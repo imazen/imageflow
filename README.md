@@ -1,17 +1,17 @@
 imageflow - Real-time image processing for the web.
 =========
 
-**The Problem**: Image processing is a ubiquitous requirement. All popular CMSes, many CDNs, and most asset pipelines implement at least image cropping, scaling, and recoding. The need for mobile-friendly websites (and consequently responsive images) makes manual asset creation methods time-prohibitive. Batch asset generation is error-prone, highly latent (affecting UX), and severely restrics web development agility. 
+**The Problem**: Image processing is a ubiquitous requirement. All popular CMSes, many CDNs, and most asset pipelines implement at least image cropping, scaling, and recoding. The need for mobile-friendly websites (and consequently responsive images) makes manual asset creation methods time-prohibitive. Batch asset generation is error-prone, highly latent (affecting UX), and severely restricts web development agility. 
 
-Existing [implementations](https://github.com/nathanaeljones/imaging-wiki) lack tests and are either (a) incorrect, and cause visual artifacts or (b) so slow that they've created industry cargo-cult assumptions about "architectural needs"; I.e, *always* use a queue and workers, because we can gzip large files on the fly but not jpeg encode them (which makes no sense from big O standpoint). This creates artificial infrastructure needs for many small/medium websites, and makes it expensive to offer image processing as part of a CDN or optimization layer. **We can eliminate this problem, and make the web faster for all users.**  There is also a high probability that (if backported to c89 and BSD licensed), [LibGD](https://github.com/libgd/libgd) will adopt our routines and therefore make them available within the PHP runtime, and the CMSes that build upon it. We have a great chance at reducing the 20MB homepage epidemic. 
+Existing [implementations](https://github.com/nathanaeljones/imaging-wiki) lack tests and are either (a) incorrect, and cause visual artifacts or (b) so slow that they've created industry cargo-cult assumptions about "architectural needs"; I.e, *always* use a queue and workers, because we can gzip large files on the fly but not jpeg encode them (which makes no sense from big O standpoint). This creates artificial infrastructure needs for many small/medium websites, and makes it expensive to offer image processing as part of a CDN or optimization layer. **We can eliminate this problem, and make the web faster for all users.**  There is also a high probability that (if back-ported to c89 and BSD licensed), [LibGD](https://github.com/libgd/libgd) will adopt our routines and therefore make them available within the PHP runtime, and the CMSes that build upon it. We have a great chance at reducing the 20MB homepage epidemic. 
 
-Image resampling is difficult to do correctly, and hard to do efficiently. Few attempts have been made at both. Our algorithm can [resample a 16MP image in 84ms using just one core](http://imageresizing.net/docs/v4/plugins/fastscaling). On a 16-core server, we can resample *15* images in 262ms. Modern performance on huge matricies is all about cache-friendliness and memory latency. Compare this to 2+ seconds for FreeImage to do the same operation with inferior accuracy. ImageMagick must be compiled in (much slower) HDRI to prevent artifacts.
+Image resampling is difficult to do correctly, and hard to do efficiently. Few attempts have been made at both. Our algorithm can [resample a 16MP image in 84ms using just one core](http://imageresizing.net/docs/v4/plugins/fastscaling). On a 16-core server, we can resample *15* such images in 262ms. Modern performance on huge matrices is all about cache-friendliness and memory latency. Compare this to 2+ seconds for FreeImage to do the same operation on 1 image with inferior accuracy. ImageMagick must be compiled in (much slower) HDRI to prevent artifacts, and even with OpenMP enabled, using all cores, is still more than an order of magnitude slower (two orders of magnitude without perf tuning).
 
-In addition, **all the libraries that I've reviewed are insecure**, having assumed all image are trusted data (libvips) or having complexity and dependencies that are impossible to audit (ImageMagick, FreeImage). The most commonly deployed implementation (not listed here) has dozens of trivially discovered vulnerabilities and buffer overflows. Some of these can easily be found by running Valgrind or Coverity, although in others the presence of a custom JIT or assembly generation can obscure their discovery.
+In addition, **all the libraries that I've reviewed are insecure**. Some assume all images are trusted data (libvips). Some have complexity and dependencies that are impossible to audit (ImageMagick, FreeImage). Others (which are even more widely deployed) simply have insufficient resources to deal with the vulnerabilities found through Valgrind and Coverity. Very few imaging libraries have any kind of automated tests, which makes Valgrind analysis much less useful. 
 
-**The solution**: Create a library that is safe for use with malicious data, and says NO to any of the following
+**The solution**: Create a test-covered library that is safe for use with malicious data, and says NO to any of the following
 
-* Operations that do not have predicitable resource (RAM/CPU) consumption. 
+* Operations that do not have predictable resource (RAM/CPU) consumption. 
 * Operations that cannot be performed in under 100ms on a 16MP jpeg, on a single i7 core. 
 * Operations that undermine security in any way.
 * Dependencies that have a questionable security track-record. LibTiff, etc. 
@@ -20,7 +20,7 @@ In addition, **all the libraries that I've reviewed are insecure**, having assum
 
 ### Simplifying assumptions
 
-* 32-bit sRGB is our 'common memory format'. To interoperate with other libraries, we must support endian-specific layout. (BGRA on little-endian, ARGB on big-endian). Endian-agnostic layout may also be required by some libraries; this needs to be investigated.
+* 32-bit sRGB is our 'common memory format'. To interoperate with other libraries (like Cairo, if users want to do text/vector/svg), we must support endian-specific layout. (BGRA on little-endian, ARGB on big-endian). Endian-agnostic layout may also be required by some libraries; this needs to be confirmed or disproven.
 * We use 128-bit floating point (BGRA, linear, premultiplied) for operations that blend pixels. (Linear RGB in 32-bits causes severe truncation).
 * The uncompressed 32-bit image can fit in RAM. If it can't, we don't do it. This is for web, and if a server can't allocate enough space for an bitmap, neither can a mobile phone. Also; at least 1 matrix transposition is required for downsampling an image, and this essentially requires it all to be in memory. No paging to disk, ever!
 * We support jpeg, gif, and png natively. All other codecs are plugins. We only write sRGB output.
@@ -32,17 +32,21 @@ In addition, **all the libraries that I've reviewed are insecure**, having assum
 * [stb_image](https://github.com/nothings/stb) (May be useful for select functions)
 * [LittleCMS](https://github.com/mm2/Little-CMS)
 * [ImageResizer - FastScaling](https://github.com/imazen/resizer/tree/develop/Plugins/FastScaling) for optimized, single-pass rendering. 
+* [ImageResizer](https://github.com/imazen/resizer) (From which we will port most of the domain logic, if not the image decoding/encoding portions)
 * OpenCV or CCV for separate plugin to address face-aware auto-cropping.
 
-![ImageFlow diagram](https://rawgithub.com/imazen/imageflow/raw/master/docs/ImageFlow_Core.svg)
+![ImageFlow diagram](https://rawgit.com/imazen/imageflow/master/docs/ImageFlow_Core.svg)
 
 All of the "hard" problems have been solved individually; we have proven performant implementations to all the expensive parts of image processing. 
 
 We also have room for more optimizations - by integrating with the codecs at the block and scan-line level, we can greatly reduce RAM and resource needs when downsampling large images. Libvips has proven that this approach can be incredibly fast. 
 
+A generic graph-based representation of an image processing workflow is very tempting. This enables advanced optimizations and potentially lets us pick the fastest or best backend depending upon image format/resolution and desired workflow. Given how easily most operations compose, this could easily make the average workflow 3-8x faster, particularly when we can compose decoding and scaling for certain codecs. The downside to this approach is the complexity of exposing a graph API via C. I would eschew the graph for initial iterations, only introducing it once we had a naive alternative in place already. 
+
+
 ## The languages
 
-The pragmatic language choice is C14. Rust is extremely attractive, and would make the solution far more secure. However, given that we often resort to assembly or manual unrolling in C, it may be unrealistic to assume we wouldn't also periodically run into perf issues with the Rust compiler. Long-term, Rust would be the ideal choice, as we get a C ABI, no runtime, yet great safety and concurrency possibilities. However, the development timeline with Rust would be nearly impossible to predict. 
+The pragmatic language choice for the core routines is C14. Rust is extremely attractive, and would make the solution far more secure (there are already safe Rust codecs!). However, given that we often resort to assembly or manual unrolling in C, it may be unrealistic to assume we wouldn't also periodically run into perf issues with the results of the Rust compiler. Long-term, Rust would be the ideal choice, as we get a C ABI, no runtime, yet great safety and concurrency possibilities. However, the development timeline with Rust would be nearly impossible to predict. 
 
 Given that there is a large amount of non-perf-critical domain logic required, it may be prudent to use Lua or Go for the mid and high-level APIs, particularly if Rust is not involved. 
 
@@ -57,19 +61,17 @@ A descriptive API is the most frequently used, and [we drafted RIAPI](https://gi
 
 Among the many shiny advanced features that I've published over the years, a couple have stood out as particularly useful and popular with end-users. 
 
-* Whitespace cropping - Apply an energy filter (factoring in all 4 channels!) and then crop off most of the non-energy bounds below a threshold. This saves trememndous time for all e-commerce users.
+* Whitespace cropping - Apply an energy filter (factoring in all 4 channels!) and then crop off most of the non-energy bounds below a threshold. This saves tremendous time for all e-commerce users.
 * Face-aware cropping - Any user profile photo will need to be cropped to multiple aspect ratios, in order to meet native app and constrained space needs. Face detection can be extremely fast (particularly if your scaling algorithm is fast), and this permits the server to make smart choices about where to center the crop (or if padding is required!). 
 
 The former (whitespace cropping) doesn't require any dependencies. The latter, face rectangle detection may or may not be easily extracted from OpenCV/ccv; this might involve a dependency. The data set is also several megabytes, so it justifies a separate assembly anyway.
-
-At a mid-to-high level, I'd love to see a generic graph-based representation of an image processing workflow. This enables advanced optimizations and lets us pick the fastest or best backend depending upon image format/resolution and desired workflow. Given how easily most operations compose, this could easily make the average workflow 3-8x faster. The downside to this approach is the complexity of exposing a graph via a C ABI. 
 
 ## Key low-level, high-performance primitives
 
 ### Color adjustments
 
 * Convert from arbitrary color space and profile to sRGB
-* sRGB<->Linear functions, on scanline sets at a time (Operations that do any blending of pixels need to operate in linear). 
+* sRGB<->Linear functions, on scan-line sets at a time (Operations that do any blending of pixels need to operate in linear). 
 * Apply gamma/adjust channels independently
 * Color adjustment matrix application
 
@@ -134,6 +136,6 @@ Also, keep in mind that computer vision is very different from image creation. I
 
 # Potential problem areas
 
-* EXIF and XMP metadata parsing to access camera orientation - this needs to be resolved (and the image rotated) before we send it to the client. Clients are notoriously inconsistent about handling rotation metadata, and they take a significant perf hit as well. 
-* Dealing with color management on a block or scanline level. I haven't used littlecms yet.
+* EXIF and XMP metadata parsing to access camera orientation - this needs to be resolved (and the image rotated) before we send it to the client. Clients are notoriously inconsistent about handling rotation metadata, and they take a significant perf hit as well. We also will likely need to preserve Copyright metadata strings, which means at least rudimentary metadata APIs. 
+* Dealing with color management on a block or scan-line level. I haven't used littlecms yet.
 * Scaling at the jpeg block level may introduce a small amount of error on the right/bottom col/row of pixels if the image size is not a multiple of 8. As we only 'halve' down to 3x the target image size before resampling, this would present as a very slight weighting error. 
