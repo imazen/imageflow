@@ -1,6 +1,9 @@
 imageflow - Real-time image processing for the web.
 =========
 
+[![travis-master](https://img.shields.io/travis/imazen/imageflow/master.svg?label=travis%20master)
+](https://travis-ci.org/imazen/imageflow/builds) 
+
 Using CLion with imageflow:
 
     bii init -l=clion imageumbrella
