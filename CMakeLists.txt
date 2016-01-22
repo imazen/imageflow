@@ -1,25 +1,31 @@
 
-
-#SET(TRAVIS_USAFE_FLAGS " -Wfloat-conversion ")
-SET(TRAVIS_USAFE_FLAGS "")
-
+if (DEFINED ENV{CI})
+  SET(TRAVIS_USAFE_FLAGS "")
+else()
+  #SET(TRAVIS_USAFE_FLAGS " -Wfloat-conversion ")
+endif()
 
 SET(FASTSCALING_FLAGS "-iquotelib -fPIC -O2 -g -Wpointer-arith -Wcast-qual -Wpedantic -Wall -Wextra -Wno-unused-parameter -Wuninitialized -Wredundant-decls -Werror")
 
 SET(CMAKE_C_FLAGS  "${CMAKE_C_FLAGS} ${FASTSCALING_FLAGS} ${TRAVIS_USAFE_FLAGS} -std=gnu11 -Wstrict-prototypes -Wmissing-prototypes -Wc++-compat -Wshadow" )
-SET( CMAKE_CXX_FLAGS  "${CMAKE_CXX_FLAGS} ${FASTSCALING_FLAGS} ${TRAVIS_USAFE_FLAGS} -std=gnu++11" )
-
-MESSAGE( STATUS "BII_BLOCK_TESTS:         " ${BII_BLOCK_TESTS} )
-
-MESSAGE( STATUS "BII_tests_fastscaling_SRC:         " ${BII_tests_fastscaling_SRC} )
+SET(CMAKE_CXX_FLAGS  "${CMAKE_CXX_FLAGS} ${FASTSCALING_FLAGS} ${TRAVIS_USAFE_FLAGS} -std=gnu++11" )
 
 
-MESSAGE( STATUS "BII_LIB_SRC:         " ${BII_LIB_SRC} )
+## valgrind
+find_program(CTEST_MEMORYCHECK_COMMAND NAMES valgrind)
+INCLUDE(Dart)
 
-MESSAGE( STATUS "BII_imageflow_SRC:         " ${BII_imageflow_SRC} )
+#MESSAGE( STATUS "BII_BLOCK_TESTS:         " ${BII_BLOCK_TESTS} )
+
+#MESSAGE( STATUS "BII_tests_fastscaling_SRC:         " ${BII_tests_fastscaling_SRC} )
 
 
-MESSAGE( STATUS "BII_theft_tests_theft_test_main_SRC:         " ${BII_theft_tests_theft_test_main_SRC} )
+#MESSAGE( STATUS "BII_LIB_SRC:         " ${BII_LIB_SRC} )
+
+#MESSAGE( STATUS "BII_imageflow_SRC:         " ${BII_imageflow_SRC} )
+
+
+#MESSAGE( STATUS "BII_theft_tests_theft_test_main_SRC:         " ${BII_theft_tests_theft_test_main_SRC} )
 
 
 
@@ -28,15 +34,15 @@ MESSAGE( STATUS "BII_theft_tests_theft_test_main_SRC:         " ${BII_theft_test
 
 ADD_BII_TARGETS()
 
-MESSAGE( STATUS "BII_theft_tests_theft_test_main_SRC:         " ${BII_theft_tests_theft_test_main_SRC} )
+#MESSAGE( STATUS "BII_theft_tests_theft_test_main_SRC:         " ${BII_theft_tests_theft_test_main_SRC} )
 
 
-MESSAGE( STATUS "BII_LIB_SRC:         " ${BII_LIB_SRC} )
+#MESSAGE( STATUS "BII_LIB_SRC:         " ${BII_LIB_SRC} )
 
 
 #tests/fastscaling.c tests/test.cpptests/weighting_test_helpers.cpptests/weighting_test_helpers.h
 
-MESSAGE( STATUS "BII_BLOCK_TESTS:         " ${BII_BLOCK_TESTS} )
+#MESSAGE( STATUS "BII_BLOCK_TESTS:         " ${BII_BLOCK_TESTS} )
 
 #TARGET_COMPILE_OPTIONS(${BII_BLOCK_TARGET} INTERFACE "${FASTSCALING_FLAGS} ${TRAVIS_USAFE_FLAGS} -std=gnu++11")
 ###############################################################################
