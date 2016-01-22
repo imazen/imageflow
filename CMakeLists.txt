@@ -19,11 +19,16 @@ MESSAGE( STATUS "BII_LIB_SRC:         " ${BII_LIB_SRC} )
 MESSAGE( STATUS "BII_imageflow_SRC:         " ${BII_imageflow_SRC} )
 
 
+MESSAGE( STATUS "BII_theft_tests_theft_test_main_SRC:         " ${BII_theft_tests_theft_test_main_SRC} )
+
+
 
 #SET(BII_tests_fastscaling_SRC "${BII_LIB_SRC}")
 #LIST(APPEND BII_tests_fastscaling_SRC "tests/fastscaling.c")
 
 ADD_BII_TARGETS()
+
+MESSAGE( STATUS "BII_theft_tests_theft_test_main_SRC:         " ${BII_theft_tests_theft_test_main_SRC} )
 
 
 MESSAGE( STATUS "BII_LIB_SRC:         " ${BII_LIB_SRC} )
