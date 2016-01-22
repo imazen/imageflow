@@ -1,12 +1,27 @@
 root = true
 
+# Unix-style newlines with a newline ending every file
 [*]
+charset = utf-8
 end_of_line = lf
 insert_final_newline = true
+
+[*.{c,cpp,hpp,h,py,rb,yml}]
 trim_trailing_whitespace = true
+
+[*.{c,cpp,hpp,h,py,md}]
 tab_width = 8
+indent_style = space
+indent_size = 4
+
+# 2 space indentation for ruby, yaml
+[*.{rb,yml,yaml}]
 indent_style = space
 indent_size = 2
 
-[**.bat]
+[**.{bat,txt,sln,dbproj,fsproj,vbproj,csproj}]
 end_of_line = crlf
+
+# Tab indentation (no size specified)
+[Makefile]
+indent_style = tab

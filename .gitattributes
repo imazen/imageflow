@@ -1,0 +1,40 @@
+*.jpg   binary
+*.png   binary
+*.gif   binary
+
+*.cs eol=lf diff=csharp
+*.vb eol=lf
+*.resx eol=lf
+*.c eol=lf diff=cpp
+*.cpp eol=lf diff=cpp
+*.cxx eol=lf diff=cpp
+*.h eol=lf diff=cpp
+*.hxx eol=lf diff=cpp
+*.py eol=lf
+*.rb eol=lf
+*.java eol=lf
+*.html eol=lf diff=html
+*.htm eol=lf diff=html
+*.css eol=lf
+*.scss eol=lf
+*.sass eol=lf
+*.less eol=lf
+*.js eol=lf
+*.lisp eol=lf
+*.clj eol=lf
+*.sql eol=lf
+*.php eol=lf
+*.lua eol=lf
+*.m eol=lf
+*.asm eol=lf
+*.erl eol=lf
+*.fs eol=lf
+*.fsx eol=lf
+*.hs eol=lf
+
+*.csproj eol=crlf
+*.vbproj eol=crlf
+*.fsproj eol=crlf
+*.dbproj eol=crlf
+*.sln eol=crlf
+*.txt eol=crlf
