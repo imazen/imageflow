@@ -19,6 +19,7 @@ install:
   - cd valgrind-3.10.1 && ./configure && make
   - sudo make install
   - cd ..
+  - rm -rf valgrind-3.10.1
   - wget http://www.biicode.com/downloads/latest/ubuntu64
   - mv ubuntu64 bii-ubuntu64.deb
   - sudo dpkg -i bii-ubuntu64.deb && sudo apt-get -f install
