@@ -21,6 +21,17 @@ bool curl_initialized = false;
 
 extern int errno;
 
+size_t nonzero_count(png_bytep array, size_t length){
+
+    size_t nonzero = 0;
+    for (size_t  i =0; i < length; i++){
+        if (array[i] != 0){
+            nonzero++;
+        }
+    }
+    return nonzero;
+}
+
 unsigned long djb2(unsigned char *str)
 {
     unsigned long hash = 5381;
@@ -270,7 +281,7 @@ TEST_CASE ("Load png from URL", "[fastscaling]")
          */
         image.format = PNG_FORMAT_BGRA;
 
-        buffer =  (png_bytep)malloc (PNG_IMAGE_SIZE(image));
+        buffer =  (png_bytep)calloc ( PNG_IMAGE_SIZE(image), sizeof(png_bytep));
 
         if (buffer != NULL)
         {
@@ -278,6 +289,10 @@ TEST_CASE ("Load png from URL", "[fastscaling]")
                                       0/*row_stride*/, NULL/*colormap for PNG_FORMAT_FLAG_COLORMAP */))
             {
 
+                int nonzero = nonzero_count(buffer, PNG_IMAGE_SIZE(image));
+                if (nonzero > 0){
+                    printf("nonzero buffer: %d of %d", nonzero,  PNG_IMAGE_SIZE(image));
+                }
                 Context context;
                 Context_initialize(&context);
 
@@ -287,15 +302,23 @@ TEST_CASE ("Load png from URL", "[fastscaling]")
                     exit(99);
                 }
                 source->fmt = BitmapPixelFormat::Bgra32;
-                source->stride = source->w * BitmapPixelFormat_bytes_per_pixel(source->fmt);
+                source->stride = PNG_IMAGE_ROW_STRIDE(image);
+                printf("png stride (%d), calculated (%d)\n",source->stride,  source->w * BitmapPixelFormat_bytes_per_pixel(source->fmt));
                 source->alpha_meaningful = true;
                 source->pixels = buffer;
 
-                BitmapBgra * canvas = BitmapBgra_create(&context, 300, 200, true, Bgra32);
+                int target_width = 300;
+                int target_height = 200;
+
+                BitmapBgra * canvas = BitmapBgra_create(&context, target_width, target_height, true, Bgra32);
 
                 RenderDetails * details = RenderDetails_create_with(&context, InterpolationFilter::Filter_Robidoux);
+                details->interpolate_last_percent = 2.1f;
+                details->minimum_sample_window_to_interposharpen = 1.5;
+                details->havling_acceptable_pixel_loss = 0.26f;
+
                 if (details == NULL) exit(99);
-                details->sharpen_percent_goal = 50;
+//                details->sharpen_percent_goal = 50;
 //                details->post_flip_x = flipx;
 //                details->post_flip_y = flipy;
 //                details->post_transpose = transpose;
@@ -304,30 +327,52 @@ TEST_CASE ("Load png from URL", "[fastscaling]")
                 //Should we even have Renderer_* functions, or just 1 call that does it all?
                 //If we add memory use estimation, we should keep Renderer
 
-                RenderDetails_render(&context,details, source, canvas);
+
+
+                if (!RenderDetails_render(&context,details, source, canvas)){
+
+                    char error[255];
+                    Context_error_message(&context, error, 255);
+                    printf("%s",error);
+                    exit(77);
+                }
                 printf("Rendered!");
                 RenderDetails_destroy(&context, details);
 
                 BitmapBgra_destroy(&context, source);
+                free(buffer);
 
                     //TODO, write out PNG here
+
+                png_image target_image;
+
+                /* Only the image structure version number needs to be set. */
+                memset(&target_image, 0, sizeof target_image);
+                target_image.version = PNG_IMAGE_VERSION;
+                target_image.opaque = NULL;
+                target_image.width = target_width;
+                target_image.height = target_height;
+                target_image.format = Bgra32;
+                target_image.flags = 0;
+                target_image.colormap_entries = 0;
+
+                if (png_image_write_to_file(&target_image, "unipng.png",
+                                            0/*convert_to_8bit*/, canvas->pixels, 0/*row_stride*/,
+                                            NULL/*colormap*/)) {
+                    success = true;
+                    int nonzero2 = nonzero_count(canvas->pixels, canvas->stride * canvas->h);
+                    printf("nonzero output buffer: %d of %d", nonzero2, canvas->stride * canvas->h);
+
+                }
+                else
+                    fprintf(stderr, "pngtopng: write failed : %s\n",
+                            image.message);
+
 
                 BitmapBgra_destroy(&context, canvas);
                 Context_terminate(&context);
 
 
-                success=true;
-
-//                if (png_image_write_to_file(&image, argv[2],
-//                                            0/*convert_to_8bit*/, buffer, 0/*row_stride*/,
-//                                            NULL/*colormap*/))
-//                    result = 0;
-//
-//                else
-//                    fprintf(stderr, "pngtopng: write %s: %s\n",
-//                            image.message);
-//
-//                free(buffer);
             }
 
             else
