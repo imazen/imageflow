@@ -278,6 +278,44 @@ TEST_CASE ("Load png from URL", "[fastscaling]")
                                       0/*row_stride*/, NULL/*colormap for PNG_FORMAT_FLAG_COLORMAP */))
             {
 
+                Context context;
+                Context_initialize(&context);
+
+
+                BitmapBgra * source = BitmapBgra_create_header(&context, (unsigned int )(image.width), (unsigned int)(image.height));
+                if (source == NULL) {
+                    exit(99);
+                }
+                source->fmt = BitmapPixelFormat::Bgra32;
+                source->stride = source->w * BitmapPixelFormat_bytes_per_pixel(source->fmt);
+                source->alpha_meaningful = true;
+                source->pixels = buffer;
+
+                BitmapBgra * canvas = BitmapBgra_create(&context, 300, 200, true, Bgra32);
+
+                RenderDetails * details = RenderDetails_create_with(&context, InterpolationFilter::Filter_Robidoux);
+                if (details == NULL) exit(99);
+                details->sharpen_percent_goal = 50;
+//                details->post_flip_x = flipx;
+//                details->post_flip_y = flipy;
+//                details->post_transpose = transpose;
+                //details->enable_profiling = profile;
+
+                //Should we even have Renderer_* functions, or just 1 call that does it all?
+                //If we add memory use estimation, we should keep Renderer
+
+                RenderDetails_render(&context,details, source, canvas);
+                printf("Rendered!");
+                RenderDetails_destroy(&context, details);
+
+                BitmapBgra_destroy(&context, source);
+
+                    //TODO, write out PNG here
+
+                BitmapBgra_destroy(&context, canvas);
+                Context_terminate(&context);
+
+
                 success=true;
 
 //                if (png_image_write_to_file(&image, argv[2],
