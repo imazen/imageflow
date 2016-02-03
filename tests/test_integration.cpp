@@ -352,7 +352,7 @@ TEST_CASE ("Load png from URL", "[fastscaling]")
                 target_image.opaque = NULL;
                 target_image.width = target_width;
                 target_image.height = target_height;
-                target_image.format = Bgra32;
+                target_image.format = PNG_FORMAT_BGRA;
                 target_image.flags = 0;
                 target_image.colormap_entries = 0;
 
