@@ -156,3 +156,30 @@ Also, keep in mind that computer vision is very different from image creation. I
 * EXIF and XMP metadata parsing to access camera orientation - this needs to be resolved (and the image rotated) before we send it to the client. Clients are notoriously inconsistent about handling rotation metadata, and they take a significant perf hit as well. We also will likely need to preserve Copyright metadata strings, which means at least rudimentary metadata APIs.
 * Dealing with color management on a block or scan-line level. I haven't used littlecms yet.
 * Scaling at the jpeg block level may introduce a small amount of error on the right/bottom col/row of pixels if the image size is not a multiple of 8. As we only 'halve' down to 3x the target image size before resampling, this would present as a very slight weighting error.
+
+
+## Operation equivalency and composition
+
+| Action | Equivalent action | Notes
+| Rotate 270  | Transpose, Vflip |
+| Rotate 90   | Vflip, Transpose |
+| Rotate 180  | Vflip, Hflip |
+| Transpose, Vflip | HFlip, Transpose | Slower |
+| Hflip, Transpose | Transpose, VFlip | VFlip is faster than HFlip |
+| Hflip, Hflip | nop |
+| Vflip, Vflip | nop |
+| Crop, VFlip | VFlip, Crop(adjusted) | ..etc, for HFlip, Transpose, Scale |
+| Scale (new_width,new_height) | CreateCanvas(width=old_height, height=new_width), RenderToCanvas1D(new_width, Copy, transpose=true), CreateCanvas(width=new_width,height=new_height), RenderToCanvas1D(new_height,Copy,transpose=true) |
+
+## Concrete Frame operations
+
+| VFlip | Format agnostic | In Place
+| Crop  | Format agnostic | In Place
+| CopyRect  | Format agnostic | New Frame
+| CreateCanvas | 
+| RenderToCanvas1D (scale (InterpolationDetails), compose (InPlace, Copy, Blende, Matte[color]), bool transpose, [list of convolution & pixel filters], working_floatspace)
+
+Resize: 
+CreateCanvas
+Render1D(scale, Copy, transpose=true)
+Render1D(scale, Copy, transpose=true)
