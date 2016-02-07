@@ -19,8 +19,6 @@
 bool curl_initialized = false;
 
 
-extern int errno;
-
 size_t nonzero_count(png_bytep array, size_t length){
 
     size_t nonzero = 0;
@@ -32,7 +30,7 @@ size_t nonzero_count(png_bytep array, size_t length){
     return nonzero;
 }
 
-unsigned long djb2(unsigned char *str)
+unsigned long djb2(unsigned const char *str)
 {
     unsigned long hash = 5381;
     int c;
@@ -100,10 +98,17 @@ uint8_t * read_all_bytes(const char * path, size_t * buffer_size){
         buffer = (uint8_t *) malloc(s);
         if ( buffer != NULL )
         {
-            fread(buffer, s, 1, fh);
+            //Returns 1 or 0, not the number of bytes.
+            //Technically we're reading 1 element of size s
+            size_t read_count = fread(buffer, s, 1, fh);
             // we can now close the file
             fclose(fh); fh = NULL;
             *buffer_size = s;
+            if (s < 1){
+                //Failed to fill buffer
+                fprintf(stderr, "Buffer size: %lu    Result code: %lu", s, read_count);
+                exit(8);
+            }
             return buffer;
 
         }else{
@@ -170,11 +175,14 @@ uint8_t* get_bytes_cached(const char * url, size_t * bytes_count_out){
     ensure_directory(cache_folder);
     char cache_path[MAX_PATH];
 
-    snprintf(cache_path, MAX_PATH, "%s/%lu", cache_folder, djb2((unsigned char *)url));
+    snprintf(cache_path, MAX_PATH, "%s/%lu", cache_folder, djb2((unsigned const char *)url));
 
     if( access( cache_path, F_OK ) == -1 ) {
         // file doesn't exist
         fetch_image(url,cache_path);
+    }else{
+
+        fprintf(stdout, "Using cached image at %s",cache_path);
     }
 
     return read_all_bytes(cache_path, bytes_count_out);

@@ -238,19 +238,19 @@ static inline int64_t get_profiler_ticks_per_second(void)
 #if defined(_POSIX_TIMERS) && (_POSIX_TIMERS > 0)
 #if defined(CLOCK_MONOTONIC_PRECISE)
 /* BSD. --------------------------------------------- */
-#define PROFILER_CLOCK_ID id = CLOCK_MONOTONIC_PRECISE;
+#define PROFILER_CLOCK_ID CLOCK_MONOTONIC_PRECISE
 #elif defined(CLOCK_MONOTONIC_RAW)
 /* Linux. ------------------------------------------- */
-#define PROFILER_CLOCK_ID id = CLOCK_MONOTONIC_RAW;
+#define PROFILER_CLOCK_ID CLOCK_MONOTONIC_RAW
 #elif defined(CLOCK_HIGHRES)
 /* Solaris. ----------------------------------------- */
-#define PROFILER_CLOCK_ID id = CLOCK_HIGHRES;
+#define PROFILER_CLOCK_ID CLOCK_HIGHRES
 #elif defined(CLOCK_MONOTONIC)
 /* AIX, BSD, Linux, POSIX, Solaris. ----------------- */
-#define PROFILER_CLOCK_ID id = CLOCK_MONOTONIC;
+#define PROFILER_CLOCK_ID CLOCK_MONOTONIC
 #elif defined(CLOCK_REALTIME)
 /* AIX, BSD, HP-UX, Linux, POSIX. ------------------- */
-#define PROFILER_CLOCK_ID id = CLOCK_REALTIME;
+#define PROFILER_CLOCK_ID CLOCK_REALTIME
 #endif
 #endif
 #endif
@@ -263,7 +263,7 @@ static inline int64_t get_high_precision_ticks(void)
     if (clock_gettime(PROFILER_CLOCK_ID, &ts) != 0) {
         return -1;
     }
-    return ts->tv_sec * 1000000 +  ts->tv_nsec;
+    return ts.tv_sec * 1000000 +  ts.tv_nsec;
 #else
     struct timeval tm;
     if (gettimeofday( &tm, NULL) != 0) {
@@ -280,7 +280,7 @@ static inline int64_t get_profiler_ticks_per_second(void)
     if (clock_getres(PROFILER_CLOCK_ID, &ts) != 0) {
         return -1;
     }
-    return ts->tv_nsec;
+    return ts.tv_nsec;
 #else
     return 1000000;
 #endif

@@ -34,6 +34,9 @@ INCLUDE(Dart)
 
 ADD_BII_TARGETS()
 
+#we need to link against libm for math.h
+TARGET_LINK_LIBRARIES(${BII_BLOCK_TARGET} INTERFACE m)
+
 #MESSAGE( STATUS "BII_theft_tests_theft_test_main_SRC:         " ${BII_theft_tests_theft_test_main_SRC} )
 
 
