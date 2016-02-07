@@ -8,8 +8,8 @@ Using CLion with imageflow:
 
     bii init -l=clion imageumbrella
     cd imageumbrella/
-    git clone https://github.com/imazen/imageflow blocks/nathanaeljones/imageflow
-    git clone https://github.com/nathanaeljones/theft blocks/nathanaeljones/theft
+    git clone git@github.com:imazen/imageflow.git blocks/nathanaeljones/imageflow
+    git clone git@github.com:nathanaeljones/theft.git blocks/nathanaeljones/theft
     bii test
 
 
@@ -39,14 +39,14 @@ In addition, **all the libraries that I've reviewed are insecure**. Some assume 
 
 * 32-bit sRGB is our 'common memory format'. To interoperate with other libraries (like Cairo, if users want to do text/vector/svg), we must support endian-specific layout. (BGRA on little-endian, ARGB on big-endian). Endian-agnostic layout may also be required by some libraries; this needs to be confirmed or disproven.
 * We use 128-bit floating point (BGRA, linear, premultiplied) for operations that blend pixels. (Linear RGB in 32-bits causes severe truncation).
-* The uncompressed 32-bit image can fit in RAM. If it can't, we don't do it. This is for web, and if a server can't allocate enough space for an bitmap, neither can a mobile phone. Also; at least 1 matrix transposition is required for downsampling an image, and this essentially requires it all to be in memory. No paging to disk, ever!
+* The uncompressed 32-bit image can fit in RAM. If it can't, we don't do it. This is for web output use, not scientific or mapping applications. Also; at least 1 matrix transposition is required for downsampling an image, and this essentially requires it all to be in memory. No paging to disk, ever!
 * We support jpeg, gif, and png natively. All other codecs are plugins. We only write sRGB output.
 
 ## The components
 
 * [libjpeg-turbo](https://github.com/imazen/libjpeg-turbo) or [mozjpeg](https://github.com/mozilla/mozjpeg)
 * [libpng](http://www.libpng.org/pub/png/libpng.html)
-* [stb_image](https://github.com/nothings/stb) (May be useful for select functions)
+* [stb_image](https://github.com/nothings/stb) (May be useful for select functions, but use is unlikely)
 * [LittleCMS](https://github.com/mm2/Little-CMS)
 * [ImageResizer - FastScaling](https://github.com/imazen/resizer/tree/develop/Plugins/FastScaling) for optimized, single-pass rendering.
 * [ImageResizer](https://github.com/imazen/resizer) (From which we will port most of the domain logic, if not the image decoding/encoding portions)
@@ -63,9 +63,11 @@ A generic graph-based representation of an image processing workflow is very tem
 
 ## The languages
 
-The pragmatic language choice for the core routines is C14. Rust is extremely attractive, and would make the solution far more secure (there are already safe Rust codecs!). However, given that we often resort to assembly or manual unrolling in C, it may be unrealistic to assume we wouldn't also periodically run into perf issues with the results of the Rust compiler. Long-term, Rust would be the ideal choice, as we get a C ABI, no runtime, yet great safety and concurrency possibilities. However, the development timeline with Rust would be nearly impossible to predict.
+The pragmatic language choice for the core routines is C11. Rust is extremely attractive, and would make the solution far more secure (there are already safe Rust codecs!). However, given that we often resort to assembly or manual unrolling in C, it may be unrealistic to assume we wouldn't also periodically run into perf issues with the results of the Rust compiler. Long-term, Rust would be the ideal choice, as we get a C ABI, no runtime, yet great safety and concurrency possibilities. However, the development timeline with Rust would be nearly impossible to predict.
 
-Given that there is a large amount of non-perf-critical domain logic required, it may be prudent to use Lua or Go for the mid and high-level APIs, particularly if Rust is not involved.
+Given that there is a large amount of non-perf-critical domain logic required, it may be prudent to use Lua or Go for the mid and high-level APIs, particularly if Rust is not involved. This, however, would make it difficult to expose a high-level cross platform API.
+
+For the present, we intend to use C11 for the entire set of APIs.
 
 
 ## API needs.
@@ -151,11 +153,12 @@ I have found the source code for OpenCV, LibGD, FreeImage, Libvips, Pixman, Cair
 
 Also, keep in mind that computer vision is very different from image creation. In computer vision, resampling accuracy matters very little, for example. But in image creation, you are serving images to photographers, people with far keener visual perception than the average developer. The images produced will be rendered side-by-side with other CSS and images, and the least significant bit of inaccuracy is quite visible. You are competing with Lightroom; with offline tools that produce visually perfect results. End-user software will be discarded if photographers feel it is corrupting their work.
 
-# Potential problem areas
+## Potential problem areas
 
 * EXIF and XMP metadata parsing to access camera orientation - this needs to be resolved (and the image rotated) before we send it to the client. Clients are notoriously inconsistent about handling rotation metadata, and they take a significant perf hit as well. We also will likely need to preserve Copyright metadata strings, which means at least rudimentary metadata APIs.
 * Dealing with color management on a block or scan-line level. I haven't used littlecms yet.
-* Scaling at the jpeg block level may introduce a small amount of error on the right/bottom col/row of pixels if the image size is not a multiple of 8. As we only 'halve' down to 3x the target image size before resampling, this would present as a very slight weighting error.
+* Scaling at the jpeg block level may introduce a small amount of error on the right/bottom col/row of pixels if the image size is not a multiple of 8. As we only 'halve' down to 3x the target image size before resampling, this would present as a very slight weighting error. Using floating-point image dimensions could permit this to be solved.
+
 
 
 ## Operation equivalency and composition
