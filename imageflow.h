@@ -8,11 +8,30 @@ extern "C" {
 //Expose API to evaluate graph and suggest minimum source dimensions.
 //Returns "indeterminate" if face or whitespace cropping is in use, or any other conditionals.
 
+//Source images must be registered with the context. They can survive multiple ImageJobs.
+//They contain an opaque cache for dimensions, metadata, and (potentially) bitmap data
+
+//There must be a primary source image; only one image can be 'looped'.
+
+
 //Multi-frame/multi-page images are not magically handled.
 //We require one frame graph per frame/page to be created by the client after metadata is parsed for that frame/page.
 
 
-
+/*
+ * output format:
+ *
+ *
+ * png -> png
+ * png -> jpeg
+ * jpeg -> png
+ * gif -> png
+ * agif -> agif
+ *
+ *
+ *
+ *
+ */
 
 
 //Imageflow makes multiple passes over each graph
@@ -110,6 +129,8 @@ typedef enum FrameNodeType{
     Filter_DrawImage,
     Filter_RemoveNoise,
     Filter_ColorMatrixsRGB,
+    Filter_Input_Placeholder,
+    Filter_Output_Placeholder
 
 };
 
@@ -122,6 +143,8 @@ typedef enum FrameNodeType{
 
 struct {
     FrameNodeType type;
+    void * data;
+
 
 } FrameNode;
 
