@@ -12,6 +12,54 @@ extern "C" {
 //They contain an opaque cache for dimensions, metadata, and (potentially) bitmap data
 
 //There must be a primary source image; only one image can be 'looped'.
+typedef enum FrameEdgeType {
+    FrameEdge_null,
+    FrameEdge_input,
+    FrameEdge_canvas,
+    FrameEdge_FORCE_ENUM_SIZE_INT32 = 2147483647
+};
+
+struct FrameEdge {
+    FrameEdgeType type;
+    int32_t from;
+    int32_t to;
+    int32_t info_byte_index;
+    int32_t info_bytes;
+};
+
+struct FrameNode {
+    FrameNodeType type;
+    int32_t info_byte_index;
+    int32_t info_bytes;
+} ;
+
+
+struct FrameGraph {
+    uint32_t memory_layout_version; //This progresses differently from the library version, as internals are subject to refactoring. If we are given a graph to copy, we check this number.
+    FrameEdge * edges;
+    int32_t edge_count;
+    int32_t next_edge_id;
+    int32_t max_edges;
+
+    FrameNode * nodes;
+    uint8_t * info_bytes;
+
+
+    int32_t max_nodes;
+    int32_t max_info_bytes;
+    int32_t next_info_byte;
+
+    int32_t node_count;
+
+
+
+
+    int32_t deleted_bytes;
+
+    int32_t next_node_id;
+};
+
+
 
 
 //Multi-frame/multi-page images are not magically handled.
@@ -68,10 +116,10 @@ typedef enum ImageNodeType {
     ImageNode_DecodeGif,
     ImageNode_FileSource,
     ImageNode_FileDestination,
-    ImageDone_MetadataDestination,
+    ImageNode_MetadataDestination,
 
 
-
+   ImageNode_FORCE_ENUM_SIZE_INT32 = 2147483647
 };
 
 typedef enum ScanlinesFilterType{
@@ -81,7 +129,8 @@ typedef enum ScanlinesFilterType{
     Scanlines_ColorMatrix, //Apply color matrix
     Scanlines_ToLinear,
     Scanlines_ToSrgb,
-    Scanlines_Custom //Execute custom callback.
+    Scanlines_Custom, //Execute custom callback.,
+    Scalines__FORCE_ENUM_SIZE_INT32 = 2147483647
 };
 
 struct ScanlinesFilter{
@@ -96,6 +145,7 @@ struct FrameNode_RenderToCanvas1D{
     ScanlinesFilter filter_list;
 };
 typedef enum FrameNodeType{
+    FrameNode_null,
     Primitive_Flip_Vertical = 1,
     Primitive_Crop = 2, //Creates a new window into an existing frame -
     Primitive_CopyRectToCanvas = 3, //Overwrite only, no compositing
@@ -130,8 +180,8 @@ typedef enum FrameNodeType{
     Filter_RemoveNoise,
     Filter_ColorMatrixsRGB,
     Filter_Input_Placeholder,
-    Filter_Output_Placeholder
-
+    Filter_Output_Placeholder,
+    Filter_FORCE_ENUM_SIZE_INT32 = 2147483647
 };
 
 //Pick frame
@@ -140,13 +190,6 @@ typedef enum FrameNodeType{
 //quantization
 
 
-
-struct {
-    FrameNodeType type;
-    void * data;
-
-
-} FrameNode;
 
 //
 //| VFlip | Format agnostic | In Place
