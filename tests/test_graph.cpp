@@ -17,21 +17,31 @@
 #include "curl/curl.h"
 #include "curl/easy.h"
 
-TEST_CASE ("execute graph", "")
+TEST_CASE ("create tiny graph", "")
 {
-    REQUIRE(true);
-
     Context * c = Context_create();
+    FrameGraph * g = FrameGraph_create(c,10,10,200);
+    int32_t last;
+    if (g == nullptr) goto cleanup;
 
-    //FrameGraph * g =
+    last = FrameNode_create_canvas(c, g,  -1, Bgra32, 400,300, 0xFFFFFFFF);
+    last = FrameNode_create_scale(c,g, last, 300, 200 );
 
-
+    REQUIRE(g->edges[0].from == 0);
+    REQUIRE(g->edges[0].to == 1);
+    REQUIRE(g->edge_count == 1);
+    REQUIRE(g->node_count == 2);
 
     cleanup:
 
-    if (c != nullptr) {
-        Context_destroy(c);
-        c = nullptr;
-    }
+        if (g != nullptr){
+            FrameGraph_destroy(c,g);
+            g = nullptr;
+        }
+
+        if (c != nullptr) {
+            Context_destroy(c);
+            c = nullptr;
+        }
 
 }
