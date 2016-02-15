@@ -20,12 +20,12 @@
 TEST_CASE ("create tiny graph", "")
 {
     Context * c = Context_create();
-    FrameGraph * g = FrameGraph_create(c,10,10,200);
+    flow_graph * g = flow_graph_create(c, 10, 10, 200);
     int32_t last;
     if (g == nullptr) goto cleanup;
 
-    last = FrameNode_create_canvas(c, g,  -1, Bgra32, 400,300, 0xFFFFFFFF);
-    last = FrameNode_create_scale(c,g, last, 300, 200 );
+    last = flow_node_create_canvas(c, g, -1, Bgra32, 400, 300, 0xFFFFFFFF);
+    last = flow_node_create_scale(c, g, last, 300, 200);
 
     REQUIRE(g->edges[0].from == 0);
     REQUIRE(g->edges[0].to == 1);
@@ -35,7 +35,7 @@ TEST_CASE ("create tiny graph", "")
     cleanup:
 
         if (g != nullptr){
-            FrameGraph_destroy(c,g);
+            flow_graph_destroy(c, g);
             g = nullptr;
         }
 
