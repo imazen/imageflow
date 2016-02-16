@@ -14,6 +14,11 @@ int Context_error_reason(Context * context)
 
 void Context_set_last_error(Context * context, StatusCode code, const char * file, int line)
 {
+    if (context->error.reason != No_Error){
+        //The last error wasn't cleared, lock it down. We prefer the original error.
+        context->error.locked = true;
+        return;
+    }
     context->error.reason = code;
     Context_add_to_callstack(context, file,line);
 #ifdef DEBUG
@@ -24,13 +29,20 @@ void Context_set_last_error(Context * context, StatusCode code, const char * fil
 
 void Context_add_to_callstack(Context * context, const char * file, int line)
 {
-    if (context->error.callstack_count < context->error.callstack_capacity) {
+    if (context->error.callstack_count < context->error.callstack_capacity && !context->error.locked) {
         context->error.callstack[context->error.callstack_count].file = file;
         context->error.callstack[context->error.callstack_count].line = line;
         context->error.callstack_count++;
     }
 }
 
+void Context_clear_error(Context * context){
+    context->error.callstack_count = 0;
+    context->error.callstack[0].file = NULL;
+    context->error.callstack[0].line = -1;
+    context->error.reason = No_Error;
+    context->error.locked = false;
+}
 
 bool Context_has_error(Context * context)
 {
@@ -43,6 +55,19 @@ static const char * status_code_to_string(StatusCode code)
     return TheStatus;
 }
 
+bool Context_print_and_exit_if_err(Context * c){
+    if (Context_has_error(c)){
+        Context_print_error_to(c, stderr);
+        return true;
+    }
+    return false;
+}
+
+void Context_print_error_to(  Context * c, FILE * stream){
+    char buffer[1024];
+    fprintf(stream, "Error code %d: %s\n", c->error.reason, status_code_to_string(c->error.reason));
+    fprintf(stream, "%s\n", Context_stacktrace(c, buffer, sizeof(buffer)));
+}
 const char * Context_error_message(Context * context, char * buffer, size_t buffer_size)
 {
     snprintf(buffer, buffer_size, "Error in file: %s line: %d status_code: %d reason: %s", context->error.callstack[0].file, context->error.callstack[0].line, context->error.reason, status_code_to_string(context->error.reason));
@@ -58,10 +83,10 @@ const char * Context_stacktrace (Context * context, char * buffer, size_t buffer
 
         //Trim the directory
         const char * file = context->error.callstack[i].file;
-        const char * lastslash = (const char *)umax64((uint64_t)strchr (file, '\\'), (uint64_t)strchr (file, '/'));
+        const char * lastslash = (const char *)umax64((uint64_t)strrchr (file, '\\'), (uint64_t)strrchr (file, '/'));
         file = (const char *)umax64((uint64_t)lastslash + 1, (uint64_t)file);
 
-        uint32_t used = snprintf (line, remaining_space, "%s: line %d\n", file , context->error.callstack[i].line);
+        uint32_t used = snprintf (line, remaining_space, "%s:%d:\n", file , context->error.callstack[i].line);
         if (used > 0 && used < remaining_space){
             remaining_space -= used;
             line += used;
@@ -91,6 +116,7 @@ void * Context_malloc(Context * context, size_t byte_count, const char * file, i
 
 void Context_free(Context * context, void * pointer, const char * file, int line)
 {
+    if (pointer == NULL) return;
     context->heap._free(context, pointer, file, line);
 }
 
@@ -131,6 +157,7 @@ void Context_initialize(Context * context)
     context->error.callstack[0].line = -1;
     //memset(context->error.callstack, 0, sizeof context->error.callstack);
     context->error.reason = No_Error;
+    context->error.locked = false;
     DefaultHeapManager_initialize(&context->heap);
     Context_set_floatspace (context, Floatspace_as_is, 0.0f, 0.0f, 0.0f);
 }

@@ -23,6 +23,7 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include <stdlib.h>
+#include <stdio.h>
 
 
 #ifdef __cplusplus
@@ -62,6 +63,11 @@ int  Context_error_reason(Context * context);
 
 void Context_free_static_caches(void);
 
+bool Context_print_and_exit_if_err(Context * c);
+
+void Context_clear_error(Context * context);
+
+void Context_print_error_to(  Context * c, FILE * stream);
 
 //non-indexed bitmap
 typedef struct BitmapBgraStruct {

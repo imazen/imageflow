@@ -1,4 +1,7 @@
 
+include (CTest)
+
+
 if (DEFINED ENV{CI})
   SET(TRAVIS_USAFE_FLAGS "")
 else()

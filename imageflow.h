@@ -10,14 +10,16 @@ extern "C" {
 
 #include "fastscaling.h"
 
+
 //Version selection is not implemented within imageflow, instead, we let callers do that logic:
 //Expose API to evaluate graph and suggest minimum source dimensions.
 //Returns "indeterminate" if face or whitespace cropping is in use, or any other conditionals.
 
-//Source images must be registered with the context. They can survive multiple ImageJobs.
-//They contain an opaque cache for dimensions, metadata, and (potentially) bitmap data
+//Source/output files and I/O interfaces must be registered with the context. They can survive multiple ImageJobs.
 
-//There must be a primary source image; only one image can be 'looped'.
+//ImageJobs associate an opaque cache for dimensions, metadata, and (potentially) bitmap data with these I/O interfaces.
+
+
 
 typedef enum flow_ntype {
     flow_ntype_Null = 0,
@@ -28,7 +30,7 @@ typedef enum flow_ntype {
     flow_ntype_primitive_RenderToCanvas1D = 5,
     flow_ntype_primitive_Halving = 6,
 
-
+    flow_ntype_primitive_bitmap_bgra_pointer,
     flow_ntype_primitive_Encode_PngFrame,
     flow_ntype_primitive_Encode_Jpeg,
     flow_ntype_primitive_Encode_Gif,
@@ -65,8 +67,7 @@ typedef enum flow_ntype {
     flow_ntype_DrawImage,
     flow_ntype_RemoveNoise,
     flow_ntype_ColorMatrixsRGB,
-    flow_ntype_Input_Placeholder,
-    flow_ntype_Output_Placeholder,
+    flow_ntype_Resource_Placeholder,
     flow_ntype__FORCE_ENUM_SIZE_INT32 = 2147483647
 } flow_ntype;
 
@@ -100,27 +101,32 @@ struct flow_graph {
     int32_t max_edges;
 
     struct flow_node * nodes;
-    uint8_t * info_bytes;
-
-
+    int32_t node_count;
+    int32_t next_node_id;
     int32_t max_nodes;
+
+    uint8_t * info_bytes;
     int32_t max_info_bytes;
     int32_t next_info_byte;
-
-    int32_t node_count;
-
-
-
-
     int32_t deleted_bytes;
 
-    int32_t next_node_id;
+    float growth_factor;
 };
 
-struct flow_graph *flow_graph_create(Context *c, uint32_t max_edges, uint32_t max_nodes, uint32_t max_info_bytes);
+
+struct flow_graph *flow_graph_create(Context *c, uint32_t max_edges, uint32_t max_nodes, uint32_t max_info_bytes, float growth_factor);
 
 void flow_graph_destroy(Context *c, struct flow_graph *target);
 
+bool flow_graph_replace_if_too_small(Context *c,  struct flow_graph ** g, uint32_t free_nodes_required, uint32_t free_edges_required, uint32_t free_bytes_required);
+struct flow_graph *flow_graph_copy_and_resize(Context *c, struct flow_graph * from, uint32_t max_edges, uint32_t max_nodes, uint32_t max_info_bytes);
+
+struct flow_graph *flow_graph_memcpy(Context *c, struct flow_graph * from);
+
+int32_t flow_graph_copy_info_bytes_to(Context *c, struct flow_graph *from, struct flow_graph **to, int32_t byte_index,
+                                      int32_t byte_count);
+
+int32_t flow_edge_duplicate(Context *c, struct flow_graph **g, int32_t edge_id);
 /*
  * flow_Graph
  * flow_Node
@@ -133,9 +139,30 @@ void flow_graph_destroy(Context *c, struct flow_graph *target);
  */
 
 
-int32_t flow_node_create_canvas(Context *c, struct flow_graph *g, int32_t prev_node, BitmapPixelFormat format,
+int32_t flow_node_create_canvas(Context *c, struct flow_graph **g, int32_t prev_node, BitmapPixelFormat format,
                                 size_t width, size_t height, uint32_t bgcolor);
-int32_t flow_node_create_scale(Context *c, struct flow_graph *g, int32_t prev_node, size_t width, size_t height);
+int32_t flow_node_create_scale(Context *c, struct flow_graph **g, int32_t prev_node, size_t width, size_t height);
+
+
+int32_t flow_node_create_resource_placeholder(Context *c, struct flow_graph **g, int32_t prev_node,
+                                              int32_t output_slot_id);
+
+
+int32_t flow_node_create_resource_bitmap_bgra(Context *c, struct flow_graph ** graph_ref, int32_t prev_node, BitmapBgra ** ref);
+
+
+
+bool flow_node_delete(Context *c, struct flow_graph *g, int32_t node_id);
+
+bool flow_edge_delete(Context *c, struct flow_graph *g, int32_t edge_id);
+
+bool flow_edge_delete_all_connected_to_node(Context *c, struct flow_graph *g, int32_t node_id);
+
+bool flow_graph_duplicate_edges_to_another_node(Context *c,  struct flow_graph ** g, int32_t from_node, int32_t to_node);
+
+struct flow_nodeinfo_index {
+    int32_t index;
+};
 
 struct flow_nodeinfo_createcanvas {
     BitmapPixelFormat format;
@@ -144,10 +171,43 @@ struct flow_nodeinfo_createcanvas {
     uint32_t bgcolor;
 };
 
-struct flow_nodeinfo_scale {
+struct flow_nodeinfo_size {
     size_t width;
     size_t height;
 };
+
+
+struct flow_nodeinfo_resource_bitmap_bgra {
+    BitmapBgra ** ref;
+};
+
+
+struct flow_job;
+
+
+typedef enum FLOW_DIRECTION{
+    FLOW_OUTPUT = 8,
+    FLOW_INPUT = 4
+} FLOW_DIRECTION;
+
+struct flow_job * flow_job_create(Context *c);
+void flow_job_destroy(Context *c, struct flow_job * job);
+
+struct flow_graph * flow_job_complete_graph(Context *c, struct flow_job * job, struct flow_graph * graph);
+
+bool flow_job_execute_graph(Context *c, struct flow_job * job, struct flow_graph * graph);
+
+
+struct flow_graph * flow_graph_flatten(Context *c, struct flow_graph * graph, bool free_previous_graph);
+
+int32_t flow_job_add_bitmap_bgra(Context *c, struct flow_job * job, FLOW_DIRECTION dir, int32_t placeholder);
+
+
+
+BitmapBgra * flow_job_get_bitmap_bgra(Context *c, struct flow_job * job, int32_t resource_id);
+
+void flow_graph_print_to(Context *c, struct flow_graph *g, FILE * stream);
+
 
 //Multi-frame/multi-page images are not magically handled.
 //We require one frame graph per frame/page to be created by the client after metadata is parsed for that frame/page.

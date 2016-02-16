@@ -76,6 +76,7 @@ typedef struct _ErrorInfo {
     ErrorCallstackLine callstack[8];
     int callstack_count;
     int callstack_capacity;
+    bool locked;
 } ErrorInfo;
 
 #ifdef EXPOSE_SIGMOID
