@@ -39,8 +39,8 @@ typedef enum flow_ntype {
     flow_ntype_primitive_Decode_Gif,
     flow_ntype_primitive_Metadata_Destination,
 
-
-    flow_ntype_Create_Canvas = 256,
+    flow_ntype_non_primitive_nodes_begin = 256,
+    flow_ntype_Create_Canvas = 4,
     flow_ntype_Crop_Percentage,
     flow_ntype_Crop_Percentage_Infinite_Canvas, //canvas_color
     flow_ntype_Crop_Rectangle,
@@ -78,10 +78,21 @@ typedef enum flow_edge_type {
     flow_edgetype_FORCE_ENUM_SIZE_INT32 = 2147483647
 } flow_edge_type;
 
+
+typedef enum flow_compositing_mode{
+    flow_compositing_mode_overwrite,
+    flow_compositing_mode_compose,
+    flow_compositing_mode_blend_with_matte
+} flow_compositing_mode;
+
 struct flow_edge {
     flow_edge_type type;
     int32_t from;
     int32_t to;
+    int32_t from_width;
+    int32_t from_height;
+    BitmapPixelFormat from_format;
+    bool from_alpha_meaningful;
     int32_t info_byte_index;
     int32_t info_bytes;
 };
@@ -152,13 +163,44 @@ int32_t flow_node_create_resource_bitmap_bgra(Context *c, struct flow_graph ** g
 
 
 
+
+
+int32_t flow_node_create_render_to_canvas_1d(Context *c, struct flow_graph **g, int32_t prev_node,
+                                             bool transpose_on_write,
+                                             uint32_t canvas_x,
+                                             uint32_t canvas_y,
+                                             int32_t scale_to_width,
+                                             WorkingFloatspace scale_and_filter_in_colorspace,
+                                             float sharpen_percent,
+                                             flow_compositing_mode compositing_mode,
+                                             uint8_t *matte_color[4],
+                                             struct flow_scanlines_filter * filter_list,
+                                             InterpolationFilter interpolation_filter);
+
+
+
 bool flow_node_delete(Context *c, struct flow_graph *g, int32_t node_id);
 
 bool flow_edge_delete(Context *c, struct flow_graph *g, int32_t edge_id);
 
 bool flow_edge_delete_all_connected_to_node(Context *c, struct flow_graph *g, int32_t node_id);
 
-bool flow_graph_duplicate_edges_to_another_node(Context *c,  struct flow_graph ** g, int32_t from_node, int32_t to_node);
+int32_t flow_graph_get_inbound_edge_count_of_type(Context *c, struct flow_graph *g, int32_t node_id,
+                                                  flow_edge_type type);
+int32_t flow_graph_get_first_inbound_edge_of_type(Context *c, struct flow_graph *g, int32_t node_id,
+                                                  flow_edge_type type);
+
+bool flow_edge_has_dimensions(Context *c, struct flow_graph *g, int32_t edge_id);
+bool flow_node_input_edges_have_dimensions(Context *c, struct flow_graph *g, int32_t node_id);
+bool flow_graph_duplicate_edges_to_another_node(Context *c, struct flow_graph **g, int32_t from_node, int32_t to_node,
+                                                bool copy_inbound, bool copy_outbound);
+
+int32_t flow_edge_create(Context *c, struct flow_graph **g, int32_t from, int32_t to, flow_edge_type type);
+
+typedef bool (*flow_graph_visitor)(Context *c, struct flow_job * job, struct flow_graph **graph_ref, int32_t id, bool * quit, bool * skip_outbound_paths, void * custom_data);
+
+bool flow_graph_walk(Context *c, struct flow_job * job, struct flow_graph **graph_ref, flow_graph_visitor node_visitor,  flow_graph_visitor edge_visitor, void * custom_data );
+
 
 struct flow_nodeinfo_index {
     int32_t index;
@@ -182,6 +224,28 @@ struct flow_nodeinfo_resource_bitmap_bgra {
 };
 
 
+
+struct flow_nodeinfo_render_to_canvas_1d{
+    //There will need to be consistency checks against the createcanvas node
+
+    InterpolationFilter interpolation_filter;
+    //InterpolationDetails * interpolationDetails;
+    int32_t scale_to_width;
+    uint32_t canvas_x;
+    uint32_t canvas_y;
+    bool transpose_on_write;
+    WorkingFloatspace scale_in_colorspace;
+
+    float sharpen_percent_goal;
+
+    flow_compositing_mode compositing_mode;
+    //When using compositing mode blend_with_matte, this color will be used. We should probably define this as always being sRGBA, 4 bytes.
+    uint8_t matte_color[4];
+
+    struct flow_scanlines_filter * filter_list;
+};
+
+
 struct flow_job;
 
 
@@ -193,12 +257,14 @@ typedef enum FLOW_DIRECTION{
 struct flow_job * flow_job_create(Context *c);
 void flow_job_destroy(Context *c, struct flow_job * job);
 
-struct flow_graph * flow_job_complete_graph(Context *c, struct flow_job * job, struct flow_graph * graph);
+bool flow_job_insert_resources_into_graph(Context *c, struct flow_job *job, struct flow_graph **graph);
 
-bool flow_job_execute_graph(Context *c, struct flow_job * job, struct flow_graph * graph);
+bool flow_job_populate_dimensions_where_certain(Context *c, struct flow_job * job, struct flow_graph **graph_ref);
 
+bool flow_job_execute_where_certain(Context *c, struct flow_job *job, struct flow_graph *graph);
+bool flow_job_graph_fully_executed(Context *c, struct flow_job *job, struct flow_graph *g);
 
-struct flow_graph * flow_graph_flatten(Context *c, struct flow_graph * graph, bool free_previous_graph);
+bool flow_graph_flatten_where_certain(Context *c, struct flow_graph ** graph_ref);
 
 int32_t flow_job_add_bitmap_bgra(Context *c, struct flow_job * job, FLOW_DIRECTION dir, int32_t placeholder);
 
@@ -267,13 +333,6 @@ struct flow_scanlines_filter;
 struct flow_scanlines_filter {
     flow_scanlines_filter_type type;
     struct flow_scanlines_filter *next;
-};
-struct flow_nodeinfo_render_to_canvas_1d {
-    InterpolationDetails * interpolationDetails;
-   // CompositionMode compose;
-    bool transpose_on_write;
-    //Floatspace working_space;
-    struct flow_scanlines_filter filter_list;
 };
 
 

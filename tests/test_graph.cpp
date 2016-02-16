@@ -132,7 +132,7 @@ TEST_CASE("execute tiny graph", "")
 
 
     last = flow_node_create_canvas(c, &g, -1, Bgra32, 400, 300, 0xFFFFFFFF);
-    //last = flow_node_create_scale(c, g, last, 300, 200);
+    last = flow_node_create_scale(c, &g, last, 300, 200);
     last = flow_node_create_resource_placeholder(c, &g, last, 0);
 
 
@@ -143,19 +143,20 @@ TEST_CASE("execute tiny graph", "")
     result_resource_id = flow_job_add_bitmap_bgra(c,job, FLOW_OUTPUT, /* graph placeholder index */ 0);
 
 
-
-
-    g2 = flow_job_complete_graph(c,job,g);
-    ERR(c);
-
-
-
-    g3 = flow_graph_flatten(c,g2, false);
-    ERR(c);
-
-
-    if (!flow_job_execute_graph(c,job,g3)){
+    if (!flow_job_insert_resources_into_graph(c, job, &g)){
         ERR(c);
+    }
+
+    while (!flow_job_graph_fully_executed(c, job, g)) {
+        if (!flow_job_populate_dimensions_where_certain(c,job,&g)){
+            ERR(c);
+        }
+        if (!flow_graph_flatten_where_certain(c,&g)){
+            ERR(c);
+        }
+        if (!flow_job_execute_where_certain(c,job,g)){
+            ERR(c);
+        }
     }
 
     REQUIRE(result_resource_id == 2048);
@@ -165,13 +166,11 @@ TEST_CASE("execute tiny graph", "")
 
 
     REQUIRE(result != NULL);
-    REQUIRE(result->w == 400);
+    REQUIRE(result->w == 300);
 
 
     BitmapBgra_destroy(c,result);
     flow_job_destroy(c,job);
-    flow_graph_destroy(c, g3);
-    flow_graph_destroy(c, g2);
     flow_graph_destroy(c, g);
     Context_destroy(c);
 }

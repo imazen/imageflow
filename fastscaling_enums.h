@@ -37,7 +37,8 @@ ENUM_START (STATUS_CODE_NAME, _StatusCode)
     Edge_already_deleted,
     Graph_could_not_be_completed,
     Not_implemented,
-    Invalid_inputs_to_node
+    Invalid_inputs_to_node,
+    Graph_not_flattened
 
 ENUM_END (STATUS_CODE_NAME)
 
