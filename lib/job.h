@@ -27,7 +27,8 @@ struct flow_job_state {
 };
 
 struct flow_job {
-
+    bool record_graph_versions;
+    int32_t next_graph_version;
     int32_t next_resource_id;
     struct flow_job_resource_item * resources_head;
     struct flow_job_resource_item * resources_tail;
@@ -35,4 +36,4 @@ struct flow_job {
 };
 
 
-static bool flow_job_create_state(Context *c, struct flow_job * job, struct flow_graph * g);
+bool flow_job_create_state(Context *c, struct flow_job * job, struct flow_graph * g);

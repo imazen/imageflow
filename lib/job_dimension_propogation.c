@@ -92,12 +92,15 @@ static bool edge_visitor_populate_outbound_dimensions(Context *c, struct flow_jo
         if (!flow_job_populate_outbound_dimensions_for_edge(c, job, *graph_ref, edge_id)){
             CONTEXT_error_return(c);
         }
+        if (!flow_edge_has_dimensions(c,*graph_ref,edge_id)) {
+            //We couldn't populate this edge, so we sure can't populate others in this direction.
+            // Stop this branch of recursion
+            *skip_outbound_paths = true;
+        }else{
+            flow_job_notify_graph_changed(c,job, *graph_ref);
+        }
     }
-    if (!flow_edge_has_dimensions(c,*graph_ref,edge_id)) {
-        //We couldn't populate this edge, so we sure can't populate others in this direction.
-        // Stop this branch of recursion
-        *skip_outbound_paths = true;
-    }
+
     return true;
 }
 

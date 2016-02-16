@@ -130,6 +130,7 @@ static int32_t flow_node_create_generic(Context *c, struct flow_graph ** graph_r
         g->edges[edge_id].info_byte_index = -1;
         g->edges[edge_id].info_bytes = 0;
     }
+
     return id;
 }
 static void * FrameNode_get_node_info_pointer(struct flow_graph * g, int32_t node_id){
@@ -439,7 +440,7 @@ bool flow_graph_walk(Context *c, struct flow_job * job, struct flow_graph **grap
     int32_t edge_ix;
     int32_t inbound_edge_count = 0;
     for (node_ix = 0; node_ix < (*graph_ref)->next_node_id; node_ix++){
-        if ((*graph_ref)->nodes[node_ix].type != flow_edgetype_null){
+        if ((*graph_ref)->nodes[node_ix].type != flow_ntype_Null){
             //Now count inbound edges
             inbound_edge_count = 0;
             for (edge_ix = 0; edge_ix < (*graph_ref)->next_edge_id; edge_ix++){
@@ -531,4 +532,53 @@ void flow_graph_print_to(Context *c, struct flow_graph *g, FILE * stream){
 
     flow_graph_print_edges_to(c,g,stream);
     flow_graph_print_nodes_to(c,g,stream);
+}
+
+static const char * get_format_name(BitmapPixelFormat f, bool alpha_meaningful){
+    switch(f){
+        case Bgr24: return "Bgr24";
+        case Bgra32: return alpha_meaningful ? "Bgra32" : "Bgr32";
+        default: return "unknown format";
+    }
+}
+
+static const char * get_ntype_name(flow_ntype type){
+    switch(type){
+        case flow_ntype_Null: return "null";
+        case flow_ntype_Create_Canvas: return "create canvas";
+        case flow_ntype_Scale: return "scale";
+        case flow_ntype_primitive_bitmap_bgra_pointer: return "BitmapBgra container";
+        case flow_ntype_primitive_RenderToCanvas1D: return "Render1D";
+        case flow_ntype_Resource_Placeholder: return "resource placeholder";
+        default: return "[stringify not implemented]";
+    }
+}
+
+bool flow_graph_print_to_dot(Context *c, struct flow_graph *g, FILE * stream){
+    fprintf(stream, "digraph g {\n");
+    fprintf(stream, "  node [shape=box]\n");
+
+    struct flow_edge * edge;
+    int32_t i;
+    for (i = 0; i < g->next_edge_id; i++){
+        edge = &g->edges[i];
+
+        if (edge->type != flow_edgetype_null){
+            fprintf(stream, "  n%d -> n%d [label=\"e%d: %dx%d %s%s\"]\n",  edge->from, edge->to, i, edge->from_width, edge->from_height,
+                    get_format_name(edge->from_format, edge->from_alpha_meaningful),
+                    edge->type == flow_edgetype_canvas ? " canvas" : "");
+        }
+    }
+
+    struct flow_node * n;;
+    for (i = 0; i < g->next_node_id; i++){
+        n = &g->nodes[i];
+
+        if (n->type != flow_ntype_Null){
+            fprintf(stream, "  n%d [label=\"n%d: %s\"]\n", i, i, get_ntype_name(n->type)); //Todo, add completion info.
+        }
+    }
+
+    fprintf(stream, "}\n");
+    return true;
 }

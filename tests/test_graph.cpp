@@ -140,6 +140,9 @@ TEST_CASE("execute tiny graph", "")
     job = flow_job_create(c);
     ERR(c);
 
+    flow_job_notify_graph_changed(c,job, g);
+
+
     result_resource_id = flow_job_add_bitmap_bgra(c,job, FLOW_OUTPUT, /* graph placeholder index */ 0);
 
 
@@ -147,16 +150,21 @@ TEST_CASE("execute tiny graph", "")
         ERR(c);
     }
 
+    int32_t passes = 0;
     while (!flow_job_graph_fully_executed(c, job, g)) {
+        REQUIRE(passes < 5);
         if (!flow_job_populate_dimensions_where_certain(c,job,&g)){
             ERR(c);
         }
         if (!flow_graph_flatten_where_certain(c,&g)){
             ERR(c);
         }
-        if (!flow_job_execute_where_certain(c,job,g)){
+        flow_job_notify_graph_changed(c,job, g);
+
+        if (!flow_job_execute_where_certain(c,job,&g)){
             ERR(c);
         }
+        passes++;
     }
 
     REQUIRE(result_resource_id == 2048);

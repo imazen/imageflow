@@ -75,6 +75,7 @@ static struct flow_graph *flow_job_insert_resources_into_graph_with_reuse(Contex
                 }
                 //flow_graph_print_to(c, g, stderr);
                 match_count++;
+                flow_job_notify_graph_changed(c,job, g);
             }
         }while(next_match >= 0);
 

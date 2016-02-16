@@ -85,6 +85,28 @@ typedef enum flow_compositing_mode{
     flow_compositing_mode_blend_with_matte
 } flow_compositing_mode;
 
+
+struct flow_job;
+
+
+typedef enum flow_scanlines_filter_type {
+    flow_scanlines_filter_Sharpen, //3x3, percentage-based
+    flow_scanlines_filter_Blur, //3x box blur to simulate guassian
+    flow_scanlines_filter_Convolve, //Apply convolution kernel
+    flow_scanlines_filter_ColorMatrix, //Apply color matrix
+    flow_scanlines_filter_ToLinear,
+    flow_scanlines_filter_ToSrgb,
+    flow_scanlines_filter_Custom, //Execute custom callback.,
+    flow_scanlines_filter__FORCE_ENUM_SIZE_INT32 = 2147483647
+} flow_scanlines_filter_type;
+
+struct flow_scanlines_filter;
+
+struct flow_scanlines_filter {
+    flow_scanlines_filter_type type;
+    struct flow_scanlines_filter *next;
+};
+
 struct flow_edge {
     flow_edge_type type;
     int32_t from;
@@ -246,8 +268,6 @@ struct flow_nodeinfo_render_to_canvas_1d{
 };
 
 
-struct flow_job;
-
 
 typedef enum FLOW_DIRECTION{
     FLOW_OUTPUT = 8,
@@ -261,12 +281,17 @@ bool flow_job_insert_resources_into_graph(Context *c, struct flow_job *job, stru
 
 bool flow_job_populate_dimensions_where_certain(Context *c, struct flow_job * job, struct flow_graph **graph_ref);
 
-bool flow_job_execute_where_certain(Context *c, struct flow_job *job, struct flow_graph *graph);
+bool flow_job_execute_where_certain(Context *c, struct flow_job *job, struct flow_graph **graph_ref);
 bool flow_job_graph_fully_executed(Context *c, struct flow_job *job, struct flow_graph *g);
+
+bool flow_job_notify_graph_changed(Context *c, struct flow_job *job, struct flow_graph * g);
+
 
 bool flow_graph_flatten_where_certain(Context *c, struct flow_graph ** graph_ref);
 
 int32_t flow_job_add_bitmap_bgra(Context *c, struct flow_job * job, FLOW_DIRECTION dir, int32_t placeholder);
+
+bool flow_graph_print_to_dot(Context *c, struct flow_graph *g, FILE * stream);
 
 
 
@@ -317,23 +342,6 @@ void flow_graph_print_to(Context *c, struct flow_graph *g, FILE * stream);
 // PerFrameFlow - contains subgraph, which has an FrameOutput endpoint.
 
 
-typedef enum flow_scanlines_filter_type {
-    flow_scanlines_filter_Sharpen, //3x3, percentage-based
-    flow_scanlines_filter_Blur, //3x box blur to simulate guassian
-    flow_scanlines_filter_Convolve, //Apply convolution kernel
-    flow_scanlines_filter_ColorMatrix, //Apply color matrix
-    flow_scanlines_filter_ToLinear,
-    flow_scanlines_filter_ToSrgb,
-    flow_scanlines_filter_Custom, //Execute custom callback.,
-    flow_scanlines_filter__FORCE_ENUM_SIZE_INT32 = 2147483647
-} flow_scanlines_filter_type;
-
-struct flow_scanlines_filter;
-
-struct flow_scanlines_filter {
-    flow_scanlines_filter_type type;
-    struct flow_scanlines_filter *next;
-};
 
 
 //Pick frame

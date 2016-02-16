@@ -4,6 +4,8 @@ struct flow_job * flow_job_create(Context *c){
 
     struct flow_job * job = (struct flow_job *) CONTEXT_malloc(c, sizeof(struct flow_job));
 
+    job->record_graph_versions = true;
+    job->next_graph_version = 0;
     job->next_resource_id = 0x800;
     job->resources_head = NULL;
     job->job_state.node_completed = NULL;
@@ -24,7 +26,7 @@ static void flow_job_state_destroy(Context *c, struct flow_job * job) {
 }
 
 
-static bool flow_job_create_state(Context *c, struct flow_job * job, struct flow_graph * g) {
+bool flow_job_create_state(Context *c, struct flow_job * job, struct flow_graph * g) {
     flow_job_state_destroy(c,job);
     job->job_state.node_completed = (bool *) CONTEXT_malloc(c, sizeof(bool) * g->max_nodes);
     if (job->job_state.node_completed == NULL) {
@@ -98,4 +100,72 @@ BitmapBgra * flow_job_get_bitmap_bgra(Context *c, struct flow_job * job, int32_t
     return (BitmapBgra *)r->data;
 }
 
+static bool files_identical(Context *c, const char * path1, const char* path2, bool * identical){
+    FILE * fp1 = fopen(path1, "r");
+    if (fp1 == NULL){
+        CONTEXT_error(c, Failed_to_open_file); 
+        return false;
+    }
+    FILE * fp2 = fopen(path2, "r");
+    if (fp2 == NULL){
+        CONTEXT_error(c, Failed_to_open_file); 
+        fclose(fp1);
+        return false;
+    }
+    int ch1 = getc(fp1);
+    int ch2 = getc(fp2);
 
+    while ((ch1 != EOF) && (ch2 != EOF) && (ch1 == ch2)) {
+        ch1 = getc(fp1);
+        ch2 = getc(fp2);
+    }
+
+    *identical = (ch1 == ch2);
+    fclose(fp1);
+    fclose(fp2);
+    return true;
+}
+#define FLOW_MAX_GRAPH_VERSIONS 50
+
+bool flow_job_notify_graph_changed(Context *c, struct flow_job *job, struct flow_graph * g){
+    if (job == NULL || !job->record_graph_versions || job->next_graph_version > FLOW_MAX_GRAPH_VERSIONS) return true;
+
+    char filename[255];
+    char prev_filename[255];
+
+    if (job->next_graph_version == 0){
+        //Delete existing graphs
+        int32_t i =0; 
+        for (i = 0; i <= FLOW_MAX_GRAPH_VERSIONS; i++){
+            snprintf(filename, 254,"graph_version_%d.dot", i);
+            remove(filename);
+        }
+    }
+
+    snprintf(filename, 254,"graph_version_%d.dot", job->next_graph_version++);
+
+    FILE * f = fopen(filename,"w");
+    if (f == NULL){
+        CONTEXT_error(c, Failed_to_open_file); 
+        return false;
+    }
+    if (!flow_graph_print_to_dot(c,g,f)){
+        fclose(f);
+        CONTEXT_error_return(c);
+    }else {
+        fclose(f);
+    }
+    //Compare
+    if (job->next_graph_version > 1){
+        snprintf(prev_filename, 254,"graph_version_%d.dot", job->next_graph_version-1);
+        bool identical = false;
+        if (!files_identical(c, prev_filename, filename, &identical)){
+            CONTEXT_error_return(c);
+        }
+        if (identical){
+            job->next_graph_version--; //Next time we will overwrite the duplicate graph. The last two graphs may remain dupes.
+        }
+    } 
+
+    return true;
+}

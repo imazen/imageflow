@@ -3,7 +3,7 @@
 
 
 static bool flow_job_node_is_completed(Context * c, struct flow_job * job,  struct flow_graph * g, int32_t node_id) {
-    return job->job_state.node_completed[node_id];
+    return job->job_state.node_completed != NULL && job->job_state.node_completed[node_id];
 }
 bool flow_job_graph_fully_executed(Context *c, struct flow_job *job, struct flow_graph *g){
     int32_t i;
@@ -104,6 +104,9 @@ static bool node_visitor_execute(Context *c, struct flow_job *job, struct flow_g
     if (!flow_job_node_is_completed(c,job,*graph_ref,node_id)){
         //If we couldn't complete this node yet, end this branch.
         *skip_outbound_paths = true;
+    }else{
+         flow_job_notify_graph_changed(c,job, *graph_ref);
+
     }
     return true;
 }
