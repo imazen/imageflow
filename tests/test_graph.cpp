@@ -149,6 +149,9 @@ TEST_CASE("execute tiny graph", "")
     if (!flow_job_insert_resources_into_graph(c, job, &g)){
         ERR(c);
     }
+    REQUIRE(g->edges[2].from == 1);
+    REQUIRE(g->edges[2].to == 3);
+
 
     int32_t passes = 0;
     while (!flow_job_graph_fully_executed(c, job, g)) {

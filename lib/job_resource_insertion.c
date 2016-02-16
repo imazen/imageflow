@@ -66,7 +66,7 @@ static struct flow_graph *flow_job_insert_resources_into_graph_with_reuse(Contex
                     CONTEXT_error_return(c);
                 }
                 //flow_graph_print_to(c, g, stderr);
-                if (!flow_graph_duplicate_edges_to_another_node(c, &g, next_match, replacement_node_id, false, false)) {
+                if (!flow_graph_duplicate_edges_to_another_node(c, &g, next_match, replacement_node_id, true, true)) {
                     CONTEXT_error_return(c);
                 }
                 //flow_graph_print_to(c, g, stderr);
