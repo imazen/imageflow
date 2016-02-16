@@ -159,19 +159,19 @@ TEST_CASE("execute tiny graph", "")
     }
 
     REQUIRE(result_resource_id == 2048);
-    //result = flow_job_get_bitmap_bgra(c, job, result_resource_id);
+    result = flow_job_get_bitmap_bgra(c, job, result_resource_id);
 
     ERR(c);
 
 
-    //REQUIRE(result != NULL);
-    //REQUIRE(result->w == 400);
+    REQUIRE(result != NULL);
+    REQUIRE(result->w == 400);
 
 
- //   BitmapBgra_destroy(c,result);
-//    flow_job_destroy(c,job);
-//    flow_graph_destroy(c, g3);
-//    flow_graph_destroy(c, g2);
-//    flow_graph_destroy(c, g);
+    BitmapBgra_destroy(c,result);
+    flow_job_destroy(c,job);
+    flow_graph_destroy(c, g3);
+    flow_graph_destroy(c, g2);
+    flow_graph_destroy(c, g);
     Context_destroy(c);
 }

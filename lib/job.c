@@ -370,7 +370,14 @@ bool flow_job_execute_graph(Context *c, struct flow_job * job, struct flow_graph
 
 
 struct flow_graph * flow_graph_flatten(Context *c, struct flow_graph * graph, bool free_previous_graph){
-    return graph;
+    struct flow_graph * new_graph = flow_graph_memcpy(c,graph);
+    if (new_graph == NULL) {
+        CONTEXT_add_to_callstack(c);
+    }
+    if (free_previous_graph){
+        flow_graph_destroy(c,graph);
+    }
+    return new_graph;
 }
 
 static int32_t flow_job_add_resource(Context *c, struct flow_job * job, FLOW_DIRECTION dir, int32_t graph_placeholder_id, flow_job_resource_type type, void * data){
