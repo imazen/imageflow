@@ -16,13 +16,14 @@ static bool flow_job_calculate_render1d_dimensions(Context * c, struct flow_node
     return true;
 }
 static bool flow_job_calculate_dimensions(Context * c, struct flow_node * node, uint8_t * nodeinfo, struct flow_edge * input, struct flow_edge * output){
-    if (node->type == flow_ntype_Scale){
-        struct flow_nodeinfo_size * size = (struct flow_nodeinfo_size *) nodeinfo;
+    if (node->type == flow_ntype_Scale) {
+        struct flow_nodeinfo_size *size = (struct flow_nodeinfo_size *) nodeinfo;
         output->from_width = size->width;
         output->from_height = size->height;
         output->from_alpha_meaningful = input->from_alpha_meaningful;
         output->from_format = input->from_format;
     }else{
+        printf("Dimension calculation not implemented for %d", node->type);
         CONTEXT_error(c, Not_implemented);
         return false;
     }
@@ -48,6 +49,7 @@ static bool flow_job_populate_outbound_dimensions_for_edge(Context *c, struct fl
         if (!flow_job_calculate_canvas_dimensions(c,node,nodebytes, edge)){
             CONTEXT_error_return(c);
         }
+        return true;
     }
     int32_t input_edge_id = flow_graph_get_first_inbound_edge_of_type(c,g,node_id, flow_edgetype_input);
     struct flow_edge * input_edge = &g->edges[input_edge_id];
@@ -60,10 +62,12 @@ static bool flow_job_populate_outbound_dimensions_for_edge(Context *c, struct fl
         if (!flow_job_calculate_render1d_dimensions(c,node,nodebytes, input_edge, &g->edges[canvas], edge)){
             CONTEXT_error_return(c);
         }
+        return true;
     }else{
         if (!flow_job_calculate_dimensions(c,node, nodebytes,input_edge, edge)){
             CONTEXT_error_return(c);
         }
+        return true;
     }
     return true;
 }

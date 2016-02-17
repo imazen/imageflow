@@ -27,6 +27,7 @@ typedef enum flow_ntype {
     flow_ntype_primitive_Crop = 2, //Creates a new window into an existing frame -
     flow_ntype_primitive_CopyRectToCanvas = 3, //Overwrite only, no compositing
     flow_ntype_primitive_CreateCanvas = 4, //blank, or with background color
+    flow_ntype_Create_Canvas = 4,
     flow_ntype_primitive_RenderToCanvas1D = 5,
     flow_ntype_primitive_Halving = 6,
 
@@ -40,7 +41,6 @@ typedef enum flow_ntype {
     flow_ntype_primitive_Metadata_Destination,
 
     flow_ntype_non_primitive_nodes_begin = 256,
-    flow_ntype_Create_Canvas = 4,
     flow_ntype_Crop_Percentage,
     flow_ntype_Crop_Percentage_Infinite_Canvas, //canvas_color
     flow_ntype_Crop_Rectangle,
@@ -123,6 +123,8 @@ struct flow_node {
     flow_ntype type;
     int32_t info_byte_index;
     int32_t info_bytes;
+    bool executed;
+    BitmapBgra * result_bitmap;
 } ;
 
 
@@ -224,6 +226,7 @@ typedef bool (*flow_graph_visitor)(Context *c, struct flow_job * job, struct flo
 bool flow_graph_walk(Context *c, struct flow_job * job, struct flow_graph **graph_ref, flow_graph_visitor node_visitor,  flow_graph_visitor edge_visitor, void * custom_data );
 
 
+
 struct flow_nodeinfo_index {
     int32_t index;
 };
@@ -267,6 +270,7 @@ struct flow_nodeinfo_render_to_canvas_1d{
     struct flow_scanlines_filter * filter_list;
 };
 
+bool flow_node_execute_render_to_canvas_1d(Context *c, struct flow_job * job, BitmapBgra * input, BitmapBgra * canvas, struct flow_nodeinfo_render_to_canvas_1d * info);
 
 
 typedef enum FLOW_DIRECTION{

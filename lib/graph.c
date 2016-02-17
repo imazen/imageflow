@@ -88,6 +88,7 @@ static int32_t flow_nodeinfo_size(Context *c, flow_ntype type){
         case flow_ntype_Scale: return sizeof(struct flow_nodeinfo_size);
         case flow_ntype_Resource_Placeholder: return sizeof(struct flow_nodeinfo_index);
         case flow_ntype_primitive_bitmap_bgra_pointer: return sizeof(struct flow_nodeinfo_resource_bitmap_bgra);
+        case flow_ntype_primitive_RenderToCanvas1D: return sizeof(struct flow_nodeinfo_render_to_canvas_1d);
         default:
 
             CONTEXT_error(c, Invalid_argument);
@@ -117,6 +118,8 @@ static int32_t flow_node_create_generic(Context *c, struct flow_graph ** graph_r
     g->nodes[id].type = type;
     g->nodes[id].info_byte_index = g->next_info_byte;
     g->nodes[id].info_bytes = nodeinfo_size;
+    g->nodes[id].executed = false;
+    g->nodes[id].result_bitmap = NULL;
 
     g->next_info_byte += g->nodes[id].info_bytes;
     g->next_node_id += 1;
@@ -395,7 +398,9 @@ bool flow_node_delete(Context *c, struct flow_graph *g, int32_t node_id){
 static bool flow_graph_walk_recursive(Context *c, struct flow_job * job, struct flow_graph **graph_ref, int32_t node_id, bool * quit, flow_graph_visitor node_visitor,flow_graph_visitor edge_visitor, void * custom_data){
     bool skip_outbound_paths = false;
     if (node_visitor != NULL){
-        node_visitor(c,job,graph_ref,node_id, quit, &skip_outbound_paths, custom_data);
+        if (!node_visitor(c,job,graph_ref,node_id, quit, &skip_outbound_paths, custom_data)){
+            CONTEXT_error_return(c);
+        }
     }
     if (skip_outbound_paths || *quit) {
         return true;
@@ -409,7 +414,9 @@ static bool flow_graph_walk_recursive(Context *c, struct flow_job * job, struct 
 
             skip_outbound_paths = false;
             if (edge_visitor != NULL) {
-                edge_visitor(c,job,graph_ref,edge_ix, quit, &skip_outbound_paths, custom_data);
+                if (!edge_visitor(c,job,graph_ref,edge_ix, quit, &skip_outbound_paths, custom_data)){
+                    CONTEXT_error_return(c);
+                }
             }
             if (*quit) {
                 return true;
@@ -502,7 +509,7 @@ int32_t flow_graph_get_first_inbound_edge_of_type(Context *c, struct flow_graph 
         edge = &g->edges[i];
         if (edge->type == type){
             if (edge->to == node_id) {
-                return edge->from;
+               return i;
             }
         }
     }
@@ -575,7 +582,7 @@ bool flow_graph_print_to_dot(Context *c, struct flow_graph *g, FILE * stream){
         n = &g->nodes[i];
 
         if (n->type != flow_ntype_Null){
-            fprintf(stream, "  n%d [label=\"n%d: %s\"]\n", i, i, get_ntype_name(n->type)); //Todo, add completion info.
+            fprintf(stream, "  n%d [label=\"n%d: %s%s\"]\n", i, i, get_ntype_name(n->type), n->executed ? " [done]" : ""); //Todo, add completion info.
         }
     }
 

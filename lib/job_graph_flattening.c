@@ -1,14 +1,14 @@
 #include "job.h"
 
 static bool flow_graph_flatten_node_scale(Context * c, struct flow_graph **g, int32_t node_id, int32_t * first_replacement_node, int32_t * last_replacement_node){
-    struct flow_nodeinfo_size * size = (struct flow_nodeinfo_size *) &(*g)->info_bytes[(*g)->nodes[node_id].info_bytes];
+    struct flow_nodeinfo_size * size = (struct flow_nodeinfo_size *) &(*g)->info_bytes[(*g)->nodes[node_id].info_byte_index];
 
     int32_t input_id = flow_graph_get_first_inbound_edge_of_type(c,*g,node_id, flow_edgetype_input);
     struct flow_edge * input_edge = &(*g)->edges[input_id];
 
 
     //create canvas for render1d
-    int32_t canvas_a = flow_node_create_canvas(c,g,-1,input_edge->from_format,size->width, input_edge->from_height,0);
+    int32_t canvas_a = flow_node_create_canvas(c,g,-1,input_edge->from_format,input_edge->from_height, size->width,0);
     if (canvas_a < 0){
         CONTEXT_error_return(c);
     }
@@ -103,8 +103,9 @@ bool flow_graph_flatten_where_certain(Context *c, struct flow_graph ** graph_ref
         CONTEXT_error(c,Null_argument);
         return false;
     }
-    bool re_walk = false;
+    bool re_walk;
     do {
+        re_walk = false;
         if (!flow_graph_walk(c, NULL, graph_ref, node_visitor_flatten, NULL, &re_walk)) {
             CONTEXT_error_return(c);
         }

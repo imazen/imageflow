@@ -8,47 +8,47 @@ struct flow_job * flow_job_create(Context *c){
     job->next_graph_version = 0;
     job->next_resource_id = 0x800;
     job->resources_head = NULL;
-    job->job_state.node_completed = NULL;
-    job->job_state.node_bitmap = NULL;
+//    job->job_state.node_completed = NULL;
+//    job->job_state.node_bitmap = NULL;
     return job;
 }
-
-static void flow_job_state_destroy(Context *c, struct flow_job * job) {
-    if (job->job_state.node_bitmap != NULL) {
-        //TOOD: dispose of the owned bitmaps;
-        CONTEXT_free(c, job->job_state.node_bitmap);
-        job->job_state.node_bitmap = NULL;
-    }
-    if (job->job_state.node_completed != NULL) {
-        CONTEXT_free(c, job->job_state.node_completed);
-        job->job_state.node_completed = NULL;
-    }
-}
-
-
-bool flow_job_create_state(Context *c, struct flow_job * job, struct flow_graph * g) {
-    flow_job_state_destroy(c,job);
-    job->job_state.node_completed = (bool *) CONTEXT_malloc(c, sizeof(bool) * g->max_nodes);
-    if (job->job_state.node_completed == NULL) {
-        CONTEXT_error(c, Out_of_memory);
-        return false;
-    }
-
-    job->job_state.node_bitmap = (BitmapBgra **) CONTEXT_malloc(c, sizeof(BitmapBgra *) * g->max_nodes);
-    if (job->job_state.node_bitmap == NULL) {
-        CONTEXT_error(c, Out_of_memory);
-        return false;
-    }
-    for (int i = 0; i < g->max_nodes; i++) {
-        job->job_state.node_bitmap[i] = NULL;
-        job->job_state.node_completed[i] = false;
-    }
-    return true;
-}
+//
+//static void flow_job_state_destroy(Context *c, struct flow_job * job) {
+//    if (job->job_state.node_bitmap != NULL) {
+//        //TOOD: dispose of the owned bitmaps;
+//        CONTEXT_free(c, job->job_state.node_bitmap);
+//        job->job_state.node_bitmap = NULL;
+//    }
+//    if (job->job_state.node_completed != NULL) {
+//        CONTEXT_free(c, job->job_state.node_completed);
+//        job->job_state.node_completed = NULL;
+//    }
+//}
+//
+//
+//bool flow_job_create_state(Context *c, struct flow_job * job, struct flow_graph * g) {
+//    flow_job_state_destroy(c,job);
+//    job->job_state.node_completed = (bool *) CONTEXT_malloc(c, sizeof(bool) * g->max_nodes);
+//    if (job->job_state.node_completed == NULL) {
+//        CONTEXT_error(c, Out_of_memory);
+//        return false;
+//    }
+//
+//    job->job_state.node_bitmap = (BitmapBgra **) CONTEXT_malloc(c, sizeof(BitmapBgra *) * g->max_nodes);
+//    if (job->job_state.node_bitmap == NULL) {
+//        CONTEXT_error(c, Out_of_memory);
+//        return false;
+//    }
+//    for (int i = 0; i < g->max_nodes; i++) {
+//        job->job_state.node_bitmap[i] = NULL;
+//        job->job_state.node_completed[i] = false;
+//    }
+//    return true;
+//}
 
 void flow_job_destroy(Context *c, struct flow_job * job){
     //TODO: Free all the resources
-    flow_job_state_destroy(c,job);
+    //    flow_job_state_destroy(c,job);
     CONTEXT_free(c, job);
 }
 
@@ -157,7 +157,7 @@ bool flow_job_notify_graph_changed(Context *c, struct flow_job *job, struct flow
     }
     //Compare
     if (job->next_graph_version > 1){
-        snprintf(prev_filename, 254,"graph_version_%d.dot", job->next_graph_version-1);
+        snprintf(prev_filename, 254,"graph_version_%d.dot", job->next_graph_version-2);
         bool identical = false;
         if (!files_identical(c, prev_filename, filename, &identical)){
             CONTEXT_error_return(c);

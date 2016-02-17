@@ -32,7 +32,7 @@ struct flow_job {
     int32_t next_resource_id;
     struct flow_job_resource_item * resources_head;
     struct flow_job_resource_item * resources_tail;
-    struct flow_job_state job_state;
+    //struct flow_job_state job_state;
 };
 
 

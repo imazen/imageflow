@@ -539,7 +539,6 @@ static bool RenderWrapper1D(
     // p->Stop(name, true, true);
     //}
 }
-
 bool Renderer_perform_render(Context * context, Renderer * r)
 {
     prof_start(context,"perform_render", false);
