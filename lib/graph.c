@@ -125,6 +125,7 @@ static int32_t flow_node_create_generic(Context *c, struct flow_graph ** graph_r
     g->next_node_id += 1;
     g->node_count += 1;
     if (prev_node >= 0){
+        //TODO - call create_edge??
         g->edge_count += 1;
         g->next_edge_id += 1;
         g->edges[edge_id].from = prev_node;
@@ -132,6 +133,10 @@ static int32_t flow_node_create_generic(Context *c, struct flow_graph ** graph_r
         g->edges[edge_id].type = flow_edgetype_input;
         g->edges[edge_id].info_byte_index = -1;
         g->edges[edge_id].info_bytes = 0;
+        g->edges[edge_id].from_width = -1;
+        g->edges[edge_id].from_height = -1;
+        g->edges[edge_id].from_alpha_meaningful = false;
+        g->edges[edge_id].from_format = Bgra32;
     }
 
     return id;
