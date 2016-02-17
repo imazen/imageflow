@@ -96,10 +96,18 @@ static bool stringify_bitmap_bgra_pointer(Context *c, struct flow_graph *g, int3
     return true;
 }
 
+static bool stringify_decode_png(Context *c, struct flow_graph *g, int32_t node_id, char * buffer, size_t buffer_size){
+    FLOW_GET_INFOBYTES(g,node_id, flow_nodeinfo_decode_png, info);
+
+    //TODO
+    snprintf(buffer, buffer_size, "decode png %lux%lu%s", info->width, info->height, g->nodes[node_id].executed ? " [done]" : "");
+    return true;
+}
 
 
 
-static bool dimensions_scale(Context *c, struct flow_graph *g, int32_t node_id, int32_t outbound_edge_id){
+
+static bool dimensions_scale(Context *c, struct flow_graph *g, int32_t node_id, int32_t outbound_edge_id, bool force_estimate){
     FLOW_GET_INFOBYTES(g,node_id, flow_nodeinfo_size, info)
     FLOW_GET_INPUT_EDGE(g,node_id)
 
@@ -112,7 +120,7 @@ static bool dimensions_scale(Context *c, struct flow_graph *g, int32_t node_id, 
     return true;
 }
 
-static bool dimensions_canvas(Context *c, struct flow_graph *g, int32_t node_id, int32_t outbound_edge_id){
+static bool dimensions_canvas(Context *c, struct flow_graph *g, int32_t node_id, int32_t outbound_edge_id, bool force_estimate){
     FLOW_GET_INFOBYTES(g,node_id, flow_nodeinfo_createcanvas, info)
 
     struct flow_edge * output = &g->edges[outbound_edge_id];
@@ -123,7 +131,7 @@ static bool dimensions_canvas(Context *c, struct flow_graph *g, int32_t node_id,
     output->from_format = info->format;
     return true;
 }
-static bool dimensions_render1d(Context *c, struct flow_graph *g, int32_t node_id, int32_t outbound_edge_id){
+static bool dimensions_render1d(Context *c, struct flow_graph *g, int32_t node_id, int32_t outbound_edge_id, bool force_estimate){
     //FLOW_GET_INFOBYTES(g,node_id, flow_nodeinfo_size, info)
     FLOW_GET_CANVAS_EDGE(g,node_id)
 
@@ -136,6 +144,17 @@ static bool dimensions_render1d(Context *c, struct flow_graph *g, int32_t node_i
     return true;
 }
 
+static bool dimensions_decode_png(Context *c, struct flow_graph *g, int32_t node_id, int32_t outbound_edge_id, bool force_estimate){
+    FLOW_GET_INFOBYTES(g,node_id, flow_nodeinfo_decode_png, info)
+
+    struct flow_edge * output = &g->edges[outbound_edge_id];
+
+    output->from_width = info->width;
+    output->from_height = info->height;
+    output->from_alpha_meaningful = true;
+    output->from_format = Bgra32;
+    return true;
+}
 
 static bool flattenshort_scale(Context *c, struct flow_graph **g, int32_t node_id, struct flow_node * node, struct flow_edge * input_edge, int32_t * first_replacement_node, int32_t * last_replacement_node){
     FLOW_GET_INFOBYTES((*g),node_id, flow_nodeinfo_size, size)
@@ -214,6 +233,20 @@ static bool execute_render1d(Context *c, struct flow_job * job, struct flow_grap
     return true;
 }
 
+static bool execute_decode_png(Context *c, struct flow_job * job, struct flow_graph * g, int32_t node_id){
+    FLOW_GET_INFOBYTES(g,node_id, flow_nodeinfo_decode_png, info)
+
+    struct flow_node * n = &g->nodes[node_id];
+    //TODO: bgcolor
+    n->result_bitmap = BitmapBgra_create(c, info->width, info->height, true, Bgra32);
+    if ( n->result_bitmap == NULL){
+        CONTEXT_error_return(c);
+    }
+    n->executed = true;
+    return true;
+}
+
+
 
 struct flow_node_definition flow_node_defs[] = {
         {
@@ -271,6 +304,17 @@ struct flow_node_definition flow_node_defs[] = {
                 .populate_dimensions = dimensions_render1d,
                 .execute = execute_render1d
 
+
+        },
+        {
+                .type = flow_ntype_primitive_Decode_Png,
+                .nodeinfo_bytes_fixed = sizeof(struct flow_nodeinfo_decode_png),
+                .type_name = "decode png",
+                .input_count = 0,
+                .canvas_count = 0, //?
+                .stringify = stringify_decode_png,
+                .populate_dimensions = dimensions_decode_png,
+                .execute = execute_decode_png,
 
         },
         {
@@ -358,7 +402,7 @@ bool flow_node_validate_inputs(Context *c, struct flow_graph *g, int32_t node_id
     }
     return true;
 }
-bool flow_node_populate_dimensions_to_edge(Context *c, struct flow_graph *g, int32_t node_id, int32_t outbound_edge_id){
+bool flow_node_populate_dimensions_to_edge(Context *c, struct flow_graph *g, int32_t node_id, int32_t outbound_edge_id, bool force_estimate){
     if (!flow_node_validate_inputs(c,g,node_id)){
         CONTEXT_error_return(c);
     }
@@ -371,7 +415,7 @@ bool flow_node_populate_dimensions_to_edge(Context *c, struct flow_graph *g, int
         CONTEXT_error(c,Not_implemented);
         return false;
     }else{
-        def->populate_dimensions(c,g,node_id,outbound_edge_id);
+        def->populate_dimensions(c,g,node_id,outbound_edge_id, force_estimate);
     }
     return true;
 }
@@ -432,4 +476,8 @@ bool flow_node_execute(Context *c, struct flow_job * job, struct flow_graph *g, 
         def->execute(c,job, g,node_id);
     }
     return true;
+}
+bool flow_node_estimate_execution_cost(Context *c, struct flow_graph *g, int32_t node_id, size_t * bytes_required, size_t * cpu_cost){
+    CONTEXT_error(c, Not_implemented);
+    return false;
 }

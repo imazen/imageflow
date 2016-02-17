@@ -248,6 +248,11 @@ struct flow_nodeinfo_resource_bitmap_bgra {
     BitmapBgra ** ref;
 };
 
+struct flow_nodeinfo_decode_png{
+    size_t width;
+    size_t height;
+
+};
 
 
 struct flow_nodeinfo_render_to_canvas_1d{
@@ -284,7 +289,8 @@ void flow_job_destroy(Context *c, struct flow_job * job);
 bool flow_job_insert_resources_into_graph(Context *c, struct flow_job *job, struct flow_graph **graph);
 
 bool flow_job_populate_dimensions_where_certain(Context *c, struct flow_job * job, struct flow_graph **graph_ref);
-
+//For doing execution cost estimates, we force estimate, then flatten, then calculate cost
+bool flow_job_force_populate_dimensions(Context *c, struct flow_job * job, struct flow_graph **graph_ref);
 bool flow_job_execute_where_certain(Context *c, struct flow_job *job, struct flow_graph **graph_ref);
 bool flow_job_graph_fully_executed(Context *c, struct flow_job *job, struct flow_graph *g);
 

@@ -1,15 +1,12 @@
 #include "job.h"
 #include "graph.h"
 
-static bool flow_job_populate_outbound_dimensions_for_edge(Context *c, struct flow_job * job, struct flow_graph *g, int32_t outbound_edge_id){
+static bool flow_job_populate_outbound_dimensions_for_edge(Context *c, struct flow_job * job, struct flow_graph *g, int32_t outbound_edge_id, bool force_estimate){
 
 
     struct flow_edge * edge = &g->edges[outbound_edge_id];
 
-    if (!flow_node_validate_inputs(c,g, edge->from)){
-        CONTEXT_error_return(c);
-    }
-    if (!flow_node_populate_dimensions_to_edge(c,g,edge->from, outbound_edge_id)){
+    if (!flow_node_populate_dimensions_to_edge(c,g,edge->from, outbound_edge_id, force_estimate)){
         CONTEXT_error_return(c);
     }
     return true;
@@ -36,7 +33,7 @@ static bool edge_visitor_populate_outbound_dimensions(Context *c, struct flow_jo
                                                       void *custom_data){
     //Only populate if empty
     if (!flow_edge_has_dimensions(c,*graph_ref,edge_id)) {
-        if (!flow_job_populate_outbound_dimensions_for_edge(c, job, *graph_ref, edge_id)){
+        if (!flow_job_populate_outbound_dimensions_for_edge(c, job, *graph_ref, edge_id, (bool)custom_data)){
             CONTEXT_error_return(c);
         }
         if (!flow_edge_has_dimensions(c,*graph_ref,edge_id)) {
@@ -53,7 +50,15 @@ static bool edge_visitor_populate_outbound_dimensions(Context *c, struct flow_jo
 
 bool flow_job_populate_dimensions_where_certain(Context *c, struct flow_job * job, struct flow_graph **graph_ref ){
     //TODO: would be good to verify graph is acyclic.
-    if (!flow_graph_walk(c, job, graph_ref, NULL, edge_visitor_populate_outbound_dimensions, NULL)){
+    if (!flow_graph_walk(c, job, graph_ref, NULL, edge_visitor_populate_outbound_dimensions, (void*)false)){
+        CONTEXT_error_return(c);
+    }
+    return true;
+}
+
+bool flow_job_force_populate_dimensions(Context *c, struct flow_job * job, struct flow_graph **graph_ref ){
+    //TODO: would be good to verify graph is acyclic.
+    if (!flow_graph_walk(c, job, graph_ref, NULL, edge_visitor_populate_outbound_dimensions, (void *)true)){
         CONTEXT_error_return(c);
     }
     return true;
