@@ -1,5 +1,5 @@
 #include "job.h"
-
+#include "graph.h"
 
 
 static bool flow_job_node_is_completed(Context * c, struct flow_job * job,  struct flow_graph * g, int32_t node_id) {
@@ -47,82 +47,12 @@ static bool flow_job_node_is_ready_for_execution(Context *c, struct flow_job *jo
 }
 
 
-
-
-static bool flow_job_complete_node(Context *c, struct flow_job * job, struct flow_graph * g, int32_t node_id ) {
-
-    struct flow_node * n = &g->nodes[node_id];
-    uint8_t * bytes = &g->info_bytes[n->info_byte_index];
-
-    BitmapBgra * b = NULL;
-    if (n->type == flow_ntype_Create_Canvas) {
-        if (flow_graph_get_inbound_edge_count_of_type(c, g, node_id, flow_edgetype_input) +
-            flow_graph_get_inbound_edge_count_of_type(c, g, node_id, flow_edgetype_canvas) != 0){
-            CONTEXT_error(c, Invalid_inputs_to_node);
-            return false;
-        }
-        struct flow_nodeinfo_createcanvas *info = (struct flow_nodeinfo_createcanvas *) bytes;
-        b = BitmapBgra_create(c, info->width, info->height, true, info->format);
-        if (b == NULL){
-            CONTEXT_error_return(c);
-        }
-        //b->matte_color = info->bgcolor;
-    }else if(n->type == flow_ntype_primitive_bitmap_bgra_pointer) {
-        if (flow_graph_get_inbound_edge_count_of_type(c, g, node_id, flow_edgetype_input) != 1 &&
-            flow_graph_get_inbound_edge_count_of_type(c, g, node_id, flow_edgetype_canvas) != 0) {
-            CONTEXT_error(c, Invalid_inputs_to_node);
-            return false;
-        }
-        struct flow_nodeinfo_resource_bitmap_bgra *info = (struct flow_nodeinfo_resource_bitmap_bgra *) bytes;
-
-        int32_t input_edge_id = flow_graph_get_first_inbound_edge_of_type(c, g, node_id, flow_edgetype_input);
-        //get input
-        b = g->nodes[g->edges[input_edge_id].from].result_bitmap;
-        //Update pointer
-        *info->ref = b;
-    }else if(n->type == flow_ntype_primitive_RenderToCanvas1D){
-        if (flow_graph_get_inbound_edge_count_of_type(c, g, node_id, flow_edgetype_input) != 1 &&
-            flow_graph_get_inbound_edge_count_of_type(c, g, node_id, flow_edgetype_canvas) != 1) {
-            CONTEXT_error(c, Invalid_inputs_to_node);
-            return false;
-        }
-
-        struct flow_nodeinfo_render_to_canvas_1d *info = (struct flow_nodeinfo_render_to_canvas_1d *) bytes;
-
-        int32_t input_edge_id = flow_graph_get_first_inbound_edge_of_type(c, g, node_id, flow_edgetype_input);
-        //get input
-        BitmapBgra * input = g->nodes[g->edges[input_edge_id].from].result_bitmap;
-        int32_t canvas_edge_id = flow_graph_get_first_inbound_edge_of_type(c, g, node_id, flow_edgetype_canvas);
-        //get input
-        BitmapBgra * canvas = g->nodes[g->edges[canvas_edge_id].from].result_bitmap;
-
-        if (!flow_node_execute_render_to_canvas_1d(c, job, input, canvas, info)){
-            CONTEXT_error_return(c);
-        }
-
-        b = canvas;
-
-    }else{
-        if (n->type < flow_ntype_non_primitive_nodes_begin) {
-            CONTEXT_error(c, Not_implemented);
-        }else{
-            CONTEXT_error(c, Graph_not_flattened);
-        }
-        return false;
-    }
-
-    n->result_bitmap = b;
-    n->executed = true;
-    return true;
-}
-
-
 static bool node_visitor_execute(Context *c, struct flow_job *job, struct flow_graph **graph_ref,
                                  int32_t node_id, bool *quit, bool *skip_outbound_paths,
                                  void *custom_data){
 
     if (flow_job_node_is_ready_for_execution(c,job,*graph_ref,node_id)){
-        if (!flow_job_complete_node(c, job, *graph_ref, node_id)) {
+        if (!flow_node_execute(c, job, *graph_ref, node_id)) {
             CONTEXT_error_return(c);
         }
     }

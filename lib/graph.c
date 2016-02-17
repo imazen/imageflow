@@ -1,10 +1,4 @@
-#include "fastscaling_private.h"
-#include "../imageflow.h"
-#include <stdint.h>
-#include <stdbool.h>
-#include <stdlib.h>
-#include <string.h>
-#include "math_functions.h"
+#include "graph.h"
 
 static size_t flow_graph_size_for(uint32_t max_edges, uint32_t max_nodes, uint32_t max_info_bytes){
     return sizeof(struct flow_graph) + sizeof(struct flow_edge) * max_edges + sizeof(struct flow_node) * max_nodes + max_info_bytes;
@@ -82,26 +76,14 @@ void flow_graph_destroy(Context *c, struct flow_graph *g){
     CONTEXT_free(c,g);
 }
 
-static int32_t flow_nodeinfo_size(Context *c, flow_ntype type){
-    switch(type){
-        case flow_ntype_Create_Canvas: return sizeof(struct flow_nodeinfo_createcanvas);
-        case flow_ntype_Scale: return sizeof(struct flow_nodeinfo_size);
-        case flow_ntype_Resource_Placeholder: return sizeof(struct flow_nodeinfo_index);
-        case flow_ntype_primitive_bitmap_bgra_pointer: return sizeof(struct flow_nodeinfo_resource_bitmap_bgra);
-        case flow_ntype_primitive_RenderToCanvas1D: return sizeof(struct flow_nodeinfo_render_to_canvas_1d);
-        default:
 
-            CONTEXT_error(c, Invalid_argument);
-            return -404;
-    }
-}
 
 static int32_t flow_node_create_generic(Context *c, struct flow_graph ** graph_ref, int32_t prev_node, flow_ntype type){
     if (graph_ref == NULL || (*graph_ref) == NULL){
         CONTEXT_error(c, Null_argument);
         return -20;
     }
-    int32_t nodeinfo_size = flow_nodeinfo_size(c, type);
+    int32_t nodeinfo_size = flow_node_fixed_infobyte_count(c, type);
     if (nodeinfo_size < 0){
         CONTEXT_add_to_callstack(c);
         return nodeinfo_size;
@@ -554,22 +536,11 @@ static const char * get_format_name(BitmapPixelFormat f, bool alpha_meaningful){
     }
 }
 
-static const char * get_ntype_name(flow_ntype type){
-    switch(type){
-        case flow_ntype_Null: return "null";
-        case flow_ntype_Create_Canvas: return "create canvas";
-        case flow_ntype_Scale: return "scale";
-        case flow_ntype_primitive_bitmap_bgra_pointer: return "BitmapBgra container";
-        case flow_ntype_primitive_RenderToCanvas1D: return "Render1D";
-        case flow_ntype_Resource_Placeholder: return "resource placeholder";
-        default: return "[stringify not implemented]";
-    }
-}
-
 bool flow_graph_print_to_dot(Context *c, struct flow_graph *g, FILE * stream){
     fprintf(stream, "digraph g {\n");
     fprintf(stream, "  node [shape=box]\n  size=\"4,7\"\n");
 
+    char node_label_buffer[1024];
     struct flow_edge * edge;
     int32_t i;
     for (i = 0; i < g->next_edge_id; i++){
@@ -587,7 +558,8 @@ bool flow_graph_print_to_dot(Context *c, struct flow_graph *g, FILE * stream){
         n = &g->nodes[i];
 
         if (n->type != flow_ntype_Null){
-            fprintf(stream, "  n%d [label=\"n%d: %s%s\"]\n", i, i, get_ntype_name(n->type), n->executed ? " [done]" : ""); //Todo, add completion info.
+            flow_node_stringify(c,g,i,node_label_buffer, 1023);
+            fprintf(stream, "  n%d [label=\"n%d: %s\"]\n", i, i, node_label_buffer); //Todo, add completion info.
         }
     }
 
