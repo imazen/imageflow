@@ -563,7 +563,7 @@ static const char * get_ntype_name(flow_ntype type){
 
 bool flow_graph_print_to_dot(Context *c, struct flow_graph *g, FILE * stream){
     fprintf(stream, "digraph g {\n");
-    fprintf(stream, "  node [shape=box]\n");
+    fprintf(stream, "  node [shape=box]\n  size=\"4,7\"\n");
 
     struct flow_edge * edge;
     int32_t i;

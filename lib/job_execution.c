@@ -25,6 +25,10 @@ static bool flow_job_node_is_ready_for_execution(Context *c, struct flow_job *jo
     if (g->nodes[node_id].type >= flow_ntype_non_primitive_nodes_begin ) {
         return false; //Not a primitive node. We assume if a primitive node exists, it has dimensions and has been flattened.
     }
+    //For clarity, although not strictly required (AFAIK), we wait until dimensions are populated.
+    if (!flow_node_input_edges_have_dimensions(c, g, node_id)){
+        return false;
+    }
     struct flow_edge * edge;
     int32_t i;
     for (i = 0; i < g->next_edge_id; i++){
