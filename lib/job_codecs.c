@@ -99,6 +99,9 @@ static void * codec_aquire_decode_png_on_buffer(Context *c, struct flow_job * jo
             CONTEXT_add_to_callstack(c);
             return NULL;
         }
+        state->file_bytes = buffer->buffer;
+        state->file_bytes_count = buffer->buffer_size;
+
         buffer->codec_state = (void *)state;
     }
     return buffer->codec_state;

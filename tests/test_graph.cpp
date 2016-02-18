@@ -207,7 +207,6 @@ TEST_CASE("decode and scale png", "")
         ERR(c);
     }
 
-    REQUIRE(result_resource_id == 2048);
     result = flow_job_get_bitmap_bgra(c, job, result_resource_id);
 
     ERR(c);
