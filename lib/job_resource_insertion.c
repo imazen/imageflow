@@ -1,10 +1,60 @@
 #include "job.h"
-static int32_t create_node_for_resource(Context *c, struct flow_job_resource_item * item, struct flow_graph ** g){
+#include "graph.h"
+
+
+static int32_t flow_node_create_codec_on_buffer(Context *c, struct flow_job * job, struct flow_graph **graph_ref, struct flow_job_resource_buffer * buf, flow_job_codec_type codec_type){
+    int32_t id = flow_node_create_generic(c, graph_ref, -1, flow_ntype_primitive_decoder);
+    if (id < 0){
+        CONTEXT_add_to_callstack(c);
+        return id;
+    }
+    FLOW_GET_INFOBYTES((*graph_ref),id, flow_nodeinfo_decoder, info)
+    info->type = codec_type;
+    info->decoder = flow_job_acquire_decoder_over_buffer(c,job,buf,codec_type);
+    return id;
+}
+
+int32_t flow_node_create_resource_bitmap_bgra(Context *c, struct flow_graph **g, int32_t prev_node, BitmapBgra ** ref){
+    int32_t id = flow_node_create_generic(c, g, prev_node, flow_ntype_primitive_bitmap_bgra_pointer);
+    if (id < 0){
+        CONTEXT_add_to_callstack(c);
+        return id;
+    }
+    FLOW_GET_INFOBYTES((*g),id, flow_nodeinfo_resource_bitmap_bgra, info)
+    info->ref = ref;
+    return id;
+}
+
+static int32_t create_node_for_buffer(Context *c,struct flow_job * job, struct flow_job_resource_item * item, struct flow_graph ** g){
+    if (item->direction != FLOW_INPUT){
+        CONTEXT_error(c, Not_implemented);
+        return -1;
+    }
+    struct flow_job_resource_buffer * buf = (struct flow_job_resource_buffer *)item->data;
+
+    flow_job_codec_type ctype = flow_job_codec_select(c,job, (uint8_t  *)buf->buffer, buf ->buffer_size);
+    if (ctype == flow_job_codec_type_null){
+        //unknown
+        CONTEXT_error(c, Not_implemented); //Or bad buffer, unsupported file type, etc.
+        return -1;
+    }
+    return flow_node_create_codec_on_buffer(c, job, g, buf, ctype);
+}
+
+
+static int32_t create_node_for_resource(Context *c,struct flow_job * job, struct flow_job_resource_item * item, struct flow_graph ** g){
+
     int32_t node_id = -1;
-    if (item->type == flow_job_resource_bitmap_bgra){
+    if (item->type == flow_job_resource_type_bitmap_bgra){
+        if (item->direction != FLOW_OUTPUT){
+            CONTEXT_error(c, Not_implemented);
+            return false;
+        }
         node_id = flow_node_create_resource_bitmap_bgra(c,g, -1, (BitmapBgra **)&item->data);
+    }else if (item->type == flow_job_resource_type_buffer) {
+        node_id = create_node_for_buffer(c,job, item,g);
     }else{
-        CONTEXT_error(c,Invalid_internal_state);
+        CONTEXT_error(c,Not_implemented);
         return -404;
     }
     if (node_id < 0){
@@ -61,7 +111,7 @@ static struct flow_graph *flow_job_insert_resources_into_graph_with_reuse(Contex
 
             next_match = flow_job_find_first_node_with_placeholder_id(c,g, current->graph_placeholder_id);
             if (next_match >= 0) {
-                replacement_node_id = create_node_for_resource(c, current, &g);
+                replacement_node_id = create_node_for_resource(c, job, current, &g);
                 if (replacement_node_id < 0) {
                     CONTEXT_error_return(c);
                 }
@@ -94,6 +144,9 @@ static struct flow_graph *flow_job_insert_resources_into_graph_with_reuse(Contex
     return g;
 }
 bool flow_job_insert_resources_into_graph(Context *c, struct flow_job *job, struct flow_graph **graph_ref){
+    if (!flow_job_notify_graph_changed(c,job, *graph_ref)){
+        CONTEXT_error_return(c);
+    }
     struct flow_graph * g = flow_job_insert_resources_into_graph_with_reuse(c, job, *graph_ref, true);
     if (g == NULL){
         CONTEXT_error_return(c);

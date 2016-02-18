@@ -119,7 +119,7 @@ TEST_CASE("execute tiny graph", "")
 {
 
     Context * c = Context_create();
-    struct flow_graph *g = nullptr, *g2 = nullptr, *g3 = nullptr;
+    struct flow_graph *g = nullptr;
     struct flow_job *job = nullptr;
 
     int32_t result_resource_id;
@@ -130,18 +130,12 @@ TEST_CASE("execute tiny graph", "")
 
     int32_t last;
 
-
     last = flow_node_create_canvas(c, &g, -1, Bgra32, 400, 300, 0xFFFFFFFF);
     last = flow_node_create_scale(c, &g, last, 300, 200);
     last = flow_node_create_resource_placeholder(c, &g, last, 0);
 
-
-
     job = flow_job_create(c);
     ERR(c);
-
-    flow_job_notify_graph_changed(c,job, g);
-
 
     result_resource_id = flow_job_add_bitmap_bgra(c,job, FLOW_OUTPUT, /* graph placeholder index */ 0);
 
@@ -153,21 +147,64 @@ TEST_CASE("execute tiny graph", "")
     REQUIRE(g->edges[2].to == 3);
 
 
-    int32_t passes = 0;
-    while (!flow_job_graph_fully_executed(c, job, g)) {
-        REQUIRE(passes < 5);
-        if (!flow_job_populate_dimensions_where_certain(c,job,&g)){
-            ERR(c);
-        }
-        if (!flow_graph_flatten_where_certain(c,&g)){
-            ERR(c);
-        }
-        flow_job_notify_graph_changed(c,job, g);
+    if (!flow_job_execute(c, job, &g)){
+        ERR(c);
+    }
 
-        if (!flow_job_execute_where_certain(c,job,&g)){
-            ERR(c);
-        }
-        passes++;
+    REQUIRE(result_resource_id == 2048);
+    result = flow_job_get_bitmap_bgra(c, job, result_resource_id);
+
+    ERR(c);
+
+
+    REQUIRE(result != NULL);
+    REQUIRE(result->w == 300);
+
+
+    BitmapBgra_destroy(c,result);
+    flow_job_destroy(c,job);
+    flow_graph_destroy(c, g);
+    Context_destroy(c);
+}
+
+
+
+TEST_CASE("decode and scale png", "")
+{
+
+    Context * c = Context_create();
+    struct flow_graph *g = nullptr;
+    struct flow_job *job = nullptr;
+
+    int32_t result_resource_id;
+    BitmapBgra * result = nullptr;
+
+    g = flow_graph_create(c, 10, 10, 200, 2.0);
+    ERR(c);
+
+    int32_t last;
+    last = flow_node_create_resource_placeholder(c, &g, -1, 0);
+    last = flow_node_create_scale(c, &g, last, 300, 200);
+    last = flow_node_create_resource_placeholder(c, &g, last, 1);
+
+
+
+    job = flow_job_create(c);
+    ERR(c);
+    uint8_t image_bytes_literal[] = {0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, 0x00, 0x00, 0x00, 0x0D, 0x49, 0x48, 0x44, 0x52, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x08, 0x06, 0x00, 0x00, 0x00, 0x1F, 0x15, 0xC4, 0x89, 0x00, 0x00, 0x00, 0x0A, 0x49, 0x44, 0x41, 0x54, 0x78, 0x9C, 0x63, 0x00, 0x01, 0x00, 0x00, 0x05, 0x00, 0x01, 0x0D, 0x0A, 0x2D, 0xB4, 0x00, 0x00, 0x00, 0x00, 0x49, 0x45, 0x4E, 0x44, 0xAE, 0x42, 0x60, 0x82};
+
+
+    int32_t input_resource_id = flow_job_add_buffer(c,job, FLOW_INPUT, 0, (void*) &image_bytes_literal[0], sizeof(image_bytes_literal), false);
+
+
+    result_resource_id = flow_job_add_bitmap_bgra(c,job, FLOW_OUTPUT, /* graph placeholder index */ 1);
+
+
+    if (!flow_job_insert_resources_into_graph(c, job, &g)){
+        ERR(c);
+    }
+    if (!flow_job_execute(c, job, &g)){
+        ERR(c);
     }
 
     REQUIRE(result_resource_id == 2048);

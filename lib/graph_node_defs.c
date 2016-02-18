@@ -1,4 +1,5 @@
 #include "graph.h"
+#include "job.h"
 
 
 
@@ -33,7 +34,6 @@
 //    flow_nodedef_fn_execute execute;
 //
 //};
-#define FLOW_GET_INFOBYTES(g, node_id, type, varname) struct type * varname = (struct type *) &g->info_bytes[g->nodes[node_id].info_byte_index];
 
 #define FLOW_GET_INPUT_EDGE(g, node_id) int32_t input_edge_id = flow_graph_get_first_inbound_edge_of_type(c,g,node_id, flow_edgetype_input); \
     if (input_edge_id < 0) { \
@@ -96,11 +96,23 @@ static bool stringify_bitmap_bgra_pointer(Context *c, struct flow_graph *g, int3
     return true;
 }
 
-static bool stringify_decode_png(Context *c, struct flow_graph *g, int32_t node_id, char * buffer, size_t buffer_size){
-    FLOW_GET_INFOBYTES(g,node_id, flow_nodeinfo_decode_png, info);
+static bool stringify_decode(Context *c, struct flow_graph *g, int32_t node_id, char *buffer, size_t buffer_size){
+    FLOW_GET_INFOBYTES(g,node_id, flow_nodeinfo_decoder, info);
 
-    //TODO
-    snprintf(buffer, buffer_size, "decode png %lux%lu%s", info->width, info->height, g->nodes[node_id].executed ? " [done]" : "");
+
+    struct flow_job_codec_definition * def = flow_job_get_codec_definition(c,info->type);
+
+    //TODO FIX job null
+    if (def->stringify == NULL){
+        if (def->name == NULL){
+            CONTEXT_error(c,Not_implemented);
+            return false;
+        }else{
+            snprintf(buffer,buffer_size, "%s", def->name);
+        }
+    }else {
+        def->stringify(c, NULL, info->decoder, buffer, buffer_size); //what about [done]
+    }
     return true;
 }
 
@@ -144,14 +156,27 @@ static bool dimensions_render1d(Context *c, struct flow_graph *g, int32_t node_i
     return true;
 }
 
-static bool dimensions_decode_png(Context *c, struct flow_graph *g, int32_t node_id, int32_t outbound_edge_id, bool force_estimate){
-    FLOW_GET_INFOBYTES(g,node_id, flow_nodeinfo_decode_png, info)
+static bool dimensions_decode(Context *c, struct flow_graph *g, int32_t node_id, int32_t outbound_edge_id,
+                              bool force_estimate){
+    FLOW_GET_INFOBYTES(g,node_id, flow_nodeinfo_decoder, info)
 
     struct flow_edge * output = &g->edges[outbound_edge_id];
 
-    output->from_width = info->width;
-    output->from_height = info->height;
-    output->from_alpha_meaningful = true;
+    struct flow_job_codec_definition * def = flow_job_get_codec_definition(c,info->type);
+
+    if (def == NULL || def->get_frame_info == NULL){
+        CONTEXT_error(c, Not_implemented);
+        return false;
+    }
+    struct decoder_frame_info frame_info;
+
+    if (!def->get_frame_info(c,NULL,info->decoder, &frame_info)){
+        CONTEXT_error_return(c);
+    }
+
+    output->from_width = frame_info.w;
+    output->from_height = frame_info.h;
+    output->from_alpha_meaningful = true;//TODO Wrong
     output->from_format = Bgra32;
     return true;
 }
@@ -233,15 +258,31 @@ static bool execute_render1d(Context *c, struct flow_job * job, struct flow_grap
     return true;
 }
 
-static bool execute_decode_png(Context *c, struct flow_job * job, struct flow_graph * g, int32_t node_id){
-    FLOW_GET_INFOBYTES(g,node_id, flow_nodeinfo_decode_png, info)
+static bool execute_decode(Context *c, struct flow_job *job, struct flow_graph *g, int32_t node_id){
+    FLOW_GET_INFOBYTES(g,node_id, flow_nodeinfo_decoder, info)
 
     struct flow_node * n = &g->nodes[node_id];
-    //TODO: bgcolor
-    n->result_bitmap = BitmapBgra_create(c, info->width, info->height, true, Bgra32);
+
+
+    struct flow_job_codec_definition * def = flow_job_get_codec_definition(c,info->type);
+
+    if (def == NULL || def->get_frame_info == NULL || def->read_frame == NULL){
+        CONTEXT_error(c, Not_implemented);
+        return false;
+    }
+    struct decoder_frame_info frame_info;
+    if (!def->get_frame_info(c,NULL,info->decoder, &frame_info)){
+        CONTEXT_error_return(c);
+    }
+
+    n->result_bitmap = BitmapBgra_create(c, frame_info.w, frame_info.h, true, Bgra32);
     if ( n->result_bitmap == NULL){
         CONTEXT_error_return(c);
     }
+    if (!def->read_frame(c,NULL,info->decoder, n->result_bitmap)){
+        CONTEXT_error_return(c);
+    }
+
     n->executed = true;
     return true;
 }
@@ -307,14 +348,14 @@ struct flow_node_definition flow_node_defs[] = {
 
         },
         {
-                .type = flow_ntype_primitive_Decode_Png,
-                .nodeinfo_bytes_fixed = sizeof(struct flow_nodeinfo_decode_png),
-                .type_name = "decode png",
+                .type = flow_ntype_primitive_decoder,
+                .nodeinfo_bytes_fixed = sizeof(struct flow_nodeinfo_decoder),
+                .type_name = "decode",
                 .input_count = 0,
                 .canvas_count = 0, //?
-                .stringify = stringify_decode_png,
-                .populate_dimensions = dimensions_decode_png,
-                .execute = execute_decode_png,
+                .stringify = stringify_decode,
+                .populate_dimensions = dimensions_decode,
+                .execute = execute_decode,
 
         },
         {

@@ -7,7 +7,6 @@ extern "C" {
 #include <stdint.h>
 #include <stdbool.h>
 #include <stdlib.h>
-
 #include "fastscaling.h"
 
 
@@ -32,13 +31,8 @@ typedef enum flow_ntype {
     flow_ntype_primitive_Halving = 6,
 
     flow_ntype_primitive_bitmap_bgra_pointer,
-    flow_ntype_primitive_Encode_PngFrame,
-    flow_ntype_primitive_Encode_Jpeg,
-    flow_ntype_primitive_Encode_Gif,
-    flow_ntype_primitive_Decode_Png,
-    flow_ntype_primitive_Decode_Jpeg,
-    flow_ntype_primitive_Decode_Gif,
-    flow_ntype_primitive_Metadata_Destination,
+    flow_ntype_primitive_decoder,
+    flow_ntype_primitive_encoder,
 
     flow_ntype_non_primitive_nodes_begin = 256,
     flow_ntype_Crop_Percentage,
@@ -87,6 +81,20 @@ typedef enum flow_compositing_mode{
 
 
 struct flow_job;
+
+
+typedef enum flow_job_resource_type{
+    flow_job_resource_type_bitmap_bgra = 1,
+    flow_job_resource_type_buffer = 2
+
+} flow_job_resource_type;
+
+typedef enum flow_job_codec_type{
+    flow_job_codec_type_null,
+    flow_job_codec_type_bitmap_bgra_pointer,
+    flow_job_codec_type_decode_png,
+    flow_job_codec_type_encode_png
+} flow_job_codec_type;
 
 
 typedef enum flow_scanlines_filter_type {
@@ -162,6 +170,8 @@ int32_t flow_graph_copy_info_bytes_to(Context *c, struct flow_graph *from, struc
                                       int32_t byte_count);
 
 int32_t flow_edge_duplicate(Context *c, struct flow_graph **g, int32_t edge_id);
+
+
 /*
  * flow_Graph
  * flow_Node
@@ -248,10 +258,9 @@ struct flow_nodeinfo_resource_bitmap_bgra {
     BitmapBgra ** ref;
 };
 
-struct flow_nodeinfo_decode_png{
-    size_t width;
-    size_t height;
-
+struct flow_nodeinfo_decoder{
+    void * decoder;
+    flow_job_codec_type type;
 };
 
 
@@ -295,11 +304,15 @@ bool flow_job_execute_where_certain(Context *c, struct flow_job *job, struct flo
 bool flow_job_graph_fully_executed(Context *c, struct flow_job *job, struct flow_graph *g);
 
 bool flow_job_notify_graph_changed(Context *c, struct flow_job *job, struct flow_graph * g);
-
+bool flow_job_execute(Context *c, struct flow_job * job,struct flow_graph **graph_ref);
 
 bool flow_graph_flatten_where_certain(Context *c, struct flow_graph ** graph_ref);
 
 int32_t flow_job_add_bitmap_bgra(Context *c, struct flow_job * job, FLOW_DIRECTION dir, int32_t placeholder);
+int32_t flow_job_add_buffer(Context *c, struct flow_job * job, FLOW_DIRECTION dir, int32_t graph_placeholder_id, void * buffer, size_t buffer_size, bool owned_by_job);
+
+
+int32_t flow_node_create_generic(Context *c, struct flow_graph ** graph_ref, int32_t prev_node, flow_ntype type);
 
 bool flow_graph_print_to_dot(Context *c, struct flow_graph *g, FILE * stream);
 

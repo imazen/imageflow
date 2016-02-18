@@ -1,4 +1,6 @@
+#include <glenn/png/png.h>
 #include "job.h"
+#include "png.h"
 
 struct flow_job * flow_job_create(Context *c){
 
@@ -8,51 +10,14 @@ struct flow_job * flow_job_create(Context *c){
     job->next_graph_version = 0;
     job->next_resource_id = 0x800;
     job->resources_head = NULL;
-//    job->job_state.node_completed = NULL;
-//    job->job_state.node_bitmap = NULL;
+    job->max_calc_flatten_execute_passes = 5;
     return job;
 }
-//
-//static void flow_job_state_destroy(Context *c, struct flow_job * job) {
-//    if (job->job_state.node_bitmap != NULL) {
-//        //TOOD: dispose of the owned bitmaps;
-//        CONTEXT_free(c, job->job_state.node_bitmap);
-//        job->job_state.node_bitmap = NULL;
-//    }
-//    if (job->job_state.node_completed != NULL) {
-//        CONTEXT_free(c, job->job_state.node_completed);
-//        job->job_state.node_completed = NULL;
-//    }
-//}
-//
-//
-//bool flow_job_create_state(Context *c, struct flow_job * job, struct flow_graph * g) {
-//    flow_job_state_destroy(c,job);
-//    job->job_state.node_completed = (bool *) CONTEXT_malloc(c, sizeof(bool) * g->max_nodes);
-//    if (job->job_state.node_completed == NULL) {
-//        CONTEXT_error(c, Out_of_memory);
-//        return false;
-//    }
-//
-//    job->job_state.node_bitmap = (BitmapBgra **) CONTEXT_malloc(c, sizeof(BitmapBgra *) * g->max_nodes);
-//    if (job->job_state.node_bitmap == NULL) {
-//        CONTEXT_error(c, Out_of_memory);
-//        return false;
-//    }
-//    for (int i = 0; i < g->max_nodes; i++) {
-//        job->job_state.node_bitmap[i] = NULL;
-//        job->job_state.node_completed[i] = false;
-//    }
-//    return true;
-//}
 
 void flow_job_destroy(Context *c, struct flow_job * job){
-    //TODO: Free all the resources
-    //    flow_job_state_destroy(c,job);
+    //TODO: Free all the resources, and their codecs
     CONTEXT_free(c, job);
 }
-
-
 
 
 static int32_t flow_job_add_resource(Context *c, struct flow_job * job, FLOW_DIRECTION dir, int32_t graph_placeholder_id, flow_job_resource_type type, void * data){
@@ -68,6 +33,8 @@ static int32_t flow_job_add_resource(Context *c, struct flow_job * job, FLOW_DIR
     r->data = data;
     r->direction = dir;
     r->type = type;
+    r->codec_state = NULL;
+    r->codec_type = flow_job_codec_type_null;
     if (job->resources_head == NULL){
         job->resources_head = r;
         job->resources_tail = r;
@@ -89,7 +56,10 @@ static struct flow_job_resource_item * flow_job_get_resource(Context *c, struct 
     return NULL;
 }
 int32_t flow_job_add_bitmap_bgra(Context *c, struct flow_job * job, FLOW_DIRECTION dir, int32_t graph_placeholder_id){
-    int32_t id = flow_job_add_resource(c,job,dir,graph_placeholder_id, flow_job_resource_bitmap_bgra, NULL);
+    int32_t id = flow_job_add_resource(c, job, dir, graph_placeholder_id, flow_job_resource_type_bitmap_bgra, NULL);
+    if (id >= 0) {
+        flow_job_get_resource(c,job,id)->codec_type = flow_job_codec_type_bitmap_bgra_pointer;
+    }
     return id;
 }
 
@@ -99,6 +69,62 @@ BitmapBgra * flow_job_get_bitmap_bgra(Context *c, struct flow_job * job, int32_t
     if (r == NULL || r->data == NULL) return NULL;
     return (BitmapBgra *)r->data;
 }
+
+
+
+int32_t flow_job_add_buffer(Context *c, struct flow_job * job, FLOW_DIRECTION dir, int32_t graph_placeholder_id, void * buffer, size_t buffer_size, bool owned_by_job){
+    struct flow_job_resource_buffer * resource = (struct flow_job_resource_buffer *) CONTEXT_calloc(c, 1, sizeof(struct flow_job_resource_buffer));
+
+    resource->buffer = buffer;
+    resource->buffer_size = buffer_size;
+    resource->owned_by_job = owned_by_job;
+
+    int32_t id = flow_job_add_resource(c, job, dir, graph_placeholder_id, flow_job_resource_type_buffer, resource);
+    return id;
+}
+
+
+bool flow_job_execute(Context *c, struct flow_job * job,struct flow_graph **graph_ref){
+    if (!flow_job_notify_graph_changed(c,job, *graph_ref)){
+        CONTEXT_error_return(c);
+    }
+    int32_t passes = 0;
+    while (!flow_job_graph_fully_executed(c, job, *graph_ref)) {
+        if (passes >= job->max_calc_flatten_execute_passes){
+            CONTEXT_error(c,Graph_could_not_be_executed);
+            return false;
+        }
+        if (!flow_job_populate_dimensions_where_certain(c,job,graph_ref)){
+            CONTEXT_error_return(c);
+        }
+        if (!flow_graph_flatten_where_certain(c,graph_ref)){
+            CONTEXT_error_return(c);
+        }
+        if (!flow_job_notify_graph_changed(c,job, *graph_ref)){
+            CONTEXT_error_return(c);
+        }
+
+        if (!flow_job_execute_where_certain(c,job,graph_ref)){
+            CONTEXT_error_return(c);
+        }
+        passes++;
+    }
+    return true;
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 static bool files_identical(Context *c, const char * path1, const char* path2, bool * identical){
     FILE * fp1 = fopen(path1, "r");

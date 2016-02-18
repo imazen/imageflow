@@ -78,7 +78,7 @@ void flow_graph_destroy(Context *c, struct flow_graph *g){
 
 
 
-static int32_t flow_node_create_generic(Context *c, struct flow_graph ** graph_ref, int32_t prev_node, flow_ntype type){
+int32_t flow_node_create_generic(Context *c, struct flow_graph ** graph_ref, int32_t prev_node, flow_ntype type){
     if (graph_ref == NULL || (*graph_ref) == NULL){
         CONTEXT_error(c, Null_argument);
         return -20;
@@ -164,16 +164,6 @@ int32_t flow_node_create_resource_placeholder(Context *c, struct flow_graph **g,
     return id;
 }
 
-int32_t flow_node_create_resource_bitmap_bgra(Context *c, struct flow_graph **g, int32_t prev_node, BitmapBgra ** ref){
-    int32_t id = flow_node_create_generic(c, g, prev_node, flow_ntype_primitive_bitmap_bgra_pointer);
-    if (id < 0){
-        CONTEXT_add_to_callstack(c);
-        return id;
-    }
-    struct flow_nodeinfo_resource_bitmap_bgra * info = (struct flow_nodeinfo_resource_bitmap_bgra *) FrameNode_get_node_info_pointer(*g, id);
-    info->ref = ref;
-    return id;
-}
 
 int32_t flow_node_create_render_to_canvas_1d(Context *c, struct flow_graph **g, int32_t prev_node,
                                              bool transpose_on_write,
@@ -205,6 +195,8 @@ int32_t flow_node_create_render_to_canvas_1d(Context *c, struct flow_graph **g, 
     memcpy(&info->matte_color, matte_color, 4);
     return id;
 }
+
+
 
 
 bool flow_edge_delete(Context *c, struct flow_graph *g, int32_t edge_id){

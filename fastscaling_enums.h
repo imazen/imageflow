@@ -39,7 +39,10 @@ ENUM_START (STATUS_CODE_NAME, _StatusCode)
     Not_implemented,
     Invalid_inputs_to_node,
     Graph_not_flattened,
-    Failed_to_open_file
+    Failed_to_open_file,
+    Graph_could_not_be_executed,
+    Png_decoding_failed,
+    Png_encoding_failed,
 
 ENUM_END (STATUS_CODE_NAME)
 

@@ -1,3 +1,5 @@
+#pragma once
+
 #include "fastscaling_private.h"
 #include "../imageflow.h"
 #include <stdint.h>
@@ -55,3 +57,5 @@ bool flow_node_flatten(Context *c, struct flow_graph **graph_ref, int32_t node_i
 bool flow_node_execute(Context *c, struct flow_job * job, struct flow_graph *g, int32_t node_id);
 bool flow_node_estimate_execution_cost(Context *c, struct flow_graph *g, int32_t node_id, size_t * bytes_required, size_t * cpu_cost);
 bool flow_node_validate_inputs(Context *c, struct flow_graph *g, int32_t node_id);
+
+#define FLOW_GET_INFOBYTES(g, node_id, type, varname) struct type * varname = (struct type *) &g->info_bytes[g->nodes[node_id].info_byte_index];
