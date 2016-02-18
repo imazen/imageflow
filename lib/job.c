@@ -78,6 +78,7 @@ int32_t flow_job_add_buffer(Context *c, struct flow_job * job, FLOW_DIRECTION di
     resource->buffer = buffer;
     resource->buffer_size = buffer_size;
     resource->owned_by_job = owned_by_job;
+    resource->codec_state = NULL;
 
     int32_t id = flow_job_add_resource(c, job, dir, graph_placeholder_id, flow_job_resource_type_buffer, resource);
     return id;
@@ -129,12 +130,12 @@ bool flow_job_execute(Context *c, struct flow_job * job,struct flow_graph **grap
 static bool files_identical(Context *c, const char * path1, const char* path2, bool * identical){
     FILE * fp1 = fopen(path1, "r");
     if (fp1 == NULL){
-        CONTEXT_error(c, Failed_to_open_file); 
+        CONTEXT_error(c, Failed_to_open_file);
         return false;
     }
     FILE * fp2 = fopen(path2, "r");
     if (fp2 == NULL){
-        CONTEXT_error(c, Failed_to_open_file); 
+        CONTEXT_error(c, Failed_to_open_file);
         fclose(fp1);
         return false;
     }
@@ -161,7 +162,7 @@ bool flow_job_notify_graph_changed(Context *c, struct flow_job *job, struct flow
 
     if (job->next_graph_version == 0){
         //Delete existing graphs
-        int32_t i =0; 
+        int32_t i =0;
         for (i = 0; i <= FLOW_MAX_GRAPH_VERSIONS; i++){
             snprintf(filename, 254,"graph_version_%d.dot", i);
             remove(filename);
@@ -172,7 +173,7 @@ bool flow_job_notify_graph_changed(Context *c, struct flow_job *job, struct flow
 
     FILE * f = fopen(filename,"w");
     if (f == NULL){
-        CONTEXT_error(c, Failed_to_open_file); 
+        CONTEXT_error(c, Failed_to_open_file);
         return false;
     }
     if (!flow_graph_print_to_dot(c,g,f)){
@@ -191,7 +192,7 @@ bool flow_job_notify_graph_changed(Context *c, struct flow_job *job, struct flow
         if (identical){
             job->next_graph_version--; //Next time we will overwrite the duplicate graph. The last two graphs may remain dupes.
         }
-    } 
+    }
 
     return true;
 }

@@ -144,6 +144,7 @@ struct flow_job_codec_definition flow_job_codec_defs[] = {
                 .get_frame_info = png_get_info,
                 .read_frame = png_read_frame,
                 .dispose = NULL,
+                .name ="decode png"
         }
 };
 
