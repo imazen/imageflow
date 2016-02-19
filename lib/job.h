@@ -22,12 +22,6 @@ struct decoder_frame_info{
 };
 
 
-struct flow_job_resource_buffer{
-    void * buffer;
-    size_t buffer_size;
-    bool owned_by_job;
-    void * codec_state;
-};
 
 
 struct flow_job {
@@ -47,6 +41,10 @@ typedef bool (*codec_get_frame_info_fn)(Context *c, struct flow_job * job, void 
 
 typedef bool (*codec_read_frame_fn)(Context *c, struct flow_job * job, void * codec_state, BitmapBgra * canvas);
 
+
+typedef bool (*codec_write_frame_fn)(Context *c, struct flow_job * job, void * codec_state, BitmapBgra * frame);
+
+
 typedef bool (*codec_dispose_fn)(Context *c, struct flow_job * job, void * codec_state);
 
 typedef bool (*codec_stringify_fn)(Context *c,  struct flow_job * job, void * codec_state, char * buffer, size_t buffer_size);
@@ -57,6 +55,7 @@ struct flow_job_codec_definition{
     codec_aquire_on_buffer_fn aquire_on_buffer;
     codec_get_frame_info_fn  get_frame_info;
     codec_read_frame_fn read_frame;
+    codec_write_frame_fn write_frame;
     codec_dispose_fn  dispose;
     codec_stringify_fn  stringify;
     const char * name;

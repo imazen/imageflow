@@ -2,15 +2,15 @@
 #include "graph.h"
 
 
-static int32_t flow_node_create_codec_on_buffer(Context *c, struct flow_job * job, struct flow_graph **graph_ref, struct flow_job_resource_buffer * buf, flow_job_codec_type codec_type){
-    int32_t id = flow_node_create_generic(c, graph_ref, -1, flow_ntype_primitive_decoder);
+static int32_t flow_node_create_codec_on_buffer(Context *c, struct flow_job * job, struct flow_graph **graph_ref, struct flow_job_resource_buffer * buf, flow_job_codec_type codec_type, flow_ntype node_type){
+    int32_t id = flow_node_create_generic(c, graph_ref, -1, node_type);
     if (id < 0){
         CONTEXT_add_to_callstack(c);
         return id;
     }
-    FLOW_GET_INFOBYTES((*graph_ref),id, flow_nodeinfo_decoder, info)
+    FLOW_GET_INFOBYTES((*graph_ref),id, flow_nodeinfo_codec, info)
     info->type = codec_type;
-    info->decoder = flow_job_acquire_decoder_over_buffer(c,job,buf,codec_type);
+    info->codec_state = flow_job_acquire_decoder_over_buffer(c,job,buf,codec_type);
     return id;
 }
 
@@ -26,19 +26,29 @@ int32_t flow_node_create_resource_bitmap_bgra(Context *c, struct flow_graph **g,
 }
 
 static int32_t create_node_for_buffer(Context *c,struct flow_job * job, struct flow_job_resource_item * item, struct flow_graph ** g){
-    if (item->direction != FLOW_INPUT){
-        CONTEXT_error(c, Not_implemented);
-        return -1;
-    }
-    struct flow_job_resource_buffer * buf = (struct flow_job_resource_buffer *)item->data;
 
-    flow_job_codec_type ctype = flow_job_codec_select(c,job, (uint8_t  *)buf->buffer, buf ->buffer_size);
-    if (ctype == flow_job_codec_type_null){
-        //unknown
-        CONTEXT_error(c, Not_implemented); //Or bad buffer, unsupported file type, etc.
-        return -1;
+    struct flow_job_resource_buffer * buf = (struct flow_job_resource_buffer *)item->data;
+    int32_t id;
+    if (item->direction == FLOW_INPUT) {
+
+        flow_job_codec_type ctype = flow_job_codec_select(c, job, (uint8_t *) buf->buffer, buf->buffer_size);
+        if (ctype == flow_job_codec_type_null) {
+            //unknown
+            CONTEXT_error(c, Not_implemented); //Or bad buffer, unsupported file type, etc.
+            return -1;
+        }
+        id = flow_node_create_codec_on_buffer(c, job, g, buf, ctype, flow_ntype_primitive_decoder);
+        if (id < 0){
+            CONTEXT_add_to_callstack(c);
+        }
+    }else{
+        //TODO: we need some way to pick which type of encoder is used for a given placeholder.
+        id= flow_node_create_codec_on_buffer(c, job, g, buf, flow_job_codec_type_encode_png, flow_ntype_primitive_encoder);
+        if (id < 0){
+            CONTEXT_add_to_callstack(c);
+        }
     }
-    return flow_node_create_codec_on_buffer(c, job, g, buf, ctype);
+    return id;
 }
 
 

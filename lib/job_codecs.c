@@ -197,11 +197,34 @@ static void png_flush_nullop(png_structp png_ptr)
 
         png_write_png(png_ptr, info_ptr, PNG_TRANSFORM_BGR, NULL);
 
+        state->output_resource->buffer = state->buffer;
+        state->output_resource->buffer_size = state->size;
+
     }
     //TODO: maybe ? png_destroy_write_struct(&nv_ptr, &nv_info);
     return true;
 
 }
+
+
+
+static void * codec_aquire_encode_png_on_buffer(Context *c, struct flow_job * job, struct flow_job_resource_buffer * buffer){
+    //flow_job_png_decoder_state
+    if (buffer->codec_state == NULL){
+        struct flow_job_png_encoder_state * state = (struct flow_job_png_encoder_state *) CONTEXT_malloc(c, sizeof(struct flow_job_png_encoder_state));
+        if (state == NULL){
+            CONTEXT_error(c, Out_of_memory);
+            return NULL;
+        }
+        state->buffer = NULL;
+        state->size = 0;
+        state->output_resource = buffer;
+
+        buffer->codec_state = (void *)state;
+    }
+    return buffer->codec_state;
+}
+
 
 //typedef bool (*codec_dispose_fn)(Context *c, struct flow_job * job, void * codec_state);
 
@@ -216,6 +239,13 @@ struct flow_job_codec_definition flow_job_codec_defs[] = {
                 .read_frame = png_read_frame,
                 .dispose = NULL,
                 .name ="decode png"
+        },
+        {
+                .type= flow_job_codec_type_encode_png,
+                .aquire_on_buffer = codec_aquire_encode_png_on_buffer,
+                .write_frame = png_write_frame,
+                .dispose = NULL,
+                .name ="encode png"
         }
 };
 

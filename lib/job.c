@@ -70,6 +70,12 @@ BitmapBgra * flow_job_get_bitmap_bgra(Context *c, struct flow_job * job, int32_t
     return (BitmapBgra *)r->data;
 }
 
+struct flow_job_resource_buffer * flow_job_get_buffer(Context *c, struct flow_job * job, int32_t resource_id){
+    struct flow_job_resource_item * r = flow_job_get_resource(c,job,resource_id);
+    if (r == NULL || r->data == NULL) return NULL;
+    return (struct flow_job_resource_buffer *)r->data;
+}
+
 
 
 int32_t flow_job_add_buffer(Context *c, struct flow_job * job, FLOW_DIRECTION dir, int32_t graph_placeholder_id, void * buffer, size_t buffer_size, bool owned_by_job){

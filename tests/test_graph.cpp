@@ -225,3 +225,66 @@ TEST_CASE("decode and scale png", "")
     flow_graph_destroy(c, g);
     Context_destroy(c);
 }
+
+TEST_CASE("decode, scale, and re-encode png", "")
+{
+
+    Context * c = Context_create();
+    struct flow_graph *g = nullptr;
+    struct flow_job *job = nullptr;
+
+    int32_t result_resource_id;
+    struct flow_job_resource_buffer * result = nullptr;
+
+    g = flow_graph_create(c, 10, 10, 200, 2.0);
+    ERR(c);
+
+
+    int32_t input_placeholder = 0;
+    int32_t output_placeholder = 1;
+
+    int32_t last;
+    last = flow_node_create_resource_placeholder(c, &g, -1, input_placeholder);
+    last = flow_node_create_scale(c, &g, last, 300, 200);
+    last = flow_node_create_resource_placeholder(c, &g, last, output_placeholder);
+
+
+
+    job = flow_job_create(c);
+    ERR(c);
+    uint8_t image_bytes_literal[] = {0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, 0x00, 0x00, 0x00, 0x0D, 0x49, 0x48, 0x44, 0x52, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x08, 0x06, 0x00, 0x00, 0x00, 0x1F, 0x15, 0xC4, 0x89, 0x00, 0x00, 0x00, 0x0A, 0x49, 0x44, 0x41, 0x54, 0x78, 0x9C, 0x63, 0x00, 0x01, 0x00, 0x00, 0x05, 0x00, 0x01, 0x0D, 0x0A, 0x2D, 0xB4, 0x00, 0x00, 0x00, 0x00, 0x49, 0x45, 0x4E, 0x44, 0xAE, 0x42, 0x60, 0x82};
+
+
+    int32_t input_resource_id = flow_job_add_buffer(c,job, FLOW_INPUT, input_placeholder, (void*) &image_bytes_literal[0], sizeof(image_bytes_literal), false);
+
+
+    result_resource_id = flow_job_add_buffer(c,job, FLOW_OUTPUT, output_placeholder, NULL, 0, true);
+
+
+    if (!flow_job_insert_resources_into_graph(c, job, &g)){
+        ERR(c);
+    }
+    if (!flow_job_execute(c, job, &g)){
+        ERR(c);
+    }
+
+    result = flow_job_get_buffer(c, job, result_resource_id);
+
+    ERR(c);
+
+
+    REQUIRE(result != NULL);
+
+    FILE *fh = fopen("graph_scaled_png.png", "w");
+    if ( fh != NULL ) {
+        if (fwrite(result->buffer, result->buffer_size, 1,fh) != 1){
+            REQUIRE(false);
+        }
+    }
+    fclose(fh);
+
+
+    flow_job_destroy(c,job);
+    flow_graph_destroy(c, g);
+    Context_destroy(c);
+}

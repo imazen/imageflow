@@ -97,7 +97,7 @@ static bool stringify_bitmap_bgra_pointer(Context *c, struct flow_graph *g, int3
 }
 
 static bool stringify_decode(Context *c, struct flow_graph *g, int32_t node_id, char *buffer, size_t buffer_size){
-    FLOW_GET_INFOBYTES(g,node_id, flow_nodeinfo_decoder, info);
+    FLOW_GET_INFOBYTES(g,node_id, flow_nodeinfo_codec, info);
 
 
     struct flow_job_codec_definition * def = flow_job_get_codec_definition(c,info->type);
@@ -111,9 +111,13 @@ static bool stringify_decode(Context *c, struct flow_graph *g, int32_t node_id, 
             snprintf(buffer,buffer_size, "%s", def->name);
         }
     }else {
-        def->stringify(c, NULL, info->decoder, buffer, buffer_size); //what about [done]
+        def->stringify(c, NULL, info->codec_state, buffer, buffer_size); //what about [done]
     }
     return true;
+}
+
+static bool stringify_encode(Context *c, struct flow_graph *g, int32_t node_id, char *buffer, size_t buffer_size){
+    return stringify_decode(c, g, node_id, buffer, buffer_size);
 }
 
 
@@ -158,7 +162,7 @@ static bool dimensions_render1d(Context *c, struct flow_graph *g, int32_t node_i
 
 static bool dimensions_decode(Context *c, struct flow_graph *g, int32_t node_id, int32_t outbound_edge_id,
                               bool force_estimate){
-    FLOW_GET_INFOBYTES(g,node_id, flow_nodeinfo_decoder, info)
+    FLOW_GET_INFOBYTES(g,node_id, flow_nodeinfo_codec, info)
 
     struct flow_edge * output = &g->edges[outbound_edge_id];
 
@@ -170,7 +174,7 @@ static bool dimensions_decode(Context *c, struct flow_graph *g, int32_t node_id,
     }
     struct decoder_frame_info frame_info;
 
-    if (!def->get_frame_info(c,NULL,info->decoder, &frame_info)){
+    if (!def->get_frame_info(c,NULL,info->codec_state, &frame_info)){
         CONTEXT_error_return(c);
     }
 
@@ -259,7 +263,7 @@ static bool execute_render1d(Context *c, struct flow_job * job, struct flow_grap
 }
 
 static bool execute_decode(Context *c, struct flow_job *job, struct flow_graph *g, int32_t node_id){
-    FLOW_GET_INFOBYTES(g,node_id, flow_nodeinfo_decoder, info)
+    FLOW_GET_INFOBYTES(g,node_id, flow_nodeinfo_codec, info)
 
     struct flow_node * n = &g->nodes[node_id];
 
@@ -271,7 +275,7 @@ static bool execute_decode(Context *c, struct flow_job *job, struct flow_graph *
         return false;
     }
     struct decoder_frame_info frame_info;
-    if (!def->get_frame_info(c,NULL,info->decoder, &frame_info)){
+    if (!def->get_frame_info(c,NULL,info->codec_state, &frame_info)){
         CONTEXT_error_return(c);
     }
 
@@ -279,7 +283,7 @@ static bool execute_decode(Context *c, struct flow_job *job, struct flow_graph *
     if ( n->result_bitmap == NULL){
         CONTEXT_error_return(c);
     }
-    if (!def->read_frame(c,NULL,info->decoder, n->result_bitmap)){
+    if (!def->read_frame(c,NULL,info->codec_state, n->result_bitmap)){
         CONTEXT_error_return(c);
     }
 
@@ -287,6 +291,28 @@ static bool execute_decode(Context *c, struct flow_job *job, struct flow_graph *
     return true;
 }
 
+
+static bool execute_encode(Context *c, struct flow_job *job, struct flow_graph *g, int32_t node_id){
+    FLOW_GET_INFOBYTES(g,node_id, flow_nodeinfo_codec, info)
+    FLOW_GET_INPUT_EDGE(g,node_id)
+    struct flow_node * n = &g->nodes[node_id];
+    n->result_bitmap = g->nodes[input_edge->from].result_bitmap;
+
+
+    struct flow_job_codec_definition * def = flow_job_get_codec_definition(c,info->type);
+
+    if (def == NULL || def->write_frame == NULL){
+        CONTEXT_error(c, Not_implemented);
+        return false;
+    }
+
+    if (!def->write_frame(c,NULL,info->codec_state, n->result_bitmap)){
+        CONTEXT_error_return(c);
+    }
+
+    n->executed = true;
+    return true;
+}
 
 
 struct flow_node_definition flow_node_defs[] = {
@@ -349,7 +375,7 @@ struct flow_node_definition flow_node_defs[] = {
         },
         {
                 .type = flow_ntype_primitive_decoder,
-                .nodeinfo_bytes_fixed = sizeof(struct flow_nodeinfo_decoder),
+                .nodeinfo_bytes_fixed = sizeof(struct flow_nodeinfo_codec),
                 .type_name = "decode",
                 .input_count = 0,
                 .canvas_count = 0, //?
@@ -359,6 +385,15 @@ struct flow_node_definition flow_node_defs[] = {
 
         },
         {
+                .type = flow_ntype_primitive_encoder,
+                .nodeinfo_bytes_fixed = sizeof(struct flow_nodeinfo_codec),
+                .type_name = "encode",
+                .input_count = 1,
+                .canvas_count = 0, //?
+                .stringify = stringify_encode,
+                .execute = execute_encode,
+
+        },{
                 .type= flow_ntype_Null,
                 .type_name = "(null)",
                 .input_count = 0,

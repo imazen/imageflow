@@ -256,8 +256,8 @@ struct flow_nodeinfo_resource_bitmap_bgra {
     BitmapBgra ** ref;
 };
 
-struct flow_nodeinfo_decoder{
-    void * decoder;
+struct flow_nodeinfo_codec {
+    void * codec_state;
     flow_job_codec_type type;
 };
 
@@ -317,16 +317,22 @@ bool flow_graph_print_to_dot(Context *c, struct flow_graph *g, FILE * stream);
 
 
 BitmapBgra * flow_job_get_bitmap_bgra(Context *c, struct flow_job * job, int32_t resource_id);
+struct flow_job_resource_buffer * flow_job_get_buffer(Context *c, struct flow_job * job, int32_t resource_id);
 
 void flow_graph_print_to(Context *c, struct flow_graph *g, FILE * stream);
 
 
-struct flow_job_png_encoder_state {
+struct flow_job_resource_buffer{
+    void * buffer;
+    size_t buffer_size;
+    bool owned_by_job;
+    void * codec_state;
+};
 
-    png_image image;
+struct flow_job_png_encoder_state {
     char *buffer;
     size_t size;
-
+    struct flow_job_resource_buffer * output_resource;
 };
 
 
