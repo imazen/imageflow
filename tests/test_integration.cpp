@@ -5,6 +5,7 @@
 #include <sys/stat.h>
 #include <errno.h>
 #include <stdio.h>
+#include <nathanaeljones/imageflow/imageflow.h>
 
 #include "fastscaling_private.h"
 #include "weighting_test_helpers.h"
@@ -86,6 +87,18 @@ void copy_file(FILE* from, FILE* to){
     if (m) perror("copy");
 }
 
+
+
+bool write_all_byte(const char *path, char * buffer, size_t size){
+    FILE *fh = fopen(path, "w");
+    if ( fh != NULL ) {
+        if (fwrite(buffer, size, 1,fh) != 1){
+            exit(999);
+        }
+    }
+    fclose(fh);
+    return true;
+}
 
 uint8_t * read_all_bytes(const char * path, size_t * buffer_size){
     uint8_t *buffer;
@@ -352,30 +365,16 @@ TEST_CASE ("Load png from URL", "[fastscaling]")
 
                     //TODO, write out PNG here
 
-                png_image target_image;
 
-                /* Only the image structure version number needs to be set. */
-                memset(&target_image, 0, sizeof target_image);
-                target_image.version = PNG_IMAGE_VERSION;
-                target_image.opaque = NULL;
-                target_image.width = target_width;
-                target_image.height = target_height;
-                target_image.format = PNG_FORMAT_BGRA;
-                target_image.flags = 0;
-                target_image.colormap_entries = 0;
+                struct flow_job_png_encoder_state encoder_state;
 
-                if (png_image_write_to_file(&target_image, "unipng.png",
-                                            0/*convert_to_8bit*/, canvas->pixels, 0/*row_stride*/,
-                                            NULL/*colormap*/)) {
-                    success = true;
-                    int nonzero2 = nonzero_count(canvas->pixels, canvas->stride * canvas->h);
-                    printf("nonzero output buffer: %d of %d", nonzero2, canvas->stride * canvas->h);
-
+                if (!png_write_frame(&context, NULL, &encoder_state, canvas)){
+                    //CONTEXT_error_return(&context);
+                    exit(42);
+                }else{
+                    write_all_byte("outpng.png", encoder_state.buffer, encoder_state.size);
+                    success= true;
                 }
-                else
-                    fprintf(stderr, "pngtopng: write failed : %s\n",
-                            image.message);
-
 
                 BitmapBgra_destroy(&context, canvas);
                 Context_terminate(&context);

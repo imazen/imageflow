@@ -88,13 +88,12 @@ static int32_t flow_job_find_first_node_with_placeholder_id(Context *c, struct f
 
 
 static struct flow_graph *flow_job_insert_resources_into_graph_with_reuse(Context *c, struct flow_job *job,
-                                                                          struct flow_graph *from,
-                                                                          bool may_reuse_graph){
+                                                                          struct flow_graph *from){
     if (from == NULL){
         CONTEXT_error(c, Null_argument);
         return NULL;
     }
-    struct flow_graph * g = may_reuse_graph ? from : flow_graph_memcpy(c,from);
+    struct flow_graph * g = from;
     if (g == NULL){
         CONTEXT_add_to_callstack(c);
         return NULL;
@@ -147,7 +146,7 @@ bool flow_job_insert_resources_into_graph(Context *c, struct flow_job *job, stru
     if (!flow_job_notify_graph_changed(c,job, *graph_ref)){
         CONTEXT_error_return(c);
     }
-    struct flow_graph * g = flow_job_insert_resources_into_graph_with_reuse(c, job, *graph_ref, true);
+    struct flow_graph * g = flow_job_insert_resources_into_graph_with_reuse(c, job, *graph_ref);
     if (g == NULL){
         CONTEXT_error_return(c);
     }

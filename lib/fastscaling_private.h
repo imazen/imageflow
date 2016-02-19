@@ -260,7 +260,7 @@ static inline int64_t get_profiler_ticks_per_second(void)
 static inline int64_t get_high_precision_ticks(void)
 {
 #ifdef PROFILER_CLOCK_ID
-    timespec ts;
+    struct timespec ts;
     if (clock_gettime(PROFILER_CLOCK_ID, &ts) != 0) {
         return -1;
     }
@@ -277,7 +277,7 @@ static inline int64_t get_high_precision_ticks(void)
 static inline int64_t get_profiler_ticks_per_second(void)
 {
 #ifdef PROFILER_CLOCK_ID
-    timespec ts;
+    struct timespec ts;
     if (clock_getres(PROFILER_CLOCK_ID, &ts) != 0) {
         return -1;
     }

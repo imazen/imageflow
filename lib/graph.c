@@ -61,16 +61,6 @@ struct flow_graph *flow_graph_copy_and_resize(Context *c, struct flow_graph * fr
     memcpy(g->nodes, from->nodes, from->next_node_id * sizeof(struct flow_node));
     return g;
 }
-struct flow_graph *flow_graph_memcpy(Context *c, struct flow_graph * from){
-    struct flow_graph * g = flow_graph_create(c,from->max_edges, from->max_nodes, from->max_info_bytes, from->growth_factor);
-    if (g == NULL){
-        CONTEXT_add_to_callstack(c);
-        return NULL;
-    }
-    size_t bytes = flow_graph_size_for(from->max_edges, from->max_nodes, from->max_info_bytes);
-    memcpy(g, from, bytes);
-    return g;
-}
 
 void flow_graph_destroy(Context *c, struct flow_graph *g){
     CONTEXT_free(c,g);

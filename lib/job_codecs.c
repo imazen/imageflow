@@ -1,3 +1,4 @@
+#include <zlib.h>
 #include "job.h"
 
 
@@ -133,6 +134,73 @@ static bool png_read_frame(Context *c, struct flow_job * job, void * codec_state
         CONTEXT_error(c, Invalid_internal_state);
         return false;
     }
+}
+
+
+
+
+static void png_write_data_callback(png_structp png_ptr, png_bytep data, png_size_t length){
+    struct flow_job_png_encoder_state* p=(struct flow_job_png_encoder_state*)png_get_io_ptr(png_ptr);
+    size_t nsize = p->size + length;
+
+    /* allocate or grow buffer */
+    if(p->buffer)
+        p->buffer = (char*) realloc(p->buffer, nsize);
+    else
+        p->buffer = (char*)malloc(nsize);
+
+    if(!p->buffer)
+        png_error(png_ptr, "Write Error"); //TODO: comprehend png error handling
+
+    /* copy new bytes to end of buffer */
+    memcpy(p->buffer + p->size, data, length);
+    p->size += length;
+}
+static void png_flush_nullop(png_structp png_ptr)
+{
+}
+
+ bool png_write_frame(Context * c, struct flow_job * job, void * codec_state, BitmapBgra * frame) {
+    struct flow_job_png_encoder_state *state = (struct flow_job_png_encoder_state *) codec_state;
+    state->buffer = NULL;
+    state->size = 0;
+
+    png_structp png_ptr = png_create_write_struct(PNG_LIBPNG_VER_STRING, "writing to memory", NULL,
+                                                  NULL); //makepng_error, makepng_warning);
+    volatile png_infop info_ptr = NULL;
+    if (png_ptr == NULL) {
+        CONTEXT_error(c, Out_of_memory);
+        return false;
+    }
+    png_set_compression_level(png_ptr, Z_BEST_COMPRESSION);
+    png_set_text_compression_level(png_ptr, Z_BEST_COMPRESSION);
+
+    png_set_write_fn(png_ptr, state, png_write_data_callback, png_flush_nullop);
+
+    info_ptr = png_create_info_struct(png_ptr);
+    if (info_ptr == NULL)
+        png_error(png_ptr, "OOM allocating info structure");//TODO: comprehend png error handling
+    {
+
+        png_bytepp rows = (png_bytepp) malloc(sizeof(png_bytep) * frame->h);
+        unsigned int y;
+        for (y = 0; y < frame->h; ++y) {
+            rows[y] =  frame->pixels + (frame->stride * y);
+        }
+
+        png_set_rows(png_ptr,info_ptr, rows);
+
+        png_set_IHDR(png_ptr, info_ptr, (png_uint_32)frame->w, (png_uint_32)frame->h, 8, PNG_COLOR_TYPE_RGB_ALPHA,
+                     PNG_INTERLACE_NONE, PNG_COMPRESSION_TYPE_BASE, PNG_FILTER_TYPE_BASE);
+
+        png_set_sRGB(png_ptr, info_ptr, PNG_sRGB_INTENT_ABSOLUTE);
+
+        png_write_png(png_ptr, info_ptr, PNG_TRANSFORM_BGR, NULL);
+
+    }
+    //TODO: maybe ? png_destroy_write_struct(&nv_ptr, &nv_info);
+    return true;
+
 }
 
 //typedef bool (*codec_dispose_fn)(Context *c, struct flow_job * job, void * codec_state);

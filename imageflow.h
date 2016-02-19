@@ -7,6 +7,7 @@ extern "C" {
 #include <stdint.h>
 #include <stdbool.h>
 #include <stdlib.h>
+#include <glenn/png/png.h>
 #include "fastscaling.h"
 
 
@@ -25,10 +26,8 @@ typedef enum flow_ntype {
     flow_ntype_primitive_Flip_Vertical = 1,
     flow_ntype_primitive_Crop = 2, //Creates a new window into an existing frame -
     flow_ntype_primitive_CopyRectToCanvas = 3, //Overwrite only, no compositing
-    flow_ntype_primitive_CreateCanvas = 4, //blank, or with background color
     flow_ntype_Create_Canvas = 4,
     flow_ntype_primitive_RenderToCanvas1D = 5,
-    flow_ntype_primitive_Halving = 6,
 
     flow_ntype_primitive_bitmap_bgra_pointer,
     flow_ntype_primitive_decoder,
@@ -164,7 +163,6 @@ void flow_graph_destroy(Context *c, struct flow_graph *target);
 bool flow_graph_replace_if_too_small(Context *c,  struct flow_graph ** g, uint32_t free_nodes_required, uint32_t free_edges_required, uint32_t free_bytes_required);
 struct flow_graph *flow_graph_copy_and_resize(Context *c, struct flow_graph * from, uint32_t max_edges, uint32_t max_nodes, uint32_t max_info_bytes);
 
-struct flow_graph *flow_graph_memcpy(Context *c, struct flow_graph * from);
 
 int32_t flow_graph_copy_info_bytes_to(Context *c, struct flow_graph *from, struct flow_graph **to, int32_t byte_index,
                                       int32_t byte_count);
@@ -321,6 +319,18 @@ bool flow_graph_print_to_dot(Context *c, struct flow_graph *g, FILE * stream);
 BitmapBgra * flow_job_get_bitmap_bgra(Context *c, struct flow_job * job, int32_t resource_id);
 
 void flow_graph_print_to(Context *c, struct flow_graph *g, FILE * stream);
+
+
+struct flow_job_png_encoder_state {
+
+    png_image image;
+    char *buffer;
+    size_t size;
+
+};
+
+
+bool png_write_frame(Context * c, struct flow_job * job, void * codec_state, BitmapBgra * frame);
 
 
 //Multi-frame/multi-page images are not magically handled.

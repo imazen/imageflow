@@ -64,6 +64,7 @@ struct flow_job_codec_definition{
 };
 
 
+//typedef unsigned long png_uint_32;
 
 struct flow_job_codec_definition * flow_job_get_codec_definition(Context *c, flow_job_codec_type type);
 flow_job_codec_type flow_job_codec_select(Context *c, struct flow_job * job,  uint8_t * data, size_t data_bytes);
