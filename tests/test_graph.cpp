@@ -260,7 +260,7 @@ TEST_CASE("decode, scale, and re-encode png", "")
 
     size_t bytes_count = 0;
 
-    uint8_t * bytes = get_bytes_cached("http://s3.amazonaws.com/resizer-images/sun_256.png", &bytes_count);
+    uint8_t * bytes = get_bytes_cached("http://z.zr.io/ri/8s.jpg?format=png", &bytes_count);
 
     int32_t input_resource_id = flow_job_add_buffer(c,job, FLOW_INPUT, input_placeholder, (void*) bytes, bytes_count, false);
 
