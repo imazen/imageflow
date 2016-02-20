@@ -353,7 +353,29 @@ TEST_CASE("scale and flip and crop png", "")
     last = flow_node_create_primitive_crop(c, &g, last, 20, 10, 80, 40);
     last = flow_node_create_resource_placeholder(c, &g, last, output_placeholder);
 
-    execute_graph_for_url(c, "http://z.zr.io/ri/8s.jpg?format=png&width=800", "graph_scaled_png.png", &g);
+    execute_graph_for_url(c, "http://z.zr.io/ri/8s.jpg?format=png&width=800", "graph_flipped_cropped_png.png", &g);
+
+    flow_graph_destroy(c, g);
+    Context_destroy(c);
+}
+
+
+TEST_CASE("scale copy rect", "")
+{
+    Context * c = Context_create();
+    struct flow_graph *g = flow_graph_create(c, 10, 10, 200, 2.0);
+    ERR(c);
+
+    int32_t last, input_placeholder = 0, output_placeholder = 1;
+
+    last = flow_node_create_resource_placeholder(c, &g, -1, input_placeholder);
+    last = flow_node_create_scale(c, &g, last, 200, 200);
+    int32_t canvas = flow_node_create_canvas(c, &g, -1, Bgra32, 300,300, 0);
+    last = flow_node_create_primitive_copy_rect_to_canvas(c, &g, last, 0,0,150,150, 50,50);
+    flow_edge_create(c, &g,canvas, last, flow_edgetype_canvas );
+    last = flow_node_create_resource_placeholder(c, &g, last, output_placeholder);
+
+    execute_graph_for_url(c, "http://z.zr.io/ri/8s.jpg?format=png&width=800", "graph_scaled_blitted_png.png", &g);
 
     flow_graph_destroy(c, g);
     Context_destroy(c);

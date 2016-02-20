@@ -153,6 +153,23 @@ int32_t flow_node_create_primitive_crop(Context *c, struct flow_graph **g, int32
     return id;
 }
 
+int32_t flow_node_create_primitive_copy_rect_to_canvas(Context *c, struct flow_graph **g, int32_t prev_node, uint32_t from_x, uint32_t from_y, uint32_t width, uint32_t height, uint32_t x, uint32_t y){
+    int32_t id = flow_node_create_generic(c, g, prev_node, flow_ntype_primitive_CopyRectToCanvas);
+    if (id < 0){
+        CONTEXT_add_to_callstack(c);
+        return id;
+    }
+    struct flow_nodeinfo_copy_rect_to_canvas * info = (struct flow_nodeinfo_copy_rect_to_canvas *) FrameNode_get_node_info_pointer(*g, id);
+    info->x = x;
+    info->y = y;
+    info->width = width;
+    info->height = height;
+    info->from_x = from_x;
+    info->from_y = from_y;
+    return id;
+}
+
+
 int32_t flow_node_create_scale(Context *c, struct flow_graph **g, int32_t prev_node, size_t width, size_t height){
     int32_t id = flow_node_create_generic(c, g, prev_node, flow_ntype_Scale);
     if (id < 0){

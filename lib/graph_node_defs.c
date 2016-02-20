@@ -166,6 +166,19 @@ static bool dimensions_mimic_input(Context *c, struct flow_graph *g, int32_t nod
     return true;
 }
 
+static bool dimensions_copy_rect(Context *c, struct flow_graph *g, int32_t node_id, int32_t outbound_edge_id, bool force_estimate){
+    FLOW_GET_CANVAS_EDGE(g,node_id)
+
+    struct flow_edge * output = &g->edges[outbound_edge_id];
+
+    //TODO: implement validation of all coordinates here.
+    output->from_width = canvas_edge->from_width;
+    output->from_height = canvas_edge->from_height;
+    output->from_alpha_meaningful = canvas_edge->from_alpha_meaningful;
+    output->from_format = canvas_edge->from_format;
+    return true;
+}
+
 static bool dimensions_crop(Context *c, struct flow_graph *g, int32_t node_id, int32_t outbound_edge_id, bool force_estimate){
     FLOW_GET_INFOBYTES(g,node_id, flow_nodeinfo_crop, info)
     FLOW_GET_INPUT_EDGE(g,node_id)
@@ -362,6 +375,38 @@ static bool execute_render1d(Context *c, struct flow_job * job, struct flow_grap
     return true;
 }
 
+
+static bool execute_copy_rect(Context *c, struct flow_job * job, struct flow_graph * g, int32_t node_id){
+    FLOW_GET_INFOBYTES(g,node_id, flow_nodeinfo_copy_rect_to_canvas, info)
+    FLOW_GET_INPUT_EDGE(g,node_id)
+    FLOW_GET_CANVAS_EDGE(g,node_id)
+    struct flow_node * n = &g->nodes[node_id];
+
+    BitmapBgra * input = g->nodes[input_edge->from].result_bitmap;
+    BitmapBgra * canvas = g->nodes[canvas_edge->from].result_bitmap;
+
+    //TODO: implement bounds checks!!!
+    if (input->fmt != canvas->fmt){
+        CONTEXT_error(c, Invalid_argument);
+        return false;
+    }
+    if (info->x == 0 && info->from_x == 0 && info->from_y == 0 && info->y == 0 && info->width == input->w && info->width == canvas->w &&
+        info->height == input->h && info->height == canvas->h && canvas->stride == input->stride){
+        memcpy(canvas->pixels, input->pixels, input->stride * input->h);
+        canvas->alpha_meaningful = input->alpha_meaningful;
+    }else {
+        int32_t bytes_pp = BitmapPixelFormat_bytes_per_pixel(input->fmt);
+        for (uint32_t y = 0; y < info->height; y++) {
+            void *from_ptr =input->pixels + (size_t)(input->stride * (info->from_y + y) + bytes_pp * info->from_x);
+            void *to_ptr = canvas->pixels + (size_t)(canvas->stride * (info->y + y) + bytes_pp * info->x);
+            memcpy(to_ptr, from_ptr, info->width * bytes_pp);
+        }
+    }
+    n->result_bitmap = canvas;
+    n->executed = true;
+    return true;
+}
+
 static bool execute_decode(Context *c, struct flow_job *job, struct flow_graph *g, int32_t node_id){
     FLOW_GET_INFOBYTES(g,node_id, flow_nodeinfo_codec, info)
 
@@ -458,6 +503,15 @@ struct flow_node_definition flow_node_defs[] = {
                 .populate_dimensions = dimensions_crop,
                 .type_name = "crop",
                 .execute = execute_crop
+        },
+        {
+                .type = flow_ntype_primitive_CopyRectToCanvas,
+                .nodeinfo_bytes_fixed = sizeof(struct flow_nodeinfo_copy_rect_to_canvas),
+                .input_count = 1,
+                .canvas_count = 1,
+                .populate_dimensions = dimensions_copy_rect,
+                .type_name = "copy rect",
+                .execute = execute_copy_rect
         },
         {
                 .type = flow_ntype_Resource_Placeholder,

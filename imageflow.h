@@ -195,7 +195,7 @@ int32_t flow_node_create_resource_placeholder(Context *c, struct flow_graph **g,
 
 int32_t flow_node_create_resource_bitmap_bgra(Context *c, struct flow_graph ** graph_ref, int32_t prev_node, BitmapBgra ** ref);
 
-
+int32_t flow_node_create_primitive_copy_rect_to_canvas(Context *c, struct flow_graph **g, int32_t prev_node, uint32_t from_x, uint32_t from_y, uint32_t width, uint32_t height, uint32_t x, uint32_t y);
 
 int32_t flow_node_create_primitive_crop(Context *c, struct flow_graph **g, int32_t prev_node, uint32_t x1, uint32_t x2, uint32_t y1, uint32_t y2);
 
@@ -255,6 +255,15 @@ struct flow_nodeinfo_crop {
     uint32_t y2;
 };
 
+struct flow_nodeinfo_copy_rect_to_canvas {
+    uint32_t x;
+    uint32_t y;
+    uint32_t from_x;
+    uint32_t from_y;
+    uint32_t width;
+    uint32_t height;
+
+};
 
 struct flow_nodeinfo_size {
     size_t width;
