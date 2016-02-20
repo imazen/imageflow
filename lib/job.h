@@ -37,10 +37,12 @@ struct flow_job {
     bool record_frame_images;
     bool render_graph_versions;
     bool render_animated_graph;
+    bool render_last_graph;
 };
 
 void flow_utils_ensure_directory_exists(const char *dir_path);
 
+bool flow_job_render_graph_to_png(Context *c, struct flow_job *job, struct flow_graph * g, int32_t graph_version);
 bool flow_job_notify_node_complete(Context *c, struct flow_job *job, struct flow_graph * g, int32_t node_id);
 
 typedef void * (*codec_aquire_on_buffer_fn)(Context *c, struct flow_job * job, struct flow_job_resource_buffer * buffer);

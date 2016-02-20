@@ -522,7 +522,7 @@ static const char * get_format_name(BitmapPixelFormat f, bool alpha_meaningful){
 
 bool flow_graph_print_to_dot(Context *c, struct flow_graph *g, FILE * stream, const char * image_node_filename_prefix){
     fprintf(stream, "digraph g {\n");
-    fprintf(stream, "  node [shape=box, fontsize=20, fontname=\"sans-serif\"]\n  size=\"12,18\"\n");
+    fprintf(stream, "  node [shape=box, fontsize=20, fontcolor=\"#5AFA0A\" fontname=\"sans-serif bold\"]\n  size=\"12,18\"\n");
     fprintf(stream, "  edge [fontsize=20, fontname=\"sans-serif\"]\n");
 
 

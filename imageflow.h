@@ -293,7 +293,7 @@ typedef enum FLOW_DIRECTION{
 
 struct flow_job * flow_job_create(Context *c);
 void flow_job_destroy(Context *c, struct flow_job * job);
-bool flow_job_configure_recording(Context * c, struct flow_job * job, bool record_graph_versions, bool record_frame_images, bool render_graph_versions, bool render_animated_graph);
+bool flow_job_configure_recording(Context * c, struct flow_job * job, bool record_graph_versions, bool record_frame_images, bool render_last_graph, bool render_graph_versions, bool render_animated_graph);
     bool flow_job_insert_resources_into_graph(Context *c, struct flow_job *job, struct flow_graph **graph);
 
 bool flow_job_populate_dimensions_where_certain(Context *c, struct flow_job * job, struct flow_graph **graph_ref);

@@ -6,7 +6,7 @@ struct flow_job * flow_job_create(Context *c){
 
     struct flow_job * job = (struct flow_job *) CONTEXT_malloc(c, sizeof(struct flow_job));
     static int32_t job_id = 0;
-    flow_job_configure_recording(c, job, false, false, false, false);
+    flow_job_configure_recording(c, job, false, false, false, false, false);
     job->next_graph_version = 0;
     job->debug_job_id = job_id++;
     job->next_resource_id = 0x800;
@@ -15,9 +15,10 @@ struct flow_job * flow_job_create(Context *c){
     return job;
 }
 
-bool flow_job_configure_recording(Context * c, struct flow_job * job, bool record_graph_versions, bool record_frame_images, bool render_graph_versions, bool render_animated_graph){
+bool flow_job_configure_recording(Context * c, struct flow_job * job, bool record_graph_versions, bool record_frame_images, bool render_last_graph, bool render_graph_versions, bool render_animated_graph){
     job->record_frame_images = record_frame_images;
     job->record_graph_versions = record_graph_versions;
+    job->render_last_graph = render_last_graph;
     job->render_graph_versions = render_graph_versions && record_graph_versions;
     job->render_animated_graph = render_animated_graph && job->render_graph_versions;
     return true;
@@ -127,6 +128,10 @@ bool flow_job_execute(Context *c, struct flow_job * job,struct flow_graph **grap
         if (!flow_job_notify_graph_changed(c,job, *graph_ref)){
             CONTEXT_error_return(c);
         }
+    }
+    if (job->next_graph_version > 0 && job->render_last_graph &&
+        !flow_job_render_graph_to_png(c,job,*graph_ref, job->next_graph_version -1)){
+        CONTEXT_error_return(c);
     }
     return true;
 }
@@ -250,14 +255,22 @@ bool flow_job_notify_graph_changed(Context *c, struct flow_job *job, struct flow
         }
         if (identical){
             job->next_graph_version--; //Next time we will overwrite the duplicate graph. The last two graphs may remain dupes.
+            remove(filename);
         }else if (job->render_graph_versions){
-            char dotfile_command[2048];
-            snprintf(dotfile_command, 2048, "dot -Tpng -Gsize=11,16\\! -Gdpi=150  -O %s", prev_filename);
-            int32_t ignore = system(dotfile_command);
-            ignore++;
+            flow_job_render_graph_to_png(c, job, g, prev_graph_version);
         }
     }
 
     return true;
 }
 
+bool flow_job_render_graph_to_png(Context *c, struct flow_job *job, struct flow_graph * g, int32_t graph_version){
+    char filename[255];
+    snprintf(filename, 254,"job_%d_graph_version_%d.dot", job->debug_job_id,  graph_version);
+
+    char dotfile_command[2048];
+    snprintf(dotfile_command, 2048, "dot -Tpng -Gsize=11,16\\! -Gdpi=150  -O %s", filename);
+    int32_t ignore = system(dotfile_command);
+    ignore++;
+    return true;
+}

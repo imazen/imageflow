@@ -152,15 +152,15 @@ void fetch_image(const char* url, char* dest_path){ /*null-terminated string*/
 
 uint8_t * get_bytes_cached(const char * url, size_t * bytes_count_out){
 
-    const size_t MAX_PATH = 255;
-    char cache_folder[MAX_PATH];
+    #define FLOW_MAX_PATH 255
+    char cache_folder[FLOW_MAX_PATH];
 
-    snprintf(cache_folder,MAX_PATH, "%s/imageflow_cache", getenv("HOME"));
+    snprintf(cache_folder,FLOW_MAX_PATH, "%s/imageflow_cache", getenv("HOME"));
 
     flow_utils_ensure_directory_exists(cache_folder);
-    char cache_path[MAX_PATH];
+    char cache_path[FLOW_MAX_PATH];
 
-    snprintf(cache_path, MAX_PATH, "%s/%lu", cache_folder, djb2((unsigned const char *)url));
+    snprintf(cache_path, FLOW_MAX_PATH, "%s/%lu", cache_folder, djb2((unsigned const char *)url));
 
     if( access( cache_path, F_OK ) == -1 ) {
         // file doesn't exist

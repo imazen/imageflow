@@ -255,7 +255,7 @@ TEST_CASE("decode, scale, and re-encode png", "")
 
     job = flow_job_create(c);
     ERR(c);
-    flow_job_configure_recording(c, job, true, true, true, true);
+    flow_job_configure_recording(c, job, true, true, true, false, false);
 
 
     size_t bytes_count = 0;
