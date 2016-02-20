@@ -23,7 +23,7 @@ extern "C" {
 
 typedef enum flow_ntype {
     flow_ntype_Null = 0,
-    flow_ntype_primitive_Flip_Vertical = 1,
+    flow_ntype_primitive_Flip_Vertical = 1, //Flips existing
     flow_ntype_primitive_Crop = 2, //Creates a new window into an existing frame -
     flow_ntype_primitive_CopyRectToCanvas = 3, //Overwrite only, no compositing
     flow_ntype_Create_Canvas = 4,
@@ -34,6 +34,9 @@ typedef enum flow_ntype {
     flow_ntype_primitive_encoder,
 
     flow_ntype_non_primitive_nodes_begin = 256,
+    flow_ntype_Clone,
+    flow_ntype_Transpose,
+
     flow_ntype_Crop_Percentage,
     flow_ntype_Crop_Percentage_Infinite_Canvas, //canvas_color
     flow_ntype_Crop_Rectangle,
@@ -188,6 +191,8 @@ int32_t flow_node_create_canvas(Context *c, struct flow_graph **g, int32_t prev_
 int32_t flow_node_create_scale(Context *c, struct flow_graph **g, int32_t prev_node, size_t width, size_t height);
 
 int32_t flow_node_create_primitive_flip_vertical(Context *c, struct flow_graph **g, int32_t prev_node);
+
+int32_t flow_node_create_clone(Context *c, struct flow_graph **g, int32_t prev_node);
 
 int32_t flow_node_create_resource_placeholder(Context *c, struct flow_graph **g, int32_t prev_node,
                                               int32_t output_slot_id);

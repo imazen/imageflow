@@ -293,6 +293,27 @@ static bool flattenshort_scale(Context *c, struct flow_graph **g, int32_t node_i
 }
 
 
+static bool shortflatten_clone(Context *c, struct flow_graph **g, int32_t node_id, struct flow_node * node, struct flow_edge * input_edge, int32_t * first_replacement_node, int32_t * last_replacement_node){
+
+    //create canvas
+    int32_t canvas = flow_node_create_canvas(c,g,-1,input_edge->from_format,input_edge->from_width,input_edge->from_height,0);
+    if (canvas < 0){
+        CONTEXT_error_return(c);
+    }
+    //Blit from image
+    *first_replacement_node = flow_node_create_primitive_copy_rect_to_canvas(c,g, -1, 0,0,input_edge->from_width, input_edge->from_height, 0,0);
+    if (*first_replacement_node < 0){
+        CONTEXT_error_return(c);
+    }
+    //blit to canvas
+    if (flow_edge_create(c,g, canvas, *first_replacement_node, flow_edgetype_canvas) < 0){
+        CONTEXT_error_return(c);
+    }
+
+    *last_replacement_node = *first_replacement_node;
+    return true;
+}
+
 static bool execute_canvas(Context *c, struct flow_job * job, struct flow_graph * g, int32_t node_id){
     FLOW_GET_INFOBYTES(g,node_id, flow_nodeinfo_createcanvas, info)
 
@@ -494,6 +515,15 @@ struct flow_node_definition flow_node_defs[] = {
                 .populate_dimensions = dimensions_mimic_input,
                 .type_name = "flip vertical",
                 .execute = execute_flip_vertical
+        },
+        {
+                .type = flow_ntype_Clone,
+                .nodeinfo_bytes_fixed = 0,
+                .input_count = 1,
+                .canvas_count = 0,
+                .populate_dimensions = dimensions_mimic_input,
+                .type_name = "clone",
+                .flatten_shorthand = shortflatten_clone
         },
         {
                 .type = flow_ntype_primitive_Crop,
