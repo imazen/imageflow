@@ -165,6 +165,17 @@ static bool dimensions_mimic_input(Context *c, struct flow_graph *g, int32_t nod
     output->from_format = input_edge->from_format;
     return true;
 }
+static bool dimensions_transpose(Context *c, struct flow_graph *g, int32_t node_id, int32_t outbound_edge_id, bool force_estimate){
+    FLOW_GET_INPUT_EDGE(g,node_id)
+
+    struct flow_edge * output = &g->edges[outbound_edge_id];
+
+    output->from_width = input_edge->from_height; //we just swap with and height
+    output->from_height = input_edge->from_width;
+    output->from_alpha_meaningful = input_edge->from_alpha_meaningful;
+    output->from_format = input_edge->from_format;
+    return true;
+}
 
 static bool dimensions_copy_rect(Context *c, struct flow_graph *g, int32_t node_id, int32_t outbound_edge_id, bool force_estimate){
     FLOW_GET_CANVAS_EDGE(g,node_id)
@@ -255,6 +266,19 @@ static bool dimensions_decode(Context *c, struct flow_graph *g, int32_t node_id,
     return true;
 }
 
+static int32_t create_render1d_node(Context *c, struct flow_graph **g, int32_t last, int32_t to_width, bool transpose, InterpolationFilter filter){
+
+    WorkingFloatspace floatspace = Floatspace_linear;
+    flow_compositing_mode mode = flow_compositing_mode_overwrite;
+    uint8_t *matte_color[4];
+    float sharpen_percent =0;
+
+    int32_t id = flow_node_create_render_to_canvas_1d(c,g,last,transpose,0,0,to_width, floatspace, sharpen_percent, mode, matte_color, NULL, filter);
+    if (id < 0){
+       CONTEXT_add_to_callstack(c);
+    }
+    return id;
+}
 static bool flattenshort_scale(Context *c, struct flow_graph **g, int32_t node_id, struct flow_node * node, struct flow_edge * input_edge, int32_t * first_replacement_node, int32_t * last_replacement_node){
     FLOW_GET_INFOBYTES((*g),node_id, flow_nodeinfo_size, size)
 
@@ -268,13 +292,8 @@ static bool flattenshort_scale(Context *c, struct flow_graph **g, int32_t node_i
         CONTEXT_error_return(c);
     }
 
-    WorkingFloatspace floatspace = Floatspace_linear;
-    flow_compositing_mode mode = flow_compositing_mode_overwrite;
     InterpolationFilter filter = Filter_Robidoux;
-    uint8_t *matte_color[4];
-    float sharpen_percent =0;
-
-    *first_replacement_node = flow_node_create_render_to_canvas_1d(c,g,-1,true,0,0,size->width, floatspace, sharpen_percent, mode, matte_color, NULL, filter);
+    *first_replacement_node = create_render1d_node(c,g,-1, size->width, true, filter);
     if (*first_replacement_node < 0){
         CONTEXT_error_return(c);
     }
@@ -282,11 +301,85 @@ static bool flattenshort_scale(Context *c, struct flow_graph **g, int32_t node_i
         CONTEXT_error_return(c);
     }
 
-    *last_replacement_node = flow_node_create_render_to_canvas_1d(c,g, *first_replacement_node,true, 0,0, size->height, floatspace, sharpen_percent, mode, matte_color, NULL, filter);
+    *last_replacement_node = create_render1d_node(c,g,*first_replacement_node, size->height, true, filter);
     if (*last_replacement_node < 0){
         CONTEXT_error_return(c);
     }
     if (flow_edge_create(c,g, canvas_b, *last_replacement_node, flow_edgetype_canvas) < 0){
+        CONTEXT_error_return(c);
+    }
+    return true;
+}
+
+
+static bool shortflatten_transpose(Context *c, struct flow_graph **g, int32_t node_id, struct flow_node *node,
+                                   struct flow_edge *input_edge, int32_t *first_replacement_node,
+                                   int32_t *last_replacement_node){
+
+    int32_t canvas = flow_node_create_canvas(c,g,-1,input_edge->from_format,input_edge->from_height, input_edge->from_width,0);
+    if (canvas < 0){
+        CONTEXT_error_return(c);
+    }
+
+    *first_replacement_node = create_render1d_node(c,g,*first_replacement_node, input_edge->from_width, true, Filter_Robidoux);
+    if (*first_replacement_node < 0){
+        CONTEXT_error_return(c);
+    }
+    if (flow_edge_create(c,g, canvas, *first_replacement_node, flow_edgetype_canvas) < 0){
+        CONTEXT_error_return(c);
+    }
+
+    *last_replacement_node = *first_replacement_node;
+    return true;
+}
+
+
+static bool shortflatten_rotate_90(Context *c, struct flow_graph **g, int32_t node_id, struct flow_node *node,
+                                   struct flow_edge *input_edge, int32_t *first_replacement_node,
+                                   int32_t *last_replacement_node){
+
+    *first_replacement_node = flow_node_create_transpose(c,g, -1);
+    if (*first_replacement_node < 0){
+        CONTEXT_error_return(c);
+    }
+    *last_replacement_node = flow_node_create_primitive_flip_vertical(c,g,*first_replacement_node);
+    if (*last_replacement_node < 0){
+        CONTEXT_error_return(c);
+    }
+    return true;
+}
+static bool shortflatten_rotate_270(Context *c, struct flow_graph **g, int32_t node_id, struct flow_node *node,
+                                   struct flow_edge *input_edge, int32_t *first_replacement_node,
+                                   int32_t *last_replacement_node){
+
+    *first_replacement_node = flow_node_create_primitive_flip_vertical(c,g, -1);
+    if (*first_replacement_node < 0){
+        CONTEXT_error_return(c);
+    }
+    *last_replacement_node = flow_node_create_transpose(c,g, *first_replacement_node);
+    if (*last_replacement_node < 0){
+        CONTEXT_error_return(c);
+    }
+    return true;
+}
+static bool shortflatten_rotate_180(Context *c, struct flow_graph **g, int32_t node_id, struct flow_node *node,
+                                    struct flow_edge *input_edge, int32_t *first_replacement_node,
+                                    int32_t *last_replacement_node){
+
+    *first_replacement_node = flow_node_create_primitive_flip_vertical(c,g, -1);
+    if (*first_replacement_node < 0){
+        CONTEXT_error_return(c);
+    }
+    *last_replacement_node = flow_node_create_transpose(c,g, *first_replacement_node);
+    if (*last_replacement_node < 0){
+        CONTEXT_error_return(c);
+    }
+    *last_replacement_node = flow_node_create_primitive_flip_vertical(c,g, *last_replacement_node);
+    if (*last_replacement_node < 0){
+        CONTEXT_error_return(c);
+    }
+    *last_replacement_node = flow_node_create_transpose(c,g, *last_replacement_node);
+    if (*last_replacement_node < 0){
         CONTEXT_error_return(c);
     }
     return true;
@@ -524,6 +617,42 @@ struct flow_node_definition flow_node_defs[] = {
                 .populate_dimensions = dimensions_mimic_input,
                 .type_name = "clone",
                 .flatten_shorthand = shortflatten_clone
+        },
+        {
+                .type = flow_ntype_Transpose,
+                .nodeinfo_bytes_fixed = 0,
+                .input_count = 1,
+                .canvas_count = 0,
+                .populate_dimensions = dimensions_transpose,
+                .type_name = "transpose",
+                .flatten_shorthand = shortflatten_transpose
+        },
+        {
+            .type = flow_ntype_Rotate_90,
+            .nodeinfo_bytes_fixed = 0,
+            .input_count = 1,
+            .canvas_count = 0,
+            .populate_dimensions = dimensions_transpose,
+            .type_name = "rotate 90",
+            .flatten_shorthand = shortflatten_rotate_90
+        },
+        {
+            .type = flow_ntype_Rotate_180,
+            .nodeinfo_bytes_fixed = 0,
+            .input_count = 1,
+            .canvas_count = 0,
+            .populate_dimensions = dimensions_mimic_input,
+            .type_name = "rotate 180",
+            .flatten_shorthand = shortflatten_rotate_180
+        },
+        {
+            .type = flow_ntype_Rotate_270,
+            .nodeinfo_bytes_fixed = 0,
+            .input_count = 1,
+            .canvas_count = 0,
+            .populate_dimensions = dimensions_transpose,
+            .type_name = "rotate 270",
+            .flatten_shorthand = shortflatten_rotate_270
         },
         {
                 .type = flow_ntype_primitive_Crop,

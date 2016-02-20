@@ -147,6 +147,39 @@ int32_t flow_node_create_clone(Context *c, struct flow_graph **g, int32_t prev_n
     }
     return id;
 }
+
+int32_t flow_node_create_transpose(Context *c, struct flow_graph **g, int32_t prev_node){
+    int32_t id = flow_node_create_generic(c, g, prev_node, flow_ntype_Transpose);
+    if (id < 0){
+        CONTEXT_add_to_callstack(c);
+        return id;
+    }
+    return id;
+}
+int32_t flow_node_create_rotate_90(Context *c, struct flow_graph **g, int32_t prev_node){
+    int32_t id = flow_node_create_generic(c, g, prev_node, flow_ntype_Rotate_90);
+    if (id < 0){
+        CONTEXT_add_to_callstack(c);
+        return id;
+    }
+    return id;
+}
+int32_t flow_node_create_rotate_180(Context *c, struct flow_graph **g, int32_t prev_node){
+    int32_t id = flow_node_create_generic(c, g, prev_node, flow_ntype_Rotate_180);
+    if (id < 0){
+        CONTEXT_add_to_callstack(c);
+        return id;
+    }
+    return id;
+}
+int32_t flow_node_create_rotate_270(Context *c, struct flow_graph **g, int32_t prev_node){
+    int32_t id = flow_node_create_generic(c, g, prev_node, flow_ntype_Rotate_270);
+    if (id < 0){
+        CONTEXT_add_to_callstack(c);
+        return id;
+    }
+    return id;
+}
 int32_t flow_node_create_primitive_crop(Context *c, struct flow_graph **g, int32_t prev_node, uint32_t x1, uint32_t y1, uint32_t x2, uint32_t y2){
     int32_t id = flow_node_create_generic(c, g, prev_node, flow_ntype_primitive_Crop);
     if (id < 0){

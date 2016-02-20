@@ -392,7 +392,8 @@ TEST_CASE("test frame clone", "")
     int32_t input = flow_node_create_resource_placeholder(c, &g, -1, input_placeholder);
     int32_t clone_a  = flow_node_create_clone(c, &g, input);
     int32_t clone_b  = flow_node_create_clone(c, &g, input);
-    flow_node_create_primitive_flip_vertical(c,&g,clone_b); //mutate b, leave a alone
+    int32_t last = flow_node_create_primitive_flip_vertical(c,&g,clone_b); //mutate b, leave a alone
+    flow_node_create_transpose(c,&g,last);
 
     flow_node_create_resource_placeholder(c, &g, clone_a, output_placeholder);
 
@@ -401,3 +402,31 @@ TEST_CASE("test frame clone", "")
     flow_graph_destroy(c, g);
     Context_destroy(c);
 }
+
+
+
+TEST_CASE("test rotation", "")
+{
+    Context * c = Context_create();
+    struct flow_graph *g = flow_graph_create(c, 10, 10, 200, 2.0);
+    ERR(c);
+
+    int32_t input_placeholder = 0, output_placeholder = 1;
+
+    int32_t input = flow_node_create_resource_placeholder(c, &g, -1, input_placeholder);
+    int32_t clone_a  = flow_node_create_clone(c, &g, input);
+    clone_a = flow_node_create_rotate_90(c,&g,clone_a);
+    int32_t clone_b  = flow_node_create_clone(c, &g, input);
+    clone_b = flow_node_create_rotate_180(c,&g,clone_b);
+    int32_t clone_c  = flow_node_create_clone(c, &g, input);
+    clone_c = flow_node_create_rotate_270(c,&g,clone_c);
+    flow_node_create_resource_placeholder(c, &g, clone_a, output_placeholder);
+
+    execute_graph_for_url(c, "http://z.zr.io/ri/Oriented.jpg?format=png", "rotated.png", &g);
+
+    flow_graph_destroy(c, g);
+    Context_destroy(c);
+}
+
+
+

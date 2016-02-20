@@ -194,6 +194,14 @@ int32_t flow_node_create_primitive_flip_vertical(Context *c, struct flow_graph *
 
 int32_t flow_node_create_clone(Context *c, struct flow_graph **g, int32_t prev_node);
 
+int32_t flow_node_create_transpose(Context *c, struct flow_graph **g, int32_t prev_node);
+
+int32_t flow_node_create_rotate_90(Context *c, struct flow_graph **g, int32_t prev_node);
+
+int32_t flow_node_create_rotate_180(Context *c, struct flow_graph **g, int32_t prev_node);
+
+int32_t flow_node_create_rotate_270(Context *c, struct flow_graph **g, int32_t prev_node);
+
 int32_t flow_node_create_resource_placeholder(Context *c, struct flow_graph **g, int32_t prev_node,
                                               int32_t output_slot_id);
 
