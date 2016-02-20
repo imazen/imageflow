@@ -6,6 +6,8 @@
 #include <stdbool.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/stat.h>
+#include <errno.h>
 #include "png.h"
 
 
@@ -25,15 +27,21 @@ struct decoder_frame_info{
 
 
 struct flow_job {
-    bool record_graph_versions;
+    int32_t debug_job_id;
     int32_t next_graph_version;
     int32_t next_resource_id;
     int32_t max_calc_flatten_execute_passes;
     struct flow_job_resource_item * resources_head;
     struct flow_job_resource_item * resources_tail;
+    bool record_graph_versions;
+    bool record_frame_images;
+    bool render_graph_versions;
+    bool render_animated_graph;
 };
 
+void flow_utils_ensure_directory_exists(const char *dir_path);
 
+bool flow_job_notify_node_complete(Context *c, struct flow_job *job, struct flow_graph * g, int32_t node_id);
 
 typedef void * (*codec_aquire_on_buffer_fn)(Context *c, struct flow_job * job, struct flow_job_resource_buffer * buffer);
 
@@ -86,3 +94,4 @@ struct flow_job_resource_item{
     void * codec_state;
     void * data;
 };
+

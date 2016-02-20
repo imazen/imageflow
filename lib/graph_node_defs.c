@@ -51,6 +51,8 @@
     struct flow_edge * canvas_edge = &g->edges[canvas_edge_id];
 
 
+const char stringify_done[] = "[x]";
+const char stringify_notdone[] = "[]";
 
 static const char * get_format_name(BitmapPixelFormat f, bool alpha_meaningful){
     switch(f){
@@ -64,35 +66,51 @@ static const char * get_format_name(BitmapPixelFormat f, bool alpha_meaningful){
 static bool stringify_scale(Context *c, struct flow_graph *g, int32_t node_id, char * buffer, size_t buffer_size){
     FLOW_GET_INFOBYTES(g,node_id, flow_nodeinfo_size, info);
 
-    snprintf(buffer, buffer_size, "scale %lux%lu%s", info->width, info->height, g->nodes[node_id].executed ? " [done]" : "");
+    snprintf(buffer, buffer_size, "scale %lux%lu %s", info->width, info->height, g->nodes[node_id].executed ? stringify_done : stringify_notdone);
     return true;
 }
 
 static bool stringify_canvas(Context *c, struct flow_graph *g, int32_t node_id, char * buffer, size_t buffer_size){
     FLOW_GET_INFOBYTES(g,node_id, flow_nodeinfo_createcanvas, info);
 
-    snprintf(buffer, buffer_size, "create canvas %lux%lu %s%s", info->width, info->height, get_format_name(info->format, false), g->nodes[node_id].executed ? " [done]" : "");
+    snprintf(buffer, buffer_size, "canvas %lux%lu %s %s", info->width, info->height, get_format_name(info->format, false), g->nodes[node_id].executed ? stringify_done : stringify_notdone);
     return true;
 }
-
+static char * stringify_colorspace(WorkingFloatspace space){
+    switch (space){
+        case Floatspace_gamma: return "gamma";
+        case Floatspace_linear: return "linear";
+        case Floatspace_srgb: return "sRGB";
+        default:
+            return "colorspace unknown";
+    }
+}
+static char * stringify_filter(InterpolationFilter filter){
+    switch (filter){
+        case Filter_Robidoux: return "robidoux";
+        default:
+            return "??";
+    }
+}
 static bool stringify_render1d(Context *c, struct flow_graph *g, int32_t node_id, char * buffer, size_t buffer_size){
     FLOW_GET_INFOBYTES(g,node_id, flow_nodeinfo_render_to_canvas_1d, info);
 
-    //TODO
-    snprintf(buffer, buffer_size, "render1d %d%s", info->scale_to_width, g->nodes[node_id].executed ? " [done]" : "");
+    snprintf(buffer, buffer_size, "render1d x%d %s %s\nat %d,%d. %s sharp%d%%. %s", info->scale_to_width,
+             stringify_filter(info->interpolation_filter), g->nodes[node_id].executed ? stringify_done: stringify_notdone,
+     info->canvas_x, info->canvas_y, info->transpose_on_write ? "transpose. " : "",(int)info->sharpen_percent_goal, stringify_colorspace(info->scale_in_colorspace));
     return true;
 }
 
 static bool stringify_placeholder(Context *c, struct flow_graph *g, int32_t node_id, char * buffer, size_t buffer_size){
     FLOW_GET_INFOBYTES(g,node_id, flow_nodeinfo_index, info);
 
-    snprintf(buffer, buffer_size, "resource placeholder #%d", info->index);
+    snprintf(buffer, buffer_size, "placeholder #%d", info->index);
     return true;
 }
 
 
 static bool stringify_bitmap_bgra_pointer(Context *c, struct flow_graph *g, int32_t node_id, char * buffer, size_t buffer_size){
-    snprintf(buffer, buffer_size, "BitmapBgra container");
+    snprintf(buffer, buffer_size, "* BitmapBgra");
     return true;
 }
 
@@ -108,10 +126,10 @@ static bool stringify_decode(Context *c, struct flow_graph *g, int32_t node_id, 
             CONTEXT_error(c,Not_implemented);
             return false;
         }else{
-            snprintf(buffer,buffer_size, "%s", def->name);
+            snprintf(buffer,buffer_size, "%s %s", def->name, g->nodes[node_id].executed ? stringify_done : stringify_notdone);
         }
     }else {
-        def->stringify(c, NULL, info->codec_state, buffer, buffer_size); //what about [done]
+        def->stringify(c, NULL, info->codec_state, buffer, buffer_size);
     }
     return true;
 }
@@ -232,6 +250,13 @@ static bool execute_canvas(Context *c, struct flow_job * job, struct flow_graph 
     if ( n->result_bitmap == NULL){
         CONTEXT_error_return(c);
     }
+    //Uncomment to make canvas blue for debugging
+//    for (int32_t y =0; y < (int32_t)n->result_bitmap->h; y++)
+//    for (int32_t i = 0; i < (int32_t)n->result_bitmap->w; i++){
+//        n->result_bitmap->pixels[n->result_bitmap->stride * y + i * 4] = 0xFF;
+//        n->result_bitmap->pixels[n->result_bitmap->stride * y + i * 4 + 3] = 0xFF;
+//    }
+
     n->executed = true;
     return true;
 }
@@ -335,7 +360,7 @@ struct flow_node_definition flow_node_defs[] = {
                 .input_count = 0,
                 .canvas_count = 0,
                 .populate_dimensions = dimensions_canvas,
-                .type_name = "create canvas",
+                .type_name = "canvas",
                 .stringify = stringify_canvas,
                 .execute = execute_canvas
 
@@ -344,7 +369,7 @@ struct flow_node_definition flow_node_defs[] = {
         {
                 .type = flow_ntype_Resource_Placeholder,
                 .nodeinfo_bytes_fixed = sizeof(struct flow_nodeinfo_index),
-                .type_name = "resource placeholder",
+                .type_name = "placeholder",
                 .input_count = -1,
                 .canvas_count = 0,
                 .stringify = stringify_placeholder
@@ -354,7 +379,7 @@ struct flow_node_definition flow_node_defs[] = {
         {
                 .type = flow_ntype_primitive_bitmap_bgra_pointer,
                 .nodeinfo_bytes_fixed = sizeof(struct flow_nodeinfo_resource_bitmap_bgra),
-                .type_name = "bitmap bgra pointer",
+                .type_name = "BitmapBgra ptr",
                 .input_count = 1,
                 .canvas_count = 0,
                 .stringify = stringify_bitmap_bgra_pointer,
@@ -364,7 +389,7 @@ struct flow_node_definition flow_node_defs[] = {
         {
                 .type = flow_ntype_primitive_RenderToCanvas1D,
                 .nodeinfo_bytes_fixed = sizeof(struct flow_nodeinfo_render_to_canvas_1d),
-                .type_name = "render to canvas 1d",
+                .type_name = "render1d",
                 .input_count = 1,
                 .canvas_count = 1,
                 .stringify = stringify_render1d,
@@ -424,7 +449,7 @@ bool flow_node_stringify(Context *c, struct flow_graph *g, int32_t node_id, char
             CONTEXT_error(c,Not_implemented);
             return false;
         }
-        snprintf(buffer,buffer_size,"%s%s",def->type_name, node->executed ? " [done]" : "");
+        snprintf(buffer,buffer_size,"%s %s",def->type_name, node->executed ? stringify_done : stringify_notdone);
     }else{
         def->stringify(c,g,node_id, buffer,buffer_size);
     }

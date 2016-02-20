@@ -352,5 +352,5 @@ return 0;
 1. Switch to the directory holding the generated graph_version_XXX.dot files.
 2. Ensure you have graphviz, gifsicle and avtools:  sudo apt-get install libav-tools graphviz gifsicle
 3. Convert them to .png: `find . -type f -name '*.dot' -execdir dot -Tpng -Gsize=5,9\! -Gdpi=100  -O {} \;`
-4. Assemble .gif: `avconv -i graph_version_%d.dot.png -pix_fmt rgb24 -y output.gif`
+4. Assemble .gif: `avconv -i job_2_graph_version_%d.dot.png -pix_fmt rgb24 -y output.gif`
 5: Add delay to frames, optimize: `gifsicle -d 200 output.gif -l=2 -O -o optimized.gif`

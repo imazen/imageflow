@@ -62,8 +62,8 @@ static bool flow_job_png_decoder_FinishRead(Context * c, struct flow_job_png_dec
         CONTEXT_error(c,Invalid_internal_state);
         return false;
     }
-
-    state->pixel_buffer =  (png_bytep)CONTEXT_calloc (c, state->pixel_buffer_size, sizeof(png_bytep));
+    //We let the caller create the buffer
+    //    state->pixel_buffer =  (png_bytep)CONTEXT_calloc (c, state->pixel_buffer_size, sizeof(png_bytep));
     if (state->pixel_buffer == NULL){
         png_image_free(&state->image);
         state->stage = flow_job_png_decoder_stage_Failed;

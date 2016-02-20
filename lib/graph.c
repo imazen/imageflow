@@ -92,6 +92,7 @@ int32_t flow_node_create_generic(Context *c, struct flow_graph ** graph_ref, int
     g->nodes[id].info_bytes = nodeinfo_size;
     g->nodes[id].executed = false;
     g->nodes[id].result_bitmap = NULL;
+    g->nodes[id].ticks_elapsed = 0;
 
     g->next_info_byte += g->nodes[id].info_bytes;
     g->next_node_id += 1;
@@ -503,8 +504,9 @@ int32_t flow_graph_get_inbound_edge_count_of_type(Context *c, struct flow_graph 
 }
 
 void flow_graph_print_to(Context *c, struct flow_graph *g, FILE * stream){
-    fprintf(stream, "Graph nodes: %d, edges: %d, infobytes: %d\n", g->node_count, g->edge_count, g->next_info_byte);
-    fprintf(stream, "Space utilization: nodes: %d/%d, edges: %d/%d, infobytes %d/%d\n", g->next_node_id, g->max_nodes, g->next_edge_id, g->max_edges, g->next_info_byte, g->max_info_bytes);
+    fprintf(stream, "%d nodes (%d/%d), %d edges (%d/%d), %d infobytes (%d/%d)\n", g->node_count, g->next_node_id, g->max_nodes,
+            g->edge_count, g->next_edge_id, g->max_edges,
+            g->next_info_byte - g->deleted_bytes, g->next_info_byte, g->max_info_bytes);
 
     flow_graph_print_edges_to(c,g,stream);
     flow_graph_print_nodes_to(c,g,stream);
@@ -518,19 +520,27 @@ static const char * get_format_name(BitmapPixelFormat f, bool alpha_meaningful){
     }
 }
 
-bool flow_graph_print_to_dot(Context *c, struct flow_graph *g, FILE * stream){
+bool flow_graph_print_to_dot(Context *c, struct flow_graph *g, FILE * stream, const char * image_node_filename_prefix){
     fprintf(stream, "digraph g {\n");
-    fprintf(stream, "  node [shape=box]\n  size=\"4,7\"\n");
+    fprintf(stream, "  node [shape=box, fontsize=20, fontname=\"sans-serif\"]\n  size=\"12,18\"\n");
+    fprintf(stream, "  edge [fontsize=20, fontname=\"sans-serif\"]\n");
+
 
     char node_label_buffer[1024];
     struct flow_edge * edge;
     int32_t i;
     for (i = 0; i < g->next_edge_id; i++){
         edge = &g->edges[i];
+        char dimensions[64];
+        if (edge->from_width < 0 && edge->from_height < 0){
+            snprintf(dimensions, 63, "?x?");
+        }else{
+            snprintf(dimensions, 63, "%dx%d %s", edge->from_width, edge->from_height,
+                     get_format_name(edge->from_format, edge->from_alpha_meaningful));
+        }
 
         if (edge->type != flow_edgetype_null){
-            fprintf(stream, "  n%d -> n%d [label=\"e%d: %dx%d %s%s\"]\n",  edge->from, edge->to, i, edge->from_width, edge->from_height,
-                    get_format_name(edge->from_format, edge->from_alpha_meaningful),
+            fprintf(stream, "  n%d -> n%d [label=\"e%d: %s%s\"]\n",  edge->from, edge->to, i, dimensions,
                     edge->type == flow_edgetype_canvas ? " canvas" : "");
         }
     }
@@ -539,11 +549,28 @@ bool flow_graph_print_to_dot(Context *c, struct flow_graph *g, FILE * stream){
     for (i = 0; i < g->next_node_id; i++){
         n = &g->nodes[i];
 
+
         if (n->type != flow_ntype_Null){
             flow_node_stringify(c,g,i,node_label_buffer, 1023);
-            fprintf(stream, "  n%d [label=\"n%d: %s\"]\n", i, i, node_label_buffer); //Todo, add completion info.
+            //fprintf(stream, "  n%d [image=\"./node_frames/%s%d.png\", label=\"n%d: %s\"]\n", i, image_node_filename_prefix, i, i, node_label_buffer); //Todo, add completion info.
+
+            float ms = n->ticks_elapsed * 1000.0 / (float)get_profiler_ticks_per_second();
+
+            if (n->result_bitmap != NULL && image_node_filename_prefix != NULL){
+                fprintf(stream, "  n%d [image=\"%s%d.png\", label=\"n%d: %s\n%.2fms\"]\n", i, image_node_filename_prefix, i, i, node_label_buffer,ms);
+            } else{
+                fprintf(stream, "  n%d [label=\"n%d: %s\n%.2fms\"]\n", i, i, node_label_buffer,ms); //Todo, add completion info.
+
+            }
         }
     }
+
+    //Print graph info last so it displays right or last
+    fprintf(stream, " graphinfo [label=\"");
+    fprintf(stream, "%d nodes (%d/%d)\n %d edges (%d/%d)\n %d infobytes (%d/%d)\n", g->node_count, g->next_node_id, g->max_nodes,
+            g->edge_count, g->next_edge_id, g->max_edges,
+            g->next_info_byte - g->deleted_bytes, g->next_info_byte, g->max_info_bytes);
+    fprintf(stream, "\"]\n");
 
     fprintf(stream, "}\n");
     return true;

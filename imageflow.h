@@ -132,6 +132,7 @@ struct flow_node {
     int32_t info_bytes;
     bool executed;
     BitmapBgra * result_bitmap;
+    uint32_t ticks_elapsed;
 } ;
 
 
@@ -292,8 +293,8 @@ typedef enum FLOW_DIRECTION{
 
 struct flow_job * flow_job_create(Context *c);
 void flow_job_destroy(Context *c, struct flow_job * job);
-
-bool flow_job_insert_resources_into_graph(Context *c, struct flow_job *job, struct flow_graph **graph);
+bool flow_job_configure_recording(Context * c, struct flow_job * job, bool record_graph_versions, bool record_frame_images, bool render_graph_versions, bool render_animated_graph);
+    bool flow_job_insert_resources_into_graph(Context *c, struct flow_job *job, struct flow_graph **graph);
 
 bool flow_job_populate_dimensions_where_certain(Context *c, struct flow_job * job, struct flow_graph **graph_ref);
 //For doing execution cost estimates, we force estimate, then flatten, then calculate cost
@@ -312,8 +313,7 @@ int32_t flow_job_add_buffer(Context *c, struct flow_job * job, FLOW_DIRECTION di
 
 int32_t flow_node_create_generic(Context *c, struct flow_graph ** graph_ref, int32_t prev_node, flow_ntype type);
 
-bool flow_graph_print_to_dot(Context *c, struct flow_graph *g, FILE * stream);
-
+bool flow_graph_print_to_dot(Context *c, struct flow_graph *g, FILE * stream, const char * image_node_filename_prefix);
 
 
 BitmapBgra * flow_job_get_bitmap_bgra(Context *c, struct flow_job * job, int32_t resource_id);

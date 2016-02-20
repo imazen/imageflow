@@ -6,9 +6,12 @@ static bool flow_job_populate_outbound_dimensions_for_edge(Context *c, struct fl
 
     struct flow_edge * edge = &g->edges[outbound_edge_id];
 
+    uint64_t now = get_high_precision_ticks();
+
     if (!flow_node_populate_dimensions_to_edge(c,g,edge->from, outbound_edge_id, force_estimate)){
         CONTEXT_error_return(c);
     }
+    g->nodes[edge->from].ticks_elapsed += get_high_precision_ticks() - now;
     return true;
 }
 

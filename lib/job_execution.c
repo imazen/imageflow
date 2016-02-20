@@ -52,8 +52,12 @@ static bool node_visitor_execute(Context *c, struct flow_job *job, struct flow_g
                                  void *custom_data){
 
     if (flow_job_node_is_ready_for_execution(c,job,*graph_ref,node_id)){
+        uint64_t now = get_high_precision_ticks();
         if (!flow_node_execute(c, job, *graph_ref, node_id)) {
             CONTEXT_error_return(c);
+        }else{
+            (*graph_ref)->nodes[node_id].ticks_elapsed += get_high_precision_ticks() - now;
+            flow_job_notify_node_complete(c, job, *graph_ref, node_id);
         }
     }
     if (!flow_job_node_is_completed(c,job,*graph_ref,node_id)){
