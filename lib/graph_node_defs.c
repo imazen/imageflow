@@ -154,6 +154,19 @@ static bool dimensions_scale(Context *c, struct flow_graph *g, int32_t node_id, 
     return true;
 }
 
+static bool dimensions_mimic_input(Context *c, struct flow_graph *g, int32_t node_id, int32_t outbound_edge_id, bool force_estimate){
+    FLOW_GET_INPUT_EDGE(g,node_id)
+
+    struct flow_edge * output = &g->edges[outbound_edge_id];
+
+    output->from_width = input_edge->from_width;
+    output->from_height = input_edge->from_height;
+    output->from_alpha_meaningful = input_edge->from_alpha_meaningful;
+    output->from_format = input_edge->from_format;
+    return true;
+}
+
+
 static bool dimensions_canvas(Context *c, struct flow_graph *g, int32_t node_id, int32_t outbound_edge_id, bool force_estimate){
     FLOW_GET_INFOBYTES(g,node_id, flow_nodeinfo_createcanvas, info)
 
@@ -261,6 +274,16 @@ static bool execute_canvas(Context *c, struct flow_job * job, struct flow_graph 
     return true;
 }
 
+static bool execute_flip_vertical(Context *c, struct flow_job * job, struct flow_graph * g, int32_t node_id){
+    FLOW_GET_INPUT_EDGE(g,node_id)
+    struct flow_node * n = &g->nodes[node_id];
+    n->result_bitmap = g->nodes[input_edge->from].result_bitmap;
+    BitmapBgra_flip_vertical(c, n->result_bitmap);
+    n->executed = true;
+    return true;
+}
+
+
 static bool execute_bitmap_bgra_pointer(Context *c, struct flow_job * job,struct flow_graph * g, int32_t node_id){
     FLOW_GET_INFOBYTES(g,node_id, flow_nodeinfo_resource_bitmap_bgra, info)
     FLOW_GET_INPUT_EDGE(g,node_id)
@@ -365,6 +388,15 @@ struct flow_node_definition flow_node_defs[] = {
                 .execute = execute_canvas
 
 
+        },
+        {
+                .type = flow_ntype_primitive_Flip_Vertical,
+                .nodeinfo_bytes_fixed = 0,
+                .input_count = 1,
+                .canvas_count = 0,
+                .populate_dimensions = dimensions_mimic_input,
+                .type_name = "flip vertical",
+                .execute = execute_flip_vertical
         },
         {
                 .type = flow_ntype_Resource_Placeholder,

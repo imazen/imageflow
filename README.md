@@ -159,6 +159,9 @@ Also, keep in mind that computer vision is very different from image creation. I
 * Dealing with color management on a block or scan-line level. I haven't used littlecms yet.
 * Scaling at the jpeg block level may introduce a small amount of error on the right/bottom col/row of pixels if the image size is not a multiple of 8. As we only 'halve' down to 3x the target image size before resampling, this would present as a very slight weighting error. Using floating-point image dimensions could permit this to be solved.
 
+## Problems
+
+* If a node has two outbound edges and both try to re-use the canvas, how do we solve the problem?
 
 
 ## Operation equivalency and composition

@@ -260,7 +260,7 @@ TEST_CASE("decode, scale, and re-encode png", "")
 
     size_t bytes_count = 0;
 
-    uint8_t * bytes = get_bytes_cached("http://z.zr.io/ri/8s.jpg?format=png", &bytes_count);
+    uint8_t * bytes = get_bytes_cached("http://z.zr.io/ri/8s.jpg?format=png&width=800", &bytes_count);
 
     int32_t input_resource_id = flow_job_add_buffer(c,job, FLOW_INPUT, input_placeholder, (void*) bytes, bytes_count, false);
 
@@ -292,6 +292,68 @@ TEST_CASE("decode, scale, and re-encode png", "")
 
 
     flow_job_destroy(c,job);
+    flow_graph_destroy(c, g);
+    Context_destroy(c);
+}
+
+//Assumes placeholders 0 and 1 for input/output respectively
+bool execute_graph_for_url(Context * c, const char * input_image_url, const char * output_image_path, struct flow_graph ** graph_ref){
+    struct flow_job * job = flow_job_create(c);
+    ERR(c);
+    flow_job_configure_recording(c, job, true, true, true, false, false);
+
+    int32_t input_placeholder = 0;
+    int32_t output_placeholder = 1;
+
+
+    size_t bytes_count = 0;
+    uint8_t * bytes = get_bytes_cached(input_image_url, &bytes_count);
+
+    int32_t input_resource_id = flow_job_add_buffer(c,job, FLOW_INPUT, input_placeholder, (void*) bytes, bytes_count, false);
+
+
+    int32_t result_resource_id = flow_job_add_buffer(c,job, FLOW_OUTPUT, output_placeholder, NULL, 0, true);
+
+
+    if (!flow_job_insert_resources_into_graph(c, job, graph_ref)){
+        ERR(c);
+    }
+    if (!flow_job_execute(c, job, graph_ref)){
+        ERR(c);
+    }
+
+    struct flow_job_resource_buffer * result = flow_job_get_buffer(c, job, result_resource_id);
+
+    ERR(c);
+
+    REQUIRE(result != NULL);
+
+    FILE *fh = fopen(output_image_path, "w");
+    if ( fh != NULL ) {
+        if (fwrite(result->buffer, result->buffer_size, 1,fh) != 1){
+            REQUIRE(false);
+        }
+    }
+    fclose(fh);
+    flow_job_destroy(c,job);
+    return true;
+}
+
+TEST_CASE("scale and flip png", "")
+{
+    Context * c = Context_create();
+    struct flow_graph *g = flow_graph_create(c, 10, 10, 200, 2.0);
+    ERR(c);
+
+    int32_t last, input_placeholder = 0, output_placeholder = 1;
+
+    last = flow_node_create_resource_placeholder(c, &g, -1, input_placeholder);
+    last = flow_node_create_scale(c, &g, last, 120, 120);
+    last = flow_node_create_primitive_flip_vertical(c, &g, last);
+    last = flow_node_create_resource_placeholder(c, &g, last, output_placeholder);
+
+    execute_graph_for_url(c, "http://z.zr.io/ri/8s.jpg?format=png&width=800", "graph_scaled_png.png", &g);
+
     flow_graph_destroy(c, g);
     Context_destroy(c);
 }

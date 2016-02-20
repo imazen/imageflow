@@ -131,6 +131,14 @@ int32_t flow_node_create_canvas(Context *c, struct flow_graph **g, int32_t prev_
     info->bgcolor = bgcolor;
     return id;
 }
+int32_t flow_node_create_primitive_flip_vertical(Context *c, struct flow_graph **g, int32_t prev_node){
+    int32_t id = flow_node_create_generic(c, g, prev_node, flow_ntype_primitive_Flip_Vertical);
+    if (id < 0){
+        CONTEXT_add_to_callstack(c);
+        return id;
+    }
+    return id;
+}
 int32_t flow_node_create_scale(Context *c, struct flow_graph **g, int32_t prev_node, size_t width, size_t height){
     int32_t id = flow_node_create_generic(c, g, prev_node, flow_ntype_Scale);
     if (id < 0){

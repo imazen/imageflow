@@ -187,6 +187,7 @@ int32_t flow_node_create_canvas(Context *c, struct flow_graph **g, int32_t prev_
                                 size_t width, size_t height, uint32_t bgcolor);
 int32_t flow_node_create_scale(Context *c, struct flow_graph **g, int32_t prev_node, size_t width, size_t height);
 
+int32_t flow_node_create_primitive_flip_vertical(Context *c, struct flow_graph **g, int32_t prev_node);
 
 int32_t flow_node_create_resource_placeholder(Context *c, struct flow_graph **g, int32_t prev_node,
                                               int32_t output_slot_id);
