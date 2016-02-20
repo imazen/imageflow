@@ -545,6 +545,8 @@ bool flow_graph_print_to_dot(Context *c, struct flow_graph *g, FILE * stream, co
         }
     }
 
+    uint64_t total_ticks =0;
+
     struct flow_node * n;;
     for (i = 0; i < g->next_node_id; i++){
         n = &g->nodes[i];
@@ -554,6 +556,7 @@ bool flow_graph_print_to_dot(Context *c, struct flow_graph *g, FILE * stream, co
             flow_node_stringify(c,g,i,node_label_buffer, 1023);
             //fprintf(stream, "  n%d [image=\"./node_frames/%s%d.png\", label=\"n%d: %s\"]\n", i, image_node_filename_prefix, i, i, node_label_buffer); //Todo, add completion info.
 
+            total_ticks += n->ticks_elapsed;
             float ms = n->ticks_elapsed * 1000.0 / (float)get_profiler_ticks_per_second();
 
             if (n->result_bitmap != NULL && image_node_filename_prefix != NULL){
@@ -565,11 +568,14 @@ bool flow_graph_print_to_dot(Context *c, struct flow_graph *g, FILE * stream, co
         }
     }
 
+    float total_ms =total_ticks * 1000.0 / (float)get_profiler_ticks_per_second();
+
+
     //Print graph info last so it displays right or last
     fprintf(stream, " graphinfo [label=\"");
-    fprintf(stream, "%d nodes (%d/%d)\n %d edges (%d/%d)\n %d infobytes (%d/%d)\n", g->node_count, g->next_node_id, g->max_nodes,
+    fprintf(stream, "%d nodes (%d/%d)\n %d edges (%d/%d)\n %d infobytes (%d/%d)\nExecution time: %.2fms", g->node_count, g->next_node_id, g->max_nodes,
             g->edge_count, g->next_edge_id, g->max_edges,
-            g->next_info_byte - g->deleted_bytes, g->next_info_byte, g->max_info_bytes);
+            g->next_info_byte - g->deleted_bytes, g->next_info_byte, g->max_info_bytes, total_ms);
     fprintf(stream, "\"]\n");
 
     fprintf(stream, "}\n");

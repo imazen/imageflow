@@ -8,7 +8,7 @@ else()
   #SET(TRAVIS_USAFE_FLAGS " -Wfloat-conversion ")
 endif()
 
-SET(FASTSCALING_FLAGS "-iquotelib -fPIC -Og -g -Wpointer-arith -Wcast-qual -Wpedantic -Wall -Wextra -Wno-unused-parameter -Wuninitialized -Wredundant-decls -Werror")
+SET(FASTSCALING_FLAGS "-iquotelib -fPIC -O2 -g -Wpointer-arith -Wcast-qual -Wpedantic -Wall -Wextra -Wno-unused-parameter -Wuninitialized -Wredundant-decls -Werror")
 
 SET(CMAKE_C_FLAGS  "${CMAKE_C_FLAGS} ${FASTSCALING_FLAGS} ${TRAVIS_USAFE_FLAGS} -std=gnu11 -Wstrict-prototypes -Wmissing-prototypes -Wc++-compat -Wshadow" )
 SET(CMAKE_CXX_FLAGS  "${CMAKE_CXX_FLAGS} ${FASTSCALING_FLAGS} ${TRAVIS_USAFE_FLAGS} -std=gnu++11" )
