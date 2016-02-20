@@ -166,6 +166,32 @@ static bool dimensions_mimic_input(Context *c, struct flow_graph *g, int32_t nod
     return true;
 }
 
+static bool dimensions_crop(Context *c, struct flow_graph *g, int32_t node_id, int32_t outbound_edge_id, bool force_estimate){
+    FLOW_GET_INFOBYTES(g,node_id, flow_nodeinfo_crop, info)
+    FLOW_GET_INPUT_EDGE(g,node_id)
+
+    struct flow_edge * output = &g->edges[outbound_edge_id];
+
+    output->from_width = info->x2 - info->x1;
+    output->from_height = info->y2 - info->y1;
+    if (output->from_width < 1 || output->from_height < 1){
+        CONTEXT_error(c, Invalid_argument);
+        return false;
+    }
+    if ((int32_t)info->x1 >= input_edge->from_width || (int32_t)info->x2 > input_edge->from_width){
+        CONTEXT_error(c, Invalid_argument);
+        return false;
+    }
+    if ((int32_t)info->y1 >= input_edge->from_height || (int32_t)info->y2 > input_edge->from_height){
+        CONTEXT_error(c, Invalid_argument);
+        return false;
+    }
+    output->from_alpha_meaningful = input_edge->from_alpha_meaningful;
+    output->from_format = input_edge->from_format;
+    return true;
+}
+
+
 
 static bool dimensions_canvas(Context *c, struct flow_graph *g, int32_t node_id, int32_t outbound_edge_id, bool force_estimate){
     FLOW_GET_INFOBYTES(g,node_id, flow_nodeinfo_createcanvas, info)
@@ -284,6 +310,32 @@ static bool execute_flip_vertical(Context *c, struct flow_job * job, struct flow
 }
 
 
+static bool execute_crop(Context *c, struct flow_job * job, struct flow_graph * g, int32_t node_id){
+    FLOW_GET_INFOBYTES(g,node_id, flow_nodeinfo_crop, info)
+    FLOW_GET_INPUT_EDGE(g,node_id)
+    struct flow_node * n = &g->nodes[node_id];
+
+    BitmapBgra * original = g->nodes[input_edge->from].result_bitmap;;
+    BitmapBgra * b = BitmapBgra_create_header(c,info->x2 - info->x1, info->y2 - info->y1);
+    if (b == NULL){
+        CONTEXT_error_return(c);
+    }
+    b->alpha_meaningful = original->alpha_meaningful;
+    b->borrowed_pixels = true;
+    b->can_reuse_space = false;
+    b->compositing_mode = original->compositing_mode;
+    b->fmt = original->fmt;
+    memcpy(&b->matte_color,&original->matte_color, 4);
+    b->stride = original->stride;
+    b->pixels = original->pixels + (original->stride * info->y1) + BitmapPixelFormat_bytes_per_pixel(original->fmt) * info->x1;
+
+    n->result_bitmap = b;
+    n->executed = true;
+    return true;
+}
+
+
+
 static bool execute_bitmap_bgra_pointer(Context *c, struct flow_job * job,struct flow_graph * g, int32_t node_id){
     FLOW_GET_INFOBYTES(g,node_id, flow_nodeinfo_resource_bitmap_bgra, info)
     FLOW_GET_INPUT_EDGE(g,node_id)
@@ -397,6 +449,15 @@ struct flow_node_definition flow_node_defs[] = {
                 .populate_dimensions = dimensions_mimic_input,
                 .type_name = "flip vertical",
                 .execute = execute_flip_vertical
+        },
+        {
+                .type = flow_ntype_primitive_Crop,
+                .nodeinfo_bytes_fixed = sizeof(struct flow_nodeinfo_crop),
+                .input_count = 1,
+                .canvas_count = 0,
+                .populate_dimensions = dimensions_crop,
+                .type_name = "crop",
+                .execute = execute_crop
         },
         {
                 .type = flow_ntype_Resource_Placeholder,

@@ -339,7 +339,7 @@ bool execute_graph_for_url(Context * c, const char * input_image_url, const char
     return true;
 }
 
-TEST_CASE("scale and flip png", "")
+TEST_CASE("scale and flip and crop png", "")
 {
     Context * c = Context_create();
     struct flow_graph *g = flow_graph_create(c, 10, 10, 200, 2.0);
@@ -350,6 +350,7 @@ TEST_CASE("scale and flip png", "")
     last = flow_node_create_resource_placeholder(c, &g, -1, input_placeholder);
     last = flow_node_create_scale(c, &g, last, 120, 120);
     last = flow_node_create_primitive_flip_vertical(c, &g, last);
+    last = flow_node_create_primitive_crop(c, &g, last, 20, 10, 80, 40);
     last = flow_node_create_resource_placeholder(c, &g, last, output_placeholder);
 
     execute_graph_for_url(c, "http://z.zr.io/ri/8s.jpg?format=png&width=800", "graph_scaled_png.png", &g);

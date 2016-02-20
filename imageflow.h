@@ -197,7 +197,7 @@ int32_t flow_node_create_resource_bitmap_bgra(Context *c, struct flow_graph ** g
 
 
 
-
+int32_t flow_node_create_primitive_crop(Context *c, struct flow_graph **g, int32_t prev_node, uint32_t x1, uint32_t x2, uint32_t y1, uint32_t y2);
 
 int32_t flow_node_create_render_to_canvas_1d(Context *c, struct flow_graph **g, int32_t prev_node,
                                              bool transpose_on_write,
@@ -247,6 +247,14 @@ struct flow_nodeinfo_createcanvas {
     size_t height;
     uint32_t bgcolor;
 };
+
+struct flow_nodeinfo_crop {
+    uint32_t x1;
+    uint32_t x2;
+    uint32_t y1;
+    uint32_t y2;
+};
+
 
 struct flow_nodeinfo_size {
     size_t width;

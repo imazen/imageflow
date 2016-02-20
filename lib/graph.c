@@ -139,6 +139,20 @@ int32_t flow_node_create_primitive_flip_vertical(Context *c, struct flow_graph *
     }
     return id;
 }
+int32_t flow_node_create_primitive_crop(Context *c, struct flow_graph **g, int32_t prev_node, uint32_t x1, uint32_t y1, uint32_t x2, uint32_t y2){
+    int32_t id = flow_node_create_generic(c, g, prev_node, flow_ntype_primitive_Crop);
+    if (id < 0){
+        CONTEXT_add_to_callstack(c);
+        return id;
+    }
+    struct flow_nodeinfo_crop * info = (struct flow_nodeinfo_crop *) FrameNode_get_node_info_pointer(*g, id);
+    info->x1 = x1;
+    info->y1 = y1;
+    info->x2 = x2;
+    info->y2 = y2;
+    return id;
+}
+
 int32_t flow_node_create_scale(Context *c, struct flow_graph **g, int32_t prev_node, size_t width, size_t height){
     int32_t id = flow_node_create_generic(c, g, prev_node, flow_ntype_Scale);
     if (id < 0){
