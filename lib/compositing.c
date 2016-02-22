@@ -95,6 +95,25 @@ bool BitmapBgra_flip_vertical(Context * context, BitmapBgra * b)
     return true;
 }
 
+bool BitmapBgra_flip_horizontal(Context * context, BitmapBgra * b)
+{
+    uint32_t swap[4];
+    //Dont' copy the full stride (padding), it could be windowed!
+    for (uint32_t y = 0; y < b->h; y++) {
+        uint8_t * left = b->pixels + (y * b->stride);
+        uint8_t * right = b->pixels + (y * b->stride) + (BitmapPixelFormat_bytes_per_pixel (b->fmt) * (b->w - 1));
+        while (left < right){
+            memcpy(&swap, left, BitmapPixelFormat_bytes_per_pixel (b->fmt));
+            memcpy(left, right, BitmapPixelFormat_bytes_per_pixel (b->fmt));
+            memcpy(right, &swap, BitmapPixelFormat_bytes_per_pixel (b->fmt));
+            left += BitmapPixelFormat_bytes_per_pixel (b->fmt);
+            right -= BitmapPixelFormat_bytes_per_pixel (b->fmt);
+        }
+    }
+    return true;
+}
+
+
 /*
 static int  copy_bitmap_bgra(BitmapBgra * src, BitmapBgra * dst)
 {

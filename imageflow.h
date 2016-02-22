@@ -23,8 +23,9 @@ extern "C" {
 
 typedef enum flow_ntype {
     flow_ntype_Null = 0,
-    flow_ntype_primitive_Flip_Vertical = 1, //Flips existing
-    flow_ntype_primitive_Crop = 2, //Creates a new window into an existing frame -
+    flow_ntype_primitive_Flip_Vertical = 1,
+    flow_ntype_primitive_Flip_Horizontal = 1,
+    flow_ntype_primitive_Crop = 2,
     flow_ntype_primitive_CopyRectToCanvas = 3, //Overwrite only, no compositing
     flow_ntype_Create_Canvas = 4,
     flow_ntype_primitive_RenderToCanvas1D = 5,
@@ -191,7 +192,7 @@ int32_t flow_node_create_canvas(Context *c, struct flow_graph **g, int32_t prev_
 int32_t flow_node_create_scale(Context *c, struct flow_graph **g, int32_t prev_node, size_t width, size_t height);
 
 int32_t flow_node_create_primitive_flip_vertical(Context *c, struct flow_graph **g, int32_t prev_node);
-
+int32_t flow_node_create_primitive_flip_horizontal(Context *c, struct flow_graph **g, int32_t prev_node);
 int32_t flow_node_create_clone(Context *c, struct flow_graph **g, int32_t prev_node);
 
 int32_t flow_node_create_transpose(Context *c, struct flow_graph **g, int32_t prev_node);
@@ -204,6 +205,8 @@ int32_t flow_node_create_rotate_270(Context *c, struct flow_graph **g, int32_t p
 
 int32_t flow_node_create_resource_placeholder(Context *c, struct flow_graph **g, int32_t prev_node,
                                               int32_t output_slot_id);
+
+
 
 
 int32_t flow_node_create_resource_bitmap_bgra(Context *c, struct flow_graph ** graph_ref, int32_t prev_node, BitmapBgra ** ref);
@@ -338,7 +341,8 @@ bool flow_job_execute(Context *c, struct flow_job * job,struct flow_graph **grap
 
 bool flow_graph_flatten_where_certain(Context *c, struct flow_graph ** graph_ref);
 
-int32_t flow_job_add_bitmap_bgra(Context *c, struct flow_job * job, FLOW_DIRECTION dir, int32_t placeholder);
+int32_t flow_job_add_bitmap_bgra(Context *c, struct flow_job * job, FLOW_DIRECTION dir, int32_t graph_placeholder_id, BitmapBgra * bitmap);
+
 int32_t flow_job_add_buffer(Context *c, struct flow_job * job, FLOW_DIRECTION dir, int32_t graph_placeholder_id, void * buffer, size_t buffer_size, bool owned_by_job);
 
 

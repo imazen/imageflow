@@ -56,10 +56,6 @@ static int32_t create_node_for_resource(Context *c,struct flow_job * job, struct
 
     int32_t node_id = -1;
     if (item->type == flow_job_resource_type_bitmap_bgra){
-        if (item->direction != FLOW_OUTPUT){
-            CONTEXT_error(c, Not_implemented);
-            return false;
-        }
         node_id = flow_node_create_resource_bitmap_bgra(c,g, -1, (BitmapBgra **)&item->data);
     }else if (item->type == flow_job_resource_type_buffer) {
         node_id = create_node_for_buffer(c,job, item,g);

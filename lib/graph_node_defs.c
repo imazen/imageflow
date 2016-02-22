@@ -154,6 +154,24 @@ static bool dimensions_scale(Context *c, struct flow_graph *g, int32_t node_id, 
     return true;
 }
 
+static bool dimensions_bitmap_bgra_pointer(Context *c, struct flow_graph *g, int32_t node_id, int32_t outbound_edge_id, bool force_estimate){
+    FLOW_GET_INFOBYTES(g,node_id, flow_nodeinfo_resource_bitmap_bgra, info)
+
+    if (*info->ref == NULL){
+        CONTEXT_error(c, Invalid_inputs_to_node);
+        return false; //If this is acting as an source node, info->data MUST be populated
+    }
+    BitmapBgra * b = *info->ref;
+
+    struct flow_edge * output = &g->edges[outbound_edge_id];
+    output->from_width = b->w;
+    output->from_height = b->h;
+    output->from_alpha_meaningful = b->alpha_meaningful;
+    output->from_format = b->fmt;
+    return true;
+}
+
+
 static bool dimensions_mimic_input(Context *c, struct flow_graph *g, int32_t node_id, int32_t outbound_edge_id, bool force_estimate){
     FLOW_GET_INPUT_EDGE(g,node_id)
 
@@ -436,6 +454,15 @@ static bool execute_flip_vertical(Context *c, struct flow_job * job, struct flow
     return true;
 }
 
+static bool execute_flip_horizontal(Context *c, struct flow_job * job, struct flow_graph * g, int32_t node_id){
+    FLOW_GET_INPUT_EDGE(g,node_id)
+    struct flow_node * n = &g->nodes[node_id];
+    n->result_bitmap = g->nodes[input_edge->from].result_bitmap;
+    BitmapBgra_flip_horizontal(c, n->result_bitmap);
+    n->executed = true;
+    return true;
+}
+
 
 static bool execute_crop(Context *c, struct flow_job * job, struct flow_graph * g, int32_t node_id){
     FLOW_GET_INFOBYTES(g,node_id, flow_nodeinfo_crop, info)
@@ -465,10 +492,21 @@ static bool execute_crop(Context *c, struct flow_job * job, struct flow_graph * 
 
 static bool execute_bitmap_bgra_pointer(Context *c, struct flow_job * job,struct flow_graph * g, int32_t node_id){
     FLOW_GET_INFOBYTES(g,node_id, flow_nodeinfo_resource_bitmap_bgra, info)
-    FLOW_GET_INPUT_EDGE(g,node_id)
     struct flow_node * n = &g->nodes[node_id];
-    *info->ref = n->result_bitmap = g->nodes[input_edge->from].result_bitmap;
-    n->executed = true;
+
+    int count = flow_graph_get_inbound_edge_count_of_type(c, g, node_id, flow_edgetype_input);
+    if (count == 1){
+        FLOW_GET_INPUT_EDGE(g,node_id)
+        *info->ref = n->result_bitmap = g->nodes[input_edge->from].result_bitmap;
+        n->executed = true;
+    }else{
+        n->result_bitmap = *info->ref;
+        if (*info->ref == NULL){
+            CONTEXT_error(c, Invalid_inputs_to_node);
+            return false;
+        }
+        n->executed = true;
+    }
     return true;
 }
 
@@ -610,6 +648,15 @@ struct flow_node_definition flow_node_defs[] = {
                 .execute = execute_flip_vertical
         },
         {
+                .type = flow_ntype_primitive_Flip_Horizontal,
+                .nodeinfo_bytes_fixed = 0,
+                .input_count = 1,
+                .canvas_count = 0,
+                .populate_dimensions = dimensions_mimic_input,
+                .type_name = "flip horizontal",
+                .execute = execute_flip_horizontal
+        },
+        {
                 .type = flow_ntype_Clone,
                 .nodeinfo_bytes_fixed = 0,
                 .input_count = 1,
@@ -686,10 +733,11 @@ struct flow_node_definition flow_node_defs[] = {
                 .type = flow_ntype_primitive_bitmap_bgra_pointer,
                 .nodeinfo_bytes_fixed = sizeof(struct flow_nodeinfo_resource_bitmap_bgra),
                 .type_name = "BitmapBgra ptr",
-                .input_count = 1,
+                .input_count = -1,
                 .canvas_count = 0,
                 .stringify = stringify_bitmap_bgra_pointer,
                 .execute = execute_bitmap_bgra_pointer,
+                .populate_dimensions = dimensions_bitmap_bgra_pointer
 
         },
         {

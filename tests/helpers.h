@@ -23,6 +23,7 @@ unsigned long djb2(unsigned const char *str);
 size_t nonzero_count(uint8_t * array, size_t length);
 
 
+BitmapBgra * BitmapBgra_create_test_image(Context * c);
 
 size_t nonzero_count(uint8_t * array, size_t length){
 
@@ -205,4 +206,24 @@ void flow_utils_ensure_directory_exists(const char *dir_path){
         }
     }
 
+}
+
+BitmapBgra * BitmapBgra_create_test_image(Context  * c){
+    BitmapBgra * test = BitmapBgra_create(c, 256, 256, false, Bgra32);
+    if (test == NULL){
+        CONTEXT_add_to_callstack(c);
+        return NULL;
+    }
+    uint8_t * pixel = test->pixels;
+    for (uint32_t y = 0; y < test->h; y++){
+        pixel = test->pixels + (y * test->stride);
+        for (uint32_t x = 0; x < test->w; x++){
+            pixel[0] = x;
+            pixel[1] = x /2;
+            pixel[3] = x /3;
+            pixel[4] = y;
+            pixel++;
+        }
+    }
+    return test;
 }

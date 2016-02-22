@@ -10,6 +10,7 @@
 #endif
 
 #include "fastscaling_private.h"
+#include <string.h>
 
 const int MAX_BYTES_PP = 16;
 
@@ -150,3 +151,25 @@ void BitmapFloat_destroy(Context* context, BitmapFloat * im)
     CONTEXT_free(context, im);
 }
 
+bool BitmapBgra_compare(Context * c, BitmapBgra * a, BitmapBgra *b, bool * equal_out){
+    if (a == NULL || b == NULL){
+        CONTEXT_error(c, Null_argument);
+        return false;
+    }
+    if (a->w != b->w || a->h != b->h || a->fmt != b->fmt){
+        *equal_out = false;
+        return true;
+    }
+    //TODO: compare bgcolor and alpha_meaningful?
+    //Dont' compare the full stride (padding), it could be windowed!
+    uint32_t row_length = umin (b->stride, b->w *  BitmapPixelFormat_bytes_per_pixel (b->fmt));
+    for (uint32_t i = 0; i < b->h; i++) {
+        if (!memcmp(a->pixels + (i * a->stride), b->pixels + (i * b->stride), row_length)){
+            *equal_out = false;
+            return true;
+        }
+    }
+    *equal_out = true;
+    return true;
+
+}

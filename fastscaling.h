@@ -194,6 +194,8 @@ typedef struct RenderDetailsStruct {
 BitmapBgra * BitmapBgra_create(Context * context, int sx, int sy, bool zeroed, BitmapPixelFormat format);
 BitmapBgra * BitmapBgra_create_header(Context * context, int sx, int sy);
 void BitmapBgra_destroy(Context * context, BitmapBgra * im);
+bool BitmapBgra_flip_horizontal(Context * context, BitmapBgra * b);
+bool BitmapBgra_compare(Context * c, BitmapBgra * a, BitmapBgra *b, bool * equal_out);
 
 RenderDetails * RenderDetails_create(Context * context);
 RenderDetails * RenderDetails_create_with(Context * context, InterpolationFilter filter);

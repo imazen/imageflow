@@ -64,8 +64,8 @@ static struct flow_job_resource_item * flow_job_get_resource(Context *c, struct 
     }
     return NULL;
 }
-int32_t flow_job_add_bitmap_bgra(Context *c, struct flow_job * job, FLOW_DIRECTION dir, int32_t graph_placeholder_id){
-    int32_t id = flow_job_add_resource(c, job, dir, graph_placeholder_id, flow_job_resource_type_bitmap_bgra, NULL);
+int32_t flow_job_add_bitmap_bgra(Context *c, struct flow_job * job, FLOW_DIRECTION dir, int32_t graph_placeholder_id, BitmapBgra * bitmap){
+    int32_t id = flow_job_add_resource(c, job, dir, graph_placeholder_id, flow_job_resource_type_bitmap_bgra, bitmap);
     if (id >= 0) {
         flow_job_get_resource(c,job,id)->codec_type = flow_job_codec_type_bitmap_bgra_pointer;
     }
