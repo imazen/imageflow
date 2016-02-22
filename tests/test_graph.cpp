@@ -393,6 +393,7 @@ TEST_CASE("Roundtrip flipping", "")
     int32_t last, input_placeholder = 0, output_placeholder = 1;
 
     last = flow_node_create_resource_placeholder(c, &g, -1, input_placeholder);
+    last = flow_node_create_clone(c, &g, last);
     last = flow_node_create_primitive_flip_vertical(c, &g, last);
     last = flow_node_create_primitive_flip_horizontal(c, &g, last);
     last = flow_node_create_primitive_flip_horizontal(c, &g, last);

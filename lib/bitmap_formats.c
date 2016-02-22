@@ -156,15 +156,15 @@ bool BitmapBgra_compare(Context * c, BitmapBgra * a, BitmapBgra *b, bool * equal
         CONTEXT_error(c, Null_argument);
         return false;
     }
+    *equal_out = false;
     if (a->w != b->w || a->h != b->h || a->fmt != b->fmt){
-        *equal_out = false;
         return true;
     }
     //TODO: compare bgcolor and alpha_meaningful?
     //Dont' compare the full stride (padding), it could be windowed!
     uint32_t row_length = umin (b->stride, b->w *  BitmapPixelFormat_bytes_per_pixel (b->fmt));
     for (uint32_t i = 0; i < b->h; i++) {
-        if (!memcmp(a->pixels + (i * a->stride), b->pixels + (i * b->stride), row_length)){
+        if (memcmp(a->pixels + (i * a->stride), b->pixels + (i * b->stride), row_length) != 0){
             *equal_out = false;
             return true;
         }
