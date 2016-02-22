@@ -157,12 +157,92 @@ Also, keep in mind that computer vision is very different from image creation. I
 
 * EXIF and XMP metadata parsing to access camera orientation - this needs to be resolved (and the image rotated) before we send it to the client. Clients are notoriously inconsistent about handling rotation metadata, and they take a significant perf hit as well. We also will likely need to preserve Copyright metadata strings, which means at least rudimentary metadata APIs.
 * Dealing with color management on a block or scan-line level. I haven't used littlecms yet.
-* Scaling at the jpeg block level may introduce a small amount of error on the right/bottom col/row of pixels if the image size is not a multiple of 8. As we only 'halve' down to 3x the target image size before resampling, this would present as a very slight weighting error. Using floating-point image dimensions could permit this to be solved.
+* Scaling at the jpeg block level may introduce a small amount of error on the right/bottom col/row of pixels if the image size is not a multiple of 8. As we only 'halve' down to 3x the target image size before resampling, this would present as a very slight weighting error. Using floating-point image dimensions could permit this to be solved, or having "subpixel_left" "subpixel_right" inputs to Render1D that describe the remainder to crop from the input.
 
-## Problems
+## Node types
 
-* If a node has two outbound edges and both try to re-use the canvas, how do we solve the problem?
+```
 
+typedef enum flow_ntype {
+    flow_ntype_Null = 0,
+    flow_ntype_primitive_Flip_Vertical_Mutate = 1,
+    flow_ntype_primitive_Flip_Horizontal_Mutate = 1,
+    flow_ntype_primitive_Crop_Mutate_Alias = 2,
+    flow_ntype_primitive_CopyRectToCanvas = 3, //Overwrite only, no compositing
+    flow_ntype_Create_Canvas = 4,
+    flow_ntype_primitive_RenderToCanvas1D = 5,
+
+    flow_ntype_primitive_bitmap_bgra_pointer,
+    flow_ntype_primitive_decoder,
+    flow_ntype_primitive_encoder,
+
+    flow_ntype_non_primitive_nodes_begin = 256,
+
+    flow_ntype_decoder,
+    flow_ntype_encoder,
+    flow_ntype_Clone,
+    flow_ntype_Transpose,
+    flow_ntype_Flip_Vertical,
+    flow_ntype_Flip_Horizontal,
+    flow_ntype_Crop,
+    flow_ntype_Render1D,
+
+
+    flow_ntype_Rotate_90,
+    flow_ntype_Rotate_180,
+    flow_ntype_Rotate_270,
+    flow_ntype_Scale, //(preserve colorspace), interpolation filter
+
+
+    //Not implemented below here:
+    flow_ntype_Rotate_Flip_Per_Orientation,
+    flow_ntype_Crop_Percentage,
+    flow_ntype_Crop_Percentage_Infinite_Canvas, //canvas_color
+    flow_ntype_Crop_Rectangle,
+    flow_ntype_Constrain, //(mode=pad|max|crop|stretch) (width, height) (scale=down|up|both|canvas) (anchor=9 points)
+    flow_ntype_Matte,
+    flow_ntype_EnlargeCanvas,
+    flow_ntype_Sharpen,
+    flow_ntype_Blur,
+    flow_ntype_Convolve_Custom,
+    flow_ntype_AdjustContrast,
+    flow_ntype_AdjustSaturation,
+    flow_ntype_AdjustBrightness,
+    flow_ntype_CropWhitespace, //tolerances and padding
+    flow_ntype_Opacity,
+    flow_ntype_Sepia,
+    flow_ntype_Grayscale, //true|y|ry|ntsc|bt709|flat
+    flow_ntype_DrawImage,
+    flow_ntype_RemoveNoise,
+    flow_ntype_ColorMatrixsRGB,
+    flow_ntype_Resource_Placeholder,
+    flow_ntype__FORCE_ENUM_SIZE_INT32 = 2147483647
+} flow_ntype;
+
+
+typedef enum flow_node_state{
+    flow_node_state_Blank = 0,
+    flow_node_state_InputDimensionsKnown = 1,
+    flow_node_state_OutputDimensionsKnown = 2,
+    flow_node_state_ReadyForPreOptimizeFlatten = 3,
+    flow_node_state_PreOptimizeFlattened = 4,
+    flow_node_state_ReadyForOptimize = 7,
+    flow_node_state_Optimized = 8,
+    flow_node_state_ReadyForPostOptimizeFlatten = 15,
+    flow_node_state_PostOptimizeFlattened  =16,
+    flow_node_state_ReadyForExecution = 31,
+    flow_node_state_Executed = 32
+} flow_node_state;
+
+typedef enum flow_edge_type {
+    flow_edgetype_null,
+    flow_edgetype_input,
+    flow_edgetype_canvas,
+    flow_edgetype_info,
+    flow_edgetype_FORCE_ENUM_SIZE_INT32 = 2147483647
+} flow_edge_type;
+
+```
 
 ## Operation equivalency and composition
 
@@ -191,7 +271,7 @@ Render1D(scale, Copy, transpose=true)
 Render1D(scale, Copy, transpose=true)
 
 
-## Sample API use
+## (out of date) API sketches
 
 ```
 
