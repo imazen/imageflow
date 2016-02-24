@@ -20,6 +20,80 @@
 
 #define ERR(c) REQUIRE_FALSE(Context_print_and_exit_if_err(c))
 
+
+
+//Assumes placeholders 0 and 1 for input/output respectively
+bool execute_graph_for_url(Context * c, const char * input_image_url, const char * output_image_path, struct flow_graph ** graph_ref){
+    struct flow_job * job = flow_job_create(c);
+    ERR(c);
+    flow_job_configure_recording(c, job, true, true, true, false, false);
+
+    int32_t input_placeholder = 0;
+    int32_t output_placeholder = 1;
+
+
+    size_t bytes_count = 0;
+    uint8_t * bytes = get_bytes_cached(input_image_url, &bytes_count);
+
+    int32_t input_resource_id = flow_job_add_buffer(c,job, FLOW_INPUT, input_placeholder, (void*) bytes, bytes_count, false);
+
+
+    int32_t result_resource_id = flow_job_add_buffer(c,job, FLOW_OUTPUT, output_placeholder, NULL, 0, true);
+
+
+    if (!flow_job_insert_resources_into_graph(c, job, graph_ref)){
+        ERR(c);
+    }
+    if (!flow_job_execute(c, job, graph_ref)){
+        ERR(c);
+    }
+
+    struct flow_job_resource_buffer * result = flow_job_get_buffer(c, job, result_resource_id);
+
+    ERR(c);
+
+    REQUIRE(result != NULL);
+
+    FILE *fh = fopen(output_image_path, "w");
+    if ( fh != NULL ) {
+        if (fwrite(result->buffer, result->buffer_size, 1,fh) != 1){
+            REQUIRE(false);
+        }
+    }
+    fclose(fh);
+    flow_job_destroy(c,job);
+    return true;
+}
+
+bool execute_graph_for_bitmap_bgra(Context * c, BitmapBgra * input, BitmapBgra ** out, struct flow_graph ** graph_ref){
+    struct flow_job * job = flow_job_create(c);
+    ERR(c);
+    flow_job_configure_recording(c, job, true, true, true, false, false);
+
+    int32_t input_placeholder = 0;
+    int32_t output_placeholder = 1;
+
+    int32_t input_resource_id = flow_job_add_bitmap_bgra(c,job, FLOW_INPUT, input_placeholder, input);
+    int32_t result_resource_id = flow_job_add_bitmap_bgra(c,job, FLOW_OUTPUT, output_placeholder, NULL);
+
+    if (!flow_job_insert_resources_into_graph(c, job, graph_ref)){
+        ERR(c);
+    }
+    if (!flow_job_execute(c, job, graph_ref)){
+        ERR(c);
+    }
+
+    *out = flow_job_get_bitmap_bgra(c, job, result_resource_id);
+    ERR(c);
+    flow_job_destroy(c,job);
+    return true;
+}
+
+
+
+
+
+
 TEST_CASE ("create tiny graph", "")
 {
     Context * c = Context_create();
@@ -296,73 +370,6 @@ TEST_CASE("decode, scale, and re-encode png", "")
     Context_destroy(c);
 }
 
-//Assumes placeholders 0 and 1 for input/output respectively
-bool execute_graph_for_url(Context * c, const char * input_image_url, const char * output_image_path, struct flow_graph ** graph_ref){
-    struct flow_job * job = flow_job_create(c);
-    ERR(c);
-    flow_job_configure_recording(c, job, true, true, true, false, false);
-
-    int32_t input_placeholder = 0;
-    int32_t output_placeholder = 1;
-
-
-    size_t bytes_count = 0;
-    uint8_t * bytes = get_bytes_cached(input_image_url, &bytes_count);
-
-    int32_t input_resource_id = flow_job_add_buffer(c,job, FLOW_INPUT, input_placeholder, (void*) bytes, bytes_count, false);
-
-
-    int32_t result_resource_id = flow_job_add_buffer(c,job, FLOW_OUTPUT, output_placeholder, NULL, 0, true);
-
-
-    if (!flow_job_insert_resources_into_graph(c, job, graph_ref)){
-        ERR(c);
-    }
-    if (!flow_job_execute(c, job, graph_ref)){
-        ERR(c);
-    }
-
-    struct flow_job_resource_buffer * result = flow_job_get_buffer(c, job, result_resource_id);
-
-    ERR(c);
-
-    REQUIRE(result != NULL);
-
-    FILE *fh = fopen(output_image_path, "w");
-    if ( fh != NULL ) {
-        if (fwrite(result->buffer, result->buffer_size, 1,fh) != 1){
-            REQUIRE(false);
-        }
-    }
-    fclose(fh);
-    flow_job_destroy(c,job);
-    return true;
-}
-
-bool execute_graph_for_bitmap_bgra(Context * c, BitmapBgra * input, BitmapBgra ** out, struct flow_graph ** graph_ref){
-    struct flow_job * job = flow_job_create(c);
-    ERR(c);
-    flow_job_configure_recording(c, job, true, true, true, false, false);
-
-    int32_t input_placeholder = 0;
-    int32_t output_placeholder = 1;
-
-    int32_t input_resource_id = flow_job_add_bitmap_bgra(c,job, FLOW_INPUT, input_placeholder, input);
-    int32_t result_resource_id = flow_job_add_bitmap_bgra(c,job, FLOW_OUTPUT, output_placeholder, NULL);
-
-    if (!flow_job_insert_resources_into_graph(c, job, graph_ref)){
-        ERR(c);
-    }
-    if (!flow_job_execute(c, job, graph_ref)){
-        ERR(c);
-    }
-
-    *out = flow_job_get_bitmap_bgra(c, job, result_resource_id);
-    ERR(c);
-    flow_job_destroy(c,job);
-    return true;
-}
-
 TEST_CASE("scale and flip and crop png", "")
 {
     Context * c = Context_create();
@@ -469,6 +476,32 @@ TEST_CASE("test rotation", "")
     int32_t input_placeholder = 0, output_placeholder = 1;
 
     int32_t input = flow_node_create_resource_placeholder(c, &g, -1, input_placeholder);
+    int32_t a  =  flow_node_create_rotate_90(c,&g,input);
+    int32_t b  = flow_node_create_rotate_180(c,&g,input);
+    int32_t c_n  = flow_node_create_rotate_270(c,&g,input);
+    flow_node_create_resource_placeholder(c, &g, a, output_placeholder);
+
+    execute_graph_for_url(c, "http://z.zr.io/ri/Oriented.jpg?format=png", "rotated.png", &g);
+
+    flow_graph_destroy(c, g);
+    Context_destroy(c);
+}
+
+
+
+
+TEST_CASE("test memory corruption", "")
+{
+    //This test case helped expose a flaw in graph creation, where we swapped max_edges and max_nodes and caused memory overlap
+    //It also showed how that post_optimize_flatten calls which create pre_optimize_flattenable nodes
+    //Can cause execution to fail in fewer than 6 passes. We may want to re-evaluate our graph exeuction approach
+    Context * c = Context_create();
+    struct flow_graph *g = flow_graph_create(c, 10, 10, 200, 2.0);
+    ERR(c);
+
+    int32_t input_placeholder = 0, output_placeholder = 1;
+
+    int32_t input = flow_node_create_resource_placeholder(c, &g, -1, input_placeholder);
     int32_t clone_a  = flow_node_create_clone(c, &g, input);
     clone_a = flow_node_create_rotate_90(c,&g,clone_a);
     int32_t clone_b  = flow_node_create_clone(c, &g, input);
@@ -482,6 +515,3 @@ TEST_CASE("test rotation", "")
     flow_graph_destroy(c, g);
     Context_destroy(c);
 }
-
-
-

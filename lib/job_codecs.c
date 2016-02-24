@@ -96,6 +96,7 @@ static void * codec_aquire_decode_png_on_buffer(Context *c, struct flow_job * jo
             CONTEXT_error(c, Out_of_memory);
             return NULL;
         }
+        state->stage = flow_job_png_decoder_stage_Null;
         if (!flow_job_png_decoder_reset(c, state)){
             CONTEXT_add_to_callstack(c);
             return NULL;

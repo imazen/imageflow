@@ -6,25 +6,26 @@ static bool node_visitor_flatten(Context *c, struct flow_job *job, struct flow_g
                                                       int32_t node_id, bool *quit, bool *skip_outbound_paths,
                                                       void *custom_data){
 
-    struct flow_node * node =&(*graph_ref)->nodes[node_id];
+    if (!flow_node_update_state(c,*graph_ref, node_id)){
+        CONTEXT_error_return(c);
+    }
+    struct flow_node * n = &(*graph_ref)->nodes[node_id];
 
     //If input nodes are populated
-    if (flow_node_input_edges_have_dimensions(c,*graph_ref,node_id)){
-        if (node->type >= flow_ntype_non_primitive_nodes_begin ) {
-            if (!flow_node_flatten(c, graph_ref, node_id)) {
-                CONTEXT_error_return(c);
-            }
-            *quit = true;
-            *((bool *)custom_data) = true;
+    if (n->state == flow_node_state_ReadyForPreOptimizeFlatten){
+        if (!flow_node_pre_optimize_flatten(c, graph_ref, node_id)) {
+            CONTEXT_error_return(c);
         }
-    }else{
+        *quit = true;
+        *((bool *)custom_data) = true;
+    }else if ((n->state & flow_node_state_InputDimensionsKnown) == 0){
         //we can't flatten past missing dimensions
         *skip_outbound_paths = true;
     }
     return true;
 }
 
-bool flow_graph_flatten_where_certain(Context *c, struct flow_graph ** graph_ref){
+bool flow_graph_pre_optimize_flatten(Context *c, struct flow_graph **graph_ref){
     if (*graph_ref == NULL){
         CONTEXT_error(c,Null_argument);
         return false;
@@ -32,7 +33,7 @@ bool flow_graph_flatten_where_certain(Context *c, struct flow_graph ** graph_ref
     bool re_walk;
     do {
         re_walk = false;
-        if (!flow_graph_walk(c, NULL, graph_ref, node_visitor_flatten, NULL, &re_walk)) {
+        if (!flow_graph_walk_dependency_wise(c, NULL, graph_ref, node_visitor_flatten, NULL, &re_walk)) {
             CONTEXT_error_return(c);
         }
     }while(re_walk);

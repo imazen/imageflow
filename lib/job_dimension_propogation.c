@@ -31,13 +31,25 @@ bool flow_node_input_edges_have_dimensions(Context *c,struct flow_graph *g, int3
     return true;
 }
 
+
+
 static bool edge_visitor_populate_outbound_dimensions(Context *c, struct flow_job *job, struct flow_graph **graph_ref,
                                                       int32_t edge_id, bool *quit, bool *skip_outbound_paths,
                                                       void *custom_data){
+
+    int32_t node_id = (*graph_ref)->edges[edge_id].from;
     //Only populate if empty
     if (!flow_edge_has_dimensions(c,*graph_ref,edge_id)) {
-        if (!flow_job_populate_outbound_dimensions_for_edge(c, job, *graph_ref, edge_id, (bool)custom_data)){
+        if (!flow_node_update_state(c,*graph_ref, node_id)){
             CONTEXT_error_return(c);
+        }
+
+        struct flow_node * n = &(*graph_ref)->nodes[node_id];
+        //If input nodes are populated
+        if ((n->state & flow_node_state_InputDimensionsKnown) > 0){
+            if (!flow_job_populate_outbound_dimensions_for_edge(c, job, *graph_ref, edge_id, (bool)custom_data)){
+                CONTEXT_error_return(c);
+            }
         }
         if (!flow_edge_has_dimensions(c,*graph_ref,edge_id)) {
             //We couldn't populate this edge, so we sure can't populate others in this direction.
@@ -53,7 +65,7 @@ static bool edge_visitor_populate_outbound_dimensions(Context *c, struct flow_jo
 
 bool flow_job_populate_dimensions_where_certain(Context *c, struct flow_job * job, struct flow_graph **graph_ref ){
     //TODO: would be good to verify graph is acyclic.
-    if (!flow_graph_walk(c, job, graph_ref, NULL, edge_visitor_populate_outbound_dimensions, (void*)false)){
+    if (!flow_graph_walk_dependency_wise(c, job, graph_ref, NULL, edge_visitor_populate_outbound_dimensions, (void*)false)){
         CONTEXT_error_return(c);
     }
     return true;

@@ -1,6 +1,7 @@
 #include <glenn/png/png.h>
 
 #include "job.h"
+#include "graph.h"
 
 struct flow_job * flow_job_create(Context *c){
 
@@ -11,7 +12,7 @@ struct flow_job * flow_job_create(Context *c){
     job->debug_job_id = job_id++;
     job->next_resource_id = 0x800;
     job->resources_head = NULL;
-    job->max_calc_flatten_execute_passes = 5;
+    job->max_calc_flatten_execute_passes = 6;
     return job;
 }
 
@@ -104,6 +105,13 @@ bool flow_job_execute(Context *c, struct flow_job * job,struct flow_graph **grap
     if (!flow_job_notify_graph_changed(c,job, *graph_ref)){
         CONTEXT_error_return(c);
     }
+    //States for a node
+    //New
+    //OutboundDimensionsKnown
+    //Flattened
+    //Optimized
+    //LockedForExecution
+    //Executed
     int32_t passes = 0;
     while (!flow_job_graph_fully_executed(c, job, *graph_ref)) {
         if (passes >= job->max_calc_flatten_execute_passes){
@@ -113,13 +121,45 @@ bool flow_job_execute(Context *c, struct flow_job * job,struct flow_graph **grap
         if (!flow_job_populate_dimensions_where_certain(c,job,graph_ref)){
             CONTEXT_error_return(c);
         }
-        if (!flow_graph_flatten_where_certain(c,graph_ref)){
+        if (!flow_job_notify_graph_changed(c,job, *graph_ref)){
+            CONTEXT_error_return(c);
+        }
+        if (!flow_graph_pre_optimize_flatten(c, graph_ref)){
             CONTEXT_error_return(c);
         }
         if (!flow_job_notify_graph_changed(c,job, *graph_ref)){
             CONTEXT_error_return(c);
         }
-
+        if (!flow_job_populate_dimensions_where_certain(c,job,graph_ref)){
+            CONTEXT_error_return(c);
+        }
+        if (!flow_job_notify_graph_changed(c,job, *graph_ref)){
+            CONTEXT_error_return(c);
+        }
+        if (!flow_graph_optimize(c,job, graph_ref)){
+            CONTEXT_error_return(c);
+        }
+        if (!flow_job_notify_graph_changed(c,job, *graph_ref)){
+            CONTEXT_error_return(c);
+        }
+        if (!flow_job_populate_dimensions_where_certain(c,job,graph_ref)){
+            CONTEXT_error_return(c);
+        }
+        if (!flow_job_notify_graph_changed(c,job, *graph_ref)){
+            CONTEXT_error_return(c);
+        }
+        if (!flow_graph_post_optimize_flatten(c, job,  graph_ref)){
+            CONTEXT_error_return(c);
+        }
+        if (!flow_job_notify_graph_changed(c,job, *graph_ref)){
+            CONTEXT_error_return(c);
+        }
+        if (!flow_job_populate_dimensions_where_certain(c,job,graph_ref)){
+            CONTEXT_error_return(c);
+        }
+        if (!flow_job_notify_graph_changed(c,job, *graph_ref)){
+            CONTEXT_error_return(c);
+        }
         if (!flow_job_execute_where_certain(c,job,graph_ref)){
             CONTEXT_error_return(c);
         }
@@ -185,7 +225,7 @@ static bool files_identical(Context *c, const char * path1, const char* path2, b
     fclose(fp2);
     return true;
 }
-#define FLOW_MAX_GRAPH_VERSIONS 50
+#define FLOW_MAX_GRAPH_VERSIONS 100
 
 
 
@@ -272,5 +312,75 @@ bool flow_job_render_graph_to_png(Context *c, struct flow_job *job, struct flow_
     snprintf(dotfile_command, 2048, "dot -Tpng -Gsize=11,16\\! -Gdpi=150  -O %s", filename);
     int32_t ignore = system(dotfile_command);
     ignore++;
+    return true;
+}
+
+
+static bool node_visitor_post_optimize_flatten(Context *c, struct flow_job *job, struct flow_graph **graph_ref,
+                                 int32_t node_id, bool *quit, bool *skip_outbound_paths,
+                                 void *custom_data){
+
+    if (!flow_node_update_state(c,*graph_ref, node_id)){
+        CONTEXT_error_return(c);
+    }
+    struct flow_node * n = &(*graph_ref)->nodes[node_id];
+
+    //If input nodes are populated
+    if (n->state == flow_node_state_ReadyForPostOptimizeFlatten){
+        if (!flow_node_post_optimize_flatten(c, graph_ref, node_id)) {
+            CONTEXT_error_return(c);
+        }
+        if (!flow_graph_validate(c, *graph_ref)){
+            CONTEXT_error_return(c);
+        }
+        *quit = true;
+        *((bool *)custom_data) = true;
+    }else if ((n->state & flow_node_state_InputDimensionsKnown) == 0){
+        //we can't flatten past missing dimensions
+        *skip_outbound_paths = true;
+    }
+    return true;
+}
+
+bool flow_graph_post_optimize_flatten(Context *c, struct flow_job *job, struct flow_graph ** graph_ref){
+    if (*graph_ref == NULL){
+        CONTEXT_error(c,Null_argument);
+        return false;
+    }
+    bool re_walk;
+    do {
+        re_walk = false;
+        if (!flow_graph_walk(c, job, graph_ref, node_visitor_post_optimize_flatten, NULL, &re_walk)) {
+            CONTEXT_error_return(c);
+        }
+    }while(re_walk);
+    return true;
+}
+
+static bool node_visitor_optimize(Context *c, struct flow_job *job, struct flow_graph **graph_ref,
+                                               int32_t node_id, bool *quit, bool *skip_outbound_paths,
+                                               void *custom_data){
+
+    struct flow_node * node =&(*graph_ref)->nodes[node_id];
+    if (node->state == flow_node_state_ReadyForOptimize) {
+        node->state = (flow_node_state) (node->state | flow_node_state_Optimized);
+    }
+
+    //Implement optimizations
+    return true;
+}
+
+bool flow_graph_optimize(Context *c,struct flow_job *job, struct flow_graph ** graph_ref){
+    if (*graph_ref == NULL){
+        CONTEXT_error(c,Null_argument);
+        return false;
+    }
+    bool re_walk;
+    do {
+        re_walk = false;
+        if (!flow_graph_walk(c, job, graph_ref, node_visitor_optimize, NULL, &re_walk)) {
+            CONTEXT_error_return(c);
+        }
+    }while(re_walk);
     return true;
 }

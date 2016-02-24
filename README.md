@@ -176,16 +176,20 @@ typedef enum flow_ntype {
     flow_ntype_primitive_decoder,
     flow_ntype_primitive_encoder,
 
+
     flow_ntype_non_primitive_nodes_begin = 256,
 
-    flow_ntype_decoder,
-    flow_ntype_encoder,
-    flow_ntype_Clone,
     flow_ntype_Transpose,
     flow_ntype_Flip_Vertical,
     flow_ntype_Flip_Horizontal,
-    flow_ntype_Crop,
     flow_ntype_Render1D,
+    flow_ntype_Crop,
+    flow_ntype_non_optimizable_nodes_begin = 512,
+
+
+    flow_ntype_Clone,
+    flow_ntype_decoder,
+    flow_ntype_encoder,
 
 
     flow_ntype_Rotate_90,
@@ -223,15 +227,16 @@ typedef enum flow_ntype {
 typedef enum flow_node_state{
     flow_node_state_Blank = 0,
     flow_node_state_InputDimensionsKnown = 1,
-    flow_node_state_OutputDimensionsKnown = 2,
-    flow_node_state_ReadyForPreOptimizeFlatten = 3,
-    flow_node_state_PreOptimizeFlattened = 4,
-    flow_node_state_ReadyForOptimize = 7,
-    flow_node_state_Optimized = 8,
-    flow_node_state_ReadyForPostOptimizeFlatten = 15,
-    flow_node_state_PostOptimizeFlattened  =16,
+    flow_node_state_ReadyForPreOptimizeFlatten = 1,
+    flow_node_state_PreOptimizeFlattened = 2,
+    flow_node_state_ReadyForOptimize = 3,
+    flow_node_state_Optimized = 4,
+    flow_node_state_ReadyForPostOptimizeFlatten = 7,
+    flow_node_state_PostOptimizeFlattened = 8,
+    flow_node_state_InputsExecuted = 16,
     flow_node_state_ReadyForExecution = 31,
-    flow_node_state_Executed = 32
+    flow_node_state_Executed = 32,
+    flow_node_state_Done = 63
 } flow_node_state;
 
 typedef enum flow_edge_type {
@@ -241,6 +246,7 @@ typedef enum flow_edge_type {
     flow_edgetype_info,
     flow_edgetype_FORCE_ENUM_SIZE_INT32 = 2147483647
 } flow_edge_type;
+
 
 ```
 

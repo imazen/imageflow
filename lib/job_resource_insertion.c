@@ -93,16 +93,11 @@ static int32_t flow_job_find_first_node_with_placeholder_id(Context *c, struct f
 }
 
 
-static struct flow_graph *flow_job_insert_resources_into_graph_with_reuse(Context *c, struct flow_job *job,
-                                                                          struct flow_graph *from){
-    if (from == NULL){
+static bool flow_job_insert_resources_into_graph_with_reuse(Context *c, struct flow_job *job,
+                                                                          struct flow_graph **graph_ref){
+    if (graph_ref == NULL || *graph_ref == NULL){
         CONTEXT_error(c, Null_argument);
-        return NULL;
-    }
-    struct flow_graph * g = from;
-    if (g == NULL){
-        CONTEXT_add_to_callstack(c);
-        return NULL;
+        return false;
     }
 
     struct flow_job_resource_item * current = job->resources_head;
@@ -114,23 +109,23 @@ static struct flow_graph *flow_job_insert_resources_into_graph_with_reuse(Contex
         do {
             //flow_graph_print_to(c,g,stderr);
 
-            next_match = flow_job_find_first_node_with_placeholder_id(c,g, current->graph_placeholder_id);
+            next_match = flow_job_find_first_node_with_placeholder_id(c, *graph_ref, current->graph_placeholder_id);
             if (next_match >= 0) {
-                replacement_node_id = create_node_for_resource(c, job, current, &g);
+                replacement_node_id = create_node_for_resource(c, job, current, graph_ref);
                 if (replacement_node_id < 0) {
                     CONTEXT_error_return(c);
                 }
                 //flow_graph_print_to(c, g, stderr);
-                if (!flow_graph_duplicate_edges_to_another_node(c, &g, next_match, replacement_node_id, true, true)) {
+                if (!flow_graph_duplicate_edges_to_another_node(c, graph_ref, next_match, replacement_node_id, true, true)) {
                     CONTEXT_error_return(c);
                 }
                 //flow_graph_print_to(c, g, stderr);
-                if (!flow_node_delete(c, g, next_match)) {
+                if (!flow_node_delete(c, *graph_ref, next_match)) {
                     CONTEXT_error_return(c);
                 }
                 //flow_graph_print_to(c, g, stderr);
                 match_count++;
-                flow_job_notify_graph_changed(c,job, g);
+                flow_job_notify_graph_changed(c,job, *graph_ref);
             }
         }while(next_match >= 0);
 
@@ -141,22 +136,20 @@ static struct flow_graph *flow_job_insert_resources_into_graph_with_reuse(Contex
 
         current = current->next;
     }
-    if (flow_job_find_first_node_with_placeholder_id(c,g, -1) > -1){
+    if (flow_job_find_first_node_with_placeholder_id(c,*graph_ref, -1) > -1){
         //Leftover nodes with no placeholder - this is an error
         CONTEXT_error(c, Graph_could_not_be_completed);
-        return NULL;
+        return false;
     }
-    return g;
+    return true;
 }
 bool flow_job_insert_resources_into_graph(Context *c, struct flow_job *job, struct flow_graph **graph_ref){
     if (!flow_job_notify_graph_changed(c,job, *graph_ref)){
         CONTEXT_error_return(c);
     }
-    struct flow_graph * g = flow_job_insert_resources_into_graph_with_reuse(c, job, *graph_ref);
-    if (g == NULL){
+    if (!flow_job_insert_resources_into_graph_with_reuse(c, job, graph_ref)){
         CONTEXT_error_return(c);
     }
-    *graph_ref = g;
     return true;
 }
 

@@ -23,9 +23,9 @@ extern "C" {
 
 typedef enum flow_ntype {
     flow_ntype_Null = 0,
-    flow_ntype_primitive_Flip_Vertical = 1,
-    flow_ntype_primitive_Flip_Horizontal = 1,
-    flow_ntype_primitive_Crop = 2,
+    flow_ntype_primitive_Flip_Vertical_Mutate = 1,
+    flow_ntype_primitive_Flip_Horizontal_Mutate = 1,
+    flow_ntype_primitive_Crop_Mutate_Alias = 2,
     flow_ntype_primitive_CopyRectToCanvas = 3, //Overwrite only, no compositing
     flow_ntype_Create_Canvas = 4,
     flow_ntype_primitive_RenderToCanvas1D = 5,
@@ -34,20 +34,33 @@ typedef enum flow_ntype {
     flow_ntype_primitive_decoder,
     flow_ntype_primitive_encoder,
 
-    flow_ntype_non_primitive_nodes_begin = 256,
-    flow_ntype_Clone,
-    flow_ntype_Transpose,
 
-    flow_ntype_Crop_Percentage,
-    flow_ntype_Crop_Percentage_Infinite_Canvas, //canvas_color
-    flow_ntype_Crop_Rectangle,
+    flow_ntype_non_primitive_nodes_begin = 256,
+
+    flow_ntype_Transpose,
     flow_ntype_Flip_Vertical,
     flow_ntype_Flip_Horizontal,
+    flow_ntype_Render1D,
+    flow_ntype_Crop,
+    flow_ntype_non_optimizable_nodes_begin = 512,
+
+
+    flow_ntype_Clone,
+    flow_ntype_decoder,
+    flow_ntype_encoder,
+
+
     flow_ntype_Rotate_90,
     flow_ntype_Rotate_180,
     flow_ntype_Rotate_270,
-    flow_ntype_Rotate_Flip_Per_Orientation,
     flow_ntype_Scale, //(preserve colorspace), interpolation filter
+
+
+    //Not implemented below here:
+    flow_ntype_Rotate_Flip_Per_Orientation,
+    flow_ntype_Crop_Percentage,
+    flow_ntype_Crop_Percentage_Infinite_Canvas, //canvas_color
+    flow_ntype_Crop_Rectangle,
     flow_ntype_Constrain, //(mode=pad|max|crop|stretch) (width, height) (scale=down|up|both|canvas) (anchor=9 points)
     flow_ntype_Matte,
     flow_ntype_EnlargeCanvas,
@@ -68,10 +81,27 @@ typedef enum flow_ntype {
     flow_ntype__FORCE_ENUM_SIZE_INT32 = 2147483647
 } flow_ntype;
 
+
+typedef enum flow_node_state{
+    flow_node_state_Blank = 0,
+    flow_node_state_InputDimensionsKnown = 1,
+    flow_node_state_ReadyForPreOptimizeFlatten = 1,
+    flow_node_state_PreOptimizeFlattened = 2,
+    flow_node_state_ReadyForOptimize = 3,
+    flow_node_state_Optimized = 4,
+    flow_node_state_ReadyForPostOptimizeFlatten = 7,
+    flow_node_state_PostOptimizeFlattened = 8,
+    flow_node_state_InputsExecuted = 16,
+    flow_node_state_ReadyForExecution = 31,
+    flow_node_state_Executed = 32,
+    flow_node_state_Done = 63
+} flow_node_state;
+
 typedef enum flow_edge_type {
     flow_edgetype_null,
     flow_edgetype_input,
     flow_edgetype_canvas,
+    flow_edgetype_info,
     flow_edgetype_FORCE_ENUM_SIZE_INT32 = 2147483647
 } flow_edge_type;
 
@@ -117,6 +147,13 @@ struct flow_scanlines_filter {
     flow_scanlines_filter_type type;
     struct flow_scanlines_filter *next;
 };
+//
+//struct flow_frame_info{
+//    int32_t w;
+//    int32_t h;
+//    BitmapPixelFormat fmt;
+//    bool alpha_meaningful;
+//};
 
 struct flow_edge {
     flow_edge_type type;
@@ -134,7 +171,7 @@ struct flow_node {
     flow_ntype type;
     int32_t info_byte_index;
     int32_t info_bytes;
-    bool executed;
+    flow_node_state state;
     BitmapBgra * result_bitmap;
     uint32_t ticks_elapsed;
 } ;
@@ -228,7 +265,6 @@ int32_t flow_node_create_render_to_canvas_1d(Context *c, struct flow_graph **g, 
                                              InterpolationFilter interpolation_filter);
 
 
-
 bool flow_node_delete(Context *c, struct flow_graph *g, int32_t node_id);
 
 bool flow_edge_delete(Context *c, struct flow_graph *g, int32_t edge_id);
@@ -242,7 +278,7 @@ int32_t flow_graph_get_first_inbound_edge_of_type(Context *c, struct flow_graph 
 
 bool flow_edge_has_dimensions(Context *c, struct flow_graph *g, int32_t edge_id);
 bool flow_node_input_edges_have_dimensions(Context *c, struct flow_graph *g, int32_t node_id);
-bool flow_graph_duplicate_edges_to_another_node(Context *c, struct flow_graph **g, int32_t from_node, int32_t to_node,
+bool flow_graph_duplicate_edges_to_another_node(Context *c, struct flow_graph **graph_ref, int32_t from_node, int32_t to_node,
                                                 bool copy_inbound, bool copy_outbound);
 
 int32_t flow_edge_create(Context *c, struct flow_graph **g, int32_t from, int32_t to, flow_edge_type type);
@@ -296,7 +332,6 @@ struct flow_nodeinfo_codec {
     flow_job_codec_type type;
 };
 
-
 struct flow_nodeinfo_render_to_canvas_1d{
     //There will need to be consistency checks against the createcanvas node
 
@@ -319,6 +354,13 @@ struct flow_nodeinfo_render_to_canvas_1d{
 
 bool flow_node_execute_render_to_canvas_1d(Context *c, struct flow_job * job, BitmapBgra * input, BitmapBgra * canvas, struct flow_nodeinfo_render_to_canvas_1d * info);
 
+int32_t flow_node_create_render1d(Context *c, struct flow_graph **g, int32_t prev_node,
+                                  bool transpose_on_write,
+                                  int32_t scale_to_width,
+                                  WorkingFloatspace scale_and_filter_in_colorspace,
+                                  float sharpen_percent,
+                                  struct flow_scanlines_filter * filter_list,
+                                  InterpolationFilter interpolation_filter);
 
 typedef enum FLOW_DIRECTION{
     FLOW_OUTPUT = 8,
@@ -328,7 +370,8 @@ typedef enum FLOW_DIRECTION{
 struct flow_job * flow_job_create(Context *c);
 void flow_job_destroy(Context *c, struct flow_job * job);
 bool flow_job_configure_recording(Context * c, struct flow_job * job, bool record_graph_versions, bool record_frame_images, bool render_last_graph, bool render_graph_versions, bool render_animated_graph);
-    bool flow_job_insert_resources_into_graph(Context *c, struct flow_job *job, struct flow_graph **graph);
+
+bool flow_job_insert_resources_into_graph(Context *c, struct flow_job *job, struct flow_graph **graph);
 
 bool flow_job_populate_dimensions_where_certain(Context *c, struct flow_job * job, struct flow_graph **graph_ref);
 //For doing execution cost estimates, we force estimate, then flatten, then calculate cost
@@ -338,8 +381,10 @@ bool flow_job_graph_fully_executed(Context *c, struct flow_job *job, struct flow
 
 bool flow_job_notify_graph_changed(Context *c, struct flow_job *job, struct flow_graph * g);
 bool flow_job_execute(Context *c, struct flow_job * job,struct flow_graph **graph_ref);
+bool flow_graph_post_optimize_flatten(Context *c, struct flow_job *job, struct flow_graph ** graph_ref);
 
-bool flow_graph_flatten_where_certain(Context *c, struct flow_graph ** graph_ref);
+bool flow_graph_optimize(Context *c,struct flow_job *job, struct flow_graph ** graph_ref);
+bool flow_graph_pre_optimize_flatten(Context *c, struct flow_graph **graph_ref);
 
 int32_t flow_job_add_bitmap_bgra(Context *c, struct flow_job * job, FLOW_DIRECTION dir, int32_t graph_placeholder_id, BitmapBgra * bitmap);
 
@@ -372,6 +417,9 @@ struct flow_job_png_encoder_state {
 
 
 bool png_write_frame(Context * c, struct flow_job * job, void * codec_state, BitmapBgra * frame);
+
+bool flow_node_post_optimize_flatten(Context *c, struct flow_graph **graph_ref, int32_t node_id);
+
 
 
 //Multi-frame/multi-page images are not magically handled.

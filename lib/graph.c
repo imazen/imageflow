@@ -36,6 +36,16 @@ struct flow_graph *flow_graph_create(Context *c, uint32_t max_edges, uint32_t ma
         CONTEXT_free(c,g);
         return NULL;
     }
+    if ((size_t)&g->edges[g->max_edges - 1].info_bytes >= (size_t)&g->nodes[0].type){
+        CONTEXT_error(c, Invalid_internal_state);
+        CONTEXT_free(c,g);
+        return NULL;
+    }
+    if ((size_t)&g->nodes[g->max_nodes - 1].ticks_elapsed >= (size_t)&g->info_bytes[0]){
+        CONTEXT_error(c, Invalid_internal_state);
+        CONTEXT_free(c,g);
+        return NULL;
+    }
     return g;
 }
 
@@ -44,7 +54,7 @@ struct flow_graph *flow_graph_copy_and_resize(Context *c, struct flow_graph * fr
         CONTEXT_error(c, Invalid_argument);
         return NULL;
     }
-    struct flow_graph * g = flow_graph_create(c,max_nodes,max_edges,max_info_bytes, from->growth_factor);
+    struct flow_graph * g = flow_graph_create(c,max_edges,max_nodes, max_info_bytes, from->growth_factor);
     g->growth_factor = from->growth_factor;
 
     g->deleted_bytes = from->deleted_bytes;
@@ -85,12 +95,10 @@ int32_t flow_node_create_generic(Context *c, struct flow_graph ** graph_ref, int
     struct flow_graph * g = *graph_ref;
     int32_t id = g->next_node_id;
 
-    int32_t edge_id = g->next_edge_id;
-
     g->nodes[id].type = type;
     g->nodes[id].info_byte_index = g->next_info_byte;
     g->nodes[id].info_bytes = nodeinfo_size;
-    g->nodes[id].executed = false;
+    g->nodes[id].state = flow_node_state_Blank;
     g->nodes[id].result_bitmap = NULL;
     g->nodes[id].ticks_elapsed = 0;
 
@@ -98,22 +106,17 @@ int32_t flow_node_create_generic(Context *c, struct flow_graph ** graph_ref, int
     g->next_node_id += 1;
     g->node_count += 1;
     if (prev_node >= 0){
-        //TODO - call create_edge??
-        g->edge_count += 1;
-        g->next_edge_id += 1;
-        g->edges[edge_id].from = prev_node;
-        g->edges[edge_id].to = id;
-        g->edges[edge_id].type = flow_edgetype_input;
-        g->edges[edge_id].info_byte_index = -1;
-        g->edges[edge_id].info_bytes = 0;
-        g->edges[edge_id].from_width = -1;
-        g->edges[edge_id].from_height = -1;
-        g->edges[edge_id].from_alpha_meaningful = false;
-        g->edges[edge_id].from_format = Bgra32;
+        if (flow_edge_create(c, graph_ref, prev_node, id, flow_edgetype_input) < 0){
+            CONTEXT_add_to_callstack(c);
+            return -3;
+        }
+
     }
 
     return id;
 }
+
+
 static void * FrameNode_get_node_info_pointer(struct flow_graph * g, int32_t node_id){
     return &(g->info_bytes[g->nodes[node_id].info_byte_index]);
 }
@@ -131,8 +134,9 @@ int32_t flow_node_create_canvas(Context *c, struct flow_graph **g, int32_t prev_
     info->bgcolor = bgcolor;
     return id;
 }
+
 int32_t flow_node_create_primitive_flip_vertical(Context *c, struct flow_graph **g, int32_t prev_node){
-    int32_t id = flow_node_create_generic(c, g, prev_node, flow_ntype_primitive_Flip_Vertical);
+    int32_t id = flow_node_create_generic(c, g, prev_node, flow_ntype_primitive_Flip_Vertical_Mutate);
     if (id < 0){
         CONTEXT_add_to_callstack(c);
         return id;
@@ -140,7 +144,7 @@ int32_t flow_node_create_primitive_flip_vertical(Context *c, struct flow_graph *
     return id;
 }
 int32_t flow_node_create_primitive_flip_horizontal(Context *c, struct flow_graph **g, int32_t prev_node){
-    int32_t id = flow_node_create_generic(c, g, prev_node, flow_ntype_primitive_Flip_Horizontal);
+    int32_t id = flow_node_create_generic(c, g, prev_node, flow_ntype_primitive_Flip_Horizontal_Mutate);
     if (id < 0){
         CONTEXT_add_to_callstack(c);
         return id;
@@ -189,7 +193,7 @@ int32_t flow_node_create_rotate_270(Context *c, struct flow_graph **g, int32_t p
     return id;
 }
 int32_t flow_node_create_primitive_crop(Context *c, struct flow_graph **g, int32_t prev_node, uint32_t x1, uint32_t y1, uint32_t x2, uint32_t y2){
-    int32_t id = flow_node_create_generic(c, g, prev_node, flow_ntype_primitive_Crop);
+    int32_t id = flow_node_create_generic(c, g, prev_node, flow_ntype_primitive_Crop_Mutate_Alias);
     if (id < 0){
         CONTEXT_add_to_callstack(c);
         return id;
@@ -274,6 +278,37 @@ int32_t flow_node_create_render_to_canvas_1d(Context *c, struct flow_graph **g, 
     memcpy(&info->matte_color, matte_color, 4);
     return id;
 }
+
+int32_t flow_node_create_render1d(Context *c, struct flow_graph **g, int32_t prev_node,
+                                             bool transpose_on_write,
+                                             int32_t scale_to_width,
+                                             WorkingFloatspace scale_and_filter_in_colorspace,
+                                             float sharpen_percent,
+                                             struct flow_scanlines_filter * filter_list,
+                                             InterpolationFilter interpolation_filter) {
+    int32_t id = flow_node_create_generic(c, g, prev_node, flow_ntype_Render1D);
+    if (id < 0){
+        CONTEXT_add_to_callstack(c);
+        return id;
+    }
+    struct flow_nodeinfo_render_to_canvas_1d * info = (struct flow_nodeinfo_render_to_canvas_1d *) FrameNode_get_node_info_pointer(*g, id);
+    info->transpose_on_write = transpose_on_write;
+
+    info->scale_to_width = scale_to_width;
+    info->interpolation_filter = interpolation_filter;
+    info->scale_in_colorspace = scale_and_filter_in_colorspace;
+    info->sharpen_percent_goal = sharpen_percent;
+    info->compositing_mode = flow_compositing_mode_overwrite;
+    info->filter_list = filter_list;
+    info->canvas_x = 0;
+    info->canvas_y = 0;
+    info->matte_color[0] = 0;
+    info->matte_color[1] = 0;
+    info->matte_color[2] = 0;
+    info->matte_color[3] = 0;
+    return id;
+}
+
 
 
 
@@ -377,21 +412,21 @@ int32_t flow_edge_create(Context *c, struct flow_graph **g, int32_t from, int32_
     return (*g)->next_edge_id -1;
 }
 int32_t flow_edge_duplicate(Context *c, struct flow_graph **g, int32_t edge_id){
-    struct flow_edge * old = &(*g)->edges[edge_id];
-    int32_t new_id = flow_edge_create(c,g,old->from, old->to, old->type);
+    struct flow_edge old_copy = (*g)->edges[edge_id];
+    int32_t new_id = flow_edge_create(c, g, old_copy.from, old_copy.to, old_copy.type);
     if (new_id < 0){
         CONTEXT_add_to_callstack(c);
         return -1;
     }
     struct flow_edge * e = &(*g)->edges[new_id];
-    e->from_format = old->from_format;
-    e->from_width = old->from_width;
-    e->from_height = old->from_height;
-    e->from_alpha_meaningful = old->from_alpha_meaningful;
+    e->from_format = old_copy.from_format;
+    e->from_width = old_copy.from_width;
+    e->from_height = old_copy.from_height;
+    e->from_alpha_meaningful = old_copy.from_alpha_meaningful;
 
-    if (old->info_byte_index >= 0 && old->info_bytes > 0){
-        e->info_bytes = old->info_bytes;
-        e->info_byte_index = flow_graph_copy_info_bytes_to(c, *g, g, old->info_byte_index, old->info_bytes);
+    if (old_copy.info_byte_index >= 0 && old_copy.info_bytes > 0){
+        e->info_bytes = old_copy.info_bytes;
+        e->info_byte_index = flow_graph_copy_info_bytes_to(c, *g, g, old_copy.info_byte_index, old_copy.info_bytes);
         if (e->info_byte_index < 0){
             CONTEXT_add_to_callstack(c);
             return e->info_byte_index;
@@ -400,19 +435,21 @@ int32_t flow_edge_duplicate(Context *c, struct flow_graph **g, int32_t edge_id){
     return new_id;
 }
 
-bool flow_graph_duplicate_edges_to_another_node(Context *c,  struct flow_graph ** g, int32_t from_node, int32_t to_node, bool copy_inbound, bool copy_outbound){
+bool flow_graph_duplicate_edges_to_another_node(Context *c, struct flow_graph **graph_ref, int32_t from_node, int32_t to_node, bool copy_inbound, bool copy_outbound){
     int32_t i = -1;
-    struct flow_edge * current_edge;
-    for (i = 0; i < (*g)->next_edge_id; i++){
-        current_edge = &(*g)->edges[i];
+
+    int32_t old_edge_count = (*graph_ref)->next_edge_id;
+    for (i = 0; i < old_edge_count; i++){
+        //This current_edge reference becomes invalid as soon as flow_edge_duplicate is called
+        struct flow_edge * current_edge = &(*graph_ref)->edges[i];
         if (current_edge->type != flow_edgetype_null){
             if ((copy_outbound && current_edge->from == from_node) || (copy_inbound && current_edge->to == from_node)) {
-                int32_t new_edge_id = flow_edge_duplicate(c, g, i);
+                int32_t new_edge_id = flow_edge_duplicate(c, graph_ref, i);
                 if (new_edge_id < 0){
                     CONTEXT_add_to_callstack(c);
                     return false;
                 }
-                struct flow_edge * new_edge = &(*g)->edges[new_edge_id];
+                struct flow_edge * new_edge = &(*graph_ref)->edges[new_edge_id];
 
                 if (new_edge->from == from_node){
                     new_edge->from = to_node;
@@ -438,6 +475,12 @@ bool flow_node_delete(Context *c, struct flow_graph *g, int32_t node_id){
         CONTEXT_error(c, Node_already_deleted);
         return false;
     }else{
+        //We shouldn't be deleting nodes with frames already attached.
+        if (n->result_bitmap != NULL){
+            CONTEXT_error(c, Invalid_internal_state);
+            return false;
+        }
+
         if (!flow_edge_delete_all_connected_to_node(c,g,node_id)){
             CONTEXT_error_return(c);
         }
@@ -445,6 +488,7 @@ bool flow_node_delete(Context *c, struct flow_graph *g, int32_t node_id){
         g->deleted_bytes += n->info_bytes;
         n->info_byte_index = -1;
         n->info_bytes = 0;
+        n->state = flow_node_state_Blank;
         g->node_count--;
         return true;
     }
@@ -529,34 +573,87 @@ bool flow_graph_walk(Context *c, struct flow_job * job, struct flow_graph **grap
 }
 
 
-static void flow_graph_print_nodes_to(Context *c, struct flow_graph *g, FILE * stream) {
-    struct flow_node * n;
-    int32_t i;
-    for (i = 0; i < g->next_node_id; i++){
-        n = &g->nodes[i];
 
-        if (n->type != flow_ntype_Null){
-            fprintf(stream, "[%d]: node type %d, %d infobytes\n", i, n->type,n->info_bytes);
-        }else{
-            fprintf(stream, "(null)\n");
-        }
-    }
-}
 
-static void flow_graph_print_edges_to(Context *c, struct flow_graph *g, FILE * stream) {
+static bool flow_graph_walk_recursive_dependency_wise(Context *c, struct flow_job * job, struct flow_graph **graph_ref, int32_t node_id, bool * quit, bool * skip_return_path,  flow_graph_visitor node_visitor,flow_graph_visitor edge_visitor, void * custom_data){
+
     struct flow_edge * edge;
-    int32_t i;
-    for (i = 0; i < g->next_edge_id; i++){
-        edge = &g->edges[i];
+    int32_t edge_ix;
+    for (edge_ix = 0; edge_ix < (*graph_ref)->next_edge_id; edge_ix++){
+        edge = &(*graph_ref)->edges[edge_ix];
+        if (edge->type != flow_edgetype_null && edge->to == node_id){
+            bool skip_this_return_path = false;
 
-        if (edge->type != flow_edgetype_null){
-            fprintf(stream, "%d: (%d, %d) type %d, %d infobytes\n", i, edge->from, edge->to, edge->type,edge->info_bytes);
-        }else{
-            fprintf(stream, "(null)\n");
+
+            //Recurse, depth first
+            if (!flow_graph_walk_recursive_dependency_wise(c, job, graph_ref, edge->from, quit, &skip_this_return_path ,node_visitor, edge_visitor,
+                                           custom_data)) {
+                return false; //Actually, we *don't* want to add to the callstack. Recursion could be 30+ here. One line is enough
+            }
+            if (*quit){
+                return true;
+            }
+            //We want to evaluate all branches depth first before we actually act on skip_return_path
+            if (skip_this_return_path){
+                *skip_return_path = true;
+            }else if (edge_visitor != NULL) {
+                //If the deeper nodes didn't ask to skip, evalutate the edge
+                if (!edge_visitor(c, job, graph_ref, edge_ix, quit, &skip_this_return_path, custom_data)) {
+                    CONTEXT_error_return(c);
+                }
+                if (*quit) {
+                    return true;
+                }
+                if (skip_this_return_path) {
+                    *skip_return_path = true;
+                }
+            }
         }
     }
+
+    //No inbound edges flagged to skip. Node gets direct influence over caller's skip_path and quit flag
+    if (!*skip_return_path && node_visitor != NULL) {
+        if (!node_visitor(c, job, graph_ref, node_id, quit, skip_return_path, custom_data)) {
+            CONTEXT_error_return(c);
+        }
+    }
+    return true;
 }
 
+
+bool flow_graph_walk_dependency_wise(Context *c, struct flow_job * job, struct flow_graph **graph_ref, flow_graph_visitor node_visitor,  flow_graph_visitor edge_visitor, void * custom_data ){
+    //TODO: would be good to verify graph is acyclic.
+
+    bool quit = false;
+    //We start by finding nodes with no inbound edges, then working in a direction.
+    struct flow_edge * edge;
+    int32_t node_ix;
+    int32_t edge_ix;
+    int32_t outbound_edge_count = 0;
+    for (node_ix = 0; node_ix < (*graph_ref)->next_node_id; node_ix++){
+        if ((*graph_ref)->nodes[node_ix].type != flow_ntype_Null){
+            //Now count outbound edges
+            outbound_edge_count = 0;
+            for (edge_ix = 0; edge_ix < (*graph_ref)->next_edge_id; edge_ix++){
+                edge = &(*graph_ref)->edges[edge_ix];
+                if (edge->type != flow_edgetype_null && edge->from == node_ix){
+                    outbound_edge_count++;
+                }
+            }
+            //if zero, we have a winner
+            if (outbound_edge_count == 0){
+                bool skip_return_path_unused = false;
+                if (!flow_graph_walk_recursive_dependency_wise(c, job, graph_ref, node_ix, &quit, &skip_return_path_unused, node_visitor, edge_visitor, custom_data )){
+                    CONTEXT_error_return(c);
+                }
+                if (quit){
+                    return true;
+                }
+            }
+        }
+    }
+    return true;
+}
 
 
 int32_t flow_graph_get_first_inbound_edge_of_type(Context *c, struct flow_graph *g, int32_t node_id,
@@ -591,14 +688,6 @@ int32_t flow_graph_get_inbound_edge_count_of_type(Context *c, struct flow_graph 
     return count;
 }
 
-void flow_graph_print_to(Context *c, struct flow_graph *g, FILE * stream){
-    fprintf(stream, "%d nodes (%d/%d), %d edges (%d/%d), %d infobytes (%d/%d)\n", g->node_count, g->next_node_id, g->max_nodes,
-            g->edge_count, g->next_edge_id, g->max_edges,
-            g->next_info_byte - g->deleted_bytes, g->next_info_byte, g->max_info_bytes);
-
-    flow_graph_print_edges_to(c,g,stream);
-    flow_graph_print_nodes_to(c,g,stream);
-}
 
 static const char * get_format_name(BitmapPixelFormat f, bool alpha_meaningful){
     switch(f){
@@ -619,16 +708,16 @@ bool flow_graph_print_to_dot(Context *c, struct flow_graph *g, FILE * stream, co
     int32_t i;
     for (i = 0; i < g->next_edge_id; i++){
         edge = &g->edges[i];
-        char dimensions[64];
-        if (edge->from_width < 0 && edge->from_height < 0){
-            snprintf(dimensions, 63, "?x?");
-        }else{
-            snprintf(dimensions, 63, "%dx%d %s", edge->from_width, edge->from_height,
-                     get_format_name(edge->from_format, edge->from_alpha_meaningful));
-        }
+         if (edge->type != flow_edgetype_null){
+             char dimensions[64];
+             if (edge->from_width < 0 && edge->from_height < 0){
+                 snprintf(dimensions, 63, "?x?");
+             }else{
+                 snprintf(dimensions, 63, "%dx%d %s", edge->from_width, edge->from_height,
+                          get_format_name(edge->from_format, edge->from_alpha_meaningful));
+             }
 
-        if (edge->type != flow_edgetype_null){
-            fprintf(stream, "  n%d -> n%d [label=\"e%d: %s%s\"]\n",  edge->from, edge->to, i, dimensions,
+             fprintf(stream, "  n%d -> n%d [label=\"e%d: %s%s\"]\n",  edge->from, edge->to, i, dimensions,
                     edge->type == flow_edgetype_canvas ? " canvas" : "");
         }
     }
@@ -641,7 +730,9 @@ bool flow_graph_print_to_dot(Context *c, struct flow_graph *g, FILE * stream, co
 
 
         if (n->type != flow_ntype_Null){
-            flow_node_stringify(c,g,i,node_label_buffer, 1023);
+            if (!flow_node_stringify(c,g,i,node_label_buffer, 1023)){
+                CONTEXT_error_return(c);
+            }
             //fprintf(stream, "  n%d [image=\"./node_frames/%s%d.png\", label=\"n%d: %s\"]\n", i, image_node_filename_prefix, i, i, node_label_buffer); //Todo, add completion info.
 
             total_ticks += n->ticks_elapsed;
@@ -667,5 +758,77 @@ bool flow_graph_print_to_dot(Context *c, struct flow_graph *g, FILE * stream, co
     fprintf(stream, "\"]\n");
 
     fprintf(stream, "}\n");
+    return true;
+}
+
+
+bool flow_graph_validate(Context * c,struct flow_graph *g){
+
+    struct flow_edge * edge;
+    int32_t i;
+    for (i = 0; i < g->next_edge_id; i++){
+        edge = &g->edges[i];
+        if (edge->type != flow_edgetype_null){
+            if (edge->from < 0 || edge->to < 0 || edge->from >= g->next_node_id || edge->to >= g->next_node_id){
+                CONTEXT_error(c, Invalid_internal_state);
+                return false;
+            }
+            //Validate all edge from/to values are non-null nodes
+            if (g->nodes[edge->from].type == flow_ntype_Null || g->nodes[edge->to].type == flow_ntype_Null){
+                CONTEXT_error(c, Invalid_internal_state);
+                return false;
+            }
+
+
+            //Validate all info bytes are within bounds (and do not overlap?)
+            if (edge->info_byte_index + edge->info_bytes > g->next_info_byte){
+                CONTEXT_error(c, Invalid_internal_state);
+                return false;
+            }
+        }else{
+            //validate all null nodes/edges are fully null
+            if (edge->from != -1 || edge->to != -1 || edge->info_byte_index != -1 ||
+                                                      edge->info_bytes != 0){
+                CONTEXT_error(c, Invalid_internal_state);
+                return false;
+            }
+        }
+    }
+
+    struct flow_node * node;
+    for (i = 0; i < g->next_node_id; i++){
+        node = &g->nodes[i];
+        if (node->type != flow_ntype_Null){
+            if (node->state > flow_node_state_Done){
+                CONTEXT_error(c, Invalid_internal_state);
+                return false;
+            }
+            if (!flow_node_validate_inputs(c, g, i)){
+                CONTEXT_error(c, Invalid_internal_state);
+                return false;
+            }
+            //Validate all node types are real and have corresponding definitions
+
+            struct flow_node_definition * def = flow_nodedef_get(c, node->type);
+            if (def == NULL){
+                CONTEXT_error_return(c);
+            }
+
+            //Validate all info bytes are within bounds (and TODO: do not overlap?)
+            if (node->info_byte_index + node->info_bytes > g->next_info_byte){
+                CONTEXT_error(c, Invalid_internal_state);
+                return false;
+            }
+        }else{
+            //validate all null nodes/edges are fully null
+            if (node->result_bitmap != NULL || node->state != flow_node_state_Blank || node->info_byte_index != -1 ||
+                    node->info_bytes != 0){
+                CONTEXT_error(c, Invalid_internal_state);
+                return false;
+            }
+        }
+    }
+
+
     return true;
 }
