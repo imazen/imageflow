@@ -53,6 +53,8 @@ ProfilingLog * Context_get_profiler_log(Context * context);
 
 Context * Context_create(void);
 void Context_destroy(Context * context);
+void Context_free_allocated_memory(Context * context);
+void Context_print_memory_info(Context * context);
 
 const char * Context_error_message(Context * context, char * buffer, size_t buffer_size);
 

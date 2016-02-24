@@ -33,7 +33,7 @@ bool execute_graph_for_url(Context * c, const char * input_image_url, const char
 
 
     size_t bytes_count = 0;
-    uint8_t * bytes = get_bytes_cached(input_image_url, &bytes_count);
+    uint8_t * bytes = get_bytes_cached(c, &bytes_count, input_image_url);
 
     int32_t input_resource_id = flow_job_add_buffer(c,job, FLOW_INPUT, input_placeholder, (void*) bytes, bytes_count, false);
 
@@ -111,8 +111,6 @@ TEST_CASE ("create tiny graph", "")
     REQUIRE(g->edge_count == 2);
     REQUIRE(g->node_count == 3);
 
-
-    flow_graph_destroy(c, g);
     Context_destroy(c);
 }
 
@@ -149,9 +147,6 @@ TEST_CASE ("delete a node from a graph", "")
     REQUIRE(g->edges[1].from == -1);
     REQUIRE(g->edges[1].to == -1);
 
-
-
-    flow_graph_destroy(c, g);
     Context_destroy(c);
 }
 
@@ -181,7 +176,6 @@ TEST_CASE ("clone an edge", "")
     REQUIRE(g->edges[1].to == 1);
 
 
-    flow_graph_destroy(c, g);
     Context_destroy(c);
 }
 
@@ -208,6 +202,7 @@ TEST_CASE("execute tiny graph", "")
     int32_t last;
 
     last = flow_node_create_canvas(c, &g, -1, Bgra32, 400, 300, 0xFFFFFFFF);
+//    last = flow_node_create_fill_rect()
     last = flow_node_create_scale(c, &g, last, 300, 200);
     last = flow_node_create_resource_placeholder(c, &g, last, 0);
 
@@ -238,9 +233,6 @@ TEST_CASE("execute tiny graph", "")
     REQUIRE(result->w == 300);
 
 
-    BitmapBgra_destroy(c,result);
-    flow_job_destroy(c,job);
-    flow_graph_destroy(c, g);
     Context_destroy(c);
 }
 
@@ -296,10 +288,6 @@ TEST_CASE("decode and scale png", "")
     REQUIRE(result != NULL);
     REQUIRE(result->w == 300);
 
-
-    BitmapBgra_destroy(c,result);
-    flow_job_destroy(c,job);
-    flow_graph_destroy(c, g);
     Context_destroy(c);
 }
 
@@ -334,7 +322,7 @@ TEST_CASE("decode, scale, and re-encode png", "")
 
     size_t bytes_count = 0;
 
-    uint8_t * bytes = get_bytes_cached("http://z.zr.io/ri/8s.jpg?format=png&width=800", &bytes_count);
+    uint8_t * bytes = get_bytes_cached(c, &bytes_count, "http://z.zr.io/ri/8s.jpg?format=png&width=800");
 
     int32_t input_resource_id = flow_job_add_buffer(c,job, FLOW_INPUT, input_placeholder, (void*) bytes, bytes_count, false);
 
@@ -365,8 +353,6 @@ TEST_CASE("decode, scale, and re-encode png", "")
     fclose(fh);
 
 
-    flow_job_destroy(c,job);
-    flow_graph_destroy(c, g);
     Context_destroy(c);
 }
 
@@ -386,7 +372,6 @@ TEST_CASE("scale and flip and crop png", "")
 
     execute_graph_for_url(c, "http://z.zr.io/ri/8s.jpg?format=png&width=800", "graph_flipped_cropped_png.png", &g);
 
-    flow_graph_destroy(c, g);
     Context_destroy(c);
 }
 
@@ -418,7 +403,6 @@ TEST_CASE("Roundtrip flipping", "")
     }
     REQUIRE(equal);
 
-    flow_graph_destroy(c, g);
     Context_destroy(c);
 }
 
@@ -439,7 +423,6 @@ TEST_CASE("scale copy rect", "")
 
     execute_graph_for_url(c, "http://z.zr.io/ri/8s.jpg?format=png&width=800", "graph_scaled_blitted_png.png", &g);
 
-    flow_graph_destroy(c, g);
     Context_destroy(c);
 }
 
@@ -461,7 +444,6 @@ TEST_CASE("test frame clone", "")
 
     execute_graph_for_url(c, "http://z.zr.io/ri/8s.jpg?format=png&width=400", "unflipped.png", &g);
 
-    flow_graph_destroy(c, g);
     Context_destroy(c);
 }
 
@@ -483,7 +465,6 @@ TEST_CASE("test rotation", "")
 
     execute_graph_for_url(c, "http://z.zr.io/ri/Oriented.jpg?format=png", "rotated.png", &g);
 
-    flow_graph_destroy(c, g);
     Context_destroy(c);
 }
 
@@ -512,7 +493,6 @@ TEST_CASE("test memory corruption", "")
 
     execute_graph_for_url(c, "http://z.zr.io/ri/Oriented.jpg?format=png", "rotated.png", &g);
 
-    flow_graph_destroy(c, g);
     Context_destroy(c);
 }
 
@@ -543,6 +523,5 @@ TEST_CASE("check for cycles", "")
     REQUIRE(Context_error_reason(c) == Graph_is_cyclic);
 
 
-    flow_graph_destroy(c, g);
     Context_destroy(c);
 }

@@ -146,9 +146,9 @@ static void png_write_data_callback(png_structp png_ptr, png_bytep data, png_siz
 
     /* allocate or grow buffer */
     if(p->buffer)
-        p->buffer = (char*) realloc(p->buffer, nsize);
+        p->buffer = (char*) CONTEXT_realloc(p->context,p->buffer, nsize);
     else
-        p->buffer = (char*)malloc(nsize);
+        p->buffer = (char*)CONTEXT_malloc(p->context, nsize);
 
     if(!p->buffer)
         png_error(png_ptr, "Write Error"); //TODO: comprehend png error handling
@@ -165,10 +165,11 @@ static void png_flush_nullop(png_structp png_ptr)
     struct flow_job_png_encoder_state *state = (struct flow_job_png_encoder_state *) codec_state;
     state->buffer = NULL;
     state->size = 0;
+     state->context = c;
 
     png_structp png_ptr = png_create_write_struct(PNG_LIBPNG_VER_STRING, "writing to memory", NULL,
                                                   NULL); //makepng_error, makepng_warning);
-    volatile png_infop info_ptr = NULL;
+    png_infop info_ptr = NULL;
     if (png_ptr == NULL) {
         CONTEXT_error(c, Out_of_memory);
         return false;
@@ -183,7 +184,7 @@ static void png_flush_nullop(png_structp png_ptr)
         png_error(png_ptr, "OOM allocating info structure");//TODO: comprehend png error handling
     {
 
-        png_bytepp rows = (png_bytepp) malloc(sizeof(png_bytep) * frame->h);
+        png_bytepp rows = (png_bytepp) CONTEXT_malloc(c,sizeof(png_bytep) * frame->h);
         unsigned int y;
         for (y = 0; y < frame->h; ++y) {
             rows[y] =  frame->pixels + (frame->stride * y);
@@ -198,6 +199,9 @@ static void png_flush_nullop(png_structp png_ptr)
 
         png_write_png(png_ptr, info_ptr, PNG_TRANSFORM_BGR, NULL);
 
+        CONTEXT_free(c, rows);
+        rows = NULL;
+        png_destroy_write_struct(&png_ptr, &info_ptr);
         state->output_resource->buffer = state->buffer;
         state->output_resource->buffer_size = state->size;
 
@@ -219,6 +223,7 @@ static void * codec_aquire_encode_png_on_buffer(Context *c, struct flow_job * jo
         }
         state->buffer = NULL;
         state->size = 0;
+        state->context = c;
         state->output_resource = buffer;
 
         buffer->codec_state = (void *)state;

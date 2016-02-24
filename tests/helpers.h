@@ -13,9 +13,9 @@
 #include <imageflow.h>
 #include <../lib/job.h>
 
-uint8_t* get_bytes_cached(const char * url, size_t * bytes_count_out);
+uint8_t *get_bytes_cached(Context *c, size_t *bytes_count_out, const char *url);
 void fetch_image(const char* url, char* dest_path);
-uint8_t * read_all_bytes(const char * path, size_t * buffer_size);
+uint8_t *read_all_bytes(Context *c, size_t *buffer_size, const char *path);
 bool write_all_byte(const char *path, char * buffer, size_t size);
 void copy_file(FILE* from, FILE* to);
 
@@ -72,7 +72,7 @@ bool write_all_byte(const char *path, char * buffer, size_t size){
     return true;
 }
 
-uint8_t * read_all_bytes(const char * path, size_t * buffer_size){
+uint8_t *read_all_bytes(Context *c, size_t *buffer_size, const char *path) {
     uint8_t *buffer;
     FILE *fh = fopen(path, "rb");
     if ( fh != NULL )
@@ -80,7 +80,7 @@ uint8_t * read_all_bytes(const char * path, size_t * buffer_size){
         fseek(fh, 0L, SEEK_END);
         size_t s = ftell(fh);
         rewind(fh);
-        buffer = (uint8_t *) malloc(s);
+        buffer = (uint8_t *) CONTEXT_malloc(c, s);
         if ( buffer != NULL )
         {
             //Returns 1 or 0, not the number of bytes.
@@ -151,7 +151,7 @@ void fetch_image(const char* url, char* dest_path){ /*null-terminated string*/
     }
 }
 
-uint8_t * get_bytes_cached(const char * url, size_t * bytes_count_out){
+uint8_t *get_bytes_cached(Context *c, size_t *bytes_count_out, const char *url) {
 
     #define FLOW_MAX_PATH 255
     char cache_folder[FLOW_MAX_PATH];
@@ -171,7 +171,7 @@ uint8_t * get_bytes_cached(const char * url, size_t * bytes_count_out){
         fprintf(stdout, "Using cached image at %s",cache_path);
     }
 
-    return read_all_bytes(cache_path, bytes_count_out);
+    return read_all_bytes(c, bytes_count_out, cache_path);
 }
 
 

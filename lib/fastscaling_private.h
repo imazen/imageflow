@@ -49,12 +49,15 @@ typedef struct BitmapFloatStruct {
 
 typedef void * (*context_calloc_function)(struct ContextStruct * context, size_t count, size_t element_size, const char * file, int line);
 typedef void * (*context_malloc_function)(struct ContextStruct * context, size_t byte_count, const char * file, int line);
+
+typedef void * (*context_realloc_function)(struct ContextStruct * context, void * old_pointer, size_t new_byte_count, const char * file, int line);
 typedef void   (*context_free_function)  (struct ContextStruct * context, void * pointer, const char * file, int line);
 typedef void   (*context_terminate_function)  (struct ContextStruct * context);
 
 typedef struct _HeapManager {
     context_calloc_function _calloc;
     context_malloc_function _malloc;
+    context_realloc_function _realloc;
     context_free_function  _free;
     context_terminate_function _context_terminate;
     void * _private_state;
@@ -73,7 +76,7 @@ typedef struct _ErrorCallstackLine {
 
 typedef struct _ErrorInfo {
     StatusCode reason;
-    ErrorCallstackLine callstack[8];
+    ErrorCallstackLine callstack[14];
     int callstack_count;
     int callstack_capacity;
     bool locked;
@@ -105,6 +108,24 @@ typedef struct _ColorspaceInfo {
 
 } ColorspaceInfo;
 
+struct HeapAllocation{
+    void * ptr;
+    size_t bytes;
+    const char * allocated_by;
+    int allocated_by_line;
+};
+struct HeapTrackingInfo{
+    struct HeapAllocation * allocs;
+    size_t next_free_slot;
+    size_t total_slots;
+    size_t bytes_allocated_net;
+    size_t bytes_allocated_gross;
+    size_t allocations_net;
+    size_t allocations_gross;
+    size_t bytes_freed;
+    size_t allocations_net_peak;
+    size_t bytes_allocated_net_peak;
+};
 
 
 /** Context: main structure **/
@@ -114,6 +135,7 @@ typedef struct ContextStruct {
     HeapManager heap;
     ProfilingLog log;
     ColorspaceInfo colorspace;
+    struct HeapTrackingInfo heap_tracking;
 } Context;
 
 
@@ -126,6 +148,7 @@ void Context_terminate(Context * context);
 
 void * Context_calloc(Context * context, size_t, size_t, const char * file, int line);
 void * Context_malloc(Context * context, size_t, const char * file, int line);
+void * Context_realloc(Context * context, void * old_pointer, size_t new_byte_count, const char * file, int line);
 void Context_free(Context * context, void * pointer, const char * file, int line);
 bool Context_enable_profiling(Context * context,uint32_t default_capacity);
 void Context_set_last_error(Context * context, StatusCode code, const char * file, int line);
@@ -137,6 +160,7 @@ void Context_add_to_callstack(Context * context, const char * file, int line);
 #define CONTEXT_calloc(context, instance_count, element_size) Context_calloc(context, instance_count, element_size, __FILE__, __LINE__)
 #define CONTEXT_calloc_array(context, instance_count, type_name) (type_name *) Context_calloc(context, instance_count, sizeof(type_name), __FILE__, __LINE__)
 #define CONTEXT_malloc(context, byte_count) Context_malloc(context, byte_count, __FILE__, __LINE__)
+#define CONTEXT_realloc(context,old_pointer, new_byte_count) Context_realloc(context, old_pointer, new_byte_count, __FILE__, __LINE__)
 #define CONTEXT_free(context, pointer) Context_free(context, pointer, __FILE__, __LINE__)
 #define CONTEXT_error(context, status_code) CONTEXT_SET_LAST_ERROR(context,status_code)
 

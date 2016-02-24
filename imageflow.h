@@ -414,6 +414,7 @@ struct flow_job_resource_buffer{
 };
 
 struct flow_job_png_encoder_state {
+    Context * context;
     char *buffer;
     size_t size;
     struct flow_job_resource_buffer * output_resource;

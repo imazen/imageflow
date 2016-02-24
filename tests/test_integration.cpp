@@ -92,8 +92,9 @@ TEST_CASE ("Load png from URL", "[fastscaling]")
     bool success = false;
 
     size_t bytes_count = 0;
+    Context * c= Context_create();
 
-    uint8_t * bytes = get_bytes_cached("http://s3.amazonaws.com/resizer-images/sun_256.png", &bytes_count);
+    uint8_t * bytes = get_bytes_cached(c, &bytes_count, "http://s3.amazonaws.com/resizer-images/sun_256.png");
     png_size_t image_bytes_count = bytes_count;
     png_const_voidp image_bytes =bytes;
 
@@ -215,5 +216,6 @@ TEST_CASE ("Load png from URL", "[fastscaling]")
         /* Failed to read the first argument: */
         fprintf(stderr, "png_image_begin_read_from_memory: %s\n", image.message);
 
+    Context_destroy(c);
     REQUIRE (success);
 }

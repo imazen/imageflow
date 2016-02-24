@@ -1,6 +1,7 @@
 #include "fastscaling_private.h"
 #include <stdio.h>
 #include <string.h>
+#include <nathanaeljones/imageflow/fastscaling.h>
 
 #ifdef _MSC_VER
 #pragma unmanaged
@@ -34,6 +35,10 @@ void Context_add_to_callstack(Context * context, const char * file, int line)
         context->error.callstack[context->error.callstack_count].line = line;
         context->error.callstack_count++;
     }
+}
+
+static size_t Context_size_of_context(Context * context){
+    return context->heap_tracking.total_slots * sizeof(struct HeapAllocation) + context->log.capacity * sizeof(ProfilingEntry) + sizeof(struct ContextStruct);
 }
 
 void Context_clear_error(Context * context){
@@ -97,13 +102,154 @@ const char * Context_stacktrace (Context * context, char * buffer, size_t buffer
     return buffer;
 }
 
+static bool expand_heap_tracking(Context * context){
+    size_t growth_factor = 2;
+    size_t growth_divisor = 1;
+
+    size_t new_size = (context->heap_tracking.total_slots * growth_factor) / growth_divisor + 1;
+    if (new_size < context->heap_tracking.total_slots) new_size = context->heap_tracking.total_slots;
+    if (new_size < 64) new_size = 64;
+
+    struct HeapAllocation * allocs = (struct HeapAllocation *)context->heap._calloc(context, new_size, sizeof(struct HeapAllocation),__FILE__, __LINE__);
+    if (allocs == NULL){
+        CONTEXT_error(context, Out_of_memory);
+        return false;
+    }
+
+
+    struct HeapAllocation * old = context->heap_tracking.allocs;
+    if (old != NULL) {
+        memcpy(allocs, old,
+               context->heap_tracking.total_slots * sizeof(struct HeapAllocation));
+    }
+
+    context->heap_tracking.allocs = allocs;
+    context->heap_tracking.total_slots = new_size;
+    if (old != NULL) {
+        context->heap._free(context, old, __FILE__, __LINE__);
+    }
+    return true;
+}
+
+static bool Context_memory_track(Context * context, void * ptr, size_t byte_count, const char * file, int line){
+    if (context->heap_tracking.next_free_slot == context->heap_tracking.total_slots){
+        if (!expand_heap_tracking(context)){
+            CONTEXT_error_return(context);
+        }
+    }
+    struct HeapAllocation * next = &context->heap_tracking.allocs[context->heap_tracking.next_free_slot];
+    if (next->ptr != NULL){
+        CONTEXT_error(context, Invalid_internal_state);
+        return false;
+    }
+    next->allocated_by = file;
+    next->allocated_by_line = line;
+    next->bytes = byte_count;
+    next->ptr = ptr;
+    context->heap_tracking.allocations_gross++;
+    context->heap_tracking.allocations_net++;
+    if (context->heap_tracking.allocations_net_peak < context->heap_tracking.allocations_net){
+        context->heap_tracking.allocations_net_peak = context->heap_tracking.allocations_net;
+    }
+    context->heap_tracking.bytes_allocated_gross += byte_count;
+    context->heap_tracking.bytes_allocated_net += byte_count;
+
+    if (context->heap_tracking.bytes_allocated_net_peak < context->heap_tracking.bytes_allocated_net){
+        context->heap_tracking.bytes_allocated_net_peak = context->heap_tracking.bytes_allocated_net;
+    }
+
+    for (size_t i = context->heap_tracking.next_free_slot + 1; i < context->heap_tracking.total_slots; i++){
+        if (context->heap_tracking.allocs[i].ptr == NULL){
+            context->heap_tracking.next_free_slot = i;
+            return true;
+        }
+    }
+    context->heap_tracking.next_free_slot = context->heap_tracking.total_slots;
+    return true;
+}
+static void Context_memory_untrack(Context * context, void * ptr, const char * file, int line){
+    for (int64_t i = context->heap_tracking.total_slots - 1; i >= 0; i--){
+        if (context->heap_tracking.allocs[i].ptr == ptr){
+            struct HeapAllocation * alloc = &context->heap_tracking.allocs[i];
+
+            context->heap_tracking.allocations_net--;
+            context->heap_tracking.bytes_allocated_net -= alloc->bytes;
+            context->heap_tracking.bytes_freed += alloc->bytes;
+            alloc->ptr = NULL;
+            alloc->bytes = 0;
+            alloc->allocated_by = NULL;
+            alloc->allocated_by_line = 0;
+
+            //Only seek backwards, so we always point to the first.
+            if ((int64_t)context->heap_tracking.next_free_slot > i){
+                context->heap_tracking.next_free_slot = (int64_t)i;
+            }
+
+            return;
+        }
+    }
+    //TODO: failed to untrack?? warning??
+#ifdef DEBUG
+    fprintf(stderr, "%s:%d Failed to untrack memory allocated at %zu bytes\n", file, line, ptr);
+#endif
+
+
+}
+
+ void Context_print_memory_info(Context * context){
+    size_t meta_bytes = Context_size_of_context(context);
+    fprintf(stderr, "Context %p is using %zu bytes for metadata, %zu bytes for %zu allocations (total bytes %zu)\n", (void *)context, meta_bytes, context->heap_tracking.bytes_allocated_net, context->heap_tracking.allocations_net, context->heap_tracking.bytes_allocated_net + meta_bytes);
+    fprintf(stderr, "Context %p peak usage %zu bytes total, %zu allocations. %zu bytes from %zu allocations freed explicitly\n", (void *)context, meta_bytes + context->heap_tracking.bytes_allocated_net_peak, context->heap_tracking.allocations_net_peak, context->heap_tracking.bytes_freed, context->heap_tracking.allocations_gross - context->heap_tracking.allocations_net);
+
+}
+void Context_free_allocated_memory(Context * context){
+
+//    fprintf(stderr, "Context_free_allocated_memory:\n");
+//    Context_print_memory_info(context);
+    for (size_t i = 0; i < context->heap_tracking.total_slots; i++){
+        if (context->heap_tracking.allocs[i].ptr != NULL){
+
+
+            context->heap._free(context, context->heap_tracking.allocs[i].ptr, __FILE__, __LINE__);
+
+
+            struct HeapAllocation * alloc = &context->heap_tracking.allocs[i];
+            //fprintf(stderr, "Freed %zu bytes at %p, allocated at %s:%u\n",alloc->bytes,  alloc->ptr, alloc->allocated_by, alloc->allocated_by_line);
+
+            context->heap_tracking.allocations_net--;
+            context->heap_tracking.bytes_allocated_net -= alloc->bytes;
+            alloc->ptr = NULL;
+            alloc->bytes = 0;
+            alloc->allocated_by = NULL;
+            alloc->allocated_by_line = 0;
+
+            //Only seek backwards, so we always point to the first.
+            if (context->heap_tracking.next_free_slot > i){
+                context->heap_tracking.next_free_slot = i;
+            }
+        }
+    }
+    if (context->heap_tracking.allocations_net != 0 ||
+            context->heap_tracking.bytes_allocated_net != 0){
+        fprintf(stderr, "Failed to deallocated %zu bytes", context->heap_tracking.bytes_allocated_net);
+
+    }
+
+}
 
 void * Context_calloc(Context * context, size_t instance_count, size_t instance_size, const char * file, int line)
 {
 #ifdef DEBUG
     fprintf(stderr, "%s:%d calloc of %zu * %zu bytes\n", file, line, instance_count, instance_size);
 #endif
-    return context->heap._calloc(context, instance_count, instance_size, file, line);
+
+    void * ptr = context->heap._calloc(context, instance_count, instance_size, file, line);
+    if (ptr == NULL) return NULL;
+    if (!Context_memory_track(context, ptr, instance_count * instance_size, file, line)){
+        context->heap._free(context, ptr, file, line);
+        return NULL;
+    }
+    return ptr;
 }
 
 void * Context_malloc(Context * context, size_t byte_count, const char * file, int line)
@@ -111,12 +257,35 @@ void * Context_malloc(Context * context, size_t byte_count, const char * file, i
 #ifdef DEBUG
     fprintf(stderr, "%s:%d malloc of %zu bytes\n", file, line, byte_count);
 #endif
-    return context->heap._malloc(context, byte_count, file, line);
+    void * ptr = context->heap._malloc(context, byte_count, file, line);
+    if (ptr == NULL) return NULL;
+    if (!Context_memory_track(context, ptr, byte_count, file, line)){
+        context->heap._free(context, ptr, file, line);
+        return NULL;
+    }
+    return ptr;
+}
+
+
+void * Context_realloc(Context * context, void * old_pointer, size_t new_byte_count, const char * file, int line)
+{
+#ifdef DEBUG
+    fprintf(stderr, "%s:%d realloc of %zu bytes\n", file, line, byte_count);
+#endif
+    void * ptr = context->heap._realloc(context, old_pointer, new_byte_count, file, line);
+    if (ptr == NULL) return NULL;
+    Context_memory_untrack(context, old_pointer, __FILE__, __LINE__);
+    if (!Context_memory_track(context, ptr, new_byte_count, file, line)){
+        context->heap._free(context, ptr, file, line);
+        return NULL;
+    }
+    return ptr;
 }
 
 void Context_free(Context * context, void * pointer, const char * file, int line)
 {
     if (pointer == NULL) return;
+    Context_memory_untrack(context, pointer, file, line);
     context->heap._free(context, pointer, file, line);
 }
 
@@ -133,6 +302,10 @@ static void * DefaultHeapManager_malloc(struct ContextStruct * context, size_t b
 {
     return malloc(byte_count);
 }
+static void * DefaultHeapManager_realloc(struct ContextStruct * context, void * old_pointer, size_t new_byte_count, const char * file, int line)
+{
+    return realloc(old_pointer, new_byte_count);
+}
 static void  DefaultHeapManager_free(struct ContextStruct * context, void * pointer, const char * file, int line)
 {
     free(pointer);
@@ -143,7 +316,23 @@ void DefaultHeapManager_initialize(HeapManager * manager)
     manager->_calloc = DefaultHeapManager_calloc;
     manager->_malloc = DefaultHeapManager_malloc;
     manager->_free = DefaultHeapManager_free;
+    manager->_realloc = DefaultHeapManager_realloc;
     manager->_context_terminate = NULL;
+}
+
+
+static void Context_heap_tracking_initialize(Context * context){
+
+    context->heap_tracking.total_slots = 0;
+    context->heap_tracking.next_free_slot = 0;
+    context->heap_tracking.allocations_gross = 0;
+    context->heap_tracking.allocations_net  =0;
+    context->heap_tracking.allocs = NULL;
+    context->heap_tracking.bytes_allocated_gross = 0;
+    context->heap_tracking.bytes_allocated_net = 0;
+    context->heap_tracking.allocations_net_peak = 0;
+    context->heap_tracking.bytes_allocated_net_peak = 0;
+    context->heap_tracking.bytes_freed = 0;
 }
 
 void Context_initialize(Context * context)
@@ -159,7 +348,16 @@ void Context_initialize(Context * context)
     context->error.reason = No_Error;
     context->error.locked = false;
     DefaultHeapManager_initialize(&context->heap);
+    Context_heap_tracking_initialize(context);
     Context_set_floatspace (context, Floatspace_as_is, 0.0f, 0.0f, 0.0f);
+}
+
+static void Context_heap_tracking_terminate(Context *context){
+
+    if (context->heap_tracking.allocs != NULL){
+        context->heap._free(context, context->heap_tracking.allocs, __FILE__, __LINE__);
+    }
+    Context_heap_tracking_initialize(context);
 }
 
 Context * Context_create(void)
@@ -176,7 +374,11 @@ void Context_terminate(Context * context)
     if (context != NULL) {
         if (context->heap._context_terminate != NULL) {
             context->heap._context_terminate(context);
+        }else{
+            Context_free_allocated_memory(context);
         }
+        Context_heap_tracking_terminate(context);
+
         CONTEXT_free(context, context->log.log);
     }
 }
