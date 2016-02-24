@@ -515,3 +515,34 @@ TEST_CASE("test memory corruption", "")
     flow_graph_destroy(c, g);
     Context_destroy(c);
 }
+
+
+
+TEST_CASE("check for cycles", "")
+{
+    //This test case helped expose a flaw in graph creation, where we swapped max_edges and max_nodes and caused memory overlap
+    //It also showed how that post_optimize_flatten calls which create pre_optimize_flattenable nodes
+    //Can cause execution to fail in fewer than 6 passes. We may want to re-evaluate our graph exeuction approach
+    Context * c = Context_create();
+    struct flow_graph *g = flow_graph_create(c, 10, 10, 200, 2.0);
+    ERR(c);
+
+    int32_t first =flow_node_create_clone(c, &g, -1);
+    int32_t second = flow_node_create_clone(c, &g, first);
+    int32_t third = flow_node_create_clone(c, &g, second);
+    flow_edge_create(c, &g, third, first, flow_edgetype_input);//make a cycle
+
+    REQUIRE_FALSE(flow_graph_validate(c, g));
+    REQUIRE(Context_error_reason(c) == Graph_is_cyclic);
+
+    Context_clear_error(c);
+
+    int32_t fourth = flow_node_create_clone(c, &g, third);
+
+    REQUIRE_FALSE(flow_graph_validate(c, g));
+    REQUIRE(Context_error_reason(c) == Graph_is_cyclic);
+
+
+    flow_graph_destroy(c, g);
+    Context_destroy(c);
+}

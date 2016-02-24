@@ -385,6 +385,10 @@ bool flow_graph_post_optimize_flatten(Context *c, struct flow_job *job, struct f
 
 bool flow_graph_optimize(Context *c,struct flow_job *job, struct flow_graph ** graph_ref);
 bool flow_graph_pre_optimize_flatten(Context *c, struct flow_graph **graph_ref);
+int32_t flow_graph_get_edge_count(Context *c, struct flow_graph *g, int32_t node_id, bool filter_by_edge_type,
+                                  flow_edge_type type, bool include_inbound, bool include_outbound);
+
+bool flow_graph_validate(Context * c,struct flow_graph *g);
 
 int32_t flow_job_add_bitmap_bgra(Context *c, struct flow_job * job, FLOW_DIRECTION dir, int32_t graph_placeholder_id, BitmapBgra * bitmap);
 

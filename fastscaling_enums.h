@@ -43,6 +43,7 @@ ENUM_START (STATUS_CODE_NAME, _StatusCode)
     Graph_could_not_be_executed,
     Png_decoding_failed,
     Png_encoding_failed,
+    Graph_is_cyclic,
 
 ENUM_END (STATUS_CODE_NAME)
 

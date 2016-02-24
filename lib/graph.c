@@ -575,7 +575,20 @@ bool flow_graph_walk(Context *c, struct flow_job * job, struct flow_graph **grap
 
 
 
-static bool flow_graph_walk_recursive_dependency_wise(Context *c, struct flow_job * job, struct flow_graph **graph_ref, int32_t node_id, bool * quit, bool * skip_return_path,  flow_graph_visitor node_visitor,flow_graph_visitor edge_visitor, void * custom_data){
+static bool flow_graph_walk_recursive_dependency_wise(Context *c, struct flow_job * job, struct flow_graph **graph_ref, int32_t node_id, bool * quit, bool * skip_return_path,  flow_graph_visitor node_visitor,flow_graph_visitor edge_visitor, bool * visited_local,bool *visited_global,  void * custom_data){
+
+    //Check for cycles
+    if (visited_local[node_id]){
+        CONTEXT_error(c, Graph_is_cyclic);//Cycle in graph!
+        return false;
+    }
+    visited_local[node_id] = true;
+
+    //Skip work we did in another sibling walk
+    if (visited_global[node_id]){
+        return true;
+    }
+    visited_global[node_id] = true;
 
     struct flow_edge * edge;
     int32_t edge_ix;
@@ -586,7 +599,7 @@ static bool flow_graph_walk_recursive_dependency_wise(Context *c, struct flow_jo
 
 
             //Recurse, depth first
-            if (!flow_graph_walk_recursive_dependency_wise(c, job, graph_ref, edge->from, quit, &skip_this_return_path ,node_visitor, edge_visitor,
+            if (!flow_graph_walk_recursive_dependency_wise(c, job, graph_ref, edge->from, quit, &skip_this_return_path ,node_visitor, edge_visitor, visited_local, visited_global,
                                            custom_data)) {
                 return false; //Actually, we *don't* want to add to the callstack. Recursion could be 30+ here. One line is enough
             }
@@ -620,9 +633,18 @@ static bool flow_graph_walk_recursive_dependency_wise(Context *c, struct flow_jo
     return true;
 }
 
-
+//Assumes one has checked for cycles already
 bool flow_graph_walk_dependency_wise(Context *c, struct flow_job * job, struct flow_graph **graph_ref, flow_graph_visitor node_visitor,  flow_graph_visitor edge_visitor, void * custom_data ){
-    //TODO: would be good to verify graph is acyclic.
+
+    //visited_local checks for cycles
+    //visited_global eliminates redundant work
+    bool *visited_local = CONTEXT_calloc_array(c, (*graph_ref)->next_node_id * 2, bool);
+    size_t visited_local_bytes = (*graph_ref)->next_node_id * sizeof(bool); //Just the first half of the array
+    if (visited_local == NULL){
+        CONTEXT_error(c, Out_of_memory);
+        return false;
+    }
+    bool * visited_global = visited_local + visited_local_bytes;
 
     bool quit = false;
     //We start by finding nodes with no inbound edges, then working in a direction.
@@ -630,8 +652,11 @@ bool flow_graph_walk_dependency_wise(Context *c, struct flow_job * job, struct f
     int32_t node_ix;
     int32_t edge_ix;
     int32_t outbound_edge_count = 0;
+    int32_t starting_nodes =0;
+    int32_t last_node = -1;
     for (node_ix = 0; node_ix < (*graph_ref)->next_node_id; node_ix++){
         if ((*graph_ref)->nodes[node_ix].type != flow_ntype_Null){
+            last_node = node_ix;
             //Now count outbound edges
             outbound_edge_count = 0;
             for (edge_ix = 0; edge_ix < (*graph_ref)->next_edge_id; edge_ix++){
@@ -642,16 +667,32 @@ bool flow_graph_walk_dependency_wise(Context *c, struct flow_job * job, struct f
             }
             //if zero, we have a winner
             if (outbound_edge_count == 0){
+                starting_nodes++;
+                //Reset cycle check on visited_local
+                memset(visited_local, 0, visited_local_bytes);
                 bool skip_return_path_unused = false;
-                if (!flow_graph_walk_recursive_dependency_wise(c, job, graph_ref, node_ix, &quit, &skip_return_path_unused, node_visitor, edge_visitor, custom_data )){
+                if (!flow_graph_walk_recursive_dependency_wise(c, job, graph_ref, node_ix, &quit, &skip_return_path_unused, node_visitor, edge_visitor,
+                                                               visited_local, visited_global, custom_data )){
+
+                    CONTEXT_free(c, visited_local);
                     CONTEXT_error_return(c);
                 }
                 if (quit){
+
+                    CONTEXT_free(c, visited_local);
                     return true;
                 }
             }
         }
     }
+    if (last_node > -1 && starting_nodes == 0){
+        //We have at least one non-null node, but didn't visit any because there are no ending nodes. This implies a cycle.
+        CONTEXT_error(c, Graph_is_cyclic);
+        CONTEXT_free(c, visited_local);
+        return false;
+    }
+
+    CONTEXT_free(c, visited_local);
     return true;
 }
 
@@ -671,21 +712,27 @@ int32_t flow_graph_get_first_inbound_edge_of_type(Context *c, struct flow_graph 
     return -404;
 }
 
-
-int32_t flow_graph_get_inbound_edge_count_of_type(Context *c, struct flow_graph *g, int32_t node_id,
-                                                  flow_edge_type type) {
+int32_t flow_graph_get_edge_count(Context *c, struct flow_graph *g, int32_t node_id, bool filter_by_edge_type,
+                                                  flow_edge_type type, bool include_inbound, bool include_outbound) {
     struct flow_edge * edge;
     int32_t i;
     int32_t count = 0;
     for (i = 0; i < g->next_edge_id; i++){
         edge = &g->edges[i];
-        if (edge->type == type){
-            if (edge->to == node_id) {
+        if (!filter_by_edge_type || edge->type == type){
+            if ((include_inbound && edge->to == node_id) ||
+                    (include_outbound && edge->from == node_id)) {
                 count++;
             }
         }
     }
     return count;
+}
+
+
+int32_t flow_graph_get_inbound_edge_count_of_type(Context *c, struct flow_graph *g, int32_t node_id,
+                                                  flow_edge_type type) {
+    return flow_graph_get_edge_count(c, g, node_id, true, type, true, false);
 }
 
 
@@ -796,39 +843,42 @@ bool flow_graph_validate(Context * c,struct flow_graph *g){
     }
 
     struct flow_node * node;
-    for (i = 0; i < g->next_node_id; i++){
+    for (i = 0; i < g->next_node_id; i++) {
         node = &g->nodes[i];
-        if (node->type != flow_ntype_Null){
-            if (node->state > flow_node_state_Done){
+        if (node->type != flow_ntype_Null) {
+            if (node->state > flow_node_state_Done) {
                 CONTEXT_error(c, Invalid_internal_state);
                 return false;
             }
-            if (!flow_node_validate_inputs(c, g, i)){
+            if (!flow_node_validate_inputs(c, g, i)) {
                 CONTEXT_error(c, Invalid_internal_state);
                 return false;
             }
             //Validate all node types are real and have corresponding definitions
 
-            struct flow_node_definition * def = flow_nodedef_get(c, node->type);
-            if (def == NULL){
+            struct flow_node_definition *def = flow_nodedef_get(c, node->type);
+            if (def == NULL) {
                 CONTEXT_error_return(c);
             }
 
             //Validate all info bytes are within bounds (and TODO: do not overlap?)
-            if (node->info_byte_index + node->info_bytes > g->next_info_byte){
+            if (node->info_byte_index + node->info_bytes > g->next_info_byte) {
                 CONTEXT_error(c, Invalid_internal_state);
                 return false;
             }
-        }else{
+        } else {
             //validate all null nodes/edges are fully null
             if (node->result_bitmap != NULL || node->state != flow_node_state_Blank || node->info_byte_index != -1 ||
-                    node->info_bytes != 0){
+                node->info_bytes != 0) {
                 CONTEXT_error(c, Invalid_internal_state);
                 return false;
             }
         }
     }
 
-
+    //Validate graph has no cycles, just by walking it.
+    if (!flow_graph_walk_dependency_wise(c, NULL, &g, NULL, NULL, NULL)){
+        CONTEXT_error_return(c);
+    }
     return true;
 }

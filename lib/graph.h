@@ -59,7 +59,6 @@ bool flow_node_pre_optimize_flatten(Context *c, struct flow_graph **graph_ref, i
 bool flow_node_execute(Context *c, struct flow_job * job, struct flow_graph *g, int32_t node_id);
 bool flow_node_estimate_execution_cost(Context *c, struct flow_graph *g, int32_t node_id, size_t * bytes_required, size_t * cpu_cost);
 bool flow_node_validate_inputs(Context *c, struct flow_graph *g, int32_t node_id);
-bool flow_graph_validate(Context *c, struct flow_graph *g);
 bool flow_node_update_state(Context *c, struct flow_graph *g, int32_t node_id);
 
 bool flow_graph_walk_dependency_wise(Context *c, struct flow_job * job, struct flow_graph **graph_ref, flow_graph_visitor node_visitor,  flow_graph_visitor edge_visitor, void * custom_data );
