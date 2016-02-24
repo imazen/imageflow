@@ -214,15 +214,15 @@ BitmapBgra * BitmapBgra_create_test_image(Context  * c){
         CONTEXT_add_to_callstack(c);
         return NULL;
     }
-    uint8_t * pixel = test->pixels;
+    uint8_t * pixel;
     for (uint32_t y = 0; y < test->h; y++){
         pixel = test->pixels + (y * test->stride);
         for (uint32_t x = 0; x < test->w; x++){
-            pixel[0] = x;
-            pixel[1] = x /2;
-            pixel[3] = x /3;
-            pixel[4] = y;
-            pixel++;
+            pixel[0] = (uint8_t)x;
+            pixel[1] = (uint8_t) (x /2);
+            pixel[2] = (uint8_t)(x /3);
+            pixel[3] = (uint8_t)y;
+            pixel+=4;
         }
     }
     return test;
