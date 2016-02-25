@@ -270,19 +270,14 @@ TEST_CASE("decode and scale png", "")
     Context_destroy(c);
 }
 
-TEST_CASE("decode, scale, and re-encode png", "")
+bool scale_image_to_disk_inner(Context* c)
 {
-
-    Context* c = Context_create();
-    struct flow_graph* g = nullptr;
-    struct flow_job* job = nullptr;
-
-    int32_t result_resource_id;
-    struct flow_job_resource_buffer* result = nullptr;
-
-    g = flow_graph_create(c, 10, 10, 200, 2.0);
-    ERR(c);
-
+    // We'll create a simple graph
+    struct flow_graph* g = flow_graph_create(c, 10, 10, 200, 2.0);
+    if (g == NULL) {
+        return false;
+    }
+    //We associate placeholders and resources with simple integers
     int32_t input_placeholder = 0;
     int32_t output_placeholder = 1;
 
@@ -291,42 +286,69 @@ TEST_CASE("decode, scale, and re-encode png", "")
     last = flow_node_create_scale(c, &g, last, 120, 120);
     last = flow_node_create_resource_placeholder(c, &g, last, output_placeholder);
 
-    job = flow_job_create(c);
-    ERR(c);
-    flow_job_configure_recording(c, job, true, true, true, false, false);
+    // We create a job to create I/O resources and attach them to our abstract graph above
+    struct flow_job* job = flow_job_create(c);
 
-    size_t bytes_count = 0;
+    // We've done 4 mallocs, make sure we didn't run out of memory
+    if (Context_has_error(c)) {
+        return false;
+    }
 
-    uint8_t* bytes = get_bytes_cached(c, &bytes_count, "http://z.zr.io/ri/8s.jpg?format=png&width=800");
+    // Uncomment to generate an animated graph of the process. Requires sudo apt-get install libav-tools graphviz
+    // gifsicle
+    // flow_job_configure_recording(c, job, true, true, true, true, true);
 
-    int32_t input_resource_id
-        = flow_job_add_buffer(c, job, FLOW_INPUT, input_placeholder, (void*)bytes, bytes_count, false);
+    // We're going to use an embedded image, but you could get bytes from anywhere
+    uint8_t image_bytes_literal[]
+        = { 0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, 0x00, 0x00, 0x00, 0x0D, 0x49, 0x48, 0x44, 0x52, 0x00,
+            0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x08, 0x06, 0x00, 0x00, 0x00, 0x1F, 0x15, 0xC4, 0x89, 0x00,
+            0x00, 0x00, 0x0A, 0x49, 0x44, 0x41, 0x54, 0x78, 0x9C, 0x63, 0x00, 0x01, 0x00, 0x00, 0x05, 0x00, 0x01,
+            0x0D, 0x0A, 0x2D, 0xB4, 0x00, 0x00, 0x00, 0x00, 0x49, 0x45, 0x4E, 0x44, 0xAE, 0x42, 0x60, 0x82 };
 
-    result_resource_id = flow_job_add_buffer(c, job, FLOW_OUTPUT, output_placeholder, NULL, 0, true);
+    int32_t input_resource_id = flow_job_add_buffer(c, job, FLOW_INPUT, input_placeholder,
+                                                    (void*)&image_bytes_literal[0], sizeof(image_bytes_literal), false);
+    // Let's ask for an output buffer as a result
+    int32_t result_resource_id = flow_job_add_buffer(c, job, FLOW_OUTPUT, output_placeholder, NULL, 0, true);
 
+    // Insert resources into the graph
     if (!flow_job_insert_resources_into_graph(c, job, &g)) {
-        ERR(c);
+        return false;
     }
+    // Execute the graph
     if (!flow_job_execute(c, job, &g)) {
-        ERR(c);
+        return false;
     }
-
-    result = flow_job_get_buffer(c, job, result_resource_id);
-
-    ERR(c);
-
-    REQUIRE(result != NULL);
-
+    // Access the output buffer
+    struct flow_job_resource_buffer* result = flow_job_get_buffer(c, job, result_resource_id);
+    // Now let's write it to disk
     FILE* fh = fopen("graph_scaled_png.png", "w");
-    if (fh != NULL) {
-        if (fwrite(result->buffer, result->buffer_size, 1, fh) != 1) {
-            REQUIRE(false);
-        }
+    if (Context_has_error(c) || fh == NULL || fwrite(result->buffer, result->buffer_size, 1, fh) != 1) {
+        if (fh != NULL)
+            fclose(fh);
+        return false;
     }
     fclose(fh);
+    return true;
+}
+
+bool scale_image_to_disk()
+{
+    // The Context provides error tracking, profling, heap tracking.
+    Context* c = Context_create();
+    if (c == NULL) {
+        return false;
+    }
+    if (!scale_image_to_disk_inner(c)) {
+        Context_print_error_to(c, stderr);
+        Context_destroy(c);
+        return false;
+    }
 
     Context_destroy(c);
+    return true;
 }
+
+TEST_CASE("decode, scale, and re-encode png", "") { REQUIRE(scale_image_to_disk()); }
 
 TEST_CASE("scale and flip and crop png", "")
 {

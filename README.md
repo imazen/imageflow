@@ -5,6 +5,8 @@ imageflow - Real-time image processing for the web.
 ](https://travis-ci.org/imazen/imageflow/builds) 
 
 How to download, build, and run tests (after [installing Conan](https://www.conan.io/downloads))
+
+
     git clone git@github.com:imazen/imageflow.git blocks/nathanaeljones/imageflow
     cd imageflow
     .travis/run_tests.sh
@@ -18,7 +20,94 @@ How to download, build, and run tests (after [installing Conan](https://www.cona
 ======
 
 
-**The Problem**: Image processing is a ubiquitous requirement. All popular CMSes, many CDNs, and most asset pipelines implement at least image cropping, scaling, and recoding. The need for mobile-friendly websites (and consequently responsive images) makes manual asset creation methods time-prohibitive. Batch asset generation is error-prone, highly latent (affecting UX), and severely restricts web development agility.
+![ImageFlow diagram](https://rawgit.com/imazen/imageflow/master/docs/ImageFlow_Core.svg)
+
+
+## Using the long-form graph API
+
+
+    bool scale_image_to_disk_inner(Context* c)
+    {
+        // We'll create a simple graph
+        struct flow_graph* g = flow_graph_create(c, 10, 10, 200, 2.0);
+        if (g == NULL) {
+            return false;
+        }
+        //We associate placeholders and resources with simple integers
+        int32_t input_placeholder = 0;
+        int32_t output_placeholder = 1;
+
+        int32_t last;
+        last = flow_node_create_resource_placeholder(c, &g, -1, input_placeholder);
+        last = flow_node_create_scale(c, &g, last, 120, 120);
+        last = flow_node_create_resource_placeholder(c, &g, last, output_placeholder);
+
+        // We create a job to create I/O resources and attach them to our abstract graph above
+        struct flow_job* job = flow_job_create(c);
+
+        // We've done 4 mallocs, make sure we didn't run out of memory
+        if (Context_has_error(c)) {
+            return false;
+        }
+
+        // Uncomment to generate an animated graph of the process. Requires sudo apt-get install libav-tools graphviz
+        // gifsicle
+        // flow_job_configure_recording(c, job, true, true, true, true, true);
+
+        // We're going to use an embedded image, but you could get bytes from anywhere
+        uint8_t image_bytes_literal[]
+            = { 0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, 0x00, 0x00, 0x00, 0x0D, 0x49, 0x48, 0x44, 0x52, 0x00,
+                0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x08, 0x06, 0x00, 0x00, 0x00, 0x1F, 0x15, 0xC4, 0x89, 0x00,
+                0x00, 0x00, 0x0A, 0x49, 0x44, 0x41, 0x54, 0x78, 0x9C, 0x63, 0x00, 0x01, 0x00, 0x00, 0x05, 0x00, 0x01,
+                0x0D, 0x0A, 0x2D, 0xB4, 0x00, 0x00, 0x00, 0x00, 0x49, 0x45, 0x4E, 0x44, 0xAE, 0x42, 0x60, 0x82 };
+
+        int32_t input_resource_id = flow_job_add_buffer(c, job, FLOW_INPUT, input_placeholder,
+                                                        (void*)&image_bytes_literal[0], sizeof(image_bytes_literal), false);
+        // Let's ask for an output buffer as a result
+        int32_t result_resource_id = flow_job_add_buffer(c, job, FLOW_OUTPUT, output_placeholder, NULL, 0, true);
+
+        // Insert resources into the graph
+        if (!flow_job_insert_resources_into_graph(c, job, &g)) {
+            return false;
+        }
+        // Execute the graph
+        if (!flow_job_execute(c, job, &g)) {
+            return false;
+        }
+        // Access the output buffer
+        struct flow_job_resource_buffer* result = flow_job_get_buffer(c, job, result_resource_id);
+        // Now let's write it to disk
+        FILE* fh = fopen("graph_scaled_png.png", "w");
+        if (Context_has_error(c) || fh == NULL || fwrite(result->buffer, result->buffer_size, 1, fh) != 1) {
+            if (fh != NULL)
+                fclose(fh);
+            return false;
+        }
+        fclose(fh);
+        return true;
+    }
+
+    bool scale_image_to_disk()
+    {
+        // The Context provides error tracking, profling, heap tracking.
+        Context* c = Context_create();
+        if (c == NULL) {
+            return false;
+        }
+        if (!scale_image_to_disk_inner(c)) {
+            Context_print_error_to(c, stderr);
+            Context_destroy(c);
+            return false;
+        }
+
+        Context_destroy(c);
+        return true;
+    }
+
+
+## The Problem - Why we need imageflow
+
+Image processing is a ubiquitous requirement. All popular CMSes, many CDNs, and most asset pipelines implement at least image cropping, scaling, and recoding. The need for mobile-friendly websites (and consequently responsive images) makes manual asset creation methods time-prohibitive. Batch asset generation is error-prone, highly latent (affecting UX), and severely restricts web development agility.
 
 Existing [implementations](https://github.com/nathanaeljones/imaging-wiki) lack tests and are either (a) incorrect, and cause visual artifacts or (b) so slow that they've created industry cargo-cult assumptions about "architectural needs"; I.e, *always* use a queue and workers, because we can gzip large files on the fly but not jpeg encode them (which makes no sense from big O standpoint). This creates artificial infrastructure needs for many small/medium websites, and makes it expensive to offer image processing as part of a CDN or optimization layer. **We can eliminate this problem, and make the web faster for all users.**  There is also a high probability that (if back-ported to c89 and BSD licensed), [LibGD](https://github.com/libgd/libgd) will adopt our routines and therefore make them available within the PHP runtime, and the CMSes that build upon it. We have a great chance at reducing the 20MB homepage epidemic.
 
@@ -52,13 +141,11 @@ In addition, **all the libraries that I've reviewed are insecure**. Some assume 
 * [ImageResizer](https://github.com/imazen/resizer) (From which we will port most of the domain logic, if not the image decoding/encoding portions)
 * OpenCV or CCV for separate plugin to address face-aware auto-cropping.
 
-![ImageFlow diagram](https://rawgit.com/imazen/imageflow/master/docs/ImageFlow_Core.svg)
-
 All of the "hard" problems have been solved individually; we have proven performant implementations to all the expensive parts of image processing.
 
 We also have room for more optimizations - by integrating with the codecs at the block and scan-line level, we can greatly reduce RAM and resource needs when downsampling large images. Libvips has proven that this approach can be incredibly fast.
 
-A generic graph-based representation of an image processing workflow is very tempting. This enables advanced optimizations and potentially lets us pick the fastest or best backend depending upon image format/resolution and desired workflow. Given how easily most operations compose, this could easily make the average workflow 3-8x faster, particularly when we can compose decoding and scaling for certain codecs. The downside to this approach is the complexity of exposing a graph API via C. I would eschew the graph for initial iterations, only introducing it once we had a naive alternative in place already.
+A generic graph-based representation of an image processing workflow enables advanced optimizations and potentially lets us pick the fastest or best backend depending upon image format/resolution and desired workflow. Given how easily most operations compose, this could easily make the average workflow 3-8x faster, particularly when we can compose decoding and scaling for certain codecs. 
 
 ## API needs.
 
