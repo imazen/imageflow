@@ -10,6 +10,6 @@ if [[ "$(uname -s)" == 'Darwin' ]]; then
     pyenv activate conan
     # Pending osx configuration
 else
-    sudo docker run --rm -v $(pwd):/home/conan lasote/conangcc48 /bin/bash .travis/run_tests.sh	
+    sudo docker run --rm -v $(pwd):/home/conan lasote/conangcc48 /bin/bash -c "sudo pip install conan --upgrade && .travis/run_tests.sh"	
 fi
 
