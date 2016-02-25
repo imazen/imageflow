@@ -4,16 +4,16 @@ imageflow - Real-time image processing for the web.
 [![travis-master](https://img.shields.io/travis/imazen/imageflow/master.svg?label=travis%20master)
 ](https://travis-ci.org/imazen/imageflow/builds) 
 
-Using CLion with imageflow:
-
-    bii init -l=clion imageumbrella
-    cd imageumbrella/
+How to download, build, and run tests (after [installing Conan](https://www.conan.io/downloads))
     git clone git@github.com:imazen/imageflow.git blocks/nathanaeljones/imageflow
-    git clone git@github.com:nathanaeljones/theft.git blocks/nathanaeljones/theft
-    bii test
+    cd imageflow
+    .travis/run_tests.sh
 
-
-    bii test  -T memcheck
+    # Valgrind
+    valgrind ./build/bin/test_graph_program
+    valgrind ./build/bin/test_test
+    valgrind ./build/bin/test_error_handling
+    valgrind ./build/bin/fastscaling
 
 ======
 
@@ -46,7 +46,7 @@ In addition, **all the libraries that I've reviewed are insecure**. Some assume 
 
 * [libjpeg-turbo](https://github.com/imazen/libjpeg-turbo) or [mozjpeg](https://github.com/mozilla/mozjpeg)
 * [libpng](http://www.libpng.org/pub/png/libpng.html)
-* [stb_image](https://github.com/nothings/stb) (May be useful for select functions, but use is unlikely)
+* [giflib](http://giflib.sourceforge.net/)
 * [LittleCMS](https://github.com/mm2/Little-CMS)
 * [ImageResizer - FastScaling](https://github.com/imazen/resizer/tree/develop/Plugins/FastScaling) for optimized, single-pass rendering.
 * [ImageResizer](https://github.com/imazen/resizer) (From which we will port most of the domain logic, if not the image decoding/encoding portions)
@@ -59,16 +59,6 @@ All of the "hard" problems have been solved individually; we have proven perform
 We also have room for more optimizations - by integrating with the codecs at the block and scan-line level, we can greatly reduce RAM and resource needs when downsampling large images. Libvips has proven that this approach can be incredibly fast.
 
 A generic graph-based representation of an image processing workflow is very tempting. This enables advanced optimizations and potentially lets us pick the fastest or best backend depending upon image format/resolution and desired workflow. Given how easily most operations compose, this could easily make the average workflow 3-8x faster, particularly when we can compose decoding and scaling for certain codecs. The downside to this approach is the complexity of exposing a graph API via C. I would eschew the graph for initial iterations, only introducing it once we had a naive alternative in place already.
-
-
-## The languages
-
-The pragmatic language choice for the core routines is C11. Rust is extremely attractive, and would make the solution far more secure (there are already safe Rust codecs!). However, given that we often resort to assembly or manual unrolling in C, it may be unrealistic to assume we wouldn't also periodically run into perf issues with the results of the Rust compiler. Long-term, Rust would be the ideal choice, as we get a C ABI, no runtime, yet great safety and concurrency possibilities. However, the development timeline with Rust would be nearly impossible to predict.
-
-Given that there is a large amount of non-perf-critical domain logic required, it may be prudent to use Lua or Go for the mid and high-level APIs, particularly if Rust is not involved. This, however, would make it difficult to expose a high-level cross platform API.
-
-For the present, we intend to use C11 for the entire set of APIs.
-
 
 ## API needs.
 
@@ -263,183 +253,3 @@ typedef enum flow_edge_type {
 | Crop, VFlip | VFlip, Crop(adjusted) | ..etc, for HFlip, Transpose, Scale |
 | Scale (new_width,new_height) | CreateCanvas(width=old_height, height=new_width), RenderToCanvas1D(new_width, Copy, transpose=true), CreateCanvas(width=new_width,height=new_height), RenderToCanvas1D(new_height,Copy,transpose=true) |
 
-## Concrete Frame operations
-
-| VFlip | Format agnostic | In Place
-| Crop  | Format agnostic | In Place
-| CopyRect  | Format agnostic | New Frame
-| CreateCanvas | 
-| RenderToCanvas1D (scale (InterpolationDetails), compose (InPlace, Copy, Blende, Matte[color]), bool transpose, [list of convolution & pixel filters], working_floatspace)
-
-Resize: 
-CreateCanvas
-Render1D(scale, Copy, transpose=true)
-Render1D(scale, Copy, transpose=true)
-
-
-## (out of date) API sketches
-
-```
-
-//TODO: Adapt these function signatures to deal with error reporting (or are we expecting the host language to panic/throw exception?)
-//TODO: Add dispose hooks?
-
-//ImageSourceBufferReader
-size_t get_length(void * token, Context * c){
-    //Get size of image from storage based on token.
-}
-size_t copy_to(uint8_t * buffer, size_t buffer_size, void * token, Context * c){
-    //Copy image bytes to destination buffer, returning actual number of bytes copied (in case get_length overestimated)
-    //May be called with a smaller buffer if only the header is required. May be called multiple times; caching is suggested.
-}
-
-
-//ImageSourceSequentialReader
-size_t get_length(void * token, Context * c){
-    //Get size of image from storage based on token.
-}
-size_t read_bytes(uint8_t * buffer, size_t buffer_size, void * token, Context * c){
-    //Copy next set of image bytes to destination buffer, returning actual number of bytes copied (in case get_length overestimated)
-    //May be called many times.
-}
-
-//ImageSourceIO
-size_t custom_read(void *buffer, size_t size, void * token) {
-    return fread(buffer, 1, size, (FILE *)token);
-}
-size_t custom_write(void *buffer, size_t size, void * token) {
-    return (size_t)fwrite(buffer, 1, size, (FILE *)token);
-}
-int custom_seek(long offset, int origin, void * token) {
-    return fseek((FILE *)handle, offset, origin);
-}
-long int custom_position(void * token) {
-    return ftell((FILE *)token);
-}
-size_t custom_length(void * token){
-
-}
-
-//ImageSourcePeek
-size_t peek_bytes(void *buffer, size_t requested_byte_count, int32_t * more_bytes_exist, void * token, Context * c){
-//Returns actual byte count, which may be less than requested, either because fewer header bytes were cached by the host,
-//or because the file is shorter. Check the more_bytes_exist flag  (0 - all file bytes sent, 1 - partial file sent)
-}
-
-// ImageSourceWriter
-int write_bytes(void *buffer, size_t size, void * token, Context * c){
-}
-
-
-// initialize your own IO functions
-ImageSourceIO io;
-io.read_proc = custom_read;
-io.write_proc = custom_write;
-io.seek_proc = custom_seek;
-io.tell_proc = custom_position;
-io.length_proc = custom_length;
-
-uint8_t * image_a_buffer = malloc(200);
-size_t image_a_bytes = 200;
-
-char * image_b_uuid = "124-515215-15251";
-
-ImageSourceBufferReader image_b_buffer;
-image_b_buffer.get_length = get_length;
-image_b_buffer.copy_to = copy_to;
-
-//Source complicates
-// Color profile is orthogonal to orientation data
-//
-
-Context * c = Context_create(); if (c == NULL) return 1;
-
-
-//We construct a frame graph using numeric placeholders for input and output. 
-FrameGraph * g = FrameGraph_create(c, 4096); //initial allocation size. failure to allocate enough space will ? cause a panic. ?
-if (g == NULL){ return 2 }; //OOM 
-
-int last = FrameNode_create(c, g,  NULL, FrameNode_Input_Placeholder, 0 );
-last = FrameNode_create(c,g, last, FrameNode_Constrain, 300,200, Constrain_max, Upscale_canvas);
-last = FrameNode_create(c,g, last, FrameNode_Output_Placeholder,0);
-
-
-
-
-//Once the context is created, we rely on the fact that calls should fail via result code
-ImageSource * image_a = ImageSource_create_and_copy_from_buffer(c, image_a_buffer, image_a_bytes); 
-ImageSource_add_peek_function(c,image_a, peek_bytes, NULL);
-
-ImageSource * image_b = ImageSource_create_empty(c); 
-ImageSource_add_buffer_reader(c, image_b, image_b_buffer, image_b_uuid);
-
-ImageSource * image_c = ImageSource_create_empty(c);
-ImageSource_add_io(c, image_c, io, /* file ptr */);
-
-
-//Wait, is it easier to run a binary search over input image sizes, or to implement constraint algebra over the graph? Or can the former solve for more than 1 variable?
-ImageSource * image_simulation = ImageSource_create_with_dimensions(c, 200,100, Bgra32);
-
-ImageJob * sim = ImageJob_create(c);
-int useful_width;
-int useful_height;
-ImageJob_find_maximum_useful_dimensions(c, sim, g, &useful_width, &useful_height); 
-
-ImageJob * job = ImageJob_create(c);
-
-//coder and decoder instances are local to the image jobs
-
-if (Context_has_error(c)){
-    //TODO: propagate error details
-    Context_destroy(c);
-    return 1;
-}
-
-ImageJob_add_primary_source(c, job, image_a); //These can be called with null ImageSource, 
-ImageJob_add_secondary_source(c, job, image_b);
-ImageJob_add_target(c, job, image_c);
-
-StatusCode result = ImageJob_read_sources_info(c, job);
-if (result == Ok){
-    ImageSource_get_frame_count(c,image_a);
-    ImageSource_get_page_count(c,image_a);
-    ImageSource_get_dimensions(c,image_a, &w, &h);
-    ImageJob_set_target_format(c, job, image_c, Jpeg, 90);
-    ImageJob_autoset_target_format( c, job, image_c) ; //perhaps based on the source images?
-    
-    
-    
-    do {
-    FrameGraph  * frame0 = FrameGraph_copy(c,g);
-        ImageJob_complete_frame_graph(c, job, frame0);
-        ImageGraph_flatten(c, job, frame0);
-        ImageGraph_optimize(c, job, frame0);
-        
-    ImageJob_execute_all_targets(c, job, frame0);
-    }while(ImageJob_next_frame(c,job));
-    
-        
-}else{
-    //Deal with error
-    ImageJob_destroy(c, job);
-    Context_destroy(c); //Destroying the context should ensure any ImageSource caches are freed. 
-    return 2;
-}
- 
-
-//If using a managed language, make sure you pin your reader/writer structs & functions.
-ImageJob_destroy(c, job);
-Context_destroy(c); //Destroying the context should ensure any ImageSource caches are freed. 
-return 0;
-
-```
-
-
-
-## Generating animated gifs of graph progression.
-
-1. Switch to the directory holding the generated graph_version_XXX.dot files.
-2. Ensure you have graphviz, gifsicle and avtools:  sudo apt-get install libav-tools graphviz gifsicle
-3. Convert them to .png: `find . -type f -name '*.dot' -execdir dot -Tpng -Gsize=5,9\! -Gdpi=100  -O {} \;`
-4. Assemble .gif: `avconv -i job_2_graph_version_%d.dot.png -pix_fmt rgb24 -y output.gif`
-5: Add delay to frames, optimize: `gifsicle -d 200 output.gif -l=2 -O -o optimized.gif`
