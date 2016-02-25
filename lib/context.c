@@ -209,13 +209,15 @@ void Context_free_allocated_memory(Context * context){
     for (size_t i = 0; i < context->heap_tracking.total_slots; i++){
         if (context->heap_tracking.allocs[i].ptr != NULL){
 
+            struct HeapAllocation * alloc = &context->heap_tracking.allocs[i];
+            
+            //Uncomment to debug double-frees
+            //fprintf(stderr, "Freeing %zu bytes at %p, allocated at %s:%u\n",alloc->bytes,  alloc->ptr, alloc->allocated_by, alloc->allocated_by_line);
 
             context->heap._free(context, context->heap_tracking.allocs[i].ptr, __FILE__, __LINE__);
 
 
-            struct HeapAllocation * alloc = &context->heap_tracking.allocs[i];
-            //fprintf(stderr, "Freed %zu bytes at %p, allocated at %s:%u\n",alloc->bytes,  alloc->ptr, alloc->allocated_by, alloc->allocated_by_line);
-
+            
             context->heap_tracking.allocations_net--;
             context->heap_tracking.bytes_allocated_net -= alloc->bytes;
             alloc->ptr = NULL;
@@ -377,9 +379,8 @@ void Context_terminate(Context * context)
         }else{
             Context_free_allocated_memory(context);
         }
+        context->log.log = NULL; //We allocated .log with CONTEXT_malloc. It's freed with everything else
         Context_heap_tracking_terminate(context);
-
-        CONTEXT_free(context, context->log.log);
     }
 }
 void Context_destroy(Context * context)

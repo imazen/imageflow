@@ -200,7 +200,10 @@ TEST_CASE_METHOD(Fixture, "Creating BitmapBgra", "[error_handling]")
     Context context;
     Context_initialize(&context);
     initialize_heap(&context);
+    
     BitmapBgra * source = NULL;
+    //Create something so heap_tracking is initialized
+    source = BitmapBgra_create(&context, 1, 1, true, (BitmapPixelFormat)2);
     SECTION("Creating a 1x1 bitmap is valid") {
         source = BitmapBgra_create(&context, 1, 1, true, (BitmapPixelFormat)2);
         REQUIRE_FALSE(source == NULL);

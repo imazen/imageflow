@@ -13,7 +13,7 @@ bool test (int sx, int sy, BitmapPixelFormat sbpp, int cx, int cy, BitmapPixelFo
 
     BitmapBgra * source = BitmapBgra_create(&context, sx, sy, true, sbpp);
     BitmapBgra * canvas = BitmapBgra_create(&context, cx, cy, true, cbpp);
-
+    if (canvas == NULL || source == NULL) return false;
     RenderDetails * details = RenderDetails_create_with(&context, filter);
     if (details == NULL) return false;
     details->sharpen_percent_goal = 50;
@@ -25,12 +25,10 @@ bool test (int sx, int sy, BitmapPixelFormat sbpp, int cx, int cy, BitmapPixelFo
     //Should we even have Renderer_* functions, or just 1 call that does it all?
     //If we add memory use estimation, we should keep Renderer
 
-    RenderDetails_render(&context,details, source, canvas);
+    if (!RenderDetails_render(&context,details, source, canvas)){
+        return false;
+    }
 
-    RenderDetails_destroy(&context, details);
-
-    BitmapBgra_destroy(&context, source);
-    BitmapBgra_destroy(&context, canvas);
 
     Context_terminate(&context);
     return true;
@@ -56,10 +54,6 @@ bool test_in_place (int sx, int sy, BitmapPixelFormat sbpp, bool flipx, bool fli
 
 
     RenderDetails_render_in_place(&context,details, source);
-
-    RenderDetails_destroy(&context, details);
-
-    BitmapBgra_destroy(&context,source);
 
     Context_terminate(&context);
     return true;
