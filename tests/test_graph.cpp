@@ -1,4 +1,4 @@
-#include <glenn/png/png.h>
+#include <png.h>
 #include "catch.hpp"
 #include "unistd.h"
 #include <sys/types.h>

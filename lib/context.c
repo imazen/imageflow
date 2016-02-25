@@ -1,7 +1,7 @@
 #include "fastscaling_private.h"
 #include <stdio.h>
 #include <string.h>
-#include <nathanaeljones/imageflow/fastscaling.h>
+#include <fastscaling.h>
 
 #ifdef _MSC_VER
 #pragma unmanaged

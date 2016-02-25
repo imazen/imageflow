@@ -2,39 +2,16 @@ language:
   - cpp
 
 compiler:
-  - clang
   - gcc
+  
+sudo:
+  - required
 
-before_install:
-  - sudo add-apt-repository -y ppa:ubuntu-toolchain-r/test
-  - sudo apt-get update -qq
+services:
+  - docker
+           
 install:
-  - sudo apt-get install libc6-dbg
-  - if [ "$CXX" = "clang++" ]; then sudo apt-get install -qq libstdc++-4.8-dev; fi
-  - if [ "$CXX" == "g++" ]; then sudo apt-get install -qq g++-4.8; fi
-  - if [ "$CXX" == "g++" ]; then sudo update-alternatives --install /usr/bin/g++ g++
-    /usr/bin/g++-4.8 50; fi
-#  - if [ "$CXX" = "g++" ]; then export CXX="g++-4.8" CC="gcc-4.8"; alias g++="g++-4.8"; alias gcc="gcc-4.8"; fi
-  - wget https://s3.amazonaws.com/public-unit-test-resources/valgrind-3.10.1.tar.bz2 && tar xjvf valgrind-3.10.1.tar.bz2
-  - cd valgrind-3.10.1 && ./configure && make
-  - sudo make install
-  - cd ..
-  - rm -rf valgrind-3.10.1
-  - wget http://www.biicode.com/downloads/latest/ubuntu64
-  - mv ubuntu64 bii-ubuntu64.deb
-  - sudo dpkg -i bii-ubuntu64.deb && sudo apt-get -f install
-  - rm bii-ubuntu64.deb
-  - wget https://s3.amazonaws.com/biibinaries/thirdparty/cmake-3.0.2-Linux-64.tar.gz
-  - tar -xzf cmake-3.0.2-Linux-64.tar.gz
-  - sudo cp -fR cmake-3.0.2-Linux-64/* /usr
-  - rm -rf cmake-3.0.2-Linux-64
-  - rm cmake-3.0.2-Linux-64.tar.gz
+  - .travis/install.sh
 
 script:
-  - cd /tmp
-  - bii init -L
-  - shopt -s dotglob && mv $TRAVIS_BUILD_DIR/* ./
-  - if [ "$CXX" == "clang++" ]; then export CXX="clang++" && bii build; fi
-  - if [ "$CXX" == "g++" ];     then export CXX="g++"     && bii build; fi
-  - bii test
-  - bii test  -T memcheck
+  - .travis/run.sh

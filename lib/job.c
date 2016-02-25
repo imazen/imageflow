@@ -1,4 +1,4 @@
-#include <glenn/png/png.h>
+#include <png.h>
 
 #include "job.h"
 #include "graph.h"

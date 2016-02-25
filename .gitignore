@@ -223,3 +223,7 @@ UpgradeLog*.htm
 
 # Microsoft Fakes
 FakesAssemblies/
+
+# Eclipse project
+.project
+

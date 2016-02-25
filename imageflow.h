@@ -7,7 +7,7 @@ extern "C" {
 #include <stdint.h>
 #include <stdbool.h>
 #include <stdlib.h>
-#include <glenn/png/png.h>
+#include <png.h>
 #include "fastscaling.h"
 
 
