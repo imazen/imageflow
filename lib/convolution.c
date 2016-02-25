@@ -23,13 +23,13 @@
 #endif
 #endif
 
-ConvolutionKernel * ConvolutionKernel_create(Context * context, uint32_t radius)
+ConvolutionKernel* ConvolutionKernel_create(Context* context, uint32_t radius)
 {
-    ConvolutionKernel * k = CONTEXT_calloc_array(context, 1, ConvolutionKernel);
-    //For the actual array;
-    float * a = CONTEXT_calloc_array(context,radius * 2 + 1, float);
-    //we assume a maximum of 4 channels are going to need buffering during convolution
-    float * buf = (float *)CONTEXT_malloc(context, (radius +2) * 4 * sizeof(float));
+    ConvolutionKernel* k = CONTEXT_calloc_array(context, 1, ConvolutionKernel);
+    // For the actual array;
+    float* a = CONTEXT_calloc_array(context, radius * 2 + 1, float);
+    // we assume a maximum of 4 channels are going to need buffering during convolution
+    float* buf = (float*)CONTEXT_malloc(context, (radius + 2) * 4 * sizeof(float));
 
     if (k == NULL || a == NULL || buf == NULL) {
         CONTEXT_free(context, k);
@@ -43,9 +43,8 @@ ConvolutionKernel * ConvolutionKernel_create(Context * context, uint32_t radius)
     k->buffer = buf;
     k->radius = radius;
     return k;
-
 }
-void ConvolutionKernel_destroy(Context * context, ConvolutionKernel * kernel)
+void ConvolutionKernel_destroy(Context* context, ConvolutionKernel* kernel)
 {
     if (kernel != NULL) {
         CONTEXT_free(context, kernel->kernel);
@@ -56,11 +55,9 @@ void ConvolutionKernel_destroy(Context * context, ConvolutionKernel * kernel)
     CONTEXT_free(context, kernel);
 }
 
-
-
-ConvolutionKernel * ConvolutionKernel_create_guassian(Context * context, double stdDev, uint32_t radius)
+ConvolutionKernel* ConvolutionKernel_create_guassian(Context* context, double stdDev, uint32_t radius)
 {
-    ConvolutionKernel * k = ConvolutionKernel_create(context, radius);
+    ConvolutionKernel* k = ConvolutionKernel_create(context, radius);
     if (k != NULL) {
         for (uint32_t i = 0; i < k->width; i++) {
 
@@ -70,7 +67,7 @@ ConvolutionKernel * ConvolutionKernel_create_guassian(Context * context, double 
     return k;
 }
 
-double ConvolutionKernel_sum(ConvolutionKernel * kernel)
+double ConvolutionKernel_sum(ConvolutionKernel* kernel)
 {
     double sum = 0;
     for (uint32_t i = 0; i < kernel->width; i++) {
@@ -79,27 +76,28 @@ double ConvolutionKernel_sum(ConvolutionKernel * kernel)
     return sum;
 }
 
-void ConvolutionKernel_normalize(ConvolutionKernel * kernel, float desiredSum)
+void ConvolutionKernel_normalize(ConvolutionKernel* kernel, float desiredSum)
 {
     double sum = ConvolutionKernel_sum(kernel);
-    if (sum == 0) return; //nothing to do here, zeroes are as normalized as you can get ;)
+    if (sum == 0)
+        return; // nothing to do here, zeroes are as normalized as you can get ;)
     float factor = (float)(desiredSum / sum);
     for (uint32_t i = 0; i < kernel->width; i++) {
         kernel->kernel[i] *= factor;
     }
 }
-ConvolutionKernel * ConvolutionKernel_create_guassian_normalized(Context * context, double stdDev, uint32_t radius)
+ConvolutionKernel* ConvolutionKernel_create_guassian_normalized(Context* context, double stdDev, uint32_t radius)
 {
-    ConvolutionKernel *kernel = ConvolutionKernel_create_guassian(context, stdDev, radius);
+    ConvolutionKernel* kernel = ConvolutionKernel_create_guassian(context, stdDev, radius);
     if (kernel != NULL) {
         ConvolutionKernel_normalize(kernel, 1);
     }
     return kernel;
 }
 
-ConvolutionKernel * ConvolutionKernel_create_guassian_sharpen(Context * context, double stdDev, uint32_t radius)
+ConvolutionKernel* ConvolutionKernel_create_guassian_sharpen(Context* context, double stdDev, uint32_t radius)
 {
-    ConvolutionKernel *kernel = ConvolutionKernel_create_guassian(context, stdDev, radius);
+    ConvolutionKernel* kernel = ConvolutionKernel_create_guassian(context, stdDev, radius);
     if (kernel != NULL) {
         double sum = ConvolutionKernel_sum(kernel);
         for (uint32_t i = 0; i < kernel->width; i++) {
@@ -114,16 +112,17 @@ ConvolutionKernel * ConvolutionKernel_create_guassian_sharpen(Context * context,
     return kernel;
 }
 
-
-bool BitmapFloat_convolve_rows(Context * context, BitmapFloat * buf,  ConvolutionKernel *kernel, uint32_t convolve_channels, uint32_t from_row, int row_count)
+bool BitmapFloat_convolve_rows(Context* context, BitmapFloat* buf, ConvolutionKernel* kernel,
+                               uint32_t convolve_channels, uint32_t from_row, int row_count)
 {
 
     const uint32_t radius = kernel->radius;
     const float threshold_min = kernel->threshold_min_change;
     const float threshold_max = kernel->threshold_max_change;
 
-    //Do nothing unless the image is at least half as wide as the kernel.
-    if (buf->w < radius + 1) return true;
+    // Do nothing unless the image is at least half as wide as the kernel.
+    if (buf->w < radius + 1)
+        return true;
 
     const uint32_t buffer_count = radius + 1;
     const uint32_t w = buf->w;
@@ -134,12 +133,12 @@ bool BitmapFloat_convolve_rows(Context * context, BitmapFloat * buf,  Convolutio
 
     const uint32_t ch_used = convolve_channels;
 
-    float* __restrict buffer =  kernel->buffer;
+    float* __restrict buffer = kernel->buffer;
     float* __restrict avg = &kernel->buffer[buffer_count * ch_used];
 
-    const float  * __restrict kern = kernel->kernel;
+    const float* __restrict kern = kernel->kernel;
 
-    const int  wrap_mode = 0;
+    const int wrap_mode = 0;
 
     for (uint32_t row = from_row; row < until_row; row++) {
 
@@ -147,11 +146,12 @@ bool BitmapFloat_convolve_rows(Context * context, BitmapFloat * buf,  Convolutio
         int circular_idx = 0;
 
         for (uint32_t ndx = 0; ndx < w + buffer_count; ndx++) {
-            //Flush old value
+            // Flush old value
             if (ndx >= buffer_count) {
-                memcpy(&source_buffer[(ndx - buffer_count) * step], &buffer[circular_idx * ch_used], ch_used * sizeof(float));
+                memcpy(&source_buffer[(ndx - buffer_count) * step], &buffer[circular_idx * ch_used],
+                       ch_used * sizeof(float));
             }
-            //Calculate and enqueue new value
+            // Calculate and enqueue new value
             if (ndx < w) {
                 const int left = ndx - radius;
                 const int right = ndx + radius;
@@ -160,12 +160,12 @@ bool BitmapFloat_convolve_rows(Context * context, BitmapFloat * buf,  Convolutio
                 memset(avg, 0, sizeof(float) * ch_used);
 
                 if (left < 0 || right >= (int32_t)w) {
-                    if (wrap_mode == 0){
-                        //Only sample what's present, and fix the average later.
+                    if (wrap_mode == 0) {
+                        // Only sample what's present, and fix the average later.
                         float total_weight = 0;
                         /* Accumulate each channel */
                         for (i = left; i <= right; i++) {
-                            if (i > 0 && i < int_w){
+                            if (i > 0 && i < int_w) {
                                 const float weight = kern[i - left];
                                 total_weight += weight;
                                 for (uint32_t j = 0; j < ch_used; j++)
@@ -174,13 +174,12 @@ bool BitmapFloat_convolve_rows(Context * context, BitmapFloat * buf,  Convolutio
                         }
                         for (uint32_t j = 0; j < ch_used; j++)
                             avg[j] = avg[j] / total_weight;
-                    }
-                    else if (wrap_mode == 1){
-                        //Extend last pixel to be used for all missing inputs
+                    } else if (wrap_mode == 1) {
+                        // Extend last pixel to be used for all missing inputs
                         /* Accumulate each channel */
                         for (i = left; i <= right; i++) {
                             const float weight = kern[i - left];
-                            const uint32_t ix = EVIL_CLAMP (i, 0, int_w - 1);
+                            const uint32_t ix = EVIL_CLAMP(i, 0, int_w - 1);
                             for (uint32_t j = 0; j < ch_used; j++)
                                 avg[j] += weight * source_buffer[ix * step + j];
                         }
@@ -194,7 +193,7 @@ bool BitmapFloat_convolve_rows(Context * context, BitmapFloat * buf,  Convolutio
                     }
                 }
 
-                //Enqueue difference
+                // Enqueue difference
                 memcpy(&buffer[circular_idx * ch_used], avg, ch_used * sizeof(float));
 
                 if (threshold_min > 0 || threshold_max > 0) {
@@ -208,12 +207,10 @@ bool BitmapFloat_convolve_rows(Context * context, BitmapFloat * buf,  Convolutio
                 }
             }
             circular_idx = (circular_idx + 1) % buffer_count;
-
         }
     }
     return true;
 }
-
 
 /*
 static void BgraSharpenInPlaceX(BitmapBgra * im, float pct)
@@ -234,22 +231,22 @@ static void BgraSharpenInPlaceX(BitmapBgra * im, float pct)
     for (y = 0; y < sy; y++)
     {
         unsigned char *row = im->pixels + y * stride;
-        for (current = bytes_pp, prev = 0, next = bytes_pp + bytes_pp; next < stride; prev = current, current = next, next += bytes_pp){
+        for (current = bytes_pp, prev = 0, next = bytes_pp + bytes_pp; next < stride; prev = current, current = next,
+next += bytes_pp){
             //We never sharpen the alpha channel
             //TODO - we need to buffer the left pixel to prevent it from affecting later calculations
             for (uint32_t i = 0; i < 3; i++)
-                row[current + i] = uchar_clamp_ff(outer_coeff * (float)row[prev + i] + inner_coeff * (float)row[current + i] + outer_coeff * (float)row[next + i]);
+                row[current + i] = uchar_clamp_ff(outer_coeff * (float)row[prev + i] + inner_coeff * (float)row[current
++ i] + outer_coeff * (float)row[next + i]);
         }
     }
 }
 */
 
-static void
-SharpenBgraFloatInPlace(float* buf, unsigned int count, double pct,
-                        int step)
+static void SharpenBgraFloatInPlace(float* buf, unsigned int count, double pct, int step)
 {
 
-    const float n = (float)(-pct / (pct - 1)); //if 0 < pct < 1
+    const float n = (float)(-pct / (pct - 1)); // if 0 < pct < 1
     const float c_o = n / -2.0f;
     const float c_i = n + 1;
 
@@ -295,20 +292,14 @@ SharpenBgraFloatInPlace(float* buf, unsigned int count, double pct,
             left_g = g;
             left_r = r;
         }
-
     }
-
 }
 
-
-
-
-
-bool BitmapFloat_sharpen_rows(Context * context, BitmapFloat * im, uint32_t start_row, uint32_t row_count, double pct)
+bool BitmapFloat_sharpen_rows(Context* context, BitmapFloat* im, uint32_t start_row, uint32_t row_count, double pct)
 {
     if (!(start_row + row_count <= im->h)) {
         CONTEXT_error(context, Invalid_internal_state);
-        return false;        
+        return false;
     }
     for (uint32_t row = start_row; row < start_row + row_count; row++) {
         SharpenBgraFloatInPlace(im->pixels + (im->float_stride * row), im->w, pct, im->channels);

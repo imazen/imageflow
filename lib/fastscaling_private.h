@@ -13,64 +13,59 @@
 #include "fastscaling.h"
 #include "math_functions.h"
 
-
-
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-//floating-point bitmap, typically linear RGBA, premultiplied
+// floating-point bitmap, typically linear RGBA, premultiplied
 typedef struct BitmapFloatStruct {
-    //buffer width in pixels
+    // buffer width in pixels
     uint32_t w;
-    //buffer height in pixels
+    // buffer height in pixels
     uint32_t h;
-    //The number of floats per pixel
+    // The number of floats per pixel
     uint32_t channels;
-    //The pixel data
-    float *pixels;
-    //If true, don't dispose the buffer with the struct
+    // The pixel data
+    float* pixels;
+    // If true, don't dispose the buffer with the struct
     bool pixels_borrowed;
-    //The number of floats in the buffer
+    // The number of floats in the buffer
     uint32_t float_count;
-    //The number of floats betwen (0,0) and (0,1)
+    // The number of floats betwen (0,0) and (0,1)
     uint32_t float_stride;
 
-    //If true, alpha has been premultiplied
+    // If true, alpha has been premultiplied
     bool alpha_premultiplied;
-    //If true, the alpha channel holds meaningful data
+    // If true, the alpha channel holds meaningful data
     bool alpha_meaningful;
 } BitmapFloat;
 
-
-
-
 /** Context: Heap Manager **/
 
-typedef void * (*context_calloc_function)(struct ContextStruct * context, size_t count, size_t element_size, const char * file, int line);
-typedef void * (*context_malloc_function)(struct ContextStruct * context, size_t byte_count, const char * file, int line);
+typedef void* (*context_calloc_function)(struct ContextStruct* context, size_t count, size_t element_size,
+                                         const char* file, int line);
+typedef void* (*context_malloc_function)(struct ContextStruct* context, size_t byte_count, const char* file, int line);
 
-typedef void * (*context_realloc_function)(struct ContextStruct * context, void * old_pointer, size_t new_byte_count, const char * file, int line);
-typedef void   (*context_free_function)  (struct ContextStruct * context, void * pointer, const char * file, int line);
-typedef void   (*context_terminate_function)  (struct ContextStruct * context);
+typedef void* (*context_realloc_function)(struct ContextStruct* context, void* old_pointer, size_t new_byte_count,
+                                          const char* file, int line);
+typedef void (*context_free_function)(struct ContextStruct* context, void* pointer, const char* file, int line);
+typedef void (*context_terminate_function)(struct ContextStruct* context);
 
 typedef struct _HeapManager {
     context_calloc_function _calloc;
     context_malloc_function _malloc;
     context_realloc_function _realloc;
-    context_free_function  _free;
+    context_free_function _free;
     context_terminate_function _context_terminate;
-    void * _private_state;
+    void* _private_state;
 } HeapManager;
 
-void DefaultHeapManager_initialize(HeapManager * context);
-
+void DefaultHeapManager_initialize(HeapManager* context);
 
 /** Context: ErrorInfo **/
 
-
 typedef struct _ErrorCallstackLine {
-    const char * file;
+    const char* file;
     int line;
 } ErrorCallstackLine;
 
@@ -95,7 +90,7 @@ typedef struct _SigmoidInfo {
 #endif
 
 typedef struct _ColorspaceInfo {
-    float byte_to_float[256]; //Converts 0..255 -> 0..1, but knowing that 0.255 has sRGB gamma.
+    float byte_to_float[256]; // Converts 0..255 -> 0..1, but knowing that 0.255 has sRGB gamma.
     WorkingFloatspace floatspace;
     bool apply_srgb;
     bool apply_gamma;
@@ -108,14 +103,14 @@ typedef struct _ColorspaceInfo {
 
 } ColorspaceInfo;
 
-struct HeapAllocation{
-    void * ptr;
+struct HeapAllocation {
+    void* ptr;
     size_t bytes;
-    const char * allocated_by;
+    const char* allocated_by;
     int allocated_by_line;
 };
-struct HeapTrackingInfo{
-    struct HeapAllocation * allocs;
+struct HeapTrackingInfo {
+    struct HeapAllocation* allocs;
     size_t next_free_slot;
     size_t total_slots;
     size_t bytes_allocated_net;
@@ -127,7 +122,6 @@ struct HeapTrackingInfo{
     size_t bytes_allocated_net_peak;
 };
 
-
 /** Context: main structure **/
 
 typedef struct ContextStruct {
@@ -138,105 +132,82 @@ typedef struct ContextStruct {
     struct HeapTrackingInfo heap_tracking;
 } Context;
 
-
 #include "color.h"
 
+void Context_initialize(Context* context);
+void Context_terminate(Context* context);
 
-void Context_initialize(Context * context);
-void Context_terminate(Context * context);
-
-
-void * Context_calloc(Context * context, size_t, size_t, const char * file, int line);
-void * Context_malloc(Context * context, size_t, const char * file, int line);
-void * Context_realloc(Context * context, void * old_pointer, size_t new_byte_count, const char * file, int line);
-void Context_free(Context * context, void * pointer, const char * file, int line);
-bool Context_enable_profiling(Context * context,uint32_t default_capacity);
-void Context_set_last_error(Context * context, StatusCode code, const char * file, int line);
-void Context_add_to_callstack(Context * context, const char * file, int line);
-
-
+void* Context_calloc(Context* context, size_t, size_t, const char* file, int line);
+void* Context_malloc(Context* context, size_t, const char* file, int line);
+void* Context_realloc(Context* context, void* old_pointer, size_t new_byte_count, const char* file, int line);
+void Context_free(Context* context, void* pointer, const char* file, int line);
+bool Context_enable_profiling(Context* context, uint32_t default_capacity);
+void Context_set_last_error(Context* context, StatusCode code, const char* file, int line);
+void Context_add_to_callstack(Context* context, const char* file, int line);
 
 #define CONTEXT_SET_LAST_ERROR(context, status_code) Context_set_last_error(context, status_code, __FILE__, __LINE__)
-#define CONTEXT_calloc(context, instance_count, element_size) Context_calloc(context, instance_count, element_size, __FILE__, __LINE__)
-#define CONTEXT_calloc_array(context, instance_count, type_name) (type_name *) Context_calloc(context, instance_count, sizeof(type_name), __FILE__, __LINE__)
+#define CONTEXT_calloc(context, instance_count, element_size)                                                          \
+    Context_calloc(context, instance_count, element_size, __FILE__, __LINE__)
+#define CONTEXT_calloc_array(context, instance_count, type_name)                                                       \
+    (type_name*) Context_calloc(context, instance_count, sizeof(type_name), __FILE__, __LINE__)
 #define CONTEXT_malloc(context, byte_count) Context_malloc(context, byte_count, __FILE__, __LINE__)
-#define CONTEXT_realloc(context,old_pointer, new_byte_count) Context_realloc(context, old_pointer, new_byte_count, __FILE__, __LINE__)
+#define CONTEXT_realloc(context, old_pointer, new_byte_count)                                                          \
+    Context_realloc(context, old_pointer, new_byte_count, __FILE__, __LINE__)
 #define CONTEXT_free(context, pointer) Context_free(context, pointer, __FILE__, __LINE__)
-#define CONTEXT_error(context, status_code) CONTEXT_SET_LAST_ERROR(context,status_code)
+#define CONTEXT_error(context, status_code) CONTEXT_SET_LAST_ERROR(context, status_code)
 
-#define CONTEXT_add_to_callstack(context) Context_add_to_callstack(context, __FILE__,__LINE__)
+#define CONTEXT_add_to_callstack(context) Context_add_to_callstack(context, __FILE__, __LINE__)
 
-#define CONTEXT_error_return(context) Context_add_to_callstack(context, __FILE__,__LINE__); return false
-
-
+#define CONTEXT_error_return(context)                                                                                  \
+    Context_add_to_callstack(context, __FILE__, __LINE__);                                                             \
+    return false
 
 #define ALLOW_PROFILING
 
 #ifdef ALLOW_PROFILING
-#define prof_start(context, name, allow_recursion)  Context_profiler_start(context,name,allow_recursion);
-#define prof_stop(context, name, assert_started, stop_children) Context_profiler_stop(context,name,assert_started, stop_children);
+#define prof_start(context, name, allow_recursion) Context_profiler_start(context, name, allow_recursion);
+#define prof_stop(context, name, assert_started, stop_children)                                                        \
+    Context_profiler_stop(context, name, assert_started, stop_children);
 #else
 #define prof_start(context, name, allow_recursion)
 #define prof_stop(context, name, assert_started, stop_children)
 #endif
 
-void Context_profiler_start(Context * context, const char * name, bool allow_recursion);
-void Context_profiler_stop(Context * context, const char * name, bool assert_started, bool stop_children);
+void Context_profiler_start(Context* context, const char* name, bool allow_recursion);
+void Context_profiler_stop(Context* context, const char* name, bool assert_started, bool stop_children);
 
+BitmapFloat* BitmapFloat_create_header(Context* context, int sx, int sy, int channels);
 
+BitmapFloat* BitmapFloat_create(Context* context, int sx, int sy, int channels, bool zeroed);
 
+void BitmapFloat_destroy(Context* context, BitmapFloat* im);
 
-BitmapFloat * BitmapFloat_create_header(Context * context, int sx, int sy, int channels);
+bool BitmapFloat_scale_rows(Context* context, BitmapFloat* from, uint32_t from_row, BitmapFloat* to, uint32_t to_row,
+                            uint32_t row_count, PixelContributions* weights);
+bool BitmapFloat_convolve_rows(Context* context, BitmapFloat* buf, ConvolutionKernel* kernel,
+                               uint32_t convolve_channels, uint32_t from_row, int row_count);
 
-BitmapFloat * BitmapFloat_create(Context * context, int sx, int sy, int channels, bool zeroed);
+bool BitmapFloat_sharpen_rows(Context* context, BitmapFloat* im, uint32_t start_row, uint32_t row_count, double pct);
 
-void BitmapFloat_destroy(Context * context, BitmapFloat * im);
+bool BitmapBgra_convert_srgb_to_linear(Context* context, BitmapBgra* src, uint32_t from_row, BitmapFloat* dest,
+                                       uint32_t dest_row, uint32_t row_count);
 
-bool BitmapFloat_scale_rows(Context * context, BitmapFloat * from, uint32_t from_row, BitmapFloat * to, uint32_t to_row, uint32_t row_count, PixelContributions * weights);
-bool BitmapFloat_convolve_rows(Context * context, BitmapFloat * buf, ConvolutionKernel *kernel,  uint32_t convolve_channels, uint32_t from_row, int row_count);
+bool BitmapFloat_pivoting_composite_linear_over_srgb(Context* context, BitmapFloat* src, uint32_t from_row,
+                                                     BitmapBgra* dest, uint32_t dest_row, uint32_t row_count,
+                                                     bool transpose);
 
-bool BitmapFloat_sharpen_rows(Context * context, BitmapFloat * im, uint32_t start_row, uint32_t row_count, double pct);
+bool BitmapBgra_flip_vertical(Context* context, BitmapBgra* b);
 
+bool BitmapFloat_demultiply_alpha(Context* context, BitmapFloat* src, const uint32_t from_row,
+                                  const uint32_t row_count);
 
-bool BitmapBgra_convert_srgb_to_linear(Context * context,
-                                       BitmapBgra * src,
-                                       uint32_t from_row,
-                                       BitmapFloat * dest,
-                                       uint32_t dest_row,
-                                       uint32_t row_count);
+bool BitmapFloat_copy_linear_over_srgb(Context* context, BitmapFloat* src, const uint32_t from_row, BitmapBgra* dest,
+                                       const uint32_t dest_row, const uint32_t row_count, const uint32_t from_col,
+                                       const uint32_t col_count, const bool transpose);
 
-bool BitmapFloat_pivoting_composite_linear_over_srgb(Context * context,
-        BitmapFloat * src,
-        uint32_t from_row,
-        BitmapBgra * dest,
-        uint32_t dest_row,
-        uint32_t row_count,
-        bool transpose);
+bool Halve(Context* context, const BitmapBgra* from, BitmapBgra* to, int divisor);
 
-bool BitmapBgra_flip_vertical(Context * context, BitmapBgra * b);
-
-bool BitmapFloat_demultiply_alpha(
-    Context * context,
-    BitmapFloat * src,
-    const uint32_t from_row,
-    const uint32_t row_count);
-
-bool BitmapFloat_copy_linear_over_srgb(
-    Context * context,
-    BitmapFloat * src,
-    const uint32_t from_row,
-    BitmapBgra * dest,
-    const uint32_t dest_row,
-    const uint32_t row_count,
-    const uint32_t from_col,
-    const uint32_t col_count,
-    const bool transpose);
-
-bool Halve(Context * context, const BitmapBgra * from, BitmapBgra * to, int divisor);
-
-bool HalveInPlace(Context * context, BitmapBgra * from, int divisor);
-
-
+bool HalveInPlace(Context* context, BitmapBgra* from, int divisor);
 
 #ifndef _TIMERS_IMPLEMENTED
 #define _TIMERS_IMPLEMENTED
@@ -280,7 +251,6 @@ static inline int64_t get_profiler_ticks_per_second(void)
 #endif
 #endif
 
-
 static inline int64_t get_high_precision_ticks(void)
 {
 #ifdef PROFILER_CLOCK_ID
@@ -288,10 +258,10 @@ static inline int64_t get_high_precision_ticks(void)
     if (clock_gettime(PROFILER_CLOCK_ID, &ts) != 0) {
         return -1;
     }
-    return ts.tv_sec * 1000000 +  ts.tv_nsec;
+    return ts.tv_sec * 1000000 + ts.tv_nsec;
 #else
     struct timeval tm;
-    if (gettimeofday( &tm, NULL) != 0) {
+    if (gettimeofday(&tm, NULL) != 0) {
         return -1;
     }
     return tm.tv_sec * 1000000 + tm.tv_usec;
@@ -314,7 +284,6 @@ static inline int64_t get_profiler_ticks_per_second(void)
 #endif
 #endif
 
-
 #ifdef _MSC_VER
 
 #include <stdio.h>
@@ -323,8 +292,6 @@ static inline int64_t get_profiler_ticks_per_second(void)
 #ifndef snprintf
 #define snprintf c99_snprintf
 #endif
-
-
 
 inline int c99_vsnprintf(char* str, size_t size, const char* format, va_list ap)
 {
@@ -338,22 +305,20 @@ inline int c99_vsnprintf(char* str, size_t size, const char* format, va_list ap)
     return count;
 }
 
-inline int c99_snprintf (char* str, size_t size, const char* format, ...)
+inline int c99_snprintf(char* str, size_t size, const char* format, ...)
 {
     int count;
     va_list ap;
 
-    va_start (ap, format);
-    count = c99_vsnprintf (str, size, format, ap);
-    va_end (ap);
+    va_start(ap, format);
+    count = c99_vsnprintf(str, size, format, ap);
+    va_end(ap);
 
     return count;
 }
 
 #endif // _MSC_VER
 
-
 #ifdef __cplusplus
 }
 #endif
-

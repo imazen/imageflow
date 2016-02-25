@@ -13,28 +13,30 @@
 #include <stdio.h>
 #include <string.h>
 
-bool test (int sx, int sy, BitmapPixelFormat sbpp, int cx, int cy, BitmapPixelFormat cbpp, bool transpose, bool flipx, bool flipy, InterpolationFilter filter);
+bool test(int sx, int sy, BitmapPixelFormat sbpp, int cx, int cy, BitmapPixelFormat cbpp, bool transpose, bool flipx,
+          bool flipy, InterpolationFilter filter);
 
-bool test (int sx, int sy, BitmapPixelFormat sbpp, int cx, int cy, BitmapPixelFormat cbpp, bool transpose, bool flipx, bool flipy, InterpolationFilter filter)
+bool test(int sx, int sy, BitmapPixelFormat sbpp, int cx, int cy, BitmapPixelFormat cbpp, bool transpose, bool flipx,
+          bool flipy, InterpolationFilter filter)
 {
-    Context * context = Context_create();
-    if (context == NULL){
+    Context* context = Context_create();
+    if (context == NULL) {
         return false;
     }
-    BitmapBgra * source = BitmapBgra_create(context, sx, sy, true, sbpp);
-    if (source == NULL){
+    BitmapBgra* source = BitmapBgra_create(context, sx, sy, true, sbpp);
+    if (source == NULL) {
         Context_destroy(context);
         return false;
     }
-    BitmapBgra * canvas = BitmapBgra_create(context, cx, cy, true, cbpp);
-    if (canvas == NULL){
+    BitmapBgra* canvas = BitmapBgra_create(context, cx, cy, true, cbpp);
+    if (canvas == NULL) {
         BitmapBgra_destroy(context, source);
         Context_destroy(context);
         return false;
     }
 
-    RenderDetails * details = RenderDetails_create_with(context, filter);
-    if (details == NULL){
+    RenderDetails* details = RenderDetails_create_with(context, filter);
+    if (details == NULL) {
         BitmapBgra_destroy(context, source);
         BitmapBgra_destroy(context, canvas);
         Context_destroy(context);
@@ -45,17 +47,12 @@ bool test (int sx, int sy, BitmapPixelFormat sbpp, int cx, int cy, BitmapPixelFo
     details->post_flip_y = flipy;
     details->post_transpose = transpose;
 
-    float sepia[25] = { .769f, .686f, .534f, 0, 0,
-                        .189f, .168f, .131f, 0, 0,
-                        0, 0, 0, 1, 0,
-                        0, 0, 0, 0, 1,
-                        0, 0, 0, 0, 0
-                      };
+    float sepia[25]
+        = { .769f, .686f, .534f, 0, 0, .189f, .168f, .131f, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0 };
 
-    memcpy( &details->color_matrix_data, &sepia, sizeof sepia);
+    memcpy(&details->color_matrix_data, &sepia, sizeof sepia);
 
     details->apply_color_matrix = true;
-
 
     RenderDetails_render(context, details, source, canvas);
     RenderDetails_destroy(context, details);
@@ -69,19 +66,16 @@ bool test (int sx, int sy, BitmapPixelFormat sbpp, int cx, int cy, BitmapPixelFo
     return true;
 }
 
-
-
 int main(void)
 {
 
-    printf( "Running 3 x 20 operations\n" );
-    for (int i =0; i < 20; i++) {
-        if (InterpolationDetails_interpolation_filter_exists((InterpolationFilter)i)){
-            test (1200, 100, Bgr24, 400, 223, Bgra32, true, true, false, (InterpolationFilter)i);
-            test (44, 33, Bgr24, 800, 600, Bgra32, false, true, true, (InterpolationFilter)i);
-            test (1200, 800, Bgra32, 200, 150, Bgra32, false, false, false, (InterpolationFilter)i);
+    printf("Running 3 x 20 operations\n");
+    for (int i = 0; i < 20; i++) {
+        if (InterpolationDetails_interpolation_filter_exists((InterpolationFilter)i)) {
+            test(1200, 100, Bgr24, 400, 223, Bgra32, true, true, false, (InterpolationFilter)i);
+            test(44, 33, Bgr24, 800, 600, Bgra32, false, true, true, (InterpolationFilter)i);
+            test(1200, 800, Bgra32, 200, 150, Bgra32, false, false, false, (InterpolationFilter)i);
         }
     }
     return 0;
-
 }
