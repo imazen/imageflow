@@ -1,0 +1,6 @@
+[requires]
+littlecms/2.7@lasote/stable
+libpng/1.6.21@lasote/stable
+
+[generators]
+cmake
