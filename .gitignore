@@ -226,4 +226,5 @@ FakesAssemblies/
 
 # Eclipse project
 .project
-
+# Clion
+.idea/
