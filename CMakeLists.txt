@@ -1,7 +1,12 @@
 project(ImageFlow)
 cmake_minimum_required(VERSION 2.8.12)
 
-include(${CMAKE_BINARY_DIR}/conanbuildinfo.cmake)
+if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/build/conanbuildinfo.cmake) #Clion, with conanbuildinfo.cmake in root
+    include(${CMAKE_CURRENT_SOURCE_DIR}/build/conanbuildinfo.cmake)
+else()
+    include(${CMAKE_BINARY_DIR}/conanbuildinfo.cmake) # Not CLion
+endif()
+
 conan_basic_setup()
 
 option(ENABLE_TEST OFF)
