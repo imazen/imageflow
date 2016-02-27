@@ -16,6 +16,8 @@ How to download, build, and run tests (after [installing Conan](https://www.cona
     valgrind ./build/bin/test_test
     valgrind ./build/bin/test_error_handling
     valgrind ./build/bin/fastscaling
+    
+    #After run_tests.sh, you may open the imageflow folder in CLion for debugging
 
 ======
 
