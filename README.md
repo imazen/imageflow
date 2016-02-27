@@ -50,7 +50,7 @@ How to download, build, and run tests (after [installing Conan](https://www.cona
             return false;
         }
 
-        // Uncomment to generate an animated graph of the process. Requires sudo apt-get install libav-tools graphviz
+        // Uncomment to generate an animated graph. Requires sudo apt-get install libav-tools graphviz
         // gifsicle
         // flow_job_configure_recording(c, job, true, true, true, true, true);
 

@@ -11,6 +11,10 @@ conan_basic_setup()
 
 option(ENABLE_TEST OFF)
 
+if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/build/conanbuildinfo.cmake)
+	set(ENABLE_TEST ON)
+endif()
+
 list(REMOVE_ITEM CONAN_LIBS efence) # FIXME: Maybe efence should be a private dep of openssls
 
 file(GLOB LIB_SRCS lib/*.c)
@@ -34,7 +38,7 @@ if(ENABLE_TEST)
 		add_test(NAME ${target} COMMAND $<TARGET_FILE:${target}>)
 	    target_link_libraries(${target} imageflow ${CONAN_LIBS})
 	    target_include_directories(${target} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
-		target_include_directories(${target} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/lib)	    
+		target_include_directories(${target} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/lib)
 	endfunction()
 
 	create_test(fastscaling tests/fastscaling.c)
@@ -42,7 +46,7 @@ if(ENABLE_TEST)
 	create_test(test_graph_program tests/test_graph.cpp tests/test_graph_program.cpp tests/helpers.c)
 	create_test(test_error_handling tests/test_error_handling.cpp tests/test_graph_program.cpp  tests/helpers.c)
 	create_test(test_test tests/test.cpp tests/test_graph_program.cpp tests/weighting_test_helpers.cpp tests/helpers.c)
-	
+
 	# Theft library don't compile in windows
 	if(UNIX)
 		create_test(theft_test_main theft_tests/theft_test_main.cpp theft_tests/test_rendering.cpp)
