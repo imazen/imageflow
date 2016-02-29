@@ -18,10 +18,10 @@
 #include "curl/easy.h"
 #include "helpers.h"
 
-#define ERR(c) REQUIRE_FALSE(Context_print_and_exit_if_err(c))
+#define ERR(c) REQUIRE_FALSE(flow_context_print_and_exit_if_err(c))
 
 // Assumes placeholders 0 and 1 for input/output respectively
-bool execute_graph_for_url(Context* c, const char* input_image_url, const char* output_image_path,
+bool execute_graph_for_url(flow_context* c, const char* input_image_url, const char* output_image_path,
                            struct flow_graph** graph_ref)
 {
     struct flow_job* job = flow_job_create(c);
@@ -63,7 +63,8 @@ bool execute_graph_for_url(Context* c, const char* input_image_url, const char* 
     return true;
 }
 
-bool execute_graph_for_bitmap_bgra(Context* c, BitmapBgra* input, BitmapBgra** out, struct flow_graph** graph_ref)
+bool execute_graph_for_bitmap_bgra(flow_context* c, flow_bitmap_bgra* input, flow_bitmap_bgra** out,
+                                   struct flow_graph** graph_ref)
 {
     struct flow_job* job = flow_job_create(c);
     ERR(c);
@@ -90,11 +91,11 @@ bool execute_graph_for_bitmap_bgra(Context* c, BitmapBgra* input, BitmapBgra** o
 
 TEST_CASE("create tiny graph", "")
 {
-    Context* c = Context_create();
+    flow_context* c = flow_context_create();
     flow_graph* g = flow_graph_create(c, 10, 10, 200, 2.0);
     int32_t last;
 
-    last = flow_node_create_canvas(c, &g, -1, Bgra32, 400, 300, 0xFFFFFFFF);
+    last = flow_node_create_canvas(c, &g, -1, flow_bgra32, 400, 300, 0xFFFFFFFF);
     last = flow_node_create_scale(c, &g, last, 300, 200);
     last = flow_node_create_resource_placeholder(c, &g, last, 0);
 
@@ -105,16 +106,16 @@ TEST_CASE("create tiny graph", "")
     REQUIRE(g->edge_count == 2);
     REQUIRE(g->node_count == 3);
 
-    Context_destroy(c);
+    flow_context_destroy(c);
 }
 
 TEST_CASE("delete a node from a graph", "")
 {
-    Context* c = Context_create();
+    flow_context* c = flow_context_create();
     flow_graph* g = flow_graph_create(c, 10, 10, 200, 2.0);
     int32_t last;
 
-    last = flow_node_create_canvas(c, &g, -1, Bgra32, 400, 300, 0xFFFFFFFF);
+    last = flow_node_create_canvas(c, &g, -1, flow_bgra32, 400, 300, 0xFFFFFFFF);
     last = flow_node_create_scale(c, &g, last, 300, 200);
     last = flow_node_create_resource_placeholder(c, &g, last, 0);
     ERR(c);
@@ -140,15 +141,15 @@ TEST_CASE("delete a node from a graph", "")
     REQUIRE(g->edges[1].from == -1);
     REQUIRE(g->edges[1].to == -1);
 
-    Context_destroy(c);
+    flow_context_destroy(c);
 }
 
 TEST_CASE("clone an edge", "")
 {
-    Context* c = Context_create();
+    flow_context* c = flow_context_create();
     flow_graph* g = flow_graph_create(c, 10, 10, 200, 2.0);
     int32_t last;
-    last = flow_node_create_canvas(c, &g, -1, Bgra32, 400, 300, 0xFFFFFFFF);
+    last = flow_node_create_canvas(c, &g, -1, flow_bgra32, 400, 300, 0xFFFFFFFF);
     last = flow_node_create_scale(c, &g, last, 300, 200);
 
     ERR(c);
@@ -167,7 +168,7 @@ TEST_CASE("clone an edge", "")
     REQUIRE(g->edges[1].from == 0);
     REQUIRE(g->edges[1].to == 1);
 
-    Context_destroy(c);
+    flow_context_destroy(c);
 }
 
 // TODO test paths where adding nodes/edges exceeds the max size
@@ -175,20 +176,20 @@ TEST_CASE("clone an edge", "")
 TEST_CASE("execute tiny graph", "")
 {
 
-    Context* c = Context_create();
+    flow_context* c = flow_context_create();
     flow_utils_ensure_directory_exists("node_frames");
     struct flow_graph* g = nullptr;
     struct flow_job* job = nullptr;
 
     int32_t result_resource_id;
-    BitmapBgra* result = nullptr;
+    flow_bitmap_bgra* result = nullptr;
 
     g = flow_graph_create(c, 10, 10, 200, 2.0);
     ERR(c);
 
     int32_t last;
 
-    last = flow_node_create_canvas(c, &g, -1, Bgra32, 400, 300, 0xFFFFFFFF);
+    last = flow_node_create_canvas(c, &g, -1, flow_bgra32, 400, 300, 0xFFFFFFFF);
     //    last = flow_node_create_fill_rect()
     last = flow_node_create_scale(c, &g, last, 300, 200);
     last = flow_node_create_resource_placeholder(c, &g, last, 0);
@@ -216,18 +217,18 @@ TEST_CASE("execute tiny graph", "")
     REQUIRE(result != NULL);
     REQUIRE(result->w == 300);
 
-    Context_destroy(c);
+    flow_context_destroy(c);
 }
 
 TEST_CASE("decode and scale png", "")
 {
 
-    Context* c = Context_create();
+    flow_context* c = flow_context_create();
     struct flow_graph* g = nullptr;
     struct flow_job* job = nullptr;
 
     int32_t result_resource_id;
-    BitmapBgra* result = nullptr;
+    flow_bitmap_bgra* result = nullptr;
 
     g = flow_graph_create(c, 10, 10, 200, 2.0);
     ERR(c);
@@ -267,17 +268,17 @@ TEST_CASE("decode and scale png", "")
     REQUIRE(result != NULL);
     REQUIRE(result->w == 300);
 
-    Context_destroy(c);
+    flow_context_destroy(c);
 }
 
-bool scale_image_to_disk_inner(Context* c)
+bool scale_image_to_disk_inner(flow_context* c)
 {
     // We'll create a simple graph
     struct flow_graph* g = flow_graph_create(c, 10, 10, 200, 2.0);
     if (g == NULL) {
         return false;
     }
-    //We associate placeholders and resources with simple integers
+    // We associate placeholders and resources with simple integers
     int32_t input_placeholder = 0;
     int32_t output_placeholder = 1;
 
@@ -290,7 +291,7 @@ bool scale_image_to_disk_inner(Context* c)
     struct flow_job* job = flow_job_create(c);
 
     // We've done 4 mallocs, make sure we didn't run out of memory
-    if (Context_has_error(c)) {
+    if (flow_context_has_error(c)) {
         return false;
     }
 
@@ -322,7 +323,7 @@ bool scale_image_to_disk_inner(Context* c)
     struct flow_job_resource_buffer* result = flow_job_get_buffer(c, job, result_resource_id);
     // Now let's write it to disk
     FILE* fh = fopen("graph_scaled_png.png", "w");
-    if (Context_has_error(c) || fh == NULL || fwrite(result->buffer, result->buffer_size, 1, fh) != 1) {
+    if (flow_context_has_error(c) || fh == NULL || fwrite(result->buffer, result->buffer_size, 1, fh) != 1) {
         if (fh != NULL)
             fclose(fh);
         return false;
@@ -333,18 +334,18 @@ bool scale_image_to_disk_inner(Context* c)
 
 bool scale_image_to_disk()
 {
-    // The Context provides error tracking, profling, heap tracking.
-    Context* c = Context_create();
+    // The flow_context provides error tracking, profling, heap tracking.
+    flow_context* c = flow_context_create();
     if (c == NULL) {
         return false;
     }
     if (!scale_image_to_disk_inner(c)) {
-        Context_print_error_to(c, stderr);
-        Context_destroy(c);
+        flow_context_print_error_to(c, stderr);
+        flow_context_destroy(c);
         return false;
     }
 
-    Context_destroy(c);
+    flow_context_destroy(c);
     return true;
 }
 
@@ -352,7 +353,7 @@ TEST_CASE("decode, scale, and re-encode png", "") { REQUIRE(scale_image_to_disk(
 
 TEST_CASE("scale and flip and crop png", "")
 {
-    Context* c = Context_create();
+    flow_context* c = flow_context_create();
     struct flow_graph* g = flow_graph_create(c, 10, 10, 200, 2.0);
     ERR(c);
 
@@ -366,12 +367,12 @@ TEST_CASE("scale and flip and crop png", "")
 
     execute_graph_for_url(c, "http://z.zr.io/ri/8s.jpg?format=png&width=800", "graph_flipped_cropped_png.png", &g);
 
-    Context_destroy(c);
+    flow_context_destroy(c);
 }
 
 TEST_CASE("Roundtrip flipping", "")
 {
-    Context* c = Context_create();
+    flow_context* c = flow_context_create();
     struct flow_graph* g = flow_graph_create(c, 10, 10, 200, 2.0);
     ERR(c);
 
@@ -385,23 +386,23 @@ TEST_CASE("Roundtrip flipping", "")
     last = flow_node_create_primitive_flip_vertical(c, &g, last);
     last = flow_node_create_resource_placeholder(c, &g, last, output_placeholder);
 
-    BitmapBgra* gradient = BitmapBgra_create_test_image(c);
-    BitmapBgra* result;
+    flow_bitmap_bgra* gradient = BitmapBgra_create_test_image(c);
+    flow_bitmap_bgra* result;
     execute_graph_for_bitmap_bgra(c, gradient, &result, &g);
 
     ERR(c);
     bool equal = false;
-    if (!BitmapBgra_compare(c, gradient, result, &equal)) {
+    if (!flow_bitmap_bgra_compare(c, gradient, result, &equal)) {
         ERR(c);
     }
     REQUIRE(equal);
 
-    Context_destroy(c);
+    flow_context_destroy(c);
 }
 
 TEST_CASE("scale copy rect", "")
 {
-    Context* c = Context_create();
+    flow_context* c = flow_context_create();
     struct flow_graph* g = flow_graph_create(c, 10, 10, 200, 2.0);
     ERR(c);
 
@@ -409,19 +410,19 @@ TEST_CASE("scale copy rect", "")
 
     last = flow_node_create_resource_placeholder(c, &g, -1, input_placeholder);
     last = flow_node_create_scale(c, &g, last, 200, 200);
-    int32_t canvas = flow_node_create_canvas(c, &g, -1, Bgra32, 300, 300, 0);
+    int32_t canvas = flow_node_create_canvas(c, &g, -1, flow_bgra32, 300, 300, 0);
     last = flow_node_create_primitive_copy_rect_to_canvas(c, &g, last, 0, 0, 150, 150, 50, 50);
     flow_edge_create(c, &g, canvas, last, flow_edgetype_canvas);
     last = flow_node_create_resource_placeholder(c, &g, last, output_placeholder);
 
     execute_graph_for_url(c, "http://z.zr.io/ri/8s.jpg?format=png&width=800", "graph_scaled_blitted_png.png", &g);
 
-    Context_destroy(c);
+    flow_context_destroy(c);
 }
 
 TEST_CASE("test frame clone", "")
 {
-    Context* c = Context_create();
+    flow_context* c = flow_context_create();
     struct flow_graph* g = flow_graph_create(c, 10, 10, 200, 2.0);
     ERR(c);
 
@@ -437,12 +438,12 @@ TEST_CASE("test frame clone", "")
 
     execute_graph_for_url(c, "http://z.zr.io/ri/8s.jpg?format=png&width=400", "unflipped.png", &g);
 
-    Context_destroy(c);
+    flow_context_destroy(c);
 }
 
 TEST_CASE("test rotation", "")
 {
-    Context* c = Context_create();
+    flow_context* c = flow_context_create();
     struct flow_graph* g = flow_graph_create(c, 10, 10, 200, 2.0);
     ERR(c);
 
@@ -456,7 +457,7 @@ TEST_CASE("test rotation", "")
 
     execute_graph_for_url(c, "http://z.zr.io/ri/Oriented.jpg?format=png", "rotated.png", &g);
 
-    Context_destroy(c);
+    flow_context_destroy(c);
 }
 
 TEST_CASE("test memory corruption", "")
@@ -465,7 +466,7 @@ TEST_CASE("test memory corruption", "")
     // overlap
     // It also showed how that post_optimize_flatten calls which create pre_optimize_flattenable nodes
     // Can cause execution to fail in fewer than 6 passes. We may want to re-evaluate our graph exeuction approach
-    Context* c = Context_create();
+    flow_context* c = flow_context_create();
     struct flow_graph* g = flow_graph_create(c, 10, 10, 200, 2.0);
     ERR(c);
 
@@ -482,7 +483,7 @@ TEST_CASE("test memory corruption", "")
 
     execute_graph_for_url(c, "http://z.zr.io/ri/Oriented.jpg?format=png", "rotated.png", &g);
 
-    Context_destroy(c);
+    flow_context_destroy(c);
 }
 
 TEST_CASE("check for cycles", "")
@@ -491,7 +492,7 @@ TEST_CASE("check for cycles", "")
     // overlap
     // It also showed how that post_optimize_flatten calls which create pre_optimize_flattenable nodes
     // Can cause execution to fail in fewer than 6 passes. We may want to re-evaluate our graph exeuction approach
-    Context* c = Context_create();
+    flow_context* c = flow_context_create();
     struct flow_graph* g = flow_graph_create(c, 10, 10, 200, 2.0);
     ERR(c);
 
@@ -501,14 +502,14 @@ TEST_CASE("check for cycles", "")
     flow_edge_create(c, &g, third, first, flow_edgetype_input); // make a cycle
 
     REQUIRE_FALSE(flow_graph_validate(c, g));
-    REQUIRE(Context_error_reason(c) == Graph_is_cyclic);
+    REQUIRE(flow_context_error_reason(c) == flow_status_Graph_is_cyclic);
 
-    Context_clear_error(c);
+    flow_context_clear_error(c);
 
     int32_t fourth = flow_node_create_clone(c, &g, third);
 
     REQUIRE_FALSE(flow_graph_validate(c, g));
-    REQUIRE(Context_error_reason(c) == Graph_is_cyclic);
+    REQUIRE(flow_context_error_reason(c) == flow_status_Graph_is_cyclic);
 
-    Context_destroy(c);
+    flow_context_destroy(c);
 }

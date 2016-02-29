@@ -35,7 +35,6 @@ typedef unsigned long long int	uint64_t;
 
 
 
-#include "../fastscaling.h"
 /* Includes the header in the wrapper code */
 #include "../imageflow.h"
 
@@ -43,5 +42,4 @@ typedef unsigned long long int	uint64_t;
 
 /* Parse the header file to generate wrappers */
 
-%include "../fastscaling.h"
 %include "../imageflow.h"

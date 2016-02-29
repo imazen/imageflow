@@ -23,19 +23,19 @@
 #endif
 #endif
 
-ConvolutionKernel* ConvolutionKernel_create(Context* context, uint32_t radius)
+flow_convolution_kernel* flow_convolution_kernel_create(flow_context* context, uint32_t radius)
 {
-    ConvolutionKernel* k = CONTEXT_calloc_array(context, 1, ConvolutionKernel);
+    flow_convolution_kernel* k = FLOW_calloc_array(context, 1, flow_convolution_kernel);
     // For the actual array;
-    float* a = CONTEXT_calloc_array(context, radius * 2 + 1, float);
+    float* a = FLOW_calloc_array(context, radius * 2 + 1, float);
     // we assume a maximum of 4 channels are going to need buffering during convolution
-    float* buf = (float*)CONTEXT_malloc(context, (radius + 2) * 4 * sizeof(float));
+    float* buf = (float*)FLOW_malloc(context, (radius + 2) * 4 * sizeof(float));
 
     if (k == NULL || a == NULL || buf == NULL) {
-        CONTEXT_free(context, k);
-        CONTEXT_free(context, a);
-        CONTEXT_free(context, buf);
-        CONTEXT_error(context, Out_of_memory);
+        FLOW_free(context, k);
+        FLOW_free(context, a);
+        FLOW_free(context, buf);
+        FLOW_error(context, flow_status_Out_of_memory);
         return NULL;
     }
     k->kernel = a;
@@ -44,20 +44,20 @@ ConvolutionKernel* ConvolutionKernel_create(Context* context, uint32_t radius)
     k->radius = radius;
     return k;
 }
-void ConvolutionKernel_destroy(Context* context, ConvolutionKernel* kernel)
+void flow_convolution_kernel_destroy(flow_context* context, flow_convolution_kernel* kernel)
 {
     if (kernel != NULL) {
-        CONTEXT_free(context, kernel->kernel);
-        CONTEXT_free(context, kernel->buffer);
+        FLOW_free(context, kernel->kernel);
+        FLOW_free(context, kernel->buffer);
         kernel->kernel = NULL;
         kernel->buffer = NULL;
     }
-    CONTEXT_free(context, kernel);
+    FLOW_free(context, kernel);
 }
 
-ConvolutionKernel* ConvolutionKernel_create_guassian(Context* context, double stdDev, uint32_t radius)
+flow_convolution_kernel* flow_convolution_kernel_create_guassian(flow_context* context, double stdDev, uint32_t radius)
 {
-    ConvolutionKernel* k = ConvolutionKernel_create(context, radius);
+    flow_convolution_kernel* k = flow_convolution_kernel_create(context, radius);
     if (k != NULL) {
         for (uint32_t i = 0; i < k->width; i++) {
 
@@ -67,7 +67,7 @@ ConvolutionKernel* ConvolutionKernel_create_guassian(Context* context, double st
     return k;
 }
 
-double ConvolutionKernel_sum(ConvolutionKernel* kernel)
+double flow_convolution_kernel_sum(flow_convolution_kernel* kernel)
 {
     double sum = 0;
     for (uint32_t i = 0; i < kernel->width; i++) {
@@ -76,9 +76,9 @@ double ConvolutionKernel_sum(ConvolutionKernel* kernel)
     return sum;
 }
 
-void ConvolutionKernel_normalize(ConvolutionKernel* kernel, float desiredSum)
+void flow_convolution_kernel_normalize(flow_convolution_kernel* kernel, float desiredSum)
 {
-    double sum = ConvolutionKernel_sum(kernel);
+    double sum = flow_convolution_kernel_sum(kernel);
     if (sum == 0)
         return; // nothing to do here, zeroes are as normalized as you can get ;)
     float factor = (float)(desiredSum / sum);
@@ -86,20 +86,22 @@ void ConvolutionKernel_normalize(ConvolutionKernel* kernel, float desiredSum)
         kernel->kernel[i] *= factor;
     }
 }
-ConvolutionKernel* ConvolutionKernel_create_guassian_normalized(Context* context, double stdDev, uint32_t radius)
+flow_convolution_kernel* flow_convolution_kernel_create_guassian_normalized(flow_context* context, double stdDev,
+                                                                            uint32_t radius)
 {
-    ConvolutionKernel* kernel = ConvolutionKernel_create_guassian(context, stdDev, radius);
+    flow_convolution_kernel* kernel = flow_convolution_kernel_create_guassian(context, stdDev, radius);
     if (kernel != NULL) {
-        ConvolutionKernel_normalize(kernel, 1);
+        flow_convolution_kernel_normalize(kernel, 1);
     }
     return kernel;
 }
 
-ConvolutionKernel* ConvolutionKernel_create_guassian_sharpen(Context* context, double stdDev, uint32_t radius)
+flow_convolution_kernel* flow_convolution_kernel_create_guassian_sharpen(flow_context* context, double stdDev,
+                                                                         uint32_t radius)
 {
-    ConvolutionKernel* kernel = ConvolutionKernel_create_guassian(context, stdDev, radius);
+    flow_convolution_kernel* kernel = flow_convolution_kernel_create_guassian(context, stdDev, radius);
     if (kernel != NULL) {
-        double sum = ConvolutionKernel_sum(kernel);
+        double sum = flow_convolution_kernel_sum(kernel);
         for (uint32_t i = 0; i < kernel->width; i++) {
             if (i == radius) {
                 kernel->kernel[i] = (float)(2 * sum - kernel->kernel[i]);
@@ -107,13 +109,13 @@ ConvolutionKernel* ConvolutionKernel_create_guassian_sharpen(Context* context, d
                 kernel->kernel[i] *= -1;
             }
         }
-        ConvolutionKernel_normalize(kernel, 1);
+        flow_convolution_kernel_normalize(kernel, 1);
     }
     return kernel;
 }
 
-bool BitmapFloat_convolve_rows(Context* context, BitmapFloat* buf, ConvolutionKernel* kernel,
-                               uint32_t convolve_channels, uint32_t from_row, int row_count)
+bool flow_bitmap_float_convolve_rows(flow_context* context, flow_bitmap_float* buf, flow_convolution_kernel* kernel,
+                                     uint32_t convolve_channels, uint32_t from_row, int row_count)
 {
 
     const uint32_t radius = kernel->radius;
@@ -213,7 +215,7 @@ bool BitmapFloat_convolve_rows(Context* context, BitmapFloat* buf, ConvolutionKe
 }
 
 /*
-static void BgraSharpenInPlaceX(BitmapBgra * im, float pct)
+static void BgraSharpenInPlaceX(flow_bitmap_bgra * im, float pct)
 {
     const float n = -pct / (pct - 1); //if 0 < pct < 1
     const float outer_coeff = n / -2.0f;
@@ -223,7 +225,7 @@ static void BgraSharpenInPlaceX(BitmapBgra * im, float pct)
 
     const uint32_t sy = im->h;
     const uint32_t stride = im->stride;
-    const uint32_t bytes_pp = BitmapPixelFormat_bytes_per_pixel (im->fmt);
+    const uint32_t bytes_pp = flow_pixel_format_bytes_per_pixel (im->fmt);
 
 
     if (pct <= 0 || im->w < 3 || bytes_pp < 3) return;
@@ -295,10 +297,11 @@ static void SharpenBgraFloatInPlace(float* buf, unsigned int count, double pct, 
     }
 }
 
-bool BitmapFloat_sharpen_rows(Context* context, BitmapFloat* im, uint32_t start_row, uint32_t row_count, double pct)
+bool flow_bitmap_float_sharpen_rows(flow_context* context, flow_bitmap_float* im, uint32_t start_row,
+                                    uint32_t row_count, double pct)
 {
     if (!(start_row + row_count <= im->h)) {
-        CONTEXT_error(context, Invalid_internal_state);
+        FLOW_error(context, flow_status_Invalid_internal_state);
         return false;
     }
     for (uint32_t row = start_row; row < start_row + row_count; row++) {

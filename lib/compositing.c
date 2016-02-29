@@ -13,21 +13,21 @@
 
 #include <string.h>
 
-bool BitmapBgra_convert_srgb_to_linear(Context* context, BitmapBgra* src, uint32_t from_row, BitmapFloat* dest,
-                                       uint32_t dest_row, uint32_t row_count)
+bool flow_bitmap_float_convert_srgb_to_linear(flow_context* context, flow_bitmap_bgra* src, uint32_t from_row,
+                                              flow_bitmap_float* dest, uint32_t dest_row, uint32_t row_count)
 {
-    if (src->w != dest->w || BitmapPixelFormat_bytes_per_pixel(src->fmt) < dest->channels) {
-        CONTEXT_error(context, Invalid_internal_state);
+    if (src->w != dest->w || flow_pixel_format_bytes_per_pixel(src->fmt) < dest->channels) {
+        FLOW_error(context, flow_status_Invalid_internal_state);
         return false;
     }
     if (!(from_row + row_count <= src->h && dest_row + row_count <= dest->h)) {
-        CONTEXT_error(context, Invalid_internal_state);
+        FLOW_error(context, flow_status_Invalid_internal_state);
         return false;
     }
 
     const uint32_t w = src->w;
-    const uint32_t units = w * BitmapPixelFormat_bytes_per_pixel(src->fmt);
-    const uint32_t from_step = BitmapPixelFormat_bytes_per_pixel(src->fmt);
+    const uint32_t units = w * flow_pixel_format_bytes_per_pixel(src->fmt);
+    const uint32_t from_step = flow_pixel_format_bytes_per_pixel(src->fmt);
     const uint32_t to_step = dest->channels;
     const uint32_t copy_step = umin(from_step, to_step);
 
@@ -54,7 +54,7 @@ bool BitmapBgra_convert_srgb_to_linear(Context* context, BitmapBgra* src, uint32
             }
             // We're only working on a portion... dest->alpha_premultiplied = true;
         } else {
-            CONTEXT_error(context, Unsupported_pixel_format);
+            FLOW_error(context, flow_status_Unsupported_pixel_format);
             return false;
         }
     }
@@ -71,15 +71,15 @@ static void unpack24bitRow(uint32_t width, unsigned char* sourceLine, unsigned c
 }
 */
 
-bool BitmapBgra_flip_vertical(Context* context, BitmapBgra* b)
+bool flow_bitmap_float_flip_vertical(flow_context* context, flow_bitmap_bgra* b)
 {
-    void* swap = CONTEXT_malloc(context, b->stride);
+    void* swap = FLOW_malloc(context, b->stride);
     if (swap == NULL) {
-        CONTEXT_error(context, Out_of_memory);
+        FLOW_error(context, flow_status_Out_of_memory);
         return false;
     }
     // Dont' copy the full stride (padding), it could be windowed!
-    uint32_t row_length = umin(b->stride, b->w * BitmapPixelFormat_bytes_per_pixel(b->fmt));
+    uint32_t row_length = umin(b->stride, b->w * flow_pixel_format_bytes_per_pixel(b->fmt));
     for (uint32_t i = 0; i < b->h / 2; i++) {
         void* top = b->pixels + (i * b->stride);
         void* bottom = b->pixels + ((b->h - 1 - i) * b->stride);
@@ -87,42 +87,42 @@ bool BitmapBgra_flip_vertical(Context* context, BitmapBgra* b)
         memcpy(top, bottom, row_length);
         memcpy(bottom, swap, row_length);
     }
-    CONTEXT_free(context, swap);
+    FLOW_free(context, swap);
     return true;
 }
 
-bool BitmapBgra_flip_horizontal(Context* context, BitmapBgra* b)
+bool flow_bitmap_bgra_flip_horizontal(flow_context* context, flow_bitmap_bgra* b)
 {
     uint32_t swap[4];
     // Dont' copy the full stride (padding), it could be windowed!
     for (uint32_t y = 0; y < b->h; y++) {
         uint8_t* left = b->pixels + (y * b->stride);
-        uint8_t* right = b->pixels + (y * b->stride) + (BitmapPixelFormat_bytes_per_pixel(b->fmt) * (b->w - 1));
+        uint8_t* right = b->pixels + (y * b->stride) + (flow_pixel_format_bytes_per_pixel(b->fmt) * (b->w - 1));
         while (left < right) {
-            memcpy(&swap, left, BitmapPixelFormat_bytes_per_pixel(b->fmt));
-            memcpy(left, right, BitmapPixelFormat_bytes_per_pixel(b->fmt));
-            memcpy(right, &swap, BitmapPixelFormat_bytes_per_pixel(b->fmt));
-            left += BitmapPixelFormat_bytes_per_pixel(b->fmt);
-            right -= BitmapPixelFormat_bytes_per_pixel(b->fmt);
+            memcpy(&swap, left, flow_pixel_format_bytes_per_pixel(b->fmt));
+            memcpy(left, right, flow_pixel_format_bytes_per_pixel(b->fmt));
+            memcpy(right, &swap, flow_pixel_format_bytes_per_pixel(b->fmt));
+            left += flow_pixel_format_bytes_per_pixel(b->fmt);
+            right -= flow_pixel_format_bytes_per_pixel(b->fmt);
         }
     }
     return true;
 }
 
 /*
-static int  copy_bitmap_bgra(BitmapBgra * src, BitmapBgra * dst)
+static int  copy_bitmap_bgra(flow_bitmap_bgra * src, flow_bitmap_bgra * dst)
 {
     // TODO: check sizes / overflows
     if (dst->w != src->w || dst->h != src->h) return -1;
 
     if (src->fmt == dst->fmt)
     {
-        const uint32_t bytes_pp = BitmapPixelFormat_bytes_per_pixel (src->fmt);
+        const uint32_t bytes_pp = flow_pixel_format_bytes_per_pixel (src->fmt);
         // recalculate line width as it can be different from the stride
         for (uint32_t y = 0; y < src->h; y++)
             memcpy(dst->pixels + y*dst->stride, src->pixels + y*src->stride, src->w*bytes_pp);
     }
-    else if (src->fmt == Bgr24 && dst->fmt == Bgra32)
+    else if (src->fmt == flow_bgr24 && dst->fmt == flow_bgra32)
     {
         for (uint32_t y = 0; y < src->h; y++)
             unpack24bitRow(src->w, src->pixels + y*src->stride, dst->pixels + y*dst->stride);
@@ -134,7 +134,7 @@ static int  copy_bitmap_bgra(BitmapBgra * src, BitmapBgra * dst)
 }
 */
 
-static bool BitmapFloat_blend_matte(Context* context, BitmapFloat* src, const uint32_t from_row,
+static bool BitmapFloat_blend_matte(flow_context* context, flow_bitmap_float* src, const uint32_t from_row,
                                     const uint32_t row_count, const uint8_t* const matte)
 {
     // We assume that matte is BGRA, regardless.
@@ -164,7 +164,8 @@ static bool BitmapFloat_blend_matte(Context* context, BitmapFloat* src, const ui
     return true;
 }
 
-bool BitmapFloat_demultiply_alpha(Context* context, BitmapFloat* src, const uint32_t from_row, const uint32_t row_count)
+bool flow_bitmap_float_demultiply_alpha(flow_context* context, flow_bitmap_float* src, const uint32_t from_row,
+                                        const uint32_t row_count)
 {
     for (uint32_t row = from_row; row < from_row + row_count; row++) {
         uint32_t start_ix = row * src->float_stride;
@@ -182,19 +183,19 @@ bool BitmapFloat_demultiply_alpha(Context* context, BitmapFloat* src, const uint
     return true;
 }
 
-bool BitmapFloat_copy_linear_over_srgb(Context* context, BitmapFloat* src, const uint32_t from_row, BitmapBgra* dest,
-                                       const uint32_t dest_row, const uint32_t row_count, const uint32_t from_col,
-                                       const uint32_t col_count, const bool transpose)
+bool flow_bitmap_float_copy_linear_over_srgb(flow_context* context, flow_bitmap_float* src, const uint32_t from_row,
+                                             flow_bitmap_bgra* dest, const uint32_t dest_row, const uint32_t row_count,
+                                             const uint32_t from_col, const uint32_t col_count, const bool transpose)
 {
 
-    const uint32_t dest_bytes_pp = BitmapPixelFormat_bytes_per_pixel(dest->fmt);
+    const uint32_t dest_bytes_pp = flow_pixel_format_bytes_per_pixel(dest->fmt);
 
     const uint32_t dest_row_stride = transpose ? dest_bytes_pp : dest->stride;
     const uint32_t dest_pixel_stride = transpose ? dest->stride : dest_bytes_pp;
     const uint32_t srcitems = umin(from_col + col_count, src->w) * src->channels;
     const uint32_t ch = src->channels;
-    const bool copy_alpha = dest->fmt == Bgra32 && src->channels == 4 && src->alpha_meaningful;
-    const bool clean_alpha = !copy_alpha && dest->fmt == Bgra32;
+    const bool copy_alpha = dest->fmt == flow_bgra32 && src->channels == 4 && src->alpha_meaningful;
+    const bool clean_alpha = !copy_alpha && dest->fmt == flow_bgra32;
 
     for (uint32_t row = 0; row < row_count; row++) {
         float* src_row = src->pixels + (row + from_row) * src->float_stride;
@@ -217,19 +218,19 @@ bool BitmapFloat_copy_linear_over_srgb(Context* context, BitmapFloat* src, const
     return true;
 }
 
-static bool BitmapFloat_compose_linear_over_srgb(Context* context, BitmapFloat* src, const uint32_t from_row,
-                                                 BitmapBgra* dest, const uint32_t dest_row, const uint32_t row_count,
-                                                 const uint32_t from_col, const uint32_t col_count,
-                                                 const bool transpose)
+static bool BitmapFloat_compose_linear_over_srgb(flow_context* context, flow_bitmap_float* src, const uint32_t from_row,
+                                                 flow_bitmap_bgra* dest, const uint32_t dest_row,
+                                                 const uint32_t row_count, const uint32_t from_col,
+                                                 const uint32_t col_count, const bool transpose)
 {
 
-    const uint32_t dest_bytes_pp = BitmapPixelFormat_bytes_per_pixel(dest->fmt);
+    const uint32_t dest_bytes_pp = flow_pixel_format_bytes_per_pixel(dest->fmt);
     const uint32_t dest_row_stride = transpose ? dest_bytes_pp : dest->stride;
     const uint32_t dest_pixel_stride = transpose ? dest->stride : dest_bytes_pp;
     const uint32_t srcitems = umin(from_col + col_count, src->w) * src->channels;
     const uint32_t ch = src->channels;
 
-    const bool dest_alpha = dest->fmt == Bgra32 && dest->alpha_meaningful;
+    const bool dest_alpha = dest->fmt == flow_bgra32 && dest->alpha_meaningful;
 
     const uint8_t dest_alpha_index = dest_alpha ? 3 : 0;
     const float dest_alpha_to_float_coeff = dest_alpha ? 1.0f / 255.0f : 0.0f;
@@ -271,36 +272,39 @@ static bool BitmapFloat_compose_linear_over_srgb(Context* context, BitmapFloat* 
     return true;
 }
 
-bool BitmapFloat_pivoting_composite_linear_over_srgb(Context* context, BitmapFloat* src, uint32_t from_row,
-                                                     BitmapBgra* dest, uint32_t dest_row, uint32_t row_count,
-                                                     bool transpose)
+bool flow_bitmap_float_pivoting_composite_linear_over_srgb(flow_context* context, flow_bitmap_float* src,
+                                                           uint32_t from_row, flow_bitmap_bgra* dest, uint32_t dest_row,
+                                                           uint32_t row_count, bool transpose)
 {
     if (transpose ? src->w != dest->h : src->w != dest->w) {
         // TODO: Add more bounds checks
-        CONTEXT_error(context, Invalid_internal_state);
+        FLOW_error(context, flow_status_Invalid_internal_state);
         return false;
     }
 
-    if (src->alpha_meaningful && src->channels == 4 && dest->compositing_mode == Blend_with_matte) {
+    if (src->alpha_meaningful && src->channels == 4
+        && dest->compositing_mode == flow_bitmap_compositing_blend_with_matte) {
         if (!BitmapFloat_blend_matte(context, src, from_row, row_count, dest->matte_color)) {
-            CONTEXT_add_to_callstack(context);
+            FLOW_add_to_callstack(context);
             return false;
         }
         src->alpha_premultiplied = false;
     }
-    if (src->channels == 4 && src->alpha_premultiplied && dest->compositing_mode != Blend_with_self) {
+    if (src->channels == 4 && src->alpha_premultiplied
+        && dest->compositing_mode != flow_bitmap_compositing_blend_with_self) {
         // Demultiply
-        if (!BitmapFloat_demultiply_alpha(context, src, from_row, row_count)) {
-            CONTEXT_add_to_callstack(context);
+        if (!flow_bitmap_float_demultiply_alpha(context, src, from_row, row_count)) {
+            FLOW_add_to_callstack(context);
             return false;
         }
     }
 
-    bool can_compose = dest->compositing_mode == Blend_with_self && src->alpha_meaningful && src->channels == 4;
+    bool can_compose = dest->compositing_mode == flow_bitmap_compositing_blend_with_self && src->alpha_meaningful
+                       && src->channels == 4;
 
     if (can_compose && !src->alpha_premultiplied) {
         // Something went wrong. We should always have alpha premultiplied.
-        CONTEXT_error(context, Invalid_internal_state);
+        FLOW_error(context, flow_status_Invalid_internal_state);
         return false;
     }
 
@@ -319,15 +323,15 @@ bool BitmapFloat_pivoting_composite_linear_over_srgb(Context* context, BitmapFlo
             for (int i = 0; i < tiles; i++) {
                 if (!BitmapFloat_compose_linear_over_srgb(context, src, from_row, dest, dest_row, row_count,
                                                           i * tile_width, tile_width, transpose)) {
-                    CONTEXT_add_to_callstack(context);
+                    FLOW_add_to_callstack(context);
                     return false;
                 }
             }
         } else {
             for (int i = 0; i < tiles; i++) {
-                if (!BitmapFloat_copy_linear_over_srgb(context, src, from_row, dest, dest_row, row_count,
-                                                       i * tile_width, tile_width, transpose)) {
-                    CONTEXT_add_to_callstack(context);
+                if (!flow_bitmap_float_copy_linear_over_srgb(context, src, from_row, dest, dest_row, row_count,
+                                                             i * tile_width, tile_width, transpose)) {
+                    FLOW_add_to_callstack(context);
                     return false;
                 }
             }
@@ -336,13 +340,13 @@ bool BitmapFloat_pivoting_composite_linear_over_srgb(Context* context, BitmapFlo
         if (can_compose) {
             if (!BitmapFloat_compose_linear_over_srgb(context, src, from_row, dest, dest_row, row_count, 0, src->w,
                                                       transpose)) {
-                CONTEXT_add_to_callstack(context);
+                FLOW_add_to_callstack(context);
                 return false;
             }
         } else {
-            if (!BitmapFloat_copy_linear_over_srgb(context, src, from_row, dest, dest_row, row_count, 0, src->w,
-                                                   transpose)) {
-                CONTEXT_add_to_callstack(context);
+            if (!flow_bitmap_float_copy_linear_over_srgb(context, src, from_row, dest, dest_row, row_count, 0, src->w,
+                                                         transpose)) {
+                FLOW_add_to_callstack(context);
                 return false;
             }
         }

@@ -11,15 +11,15 @@
 
 #include "fastscaling_private.h"
 
-bool BitmapFloat_linear_to_luv_rows(Context* context, BitmapFloat* bit, const uint32_t start_row,
-                                    const uint32_t row_count)
+bool flow_bitmap_float_linear_to_luv_rows(flow_context* context, flow_bitmap_float* bit, const uint32_t start_row,
+                                          const uint32_t row_count)
 {
     if (!(start_row + row_count <= bit->h)) {
-        CONTEXT_error(context, Invalid_internal_state); // Don't access rows past the end of the bitmap
+        FLOW_error(context, flow_status_Invalid_internal_state); // Don't access rows past the end of the bitmap
         return false;
     }
     if ((bit->w * bit->channels) != bit->float_stride) {
-        CONTEXT_error(context, Invalid_internal_state); // This algorithm can't handle padding, if present
+        FLOW_error(context, flow_status_Invalid_internal_state); // This algorithm can't handle padding, if present
         return false;
     }
     float* start_at = bit->float_stride * start_row + bit->pixels;
@@ -32,15 +32,15 @@ bool BitmapFloat_linear_to_luv_rows(Context* context, BitmapFloat* bit, const ui
     return true;
 }
 
-bool BitmapFloat_luv_to_linear_rows(Context* context, BitmapFloat* bit, const uint32_t start_row,
-                                    const uint32_t row_count)
+bool flow_bitmap_float_luv_to_linear_rows(flow_context* context, flow_bitmap_float* bit, const uint32_t start_row,
+                                          const uint32_t row_count)
 {
     if (!(start_row + row_count <= bit->h)) {
-        CONTEXT_error(context, Invalid_internal_state);
+        FLOW_error(context, flow_status_Invalid_internal_state);
         return false;
     }
     if ((bit->w * bit->channels) != bit->float_stride) {
-        CONTEXT_error(context, Invalid_internal_state);
+        FLOW_error(context, flow_status_Invalid_internal_state);
         return false;
     }
     float* start_at = bit->float_stride * start_row + bit->pixels;
@@ -53,11 +53,11 @@ bool BitmapFloat_luv_to_linear_rows(Context* context, BitmapFloat* bit, const ui
     return true;
 }
 
-bool BitmapBgra_apply_color_matrix(Context* context, BitmapBgra* bmp, const uint32_t row, const uint32_t count,
-                                   float* const __restrict m[5])
+bool flow_bitmap_bgra_apply_color_matrix(flow_context* context, flow_bitmap_bgra* bmp, const uint32_t row,
+                                         const uint32_t count, float* const __restrict m[5])
 {
     const uint32_t stride = bmp->stride;
-    const uint32_t ch = BitmapPixelFormat_bytes_per_pixel(bmp->fmt);
+    const uint32_t ch = flow_pixel_format_bytes_per_pixel(bmp->fmt);
     const uint32_t w = bmp->w;
     const uint32_t h = umin(row + count, bmp->h);
     if (ch == 4) {
@@ -97,14 +97,14 @@ bool BitmapBgra_apply_color_matrix(Context* context, BitmapBgra* bmp, const uint
                 newdata[2] = r;
             }
     } else {
-        CONTEXT_error(context, Unsupported_pixel_format);
+        FLOW_error(context, flow_status_Unsupported_pixel_format);
         return false;
     }
     return true;
 }
 
-bool BitmapFloat_apply_color_matrix(Context* context, BitmapFloat* bmp, const uint32_t row, const uint32_t count,
-                                    float* m[5])
+bool flow_bitmap_float_apply_color_matrix(flow_context* context, flow_bitmap_float* bmp, const uint32_t row,
+                                          const uint32_t count, float** m)
 {
     const uint32_t stride = bmp->float_stride;
     const uint32_t ch = bmp->channels;
@@ -152,20 +152,20 @@ bool BitmapFloat_apply_color_matrix(Context* context, BitmapFloat* bmp, const ui
         return true;
     }
     default: {
-        CONTEXT_error(context, Unsupported_pixel_format);
+        FLOW_error(context, flow_status_Unsupported_pixel_format);
         return false;
     }
     }
 }
 
-bool BitmapBgra_populate_histogram(Context* context, BitmapBgra* bmp, uint64_t* histograms,
-                                   const uint32_t histogram_size_per_channel, const uint32_t histogram_count,
-                                   uint64_t* pixels_sampled)
+bool flow_bitmap_bgra_populate_histogram(flow_context* context, flow_bitmap_bgra* bmp, uint64_t* histograms,
+                                         uint32_t histogram_size_per_channel, uint32_t histogram_count,
+                                         uint64_t* pixels_sampled)
 {
     const uint32_t row = 0;
     const uint32_t count = bmp->h;
     const uint32_t stride = bmp->stride;
-    const uint32_t ch = BitmapPixelFormat_bytes_per_pixel(bmp->fmt);
+    const uint32_t ch = flow_pixel_format_bytes_per_pixel(bmp->fmt);
     const uint32_t w = bmp->w;
     const uint32_t h = umin(row + count, bmp->h);
 
@@ -203,13 +203,13 @@ bool BitmapBgra_populate_histogram(Context* context, BitmapBgra* bmp, uint64_t* 
                 }
             }
         } else {
-            CONTEXT_error(context, Invalid_internal_state);
+            FLOW_error(context, flow_status_Invalid_internal_state);
             return false;
         }
 
         *(pixels_sampled) = (h - row) * w;
     } else {
-        CONTEXT_error(context, Unsupported_pixel_format);
+        FLOW_error(context, flow_status_Unsupported_pixel_format);
         return false;
     }
     return true;
@@ -219,7 +219,7 @@ bool BitmapBgra_populate_histogram(Context* context, BitmapBgra* bmp, uint64_t* 
 
 #ifdef EXPOSE_SIGMOID
 
-static void Context_sigmoid_internal(Context* c, float x_coefficent, float x_offset, float constant)
+static void Context_sigmoid_internal(flow_context* c, float x_coefficent, float x_offset, float constant)
 {
     c->colorspace.sigmoid.constant = constant; // 1
     c->colorspace.sigmoid.x_coeff = x_coefficent; // 2
@@ -239,12 +239,12 @@ static float derive_constant(float x, float slope, float sign)
 
 #endif
 
-void Context_set_floatspace(Context* context, WorkingFloatspace space, float a, float b, float c)
+void flow_context_set_floatspace(flow_context* context, flow_working_floatspace space, float a, float b, float c)
 {
     context->colorspace.floatspace = space;
 
-    context->colorspace.apply_srgb = (space & Floatspace_linear) > 0;
-    context->colorspace.apply_gamma = (space & Floatspace_gamma) > 0;
+    context->colorspace.apply_srgb = (space & flow_working_floatspace_linear) > 0;
+    context->colorspace.apply_gamma = (space & flow_working_floatspace_gamma) > 0;
 
 #ifdef EXPOSE_SIGMOID
     context->colorspace.apply_sigmoid = (space & Floatspace_sigmoid) > 0;
@@ -266,6 +266,12 @@ void Context_set_floatspace(Context* context, WorkingFloatspace space, float a, 
     }
 }
 
-float Context_byte_to_floatspace(Context* c, uint8_t srgb_value) { return Context_srgb_to_floatspace(c, srgb_value); }
+float flow_context_byte_to_floatspace(flow_context* c, uint8_t srgb_value)
+{
+    return Context_srgb_to_floatspace(c, srgb_value);
+}
 
-uint8_t Context_floatspace_to_byte(Context* c, float space_value) { return Context_floatspace_to_srgb(c, space_value); }
+uint8_t flow_context_floatspace_to_byte(flow_context* c, float space_value)
+{
+    return Context_floatspace_to_srgb(c, space_value);
+}

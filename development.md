@@ -35,7 +35,7 @@ clang-format -i {lib,tests,.}/*.{c,h,cpp,hpp}
 3. Edit `compiler.version` in ~/.conan/conan.conf 
 
 Per https://github.com/conan-io/conan/issues/178
-Destroy the ./build directory before trying again.
+Destroy the ./build directory before trying again.(`rm -rf build`)
 
 
 ## Generating animated gifs of graph progression.
@@ -60,20 +60,20 @@ Destroy the ./build directory before trying again.
 //TODO: Add dispose hooks?
 
 //ImageSourceBufferReader
-size_t get_length(void * token, Context * c){
+size_t get_length(void * token, flow_context * c){
     //Get size of image from storage based on token.
 }
-size_t copy_to(uint8_t * buffer, size_t buffer_size, void * token, Context * c){
+size_t copy_to(uint8_t * buffer, size_t buffer_size, void * token, flow_context * c){
     //Copy image bytes to destination buffer, returning actual number of bytes copied (in case get_length overestimated)
     //May be called with a smaller buffer if only the header is required. May be called multiple times; caching is suggested.
 }
 
 
 //ImageSourceSequentialReader
-size_t get_length(void * token, Context * c){
+size_t get_length(void * token, flow_context * c){
     //Get size of image from storage based on token.
 }
-size_t read_bytes(uint8_t * buffer, size_t buffer_size, void * token, Context * c){
+size_t read_bytes(uint8_t * buffer, size_t buffer_size, void * token, flow_context * c){
     //Copy next set of image bytes to destination buffer, returning actual number of bytes copied (in case get_length overestimated)
     //May be called many times.
 }
@@ -96,13 +96,13 @@ size_t custom_length(void * token){
 }
 
 //ImageSourcePeek
-size_t peek_bytes(void *buffer, size_t requested_byte_count, int32_t * more_bytes_exist, void * token, Context * c){
+size_t peek_bytes(void *buffer, size_t requested_byte_count, int32_t * more_bytes_exist, void * token, flow_context * c){
 //Returns actual byte count, which may be less than requested, either because fewer header bytes were cached by the host,
 //or because the file is shorter. Check the more_bytes_exist flag  (0 - all file bytes sent, 1 - partial file sent)
 }
 
 // ImageSourceWriter
-int write_bytes(void *buffer, size_t size, void * token, Context * c){
+int write_bytes(void *buffer, size_t size, void * token, flow_context * c){
 }
 
 
@@ -127,7 +127,7 @@ image_b_buffer.copy_to = copy_to;
 // Color profile is orthogonal to orientation data
 //
 
-Context * c = Context_create(); if (c == NULL) return 1;
+flow_context * c = flow_context_create(); if (c == NULL) return 1;
 
 
 //We construct a frame graph using numeric placeholders for input and output. 
@@ -153,7 +153,7 @@ ImageSource_add_io(c, image_c, io, /* file ptr */);
 
 
 //Wait, is it easier to run a binary search over input image sizes, or to implement constraint algebra over the graph? Or can the former solve for more than 1 variable?
-ImageSource * image_simulation = ImageSource_create_with_dimensions(c, 200,100, Bgra32);
+ImageSource * image_simulation = ImageSource_create_with_dimensions(c, 200,100, flow_bgra32);
 
 ImageJob * sim = ImageJob_create(c);
 int useful_width;
@@ -164,7 +164,7 @@ ImageJob * job = ImageJob_create(c);
 
 //coder and decoder instances are local to the image jobs
 
-if (Context_has_error(c)){
+if (flow_context_has_error(c)){
     //TODO: propagate error details
     Context_destroy(c);
     return 1;
@@ -174,7 +174,7 @@ ImageJob_add_primary_source(c, job, image_a); //These can be called with null Im
 ImageJob_add_secondary_source(c, job, image_b);
 ImageJob_add_target(c, job, image_c);
 
-StatusCode result = ImageJob_read_sources_info(c, job);
+flow_status_code result = ImageJob_read_sources_info(c, job);
 if (result == Ok){
     ImageSource_get_frame_count(c,image_a);
     ImageSource_get_page_count(c,image_a);
@@ -204,7 +204,7 @@ if (result == Ok){
 
 //If using a managed language, make sure you pin your reader/writer structs & functions.
 ImageJob_destroy(c, job);
-Context_destroy(c); //Destroying the context should ensure any ImageSource caches are freed. 
+flow_context_destroy(c); //Destroying the context should ensure any ImageSource caches are freed. 
 return 0;
 
 ```

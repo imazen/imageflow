@@ -1,23 +1,22 @@
 #include "fastscaling_private.h"
 #include <stdio.h>
 #include <string.h>
-#include <fastscaling.h>
 
 #ifdef _MSC_VER
 #pragma unmanaged
 #endif
 
-int Context_error_reason(Context* context) { return context->error.reason; }
+int flow_context_error_reason(flow_context* context) { return context->error.reason; }
 
-void Context_set_last_error(Context* context, StatusCode code, const char* file, int line)
+void flow_context_set_last_error(flow_context* context, flow_status_code code, const char* file, int line)
 {
-    if (context->error.reason != No_Error) {
+    if (context->error.reason != flow_status_No_Error) {
         // The last error wasn't cleared, lock it down. We prefer the original error.
         context->error.locked = true;
         return;
     }
     context->error.reason = code;
-    Context_add_to_callstack(context, file, line);
+    flow_context_add_to_callstack(context, file, line);
 #ifdef DEBUG
     char buffer[1024];
     fprintf(stderr, "%s:%d Context_set_last_error the error registered was: %s\n", file, line,
@@ -25,7 +24,7 @@ void Context_set_last_error(Context* context, StatusCode code, const char* file,
 #endif
 }
 
-void Context_add_to_callstack(Context* context, const char* file, int line)
+void flow_context_add_to_callstack(flow_context* context, const char* file, int line)
 {
     if (context->error.callstack_count < context->error.callstack_capacity && !context->error.locked) {
         context->error.callstack[context->error.callstack_count].file = file;
@@ -34,42 +33,42 @@ void Context_add_to_callstack(Context* context, const char* file, int line)
     }
 }
 
-static size_t Context_size_of_context(Context* context)
+static size_t Context_size_of_context(flow_context* context)
 {
-    return context->heap_tracking.total_slots * sizeof(struct HeapAllocation)
-           + context->log.capacity * sizeof(ProfilingEntry) + sizeof(struct ContextStruct);
+    return context->heap_tracking.total_slots * sizeof(struct flow_heap_allocation)
+           + context->log.capacity * sizeof(flow_profiling_entry) + sizeof(struct flow_context_struct);
 }
 
-void Context_clear_error(Context* context)
+void flow_context_clear_error(flow_context* context)
 {
     context->error.callstack_count = 0;
     context->error.callstack[0].file = NULL;
     context->error.callstack[0].line = -1;
-    context->error.reason = No_Error;
+    context->error.reason = flow_status_No_Error;
     context->error.locked = false;
 }
 
-bool Context_has_error(Context* context) { return context->error.reason != No_Error; }
+bool flow_context_has_error(flow_context* context) { return context->error.reason != flow_status_No_Error; }
 
-const char* TheStatus = "Status code lookup not implemented";
-static const char* status_code_to_string(StatusCode code) { return TheStatus; }
+const char* flow_status_code_lookup_not_implemented = "Status code lookup not implemented";
+static const char* status_code_to_string(flow_status_code code) { return flow_status_code_lookup_not_implemented; }
 
-bool Context_print_and_exit_if_err(Context* c)
+bool flow_context_print_and_exit_if_err(flow_context* c)
 {
-    if (Context_has_error(c)) {
-        Context_print_error_to(c, stderr);
+    if (flow_context_has_error(c)) {
+        flow_context_print_error_to(c, stderr);
         return true;
     }
     return false;
 }
 
-void Context_print_error_to(Context* c, FILE* stream)
+void flow_context_print_error_to(flow_context* c, FILE* stream)
 {
     char buffer[1024];
     fprintf(stream, "Error code %d: %s\n", c->error.reason, status_code_to_string(c->error.reason));
-    fprintf(stream, "%s\n", Context_stacktrace(c, buffer, sizeof(buffer)));
+    fprintf(stream, "%s\n", flow_context_stacktrace(c, buffer, sizeof(buffer)));
 }
-const char* Context_error_message(Context* context, char* buffer, size_t buffer_size)
+const char* flow_context_error_message(flow_context* context, char* buffer, size_t buffer_size)
 {
     snprintf(buffer, buffer_size, "Error in file: %s line: %d status_code: %d reason: %s",
              context->error.callstack[0].file, context->error.callstack[0].line, context->error.reason,
@@ -78,7 +77,7 @@ const char* Context_error_message(Context* context, char* buffer, size_t buffer_
     return buffer;
 }
 
-const char* Context_stacktrace(Context* context, char* buffer, size_t buffer_size)
+const char* flow_context_stacktrace(flow_context* context, char* buffer, size_t buffer_size)
 {
     size_t remaining_space = buffer_size - 1; // For null character
     char* line = buffer;
@@ -100,7 +99,7 @@ const char* Context_stacktrace(Context* context, char* buffer, size_t buffer_siz
     return buffer;
 }
 
-static bool expand_heap_tracking(Context* context)
+static bool expand_heap_tracking(flow_context* context)
 {
     size_t growth_factor = 2;
     size_t growth_divisor = 1;
@@ -111,16 +110,16 @@ static bool expand_heap_tracking(Context* context)
     if (new_size < 64)
         new_size = 64;
 
-    struct HeapAllocation* allocs = (struct HeapAllocation*)context->heap._calloc(
-        context, new_size, sizeof(struct HeapAllocation), __FILE__, __LINE__);
+    struct flow_heap_allocation* allocs = (struct flow_heap_allocation*)context->heap._calloc(
+        context, new_size, sizeof(struct flow_heap_allocation), __FILE__, __LINE__);
     if (allocs == NULL) {
-        CONTEXT_error(context, Out_of_memory);
+        FLOW_error(context, flow_status_Out_of_memory);
         return false;
     }
 
-    struct HeapAllocation* old = context->heap_tracking.allocs;
+    struct flow_heap_allocation* old = context->heap_tracking.allocs;
     if (old != NULL) {
-        memcpy(allocs, old, context->heap_tracking.total_slots * sizeof(struct HeapAllocation));
+        memcpy(allocs, old, context->heap_tracking.total_slots * sizeof(struct flow_heap_allocation));
     }
 
     context->heap_tracking.allocs = allocs;
@@ -131,16 +130,16 @@ static bool expand_heap_tracking(Context* context)
     return true;
 }
 
-static bool Context_memory_track(Context* context, void* ptr, size_t byte_count, const char* file, int line)
+static bool Context_memory_track(flow_context* context, void* ptr, size_t byte_count, const char* file, int line)
 {
     if (context->heap_tracking.next_free_slot == context->heap_tracking.total_slots) {
         if (!expand_heap_tracking(context)) {
-            CONTEXT_error_return(context);
+            FLOW_error_return(context);
         }
     }
-    struct HeapAllocation* next = &context->heap_tracking.allocs[context->heap_tracking.next_free_slot];
+    struct flow_heap_allocation* next = &context->heap_tracking.allocs[context->heap_tracking.next_free_slot];
     if (next->ptr != NULL) {
-        CONTEXT_error(context, Invalid_internal_state);
+        FLOW_error(context, flow_status_Invalid_internal_state);
         return false;
     }
     next->allocated_by = file;
@@ -168,11 +167,11 @@ static bool Context_memory_track(Context* context, void* ptr, size_t byte_count,
     context->heap_tracking.next_free_slot = context->heap_tracking.total_slots;
     return true;
 }
-static void Context_memory_untrack(Context* context, void* ptr, const char* file, int line)
+static void Context_memory_untrack(flow_context* context, void* ptr, const char* file, int line)
 {
     for (int64_t i = context->heap_tracking.total_slots - 1; i >= 0; i--) {
         if (context->heap_tracking.allocs[i].ptr == ptr) {
-            struct HeapAllocation* alloc = &context->heap_tracking.allocs[i];
+            struct flow_heap_allocation* alloc = &context->heap_tracking.allocs[i];
 
             context->heap_tracking.allocations_net--;
             context->heap_tracking.bytes_allocated_net -= alloc->bytes;
@@ -196,27 +195,28 @@ static void Context_memory_untrack(Context* context, void* ptr, const char* file
 #endif
 }
 
-void Context_print_memory_info(Context* context)
+void flow_context_print_memory_info(flow_context* context)
 {
     size_t meta_bytes = Context_size_of_context(context);
-    fprintf(stderr, "Context %p is using %zu bytes for metadata, %zu bytes for %zu allocations (total bytes %zu)\n",
+    fprintf(stderr,
+            "flow_context %p is using %zu bytes for metadata, %zu bytes for %zu allocations (total bytes %zu)\n",
             (void*)context, meta_bytes, context->heap_tracking.bytes_allocated_net,
             context->heap_tracking.allocations_net, context->heap_tracking.bytes_allocated_net + meta_bytes);
-    fprintf(stderr,
-            "Context %p peak usage %zu bytes total, %zu allocations. %zu bytes from %zu allocations freed explicitly\n",
+    fprintf(stderr, "flow_context %p peak usage %zu bytes total, %zu allocations. %zu bytes from %zu allocations freed "
+                    "explicitly\n",
             (void*)context, meta_bytes + context->heap_tracking.bytes_allocated_net_peak,
             context->heap_tracking.allocations_net_peak, context->heap_tracking.bytes_freed,
             context->heap_tracking.allocations_gross - context->heap_tracking.allocations_net);
 }
-void Context_free_allocated_memory(Context* context)
+void flow_context_free_all_allocations(flow_context* context)
 {
 
-    //    fprintf(stderr, "Context_free_allocated_memory:\n");
-    //    Context_print_memory_info(context);
+    //    fprintf(stderr, "flow_context_free_all_allocations:\n");
+    //    flow_context_print_memory_info(context);
     for (size_t i = 0; i < context->heap_tracking.total_slots; i++) {
         if (context->heap_tracking.allocs[i].ptr != NULL) {
 
-            struct HeapAllocation* alloc = &context->heap_tracking.allocs[i];
+            struct flow_heap_allocation* alloc = &context->heap_tracking.allocs[i];
 
             // Uncomment to debug double-frees
             // fprintf(stderr, "Freeing %zu bytes at %p, allocated at %s:%u\n",alloc->bytes,  alloc->ptr,
@@ -242,7 +242,8 @@ void Context_free_allocated_memory(Context* context)
     }
 }
 
-void* Context_calloc(Context* context, size_t instance_count, size_t instance_size, const char* file, int line)
+void* flow_context_calloc(flow_context* context, size_t instance_count, size_t instance_size, const char* file,
+                          int line)
 {
 #ifdef DEBUG
     fprintf(stderr, "%s:%d calloc of %zu * %zu bytes\n", file, line, instance_count, instance_size);
@@ -258,7 +259,7 @@ void* Context_calloc(Context* context, size_t instance_count, size_t instance_si
     return ptr;
 }
 
-void* Context_malloc(Context* context, size_t byte_count, const char* file, int line)
+void* flow_context_malloc(flow_context* context, size_t byte_count, const char* file, int line)
 {
 #ifdef DEBUG
     fprintf(stderr, "%s:%d malloc of %zu bytes\n", file, line, byte_count);
@@ -273,7 +274,7 @@ void* Context_malloc(Context* context, size_t byte_count, const char* file, int 
     return ptr;
 }
 
-void* Context_realloc(Context* context, void* old_pointer, size_t new_byte_count, const char* file, int line)
+void* flow_context_realloc(flow_context* context, void* old_pointer, size_t new_byte_count, const char* file, int line)
 {
 #ifdef DEBUG
     fprintf(stderr, "%s:%d realloc of %zu bytes\n", file, line, byte_count);
@@ -289,7 +290,7 @@ void* Context_realloc(Context* context, void* old_pointer, size_t new_byte_count
     return ptr;
 }
 
-void Context_free(Context* context, void* pointer, const char* file, int line)
+void flow_context_free(flow_context* context, void* pointer, const char* file, int line)
 {
     if (pointer == NULL)
         return;
@@ -297,28 +298,29 @@ void Context_free(Context* context, void* pointer, const char* file, int line)
     context->heap._free(context, pointer, file, line);
 }
 
-void Context_free_static_caches(void) {}
+void flow_context_free_static_caches(void) {}
 
-static void* DefaultHeapManager_calloc(struct ContextStruct* context, size_t count, size_t element_size,
+static void* DefaultHeapManager_calloc(struct flow_context_struct* context, size_t count, size_t element_size,
                                        const char* file, int line)
 {
     return calloc(count, element_size);
 }
-static void* DefaultHeapManager_malloc(struct ContextStruct* context, size_t byte_count, const char* file, int line)
+static void* DefaultHeapManager_malloc(struct flow_context_struct* context, size_t byte_count, const char* file,
+                                       int line)
 {
     return malloc(byte_count);
 }
-static void* DefaultHeapManager_realloc(struct ContextStruct* context, void* old_pointer, size_t new_byte_count,
+static void* DefaultHeapManager_realloc(struct flow_context_struct* context, void* old_pointer, size_t new_byte_count,
                                         const char* file, int line)
 {
     return realloc(old_pointer, new_byte_count);
 }
-static void DefaultHeapManager_free(struct ContextStruct* context, void* pointer, const char* file, int line)
+static void DefaultHeapManager_free(struct flow_context_struct* context, void* pointer, const char* file, int line)
 {
     free(pointer);
 }
 
-void DefaultHeapManager_initialize(HeapManager* manager)
+void flow_default_heap_manager_initialize(flow_heap_manager* manager)
 {
     manager->_calloc = DefaultHeapManager_calloc;
     manager->_malloc = DefaultHeapManager_malloc;
@@ -327,7 +329,7 @@ void DefaultHeapManager_initialize(HeapManager* manager)
     manager->_context_terminate = NULL;
 }
 
-static void Context_heap_tracking_initialize(Context* context)
+static void Context_heap_tracking_initialize(flow_context* context)
 {
 
     context->heap_tracking.total_slots = 0;
@@ -342,7 +344,7 @@ static void Context_heap_tracking_initialize(Context* context)
     context->heap_tracking.bytes_freed = 0;
 }
 
-void Context_initialize(Context* context)
+void flow_context_initialize(flow_context* context)
 {
     context->log.log = NULL;
     context->log.capacity = 0;
@@ -352,14 +354,14 @@ void Context_initialize(Context* context)
     context->error.callstack[0].file = NULL;
     context->error.callstack[0].line = -1;
     // memset(context->error.callstack, 0, sizeof context->error.callstack);
-    context->error.reason = No_Error;
+    context->error.reason = flow_status_No_Error;
     context->error.locked = false;
-    DefaultHeapManager_initialize(&context->heap);
+    flow_default_heap_manager_initialize(&context->heap);
     Context_heap_tracking_initialize(context);
-    Context_set_floatspace(context, Floatspace_as_is, 0.0f, 0.0f, 0.0f);
+    flow_context_set_floatspace(context, flow_working_floatspace_as_is, 0.0f, 0.0f, 0.0f);
 }
 
-static void Context_heap_tracking_terminate(Context* context)
+static void Context_heap_tracking_terminate(flow_context* context)
 {
 
     if (context->heap_tracking.allocs != NULL) {
@@ -368,86 +370,86 @@ static void Context_heap_tracking_terminate(Context* context)
     Context_heap_tracking_initialize(context);
 }
 
-Context* Context_create(void)
+flow_context* flow_context_create(void)
 {
-    Context* c = (Context*)malloc(sizeof(Context));
+    flow_context* c = (flow_context*)malloc(sizeof(flow_context));
     if (c != NULL) {
-        Context_initialize(c);
+        flow_context_initialize(c);
     }
     return c;
 }
 
-void Context_terminate(Context* context)
+void flow_context_terminate(flow_context* context)
 {
     if (context != NULL) {
         if (context->heap._context_terminate != NULL) {
             context->heap._context_terminate(context);
         } else {
-            Context_free_allocated_memory(context);
+            flow_context_free_all_allocations(context);
         }
-        context->log.log = NULL; // We allocated .log with CONTEXT_malloc. It's freed with everything else
+        context->log.log = NULL; // We allocated .log with FLOW_malloc. It's freed with everything else
         Context_heap_tracking_terminate(context);
     }
 }
-void Context_destroy(Context* context)
+void flow_context_destroy(flow_context* context)
 {
-    Context_terminate(context);
+    flow_context_terminate(context);
     free(context);
 }
 
-bool Context_enable_profiling(Context* context, uint32_t default_capacity)
+bool flow_context_enable_profiling(flow_context* context, uint32_t default_capacity)
 {
     if (context->log.log == NULL) {
-        context->log.log = (ProfilingEntry*)CONTEXT_malloc(context, sizeof(ProfilingEntry) * default_capacity);
+        context->log.log = (flow_profiling_entry*)FLOW_malloc(context, sizeof(flow_profiling_entry) * default_capacity);
         if (context->log.log == NULL) {
-            CONTEXT_error(context, Out_of_memory);
+            FLOW_error(context, flow_status_Out_of_memory);
             return false;
         } else {
             context->log.capacity = default_capacity;
             context->log.count = 0;
         }
-        context->log.ticks_per_second = get_profiler_ticks_per_second();
+        context->log.ticks_per_second = flow_get_profiler_ticks_per_second();
 
     } else {
         // TODO: grow and copy array
-        CONTEXT_error(context, Invalid_internal_state);
+        FLOW_error(context, flow_status_Invalid_internal_state);
         return false;
     }
     return true;
 }
 
-void Context_profiler_start(Context* context, const char* name, bool allow_recursion)
+void flow_context_profiler_start(flow_context* context, const char* name, bool allow_recursion)
 {
     if (context->log.log == NULL)
         return;
-    ProfilingEntry* current = &(context->log.log[context->log.count]);
+    flow_profiling_entry* current = &(context->log.log[context->log.count]);
     context->log.count++;
     if (context->log.count >= context->log.capacity)
         return;
 
-    current->time = get_high_precision_ticks();
+    current->time = flow_get_high_precision_ticks();
     current->name = name;
-    current->flags = allow_recursion ? Profiling_start_allow_recursion : Profiling_start;
+    current->flags = allow_recursion ? flow_profiling_entry_start_allow_recursion : flow_profiling_entry_start;
 }
 
-void Context_profiler_stop(Context* context, const char* name, bool assert_started, bool stop_children)
+void flow_context_profiler_stop(flow_context* context, const char* name, bool assert_started, bool stop_children)
 {
     if (context->log.log == NULL)
         return;
-    ProfilingEntry* current = &(context->log.log[context->log.count]);
+    flow_profiling_entry* current = &(context->log.log[context->log.count]);
     context->log.count++;
     if (context->log.count >= context->log.capacity)
         return;
 
-    current->time = get_high_precision_ticks();
+    current->time = flow_get_high_precision_ticks();
     current->name = name;
-    current->flags = assert_started ? Profiling_stop_assert_started : Profiling_stop;
+    current->flags = assert_started ? flow_profiling_entry_stop_assert_started : flow_profiling_entry_stop;
     if (stop_children) {
-        current->flags = (ProfilingEntryFlags)(current->flags | Profiling_stop_children);
+        current->flags = (flow_profiling_entry_flags)(current->flags | flow_profiling_entry_stop_children);
     }
 }
 
-ProfilingLog* Context_get_profiler_log(Context* context) { return &context->log; }
+flow_profiling_log* flow_context_get_profiler_log(flow_context* context) { return &context->log; }
 
 /* Aligned allocations
 

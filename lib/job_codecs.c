@@ -18,11 +18,11 @@ struct flow_job_png_decoder_state {
     size_t pixel_buffer_size;
 };
 
-static bool flow_job_png_decoder_reset(Context* c, struct flow_job_png_decoder_state* state)
+static bool flow_job_png_decoder_reset(flow_context* c, struct flow_job_png_decoder_state* state)
 {
 
     if (state->stage == flow_job_png_decoder_stage_FinishRead) {
-        CONTEXT_free(c, state->pixel_buffer);
+        FLOW_free(c, state->pixel_buffer);
     }
     memset(&state->image, 0, sizeof state->image);
     state->image.version = PNG_IMAGE_VERSION;
@@ -32,15 +32,15 @@ static bool flow_job_png_decoder_reset(Context* c, struct flow_job_png_decoder_s
     state->stage = flow_job_png_decoder_stage_NotStarted;
     return true;
 }
-static bool flow_job_png_decoder_BeginRead(Context* c, struct flow_job_png_decoder_state* state)
+static bool flow_job_png_decoder_BeginRead(flow_context* c, struct flow_job_png_decoder_state* state)
 {
     if (state->stage != flow_job_png_decoder_stage_NotStarted) {
-        CONTEXT_error(c, Invalid_internal_state);
+        FLOW_error(c, flow_status_Invalid_internal_state);
         return false;
     }
     if (!flow_job_png_decoder_reset(c, state)) {
         state->stage = flow_job_png_decoder_stage_Failed;
-        CONTEXT_error_return(c);
+        FLOW_error_return(c);
     }
     state->stage = flow_job_png_decoder_stage_BeginRead;
     if (png_image_begin_read_from_memory(&state->image, state->file_bytes, state->file_bytes_count)) {
@@ -50,23 +50,23 @@ static bool flow_job_png_decoder_BeginRead(Context* c, struct flow_job_png_decod
         return true;
     } else {
         state->stage = flow_job_png_decoder_stage_Failed;
-        CONTEXT_error(c, Invalid_argument); // TODO
+        FLOW_error(c, flow_status_Invalid_argument); // TODO
         return false;
     }
 }
 
-static bool flow_job_png_decoder_FinishRead(Context* c, struct flow_job_png_decoder_state* state)
+static bool flow_job_png_decoder_FinishRead(flow_context* c, struct flow_job_png_decoder_state* state)
 {
     if (state->stage != flow_job_png_decoder_stage_BeginRead) {
-        CONTEXT_error(c, Invalid_internal_state);
+        FLOW_error(c, flow_status_Invalid_internal_state);
         return false;
     }
     // We let the caller create the buffer
-    //    state->pixel_buffer =  (png_bytep)CONTEXT_calloc (c, state->pixel_buffer_size, sizeof(png_bytep));
+    //    state->pixel_buffer =  (png_bytep)FLOW_calloc (c, state->pixel_buffer_size, sizeof(png_bytep));
     if (state->pixel_buffer == NULL) {
         png_image_free(&state->image);
         state->stage = flow_job_png_decoder_stage_Failed;
-        CONTEXT_error(c, Out_of_memory);
+        FLOW_error(c, flow_status_Out_of_memory);
         return false;
     }
 
@@ -77,27 +77,27 @@ static bool flow_job_png_decoder_FinishRead(Context* c, struct flow_job_png_deco
         return true;
     } else {
         state->stage = flow_job_png_decoder_stage_Failed;
-        CONTEXT_free(c, state->pixel_buffer);
+        FLOW_free(c, state->pixel_buffer);
         fprintf(stderr, "png_image_finish_read: %s\n", state->image.message);
-        CONTEXT_error(c, Invalid_argument); // TODO
+        FLOW_error(c, flow_status_Invalid_argument); // TODO
         return false;
     }
 }
 
-static void* codec_aquire_decode_png_on_buffer(Context* c, struct flow_job* job,
+static void* codec_aquire_decode_png_on_buffer(flow_context* c, struct flow_job* job,
                                                struct flow_job_resource_buffer* buffer)
 {
     // flow_job_png_decoder_state
     if (buffer->codec_state == NULL) {
         struct flow_job_png_decoder_state* state
-            = (struct flow_job_png_decoder_state*)CONTEXT_malloc(c, sizeof(struct flow_job_png_decoder_state));
+            = (struct flow_job_png_decoder_state*)FLOW_malloc(c, sizeof(struct flow_job_png_decoder_state));
         if (state == NULL) {
-            CONTEXT_error(c, Out_of_memory);
+            FLOW_error(c, flow_status_Out_of_memory);
             return NULL;
         }
         state->stage = flow_job_png_decoder_stage_Null;
         if (!flow_job_png_decoder_reset(c, state)) {
-            CONTEXT_add_to_callstack(c);
+            FLOW_add_to_callstack(c);
             return NULL;
         }
         state->file_bytes = buffer->buffer;
@@ -108,13 +108,13 @@ static void* codec_aquire_decode_png_on_buffer(Context* c, struct flow_job* job,
     return buffer->codec_state;
 }
 
-static bool png_get_info(Context* c, struct flow_job* job, void* codec_state,
+static bool png_get_info(flow_context* c, struct flow_job* job, void* codec_state,
                          struct decoder_frame_info* decoder_frame_info_ref)
 {
     struct flow_job_png_decoder_state* state = (struct flow_job_png_decoder_state*)codec_state;
     if (state->stage < flow_job_png_decoder_stage_BeginRead) {
         if (!flow_job_png_decoder_BeginRead(c, state)) {
-            CONTEXT_error_return(c);
+            FLOW_error_return(c);
         }
     }
     decoder_frame_info_ref->w = state->image.width;
@@ -122,18 +122,18 @@ static bool png_get_info(Context* c, struct flow_job* job, void* codec_state,
     return true;
 }
 
-static bool png_read_frame(Context* c, struct flow_job* job, void* codec_state, BitmapBgra* canvas)
+static bool png_read_frame(flow_context* c, struct flow_job* job, void* codec_state, flow_bitmap_bgra* canvas)
 {
     struct flow_job_png_decoder_state* state = (struct flow_job_png_decoder_state*)codec_state;
     if (state->stage == flow_job_png_decoder_stage_BeginRead) {
         state->pixel_buffer = canvas->pixels;
         state->pixel_buffer_size = canvas->stride * canvas->h;
         if (!flow_job_png_decoder_FinishRead(c, state)) {
-            CONTEXT_error_return(c);
+            FLOW_error_return(c);
         }
         return true;
     } else {
-        CONTEXT_error(c, Invalid_internal_state);
+        FLOW_error(c, flow_status_Invalid_internal_state);
         return false;
     }
 }
@@ -145,9 +145,9 @@ static void png_write_data_callback(png_structp png_ptr, png_bytep data, png_siz
 
     /* allocate or grow buffer */
     if (p->buffer)
-        p->buffer = (char*)CONTEXT_realloc(p->context, p->buffer, nsize);
+        p->buffer = (char*)FLOW_realloc(p->context, p->buffer, nsize);
     else
-        p->buffer = (char*)CONTEXT_malloc(p->context, nsize);
+        p->buffer = (char*)FLOW_malloc(p->context, nsize);
 
     if (!p->buffer)
         png_error(png_ptr, "Write Error"); // TODO: comprehend png error handling
@@ -158,7 +158,7 @@ static void png_write_data_callback(png_structp png_ptr, png_bytep data, png_siz
 }
 static void png_flush_nullop(png_structp png_ptr) {}
 
-bool png_write_frame(Context* c, struct flow_job* job, void* codec_state, BitmapBgra* frame)
+bool flow_bitmap_bgra_write_png(flow_context* c, struct flow_job* job, void* codec_state, flow_bitmap_bgra* frame)
 {
     struct flow_job_png_encoder_state* state = (struct flow_job_png_encoder_state*)codec_state;
     state->buffer = NULL;
@@ -169,7 +169,7 @@ bool png_write_frame(Context* c, struct flow_job* job, void* codec_state, Bitmap
                                                   NULL); // makepng_error, makepng_warning);
     png_infop info_ptr = NULL;
     if (png_ptr == NULL) {
-        CONTEXT_error(c, Out_of_memory);
+        FLOW_error(c, flow_status_Out_of_memory);
         return false;
     }
     png_set_compression_level(png_ptr, Z_BEST_COMPRESSION);
@@ -182,7 +182,7 @@ bool png_write_frame(Context* c, struct flow_job* job, void* codec_state, Bitmap
         png_error(png_ptr, "OOM allocating info structure"); // TODO: comprehend png error handling
     {
 
-        png_bytepp rows = (png_bytepp)CONTEXT_malloc(c, sizeof(png_bytep) * frame->h);
+        png_bytepp rows = (png_bytepp)FLOW_malloc(c, sizeof(png_bytep) * frame->h);
         unsigned int y;
         for (y = 0; y < frame->h; ++y) {
             rows[y] = frame->pixels + (frame->stride * y);
@@ -197,7 +197,7 @@ bool png_write_frame(Context* c, struct flow_job* job, void* codec_state, Bitmap
 
         png_write_png(png_ptr, info_ptr, PNG_TRANSFORM_BGR, NULL);
 
-        CONTEXT_free(c, rows);
+        FLOW_free(c, rows);
         rows = NULL;
         png_destroy_write_struct(&png_ptr, &info_ptr);
         state->output_resource->buffer = state->buffer;
@@ -207,15 +207,15 @@ bool png_write_frame(Context* c, struct flow_job* job, void* codec_state, Bitmap
     return true;
 }
 
-static void* codec_aquire_encode_png_on_buffer(Context* c, struct flow_job* job,
+static void* codec_aquire_encode_png_on_buffer(flow_context* c, struct flow_job* job,
                                                struct flow_job_resource_buffer* buffer)
 {
     // flow_job_png_decoder_state
     if (buffer->codec_state == NULL) {
         struct flow_job_png_encoder_state* state
-            = (struct flow_job_png_encoder_state*)CONTEXT_malloc(c, sizeof(struct flow_job_png_encoder_state));
+            = (struct flow_job_png_encoder_state*)FLOW_malloc(c, sizeof(struct flow_job_png_encoder_state));
         if (state == NULL) {
-            CONTEXT_error(c, Out_of_memory);
+            FLOW_error(c, flow_status_Out_of_memory);
             return NULL;
         }
         state->buffer = NULL;
@@ -228,7 +228,7 @@ static void* codec_aquire_encode_png_on_buffer(Context* c, struct flow_job* job,
     return buffer->codec_state;
 }
 
-// typedef bool (*codec_dispose_fn)(Context *c, struct flow_job * job, void * codec_state);
+// typedef bool (*codec_dispose_fn)(flow_context *c, struct flow_job * job, void * codec_state);
 
 struct flow_job_codec_definition flow_job_codec_defs[] = { { .type = flow_job_codec_type_decode_png,
                                                              .aquire_on_buffer = codec_aquire_decode_png_on_buffer,
@@ -238,19 +238,19 @@ struct flow_job_codec_definition flow_job_codec_defs[] = { { .type = flow_job_co
                                                              .name = "decode png" },
                                                            { .type = flow_job_codec_type_encode_png,
                                                              .aquire_on_buffer = codec_aquire_encode_png_on_buffer,
-                                                             .write_frame = png_write_frame,
+                                                             .write_frame = flow_bitmap_bgra_write_png,
                                                              .dispose = NULL,
                                                              .name = "encode png" } };
 
 int32_t flow_job_codec_defs_count = sizeof(flow_job_codec_defs) / sizeof(struct flow_job_codec_definition);
-struct flow_job_codec_definition* flow_job_get_codec_definition(Context* c, flow_job_codec_type type)
+struct flow_job_codec_definition* flow_job_get_codec_definition(flow_context* c, flow_job_codec_type type)
 {
     int i = 0;
     for (i = 0; i < flow_job_codec_defs_count; i++) {
         if (flow_job_codec_defs[i].type == type)
             return &flow_job_codec_defs[i];
     }
-    CONTEXT_error(c, Not_implemented);
+    FLOW_error(c, flow_status_Not_implemented);
     return NULL;
 }
 
@@ -263,7 +263,7 @@ struct flow_job_codec_magic_bytes flow_job_codec_magic_bytes_defs[] = { {
 int32_t flow_job_codec_magic_bytes_defs_count = sizeof(flow_job_codec_magic_bytes_defs)
                                                 / sizeof(struct flow_job_codec_magic_bytes);
 
-flow_job_codec_type flow_job_codec_select(Context* c, struct flow_job* job, uint8_t* data, size_t data_bytes)
+flow_job_codec_type flow_job_codec_select(flow_context* c, struct flow_job* job, uint8_t* data, size_t data_bytes)
 {
     int32_t series_ix = 0;
     for (series_ix = 0; series_ix < flow_job_codec_magic_bytes_defs_count; series_ix++) {
@@ -285,42 +285,42 @@ flow_job_codec_type flow_job_codec_select(Context* c, struct flow_job* job, uint
     return flow_job_codec_type_null;
 }
 
-void* flow_job_acquire_decoder_over_buffer(Context* c, struct flow_job* job, struct flow_job_resource_buffer* buffer,
-                                           flow_job_codec_type type)
+void* flow_job_acquire_decoder_over_buffer(flow_context* c, struct flow_job* job,
+                                           struct flow_job_resource_buffer* buffer, flow_job_codec_type type)
 {
 
     struct flow_job_codec_definition* def = flow_job_get_codec_definition(c, type);
     if (def == NULL) {
-        CONTEXT_add_to_callstack(c);
+        FLOW_add_to_callstack(c);
         return NULL;
     }
     return def->aquire_on_buffer(c, job, buffer);
 }
 
-bool flow_job_decoder_get_frame_info(Context* c, struct flow_job* job, void* codec_state, flow_job_codec_type type,
+bool flow_job_decoder_get_frame_info(flow_context* c, struct flow_job* job, void* codec_state, flow_job_codec_type type,
                                      struct decoder_frame_info* decoder_frame_info_ref)
 {
     struct flow_job_codec_definition* def = flow_job_get_codec_definition(c, type);
     if (def == NULL) {
-        CONTEXT_error_return(c);
+        FLOW_error_return(c);
     }
     if (!def->get_frame_info(c, job, codec_state, decoder_frame_info_ref)) {
-        CONTEXT_error_return(c);
+        FLOW_error_return(c);
     }
     return true;
 }
 
-bool flow_job_decoder_read_frame(Context* c, struct flow_job* job, void* codec_state, flow_job_codec_type type,
-                                 BitmapBgra* canvas)
+bool flow_job_decoder_read_frame(flow_context* c, struct flow_job* job, void* codec_state, flow_job_codec_type type,
+                                 flow_bitmap_bgra* canvas)
 {
     struct flow_job_codec_definition* def = flow_job_get_codec_definition(c, type);
     if (def == NULL) {
-        CONTEXT_error_return(c);
+        FLOW_error_return(c);
     }
     if (!def->read_frame(c, job, codec_state, canvas)) {
-        CONTEXT_error_return(c);
+        FLOW_error_return(c);
     }
     return true;
 }
 
-// typedef bool (*codec_dispose_fn)(Context *c, struct flow_job * job, void * codec_state);
+// typedef bool (*codec_dispose_fn)(flow_context *c, struct flow_job * job, void * codec_state);

@@ -10,15 +10,16 @@
 #pragma unmanaged
 #endif
 
-#include "fastscaling.h"
+#include "imageflow.h"
 #include "math_functions.h"
+#include "png.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
 // floating-point bitmap, typically linear RGBA, premultiplied
-typedef struct BitmapFloatStruct {
+typedef struct flow_bitmap_float {
     // buffer width in pixels
     uint32_t w;
     // buffer height in pixels
@@ -38,47 +39,49 @@ typedef struct BitmapFloatStruct {
     bool alpha_premultiplied;
     // If true, the alpha channel holds meaningful data
     bool alpha_meaningful;
-} BitmapFloat;
+} flow_bitmap_float;
 
-/** Context: Heap Manager **/
+/** flow_context: Heap Manager **/
 
-typedef void* (*context_calloc_function)(struct ContextStruct* context, size_t count, size_t element_size,
-                                         const char* file, int line);
-typedef void* (*context_malloc_function)(struct ContextStruct* context, size_t byte_count, const char* file, int line);
+typedef void* (*flow_context_calloc_function)(struct flow_context_struct* context, size_t count, size_t element_size,
+                                              const char* file, int line);
+typedef void* (*flow_context_malloc_function)(struct flow_context_struct* context, size_t byte_count, const char* file,
+                                              int line);
 
-typedef void* (*context_realloc_function)(struct ContextStruct* context, void* old_pointer, size_t new_byte_count,
-                                          const char* file, int line);
-typedef void (*context_free_function)(struct ContextStruct* context, void* pointer, const char* file, int line);
-typedef void (*context_terminate_function)(struct ContextStruct* context);
+typedef void* (*flow_context_realloc_function)(struct flow_context_struct* context, void* old_pointer,
+                                               size_t new_byte_count, const char* file, int line);
+typedef void (*flow_context_free_function)(struct flow_context_struct* context, void* pointer, const char* file,
+                                           int line);
+typedef void (*flow_context_terminate_function)(struct flow_context_struct* context);
 
-typedef struct _HeapManager {
-    context_calloc_function _calloc;
-    context_malloc_function _malloc;
-    context_realloc_function _realloc;
-    context_free_function _free;
-    context_terminate_function _context_terminate;
+typedef struct flow_heap_manager {
+    flow_context_calloc_function _calloc;
+    flow_context_malloc_function _malloc;
+    flow_context_realloc_function _realloc;
+    flow_context_free_function _free;
+    flow_context_terminate_function _context_terminate;
     void* _private_state;
-} HeapManager;
+} flow_heap_manager;
 
-void DefaultHeapManager_initialize(HeapManager* context);
+void flow_default_heap_manager_initialize(flow_heap_manager* context);
 
-/** Context: ErrorInfo **/
+/** flow_context: flow_error_info **/
 
-typedef struct _ErrorCallstackLine {
+typedef struct flow_error_callstack_line {
     const char* file;
     int line;
-} ErrorCallstackLine;
+} flow_error_callstack_line;
 
-typedef struct _ErrorInfo {
-    StatusCode reason;
-    ErrorCallstackLine callstack[14];
+typedef struct flow_error_info {
+    flow_status_code reason;
+    flow_error_callstack_line callstack[14];
     int callstack_count;
     int callstack_capacity;
     bool locked;
-} ErrorInfo;
+} flow_error_info;
 
 #ifdef EXPOSE_SIGMOID
-/** Context: Colorspace */
+/** flow_context: Colorspace */
 typedef struct _SigmoidInfo {
     float constant;
     float x_coeff;
@@ -89,9 +92,9 @@ typedef struct _SigmoidInfo {
 
 #endif
 
-typedef struct _ColorspaceInfo {
+typedef struct flow_colorspace_info {
     float byte_to_float[256]; // Converts 0..255 -> 0..1, but knowing that 0.255 has sRGB gamma.
-    WorkingFloatspace floatspace;
+    flow_working_floatspace floatspace;
     bool apply_srgb;
     bool apply_gamma;
     float gamma;
@@ -101,16 +104,16 @@ typedef struct _ColorspaceInfo {
     bool apply_sigmoid;
 #endif
 
-} ColorspaceInfo;
+} flow_colorspace_info;
 
-struct HeapAllocation {
+struct flow_heap_allocation {
     void* ptr;
     size_t bytes;
     const char* allocated_by;
     int allocated_by_line;
 };
-struct HeapTrackingInfo {
-    struct HeapAllocation* allocs;
+struct flow_heap_tracking_info {
+    struct flow_heap_allocation* allocs;
     size_t next_free_slot;
     size_t total_slots;
     size_t bytes_allocated_net;
@@ -122,92 +125,95 @@ struct HeapTrackingInfo {
     size_t bytes_allocated_net_peak;
 };
 
-/** Context: main structure **/
+/** flow_context: main structure **/
 
-typedef struct ContextStruct {
-    ErrorInfo error;
-    HeapManager heap;
-    ProfilingLog log;
-    ColorspaceInfo colorspace;
-    struct HeapTrackingInfo heap_tracking;
-} Context;
+typedef struct flow_context_struct {
+    flow_error_info error;
+    flow_heap_manager heap;
+    flow_profiling_log log;
+    flow_colorspace_info colorspace;
+    struct flow_heap_tracking_info heap_tracking;
+} flow_context;
 
 #include "color.h"
 
-void Context_initialize(Context* context);
-void Context_terminate(Context* context);
+void flow_context_initialize(flow_context* context);
+void flow_context_terminate(flow_context* context);
 
-void* Context_calloc(Context* context, size_t, size_t, const char* file, int line);
-void* Context_malloc(Context* context, size_t, const char* file, int line);
-void* Context_realloc(Context* context, void* old_pointer, size_t new_byte_count, const char* file, int line);
-void Context_free(Context* context, void* pointer, const char* file, int line);
-bool Context_enable_profiling(Context* context, uint32_t default_capacity);
-void Context_set_last_error(Context* context, StatusCode code, const char* file, int line);
-void Context_add_to_callstack(Context* context, const char* file, int line);
+void* flow_context_calloc(flow_context* context, size_t, size_t, const char* file, int line);
+void* flow_context_malloc(flow_context* context, size_t, const char* file, int line);
+void* flow_context_realloc(flow_context* context, void* old_pointer, size_t new_byte_count, const char* file, int line);
+void flow_context_free(flow_context* context, void* pointer, const char* file, int line);
+bool flow_context_enable_profiling(flow_context* context, uint32_t default_capacity);
+void flow_context_set_last_error(flow_context* context, flow_status_code code, const char* file, int line);
+void flow_context_add_to_callstack(flow_context* context, const char* file, int line);
 
-#define CONTEXT_SET_LAST_ERROR(context, status_code) Context_set_last_error(context, status_code, __FILE__, __LINE__)
-#define CONTEXT_calloc(context, instance_count, element_size)                                                          \
-    Context_calloc(context, instance_count, element_size, __FILE__, __LINE__)
-#define CONTEXT_calloc_array(context, instance_count, type_name)                                                       \
-    (type_name*) Context_calloc(context, instance_count, sizeof(type_name), __FILE__, __LINE__)
-#define CONTEXT_malloc(context, byte_count) Context_malloc(context, byte_count, __FILE__, __LINE__)
-#define CONTEXT_realloc(context, old_pointer, new_byte_count)                                                          \
-    Context_realloc(context, old_pointer, new_byte_count, __FILE__, __LINE__)
-#define CONTEXT_free(context, pointer) Context_free(context, pointer, __FILE__, __LINE__)
-#define CONTEXT_error(context, status_code) CONTEXT_SET_LAST_ERROR(context, status_code)
+#define FLOW_CONTEXT_SET_LAST_ERROR(context, status_code)                                                              \
+    flow_context_set_last_error(context, status_code, __FILE__, __LINE__)
+#define FLOW_calloc(context, instance_count, element_size)                                                             \
+    flow_context_calloc(context, instance_count, element_size, __FILE__, __LINE__)
+#define FLOW_calloc_array(context, instance_count, type_name)                                                          \
+    (type_name*) flow_context_calloc(context, instance_count, sizeof(type_name), __FILE__, __LINE__)
+#define FLOW_malloc(context, byte_count) flow_context_malloc(context, byte_count, __FILE__, __LINE__)
+#define FLOW_realloc(context, old_pointer, new_byte_count)                                                             \
+    flow_context_realloc(context, old_pointer, new_byte_count, __FILE__, __LINE__)
+#define FLOW_free(context, pointer) flow_context_free(context, pointer, __FILE__, __LINE__)
+#define FLOW_error(context, status_code) FLOW_CONTEXT_SET_LAST_ERROR(context, status_code)
 
-#define CONTEXT_add_to_callstack(context) Context_add_to_callstack(context, __FILE__, __LINE__)
+#define FLOW_add_to_callstack(context) flow_context_add_to_callstack(context, __FILE__, __LINE__)
 
-#define CONTEXT_error_return(context)                                                                                  \
-    Context_add_to_callstack(context, __FILE__, __LINE__);                                                             \
+#define FLOW_error_return(context)                                                                                     \
+    flow_context_add_to_callstack(context, __FILE__, __LINE__);                                                        \
     return false
 
-#define ALLOW_PROFILING
+#define FLOW_ALLOW_PROFILING
 
-#ifdef ALLOW_PROFILING
-#define prof_start(context, name, allow_recursion) Context_profiler_start(context, name, allow_recursion);
-#define prof_stop(context, name, assert_started, stop_children)                                                        \
-    Context_profiler_stop(context, name, assert_started, stop_children);
+#ifdef FLOW_ALLOW_PROFILING
+#define flow_prof_start(context, name, allow_recursion) flow_context_profiler_start(context, name, allow_recursion);
+#define flow_prof_stop(context, name, assert_started, stop_children)                                                   \
+    flow_context_profiler_stop(context, name, assert_started, stop_children);
 #else
-#define prof_start(context, name, allow_recursion)
-#define prof_stop(context, name, assert_started, stop_children)
+#define flow_prof_start(context, name, allow_recursion)
+#define flow_prof_stop(context, name, assert_started, stop_children)
 #endif
 
-void Context_profiler_start(Context* context, const char* name, bool allow_recursion);
-void Context_profiler_stop(Context* context, const char* name, bool assert_started, bool stop_children);
+void flow_context_profiler_start(flow_context* context, const char* name, bool allow_recursion);
+void flow_context_profiler_stop(flow_context* context, const char* name, bool assert_started, bool stop_children);
 
-BitmapFloat* BitmapFloat_create_header(Context* context, int sx, int sy, int channels);
+flow_bitmap_float* flow_bitmap_float_create_header(flow_context* context, int sx, int sy, int channels);
 
-BitmapFloat* BitmapFloat_create(Context* context, int sx, int sy, int channels, bool zeroed);
+flow_bitmap_float* flow_bitmap_float_create(flow_context* context, int sx, int sy, int channels, bool zeroed);
 
-void BitmapFloat_destroy(Context* context, BitmapFloat* im);
+void flow_bitmap_float_destroy(flow_context* context, flow_bitmap_float* im);
 
-bool BitmapFloat_scale_rows(Context* context, BitmapFloat* from, uint32_t from_row, BitmapFloat* to, uint32_t to_row,
-                            uint32_t row_count, PixelContributions* weights);
-bool BitmapFloat_convolve_rows(Context* context, BitmapFloat* buf, ConvolutionKernel* kernel,
-                               uint32_t convolve_channels, uint32_t from_row, int row_count);
+bool flow_bitmap_float_scale_rows(flow_context* context, flow_bitmap_float* from, uint32_t from_row,
+                                  flow_bitmap_float* to, uint32_t to_row, uint32_t row_count,
+                                  flow_interpolation_pixel_contributions* weights);
+bool flow_bitmap_float_convolve_rows(flow_context* context, flow_bitmap_float* buf, flow_convolution_kernel* kernel,
+                                     uint32_t convolve_channels, uint32_t from_row, int row_count);
 
-bool BitmapFloat_sharpen_rows(Context* context, BitmapFloat* im, uint32_t start_row, uint32_t row_count, double pct);
+bool flow_bitmap_float_sharpen_rows(flow_context* context, flow_bitmap_float* im, uint32_t start_row,
+                                    uint32_t row_count, double pct);
 
-bool BitmapBgra_convert_srgb_to_linear(Context* context, BitmapBgra* src, uint32_t from_row, BitmapFloat* dest,
-                                       uint32_t dest_row, uint32_t row_count);
+bool flow_bitmap_float_convert_srgb_to_linear(flow_context* context, flow_bitmap_bgra* src, uint32_t from_row,
+                                              flow_bitmap_float* dest, uint32_t dest_row, uint32_t row_count);
 
-bool BitmapFloat_pivoting_composite_linear_over_srgb(Context* context, BitmapFloat* src, uint32_t from_row,
-                                                     BitmapBgra* dest, uint32_t dest_row, uint32_t row_count,
-                                                     bool transpose);
+bool flow_bitmap_float_pivoting_composite_linear_over_srgb(flow_context* context, flow_bitmap_float* src,
+                                                           uint32_t from_row, flow_bitmap_bgra* dest, uint32_t dest_row,
+                                                           uint32_t row_count, bool transpose);
 
-bool BitmapBgra_flip_vertical(Context* context, BitmapBgra* b);
+bool flow_bitmap_float_flip_vertical(flow_context* context, flow_bitmap_bgra* b);
 
-bool BitmapFloat_demultiply_alpha(Context* context, BitmapFloat* src, const uint32_t from_row,
-                                  const uint32_t row_count);
+bool flow_bitmap_float_demultiply_alpha(flow_context* context, flow_bitmap_float* src, const uint32_t from_row,
+                                        const uint32_t row_count);
 
-bool BitmapFloat_copy_linear_over_srgb(Context* context, BitmapFloat* src, const uint32_t from_row, BitmapBgra* dest,
-                                       const uint32_t dest_row, const uint32_t row_count, const uint32_t from_col,
-                                       const uint32_t col_count, const bool transpose);
+bool flow_bitmap_float_copy_linear_over_srgb(flow_context* context, flow_bitmap_float* src, const uint32_t from_row,
+                                             flow_bitmap_bgra* dest, const uint32_t dest_row, const uint32_t row_count,
+                                             const uint32_t from_col, const uint32_t col_count, const bool transpose);
 
-bool Halve(Context* context, const BitmapBgra* from, BitmapBgra* to, int divisor);
+bool flow_halve(flow_context* context, const flow_bitmap_bgra* from, flow_bitmap_bgra* to, int divisor);
 
-bool HalveInPlace(Context* context, BitmapBgra* from, int divisor);
+bool flow_halve_in_place(flow_context* context, flow_bitmap_bgra* from, int divisor);
 
 #ifndef _TIMERS_IMPLEMENTED
 #define _TIMERS_IMPLEMENTED
@@ -216,13 +222,13 @@ bool HalveInPlace(Context* context, BitmapBgra* from, int divisor);
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
 #include <winbase.h>
-static inline int64_t get_high_precision_ticks(void)
+static inline int64_t flow_get_high_precision_ticks(void)
 {
     LARGE_INTEGER val;
     QueryPerformanceCounter(&val);
     return val.QuadPart;
 }
-static inline int64_t get_profiler_ticks_per_second(void)
+static inline int64_t flow_get_profiler_ticks_per_second(void)
 {
     LARGE_INTEGER val;
     QueryPerformanceFrequency(&val);
@@ -251,7 +257,7 @@ static inline int64_t get_profiler_ticks_per_second(void)
 #endif
 #endif
 
-static inline int64_t get_high_precision_ticks(void)
+static inline int64_t flow_get_high_precision_ticks(void)
 {
 #ifdef PROFILER_CLOCK_ID
     struct timespec ts;
@@ -268,7 +274,7 @@ static inline int64_t get_high_precision_ticks(void)
 #endif
 }
 
-static inline int64_t get_profiler_ticks_per_second(void)
+static inline int64_t flow_get_profiler_ticks_per_second(void)
 {
 #ifdef PROFILER_CLOCK_ID
     struct timespec ts;

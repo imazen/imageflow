@@ -13,8 +13,9 @@
 #include "fastscaling_private.h"
 #include <string.h>
 
-bool BitmapFloat_scale_rows(Context* context, BitmapFloat* from, uint32_t from_row, BitmapFloat* to, uint32_t to_row,
-                            uint32_t row_count, PixelContributions* weights)
+bool flow_bitmap_float_scale_rows(flow_context* context, flow_bitmap_float* from, uint32_t from_row,
+                                  flow_bitmap_float* to, uint32_t to_row, uint32_t row_count,
+                                  flow_interpolation_pixel_contributions* weights)
 {
 
     const uint32_t from_step = from->channels;
@@ -23,7 +24,7 @@ bool BitmapFloat_scale_rows(Context* context, BitmapFloat* from, uint32_t from_r
     const uint32_t min_channels = umin(from_step, to_step);
     uint32_t ndx;
     if (min_channels > 4) {
-        CONTEXT_error(context, Invalid_internal_state);
+        FLOW_error(context, flow_status_Invalid_internal_state);
         return false;
     }
     float avg[4];
@@ -129,7 +130,7 @@ This halves in sRGB space instead of linear. Not significantly faster on modern 
 #define HALVE_ROW_NAME HalveRowByDivisorColorSpaceAware
 #define HALVE_INTERNAL_NAME HalveInternalColorSpaceAware
 
-static inline void HALVE_ROW_NAME(Context* context, const unsigned char* from, HALVING_TYPE* to,
+static inline void HALVE_ROW_NAME(flow_context* context, const unsigned char* from, HALVING_TYPE* to,
                                   const unsigned int to_count, const int divisor, const int step)
 {
     int to_b, from_b;
@@ -194,20 +195,20 @@ static inline void HALVE_ROW_NAME(Context* context, const unsigned char* from, H
     }
 }
 
-static bool HALVE_INTERNAL_NAME(Context* context, const BitmapBgra* from, BitmapBgra* to, const int to_w,
-                                const int to_h, const int to_stride, const int divisor)
+static bool HALVE_INTERNAL_NAME(flow_context* context, const flow_bitmap_bgra* from, flow_bitmap_bgra* to,
+                                const int to_w, const int to_h, const int to_stride, const int divisor)
 {
 
-    const int to_w_bytes = to_w * BitmapPixelFormat_bytes_per_pixel(to->fmt);
-    HALVING_TYPE* buffer = (HALVING_TYPE*)CONTEXT_calloc(context, to_w_bytes, sizeof(HALVING_TYPE));
+    const int to_w_bytes = to_w * flow_pixel_format_bytes_per_pixel(to->fmt);
+    HALVING_TYPE* buffer = (HALVING_TYPE*)FLOW_calloc(context, to_w_bytes, sizeof(HALVING_TYPE));
     if (buffer == NULL) {
-        CONTEXT_error(context, Out_of_memory);
+        FLOW_error(context, flow_status_Out_of_memory);
         return false;
     }
     // Force the from and to formate to be the same
     if (from->fmt != to->fmt
-        || (BitmapPixelFormat_bytes_per_pixel(from->fmt) != 3 && BitmapPixelFormat_bytes_per_pixel(from->fmt) != 4)) {
-        CONTEXT_error(context, Invalid_internal_state);
+        || (flow_pixel_format_bytes_per_pixel(from->fmt) != 3 && flow_pixel_format_bytes_per_pixel(from->fmt) != 4)) {
+        FLOW_error(context, flow_status_Invalid_internal_state);
         return false;
     }
 
@@ -217,7 +218,7 @@ static bool HALVE_INTERNAL_NAME(Context* context, const BitmapBgra* from, Bitmap
     const unsigned int shift = isPowerOfTwo(divisorSqr) ? intlog2(divisorSqr) : 0;
 #endif
 
-    const uint32_t bytes_pp = BitmapPixelFormat_bytes_per_pixel(from->fmt);
+    const uint32_t bytes_pp = flow_pixel_format_bytes_per_pixel(from->fmt);
 
     // TODO: Ensure that from is equal or greater than divisorx to_w and t_h
     // Ensure that shift > 0 && divisorSqr > 0 && divisor > 0
@@ -252,7 +253,7 @@ static bool HALVE_INTERNAL_NAME(Context* context, const BitmapBgra* from, Bitmap
 #endif
     }
 
-    CONTEXT_free(context, buffer);
+    FLOW_free(context, buffer);
 
     return true;
 }
@@ -273,7 +274,7 @@ static bool HALVE_INTERNAL_NAME(Context* context, const BitmapBgra* from, Bitmap
 
 //** Do not edit the following two functions; they are copy/pasted from above. **//
 
-static inline void HALVE_ROW_NAME(Context* context, const unsigned char* from, HALVING_TYPE* to,
+static inline void HALVE_ROW_NAME(flow_context* context, const unsigned char* from, HALVING_TYPE* to,
                                   const unsigned int to_count, const int divisor, const int step)
 {
     int to_b, from_b;
@@ -338,20 +339,20 @@ static inline void HALVE_ROW_NAME(Context* context, const unsigned char* from, H
     }
 }
 
-static bool HALVE_INTERNAL_NAME(Context* context, const BitmapBgra* from, BitmapBgra* to, const int to_w,
-                                const int to_h, const int to_stride, const int divisor)
+static bool HALVE_INTERNAL_NAME(flow_context* context, const flow_bitmap_bgra* from, flow_bitmap_bgra* to,
+                                const int to_w, const int to_h, const int to_stride, const int divisor)
 {
 
-    const int to_w_bytes = to_w * BitmapPixelFormat_bytes_per_pixel(to->fmt);
-    HALVING_TYPE* buffer = (HALVING_TYPE*)CONTEXT_calloc(context, to_w_bytes, sizeof(HALVING_TYPE));
+    const int to_w_bytes = to_w * flow_pixel_format_bytes_per_pixel(to->fmt);
+    HALVING_TYPE* buffer = (HALVING_TYPE*)FLOW_calloc(context, to_w_bytes, sizeof(HALVING_TYPE));
     if (buffer == NULL) {
-        CONTEXT_error(context, Out_of_memory);
+        FLOW_error(context, flow_status_Out_of_memory);
         return false;
     }
     // Force the from and to formate to be the same
     if (from->fmt != to->fmt
-        || (BitmapPixelFormat_bytes_per_pixel(from->fmt) != 3 && BitmapPixelFormat_bytes_per_pixel(from->fmt) != 4)) {
-        CONTEXT_error(context, Invalid_internal_state);
+        || (flow_pixel_format_bytes_per_pixel(from->fmt) != 3 && flow_pixel_format_bytes_per_pixel(from->fmt) != 4)) {
+        FLOW_error(context, flow_status_Invalid_internal_state);
         return false;
     }
 
@@ -361,7 +362,7 @@ static bool HALVE_INTERNAL_NAME(Context* context, const BitmapBgra* from, Bitmap
     const unsigned int shift = isPowerOfTwo(divisorSqr) ? intlog2(divisorSqr) : 0;
 #endif
 
-    const uint32_t bytes_pp = BitmapPixelFormat_bytes_per_pixel(from->fmt);
+    const uint32_t bytes_pp = flow_pixel_format_bytes_per_pixel(from->fmt);
 
     // TODO: Ensure that from is equal or greater than divisorx to_w and t_h
     // Ensure that shift > 0 && divisorSqr > 0 && divisor > 0
@@ -396,41 +397,41 @@ static bool HALVE_INTERNAL_NAME(Context* context, const BitmapBgra* from, Bitmap
 #endif
     }
 
-    CONTEXT_free(context, buffer);
+    FLOW_free(context, buffer);
 
     return true;
 }
 
 //** Do not edit the above two functions; they are copy/pasted. **//
 
-bool Halve(Context* context, const BitmapBgra* from, BitmapBgra* to, int divisor)
+bool flow_halve(flow_context* context, const flow_bitmap_bgra* from, flow_bitmap_bgra* to, int divisor)
 {
 
     bool r = false;
-    if (context->colorspace.floatspace == Floatspace_as_is) {
+    if (context->colorspace.floatspace == flow_working_floatspace_as_is) {
         r = HalveInternal(context, from, to, to->w, to->h, to->stride, divisor);
     } else {
         r = HalveInternalColorSpaceAware(context, from, to, to->w, to->h, to->stride, divisor);
     }
     if (!r) {
-        CONTEXT_add_to_callstack(context);
+        FLOW_add_to_callstack(context);
     }
     return r;
 }
 
-bool HalveInPlace(Context* context, BitmapBgra* from, int divisor)
+bool flow_halve_in_place(flow_context* context, flow_bitmap_bgra* from, int divisor)
 {
     int to_w = from->w / divisor;
     int to_h = from->h / divisor;
-    int to_stride = to_w * BitmapPixelFormat_bytes_per_pixel(from->fmt);
+    int to_stride = to_w * flow_pixel_format_bytes_per_pixel(from->fmt);
     bool r = false;
-    if (context->colorspace.floatspace == Floatspace_as_is) {
+    if (context->colorspace.floatspace == flow_working_floatspace_as_is) {
         r = HalveInternal(context, from, from, to_w, to_h, to_stride, divisor);
     } else {
         r = HalveInternalColorSpaceAware(context, from, from, to_w, to_h, to_stride, divisor);
     }
     if (!r) {
-        CONTEXT_add_to_callstack(context);
+        FLOW_add_to_callstack(context);
     }
     from->w = to_w;
     from->h = to_h;

@@ -1,11 +1,11 @@
 #include "catch.hpp"
 #include "fastscaling_private.h"
 
-const int MAX_BYTES_PP = 16;
+const int FLOW_MAX_BYTES_PP = 16;
 
-static std::ostream& operator<<(std::ostream& out, const BitmapFloat& bitmap_float)
+static std::ostream& operator<<(std::ostream& out, const flow_bitmap_float& bitmap_float)
 {
-    return out << "BitmapFloat: w:" << bitmap_float.w << " h: " << bitmap_float.h
+    return out << "flow_bitmap_float: w:" << bitmap_float.w << " h: " << bitmap_float.h
                << " channels:" << bitmap_float.channels << '\n';
 }
 
@@ -19,17 +19,17 @@ public:
     int alloc_count;
     int total_successful_allocs;
 
-    static void* _calloc(Context* context, size_t count, size_t element_size, const char* file, int line)
+    static void* _calloc(flow_context* context, size_t count, size_t element_size, const char* file, int line)
     {
         return ((Fixture*)context->heap._private_state)->calloc(count, element_size);
     }
-    static void* _malloc(Context* context, size_t byte_count, const char* file, int line)
+    static void* _malloc(flow_context* context, size_t byte_count, const char* file, int line)
     {
         return ((Fixture*)context->heap._private_state)->malloc(byte_count);
     }
-    static void _free(Context* context, void* pointer, const char* file, int line) { free(pointer); }
+    static void _free(flow_context* context, void* pointer, const char* file, int line) { free(pointer); }
 
-    void initialize_heap(Context* context)
+    void initialize_heap(flow_context* context)
     {
         context->heap._private_state = this;
         context->heap._calloc = _calloc;
@@ -98,12 +98,12 @@ public:
 
 TEST_CASE_METHOD(Fixture, "Perform Rendering", "[error_handling]")
 {
-    Context context;
-    Context_initialize(&context);
+    flow_context context;
+    flow_context_initialize(&context);
     initialize_heap(&context);
-    BitmapBgra* source = BitmapBgra_create(&context, 4, 4, true, Bgra32);
-    BitmapBgra* canvas = BitmapBgra_create(&context, 2, 2, true, Bgra32);
-    RenderDetails* details = RenderDetails_create_with(&context, Filter_CubicFast);
+    flow_bitmap_bgra* source = flow_bitmap_bgra_create(&context, 4, 4, true, flow_bgra32);
+    flow_bitmap_bgra* canvas = flow_bitmap_bgra_create(&context, 2, 2, true, flow_bgra32);
+    flow_RenderDetails* details = flow_RenderDetails_create_with(&context, flow_interpolation_filter_CubicFast);
     details->sharpen_percent_goal = 50;
     details->post_flip_x = true;
     details->post_flip_y = false;
@@ -113,17 +113,17 @@ TEST_CASE_METHOD(Fixture, "Perform Rendering", "[error_handling]")
     {
         details->halving_divisor = 5;
 
-        CHECK(RenderDetails_render(&context, details, source, canvas) == false);
-        CHECK(Context_has_error(&context));
+        CHECK(flow_RenderDetails_render(&context, details, source, canvas) == false);
+        CHECK(flow_context_has_error(&context));
         char buffer[1024];
-        CAPTURE(Context_error_message(&context, buffer, sizeof(buffer)));
-        CHECK(Context_error_reason(&context) == Invalid_BitmapBgra_dimensions);
+        CAPTURE(flow_context_error_message(&context, buffer, sizeof(buffer)));
+        CHECK(flow_context_error_reason(&context) == flow_status_Invalid_BitmapBgra_dimensions);
     }
 
-    RenderDetails_destroy(&context, details);
-    BitmapBgra_destroy(&context, source);
-    BitmapBgra_destroy(&context, canvas);
-    Context_terminate(&context);
+    flow_RenderDetails_destroy(&context, details);
+    flow_bitmap_bgra_destroy(&context, source);
+    flow_bitmap_bgra_destroy(&context, canvas);
+    flow_context_terminate(&context);
 }
 
 TEST_CASE_METHOD(Fixture, "Test allocation failure handling", "[error_handling]")
@@ -142,14 +142,14 @@ TEST_CASE_METHOD(Fixture, "Test allocation failure handling", "[error_handling]"
     CAPTURE(cw);
     CAPTURE(ch);
 
-    Context context;
-    Context_initialize(&context);
+    flow_context context;
+    flow_context_initialize(&context);
     initialize_heap(&context);
 
-    BitmapBgra* source = BitmapBgra_create(&context, sw, sh, true, Bgra32);
-    BitmapBgra* canvas = BitmapBgra_create(&context, cw, ch, true, Bgra32);
-    RenderDetails* details = RenderDetails_create(&context);
-    details->interpolation = InterpolationDetails_create_from(&context, Filter_CubicFast);
+    flow_bitmap_bgra* source = flow_bitmap_bgra_create(&context, sw, sh, true, flow_bgra32);
+    flow_bitmap_bgra* canvas = flow_bitmap_bgra_create(&context, cw, ch, true, flow_bgra32);
+    flow_RenderDetails* details = flow_RenderDetails_create(&context);
+    details->interpolation = flow_interpolation_details_create_from(&context, flow_interpolation_filter_CubicFast);
     details->sharpen_percent_goal = 50;
     details->post_flip_x = true;
     details->post_flip_y = false;
@@ -160,7 +160,7 @@ TEST_CASE_METHOD(Fixture, "Test allocation failure handling", "[error_handling]"
 
     fail_alloc_after(fail_alloc_x);
 
-    bool result = RenderDetails_render(&context, details, source, canvas);
+    bool result = flow_RenderDetails_render(&context, details, source, canvas);
     CAPTURE(fail_alloc_x);
 
     CAPTURE(alloc_count);
@@ -168,125 +168,125 @@ TEST_CASE_METHOD(Fixture, "Test allocation failure handling", "[error_handling]"
     CAPTURE(total_successful_allocs);
     CAPTURE(last_attempted_allocation_size);
     CHECK(!result);
-    CHECK(Context_has_error(&context));
+    CHECK(flow_context_has_error(&context));
     char buffer[1024];
-    CAPTURE(Context_error_message(&context, buffer, sizeof(buffer)));
-    CHECK(Context_error_reason(&context) == Out_of_memory);
+    CAPTURE(flow_context_error_message(&context, buffer, sizeof(buffer)));
+    CHECK(flow_context_error_reason(&context) == flow_status_Out_of_memory);
 
-    RenderDetails_destroy(&context, details);
-    BitmapBgra_destroy(&context, source);
-    BitmapBgra_destroy(&context, canvas);
-    Context_terminate(&context);
+    flow_RenderDetails_destroy(&context, details);
+    flow_bitmap_bgra_destroy(&context, source);
+    flow_bitmap_bgra_destroy(&context, canvas);
+    flow_context_terminate(&context);
 }
 
-TEST_CASE_METHOD(Fixture, "Creating BitmapBgra", "[error_handling]")
+TEST_CASE_METHOD(Fixture, "Creating flow_bitmap_bgra", "[error_handling]")
 {
-    Context context;
-    Context_initialize(&context);
+    flow_context context;
+    flow_context_initialize(&context);
     initialize_heap(&context);
 
-    BitmapBgra* source = NULL;
+    flow_bitmap_bgra* source = NULL;
     // Create something so heap_tracking is initialized
-    source = BitmapBgra_create(&context, 1, 1, true, (BitmapPixelFormat)2);
+    source = flow_bitmap_bgra_create(&context, 1, 1, true, (flow_pixel_format)2);
     SECTION("Creating a 1x1 bitmap is valid")
     {
-        source = BitmapBgra_create(&context, 1, 1, true, (BitmapPixelFormat)2);
+        source = flow_bitmap_bgra_create(&context, 1, 1, true, (flow_pixel_format)2);
         REQUIRE_FALSE(source == NULL);
-        REQUIRE_FALSE(Context_has_error(&context));
+        REQUIRE_FALSE(flow_context_has_error(&context));
     }
     SECTION("A 0x0 bitmap is invalid")
     {
-        source = BitmapBgra_create(&context, 0, 0, true, (BitmapPixelFormat)2);
+        source = flow_bitmap_bgra_create(&context, 0, 0, true, (flow_pixel_format)2);
         REQUIRE(source == NULL);
-        REQUIRE(Context_has_error(&context));
-        REQUIRE(Context_error_reason(&context) == Invalid_BitmapBgra_dimensions);
-        // REQUIRE(Context_error_message(&context));
+        REQUIRE(flow_context_has_error(&context));
+        REQUIRE(flow_context_error_reason(&context) == flow_status_Invalid_BitmapBgra_dimensions);
+        // REQUIRE(flow_context_error_message(&context));
     }
     SECTION("A gargantuan bitmap is also invalid")
     {
-        source = BitmapBgra_create(&context, 1, INT_MAX, true, (BitmapPixelFormat)2);
+        source = flow_bitmap_bgra_create(&context, 1, INT_MAX, true, (flow_pixel_format)2);
         REQUIRE(source == NULL);
-        REQUIRE(Context_has_error(&context));
-        REQUIRE(Context_error_reason(&context) == Invalid_BitmapBgra_dimensions);
+        REQUIRE(flow_context_has_error(&context));
+        REQUIRE(flow_context_error_reason(&context) == flow_status_Invalid_BitmapBgra_dimensions);
     }
 
     SECTION("A bitmap that exhausts memory is invalid too")
     {
         always_fail_allocation();
-        source = BitmapBgra_create(&context, 1, 1, true, (BitmapPixelFormat)2);
+        source = flow_bitmap_bgra_create(&context, 1, 1, true, (flow_pixel_format)2);
         REQUIRE(source == NULL);
-        REQUIRE(Context_has_error(&context));
-        REQUIRE(Context_error_reason(&context) == Out_of_memory);
+        REQUIRE(flow_context_has_error(&context));
+        REQUIRE(flow_context_error_reason(&context) == flow_status_Out_of_memory);
     }
     SECTION("Exhausting memory in the pixel allocation is also handled")
     {
-        fail_allocation_if_size_larger_than(sizeof(BitmapBgra));
-        source = BitmapBgra_create(&context, 640, 480, true, (BitmapPixelFormat)2);
+        fail_allocation_if_size_larger_than(sizeof(flow_bitmap_bgra));
+        source = flow_bitmap_bgra_create(&context, 640, 480, true, (flow_pixel_format)2);
         REQUIRE(source == NULL);
         REQUIRE(last_attempted_allocation_size == 640 * 480 * 2); // the failed allocation tried to allocate the pixels
-        REQUIRE(Context_has_error(&context));
-        REQUIRE(Context_error_reason(&context) == Out_of_memory);
+        REQUIRE(flow_context_has_error(&context));
+        REQUIRE(flow_context_error_reason(&context) == flow_status_Out_of_memory);
     }
-    BitmapBgra_destroy(&context, source);
+    flow_bitmap_bgra_destroy(&context, source);
 }
 
-TEST_CASE("Context", "[error_handling]")
+TEST_CASE("flow_context", "[error_handling]")
 {
-    Context context;
-    Context_initialize(&context);
+    flow_context context;
+    flow_context_initialize(&context);
 
-    SECTION("Context_error_message should be safe when no error has ocurred yet")
+    SECTION("flow_context_error_message should be safe when no error has ocurred yet")
     {
         char error_msg[1024];
         REQUIRE(std::string("Error in file: (null) line: -1 status_code: 0 reason: Status code lookup not implemented")
-                == Context_error_message(&context, error_msg, sizeof error_msg));
+                == flow_context_error_message(&context, error_msg, sizeof error_msg));
     }
-    Context_terminate(&context);
+    flow_context_terminate(&context);
 }
 
 TEST_CASE("Argument checking for convert_sgrp_to_linear", "[error_handling]")
 {
-    Context context;
-    Context_initialize(&context);
-    BitmapBgra* src = BitmapBgra_create(&context, 2, 3, true, Bgra32);
+    flow_context context;
+    flow_context_initialize(&context);
+    flow_bitmap_bgra* src = flow_bitmap_bgra_create(&context, 2, 3, true, flow_bgra32);
     char error_msg[1024];
-    CAPTURE(Context_error_message(&context, error_msg, sizeof error_msg));
+    CAPTURE(flow_context_error_message(&context, error_msg, sizeof error_msg));
     REQUIRE(src != NULL);
-    BitmapFloat* dest = BitmapFloat_create(&context, 1, 1, 4, false);
-    BitmapBgra_convert_srgb_to_linear(&context, src, 3, dest, 0, 0);
-    BitmapBgra_destroy(&context, src);
+    flow_bitmap_float* dest = flow_bitmap_float_create(&context, 1, 1, 4, false);
+    flow_bitmap_float_convert_srgb_to_linear(&context, src, 3, dest, 0, 0);
+    flow_bitmap_bgra_destroy(&context, src);
     CAPTURE(*dest);
     REQUIRE(dest->float_count == 4); // 1x1x4 channels
-    BitmapFloat_destroy(&context, dest);
-    Context_terminate(&context);
+    flow_bitmap_float_destroy(&context, dest);
+    flow_context_terminate(&context);
 }
 
 TEST_CASE("Test stacktrace serialization", "[error_handling]")
 {
     using namespace Catch::Generators;
-    Context context;
-    Context_initialize(&context);
-    CONTEXT_error(&context, Out_of_memory);
-    CONTEXT_add_to_callstack(&context);
-    CONTEXT_add_to_callstack(&context);
-    CONTEXT_add_to_callstack(&context);
-    CONTEXT_add_to_callstack(&context);
-    CONTEXT_add_to_callstack(&context);
-    CONTEXT_add_to_callstack(&context);
-    CONTEXT_add_to_callstack(&context);
-    CONTEXT_add_to_callstack(&context);
-    CONTEXT_add_to_callstack(&context);
-    CONTEXT_add_to_callstack(&context);
-    CONTEXT_add_to_callstack(&context);
+    flow_context context;
+    flow_context_initialize(&context);
+    FLOW_error(&context, flow_status_Out_of_memory);
+    FLOW_add_to_callstack(&context);
+    FLOW_add_to_callstack(&context);
+    FLOW_add_to_callstack(&context);
+    FLOW_add_to_callstack(&context);
+    FLOW_add_to_callstack(&context);
+    FLOW_add_to_callstack(&context);
+    FLOW_add_to_callstack(&context);
+    FLOW_add_to_callstack(&context);
+    FLOW_add_to_callstack(&context);
+    FLOW_add_to_callstack(&context);
+    FLOW_add_to_callstack(&context);
 
     int stacktrace_buffer_size = GENERATE(between(1, 8)) * 32;
 
     char* stacktrace = (char*)malloc(stacktrace_buffer_size);
 
     CAPTURE(stacktrace_buffer_size);
-    CAPTURE(Context_stacktrace(&context, stacktrace, stacktrace_buffer_size));
+    CAPTURE(flow_context_stacktrace(&context, stacktrace, stacktrace_buffer_size));
 
     free(stacktrace);
 
-    Context_terminate(&context);
+    flow_context_terminate(&context);
 }

@@ -14,15 +14,15 @@
 
 const Rect RectFailure = { -1, -1, -1, -1 };
 
-Rect detect_content(Context* context, BitmapBgra* b, uint8_t threshold)
+Rect detect_content(flow_context* context, flow_bitmap_bgra* b, uint8_t threshold)
 {
     SearchInfo info;
     info.w = b->w;
     info.h = b->h;
     info.buff_size = 2048;
-    info.buf = (uint8_t*)CONTEXT_malloc(context, info.buff_size);
+    info.buf = (uint8_t*)FLOW_malloc(context, info.buff_size);
     if (info.buf == NULL) {
-        CONTEXT_error(context, Out_of_memory);
+        FLOW_error(context, flow_status_Out_of_memory);
         return RectFailure;
     }
     info.max_x = 0;
@@ -37,65 +37,65 @@ Rect detect_content(Context* context, BitmapBgra* b, uint8_t threshold)
 
     // left half, middle, ->
     if (!check_region(context, 4, 0, 0.5, 0.5, 0.5, &info)) {
-        CONTEXT_add_to_callstack(context);
+        FLOW_add_to_callstack(context);
         return RectFailure;
     }
     // right half, middle, <-
     if (!check_region(context, 2, 0.5, 1, 0.5, 0.5, &info)) {
-        CONTEXT_add_to_callstack(context);
+        FLOW_add_to_callstack(context);
         return RectFailure;
     }
 
     // left half, bottom third ->
     if (!check_region(context, 4, 0, 0.5, 0.677f, 0.677f, &info)) {
-        CONTEXT_add_to_callstack(context);
+        FLOW_add_to_callstack(context);
         return RectFailure;
     }
     // right half, bottom third -<
     if (!check_region(context, 2, 0.5, 1, 0.677f, 0.677f, &info)) {
-        CONTEXT_add_to_callstack(context);
+        FLOW_add_to_callstack(context);
         return RectFailure;
     }
     // left half, top third ->
     if (!check_region(context, 4, 0, 0.5, 0.333f, 0.333f, &info)) {
-        CONTEXT_add_to_callstack(context);
+        FLOW_add_to_callstack(context);
         return RectFailure;
     }
     // right half, top third -<
     if (!check_region(context, 2, 0.5, 1, 0.333f, 0.333f, &info)) {
-        CONTEXT_add_to_callstack(context);
+        FLOW_add_to_callstack(context);
         return RectFailure;
     }
 
     // top half, center \/
     if (!check_region(context, 1, 0.5, 0.5, 0, 0.5, &info)) {
-        CONTEXT_add_to_callstack(context);
+        FLOW_add_to_callstack(context);
         return RectFailure;
     }
     // top half, right third
     if (!check_region(context, 1, 0.677f, 0.677f, 0, 0.5, &info)) {
-        CONTEXT_add_to_callstack(context);
+        FLOW_add_to_callstack(context);
         return RectFailure;
     }
     // top half, left third.
     if (!check_region(context, 1, 0.333f, 0.333f, 0, 0.5, &info)) {
-        CONTEXT_add_to_callstack(context);
+        FLOW_add_to_callstack(context);
         return RectFailure;
     }
 
     // bottom half, center \/
     if (!check_region(context, 3, 0.5, 0.5, 0.5, 1, &info)) {
-        CONTEXT_add_to_callstack(context);
+        FLOW_add_to_callstack(context);
         return RectFailure;
     }
     // bottom half, right third
     if (!check_region(context, 3, 0.677f, 0.677f, 0.5, 1, &info)) {
-        CONTEXT_add_to_callstack(context);
+        FLOW_add_to_callstack(context);
         return RectFailure;
     }
     // bottom half, left third.
     if (!check_region(context, 3, 0.333f, 0.333f, 0.5, 1, &info)) {
-        CONTEXT_add_to_callstack(context);
+        FLOW_add_to_callstack(context);
         return RectFailure;
     }
 
@@ -107,7 +107,7 @@ Rect detect_content(Context* context, BitmapBgra* b, uint8_t threshold)
     if (area_to_scan_separately > (long)(info.h * info.w)) {
         // Just scan it all at once, non-directionally
         if (!check_region(context, 0, 0, 1, 0, 1, &info)) {
-            CONTEXT_add_to_callstack(context);
+            FLOW_add_to_callstack(context);
             return RectFailure;
         }
     } else {
@@ -115,19 +115,19 @@ Rect detect_content(Context* context, BitmapBgra* b, uint8_t threshold)
         // Finish by scanning everything that is left. Should be a smaller set.
         // Corners will overlap, and be scanned twice, if they are whitespace.
         if (!check_region(context, 1, 0, 1, 0, 1, &info)) {
-            CONTEXT_add_to_callstack(context);
+            FLOW_add_to_callstack(context);
             return RectFailure;
         }
         if (!check_region(context, 4, 0, 1, 0, 1, &info)) {
-            CONTEXT_add_to_callstack(context);
+            FLOW_add_to_callstack(context);
             return RectFailure;
         }
         if (!check_region(context, 2, 0, 1, 0, 1, &info)) {
-            CONTEXT_add_to_callstack(context);
+            FLOW_add_to_callstack(context);
             return RectFailure;
         }
         if (!check_region(context, 3, 0, 1, 0, 1, &info)) {
-            CONTEXT_add_to_callstack(context);
+            FLOW_add_to_callstack(context);
             return RectFailure;
         }
     }
@@ -138,10 +138,10 @@ Rect detect_content(Context* context, BitmapBgra* b, uint8_t threshold)
     result.y2 = info.max_y;
     result.x2 = info.max_x;
 
-    CONTEXT_free(context, info.buf);
+    FLOW_free(context, info.buf);
     return result;
 }
-bool fill_buffer(Context* context, SearchInfo* __restrict info)
+bool fill_buffer(flow_context* context, SearchInfo* __restrict info)
 {
     /* Red: 0.299;
     Green: 0.587;
@@ -149,7 +149,7 @@ bool fill_buffer(Context* context, SearchInfo* __restrict info)
     */
     const uint32_t w = info->buf_w;
     const uint32_t h = info->buf_h;
-    const uint32_t bytes_per_pixel = BitmapPixelFormat_bytes_per_pixel(info->bitmap->fmt);
+    const uint32_t bytes_per_pixel = flow_pixel_format_bytes_per_pixel(info->bitmap->fmt);
     const uint32_t remnant = info->bitmap->stride - (bytes_per_pixel * w);
     uint8_t const* __restrict bgra = info->bitmap->pixels + (info->bitmap->stride * info->buf_y)
                                      + (bytes_per_pixel * info->buf_x);
@@ -191,7 +191,7 @@ bool fill_buffer(Context* context, SearchInfo* __restrict info)
     return true;
 }
 
-bool sobel_scharr_detect(Context* context, SearchInfo* info)
+bool sobel_scharr_detect(flow_context* context, SearchInfo* info)
 {
 #define COEFFA = 3
 #define COEFFB = 10;
@@ -237,7 +237,7 @@ bool sobel_scharr_detect(Context* context, SearchInfo* info)
     return true;
 }
 
-bool check_region(Context* context, int edgeTRBL, float x_1_percent, float x_2_percent, float y_1_percent,
+bool check_region(flow_context* context, int edgeTRBL, float x_1_percent, float x_2_percent, float y_1_percent,
                   float y_2_percent, SearchInfo* __restrict info)
 {
     uint32_t x1 = (uint32_t)umax(0, umin(info->w, (uint32_t)floor(x_1_percent * (float)info->w) - 1));
@@ -331,11 +331,11 @@ bool check_region(Context* context, int edgeTRBL, float x_1_percent, float x_2_p
             }
 
             if (!fill_buffer(context, info)) {
-                CONTEXT_add_to_callstack(context);
+                FLOW_add_to_callstack(context);
                 return false;
             }
             if (!sobel_scharr_detect(context, info)) {
-                CONTEXT_add_to_callstack(context);
+                FLOW_add_to_callstack(context);
                 return false;
             }
         }

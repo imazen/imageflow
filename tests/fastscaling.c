@@ -13,33 +13,33 @@
 #include <stdio.h>
 #include <string.h>
 
-bool test(int sx, int sy, BitmapPixelFormat sbpp, int cx, int cy, BitmapPixelFormat cbpp, bool transpose, bool flipx,
-          bool flipy, InterpolationFilter filter);
+bool test(int sx, int sy, flow_pixel_format sbpp, int cx, int cy, flow_pixel_format cbpp, bool transpose, bool flipx,
+          bool flipy, flow_interpolation_filter filter);
 
-bool test(int sx, int sy, BitmapPixelFormat sbpp, int cx, int cy, BitmapPixelFormat cbpp, bool transpose, bool flipx,
-          bool flipy, InterpolationFilter filter)
+bool test(int sx, int sy, flow_pixel_format sbpp, int cx, int cy, flow_pixel_format cbpp, bool transpose, bool flipx,
+          bool flipy, flow_interpolation_filter filter)
 {
-    Context* context = Context_create();
+    flow_context* context = flow_context_create();
     if (context == NULL) {
         return false;
     }
-    BitmapBgra* source = BitmapBgra_create(context, sx, sy, true, sbpp);
+    flow_bitmap_bgra* source = flow_bitmap_bgra_create(context, sx, sy, true, sbpp);
     if (source == NULL) {
-        Context_destroy(context);
+        flow_context_destroy(context);
         return false;
     }
-    BitmapBgra* canvas = BitmapBgra_create(context, cx, cy, true, cbpp);
+    flow_bitmap_bgra* canvas = flow_bitmap_bgra_create(context, cx, cy, true, cbpp);
     if (canvas == NULL) {
-        BitmapBgra_destroy(context, source);
-        Context_destroy(context);
+        flow_bitmap_bgra_destroy(context, source);
+        flow_context_destroy(context);
         return false;
     }
 
-    RenderDetails* details = RenderDetails_create_with(context, filter);
+    flow_RenderDetails* details = flow_RenderDetails_create_with(context, filter);
     if (details == NULL) {
-        BitmapBgra_destroy(context, source);
-        BitmapBgra_destroy(context, canvas);
-        Context_destroy(context);
+        flow_bitmap_bgra_destroy(context, source);
+        flow_bitmap_bgra_destroy(context, canvas);
+        flow_context_destroy(context);
         return false;
     }
     details->sharpen_percent_goal = 50;
@@ -54,14 +54,14 @@ bool test(int sx, int sy, BitmapPixelFormat sbpp, int cx, int cy, BitmapPixelFor
 
     details->apply_color_matrix = true;
 
-    RenderDetails_render(context, details, source, canvas);
-    RenderDetails_destroy(context, details);
+    flow_RenderDetails_render(context, details, source, canvas);
+    flow_RenderDetails_destroy(context, details);
 
-    BitmapBgra_destroy(context, source);
-    BitmapBgra_destroy(context, canvas);
+    flow_bitmap_bgra_destroy(context, source);
+    flow_bitmap_bgra_destroy(context, canvas);
 
-    Context_destroy(context);
-    Context_free_static_caches();
+    flow_context_destroy(context);
+    flow_context_free_static_caches();
 
     return true;
 }
@@ -71,10 +71,10 @@ int main(void)
 
     printf("Running 3 x 20 operations\n");
     for (int i = 0; i < 20; i++) {
-        if (InterpolationDetails_interpolation_filter_exists((InterpolationFilter)i)) {
-            test(1200, 100, Bgr24, 400, 223, Bgra32, true, true, false, (InterpolationFilter)i);
-            test(44, 33, Bgr24, 800, 600, Bgra32, false, true, true, (InterpolationFilter)i);
-            test(1200, 800, Bgra32, 200, 150, Bgra32, false, false, false, (InterpolationFilter)i);
+        if (flow_interpolation_filter_exists((flow_interpolation_filter)i)) {
+            test(1200, 100, flow_bgr24, 400, 223, flow_bgra32, true, true, false, (flow_interpolation_filter)i);
+            test(44, 33, flow_bgr24, 800, 600, flow_bgra32, false, true, true, (flow_interpolation_filter)i);
+            test(1200, 800, flow_bgra32, 200, 150, flow_bgra32, false, false, false, (flow_interpolation_filter)i);
         }
     }
     return 0;

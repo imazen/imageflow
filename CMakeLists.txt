@@ -19,8 +19,6 @@ list(REMOVE_ITEM CONAN_LIBS efence) # FIXME: Maybe efence should be a private de
 
 file(GLOB LIB_SRCS lib/*.c)
 file(GLOB LIB_HDRS lib/*.h)
-list(APPEND LIB_HDRS fastscaling.h)
-list(APPEND LIB_HDRS fastscaling_enums.h)
 list(APPEND LIB_HDRS imageflow.h)
 
 add_library(imageflow ${LIB_SRCS} ${LIB_HDRS})
@@ -43,7 +41,7 @@ if(ENABLE_TEST)
 		target_include_directories(${target} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/lib)
 	endfunction()
 
-	create_test(fastscaling tests/fastscaling.c)
+	create_test(test_fastscaling tests/fastscaling.c)
 	create_test(test_integration_program tests/test_integration.cpp tests/test_integration_program.cpp)
 	create_test(test_graph_program tests/test_graph.cpp tests/test_graph_program.cpp tests/helpers.c)
 	create_test(test_error_handling tests/test_error_handling.cpp tests/test_graph_program.cpp  tests/helpers.c)

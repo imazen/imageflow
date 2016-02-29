@@ -15,11 +15,11 @@
 extern "C" {
 #endif
 
-typedef struct BitmapFloatStruct BitmapFloat;
+typedef struct flow_bitmap_float flow_bitmap_float;
 
-typedef struct BitmapBgraStruct BitmapBgra;
+typedef struct flow_bitmap_bgra_struct flow_bitmap_bgra;
 
-typedef struct ContextStruct Context;
+typedef struct flow_context_struct flow_context;
 
 static inline float linear_to_srgb(float clr)
 {
@@ -41,9 +41,12 @@ static inline float srgb_to_linear(float s)
         return (float)pow((s + 0.055f) / (1 + 0.055f), 2.4f);
 }
 
-static inline float remove_gamma(Context* context, float value) { return (float)pow(value, context->colorspace.gamma); }
+static inline float remove_gamma(flow_context* context, float value)
+{
+    return (float)pow(value, context->colorspace.gamma);
+}
 
-static inline float apply_gamma(Context* context, float value)
+static inline float apply_gamma(flow_context* context, float value)
 {
     return (float)pow(value, context->colorspace.gamma_inverse);
 }
@@ -76,7 +79,7 @@ static inline float sigmoid_inverse(const SigmoidInfo* info, float y)
 
 #endif
 
-static inline float Context_srgb_to_floatspace_uncached(Context* context, uint8_t value)
+static inline float Context_srgb_to_floatspace_uncached(flow_context* context, uint8_t value)
 {
     float v = ((float)value) * (float)(1.0f / 255.0f);
     if (context->colorspace.apply_srgb)
@@ -90,16 +93,16 @@ static inline float Context_srgb_to_floatspace_uncached(Context* context, uint8_
     return v;
 }
 
-static inline float Context_srgb_to_floatspace(Context* context, uint8_t value)
+static inline float Context_srgb_to_floatspace(flow_context* context, uint8_t value)
 {
     // if (!context->colorspace.apply_srgb) return Context_srgb_to_floatspace_uncached (context,value);
-    // return context->colorspace.floatspace == Floatspace_as_is ? (value * (1.f/255.f)) :
+    // return context->colorspace.floatspace == flow_working_floatspace_as_is ? (value * (1.f/255.f)) :
     // context->colorspace.byte_to_float[value];
     return context->colorspace
         .byte_to_float[value]; // 2x faster, even if just multiplying by 1/255. 3x faster than the entire calculation.
 }
 
-static inline uint8_t Context_floatspace_to_srgb(Context* context, float space_value)
+static inline uint8_t Context_floatspace_to_srgb(flow_context* context, float space_value)
 {
     float v = space_value;
 #ifdef EXPOSE_SIGMOID
@@ -204,16 +207,15 @@ static inline void yxz_to_linear(float* yxz)
     yxz[0] = 0.055648f * X - 0.204043f * Y + 1.057311f * Z; // b
 }
 
-bool BitmapFloat_linear_to_luv_rows(Context* context, BitmapFloat* bit, const uint32_t start_row,
-                                    const uint32_t row_count);
-bool BitmapFloat_luv_to_linear_rows(Context* context, BitmapFloat* bit, const uint32_t start_row,
-                                    const uint32_t row_count);
+bool flow_bitmap_float_linear_to_luv_rows(flow_context* context, flow_bitmap_float* bit, const uint32_t start_row,
+                                          const uint32_t row_count);
+bool flow_bitmap_float_luv_to_linear_rows(flow_context* context, flow_bitmap_float* bit, const uint32_t start_row,
+                                          const uint32_t row_count);
 
-bool BitmapFloat_apply_color_matrix(Context* context, BitmapFloat* bmp, const uint32_t row, const uint32_t count,
-                                    float* m[5]);
-bool BitmapBgra_apply_color_matrix(Context* context, BitmapBgra* bmp, const uint32_t row, const uint32_t count,
-                                   float* const __restrict m[5]);
-
+bool flow_bitmap_float_apply_color_matrix(flow_context* context, flow_bitmap_float* bmp, const uint32_t row,
+                                          const uint32_t count, float** m);
+bool flow_bitmap_bgra_apply_color_matrix(flow_context* context, flow_bitmap_bgra* bmp, const uint32_t row,
+                                         const uint32_t count, float* const __restrict m[5]);
 #ifdef __cplusplus
 }
 #endif

@@ -6,17 +6,17 @@
 #include "trim_whitespace.h"
 #include "string.h"
 
-bool test(int sx, int sy, BitmapPixelFormat sbpp, int cx, int cy, BitmapPixelFormat cbpp, bool transpose, bool flipx,
-          bool flipy, bool profile, InterpolationFilter filter)
+bool test(int sx, int sy, flow_pixel_format sbpp, int cx, int cy, flow_pixel_format cbpp, bool transpose, bool flipx,
+          bool flipy, bool profile, flow_interpolation_filter filter)
 {
-    Context context;
-    Context_initialize(&context);
+    flow_context context;
+    flow_context_initialize(&context);
 
-    BitmapBgra* source = BitmapBgra_create(&context, sx, sy, true, sbpp);
-    BitmapBgra* canvas = BitmapBgra_create(&context, cx, cy, true, cbpp);
+    flow_bitmap_bgra* source = flow_bitmap_bgra_create(&context, sx, sy, true, sbpp);
+    flow_bitmap_bgra* canvas = flow_bitmap_bgra_create(&context, cx, cy, true, cbpp);
     if (canvas == NULL || source == NULL)
         return false;
-    RenderDetails* details = RenderDetails_create_with(&context, filter);
+    flow_RenderDetails* details = flow_RenderDetails_create_with(&context, filter);
     if (details == NULL)
         return false;
     details->sharpen_percent_goal = 50;
@@ -26,88 +26,92 @@ bool test(int sx, int sy, BitmapPixelFormat sbpp, int cx, int cy, BitmapPixelFor
     details->enable_profiling = profile;
 
     // Should we even have Renderer_* functions, or just 1 call that does it all?
-    // If we add memory use estimation, we should keep Renderer
+    // If we add memory use estimation, we should keep flow_Renderer
 
-    if (!RenderDetails_render(&context, details, source, canvas)) {
+    if (!flow_RenderDetails_render(&context, details, source, canvas)) {
         return false;
     }
 
-    Context_terminate(&context);
+    flow_context_terminate(&context);
     return true;
 }
 
-bool test_in_place(int sx, int sy, BitmapPixelFormat sbpp, bool flipx, bool flipy, bool profile, float sharpen,
+bool test_in_place(int sx, int sy, flow_pixel_format sbpp, bool flipx, bool flipy, bool profile, float sharpen,
                    uint32_t kernelRadius)
 {
-    Context context;
-    Context_initialize(&context);
-    BitmapBgra* source = BitmapBgra_create(&context, sx, sy, true, sbpp);
+    flow_context context;
+    flow_context_initialize(&context);
+    flow_bitmap_bgra* source = flow_bitmap_bgra_create(&context, sx, sy, true, sbpp);
 
-    RenderDetails* details = RenderDetails_create(&context);
+    flow_RenderDetails* details = flow_RenderDetails_create(&context);
 
     details->sharpen_percent_goal = sharpen;
     details->post_flip_x = flipx;
     details->post_flip_y = flipy;
     details->enable_profiling = profile;
     if (kernelRadius > 0) {
-        details->kernel_a = ConvolutionKernel_create_guassian_normalized(&context, 1.4, kernelRadius);
+        details->kernel_a = flow_convolution_kernel_create_guassian_normalized(&context, 1.4, kernelRadius);
     }
 
-    RenderDetails_render_in_place(&context, details, source);
+    flow_RenderDetails_render_in_place(&context, details, source);
 
-    Context_terminate(&context);
+    flow_context_terminate(&context);
     return true;
 }
 
-const InterpolationFilter DEFAULT_FILTER = Filter_Robidoux;
+const flow_interpolation_filter DEFAULT_FILTER = flow_interpolation_filter_Robidoux;
 
 TEST_CASE("Render without crashing", "[fastscaling]")
 {
-    REQUIRE(test(400, 300, Bgra32, 200, 40, Bgra32, false, false, false, false, DEFAULT_FILTER));
+    REQUIRE(test(400, 300, flow_bgra32, 200, 40, flow_bgra32, false, false, false, false, DEFAULT_FILTER));
 }
 
 TEST_CASE("Render - upscale", "[fastscaling]")
 {
-    REQUIRE(test(200, 40, Bgra32, 500, 300, Bgra32, false, false, false, false, DEFAULT_FILTER));
+    REQUIRE(test(200, 40, flow_bgra32, 500, 300, flow_bgra32, false, false, false, false, DEFAULT_FILTER));
 }
 
 TEST_CASE("Render - downscale 24->32", "[fastscaling]")
 {
-    REQUIRE(test(400, 200, Bgr24, 200, 100, Bgra32, false, false, false, false, DEFAULT_FILTER));
+    REQUIRE(test(400, 200, flow_bgr24, 200, 100, flow_bgra32, false, false, false, false, DEFAULT_FILTER));
 }
 
 TEST_CASE("Render and rotate", "[fastscaling]")
 {
-    REQUIRE(test(200, 40, Bgra32, 500, 300, Bgra32, true, true, true, false, DEFAULT_FILTER));
+    REQUIRE(test(200, 40, flow_bgra32, 500, 300, flow_bgra32, true, true, true, false, DEFAULT_FILTER));
 }
 
 TEST_CASE("Render and rotate with profiling", "[fastscaling]")
 {
-    REQUIRE(test(200, 40, Bgra32, 500, 300, Bgra32, true, true, true, true, DEFAULT_FILTER));
+    REQUIRE(test(200, 40, flow_bgra32, 500, 300, flow_bgra32, true, true, true, true, DEFAULT_FILTER));
 }
 
-TEST_CASE("Flip in place", "[fastscaling]") { REQUIRE(test_in_place(400, 300, Bgra32, true, true, false, 0, 0)); }
-TEST_CASE("Flip in place 24 bit", "[fastscaling]") { REQUIRE(test_in_place(400, 300, Bgr24, true, true, false, 0, 0)); }
+TEST_CASE("Flip in place", "[fastscaling]") { REQUIRE(test_in_place(400, 300, flow_bgra32, true, true, false, 0, 0)); }
+TEST_CASE("Flip in place 24 bit", "[fastscaling]")
+{
+    REQUIRE(test_in_place(400, 300, flow_bgr24, true, true, false, 0, 0));
+}
 // segfaults the process
 TEST_CASE("Sharpen and convolve in place", "[fastscaling]")
 {
-    REQUIRE(test_in_place(400, 300, Bgr24, false, false, false, 0.5, 0));
+    REQUIRE(test_in_place(400, 300, flow_bgr24, false, false, false, 0.5, 0));
 }
 //*/
 
-BitmapBgra* crop_window(Context* context, BitmapBgra* source, uint32_t x, uint32_t y, uint32_t w, uint32_t h)
+flow_bitmap_bgra* crop_window(flow_context* context, flow_bitmap_bgra* source, uint32_t x, uint32_t y, uint32_t w,
+                              uint32_t h)
 {
-    BitmapBgra* cropped = BitmapBgra_create_header(context, w, h);
+    flow_bitmap_bgra* cropped = flow_bitmap_bgra_create_header(context, w, h);
     cropped->fmt = source->fmt;
-    const uint32_t bytes_pp = BitmapPixelFormat_bytes_per_pixel(source->fmt);
+    const uint32_t bytes_pp = flow_pixel_format_bytes_per_pixel(source->fmt);
     cropped->pixels = source->pixels + (y * source->stride) + (x * bytes_pp);
     cropped->stride = source->stride;
     return cropped;
 }
 
-void clear_bitmap(BitmapBgra* b, uint8_t fill_red, uint8_t fill_green, uint8_t fill_blue, uint8_t fill_alpha)
+void clear_bitmap(flow_bitmap_bgra* b, uint8_t fill_red, uint8_t fill_green, uint8_t fill_blue, uint8_t fill_alpha)
 {
-    const uint32_t bytes_pp = BitmapPixelFormat_bytes_per_pixel(b->fmt);
+    const uint32_t bytes_pp = flow_pixel_format_bytes_per_pixel(b->fmt);
     const uint32_t row_bytes = bytes_pp * b->w;
     for (uint32_t i = 0; i < row_bytes; i += 4) {
         b->pixels[i] = fill_blue;
@@ -122,17 +126,17 @@ void clear_bitmap(BitmapBgra* b, uint8_t fill_red, uint8_t fill_green, uint8_t f
     }
 }
 
-void fill_rect(Context* context, BitmapBgra* b, uint32_t x, uint32_t y, uint32_t w, uint32_t h, uint8_t fill_red,
-               uint8_t fill_green, uint8_t fill_blue, uint8_t fill_alpha)
+void fill_rect(flow_context* context, flow_bitmap_bgra* b, uint32_t x, uint32_t y, uint32_t w, uint32_t h,
+               uint8_t fill_red, uint8_t fill_green, uint8_t fill_blue, uint8_t fill_alpha)
 {
-    BitmapBgra* cropped = crop_window(context, b, x, y, w, h);
+    flow_bitmap_bgra* cropped = crop_window(context, b, x, y, w, h);
     clear_bitmap(cropped, fill_red, fill_green, fill_blue, fill_alpha);
-    BitmapBgra_destroy(context, cropped);
+    flow_bitmap_bgra_destroy(context, cropped);
 }
 
 /*/ segfaults the process if you uncomment this
 TEST_CASE ("Trim whitespace in 32-bit image", "[fastscaling]") {
-    BitmapBgra* b = create_bitmap_bgra (200, 150, true, Bgra32);
+    flow_bitmap_bgra* b = create_bitmap_bgra (200, 150, true, flow_bgra32);
 
     fill_rect (b, 30, 20, 100, 75, 30, 30, 30, 255);
 
@@ -153,15 +157,15 @@ TEST_CASE("Test contrib windows", "[fastscaling]")
 
     char msg[256];
 
-    Context context;
-    Context_initialize(&context);
+    flow_context context;
+    flow_context_initialize(&context);
 
     bool r = test_contrib_windows(&context, msg);
 
     if (!r)
         FAIL(msg);
     REQUIRE(r);
-    Context_terminate(&context);
+    flow_context_terminate(&context);
 }
 
 TEST_CASE("Test Weighting", "[fastscaling]")
@@ -169,50 +173,68 @@ TEST_CASE("Test Weighting", "[fastscaling]")
 
     char msg[256];
 
-    Context context;
-    Context_initialize(&context);
+    flow_context context;
+    flow_context_initialize(&context);
 
     // These have window = 1, and shouldnt' have negative values. They should also end at 1
-    CHECK(test_filter(&context, InterpolationFilter::Filter_Hermite, msg, 0, 0, 0.99, 0.08, 1) == nullptr);
+    CHECK(test_filter(&context, flow_interpolation_filter::flow_interpolation_filter_Hermite, msg, 0, 0, 0.99, 0.08, 1)
+          == nullptr);
     // Also called a linear filter
-    CHECK(test_filter(&context, InterpolationFilter::Filter_Triangle, msg, 0, 0, 0.99, 0.08, 1) == nullptr);
+    CHECK(test_filter(&context, flow_interpolation_filter::flow_interpolation_filter_Triangle, msg, 0, 0, 0.99, 0.08, 1)
+          == nullptr);
     // Box should only return a value from -0.5..0.5
-    CHECK(test_filter(&context, InterpolationFilter::Filter_Box, msg, 0, 0, 0.51, 0.001, 0.51) == nullptr);
+    CHECK(test_filter(&context, flow_interpolation_filter::flow_interpolation_filter_Box, msg, 0, 0, 0.51, 0.001, 0.51)
+          == nullptr);
 
     // These should go negative between x=1 and x=2, but should end at x=2
-    CHECK(test_filter(&context, InterpolationFilter::Filter_CatmullRom, msg, 1, 2, 1, 0.08, 2) == nullptr);
-    CHECK(test_filter(&context, InterpolationFilter::Filter_CubicFast, msg, 1, 2, 1, 0.08, 2) == nullptr);
-    CHECK(test_filter(&context, InterpolationFilter::Filter_Cubic, msg, 1, 2, 1, 0.08, 2) == nullptr);
+    CHECK(test_filter(&context, flow_interpolation_filter::flow_interpolation_filter_CatmullRom, msg, 1, 2, 1, 0.08, 2)
+          == nullptr);
+    CHECK(test_filter(&context, flow_interpolation_filter::flow_interpolation_filter_CubicFast, msg, 1, 2, 1, 0.08, 2)
+          == nullptr);
+    CHECK(test_filter(&context, flow_interpolation_filter::flow_interpolation_filter_Cubic, msg, 1, 2, 1, 0.08, 2)
+          == nullptr);
 
     // BSpline is a smoothing filter, always positive
-    CHECK(test_filter(&context, InterpolationFilter::Filter_CubicBSpline, msg, 0, 0, 1.75, 0.08, 2) == nullptr);
+    CHECK(test_filter(&context, flow_interpolation_filter::flow_interpolation_filter_CubicBSpline, msg, 0, 0, 1.75,
+                      0.08, 2) == nullptr);
 
-    CHECK(test_filter(&context, InterpolationFilter::Filter_Mitchell, msg, 1.0f, 1.75f, 1, 0.08, 1.75) == nullptr);
+    CHECK(test_filter(&context, flow_interpolation_filter::flow_interpolation_filter_Mitchell, msg, 1.0f, 1.75f, 1,
+                      0.08, 1.75) == nullptr);
 
-    CHECK(test_filter(&context, InterpolationFilter::Filter_Robidoux, msg, 1, 1.65, 1, 0.08, 1.75) == nullptr);
-    CHECK(test_filter(&context, InterpolationFilter::Filter_RobidouxSharp, msg, 1, 1.8, 1, 0.08, 1.8) == nullptr);
+    CHECK(test_filter(&context, flow_interpolation_filter::flow_interpolation_filter_Robidoux, msg, 1, 1.65, 1, 0.08,
+                      1.75) == nullptr);
+    CHECK(test_filter(&context, flow_interpolation_filter::flow_interpolation_filter_RobidouxSharp, msg, 1, 1.8, 1,
+                      0.08, 1.8) == nullptr);
 
     // Sinc filters. These have second crossings.
-    CHECK(test_filter(&context, InterpolationFilter::Filter_RawLanczos2, msg, 1, 2, 1, 0.08, 2) == nullptr);
-    CHECK(test_filter(&context, InterpolationFilter::Filter_RawLanczos2Sharp, msg, 0.954, 1.86, 1, 0.08, 2) == nullptr);
+    CHECK(test_filter(&context, flow_interpolation_filter::flow_interpolation_filter_RawLanczos2, msg, 1, 2, 1, 0.08, 2)
+          == nullptr);
+    CHECK(test_filter(&context, flow_interpolation_filter::flow_interpolation_filter_RawLanczos2Sharp, msg, 0.954, 1.86,
+                      1, 0.08, 2) == nullptr);
 
     // These should be negative between x=1 and x=2, positive between 2 and 3, but should end at 3
 
-    CHECK(test_filter(&context, InterpolationFilter::Filter_RawLanczos3, msg, 1, 2, 1, 0.1, 3) == nullptr);
-    CHECK(test_filter(&context, InterpolationFilter::Filter_RawLanczos3Sharp, msg, 0.98, 1.9625, 1, 0.1, 3) == nullptr);
+    CHECK(test_filter(&context, flow_interpolation_filter::flow_interpolation_filter_RawLanczos3, msg, 1, 2, 1, 0.1, 3)
+          == nullptr);
+    CHECK(test_filter(&context, flow_interpolation_filter::flow_interpolation_filter_RawLanczos3Sharp, msg, 0.98,
+                      1.9625, 1, 0.1, 3) == nullptr);
 
     ///
-    CHECK(test_filter(&context, InterpolationFilter::Filter_Lanczos2, msg, 1, 2, 1, 0.08, 2) == nullptr);
+    CHECK(test_filter(&context, flow_interpolation_filter::flow_interpolation_filter_Lanczos2, msg, 1, 2, 1, 0.08, 2)
+          == nullptr);
 
-    CHECK(test_filter(&context, InterpolationFilter::Filter_Lanczos2Sharp, msg, 0.954, 1.86, 1, 0.08, 2) == nullptr);
+    CHECK(test_filter(&context, flow_interpolation_filter::flow_interpolation_filter_Lanczos2Sharp, msg, 0.954, 1.86, 1,
+                      0.08, 2) == nullptr);
 
     // These should be negative between x=1 and x=2, positive between 2 and 3, but should end at 3
 
-    CHECK(test_filter(&context, InterpolationFilter::Filter_Lanczos, msg, 1, 2, 1, 0.1, 3) == nullptr);
+    CHECK(test_filter(&context, flow_interpolation_filter::flow_interpolation_filter_Lanczos, msg, 1, 2, 1, 0.1, 3)
+          == nullptr);
 
-    CHECK(test_filter(&context, InterpolationFilter::Filter_LanczosSharp, msg, 0.98, 1.9625, 1, 0.1, 2.943) == nullptr);
+    CHECK(test_filter(&context, flow_interpolation_filter::flow_interpolation_filter_LanczosSharp, msg, 0.98, 1.9625, 1,
+                      0.1, 2.943) == nullptr);
 
-    Context_terminate(&context);
+    flow_context_terminate(&context);
 }
 
 TEST_CASE("Test Linear RGB 000 -> LUV ", "[fastscaling]")
@@ -288,10 +310,10 @@ SCENARIO("sRGB roundtrip", "[fastscaling]")
     {
         int w = 256;
         int h = 256;
-        Context context;
-        Context_initialize(&context);
-        BitmapBgra* bit = BitmapBgra_create(&context, w, h, true, Bgra32);
-        const uint32_t bytes_pp = BitmapPixelFormat_bytes_per_pixel(bit->fmt);
+        flow_context context;
+        flow_context_initialize(&context);
+        flow_bitmap_bgra* bit = flow_bitmap_bgra_create(&context, w, h, true, flow_bgra32);
+        const uint32_t bytes_pp = flow_pixel_format_bytes_per_pixel(bit->fmt);
 
         for (size_t y = 1; y < bit->h; y++) {
             for (size_t x = 0; x < bit->w; x++) {
@@ -304,14 +326,14 @@ SCENARIO("sRGB roundtrip", "[fastscaling]")
             }
         }
 
-        BitmapBgra* final = BitmapBgra_create(&context, w, h, true, Bgra32);
-        // BitmapFloat* buf = create_bitmap_float(w, h, 4, true);
+        flow_bitmap_bgra* final = flow_bitmap_bgra_create(&context, w, h, true, flow_bgra32);
+        // flow_bitmap_float* buf = create_bitmap_float(w, h, 4, true);
 
         WHEN("we do stuff")
         {
 
-            RenderDetails* details = RenderDetails_create(&context);
-            CHECK(RenderDetails_render(&context, details, bit, final));
+            flow_RenderDetails* details = flow_RenderDetails_create(&context);
+            CHECK(flow_RenderDetails_render(&context, details, bit, final));
 
             // convert_srgb_to_linear(bit, 0, buf, 0, h);
             // demultiply_alpha(buf, 0, h);
@@ -346,10 +368,10 @@ SCENARIO("sRGB roundtrip", "[fastscaling]")
                 }
                 REQUIRE(exact_match);
             }
-            RenderDetails_destroy(&context, details);
+            flow_RenderDetails_destroy(&context, details);
         }
-        BitmapBgra_destroy(&context, final);
-        BitmapBgra_destroy(&context, bit);
-        Context_terminate(&context);
+        flow_bitmap_bgra_destroy(&context, final);
+        flow_bitmap_bgra_destroy(&context, bit);
+        flow_context_terminate(&context);
     }
 }

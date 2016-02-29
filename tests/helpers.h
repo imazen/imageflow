@@ -10,19 +10,19 @@
 #include "curl/curl.h"
 #include "curl/easy.h"
 #include <stdlib.h>
-#include <imageflow.h>
+#include "imageflow.h"
 #include <../lib/job.h>
 
-uint8_t* get_bytes_cached(Context* c, size_t* bytes_count_out, const char* url);
+uint8_t* get_bytes_cached(flow_context* c, size_t* bytes_count_out, const char* url);
 void fetch_image(const char* url, char* dest_path);
-uint8_t* read_all_bytes(Context* c, size_t* buffer_size, const char* path);
+uint8_t* read_all_bytes(flow_context* c, size_t* buffer_size, const char* path);
 bool write_all_byte(const char* path, char* buffer, size_t size);
 void copy_file(FILE* from, FILE* to);
 
 unsigned long djb2(unsigned const char* str);
 size_t nonzero_count(uint8_t* array, size_t length);
 
-BitmapBgra* BitmapBgra_create_test_image(Context* c);
+flow_bitmap_bgra* BitmapBgra_create_test_image(flow_context* c);
 
 size_t nonzero_count(uint8_t* array, size_t length)
 {
@@ -74,7 +74,7 @@ bool write_all_byte(const char* path, char* buffer, size_t size)
     return true;
 }
 
-uint8_t* read_all_bytes(Context* c, size_t* buffer_size, const char* path)
+uint8_t* read_all_bytes(flow_context* c, size_t* buffer_size, const char* path)
 {
     uint8_t* buffer;
     FILE* fh = fopen(path, "rb");
@@ -82,7 +82,7 @@ uint8_t* read_all_bytes(Context* c, size_t* buffer_size, const char* path)
         fseek(fh, 0L, SEEK_END);
         size_t s = ftell(fh);
         rewind(fh);
-        buffer = (uint8_t*)CONTEXT_malloc(c, s);
+        buffer = (uint8_t*)FLOW_malloc(c, s);
         if (buffer != NULL) {
             // Returns 1 or 0, not the number of bytes.
             // Technically we're reading 1 element of size s
@@ -155,7 +155,7 @@ void fetch_image(const char* url, char* dest_path)
     }
 }
 
-uint8_t* get_bytes_cached(Context* c, size_t* bytes_count_out, const char* url)
+uint8_t* get_bytes_cached(flow_context* c, size_t* bytes_count_out, const char* url)
 {
 
 #define FLOW_MAX_PATH 255
@@ -205,11 +205,11 @@ void flow_utils_ensure_directory_exists(const char* dir_path)
     }
 }
 
-BitmapBgra* BitmapBgra_create_test_image(Context* c)
+flow_bitmap_bgra* BitmapBgra_create_test_image(flow_context* c)
 {
-    BitmapBgra* test = BitmapBgra_create(c, 256, 256, false, Bgra32);
+    flow_bitmap_bgra* test = flow_bitmap_bgra_create(c, 256, 256, false, flow_bgra32);
     if (test == NULL) {
-        CONTEXT_add_to_callstack(c);
+        FLOW_add_to_callstack(c);
         return NULL;
     }
     uint8_t* pixel;

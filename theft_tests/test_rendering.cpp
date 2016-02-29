@@ -8,7 +8,7 @@ extern "C" {
 #include <sys/time.h>
 #include <string.h>
 
-static Context * c;
+static flow_context * c;
 
 static bool get_time_seed(theft_seed *seed)
 {
@@ -23,9 +23,9 @@ struct TestEnv {
     int max_dimensions;
 };
 
-static theft_trial_res render_should_succeed(RenderDetails * details, BitmapBgra * source, BitmapBgra * canvas) {
+static theft_trial_res render_should_succeed(flow_RenderDetails * details, flow_bitmap_bgra * source, flow_bitmap_bgra * canvas) {
 
-    bool result = RenderDetails_render(c, details, source, canvas);
+    bool result = flow_RenderDetails_render(c, details, source, canvas);
     if (!result) return THEFT_TRIAL_FAIL;
 
     return THEFT_TRIAL_PASS;
@@ -38,10 +38,10 @@ void * renderdetails_random(theft * theft, theft_seed seed, void * input) {
 
     do {
         filter = theft_random(theft) % 30;
-    }while (!InterpolationDetails_interpolation_filter_exists((InterpolationFilter)filter));
+    }while (!flow_interpolation_filter_exists((flow_interpolation_filter) filter));
 
 
-    RenderDetails * details = RenderDetails_create_with(c, (InterpolationFilter)filter);
+    flow_RenderDetails * details = flow_RenderDetails_create_with(c, (flow_interpolation_filter) filter);
 
     if (details == NULL) return NULL;
 
@@ -54,14 +54,14 @@ void * renderdetails_random(theft * theft, theft_seed seed, void * input) {
 }
 void renderdetails_free(void * details, void * unused)
 {
-    RenderDetails_destroy(c, (RenderDetails *)details);
+    flow_RenderDetails_destroy(c, (flow_RenderDetails *) details);
 }
 
 void * BitmapBgra_random_dest(theft * theft, theft_seed seed, void * input) {
-    BitmapPixelFormat fmt = (BitmapPixelFormat)(3 + theft_random(theft) % 2);
+    flow_pixel_format fmt = (flow_pixel_format)(3 + theft_random(theft) % 2);
     int w = theft_random(theft) % 2049;
     int h = theft_random(theft) % 2049;
-    BitmapBgra * b = BitmapBgra_create(c, w,h, false, fmt);
+    flow_bitmap_bgra * b = flow_bitmap_bgra_create(c, w, h, false, fmt);
     b -> alpha_meaningful = !!(theft_random(theft) % 2);
     b -> can_reuse_space = !!(theft_random(theft) % 2);
     b -> stride_readonly = !!(theft_random(theft) % 2);
@@ -70,19 +70,19 @@ void * BitmapBgra_random_dest(theft * theft, theft_seed seed, void * input) {
     b->matte_color[1] = theft_random(theft) % 256;
     b->matte_color[2] = theft_random(theft) % 256;
     b->matte_color[3] = theft_random(theft) % 256;
-    b->compositing_mode = (BitmapCompositingMode)(theft_random(theft) % 3);
+    b->compositing_mode = (flow_bitmap_compositing_mode)(theft_random(theft) % 3);
     return (void*)b;
 }
 
 void * BitmapBgra_random_zeroed_source(theft * theft, theft_seed seed, void * input) {
-    BitmapPixelFormat fmt = (BitmapPixelFormat)(3 + theft_random(theft) % 2);
+    flow_pixel_format fmt = (flow_pixel_format)(3 + theft_random(theft) % 2);
     int w = 1 + (theft_random(theft) % 2048);
     int h = 1 + (theft_random(theft) % 2048);
 
-    BitmapBgra * b = BitmapBgra_create(c, w, h, true, fmt);
+    flow_bitmap_bgra * b = flow_bitmap_bgra_create(c, w, h, true, fmt);
     if (!b) {
         char buffer[1024];
-        printf("BitmapBgra_create failed: %s\n", Context_error_message(c, buffer, sizeof buffer));
+        printf("flow_bitmap_bgra_create failed: %s\n", flow_context_error_message(c, buffer, sizeof buffer));
         printf("dimensions: %dx%d format: %u\n", w, h, (unsigned)fmt);
         return THEFT_ERROR; // or THEFT_SKIP maybe
     }
@@ -94,16 +94,16 @@ void * BitmapBgra_random_zeroed_source(theft * theft, theft_seed seed, void * in
     b->matte_color[1] = theft_random(theft) % 256;
     b->matte_color[2] = theft_random(theft) % 256;
     b->matte_color[3] = theft_random(theft) % 256;
-    b->compositing_mode = (BitmapCompositingMode)(theft_random(theft) % 3);
+    b->compositing_mode = (flow_bitmap_compositing_mode)(theft_random(theft) % 3);
     return (void*)b;
 }
 
 void bitmapbgra_free(void * details, void * unused)
 {
-    BitmapBgra_destroy(c, (BitmapBgra *)details);
+    flow_bitmap_bgra_destroy(c, (flow_bitmap_bgra *) details);
 }
 /*
-InterpolationDetails * interpolation;
+flow_interpolation_details * interpolation;
     //How large the interoplation window needs to be before we even attempt to apply a sharpening
     //percentage to the given filter
     float minimum_sample_window_to_interposharpen;
@@ -118,9 +118,9 @@ InterpolationDetails * interpolation;
     uint32_t halving_divisor;
 
     //The first convolution to apply
-    ConvolutionKernel * kernel_a;
+    flow_convolution_kernel * kernel_a;
     //A second convolution to apply
-    ConvolutionKernel * kernel_b;
+    flow_convolution_kernel * kernel_b;
 
 
     //If greater than 0, a percentage to sharpen the result along each axis;
@@ -141,8 +141,8 @@ InterpolationDetails * interpolation;
 
 
 
-void reboot_context(){ if (c != NULL){ Context_destroy(c); } c = Context_create();}
-void destroy_context(){ if (c != NULL){ Context_destroy(c); c = NULL;}}
+void reboot_context(){ if (c != NULL){ flow_context_destroy(c); } c = flow_context_create();}
+void destroy_context(){ if (c != NULL){ flow_context_destroy(c); c = NULL;}}
 
 
 TEST_CASE("TestRender", "[fastscaling][thief]") {

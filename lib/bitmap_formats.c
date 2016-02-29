@@ -12,30 +12,30 @@
 #include "fastscaling_private.h"
 #include <string.h>
 
-const int MAX_BYTES_PP = 16;
+const int FLOW_MAX_BYTES_PP = 16;
 
-// Ha, ha. The result of sx * sy * MAX_BYTES_PP will overflow if the result is bigger than INT_MAX
+// Ha, ha. The result of sx * sy * FLOW_MAX_BYTES_PP will overflow if the result is bigger than INT_MAX
 // causing it to wrap around and be true. This is what the sx < INT_MAX / sy code does
 
 static bool are_valid_bitmap_dimensions(int sx, int sy)
 {
     return (sx > 0 && sy > 0 // positive dimensions
             && sx < INT_MAX / sy // no integer overflow
-            && sx * MAX_BYTES_PP < ((INT_MAX - MAX_BYTES_PP) / sy)); // then we can safely check
+            && sx * FLOW_MAX_BYTES_PP < ((INT_MAX - FLOW_MAX_BYTES_PP) / sy)); // then we can safely check
 }
 
-uint32_t BitmapPixelFormat_bytes_per_pixel(BitmapPixelFormat format) { return (uint32_t)format; }
+uint32_t flow_pixel_format_bytes_per_pixel(flow_pixel_format format) { return (uint32_t)format; }
 
-BitmapBgra* BitmapBgra_create_header(Context* context, int sx, int sy)
+flow_bitmap_bgra* flow_bitmap_bgra_create_header(flow_context* context, int sx, int sy)
 {
-    BitmapBgra* im;
+    flow_bitmap_bgra* im;
     if (!are_valid_bitmap_dimensions(sx, sy)) {
-        CONTEXT_error(context, Invalid_BitmapBgra_dimensions);
+        FLOW_error(context, flow_status_Invalid_BitmapBgra_dimensions);
         return NULL;
     }
-    im = (BitmapBgra*)CONTEXT_calloc(context, 1, sizeof(BitmapBgra));
+    im = (flow_bitmap_bgra*)FLOW_calloc(context, 1, sizeof(flow_bitmap_bgra));
     if (im == NULL) {
-        CONTEXT_error(context, Out_of_memory);
+        FLOW_error(context, flow_status_Out_of_memory);
         return NULL;
     }
     im->w = sx;
@@ -48,53 +48,53 @@ BitmapBgra* BitmapBgra_create_header(Context* context, int sx, int sy)
     return im;
 }
 
-BitmapBgra* BitmapBgra_create(Context* context, int sx, int sy, bool zeroed, BitmapPixelFormat format)
+flow_bitmap_bgra* flow_bitmap_bgra_create(flow_context* context, int sx, int sy, bool zeroed, flow_pixel_format format)
 {
-    BitmapBgra* im = BitmapBgra_create_header(context, sx, sy);
+    flow_bitmap_bgra* im = flow_bitmap_bgra_create_header(context, sx, sy);
     if (im == NULL) {
-        CONTEXT_add_to_callstack(context);
+        FLOW_add_to_callstack(context);
         return NULL;
     }
     im->fmt = format;
-    im->stride = im->w * BitmapPixelFormat_bytes_per_pixel(im->fmt);
+    im->stride = im->w * flow_pixel_format_bytes_per_pixel(im->fmt);
     im->pixels_readonly = false;
     im->stride_readonly = false;
     im->borrowed_pixels = false;
-    im->alpha_meaningful = im->fmt == Bgra32;
+    im->alpha_meaningful = im->fmt == flow_bgra32;
     if (zeroed) {
-        im->pixels = (unsigned char*)CONTEXT_calloc(context, im->h * im->stride, sizeof(unsigned char));
+        im->pixels = (unsigned char*)FLOW_calloc(context, im->h * im->stride, sizeof(unsigned char));
     } else {
-        im->pixels = (unsigned char*)CONTEXT_malloc(context, im->h * im->stride);
+        im->pixels = (unsigned char*)FLOW_malloc(context, im->h * im->stride);
     }
     if (im->pixels == NULL) {
-        CONTEXT_free(context, im);
-        CONTEXT_error(context, Out_of_memory);
+        FLOW_free(context, im);
+        FLOW_error(context, flow_status_Out_of_memory);
         return NULL;
     }
     return im;
 }
 
-void BitmapBgra_destroy(Context* context, BitmapBgra* im)
+void flow_bitmap_bgra_destroy(flow_context* context, flow_bitmap_bgra* im)
 {
     if (im == NULL)
         return;
     if (!im->borrowed_pixels) {
-        CONTEXT_free(context, im->pixels);
+        FLOW_free(context, im->pixels);
     }
-    CONTEXT_free(context, im);
+    FLOW_free(context, im);
 }
 
-BitmapFloat* BitmapFloat_create_header(Context* context, int sx, int sy, int channels)
+flow_bitmap_float* flow_bitmap_float_create_header(flow_context* context, int sx, int sy, int channels)
 {
-    BitmapFloat* im;
+    flow_bitmap_float* im;
 
     if (!are_valid_bitmap_dimensions(sx, sy)) {
-        CONTEXT_error(context, Invalid_BitmapFloat_dimensions);
+        FLOW_error(context, flow_status_Invalid_BitmapFloat_dimensions);
     }
 
-    im = (BitmapFloat*)CONTEXT_calloc(context, 1, sizeof(BitmapFloat));
+    im = (flow_bitmap_float*)FLOW_calloc(context, 1, sizeof(flow_bitmap_float));
     if (im == NULL) {
-        CONTEXT_error(context, Out_of_memory);
+        FLOW_error(context, flow_status_Out_of_memory);
         return NULL;
     }
     im->w = sx;
@@ -109,43 +109,43 @@ BitmapFloat* BitmapFloat_create_header(Context* context, int sx, int sy, int cha
     return im;
 }
 
-BitmapFloat* BitmapFloat_create(Context* context, int sx, int sy, int channels, bool zeroed)
+flow_bitmap_float* flow_bitmap_float_create(flow_context* context, int sx, int sy, int channels, bool zeroed)
 {
-    BitmapFloat* im = BitmapFloat_create_header(context, sx, sy, channels);
+    flow_bitmap_float* im = flow_bitmap_float_create_header(context, sx, sy, channels);
     if (im == NULL) {
-        CONTEXT_add_to_callstack(context);
+        FLOW_add_to_callstack(context);
         return NULL;
     }
     im->pixels_borrowed = false;
     if (zeroed) {
-        im->pixels = (float*)CONTEXT_calloc(context, im->float_count, sizeof(float));
+        im->pixels = (float*)FLOW_calloc(context, im->float_count, sizeof(float));
     } else {
-        im->pixels = (float*)CONTEXT_malloc(context, im->float_count * sizeof(float));
+        im->pixels = (float*)FLOW_malloc(context, im->float_count * sizeof(float));
     }
     if (im->pixels == NULL) {
-        CONTEXT_free(context, im);
-        CONTEXT_error(context, Out_of_memory);
+        FLOW_free(context, im);
+        FLOW_error(context, flow_status_Out_of_memory);
         return NULL;
     }
     return im;
 }
 
-void BitmapFloat_destroy(Context* context, BitmapFloat* im)
+void flow_bitmap_float_destroy(flow_context* context, flow_bitmap_float* im)
 {
     if (im == NULL)
         return;
 
     if (!im->pixels_borrowed) {
-        CONTEXT_free(context, im->pixels);
+        FLOW_free(context, im->pixels);
     }
     im->pixels = NULL;
-    CONTEXT_free(context, im);
+    FLOW_free(context, im);
 }
 
-bool BitmapBgra_compare(Context* c, BitmapBgra* a, BitmapBgra* b, bool* equal_out)
+bool flow_bitmap_bgra_compare(flow_context* c, flow_bitmap_bgra* a, flow_bitmap_bgra* b, bool* equal_out)
 {
     if (a == NULL || b == NULL) {
-        CONTEXT_error(c, Null_argument);
+        FLOW_error(c, flow_status_Null_argument);
         return false;
     }
     *equal_out = false;
@@ -154,7 +154,7 @@ bool BitmapBgra_compare(Context* c, BitmapBgra* a, BitmapBgra* b, bool* equal_ou
     }
     // TODO: compare bgcolor and alpha_meaningful?
     // Dont' compare the full stride (padding), it could be windowed!
-    uint32_t row_length = umin(b->stride, b->w * BitmapPixelFormat_bytes_per_pixel(b->fmt));
+    uint32_t row_length = umin(b->stride, b->w * flow_pixel_format_bytes_per_pixel(b->fmt));
     for (uint32_t i = 0; i < b->h; i++) {
         if (memcmp(a->pixels + (i * a->stride), b->pixels + (i * b->stride), row_length) != 0) {
             *equal_out = false;

@@ -23,7 +23,7 @@
 
 #include <stdlib.h>
 
-static void derive_cubic_coefficients(double B, double C, InterpolationDetails* out)
+static void derive_cubic_coefficients(double B, double C, flow_interpolation_details* out)
 {
     double bx2 = B + B;
     out->p1 = 1.0 - (1.0 / 3.0) * B;
@@ -35,7 +35,7 @@ static void derive_cubic_coefficients(double B, double C, InterpolationDetails* 
     out->q4 = (-1.0 / 6.0) * B - C;
 }
 
-static double filter_flex_cubic(const InterpolationDetails* d, double x)
+static double filter_flex_cubic(const flow_interpolation_details* d, double x)
 {
     const double t = (double)fabs(x) / d->blur;
 
@@ -47,7 +47,7 @@ static double filter_flex_cubic(const InterpolationDetails* d, double x)
     }
     return (0.0);
 }
-static double filter_bicubic_fast(const InterpolationDetails* d, double t)
+static double filter_bicubic_fast(const flow_interpolation_details* d, double t)
 {
     double abs_t = (double)fabs(t) / d->blur;
     double abs_t_sq = abs_t * abs_t;
@@ -58,7 +58,7 @@ static double filter_bicubic_fast(const InterpolationDetails* d, double t)
     return 0;
 }
 
-static double filter_sinc(const InterpolationDetails* d, double t)
+static double filter_sinc(const flow_interpolation_details* d, double t)
 {
     const double abs_t = (double)fabs(t) / d->blur;
     if (abs_t == 0) {
@@ -71,14 +71,14 @@ static double filter_sinc(const InterpolationDetails* d, double t)
     return sin(a) / a;
 }
 
-static double filter_box(const InterpolationDetails* d, double t)
+static double filter_box(const flow_interpolation_details* d, double t)
 {
 
     const double x = t / d->blur;
     return (x >= -1 * d->window && x < d->window) ? 1 : 0;
 }
 
-static double filter_triangle(const InterpolationDetails* d, double t)
+static double filter_triangle(const flow_interpolation_details* d, double t)
 {
     const double x = (double)fabs(t) / d->blur;
     if (x < 1.0)
@@ -86,7 +86,7 @@ static double filter_triangle(const InterpolationDetails* d, double t)
     return (0.0);
 }
 
-static double filter_sinc_windowed(const InterpolationDetails* d, double t)
+static double filter_sinc_windowed(const flow_interpolation_details* d, double t)
 {
     const double x = t / d->blur;
     const double abs_t = (double)fabs(x);
@@ -99,7 +99,7 @@ static double filter_sinc_windowed(const InterpolationDetails* d, double t)
     return d->window * sin(IR_PI * x / d->window) * sin(x * IR_PI) / (IR_PI * IR_PI * x * x);
 }
 
-static double filter_jinc(const InterpolationDetails* d, double t)
+static double filter_jinc(const flow_interpolation_details* d, double t)
 {
     const double x = fabs(t) / d->blur;
     if (x == 0.0)
@@ -118,12 +118,12 @@ static inline double window_jinc (double x) {
     ////x crossing #1 1.2196698912665045
 }
 
-static double filter_window_jinc (const InterpolationDetails * d, double t) {
+static double filter_window_jinc (const flow_interpolation_details * d, double t) {
     return window_jinc (t / (d->blur * d->window));
 }
 */
 
-static double filter_ginseng(const InterpolationDetails* d, double t)
+static double filter_ginseng(const flow_interpolation_details* d, double t)
 {
     // Sinc windowed by jinc
     const double abs_t = (double)fabs(t) / d->blur;
@@ -143,7 +143,7 @@ static double filter_ginseng(const InterpolationDetails* d, double t)
 
 #define TONY 0.00001
 
-double InterpolationDetails_percent_negative_weight(const InterpolationDetails* details)
+double flow_interpolation_details_percent_negative_weight(const flow_interpolation_details* details)
 {
     const int samples = 50;
     double step = details->window / (double)samples;
@@ -163,11 +163,11 @@ double InterpolationDetails_percent_negative_weight(const InterpolationDetails* 
     return negative_area / positive_area;
 }
 
-InterpolationDetails* InterpolationDetails_create(Context* context)
+flow_interpolation_details* flow_interpolation_details_create(flow_context* context)
 {
-    InterpolationDetails* d = CONTEXT_calloc_array(context, 1, InterpolationDetails);
+    flow_interpolation_details* d = FLOW_calloc_array(context, 1, flow_interpolation_details);
     if (d == NULL) {
-        CONTEXT_error(context, Out_of_memory);
+        FLOW_error(context, flow_status_Out_of_memory);
         return NULL;
     }
     d->blur = 1;
@@ -178,150 +178,162 @@ InterpolationDetails* InterpolationDetails_create(Context* context)
     return d;
 }
 
-InterpolationDetails* InterpolationDetails_create_bicubic_custom(Context* context, double window, double blur, double B,
-                                                                 double C)
+flow_interpolation_details* flow_interpolation_details_create_bicubic_custom(flow_context* context, double window,
+                                                                             double blur, double B, double C)
 {
-    InterpolationDetails* d = InterpolationDetails_create(context);
+    flow_interpolation_details* d = flow_interpolation_details_create(context);
     if (d != NULL) {
         d->blur = blur;
         derive_cubic_coefficients(B, C, d);
         d->filter = filter_flex_cubic;
         d->window = window;
     } else {
-        CONTEXT_add_to_callstack(context);
+        FLOW_add_to_callstack(context);
     }
     return d;
 }
-InterpolationDetails* InterpolationDetails_create_custom(Context* context, double window, double blur,
-                                                         detailed_interpolation_method filter)
+flow_interpolation_details* flow_interpolation_details_create_custom(flow_context* context, double window, double blur,
+                                                                     flow_detailed_interpolation_method filter)
 {
-    InterpolationDetails* d = InterpolationDetails_create(context);
+    flow_interpolation_details* d = flow_interpolation_details_create(context);
     if (d != NULL) {
         d->blur = blur;
         d->filter = filter;
         d->window = window;
     } else {
-        CONTEXT_add_to_callstack(context);
+        FLOW_add_to_callstack(context);
     }
     return d;
 }
 
-void InterpolationDetails_destroy(Context* context, InterpolationDetails* details) { CONTEXT_free(context, details); }
+void flow_interpolation_details_destroy(flow_context* context, flow_interpolation_details* details)
+{
+    FLOW_free(context, details);
+}
 
-static InterpolationDetails* InterpolationDetails_create_from_internal(Context* context, InterpolationFilter filter,
-                                                                       bool checkExistenceOnly)
+static flow_interpolation_details* InterpolationDetails_create_from_internal(flow_context* context,
+                                                                             flow_interpolation_filter filter,
+                                                                             bool checkExistenceOnly)
 {
     bool ex = checkExistenceOnly;
-    InterpolationDetails* truePtr = (InterpolationDetails*)-1;
+    flow_interpolation_details* truePtr = (flow_interpolation_details*)-1;
     switch (filter) {
-    case Filter_Linear:
-    case Filter_Triangle:
-        return ex ? truePtr : InterpolationDetails_create_custom(context, 1, 1, filter_triangle);
+    case flow_interpolation_filter_Linear:
+    case flow_interpolation_filter_Triangle:
+        return ex ? truePtr : flow_interpolation_details_create_custom(context, 1, 1, filter_triangle);
 
-    case Filter_RawLanczos2:
-        return ex ? truePtr : InterpolationDetails_create_custom(context, 2, 1, filter_sinc);
-    case Filter_RawLanczos3:
-        return ex ? truePtr : InterpolationDetails_create_custom(context, 3, 1, filter_sinc);
-    case Filter_RawLanczos2Sharp:
-        return ex ? truePtr : InterpolationDetails_create_custom(context, 2, 0.9549963639785485, filter_sinc);
-    case Filter_RawLanczos3Sharp:
-        return ex ? truePtr : InterpolationDetails_create_custom(context, 3, 0.9812505644269356, filter_sinc);
+    case flow_interpolation_filter_RawLanczos2:
+        return ex ? truePtr : flow_interpolation_details_create_custom(context, 2, 1, filter_sinc);
+    case flow_interpolation_filter_RawLanczos3:
+        return ex ? truePtr : flow_interpolation_details_create_custom(context, 3, 1, filter_sinc);
+    case flow_interpolation_filter_RawLanczos2Sharp:
+        return ex ? truePtr : flow_interpolation_details_create_custom(context, 2, 0.9549963639785485, filter_sinc);
+    case flow_interpolation_filter_RawLanczos3Sharp:
+        return ex ? truePtr : flow_interpolation_details_create_custom(context, 3, 0.9812505644269356, filter_sinc);
 
     // Hermite and BSpline no negative weights
-    case Filter_CubicBSpline:
-        return ex ? truePtr : InterpolationDetails_create_bicubic_custom(context, 2, 1, 1, 0);
+    case flow_interpolation_filter_CubicBSpline:
+        return ex ? truePtr : flow_interpolation_details_create_bicubic_custom(context, 2, 1, 1, 0);
 
-    case Filter_Lanczos2:
-        return ex ? truePtr : InterpolationDetails_create_custom(context, 2, 1, filter_sinc_windowed);
-    case Filter_Lanczos:
-        return ex ? truePtr : InterpolationDetails_create_custom(context, 3, 1, filter_sinc_windowed);
-    case Filter_Lanczos2Sharp:
-        return ex ? truePtr : InterpolationDetails_create_custom(context, 2, 0.9549963639785485, filter_sinc_windowed);
-    case Filter_LanczosSharp:
-        return ex ? truePtr : InterpolationDetails_create_custom(context, 3, 0.9812505644269356, filter_sinc_windowed);
+    case flow_interpolation_filter_Lanczos2:
+        return ex ? truePtr : flow_interpolation_details_create_custom(context, 2, 1, filter_sinc_windowed);
+    case flow_interpolation_filter_Lanczos:
+        return ex ? truePtr : flow_interpolation_details_create_custom(context, 3, 1, filter_sinc_windowed);
+    case flow_interpolation_filter_Lanczos2Sharp:
+        return ex ? truePtr
+                  : flow_interpolation_details_create_custom(context, 2, 0.9549963639785485, filter_sinc_windowed);
+    case flow_interpolation_filter_LanczosSharp:
+        return ex ? truePtr
+                  : flow_interpolation_details_create_custom(context, 3, 0.9812505644269356, filter_sinc_windowed);
 
-    case Filter_CubicFast:
-        return ex ? truePtr : InterpolationDetails_create_custom(context, 1, 1, filter_bicubic_fast);
-    case Filter_Cubic:
-        return ex ? truePtr : InterpolationDetails_create_bicubic_custom(context, 2, 1, 0, 1);
-    case Filter_CubicSharp:
-        return ex ? truePtr : InterpolationDetails_create_bicubic_custom(context, 2, 0.9549963639785485, 0, 1);
-    case Filter_CatmullRom:
-        return ex ? truePtr : InterpolationDetails_create_bicubic_custom(context, 2, 1, 0, 0.5);
-    case Filter_CatmullRomFast:
-        return ex ? truePtr : InterpolationDetails_create_bicubic_custom(context, 1, 1, 0, 0.5);
-    case Filter_CatmullRomFastSharp:
-        return ex ? truePtr : InterpolationDetails_create_bicubic_custom(context, 1, 13.0 / 16.0, 0, 0.5);
-    case Filter_Mitchell:
-        return ex ? truePtr : InterpolationDetails_create_bicubic_custom(context, 2, 7.0 / 8.0, 1.0 / 3.0, 1.0 / 3.0);
-    case Filter_MitchellFast:
-        return ex ? truePtr : InterpolationDetails_create_bicubic_custom(context, 1, 7.0 / 8.0, 1.0 / 3.0, 1.0 / 3.0);
+    case flow_interpolation_filter_CubicFast:
+        return ex ? truePtr : flow_interpolation_details_create_custom(context, 1, 1, filter_bicubic_fast);
+    case flow_interpolation_filter_Cubic:
+        return ex ? truePtr : flow_interpolation_details_create_bicubic_custom(context, 2, 1, 0, 1);
+    case flow_interpolation_filter_CubicSharp:
+        return ex ? truePtr : flow_interpolation_details_create_bicubic_custom(context, 2, 0.9549963639785485, 0, 1);
+    case flow_interpolation_filter_CatmullRom:
+        return ex ? truePtr : flow_interpolation_details_create_bicubic_custom(context, 2, 1, 0, 0.5);
+    case flow_interpolation_filter_CatmullRomFast:
+        return ex ? truePtr : flow_interpolation_details_create_bicubic_custom(context, 1, 1, 0, 0.5);
+    case flow_interpolation_filter_CatmullRomFastSharp:
+        return ex ? truePtr : flow_interpolation_details_create_bicubic_custom(context, 1, 13.0 / 16.0, 0, 0.5);
+    case flow_interpolation_filter_Mitchell:
+        return ex ? truePtr
+                  : flow_interpolation_details_create_bicubic_custom(context, 2, 7.0 / 8.0, 1.0 / 3.0, 1.0 / 3.0);
+    case flow_interpolation_filter_MitchellFast:
+        return ex ? truePtr
+                  : flow_interpolation_details_create_bicubic_custom(context, 1, 7.0 / 8.0, 1.0 / 3.0, 1.0 / 3.0);
 
-    case Filter_Robidoux:
-        return ex ? truePtr : InterpolationDetails_create_bicubic_custom(context, 2, 1. / 1.1685777620836932,
-                                                                         0.37821575509399867, 0.31089212245300067);
-    case Filter_Fastest:
-        return ex ? truePtr : InterpolationDetails_create_bicubic_custom(context, 0.74, 0.74, 0.37821575509399867,
-                                                                         0.31089212245300067);
+    case flow_interpolation_filter_Robidoux:
+        return ex ? truePtr : flow_interpolation_details_create_bicubic_custom(
+                                  context, 2, 1. / 1.1685777620836932, 0.37821575509399867, 0.31089212245300067);
+    case flow_interpolation_filter_Fastest:
+        return ex ? truePtr : flow_interpolation_details_create_bicubic_custom(context, 0.74, 0.74, 0.37821575509399867,
+                                                                               0.31089212245300067);
 
-    case Filter_RobidouxFast:
-        return ex ? truePtr : InterpolationDetails_create_bicubic_custom(context, 1.05, 1. / 1.1685777620836932,
-                                                                         0.37821575509399867, 0.31089212245300067);
-    case Filter_RobidouxSharp:
-        return ex ? truePtr : InterpolationDetails_create_bicubic_custom(context, 2, 1. / 1.105822933719019,
-                                                                         0.2620145123990142, 0.3689927438004929);
-    case Filter_Hermite:
-        return ex ? truePtr : InterpolationDetails_create_bicubic_custom(context, 1, 1, 0, 0);
-    case Filter_Box:
-        return ex ? truePtr : InterpolationDetails_create_custom(context, 0.5, 1, filter_box);
+    case flow_interpolation_filter_RobidouxFast:
+        return ex ? truePtr : flow_interpolation_details_create_bicubic_custom(
+                                  context, 1.05, 1. / 1.1685777620836932, 0.37821575509399867, 0.31089212245300067);
+    case flow_interpolation_filter_RobidouxSharp:
+        return ex ? truePtr : flow_interpolation_details_create_bicubic_custom(context, 2, 1. / 1.105822933719019,
+                                                                               0.2620145123990142, 0.3689927438004929);
+    case flow_interpolation_filter_Hermite:
+        return ex ? truePtr : flow_interpolation_details_create_bicubic_custom(context, 1, 1, 0, 0);
+    case flow_interpolation_filter_Box:
+        return ex ? truePtr : flow_interpolation_details_create_custom(context, 0.5, 1, filter_box);
 
-    case Filter_Ginseng:
-        return ex ? truePtr : InterpolationDetails_create_custom(context, 3, 1, filter_ginseng);
+    case flow_interpolation_filter_Ginseng:
+        return ex ? truePtr : flow_interpolation_details_create_custom(context, 3, 1, filter_ginseng);
 
-    case Filter_GinsengSharp:
-        return ex ? truePtr : InterpolationDetails_create_custom(context, 3, 0.9812505644269356, filter_ginseng);
+    case flow_interpolation_filter_GinsengSharp:
+        return ex ? truePtr : flow_interpolation_details_create_custom(context, 3, 0.9812505644269356, filter_ginseng);
 
-    case Filter_Jinc:
-        return ex ? truePtr : InterpolationDetails_create_custom(context, 3, 1.0 / 1.2196698912665045, filter_jinc);
+    case flow_interpolation_filter_Jinc:
+        return ex ? truePtr
+                  : flow_interpolation_details_create_custom(context, 3, 1.0 / 1.2196698912665045, filter_jinc);
     }
     if (!checkExistenceOnly) {
-        CONTEXT_error(context, Invalid_interpolation_filter);
+        FLOW_error(context, flow_status_Invalid_interpolation_filter);
     }
     return NULL;
 }
 
-InterpolationDetails* InterpolationDetails_create_from(Context* context, InterpolationFilter filter)
+flow_interpolation_details* flow_interpolation_details_create_from(flow_context* context,
+                                                                   flow_interpolation_filter filter)
 {
     return InterpolationDetails_create_from_internal(context, filter, false);
 }
 
-bool InterpolationDetails_interpolation_filter_exists(InterpolationFilter filter)
+bool flow_interpolation_filter_exists(flow_interpolation_filter filter)
 {
     return (InterpolationDetails_create_from_internal(NULL, filter, true) != NULL);
 }
 
-static LineContributions* LineContributions_alloc(Context* context, const uint32_t line_length,
-                                                  const uint32_t windows_size)
+static flow_interpolation_line_contributions* LineContributions_alloc(flow_context* context, const uint32_t line_length,
+                                                                      const uint32_t windows_size)
 {
-    LineContributions* res = (LineContributions*)CONTEXT_malloc(context, sizeof(LineContributions));
+    flow_interpolation_line_contributions* res
+        = (flow_interpolation_line_contributions*)FLOW_malloc(context, sizeof(flow_interpolation_line_contributions));
     if (res == NULL) {
-        CONTEXT_error(context, Out_of_memory);
+        FLOW_error(context, flow_status_Out_of_memory);
         return NULL;
     }
     res->WindowSize = windows_size;
     res->LineLength = line_length;
-    res->ContribRow = (PixelContributions*)CONTEXT_malloc(context, line_length * sizeof(PixelContributions));
+    res->ContribRow = (flow_interpolation_pixel_contributions*)FLOW_malloc(
+        context, line_length * sizeof(flow_interpolation_pixel_contributions));
     if (!res->ContribRow) {
-        CONTEXT_free(context, res);
-        CONTEXT_error(context, Out_of_memory);
+        FLOW_free(context, res);
+        FLOW_error(context, flow_status_Out_of_memory);
         return NULL;
     }
 
-    float* allWeights = CONTEXT_calloc_array(context, windows_size * line_length, float);
+    float* allWeights = FLOW_calloc_array(context, windows_size * line_length, float);
     if (!allWeights) {
-        CONTEXT_free(context, res->ContribRow);
-        CONTEXT_free(context, res);
-        CONTEXT_error(context, Out_of_memory);
+        FLOW_free(context, res->ContribRow);
+        FLOW_free(context, res);
+        FLOW_error(context, flow_status_Out_of_memory);
         return NULL;
     }
 
@@ -331,22 +343,23 @@ static LineContributions* LineContributions_alloc(Context* context, const uint32
     return res;
 }
 
-void LineContributions_destroy(Context* context, LineContributions* p)
+void flow_interpolation_line_contributions_destroy(flow_context* context, flow_interpolation_line_contributions* p)
 {
 
     if (p != NULL) {
         if (p->ContribRow != NULL) {
-            CONTEXT_free(context, p->ContribRow[0].Weights);
+            FLOW_free(context, p->ContribRow[0].Weights);
         }
-        CONTEXT_free(context, p->ContribRow);
+        FLOW_free(context, p->ContribRow);
     }
-    CONTEXT_free(context, p);
+    FLOW_free(context, p);
 }
 
-LineContributions* LineContributions_create(Context* context, const uint32_t output_line_size,
-                                            const uint32_t input_line_size, const InterpolationDetails* details)
+flow_interpolation_line_contributions*
+flow_interpolation_line_contributions_create(flow_context* context, const uint32_t output_line_size,
+                                             const uint32_t input_line_size, const flow_interpolation_details* details)
 {
-    const double sharpen_ratio = InterpolationDetails_percent_negative_weight(details);
+    const double sharpen_ratio = flow_interpolation_details_percent_negative_weight(details);
     const double desired_sharpen_ratio = details->sharpen_percent_goal / 100.0;
     const double extra_negative_weight
         = sharpen_ratio > 0 && desired_sharpen_ratio > 0 ? (desired_sharpen_ratio + sharpen_ratio) / sharpen_ratio : 0;
@@ -357,9 +370,10 @@ LineContributions* LineContributions_create(Context* context, const uint32_t out
 
     const uint32_t allocated_window_size = (int)ceil(2 * (half_source_window - TONY)) + 1;
     uint32_t u, ix;
-    LineContributions* res = LineContributions_alloc(context, output_line_size, allocated_window_size);
+    flow_interpolation_line_contributions* res
+        = LineContributions_alloc(context, output_line_size, allocated_window_size);
     if (res == NULL) {
-        CONTEXT_add_to_callstack(context);
+        FLOW_add_to_callstack(context);
         return NULL;
     }
     double negative_area = 0;
@@ -379,8 +393,8 @@ LineContributions* LineContributions_create(Context* context, const uint32_t out
         const uint32_t source_pixel_count = right_src_pixel - left_src_pixel + 1;
 
         if (source_pixel_count > allocated_window_size) {
-            LineContributions_destroy(context, res);
-            CONTEXT_error(context, Invalid_internal_state);
+            flow_interpolation_line_contributions_destroy(context, res);
+            FLOW_error(context, flow_status_Invalid_internal_state);
             return NULL;
         }
 
@@ -403,8 +417,8 @@ LineContributions* LineContributions_create(Context* context, const uint32_t out
         }
 
         if (total_weight <= TONY) {
-            LineContributions_destroy(context, res);
-            CONTEXT_error(context, Invalid_internal_state);
+            flow_interpolation_line_contributions_destroy(context, res);
+            FLOW_error(context, flow_status_Invalid_internal_state);
             return NULL;
         }
 

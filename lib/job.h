@@ -1,6 +1,5 @@
 #pragma once
 
-#include "../imageflow.h"
 #include "fastscaling_private.h"
 #include <stdint.h>
 #include <stdbool.h>
@@ -37,21 +36,22 @@ struct flow_job {
 
 void flow_utils_ensure_directory_exists(const char* dir_path);
 
-bool flow_job_render_graph_to_png(Context* c, struct flow_job* job, struct flow_graph* g, int32_t graph_version);
-bool flow_job_notify_node_complete(Context* c, struct flow_job* job, struct flow_graph* g, int32_t node_id);
+bool flow_job_render_graph_to_png(flow_context* c, struct flow_job* job, struct flow_graph* g, int32_t graph_version);
+bool flow_job_notify_node_complete(flow_context* c, struct flow_job* job, struct flow_graph* g, int32_t node_id);
 
-typedef void* (*codec_aquire_on_buffer_fn)(Context* c, struct flow_job* job, struct flow_job_resource_buffer* buffer);
+typedef void* (*codec_aquire_on_buffer_fn)(flow_context* c, struct flow_job* job,
+                                           struct flow_job_resource_buffer* buffer);
 
-typedef bool (*codec_get_frame_info_fn)(Context* c, struct flow_job* job, void* codec_state,
+typedef bool (*codec_get_frame_info_fn)(flow_context* c, struct flow_job* job, void* codec_state,
                                         struct decoder_frame_info* decoder_frame_info_ref);
 
-typedef bool (*codec_read_frame_fn)(Context* c, struct flow_job* job, void* codec_state, BitmapBgra* canvas);
+typedef bool (*codec_read_frame_fn)(flow_context* c, struct flow_job* job, void* codec_state, flow_bitmap_bgra* canvas);
 
-typedef bool (*codec_write_frame_fn)(Context* c, struct flow_job* job, void* codec_state, BitmapBgra* frame);
+typedef bool (*codec_write_frame_fn)(flow_context* c, struct flow_job* job, void* codec_state, flow_bitmap_bgra* frame);
 
-typedef bool (*codec_dispose_fn)(Context* c, struct flow_job* job, void* codec_state);
+typedef bool (*codec_dispose_fn)(flow_context* c, struct flow_job* job, void* codec_state);
 
-typedef bool (*codec_stringify_fn)(Context* c, struct flow_job* job, void* codec_state, char* buffer,
+typedef bool (*codec_stringify_fn)(flow_context* c, struct flow_job* job, void* codec_state, char* buffer,
                                    size_t buffer_size);
 
 struct flow_job_codec_definition {
@@ -67,17 +67,17 @@ struct flow_job_codec_definition {
 
 // typedef unsigned long png_uint_32;
 
-struct flow_job_codec_definition* flow_job_get_codec_definition(Context* c, flow_job_codec_type type);
-flow_job_codec_type flow_job_codec_select(Context* c, struct flow_job* job, uint8_t* data, size_t data_bytes);
+struct flow_job_codec_definition* flow_job_get_codec_definition(flow_context* c, flow_job_codec_type type);
+flow_job_codec_type flow_job_codec_select(flow_context* c, struct flow_job* job, uint8_t* data, size_t data_bytes);
 
-void* flow_job_acquire_decoder_over_buffer(Context* c, struct flow_job* job, struct flow_job_resource_buffer* buffer,
-                                           flow_job_codec_type type);
+void* flow_job_acquire_decoder_over_buffer(flow_context* c, struct flow_job* job,
+                                           struct flow_job_resource_buffer* buffer, flow_job_codec_type type);
 
-bool flow_job_decoder_get_frame_info(Context* c, struct flow_job* job, void* codec_state, flow_job_codec_type type,
+bool flow_job_decoder_get_frame_info(flow_context* c, struct flow_job* job, void* codec_state, flow_job_codec_type type,
                                      struct decoder_frame_info* decoder_frame_info_ref);
 
-bool flow_job_decoder_read_frame(Context* c, struct flow_job* job, void* codec_state, flow_job_codec_type type,
-                                 BitmapBgra* canvas);
+bool flow_job_decoder_read_frame(flow_context* c, struct flow_job* job, void* codec_state, flow_job_codec_type type,
+                                 flow_bitmap_bgra* canvas);
 
 struct flow_job_resource_item {
     struct flow_job_resource_item* next;

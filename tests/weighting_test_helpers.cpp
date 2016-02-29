@@ -9,19 +9,20 @@
 
 #include "fastscaling_private.h"
 
-bool test_contrib_windows(Context* context, char* msg)
+bool test_contrib_windows(flow_context* context, char* msg)
 {
     int bad = -1;
-    LineContributions* lct = 0;
+    flow_interpolation_line_contributions* lct = 0;
 
     // assumes included edge cases
 
-    InterpolationDetails* cubicFast = InterpolationDetails_create_from(context, InterpolationFilter::Filter_CubicFast);
+    flow_interpolation_details* cubicFast = flow_interpolation_details_create_from(
+        context, flow_interpolation_filter::flow_interpolation_filter_CubicFast);
 
     unsigned int from_w = 6;
     unsigned int to_w = 3;
     unsigned int corr36[3][2] = { { 0, 1 }, { 2, 3 }, { 4, 5 } };
-    lct = LineContributions_create(context, to_w, from_w, cubicFast);
+    lct = flow_interpolation_line_contributions_create(context, to_w, from_w, cubicFast);
 
     for (uint32_t i = 0; i < lct->LineLength; i++)
         if (lct->ContribRow[i].Left != (int)corr36[i][0]) {
@@ -35,16 +36,16 @@ bool test_contrib_windows(Context* context, char* msg)
     if (bad != -1) {
         snprintf(msg, 255, "at 6->3 invalid value (%d; %d) at %d, expected (%d; %d)", lct->ContribRow[bad].Left,
                  lct->ContribRow[bad].Right, bad, corr36[bad][0], corr36[bad][1]);
-        LineContributions_destroy(context, lct);
+        flow_interpolation_line_contributions_destroy(context, lct);
         return false;
     }
-    LineContributions_destroy(context, lct);
+    flow_interpolation_line_contributions_destroy(context, lct);
 
     from_w = 6;
     to_w = 4;
     unsigned int corr46[4][2] = { { 0, 1 }, { 1, 2 }, { 3, 4 }, { 4, 5 } };
-    lct = LineContributions_create(context, to_w, from_w, cubicFast);
-    InterpolationDetails_destroy(context, cubicFast);
+    lct = flow_interpolation_line_contributions_create(context, to_w, from_w, cubicFast);
+    flow_interpolation_details_destroy(context, cubicFast);
 
     for (uint32_t i = 0; i < lct->LineLength; i++)
         if (lct->ContribRow[i].Left != (int)corr46[i][0]) {
@@ -58,14 +59,14 @@ bool test_contrib_windows(Context* context, char* msg)
     if (bad != -1) {
         snprintf(msg, 255, "at 6->4 invalid value (%d; %d) at %d, expected (%d; %d)", lct->ContribRow[bad].Left,
                  lct->ContribRow[bad].Right, bad, corr46[bad][0], corr46[bad][1]);
-        LineContributions_destroy(context, lct);
+        flow_interpolation_line_contributions_destroy(context, lct);
         return false;
     }
-    LineContributions_destroy(context, lct);
+    flow_interpolation_line_contributions_destroy(context, lct);
     return true;
 }
 
-bool function_bounded(Context* context, InterpolationDetails* details, char* msg, double input_start_value,
+bool function_bounded(flow_context* context, flow_interpolation_details* details, char* msg, double input_start_value,
                       double stop_at_abs, double input_step, double result_low_threshold, double result_high_threshold,
                       const char* name)
 {
@@ -90,8 +91,8 @@ bool function_bounded(Context* context, InterpolationDetails* details, char* msg
                             result_low_threshold, result_high_threshold, name);
 }
 
-bool function_bounded_bi(Context* context, InterpolationDetails* details, char* msg, double input_start_value,
-                         double stop_at_abs, double input_step, double result_low_threshold,
+bool function_bounded_bi(flow_context* context, flow_interpolation_details* details, char* msg,
+                         double input_start_value, double stop_at_abs, double input_step, double result_low_threshold,
                          double result_high_threshold, const char* name)
 {
     return function_bounded(context, details, msg, input_start_value, stop_at_abs, input_step, result_low_threshold,
@@ -100,7 +101,7 @@ bool function_bounded_bi(Context* context, InterpolationDetails* details, char* 
                                result_low_threshold, result_high_threshold, name);
 }
 
-bool test_details(Context* context, InterpolationDetails* details, char* msg, double expected_first_crossing,
+bool test_details(flow_context* context, flow_interpolation_details* details, char* msg, double expected_first_crossing,
                   double expected_second_crossing, double expected_near0, double near0_threshold, double expected_end)
 {
     double top = (*details->filter)(details, 0);
@@ -142,24 +143,24 @@ bool test_details(Context* context, InterpolationDetails* details, char* msg, do
     return true;
 }
 
-char* test_filter(Context* context, InterpolationFilter filter, char* msg, double expected_first_crossing,
+char* test_filter(flow_context* context, flow_interpolation_filter filter, char* msg, double expected_first_crossing,
                   double expected_second_crossing, double expected_near0, double near0_threshold, double expected_end)
 {
-    InterpolationDetails* details = InterpolationDetails_create_from(context, filter);
+    flow_interpolation_details* details = flow_interpolation_details_create_from(context, filter);
     snprintf(msg, 255, "Filter=(%d) ", filter);
     bool result = test_details(context, details, msg, expected_first_crossing, expected_second_crossing, expected_near0,
                                near0_threshold, expected_end);
-    InterpolationDetails_destroy(context, details);
+    flow_interpolation_details_destroy(context, details);
     if (!result)
         return msg;
     else
         return nullptr;
 }
 
-InterpolationDetails* sample_filter(Context* context, InterpolationFilter filter, double x_from, double x_to,
-                                    double* buffer, int samples)
+flow_interpolation_details* sample_filter(flow_context* context, flow_interpolation_filter filter, double x_from,
+                                          double x_to, double* buffer, int samples)
 {
-    InterpolationDetails* details = InterpolationDetails_create_from(context, filter);
+    flow_interpolation_details* details = flow_interpolation_details_create_from(context, filter);
     if (details == NULL)
         return NULL;
     for (int i = 0; i < samples; i++) {

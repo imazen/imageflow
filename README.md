@@ -28,7 +28,7 @@ How to download, build, and run tests (after [installing Conan](https://www.cona
 ## Using the long-form graph API
 
 
-    bool scale_image_to_disk_inner(Context* c)
+    bool scale_image_to_disk_inner(flow_context* c)
     {
         // We'll create a simple graph
         struct flow_graph* g = flow_graph_create(c, 10, 10, 200, 2.0);
@@ -48,7 +48,7 @@ How to download, build, and run tests (after [installing Conan](https://www.cona
         struct flow_job* job = flow_job_create(c);
 
         // We've done 4 mallocs, make sure we didn't run out of memory
-        if (Context_has_error(c)) {
+        if (flow_context_has_error(c)) {
             return false;
         }
 
@@ -80,7 +80,7 @@ How to download, build, and run tests (after [installing Conan](https://www.cona
         struct flow_job_resource_buffer* result = flow_job_get_buffer(c, job, result_resource_id);
         // Now let's write it to disk
         FILE* fh = fopen("graph_scaled_png.png", "w");
-        if (Context_has_error(c) || fh == NULL || fwrite(result->buffer, result->buffer_size, 1, fh) != 1) {
+        if (flow_context_has_error(c) || fh == NULL || fwrite(result->buffer, result->buffer_size, 1, fh) != 1) {
             if (fh != NULL)
                 fclose(fh);
             return false;
@@ -91,18 +91,18 @@ How to download, build, and run tests (after [installing Conan](https://www.cona
 
     bool scale_image_to_disk()
     {
-        // The Context provides error tracking, profling, heap tracking.
-        Context* c = Context_create();
+        // The flow_context provides error tracking, profling, heap tracking.
+        flow_context* c = flow_context_create();
         if (c == NULL) {
             return false;
         }
         if (!scale_image_to_disk_inner(c)) {
-            Context_print_error_to(c, stderr);
-            Context_destroy(c);
+            flow_context_print_error_to(c, stderr);
+            flow_context_destroy(c);
             return false;
         }
 
-        Context_destroy(c);
+        flow_context_destroy(c);
         return true;
     }
 
@@ -318,13 +318,13 @@ typedef enum flow_node_state{
     flow_node_state_Done = 63
 } flow_node_state;
 
-typedef enum flow_edge_type {
+typedef enum flow_edgetype {
     flow_edgetype_null,
     flow_edgetype_input,
     flow_edgetype_canvas,
     flow_edgetype_info,
     flow_edgetype_FORCE_ENUM_SIZE_INT32 = 2147483647
-} flow_edge_type;
+} flow_edgetype;
          `                                                                                                                                                                                                         `
 
 ```
