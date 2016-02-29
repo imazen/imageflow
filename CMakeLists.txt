@@ -19,7 +19,9 @@ list(REMOVE_ITEM CONAN_LIBS efence) # FIXME: Maybe efence should be a private de
 
 file(GLOB LIB_SRCS lib/*.c)
 file(GLOB LIB_HDRS lib/*.h)
-
+list(APPEND LIB_HDRS fastscaling.h)
+list(APPEND LIB_HDRS fastscaling_enums.h)
+list(APPEND LIB_HDRS imageflow.h)
 
 add_library(imageflow ${LIB_SRCS} ${LIB_HDRS})
 target_link_libraries(imageflow ${CONAN_LIBS})
