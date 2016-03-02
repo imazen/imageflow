@@ -9,7 +9,7 @@
 #pragma unmanaged
 #endif
 
-#include "fastscaling_private.h"
+#include "imageflow_private.h"
 
 #include <string.h>
 

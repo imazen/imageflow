@@ -10,7 +10,7 @@
 #pragma unmanaged
 #endif
 
-#include "fastscaling_private.h"
+#include "imageflow_private.h"
 #include <string.h>
 
 bool flow_bitmap_float_scale_rows(flow_context* context, flow_bitmap_float* from, uint32_t from_row,

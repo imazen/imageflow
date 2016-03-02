@@ -7,7 +7,7 @@
 
 #include <string.h>
 
-#include "fastscaling_private.h"
+#include "imageflow_private.h"
 
 bool test_contrib_windows(flow_context* context, char* msg)
 {

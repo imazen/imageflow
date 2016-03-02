@@ -3,7 +3,7 @@
 #include <png.h>
 
 #include "imageflow.h"
-#include "fastscaling_private.h"
+#include "imageflow_private.h"
 #include "weighting_test_helpers.h"
 #include "trim_whitespace.h"
 #include "string.h"

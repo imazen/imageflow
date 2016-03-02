@@ -12,7 +12,7 @@
 #include <stdlib.h>
 #include "imageflow.h"
 #include <../lib/job.h>
-#include "../lib/fastscaling_private.h"
+#include "imageflow_private.h"
 
 uint8_t* get_bytes_cached(flow_context* c, size_t* bytes_count_out, const char* url);
 void fetch_image(const char* url, char* dest_path);

@@ -1,6 +1,6 @@
 #pragma once
 
-#include "fastscaling_private.h"
+#include "imageflow_private.h"
 #include <stdint.h>
 #include <stdbool.h>
 #include <stdlib.h>

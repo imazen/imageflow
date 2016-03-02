@@ -9,7 +9,7 @@
 #pragma unmanaged
 #endif
 
-#include "fastscaling_private.h"
+#include "imageflow_private.h"
 
 bool flow_bitmap_float_linear_to_luv_rows(flow_context* context, flow_bitmap_float* bit, const uint32_t start_row,
                                           const uint32_t row_count)

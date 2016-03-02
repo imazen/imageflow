@@ -1,5 +1,5 @@
 #include "catch.hpp"
-#include "fastscaling_private.h"
+#include "imageflow_private.h"
 
 const int FLOW_MAX_BYTES_PP = 16;
 

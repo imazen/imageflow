@@ -11,7 +11,7 @@
 #pragma unmanaged
 #endif
 
-#include "fastscaling_private.h"
+#include "imageflow_private.h"
 
 typedef struct RectStruct {
     int32_t x1, y1, x2, y2;

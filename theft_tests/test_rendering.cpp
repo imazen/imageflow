@@ -1,4 +1,4 @@
-#include "fastscaling_private.h"
+#include "imageflow_private.h"
 
 #include "catch.hpp"
 extern "C" {
