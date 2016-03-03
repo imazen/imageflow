@@ -172,8 +172,8 @@ bool flow_bitmap_bgra_write_png(flow_context* c, struct flow_job* job, void* cod
         FLOW_error(c, flow_status_Out_of_memory);
         return false;
     }
-    png_set_compression_level(png_ptr, Z_BEST_COMPRESSION);
-    png_set_text_compression_level(png_ptr, Z_BEST_COMPRESSION);
+    png_set_compression_level(png_ptr, Z_DEFAULT_COMPRESSION);
+    png_set_text_compression_level(png_ptr, Z_DEFAULT_COMPRESSION);
 
     png_set_write_fn(png_ptr, state, png_write_data_callback, png_flush_nullop);
 
@@ -193,7 +193,7 @@ bool flow_bitmap_bgra_write_png(flow_context* c, struct flow_job* job, void* cod
         png_set_IHDR(png_ptr, info_ptr, (png_uint_32)frame->w, (png_uint_32)frame->h, 8, PNG_COLOR_TYPE_RGB_ALPHA,
                      PNG_INTERLACE_NONE, PNG_COMPRESSION_TYPE_BASE, PNG_FILTER_TYPE_BASE);
 
-        png_set_sRGB(png_ptr, info_ptr, PNG_sRGB_INTENT_ABSOLUTE);
+        png_set_sRGB(png_ptr, info_ptr, PNG_sRGB_INTENT_PERCEPTUAL);
 
         png_write_png(png_ptr, info_ptr, PNG_TRANSFORM_BGR, NULL);
 
