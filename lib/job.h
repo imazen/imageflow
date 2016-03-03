@@ -18,6 +18,7 @@ struct flow_job_codec_magic_bytes {
 struct decoder_frame_info {
     int32_t w;
     int32_t h;
+    flow_pixel_format format;
 };
 
 struct flow_job {

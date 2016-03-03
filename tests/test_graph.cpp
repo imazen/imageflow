@@ -370,6 +370,25 @@ TEST_CASE("scale and flip and crop png", "")
     flow_context_destroy(c);
 }
 
+TEST_CASE("scale and flip and crop jpg", "")
+{
+    flow_context* c = flow_context_create();
+    struct flow_graph* g = flow_graph_create(c, 10, 10, 200, 2.0);
+    ERR(c);
+
+    int32_t last, input_placeholder = 0, output_placeholder = 1;
+
+    last = flow_node_create_resource_placeholder(c, &g, -1, input_placeholder);
+    last = flow_node_create_scale(c, &g, last, 120, 120);
+    last = flow_node_create_primitive_flip_vertical(c, &g, last);
+    last = flow_node_create_primitive_crop(c, &g, last, 20, 10, 80, 40);
+    last = flow_node_create_resource_placeholder(c, &g, last, output_placeholder);
+
+    execute_graph_for_url(c, "http://z.zr.io/ri/8s.jpg?width=800", "graph_flipped_cropped_from_jpeg.png", &g);
+
+    flow_context_destroy(c);
+}
+
 TEST_CASE("Roundtrip flipping", "")
 {
     flow_context* c = flow_context_create();

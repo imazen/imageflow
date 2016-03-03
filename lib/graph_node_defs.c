@@ -350,7 +350,7 @@ static bool dimensions_decode(flow_context* c, struct flow_graph* g, int32_t nod
     output->from_width = frame_info.w;
     output->from_height = frame_info.h;
     output->from_alpha_meaningful = true; // TODO Wrong
-    output->from_format = flow_bgra32;
+    output->from_format = frame_info.format;
     return true;
 }
 
@@ -806,7 +806,7 @@ static bool execute_decode(flow_context* c, struct flow_job* job, struct flow_gr
         FLOW_error_return(c);
     }
 
-    n->result_bitmap = flow_bitmap_bgra_create(c, frame_info.w, frame_info.h, true, flow_bgra32);
+    n->result_bitmap = flow_bitmap_bgra_create(c, frame_info.w, frame_info.h, true, frame_info.format);
     if (n->result_bitmap == NULL) {
         FLOW_error_return(c);
     }
