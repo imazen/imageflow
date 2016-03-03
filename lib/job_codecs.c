@@ -429,6 +429,20 @@ static void png_write_data_callback(png_structp png_ptr, png_bytep data, png_siz
     memcpy(p->buffer + p->size, data, length);
     p->size += length;
 }
+
+static void png_encoder_error_handler(png_structp png_ptr, png_const_charp msg)
+{
+    struct flow_job_png_encoder_state* state = (struct flow_job_png_encoder_state*)png_get_error_ptr(png_ptr);
+
+    if (state == NULL) {
+        exit(42);
+        abort(); // WTF?
+    }
+    FLOW_CONTEXT_SET_LAST_ERROR(state->context, flow_status_Png_encoding_failed);
+
+    longjmp(state->error_handler_jmp_buf, 1);
+}
+
 static void png_flush_nullop(png_structp png_ptr) {}
 
 bool flow_bitmap_bgra_write_png(flow_context* c, struct flow_job* job, void* codec_state, flow_bitmap_bgra* frame)
@@ -438,13 +452,20 @@ bool flow_bitmap_bgra_write_png(flow_context* c, struct flow_job* job, void* cod
     state->size = 0;
     state->context = c;
 
-    png_structp png_ptr = png_create_write_struct(PNG_LIBPNG_VER_STRING, "writing to memory", NULL,
+    if (setjmp(state->error_handler_jmp_buf)) {
+        // Execution comes back to this point if an error happens
+        // We assume that the handler already set the context error
+        return false;
+    }
+
+    png_structp png_ptr = png_create_write_struct(PNG_LIBPNG_VER_STRING, state, png_encoder_error_handler,
                                                   NULL); // makepng_error, makepng_warning);
     png_infop info_ptr = NULL;
     if (png_ptr == NULL) {
         FLOW_error(c, flow_status_Out_of_memory);
         return false;
     }
+
     png_set_compression_level(png_ptr, Z_BEST_SPEED);
     png_set_text_compression_level(png_ptr, Z_DEFAULT_COMPRESSION);
 
@@ -456,6 +477,10 @@ bool flow_bitmap_bgra_write_png(flow_context* c, struct flow_job* job, void* cod
     {
 
         png_bytepp rows = create_row_pointers(c, frame->pixels, frame->stride * frame->h, frame->stride, frame->h);
+        if (rows == NULL) {
+            FLOW_add_to_callstack(c);
+            return false;
+        }
         // TODO: check rows for NULL
 
         png_set_rows(png_ptr, info_ptr, rows);
@@ -470,8 +495,11 @@ bool flow_bitmap_bgra_write_png(flow_context* c, struct flow_job* job, void* cod
         FLOW_free(c, rows);
         rows = NULL;
         png_destroy_write_struct(&png_ptr, &info_ptr);
-        state->output_resource->buffer = state->buffer;
-        state->output_resource->buffer_size = state->size;
+        // Copy the final result to the output resource, if it exists.
+        if (state->output_resource != NULL) {
+            state->output_resource->buffer = state->buffer;
+            state->output_resource->buffer_size = state->size;
+        }
     }
     // TODO: maybe ? png_destroy_write_struct(&nv_ptr, &nv_info);
     return true;

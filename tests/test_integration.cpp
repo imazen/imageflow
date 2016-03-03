@@ -91,6 +91,7 @@ TEST_CASE("Load png from URL", "[fastscaling]")
     flow_context* c = flow_context_create();
 
     uint8_t* bytes = get_bytes_cached(c, &bytes_count, "http://s3.amazonaws.com/resizer-images/sun_256.png");
+    REQUIRE_FALSE(bytes == NULL);
     png_size_t image_bytes_count = bytes_count;
     png_const_voidp image_bytes = bytes;
 
@@ -109,7 +110,7 @@ TEST_CASE("Load png from URL", "[fastscaling]")
          */
         image.format = PNG_FORMAT_BGRA;
 
-        buffer = (png_bytep)calloc(PNG_IMAGE_SIZE(image), sizeof(png_bytep));
+        buffer = FLOW_calloc_array(c, PNG_IMAGE_SIZE(image), png_byte);
 
         if (buffer != NULL) {
             if (png_image_finish_read(&image, NULL /*background*/, buffer, 0 /*row_stride*/,
@@ -119,14 +120,10 @@ TEST_CASE("Load png from URL", "[fastscaling]")
                 if (nonzero > 0) {
                     printf("nonzero buffer: %d of %d", nonzero, PNG_IMAGE_SIZE(image));
                 }
-                flow_context context;
-                flow_context_initialize(&context);
 
-                flow_bitmap_bgra* source = flow_bitmap_bgra_create_header(&context, (unsigned int)(image.width),
-                                                                          (unsigned int)(image.height));
-                if (source == NULL) {
-                    exit(99);
-                }
+                flow_bitmap_bgra* source
+                    = flow_bitmap_bgra_create_header(c, (unsigned int)(image.width), (unsigned int)(image.height));
+                REQUIRE_FALSE(source == NULL);
                 source->fmt = flow_pixel_format::flow_bgra32;
                 source->stride = PNG_IMAGE_ROW_STRIDE(image);
                 printf("png stride (%d), calculated (%d)\n", source->stride,
@@ -137,17 +134,16 @@ TEST_CASE("Load png from URL", "[fastscaling]")
                 int target_width = 300;
                 int target_height = 200;
 
-                flow_bitmap_bgra* canvas
-                    = flow_bitmap_bgra_create(&context, target_width, target_height, true, flow_bgra32);
+                flow_bitmap_bgra* canvas = flow_bitmap_bgra_create(c, target_width, target_height, true, flow_bgra32);
 
-                flow_RenderDetails* details = flow_RenderDetails_create_with(
-                    &context, flow_interpolation_filter::flow_interpolation_filter_Robidoux);
+                REQUIRE_FALSE(canvas == NULL);
+                flow_RenderDetails* details
+                    = flow_RenderDetails_create_with(c, flow_interpolation_filter::flow_interpolation_filter_Robidoux);
                 details->interpolate_last_percent = 2.1f;
                 details->minimum_sample_window_to_interposharpen = 1.5;
                 details->havling_acceptable_pixel_loss = 0.26f;
 
-                if (details == NULL)
-                    exit(99);
+                REQUIRE_FALSE(details == NULL);
                 //                details->sharpen_percent_goal = 50;
                 //                details->post_flip_x = flipx;
                 //                details->post_flip_y = flipy;
@@ -157,33 +153,33 @@ TEST_CASE("Load png from URL", "[fastscaling]")
                 // Should we even have Renderer_* functions, or just 1 call that does it all?
                 // If we add memory use estimation, we should keep flow_Renderer
 
-                if (!flow_RenderDetails_render(&context, details, source, canvas)) {
+                if (!flow_RenderDetails_render(c, details, source, canvas)) {
 
                     char error[255];
-                    flow_context_error_message(&context, error, 255);
+                    flow_context_error_message(c, error, 255);
                     printf("%s", error);
                     exit(77);
                 }
                 printf("Rendered!");
-                flow_RenderDetails_destroy(&context, details);
+                flow_RenderDetails_destroy(c, details);
 
-                flow_bitmap_bgra_destroy(&context, source);
-                free(buffer);
+                flow_bitmap_bgra_destroy(c, source);
 
                 // TODO, write out PNG here
 
                 struct flow_job_png_encoder_state encoder_state;
+                encoder_state.output_resource = NULL;
+                encoder_state.context = c;
 
-                if (!flow_bitmap_bgra_write_png(&context, NULL, &encoder_state, canvas)) {
-                    // FLOW_error_return(&context);
-                    exit(42);
+                if (!flow_bitmap_bgra_write_png(c, NULL, &encoder_state, canvas)) {
+                    // FLOW_error_return(context);
+                    FAIL("Failed to write png");
                 } else {
                     write_all_byte("outpng.png", encoder_state.buffer, encoder_state.size);
                     success = true;
                 }
 
-                flow_bitmap_bgra_destroy(&context, canvas);
-                flow_context_terminate(&context);
+                flow_bitmap_bgra_destroy(c, canvas);
 
             }
 

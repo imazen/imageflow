@@ -8,6 +8,7 @@ extern "C" {
 #include <stdbool.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include <setjmp.h>
 
 // Version selection is not implemented within imageflow, instead, we let callers do that logic:
 // Expose API to evaluate graph and suggest minimum source dimensions.
@@ -693,6 +694,7 @@ struct flow_job_png_encoder_state {
     char* buffer;
     size_t size;
     struct flow_job_resource_buffer* output_resource;
+    jmp_buf error_handler_jmp_buf;
 };
 
 bool flow_bitmap_bgra_write_png(flow_context* c, struct flow_job* job, void* codec_state, flow_bitmap_bgra* frame);
