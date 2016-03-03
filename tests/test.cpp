@@ -304,7 +304,7 @@ TEST_CASE("Test guassian blur approximation.", "[fastscaling]")
     flow_bitmap_float* image = flow_bitmap_float_create(&context, bitmap_width, 1, 4, true);
     CHECK_FALSE(image == NULL);
 
-    for (int i = 0; i < image->w * 4; i++) {
+    for (uint32_t i = 0; i < image->w * 4; i++) {
 
         image->pixels[i] = (i % 8 == 0 ? 0.5 : 0) + (i % 12 == 0 ? 0.4 : 0.1);
     }

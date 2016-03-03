@@ -292,6 +292,8 @@ static bool flow_job_png_decoder_BeginRead(flow_context* c, struct flow_job_png_
     if (!(state->color_type & PNG_COLOR_MASK_COLOR))
         png_set_gray_to_rgb(state->png_ptr);
 
+    // We use BGRA, not RGBA
+    png_set_bgr(state->png_ptr);
     // We don't want to think about interlacing. Let libpng fix that up.
 
     // Update our info based on these new settings.
@@ -443,7 +445,7 @@ bool flow_bitmap_bgra_write_png(flow_context* c, struct flow_job* job, void* cod
         FLOW_error(c, flow_status_Out_of_memory);
         return false;
     }
-    png_set_compression_level(png_ptr, Z_DEFAULT_COMPRESSION);
+    png_set_compression_level(png_ptr, Z_BEST_SPEED);
     png_set_text_compression_level(png_ptr, Z_DEFAULT_COMPRESSION);
 
     png_set_write_fn(png_ptr, state, png_write_data_callback, png_flush_nullop);
