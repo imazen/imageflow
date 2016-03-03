@@ -48,7 +48,16 @@ Destroy the ./build directory before trying again.(`rm -rf build`)
 
 
 
+## Benchmarking to-do:
 
+Vs. https://github.com/h2non/imaginary
+Vs. libvips directly
+Vs. Imagemagick
+
+
+## Misc. resources
+
+https://github.com/mm2/Little-CMS/blob/master/utils/jpgicc/iccjpeg.c
 
 
 
