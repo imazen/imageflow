@@ -35,7 +35,7 @@ struct flow_job_png_decoder_state {
     size_t pixel_buffer_size;
     png_bytepp pixel_buffer_row_pointers;
     flow_context * context;
-    cmsHPROFILE * color_profile;
+    cmsHPROFILE color_profile;
     flow_job_color_profile_source color_profile_source;
     double gamma;
 };
@@ -46,7 +46,10 @@ static bool flow_job_png_decoder_reset(flow_context* c, struct flow_job_png_deco
         FLOW_free(c, state->pixel_buffer);
     }
     if (state->stage == flow_job_png_decoder_stage_Null){
-        state->png_ptr = state->info_ptr = state->color_profile = state->pixel_buffer_row_pointers = NULL;
+        state->pixel_buffer_row_pointers = NULL;
+        state->color_profile = NULL;
+        state->info_ptr = NULL;
+        state->png_ptr = NULL;
     }else {
         if (state->png_ptr != NULL || state->info_ptr != NULL) {
             png_destroy_read_struct(&state->png_ptr, &state->info_ptr, NULL);
@@ -88,14 +91,14 @@ static png_bytepp create_row_pointers(flow_context* c, void * buffer, size_t buf
     }
     unsigned int y;
     for (y = 0; y < height; ++y) {
-        rows[y] = buffer + (stride * y);
+        rows[y] = (png_bytep)((uint8_t *)buffer + (stride * y));
     }
     return rows;
 }
 
 static void png_decoder_error_handler(png_structp png_ptr, png_const_charp msg)
 {
-    struct flow_job_png_decoder_state* state = png_get_error_ptr(png_ptr);
+    struct flow_job_png_decoder_state* state = (struct flow_job_png_decoder_state*)png_get_error_ptr(png_ptr);
 
     if (state == NULL){
         exit(42);
@@ -121,7 +124,7 @@ static void custom_read_data(png_structp png_ptr, png_bytep buffer, png_size_t b
         png_error(png_ptr, "Read beyond end of data requested");
     }
     size_t bytes_read = umin64(state->file_bytes_count - state->file_bytes_read,bytes_requested);
-    memcpy(buffer, state->file_bytes + state->file_bytes_read, bytes_read);
+    memcpy(buffer, (const uint8_t *)state->file_bytes + state->file_bytes_read, bytes_read);
     state->file_bytes_read += bytes_read;
 }
 
@@ -195,10 +198,18 @@ static bool png_decoder_load_color_profile(flow_context* c, struct flow_job_png_
 static bool transform_to_srgb(flow_context* c, struct flow_job_png_decoder_state* state, flow_bitmap_bgra * frame){
     if (state->color_profile != NULL){
         cmsHPROFILE target_profile = cmsCreate_sRGBProfile();
+        if (target_profile == NULL){
+            FLOW_error(c, flow_status_Out_of_memory);
+            return false;
+        }
         cmsHTRANSFORM transform = cmsCreateTransform(state->color_profile, TYPE_RGBA_8,
                                                      target_profile, TYPE_RGBA_8,
                                                      INTENT_PERCEPTUAL, 0);
-
+        if (transform == NULL){
+            cmsCloseProfile(target_profile);
+            FLOW_error(c, flow_status_Out_of_memory);
+            return false;
+        }
         for (unsigned int i = 0; i < frame->h; i++) {
             cmsDoTransform(transform, frame->pixels + (frame->stride * i),
                            frame->pixels + (frame->stride * i),
@@ -208,6 +219,7 @@ static bool transform_to_srgb(flow_context* c, struct flow_job_png_decoder_state
         cmsDeleteTransform(transform);
         cmsCloseProfile(target_profile);
     }
+    return true;
 }
 
 
@@ -250,9 +262,11 @@ static bool flow_job_png_decoder_BeginRead(flow_context* c, struct flow_job_png_
     //Read header and chunks
     png_read_info(state->png_ptr, state->info_ptr);
 
+    png_uint_32 w,h;
     //Get dimensions and info
-    png_get_IHDR(state->png_ptr, state->info_ptr, &state->w, &state->h,
+    png_get_IHDR(state->png_ptr, state->info_ptr, &w, &h,
                  &state->bit_depth, &state->color_type, NULL, NULL, NULL);
+    state->w = w; state->h = h;
 
     //Parse gamma and color profile info
     if (!png_decoder_load_color_profile(c, state)){
@@ -337,6 +351,7 @@ static bool flow_job_png_decoder_FinishRead(flow_context* c, struct flow_job_png
     //Not sure if we should just call reset instead, or not...
     png_destroy_read_struct(&state->png_ptr, &state->info_ptr, NULL);
 
+
     return true;
 }
 
@@ -386,6 +401,10 @@ static bool png_read_frame(flow_context* c, struct flow_job* job, void* codec_st
         state->pixel_buffer = canvas->pixels;
         state->pixel_buffer_size = canvas->stride * canvas->h;
         if (!flow_job_png_decoder_FinishRead(c, state)) {
+            FLOW_error_return(c);
+        }
+
+        if (!transform_to_srgb(c, state, canvas)){
             FLOW_error_return(c);
         }
         return true;
