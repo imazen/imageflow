@@ -7,7 +7,6 @@
 #include "string.h"
 #include "helpers.h"
 
-
 bool test(int sx, int sy, flow_pixel_format sbpp, int cx, int cy, flow_pixel_format cbpp, bool transpose, bool flipx,
           bool flipy, bool profile, flow_interpolation_filter filter)
 {
@@ -286,47 +285,45 @@ TEST_CASE("Test guassian blur approximation.", "[fastscaling]")
     flow_context context;
     flow_context_initialize(&context);
 
-
     float sigma = 2.0;
 
-    //We figure this out just for the actual guassian function
-    int kernel_radius = max(1,(int)ceil (sigma * 3.11513411073090629014797467185716068837128426554157826035269 - 0.5)); //Should provide at least 7 bits of precision, and almost always 8.
-
+    // We figure this out just for the actual guassian function
+    int kernel_radius = max(1, (int)ceil(sigma * 3.11513411073090629014797467185716068837128426554157826035269
+                                         - 0.5)); // Should provide at least 7 bits of precision, and almost always 8.
 
     uint32_t bitmap_width = 300;
-    uint32_t d =  flow_bitmap_float_approx_gaussian_calculate_d( sigma,  bitmap_width);
+    uint32_t d = flow_bitmap_float_approx_gaussian_calculate_d(sigma, bitmap_width);
 
-    uint32_t buffer_elements = flow_bitmap_float_approx_gaussian_buffer_element_count_required( sigma,  bitmap_width);
+    uint32_t buffer_elements = flow_bitmap_float_approx_gaussian_buffer_element_count_required(sigma, bitmap_width);
 
-    float * buffer = FLOW_calloc_array(&context, buffer_elements, float);
-    CHECK_FALSE (buffer == NULL);
+    float* buffer = FLOW_calloc_array(&context, buffer_elements, float);
+    CHECK_FALSE(buffer == NULL);
 
-    //Preferably test premultiplication
+    // Preferably test premultiplication
 
     flow_bitmap_float* image = flow_bitmap_float_create(&context, bitmap_width, 1, 4, true);
-    CHECK_FALSE (image == NULL);
+    CHECK_FALSE(image == NULL);
 
-    for (int i =0; i < image->w * 4; i++){
+    for (int i = 0; i < image->w * 4; i++) {
 
-        image->pixels[i] = (i % 8 == 0 ? 0.5 : 0) +  (i % 12 == 0 ? 0.4 : 0.1);
+        image->pixels[i] = (i % 8 == 0 ? 0.5 : 0) + (i % 12 == 0 ? 0.4 : 0.1);
     }
     flow_bitmap_float* image_b = flow_bitmap_float_create(&context, bitmap_width, 1, 4, true);
     memcpy(image_b->pixels, image->pixels, image->float_stride * sizeof(float));
 
-    CHECK(flow_bitmap_float_approx_gaussian_blur_rows(&context, image,  sigma,buffer,  buffer_elements, 0, 1));
+    CHECK(flow_bitmap_float_approx_gaussian_blur_rows(&context, image, sigma, buffer, buffer_elements, 0, 1));
 
-
-    flow_convolution_kernel* gaussian = flow_convolution_kernel_create_gaussian_normalized(&context, sigma, kernel_radius);
+    flow_convolution_kernel* gaussian
+        = flow_convolution_kernel_create_gaussian_normalized(&context, sigma, kernel_radius);
     CHECK(gaussian != NULL);
     CHECK(flow_bitmap_float_convolve_rows(&context, image_b, gaussian, 4, 0, 1));
 
-    //Compare image_a and image_b
+    // Compare image_a and image_b
     float max_delta = 0;
     double avg_delta = flow_bitmap_float_compare(&context, image, image_b, &max_delta);
 
     CHECK(max_delta < 0.12);
     CHECK(avg_delta < 0.03);
-
 
     flow_context_terminate(&context);
 }

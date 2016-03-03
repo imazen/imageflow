@@ -24,7 +24,7 @@ unsigned long djb2(unsigned const char* str);
 size_t nonzero_count(uint8_t* array, size_t length);
 
 flow_bitmap_bgra* BitmapBgra_create_test_image(flow_context* c);
-double flow_bitmap_float_compare(flow_context * c, flow_bitmap_float * a, flow_bitmap_float *b, float * out_max_delta);
+double flow_bitmap_float_compare(flow_context* c, flow_bitmap_float* a, flow_bitmap_float* b, float* out_max_delta);
 
 size_t nonzero_count(uint8_t* array, size_t length)
 {
@@ -228,24 +228,26 @@ flow_bitmap_bgra* BitmapBgra_create_test_image(flow_context* c)
     return test;
 }
 
-//Returns average delte per channel per pixel. returns (double)INT32_MAX if dimension or channel mismatch
-double flow_bitmap_float_compare(flow_context * c, flow_bitmap_float * a, flow_bitmap_float *b, float * out_max_delta){
-    if (a->w != b->w || a->h != b->h || a->channels != b->channels || a->float_count != b->float_count || a->float_stride != b->float_stride){
+// Returns average delte per channel per pixel. returns (double)INT32_MAX if dimension or channel mismatch
+double flow_bitmap_float_compare(flow_context* c, flow_bitmap_float* a, flow_bitmap_float* b, float* out_max_delta)
+{
+    if (a->w != b->w || a->h != b->h || a->channels != b->channels || a->float_count != b->float_count
+        || a->float_stride != b->float_stride) {
         return (double)INT32_MAX;
     }
-    double difference_total =0;
-    float max_delta =0;
-    for (uint32_t y = 0; y < a->h; y++){
+    double difference_total = 0;
+    float max_delta = 0;
+    for (uint32_t y = 0; y < a->h; y++) {
 
         double row_delta = 0;
-        for (uint32_t x =0; x < a->w; x++){
+        for (uint32_t x = 0; x < a->w; x++) {
             int pixel = y * a->float_stride + x * a->channels;
-            for (uint32_t cx = 0; cx < a->channels; cx++){
+            for (uint32_t cx = 0; cx < a->channels; cx++) {
                 float delta = fabs(a->pixels[pixel + cx] - b->pixels[pixel + cx]);
-                if (delta > max_delta) max_delta = delta;
+                if (delta > max_delta)
+                    max_delta = delta;
                 row_delta += delta;
             }
-
         }
         difference_total = row_delta / (float)(a->w * a->channels);
     }

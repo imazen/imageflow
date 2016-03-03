@@ -86,8 +86,8 @@ void flow_convolution_kernel_normalize(flow_convolution_kernel* kernel, float de
         kernel->kernel[i] *= factor;
     }
 }
-flow_convolution_kernel*flow_convolution_kernel_create_gaussian_normalized(flow_context *context, double stdDev,
-                                                                           uint32_t radius)
+flow_convolution_kernel* flow_convolution_kernel_create_gaussian_normalized(flow_context* context, double stdDev,
+                                                                            uint32_t radius)
 {
     flow_convolution_kernel* kernel = flow_convolution_kernel_create_guassian(context, stdDev, radius);
     if (kernel != NULL) {
@@ -214,7 +214,9 @@ bool flow_bitmap_float_convolve_rows(flow_context* context, flow_bitmap_float* b
     return true;
 }
 
-static bool BitmapFloat_boxblur_rows (flow_context * context, flow_bitmap_float *image, uint32_t radius, uint32_t passes, const uint32_t convolve_channels, float  * work_buffer, uint32_t from_row, int row_count)
+static bool BitmapFloat_boxblur_rows(flow_context* context, flow_bitmap_float* image, uint32_t radius, uint32_t passes,
+                                     const uint32_t convolve_channels, float* work_buffer, uint32_t from_row,
+                                     int row_count)
 {
     const uint32_t buffer_count = radius + 1;
     const uint32_t w = image->w;
@@ -226,42 +228,42 @@ static bool BitmapFloat_boxblur_rows (flow_context * context, flow_bitmap_float 
     const float std_factor = 1.0f / (float)(std_count);
     for (uint32_t row = from_row; row < until_row; row++) {
         float* __restrict source_buffer = &image->pixels[row * image->float_stride];
-        for (uint32_t pass_index = 0; pass_index < passes; pass_index++){
+        for (uint32_t pass_index = 0; pass_index < passes; pass_index++) {
             int circular_idx = 0;
-            float sum[4] = {0, 0, 0, 0};
+            float sum[4] = { 0, 0, 0, 0 };
             uint32_t count = 0;
             for (uint32_t ndx = 0; ndx < radius; ndx++) {
-                for (uint32_t ch = 0; ch < convolve_channels; ch++){
+                for (uint32_t ch = 0; ch < convolve_channels; ch++) {
                     sum[ch] += source_buffer[ndx * step + ch];
                 }
                 count++;
             }
-            for (uint32_t ndx = 0; ndx < w + buffer_count; ndx++) { //Pixels
+            for (uint32_t ndx = 0; ndx < w + buffer_count; ndx++) { // Pixels
                 if (ndx >= buffer_count) { // same as ndx > radius
-                    //Remove trailing item from average
-                    for (uint32_t ch = 0; ch < convolve_channels; ch++){
+                    // Remove trailing item from average
+                    for (uint32_t ch = 0; ch < convolve_channels; ch++) {
                         sum[ch] -= source_buffer[(ndx - radius - 1) * step + ch];
                     }
                     count--;
-                    //Flush old value
-                    memcpy (&source_buffer[(ndx - buffer_count) * step], &buffer[circular_idx * ch_used], ch_used * sizeof (float));
+                    // Flush old value
+                    memcpy(&source_buffer[(ndx - buffer_count) * step], &buffer[circular_idx * ch_used],
+                           ch_used * sizeof(float));
                 }
-                //Calculate and enqueue new value
+                // Calculate and enqueue new value
                 if (ndx < w) {
-                    if (ndx < w - radius){
-                        for (uint32_t ch = 0; ch < convolve_channels; ch++){
+                    if (ndx < w - radius) {
+                        for (uint32_t ch = 0; ch < convolve_channels; ch++) {
                             sum[ch] += source_buffer[(ndx + radius) * step + ch];
                         }
                         count++;
                     }
-                    //Enqueue averaged value
-                    if (count != std_count){
-                        for (uint32_t ch = 0; ch < convolve_channels; ch++){
-                            buffer[circular_idx * ch_used + ch] = sum[ch]  / (float)count; //Recompute factor
+                    // Enqueue averaged value
+                    if (count != std_count) {
+                        for (uint32_t ch = 0; ch < convolve_channels; ch++) {
+                            buffer[circular_idx * ch_used + ch] = sum[ch] / (float)count; // Recompute factor
                         }
-                    }
-                    else{
-                        for (uint32_t ch = 0; ch < convolve_channels; ch++){
+                    } else {
+                        for (uint32_t ch = 0; ch < convolve_channels; ch++) {
                             buffer[circular_idx * ch_used + ch] = sum[ch] * std_factor;
                         }
                     }
@@ -272,10 +274,12 @@ static bool BitmapFloat_boxblur_rows (flow_context * context, flow_bitmap_float 
     }
     return true;
 }
-static bool BitmapFloat_boxblur_misaligned_rows (flow_context * context, flow_bitmap_float *image, uint32_t radius, int align, const uint32_t convolve_channels, float *work_buffer, uint32_t from_row, int row_count)
+static bool BitmapFloat_boxblur_misaligned_rows(flow_context* context, flow_bitmap_float* image, uint32_t radius,
+                                                int align, const uint32_t convolve_channels, float* work_buffer,
+                                                uint32_t from_row, int row_count)
 {
-    if (align != 1 && align != -1){
-        FLOW_error (context, flow_status_Invalid_internal_state);
+    if (align != 1 && align != -1) {
+        FLOW_error(context, flow_status_Invalid_internal_state);
         return false;
     }
     const uint32_t buffer_count = radius + 2;
@@ -288,51 +292,52 @@ static bool BitmapFloat_boxblur_misaligned_rows (flow_context * context, flow_bi
     for (uint32_t row = from_row; row < until_row; row++) {
         float* __restrict source_buffer = &image->pixels[row * image->float_stride];
         int circular_idx = 0;
-        float sum[4] = {0, 0, 0, 0};
+        float sum[4] = { 0, 0, 0, 0 };
         float count = 0;
         for (uint32_t ndx = 0; ndx < radius; ndx++) {
             float factor = (ndx == radius - 1) ? 0.5f : 1;
-            for (uint32_t ch = 0; ch < convolve_channels; ch++){
+            for (uint32_t ch = 0; ch < convolve_channels; ch++) {
                 sum[ch] += source_buffer[ndx * step + ch] * factor;
             }
             count += factor;
         }
-        for (uint32_t ndx = 0; ndx < w + buffer_count - write_offset; ndx++) { //Pixels
-            //Calculate new value
+        for (uint32_t ndx = 0; ndx < w + buffer_count - write_offset; ndx++) { // Pixels
+            // Calculate new value
             if (ndx < w) {
-                if (ndx < w - radius){
-                    for (uint32_t ch = 0; ch < convolve_channels; ch++){
+                if (ndx < w - radius) {
+                    for (uint32_t ch = 0; ch < convolve_channels; ch++) {
                         sum[ch] += source_buffer[(ndx + radius) * step + ch] * 0.5f;
                     }
-                    count+= 0.5f;
+                    count += 0.5f;
                 }
-                if (ndx < w - radius + 1){
-                    for (uint32_t ch = 0; ch < convolve_channels; ch++){
+                if (ndx < w - radius + 1) {
+                    for (uint32_t ch = 0; ch < convolve_channels; ch++) {
                         sum[ch] += source_buffer[(ndx - 1 + radius) * step + ch] * 0.5f;
                     }
                     count += 0.5f;
                 }
-                //Remove trailing items from average
-                if (ndx >= radius){
-                    for (uint32_t ch = 0; ch < convolve_channels; ch++){
+                // Remove trailing items from average
+                if (ndx >= radius) {
+                    for (uint32_t ch = 0; ch < convolve_channels; ch++) {
                         sum[ch] -= source_buffer[(ndx - radius) * step + ch] * 0.5f;
                     }
-                    count-= 0.5f;
+                    count -= 0.5f;
                 }
-                if (ndx  >= radius + 1){
-                    for (uint32_t ch = 0; ch < convolve_channels; ch++){
+                if (ndx >= radius + 1) {
+                    for (uint32_t ch = 0; ch < convolve_channels; ch++) {
                         sum[ch] -= source_buffer[(ndx - 1 - radius) * step + ch] * 0.5f;
                     }
                     count -= 0.5f;
                 }
             }
-            //Flush old value
-            if (ndx   >= buffer_count - write_offset) {
-                memcpy (&source_buffer[(ndx + write_offset - buffer_count) * step], &buffer[circular_idx * ch_used], ch_used * sizeof (float));
+            // Flush old value
+            if (ndx >= buffer_count - write_offset) {
+                memcpy(&source_buffer[(ndx + write_offset - buffer_count) * step], &buffer[circular_idx * ch_used],
+                       ch_used * sizeof(float));
             }
-            //enqueue new value
+            // enqueue new value
             if (ndx < w) {
-                for (uint32_t ch = 0; ch < convolve_channels; ch++){
+                for (uint32_t ch = 0; ch < convolve_channels; ch++) {
                     buffer[circular_idx * ch_used + ch] = sum[ch] / (float)count;
                 }
             }
@@ -342,58 +347,62 @@ static bool BitmapFloat_boxblur_misaligned_rows (flow_context * context, flow_bi
     return true;
 }
 
-uint32_t flow_bitmap_float_approx_gaussian_calculate_d(float sigma, uint32_t bitmap_width){
-    uint32_t d = (int)floorf (1.8799712059732503768118239636082839397552400554574537f * sigma + 0.5f);
-    d = umin (d, (bitmap_width - 1) / 2);//Never exceed half the size of the buffer.
+uint32_t flow_bitmap_float_approx_gaussian_calculate_d(float sigma, uint32_t bitmap_width)
+{
+    uint32_t d = (int)floorf(1.8799712059732503768118239636082839397552400554574537f * sigma + 0.5f);
+    d = umin(d, (bitmap_width - 1) / 2); // Never exceed half the size of the buffer.
     return d;
 }
 
-uint32_t flow_bitmap_float_approx_gaussian_buffer_element_count_required(float sigma, uint32_t bitmap_width){
-    return flow_bitmap_float_approx_gaussian_calculate_d(sigma,bitmap_width) * 2 + 12; // * sizeof(float);
-}
-bool flow_bitmap_float_approx_gaussian_blur_rows(flow_context *context, flow_bitmap_float *image, float sigma,
-                                                 float * buffer, size_t buffer_element_count, uint32_t from_row, int row_count)
+uint32_t flow_bitmap_float_approx_gaussian_buffer_element_count_required(float sigma, uint32_t bitmap_width)
 {
-    //Ensure sigma is large enough for approximation to be accurate.
-    if (sigma < 2){
-        FLOW_error (context, flow_status_Invalid_internal_state);
+    return flow_bitmap_float_approx_gaussian_calculate_d(sigma, bitmap_width) * 2 + 12; // * sizeof(float);
+}
+bool flow_bitmap_float_approx_gaussian_blur_rows(flow_context* context, flow_bitmap_float* image, float sigma,
+                                                 float* buffer, size_t buffer_element_count, uint32_t from_row,
+                                                 int row_count)
+{
+    // Ensure sigma is large enough for approximation to be accurate.
+    if (sigma < 2) {
+        FLOW_error(context, flow_status_Invalid_internal_state);
         return false;
     }
 
-    //Ensure the buffer is large enough
-    if (flow_bitmap_float_approx_gaussian_buffer_element_count_required(sigma, image->w) > buffer_element_count){
-        FLOW_error (context, flow_status_Invalid_internal_state);
+    // Ensure the buffer is large enough
+    if (flow_bitmap_float_approx_gaussian_buffer_element_count_required(sigma, image->w) > buffer_element_count) {
+        FLOW_error(context, flow_status_Invalid_internal_state);
         return false;
     }
 
-    //http://www.w3.org/TR/SVG11/filters.html#feGaussianBlur
+    // http://www.w3.org/TR/SVG11/filters.html#feGaussianBlur
     // For larger values of 's' (s >= 2.0), an approximation can be used :
-    // Three successive box - blurs build a piece - wise quadratic convolution kernel, which approximates the Gaussian kernel to within roughly 3 % .
+    // Three successive box - blurs build a piece - wise quadratic convolution kernel, which approximates the Gaussian
+    // kernel to within roughly 3 % .
     uint32_t d = flow_bitmap_float_approx_gaussian_calculate_d(sigma, image->w);
     //... if d is odd, use three box - blurs of size 'd', centered on the output pixel.
-    if (d % 2 > 0){
-        if (!BitmapFloat_boxblur_rows (context, image, d / 2, 3, image->channels, buffer, from_row, row_count)){
-            FLOW_error_return (context);
+    if (d % 2 > 0) {
+        if (!BitmapFloat_boxblur_rows(context, image, d / 2, 3, image->channels, buffer, from_row, row_count)) {
+            FLOW_error_return(context);
         }
-    }
-    else{
+    } else {
         // ... if d is even, two box - blurs of size 'd'
         // (the first one centered on the pixel boundary between the output pixel and the one to the left,
         //  the second one centered on the pixel boundary between the output pixel and the one to the right)
         // and one box blur of size 'd+1' centered on the output pixel.
-        if (!BitmapFloat_boxblur_misaligned_rows (context, image, d / 2, -1, image->channels, buffer, from_row, row_count)){
-            FLOW_error_return (context);
+        if (!BitmapFloat_boxblur_misaligned_rows(context, image, d / 2, -1, image->channels, buffer, from_row,
+                                                 row_count)) {
+            FLOW_error_return(context);
         }
-        if (!BitmapFloat_boxblur_misaligned_rows (context, image, d / 2, 1, image->channels, buffer, from_row, row_count)){
-            FLOW_error_return (context);
+        if (!BitmapFloat_boxblur_misaligned_rows(context, image, d / 2, 1, image->channels, buffer, from_row,
+                                                 row_count)) {
+            FLOW_error_return(context);
         }
-        if (!BitmapFloat_boxblur_rows (context, image, d / 2 + 1, 1, image->channels, buffer, from_row, row_count)){
-            FLOW_error_return (context);
+        if (!BitmapFloat_boxblur_rows(context, image, d / 2 + 1, 1, image->channels, buffer, from_row, row_count)) {
+            FLOW_error_return(context);
         }
     }
     return true;
 }
-
 
 /*
 static void BgraSharpenInPlaceX(flow_bitmap_bgra * im, float pct)

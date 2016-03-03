@@ -416,8 +416,8 @@ flow_convolution_kernel* flow_convolution_kernel_create_guassian(flow_context* c
 // The only error these 2 could generate would be a null pointer. Should they have a context just for this?
 double flow_convolution_kernel_sum(flow_convolution_kernel* kernel);
 void flow_convolution_kernel_normalize(flow_convolution_kernel* kernel, float desiredSum);
-flow_convolution_kernel*flow_convolution_kernel_create_gaussian_normalized(flow_context *context, double stdDev,
-                                                                           uint32_t radius);
+flow_convolution_kernel* flow_convolution_kernel_create_gaussian_normalized(flow_context* context, double stdDev,
+                                                                            uint32_t radius);
 flow_convolution_kernel* flow_convolution_kernel_create_guassian_sharpen(flow_context* context, double stdDev,
                                                                          uint32_t radius);
 

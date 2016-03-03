@@ -198,13 +198,13 @@ bool flow_bitmap_float_sharpen_rows(flow_context* context, flow_bitmap_float* im
 bool flow_bitmap_float_convert_srgb_to_linear(flow_context* context, flow_bitmap_bgra* src, uint32_t from_row,
                                               flow_bitmap_float* dest, uint32_t dest_row, uint32_t row_count);
 
-
 uint32_t flow_bitmap_float_approx_gaussian_calculate_d(float sigma, uint32_t bitmap_width);
 
 uint32_t flow_bitmap_float_approx_gaussian_buffer_element_count_required(float sigma, uint32_t bitmap_width);
 
-bool flow_bitmap_float_approx_gaussian_blur_rows(flow_context *context, flow_bitmap_float *image, float sigma,
-                                                 float * buffer, size_t buffer_element_count, uint32_t from_row, int row_count);
+bool flow_bitmap_float_approx_gaussian_blur_rows(flow_context* context, flow_bitmap_float* image, float sigma,
+                                                 float* buffer, size_t buffer_element_count, uint32_t from_row,
+                                                 int row_count);
 bool flow_bitmap_float_pivoting_composite_linear_over_srgb(flow_context* context, flow_bitmap_float* src,
                                                            uint32_t from_row, flow_bitmap_bgra* dest, uint32_t dest_row,
                                                            uint32_t row_count, bool transpose);
