@@ -76,6 +76,7 @@ typedef enum flow_ntype {
     flow_ntype_RemoveNoise,
     flow_ntype_ColorMatrixsRGB,
     flow_ntype_Resource_Placeholder,
+    flow_ntype_Encoder_Placeholder,
     flow_ntype__FORCE_ENUM_SIZE_INT32 = 2147483647
 } flow_ntype;
 
@@ -122,7 +123,7 @@ typedef enum flow_job_codec_type {
     flow_job_codec_type_decode_png,
     flow_job_codec_type_encode_png,
     flow_job_codec_type_decode_jpeg,
-    flow_job_codec_type_encode_jpg
+    flow_job_codec_type_encode_jpeg
 } flow_job_codec_type;
 
 typedef enum flow_scanlines_filter_type {
@@ -158,6 +159,9 @@ typedef enum flow_status_code {
     flow_status_Graph_could_not_be_executed,
     flow_status_Png_decoding_failed,
     flow_status_Png_encoding_failed,
+
+    flow_status_Jpeg_decoding_failed,
+    flow_status_Jpeg_encoding_failed,
     flow_status_Graph_is_cyclic,
 } flow_status_code;
 
@@ -529,6 +533,9 @@ int32_t flow_node_create_rotate_270(flow_context* c, struct flow_graph** g, int3
 int32_t flow_node_create_resource_placeholder(flow_context* c, struct flow_graph** g, int32_t prev_node,
                                               int32_t output_slot_id);
 
+int32_t flow_node_create_encoder_placeholder(flow_context* c, struct flow_graph** g, int32_t prev_node,
+                                             int32_t output_slot_id, flow_job_codec_type codec_type);
+
 int32_t flow_node_create_resource_bitmap_bgra(flow_context* c, struct flow_graph** graph_ref, int32_t prev_node,
                                               flow_bitmap_bgra** ref);
 
@@ -573,6 +580,11 @@ bool flow_graph_walk(flow_context* c, struct flow_job* job, struct flow_graph** 
 
 struct flow_nodeinfo_index {
     int32_t index;
+};
+
+struct flow_nodeinfo_encoder_placeholder {
+    struct flow_nodeinfo_index index; // MUST BE FIRST
+    flow_job_codec_type codec_type;
 };
 
 struct flow_nodeinfo_createcanvas {
@@ -691,16 +703,8 @@ struct flow_job_resource_buffer {
     void* codec_state;
 };
 
-struct flow_job_png_encoder_state {
-    flow_context* context;
-    char* buffer;
-    size_t size;
-    struct flow_job_resource_buffer* output_resource;
-    jmp_buf error_handler_jmp_buf;
-};
-
-bool flow_bitmap_bgra_write_png(flow_context* c, struct flow_job* job, void* codec_state, flow_bitmap_bgra* frame);
-
+bool flow_bitmap_bgra_write_png(flow_context* c, struct flow_job* job, flow_bitmap_bgra* frame,
+                                struct flow_job_resource_buffer* buffer);
 bool flow_node_post_optimize_flatten(flow_context* c, struct flow_graph** graph_ref, int32_t node_id);
 
 // Multi-frame/multi-page images are not magically handled.

@@ -266,6 +266,22 @@ int32_t flow_node_create_resource_placeholder(flow_context* c, struct flow_graph
     return id;
 }
 
+int32_t flow_node_create_encoder_placeholder(flow_context* c, struct flow_graph** g, int32_t prev_node,
+                                             int32_t output_slot_id, flow_job_codec_type codec_type)
+{
+    int32_t id = flow_node_create_generic(c, g, prev_node, flow_ntype_Encoder_Placeholder);
+    if (id < 0) {
+        FLOW_add_to_callstack(c);
+        return id;
+    }
+
+    struct flow_nodeinfo_encoder_placeholder* info
+        = (struct flow_nodeinfo_encoder_placeholder*)FrameNode_get_node_info_pointer(*g, id);
+    info->index.index = output_slot_id;
+    info->codec_type = codec_type;
+    return id;
+}
+
 int32_t flow_node_create_render_to_canvas_1d(flow_context* c, struct flow_graph** g, int32_t prev_node,
                                              bool transpose_on_write, uint32_t canvas_x, uint32_t canvas_y,
                                              int32_t scale_to_width,

@@ -30,7 +30,7 @@ int32_t flow_node_create_resource_bitmap_bgra(flow_context* c, struct flow_graph
 }
 
 static int32_t create_node_for_buffer(flow_context* c, struct flow_job* job, struct flow_job_resource_item* item,
-                                      struct flow_graph** g)
+                                      struct flow_graph** g, int32_t placeholder_node_index)
 {
 
     struct flow_job_resource_buffer* buf = (struct flow_job_resource_buffer*)item->data;
@@ -48,9 +48,16 @@ static int32_t create_node_for_buffer(flow_context* c, struct flow_job* job, str
             FLOW_add_to_callstack(c);
         }
     } else {
-        // TODO: we need some way to pick which type of encoder is used for a given placeholder.
-        id = flow_node_create_codec_on_buffer(c, job, g, buf, flow_job_codec_type_encode_png,
-                                              flow_ntype_primitive_encoder);
+
+        flow_job_codec_type codec_type = flow_job_codec_type_encode_png;
+
+        // If an encoder placeholder is used we can get specifics
+        if ((*g)->nodes[placeholder_node_index].type == flow_ntype_Encoder_Placeholder) {
+            FLOW_GET_INFOBYTES((*g), placeholder_node_index, flow_nodeinfo_encoder_placeholder, info);
+            codec_type = info->codec_type;
+        }
+
+        id = flow_node_create_codec_on_buffer(c, job, g, buf, codec_type, flow_ntype_primitive_encoder);
         if (id < 0) {
             FLOW_add_to_callstack(c);
         }
@@ -59,14 +66,14 @@ static int32_t create_node_for_buffer(flow_context* c, struct flow_job* job, str
 }
 
 static int32_t create_node_for_resource(flow_context* c, struct flow_job* job, struct flow_job_resource_item* item,
-                                        struct flow_graph** g)
+                                        struct flow_graph** g, int32_t placeholder_node_index)
 {
 
     int32_t node_id = -1;
     if (item->type == flow_job_resource_type_bitmap_bgra) {
         node_id = flow_node_create_resource_bitmap_bgra(c, g, -1, (flow_bitmap_bgra**)&item->data);
     } else if (item->type == flow_job_resource_type_buffer) {
-        node_id = create_node_for_buffer(c, job, item, g);
+        node_id = create_node_for_buffer(c, job, item, g, placeholder_node_index);
     } else {
         FLOW_error(c, flow_status_Not_implemented);
         return -404;
@@ -87,7 +94,7 @@ static int32_t flow_job_find_first_node_with_placeholder_id(flow_context* c, str
     }
     int32_t i;
     for (i = 0; i < g->next_node_id; i++) {
-        if (g->nodes[i].type == flow_ntype_Resource_Placeholder) {
+        if (g->nodes[i].type == flow_ntype_Resource_Placeholder || g->nodes[i].type == flow_ntype_Encoder_Placeholder) {
             if (placeholder_id == -1) {
                 return i;
             } else {
@@ -121,7 +128,7 @@ static bool flow_job_insert_resources_into_graph_with_reuse(flow_context* c, str
 
             next_match = flow_job_find_first_node_with_placeholder_id(c, *graph_ref, current->graph_placeholder_id);
             if (next_match >= 0) {
-                replacement_node_id = create_node_for_resource(c, job, current, graph_ref);
+                replacement_node_id = create_node_for_resource(c, job, current, graph_ref, next_match);
                 if (replacement_node_id < 0) {
                     FLOW_error_return(c);
                 }

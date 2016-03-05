@@ -3,13 +3,13 @@
 #include "lcms2.h"
 #include "job_codecs.h"
 
-uint8_t **  flow_job_create_row_pointers(flow_context *c, void *buffer, size_t buffer_size, size_t stride, size_t height)
+uint8_t** flow_job_create_row_pointers(flow_context* c, void* buffer, size_t buffer_size, size_t stride, size_t height)
 {
     if (buffer_size < stride * height) {
         FLOW_error(c, flow_status_Invalid_internal_state);
         return NULL;
     }
-    uint8_t **  rows = (uint8_t ** )FLOW_malloc(c, sizeof(uint8_t *) * height);
+    uint8_t** rows = (uint8_t**)FLOW_malloc(c, sizeof(uint8_t*) * height);
     if (rows == NULL) {
         FLOW_error(c, flow_status_Out_of_memory);
         return NULL;
@@ -21,7 +21,7 @@ uint8_t **  flow_job_create_row_pointers(flow_context *c, void *buffer, size_t b
     return rows;
 }
 
- bool flow_bitmap_bgra_transform_to_srgb(flow_context *c, cmsHPROFILE current_profile, flow_bitmap_bgra *frame)
+bool flow_bitmap_bgra_transform_to_srgb(flow_context* c, cmsHPROFILE current_profile, flow_bitmap_bgra* frame)
 {
     if (current_profile != NULL) {
         cmsHPROFILE target_profile = cmsCreate_sRGBProfile();
@@ -52,30 +52,29 @@ uint8_t **  flow_job_create_row_pointers(flow_context *c, void *buffer, size_t b
 
 // typedef bool (*codec_dispose_fn)(flow_context *c, struct flow_job * job, void * codec_state);
 
-struct flow_job_codec_definition flow_job_codec_defs[] = {
-    { .type = flow_job_codec_type_decode_png,
-      .aquire_on_buffer = flow_job_codecs_aquire_decode_png_on_buffer,
-      .get_frame_info = flow_job_codecs_png_get_info,
-      .read_frame = flow_job_codecs_png_read_frame,
-      .dispose = NULL,
-      .name = "decode png" },
-    { .type = flow_job_codec_type_encode_png,
-      .aquire_on_buffer = flow_job_codecs_aquire_encode_png_on_buffer,
-      .write_frame = flow_bitmap_bgra_write_png,
-      .dispose = NULL,
-      .name = "encode png" },
-    { .type = flow_job_codec_type_decode_jpeg,
-      .aquire_on_buffer = flow_job_codecs_aquire_decode_jpeg_on_buffer,
-      .get_frame_info = flow_job_codecs_jpeg_get_info,
-      .read_frame = flow_job_codecs_jpeg_read_frame,
-      .dispose = NULL,
-      .name = "decode jpeg" },
-    //        {.type = flow_job_codec_type_encode_jpg,
-    //                .aquire_on_buffer = codec_aquire_encode_jpg_on_buffer,
-    //                .write_frame = flow_bitmap_bgra_write_jpg,
-    //                .dispose = NULL,
-    //                .name = "encode png"}
-};
+struct flow_job_codec_definition flow_job_codec_defs[]
+    = { { .type = flow_job_codec_type_decode_png,
+          .aquire_on_buffer = flow_job_codecs_aquire_decode_png_on_buffer,
+          .get_frame_info = flow_job_codecs_png_get_info,
+          .read_frame = flow_job_codecs_png_read_frame,
+          .dispose = NULL,
+          .name = "decode png" },
+        { .type = flow_job_codec_type_encode_png,
+          .aquire_on_buffer = flow_job_codecs_aquire_encode_png_on_buffer,
+          .write_frame = flow_job_codecs_png_write_frame,
+          .dispose = NULL,
+          .name = "encode png" },
+        { .type = flow_job_codec_type_decode_jpeg,
+          .aquire_on_buffer = flow_job_codecs_aquire_decode_jpeg_on_buffer,
+          .get_frame_info = flow_job_codecs_jpeg_get_info,
+          .read_frame = flow_job_codecs_jpeg_read_frame,
+          .dispose = NULL,
+          .name = "decode jpeg" },
+        { .type = flow_job_codec_type_encode_jpeg,
+          .aquire_on_buffer = flow_job_codecs_aquire_encode_jpeg_on_buffer,
+          .write_frame = flow_job_codecs_jpeg_write_frame,
+          .dispose = NULL,
+          .name = "encode png" } };
 
 int32_t flow_job_codec_defs_count = sizeof(flow_job_codec_defs) / sizeof(struct flow_job_codec_definition);
 struct flow_job_codec_definition* flow_job_get_codec_definition(flow_context* c, flow_job_codec_type type)

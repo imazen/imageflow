@@ -143,6 +143,16 @@ static bool stringify_placeholder(flow_context* c, struct flow_graph* g, int32_t
     return true;
 }
 
+static bool stringify_encoder_placeholder(flow_context* c, struct flow_graph* g, int32_t node_id, char* buffer,
+                                          size_t buffer_size)
+{
+    FLOW_GET_INFOBYTES(g, node_id, flow_nodeinfo_encoder_placeholder, info);
+
+    snprintf(buffer, buffer_size, "encoder placeholder #%d", info->index.index);
+    // TODO - display codec type
+    return true;
+}
+
 static bool stringify_bitmap_bgra_pointer(flow_context* c, struct flow_graph* g, int32_t node_id, char* buffer,
                                           size_t buffer_size)
 {
@@ -856,6 +866,15 @@ struct flow_node_definition flow_node_defs[] = {
       .input_count = -1,
       .canvas_count = 0,
       .stringify = stringify_placeholder
+      // Placeholders aren't *flattened*, per se - they are swapped out prior to the execution loop by the job.
+    },
+    {
+      .type = flow_ntype_Encoder_Placeholder,
+      .nodeinfo_bytes_fixed = sizeof(struct flow_nodeinfo_encoder_placeholder),
+      .type_name = "encoder placeholder",
+      .input_count = -1,
+      .canvas_count = 0,
+      .stringify = stringify_encoder_placeholder
       // Placeholders aren't *flattened*, per se - they are swapped out prior to the execution loop by the job.
     },
     { // Should be useless once we finish function/mutate logic
