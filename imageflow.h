@@ -121,7 +121,7 @@ typedef enum flow_job_codec_type {
     flow_job_codec_type_bitmap_bgra_pointer,
     flow_job_codec_type_decode_png,
     flow_job_codec_type_encode_png,
-    flow_job_codec_type_decode_jpg,
+    flow_job_codec_type_decode_jpeg,
     flow_job_codec_type_encode_jpg
 } flow_job_codec_type;
 
