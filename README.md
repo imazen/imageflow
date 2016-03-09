@@ -22,6 +22,9 @@ How to download, build, and run tests (after [installing Conan](https://www.cona
 ======
 
 
+**imageflow is still in the prototype phase. It is neither API-stable nor secure.**
+
+
 ![ImageFlow diagram](https://rawgit.com/imazen/imageflow/master/docs/ImageFlow_Core.svg)
 
 
@@ -115,9 +118,26 @@ Existing [implementations](https://github.com/nathanaeljones/imaging-wiki) lack 
 
 Image resampling is difficult to do correctly, and hard to do efficiently. Few attempts have been made at both. Our algorithm can [resample a 16MP image in 84ms using just one core](http://imageresizing.net/docs/v4/plugins/fastscaling). On a 16-core server, we can resample *15* such images in 262ms. Modern performance on huge matrices is all about cache-friendliness and memory latency. Compare this to 2+ seconds for FreeImage to do the same operation on 1 image with inferior accuracy. ImageMagick must be compiled in (much slower) HDRI to prevent artifacts, and even with OpenMP enabled, using all cores, is still more than an order of magnitude slower (two orders of magnitude without perf tuning).
 
-In addition, **all the libraries that I've reviewed are insecure**. Some assume all images are trusted data (libvips). Some have complexity and dependencies that are impossible to audit (ImageMagick, FreeImage). Others (which are even more widely deployed) simply have insufficient resources to deal with the vulnerabilities found through Valgrind and Coverity. Very few imaging libraries have any kind of automated tests, which makes Valgrind analysis much less useful.
+In addition, it rarely took me more than 45 minutes to discover a vulnerability in the imaging libraries I worked with. Nearly all imaging libraries were designed as offline toolkits for processing trusted image data, accumulating years of features and attack surface area before being moved to the server. Image codecs have an even worse security record than image processing libraries, yet released toolkit binaries often include outdated and vulnerable versions.   
 
-**The solution**: Create a test-covered library that is safe for use with malicious data, and says NO to any of the following
+@jcupitt, author of libvips (an incredibly powerful and fast image processing framework) has this excellent advice:
+
+> I would say the solution is layered security. 
+
+> * Only enable the load libraries you really need. For example, libvips will open microscope slide images, which most websites will not require.
+* Keep all the image load libraries patched and updated daily.
+* Keep the image handling part of a site in a sandbox: a separate process, or even a separate machine, running as a low-privilege user.
+* Kill and reset the image handling system regularly, perhaps every few images. 
+
+**This advice should be applied to any use of ImageMagick, GraphicsMagick, LibGD, FreeImage, or OpenCV.**
+
+Also, make sure that whichever library you choose has good test coverage and automatic Valgrind and Coverity scanning set up. Also, *read* the Coverity and valgrind reports. 
+
+Unfortunately, in-process or priviledged exeuction is the default in every CMS or image server whose code I've reviewed. 
+
+Given the unlikelyhood of software developers learning correct sandboxing in masse (which isn't even possible to do securely on windows), it seems imperative that we create an imaging library that is safe for in-process use. 
+
+**The proposed solution**: Create a test-covered library that is safe for use with malicious data, and says NO to any of the following
 
 * Operations that do not have predictable resource (RAM/CPU) consumption.
 * Operations that cannot be performed in under 100ms on a 16MP jpeg, on a single i7 core.
@@ -125,6 +145,7 @@ In addition, **all the libraries that I've reviewed are insecure**. Some assume 
 * Dependencies that have a questionable security track-record. LibTiff, etc.
 * Optimizations that cause incorrect results (such as failing to perform color-correction, or scaling in the sRGB space instead of linear). (Or using 8-bit instead of 14-bit per channel when working in linear - this causes egregious truncation/color banding).
 * Abstractions that prevent major optimizations (over 30%). Some of the most common (enforced codec agnosticism) can prevent ~3000% reductions in cost.
+
 
 ### Simplifying assumptions
 
