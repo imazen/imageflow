@@ -120,7 +120,7 @@ Image resampling is difficult to do correctly, and hard to do efficiently. Few a
 
 In addition, it rarely took me more than 45 minutes to discover a vulnerability in the imaging libraries I worked with. Nearly all imaging libraries were designed as offline toolkits for processing trusted image data, accumulating years of features and attack surface area before being moved to the server. Image codecs have an even worse security record than image processing libraries, yet released toolkit binaries often include outdated and vulnerable versions.   
 
-@jcupitt, author of libvips (an incredibly powerful and fast image processing framework) has this excellent advice:
+@jcupitt, author of libvips (an incredibly powerful and fast image processing framework, with likely the best test and security coverage of them all) has this excellent advice for using any imaging library:
 
 > I would say the solution is layered security. 
 
