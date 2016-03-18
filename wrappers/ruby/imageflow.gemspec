@@ -2,7 +2,7 @@
 lib = File.expand_path('../lib/', __FILE__)
 $:.unshift lib unless $:.include?(lib)
 
-require 'bundler/version'
+require 'imageflow/version'
 
 Gem::Specification.new do |s|
   s.name        = "bundler"
@@ -16,16 +16,23 @@ Gem::Specification.new do |s|
   s.required_rubygems_version = ">= 1.3.6"
   #s.rubyforge_project         = "bundler"
 
-  s.add_dependency('ffi')
+
+  s.files        = Dir.glob("{bin,lib}/**/*") #+ %w(LICENSE README.md)
+  s.test_files        = Dir.glob("{test/spec}/**/*")
+  #s.executables  = ['bundle']
+  s.require_path = 'lib'
+  s.license = "AGPL v3"
+
+
+
 
   s.add_development_dependency "rspec"
   s.add_development_dependency "sinatra"
   s.add_development_dependency "pry"
   s.add_development_dependency "rake"
 
-  s.files        = Dir.glob("{bin,lib}/**/*") + %w(LICENSE README.md)
-  #s.executables  = ['bundle']
-  s.require_path = 'lib'
-  s.license = "AGPL v3"
+  s.add_dependency 'ffi', '>=1.9.10'
+
+  s.add_development_dependency 'ffi', '>=1.9.10'
 end
 

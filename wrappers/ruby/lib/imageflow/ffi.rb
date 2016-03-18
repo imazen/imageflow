@@ -1,7 +1,7 @@
 module Imageflow
 	module Native
 		extend FFI::Library
-		ffi_lib '../../../../build/libimageflow.so'
+		ffi_lib File.expand_path('../../../../../build/libimageflow.so', __FILE__)
 
 		class FlowProfilingEntry < FFI::Struct
 		layout(
