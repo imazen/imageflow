@@ -390,6 +390,25 @@ TEST_CASE("scale and flip and crop jpg", "")
     flow_context_destroy(c);
 }
 
+TEST_CASE("benchmark scaling large progressive jpg", "")
+{
+    flow_context* c = flow_context_create();
+    struct flow_graph* g = flow_graph_create(c, 10, 10, 200, 2.0);
+    ERR(c);
+
+    int32_t last, input_placeholder = 0, output_placeholder = 1;
+
+    last = flow_node_create_resource_placeholder(c, &g, -1, input_placeholder);
+    last = flow_node_create_scale(c, &g, last, 800, 800);
+    last = flow_node_create_encoder_placeholder(c, &g, last, output_placeholder, flow_job_codec_type_encode_jpeg);
+
+    execute_graph_for_url(c, "https://s3.amazonaws.com/resizer-dynamic-downloads/imageflow_test_suite/4kx4k.jpg",
+                          "graph_large_jpeg.jpg", &g);
+
+    flow_context_destroy(c);
+}
+
+
 TEST_CASE("benchmark scaling large jpg", "")
 {
     flow_context* c = flow_context_create();
@@ -402,7 +421,8 @@ TEST_CASE("benchmark scaling large jpg", "")
     last = flow_node_create_scale(c, &g, last, 800, 800);
     last = flow_node_create_encoder_placeholder(c, &g, last, output_placeholder, flow_job_codec_type_encode_jpeg);
 
-    execute_graph_for_url(c, "https://s3.amazonaws.com/resizer-dynamic-downloads/imageflow_test_suite/4kx4k.jpg", "graph_large_jpeg.jpg", &g);
+    execute_graph_for_url(c, "https://s3.amazonaws.com/resizer-dynamic-downloads/imageflow_test_suite/4kx4k_baseline.jpg",
+                          "graph_large_jpeg.jpg", &g);
 
     flow_context_destroy(c);
 }

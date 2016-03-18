@@ -12,6 +12,9 @@
 #include "imageflow_private.h"
 #include <stdio.h>
 #include <string.h>
+#include "jpeglib.h"
+#include "png.h"
+
 
 bool test(int sx, int sy, flow_pixel_format sbpp, int cx, int cy, flow_pixel_format cbpp, bool transpose, bool flipx,
           bool flipy, flow_interpolation_filter filter);
