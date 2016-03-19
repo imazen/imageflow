@@ -30,6 +30,7 @@ Gem::Specification.new do |s|
   s.add_development_dependency "sinatra"
   s.add_development_dependency "pry"
   s.add_development_dependency "rake"
+  s.add_development_dependency "ffi-swig-generator"
 
   s.add_dependency 'ffi', '>=1.9.10'
 
