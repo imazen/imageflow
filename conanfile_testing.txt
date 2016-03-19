@@ -7,5 +7,21 @@ catch/1.3.0@TyRoXx/stable
 libcurl/7.47.1@lasote/stable
 theft/0.2.0@lasote/stable
 
+[options]
+libjpeg-turbo:shared=True
+libpng:shared=True
+zlib:shared=True
+littlecms:shared=True
+libcurl:shared=True
+#theft:shared=True
+OpenSSL:shared=True
+imageflow:shared=True
+
 [generators]
 cmake
+
+
+[imports]
+bin, *.dll -> ./build/bin
+bin, *.so -> ./build/bin
+lib, *.dylib* -> ./build/bin

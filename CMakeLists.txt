@@ -21,7 +21,7 @@ file(GLOB LIB_SRCS lib/*.c)
 file(GLOB LIB_HDRS lib/*.h)
 list(APPEND LIB_HDRS imageflow.h)
 
-add_library(imageflow ${LIB_SRCS} ${LIB_HDRS})
+add_library(imageflow SHARED ${LIB_SRCS} ${LIB_HDRS})
 target_link_libraries(imageflow ${CONAN_LIBS})
 target_include_directories(imageflow PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 
