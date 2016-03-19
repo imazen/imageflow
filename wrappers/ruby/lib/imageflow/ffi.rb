@@ -3,6 +3,215 @@ module Imageflow
 		extend FFI::Library
 		ffi_lib File.expand_path('../../../../../build/libimageflow.so', __FILE__)
 
+		def self.attach_function (prefixed_name, *vars)
+			super prefixed_name.to_s.gsub(/^flow_/,"").to_sym, prefixed_name, *vars
+		end
+
+
+		enum :flow_ntype, [
+					:ntype_Null , 0,
+					:ntype_primitive_Flip_Vertical_Mutate , 1,
+					:ntype_primitive_Flip_Horizontal_Mutate , 1,
+					:ntype_primitive_Crop_Mutate_Alias , 2,
+					:ntype_primitive_CopyRectToCanvas , 3,
+					:ntype_Create_Canvas , 4,
+					:ntype_primitive_RenderToCanvas1D , 5,
+
+					:ntype_primitive_bitmap_bgra_pointer,
+					:ntype_primitive_decoder,
+					:ntype_primitive_encoder,
+
+					:ntype_non_primitive_nodes_begin , 256,
+
+					:ntype_Transpose,
+					:ntype_Flip_Vertical,
+					:ntype_Flip_Horizontal,
+					:ntype_Render1D,
+					:ntype_Crop,
+					:ntype_non_optimizable_nodes_begin , 512,
+
+					:ntype_Clone,
+					:ntype_decoder,
+					:ntype_encoder,
+
+					:ntype_Rotate_90,
+					:ntype_Rotate_180,
+					:ntype_Rotate_270,
+					:ntype_Scale,
+					# Not implemented below here:
+																	 :ntype_Rotate_Flip_Per_Orientation,
+															 :ntype_Crop_Percentage,
+															 :ntype_Crop_Percentage_Infinite_Canvas,
+					:ntype_Crop_Rectangle,
+					:ntype_Constrain,
+					:ntype_Matte,
+					:ntype_EnlargeCanvas,
+					:ntype_Sharpen,
+					:ntype_Blur,
+					:ntype_Convolve_Custom,
+					:ntype_AdjustContrast,
+					:ntype_AdjustSaturation,
+					:ntype_AdjustBrightness,
+					:ntype_CropWhitespace,
+					:ntype_Opacity,
+					:ntype_Sepia,
+					:ntype_Grayscale,
+					:ntype_DrawImage,
+					:ntype_RemoveNoise,
+					:ntype_ColorMatrixsRGB,
+					:ntype_Resource_Placeholder,
+					:ntype_Encoder_Placeholder,
+					:ntype__FORCE_ENUM_SIZE_INT32 , 2147483647
+		]
+    #
+		# typedef enum flow_node_state {
+		# 	flow_node_state_Blank = 0,
+		# 			flow_node_state_InputDimensionsKnown = 1,
+		# 			flow_node_state_ReadyForPreOptimizeFlatten = 1,
+		# 			flow_node_state_PreOptimizeFlattened = 2,
+		# 			flow_node_state_ReadyForOptimize = 3,
+		# 			flow_node_state_Optimized = 4,
+		# 			flow_node_state_ReadyForPostOptimizeFlatten = 7,
+		# 			flow_node_state_PostOptimizeFlattened = 8,
+		# 			flow_node_state_InputsExecuted = 16,
+		# 			flow_node_state_ReadyForExecution = 31,
+		# 			flow_node_state_Executed = 32,
+		# 			flow_node_state_Done = 63
+		# } flow_node_state;
+    #
+		# typedef enum flow_edgetype {
+		# 	flow_edgetype_null,
+		# 			flow_edgetype_input,
+		# 			flow_edgetype_canvas,
+		# 			flow_edgetype_info,
+		# 			flow_edgetype_FORCE_ENUM_SIZE_INT32 = 2147483647
+		# } flow_edgetype;
+    #
+		# typedef enum flow_compositing_mode {
+		# 	flow_compositing_mode_overwrite,
+		# 			flow_compositing_mode_compose,
+		# 			flow_compositing_mode_blend_with_matte
+		# } flow_compositing_mode;
+    #
+		# struct flow_job;
+    #
+		# typedef enum flow_job_resource_type {
+		# 	flow_job_resource_type_bitmap_bgra = 1,
+		# 			flow_job_resource_type_buffer = 2
+    #
+		# } flow_job_resource_type;
+    #
+		# typedef enum flow_job_codec_type {
+		# 	flow_job_codec_type_null,
+		# 			flow_job_codec_type_bitmap_bgra_pointer,
+		# 			flow_job_codec_type_decode_png,
+		# 			flow_job_codec_type_encode_png,
+		# 			flow_job_codec_type_decode_jpeg,
+		# 			flow_job_codec_type_encode_jpeg
+		# } flow_job_codec_type;
+    #
+		# typedef enum flow_scanlines_filter_type {
+		# 	flow_scanlines_filter_Sharpen, // 3x3, percentage-based
+		# 	flow_scanlines_filter_Blur, // 3x box blur to simulate guassian
+		# 	flow_scanlines_filter_Convolve, // Apply convolution kernel
+		# 	flow_scanlines_filter_ColorMatrix, // Apply color matrix
+		# 	flow_scanlines_filter_ToLinear,
+		# 			flow_scanlines_filter_ToSrgb,
+		# 			flow_scanlines_filter_Custom, // Execute custom callback.,
+		# 																											flow_scanlines_filter__FORCE_ENUM_SIZE_INT32 = 2147483647
+		# } flow_scanlines_filter_type;
+    #
+		# typedef enum flow_status_code {
+		# 	flow_status_No_Error = 0,
+		# 			flow_status_Out_of_memory = 1,
+		# 			flow_status_Invalid_BitmapBgra_dimensions,
+		# 			flow_status_Invalid_BitmapFloat_dimensions,
+		# 			flow_status_Unsupported_pixel_format,
+		# 			flow_status_Invalid_internal_state,
+		# 			flow_status_Transpose_not_permitted_in_place,
+		# 			flow_status_Invalid_interpolation_filter,
+		# 			flow_status_Invalid_argument,
+		# 			flow_status_Null_argument,
+		# 			flow_status_Interpolation_details_missing,
+		# 			flow_status_Node_already_deleted,
+		# 			flow_status_Edge_already_deleted,
+		# 			flow_status_Graph_could_not_be_completed,
+		# 			flow_status_Not_implemented,
+		# 			flow_status_Invalid_inputs_to_node,
+		# 			flow_status_Graph_not_flattened,
+		# 			flow_status_Failed_to_open_file,
+		# 			flow_status_Graph_could_not_be_executed,
+		# 			flow_status_Png_decoding_failed,
+		# 			flow_status_Png_encoding_failed,
+    #
+		# 			flow_status_Jpeg_decoding_failed,
+		# 			flow_status_Jpeg_encoding_failed,
+		# 			flow_status_Graph_is_cyclic,
+		# } flow_status_code;
+    #
+		# typedef enum flow_interpolation_filter {
+		# 	flow_interpolation_filter_RobidouxFast = 1,
+		# 			flow_interpolation_filter_Robidoux = 2,
+		# 			flow_interpolation_filter_RobidouxSharp = 3,
+		# 			flow_interpolation_filter_Ginseng,
+		# 			flow_interpolation_filter_GinsengSharp,
+		# 			flow_interpolation_filter_Lanczos,
+		# 			flow_interpolation_filter_LanczosSharp,
+		# 			flow_interpolation_filter_Lanczos2,
+		# 			flow_interpolation_filter_Lanczos2Sharp,
+		# 			flow_interpolation_filter_CubicFast,
+		# 			flow_interpolation_filter_Cubic,
+		# 			flow_interpolation_filter_CubicSharp,
+		# 			flow_interpolation_filter_CatmullRom,
+		# 			flow_interpolation_filter_Mitchell,
+    #
+		# 			flow_interpolation_filter_CubicBSpline,
+		# 			flow_interpolation_filter_Hermite,
+		# 			flow_interpolation_filter_Jinc,
+		# 			flow_interpolation_filter_RawLanczos3,
+		# 			flow_interpolation_filter_RawLanczos3Sharp,
+		# 			flow_interpolation_filter_RawLanczos2,
+		# 			flow_interpolation_filter_RawLanczos2Sharp,
+		# 			flow_interpolation_filter_Triangle,
+		# 			flow_interpolation_filter_Linear,
+		# 			flow_interpolation_filter_Box,
+		# 			flow_interpolation_filter_CatmullRomFast,
+		# 			flow_interpolation_filter_CatmullRomFastSharp,
+    #
+		# 			flow_interpolation_filter_Fastest,
+    #
+		# 			flow_interpolation_filter_MitchellFast
+		# } flow_interpolation_filter;
+    #
+		# typedef enum flow_profiling_entry_flags {
+		# 	flow_profiling_entry_start = 2,
+		# 			flow_profiling_entry_start_allow_recursion = 6,
+		# 			flow_profiling_entry_stop = 8,
+		# 			flow_profiling_entry_stop_assert_started = 24,
+		# 			flow_profiling_entry_stop_children = 56
+		# } flow_profiling_entry_flags;
+    #
+		# typedef enum flow_pixel_format { flow_bgr24 = 3, flow_bgra32 = 4, flow_gray8 = 1 } flow_pixel_format;
+    #
+		# typedef enum flow_bitmap_compositing_mode {
+		# 	flow_bitmap_compositing_replace_self = 0,
+		# 			flow_bitmap_compositing_blend_with_self = 1,
+		# 			flow_bitmap_compositing_blend_with_matte = 2
+		# } flow_bitmap_compositing_mode;
+    #
+		# typedef enum flow_working_floatspace {
+		# 	flow_working_floatspace_srgb = 0,
+		# 			flow_working_floatspace_as_is = 0,
+		# 			flow_working_floatspace_linear = 1,
+		# 			flow_working_floatspace_gamma = 2
+		# } flow_working_floatspace;
+
+		enum :pixel_format, [
+				:bgr24, 3,
+				:bgra32, 4,
+				:gray8, 1
+		]
+
 		class FlowProfilingEntry < FFI::Struct
 		layout(
 		       :time, :int64,
@@ -31,8 +240,8 @@ module Imageflow
 		attach_function :flow_context_destroy, [ :pointer ], :void
 		attach_function :flow_context_free_all_allocations, [ :pointer ], :void
 		attach_function :flow_context_print_memory_info, [ :pointer ], :void
-		attach_function :flow_context_error_message, [ :pointer, :string, :uint ], :string
-		attach_function :flow_context_stacktrace, [ :pointer, :string, :uint ], :string
+		attach_function :flow_context_error_message, [ :pointer, :pointer, :uint ], :pointer
+		attach_function :flow_context_stacktrace, [ :pointer, :pointer, :uint ], :pointer
 		attach_function :flow_context_has_error, [ :pointer ], :bool
 		attach_function :flow_context_error_reason, [ :pointer ], :int
 		attach_function :flow_context_free_static_caches, [  ], :void
@@ -207,7 +416,7 @@ module Imageflow
 		attach_function :flow_graph_copy_and_resize, [ :pointer, :pointer, :uint32, :uint32, :uint32 ], :pointer
 		attach_function :flow_graph_copy_info_bytes_to, [ :pointer, :pointer, :pointer, :int32, :int32 ], :int32
 		attach_function :flow_edge_duplicate, [ :pointer, :pointer, :int32 ], :int32
-		attach_function :flow_node_create_canvas, [ :pointer, :pointer, :int32, :int, :uint, :uint, :uint32 ], :int32
+		attach_function :flow_node_create_canvas, [ :pointer, :pointer, :int32, :pixel_format, :uint, :uint, :uint32 ], :int32
 		attach_function :flow_node_create_scale, [ :pointer, :pointer, :int32, :uint, :uint ], :int32
 		attach_function :flow_node_create_primitive_flip_vertical, [ :pointer, :pointer, :int32 ], :int32
 		attach_function :flow_node_create_primitive_flip_horizontal, [ :pointer, :pointer, :int32 ], :int32
