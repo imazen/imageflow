@@ -32,7 +32,7 @@ module Imageflow
 
     def get_buffer_bytes(resource_id:)
       buffer = get_buffer(resource_id: resource_id)
-      buffer.buffer.get_bytes(0, buffer.buffer_size)
+      buffer[:buffer].get_bytes(0, buffer[:buffer_size])
     end
 
 
