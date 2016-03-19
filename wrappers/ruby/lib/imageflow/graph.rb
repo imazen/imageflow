@@ -25,11 +25,11 @@ module Imageflow
     end
 
     def initialize(context: , node_capacity: 10, edge_capacity: 10,
-                   infobyte_capacity: 200, growth_factor: 2.0 )
+                   infobyte_capacity: 200, growth_factor: 2.0, ptr_graph: nil )
       @c = context
       @pointer_reference =  FFI::MemoryPointer.new(:size_t, 1, true)
 
-      pointer = @c.call_method(:graph_create, edge_capacity, node_capacity, infobyte_capacity, growth_factor)
+      pointer = ptr_graph || @c.call_method(:graph_create, edge_capacity, node_capacity, infobyte_capacity, growth_factor)
       @pointer_reference.put_pointer(0, pointer)
     end
 
@@ -52,7 +52,9 @@ module Imageflow
       add_child_node(-1, *args)
     end
 
-
+    def deep_clone
+      Graph.new context: @c, ptr_graph: @c.call_method(:graph_copy, ptr_graph)
+    end
 
   end
 end

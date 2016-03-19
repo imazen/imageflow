@@ -5,7 +5,7 @@ module Imageflow
   describe 'imageflow' do
 
     describe 'Native' do
-      let(:flow) {Imageflow::Native}
+      let(:flow) { Imageflow::Native }
 
       before(:each) do
         @c = flow.context_create
@@ -23,7 +23,6 @@ module Imageflow
 
         flow.context_destroy(context)
       end
-
 
 
       it 'can report an error condition' do
@@ -55,26 +54,6 @@ module Imageflow
         expect {
           @c.call_method(:bitmap_bgra_create_header, -1, -1)
         }.to raise_error /status_code: 2/
-      end
-
-      describe 'Graph' do
-        it 'can be created' do
-          g = @c.create_graph
-        end
-        it 'can be destroyed' do
-          g = @c.create_graph
-          g.destroy!
-          expect(g.destroyed?).to be true
-        end
-
-        it 'can be populated' do
-          g = @c.create_graph
-
-          g.create_node(:canvas, :bgra32, 400, 300, 0xFFFFFFFF)
-          .add(:scale, 300, 200)
-          .add(:resource_placeholder, 0)
-
-        end
       end
     end
   end

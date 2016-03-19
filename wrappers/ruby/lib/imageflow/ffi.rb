@@ -101,15 +101,7 @@ module Imageflow
     #
 		# } flow_job_resource_type;
     #
-		# typedef enum flow_job_codec_type {
-		# 	flow_job_codec_type_null,
-		# 			flow_job_codec_type_bitmap_bgra_pointer,
-		# 			flow_job_codec_type_decode_png,
-		# 			flow_job_codec_type_encode_png,
-		# 			flow_job_codec_type_decode_jpeg,
-		# 			flow_job_codec_type_encode_jpeg
-		# } flow_job_codec_type;
-    #
+
 		# typedef enum flow_scanlines_filter_type {
 		# 	flow_scanlines_filter_Sharpen, // 3x3, percentage-based
 		# 	flow_scanlines_filter_Blur, // 3x box blur to simulate guassian
@@ -210,6 +202,15 @@ module Imageflow
 				:bgr24, 3,
 				:bgra32, 4,
 				:gray8, 1
+		]
+
+		enum :codec_type, [
+				:null,
+				:bitmap_bgra_pointer,
+				:decode_png,
+				:encode_png,
+				:decode_jpeg,
+				:encode_jpeg
 		]
 
 		class FlowProfilingEntry < FFI::Struct
@@ -414,6 +415,8 @@ module Imageflow
 		attach_function :flow_graph_destroy, [ :pointer, :pointer ], :void
 		attach_function :flow_graph_replace_if_too_small, [ :pointer, :pointer, :uint32, :uint32, :uint32 ], :bool
 		attach_function :flow_graph_copy_and_resize, [ :pointer, :pointer, :uint32, :uint32, :uint32 ], :pointer
+
+		attach_function :flow_graph_copy, [ :pointer, :pointer], :pointer
 		attach_function :flow_graph_copy_info_bytes_to, [ :pointer, :pointer, :pointer, :int32, :int32 ], :int32
 		attach_function :flow_edge_duplicate, [ :pointer, :pointer, :int32 ], :int32
 		attach_function :flow_node_create_canvas, [ :pointer, :pointer, :int32, :pixel_format, :uint, :uint, :uint32 ], :int32
@@ -426,7 +429,7 @@ module Imageflow
 		attach_function :flow_node_create_rotate_180, [ :pointer, :pointer, :int32 ], :int32
 		attach_function :flow_node_create_rotate_270, [ :pointer, :pointer, :int32 ], :int32
 		attach_function :flow_node_create_resource_placeholder, [ :pointer, :pointer, :int32, :int32 ], :int32
-		attach_function :flow_node_create_encoder_placeholder, [ :pointer, :pointer, :int32, :int32, :int ], :int32
+		attach_function :flow_node_create_encoder_placeholder, [ :pointer, :pointer, :int32, :int32, :codec_type ], :int32
 		attach_function :flow_node_create_resource_bitmap_bgra, [ :pointer, :pointer, :int32, :pointer ], :int32
 		attach_function :flow_node_create_primitive_copy_rect_to_canvas, [ :pointer, :pointer, :int32, :uint32, :uint32, :uint32, :uint32, :uint32, :uint32 ], :int32
 		attach_function :flow_node_create_primitive_crop, [ :pointer, :pointer, :int32, :uint32, :uint32, :uint32, :uint32 ], :int32
@@ -514,7 +517,10 @@ module Imageflow
 		attach_function :flow_node_create_render1d, [ :pointer, :pointer, :int32, :bool, :int32, :int, :float, :pointer, :int ], :int32
 		FLOW_INPUT = 4
 		FLOW_OUTPUT = 8
-
+		enum :flow_direction, [
+				:flow_input, 4,
+				:flow_output, 8
+		]
 		attach_function :flow_job_create, [ :pointer ], :pointer
 		attach_function :flow_job_destroy, [ :pointer, :pointer ], :void
 		attach_function :flow_job_configure_recording, [ :pointer, :pointer, :bool, :bool, :bool, :bool, :bool ], :bool
@@ -531,7 +537,7 @@ module Imageflow
 		attach_function :flow_graph_get_edge_count, [ :pointer, :pointer, :int32, :bool, :int, :bool, :bool ], :int32
 		attach_function :flow_graph_validate, [ :pointer, :pointer ], :bool
 		attach_function :flow_job_add_bitmap_bgra, [ :pointer, :pointer, :int, :int32, :pointer ], :int32
-		attach_function :flow_job_add_buffer, [ :pointer, :pointer, :int, :int32, :pointer, :uint, :bool ], :int32
+		attach_function :flow_job_add_buffer, [ :pointer, :pointer, :flow_direction, :int32, :pointer, :uint, :bool ], :int32
 		attach_function :flow_node_create_generic, [ :pointer, :pointer, :int32, :int ], :int32
 		attach_function :flow_graph_print_to_dot, [ :pointer, :pointer, :pointer, :string ], :bool
 		attach_function :flow_job_get_bitmap_bgra, [ :pointer, :pointer, :int32 ], :pointer
