@@ -238,7 +238,7 @@ void flow_context_free_all_allocations(flow_context* context)
         }
     }
     if (context->heap_tracking.allocations_net != 0 || context->heap_tracking.bytes_allocated_net != 0) {
-        fprintf(stderr, "Failed to deallocated %zu bytes", context->heap_tracking.bytes_allocated_net);
+        fprintf(stderr, "Failed to deallocate %zu allocations (%zu bytes)", context->heap_tracking.allocations_net, context->heap_tracking.bytes_allocated_net);
     }
 }
 
