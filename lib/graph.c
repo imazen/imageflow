@@ -79,6 +79,11 @@ struct flow_graph* flow_graph_copy_and_resize(flow_context* c, struct flow_graph
     return g;
 }
 
+struct flow_graph* flow_graph_copy(flow_context* c, struct flow_graph* from)
+{
+    return flow_graph_copy_and_resize(c, from, from->max_edges, from->max_nodes, from->max_info_bytes);
+}
+
 void flow_graph_destroy(flow_context* c, struct flow_graph* g) { FLOW_free(c, g); }
 
 int32_t flow_node_create_generic(flow_context* c, struct flow_graph** graph_ref, int32_t prev_node, flow_ntype type)

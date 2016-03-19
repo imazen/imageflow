@@ -498,6 +498,8 @@ bool flow_graph_replace_if_too_small(flow_context* c, struct flow_graph** g, uin
 struct flow_graph* flow_graph_copy_and_resize(flow_context* c, struct flow_graph* from, uint32_t max_edges,
                                               uint32_t max_nodes, uint32_t max_info_bytes);
 
+struct flow_graph* flow_graph_copy(flow_context* c, struct flow_graph* from);
+
 int32_t flow_graph_copy_info_bytes_to(flow_context* c, struct flow_graph* from, struct flow_graph** to,
                                       int32_t byte_index, int32_t byte_count);
 
