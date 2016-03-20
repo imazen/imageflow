@@ -1,3 +1,3 @@
 require "imageflow"
-require "imageflow/server"
-run Imageflow::Server.new
+require "imageflow/riapi"
+run Imageflow::Riapi::Server.new

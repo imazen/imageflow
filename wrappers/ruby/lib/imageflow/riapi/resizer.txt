@@ -1,0 +1,173 @@
+
+Diagnostics - list supported input formats, and server runtime info
+
+DropShadow, Gradient, FolderResizeSyntax not supported
+IEPNGFix not supported
+Image404 not supported
+ImageHandlerSyntax not supported
+
+#########################################################
+Presets will need to be ported
+
+SizeLimits will be embedded
+
+
+BoxEdges
+Enumerations
+instructions
+
+
+
+Support mapping points from the source image to the output image
+Support calculating the final size
+
+
+
+format should default to input
+90% jpeg quality by default
+32-bit PNG by default, reduce if colors=
+ignoreicc=true (Pretend sRGB)
+
+Precalculate source.width, source.height, result.ext, result.mime
+
+Select &page or &frame
+Apply sRrotate and sFlip
+apply autorotate & autorotate.default (false)
+
+
+
+var ile = new ImageLayoutEngine(s.originalSize, s.copyRect);
+ile.ApplySettings(s.settings);
+s.copyRect = ile.CopyFrom;
+s.ValidateCropping();
+
+//Translate and scale all existing rings
+s.layout.Shift(s.copyRect, new RectangleF(new Point(0, 0), ile.CopyToSize));
+
+s.layout.AddRing("image", PolygonMath.ToPoly(new RectangleF(new PointF(0, 0), ile.CopyToSize)));
+
+s.layout.AddRing("imageArea",PolygonMath.ToPoly(new RectangleF(new PointF(0, 0), ile.CanvasSize)));
+
+//Center imageArea around 'image'
+s.layout["imageArea"] = PolygonMath.AlignWith(s.layout["imageArea"], s.layout["image"], s.settings.Anchor);
+
+
+if (!s.settings.Padding.IsEmpty) {
+    s.layout.AddRing("padding",  s.settings.Padding);
+}
+//And borders
+if (!s.settings.Border.IsEmpty) {
+    s.layout.AddRing("border", s.settings.Border);
+}
+
+if (!s.settings.Margin.IsEmpty) {
+    s.layout.AddRing("margin", s.settings.Margin);
+}
+
+//Now, rotate all rings.
+s.layout.Rotate(s.settings.Rotate, new PointF(0, 0));
+
+//Normalize all the rings
+s.layout.Normalize(new PointF(0, 0));
+
+//Calculates a bounding box around all the rings in the layout, then rounds that size. Creates a 1x1 pixel destSize value at minimum.
+s.destSize = PolygonMath.RoundPoints(s.layout.GetBoundingBox().Size);
+s.destSize = new Size((int)Math.Max(1, s.destSize.Width), (int)Math.Max(1, s.destSize.Height));
+
+#####################
+
+
+#Render background color
+
+ //If the image doesn't support transparency, we need to fill the background color now.
+Color background = s.settings.BackgroundColor;
+
+
+
+//Find out if we can safely know that nothing will be showing from behind the image (no margin, padding, etc, and source format doesn't have alpha channel).
+//Doesn't know anything about s.preRenderBitmap
+bool nothingToShow = (s.sourceBitmap != null && (s.sourceBitmap.PixelFormat == PixelFormat.Format24bppRgb ||
+            s.sourceBitmap.PixelFormat == PixelFormat.Format32bppRgb || 
+            s.sourceBitmap.PixelFormat == PixelFormat.Format48bppRgb) &&
+            PolygonMath.ArraysEqual(s.layout["image"], s.layout.LastRing.points) &&
+            PolygonMath.IsUnrotated(s.layout["image"]) && string.IsNullOrEmpty(s.settings["s.alpha"])
+                && string.IsNullOrEmpty(s.settings["s.roundcorners"])
+                && string.IsNullOrEmpty(s.settings["filter"]));
+
+//Set the background to white if the background will be showing and the destination format doesn't support transparency.
+if (background == Color.Transparent && !s.supportsTransparency & !nothingToShow) 
+    background = Color.White;
+
+
+
+//Fill background
+if (background != Color.Transparent) //This causes increased aliasing at the edges - i.e., a faint white border that is even more pronounced than usual.
+    g.Clear(background); //Does this work for Color.Transparent? -- 
+return RequestedAction.None;
+
+#  if (!s.layout.ContainsRing("padding")) return RequestedAction.None;
+
+Color paddingColor = s.settings.PaddingColor;
+//Inherit color
+if (paddingColor.Equals(Color.Transparent)) paddingColor = s.settings.BackgroundColor;
+//Draw padding around image if needed.
+if (!paddingColor.Equals(s.settings.BackgroundColor) && paddingColor != Color.Transparent)
+    using (Brush b = new SolidBrush(paddingColor)) s.destGraphics.FillPolygon(b, s.layout["padding"]);
+
+#prerenderimage
+feathering, rounded corners, AForge filters
+
+#renderimage
+  if (s.preRenderBitmap != null) {
+    using (Bitmap b = s.preRenderBitmap) { //Dispose the intermediate bitmap aggressively
+        this.InternalGraphicsDrawImage(s, s.destBitmap, s.preRenderBitmap, PolygonMath.getParallelogram(s.layout["image"]), 
+            s.copyRect, s.colorMatrix);
+    }
+} else { 
+    this.InternalGraphicsDrawImage(s,s.destBitmap,s.sourceBitmap, PolygonMath.getParallelogram(s.layout["image"]), s.copyRect,  s.colorMatrix);
+}
+
+
+#render border
+if (double.IsNaN(s.settings.Border.All)) {
+    float[] widths = new float[] { (float)s.settings.Border.Top * -1, (float)s.settings.Border.Right * -1, (float)s.settings.Border.Bottom * -1, (float)s.settings.Border.Left * -1 };
+    PointF[,] corners = PolygonMath.GetCorners(s.layout["border"],widths);
+
+    for (int i = 0; i <= corners.GetUpperBound(0); i++) {
+        int last = i == 0 ? corners.GetUpperBound(0) : i -1;
+
+        PointF start = PolygonMath.Average(corners[last, 3], corners[last, 0]);
+        PointF end = PolygonMath.Average(corners[i, 0], corners[i, 1]);
+
+        using (Pen p = new Pen(s.settings.BorderColor, widths[i < 1 ? 3 : i -1] * -1)) {
+            p.Alignment = System.Drawing.Drawing2D.PenAlignment.Center; //PenAlignment.Center is the only supported mode.
+            p.LineJoin = System.Drawing.Drawing2D.LineJoin.Miter;
+            s.destGraphics.DrawLine(p, start, end);
+        }
+
+    }
+} else {
+    using (Pen p = new Pen(s.settings.BorderColor, (float)s.settings.Border.All)) {
+        p.Alignment = System.Drawing.Drawing2D.PenAlignment.Center; //PenAlignment.Center is the only supported mode.
+        p.LineJoin = System.Drawing.Drawing2D.LineJoin.Miter;
+        s.destGraphics.DrawPolygon(p, PolygonMath.InflatePoly(s.layout["border"], (float)(s.settings.Border.All / -2.0))); //I hope GDI rounds the same way as .NET.. Otherwise there may be an off-by-one error..
+    }
+}
+
+#renderoverlays
+
+#postprocess
+
+s.finalSize = s.destSize;
+
+//The last flipping.
+if (s.settings.Flip != RotateFlipType.RotateNoneFlipNone)
+    s.destBitmap.RotateFlip(s.settings.Flip);
+
+//Set DPI value
+if (!string.IsNullOrEmpty(s.settings["dpi"])){
+    int dpi = s.settings.Get<int>("dpi",96);
+    s.destBitmap.SetResolution(dpi, dpi);
+}
+
+s.finalSize = s.destBitmap.Size;
