@@ -18,6 +18,21 @@ module Imageflow::Riapi
         end
       end
 
+      describe "#[]" do
+        it "can lookup case-insensitive" do
+          i = Instructions.new({"a" => "b"})
+          expect(i["A"]).to eq("b")
+        end
+        it "can lookup by symbols case-insensitive" do
+          i = Instructions.new({"a" => "b"})
+          expect(i[:"A"]).to eq("b")
+        end
+        it "can lookup symbols by case-insensitive strings" do
+          i = Instructions.new({a: "b"})
+          expect(i["A"]).to eq("b")
+        end
+      end
+
       describe "#parse_enum" do
         it "returns nil if value unrecognized" do
           expect(Instructions.parse_enum("hello", map: {"nope" => :value})).to be_nil
@@ -62,6 +77,37 @@ module Imageflow::Riapi
             expect(Instructions.parse_bool(s)).to eq(false)
           end
         end
+      end
+
+
+      describe "#parse_list" do
+        it "leaves nil as-is" do
+          expect(Instructions.parse_list(nil)).to be_nil
+        end
+        it 'returns nil if an invalid qty of values is present' do
+          expect(Instructions.parse_list("a,b,c", default_element: nil, permitted_counts: [1,2])).to be_nil
+        end
+        it 'returns nil if any values are missing and default_element is nil' do
+          expect(Instructions.parse_list("a,,c", default_element: nil, permitted_counts: [3])).to be_nil
+        end
+
+        it 'substitutes default_element for missing items' do
+          expect(Instructions.parse_list("a,,c", default_element: "b", permitted_counts: [3])).to eq(["a","b","c"])
+        end
+
+        it 'substitutes default_element for items which fail parsing' do
+          expect(Instructions.parse_list("1,,c", default_element: 2, value_type: :decimal, permitted_counts: [3])).to eq([1,2,2])
+        end
+
+        it 'parses decimals' do
+          expect(Instructions.parse_list("1.2,3.1,5.1", default_element: nil, value_type: :decimal, permitted_counts: [3])).to eq([1.2, 3.1, 5.1])
+        end
+
+        it 'ignores trailing/leading spaces and parens' do
+          expect(Instructions.parse_list("  (1.2,3.1,5.1 )", default_element: nil, value_type: :decimal, permitted_counts: [3])).to eq([1.2, 3.1, 5.1])
+        end
+
+
       end
 
       describe "#normalize" do
@@ -109,12 +155,22 @@ module Imageflow::Riapi
         end
       end
 
-      describe "#mode" do
+
+      describe "#crop_array" do
         it "should be readable and writable" do
-          i = Instructions.new "?mode=up"
-          expect(i.mode).to eq(:upscale_only)
-          i.mode = :downscale_only
-          expect(i.to_s).to eq(";mode=downscaleonly")
+          i = Instructions.new "?crop=(1,2,-1,-1)"
+          expect(i.crop_array).to eq([1,2,-1,-1])
+          i.crop_array = [0.2,0.2,0.8,0.8]
+          expect(i.to_s).to eq(";crop=0.2,0.2,0.8,0.8")
+        end
+      end
+
+      describe "#scale" do
+        it "should be readable and writable" do
+          i = Instructions.new "?scale=up"
+          expect(i.scale).to eq(:upscale_only)
+          i.scale = :downscale_only
+          expect(i.to_s).to eq(";scale=downscaleonly")
         end
       end
 

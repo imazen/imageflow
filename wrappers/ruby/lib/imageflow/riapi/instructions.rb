@@ -41,10 +41,30 @@ module Imageflow
         hash[keys[0].to_s] = values[0][0] unless values.empty? ##take the first one (current strategy)
       end
 
+      def [](key)
+        key = key.to_s.upcase
+        hash.each_pair do |k, v|
+          return v if k.to_s.upcase == key
+        end
+        nil
+      end
+      def []=(k, v)
+        set_first(keys: k, value: v)
+      end
+
+
       def get_first(keys:)
         keys = [keys].flatten
-        normalize(keys: keys)
-        hash[keys[0].to_s]
+        keys_n = keys.map { |k| k.to_s.upcase }
+        values = []
+        hash.each_pair do |k, v|
+          priority = keys_n.index k.to_s.upcase
+          unless priority.nil?
+            values << [v, priority]
+          end
+        end
+        values.sort_by! { |k, v| v } #Sort by priority
+        values.empty? ? nil : values[0][0] ##take the first one (current strategy)
       end
 
       def set_first(keys:, value:)
@@ -57,8 +77,16 @@ module Imageflow
         end
       end
 
+      def self.parse_decimal_strict(v)
+        Float(v)
+        BigDecimal(v, 0)
+      rescue ArgumentError
+        nil
+
+      end
+
       def self.clamp_decimal(v, min: nil, max: nil)
-        v = BigDecimal.new(v, 0)
+        v = Instructions.parse_decimal_strict(v)
         v = [v, BigDecimal.new(min)].max unless min.nil?
         v = [v, BigDecimal.new(max)].min unless max.nil?
         v
@@ -129,6 +157,24 @@ module Imageflow
         map[v]
       end
 
+      def self.parse_list(v, default_element: nil, value_type: :string, permitted_counts: nil )
+        return nil if v.nil?
+        v.gsub! /^[ \(\),]+/, ""
+        v.gsub! /[ \(\),]+$/, ""  #TODO: should we actually be stripping commas? Don't think so, but that is current IR behavior
+        parts = v.split(/,/)
+        #Gotta match the counts
+        return nil unless permitted_counts.nil? || permitted_counts.include?(parts.length)
+
+        parts.map do |v|
+          v = v.empty? ? nil : v
+          return nil if v.nil? && default_element.nil?
+          if value_type == :decimal && !v.nil?
+            v = Instructions.parse_decimal_strict(v)
+          end
+          v || default_element
+        end
+      end
+
       def self.stringify_enum(v, values:)
         raise "Value must be one of #{values.inspect} or nil" unless v.nil? || values.include?(v)
         v.nil? ? nil : v.to_s.gsub(/_/, "")
@@ -151,8 +197,7 @@ module Imageflow
       attr_hash_int :height, keys: ["height", "h"]
 
       attr_hash_enum :mode, keys: "mode",
-                     values: [:both, :upscale_canvas, :upscale_only, :downscale_only],
-                     map: {canvas: :upscale_canvas, up: :upscale_only, down: :downscale_only}
+                     values: [:none, :max, :pad, :crop, :stretch] #we're omitting :carve
 
       attr_hash_enum :anchor, keys: "anchor",
                      values: [:top_left, :top_center, :top_right, :middle_left, :middle_center, :middle_right, :bottom_left, :bottom_center, :bottom_right]
@@ -192,6 +237,15 @@ module Imageflow
       attr_hash_decimal :crop_y_units, keys: "cropyunits"
 
       #todo: croprectangle []
+
+      def crop_array
+        Instructions.parse_list(get_first(keys: "crop"), value_type: :decimal, permitted_counts: [4], default_element: 0)
+      end
+      def crop_array=(v)
+        raise "nil or Array of 4 BigDecimal values required for crop_array" unless v.nil? || (v.length == 4 && v.all?{|e| e.is_a?(Numeric)} )
+        set_first(keys: "crop", value: v.nil? ? nil : v.map{|d| BigDecimal(d,0).truncate(10).to_s('F')}.join(','))
+      end
+
 
       # /// <summary>
       # /// An X1,Y1,X2,Y2 array of coordinates. Unless CropXUnits and CropYUnits are specified, these are in the coordinate space of the original image.
