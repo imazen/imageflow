@@ -105,11 +105,11 @@ module Imageflow
         class_eval do
           define_method(name) do
             v = get_first(keys: keys)
-            v.nil? ? nil : Instructions.clamp_decimal(v, min: min, max: max).truncate.to_i
+            v.nil? ? nil : Instructions.clamp_decimal(v, min: min, max: max).round.to_i
           end
           define_method("#{name}=".to_sym) do |v|
             raise "Must be set to nil or numeric value" unless v.nil? || v.is_a?(Numeric)
-            set_first(keys: keys, value: v.nil? ? nil : Instructions.clamp_decimal(v, min: min, max: max).truncate.to_i.to_s)
+            set_first(keys: keys, value: v.nil? ? nil : Instructions.clamp_decimal(v, min: min, max: max).round.to_i.to_s)
           end
         end
       end
@@ -123,7 +123,7 @@ module Imageflow
           end
           define_method("#{name}=".to_sym) do |v|
             raise "Must be set to nil or numeric value" unless v.nil? || v.is_a?(Numeric)
-            set_first(keys: keys, value: v.nil? ? nil : Instructions.clamp_decimal(v, min: min, max: max).truncate(10).to_s('F'))
+            set_first(keys: keys, value: v.nil? ? nil : Instructions.clamp_decimal(v, min: min, max: max).round(10).to_s('F'))
           end
         end
       end
@@ -196,6 +196,9 @@ module Imageflow
       attr_hash_int :width, keys: ["width", "w"]
       attr_hash_int :height, keys: ["height", "h"]
 
+      attr_hash_int :obsolete_maxwidth, keys: ["maxwidth"]
+      attr_hash_int :obsolete_maxheight, keys: ["maxheight"]
+
       attr_hash_enum :mode, keys: "mode",
                      values: [:none, :max, :pad, :crop, :stretch] #we're omitting :carve
 
@@ -243,7 +246,7 @@ module Imageflow
       end
       def crop_array=(v)
         raise "nil or Array of 4 BigDecimal values required for crop_array" unless v.nil? || (v.length == 4 && v.all?{|e| e.is_a?(Numeric)} )
-        set_first(keys: "crop", value: v.nil? ? nil : v.map{|d| BigDecimal(d,0).truncate(10).to_s('F')}.join(','))
+        set_first(keys: "crop", value: v.nil? ? nil : v.map{|d| BigDecimal(d,0).round(10).to_s('F')}.join(','))
       end
 
 

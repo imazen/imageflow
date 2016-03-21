@@ -42,5 +42,14 @@ module Imageflow::Riapi
       end
       #TODO: add more tests here for crop window calculations
     end
+
+
+    describe "#scale_inside" do
+
+      it "should not produce a size larger than the container" do
+        result = ImageLayoutEngine.new(original_size: [1600,1200]).scale_inside inner2: [10,10], outer2: [1600,1200]
+        expect(result).to eq([1200,1200])
+      end
+    end
   end
 end

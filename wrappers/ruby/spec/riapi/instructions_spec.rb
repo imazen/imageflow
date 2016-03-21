@@ -179,7 +179,7 @@ module Imageflow::Riapi
           i = Instructions.new "?zoom=2.3"
           expect(i.zoom).to eq(2.3)
           i.zoom = 5.3
-          expect(i.to_s).to eq(";zoom=5.2999999999")
+          expect(i.to_s).to eq(";zoom=5.3")
         end
       end
       describe "#autorotate" do
