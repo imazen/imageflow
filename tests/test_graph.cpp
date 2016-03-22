@@ -570,3 +570,4 @@ TEST_CASE("check for cycles", "")
 
     flow_context_destroy(c);
 }
+

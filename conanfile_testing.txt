@@ -8,11 +8,11 @@ libcurl/7.47.1@lasote/stable
 theft/0.2.0@lasote/stable
 
 [options]
-libjpeg-turbo:shared=True
-libpng:shared=True
-zlib:shared=True
-littlecms:shared=True
-libcurl:shared=True
+libjpeg-turbo:shared=False
+libpng:shared=False
+zlib:shared=False
+littlecms:shared=False
+libcurl:shared=False
 #theft:shared=True
 OpenSSL:shared=True
 imageflow:shared=True

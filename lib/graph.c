@@ -678,7 +678,6 @@ static bool flow_graph_walk_recursive_dependency_wise(flow_context* c, struct fl
     return true;
 }
 
-// Assumes one has checked for cycles already
 bool flow_graph_walk_dependency_wise(flow_context* c, struct flow_job* job, struct flow_graph** graph_ref,
                                      flow_graph_visitor node_visitor, flow_graph_visitor edge_visitor,
                                      void* custom_data)
