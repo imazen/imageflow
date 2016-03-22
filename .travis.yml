@@ -1,15 +1,19 @@
+os:
+  - linux
+  - osx
+
 language:
   - cpp
 
 compiler:
   - gcc
-  
+
 sudo:
   - required
 
 services:
   - docker
-           
+
 install:
   - .travis/install.sh
 
