@@ -7,6 +7,10 @@ struct flow_job* flow_job_create(flow_context* c)
 {
 
     struct flow_job* job = (struct flow_job*)FLOW_malloc(c, sizeof(struct flow_job));
+    if (job == NULL) {
+        FLOW_error(c, flow_status_Out_of_memory);
+        return NULL;
+    }
     static int32_t job_id = 0;
     flow_job_configure_recording(c, job, false, false, false, false, false);
     job->next_graph_version = 0;

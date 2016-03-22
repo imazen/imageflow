@@ -315,6 +315,18 @@ bool scale_image_to_disk_inner(flow_context* c)
     if (!flow_job_insert_resources_into_graph(c, job, &g)) {
         return false;
     }
+    struct flow_job_input_resource_info info;
+    if (!flow_job_get_input_resource_info_by_placeholder_id(c, job, input_placeholder, &info)){
+        return false;
+    }
+    REQUIRE(info.frame0_post_decode_format == flow_bgra32);
+    REQUIRE(info.frame0_width == 1);
+    REQUIRE(info.frame0_height == 1);
+    REQUIRE(strcmp(info.preferred_extension, "png") == 0);
+    REQUIRE(strcmp(info.preferred_mime_type, "image/png") == 0);
+    REQUIRE(info.codec_type == flow_job_codec_type_decode_png);
+
+
     // Execute the graph
     if (!flow_job_execute(c, job, &g)) {
         return false;

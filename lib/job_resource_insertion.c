@@ -2,7 +2,7 @@
 #include "graph.h"
 
 static int32_t flow_node_create_codec_on_buffer(flow_context* c, struct flow_job* job, struct flow_graph** graph_ref,
-                                                struct flow_job_resource_buffer* buf, flow_job_codec_type codec_type,
+                                                struct flow_job_resource_item* resource_item, struct flow_job_resource_buffer* buf, flow_job_codec_type codec_type,
                                                 flow_ntype node_type)
 {
     int32_t id = flow_node_create_generic(c, graph_ref, -1, node_type);
@@ -13,6 +13,8 @@ static int32_t flow_node_create_codec_on_buffer(flow_context* c, struct flow_job
     FLOW_GET_INFOBYTES((*graph_ref), id, flow_nodeinfo_codec, info)
     info->type = codec_type;
     info->codec_state = flow_job_acquire_decoder_over_buffer(c, job, buf, codec_type);
+    resource_item->codec_type = codec_type;
+    resource_item->codec_state = info->codec_state;
     return id;
 }
 
@@ -43,7 +45,7 @@ static int32_t create_node_for_buffer(flow_context* c, struct flow_job* job, str
             FLOW_error(c, flow_status_Not_implemented); // Or bad buffer, unsupported file type, etc.
             return -1;
         }
-        id = flow_node_create_codec_on_buffer(c, job, g, buf, ctype, flow_ntype_primitive_decoder);
+        id = flow_node_create_codec_on_buffer(c, job, g, item, buf, ctype, flow_ntype_primitive_decoder);
         if (id < 0) {
             FLOW_add_to_callstack(c);
         }
@@ -56,8 +58,7 @@ static int32_t create_node_for_buffer(flow_context* c, struct flow_job* job, str
             FLOW_GET_INFOBYTES((*g), placeholder_node_index, flow_nodeinfo_encoder_placeholder, info);
             codec_type = info->codec_type;
         }
-
-        id = flow_node_create_codec_on_buffer(c, job, g, buf, codec_type, flow_ntype_primitive_encoder);
+        id = flow_node_create_codec_on_buffer(c, job, g, item, buf, codec_type, flow_ntype_primitive_encoder);
         if (id < 0) {
             FLOW_add_to_callstack(c);
         }
@@ -84,6 +85,13 @@ static int32_t create_node_for_resource(flow_context* c, struct flow_job* job, s
     return node_id;
 }
 
+
+static int32_t get_placeholder_id_for_node(flow_context* c, struct flow_graph* g, int32_t node_id){
+    uint8_t* info_bytes = &g->info_bytes[g->nodes[node_id].info_byte_index];
+    struct flow_nodeinfo_index* info = (struct flow_nodeinfo_index*)info_bytes;
+    return info->index;
+}
+
 // When placeholder_id == -1, the first resource placeholder is returned.
 static int32_t flow_job_find_first_node_with_placeholder_id(flow_context* c, struct flow_graph* g,
                                                             int32_t placeholder_id)
@@ -98,9 +106,7 @@ static int32_t flow_job_find_first_node_with_placeholder_id(flow_context* c, str
             if (placeholder_id == -1) {
                 return i;
             } else {
-                uint8_t* info_bytes = &g->info_bytes[g->nodes[i].info_byte_index];
-                struct flow_nodeinfo_index* info = (struct flow_nodeinfo_index*)info_bytes;
-                if (info->index == placeholder_id) {
+                if (get_placeholder_id_for_node(c, g, i) == placeholder_id) {
                     return i;
                 }
             }

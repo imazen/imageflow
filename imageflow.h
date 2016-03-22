@@ -705,6 +705,23 @@ struct flow_job_resource_buffer {
     void* codec_state;
 };
 
+struct flow_job_input_resource_info {
+    flow_job_codec_type codec_type;
+    flow_job_resource_type resource_type;
+    const char * preferred_mime_type;
+    const char * preferred_extension;
+    int32_t frame0_width;
+    int32_t frame0_height;
+    flow_pixel_format frame0_post_decode_format;
+    //const char * format_subtype;
+    //bool is_srgb;
+};
+
+int32_t flow_job_get_resource_id_for_placeholder_id(flow_context* c, struct flow_job* job, int32_t by_placeholder_id);
+
+bool flow_job_get_input_resource_info_by_placeholder_id(flow_context* c, struct flow_job* job, int32_t by_placeholder_id, struct flow_job_input_resource_info * info);
+
+
 bool flow_bitmap_bgra_write_png(flow_context* c, struct flow_job* job, flow_bitmap_bgra* frame,
                                 struct flow_job_resource_buffer* buffer);
 bool flow_node_post_optimize_flatten(flow_context* c, struct flow_graph** graph_ref, int32_t node_id);

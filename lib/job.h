@@ -8,6 +8,7 @@
 #include <sys/stat.h>
 #include <errno.h>
 #include "png.h"
+#include "lcms2.h"
 
 struct flow_job_codec_magic_bytes {
     flow_job_codec_type codec_type;
@@ -64,7 +65,24 @@ struct flow_job_codec_definition {
     codec_dispose_fn dispose;
     codec_stringify_fn stringify;
     const char* name;
+    const char * preferred_mime_type;
+    const char * preferred_extension;
 };
+
+
+typedef enum flow_job_color_profile_source {
+    flow_job_color_profile_source_null,
+    flow_job_color_profile_source_ICCP,
+    flow_job_color_profile_source_ICCP_GRAY,
+    flow_job_color_profile_source_GAMA_CHRM,
+
+} flow_job_color_profile_source;
+
+//Later we may want to expose this information to the outside
+//struct flow_job_decoder_info {
+//    cmsHPROFILE color_profile;
+//    flow_job_color_profile_source color_profile_source;
+//};
 
 // typedef unsigned long png_uint_32;
 

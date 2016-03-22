@@ -1,12 +1,5 @@
 #pragma once
 
-typedef enum flow_job_color_profile_source {
-    flow_job_color_profile_source_null,
-    flow_job_color_profile_source_ICCP,
-    flow_job_color_profile_source_ICCP_GRAY,
-    flow_job_color_profile_source_GAMA_CHRM,
-
-} flow_job_color_profile_source;
 
 void* flow_job_codecs_aquire_decode_jpeg_on_buffer(flow_context* c, struct flow_job* job,
                                                    struct flow_job_resource_buffer* buffer);
