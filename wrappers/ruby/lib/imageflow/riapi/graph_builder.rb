@@ -60,8 +60,8 @@ module Imageflow
 
         add_expand_canvas(left: ile.result[:copy_to_rect][0],
                           top: ile.result[:copy_to_rect][1],
-                          right: ile.result[:canvas_size][0] - ile.result[:copy_to_size][0],
-                          bottom: ile.result[:canvas_size][1] - ile.result[:copy_to_size][1],
+                          right: ile.result[:canvas_size][0] - ile.result[:copy_to_size][0] - ile.result[:copy_to_rect][0],
+                          bottom: ile.result[:canvas_size][1] - ile.result[:copy_to_size][1] - ile.result[:copy_to_rect][1],
                           color: 0xFFFFFFFF) #instructions.background_color)
 
 

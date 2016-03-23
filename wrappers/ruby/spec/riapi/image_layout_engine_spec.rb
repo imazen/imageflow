@@ -36,6 +36,17 @@ module Imageflow::Riapi
                                })
     end
 
+    it 'should support mode=max implicitly' do
+      ile = ImageLayoutEngine.new original_size: [1600, 1200], crop_rectangle: nil
+      ile.apply_instructions Instructions.new "w=10"
+      expect(ile.result).to eq({
+                                   canvas_size: [10, 8],
+                                   copy_to_size: [10, 8],
+                                   copy_to_rect: [0, 0, 10, 8],
+                                   copy_from: [0, 0, 1600, 1200]
+                               })
+    end
+
     describe "#get_manual_crop_window" do
       it "should work with percentages" do
         crop = ImageLayoutEngine.get_manual_crop_window original_size: [100, 100],

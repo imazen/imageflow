@@ -40,6 +40,7 @@ module Imageflow
       #mutates @target_size, @area_size, @copy_rect, and @manual_crop_rect
       def calculate_for_dimensions(i, manual_crop_size:)
         fit_mode = ImageLayoutEngine.determine_fit_mode(instructions: i)
+        manual_crop_size = manual_crop_size.map{|v| v.to_f}
         image_ratio = manual_crop_size[0] / manual_crop_size[1]
 
         w = i.width
