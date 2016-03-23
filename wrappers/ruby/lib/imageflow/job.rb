@@ -4,6 +4,7 @@ module Imageflow
       @c = context
       @ptr =  @c.call_method(:job_create)
       @keepalive = []
+      record_nothing #Don't record anything by default
     end
 
 
@@ -30,15 +31,50 @@ module Imageflow
       Native::FlowJobResourceBuffer.new @c.call_method(:job_get_buffer, @ptr, resource_id)
     end
 
+    def record_nothing
+      configure_recording  record_graph_versions: false,
+                           record_frame_images: false,
+                           render_graph_versions: false,
+                           render_animated_graph: false,
+                           render_last_graph: false
+
+
+    end
+
+    def debug_record_gif
+      configure_recording  record_graph_versions: true,
+                           record_frame_images: true,
+                           render_graph_versions: true,
+                           render_animated_graph: true,
+                           render_last_graph: true
+
+
+    end
+
+    def configure_recording(record_graph_versions:, record_frame_images:, render_last_graph:, render_graph_versions:,  render_animated_graph: )
+      @c.call_method(:job_configure_recording, @ptr, record_graph_versions, record_frame_images, render_last_graph, render_graph_versions, render_animated_graph)
+    end
+
     def get_buffer_bytes(resource_id:)
       buffer = get_buffer(resource_id: resource_id)
+      raise "Buffer pointer null" if buffer[:buffer] == FFI::Pointer.new(0)
       buffer[:buffer].get_bytes(0, buffer[:buffer_size])
     end
 
+    def insert_resources(graph: )
+      @c.call_method(:job_insert_resources_into_graph, @ptr, graph.ptr_ptr_graph)
+    end
 
     def execute (graph: )
-      @c.call_method(:job_insert_resources_into_graph, @ptr, graph.ptr_ptr_graph)
       @c.call_method(:job_execute, @ptr, graph.ptr_ptr_graph)
+    end
+
+    def get_input_resource_info(placeholder_id:  )
+      info = Imageflow::Native::FlowJobInputResourceInfo.new
+
+      @c.call_method(:job_get_input_resource_info_by_placeholder_id, @ptr, placeholder_id.to_i, info )
+
+      info
     end
 
 

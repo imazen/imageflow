@@ -1,15 +1,8 @@
 
 Diagnostics - list supported input formats, and server runtime info
 
-DropShadow, Gradient, FolderResizeSyntax not supported
-IEPNGFix not supported
-Image404 not supported
-ImageHandlerSyntax not supported
 
-#########################################################
 Presets will need to be ported
-
-SizeLimits will be embedded
 
 
 BoxEdges

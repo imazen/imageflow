@@ -20,9 +20,11 @@ module Imageflow
 					:ntype_primitive_bitmap_bgra_pointer,
 					:ntype_primitive_decoder,
 					:ntype_primitive_encoder,
+					:ntype_primitive_fill_rect,
 
 					:ntype_non_primitive_nodes_begin , 256,
 
+					:ntype_Expand_Canvas,
 					:ntype_Transpose,
 					:ntype_Flip_Vertical,
 					:ntype_Flip_Horizontal,
@@ -424,6 +426,8 @@ module Imageflow
 		attach_function :flow_node_create_primitive_flip_vertical, [ :pointer, :pointer, :int32 ], :int32
 		attach_function :flow_node_create_primitive_flip_horizontal, [ :pointer, :pointer, :int32 ], :int32
 		attach_function :flow_node_create_clone, [ :pointer, :pointer, :int32 ], :int32
+		attach_function :flow_node_create_noop, [ :pointer, :pointer, :int32 ], :int32
+		attach_function :flow_node_create_expand_canvas, [ :pointer, :pointer, :int32 , :uint32 , :uint32 , :uint32 , :uint32 , :uint32 ], :int32
 		attach_function :flow_node_create_transpose, [ :pointer, :pointer, :int32 ], :int32
 		attach_function :flow_node_create_rotate_90, [ :pointer, :pointer, :int32 ], :int32
 		attach_function :flow_node_create_rotate_180, [ :pointer, :pointer, :int32 ], :int32
@@ -553,5 +557,29 @@ module Imageflow
 		end
 		attach_function :flow_bitmap_bgra_write_png, [ :pointer, :pointer, :pointer, :pointer ], :bool
 		attach_function :flow_node_post_optimize_flatten, [ :pointer, :pointer, :int32 ], :bool
+
+		enum :flow_job_resource_type, [
+			:bitmap_bgra, 1,
+			:buffer, 2
+		]
+
+		class FlowJobInputResourceInfo < FFI::Struct
+			layout(
+					:codec_type, :codec_type,
+					:resource_type, :flow_job_resource_type,
+					:preferred_mime_type, :strptr,
+					:preferred_extension, :strptr,
+					:frame0_width, :int32,
+					:frame0_height, :int32,
+					:frame0_post_decode_format, :pixel_format,
+			)
+		end
+
+
+		attach_function :flow_job_get_resource_id_for_placeholder_id, [:pointer, :pointer, :int32], :int32
+
+		attach_function :flow_job_get_input_resource_info_by_placeholder_id, [:pointer, :pointer, :int32, FlowJobInputResourceInfo.by_ref], :bool
+
+
 	end
 end

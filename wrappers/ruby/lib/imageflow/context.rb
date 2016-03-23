@@ -41,7 +41,11 @@ module Imageflow
 
       Native.context_error_message(@c, buffer, 2048)
 
-      buffer.read_string
+      buffer2 = FFI::MemoryPointer.new(:char, 2048, true)
+
+      Native.context_stacktrace(@c, buffer2, 2048)
+
+      "\n" + buffer.read_string + "\n" + buffer2.read_string
     end
 
     def stack_trace

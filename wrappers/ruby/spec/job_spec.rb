@@ -36,7 +36,9 @@ module Imageflow
             .add(:encoder_placeholder, 1, :encode_jpeg)
 
 
-        job.execute graph: g.deep_clone
+        job.insert_resources graph: g
+
+        job.execute graph: g
 
         out_bytes = job.get_buffer(resource_id: output_resource_id)
 

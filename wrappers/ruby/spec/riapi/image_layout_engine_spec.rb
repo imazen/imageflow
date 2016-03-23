@@ -10,6 +10,7 @@ module Imageflow::Riapi
       expect(ile.result).to eq({
           canvas_size: [90,45],
           copy_to_size: [90,45],
+          copy_to_rect: [0,0,90,45],
           copy_from: [0,200,1600,1000]
                                })
     end
@@ -19,6 +20,7 @@ module Imageflow::Riapi
       expect(ile.result).to eq({
                                    canvas_size: [10,10],
                                    copy_to_size: [10,10],
+                                   copy_to_rect: [0,0,10,10],
                                    copy_from: [200,0,1400,1200]
                                })
     end
@@ -29,6 +31,7 @@ module Imageflow::Riapi
       expect(ile.result).to eq({
                                    canvas_size: [10,8],
                                    copy_to_size: [10,8],
+                                   copy_to_rect: [0,0,10,8],
                                    copy_from: [0,0,1600,1200]
                                })
     end

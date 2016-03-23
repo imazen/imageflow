@@ -1,4 +1,7 @@
 require "imageflow/riapi/url"
 require "imageflow/riapi/instructions"
 require "imageflow/riapi/image_layout_engine"
+require "imageflow/riapi/image_source"
+require "imageflow/riapi/graph_builder"
+require "imageflow/riapi/classic_job"
 require "imageflow/riapi/server"
