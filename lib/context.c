@@ -70,9 +70,8 @@ void flow_context_print_error_to(flow_context* c, FILE* stream)
 }
 const char* flow_context_error_message(flow_context* context, char* buffer, size_t buffer_size)
 {
-    snprintf(buffer, buffer_size, "Error in file: %s line: %d status_code: %d reason: %s",
-             context->error.callstack[0].file, context->error.callstack[0].line, context->error.reason,
-             status_code_to_string(context->error.reason));
+    snprintf(buffer, buffer_size, "Error in file: %s:%d status_code: %d reason: %s", context->error.callstack[0].file,
+             context->error.callstack[0].line, context->error.reason, status_code_to_string(context->error.reason));
 
     return buffer;
 }

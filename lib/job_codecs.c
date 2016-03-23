@@ -143,8 +143,8 @@ flow_job_codec_type flow_job_codec_select(flow_context* c, struct flow_job* job,
     return flow_job_codec_type_null;
 }
 
-void* flow_job_acquire_decoder_over_buffer(flow_context* c, struct flow_job* job,
-                                           struct flow_job_resource_buffer* buffer, flow_job_codec_type type)
+void* flow_job_acquire_codec_over_buffer(flow_context* c, struct flow_job* job, struct flow_job_resource_buffer* buffer,
+                                         flow_job_codec_type type)
 {
 
     struct flow_job_codec_definition* def = flow_job_get_codec_definition(c, type);
@@ -203,6 +203,11 @@ bool flow_job_get_input_resource_info_by_placeholder_id(flow_context* c, struct 
         FLOW_error(c, flow_status_Invalid_argument); //Bad placeholder id
         return false;
     }
+    // Ensure we've read from from the resource already
+    if (!flow_job_initialize_input_resource(c, job, current)) {
+        FLOW_error_return(c);
+    }
+
     info->resource_type = current->type;
     info->codec_type  = current->codec_type; //This is also populated by bitmapbgra
 
@@ -217,6 +222,11 @@ bool flow_job_get_input_resource_info_by_placeholder_id(flow_context* c, struct 
         info->frame0_height = bitmap->h;
         info->frame0_post_decode_format = bitmap->fmt;
     }else {
+        if (current->codec_state == NULL) {
+
+            FLOW_error(c, flow_status_Invalid_internal_state); // Codecs should be initialized by this point
+            return false;
+        }
         struct flow_job_codec_definition* def = flow_job_get_codec_definition(c, current->codec_type);
         if (def == NULL) {
             FLOW_error_return(c);

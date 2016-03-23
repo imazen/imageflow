@@ -209,7 +209,7 @@ static bool write_frame_to_disk(flow_context* c, const char* path, flow_bitmap_b
 
     if (!png_image_write_to_file(&target_image, path, 0 /*convert_to_8bit*/, b->pixels, 0 /*row_stride*/,
                                  NULL /*colormap*/)) {
-        printf("%s", target_image.message);
+        printf("Error writing to %s : %s", path, target_image.message);
         FLOW_error(c, flow_status_Failed_to_open_file); // image.message
         return false;
     }

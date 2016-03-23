@@ -55,6 +55,9 @@ build-iPhoneSimulator/
 .idea/dynamic.xml
 .idea/uiDesigner.xml
 
+./*.png
+./*.dot
+
 # Gradle:
 .idea/gradle.xml
 .idea/libraries

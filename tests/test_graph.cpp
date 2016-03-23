@@ -482,6 +482,7 @@ TEST_CASE("scale copy rect", "")
     int32_t canvas = flow_node_create_canvas(c, &g, -1, flow_bgra32, 300, 300, 0);
     last = flow_node_create_primitive_copy_rect_to_canvas(c, &g, last, 0, 0, 150, 150, 50, 50);
     flow_edge_create(c, &g, canvas, last, flow_edgetype_canvas);
+    last = flow_node_create_expand_canvas(c, &g, last, 10, 20, 30, 40, 0xFF99FF99);
     last = flow_node_create_resource_placeholder(c, &g, last, output_placeholder);
 
     execute_graph_for_url(c, "http://z.zr.io/ri/8s.jpg?format=png&width=800", "graph_scaled_blitted_png.png", &g);

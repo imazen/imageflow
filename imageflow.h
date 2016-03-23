@@ -36,8 +36,10 @@ typedef enum flow_ntype {
     flow_ntype_primitive_decoder,
     flow_ntype_primitive_encoder,
 
+    flow_ntype_Fill_Rect_Mutate,
     flow_ntype_non_primitive_nodes_begin = 256,
 
+    flow_ntype_Expand_Canvas,
     flow_ntype_Transpose,
     flow_ntype_Flip_Vertical,
     flow_ntype_Flip_Horizontal,
@@ -53,6 +55,7 @@ typedef enum flow_ntype {
     flow_ntype_Rotate_180,
     flow_ntype_Rotate_270,
     flow_ntype_Scale, //(preserve colorspace), interpolation filter
+    flow_ntype_Noop,
 
     // Not implemented below here:
     flow_ntype_Rotate_Flip_Per_Orientation,
@@ -523,7 +526,10 @@ int32_t flow_node_create_scale(flow_context* c, struct flow_graph** g, int32_t p
 int32_t flow_node_create_primitive_flip_vertical(flow_context* c, struct flow_graph** g, int32_t prev_node);
 int32_t flow_node_create_primitive_flip_horizontal(flow_context* c, struct flow_graph** g, int32_t prev_node);
 int32_t flow_node_create_clone(flow_context* c, struct flow_graph** g, int32_t prev_node);
-
+int32_t flow_node_create_expand_canvas(flow_context* c, struct flow_graph** g, int32_t prev_node, uint32_t left,
+                                       uint32_t top, uint32_t right, uint32_t bottom, uint32_t canvas_color_srgb);
+int32_t flow_node_create_fill_rect(flow_context* c, struct flow_graph** g, int32_t prev_node, uint32_t x1, uint32_t y1,
+                                   uint32_t x2, uint32_t y2, uint32_t color_srgb);
 int32_t flow_node_create_transpose(flow_context* c, struct flow_graph** g, int32_t prev_node);
 
 int32_t flow_node_create_rotate_90(flow_context* c, struct flow_graph** g, int32_t prev_node);
@@ -537,6 +543,7 @@ int32_t flow_node_create_resource_placeholder(flow_context* c, struct flow_graph
 
 int32_t flow_node_create_encoder_placeholder(flow_context* c, struct flow_graph** g, int32_t prev_node,
                                              int32_t output_slot_id, flow_job_codec_type codec_type);
+int32_t flow_node_create_noop(flow_context* c, struct flow_graph** g, int32_t prev_node);
 
 int32_t flow_node_create_resource_bitmap_bgra(flow_context* c, struct flow_graph** graph_ref, int32_t prev_node,
                                               flow_bitmap_bgra** ref);
@@ -566,6 +573,9 @@ int32_t flow_graph_get_inbound_edge_count_of_type(flow_context* c, struct flow_g
                                                   flow_edgetype type);
 int32_t flow_graph_get_first_inbound_edge_of_type(flow_context* c, struct flow_graph* g, int32_t node_id,
                                                   flow_edgetype type);
+
+int32_t flow_graph_get_first_outbound_edge_of_type(flow_context* c, struct flow_graph* g, int32_t node_id,
+                                                   flow_edgetype type);
 
 bool flow_edge_has_dimensions(flow_context* c, struct flow_graph* g, int32_t edge_id);
 bool flow_node_input_edges_have_dimensions(flow_context* c, struct flow_graph* g, int32_t node_id);
@@ -610,6 +620,20 @@ struct flow_nodeinfo_copy_rect_to_canvas {
     uint32_t from_y;
     uint32_t width;
     uint32_t height;
+};
+struct flow_nodeinfo_expand_canvas {
+    uint32_t left;
+    uint32_t top;
+    uint32_t right;
+    uint32_t bottom;
+    uint32_t canvas_color_srgb;
+};
+struct flow_nodeinfo_fill_rect {
+    uint32_t x1;
+    uint32_t y1;
+    uint32_t x2;
+    uint32_t y2;
+    uint32_t color_srgb;
 };
 
 struct flow_nodeinfo_size {

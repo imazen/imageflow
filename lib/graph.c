@@ -145,6 +145,16 @@ int32_t flow_node_create_canvas(flow_context* c, struct flow_graph** g, int32_t 
     return id;
 }
 
+int32_t flow_node_create_noop(flow_context* c, struct flow_graph** g, int32_t prev_node)
+{
+    int32_t id = flow_node_create_generic(c, g, prev_node, flow_ntype_Noop);
+    if (id < 0) {
+        FLOW_add_to_callstack(c);
+        return id;
+    }
+    return id;
+}
+
 int32_t flow_node_create_primitive_flip_vertical(flow_context* c, struct flow_graph** g, int32_t prev_node)
 {
     int32_t id = flow_node_create_generic(c, g, prev_node, flow_ntype_primitive_Flip_Vertical_Mutate);
@@ -242,6 +252,41 @@ int32_t flow_node_create_primitive_copy_rect_to_canvas(flow_context* c, struct f
     info->height = height;
     info->from_x = from_x;
     info->from_y = from_y;
+    return id;
+}
+
+int32_t flow_node_create_expand_canvas(flow_context* c, struct flow_graph** g, int32_t prev_node, uint32_t left,
+                                       uint32_t top, uint32_t right, uint32_t bottom, uint32_t canvas_color_srgb)
+{
+    int32_t id = flow_node_create_generic(c, g, prev_node, flow_ntype_Expand_Canvas);
+    if (id < 0) {
+        FLOW_add_to_callstack(c);
+        return id;
+    }
+    struct flow_nodeinfo_expand_canvas* info
+        = (struct flow_nodeinfo_expand_canvas*)FrameNode_get_node_info_pointer(*g, id);
+    info->left = left;
+    info->top = top;
+    info->right = right;
+    info->bottom = bottom;
+    info->canvas_color_srgb = canvas_color_srgb;
+    return id;
+}
+
+int32_t flow_node_create_fill_rect(flow_context* c, struct flow_graph** g, int32_t prev_node, uint32_t x1, uint32_t y1,
+                                   uint32_t x2, uint32_t y2, uint32_t color_srgb)
+{
+    int32_t id = flow_node_create_generic(c, g, prev_node, flow_ntype_Fill_Rect_Mutate);
+    if (id < 0) {
+        FLOW_add_to_callstack(c);
+        return id;
+    }
+    struct flow_nodeinfo_fill_rect* info = (struct flow_nodeinfo_fill_rect*)FrameNode_get_node_info_pointer(*g, id);
+    info->x1 = x1;
+    info->y1 = y1;
+    info->x2 = x2;
+    info->y2 = y2;
+    info->color_srgb = color_srgb;
     return id;
 }
 
@@ -754,6 +799,21 @@ int32_t flow_graph_get_first_inbound_edge_of_type(flow_context* c, struct flow_g
         edge = &g->edges[i];
         if (edge->type == type) {
             if (edge->to == node_id) {
+                return i;
+            }
+        }
+    }
+    return -404;
+}
+int32_t flow_graph_get_first_outbound_edge_of_type(flow_context* c, struct flow_graph* g, int32_t node_id,
+                                                   flow_edgetype type)
+{
+    struct flow_edge* edge;
+    int32_t i;
+    for (i = 0; i < g->next_edge_id; i++) {
+        edge = &g->edges[i];
+        if (edge->type == type) {
+            if (edge->from == node_id) {
                 return i;
             }
         }

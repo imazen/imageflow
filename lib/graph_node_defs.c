@@ -294,6 +294,27 @@ static bool dimensions_crop(flow_context* c, struct flow_graph* g, int32_t node_
     return true;
 }
 
+static bool dimensions_expand_canvas(flow_context* c, struct flow_graph* g, int32_t node_id, int32_t outbound_edge_id,
+                                     bool force_estimate)
+{
+    FLOW_GET_INFOBYTES(g, node_id, flow_nodeinfo_expand_canvas, info)
+    FLOW_GET_INPUT_EDGE(g, node_id)
+
+    struct flow_edge* output = &g->edges[outbound_edge_id];
+
+    output->from_width = input_edge->from_width + info->left + info->right;
+    output->from_height = input_edge->from_height + info->top + info->bottom;
+
+    if (output->from_width < 1 || output->from_height < 1) {
+        FLOW_error(c, flow_status_Invalid_argument);
+        return false;
+    }
+    // TODO: If we were passed a transparent background color, we should upgrade the format to have alpha.
+    output->from_alpha_meaningful = input_edge->from_alpha_meaningful;
+    output->from_format = input_edge->from_format;
+    return true;
+}
+
 static bool dimensions_canvas(flow_context* c, struct flow_graph* g, int32_t node_id, int32_t outbound_edge_id,
                               bool force_estimate)
 {
@@ -395,6 +416,30 @@ static int32_t create_render1d_node(flow_context* c, struct flow_graph** g, int3
     }
     return id;
 }
+static bool flatten_delete_node(flow_context* c, struct flow_graph** graph_ref, int32_t node_id)
+{
+    int32_t input_edge_id = flow_graph_get_first_inbound_edge_of_type(c, *graph_ref, node_id, flow_edgetype_input);
+
+    int32_t output_edge_id = flow_graph_get_first_outbound_edge_of_type(c, *graph_ref, node_id, flow_edgetype_input);
+
+    struct flow_edge* input_edge = input_edge_id < 0 ? NULL : &(*graph_ref)->edges[input_edge_id];
+
+    struct flow_edge* output_edge = output_edge_id < 0 ? NULL : &(*graph_ref)->edges[output_edge_id];
+
+    if (output_edge != NULL && input_edge != NULL) {
+        // Clone edges
+        if (!flow_graph_duplicate_edges_to_another_node(c, graph_ref, input_edge->from, output_edge->to, true, false)) {
+            FLOW_error_return(c);
+        }
+    }
+
+    // Delete the original
+    if (!flow_node_delete(c, *graph_ref, node_id)) {
+        FLOW_error_return(c);
+    }
+    return true;
+}
+
 static bool flatten_scale(flow_context* c, struct flow_graph** g, int32_t node_id, struct flow_node* node,
                           struct flow_edge* input_edge, int32_t* first_replacement_node, int32_t* last_replacement_node)
 {
@@ -586,6 +631,66 @@ static bool flatten_crop(flow_context* c, struct flow_graph** g, int32_t node_id
     return true;
 }
 
+static bool flatten_expand_canvas(flow_context* c, struct flow_graph** g, int32_t node_id, struct flow_node* node,
+                                  struct flow_edge* input_edge, int32_t* first_replacement_node,
+                                  int32_t* last_replacement_node)
+{
+
+    FLOW_GET_INFOBYTES((*g), node_id, flow_nodeinfo_expand_canvas, info)
+
+    // TODO: If edges are all zero, replace this node with a nullop
+
+    int canvas_width = input_edge->from_width + info->left + info->right;
+    int canvas_height = input_edge->from_height + info->top + info->bottom;
+
+    int canvas_node_id = flow_node_create_canvas(c, g, -1, input_edge->from_format, canvas_width, canvas_height, 0);
+    if (canvas_node_id < 0) {
+        FLOW_error_return(c);
+    }
+
+    *first_replacement_node = flow_node_create_primitive_copy_rect_to_canvas(
+        c, g, *first_replacement_node, 0, 0, input_edge->from_width, input_edge->from_height, info->left, info->top);
+    if (*first_replacement_node < 0) {
+        FLOW_error_return(c);
+    }
+    // Ad canvas edge
+    if (flow_edge_create(c, g, canvas_node_id, *first_replacement_node, flow_edgetype_canvas) < 0) {
+        FLOW_error_return(c);
+    }
+
+    *last_replacement_node = *first_replacement_node;
+
+    if (info->left > 0)
+        *last_replacement_node = flow_node_create_fill_rect(c, g, *first_replacement_node, 0, 0, info->left,
+                                                            canvas_height, info->canvas_color_srgb);
+    if (*last_replacement_node < 0) {
+        FLOW_error_return(c);
+    }
+
+    if (info->top > 0)
+        *last_replacement_node = flow_node_create_fill_rect(c, g, *last_replacement_node, info->left, 0, canvas_width,
+                                                            info->top, info->canvas_color_srgb);
+    if (*last_replacement_node < 0) {
+        FLOW_error_return(c);
+    }
+    if (info->bottom > 0)
+        *last_replacement_node
+            = flow_node_create_fill_rect(c, g, *last_replacement_node, info->left, canvas_height - info->bottom,
+                                         canvas_width, canvas_height, info->canvas_color_srgb);
+    if (*last_replacement_node < 0) {
+        FLOW_error_return(c);
+    }
+    if (info->right > 0)
+        *last_replacement_node
+            = flow_node_create_fill_rect(c, g, *last_replacement_node, canvas_width - info->left, info->top,
+                                         canvas_width, canvas_height - info->top, info->canvas_color_srgb);
+    if (*last_replacement_node < 0) {
+        FLOW_error_return(c);
+    }
+
+    return true;
+}
+
 static bool flatten_render1d(flow_context* c, struct flow_graph** g, int32_t node_id, struct flow_node* node,
                              struct flow_edge* input_edge, int32_t* first_replacement_node,
                              int32_t* last_replacement_node)
@@ -731,6 +836,36 @@ static bool execute_crop(flow_context* c, struct flow_job* job, struct flow_grap
     return true;
 }
 
+static bool execute_fill_rect(flow_context* c, struct flow_job* job, struct flow_graph* g, int32_t node_id)
+{
+    FLOW_GET_INFOBYTES(g, node_id, flow_nodeinfo_fill_rect, info)
+    FLOW_GET_INPUT_EDGE(g, node_id)
+    struct flow_node* n = &g->nodes[node_id];
+
+    flow_bitmap_bgra* b = g->nodes[input_edge->from].result_bitmap;
+
+    if (info->x1 >= info->x2 || info->y1 >= info->y2 || info->y2 > b->h || info->x2 > b->w) {
+        FLOW_error(c, flow_status_Invalid_argument);
+        // Either out of bounds or has a width or height of zero.
+        return false;
+    }
+
+    uint8_t* topleft = b->pixels + (b->stride * info->y1) + flow_pixel_format_bytes_per_pixel(b->fmt) * info->x1;
+
+    uint8_t step = flow_pixel_format_bytes_per_pixel(b->fmt);
+    size_t rect_width_bytes = step * (info->x2 - info->x1);
+    // Create first row
+    for (uint32_t x = info->x1; x < info->x2; x++) {
+        memcpy(topleft + (x * step), &info->color_srgb, step);
+    }
+    // Copy downwards
+    for (uint32_t y = 1; y < (info->y2 - info->y1); y++) {
+        memcpy(topleft + (b->stride * y), topleft, rect_width_bytes);
+    }
+    n->result_bitmap = b;
+    return true;
+}
+
 static bool execute_bitmap_bgra_pointer(flow_context* c, struct flow_job* job, struct flow_graph* g, int32_t node_id)
 {
     FLOW_GET_INFOBYTES(g, node_id, flow_nodeinfo_resource_bitmap_bgra, info)
@@ -860,6 +995,16 @@ struct flow_node_definition flow_node_defs[] = {
 
     },
     {
+      .type = flow_ntype_Noop,
+      .input_count = 1,
+      .canvas_count = 0,
+      .type_name = "no-op",
+      .nodeinfo_bytes_fixed = 0,
+      .populate_dimensions = dimensions_mimic_input,
+      .pre_optimize_flatten_complex = flatten_delete_node,
+
+    },
+    {
       .type = flow_ntype_Resource_Placeholder,
       .nodeinfo_bytes_fixed = sizeof(struct flow_nodeinfo_index),
       .type_name = "placeholder",
@@ -957,6 +1102,15 @@ struct flow_node_definition flow_node_defs[] = {
       .type_name = "crop",
       .post_optimize_flatten = flatten_crop,
     },
+    {
+      .type = flow_ntype_Expand_Canvas,
+      .nodeinfo_bytes_fixed = sizeof(struct flow_nodeinfo_expand_canvas),
+      .input_count = 1,
+      .canvas_count = 0,
+      .populate_dimensions = dimensions_expand_canvas,
+      .type_name = "expand_canvas",
+      .post_optimize_flatten = flatten_expand_canvas,
+    },
 
     {
       .type = flow_ntype_Render1D,
@@ -1014,6 +1168,13 @@ struct flow_node_definition flow_node_defs[] = {
       .populate_dimensions = dimensions_crop,
       .type_name = "crop mutate/alias",
       .execute = execute_crop },
+    { .type = flow_ntype_Fill_Rect_Mutate,
+      .nodeinfo_bytes_fixed = sizeof(struct flow_nodeinfo_fill_rect),
+      .input_count = 1,
+      .canvas_count = 0,
+      .populate_dimensions = dimensions_mimic_input,
+      .type_name = "fill rect",
+      .execute = execute_fill_rect },
 
     { .type = flow_ntype_primitive_CopyRectToCanvas,
       .nodeinfo_bytes_fixed = sizeof(struct flow_nodeinfo_copy_rect_to_canvas),

@@ -40,6 +40,7 @@ void flow_utils_ensure_directory_exists(const char* dir_path);
 
 bool flow_job_render_graph_to_png(flow_context* c, struct flow_job* job, struct flow_graph* g, int32_t graph_version);
 bool flow_job_notify_node_complete(flow_context* c, struct flow_job* job, struct flow_graph* g, int32_t node_id);
+bool flow_job_initialize_input_resource(flow_context* c, struct flow_job* job, struct flow_job_resource_item* item);
 
 typedef void* (*codec_aquire_on_buffer_fn)(flow_context* c, struct flow_job* job,
                                            struct flow_job_resource_buffer* buffer);
@@ -89,8 +90,8 @@ typedef enum flow_job_color_profile_source {
 struct flow_job_codec_definition* flow_job_get_codec_definition(flow_context* c, flow_job_codec_type type);
 flow_job_codec_type flow_job_codec_select(flow_context* c, struct flow_job* job, uint8_t* data, size_t data_bytes);
 
-void* flow_job_acquire_decoder_over_buffer(flow_context* c, struct flow_job* job,
-                                           struct flow_job_resource_buffer* buffer, flow_job_codec_type type);
+void* flow_job_acquire_codec_over_buffer(flow_context* c, struct flow_job* job, struct flow_job_resource_buffer* buffer,
+                                         flow_job_codec_type type);
 
 bool flow_job_decoder_get_frame_info(flow_context* c, struct flow_job* job, void* codec_state, flow_job_codec_type type,
                                      struct decoder_frame_info* decoder_frame_info_ref);

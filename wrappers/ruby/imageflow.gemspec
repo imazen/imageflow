@@ -32,6 +32,9 @@ Gem::Specification.new do |s|
   s.add_development_dependency "rake"
   s.add_development_dependency "thin"
   s.add_development_dependency "ffi-swig-generator"
+  s.add_development_dependency "rack-test"
+  s.add_development_dependency "rerun"
+  s.add_development_dependency "rb-fsevent"
 
   s.add_dependency 'ffi', '>=1.9.10'
 

@@ -238,7 +238,7 @@ TEST_CASE("flow_context", "[error_handling]")
     SECTION("flow_context_error_message should be safe when no error has ocurred yet")
     {
         char error_msg[1024];
-        REQUIRE(std::string("Error in file: (null) line: -1 status_code: 0 reason: Status code lookup not implemented")
+        REQUIRE(std::string("Error in file: (null):-1 status_code: 0 reason: Status code lookup not implemented")
                 == flow_context_error_message(&context, error_msg, sizeof error_msg));
     }
     flow_context_terminate(&context);
