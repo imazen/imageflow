@@ -64,6 +64,7 @@ module Imageflow
     def create_job (**args)
       Job.new context: self, **args
     end
+
     def call_method(name, *args)
       raise_if_destroyed
       raise_pending_error

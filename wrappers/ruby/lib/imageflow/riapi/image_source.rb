@@ -9,15 +9,16 @@ module Imageflow
         @resource_identifier = resource_identifier
         @bytes = bytes
       end
+
       def self.from_file(path:)
         ImageSource.new resource_identifier: path, type: :file
       end
 
-      def self.from_binary(binary_string:, optional_resource_identifier:"")
+      def self.from_binary(binary_string:, optional_resource_identifier: "")
         ImageSource.new resource_identifier: optional_resource_identifier, type: :binary, bytes: binary_string
       end
 
-      def self.from_url(url: )
+      def self.from_url(url:)
         ImageSource.new resource_identifier: url, type: :url
       end
 
@@ -27,12 +28,11 @@ module Imageflow
         if type == :url
           @bytes =Net::HTTP.get(URI(resource_identifier))
         elsif type == :file
-          @bytes = File.open(resource_identifier, "rb") {|f| f.read}
+          @bytes = File.open(resource_identifier, "rb") { |f| f.read }
         else
           raise "Unsupported resource type #{type}"
         end
       end
-
 
 
     end

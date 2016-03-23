@@ -3,19 +3,19 @@ require 'imageflow'
 require 'imageflow/riapi'
 module Imageflow::Riapi
 
-	describe 'imageflow' do
+  describe 'imageflow' do
 
-		describe 'Uri' do
-			it "can build a simple query" do
-				
-				result = Url.build_query_string hash_of_strings: {value: true, hi: "hello"}, url_encode: true
-				expect(result).to eq("?value=true&hi=hello")
-			end
+    describe 'Uri' do
+      it "can build a simple query" do
 
-			it "can build a complex query" do
+        result = Url.build_query_string hash_of_strings: {value: true, hi: "hello"}, url_encode: true
+        expect(result).to eq("?value=true&hi=hello")
+      end
 
-				result = Url.build_query_string hash_of_strings: {'value&': true, hi: "he l///lo"}, url_encode: true
-				expect(result).to eq("?value%26=true&hi=he%20l%2F%2F%2Flo")
+      it "can build a complex query" do
+
+        result = Url.build_query_string hash_of_strings: {'value&': true, hi: "he l///lo"}, url_encode: true
+        expect(result).to eq("?value%26=true&hi=he%20l%2F%2F%2Flo")
       end
 
       describe "#add_implicit_questionmark" do
@@ -83,6 +83,6 @@ module Imageflow::Riapi
       end
 
 
-		end
-	end
+    end
+  end
 end

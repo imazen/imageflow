@@ -14,7 +14,6 @@ module Imageflow
       end
 
 
-
       def apply_instructions(i)
         @manual_crop_rect = i.crop_array.nil? ? @original_copy_rect : ImageLayoutEngine.get_manual_crop_window(instructions: i, original_size: @original_size)
         @manual_crop_rect ||= [0, 0, @original_size[0], @original_size[1]]
@@ -34,7 +33,7 @@ module Imageflow
 
         @area_size = @area_size.map { |v| BigDecimal.new([v, 1].max, 0).round }
         @target_size = @target_size.map { |v| BigDecimal.new([v, 1].max, 0).round }
-        @target_rect = align_rect( rect: [0,0] + @target_size, container: [0,0] + @area_size, align:  i.anchor || :middle_center)
+        @target_rect = align_rect(rect: [0, 0] + @target_size, container: [0, 0] + @area_size, align: i.anchor || :middle_center)
       end
 
 

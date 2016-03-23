@@ -42,7 +42,7 @@ module Imageflow
 
         out_bytes = job.get_buffer(resource_id: output_resource_id)
 
-        expect(out_bytes[:buffer_size]).to be_between(200,900)
+        expect(out_bytes[:buffer_size]).to be_between(200, 900)
 
       end
     end

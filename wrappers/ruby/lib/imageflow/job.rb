@@ -1,8 +1,8 @@
 module Imageflow
   class Job
-    def initialize(context: )
+    def initialize(context:)
       @c = context
-      @ptr =  @c.call_method(:job_create)
+      @ptr = @c.call_method(:job_create)
       @keepalive = []
       record_nothing #Don't record anything by default
     end
@@ -12,6 +12,7 @@ module Imageflow
       @c.call_method(:job_destroy, @ptr)
       @ptr = nil
     end
+
     def destroyed?
       @ptr.nil? || @ptr.null?
     end
@@ -32,26 +33,26 @@ module Imageflow
     end
 
     def record_nothing
-      configure_recording  record_graph_versions: false,
-                           record_frame_images: false,
-                           render_graph_versions: false,
-                           render_animated_graph: false,
-                           render_last_graph: false
+      configure_recording record_graph_versions: false,
+                          record_frame_images: false,
+                          render_graph_versions: false,
+                          render_animated_graph: false,
+                          render_last_graph: false
 
 
     end
 
     def debug_record_gif
-      configure_recording  record_graph_versions: true,
-                           record_frame_images: true,
-                           render_graph_versions: true,
-                           render_animated_graph: true,
-                           render_last_graph: true
+      configure_recording record_graph_versions: true,
+                          record_frame_images: true,
+                          render_graph_versions: true,
+                          render_animated_graph: true,
+                          render_last_graph: true
 
 
     end
 
-    def configure_recording(record_graph_versions:, record_frame_images:, render_last_graph:, render_graph_versions:,  render_animated_graph: )
+    def configure_recording(record_graph_versions:, record_frame_images:, render_last_graph:, render_graph_versions:, render_animated_graph:)
       @c.call_method(:job_configure_recording, @ptr, record_graph_versions, record_frame_images, render_last_graph, render_graph_versions, render_animated_graph)
     end
 
@@ -61,18 +62,18 @@ module Imageflow
       buffer[:buffer].get_bytes(0, buffer[:buffer_size])
     end
 
-    def insert_resources(graph: )
+    def insert_resources(graph:)
       @c.call_method(:job_insert_resources_into_graph, @ptr, graph.ptr_ptr_graph)
     end
 
-    def execute (graph: )
+    def execute (graph:)
       @c.call_method(:job_execute, @ptr, graph.ptr_ptr_graph)
     end
 
-    def get_input_resource_info(placeholder_id:  )
+    def get_input_resource_info(placeholder_id:)
       info = Imageflow::Native::FlowJobInputResourceInfo.new
 
-      @c.call_method(:job_get_input_resource_info_by_placeholder_id, @ptr, placeholder_id.to_i, info )
+      @c.call_method(:job_get_input_resource_info_by_placeholder_id, @ptr, placeholder_id.to_i, info)
 
       info
     end

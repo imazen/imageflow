@@ -52,7 +52,7 @@ module Imageflow
       #Parses a querystring into a name/value collection. The given string cannot include path or fragment information - it must be *just* the querystring.
       def self.parse_query_only(path, allow_semicolons: true, url_decode: true)
         hash = {}
-        path.split(allow_semicolons ? /[\?\&\;]/ : /[\?\&]/).compact.select{|s| s.length > 0}.each do |pair_str|
+        path.split(allow_semicolons ? /[\?\&\;]/ : /[\?\&]/).compact.select { |s| s.length > 0 }.each do |pair_str|
           first_eq = pair_str.index '='
           k = first_eq.nil? ? pair_str : pair_str[0...first_eq]
           v = first_eq.nil? ? "" : pair_str[first_eq + 1.. -1] || ""

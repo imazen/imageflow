@@ -23,15 +23,15 @@ module Imageflow
       end
 
       def add_crop(crop:)
-        @last = @last.add(:primitive_crop, crop[0], crop[1], crop[2], crop[3] )
+        @last = @last.add(:primitive_crop, crop[0], crop[1], crop[2], crop[3])
       end
 
-      def add_expand_canvas(left:, top:, right:, bottom:, color: )
-        @last = @last.add(:expand_canvas, left,top,right, bottom, color )
+      def add_expand_canvas(left:, top:, right:, bottom:, color:)
+        @last = @last.add(:expand_canvas, left, top, right, bottom, color)
       end
 
 
-      def build_graph(input_placeholder_id: , output_placeholder_id: , instructions:, source_info:)
+      def build_graph(input_placeholder_id:, output_placeholder_id:, instructions:, source_info:)
 
         #TODO: apply autorotate & autorotate.default (false)
         g = @context.create_graph
@@ -65,7 +65,6 @@ module Imageflow
                           color: 0xFFFFFFFF) #instructions.background_color)
 
 
-
         #TODO: Add parsing for these
         # if (!s.settings.Padding.IsEmpty) {
         #     s.layout.AddRing("padding",  s.settings.Padding);
@@ -82,12 +81,6 @@ module Imageflow
 
         add_rotate(i.rotate) unless i.rotate.nil?
         add_flip(i.flip) unless i.flip.nil?
-
-
-
-
-
-
 
 
         if source_info[:codec_type] == :decode_png

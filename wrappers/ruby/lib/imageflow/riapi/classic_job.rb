@@ -31,7 +31,7 @@ module Imageflow
 
 
       def get_source_info(job:, placeholder_id:)
-        info = job.get_input_resource_info  placeholder_id: placeholder_id
+        info = job.get_input_resource_info placeholder_id: placeholder_id
 
         {
             preferred_mime_type: info[:preferred_mime_type],
@@ -43,8 +43,6 @@ module Imageflow
         }
 
       end
-
-
 
 
       def acquire (info_only: false)
@@ -73,7 +71,7 @@ module Imageflow
 
         g = gb.build_graph(input_placeholder_id: 0, output_placeholder_id: 1, source_info: result_info[:source], instructions: instructions)
 
-        @result_info[:mime_type]  = gb.result_mime_type
+        @result_info[:mime_type] = gb.result_mime_type
 
         #we have to insert the last resource that we just added in complete_graph
         job.insert_resources graph: g

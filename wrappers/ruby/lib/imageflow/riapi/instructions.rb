@@ -48,6 +48,7 @@ module Imageflow
         end
         nil
       end
+
       def []=(k, v)
         set_first(keys: k, value: v)
       end
@@ -157,10 +158,10 @@ module Imageflow
         map[v]
       end
 
-      def self.parse_list(v, default_element: nil, value_type: :string, permitted_counts: nil )
+      def self.parse_list(v, default_element: nil, value_type: :string, permitted_counts: nil)
         return nil if v.nil?
         v.gsub! /^[ \(\),]+/, ""
-        v.gsub! /[ \(\),]+$/, ""  #TODO: should we actually be stripping commas? Don't think so, but that is current IR behavior
+        v.gsub! /[ \(\),]+$/, "" #TODO: should we actually be stripping commas? Don't think so, but that is current IR behavior
         parts = v.split(/,/)
         #Gotta match the counts
         return nil unless permitted_counts.nil? || permitted_counts.include?(parts.length)
@@ -244,9 +245,10 @@ module Imageflow
       def crop_array
         Instructions.parse_list(get_first(keys: "crop"), value_type: :decimal, permitted_counts: [4], default_element: 0)
       end
+
       def crop_array=(v)
-        raise "nil or Array of 4 BigDecimal values required for crop_array" unless v.nil? || (v.length == 4 && v.all?{|e| e.is_a?(Numeric)} )
-        set_first(keys: "crop", value: v.nil? ? nil : v.map{|d| BigDecimal(d,0).round(10).to_s('F')}.join(','))
+        raise "nil or Array of 4 BigDecimal values required for crop_array" unless v.nil? || (v.length == 4 && v.all? { |e| e.is_a?(Numeric) })
+        set_first(keys: "crop", value: v.nil? ? nil : v.map { |d| BigDecimal(d, 0).round(10).to_s('F') }.join(','))
       end
 
 

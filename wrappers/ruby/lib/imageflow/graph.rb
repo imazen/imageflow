@@ -1,6 +1,7 @@
 module Imageflow
   class Node
     attr_reader :index
+
     def initialize(graph:, index:)
       @g = graph
       @index = index
@@ -20,24 +21,25 @@ module Imageflow
     def ptr_graph
       @pointer_reference.get_pointer(0)
     end
+
     def ptr_ptr_graph
       @pointer_reference
     end
 
-    def initialize(context: , node_capacity: 10, edge_capacity: 10,
-                   infobyte_capacity: 200, growth_factor: 2.0, ptr_graph: nil )
+    def initialize(context:, node_capacity: 10, edge_capacity: 10,
+                   infobyte_capacity: 200, growth_factor: 2.0, ptr_graph: nil)
       @c = context
-      @pointer_reference =  FFI::MemoryPointer.new(:size_t, 1, true)
+      @pointer_reference = FFI::MemoryPointer.new(:size_t, 1, true)
 
       pointer = ptr_graph || @c.call_method(:graph_create, edge_capacity, node_capacity, infobyte_capacity, growth_factor)
       @pointer_reference.put_pointer(0, pointer)
     end
 
 
-
     def destroyed?
       @pointer_reference.nil? || @pointer_reference.get_pointer(0).null?
     end
+
     def destroy!
       @c.call_method(:graph_destroy, @pointer_reference.get_pointer(0))
       @pointer_reference = nil
