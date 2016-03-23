@@ -228,3 +228,8 @@ FakesAssemblies/
 .project
 # Clion
 .idea/
+# Eclipse pydev
+.pydevproject
+# Compiled conanfile
+conanfile.pyc
+

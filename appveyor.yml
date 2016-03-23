@@ -1,0 +1,17 @@
+build: false
+environment:
+    PYTHON: "C:\\Python27"
+    PYTHON_VERSION: "2.7.8"
+    PYTHON_ARCH: "32"
+
+install:
+  - set PATH=%PATH%;%PYTHON%/Scripts/
+  - pip.exe install conan
+  - conan user # It creates the conan data directory
+
+test_script:
+  - mkdir build
+  - cd build
+  - conan install --file ../conanfile.py -o build_tests=True --build missing
+  - cmake ../ -DENABLE_TEST=ON && cmake --build . && ctest -V
+
