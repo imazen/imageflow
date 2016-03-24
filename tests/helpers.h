@@ -217,7 +217,10 @@ uint8_t* get_bytes_cached(flow_context* c, size_t* bytes_count_out, const char* 
 #define FLOW_MAX_PATH 255
     char cache_folder[FLOW_MAX_PATH];
 
-    flow_snprintf(cache_folder, FLOW_MAX_PATH, "%s/imageflow_cache", getenv("HOME"));
+    char * cache_dir = getenv("HOME");
+    if (cache_dir == NULL) cache_dir = getenv("TEMP");
+
+    flow_snprintf(cache_folder, FLOW_MAX_PATH, "%s/imageflow_cache", cache_dir);
 
     flow_utils_ensure_directory_exists(cache_folder);
     char cache_path[FLOW_MAX_PATH];
