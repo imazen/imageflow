@@ -44,6 +44,7 @@ TEST_CASE("Test context creation", "")
     ERR(c);
     flow_context_destroy(c);
 }
+using namespace Catch::Matchers;
 
 TEST_CASE("Test error message printing", "")
 {
@@ -54,8 +55,7 @@ TEST_CASE("Test error message printing", "")
     char buf[4096];
     int chars_written = flow_context_error_and_stacktrace(c, buf, 4096, false);
     REQUIRE(chars_written > 0);
-    REQUIRE(buf == std::string("Invalid argument : You passed a value outside [0,1]: 3\ntest_context.cpp:54: in "
-                               "function ____C_A_T_C_H____T_E_S_T____49\n"));
+    REQUIRE_THAT( buf, StartsWith("Invalid argument : You passed a value outside [0,1]: 3\ntest_context.cpp:" ) );
 
     flow_context_destroy(c);
 }
