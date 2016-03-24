@@ -316,7 +316,7 @@ bool flow_bitmap_float_pivoting_composite_linear_over_srgb(flow_context* context
         // Let's try to tile within 2kb, get some cache coherency
         const float dest_opt_rows = 2048.0f / (float)dest->stride;
 
-        const int tile_width = max(4, (int)dest_opt_rows);
+        const int tile_width = int_max(4, (int)dest_opt_rows);
         const int tiles = src->w / tile_width;
 
         if (can_compose) {

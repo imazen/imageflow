@@ -437,9 +437,9 @@ bool flow_graph_replace_if_too_small(flow_context* c, struct flow_graph** g, uin
     if ((int32_t)free_nodes_required > (*g)->max_nodes - (*g)->next_node_id
         || (int32_t)free_edges_required > (*g)->max_edges - (*g)->next_edge_id
         || (int32_t)free_bytes_required > (*g)->max_info_bytes - (*g)->next_info_byte) {
-        int32_t min_nodes = max((*g)->max_nodes, (*g)->next_node_id + free_nodes_required);
-        int32_t min_edges = max((*g)->max_edges, (*g)->next_edge_id + free_edges_required);
-        int32_t min_bytes = max((*g)->max_info_bytes, (*g)->next_info_byte + free_bytes_required);
+        int32_t min_nodes = int_max((*g)->max_nodes, (*g)->next_node_id + free_nodes_required);
+        int32_t min_edges = int_max((*g)->max_edges, (*g)->next_edge_id + free_edges_required);
+        int32_t min_bytes = int_max((*g)->max_info_bytes, (*g)->next_info_byte + free_bytes_required);
         struct flow_graph* new_graph = flow_graph_copy_and_resize(c, (*g), (uint32_t)(growth_factor * (float)min_nodes),
                                                                   (uint32_t)(growth_factor * (float)min_edges),
                                                                   (uint32_t)(growth_factor * (float)min_bytes));

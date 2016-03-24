@@ -198,7 +198,7 @@ bool flow_bitmap_bgra_populate_histogram(flow_context* context, flow_bitmap_bgra
                     // Calculate luminosity and saturation
                     histograms[(306 * data[2] + 601 * data[1] + 117 * data[0]) >> shift]++;
                     histograms[histogram_size_per_channel
-                               + (max(255, max(abs((int)data[2] - (int)data[1]), abs((int)data[1] - (int)data[0])))
+                               + (int_max(255, int_max(abs((int)data[2] - (int)data[1]), abs((int)data[1] - (int)data[0])))
                                   >> shift)]++;
                 }
             }

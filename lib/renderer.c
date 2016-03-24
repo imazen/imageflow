@@ -146,7 +146,7 @@ static int Renderer_determine_divisor(flow_Renderer* r)
               > r->details->havling_acceptable_pixel_loss) {
         divisor--;
     }
-    return max(1, divisor);
+    return int_max(1, divisor);
 }
 
 void Renderer_destroy(flow_context* context, flow_Renderer* r)

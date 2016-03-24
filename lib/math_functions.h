@@ -16,8 +16,8 @@
 
 #define IR_PI 3.1415926535897932384626433832795
 
-static inline int min(int a, int b) { return a <= b ? a : b; }
-static inline int max(int a, int b) { return a >= b ? a : b; }
+static inline int int_min(int a, int b) { return a <= b ? a : b; }
+static inline int int_max(int a, int b) { return a >= b ? a : b; }
 
 static inline unsigned int umin(unsigned int a, unsigned int b) { return a <= b ? a : b; }
 static inline unsigned int umax(unsigned int a, unsigned int b) { return a >= b ? a : b; }

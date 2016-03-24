@@ -288,7 +288,7 @@ TEST_CASE("Test guassian blur approximation.", "[fastscaling]")
     float sigma = 2.0;
 
     // We figure this out just for the actual guassian function
-    int kernel_radius = max(1, (int)ceil(sigma * 3.11513411073090629014797467185716068837128426554157826035269
+    int kernel_radius = int_max(1, (int)ceil(sigma * 3.11513411073090629014797467185716068837128426554157826035269
                                          - 0.5)); // Should provide at least 7 bits of precision, and almost always 8.
 
     uint32_t bitmap_width = 300;

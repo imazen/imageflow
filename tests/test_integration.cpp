@@ -1,14 +1,12 @@
-
-#include "helpers.h"
-#include <png.h>
-
+#include "catch.hpp"
 #include "imageflow.h"
 #include "imageflow_private.h"
+#include "helpers.h"
+#include <png.h>
 #include "weighting_test_helpers.h"
 #include "trim_whitespace.h"
 #include "string.h"
 #include "lcms2.h"
-#include "catch.hpp"
 
 // TODO: https://github.com/pornel/pngquant/
 
