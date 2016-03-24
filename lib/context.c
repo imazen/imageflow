@@ -5,10 +5,13 @@
 
 int flow_vsnprintf(char* s, size_t n, const char* fmt, va_list v)
 {
+    if (n == 0) {
+        return -1; //because MSFT _vsn_printf_s will crash if you pass it zero for buffer size.
+    }
     int res;
 #ifdef _WIN32
     // Could use "_vsnprintf_s(s, n, _TRUNCATE, fmt, v)" ?
-    res = _vsnprintf_s(s, n - 1, _TRUNCATE, fmt, v);
+    res = _vsnprintf_s(s, n, _TRUNCATE, fmt, v);
 #else
     res = vsnprintf(s, n, fmt, v);
 #endif

@@ -27,14 +27,24 @@ TEST_CASE("Test flow_snprintf with zero-character  buffer_size", "")
     REQUIRE(buf[0] == 25); // It shouldn't have written past the size
 }
 
+TEST_CASE("Test flow_snprintf with an insufficent  buffer_size", "")
+{
+    char buf[] = { 23, 24, 25, 26 };
+    REQUIRE(flow_snprintf(&buf[0], 3, "hello") == -1);
+    REQUIRE(buf[0] == 'h');
+    REQUIRE(buf[1] == 'e');
+    REQUIRE(buf[2] == 0); // It shouldn't have written past the size
+    REQUIRE(buf[3] == 26);
+}
+
 TEST_CASE("Test flow_snprintf with a sufficient buffer", "")
 {
-    char buf[8];
-    buf[7] = 25;
+    char buf[7];
+    buf[6] = 25;
     REQUIRE(flow_snprintf(&buf[0], 6, "hello") == 5);
 
-    REQUIRE(buf[6] == 0); // It should have written the null
-    REQUIRE(buf[7] == 25); // It shouldn't have written past the size
+    REQUIRE(buf[5] == 0); // It should have written the null
+    REQUIRE(buf[6] == 25); // It shouldn't have written past the size
 }
 
 TEST_CASE("Test context creation", "")
