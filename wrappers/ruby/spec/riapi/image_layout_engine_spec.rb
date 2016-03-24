@@ -47,6 +47,10 @@ module Imageflow::Riapi
                                })
     end
 
+
+    #TODO - add test for implicit scale=down? Current behavior =both http://localhost:3000/ri/utah2.jpg?crop=0,500,1000,1000&width=2000
+
+
     describe "#get_manual_crop_window" do
       it "should work with percentages" do
         crop = ImageLayoutEngine.get_manual_crop_window original_size: [100, 100],

@@ -39,7 +39,7 @@ module Imageflow
       raise_if_destroyed
       buffer = FFI::MemoryPointer.new(:char, 4096, true)
 
-      Native.context_error_message_and_stacktrace(@c, buffer, 4096, full_file_paths)
+      Native.context_error_and_stacktrace(@c, buffer, 4096, full_file_paths)
 
       "\n" + buffer.read_string
     end

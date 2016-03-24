@@ -37,7 +37,7 @@ module Imageflow
 
         flow.context_error_message(@c, buffer, 2048)
 
-        expect(buffer.read_string).to match /status_code: 2/
+        expect(buffer.read_string).to match /Invalid dimensions/
       end
     end
 
@@ -53,7 +53,7 @@ module Imageflow
       it 'can raise an error' do
         expect {
           @c.call_method(:bitmap_bgra_create_header, -1, -1)
-        }.to raise_error /status_code: 2/
+        }.to raise_error /Invalid dimensions/
       end
     end
   end
