@@ -6,7 +6,7 @@
 int flow_vsnprintf(char* s, size_t n, const char* fmt, va_list v)
 {
     if (n == 0) {
-        return -1; //because MSFT _vsn_printf_s will crash if you pass it zero for buffer size.
+        return -1; // because MSFT _vsn_printf_s will crash if you pass it zero for buffer size.
     }
     int res;
 #ifdef _WIN32

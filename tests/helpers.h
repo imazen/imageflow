@@ -13,13 +13,12 @@
 #include <../lib/job.h>
 #include "imageflow_private.h"
 
-
 #ifdef _MSC_VER
 #include "io.h"
 #pragma warning(error : 4005)
 
 #ifndef _UNISTD_H
-#define _UNISTD_H    1
+#define _UNISTD_H 1
 
 /* This file intended to serve as a drop-in replacement for
 *  unistd.h on Windows
@@ -36,10 +35,10 @@
 
 /* Values for the second argument to access.
 These may be OR'd together.  */
-#define R_OK    4       /* Test for read permission.  */
-#define W_OK    2       /* Test for write permission.  */
+#define R_OK 4 /* Test for read permission.  */
+#define W_OK 2 /* Test for write permission.  */
 //#define   X_OK    1       /* execute permission - unsupported in windows*/
-#define F_OK    0       /* Test for existence.  */
+#define F_OK 0 /* Test for existence.  */
 
 #define access _access
 #define dup2 _dup2
@@ -51,7 +50,9 @@ These may be OR'd together.  */
 #define chdir _chdir
 #define isatty _isatty
 #define lseek _lseek
-/* read, write, and close are NOT being #defined here, because while there are file handle specific versions for Windows, they probably don't work for sockets. You need to look at your app and consider whether to call e.g. closesocket(). */
+/* read, write, and close are NOT being #defined here, because while there are file handle specific versions for
+ * Windows, they probably don't work for sockets. You need to look at your app and consider whether to call e.g.
+ * closesocket(). */
 
 #define ssize_t int
 
@@ -64,7 +65,6 @@ These may be OR'd together.  */
 #else
 #include "unistd.h"
 #endif
-
 
 uint8_t* get_bytes_cached(flow_context* c, size_t* bytes_count_out, const char* url);
 void fetch_image(const char* url, char* dest_path);
@@ -217,8 +217,9 @@ uint8_t* get_bytes_cached(flow_context* c, size_t* bytes_count_out, const char* 
 #define FLOW_MAX_PATH 255
     char cache_folder[FLOW_MAX_PATH];
 
-    char * cache_dir = getenv("HOME");
-    if (cache_dir == NULL) cache_dir = getenv("TEMP");
+    char* cache_dir = getenv("HOME");
+    if (cache_dir == NULL)
+        cache_dir = getenv("TEMP");
 
     flow_snprintf(cache_folder, FLOW_MAX_PATH, "%s/imageflow_cache", cache_dir);
 
@@ -250,9 +251,9 @@ void flow_utils_ensure_directory_exists(const char* dir_path)
         }
     } else {
         if ((errno = ENOENT)) {
-            // Add more flags to the mode if necessary.
+// Add more flags to the mode if necessary.
 #ifdef _MSC_VER
-            e = mkdir(dir_path);//Windows doesn't support the last param, S_IRWXU);
+            e = mkdir(dir_path); // Windows doesn't support the last param, S_IRWXU);
 #else
             e = mkdir(dir_path, S_IRWXU);
 #endif

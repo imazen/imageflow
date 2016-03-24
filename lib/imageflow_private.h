@@ -151,13 +151,14 @@ PUB void flow_context_terminate(flow_context* context);
 
 PUB void* flow_context_calloc(flow_context* context, size_t, size_t, const char* file, int line);
 PUB void* flow_context_malloc(flow_context* context, size_t, const char* file, int line);
-PUB void* flow_context_realloc(flow_context* context, void* old_pointer, size_t new_byte_count, const char* file, int line);
+PUB void* flow_context_realloc(flow_context* context, void* old_pointer, size_t new_byte_count, const char* file,
+                               int line);
 PUB void flow_context_free(flow_context* context, void* pointer, const char* file, int line);
 PUB bool flow_context_enable_profiling(flow_context* context, uint32_t default_capacity);
-PUB void flow_context_raise_error(flow_context* context, flow_status_code code, char* message, const char* file, int line,
-                              const char* function_name);
+PUB void flow_context_raise_error(flow_context* context, flow_status_code code, char* message, const char* file,
+                                  int line, const char* function_name);
 PUB char* flow_context_set_error_get_message_buffer(flow_context* context, flow_status_code code, const char* file,
-                                                int line, const char* function_name);
+                                                    int line, const char* function_name);
 PUB void flow_context_add_to_callstack(flow_context* context, const char* file, int line, const char* function_name);
 
 #define FLOW_calloc(context, instance_count, element_size)                                                             \
@@ -201,36 +202,37 @@ PUB flow_bitmap_float* flow_bitmap_float_create(flow_context* context, int sx, i
 PUB void flow_bitmap_float_destroy(flow_context* context, flow_bitmap_float* im);
 
 PUB bool flow_bitmap_float_scale_rows(flow_context* context, flow_bitmap_float* from, uint32_t from_row,
-                                  flow_bitmap_float* to, uint32_t to_row, uint32_t row_count,
-                                  flow_interpolation_pixel_contributions* weights);
+                                      flow_bitmap_float* to, uint32_t to_row, uint32_t row_count,
+                                      flow_interpolation_pixel_contributions* weights);
 PUB bool flow_bitmap_float_convolve_rows(flow_context* context, flow_bitmap_float* buf, flow_convolution_kernel* kernel,
-                                     uint32_t convolve_channels, uint32_t from_row, int row_count);
+                                         uint32_t convolve_channels, uint32_t from_row, int row_count);
 
 PUB bool flow_bitmap_float_sharpen_rows(flow_context* context, flow_bitmap_float* im, uint32_t start_row,
-                                    uint32_t row_count, double pct);
+                                        uint32_t row_count, double pct);
 
 PUB bool flow_bitmap_float_convert_srgb_to_linear(flow_context* context, flow_bitmap_bgra* src, uint32_t from_row,
-                                              flow_bitmap_float* dest, uint32_t dest_row, uint32_t row_count);
+                                                  flow_bitmap_float* dest, uint32_t dest_row, uint32_t row_count);
 
 PUB uint32_t flow_bitmap_float_approx_gaussian_calculate_d(float sigma, uint32_t bitmap_width);
 
 PUB uint32_t flow_bitmap_float_approx_gaussian_buffer_element_count_required(float sigma, uint32_t bitmap_width);
 
 PUB bool flow_bitmap_float_approx_gaussian_blur_rows(flow_context* context, flow_bitmap_float* image, float sigma,
-                                                 float* buffer, size_t buffer_element_count, uint32_t from_row,
-                                                 int row_count);
+                                                     float* buffer, size_t buffer_element_count, uint32_t from_row,
+                                                     int row_count);
 PUB bool flow_bitmap_float_pivoting_composite_linear_over_srgb(flow_context* context, flow_bitmap_float* src,
-                                                           uint32_t from_row, flow_bitmap_bgra* dest, uint32_t dest_row,
-                                                           uint32_t row_count, bool transpose);
+                                                               uint32_t from_row, flow_bitmap_bgra* dest,
+                                                               uint32_t dest_row, uint32_t row_count, bool transpose);
 
 PUB bool flow_bitmap_float_flip_vertical(flow_context* context, flow_bitmap_bgra* b);
 
 PUB bool flow_bitmap_float_demultiply_alpha(flow_context* context, flow_bitmap_float* src, const uint32_t from_row,
-                                        const uint32_t row_count);
+                                            const uint32_t row_count);
 
 PUB bool flow_bitmap_float_copy_linear_over_srgb(flow_context* context, flow_bitmap_float* src, const uint32_t from_row,
-                                             flow_bitmap_bgra* dest, const uint32_t dest_row, const uint32_t row_count,
-                                             const uint32_t from_col, const uint32_t col_count, const bool transpose);
+                                                 flow_bitmap_bgra* dest, const uint32_t dest_row,
+                                                 const uint32_t row_count, const uint32_t from_col,
+                                                 const uint32_t col_count, const bool transpose);
 
 PUB bool flow_halve(flow_context* context, const flow_bitmap_bgra* from, flow_bitmap_bgra* to, int divisor);
 

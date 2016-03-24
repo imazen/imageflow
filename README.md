@@ -5,7 +5,9 @@ imageflow - Real-time image processing for the web.
 ](https://travis-ci.org/imazen/imageflow/builds) 
 
 
-How to download, build, and run tests. Follow these steps before trying to open the project in any IDE.
+How to download, build, and run tests. Follow these steps before trying to open the project in any IDE. 
+
+Windows: build/Imageflow.sln will be created during 'conan build', but is only set up for Release mode compilation by default. Switch configuration to Release to get a build.
  
  1. [Install Conan](https://www.conan.io/downloads) - installers available for download (all platforms).
  2. Install cmake (`cinst cmake.portable` on windows w/ chocolatey, `sudo apt-get install cmake` elsewhere)
