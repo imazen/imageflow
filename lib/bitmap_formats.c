@@ -30,7 +30,7 @@ flow_bitmap_bgra* flow_bitmap_bgra_create_header(flow_context* context, int sx, 
 {
     flow_bitmap_bgra* im;
     if (!are_valid_bitmap_dimensions(sx, sy)) {
-        FLOW_error(context, flow_status_Invalid_BitmapBgra_dimensions);
+        FLOW_error(context, flow_status_Invalid_dimensions);
         return NULL;
     }
     im = (flow_bitmap_bgra*)FLOW_calloc(context, 1, sizeof(flow_bitmap_bgra));
@@ -89,7 +89,7 @@ flow_bitmap_float* flow_bitmap_float_create_header(flow_context* context, int sx
     flow_bitmap_float* im;
 
     if (!are_valid_bitmap_dimensions(sx, sy)) {
-        FLOW_error(context, flow_status_Invalid_BitmapFloat_dimensions);
+        FLOW_error(context, flow_status_Invalid_dimensions);
     }
 
     im = (flow_bitmap_float*)FLOW_calloc(context, 1, sizeof(flow_bitmap_float));

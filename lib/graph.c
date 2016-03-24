@@ -398,7 +398,7 @@ bool flow_edge_delete(flow_context* c, struct flow_graph* g, int32_t edge_id)
     }
     struct flow_edge* e = &g->edges[edge_id];
     if (e->type == flow_edgetype_null) {
-        FLOW_error(c, flow_status_Edge_already_deleted);
+        FLOW_error(c, flow_status_Item_does_not_exist);
         return false;
     } else {
         g->deleted_bytes += e->info_bytes;
@@ -557,7 +557,7 @@ bool flow_node_delete(flow_context* c, struct flow_graph* g, int32_t node_id)
     }
     struct flow_node* n = &g->nodes[node_id];
     if (n->type == flow_ntype_Null) {
-        FLOW_error(c, flow_status_Node_already_deleted);
+        FLOW_error(c, flow_status_Item_does_not_exist);
         return false;
     } else {
         // We shouldn't be deleting nodes with frames already attached.
@@ -872,10 +872,10 @@ bool flow_graph_print_to_dot(flow_context* c, struct flow_graph* g, FILE* stream
         if (edge->type != flow_edgetype_null) {
             char dimensions[64];
             if (edge->from_width < 0 && edge->from_height < 0) {
-                snprintf(dimensions, 63, "?x?");
+                flow_snprintf(dimensions, 63, "?x?");
             } else {
-                snprintf(dimensions, 63, "%dx%d %s", edge->from_width, edge->from_height,
-                         get_format_name(edge->from_format, edge->from_alpha_meaningful));
+                flow_snprintf(dimensions, 63, "%dx%d %s", edge->from_width, edge->from_height,
+                              get_format_name(edge->from_format, edge->from_alpha_meaningful));
             }
 
             fprintf(stream, "  n%d -> n%d [label=\"e%d: %s%s\"]\n", edge->from, edge->to, i, dimensions,

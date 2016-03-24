@@ -117,7 +117,7 @@ TEST_CASE_METHOD(Fixture, "Perform Rendering", "[error_handling]")
         CHECK(flow_context_has_error(&context));
         char buffer[1024];
         CAPTURE(flow_context_error_message(&context, buffer, sizeof(buffer)));
-        CHECK(flow_context_error_reason(&context) == flow_status_Invalid_BitmapBgra_dimensions);
+        CHECK(flow_context_error_reason(&context) == flow_status_Invalid_dimensions);
     }
 
     flow_RenderDetails_destroy(&context, details);
@@ -199,7 +199,7 @@ TEST_CASE_METHOD(Fixture, "Creating flow_bitmap_bgra", "[error_handling]")
         source = flow_bitmap_bgra_create(&context, 0, 0, true, (flow_pixel_format)2);
         REQUIRE(source == NULL);
         REQUIRE(flow_context_has_error(&context));
-        REQUIRE(flow_context_error_reason(&context) == flow_status_Invalid_BitmapBgra_dimensions);
+        REQUIRE(flow_context_error_reason(&context) == flow_status_Invalid_dimensions);
         // REQUIRE(flow_context_error_message(&context));
     }
     SECTION("A gargantuan bitmap is also invalid")
@@ -207,7 +207,7 @@ TEST_CASE_METHOD(Fixture, "Creating flow_bitmap_bgra", "[error_handling]")
         source = flow_bitmap_bgra_create(&context, 1, INT_MAX, true, (flow_pixel_format)2);
         REQUIRE(source == NULL);
         REQUIRE(flow_context_has_error(&context));
-        REQUIRE(flow_context_error_reason(&context) == flow_status_Invalid_BitmapBgra_dimensions);
+        REQUIRE(flow_context_error_reason(&context) == flow_status_Invalid_dimensions);
     }
 
     SECTION("A bitmap that exhausts memory is invalid too")
@@ -238,10 +238,11 @@ TEST_CASE("flow_context", "[error_handling]")
     SECTION("flow_context_error_message should be safe when no error has ocurred yet")
     {
         char error_msg[1024];
-        REQUIRE(std::string("Error in file: (null):-1 status_code: 0 reason: Status code lookup not implemented")
-                == flow_context_error_message(&context, error_msg, sizeof error_msg));
+        flow_context_error_message(&context, error_msg, sizeof error_msg);
+        REQUIRE(std::string("No error") == error_msg);
+
+        flow_context_terminate(&context);
     }
-    flow_context_terminate(&context);
 }
 
 TEST_CASE("Argument checking for convert_sgrp_to_linear", "[error_handling]")
@@ -250,7 +251,8 @@ TEST_CASE("Argument checking for convert_sgrp_to_linear", "[error_handling]")
     flow_context_initialize(&context);
     flow_bitmap_bgra* src = flow_bitmap_bgra_create(&context, 2, 3, true, flow_bgra32);
     char error_msg[1024];
-    CAPTURE(flow_context_error_message(&context, error_msg, sizeof error_msg));
+    flow_context_error_message(&context, error_msg, sizeof error_msg);
+    CAPTURE(error_msg);
     REQUIRE(src != NULL);
     flow_bitmap_float* dest = flow_bitmap_float_create(&context, 1, 1, 4, false);
     flow_bitmap_float_convert_srgb_to_linear(&context, src, 3, dest, 0, 0);
@@ -282,9 +284,10 @@ TEST_CASE("Test stacktrace serialization", "[error_handling]")
     int stacktrace_buffer_size = GENERATE(between(1, 8)) * 32;
 
     char* stacktrace = (char*)malloc(stacktrace_buffer_size);
+    flow_context_stacktrace(&context, stacktrace, stacktrace_buffer_size, false);
 
     CAPTURE(stacktrace_buffer_size);
-    CAPTURE(flow_context_stacktrace(&context, stacktrace, stacktrace_buffer_size));
+    CAPTURE(stacktrace);
 
     free(stacktrace);
 

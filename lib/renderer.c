@@ -7,11 +7,7 @@
 */
 
 #ifdef _MSC_VER
-#pragma unmanaged
 #pragma warning(disable : 4996)
-#if _MSC_VER < 1900
-#define snprintf _snprintf
-#endif
 #endif
 
 #include "imageflow_private.h"
@@ -176,7 +172,7 @@ flow_Renderer* Renderer_create_in_place(flow_context* context, flow_bitmap_bgra*
                                         flow_RenderDetails* details)
 {
     if (details->post_transpose) {
-        FLOW_error(context, flow_status_Transpose_not_permitted_in_place);
+        FLOW_error(context, flow_status_Invalid_argument);
         return NULL;
     }
     flow_Renderer* r = FLOW_calloc_array(context, 1, flow_Renderer);
@@ -533,7 +529,7 @@ bool Renderer_perform_render(flow_context* context, flow_Renderer* r)
                                          : (r->canvas->h != r->source->h || r->canvas->w != r->source->w));
 
     if (scaling_required && r->details->interpolation == NULL) {
-        FLOW_error(context, flow_status_Interpolation_details_missing);
+        FLOW_error(context, flow_status_Invalid_argument);
         return false;
     }
 

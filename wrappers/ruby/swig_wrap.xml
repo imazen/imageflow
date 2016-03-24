@@ -1751,9 +1751,9 @@
                 <enumitem id="1295" addr="0x7fc88d847950" >
                     <attributelist id="1296" addr="0x7fc88d847950" >
                         <attribute name="sym_name" value="status_Invalid_BitmapBgra_dimensions" id="1297" addr="0x7fc88d8a2c70" />
-                        <attribute name="name" value="flow_status_Invalid_BitmapBgra_dimensions" id="1298" addr="0x7fc88d8a2c70" />
+                        <attribute name="name" value="flow_status_Invalid_dimensions" id="1298" addr="0x7fc88d8a2c70" />
                         <attribute name="feature_immutable" value="1" id="1299" addr="0x7fc88d8a2c70" />
-                        <attribute name="value" value="flow_status_Invalid_BitmapBgra_dimensions" id="1300" addr="0x7fc88d8a2c70" />
+                        <attribute name="value" value="flow_status_Invalid_dimensions" id="1300" addr="0x7fc88d8a2c70" />
                         <attribute name="type" value="int" id="1301" addr="0x7fc88d8a2c70" />
                         <attribute name="enumvalueex" value="status_Out_of_memory + 1" id="1302" addr="0x7fc88d8a2c70" />
                         <attribute name="feature_nodefaultctor" value="1" id="1303" addr="0x7fc88d8a2c70" />
@@ -1765,9 +1765,9 @@
                 <enumitem id="1306" addr="0x7fc88d8479f0" >
                     <attributelist id="1307" addr="0x7fc88d8479f0" >
                         <attribute name="sym_name" value="status_Invalid_BitmapFloat_dimensions" id="1308" addr="0x7fc88d8a2c70" />
-                        <attribute name="name" value="flow_status_Invalid_BitmapFloat_dimensions" id="1309" addr="0x7fc88d8a2c70" />
+                        <attribute name="name" value="flow_status_Invalid_dimensions" id="1309" addr="0x7fc88d8a2c70" />
                         <attribute name="feature_immutable" value="1" id="1310" addr="0x7fc88d8a2c70" />
-                        <attribute name="value" value="flow_status_Invalid_BitmapFloat_dimensions" id="1311" addr="0x7fc88d8a2c70" />
+                        <attribute name="value" value="flow_status_Invalid_dimensions" id="1311" addr="0x7fc88d8a2c70" />
                         <attribute name="type" value="int" id="1312" addr="0x7fc88d8a2c70" />
                         <attribute name="enumvalueex" value="status_Invalid_BitmapBgra_dimensions + 1" id="1313" addr="0x7fc88d8a2c70" />
                         <attribute name="feature_nodefaultctor" value="1" id="1314" addr="0x7fc88d8a2c70" />
@@ -1807,9 +1807,9 @@
                 <enumitem id="1339" addr="0x7fc88d847bd0" >
                     <attributelist id="1340" addr="0x7fc88d847bd0" >
                         <attribute name="sym_name" value="status_Transpose_not_permitted_in_place" id="1341" addr="0x7fc88d8a2c70" />
-                        <attribute name="name" value="flow_status_Transpose_not_permitted_in_place" id="1342" addr="0x7fc88d8a2c70" />
+                        <attribute name="name" value="flow_status_Invalid_argument" id="1342" addr="0x7fc88d8a2c70" />
                         <attribute name="feature_immutable" value="1" id="1343" addr="0x7fc88d8a2c70" />
-                        <attribute name="value" value="flow_status_Transpose_not_permitted_in_place" id="1344" addr="0x7fc88d8a2c70" />
+                        <attribute name="value" value="flow_status_Invalid_argument" id="1344" addr="0x7fc88d8a2c70" />
                         <attribute name="type" value="int" id="1345" addr="0x7fc88d8a2c70" />
                         <attribute name="enumvalueex" value="status_Invalid_internal_state + 1" id="1346" addr="0x7fc88d8a2c70" />
                         <attribute name="feature_nodefaultctor" value="1" id="1347" addr="0x7fc88d8a2c70" />
@@ -1821,9 +1821,9 @@
                 <enumitem id="1350" addr="0x7fc88d847c70" >
                     <attributelist id="1351" addr="0x7fc88d847c70" >
                         <attribute name="sym_name" value="status_Invalid_interpolation_filter" id="1352" addr="0x7fc88d8a2c70" />
-                        <attribute name="name" value="flow_status_Invalid_interpolation_filter" id="1353" addr="0x7fc88d8a2c70" />
+                        <attribute name="name" value="flow_status_Invalid_argument" id="1353" addr="0x7fc88d8a2c70" />
                         <attribute name="feature_immutable" value="1" id="1354" addr="0x7fc88d8a2c70" />
-                        <attribute name="value" value="flow_status_Invalid_interpolation_filter" id="1355" addr="0x7fc88d8a2c70" />
+                        <attribute name="value" value="flow_status_Invalid_argument" id="1355" addr="0x7fc88d8a2c70" />
                         <attribute name="type" value="int" id="1356" addr="0x7fc88d8a2c70" />
                         <attribute name="enumvalueex" value="status_Transpose_not_permitted_in_place + 1" id="1357" addr="0x7fc88d8a2c70" />
                         <attribute name="feature_nodefaultctor" value="1" id="1358" addr="0x7fc88d8a2c70" />
@@ -1863,9 +1863,9 @@
                 <enumitem id="1383" addr="0x7fc88d847e50" >
                     <attributelist id="1384" addr="0x7fc88d847e50" >
                         <attribute name="sym_name" value="status_Interpolation_details_missing" id="1385" addr="0x7fc88d8a2c70" />
-                        <attribute name="name" value="flow_status_Interpolation_details_missing" id="1386" addr="0x7fc88d8a2c70" />
+                        <attribute name="name" value="flow_status_Invalid_argument" id="1386" addr="0x7fc88d8a2c70" />
                         <attribute name="feature_immutable" value="1" id="1387" addr="0x7fc88d8a2c70" />
-                        <attribute name="value" value="flow_status_Interpolation_details_missing" id="1388" addr="0x7fc88d8a2c70" />
+                        <attribute name="value" value="flow_status_Invalid_argument" id="1388" addr="0x7fc88d8a2c70" />
                         <attribute name="type" value="int" id="1389" addr="0x7fc88d8a2c70" />
                         <attribute name="enumvalueex" value="status_Null_argument + 1" id="1390" addr="0x7fc88d8a2c70" />
                         <attribute name="feature_nodefaultctor" value="1" id="1391" addr="0x7fc88d8a2c70" />
@@ -1877,9 +1877,9 @@
                 <enumitem id="1394" addr="0x7fc88d847ef0" >
                     <attributelist id="1395" addr="0x7fc88d847ef0" >
                         <attribute name="sym_name" value="status_Node_already_deleted" id="1396" addr="0x7fc88d8a2c70" />
-                        <attribute name="name" value="flow_status_Node_already_deleted" id="1397" addr="0x7fc88d8a2c70" />
+                        <attribute name="name" value="flow_status_Item_does_not_exist" id="1397" addr="0x7fc88d8a2c70" />
                         <attribute name="feature_immutable" value="1" id="1398" addr="0x7fc88d8a2c70" />
-                        <attribute name="value" value="flow_status_Node_already_deleted" id="1399" addr="0x7fc88d8a2c70" />
+                        <attribute name="value" value="flow_status_Item_does_not_exist" id="1399" addr="0x7fc88d8a2c70" />
                         <attribute name="type" value="int" id="1400" addr="0x7fc88d8a2c70" />
                         <attribute name="enumvalueex" value="status_Interpolation_details_missing + 1" id="1401" addr="0x7fc88d8a2c70" />
                         <attribute name="feature_nodefaultctor" value="1" id="1402" addr="0x7fc88d8a2c70" />
@@ -1891,9 +1891,9 @@
                 <enumitem id="1405" addr="0x7fc88d847f90" >
                     <attributelist id="1406" addr="0x7fc88d847f90" >
                         <attribute name="sym_name" value="status_Edge_already_deleted" id="1407" addr="0x7fc88d8a2c70" />
-                        <attribute name="name" value="flow_status_Edge_already_deleted" id="1408" addr="0x7fc88d8a2c70" />
+                        <attribute name="name" value="flow_status_Item_does_not_exist" id="1408" addr="0x7fc88d8a2c70" />
                         <attribute name="feature_immutable" value="1" id="1409" addr="0x7fc88d8a2c70" />
-                        <attribute name="value" value="flow_status_Edge_already_deleted" id="1410" addr="0x7fc88d8a2c70" />
+                        <attribute name="value" value="flow_status_Item_does_not_exist" id="1410" addr="0x7fc88d8a2c70" />
                         <attribute name="type" value="int" id="1411" addr="0x7fc88d8a2c70" />
                         <attribute name="enumvalueex" value="status_Node_already_deleted + 1" id="1412" addr="0x7fc88d8a2c70" />
                         <attribute name="feature_nodefaultctor" value="1" id="1413" addr="0x7fc88d8a2c70" />
@@ -1905,9 +1905,9 @@
                 <enumitem id="1416" addr="0x7fc88d848030" >
                     <attributelist id="1417" addr="0x7fc88d848030" >
                         <attribute name="sym_name" value="status_Graph_could_not_be_completed" id="1418" addr="0x7fc88d8a2c70" />
-                        <attribute name="name" value="flow_status_Graph_could_not_be_completed" id="1419" addr="0x7fc88d8a2c70" />
+                        <attribute name="name" value="flow_status_Graph_invalid" id="1419" addr="0x7fc88d8a2c70" />
                         <attribute name="feature_immutable" value="1" id="1420" addr="0x7fc88d8a2c70" />
-                        <attribute name="value" value="flow_status_Graph_could_not_be_completed" id="1421" addr="0x7fc88d8a2c70" />
+                        <attribute name="value" value="flow_status_Graph_invalid" id="1421" addr="0x7fc88d8a2c70" />
                         <attribute name="type" value="int" id="1422" addr="0x7fc88d8a2c70" />
                         <attribute name="enumvalueex" value="status_Edge_already_deleted + 1" id="1423" addr="0x7fc88d8a2c70" />
                         <attribute name="feature_nodefaultctor" value="1" id="1424" addr="0x7fc88d8a2c70" />
@@ -1961,9 +1961,9 @@
                 <enumitem id="1460" addr="0x7fc88d8482b0" >
                     <attributelist id="1461" addr="0x7fc88d8482b0" >
                         <attribute name="sym_name" value="status_Failed_to_open_file" id="1462" addr="0x7fc88d8a2c70" />
-                        <attribute name="name" value="flow_status_Failed_to_open_file" id="1463" addr="0x7fc88d8a2c70" />
+                        <attribute name="name" value="flow_status_IO_error" id="1463" addr="0x7fc88d8a2c70" />
                         <attribute name="feature_immutable" value="1" id="1464" addr="0x7fc88d8a2c70" />
-                        <attribute name="value" value="flow_status_Failed_to_open_file" id="1465" addr="0x7fc88d8a2c70" />
+                        <attribute name="value" value="flow_status_IO_error" id="1465" addr="0x7fc88d8a2c70" />
                         <attribute name="type" value="int" id="1466" addr="0x7fc88d8a2c70" />
                         <attribute name="enumvalueex" value="status_Graph_not_flattened + 1" id="1467" addr="0x7fc88d8a2c70" />
                         <attribute name="feature_nodefaultctor" value="1" id="1468" addr="0x7fc88d8a2c70" />
@@ -1975,9 +1975,9 @@
                 <enumitem id="1471" addr="0x7fc88d848350" >
                     <attributelist id="1472" addr="0x7fc88d848350" >
                         <attribute name="sym_name" value="status_Graph_could_not_be_executed" id="1473" addr="0x7fc88d8a2c70" />
-                        <attribute name="name" value="flow_status_Graph_could_not_be_executed" id="1474" addr="0x7fc88d8a2c70" />
+                        <attribute name="name" value="flow_status_Maximum_graph_passes_exceeded" id="1474" addr="0x7fc88d8a2c70" />
                         <attribute name="feature_immutable" value="1" id="1475" addr="0x7fc88d8a2c70" />
-                        <attribute name="value" value="flow_status_Graph_could_not_be_executed" id="1476" addr="0x7fc88d8a2c70" />
+                        <attribute name="value" value="flow_status_Maximum_graph_passes_exceeded" id="1476" addr="0x7fc88d8a2c70" />
                         <attribute name="type" value="int" id="1477" addr="0x7fc88d8a2c70" />
                         <attribute name="enumvalueex" value="status_Failed_to_open_file + 1" id="1478" addr="0x7fc88d8a2c70" />
                         <attribute name="feature_nodefaultctor" value="1" id="1479" addr="0x7fc88d8a2c70" />
@@ -1989,9 +1989,9 @@
                 <enumitem id="1482" addr="0x7fc88d8483f0" >
                     <attributelist id="1483" addr="0x7fc88d8483f0" >
                         <attribute name="sym_name" value="status_Png_decoding_failed" id="1484" addr="0x7fc88d8a2c70" />
-                        <attribute name="name" value="flow_status_Png_decoding_failed" id="1485" addr="0x7fc88d8a2c70" />
+                        <attribute name="name" value="flow_status_Image_decoding_failed" id="1485" addr="0x7fc88d8a2c70" />
                         <attribute name="feature_immutable" value="1" id="1486" addr="0x7fc88d8a2c70" />
-                        <attribute name="value" value="flow_status_Png_decoding_failed" id="1487" addr="0x7fc88d8a2c70" />
+                        <attribute name="value" value="flow_status_Image_decoding_failed" id="1487" addr="0x7fc88d8a2c70" />
                         <attribute name="type" value="int" id="1488" addr="0x7fc88d8a2c70" />
                         <attribute name="enumvalueex" value="status_Graph_could_not_be_executed + 1" id="1489" addr="0x7fc88d8a2c70" />
                         <attribute name="feature_nodefaultctor" value="1" id="1490" addr="0x7fc88d8a2c70" />
@@ -2003,9 +2003,9 @@
                 <enumitem id="1493" addr="0x7fc88d848490" >
                     <attributelist id="1494" addr="0x7fc88d848490" >
                         <attribute name="sym_name" value="status_Png_encoding_failed" id="1495" addr="0x7fc88d8a2c70" />
-                        <attribute name="name" value="flow_status_Png_encoding_failed" id="1496" addr="0x7fc88d8a2c70" />
+                        <attribute name="name" value="flow_status_Image_encoding_failed" id="1496" addr="0x7fc88d8a2c70" />
                         <attribute name="feature_immutable" value="1" id="1497" addr="0x7fc88d8a2c70" />
-                        <attribute name="value" value="flow_status_Png_encoding_failed" id="1498" addr="0x7fc88d8a2c70" />
+                        <attribute name="value" value="flow_status_Image_encoding_failed" id="1498" addr="0x7fc88d8a2c70" />
                         <attribute name="type" value="int" id="1499" addr="0x7fc88d8a2c70" />
                         <attribute name="enumvalueex" value="status_Png_decoding_failed + 1" id="1500" addr="0x7fc88d8a2c70" />
                         <attribute name="feature_nodefaultctor" value="1" id="1501" addr="0x7fc88d8a2c70" />
@@ -2017,9 +2017,9 @@
                 <enumitem id="1504" addr="0x7fc88d848530" >
                     <attributelist id="1505" addr="0x7fc88d848530" >
                         <attribute name="sym_name" value="status_Jpeg_decoding_failed" id="1506" addr="0x7fc88d8a2c70" />
-                        <attribute name="name" value="flow_status_Jpeg_decoding_failed" id="1507" addr="0x7fc88d8a2c70" />
+                        <attribute name="name" value="flow_status_Image_decoding_failed" id="1507" addr="0x7fc88d8a2c70" />
                         <attribute name="feature_immutable" value="1" id="1508" addr="0x7fc88d8a2c70" />
-                        <attribute name="value" value="flow_status_Jpeg_decoding_failed" id="1509" addr="0x7fc88d8a2c70" />
+                        <attribute name="value" value="flow_status_Image_decoding_failed" id="1509" addr="0x7fc88d8a2c70" />
                         <attribute name="type" value="int" id="1510" addr="0x7fc88d8a2c70" />
                         <attribute name="enumvalueex" value="status_Png_encoding_failed + 1" id="1511" addr="0x7fc88d8a2c70" />
                         <attribute name="feature_nodefaultctor" value="1" id="1512" addr="0x7fc88d8a2c70" />
@@ -2031,9 +2031,9 @@
                 <enumitem id="1515" addr="0x7fc88d8485d0" >
                     <attributelist id="1516" addr="0x7fc88d8485d0" >
                         <attribute name="sym_name" value="status_Jpeg_encoding_failed" id="1517" addr="0x7fc88d8a2c70" />
-                        <attribute name="name" value="flow_status_Jpeg_encoding_failed" id="1518" addr="0x7fc88d8a2c70" />
+                        <attribute name="name" value="flow_status_Image_encoding_failed" id="1518" addr="0x7fc88d8a2c70" />
                         <attribute name="feature_immutable" value="1" id="1519" addr="0x7fc88d8a2c70" />
-                        <attribute name="value" value="flow_status_Jpeg_encoding_failed" id="1520" addr="0x7fc88d8a2c70" />
+                        <attribute name="value" value="flow_status_Image_encoding_failed" id="1520" addr="0x7fc88d8a2c70" />
                         <attribute name="type" value="int" id="1521" addr="0x7fc88d8a2c70" />
                         <attribute name="enumvalueex" value="status_Jpeg_decoding_failed + 1" id="1522" addr="0x7fc88d8a2c70" />
                         <attribute name="feature_nodefaultctor" value="1" id="1523" addr="0x7fc88d8a2c70" />

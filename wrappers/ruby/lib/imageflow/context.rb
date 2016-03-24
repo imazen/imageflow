@@ -35,24 +35,20 @@ module Imageflow
     end
 
 
-    def error_message
+    def error_message(full_file_paths: true)
       raise_if_destroyed
-      buffer = FFI::MemoryPointer.new(:char, 2048, true)
+      buffer = FFI::MemoryPointer.new(:char, 4096, true)
 
-      Native.context_error_message(@c, buffer, 2048)
+      Native.context_error_message_and_stacktrace(@c, buffer, 4096, full_file_paths)
 
-      buffer2 = FFI::MemoryPointer.new(:char, 2048, true)
-
-      Native.context_stacktrace(@c, buffer2, 2048)
-
-      "\n" + buffer.read_string + "\n" + buffer2.read_string
+      "\n" + buffer.read_string
     end
 
-    def stack_trace
+    def stack_trace(full_file_paths: true)
       raise_if_destroyed
-      buffer = FFI::MemoryPointer.new(:char, 2048, true)
+      buffer = FFI::MemoryPointer.new(:char, 4096, true)
 
-      Native.context_stack_trace(@c, buffer, 2048)
+      Native.context_stack_trace(@c, buffer, 4096, full_file_paths)
 
       buffer.read_string
     end

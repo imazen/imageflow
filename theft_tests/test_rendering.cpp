@@ -82,7 +82,8 @@ void * BitmapBgra_random_zeroed_source(theft * theft, theft_seed seed, void * in
     flow_bitmap_bgra * b = flow_bitmap_bgra_create(c, w, h, true, fmt);
     if (!b) {
         char buffer[1024];
-        printf("flow_bitmap_bgra_create failed: %s\n", flow_context_error_message(c, buffer, sizeof buffer));
+        flow_context_error_message(c, buffer, sizeof buffer);
+        printf("flow_bitmap_bgra_create failed: %s\n", &buffer[0]);
         printf("dimensions: %dx%d format: %u\n", w, h, (unsigned)fmt);
         return THEFT_ERROR; // or THEFT_SKIP maybe
     }

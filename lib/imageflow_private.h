@@ -70,7 +70,10 @@ void flow_default_heap_manager_initialize(flow_heap_manager* context);
 typedef struct flow_error_callstack_line {
     const char* file;
     int line;
+    const char* function_name;
 } flow_error_callstack_line;
+
+#define FLOW_ERROR_MESSAGE_SIZE 1023
 
 typedef struct flow_error_info {
     flow_status_code reason;
@@ -78,6 +81,7 @@ typedef struct flow_error_info {
     int callstack_count;
     int callstack_capacity;
     bool locked;
+    char message[FLOW_ERROR_MESSAGE_SIZE + 1];
 } flow_error_info;
 
 #ifdef EXPOSE_SIGMOID
@@ -137,6 +141,9 @@ typedef struct flow_context_struct {
 
 #include "color.h"
 
+int flow_snprintf(char* s, size_t n, const char* fmt, ...);
+int flow_vsnprintf(char* s, size_t n, const char* fmt, va_list v);
+
 void flow_context_initialize(flow_context* context);
 void flow_context_terminate(flow_context* context);
 
@@ -145,11 +152,12 @@ void* flow_context_malloc(flow_context* context, size_t, const char* file, int l
 void* flow_context_realloc(flow_context* context, void* old_pointer, size_t new_byte_count, const char* file, int line);
 void flow_context_free(flow_context* context, void* pointer, const char* file, int line);
 bool flow_context_enable_profiling(flow_context* context, uint32_t default_capacity);
-void flow_context_set_last_error(flow_context* context, flow_status_code code, const char* file, int line);
-void flow_context_add_to_callstack(flow_context* context, const char* file, int line);
+void flow_context_raise_error(flow_context* context, flow_status_code code, char* message, const char* file, int line,
+                              const char* function_name);
+char* flow_context_set_error_get_message_buffer(flow_context* context, flow_status_code code, const char* file,
+                                                int line, const char* function_name);
+void flow_context_add_to_callstack(flow_context* context, const char* file, int line, const char* function_name);
 
-#define FLOW_CONTEXT_SET_LAST_ERROR(context, status_code)                                                              \
-    flow_context_set_last_error(context, status_code, __FILE__, __LINE__)
 #define FLOW_calloc(context, instance_count, element_size)                                                             \
     flow_context_calloc(context, instance_count, element_size, __FILE__, __LINE__)
 #define FLOW_calloc_array(context, instance_count, type_name)                                                          \
@@ -158,12 +166,16 @@ void flow_context_add_to_callstack(flow_context* context, const char* file, int 
 #define FLOW_realloc(context, old_pointer, new_byte_count)                                                             \
     flow_context_realloc(context, old_pointer, new_byte_count, __FILE__, __LINE__)
 #define FLOW_free(context, pointer) flow_context_free(context, pointer, __FILE__, __LINE__)
-#define FLOW_error(context, status_code) FLOW_CONTEXT_SET_LAST_ERROR(context, status_code)
+#define FLOW_error(context, status_code)                                                                               \
+    flow_context_set_error_get_message_buffer(context, status_code, __FILE__, __LINE__, __func__)
+#define FLOW_error_msg(context, status_code, ...)                                                                      \
+    flow_snprintf(flow_context_set_error_get_message_buffer(context, status_code, __FILE__, __LINE__, __func__),       \
+                  FLOW_ERROR_MESSAGE_SIZE, __VA_ARGS__)
 
-#define FLOW_add_to_callstack(context) flow_context_add_to_callstack(context, __FILE__, __LINE__)
+#define FLOW_add_to_callstack(context) flow_context_add_to_callstack(context, __FILE__, __LINE__, __func__)
 
 #define FLOW_error_return(context)                                                                                     \
-    flow_context_add_to_callstack(context, __FILE__, __LINE__);                                                        \
+    flow_context_add_to_callstack(context, __FILE__, __LINE__, __func__);                                              \
     return false
 
 #define FLOW_ALLOW_PROFILING
@@ -297,40 +309,7 @@ static inline int64_t flow_get_profiler_ticks_per_second(void)
 #endif
 #endif
 
-#ifdef _MSC_VER
 
-#include <stdio.h>
-#include <stdarg.h>
-
-#ifndef snprintf
-#define snprintf c99_snprintf
-#endif
-
-inline int c99_vsnprintf(char* str, size_t size, const char* format, va_list ap)
-{
-    int count = -1;
-
-    if (size != 0)
-        count = _vsnprintf_s(str, size, _TRUNCATE, format, ap);
-    if (count == -1)
-        count = _vscprintf(format, ap);
-
-    return count;
-}
-
-inline int c99_snprintf(char* str, size_t size, const char* format, ...)
-{
-    int count;
-    va_list ap;
-
-    va_start(ap, format);
-    count = c99_vsnprintf(str, size, format, ap);
-    va_end(ap);
-
-    return count;
-}
-
-#endif // _MSC_VER
 
 #ifdef __cplusplus
 }

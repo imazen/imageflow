@@ -55,7 +55,7 @@
 
 static bool stringify_state(char* buffer, size_t buffer_isze, struct flow_node* n)
 {
-    snprintf(buffer, buffer_isze, "[%d/%d]", n->state, flow_node_state_Done);
+    flow_snprintf(buffer, buffer_isze, "[%d/%d]", n->state, flow_node_state_Done);
     return true;
 }
 
@@ -80,7 +80,8 @@ static bool stringify_scale(flow_context* c, struct flow_graph* g, int32_t node_
         FLOW_error_return(c);
     }
 
-    snprintf(buffer, buffer_size, "scale %lux%lu %s", info->width, info->height, (const char*)(const char*) & state);
+    flow_snprintf(buffer, buffer_size, "scale %lux%lu %s", info->width, info->height,
+                  (const char*)(const char*) & state);
     return true;
 }
 
@@ -93,8 +94,8 @@ static bool stringify_canvas(flow_context* c, struct flow_graph* g, int32_t node
         FLOW_error_return(c);
     }
 
-    snprintf(buffer, buffer_size, "canvas %lux%lu %s %s", info->width, info->height,
-             get_format_name(info->format, false), (const char*)&state);
+    flow_snprintf(buffer, buffer_size, "canvas %lux%lu %s %s", info->width, info->height,
+                  get_format_name(info->format, false), (const char*)&state);
     return true;
 }
 static char* stringify_colorspace(flow_working_floatspace space)
@@ -127,10 +128,10 @@ static bool stringify_render1d(flow_context* c, struct flow_graph* g, int32_t no
         FLOW_error_return(c);
     }
 
-    snprintf(buffer, buffer_size, "render1d x%d %s %s\nat %d,%d. %s sharp%d%%. %s", info->scale_to_width,
-             stringify_filter(info->interpolation_filter), (const char*)&state, info->canvas_x, info->canvas_y,
-             info->transpose_on_write ? "transpose. " : "", (int)info->sharpen_percent_goal,
-             stringify_colorspace(info->scale_in_colorspace));
+    flow_snprintf(buffer, buffer_size, "render1d x%d %s %s\nat %d,%d. %s sharp%d%%. %s", info->scale_to_width,
+                  stringify_filter(info->interpolation_filter), (const char*)&state, info->canvas_x, info->canvas_y,
+                  info->transpose_on_write ? "transpose. " : "", (int)info->sharpen_percent_goal,
+                  stringify_colorspace(info->scale_in_colorspace));
     return true;
 }
 
@@ -139,7 +140,7 @@ static bool stringify_placeholder(flow_context* c, struct flow_graph* g, int32_t
 {
     FLOW_GET_INFOBYTES(g, node_id, flow_nodeinfo_index, info);
 
-    snprintf(buffer, buffer_size, "placeholder #%d", info->index);
+    flow_snprintf(buffer, buffer_size, "placeholder #%d", info->index);
     return true;
 }
 
@@ -148,7 +149,7 @@ static bool stringify_encoder_placeholder(flow_context* c, struct flow_graph* g,
 {
     FLOW_GET_INFOBYTES(g, node_id, flow_nodeinfo_encoder_placeholder, info);
 
-    snprintf(buffer, buffer_size, "encoder placeholder #%d", info->index.index);
+    flow_snprintf(buffer, buffer_size, "encoder placeholder #%d", info->index.index);
     // TODO - display codec type
     return true;
 }
@@ -156,7 +157,7 @@ static bool stringify_encoder_placeholder(flow_context* c, struct flow_graph* g,
 static bool stringify_bitmap_bgra_pointer(flow_context* c, struct flow_graph* g, int32_t node_id, char* buffer,
                                           size_t buffer_size)
 {
-    snprintf(buffer, buffer_size, "* flow_bitmap_bgra");
+    flow_snprintf(buffer, buffer_size, "* flow_bitmap_bgra");
     return true;
 }
 
@@ -178,7 +179,7 @@ static bool stringify_decode(flow_context* c, struct flow_graph* g, int32_t node
                 FLOW_error_return(c);
             }
 
-            snprintf(buffer, buffer_size, "%s %s", def->name, (const char*)&state);
+            flow_snprintf(buffer, buffer_size, "%s %s", def->name, (const char*)&state);
         }
     } else {
         def->stringify(c, NULL, info->codec_state, buffer, buffer_size);
@@ -1251,7 +1252,7 @@ bool flow_node_stringify(flow_context* c, struct flow_graph* g, int32_t node_id,
             FLOW_error_return(c);
         }
 
-        snprintf(buffer, buffer_size, "%s %s", def->type_name, (const char*)&state);
+        flow_snprintf(buffer, buffer_size, "%s %s", def->type_name, (const char*)&state);
     } else {
         if (!def->stringify(c, g, node_id, buffer, buffer_size)) {
             FLOW_error_return(c);

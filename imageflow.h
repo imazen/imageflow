@@ -143,30 +143,33 @@ typedef enum flow_scanlines_filter_type {
 typedef enum flow_status_code {
     flow_status_No_Error = 0,
     flow_status_Out_of_memory = 1,
-    flow_status_Invalid_BitmapBgra_dimensions,
-    flow_status_Invalid_BitmapFloat_dimensions,
-    flow_status_Unsupported_pixel_format,
-    flow_status_Invalid_internal_state,
-    flow_status_Transpose_not_permitted_in_place,
-    flow_status_Invalid_interpolation_filter,
-    flow_status_Invalid_argument,
-    flow_status_Null_argument,
-    flow_status_Interpolation_details_missing,
-    flow_status_Node_already_deleted,
-    flow_status_Edge_already_deleted,
-    flow_status_Graph_could_not_be_completed,
     flow_status_Not_implemented,
+    flow_status_Unsupported_pixel_format,
+    flow_status_Null_argument,
+    flow_status_Invalid_argument,
+    flow_status_Invalid_dimensions,
+    flow_status_Invalid_internal_state,
+    flow_status_IO_error,
+    flow_status_Image_decoding_failed,
+    flow_status_Image_encoding_failed,
+    flow_status_Item_does_not_exist,
+    flow_status_Graph_invalid,
     flow_status_Invalid_inputs_to_node,
-    flow_status_Graph_not_flattened,
-    flow_status_Failed_to_open_file,
-    flow_status_Graph_could_not_be_executed,
-    flow_status_Png_decoding_failed,
-    flow_status_Png_encoding_failed,
-
-    flow_status_Jpeg_decoding_failed,
-    flow_status_Jpeg_encoding_failed,
+    flow_status_Maximum_graph_passes_exceeded,
     flow_status_Graph_is_cyclic,
+    flow_status_Other_error,
+    flow_status____Last_library_error,
+    flow_status_First_user_defined_error = 1025,
+    flow_status_Last_user_defined_error = 2147483647,
 } flow_status_code;
+
+static const char* const flow_status_code_strings[] = {
+    "No error",      "Out Of Memory",          "Not implemented",               "Pixel format unsupported by algorithm",
+    "Null argument", "Invalid argument",       "Invalid dimensions",            "Internal state invalid",
+    "I/O error",     "Image decoding failed",  "Image encoding failed",         "Item does not exist",
+    "Graph invalid", "Invalid inputs to node", "Maximum graph passes exceeded", "Graph is cyclic",
+    "Other error:",
+};
 
 typedef enum flow_interpolation_filter {
     flow_interpolation_filter_RobidouxFast = 1,
@@ -249,9 +252,10 @@ void flow_context_destroy(flow_context* context);
 void flow_context_free_all_allocations(flow_context* context);
 void flow_context_print_memory_info(flow_context* context);
 
-const char* flow_context_error_message(flow_context* context, char* buffer, size_t buffer_size);
+int32_t flow_context_error_and_stacktrace(flow_context* context, char* buffer, size_t buffer_size, bool full_file_path);
+int32_t flow_context_error_message(flow_context* context, char* buffer, size_t buffer_size);
 
-const char* flow_context_stacktrace(flow_context* context, char* buffer, size_t buffer_size);
+int32_t flow_context_stacktrace(flow_context* context, char* buffer, size_t buffer_size, bool full_file_path);
 
 bool flow_context_has_error(flow_context* context);
 int flow_context_error_reason(flow_context* context);

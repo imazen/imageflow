@@ -1,34 +1,65 @@
 #include "imageflow_private.h"
 #include <stdio.h>
 #include <string.h>
+#include <stdarg.h>
 
-#ifdef _MSC_VER
-#pragma unmanaged
+int flow_vsnprintf(char* s, size_t n, const char* fmt, va_list v)
+{
+    int res;
+#ifdef _WIN32
+    // Could use "_vsnprintf_s(s, n, _TRUNCATE, fmt, v)" ?
+    res = _vsnprintf_s(s, n - 1, _TRUNCATE, fmt, v);
+#else
+    res = vsnprintf(s, n, fmt, v);
 #endif
+    if (n)
+        s[n - 1] = 0;
+    // Unix returns length output would require, Windows returns negative when truncated.
+    return (res >= (int)n || res < 0) ? -1 : res;
+}
+
+int flow_snprintf(char* s, size_t n, const char* fmt, ...)
+{
+    int res;
+    va_list v;
+    va_start(v, fmt);
+    res = flow_vsnprintf(s, n, fmt, v);
+    va_end(v);
+    return res;
+}
 
 int flow_context_error_reason(flow_context* context) { return context->error.reason; }
 
-void flow_context_set_last_error(flow_context* context, flow_status_code code, const char* file, int line)
+void flow_context_raise_error(flow_context* context, flow_status_code code, char* message, const char* file, int line,
+                              const char* function_name)
 {
+    char* buffer = flow_context_set_error_get_message_buffer(context, code, file, line, function_name);
+    if (message != NULL) {
+        flow_snprintf(buffer, FLOW_ERROR_MESSAGE_SIZE, "%s", message);
+    }
+}
+
+char* flow_context_set_error_get_message_buffer(flow_context* context, flow_status_code code, const char* file,
+                                                int line, const char* function_name)
+{
+    // We can't return an invalid buffer, even if an error has already been logged.
+    static char throwaway_buffer[FLOW_ERROR_MESSAGE_SIZE + 1];
     if (context->error.reason != flow_status_No_Error) {
         // The last error wasn't cleared, lock it down. We prefer the original error.
         context->error.locked = true;
-        return;
+        return &throwaway_buffer[0];
     }
     context->error.reason = code;
-    flow_context_add_to_callstack(context, file, line);
-#ifdef DEBUG
-    char buffer[1024];
-    fprintf(stderr, "%s:%d Context_set_last_error the error registered was: %s\n", file, line,
-            Context_error_message(context, buffer, sizeof(buffer)));
-#endif
+    flow_context_add_to_callstack(context, file, line, function_name);
+    return &context->error.message[0];
 }
 
-void flow_context_add_to_callstack(flow_context* context, const char* file, int line)
+void flow_context_add_to_callstack(flow_context* context, const char* file, int line, const char* function_name)
 {
     if (context->error.callstack_count < context->error.callstack_capacity && !context->error.locked) {
         context->error.callstack[context->error.callstack_count].file = file;
         context->error.callstack[context->error.callstack_count].line = line;
+        context->error.callstack[context->error.callstack_count].function_name = function_name;
         context->error.callstack_count++;
     }
 }
@@ -44,14 +75,27 @@ void flow_context_clear_error(flow_context* context)
     context->error.callstack_count = 0;
     context->error.callstack[0].file = NULL;
     context->error.callstack[0].line = -1;
+    context->error.callstack[0].function_name = NULL;
     context->error.reason = flow_status_No_Error;
     context->error.locked = false;
+    context->error.message[0] = 0;
 }
 
 bool flow_context_has_error(flow_context* context) { return context->error.reason != flow_status_No_Error; }
 
-const char* flow_status_code_lookup_not_implemented = "Status code lookup not implemented";
-static const char* status_code_to_string(flow_status_code code) { return flow_status_code_lookup_not_implemented; }
+static const char* status_code_to_string(flow_status_code code)
+{
+    if (code < 0) {
+        return "Unknown negative status code";
+    }
+    if (code >= flow_status_First_user_defined_error && code <= flow_status_Last_user_defined_error) {
+        return "User defined error";
+    }
+    if (code >= flow_status____Last_library_error) {
+        return "Unknown status code";
+    }
+    return flow_status_code_strings[code];
+}
 
 bool flow_context_print_and_exit_if_err(flow_context* c)
 {
@@ -64,38 +108,90 @@ bool flow_context_print_and_exit_if_err(flow_context* c)
 
 void flow_context_print_error_to(flow_context* c, FILE* stream)
 {
-    char buffer[1024];
-    fprintf(stream, "Error code %d: %s\n", c->error.reason, status_code_to_string(c->error.reason));
-    fprintf(stream, "%s\n", flow_context_stacktrace(c, buffer, sizeof(buffer)));
+    char buffer[FLOW_ERROR_MESSAGE_SIZE + 2048];
+    flow_context_error_message(c, buffer, sizeof(buffer));
+    fprintf(stream, "%s", buffer);
 }
-const char* flow_context_error_message(flow_context* context, char* buffer, size_t buffer_size)
+int32_t flow_context_error_and_stacktrace(flow_context* context, char* buffer, size_t buffer_size, bool full_file_path)
 {
-    snprintf(buffer, buffer_size, "Error in file: %s:%d status_code: %d reason: %s", context->error.callstack[0].file,
-             context->error.callstack[0].line, context->error.reason, status_code_to_string(context->error.reason));
+    size_t original_buffer_size = buffer_size;
+    int chars_written = flow_context_error_message(context, buffer, buffer_size);
+    if (chars_written < 0) {
+        return -1; // we ran out of space
+    } else {
+        buffer = buffer + chars_written;
+        buffer_size -= chars_written;
+    }
 
-    return buffer;
+    if (context->error.callstack_count > 0) {
+        chars_written = flow_snprintf(buffer, buffer_size, "\n");
+        if (chars_written < 0) {
+            return -1; // we ran out of space
+        } else {
+            buffer = buffer + chars_written;
+            buffer_size -= chars_written;
+        }
+    }
+
+    chars_written = flow_context_stacktrace(context, buffer, buffer_size, full_file_path);
+    if (chars_written < 0) {
+        return -1; // we ran out of space
+    } else {
+        buffer = buffer + chars_written;
+        buffer_size -= chars_written;
+    }
+
+    return original_buffer_size - buffer_size;
 }
 
-const char* flow_context_stacktrace(flow_context* context, char* buffer, size_t buffer_size)
+int32_t flow_context_error_message(flow_context* context, char* buffer, size_t buffer_size)
 {
-    size_t remaining_space = buffer_size - 1; // For null character
+    int chars_written = 0;
+    if (context->error.message[0] == 0) {
+        chars_written = flow_snprintf(buffer, buffer_size, "%s", status_code_to_string(context->error.reason));
+    } else {
+        chars_written = flow_snprintf(buffer, buffer_size, "%s : %s", status_code_to_string(context->error.reason),
+                                      context->error.message);
+    }
+    if (chars_written < 0) {
+        return -1; // we ran out of space
+    }
+    return chars_written;
+}
+
+int32_t flow_context_stacktrace(flow_context* context, char* buffer, size_t buffer_size, bool full_file_path)
+{
+
+    // Test with function_name = NULL
+
+    size_t remaining_space = buffer_size; // For null character
     char* line = buffer;
     for (int i = 0; i < context->error.callstack_count; i++) {
 
         // Trim the directory
         const char* file = context->error.callstack[i].file;
-        const char* lastslash = (const char*)umax64((uint64_t)strrchr(file, '\\'), (uint64_t)strrchr(file, '/'));
-        file = (const char*)umax64((uint64_t)lastslash + 1, (uint64_t)file);
+        if (file == NULL) {
+            file = "(unknown)";
+        } else {
+            const char* lastslash = (const char*)umax64((uint64_t)strrchr(file, '\\'), (uint64_t)strrchr(file, '/'));
+            if (!full_file_path) {
+                file = (const char*)umax64((uint64_t)lastslash + 1, (uint64_t)file);
+            }
+        }
+        const char* func_name = context->error.callstack[i].function_name == NULL
+                                    ? "(unknown)"
+                                    : context->error.callstack[i].function_name;
 
-        uint32_t used = snprintf(line, remaining_space, "%s:%d:\n", file, context->error.callstack[i].line);
-        if (used > 0 && used < remaining_space) {
+        int32_t used = flow_snprintf(line, remaining_space, "%s:%d: in function %s\n", file,
+                                     context->error.callstack[i].line, func_name);
+        if (used < 0) {
+            return -1;
+        } else {
             remaining_space -= used;
             line += used;
-        } else {
-            return buffer;
         }
     }
-    return buffer;
+    return buffer_size - remaining_space;
 }
 
 static bool expand_heap_tracking(flow_context* context)
@@ -352,8 +448,10 @@ void flow_context_initialize(flow_context* context)
     context->error.callstack_count = 0;
     context->error.callstack[0].file = NULL;
     context->error.callstack[0].line = -1;
+    context->error.callstack[0].function_name = NULL;
     // memset(context->error.callstack, 0, sizeof context->error.callstack);
     context->error.reason = flow_status_No_Error;
+    context->error.message[0] = 0;
     context->error.locked = false;
     flow_default_heap_manager_initialize(&context->heap);
     Context_heap_tracking_initialize(context);

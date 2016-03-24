@@ -165,12 +165,12 @@ uint8_t* get_bytes_cached(flow_context* c, size_t* bytes_count_out, const char* 
 #define FLOW_MAX_PATH 255
     char cache_folder[FLOW_MAX_PATH];
 
-    snprintf(cache_folder, FLOW_MAX_PATH, "%s/imageflow_cache", getenv("HOME"));
+    flow_snprintf(cache_folder, FLOW_MAX_PATH, "%s/imageflow_cache", getenv("HOME"));
 
     flow_utils_ensure_directory_exists(cache_folder);
     char cache_path[FLOW_MAX_PATH];
 
-    snprintf(cache_path, FLOW_MAX_PATH, "%s/%lu", cache_folder, djb2((unsigned const char*)url));
+    flow_snprintf(cache_path, FLOW_MAX_PATH, "%s/%lu", cache_folder, djb2((unsigned const char*)url));
 
     if (access(cache_path, F_OK) == -1) {
         // file doesn't exist

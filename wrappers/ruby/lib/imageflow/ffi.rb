@@ -114,35 +114,7 @@ module Imageflow
     # 			flow_scanlines_filter_Custom, // Execute custom callback.,
     # 																											flow_scanlines_filter__FORCE_ENUM_SIZE_INT32 = 2147483647
     # } flow_scanlines_filter_type;
-    #
-    # typedef enum flow_status_code {
-    # 	flow_status_No_Error = 0,
-    # 			flow_status_Out_of_memory = 1,
-    # 			flow_status_Invalid_BitmapBgra_dimensions,
-    # 			flow_status_Invalid_BitmapFloat_dimensions,
-    # 			flow_status_Unsupported_pixel_format,
-    # 			flow_status_Invalid_internal_state,
-    # 			flow_status_Transpose_not_permitted_in_place,
-    # 			flow_status_Invalid_interpolation_filter,
-    # 			flow_status_Invalid_argument,
-    # 			flow_status_Null_argument,
-    # 			flow_status_Interpolation_details_missing,
-    # 			flow_status_Node_already_deleted,
-    # 			flow_status_Edge_already_deleted,
-    # 			flow_status_Graph_could_not_be_completed,
-    # 			flow_status_Not_implemented,
-    # 			flow_status_Invalid_inputs_to_node,
-    # 			flow_status_Graph_not_flattened,
-    # 			flow_status_Failed_to_open_file,
-    # 			flow_status_Graph_could_not_be_executed,
-    # 			flow_status_Png_decoding_failed,
-    # 			flow_status_Png_encoding_failed,
-    #
-    # 			flow_status_Jpeg_decoding_failed,
-    # 			flow_status_Jpeg_encoding_failed,
-    # 			flow_status_Graph_is_cyclic,
-    # } flow_status_code;
-    #
+
     # typedef enum flow_interpolation_filter {
     # 	flow_interpolation_filter_RobidouxFast = 1,
     # 			flow_interpolation_filter_Robidoux = 2,
@@ -200,6 +172,28 @@ module Imageflow
     # 			flow_working_floatspace_gamma = 2
     # } flow_working_floatspace;
 
+    enum :flow_status_code, [
+        :No_Error, 0,
+        :Out_of_memory, 1,
+        :Not_implemented,
+        :Unsupported_pixel_format,
+        :Null_argument,
+        :Invalid_argument,
+        :Invalid_dimensions,
+        :Invalid_internal_state,
+        :IO_error,
+        :Image_decoding_failed,
+        :Image_encoding_failed,
+        :Item_does_not_exist,
+        :Graph_invalid,
+        :Invalid_inputs_to_node,
+        :Maximum_graph_passes_exceeded,
+        :Graph_is_cyclic,
+        :Other_error,
+        :___Last_library_error,
+        :First_user_defined_error, 1025,
+        :Last_user_defined_error, 2147483647,
+    ]
     enum :pixel_format, [
         :bgr24, 3,
         :bgra32, 4,
@@ -245,8 +239,9 @@ module Imageflow
     attach_function :flow_context_destroy, [:pointer], :void
     attach_function :flow_context_free_all_allocations, [:pointer], :void
     attach_function :flow_context_print_memory_info, [:pointer], :void
-    attach_function :flow_context_error_message, [:pointer, :pointer, :uint], :pointer
-    attach_function :flow_context_stacktrace, [:pointer, :pointer, :uint], :pointer
+    attach_function :flow_context_error_message, [:pointer, :pointer, :uint], :int32
+    attach_function :flow_context_stacktrace, [:pointer, :pointer, :uint, :bool], :int32
+    attach_function :flow_context_error_and_stacktrace, [:pointer, :pointer, :uint, :bool], :int32
     attach_function :flow_context_has_error, [:pointer], :bool
     attach_function :flow_context_error_reason, [:pointer], :int
     attach_function :flow_context_free_static_caches, [], :void

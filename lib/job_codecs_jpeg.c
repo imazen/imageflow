@@ -59,7 +59,7 @@ static void jpeg_decode_error_exit(j_common_ptr cinfo)
 
     flow_job_jpg_decoder_reset(state->context, state);
     state->stage = flow_job_jpg_decoder_stage_Failed;
-    FLOW_error(state->context, flow_status_Jpeg_decoding_failed);
+    FLOW_error(state->context, flow_status_Image_decoding_failed);
 
     /* Return control to the setjmp point */
     longjmp(state->error_handler_jmp, 1);
@@ -387,7 +387,7 @@ static void jpeg_encode_error_exit(j_common_ptr cinfo)
 
     // TODO - cleanup??
 
-    FLOW_error(state->context, flow_status_Jpeg_encoding_failed);
+    FLOW_error(state->context, flow_status_Image_encoding_failed);
 
     jpeg_destroy_compress(&state->cinfo);
 

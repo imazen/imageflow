@@ -181,9 +181,12 @@ static bool flow_job_insert_resources_into_graph_with_reuse(flow_context* c, str
 
         current = current->next;
     }
-    if (flow_job_find_first_node_with_placeholder_id(c, *graph_ref, -1) > -1) {
+    int remaining_placeholder_node = flow_job_find_first_node_with_placeholder_id(c, *graph_ref, -1);
+    if (remaining_placeholder_node > -1) {
         // Leftover nodes with no placeholder - this is an error
-        FLOW_error(c, flow_status_Graph_could_not_be_completed);
+        FLOW_error_msg(c, flow_status_Graph_invalid, "No matching job resource found for placeholder id %d (node #%d).",
+                       get_placeholder_id_for_node(c, *graph_ref, remaining_placeholder_node),
+                       remaining_placeholder_node);
         return false;
     }
     return true;

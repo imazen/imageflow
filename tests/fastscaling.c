@@ -5,10 +5,6 @@
  * Licensed under the GNU Affero General Public License, Version 3.0.
  * Commercial licenses available at http://imageresizing.net/
  */
-#ifdef _MSC_VER
-#pragma unmanaged
-#endif
-
 #include "imageflow_private.h"
 #include <stdio.h>
 #include <string.h>

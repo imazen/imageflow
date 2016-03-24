@@ -89,7 +89,7 @@ static void png_decoder_error_handler(png_structp png_ptr, png_const_charp msg)
         exit(42);
         abort(); // WTF?
     }
-    FLOW_CONTEXT_SET_LAST_ERROR(state->context, flow_status_Png_decoding_failed);
+    FLOW_error_msg(state->context, flow_status_Image_decoding_failed, "PNG decoding failed");
 
     // Dispose of everything
     flow_job_png_decoder_reset(state->context, state);
@@ -398,7 +398,7 @@ static void png_encoder_error_handler(png_structp png_ptr, png_const_charp msg)
         exit(42);
         abort(); // WTF?
     }
-    FLOW_CONTEXT_SET_LAST_ERROR(state->context, flow_status_Png_encoding_failed);
+    FLOW_error_msg(state->context, flow_status_Image_encoding_failed, "PNG encoding failed");
 
     longjmp(state->error_handler_jmp_buf, 1);
 }

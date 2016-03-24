@@ -133,7 +133,7 @@ bool flow_job_execute(flow_context* c, struct flow_job* job, struct flow_graph**
     int32_t passes = 0;
     while (!flow_job_graph_fully_executed(c, job, *graph_ref)) {
         if (passes >= job->max_calc_flatten_execute_passes) {
-            FLOW_error(c, flow_status_Graph_could_not_be_executed);
+            FLOW_error(c, flow_status_Maximum_graph_passes_exceeded);
             return false;
         }
         if (!flow_job_populate_dimensions_where_certain(c, job, graph_ref)) {
@@ -209,8 +209,8 @@ static bool write_frame_to_disk(flow_context* c, const char* path, flow_bitmap_b
 
     if (!png_image_write_to_file(&target_image, path, 0 /*convert_to_8bit*/, b->pixels, 0 /*row_stride*/,
                                  NULL /*colormap*/)) {
-        printf("Error writing to %s : %s", path, target_image.message);
-        FLOW_error(c, flow_status_Failed_to_open_file); // image.message
+        FLOW_error_msg(c, flow_status_Image_encoding_failed, "Failed to export frame as png: %s  output path: %s.",
+                       target_image.message, path);
         return false;
     }
     return true;
@@ -220,12 +220,12 @@ static bool files_identical(flow_context* c, const char* path1, const char* path
 {
     FILE* fp1 = fopen(path1, "r");
     if (fp1 == NULL) {
-        FLOW_error(c, flow_status_Failed_to_open_file);
+        FLOW_error_msg(c, flow_status_IO_error, "Failed to open file A for comparison (%s).", path1);
         return false;
     }
     FILE* fp2 = fopen(path2, "r");
     if (fp2 == NULL) {
-        FLOW_error(c, flow_status_Failed_to_open_file);
+        FLOW_error_msg(c, flow_status_IO_error, "Failed to open file B for comparison (%s).", path2);
         fclose(fp1);
         return false;
     }
@@ -249,7 +249,7 @@ bool flow_job_notify_node_complete(flow_context* c, struct flow_job* job, struct
     struct flow_node* n = &g->nodes[node_id];
     if (n->result_bitmap != NULL && job->record_frame_images == true) {
         char path[1024];
-        snprintf(path, 1023, "node_frames/job_%d_node_%d.png", job->debug_job_id, node_id);
+        flow_snprintf(path, 1023, "node_frames/job_%d_node_%d.png", job->debug_job_id, node_id);
         if (!write_frame_to_disk(c, path, n->result_bitmap)) {
             FLOW_error_return(c);
         }
@@ -270,15 +270,15 @@ bool flow_job_notify_graph_changed(flow_context* c, struct flow_job* job, struct
         // Delete existing graphs
         int32_t i = 0;
         for (i = 0; i <= FLOW_MAX_GRAPH_VERSIONS; i++) {
-            snprintf(filename, 254, "job_%d_graph_version_%d.dot", job->debug_job_id, i);
+            flow_snprintf(filename, 254, "job_%d_graph_version_%d.dot", job->debug_job_id, i);
             remove(filename);
-            snprintf(filename, 254, "job_%d_graph_version_%d.dot.png", job->debug_job_id, i);
+            flow_snprintf(filename, 254, "job_%d_graph_version_%d.dot.png", job->debug_job_id, i);
             remove(filename);
-            snprintf(filename, 254, "job_%d_graph_version_%d.dot.svg", job->debug_job_id, i);
+            flow_snprintf(filename, 254, "job_%d_graph_version_%d.dot.svg", job->debug_job_id, i);
             remove(filename);
             int32_t node_ix = 0;
             for (node_ix = 0; node_ix < 42; node_ix++) {
-                snprintf(filename, 254, "./node_frames/job_%d_node_%d.png", job->debug_job_id, node_ix);
+                flow_snprintf(filename, 254, "./node_frames/job_%d_node_%d.png", job->debug_job_id, node_ix);
                 remove(filename);
             }
         }
@@ -288,13 +288,13 @@ bool flow_job_notify_graph_changed(flow_context* c, struct flow_job* job, struct
     int32_t current_graph_version = job->next_graph_version;
     job->next_graph_version++;
 
-    snprintf(filename, 254, "job_%d_graph_version_%d.dot", job->debug_job_id, current_graph_version);
+    flow_snprintf(filename, 254, "job_%d_graph_version_%d.dot", job->debug_job_id, current_graph_version);
 
-    snprintf(image_prefix, 254, "./node_frames/job_%d_node_", job->debug_job_id);
+    flow_snprintf(image_prefix, 254, "./node_frames/job_%d_node_", job->debug_job_id);
 
     FILE* f = fopen(filename, "w");
     if (f == NULL) {
-        FLOW_error(c, flow_status_Failed_to_open_file);
+        FLOW_error_msg(c, flow_status_IO_error, "Failed to open %s for graph dotfile export.", filename);
         return false;
     }
     if (!flow_graph_print_to_dot(c, g, f, image_prefix)) {
@@ -305,7 +305,7 @@ bool flow_job_notify_graph_changed(flow_context* c, struct flow_job* job, struct
     }
     // Compare
     if (job->next_graph_version > 1) {
-        snprintf(prev_filename, 254, "job_%d_graph_version_%d.dot", job->debug_job_id, prev_graph_version);
+        flow_snprintf(prev_filename, 254, "job_%d_graph_version_%d.dot", job->debug_job_id, prev_graph_version);
         bool identical = false;
         if (!files_identical(c, prev_filename, filename, &identical)) {
             FLOW_error_return(c);
@@ -325,10 +325,10 @@ bool flow_job_notify_graph_changed(flow_context* c, struct flow_job* job, struct
 bool flow_job_render_graph_to_png(flow_context* c, struct flow_job* job, struct flow_graph* g, int32_t graph_version)
 {
     char filename[255];
-    snprintf(filename, 254, "job_%d_graph_version_%d.dot", job->debug_job_id, graph_version);
+    flow_snprintf(filename, 254, "job_%d_graph_version_%d.dot", job->debug_job_id, graph_version);
 
     char dotfile_command[2048];
-    snprintf(dotfile_command, 2048, "dot -Tpng -Gsize=11,16\\! -Gdpi=150  -O %s", filename);
+    flow_snprintf(dotfile_command, 2048, "dot -Tpng -Gsize=11,16\\! -Gdpi=150  -O %s", filename);
     int32_t ignore = system(dotfile_command);
     ignore++;
     return true;

@@ -34,8 +34,8 @@ bool test_contrib_windows(flow_context* context, char* msg)
         }
 
     if (bad != -1) {
-        snprintf(msg, 255, "at 6->3 invalid value (%d; %d) at %d, expected (%d; %d)", lct->ContribRow[bad].Left,
-                 lct->ContribRow[bad].Right, bad, corr36[bad][0], corr36[bad][1]);
+        flow_snprintf(msg, 255, "at 6->3 invalid value (%d; %d) at %d, expected (%d; %d)", lct->ContribRow[bad].Left,
+                      lct->ContribRow[bad].Right, bad, corr36[bad][0], corr36[bad][1]);
         flow_interpolation_line_contributions_destroy(context, lct);
         return false;
     }
@@ -57,8 +57,8 @@ bool test_contrib_windows(flow_context* context, char* msg)
         }
 
     if (bad != -1) {
-        snprintf(msg, 255, "at 6->4 invalid value (%d; %d) at %d, expected (%d; %d)", lct->ContribRow[bad].Left,
-                 lct->ContribRow[bad].Right, bad, corr46[bad][0], corr46[bad][1]);
+        flow_snprintf(msg, 255, "at 6->4 invalid value (%d; %d) at %d, expected (%d; %d)", lct->ContribRow[bad].Left,
+                      lct->ContribRow[bad].Right, bad, corr46[bad][0], corr46[bad][1]);
         flow_interpolation_line_contributions_destroy(context, lct);
         return false;
     }
@@ -78,12 +78,12 @@ bool function_bounded(flow_context* context, flow_interpolation_details* details
     double result_value = (*details->filter)(details, input_value);
 
     if (result_value < result_low_threshold) {
-        snprintf(msg + strlen(msg), 255 - strlen(msg), "value %.4f is below %.4f at x=%.4f (%s)", result_value,
-                 result_low_threshold, input_value, name);
+        flow_snprintf(msg + strlen(msg), 255 - strlen(msg), "value %.4f is below %.4f at x=%.4f (%s)", result_value,
+                      result_low_threshold, input_value, name);
         return false;
     } else if (result_value > result_high_threshold) {
-        snprintf(msg + strlen(msg), 255 - strlen(msg), "value %.4f exceeds %.4f at x=%.4f (%s)", result_value,
-                 result_high_threshold, input_value, name);
+        flow_snprintf(msg + strlen(msg), 255 - strlen(msg), "value %.4f exceeds %.4f at x=%.4f (%s)", result_value,
+                      result_high_threshold, input_value, name);
         return false;
     }
 
@@ -147,7 +147,7 @@ char* test_filter(flow_context* context, flow_interpolation_filter filter, char*
                   double expected_second_crossing, double expected_near0, double near0_threshold, double expected_end)
 {
     flow_interpolation_details* details = flow_interpolation_details_create_from(context, filter);
-    snprintf(msg, 255, "Filter=(%d) ", filter);
+    flow_snprintf(msg, 255, "Filter=(%d) ", filter);
     bool result = test_details(context, details, msg, expected_first_crossing, expected_second_crossing, expected_near0,
                                near0_threshold, expected_end);
     flow_interpolation_details_destroy(context, details);
