@@ -4,23 +4,29 @@ imageflow - Real-time image processing for the web.
 [![travis-master](https://img.shields.io/travis/imazen/imageflow/master.svg?label=travis%20master)
 ](https://travis-ci.org/imazen/imageflow/builds) 
 
-How to download, build, and run tests (after [installing Conan](https://www.conan.io/downloads))
 
-
+How to download, build, and run tests. Follow these steps before trying to open the project in any IDE.
+ 
+ 1. [Install Conan](https://www.conan.io/downloads) - installers available for download (all platforms).
+ 2. Install cmake (`cinst cmake.portable` on windows w/ chocolatey, `sudo apt-get install cmake` elsewhere)
+ 
+ 
     git clone git@github.com:imazen/imageflow.git blocks/nathanaeljones/imageflow
     cd imageflow
-    .travis/run_tests.sh
+    mkdir build
+    cd build
+    conan install -u --file ../conanfile.py -o build_tests=True --build missing
+    cd ..
+    conan build
 
     # Valgrind
     valgrind ./build/bin/test_graph_program
     valgrind ./build/bin/test_test
     valgrind ./build/bin/test_error_handling
     valgrind ./build/bin/fastscaling
-    
-    #After run_tests.sh, you may open the imageflow folder in CLion for debugging
+
 
 ======
-
 
 **imageflow is still in the prototype phase. It is neither API-stable nor secure.**
 
