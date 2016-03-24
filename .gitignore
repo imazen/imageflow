@@ -233,3 +233,9 @@ FakesAssemblies/
 # Compiled conanfile
 conanfile.pyc
 
+#Generated for tests
+build/
+cacert.pem
+node_frames/
+conaninfo.txt
+conanbuildinfo.cmake

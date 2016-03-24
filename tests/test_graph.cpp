@@ -26,7 +26,7 @@ bool execute_graph_for_url(flow_context* c, const char* input_image_url, const c
 {
     struct flow_job* job = flow_job_create(c);
     ERR(c);
-    flow_job_configure_recording(c, job, true, true, true, false, false);
+    flow_job_configure_recording(c, job, false, false, false, false, false);
 
     int32_t input_placeholder = 0;
     int32_t output_placeholder = 1;

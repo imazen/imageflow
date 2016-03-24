@@ -179,7 +179,7 @@ TEST_CASE("TestRender", "[fastscaling][thief]") {
     cfg.type_info[0] = &renderdetails_type_info;
     cfg.type_info[1] = &src_type_info;
     cfg.type_info[2] = &dest_type_info;
-    cfg.trials = 100;
+    cfg.trials = 20; //Raise this back to 1000 for better testing.
     cfg.report = &report;
 
     theft * t = theft_init(0);
@@ -240,7 +240,7 @@ TEST_CASE("Roundtrip RGB<->LUV property", "[fastscaling][thief]") {
     cfg.name = __func__;
     cfg.fun = (theft_propfun*)before_and_after_should_match;
     cfg.type_info[0] = &bitmap_type_info;
-    cfg.trials = 100000;
+    cfg.trials = 10000;
     cfg.report = &report;
 
     theft * t = theft_init(0);
