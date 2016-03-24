@@ -66,10 +66,9 @@ struct flow_job_codec_definition {
     codec_dispose_fn dispose;
     codec_stringify_fn stringify;
     const char* name;
-    const char * preferred_mime_type;
-    const char * preferred_extension;
+    const char* preferred_mime_type;
+    const char* preferred_extension;
 };
-
 
 typedef enum flow_job_color_profile_source {
     flow_job_color_profile_source_null,
@@ -79,8 +78,8 @@ typedef enum flow_job_color_profile_source {
 
 } flow_job_color_profile_source;
 
-//Later we may want to expose this information to the outside
-//struct flow_job_decoder_info {
+// Later we may want to expose this information to the outside
+// struct flow_job_decoder_info {
 //    cmsHPROFILE color_profile;
 //    flow_job_color_profile_source color_profile_source;
 //};

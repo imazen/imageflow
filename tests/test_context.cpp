@@ -21,7 +21,7 @@ TEST_CASE("Test flow_snprintf with single-character buffer", "")
     REQUIRE(buf[1] == 25); // It should have left the last character untouched
 }
 
-TEST_CASE("Test flow_snprintf with zero-character buffer", "")
+TEST_CASE("Test flow_snprintf with zero-character  buffer_size", "")
 {
     char buf[] = { 25 };
     REQUIRE(flow_snprintf(&buf[0], 0, "hello") == -1);
@@ -55,7 +55,7 @@ TEST_CASE("Test error message printing", "")
     char buf[4096];
     int chars_written = flow_context_error_and_stacktrace(c, buf, 4096, false);
     REQUIRE(chars_written > 0);
-    REQUIRE_THAT( buf, StartsWith("Invalid argument : You passed a value outside [0,1]: 3\ntest_context.cpp:" ) );
+    REQUIRE_THAT(buf, StartsWith("Invalid argument : You passed a value outside [0,1]: 3\ntest_context.cpp:"));
 
     flow_context_destroy(c);
 }

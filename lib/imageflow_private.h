@@ -309,8 +309,6 @@ static inline int64_t flow_get_profiler_ticks_per_second(void)
 #endif
 #endif
 
-
-
 #ifdef __cplusplus
 }
 #endif

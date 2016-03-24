@@ -85,7 +85,7 @@ bool flow_context_has_error(flow_context* context) { return context->error.reaso
 
 static const char* status_code_to_string(flow_status_code code)
 {
-    //Code is an unsigned enum, and cannot be negative. We just check the upper bounds
+    // Code is an unsigned enum, and cannot be negative. We just check the upper bounds
     if (code >= flow_status_First_user_defined_error && code <= flow_status_Last_user_defined_error) {
         return "User defined error";
     }
@@ -331,7 +331,8 @@ void flow_context_free_all_allocations(flow_context* context)
         }
     }
     if (context->heap_tracking.allocations_net != 0 || context->heap_tracking.bytes_allocated_net != 0) {
-        fprintf(stderr, "Failed to deallocate %zu allocations (%zu bytes)", context->heap_tracking.allocations_net, context->heap_tracking.bytes_allocated_net);
+        fprintf(stderr, "Failed to deallocate %zu allocations (%zu bytes)", context->heap_tracking.allocations_net,
+                context->heap_tracking.bytes_allocated_net);
     }
 }
 

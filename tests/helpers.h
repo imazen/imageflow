@@ -119,7 +119,7 @@ void fetch_image(const char* url, char* dest_path)
         curl_initialized = true;
         curl_global_init(CURL_GLOBAL_ALL);
     }
-    fprintf(stdout, "Fetching %s..." ,url);
+    fprintf(stdout, "Fetching %s...", url);
 
     CURL* curl;
     FILE* fp;
@@ -177,7 +177,7 @@ uint8_t* get_bytes_cached(flow_context* c, size_t* bytes_count_out, const char* 
         fetch_image(url, cache_path);
     } else {
 
-        //fprintf(stdout, "Using cached image at %s", cache_path);
+        // fprintf(stdout, "Using cached image at %s", cache_path);
     }
 
     return read_all_bytes(c, bytes_count_out, cache_path);
@@ -198,7 +198,8 @@ void flow_utils_ensure_directory_exists(const char* dir_path)
             // Add more flags to the mode if necessary.
             e = mkdir(dir_path, S_IRWXU);
             if (e != 0) {
-                fprintf(stdout, "The directory %s does not exist, and creation failed with errno=%d.\n", dir_path, errno);
+                fprintf(stdout, "The directory %s does not exist, and creation failed with errno=%d.\n", dir_path,
+                        errno);
             } else {
                 fprintf(stdout, "The directory %s did not exist. Created successfully.\n", dir_path);
             }

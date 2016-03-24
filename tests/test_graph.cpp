@@ -316,7 +316,7 @@ bool scale_image_to_disk_inner(flow_context* c)
         return false;
     }
     struct flow_job_input_resource_info info;
-    if (!flow_job_get_input_resource_info_by_placeholder_id(c, job, input_placeholder, &info)){
+    if (!flow_job_get_input_resource_info_by_placeholder_id(c, job, input_placeholder, &info)) {
         return false;
     }
     REQUIRE(info.frame0_post_decode_format == flow_bgra32);
@@ -325,7 +325,6 @@ bool scale_image_to_disk_inner(flow_context* c)
     REQUIRE(strcmp(info.preferred_extension, "png") == 0);
     REQUIRE(strcmp(info.preferred_mime_type, "image/png") == 0);
     REQUIRE(info.codec_type == flow_job_codec_type_decode_png);
-
 
     // Execute the graph
     if (!flow_job_execute(c, job, &g)) {
@@ -420,7 +419,6 @@ TEST_CASE("benchmark scaling large progressive jpg", "")
     flow_context_destroy(c);
 }
 
-
 TEST_CASE("benchmark scaling large jpg", "")
 {
     flow_context* c = flow_context_create();
@@ -433,7 +431,8 @@ TEST_CASE("benchmark scaling large jpg", "")
     last = flow_node_create_scale(c, &g, last, 800, 800);
     last = flow_node_create_encoder_placeholder(c, &g, last, output_placeholder, flow_job_codec_type_encode_jpeg);
 
-    execute_graph_for_url(c, "https://s3.amazonaws.com/resizer-dynamic-downloads/imageflow_test_suite/4kx4k_baseline.jpg",
+    execute_graph_for_url(c,
+                          "https://s3.amazonaws.com/resizer-dynamic-downloads/imageflow_test_suite/4kx4k_baseline.jpg",
                           "graph_large_jpeg.jpg", &g);
 
     flow_context_destroy(c);
@@ -583,4 +582,3 @@ TEST_CASE("check for cycles", "")
 
     flow_context_destroy(c);
 }
-

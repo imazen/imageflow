@@ -1,6 +1,5 @@
 #pragma once
 
-
 void* flow_job_codecs_aquire_decode_jpeg_on_buffer(flow_context* c, struct flow_job* job,
                                                    struct flow_job_resource_buffer* buffer);
 bool flow_job_codecs_jpeg_get_info(flow_context* c, struct flow_job* job, void* codec_state,
