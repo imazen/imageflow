@@ -3,6 +3,12 @@ environment:
     PYTHON: "C:\\Python27"
     PYTHON_VERSION: "2.7.8"
     PYTHON_ARCH: "32"
+matrix:
+  fast_finish: true
+    - platform: x86
+      configuration: Release
+    - platform: x64
+      configuration: Release
 
 install:
   - set PATH=%PATH%;%PYTHON%/Scripts/
@@ -12,6 +18,7 @@ install:
 test_script:
   - mkdir build
   - cd build
-  - conan install --file ../conanfile.py -o build_tests=True --build missing
-  - cmake ../ -DENABLE_TEST=ON && cmake --build . && ctest -V
+  - if "%PLATFORM%"=="x86" conan install --file ../conanfile.py -o build_tests=True --build missing  -s build_type=Release -s arch=x86
+  - if "%PLATFORM%"=="x64" conan install --file ../conanfile.py -o build_tests=True --build missing  -s build_type=Release -s arch=x86_64
+  - cmake ../ -DENABLE_TEST=ON && cmake --build . && ctest -V -C Release
 
