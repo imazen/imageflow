@@ -3,12 +3,12 @@ environment:
     PYTHON: "C:\\Python27"
     PYTHON_VERSION: "2.7.8"
     PYTHON_ARCH: "32"
-matrix:
-  fast_finish: true
-    - platform: x86
-      configuration: Release
-    - platform: x64
-      configuration: Release
+
+configuration: Release
+
+platform:
+- x86
+- x64
 
 install:
   - set PATH=%PATH%;%PYTHON%/Scripts/
