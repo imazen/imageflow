@@ -1454,13 +1454,13 @@
             </cdecl >
             <enum id="1061" addr="0x7fc88d845af0" >
                 <attributelist id="1062" addr="0x7fc88d845af0" >
-                    <attribute name="name" value="flow_job_codec_type" id="1063" addr="0x7fc88d8a2c70" />
+                    <attribute name="name" value="flow_codec_type" id="1063" addr="0x7fc88d8a2c70" />
                     <attribute name="sym_symtab" value="0x7fc88d8288b0" id="1064" addr="0x7fc88d8288b0" />
                     <attribute name="allows_typedef" value="1" id="1065" addr="0x7fc88d8a2c70" />
                     <attribute name="csym_nextSibling" value="0x7fc88d845bd0" id="1066" addr="0x7fc88d845bd0" />
                     <attribute name="sym_name" value="job_codec_type" id="1067" addr="0x7fc88d8a2c70" />
-                    <attribute name="tdname" value="flow_job_codec_type" id="1068" addr="0x7fc88d8a2c70" />
-                    <attribute name="enumtype" value="enum flow_job_codec_type" id="1069" addr="0x7fc88d8a2c70" />
+                    <attribute name="tdname" value="flow_codec_type" id="1068" addr="0x7fc88d8a2c70" />
+                    <attribute name="enumtype" value="enum flow_codec_type" id="1069" addr="0x7fc88d8a2c70" />
                     <attribute name="sym_overname" value="__SWIG_0" id="1070" addr="0x7fc88d8a2c70" />
                     <attribute name="enumkey" value="enum" id="1071" addr="0x7fc88d8a2c70" />
                     <attribute name="feature_nodefaultctor" value="1" id="1072" addr="0x7fc88d8a2c70" />
@@ -1468,8 +1468,8 @@
 
                 <enumitem id="1073" addr="0x7fc88d845570" >
                     <attributelist id="1074" addr="0x7fc88d845570" >
-                        <attribute name="value" value="flow_job_codec_type_null" id="1075" addr="0x7fc88d8a2c70" />
-                        <attribute name="name" value="flow_job_codec_type_null" id="1076" addr="0x7fc88d8a2c70" />
+                        <attribute name="value" value="flow_codec_type_null" id="1075" addr="0x7fc88d8a2c70" />
+                        <attribute name="name" value="flow_codec_type_null" id="1076" addr="0x7fc88d8a2c70" />
                         <attribute name="firstenumitem" value="1" id="1077" addr="0x7fc88d8a2c70" />
                         <attribute name="sym_symtab" value="0x7fc88d8288b0" id="1078" addr="0x7fc88d8288b0" />
                         <attribute name="feature_immutable" value="1" id="1079" addr="0x7fc88d8a2c70" />
@@ -1485,9 +1485,9 @@
                 <enumitem id="1086" addr="0x7fc88d845770" >
                     <attributelist id="1087" addr="0x7fc88d845770" >
                         <attribute name="sym_name" value="job_codec_type_bitmap_bgra_pointer" id="1088" addr="0x7fc88d8a2c70" />
-                        <attribute name="name" value="flow_job_codec_type_bitmap_bgra_pointer" id="1089" addr="0x7fc88d8a2c70" />
+                        <attribute name="name" value="flow_codec_type_bitmap_bgra_pointer" id="1089" addr="0x7fc88d8a2c70" />
                         <attribute name="feature_immutable" value="1" id="1090" addr="0x7fc88d8a2c70" />
-                        <attribute name="value" value="flow_job_codec_type_bitmap_bgra_pointer" id="1091" addr="0x7fc88d8a2c70" />
+                        <attribute name="value" value="flow_codec_type_bitmap_bgra_pointer" id="1091" addr="0x7fc88d8a2c70" />
                         <attribute name="type" value="int" id="1092" addr="0x7fc88d8a2c70" />
                         <attribute name="enumvalueex" value="job_codec_type_null + 1" id="1093" addr="0x7fc88d8a2c70" />
                         <attribute name="feature_nodefaultctor" value="1" id="1094" addr="0x7fc88d8a2c70" />
@@ -1499,9 +1499,9 @@
                 <enumitem id="1097" addr="0x7fc88d845810" >
                     <attributelist id="1098" addr="0x7fc88d845810" >
                         <attribute name="sym_name" value="job_codec_type_decode_png" id="1099" addr="0x7fc88d8a2c70" />
-                        <attribute name="name" value="flow_job_codec_type_decode_png" id="1100" addr="0x7fc88d8a2c70" />
+                        <attribute name="name" value="flow_codec_type_decode_png" id="1100" addr="0x7fc88d8a2c70" />
                         <attribute name="feature_immutable" value="1" id="1101" addr="0x7fc88d8a2c70" />
-                        <attribute name="value" value="flow_job_codec_type_decode_png" id="1102" addr="0x7fc88d8a2c70" />
+                        <attribute name="value" value="flow_codec_type_decode_png" id="1102" addr="0x7fc88d8a2c70" />
                         <attribute name="type" value="int" id="1103" addr="0x7fc88d8a2c70" />
                         <attribute name="enumvalueex" value="job_codec_type_bitmap_bgra_pointer + 1" id="1104" addr="0x7fc88d8a2c70" />
                         <attribute name="feature_nodefaultctor" value="1" id="1105" addr="0x7fc88d8a2c70" />
@@ -1513,9 +1513,9 @@
                 <enumitem id="1108" addr="0x7fc88d8458b0" >
                     <attributelist id="1109" addr="0x7fc88d8458b0" >
                         <attribute name="sym_name" value="job_codec_type_encode_png" id="1110" addr="0x7fc88d8a2c70" />
-                        <attribute name="name" value="flow_job_codec_type_encode_png" id="1111" addr="0x7fc88d8a2c70" />
+                        <attribute name="name" value="flow_codec_type_encode_png" id="1111" addr="0x7fc88d8a2c70" />
                         <attribute name="feature_immutable" value="1" id="1112" addr="0x7fc88d8a2c70" />
-                        <attribute name="value" value="flow_job_codec_type_encode_png" id="1113" addr="0x7fc88d8a2c70" />
+                        <attribute name="value" value="flow_codec_type_encode_png" id="1113" addr="0x7fc88d8a2c70" />
                         <attribute name="type" value="int" id="1114" addr="0x7fc88d8a2c70" />
                         <attribute name="enumvalueex" value="job_codec_type_decode_png + 1" id="1115" addr="0x7fc88d8a2c70" />
                         <attribute name="feature_nodefaultctor" value="1" id="1116" addr="0x7fc88d8a2c70" />
@@ -1527,9 +1527,9 @@
                 <enumitem id="1119" addr="0x7fc88d845950" >
                     <attributelist id="1120" addr="0x7fc88d845950" >
                         <attribute name="sym_name" value="job_codec_type_decode_jpeg" id="1121" addr="0x7fc88d8a2c70" />
-                        <attribute name="name" value="flow_job_codec_type_decode_jpeg" id="1122" addr="0x7fc88d8a2c70" />
+                        <attribute name="name" value="flow_codec_type_decode_jpeg" id="1122" addr="0x7fc88d8a2c70" />
                         <attribute name="feature_immutable" value="1" id="1123" addr="0x7fc88d8a2c70" />
-                        <attribute name="value" value="flow_job_codec_type_decode_jpeg" id="1124" addr="0x7fc88d8a2c70" />
+                        <attribute name="value" value="flow_codec_type_decode_jpeg" id="1124" addr="0x7fc88d8a2c70" />
                         <attribute name="type" value="int" id="1125" addr="0x7fc88d8a2c70" />
                         <attribute name="enumvalueex" value="job_codec_type_encode_png + 1" id="1126" addr="0x7fc88d8a2c70" />
                         <attribute name="feature_nodefaultctor" value="1" id="1127" addr="0x7fc88d8a2c70" />
@@ -1541,9 +1541,9 @@
                 <enumitem id="1130" addr="0x7fc88d8459f0" >
                     <attributelist id="1131" addr="0x7fc88d8459f0" >
                         <attribute name="sym_name" value="job_codec_type_encode_jpeg" id="1132" addr="0x7fc88d8a2c70" />
-                        <attribute name="name" value="flow_job_codec_type_encode_jpeg" id="1133" addr="0x7fc88d8a2c70" />
+                        <attribute name="name" value="flow_codec_type_encode_jpeg" id="1133" addr="0x7fc88d8a2c70" />
                         <attribute name="feature_immutable" value="1" id="1134" addr="0x7fc88d8a2c70" />
-                        <attribute name="value" value="flow_job_codec_type_encode_jpeg" id="1135" addr="0x7fc88d8a2c70" />
+                        <attribute name="value" value="flow_codec_type_encode_jpeg" id="1135" addr="0x7fc88d8a2c70" />
                         <attribute name="type" value="int" id="1136" addr="0x7fc88d8a2c70" />
                         <attribute name="enumvalueex" value="job_codec_type_decode_jpeg + 1" id="1137" addr="0x7fc88d8a2c70" />
                         <attribute name="feature_nodefaultctor" value="1" id="1138" addr="0x7fc88d8a2c70" />
@@ -1555,11 +1555,11 @@
             </enum >
             <cdecl id="1141" addr="0x7fc88d845bd0" >
                 <attributelist id="1142" addr="0x7fc88d845bd0" >
-                    <attribute name="name" value="flow_job_codec_type" id="1143" addr="0x7fc88d8a2c70" />
+                    <attribute name="name" value="flow_codec_type" id="1143" addr="0x7fc88d8a2c70" />
                     <attribute name="decl" value="" id="1144" addr="0x7fc88d8a2c70" />
                     <attribute name="storage" value="typedef" id="1145" addr="0x7fc88d8a2c70" />
                     <attribute name="kind" value="typedef" id="1146" addr="0x7fc88d8a2c70" />
-                    <attribute name="type" value="enum flow_job_codec_type" id="1147" addr="0x7fc88d8a2c70" />
+                    <attribute name="type" value="enum flow_codec_type" id="1147" addr="0x7fc88d8a2c70" />
                     <attribute name="feature_nodefaultctor" value="1" id="1148" addr="0x7fc88d8a2c70" />
                 </attributelist >
              
@@ -2906,7 +2906,7 @@
                                         <attribute name="flow_pixel_format" value="enum flow_pixel_format" id="2211" addr="0x7fc88d8a2c70" />
                                         <attribute name="flow_compositing_mode" value="enum flow_compositing_mode" id="2212" addr="0x7fc88d8a2c70" />
                                         <attribute name="flow_bitmap_compositing_mode" value="enum flow_bitmap_compositing_mode" id="2213" addr="0x7fc88d8a2c70" />
-                                        <attribute name="flow_job_codec_type" value="enum flow_job_codec_type" id="2214" addr="0x7fc88d8a2c70" />
+                                        <attribute name="flow_codec_type" value="enum flow_codec_type" id="2214" addr="0x7fc88d8a2c70" />
                                         <attribute name="struct flow_nodeinfo_size" value="struct flow_nodeinfo_size" id="2215" addr="0x7fc88d8a2c70" />
                                         <attribute name="struct flow_scanlines_filter" value="struct flow_scanlines_filter" id="2216" addr="0x7fc88d8a2c70" />
                                         <attribute name="flow_scanlines_filter" value="flow_scanlines_filter" id="2217" addr="0x7fc88d8a2c70" />
@@ -3261,7 +3261,7 @@
                                         <attribute name="flow_pixel_format" value="enum flow_pixel_format" id="2441" addr="0x7fc88d8a2c70" />
                                         <attribute name="flow_compositing_mode" value="enum flow_compositing_mode" id="2442" addr="0x7fc88d8a2c70" />
                                         <attribute name="flow_bitmap_compositing_mode" value="enum flow_bitmap_compositing_mode" id="2443" addr="0x7fc88d8a2c70" />
-                                        <attribute name="flow_job_codec_type" value="enum flow_job_codec_type" id="2444" addr="0x7fc88d8a2c70" />
+                                        <attribute name="flow_codec_type" value="enum flow_codec_type" id="2444" addr="0x7fc88d8a2c70" />
                                         <attribute name="struct flow_nodeinfo_size" value="struct flow_nodeinfo_size" id="2445" addr="0x7fc88d8a2c70" />
                                         <attribute name="struct flow_scanlines_filter" value="struct flow_scanlines_filter" id="2446" addr="0x7fc88d8a2c70" />
                                         <attribute name="flow_scanlines_filter" value="flow_scanlines_filter" id="2447" addr="0x7fc88d8a2c70" />
@@ -3942,7 +3942,7 @@
                                         <attribute name="flow_pixel_format" value="enum flow_pixel_format" id="2906" addr="0x7fc88d8a2c70" />
                                         <attribute name="flow_compositing_mode" value="enum flow_compositing_mode" id="2907" addr="0x7fc88d8a2c70" />
                                         <attribute name="flow_bitmap_compositing_mode" value="enum flow_bitmap_compositing_mode" id="2908" addr="0x7fc88d8a2c70" />
-                                        <attribute name="flow_job_codec_type" value="enum flow_job_codec_type" id="2909" addr="0x7fc88d8a2c70" />
+                                        <attribute name="flow_codec_type" value="enum flow_codec_type" id="2909" addr="0x7fc88d8a2c70" />
                                         <attribute name="struct flow_nodeinfo_size" value="struct flow_nodeinfo_size" id="2910" addr="0x7fc88d8a2c70" />
                                         <attribute name="struct flow_scanlines_filter" value="struct flow_scanlines_filter" id="2911" addr="0x7fc88d8a2c70" />
                                         <attribute name="flow_scanlines_filter" value="flow_scanlines_filter" id="2912" addr="0x7fc88d8a2c70" />
@@ -4587,7 +4587,7 @@
                                         <attribute name="flow_pixel_format" value="enum flow_pixel_format" id="3355" addr="0x7fc88d8a2c70" />
                                         <attribute name="flow_compositing_mode" value="enum flow_compositing_mode" id="3356" addr="0x7fc88d8a2c70" />
                                         <attribute name="flow_bitmap_compositing_mode" value="enum flow_bitmap_compositing_mode" id="3357" addr="0x7fc88d8a2c70" />
-                                        <attribute name="flow_job_codec_type" value="enum flow_job_codec_type" id="3358" addr="0x7fc88d8a2c70" />
+                                        <attribute name="flow_codec_type" value="enum flow_codec_type" id="3358" addr="0x7fc88d8a2c70" />
                                         <attribute name="struct flow_nodeinfo_size" value="struct flow_nodeinfo_size" id="3359" addr="0x7fc88d8a2c70" />
                                         <attribute name="struct flow_scanlines_filter" value="struct flow_scanlines_filter" id="3360" addr="0x7fc88d8a2c70" />
                                         <attribute name="flow_scanlines_filter" value="flow_scanlines_filter" id="3361" addr="0x7fc88d8a2c70" />
@@ -5063,7 +5063,7 @@
                                         <attribute name="flow_pixel_format" value="enum flow_pixel_format" id="3682" addr="0x7fc88d8a2c70" />
                                         <attribute name="flow_compositing_mode" value="enum flow_compositing_mode" id="3683" addr="0x7fc88d8a2c70" />
                                         <attribute name="flow_bitmap_compositing_mode" value="enum flow_bitmap_compositing_mode" id="3684" addr="0x7fc88d8a2c70" />
-                                        <attribute name="flow_job_codec_type" value="enum flow_job_codec_type" id="3685" addr="0x7fc88d8a2c70" />
+                                        <attribute name="flow_codec_type" value="enum flow_codec_type" id="3685" addr="0x7fc88d8a2c70" />
                                         <attribute name="struct flow_nodeinfo_size" value="struct flow_nodeinfo_size" id="3686" addr="0x7fc88d8a2c70" />
                                         <attribute name="struct flow_scanlines_filter" value="struct flow_scanlines_filter" id="3687" addr="0x7fc88d8a2c70" />
                                         <attribute name="flow_scanlines_filter" value="flow_scanlines_filter" id="3688" addr="0x7fc88d8a2c70" />
@@ -5460,7 +5460,7 @@
                                         <attribute name="flow_pixel_format" value="enum flow_pixel_format" id="3945" addr="0x7fc88d8a2c70" />
                                         <attribute name="flow_compositing_mode" value="enum flow_compositing_mode" id="3946" addr="0x7fc88d8a2c70" />
                                         <attribute name="flow_bitmap_compositing_mode" value="enum flow_bitmap_compositing_mode" id="3947" addr="0x7fc88d8a2c70" />
-                                        <attribute name="flow_job_codec_type" value="enum flow_job_codec_type" id="3948" addr="0x7fc88d8a2c70" />
+                                        <attribute name="flow_codec_type" value="enum flow_codec_type" id="3948" addr="0x7fc88d8a2c70" />
                                         <attribute name="struct flow_nodeinfo_size" value="struct flow_nodeinfo_size" id="3949" addr="0x7fc88d8a2c70" />
                                         <attribute name="struct flow_scanlines_filter" value="struct flow_scanlines_filter" id="3950" addr="0x7fc88d8a2c70" />
                                         <attribute name="flow_scanlines_filter" value="flow_scanlines_filter" id="3951" addr="0x7fc88d8a2c70" />
@@ -6555,7 +6555,7 @@
                                         <attribute name="flow_pixel_format" value="enum flow_pixel_format" id="4717" addr="0x7fc88d8a2c70" />
                                         <attribute name="flow_compositing_mode" value="enum flow_compositing_mode" id="4718" addr="0x7fc88d8a2c70" />
                                         <attribute name="flow_bitmap_compositing_mode" value="enum flow_bitmap_compositing_mode" id="4719" addr="0x7fc88d8a2c70" />
-                                        <attribute name="flow_job_codec_type" value="enum flow_job_codec_type" id="4720" addr="0x7fc88d8a2c70" />
+                                        <attribute name="flow_codec_type" value="enum flow_codec_type" id="4720" addr="0x7fc88d8a2c70" />
                                         <attribute name="struct flow_nodeinfo_size" value="struct flow_nodeinfo_size" id="4721" addr="0x7fc88d8a2c70" />
                                         <attribute name="struct flow_scanlines_filter" value="struct flow_scanlines_filter" id="4722" addr="0x7fc88d8a2c70" />
                                         <attribute name="flow_scanlines_filter" value="flow_scanlines_filter" id="4723" addr="0x7fc88d8a2c70" />
@@ -6910,7 +6910,7 @@
                                         <attribute name="flow_pixel_format" value="enum flow_pixel_format" id="4947" addr="0x7fc88d8a2c70" />
                                         <attribute name="flow_compositing_mode" value="enum flow_compositing_mode" id="4948" addr="0x7fc88d8a2c70" />
                                         <attribute name="flow_bitmap_compositing_mode" value="enum flow_bitmap_compositing_mode" id="4949" addr="0x7fc88d8a2c70" />
-                                        <attribute name="flow_job_codec_type" value="enum flow_job_codec_type" id="4950" addr="0x7fc88d8a2c70" />
+                                        <attribute name="flow_codec_type" value="enum flow_codec_type" id="4950" addr="0x7fc88d8a2c70" />
                                         <attribute name="struct flow_nodeinfo_size" value="struct flow_nodeinfo_size" id="4951" addr="0x7fc88d8a2c70" />
                                         <attribute name="struct flow_scanlines_filter" value="struct flow_scanlines_filter" id="4952" addr="0x7fc88d8a2c70" />
                                         <attribute name="flow_scanlines_filter" value="flow_scanlines_filter" id="4953" addr="0x7fc88d8a2c70" />
@@ -7615,7 +7615,7 @@
                                         <attribute name="flow_pixel_format" value="enum flow_pixel_format" id="5425" addr="0x7fc88d8a2c70" />
                                         <attribute name="flow_compositing_mode" value="enum flow_compositing_mode" id="5426" addr="0x7fc88d8a2c70" />
                                         <attribute name="flow_bitmap_compositing_mode" value="enum flow_bitmap_compositing_mode" id="5427" addr="0x7fc88d8a2c70" />
-                                        <attribute name="flow_job_codec_type" value="enum flow_job_codec_type" id="5428" addr="0x7fc88d8a2c70" />
+                                        <attribute name="flow_codec_type" value="enum flow_codec_type" id="5428" addr="0x7fc88d8a2c70" />
                                         <attribute name="struct flow_nodeinfo_size" value="struct flow_nodeinfo_size" id="5429" addr="0x7fc88d8a2c70" />
                                         <attribute name="struct flow_scanlines_filter" value="struct flow_scanlines_filter" id="5430" addr="0x7fc88d8a2c70" />
                                         <attribute name="flow_scanlines_filter" value="flow_scanlines_filter" id="5431" addr="0x7fc88d8a2c70" />
@@ -7939,7 +7939,7 @@
                                         <attribute name="flow_pixel_format" value="enum flow_pixel_format" id="5630" addr="0x7fc88d8a2c70" />
                                         <attribute name="flow_compositing_mode" value="enum flow_compositing_mode" id="5631" addr="0x7fc88d8a2c70" />
                                         <attribute name="flow_bitmap_compositing_mode" value="enum flow_bitmap_compositing_mode" id="5632" addr="0x7fc88d8a2c70" />
-                                        <attribute name="flow_job_codec_type" value="enum flow_job_codec_type" id="5633" addr="0x7fc88d8a2c70" />
+                                        <attribute name="flow_codec_type" value="enum flow_codec_type" id="5633" addr="0x7fc88d8a2c70" />
                                         <attribute name="struct flow_nodeinfo_size" value="struct flow_nodeinfo_size" id="5634" addr="0x7fc88d8a2c70" />
                                         <attribute name="struct flow_scanlines_filter" value="struct flow_scanlines_filter" id="5635" addr="0x7fc88d8a2c70" />
                                         <attribute name="flow_scanlines_filter" value="flow_scanlines_filter" id="5636" addr="0x7fc88d8a2c70" />
@@ -8368,7 +8368,7 @@
                                         <attribute name="flow_pixel_format" value="enum flow_pixel_format" id="5919" addr="0x7fc88d8a2c70" />
                                         <attribute name="flow_compositing_mode" value="enum flow_compositing_mode" id="5920" addr="0x7fc88d8a2c70" />
                                         <attribute name="flow_bitmap_compositing_mode" value="enum flow_bitmap_compositing_mode" id="5921" addr="0x7fc88d8a2c70" />
-                                        <attribute name="flow_job_codec_type" value="enum flow_job_codec_type" id="5922" addr="0x7fc88d8a2c70" />
+                                        <attribute name="flow_codec_type" value="enum flow_codec_type" id="5922" addr="0x7fc88d8a2c70" />
                                         <attribute name="struct flow_nodeinfo_size" value="struct flow_nodeinfo_size" id="5923" addr="0x7fc88d8a2c70" />
                                         <attribute name="struct flow_scanlines_filter" value="struct flow_scanlines_filter" id="5924" addr="0x7fc88d8a2c70" />
                                         <attribute name="flow_scanlines_filter" value="flow_scanlines_filter" id="5925" addr="0x7fc88d8a2c70" />
@@ -8752,7 +8752,7 @@
                                         <attribute name="flow_pixel_format" value="enum flow_pixel_format" id="6172" addr="0x7fc88d8a2c70" />
                                         <attribute name="flow_compositing_mode" value="enum flow_compositing_mode" id="6173" addr="0x7fc88d8a2c70" />
                                         <attribute name="flow_bitmap_compositing_mode" value="enum flow_bitmap_compositing_mode" id="6174" addr="0x7fc88d8a2c70" />
-                                        <attribute name="flow_job_codec_type" value="enum flow_job_codec_type" id="6175" addr="0x7fc88d8a2c70" />
+                                        <attribute name="flow_codec_type" value="enum flow_codec_type" id="6175" addr="0x7fc88d8a2c70" />
                                         <attribute name="struct flow_nodeinfo_size" value="struct flow_nodeinfo_size" id="6176" addr="0x7fc88d8a2c70" />
                                         <attribute name="struct flow_scanlines_filter" value="struct flow_scanlines_filter" id="6177" addr="0x7fc88d8a2c70" />
                                         <attribute name="flow_scanlines_filter" value="flow_scanlines_filter" id="6178" addr="0x7fc88d8a2c70" />
@@ -9811,7 +9811,7 @@
                 <attributelist id="6895" addr="0x7fc88d879b70" >
                     <attribute name="sym_name" value="node_create_encoder_placeholder" id="6896" addr="0x7fc88d8a2c70" />
                     <attribute name="name" value="flow_node_create_encoder_placeholder" id="6897" addr="0x7fc88d8a2c70" />
-                    <attribute name="decl" value="f(p.flow_context,p.p.struct flow_graph,int32_t,int32_t,flow_job_codec_type)." id="6898" addr="0x7fc88d8a2c70" />
+                    <attribute name="decl" value="f(p.flow_context,p.p.struct flow_graph,int32_t,int32_t,flow_codec_type)." id="6898" addr="0x7fc88d8a2c70" />
                     <parmlist id="6899" addr="0x7fc88d879610" >
                         <parm id="6900">
                             <attributelist id="6901" addr="0x7fc88d879610" >
@@ -9841,7 +9841,7 @@
                         <parm id="6917">
                             <attributelist id="6918" addr="0x7fc88d879ab0" >
                                 <attribute name="name" value="codec_type" id="6919" addr="0x7fc88d8a2c70" />
-                                <attribute name="type" value="flow_job_codec_type" id="6920" addr="0x7fc88d8a2c70" />
+                                <attribute name="type" value="flow_codec_type" id="6920" addr="0x7fc88d8a2c70" />
                             </attributelist >
                         </parm >
                     </parmlist >
@@ -10651,7 +10651,7 @@
                                         <attribute name="flow_pixel_format" value="enum flow_pixel_format" id="7494" addr="0x7fc88d8a2c70" />
                                         <attribute name="flow_compositing_mode" value="enum flow_compositing_mode" id="7495" addr="0x7fc88d8a2c70" />
                                         <attribute name="flow_bitmap_compositing_mode" value="enum flow_bitmap_compositing_mode" id="7496" addr="0x7fc88d8a2c70" />
-                                        <attribute name="flow_job_codec_type" value="enum flow_job_codec_type" id="7497" addr="0x7fc88d8a2c70" />
+                                        <attribute name="flow_codec_type" value="enum flow_codec_type" id="7497" addr="0x7fc88d8a2c70" />
                                         <attribute name="struct flow_nodeinfo_size" value="struct flow_nodeinfo_size" id="7498" addr="0x7fc88d8a2c70" />
                                         <attribute name="struct flow_scanlines_filter" value="struct flow_scanlines_filter" id="7499" addr="0x7fc88d8a2c70" />
                                         <attribute name="flow_scanlines_filter" value="flow_scanlines_filter" id="7500" addr="0x7fc88d8a2c70" />
@@ -10960,7 +10960,7 @@
                                         <attribute name="flow_pixel_format" value="enum flow_pixel_format" id="7687" addr="0x7fc88d8a2c70" />
                                         <attribute name="flow_compositing_mode" value="enum flow_compositing_mode" id="7688" addr="0x7fc88d8a2c70" />
                                         <attribute name="flow_bitmap_compositing_mode" value="enum flow_bitmap_compositing_mode" id="7689" addr="0x7fc88d8a2c70" />
-                                        <attribute name="flow_job_codec_type" value="enum flow_job_codec_type" id="7690" addr="0x7fc88d8a2c70" />
+                                        <attribute name="flow_codec_type" value="enum flow_codec_type" id="7690" addr="0x7fc88d8a2c70" />
                                         <attribute name="struct flow_nodeinfo_size" value="struct flow_nodeinfo_size" id="7691" addr="0x7fc88d8a2c70" />
                                         <attribute name="struct flow_scanlines_filter" value="struct flow_scanlines_filter" id="7692" addr="0x7fc88d8a2c70" />
                                         <attribute name="flow_scanlines_filter" value="flow_scanlines_filter" id="7693" addr="0x7fc88d8a2c70" />
@@ -11199,7 +11199,7 @@
                         <attribute name="decl" value="" id="7818" addr="0x7fc88d8a2c70" />
                         <attribute name="access" value="public" id="7819" addr="0x7fc88d8a2c70" />
                         <attribute name="kind" value="variable" id="7820" addr="0x7fc88d8a2c70" />
-                        <attribute name="type" value="flow_job_codec_type" id="7821" addr="0x7fc88d8a2c70" />
+                        <attribute name="type" value="flow_codec_type" id="7821" addr="0x7fc88d8a2c70" />
                         <attribute name="feature_nodefaultctor" value="1" id="7822" addr="0x7fc88d8a2c70" />
                         <attribute name="sym_symtab" value="0x7fc88d882690" id="7823" addr="0x7fc88d882690" />
                         <attribute name="sym_overname" value="__SWIG_0" id="7824" addr="0x7fc88d8a2c70" />
@@ -11284,7 +11284,7 @@
                                         <attribute name="flow_pixel_format" value="enum flow_pixel_format" id="7892" addr="0x7fc88d8a2c70" />
                                         <attribute name="flow_compositing_mode" value="enum flow_compositing_mode" id="7893" addr="0x7fc88d8a2c70" />
                                         <attribute name="flow_bitmap_compositing_mode" value="enum flow_bitmap_compositing_mode" id="7894" addr="0x7fc88d8a2c70" />
-                                        <attribute name="flow_job_codec_type" value="enum flow_job_codec_type" id="7895" addr="0x7fc88d8a2c70" />
+                                        <attribute name="flow_codec_type" value="enum flow_codec_type" id="7895" addr="0x7fc88d8a2c70" />
                                         <attribute name="struct flow_nodeinfo_size" value="struct flow_nodeinfo_size" id="7896" addr="0x7fc88d8a2c70" />
                                         <attribute name="struct flow_scanlines_filter" value="struct flow_scanlines_filter" id="7897" addr="0x7fc88d8a2c70" />
                                         <attribute name="flow_scanlines_filter" value="flow_scanlines_filter" id="7898" addr="0x7fc88d8a2c70" />
@@ -11638,7 +11638,7 @@
                                         <attribute name="flow_pixel_format" value="enum flow_pixel_format" id="8121" addr="0x7fc88d8a2c70" />
                                         <attribute name="flow_compositing_mode" value="enum flow_compositing_mode" id="8122" addr="0x7fc88d8a2c70" />
                                         <attribute name="flow_bitmap_compositing_mode" value="enum flow_bitmap_compositing_mode" id="8123" addr="0x7fc88d8a2c70" />
-                                        <attribute name="flow_job_codec_type" value="enum flow_job_codec_type" id="8124" addr="0x7fc88d8a2c70" />
+                                        <attribute name="flow_codec_type" value="enum flow_codec_type" id="8124" addr="0x7fc88d8a2c70" />
                                         <attribute name="struct flow_nodeinfo_size" value="struct flow_nodeinfo_size" id="8125" addr="0x7fc88d8a2c70" />
                                         <attribute name="struct flow_scanlines_filter" value="struct flow_scanlines_filter" id="8126" addr="0x7fc88d8a2c70" />
                                         <attribute name="flow_scanlines_filter" value="flow_scanlines_filter" id="8127" addr="0x7fc88d8a2c70" />
@@ -11992,7 +11992,7 @@
                                         <attribute name="flow_pixel_format" value="enum flow_pixel_format" id="8350" addr="0x7fc88d8a2c70" />
                                         <attribute name="flow_compositing_mode" value="enum flow_compositing_mode" id="8351" addr="0x7fc88d8a2c70" />
                                         <attribute name="flow_bitmap_compositing_mode" value="enum flow_bitmap_compositing_mode" id="8352" addr="0x7fc88d8a2c70" />
-                                        <attribute name="flow_job_codec_type" value="enum flow_job_codec_type" id="8353" addr="0x7fc88d8a2c70" />
+                                        <attribute name="flow_codec_type" value="enum flow_codec_type" id="8353" addr="0x7fc88d8a2c70" />
                                         <attribute name="struct flow_nodeinfo_size" value="struct flow_nodeinfo_size" id="8354" addr="0x7fc88d8a2c70" />
                                         <attribute name="struct flow_scanlines_filter" value="struct flow_scanlines_filter" id="8355" addr="0x7fc88d8a2c70" />
                                         <attribute name="flow_scanlines_filter" value="flow_scanlines_filter" id="8356" addr="0x7fc88d8a2c70" />
@@ -12376,7 +12376,7 @@
                                         <attribute name="flow_pixel_format" value="enum flow_pixel_format" id="8603" addr="0x7fc88d8a2c70" />
                                         <attribute name="flow_compositing_mode" value="enum flow_compositing_mode" id="8604" addr="0x7fc88d8a2c70" />
                                         <attribute name="flow_bitmap_compositing_mode" value="enum flow_bitmap_compositing_mode" id="8605" addr="0x7fc88d8a2c70" />
-                                        <attribute name="flow_job_codec_type" value="enum flow_job_codec_type" id="8606" addr="0x7fc88d8a2c70" />
+                                        <attribute name="flow_codec_type" value="enum flow_codec_type" id="8606" addr="0x7fc88d8a2c70" />
                                         <attribute name="struct flow_nodeinfo_size" value="struct flow_nodeinfo_size" id="8607" addr="0x7fc88d8a2c70" />
                                         <attribute name="struct flow_scanlines_filter" value="struct flow_scanlines_filter" id="8608" addr="0x7fc88d8a2c70" />
                                         <attribute name="flow_scanlines_filter" value="flow_scanlines_filter" id="8609" addr="0x7fc88d8a2c70" />
@@ -12700,7 +12700,7 @@
                                         <attribute name="flow_pixel_format" value="enum flow_pixel_format" id="8808" addr="0x7fc88d8a2c70" />
                                         <attribute name="flow_compositing_mode" value="enum flow_compositing_mode" id="8809" addr="0x7fc88d8a2c70" />
                                         <attribute name="flow_bitmap_compositing_mode" value="enum flow_bitmap_compositing_mode" id="8810" addr="0x7fc88d8a2c70" />
-                                        <attribute name="flow_job_codec_type" value="enum flow_job_codec_type" id="8811" addr="0x7fc88d8a2c70" />
+                                        <attribute name="flow_codec_type" value="enum flow_codec_type" id="8811" addr="0x7fc88d8a2c70" />
                                         <attribute name="struct flow_nodeinfo_size" value="struct flow_nodeinfo_size" id="8812" addr="0x7fc88d8a2c70" />
                                         <attribute name="struct flow_scanlines_filter" value="struct flow_scanlines_filter" id="8813" addr="0x7fc88d8a2c70" />
                                         <attribute name="flow_scanlines_filter" value="flow_scanlines_filter" id="8814" addr="0x7fc88d8a2c70" />
@@ -13009,7 +13009,7 @@
                                         <attribute name="flow_pixel_format" value="enum flow_pixel_format" id="9001" addr="0x7fc88d8a2c70" />
                                         <attribute name="flow_compositing_mode" value="enum flow_compositing_mode" id="9002" addr="0x7fc88d8a2c70" />
                                         <attribute name="flow_bitmap_compositing_mode" value="enum flow_bitmap_compositing_mode" id="9003" addr="0x7fc88d8a2c70" />
-                                        <attribute name="flow_job_codec_type" value="enum flow_job_codec_type" id="9004" addr="0x7fc88d8a2c70" />
+                                        <attribute name="flow_codec_type" value="enum flow_codec_type" id="9004" addr="0x7fc88d8a2c70" />
                                         <attribute name="struct flow_nodeinfo_size" value="struct flow_nodeinfo_size" id="9005" addr="0x7fc88d8a2c70" />
                                         <attribute name="struct flow_scanlines_filter" value="struct flow_scanlines_filter" id="9006" addr="0x7fc88d8a2c70" />
                                         <attribute name="flow_scanlines_filter" value="flow_scanlines_filter" id="9007" addr="0x7fc88d8a2c70" />
@@ -13248,7 +13248,7 @@
                         <attribute name="decl" value="" id="9132" addr="0x7fc88d8a2c70" />
                         <attribute name="access" value="public" id="9133" addr="0x7fc88d8a2c70" />
                         <attribute name="kind" value="variable" id="9134" addr="0x7fc88d8a2c70" />
-                        <attribute name="type" value="flow_job_codec_type" id="9135" addr="0x7fc88d8a2c70" />
+                        <attribute name="type" value="flow_codec_type" id="9135" addr="0x7fc88d8a2c70" />
                         <attribute name="feature_nodefaultctor" value="1" id="9136" addr="0x7fc88d8a2c70" />
                         <attribute name="sym_symtab" value="0x7fc88d886b90" id="9137" addr="0x7fc88d886b90" />
                         <attribute name="sym_overname" value="__SWIG_0" id="9138" addr="0x7fc88d8a2c70" />
@@ -13333,7 +13333,7 @@
                                         <attribute name="flow_pixel_format" value="enum flow_pixel_format" id="9206" addr="0x7fc88d8a2c70" />
                                         <attribute name="flow_compositing_mode" value="enum flow_compositing_mode" id="9207" addr="0x7fc88d8a2c70" />
                                         <attribute name="flow_bitmap_compositing_mode" value="enum flow_bitmap_compositing_mode" id="9208" addr="0x7fc88d8a2c70" />
-                                        <attribute name="flow_job_codec_type" value="enum flow_job_codec_type" id="9209" addr="0x7fc88d8a2c70" />
+                                        <attribute name="flow_codec_type" value="enum flow_codec_type" id="9209" addr="0x7fc88d8a2c70" />
                                         <attribute name="struct flow_nodeinfo_size" value="struct flow_nodeinfo_size" id="9210" addr="0x7fc88d8a2c70" />
                                         <attribute name="struct flow_scanlines_filter" value="struct flow_scanlines_filter" id="9211" addr="0x7fc88d8a2c70" />
                                         <attribute name="flow_scanlines_filter" value="flow_scanlines_filter" id="9212" addr="0x7fc88d8a2c70" />
@@ -14763,7 +14763,7 @@
                                         <attribute name="flow_pixel_format" value="enum flow_pixel_format" id="10203" addr="0x7fc88d8a2c70" />
                                         <attribute name="flow_compositing_mode" value="enum flow_compositing_mode" id="10204" addr="0x7fc88d8a2c70" />
                                         <attribute name="flow_bitmap_compositing_mode" value="enum flow_bitmap_compositing_mode" id="10205" addr="0x7fc88d8a2c70" />
-                                        <attribute name="flow_job_codec_type" value="enum flow_job_codec_type" id="10206" addr="0x7fc88d8a2c70" />
+                                        <attribute name="flow_codec_type" value="enum flow_codec_type" id="10206" addr="0x7fc88d8a2c70" />
                                         <attribute name="struct flow_nodeinfo_size" value="struct flow_nodeinfo_size" id="10207" addr="0x7fc88d8a2c70" />
                                         <attribute name="struct flow_scanlines_filter" value="struct flow_scanlines_filter" id="10208" addr="0x7fc88d8a2c70" />
                                         <attribute name="flow_scanlines_filter" value="flow_scanlines_filter" id="10209" addr="0x7fc88d8a2c70" />

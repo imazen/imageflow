@@ -52,8 +52,8 @@ bool flow_bitmap_bgra_transform_to_srgb(flow_context* c, cmsHPROFILE current_pro
 
 // typedef bool (*codec_dispose_fn)(flow_context *c, struct flow_job * job, void * codec_state);
 
-struct flow_job_codec_definition flow_job_codec_defs[]
-    = { { .type = flow_job_codec_type_decode_png,
+struct flow_codec_definition flow_job_codec_defs[]
+    = { { .type = flow_codec_type_decode_png,
           .aquire_on_buffer = flow_job_codecs_aquire_decode_png_on_buffer,
           .get_frame_info = flow_job_codecs_png_get_info,
           .read_frame = flow_job_codecs_png_read_frame,
@@ -61,14 +61,14 @@ struct flow_job_codec_definition flow_job_codec_defs[]
           .name = "decode png",
           .preferred_mime_type = "image/png",
           .preferred_extension = "png" },
-        { .type = flow_job_codec_type_encode_png,
+        { .type = flow_codec_type_encode_png,
           .aquire_on_buffer = flow_job_codecs_aquire_encode_png_on_buffer,
           .write_frame = flow_job_codecs_png_write_frame,
           .dispose = NULL,
           .name = "encode png",
           .preferred_mime_type = "image/png",
           .preferred_extension = "png" },
-        { .type = flow_job_codec_type_decode_jpeg,
+        { .type = flow_codec_type_decode_jpeg,
           .aquire_on_buffer = flow_job_codecs_aquire_decode_jpeg_on_buffer,
           .get_frame_info = flow_job_codecs_jpeg_get_info,
           .read_frame = flow_job_codecs_jpeg_read_frame,
@@ -76,7 +76,7 @@ struct flow_job_codec_definition flow_job_codec_defs[]
           .name = "decode jpeg",
           .preferred_mime_type = "image/jpeg",
           .preferred_extension = "jpg" },
-        { .type = flow_job_codec_type_encode_jpeg,
+        { .type = flow_codec_type_encode_jpeg,
           .aquire_on_buffer = flow_job_codecs_aquire_encode_jpeg_on_buffer,
           .write_frame = flow_job_codecs_jpeg_write_frame,
           .dispose = NULL,
@@ -84,8 +84,8 @@ struct flow_job_codec_definition flow_job_codec_defs[]
           .preferred_mime_type = "image/jpeg",
           .preferred_extension = "jpg" } };
 
-int32_t flow_job_codec_defs_count = sizeof(flow_job_codec_defs) / sizeof(struct flow_job_codec_definition);
-struct flow_job_codec_definition* flow_job_get_codec_definition(flow_context* c, flow_job_codec_type type)
+int32_t flow_job_codec_defs_count = sizeof(flow_job_codec_defs) / sizeof(struct flow_codec_definition);
+struct flow_codec_definition* flow_job_get_codec_definition(flow_context* c, flow_codec_type type)
 {
     int i = 0;
     for (i = 0; i < flow_job_codec_defs_count; i++) {
@@ -102,30 +102,30 @@ uint8_t jpeg_bytes_a[] = { 0xFF, 0xD8, 0xFF, 0xDB };
 uint8_t jpeg_bytes_b[] = { 0xFF, 0xD8, 0xFF, 0xE0 };
 uint8_t jpeg_bytes_c[] = { 0xFF, 0xD8, 0xFF, 0xE1 };
 
-struct flow_job_codec_magic_bytes flow_job_codec_magic_bytes_defs[]
+struct flow_codec_magic_bytes flow_job_codec_magic_bytes_defs[]
     = { {
-          .codec_type = flow_job_codec_type_decode_png, .byte_count = 7, .bytes = (uint8_t*)&png_bytes,
+          .codec_type = flow_codec_type_decode_png, .byte_count = 7, .bytes = (uint8_t*)&png_bytes,
         },
         {
-          .codec_type = flow_job_codec_type_decode_jpeg, .byte_count = 4, .bytes = (uint8_t*)&jpeg_bytes_a,
+          .codec_type = flow_codec_type_decode_jpeg, .byte_count = 4, .bytes = (uint8_t*)&jpeg_bytes_a,
 
         },
         {
-          .codec_type = flow_job_codec_type_decode_jpeg, .byte_count = 4, .bytes = (uint8_t*)&jpeg_bytes_b,
+          .codec_type = flow_codec_type_decode_jpeg, .byte_count = 4, .bytes = (uint8_t*)&jpeg_bytes_b,
 
         },
         {
-          .codec_type = flow_job_codec_type_decode_jpeg, .byte_count = 4, .bytes = (uint8_t*)&jpeg_bytes_c,
+          .codec_type = flow_codec_type_decode_jpeg, .byte_count = 4, .bytes = (uint8_t*)&jpeg_bytes_c,
 
         } };
 int32_t flow_job_codec_magic_bytes_defs_count = sizeof(flow_job_codec_magic_bytes_defs)
-                                                / sizeof(struct flow_job_codec_magic_bytes);
+                                                / sizeof(struct flow_codec_magic_bytes);
 
-flow_job_codec_type flow_job_codec_select(flow_context* c, struct flow_job* job, uint8_t* data, size_t data_bytes)
+flow_codec_type flow_job_codec_select(flow_context* c, struct flow_job* job, uint8_t* data, size_t data_bytes)
 {
     int32_t series_ix = 0;
     for (series_ix = 0; series_ix < flow_job_codec_magic_bytes_defs_count; series_ix++) {
-        struct flow_job_codec_magic_bytes* magic = &flow_job_codec_magic_bytes_defs[series_ix];
+        struct flow_codec_magic_bytes* magic = &flow_job_codec_magic_bytes_defs[series_ix];
         if (data_bytes < magic->byte_count) {
             continue;
         }
@@ -140,14 +140,14 @@ flow_job_codec_type flow_job_codec_select(flow_context* c, struct flow_job* job,
         if (match)
             return magic->codec_type;
     }
-    return flow_job_codec_type_null;
+    return flow_codec_type_null;
 }
 
 void* flow_job_acquire_codec_over_buffer(flow_context* c, struct flow_job* job, struct flow_job_resource_buffer* buffer,
-                                         flow_job_codec_type type)
+                                         flow_codec_type type)
 {
 
-    struct flow_job_codec_definition* def = flow_job_get_codec_definition(c, type);
+    struct flow_codec_definition* def = flow_job_get_codec_definition(c, type);
     if (def == NULL) {
         FLOW_add_to_callstack(c);
         return NULL;
@@ -155,10 +155,10 @@ void* flow_job_acquire_codec_over_buffer(flow_context* c, struct flow_job* job, 
     return def->aquire_on_buffer(c, job, buffer);
 }
 
-bool flow_job_decoder_get_frame_info(flow_context* c, struct flow_job* job, void* codec_state, flow_job_codec_type type,
+bool flow_job_decoder_get_frame_info(flow_context* c, struct flow_job* job, void* codec_state, flow_codec_type type,
                                      struct decoder_frame_info* decoder_frame_info_ref)
 {
-    struct flow_job_codec_definition* def = flow_job_get_codec_definition(c, type);
+    struct flow_codec_definition* def = flow_job_get_codec_definition(c, type);
     if (def == NULL) {
         FLOW_error_return(c);
     }
@@ -168,10 +168,10 @@ bool flow_job_decoder_get_frame_info(flow_context* c, struct flow_job* job, void
     return true;
 }
 
-bool flow_job_decoder_read_frame(flow_context* c, struct flow_job* job, void* codec_state, flow_job_codec_type type,
+bool flow_job_decoder_read_frame(flow_context* c, struct flow_job* job, void* codec_state, flow_codec_type type,
                                  flow_bitmap_bgra* canvas)
 {
-    struct flow_job_codec_definition* def = flow_job_get_codec_definition(c, type);
+    struct flow_codec_definition* def = flow_job_get_codec_definition(c, type);
     if (def == NULL) {
         FLOW_error_return(c);
     }
@@ -233,7 +233,7 @@ bool flow_job_get_input_resource_info_by_placeholder_id(flow_context* c, struct 
             FLOW_error(c, flow_status_Invalid_internal_state); // Codecs should be initialized by this point
             return false;
         }
-        struct flow_job_codec_definition* def = flow_job_get_codec_definition(c, current->codec_type);
+        struct flow_codec_definition* def = flow_job_get_codec_definition(c, current->codec_type);
         if (def == NULL) {
             FLOW_error_return(c);
         }

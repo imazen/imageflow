@@ -3,6 +3,11 @@
 
 #include "imageflow.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+
 typedef bool (*flow_nodedef_fn_stringify)(flow_context* c, struct flow_graph* g, int32_t node_id, char* buffer,
                                           size_t buffer_size);
 
@@ -58,3 +63,7 @@ bool flow_node_estimate_execution_cost(flow_context* c, struct flow_graph* g, in
                                        size_t* cpu_cost);
 bool flow_node_validate_inputs(flow_context* c, struct flow_graph* g, int32_t node_id);
 bool flow_node_update_state(flow_context* c, struct flow_graph* g, int32_t node_id);
+
+#ifdef __cplusplus
+}
+#endif

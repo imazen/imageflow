@@ -47,11 +47,12 @@ if(ENABLE_TEST)
 	endfunction()
 
 	create_test(test_fastscaling tests/fastscaling.c)
-	create_test(test_integration_program tests/test_integration.cpp tests/test_integration_program.cpp  tests/helpers.c)
-	create_test(test_graph_program tests/test_graph.cpp tests/test_graph_program.cpp tests/helpers.c)
-	create_test(test_error_handling tests/test_error_handling.cpp tests/test_graph_program.cpp  tests/helpers.c)
-	create_test(test_test tests/test.cpp tests/test_graph_program.cpp tests/weighting_test_helpers.cpp tests/helpers.c)
-	create_test(test_context tests/test_context.cpp tests/test_context_program.cpp tests/helpers.c)
+	create_test(test_integration_program  tests/test_integration.cpp tests/runner.cpp tests/helpers.c )
+	create_test(test_graph_program tests/test_graph.cpp tests/runner.cpp tests/helpers.c )
+	create_test(test_error_handling  tests/helpers.c tests/test_error_handling.cpp tests/runner.cpp)
+	create_test(test_test  tests/test.cpp tests/runner.cpp  tests/helpers.c )
+	create_test(test_weighting  tests/test_weighting.cpp tests/runner.cpp tests/test_weighting_helpers.cpp tests/helpers.c )
+	create_test(test_context tests/helpers.c tests/test_context.cpp tests/runner.cpp)
 
 	# Theft library don't compile in windows
 	if(UNIX)

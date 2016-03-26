@@ -30,7 +30,7 @@ struct flow_job_jpeg_decoder_state {
     uint8_t** pixel_buffer_row_pointers;
     flow_context* context;
     cmsHPROFILE color_profile;
-    flow_job_color_profile_source color_profile_source;
+    flow_codec_color_profile_source color_profile_source;
     double gamma;
 };
 
@@ -282,7 +282,7 @@ static bool flow_job_jpg_decoder_reset(flow_context* c, struct flow_job_jpeg_dec
             state->pixel_buffer_row_pointers = NULL;
         }
     }
-    state->color_profile_source = flow_job_color_profile_source_null;
+    state->color_profile_source = flow_codec_color_profile_source_null;
     state->row_stride = 0;
     state->context = c;
     state->w = 0;

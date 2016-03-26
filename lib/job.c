@@ -57,7 +57,7 @@ static int32_t flow_job_add_resource(flow_context* c, struct flow_job* job, FLOW
     r->direction = dir;
     r->type = type;
     r->codec_state = NULL;
-    r->codec_type = flow_job_codec_type_null;
+    r->codec_type = flow_codec_type_null;
     if (job->resources_head == NULL) {
         job->resources_head = r;
         job->resources_tail = r;
@@ -84,7 +84,7 @@ int32_t flow_job_add_bitmap_bgra(flow_context* c, struct flow_job* job, FLOW_DIR
 {
     int32_t id = flow_job_add_resource(c, job, dir, graph_placeholder_id, flow_job_resource_type_bitmap_bgra, bitmap);
     if (id >= 0) {
-        flow_job_get_resource(c, job, id)->codec_type = flow_job_codec_type_bitmap_bgra_pointer;
+        flow_job_get_resource(c, job, id)->codec_type = flow_codec_type_bitmap_bgra_pointer;
     }
     return id;
 }
@@ -493,8 +493,8 @@ bool flow_job_initialize_input_resource(flow_context* c, struct flow_job* job, s
             return true; // Already done
         }
         struct flow_job_resource_buffer* buf = (struct flow_job_resource_buffer*)item->data;
-        flow_job_codec_type ctype = flow_job_codec_select(c, job, (uint8_t*)buf->buffer, buf->buffer_size);
-        if (ctype == flow_job_codec_type_null) {
+        flow_codec_type ctype = flow_job_codec_select(c, job, (uint8_t*)buf->buffer, buf->buffer_size);
+        if (ctype == flow_codec_type_null) {
             // unknown
             FLOW_error(c, flow_status_Not_implemented); // Or bad buffer, unsupported file type, etc.
             return -1;
@@ -524,7 +524,7 @@ static int32_t create_node_for_buffer(flow_context* c, struct flow_job* job, str
         }
     } else {
 
-        flow_job_codec_type codec_type = flow_job_codec_type_encode_png;
+        flow_codec_type codec_type = flow_codec_type_encode_png;
 
         // If an encoder placeholder is used we can get specifics
         if ((*g)->nodes[placeholder_node_index].type == flow_ntype_Encoder_Placeholder) {

@@ -31,7 +31,7 @@ struct flow_job_png_decoder_state {
     png_bytepp pixel_buffer_row_pointers;
     flow_context* context;
     cmsHPROFILE color_profile;
-    flow_job_color_profile_source color_profile_source;
+    flow_codec_color_profile_source color_profile_source;
     double gamma;
 };
 
@@ -66,7 +66,7 @@ static bool flow_job_png_decoder_reset(flow_context* c, struct flow_job_png_deco
             state->pixel_buffer_row_pointers = NULL;
         }
     }
-    state->color_profile_source = flow_job_color_profile_source_null;
+    state->color_profile_source = flow_codec_color_profile_source_null;
     state->rowbytes = 0;
     state->color_type = 0;
     state->bit_depth = 0;
@@ -138,11 +138,11 @@ static bool png_decoder_load_color_profile(flow_context* c, struct flow_job_png_
         cmsColorSpaceSignature colorspace = cmsGetColorSpace(profile);
 
         if (colorspace == cmsSigRgbData && is_color_png) {
-            state->color_profile_source = flow_job_color_profile_source_ICCP;
+            state->color_profile_source = flow_codec_color_profile_source_ICCP;
         } else {
             if (colorspace == cmsSigGrayData && !is_color_png) {
                 // TODO: warn about this
-                state->color_profile_source = flow_job_color_profile_source_ICCP_GRAY;
+                state->color_profile_source = flow_codec_color_profile_source_ICCP_GRAY;
                 ;
             }
             cmsCloseProfile(profile);
@@ -170,7 +170,7 @@ static bool png_decoder_load_color_profile(flow_context* c, struct flow_job_png_
 
         cmsFreeToneCurve(gamma_table[0]);
 
-        state->color_profile_source = flow_job_color_profile_source_GAMA_CHRM;
+        state->color_profile_source = flow_codec_color_profile_source_GAMA_CHRM;
     }
 
     state->color_profile = profile;

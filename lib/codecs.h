@@ -1,7 +1,12 @@
 #pragma once
 
-struct flow_job_codec_magic_bytes {
-    flow_job_codec_type codec_type;
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+
+struct flow_codec_magic_bytes {
+    flow_codec_type codec_type;
     size_t byte_count;
     uint8_t* bytes;
 };
@@ -29,8 +34,8 @@ typedef bool (*codec_dispose_fn)(flow_context* c, struct flow_job* job, void* co
 typedef bool (*codec_stringify_fn)(flow_context* c, struct flow_job* job, void* codec_state, char* buffer,
                                    size_t buffer_size);
 
-struct flow_job_codec_definition {
-    flow_job_codec_type type;
+struct flow_codec_definition {
+    flow_codec_type type;
     codec_aquire_on_buffer_fn aquire_on_buffer;
     codec_get_frame_info_fn get_frame_info;
     codec_read_frame_fn read_frame;
@@ -42,32 +47,32 @@ struct flow_job_codec_definition {
     const char* preferred_extension;
 };
 
-typedef enum flow_job_color_profile_source {
-    flow_job_color_profile_source_null,
-    flow_job_color_profile_source_ICCP,
-    flow_job_color_profile_source_ICCP_GRAY,
-    flow_job_color_profile_source_GAMA_CHRM,
+typedef enum flow_codec_color_profile_source {
+    flow_codec_color_profile_source_null,
+    flow_codec_color_profile_source_ICCP,
+    flow_codec_color_profile_source_ICCP_GRAY,
+    flow_codec_color_profile_source_GAMA_CHRM,
 
-} flow_job_color_profile_source;
+} flow_codec_color_profile_source;
 
 // Later we may want to expose this information to the outside
 // struct flow_job_decoder_info {
 //    cmsHPROFILE color_profile;
-//    flow_job_color_profile_source color_profile_source;
+//    flow_codec_color_profile_source color_profile_source;
 //};
 
 // typedef unsigned long png_uint_32;
 
-struct flow_job_codec_definition* flow_job_get_codec_definition(flow_context* c, flow_job_codec_type type);
-flow_job_codec_type flow_job_codec_select(flow_context* c, struct flow_job* job, uint8_t* data, size_t data_bytes);
+struct flow_codec_definition* flow_job_get_codec_definition(flow_context* c, flow_codec_type type);
+flow_codec_type flow_job_codec_select(flow_context* c, struct flow_job* job, uint8_t* data, size_t data_bytes);
 
 void* flow_job_acquire_codec_over_buffer(flow_context* c, struct flow_job* job, struct flow_job_resource_buffer* buffer,
-                                         flow_job_codec_type type);
+                                         flow_codec_type type);
 
-bool flow_job_decoder_get_frame_info(flow_context* c, struct flow_job* job, void* codec_state, flow_job_codec_type type,
+bool flow_job_decoder_get_frame_info(flow_context* c, struct flow_job* job, void* codec_state, flow_codec_type type,
                                      struct decoder_frame_info* decoder_frame_info_ref);
 
-bool flow_job_decoder_read_frame(flow_context* c, struct flow_job* job, void* codec_state, flow_job_codec_type type,
+bool flow_job_decoder_read_frame(flow_context* c, struct flow_job* job, void* codec_state, flow_codec_type type,
                                  flow_bitmap_bgra* canvas);
 
 struct flow_job_resource_item {
@@ -76,7 +81,7 @@ struct flow_job_resource_item {
     int32_t graph_placeholder_id;
     FLOW_DIRECTION direction;
     flow_job_resource_type type;
-    flow_job_codec_type codec_type;
+    flow_codec_type codec_type;
     void* codec_state;
     void* data;
 };
@@ -110,3 +115,7 @@ bool flow_bitmap_bgra_transform_to_srgb(flow_context* c, cmsHPROFILE current_pro
 
 // bool flow_job_codecs_png_write_frame(flow_context* c, struct flow_job* job, void* codec_state, flow_bitmap_bgra*
 // frame);
+
+#ifdef __cplusplus
+}
+#endif

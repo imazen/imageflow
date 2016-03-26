@@ -101,12 +101,12 @@ typedef unsigned long long int uint64_t;
   flow_job_resource_type_bitmap_bgra = 1
   flow_job_resource_type_buffer = 2
 
-  flow_job_codec_type_null = 0
-  flow_job_codec_type_bitmap_bgra_pointer = 1
-  flow_job_codec_type_decode_png = 1
-  flow_job_codec_type_encode_png = 1
-  flow_job_codec_type_decode_jpeg = 1
-  flow_job_codec_type_encode_jpeg = 1
+  flow_codec_type_null = 0
+  flow_codec_type_bitmap_bgra_pointer = 1
+  flow_codec_type_decode_png = 1
+  flow_codec_type_encode_png = 1
+  flow_codec_type_decode_jpeg = 1
+  flow_codec_type_encode_jpeg = 1
 
   flow_scanlines_filter_Sharpen = 0
   flow_scanlines_filter_Blur = 1

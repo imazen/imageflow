@@ -1,20 +1,5 @@
 #include <png.h>
 #include "catch.hpp"
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <errno.h>
-#include <stdio.h>
-
-#include "imageflow.h"
-
-#include "imageflow_private.h"
-#include "weighting_test_helpers.h"
-#include "trim_whitespace.h"
-#include "string.h"
-#include "lcms2.h"
-#include "png.h"
-#include "curl/curl.h"
-#include "curl/easy.h"
 #include "helpers.h"
 
 #define ERR(c) REQUIRE_FALSE(flow_context_print_and_exit_if_err(c))
@@ -323,7 +308,7 @@ bool scale_image_to_disk_inner(flow_context* c)
     REQUIRE(info.frame0_height == 1);
     REQUIRE(strcmp(info.preferred_extension, "png") == 0);
     REQUIRE(strcmp(info.preferred_mime_type, "image/png") == 0);
-    REQUIRE(info.codec_type == flow_job_codec_type_decode_png);
+    REQUIRE(info.codec_type == flow_codec_type_decode_png);
 
     // Execute the graph
     if (!flow_job_execute(c, job, &g)) {
@@ -393,7 +378,7 @@ TEST_CASE("scale and flip and crop jpg", "")
     last = flow_node_create_primitive_flip_vertical(c, &g, last);
     last = flow_node_create_primitive_crop(c, &g, last, 20, 10, 80, 40);
 
-    last = flow_node_create_encoder_placeholder(c, &g, last, output_placeholder, flow_job_codec_type_encode_jpeg);
+    last = flow_node_create_encoder_placeholder(c, &g, last, output_placeholder, flow_codec_type_encode_jpeg);
 
     execute_graph_for_url(c, "http://z.zr.io/ri/8s.jpg?width=800", "graph_flipped_cropped_from_jpeg.jpg", &g);
 
@@ -410,7 +395,7 @@ TEST_CASE("benchmark scaling large progressive jpg", "")
 
     last = flow_node_create_resource_placeholder(c, &g, -1, input_placeholder);
     last = flow_node_create_scale(c, &g, last, 800, 800);
-    last = flow_node_create_encoder_placeholder(c, &g, last, output_placeholder, flow_job_codec_type_encode_jpeg);
+    last = flow_node_create_encoder_placeholder(c, &g, last, output_placeholder, flow_codec_type_encode_jpeg);
 
     execute_graph_for_url(c, "https://s3.amazonaws.com/resizer-dynamic-downloads/imageflow_test_suite/4kx4k.jpg",
                           "graph_large_jpeg.jpg", &g);
@@ -428,7 +413,7 @@ TEST_CASE("benchmark scaling large jpg", "")
 
     last = flow_node_create_resource_placeholder(c, &g, -1, input_placeholder);
     last = flow_node_create_scale(c, &g, last, 800, 800);
-    last = flow_node_create_encoder_placeholder(c, &g, last, output_placeholder, flow_job_codec_type_encode_jpeg);
+    last = flow_node_create_encoder_placeholder(c, &g, last, output_placeholder, flow_codec_type_encode_jpeg);
 
     execute_graph_for_url(c,
                           "https://s3.amazonaws.com/resizer-dynamic-downloads/imageflow_test_suite/4kx4k_baseline.jpg",

@@ -135,14 +135,14 @@ typedef enum flow_job_resource_type {
 
 } flow_job_resource_type;
 
-typedef enum flow_job_codec_type {
-    flow_job_codec_type_null,
-    flow_job_codec_type_bitmap_bgra_pointer,
-    flow_job_codec_type_decode_png,
-    flow_job_codec_type_encode_png,
-    flow_job_codec_type_decode_jpeg,
-    flow_job_codec_type_encode_jpeg
-} flow_job_codec_type;
+typedef enum flow_codec_type {
+    flow_codec_type_null,
+    flow_codec_type_bitmap_bgra_pointer,
+    flow_codec_type_decode_png,
+    flow_codec_type_encode_png,
+    flow_codec_type_decode_jpeg,
+    flow_codec_type_encode_jpeg
+} flow_codec_type;
 
 typedef enum flow_scanlines_filter_type {
     flow_scanlines_filter_Sharpen, // 3x3, percentage-based
@@ -566,7 +566,7 @@ PUB int32_t flow_node_create_resource_placeholder(flow_context* c, struct flow_g
                                                   int32_t output_slot_id);
 
 PUB int32_t flow_node_create_encoder_placeholder(flow_context* c, struct flow_graph** g, int32_t prev_node,
-                                                 int32_t output_slot_id, flow_job_codec_type codec_type);
+                                                 int32_t output_slot_id, flow_codec_type codec_type);
 PUB int32_t flow_node_create_noop(flow_context* c, struct flow_graph** g, int32_t prev_node);
 
 PUB int32_t flow_node_create_resource_bitmap_bgra(flow_context* c, struct flow_graph** graph_ref, int32_t prev_node,
@@ -620,7 +620,7 @@ struct flow_nodeinfo_index {
 
 struct flow_nodeinfo_encoder_placeholder {
     struct flow_nodeinfo_index index; // MUST BE FIRST
-    flow_job_codec_type codec_type;
+    flow_codec_type codec_type;
 };
 
 struct flow_nodeinfo_createcanvas {
@@ -671,7 +671,7 @@ struct flow_nodeinfo_resource_bitmap_bgra {
 
 struct flow_nodeinfo_codec {
     void* codec_state;
-    flow_job_codec_type type;
+    flow_codec_type type;
 };
 
 struct flow_nodeinfo_render_to_canvas_1d {
@@ -758,7 +758,7 @@ struct flow_job_resource_buffer {
 };
 
 struct flow_job_input_resource_info {
-    flow_job_codec_type codec_type;
+    flow_codec_type codec_type;
     flow_job_resource_type resource_type;
     const char* preferred_mime_type;
     const char* preferred_extension;

@@ -165,7 +165,7 @@ static bool stringify_decode(flow_context* c, struct flow_graph* g, int32_t node
 {
     FLOW_GET_INFOBYTES(g, node_id, flow_nodeinfo_codec, info);
 
-    struct flow_job_codec_definition* def = flow_job_get_codec_definition(c, info->type);
+    struct flow_codec_definition* def = flow_job_get_codec_definition(c, info->type);
 
     // TODO FIX job null
     if (def->stringify == NULL) {
@@ -367,7 +367,7 @@ static bool dimensions_decode(flow_context* c, struct flow_graph* g, int32_t nod
 
     struct flow_edge* output = &g->edges[outbound_edge_id];
 
-    struct flow_job_codec_definition* def = flow_job_get_codec_definition(c, info->type);
+    struct flow_codec_definition* def = flow_job_get_codec_definition(c, info->type);
 
     if (def == NULL || def->get_frame_info == NULL) {
         FLOW_error(c, flow_status_Not_implemented);
@@ -941,7 +941,7 @@ static bool execute_decode(flow_context* c, struct flow_job* job, struct flow_gr
 
     struct flow_node* n = &g->nodes[node_id];
 
-    struct flow_job_codec_definition* def = flow_job_get_codec_definition(c, info->type);
+    struct flow_codec_definition* def = flow_job_get_codec_definition(c, info->type);
 
     if (def == NULL || def->get_frame_info == NULL || def->read_frame == NULL) {
         FLOW_error(c, flow_status_Not_implemented);
@@ -969,7 +969,7 @@ static bool execute_encode(flow_context* c, struct flow_job* job, struct flow_gr
     struct flow_node* n = &g->nodes[node_id];
     n->result_bitmap = g->nodes[input_edge->from].result_bitmap;
 
-    struct flow_job_codec_definition* def = flow_job_get_codec_definition(c, info->type);
+    struct flow_codec_definition* def = flow_job_get_codec_definition(c, info->type);
 
     if (def == NULL || def->write_frame == NULL) {
         FLOW_error(c, flow_status_Not_implemented);

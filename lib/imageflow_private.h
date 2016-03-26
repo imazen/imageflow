@@ -246,6 +246,9 @@ PUB bool flow_halve(flow_context* context, const flow_bitmap_bgra* from, flow_bi
 
 PUB bool flow_halve_in_place(flow_context* context, flow_bitmap_bgra* from, int divisor);
 
+
+PUB void flow_utils_ensure_directory_exists(const char* dir_path);
+
 #undef PUB
 
 #ifndef _TIMERS_IMPLEMENTED

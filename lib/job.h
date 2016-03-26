@@ -6,6 +6,11 @@
 #include "codecs.h"
 #include "nodes.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+
 struct flow_job {
     int32_t debug_job_id;
     int32_t next_graph_version;
@@ -20,9 +25,11 @@ struct flow_job {
     bool render_last_graph;
 };
 
-void flow_utils_ensure_directory_exists(const char* dir_path);
 
 bool flow_job_render_graph_to_png(flow_context* c, struct flow_job* job, struct flow_graph* g, int32_t graph_version);
 bool flow_job_notify_node_complete(flow_context* c, struct flow_job* job, struct flow_graph* g, int32_t node_id);
 bool flow_job_initialize_input_resource(flow_context* c, struct flow_job* job, struct flow_job_resource_item* item);
 
+#ifdef __cplusplus
+}
+#endif
