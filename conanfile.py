@@ -3,10 +3,10 @@ import os
 
 class ImageFlowConan(ConanFile):
     settings = "os", "compiler", "build_type", "arch"
-    requires = "littlecms/2.7@lasote/stable", "libpng/1.6.21@lasote/stable", "libjpeg-turbo/1.4.2@lasote/stable" 
+    requires = "littlecms/2.7@lasote/stable", "libpng/1.6.21@lasote/stable", "libjpeg-turbo/1.4.2@lasote/stable" , "giflib/5.1.2@lasote/stable"
     options = {"build_tests": [True, False]}
     generators = "cmake"
-    default_options = "build_tests=True", "libjpeg-turbo:shared=False", "libpng:shared=False", \
+    default_options = "build_tests=True", "libjpeg-turbo:shared=False", "libpng:shared=False", "giflib:shared=False", \
    					  "zlib:shared=False", "libcurl:shared=False", "OpenSSL:shared=True", \
    					  "imageflow:shared=True"
 

@@ -1,7 +1,7 @@
 #include "imageflow_private.h"
 #include "job.h"
 #include "lcms2.h"
-#include "job_codecs.h"
+#include "codecs.h"
 
 uint8_t** flow_job_create_row_pointers(flow_context* c, void* buffer, size_t buffer_size, size_t stride, size_t height)
 {

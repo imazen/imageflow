@@ -1,4 +1,6 @@
-#include "graph.h"
+#include "imageflow_private.h"
+#include "math_functions.h"
+#include "nodes.h"
 
 static size_t flow_graph_size_for(uint32_t max_edges, uint32_t max_nodes, uint32_t max_info_bytes)
 {

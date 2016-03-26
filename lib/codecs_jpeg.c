@@ -3,7 +3,7 @@
 #include "imageflow_private.h"
 #include "job.h"
 #include "lcms2.h"
-#include "job_codecs.h"
+#include "codecs.h"
 
 typedef enum flow_job_jpeg_decoder_stage {
     flow_job_jpg_decoder_stage_Null = 0,

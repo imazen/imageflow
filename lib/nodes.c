@@ -1,4 +1,4 @@
-#include "graph.h"
+#include "nodes.h"
 #include "job.h"
 
 //

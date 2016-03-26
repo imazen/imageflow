@@ -5,27 +5,45 @@ imageflow - Real-time image processing for the web.
 ](https://travis-ci.org/imazen/imageflow/builds) 
 
 
-How to download, build, and run tests. Follow these steps before trying to open the project in any IDE. 
+How to download, build, and run tests. 
+
+### Universal steps for all platforms - get Conan, Cmake, and Git
+
+Don't try to open anything in any IDE until you've run conan install.
+
+ 1. [Install Conan](https://www.conan.io/downloads) - installers available for download (all platforms).
+ 2. Install cmake (`cinst -y cmake.portable` on windows w/ chocolatey, `sudo apt-get install cmake` elsewhere)
+ 3. Install git (`cinst -y git.install` or `sudo apt-get install git`) 
+ 
+     git clone git@github.com:imazen/imageflow.git blocks/nathanaeljones/imageflow
+     cd imageflow
+     mkdir build
+ 
+### CLion on Windows
+
+1. Install mingw (`cinst mingw`, followed by `set PATH=%PATH%;C:\tools\mingw64\bin`)
+2. Configure CLion to use C:\tools\mingw64 for tooling
+3. Delete %HOMEPATH%\.conan\conan.conf so that the new compilers can be detected
+
+    cd build
+    conan install -u --file ../conanfile.py -o build_tests=True --build missing  -s build_type=Release -s arch=x86_64 -s compiler=gcc
+    cd ..
+    conan build
+    
+
+### Visual Studio 2015 Update 1
+
 
 Windows: build/Imageflow.sln will be created during 'conan build', but is only set up for Release mode compilation by default. Switch configuration to Release to get a build.
  
- 1. [Install Conan](https://www.conan.io/downloads) - installers available for download (all platforms).
- 2. Install cmake (`cinst cmake.portable` on windows w/ chocolatey, `sudo apt-get install cmake` elsewhere)
+Install nasm (`cinst -y nasm` on windows, followed by `set PATH=%PATH%;%ProgramFiles(x86)%\nasm`) (only if you have to build dependencies from source).
  
  
-    git clone git@github.com:imazen/imageflow.git blocks/nathanaeljones/imageflow
-    cd imageflow
-    mkdir build
     cd build
-    conan install -u --file ../conanfile.py -o build_tests=True --build missing
+    conan install -u --file ../conanfile.py -o build_tests=True --build missing  -s build_type=Release -s arch=x86_64
     cd ..
     conan build
-
-    # Valgrind
-    valgrind ./build/bin/test_graph_program
-    valgrind ./build/bin/test_test
-    valgrind ./build/bin/test_error_handling
-    valgrind ./build/bin/fastscaling
+    
 
 
 ======

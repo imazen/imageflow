@@ -6,13 +6,16 @@
  * Commercial licenses available at http://imageresizing.net/
  */
 #pragma once
-#ifdef _MSC_VER
-#pragma unmanaged
-#endif
 
 #include "imageflow.h"
 #include "math_functions.h"
 #include "png.h"
+#include <stdint.h>
+#include <stdbool.h>
+#include <stdlib.h>
+#include <string.h>
+#include <sys/stat.h>
+#include <errno.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -142,6 +145,11 @@ typedef struct flow_context_struct {
 } flow_context;
 
 #include "color.h"
+
+
+PUB bool flow_graph_walk_dependency_wise(flow_context* c, struct flow_job* job, struct flow_graph** graph_ref,
+                                     flow_graph_visitor node_visitor, flow_graph_visitor edge_visitor,
+                                     void* custom_data);
 
 PUB int flow_snprintf(char* s, size_t n, const char* fmt, ...);
 PUB int flow_vsnprintf(char* s, size_t n, const char* fmt, va_list v);

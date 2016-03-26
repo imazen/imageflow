@@ -1,11 +1,7 @@
 #pragma once
 
-#include "imageflow_private.h"
-#include <stdint.h>
-#include <stdbool.h>
-#include <stdlib.h>
-#include <string.h>
-#include "math_functions.h"
+
+#include "imageflow.h"
 
 typedef bool (*flow_nodedef_fn_stringify)(flow_context* c, struct flow_graph* g, int32_t node_id, char* buffer,
                                           size_t buffer_size);
@@ -47,6 +43,10 @@ struct flow_node_definition {
 
 struct flow_node_definition* flow_nodedef_get(flow_context* c, flow_ntype type);
 
+
+#define FLOW_GET_INFOBYTES(g, node_id, type, varname)                                                                  \
+    struct type* varname = (struct type*)&g->info_bytes[g->nodes[node_id].info_byte_index];
+
 bool flow_node_stringify(flow_context* c, struct flow_graph* g, int32_t node_id, char* buffer, size_t buffer_size);
 int32_t flow_node_fixed_infobyte_count(flow_context* c, flow_ntype type);
 bool flow_node_infobyte_count(flow_context* c, struct flow_graph* g, int32_t node_id, int32_t* infobytes_count_out);
@@ -58,10 +58,3 @@ bool flow_node_estimate_execution_cost(flow_context* c, struct flow_graph* g, in
                                        size_t* cpu_cost);
 bool flow_node_validate_inputs(flow_context* c, struct flow_graph* g, int32_t node_id);
 bool flow_node_update_state(flow_context* c, struct flow_graph* g, int32_t node_id);
-
-bool flow_graph_walk_dependency_wise(flow_context* c, struct flow_job* job, struct flow_graph** graph_ref,
-                                     flow_graph_visitor node_visitor, flow_graph_visitor edge_visitor,
-                                     void* custom_data);
-
-#define FLOW_GET_INFOBYTES(g, node_id, type, varname)                                                                  \
-    struct type* varname = (struct type*)&g->info_bytes[g->nodes[node_id].info_byte_index];
