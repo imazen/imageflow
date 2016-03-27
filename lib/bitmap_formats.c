@@ -62,12 +62,12 @@ flow_bitmap_bgra* flow_bitmap_bgra_create(flow_context* context, int sx, int sy,
     im->borrowed_pixels = false;
     im->alpha_meaningful = im->fmt == flow_bgra32;
     if (zeroed) {
-        im->pixels = (unsigned char*)FLOW_calloc(context, im->h * im->stride, sizeof(unsigned char));
+        im->pixels = (unsigned char*)FLOW_calloc_owned(context, im->h * im->stride, sizeof(unsigned char), im);
     } else {
-        im->pixels = (unsigned char*)FLOW_malloc(context, im->h * im->stride);
+        im->pixels = (unsigned char*)FLOW_malloc_owned(context, im->h * im->stride, im);
     }
     if (im->pixels == NULL) {
-        FLOW_free(context, im);
+        FLOW_destroy(context, im);
         FLOW_error(context, flow_status_Out_of_memory);
         return NULL;
     }
@@ -76,12 +76,7 @@ flow_bitmap_bgra* flow_bitmap_bgra_create(flow_context* context, int sx, int sy,
 
 void flow_bitmap_bgra_destroy(flow_context* context, flow_bitmap_bgra* im)
 {
-    if (im == NULL)
-        return;
-    if (!im->borrowed_pixels) {
-        FLOW_free(context, im->pixels);
-    }
-    FLOW_free(context, im);
+    FLOW_destroy(context, im);
 }
 
 flow_bitmap_float* flow_bitmap_float_create_header(flow_context* context, int sx, int sy, int channels)
@@ -118,12 +113,12 @@ flow_bitmap_float* flow_bitmap_float_create(flow_context* context, int sx, int s
     }
     im->pixels_borrowed = false;
     if (zeroed) {
-        im->pixels = (float*)FLOW_calloc(context, im->float_count, sizeof(float));
+        im->pixels = (float*)FLOW_calloc_owned(context, im->float_count, sizeof(float), im);
     } else {
-        im->pixels = (float*)FLOW_malloc(context, im->float_count * sizeof(float));
+        im->pixels = (float*)FLOW_malloc_owned(context, im->float_count * sizeof(float), im);
     }
     if (im->pixels == NULL) {
-        FLOW_free(context, im);
+        FLOW_destroy(context, im);
         FLOW_error(context, flow_status_Out_of_memory);
         return NULL;
     }
@@ -132,14 +127,7 @@ flow_bitmap_float* flow_bitmap_float_create(flow_context* context, int sx, int s
 
 void flow_bitmap_float_destroy(flow_context* context, flow_bitmap_float* im)
 {
-    if (im == NULL)
-        return;
-
-    if (!im->pixels_borrowed) {
-        FLOW_free(context, im->pixels);
-    }
-    im->pixels = NULL;
-    FLOW_free(context, im);
+    FLOW_destroy(context, im);
 }
 
 bool flow_bitmap_bgra_compare(flow_context* c, flow_bitmap_bgra* a, flow_bitmap_bgra* b, bool* equal_out)

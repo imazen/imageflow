@@ -15,7 +15,8 @@ bool r = test_contrib_windows(&context, msg);
 if (!r)
 FAIL(msg);
 REQUIRE(r);
-flow_context_terminate(&context);
+    REQUIRE(flow_context_begin_terminate(&context) == true);
+    flow_context_end_terminate(&context);
 }
 
 TEST_CASE("Test Weighting", "[fastscaling]")
@@ -84,5 +85,6 @@ CHECK(test_filter(&context, flow_interpolation_filter::flow_interpolation_filter
 CHECK(test_filter(&context, flow_interpolation_filter::flow_interpolation_filter_LanczosSharp, msg, 0.98, 1.9625, 1,
                   0.1, 2.943) == nullptr);
 
-flow_context_terminate(&context);
+    REQUIRE(flow_context_begin_terminate(&context) == true);
+    flow_context_end_terminate(&context);
 }

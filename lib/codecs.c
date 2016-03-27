@@ -1,5 +1,5 @@
 #include "imageflow_private.h"
-#include "job.h"
+
 #include "lcms2.h"
 #include "codecs.h"
 
@@ -52,7 +52,7 @@ bool flow_bitmap_bgra_transform_to_srgb(flow_context* c, cmsHPROFILE current_pro
 
 // typedef bool (*codec_dispose_fn)(flow_context *c, struct flow_job * job, void * codec_state);
 
-struct flow_codec_definition flow_job_codec_defs[]
+struct flow_codec_definition flow_codec_defs[]
     = { { .type = flow_codec_type_decode_png,
           .aquire_on_buffer = flow_job_codecs_aquire_decode_png_on_buffer,
           .get_frame_info = flow_job_codecs_png_get_info,
@@ -84,13 +84,13 @@ struct flow_codec_definition flow_job_codec_defs[]
           .preferred_mime_type = "image/jpeg",
           .preferred_extension = "jpg" } };
 
-int32_t flow_job_codec_defs_count = sizeof(flow_job_codec_defs) / sizeof(struct flow_codec_definition);
+int32_t flow_codec_defs_count = sizeof(flow_codec_defs) / sizeof(struct flow_codec_definition);
 struct flow_codec_definition* flow_job_get_codec_definition(flow_context* c, flow_codec_type type)
 {
     int i = 0;
-    for (i = 0; i < flow_job_codec_defs_count; i++) {
-        if (flow_job_codec_defs[i].type == type)
-            return &flow_job_codec_defs[i];
+    for (i = 0; i < flow_codec_defs_count; i++) {
+        if (flow_codec_defs[i].type == type)
+            return &flow_codec_defs[i];
     }
     FLOW_error(c, flow_status_Not_implemented);
     return NULL;

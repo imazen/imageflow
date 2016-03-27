@@ -1,9 +1,41 @@
 #include <stdio.h>
 #include <jpeglib.h>
 #include "imageflow_private.h"
-#include "job.h"
 #include "lcms2.h"
 #include "codecs.h"
+
+
+//Gif - read X bytes into buffer at a time, return count copied.
+//Gif - wrtie
+//    /* func type to read gif data from arbitrary sources (TVT) */
+//    typedef int (*InputFunc) (GifFileType *, GifByteType *, int);
+//
+///* func type to write gif data to arbitrary targets.
+// * Returns count of bytes written. (MRB)
+// */
+//    typedef int (*OutputFunc) (GifFileType *, const GifByteType *, int);
+////
+////
+//
+//    static void
+//    _ReadProc(png_structp png_ptr, unsigned char *data, png_size_t size) {
+//        pfi_ioStructure pfio = (pfi_ioStructure)png_get_io_ptr(png_ptr);
+//        unsigned n = pfio->s_io->read_proc(data, (unsigned int)size, 1, pfio->s_handle);
+//        if(size && (n == 0)) {
+//            throw "Read error: invalid or corrupted PNG file";
+//        }
+//    }
+//
+//    static void
+//    _WriteProc(png_structp png_ptr, unsigned char *data, png_size_t size) {
+//        pfi_ioStructure pfio = (pfi_ioStructure)png_get_io_ptr(png_ptr);
+//        pfio->s_io->write_proc(data, (unsigned int)size, 1, pfio->s_handle);
+//    }
+
+
+
+//context errors must be translated to codec-specific exit flags for every codec
+
 
 typedef enum flow_job_jpeg_decoder_stage {
     flow_job_jpg_decoder_stage_Null = 0,

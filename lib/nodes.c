@@ -1,5 +1,6 @@
+#include "imageflow_private.h"
 #include "nodes.h"
-#include "job.h"
+#include "codecs.h"
 
 //
 // typedef bool (*flow_nodedef_fn_stringify)(flow_context *c, struct flow_graph *g, int32_t node_id, char * buffer,

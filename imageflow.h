@@ -38,6 +38,9 @@ configures to build a shared library.*/
 // * We heavily experimented with LUV and XYZ color spaces, but determined that better results occur using RGB linear.
 // * A custom sigmoidized color space could perhaps improve things, but would introduce significant overhead.
 
+
+typedef enum FLOW_DIRECTION { FLOW_OUTPUT = 8, FLOW_INPUT = 4 } FLOW_DIRECTION;
+
 typedef enum flow_ntype {
     flow_ntype_Null = 0,
     flow_ntype_primitive_Flip_Vertical_Mutate = 1,
@@ -129,7 +132,7 @@ typedef enum flow_compositing_mode {
 
 struct flow_job;
 
-typedef enum flow_job_resource_type {
+typedef enum flow_job_resource_type { //TODO: delete this
     flow_job_resource_type_bitmap_bgra = 1,
     flow_job_resource_type_buffer = 2
 
@@ -141,7 +144,9 @@ typedef enum flow_codec_type {
     flow_codec_type_decode_png,
     flow_codec_type_encode_png,
     flow_codec_type_decode_jpeg,
-    flow_codec_type_encode_jpeg
+    flow_codec_type_encode_jpeg,
+    flow_codec_type_encoder,
+    flow_codec_type_decoder,
 } flow_codec_type;
 
 typedef enum flow_scanlines_filter_type {
@@ -228,6 +233,7 @@ typedef enum flow_profiling_entry_flags {
     flow_profiling_entry_stop_children = 56
 } flow_profiling_entry_flags;
 
+//TODO: So many more - 8-bit, compressed data,
 typedef enum flow_pixel_format { flow_bgr24 = 3, flow_bgra32 = 4, flow_gray8 = 1 } flow_pixel_format;
 
 typedef enum flow_bitmap_compositing_mode {
@@ -243,7 +249,7 @@ typedef enum flow_working_floatspace {
     flow_working_floatspace_gamma = 2
 } flow_working_floatspace;
 
-typedef struct flow_context_struct flow_context;
+typedef struct flow_ctx flow_context;
 
 /** flow_context: flow_profiling_log **/
 
@@ -264,6 +270,16 @@ PUB flow_profiling_log* flow_context_get_profiler_log(flow_context* context);
 
 PUB flow_context* flow_context_create(void);
 PUB void flow_context_destroy(flow_context* context);
+
+//Flush buffers; close files     ; release underlying resources - the job has been ended.
+typedef bool (*flow_destructor_function) (flow_context *c, void * thing);
+
+PUB bool flow_set_destructor(flow_context * context, void * thing, flow_destructor_function *destructor);
+
+//Thing will only be destroyed and freed at the time that owner is destroyed and freed
+PUB bool flow_set_owner(flow_context * context, void *thing, void *owner);
+
+
 PUB void flow_context_free_all_allocations(flow_context* context);
 PUB void flow_context_print_memory_info(flow_context* context);
 
@@ -276,13 +292,85 @@ PUB int32_t flow_context_stacktrace(flow_context* context, char* buffer, size_t 
 PUB bool flow_context_has_error(flow_context* context);
 PUB int flow_context_error_reason(flow_context* context);
 
-PUB void flow_context_free_static_caches(void);
-
 PUB bool flow_context_print_and_exit_if_err(flow_context* c);
 
 PUB void flow_context_clear_error(flow_context* context);
 
 PUB void flow_context_print_error_to(flow_context* c, FILE* stream);
+
+typedef enum flow_io_mode {
+    flow_io_mode_null = 0,
+    flow_io_mode_read_sequential = 1,
+    flow_io_mode_write_sequential = 2,
+    flow_io_mode_read_seekable = 1 | 4,
+    flow_io_mode_write_seekable = 2 | 4,
+    flow_io_mode_read_write_seekable = 1 | 2 | 4 | 8
+} flow_io_mode;
+
+struct flow_io;
+
+//Returns the number of read into the buffer. Failure to read 'count' bytes could mean EOF or failure. Check context status. Pass NULL to buffer if you want to skip 'count' many bytes, seeking ahead.
+typedef int64_t (*flow_io_read_function) (flow_context * c, struct flow_io * io, uint8_t * buffer, size_t count);
+//Returns the number of bytes written. If it doesn't equal 'count', there was an error. Check context status
+typedef int64_t (*flow_io_write_function) (flow_context * c, struct flow_io * io, uint8_t * buffer, size_t count);
+
+//Returns negative on failure - check context for more detail. Returns the current position in the stream when successful
+typedef int64_t (*flow_io_position_function) (flow_context * c, struct flow_io * io);
+
+//Returns true if seek was successful.
+typedef bool (*flow_io_seek_function) (flow_context * c, struct flow_io * io, int64_t position);
+
+
+
+//If you want to know what kind of I/O structure is inside user_data, compare the read_func/write_func function pointers. No need for another human-assigned set of custom structure identifiers.
+struct flow_io {
+    flow_context *context;
+    flow_io_mode mode;  //Call nothing, dereference nothing, if this is 0
+    flow_io_read_function read_func;    //Optional for write modes
+    flow_io_write_function write_func;  //Optional for read modes
+    flow_io_position_function position_func;    //Optional for sequential modes
+    flow_io_seek_function seek_function; //Optional for sequential modes
+    flow_destructor_function dispose_func;  //Optional.
+    void *user_data;
+    uint64_t optional_file_length; //Whoever sets up this structure can populate this value - or set it to -1 - as they wish. useful for resource estimation.
+};
+
+
+struct flow_codec_instance; //All methods should center around this
+
+
+struct flow_io * flow_io_create_for_file(flow_context * c, flow_io_mode mode, const char *filename);
+struct flow_io * flow_io_create_for_readonly_memory(flow_context * c, flow_io_mode mode, uint8_t * memory, size_t length);
+struct flow_io * flow_io_create_for_output_buffer(flow_context * c);
+
+//Returns false if the flow_io struct is disposed or not an output buffer type (or for any other error)
+bool flow_io_get_output_buffer(flow_context * c, struct flow_io *);
+
+
+//This step always pre-allocates space for the next call, such that a failure to register the I/O can't happen immediately, and cleanup can be performed anyhow (as long as you create and add io structs one at a time)
+
+bool flow_job_add_io(flow_context *c, struct flow_io *, int32_t placeholder_id, FLOW_DIRECTION direction);
+
+//Access buffer for output
+//Accces codec_instance for input
+//Setup codec for output
+
+
+//Create I/O for inputs/outputs.
+//Add I/O to job. At this point a codec is assigned and initialized.
+//Create input/output bitmaps
+
+//Read info, setup encoders by placeholder - OR - delay insertion until the previous frame is complete. execution causing the codec selection based on the bitmap data.
+//Maybe we can make this less magical?
+
+
+
+
+
+//shutdown
+//nature - memory, FILE *,
+
+
 
 // non-indexed bitmap
 typedef struct flow_bitmap_bgra_struct {
@@ -705,7 +793,6 @@ PUB int32_t flow_node_create_render1d(flow_context* c, struct flow_graph** g, in
                                       struct flow_scanlines_filter* filter_list,
                                       flow_interpolation_filter interpolation_filter);
 
-typedef enum FLOW_DIRECTION { FLOW_OUTPUT = 8, FLOW_INPUT = 4 } FLOW_DIRECTION;
 
 PUB struct flow_job* flow_job_create(flow_context* c);
 PUB void flow_job_destroy(flow_context* c, struct flow_job* job);

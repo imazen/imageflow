@@ -1,5 +1,7 @@
 #pragma once
 
+#include "lcms2.h"
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -75,16 +77,7 @@ bool flow_job_decoder_get_frame_info(flow_context* c, struct flow_job* job, void
 bool flow_job_decoder_read_frame(flow_context* c, struct flow_job* job, void* codec_state, flow_codec_type type,
                                  flow_bitmap_bgra* canvas);
 
-struct flow_job_resource_item {
-    struct flow_job_resource_item* next;
-    int32_t id;
-    int32_t graph_placeholder_id;
-    FLOW_DIRECTION direction;
-    flow_job_resource_type type;
-    flow_codec_type codec_type;
-    void* codec_state;
-    void* data;
-};
+
 
 void* flow_job_codecs_aquire_decode_jpeg_on_buffer(flow_context* c, struct flow_job* job,
                                                    struct flow_job_resource_buffer* buffer);

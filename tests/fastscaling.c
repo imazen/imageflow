@@ -59,7 +59,6 @@ bool test(int sx, int sy, flow_pixel_format sbpp, int cx, int cy, flow_pixel_for
     flow_bitmap_bgra_destroy(context, canvas);
 
     flow_context_destroy(context);
-    flow_context_free_static_caches();
 
     return true;
 }

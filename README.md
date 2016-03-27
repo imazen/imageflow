@@ -120,7 +120,7 @@ Install nasm (`cinst -y nasm` on windows, followed by `set PATH=%PATH%;%ProgramF
 
     bool scale_image_to_disk()
     {
-        // The flow_context provides error tracking, profling, heap tracking.
+        // The flow_context provides error tracking, profling, underlying_heap tracking.
         flow_context* c = flow_context_create();
         if (c == NULL) {
             return false;

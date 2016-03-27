@@ -19,23 +19,23 @@ public:
     int alloc_count;
     int total_successful_allocs;
 
-    static void* _calloc(flow_context* context, size_t count, size_t element_size, const char* file, int line)
+    static void* _calloc(flow_context* context, struct flow_heap * heap, size_t count, size_t element_size, const char* file, int line)
     {
-        return ((Fixture*)context->heap._private_state)->calloc(count, element_size);
+        return ((Fixture*)context->underlying_heap._private_state)->calloc(count, element_size);
     }
-    static void* _malloc(flow_context* context, size_t byte_count, const char* file, int line)
+    static void* _malloc(flow_context* context, struct flow_heap * heap, size_t byte_count, const char* file, int line)
     {
-        return ((Fixture*)context->heap._private_state)->malloc(byte_count);
+        return ((Fixture*)context->underlying_heap._private_state)->malloc(byte_count);
     }
-    static void _free(flow_context* context, void* pointer, const char* file, int line) { free(pointer); }
+    static void _free(flow_context* context, struct flow_heap * heap, void* pointer, const char* file, int line) { free(pointer); }
 
     void initialize_heap(flow_context* context)
     {
-        context->heap._private_state = this;
-        context->heap._calloc = _calloc;
-        context->heap._malloc = _malloc;
-        context->heap._free = _free;
-        context->heap._context_terminate = NULL;
+        context->underlying_heap._private_state = this;
+        context->underlying_heap._calloc = _calloc;
+        context->underlying_heap._malloc = _malloc;
+        context->underlying_heap._free = _free;
+        context->underlying_heap._context_terminate = NULL;
     }
     Fixture()
     {
@@ -123,7 +123,8 @@ TEST_CASE_METHOD(Fixture, "Perform Rendering", "[error_handling]")
     flow_RenderDetails_destroy(&context, details);
     flow_bitmap_bgra_destroy(&context, source);
     flow_bitmap_bgra_destroy(&context, canvas);
-    flow_context_terminate(&context);
+    REQUIRE(flow_context_begin_terminate(&context) == true);
+    flow_context_end_terminate(&context);
 }
 
 TEST_CASE_METHOD(Fixture, "Test allocation failure handling", "[error_handling]")
@@ -176,7 +177,8 @@ TEST_CASE_METHOD(Fixture, "Test allocation failure handling", "[error_handling]"
     flow_RenderDetails_destroy(&context, details);
     flow_bitmap_bgra_destroy(&context, source);
     flow_bitmap_bgra_destroy(&context, canvas);
-    flow_context_terminate(&context);
+    REQUIRE(flow_context_begin_terminate(&context) == true);
+    flow_context_end_terminate(&context);
 }
 
 TEST_CASE_METHOD(Fixture, "Creating flow_bitmap_bgra", "[error_handling]")
@@ -186,7 +188,7 @@ TEST_CASE_METHOD(Fixture, "Creating flow_bitmap_bgra", "[error_handling]")
     initialize_heap(&context);
 
     flow_bitmap_bgra* source = NULL;
-    // Create something so heap_tracking is initialized
+    // Create something so object_tracking is initialized
     source = flow_bitmap_bgra_create(&context, 1, 1, true, (flow_pixel_format)2);
     SECTION("Creating a 1x1 bitmap is valid")
     {
@@ -241,7 +243,8 @@ TEST_CASE("flow_context", "[error_handling]")
         flow_context_error_message(&context, error_msg, sizeof error_msg);
         REQUIRE(std::string("No error") == error_msg);
 
-        flow_context_terminate(&context);
+        REQUIRE(flow_context_begin_terminate(&context) == true);
+        flow_context_end_terminate(&context);
     }
 }
 
@@ -260,7 +263,8 @@ TEST_CASE("Argument checking for convert_sgrp_to_linear", "[error_handling]")
     CAPTURE(*dest);
     REQUIRE(dest->float_count == 4); // 1x1x4 channels
     flow_bitmap_float_destroy(&context, dest);
-    flow_context_terminate(&context);
+    REQUIRE(flow_context_begin_terminate(&context) == true);
+    flow_context_end_terminate(&context);
 }
 
 TEST_CASE("Test stacktrace serialization", "[error_handling]")
@@ -291,5 +295,6 @@ TEST_CASE("Test stacktrace serialization", "[error_handling]")
 
     free(stacktrace);
 
-    flow_context_terminate(&context);
+    REQUIRE(flow_context_begin_terminate(&context) == true);
+    flow_context_end_terminate(&context);
 }

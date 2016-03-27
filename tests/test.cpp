@@ -27,8 +27,9 @@ bool test(int sx, int sy, flow_pixel_format sbpp, int cx, int cy, flow_pixel_for
         return false;
     }
 
-    flow_context_terminate(&context);
-    return true;
+    bool success = flow_context_begin_terminate(&context);
+    flow_context_end_terminate(&context);
+    return success;
 }
 
 bool test_in_place(int sx, int sy, flow_pixel_format sbpp, bool flipx, bool flipy, bool profile, float sharpen,
@@ -50,8 +51,9 @@ bool test_in_place(int sx, int sy, flow_pixel_format sbpp, bool flipx, bool flip
 
     flow_RenderDetails_render_in_place(&context, details, source);
 
-    flow_context_terminate(&context);
-    return true;
+    bool success = flow_context_begin_terminate(&context);
+    flow_context_end_terminate(&context);
+    return success;
 }
 
 const flow_interpolation_filter DEFAULT_FILTER = flow_interpolation_filter_Robidoux;
@@ -236,7 +238,8 @@ TEST_CASE("Test guassian blur approximation.", "[fastscaling]")
     CHECK(max_delta < 0.12);
     CHECK(avg_delta < 0.03);
 
-    flow_context_terminate(&context);
+    REQUIRE(flow_context_begin_terminate(&context) == true);
+    flow_context_end_terminate(&context);
 }
 /*
 If we need to research fixed point, convert this test
@@ -331,6 +334,7 @@ SCENARIO("sRGB roundtrip", "[fastscaling]")
         }
         flow_bitmap_bgra_destroy(&context, final);
         flow_bitmap_bgra_destroy(&context, bit);
-        flow_context_terminate(&context);
+        REQUIRE(flow_context_begin_terminate(&context) == true);
+        flow_context_end_terminate(&context);
     }
 }

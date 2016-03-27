@@ -39,17 +39,17 @@ struct flow_graph* flow_graph_create(flow_context* c, uint32_t max_edges, uint32
     if (((size_t)g->info_bytes - (size_t)g) != total_bytes - max_info_bytes) {
         // Somehow our math was inconsistent with flow_graph_size_for()
         FLOW_error(c, flow_status_Invalid_internal_state);
-        FLOW_free(c, g);
+        FLOW_destroy(c, g); //No destructor or child items to fail
         return NULL;
     }
     if ((size_t)&g->edges[g->max_edges - 1].info_bytes >= (size_t)&g->nodes[0].type) {
         FLOW_error(c, flow_status_Invalid_internal_state);
-        FLOW_free(c, g);
+        FLOW_destroy(c, g); //No destructor or child items to fail
         return NULL;
     }
     if ((size_t)&g->nodes[g->max_nodes - 1].ticks_elapsed >= (size_t)&g->info_bytes[0]) {
         FLOW_error(c, flow_status_Invalid_internal_state);
-        FLOW_free(c, g);
+        FLOW_destroy(c, g); //No destructor or child items to fail
         return NULL;
     }
     return g;

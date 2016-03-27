@@ -83,3 +83,69 @@ TEST_CASE("Test error message printing with null files or functions in the stack
 
     flow_context_destroy(c);
 }
+
+static bool bad_destructor(flow_context * c, void * p){
+    return false;
+}
+TEST_CASE("Test reporting of a failing destructor", "")
+{
+    flow_context* c = flow_context_create();
+    ERR(c);
+
+    void * data = flow_context_malloc(c, 20, bad_destructor, c, __FILE__,__LINE__);
+
+    //begin_terminate should trigger the destructor
+    REQUIRE(flow_context_begin_terminate(c) == false);
+
+    char buf[4096];
+    int chars_written = flow_context_error_and_stacktrace(c, buf, 4096, false);
+    REQUIRE(chars_written > 0);
+    REQUIRE_THAT(buf , StartsWith("Other error: : Destructor returned false, indicating failure"));
+
+    flow_context_destroy(c);
+}
+
+
+bool destructor_called = false;
+
+static bool tattletale_destructor(flow_context * c, void * p){
+    destructor_called = true;
+    return true;
+}
+
+TEST_CASE("Test destructor", "")
+{
+    flow_context* c = flow_context_create();
+    ERR(c);
+
+    destructor_called = false;
+    void * data = flow_context_malloc(c, 20, tattletale_destructor, c, __FILE__,__LINE__);
+
+    //begin_terminate should trigger the destructor
+    REQUIRE(flow_context_begin_terminate(c) == true);
+    flow_context_destroy(c);
+    REQUIRE(destructor_called == true);
+    destructor_called = false;
+}
+
+TEST_CASE("Test ownership", "")
+{
+    flow_context* c = flow_context_create();
+    ERR(c);
+
+
+    void * container = FLOW_malloc(c, 10);
+    void * data = flow_context_malloc(c, 20, tattletale_destructor, container, __FILE__,__LINE__);
+
+    //Destroying container should destroy data as well
+    destructor_called = false;
+    FLOW_destroy(c, container);
+    REQUIRE(destructor_called == true);
+    destructor_called = false;
+
+    REQUIRE(flow_context_begin_terminate(c) == true);
+    flow_context_destroy(c);
+}
+
+
+

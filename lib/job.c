@@ -2,8 +2,8 @@
 
 
 #include "imageflow_private.h"
-#include "job.h"
-
+#include "nodes.h"
+#include "codecs.h"
 
 struct flow_job* flow_job_create(flow_context* c)
 {
@@ -36,15 +36,14 @@ bool flow_job_configure_recording(flow_context* c, struct flow_job* job, bool re
 }
 void flow_job_destroy(flow_context* c, struct flow_job* job)
 {
-    // TODO: Free all the resources, and their codecs
-    FLOW_free(c, job);
+    FLOW_destroy(c, job);
 }
 
 static int32_t flow_job_add_resource(flow_context* c, struct flow_job* job, FLOW_DIRECTION dir,
                                      int32_t graph_placeholder_id, flow_job_resource_type type, void* data)
 {
     struct flow_job_resource_item* r
-        = (struct flow_job_resource_item*)FLOW_malloc(c, sizeof(struct flow_job_resource_item));
+        = (struct flow_job_resource_item*)FLOW_malloc_owned(c, sizeof(struct flow_job_resource_item), job);
     if (r == NULL) {
         FLOW_error(c, flow_status_Out_of_memory);
         return -2;
