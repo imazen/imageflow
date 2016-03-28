@@ -22,9 +22,7 @@ struct flow_job_png_decoder_state {
     png_size_t h;
     jmp_buf error_handler_jmp;
     int color_type, bit_depth;
-    png_const_voidp file_bytes;
-    png_size_t file_bytes_count;
-    png_size_t file_bytes_read;
+    struct flow_io* io;
     png_bytep pixel_buffer;
     size_t pixel_buffer_size;
     png_bytepp pixel_buffer_row_pointers;
@@ -36,9 +34,7 @@ struct flow_job_png_decoder_state {
 
 struct flow_job_png_encoder_state {
     flow_context* context;
-    char* buffer;
-    size_t size;
-    struct flow_job_resource_buffer* output_resource;
+    struct flow_io* io;
     jmp_buf error_handler_jmp_buf;
 };
 
@@ -75,7 +71,6 @@ static bool flow_job_png_decoder_reset(flow_context* c, struct flow_job_png_deco
     state->gamma = 0.45455;
     state->pixel_buffer = NULL;
     state->pixel_buffer_size = -1;
-    state->file_bytes_read = 0;
     state->stage = flow_job_png_decoder_stage_NotStarted;
     return true;
 }
@@ -88,7 +83,7 @@ static void png_decoder_error_handler(png_structp png_ptr, png_const_charp msg)
         exit(42);
         abort(); // WTF?
     }
-    FLOW_error_msg(state->context, flow_status_Image_decoding_failed, "PNG decoding failed");
+    FLOW_error_msg(state->context, flow_status_Image_decoding_failed, "PNG decoding failed: %s", msg);
 
     // Dispose of everything
     flow_job_png_decoder_reset(state->context, state);
@@ -101,15 +96,21 @@ static void custom_read_data(png_structp png_ptr, png_bytep buffer, png_size_t b
 {
     struct flow_job_png_decoder_state* state = (struct flow_job_png_decoder_state*)png_get_io_ptr(png_ptr);
 
-    if (state == NULL) {
+    if (state == NULL || state->context == NULL) {
         png_error(png_ptr, "Read Error");
     }
-    if (bytes_requested > state->file_bytes_count - state->file_bytes_read) {
-        png_error(png_ptr, "Read beyond end of data requested");
+    if (state->io == NULL) {
+        FLOW_error_msg(state->context, flow_status_Image_decoding_failed,
+                       "PNG decoding failed - struct flow_io was null");
+        png_error(png_ptr, "Read Error");
     }
-    size_t bytes_read = umin64(state->file_bytes_count - state->file_bytes_read, bytes_requested);
-    memcpy(buffer, (const uint8_t*)state->file_bytes + state->file_bytes_read, bytes_read);
-    state->file_bytes_read += bytes_read;
+    int64_t bytes_read = state->io->read_func(state->context, state->io, buffer, bytes_requested);
+    if (bytes_read != (int64_t)bytes_requested) {
+        png_error(png_ptr, "Read beyond end of data requested");
+        // TODO: Actually check the context error and see if there's a better way
+    } else {
+        // for (int i =0; i < bytes_read; i++) fprintf(stderr, "%08x", buffer[i]);
+    }
 }
 
 static bool png_decoder_load_color_profile(flow_context* c, struct flow_job_png_decoder_state* state)
@@ -207,6 +208,7 @@ static bool flow_job_png_decoder_BeginRead(flow_context* c, struct flow_job_png_
     if (setjmp(state->error_handler_jmp)) {
         // Execution comes back to this point if an error happens
         // We assume that the handler already set the context error
+        FLOW_add_to_callstack(c);
         return false;
     }
     // Custom read function req.d - reading from memory
@@ -310,29 +312,26 @@ static bool flow_job_png_decoder_FinishRead(flow_context* c, struct flow_job_png
     return true;
 }
 
-void* flow_job_codecs_aquire_decode_png_on_buffer(flow_context* c, struct flow_job* job,
-                                                  struct flow_job_resource_buffer* buffer)
+bool flow_job_codecs_initialize_decode_png(flow_context* c, struct flow_job* job, struct flow_codec_instance* item)
 {
     // flow_job_png_decoder_state
-    if (buffer->codec_state == NULL) {
+    if (item->codec_state == NULL) {
         struct flow_job_png_decoder_state* state
             = (struct flow_job_png_decoder_state*)FLOW_malloc(c, sizeof(struct flow_job_png_decoder_state));
         if (state == NULL) {
             FLOW_error(c, flow_status_Out_of_memory);
-            return NULL;
+            return false;
         }
         state->stage = flow_job_png_decoder_stage_Null;
 
         if (!flow_job_png_decoder_reset(c, state)) {
             FLOW_add_to_callstack(c);
-            return NULL;
+            return false;
         }
-        state->file_bytes = buffer->buffer;
-        state->file_bytes_count = buffer->buffer_size;
-
-        buffer->codec_state = (void*)state;
+        state->io = item->io;
+        item->codec_state = state;
     }
-    return buffer->codec_state;
+    return true;
 }
 
 bool flow_job_codecs_png_get_info(flow_context* c, struct flow_job* job, void* codec_state,
@@ -373,20 +372,15 @@ bool flow_job_codecs_png_read_frame(flow_context* c, struct flow_job* job, void*
 static void png_write_data_callback(png_structp png_ptr, png_bytep data, png_size_t length)
 {
     struct flow_job_png_encoder_state* p = (struct flow_job_png_encoder_state*)png_get_io_ptr(png_ptr);
-    size_t nsize = p->size + length;
 
-    /* allocate or grow buffer */
-    if (p->buffer)
-        p->buffer = (char*)FLOW_realloc(p->context, p->buffer, nsize);
-    else
-        p->buffer = (char*)FLOW_malloc(p->context, nsize);
-
-    if (!p->buffer)
-        png_error(png_ptr, "Write Error"); // TODO: comprehend png error handling
-
-    /* copy new bytes to end of buffer */
-    memcpy(p->buffer + p->size, data, length);
-    p->size += length;
+    if (p->io->write_func(p->context, p->io, data, length) != (int64_t)length) {
+        if (!flow_context_has_error(p->context)) {
+            FLOW_error_msg(p->context, flow_status_IO_error, "Failed to write %l bytes", length);
+        } else {
+            FLOW_add_to_callstack(p->context);
+        }
+        png_error(png_ptr, "Write Error");
+    }
 }
 
 static void png_encoder_error_handler(png_structp png_ptr, png_const_charp msg)
@@ -404,30 +398,29 @@ static void png_encoder_error_handler(png_structp png_ptr, png_const_charp msg)
 
 static void png_flush_nullop(png_structp png_ptr) {}
 
-bool flow_bitmap_bgra_write_png(flow_context* c, struct flow_job* job, flow_bitmap_bgra* frame,
-                                struct flow_job_resource_buffer* buffer)
+bool flow_bitmap_bgra_write_png(flow_context* c, struct flow_job* job, flow_bitmap_bgra* frame, struct flow_io* io)
 {
+    struct flow_codec_instance instance;
+    instance.codec_id = flow_codec_type_encode_png;
+    instance.direction = FLOW_OUTPUT;
+    instance.io = io;
+    instance.codec_state = NULL;
+    instance.graph_placeholder_id = 404;
+    instance.next = NULL;
 
-    buffer->codec_state = NULL;
-
-    struct flow_job_png_encoder_state* state
-        = (struct flow_job_png_encoder_state*)flow_job_codecs_aquire_encode_png_on_buffer(c, job, buffer);
-
-    if (state == NULL) {
+    if (!flow_job_codecs_initialize_encode_png(c, job, &instance)) {
         FLOW_error_return(c);
     }
-    if (!flow_job_codecs_png_write_frame(c, job, state, frame)) {
+
+    if (!flow_job_codecs_png_write_frame(c, job, instance.codec_state, frame)) {
         FLOW_error_return(c);
     }
-    FLOW_free(c, buffer->codec_state);
     return true;
 }
 
 bool flow_job_codecs_png_write_frame(flow_context* c, struct flow_job* job, void* codec_state, flow_bitmap_bgra* frame)
 {
     struct flow_job_png_encoder_state* state = (struct flow_job_png_encoder_state*)codec_state;
-    state->buffer = NULL;
-    state->size = 0;
     state->context = c;
 
     if (setjmp(state->error_handler_jmp_buf)) {
@@ -474,33 +467,24 @@ bool flow_job_codecs_png_write_frame(flow_context* c, struct flow_job* job, void
         FLOW_free(c, rows);
         rows = NULL;
         png_destroy_write_struct(&png_ptr, &info_ptr);
-        // Copy the final result to the output resource, if it exists.
-        if (state->output_resource != NULL) {
-            state->output_resource->buffer = state->buffer;
-            state->output_resource->buffer_size = state->size;
-        }
     }
     // TODO: maybe ? png_destroy_write_struct(&nv_ptr, &nv_info);
     return true;
 }
 
-void* flow_job_codecs_aquire_encode_png_on_buffer(flow_context* c, struct flow_job* job,
-                                                  struct flow_job_resource_buffer* buffer)
+bool flow_job_codecs_initialize_encode_png(flow_context* c, struct flow_job* job, struct flow_codec_instance* item)
 {
     // flow_job_png_decoder_state
-    if (buffer->codec_state == NULL) {
+    if (item->codec_state == NULL) {
         struct flow_job_png_encoder_state* state
             = (struct flow_job_png_encoder_state*)FLOW_malloc(c, sizeof(struct flow_job_png_encoder_state));
         if (state == NULL) {
             FLOW_error(c, flow_status_Out_of_memory);
-            return NULL;
+            return false;
         }
-        state->buffer = NULL;
-        state->size = 0;
         state->context = c;
-        state->output_resource = buffer;
-
-        buffer->codec_state = (void*)state;
+        state->io = item->io;
+        item->codec_state = state;
     }
-    return buffer->codec_state;
+    return true;
 }

@@ -54,83 +54,112 @@ Install nasm (`cinst -y nasm` on windows, followed by `set PATH=%PATH%;%ProgramF
 ![ImageFlow diagram](https://rawgit.com/imazen/imageflow/master/docs/ImageFlow_Core.svg)
 
 
-## Using the long-form graph API
+## Using the long-form graph API (with proper error handling)
 
-
-    bool scale_image_to_disk_inner(flow_context* c)
+    
+        
+    uint8_t image_bytes_literal[]
+        = { 0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, 0x00, 0x00, 0x00, 0x0D, 0x49, 0x48, 0x44, 0x52, 0x00,
+            0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x08, 0x06, 0x00, 0x00, 0x00, 0x1F, 0x15, 0xC4, 0x89, 0x00,
+            0x00, 0x00, 0x0A, 0x49, 0x44, 0x41, 0x54, 0x78, 0x9C, 0x63, 0x00, 0x01, 0x00, 0x00, 0x05, 0x00, 0x01,
+            0x0D, 0x0A, 0x2D, 0xB4, 0x00, 0x00, 0x00, 0x00, 0x49, 0x45, 0x4E, 0x44, 0xAE, 0x42, 0x60, 0x82 };
+    
+    bool create_operation_graph(flow_context* c, struct flow_graph** graph_ref, int32_t input_placeholder,
+                                int32_t output_placeholder, struct flow_job_decoder_info* info)
     {
-        // We'll create a simple graph
+        // We'll create a simple operation graph that scales the image up 200%
         struct flow_graph* g = flow_graph_create(c, 10, 10, 200, 2.0);
         if (g == NULL) {
+            FLOW_add_to_callstack(c);
             return false;
         }
-        //We associate placeholders and resources with simple integers
-        int32_t input_placeholder = 0;
-        int32_t output_placeholder = 1;
-
-        int32_t last;
-        last = flow_node_create_resource_placeholder(c, &g, -1, input_placeholder);
-        last = flow_node_create_scale(c, &g, last, 120, 120);
-        last = flow_node_create_resource_placeholder(c, &g, last, output_placeholder);
-
-        // We create a job to create I/O resources and attach them to our abstract graph above
-        struct flow_job* job = flow_job_create(c);
-
-        // We've done 4 mallocs, make sure we didn't run out of memory
+        int32_t last = flow_node_create_decoder(c, &g, -1, input_placeholder);
+        // Double the original width/height
+        last = flow_node_create_scale(c, &g, last, info->frame0_width * 2, info->frame0_height * 2);
+        // Keep the original format if png or jpeg
+        size_t encoder_id = info->codec_type == flow_codec_type_decode_jpeg ? flow_codec_type_encode_jpeg
+                                                                            : flow_codec_type_encode_png;
+        last = flow_node_create_encoder(c, &g, last, output_placeholder, encoder_id);
+    
         if (flow_context_has_error(c)) {
+            FLOW_add_to_callstack(c);
             return false;
         }
-
-        // Uncomment to generate an animated graph. Requires sudo apt-get install libav-tools graphviz
-        // gifsicle
-        // flow_job_configure_recording(c, job, true, true, true, true, true);
-
-        // We're going to use an embedded image, but you could get bytes from anywhere
-        uint8_t image_bytes_literal[]
-            = { 0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, 0x00, 0x00, 0x00, 0x0D, 0x49, 0x48, 0x44, 0x52, 0x00,
-                0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x08, 0x06, 0x00, 0x00, 0x00, 0x1F, 0x15, 0xC4, 0x89, 0x00,
-                0x00, 0x00, 0x0A, 0x49, 0x44, 0x41, 0x54, 0x78, 0x9C, 0x63, 0x00, 0x01, 0x00, 0x00, 0x05, 0x00, 0x01,
-                0x0D, 0x0A, 0x2D, 0xB4, 0x00, 0x00, 0x00, 0x00, 0x49, 0x45, 0x4E, 0x44, 0xAE, 0x42, 0x60, 0x82 };
-
-        int32_t input_resource_id = flow_job_add_buffer(c, job, FLOW_INPUT, input_placeholder,
-                                                        (void*)&image_bytes_literal[0], sizeof(image_bytes_literal), false);
-        // Let's ask for an output buffer as a result
-        int32_t result_resource_id = flow_job_add_buffer(c, job, FLOW_OUTPUT, output_placeholder, NULL, 0, true);
-
-        // Insert resources into the graph
-        if (!flow_job_insert_resources_into_graph(c, job, &g)) {
-            return false;
-        }
-        // Execute the graph
-        if (!flow_job_execute(c, job, &g)) {
-            return false;
-        }
-        // Access the output buffer
-        struct flow_job_resource_buffer* result = flow_job_get_buffer(c, job, result_resource_id);
-        // Now let's write it to disk
-        FILE* fh = fopen("graph_scaled_png.png", "w");
-        if (flow_context_has_error(c) || fh == NULL || fwrite(result->buffer, result->buffer_size, 1, fh) != 1) {
-            if (fh != NULL)
-                fclose(fh);
-            return false;
-        }
-        fclose(fh);
+        *graph_ref = g;
         return true;
     }
-
+    
+    bool scale_image_inner(flow_context* c, flow_io* input, flow_io* output)
+    {
+        // We associate codecs and nodes using integer IDs that you select
+        int32_t input_placeholder = 42;
+        int32_t output_placeholder = 0xbad1dea;
+    
+        // We create a job to create I/O resources and attach them to our abstract graph above
+        struct flow_job* job = flow_job_create(c);
+        if (job == NULL) {
+            FLOW_add_to_callstack(c);
+            return false;
+        }
+        // Uncomment to make an animation. Requires sudo apt-get install libav-tools graphviz gifsicle
+        // flow_job_configure_recording(c, job, true, true, true, true, true);
+    
+        // Add I/O to the job. First bytes are read here
+        if (!flow_job_add_io(c, job, input, input_placeholder, FLOW_INPUT)
+            || !flow_job_add_io(c, job, output, output_placeholder, FLOW_OUTPUT)) {
+            FLOW_add_to_callstack(c);
+            return false;
+        }
+        // Let's read information about the input file
+        struct flow_job_decoder_info info;
+        if (!flow_job_get_decoder_info(c, job, input_placeholder, &info)) {
+            FLOW_add_to_callstack(c);
+            return false;
+        }
+        // And give it to the operation graph designer
+        struct flow_graph* g;
+        if (!create_operation_graph(c, &g, input_placeholder, output_placeholder, &info)) {
+            FLOW_add_to_callstack(c);
+            return false;
+        }
+        // Execute the graph we created
+        if (!flow_job_execute(c, job, &g)) {
+            FLOW_add_to_callstack(c);
+            return false;
+        }
+        return true;
+    }
+    
     bool scale_image_to_disk()
     {
-        // The flow_context provides error tracking, profling, underlying_heap tracking.
+        // flow_context provides error tracking and memory management
         flow_context* c = flow_context_create();
         if (c == NULL) {
             return false;
         }
-        if (!scale_image_to_disk_inner(c)) {
+        // We're going to use an embedded image, but you could get bytes from anywhere
+        struct flow_io* input = flow_io_create_from_memory(c, flow_io_mode_read_seekable, &image_bytes_literal[0],
+                                                           sizeof(image_bytes_literal), c, NULL);
+        // Output to an in-memory expanding buffer. This could be a stream or file instead.
+        struct flow_io* output = flow_io_create_for_output_buffer(c, c);
+    
+        // Using an inner function makes it easier to deal with errors
+        if (input == NULL || output == NULL || !scale_image_inner(c, input, output)) {
+            FLOW_add_to_callstack(c);
+            flow_context_print_error_to(c, stderr); // prints the callstack, too
+            flow_context_destroy(c);
+            return false;
+        }
+        // Write the output to file. We could use flow_io_get_output_buffer to get the bytes directly if we wanted them
+        if (!flow_io_write_output_buffer_to_file(c, output, "graph_scaled_png.png")) {
+    
+            FLOW_add_to_callstack(c);
             flow_context_print_error_to(c, stderr);
             flow_context_destroy(c);
             return false;
         }
-
+        // This will destroy the input/output objects, but if there are underlying streams that need to be
+        // closed, you would do that here after flow_context_destroy
         flow_context_destroy(c);
         return true;
     }
@@ -345,7 +374,6 @@ typedef enum flow_ntype {
     flow_ntype_DrawImage,
     flow_ntype_RemoveNoise,
     flow_ntype_ColorMatrixsRGB,
-    flow_ntype_Resource_Placeholder,
     flow_ntype__FORCE_ENUM_SIZE_INT32 = 2147483647
 } flow_ntype;
 

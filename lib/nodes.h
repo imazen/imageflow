@@ -1,12 +1,10 @@
 #pragma once
 
-
 #include "imageflow.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
-
 
 typedef bool (*flow_nodedef_fn_stringify)(flow_context* c, struct flow_graph* g, int32_t node_id, char* buffer,
                                           size_t buffer_size);
@@ -47,7 +45,6 @@ struct flow_node_definition {
 };
 
 struct flow_node_definition* flow_nodedef_get(flow_context* c, flow_ntype type);
-
 
 #define FLOW_GET_INFOBYTES(g, node_id, type, varname)                                                                  \
     struct type* varname = (struct type*)&g->info_bytes[g->nodes[node_id].info_byte_index];

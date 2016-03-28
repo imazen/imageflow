@@ -4,7 +4,6 @@
 // Moving implementations here inexplicably causes linker errors, even when specifically including this compilation
 // unit.
 
-
 size_t nonzero_count(uint8_t* array, size_t length)
 {
 
@@ -192,6 +191,16 @@ void flow_utils_ensure_directory_exists(const char* dir_path)
             }
         }
     }
+}
+
+bool has_err(flow_context* c, const char* file, int line, const char* func)
+{
+    if (flow_context_has_error(c)) {
+        flow_context_add_to_callstack(c, file, line, func);
+        flow_context_print_error_to(c, stderr);
+        return true;
+    }
+    return false;
 }
 
 flow_bitmap_bgra* BitmapBgra_create_test_image(flow_context* c)

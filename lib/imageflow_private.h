@@ -7,11 +7,9 @@
  */
 #pragma once
 
-#include "imageflow.h"
+#include "imageflow_advanced.h"
 #include "math_functions.h"
 #include "png.h"
-#include <stdint.h>
-#include <stdbool.h>
 #include <stdlib.h>
 #include <stdarg.h>
 #include <string.h>
@@ -25,128 +23,6 @@ extern "C" {
 #define PUB FLOW_EXPORT
 
 //** START: future: imageflow_advanced.h */
-
-
-struct flow_heap;
-struct flow_codec_instance;
-struct flow_job;
-struct flow_bitmap_float;
-
-//Portable snprintf
-PUB int flow_snprintf(char* s, size_t n, const char* fmt, ...);
-PUB int flow_vsnprintf(char* s, size_t n, const char* fmt, va_list v);
-
-
-////////////////////////////////////////////
-// You can control the underlying heap if you want
-
-typedef void* (*flow_heap_calloc_function)(struct flow_ctx* context, struct flow_heap * heap, size_t count, size_t element_size,
-                                           const char* file, int line);
-typedef void* (*flow_heap_malloc_function)(struct flow_ctx* context, struct flow_heap * heap, size_t byte_count, const char* file,
-                                           int line);
-
-typedef void* (*flow_heap_realloc_function)(struct flow_ctx* context,struct flow_heap * heap,  void* old_pointer,
-                                            size_t new_byte_count, const char* file, int line);
-typedef void (*flow_heap_free_function)(struct flow_ctx* context, struct flow_heap * heap, void* pointer, const char* file,
-                                        int line);
-typedef void (*flow_heap_terminate_function)(struct flow_ctx* context, struct flow_heap * heap);
-
-PUB void * flow_heap_get_private_state(struct flow_heap * heap);
-PUB bool flow_heap_set_private_state(struct flow_heap * heap, void * private_state);
-
-PUB bool flow_heap_set_default(flow_context * context);
-PUB bool flow_heap_set_custom(flow_context *context, flow_heap_calloc_function calloc, flow_heap_malloc_function malloc,
-                          flow_heap_realloc_function realloc, flow_heap_free_function free,
-                          flow_heap_terminate_function terminate, void *initial_private_state);
-
-
-//When you need to control 100% of heap operations, you can allocate
-// flow_context_sizeof_context() bytes and initialize them with flow_context_initialize,
-// then call flow_heap_set_custom. Use flow_context_terminate and your matching free() function instead of flow_context_destroy
-PUB size_t flow_context_sizeof_context(void);
-PUB void flow_context_initialize(flow_context* context);
-//Want to ensure there were no memory leaks due to incorrect API use, and that all files flushed and close successfully?
-//Call begin_terminate, then check on error status and memory stats.
-PUB bool flow_context_begin_terminate(flow_context* context);
-PUB void flow_context_end_terminate(flow_context* context);
-
-
-
-PUB void* flow_context_calloc(flow_context* context, size_t instance_count, size_t instance_size, flow_destructor_function destructor,void * owner, const char* file, int line);
-PUB void* flow_context_malloc(flow_context* context, size_t byte_count, flow_destructor_function destructor,void * owner, const char* file, int line);
-PUB void* flow_context_realloc(flow_context* context, void* old_pointer, size_t new_byte_count, const char* file,
-                               int line);
-PUB void flow_deprecated_free(flow_context *context, void *pointer, const char *file, int line);
-PUB bool flow_destroy_by_owner(flow_context *context, void *owner, const char *file, int line);
-PUB bool flow_destroy(flow_context *context, void *pointer, const char *file, int line);
-
-
-
-#define FLOW_calloc(context, instance_count, element_size)                                                             \
-    flow_context_calloc(context, instance_count, element_size, NULL, context, __FILE__, __LINE__)
-#define FLOW_calloc_array(context, instance_count, type_name)                                                          \
-    (type_name*) flow_context_calloc(context, instance_count, sizeof(type_name), NULL, context, __FILE__, __LINE__)
-#define FLOW_malloc(context, byte_count) flow_context_malloc(context, byte_count, NULL, context, __FILE__, __LINE__)
-
-#define FLOW_calloc_owned(context, instance_count, element_size, owner)                                                             \
-    flow_context_calloc(context, instance_count, element_size, NULL, owner, __FILE__, __LINE__)
-#define FLOW_calloc_array_owned(context, instance_count, type_name, owner)                                                          \
-    (type_name*) flow_context_calloc(context, instance_count, sizeof(type_name), NULL, owner, __FILE__, __LINE__)
-#define FLOW_malloc_owned(context, byte_count, owner) flow_context_malloc(context, byte_count, NULL, owner, __FILE__, __LINE__)
-
-#define FLOW_realloc(context, old_pointer, new_byte_count)                                                             \
-    flow_context_realloc(context, old_pointer, new_byte_count, __FILE__, __LINE__)
-
-#define FLOW_free(context, pointer) flow_deprecated_free(context, pointer, __FILE__, __LINE__)
-#define FLOW_destroy(context, pointer) flow_destroy(context, pointer, __FILE__, __LINE__)
-
-
-PUB void flow_context_raise_error(flow_context* context, flow_status_code code, char* message, const char* file,
-                                  int line, const char* function_name);
-PUB char* flow_context_set_error_get_message_buffer(flow_context* context, flow_status_code code, const char* file,
-                                                    int line, const char* function_name);
-PUB void flow_context_add_to_callstack(flow_context* context, const char* file, int line, const char* function_name);
-
-
-#define FLOW_error(context, status_code)                                                                               \
-    flow_context_set_error_get_message_buffer(context, status_code, __FILE__, __LINE__, __func__)
-#define FLOW_error_msg(context, status_code, ...)                                                                      \
-    flow_snprintf(flow_context_set_error_get_message_buffer(context, status_code, __FILE__, __LINE__, __func__),       \
-                  FLOW_ERROR_MESSAGE_SIZE, __VA_ARGS__)
-
-#define FLOW_add_to_callstack(context) flow_context_add_to_callstack(context, __FILE__, __LINE__, __func__)
-
-#define FLOW_error_return(context)                                                                                     \
-    flow_context_add_to_callstack(context, __FILE__, __LINE__, __func__);                                              \
-    return false
-
-
-
-
-
-
-
-
-
-
-
-PUB bool flow_context_enable_profiling(flow_context* context, uint32_t default_capacity);
-
-#define FLOW_ALLOW_PROFILING
-
-#ifdef FLOW_ALLOW_PROFILING
-#define flow_prof_start(context, name, allow_recursion) flow_context_profiler_start(context, name, allow_recursion);
-#define flow_prof_stop(context, name, assert_started, stop_children)                                                   \
-    flow_context_profiler_stop(context, name, assert_started, stop_children);
-#else
-#define flow_prof_start(context, name, allow_recursion)
-#define flow_prof_stop(context, name, assert_started, stop_children)
-#endif
-
-PUB void flow_context_profiler_start(flow_context* context, const char* name, bool allow_recursion);
-PUB void flow_context_profiler_stop(flow_context* context, const char* name, bool assert_started, bool stop_children);
-
-
 
 //** END: future: imageflow_advanced.h */
 
@@ -184,8 +60,8 @@ struct flow_heap {
     void* _private_state;
 };
 struct flow_objtracking_info;
-void flow_context_objtracking_initialize(struct flow_objtracking_info *heap_tracking);
-void flow_context_objtracking_terminate(flow_context *context);
+void flow_context_objtracking_initialize(struct flow_objtracking_info* heap_tracking);
+void flow_context_objtracking_terminate(flow_context* context);
 
 /** flow_context: flow_error_info **/
 
@@ -236,7 +112,7 @@ typedef struct flow_colorspace_info {
 struct flow_heap_object_record {
     void* ptr;
     size_t bytes;
-    void * owner;
+    void* owner;
     flow_destructor_function destructor;
     const char* allocated_by;
     int allocated_by_line;
@@ -267,12 +143,9 @@ typedef struct flow_ctx {
 
 #include "color.h"
 
-
 PUB bool flow_graph_walk_dependency_wise(flow_context* c, struct flow_job* job, struct flow_graph** graph_ref,
-                                     flow_graph_visitor node_visitor, flow_graph_visitor edge_visitor,
-                                     void* custom_data);
-
-
+                                         flow_graph_visitor node_visitor, flow_graph_visitor edge_visitor,
+                                         void* custom_data);
 
 PUB flow_bitmap_float* flow_bitmap_float_create_header(flow_context* context, int sx, int sy, int channels);
 
@@ -317,48 +190,126 @@ PUB bool flow_halve(flow_context* context, const flow_bitmap_bgra* from, flow_bi
 
 PUB bool flow_halve_in_place(flow_context* context, flow_bitmap_bgra* from, int divisor);
 
-
 PUB void flow_utils_ensure_directory_exists(const char* dir_path);
-
-
-struct flow_codec_definition;
 
 // https://github.com/imazen/freeimage/blob/master/Source/FreeImage/FreeImageIO.cpp
 // https://github.com/imazen/freeimage/blob/master/Source/FreeImage/PluginJPEG.cpp
 
+// shutdown
+// nature - memory, FILE *,
 
+struct flow_nodeinfo_index {
+    int32_t index;
+};
 
-    //shutdown
-    //nature - memory, FILE *,
+struct flow_nodeinfo_encoder_placeholder {
+    struct flow_nodeinfo_index index; // MUST BE FIRST
+    flow_codec_type codec_type;
+};
 
+struct flow_nodeinfo_createcanvas {
+    flow_pixel_format format;
+    size_t width;
+    size_t height;
+    uint32_t bgcolor;
+};
 
-struct flow_codec_instance{
+struct flow_nodeinfo_crop {
+    uint32_t x1;
+    uint32_t x2;
+    uint32_t y1;
+    uint32_t y2;
+};
+
+struct flow_nodeinfo_copy_rect_to_canvas {
+    uint32_t x;
+    uint32_t y;
+    uint32_t from_x;
+    uint32_t from_y;
+    uint32_t width;
+    uint32_t height;
+};
+struct flow_nodeinfo_expand_canvas {
+    uint32_t left;
+    uint32_t top;
+    uint32_t right;
+    uint32_t bottom;
+    uint32_t canvas_color_srgb;
+};
+struct flow_nodeinfo_fill_rect {
+    uint32_t x1;
+    uint32_t y1;
+    uint32_t x2;
+    uint32_t y2;
+    uint32_t color_srgb;
+};
+
+struct flow_nodeinfo_size {
+    size_t width;
+    size_t height;
+};
+struct flow_nodeinfo_bitmap_bgra_pointer {
+    flow_bitmap_bgra** ref;
+};
+
+struct flow_nodeinfo_codec {
+    int32_t placeholder_id;
+    struct flow_codec_instance* codec;
+    // For encoders
+    size_t desired_encoder_id;
+};
+
+struct flow_nodeinfo_render_to_canvas_1d {
+    // There will need to be consistency checks against the createcanvas node
+
+    flow_interpolation_filter interpolation_filter;
+    // flow_interpolation_details * interpolationDetails;
+    int32_t scale_to_width;
+    uint32_t canvas_x;
+    uint32_t canvas_y;
+    bool transpose_on_write;
+    flow_working_floatspace scale_in_colorspace;
+
+    float sharpen_percent_goal;
+
+    flow_compositing_mode compositing_mode;
+    // When using compositing mode blend_with_matte, this color will be used. We should probably define this as always
+    // being sRGBA, 4 bytes.
+    uint8_t matte_color[4];
+
+    struct flow_scanlines_filter* filter_list;
+};
+
+// If you want to know what kind of I/O structure is inside user_data, compare the read_func/write_func function
+// pointers. No need for another human-assigned set of custom structure identifiers.
+struct flow_io {
+    flow_context* context;
+    flow_io_mode mode; // Call nothing, dereference nothing, if this is 0
+    flow_io_read_function read_func; // Optional for write modes
+    flow_io_write_function write_func; // Optional for read modes
+    flow_io_position_function position_func; // Optional for sequential modes
+    flow_io_seek_function seek_function; // Optional for sequential modes
+    flow_destructor_function dispose_func; // Optional.
+    void* user_data;
+    uint64_t optional_file_length; // Whoever sets up this structure can populate this value - or set it to -1 - as they
+    // wish. useful for resource estimation.
+};
+
+struct flow_codec_instance {
     int32_t graph_placeholder_id;
     size_t codec_id;
     void* codec_state;
-    struct flow_io io;
-
-};
-
-struct flow_job_resource_item {
-    struct flow_job_resource_item* next;
-    int32_t id;
-    int32_t graph_placeholder_id;
+    struct flow_io* io;
+    struct flow_codec_instance* next;
     FLOW_DIRECTION direction;
-    flow_job_resource_type type;
-    flow_codec_type codec_type;
-    void* codec_state;
-    void* data;
 };
 
 struct flow_job {
     int32_t debug_job_id;
     int32_t next_graph_version;
-    int32_t next_resource_id;
     int32_t max_calc_flatten_execute_passes;
-    struct flow_codec_instance * codecs;
-    struct flow_job_resource_item* resources_head;
-    struct flow_job_resource_item* resources_tail;
+    struct flow_codec_instance* codecs_head;
+    struct flow_codec_instance* codecs_tail;
     bool record_graph_versions;
     bool record_frame_images;
     bool render_graph_versions;
@@ -366,12 +317,65 @@ struct flow_job {
     bool render_last_graph;
 };
 
-
-PUB bool flow_job_render_graph_to_png(flow_context* c, struct flow_job* job, struct flow_graph* g, int32_t graph_version);
+PUB bool flow_job_render_graph_to_png(flow_context* c, struct flow_job* job, struct flow_graph* g,
+                                      int32_t graph_version);
 PUB bool flow_job_notify_node_complete(flow_context* c, struct flow_job* job, struct flow_graph* g, int32_t node_id);
-PUB bool flow_job_initialize_input_resource(flow_context* c, struct flow_job* job, struct flow_job_resource_item* item);
 
+PUB bool flow_job_link_codecs(flow_context* c, struct flow_job* job, struct flow_graph** graph_ref);
 
+struct flow_scanlines_filter {
+    flow_scanlines_filter_type type;
+    struct flow_scanlines_filter* next;
+};
+//
+// struct flow_frame_info{
+//    int32_t w;
+//    int32_t h;
+//    flow_pixel_format fmt;
+//    bool alpha_meaningful;
+//};
+
+struct flow_edge {
+    flow_edgetype type;
+    int32_t from;
+    int32_t to;
+    int32_t from_width;
+    int32_t from_height;
+    flow_pixel_format from_format;
+    bool from_alpha_meaningful;
+    int32_t info_byte_index;
+    int32_t info_bytes;
+};
+
+struct flow_node {
+    flow_ntype type;
+    int32_t info_byte_index;
+    int32_t info_bytes;
+    flow_node_state state;
+    flow_bitmap_bgra* result_bitmap;
+    uint32_t ticks_elapsed;
+};
+
+struct flow_graph {
+    uint32_t memory_layout_version; // This progresses differently from the library version, as internals are subject to
+    // refactoring. If we are given a graph to copy, we check this number.
+    struct flow_edge* edges;
+    int32_t edge_count;
+    int32_t next_edge_id;
+    int32_t max_edges;
+
+    struct flow_node* nodes;
+    int32_t node_count;
+    int32_t next_node_id;
+    int32_t max_nodes;
+
+    uint8_t* info_bytes;
+    int32_t max_info_bytes;
+    int32_t next_info_byte;
+    int32_t deleted_bytes;
+
+    float growth_factor;
+};
 
 #undef PUB
 

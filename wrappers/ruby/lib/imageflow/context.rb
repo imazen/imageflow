@@ -17,6 +17,10 @@ module Imageflow
       @c = nil
     end
 
+    def ptr
+      @c
+    end
+
     def is_destroyed?
       @c == nil
     end

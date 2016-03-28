@@ -37,7 +37,7 @@ module Imageflow
         g = @context.create_graph
         i = instructions
 
-        @last = g.create_node(:resource_placeholder, 0)
+        @last = g.create_node(:decoder, 0)
 
 
         original_size = [source_info[:frame0_width], source_info[:frame0_height]]
@@ -90,7 +90,7 @@ module Imageflow
           @result_mime_type = 'image/jpeg'
           output_codec = :encode_jpeg
         end
-        @last = @last.add(:encoder_placeholder, output_placeholder_id, output_codec)
+        @last = @last.add(:encoder, output_placeholder_id, output_codec)
 
         g
       end

@@ -58,7 +58,7 @@ module Imageflow
         #job.debug_record_gif
 
         job.add_input_buffer(placeholder_id: 0, bytes: source.bytes)
-        output_resource_id = job.add_output_buffer(placeholder_id: 1)
+        job.add_output_buffer(placeholder_id: 1)
 
 
         @result_info ||= {}
@@ -73,12 +73,10 @@ module Imageflow
 
         @result_info[:mime_type] = gb.result_mime_type
 
-        #we have to insert the last resource that we just added in complete_graph
-        job.insert_resources graph: g
 
         job.execute graph: g
 
-        @result_bytes = job.get_buffer_bytes(resource_id: output_resource_id)
+        @result_bytes = job.get_buffer_bytes(placeholder_id: 1)
       ensure
         c.destroy! unless c.nil?
       end

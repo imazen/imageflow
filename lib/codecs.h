@@ -1,11 +1,11 @@
 #pragma once
 
+#include <jpeglib.h>
 #include "lcms2.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
-
 
 struct flow_codec_magic_bytes {
     flow_codec_type codec_type;
@@ -19,10 +19,10 @@ struct decoder_frame_info {
     flow_pixel_format format;
 };
 
-
-
 typedef void* (*codec_aquire_on_buffer_fn)(flow_context* c, struct flow_job* job,
                                            struct flow_job_resource_buffer* buffer);
+
+typedef bool (*codec_intialize)(flow_context* c, struct flow_job* job, struct flow_codec_instance* instance);
 
 typedef bool (*codec_get_frame_info_fn)(flow_context* c, struct flow_job* job, void* codec_state,
                                         struct decoder_frame_info* decoder_frame_info_ref);
@@ -39,6 +39,7 @@ typedef bool (*codec_stringify_fn)(flow_context* c, struct flow_job* job, void* 
 struct flow_codec_definition {
     flow_codec_type type;
     codec_aquire_on_buffer_fn aquire_on_buffer;
+    codec_intialize initialize;
     codec_get_frame_info_fn get_frame_info;
     codec_read_frame_fn read_frame;
     codec_write_frame_fn write_frame;
@@ -68,8 +69,7 @@ typedef enum flow_codec_color_profile_source {
 struct flow_codec_definition* flow_job_get_codec_definition(flow_context* c, flow_codec_type type);
 flow_codec_type flow_job_codec_select(flow_context* c, struct flow_job* job, uint8_t* data, size_t data_bytes);
 
-void* flow_job_acquire_codec_over_buffer(flow_context* c, struct flow_job* job, struct flow_job_resource_buffer* buffer,
-                                         flow_codec_type type);
+bool flow_job_initialize_codec(flow_context* c, struct flow_job* job, struct flow_codec_instance* item);
 
 bool flow_job_decoder_get_frame_info(flow_context* c, struct flow_job* job, void* codec_state, flow_codec_type type,
                                      struct decoder_frame_info* decoder_frame_info_ref);
@@ -77,28 +77,25 @@ bool flow_job_decoder_get_frame_info(flow_context* c, struct flow_job* job, void
 bool flow_job_decoder_read_frame(flow_context* c, struct flow_job* job, void* codec_state, flow_codec_type type,
                                  flow_bitmap_bgra* canvas);
 
+bool flow_job_codecs_initialize_encode_jpeg(flow_context* c, struct flow_job* job, struct flow_codec_instance* item);
+bool flow_job_codecs_initialize_decode_jpeg(flow_context* c, struct flow_job* job, struct flow_codec_instance* item);
 
-
-void* flow_job_codecs_aquire_decode_jpeg_on_buffer(flow_context* c, struct flow_job* job,
-                                                   struct flow_job_resource_buffer* buffer);
 bool flow_job_codecs_jpeg_get_info(flow_context* c, struct flow_job* job, void* codec_state,
                                    struct decoder_frame_info* decoder_frame_info_ref);
 bool flow_job_codecs_jpeg_read_frame(flow_context* c, struct flow_job* job, void* codec_state,
                                      flow_bitmap_bgra* canvas);
-void* flow_job_codecs_aquire_encode_jpeg_on_buffer(flow_context* c, struct flow_job* job,
-                                                   struct flow_job_resource_buffer* buffer);
+
 bool flow_job_codecs_jpeg_write_frame(flow_context* c, struct flow_job* job, void* codec_state,
                                       flow_bitmap_bgra* frame);
 
-void* flow_job_codecs_aquire_encode_png_on_buffer(flow_context* c, struct flow_job* job,
-                                                  struct flow_job_resource_buffer* buffer);
+bool flow_job_codecs_initialize_decode_png(flow_context* c, struct flow_job* job, struct flow_codec_instance* item);
 
 bool flow_job_codecs_png_write_frame(flow_context* c, struct flow_job* job, void* codec_state, flow_bitmap_bgra* frame);
 
 bool flow_job_codecs_png_get_info(flow_context* c, struct flow_job* job, void* codec_state,
                                   struct decoder_frame_info* decoder_frame_info_ref);
-void* flow_job_codecs_aquire_decode_png_on_buffer(flow_context* c, struct flow_job* job,
-                                                  struct flow_job_resource_buffer* buffer);
+bool flow_job_codecs_initialize_encode_png(flow_context* c, struct flow_job* job, struct flow_codec_instance* item);
+
 bool flow_job_codecs_png_read_frame(flow_context* c, struct flow_job* job, void* codec_state, flow_bitmap_bgra* canvas);
 
 png_bytepp flow_job_create_row_pointers(flow_context* c, void* buffer, size_t buffer_size, size_t stride,
@@ -108,6 +105,9 @@ bool flow_bitmap_bgra_transform_to_srgb(flow_context* c, cmsHPROFILE current_pro
 
 // bool flow_job_codecs_png_write_frame(flow_context* c, struct flow_job* job, void* codec_state, flow_bitmap_bgra*
 // frame);
+
+void flow_codecs_jpeg_setup_source_manager(j_decompress_ptr cinfo, struct flow_io* io);
+void flow_codecs_jpeg_setup_dest_manager(j_compress_ptr cinfo, struct flow_io* io);
 
 #ifdef __cplusplus
 }

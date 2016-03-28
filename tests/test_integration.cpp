@@ -163,13 +163,15 @@ TEST_CASE("Load png from URL", "[fastscaling]")
 
                 // TODO, write out PNG here
 
-                struct flow_job_resource_buffer buffer;
+                struct flow_io* buf = flow_io_create_for_output_buffer(c, c);
 
-                if (!flow_bitmap_bgra_write_png(c, NULL, canvas, &buffer)) {
+                if (!flow_bitmap_bgra_write_png(c, NULL, canvas, buf)) {
                     // FLOW_error_return(context);
                     FAIL("Failed to write png");
                 } else {
-                    write_all_byte("outpng.png", (char*)buffer.buffer, buffer.buffer_size);
+                    if (!flow_io_write_output_buffer_to_file(c, buf, "outpng.png")) {
+                        FAIL("Failed to copy to disk");
+                    }
                     success = true;
                 }
 

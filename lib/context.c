@@ -64,8 +64,6 @@ void flow_context_add_to_callstack(flow_context* context, const char* file, int 
     }
 }
 
-
-
 void flow_context_clear_error(flow_context* context)
 {
     context->error.callstack_count = 0;
@@ -103,7 +101,7 @@ bool flow_context_print_and_exit_if_err(flow_context* c)
 void flow_context_print_error_to(flow_context* c, FILE* stream)
 {
     char buffer[FLOW_ERROR_MESSAGE_SIZE + 2048];
-    flow_context_error_message(c, buffer, sizeof(buffer));
+    flow_context_error_and_stacktrace(c, buffer, sizeof(buffer), true);
     fprintf(stream, "%s", buffer);
 }
 int32_t flow_context_error_and_stacktrace(flow_context* context, char* buffer, size_t buffer_size, bool full_file_path)
@@ -188,13 +186,12 @@ int32_t flow_context_stacktrace(flow_context* context, char* buffer, size_t buff
     return buffer_size - remaining_space;
 }
 
-
 void flow_context_initialize(flow_context* context)
 {
     context->log.log = NULL;
     context->log.capacity = 0;
     context->log.count = 0;
-    context->error.callstack_capacity = 8;
+    context->error.callstack_capacity = 14;
     context->error.callstack_count = 0;
     context->error.callstack[0].file = NULL;
     context->error.callstack[0].line = -1;
@@ -208,8 +205,6 @@ void flow_context_initialize(flow_context* context)
     flow_context_set_floatspace(context, flow_working_floatspace_as_is, 0.0f, 0.0f, 0.0f);
 }
 
-
-
 flow_context* flow_context_create(void)
 {
     flow_context* c = (flow_context*)malloc(sizeof(flow_context));
@@ -219,18 +214,18 @@ flow_context* flow_context_create(void)
     return c;
 }
 
-size_t flow_context_sizeof_context(){
-    return sizeof(struct flow_ctx);
-}
+size_t flow_context_sizeof_context_struct() { return sizeof(struct flow_ctx); }
 
-//One can call begin_terminate to do the error-possible things, yet later check the heap status, remaining allocations, and error count
-//Later, you can call flow_context_destroy()
+// One can call begin_terminate to do the error-possible things, yet later check the heap status, remaining allocations,
+// and error count
+// Later, you can call flow_context_destroy()
 bool flow_context_begin_terminate(flow_context* context)
 {
-    if (context == NULL) return true;
+    if (context == NULL)
+        return true;
 
     bool success = true;
-    if (!flow_destroy_by_owner(context, context, __FILE__, __LINE__)){
+    if (!flow_destroy_by_owner(context, context, __FILE__, __LINE__)) {
         FLOW_add_to_callstack(context);
         success = false;
     }
@@ -238,10 +233,10 @@ bool flow_context_begin_terminate(flow_context* context)
     return success;
 }
 
-
 void flow_context_end_terminate(flow_context* context)
 {
-    if (context == NULL) return;
+    if (context == NULL)
+        return;
 
     flow_context_objtracking_terminate(context);
 

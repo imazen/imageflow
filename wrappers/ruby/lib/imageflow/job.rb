@@ -21,15 +21,27 @@ module Imageflow
       buffer = FFI::MemoryPointer.new(:char, bytes.bytesize) # Allocate memory sized to the data
       buffer.put_bytes(0, bytes)
       @keepalive << buffer
-      @c.call_method(:job_add_buffer, @ptr, :flow_input, placeholder_id, buffer, bytes.bytesize, false)
+
+      io_in = @c.call_method(:io_create_from_memory, :mode_read_write_seekable, buffer, bytes.bytesize, @c.ptr, nil)
+
+      @c.call_method(:job_add_io, @ptr, io_in, placeholder_id,  :flow_input)
     end
 
     def add_output_buffer(placeholder_id:)
-      @c.call_method(:job_add_buffer, @ptr, :flow_output, placeholder_id, nil, 0, true)
+
+      io_ptr = @c.call_method(:io_create_for_output_buffer, @c.ptr)
+
+      @c.call_method(:job_add_io, @ptr, io_ptr, placeholder_id,  :flow_output)
     end
 
-    def get_buffer(resource_id:)
-      Native::FlowJobResourceBuffer.new @c.call_method(:job_get_buffer, @ptr, resource_id)
+    def get_buffer(placeholder_id:)
+      buffer_pointer = FFI::MemoryPointer.new(:pointer, 1) # Allocate memory sized to the data
+      buffer_size = FFI::MemoryPointer.new(:uint64, 1) # Allocate memory sized to the data
+
+      @c.call_method(:job_get_output_buffer, @ptr, placeholder_id, buffer_pointer, buffer_size)
+
+      {buffer: buffer_pointer.get_pointer(0),
+       buffer_size: buffer_size.get_uint64(0)}
     end
 
     def record_nothing
@@ -56,14 +68,10 @@ module Imageflow
       @c.call_method(:job_configure_recording, @ptr, record_graph_versions, record_frame_images, render_last_graph, render_graph_versions, render_animated_graph)
     end
 
-    def get_buffer_bytes(resource_id:)
-      buffer = get_buffer(resource_id: resource_id)
+    def get_buffer_bytes(placeholder_id:)
+      buffer = get_buffer(placeholder_id: placeholder_id)
       raise "Buffer pointer null" if buffer[:buffer] == FFI::Pointer.new(0)
       buffer[:buffer].get_bytes(0, buffer[:buffer_size])
-    end
-
-    def insert_resources(graph:)
-      @c.call_method(:job_insert_resources_into_graph, @ptr, graph.ptr_ptr_graph)
     end
 
     def execute (graph:)
@@ -71,9 +79,9 @@ module Imageflow
     end
 
     def get_input_resource_info(placeholder_id:)
-      info = Imageflow::Native::FlowJobInputResourceInfo.new
+      info = Imageflow::Native::FlowJobDecoderInfo.new
 
-      @c.call_method(:job_get_input_resource_info_by_placeholder_id, @ptr, placeholder_id.to_i, info)
+      @c.call_method(:job_get_decoder_info, @ptr, placeholder_id.to_i, info)
 
       info
     end

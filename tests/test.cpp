@@ -149,7 +149,6 @@ TEST_CASE ("Trim whitespace in 32-bit image", "[fastscaling]") {
 
 //*/
 
-
 TEST_CASE("Test Linear RGB 000 -> LUV ", "[fastscaling]")
 {
     float bgra[4] = { 0, 0, 0, 0 };

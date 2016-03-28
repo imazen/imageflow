@@ -27,7 +27,7 @@ module Imageflow
 
         g.create_node(:canvas, :bgra32, 400, 300, 0xFFFFFFFF)
             .add(:scale, 300, 200)
-            .add(:resource_placeholder, 0)
+            .add(:encoder_placeholder, 0)
 
       end
     end

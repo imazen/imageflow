@@ -136,25 +136,6 @@ static bool stringify_render1d(flow_context* c, struct flow_graph* g, int32_t no
     return true;
 }
 
-static bool stringify_placeholder(flow_context* c, struct flow_graph* g, int32_t node_id, char* buffer,
-                                  size_t buffer_size)
-{
-    FLOW_GET_INFOBYTES(g, node_id, flow_nodeinfo_index, info);
-
-    flow_snprintf(buffer, buffer_size, "placeholder #%d", info->index);
-    return true;
-}
-
-static bool stringify_encoder_placeholder(flow_context* c, struct flow_graph* g, int32_t node_id, char* buffer,
-                                          size_t buffer_size)
-{
-    FLOW_GET_INFOBYTES(g, node_id, flow_nodeinfo_encoder_placeholder, info);
-
-    flow_snprintf(buffer, buffer_size, "encoder placeholder #%d", info->index.index);
-    // TODO - display codec type
-    return true;
-}
-
 static bool stringify_bitmap_bgra_pointer(flow_context* c, struct flow_graph* g, int32_t node_id, char* buffer,
                                           size_t buffer_size)
 {
@@ -165,8 +146,12 @@ static bool stringify_bitmap_bgra_pointer(flow_context* c, struct flow_graph* g,
 static bool stringify_decode(flow_context* c, struct flow_graph* g, int32_t node_id, char* buffer, size_t buffer_size)
 {
     FLOW_GET_INFOBYTES(g, node_id, flow_nodeinfo_codec, info);
+    // TODO - fix when codec_id == 0
 
-    struct flow_codec_definition* def = flow_job_get_codec_definition(c, info->type);
+    struct flow_codec_definition* def = flow_job_get_codec_definition(c, (flow_codec_type)info->codec->codec_id);
+    if (def == NULL) {
+        FLOW_error_return(c);
+    }
 
     // TODO FIX job null
     if (def->stringify == NULL) {
@@ -183,7 +168,7 @@ static bool stringify_decode(flow_context* c, struct flow_graph* g, int32_t node
             flow_snprintf(buffer, buffer_size, "%s %s", def->name, (const char*)&state);
         }
     } else {
-        def->stringify(c, NULL, info->codec_state, buffer, buffer_size);
+        def->stringify(c, NULL, info->codec->codec_state, buffer, buffer_size);
     }
     return true;
 }
@@ -211,7 +196,7 @@ static bool dimensions_scale(flow_context* c, struct flow_graph* g, int32_t node
 static bool dimensions_bitmap_bgra_pointer(flow_context* c, struct flow_graph* g, int32_t node_id,
                                            int32_t outbound_edge_id, bool force_estimate)
 {
-    FLOW_GET_INFOBYTES(g, node_id, flow_nodeinfo_resource_bitmap_bgra, info)
+    FLOW_GET_INFOBYTES(g, node_id, flow_nodeinfo_bitmap_bgra_pointer, info)
 
     if (*info->ref == NULL) {
         FLOW_error(c, flow_status_Invalid_inputs_to_node);
@@ -368,15 +353,22 @@ static bool dimensions_decode(flow_context* c, struct flow_graph* g, int32_t nod
 
     struct flow_edge* output = &g->edges[outbound_edge_id];
 
-    struct flow_codec_definition* def = flow_job_get_codec_definition(c, info->type);
+    struct flow_codec_definition* def = flow_job_get_codec_definition(c, (flow_codec_type)info->codec->codec_id);
 
-    if (def == NULL || def->get_frame_info == NULL) {
+    if (def == NULL) {
+        FLOW_error_return(c);
+    }
+    if (def->get_frame_info == NULL) {
         FLOW_error(c, flow_status_Not_implemented);
+        return false;
+    }
+    if (info->codec->codec_state == NULL) {
+        FLOW_error_msg(c, flow_status_Invalid_internal_state, "Codec has not been initialized.");
         return false;
     }
     struct decoder_frame_info frame_info;
 
-    if (!def->get_frame_info(c, NULL, info->codec_state, &frame_info)) {
+    if (!def->get_frame_info(c, NULL, info->codec->codec_state, &frame_info)) {
         FLOW_error_return(c);
     }
 
@@ -743,6 +735,20 @@ static bool flatten_encode(flow_context* c, struct flow_graph** g, int32_t node_
 {
 
     node->type = flow_ntype_primitive_encoder;
+    FLOW_GET_INFOBYTES((*g), node_id, flow_nodeinfo_codec, info)
+
+    if (info->codec->codec_state == NULL) {
+        // Not yet initialized.
+        // Don't overwrite the current ID if we're using 0 - that means we're in placeholder mode
+        if (info->desired_encoder_id != 0) {
+            info->codec->codec_id = info->desired_encoder_id;
+        }
+        // TODO: establish NULL as a valid flow_job * value for initialize_codec?
+        if (!flow_job_initialize_codec(c, NULL, info->codec)) {
+            FLOW_add_to_callstack(c);
+            return false;
+        }
+    }
 
     *first_replacement_node = *last_replacement_node = node_id;
     // TODO, inject color space correction and other filters
@@ -870,7 +876,7 @@ static bool execute_fill_rect(flow_context* c, struct flow_job* job, struct flow
 
 static bool execute_bitmap_bgra_pointer(flow_context* c, struct flow_job* job, struct flow_graph* g, int32_t node_id)
 {
-    FLOW_GET_INFOBYTES(g, node_id, flow_nodeinfo_resource_bitmap_bgra, info)
+    FLOW_GET_INFOBYTES(g, node_id, flow_nodeinfo_bitmap_bgra_pointer, info)
     struct flow_node* n = &g->nodes[node_id];
 
     int count = flow_graph_get_inbound_edge_count_of_type(c, g, node_id, flow_edgetype_input);
@@ -942,14 +948,16 @@ static bool execute_decode(flow_context* c, struct flow_job* job, struct flow_gr
 
     struct flow_node* n = &g->nodes[node_id];
 
-    struct flow_codec_definition* def = flow_job_get_codec_definition(c, info->type);
-
-    if (def == NULL || def->get_frame_info == NULL || def->read_frame == NULL) {
+    struct flow_codec_definition* def = flow_job_get_codec_definition(c, (flow_codec_type)info->codec->codec_id);
+    if (def == NULL) {
+        FLOW_error_return(c);
+    }
+    if (def->get_frame_info == NULL || def->read_frame == NULL) {
         FLOW_error(c, flow_status_Not_implemented);
         return false;
     }
     struct decoder_frame_info frame_info;
-    if (!def->get_frame_info(c, NULL, info->codec_state, &frame_info)) {
+    if (!def->get_frame_info(c, NULL, info->codec->codec_state, &frame_info)) {
         FLOW_error_return(c);
     }
 
@@ -957,7 +965,7 @@ static bool execute_decode(flow_context* c, struct flow_job* job, struct flow_gr
     if (n->result_bitmap == NULL) {
         FLOW_error_return(c);
     }
-    if (!def->read_frame(c, NULL, info->codec_state, n->result_bitmap)) {
+    if (!def->read_frame(c, NULL, info->codec->codec_state, n->result_bitmap)) {
         FLOW_error_return(c);
     }
     return true;
@@ -970,14 +978,16 @@ static bool execute_encode(flow_context* c, struct flow_job* job, struct flow_gr
     struct flow_node* n = &g->nodes[node_id];
     n->result_bitmap = g->nodes[input_edge->from].result_bitmap;
 
-    struct flow_codec_definition* def = flow_job_get_codec_definition(c, info->type);
-
-    if (def == NULL || def->write_frame == NULL) {
+    struct flow_codec_definition* def = flow_job_get_codec_definition(c, (flow_codec_type)info->codec->codec_id);
+    if (def == NULL) {
+        FLOW_error_return(c);
+    }
+    if (def->write_frame == NULL) {
         FLOW_error(c, flow_status_Not_implemented);
         return false;
     }
 
-    if (!def->write_frame(c, NULL, info->codec_state, n->result_bitmap)) {
+    if (!def->write_frame(c, NULL, info->codec->codec_state, n->result_bitmap)) {
         FLOW_error_return(c);
     }
     return true;
@@ -1005,24 +1015,6 @@ struct flow_node_definition flow_node_defs[] = {
       .populate_dimensions = dimensions_mimic_input,
       .pre_optimize_flatten_complex = flatten_delete_node,
 
-    },
-    {
-      .type = flow_ntype_Resource_Placeholder,
-      .nodeinfo_bytes_fixed = sizeof(struct flow_nodeinfo_index),
-      .type_name = "placeholder",
-      .input_count = -1,
-      .canvas_count = 0,
-      .stringify = stringify_placeholder
-      // Placeholders aren't *flattened*, per se - they are swapped out prior to the execution loop by the job.
-    },
-    {
-      .type = flow_ntype_Encoder_Placeholder,
-      .nodeinfo_bytes_fixed = sizeof(struct flow_nodeinfo_encoder_placeholder),
-      .type_name = "encoder placeholder",
-      .input_count = -1,
-      .canvas_count = 0,
-      .stringify = stringify_encoder_placeholder
-      // Placeholders aren't *flattened*, per se - they are swapped out prior to the execution loop by the job.
     },
     { // Should be useless once we finish function/mutate logic
       .type = flow_ntype_Clone,
@@ -1187,7 +1179,7 @@ struct flow_node_definition flow_node_defs[] = {
       .execute = execute_copy_rect },
 
     { .type = flow_ntype_primitive_bitmap_bgra_pointer,
-      .nodeinfo_bytes_fixed = sizeof(struct flow_nodeinfo_resource_bitmap_bgra),
+      .nodeinfo_bytes_fixed = sizeof(struct flow_nodeinfo_bitmap_bgra_pointer),
       .type_name = "flow_bitmap_bgra ptr",
       .input_count = -1,
       .canvas_count = 0,
@@ -1422,10 +1414,13 @@ bool flow_node_populate_dimensions_to_edge(flow_context* c, struct flow_graph* g
         FLOW_error_return(c);
     }
     if (def->populate_dimensions == NULL) {
-        FLOW_error(c, flow_status_Not_implemented);
+        FLOW_error_msg(c, flow_status_Not_implemented, "populate_dimensions is not implemented for node type %s",
+                       def->type_name);
         return false;
     } else {
-        def->populate_dimensions(c, g, node_id, outbound_edge_id, force_estimate);
+        if (!def->populate_dimensions(c, g, node_id, outbound_edge_id, force_estimate)) {
+            FLOW_error_return(c);
+        }
     }
     return true;
 }
@@ -1442,7 +1437,10 @@ static bool flow_node_flatten_generic(flow_context* c, struct flow_graph** graph
     }
     if ((post_optimize ? def->post_optimize_flatten_complex : def->pre_optimize_flatten_complex) == NULL) {
         if ((post_optimize ? def->post_optimize_flatten : def->pre_optimize_flatten) == NULL) {
-            FLOW_error(c, flow_status_Not_implemented);
+            FLOW_error_msg(c, flow_status_Not_implemented,
+                           post_optimize ? "post_optimize flattening not implemented for node %s"
+                                         : "pre_optimize flattening not implemented for node %s",
+                           def->type_name);
             return false;
         } else {
             int32_t first_replacement_node = -1;

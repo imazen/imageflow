@@ -7,6 +7,12 @@ module Imageflow
       super prefixed_name.to_s.gsub(/^flow_/, "").to_sym, prefixed_name, *vars
     end
 
+    FLOW_INPUT = 4
+    FLOW_OUTPUT = 8
+    enum :flow_direction, [
+        :flow_input, 4,
+        :flow_output, 8
+    ]
 
     enum :flow_ntype, [
         :ntype_Null, 0,
@@ -61,8 +67,6 @@ module Imageflow
         :ntype_DrawImage,
         :ntype_RemoveNoise,
         :ntype_ColorMatrixsRGB,
-        :ntype_Resource_Placeholder,
-        :ntype_Encoder_Placeholder,
         :ntype__FORCE_ENUM_SIZE_INT32, 2147483647
     ]
     #
@@ -209,6 +213,16 @@ module Imageflow
         :encode_jpeg
     ]
 
+    enum :flow_io_mode, [
+        :mode_null,
+        :flow_io_mode_read_sequential, 1,
+        :mode_write_sequential, 2,
+        :mode_read_seekable, 5, #1 | 4,
+        :mode_write_seekable, 6, #2 | 4,
+        :mode_read_write_seekable, 15, #1 | 2 | 4 | 8
+
+    ]
+
     class FlowProfilingEntry < FFI::Struct
       layout(
           :time, :int64,
@@ -237,7 +251,6 @@ module Imageflow
     attach_function :flow_context_get_profiler_log, [:pointer], :pointer
     attach_function :flow_context_create, [], :pointer
     attach_function :flow_context_destroy, [:pointer], :void
-    attach_function :flow_context_free_all_allocations, [:pointer], :void
     attach_function :flow_context_print_memory_info, [:pointer], :void
     attach_function :flow_context_error_message, [:pointer, :pointer, :uint], :int32
     attach_function :flow_context_stacktrace, [:pointer, :pointer, :uint, :bool], :int32
@@ -247,6 +260,52 @@ module Imageflow
     attach_function :flow_context_print_and_exit_if_err, [:pointer], :bool
     attach_function :flow_context_clear_error, [:pointer], :void
     attach_function :flow_context_print_error_to, [:pointer, :pointer], :void
+
+    # PUB bool flow_job_get_decoder_info(flow_context* c, struct flow_job* job, int32_t by_placeholder_id,
+    #                                                                                   struct flow_job_decoder_info* info);
+
+
+
+    #PUB struct flow_io* flow_io_create_for_file(flow_context* c, flow_io_mode mode, const char* filename, void* owner);
+    #attach_function :flow_io_create_for_file, [:pointer, :flow_io_mode, :string, :pointer], :pointer
+    #
+    # PUB bool flow_job_initialize_encoder(flow_context* c, struct flow_job* job, int32_t by_placeholder_id,
+    #                                                                                     flow_codec_type codec_id);
+    #
+    # PUB struct flow_codec_instance* flow_job_get_codec_instance(flow_context* c, struct flow_job* job,
+    #                                                                                     int32_t by_placeholder_id);
+
+    # PUB struct flow_io* flow_io_create_from_memory(flow_context* c, flow_io_mode mode, uint8_t* memory, size_t length,
+    #    void* owner, flow_destructor_function memory_free);
+    attach_function :flow_io_create_from_memory, [:pointer, :flow_io_mode, :pointer, :uint64, :pointer, :pointer], :pointer
+    #PUB struct flow_io* flow_io_create_for_output_buffer(flow_context* c, void* owner);
+    attach_function :flow_io_create_for_output_buffer, [:pointer, :pointer], :pointer
+
+
+    # // Returns false if the flow_io struct is disposed or not an output buffer type (or for any other error)
+    # PUB bool flow_io_get_output_buffer(flow_context* c, struct flow_io* io, uint8_t** out_pointer_to_buffer,
+    #                                                            size_t* out_length);
+    attach_function :flow_io_get_output_buffer, [:pointer, :pointer, :pointer, :pointer], :bool
+
+    # PUB bool flow_io_write_output_buffer_to_file(flow_context* c, struct flow_io* io, const char* file_path);
+    attach_function :flow_io_write_output_buffer_to_file, [:pointer, :pointer, :string], :bool
+
+    #PUB struct flow_io * flow_job_get_io(flow_context* c, struct flow_job * job, int32_t placeholder_id);
+    attach_function :flow_job_get_io, [:pointer, :pointer, :int32], :pointer
+
+    #PUB bool flow_job_get_output_buffer_by_placeholder(flow_context* c, struct flow_job * job, int32_t placeholder_id, uint8_t** out_pointer_to_buffer,
+    #                                                                                                   size_t* out_length)
+    attach_function :flow_job_get_output_buffer, [:pointer, :pointer, :int32,  :pointer, :pointer], :bool
+    # PUB bool flow_job_add_io(flow_context* c, struct flow_job* job, struct flow_io* io, int32_t placeholder_id,
+    #                                                                                             FLOW_DIRECTION direction);
+    attach_function :flow_job_add_io, [:pointer, :pointer, :pointer, :int32, :flow_direction], :bool
+
+    # bool flow_job_set_default_encoder(flow_context* c, struct flow_job* job, int32_t by_placeholder_id,
+    #                                                                                  flow_codec_type default_encoder_id);
+    attach_function :flow_job_set_default_encoder, [:pointer, :pointer, :int32, :uint64], :bool
+
+
+
     class FlowBitmapBgraStruct < FFI::Struct
       layout(
           :w, :uint32,
@@ -430,9 +489,10 @@ module Imageflow
     attach_function :flow_node_create_rotate_90, [:pointer, :pointer, :int32], :int32
     attach_function :flow_node_create_rotate_180, [:pointer, :pointer, :int32], :int32
     attach_function :flow_node_create_rotate_270, [:pointer, :pointer, :int32], :int32
-    attach_function :flow_node_create_resource_placeholder, [:pointer, :pointer, :int32, :int32], :int32
-    attach_function :flow_node_create_encoder_placeholder, [:pointer, :pointer, :int32, :int32, :codec_type], :int32
-    attach_function :flow_node_create_resource_bitmap_bgra, [:pointer, :pointer, :int32, :pointer], :int32
+    attach_function :flow_node_create_decoder, [:pointer, :pointer, :int32, :int32], :int32
+    attach_function :flow_node_create_encoder_placeholder, [:pointer, :pointer, :int32, :int32], :int32
+
+    attach_function :flow_node_create_encoder, [:pointer, :pointer, :int32, :int32, :uint64], :int32
     attach_function :flow_node_create_primitive_copy_rect_to_canvas, [:pointer, :pointer, :int32, :uint32, :uint32, :uint32, :uint32, :uint32, :uint32], :int32
     attach_function :flow_node_create_primitive_crop, [:pointer, :pointer, :int32, :uint32, :uint32, :uint32, :uint32], :int32
     attach_function :flow_node_create_render_to_canvas_1d, [:pointer, :pointer, :int32, :bool, :uint32, :uint32, :int32, :int, :float, :int, :pointer, :pointer, :int], :pointer
@@ -517,16 +577,10 @@ module Imageflow
     end
     attach_function :flow_node_execute_render_to_canvas_1d, [:pointer, :pointer, :pointer, :pointer, :pointer], :bool
     attach_function :flow_node_create_render1d, [:pointer, :pointer, :int32, :bool, :int32, :int, :float, :pointer, :int], :int32
-    FLOW_INPUT = 4
-    FLOW_OUTPUT = 8
-    enum :flow_direction, [
-        :flow_input, 4,
-        :flow_output, 8
-    ]
+
     attach_function :flow_job_create, [:pointer], :pointer
-    attach_function :flow_job_destroy, [:pointer, :pointer], :void
+    attach_function :flow_job_destroy, [:pointer, :pointer], :bool
     attach_function :flow_job_configure_recording, [:pointer, :pointer, :bool, :bool, :bool, :bool, :bool], :bool
-    attach_function :flow_job_insert_resources_into_graph, [:pointer, :pointer, :pointer], :bool
     attach_function :flow_job_populate_dimensions_where_certain, [:pointer, :pointer, :pointer], :bool
     attach_function :flow_job_force_populate_dimensions, [:pointer, :pointer, :pointer], :bool
     attach_function :flow_job_execute_where_certain, [:pointer, :pointer, :pointer], :bool
@@ -538,33 +592,15 @@ module Imageflow
     attach_function :flow_graph_pre_optimize_flatten, [:pointer, :pointer], :bool
     attach_function :flow_graph_get_edge_count, [:pointer, :pointer, :int32, :bool, :int, :bool, :bool], :int32
     attach_function :flow_graph_validate, [:pointer, :pointer], :bool
-    attach_function :flow_job_add_bitmap_bgra, [:pointer, :pointer, :int, :int32, :pointer], :int32
-    attach_function :flow_job_add_buffer, [:pointer, :pointer, :flow_direction, :int32, :pointer, :uint, :bool], :int32
     attach_function :flow_node_create_generic, [:pointer, :pointer, :int32, :int], :int32
     attach_function :flow_graph_print_to_dot, [:pointer, :pointer, :pointer, :string], :bool
-    attach_function :flow_job_get_bitmap_bgra, [:pointer, :pointer, :int32], :pointer
-    attach_function :flow_job_get_buffer, [:pointer, :pointer, :int32], :pointer
     #attach_function :flow_graph_print_to, [ :pointer, :pointer, :pointer ], :void
-    class FlowJobResourceBuffer < FFI::Struct
-      layout(
-          :buffer, :pointer,
-          :buffer_size, :uint,
-          :owned_by_job, :bool,
-          :codec_state, :pointer
-      )
-    end
+
     attach_function :flow_bitmap_bgra_write_png, [:pointer, :pointer, :pointer, :pointer], :bool
     attach_function :flow_node_post_optimize_flatten, [:pointer, :pointer, :int32], :bool
-
-    enum :flow_job_resource_type, [
-        :bitmap_bgra, 1,
-        :buffer, 2
-    ]
-
-    class FlowJobInputResourceInfo < FFI::Struct
+    class FlowJobDecoderInfo < FFI::Struct
       layout(
           :codec_type, :codec_type,
-          :resource_type, :flow_job_resource_type,
           :preferred_mime_type, :strptr,
           :preferred_extension, :strptr,
           :frame0_width, :int32,
@@ -572,11 +608,7 @@ module Imageflow
           :frame0_post_decode_format, :pixel_format,
       )
     end
-
-
-    attach_function :flow_job_get_resource_id_for_placeholder_id, [:pointer, :pointer, :int32], :int32
-
-    attach_function :flow_job_get_input_resource_info_by_placeholder_id, [:pointer, :pointer, :int32, FlowJobInputResourceInfo.by_ref], :bool
+    attach_function :flow_job_get_decoder_info, [:pointer, :pointer, :int32, :pointer], :pointer
 
 
   end

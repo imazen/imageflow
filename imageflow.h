@@ -1,24 +1,21 @@
 #pragma once
-
-#ifdef __cplusplus
-extern "C" {
-#endif
-
 #include <stdint.h>
 #include <stdbool.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <setjmp.h>
 
-/* Cmake will define MyLibrary_EXPORTS on Windows when it
-configures to build a shared library.*/
-
+#ifdef __cplusplus
+extern "C" {
+#endif
 #if defined(_WIN32)
 #if defined(imageflow_EXPORTS)
+/* Cmake will define imageflow_EXPORTS on Windows when it
+configures to build a shared library.*/
 #define FLOW_EXPORT __declspec(dllexport)
 #else
 #define FLOW_EXPORT __declspec(dllimport)
-#endif /* MyLibrary_EXPORTS */
+#endif /* imageflow_EXPORTS */
 #else /* defined (_WIN32) */
 #define FLOW_EXPORT
 #endif
@@ -37,7 +34,6 @@ configures to build a shared library.*/
 
 // * We heavily experimented with LUV and XYZ color spaces, but determined that better results occur using RGB linear.
 // * A custom sigmoidized color space could perhaps improve things, but would introduce significant overhead.
-
 
 typedef enum FLOW_DIRECTION { FLOW_OUTPUT = 8, FLOW_INPUT = 4 } FLOW_DIRECTION;
 
@@ -96,8 +92,6 @@ typedef enum flow_ntype {
     flow_ntype_DrawImage,
     flow_ntype_RemoveNoise,
     flow_ntype_ColorMatrixsRGB,
-    flow_ntype_Resource_Placeholder,
-    flow_ntype_Encoder_Placeholder,
     flow_ntype__FORCE_ENUM_SIZE_INT32 = 2147483647
 } flow_ntype;
 
@@ -131,12 +125,6 @@ typedef enum flow_compositing_mode {
 } flow_compositing_mode;
 
 struct flow_job;
-
-typedef enum flow_job_resource_type { //TODO: delete this
-    flow_job_resource_type_bitmap_bgra = 1,
-    flow_job_resource_type_buffer = 2
-
-} flow_job_resource_type;
 
 typedef enum flow_codec_type {
     flow_codec_type_null,
@@ -225,15 +213,7 @@ typedef enum flow_interpolation_filter {
     flow_interpolation_filter_MitchellFast
 } flow_interpolation_filter;
 
-typedef enum flow_profiling_entry_flags {
-    flow_profiling_entry_start = 2,
-    flow_profiling_entry_start_allow_recursion = 6,
-    flow_profiling_entry_stop = 8,
-    flow_profiling_entry_stop_assert_started = 24,
-    flow_profiling_entry_stop_children = 56
-} flow_profiling_entry_flags;
-
-//TODO: So many more - 8-bit, compressed data,
+// TODO: So many more - 8-bit, compressed data,
 typedef enum flow_pixel_format { flow_bgr24 = 3, flow_bgra32 = 4, flow_gray8 = 1 } flow_pixel_format;
 
 typedef enum flow_bitmap_compositing_mode {
@@ -249,39 +229,49 @@ typedef enum flow_working_floatspace {
     flow_working_floatspace_gamma = 2
 } flow_working_floatspace;
 
+typedef enum flow_io_mode {
+    flow_io_mode_null = 0,
+    flow_io_mode_read_sequential = 1,
+    flow_io_mode_write_sequential = 2,
+    flow_io_mode_read_seekable = 5, // 1 | 4,
+    flow_io_mode_write_seekable = 6, // 2 | 4,
+    flow_io_mode_read_write_seekable = 15, // 1 | 2 | 4 | 8
+} flow_io_mode;
+
 typedef struct flow_ctx flow_context;
-
-/** flow_context: flow_profiling_log **/
-
-typedef struct {
-    int64_t time;
-    const char* name;
-    flow_profiling_entry_flags flags;
-} flow_profiling_entry;
-
-typedef struct {
-    flow_profiling_entry* log;
-    uint32_t count;
-    uint32_t capacity;
-    int64_t ticks_per_second;
-} flow_profiling_log;
-
-PUB flow_profiling_log* flow_context_get_profiler_log(flow_context* context);
+struct flow_codec_definition;
+struct flow_codec_instance; // All methods should center around this
+struct flow_nodeinfo_index;
+struct flow_nodeinfo_encoder_placeholder;
+struct flow_nodeinfo_createcanvas;
+struct flow_nodeinfo_crop;
+struct flow_nodeinfo_copy_rect_to_canvas;
+struct flow_nodeinfo_expand_canvas;
+struct flow_nodeinfo_fill_rect;
+struct flow_nodinfo_size;
+struct flow_nodeinfo_bitmap_bgra_pointer;
+struct flow_nodeinfo_codec;
+struct flow_nodeinfo_render_to_canvas_1d;
+struct flow_scanlines_filter;
+struct flow_node;
+struct flow_edge;
+struct flow_graph;
 
 PUB flow_context* flow_context_create(void);
-PUB void flow_context_destroy(flow_context* context);
 
-//Flush buffers; close files     ; release underlying resources - the job has been ended.
-typedef bool (*flow_destructor_function) (flow_context *c, void * thing);
+// When you need to control 100% of heap operations, you can allocate
+// flow_context_sizeof_context() bytes and initialize them with flow_context_initialize,
+// then call flow_heap_set_custom. Use flow_context_terminate and your matching free() function instead of
+// flow_context_destroy
+PUB size_t flow_context_sizeof_context_struct(void);
+PUB void flow_context_initialize(flow_context* context);
+// Want to ensure there were no memory leaks due to incorrect API use, and that all files flushed and close
+// successfully?
+// Call begin_terminate, then check on error status and memory stats.
+PUB bool flow_context_begin_terminate(flow_context* context);
+PUB void flow_context_end_terminate(flow_context* context);
 
-PUB bool flow_set_destructor(flow_context * context, void * thing, flow_destructor_function *destructor);
-
-//Thing will only be destroyed and freed at the time that owner is destroyed and freed
-PUB bool flow_set_owner(flow_context * context, void *thing, void *owner);
-
-
-PUB void flow_context_free_all_allocations(flow_context* context);
-PUB void flow_context_print_memory_info(flow_context* context);
+PUB void flow_context_destroy(flow_context* context); // Don't pass this a pointer on the stack! use begin/end terminate
 
 PUB int32_t
     flow_context_error_and_stacktrace(flow_context* context, char* buffer, size_t buffer_size, bool full_file_path);
@@ -298,79 +288,38 @@ PUB void flow_context_clear_error(flow_context* context);
 
 PUB void flow_context_print_error_to(flow_context* c, FILE* stream);
 
-typedef enum flow_io_mode {
-    flow_io_mode_null = 0,
-    flow_io_mode_read_sequential = 1,
-    flow_io_mode_write_sequential = 2,
-    flow_io_mode_read_seekable = 1 | 4,
-    flow_io_mode_write_seekable = 2 | 4,
-    flow_io_mode_read_write_seekable = 1 | 2 | 4 | 8
-} flow_io_mode;
+PUB void flow_context_print_memory_info(flow_context* context);
 
-struct flow_io;
+// Flush buffers; close files     ; release underlying resources - the job has been ended.
+typedef bool (*flow_destructor_function)(flow_context* c, void* thing);
 
-//Returns the number of read into the buffer. Failure to read 'count' bytes could mean EOF or failure. Check context status. Pass NULL to buffer if you want to skip 'count' many bytes, seeking ahead.
-typedef int64_t (*flow_io_read_function) (flow_context * c, struct flow_io * io, uint8_t * buffer, size_t count);
-//Returns the number of bytes written. If it doesn't equal 'count', there was an error. Check context status
-typedef int64_t (*flow_io_write_function) (flow_context * c, struct flow_io * io, uint8_t * buffer, size_t count);
+// Assuming, here, that we never get a pointer to address 42 in memory.
+#define FLOW_OWNER_IMMORTAL ((void*)42)
 
-//Returns negative on failure - check context for more detail. Returns the current position in the stream when successful
-typedef int64_t (*flow_io_position_function) (flow_context * c, struct flow_io * io);
+PUB struct flow_io* flow_io_create_for_file(flow_context* c, flow_io_mode mode, const char* filename, void* owner);
+PUB struct flow_io* flow_io_create_from_memory(flow_context* c, flow_io_mode mode, uint8_t* memory, size_t length,
+                                               void* owner, flow_destructor_function memory_free);
+PUB struct flow_io* flow_io_create_for_output_buffer(flow_context* c, void* owner);
 
-//Returns true if seek was successful.
-typedef bool (*flow_io_seek_function) (flow_context * c, struct flow_io * io, int64_t position);
+// Returns false if the flow_io struct is disposed or not an output buffer type (or for any other error)
+PUB bool flow_io_get_output_buffer(flow_context* c, struct flow_io* io, uint8_t** out_pointer_to_buffer,
+                                   size_t* out_length);
+PUB struct flow_io* flow_job_get_io(flow_context* c, struct flow_job* job, int32_t placeholder_id);
 
+PUB bool flow_job_get_output_buffer(flow_context* c, struct flow_job* job, int32_t placeholder_id,
+                                    uint8_t** out_pointer_to_buffer, size_t* out_length);
+PUB bool flow_io_write_output_buffer_to_file(flow_context* c, struct flow_io* io, const char* file_path);
 
+PUB bool flow_job_initialize_encoder(flow_context* c, struct flow_job* job, int32_t by_placeholder_id,
+                                     flow_codec_type codec_id);
 
-//If you want to know what kind of I/O structure is inside user_data, compare the read_func/write_func function pointers. No need for another human-assigned set of custom structure identifiers.
-struct flow_io {
-    flow_context *context;
-    flow_io_mode mode;  //Call nothing, dereference nothing, if this is 0
-    flow_io_read_function read_func;    //Optional for write modes
-    flow_io_write_function write_func;  //Optional for read modes
-    flow_io_position_function position_func;    //Optional for sequential modes
-    flow_io_seek_function seek_function; //Optional for sequential modes
-    flow_destructor_function dispose_func;  //Optional.
-    void *user_data;
-    uint64_t optional_file_length; //Whoever sets up this structure can populate this value - or set it to -1 - as they wish. useful for resource estimation.
-};
+PUB bool flow_job_add_io(flow_context* c, struct flow_job* job, struct flow_io* io, int32_t placeholder_id,
+                         FLOW_DIRECTION direction);
 
-
-struct flow_codec_instance; //All methods should center around this
-
-
-struct flow_io * flow_io_create_for_file(flow_context * c, flow_io_mode mode, const char *filename);
-struct flow_io * flow_io_create_for_readonly_memory(flow_context * c, flow_io_mode mode, uint8_t * memory, size_t length);
-struct flow_io * flow_io_create_for_output_buffer(flow_context * c);
-
-//Returns false if the flow_io struct is disposed or not an output buffer type (or for any other error)
-bool flow_io_get_output_buffer(flow_context * c, struct flow_io *);
-
-
-//This step always pre-allocates space for the next call, such that a failure to register the I/O can't happen immediately, and cleanup can be performed anyhow (as long as you create and add io structs one at a time)
-
-bool flow_job_add_io(flow_context *c, struct flow_io *, int32_t placeholder_id, FLOW_DIRECTION direction);
-
-//Access buffer for output
-//Accces codec_instance for input
-//Setup codec for output
-
-
-//Create I/O for inputs/outputs.
-//Add I/O to job. At this point a codec is assigned and initialized.
-//Create input/output bitmaps
-
-//Read info, setup encoders by placeholder - OR - delay insertion until the previous frame is complete. execution causing the codec selection based on the bitmap data.
-//Maybe we can make this less magical?
-
-
-
-
-
-//shutdown
-//nature - memory, FILE *,
-
-
+PUB struct flow_codec_instance* flow_job_get_codec_instance(flow_context* c, struct flow_job* job,
+                                                            int32_t by_placeholder_id);
+bool flow_job_set_default_encoder(flow_context* c, struct flow_job* job, int32_t by_placeholder_id,
+                                  flow_codec_type default_encoder_id);
 
 // non-indexed bitmap
 typedef struct flow_bitmap_bgra_struct {
@@ -546,62 +495,6 @@ PUB bool flow_bitmap_bgra_populate_histogram(flow_context* context, flow_bitmap_
                                              uint32_t histogram_size_per_channel, uint32_t histogram_count,
                                              uint64_t* pixels_sampled);
 
-struct flow_scanlines_filter;
-
-struct flow_scanlines_filter {
-    flow_scanlines_filter_type type;
-    struct flow_scanlines_filter* next;
-};
-//
-// struct flow_frame_info{
-//    int32_t w;
-//    int32_t h;
-//    flow_pixel_format fmt;
-//    bool alpha_meaningful;
-//};
-
-struct flow_edge {
-    flow_edgetype type;
-    int32_t from;
-    int32_t to;
-    int32_t from_width;
-    int32_t from_height;
-    flow_pixel_format from_format;
-    bool from_alpha_meaningful;
-    int32_t info_byte_index;
-    int32_t info_bytes;
-};
-
-struct flow_node {
-    flow_ntype type;
-    int32_t info_byte_index;
-    int32_t info_bytes;
-    flow_node_state state;
-    flow_bitmap_bgra* result_bitmap;
-    uint32_t ticks_elapsed;
-};
-
-struct flow_graph {
-    uint32_t memory_layout_version; // This progresses differently from the library version, as internals are subject to
-    // refactoring. If we are given a graph to copy, we check this number.
-    struct flow_edge* edges;
-    int32_t edge_count;
-    int32_t next_edge_id;
-    int32_t max_edges;
-
-    struct flow_node* nodes;
-    int32_t node_count;
-    int32_t next_node_id;
-    int32_t max_nodes;
-
-    uint8_t* info_bytes;
-    int32_t max_info_bytes;
-    int32_t next_info_byte;
-    int32_t deleted_bytes;
-
-    float growth_factor;
-};
-
 PUB struct flow_graph* flow_graph_create(flow_context* c, uint32_t max_edges, uint32_t max_nodes,
                                          uint32_t max_info_bytes, float growth_factor);
 
@@ -630,6 +523,8 @@ PUB int32_t flow_edge_duplicate(flow_context* c, struct flow_graph** g, int32_t 
  * flow_
  */
 
+PUB int32_t flow_node_create_decoder(flow_context* c, struct flow_graph** g, int32_t prev_node, int32_t placeholder_id);
+
 PUB int32_t flow_node_create_canvas(flow_context* c, struct flow_graph** g, int32_t prev_node, flow_pixel_format format,
                                     size_t width, size_t height, uint32_t bgcolor);
 PUB int32_t
@@ -654,11 +549,15 @@ PUB int32_t flow_node_create_resource_placeholder(flow_context* c, struct flow_g
                                                   int32_t output_slot_id);
 
 PUB int32_t flow_node_create_encoder_placeholder(flow_context* c, struct flow_graph** g, int32_t prev_node,
-                                                 int32_t output_slot_id, flow_codec_type codec_type);
+                                                 int32_t output_slot_id);
+
+PUB int32_t flow_node_create_encoder(flow_context* c, struct flow_graph** g, int32_t prev_node, int32_t placeholder_id,
+                                     size_t desired_encoder_id);
+
 PUB int32_t flow_node_create_noop(flow_context* c, struct flow_graph** g, int32_t prev_node);
 
-PUB int32_t flow_node_create_resource_bitmap_bgra(flow_context* c, struct flow_graph** graph_ref, int32_t prev_node,
-                                                  flow_bitmap_bgra** ref);
+PUB int32_t flow_node_create_bitmap_bgra_reference(flow_context* c, struct flow_graph** g, int32_t prev_node,
+                                                   flow_bitmap_bgra** pointer_to_pointer_to_bitmap_bgra);
 
 PUB int32_t flow_node_create_primitive_copy_rect_to_canvas(flow_context* c, struct flow_graph** g, int32_t prev_node,
                                                            uint32_t from_x, uint32_t from_y, uint32_t width,
@@ -702,87 +601,6 @@ typedef bool (*flow_graph_visitor)(flow_context* c, struct flow_job* job, struct
 PUB bool flow_graph_walk(flow_context* c, struct flow_job* job, struct flow_graph** graph_ref,
                          flow_graph_visitor node_visitor, flow_graph_visitor edge_visitor, void* custom_data);
 
-struct flow_nodeinfo_index {
-    int32_t index;
-};
-
-struct flow_nodeinfo_encoder_placeholder {
-    struct flow_nodeinfo_index index; // MUST BE FIRST
-    flow_codec_type codec_type;
-};
-
-struct flow_nodeinfo_createcanvas {
-    flow_pixel_format format;
-    size_t width;
-    size_t height;
-    uint32_t bgcolor;
-};
-
-struct flow_nodeinfo_crop {
-    uint32_t x1;
-    uint32_t x2;
-    uint32_t y1;
-    uint32_t y2;
-};
-
-struct flow_nodeinfo_copy_rect_to_canvas {
-    uint32_t x;
-    uint32_t y;
-    uint32_t from_x;
-    uint32_t from_y;
-    uint32_t width;
-    uint32_t height;
-};
-struct flow_nodeinfo_expand_canvas {
-    uint32_t left;
-    uint32_t top;
-    uint32_t right;
-    uint32_t bottom;
-    uint32_t canvas_color_srgb;
-};
-struct flow_nodeinfo_fill_rect {
-    uint32_t x1;
-    uint32_t y1;
-    uint32_t x2;
-    uint32_t y2;
-    uint32_t color_srgb;
-};
-
-struct flow_nodeinfo_size {
-    size_t width;
-    size_t height;
-};
-
-struct flow_nodeinfo_resource_bitmap_bgra {
-    flow_bitmap_bgra** ref;
-};
-
-struct flow_nodeinfo_codec {
-    void* codec_state;
-    flow_codec_type type;
-};
-
-struct flow_nodeinfo_render_to_canvas_1d {
-    // There will need to be consistency checks against the createcanvas node
-
-    flow_interpolation_filter interpolation_filter;
-    // flow_interpolation_details * interpolationDetails;
-    int32_t scale_to_width;
-    uint32_t canvas_x;
-    uint32_t canvas_y;
-    bool transpose_on_write;
-    flow_working_floatspace scale_in_colorspace;
-
-    float sharpen_percent_goal;
-
-    flow_compositing_mode compositing_mode;
-    // When using compositing mode blend_with_matte, this color will be used. We should probably define this as always
-    // being sRGBA, 4 bytes.
-    uint8_t matte_color[4];
-
-    struct flow_scanlines_filter* filter_list;
-};
-
 PUB bool flow_node_execute_render_to_canvas_1d(flow_context* c, struct flow_job* job, flow_bitmap_bgra* input,
                                                flow_bitmap_bgra* canvas,
                                                struct flow_nodeinfo_render_to_canvas_1d* info);
@@ -793,9 +611,8 @@ PUB int32_t flow_node_create_render1d(flow_context* c, struct flow_graph** g, in
                                       struct flow_scanlines_filter* filter_list,
                                       flow_interpolation_filter interpolation_filter);
 
-
 PUB struct flow_job* flow_job_create(flow_context* c);
-PUB void flow_job_destroy(flow_context* c, struct flow_job* job);
+PUB bool flow_job_destroy(flow_context* c, struct flow_job* job);
 PUB bool flow_job_configure_recording(flow_context* c, struct flow_job* job, bool record_graph_versions,
                                       bool record_frame_images, bool render_last_graph, bool render_graph_versions,
                                       bool render_animated_graph);
@@ -844,9 +661,8 @@ struct flow_job_resource_buffer {
     void* codec_state;
 };
 
-struct flow_job_input_resource_info {
+struct flow_job_decoder_info {
     flow_codec_type codec_type;
-    flow_job_resource_type resource_type;
     const char* preferred_mime_type;
     const char* preferred_extension;
     int32_t frame0_width;
@@ -861,10 +677,12 @@ PUB int32_t
 
 PUB bool flow_job_get_input_resource_info_by_placeholder_id(flow_context* c, struct flow_job* job,
                                                             int32_t by_placeholder_id,
-                                                            struct flow_job_input_resource_info* info);
+                                                            struct flow_job_decoder_info* info);
 
-PUB bool flow_bitmap_bgra_write_png(flow_context* c, struct flow_job* job, flow_bitmap_bgra* frame,
-                                    struct flow_job_resource_buffer* buffer);
+PUB bool flow_job_get_decoder_info(flow_context* c, struct flow_job* job, int32_t by_placeholder_id,
+                                   struct flow_job_decoder_info* info);
+
+bool flow_bitmap_bgra_write_png(flow_context* c, struct flow_job* job, flow_bitmap_bgra* frame, struct flow_io* io);
 PUB bool flow_node_post_optimize_flatten(flow_context* c, struct flow_graph** graph_ref, int32_t node_id);
 
 // Multi-frame/multi-page images are not magically handled.

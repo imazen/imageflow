@@ -3,39 +3,7 @@
 #include "imageflow_private.h"
 #include "lcms2.h"
 #include "codecs.h"
-
-
-//Gif - read X bytes into buffer at a time, return count copied.
-//Gif - wrtie
-//    /* func type to read gif data from arbitrary sources (TVT) */
-//    typedef int (*InputFunc) (GifFileType *, GifByteType *, int);
-//
-///* func type to write gif data to arbitrary targets.
-// * Returns count of bytes written. (MRB)
-// */
-//    typedef int (*OutputFunc) (GifFileType *, const GifByteType *, int);
-////
-////
-//
-//    static void
-//    _ReadProc(png_structp png_ptr, unsigned char *data, png_size_t size) {
-//        pfi_ioStructure pfio = (pfi_ioStructure)png_get_io_ptr(png_ptr);
-//        unsigned n = pfio->s_io->read_proc(data, (unsigned int)size, 1, pfio->s_handle);
-//        if(size && (n == 0)) {
-//            throw "Read error: invalid or corrupted PNG file";
-//        }
-//    }
-//
-//    static void
-//    _WriteProc(png_structp png_ptr, unsigned char *data, png_size_t size) {
-//        pfi_ioStructure pfio = (pfi_ioStructure)png_get_io_ptr(png_ptr);
-//        pfio->s_io->write_proc(data, (unsigned int)size, 1, pfio->s_handle);
-//    }
-
-
-
-//context errors must be translated to codec-specific exit flags for every codec
-
+#include "jerror.h"
 
 typedef enum flow_job_jpeg_decoder_stage {
     flow_job_jpg_decoder_stage_Null = 0,
@@ -46,107 +14,83 @@ typedef enum flow_job_jpeg_decoder_stage {
 } flow_job_jpeg_decoder_stage;
 
 struct flow_job_jpeg_decoder_state {
-
     struct jpeg_error_mgr error_mgr; // MUST be first
+    jmp_buf error_handler_jmp; // MUST be second
+    flow_context* context; // MUST be third
+    size_t codec_id; // MUST be fourht
     flow_job_jpeg_decoder_stage stage;
     struct jpeg_decompress_struct* cinfo;
     size_t row_stride;
     size_t w;
     size_t h;
     int channels;
-    jmp_buf error_handler_jmp;
-    void* file_bytes;
-    size_t file_bytes_count;
+    struct flow_io* io;
     uint8_t* pixel_buffer;
     size_t pixel_buffer_size;
     uint8_t** pixel_buffer_row_pointers;
-    flow_context* context;
+
     cmsHPROFILE color_profile;
     flow_codec_color_profile_source color_profile_source;
     double gamma;
 };
-
-struct flow_job_jpeg_encoder_state {
-
+struct flow_job_jpeg_codec_state_common {
     struct jpeg_error_mgr error_mgr; // MUST be first
+    jmp_buf error_handler_jmp; // MUST be second
+    flow_context* context; // MUST be third
+    size_t codec_id; // MUST be fourht
+};
+struct flow_job_jpeg_encoder_state {
+    struct jpeg_error_mgr error_mgr; // MUST be first
+    jmp_buf error_handler_jmp; // MUST be second
+    flow_context* context; // MUST be third
+    size_t codec_id; // MUST be fourht
     struct jpeg_compress_struct cinfo;
-    jmp_buf error_handler_jmp;
-
-    flow_context* context;
-    char* buffer;
-    size_t size;
-    struct flow_job_resource_buffer* output_resource;
+    struct flow_io* io;
 };
 
 static bool flow_job_jpg_decoder_reset(flow_context* c, struct flow_job_jpeg_decoder_state* state);
 
-static void jpeg_decode_error_exit(j_common_ptr cinfo)
+static void jpeg_error_exit(j_common_ptr cinfo)
 {
     /* cinfo->err really points to a my_error_mgr struct, so coerce pointer */
-    struct flow_job_jpeg_decoder_state* state = (struct flow_job_jpeg_decoder_state*)cinfo->err;
+    struct flow_job_jpeg_codec_state_common* state = (struct flow_job_jpeg_codec_state_common*)cinfo->err;
 
     /* Always display the message. */
     /* We could postpone this until after returning, if we chose. */
     (*cinfo->err->output_message)(cinfo);
 
-    flow_job_jpg_decoder_reset(state->context, state);
-    state->stage = flow_job_jpg_decoder_stage_Failed;
-    FLOW_error(state->context, flow_status_Image_decoding_failed);
+    // Uncomment to permit JPEGs with unknown markers
+    // if (state->error_mgr.msg_code == JERR_UNKNOWN_MARKER) return;
+
+    // Destroy memory allocs and temp files
+    // Specialized routines are wrappers for jpeg_destroy_compress
+    jpeg_destroy(cinfo);
+
+    if (state->codec_id == flow_codec_type_encode_jpeg) {
+        if (!flow_context_has_error(state->context)) {
+            FLOW_error(state->context, flow_status_Image_encoding_failed);
+        }
+    } else if (state->codec_id == flow_codec_type_decode_jpeg) {
+        struct flow_job_jpeg_decoder_state* decoder = (struct flow_job_jpeg_decoder_state*)state;
+        flow_job_jpg_decoder_reset(decoder->context, decoder);
+        decoder->stage = flow_job_jpg_decoder_stage_Failed;
+        if (!flow_context_has_error(state->context)) {
+            FLOW_error(state->context, flow_status_Image_decoding_failed);
+        }
+    }
 
     /* Return control to the setjmp point */
     longjmp(state->error_handler_jmp, 1);
 }
 
-static const JOCTET EOI_BUFFER[1] = { JPEG_EOI };
-typedef struct my_source_mgr {
-    struct jpeg_source_mgr pub;
-    const JOCTET* data;
-    size_t len;
-} my_source_mgr;
+//! Sends errors and warnings to where they should go
 
-static void my_init_source(j_decompress_ptr cinfo) {}
-
-static boolean my_fill_input_buffer(j_decompress_ptr cinfo)
+static void flow_jpeg_output_message(j_common_ptr cinfo)
 {
-    my_source_mgr* src = (my_source_mgr*)cinfo->src;
-    // No more data.  Probably an incomplete image;  just output EOI.
-    src->pub.next_input_byte = EOI_BUFFER;
-    src->pub.bytes_in_buffer = 1;
-    return TRUE;
-}
-static void my_skip_input_data(j_decompress_ptr cinfo, long num_bytes)
-{
-    my_source_mgr* src = (my_source_mgr*)cinfo->src;
-    if ((long)src->pub.bytes_in_buffer < num_bytes) {
-        // Skipping over all of remaining data;  output EOI.
-        src->pub.next_input_byte = EOI_BUFFER;
-        src->pub.bytes_in_buffer = 1;
-    } else {
-        // Skipping over only some of the remaining data.
-        src->pub.next_input_byte += num_bytes;
-        src->pub.bytes_in_buffer -= num_bytes;
-    }
-}
-static void my_term_source(j_decompress_ptr cinfo) {}
-
-static void my_set_source_mgr(j_decompress_ptr cinfo, const char* data, size_t len)
-{
-    my_source_mgr* src;
-    if (cinfo->src == 0) { // if this is first time;  allocate memory
-        cinfo->src = (struct jpeg_source_mgr*)(*cinfo->mem->alloc_small)((j_common_ptr)cinfo, JPOOL_PERMANENT,
-                                                                         sizeof(my_source_mgr));
-    }
-    src = (my_source_mgr*)cinfo->src;
-    src->pub.init_source = my_init_source;
-    src->pub.fill_input_buffer = my_fill_input_buffer;
-    src->pub.skip_input_data = my_skip_input_data;
-    src->pub.resync_to_restart = jpeg_resync_to_restart; // default
-    src->pub.term_source = my_term_source;
-    // fill the buffers
-    src->data = (const JOCTET*)data;
-    src->len = len;
-    src->pub.bytes_in_buffer = len;
-    src->pub.next_input_byte = src->data;
+    char buffer[JMSG_LENGTH_MAX];
+    cinfo->err->format_message(cinfo, buffer);
+    // TODO: maybe create a warnings log in flow_context, and append? Users aren't reading stderr
+    fprintf(stderr, "%s", &buffer[0]);
 }
 
 static bool flow_job_jpg_decoder_BeginRead(flow_context* c, struct flow_job_jpeg_decoder_state* state)
@@ -165,7 +109,7 @@ static bool flow_job_jpg_decoder_BeginRead(flow_context* c, struct flow_job_jpeg
 
     /* We set up the normal JPEG error routines, then override error_exit. */
     state->cinfo->err = jpeg_std_error(&state->error_mgr);
-    state->error_mgr.error_exit = jpeg_decode_error_exit;
+    state->error_mgr.error_exit = jpeg_error_exit;
 
     if (state->cinfo == NULL) {
         FLOW_error(c, flow_status_Out_of_memory);
@@ -173,12 +117,12 @@ static bool flow_job_jpg_decoder_BeginRead(flow_context* c, struct flow_job_jpeg
         state->stage = flow_job_jpg_decoder_stage_Failed;
         return false;
     }
-    /* Establish the setjmp return context for jpeg_decode_error_exit to use. */
+    /* Establish the setjmp return context for jpeg_error_exit to use. */
     if (setjmp(state->error_handler_jmp)) {
         /* If we get here, the JPEG code has signaled an error.
          */
         if (state->stage != flow_job_jpg_decoder_stage_Failed) {
-            exit(404); // This should never happen, jpeg_decode_error_exit should fix it.
+            exit(404); // This should never happen, jpeg_error_exit should fix it.
         }
         return false;
     }
@@ -186,7 +130,7 @@ static bool flow_job_jpg_decoder_BeginRead(flow_context* c, struct flow_job_jpeg
     jpeg_create_decompress(state->cinfo);
 
     // Set a source manager for reading from memory
-    my_set_source_mgr(state->cinfo, (const char*)state->file_bytes, state->file_bytes_count);
+    flow_codecs_jpeg_setup_source_manager(state->cinfo, state->io);
 
     /* Step 3: read file parameters with jpeg_read_header() */
 
@@ -327,29 +271,27 @@ static bool flow_job_jpg_decoder_reset(flow_context* c, struct flow_job_jpeg_dec
     return true;
 }
 
-void* flow_job_codecs_aquire_decode_jpeg_on_buffer(flow_context* c, struct flow_job* job,
-                                                   struct flow_job_resource_buffer* buffer)
+bool flow_job_codecs_initialize_decode_jpeg(flow_context* c, struct flow_job* job, struct flow_codec_instance* item)
 {
     // flow_job_jpeg_decoder_state
-    if (buffer->codec_state == NULL) {
+    if (item->codec_state == NULL) {
         struct flow_job_jpeg_decoder_state* state
             = (struct flow_job_jpeg_decoder_state*)FLOW_malloc(c, sizeof(struct flow_job_jpeg_decoder_state));
         if (state == NULL) {
             FLOW_error(c, flow_status_Out_of_memory);
-            return NULL;
+            return false;
         }
         state->stage = flow_job_jpg_decoder_stage_Null;
 
         if (!flow_job_jpg_decoder_reset(c, state)) {
             FLOW_add_to_callstack(c);
-            return NULL;
+            return false;
         }
-        state->file_bytes = buffer->buffer;
-        state->file_bytes_count = buffer->buffer_size;
-
-        buffer->codec_state = (void*)state;
+        state->codec_id = item->codec_id;
+        state->io = item->io;
+        item->codec_state = state;
     }
-    return buffer->codec_state;
+    return true;
 }
 
 bool flow_job_codecs_jpeg_get_info(flow_context* c, struct flow_job* job, void* codec_state,
@@ -387,55 +329,32 @@ bool flow_job_codecs_jpeg_read_frame(flow_context* c, struct flow_job* job, void
     }
 }
 
-void* flow_job_codecs_aquire_encode_jpeg_on_buffer(flow_context* c, struct flow_job* job,
-                                                   struct flow_job_resource_buffer* buffer)
+bool flow_job_codecs_initialize_encode_jpeg(flow_context* c, struct flow_job* job, struct flow_codec_instance* item)
 {
-    // flow_job_jpeg_decoder_state
-    if (buffer->codec_state == NULL) {
-        struct flow_job_jpeg_encoder_state* state
-            = (struct flow_job_jpeg_encoder_state*)FLOW_malloc(c, sizeof(struct flow_job_jpeg_encoder_state));
+    // flow_job_png_decoder_state
+    if (item->codec_state == NULL) {
+        struct flow_job_jpeg_encoder_state* state = (struct flow_job_jpeg_encoder_state*)FLOW_malloc(
+            c, sizeof(struct flow_job_jpeg_encoder_state)); // TODO: ownership other than context?
         if (state == NULL) {
             FLOW_error(c, flow_status_Out_of_memory);
-            return NULL;
+            return false;
         }
-        state->buffer = NULL;
-        state->size = 0;
+        state->codec_id = item->codec_id;
         state->context = c;
-        state->output_resource = buffer;
-
-        buffer->codec_state = (void*)state;
+        state->io = item->io;
+        item->codec_state = state;
     }
-    return buffer->codec_state;
-}
-
-static void jpeg_encode_error_exit(j_common_ptr cinfo)
-{
-    /* cinfo->err really points to a my_error_mgr struct, so coerce pointer */
-    struct flow_job_jpeg_encoder_state* state = (struct flow_job_jpeg_encoder_state*)cinfo->err;
-
-    /* Always display the message. */
-    /* We could postpone this until after returning, if we chose. */
-    (*cinfo->err->output_message)(cinfo);
-
-    // TODO - cleanup??
-
-    FLOW_error(state->context, flow_status_Image_encoding_failed);
-
-    jpeg_destroy_compress(&state->cinfo);
-
-    /* Return control to the setjmp point */
-    longjmp(state->error_handler_jmp, 1);
+    return true;
 }
 
 bool flow_job_codecs_jpeg_write_frame(flow_context* c, struct flow_job* job, void* codec_state, flow_bitmap_bgra* frame)
 {
     struct flow_job_jpeg_encoder_state* state = (struct flow_job_jpeg_encoder_state*)codec_state;
-    state->buffer = NULL;
-    state->size = 0;
     state->context = c;
 
     state->cinfo.err = jpeg_std_error(&state->error_mgr);
-    state->error_mgr.error_exit = jpeg_encode_error_exit;
+    state->error_mgr.error_exit = jpeg_error_exit;
+    state->error_mgr.output_message = flow_jpeg_output_message;
 
     if (setjmp(state->error_handler_jmp)) {
         // Execution comes back to this point if an error happens
@@ -444,8 +363,7 @@ bool flow_job_codecs_jpeg_write_frame(flow_context* c, struct flow_job* job, voi
     }
 
     jpeg_create_compress(&state->cinfo);
-
-    jpeg_mem_dest(&state->cinfo, (unsigned char**)&state->buffer, &state->size);
+    flow_codecs_jpeg_setup_dest_manager(&state->cinfo, state->io);
 
     state->cinfo.in_color_space = JCS_EXT_BGRA;
     state->cinfo.image_height = frame->h;
@@ -479,12 +397,6 @@ bool flow_job_codecs_jpeg_write_frame(flow_context* c, struct flow_job* job, voi
     if (state->error_mgr.num_warnings > 0) {
         FLOW_error(c, flow_status_Invalid_internal_state);
         return false;
-    }
-
-    // Copy the final result to the output resource, if it exists.
-    if (state->output_resource != NULL) {
-        state->output_resource->buffer = state->buffer;
-        state->output_resource->buffer_size = state->size;
     }
 
     return true;

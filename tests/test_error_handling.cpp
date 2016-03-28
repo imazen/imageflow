@@ -19,15 +19,19 @@ public:
     int alloc_count;
     int total_successful_allocs;
 
-    static void* _calloc(flow_context* context, struct flow_heap * heap, size_t count, size_t element_size, const char* file, int line)
+    static void* _calloc(flow_context* context, struct flow_heap* heap, size_t count, size_t element_size,
+                         const char* file, int line)
     {
         return ((Fixture*)context->underlying_heap._private_state)->calloc(count, element_size);
     }
-    static void* _malloc(flow_context* context, struct flow_heap * heap, size_t byte_count, const char* file, int line)
+    static void* _malloc(flow_context* context, struct flow_heap* heap, size_t byte_count, const char* file, int line)
     {
         return ((Fixture*)context->underlying_heap._private_state)->malloc(byte_count);
     }
-    static void _free(flow_context* context, struct flow_heap * heap, void* pointer, const char* file, int line) { free(pointer); }
+    static void _free(flow_context* context, struct flow_heap* heap, void* pointer, const char* file, int line)
+    {
+        free(pointer);
+    }
 
     void initialize_heap(flow_context* context)
     {

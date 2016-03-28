@@ -39,17 +39,17 @@ struct flow_graph* flow_graph_create(flow_context* c, uint32_t max_edges, uint32
     if (((size_t)g->info_bytes - (size_t)g) != total_bytes - max_info_bytes) {
         // Somehow our math was inconsistent with flow_graph_size_for()
         FLOW_error(c, flow_status_Invalid_internal_state);
-        FLOW_destroy(c, g); //No destructor or child items to fail
+        FLOW_destroy(c, g); // No destructor or child items to fail
         return NULL;
     }
     if ((size_t)&g->edges[g->max_edges - 1].info_bytes >= (size_t)&g->nodes[0].type) {
         FLOW_error(c, flow_status_Invalid_internal_state);
-        FLOW_destroy(c, g); //No destructor or child items to fail
+        FLOW_destroy(c, g); // No destructor or child items to fail
         return NULL;
     }
     if ((size_t)&g->nodes[g->max_nodes - 1].ticks_elapsed >= (size_t)&g->info_bytes[0]) {
         FLOW_error(c, flow_status_Invalid_internal_state);
-        FLOW_destroy(c, g); //No destructor or child items to fail
+        FLOW_destroy(c, g); // No destructor or child items to fail
         return NULL;
     }
     return g;
@@ -305,32 +305,51 @@ int32_t flow_node_create_scale(flow_context* c, struct flow_graph** g, int32_t p
     return id;
 }
 
-int32_t flow_node_create_resource_placeholder(flow_context* c, struct flow_graph** g, int32_t prev_node,
-                                              int32_t output_slot_id)
+int32_t flow_node_create_decoder(flow_context* c, struct flow_graph** g, int32_t prev_node, int32_t placeholder_id)
 {
-    int32_t id = flow_node_create_generic(c, g, prev_node, flow_ntype_Resource_Placeholder);
+    int32_t id = flow_node_create_generic(c, g, prev_node, flow_ntype_decoder);
     if (id < 0) {
         FLOW_add_to_callstack(c);
         return id;
     }
-    struct flow_nodeinfo_index* info = (struct flow_nodeinfo_index*)FrameNode_get_node_info_pointer(*g, id);
-    info->index = output_slot_id;
+
+    struct flow_nodeinfo_codec* info = (struct flow_nodeinfo_codec*)FrameNode_get_node_info_pointer(*g, id);
+    info->placeholder_id = placeholder_id;
+    info->codec = NULL;
+    return id;
+}
+int32_t flow_node_create_encoder_placeholder(flow_context* c, struct flow_graph** g, int32_t prev_node,
+                                             int32_t placeholder_id)
+{
+    return flow_node_create_encoder(c, g, prev_node, placeholder_id, 0);
+}
+int32_t flow_node_create_encoder(flow_context* c, struct flow_graph** g, int32_t prev_node, int32_t placeholder_id,
+                                 size_t desired_encoder_id)
+{
+    int32_t id = flow_node_create_generic(c, g, prev_node, flow_ntype_encoder);
+    if (id < 0) {
+        FLOW_add_to_callstack(c);
+        return id;
+    }
+
+    struct flow_nodeinfo_codec* info = (struct flow_nodeinfo_codec*)FrameNode_get_node_info_pointer(*g, id);
+    info->placeholder_id = placeholder_id;
+    info->codec = NULL;
+    info->desired_encoder_id = desired_encoder_id;
     return id;
 }
 
-int32_t flow_node_create_encoder_placeholder(flow_context* c, struct flow_graph** g, int32_t prev_node,
-                                             int32_t output_slot_id, flow_codec_type codec_type)
+int32_t flow_node_create_bitmap_bgra_reference(flow_context* c, struct flow_graph** g, int32_t prev_node,
+                                               flow_bitmap_bgra** pointer_to_pointer_to_bitmap_bgra)
 {
-    int32_t id = flow_node_create_generic(c, g, prev_node, flow_ntype_Encoder_Placeholder);
+    int32_t id = flow_node_create_generic(c, g, prev_node, flow_ntype_primitive_bitmap_bgra_pointer);
     if (id < 0) {
         FLOW_add_to_callstack(c);
         return id;
     }
-
-    struct flow_nodeinfo_encoder_placeholder* info
-        = (struct flow_nodeinfo_encoder_placeholder*)FrameNode_get_node_info_pointer(*g, id);
-    info->index.index = output_slot_id;
-    info->codec_type = codec_type;
+    struct flow_nodeinfo_bitmap_bgra_pointer* info
+        = (struct flow_nodeinfo_bitmap_bgra_pointer*)FrameNode_get_node_info_pointer(*g, id);
+    info->ref = pointer_to_pointer_to_bitmap_bgra;
     return id;
 }
 
