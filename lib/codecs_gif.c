@@ -67,7 +67,7 @@ bool flow_job_gif_dispose(flow_context* c, void* codec_state){
     struct flow_job_gif_decoder_state* state = (struct flow_job_gif_decoder_state*)codec_state;
     if (state->gif != NULL){
         int error = 0;
-        //fprintf(stderr, "Closing gif\n");
+        //fprintf(stderr, "Closing gif %p\n", (void *)state->gif);
         if (DGifCloseFile(state->gif, &error) !=D_GIF_SUCCEEDED){
             FLOW_error_msg(c, flow_status_Image_decoding_failed, "Failed to close gif: DGifCloseFile failed with error '%s'",
                            GifErrorString(error));

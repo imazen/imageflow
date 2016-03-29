@@ -10,8 +10,9 @@ extern "C" {
 
 struct flow_codec_magic_bytes {
     flow_codec_type codec_type;
+    const char * file_type_name;
     size_t byte_count;
-    uint8_t* bytes;
+    const uint8_t * bytes;
 };
 
 struct flow_decoder_frame_info {
@@ -20,44 +21,6 @@ struct flow_decoder_frame_info {
     flow_pixel_format format;
 };
 
-typedef void* (*codec_aquire_on_buffer_fn)(flow_context* c, struct flow_job* job,
-                                           struct flow_job_resource_buffer* buffer);
-typedef bool (*codec_intialize)(flow_context* c, struct flow_job* job, struct flow_codec_instance* instance);
-
-typedef bool (*codec_get_info_fn)(flow_context* c, struct flow_job* job, void* codec_state,
-                                        struct flow_decoder_info* decoder_info_ref);
-typedef bool (*codec_switch_frame_fn)(flow_context* c, struct flow_job* job, void* codec_state,
-                                  size_t frame_index);
-
-
-
-typedef bool (*codec_get_frame_info_fn)(flow_context* c, struct flow_job* job, void* codec_state,
-                                        struct flow_decoder_frame_info* decoder_frame_info_ref);
-
-typedef bool (*codec_read_frame_fn)(flow_context* c, struct flow_job* job, void* codec_state, flow_bitmap_bgra* canvas);
-
-typedef bool (*codec_write_frame_fn)(flow_context* c, struct flow_job* job, void* codec_state, flow_bitmap_bgra* frame);
-
-typedef bool (*codec_dispose_fn)(flow_context* c, struct flow_job* job, void* codec_state);
-
-typedef bool (*codec_stringify_fn)(flow_context* c, struct flow_job* job, void* codec_state, char* buffer,
-                                   size_t buffer_size);
-
-struct flow_codec_definition {
-    flow_codec_type type;
-    codec_aquire_on_buffer_fn aquire_on_buffer;
-    codec_intialize initialize;
-    codec_get_info_fn get_info;
-    codec_get_frame_info_fn get_frame_info;
-    codec_switch_frame_fn switch_frame;
-    codec_read_frame_fn read_frame;
-    codec_write_frame_fn write_frame;
-    flow_destructor_function dispose;
-    codec_stringify_fn stringify;
-    const char* name;
-    const char* preferred_mime_type;
-    const char* preferred_extension;
-};
 
 typedef enum flow_codec_color_profile_source {
     flow_codec_color_profile_source_null,

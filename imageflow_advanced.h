@@ -13,7 +13,8 @@ struct flow_codec_instance;
 struct flow_job;
 struct flow_bitmap_float;
 
-// Portable snprintf
+////////////////////////////////////////////
+//  Portable snprintf
 PUB int flow_snprintf(char* s, size_t n, const char* fmt, ...);
 PUB int flow_vsnprintf(char* s, size_t n, const char* fmt, va_list v);
 
@@ -39,10 +40,17 @@ PUB bool flow_heap_set_custom(flow_context* context, flow_heap_calloc_function c
                               flow_heap_realloc_function realloc, flow_heap_free_function free,
                               flow_heap_terminate_function terminate, void* initial_private_state);
 
-PUB bool flow_set_destructor(flow_context* context, void* thing, flow_destructor_function* destructor);
 
-// Thing will only be destroyed and freed at the time that owner is destroyed and freed
-PUB bool flow_set_owner(flow_context* context, void* thing, void* owner);
+//
+//PUB bool flow_set_destructor(flow_context* context, void* thing, flow_destructor_function* destructor);
+//
+//// Thing will only be destroyed and freed at the time that owner is destroyed and freed
+//PUB bool flow_set_owner(flow_context* context, void* thing, void* owner);
+
+////////////////////////////////////////////
+// use imageflow memory management
+
+
 
 PUB void* flow_context_calloc(flow_context* context, size_t instance_count, size_t instance_size,
                               flow_destructor_function destructor, void* owner, const char* file, int line);
@@ -73,6 +81,9 @@ PUB bool flow_destroy(flow_context* context, void* pointer, const char* file, in
 #define FLOW_free(context, pointer) flow_deprecated_free(context, pointer, __FILE__, __LINE__)
 #define FLOW_destroy(context, pointer) flow_destroy(context, pointer, __FILE__, __LINE__)
 
+
+////////////////////////////////////////////
+// use imageflow's error system
 PUB void flow_context_raise_error(flow_context* context, flow_status_code code, char* message, const char* file,
                                   int line, const char* function_name);
 PUB char* flow_context_set_error_get_message_buffer(flow_context* context, flow_status_code code, const char* file,
@@ -90,6 +101,10 @@ PUB void flow_context_add_to_callstack(flow_context* context, const char* file, 
 #define FLOW_error_return(context)                                                                                     \
     flow_context_add_to_callstack(context, __FILE__, __LINE__, __func__);                                              \
     return false
+
+
+////////////////////////////////////////////
+// profiling (not widely used ATM)
 
 typedef enum flow_profiling_entry_flags {
     flow_profiling_entry_start = 2,
@@ -130,6 +145,8 @@ PUB bool flow_context_enable_profiling(flow_context* context, uint32_t default_c
 PUB void flow_context_profiler_start(flow_context* context, const char* name, bool allow_recursion);
 PUB void flow_context_profiler_stop(flow_context* context, const char* name, bool assert_started, bool stop_children);
 
+////////////////////////////////////////////
+// Make your own I/O systems
 struct flow_io;
 
 // Returns the number of read into the buffer. Failure to read 'count' bytes could mean EOF or failure. Check context
@@ -144,6 +161,50 @@ typedef int64_t (*flow_io_position_function)(flow_context* c, struct flow_io* io
 
 // Returns true if seek was successful.
 typedef bool (*flow_io_seek_function)(flow_context* c, struct flow_io* io, int64_t position);
+
+
+
+////////////////////////////////////////////
+// Make your own codecs
+struct flow_decoder_frame_info;
+
+typedef void* (*codec_aquire_on_buffer_fn)(flow_context* c, struct flow_job* job,
+                                           struct flow_job_resource_buffer* buffer);
+typedef bool (*codec_intialize)(flow_context* c, struct flow_job* job, struct flow_codec_instance* instance);
+
+typedef bool (*codec_get_info_fn)(flow_context* c, struct flow_job* job, void* codec_state,
+                                  struct flow_decoder_info* decoder_info_ref);
+typedef bool (*codec_switch_frame_fn)(flow_context* c, struct flow_job* job, void* codec_state,
+                                      size_t frame_index);
+
+
+
+typedef bool (*codec_get_frame_info_fn)(flow_context* c, struct flow_job* job, void* codec_state,
+                                        struct flow_decoder_frame_info* decoder_frame_info_ref);
+
+typedef bool (*codec_read_frame_fn)(flow_context* c, struct flow_job* job, void* codec_state, flow_bitmap_bgra* canvas);
+
+typedef bool (*codec_write_frame_fn)(flow_context* c, struct flow_job* job, void* codec_state, flow_bitmap_bgra* frame);
+
+typedef bool (*codec_stringify_fn)(flow_context* c, struct flow_job* job, void* codec_state, char* buffer,
+                                   size_t buffer_size);
+
+struct flow_codec_definition {
+    flow_codec_type type;
+    codec_aquire_on_buffer_fn aquire_on_buffer;
+    codec_intialize initialize;
+    codec_get_info_fn get_info;
+    codec_get_frame_info_fn get_frame_info;
+    codec_switch_frame_fn switch_frame;
+    codec_read_frame_fn read_frame;
+    codec_write_frame_fn write_frame;
+    flow_destructor_function dispose;
+    codec_stringify_fn stringify;
+    const char* name;
+    const char* preferred_mime_type;
+    const char* preferred_extension;
+};
+
 
 #undef PUB
 #ifdef __cplusplus

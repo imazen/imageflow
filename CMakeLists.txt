@@ -20,13 +20,14 @@ list(REMOVE_ITEM CONAN_LIBS efence) # FIXME: Maybe efence should be a private de
 file(GLOB LIB_SRCS lib/*.c)
 file(GLOB LIB_HDRS lib/*.h)
 list(APPEND LIB_HDRS imageflow.h)
+list(APPEND LIB_HDRS imageflow_advanced.h)
 
 add_library(imageflow SHARED ${LIB_SRCS} ${LIB_HDRS})
 target_link_libraries(imageflow ${CONAN_LIBS})
 target_include_directories(imageflow PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 
 if (UNIX)
-	set(FASTSCALING_FLAGS "-iquotelib -fPIC -O2 -Wpointer-arith -Wcast-qual -Wpedantic -Wall -Wextra -Wno-unused-parameter -Wuninitialized -Wredundant-decls -Werror")
+	set(FASTSCALING_FLAGS "-iquotelib -fPIC -O2  -Wpointer-arith -Wcast-qual -Wpedantic -Wall -Wextra -Wno-unused-parameter -Wuninitialized -Wredundant-decls -Werror")
 	set(CMAKE_C_FLAGS  "${CMAKE_C_FLAGS} ${FASTSCALING_FLAGS} -std=gnu11 -Wstrict-prototypes -Wmissing-prototypes -Wc++-compat -Wshadow" )
 	set(CMAKE_CXX_FLAGS  "${CMAKE_CXX_FLAGS} ${FASTSCALING_FLAGS} -std=gnu++11" )
 else()

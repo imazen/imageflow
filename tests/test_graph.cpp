@@ -367,22 +367,32 @@ TEST_CASE("scale gif", "")
 
     flow_context_destroy(c);
 }
-TEST_CASE("scale gif 2", "")
+
+TEST_CASE("read gif overlapped", "")
 {
     flow_context* c = flow_context_create();
-    struct flow_graph* g = flow_graph_create(c, 10, 10, 200, 2.0);
+    REQUIRE(c != NULL);
+    //Get the input gif
+    struct flow_io * input = get_io_for_cached_url(c, "http://z.zr.io/rw/pluginexamples/example-animated.gif",c);//"http://i.kinja-img.com/gawker-media/image/upload/s--dM0nT5E4--/mn3sov5id06ppjkfb1b2.gif", c);
     ERR(c);
-
-    int32_t last, input_placeholder = 0, output_placeholder = 1;
-
-    last = flow_node_create_decoder(c, &g, -1, input_placeholder);
-    last = flow_node_create_scale(c, &g, last, 120, 120);
-    last = flow_node_create_encoder_placeholder(c, &g, last, output_placeholder);
-
-    execute_graph_for_url(c, "http://z.zr.io/ri/8s.jpg?format=gif&width=800", "gif_scaled.png", &g);
-
+    struct flow_io * input2 = get_io_for_cached_url(c, "http://z.zr.io/rw/pluginexamples/example-animated.gif",c);//"http://i.kinja-img.com/gawker-media/image/upload/s--dM0nT5E4--/mn3sov5id06ppjkfb1b2.gif", c);
+    ERR(c);
+    //Create the job and add the input
+    struct flow_job* job = flow_job_create(c);
+    ERR(c);
+    flow_job_add_io(c, job, input, 0, FLOW_INPUT);
+    flow_job_add_io(c, job, input2, 1, FLOW_INPUT);
+    //Now we can read metadata about the input
+    struct flow_decoder_info info;
+    if (!flow_job_get_decoder_info(c, job, 0, &info)){
+        ERR(c);
+    }
+    if (!flow_job_get_decoder_info(c, job, 1, &info)){
+        ERR(c);
+    }
     flow_context_destroy(c);
 }
+
 
 TEST_CASE("export frames of animated gif", "")
 {
