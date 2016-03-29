@@ -21,7 +21,6 @@ struct decoder_frame_info {
 
 typedef void* (*codec_aquire_on_buffer_fn)(flow_context* c, struct flow_job* job,
                                            struct flow_job_resource_buffer* buffer);
-
 typedef bool (*codec_intialize)(flow_context* c, struct flow_job* job, struct flow_codec_instance* instance);
 
 typedef bool (*codec_get_frame_info_fn)(flow_context* c, struct flow_job* job, void* codec_state,
@@ -97,6 +96,12 @@ bool flow_job_codecs_png_get_info(flow_context* c, struct flow_job* job, void* c
 bool flow_job_codecs_initialize_encode_png(flow_context* c, struct flow_job* job, struct flow_codec_instance* item);
 
 bool flow_job_codecs_png_read_frame(flow_context* c, struct flow_job* job, void* codec_state, flow_bitmap_bgra* canvas);
+
+bool flow_job_codecs_gif_initialize(flow_context* c, struct flow_job* job, struct flow_codec_instance* codec);
+
+bool flow_job_codecs_gif_get_info(flow_context* c, struct flow_job* job, void* codec_state,
+                                  struct decoder_frame_info* decoder_frame_info_ref);
+bool flow_job_codecs_gif_read_frame(flow_context* c, struct flow_job* job, void* codec_state, flow_bitmap_bgra* canvas);
 
 png_bytepp flow_job_create_row_pointers(flow_context* c, void* buffer, size_t buffer_size, size_t stride,
                                         size_t height);

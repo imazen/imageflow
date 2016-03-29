@@ -52,7 +52,16 @@ bool flow_bitmap_bgra_transform_to_srgb(flow_context* c, cmsHPROFILE current_pro
 
 // typedef bool (*codec_dispose_fn)(flow_context *c, struct flow_job * job, void * codec_state);
 
-struct flow_codec_definition flow_codec_defs[] = { { .type = flow_codec_type_decode_png,
+struct flow_codec_definition flow_codec_defs[] = { { .type = flow_codec_type_decode_gif,
+                                                     .aquire_on_buffer = NULL,
+                                                     .initialize = flow_job_codecs_gif_initialize,
+                                                     .get_frame_info = flow_job_codecs_gif_get_info,
+                                                     .read_frame = flow_job_codecs_gif_read_frame,
+                                                     .dispose = NULL,
+                                                     .name = "decode gif",
+                                                     .preferred_mime_type = "image/gif",
+                                                     .preferred_extension = "gif" },
+                                                   { .type = flow_codec_type_decode_png,
                                                      .aquire_on_buffer = NULL,
                                                      .initialize = flow_job_codecs_initialize_decode_png,
                                                      .get_frame_info = flow_job_codecs_png_get_info,
@@ -102,6 +111,8 @@ uint8_t jpeg_bytes_a[] = { 0xFF, 0xD8, 0xFF, 0xDB };
 uint8_t jpeg_bytes_b[] = { 0xFF, 0xD8, 0xFF, 0xE0 };
 uint8_t jpeg_bytes_c[] = { 0xFF, 0xD8, 0xFF, 0xE1 };
 
+uint8_t gif_bytes[] = { 0x47, 0x49, 0x46, 0x38 };
+
 struct flow_codec_magic_bytes flow_job_codec_magic_bytes_defs[]
     = { {
           .codec_type = flow_codec_type_decode_png, .byte_count = 7, .bytes = (uint8_t*)&png_bytes,
@@ -116,6 +127,10 @@ struct flow_codec_magic_bytes flow_job_codec_magic_bytes_defs[]
         },
         {
           .codec_type = flow_codec_type_decode_jpeg, .byte_count = 4, .bytes = (uint8_t*)&jpeg_bytes_c,
+
+        },
+        {
+          .codec_type = flow_codec_type_decode_gif, .byte_count = 4, .bytes = (uint8_t*)&gif_bytes,
 
         } };
 int32_t flow_job_codec_magic_bytes_defs_count = sizeof(flow_job_codec_magic_bytes_defs)

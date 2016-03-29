@@ -62,3 +62,9 @@ if(ENABLE_TEST)
 	endif()
 
 endif()
+
+if(${CMAKE_GENERATOR} MATCHES "Unix Makefiles")
+	message(STATUS ${CMAKE_BUILD_TOOL})
+	set(CMAKE_MAKE_PROGRAM "${CMAKE_MAKE_PROGRAM} -j6")
+	message(STATUS "Added arguments to CMAKE_BUILD_TOOL: ${CMAKE_MAKE_PROGRAM}")
+endif()

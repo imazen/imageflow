@@ -351,6 +351,23 @@ TEST_CASE("scale and flip and crop png", "")
     flow_context_destroy(c);
 }
 
+TEST_CASE("scale gif", "")
+{
+    flow_context* c = flow_context_create();
+    struct flow_graph* g = flow_graph_create(c, 10, 10, 200, 2.0);
+    ERR(c);
+
+    int32_t last, input_placeholder = 0, output_placeholder = 1;
+
+    last = flow_node_create_decoder(c, &g, -1, input_placeholder);
+    last = flow_node_create_scale(c, &g, last, 120, 120);
+    last = flow_node_create_encoder_placeholder(c, &g, last, output_placeholder);
+
+    execute_graph_for_url(c, "http://z.zr.io/ri/8s.jpg?format=gif&width=800", "gif_scaled.png", &g);
+
+    flow_context_destroy(c);
+}
+
 TEST_CASE("scale and flip and crop jpg", "")
 {
     flow_context* c = flow_context_create();

@@ -135,6 +135,7 @@ typedef enum flow_codec_type {
     flow_codec_type_encode_jpeg,
     flow_codec_type_encoder,
     flow_codec_type_decoder,
+    flow_codec_type_decode_gif,
 } flow_codec_type;
 
 typedef enum flow_scanlines_filter_type {

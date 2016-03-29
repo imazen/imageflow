@@ -92,7 +92,7 @@ static int64_t flow_io_obuf_read(flow_context* c, struct flow_io* io, uint8_t* b
     }
 }
 // Returns the number of bytes written. If it doesn't equal 'count', there was an error. Check context status
-static int64_t flow_io_obuf_write(flow_context* c, struct flow_io* io, uint8_t* buffer, size_t count)
+static int64_t flow_io_obuf_write(flow_context* c, struct flow_io* io, const uint8_t* buffer, size_t count)
 {
     struct flow_io_obuf* state = (struct flow_io_obuf*)io->user_data;
     if (buffer == NULL) {
@@ -228,7 +228,7 @@ static int64_t flow_io_memory_read(flow_context* c, struct flow_io* io, uint8_t*
     }
 }
 // Returns the number of bytes written. If it doesn't equal 'count', there was an error. Check context status
-static int64_t flow_io_memory_write(flow_context* c, struct flow_io* io, uint8_t* buffer, size_t count)
+static int64_t flow_io_memory_write(flow_context* c, struct flow_io* io, const uint8_t* buffer, size_t count)
 {
     struct flow_io_memory* state = (struct flow_io_memory*)io->user_data;
     if (buffer == NULL) {

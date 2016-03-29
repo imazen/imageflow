@@ -136,7 +136,7 @@ struct flow_io;
 // status. Pass NULL to buffer if you want to skip 'count' many bytes, seeking ahead.
 typedef int64_t (*flow_io_read_function)(flow_context* c, struct flow_io* io, uint8_t* buffer, size_t count);
 // Returns the number of bytes written. If it doesn't equal 'count', there was an error. Check context status
-typedef int64_t (*flow_io_write_function)(flow_context* c, struct flow_io* io, uint8_t* buffer, size_t count);
+typedef int64_t (*flow_io_write_function)(flow_context* c, struct flow_io* io, const uint8_t* buffer, size_t count);
 
 // Returns negative on failure - check context for more detail. Returns the current position in the stream when
 // successful
