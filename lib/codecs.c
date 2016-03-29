@@ -55,16 +55,19 @@ bool flow_bitmap_bgra_transform_to_srgb(flow_context* c, cmsHPROFILE current_pro
 struct flow_codec_definition flow_codec_defs[] = { { .type = flow_codec_type_decode_gif,
                                                      .aquire_on_buffer = NULL,
                                                      .initialize = flow_job_codecs_gif_initialize,
-                                                     .get_frame_info = flow_job_codecs_gif_get_info,
+                                                     .get_frame_info = flow_job_codecs_gif_get_frame_info,
+                                                           .get_info = flow_job_codecs_gif_get_info,
+                                                           .switch_frame = flow_job_codecs_decode_gif_switch_frame,
                                                      .read_frame = flow_job_codecs_gif_read_frame,
-                                                     .dispose = NULL,
+                                                     .dispose = flow_job_gif_dispose,
                                                      .name = "decode gif",
                                                      .preferred_mime_type = "image/gif",
                                                      .preferred_extension = "gif" },
                                                    { .type = flow_codec_type_decode_png,
                                                      .aquire_on_buffer = NULL,
                                                      .initialize = flow_job_codecs_initialize_decode_png,
-                                                     .get_frame_info = flow_job_codecs_png_get_info,
+                                                     .get_frame_info = flow_job_codecs_png_get_frame_info,
+                                                           .get_info = flow_job_codecs_png_get_info,
                                                      .read_frame = flow_job_codecs_png_read_frame,
                                                      .dispose = NULL,
                                                      .name = "decode png",
@@ -172,12 +175,43 @@ bool flow_job_initialize_codec(flow_context* c, struct flow_job* job, struct flo
     return def->initialize(c, job, item);
 }
 
+
+bool flow_job_decoder_switch_frame(flow_context* c, struct flow_job* job, int32_t by_placeholder_id, int64_t frame_index)
+{
+    struct flow_codec_instance* current = flow_job_get_codec_instance(c, job, by_placeholder_id);
+    if (current == NULL) {
+        FLOW_error(c, flow_status_Invalid_argument); // Bad placeholder id
+        return false;
+    }
+    if (current->codec_state == NULL) {
+        FLOW_error(c, flow_status_Invalid_internal_state); // Codecs should be initialized by this point
+        return false;
+    }
+    struct flow_codec_definition* def = flow_job_get_codec_definition(c, (flow_codec_type)current->codec_id);
+    if (def == NULL) {
+        FLOW_error_return(c);
+    }
+    if (def->switch_frame == NULL) {
+        FLOW_error_msg(c, flow_status_Not_implemented, ".switch_frame is not implemented for codec %s", def->name);
+        return false;
+    }
+    if (!def->switch_frame(c, job, current->codec_state, frame_index)) {
+        FLOW_error_return(c);
+    }
+    return true;
+}
+
+
 bool flow_job_decoder_get_frame_info(flow_context* c, struct flow_job* job, void* codec_state, flow_codec_type type,
-                                     struct decoder_frame_info* decoder_frame_info_ref)
+                                     struct flow_decoder_frame_info* decoder_frame_info_ref)
 {
     struct flow_codec_definition* def = flow_job_get_codec_definition(c, type);
     if (def == NULL) {
         FLOW_error_return(c);
+    }
+    if (def->get_frame_info == NULL) {
+        FLOW_error_msg(c, flow_status_Not_implemented, ".get_frame_info is not implemented for codec %s", def->name);
+        return false;
     }
     if (!def->get_frame_info(c, job, codec_state, decoder_frame_info_ref)) {
         FLOW_error_return(c);
@@ -192,14 +226,35 @@ bool flow_job_decoder_read_frame(flow_context* c, struct flow_job* job, void* co
     if (def == NULL) {
         FLOW_error_return(c);
     }
+    if (def->read_frame == NULL) {
+        FLOW_error_msg(c, flow_status_Not_implemented, ".read_frame is not implemented for codec %s", def->name);
+        return false;
+    }
     if (!def->read_frame(c, job, codec_state, canvas)) {
         FLOW_error_return(c);
     }
     return true;
 }
 
+static bool flow_job_decoder_get_info(flow_context* c, struct flow_job* job, void* codec_state, flow_codec_type type,
+                               struct flow_decoder_info* decoder_info_ref)
+{
+    struct flow_codec_definition* def = flow_job_get_codec_definition(c, type);
+    if (def == NULL) {
+        FLOW_error_return(c);
+    }
+    if (def->get_info == NULL) {
+        FLOW_error_msg(c, flow_status_Not_implemented, ".get_info is not implemented for codec %s", def->name);
+        return false;
+    }
+    if (!def->get_info(c, job, codec_state, decoder_info_ref)) {
+        FLOW_error_return(c);
+    }
+    return true;
+}
+
 bool flow_job_get_decoder_info(flow_context* c, struct flow_job* job, int32_t by_placeholder_id,
-                               struct flow_job_decoder_info* info)
+                               struct flow_decoder_info* info)
 {
     struct flow_codec_instance* current = flow_job_get_codec_instance(c, job, by_placeholder_id);
     if (current == NULL) {
@@ -217,21 +272,26 @@ bool flow_job_get_decoder_info(flow_context* c, struct flow_job* job, int32_t by
         FLOW_error(c, flow_status_Invalid_internal_state); // Codecs should be initialized by this point
         return false;
     }
+    info->frame0_post_decode_format = flow_bgra32;
+    info->frame0_height = 0;
+    info->frame0_width = 0;
+    info->codec_type = (flow_codec_type)current->codec_id;
+    info->current_frame_index = 0;
+    info->frame_count = 0;
+    info->preferred_extension = NULL;
+    info->preferred_mime_type = NULL;
+
+    if (!flow_job_decoder_get_info(c, job, current->codec_state, (flow_codec_type)current->codec_id,
+                                         info)) {
+        FLOW_error_return(c);
+    }
+    //Fill in defaults
     struct flow_codec_definition* def = flow_job_get_codec_definition(c, (flow_codec_type)current->codec_id);
     if (def == NULL) {
         FLOW_error_return(c);
     }
-
-    struct decoder_frame_info frame_info;
-    if (!flow_job_decoder_get_frame_info(c, job, current->codec_state, (flow_codec_type)current->codec_id,
-                                         &frame_info)) {
-        FLOW_error_return(c);
-    }
-    info->frame0_width = frame_info.w;
-    info->frame0_height = frame_info.h;
-    info->frame0_post_decode_format = frame_info.format;
-    info->preferred_mime_type = def->preferred_mime_type;
-    info->preferred_extension = def->preferred_extension;
+    if (info->preferred_mime_type == NULL) info->preferred_mime_type = def->preferred_mime_type;
+    if (info->preferred_extension == NULL) info->preferred_extension = def->preferred_extension;
 
     return true;
 }

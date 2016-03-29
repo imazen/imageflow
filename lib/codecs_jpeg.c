@@ -295,7 +295,7 @@ bool flow_job_codecs_initialize_decode_jpeg(flow_context* c, struct flow_job* jo
 }
 
 bool flow_job_codecs_jpeg_get_info(flow_context* c, struct flow_job* job, void* codec_state,
-                                   struct decoder_frame_info* decoder_frame_info_ref)
+                                   struct flow_decoder_frame_info* decoder_frame_info_ref)
 {
     struct flow_job_jpeg_decoder_state* state = (struct flow_job_jpeg_decoder_state*)codec_state;
     if (state->stage < flow_job_jpg_decoder_stage_BeginRead) {

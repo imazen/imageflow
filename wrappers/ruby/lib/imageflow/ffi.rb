@@ -262,7 +262,7 @@ module Imageflow
     attach_function :flow_context_print_error_to, [:pointer, :pointer], :void
 
     # PUB bool flow_job_get_decoder_info(flow_context* c, struct flow_job* job, int32_t by_placeholder_id,
-    #                                                                                   struct flow_job_decoder_info* info);
+    #                                                                                   struct flow_decoder_info* info);
 
 
 

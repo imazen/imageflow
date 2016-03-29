@@ -334,8 +334,8 @@ bool flow_job_codecs_initialize_decode_png(flow_context* c, struct flow_job* job
     return true;
 }
 
-bool flow_job_codecs_png_get_info(flow_context* c, struct flow_job* job, void* codec_state,
-                                  struct decoder_frame_info* decoder_frame_info_ref)
+bool flow_job_codecs_png_get_frame_info(flow_context *c, struct flow_job *job, void *codec_state,
+                                        struct flow_decoder_frame_info *decoder_frame_info_ref)
 {
     struct flow_job_png_decoder_state* state = (struct flow_job_png_decoder_state*)codec_state;
     if (state->stage < flow_job_png_decoder_stage_BeginRead) {
@@ -346,6 +346,22 @@ bool flow_job_codecs_png_get_info(flow_context* c, struct flow_job* job, void* c
     decoder_frame_info_ref->w = state->w;
     decoder_frame_info_ref->h = state->h;
     decoder_frame_info_ref->format = flow_bgra32;
+    return true;
+}
+bool flow_job_codecs_png_get_info(flow_context* c, struct flow_job* job, void* codec_state,
+                                  struct flow_decoder_info* info_ref)
+{
+    struct flow_job_png_decoder_state* state = (struct flow_job_png_decoder_state*)codec_state;
+    if (state->stage < flow_job_png_decoder_stage_BeginRead) {
+        if (!flow_job_png_decoder_BeginRead(c, state)) {
+            FLOW_error_return(c);
+        }
+    }
+    info_ref->frame0_width = state->w;
+    info_ref->frame0_height= state->h;
+    info_ref->frame_count = 1;
+    info_ref->current_frame_index = 0;
+    info_ref->frame0_post_decode_format = flow_bgra32;
     return true;
 }
 

@@ -223,7 +223,7 @@ uint8_t image_bytes_literal[]
         0x0D, 0x0A, 0x2D, 0xB4, 0x00, 0x00, 0x00, 0x00, 0x49, 0x45, 0x4E, 0x44, 0xAE, 0x42, 0x60, 0x82 };
 
 bool create_operation_graph(flow_context* c, struct flow_graph** graph_ref, int32_t input_placeholder,
-                            int32_t output_placeholder, struct flow_job_decoder_info* info)
+                            int32_t output_placeholder, struct flow_decoder_info* info)
 {
 
     REQUIRE(info->frame0_post_decode_format == flow_bgra32);
@@ -277,7 +277,7 @@ bool scale_image_inner(flow_context* c, flow_io* input, flow_io* output)
         return false;
     }
     // Let's read information about the input file
-    struct flow_job_decoder_info info;
+    struct flow_decoder_info info;
     if (!flow_job_get_decoder_info(c, job, input_placeholder, &info)) {
         FLOW_add_to_callstack(c);
         return false;
@@ -367,6 +367,75 @@ TEST_CASE("scale gif", "")
 
     flow_context_destroy(c);
 }
+TEST_CASE("scale gif 2", "")
+{
+    flow_context* c = flow_context_create();
+    struct flow_graph* g = flow_graph_create(c, 10, 10, 200, 2.0);
+    ERR(c);
+
+    int32_t last, input_placeholder = 0, output_placeholder = 1;
+
+    last = flow_node_create_decoder(c, &g, -1, input_placeholder);
+    last = flow_node_create_scale(c, &g, last, 120, 120);
+    last = flow_node_create_encoder_placeholder(c, &g, last, output_placeholder);
+
+    execute_graph_for_url(c, "http://z.zr.io/ri/8s.jpg?format=gif&width=800", "gif_scaled.png", &g);
+
+    flow_context_destroy(c);
+}
+
+TEST_CASE("export frames of animated gif", "")
+{
+    int32_t last, input_placeholder = 0;
+
+    flow_context* c = flow_context_create();
+    REQUIRE(c != NULL);
+    //Get the input gif
+    struct flow_io * input = get_io_for_cached_url(c, "http://z.zr.io/rw/pluginexamples/example-animated.gif",c);//"http://i.kinja-img.com/gawker-media/image/upload/s--dM0nT5E4--/mn3sov5id06ppjkfb1b2.gif", c);
+    ERR(c);
+    //Create the job and add the input
+    struct flow_job* job = flow_job_create(c);
+    ERR(c);
+    flow_job_add_io(c, job, input, input_placeholder, FLOW_INPUT);
+    //Now we can read metadata about the input
+    struct flow_decoder_info info;
+    if (!flow_job_get_decoder_info(c, job, input_placeholder, &info)){
+        ERR(c);
+    }
+
+    REQUIRE(info.frame_count == 68);
+    //Loop through each frame, add a corresponding output file, and execute the operation
+    for (int i =0; i < (int64_t)info.frame_count; i++){
+        struct flow_io* output = flow_io_create_for_output_buffer(c, job);
+        int32_t output_placeholder = input_placeholder + 1 +  i;
+        flow_job_add_io(c, job, output, output_placeholder , FLOW_OUTPUT);
+
+        struct flow_graph* g = flow_graph_create(c, 10, 10, 200, 2.0);
+        ERR(c);
+        last = flow_node_create_decoder(c, &g, -1, input_placeholder);
+        last = flow_node_create_encoder(c, &g, last, output_placeholder, flow_codec_type_encode_png);
+
+        if (!flow_job_decoder_switch_frame(c, job, input_placeholder, i)){
+            ERR(c);
+        }
+
+        if (!flow_job_execute(c, job, &g)) {
+            ERR(c);
+        }
+        char output_image_path[255];
+        flow_snprintf(output_image_path, sizeof(output_image_path), "exported_gif_frame_%i.png", i);
+
+        if (!flow_io_write_output_buffer_to_file(c, output, output_image_path)) {
+            ERR(c);
+        }
+    }
+
+    flow_job_destroy(c, job);
+    flow_context_destroy(c);
+}
+
+
+
 
 TEST_CASE("scale and flip and crop jpg", "")
 {

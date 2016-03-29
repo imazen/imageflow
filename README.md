@@ -65,7 +65,7 @@ Install nasm (`cinst -y nasm` on windows, followed by `set PATH=%PATH%;%ProgramF
             0x0D, 0x0A, 0x2D, 0xB4, 0x00, 0x00, 0x00, 0x00, 0x49, 0x45, 0x4E, 0x44, 0xAE, 0x42, 0x60, 0x82 };
     
     bool create_operation_graph(flow_context* c, struct flow_graph** graph_ref, int32_t input_placeholder,
-                                int32_t output_placeholder, struct flow_job_decoder_info* info)
+                                int32_t output_placeholder, struct flow_decoder_info* info)
     {
         // We'll create a simple operation graph that scales the image up 200%
         struct flow_graph* g = flow_graph_create(c, 10, 10, 200, 2.0);
@@ -111,7 +111,7 @@ Install nasm (`cinst -y nasm` on windows, followed by `set PATH=%PATH%;%ProgramF
             return false;
         }
         // Let's read information about the input file
-        struct flow_job_decoder_info info;
+        struct flow_decoder_info info;
         if (!flow_job_get_decoder_info(c, job, input_placeholder, &info)) {
             FLOW_add_to_callstack(c);
             return false;

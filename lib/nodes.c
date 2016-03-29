@@ -366,7 +366,7 @@ static bool dimensions_decode(flow_context* c, struct flow_graph* g, int32_t nod
         FLOW_error_msg(c, flow_status_Invalid_internal_state, "Codec has not been initialized.");
         return false;
     }
-    struct decoder_frame_info frame_info;
+    struct flow_decoder_frame_info frame_info;
 
     if (!def->get_frame_info(c, NULL, info->codec->codec_state, &frame_info)) {
         FLOW_error_return(c);
@@ -956,7 +956,7 @@ static bool execute_decode(flow_context* c, struct flow_job* job, struct flow_gr
         FLOW_error(c, flow_status_Not_implemented);
         return false;
     }
-    struct decoder_frame_info frame_info;
+    struct flow_decoder_frame_info frame_info;
     if (!def->get_frame_info(c, NULL, info->codec->codec_state, &frame_info)) {
         FLOW_error_return(c);
     }

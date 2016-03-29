@@ -250,3 +250,19 @@ double flow_bitmap_float_compare(flow_context* c, flow_bitmap_float* a, flow_bit
     *out_max_delta = max_delta;
     return difference_total / a->h;
 }
+
+struct flow_io * get_io_for_cached_url(flow_context * c, const char * url, void * owner){
+    size_t bytes_count = 0;
+    uint8_t* bytes = get_bytes_cached(c, &bytes_count, url);
+    if (bytes == NULL){
+        FLOW_error(c, flow_status_IO_error);
+        return NULL;
+    }
+
+    struct flow_io* input = flow_io_create_from_memory(c, flow_io_mode_read_seekable, bytes, bytes_count, owner, NULL);
+    if (input == NULL){
+        FLOW_add_to_callstack(c);
+        return NULL;
+    }
+    return input;
+}

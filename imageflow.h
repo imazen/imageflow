@@ -546,9 +546,6 @@ PUB int32_t flow_node_create_rotate_180(flow_context* c, struct flow_graph** g, 
 
 PUB int32_t flow_node_create_rotate_270(flow_context* c, struct flow_graph** g, int32_t prev_node);
 
-PUB int32_t flow_node_create_resource_placeholder(flow_context* c, struct flow_graph** g, int32_t prev_node,
-                                                  int32_t output_slot_id);
-
 PUB int32_t flow_node_create_encoder_placeholder(flow_context* c, struct flow_graph** g, int32_t prev_node,
                                                  int32_t output_slot_id);
 
@@ -618,7 +615,7 @@ PUB bool flow_job_configure_recording(flow_context* c, struct flow_job* job, boo
                                       bool record_frame_images, bool render_last_graph, bool render_graph_versions,
                                       bool render_animated_graph);
 
-PUB bool flow_job_insert_resources_into_graph(flow_context* c, struct flow_job* job, struct flow_graph** graph);
+bool flow_job_decoder_switch_frame(flow_context* c, struct flow_job* job, int32_t by_placeholder_id, int64_t frame_index);
 
 PUB bool flow_job_populate_dimensions_where_certain(flow_context* c, struct flow_job* job,
                                                     struct flow_graph** graph_ref);
@@ -638,20 +635,11 @@ PUB int32_t flow_graph_get_edge_count(flow_context* c, struct flow_graph* g, int
 
 PUB bool flow_graph_validate(flow_context* c, struct flow_graph* g);
 
-PUB int32_t flow_job_add_bitmap_bgra(flow_context* c, struct flow_job* job, FLOW_DIRECTION dir,
-                                     int32_t graph_placeholder_id, flow_bitmap_bgra* bitmap);
-
-PUB int32_t flow_job_add_buffer(flow_context* c, struct flow_job* job, FLOW_DIRECTION dir, int32_t graph_placeholder_id,
-                                void* buffer, size_t buffer_size, bool owned_by_job);
-
 PUB int32_t
     flow_node_create_generic(flow_context* c, struct flow_graph** graph_ref, int32_t prev_node, flow_ntype type);
 
 PUB bool flow_graph_print_to_dot(flow_context* c, struct flow_graph* g, FILE* stream,
                                  const char* image_node_filename_prefix);
-
-PUB flow_bitmap_bgra* flow_job_get_bitmap_bgra(flow_context* c, struct flow_job* job, int32_t resource_id);
-PUB struct flow_job_resource_buffer* flow_job_get_buffer(flow_context* c, struct flow_job* job, int32_t resource_id);
 
 PUB void flow_graph_print_to(flow_context* c, struct flow_graph* g, FILE* stream);
 
@@ -662,10 +650,12 @@ struct flow_job_resource_buffer {
     void* codec_state;
 };
 
-struct flow_job_decoder_info {
+struct flow_decoder_info {
     flow_codec_type codec_type;
     const char* preferred_mime_type;
     const char* preferred_extension;
+    size_t frame_count;
+    int64_t current_frame_index;
     int32_t frame0_width;
     int32_t frame0_height;
     flow_pixel_format frame0_post_decode_format;
@@ -673,15 +663,10 @@ struct flow_job_decoder_info {
     // bool is_srgb;
 };
 
-PUB int32_t
-    flow_job_get_resource_id_for_placeholder_id(flow_context* c, struct flow_job* job, int32_t by_placeholder_id);
 
-PUB bool flow_job_get_input_resource_info_by_placeholder_id(flow_context* c, struct flow_job* job,
-                                                            int32_t by_placeholder_id,
-                                                            struct flow_job_decoder_info* info);
 
 PUB bool flow_job_get_decoder_info(flow_context* c, struct flow_job* job, int32_t by_placeholder_id,
-                                   struct flow_job_decoder_info* info);
+                                   struct flow_decoder_info* info);
 
 bool flow_bitmap_bgra_write_png(flow_context* c, struct flow_job* job, flow_bitmap_bgra* frame, struct flow_io* io);
 PUB bool flow_node_post_optimize_flatten(flow_context* c, struct flow_graph** graph_ref, int32_t node_id);

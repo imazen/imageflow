@@ -16,12 +16,10 @@ typedef void (*read_function_data_cleanup)(flow_context* c, void** read_function
 
 struct flow_job_gif_decoder_state {
     GifFileType* gif;
-    size_t row_stride;
     size_t w;
     size_t h;
-
+    int64_t current_frame_index;
     struct flow_io* io;
-    uint8_t* pixel_buffer;
     flow_context* context;
     flow_job_gif_decoder_stage stage;
 };
@@ -29,12 +27,16 @@ struct flow_job_gif_decoder_state {
 // TODO: context errors must be translated to codec-specific exit flags for every codec (don't think return count is
 // enough)
 
+
 static int flow_job_gif_read_function(GifFileType* gif, GifByteType* buffer, int bytes_please)
 {
     struct flow_job_gif_decoder_state* state = (struct flow_job_gif_decoder_state*)gif->UserData;
-
+    if (state == NULL || state->io == NULL || state->io->read_func == NULL || state->context == NULL){
+        fprintf(stderr, "Fatal invocation of gif_read_function\n");
+    }
     int64_t bytes_read = state->io->read_func(state->context, state->io, buffer, bytes_please);
     if (bytes_read != bytes_please) {
+        fprintf(stderr, "Read only %li of %i requested bytes\n", bytes_read, bytes_please);
         if (flow_context_has_error(state->context)) {
             FLOW_add_to_callstack(state->context);
         } else {
@@ -60,6 +62,23 @@ static int flow_job_gif_read_function(GifFileType* gif, GifByteType* buffer, int
 //    return bytes_written;
 //}
 
+// Flush buffers; close files     ; release underlying resources - the job has been ended.
+bool flow_job_gif_dispose(flow_context* c, void* codec_state){
+    struct flow_job_gif_decoder_state* state = (struct flow_job_gif_decoder_state*)codec_state;
+    if (state->gif != NULL){
+        int error = 0;
+        //fprintf(stderr, "Closing gif\n");
+        if (DGifCloseFile(state->gif, &error) !=D_GIF_SUCCEEDED){
+            FLOW_error_msg(c, flow_status_Image_decoding_failed, "Failed to close gif: DGifCloseFile failed with error '%s'",
+                           GifErrorString(error));
+            return false;
+        }
+        state->gif = NULL;
+    }
+    return true;
+}
+
+
 static bool flow_job_gif_decoder_reset(flow_context* c, struct flow_job_gif_decoder_state* state)
 {
     if (state->stage == flow_job_gif_decoder_stage_FinishRead) {
@@ -80,13 +99,37 @@ static bool flow_job_gif_decoder_reset(flow_context* c, struct flow_job_gif_deco
             state->gif = NULL;
         }
     }
-    state->row_stride = 0;
+    state->current_frame_index = 0;
     state->context = c;
     state->w = 0;
     state->h = 0;
     state->stage = flow_job_gif_decoder_stage_NotStarted;
     return true;
 }
+
+
+static bool flow_job_gif_decoder_FinishRead(flow_context* c, struct flow_job_gif_decoder_state* state)
+{
+    if (state->stage < flow_job_gif_decoder_stage_BeginRead) {
+        FLOW_error(c, flow_status_Invalid_internal_state);
+        return false;
+    }
+    if (state->stage == flow_job_gif_decoder_stage_FinishRead){
+        return true;
+    }
+
+    state->stage = flow_job_gif_decoder_stage_FinishRead;
+
+    //fprintf(stderr, "DGifSlurp on %p\n", (void *)state->gif);
+    if (DGifSlurp(state->gif) != GIF_OK) {
+        FLOW_error_msg(c, flow_status_Image_decoding_failed, "Failed to read gif: DGifSlurp(%p) failed with error '%s'", (void *)state->gif,
+                       GifErrorString(state->gif->Error));
+        return false;
+    }
+
+    return true;
+}
+
 
 static bool flow_job_gif_decoder_BeginRead(flow_context* c, struct flow_job_gif_decoder_state* state)
 {
@@ -102,6 +145,7 @@ static bool flow_job_gif_decoder_BeginRead(flow_context* c, struct flow_job_gif_
 
     int error = 0;
     state->gif = DGifOpen(state, flow_job_gif_read_function, &error);
+    //fprintf(stderr, "DGifOpen returned %p\n", (void *) state->gif);
 
     if (error != D_GIF_SUCCEEDED) {
         FLOW_error_msg(c, flow_status_Image_decoding_failed, "Failed to open gif: DGifOpen failed with error '%s'",
@@ -118,31 +162,6 @@ static bool flow_job_gif_decoder_BeginRead(flow_context* c, struct flow_job_gif_
     state->w = state->gif->SWidth;
     state->h = state->gif->SHeight;
 
-    return true;
-}
-
-static bool flow_job_gif_decoder_FinishRead(flow_context* c, struct flow_job_gif_decoder_state* state)
-{
-    if (state->stage != flow_job_gif_decoder_stage_BeginRead) {
-        FLOW_error(c, flow_status_Invalid_internal_state);
-        return false;
-    }
-    // We let the caller create the buffer
-    //    state->pixel_buffer =  (gif_bytep)FLOW_calloc (c, state->pixel_buffer_size, sizeof(gif_bytep));
-    if (state->pixel_buffer == NULL) {
-        flow_job_gif_decoder_reset(c, state);
-        state->stage = flow_job_gif_decoder_stage_Failed;
-        FLOW_error(c, flow_status_Out_of_memory);
-        return false;
-    }
-
-    state->stage = flow_job_gif_decoder_stage_FinishRead;
-
-    if (DGifSlurp(state->gif) != GIF_OK) {
-        FLOW_error_msg(c, flow_status_Image_decoding_failed, "Failed to open gif: DGifOpen failed with error '%s'",
-                       GifErrorString(state->gif->Error));
-        return false;
-    }
 
     return true;
 }
@@ -152,7 +171,7 @@ bool flow_job_codecs_gif_initialize(flow_context* c, struct flow_job* job, struc
     // flow_job_gif_decoder_state
     if (codec->codec_state == NULL) {
         struct flow_job_gif_decoder_state* state
-            = (struct flow_job_gif_decoder_state*)FLOW_malloc(c, sizeof(struct flow_job_gif_decoder_state));
+            = (struct flow_job_gif_decoder_state*)flow_context_malloc(c, sizeof(struct flow_job_gif_decoder_state), flow_job_gif_dispose, job, __FILE__, __LINE__);
         if (state == NULL) {
             FLOW_error(c, flow_status_Out_of_memory);
             return false;
@@ -170,9 +189,40 @@ bool flow_job_codecs_gif_initialize(flow_context* c, struct flow_job* job, struc
     }
     return true;
 }
-
+bool flow_job_codecs_decode_gif_switch_frame(flow_context* c, struct flow_job* job, void* codec_state, size_t frame_index){
+    struct flow_job_gif_decoder_state* state = (struct flow_job_gif_decoder_state*)codec_state;
+    if (state->stage < flow_job_gif_decoder_stage_BeginRead) {
+        if (!flow_job_gif_decoder_BeginRead(c, state)) {
+            FLOW_error_return(c);
+        }
+    }
+    state->current_frame_index = frame_index;
+    return true;
+}
 bool flow_job_codecs_gif_get_info(flow_context* c, struct flow_job* job, void* codec_state,
-                                  struct decoder_frame_info* decoder_frame_info_ref)
+                                  struct flow_decoder_info* info_ref)
+{
+    struct flow_job_gif_decoder_state* state = (struct flow_job_gif_decoder_state*)codec_state;
+    if (state->stage < flow_job_gif_decoder_stage_BeginRead) {
+        if (!flow_job_gif_decoder_BeginRead(c, state)) {
+            FLOW_error_return(c);
+        }
+    }
+    if (state->stage < flow_job_gif_decoder_stage_FinishRead) {
+        if (!flow_job_gif_decoder_FinishRead(c, state)) {
+            FLOW_error_return(c);
+        }
+    }
+    info_ref->frame0_width = state->gif->SWidth;
+    info_ref->frame0_height= state->gif->SHeight;
+    info_ref->frame_count = state->gif->ImageCount;
+    info_ref->current_frame_index = state->current_frame_index;
+    info_ref->frame0_post_decode_format = flow_bgra32;
+    return true;
+}
+
+bool flow_job_codecs_gif_get_frame_info(flow_context* c, struct flow_job* job, void* codec_state,
+                                  struct flow_decoder_frame_info* decoder_frame_info_ref)
 {
     struct flow_job_gif_decoder_state* state = (struct flow_job_gif_decoder_state*)codec_state;
     if (state->stage < flow_job_gif_decoder_stage_BeginRead) {
@@ -186,6 +236,8 @@ bool flow_job_codecs_gif_get_info(flow_context* c, struct flow_job* job, void* c
     return true;
 }
 
+
+
 static bool dequantize(flow_context * c, GifFileType * gif, int frame_index, flow_bitmap_bgra * canvas){
     if (gif->ImageCount <= frame_index){
         FLOW_error_msg(c, flow_status_Invalid_argument, "Frame index must be between [0, %i). Given %i", gif->ImageCount, frame_index);
@@ -194,8 +246,10 @@ static bool dequantize(flow_context * c, GifFileType * gif, int frame_index, flo
     SavedImage * image = &gif->SavedImages[frame_index];
     int w = image->ImageDesc.Width;
     int h = image->ImageDesc.Height;
-    if (w != (int)canvas->w && h != (int)canvas->h){
-        FLOW_error_msg(c, flow_status_Invalid_argument, "Canvas size must match gif size");
+    int left = image->ImageDesc.Left;
+    int top = image->ImageDesc.Top;
+    if (w + left > (int)canvas->w && h + top > (int)canvas->h){
+        FLOW_error_msg(c, flow_status_Invalid_argument, "Canvas size must be >= gif size");
         return false;
     }
     if (canvas->fmt != flow_bgra32){
@@ -211,10 +265,10 @@ static bool dequantize(flow_context * c, GifFileType * gif, int frame_index, flo
     ColorMapObject * palette = image->ImageDesc.ColorMap;
     if (palette == NULL) palette = gif->SColorMap;
     uint8_t * gif_byte = &image->RasterBits[0];
-    uint8_t * canvas_byte = canvas->pixels;
+    uint8_t * canvas_byte = canvas->pixels + (left * 4) + (top * canvas->stride);
     int palette_size = palette->ColorCount;
     GifColorType * colors = palette->Colors;
-    int stride_offset = canvas->stride - (canvas->w * 4);
+    int stride_offset = canvas->stride - (w * 4);
 
 
     for (int y = 0; y < h; y++){
@@ -238,13 +292,20 @@ static bool dequantize(flow_context * c, GifFileType * gif, int frame_index, flo
 bool flow_job_codecs_gif_read_frame(flow_context* c, struct flow_job* job, void* codec_state, flow_bitmap_bgra* canvas)
 {
     struct flow_job_gif_decoder_state* state = (struct flow_job_gif_decoder_state*)codec_state;
-    if (state->stage == flow_job_gif_decoder_stage_BeginRead) {
-        state->pixel_buffer = canvas->pixels;
+    if (state->stage >= flow_job_gif_decoder_stage_BeginRead) {
+
+        if (canvas == NULL || canvas->pixels == NULL) {
+            flow_job_gif_decoder_reset(c, state);
+            state->stage = flow_job_gif_decoder_stage_Failed;
+            FLOW_error(c, flow_status_Out_of_memory);
+            return false;
+        }
+
         if (!flow_job_gif_decoder_FinishRead(c, state)) {
             FLOW_error_return(c);
         }
 
-        if (!dequantize(c, state->gif, 0, canvas)){
+        if (!dequantize(c, state->gif, state->current_frame_index, canvas)){
             FLOW_error_return(c);
         }
 
