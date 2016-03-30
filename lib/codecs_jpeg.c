@@ -8,37 +8,6 @@
 static uint8_t jpeg_bytes_a[] = { 0xFF, 0xD8, 0xFF, 0xDB };
 static uint8_t jpeg_bytes_b[] = { 0xFF, 0xD8, 0xFF, 0xE0 };
 static uint8_t jpeg_bytes_c[] = { 0xFF, 0xD8, 0xFF, 0xE1 };
-static struct flow_codec_magic_bytes jpeg_magic_bytes[] = { {
-                                                              .byte_count = 4, .bytes = (uint8_t*)&jpeg_bytes_a,
-
-                                                            },
-                                                            {
-                                                              .byte_count = 4, .bytes = (uint8_t*)&jpeg_bytes_b,
-
-                                                            },
-                                                            {
-                                                              .byte_count = 4, .bytes = (uint8_t*)&jpeg_bytes_c,
-
-                                                            } };
-
-const struct flow_codec_definition flow_codec_definition_decode_jpeg
-    = { .codec_id = flow_codec_type_decode_jpeg,
-        .initialize = flow_job_codecs_initialize_decode_jpeg,
-        .get_frame_info = flow_job_codecs_jpeg_get_info,
-        .read_frame = flow_job_codecs_jpeg_read_frame,
-        .magic_byte_sets = &jpeg_magic_bytes[0],
-        .magic_byte_sets_count = sizeof(jpeg_magic_bytes) / sizeof(struct flow_codec_magic_bytes),
-        .name = "decode jpeg",
-        .preferred_mime_type = "image/jpeg",
-        .preferred_extension = "jpg" };
-
-const struct flow_codec_definition flow_codec_definition_encode_jpeg
-    = { .codec_id = flow_codec_type_encode_jpeg,
-        .initialize = flow_job_codecs_initialize_encode_jpeg,
-        .write_frame = flow_job_codecs_jpeg_write_frame,
-        .name = "encode jpeg",
-        .preferred_mime_type = "image/jpeg",
-        .preferred_extension = "jpg" };
 
 typedef enum flow_job_jpeg_decoder_stage {
     flow_job_jpg_decoder_stage_Null = 0,
@@ -306,7 +275,8 @@ static bool flow_job_jpg_decoder_reset(flow_context* c, struct flow_job_jpeg_dec
     return true;
 }
 
-bool flow_job_codecs_initialize_decode_jpeg(flow_context* c, struct flow_job* job, struct flow_codec_instance* item)
+static bool flow_job_codecs_initialize_decode_jpeg(flow_context* c, struct flow_job* job,
+                                                   struct flow_codec_instance* item)
 {
     // flow_job_jpeg_decoder_state
     if (item->codec_state == NULL) {
@@ -329,8 +299,8 @@ bool flow_job_codecs_initialize_decode_jpeg(flow_context* c, struct flow_job* jo
     return true;
 }
 
-bool flow_job_codecs_jpeg_get_info(flow_context* c, struct flow_job* job, void* codec_state,
-                                   struct flow_decoder_frame_info* decoder_frame_info_ref)
+static bool flow_job_codecs_jpeg_get_info(flow_context* c, struct flow_job* job, void* codec_state,
+                                          struct flow_decoder_frame_info* decoder_frame_info_ref)
 {
     struct flow_job_jpeg_decoder_state* state = (struct flow_job_jpeg_decoder_state*)codec_state;
     if (state->stage < flow_job_jpg_decoder_stage_BeginRead) {
@@ -344,7 +314,8 @@ bool flow_job_codecs_jpeg_get_info(flow_context* c, struct flow_job* job, void* 
     return true;
 }
 
-bool flow_job_codecs_jpeg_read_frame(flow_context* c, struct flow_job* job, void* codec_state, flow_bitmap_bgra* canvas)
+static bool flow_job_codecs_jpeg_read_frame(flow_context* c, struct flow_job* job, void* codec_state,
+                                            flow_bitmap_bgra* canvas)
 {
     struct flow_job_jpeg_decoder_state* state = (struct flow_job_jpeg_decoder_state*)codec_state;
     if (state->stage == flow_job_jpg_decoder_stage_BeginRead) {
@@ -364,7 +335,8 @@ bool flow_job_codecs_jpeg_read_frame(flow_context* c, struct flow_job* job, void
     }
 }
 
-bool flow_job_codecs_initialize_encode_jpeg(flow_context* c, struct flow_job* job, struct flow_codec_instance* item)
+static bool flow_job_codecs_initialize_encode_jpeg(flow_context* c, struct flow_job* job,
+                                                   struct flow_codec_instance* item)
 {
     // flow_job_png_decoder_state
     if (item->codec_state == NULL) {
@@ -382,7 +354,8 @@ bool flow_job_codecs_initialize_encode_jpeg(flow_context* c, struct flow_job* jo
     return true;
 }
 
-bool flow_job_codecs_jpeg_write_frame(flow_context* c, struct flow_job* job, void* codec_state, flow_bitmap_bgra* frame)
+static bool flow_job_codecs_jpeg_write_frame(flow_context* c, struct flow_job* job, void* codec_state,
+                                             flow_bitmap_bgra* frame)
 {
     struct flow_job_jpeg_encoder_state* state = (struct flow_job_jpeg_encoder_state*)codec_state;
     state->context = c;
@@ -436,3 +409,35 @@ bool flow_job_codecs_jpeg_write_frame(flow_context* c, struct flow_job* job, voi
 
     return true;
 }
+
+static struct flow_codec_magic_bytes jpeg_magic_bytes[] = { {
+                                                              .byte_count = 4, .bytes = (uint8_t*)&jpeg_bytes_a,
+
+                                                            },
+                                                            {
+                                                              .byte_count = 4, .bytes = (uint8_t*)&jpeg_bytes_b,
+
+                                                            },
+                                                            {
+                                                              .byte_count = 4, .bytes = (uint8_t*)&jpeg_bytes_c,
+
+                                                            } };
+
+const struct flow_codec_definition flow_codec_definition_decode_jpeg
+    = { .codec_id = flow_codec_type_decode_jpeg,
+        .initialize = flow_job_codecs_initialize_decode_jpeg,
+        .get_frame_info = flow_job_codecs_jpeg_get_info,
+        .read_frame = flow_job_codecs_jpeg_read_frame,
+        .magic_byte_sets = &jpeg_magic_bytes[0],
+        .magic_byte_sets_count = sizeof(jpeg_magic_bytes) / sizeof(struct flow_codec_magic_bytes),
+        .name = "decode jpeg",
+        .preferred_mime_type = "image/jpeg",
+        .preferred_extension = "jpg" };
+
+const struct flow_codec_definition flow_codec_definition_encode_jpeg
+    = { .codec_id = flow_codec_type_encode_jpeg,
+        .initialize = flow_job_codecs_initialize_encode_jpeg,
+        .write_frame = flow_job_codecs_jpeg_write_frame,
+        .name = "encode jpeg",
+        .preferred_mime_type = "image/jpeg",
+        .preferred_extension = "jpg" };

@@ -11,19 +11,6 @@ static struct flow_codec_magic_bytes gif_magic_bytes[] = { {
 
 } };
 
-const struct flow_codec_definition flow_codec_definition_decode_gif
-    = { .codec_id = flow_codec_type_decode_gif,
-        .initialize = flow_job_codecs_gif_initialize,
-        .get_frame_info = flow_job_codecs_gif_get_frame_info,
-        .get_info = flow_job_codecs_gif_get_info,
-        .switch_frame = flow_job_codecs_decode_gif_switch_frame,
-        .read_frame = flow_job_codecs_gif_read_frame,
-        .magic_byte_sets = &gif_magic_bytes[0],
-        .magic_byte_sets_count = sizeof(gif_magic_bytes) / sizeof(struct flow_codec_magic_bytes),
-        .name = "decode gif",
-        .preferred_mime_type = "image/gif",
-        .preferred_extension = "gif" };
-
 typedef enum flow_job_gif_decoder_stage {
     flow_job_gif_decoder_stage_Null = 0,
     flow_job_gif_decoder_stage_Failed,
@@ -182,7 +169,7 @@ static bool flow_job_gif_decoder_BeginRead(flow_context* c, struct flow_job_gif_
     return true;
 }
 
-bool flow_job_codecs_gif_initialize(flow_context* c, struct flow_job* job, struct flow_codec_instance* codec)
+static bool flow_job_codecs_gif_initialize(flow_context* c, struct flow_job* job, struct flow_codec_instance* codec)
 {
     // flow_job_gif_decoder_state
     if (codec->codec_state == NULL) {
@@ -205,8 +192,8 @@ bool flow_job_codecs_gif_initialize(flow_context* c, struct flow_job* job, struc
     }
     return true;
 }
-bool flow_job_codecs_decode_gif_switch_frame(flow_context* c, struct flow_job* job, void* codec_state,
-                                             size_t frame_index)
+static bool flow_job_codecs_decode_gif_switch_frame(flow_context* c, struct flow_job* job, void* codec_state,
+                                                    size_t frame_index)
 {
     struct flow_job_gif_decoder_state* state = (struct flow_job_gif_decoder_state*)codec_state;
     if (state->stage < flow_job_gif_decoder_stage_BeginRead) {
@@ -217,8 +204,8 @@ bool flow_job_codecs_decode_gif_switch_frame(flow_context* c, struct flow_job* j
     state->current_frame_index = frame_index;
     return true;
 }
-bool flow_job_codecs_gif_get_info(flow_context* c, struct flow_job* job, void* codec_state,
-                                  struct flow_decoder_info* info_ref)
+static bool flow_job_codecs_gif_get_info(flow_context* c, struct flow_job* job, void* codec_state,
+                                         struct flow_decoder_info* info_ref)
 {
     struct flow_job_gif_decoder_state* state = (struct flow_job_gif_decoder_state*)codec_state;
     if (state->stage < flow_job_gif_decoder_stage_BeginRead) {
@@ -239,8 +226,8 @@ bool flow_job_codecs_gif_get_info(flow_context* c, struct flow_job* job, void* c
     return true;
 }
 
-bool flow_job_codecs_gif_get_frame_info(flow_context* c, struct flow_job* job, void* codec_state,
-                                        struct flow_decoder_frame_info* decoder_frame_info_ref)
+static bool flow_job_codecs_gif_get_frame_info(flow_context* c, struct flow_job* job, void* codec_state,
+                                               struct flow_decoder_frame_info* decoder_frame_info_ref)
 {
     struct flow_job_gif_decoder_state* state = (struct flow_job_gif_decoder_state*)codec_state;
     if (state->stage < flow_job_gif_decoder_stage_BeginRead) {
@@ -309,7 +296,8 @@ static bool dequantize(flow_context* c, GifFileType* gif, int frame_index, flow_
     return true;
 }
 
-bool flow_job_codecs_gif_read_frame(flow_context* c, struct flow_job* job, void* codec_state, flow_bitmap_bgra* canvas)
+static bool flow_job_codecs_gif_read_frame(flow_context* c, struct flow_job* job, void* codec_state,
+                                           flow_bitmap_bgra* canvas)
 {
     struct flow_job_gif_decoder_state* state = (struct flow_job_gif_decoder_state*)codec_state;
     if (state->stage >= flow_job_gif_decoder_stage_BeginRead) {
@@ -422,3 +410,16 @@ bool flow_job_codecs_gif_read_frame(flow_context* c, struct flow_job* job, void*
 //
 //    return true;
 //}
+
+const struct flow_codec_definition flow_codec_definition_decode_gif
+    = { .codec_id = flow_codec_type_decode_gif,
+        .initialize = flow_job_codecs_gif_initialize,
+        .get_frame_info = flow_job_codecs_gif_get_frame_info,
+        .get_info = flow_job_codecs_gif_get_info,
+        .switch_frame = flow_job_codecs_decode_gif_switch_frame,
+        .read_frame = flow_job_codecs_gif_read_frame,
+        .magic_byte_sets = &gif_magic_bytes[0],
+        .magic_byte_sets_count = sizeof(gif_magic_bytes) / sizeof(struct flow_codec_magic_bytes),
+        .name = "decode gif",
+        .preferred_mime_type = "image/gif",
+        .preferred_extension = "gif" };
