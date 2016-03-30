@@ -33,7 +33,7 @@ module Imageflow
 
         g.create_node(:decoder, 0)
             .add(:scale, 300, 200)
-            .add(:encoder, 1, :encode_jpeg)
+            .add(:encoder, 1, 4) #4 is the id of the jpeg encoder
 
 
         job.execute graph: g

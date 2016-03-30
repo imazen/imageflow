@@ -324,7 +324,7 @@ int32_t flow_node_create_encoder_placeholder(flow_context* c, struct flow_graph*
     return flow_node_create_encoder(c, g, prev_node, placeholder_id, 0);
 }
 int32_t flow_node_create_encoder(flow_context* c, struct flow_graph** g, int32_t prev_node, int32_t placeholder_id,
-                                 size_t desired_encoder_id)
+                                 int64_t desired_encoder_id)
 {
     int32_t id = flow_node_create_generic(c, g, prev_node, flow_ntype_encoder);
     if (id < 0) {

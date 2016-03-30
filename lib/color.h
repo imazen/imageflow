@@ -17,8 +17,6 @@ extern "C" {
 
 typedef struct flow_bitmap_float flow_bitmap_float;
 
-typedef struct flow_bitmap_bgra_struct flow_bitmap_bgra;
-
 typedef struct flow_ctx flow_context;
 
 static inline float linear_to_srgb(float clr)

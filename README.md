@@ -77,7 +77,7 @@ Install nasm (`cinst -y nasm` on windows, followed by `set PATH=%PATH%;%ProgramF
         // Double the original width/height
         last = flow_node_create_scale(c, &g, last, info->frame0_width * 2, info->frame0_height * 2);
         // Keep the original format if png or jpeg
-        size_t encoder_id = info->codec_type == flow_codec_type_decode_jpeg ? flow_codec_type_encode_jpeg
+        size_t encoder_id = info->codec_id == flow_codec_type_decode_jpeg ? flow_codec_type_encode_jpeg
                                                                             : flow_codec_type_encode_png;
         last = flow_node_create_encoder(c, &g, last, output_placeholder, encoder_id);
     

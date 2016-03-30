@@ -5,6 +5,31 @@
 #include "lcms2.h"
 #include "codecs.h"
 
+static uint8_t png_bytes[] = { 0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A };
+static struct flow_codec_magic_bytes png_magic_bytes[] = { {
+    .byte_count = 7, .bytes = (uint8_t*)&png_bytes,
+} };
+
+const struct flow_codec_definition flow_codec_definition_decode_png
+    = { .codec_id = flow_codec_type_decode_png,
+        .initialize = flow_job_codecs_initialize_decode_png,
+        .get_frame_info = flow_job_codecs_png_get_frame_info,
+        .get_info = flow_job_codecs_png_get_info,
+        .read_frame = flow_job_codecs_png_read_frame,
+        .magic_byte_sets = &png_magic_bytes[0],
+        .magic_byte_sets_count = sizeof(png_magic_bytes) / sizeof(struct flow_codec_magic_bytes),
+        .name = "decode png",
+        .preferred_mime_type = "image/png",
+        .preferred_extension = "png" };
+
+const struct flow_codec_definition flow_codec_definition_encode_png
+    = { .codec_id = flow_codec_type_encode_png,
+        .initialize = flow_job_codecs_initialize_encode_png,
+        .write_frame = flow_job_codecs_png_write_frame,
+        .name = "encode png",
+        .preferred_mime_type = "image/png",
+        .preferred_extension = "png" };
+
 typedef enum flow_job_png_decoder_stage {
     flow_job_png_decoder_stage_Null = 0,
     flow_job_png_decoder_stage_Failed,
@@ -334,8 +359,8 @@ bool flow_job_codecs_initialize_decode_png(flow_context* c, struct flow_job* job
     return true;
 }
 
-bool flow_job_codecs_png_get_frame_info(flow_context *c, struct flow_job *job, void *codec_state,
-                                        struct flow_decoder_frame_info *decoder_frame_info_ref)
+bool flow_job_codecs_png_get_frame_info(flow_context* c, struct flow_job* job, void* codec_state,
+                                        struct flow_decoder_frame_info* decoder_frame_info_ref)
 {
     struct flow_job_png_decoder_state* state = (struct flow_job_png_decoder_state*)codec_state;
     if (state->stage < flow_job_png_decoder_stage_BeginRead) {
@@ -358,7 +383,7 @@ bool flow_job_codecs_png_get_info(flow_context* c, struct flow_job* job, void* c
         }
     }
     info_ref->frame0_width = state->w;
-    info_ref->frame0_height= state->h;
+    info_ref->frame0_height = state->h;
     info_ref->frame_count = 1;
     info_ref->current_frame_index = 0;
     info_ref->frame0_post_decode_format = flow_bgra32;

@@ -128,13 +128,10 @@ struct flow_job;
 
 typedef enum flow_codec_type {
     flow_codec_type_null,
-    flow_codec_type_bitmap_bgra_pointer,
     flow_codec_type_decode_png,
     flow_codec_type_encode_png,
     flow_codec_type_decode_jpeg,
     flow_codec_type_encode_jpeg,
-    flow_codec_type_encoder,
-    flow_codec_type_decoder,
     flow_codec_type_decode_gif,
 } flow_codec_type;
 
@@ -243,7 +240,6 @@ typedef struct flow_ctx flow_context;
 struct flow_codec_definition;
 struct flow_codec_instance; // All methods should center around this
 struct flow_nodeinfo_index;
-struct flow_nodeinfo_encoder_placeholder;
 struct flow_nodeinfo_createcanvas;
 struct flow_nodeinfo_crop;
 struct flow_nodeinfo_copy_rect_to_canvas;
@@ -257,6 +253,7 @@ struct flow_scanlines_filter;
 struct flow_node;
 struct flow_edge;
 struct flow_graph;
+typedef struct flow_bitmap_bgra_struct flow_bitmap_bgra;
 
 PUB flow_context* flow_context_create(void);
 
@@ -312,7 +309,7 @@ PUB bool flow_job_get_output_buffer(flow_context* c, struct flow_job* job, int32
 PUB bool flow_io_write_output_buffer_to_file(flow_context* c, struct flow_io* io, const char* file_path);
 
 PUB bool flow_job_initialize_encoder(flow_context* c, struct flow_job* job, int32_t by_placeholder_id,
-                                     flow_codec_type codec_id);
+                                     int64_t codec_id);
 
 PUB bool flow_job_add_io(flow_context* c, struct flow_job* job, struct flow_io* io, int32_t placeholder_id,
                          FLOW_DIRECTION direction);
@@ -320,181 +317,7 @@ PUB bool flow_job_add_io(flow_context* c, struct flow_job* job, struct flow_io* 
 PUB struct flow_codec_instance* flow_job_get_codec_instance(flow_context* c, struct flow_job* job,
                                                             int32_t by_placeholder_id);
 bool flow_job_set_default_encoder(flow_context* c, struct flow_job* job, int32_t by_placeholder_id,
-                                  flow_codec_type default_encoder_id);
-
-// non-indexed bitmap
-typedef struct flow_bitmap_bgra_struct {
-
-    // bitmap width in pixels
-    uint32_t w;
-    // bitmap height in pixels
-    uint32_t h;
-    // byte length of each row (may include any amount of padding)
-    uint32_t stride;
-    // pointer to pixel 0,0; should be of length > h * stride
-    unsigned char* pixels;
-    // If true, we don't dispose of *pixels when we dispose the struct
-    bool borrowed_pixels;
-    // If false, we can even ignore the alpha channel on 4bpp
-    bool alpha_meaningful;
-    // If false, we can edit pixels without affecting the stride
-    bool pixels_readonly;
-    // If false, we can change the stride of the image.
-    bool stride_readonly;
-
-    // If true, we can reuse the allocated memory for other purposes.
-    bool can_reuse_space;
-
-    flow_pixel_format fmt;
-
-    // When using compositing mode blend_with_matte, this color will be used. We should probably define this as always
-    // being sRGBA, 4 bytes.
-    uint8_t matte_color[4];
-
-    flow_bitmap_compositing_mode compositing_mode;
-
-} flow_bitmap_bgra;
-
-PUB float flow_context_byte_to_floatspace(flow_context* c, uint8_t srgb_value);
-PUB uint8_t flow_context_floatspace_to_byte(flow_context* c, float space_value);
-
-PUB void flow_context_set_floatspace(flow_context* context, flow_working_floatspace space, float a, float b, float c);
-
-typedef struct flow_RendererStruct flow_Renderer;
-
-struct flow_interpolation_details_struct;
-typedef double (*flow_detailed_interpolation_method)(const struct flow_interpolation_details_struct*, double);
-
-typedef struct flow_interpolation_details_struct {
-    // 1 is the default; near-zero overlapping between windows. 2 overlaps 50% on each side.
-    double window;
-    // Coefficients for bucubic weighting
-    double p1, p2, p3, q1, q2, q3, q4;
-    // Blurring factor when > 1, sharpening factor when < 1. Applied to weights.
-    double blur;
-
-    // pointer to the weight calculation function
-    flow_detailed_interpolation_method filter;
-    // How much sharpening we are requesting
-    float sharpen_percent_goal;
-
-} flow_interpolation_details;
-
-typedef struct flow_convolution_kernel {
-    float* kernel;
-    uint32_t width;
-    uint32_t radius;
-    float threshold_min_change; // These change values are on a somewhat arbitrary scale between 0 and 4;
-    float threshold_max_change;
-    float* buffer;
-} flow_convolution_kernel;
-
-typedef struct flow_RenderDetailsStruct {
-    // Interpolation and scaling details
-    flow_interpolation_details* interpolation;
-    // How large the interoplation window needs to be before we even attempt to apply a sharpening
-    // percentage to the given filter
-    float minimum_sample_window_to_interposharpen;
-
-    // If possible to do correctly, halve the image until it is [interpolate_last_percent] times larger than needed. 3
-    // or greater reccomended. Specify -1 to disable halving.
-    float interpolate_last_percent;
-
-    // The number of pixels (in target canvas coordinates) that it is acceptable to discard for better halving
-    // performance
-    float havling_acceptable_pixel_loss;
-
-    // The actual halving factor to use.
-    uint32_t halving_divisor;
-
-    // The first convolution to apply
-    flow_convolution_kernel* kernel_a;
-    // A second convolution to apply
-    flow_convolution_kernel* kernel_b;
-
-    // If greater than 0, a percentage to sharpen the result along each axis;
-    float sharpen_percent_goal;
-
-    // If true, we should apply the color matrix
-    bool apply_color_matrix;
-
-    float color_matrix_data[25];
-    float* color_matrix[5];
-
-    // Transpose, flipx, flipy - combined, these give you all 90 interval rotations
-    bool post_transpose;
-    bool post_flip_x;
-    bool post_flip_y;
-
-    // Enables profiling
-    bool enable_profiling;
-
-} flow_RenderDetails;
-
-PUB flow_bitmap_bgra* flow_bitmap_bgra_create(flow_context* context, int sx, int sy, bool zeroed,
-                                              flow_pixel_format format);
-PUB flow_bitmap_bgra* flow_bitmap_bgra_create_header(flow_context* context, int sx, int sy);
-PUB void flow_bitmap_bgra_destroy(flow_context* context, flow_bitmap_bgra* im);
-PUB bool flow_bitmap_bgra_flip_horizontal(flow_context* context, flow_bitmap_bgra* b);
-PUB bool flow_bitmap_bgra_compare(flow_context* c, flow_bitmap_bgra* a, flow_bitmap_bgra* b, bool* equal_out);
-
-PUB flow_RenderDetails* flow_RenderDetails_create(flow_context* context);
-PUB flow_RenderDetails* flow_RenderDetails_create_with(flow_context* context, flow_interpolation_filter filter);
-
-PUB bool flow_RenderDetails_render(flow_context* context, flow_RenderDetails* details, flow_bitmap_bgra* source,
-                                   flow_bitmap_bgra* canvas);
-PUB bool flow_RenderDetails_render_in_place(flow_context* context, flow_RenderDetails* details,
-                                            flow_bitmap_bgra* edit_in_place);
-PUB void flow_RenderDetails_destroy(flow_context* context, flow_RenderDetails* d);
-
-PUB bool flow_interpolation_filter_exists(flow_interpolation_filter filter);
-PUB flow_interpolation_details* flow_interpolation_details_create(flow_context* context);
-PUB flow_interpolation_details* flow_interpolation_details_create_bicubic_custom(flow_context* context, double window,
-                                                                                 double blur, double B, double C);
-PUB flow_interpolation_details* flow_interpolation_details_create_custom(flow_context* context, double window,
-                                                                         double blur,
-                                                                         flow_detailed_interpolation_method filter);
-PUB flow_interpolation_details* flow_interpolation_details_create_from(flow_context* context,
-                                                                       flow_interpolation_filter filter);
-PUB double flow_interpolation_details_percent_negative_weight(const flow_interpolation_details* details);
-PUB void flow_interpolation_details_destroy(flow_context* context, flow_interpolation_details*);
-
-PUB uint32_t flow_pixel_format_bytes_per_pixel(flow_pixel_format format);
-
-typedef struct {
-    float* Weights; /* Normalized weights of neighboring pixels */
-    int Left; /* Bounds of source pixels window */
-    int Right;
-} flow_interpolation_pixel_contributions; /* Contirbution information for a single pixel */
-
-typedef struct {
-    flow_interpolation_pixel_contributions* ContribRow; /* Row (or column) of contribution weights */
-    uint32_t WindowSize; /* Filter window size (of affecting source pixels) */
-    uint32_t LineLength; /* Length of line (no. or rows / cols) */
-    double percent_negative; /* Estimates the sharpening effect actually applied*/
-} flow_interpolation_line_contributions;
-
-PUB flow_interpolation_line_contributions*
-flow_interpolation_line_contributions_create(flow_context* context, const uint32_t output_line_size,
-                                             const uint32_t input_line_size, const flow_interpolation_details* details);
-PUB void flow_interpolation_line_contributions_destroy(flow_context* context, flow_interpolation_line_contributions* p);
-
-PUB flow_convolution_kernel* flow_convolution_kernel_create(flow_context* context, uint32_t radius);
-PUB void flow_convolution_kernel_destroy(flow_context* context, flow_convolution_kernel* kernel);
-
-PUB flow_convolution_kernel* flow_convolution_kernel_create_guassian(flow_context* context, double stdDev,
-                                                                     uint32_t radius);
-// The only error these 2 could generate would be a null pointer. Should they have a context just for this?
-PUB double flow_convolution_kernel_sum(flow_convolution_kernel* kernel);
-PUB void flow_convolution_kernel_normalize(flow_convolution_kernel* kernel, float desiredSum);
-PUB flow_convolution_kernel* flow_convolution_kernel_create_gaussian_normalized(flow_context* context, double stdDev,
-                                                                                uint32_t radius);
-PUB flow_convolution_kernel* flow_convolution_kernel_create_guassian_sharpen(flow_context* context, double stdDev,
-                                                                             uint32_t radius);
-
-PUB bool flow_bitmap_bgra_populate_histogram(flow_context* context, flow_bitmap_bgra* bmp, uint64_t* histograms,
-                                             uint32_t histogram_size_per_channel, uint32_t histogram_count,
-                                             uint64_t* pixels_sampled);
+                                  int64_t default_encoder_id);
 
 PUB struct flow_graph* flow_graph_create(flow_context* c, uint32_t max_edges, uint32_t max_nodes,
                                          uint32_t max_info_bytes, float growth_factor);
@@ -507,22 +330,6 @@ PUB struct flow_graph* flow_graph_copy_and_resize(flow_context* c, struct flow_g
                                                   uint32_t max_nodes, uint32_t max_info_bytes);
 
 PUB struct flow_graph* flow_graph_copy(flow_context* c, struct flow_graph* from);
-
-PUB int32_t flow_graph_copy_info_bytes_to(flow_context* c, struct flow_graph* from, struct flow_graph** to,
-                                          int32_t byte_index, int32_t byte_count);
-
-PUB int32_t flow_edge_duplicate(flow_context* c, struct flow_graph** g, int32_t edge_id);
-
-/*
- * flow_Graph
- * flow_Node
- * flow_Edge
- * flow_edgetype
- * flow_ntype
- *
- * flow_node_create_canvas
- * flow_
- */
 
 PUB int32_t flow_node_create_decoder(flow_context* c, struct flow_graph** g, int32_t prev_node, int32_t placeholder_id);
 
@@ -550,7 +357,7 @@ PUB int32_t flow_node_create_encoder_placeholder(flow_context* c, struct flow_gr
                                                  int32_t output_slot_id);
 
 PUB int32_t flow_node_create_encoder(flow_context* c, struct flow_graph** g, int32_t prev_node, int32_t placeholder_id,
-                                     size_t desired_encoder_id);
+                                     int64_t desired_encoder_id);
 
 PUB int32_t flow_node_create_noop(flow_context* c, struct flow_graph** g, int32_t prev_node);
 
@@ -572,36 +379,7 @@ PUB int32_t flow_node_create_render_to_canvas_1d(flow_context* c, struct flow_gr
                                                  uint8_t* matte_color[4], struct flow_scanlines_filter* filter_list,
                                                  flow_interpolation_filter interpolation_filter);
 
-PUB bool flow_node_delete(flow_context* c, struct flow_graph* g, int32_t node_id);
-
-PUB bool flow_edge_delete(flow_context* c, struct flow_graph* g, int32_t edge_id);
-
-PUB bool flow_edge_delete_all_connected_to_node(flow_context* c, struct flow_graph* g, int32_t node_id);
-
-PUB int32_t flow_graph_get_inbound_edge_count_of_type(flow_context* c, struct flow_graph* g, int32_t node_id,
-                                                      flow_edgetype type);
-PUB int32_t flow_graph_get_first_inbound_edge_of_type(flow_context* c, struct flow_graph* g, int32_t node_id,
-                                                      flow_edgetype type);
-
-PUB int32_t flow_graph_get_first_outbound_edge_of_type(flow_context* c, struct flow_graph* g, int32_t node_id,
-                                                       flow_edgetype type);
-
-PUB bool flow_edge_has_dimensions(flow_context* c, struct flow_graph* g, int32_t edge_id);
-PUB bool flow_node_input_edges_have_dimensions(flow_context* c, struct flow_graph* g, int32_t node_id);
-PUB bool flow_graph_duplicate_edges_to_another_node(flow_context* c, struct flow_graph** graph_ref, int32_t from_node,
-                                                    int32_t to_node, bool copy_inbound, bool copy_outbound);
-
 PUB int32_t flow_edge_create(flow_context* c, struct flow_graph** g, int32_t from, int32_t to, flow_edgetype type);
-
-typedef bool (*flow_graph_visitor)(flow_context* c, struct flow_job* job, struct flow_graph** graph_ref, int32_t id,
-                                   bool* quit, bool* skip_outbound_paths, void* custom_data);
-
-PUB bool flow_graph_walk(flow_context* c, struct flow_job* job, struct flow_graph** graph_ref,
-                         flow_graph_visitor node_visitor, flow_graph_visitor edge_visitor, void* custom_data);
-
-PUB bool flow_node_execute_render_to_canvas_1d(flow_context* c, struct flow_job* job, flow_bitmap_bgra* input,
-                                               flow_bitmap_bgra* canvas,
-                                               struct flow_nodeinfo_render_to_canvas_1d* info);
 
 PUB int32_t flow_node_create_render1d(flow_context* c, struct flow_graph** g, int32_t prev_node,
                                       bool transpose_on_write, int32_t scale_to_width,
@@ -615,43 +393,18 @@ PUB bool flow_job_configure_recording(flow_context* c, struct flow_job* job, boo
                                       bool record_frame_images, bool render_last_graph, bool render_graph_versions,
                                       bool render_animated_graph);
 
-bool flow_job_decoder_switch_frame(flow_context* c, struct flow_job* job, int32_t by_placeholder_id, int64_t frame_index);
-
-PUB bool flow_job_populate_dimensions_where_certain(flow_context* c, struct flow_job* job,
-                                                    struct flow_graph** graph_ref);
-// For doing execution cost estimates, we force estimate, then flatten, then calculate cost
-PUB bool flow_job_force_populate_dimensions(flow_context* c, struct flow_job* job, struct flow_graph** graph_ref);
-PUB bool flow_job_execute_where_certain(flow_context* c, struct flow_job* job, struct flow_graph** graph_ref);
-PUB bool flow_job_graph_fully_executed(flow_context* c, struct flow_job* job, struct flow_graph* g);
-
-PUB bool flow_job_notify_graph_changed(flow_context* c, struct flow_job* job, struct flow_graph* g);
-PUB bool flow_job_execute(flow_context* c, struct flow_job* job, struct flow_graph** graph_ref);
-PUB bool flow_graph_post_optimize_flatten(flow_context* c, struct flow_job* job, struct flow_graph** graph_ref);
-
-PUB bool flow_graph_optimize(flow_context* c, struct flow_job* job, struct flow_graph** graph_ref);
-PUB bool flow_graph_pre_optimize_flatten(flow_context* c, struct flow_graph** graph_ref);
-PUB int32_t flow_graph_get_edge_count(flow_context* c, struct flow_graph* g, int32_t node_id, bool filter_by_edge_type,
-                                      flow_edgetype type, bool include_inbound, bool include_outbound);
+bool flow_job_decoder_switch_frame(flow_context* c, struct flow_job* job, int32_t by_placeholder_id,
+                                   int64_t frame_index);
 
 PUB bool flow_graph_validate(flow_context* c, struct flow_graph* g);
 
 PUB int32_t
     flow_node_create_generic(flow_context* c, struct flow_graph** graph_ref, int32_t prev_node, flow_ntype type);
 
-PUB bool flow_graph_print_to_dot(flow_context* c, struct flow_graph* g, FILE* stream,
-                                 const char* image_node_filename_prefix);
-
-PUB void flow_graph_print_to(flow_context* c, struct flow_graph* g, FILE* stream);
-
-struct flow_job_resource_buffer {
-    void* buffer;
-    size_t buffer_size;
-    bool owned_by_job;
-    void* codec_state;
-};
+PUB uint32_t flow_pixel_format_bytes_per_pixel(flow_pixel_format format);
 
 struct flow_decoder_info {
-    flow_codec_type codec_type;
+    int64_t codec_id;
     const char* preferred_mime_type;
     const char* preferred_extension;
     size_t frame_count;
@@ -663,69 +416,11 @@ struct flow_decoder_info {
     // bool is_srgb;
 };
 
-
-
 PUB bool flow_job_get_decoder_info(flow_context* c, struct flow_job* job, int32_t by_placeholder_id,
                                    struct flow_decoder_info* info);
 
 bool flow_bitmap_bgra_write_png(flow_context* c, struct flow_job* job, flow_bitmap_bgra* frame, struct flow_io* io);
-PUB bool flow_node_post_optimize_flatten(flow_context* c, struct flow_graph** graph_ref, int32_t node_id);
 
-// Multi-frame/multi-page images are not magically handled.
-// We require one frame graph per frame/page to be created by the client after metadata is parsed for that frame/page.
-
-/*
- * output format:
- *
- *
- * png -> png
- * png -> jpeg
- * jpeg -> png
- * gif -> png
- * agif -> agif
- *
- *
- *
- *
- */
-
-// Imageflow makes multiple passes over each graph
-// 1. Parse headers on every source node. Resolve conditionals based on that data.
-// 2. ...
-
-// n-1: Collapse frame graph into primitives
-
-// Source node - can be asked for different I/O interfaces. May always upgrade instead. Header should be implemented for
-// safety (avoiding expensive loads)
-// header, length -> random access -> buffer
-
-// Output node - callback
-// Output node - metadata
-
-// File output nodes
-// Output node - buffer
-// Output node - random read/write
-
-// MetadataCache
-
-// SelectFrame
-// PerFrameFlow - contains subgraph, which has an FrameOutput endpoint.
-
-// Pick frame
-// decoding
-// encoding
-// quantization
-
-//
-//| VFlip | Format agnostic | In Place
-//| Crop  | Format agnostic | In Place
-//| CopyRect  | Format agnostic | New Frame
-//| CreateCanvas |
-//| RenderToCanvas1D (scale (flow_interpolation_details), compose (InPlace, Copy, Blende, Matte[color]), bool transpose,
-//[list
-// of convolution & pixel filters], working_floatspace)
-//
-//
 #undef PUB
 
 #ifdef __cplusplus

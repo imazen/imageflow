@@ -82,7 +82,7 @@ FLOW_EXPORT flow_bitmap_bgra* BitmapBgra_create_test_image(flow_context* c);
 FLOW_EXPORT double flow_bitmap_float_compare(flow_context* c, flow_bitmap_float* a, flow_bitmap_float* b,
                                              float* out_max_delta);
 
-FLOW_EXPORT struct flow_io * get_io_for_cached_url(flow_context * c, const char * url, void * owner);
+FLOW_EXPORT struct flow_io* get_io_for_cached_url(flow_context* c, const char* url, void* owner);
 
 FLOW_EXPORT bool has_err(flow_context* c, const char* file, int line, const char* func);
 

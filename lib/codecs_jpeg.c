@@ -5,6 +5,41 @@
 #include "codecs.h"
 #include "jerror.h"
 
+static uint8_t jpeg_bytes_a[] = { 0xFF, 0xD8, 0xFF, 0xDB };
+static uint8_t jpeg_bytes_b[] = { 0xFF, 0xD8, 0xFF, 0xE0 };
+static uint8_t jpeg_bytes_c[] = { 0xFF, 0xD8, 0xFF, 0xE1 };
+static struct flow_codec_magic_bytes jpeg_magic_bytes[] = { {
+                                                              .byte_count = 4, .bytes = (uint8_t*)&jpeg_bytes_a,
+
+                                                            },
+                                                            {
+                                                              .byte_count = 4, .bytes = (uint8_t*)&jpeg_bytes_b,
+
+                                                            },
+                                                            {
+                                                              .byte_count = 4, .bytes = (uint8_t*)&jpeg_bytes_c,
+
+                                                            } };
+
+const struct flow_codec_definition flow_codec_definition_decode_jpeg
+    = { .codec_id = flow_codec_type_decode_jpeg,
+        .initialize = flow_job_codecs_initialize_decode_jpeg,
+        .get_frame_info = flow_job_codecs_jpeg_get_info,
+        .read_frame = flow_job_codecs_jpeg_read_frame,
+        .magic_byte_sets = &jpeg_magic_bytes[0],
+        .magic_byte_sets_count = sizeof(jpeg_magic_bytes) / sizeof(struct flow_codec_magic_bytes),
+        .name = "decode jpeg",
+        .preferred_mime_type = "image/jpeg",
+        .preferred_extension = "jpg" };
+
+const struct flow_codec_definition flow_codec_definition_encode_jpeg
+    = { .codec_id = flow_codec_type_encode_jpeg,
+        .initialize = flow_job_codecs_initialize_encode_jpeg,
+        .write_frame = flow_job_codecs_jpeg_write_frame,
+        .name = "encode jpeg",
+        .preferred_mime_type = "image/jpeg",
+        .preferred_extension = "jpg" };
+
 typedef enum flow_job_jpeg_decoder_stage {
     flow_job_jpg_decoder_stage_Null = 0,
     flow_job_jpg_decoder_stage_Failed,

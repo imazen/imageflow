@@ -204,15 +204,6 @@ module Imageflow
         :gray8, 1
     ]
 
-    enum :codec_type, [
-        :null,
-        :bitmap_bgra_pointer,
-        :decode_png,
-        :encode_png,
-        :decode_jpeg,
-        :encode_jpeg
-    ]
-
     enum :flow_io_mode, [
         :mode_null,
         :flow_io_mode_read_sequential, 1,
@@ -302,7 +293,7 @@ module Imageflow
 
     # bool flow_job_set_default_encoder(flow_context* c, struct flow_job* job, int32_t by_placeholder_id,
     #                                                                                  flow_codec_type default_encoder_id);
-    attach_function :flow_job_set_default_encoder, [:pointer, :pointer, :int32, :uint64], :bool
+    attach_function :flow_job_set_default_encoder, [:pointer, :pointer, :int32, :int64], :bool
 
 
 
@@ -515,7 +506,7 @@ module Imageflow
     class FlowNodeinfoEncoderPlaceholder < FFI::Struct
       layout(
           :index, FlowNodeinfoIndex,
-          :codec_type, :int
+          :codec_id, :int
       )
     end
     class FlowNodeinfoCreatecanvas < FFI::Struct
@@ -600,14 +591,21 @@ module Imageflow
     attach_function :flow_node_post_optimize_flatten, [:pointer, :pointer, :int32], :bool
     class FlowJobDecoderInfo < FFI::Struct
       layout(
-          :codec_type, :codec_type,
+          :codec_id, :int64,
           :preferred_mime_type, :strptr,
           :preferred_extension, :strptr,
+          :frame_count, :size_t,
+          :current_frame_index, :int64,
           :frame0_width, :int32,
           :frame0_height, :int32,
           :frame0_post_decode_format, :pixel_format,
       )
     end
+
+
+
+
+
     attach_function :flow_job_get_decoder_info, [:pointer, :pointer, :int32, :pointer], :pointer
 
 

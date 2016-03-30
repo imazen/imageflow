@@ -139,9 +139,32 @@ typedef struct flow_ctx {
     flow_profiling_log log;
     flow_colorspace_info colorspace;
     struct flow_objtracking_info object_tracking;
+    struct flow_context_codec_set* codec_set;
 } flow_context;
 
 #include "color.h"
+
+PUB bool flow_node_execute_render_to_canvas_1d(flow_context* c, struct flow_job* job, flow_bitmap_bgra* input,
+                                               flow_bitmap_bgra* canvas,
+                                               struct flow_nodeinfo_render_to_canvas_1d* info);
+
+PUB bool flow_job_populate_dimensions_where_certain(flow_context* c, struct flow_job* job,
+                                                    struct flow_graph** graph_ref);
+// For doing execution cost estimates, we force estimate, then flatten, then calculate cost
+PUB bool flow_job_force_populate_dimensions(flow_context* c, struct flow_job* job, struct flow_graph** graph_ref);
+PUB bool flow_job_execute_where_certain(flow_context* c, struct flow_job* job, struct flow_graph** graph_ref);
+PUB bool flow_job_graph_fully_executed(flow_context* c, struct flow_job* job, struct flow_graph* g);
+
+PUB bool flow_job_notify_graph_changed(flow_context* c, struct flow_job* job, struct flow_graph* g);
+PUB bool flow_job_execute(flow_context* c, struct flow_job* job, struct flow_graph** graph_ref);
+PUB bool flow_graph_post_optimize_flatten(flow_context* c, struct flow_job* job, struct flow_graph** graph_ref);
+
+PUB bool flow_graph_optimize(flow_context* c, struct flow_job* job, struct flow_graph** graph_ref);
+PUB bool flow_graph_pre_optimize_flatten(flow_context* c, struct flow_graph** graph_ref);
+PUB int32_t flow_graph_get_edge_count(flow_context* c, struct flow_graph* g, int32_t node_id, bool filter_by_edge_type,
+                                      flow_edgetype type, bool include_inbound, bool include_outbound);
+
+PUB bool flow_node_post_optimize_flatten(flow_context* c, struct flow_graph** graph_ref, int32_t node_id);
 
 PUB bool flow_graph_walk_dependency_wise(flow_context* c, struct flow_job* job, struct flow_graph** graph_ref,
                                          flow_graph_visitor node_visitor, flow_graph_visitor edge_visitor,
@@ -256,7 +279,7 @@ struct flow_nodeinfo_codec {
     int32_t placeholder_id;
     struct flow_codec_instance* codec;
     // For encoders
-    size_t desired_encoder_id;
+    int64_t desired_encoder_id;
 };
 
 struct flow_nodeinfo_render_to_canvas_1d {
@@ -297,7 +320,7 @@ struct flow_io {
 
 struct flow_codec_instance {
     int32_t graph_placeholder_id;
-    size_t codec_id;
+    int64_t codec_id;
     void* codec_state;
     struct flow_io* io;
     struct flow_codec_instance* next;
