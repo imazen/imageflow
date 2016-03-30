@@ -27,7 +27,7 @@ target_link_libraries(imageflow ${CONAN_LIBS})
 target_include_directories(imageflow PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 
 if (UNIX)
-	set(FASTSCALING_FLAGS "-iquotelib -fPIC -O2  -Wpointer-arith -Wcast-qual -Wpedantic -Wall -Wextra -Wno-unused-parameter -Wuninitialized -Wredundant-decls -Werror")
+	set(FASTSCALING_FLAGS "-iquotelib -fPIC -Wpointer-arith -Wcast-qual -Wpedantic -Wall -Wextra -Wno-unused-parameter -Wuninitialized -Wredundant-decls -Werror")
 	set(CMAKE_C_FLAGS  "${CMAKE_C_FLAGS} ${FASTSCALING_FLAGS} -std=gnu11 -Wstrict-prototypes -Wmissing-prototypes -Wc++-compat -Wshadow" )
 	set(CMAKE_CXX_FLAGS  "${CMAKE_CXX_FLAGS} ${FASTSCALING_FLAGS} -std=gnu++11" )
 else()
@@ -35,6 +35,17 @@ else()
 	set(CMAKE_C_FLAGS  "${CMAKE_C_FLAGS} ${FASTSCALING_FLAGS}" )
 	set(CMAKE_CXX_FLAGS  "${CMAKE_CXX_FLAGS} ${FASTSCALING_FLAGS}" )
 endif()
+
+option(COVERAGE "Generate coverage data" OFF)
+if (COVERAGE)
+	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g -O0") # debug, no optimisation
+	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} --coverage")#--fprofile-arcs --ftest-coverage") # enabling coverage
+	set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -g -O0") # debug, no optimisation
+	set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} --coverage ") # enabling coverage
+else()
+
+endif()
+
 
 if(ENABLE_TEST)
     include(CTest)
