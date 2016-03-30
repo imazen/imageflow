@@ -13,9 +13,9 @@
 #include "imageflow_private.h"
 #include <string.h>
 
-bool flow_bitmap_float_scale_rows(flow_context* context, flow_bitmap_float* from, uint32_t from_row,
-                                  flow_bitmap_float* to, uint32_t to_row, uint32_t row_count,
-                                  flow_interpolation_pixel_contributions* weights)
+bool flow_bitmap_float_scale_rows(flow_c* context, struct flow_bitmap_float* from, uint32_t from_row,
+                                  struct flow_bitmap_float* to, uint32_t to_row, uint32_t row_count,
+                                  struct flow_interpolation_pixel_contributions* weights)
 {
 
     const uint32_t from_step = from->channels;
@@ -130,7 +130,7 @@ This halves in sRGB space instead of linear. Not significantly faster on modern 
 #define HALVE_ROW_NAME HalveRowByDivisorColorSpaceAware
 #define HALVE_INTERNAL_NAME HalveInternalColorSpaceAware
 
-static inline void HALVE_ROW_NAME(flow_context* context, const unsigned char* from, HALVING_TYPE* to,
+static inline void HALVE_ROW_NAME(flow_c* context, const unsigned char* from, HALVING_TYPE* to,
                                   const unsigned int to_count, const int divisor, const int step)
 {
     int to_b, from_b;
@@ -195,7 +195,7 @@ static inline void HALVE_ROW_NAME(flow_context* context, const unsigned char* fr
     }
 }
 
-static bool HALVE_INTERNAL_NAME(flow_context* context, const struct flow_bitmap_bgra* from, struct flow_bitmap_bgra* to,
+static bool HALVE_INTERNAL_NAME(flow_c* context, const struct flow_bitmap_bgra* from, struct flow_bitmap_bgra* to,
                                 const int to_w, const int to_h, const int to_stride, const int divisor)
 {
 
@@ -274,7 +274,7 @@ static bool HALVE_INTERNAL_NAME(flow_context* context, const struct flow_bitmap_
 
 //** Do not edit the following two functions; they are copy/pasted from above. **//
 
-static inline void HALVE_ROW_NAME(flow_context* context, const unsigned char* from, HALVING_TYPE* to,
+static inline void HALVE_ROW_NAME(flow_c* context, const unsigned char* from, HALVING_TYPE* to,
                                   const unsigned int to_count, const int divisor, const int step)
 {
     int to_b, from_b;
@@ -339,7 +339,7 @@ static inline void HALVE_ROW_NAME(flow_context* context, const unsigned char* fr
     }
 }
 
-static bool HALVE_INTERNAL_NAME(flow_context* context, const struct flow_bitmap_bgra* from, struct flow_bitmap_bgra* to,
+static bool HALVE_INTERNAL_NAME(flow_c* context, const struct flow_bitmap_bgra* from, struct flow_bitmap_bgra* to,
                                 const int to_w, const int to_h, const int to_stride, const int divisor)
 {
 
@@ -404,7 +404,7 @@ static bool HALVE_INTERNAL_NAME(flow_context* context, const struct flow_bitmap_
 
 //** Do not edit the above two functions; they are copy/pasted. **//
 
-bool flow_halve(flow_context* context, const struct flow_bitmap_bgra* from, struct flow_bitmap_bgra* to, int divisor)
+bool flow_halve(flow_c* context, const struct flow_bitmap_bgra* from, struct flow_bitmap_bgra* to, int divisor)
 {
 
     bool r = false;
@@ -419,7 +419,7 @@ bool flow_halve(flow_context* context, const struct flow_bitmap_bgra* from, stru
     return r;
 }
 
-bool flow_halve_in_place(flow_context* context, struct flow_bitmap_bgra* from, int divisor)
+bool flow_halve_in_place(flow_c* context, struct flow_bitmap_bgra* from, int divisor)
 {
     int to_w = from->w / divisor;
     int to_h = from->h / divisor;

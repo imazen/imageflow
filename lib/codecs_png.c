@@ -31,19 +31,19 @@ struct flow_job_png_decoder_state {
     png_bytep pixel_buffer;
     size_t pixel_buffer_size;
     png_bytepp pixel_buffer_row_pointers;
-    flow_context* context;
+    flow_c* context;
     cmsHPROFILE color_profile;
     flow_codec_color_profile_source color_profile_source;
     double gamma;
 };
 
 struct flow_job_png_encoder_state {
-    flow_context* context;
+    flow_c* context;
     struct flow_io* io;
     jmp_buf error_handler_jmp_buf;
 };
 
-static bool flow_job_png_decoder_reset(flow_context* c, struct flow_job_png_decoder_state* state)
+static bool flow_job_png_decoder_reset(flow_c* c, struct flow_job_png_decoder_state* state)
 {
     if (state->stage == flow_job_png_decoder_stage_FinishRead) {
         FLOW_free(c, state->pixel_buffer);
@@ -118,7 +118,7 @@ static void custom_read_data(png_structp png_ptr, png_bytep buffer, png_size_t b
     }
 }
 
-static bool png_decoder_load_color_profile(flow_context* c, struct flow_job_png_decoder_state* state)
+static bool png_decoder_load_color_profile(flow_c* c, struct flow_job_png_decoder_state* state)
 {
 
     // Get gamma
@@ -182,7 +182,7 @@ static bool png_decoder_load_color_profile(flow_context* c, struct flow_job_png_
     return true;
 }
 
-static bool flow_job_png_decoder_BeginRead(flow_context* c, struct flow_job_png_decoder_state* state)
+static bool flow_job_png_decoder_BeginRead(flow_c* c, struct flow_job_png_decoder_state* state)
 {
     if (state->stage != flow_job_png_decoder_stage_NotStarted) {
         FLOW_error(c, flow_status_Invalid_internal_state);
@@ -277,7 +277,7 @@ static bool flow_job_png_decoder_BeginRead(flow_context* c, struct flow_job_png_
     return true;
 }
 
-static bool flow_job_png_decoder_FinishRead(flow_context* c, struct flow_job_png_decoder_state* state)
+static bool flow_job_png_decoder_FinishRead(flow_c* c, struct flow_job_png_decoder_state* state)
 {
     if (state->stage != flow_job_png_decoder_stage_BeginRead) {
         FLOW_error(c, flow_status_Invalid_internal_state);
@@ -317,8 +317,7 @@ static bool flow_job_png_decoder_FinishRead(flow_context* c, struct flow_job_png
     return true;
 }
 
-static bool flow_job_codecs_initialize_decode_png(flow_context* c, struct flow_job* job,
-                                                  struct flow_codec_instance* item)
+static bool flow_job_codecs_initialize_decode_png(flow_c* c, struct flow_job* job, struct flow_codec_instance* item)
 {
     // flow_job_png_decoder_state
     if (item->codec_state == NULL) {
@@ -340,7 +339,7 @@ static bool flow_job_codecs_initialize_decode_png(flow_context* c, struct flow_j
     return true;
 }
 
-static bool flow_job_codecs_png_get_frame_info(flow_context* c, struct flow_job* job, void* codec_state,
+static bool flow_job_codecs_png_get_frame_info(flow_c* c, struct flow_job* job, void* codec_state,
                                                struct flow_decoder_frame_info* decoder_frame_info_ref)
 {
     struct flow_job_png_decoder_state* state = (struct flow_job_png_decoder_state*)codec_state;
@@ -354,7 +353,7 @@ static bool flow_job_codecs_png_get_frame_info(flow_context* c, struct flow_job*
     decoder_frame_info_ref->format = flow_bgra32;
     return true;
 }
-static bool flow_job_codecs_png_get_info(flow_context* c, struct flow_job* job, void* codec_state,
+static bool flow_job_codecs_png_get_info(flow_c* c, struct flow_job* job, void* codec_state,
                                          struct flow_decoder_info* info_ref)
 {
     struct flow_job_png_decoder_state* state = (struct flow_job_png_decoder_state*)codec_state;
@@ -371,7 +370,7 @@ static bool flow_job_codecs_png_get_info(flow_context* c, struct flow_job* job, 
     return true;
 }
 
-static bool flow_job_codecs_png_read_frame(flow_context* c, struct flow_job* job, void* codec_state,
+static bool flow_job_codecs_png_read_frame(flow_c* c, struct flow_job* job, void* codec_state,
                                            struct flow_bitmap_bgra* canvas)
 {
     struct flow_job_png_decoder_state* state = (struct flow_job_png_decoder_state*)codec_state;
@@ -421,7 +420,7 @@ static void png_encoder_error_handler(png_structp png_ptr, png_const_charp msg)
 
 static void png_flush_nullop(png_structp png_ptr) {}
 
-static bool flow_job_codecs_png_write_frame(flow_context* c, struct flow_job* job, void* codec_state,
+static bool flow_job_codecs_png_write_frame(flow_c* c, struct flow_job* job, void* codec_state,
                                             struct flow_bitmap_bgra* frame)
 {
     struct flow_job_png_encoder_state* state = (struct flow_job_png_encoder_state*)codec_state;
@@ -476,8 +475,7 @@ static bool flow_job_codecs_png_write_frame(flow_context* c, struct flow_job* jo
     return true;
 }
 
-static bool flow_job_codecs_initialize_encode_png(flow_context* c, struct flow_job* job,
-                                                  struct flow_codec_instance* item)
+static bool flow_job_codecs_initialize_encode_png(flow_c* c, struct flow_job* job, struct flow_codec_instance* item)
 {
     // flow_job_png_decoder_state
     if (item->codec_state == NULL) {
@@ -494,7 +492,7 @@ static bool flow_job_codecs_initialize_encode_png(flow_context* c, struct flow_j
     return true;
 }
 
-bool flow_bitmap_bgra_write_png(flow_context* c, struct flow_job* job, struct flow_bitmap_bgra* frame, struct flow_io* io)
+bool flow_bitmap_bgra_write_png(flow_c* c, struct flow_job* job, struct flow_bitmap_bgra* frame, struct flow_io* io)
 {
     struct flow_codec_instance instance;
     instance.codec_id = flow_codec_type_encode_png;

@@ -54,7 +54,7 @@ bool write_all_byte(const char* path, char* buffer, size_t size)
     return true;
 }
 
-uint8_t* read_all_bytes(flow_context* c, size_t* buffer_size, const char* path)
+uint8_t* read_all_bytes(flow_c* c, size_t* buffer_size, const char* path)
 {
     uint8_t* buffer;
     FILE* fh = fopen(path, "rb");
@@ -137,7 +137,7 @@ void fetch_image(const char* url, char* dest_path)
     }
 }
 
-uint8_t* get_bytes_cached(flow_context* c, size_t* bytes_count_out, const char* url)
+uint8_t* get_bytes_cached(flow_c* c, size_t* bytes_count_out, const char* url)
 {
 
 #define FLOW_MAX_PATH 255
@@ -193,7 +193,7 @@ void flow_utils_ensure_directory_exists(const char* dir_path)
     }
 }
 
-bool has_err(flow_context* c, const char* file, int line, const char* func)
+bool has_err(flow_c* c, const char* file, int line, const char* func)
 {
     if (flow_context_has_error(c)) {
         flow_context_add_to_callstack(c, file, line, func);
@@ -203,7 +203,7 @@ bool has_err(flow_context* c, const char* file, int line, const char* func)
     return false;
 }
 
-struct flow_bitmap_bgra* BitmapBgra_create_test_image(flow_context* c)
+struct flow_bitmap_bgra* BitmapBgra_create_test_image(flow_c* c)
 {
     struct flow_bitmap_bgra* test = flow_bitmap_bgra_create(c, 256, 256, false, flow_bgra32);
     if (test == NULL) {
@@ -225,7 +225,8 @@ struct flow_bitmap_bgra* BitmapBgra_create_test_image(flow_context* c)
 }
 
 // Returns average delte per channel per pixel. returns (double)INT32_MAX if dimension or channel mismatch
-double flow_bitmap_float_compare(flow_context* c, flow_bitmap_float* a, flow_bitmap_float* b, float* out_max_delta)
+double flow_bitmap_float_compare(flow_c* c, struct flow_bitmap_float* a, struct flow_bitmap_float* b,
+                                 float* out_max_delta)
 {
     if (a->w != b->w || a->h != b->h || a->channels != b->channels || a->float_count != b->float_count
         || a->float_stride != b->float_stride) {
@@ -251,7 +252,7 @@ double flow_bitmap_float_compare(flow_context* c, flow_bitmap_float* a, flow_bit
     return difference_total / a->h;
 }
 
-struct flow_io* get_io_for_cached_url(flow_context* c, const char* url, void* owner)
+struct flow_io* get_io_for_cached_url(flow_c* c, const char* url, void* owner)
 {
     size_t bytes_count = 0;
     uint8_t* bytes = get_bytes_cached(c, &bytes_count, url);

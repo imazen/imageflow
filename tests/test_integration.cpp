@@ -119,7 +119,7 @@ TEST_CASE("Load png from URL", "[fastscaling]")
     bool success = false;
 
     size_t bytes_count = 0;
-    flow_context* c = flow_context_create();
+    flow_c* c = flow_context_create();
 
     uint8_t* bytes = get_bytes_cached(c, &bytes_count, "http://s3.amazonaws.com/resizer-images/sun_256.png");
     REQUIRE_FALSE(bytes == NULL);
@@ -165,10 +165,11 @@ TEST_CASE("Load png from URL", "[fastscaling]")
                 int target_width = 300;
                 int target_height = 200;
 
-                struct flow_bitmap_bgra* canvas = flow_bitmap_bgra_create(c, target_width, target_height, true, flow_bgra32);
+                struct flow_bitmap_bgra* canvas
+                    = flow_bitmap_bgra_create(c, target_width, target_height, true, flow_bgra32);
 
                 REQUIRE_FALSE(canvas == NULL);
-                flow_RenderDetails* details
+                struct flow_RenderDetails* details
                     = flow_RenderDetails_create_with(c, flow_interpolation_filter::flow_interpolation_filter_Robidoux);
                 details->interpolate_last_percent = 2.1f;
                 details->minimum_sample_window_to_interposharpen = 1.5;

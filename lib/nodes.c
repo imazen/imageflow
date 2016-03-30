@@ -72,7 +72,7 @@ static const char* get_format_name(flow_pixel_format f, bool alpha_meaningful)
     }
 }
 
-static bool stringify_scale(flow_context* c, struct flow_graph* g, int32_t node_id, char* buffer, size_t buffer_size)
+static bool stringify_scale(flow_c* c, struct flow_graph* g, int32_t node_id, char* buffer, size_t buffer_size)
 {
     FLOW_GET_INFOBYTES(g, node_id, flow_nodeinfo_size, info);
 
@@ -86,7 +86,7 @@ static bool stringify_scale(flow_context* c, struct flow_graph* g, int32_t node_
     return true;
 }
 
-static bool stringify_canvas(flow_context* c, struct flow_graph* g, int32_t node_id, char* buffer, size_t buffer_size)
+static bool stringify_canvas(flow_c* c, struct flow_graph* g, int32_t node_id, char* buffer, size_t buffer_size)
 {
     FLOW_GET_INFOBYTES(g, node_id, flow_nodeinfo_createcanvas, info);
 
@@ -121,7 +121,7 @@ static char* stringify_filter(flow_interpolation_filter filter)
         return "??";
     }
 }
-static bool stringify_render1d(flow_context* c, struct flow_graph* g, int32_t node_id, char* buffer, size_t buffer_size)
+static bool stringify_render1d(flow_c* c, struct flow_graph* g, int32_t node_id, char* buffer, size_t buffer_size)
 {
     FLOW_GET_INFOBYTES(g, node_id, flow_nodeinfo_render_to_canvas_1d, info);
     char state[64];
@@ -136,14 +136,14 @@ static bool stringify_render1d(flow_context* c, struct flow_graph* g, int32_t no
     return true;
 }
 
-static bool stringify_bitmap_bgra_pointer(flow_context* c, struct flow_graph* g, int32_t node_id, char* buffer,
+static bool stringify_bitmap_bgra_pointer(flow_c* c, struct flow_graph* g, int32_t node_id, char* buffer,
                                           size_t buffer_size)
 {
     flow_snprintf(buffer, buffer_size, "* flow_bitmap_bgra");
     return true;
 }
 
-static bool stringify_decode(flow_context* c, struct flow_graph* g, int32_t node_id, char* buffer, size_t buffer_size)
+static bool stringify_decode(flow_c* c, struct flow_graph* g, int32_t node_id, char* buffer, size_t buffer_size)
 {
     FLOW_GET_INFOBYTES(g, node_id, flow_nodeinfo_codec, info);
     // TODO - fix when codec_id == 0
@@ -173,12 +173,12 @@ static bool stringify_decode(flow_context* c, struct flow_graph* g, int32_t node
     return true;
 }
 
-static bool stringify_encode(flow_context* c, struct flow_graph* g, int32_t node_id, char* buffer, size_t buffer_size)
+static bool stringify_encode(flow_c* c, struct flow_graph* g, int32_t node_id, char* buffer, size_t buffer_size)
 {
     return stringify_decode(c, g, node_id, buffer, buffer_size);
 }
 
-static bool dimensions_scale(flow_context* c, struct flow_graph* g, int32_t node_id, int32_t outbound_edge_id,
+static bool dimensions_scale(flow_c* c, struct flow_graph* g, int32_t node_id, int32_t outbound_edge_id,
                              bool force_estimate)
 {
     FLOW_GET_INFOBYTES(g, node_id, flow_nodeinfo_size, info)
@@ -193,8 +193,8 @@ static bool dimensions_scale(flow_context* c, struct flow_graph* g, int32_t node
     return true;
 }
 
-static bool dimensions_bitmap_bgra_pointer(flow_context* c, struct flow_graph* g, int32_t node_id,
-                                           int32_t outbound_edge_id, bool force_estimate)
+static bool dimensions_bitmap_bgra_pointer(flow_c* c, struct flow_graph* g, int32_t node_id, int32_t outbound_edge_id,
+                                           bool force_estimate)
 {
     FLOW_GET_INFOBYTES(g, node_id, flow_nodeinfo_bitmap_bgra_pointer, info)
 
@@ -212,7 +212,7 @@ static bool dimensions_bitmap_bgra_pointer(flow_context* c, struct flow_graph* g
     return true;
 }
 
-static bool dimensions_mimic_input(flow_context* c, struct flow_graph* g, int32_t node_id, int32_t outbound_edge_id,
+static bool dimensions_mimic_input(flow_c* c, struct flow_graph* g, int32_t node_id, int32_t outbound_edge_id,
                                    bool force_estimate)
 {
     FLOW_GET_INPUT_EDGE(g, node_id)
@@ -225,7 +225,7 @@ static bool dimensions_mimic_input(flow_context* c, struct flow_graph* g, int32_
     output->from_format = input_edge->from_format;
     return true;
 }
-static bool dimensions_transpose(flow_context* c, struct flow_graph* g, int32_t node_id, int32_t outbound_edge_id,
+static bool dimensions_transpose(flow_c* c, struct flow_graph* g, int32_t node_id, int32_t outbound_edge_id,
                                  bool force_estimate)
 {
     FLOW_GET_INPUT_EDGE(g, node_id)
@@ -239,7 +239,7 @@ static bool dimensions_transpose(flow_context* c, struct flow_graph* g, int32_t 
     return true;
 }
 
-static bool dimensions_copy_rect(flow_context* c, struct flow_graph* g, int32_t node_id, int32_t outbound_edge_id,
+static bool dimensions_copy_rect(flow_c* c, struct flow_graph* g, int32_t node_id, int32_t outbound_edge_id,
                                  bool force_estimate)
 {
     FLOW_GET_CANVAS_EDGE(g, node_id)
@@ -254,7 +254,7 @@ static bool dimensions_copy_rect(flow_context* c, struct flow_graph* g, int32_t 
     return true;
 }
 
-static bool dimensions_crop(flow_context* c, struct flow_graph* g, int32_t node_id, int32_t outbound_edge_id,
+static bool dimensions_crop(flow_c* c, struct flow_graph* g, int32_t node_id, int32_t outbound_edge_id,
                             bool force_estimate)
 {
     FLOW_GET_INFOBYTES(g, node_id, flow_nodeinfo_crop, info)
@@ -281,7 +281,7 @@ static bool dimensions_crop(flow_context* c, struct flow_graph* g, int32_t node_
     return true;
 }
 
-static bool dimensions_expand_canvas(flow_context* c, struct flow_graph* g, int32_t node_id, int32_t outbound_edge_id,
+static bool dimensions_expand_canvas(flow_c* c, struct flow_graph* g, int32_t node_id, int32_t outbound_edge_id,
                                      bool force_estimate)
 {
     FLOW_GET_INFOBYTES(g, node_id, flow_nodeinfo_expand_canvas, info)
@@ -302,7 +302,7 @@ static bool dimensions_expand_canvas(flow_context* c, struct flow_graph* g, int3
     return true;
 }
 
-static bool dimensions_canvas(flow_context* c, struct flow_graph* g, int32_t node_id, int32_t outbound_edge_id,
+static bool dimensions_canvas(flow_c* c, struct flow_graph* g, int32_t node_id, int32_t outbound_edge_id,
                               bool force_estimate)
 {
     FLOW_GET_INFOBYTES(g, node_id, flow_nodeinfo_createcanvas, info)
@@ -316,7 +316,7 @@ static bool dimensions_canvas(flow_context* c, struct flow_graph* g, int32_t nod
     return true;
 }
 
-static bool dimensions_render1d(flow_context* c, struct flow_graph* g, int32_t node_id, int32_t outbound_edge_id,
+static bool dimensions_render1d(flow_c* c, struct flow_graph* g, int32_t node_id, int32_t outbound_edge_id,
                                 bool force_estimate)
 {
     FLOW_GET_INFOBYTES(g, node_id, flow_nodeinfo_render_to_canvas_1d, info)
@@ -331,8 +331,8 @@ static bool dimensions_render1d(flow_context* c, struct flow_graph* g, int32_t n
     return true;
 }
 
-static bool dimensions_render_to_canvas_1d(flow_context* c, struct flow_graph* g, int32_t node_id,
-                                           int32_t outbound_edge_id, bool force_estimate)
+static bool dimensions_render_to_canvas_1d(flow_c* c, struct flow_graph* g, int32_t node_id, int32_t outbound_edge_id,
+                                           bool force_estimate)
 {
     // FLOW_GET_INFOBYTES(g,node_id, flow_nodeinfo_size, info)
     FLOW_GET_CANVAS_EDGE(g, node_id)
@@ -346,7 +346,7 @@ static bool dimensions_render_to_canvas_1d(flow_context* c, struct flow_graph* g
     return true;
 }
 
-static bool dimensions_decode(flow_context* c, struct flow_graph* g, int32_t node_id, int32_t outbound_edge_id,
+static bool dimensions_decode(flow_c* c, struct flow_graph* g, int32_t node_id, int32_t outbound_edge_id,
                               bool force_estimate)
 {
     FLOW_GET_INFOBYTES(g, node_id, flow_nodeinfo_codec, info)
@@ -379,7 +379,7 @@ static bool dimensions_decode(flow_context* c, struct flow_graph* g, int32_t nod
     return true;
 }
 
-static int32_t create_primitve_render_to_canvas_1d_node(flow_context* c, struct flow_graph** g, int32_t last,
+static int32_t create_primitve_render_to_canvas_1d_node(flow_c* c, struct flow_graph** g, int32_t last,
                                                         int32_t to_width, bool transpose,
                                                         flow_interpolation_filter filter)
 {
@@ -397,8 +397,8 @@ static int32_t create_primitve_render_to_canvas_1d_node(flow_context* c, struct 
     return id;
 }
 
-static int32_t create_render1d_node(flow_context* c, struct flow_graph** g, int32_t last, int32_t to_width,
-                                    bool transpose, flow_interpolation_filter filter)
+static int32_t create_render1d_node(flow_c* c, struct flow_graph** g, int32_t last, int32_t to_width, bool transpose,
+                                    flow_interpolation_filter filter)
 {
 
     flow_working_floatspace floatspace = flow_working_floatspace_linear;
@@ -410,7 +410,7 @@ static int32_t create_render1d_node(flow_context* c, struct flow_graph** g, int3
     }
     return id;
 }
-static bool flatten_delete_node(flow_context* c, struct flow_graph** graph_ref, int32_t node_id)
+static bool flatten_delete_node(flow_c* c, struct flow_graph** graph_ref, int32_t node_id)
 {
     int32_t input_edge_id = flow_graph_get_first_inbound_edge_of_type(c, *graph_ref, node_id, flow_edgetype_input);
 
@@ -434,7 +434,7 @@ static bool flatten_delete_node(flow_context* c, struct flow_graph** graph_ref, 
     return true;
 }
 
-static bool flatten_scale(flow_context* c, struct flow_graph** g, int32_t node_id, struct flow_node* node,
+static bool flatten_scale(flow_c* c, struct flow_graph** g, int32_t node_id, struct flow_node* node,
                           struct flow_edge* input_edge, int32_t* first_replacement_node, int32_t* last_replacement_node)
 {
     FLOW_GET_INFOBYTES((*g), node_id, flow_nodeinfo_size, size)
@@ -452,7 +452,7 @@ static bool flatten_scale(flow_context* c, struct flow_graph** g, int32_t node_i
     return true;
 }
 
-static bool flatten_transpose(flow_context* c, struct flow_graph** g, int32_t node_id, struct flow_node* node,
+static bool flatten_transpose(flow_c* c, struct flow_graph** g, int32_t node_id, struct flow_node* node,
                               struct flow_edge* input_edge, int32_t* first_replacement_node,
                               int32_t* last_replacement_node)
 {
@@ -476,7 +476,7 @@ static bool flatten_transpose(flow_context* c, struct flow_graph** g, int32_t no
     return true;
 }
 
-static bool flatten_rotate_90(flow_context* c, struct flow_graph** g, int32_t node_id, struct flow_node* node,
+static bool flatten_rotate_90(flow_c* c, struct flow_graph** g, int32_t node_id, struct flow_node* node,
                               struct flow_edge* input_edge, int32_t* first_replacement_node,
                               int32_t* last_replacement_node)
 {
@@ -491,7 +491,7 @@ static bool flatten_rotate_90(flow_context* c, struct flow_graph** g, int32_t no
     }
     return true;
 }
-static bool flatten_rotate_270(flow_context* c, struct flow_graph** g, int32_t node_id, struct flow_node* node,
+static bool flatten_rotate_270(flow_c* c, struct flow_graph** g, int32_t node_id, struct flow_node* node,
                                struct flow_edge* input_edge, int32_t* first_replacement_node,
                                int32_t* last_replacement_node)
 {
@@ -506,7 +506,7 @@ static bool flatten_rotate_270(flow_context* c, struct flow_graph** g, int32_t n
     }
     return true;
 }
-static bool flatten_rotate_180(flow_context* c, struct flow_graph** g, int32_t node_id, struct flow_node* node,
+static bool flatten_rotate_180(flow_c* c, struct flow_graph** g, int32_t node_id, struct flow_node* node,
                                struct flow_edge* input_edge, int32_t* first_replacement_node,
                                int32_t* last_replacement_node)
 {
@@ -522,7 +522,7 @@ static bool flatten_rotate_180(flow_context* c, struct flow_graph** g, int32_t n
     return true;
 }
 
-static bool node_has_other_dependents(flow_context* c, struct flow_graph* g, int32_t node_id,
+static bool node_has_other_dependents(flow_c* c, struct flow_graph* g, int32_t node_id,
                                       int32_t excluding_dependent_node_id, bool* has_other_dependents)
 {
     // TODO: Implement tracing logic
@@ -530,7 +530,7 @@ static bool node_has_other_dependents(flow_context* c, struct flow_graph* g, int
     return true;
 }
 
-static bool set_node_optimized_and_update_state(flow_context* c, struct flow_graph* g, int32_t node_id)
+static bool set_node_optimized_and_update_state(flow_c* c, struct flow_graph* g, int32_t node_id)
 {
     struct flow_node* n = &g->nodes[node_id];
 
@@ -541,7 +541,7 @@ static bool set_node_optimized_and_update_state(flow_context* c, struct flow_gra
     return true;
 }
 
-static bool flatten_flip_v(flow_context* c, struct flow_graph** g, int32_t node_id, struct flow_node* node,
+static bool flatten_flip_v(flow_c* c, struct flow_graph** g, int32_t node_id, struct flow_node* node,
                            struct flow_edge* input_edge, int32_t* first_replacement_node,
                            int32_t* last_replacement_node)
 {
@@ -568,7 +568,7 @@ static bool flatten_flip_v(flow_context* c, struct flow_graph** g, int32_t node_
     return true;
 }
 
-static bool flatten_flip_h(flow_context* c, struct flow_graph** g, int32_t node_id, struct flow_node* node,
+static bool flatten_flip_h(flow_c* c, struct flow_graph** g, int32_t node_id, struct flow_node* node,
                            struct flow_edge* input_edge, int32_t* first_replacement_node,
                            int32_t* last_replacement_node)
 {
@@ -596,7 +596,7 @@ static bool flatten_flip_h(flow_context* c, struct flow_graph** g, int32_t node_
     return true;
 }
 
-static bool flatten_crop(flow_context* c, struct flow_graph** g, int32_t node_id, struct flow_node* node,
+static bool flatten_crop(flow_c* c, struct flow_graph** g, int32_t node_id, struct flow_node* node,
                          struct flow_edge* input_edge, int32_t* first_replacement_node, int32_t* last_replacement_node)
 {
 
@@ -625,7 +625,7 @@ static bool flatten_crop(flow_context* c, struct flow_graph** g, int32_t node_id
     return true;
 }
 
-static bool flatten_expand_canvas(flow_context* c, struct flow_graph** g, int32_t node_id, struct flow_node* node,
+static bool flatten_expand_canvas(flow_c* c, struct flow_graph** g, int32_t node_id, struct flow_node* node,
                                   struct flow_edge* input_edge, int32_t* first_replacement_node,
                                   int32_t* last_replacement_node)
 {
@@ -685,7 +685,7 @@ static bool flatten_expand_canvas(flow_context* c, struct flow_graph** g, int32_
     return true;
 }
 
-static bool flatten_render1d(flow_context* c, struct flow_graph** g, int32_t node_id, struct flow_node* node,
+static bool flatten_render1d(flow_c* c, struct flow_graph** g, int32_t node_id, struct flow_node* node,
                              struct flow_edge* input_edge, int32_t* first_replacement_node,
                              int32_t* last_replacement_node)
 {
@@ -717,7 +717,7 @@ static bool flatten_render1d(flow_context* c, struct flow_graph** g, int32_t nod
     return true;
 }
 
-static bool flatten_decode(flow_context* c, struct flow_graph** g, int32_t node_id, struct flow_node* node,
+static bool flatten_decode(flow_c* c, struct flow_graph** g, int32_t node_id, struct flow_node* node,
                            struct flow_edge* input_edge, int32_t* first_replacement_node,
                            int32_t* last_replacement_node)
 {
@@ -729,7 +729,7 @@ static bool flatten_decode(flow_context* c, struct flow_graph** g, int32_t node_
     return true;
 }
 
-static bool flatten_encode(flow_context* c, struct flow_graph** g, int32_t node_id, struct flow_node* node,
+static bool flatten_encode(flow_c* c, struct flow_graph** g, int32_t node_id, struct flow_node* node,
                            struct flow_edge* input_edge, int32_t* first_replacement_node,
                            int32_t* last_replacement_node)
 {
@@ -755,7 +755,7 @@ static bool flatten_encode(flow_context* c, struct flow_graph** g, int32_t node_
     return true;
 }
 
-static bool flatten_clone(flow_context* c, struct flow_graph** g, int32_t node_id, struct flow_node* node,
+static bool flatten_clone(flow_c* c, struct flow_graph** g, int32_t node_id, struct flow_node* node,
                           struct flow_edge* input_edge, int32_t* first_replacement_node, int32_t* last_replacement_node)
 {
 
@@ -780,7 +780,7 @@ static bool flatten_clone(flow_context* c, struct flow_graph** g, int32_t node_i
     return true;
 }
 
-static bool execute_canvas(flow_context* c, struct flow_job* job, struct flow_graph* g, int32_t node_id)
+static bool execute_canvas(flow_c* c, struct flow_job* job, struct flow_graph* g, int32_t node_id)
 {
     FLOW_GET_INFOBYTES(g, node_id, flow_nodeinfo_createcanvas, info)
 
@@ -800,7 +800,7 @@ static bool execute_canvas(flow_context* c, struct flow_job* job, struct flow_gr
     return true;
 }
 
-static bool execute_flip_vertical(flow_context* c, struct flow_job* job, struct flow_graph* g, int32_t node_id)
+static bool execute_flip_vertical(flow_c* c, struct flow_job* job, struct flow_graph* g, int32_t node_id)
 {
     FLOW_GET_INPUT_EDGE(g, node_id)
     struct flow_node* n = &g->nodes[node_id];
@@ -809,7 +809,7 @@ static bool execute_flip_vertical(flow_context* c, struct flow_job* job, struct 
     return true;
 }
 
-static bool execute_flip_horizontal(flow_context* c, struct flow_job* job, struct flow_graph* g, int32_t node_id)
+static bool execute_flip_horizontal(flow_c* c, struct flow_job* job, struct flow_graph* g, int32_t node_id)
 {
     FLOW_GET_INPUT_EDGE(g, node_id)
     struct flow_node* n = &g->nodes[node_id];
@@ -818,7 +818,7 @@ static bool execute_flip_horizontal(flow_context* c, struct flow_job* job, struc
     return true;
 }
 
-static bool execute_crop(flow_context* c, struct flow_job* job, struct flow_graph* g, int32_t node_id)
+static bool execute_crop(flow_c* c, struct flow_job* job, struct flow_graph* g, int32_t node_id)
 {
     FLOW_GET_INFOBYTES(g, node_id, flow_nodeinfo_crop, info)
     FLOW_GET_INPUT_EDGE(g, node_id)
@@ -844,7 +844,7 @@ static bool execute_crop(flow_context* c, struct flow_job* job, struct flow_grap
     return true;
 }
 
-static bool execute_fill_rect(flow_context* c, struct flow_job* job, struct flow_graph* g, int32_t node_id)
+static bool execute_fill_rect(flow_c* c, struct flow_job* job, struct flow_graph* g, int32_t node_id)
 {
     FLOW_GET_INFOBYTES(g, node_id, flow_nodeinfo_fill_rect, info)
     FLOW_GET_INPUT_EDGE(g, node_id)
@@ -874,7 +874,7 @@ static bool execute_fill_rect(flow_context* c, struct flow_job* job, struct flow
     return true;
 }
 
-static bool execute_bitmap_bgra_pointer(flow_context* c, struct flow_job* job, struct flow_graph* g, int32_t node_id)
+static bool execute_bitmap_bgra_pointer(flow_c* c, struct flow_job* job, struct flow_graph* g, int32_t node_id)
 {
     FLOW_GET_INFOBYTES(g, node_id, flow_nodeinfo_bitmap_bgra_pointer, info)
     struct flow_node* n = &g->nodes[node_id];
@@ -893,7 +893,7 @@ static bool execute_bitmap_bgra_pointer(flow_context* c, struct flow_job* job, s
     return true;
 }
 
-static bool execute_render1d(flow_context* c, struct flow_job* job, struct flow_graph* g, int32_t node_id)
+static bool execute_render1d(flow_c* c, struct flow_job* job, struct flow_graph* g, int32_t node_id)
 {
     FLOW_GET_INFOBYTES(g, node_id, flow_nodeinfo_render_to_canvas_1d, info)
     FLOW_GET_INPUT_EDGE(g, node_id)
@@ -910,7 +910,7 @@ static bool execute_render1d(flow_context* c, struct flow_job* job, struct flow_
     return true;
 }
 
-static bool execute_copy_rect(flow_context* c, struct flow_job* job, struct flow_graph* g, int32_t node_id)
+static bool execute_copy_rect(flow_c* c, struct flow_job* job, struct flow_graph* g, int32_t node_id)
 {
     FLOW_GET_INFOBYTES(g, node_id, flow_nodeinfo_copy_rect_to_canvas, info)
     FLOW_GET_INPUT_EDGE(g, node_id)
@@ -942,7 +942,7 @@ static bool execute_copy_rect(flow_context* c, struct flow_job* job, struct flow
     return true;
 }
 
-static bool execute_decode(flow_context* c, struct flow_job* job, struct flow_graph* g, int32_t node_id)
+static bool execute_decode(flow_c* c, struct flow_job* job, struct flow_graph* g, int32_t node_id)
 {
     FLOW_GET_INFOBYTES(g, node_id, flow_nodeinfo_codec, info)
 
@@ -971,7 +971,7 @@ static bool execute_decode(flow_context* c, struct flow_job* job, struct flow_gr
     return true;
 }
 
-static bool execute_encode(flow_context* c, struct flow_job* job, struct flow_graph* g, int32_t node_id)
+static bool execute_encode(flow_c* c, struct flow_job* job, struct flow_graph* g, int32_t node_id)
 {
     FLOW_GET_INFOBYTES(g, node_id, flow_nodeinfo_codec, info)
     FLOW_GET_INPUT_EDGE(g, node_id)
@@ -1217,7 +1217,7 @@ struct flow_node_definition flow_node_defs[] = {
 };
 int32_t flow_node_defs_count = sizeof(flow_node_defs) / sizeof(struct flow_node_definition);
 
-struct flow_node_definition* flow_nodedef_get(flow_context* c, flow_ntype type)
+struct flow_node_definition* flow_nodedef_get(flow_c* c, flow_ntype type)
 {
     int i = 0;
     for (i = 0; i < flow_node_defs_count; i++) {
@@ -1228,7 +1228,7 @@ struct flow_node_definition* flow_nodedef_get(flow_context* c, flow_ntype type)
     return NULL;
 }
 
-bool flow_node_stringify(flow_context* c, struct flow_graph* g, int32_t node_id, char* buffer, size_t buffer_size)
+bool flow_node_stringify(flow_c* c, struct flow_graph* g, int32_t node_id, char* buffer, size_t buffer_size)
 {
     struct flow_node* node = &g->nodes[node_id];
     struct flow_node_definition* def = flow_nodedef_get(c, node->type);
@@ -1253,7 +1253,7 @@ bool flow_node_stringify(flow_context* c, struct flow_graph* g, int32_t node_id,
     }
     return true;
 }
-int32_t flow_node_fixed_infobyte_count(flow_context* c, flow_ntype type)
+int32_t flow_node_fixed_infobyte_count(flow_c* c, flow_ntype type)
 {
     struct flow_node_definition* def = flow_nodedef_get(c, type);
     if (def == NULL) {
@@ -1265,7 +1265,7 @@ int32_t flow_node_fixed_infobyte_count(flow_context* c, flow_ntype type)
     }
     return def->nodeinfo_bytes_fixed;
 }
-bool flow_node_infobyte_count(flow_context* c, struct flow_graph* g, int32_t node_id, int32_t* infobytes_count_out)
+bool flow_node_infobyte_count(flow_c* c, struct flow_graph* g, int32_t node_id, int32_t* infobytes_count_out)
 {
     struct flow_node* node = &g->nodes[node_id];
     struct flow_node_definition* def = flow_nodedef_get(c, node->type);
@@ -1283,7 +1283,7 @@ bool flow_node_infobyte_count(flow_context* c, struct flow_graph* g, int32_t nod
     return true;
 }
 
-bool flow_node_validate_inputs(flow_context* c, struct flow_graph* g, int32_t node_id)
+bool flow_node_validate_inputs(flow_c* c, struct flow_graph* g, int32_t node_id)
 {
     struct flow_node* node = &g->nodes[node_id];
     struct flow_node_definition* def = flow_nodedef_get(c, node->type);
@@ -1305,7 +1305,7 @@ bool flow_node_validate_inputs(flow_context* c, struct flow_graph* g, int32_t no
     return true;
 }
 
-static bool flow_node_all_types_inputs_executed(flow_context* c, struct flow_graph* g, int32_t node_id)
+static bool flow_node_all_types_inputs_executed(flow_c* c, struct flow_graph* g, int32_t node_id)
 {
     int32_t i;
     for (i = 0; i < g->next_edge_id; i++) {
@@ -1318,7 +1318,7 @@ static bool flow_node_all_types_inputs_executed(flow_context* c, struct flow_gra
     return true;
 }
 
-bool flow_node_update_state(flow_context* c, struct flow_graph* g, int32_t node_id)
+bool flow_node_update_state(flow_c* c, struct flow_graph* g, int32_t node_id)
 {
 
     // Ready flags are cumulative.
@@ -1402,8 +1402,8 @@ bool flow_node_update_state(flow_context* c, struct flow_graph* g, int32_t node_
     return true;
 }
 
-bool flow_node_populate_dimensions_to_edge(flow_context* c, struct flow_graph* g, int32_t node_id,
-                                           int32_t outbound_edge_id, bool force_estimate)
+bool flow_node_populate_dimensions_to_edge(flow_c* c, struct flow_graph* g, int32_t node_id, int32_t outbound_edge_id,
+                                           bool force_estimate)
 {
     if (!flow_node_validate_inputs(c, g, node_id)) {
         FLOW_error_return(c);
@@ -1424,8 +1424,7 @@ bool flow_node_populate_dimensions_to_edge(flow_context* c, struct flow_graph* g
     }
     return true;
 }
-static bool flow_node_flatten_generic(flow_context* c, struct flow_graph** graph_ref, int32_t node_id,
-                                      bool post_optimize)
+static bool flow_node_flatten_generic(flow_c* c, struct flow_graph** graph_ref, int32_t node_id, bool post_optimize)
 {
     if (!flow_node_validate_inputs(c, *graph_ref, node_id)) {
         FLOW_error_return(c);
@@ -1477,21 +1476,21 @@ static bool flow_node_flatten_generic(flow_context* c, struct flow_graph** graph
     }
     return true;
 }
-bool flow_node_pre_optimize_flatten(flow_context* c, struct flow_graph** graph_ref, int32_t node_id)
+bool flow_node_pre_optimize_flatten(flow_c* c, struct flow_graph** graph_ref, int32_t node_id)
 {
     if (!flow_node_flatten_generic(c, graph_ref, node_id, false)) {
         FLOW_error_return(c);
     }
     return true;
 }
-bool flow_node_post_optimize_flatten(flow_context* c, struct flow_graph** graph_ref, int32_t node_id)
+bool flow_node_post_optimize_flatten(flow_c* c, struct flow_graph** graph_ref, int32_t node_id)
 {
     if (!flow_node_flatten_generic(c, graph_ref, node_id, true)) {
         FLOW_error_return(c);
     }
     return true;
 }
-bool flow_node_execute(flow_context* c, struct flow_job* job, struct flow_graph* g, int32_t node_id)
+bool flow_node_execute(flow_c* c, struct flow_job* job, struct flow_graph* g, int32_t node_id)
 {
     if (!flow_node_validate_inputs(c, g, node_id)) {
         FLOW_error_return(c);
@@ -1516,7 +1515,7 @@ bool flow_node_execute(flow_context* c, struct flow_job* job, struct flow_graph*
     }
     return true;
 }
-bool flow_node_estimate_execution_cost(flow_context* c, struct flow_graph* g, int32_t node_id, size_t* bytes_required,
+bool flow_node_estimate_execution_cost(flow_c* c, struct flow_graph* g, int32_t node_id, size_t* bytes_required,
                                        size_t* cpu_cost)
 {
     FLOW_error(c, flow_status_Not_implemented);

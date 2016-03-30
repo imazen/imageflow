@@ -3,7 +3,7 @@
 #include "helpers.h"
 
 // Assumes placeholders 0 and 1 for input/output respectively
-bool execute_graph_for_url(flow_context* c, const char* input_image_url, const char* output_image_path,
+bool execute_graph_for_url(flow_c* c, const char* input_image_url, const char* output_image_path,
                            struct flow_graph** graph_ref)
 {
     size_t bytes_count = 0;
@@ -37,7 +37,7 @@ bool execute_graph_for_url(flow_context* c, const char* input_image_url, const c
     return true;
 }
 
-bool execute_graph_for_bitmap_bgra(flow_context* c, struct flow_graph** graph_ref)
+bool execute_graph_for_bitmap_bgra(flow_c* c, struct flow_graph** graph_ref)
 {
     struct flow_job* job = flow_job_create(c);
     ERR(c);
@@ -53,7 +53,7 @@ bool execute_graph_for_bitmap_bgra(flow_context* c, struct flow_graph** graph_re
 
 TEST_CASE("create tiny graph", "")
 {
-    flow_context* c = flow_context_create();
+    flow_c* c = flow_context_create();
     flow_graph* g = flow_graph_create(c, 10, 10, 200, 2.0);
     int32_t last;
 
@@ -73,7 +73,7 @@ TEST_CASE("create tiny graph", "")
 
 TEST_CASE("delete a node from a graph", "")
 {
-    flow_context* c = flow_context_create();
+    flow_c* c = flow_context_create();
     flow_graph* g = flow_graph_create(c, 10, 10, 200, 2.0);
     int32_t last;
 
@@ -108,7 +108,7 @@ TEST_CASE("delete a node from a graph", "")
 
 TEST_CASE("clone an edge", "")
 {
-    flow_context* c = flow_context_create();
+    flow_c* c = flow_context_create();
     flow_graph* g = flow_graph_create(c, 10, 10, 200, 2.0);
     int32_t last;
     last = flow_node_create_canvas(c, &g, -1, flow_bgra32, 400, 300, 0xFFFFFFFF);
@@ -138,7 +138,7 @@ TEST_CASE("clone an edge", "")
 TEST_CASE("execute tiny graph", "")
 {
 
-    flow_context* c = flow_context_create();
+    flow_c* c = flow_context_create();
     flow_utils_ensure_directory_exists("node_frames");
     struct flow_graph* g = nullptr;
     struct flow_job* job = nullptr;
@@ -174,7 +174,7 @@ TEST_CASE("execute tiny graph", "")
 TEST_CASE("decode and scale png", "")
 {
 
-    flow_context* c = flow_context_create();
+    flow_c* c = flow_context_create();
     struct flow_graph* g = nullptr;
     struct flow_job* job = nullptr;
     struct flow_bitmap_bgra* result = nullptr;
@@ -222,7 +222,7 @@ uint8_t image_bytes_literal[]
         0x00, 0x00, 0x0A, 0x49, 0x44, 0x41, 0x54, 0x78, 0x9C, 0x63, 0x00, 0x01, 0x00, 0x00, 0x05, 0x00, 0x01,
         0x0D, 0x0A, 0x2D, 0xB4, 0x00, 0x00, 0x00, 0x00, 0x49, 0x45, 0x4E, 0x44, 0xAE, 0x42, 0x60, 0x82 };
 
-bool create_operation_graph(flow_context* c, struct flow_graph** graph_ref, int32_t input_placeholder,
+bool create_operation_graph(flow_c* c, struct flow_graph** graph_ref, int32_t input_placeholder,
                             int32_t output_placeholder, struct flow_decoder_info* info)
 {
 
@@ -255,7 +255,7 @@ bool create_operation_graph(flow_context* c, struct flow_graph** graph_ref, int3
     return true;
 }
 
-bool scale_image_inner(flow_context* c, flow_io* input, flow_io* output)
+bool scale_image_inner(flow_c* c, flow_io* input, flow_io* output)
 {
     // We associate codecs and nodes using integer IDs that you select
     int32_t input_placeholder = 42;
@@ -299,7 +299,7 @@ bool scale_image_inner(flow_context* c, flow_io* input, flow_io* output)
 bool scale_image_to_disk()
 {
     // flow_context provides error tracking and memory management
-    flow_context* c = flow_context_create();
+    flow_c* c = flow_context_create();
     if (c == NULL) {
         return false;
     }
@@ -334,7 +334,7 @@ TEST_CASE("decode, scale, and re-encode png", "") { REQUIRE(scale_image_to_disk(
 
 TEST_CASE("scale and flip and crop png", "")
 {
-    flow_context* c = flow_context_create();
+    flow_c* c = flow_context_create();
     struct flow_graph* g = flow_graph_create(c, 10, 10, 200, 2.0);
     ERR(c);
 
@@ -452,7 +452,7 @@ TEST_CASE("export frames of animated gif", "")
 */
 TEST_CASE("scale and flip and crop jpg", "")
 {
-    flow_context* c = flow_context_create();
+    flow_c* c = flow_context_create();
     struct flow_graph* g = flow_graph_create(c, 10, 10, 200, 2.0);
     ERR(c);
 
@@ -472,7 +472,7 @@ TEST_CASE("scale and flip and crop jpg", "")
 
 TEST_CASE("benchmark scaling large progressive jpg", "")
 {
-    flow_context* c = flow_context_create();
+    flow_c* c = flow_context_create();
     struct flow_graph* g = flow_graph_create(c, 10, 10, 200, 2.0);
     ERR(c);
 
@@ -490,7 +490,7 @@ TEST_CASE("benchmark scaling large progressive jpg", "")
 
 TEST_CASE("benchmark scaling large jpg", "")
 {
-    flow_context* c = flow_context_create();
+    flow_c* c = flow_context_create();
     struct flow_graph* g = flow_graph_create(c, 10, 10, 200, 2.0);
     ERR(c);
 
@@ -509,7 +509,7 @@ TEST_CASE("benchmark scaling large jpg", "")
 
 TEST_CASE("Roundtrip flipping", "")
 {
-    flow_context* c = flow_context_create();
+    flow_c* c = flow_context_create();
     struct flow_graph* g = flow_graph_create(c, 10, 10, 200, 2.0);
     ERR(c);
 
@@ -540,7 +540,7 @@ TEST_CASE("Roundtrip flipping", "")
 
 TEST_CASE("scale copy rect", "")
 {
-    flow_context* c = flow_context_create();
+    flow_c* c = flow_context_create();
     struct flow_graph* g = flow_graph_create(c, 10, 10, 200, 2.0);
     ERR(c);
 
@@ -561,7 +561,7 @@ TEST_CASE("scale copy rect", "")
 
 TEST_CASE("test frame clone", "")
 {
-    flow_context* c = flow_context_create();
+    flow_c* c = flow_context_create();
     struct flow_graph* g = flow_graph_create(c, 10, 10, 200, 2.0);
     ERR(c);
 
@@ -582,7 +582,7 @@ TEST_CASE("test frame clone", "")
 
 TEST_CASE("test rotation", "")
 {
-    flow_context* c = flow_context_create();
+    flow_c* c = flow_context_create();
     struct flow_graph* g = flow_graph_create(c, 10, 10, 200, 2.0);
     ERR(c);
 
@@ -605,7 +605,7 @@ TEST_CASE("test memory corruption", "")
     // overlap
     // It also showed how that post_optimize_flatten calls which create pre_optimize_flattenable nodes
     // Can cause execution to fail in fewer than 6 passes. We may want to re-evaluate our graph exeuction approach
-    flow_context* c = flow_context_create();
+    flow_c* c = flow_context_create();
     struct flow_graph* g = flow_graph_create(c, 10, 10, 200, 2.0);
     ERR(c);
 
@@ -631,7 +631,7 @@ TEST_CASE("check for cycles", "")
     // overlap
     // It also showed how that post_optimize_flatten calls which create pre_optimize_flattenable nodes
     // Can cause execution to fail in fewer than 6 passes. We may want to re-evaluate our graph exeuction approach
-    flow_context* c = flow_context_create();
+    flow_c* c = flow_context_create();
     struct flow_graph* g = flow_graph_create(c, 10, 10, 200, 2.0);
     ERR(c);
 

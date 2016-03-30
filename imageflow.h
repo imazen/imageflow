@@ -236,7 +236,7 @@ typedef enum flow_io_mode {
     flow_io_mode_read_write_seekable = 15, // 1 | 2 | 4 | 8
 } flow_io_mode;
 
-typedef struct flow_ctx flow_context;
+typedef struct flow_context flow_c;
 struct flow_codec_definition;
 struct flow_codec_instance; // All methods should center around this
 struct flow_nodeinfo_index;
@@ -255,123 +255,118 @@ struct flow_edge;
 struct flow_graph;
 struct flow_bitmap_bgra;
 
-PUB flow_context* flow_context_create(void);
+PUB flow_c* flow_context_create(void);
 
 // When you need to control 100% of heap operations, you can allocate
 // flow_context_sizeof_context() bytes and initialize them with flow_context_initialize,
 // then call flow_heap_set_custom. Use flow_context_terminate and your matching free() function instead of
 // flow_context_destroy
 PUB size_t flow_context_sizeof_context_struct(void);
-PUB void flow_context_initialize(flow_context* context);
+PUB void flow_context_initialize(flow_c* c);
 // Want to ensure there were no memory leaks due to incorrect API use, and that all files flushed and close
 // successfully?
 // Call begin_terminate, then check on error status and memory stats.
-PUB bool flow_context_begin_terminate(flow_context* context);
-PUB void flow_context_end_terminate(flow_context* context);
+PUB bool flow_context_begin_terminate(flow_c* c);
+PUB void flow_context_end_terminate(flow_c* c);
 
-PUB void flow_context_destroy(flow_context* context); // Don't pass this a pointer on the stack! use begin/end terminate
+PUB void flow_context_destroy(flow_c* c); // Don't pass this a pointer on the stack! use begin/end terminate
 
-PUB int32_t
-    flow_context_error_and_stacktrace(flow_context* context, char* buffer, size_t buffer_size, bool full_file_path);
-PUB int32_t flow_context_error_message(flow_context* context, char* buffer, size_t buffer_size);
+PUB int32_t flow_context_error_and_stacktrace(flow_c* c, char* buffer, size_t buffer_size, bool full_file_path);
+PUB int32_t flow_context_error_message(flow_c* c, char* buffer, size_t buffer_size);
 
-PUB int32_t flow_context_stacktrace(flow_context* context, char* buffer, size_t buffer_size, bool full_file_path);
+PUB int32_t flow_context_stacktrace(flow_c* c, char* buffer, size_t buffer_size, bool full_file_path);
 
-PUB bool flow_context_has_error(flow_context* context);
-PUB int flow_context_error_reason(flow_context* context);
+PUB bool flow_context_has_error(flow_c* c);
+PUB int flow_context_error_reason(flow_c* c);
 
-PUB bool flow_context_print_and_exit_if_err(flow_context* c);
+PUB bool flow_context_print_and_exit_if_err(flow_c* c);
 
-PUB void flow_context_clear_error(flow_context* context);
+PUB void flow_context_clear_error(flow_c* c);
 
-PUB void flow_context_print_error_to(flow_context* c, FILE* stream);
+PUB void flow_context_print_error_to(flow_c* c, FILE* stream);
 
-PUB void flow_context_print_memory_info(flow_context* context);
+PUB void flow_context_print_memory_info(flow_c* c);
 
 // Flush buffers; close files     ; release underlying resources - the job has been ended.
-typedef bool (*flow_destructor_function)(flow_context* c, void* thing);
+typedef bool (*flow_destructor_function)(flow_c* c, void* thing);
 
 // Assuming, here, that we never get a pointer to address 42 in memory.
 #define FLOW_OWNER_IMMORTAL ((void*)42)
 
-PUB struct flow_io* flow_io_create_for_file(flow_context* c, flow_io_mode mode, const char* filename, void* owner);
-PUB struct flow_io* flow_io_create_from_memory(flow_context* c, flow_io_mode mode, uint8_t* memory, size_t length,
+PUB struct flow_io* flow_io_create_for_file(flow_c* c, flow_io_mode mode, const char* filename, void* owner);
+PUB struct flow_io* flow_io_create_from_memory(flow_c* c, flow_io_mode mode, uint8_t* memory, size_t length,
                                                void* owner, flow_destructor_function memory_free);
-PUB struct flow_io* flow_io_create_for_output_buffer(flow_context* c, void* owner);
+PUB struct flow_io* flow_io_create_for_output_buffer(flow_c* c, void* owner);
 
 // Returns false if the flow_io struct is disposed or not an output buffer type (or for any other error)
-PUB bool flow_io_get_output_buffer(flow_context* c, struct flow_io* io, uint8_t** out_pointer_to_buffer,
-                                   size_t* out_length);
-PUB struct flow_io* flow_job_get_io(flow_context* c, struct flow_job* job, int32_t placeholder_id);
+PUB bool flow_io_get_output_buffer(flow_c* c, struct flow_io* io, uint8_t** out_pointer_to_buffer, size_t* out_length);
+PUB struct flow_io* flow_job_get_io(flow_c* c, struct flow_job* job, int32_t placeholder_id);
 
-PUB bool flow_job_get_output_buffer(flow_context* c, struct flow_job* job, int32_t placeholder_id,
+PUB bool flow_job_get_output_buffer(flow_c* c, struct flow_job* job, int32_t placeholder_id,
                                     uint8_t** out_pointer_to_buffer, size_t* out_length);
-PUB bool flow_io_write_output_buffer_to_file(flow_context* c, struct flow_io* io, const char* file_path);
+PUB bool flow_io_write_output_buffer_to_file(flow_c* c, struct flow_io* io, const char* file_path);
 
-PUB bool flow_job_initialize_encoder(flow_context* c, struct flow_job* job, int32_t by_placeholder_id,
-                                     int64_t codec_id);
+PUB bool flow_job_initialize_encoder(flow_c* c, struct flow_job* job, int32_t by_placeholder_id, int64_t codec_id);
 
-PUB bool flow_job_add_io(flow_context* c, struct flow_job* job, struct flow_io* io, int32_t placeholder_id,
+PUB bool flow_job_add_io(flow_c* c, struct flow_job* job, struct flow_io* io, int32_t placeholder_id,
                          FLOW_DIRECTION direction);
 
-PUB struct flow_codec_instance* flow_job_get_codec_instance(flow_context* c, struct flow_job* job,
-                                                            int32_t by_placeholder_id);
-bool flow_job_set_default_encoder(flow_context* c, struct flow_job* job, int32_t by_placeholder_id,
+PUB struct flow_codec_instance* flow_job_get_codec_instance(flow_c* c, struct flow_job* job, int32_t by_placeholder_id);
+bool flow_job_set_default_encoder(flow_c* c, struct flow_job* job, int32_t by_placeholder_id,
                                   int64_t default_encoder_id);
 
-PUB struct flow_graph* flow_graph_create(flow_context* c, uint32_t max_edges, uint32_t max_nodes,
-                                         uint32_t max_info_bytes, float growth_factor);
+PUB struct flow_graph* flow_graph_create(flow_c* c, uint32_t max_edges, uint32_t max_nodes, uint32_t max_info_bytes,
+                                         float growth_factor);
 
-PUB void flow_graph_destroy(flow_context* c, struct flow_graph* target);
+PUB void flow_graph_destroy(flow_c* c, struct flow_graph* target);
 
-PUB bool flow_graph_replace_if_too_small(flow_context* c, struct flow_graph** g, uint32_t free_nodes_required,
+PUB bool flow_graph_replace_if_too_small(flow_c* c, struct flow_graph** g, uint32_t free_nodes_required,
                                          uint32_t free_edges_required, uint32_t free_bytes_required);
-PUB struct flow_graph* flow_graph_copy_and_resize(flow_context* c, struct flow_graph* from, uint32_t max_edges,
+PUB struct flow_graph* flow_graph_copy_and_resize(flow_c* c, struct flow_graph* from, uint32_t max_edges,
                                                   uint32_t max_nodes, uint32_t max_info_bytes);
 
-PUB struct flow_graph* flow_graph_copy(flow_context* c, struct flow_graph* from);
+PUB struct flow_graph* flow_graph_copy(flow_c* c, struct flow_graph* from);
 
-PUB int32_t flow_node_create_decoder(flow_context* c, struct flow_graph** g, int32_t prev_node, int32_t placeholder_id);
+PUB int32_t flow_node_create_decoder(flow_c* c, struct flow_graph** g, int32_t prev_node, int32_t placeholder_id);
 
-PUB int32_t flow_node_create_canvas(flow_context* c, struct flow_graph** g, int32_t prev_node, flow_pixel_format format,
+PUB int32_t flow_node_create_canvas(flow_c* c, struct flow_graph** g, int32_t prev_node, flow_pixel_format format,
                                     size_t width, size_t height, uint32_t bgcolor);
-PUB int32_t
-    flow_node_create_scale(flow_context* c, struct flow_graph** g, int32_t prev_node, size_t width, size_t height);
+PUB int32_t flow_node_create_scale(flow_c* c, struct flow_graph** g, int32_t prev_node, size_t width, size_t height);
 
-PUB int32_t flow_node_create_primitive_flip_vertical(flow_context* c, struct flow_graph** g, int32_t prev_node);
-PUB int32_t flow_node_create_primitive_flip_horizontal(flow_context* c, struct flow_graph** g, int32_t prev_node);
-PUB int32_t flow_node_create_clone(flow_context* c, struct flow_graph** g, int32_t prev_node);
-PUB int32_t flow_node_create_expand_canvas(flow_context* c, struct flow_graph** g, int32_t prev_node, uint32_t left,
+PUB int32_t flow_node_create_primitive_flip_vertical(flow_c* c, struct flow_graph** g, int32_t prev_node);
+PUB int32_t flow_node_create_primitive_flip_horizontal(flow_c* c, struct flow_graph** g, int32_t prev_node);
+PUB int32_t flow_node_create_clone(flow_c* c, struct flow_graph** g, int32_t prev_node);
+PUB int32_t flow_node_create_expand_canvas(flow_c* c, struct flow_graph** g, int32_t prev_node, uint32_t left,
                                            uint32_t top, uint32_t right, uint32_t bottom, uint32_t canvas_color_srgb);
-PUB int32_t flow_node_create_fill_rect(flow_context* c, struct flow_graph** g, int32_t prev_node, uint32_t x1,
-                                       uint32_t y1, uint32_t x2, uint32_t y2, uint32_t color_srgb);
-PUB int32_t flow_node_create_transpose(flow_context* c, struct flow_graph** g, int32_t prev_node);
+PUB int32_t flow_node_create_fill_rect(flow_c* c, struct flow_graph** g, int32_t prev_node, uint32_t x1, uint32_t y1,
+                                       uint32_t x2, uint32_t y2, uint32_t color_srgb);
+PUB int32_t flow_node_create_transpose(flow_c* c, struct flow_graph** g, int32_t prev_node);
 
-PUB int32_t flow_node_create_rotate_90(flow_context* c, struct flow_graph** g, int32_t prev_node);
+PUB int32_t flow_node_create_rotate_90(flow_c* c, struct flow_graph** g, int32_t prev_node);
 
-PUB int32_t flow_node_create_rotate_180(flow_context* c, struct flow_graph** g, int32_t prev_node);
+PUB int32_t flow_node_create_rotate_180(flow_c* c, struct flow_graph** g, int32_t prev_node);
 
-PUB int32_t flow_node_create_rotate_270(flow_context* c, struct flow_graph** g, int32_t prev_node);
+PUB int32_t flow_node_create_rotate_270(flow_c* c, struct flow_graph** g, int32_t prev_node);
 
-PUB int32_t flow_node_create_encoder_placeholder(flow_context* c, struct flow_graph** g, int32_t prev_node,
-                                                 int32_t output_slot_id);
+PUB int32_t
+    flow_node_create_encoder_placeholder(flow_c* c, struct flow_graph** g, int32_t prev_node, int32_t output_slot_id);
 
-PUB int32_t flow_node_create_encoder(flow_context* c, struct flow_graph** g, int32_t prev_node, int32_t placeholder_id,
+PUB int32_t flow_node_create_encoder(flow_c* c, struct flow_graph** g, int32_t prev_node, int32_t placeholder_id,
                                      int64_t desired_encoder_id);
 
-PUB int32_t flow_node_create_noop(flow_context* c, struct flow_graph** g, int32_t prev_node);
+PUB int32_t flow_node_create_noop(flow_c* c, struct flow_graph** g, int32_t prev_node);
 
-PUB int32_t flow_node_create_bitmap_bgra_reference(flow_context* c, struct flow_graph** g, int32_t prev_node,
+PUB int32_t flow_node_create_bitmap_bgra_reference(flow_c* c, struct flow_graph** g, int32_t prev_node,
                                                    struct flow_bitmap_bgra** pointer_to_pointer_to_bitmap_bgra);
 
-PUB int32_t flow_node_create_primitive_copy_rect_to_canvas(flow_context* c, struct flow_graph** g, int32_t prev_node,
+PUB int32_t flow_node_create_primitive_copy_rect_to_canvas(flow_c* c, struct flow_graph** g, int32_t prev_node,
                                                            uint32_t from_x, uint32_t from_y, uint32_t width,
                                                            uint32_t height, uint32_t x, uint32_t y);
 
-PUB int32_t flow_node_create_primitive_crop(flow_context* c, struct flow_graph** g, int32_t prev_node, uint32_t x1,
+PUB int32_t flow_node_create_primitive_crop(flow_c* c, struct flow_graph** g, int32_t prev_node, uint32_t x1,
                                             uint32_t x2, uint32_t y1, uint32_t y2);
 
-PUB int32_t flow_node_create_render_to_canvas_1d(flow_context* c, struct flow_graph** g, int32_t prev_node,
+PUB int32_t flow_node_create_render_to_canvas_1d(flow_c* c, struct flow_graph** g, int32_t prev_node,
                                                  bool transpose_on_write, uint32_t canvas_x, uint32_t canvas_y,
                                                  int32_t scale_to_width,
                                                  flow_working_floatspace scale_and_filter_in_colorspace,
@@ -379,27 +374,24 @@ PUB int32_t flow_node_create_render_to_canvas_1d(flow_context* c, struct flow_gr
                                                  uint8_t* matte_color[4], struct flow_scanlines_filter* filter_list,
                                                  flow_interpolation_filter interpolation_filter);
 
-PUB int32_t flow_edge_create(flow_context* c, struct flow_graph** g, int32_t from, int32_t to, flow_edgetype type);
+PUB int32_t flow_edge_create(flow_c* c, struct flow_graph** g, int32_t from, int32_t to, flow_edgetype type);
 
-PUB int32_t flow_node_create_render1d(flow_context* c, struct flow_graph** g, int32_t prev_node,
-                                      bool transpose_on_write, int32_t scale_to_width,
-                                      flow_working_floatspace scale_and_filter_in_colorspace, float sharpen_percent,
-                                      struct flow_scanlines_filter* filter_list,
+PUB int32_t flow_node_create_render1d(flow_c* c, struct flow_graph** g, int32_t prev_node, bool transpose_on_write,
+                                      int32_t scale_to_width, flow_working_floatspace scale_and_filter_in_colorspace,
+                                      float sharpen_percent, struct flow_scanlines_filter* filter_list,
                                       flow_interpolation_filter interpolation_filter);
 
-PUB struct flow_job* flow_job_create(flow_context* c);
-PUB bool flow_job_destroy(flow_context* c, struct flow_job* job);
-PUB bool flow_job_configure_recording(flow_context* c, struct flow_job* job, bool record_graph_versions,
+PUB struct flow_job* flow_job_create(flow_c* c);
+PUB bool flow_job_destroy(flow_c* c, struct flow_job* job);
+PUB bool flow_job_configure_recording(flow_c* c, struct flow_job* job, bool record_graph_versions,
                                       bool record_frame_images, bool render_last_graph, bool render_graph_versions,
                                       bool render_animated_graph);
 
-bool flow_job_decoder_switch_frame(flow_context* c, struct flow_job* job, int32_t by_placeholder_id,
-                                   int64_t frame_index);
+bool flow_job_decoder_switch_frame(flow_c* c, struct flow_job* job, int32_t by_placeholder_id, int64_t frame_index);
 
-PUB bool flow_graph_validate(flow_context* c, struct flow_graph* g);
+PUB bool flow_graph_validate(flow_c* c, struct flow_graph* g);
 
-PUB int32_t
-    flow_node_create_generic(flow_context* c, struct flow_graph** graph_ref, int32_t prev_node, flow_ntype type);
+PUB int32_t flow_node_create_generic(flow_c* c, struct flow_graph** graph_ref, int32_t prev_node, flow_ntype type);
 
 PUB uint32_t flow_pixel_format_bytes_per_pixel(flow_pixel_format format);
 
@@ -416,10 +408,10 @@ struct flow_decoder_info {
     // bool is_srgb;
 };
 
-PUB bool flow_job_get_decoder_info(flow_context* c, struct flow_job* job, int32_t by_placeholder_id,
+PUB bool flow_job_get_decoder_info(flow_c* c, struct flow_job* job, int32_t by_placeholder_id,
                                    struct flow_decoder_info* info);
 
-bool flow_bitmap_bgra_write_png(flow_context* c, struct flow_job* job, struct flow_bitmap_bgra* frame, struct flow_io* io);
+bool flow_bitmap_bgra_write_png(flow_c* c, struct flow_job* job, struct flow_bitmap_bgra* frame, struct flow_io* io);
 
 #undef PUB
 

@@ -8,7 +8,7 @@ extern "C" {
 #include <sys/time.h>
 #include <string.h>
 
-static flow_context * c;
+static flow_c * c;
 
 static bool get_time_seed(theft_seed *seed)
 {
@@ -23,7 +23,7 @@ struct TestEnv {
     int max_dimensions;
 };
 
-static theft_trial_res render_should_succeed(flow_RenderDetails * details, struct flow_bitmap_bgra * source, struct flow_bitmap_bgra * canvas) {
+static theft_trial_res render_should_succeed(struct flow_RenderDetails * details, struct flow_bitmap_bgra * source, struct flow_bitmap_bgra * canvas) {
 
     bool result = flow_RenderDetails_render(c, details, source, canvas);
     if (!result) return THEFT_TRIAL_FAIL;
@@ -41,7 +41,7 @@ void * renderdetails_random(theft * theft, theft_seed seed, void * input) {
     }while (!flow_interpolation_filter_exists((flow_interpolation_filter) filter));
 
 
-    flow_RenderDetails * details = flow_RenderDetails_create_with(c, (flow_interpolation_filter) filter);
+    struct flow_RenderDetails * details = flow_RenderDetails_create_with(c, (flow_interpolation_filter) filter);
 
     if (details == NULL) return NULL;
 
@@ -54,7 +54,7 @@ void * renderdetails_random(theft * theft, theft_seed seed, void * input) {
 }
 void renderdetails_free(void * details, void * unused)
 {
-    flow_RenderDetails_destroy(c, (flow_RenderDetails *) details);
+    flow_RenderDetails_destroy(c, (struct flow_RenderDetails *) details);
 }
 
 void * BitmapBgra_random_dest(theft * theft, theft_seed seed, void * input) {
@@ -104,7 +104,7 @@ void bitmapbgra_free(void * details, void * unused)
     flow_bitmap_bgra_destroy(c, (struct flow_bitmap_bgra *) details);
 }
 /*
-flow_interpolation_details * interpolation;
+struct flow_interpolation_details * interpolation;
     //How large the interoplation window needs to be before we even attempt to apply a sharpening
     //percentage to the given filter
     float minimum_sample_window_to_interposharpen;

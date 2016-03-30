@@ -7,7 +7,7 @@ TEST_CASE("Test contrib windows", "[fastscaling]")
 
     char msg[256];
 
-    flow_context context;
+    flow_c context;
     flow_context_initialize(&context);
 
     bool r = test_contrib_windows(&context, msg);
@@ -24,7 +24,7 @@ TEST_CASE("Test Weighting", "[fastscaling]")
 
     char msg[256];
 
-    flow_context context;
+    flow_c context;
     flow_context_initialize(&context);
 
     // These have window = 1, and shouldnt' have negative values. They should also end at 1

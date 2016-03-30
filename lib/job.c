@@ -2,7 +2,7 @@
 #include "nodes.h"
 #include "codecs.h"
 
-struct flow_job* flow_job_create(flow_context* c)
+struct flow_job* flow_job_create(flow_c* c)
 {
 
     struct flow_job* job = (struct flow_job*)FLOW_malloc(c, sizeof(struct flow_job));
@@ -20,9 +20,8 @@ struct flow_job* flow_job_create(flow_context* c)
     return job;
 }
 
-bool flow_job_configure_recording(flow_context* c, struct flow_job* job, bool record_graph_versions,
-                                  bool record_frame_images, bool render_last_graph, bool render_graph_versions,
-                                  bool render_animated_graph)
+bool flow_job_configure_recording(flow_c* c, struct flow_job* job, bool record_graph_versions, bool record_frame_images,
+                                  bool render_last_graph, bool render_graph_versions, bool render_animated_graph)
 {
     job->record_frame_images = record_frame_images;
     job->record_graph_versions = record_graph_versions;
@@ -31,9 +30,9 @@ bool flow_job_configure_recording(flow_context* c, struct flow_job* job, bool re
     job->render_animated_graph = render_animated_graph && job->render_graph_versions;
     return true;
 }
-bool flow_job_destroy(flow_context* c, struct flow_job* job) { return FLOW_destroy(c, job); }
+bool flow_job_destroy(flow_c* c, struct flow_job* job) { return FLOW_destroy(c, job); }
 
-struct flow_io* flow_job_get_io(flow_context* c, struct flow_job* job, int32_t placeholder_id)
+struct flow_io* flow_job_get_io(flow_c* c, struct flow_job* job, int32_t placeholder_id)
 {
     struct flow_codec_instance* codec = flow_job_get_codec_instance(c, job, placeholder_id);
     if (codec == NULL) {
@@ -43,7 +42,7 @@ struct flow_io* flow_job_get_io(flow_context* c, struct flow_job* job, int32_t p
     return codec->io;
 }
 
-bool flow_job_get_output_buffer(flow_context* c, struct flow_job* job, int32_t placeholder_id,
+bool flow_job_get_output_buffer(flow_c* c, struct flow_job* job, int32_t placeholder_id,
                                 uint8_t** out_pointer_to_buffer, size_t* out_length)
 {
     struct flow_io* io = flow_job_get_io(c, job, placeholder_id);
@@ -58,7 +57,7 @@ bool flow_job_get_output_buffer(flow_context* c, struct flow_job* job, int32_t p
     return true;
 }
 
-bool flow_job_add_io(flow_context* c, struct flow_job* job, struct flow_io* io, int32_t placeholder_id,
+bool flow_job_add_io(flow_c* c, struct flow_job* job, struct flow_io* io, int32_t placeholder_id,
                      FLOW_DIRECTION direction)
 {
     struct flow_codec_instance* r
@@ -112,7 +111,7 @@ bool flow_job_add_io(flow_context* c, struct flow_job* job, struct flow_io* io, 
     return true;
 }
 
-bool flow_job_execute(flow_context* c, struct flow_job* job, struct flow_graph** graph_ref)
+bool flow_job_execute(flow_c* c, struct flow_job* job, struct flow_graph** graph_ref)
 {
     if (!flow_job_notify_graph_changed(c, job, *graph_ref)) {
         FLOW_error_return(c);
@@ -192,7 +191,7 @@ bool flow_job_execute(flow_context* c, struct flow_job* job, struct flow_graph**
     return true;
 }
 
-static bool node_visitor_post_optimize_flatten(flow_context* c, struct flow_job* job, struct flow_graph** graph_ref,
+static bool node_visitor_post_optimize_flatten(flow_c* c, struct flow_job* job, struct flow_graph** graph_ref,
                                                int32_t node_id, bool* quit, bool* skip_outbound_paths,
                                                void* custom_data)
 {
@@ -219,7 +218,7 @@ static bool node_visitor_post_optimize_flatten(flow_context* c, struct flow_job*
     return true;
 }
 
-bool flow_graph_post_optimize_flatten(flow_context* c, struct flow_job* job, struct flow_graph** graph_ref)
+bool flow_graph_post_optimize_flatten(flow_c* c, struct flow_job* job, struct flow_graph** graph_ref)
 {
     if (*graph_ref == NULL) {
         FLOW_error(c, flow_status_Null_argument);
@@ -235,7 +234,7 @@ bool flow_graph_post_optimize_flatten(flow_context* c, struct flow_job* job, str
     return true;
 }
 
-static bool node_visitor_optimize(flow_context* c, struct flow_job* job, struct flow_graph** graph_ref, int32_t node_id,
+static bool node_visitor_optimize(flow_c* c, struct flow_job* job, struct flow_graph** graph_ref, int32_t node_id,
                                   bool* quit, bool* skip_outbound_paths, void* custom_data)
 {
 
@@ -248,7 +247,7 @@ static bool node_visitor_optimize(flow_context* c, struct flow_job* job, struct 
     return true;
 }
 
-bool flow_graph_optimize(flow_context* c, struct flow_job* job, struct flow_graph** graph_ref)
+bool flow_graph_optimize(flow_c* c, struct flow_job* job, struct flow_graph** graph_ref)
 {
     if (*graph_ref == NULL) {
         FLOW_error(c, flow_status_Null_argument);
@@ -264,7 +263,7 @@ bool flow_graph_optimize(flow_context* c, struct flow_job* job, struct flow_grap
     return true;
 }
 
-static bool flow_job_populate_outbound_dimensions_for_edge(flow_context* c, struct flow_job* job, struct flow_graph* g,
+static bool flow_job_populate_outbound_dimensions_for_edge(flow_c* c, struct flow_job* job, struct flow_graph* g,
                                                            int32_t outbound_edge_id, bool force_estimate)
 {
 
@@ -279,12 +278,12 @@ static bool flow_job_populate_outbound_dimensions_for_edge(flow_context* c, stru
     return true;
 }
 
-bool flow_edge_has_dimensions(flow_context* c, struct flow_graph* g, int32_t edge_id)
+bool flow_edge_has_dimensions(flow_c* c, struct flow_graph* g, int32_t edge_id)
 {
     struct flow_edge* edge = &g->edges[edge_id];
     return edge->from_width > 0;
 }
-bool flow_node_input_edges_have_dimensions(flow_context* c, struct flow_graph* g, int32_t node_id)
+bool flow_node_input_edges_have_dimensions(flow_c* c, struct flow_graph* g, int32_t node_id)
 {
     int32_t i;
     for (i = 0; i < g->next_edge_id; i++) {
@@ -297,9 +296,9 @@ bool flow_node_input_edges_have_dimensions(flow_context* c, struct flow_graph* g
     return true;
 }
 
-static bool edge_visitor_populate_outbound_dimensions(flow_context* c, struct flow_job* job,
-                                                      struct flow_graph** graph_ref, int32_t edge_id, bool* quit,
-                                                      bool* skip_outbound_paths, void* custom_data)
+static bool edge_visitor_populate_outbound_dimensions(flow_c* c, struct flow_job* job, struct flow_graph** graph_ref,
+                                                      int32_t edge_id, bool* quit, bool* skip_outbound_paths,
+                                                      void* custom_data)
 {
 
     int32_t node_id = (*graph_ref)->edges[edge_id].from;
@@ -328,7 +327,7 @@ static bool edge_visitor_populate_outbound_dimensions(flow_context* c, struct fl
     return true;
 }
 
-bool flow_job_populate_dimensions_where_certain(flow_context* c, struct flow_job* job, struct flow_graph** graph_ref)
+bool flow_job_populate_dimensions_where_certain(flow_c* c, struct flow_job* job, struct flow_graph** graph_ref)
 {
     // TODO: would be good to verify graph is acyclic.
     if (!flow_graph_walk_dependency_wise(c, job, graph_ref, NULL, edge_visitor_populate_outbound_dimensions,
@@ -338,7 +337,7 @@ bool flow_job_populate_dimensions_where_certain(flow_context* c, struct flow_job
     return true;
 }
 
-bool flow_job_force_populate_dimensions(flow_context* c, struct flow_job* job, struct flow_graph** graph_ref)
+bool flow_job_force_populate_dimensions(flow_c* c, struct flow_job* job, struct flow_graph** graph_ref)
 {
     // TODO: would be good to verify graph is acyclic.
     if (!flow_graph_walk(c, job, graph_ref, NULL, edge_visitor_populate_outbound_dimensions, (void*)true)) {
@@ -347,11 +346,11 @@ bool flow_job_force_populate_dimensions(flow_context* c, struct flow_job* job, s
     return true;
 }
 
-static bool flow_job_node_is_executed(flow_context* c, struct flow_job* job, struct flow_graph* g, int32_t node_id)
+static bool flow_job_node_is_executed(flow_c* c, struct flow_job* job, struct flow_graph* g, int32_t node_id)
 {
     return (g->nodes[node_id].state & flow_node_state_Executed) > 0;
 }
-bool flow_job_graph_fully_executed(flow_context* c, struct flow_job* job, struct flow_graph* g)
+bool flow_job_graph_fully_executed(flow_c* c, struct flow_job* job, struct flow_graph* g)
 {
     int32_t i;
     for (i = 0; i < g->next_node_id; i++) {
@@ -364,7 +363,7 @@ bool flow_job_graph_fully_executed(flow_context* c, struct flow_job* job, struct
     return true;
 }
 
-static bool node_visitor_execute(flow_context* c, struct flow_job* job, struct flow_graph** graph_ref, int32_t node_id,
+static bool node_visitor_execute(flow_c* c, struct flow_job* job, struct flow_graph** graph_ref, int32_t node_id,
                                  bool* quit, bool* skip_outbound_paths, void* custom_data)
 {
 
@@ -394,7 +393,7 @@ static bool node_visitor_execute(flow_context* c, struct flow_job* job, struct f
 
 // if no hits, search forward
 
-bool flow_job_execute_where_certain(flow_context* c, struct flow_job* job, struct flow_graph** g)
+bool flow_job_execute_where_certain(flow_c* c, struct flow_job* job, struct flow_graph** g)
 {
     if (*g == NULL) {
         FLOW_error(c, flow_status_Null_argument);
@@ -412,7 +411,7 @@ bool flow_job_execute_where_certain(flow_context* c, struct flow_job* job, struc
     return true;
 }
 
-static bool node_visitor_flatten(flow_context* c, struct flow_job* job, struct flow_graph** graph_ref, int32_t node_id,
+static bool node_visitor_flatten(flow_c* c, struct flow_job* job, struct flow_graph** graph_ref, int32_t node_id,
                                  bool* quit, bool* skip_outbound_paths, void* custom_data)
 {
 
@@ -435,7 +434,7 @@ static bool node_visitor_flatten(flow_context* c, struct flow_job* job, struct f
     return true;
 }
 
-bool flow_graph_pre_optimize_flatten(flow_context* c, struct flow_graph** graph_ref)
+bool flow_graph_pre_optimize_flatten(flow_c* c, struct flow_graph** graph_ref)
 {
     if (*graph_ref == NULL) {
         FLOW_error(c, flow_status_Null_argument);
@@ -451,7 +450,7 @@ bool flow_graph_pre_optimize_flatten(flow_context* c, struct flow_graph** graph_
     return true;
 }
 
-bool flow_job_link_codecs(flow_context* c, struct flow_job* job, struct flow_graph** graph_ref)
+bool flow_job_link_codecs(flow_c* c, struct flow_job* job, struct flow_graph** graph_ref)
 {
 
     if (graph_ref == NULL || *graph_ref == NULL) {
@@ -482,8 +481,7 @@ bool flow_job_link_codecs(flow_context* c, struct flow_job* job, struct flow_gra
     return true;
 }
 
-struct flow_codec_instance* flow_job_get_codec_instance(flow_context* c, struct flow_job* job,
-                                                        int32_t by_placeholder_id)
+struct flow_codec_instance* flow_job_get_codec_instance(flow_c* c, struct flow_job* job, int32_t by_placeholder_id)
 {
     struct flow_codec_instance* current = job->codecs_head;
     while (current != NULL) {

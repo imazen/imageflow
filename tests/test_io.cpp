@@ -4,7 +4,7 @@
 
 TEST_CASE("Test memory io", "")
 {
-    flow_context* c = flow_context_create();
+    flow_c* c = flow_context_create();
     uint8_t buf[] = { 3, 25, 1, 2, 3, 4, 5 };
     struct flow_io* mem
         = flow_io_create_from_memory(c, flow_io_mode_read_write_seekable, &buf[0], sizeof(buf), c, NULL);

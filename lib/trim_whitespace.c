@@ -12,11 +12,11 @@
 #pragma unmanaged
 #endif
 
-const Rect RectFailure = { -1, -1, -1, -1 };
+const struct flow_rect RectFailure = { -1, -1, -1, -1 };
 
-Rect detect_content(flow_context* context, struct flow_bitmap_bgra* b, uint8_t threshold)
+struct flow_rect detect_content(flow_c* context, struct flow_bitmap_bgra* b, uint8_t threshold)
 {
-    SearchInfo info;
+    struct flow_SearchInfo info;
     info.w = b->w;
     info.h = b->h;
     info.buff_size = 2048;
@@ -132,7 +132,7 @@ Rect detect_content(flow_context* context, struct flow_bitmap_bgra* b, uint8_t t
         }
     }
 
-    Rect result;
+    struct flow_rect result;
     result.x1 = info.min_x;
     result.y1 = info.min_y;
     result.y2 = info.max_y;
@@ -141,7 +141,7 @@ Rect detect_content(flow_context* context, struct flow_bitmap_bgra* b, uint8_t t
     FLOW_free(context, info.buf);
     return result;
 }
-bool fill_buffer(flow_context* context, SearchInfo* __restrict info)
+bool fill_buffer(flow_c* context, struct flow_SearchInfo* __restrict info)
 {
     /* Red: 0.299;
     Green: 0.587;
@@ -191,7 +191,7 @@ bool fill_buffer(flow_context* context, SearchInfo* __restrict info)
     return true;
 }
 
-bool sobel_scharr_detect(flow_context* context, SearchInfo* info)
+bool sobel_scharr_detect(flow_c* context, struct flow_SearchInfo* info)
 {
 #define COEFFA = 3
 #define COEFFB = 10;
@@ -237,8 +237,8 @@ bool sobel_scharr_detect(flow_context* context, SearchInfo* info)
     return true;
 }
 
-bool check_region(flow_context* context, int edgeTRBL, float x_1_percent, float x_2_percent, float y_1_percent,
-                  float y_2_percent, SearchInfo* __restrict info)
+bool check_region(flow_c* context, int edgeTRBL, float x_1_percent, float x_2_percent, float y_1_percent,
+                  float y_2_percent, struct flow_SearchInfo* __restrict info)
 {
     uint32_t x1 = (uint32_t)umax(0, umin(info->w, (uint32_t)floor(x_1_percent * (float)info->w) - 1));
     uint32_t x2 = (uint32_t)umax(0, umin(info->w, (uint32_t)ceil(x_2_percent * (float)info->w) + 1));

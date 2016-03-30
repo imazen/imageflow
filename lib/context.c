@@ -28,9 +28,9 @@ int flow_snprintf(char* s, size_t n, const char* fmt, ...)
     return res;
 }
 
-int flow_context_error_reason(flow_context* context) { return context->error.reason; }
+int flow_context_error_reason(flow_c* context) { return context->error.reason; }
 
-void flow_context_raise_error(flow_context* context, flow_status_code code, char* message, const char* file, int line,
+void flow_context_raise_error(flow_c* context, flow_status_code code, char* message, const char* file, int line,
                               const char* function_name)
 {
     char* buffer = flow_context_set_error_get_message_buffer(context, code, file, line, function_name);
@@ -39,8 +39,8 @@ void flow_context_raise_error(flow_context* context, flow_status_code code, char
     }
 }
 
-char* flow_context_set_error_get_message_buffer(flow_context* context, flow_status_code code, const char* file,
-                                                int line, const char* function_name)
+char* flow_context_set_error_get_message_buffer(flow_c* context, flow_status_code code, const char* file, int line,
+                                                const char* function_name)
 {
     // We can't return an invalid buffer, even if an error has already been logged.
     static char throwaway_buffer[FLOW_ERROR_MESSAGE_SIZE + 1];
@@ -54,7 +54,7 @@ char* flow_context_set_error_get_message_buffer(flow_context* context, flow_stat
     return &context->error.message[0];
 }
 
-void flow_context_add_to_callstack(flow_context* context, const char* file, int line, const char* function_name)
+void flow_context_add_to_callstack(flow_c* context, const char* file, int line, const char* function_name)
 {
     if (context->error.callstack_count < context->error.callstack_capacity && !context->error.locked) {
         context->error.callstack[context->error.callstack_count].file = file;
@@ -64,7 +64,7 @@ void flow_context_add_to_callstack(flow_context* context, const char* file, int 
     }
 }
 
-void flow_context_clear_error(flow_context* context)
+void flow_context_clear_error(flow_c* context)
 {
     context->error.callstack_count = 0;
     context->error.callstack[0].file = NULL;
@@ -75,7 +75,7 @@ void flow_context_clear_error(flow_context* context)
     context->error.message[0] = 0;
 }
 
-bool flow_context_has_error(flow_context* context) { return context->error.reason != flow_status_No_Error; }
+bool flow_context_has_error(flow_c* context) { return context->error.reason != flow_status_No_Error; }
 
 static const char* status_code_to_string(flow_status_code code)
 {
@@ -89,7 +89,7 @@ static const char* status_code_to_string(flow_status_code code)
     return flow_status_code_strings[code];
 }
 
-bool flow_context_print_and_exit_if_err(flow_context* c)
+bool flow_context_print_and_exit_if_err(flow_c* c)
 {
     if (flow_context_has_error(c)) {
         flow_context_print_error_to(c, stderr);
@@ -98,13 +98,13 @@ bool flow_context_print_and_exit_if_err(flow_context* c)
     return false;
 }
 
-void flow_context_print_error_to(flow_context* c, FILE* stream)
+void flow_context_print_error_to(flow_c* c, FILE* stream)
 {
     char buffer[FLOW_ERROR_MESSAGE_SIZE + 2048];
     flow_context_error_and_stacktrace(c, buffer, sizeof(buffer), true);
     fprintf(stream, "%s", buffer);
 }
-int32_t flow_context_error_and_stacktrace(flow_context* context, char* buffer, size_t buffer_size, bool full_file_path)
+int32_t flow_context_error_and_stacktrace(flow_c* context, char* buffer, size_t buffer_size, bool full_file_path)
 {
     size_t original_buffer_size = buffer_size;
     int chars_written = flow_context_error_message(context, buffer, buffer_size);
@@ -136,7 +136,7 @@ int32_t flow_context_error_and_stacktrace(flow_context* context, char* buffer, s
     return original_buffer_size - buffer_size;
 }
 
-int32_t flow_context_error_message(flow_context* context, char* buffer, size_t buffer_size)
+int32_t flow_context_error_message(flow_c* context, char* buffer, size_t buffer_size)
 {
     int chars_written = 0;
     if (context->error.message[0] == 0) {
@@ -151,7 +151,7 @@ int32_t flow_context_error_message(flow_context* context, char* buffer, size_t b
     return chars_written;
 }
 
-int32_t flow_context_stacktrace(flow_context* context, char* buffer, size_t buffer_size, bool full_file_path)
+int32_t flow_context_stacktrace(flow_c* context, char* buffer, size_t buffer_size, bool full_file_path)
 {
 
     // Test with function_name = NULL
@@ -186,7 +186,7 @@ int32_t flow_context_stacktrace(flow_context* context, char* buffer, size_t buff
     return buffer_size - remaining_space;
 }
 
-void flow_context_initialize(flow_context* context)
+void flow_context_initialize(flow_c* context)
 {
     context->log.log = NULL;
     context->log.capacity = 0;
@@ -206,21 +206,21 @@ void flow_context_initialize(flow_context* context)
     context->codec_set = flow_context_get_default_codec_set();
 }
 
-flow_context* flow_context_create(void)
+flow_c* flow_context_create(void)
 {
-    flow_context* c = (flow_context*)malloc(sizeof(flow_context));
+    flow_c* c = (flow_c*)malloc(sizeof(flow_c));
     if (c != NULL) {
         flow_context_initialize(c);
     }
     return c;
 }
 
-size_t flow_context_sizeof_context_struct() { return sizeof(struct flow_ctx); }
+size_t flow_context_sizeof_context_struct() { return sizeof(struct flow_context); }
 
 // One can call begin_terminate to do the error-possible things, yet later check the heap status, remaining allocations,
 // and error count
 // Later, you can call flow_context_destroy()
-bool flow_context_begin_terminate(flow_context* context)
+bool flow_context_begin_terminate(flow_c* context)
 {
     if (context == NULL)
         return true;
@@ -234,7 +234,7 @@ bool flow_context_begin_terminate(flow_context* context)
     return success;
 }
 
-void flow_context_end_terminate(flow_context* context)
+void flow_context_end_terminate(flow_c* context)
 {
     if (context == NULL)
         return;
@@ -245,17 +245,18 @@ void flow_context_end_terminate(flow_context* context)
         context->underlying_heap._context_terminate(context, &context->underlying_heap);
     }
 }
-void flow_context_destroy(flow_context* context)
+void flow_context_destroy(flow_c* context)
 {
     flow_context_begin_terminate(context);
     flow_context_end_terminate(context);
     free(context);
 }
 
-bool flow_context_enable_profiling(flow_context* context, uint32_t default_capacity)
+bool flow_context_enable_profiling(flow_c* context, uint32_t default_capacity)
 {
     if (context->log.log == NULL) {
-        context->log.log = (flow_profiling_entry*)FLOW_malloc(context, sizeof(flow_profiling_entry) * default_capacity);
+        context->log.log = (struct flow_profiling_entry*)FLOW_malloc(context, sizeof(struct flow_profiling_entry)
+                                                                              * default_capacity);
         if (context->log.log == NULL) {
             FLOW_error(context, flow_status_Out_of_memory);
             return false;
@@ -273,11 +274,11 @@ bool flow_context_enable_profiling(flow_context* context, uint32_t default_capac
     return true;
 }
 
-void flow_context_profiler_start(flow_context* context, const char* name, bool allow_recursion)
+void flow_context_profiler_start(flow_c* context, const char* name, bool allow_recursion)
 {
     if (context->log.log == NULL)
         return;
-    flow_profiling_entry* current = &(context->log.log[context->log.count]);
+    struct flow_profiling_entry* current = &(context->log.log[context->log.count]);
     context->log.count++;
     if (context->log.count >= context->log.capacity)
         return;
@@ -287,11 +288,11 @@ void flow_context_profiler_start(flow_context* context, const char* name, bool a
     current->flags = allow_recursion ? flow_profiling_entry_start_allow_recursion : flow_profiling_entry_start;
 }
 
-void flow_context_profiler_stop(flow_context* context, const char* name, bool assert_started, bool stop_children)
+void flow_context_profiler_stop(flow_c* context, const char* name, bool assert_started, bool stop_children)
 {
     if (context->log.log == NULL)
         return;
-    flow_profiling_entry* current = &(context->log.log[context->log.count]);
+    struct flow_profiling_entry* current = &(context->log.log[context->log.count]);
     context->log.count++;
     if (context->log.count >= context->log.capacity)
         return;
@@ -304,4 +305,4 @@ void flow_context_profiler_stop(flow_context* context, const char* name, bool as
     }
 }
 
-flow_profiling_log* flow_context_get_profiler_log(flow_context* context) { return &context->log; }
+struct flow_profiling_log* flow_context_get_profiler_log(flow_c* context) { return &context->log; }

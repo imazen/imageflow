@@ -3,7 +3,7 @@
 
 const int FLOW_MAX_BYTES_PP = 16;
 
-static std::ostream& operator<<(std::ostream& out, const flow_bitmap_float& bitmap_float)
+static std::ostream& operator<<(std::ostream& out, const struct flow_bitmap_float& bitmap_float)
 {
     return out << "flow_bitmap_float: w:" << bitmap_float.w << " h: " << bitmap_float.h
                << " channels:" << bitmap_float.channels << '\n';
@@ -19,21 +19,21 @@ public:
     int alloc_count;
     int total_successful_allocs;
 
-    static void* _calloc(flow_context* context, struct flow_heap* heap, size_t count, size_t element_size,
-                         const char* file, int line)
+    static void* _calloc(flow_c* context, struct flow_heap* heap, size_t count, size_t element_size, const char* file,
+                         int line)
     {
         return ((Fixture*)context->underlying_heap._private_state)->calloc(count, element_size);
     }
-    static void* _malloc(flow_context* context, struct flow_heap* heap, size_t byte_count, const char* file, int line)
+    static void* _malloc(flow_c* context, struct flow_heap* heap, size_t byte_count, const char* file, int line)
     {
         return ((Fixture*)context->underlying_heap._private_state)->malloc(byte_count);
     }
-    static void _free(flow_context* context, struct flow_heap* heap, void* pointer, const char* file, int line)
+    static void _free(flow_c* context, struct flow_heap* heap, void* pointer, const char* file, int line)
     {
         free(pointer);
     }
 
-    void initialize_heap(flow_context* context)
+    void initialize_heap(flow_c* context)
     {
         context->underlying_heap._private_state = this;
         context->underlying_heap._calloc = _calloc;
@@ -102,12 +102,12 @@ public:
 
 TEST_CASE_METHOD(Fixture, "Perform Rendering", "[error_handling]")
 {
-    flow_context context;
+    flow_c context;
     flow_context_initialize(&context);
     initialize_heap(&context);
     struct flow_bitmap_bgra* source = flow_bitmap_bgra_create(&context, 4, 4, true, flow_bgra32);
     struct flow_bitmap_bgra* canvas = flow_bitmap_bgra_create(&context, 2, 2, true, flow_bgra32);
-    flow_RenderDetails* details = flow_RenderDetails_create_with(&context, flow_interpolation_filter_CubicFast);
+    struct flow_RenderDetails* details = flow_RenderDetails_create_with(&context, flow_interpolation_filter_CubicFast);
     details->sharpen_percent_goal = 50;
     details->post_flip_x = true;
     details->post_flip_y = false;
@@ -147,13 +147,13 @@ TEST_CASE_METHOD(Fixture, "Test allocation failure handling", "[error_handling]"
     CAPTURE(cw);
     CAPTURE(ch);
 
-    flow_context context;
+    flow_c context;
     flow_context_initialize(&context);
     initialize_heap(&context);
 
     struct flow_bitmap_bgra* source = flow_bitmap_bgra_create(&context, sw, sh, true, flow_bgra32);
     struct flow_bitmap_bgra* canvas = flow_bitmap_bgra_create(&context, cw, ch, true, flow_bgra32);
-    flow_RenderDetails* details = flow_RenderDetails_create(&context);
+    struct flow_RenderDetails* details = flow_RenderDetails_create(&context);
     details->interpolation = flow_interpolation_details_create_from(&context, flow_interpolation_filter_CubicFast);
     details->sharpen_percent_goal = 50;
     details->post_flip_x = true;
@@ -187,7 +187,7 @@ TEST_CASE_METHOD(Fixture, "Test allocation failure handling", "[error_handling]"
 
 TEST_CASE_METHOD(Fixture, "Creating flow_bitmap_bgra", "[error_handling]")
 {
-    flow_context context;
+    flow_c context;
     flow_context_initialize(&context);
     initialize_heap(&context);
 
@@ -238,7 +238,7 @@ TEST_CASE_METHOD(Fixture, "Creating flow_bitmap_bgra", "[error_handling]")
 
 TEST_CASE("flow_context", "[error_handling]")
 {
-    flow_context context;
+    flow_c context;
     flow_context_initialize(&context);
 
     SECTION("flow_context_error_message should be safe when no error has ocurred yet")
@@ -254,14 +254,14 @@ TEST_CASE("flow_context", "[error_handling]")
 
 TEST_CASE("Argument checking for convert_sgrp_to_linear", "[error_handling]")
 {
-    flow_context context;
+    flow_c context;
     flow_context_initialize(&context);
     struct flow_bitmap_bgra* src = flow_bitmap_bgra_create(&context, 2, 3, true, flow_bgra32);
     char error_msg[1024];
     flow_context_error_message(&context, error_msg, sizeof error_msg);
     CAPTURE(error_msg);
     REQUIRE(src != NULL);
-    flow_bitmap_float* dest = flow_bitmap_float_create(&context, 1, 1, 4, false);
+    struct flow_bitmap_float* dest = flow_bitmap_float_create(&context, 1, 1, 4, false);
     flow_bitmap_float_convert_srgb_to_linear(&context, src, 3, dest, 0, 0);
     flow_bitmap_bgra_destroy(&context, src);
     CAPTURE(*dest);
@@ -274,7 +274,7 @@ TEST_CASE("Argument checking for convert_sgrp_to_linear", "[error_handling]")
 TEST_CASE("Test stacktrace serialization", "[error_handling]")
 {
     using namespace Catch::Generators;
-    flow_context context;
+    flow_c context;
     flow_context_initialize(&context);
     FLOW_error(&context, flow_status_Out_of_memory);
     FLOW_add_to_callstack(&context);

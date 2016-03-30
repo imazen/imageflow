@@ -39,7 +39,7 @@ TEST_CASE("Test flow_snprintf with a sufficient buffer", "")
 
 TEST_CASE("Test context creation", "")
 {
-    flow_context* c = flow_context_create();
+    flow_c* c = flow_context_create();
     ERR(c);
     flow_context_destroy(c);
 }
@@ -47,7 +47,7 @@ using namespace Catch::Matchers;
 
 TEST_CASE("Test error message printing", "")
 {
-    flow_context* c = flow_context_create();
+    flow_c* c = flow_context_create();
     ERR(c);
 
     FLOW_error_msg(c, flow_status_Invalid_argument, "You passed a value outside [0,1]: %d", 3);
@@ -61,7 +61,7 @@ TEST_CASE("Test error message printing", "")
 
 TEST_CASE("Test error message printing with null files or functions in the stacktrace", "")
 {
-    flow_context* c = flow_context_create();
+    flow_c* c = flow_context_create();
     ERR(c);
 
     flow_context_raise_error(c, flow_status_Invalid_argument, NULL, NULL, 25, NULL);
@@ -74,10 +74,10 @@ TEST_CASE("Test error message printing with null files or functions in the stack
     flow_context_destroy(c);
 }
 
-static bool bad_destructor(flow_context* c, void* p) { return false; }
+static bool bad_destructor(flow_c* c, void* p) { return false; }
 TEST_CASE("Test reporting of a failing destructor", "")
 {
-    flow_context* c = flow_context_create();
+    flow_c* c = flow_context_create();
     ERR(c);
 
     void* data = flow_context_malloc(c, 20, bad_destructor, c, __FILE__, __LINE__);
@@ -95,7 +95,7 @@ TEST_CASE("Test reporting of a failing destructor", "")
 
 bool destructor_called = false;
 
-static bool tattletale_destructor(flow_context* c, void* p)
+static bool tattletale_destructor(flow_c* c, void* p)
 {
     destructor_called = true;
     return true;
@@ -103,7 +103,7 @@ static bool tattletale_destructor(flow_context* c, void* p)
 
 TEST_CASE("Test destructor", "")
 {
-    flow_context* c = flow_context_create();
+    flow_c* c = flow_context_create();
     ERR(c);
 
     destructor_called = false;
@@ -118,7 +118,7 @@ TEST_CASE("Test destructor", "")
 
 TEST_CASE("Test ownership", "")
 {
-    flow_context* c = flow_context_create();
+    flow_c* c = flow_context_create();
     ERR(c);
 
     void* container = FLOW_malloc(c, 10);

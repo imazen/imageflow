@@ -13,8 +13,8 @@
 
 #include <string.h>
 
-bool flow_bitmap_float_convert_srgb_to_linear(flow_context* context, struct flow_bitmap_bgra* src, uint32_t from_row,
-                                              flow_bitmap_float* dest, uint32_t dest_row, uint32_t row_count)
+bool flow_bitmap_float_convert_srgb_to_linear(flow_c* context, struct flow_bitmap_bgra* src, uint32_t from_row,
+                                              struct flow_bitmap_float* dest, uint32_t dest_row, uint32_t row_count)
 {
     if (src->w != dest->w || flow_pixel_format_bytes_per_pixel(src->fmt) < dest->channels) {
         FLOW_error(context, flow_status_Invalid_internal_state);
@@ -71,7 +71,7 @@ static void unpack24bitRow(uint32_t width, unsigned char* sourceLine, unsigned c
 }
 */
 
-bool flow_bitmap_float_flip_vertical(flow_context* context, struct flow_bitmap_bgra* b)
+bool flow_bitmap_float_flip_vertical(flow_c* context, struct flow_bitmap_bgra* b)
 {
     void* swap = FLOW_malloc(context, b->stride);
     if (swap == NULL) {
@@ -91,7 +91,7 @@ bool flow_bitmap_float_flip_vertical(flow_context* context, struct flow_bitmap_b
     return true;
 }
 
-bool flow_bitmap_bgra_flip_horizontal(flow_context* context, struct flow_bitmap_bgra* b)
+bool flow_bitmap_bgra_flip_horizontal(flow_c* context, struct flow_bitmap_bgra* b)
 {
     uint32_t swap[4];
     // Dont' copy the full stride (padding), it could be windowed!
@@ -134,7 +134,7 @@ static int  copy_bitmap_bgra(flow_bitmap_bgra * src, flow_bitmap_bgra * dst)
 }
 */
 
-static bool BitmapFloat_blend_matte(flow_context* context, flow_bitmap_float* src, const uint32_t from_row,
+static bool BitmapFloat_blend_matte(flow_c* context, struct flow_bitmap_float* src, const uint32_t from_row,
                                     const uint32_t row_count, const uint8_t* const matte)
 {
     // We assume that matte is BGRA, regardless.
@@ -164,7 +164,7 @@ static bool BitmapFloat_blend_matte(flow_context* context, flow_bitmap_float* sr
     return true;
 }
 
-bool flow_bitmap_float_demultiply_alpha(flow_context* context, flow_bitmap_float* src, const uint32_t from_row,
+bool flow_bitmap_float_demultiply_alpha(flow_c* context, struct flow_bitmap_float* src, const uint32_t from_row,
                                         const uint32_t row_count)
 {
     for (uint32_t row = from_row; row < from_row + row_count; row++) {
@@ -183,9 +183,10 @@ bool flow_bitmap_float_demultiply_alpha(flow_context* context, flow_bitmap_float
     return true;
 }
 
-bool flow_bitmap_float_copy_linear_over_srgb(flow_context* context, flow_bitmap_float* src, const uint32_t from_row,
-                                             struct flow_bitmap_bgra* dest, const uint32_t dest_row, const uint32_t row_count,
-                                             const uint32_t from_col, const uint32_t col_count, const bool transpose)
+bool flow_bitmap_float_copy_linear_over_srgb(flow_c* context, struct flow_bitmap_float* src, const uint32_t from_row,
+                                             struct flow_bitmap_bgra* dest, const uint32_t dest_row,
+                                             const uint32_t row_count, const uint32_t from_col,
+                                             const uint32_t col_count, const bool transpose)
 {
 
     const uint32_t dest_bytes_pp = flow_pixel_format_bytes_per_pixel(dest->fmt);
@@ -218,10 +219,11 @@ bool flow_bitmap_float_copy_linear_over_srgb(flow_context* context, flow_bitmap_
     return true;
 }
 
-static bool BitmapFloat_compose_linear_over_srgb(flow_context* context, flow_bitmap_float* src, const uint32_t from_row,
-                                                 struct flow_bitmap_bgra* dest, const uint32_t dest_row,
-                                                 const uint32_t row_count, const uint32_t from_col,
-                                                 const uint32_t col_count, const bool transpose)
+static bool BitmapFloat_compose_linear_over_srgb(flow_c* context, struct flow_bitmap_float* src,
+                                                 const uint32_t from_row, struct flow_bitmap_bgra* dest,
+                                                 const uint32_t dest_row, const uint32_t row_count,
+                                                 const uint32_t from_col, const uint32_t col_count,
+                                                 const bool transpose)
 {
 
     const uint32_t dest_bytes_pp = flow_pixel_format_bytes_per_pixel(dest->fmt);
@@ -272,9 +274,9 @@ static bool BitmapFloat_compose_linear_over_srgb(flow_context* context, flow_bit
     return true;
 }
 
-bool flow_bitmap_float_pivoting_composite_linear_over_srgb(flow_context* context, flow_bitmap_float* src,
-                                                           uint32_t from_row, struct flow_bitmap_bgra* dest, uint32_t dest_row,
-                                                           uint32_t row_count, bool transpose)
+bool flow_bitmap_float_pivoting_composite_linear_over_srgb(flow_c* context, struct flow_bitmap_float* src,
+                                                           uint32_t from_row, struct flow_bitmap_bgra* dest,
+                                                           uint32_t dest_row, uint32_t row_count, bool transpose)
 {
     if (transpose ? src->w != dest->h : src->w != dest->w) {
         // TODO: Add more bounds checks

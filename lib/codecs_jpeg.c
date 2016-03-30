@@ -20,7 +20,7 @@ typedef enum flow_job_jpeg_decoder_stage {
 struct flow_job_jpeg_decoder_state {
     struct jpeg_error_mgr error_mgr; // MUST be first
     jmp_buf error_handler_jmp; // MUST be second
-    flow_context* context; // MUST be third
+    flow_c* context; // MUST be third
     size_t codec_id; // MUST be fourht
     flow_job_jpeg_decoder_stage stage;
     struct jpeg_decompress_struct* cinfo;
@@ -40,19 +40,19 @@ struct flow_job_jpeg_decoder_state {
 struct flow_job_jpeg_codec_state_common {
     struct jpeg_error_mgr error_mgr; // MUST be first
     jmp_buf error_handler_jmp; // MUST be second
-    flow_context* context; // MUST be third
+    flow_c* context; // MUST be third
     size_t codec_id; // MUST be fourht
 };
 struct flow_job_jpeg_encoder_state {
     struct jpeg_error_mgr error_mgr; // MUST be first
     jmp_buf error_handler_jmp; // MUST be second
-    flow_context* context; // MUST be third
+    flow_c* context; // MUST be third
     size_t codec_id; // MUST be fourht
     struct jpeg_compress_struct cinfo;
     struct flow_io* io;
 };
 
-static bool flow_job_jpg_decoder_reset(flow_context* c, struct flow_job_jpeg_decoder_state* state);
+static bool flow_job_jpg_decoder_reset(flow_c* c, struct flow_job_jpeg_decoder_state* state);
 
 static void jpeg_error_exit(j_common_ptr cinfo)
 {
@@ -97,7 +97,7 @@ static void flow_jpeg_output_message(j_common_ptr cinfo)
     fprintf(stderr, "%s", &buffer[0]);
 }
 
-static bool flow_job_jpg_decoder_BeginRead(flow_context* c, struct flow_job_jpeg_decoder_state* state)
+static bool flow_job_jpg_decoder_BeginRead(flow_c* c, struct flow_job_jpeg_decoder_state* state)
 {
     if (state->stage != flow_job_jpg_decoder_stage_NotStarted) {
         FLOW_error(c, flow_status_Invalid_internal_state);
@@ -173,7 +173,7 @@ static bool flow_job_jpg_decoder_BeginRead(flow_context* c, struct flow_job_jpeg
     return true;
 }
 
-static bool flow_job_jpg_decoder_FinishRead(flow_context* c, struct flow_job_jpeg_decoder_state* state)
+static bool flow_job_jpg_decoder_FinishRead(flow_c* c, struct flow_job_jpeg_decoder_state* state)
 {
     if (state->stage != flow_job_jpg_decoder_stage_BeginRead) {
         FLOW_error(c, flow_status_Invalid_internal_state);
@@ -235,7 +235,7 @@ static bool flow_job_jpg_decoder_FinishRead(flow_context* c, struct flow_job_jpe
     return true;
 }
 
-static bool flow_job_jpg_decoder_reset(flow_context* c, struct flow_job_jpeg_decoder_state* state)
+static bool flow_job_jpg_decoder_reset(flow_c* c, struct flow_job_jpeg_decoder_state* state)
 {
     if (state->stage == flow_job_jpg_decoder_stage_FinishRead) {
         FLOW_free(c, state->pixel_buffer);
@@ -275,8 +275,7 @@ static bool flow_job_jpg_decoder_reset(flow_context* c, struct flow_job_jpeg_dec
     return true;
 }
 
-static bool flow_job_codecs_initialize_decode_jpeg(flow_context* c, struct flow_job* job,
-                                                   struct flow_codec_instance* item)
+static bool flow_job_codecs_initialize_decode_jpeg(flow_c* c, struct flow_job* job, struct flow_codec_instance* item)
 {
     // flow_job_jpeg_decoder_state
     if (item->codec_state == NULL) {
@@ -299,7 +298,7 @@ static bool flow_job_codecs_initialize_decode_jpeg(flow_context* c, struct flow_
     return true;
 }
 
-static bool flow_job_codecs_jpeg_get_info(flow_context* c, struct flow_job* job, void* codec_state,
+static bool flow_job_codecs_jpeg_get_info(flow_c* c, struct flow_job* job, void* codec_state,
                                           struct flow_decoder_frame_info* decoder_frame_info_ref)
 {
     struct flow_job_jpeg_decoder_state* state = (struct flow_job_jpeg_decoder_state*)codec_state;
@@ -314,7 +313,7 @@ static bool flow_job_codecs_jpeg_get_info(flow_context* c, struct flow_job* job,
     return true;
 }
 
-static bool flow_job_codecs_jpeg_read_frame(flow_context* c, struct flow_job* job, void* codec_state,
+static bool flow_job_codecs_jpeg_read_frame(flow_c* c, struct flow_job* job, void* codec_state,
                                             struct flow_bitmap_bgra* canvas)
 {
     struct flow_job_jpeg_decoder_state* state = (struct flow_job_jpeg_decoder_state*)codec_state;
@@ -335,8 +334,7 @@ static bool flow_job_codecs_jpeg_read_frame(flow_context* c, struct flow_job* jo
     }
 }
 
-static bool flow_job_codecs_initialize_encode_jpeg(flow_context* c, struct flow_job* job,
-                                                   struct flow_codec_instance* item)
+static bool flow_job_codecs_initialize_encode_jpeg(flow_c* c, struct flow_job* job, struct flow_codec_instance* item)
 {
     // flow_job_png_decoder_state
     if (item->codec_state == NULL) {
@@ -354,7 +352,7 @@ static bool flow_job_codecs_initialize_encode_jpeg(flow_context* c, struct flow_
     return true;
 }
 
-static bool flow_job_codecs_jpeg_write_frame(flow_context* c, struct flow_job* job, void* codec_state,
+static bool flow_job_codecs_jpeg_write_frame(flow_c* c, struct flow_job* job, void* codec_state,
                                              struct flow_bitmap_bgra* frame)
 {
     struct flow_job_jpeg_encoder_state* state = (struct flow_job_jpeg_encoder_state*)codec_state;

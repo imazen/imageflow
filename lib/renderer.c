@@ -14,25 +14,25 @@
 #include <stdio.h>
 #include <string.h>
 
-typedef struct flow_RendererStruct {
-    flow_RenderDetails* details;
+struct flow_Renderer {
+    struct flow_RenderDetails* details;
     bool destroy_details;
     struct flow_bitmap_bgra* source;
     bool destroy_source;
     struct flow_bitmap_bgra* canvas;
     struct flow_bitmap_bgra* transposed;
-} flow_Renderer;
+};
 
-flow_Renderer* Renderer_create(flow_context* context, struct flow_bitmap_bgra* source, struct flow_bitmap_bgra* canvas,
-                               flow_RenderDetails* details);
-flow_Renderer* Renderer_create_in_place(flow_context* context, struct flow_bitmap_bgra* editInPlace,
-                                        flow_RenderDetails* details);
-bool Renderer_perform_render(flow_context* context, flow_Renderer* r);
-void Renderer_destroy(flow_context* context, flow_Renderer* r);
+struct flow_Renderer* Renderer_create(flow_c* context, struct flow_bitmap_bgra* source, struct flow_bitmap_bgra* canvas,
+                                      struct flow_RenderDetails* details);
+struct flow_Renderer* Renderer_create_in_place(flow_c* context, struct flow_bitmap_bgra* editInPlace,
+                                               struct flow_RenderDetails* details);
+bool Renderer_perform_render(flow_c* context, struct flow_Renderer* r);
+void Renderer_destroy(flow_c* context, struct flow_Renderer* r);
 
-flow_RenderDetails* flow_RenderDetails_create(flow_context* context)
+struct flow_RenderDetails* flow_RenderDetails_create(flow_c* context)
 {
-    flow_RenderDetails* d = FLOW_calloc_array(context, 1, flow_RenderDetails);
+    struct flow_RenderDetails* d = FLOW_calloc_array(context, 1, struct flow_RenderDetails);
     if (d == NULL) {
         FLOW_error(context, flow_status_Out_of_memory);
         return NULL;
@@ -49,14 +49,14 @@ flow_RenderDetails* flow_RenderDetails_create(flow_context* context)
     return d;
 }
 
-flow_RenderDetails* flow_RenderDetails_create_with(flow_context* context, flow_interpolation_filter filter)
+struct flow_RenderDetails* flow_RenderDetails_create_with(flow_c* context, flow_interpolation_filter filter)
 {
-    flow_interpolation_details* id = flow_interpolation_details_create_from(context, filter);
+    struct flow_interpolation_details* id = flow_interpolation_details_create_from(context, filter);
     if (id == NULL) {
         FLOW_add_to_callstack(context);
         return NULL;
     }
-    flow_RenderDetails* d = flow_RenderDetails_create(context);
+    struct flow_RenderDetails* d = flow_RenderDetails_create(context);
     if (d == NULL) {
         FLOW_add_to_callstack(context);
         flow_interpolation_details_destroy(context, id);
@@ -66,7 +66,7 @@ flow_RenderDetails* flow_RenderDetails_create_with(flow_context* context, flow_i
     return d;
 }
 
-void flow_RenderDetails_destroy(flow_context* context, flow_RenderDetails* d)
+void flow_RenderDetails_destroy(flow_c* context, struct flow_RenderDetails* d)
 {
     if (d != NULL) {
         flow_interpolation_details_destroy(context, d->interpolation);
@@ -76,13 +76,13 @@ void flow_RenderDetails_destroy(flow_context* context, flow_RenderDetails* d)
     FLOW_free(context, d);
 }
 
-bool flow_RenderDetails_render(flow_context* context, flow_RenderDetails* details, struct flow_bitmap_bgra* source,
+bool flow_RenderDetails_render(flow_c* context, struct flow_RenderDetails* details, struct flow_bitmap_bgra* source,
                                struct flow_bitmap_bgra* canvas)
 {
 
     bool destroy_source = false;
 
-    flow_Renderer* r = Renderer_create(context, source, canvas, details);
+    struct flow_Renderer* r = Renderer_create(context, source, canvas, details);
     if (r == NULL) {
         FLOW_add_to_callstack(context);
         if (destroy_source) {
@@ -100,11 +100,11 @@ bool flow_RenderDetails_render(flow_context* context, flow_RenderDetails* detail
     return result;
 }
 
-bool flow_RenderDetails_render_in_place(flow_context* context, flow_RenderDetails* details,
+bool flow_RenderDetails_render_in_place(flow_c* context, struct flow_RenderDetails* details,
                                         struct flow_bitmap_bgra* edit_in_place)
 {
 
-    flow_Renderer* r = Renderer_create_in_place(context, edit_in_place, details);
+    struct flow_Renderer* r = Renderer_create_in_place(context, edit_in_place, details);
     if (r == NULL) {
         FLOW_add_to_callstack(context);
         return false;
@@ -128,7 +128,7 @@ static float Renderer_percent_loss(int from_width, int to_width, int from_height
     return (float)fmax(lost_rows * scale_factor_y, lost_columns * scale_factor_x);
 }
 
-static int Renderer_determine_divisor(flow_Renderer* r)
+static int Renderer_determine_divisor(struct flow_Renderer* r)
 {
     if (r->canvas == NULL)
         return 0;
@@ -149,7 +149,7 @@ static int Renderer_determine_divisor(flow_Renderer* r)
     return int_max(1, divisor);
 }
 
-void Renderer_destroy(flow_context* context, flow_Renderer* r)
+void Renderer_destroy(flow_c* context, struct flow_Renderer* r)
 {
     if (r == NULL)
         return;
@@ -168,14 +168,14 @@ void Renderer_destroy(flow_context* context, flow_Renderer* r)
     FLOW_free(context, r);
 }
 
-flow_Renderer* Renderer_create_in_place(flow_context* context, struct flow_bitmap_bgra* editInPlace,
-                                        flow_RenderDetails* details)
+struct flow_Renderer* Renderer_create_in_place(flow_c* context, struct flow_bitmap_bgra* editInPlace,
+                                               struct flow_RenderDetails* details)
 {
     if (details->post_transpose) {
         FLOW_error(context, flow_status_Invalid_argument);
         return NULL;
     }
-    flow_Renderer* r = FLOW_calloc_array(context, 1, flow_Renderer);
+    struct flow_Renderer* r = FLOW_calloc_array(context, 1, struct flow_Renderer);
     if (r == NULL) {
         FLOW_error(context, flow_status_Out_of_memory);
         return NULL;
@@ -194,10 +194,10 @@ flow_Renderer* Renderer_create_in_place(flow_context* context, struct flow_bitma
     return r;
 }
 
-flow_Renderer* Renderer_create(flow_context* context, struct flow_bitmap_bgra* source, struct flow_bitmap_bgra* canvas,
-                               flow_RenderDetails* details)
+struct flow_Renderer* Renderer_create(flow_c* context, struct flow_bitmap_bgra* source, struct flow_bitmap_bgra* canvas,
+                                      struct flow_RenderDetails* details)
 {
-    flow_Renderer* r = FLOW_calloc_array(context, 1, flow_Renderer);
+    struct flow_Renderer* r = FLOW_calloc_array(context, 1, struct flow_Renderer);
     if (r == NULL) {
         FLOW_error(context, flow_status_Out_of_memory);
         return NULL;
@@ -234,13 +234,14 @@ static void SimpleRenderInPlace(void)
 */
 
 // TODO: find better name
-static bool HalveInTempImage(flow_context* context, flow_Renderer* r, int divisor)
+static bool HalveInTempImage(flow_c* context, struct flow_Renderer* r, int divisor)
 {
     bool result = true;
     flow_prof_start(context, "create temp image for halving", false);
     int halved_width = (int)(r->source->w / divisor);
     int halved_height = (int)(r->source->h / divisor);
-    struct flow_bitmap_bgra* tmp_im = flow_bitmap_bgra_create(context, halved_width, halved_height, true, r->source->fmt);
+    struct flow_bitmap_bgra* tmp_im
+        = flow_bitmap_bgra_create(context, halved_width, halved_height, true, r->source->fmt);
     if (tmp_im == NULL) {
         FLOW_add_to_callstack(context);
         return false;
@@ -263,7 +264,7 @@ static bool HalveInTempImage(flow_context* context, flow_Renderer* r, int diviso
     return result;
 }
 
-static bool Renderer_complete_halving(flow_context* context, flow_Renderer* r)
+static bool Renderer_complete_halving(flow_c* context, struct flow_Renderer* r)
 {
     int divisor = r->details->halving_divisor;
     if (divisor <= 1) {
@@ -283,7 +284,7 @@ static bool Renderer_complete_halving(flow_context* context, flow_Renderer* r)
     return result;
 }
 
-static bool ApplyConvolutionsFloat1D(flow_context* context, const flow_Renderer* r, flow_bitmap_float* img,
+static bool ApplyConvolutionsFloat1D(flow_c* context, const struct flow_Renderer* r, struct flow_bitmap_float* img,
                                      const uint32_t from_row, const uint32_t row_count, double sharpening_applied)
 {
     if (r->details->kernel_a != NULL) {
@@ -314,7 +315,7 @@ static bool ApplyConvolutionsFloat1D(flow_context* context, const flow_Renderer*
     return true;
 }
 
-static bool ApplyColorMatrix(flow_context* context, const flow_Renderer* r, flow_bitmap_float* img,
+static bool ApplyColorMatrix(flow_c* context, const struct flow_Renderer* r, struct flow_bitmap_float* img,
                              const uint32_t row_count)
 {
     flow_prof_start(context, "apply_color_matrix_float", false);
@@ -323,12 +324,13 @@ static bool ApplyColorMatrix(flow_context* context, const flow_Renderer* r, flow
     return b;
 }
 
-static bool ScaleAndRender1D(flow_context* context, const flow_Renderer* r, struct flow_bitmap_bgra* pSrc,
-                             struct flow_bitmap_bgra* pDst, const flow_RenderDetails* details, bool transpose, int call_number)
+static bool ScaleAndRender1D(flow_c* context, const struct flow_Renderer* r, struct flow_bitmap_bgra* pSrc,
+                             struct flow_bitmap_bgra* pDst, const struct flow_RenderDetails* details, bool transpose,
+                             int call_number)
 {
-    flow_interpolation_line_contributions* contrib = NULL;
-    flow_bitmap_float* source_buf = NULL;
-    flow_bitmap_float* dest_buf = NULL;
+    struct flow_interpolation_line_contributions* contrib = NULL;
+    struct flow_bitmap_float* source_buf = NULL;
+    struct flow_bitmap_float* dest_buf = NULL;
 
     uint32_t from_count = pSrc->w;
     uint32_t to_count = transpose ? pDst->h : pDst->w;
@@ -438,8 +440,9 @@ cleanup:
     return success;
 }
 
-static bool Render1D(flow_context* context, const flow_Renderer* r, struct flow_bitmap_bgra* pSrc, struct flow_bitmap_bgra* pDst,
-                     const flow_RenderDetails* details, bool transpose, int call_number)
+static bool Render1D(flow_c* context, const struct flow_Renderer* r, struct flow_bitmap_bgra* pSrc,
+                     struct flow_bitmap_bgra* pDst, const struct flow_RenderDetails* details, bool transpose,
+                     int call_number)
 {
 
     bool success = true;
@@ -449,7 +452,7 @@ static bool Render1D(flow_context* context, const flow_Renderer* r, struct flow_
     // How many bytes per pixel are we scaling?
     flow_pixel_format scaling_format = (pSrc->fmt == flow_bgra32 && !pSrc->alpha_meaningful) ? flow_bgr24 : pSrc->fmt;
 
-    flow_bitmap_float* buf = flow_bitmap_float_create(context, pSrc->w, buffer_row_count, scaling_format, false);
+    struct flow_bitmap_float* buf = flow_bitmap_float_create(context, pSrc->w, buffer_row_count, scaling_format, false);
     if (buf == NULL) {
         return false;
     }
@@ -493,8 +496,9 @@ cleanup:
     return success;
 }
 
-static bool RenderWrapper1D(flow_context* context, const flow_Renderer* r, struct flow_bitmap_bgra* pSrc,
-                            struct flow_bitmap_bgra* pDst, const flow_RenderDetails* details, bool transpose, int call_number)
+static bool RenderWrapper1D(flow_c* context, const struct flow_Renderer* r, struct flow_bitmap_bgra* pSrc,
+                            struct flow_bitmap_bgra* pDst, const struct flow_RenderDetails* details, bool transpose,
+                            int call_number)
 {
     bool perfect_size = transpose ? (pSrc->h == pDst->w && pDst->h == pSrc->w)
                                   : (pSrc->w == pDst->w && pSrc->h == pDst->h);
@@ -512,7 +516,7 @@ static bool RenderWrapper1D(flow_context* context, const flow_Renderer* r, struc
     // p->Stop(name, true, true);
     //}
 }
-bool Renderer_perform_render(flow_context* context, flow_Renderer* r)
+bool Renderer_perform_render(flow_c* context, struct flow_Renderer* r)
 {
     flow_prof_start(context, "perform_render", false);
     if (!Renderer_complete_halving(context, r)) {

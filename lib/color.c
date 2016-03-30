@@ -11,7 +11,7 @@
 
 #include "imageflow_private.h"
 
-bool flow_bitmap_float_linear_to_luv_rows(flow_context* context, flow_bitmap_float* bit, const uint32_t start_row,
+bool flow_bitmap_float_linear_to_luv_rows(flow_c* context, struct flow_bitmap_float* bit, const uint32_t start_row,
                                           const uint32_t row_count)
 {
     if (!(start_row + row_count <= bit->h)) {
@@ -32,7 +32,7 @@ bool flow_bitmap_float_linear_to_luv_rows(flow_context* context, flow_bitmap_flo
     return true;
 }
 
-bool flow_bitmap_float_luv_to_linear_rows(flow_context* context, flow_bitmap_float* bit, const uint32_t start_row,
+bool flow_bitmap_float_luv_to_linear_rows(flow_c* context, struct flow_bitmap_float* bit, const uint32_t start_row,
                                           const uint32_t row_count)
 {
     if (!(start_row + row_count <= bit->h)) {
@@ -53,7 +53,7 @@ bool flow_bitmap_float_luv_to_linear_rows(flow_context* context, flow_bitmap_flo
     return true;
 }
 
-bool flow_bitmap_bgra_apply_color_matrix(flow_context* context, struct flow_bitmap_bgra* bmp, const uint32_t row,
+bool flow_bitmap_bgra_apply_color_matrix(flow_c* context, struct flow_bitmap_bgra* bmp, const uint32_t row,
                                          const uint32_t count, float* const __restrict m[5])
 {
     const uint32_t stride = bmp->stride;
@@ -103,7 +103,7 @@ bool flow_bitmap_bgra_apply_color_matrix(flow_context* context, struct flow_bitm
     return true;
 }
 
-bool flow_bitmap_float_apply_color_matrix(flow_context* context, flow_bitmap_float* bmp, const uint32_t row,
+bool flow_bitmap_float_apply_color_matrix(flow_c* context, struct flow_bitmap_float* bmp, const uint32_t row,
                                           const uint32_t count, float** m)
 {
     const uint32_t stride = bmp->float_stride;
@@ -158,7 +158,7 @@ bool flow_bitmap_float_apply_color_matrix(flow_context* context, flow_bitmap_flo
     }
 }
 
-bool flow_bitmap_bgra_populate_histogram(flow_context* context, struct flow_bitmap_bgra* bmp, uint64_t* histograms,
+bool flow_bitmap_bgra_populate_histogram(flow_c* context, struct flow_bitmap_bgra* bmp, uint64_t* histograms,
                                          uint32_t histogram_size_per_channel, uint32_t histogram_count,
                                          uint64_t* pixels_sampled)
 {
@@ -239,7 +239,7 @@ static float derive_constant(float x, float slope, float sign)
 
 #endif
 
-void flow_context_set_floatspace(flow_context* context, flow_working_floatspace space, float a, float b, float c)
+void flow_context_set_floatspace(flow_c* context, flow_working_floatspace space, float a, float b, float c)
 {
     context->colorspace.floatspace = space;
 
@@ -266,12 +266,12 @@ void flow_context_set_floatspace(flow_context* context, flow_working_floatspace 
     }
 }
 
-float flow_context_byte_to_floatspace(flow_context* c, uint8_t srgb_value)
+float flow_context_byte_to_floatspace(flow_c* c, uint8_t srgb_value)
 {
     return Context_srgb_to_floatspace(c, srgb_value);
 }
 
-uint8_t flow_context_floatspace_to_byte(flow_context* c, float space_value)
+uint8_t flow_context_floatspace_to_byte(flow_c* c, float space_value)
 {
     return Context_floatspace_to_srgb(c, space_value);
 }

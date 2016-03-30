@@ -1,6 +1,6 @@
 #include "imageflow_private.h"
 
-static bool write_frame_to_disk(flow_context* c, const char* path, struct flow_bitmap_bgra* b)
+static bool write_frame_to_disk(flow_c* c, const char* path, struct flow_bitmap_bgra* b)
 {
 
     png_image target_image;
@@ -22,7 +22,7 @@ static bool write_frame_to_disk(flow_context* c, const char* path, struct flow_b
     return true;
 }
 
-static bool files_identical(flow_context* c, const char* path1, const char* path2, bool* identical)
+static bool files_identical(flow_c* c, const char* path1, const char* path2, bool* identical)
 {
     FILE* fp1 = fopen(path1, "r");
     if (fp1 == NULL) {
@@ -50,7 +50,7 @@ static bool files_identical(flow_context* c, const char* path1, const char* path
 }
 #define FLOW_MAX_GRAPH_VERSIONS 100
 
-bool flow_job_notify_node_complete(flow_context* c, struct flow_job* job, struct flow_graph* g, int32_t node_id)
+bool flow_job_notify_node_complete(flow_c* c, struct flow_job* job, struct flow_graph* g, int32_t node_id)
 {
     struct flow_node* n = &g->nodes[node_id];
     if (n->result_bitmap != NULL && job->record_frame_images == true) {
@@ -63,7 +63,7 @@ bool flow_job_notify_node_complete(flow_context* c, struct flow_job* job, struct
     return true;
 }
 
-bool flow_job_notify_graph_changed(flow_context* c, struct flow_job* job, struct flow_graph* g)
+bool flow_job_notify_graph_changed(flow_c* c, struct flow_job* job, struct flow_graph* g)
 {
     if (job == NULL || !job->record_graph_versions || job->next_graph_version > FLOW_MAX_GRAPH_VERSIONS)
         return true;
@@ -128,7 +128,7 @@ bool flow_job_notify_graph_changed(flow_context* c, struct flow_job* job, struct
     return true;
 }
 
-bool flow_job_render_graph_to_png(flow_context* c, struct flow_job* job, struct flow_graph* g, int32_t graph_version)
+bool flow_job_render_graph_to_png(flow_c* c, struct flow_job* job, struct flow_graph* g, int32_t graph_version)
 {
     char filename[255];
     flow_snprintf(filename, 254, "job_%d_graph_version_%d.dot", job->debug_job_id, graph_version);
