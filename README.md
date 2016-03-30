@@ -11,27 +11,22 @@ How to download, build, and run tests.
 
 ### Universal steps for all platforms - get Conan, Cmake, and Git
 
-Don't try to open anything in any IDE until you've run conan install.
+Don't try to open anything in any IDE until you've run `conan install`, as cmake won't be complete.
 
- 1. [Install Conan](https://www.conan.io/downloads) - installers available for download (all platforms).
- 2. Install cmake (`cinst -y cmake.portable` on windows w/ chocolatey, `sudo apt-get install cmake` elsewhere)
- 3. Install git (`cinst -y git.install` or `sudo apt-get install git`) 
- 
-     git clone git@github.com:imazen/imageflow.git blocks/nathanaeljones/imageflow
+1. [Install Conan](https://www.conan.io/downloads) - installers available for download (all platforms).
+2. Install cmake (`cinst -y cmake.portable` on windows w/ chocolatey, `sudo apt-get install cmake` elsewhere)
+3. Install git (`cinst -y git.install` or `sudo apt-get install git`) 
+
+
+```bash
+     git clone git@github.com:imazen/imageflow.git
      cd imageflow
      mkdir build
- 
-### CLion on Windows
-
-1. Install mingw (`cinst mingw`, followed by `set PATH=%PATH%;C:\tools\mingw64\bin`)
-2. Configure CLion to use C:\tools\mingw64 for tooling
-3. Delete %HOMEPATH%\.conan\conan.conf so that the new compilers can be detected
-
-    cd build
-    conan install -u --file ../conanfile.py -o build_tests=True --build missing  -s build_type=Release -s arch=x86_64 -s compiler=gcc
-    cd ..
-    conan build
-    
+     cd build 
+     conan install -u --file ../conanfile.py -o build_tests=True --build missing  -s build_type=Release
+     cd ..
+     conan build
+```
 
 ### Visual Studio 2015 Update 1
 
@@ -59,7 +54,7 @@ Install nasm (`cinst -y nasm` on windows, followed by `set PATH=%PATH%;%ProgramF
 ## Using the long-form graph API (with proper error handling)
 
     
-        
+```c++
     uint8_t image_bytes_literal[]
         = { 0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, 0x00, 0x00, 0x00, 0x0D, 0x49, 0x48, 0x44, 0x52, 0x00,
             0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x08, 0x06, 0x00, 0x00, 0x00, 0x1F, 0x15, 0xC4, 0x89, 0x00,
@@ -165,7 +160,7 @@ Install nasm (`cinst -y nasm` on windows, followed by `set PATH=%PATH%;%ProgramF
         flow_context_destroy(c);
         return true;
     }
-
+```
 
 ## The Problem - Why we need imageflow
 
@@ -318,8 +313,7 @@ Also, keep in mind that computer vision is very different from image creation. I
 
 ## Node types
 
-```
-
+```c++
 typedef enum flow_ntype {
     flow_ntype_Null = 0,
     flow_ntype_primitive_Flip_Vertical_Mutate = 1,
@@ -403,12 +397,12 @@ typedef enum flow_edgetype {
     flow_edgetype_FORCE_ENUM_SIZE_INT32 = 2147483647
 } flow_edgetype;
          `                                                                                                                                                                                                         `
-
 ```
 
 ## Operation equivalency and composition
 
-| Action | Equivalent action | Notes
+| Action | Equivalent action | Notes |
+| ------------- |------------- | ----- |
 | Rotate 270  | Transpose, Vflip |
 | Rotate 90   | Vflip, Transpose |
 | Rotate 180  | Vflip, Hflip |
