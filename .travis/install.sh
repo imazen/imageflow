@@ -15,8 +15,10 @@ else
     tar xf lcov_1.11.orig.tar.gz
     sudo make -C lcov-1.11/ install
     sudo docker pull lasote/conangcc${GCC_VERSION}
+
+    #install lcov to coveralls conversion + upload tool
+    #crashes on darwin
+    gem install coveralls-lcov
 fi
 
-#install lcov to coveralls conversion + upload tool
-gem install coveralls-lcov
 
