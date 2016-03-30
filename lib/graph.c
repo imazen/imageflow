@@ -979,7 +979,7 @@ bool flow_graph_validate(flow_c* c, struct flow_graph* g)
                 FLOW_error(c, flow_status_Invalid_internal_state);
                 return false;
             }
-            if (!flow_node_validate_inputs(c, g, i)) {
+            if (!flow_node_validate_edges(c, g, i)) {
                 FLOW_error(c, flow_status_Invalid_internal_state);
                 return false;
             }

@@ -1064,6 +1064,8 @@ struct flow_node_definition flow_node_defs[] = {
       .canvas_count = 0, //?
       .stringify = stringify_encode,
       .pre_optimize_flatten = flatten_encode,
+      .prohibit_output_edges = true,
+
     },
     // Optimizable (non-mutating)
     { .type = flow_ntype_Flip_Vertical,
@@ -1208,10 +1210,14 @@ struct flow_node_definition flow_node_defs[] = {
       .canvas_count = 0, //?
       .stringify = stringify_encode,
       .execute = execute_encode,
-
+      .prohibit_output_edges = true,
     },
     {
-      .type = flow_ntype_Null, .type_name = "(null)", .input_count = 0, .canvas_count = 0,
+      .type = flow_ntype_Null,
+      .type_name = "(null)",
+      .input_count = 0,
+      .canvas_count = 0,
+      .prohibit_output_edges = true,
 
     }
 };
@@ -1283,7 +1289,7 @@ bool flow_node_infobyte_count(flow_c* c, struct flow_graph* g, int32_t node_id, 
     return true;
 }
 
-bool flow_node_validate_inputs(flow_c* c, struct flow_graph* g, int32_t node_id)
+bool flow_node_validate_edges(flow_c* c, struct flow_graph* g, int32_t node_id)
 {
     struct flow_node* node = &g->nodes[node_id];
     struct flow_node_definition* def = flow_nodedef_get(c, node->type);
@@ -1301,6 +1307,15 @@ bool flow_node_validate_inputs(flow_c* c, struct flow_graph* g, int32_t node_id)
     if (def->canvas_count > -1 && def->canvas_count != canvas_edge_count) {
         FLOW_error(c, flow_status_Invalid_inputs_to_node);
         return false;
+    }
+
+    if (def->prohibit_output_edges) {
+        int32_t outbound_edge_count = flow_graph_get_edge_count(c, g, node_id, false, flow_edgetype_null, false, true);
+        if (outbound_edge_count > 0) {
+            FLOW_error_msg(c, flow_status_Graph_invalid, "This node (%s) cannot have outbound edges - found %i.",
+                           def->type_name, outbound_edge_count);
+            return false;
+        }
     }
     return true;
 }
@@ -1405,7 +1420,7 @@ bool flow_node_update_state(flow_c* c, struct flow_graph* g, int32_t node_id)
 bool flow_node_populate_dimensions_to_edge(flow_c* c, struct flow_graph* g, int32_t node_id, int32_t outbound_edge_id,
                                            bool force_estimate)
 {
-    if (!flow_node_validate_inputs(c, g, node_id)) {
+    if (!flow_node_validate_edges(c, g, node_id)) {
         FLOW_error_return(c);
     }
     struct flow_node* node = &g->nodes[node_id];
@@ -1426,7 +1441,7 @@ bool flow_node_populate_dimensions_to_edge(flow_c* c, struct flow_graph* g, int3
 }
 static bool flow_node_flatten_generic(flow_c* c, struct flow_graph** graph_ref, int32_t node_id, bool post_optimize)
 {
-    if (!flow_node_validate_inputs(c, *graph_ref, node_id)) {
+    if (!flow_node_validate_edges(c, *graph_ref, node_id)) {
         FLOW_error_return(c);
     }
     struct flow_node* node = &(*graph_ref)->nodes[node_id];
@@ -1492,7 +1507,7 @@ bool flow_node_post_optimize_flatten(flow_c* c, struct flow_graph** graph_ref, i
 }
 bool flow_node_execute(flow_c* c, struct flow_job* job, struct flow_graph* g, int32_t node_id)
 {
-    if (!flow_node_validate_inputs(c, g, node_id)) {
+    if (!flow_node_validate_edges(c, g, node_id)) {
         FLOW_error_return(c);
     }
     struct flow_node* node = &g->nodes[node_id];

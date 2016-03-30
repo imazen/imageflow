@@ -29,6 +29,7 @@ typedef bool (*flow_nodedef_fn_estimate_cost)(flow_c* c, struct flow_job* job, s
 struct flow_node_definition {
     flow_ntype type;
     int32_t input_count;
+    bool prohibit_output_edges;
     int32_t canvas_count;
     const char* type_name;
 
@@ -58,7 +59,7 @@ bool flow_node_pre_optimize_flatten(flow_c* c, struct flow_graph** graph_ref, in
 bool flow_node_execute(flow_c* c, struct flow_job* job, struct flow_graph* g, int32_t node_id);
 bool flow_node_estimate_execution_cost(flow_c* c, struct flow_graph* g, int32_t node_id, size_t* bytes_required,
                                        size_t* cpu_cost);
-bool flow_node_validate_inputs(flow_c* c, struct flow_graph* g, int32_t node_id);
+bool flow_node_validate_edges(flow_c* c, struct flow_graph* g, int32_t node_id);
 bool flow_node_update_state(flow_c* c, struct flow_graph* g, int32_t node_id);
 
 #ifdef __cplusplus
