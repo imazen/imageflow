@@ -16,6 +16,9 @@ class ImageFlowConan(ConanFile):
             self.requires("libcurl/7.47.1@lasote/stable")
             if self.settings.os != "Windows":  # Not supported in windows
                 self.requires("theft/0.2.0@lasote/stable")
+            if self.settings.os == "Macos":
+                self.options["libcurl"].darwin_ssl = False
+                self.options["libcurl"].custom_cacert = True
 
     def imports(self):
         self.copy("*.so", dst="bin", src="bin")  # From bin to bin
