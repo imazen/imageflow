@@ -42,7 +42,7 @@ static int flow_job_gif_read_function(GifFileType* gif, GifByteType* buffer, int
     }
     int64_t bytes_read = state->io->read_func(state->context, state->io, buffer, bytes_please);
     if (bytes_read != bytes_please) {
-        fprintf(stderr, "Read only %li of %i requested bytes\n", bytes_read, bytes_please);
+        fprintf(stderr, "Read only %" PRIu64 " of %i requested bytes\n", bytes_read, bytes_please);
         if (flow_context_has_error(state->context)) {
             FLOW_add_to_callstack(state->context);
         } else {

@@ -16,6 +16,10 @@
 #include <sys/stat.h>
 #include <errno.h>
 
+#define __STDC_FORMAT_MACROS
+#include <inttypes.h>
+#undef __STDC_FORMAT_MACROS
+
 #ifdef __cplusplus
 extern "C" {
 #endif
