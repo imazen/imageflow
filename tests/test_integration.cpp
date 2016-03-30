@@ -152,7 +152,7 @@ TEST_CASE("Load png from URL", "[fastscaling]")
                     printf("nonzero buffer: %d of %d", nonzero, PNG_IMAGE_SIZE(image));
                 }
 
-                flow_bitmap_bgra* source
+                struct flow_bitmap_bgra* source
                     = flow_bitmap_bgra_create_header(c, (unsigned int)(image.width), (unsigned int)(image.height));
                 REQUIRE_FALSE(source == NULL);
                 source->fmt = flow_pixel_format::flow_bgra32;
@@ -165,7 +165,7 @@ TEST_CASE("Load png from URL", "[fastscaling]")
                 int target_width = 300;
                 int target_height = 200;
 
-                flow_bitmap_bgra* canvas = flow_bitmap_bgra_create(c, target_width, target_height, true, flow_bgra32);
+                struct flow_bitmap_bgra* canvas = flow_bitmap_bgra_create(c, target_width, target_height, true, flow_bgra32);
 
                 REQUIRE_FALSE(canvas == NULL);
                 flow_RenderDetails* details

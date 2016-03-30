@@ -253,7 +253,7 @@ struct flow_scanlines_filter;
 struct flow_node;
 struct flow_edge;
 struct flow_graph;
-typedef struct flow_bitmap_bgra_struct flow_bitmap_bgra;
+struct flow_bitmap_bgra;
 
 PUB flow_context* flow_context_create(void);
 
@@ -362,7 +362,7 @@ PUB int32_t flow_node_create_encoder(flow_context* c, struct flow_graph** g, int
 PUB int32_t flow_node_create_noop(flow_context* c, struct flow_graph** g, int32_t prev_node);
 
 PUB int32_t flow_node_create_bitmap_bgra_reference(flow_context* c, struct flow_graph** g, int32_t prev_node,
-                                                   flow_bitmap_bgra** pointer_to_pointer_to_bitmap_bgra);
+                                                   struct flow_bitmap_bgra** pointer_to_pointer_to_bitmap_bgra);
 
 PUB int32_t flow_node_create_primitive_copy_rect_to_canvas(flow_context* c, struct flow_graph** g, int32_t prev_node,
                                                            uint32_t from_x, uint32_t from_y, uint32_t width,
@@ -419,7 +419,7 @@ struct flow_decoder_info {
 PUB bool flow_job_get_decoder_info(flow_context* c, struct flow_job* job, int32_t by_placeholder_id,
                                    struct flow_decoder_info* info);
 
-bool flow_bitmap_bgra_write_png(flow_context* c, struct flow_job* job, flow_bitmap_bgra* frame, struct flow_io* io);
+bool flow_bitmap_bgra_write_png(flow_context* c, struct flow_job* job, struct flow_bitmap_bgra* frame, struct flow_io* io);
 
 #undef PUB
 

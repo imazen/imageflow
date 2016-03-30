@@ -21,12 +21,12 @@ bool test(int sx, int sy, flow_pixel_format sbpp, int cx, int cy, flow_pixel_for
     if (context == NULL) {
         return false;
     }
-    flow_bitmap_bgra* source = flow_bitmap_bgra_create(context, sx, sy, true, sbpp);
+    struct flow_bitmap_bgra* source = flow_bitmap_bgra_create(context, sx, sy, true, sbpp);
     if (source == NULL) {
         flow_context_destroy(context);
         return false;
     }
-    flow_bitmap_bgra* canvas = flow_bitmap_bgra_create(context, cx, cy, true, cbpp);
+    struct flow_bitmap_bgra* canvas = flow_bitmap_bgra_create(context, cx, cy, true, cbpp);
     if (canvas == NULL) {
         flow_bitmap_bgra_destroy(context, source);
         flow_context_destroy(context);

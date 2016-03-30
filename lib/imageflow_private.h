@@ -144,8 +144,8 @@ typedef struct flow_ctx {
 
 #include "color.h"
 
-PUB bool flow_node_execute_render_to_canvas_1d(flow_context* c, struct flow_job* job, flow_bitmap_bgra* input,
-                                               flow_bitmap_bgra* canvas,
+PUB bool flow_node_execute_render_to_canvas_1d(flow_context* c, struct flow_job* job, struct flow_bitmap_bgra* input,
+                                               struct flow_bitmap_bgra* canvas,
                                                struct flow_nodeinfo_render_to_canvas_1d* info);
 
 PUB bool flow_job_populate_dimensions_where_certain(flow_context* c, struct flow_job* job,
@@ -185,7 +185,7 @@ PUB bool flow_bitmap_float_convolve_rows(flow_context* context, flow_bitmap_floa
 PUB bool flow_bitmap_float_sharpen_rows(flow_context* context, flow_bitmap_float* im, uint32_t start_row,
                                         uint32_t row_count, double pct);
 
-PUB bool flow_bitmap_float_convert_srgb_to_linear(flow_context* context, flow_bitmap_bgra* src, uint32_t from_row,
+PUB bool flow_bitmap_float_convert_srgb_to_linear(flow_context* context, struct flow_bitmap_bgra* src, uint32_t from_row,
                                                   flow_bitmap_float* dest, uint32_t dest_row, uint32_t row_count);
 
 PUB uint32_t flow_bitmap_float_approx_gaussian_calculate_d(float sigma, uint32_t bitmap_width);
@@ -196,22 +196,22 @@ PUB bool flow_bitmap_float_approx_gaussian_blur_rows(flow_context* context, flow
                                                      float* buffer, size_t buffer_element_count, uint32_t from_row,
                                                      int row_count);
 PUB bool flow_bitmap_float_pivoting_composite_linear_over_srgb(flow_context* context, flow_bitmap_float* src,
-                                                               uint32_t from_row, flow_bitmap_bgra* dest,
+                                                               uint32_t from_row, struct flow_bitmap_bgra* dest,
                                                                uint32_t dest_row, uint32_t row_count, bool transpose);
 
-PUB bool flow_bitmap_float_flip_vertical(flow_context* context, flow_bitmap_bgra* b);
+PUB bool flow_bitmap_float_flip_vertical(flow_context* context, struct flow_bitmap_bgra* b);
 
 PUB bool flow_bitmap_float_demultiply_alpha(flow_context* context, flow_bitmap_float* src, const uint32_t from_row,
                                             const uint32_t row_count);
 
 PUB bool flow_bitmap_float_copy_linear_over_srgb(flow_context* context, flow_bitmap_float* src, const uint32_t from_row,
-                                                 flow_bitmap_bgra* dest, const uint32_t dest_row,
+                                                 struct flow_bitmap_bgra* dest, const uint32_t dest_row,
                                                  const uint32_t row_count, const uint32_t from_col,
                                                  const uint32_t col_count, const bool transpose);
 
-PUB bool flow_halve(flow_context* context, const flow_bitmap_bgra* from, flow_bitmap_bgra* to, int divisor);
+PUB bool flow_halve(flow_context* context, const struct flow_bitmap_bgra* from, struct flow_bitmap_bgra* to, int divisor);
 
-PUB bool flow_halve_in_place(flow_context* context, flow_bitmap_bgra* from, int divisor);
+PUB bool flow_halve_in_place(flow_context* context, struct flow_bitmap_bgra* from, int divisor);
 
 PUB void flow_utils_ensure_directory_exists(const char* dir_path);
 
@@ -272,7 +272,7 @@ struct flow_nodeinfo_size {
     size_t height;
 };
 struct flow_nodeinfo_bitmap_bgra_pointer {
-    flow_bitmap_bgra** ref;
+    struct flow_bitmap_bgra** ref;
 };
 
 struct flow_nodeinfo_codec {
@@ -375,7 +375,7 @@ struct flow_node {
     int32_t info_byte_index;
     int32_t info_bytes;
     flow_node_state state;
-    flow_bitmap_bgra* result_bitmap;
+    struct flow_bitmap_bgra* result_bitmap;
     uint32_t ticks_elapsed;
 };
 

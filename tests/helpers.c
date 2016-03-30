@@ -203,9 +203,9 @@ bool has_err(flow_context* c, const char* file, int line, const char* func)
     return false;
 }
 
-flow_bitmap_bgra* BitmapBgra_create_test_image(flow_context* c)
+struct flow_bitmap_bgra* BitmapBgra_create_test_image(flow_context* c)
 {
-    flow_bitmap_bgra* test = flow_bitmap_bgra_create(c, 256, 256, false, flow_bgra32);
+    struct flow_bitmap_bgra* test = flow_bitmap_bgra_create(c, 256, 256, false, flow_bgra32);
     if (test == NULL) {
         FLOW_add_to_callstack(c);
         return NULL;

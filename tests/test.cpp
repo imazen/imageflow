@@ -7,8 +7,8 @@ bool test(int sx, int sy, flow_pixel_format sbpp, int cx, int cy, flow_pixel_for
     flow_context context;
     flow_context_initialize(&context);
 
-    flow_bitmap_bgra* source = flow_bitmap_bgra_create(&context, sx, sy, true, sbpp);
-    flow_bitmap_bgra* canvas = flow_bitmap_bgra_create(&context, cx, cy, true, cbpp);
+    struct flow_bitmap_bgra* source = flow_bitmap_bgra_create(&context, sx, sy, true, sbpp);
+    struct flow_bitmap_bgra* canvas = flow_bitmap_bgra_create(&context, cx, cy, true, cbpp);
     if (canvas == NULL || source == NULL)
         return false;
     flow_RenderDetails* details = flow_RenderDetails_create_with(&context, filter);
@@ -37,7 +37,7 @@ bool test_in_place(int sx, int sy, flow_pixel_format sbpp, bool flipx, bool flip
 {
     flow_context context;
     flow_context_initialize(&context);
-    flow_bitmap_bgra* source = flow_bitmap_bgra_create(&context, sx, sy, true, sbpp);
+    struct flow_bitmap_bgra* source = flow_bitmap_bgra_create(&context, sx, sy, true, sbpp);
 
     flow_RenderDetails* details = flow_RenderDetails_create(&context);
 
@@ -95,10 +95,10 @@ TEST_CASE("Sharpen and convolve in place", "[fastscaling]")
 }
 //*/
 
-flow_bitmap_bgra* crop_window(flow_context* context, flow_bitmap_bgra* source, uint32_t x, uint32_t y, uint32_t w,
+struct flow_bitmap_bgra* crop_window(flow_context* context, struct flow_bitmap_bgra* source, uint32_t x, uint32_t y, uint32_t w,
                               uint32_t h)
 {
-    flow_bitmap_bgra* cropped = flow_bitmap_bgra_create_header(context, w, h);
+    struct flow_bitmap_bgra* cropped = flow_bitmap_bgra_create_header(context, w, h);
     cropped->fmt = source->fmt;
     const uint32_t bytes_pp = flow_pixel_format_bytes_per_pixel(source->fmt);
     cropped->pixels = source->pixels + (y * source->stride) + (x * bytes_pp);
@@ -106,7 +106,7 @@ flow_bitmap_bgra* crop_window(flow_context* context, flow_bitmap_bgra* source, u
     return cropped;
 }
 
-void clear_bitmap(flow_bitmap_bgra* b, uint8_t fill_red, uint8_t fill_green, uint8_t fill_blue, uint8_t fill_alpha)
+void clear_bitmap(struct flow_bitmap_bgra* b, uint8_t fill_red, uint8_t fill_green, uint8_t fill_blue, uint8_t fill_alpha)
 {
     const uint32_t bytes_pp = flow_pixel_format_bytes_per_pixel(b->fmt);
     const uint32_t row_bytes = bytes_pp * b->w;
@@ -123,10 +123,10 @@ void clear_bitmap(flow_bitmap_bgra* b, uint8_t fill_red, uint8_t fill_green, uin
     }
 }
 
-void fill_rect(flow_context* context, flow_bitmap_bgra* b, uint32_t x, uint32_t y, uint32_t w, uint32_t h,
+void fill_rect(flow_context* context, struct flow_bitmap_bgra* b, uint32_t x, uint32_t y, uint32_t w, uint32_t h,
                uint8_t fill_red, uint8_t fill_green, uint8_t fill_blue, uint8_t fill_alpha)
 {
-    flow_bitmap_bgra* cropped = crop_window(context, b, x, y, w, h);
+    struct flow_bitmap_bgra* cropped = crop_window(context, b, x, y, w, h);
     clear_bitmap(cropped, fill_red, fill_green, fill_blue, fill_alpha);
     flow_bitmap_bgra_destroy(context, cropped);
 }
@@ -273,7 +273,7 @@ SCENARIO("sRGB roundtrip", "[fastscaling]")
         int h = 256;
         flow_context context;
         flow_context_initialize(&context);
-        flow_bitmap_bgra* bit = flow_bitmap_bgra_create(&context, w, h, true, flow_bgra32);
+        struct flow_bitmap_bgra* bit = flow_bitmap_bgra_create(&context, w, h, true, flow_bgra32);
         const uint32_t bytes_pp = flow_pixel_format_bytes_per_pixel(bit->fmt);
 
         for (size_t y = 1; y < bit->h; y++) {
@@ -287,7 +287,7 @@ SCENARIO("sRGB roundtrip", "[fastscaling]")
             }
         }
 
-        flow_bitmap_bgra* final = flow_bitmap_bgra_create(&context, w, h, true, flow_bgra32);
+        struct flow_bitmap_bgra* final = flow_bitmap_bgra_create(&context, w, h, true, flow_bgra32);
         // flow_bitmap_float* buf = create_bitmap_float(w, h, 4, true);
 
         WHEN("we do stuff")

@@ -195,7 +195,7 @@ static inline void HALVE_ROW_NAME(flow_context* context, const unsigned char* fr
     }
 }
 
-static bool HALVE_INTERNAL_NAME(flow_context* context, const flow_bitmap_bgra* from, flow_bitmap_bgra* to,
+static bool HALVE_INTERNAL_NAME(flow_context* context, const struct flow_bitmap_bgra* from, struct flow_bitmap_bgra* to,
                                 const int to_w, const int to_h, const int to_stride, const int divisor)
 {
 
@@ -339,7 +339,7 @@ static inline void HALVE_ROW_NAME(flow_context* context, const unsigned char* fr
     }
 }
 
-static bool HALVE_INTERNAL_NAME(flow_context* context, const flow_bitmap_bgra* from, flow_bitmap_bgra* to,
+static bool HALVE_INTERNAL_NAME(flow_context* context, const struct flow_bitmap_bgra* from, struct flow_bitmap_bgra* to,
                                 const int to_w, const int to_h, const int to_stride, const int divisor)
 {
 
@@ -404,7 +404,7 @@ static bool HALVE_INTERNAL_NAME(flow_context* context, const flow_bitmap_bgra* f
 
 //** Do not edit the above two functions; they are copy/pasted. **//
 
-bool flow_halve(flow_context* context, const flow_bitmap_bgra* from, flow_bitmap_bgra* to, int divisor)
+bool flow_halve(flow_context* context, const struct flow_bitmap_bgra* from, struct flow_bitmap_bgra* to, int divisor)
 {
 
     bool r = false;
@@ -419,7 +419,7 @@ bool flow_halve(flow_context* context, const flow_bitmap_bgra* from, flow_bitmap
     return r;
 }
 
-bool flow_halve_in_place(flow_context* context, flow_bitmap_bgra* from, int divisor)
+bool flow_halve_in_place(flow_context* context, struct flow_bitmap_bgra* from, int divisor)
 {
     int to_w = from->w / divisor;
     int to_h = from->h / divisor;

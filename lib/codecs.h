@@ -31,12 +31,12 @@ bool flow_job_decoder_get_frame_info(flow_context* c, struct flow_job* job, void
                                      struct flow_decoder_frame_info* decoder_frame_info_ref);
 
 bool flow_job_decoder_read_frame(flow_context* c, struct flow_job* job, void* codec_state, int64_t codec_id,
-                                 flow_bitmap_bgra* canvas);
+                                 struct flow_bitmap_bgra* canvas);
 
 png_bytepp flow_job_create_row_pointers(flow_context* c, void* buffer, size_t buffer_size, size_t stride,
                                         size_t height);
 
-bool flow_bitmap_bgra_transform_to_srgb(flow_context* c, cmsHPROFILE current_profile, flow_bitmap_bgra* frame);
+bool flow_bitmap_bgra_transform_to_srgb(flow_context* c, cmsHPROFILE current_profile, struct flow_bitmap_bgra* frame);
 
 void flow_codecs_jpeg_setup_source_manager(j_decompress_ptr cinfo, struct flow_io* io);
 void flow_codecs_jpeg_setup_dest_manager(j_compress_ptr cinfo, struct flow_io* io);

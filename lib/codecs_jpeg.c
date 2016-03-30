@@ -315,7 +315,7 @@ static bool flow_job_codecs_jpeg_get_info(flow_context* c, struct flow_job* job,
 }
 
 static bool flow_job_codecs_jpeg_read_frame(flow_context* c, struct flow_job* job, void* codec_state,
-                                            flow_bitmap_bgra* canvas)
+                                            struct flow_bitmap_bgra* canvas)
 {
     struct flow_job_jpeg_decoder_state* state = (struct flow_job_jpeg_decoder_state*)codec_state;
     if (state->stage == flow_job_jpg_decoder_stage_BeginRead) {
@@ -355,7 +355,7 @@ static bool flow_job_codecs_initialize_encode_jpeg(flow_context* c, struct flow_
 }
 
 static bool flow_job_codecs_jpeg_write_frame(flow_context* c, struct flow_job* job, void* codec_state,
-                                             flow_bitmap_bgra* frame)
+                                             struct flow_bitmap_bgra* frame)
 {
     struct flow_job_jpeg_encoder_state* state = (struct flow_job_jpeg_encoder_state*)codec_state;
     state->context = c;

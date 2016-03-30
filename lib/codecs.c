@@ -45,7 +45,7 @@ uint8_t** flow_job_create_row_pointers(flow_context* c, void* buffer, size_t buf
     return rows;
 }
 
-bool flow_bitmap_bgra_transform_to_srgb(flow_context* c, cmsHPROFILE current_profile, flow_bitmap_bgra* frame)
+bool flow_bitmap_bgra_transform_to_srgb(flow_context* c, cmsHPROFILE current_profile, struct flow_bitmap_bgra* frame)
 {
     if (current_profile != NULL) {
         cmsHPROFILE target_profile = cmsCreate_sRGBProfile();
@@ -134,7 +134,7 @@ bool flow_job_decoder_get_frame_info(flow_context* c, struct flow_job* job, void
 }
 
 bool flow_job_decoder_read_frame(flow_context* c, struct flow_job* job, void* codec_state, int64_t type,
-                                 flow_bitmap_bgra* canvas)
+                                 struct flow_bitmap_bgra* canvas)
 {
     struct flow_codec_definition* def = flow_job_get_codec_definition(c, type);
     if (def == NULL) {

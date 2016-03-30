@@ -14,7 +14,7 @@
 
 const Rect RectFailure = { -1, -1, -1, -1 };
 
-Rect detect_content(flow_context* context, flow_bitmap_bgra* b, uint8_t threshold)
+Rect detect_content(flow_context* context, struct flow_bitmap_bgra* b, uint8_t threshold)
 {
     SearchInfo info;
     info.w = b->w;

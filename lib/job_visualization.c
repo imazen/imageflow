@@ -1,6 +1,6 @@
 #include "imageflow_private.h"
 
-static bool write_frame_to_disk(flow_context* c, const char* path, flow_bitmap_bgra* b)
+static bool write_frame_to_disk(flow_context* c, const char* path, struct flow_bitmap_bgra* b)
 {
 
     png_image target_image;

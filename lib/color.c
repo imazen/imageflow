@@ -53,7 +53,7 @@ bool flow_bitmap_float_luv_to_linear_rows(flow_context* context, flow_bitmap_flo
     return true;
 }
 
-bool flow_bitmap_bgra_apply_color_matrix(flow_context* context, flow_bitmap_bgra* bmp, const uint32_t row,
+bool flow_bitmap_bgra_apply_color_matrix(flow_context* context, struct flow_bitmap_bgra* bmp, const uint32_t row,
                                          const uint32_t count, float* const __restrict m[5])
 {
     const uint32_t stride = bmp->stride;
@@ -158,7 +158,7 @@ bool flow_bitmap_float_apply_color_matrix(flow_context* context, flow_bitmap_flo
     }
 }
 
-bool flow_bitmap_bgra_populate_histogram(flow_context* context, flow_bitmap_bgra* bmp, uint64_t* histograms,
+bool flow_bitmap_bgra_populate_histogram(flow_context* context, struct flow_bitmap_bgra* bmp, uint64_t* histograms,
                                          uint32_t histogram_size_per_channel, uint32_t histogram_count,
                                          uint64_t* pixels_sampled)
 {

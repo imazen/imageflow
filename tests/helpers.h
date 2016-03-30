@@ -78,7 +78,7 @@ FLOW_EXPORT void copy_file(FILE* from, FILE* to);
 FLOW_EXPORT unsigned long djb2(unsigned const char* str);
 FLOW_EXPORT size_t nonzero_count(uint8_t* array, size_t length);
 
-FLOW_EXPORT flow_bitmap_bgra* BitmapBgra_create_test_image(flow_context* c);
+FLOW_EXPORT struct flow_bitmap_bgra* BitmapBgra_create_test_image(flow_context* c);
 FLOW_EXPORT double flow_bitmap_float_compare(flow_context* c, flow_bitmap_float* a, flow_bitmap_float* b,
                                              float* out_max_delta);
 

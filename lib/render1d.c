@@ -3,7 +3,7 @@
 #include <string.h>
 #include "imageflow.h"
 
-static bool ScaleAndRender1D(flow_context* context, flow_bitmap_bgra* pSrc, flow_bitmap_bgra* pDst,
+static bool ScaleAndRender1D(flow_context* context, struct flow_bitmap_bgra* pSrc, struct flow_bitmap_bgra* pDst,
                              const flow_interpolation_details* details, bool transpose)
 {
     flow_interpolation_line_contributions* contrib = NULL;
@@ -118,8 +118,8 @@ cleanup:
     return success;
 }
 
-bool flow_node_execute_render_to_canvas_1d(flow_context* c, struct flow_job* job, flow_bitmap_bgra* input,
-                                           flow_bitmap_bgra* canvas, struct flow_nodeinfo_render_to_canvas_1d* info)
+bool flow_node_execute_render_to_canvas_1d(flow_context* c, struct flow_job* job, struct flow_bitmap_bgra* input,
+                                           struct flow_bitmap_bgra* canvas, struct flow_nodeinfo_render_to_canvas_1d* info)
 {
 
     if (info->canvas_x != 0 || info->canvas_y != 0

@@ -23,7 +23,7 @@ struct TestEnv {
     int max_dimensions;
 };
 
-static theft_trial_res render_should_succeed(flow_RenderDetails * details, flow_bitmap_bgra * source, flow_bitmap_bgra * canvas) {
+static theft_trial_res render_should_succeed(flow_RenderDetails * details, struct flow_bitmap_bgra * source, struct flow_bitmap_bgra * canvas) {
 
     bool result = flow_RenderDetails_render(c, details, source, canvas);
     if (!result) return THEFT_TRIAL_FAIL;
@@ -61,7 +61,7 @@ void * BitmapBgra_random_dest(theft * theft, theft_seed seed, void * input) {
     flow_pixel_format fmt = (flow_pixel_format)(3 + theft_random(theft) % 2);
     int w = theft_random(theft) % 2049;
     int h = theft_random(theft) % 2049;
-    flow_bitmap_bgra * b = flow_bitmap_bgra_create(c, w, h, false, fmt);
+    struct flow_bitmap_bgra * b = flow_bitmap_bgra_create(c, w, h, false, fmt);
     b -> alpha_meaningful = !!(theft_random(theft) % 2);
     b -> can_reuse_space = !!(theft_random(theft) % 2);
     b -> stride_readonly = !!(theft_random(theft) % 2);
@@ -79,7 +79,7 @@ void * BitmapBgra_random_zeroed_source(theft * theft, theft_seed seed, void * in
     int w = 1 + (theft_random(theft) % 2048);
     int h = 1 + (theft_random(theft) % 2048);
 
-    flow_bitmap_bgra * b = flow_bitmap_bgra_create(c, w, h, true, fmt);
+    struct flow_bitmap_bgra * b = flow_bitmap_bgra_create(c, w, h, true, fmt);
     if (!b) {
         char buffer[1024];
         flow_context_error_message(c, buffer, sizeof buffer);
@@ -101,7 +101,7 @@ void * BitmapBgra_random_zeroed_source(theft * theft, theft_seed seed, void * in
 
 void bitmapbgra_free(void * details, void * unused)
 {
-    flow_bitmap_bgra_destroy(c, (flow_bitmap_bgra *) details);
+    flow_bitmap_bgra_destroy(c, (struct flow_bitmap_bgra *) details);
 }
 /*
 flow_interpolation_details * interpolation;

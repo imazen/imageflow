@@ -340,7 +340,7 @@ int32_t flow_node_create_encoder(flow_context* c, struct flow_graph** g, int32_t
 }
 
 int32_t flow_node_create_bitmap_bgra_reference(flow_context* c, struct flow_graph** g, int32_t prev_node,
-                                               flow_bitmap_bgra** pointer_to_pointer_to_bitmap_bgra)
+                                               struct flow_bitmap_bgra** pointer_to_pointer_to_bitmap_bgra)
 {
     int32_t id = flow_node_create_generic(c, g, prev_node, flow_ntype_primitive_bitmap_bgra_pointer);
     if (id < 0) {

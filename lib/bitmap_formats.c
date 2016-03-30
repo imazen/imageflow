@@ -26,14 +26,14 @@ static bool are_valid_bitmap_dimensions(int sx, int sy)
 
 uint32_t flow_pixel_format_bytes_per_pixel(flow_pixel_format format) { return (uint32_t)format; }
 
-flow_bitmap_bgra* flow_bitmap_bgra_create_header(flow_context* context, int sx, int sy)
+struct flow_bitmap_bgra* flow_bitmap_bgra_create_header(flow_context* context, int sx, int sy)
 {
-    flow_bitmap_bgra* im;
+    struct flow_bitmap_bgra* im;
     if (!are_valid_bitmap_dimensions(sx, sy)) {
         FLOW_error(context, flow_status_Invalid_dimensions);
         return NULL;
     }
-    im = (flow_bitmap_bgra*)FLOW_calloc(context, 1, sizeof(flow_bitmap_bgra));
+    im = (struct flow_bitmap_bgra*)FLOW_calloc(context, 1, sizeof(struct flow_bitmap_bgra));
     if (im == NULL) {
         FLOW_error(context, flow_status_Out_of_memory);
         return NULL;
@@ -48,9 +48,9 @@ flow_bitmap_bgra* flow_bitmap_bgra_create_header(flow_context* context, int sx, 
     return im;
 }
 
-flow_bitmap_bgra* flow_bitmap_bgra_create(flow_context* context, int sx, int sy, bool zeroed, flow_pixel_format format)
+struct flow_bitmap_bgra* flow_bitmap_bgra_create(flow_context* context, int sx, int sy, bool zeroed, flow_pixel_format format)
 {
-    flow_bitmap_bgra* im = flow_bitmap_bgra_create_header(context, sx, sy);
+    struct flow_bitmap_bgra* im = flow_bitmap_bgra_create_header(context, sx, sy);
     if (im == NULL) {
         FLOW_add_to_callstack(context);
         return NULL;
@@ -74,7 +74,7 @@ flow_bitmap_bgra* flow_bitmap_bgra_create(flow_context* context, int sx, int sy,
     return im;
 }
 
-void flow_bitmap_bgra_destroy(flow_context* context, flow_bitmap_bgra* im) { FLOW_destroy(context, im); }
+void flow_bitmap_bgra_destroy(flow_context* context, struct flow_bitmap_bgra* im) { FLOW_destroy(context, im); }
 
 flow_bitmap_float* flow_bitmap_float_create_header(flow_context* context, int sx, int sy, int channels)
 {
@@ -124,7 +124,7 @@ flow_bitmap_float* flow_bitmap_float_create(flow_context* context, int sx, int s
 
 void flow_bitmap_float_destroy(flow_context* context, flow_bitmap_float* im) { FLOW_destroy(context, im); }
 
-bool flow_bitmap_bgra_compare(flow_context* c, flow_bitmap_bgra* a, flow_bitmap_bgra* b, bool* equal_out)
+bool flow_bitmap_bgra_compare(flow_context* c, struct flow_bitmap_bgra* a, struct flow_bitmap_bgra* b, bool* equal_out)
 {
     if (a == NULL || b == NULL) {
         FLOW_error(c, flow_status_Null_argument);

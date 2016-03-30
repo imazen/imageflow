@@ -212,7 +212,7 @@ bool flow_bitmap_float_luv_to_linear_rows(flow_context* context, flow_bitmap_flo
 
 bool flow_bitmap_float_apply_color_matrix(flow_context* context, flow_bitmap_float* bmp, const uint32_t row,
                                           const uint32_t count, float** m);
-bool flow_bitmap_bgra_apply_color_matrix(flow_context* context, flow_bitmap_bgra* bmp, const uint32_t row,
+bool flow_bitmap_bgra_apply_color_matrix(flow_context* context, struct flow_bitmap_bgra* bmp, const uint32_t row,
                                          const uint32_t count, float* const __restrict m[5]);
 #ifdef __cplusplus
 }

@@ -105,8 +105,8 @@ TEST_CASE_METHOD(Fixture, "Perform Rendering", "[error_handling]")
     flow_context context;
     flow_context_initialize(&context);
     initialize_heap(&context);
-    flow_bitmap_bgra* source = flow_bitmap_bgra_create(&context, 4, 4, true, flow_bgra32);
-    flow_bitmap_bgra* canvas = flow_bitmap_bgra_create(&context, 2, 2, true, flow_bgra32);
+    struct flow_bitmap_bgra* source = flow_bitmap_bgra_create(&context, 4, 4, true, flow_bgra32);
+    struct flow_bitmap_bgra* canvas = flow_bitmap_bgra_create(&context, 2, 2, true, flow_bgra32);
     flow_RenderDetails* details = flow_RenderDetails_create_with(&context, flow_interpolation_filter_CubicFast);
     details->sharpen_percent_goal = 50;
     details->post_flip_x = true;
@@ -151,8 +151,8 @@ TEST_CASE_METHOD(Fixture, "Test allocation failure handling", "[error_handling]"
     flow_context_initialize(&context);
     initialize_heap(&context);
 
-    flow_bitmap_bgra* source = flow_bitmap_bgra_create(&context, sw, sh, true, flow_bgra32);
-    flow_bitmap_bgra* canvas = flow_bitmap_bgra_create(&context, cw, ch, true, flow_bgra32);
+    struct flow_bitmap_bgra* source = flow_bitmap_bgra_create(&context, sw, sh, true, flow_bgra32);
+    struct flow_bitmap_bgra* canvas = flow_bitmap_bgra_create(&context, cw, ch, true, flow_bgra32);
     flow_RenderDetails* details = flow_RenderDetails_create(&context);
     details->interpolation = flow_interpolation_details_create_from(&context, flow_interpolation_filter_CubicFast);
     details->sharpen_percent_goal = 50;
@@ -191,7 +191,7 @@ TEST_CASE_METHOD(Fixture, "Creating flow_bitmap_bgra", "[error_handling]")
     flow_context_initialize(&context);
     initialize_heap(&context);
 
-    flow_bitmap_bgra* source = NULL;
+    struct flow_bitmap_bgra* source = NULL;
     // Create something so object_tracking is initialized
     source = flow_bitmap_bgra_create(&context, 1, 1, true, (flow_pixel_format)2);
     SECTION("Creating a 1x1 bitmap is valid")
@@ -226,7 +226,7 @@ TEST_CASE_METHOD(Fixture, "Creating flow_bitmap_bgra", "[error_handling]")
     }
     SECTION("Exhausting memory in the pixel allocation is also handled")
     {
-        fail_allocation_if_size_larger_than(sizeof(flow_bitmap_bgra));
+        fail_allocation_if_size_larger_than(sizeof(struct flow_bitmap_bgra));
         source = flow_bitmap_bgra_create(&context, 640, 480, true, (flow_pixel_format)2);
         REQUIRE(source == NULL);
         REQUIRE(last_attempted_allocation_size == 640 * 480 * 2); // the failed allocation tried to allocate the pixels
@@ -256,7 +256,7 @@ TEST_CASE("Argument checking for convert_sgrp_to_linear", "[error_handling]")
 {
     flow_context context;
     flow_context_initialize(&context);
-    flow_bitmap_bgra* src = flow_bitmap_bgra_create(&context, 2, 3, true, flow_bgra32);
+    struct flow_bitmap_bgra* src = flow_bitmap_bgra_create(&context, 2, 3, true, flow_bgra32);
     char error_msg[1024];
     flow_context_error_message(&context, error_msg, sizeof error_msg);
     CAPTURE(error_msg);

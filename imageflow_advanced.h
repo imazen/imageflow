@@ -170,9 +170,9 @@ typedef bool (*codec_switch_frame_fn)(flow_context* c, struct flow_job* job, voi
 typedef bool (*codec_get_frame_info_fn)(flow_context* c, struct flow_job* job, void* codec_state,
                                         struct flow_decoder_frame_info* decoder_frame_info_ref);
 
-typedef bool (*codec_read_frame_fn)(flow_context* c, struct flow_job* job, void* codec_state, flow_bitmap_bgra* canvas);
+typedef bool (*codec_read_frame_fn)(flow_context* c, struct flow_job* job, void* codec_state, struct flow_bitmap_bgra* canvas);
 
-typedef bool (*codec_write_frame_fn)(flow_context* c, struct flow_job* job, void* codec_state, flow_bitmap_bgra* frame);
+typedef bool (*codec_write_frame_fn)(flow_context* c, struct flow_job* job, void* codec_state, struct flow_bitmap_bgra* frame);
 
 typedef bool (*codec_stringify_fn)(flow_context* c, struct flow_job* job, void* codec_state, char* buffer,
                                    size_t buffer_size);
@@ -246,7 +246,7 @@ PUB void flow_graph_print_to(flow_context* c, struct flow_graph* g, FILE* stream
 // Deal with bitmaps
 
 // non-indexed bitmap
-struct flow_bitmap_bgra_struct {
+struct flow_bitmap_bgra {
 
     // bitmap width in pixels
     uint32_t w;
@@ -353,20 +353,20 @@ typedef struct flow_RenderDetailsStruct {
 
 } flow_RenderDetails;
 
-PUB flow_bitmap_bgra* flow_bitmap_bgra_create(flow_context* context, int sx, int sy, bool zeroed,
+PUB struct flow_bitmap_bgra* flow_bitmap_bgra_create(flow_context* context, int sx, int sy, bool zeroed,
                                               flow_pixel_format format);
-PUB flow_bitmap_bgra* flow_bitmap_bgra_create_header(flow_context* context, int sx, int sy);
-PUB void flow_bitmap_bgra_destroy(flow_context* context, flow_bitmap_bgra* im);
-PUB bool flow_bitmap_bgra_flip_horizontal(flow_context* context, flow_bitmap_bgra* b);
-PUB bool flow_bitmap_bgra_compare(flow_context* c, flow_bitmap_bgra* a, flow_bitmap_bgra* b, bool* equal_out);
+PUB struct flow_bitmap_bgra* flow_bitmap_bgra_create_header(flow_context* context, int sx, int sy);
+PUB void flow_bitmap_bgra_destroy(flow_context* context, struct flow_bitmap_bgra* im);
+PUB bool flow_bitmap_bgra_flip_horizontal(flow_context* context, struct flow_bitmap_bgra* b);
+PUB bool flow_bitmap_bgra_compare(flow_context* c, struct flow_bitmap_bgra* a, struct flow_bitmap_bgra* b, bool* equal_out);
 
 PUB flow_RenderDetails* flow_RenderDetails_create(flow_context* context);
 PUB flow_RenderDetails* flow_RenderDetails_create_with(flow_context* context, flow_interpolation_filter filter);
 
-PUB bool flow_RenderDetails_render(flow_context* context, flow_RenderDetails* details, flow_bitmap_bgra* source,
-                                   flow_bitmap_bgra* canvas);
+PUB bool flow_RenderDetails_render(flow_context* context, flow_RenderDetails* details, struct flow_bitmap_bgra* source,
+                                   struct flow_bitmap_bgra* canvas);
 PUB bool flow_RenderDetails_render_in_place(flow_context* context, flow_RenderDetails* details,
-                                            flow_bitmap_bgra* edit_in_place);
+                                            struct flow_bitmap_bgra* edit_in_place);
 PUB void flow_RenderDetails_destroy(flow_context* context, flow_RenderDetails* d);
 
 PUB bool flow_interpolation_filter_exists(flow_interpolation_filter filter);
@@ -412,7 +412,7 @@ PUB flow_convolution_kernel* flow_convolution_kernel_create_gaussian_normalized(
 PUB flow_convolution_kernel* flow_convolution_kernel_create_guassian_sharpen(flow_context* context, double stdDev,
                                                                              uint32_t radius);
 
-PUB bool flow_bitmap_bgra_populate_histogram(flow_context* context, flow_bitmap_bgra* bmp, uint64_t* histograms,
+PUB bool flow_bitmap_bgra_populate_histogram(flow_context* context, struct flow_bitmap_bgra* bmp, uint64_t* histograms,
                                              uint32_t histogram_size_per_channel, uint32_t histogram_count,
                                              uint64_t* pixels_sampled);
 #undef PUB

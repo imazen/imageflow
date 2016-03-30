@@ -202,7 +202,7 @@ static bool dimensions_bitmap_bgra_pointer(flow_context* c, struct flow_graph* g
         FLOW_error(c, flow_status_Invalid_inputs_to_node);
         return false; // If this is acting as an source node, info->data MUST be populated
     }
-    flow_bitmap_bgra* b = *info->ref;
+    struct flow_bitmap_bgra* b = *info->ref;
 
     struct flow_edge* output = &g->edges[outbound_edge_id];
     output->from_width = b->w;
@@ -824,9 +824,9 @@ static bool execute_crop(flow_context* c, struct flow_job* job, struct flow_grap
     FLOW_GET_INPUT_EDGE(g, node_id)
     struct flow_node* n = &g->nodes[node_id];
 
-    flow_bitmap_bgra* original = g->nodes[input_edge->from].result_bitmap;
+    struct flow_bitmap_bgra* original = g->nodes[input_edge->from].result_bitmap;
     ;
-    flow_bitmap_bgra* b = flow_bitmap_bgra_create_header(c, info->x2 - info->x1, info->y2 - info->y1);
+    struct flow_bitmap_bgra* b = flow_bitmap_bgra_create_header(c, info->x2 - info->x1, info->y2 - info->y1);
     if (b == NULL) {
         FLOW_error_return(c);
     }
@@ -850,7 +850,7 @@ static bool execute_fill_rect(flow_context* c, struct flow_job* job, struct flow
     FLOW_GET_INPUT_EDGE(g, node_id)
     struct flow_node* n = &g->nodes[node_id];
 
-    flow_bitmap_bgra* b = g->nodes[input_edge->from].result_bitmap;
+    struct flow_bitmap_bgra* b = g->nodes[input_edge->from].result_bitmap;
 
     if (info->x1 >= info->x2 || info->y1 >= info->y2 || info->y2 > b->h || info->x2 > b->w) {
         FLOW_error(c, flow_status_Invalid_argument);
@@ -900,8 +900,8 @@ static bool execute_render1d(flow_context* c, struct flow_job* job, struct flow_
     FLOW_GET_CANVAS_EDGE(g, node_id)
     struct flow_node* n = &g->nodes[node_id];
 
-    flow_bitmap_bgra* input = g->nodes[input_edge->from].result_bitmap;
-    flow_bitmap_bgra* canvas = g->nodes[canvas_edge->from].result_bitmap;
+    struct flow_bitmap_bgra* input = g->nodes[input_edge->from].result_bitmap;
+    struct flow_bitmap_bgra* canvas = g->nodes[canvas_edge->from].result_bitmap;
 
     if (!flow_node_execute_render_to_canvas_1d(c, job, input, canvas, info)) {
         FLOW_error_return(c);
@@ -917,8 +917,8 @@ static bool execute_copy_rect(flow_context* c, struct flow_job* job, struct flow
     FLOW_GET_CANVAS_EDGE(g, node_id)
     struct flow_node* n = &g->nodes[node_id];
 
-    flow_bitmap_bgra* input = g->nodes[input_edge->from].result_bitmap;
-    flow_bitmap_bgra* canvas = g->nodes[canvas_edge->from].result_bitmap;
+    struct flow_bitmap_bgra* input = g->nodes[input_edge->from].result_bitmap;
+    struct flow_bitmap_bgra* canvas = g->nodes[canvas_edge->from].result_bitmap;
 
     // TODO: implement bounds checks!!!
     if (input->fmt != canvas->fmt) {

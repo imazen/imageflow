@@ -143,7 +143,7 @@ TEST_CASE("execute tiny graph", "")
     struct flow_graph* g = nullptr;
     struct flow_job* job = nullptr;
 
-    flow_bitmap_bgra* result = nullptr;
+    struct flow_bitmap_bgra* result = nullptr;
 
     g = flow_graph_create(c, 10, 10, 200, 2.0);
     ERR(c);
@@ -177,7 +177,7 @@ TEST_CASE("decode and scale png", "")
     flow_context* c = flow_context_create();
     struct flow_graph* g = nullptr;
     struct flow_job* job = nullptr;
-    flow_bitmap_bgra* result = nullptr;
+    struct flow_bitmap_bgra* result = nullptr;
 
     g = flow_graph_create(c, 10, 10, 200, 2.0);
     ERR(c);
@@ -514,8 +514,8 @@ TEST_CASE("Roundtrip flipping", "")
     ERR(c);
 
     int32_t last, input_placeholder = 0, output_placeholder = 1;
-    flow_bitmap_bgra* input;
-    flow_bitmap_bgra* output;
+    struct flow_bitmap_bgra* input;
+    struct flow_bitmap_bgra* output;
 
     last = flow_node_create_bitmap_bgra_reference(c, &g, -1, &input);
     last = flow_node_create_clone(c, &g, last);

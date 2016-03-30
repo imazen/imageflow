@@ -14,7 +14,7 @@ typedef struct RectStruct {
 } Rect;
 
 typedef struct SearchInfoStruct {
-    flow_bitmap_bgra* bitmap;
+    struct flow_bitmap_bgra* bitmap;
     uint32_t min_x, max_x, min_y, max_y;
     uint32_t w, h;
     uint8_t* buf;
@@ -28,7 +28,7 @@ typedef struct SearchInfoStruct {
 extern "C" {
 #endif
 
-Rect detect_content(flow_context* context, flow_bitmap_bgra* b, uint8_t threshold);
+Rect detect_content(flow_context* context, struct flow_bitmap_bgra* b, uint8_t threshold);
 bool fill_buffer(flow_context* context, SearchInfo* __restrict info);
 bool sobel_scharr_detect(flow_context* context, SearchInfo* __restrict info);
 bool check_region(flow_context* context, int edgeTRBL, float x_1_percent, float x_2_percent, float y_1_percent,

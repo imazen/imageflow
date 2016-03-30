@@ -241,7 +241,7 @@ static bool flow_job_codecs_gif_get_frame_info(flow_context* c, struct flow_job*
     return true;
 }
 
-static bool dequantize(flow_context* c, GifFileType* gif, int frame_index, flow_bitmap_bgra* canvas)
+static bool dequantize(flow_context* c, GifFileType* gif, int frame_index, struct flow_bitmap_bgra* canvas)
 {
     if (gif->ImageCount <= frame_index) {
         FLOW_error_msg(c, flow_status_Invalid_argument, "Frame index must be between [0, %i). Given %i",
@@ -297,7 +297,7 @@ static bool dequantize(flow_context* c, GifFileType* gif, int frame_index, flow_
 }
 
 static bool flow_job_codecs_gif_read_frame(flow_context* c, struct flow_job* job, void* codec_state,
-                                           flow_bitmap_bgra* canvas)
+                                           struct flow_bitmap_bgra* canvas)
 {
     struct flow_job_gif_decoder_state* state = (struct flow_job_gif_decoder_state*)codec_state;
     if (state->stage >= flow_job_gif_decoder_stage_BeginRead) {
