@@ -1,4 +1,4 @@
 mkdir -p build
 cd build
 conan install --file ../conanfile.py -o build_tests=True --build missing
-cmake ../ -DENABLE_TEST=ON -DCOVERAGE=ON && cmake --build . && ctest -V
+conan build --file ../conanfile.py
