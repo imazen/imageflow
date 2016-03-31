@@ -28,6 +28,8 @@ git commit -m"Reformatting"
 
 clang-format -i {lib,tests,.}/*.{c,h,cpp,hpp}
 
+5. Import code style .clion.codestyle.xml into CLion to reduce the number of differences clang-format creates.
+
 ## Using multiple versions of GCC
 
 1. export CC=gcc-4.8
