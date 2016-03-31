@@ -14,6 +14,7 @@ class ImageFlowConan(ConanFile):
         if self.options.build_tests:
             self.requires("catch/1.3.0@TyRoXx/stable")
             self.requires("libcurl/7.47.1@lasote/stable")
+            self.requires("electric-fence/2.2.0@lasote/stable") ##### SLOWS IT DOWN
             if self.settings.os != "Windows":  # Not supported in windows
                 self.requires("theft/0.2.0@lasote/stable")
             if self.settings.os == "Macos":
