@@ -1,14 +1,14 @@
 #include "helpers_visual.h"
 
 struct named_checksum {
-    char* name;
-    char* checksum;
+    char * name;
+    char * checksum;
 };
 
-static bool create_relative_path(flow_c* c, char* filename, size_t max_filename_length, char* format, ...)
+static bool create_relative_path(flow_c * c, char * filename, size_t max_filename_length, char * format, ...)
 {
-    const char* this_file = __FILE__;
-    char* last_slash = strrchr(this_file, '/');
+    const char * this_file = __FILE__;
+    char * last_slash = strrchr(this_file, '/');
     if (last_slash == NULL) {
         FLOW_error(c, flow_status_Invalid_internal_state);
         return false;
@@ -32,9 +32,9 @@ static bool create_relative_path(flow_c* c, char* filename, size_t max_filename_
     return true;
 }
 
-static bool load_checksums(flow_c* c, struct named_checksum** checksums, size_t* checksum_count)
+static bool load_checksums(flow_c * c, struct named_checksum ** checksums, size_t * checksum_count)
 {
-    static struct named_checksum* list = NULL;
+    static struct named_checksum * list = NULL;
     static size_t list_size = 0;
 
     if (list == NULL) {
@@ -43,11 +43,11 @@ static bool load_checksums(flow_c* c, struct named_checksum** checksums, size_t*
             FLOW_add_to_callstack(c);
             return false;
         }
-        FILE* fp;
-        char* line_a = NULL;
+        FILE * fp;
+        char * line_a = NULL;
         size_t len_a = 0;
         ssize_t read_a;
-        char* line_b = NULL;
+        char * line_b = NULL;
         size_t len_b = 0;
         ssize_t read_b;
 
@@ -58,7 +58,7 @@ static bool load_checksums(flow_c* c, struct named_checksum** checksums, size_t*
         }
 
         list_size = 200;
-        list = (struct named_checksum*)calloc(list_size, sizeof(struct named_checksum));
+        list = (struct named_checksum *)calloc(list_size, sizeof(struct named_checksum));
 
         size_t index = 0;
         while (true) {
@@ -101,15 +101,15 @@ static bool load_checksums(flow_c* c, struct named_checksum** checksums, size_t*
 
     return true;
 }
-bool append_checksum(flow_c* c, char checksum[34], const char* name);
-bool append_checksum(flow_c* c, char checksum[34], const char* name)
+bool append_checksum(flow_c * c, char checksum[34], const char * name);
+bool append_checksum(flow_c * c, char checksum[34], const char * name)
 {
     char filename[2048];
     if (!create_relative_path(c, filename, 2048, "/visuals/checksums.list")) {
         FLOW_add_to_callstack(c);
         return false;
     }
-    FILE* fp = fopen(filename, "a");
+    FILE * fp = fopen(filename, "a");
     if (fp == NULL) {
         FLOW_error(c, flow_status_IO_error);
         return false;
@@ -119,22 +119,22 @@ bool append_checksum(flow_c* c, char checksum[34], const char* name)
     return true;
 }
 
-static bool checksum_bitmap(flow_c* c, struct flow_bitmap_bgra* bitmap, char* checksum_buffer,
+static bool checksum_bitmap(flow_c * c, struct flow_bitmap_bgra * bitmap, char * checksum_buffer,
                             size_t checksum_buffer_length)
 {
     char info_buffer[256];
     flow_snprintf(&info_buffer[0], sizeof(info_buffer), "%dx%d fmt=%d alpha=%d", bitmap->w, bitmap->h, bitmap->fmt,
                   bitmap->alpha_meaningful);
     int64_t printed_chars = (flow_snprintf(checksum_buffer, checksum_buffer_length, "%016X_%016X",
-                                           djb2_buffer((uint8_t*)bitmap->pixels, bitmap->stride * bitmap->h),
-                                           djb2((unsigned const char*)&info_buffer[0])));
+                                           djb2_buffer((uint8_t *)bitmap->pixels, bitmap->stride * bitmap->h),
+                                           djb2((unsigned const char *)&info_buffer[0])));
 
     return printed_chars != -1;
 }
 
-static char* get_checksum_for(flow_c* c, const char* name)
+static char * get_checksum_for(flow_c * c, const char * name)
 {
-    struct named_checksum* checksums = NULL;
+    struct named_checksum * checksums = NULL;
     size_t checksum_count = 0;
 
     if (!load_checksums(c, &checksums, &checksum_count)) {
@@ -149,7 +149,7 @@ static char* get_checksum_for(flow_c* c, const char* name)
     return NULL;
 }
 
-static bool download_by_checksum(flow_c* c, struct flow_bitmap_bgra* bitmap, char* checksum)
+static bool download_by_checksum(flow_c * c, struct flow_bitmap_bgra * bitmap, char * checksum)
 {
     char filename[2048];
     if (!create_relative_path(c, filename, 2048, "/visuals/%s.png", checksum)) {
@@ -170,7 +170,7 @@ static bool download_by_checksum(flow_c* c, struct flow_bitmap_bgra* bitmap, cha
     return true;
 }
 
-static bool save_bitmap_to_visuals(flow_c* c, struct flow_bitmap_bgra* bitmap, char* checksum)
+static bool save_bitmap_to_visuals(flow_c * c, struct flow_bitmap_bgra * bitmap, char * checksum)
 {
     char filename[2048];
     if (!create_relative_path(c, filename, 2048, "/visuals/%s.png", checksum)) {
@@ -185,7 +185,7 @@ static bool save_bitmap_to_visuals(flow_c* c, struct flow_bitmap_bgra* bitmap, c
     return true;
 }
 
-static bool generate_image_diff(flow_c* c, char* checksum_a, char* checksum_b)
+static bool generate_image_diff(flow_c * c, char * checksum_a, char * checksum_b)
 {
     char filename_a[2048];
     if (!create_relative_path(c, filename_a, 2048, "/visuals/%s.png", checksum_a)) {
@@ -216,7 +216,7 @@ static bool generate_image_diff(flow_c* c, char* checksum_a, char* checksum_b)
     return true;
 }
 
-static bool append_html(flow_c* c, const char* name, const char* checksum_a, const char* checksum_b)
+static bool append_html(flow_c * c, const char * name, const char * checksum_a, const char * checksum_b)
 {
     char filename[2048];
     if (!create_relative_path(c, filename, 2048, "/visuals/visuals.html")) {
@@ -225,7 +225,7 @@ static bool append_html(flow_c* c, const char* name, const char* checksum_a, con
     }
     static bool first_write = true;
 
-    FILE* fp = fopen(filename, first_write ? "w" : "a");
+    FILE * fp = fopen(filename, first_write ? "w" : "a");
     if (fp == NULL) {
         FLOW_error(c, flow_status_IO_error);
         return false;
@@ -246,8 +246,8 @@ static bool append_html(flow_c* c, const char* name, const char* checksum_a, con
     return true;
 }
 
-bool visual_compare(flow_c* c, struct flow_bitmap_bgra* bitmap, const char* name, bool store_checksums,
-                    const char* file_, const char* func_, int line_number)
+bool visual_compare(flow_c * c, struct flow_bitmap_bgra * bitmap, const char * name, bool store_checksums,
+                    const char * file_, const char * func_, int line_number)
 {
 
     char checksum[34];
@@ -258,7 +258,7 @@ bool visual_compare(flow_c* c, struct flow_bitmap_bgra* bitmap, const char* name
         return false;
     }
     // Load stored checksum
-    char* stored_checksum = get_checksum_for(c, name);
+    char * stored_checksum = get_checksum_for(c, name);
 
     // Compare
     if (stored_checksum != NULL && strcmp(checksum, stored_checksum) == 0) {

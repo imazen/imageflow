@@ -8,9 +8,9 @@ extern "C" {
 #include <sys/time.h>
 #include <string.h>
 
-static flow_c* c;
+static flow_c * c;
 
-static bool get_time_seed(theft_seed* seed)
+static bool get_time_seed(theft_seed * seed)
 {
     struct timeval tv;
     if (-1 == gettimeofday(&tv, NULL)) {
@@ -25,8 +25,8 @@ struct TestEnv {
     int max_dimensions;
 };
 
-static theft_trial_res render_should_succeed(struct flow_RenderDetails* details, struct flow_bitmap_bgra* source,
-                                             struct flow_bitmap_bgra* canvas)
+static theft_trial_res render_should_succeed(struct flow_RenderDetails * details, struct flow_bitmap_bgra * source,
+                                             struct flow_bitmap_bgra * canvas)
 {
 
     bool result = flow_RenderDetails_render(c, details, source, canvas);
@@ -36,7 +36,7 @@ static theft_trial_res render_should_succeed(struct flow_RenderDetails* details,
     return THEFT_TRIAL_PASS;
 }
 
-void* renderdetails_random(theft* theft, theft_seed seed, void* input)
+void * renderdetails_random(theft * theft, theft_seed seed, void * input)
 {
     int filter = 0;
 
@@ -44,7 +44,7 @@ void* renderdetails_random(theft* theft, theft_seed seed, void* input)
         filter = theft_random(theft) % 30;
     } while (!flow_interpolation_filter_exists((flow_interpolation_filter)filter));
 
-    struct flow_RenderDetails* details = flow_RenderDetails_create_with(c, (flow_interpolation_filter)filter);
+    struct flow_RenderDetails * details = flow_RenderDetails_create_with(c, (flow_interpolation_filter)filter);
 
     if (details == NULL)
         return NULL;
@@ -54,19 +54,19 @@ void* renderdetails_random(theft* theft, theft_seed seed, void* input)
     details->post_transpose = theft_random(theft) % 2;
 
     details->sharpen_percent_goal = (float)theft_random_double(theft);
-    return (void*)details;
+    return (void *)details;
 }
-void renderdetails_free(void* details, void* unused)
+void renderdetails_free(void * details, void * unused)
 {
-    flow_RenderDetails_destroy(c, (struct flow_RenderDetails*)details);
+    flow_RenderDetails_destroy(c, (struct flow_RenderDetails *)details);
 }
 
-void* BitmapBgra_random_dest(theft* theft, theft_seed seed, void* input)
+void * BitmapBgra_random_dest(theft * theft, theft_seed seed, void * input)
 {
     flow_pixel_format fmt = (flow_pixel_format)(3 + theft_random(theft) % 2);
     int w = theft_random(theft) % 2049;
     int h = theft_random(theft) % 2049;
-    struct flow_bitmap_bgra* b = flow_bitmap_bgra_create(c, w, h, false, fmt);
+    struct flow_bitmap_bgra * b = flow_bitmap_bgra_create(c, w, h, false, fmt);
     b->alpha_meaningful = !!(theft_random(theft) % 2);
     b->can_reuse_space = !!(theft_random(theft) % 2);
     b->stride_readonly = !!(theft_random(theft) % 2);
@@ -76,16 +76,16 @@ void* BitmapBgra_random_dest(theft* theft, theft_seed seed, void* input)
     b->matte_color[2] = theft_random(theft) % 256;
     b->matte_color[3] = theft_random(theft) % 256;
     b->compositing_mode = (flow_bitmap_compositing_mode)(theft_random(theft) % 3);
-    return (void*)b;
+    return (void *)b;
 }
 
-void* BitmapBgra_random_zeroed_source(theft* theft, theft_seed seed, void* input)
+void * BitmapBgra_random_zeroed_source(theft * theft, theft_seed seed, void * input)
 {
     flow_pixel_format fmt = (flow_pixel_format)(3 + theft_random(theft) % 2);
     int w = 1 + (theft_random(theft) % 2048);
     int h = 1 + (theft_random(theft) % 2048);
 
-    struct flow_bitmap_bgra* b = flow_bitmap_bgra_create(c, w, h, true, fmt);
+    struct flow_bitmap_bgra * b = flow_bitmap_bgra_create(c, w, h, true, fmt);
     if (!b) {
         char buffer[1024];
         flow_context_error_message(c, buffer, sizeof buffer);
@@ -102,10 +102,10 @@ void* BitmapBgra_random_zeroed_source(theft* theft, theft_seed seed, void* input
     b->matte_color[2] = theft_random(theft) % 256;
     b->matte_color[3] = theft_random(theft) % 256;
     b->compositing_mode = (flow_bitmap_compositing_mode)(theft_random(theft) % 3);
-    return (void*)b;
+    return (void *)b;
 }
 
-void bitmapbgra_free(void* details, void* unused) { flow_bitmap_bgra_destroy(c, (struct flow_bitmap_bgra*)details); }
+void bitmapbgra_free(void * details, void * unused) { flow_bitmap_bgra_destroy(c, (struct flow_bitmap_bgra *)details); }
 /*
 struct flow_interpolation_details * interpolation;
     //How large the interoplation window needs to be before we even attempt to apply a sharpening
@@ -187,14 +187,14 @@ TEST_CASE("TestRender", "[fastscaling][thief]")
     memset(&cfg, 0, sizeof cfg);
     cfg.seed = seed;
     cfg.name = __func__;
-    cfg.fun = (theft_propfun*)render_should_succeed;
+    cfg.fun = (theft_propfun *)render_should_succeed;
     cfg.type_info[0] = &renderdetails_type_info;
     cfg.type_info[1] = &src_type_info;
     cfg.type_info[2] = &dest_type_info;
     cfg.trials = 20; // Raise this back to 1000 for better testing.
     cfg.report = &report;
 
-    theft* t = theft_init(0);
+    theft * t = theft_init(0);
     theft_run_res res = theft_run(t, &cfg);
     theft_free(t);
     printf("\n");
@@ -202,7 +202,7 @@ TEST_CASE("TestRender", "[fastscaling][thief]")
     destroy_context();
 }
 
-static theft_trial_res before_and_after_should_match(float* bgra_array)
+static theft_trial_res before_and_after_should_match(float * bgra_array)
 {
     float copy[4];
     memcpy(copy, bgra_array, sizeof copy);
@@ -218,15 +218,15 @@ static theft_trial_res before_and_after_should_match(float* bgra_array)
     return THEFT_TRIAL_PASS;
 }
 
-void* allocate_random_bitmap(theft* theft, theft_seed seed, void* input)
+void * allocate_random_bitmap(theft * theft, theft_seed seed, void * input)
 {
-    float* bitmap = (float*)calloc(4, sizeof(float));
+    float * bitmap = (float *)calloc(4, sizeof(float));
     for (int i = 0; i < 4; i++)
         bitmap[i] = (float)theft_random_double(theft);
-    return (void*)bitmap;
+    return (void *)bitmap;
 }
 
-void free_bitmap(void* bitmap, void* unused) { free(bitmap); }
+void free_bitmap(void * bitmap, void * unused) { free(bitmap); }
 
 TEST_CASE("Roundtrip RGB<->LUV property", "[fastscaling][thief]")
 {
@@ -248,12 +248,12 @@ TEST_CASE("Roundtrip RGB<->LUV property", "[fastscaling][thief]")
     memset(&cfg, 0, sizeof cfg);
     cfg.seed = seed;
     cfg.name = __func__;
-    cfg.fun = (theft_propfun*)before_and_after_should_match;
+    cfg.fun = (theft_propfun *)before_and_after_should_match;
     cfg.type_info[0] = &bitmap_type_info;
     cfg.trials = 10000;
     cfg.report = &report;
 
-    theft* t = theft_init(0);
+    theft * t = theft_init(0);
     theft_run_res res = theft_run(t, &cfg);
     theft_free(t);
     printf("\n");

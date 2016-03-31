@@ -119,9 +119,9 @@ TEST_CASE("Load png from URL", "[fastscaling]")
     bool success = false;
 
     size_t bytes_count = 0;
-    flow_c* c = flow_context_create();
+    flow_c * c = flow_context_create();
 
-    uint8_t* bytes = get_bytes_cached(c, &bytes_count, "http://s3.amazonaws.com/resizer-images/sun_256.png");
+    uint8_t * bytes = get_bytes_cached(c, &bytes_count, "http://s3.amazonaws.com/resizer-images/sun_256.png");
     REQUIRE_FALSE(bytes == NULL);
     png_size_t image_bytes_count = bytes_count;
     png_const_voidp image_bytes = bytes;
@@ -147,12 +147,12 @@ TEST_CASE("Load png from URL", "[fastscaling]")
             if (png_image_finish_read(&image, NULL /*background*/, buffer, 0 /*row_stride*/,
                                       NULL /*colormap for PNG_FORMAT_FLAG_COLORMAP */)) {
 
-                int nonzero = (int)nonzero_count((uint8_t*)buffer, PNG_IMAGE_SIZE(image));
+                int nonzero = (int)nonzero_count((uint8_t *)buffer, PNG_IMAGE_SIZE(image));
                 if (nonzero > 0) {
                     printf("nonzero buffer: %d of %d", nonzero, PNG_IMAGE_SIZE(image));
                 }
 
-                struct flow_bitmap_bgra* source
+                struct flow_bitmap_bgra * source
                     = flow_bitmap_bgra_create_header(c, (unsigned int)(image.width), (unsigned int)(image.height));
                 REQUIRE_FALSE(source == NULL);
                 source->fmt = flow_pixel_format::flow_bgra32;
@@ -165,11 +165,11 @@ TEST_CASE("Load png from URL", "[fastscaling]")
                 int target_width = 300;
                 int target_height = 200;
 
-                struct flow_bitmap_bgra* canvas
+                struct flow_bitmap_bgra * canvas
                     = flow_bitmap_bgra_create(c, target_width, target_height, true, flow_bgra32);
 
                 REQUIRE_FALSE(canvas == NULL);
-                struct flow_RenderDetails* details
+                struct flow_RenderDetails * details
                     = flow_RenderDetails_create_with(c, flow_interpolation_filter::flow_interpolation_filter_Robidoux);
                 details->interpolate_last_percent = 2.1f;
                 details->minimum_sample_window_to_interposharpen = 1.5;
@@ -199,7 +199,7 @@ TEST_CASE("Load png from URL", "[fastscaling]")
 
                 // TODO, write out PNG here
 
-                struct flow_io* buf = flow_io_create_for_output_buffer(c, c);
+                struct flow_io * buf = flow_io_create_for_output_buffer(c, c);
 
                 if (!flow_bitmap_bgra_write_png(c, NULL, canvas, buf)) {
                     // FLOW_error_return(context);

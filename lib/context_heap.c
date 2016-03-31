@@ -1,15 +1,15 @@
 #include "imageflow_private.h"
 
-struct flow_heap_object_record* flow_objtracking_get_record_by_ptr(flow_c* context, void* ptr);
+struct flow_heap_object_record * flow_objtracking_get_record_by_ptr(flow_c * context, void * ptr);
 
-int64_t flow_objtracking_get_record_id_by_ptr(flow_c* context, void* ptr);
+int64_t flow_objtracking_get_record_id_by_ptr(flow_c * context, void * ptr);
 
-bool flow_objtracking_partial_destroy_by_record(flow_c* context, struct flow_heap_object_record* record,
-                                                const char* file, int line);
+bool flow_objtracking_partial_destroy_by_record(flow_c * context, struct flow_heap_object_record * record,
+                                                const char * file, int line);
 
-static bool flow_objtracking_expand_record_array(flow_c* context, struct flow_objtracking_info* tracking)
+static bool flow_objtracking_expand_record_array(flow_c * context, struct flow_objtracking_info * tracking)
 {
-    struct flow_heap* underlying_heap = &context->underlying_heap;
+    struct flow_heap * underlying_heap = &context->underlying_heap;
     size_t growth_factor = 2;
     size_t growth_divisor = 1;
 
@@ -19,14 +19,14 @@ static bool flow_objtracking_expand_record_array(flow_c* context, struct flow_ob
     if (new_size < 64)
         new_size = 64;
 
-    struct flow_heap_object_record* allocs = (struct flow_heap_object_record*)underlying_heap->_calloc(
+    struct flow_heap_object_record * allocs = (struct flow_heap_object_record *)underlying_heap->_calloc(
         context, underlying_heap, new_size, sizeof(struct flow_heap_object_record), __FILE__, __LINE__);
     if (allocs == NULL) {
         FLOW_error(context, flow_status_Out_of_memory);
         return false;
     }
 
-    struct flow_heap_object_record* old = tracking->allocs;
+    struct flow_heap_object_record * old = tracking->allocs;
     if (old != NULL) {
         memcpy(allocs, old, tracking->total_slots * sizeof(struct flow_heap_object_record));
     }
@@ -39,9 +39,10 @@ static bool flow_objtracking_expand_record_array(flow_c* context, struct flow_ob
     return true;
 }
 
-static void flow_objtracking_stats_update(flow_c* c, size_t allocs, size_t frees, size_t alloc_bytes, size_t free_bytes)
+static void flow_objtracking_stats_update(flow_c * c, size_t allocs, size_t frees, size_t alloc_bytes,
+                                          size_t free_bytes)
 {
-    struct flow_objtracking_info* tracking = &c->object_tracking;
+    struct flow_objtracking_info * tracking = &c->object_tracking;
     tracking->allocations_gross += allocs;
     tracking->allocations_net += allocs;
     tracking->allocations_net += frees;
@@ -58,10 +59,10 @@ static void flow_objtracking_stats_update(flow_c* c, size_t allocs, size_t frees
     tracking->bytes_freed += free_bytes;
 }
 
-static bool flow_objtracking_add(flow_c* context, void* ptr, size_t byte_count, flow_destructor_function destructor,
-                                 void* owner, const char* file, int line)
+static bool flow_objtracking_add(flow_c * context, void * ptr, size_t byte_count, flow_destructor_function destructor,
+                                 void * owner, const char * file, int line)
 {
-    struct flow_objtracking_info* tracking = &context->object_tracking;
+    struct flow_objtracking_info * tracking = &context->object_tracking;
 
     // Expand tracking list
     if (tracking->next_free_slot == tracking->total_slots) {
@@ -70,7 +71,7 @@ static bool flow_objtracking_add(flow_c* context, void* ptr, size_t byte_count, 
         }
     }
     // Use the next slot
-    struct flow_heap_object_record* next = &tracking->allocs[tracking->next_free_slot];
+    struct flow_heap_object_record * next = &tracking->allocs[tracking->next_free_slot];
     if (next->ptr != NULL) {
         FLOW_error(context, flow_status_Invalid_internal_state);
         return false;
@@ -90,7 +91,7 @@ static bool flow_objtracking_add(flow_c* context, void* ptr, size_t byte_count, 
     if (owner == NULL || owner == context) {
         // Do nothing
     } else {
-        struct flow_heap_object_record* owner_record = flow_objtracking_get_record_by_ptr(context, owner);
+        struct flow_heap_object_record * owner_record = flow_objtracking_get_record_by_ptr(context, owner);
         owner_record->is_owner = true;
     }
 
@@ -106,29 +107,29 @@ static bool flow_objtracking_add(flow_c* context, void* ptr, size_t byte_count, 
     return true;
 }
 
-static size_t Context_size_of_context(flow_c* context)
+static size_t Context_size_of_context(flow_c * context)
 {
     return context->object_tracking.total_slots * sizeof(struct flow_heap_object_record)
            + context->log.capacity * sizeof(struct flow_profiling_entry) + sizeof(struct flow_context);
 }
 
-void flow_context_print_memory_info(flow_c* context)
+void flow_context_print_memory_info(flow_c * context)
 {
     size_t meta_bytes = Context_size_of_context(context);
     fprintf(stderr,
             "flow_context %p is using %zu bytes for metadata, %zu bytes for %zu allocations (total bytes %zu)\n",
-            (void*)context, meta_bytes, context->object_tracking.bytes_allocated_net,
+            (void *)context, meta_bytes, context->object_tracking.bytes_allocated_net,
             context->object_tracking.allocations_net, context->object_tracking.bytes_allocated_net + meta_bytes);
     fprintf(stderr, "flow_context %p peak usage %zu bytes total, %zu allocations. %zu bytes from %zu allocations freed "
                     "explicitly\n",
-            (void*)context, meta_bytes + context->object_tracking.bytes_allocated_net_peak,
+            (void *)context, meta_bytes + context->object_tracking.bytes_allocated_net_peak,
             context->object_tracking.allocations_net_peak, context->object_tracking.bytes_freed,
             context->object_tracking.allocations_gross - context->object_tracking.allocations_net);
 }
 
-int64_t flow_objtracking_get_record_id_by_ptr(flow_c* context, void* ptr)
+int64_t flow_objtracking_get_record_id_by_ptr(flow_c * context, void * ptr)
 {
-    struct flow_objtracking_info* tracking = &context->object_tracking;
+    struct flow_objtracking_info * tracking = &context->object_tracking;
     for (int64_t i = tracking->total_slots - 1; i >= 0; i--) {
         if (tracking->allocs[i].ptr == ptr) {
             return i;
@@ -138,14 +139,14 @@ int64_t flow_objtracking_get_record_id_by_ptr(flow_c* context, void* ptr)
 }
 
 // Searches record list for the given pointer. Returns NULL if not found.
-struct flow_heap_object_record* flow_objtracking_get_record_by_ptr(flow_c* context, void* ptr)
+struct flow_heap_object_record * flow_objtracking_get_record_by_ptr(flow_c * context, void * ptr)
 {
     int64_t id = flow_objtracking_get_record_id_by_ptr(context, ptr);
     return id < 0 ? NULL : &context->object_tracking.allocs[id];
 }
 
-static void flow_objtracking_record_update(flow_c* context, struct flow_heap_object_record* record, void* new_ptr,
-                                           size_t new_size, const char* file, int line)
+static void flow_objtracking_record_update(flow_c * context, struct flow_heap_object_record * record, void * new_ptr,
+                                           size_t new_size, const char * file, int line)
 {
     // Part a: update statistics
     flow_objtracking_stats_update(context, 1, 1, new_size, record->bytes);
@@ -157,12 +158,12 @@ static void flow_objtracking_record_update(flow_c* context, struct flow_heap_obj
     record->allocated_by_line = line;
 }
 
-void* flow_context_calloc(flow_c* context, size_t instance_count, size_t instance_size,
-                          flow_destructor_function destructor, void* owner, const char* file, int line)
+void * flow_context_calloc(flow_c * context, size_t instance_count, size_t instance_size,
+                           flow_destructor_function destructor, void * owner, const char * file, int line)
 {
-    struct flow_heap* heap = &context->underlying_heap;
+    struct flow_heap * heap = &context->underlying_heap;
 
-    void* ptr = heap->_calloc(context, heap, instance_count, instance_size, file, line);
+    void * ptr = heap->_calloc(context, heap, instance_count, instance_size, file, line);
     if (ptr == NULL)
         return NULL;
     if (!flow_objtracking_add(context, ptr, instance_count * instance_size, destructor, owner, file, line)) {
@@ -172,11 +173,11 @@ void* flow_context_calloc(flow_c* context, size_t instance_count, size_t instanc
     return ptr;
 }
 
-void* flow_context_malloc(flow_c* context, size_t byte_count, flow_destructor_function destructor, void* owner,
-                          const char* file, int line)
+void * flow_context_malloc(flow_c * context, size_t byte_count, flow_destructor_function destructor, void * owner,
+                           const char * file, int line)
 {
-    struct flow_heap* heap = &context->underlying_heap;
-    void* ptr = context->underlying_heap._malloc(context, heap, byte_count, file, line);
+    struct flow_heap * heap = &context->underlying_heap;
+    void * ptr = context->underlying_heap._malloc(context, heap, byte_count, file, line);
     if (ptr == NULL)
         return NULL;
     if (!flow_objtracking_add(context, ptr, byte_count, destructor, owner, file, line)) {
@@ -186,7 +187,7 @@ void* flow_context_malloc(flow_c* context, size_t byte_count, flow_destructor_fu
     return ptr;
 }
 
-void* flow_context_realloc(flow_c* context, void* old_pointer, size_t new_byte_count, const char* file, int line)
+void * flow_context_realloc(flow_c * context, void * old_pointer, size_t new_byte_count, const char * file, int line)
 {
     // Revert to malloc if old_pointer == NULL. We'll assume no destructor, and context as the default.
     if (old_pointer == NULL) {
@@ -203,8 +204,8 @@ void* flow_context_realloc(flow_c* context, void* old_pointer, size_t new_byte_c
         return NULL;
     }
 
-    void* ptr = context->underlying_heap._realloc(context, &context->underlying_heap, old_pointer, new_byte_count, file,
-                                                  line);
+    void * ptr = context->underlying_heap._realloc(context, &context->underlying_heap, old_pointer, new_byte_count,
+                                                   file, line);
     if (ptr == NULL) {
         // NOTHING HAS CHANGED - ORIGINAL MEMORY STILL VALID. OOM appropriate, as per default behavior.
         return NULL;
@@ -214,7 +215,7 @@ void* flow_context_realloc(flow_c* context, void* old_pointer, size_t new_byte_c
     return ptr;
 }
 
-static bool flow_objtracking_call_destructor(flow_c* context, struct flow_heap_object_record* record)
+static bool flow_objtracking_call_destructor(flow_c * context, struct flow_heap_object_record * record)
 {
     if (record->destructor != NULL && record->ptr != NULL) {
         if (!record->destructor(context, record->ptr)) {
@@ -234,15 +235,15 @@ static bool flow_objtracking_call_destructor(flow_c* context, struct flow_heap_o
     return true;
 }
 
-bool flow_objtracking_partial_destroy_by_record(flow_c* context, struct flow_heap_object_record* record,
-                                                const char* file, int line)
+bool flow_objtracking_partial_destroy_by_record(flow_c * context, struct flow_heap_object_record * record,
+                                                const char * file, int line)
 {
     if (record->ptr == NULL) {
         FLOW_error(context, flow_status_Invalid_internal_state);
         return false; // WTF? You shouldn't call this method on an empty record
     }
     bool success = true;
-    struct flow_heap* heap = &context->underlying_heap;
+    struct flow_heap * heap = &context->underlying_heap;
 
     // Step 1. Destroy owned objects
     if (record->is_owner) {
@@ -275,9 +276,9 @@ bool flow_objtracking_partial_destroy_by_record(flow_c* context, struct flow_hea
     return success;
 }
 
-bool flow_destroy_by_owner(flow_c* context, void* owner, const char* file, int line)
+bool flow_destroy_by_owner(flow_c * context, void * owner, const char * file, int line)
 {
-    struct flow_heap_object_record* records = &context->object_tracking.allocs[0];
+    struct flow_heap_object_record * records = &context->object_tracking.allocs[0];
     bool success = true;
     for (size_t i = 0; i < context->object_tracking.total_slots; i++) {
         if (records[i].ptr != NULL && records[i].owner == owner) {
@@ -292,7 +293,7 @@ bool flow_destroy_by_owner(flow_c* context, void* owner, const char* file, int l
     return success;
 }
 
-bool flow_destroy(flow_c* context, void* pointer, const char* file, int line)
+bool flow_destroy(flow_c * context, void * pointer, const char * file, int line)
 {
     if (pointer == NULL)
         return true;
@@ -317,7 +318,7 @@ bool flow_destroy(flow_c* context, void* pointer, const char* file, int line)
     return success;
 }
 
-void flow_deprecated_free(flow_c* context, void* pointer, const char* file, int line)
+void flow_deprecated_free(flow_c * context, void * pointer, const char * file, int line)
 {
     if (pointer == NULL)
         return;
@@ -344,14 +345,14 @@ void flow_deprecated_free(flow_c* context, void* pointer, const char* file, int 
 
 // Simple underlying heap system
 
-void* flow_heap_get_private_state(struct flow_heap* heap)
+void * flow_heap_get_private_state(struct flow_heap * heap)
 {
     if (heap == NULL)
         return NULL;
     return heap->_private_state;
 }
 
-bool flow_heap_set_private_state(struct flow_heap* heap, void* private_state)
+bool flow_heap_set_private_state(struct flow_heap * heap, void * private_state)
 {
     if (heap == NULL)
         return false;
@@ -359,11 +360,11 @@ bool flow_heap_set_private_state(struct flow_heap* heap, void* private_state)
     return true;
 }
 
-bool flow_heap_set_custom(flow_c* context, flow_heap_calloc_function calloc, flow_heap_malloc_function malloc,
+bool flow_heap_set_custom(flow_c * context, flow_heap_calloc_function calloc, flow_heap_malloc_function malloc,
                           flow_heap_realloc_function realloc, flow_heap_free_function free,
-                          flow_heap_terminate_function terminate, void* initial_private_state)
+                          flow_heap_terminate_function terminate, void * initial_private_state)
 {
-    struct flow_heap* heap = &context->underlying_heap;
+    struct flow_heap * heap = &context->underlying_heap;
     heap->_calloc = calloc;
     heap->_malloc = malloc;
     heap->_realloc = realloc;
@@ -373,33 +374,33 @@ bool flow_heap_set_custom(flow_c* context, flow_heap_calloc_function calloc, flo
     return true;
 }
 
-static void* f_default_calloc(struct flow_context* context, struct flow_heap* heap, size_t count, size_t element_size,
-                              const char* file, int line)
+static void * f_default_calloc(struct flow_context * context, struct flow_heap * heap, size_t count,
+                               size_t element_size, const char * file, int line)
 {
     return calloc(count, element_size);
 }
 
-static void* f_default_malloc(struct flow_context* context, struct flow_heap* heap, size_t byte_count, const char* file,
-                              int line)
+static void * f_default_malloc(struct flow_context * context, struct flow_heap * heap, size_t byte_count,
+                               const char * file, int line)
 {
     return malloc(byte_count);
 }
 
-static void* f_default_realloc(struct flow_context* context, struct flow_heap* heap, void* old_pointer,
-                               size_t new_byte_count, const char* file, int line)
+static void * f_default_realloc(struct flow_context * context, struct flow_heap * heap, void * old_pointer,
+                                size_t new_byte_count, const char * file, int line)
 {
     return realloc(old_pointer, new_byte_count);
 }
 
-static void f_default_free(struct flow_context* context, struct flow_heap* heap, void* pointer, const char* file,
+static void f_default_free(struct flow_context * context, struct flow_heap * heap, void * pointer, const char * file,
                            int line)
 {
     free(pointer);
 }
 
-bool flow_heap_set_default(flow_c* context)
+bool flow_heap_set_default(flow_c * context)
 {
-    struct flow_heap* heap = &context->underlying_heap;
+    struct flow_heap * heap = &context->underlying_heap;
     heap->_calloc = f_default_calloc;
     heap->_malloc = f_default_malloc;
     heap->_free = f_default_free;
@@ -409,7 +410,7 @@ bool flow_heap_set_default(flow_c* context)
     return true;
 }
 
-void flow_context_objtracking_initialize(struct flow_objtracking_info* heap_tracking)
+void flow_context_objtracking_initialize(struct flow_objtracking_info * heap_tracking)
 {
     heap_tracking->total_slots = 0;
     heap_tracking->next_free_slot = 0;
@@ -423,7 +424,7 @@ void flow_context_objtracking_initialize(struct flow_objtracking_info* heap_trac
     heap_tracking->bytes_freed = 0;
 }
 
-void flow_context_objtracking_terminate(flow_c* context)
+void flow_context_objtracking_terminate(flow_c * context)
 {
     if (context->object_tracking.allocs != NULL) {
         context->underlying_heap._free(context, &context->underlying_heap, context->object_tracking.allocs, __FILE__,

@@ -10,25 +10,25 @@
 
 struct flow_jpeg_source_manager {
     struct jpeg_source_mgr pub;
-    struct flow_io* io;
-    JOCTET* buffer;
+    struct flow_io * io;
+    JOCTET * buffer;
     boolean bytes_have_been_read;
 };
 
 struct flow_jpeg_destination_manager {
     struct jpeg_destination_mgr pub;
-    struct flow_io* io;
-    JOCTET* buffer;
+    struct flow_io * io;
+    JOCTET * buffer;
 };
 
 //! called by jpeg_finish_compress(). It must leave next_output_byte and free_in_buffer with space available for
 // immediate writing.
 static void _flow_jpeg_io_dest_init(j_compress_ptr cinfo)
 {
-    struct flow_jpeg_destination_manager* dest = (struct flow_jpeg_destination_manager*)cinfo->dest;
+    struct flow_jpeg_destination_manager * dest = (struct flow_jpeg_destination_manager *)cinfo->dest;
 
-    dest->buffer = (JOCTET*)(*cinfo->mem->alloc_small)((j_common_ptr)cinfo, JPOOL_IMAGE,
-                                                       FLOW_JPEG_OUTPUT_BUFFER_SIZE * sizeof(JOCTET));
+    dest->buffer = (JOCTET *)(*cinfo->mem->alloc_small)((j_common_ptr)cinfo, JPOOL_IMAGE,
+                                                        FLOW_JPEG_OUTPUT_BUFFER_SIZE * sizeof(JOCTET));
     dest->pub.next_output_byte = dest->buffer;
     dest->pub.free_in_buffer = FLOW_JPEG_OUTPUT_BUFFER_SIZE;
 }
@@ -37,7 +37,7 @@ static void _flow_jpeg_io_dest_init(j_compress_ptr cinfo)
 //- suspension not supported.
 static boolean _flow_jpeg_io_dest_empty_output_buffer(j_compress_ptr cinfo)
 {
-    struct flow_jpeg_destination_manager* dest = (struct flow_jpeg_destination_manager*)cinfo->dest;
+    struct flow_jpeg_destination_manager * dest = (struct flow_jpeg_destination_manager *)cinfo->dest;
 
     if (dest->io->write_func(dest->io->context, dest->io, dest->buffer, FLOW_JPEG_OUTPUT_BUFFER_SIZE)
         != FLOW_JPEG_OUTPUT_BUFFER_SIZE) {
@@ -50,7 +50,7 @@ static boolean _flow_jpeg_io_dest_empty_output_buffer(j_compress_ptr cinfo)
         jpeg_destroy((j_common_ptr)cinfo);
 
         // Raise error with jpeg and call error_exit which will jump back to our handler
-        struct jpeg_error_mgr* err = cinfo->err;
+        struct jpeg_error_mgr * err = cinfo->err;
         err->msg_code = JERR_FILE_WRITE;
         err->error_exit((j_common_ptr)cinfo);
     }
@@ -64,7 +64,7 @@ static boolean _flow_jpeg_io_dest_empty_output_buffer(j_compress_ptr cinfo)
 //! called by jpeg_finish_compress() to flush remaining bytes after last write
 static void _flow_jpeg_io_dest_terminate(j_compress_ptr cinfo)
 {
-    struct flow_jpeg_destination_manager* dest = (struct flow_jpeg_destination_manager*)cinfo->dest;
+    struct flow_jpeg_destination_manager * dest = (struct flow_jpeg_destination_manager *)cinfo->dest;
 
     size_t remaining_bytes = FLOW_JPEG_OUTPUT_BUFFER_SIZE - dest->pub.free_in_buffer;
     // Flush to underlying io
@@ -79,7 +79,7 @@ static void _flow_jpeg_io_dest_terminate(j_compress_ptr cinfo)
             }
             jpeg_destroy((j_common_ptr)cinfo);
             // Raise error with jpeg and call error_exit which will jump back to our handler
-            struct jpeg_error_mgr* err = cinfo->err;
+            struct jpeg_error_mgr * err = cinfo->err;
             err->msg_code = JERR_FILE_WRITE;
             err->error_exit((j_common_ptr)cinfo);
         }
@@ -89,7 +89,7 @@ static void _flow_jpeg_io_dest_terminate(j_compress_ptr cinfo)
 //! Called by jpeg_read_header() before anything is read.
 static void _flow_jpeg_io_source_init(j_decompress_ptr cinfo)
 {
-    struct flow_jpeg_source_manager* src = (struct flow_jpeg_source_manager*)cinfo->src;
+    struct flow_jpeg_source_manager * src = (struct flow_jpeg_source_manager *)cinfo->src;
 
     // If we read multiple sequential files from the same flow_io*, we need to reset this (but not the buffer).
     src->bytes_have_been_read = FALSE;
@@ -99,7 +99,7 @@ static void _flow_jpeg_io_source_init(j_decompress_ptr cinfo)
 // support)
 static boolean _flow_jpeg_io_source_fill_input_buffer(j_decompress_ptr cinfo)
 {
-    struct flow_jpeg_source_manager* src = (struct flow_jpeg_source_manager*)cinfo->src;
+    struct flow_jpeg_source_manager * src = (struct flow_jpeg_source_manager *)cinfo->src;
 
     size_t bytes_read = src->io->read_func(src->io->context, src->io, src->buffer, FLOW_JPEG_INPUT_BUFFER_SIZE);
     if (bytes_read <= 0) {
@@ -113,13 +113,13 @@ static boolean _flow_jpeg_io_source_fill_input_buffer(j_decompress_ptr cinfo)
             jpeg_destroy((j_common_ptr)cinfo);
 
             // Raise error with jpeg and call error_exit which will jump back to our handler
-            struct jpeg_error_mgr* err = cinfo->err;
+            struct jpeg_error_mgr * err = cinfo->err;
             err->msg_code = JERR_INPUT_EMPTY;
             err->error_exit((j_common_ptr)cinfo);
         }
 
         // Raise warning that we hie EOF unexpectedly
-        struct jpeg_error_mgr* err = cinfo->err;
+        struct jpeg_error_mgr * err = cinfo->err;
         err->msg_code = JWRN_JPEG_EOF;
         err->emit_message((j_common_ptr)cinfo, -1);
 
@@ -138,7 +138,7 @@ static boolean _flow_jpeg_io_source_fill_input_buffer(j_decompress_ptr cinfo)
 //! Skip byte_count bytes, and refill buffer at end. bytes_in_buffer may be zero.
 static void _flow_jpeg_io_source_skip_input_data(j_decompress_ptr cinfo, long byte_count)
 {
-    struct flow_jpeg_source_manager* src = (struct flow_jpeg_source_manager*)cinfo->src;
+    struct flow_jpeg_source_manager * src = (struct flow_jpeg_source_manager *)cinfo->src;
 
     // Doesn't support suspension; could be improved to use seek_func instead
     // This would help with skipping undesired segments of the jpeg file (which are rare-ish)
@@ -157,23 +157,23 @@ static void _flow_jpeg_io_source_skip_input_data(j_decompress_ptr cinfo, long by
 static void _flow_jpeg_io_source_terminate(j_decompress_ptr cinfo) {}
 
 //! Sets up the jpeg input proxy to work with *io.
-void flow_codecs_jpeg_setup_source_manager(j_decompress_ptr cinfo, struct flow_io* io)
+void flow_codecs_jpeg_setup_source_manager(j_decompress_ptr cinfo, struct flow_io * io)
 {
-    struct flow_jpeg_source_manager* src;
+    struct flow_jpeg_source_manager * src;
 
     // We're using libjpeg's memory allocation stuff here for no good reason
     // We could use our own ownership-based release system instead, and tie lifetime to *io
     if (cinfo->src == NULL) {
-        cinfo->src = (struct jpeg_source_mgr*)(*cinfo->mem->alloc_small)((j_common_ptr)cinfo, JPOOL_PERMANENT,
-                                                                         sizeof(struct flow_jpeg_source_manager));
+        cinfo->src = (struct jpeg_source_mgr *)(*cinfo->mem->alloc_small)((j_common_ptr)cinfo, JPOOL_PERMANENT,
+                                                                          sizeof(struct flow_jpeg_source_manager));
 
-        src = (struct flow_jpeg_source_manager*)cinfo->src;
+        src = (struct flow_jpeg_source_manager *)cinfo->src;
 
-        src->buffer = (JOCTET*)(*cinfo->mem->alloc_small)((j_common_ptr)cinfo, JPOOL_PERMANENT,
-                                                          FLOW_JPEG_INPUT_BUFFER_SIZE * sizeof(JOCTET));
+        src->buffer = (JOCTET *)(*cinfo->mem->alloc_small)((j_common_ptr)cinfo, JPOOL_PERMANENT,
+                                                           FLOW_JPEG_INPUT_BUFFER_SIZE * sizeof(JOCTET));
     }
 
-    src = (struct flow_jpeg_source_manager*)cinfo->src;
+    src = (struct flow_jpeg_source_manager *)cinfo->src;
     src->pub.init_source = _flow_jpeg_io_source_init;
     src->pub.fill_input_buffer = _flow_jpeg_io_source_fill_input_buffer;
     src->pub.skip_input_data = _flow_jpeg_io_source_skip_input_data;
@@ -186,17 +186,17 @@ void flow_codecs_jpeg_setup_source_manager(j_decompress_ptr cinfo, struct flow_i
 }
 
 //! Sets up the jpeg output proxy to work with *io.
-void flow_codecs_jpeg_setup_dest_manager(j_compress_ptr cinfo, struct flow_io* io)
+void flow_codecs_jpeg_setup_dest_manager(j_compress_ptr cinfo, struct flow_io * io)
 {
 
-    struct flow_jpeg_destination_manager* dest;
+    struct flow_jpeg_destination_manager * dest;
 
     if (cinfo->dest == NULL) {
-        cinfo->dest = (struct jpeg_destination_mgr*)(*cinfo->mem->alloc_small)(
+        cinfo->dest = (struct jpeg_destination_mgr *)(*cinfo->mem->alloc_small)(
             (j_common_ptr)cinfo, JPOOL_PERMANENT, sizeof(struct flow_jpeg_destination_manager));
     }
 
-    dest = (struct flow_jpeg_destination_manager*)cinfo->dest;
+    dest = (struct flow_jpeg_destination_manager *)cinfo->dest;
     dest->pub.init_destination = _flow_jpeg_io_dest_init;
     dest->pub.empty_output_buffer = _flow_jpeg_io_dest_empty_output_buffer;
     dest->pub.term_destination = _flow_jpeg_io_dest_terminate;

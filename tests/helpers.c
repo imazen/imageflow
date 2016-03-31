@@ -4,7 +4,7 @@
 // Moving implementations here inexplicably causes linker errors, even when specifically including this compilation
 // unit.
 
-size_t nonzero_count(uint8_t* array, size_t length)
+size_t nonzero_count(uint8_t * array, size_t length)
 {
 
     size_t nonzero = 0;
@@ -16,7 +16,7 @@ size_t nonzero_count(uint8_t* array, size_t length)
     return nonzero;
 }
 
-unsigned long djb2(unsigned const char* str)
+unsigned long djb2(unsigned const char * str)
 {
     unsigned long hash = 5381;
     int c;
@@ -27,7 +27,7 @@ unsigned long djb2(unsigned const char* str)
     return hash;
 }
 
-unsigned long djb2_buffer(uint8_t* str, size_t count)
+unsigned long djb2_buffer(uint8_t * str, size_t count)
 {
     unsigned long hash = 5381;
     int c;
@@ -39,7 +39,7 @@ unsigned long djb2_buffer(uint8_t* str, size_t count)
     return hash;
 }
 
-void copy_file(FILE* from, FILE* to)
+void copy_file(FILE * from, FILE * to)
 {
     size_t n, m;
     unsigned char buff[8192];
@@ -54,9 +54,9 @@ void copy_file(FILE* from, FILE* to)
         perror("copy");
 }
 
-bool write_all_byte(const char* path, char* buffer, size_t size)
+bool write_all_byte(const char * path, char * buffer, size_t size)
 {
-    FILE* fh = fopen(path, "w");
+    FILE * fh = fopen(path, "w");
     if (fh != NULL) {
         if (fwrite(buffer, size, 1, fh) != 1) {
             exit(999);
@@ -66,15 +66,15 @@ bool write_all_byte(const char* path, char* buffer, size_t size)
     return true;
 }
 
-uint8_t* read_all_bytes(flow_c* c, size_t* buffer_size, const char* path)
+uint8_t * read_all_bytes(flow_c * c, size_t * buffer_size, const char * path)
 {
-    uint8_t* buffer;
-    FILE* fh = fopen(path, "rb");
+    uint8_t * buffer;
+    FILE * fh = fopen(path, "rb");
     if (fh != NULL) {
         fseek(fh, 0L, SEEK_END);
         size_t s = ftell(fh);
         rewind(fh);
-        buffer = (uint8_t*)FLOW_malloc(c, s);
+        buffer = (uint8_t *)FLOW_malloc(c, s);
         if (buffer != NULL) {
             // Returns 1 or 0, not the number of bytes.
             // Technically we're reading 1 element of size s
@@ -102,7 +102,7 @@ uint8_t* read_all_bytes(flow_c* c, size_t* buffer_size, const char* path)
     }
     return 0;
 }
-bool fetch_image(const char* url, char* dest_path)
+bool fetch_image(const char * url, char * dest_path)
 { /*null-terminated string*/
     static bool curl_initialized = false;
     if (!curl_initialized) {
@@ -111,9 +111,9 @@ bool fetch_image(const char* url, char* dest_path)
     }
     fprintf(stdout, "Fetching %s...", url);
 
-    CURL* curl;
-    FILE* fp;
-    FILE* real_fp;
+    CURL * curl;
+    FILE * fp;
+    FILE * real_fp;
     CURLcode res;
     curl = curl_easy_init();
     if (curl) {
@@ -150,13 +150,13 @@ bool fetch_image(const char* url, char* dest_path)
     return true;
 }
 
-uint8_t* get_bytes_cached(flow_c* c, size_t* bytes_count_out, const char* url)
+uint8_t * get_bytes_cached(flow_c * c, size_t * bytes_count_out, const char * url)
 {
 
 #define FLOW_MAX_PATH 255
     char cache_folder[FLOW_MAX_PATH];
 
-    char* cache_dir = getenv("HOME");
+    char * cache_dir = getenv("HOME");
     if (cache_dir == NULL)
         cache_dir = getenv("TEMP");
 
@@ -165,7 +165,7 @@ uint8_t* get_bytes_cached(flow_c* c, size_t* bytes_count_out, const char* url)
     flow_utils_ensure_directory_exists(cache_folder);
     char cache_path[FLOW_MAX_PATH];
 
-    flow_snprintf(cache_path, FLOW_MAX_PATH, "%s/%lu", cache_folder, djb2((unsigned const char*)url));
+    flow_snprintf(cache_path, FLOW_MAX_PATH, "%s/%lu", cache_folder, djb2((unsigned const char *)url));
 
     if (access(cache_path, F_OK) == -1) {
         // file doesn't exist
@@ -178,7 +178,7 @@ uint8_t* get_bytes_cached(flow_c* c, size_t* bytes_count_out, const char* url)
     return read_all_bytes(c, bytes_count_out, cache_path);
 }
 
-void flow_utils_ensure_directory_exists(const char* dir_path)
+void flow_utils_ensure_directory_exists(const char * dir_path)
 {
     struct stat sb;
     int e;
@@ -206,7 +206,7 @@ void flow_utils_ensure_directory_exists(const char* dir_path)
     }
 }
 
-bool has_err(flow_c* c, const char* file, int line, const char* func)
+bool has_err(flow_c * c, const char * file, int line, const char * func)
 {
     if (flow_context_has_error(c)) {
         flow_context_add_to_callstack(c, file, line, func);
@@ -216,14 +216,14 @@ bool has_err(flow_c* c, const char* file, int line, const char* func)
     return false;
 }
 
-struct flow_bitmap_bgra* BitmapBgra_create_test_image(flow_c* c)
+struct flow_bitmap_bgra * BitmapBgra_create_test_image(flow_c * c)
 {
-    struct flow_bitmap_bgra* test = flow_bitmap_bgra_create(c, 256, 256, false, flow_bgra32);
+    struct flow_bitmap_bgra * test = flow_bitmap_bgra_create(c, 256, 256, false, flow_bgra32);
     if (test == NULL) {
         FLOW_add_to_callstack(c);
         return NULL;
     }
-    uint8_t* pixel;
+    uint8_t * pixel;
     for (uint32_t y = 0; y < test->h; y++) {
         pixel = test->pixels + (y * test->stride);
         for (uint32_t x = 0; x < test->w; x++) {
@@ -238,8 +238,8 @@ struct flow_bitmap_bgra* BitmapBgra_create_test_image(flow_c* c)
 }
 
 // Returns average delte per channel per pixel. returns (double)INT32_MAX if dimension or channel mismatch
-double flow_bitmap_float_compare(flow_c* c, struct flow_bitmap_float* a, struct flow_bitmap_float* b,
-                                 float* out_max_delta)
+double flow_bitmap_float_compare(flow_c * c, struct flow_bitmap_float * a, struct flow_bitmap_float * b,
+                                 float * out_max_delta)
 {
     if (a->w != b->w || a->h != b->h || a->channels != b->channels || a->float_count != b->float_count
         || a->float_stride != b->float_stride) {
@@ -265,16 +265,16 @@ double flow_bitmap_float_compare(flow_c* c, struct flow_bitmap_float* a, struct 
     return difference_total / a->h;
 }
 
-struct flow_io* get_io_for_cached_url(flow_c* c, const char* url, void* owner)
+struct flow_io * get_io_for_cached_url(flow_c * c, const char * url, void * owner)
 {
     size_t bytes_count = 0;
-    uint8_t* bytes = get_bytes_cached(c, &bytes_count, url);
+    uint8_t * bytes = get_bytes_cached(c, &bytes_count, url);
     if (bytes == NULL) {
         FLOW_error(c, flow_status_IO_error);
         return NULL;
     }
 
-    struct flow_io* input = flow_io_create_from_memory(c, flow_io_mode_read_seekable, bytes, bytes_count, owner, NULL);
+    struct flow_io * input = flow_io_create_from_memory(c, flow_io_mode_read_seekable, bytes, bytes_count, owner, NULL);
     if (input == NULL) {
         FLOW_add_to_callstack(c);
         return NULL;

@@ -14,13 +14,13 @@
 
 const struct flow_rect RectFailure = { -1, -1, -1, -1 };
 
-struct flow_rect detect_content(flow_c* context, struct flow_bitmap_bgra* b, uint8_t threshold)
+struct flow_rect detect_content(flow_c * context, struct flow_bitmap_bgra * b, uint8_t threshold)
 {
     struct flow_SearchInfo info;
     info.w = b->w;
     info.h = b->h;
     info.buff_size = 2048;
-    info.buf = (uint8_t*)FLOW_malloc(context, info.buff_size);
+    info.buf = (uint8_t *)FLOW_malloc(context, info.buff_size);
     if (info.buf == NULL) {
         FLOW_error(context, flow_status_Out_of_memory);
         return RectFailure;
@@ -141,7 +141,7 @@ struct flow_rect detect_content(flow_c* context, struct flow_bitmap_bgra* b, uin
     FLOW_free(context, info.buf);
     return result;
 }
-bool fill_buffer(flow_c* context, struct flow_SearchInfo* __restrict info)
+bool fill_buffer(flow_c * context, struct flow_SearchInfo * __restrict info)
 {
     /* Red: 0.299;
     Green: 0.587;
@@ -151,8 +151,8 @@ bool fill_buffer(flow_c* context, struct flow_SearchInfo* __restrict info)
     const uint32_t h = info->buf_h;
     const uint32_t bytes_per_pixel = flow_pixel_format_bytes_per_pixel(info->bitmap->fmt);
     const uint32_t remnant = info->bitmap->stride - (bytes_per_pixel * w);
-    uint8_t const* __restrict bgra = info->bitmap->pixels + (info->bitmap->stride * info->buf_y)
-                                     + (bytes_per_pixel * info->buf_x);
+    uint8_t const * __restrict bgra = info->bitmap->pixels + (info->bitmap->stride * info->buf_y)
+                                      + (bytes_per_pixel * info->buf_x);
     const uint8_t channels = bytes_per_pixel;
     if (channels == 4 && info->bitmap->alpha_meaningful) {
         uint32_t buf_ix = 0;
@@ -191,7 +191,7 @@ bool fill_buffer(flow_c* context, struct flow_SearchInfo* __restrict info)
     return true;
 }
 
-bool sobel_scharr_detect(flow_c* context, struct flow_SearchInfo* info)
+bool sobel_scharr_detect(flow_c * context, struct flow_SearchInfo * info)
 {
 #define COEFFA = 3
 #define COEFFB = 10;
@@ -201,7 +201,7 @@ bool sobel_scharr_detect(flow_c* context, struct flow_SearchInfo* info)
     const uint32_t x_end = w - 1;
     const uint32_t threshold = info->threshold;
 
-    uint8_t* __restrict buf = info->buf;
+    uint8_t * __restrict buf = info->buf;
     uint32_t buf_ix = w + 1;
     for (uint32_t y = 1; y < y_end; y++) {
         for (uint32_t x = 1; x < x_end; x++) {
@@ -237,8 +237,8 @@ bool sobel_scharr_detect(flow_c* context, struct flow_SearchInfo* info)
     return true;
 }
 
-bool check_region(flow_c* context, int edgeTRBL, float x_1_percent, float x_2_percent, float y_1_percent,
-                  float y_2_percent, struct flow_SearchInfo* __restrict info)
+bool check_region(flow_c * context, int edgeTRBL, float x_1_percent, float x_2_percent, float y_1_percent,
+                  float y_2_percent, struct flow_SearchInfo * __restrict info)
 {
     uint32_t x1 = (uint32_t)umax(0, umin(info->w, (uint32_t)floor(x_1_percent * (float)info->w) - 1));
     uint32_t x2 = (uint32_t)umax(0, umin(info->w, (uint32_t)ceil(x_2_percent * (float)info->w) + 1));

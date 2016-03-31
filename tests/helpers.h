@@ -69,23 +69,23 @@ These may be OR'd together.  */
 #include "unistd.h"
 #endif
 
-FLOW_EXPORT uint8_t* get_bytes_cached(flow_c* c, size_t* bytes_count_out, const char* url);
-FLOW_EXPORT bool fetch_image(const char* url, char* dest_path);
-FLOW_EXPORT uint8_t* read_all_bytes(flow_c* c, size_t* buffer_size, const char* path);
-FLOW_EXPORT bool write_all_byte(const char* path, char* buffer, size_t size);
-FLOW_EXPORT void copy_file(FILE* from, FILE* to);
+FLOW_EXPORT uint8_t * get_bytes_cached(flow_c * c, size_t * bytes_count_out, const char * url);
+FLOW_EXPORT bool fetch_image(const char * url, char * dest_path);
+FLOW_EXPORT uint8_t * read_all_bytes(flow_c * c, size_t * buffer_size, const char * path);
+FLOW_EXPORT bool write_all_byte(const char * path, char * buffer, size_t size);
+FLOW_EXPORT void copy_file(FILE * from, FILE * to);
 
-FLOW_EXPORT unsigned long djb2(unsigned const char* str);
-FLOW_EXPORT unsigned long djb2_buffer(uint8_t* str, size_t count);
-FLOW_EXPORT size_t nonzero_count(uint8_t* array, size_t length);
+FLOW_EXPORT unsigned long djb2(unsigned const char * str);
+FLOW_EXPORT unsigned long djb2_buffer(uint8_t * str, size_t count);
+FLOW_EXPORT size_t nonzero_count(uint8_t * array, size_t length);
 
-FLOW_EXPORT struct flow_bitmap_bgra* BitmapBgra_create_test_image(flow_c* c);
-FLOW_EXPORT double flow_bitmap_float_compare(flow_c* c, struct flow_bitmap_float* a, struct flow_bitmap_float* b,
-                                             float* out_max_delta);
+FLOW_EXPORT struct flow_bitmap_bgra * BitmapBgra_create_test_image(flow_c * c);
+FLOW_EXPORT double flow_bitmap_float_compare(flow_c * c, struct flow_bitmap_float * a, struct flow_bitmap_float * b,
+                                             float * out_max_delta);
 
-FLOW_EXPORT struct flow_io* get_io_for_cached_url(flow_c* c, const char* url, void* owner);
+FLOW_EXPORT struct flow_io * get_io_for_cached_url(flow_c * c, const char * url, void * owner);
 
-FLOW_EXPORT bool has_err(flow_c* c, const char* file, int line, const char* func);
+FLOW_EXPORT bool has_err(flow_c * c, const char * file, int line, const char * func);
 
 #define ERR(c) REQUIRE_FALSE(has_err(c, __FILE__, __LINE__, __func__))
 

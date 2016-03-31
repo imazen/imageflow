@@ -7,11 +7,11 @@ bool test(int sx, int sy, flow_pixel_format sbpp, int cx, int cy, flow_pixel_for
     flow_c context;
     flow_context_initialize(&context);
 
-    struct flow_bitmap_bgra* source = flow_bitmap_bgra_create(&context, sx, sy, true, sbpp);
-    struct flow_bitmap_bgra* canvas = flow_bitmap_bgra_create(&context, cx, cy, true, cbpp);
+    struct flow_bitmap_bgra * source = flow_bitmap_bgra_create(&context, sx, sy, true, sbpp);
+    struct flow_bitmap_bgra * canvas = flow_bitmap_bgra_create(&context, cx, cy, true, cbpp);
     if (canvas == NULL || source == NULL)
         return false;
-    struct flow_RenderDetails* details = flow_RenderDetails_create_with(&context, filter);
+    struct flow_RenderDetails * details = flow_RenderDetails_create_with(&context, filter);
     if (details == NULL)
         return false;
     details->sharpen_percent_goal = 50;
@@ -37,9 +37,9 @@ bool test_in_place(int sx, int sy, flow_pixel_format sbpp, bool flipx, bool flip
 {
     flow_c context;
     flow_context_initialize(&context);
-    struct flow_bitmap_bgra* source = flow_bitmap_bgra_create(&context, sx, sy, true, sbpp);
+    struct flow_bitmap_bgra * source = flow_bitmap_bgra_create(&context, sx, sy, true, sbpp);
 
-    struct flow_RenderDetails* details = flow_RenderDetails_create(&context);
+    struct flow_RenderDetails * details = flow_RenderDetails_create(&context);
 
     details->sharpen_percent_goal = sharpen;
     details->post_flip_x = flipx;
@@ -95,10 +95,10 @@ TEST_CASE("Sharpen and convolve in place", "[fastscaling]")
 }
 //*/
 
-struct flow_bitmap_bgra* crop_window(flow_c* context, struct flow_bitmap_bgra* source, uint32_t x, uint32_t y,
-                                     uint32_t w, uint32_t h)
+struct flow_bitmap_bgra * crop_window(flow_c * context, struct flow_bitmap_bgra * source, uint32_t x, uint32_t y,
+                                      uint32_t w, uint32_t h)
 {
-    struct flow_bitmap_bgra* cropped = flow_bitmap_bgra_create_header(context, w, h);
+    struct flow_bitmap_bgra * cropped = flow_bitmap_bgra_create_header(context, w, h);
     cropped->fmt = source->fmt;
     const uint32_t bytes_pp = flow_pixel_format_bytes_per_pixel(source->fmt);
     cropped->pixels = source->pixels + (y * source->stride) + (x * bytes_pp);
@@ -106,7 +106,7 @@ struct flow_bitmap_bgra* crop_window(flow_c* context, struct flow_bitmap_bgra* s
     return cropped;
 }
 
-void clear_bitmap(struct flow_bitmap_bgra* b, uint8_t fill_red, uint8_t fill_green, uint8_t fill_blue,
+void clear_bitmap(struct flow_bitmap_bgra * b, uint8_t fill_red, uint8_t fill_green, uint8_t fill_blue,
                   uint8_t fill_alpha)
 {
     const uint32_t bytes_pp = flow_pixel_format_bytes_per_pixel(b->fmt);
@@ -124,10 +124,10 @@ void clear_bitmap(struct flow_bitmap_bgra* b, uint8_t fill_red, uint8_t fill_gre
     }
 }
 
-void fill_rect(flow_c* context, struct flow_bitmap_bgra* b, uint32_t x, uint32_t y, uint32_t w, uint32_t h,
+void fill_rect(flow_c * context, struct flow_bitmap_bgra * b, uint32_t x, uint32_t y, uint32_t w, uint32_t h,
                uint8_t fill_red, uint8_t fill_green, uint8_t fill_blue, uint8_t fill_alpha)
 {
-    struct flow_bitmap_bgra* cropped = crop_window(context, b, x, y, w, h);
+    struct flow_bitmap_bgra * cropped = crop_window(context, b, x, y, w, h);
     clear_bitmap(cropped, fill_red, fill_green, fill_blue, fill_alpha);
     flow_bitmap_bgra_destroy(context, cropped);
 }
@@ -209,24 +209,24 @@ TEST_CASE("Test guassian blur approximation.", "[fastscaling]")
 
     uint32_t buffer_elements = flow_bitmap_float_approx_gaussian_buffer_element_count_required(sigma, bitmap_width);
 
-    float* buffer = FLOW_calloc_array(&context, buffer_elements, float);
+    float * buffer = FLOW_calloc_array(&context, buffer_elements, float);
     CHECK_FALSE(buffer == NULL);
 
     // Preferably test premultiplication
 
-    struct flow_bitmap_float* image = flow_bitmap_float_create(&context, bitmap_width, 1, 4, true);
+    struct flow_bitmap_float * image = flow_bitmap_float_create(&context, bitmap_width, 1, 4, true);
     CHECK_FALSE(image == NULL);
 
     for (uint32_t i = 0; i < image->w * 4; i++) {
 
         image->pixels[i] = (i % 8 == 0 ? 0.5 : 0) + (i % 12 == 0 ? 0.4 : 0.1);
     }
-    struct flow_bitmap_float* image_b = flow_bitmap_float_create(&context, bitmap_width, 1, 4, true);
+    struct flow_bitmap_float * image_b = flow_bitmap_float_create(&context, bitmap_width, 1, 4, true);
     memcpy(image_b->pixels, image->pixels, image->float_stride * sizeof(float));
 
     CHECK(flow_bitmap_float_approx_gaussian_blur_rows(&context, image, sigma, buffer, buffer_elements, 0, 1));
 
-    struct flow_convolution_kernel* gaussian
+    struct flow_convolution_kernel * gaussian
         = flow_convolution_kernel_create_gaussian_normalized(&context, sigma, kernel_radius);
     CHECK(gaussian != NULL);
     CHECK(flow_bitmap_float_convolve_rows(&context, image_b, gaussian, 4, 0, 1));
@@ -274,12 +274,12 @@ SCENARIO("sRGB roundtrip", "[fastscaling]")
         int h = 256;
         flow_c context;
         flow_context_initialize(&context);
-        struct flow_bitmap_bgra* bit = flow_bitmap_bgra_create(&context, w, h, true, flow_bgra32);
+        struct flow_bitmap_bgra * bit = flow_bitmap_bgra_create(&context, w, h, true, flow_bgra32);
         const uint32_t bytes_pp = flow_pixel_format_bytes_per_pixel(bit->fmt);
 
         for (size_t y = 1; y < bit->h; y++) {
             for (size_t x = 0; x < bit->w; x++) {
-                uint8_t* pix = bit->pixels + (y * bit->stride) + (x * bytes_pp);
+                uint8_t * pix = bit->pixels + (y * bit->stride) + (x * bytes_pp);
 
                 *pix = (uint8_t)x;
                 *(pix + 1) = (uint8_t)x;
@@ -288,13 +288,13 @@ SCENARIO("sRGB roundtrip", "[fastscaling]")
             }
         }
 
-        struct flow_bitmap_bgra* final = flow_bitmap_bgra_create(&context, w, h, true, flow_bgra32);
+        struct flow_bitmap_bgra * final = flow_bitmap_bgra_create(&context, w, h, true, flow_bgra32);
         // flow_bitmap_float* buf = create_bitmap_float(w, h, 4, true);
 
         WHEN("we do stuff")
         {
 
-            struct flow_RenderDetails* details = flow_RenderDetails_create(&context);
+            struct flow_RenderDetails * details = flow_RenderDetails_create(&context);
             CHECK(flow_RenderDetails_render(&context, details, bit, final));
 
             // convert_srgb_to_linear(bit, 0, buf, 0, h);
@@ -307,8 +307,8 @@ SCENARIO("sRGB roundtrip", "[fastscaling]")
                 bool exact_match = true;
                 for (size_t y = 0; y < bit->h; y++) {
                     for (size_t x = 0; x < bit->w; x++) {
-                        uint8_t* from = bit->pixels + (y * bit->stride) + (x * bytes_pp);
-                        uint8_t* to = final->pixels + (y * final->stride) + (x * bytes_pp);
+                        uint8_t * from = bit->pixels + (y * bit->stride) + (x * bytes_pp);
+                        uint8_t * to = final->pixels + (y * final->stride) + (x * bytes_pp);
 
                         if (*from != *to)
                             exact_match = false;

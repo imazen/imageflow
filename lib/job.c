@@ -2,10 +2,10 @@
 #include "nodes.h"
 #include "codecs.h"
 
-struct flow_job* flow_job_create(flow_c* c)
+struct flow_job * flow_job_create(flow_c * c)
 {
 
-    struct flow_job* job = (struct flow_job*)FLOW_malloc(c, sizeof(struct flow_job));
+    struct flow_job * job = (struct flow_job *)FLOW_malloc(c, sizeof(struct flow_job));
     if (job == NULL) {
         FLOW_error(c, flow_status_Out_of_memory);
         return NULL;
@@ -20,8 +20,9 @@ struct flow_job* flow_job_create(flow_c* c)
     return job;
 }
 
-bool flow_job_configure_recording(flow_c* c, struct flow_job* job, bool record_graph_versions, bool record_frame_images,
-                                  bool render_last_graph, bool render_graph_versions, bool render_animated_graph)
+bool flow_job_configure_recording(flow_c * c, struct flow_job * job, bool record_graph_versions,
+                                  bool record_frame_images, bool render_last_graph, bool render_graph_versions,
+                                  bool render_animated_graph)
 {
     job->record_frame_images = record_frame_images;
     job->record_graph_versions = record_graph_versions;
@@ -30,11 +31,11 @@ bool flow_job_configure_recording(flow_c* c, struct flow_job* job, bool record_g
     job->render_animated_graph = render_animated_graph && job->render_graph_versions;
     return true;
 }
-bool flow_job_destroy(flow_c* c, struct flow_job* job) { return FLOW_destroy(c, job); }
+bool flow_job_destroy(flow_c * c, struct flow_job * job) { return FLOW_destroy(c, job); }
 
-struct flow_io* flow_job_get_io(flow_c* c, struct flow_job* job, int32_t placeholder_id)
+struct flow_io * flow_job_get_io(flow_c * c, struct flow_job * job, int32_t placeholder_id)
 {
-    struct flow_codec_instance* codec = flow_job_get_codec_instance(c, job, placeholder_id);
+    struct flow_codec_instance * codec = flow_job_get_codec_instance(c, job, placeholder_id);
     if (codec == NULL) {
         FLOW_add_to_callstack(c);
         return NULL;
@@ -42,10 +43,10 @@ struct flow_io* flow_job_get_io(flow_c* c, struct flow_job* job, int32_t placeho
     return codec->io;
 }
 
-bool flow_job_get_output_buffer(flow_c* c, struct flow_job* job, int32_t placeholder_id,
-                                uint8_t** out_pointer_to_buffer, size_t* out_length)
+bool flow_job_get_output_buffer(flow_c * c, struct flow_job * job, int32_t placeholder_id,
+                                uint8_t ** out_pointer_to_buffer, size_t * out_length)
 {
-    struct flow_io* io = flow_job_get_io(c, job, placeholder_id);
+    struct flow_io * io = flow_job_get_io(c, job, placeholder_id);
     if (io == NULL) {
         FLOW_add_to_callstack(c);
         return false;
@@ -57,11 +58,11 @@ bool flow_job_get_output_buffer(flow_c* c, struct flow_job* job, int32_t placeho
     return true;
 }
 
-bool flow_job_add_io(flow_c* c, struct flow_job* job, struct flow_io* io, int32_t placeholder_id,
+bool flow_job_add_io(flow_c * c, struct flow_job * job, struct flow_io * io, int32_t placeholder_id,
                      FLOW_DIRECTION direction)
 {
-    struct flow_codec_instance* r
-        = (struct flow_codec_instance*)FLOW_malloc_owned(c, sizeof(struct flow_codec_instance), job);
+    struct flow_codec_instance * r
+        = (struct flow_codec_instance *)FLOW_malloc_owned(c, sizeof(struct flow_codec_instance), job);
     if (r == NULL) {
         FLOW_error(c, flow_status_Out_of_memory);
         return false;
@@ -111,7 +112,7 @@ bool flow_job_add_io(flow_c* c, struct flow_job* job, struct flow_io* io, int32_
     return true;
 }
 
-bool flow_job_execute(flow_c* c, struct flow_job* job, struct flow_graph** graph_ref)
+bool flow_job_execute(flow_c * c, struct flow_job * job, struct flow_graph ** graph_ref)
 {
     if (!flow_job_notify_graph_changed(c, job, *graph_ref)) {
         FLOW_error_return(c);
@@ -191,15 +192,15 @@ bool flow_job_execute(flow_c* c, struct flow_job* job, struct flow_graph** graph
     return true;
 }
 
-static bool node_visitor_post_optimize_flatten(flow_c* c, struct flow_job* job, struct flow_graph** graph_ref,
-                                               int32_t node_id, bool* quit, bool* skip_outbound_paths,
-                                               void* custom_data)
+static bool node_visitor_post_optimize_flatten(flow_c * c, struct flow_job * job, struct flow_graph ** graph_ref,
+                                               int32_t node_id, bool * quit, bool * skip_outbound_paths,
+                                               void * custom_data)
 {
 
     if (!flow_node_update_state(c, *graph_ref, node_id)) {
         FLOW_error_return(c);
     }
-    struct flow_node* n = &(*graph_ref)->nodes[node_id];
+    struct flow_node * n = &(*graph_ref)->nodes[node_id];
 
     // If input nodes are populated
     if (n->state == flow_node_state_ReadyForPostOptimizeFlatten) {
@@ -210,7 +211,7 @@ static bool node_visitor_post_optimize_flatten(flow_c* c, struct flow_job* job, 
             FLOW_error_return(c);
         }
         *quit = true;
-        *((bool*)custom_data) = true;
+        *((bool *)custom_data) = true;
     } else if ((n->state & flow_node_state_InputDimensionsKnown) == 0) {
         // we can't flatten past missing dimensions
         *skip_outbound_paths = true;
@@ -218,7 +219,7 @@ static bool node_visitor_post_optimize_flatten(flow_c* c, struct flow_job* job, 
     return true;
 }
 
-bool flow_graph_post_optimize_flatten(flow_c* c, struct flow_job* job, struct flow_graph** graph_ref)
+bool flow_graph_post_optimize_flatten(flow_c * c, struct flow_job * job, struct flow_graph ** graph_ref)
 {
     if (*graph_ref == NULL) {
         FLOW_error(c, flow_status_Null_argument);
@@ -234,11 +235,11 @@ bool flow_graph_post_optimize_flatten(flow_c* c, struct flow_job* job, struct fl
     return true;
 }
 
-static bool node_visitor_optimize(flow_c* c, struct flow_job* job, struct flow_graph** graph_ref, int32_t node_id,
-                                  bool* quit, bool* skip_outbound_paths, void* custom_data)
+static bool node_visitor_optimize(flow_c * c, struct flow_job * job, struct flow_graph ** graph_ref, int32_t node_id,
+                                  bool * quit, bool * skip_outbound_paths, void * custom_data)
 {
 
-    struct flow_node* node = &(*graph_ref)->nodes[node_id];
+    struct flow_node * node = &(*graph_ref)->nodes[node_id];
     if (node->state == flow_node_state_ReadyForOptimize) {
         node->state = (flow_node_state)(node->state | flow_node_state_Optimized);
     }
@@ -247,7 +248,7 @@ static bool node_visitor_optimize(flow_c* c, struct flow_job* job, struct flow_g
     return true;
 }
 
-bool flow_graph_optimize(flow_c* c, struct flow_job* job, struct flow_graph** graph_ref)
+bool flow_graph_optimize(flow_c * c, struct flow_job * job, struct flow_graph ** graph_ref)
 {
     if (*graph_ref == NULL) {
         FLOW_error(c, flow_status_Null_argument);
@@ -263,7 +264,7 @@ bool flow_graph_optimize(flow_c* c, struct flow_job* job, struct flow_graph** gr
     return true;
 }
 
-static bool flow_job_populate_dimensions_for_node(flow_c* c, struct flow_job* job, struct flow_graph* g,
+static bool flow_job_populate_dimensions_for_node(flow_c * c, struct flow_job * job, struct flow_graph * g,
                                                   int32_t node_id, bool force_estimate)
 {
     uint64_t now = flow_get_high_precision_ticks();
@@ -275,13 +276,13 @@ static bool flow_job_populate_dimensions_for_node(flow_c* c, struct flow_job* jo
     return true;
 }
 
-bool flow_node_has_dimensions(flow_c* c, struct flow_graph* g, int32_t node_id)
+bool flow_node_has_dimensions(flow_c * c, struct flow_graph * g, int32_t node_id)
 {
-    struct flow_node* n = &g->nodes[node_id];
+    struct flow_node * n = &g->nodes[node_id];
     return n->result_width > 0;
 }
 
-bool flow_node_inputs_have_dimensions(flow_c* c, struct flow_graph* g, int32_t node_id)
+bool flow_node_inputs_have_dimensions(flow_c * c, struct flow_graph * g, int32_t node_id)
 {
     int32_t i;
     for (i = 0; i < g->next_edge_id; i++) {
@@ -294,11 +295,11 @@ bool flow_node_inputs_have_dimensions(flow_c* c, struct flow_graph* g, int32_t n
     return true;
 }
 
-static bool node_visitor_dimensions(flow_c* c, struct flow_job* job, struct flow_graph** graph_ref, int32_t node_id,
-                                    bool* quit, bool* skip_outbound_paths, void* custom_data)
+static bool node_visitor_dimensions(flow_c * c, struct flow_job * job, struct flow_graph ** graph_ref, int32_t node_id,
+                                    bool * quit, bool * skip_outbound_paths, void * custom_data)
 {
 
-    struct flow_node* n = &(*graph_ref)->nodes[node_id];
+    struct flow_node * n = &(*graph_ref)->nodes[node_id];
 
     int32_t outbound_edges = flow_graph_get_edge_count(c, *graph_ref, node_id, false, flow_edgetype_null, false, true);
     if (outbound_edges == 0) {
@@ -326,29 +327,29 @@ static bool node_visitor_dimensions(flow_c* c, struct flow_job* job, struct flow
     return true;
 }
 
-bool flow_job_populate_dimensions_where_certain(flow_c* c, struct flow_job* job, struct flow_graph** graph_ref)
+bool flow_job_populate_dimensions_where_certain(flow_c * c, struct flow_job * job, struct flow_graph ** graph_ref)
 {
     // TODO: would be good to verify graph is acyclic.
-    if (!flow_graph_walk_dependency_wise(c, job, graph_ref, node_visitor_dimensions, NULL, (void*)false)) {
+    if (!flow_graph_walk_dependency_wise(c, job, graph_ref, node_visitor_dimensions, NULL, (void *)false)) {
         FLOW_error_return(c);
     }
     return true;
 }
 
-bool flow_job_force_populate_dimensions(flow_c* c, struct flow_job* job, struct flow_graph** graph_ref)
+bool flow_job_force_populate_dimensions(flow_c * c, struct flow_job * job, struct flow_graph ** graph_ref)
 {
     // TODO: would be good to verify graph is acyclic.
-    if (!flow_graph_walk(c, job, graph_ref, node_visitor_dimensions, NULL, (void*)true)) {
+    if (!flow_graph_walk(c, job, graph_ref, node_visitor_dimensions, NULL, (void *)true)) {
         FLOW_error_return(c);
     }
     return true;
 }
 
-static bool flow_job_node_is_executed(flow_c* c, struct flow_job* job, struct flow_graph* g, int32_t node_id)
+static bool flow_job_node_is_executed(flow_c * c, struct flow_job * job, struct flow_graph * g, int32_t node_id)
 {
     return (g->nodes[node_id].state & flow_node_state_Executed) > 0;
 }
-bool flow_job_graph_fully_executed(flow_c* c, struct flow_job* job, struct flow_graph* g)
+bool flow_job_graph_fully_executed(flow_c * c, struct flow_job * job, struct flow_graph * g)
 {
     int32_t i;
     for (i = 0; i < g->next_node_id; i++) {
@@ -361,14 +362,14 @@ bool flow_job_graph_fully_executed(flow_c* c, struct flow_job* job, struct flow_
     return true;
 }
 
-static bool node_visitor_execute(flow_c* c, struct flow_job* job, struct flow_graph** graph_ref, int32_t node_id,
-                                 bool* quit, bool* skip_outbound_paths, void* custom_data)
+static bool node_visitor_execute(flow_c * c, struct flow_job * job, struct flow_graph ** graph_ref, int32_t node_id,
+                                 bool * quit, bool * skip_outbound_paths, void * custom_data)
 {
 
     if (!flow_node_update_state(c, *graph_ref, node_id)) {
         FLOW_error_return(c);
     }
-    struct flow_node* n = &(*graph_ref)->nodes[node_id];
+    struct flow_node * n = &(*graph_ref)->nodes[node_id];
 
     if (!flow_job_node_is_executed(c, job, *graph_ref, node_id) && n->state == flow_node_state_ReadyForExecution) {
         uint64_t now = flow_get_high_precision_ticks();
@@ -391,7 +392,7 @@ static bool node_visitor_execute(flow_c* c, struct flow_job* job, struct flow_gr
 
 // if no hits, search forward
 
-bool flow_job_execute_where_certain(flow_c* c, struct flow_job* job, struct flow_graph** g)
+bool flow_job_execute_where_certain(flow_c * c, struct flow_job * job, struct flow_graph ** g)
 {
     if (*g == NULL) {
         FLOW_error(c, flow_status_Null_argument);
@@ -409,14 +410,14 @@ bool flow_job_execute_where_certain(flow_c* c, struct flow_job* job, struct flow
     return true;
 }
 
-static bool node_visitor_flatten(flow_c* c, struct flow_job* job, struct flow_graph** graph_ref, int32_t node_id,
-                                 bool* quit, bool* skip_outbound_paths, void* custom_data)
+static bool node_visitor_flatten(flow_c * c, struct flow_job * job, struct flow_graph ** graph_ref, int32_t node_id,
+                                 bool * quit, bool * skip_outbound_paths, void * custom_data)
 {
 
     if (!flow_node_update_state(c, *graph_ref, node_id)) {
         FLOW_error_return(c);
     }
-    struct flow_node* n = &(*graph_ref)->nodes[node_id];
+    struct flow_node * n = &(*graph_ref)->nodes[node_id];
 
     // If input nodes are populated
     if (n->state == flow_node_state_ReadyForPreOptimizeFlatten) {
@@ -424,7 +425,7 @@ static bool node_visitor_flatten(flow_c* c, struct flow_job* job, struct flow_gr
             FLOW_error_return(c);
         }
         *quit = true;
-        *((bool*)custom_data) = true;
+        *((bool *)custom_data) = true;
     } else if ((n->state & flow_node_state_InputDimensionsKnown) == 0) {
         // we can't flatten past missing dimensions
         *skip_outbound_paths = true;
@@ -432,7 +433,7 @@ static bool node_visitor_flatten(flow_c* c, struct flow_job* job, struct flow_gr
     return true;
 }
 
-bool flow_graph_pre_optimize_flatten(flow_c* c, struct flow_graph** graph_ref)
+bool flow_graph_pre_optimize_flatten(flow_c * c, struct flow_graph ** graph_ref)
 {
     if (*graph_ref == NULL) {
         FLOW_error(c, flow_status_Null_argument);
@@ -448,7 +449,7 @@ bool flow_graph_pre_optimize_flatten(flow_c* c, struct flow_graph** graph_ref)
     return true;
 }
 
-bool flow_job_link_codecs(flow_c* c, struct flow_job* job, struct flow_graph** graph_ref)
+bool flow_job_link_codecs(flow_c * c, struct flow_job * job, struct flow_graph ** graph_ref)
 {
 
     if (graph_ref == NULL || *graph_ref == NULL) {
@@ -459,12 +460,12 @@ bool flow_job_link_codecs(flow_c* c, struct flow_job* job, struct flow_graph** g
         FLOW_error_return(c);
     }
 
-    struct flow_graph* g = *graph_ref;
+    struct flow_graph * g = *graph_ref;
     int32_t i;
     for (i = 0; i < g->next_node_id; i++) {
         if (g->nodes[i].type == flow_ntype_decoder || g->nodes[i].type == flow_ntype_encoder) {
-            uint8_t* info_bytes = &g->info_bytes[g->nodes[i].info_byte_index];
-            struct flow_nodeinfo_codec* info = (struct flow_nodeinfo_codec*)info_bytes;
+            uint8_t * info_bytes = &g->info_bytes[g->nodes[i].info_byte_index];
+            struct flow_nodeinfo_codec * info = (struct flow_nodeinfo_codec *)info_bytes;
             if (info->codec == NULL) {
                 info->codec = flow_job_get_codec_instance(c, job, info->placeholder_id);
 
@@ -479,9 +480,9 @@ bool flow_job_link_codecs(flow_c* c, struct flow_job* job, struct flow_graph** g
     return true;
 }
 
-struct flow_codec_instance* flow_job_get_codec_instance(flow_c* c, struct flow_job* job, int32_t by_placeholder_id)
+struct flow_codec_instance * flow_job_get_codec_instance(flow_c * c, struct flow_job * job, int32_t by_placeholder_id)
 {
-    struct flow_codec_instance* current = job->codecs_head;
+    struct flow_codec_instance * current = job->codecs_head;
     while (current != NULL) {
         if (current->graph_placeholder_id == by_placeholder_id) {
             return current;

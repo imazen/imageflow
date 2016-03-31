@@ -23,7 +23,7 @@
 
 #include <stdlib.h>
 
-static void derive_cubic_coefficients(double B, double C, struct flow_interpolation_details* out)
+static void derive_cubic_coefficients(double B, double C, struct flow_interpolation_details * out)
 {
     double bx2 = B + B;
     out->p1 = 1.0 - (1.0 / 3.0) * B;
@@ -35,7 +35,7 @@ static void derive_cubic_coefficients(double B, double C, struct flow_interpolat
     out->q4 = (-1.0 / 6.0) * B - C;
 }
 
-static double filter_flex_cubic(const struct flow_interpolation_details* d, double x)
+static double filter_flex_cubic(const struct flow_interpolation_details * d, double x)
 {
     const double t = (double)fabs(x) / d->blur;
 
@@ -47,7 +47,7 @@ static double filter_flex_cubic(const struct flow_interpolation_details* d, doub
     }
     return (0.0);
 }
-static double filter_bicubic_fast(const struct flow_interpolation_details* d, double t)
+static double filter_bicubic_fast(const struct flow_interpolation_details * d, double t)
 {
     double abs_t = (double)fabs(t) / d->blur;
     double abs_t_sq = abs_t * abs_t;
@@ -58,7 +58,7 @@ static double filter_bicubic_fast(const struct flow_interpolation_details* d, do
     return 0;
 }
 
-static double filter_sinc(const struct flow_interpolation_details* d, double t)
+static double filter_sinc(const struct flow_interpolation_details * d, double t)
 {
     const double abs_t = (double)fabs(t) / d->blur;
     if (abs_t == 0) {
@@ -71,14 +71,14 @@ static double filter_sinc(const struct flow_interpolation_details* d, double t)
     return sin(a) / a;
 }
 
-static double filter_box(const struct flow_interpolation_details* d, double t)
+static double filter_box(const struct flow_interpolation_details * d, double t)
 {
 
     const double x = t / d->blur;
     return (x >= -1 * d->window && x < d->window) ? 1 : 0;
 }
 
-static double filter_triangle(const struct flow_interpolation_details* d, double t)
+static double filter_triangle(const struct flow_interpolation_details * d, double t)
 {
     const double x = (double)fabs(t) / d->blur;
     if (x < 1.0)
@@ -86,7 +86,7 @@ static double filter_triangle(const struct flow_interpolation_details* d, double
     return (0.0);
 }
 
-static double filter_sinc_windowed(const struct flow_interpolation_details* d, double t)
+static double filter_sinc_windowed(const struct flow_interpolation_details * d, double t)
 {
     const double x = t / d->blur;
     const double abs_t = (double)fabs(x);
@@ -99,7 +99,7 @@ static double filter_sinc_windowed(const struct flow_interpolation_details* d, d
     return d->window * sin(IR_PI * x / d->window) * sin(x * IR_PI) / (IR_PI * IR_PI * x * x);
 }
 
-static double filter_jinc(const struct flow_interpolation_details* d, double t)
+static double filter_jinc(const struct flow_interpolation_details * d, double t)
 {
     const double x = fabs(t) / d->blur;
     if (x == 0.0)
@@ -123,7 +123,7 @@ static double filter_window_jinc (const struct flow_interpolation_details * d, d
 }
 */
 
-static double filter_ginseng(const struct flow_interpolation_details* d, double t)
+static double filter_ginseng(const struct flow_interpolation_details * d, double t)
 {
     // Sinc windowed by jinc
     const double abs_t = (double)fabs(t) / d->blur;
@@ -143,7 +143,7 @@ static double filter_ginseng(const struct flow_interpolation_details* d, double 
 
 #define TONY 0.00001
 
-double flow_interpolation_details_percent_negative_weight(const struct flow_interpolation_details* details)
+double flow_interpolation_details_percent_negative_weight(const struct flow_interpolation_details * details)
 {
     const int samples = 50;
     double step = details->window / (double)samples;
@@ -163,9 +163,9 @@ double flow_interpolation_details_percent_negative_weight(const struct flow_inte
     return negative_area / positive_area;
 }
 
-struct flow_interpolation_details* flow_interpolation_details_create(flow_c* context)
+struct flow_interpolation_details * flow_interpolation_details_create(flow_c * context)
 {
-    struct flow_interpolation_details* d = FLOW_calloc_array(context, 1, struct flow_interpolation_details);
+    struct flow_interpolation_details * d = FLOW_calloc_array(context, 1, struct flow_interpolation_details);
     if (d == NULL) {
         FLOW_error(context, flow_status_Out_of_memory);
         return NULL;
@@ -178,10 +178,10 @@ struct flow_interpolation_details* flow_interpolation_details_create(flow_c* con
     return d;
 }
 
-struct flow_interpolation_details* flow_interpolation_details_create_bicubic_custom(flow_c* context, double window,
-                                                                                    double blur, double B, double C)
+struct flow_interpolation_details * flow_interpolation_details_create_bicubic_custom(flow_c * context, double window,
+                                                                                     double blur, double B, double C)
 {
-    struct flow_interpolation_details* d = flow_interpolation_details_create(context);
+    struct flow_interpolation_details * d = flow_interpolation_details_create(context);
     if (d != NULL) {
         d->blur = blur;
         derive_cubic_coefficients(B, C, d);
@@ -192,10 +192,11 @@ struct flow_interpolation_details* flow_interpolation_details_create_bicubic_cus
     }
     return d;
 }
-struct flow_interpolation_details* flow_interpolation_details_create_custom(flow_c* context, double window, double blur,
-                                                                            flow_detailed_interpolation_method filter)
+struct flow_interpolation_details * flow_interpolation_details_create_custom(flow_c * context, double window,
+                                                                             double blur,
+                                                                             flow_detailed_interpolation_method filter)
 {
-    struct flow_interpolation_details* d = flow_interpolation_details_create(context);
+    struct flow_interpolation_details * d = flow_interpolation_details_create(context);
     if (d != NULL) {
         d->blur = blur;
         d->filter = filter;
@@ -206,16 +207,16 @@ struct flow_interpolation_details* flow_interpolation_details_create_custom(flow
     return d;
 }
 
-void flow_interpolation_details_destroy(flow_c* context, struct flow_interpolation_details* details)
+void flow_interpolation_details_destroy(flow_c * context, struct flow_interpolation_details * details)
 {
     FLOW_free(context, details);
 }
 
-static struct flow_interpolation_details*
-InterpolationDetails_create_from_internal(flow_c* context, flow_interpolation_filter filter, bool checkExistenceOnly)
+static struct flow_interpolation_details *
+InterpolationDetails_create_from_internal(flow_c * context, flow_interpolation_filter filter, bool checkExistenceOnly)
 {
     bool ex = checkExistenceOnly;
-    struct flow_interpolation_details* truePtr = (struct flow_interpolation_details*)-1;
+    struct flow_interpolation_details * truePtr = (struct flow_interpolation_details *)-1;
     switch (filter) {
     case flow_interpolation_filter_Linear:
     case flow_interpolation_filter_Triangle:
@@ -298,8 +299,8 @@ InterpolationDetails_create_from_internal(flow_c* context, flow_interpolation_fi
     return NULL;
 }
 
-struct flow_interpolation_details* flow_interpolation_details_create_from(flow_c* context,
-                                                                          flow_interpolation_filter filter)
+struct flow_interpolation_details * flow_interpolation_details_create_from(flow_c * context,
+                                                                           flow_interpolation_filter filter)
 {
     return InterpolationDetails_create_from_internal(context, filter, false);
 }
@@ -309,10 +310,10 @@ bool flow_interpolation_filter_exists(flow_interpolation_filter filter)
     return (InterpolationDetails_create_from_internal(NULL, filter, true) != NULL);
 }
 
-static struct flow_interpolation_line_contributions*
-LineContributions_alloc(flow_c* context, const uint32_t line_length, const uint32_t windows_size)
+static struct flow_interpolation_line_contributions *
+LineContributions_alloc(flow_c * context, const uint32_t line_length, const uint32_t windows_size)
 {
-    struct flow_interpolation_line_contributions* res = (struct flow_interpolation_line_contributions*)FLOW_malloc(
+    struct flow_interpolation_line_contributions * res = (struct flow_interpolation_line_contributions *)FLOW_malloc(
         context, sizeof(struct flow_interpolation_line_contributions));
     if (res == NULL) {
         FLOW_error(context, flow_status_Out_of_memory);
@@ -320,7 +321,7 @@ LineContributions_alloc(flow_c* context, const uint32_t line_length, const uint3
     }
     res->WindowSize = windows_size;
     res->LineLength = line_length;
-    res->ContribRow = (struct flow_interpolation_pixel_contributions*)FLOW_malloc(
+    res->ContribRow = (struct flow_interpolation_pixel_contributions *)FLOW_malloc(
         context, line_length * sizeof(struct flow_interpolation_pixel_contributions));
     if (!res->ContribRow) {
         FLOW_free(context, res);
@@ -328,7 +329,7 @@ LineContributions_alloc(flow_c* context, const uint32_t line_length, const uint3
         return NULL;
     }
 
-    float* allWeights = FLOW_calloc_array(context, windows_size * line_length, float);
+    float * allWeights = FLOW_calloc_array(context, windows_size * line_length, float);
     if (!allWeights) {
         FLOW_free(context, res->ContribRow);
         FLOW_free(context, res);
@@ -342,7 +343,7 @@ LineContributions_alloc(flow_c* context, const uint32_t line_length, const uint3
     return res;
 }
 
-void flow_interpolation_line_contributions_destroy(flow_c* context, struct flow_interpolation_line_contributions* p)
+void flow_interpolation_line_contributions_destroy(flow_c * context, struct flow_interpolation_line_contributions * p)
 {
 
     if (p != NULL) {
@@ -354,10 +355,10 @@ void flow_interpolation_line_contributions_destroy(flow_c* context, struct flow_
     FLOW_free(context, p);
 }
 
-struct flow_interpolation_line_contributions*
-flow_interpolation_line_contributions_create(flow_c* context, const uint32_t output_line_size,
+struct flow_interpolation_line_contributions *
+flow_interpolation_line_contributions_create(flow_c * context, const uint32_t output_line_size,
                                              const uint32_t input_line_size,
-                                             const struct flow_interpolation_details* details)
+                                             const struct flow_interpolation_details * details)
 {
     const double sharpen_ratio = flow_interpolation_details_percent_negative_weight(details);
     const double desired_sharpen_ratio = details->sharpen_percent_goal / 100.0;
@@ -370,7 +371,7 @@ flow_interpolation_line_contributions_create(flow_c* context, const uint32_t out
 
     const uint32_t allocated_window_size = (int)ceil(2 * (half_source_window - TONY)) + 1;
     uint32_t u, ix;
-    struct flow_interpolation_line_contributions* res
+    struct flow_interpolation_line_contributions * res
         = LineContributions_alloc(context, output_line_size, allocated_window_size);
     if (res == NULL) {
         FLOW_add_to_callstack(context);
@@ -401,14 +402,14 @@ flow_interpolation_line_contributions_create(flow_c* context, const uint32_t out
         res->ContribRow[u].Left = left_src_pixel;
         res->ContribRow[u].Right = right_src_pixel;
 
-        float* weights = res->ContribRow[u].Weights;
+        float * weights = res->ContribRow[u].Weights;
 
         // commented: additional weight for edges (doesn't seem to be too effective)
         // for (ix = left_edge; ix <= right_edge; ix++) {
         for (ix = left_src_pixel; ix <= right_src_pixel; ix++) {
             int tx = ix - left_src_pixel;
             // int tx = min(max(ix, left_src_pixel), right_src_pixel) - left_src_pixel;
-            double add = (*details->filter)(details, downscale_factor*((double)ix - center_src_pixel));
+            double add = (*details->filter)(details, downscale_factor *((double)ix - center_src_pixel));
             if (add < 0 && extra_negative_weight != 0) {
                 add *= extra_negative_weight;
             }

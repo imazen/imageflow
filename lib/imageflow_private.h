@@ -35,7 +35,7 @@ struct flow_bitmap_float {
     // The number of floats per pixel
     uint32_t channels;
     // The pixel data
-    float* pixels;
+    float * pixels;
     // If true, don't dispose the buffer with the struct
     bool pixels_borrowed;
     // The number of floats in the buffer
@@ -57,18 +57,18 @@ struct flow_heap {
     flow_heap_realloc_function _realloc;
     flow_heap_free_function _free;
     flow_heap_terminate_function _context_terminate;
-    void* _private_state;
+    void * _private_state;
 };
 struct flow_objtracking_info;
-void flow_context_objtracking_initialize(struct flow_objtracking_info* heap_tracking);
-void flow_context_objtracking_terminate(flow_c* c);
+void flow_context_objtracking_initialize(struct flow_objtracking_info * heap_tracking);
+void flow_context_objtracking_terminate(flow_c * c);
 
 /** flow_context: struct flow_error_info **/
 
 struct flow_error_callstack_line {
-    const char* file;
+    const char * file;
     int line;
-    const char* function_name;
+    const char * function_name;
 };
 
 #define FLOW_ERROR_MESSAGE_SIZE 1023
@@ -109,16 +109,16 @@ struct flow_colorspace_info {
 
 #define FLOW_USER_IS_OWNER
 struct flow_heap_object_record {
-    void* ptr;
+    void * ptr;
     size_t bytes;
-    void* owner;
+    void * owner;
     flow_destructor_function destructor;
-    const char* allocated_by;
+    const char * allocated_by;
     int allocated_by_line;
     bool is_owner;
 };
 struct flow_objtracking_info {
-    struct flow_heap_object_record* allocs;
+    struct flow_heap_object_record * allocs;
     size_t next_free_slot;
     size_t total_slots;
     size_t bytes_allocated_net;
@@ -138,85 +138,85 @@ struct flow_context {
     struct flow_profiling_log log;
     struct flow_colorspace_info colorspace;
     struct flow_objtracking_info object_tracking;
-    struct flow_context_codec_set* codec_set;
+    struct flow_context_codec_set * codec_set;
 };
 
 typedef struct flow_context flow_c;
 #include "color.h"
 
-bool write_frame_to_disk(flow_c* c, const char* path, struct flow_bitmap_bgra* b);
+bool write_frame_to_disk(flow_c * c, const char * path, struct flow_bitmap_bgra * b);
 
-PUB bool flow_node_execute_render_to_canvas_1d(flow_c* c, struct flow_job* job, struct flow_bitmap_bgra* input,
-                                               struct flow_bitmap_bgra* canvas,
-                                               struct flow_nodeinfo_render_to_canvas_1d* info);
+PUB bool flow_node_execute_render_to_canvas_1d(flow_c * c, struct flow_job * job, struct flow_bitmap_bgra * input,
+                                               struct flow_bitmap_bgra * canvas,
+                                               struct flow_nodeinfo_render_to_canvas_1d * info);
 
-PUB bool flow_job_populate_dimensions_where_certain(flow_c* c, struct flow_job* job, struct flow_graph** graph_ref);
+PUB bool flow_job_populate_dimensions_where_certain(flow_c * c, struct flow_job * job, struct flow_graph ** graph_ref);
 // For doing execution cost estimates, we force estimate, then flatten, then calculate cost
-PUB bool flow_job_force_populate_dimensions(flow_c* c, struct flow_job* job, struct flow_graph** graph_ref);
-PUB bool flow_job_execute_where_certain(flow_c* c, struct flow_job* job, struct flow_graph** graph_ref);
-PUB bool flow_job_graph_fully_executed(flow_c* c, struct flow_job* job, struct flow_graph* g);
+PUB bool flow_job_force_populate_dimensions(flow_c * c, struct flow_job * job, struct flow_graph ** graph_ref);
+PUB bool flow_job_execute_where_certain(flow_c * c, struct flow_job * job, struct flow_graph ** graph_ref);
+PUB bool flow_job_graph_fully_executed(flow_c * c, struct flow_job * job, struct flow_graph * g);
 
-PUB bool flow_job_notify_graph_changed(flow_c* c, struct flow_job* job, struct flow_graph* g);
-PUB bool flow_job_execute(flow_c* c, struct flow_job* job, struct flow_graph** graph_ref);
-PUB bool flow_graph_post_optimize_flatten(flow_c* c, struct flow_job* job, struct flow_graph** graph_ref);
+PUB bool flow_job_notify_graph_changed(flow_c * c, struct flow_job * job, struct flow_graph * g);
+PUB bool flow_job_execute(flow_c * c, struct flow_job * job, struct flow_graph ** graph_ref);
+PUB bool flow_graph_post_optimize_flatten(flow_c * c, struct flow_job * job, struct flow_graph ** graph_ref);
 
-PUB bool flow_graph_optimize(flow_c* c, struct flow_job* job, struct flow_graph** graph_ref);
-PUB bool flow_graph_pre_optimize_flatten(flow_c* c, struct flow_graph** graph_ref);
-PUB int32_t flow_graph_get_edge_count(flow_c* c, struct flow_graph* g, int32_t node_id, bool filter_by_edge_type,
+PUB bool flow_graph_optimize(flow_c * c, struct flow_job * job, struct flow_graph ** graph_ref);
+PUB bool flow_graph_pre_optimize_flatten(flow_c * c, struct flow_graph ** graph_ref);
+PUB int32_t flow_graph_get_edge_count(flow_c * c, struct flow_graph * g, int32_t node_id, bool filter_by_edge_type,
                                       flow_edgetype type, bool include_inbound, bool include_outbound);
 
-PUB bool flow_node_post_optimize_flatten(flow_c* c, struct flow_graph** graph_ref, int32_t node_id);
+PUB bool flow_node_post_optimize_flatten(flow_c * c, struct flow_graph ** graph_ref, int32_t node_id);
 
-PUB bool flow_graph_walk_dependency_wise(flow_c* c, struct flow_job* job, struct flow_graph** graph_ref,
+PUB bool flow_graph_walk_dependency_wise(flow_c * c, struct flow_job * job, struct flow_graph ** graph_ref,
                                          flow_graph_visitor node_visitor, flow_graph_visitor edge_visitor,
-                                         void* custom_data);
+                                         void * custom_data);
 
-PUB struct flow_bitmap_float* flow_bitmap_float_create_header(flow_c* c, int sx, int sy, int channels);
+PUB struct flow_bitmap_float * flow_bitmap_float_create_header(flow_c * c, int sx, int sy, int channels);
 
-PUB struct flow_bitmap_float* flow_bitmap_float_create(flow_c* c, int sx, int sy, int channels, bool zeroed);
+PUB struct flow_bitmap_float * flow_bitmap_float_create(flow_c * c, int sx, int sy, int channels, bool zeroed);
 
-PUB void flow_bitmap_float_destroy(flow_c* c, struct flow_bitmap_float* im);
+PUB void flow_bitmap_float_destroy(flow_c * c, struct flow_bitmap_float * im);
 
-PUB bool flow_bitmap_float_scale_rows(flow_c* c, struct flow_bitmap_float* from, uint32_t from_row,
-                                      struct flow_bitmap_float* to, uint32_t to_row, uint32_t row_count,
-                                      struct flow_interpolation_pixel_contributions* weights);
-PUB bool flow_bitmap_float_convolve_rows(flow_c* c, struct flow_bitmap_float* buf,
-                                         struct flow_convolution_kernel* kernel, uint32_t convolve_channels,
+PUB bool flow_bitmap_float_scale_rows(flow_c * c, struct flow_bitmap_float * from, uint32_t from_row,
+                                      struct flow_bitmap_float * to, uint32_t to_row, uint32_t row_count,
+                                      struct flow_interpolation_pixel_contributions * weights);
+PUB bool flow_bitmap_float_convolve_rows(flow_c * c, struct flow_bitmap_float * buf,
+                                         struct flow_convolution_kernel * kernel, uint32_t convolve_channels,
                                          uint32_t from_row, int row_count);
 
-PUB bool flow_bitmap_float_sharpen_rows(flow_c* c, struct flow_bitmap_float* im, uint32_t start_row, uint32_t row_count,
-                                        double pct);
+PUB bool flow_bitmap_float_sharpen_rows(flow_c * c, struct flow_bitmap_float * im, uint32_t start_row,
+                                        uint32_t row_count, double pct);
 
-PUB bool flow_bitmap_float_convert_srgb_to_linear(flow_c* c, struct flow_bitmap_bgra* src, uint32_t from_row,
-                                                  struct flow_bitmap_float* dest, uint32_t dest_row,
+PUB bool flow_bitmap_float_convert_srgb_to_linear(flow_c * c, struct flow_bitmap_bgra * src, uint32_t from_row,
+                                                  struct flow_bitmap_float * dest, uint32_t dest_row,
                                                   uint32_t row_count);
 
 PUB uint32_t flow_bitmap_float_approx_gaussian_calculate_d(float sigma, uint32_t bitmap_width);
 
 PUB uint32_t flow_bitmap_float_approx_gaussian_buffer_element_count_required(float sigma, uint32_t bitmap_width);
 
-PUB bool flow_bitmap_float_approx_gaussian_blur_rows(flow_c* c, struct flow_bitmap_float* image, float sigma,
-                                                     float* buffer, size_t buffer_element_count, uint32_t from_row,
+PUB bool flow_bitmap_float_approx_gaussian_blur_rows(flow_c * c, struct flow_bitmap_float * image, float sigma,
+                                                     float * buffer, size_t buffer_element_count, uint32_t from_row,
                                                      int row_count);
-PUB bool flow_bitmap_float_pivoting_composite_linear_over_srgb(flow_c* c, struct flow_bitmap_float* src,
-                                                               uint32_t from_row, struct flow_bitmap_bgra* dest,
+PUB bool flow_bitmap_float_pivoting_composite_linear_over_srgb(flow_c * c, struct flow_bitmap_float * src,
+                                                               uint32_t from_row, struct flow_bitmap_bgra * dest,
                                                                uint32_t dest_row, uint32_t row_count, bool transpose);
 
-PUB bool flow_bitmap_float_flip_vertical(flow_c* c, struct flow_bitmap_bgra* b);
+PUB bool flow_bitmap_float_flip_vertical(flow_c * c, struct flow_bitmap_bgra * b);
 
-PUB bool flow_bitmap_float_demultiply_alpha(flow_c* c, struct flow_bitmap_float* src, const uint32_t from_row,
+PUB bool flow_bitmap_float_demultiply_alpha(flow_c * c, struct flow_bitmap_float * src, const uint32_t from_row,
                                             const uint32_t row_count);
 
-PUB bool flow_bitmap_float_copy_linear_over_srgb(flow_c* c, struct flow_bitmap_float* src, const uint32_t from_row,
-                                                 struct flow_bitmap_bgra* dest, const uint32_t dest_row,
+PUB bool flow_bitmap_float_copy_linear_over_srgb(flow_c * c, struct flow_bitmap_float * src, const uint32_t from_row,
+                                                 struct flow_bitmap_bgra * dest, const uint32_t dest_row,
                                                  const uint32_t row_count, const uint32_t from_col,
                                                  const uint32_t col_count, const bool transpose);
 
-PUB bool flow_halve(flow_c* c, const struct flow_bitmap_bgra* from, struct flow_bitmap_bgra* to, int divisor);
+PUB bool flow_halve(flow_c * c, const struct flow_bitmap_bgra * from, struct flow_bitmap_bgra * to, int divisor);
 
-PUB bool flow_halve_in_place(flow_c* c, struct flow_bitmap_bgra* from, int divisor);
+PUB bool flow_halve_in_place(flow_c * c, struct flow_bitmap_bgra * from, int divisor);
 
-PUB void flow_utils_ensure_directory_exists(const char* dir_path);
+PUB void flow_utils_ensure_directory_exists(const char * dir_path);
 
 // https://github.com/imazen/freeimage/blob/master/Source/FreeImage/FreeImageIO.cpp
 // https://github.com/imazen/freeimage/blob/master/Source/FreeImage/PluginJPEG.cpp
@@ -275,12 +275,12 @@ struct flow_nodeinfo_size {
     size_t height;
 };
 struct flow_nodeinfo_bitmap_bgra_pointer {
-    struct flow_bitmap_bgra** ref;
+    struct flow_bitmap_bgra ** ref;
 };
 
 struct flow_nodeinfo_codec {
     int32_t placeholder_id;
-    struct flow_codec_instance* codec;
+    struct flow_codec_instance * codec;
     // For encoders
     int64_t desired_encoder_id;
 };
@@ -303,20 +303,20 @@ struct flow_nodeinfo_render_to_canvas_1d {
     // being sRGBA, 4 bytes.
     uint8_t matte_color[4];
 
-    struct flow_scanlines_filter* filter_list;
+    struct flow_scanlines_filter * filter_list;
 };
 
 // If you want to know what kind of I/O structure is inside user_data, compare the read_func/write_func function
 // pointers. No need for another human-assigned set of custom structure identifiers.
 struct flow_io {
-    flow_c* context;
+    flow_c * context;
     flow_io_mode mode; // Call nothing, dereference nothing, if this is 0
     flow_io_read_function read_func; // Optional for write modes
     flow_io_write_function write_func; // Optional for read modes
     flow_io_position_function position_func; // Optional for sequential modes
     flow_io_seek_function seek_function; // Optional for sequential modes
     flow_destructor_function dispose_func; // Optional.
-    void* user_data;
+    void * user_data;
     uint64_t optional_file_length; // Whoever sets up this structure can populate this value - or set it to -1 - as they
     // wish. useful for resource estimation.
 };
@@ -324,9 +324,9 @@ struct flow_io {
 struct flow_codec_instance {
     int32_t graph_placeholder_id;
     int64_t codec_id;
-    void* codec_state;
-    struct flow_io* io;
-    struct flow_codec_instance* next;
+    void * codec_state;
+    struct flow_io * io;
+    struct flow_codec_instance * next;
     FLOW_DIRECTION direction;
 };
 
@@ -334,8 +334,8 @@ struct flow_job {
     int32_t debug_job_id;
     int32_t next_graph_version;
     int32_t max_calc_flatten_execute_passes;
-    struct flow_codec_instance* codecs_head;
-    struct flow_codec_instance* codecs_tail; // Makes appends simple. Deletes, not so much
+    struct flow_codec_instance * codecs_head;
+    struct flow_codec_instance * codecs_tail; // Makes appends simple. Deletes, not so much
     bool record_graph_versions;
     bool record_frame_images;
     bool render_graph_versions;
@@ -343,14 +343,14 @@ struct flow_job {
     bool render_last_graph;
 };
 
-PUB bool flow_job_render_graph_to_png(flow_c* c, struct flow_job* job, struct flow_graph* g, int32_t graph_version);
-PUB bool flow_job_notify_node_complete(flow_c* c, struct flow_job* job, struct flow_graph* g, int32_t node_id);
+PUB bool flow_job_render_graph_to_png(flow_c * c, struct flow_job * job, struct flow_graph * g, int32_t graph_version);
+PUB bool flow_job_notify_node_complete(flow_c * c, struct flow_job * job, struct flow_graph * g, int32_t node_id);
 
-PUB bool flow_job_link_codecs(flow_c* c, struct flow_job* job, struct flow_graph** graph_ref);
+PUB bool flow_job_link_codecs(flow_c * c, struct flow_job * job, struct flow_graph ** graph_ref);
 
 struct flow_scanlines_filter {
     flow_scanlines_filter_type type;
-    struct flow_scanlines_filter* next;
+    struct flow_scanlines_filter * next;
 };
 //
 // struct flow_frame_info{
@@ -377,24 +377,24 @@ struct flow_node {
     int32_t result_height;
     flow_pixel_format result_format;
     bool result_alpha_meaningful;
-    struct flow_bitmap_bgra* result_bitmap;
+    struct flow_bitmap_bgra * result_bitmap;
     uint32_t ticks_elapsed;
 };
 
 struct flow_graph {
     uint32_t memory_layout_version; // This progresses differently from the library version, as internals are subject to
     // refactoring. If we are given a graph to copy, we check this number.
-    struct flow_edge* edges;
+    struct flow_edge * edges;
     int32_t edge_count;
     int32_t next_edge_id;
     int32_t max_edges;
 
-    struct flow_node* nodes;
+    struct flow_node * nodes;
     int32_t node_count;
     int32_t next_node_id;
     int32_t max_nodes;
 
-    uint8_t* info_bytes;
+    uint8_t * info_bytes;
     int32_t max_info_bytes;
     int32_t next_info_byte;
     int32_t deleted_bytes;

@@ -3,21 +3,21 @@
 #include "helpers.h"
 
 // Assumes placeholders 0 and 1 for input/output respectively
-bool execute_graph_for_url(flow_c* c, const char* input_image_url, const char* output_image_path,
-                           struct flow_graph** graph_ref)
+bool execute_graph_for_url(flow_c * c, const char * input_image_url, const char * output_image_path,
+                           struct flow_graph ** graph_ref)
 {
     size_t bytes_count = 0;
-    uint8_t* bytes = get_bytes_cached(c, &bytes_count, input_image_url);
+    uint8_t * bytes = get_bytes_cached(c, &bytes_count, input_image_url);
 
-    struct flow_job* job = flow_job_create(c);
+    struct flow_job * job = flow_job_create(c);
     ERR(c);
     flow_job_configure_recording(c, job, false, false, false, false, false);
 
     int32_t input_placeholder = 0;
     int32_t output_placeholder = 1;
 
-    struct flow_io* input = flow_io_create_from_memory(c, flow_io_mode_read_seekable, bytes, bytes_count, job, NULL);
-    struct flow_io* output = flow_io_create_for_output_buffer(c, job);
+    struct flow_io * input = flow_io_create_from_memory(c, flow_io_mode_read_seekable, bytes, bytes_count, job, NULL);
+    struct flow_io * output = flow_io_create_for_output_buffer(c, job);
 
     flow_job_add_io(c, job, input, input_placeholder, FLOW_INPUT);
     flow_job_add_io(c, job, output, output_placeholder, FLOW_OUTPUT);
@@ -37,9 +37,9 @@ bool execute_graph_for_url(flow_c* c, const char* input_image_url, const char* o
     return true;
 }
 
-bool execute_graph_for_bitmap_bgra(flow_c* c, struct flow_graph** graph_ref)
+bool execute_graph_for_bitmap_bgra(flow_c * c, struct flow_graph ** graph_ref)
 {
-    struct flow_job* job = flow_job_create(c);
+    struct flow_job * job = flow_job_create(c);
     ERR(c);
     flow_job_configure_recording(c, job, false, false, false, false, false);
 
@@ -53,8 +53,8 @@ bool execute_graph_for_bitmap_bgra(flow_c* c, struct flow_graph** graph_ref)
 
 TEST_CASE("create tiny graph", "")
 {
-    flow_c* c = flow_context_create();
-    flow_graph* g = flow_graph_create(c, 10, 10, 200, 2.0);
+    flow_c * c = flow_context_create();
+    flow_graph * g = flow_graph_create(c, 10, 10, 200, 2.0);
     int32_t last;
 
     last = flow_node_create_canvas(c, &g, -1, flow_bgra32, 400, 300, 0xFFFFFFFF);
@@ -73,8 +73,8 @@ TEST_CASE("create tiny graph", "")
 
 TEST_CASE("delete a node from a graph", "")
 {
-    flow_c* c = flow_context_create();
-    flow_graph* g = flow_graph_create(c, 10, 10, 200, 2.0);
+    flow_c * c = flow_context_create();
+    flow_graph * g = flow_graph_create(c, 10, 10, 200, 2.0);
     int32_t last;
 
     last = flow_node_create_canvas(c, &g, -1, flow_bgra32, 400, 300, 0xFFFFFFFF);
@@ -108,8 +108,8 @@ TEST_CASE("delete a node from a graph", "")
 
 TEST_CASE("clone an edge", "")
 {
-    flow_c* c = flow_context_create();
-    flow_graph* g = flow_graph_create(c, 10, 10, 200, 2.0);
+    flow_c * c = flow_context_create();
+    flow_graph * g = flow_graph_create(c, 10, 10, 200, 2.0);
     int32_t last;
     last = flow_node_create_canvas(c, &g, -1, flow_bgra32, 400, 300, 0xFFFFFFFF);
     last = flow_node_create_scale(c, &g, last, 300, 200);
@@ -138,12 +138,12 @@ TEST_CASE("clone an edge", "")
 TEST_CASE("execute tiny graph", "")
 {
 
-    flow_c* c = flow_context_create();
+    flow_c * c = flow_context_create();
     flow_utils_ensure_directory_exists("node_frames");
-    struct flow_graph* g = nullptr;
-    struct flow_job* job = nullptr;
+    struct flow_graph * g = nullptr;
+    struct flow_job * job = nullptr;
 
-    struct flow_bitmap_bgra* result = nullptr;
+    struct flow_bitmap_bgra * result = nullptr;
 
     g = flow_graph_create(c, 10, 10, 200, 2.0);
     ERR(c);
@@ -174,10 +174,10 @@ TEST_CASE("execute tiny graph", "")
 TEST_CASE("decode and scale png", "")
 {
 
-    flow_c* c = flow_context_create();
-    struct flow_graph* g = nullptr;
-    struct flow_job* job = nullptr;
-    struct flow_bitmap_bgra* result = nullptr;
+    flow_c * c = flow_context_create();
+    struct flow_graph * g = nullptr;
+    struct flow_job * job = nullptr;
+    struct flow_bitmap_bgra * result = nullptr;
 
     g = flow_graph_create(c, 10, 10, 200, 2.0);
     ERR(c);
@@ -197,8 +197,8 @@ TEST_CASE("decode and scale png", "")
             0x00, 0x00, 0x0A, 0x49, 0x44, 0x41, 0x54, 0x78, 0x9C, 0x63, 0x00, 0x01, 0x00, 0x00, 0x05, 0x00, 0x01,
             0x0D, 0x0A, 0x2D, 0xB4, 0x00, 0x00, 0x00, 0x00, 0x49, 0x45, 0x4E, 0x44, 0xAE, 0x42, 0x60, 0x82 };
 
-    struct flow_io* input_io = flow_io_create_from_memory(c, flow_io_mode_read_seekable, &image_bytes_literal[0],
-                                                          sizeof(image_bytes_literal), job, NULL);
+    struct flow_io * input_io = flow_io_create_from_memory(c, flow_io_mode_read_seekable, &image_bytes_literal[0],
+                                                           sizeof(image_bytes_literal), job, NULL);
 
     if (!flow_job_add_io(c, job, input_io, input_placeholder, FLOW_INPUT)) {
         ERR(c);
@@ -222,8 +222,8 @@ uint8_t image_bytes_literal[]
         0x00, 0x00, 0x0A, 0x49, 0x44, 0x41, 0x54, 0x78, 0x9C, 0x63, 0x00, 0x01, 0x00, 0x00, 0x05, 0x00, 0x01,
         0x0D, 0x0A, 0x2D, 0xB4, 0x00, 0x00, 0x00, 0x00, 0x49, 0x45, 0x4E, 0x44, 0xAE, 0x42, 0x60, 0x82 };
 
-bool create_operation_graph(flow_c* c, struct flow_graph** graph_ref, int32_t input_placeholder,
-                            int32_t output_placeholder, struct flow_decoder_info* info)
+bool create_operation_graph(flow_c * c, struct flow_graph ** graph_ref, int32_t input_placeholder,
+                            int32_t output_placeholder, struct flow_decoder_info * info)
 {
 
     REQUIRE(info->frame0_post_decode_format == flow_bgra32);
@@ -234,7 +234,7 @@ bool create_operation_graph(flow_c* c, struct flow_graph** graph_ref, int32_t in
     REQUIRE(info->codec_id == flow_codec_type_decode_png);
 
     // We'll create a simple operation graph that scales the image up 200%
-    struct flow_graph* g = flow_graph_create(c, 10, 10, 200, 2.0);
+    struct flow_graph * g = flow_graph_create(c, 10, 10, 200, 2.0);
     if (g == NULL) {
         FLOW_add_to_callstack(c);
         return false;
@@ -255,14 +255,14 @@ bool create_operation_graph(flow_c* c, struct flow_graph** graph_ref, int32_t in
     return true;
 }
 
-bool scale_image_inner(flow_c* c, flow_io* input, flow_io* output)
+bool scale_image_inner(flow_c * c, flow_io * input, flow_io * output)
 {
     // We associate codecs and nodes using integer IDs that you select
     int32_t input_placeholder = 42;
     int32_t output_placeholder = 0xbad1dea;
 
     // We create a job to create I/O resources and attach them to our abstract graph above
-    struct flow_job* job = flow_job_create(c);
+    struct flow_job * job = flow_job_create(c);
     if (job == NULL) {
         FLOW_add_to_callstack(c);
         return false;
@@ -283,7 +283,7 @@ bool scale_image_inner(flow_c* c, flow_io* input, flow_io* output)
         return false;
     }
     // And give it to the operation graph designer
-    struct flow_graph* g;
+    struct flow_graph * g;
     if (!create_operation_graph(c, &g, input_placeholder, output_placeholder, &info)) {
         FLOW_add_to_callstack(c);
         return false;
@@ -299,15 +299,15 @@ bool scale_image_inner(flow_c* c, flow_io* input, flow_io* output)
 bool scale_image_to_disk()
 {
     // flow_context provides error tracking and memory management
-    flow_c* c = flow_context_create();
+    flow_c * c = flow_context_create();
     if (c == NULL) {
         return false;
     }
     // We're going to use an embedded image, but you could get bytes from anywhere
-    struct flow_io* input = flow_io_create_from_memory(c, flow_io_mode_read_seekable, &image_bytes_literal[0],
-                                                       sizeof(image_bytes_literal), c, NULL);
+    struct flow_io * input = flow_io_create_from_memory(c, flow_io_mode_read_seekable, &image_bytes_literal[0],
+                                                        sizeof(image_bytes_literal), c, NULL);
     // Output to an in-memory expanding buffer. This could be a stream or file instead.
-    struct flow_io* output = flow_io_create_for_output_buffer(c, c);
+    struct flow_io * output = flow_io_create_for_output_buffer(c, c);
 
     // Using an inner function makes it easier to deal with errors
     if (input == NULL || output == NULL || !scale_image_inner(c, input, output)) {
@@ -334,8 +334,8 @@ TEST_CASE("decode, scale, and re-encode png", "") { REQUIRE(scale_image_to_disk(
 
 TEST_CASE("scale and flip and crop png", "")
 {
-    flow_c* c = flow_context_create();
-    struct flow_graph* g = flow_graph_create(c, 10, 10, 200, 2.0);
+    flow_c * c = flow_context_create();
+    struct flow_graph * g = flow_graph_create(c, 10, 10, 200, 2.0);
     ERR(c);
 
     int32_t last, input_placeholder = 0, output_placeholder = 1;
@@ -452,8 +452,8 @@ TEST_CASE("export frames of animated gif", "")
 */
 TEST_CASE("scale and flip and crop jpg", "")
 {
-    flow_c* c = flow_context_create();
-    struct flow_graph* g = flow_graph_create(c, 10, 10, 200, 2.0);
+    flow_c * c = flow_context_create();
+    struct flow_graph * g = flow_graph_create(c, 10, 10, 200, 2.0);
     ERR(c);
 
     int32_t last, input_placeholder = 0, output_placeholder = 1;
@@ -472,8 +472,8 @@ TEST_CASE("scale and flip and crop jpg", "")
 
 TEST_CASE("benchmark scaling large progressive jpg", "")
 {
-    flow_c* c = flow_context_create();
-    struct flow_graph* g = flow_graph_create(c, 10, 10, 200, 2.0);
+    flow_c * c = flow_context_create();
+    struct flow_graph * g = flow_graph_create(c, 10, 10, 200, 2.0);
     ERR(c);
 
     int32_t last, input_placeholder = 0, output_placeholder = 1;
@@ -490,8 +490,8 @@ TEST_CASE("benchmark scaling large progressive jpg", "")
 
 TEST_CASE("benchmark scaling large jpg", "")
 {
-    flow_c* c = flow_context_create();
-    struct flow_graph* g = flow_graph_create(c, 10, 10, 200, 2.0);
+    flow_c * c = flow_context_create();
+    struct flow_graph * g = flow_graph_create(c, 10, 10, 200, 2.0);
     ERR(c);
 
     int32_t last, input_placeholder = 0, output_placeholder = 1;
@@ -509,13 +509,13 @@ TEST_CASE("benchmark scaling large jpg", "")
 
 TEST_CASE("Roundtrip flipping", "")
 {
-    flow_c* c = flow_context_create();
-    struct flow_graph* g = flow_graph_create(c, 10, 10, 200, 2.0);
+    flow_c * c = flow_context_create();
+    struct flow_graph * g = flow_graph_create(c, 10, 10, 200, 2.0);
     ERR(c);
 
     int32_t last, input_placeholder = 0, output_placeholder = 1;
-    struct flow_bitmap_bgra* input;
-    struct flow_bitmap_bgra* output;
+    struct flow_bitmap_bgra * input;
+    struct flow_bitmap_bgra * output;
 
     last = flow_node_create_bitmap_bgra_reference(c, &g, -1, &input);
     last = flow_node_create_clone(c, &g, last);
@@ -540,8 +540,8 @@ TEST_CASE("Roundtrip flipping", "")
 
 TEST_CASE("scale copy rect", "")
 {
-    flow_c* c = flow_context_create();
-    struct flow_graph* g = flow_graph_create(c, 10, 10, 200, 2.0);
+    flow_c * c = flow_context_create();
+    struct flow_graph * g = flow_graph_create(c, 10, 10, 200, 2.0);
     ERR(c);
 
     int32_t last, input_placeholder = 0, output_placeholder = 1;
@@ -561,8 +561,8 @@ TEST_CASE("scale copy rect", "")
 
 TEST_CASE("test frame clone", "")
 {
-    flow_c* c = flow_context_create();
-    struct flow_graph* g = flow_graph_create(c, 10, 10, 200, 2.0);
+    flow_c * c = flow_context_create();
+    struct flow_graph * g = flow_graph_create(c, 10, 10, 200, 2.0);
     ERR(c);
 
     int32_t input_placeholder = 0, output_placeholder = 1;
@@ -582,8 +582,8 @@ TEST_CASE("test frame clone", "")
 
 TEST_CASE("test rotation", "")
 {
-    flow_c* c = flow_context_create();
-    struct flow_graph* g = flow_graph_create(c, 10, 10, 200, 2.0);
+    flow_c * c = flow_context_create();
+    struct flow_graph * g = flow_graph_create(c, 10, 10, 200, 2.0);
     ERR(c);
 
     int32_t input_placeholder = 0, output_placeholder = 1;
@@ -605,8 +605,8 @@ TEST_CASE("test memory corruption", "")
     // overlap
     // It also showed how that post_optimize_flatten calls which create pre_optimize_flattenable nodes
     // Can cause execution to fail in fewer than 6 passes. We may want to re-evaluate our graph exeuction approach
-    flow_c* c = flow_context_create();
-    struct flow_graph* g = flow_graph_create(c, 10, 10, 200, 2.0);
+    flow_c * c = flow_context_create();
+    struct flow_graph * g = flow_graph_create(c, 10, 10, 200, 2.0);
     ERR(c);
 
     int32_t input_placeholder = 0, output_placeholder = 1;
@@ -631,8 +631,8 @@ TEST_CASE("check for cycles", "")
     // overlap
     // It also showed how that post_optimize_flatten calls which create pre_optimize_flattenable nodes
     // Can cause execution to fail in fewer than 6 passes. We may want to re-evaluate our graph exeuction approach
-    flow_c* c = flow_context_create();
-    struct flow_graph* g = flow_graph_create(c, 10, 10, 200, 2.0);
+    flow_c * c = flow_context_create();
+    struct flow_graph * g = flow_graph_create(c, 10, 10, 200, 2.0);
     ERR(c);
 
     int32_t first = flow_node_create_clone(c, &g, -1);
@@ -658,11 +658,11 @@ TEST_CASE("test outbound edge validation", "")
     // overlap
     // It also showed how that post_optimize_flatten calls which create pre_optimize_flattenable nodes
     // Can cause execution to fail in fewer than 6 passes. We may want to re-evaluate our graph exeuction approach
-    flow_c* c = flow_context_create();
-    struct flow_graph* g = flow_graph_create(c, 10, 10, 200, 2.0);
+    flow_c * c = flow_context_create();
+    struct flow_graph * g = flow_graph_create(c, 10, 10, 200, 2.0);
     ERR(c);
 
-    struct flow_bitmap_bgra* p;
+    struct flow_bitmap_bgra * p;
     int32_t first = flow_node_create_bitmap_bgra_reference(c, &g, -1, &p);
     int32_t encoder = flow_node_create_encoder_placeholder(c, &g, first, 0);
     int32_t second = flow_node_create_clone(c, &g, encoder);

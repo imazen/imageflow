@@ -3,12 +3,12 @@
 #include <string.h>
 #include "imageflow.h"
 
-static bool ScaleAndRender1D(flow_c* context, struct flow_bitmap_bgra* pSrc, struct flow_bitmap_bgra* pDst,
-                             const struct flow_interpolation_details* details, bool transpose)
+static bool ScaleAndRender1D(flow_c * context, struct flow_bitmap_bgra * pSrc, struct flow_bitmap_bgra * pDst,
+                             const struct flow_interpolation_details * details, bool transpose)
 {
-    struct flow_interpolation_line_contributions* contrib = NULL;
-    struct flow_bitmap_float* source_buf = NULL;
-    struct flow_bitmap_float* dest_buf = NULL;
+    struct flow_interpolation_line_contributions * contrib = NULL;
+    struct flow_bitmap_float * source_buf = NULL;
+    struct flow_bitmap_float * dest_buf = NULL;
 
     uint32_t from_count = pSrc->w;
     uint32_t to_count = transpose ? pDst->h : pDst->w;
@@ -118,9 +118,9 @@ cleanup:
     return success;
 }
 
-bool flow_node_execute_render_to_canvas_1d(flow_c* c, struct flow_job* job, struct flow_bitmap_bgra* input,
-                                           struct flow_bitmap_bgra* canvas,
-                                           struct flow_nodeinfo_render_to_canvas_1d* info)
+bool flow_node_execute_render_to_canvas_1d(flow_c * c, struct flow_job * job, struct flow_bitmap_bgra * input,
+                                           struct flow_bitmap_bgra * canvas,
+                                           struct flow_nodeinfo_render_to_canvas_1d * info)
 {
 
     if (info->canvas_x != 0 || info->canvas_y != 0
@@ -132,7 +132,7 @@ bool flow_node_execute_render_to_canvas_1d(flow_c* c, struct flow_job* job, stru
         FLOW_error(c, flow_status_Not_implemented); // Requires cropping the target canvas
         return false;
     }
-    struct flow_interpolation_details* d = flow_interpolation_details_create_from(c, info->interpolation_filter);
+    struct flow_interpolation_details * d = flow_interpolation_details_create_from(c, info->interpolation_filter);
     if (d == NULL) {
         FLOW_error_return(c);
     }

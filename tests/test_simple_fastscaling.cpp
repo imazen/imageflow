@@ -18,23 +18,23 @@ bool test(int sx, int sy, flow_pixel_format sbpp, int cx, int cy, flow_pixel_for
 bool test(int sx, int sy, flow_pixel_format sbpp, int cx, int cy, flow_pixel_format cbpp, bool transpose, bool flipx,
           bool flipy, flow_interpolation_filter filter)
 {
-    flow_c* context = flow_context_create();
+    flow_c * context = flow_context_create();
     if (context == NULL) {
         return false;
     }
-    struct flow_bitmap_bgra* source = flow_bitmap_bgra_create(context, sx, sy, true, sbpp);
+    struct flow_bitmap_bgra * source = flow_bitmap_bgra_create(context, sx, sy, true, sbpp);
     if (source == NULL) {
         flow_context_destroy(context);
         return false;
     }
-    struct flow_bitmap_bgra* canvas = flow_bitmap_bgra_create(context, cx, cy, true, cbpp);
+    struct flow_bitmap_bgra * canvas = flow_bitmap_bgra_create(context, cx, cy, true, cbpp);
     if (canvas == NULL) {
         flow_bitmap_bgra_destroy(context, source);
         flow_context_destroy(context);
         return false;
     }
 
-    struct flow_RenderDetails* details = flow_RenderDetails_create_with(context, filter);
+    struct flow_RenderDetails * details = flow_RenderDetails_create_with(context, filter);
     if (details == NULL) {
         flow_bitmap_bgra_destroy(context, source);
         flow_bitmap_bgra_destroy(context, canvas);

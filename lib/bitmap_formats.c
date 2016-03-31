@@ -26,14 +26,14 @@ static bool are_valid_bitmap_dimensions(int sx, int sy)
 
 uint32_t flow_pixel_format_bytes_per_pixel(flow_pixel_format format) { return (uint32_t)format; }
 
-struct flow_bitmap_bgra* flow_bitmap_bgra_create_header(flow_c* context, int sx, int sy)
+struct flow_bitmap_bgra * flow_bitmap_bgra_create_header(flow_c * context, int sx, int sy)
 {
-    struct flow_bitmap_bgra* im;
+    struct flow_bitmap_bgra * im;
     if (!are_valid_bitmap_dimensions(sx, sy)) {
         FLOW_error(context, flow_status_Invalid_dimensions);
         return NULL;
     }
-    im = (struct flow_bitmap_bgra*)FLOW_calloc(context, 1, sizeof(struct flow_bitmap_bgra));
+    im = (struct flow_bitmap_bgra *)FLOW_calloc(context, 1, sizeof(struct flow_bitmap_bgra));
     if (im == NULL) {
         FLOW_error(context, flow_status_Out_of_memory);
         return NULL;
@@ -48,9 +48,10 @@ struct flow_bitmap_bgra* flow_bitmap_bgra_create_header(flow_c* context, int sx,
     return im;
 }
 
-struct flow_bitmap_bgra* flow_bitmap_bgra_create(flow_c* context, int sx, int sy, bool zeroed, flow_pixel_format format)
+struct flow_bitmap_bgra * flow_bitmap_bgra_create(flow_c * context, int sx, int sy, bool zeroed,
+                                                  flow_pixel_format format)
 {
-    struct flow_bitmap_bgra* im = flow_bitmap_bgra_create_header(context, sx, sy);
+    struct flow_bitmap_bgra * im = flow_bitmap_bgra_create_header(context, sx, sy);
     if (im == NULL) {
         FLOW_add_to_callstack(context);
         return NULL;
@@ -62,9 +63,9 @@ struct flow_bitmap_bgra* flow_bitmap_bgra_create(flow_c* context, int sx, int sy
     im->borrowed_pixels = false;
     im->alpha_meaningful = im->fmt == flow_bgra32;
     if (zeroed) {
-        im->pixels = (unsigned char*)FLOW_calloc_owned(context, im->h * im->stride, sizeof(unsigned char), im);
+        im->pixels = (unsigned char *)FLOW_calloc_owned(context, im->h * im->stride, sizeof(unsigned char), im);
     } else {
-        im->pixels = (unsigned char*)FLOW_malloc_owned(context, im->h * im->stride, im);
+        im->pixels = (unsigned char *)FLOW_malloc_owned(context, im->h * im->stride, im);
     }
     if (im->pixels == NULL) {
         FLOW_destroy(context, im);
@@ -74,17 +75,17 @@ struct flow_bitmap_bgra* flow_bitmap_bgra_create(flow_c* context, int sx, int sy
     return im;
 }
 
-void flow_bitmap_bgra_destroy(flow_c* context, struct flow_bitmap_bgra* im) { FLOW_destroy(context, im); }
+void flow_bitmap_bgra_destroy(flow_c * context, struct flow_bitmap_bgra * im) { FLOW_destroy(context, im); }
 
-struct flow_bitmap_float* flow_bitmap_float_create_header(flow_c* context, int sx, int sy, int channels)
+struct flow_bitmap_float * flow_bitmap_float_create_header(flow_c * context, int sx, int sy, int channels)
 {
-    struct flow_bitmap_float* im;
+    struct flow_bitmap_float * im;
 
     if (!are_valid_bitmap_dimensions(sx, sy)) {
         FLOW_error(context, flow_status_Invalid_dimensions);
     }
 
-    im = (struct flow_bitmap_float*)FLOW_calloc(context, 1, sizeof(struct flow_bitmap_float));
+    im = (struct flow_bitmap_float *)FLOW_calloc(context, 1, sizeof(struct flow_bitmap_float));
     if (im == NULL) {
         FLOW_error(context, flow_status_Out_of_memory);
         return NULL;
@@ -101,18 +102,18 @@ struct flow_bitmap_float* flow_bitmap_float_create_header(flow_c* context, int s
     return im;
 }
 
-struct flow_bitmap_float* flow_bitmap_float_create(flow_c* context, int sx, int sy, int channels, bool zeroed)
+struct flow_bitmap_float * flow_bitmap_float_create(flow_c * context, int sx, int sy, int channels, bool zeroed)
 {
-    struct flow_bitmap_float* im = flow_bitmap_float_create_header(context, sx, sy, channels);
+    struct flow_bitmap_float * im = flow_bitmap_float_create_header(context, sx, sy, channels);
     if (im == NULL) {
         FLOW_add_to_callstack(context);
         return NULL;
     }
     im->pixels_borrowed = false;
     if (zeroed) {
-        im->pixels = (float*)FLOW_calloc_owned(context, im->float_count, sizeof(float), im);
+        im->pixels = (float *)FLOW_calloc_owned(context, im->float_count, sizeof(float), im);
     } else {
-        im->pixels = (float*)FLOW_malloc_owned(context, im->float_count * sizeof(float), im);
+        im->pixels = (float *)FLOW_malloc_owned(context, im->float_count * sizeof(float), im);
     }
     if (im->pixels == NULL) {
         FLOW_destroy(context, im);
@@ -122,9 +123,9 @@ struct flow_bitmap_float* flow_bitmap_float_create(flow_c* context, int sx, int 
     return im;
 }
 
-void flow_bitmap_float_destroy(flow_c* context, struct flow_bitmap_float* im) { FLOW_destroy(context, im); }
+void flow_bitmap_float_destroy(flow_c * context, struct flow_bitmap_float * im) { FLOW_destroy(context, im); }
 
-bool flow_bitmap_bgra_compare(flow_c* c, struct flow_bitmap_bgra* a, struct flow_bitmap_bgra* b, bool* equal_out)
+bool flow_bitmap_bgra_compare(flow_c * c, struct flow_bitmap_bgra * a, struct flow_bitmap_bgra * b, bool * equal_out)
 {
     if (a == NULL || b == NULL) {
         FLOW_error(c, flow_status_Null_argument);

@@ -11,7 +11,7 @@
 
 #include "imageflow_private.h"
 
-bool flow_bitmap_float_linear_to_luv_rows(flow_c* context, struct flow_bitmap_float* bit, const uint32_t start_row,
+bool flow_bitmap_float_linear_to_luv_rows(flow_c * context, struct flow_bitmap_float * bit, const uint32_t start_row,
                                           const uint32_t row_count)
 {
     if (!(start_row + row_count <= bit->h)) {
@@ -22,17 +22,17 @@ bool flow_bitmap_float_linear_to_luv_rows(flow_c* context, struct flow_bitmap_fl
         FLOW_error(context, flow_status_Invalid_internal_state); // This algorithm can't handle padding, if present
         return false;
     }
-    float* start_at = bit->float_stride * start_row + bit->pixels;
+    float * start_at = bit->float_stride * start_row + bit->pixels;
 
-    const float* end_at = bit->float_stride * (start_row + row_count) + bit->pixels;
+    const float * end_at = bit->float_stride * (start_row + row_count) + bit->pixels;
 
-    for (float* pix = start_at; pix < end_at; pix++) {
+    for (float * pix = start_at; pix < end_at; pix++) {
         linear_to_luv(pix);
     }
     return true;
 }
 
-bool flow_bitmap_float_luv_to_linear_rows(flow_c* context, struct flow_bitmap_float* bit, const uint32_t start_row,
+bool flow_bitmap_float_luv_to_linear_rows(flow_c * context, struct flow_bitmap_float * bit, const uint32_t start_row,
                                           const uint32_t row_count)
 {
     if (!(start_row + row_count <= bit->h)) {
@@ -43,18 +43,18 @@ bool flow_bitmap_float_luv_to_linear_rows(flow_c* context, struct flow_bitmap_fl
         FLOW_error(context, flow_status_Invalid_internal_state);
         return false;
     }
-    float* start_at = bit->float_stride * start_row + bit->pixels;
+    float * start_at = bit->float_stride * start_row + bit->pixels;
 
-    const float* end_at = bit->float_stride * (start_row + row_count) + bit->pixels;
+    const float * end_at = bit->float_stride * (start_row + row_count) + bit->pixels;
 
-    for (float* pix = start_at; pix < end_at; pix++) {
+    for (float * pix = start_at; pix < end_at; pix++) {
         luv_to_linear(pix);
     }
     return true;
 }
 
-bool flow_bitmap_bgra_apply_color_matrix(flow_c* context, struct flow_bitmap_bgra* bmp, const uint32_t row,
-                                         const uint32_t count, float* const __restrict m[5])
+bool flow_bitmap_bgra_apply_color_matrix(flow_c * context, struct flow_bitmap_bgra * bmp, const uint32_t row,
+                                         const uint32_t count, float * const __restrict m[5])
 {
     const uint32_t stride = bmp->stride;
     const uint32_t ch = flow_pixel_format_bytes_per_pixel(bmp->fmt);
@@ -64,7 +64,7 @@ bool flow_bitmap_bgra_apply_color_matrix(flow_c* context, struct flow_bitmap_bgr
 
         for (uint32_t y = row; y < h; y++)
             for (uint32_t x = 0; x < w; x++) {
-                uint8_t* const __restrict data = bmp->pixels + stride * y + x * ch;
+                uint8_t * const __restrict data = bmp->pixels + stride * y + x * ch;
 
                 const uint8_t r = uchar_clamp_ff(m[0][0] * data[2] + m[1][0] * data[1] + m[2][0] * data[0]
                                                  + m[3][0] * data[3] + m[4][0]);
@@ -75,7 +75,7 @@ bool flow_bitmap_bgra_apply_color_matrix(flow_c* context, struct flow_bitmap_bgr
                 const uint8_t a = uchar_clamp_ff(m[0][3] * data[2] + m[1][3] * data[1] + m[2][3] * data[0]
                                                  + m[3][3] * data[3] + m[4][3]);
 
-                uint8_t* newdata = bmp->pixels + stride * y + x * ch;
+                uint8_t * newdata = bmp->pixels + stride * y + x * ch;
                 newdata[0] = b;
                 newdata[1] = g;
                 newdata[2] = r;
@@ -85,13 +85,13 @@ bool flow_bitmap_bgra_apply_color_matrix(flow_c* context, struct flow_bitmap_bgr
 
         for (uint32_t y = row; y < h; y++)
             for (uint32_t x = 0; x < w; x++) {
-                unsigned char* const __restrict data = bmp->pixels + stride * y + x * ch;
+                unsigned char * const __restrict data = bmp->pixels + stride * y + x * ch;
 
                 const uint8_t r = uchar_clamp_ff(m[0][0] * data[2] + m[1][0] * data[1] + m[2][0] * data[0] + m[4][0]);
                 const uint8_t g = uchar_clamp_ff(m[0][1] * data[2] + m[1][1] * data[1] + m[2][1] * data[0] + m[4][1]);
                 const uint8_t b = uchar_clamp_ff(m[0][2] * data[2] + m[1][2] * data[1] + m[2][2] * data[0] + m[4][2]);
 
-                uint8_t* newdata = bmp->pixels + stride * y + x * ch;
+                uint8_t * newdata = bmp->pixels + stride * y + x * ch;
                 newdata[0] = b;
                 newdata[1] = g;
                 newdata[2] = r;
@@ -103,8 +103,8 @@ bool flow_bitmap_bgra_apply_color_matrix(flow_c* context, struct flow_bitmap_bgr
     return true;
 }
 
-bool flow_bitmap_float_apply_color_matrix(flow_c* context, struct flow_bitmap_float* bmp, const uint32_t row,
-                                          const uint32_t count, float** m)
+bool flow_bitmap_float_apply_color_matrix(flow_c * context, struct flow_bitmap_float * bmp, const uint32_t row,
+                                          const uint32_t count, float ** m)
 {
     const uint32_t stride = bmp->float_stride;
     const uint32_t ch = bmp->channels;
@@ -114,7 +114,7 @@ bool flow_bitmap_float_apply_color_matrix(flow_c* context, struct flow_bitmap_fl
     case 4: {
         for (uint32_t y = row; y < h; y++)
             for (uint32_t x = 0; x < w; x++) {
-                float* const __restrict data = bmp->pixels + stride * y + x * ch;
+                float * const __restrict data = bmp->pixels + stride * y + x * ch;
 
                 const float r
                     = (m[0][0] * data[2] + m[1][0] * data[1] + m[2][0] * data[0] + m[3][0] * data[3] + m[4][0]);
@@ -125,7 +125,7 @@ bool flow_bitmap_float_apply_color_matrix(flow_c* context, struct flow_bitmap_fl
                 const float a
                     = (m[0][3] * data[2] + m[1][3] * data[1] + m[2][3] * data[0] + m[3][3] * data[3] + m[4][3]);
 
-                float* newdata = bmp->pixels + stride * y + x * ch;
+                float * newdata = bmp->pixels + stride * y + x * ch;
                 newdata[0] = b;
                 newdata[1] = g;
                 newdata[2] = r;
@@ -138,13 +138,13 @@ bool flow_bitmap_float_apply_color_matrix(flow_c* context, struct flow_bitmap_fl
         for (uint32_t y = row; y < h; y++)
             for (uint32_t x = 0; x < w; x++) {
 
-                float* const __restrict data = bmp->pixels + stride * y + x * ch;
+                float * const __restrict data = bmp->pixels + stride * y + x * ch;
 
                 const float r = (m[0][0] * data[2] + m[1][0] * data[1] + m[2][0] * data[0] + m[4][0]);
                 const float g = (m[0][1] * data[2] + m[1][1] * data[1] + m[2][1] * data[0] + m[4][1]);
                 const float b = (m[0][2] * data[2] + m[1][2] * data[1] + m[2][2] * data[0] + m[4][2]);
 
-                float* newdata = bmp->pixels + stride * y + x * ch;
+                float * newdata = bmp->pixels + stride * y + x * ch;
                 newdata[0] = b;
                 newdata[1] = g;
                 newdata[2] = r;
@@ -158,9 +158,9 @@ bool flow_bitmap_float_apply_color_matrix(flow_c* context, struct flow_bitmap_fl
     }
 }
 
-bool flow_bitmap_bgra_populate_histogram(flow_c* context, struct flow_bitmap_bgra* bmp, uint64_t* histograms,
+bool flow_bitmap_bgra_populate_histogram(flow_c * context, struct flow_bitmap_bgra * bmp, uint64_t * histograms,
                                          uint32_t histogram_size_per_channel, uint32_t histogram_count,
-                                         uint64_t* pixels_sampled)
+                                         uint64_t * pixels_sampled)
 {
     const uint32_t row = 0;
     const uint32_t count = bmp->h;
@@ -177,7 +177,7 @@ bool flow_bitmap_bgra_populate_histogram(flow_c* context, struct flow_bitmap_bgr
 
             for (uint32_t y = row; y < h; y++) {
                 for (uint32_t x = 0; x < w; x++) {
-                    uint8_t* const __restrict data = bmp->pixels + stride * y + x * ch;
+                    uint8_t * const __restrict data = bmp->pixels + stride * y + x * ch;
 
                     histograms[(306 * data[2] + 601 * data[1] + 117 * data[0]) >> shift]++;
                 }
@@ -185,7 +185,7 @@ bool flow_bitmap_bgra_populate_histogram(flow_c* context, struct flow_bitmap_bgr
         } else if (histogram_count == 3) {
             for (uint32_t y = row; y < h; y++) {
                 for (uint32_t x = 0; x < w; x++) {
-                    uint8_t* const __restrict data = bmp->pixels + stride * y + x * ch;
+                    uint8_t * const __restrict data = bmp->pixels + stride * y + x * ch;
                     histograms[data[2] >> shift]++;
                     histograms[(data[1] >> shift) + histogram_size_per_channel]++;
                     histograms[(data[0] >> shift) + 2 * histogram_size_per_channel]++;
@@ -194,7 +194,7 @@ bool flow_bitmap_bgra_populate_histogram(flow_c* context, struct flow_bitmap_bgr
         } else if (histogram_count == 2) {
             for (uint32_t y = row; y < h; y++) {
                 for (uint32_t x = 0; x < w; x++) {
-                    uint8_t* const __restrict data = bmp->pixels + stride * y + x * ch;
+                    uint8_t * const __restrict data = bmp->pixels + stride * y + x * ch;
                     // Calculate luminosity and saturation
                     histograms[(306 * data[2] + 601 * data[1] + 117 * data[0]) >> shift]++;
                     histograms[histogram_size_per_channel
@@ -219,7 +219,7 @@ bool flow_bitmap_bgra_populate_histogram(flow_c* context, struct flow_bitmap_bgr
 
 #ifdef EXPOSE_SIGMOID
 
-static void Context_sigmoid_internal(flow_context* c, float x_coefficent, float x_offset, float constant)
+static void Context_sigmoid_internal(flow_context * c, float x_coefficent, float x_offset, float constant)
 {
     c->colorspace.sigmoid.constant = constant; // 1
     c->colorspace.sigmoid.x_coeff = x_coefficent; // 2
@@ -239,7 +239,7 @@ static float derive_constant(float x, float slope, float sign)
 
 #endif
 
-void flow_context_set_floatspace(flow_c* context, flow_working_floatspace space, float a, float b, float c)
+void flow_context_set_floatspace(flow_c * context, flow_working_floatspace space, float a, float b, float c)
 {
     context->colorspace.floatspace = space;
 
@@ -266,12 +266,12 @@ void flow_context_set_floatspace(flow_c* context, flow_working_floatspace space,
     }
 }
 
-float flow_context_byte_to_floatspace(flow_c* c, uint8_t srgb_value)
+float flow_context_byte_to_floatspace(flow_c * c, uint8_t srgb_value)
 {
     return Context_srgb_to_floatspace(c, srgb_value);
 }
 
-uint8_t flow_context_floatspace_to_byte(flow_c* c, float space_value)
+uint8_t flow_context_floatspace_to_byte(flow_c * c, float space_value)
 {
     return Context_floatspace_to_srgb(c, space_value);
 }

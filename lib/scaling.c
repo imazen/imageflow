@@ -13,9 +13,9 @@
 #include "imageflow_private.h"
 #include <string.h>
 
-bool flow_bitmap_float_scale_rows(flow_c* context, struct flow_bitmap_float* from, uint32_t from_row,
-                                  struct flow_bitmap_float* to, uint32_t to_row, uint32_t row_count,
-                                  struct flow_interpolation_pixel_contributions* weights)
+bool flow_bitmap_float_scale_rows(flow_c * context, struct flow_bitmap_float * from, uint32_t from_row,
+                                  struct flow_bitmap_float * to, uint32_t to_row, uint32_t row_count,
+                                  struct flow_interpolation_pixel_contributions * weights)
 {
 
     const uint32_t from_step = from->channels;
@@ -32,15 +32,15 @@ bool flow_bitmap_float_scale_rows(flow_c* context, struct flow_bitmap_float* fro
     // if both have alpha, process it
     if (from_step == 4 && to_step == 4) {
         for (uint32_t row = 0; row < row_count; row++) {
-            const float* __restrict source_buffer = from->pixels + ((from_row + row) * from->float_stride);
-            float* __restrict dest_buffer = to->pixels + ((to_row + row) * to->float_stride);
+            const float * __restrict source_buffer = from->pixels + ((from_row + row) * from->float_stride);
+            float * __restrict dest_buffer = to->pixels + ((to_row + row) * to->float_stride);
 
             for (ndx = 0; ndx < dest_buffer_count; ndx++) {
                 float r = 0, g = 0, b = 0, a = 0;
                 const int left = weights[ndx].Left;
                 const int right = weights[ndx].Right;
 
-                const float* __restrict weightArray = weights[ndx].Weights;
+                const float * __restrict weightArray = weights[ndx].Weights;
                 int i;
 
                 /* Accumulate each channel */
@@ -61,15 +61,15 @@ bool flow_bitmap_float_scale_rows(flow_c* context, struct flow_bitmap_float* fro
         }
     } else if (from_step == 3 && to_step == 3) {
         for (uint32_t row = 0; row < row_count; row++) {
-            const float* __restrict source_buffer = from->pixels + ((from_row + row) * from->float_stride);
-            float* __restrict dest_buffer = to->pixels + ((to_row + row) * to->float_stride);
+            const float * __restrict source_buffer = from->pixels + ((from_row + row) * from->float_stride);
+            float * __restrict dest_buffer = to->pixels + ((to_row + row) * to->float_stride);
 
             for (ndx = 0; ndx < dest_buffer_count; ndx++) {
                 float r = 0, g = 0, b = 0;
                 const int left = weights[ndx].Left;
                 const int right = weights[ndx].Right;
 
-                const float* weightArray = weights[ndx].Weights;
+                const float * weightArray = weights[ndx].Weights;
                 int i;
 
                 /* Accumulate each channel */
@@ -88,8 +88,8 @@ bool flow_bitmap_float_scale_rows(flow_c* context, struct flow_bitmap_float* fro
         }
     } else {
         for (uint32_t row = 0; row < row_count; row++) {
-            const float* __restrict source_buffer = from->pixels + ((from_row + row) * from->float_stride);
-            float* __restrict dest_buffer = to->pixels + ((to_row + row) * to->float_stride);
+            const float * __restrict source_buffer = from->pixels + ((from_row + row) * from->float_stride);
+            float * __restrict dest_buffer = to->pixels + ((to_row + row) * to->float_stride);
 
             avg[0] = 0;
             avg[1] = 0;
@@ -99,7 +99,7 @@ bool flow_bitmap_float_scale_rows(flow_c* context, struct flow_bitmap_float* fro
                 const int left = weights[ndx].Left;
                 const int right = weights[ndx].Right;
 
-                const float* __restrict weightArray = weights[ndx].Weights;
+                const float * __restrict weightArray = weights[ndx].Weights;
 
                 /* Accumulate each channel */
                 for (int i = left; i <= right; i++) {
@@ -130,7 +130,7 @@ This halves in sRGB space instead of linear. Not significantly faster on modern 
 #define HALVE_ROW_NAME HalveRowByDivisorColorSpaceAware
 #define HALVE_INTERNAL_NAME HalveInternalColorSpaceAware
 
-static inline void HALVE_ROW_NAME(flow_c* context, const unsigned char* from, HALVING_TYPE* to,
+static inline void HALVE_ROW_NAME(flow_c * context, const unsigned char * from, HALVING_TYPE * to,
                                   const unsigned int to_count, const int divisor, const int step)
 {
     int to_b, from_b;
@@ -195,12 +195,12 @@ static inline void HALVE_ROW_NAME(flow_c* context, const unsigned char* from, HA
     }
 }
 
-static bool HALVE_INTERNAL_NAME(flow_c* context, const struct flow_bitmap_bgra* from, struct flow_bitmap_bgra* to,
+static bool HALVE_INTERNAL_NAME(flow_c * context, const struct flow_bitmap_bgra * from, struct flow_bitmap_bgra * to,
                                 const int to_w, const int to_h, const int to_stride, const int divisor)
 {
 
     const int to_w_bytes = to_w * flow_pixel_format_bytes_per_pixel(to->fmt);
-    HALVING_TYPE* buffer = (HALVING_TYPE*)FLOW_calloc(context, to_w_bytes, sizeof(HALVING_TYPE));
+    HALVING_TYPE * buffer = (HALVING_TYPE *)FLOW_calloc(context, to_w_bytes, sizeof(HALVING_TYPE));
     if (buffer == NULL) {
         FLOW_error(context, flow_status_Out_of_memory);
         return false;
@@ -227,7 +227,7 @@ static bool HALVE_INTERNAL_NAME(flow_c* context, const struct flow_bitmap_bgra* 
         for (d = 0; d < divisor; d++) {
             HALVE_ROW_NAME(context, from->pixels + (y * divisor + d) * from->stride, buffer, to_w, divisor, bytes_pp);
         }
-        unsigned char* dest_line = to->pixels + y * to_stride;
+        unsigned char * dest_line = to->pixels + y * to_stride;
 #ifdef ALLOW_SHIFTING_HALVING_TYPE
         if (shift == 2) {
             for (b = 0; b < to_w_bytes; b++) {
@@ -274,7 +274,7 @@ static bool HALVE_INTERNAL_NAME(flow_c* context, const struct flow_bitmap_bgra* 
 
 //** Do not edit the following two functions; they are copy/pasted from above. **//
 
-static inline void HALVE_ROW_NAME(flow_c* context, const unsigned char* from, HALVING_TYPE* to,
+static inline void HALVE_ROW_NAME(flow_c * context, const unsigned char * from, HALVING_TYPE * to,
                                   const unsigned int to_count, const int divisor, const int step)
 {
     int to_b, from_b;
@@ -339,12 +339,12 @@ static inline void HALVE_ROW_NAME(flow_c* context, const unsigned char* from, HA
     }
 }
 
-static bool HALVE_INTERNAL_NAME(flow_c* context, const struct flow_bitmap_bgra* from, struct flow_bitmap_bgra* to,
+static bool HALVE_INTERNAL_NAME(flow_c * context, const struct flow_bitmap_bgra * from, struct flow_bitmap_bgra * to,
                                 const int to_w, const int to_h, const int to_stride, const int divisor)
 {
 
     const int to_w_bytes = to_w * flow_pixel_format_bytes_per_pixel(to->fmt);
-    HALVING_TYPE* buffer = (HALVING_TYPE*)FLOW_calloc(context, to_w_bytes, sizeof(HALVING_TYPE));
+    HALVING_TYPE * buffer = (HALVING_TYPE *)FLOW_calloc(context, to_w_bytes, sizeof(HALVING_TYPE));
     if (buffer == NULL) {
         FLOW_error(context, flow_status_Out_of_memory);
         return false;
@@ -371,7 +371,7 @@ static bool HALVE_INTERNAL_NAME(flow_c* context, const struct flow_bitmap_bgra* 
         for (d = 0; d < divisor; d++) {
             HALVE_ROW_NAME(context, from->pixels + (y * divisor + d) * from->stride, buffer, to_w, divisor, bytes_pp);
         }
-        unsigned char* dest_line = to->pixels + y * to_stride;
+        unsigned char * dest_line = to->pixels + y * to_stride;
 #ifdef ALLOW_SHIFTING_HALVING_TYPE
         if (shift == 2) {
             for (b = 0; b < to_w_bytes; b++) {
@@ -404,7 +404,7 @@ static bool HALVE_INTERNAL_NAME(flow_c* context, const struct flow_bitmap_bgra* 
 
 //** Do not edit the above two functions; they are copy/pasted. **//
 
-bool flow_halve(flow_c* context, const struct flow_bitmap_bgra* from, struct flow_bitmap_bgra* to, int divisor)
+bool flow_halve(flow_c * context, const struct flow_bitmap_bgra * from, struct flow_bitmap_bgra * to, int divisor)
 {
 
     bool r = false;
@@ -419,7 +419,7 @@ bool flow_halve(flow_c* context, const struct flow_bitmap_bgra* from, struct flo
     return r;
 }
 
-bool flow_halve_in_place(flow_c* context, struct flow_bitmap_bgra* from, int divisor)
+bool flow_halve_in_place(flow_c * context, struct flow_bitmap_bgra * from, int divisor)
 {
     int to_w = from->w / divisor;
     int to_h = from->h / divisor;

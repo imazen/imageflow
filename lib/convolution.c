@@ -23,13 +23,13 @@
 #endif
 #endif
 
-struct flow_convolution_kernel* flow_convolution_kernel_create(flow_c* context, uint32_t radius)
+struct flow_convolution_kernel * flow_convolution_kernel_create(flow_c * context, uint32_t radius)
 {
-    struct flow_convolution_kernel* k = FLOW_calloc_array(context, 1, struct flow_convolution_kernel);
+    struct flow_convolution_kernel * k = FLOW_calloc_array(context, 1, struct flow_convolution_kernel);
     // For the actual array;
-    float* a = FLOW_calloc_array(context, radius * 2 + 1, float);
+    float * a = FLOW_calloc_array(context, radius * 2 + 1, float);
     // we assume a maximum of 4 channels are going to need buffering during convolution
-    float* buf = (float*)FLOW_malloc(context, (radius + 2) * 4 * sizeof(float));
+    float * buf = (float *)FLOW_malloc(context, (radius + 2) * 4 * sizeof(float));
 
     if (k == NULL || a == NULL || buf == NULL) {
         FLOW_free(context, k);
@@ -44,7 +44,7 @@ struct flow_convolution_kernel* flow_convolution_kernel_create(flow_c* context, 
     k->radius = radius;
     return k;
 }
-void flow_convolution_kernel_destroy(flow_c* context, struct flow_convolution_kernel* kernel)
+void flow_convolution_kernel_destroy(flow_c * context, struct flow_convolution_kernel * kernel)
 {
     if (kernel != NULL) {
         FLOW_free(context, kernel->kernel);
@@ -55,9 +55,10 @@ void flow_convolution_kernel_destroy(flow_c* context, struct flow_convolution_ke
     FLOW_free(context, kernel);
 }
 
-struct flow_convolution_kernel* flow_convolution_kernel_create_guassian(flow_c* context, double stdDev, uint32_t radius)
+struct flow_convolution_kernel * flow_convolution_kernel_create_guassian(flow_c * context, double stdDev,
+                                                                         uint32_t radius)
 {
-    struct flow_convolution_kernel* k = flow_convolution_kernel_create(context, radius);
+    struct flow_convolution_kernel * k = flow_convolution_kernel_create(context, radius);
     if (k != NULL) {
         for (uint32_t i = 0; i < k->width; i++) {
 
@@ -67,7 +68,7 @@ struct flow_convolution_kernel* flow_convolution_kernel_create_guassian(flow_c* 
     return k;
 }
 
-double flow_convolution_kernel_sum(struct flow_convolution_kernel* kernel)
+double flow_convolution_kernel_sum(struct flow_convolution_kernel * kernel)
 {
     double sum = 0;
     for (uint32_t i = 0; i < kernel->width; i++) {
@@ -76,7 +77,7 @@ double flow_convolution_kernel_sum(struct flow_convolution_kernel* kernel)
     return sum;
 }
 
-void flow_convolution_kernel_normalize(struct flow_convolution_kernel* kernel, float desiredSum)
+void flow_convolution_kernel_normalize(struct flow_convolution_kernel * kernel, float desiredSum)
 {
     double sum = flow_convolution_kernel_sum(kernel);
     if (sum == 0)
@@ -86,20 +87,20 @@ void flow_convolution_kernel_normalize(struct flow_convolution_kernel* kernel, f
         kernel->kernel[i] *= factor;
     }
 }
-struct flow_convolution_kernel* flow_convolution_kernel_create_gaussian_normalized(flow_c* context, double stdDev,
-                                                                                   uint32_t radius)
+struct flow_convolution_kernel * flow_convolution_kernel_create_gaussian_normalized(flow_c * context, double stdDev,
+                                                                                    uint32_t radius)
 {
-    struct flow_convolution_kernel* kernel = flow_convolution_kernel_create_guassian(context, stdDev, radius);
+    struct flow_convolution_kernel * kernel = flow_convolution_kernel_create_guassian(context, stdDev, radius);
     if (kernel != NULL) {
         flow_convolution_kernel_normalize(kernel, 1);
     }
     return kernel;
 }
 
-struct flow_convolution_kernel* flow_convolution_kernel_create_guassian_sharpen(flow_c* context, double stdDev,
-                                                                                uint32_t radius)
+struct flow_convolution_kernel * flow_convolution_kernel_create_guassian_sharpen(flow_c * context, double stdDev,
+                                                                                 uint32_t radius)
 {
-    struct flow_convolution_kernel* kernel = flow_convolution_kernel_create_guassian(context, stdDev, radius);
+    struct flow_convolution_kernel * kernel = flow_convolution_kernel_create_guassian(context, stdDev, radius);
     if (kernel != NULL) {
         double sum = flow_convolution_kernel_sum(kernel);
         for (uint32_t i = 0; i < kernel->width; i++) {
@@ -114,8 +115,8 @@ struct flow_convolution_kernel* flow_convolution_kernel_create_guassian_sharpen(
     return kernel;
 }
 
-bool flow_bitmap_float_convolve_rows(flow_c* context, struct flow_bitmap_float* buf,
-                                     struct flow_convolution_kernel* kernel, uint32_t convolve_channels,
+bool flow_bitmap_float_convolve_rows(flow_c * context, struct flow_bitmap_float * buf,
+                                     struct flow_convolution_kernel * kernel, uint32_t convolve_channels,
                                      uint32_t from_row, int row_count)
 {
 
@@ -136,16 +137,16 @@ bool flow_bitmap_float_convolve_rows(flow_c* context, struct flow_bitmap_float* 
 
     const uint32_t ch_used = convolve_channels;
 
-    float* __restrict buffer = kernel->buffer;
-    float* __restrict avg = &kernel->buffer[buffer_count * ch_used];
+    float * __restrict buffer = kernel->buffer;
+    float * __restrict avg = &kernel->buffer[buffer_count * ch_used];
 
-    const float* __restrict kern = kernel->kernel;
+    const float * __restrict kern = kernel->kernel;
 
     const int wrap_mode = 0;
 
     for (uint32_t row = from_row; row < until_row; row++) {
 
-        float* __restrict source_buffer = &buf->pixels[row * buf->float_stride];
+        float * __restrict source_buffer = &buf->pixels[row * buf->float_stride];
         int circular_idx = 0;
 
         for (uint32_t ndx = 0; ndx < w + buffer_count; ndx++) {
@@ -215,20 +216,20 @@ bool flow_bitmap_float_convolve_rows(flow_c* context, struct flow_bitmap_float* 
     return true;
 }
 
-static bool BitmapFloat_boxblur_rows(flow_c* context, struct flow_bitmap_float* image, uint32_t radius, uint32_t passes,
-                                     const uint32_t convolve_channels, float* work_buffer, uint32_t from_row,
-                                     int row_count)
+static bool BitmapFloat_boxblur_rows(flow_c * context, struct flow_bitmap_float * image, uint32_t radius,
+                                     uint32_t passes, const uint32_t convolve_channels, float * work_buffer,
+                                     uint32_t from_row, int row_count)
 {
     const uint32_t buffer_count = radius + 1;
     const uint32_t w = image->w;
     const uint32_t step = image->channels;
     const uint32_t until_row = row_count < 0 ? image->h : from_row + (unsigned)row_count;
     const uint32_t ch_used = image->channels;
-    float* __restrict buffer = work_buffer;
+    float * __restrict buffer = work_buffer;
     const uint32_t std_count = radius * 2 + 1;
     const float std_factor = 1.0f / (float)(std_count);
     for (uint32_t row = from_row; row < until_row; row++) {
-        float* __restrict source_buffer = &image->pixels[row * image->float_stride];
+        float * __restrict source_buffer = &image->pixels[row * image->float_stride];
         for (uint32_t pass_index = 0; pass_index < passes; pass_index++) {
             int circular_idx = 0;
             float sum[4] = { 0, 0, 0, 0 };
@@ -275,8 +276,8 @@ static bool BitmapFloat_boxblur_rows(flow_c* context, struct flow_bitmap_float* 
     }
     return true;
 }
-static bool BitmapFloat_boxblur_misaligned_rows(flow_c* context, struct flow_bitmap_float* image, uint32_t radius,
-                                                int align, const uint32_t convolve_channels, float* work_buffer,
+static bool BitmapFloat_boxblur_misaligned_rows(flow_c * context, struct flow_bitmap_float * image, uint32_t radius,
+                                                int align, const uint32_t convolve_channels, float * work_buffer,
                                                 uint32_t from_row, int row_count)
 {
     if (align != 1 && align != -1) {
@@ -288,10 +289,10 @@ static bool BitmapFloat_boxblur_misaligned_rows(flow_c* context, struct flow_bit
     const uint32_t step = image->channels;
     const uint32_t until_row = row_count < 0 ? image->h : from_row + (unsigned)row_count;
     const uint32_t ch_used = image->channels;
-    float* __restrict buffer = work_buffer;
+    float * __restrict buffer = work_buffer;
     const uint32_t write_offset = align == -1 ? 0 : 1;
     for (uint32_t row = from_row; row < until_row; row++) {
-        float* __restrict source_buffer = &image->pixels[row * image->float_stride];
+        float * __restrict source_buffer = &image->pixels[row * image->float_stride];
         int circular_idx = 0;
         float sum[4] = { 0, 0, 0, 0 };
         float count = 0;
@@ -359,8 +360,8 @@ uint32_t flow_bitmap_float_approx_gaussian_buffer_element_count_required(float s
 {
     return flow_bitmap_float_approx_gaussian_calculate_d(sigma, bitmap_width) * 2 + 12; // * sizeof(float);
 }
-bool flow_bitmap_float_approx_gaussian_blur_rows(flow_c* context, struct flow_bitmap_float* image, float sigma,
-                                                 float* buffer, size_t buffer_element_count, uint32_t from_row,
+bool flow_bitmap_float_approx_gaussian_blur_rows(flow_c * context, struct flow_bitmap_float * image, float sigma,
+                                                 float * buffer, size_t buffer_element_count, uint32_t from_row,
                                                  int row_count)
 {
     // Ensure sigma is large enough for approximation to be accurate.
@@ -436,7 +437,7 @@ next += bytes_pp){
 }
 */
 
-static void SharpenBgraFloatInPlace(float* buf, unsigned int count, double pct, int step)
+static void SharpenBgraFloatInPlace(float * buf, unsigned int count, double pct, int step)
 {
 
     const float n = (float)(-pct / (pct - 1)); // if 0 < pct < 1
@@ -488,7 +489,7 @@ static void SharpenBgraFloatInPlace(float* buf, unsigned int count, double pct, 
     }
 }
 
-bool flow_bitmap_float_sharpen_rows(flow_c* context, struct flow_bitmap_float* im, uint32_t start_row,
+bool flow_bitmap_float_sharpen_rows(flow_c * context, struct flow_bitmap_float * im, uint32_t start_row,
                                     uint32_t row_count, double pct)
 {
     if (!(start_row + row_count <= im->h)) {

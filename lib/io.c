@@ -6,24 +6,24 @@
 // flow_io_create_for_output_buffer section
 
 struct flow_io_obuf {
-    uint8_t* buffer;
+    uint8_t * buffer;
     int64_t cursor;
     size_t uncleared_memory_begins;
     size_t length;
 };
 
-bool flow_io_get_output_buffer(flow_c* c, struct flow_io* io, uint8_t** out_pointer_to_buffer, size_t* out_length)
+bool flow_io_get_output_buffer(flow_c * c, struct flow_io * io, uint8_t ** out_pointer_to_buffer, size_t * out_length)
 {
-    struct flow_io_obuf* state = (struct flow_io_obuf*)io->user_data;
+    struct flow_io_obuf * state = (struct flow_io_obuf *)io->user_data;
     *out_pointer_to_buffer = state->buffer;
     *out_length = state->uncleared_memory_begins;
     return true;
 }
 
-bool flow_io_write_output_buffer_to_file(flow_c* c, struct flow_io* io, const char* file_path)
+bool flow_io_write_output_buffer_to_file(flow_c * c, struct flow_io * io, const char * file_path)
 {
-    struct flow_io_obuf* state = (struct flow_io_obuf*)io->user_data;
-    FILE* fh = fopen(file_path, "wb");
+    struct flow_io_obuf * state = (struct flow_io_obuf *)io->user_data;
+    FILE * fh = fopen(file_path, "wb");
     if (fh != NULL) {
         int64_t expected_items_written = state->uncleared_memory_begins;
         int64_t items_written = fwrite(state->buffer, 1, expected_items_written, fh);
@@ -44,14 +44,14 @@ bool flow_io_write_output_buffer_to_file(flow_c* c, struct flow_io* io, const ch
     }
     return true;
 }
-static bool flow_io_obuf_dispose(flow_c* c, void* io)
+static bool flow_io_obuf_dispose(flow_c * c, void * io)
 {
     // nada, we're using ownership :)
     return true;
 }
-static bool flow_io_obuf_seek(flow_c* c, struct flow_io* io, int64_t position)
+static bool flow_io_obuf_seek(flow_c * c, struct flow_io * io, int64_t position)
 {
-    struct flow_io_obuf* state = (struct flow_io_obuf*)io->user_data;
+    struct flow_io_obuf * state = (struct flow_io_obuf *)io->user_data;
     if (position < 0 || position > (int64_t)state->uncleared_memory_begins) {
         FLOW_error_msg(c, flow_status_IO_error, "Codec tried to seek to position %il - valid values are between 0 and "
                                                 "%il inclusive (You cannot seek past the written area of an output "
@@ -62,15 +62,15 @@ static bool flow_io_obuf_seek(flow_c* c, struct flow_io* io, int64_t position)
     state->cursor = position;
     return true;
 }
-static int64_t flow_io_obuf_position(flow_c* c, struct flow_io* io)
+static int64_t flow_io_obuf_position(flow_c * c, struct flow_io * io)
 {
-    return ((struct flow_io_obuf*)io->user_data)->cursor;
+    return ((struct flow_io_obuf *)io->user_data)->cursor;
 }
 // Returns the number of bytes read into the buffer. Failure to read 'count' bytes could mean EOF or failure. Check
 // context status. Pass NULL to buffer if you want to skip 'count' many bytes, seeking ahead.
-static int64_t flow_io_obuf_read(flow_c* c, struct flow_io* io, uint8_t* buffer, size_t count)
+static int64_t flow_io_obuf_read(flow_c * c, struct flow_io * io, uint8_t * buffer, size_t count)
 {
-    struct flow_io_obuf* state = (struct flow_io_obuf*)io->user_data;
+    struct flow_io_obuf * state = (struct flow_io_obuf *)io->user_data;
     int64_t allowed_count = state->uncleared_memory_begins - state->cursor;
     if (allowed_count < 0)
         allowed_count = 0;
@@ -92,9 +92,9 @@ static int64_t flow_io_obuf_read(flow_c* c, struct flow_io* io, uint8_t* buffer,
     }
 }
 // Returns the number of bytes written. If it doesn't equal 'count', there was an error. Check context status
-static int64_t flow_io_obuf_write(flow_c* c, struct flow_io* io, const uint8_t* buffer, size_t count)
+static int64_t flow_io_obuf_write(flow_c * c, struct flow_io * io, const uint8_t * buffer, size_t count)
 {
-    struct flow_io_obuf* state = (struct flow_io_obuf*)io->user_data;
+    struct flow_io_obuf * state = (struct flow_io_obuf *)io->user_data;
     if (buffer == NULL) {
         FLOW_error_msg(c, flow_status_Null_argument, "Buffer pointer was null");
         return 0;
@@ -111,7 +111,7 @@ static int64_t flow_io_obuf_write(flow_c* c, struct flow_io* io, const uint8_t* 
 
         // Normally this would be a memory leak on failure, but our objtracker will dispose of the old buffer if
         // non-null
-        state->buffer = (uint8_t*)FLOW_realloc(c, state->buffer, new_size);
+        state->buffer = (uint8_t *)FLOW_realloc(c, state->buffer, new_size);
 
         if (state->buffer == NULL) {
             FLOW_error_msg(c, flow_status_Out_of_memory, "Failed to allocate %ul bytes for output buffer", new_size);
@@ -129,9 +129,9 @@ static int64_t flow_io_obuf_write(flow_c* c, struct flow_io* io, const uint8_t* 
     return count;
 }
 
-struct flow_io* flow_io_create_for_output_buffer(flow_c* c, void* owner)
+struct flow_io * flow_io_create_for_output_buffer(flow_c * c, void * owner)
 {
-    struct flow_io* io = (struct flow_io*)FLOW_malloc_owned(c, sizeof(struct flow_io), owner);
+    struct flow_io * io = (struct flow_io *)FLOW_malloc_owned(c, sizeof(struct flow_io), owner);
     if (io == NULL) {
         FLOW_error(c, flow_status_Out_of_memory);
         return NULL;
@@ -151,7 +151,7 @@ struct flow_io* flow_io_create_for_output_buffer(flow_c* c, void* owner)
     io->position_func = flow_io_obuf_position;
     io->mode = flow_io_mode_read_write_seekable;
 
-    struct flow_io_obuf* info = (struct flow_io_obuf*)io->user_data;
+    struct flow_io_obuf * info = (struct flow_io_obuf *)io->user_data;
     info->buffer = NULL;
     info->length = 0;
     info->uncleared_memory_begins = 0;
@@ -163,16 +163,16 @@ struct flow_io* flow_io_create_for_output_buffer(flow_c* c, void* owner)
 // flow_io_fro_memory section
 
 struct flow_io_memory {
-    uint8_t* memory;
+    uint8_t * memory;
     size_t length;
     flow_destructor_function free;
     int64_t cursor;
 };
 
 // Return false if something goes wrong.
-static bool flow_io_memory_dispose(flow_c* c, void* io)
+static bool flow_io_memory_dispose(flow_c * c, void * io)
 {
-    struct flow_io_memory* mem_struct = (struct flow_io_memory*)((struct flow_io*)io)->user_data;
+    struct flow_io_memory * mem_struct = (struct flow_io_memory *)((struct flow_io *)io)->user_data;
     if (mem_struct == NULL)
         return false;
     bool success = true;
@@ -185,9 +185,9 @@ static bool flow_io_memory_dispose(flow_c* c, void* io)
     return success;
 }
 
-static bool flow_io_memory_seek(flow_c* c, struct flow_io* io, int64_t position)
+static bool flow_io_memory_seek(flow_c * c, struct flow_io * io, int64_t position)
 {
-    struct flow_io_memory* state = (struct flow_io_memory*)io->user_data;
+    struct flow_io_memory * state = (struct flow_io_memory *)io->user_data;
     if (position < 0 || position > (int64_t)state->length) {
         FLOW_error_msg(c, flow_status_IO_error, "Codec tried to seek to position %l - valid values are between 0 and "
                                                 "%l inclusive (fixed-size memory buffer).",
@@ -200,15 +200,15 @@ static bool flow_io_memory_seek(flow_c* c, struct flow_io* io, int64_t position)
 
 // Returns negative on failure - check context for more detail. Returns the current position in the stream when
 // successful
-static int64_t flow_io_memory_position(flow_c* c, struct flow_io* io)
+static int64_t flow_io_memory_position(flow_c * c, struct flow_io * io)
 {
-    return ((struct flow_io_memory*)io->user_data)->cursor;
+    return ((struct flow_io_memory *)io->user_data)->cursor;
 }
 // Returns the number of bytes read into the buffer. Failure to read 'count' bytes could mean EOF or failure. Check
 // context status. Pass NULL to buffer if you want to skip 'count' many bytes, seeking ahead.
-static int64_t flow_io_memory_read(flow_c* c, struct flow_io* io, uint8_t* buffer, size_t count)
+static int64_t flow_io_memory_read(flow_c * c, struct flow_io * io, uint8_t * buffer, size_t count)
 {
-    struct flow_io_memory* state = (struct flow_io_memory*)io->user_data;
+    struct flow_io_memory * state = (struct flow_io_memory *)io->user_data;
     int64_t allowed_count = state->length - state->cursor;
     if (allowed_count < 0)
         allowed_count = 0;
@@ -228,9 +228,9 @@ static int64_t flow_io_memory_read(flow_c* c, struct flow_io* io, uint8_t* buffe
     }
 }
 // Returns the number of bytes written. If it doesn't equal 'count', there was an error. Check context status
-static int64_t flow_io_memory_write(flow_c* c, struct flow_io* io, const uint8_t* buffer, size_t count)
+static int64_t flow_io_memory_write(flow_c * c, struct flow_io * io, const uint8_t * buffer, size_t count)
 {
-    struct flow_io_memory* state = (struct flow_io_memory*)io->user_data;
+    struct flow_io_memory * state = (struct flow_io_memory *)io->user_data;
     if (buffer == NULL) {
         FLOW_error_msg(c, flow_status_Null_argument, "Buffer pointer was null");
         return 0;
@@ -244,10 +244,10 @@ static int64_t flow_io_memory_write(flow_c* c, struct flow_io* io, const uint8_t
     return count;
 }
 
-struct flow_io* flow_io_create_from_memory(flow_c* c, flow_io_mode mode, uint8_t* memory, size_t length, void* owner,
-                                           flow_destructor_function memory_free)
+struct flow_io * flow_io_create_from_memory(flow_c * c, flow_io_mode mode, uint8_t * memory, size_t length,
+                                            void * owner, flow_destructor_function memory_free)
 {
-    struct flow_io* io = (struct flow_io*)FLOW_malloc_owned(c, sizeof(struct flow_io), owner);
+    struct flow_io * io = (struct flow_io *)FLOW_malloc_owned(c, sizeof(struct flow_io), owner);
     if (io == NULL) {
         FLOW_error(c, flow_status_Out_of_memory);
         return NULL;
@@ -268,7 +268,7 @@ struct flow_io* flow_io_create_from_memory(flow_c* c, flow_io_mode mode, uint8_t
     io->mode = mode;
     io->optional_file_length = length;
 
-    struct flow_io_memory* mem_struct = (struct flow_io_memory*)io->user_data;
+    struct flow_io_memory * mem_struct = (struct flow_io_memory *)io->user_data;
     mem_struct->memory = memory;
     mem_struct->length = length;
     mem_struct->free = memory_free;

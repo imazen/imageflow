@@ -1,6 +1,6 @@
 #include "imageflow_private.h"
 
-bool write_frame_to_disk(flow_c* c, const char* path, struct flow_bitmap_bgra* b)
+bool write_frame_to_disk(flow_c * c, const char * path, struct flow_bitmap_bgra * b)
 {
 
     png_image target_image;
@@ -22,14 +22,14 @@ bool write_frame_to_disk(flow_c* c, const char* path, struct flow_bitmap_bgra* b
     return true;
 }
 
-static bool files_identical(flow_c* c, const char* path1, const char* path2, bool* identical)
+static bool files_identical(flow_c * c, const char * path1, const char * path2, bool * identical)
 {
-    FILE* fp1 = fopen(path1, "r");
+    FILE * fp1 = fopen(path1, "r");
     if (fp1 == NULL) {
         FLOW_error_msg(c, flow_status_IO_error, "Failed to open file A for comparison (%s).", path1);
         return false;
     }
-    FILE* fp2 = fopen(path2, "r");
+    FILE * fp2 = fopen(path2, "r");
     if (fp2 == NULL) {
         FLOW_error_msg(c, flow_status_IO_error, "Failed to open file B for comparison (%s).", path2);
         fclose(fp1);
@@ -50,9 +50,9 @@ static bool files_identical(flow_c* c, const char* path1, const char* path2, boo
 }
 #define FLOW_MAX_GRAPH_VERSIONS 100
 
-bool flow_job_notify_node_complete(flow_c* c, struct flow_job* job, struct flow_graph* g, int32_t node_id)
+bool flow_job_notify_node_complete(flow_c * c, struct flow_job * job, struct flow_graph * g, int32_t node_id)
 {
-    struct flow_node* n = &g->nodes[node_id];
+    struct flow_node * n = &g->nodes[node_id];
     if (n->result_bitmap != NULL && job->record_frame_images == true) {
         char path[1024];
         flow_snprintf(path, 1023, "node_frames/job_%d_node_%d.png", job->debug_job_id, node_id);
@@ -63,7 +63,7 @@ bool flow_job_notify_node_complete(flow_c* c, struct flow_job* job, struct flow_
     return true;
 }
 
-bool flow_job_notify_graph_changed(flow_c* c, struct flow_job* job, struct flow_graph* g)
+bool flow_job_notify_graph_changed(flow_c * c, struct flow_job * job, struct flow_graph * g)
 {
     if (job == NULL || !job->record_graph_versions || job->next_graph_version > FLOW_MAX_GRAPH_VERSIONS)
         return true;
@@ -98,7 +98,7 @@ bool flow_job_notify_graph_changed(flow_c* c, struct flow_job* job, struct flow_
 
     flow_snprintf(image_prefix, 254, "./node_frames/job_%d_node_", job->debug_job_id);
 
-    FILE* f = fopen(filename, "w");
+    FILE * f = fopen(filename, "w");
     if (f == NULL) {
         FLOW_error_msg(c, flow_status_IO_error, "Failed to open %s for graph dotfile export.", filename);
         return false;
@@ -128,7 +128,7 @@ bool flow_job_notify_graph_changed(flow_c* c, struct flow_job* job, struct flow_
     return true;
 }
 
-bool flow_job_render_graph_to_png(flow_c* c, struct flow_job* job, struct flow_graph* g, int32_t graph_version)
+bool flow_job_render_graph_to_png(flow_c * c, struct flow_job * job, struct flow_graph * g, int32_t graph_version)
 {
     char filename[255];
     flow_snprintf(filename, 254, "job_%d_graph_version_%d.dot", job->debug_job_id, graph_version);

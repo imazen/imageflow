@@ -9,14 +9,14 @@
 
 #include "imageflow_private.h"
 
-bool test_contrib_windows(flow_c* context, char* msg)
+bool test_contrib_windows(flow_c * context, char * msg)
 {
     int bad = -1;
-    struct flow_interpolation_line_contributions* lct = 0;
+    struct flow_interpolation_line_contributions * lct = 0;
 
     // assumes included edge cases
 
-    struct flow_interpolation_details* cubicFast = flow_interpolation_details_create_from(
+    struct flow_interpolation_details * cubicFast = flow_interpolation_details_create_from(
         context, flow_interpolation_filter::flow_interpolation_filter_CubicFast);
 
     unsigned int from_w = 6;
@@ -66,9 +66,9 @@ bool test_contrib_windows(flow_c* context, char* msg)
     return true;
 }
 
-bool function_bounded(flow_c* context, struct flow_interpolation_details* details, char* msg, double input_start_value,
-                      double stop_at_abs, double input_step, double result_low_threshold, double result_high_threshold,
-                      const char* name)
+bool function_bounded(flow_c * context, struct flow_interpolation_details * details, char * msg,
+                      double input_start_value, double stop_at_abs, double input_step, double result_low_threshold,
+                      double result_high_threshold, const char * name)
 {
     double input_value = input_start_value;
 
@@ -91,9 +91,9 @@ bool function_bounded(flow_c* context, struct flow_interpolation_details* detail
                             result_low_threshold, result_high_threshold, name);
 }
 
-bool function_bounded_bi(flow_c* context, struct flow_interpolation_details* details, char* msg,
+bool function_bounded_bi(flow_c * context, struct flow_interpolation_details * details, char * msg,
                          double input_start_value, double stop_at_abs, double input_step, double result_low_threshold,
-                         double result_high_threshold, const char* name)
+                         double result_high_threshold, const char * name)
 {
     return function_bounded(context, details, msg, input_start_value, stop_at_abs, input_step, result_low_threshold,
                             result_high_threshold, name)
@@ -101,7 +101,7 @@ bool function_bounded_bi(flow_c* context, struct flow_interpolation_details* det
                                result_low_threshold, result_high_threshold, name);
 }
 
-bool test_details(flow_c* context, struct flow_interpolation_details* details, char* msg,
+bool test_details(flow_c * context, struct flow_interpolation_details * details, char * msg,
                   double expected_first_crossing, double expected_second_crossing, double expected_near0,
                   double near0_threshold, double expected_end)
 {
@@ -144,10 +144,10 @@ bool test_details(flow_c* context, struct flow_interpolation_details* details, c
     return true;
 }
 
-char* test_filter(flow_c* context, flow_interpolation_filter filter, char* msg, double expected_first_crossing,
-                  double expected_second_crossing, double expected_near0, double near0_threshold, double expected_end)
+char * test_filter(flow_c * context, flow_interpolation_filter filter, char * msg, double expected_first_crossing,
+                   double expected_second_crossing, double expected_near0, double near0_threshold, double expected_end)
 {
-    struct flow_interpolation_details* details = flow_interpolation_details_create_from(context, filter);
+    struct flow_interpolation_details * details = flow_interpolation_details_create_from(context, filter);
     flow_snprintf(msg, 255, "Filter=(%d) ", filter);
     bool result = test_details(context, details, msg, expected_first_crossing, expected_second_crossing, expected_near0,
                                near0_threshold, expected_end);
@@ -158,10 +158,10 @@ char* test_filter(flow_c* context, flow_interpolation_filter filter, char* msg, 
         return nullptr;
 }
 
-struct flow_interpolation_details* sample_filter(flow_c* context, flow_interpolation_filter filter, double x_from,
-                                                 double x_to, double* buffer, int samples)
+struct flow_interpolation_details * sample_filter(flow_c * context, flow_interpolation_filter filter, double x_from,
+                                                  double x_to, double * buffer, int samples)
 {
-    struct flow_interpolation_details* details = flow_interpolation_details_create_from(context, filter);
+    struct flow_interpolation_details * details = flow_interpolation_details_create_from(context, filter);
     if (details == NULL)
         return NULL;
     for (int i = 0; i < samples; i++) {
