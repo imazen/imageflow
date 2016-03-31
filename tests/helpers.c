@@ -27,7 +27,7 @@ unsigned long djb2(unsigned const char* str)
     return hash;
 }
 
-unsigned long djb2_buffer(uint8_t * str, size_t count)
+unsigned long djb2_buffer(uint8_t* str, size_t count)
 {
     unsigned long hash = 5381;
     int c;
@@ -38,7 +38,6 @@ unsigned long djb2_buffer(uint8_t * str, size_t count)
     }
     return hash;
 }
-
 
 void copy_file(FILE* from, FILE* to)
 {
@@ -103,7 +102,7 @@ uint8_t* read_all_bytes(flow_c* c, size_t* buffer_size, const char* path)
     }
     return 0;
 }
-bool fetch_image(const char *url, char *dest_path)
+bool fetch_image(const char* url, char* dest_path)
 { /*null-terminated string*/
     static bool curl_initialized = false;
     if (!curl_initialized) {

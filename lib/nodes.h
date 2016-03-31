@@ -13,12 +13,12 @@ typedef bool (*flow_nodedef_fn_infobyte_count)(flow_c* c, struct flow_graph* g, 
                                                int32_t* infobytes_count_out);
 
 typedef bool (*flow_nodedef_fn_populate_dimensions)(flow_c* c, struct flow_graph* g, int32_t node_id,
-                                                    int32_t outbound_edge_id, bool force_estimate);
+                                                    bool force_estimate);
 
 typedef bool (*flow_nodedef_fn_flatten)(flow_c* c, struct flow_graph** graph_ref, int32_t node_id);
 
 typedef bool (*flow_nodedef_fn_flatten_shorthand)(flow_c* c, struct flow_graph** graph_ref, int32_t node_id,
-                                                  struct flow_node* node, struct flow_edge* input_edge,
+                                                  struct flow_node* node, struct flow_node* input_node,
                                                   int32_t* first_replacement_node, int32_t* last_replacement_node);
 
 typedef bool (*flow_nodedef_fn_execute)(flow_c* c, struct flow_job* job, struct flow_graph* g, int32_t node_id);
@@ -53,8 +53,7 @@ struct flow_node_definition* flow_nodedef_get(flow_c* c, flow_ntype type);
 bool flow_node_stringify(flow_c* c, struct flow_graph* g, int32_t node_id, char* buffer, size_t buffer_size);
 int32_t flow_node_fixed_infobyte_count(flow_c* c, flow_ntype type);
 bool flow_node_infobyte_count(flow_c* c, struct flow_graph* g, int32_t node_id, int32_t* infobytes_count_out);
-bool flow_node_populate_dimensions_to_edge(flow_c* c, struct flow_graph* g, int32_t node_id, int32_t outbound_edge_id,
-                                           bool force_estimate);
+bool flow_node_populate_dimensions(flow_c* c, struct flow_graph* g, int32_t node_id, bool force_estimate);
 bool flow_node_pre_optimize_flatten(flow_c* c, struct flow_graph** graph_ref, int32_t node_id);
 bool flow_node_execute(flow_c* c, struct flow_job* job, struct flow_graph* g, int32_t node_id);
 bool flow_node_estimate_execution_cost(flow_c* c, struct flow_graph* g, int32_t node_id, size_t* bytes_required,

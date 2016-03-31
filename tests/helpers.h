@@ -70,13 +70,13 @@ These may be OR'd together.  */
 #endif
 
 FLOW_EXPORT uint8_t* get_bytes_cached(flow_c* c, size_t* bytes_count_out, const char* url);
-FLOW_EXPORT bool fetch_image(const char *url, char *dest_path);
+FLOW_EXPORT bool fetch_image(const char* url, char* dest_path);
 FLOW_EXPORT uint8_t* read_all_bytes(flow_c* c, size_t* buffer_size, const char* path);
 FLOW_EXPORT bool write_all_byte(const char* path, char* buffer, size_t size);
 FLOW_EXPORT void copy_file(FILE* from, FILE* to);
 
 FLOW_EXPORT unsigned long djb2(unsigned const char* str);
-FLOW_EXPORT unsigned long djb2_buffer(uint8_t * str, size_t count);
+FLOW_EXPORT unsigned long djb2_buffer(uint8_t* str, size_t count);
 FLOW_EXPORT size_t nonzero_count(uint8_t* array, size_t length);
 
 FLOW_EXPORT struct flow_bitmap_bgra* BitmapBgra_create_test_image(flow_c* c);

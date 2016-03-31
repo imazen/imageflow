@@ -335,7 +335,7 @@ struct flow_job {
     int32_t next_graph_version;
     int32_t max_calc_flatten_execute_passes;
     struct flow_codec_instance* codecs_head;
-    struct flow_codec_instance* codecs_tail;
+    struct flow_codec_instance* codecs_tail; //Makes appends simple. Deletes, not so much
     bool record_graph_versions;
     bool record_frame_images;
     bool render_graph_versions;
@@ -364,10 +364,6 @@ struct flow_edge {
     flow_edgetype type;
     int32_t from;
     int32_t to;
-    int32_t from_width;
-    int32_t from_height;
-    flow_pixel_format from_format;
-    bool from_alpha_meaningful;
     int32_t info_byte_index;
     int32_t info_bytes;
 };
@@ -377,6 +373,10 @@ struct flow_node {
     int32_t info_byte_index;
     int32_t info_bytes;
     flow_node_state state;
+    int32_t result_width;
+    int32_t result_height;
+    flow_pixel_format result_format;
+    bool result_alpha_meaningful;
     struct flow_bitmap_bgra* result_bitmap;
     uint32_t ticks_elapsed;
 };

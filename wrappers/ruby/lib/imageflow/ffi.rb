@@ -492,8 +492,8 @@ module Imageflow
     attach_function :flow_edge_delete_all_connected_to_node, [:pointer, :pointer, :int32], :bool
     attach_function :flow_graph_get_inbound_edge_count_of_type, [:pointer, :pointer, :int32, :int], :int32
     attach_function :flow_graph_get_first_inbound_edge_of_type, [:pointer, :pointer, :int32, :int], :int32
-    attach_function :flow_edge_has_dimensions, [:pointer, :pointer, :int32], :bool
-    attach_function :flow_node_input_edges_have_dimensions, [:pointer, :pointer, :int32], :bool
+    attach_function :flow_node_has_dimensions, [:pointer, :pointer, :int32], :bool
+    attach_function :flow_node_inputs_have_dimensions, [:pointer, :pointer, :int32], :bool
     attach_function :flow_graph_duplicate_edges_to_another_node, [:pointer, :pointer, :int32, :int32, :bool, :bool], :bool
     attach_function :flow_edge_create, [:pointer, :pointer, :int32, :int32, :int], :int32
     callback(:flow_graph_visitor, [:pointer, :pointer, :pointer, :int32, :pointer, :pointer, :pointer], :bool)

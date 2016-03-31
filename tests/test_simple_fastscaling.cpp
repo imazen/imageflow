@@ -64,7 +64,6 @@ bool test(int sx, int sy, flow_pixel_format sbpp, int cx, int cy, flow_pixel_for
     return true;
 }
 
-
 TEST_CASE("Render - Running 3 x 20 operations", "[fastscaling]")
 {
     for (int i = 0; i < 20; i++) {

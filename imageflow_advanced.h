@@ -235,8 +235,15 @@ PUB int32_t
 PUB int32_t
     flow_graph_get_first_outbound_edge_of_type(flow_c* c, struct flow_graph* g, int32_t node_id, flow_edgetype type);
 
-PUB bool flow_edge_has_dimensions(flow_c* c, struct flow_graph* g, int32_t edge_id);
-PUB bool flow_node_input_edges_have_dimensions(flow_c* c, struct flow_graph* g, int32_t node_id);
+PUB int32_t
+    flow_graph_get_first_inbound_node_of_type(flow_c* c, struct flow_graph* g, int32_t node_id, flow_edgetype type);
+
+PUB int32_t
+    flow_graph_get_first_outbound_node_of_type(flow_c* c, struct flow_graph* g, int32_t node_id, flow_edgetype type);
+
+PUB bool flow_node_has_dimensions(flow_c* c, struct flow_graph* g, int32_t node_id);
+
+PUB bool flow_node_inputs_have_dimensions(flow_c* c, struct flow_graph* g, int32_t node_id);
 PUB bool flow_graph_duplicate_edges_to_another_node(flow_c* c, struct flow_graph** graph_ref, int32_t from_node,
                                                     int32_t to_node, bool copy_inbound, bool copy_outbound);
 

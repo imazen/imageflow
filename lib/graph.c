@@ -112,6 +112,10 @@ int32_t flow_node_create_generic(flow_c* c, struct flow_graph** graph_ref, int32
     g->nodes[id].state = flow_node_state_Blank;
     g->nodes[id].result_bitmap = NULL;
     g->nodes[id].ticks_elapsed = 0;
+    g->nodes[id].result_format = flow_bgra32;
+    g->nodes[id].result_width = 0;
+    g->nodes[id].result_height = 0;
+    g->nodes[id].result_alpha_meaningful = true;
 
     g->next_info_byte += g->nodes[id].info_bytes;
     g->next_node_id += 1;
@@ -505,10 +509,6 @@ int32_t flow_edge_create(flow_c* c, struct flow_graph** g, int32_t from, int32_t
     e->type = type;
     e->from = from;
     e->to = to;
-    e->from_height = -1;
-    e->from_width = -1;
-    e->from_alpha_meaningful = false;
-    e->from_format = flow_bgra32;
     e->info_bytes = 0;
     e->info_byte_index = -1;
     (*g)->edge_count++;
@@ -524,10 +524,6 @@ int32_t flow_edge_duplicate(flow_c* c, struct flow_graph** g, int32_t edge_id)
         return -1;
     }
     struct flow_edge* e = &(*g)->edges[new_id];
-    e->from_format = old_copy.from_format;
-    e->from_width = old_copy.from_width;
-    e->from_height = old_copy.from_height;
-    e->from_alpha_meaningful = old_copy.from_alpha_meaningful;
 
     if (old_copy.info_byte_index >= 0 && old_copy.info_bytes > 0) {
         e->info_bytes = old_copy.info_bytes;
@@ -838,6 +834,34 @@ int32_t flow_graph_get_first_outbound_edge_of_type(flow_c* c, struct flow_graph*
     }
     return -404;
 }
+int32_t flow_graph_get_first_inbound_node_of_type(flow_c* c, struct flow_graph* g, int32_t node_id, flow_edgetype type)
+{
+    struct flow_edge* edge;
+    int32_t i;
+    for (i = 0; i < g->next_edge_id; i++) {
+        edge = &g->edges[i];
+        if (edge->type == type) {
+            if (edge->to == node_id) {
+                return edge->from;
+            }
+        }
+    }
+    return -404;
+}
+int32_t flow_graph_get_first_outbound_node_of_type(flow_c* c, struct flow_graph* g, int32_t node_id, flow_edgetype type)
+{
+    struct flow_edge* edge;
+    int32_t i;
+    for (i = 0; i < g->next_edge_id; i++) {
+        edge = &g->edges[i];
+        if (edge->type == type) {
+            if (edge->from == node_id) {
+                return edge->to;
+            }
+        }
+    }
+    return -404;
+}
 
 int32_t flow_graph_get_edge_count(flow_c* c, struct flow_graph* g, int32_t node_id, bool filter_by_edge_type,
                                   flow_edgetype type, bool include_inbound, bool include_outbound)
@@ -887,11 +911,13 @@ bool flow_graph_print_to_dot(flow_c* c, struct flow_graph* g, FILE* stream, cons
         edge = &g->edges[i];
         if (edge->type != flow_edgetype_null) {
             char dimensions[64];
-            if (edge->from_width < 0 && edge->from_height < 0) {
+            struct flow_node* n = &g->nodes[edge->from];
+
+            if (n->result_width < 0 && n->result_height < 0) {
                 flow_snprintf(dimensions, 63, "?x?");
             } else {
-                flow_snprintf(dimensions, 63, "%dx%d %s", edge->from_width, edge->from_height,
-                              get_format_name(edge->from_format, edge->from_alpha_meaningful));
+                flow_snprintf(dimensions, 63, "%dx%d %s", n->result_width, n->result_height,
+                              get_format_name(n->result_format, n->result_alpha_meaningful));
             }
 
             fprintf(stream, "  n%d -> n%d [label=\"e%d: %s%s\"]\n", edge->from, edge->to, i, dimensions,
