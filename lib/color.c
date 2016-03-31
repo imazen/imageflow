@@ -111,50 +111,50 @@ bool flow_bitmap_float_apply_color_matrix(flow_c * context, struct flow_bitmap_f
     const uint32_t w = bmp->w;
     const uint32_t h = umin(row + count, bmp->h);
     switch (ch) {
-    case 4: {
-        for (uint32_t y = row; y < h; y++)
-            for (uint32_t x = 0; x < w; x++) {
-                float * const __restrict data = bmp->pixels + stride * y + x * ch;
+        case 4: {
+            for (uint32_t y = row; y < h; y++)
+                for (uint32_t x = 0; x < w; x++) {
+                    float * const __restrict data = bmp->pixels + stride * y + x * ch;
 
-                const float r
-                    = (m[0][0] * data[2] + m[1][0] * data[1] + m[2][0] * data[0] + m[3][0] * data[3] + m[4][0]);
-                const float g
-                    = (m[0][1] * data[2] + m[1][1] * data[1] + m[2][1] * data[0] + m[3][1] * data[3] + m[4][1]);
-                const float b
-                    = (m[0][2] * data[2] + m[1][2] * data[1] + m[2][2] * data[0] + m[3][2] * data[3] + m[4][2]);
-                const float a
-                    = (m[0][3] * data[2] + m[1][3] * data[1] + m[2][3] * data[0] + m[3][3] * data[3] + m[4][3]);
+                    const float r
+                        = (m[0][0] * data[2] + m[1][0] * data[1] + m[2][0] * data[0] + m[3][0] * data[3] + m[4][0]);
+                    const float g
+                        = (m[0][1] * data[2] + m[1][1] * data[1] + m[2][1] * data[0] + m[3][1] * data[3] + m[4][1]);
+                    const float b
+                        = (m[0][2] * data[2] + m[1][2] * data[1] + m[2][2] * data[0] + m[3][2] * data[3] + m[4][2]);
+                    const float a
+                        = (m[0][3] * data[2] + m[1][3] * data[1] + m[2][3] * data[0] + m[3][3] * data[3] + m[4][3]);
 
-                float * newdata = bmp->pixels + stride * y + x * ch;
-                newdata[0] = b;
-                newdata[1] = g;
-                newdata[2] = r;
-                newdata[3] = a;
-            }
-        return true;
-    }
-    case 3: {
+                    float * newdata = bmp->pixels + stride * y + x * ch;
+                    newdata[0] = b;
+                    newdata[1] = g;
+                    newdata[2] = r;
+                    newdata[3] = a;
+                }
+            return true;
+        }
+        case 3: {
 
-        for (uint32_t y = row; y < h; y++)
-            for (uint32_t x = 0; x < w; x++) {
+            for (uint32_t y = row; y < h; y++)
+                for (uint32_t x = 0; x < w; x++) {
 
-                float * const __restrict data = bmp->pixels + stride * y + x * ch;
+                    float * const __restrict data = bmp->pixels + stride * y + x * ch;
 
-                const float r = (m[0][0] * data[2] + m[1][0] * data[1] + m[2][0] * data[0] + m[4][0]);
-                const float g = (m[0][1] * data[2] + m[1][1] * data[1] + m[2][1] * data[0] + m[4][1]);
-                const float b = (m[0][2] * data[2] + m[1][2] * data[1] + m[2][2] * data[0] + m[4][2]);
+                    const float r = (m[0][0] * data[2] + m[1][0] * data[1] + m[2][0] * data[0] + m[4][0]);
+                    const float g = (m[0][1] * data[2] + m[1][1] * data[1] + m[2][1] * data[0] + m[4][1]);
+                    const float b = (m[0][2] * data[2] + m[1][2] * data[1] + m[2][2] * data[0] + m[4][2]);
 
-                float * newdata = bmp->pixels + stride * y + x * ch;
-                newdata[0] = b;
-                newdata[1] = g;
-                newdata[2] = r;
-            }
-        return true;
-    }
-    default: {
-        FLOW_error(context, flow_status_Unsupported_pixel_format);
-        return false;
-    }
+                    float * newdata = bmp->pixels + stride * y + x * ch;
+                    newdata[0] = b;
+                    newdata[1] = g;
+                    newdata[2] = r;
+                }
+            return true;
+        }
+        default: {
+            FLOW_error(context, flow_status_Unsupported_pixel_format);
+            return false;
+        }
     }
 }
 

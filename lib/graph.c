@@ -893,12 +893,12 @@ int32_t flow_graph_get_inbound_edge_count_of_type(flow_c * c, struct flow_graph 
 static const char * get_format_name(flow_pixel_format f, bool alpha_meaningful)
 {
     switch (f) {
-    case flow_bgr24:
-        return "flow_bgr24";
-    case flow_bgra32:
-        return alpha_meaningful ? "flow_bgra32" : "Bgr32";
-    default:
-        return "unknown format";
+        case flow_bgr24:
+            return "flow_bgr24";
+        case flow_bgra32:
+            return alpha_meaningful ? "flow_bgra32" : "Bgr32";
+        default:
+            return "unknown format";
     }
 }
 

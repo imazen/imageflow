@@ -79,12 +79,12 @@ static bool stringify_state(char * buffer, size_t buffer_isze, struct flow_node 
 static const char * get_format_name(flow_pixel_format f, bool alpha_meaningful)
 {
     switch (f) {
-    case flow_bgr24:
-        return "flow_bgr24";
-    case flow_bgra32:
-        return alpha_meaningful ? "flow_bgra32" : "Bgr32";
-    default:
-        return "?";
+        case flow_bgr24:
+            return "flow_bgr24";
+        case flow_bgra32:
+            return alpha_meaningful ? "flow_bgra32" : "Bgr32";
+        default:
+            return "?";
     }
 }
 
@@ -118,23 +118,23 @@ static bool stringify_canvas(flow_c * c, struct flow_graph * g, int32_t node_id,
 static char * stringify_colorspace(flow_working_floatspace space)
 {
     switch (space) {
-    case flow_working_floatspace_gamma:
-        return "gamma";
-    case flow_working_floatspace_linear:
-        return "linear";
-    case flow_working_floatspace_srgb:
-        return "sRGB";
-    default:
-        return "colorspace unknown";
+        case flow_working_floatspace_gamma:
+            return "gamma";
+        case flow_working_floatspace_linear:
+            return "linear";
+        case flow_working_floatspace_srgb:
+            return "sRGB";
+        default:
+            return "colorspace unknown";
     }
 }
 static char * stringify_filter(flow_interpolation_filter filter)
 {
     switch (filter) {
-    case flow_interpolation_filter_Robidoux:
-        return "robidoux";
-    default:
-        return "??";
+        case flow_interpolation_filter_Robidoux:
+            return "robidoux";
+        default:
+            return "??";
     }
 }
 static bool stringify_render1d(flow_c * c, struct flow_graph * g, int32_t node_id, char * buffer, size_t buffer_size)

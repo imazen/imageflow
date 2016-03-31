@@ -218,80 +218,82 @@ InterpolationDetails_create_from_internal(flow_c * context, flow_interpolation_f
     bool ex = checkExistenceOnly;
     struct flow_interpolation_details * truePtr = (struct flow_interpolation_details *)-1;
     switch (filter) {
-    case flow_interpolation_filter_Linear:
-    case flow_interpolation_filter_Triangle:
-        return ex ? truePtr : flow_interpolation_details_create_custom(context, 1, 1, filter_triangle);
+        case flow_interpolation_filter_Linear:
+        case flow_interpolation_filter_Triangle:
+            return ex ? truePtr : flow_interpolation_details_create_custom(context, 1, 1, filter_triangle);
 
-    case flow_interpolation_filter_RawLanczos2:
-        return ex ? truePtr : flow_interpolation_details_create_custom(context, 2, 1, filter_sinc);
-    case flow_interpolation_filter_RawLanczos3:
-        return ex ? truePtr : flow_interpolation_details_create_custom(context, 3, 1, filter_sinc);
-    case flow_interpolation_filter_RawLanczos2Sharp:
-        return ex ? truePtr : flow_interpolation_details_create_custom(context, 2, 0.9549963639785485, filter_sinc);
-    case flow_interpolation_filter_RawLanczos3Sharp:
-        return ex ? truePtr : flow_interpolation_details_create_custom(context, 3, 0.9812505644269356, filter_sinc);
+        case flow_interpolation_filter_RawLanczos2:
+            return ex ? truePtr : flow_interpolation_details_create_custom(context, 2, 1, filter_sinc);
+        case flow_interpolation_filter_RawLanczos3:
+            return ex ? truePtr : flow_interpolation_details_create_custom(context, 3, 1, filter_sinc);
+        case flow_interpolation_filter_RawLanczos2Sharp:
+            return ex ? truePtr : flow_interpolation_details_create_custom(context, 2, 0.9549963639785485, filter_sinc);
+        case flow_interpolation_filter_RawLanczos3Sharp:
+            return ex ? truePtr : flow_interpolation_details_create_custom(context, 3, 0.9812505644269356, filter_sinc);
 
-    // Hermite and BSpline no negative weights
-    case flow_interpolation_filter_CubicBSpline:
-        return ex ? truePtr : flow_interpolation_details_create_bicubic_custom(context, 2, 1, 1, 0);
+        // Hermite and BSpline no negative weights
+        case flow_interpolation_filter_CubicBSpline:
+            return ex ? truePtr : flow_interpolation_details_create_bicubic_custom(context, 2, 1, 1, 0);
 
-    case flow_interpolation_filter_Lanczos2:
-        return ex ? truePtr : flow_interpolation_details_create_custom(context, 2, 1, filter_sinc_windowed);
-    case flow_interpolation_filter_Lanczos:
-        return ex ? truePtr : flow_interpolation_details_create_custom(context, 3, 1, filter_sinc_windowed);
-    case flow_interpolation_filter_Lanczos2Sharp:
-        return ex ? truePtr
-                  : flow_interpolation_details_create_custom(context, 2, 0.9549963639785485, filter_sinc_windowed);
-    case flow_interpolation_filter_LanczosSharp:
-        return ex ? truePtr
-                  : flow_interpolation_details_create_custom(context, 3, 0.9812505644269356, filter_sinc_windowed);
+        case flow_interpolation_filter_Lanczos2:
+            return ex ? truePtr : flow_interpolation_details_create_custom(context, 2, 1, filter_sinc_windowed);
+        case flow_interpolation_filter_Lanczos:
+            return ex ? truePtr : flow_interpolation_details_create_custom(context, 3, 1, filter_sinc_windowed);
+        case flow_interpolation_filter_Lanczos2Sharp:
+            return ex ? truePtr
+                      : flow_interpolation_details_create_custom(context, 2, 0.9549963639785485, filter_sinc_windowed);
+        case flow_interpolation_filter_LanczosSharp:
+            return ex ? truePtr
+                      : flow_interpolation_details_create_custom(context, 3, 0.9812505644269356, filter_sinc_windowed);
 
-    case flow_interpolation_filter_CubicFast:
-        return ex ? truePtr : flow_interpolation_details_create_custom(context, 1, 1, filter_bicubic_fast);
-    case flow_interpolation_filter_Cubic:
-        return ex ? truePtr : flow_interpolation_details_create_bicubic_custom(context, 2, 1, 0, 1);
-    case flow_interpolation_filter_CubicSharp:
-        return ex ? truePtr : flow_interpolation_details_create_bicubic_custom(context, 2, 0.9549963639785485, 0, 1);
-    case flow_interpolation_filter_CatmullRom:
-        return ex ? truePtr : flow_interpolation_details_create_bicubic_custom(context, 2, 1, 0, 0.5);
-    case flow_interpolation_filter_CatmullRomFast:
-        return ex ? truePtr : flow_interpolation_details_create_bicubic_custom(context, 1, 1, 0, 0.5);
-    case flow_interpolation_filter_CatmullRomFastSharp:
-        return ex ? truePtr : flow_interpolation_details_create_bicubic_custom(context, 1, 13.0 / 16.0, 0, 0.5);
-    case flow_interpolation_filter_Mitchell:
-        return ex ? truePtr
-                  : flow_interpolation_details_create_bicubic_custom(context, 2, 7.0 / 8.0, 1.0 / 3.0, 1.0 / 3.0);
-    case flow_interpolation_filter_MitchellFast:
-        return ex ? truePtr
-                  : flow_interpolation_details_create_bicubic_custom(context, 1, 7.0 / 8.0, 1.0 / 3.0, 1.0 / 3.0);
+        case flow_interpolation_filter_CubicFast:
+            return ex ? truePtr : flow_interpolation_details_create_custom(context, 1, 1, filter_bicubic_fast);
+        case flow_interpolation_filter_Cubic:
+            return ex ? truePtr : flow_interpolation_details_create_bicubic_custom(context, 2, 1, 0, 1);
+        case flow_interpolation_filter_CubicSharp:
+            return ex ? truePtr
+                      : flow_interpolation_details_create_bicubic_custom(context, 2, 0.9549963639785485, 0, 1);
+        case flow_interpolation_filter_CatmullRom:
+            return ex ? truePtr : flow_interpolation_details_create_bicubic_custom(context, 2, 1, 0, 0.5);
+        case flow_interpolation_filter_CatmullRomFast:
+            return ex ? truePtr : flow_interpolation_details_create_bicubic_custom(context, 1, 1, 0, 0.5);
+        case flow_interpolation_filter_CatmullRomFastSharp:
+            return ex ? truePtr : flow_interpolation_details_create_bicubic_custom(context, 1, 13.0 / 16.0, 0, 0.5);
+        case flow_interpolation_filter_Mitchell:
+            return ex ? truePtr
+                      : flow_interpolation_details_create_bicubic_custom(context, 2, 7.0 / 8.0, 1.0 / 3.0, 1.0 / 3.0);
+        case flow_interpolation_filter_MitchellFast:
+            return ex ? truePtr
+                      : flow_interpolation_details_create_bicubic_custom(context, 1, 7.0 / 8.0, 1.0 / 3.0, 1.0 / 3.0);
 
-    case flow_interpolation_filter_Robidoux:
-        return ex ? truePtr : flow_interpolation_details_create_bicubic_custom(
-                                  context, 2, 1. / 1.1685777620836932, 0.37821575509399867, 0.31089212245300067);
-    case flow_interpolation_filter_Fastest:
-        return ex ? truePtr : flow_interpolation_details_create_bicubic_custom(context, 0.74, 0.74, 0.37821575509399867,
-                                                                               0.31089212245300067);
+        case flow_interpolation_filter_Robidoux:
+            return ex ? truePtr : flow_interpolation_details_create_bicubic_custom(
+                                      context, 2, 1. / 1.1685777620836932, 0.37821575509399867, 0.31089212245300067);
+        case flow_interpolation_filter_Fastest:
+            return ex ? truePtr : flow_interpolation_details_create_bicubic_custom(
+                                      context, 0.74, 0.74, 0.37821575509399867, 0.31089212245300067);
 
-    case flow_interpolation_filter_RobidouxFast:
-        return ex ? truePtr : flow_interpolation_details_create_bicubic_custom(
-                                  context, 1.05, 1. / 1.1685777620836932, 0.37821575509399867, 0.31089212245300067);
-    case flow_interpolation_filter_RobidouxSharp:
-        return ex ? truePtr : flow_interpolation_details_create_bicubic_custom(context, 2, 1. / 1.105822933719019,
-                                                                               0.2620145123990142, 0.3689927438004929);
-    case flow_interpolation_filter_Hermite:
-        return ex ? truePtr : flow_interpolation_details_create_bicubic_custom(context, 1, 1, 0, 0);
-    case flow_interpolation_filter_Box:
-        return ex ? truePtr : flow_interpolation_details_create_custom(context, 0.5, 1, filter_box);
+        case flow_interpolation_filter_RobidouxFast:
+            return ex ? truePtr : flow_interpolation_details_create_bicubic_custom(
+                                      context, 1.05, 1. / 1.1685777620836932, 0.37821575509399867, 0.31089212245300067);
+        case flow_interpolation_filter_RobidouxSharp:
+            return ex ? truePtr : flow_interpolation_details_create_bicubic_custom(
+                                      context, 2, 1. / 1.105822933719019, 0.2620145123990142, 0.3689927438004929);
+        case flow_interpolation_filter_Hermite:
+            return ex ? truePtr : flow_interpolation_details_create_bicubic_custom(context, 1, 1, 0, 0);
+        case flow_interpolation_filter_Box:
+            return ex ? truePtr : flow_interpolation_details_create_custom(context, 0.5, 1, filter_box);
 
-    case flow_interpolation_filter_Ginseng:
-        return ex ? truePtr : flow_interpolation_details_create_custom(context, 3, 1, filter_ginseng);
+        case flow_interpolation_filter_Ginseng:
+            return ex ? truePtr : flow_interpolation_details_create_custom(context, 3, 1, filter_ginseng);
 
-    case flow_interpolation_filter_GinsengSharp:
-        return ex ? truePtr : flow_interpolation_details_create_custom(context, 3, 0.9812505644269356, filter_ginseng);
+        case flow_interpolation_filter_GinsengSharp:
+            return ex ? truePtr
+                      : flow_interpolation_details_create_custom(context, 3, 0.9812505644269356, filter_ginseng);
 
-    case flow_interpolation_filter_Jinc:
-        return ex ? truePtr
-                  : flow_interpolation_details_create_custom(context, 3, 1.0 / 1.2196698912665045, filter_jinc);
+        case flow_interpolation_filter_Jinc:
+            return ex ? truePtr
+                      : flow_interpolation_details_create_custom(context, 3, 1.0 / 1.2196698912665045, filter_jinc);
     }
     if (!checkExistenceOnly) {
         FLOW_error_msg(context, flow_status_Invalid_argument, "Invalid interpolation filter");
