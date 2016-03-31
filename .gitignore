@@ -239,3 +239,10 @@ cacert.pem
 node_frames/
 conaninfo.txt
 conanbuildinfo.cmake
+
+# Coverage things
+.conan/
+.sudo_as_admin_successful
+coverage.info
+imageflow_cache/
+
