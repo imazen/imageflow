@@ -6,7 +6,7 @@ class ImageFlowConan(ConanFile):
     requires = "littlecms/2.7@lasote/stable", "libpng/1.6.21@lasote/stable", "libjpeg-turbo/1.4.2@lasote/stable" , "giflib/5.1.2@lasote/stable"
     options = {"build_tests": [True, False]}
     generators = "cmake"
-    default_options = "build_tests=True", "libjpeg-turbo:shared=False", "libpng:shared=False", "giflib:shared=False", \
+    default_options = "build_tests=True", "libjpeg-turbo:shared=False", "libpng:shared=False", \
    					  "zlib:shared=False", "libcurl:shared=False", "OpenSSL:shared=True", \
    					  "imageflow:shared=True"
 
@@ -17,6 +17,7 @@ class ImageFlowConan(ConanFile):
             self.requires("electric-fence/2.2.0@lasote/stable") ##### SLOWS IT DOWN
             if self.settings.os != "Windows":  # Not supported in windows
                 self.requires("theft/0.2.0@lasote/stable")
+                self.options["giflib"].shared = False
             if self.settings.os == "Macos":
                 self.options["libcurl"].darwin_ssl = False
                 self.options["libcurl"].custom_cacert = True
