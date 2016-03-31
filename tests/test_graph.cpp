@@ -482,7 +482,7 @@ TEST_CASE("benchmark scaling large progressive jpg", "")
     last = flow_node_create_scale(c, &g, last, 800, 800);
     last = flow_node_create_encoder(c, &g, last, output_placeholder, flow_codec_type_encode_jpeg);
 
-    execute_graph_for_url(c, "https://s3.amazonaws.com/resizer-dynamic-downloads/imageflow_test_suite/4kx4k.jpg",
+    execute_graph_for_url(c, "http://s3.amazonaws.com/resizer-dynamic-downloads/imageflow_test_suite/4kx4k.jpg",
                           "graph_large_jpeg.jpg", &g);
 
     flow_context_destroy(c);
@@ -501,7 +501,7 @@ TEST_CASE("benchmark scaling large jpg", "")
     last = flow_node_create_encoder(c, &g, last, output_placeholder, flow_codec_type_encode_jpeg);
 
     execute_graph_for_url(c,
-                          "https://s3.amazonaws.com/resizer-dynamic-downloads/imageflow_test_suite/4kx4k_baseline.jpg",
+                          "http://s3.amazonaws.com/resizer-dynamic-downloads/imageflow_test_suite/4kx4k_baseline.jpg",
                           "graph_large_jpeg.jpg", &g);
 
     flow_context_destroy(c);
