@@ -27,6 +27,19 @@ unsigned long djb2(unsigned const char* str)
     return hash;
 }
 
+unsigned long djb2_buffer(uint8_t * str, size_t count)
+{
+    unsigned long hash = 5381;
+    int c;
+
+    for (size_t i = 0; i < count; i++) {
+        c = *str++;
+        hash = ((hash << 5) + hash) + c; /* hash * 33 + c */
+    }
+    return hash;
+}
+
+
 void copy_file(FILE* from, FILE* to)
 {
     size_t n, m;

@@ -66,6 +66,7 @@ if(ENABLE_TEST)
 	create_test(test_weighting  tests/test_weighting.cpp tests/runner.cpp tests/test_weighting_helpers.cpp tests/helpers.c )
 	create_test(test_context tests/helpers.c tests/test_context.cpp tests/runner.cpp)
 	create_test(test_io tests/helpers.c tests/test_io.cpp tests/runner.cpp)
+	create_test(test_visuals tests/helpers.c tests/visual_helpers.c tests/test_visuals.cpp tests/runner.cpp)
 
 	add_custom_target(do_nothing)
 	# Theft library don't compile in windows
