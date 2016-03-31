@@ -70,7 +70,7 @@ These may be OR'd together.  */
 #endif
 
 FLOW_EXPORT uint8_t* get_bytes_cached(flow_c* c, size_t* bytes_count_out, const char* url);
-FLOW_EXPORT void fetch_image(const char* url, char* dest_path);
+FLOW_EXPORT bool fetch_image(const char *url, char *dest_path);
 FLOW_EXPORT uint8_t* read_all_bytes(flow_c* c, size_t* buffer_size, const char* path);
 FLOW_EXPORT bool write_all_byte(const char* path, char* buffer, size_t size);
 FLOW_EXPORT void copy_file(FILE* from, FILE* to);

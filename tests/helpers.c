@@ -103,7 +103,7 @@ uint8_t* read_all_bytes(flow_c* c, size_t* buffer_size, const char* path)
     }
     return 0;
 }
-void fetch_image(const char* url, char* dest_path)
+bool fetch_image(const char *url, char *dest_path)
 { /*null-terminated string*/
     static bool curl_initialized = false;
     if (!curl_initialized) {
@@ -148,6 +148,7 @@ void fetch_image(const char* url, char* dest_path)
         fprintf(stderr, "Failed to start CURL");
         exit(2);
     }
+    return true;
 }
 
 uint8_t* get_bytes_cached(flow_c* c, size_t* bytes_count_out, const char* url)

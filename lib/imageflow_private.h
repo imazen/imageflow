@@ -144,6 +144,8 @@ struct flow_context {
 typedef struct flow_context flow_c;
 #include "color.h"
 
+bool write_frame_to_disk(flow_c* c, const char* path, struct flow_bitmap_bgra* b);
+
 PUB bool flow_node_execute_render_to_canvas_1d(flow_c* c, struct flow_job* job, struct flow_bitmap_bgra* input,
                                                struct flow_bitmap_bgra* canvas,
                                                struct flow_nodeinfo_render_to_canvas_1d* info);
