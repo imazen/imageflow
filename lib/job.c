@@ -263,7 +263,7 @@ bool flow_graph_optimize(flow_c* c, struct flow_job* job, struct flow_graph** gr
     return true;
 }
 
-static bool flow_job_populate_dimensions_for_node(flow_c *c, struct flow_job *job, struct flow_graph *g,
+static bool flow_job_populate_dimensions_for_node(flow_c* c, struct flow_job* job, struct flow_graph* g,
                                                   int32_t node_id, bool force_estimate)
 {
     uint64_t now = flow_get_high_precision_ticks();
@@ -275,14 +275,13 @@ static bool flow_job_populate_dimensions_for_node(flow_c *c, struct flow_job *jo
     return true;
 }
 
-
 bool flow_node_has_dimensions(flow_c* c, struct flow_graph* g, int32_t node_id)
 {
-    struct flow_node * n = &g->nodes[node_id];
+    struct flow_node* n = &g->nodes[node_id];
     return n->result_width > 0;
 }
 
-bool flow_node_inputs_have_dimensions(flow_c *c, struct flow_graph *g, int32_t node_id)
+bool flow_node_inputs_have_dimensions(flow_c* c, struct flow_graph* g, int32_t node_id)
 {
     int32_t i;
     for (i = 0; i < g->next_edge_id; i++) {
@@ -296,23 +295,23 @@ bool flow_node_inputs_have_dimensions(flow_c *c, struct flow_graph *g, int32_t n
 }
 
 static bool node_visitor_dimensions(flow_c* c, struct flow_job* job, struct flow_graph** graph_ref, int32_t node_id,
-                                 bool* quit, bool* skip_outbound_paths, void* custom_data)
+                                    bool* quit, bool* skip_outbound_paths, void* custom_data)
 {
 
     struct flow_node* n = &(*graph_ref)->nodes[node_id];
 
-    int32_t outbound_edges = flow_graph_get_edge_count(c, *graph_ref,node_id, false, flow_edgetype_null, false, true);
-    if (outbound_edges == 0){
-        return true; //Endpoint node - no need.
+    int32_t outbound_edges = flow_graph_get_edge_count(c, *graph_ref, node_id, false, flow_edgetype_null, false, true);
+    if (outbound_edges == 0) {
+        return true; // Endpoint node - no need.
     }
-    if (!flow_node_has_dimensions(c, *graph_ref, node_id)){
+    if (!flow_node_has_dimensions(c, *graph_ref, node_id)) {
         if (!flow_node_update_state(c, *graph_ref, node_id)) {
             FLOW_error_return(c);
         }
 
         // If input nodes are populated
         if ((n->state & flow_node_state_InputDimensionsKnown) > 0) {
-            if (!flow_job_populate_dimensions_for_node(c, job, *graph_ref, node_id, (bool) custom_data)) {
+            if (!flow_job_populate_dimensions_for_node(c, job, *graph_ref, node_id, (bool)custom_data)) {
                 FLOW_error_return(c);
             }
         }
@@ -327,12 +326,10 @@ static bool node_visitor_dimensions(flow_c* c, struct flow_job* job, struct flow
     return true;
 }
 
-
 bool flow_job_populate_dimensions_where_certain(flow_c* c, struct flow_job* job, struct flow_graph** graph_ref)
 {
     // TODO: would be good to verify graph is acyclic.
-    if (!flow_graph_walk_dependency_wise(c, job, graph_ref, node_visitor_dimensions, NULL,
-                                         (void*)false)) {
+    if (!flow_graph_walk_dependency_wise(c, job, graph_ref, node_visitor_dimensions, NULL, (void*)false)) {
         FLOW_error_return(c);
     }
     return true;
@@ -341,7 +338,7 @@ bool flow_job_populate_dimensions_where_certain(flow_c* c, struct flow_job* job,
 bool flow_job_force_populate_dimensions(flow_c* c, struct flow_job* job, struct flow_graph** graph_ref)
 {
     // TODO: would be good to verify graph is acyclic.
-    if (!flow_graph_walk(c, job, graph_ref,node_visitor_dimensions, NULL, (void*)true)) {
+    if (!flow_graph_walk(c, job, graph_ref, node_visitor_dimensions, NULL, (void*)true)) {
         FLOW_error_return(c);
     }
     return true;

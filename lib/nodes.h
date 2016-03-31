@@ -48,12 +48,11 @@ struct flow_node_definition {
 struct flow_node_definition* flow_nodedef_get(flow_c* c, flow_ntype type);
 
 //!Throws an error and returns null if node_id does not represent a valid, non-null node
-struct flow_node * flow_node_get(flow_c *c, struct flow_graph *g, int32_t node_id);
+struct flow_node* flow_node_get(flow_c* c, struct flow_graph* g, int32_t node_id);
 
-//!Throws an error if node_id does not represent a valid, non-null node, or if there are no infobytes, or the infobyte size does not match sizeof_infobytes_struct
-void * flow_node_get_infobytes_pointer(flow_c *c, struct flow_graph * g, int32_t node_id, size_t sizeof_infobytes_struct);
-
-
+//!Throws an error if node_id does not represent a valid, non-null node, or if there are no infobytes, or the infobyte
+//size does not match sizeof_infobytes_struct
+void* flow_node_get_infobytes_pointer(flow_c* c, struct flow_graph* g, int32_t node_id, size_t sizeof_infobytes_struct);
 
 #define FLOW_GET_INFOBYTES(g, node_id, type, varname)                                                                  \
     struct type* varname = (struct type*)&g->info_bytes[g->nodes[node_id].info_byte_index];

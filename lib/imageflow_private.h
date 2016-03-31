@@ -335,7 +335,7 @@ struct flow_job {
     int32_t next_graph_version;
     int32_t max_calc_flatten_execute_passes;
     struct flow_codec_instance* codecs_head;
-    struct flow_codec_instance* codecs_tail; //Makes appends simple. Deletes, not so much
+    struct flow_codec_instance* codecs_tail; // Makes appends simple. Deletes, not so much
     bool record_graph_versions;
     bool record_frame_images;
     bool render_graph_versions;
