@@ -123,11 +123,11 @@ bool fetch_image(const char * url, char * dest_path)
             curl_easy_setopt(curl, CURLOPT_WRITEDATA, fp);
             res = curl_easy_perform(curl);
             if (res != CURLE_OK) {
-                fprintf(stderr, "CURL HTTP operation failed (error %d) - GET %s, write to  %s", res, url, dest_path);
+                fprintf(stderr, "CURL HTTP operation failed (error %d) - GET %s, write to  %s\n", res, url, dest_path);
                 exit(4);
             }
         } else {
-            fprintf(stderr, "Failed to open temp file");
+            fprintf(stderr, "Failed to open temp file\n");
             exit(3);
         }
         /* always cleanup */
@@ -137,14 +137,14 @@ bool fetch_image(const char * url, char * dest_path)
         if (real_fp) {
             copy_file(fp, real_fp);
         } else {
-            fprintf(stderr, "Failed to open file for writing %s", dest_path);
+            fprintf(stderr, "Failed to open file for writing %s\n", dest_path);
             exit(3);
         }
         fclose(real_fp);
         fclose(fp);
-        fprintf(stdout, "...done! Written to %s", dest_path);
+        fprintf(stdout, "...done! Written to %s\n", dest_path);
     } else {
-        fprintf(stderr, "Failed to start CURL");
+        fprintf(stderr, "Failed to start CURL\n");
         exit(2);
     }
     return true;
@@ -160,6 +160,7 @@ uint8_t * get_bytes_cached(flow_c * c, size_t * bytes_count_out, const char * ur
     if (cache_dir == NULL)
         cache_dir = getenv("TEMP");
 
+    //TODO: move to tests/cache (if the tests folder exists, otherwise use home/temp)
     flow_snprintf(cache_folder, FLOW_MAX_PATH, "%s/imageflow_cache", cache_dir);
 
     flow_utils_ensure_directory_exists(cache_folder);
