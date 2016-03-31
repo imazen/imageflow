@@ -243,9 +243,9 @@ module Imageflow
     attach_function :flow_context_create, [], :pointer
     attach_function :flow_context_destroy, [:pointer], :void
     attach_function :flow_context_print_memory_info, [:pointer], :void
-    attach_function :flow_context_error_message, [:pointer, :pointer, :uint], :int32
-    attach_function :flow_context_stacktrace, [:pointer, :pointer, :uint, :bool], :int32
-    attach_function :flow_context_error_and_stacktrace, [:pointer, :pointer, :uint, :bool], :int32
+    attach_function :flow_context_error_message, [:pointer, :pointer, :uint], :int64
+    attach_function :flow_context_stacktrace, [:pointer, :pointer, :uint, :bool], :int64
+    attach_function :flow_context_error_and_stacktrace, [:pointer, :pointer, :uint, :bool], :int64
     attach_function :flow_context_has_error, [:pointer], :bool
     attach_function :flow_context_error_reason, [:pointer], :int
     attach_function :flow_context_print_and_exit_if_err, [:pointer], :bool
