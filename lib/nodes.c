@@ -837,7 +837,6 @@ static bool execute_crop(flow_c * c, struct flow_job * job, struct flow_graph * 
     struct flow_node * n = &g->nodes[node_id];
 
     struct flow_bitmap_bgra * original = g->nodes[input_edge->from].result_bitmap;
-    ;
     struct flow_bitmap_bgra * b = flow_bitmap_bgra_create_header(c, info->x2 - info->x1, info->y2 - info->y1);
     if (b == NULL) {
         FLOW_error_return(c);

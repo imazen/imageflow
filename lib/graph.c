@@ -933,7 +933,6 @@ bool flow_graph_print_to_dot(flow_c * c, struct flow_graph * g, FILE * stream, c
     uint64_t total_ticks = 0;
 
     struct flow_node * n;
-    ;
     for (i = 0; i < g->next_node_id; i++) {
         n = &g->nodes[i];
 

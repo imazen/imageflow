@@ -148,7 +148,6 @@ static bool png_decoder_load_color_profile(flow_c * c, struct flow_job_png_decod
             if (colorspace == cmsSigGrayData && !is_color_png) {
                 // TODO: warn about this
                 state->color_profile_source = flow_codec_color_profile_source_ICCP_GRAY;
-                ;
             }
             cmsCloseProfile(profile);
             profile = NULL;
