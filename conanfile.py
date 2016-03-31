@@ -36,12 +36,13 @@ class ImageFlowConan(ConanFile):
         cmake = CMake(self.settings)
         cmake_settings = ""
         if self.options.build_tests:
-            cmake_settings += " -DENABLE_TEST=ON"
+            cmake_settings += " -DENABLE_TEST=ON -DCOVERAGE=ON"
 
         cmake_command = 'cmake "%s" %s %s' % (self.conanfile_directory, cmake.command_line, cmake_settings)
         cmake_build_command = 'cmake --build . %s' % cmake.build_config
-        print cmake_command
+        self.output.warn(cmake_command)
         self.run(cmake_command)
-        print cmake_build_command
+        self.output.warn(cmake_build_command)
         self.run(cmake_build_command)
         self.run('ctest -V -C Release')
+
