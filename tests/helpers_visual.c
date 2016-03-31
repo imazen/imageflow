@@ -236,10 +236,9 @@ static bool append_html(flow_c * c, const char * name, const char * checksum_a, 
 }
 
 
-// #define FLOW_STORE_CHECKSUMS
 
 
-bool visual_compare(flow_c * c, struct flow_bitmap_bgra * bitmap, const char * name, const char * file_, const char * func_, int line_number){
+bool visual_compare(flow_c * c, struct flow_bitmap_bgra * bitmap, const char * name, bool store_checksums, const char * file_, const char * func_, int line_number){
 
     char checksum[34];
 
@@ -259,18 +258,18 @@ bool visual_compare(flow_c * c, struct flow_bitmap_bgra * bitmap, const char * n
 
     if (stored_checksum == NULL) {
         //No stored checksum for this name
-#ifdef FLOW_STORE_CHECKSUMS
-        if (!append_checksum(c, checksum, name)) {
-            FLOW_error_return(c);
-        }
-        fprintf(stderr,
-                "===============\n%s\nStoring checksum %s, since FLOW_STORE_CHECKSUMS was set.\n ",
-                name, &checksum[0]);
-#else
-        fprintf(stderr,
-                "===============\n%s\nThere is no stored checksum for this test; #define FLOW_STORE_CHECKSUMS and rerun to set the initial value to %s.\n ",
-                name, &checksum[0]);
-#endif
+if (store_checksums) {
+    if (!append_checksum(c, checksum, name)) {
+        FLOW_error_return(c);
+    }
+    fprintf(stderr,
+            "===============\n%s\nStoring checksum %s, since FLOW_STORE_CHECKSUMS was set.\n ",
+            name, &checksum[0]);
+}else {
+    fprintf(stderr,
+            "===============\n%s\nThere is no stored checksum for this test; #define FLOW_STORE_CHECKSUMS and rerun to set the initial value to %s.\n ",
+            name, &checksum[0]);
+}
 
         fprintf(stderr, "%s:%d in function %s\n", file_, line_number, func_);
     }else {

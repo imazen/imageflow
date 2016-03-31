@@ -1,5 +1,13 @@
 #include "catch.hpp"
 #include "helpers_visual.h"
+//#define FLOW_STORE_CHECKSUMS
+
+#ifdef FLOW_STORE_CHECKSUMS
+bool store_checksums = true;
+#else
+bool store_checksums = false;
+#endif
+
 
 TEST_CASE("Test fill_rect", "")
 {
@@ -16,7 +24,7 @@ TEST_CASE("Test fill_rect", "")
         ERR(c);
     }
 
-    REQUIRE(visual_compare(c, b, "FillRect", __FILE__, __func__, __LINE__) == true);
+    REQUIRE(visual_compare(c, b, "FillRect", store_checksums, __FILE__, __func__, __LINE__) == true);
     ERR(c);
     flow_context_destroy(c);
 }
