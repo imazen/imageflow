@@ -239,6 +239,7 @@ cacert.pem
 node_frames/
 conaninfo.txt
 conanbuildinfo.cmake
+CTestTestfile.cmake
 
 # Coverage things
 .conan/

@@ -10,6 +10,10 @@ rm tests/visuals/*.html
 rm tests/visuals/*~
 rm cacert.pem
 rm -rf bin
+rm *.png
+rm *.jpg
+rm *.jpeg
+rm *.gif
 rm *~
 mkdir build
 cd build

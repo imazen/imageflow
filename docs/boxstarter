@@ -1,3 +1,6 @@
+#boxstarter really didn't work for me. I'd suggest using chocolatey directly and changing ExlorerOptions yourself.
+
+
 # Configure Windows
 Set-WindowsExplorerOptions -EnableShowHiddenFilesFoldersDrives -EnableShowProtectedOSFiles -EnableShowFileExtensions -EnableShowFullPathInTitleBar
 
