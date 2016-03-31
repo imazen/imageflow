@@ -26,7 +26,7 @@ class ImageFlowConan(ConanFile):
         self.copy("*.so", dst="bin", src="bin")  # From bin to bin
         self.copy("*.dll", dst="bin", src="bin")  # From bin to bin
         self.copy("*.dylib*", dst="bin", src="lib")  # From lib to bin
-        self.copy("*cacert.pem", dst="bin")  # Allows use libcurl with https without problems 
+        self.copy("*cacert.pem", dst="bin")  # Allows use libcurl with https without problems - except on darwin
         self.copy("*cacert.pem", dst=".")  # Allows use libcurl with https without problems
 
     def build(self):
