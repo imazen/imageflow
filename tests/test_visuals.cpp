@@ -1,5 +1,5 @@
 #include "catch.hpp"
-#include "visual_helpers.h"
+#include "helpers_visual.h"
 
 TEST_CASE("Test fill_rect", "")
 {

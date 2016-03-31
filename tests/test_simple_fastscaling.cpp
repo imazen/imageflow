@@ -5,6 +5,7 @@
  * Licensed under the GNU Affero General Public License, Version 3.0.
  * Commercial licenses available at http://imageresizing.net/
  */
+#include "catch.hpp"
 #include "imageflow_private.h"
 #include <stdio.h>
 #include <string.h>
@@ -63,9 +64,9 @@ bool test(int sx, int sy, flow_pixel_format sbpp, int cx, int cy, flow_pixel_for
     return true;
 }
 
-int main(void)
-{
 
+TEST_CASE("Render without crashing", "[fastscaling]")
+{
     printf("Running 3 x 20 operations\n");
     for (int i = 0; i < 20; i++) {
         if (flow_interpolation_filter_exists((flow_interpolation_filter)i)) {
@@ -74,5 +75,4 @@ int main(void)
             test(1200, 800, flow_bgra32, 200, 150, flow_bgra32, false, false, false, (flow_interpolation_filter)i);
         }
     }
-    return 0;
 }
