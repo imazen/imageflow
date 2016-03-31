@@ -65,9 +65,8 @@ bool test(int sx, int sy, flow_pixel_format sbpp, int cx, int cy, flow_pixel_for
 }
 
 
-TEST_CASE("Render without crashing", "[fastscaling]")
+TEST_CASE("Render - Running 3 x 20 operations", "[fastscaling]")
 {
-    printf("Running 3 x 20 operations\n");
     for (int i = 0; i < 20; i++) {
         if (flow_interpolation_filter_exists((flow_interpolation_filter)i)) {
             test(1200, 100, flow_bgr24, 400, 223, flow_bgra32, true, true, false, (flow_interpolation_filter)i);
