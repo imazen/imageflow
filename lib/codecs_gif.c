@@ -23,8 +23,8 @@ typedef void (*read_function_data_cleanup)(flow_c * c, void ** read_function_dat
 
 struct flow_job_gif_decoder_state {
     GifFileType * gif;
-    size_t w;
-    size_t h;
+    int32_t w;
+    int32_t h;
     int64_t current_frame_index;
     struct flow_io * io;
     flow_c * context;
@@ -50,7 +50,7 @@ static int flow_job_gif_read_function(GifFileType * gif, GifByteType * buffer, i
                            bytes_please, bytes_read);
         }
     }
-    return bytes_read;
+    return (int)bytes_read;
 }
 
 // static int flow_job_gif_write_function (GifFileType * gif, const GifByteType * buffer, int count){
@@ -235,8 +235,8 @@ static bool flow_job_codecs_gif_get_frame_info(flow_c * c, struct flow_job * job
             FLOW_error_return(c);
         }
     }
-    decoder_frame_info_ref->w = state->w;
-    decoder_frame_info_ref->h = state->h;
+    decoder_frame_info_ref->w = (int32_t)state->w;
+    decoder_frame_info_ref->h = (int32_t)state->h;
     decoder_frame_info_ref->format = flow_bgra32; // state->channels == 1 ? flow_gray8 : flow_bgr24;
     return true;
 }
@@ -313,7 +313,7 @@ static bool flow_job_codecs_gif_read_frame(flow_c * c, struct flow_job * job, vo
             FLOW_error_return(c);
         }
 
-        if (!dequantize(c, state->gif, state->current_frame_index, canvas)) {
+        if (!dequantize(c, state->gif, (int)state->current_frame_index, canvas)) {
             FLOW_error_return(c);
         }
 

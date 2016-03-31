@@ -104,10 +104,10 @@ void flow_context_print_error_to(flow_c * c, FILE * stream)
     flow_context_error_and_stacktrace(c, buffer, sizeof(buffer), true);
     fprintf(stream, "%s", buffer);
 }
-int32_t flow_context_error_and_stacktrace(flow_c * context, char * buffer, size_t buffer_size, bool full_file_path)
+int64_t flow_context_error_and_stacktrace(flow_c * context, char * buffer, size_t buffer_size, bool full_file_path)
 {
     size_t original_buffer_size = buffer_size;
-    int chars_written = flow_context_error_message(context, buffer, buffer_size);
+    int64_t chars_written = flow_context_error_message(context, buffer, buffer_size);
     if (chars_written < 0) {
         return -1; // we ran out of space
     } else {
@@ -136,7 +136,7 @@ int32_t flow_context_error_and_stacktrace(flow_c * context, char * buffer, size_
     return original_buffer_size - buffer_size;
 }
 
-int32_t flow_context_error_message(flow_c * context, char * buffer, size_t buffer_size)
+int64_t flow_context_error_message(flow_c * context, char * buffer, size_t buffer_size)
 {
     int chars_written = 0;
     if (context->error.message[0] == 0) {
@@ -151,7 +151,7 @@ int32_t flow_context_error_message(flow_c * context, char * buffer, size_t buffe
     return chars_written;
 }
 
-int32_t flow_context_stacktrace(flow_c * context, char * buffer, size_t buffer_size, bool full_file_path)
+int64_t flow_context_stacktrace(flow_c * context, char * buffer, size_t buffer_size, bool full_file_path)
 {
 
     // Test with function_name = NULL

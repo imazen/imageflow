@@ -219,7 +219,7 @@ TEST_CASE("Test guassian blur approximation.", "[fastscaling]")
 
     for (uint32_t i = 0; i < image->w * 4; i++) {
 
-        image->pixels[i] = (i % 8 == 0 ? 0.5 : 0) + (i % 12 == 0 ? 0.4 : 0.1);
+        image->pixels[i] = (float)((i % 8 == 0 ? 0.5 : 0) + (i % 12 == 0 ? 0.4 : 0.1));
     }
     struct flow_bitmap_float * image_b = flow_bitmap_float_create(&context, bitmap_width, 1, 4, true);
     memcpy(image_b->pixels, image->pixels, image->float_stride * sizeof(float));

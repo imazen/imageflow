@@ -304,8 +304,8 @@ int32_t flow_node_create_scale(flow_c * c, struct flow_graph ** g, int32_t prev_
         return id;
     }
     struct flow_nodeinfo_size * info = (struct flow_nodeinfo_size *)FrameNode_get_node_info_pointer(*g, id);
-    info->width = width;
-    info->height = height;
+    info->width = (int32_t)width;
+    info->height = (int32_t)height;
     return id;
 }
 
@@ -944,7 +944,7 @@ bool flow_graph_print_to_dot(flow_c * c, struct flow_graph * g, FILE * stream, c
             // image_node_filename_prefix, i, i, node_label_buffer); //Todo, add completion info.
 
             total_ticks += n->ticks_elapsed;
-            float ms = n->ticks_elapsed * 1000.0 / (float)flow_get_profiler_ticks_per_second();
+            double ms = n->ticks_elapsed * 1000.0 / (float)flow_get_profiler_ticks_per_second();
 
             if (n->result_bitmap != NULL && image_node_filename_prefix != NULL) {
                 fprintf(stream, "  n%d [image=\"%s%d.png\", label=\"n%d: %s\n%.2fms\"]\n", i,
@@ -956,7 +956,7 @@ bool flow_graph_print_to_dot(flow_c * c, struct flow_graph * g, FILE * stream, c
         }
     }
 
-    float total_ms = total_ticks * 1000.0 / (float)flow_get_profiler_ticks_per_second();
+    double total_ms = total_ticks * 1000.0 / (float)flow_get_profiler_ticks_per_second();
 
     // Print graph info last so it displays right or last
     fprintf(stream, " graphinfo [label=\"");

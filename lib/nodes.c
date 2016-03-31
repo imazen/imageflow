@@ -317,8 +317,8 @@ static bool dimensions_canvas(flow_c * c, struct flow_graph * g, int32_t node_id
 
     struct flow_node * n = &g->nodes[node_id];
 
-    n->result_width = info->width;
-    n->result_height = info->height;
+    n->result_width = (int32_t)info->width;
+    n->result_height = (int32_t)info->height;
     n->result_alpha_meaningful = false;
     n->result_format = info->format;
     return true;
@@ -798,7 +798,7 @@ static bool execute_canvas(flow_c * c, struct flow_job * job, struct flow_graph 
 
     struct flow_node * n = &g->nodes[node_id];
     // TODO: bgcolor
-    n->result_bitmap = flow_bitmap_bgra_create(c, info->width, info->height, true, info->format);
+    n->result_bitmap = flow_bitmap_bgra_create(c, (int)info->width, (int)info->height, true, info->format);
     if (n->result_bitmap == NULL) {
         FLOW_error_return(c);
     }

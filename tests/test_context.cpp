@@ -52,7 +52,7 @@ TEST_CASE("Test error message printing", "")
 
     FLOW_error_msg(c, flow_status_Invalid_argument, "You passed a value outside [0,1]: %d", 3);
     char buf[4096];
-    int chars_written = flow_context_error_and_stacktrace(c, buf, 4096, false);
+    int64_t chars_written = flow_context_error_and_stacktrace(c, buf, 4096, false);
     REQUIRE(chars_written > 0);
     REQUIRE_THAT(buf, StartsWith("Invalid argument : You passed a value outside [0,1]: 3\ntest_context.cpp:"));
 
@@ -67,7 +67,7 @@ TEST_CASE("Test error message printing with null files or functions in the stack
     flow_context_raise_error(c, flow_status_Invalid_argument, NULL, NULL, 25, NULL);
 
     char buf[4096];
-    int chars_written = flow_context_error_and_stacktrace(c, buf, 4096, false);
+    int64_t chars_written = flow_context_error_and_stacktrace(c, buf, 4096, false);
     REQUIRE(chars_written > 0);
     REQUIRE(buf == std::string("Invalid argument\n(unknown):25: in function (unknown)\n"));
 
@@ -86,7 +86,7 @@ TEST_CASE("Test reporting of a failing destructor", "")
     REQUIRE(flow_context_begin_terminate(c) == false);
 
     char buf[4096];
-    int chars_written = flow_context_error_and_stacktrace(c, buf, 4096, false);
+    int64_t chars_written = flow_context_error_and_stacktrace(c, buf, 4096, false);
     REQUIRE(chars_written > 0);
     REQUIRE_THAT(buf, StartsWith("Other error: : Destructor returned false, indicating failure"));
 

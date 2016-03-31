@@ -87,6 +87,9 @@ struct flow_io * get_io_for_cached_url(flow_c * c, const char * url, void * owne
 
 bool has_err(flow_c * c, const char * file, int line, const char * func);
 
+
+void flow_utils_ensure_directory_exists(const char * dir_path);
+
 #define ERR(c) REQUIRE_FALSE(has_err(c, __FILE__, __LINE__, __func__))
 
 #ifdef __cplusplus

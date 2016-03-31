@@ -215,7 +215,7 @@ static bool flow_job_jpg_decoder_FinishRead(flow_c * c, struct flow_job_jpeg_dec
          * more than one scanline at a time if that's more convenient.
          */
         scanlines_read = jpeg_read_scanlines(
-            state->cinfo, &state->pixel_buffer_row_pointers[state->cinfo->output_scanline], state->h);
+            state->cinfo, &state->pixel_buffer_row_pointers[state->cinfo->output_scanline], (JDIMENSION)state->h);
     }
 
     if (scanlines_read < 1) {
@@ -307,8 +307,8 @@ static bool flow_job_codecs_jpeg_get_info(flow_c * c, struct flow_job * job, voi
             FLOW_error_return(c);
         }
     }
-    decoder_frame_info_ref->w = state->w;
-    decoder_frame_info_ref->h = state->h;
+    decoder_frame_info_ref->w = (int32_t)state->w;
+    decoder_frame_info_ref->h = (int32_t)state->h;
     decoder_frame_info_ref->format = flow_bgra32; // state->channels == 1 ? flow_gray8 : flow_bgr24;
     return true;
 }

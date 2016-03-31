@@ -272,7 +272,7 @@ static bool flow_job_populate_dimensions_for_node(flow_c * c, struct flow_job * 
     if (!flow_node_populate_dimensions(c, g, node_id, force_estimate)) {
         FLOW_error_return(c);
     }
-    g->nodes[node_id].ticks_elapsed += flow_get_high_precision_ticks() - now;
+    g->nodes[node_id].ticks_elapsed += (int32_t)(flow_get_high_precision_ticks() - now);
     return true;
 }
 
@@ -376,7 +376,7 @@ static bool node_visitor_execute(flow_c * c, struct flow_job * job, struct flow_
         if (!flow_node_execute(c, job, *graph_ref, node_id)) {
             FLOW_error_return(c);
         } else {
-            (*graph_ref)->nodes[node_id].ticks_elapsed += flow_get_high_precision_ticks() - now;
+            (*graph_ref)->nodes[node_id].ticks_elapsed += (int32_t)(flow_get_high_precision_ticks() - now);
             n->state = (flow_node_state)(n->state | flow_node_state_Executed);
             flow_job_notify_node_complete(c, job, *graph_ref, node_id);
         }

@@ -216,7 +216,6 @@ PUB bool flow_halve(flow_c * c, const struct flow_bitmap_bgra * from, struct flo
 
 PUB bool flow_halve_in_place(flow_c * c, struct flow_bitmap_bgra * from, int divisor);
 
-PUB void flow_utils_ensure_directory_exists(const char * dir_path);
 
 // https://github.com/imazen/freeimage/blob/master/Source/FreeImage/FreeImageIO.cpp
 // https://github.com/imazen/freeimage/blob/master/Source/FreeImage/PluginJPEG.cpp
@@ -271,8 +270,8 @@ struct flow_nodeinfo_fill_rect {
 };
 
 struct flow_nodeinfo_size {
-    size_t width;
-    size_t height;
+    int32_t width;
+    int32_t height;
 };
 struct flow_nodeinfo_bitmap_bgra_pointer {
     struct flow_bitmap_bgra ** ref;
@@ -407,7 +406,9 @@ struct flow_graph {
 #ifndef _TIMERS_IMPLEMENTED
 #define _TIMERS_IMPLEMENTED
 #ifdef _WIN32
+#ifndef STRICT
 #define STRICT
+#endif
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
 #include <winbase.h>

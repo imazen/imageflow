@@ -36,7 +36,7 @@ static bool create_relative_path(flow_c * c, char * filename, size_t max_filenam
 #include <stdio.h>
 #include <stdlib.h>
 
-size_t flow_getline(char **lineptr, size_t *n, FILE *stream) {
+int64_t flow_getline(char **lineptr, size_t *n, FILE *stream) {
     char *bufptr = NULL;
     char *temp_bufptr = NULL;
     char *p = bufptr;
@@ -60,7 +60,7 @@ size_t flow_getline(char **lineptr, size_t *n, FILE *stream) {
         return -1;
     }
     if (bufptr == NULL) {
-        bufptr = malloc(128);
+        bufptr = (char *)malloc(128);
         if (bufptr == NULL) {
             return -1;
         }
@@ -68,9 +68,9 @@ size_t flow_getline(char **lineptr, size_t *n, FILE *stream) {
     }
     p = bufptr;
     while (c != EOF) {
-        if ((p - bufptr + 1) > size) {
+        if ((p - bufptr + 1) > (int64_t)size) {
             size = size + 128;
-            temp_bufptr = realloc(bufptr, size);
+            temp_bufptr = (char *)realloc(bufptr, size);
             if (temp_bufptr == NULL) {          
                 return -1;
             }
@@ -107,10 +107,10 @@ static bool load_checksums(flow_c * c, struct named_checksum ** checksums, size_
         FILE * fp;
         char * line_a = NULL;
         size_t len_a = 0;
-        ssize_t read_a;
+        int64_t read_a;
         char * line_b = NULL;
         size_t len_b = 0;
-        ssize_t read_b;
+        int64_t read_b;
 
         fp = fopen(filename, "r");
         if (fp == NULL) {

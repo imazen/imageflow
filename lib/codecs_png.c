@@ -347,8 +347,8 @@ static bool flow_job_codecs_png_get_frame_info(flow_c * c, struct flow_job * job
             FLOW_error_return(c);
         }
     }
-    decoder_frame_info_ref->w = state->w;
-    decoder_frame_info_ref->h = state->h;
+    decoder_frame_info_ref->w = (int32_t)state->w;
+    decoder_frame_info_ref->h = (int32_t)state->h;
     decoder_frame_info_ref->format = flow_bgra32;
     return true;
 }
@@ -361,8 +361,8 @@ static bool flow_job_codecs_png_get_info(flow_c * c, struct flow_job * job, void
             FLOW_error_return(c);
         }
     }
-    info_ref->frame0_width = state->w;
-    info_ref->frame0_height = state->h;
+    info_ref->frame0_width = (int32_t)state->w;
+    info_ref->frame0_height = (int32_t)state->h;
     info_ref->frame_count = 1;
     info_ref->current_frame_index = 0;
     info_ref->frame0_post_decode_format = flow_bgra32;

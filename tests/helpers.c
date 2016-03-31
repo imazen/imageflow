@@ -254,7 +254,7 @@ double flow_bitmap_float_compare(flow_c * c, struct flow_bitmap_float * a, struc
         for (uint32_t x = 0; x < a->w; x++) {
             int pixel = y * a->float_stride + x * a->channels;
             for (uint32_t cx = 0; cx < a->channels; cx++) {
-                float delta = fabs(a->pixels[pixel + cx] - b->pixels[pixel + cx]);
+                float delta = (float)fabs(a->pixels[pixel + cx] - b->pixels[pixel + cx]);
                 if (delta > max_delta)
                     max_delta = delta;
                 row_delta += delta;
