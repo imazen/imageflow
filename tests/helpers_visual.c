@@ -32,6 +32,67 @@ static bool create_relative_path(flow_c * c, char * filename, size_t max_filenam
     return true;
 }
 
+/* This code is public domain -- Will Hartung 4/9/09 */
+#include <stdio.h>
+#include <stdlib.h>
+
+size_t flow_getline(char **lineptr, size_t *n, FILE *stream) {
+    char *bufptr = NULL;
+    char *temp_bufptr = NULL;
+    char *p = bufptr;
+    size_t size;
+    int c;
+
+    if (lineptr == NULL) {
+        return -1;
+    }
+    if (stream == NULL) {
+        return -1;
+    }
+    if (n == NULL) {
+        return -1;
+    }
+    bufptr = *lineptr;
+    size = *n;
+
+    c = fgetc(stream);
+    if (c == EOF) {
+        return -1;
+    }
+    if (bufptr == NULL) {
+        bufptr = malloc(128);
+        if (bufptr == NULL) {
+            return -1;
+        }
+        size = 128;
+    }
+    p = bufptr;
+    while (c != EOF) {
+        if ((p - bufptr + 1) > size) {
+            size = size + 128;
+            temp_bufptr = realloc(bufptr, size);
+            if (temp_bufptr == NULL) {          
+                return -1;
+            }
+            else {
+                bufptr = temp_bufptr;
+                p = p + (int64_t)(temp_bufptr - bufptr);
+            }
+        }
+        *p++ = c;
+        if (c == '\n') {
+            break;
+        }
+        c = fgetc(stream);
+    }
+
+    *p++ = '\0';
+    *lineptr = bufptr;
+    *n = size;
+
+    return p - bufptr - 1;
+}
+
 static bool load_checksums(flow_c * c, struct named_checksum ** checksums, size_t * checksum_count)
 {
     static struct named_checksum * list = NULL;
@@ -63,11 +124,11 @@ static bool load_checksums(flow_c * c, struct named_checksum ** checksums, size_
         size_t index = 0;
         while (true) {
             // Read lines in pairs
-            read_a = getline(&line_a, &len_a, fp);
+            read_a = flow_getline(&line_a, &len_a, fp);
             if (read_a == -1) {
                 break;
             }
-            read_b = getline(&line_b, &len_b, fp);
+            read_b = flow_getline(&line_b, &len_b, fp);
             if (read_b == -1) {
                 free(line_a);
                 break;

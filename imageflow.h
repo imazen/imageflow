@@ -314,7 +314,7 @@ PUB bool flow_job_add_io(flow_c * c, struct flow_job * job, struct flow_io * io,
 
 PUB struct flow_codec_instance * flow_job_get_codec_instance(flow_c * c, struct flow_job * job,
                                                              int32_t by_placeholder_id);
-bool flow_job_set_default_encoder(flow_c * c, struct flow_job * job, int32_t by_placeholder_id,
+PUB bool flow_job_set_default_encoder(flow_c * c, struct flow_job * job, int32_t by_placeholder_id,
                                   int64_t default_encoder_id);
 
 PUB struct flow_graph * flow_graph_create(flow_c * c, uint32_t max_edges, uint32_t max_nodes, uint32_t max_info_bytes,
@@ -389,7 +389,7 @@ PUB bool flow_job_configure_recording(flow_c * c, struct flow_job * job, bool re
                                       bool record_frame_images, bool render_last_graph, bool render_graph_versions,
                                       bool render_animated_graph);
 
-bool flow_job_decoder_switch_frame(flow_c * c, struct flow_job * job, int32_t by_placeholder_id, int64_t frame_index);
+PUB bool flow_job_decoder_switch_frame(flow_c * c, struct flow_job * job, int32_t by_placeholder_id, int64_t frame_index);
 
 PUB bool flow_graph_validate(flow_c * c, struct flow_graph * g);
 
@@ -413,7 +413,7 @@ struct flow_decoder_info {
 PUB bool flow_job_get_decoder_info(flow_c * c, struct flow_job * job, int32_t by_placeholder_id,
                                    struct flow_decoder_info * info);
 
-bool flow_bitmap_bgra_write_png(flow_c * c, struct flow_job * job, struct flow_bitmap_bgra * frame,
+PUB bool flow_bitmap_bgra_write_png(flow_c * c, struct flow_job * job, struct flow_bitmap_bgra * frame,
                                 struct flow_io * io);
 
 #undef PUB
