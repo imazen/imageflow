@@ -436,6 +436,11 @@ static bool flatten_scale(flow_c * c, struct flow_graph ** g, int32_t node_id, s
                           struct flow_node * input_node, int32_t * first_replacement_node,
                           int32_t * last_replacement_node)
 {
+    if ((*g)->nodes[node_id].type != flow_ntype_Scale ||
+            (*g)->nodes[node_id].info_byte_index > (int64_t)((*g)->next_info_byte - sizeof(struct flow_nodeinfo_size))){
+        FLOW_error(c, flow_status_Graph_invalid);
+        return false;
+    }
     FLOW_GET_INFOBYTES((*g), node_id, flow_nodeinfo_size, size)
 
     flow_interpolation_filter filter = flow_interpolation_filter_Robidoux;
@@ -444,7 +449,9 @@ static bool flatten_scale(flow_c * c, struct flow_graph ** g, int32_t node_id, s
         FLOW_error_return(c);
     }
 
-    *last_replacement_node = create_render1d_node(c, g, *first_replacement_node, size->height, true, filter);
+    int32_t copy = *first_replacement_node;
+    int32_t height = size->height;
+    *last_replacement_node = create_render1d_node(c, g, copy, height, true, filter);
     if (*last_replacement_node < 0) {
         FLOW_error_return(c);
     }
@@ -764,15 +771,22 @@ static bool flatten_clone(flow_c * c, struct flow_graph ** g, int32_t node_id, s
                           int32_t * last_replacement_node)
 {
 
+    if (input_node == NULL){
+        FLOW_error_msg(c, flow_status_Graph_invalid, "A Clone node must have one input.");
+        return false;
+    }
+    int32_t rw = input_node->result_width;
+    int32_t rh = input_node->result_height;
+    flow_pixel_format rf = input_node->result_format;
     // create canvas
-    int32_t canvas = flow_node_create_canvas(c, g, -1, input_node->result_format, input_node->result_width,
-                                             input_node->result_height, 0);
+    int32_t canvas = flow_node_create_canvas(c, g, -1, rf, rw,
+                                             rh, 0);
     if (canvas < 0) {
         FLOW_error_return(c);
     }
     // Blit from image
-    *first_replacement_node = flow_node_create_primitive_copy_rect_to_canvas(c, g, -1, 0, 0, input_node->result_width,
-                                                                             input_node->result_height, 0, 0);
+    *first_replacement_node = flow_node_create_primitive_copy_rect_to_canvas(c, g, -1, 0, 0, rw,
+                                                                             rh, 0, 0);
     if (*first_replacement_node < 0) {
         FLOW_error_return(c);
     }

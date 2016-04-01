@@ -335,7 +335,10 @@ void flow_deprecated_free(flow_c * context, void * pointer, const char * file, i
                                                               "be used with FLOW_free");
         exit(404);
     }
-    flow_objtracking_partial_destroy_by_record(context, &context->object_tracking.allocs[record_id], file, line);
+    if (!flow_objtracking_partial_destroy_by_record(context, &context->object_tracking.allocs[record_id], file, line)){
+        FLOW_add_to_callstack(context);
+        exit(405);
+    }
     if (context->object_tracking.next_free_slot > (size_t)record_id) {
         context->object_tracking.next_free_slot = record_id;
     }
@@ -395,6 +398,7 @@ static void * f_default_realloc(struct flow_context * context, struct flow_heap 
 static void f_default_free(struct flow_context * context, struct flow_heap * heap, void * pointer, const char * file,
                            int line)
 {
+    //fprintf(stdout, "Freeing %p\n", pointer);
     free(pointer);
 }
 
