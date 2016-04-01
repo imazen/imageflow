@@ -42,6 +42,16 @@ Install nasm (`cinst -y nasm` on windows, followed by `set PATH=%PATH%;%ProgramF
     conan build
     
 
+### Starting the demo ruby image server (complete Universal steps above first!)
+
+    cd wrappers/ruby
+    bundle install
+    bundle exec thin start
+    #Browse to localhost:3000/ri/7s.jpg?width=800
+    #Backed by the same S3 buckets as z.zr.io demo server
+    #X-CPU-Time HTTP header lets you know how much time was spent inside the imageflow library
+
+    
 
 ======
 
