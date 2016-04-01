@@ -441,16 +441,20 @@ static bool flatten_scale(flow_c * c, struct flow_graph ** g, int32_t node_id, s
         FLOW_error(c, flow_status_Graph_invalid);
         return false;
     }
+    //INFOBYTES ARE INVALID AFTER THE FIRST create_*_nodec call, since the graph has been swapped out.
+    //TODO: check them all
     FLOW_GET_INFOBYTES((*g), node_id, flow_nodeinfo_size, size)
+    int32_t height = size->height;
+    int32_t width = size->width;
 
     flow_interpolation_filter filter = flow_interpolation_filter_Robidoux;
-    *first_replacement_node = create_render1d_node(c, g, -1, size->width, true, filter);
+    *first_replacement_node = create_render1d_node(c, g, -1, width, true, filter);
     if (*first_replacement_node < 0) {
         FLOW_error_return(c);
     }
 
     int32_t copy = *first_replacement_node;
-    int32_t height = size->height;
+
     *last_replacement_node = create_render1d_node(c, g, copy, height, true, filter);
     if (*last_replacement_node < 0) {
         FLOW_error_return(c);
@@ -705,8 +709,10 @@ static bool flatten_render1d(flow_c * c, struct flow_graph ** g, int32_t node_id
 
     int32_t c_h = info->transpose_on_write ? info->scale_to_width : input_node->result_height;
     int32_t c_w = info->transpose_on_write ? input_node->result_height : info->scale_to_width;
+    flow_pixel_format input_format = input_node->result_format;
+    int32_t scale_to_width = info->scale_to_width;
 
-    int32_t canvas = flow_node_create_canvas(c, g, -1, input_node->result_format, c_w, c_h, 0);
+    int32_t canvas = flow_node_create_canvas(c, g, -1, input_format, c_w, c_h, 0);
     if (canvas < 0) {
         FLOW_error_return(c);
     }
@@ -716,7 +722,7 @@ static bool flatten_render1d(flow_c * c, struct flow_graph ** g, int32_t node_id
     }
 
     *first_replacement_node = create_primitve_render_to_canvas_1d_node(
-        c, g, *first_replacement_node, info->scale_to_width, true, flow_interpolation_filter_Robidoux);
+        c, g, *first_replacement_node, scale_to_width, true, flow_interpolation_filter_Robidoux);
     if (*first_replacement_node < 0) {
         FLOW_error_return(c);
     }

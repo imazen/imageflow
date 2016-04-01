@@ -132,7 +132,7 @@ typedef enum flow_codec_type {
     flow_codec_type_encode_png,
     flow_codec_type_decode_jpeg,
     flow_codec_type_encode_jpeg,
-    flow_codec_type_decode_gif,
+    flow_codec_type_decode_gif
 } flow_codec_type;
 
 typedef enum flow_scanlines_filter_type {
@@ -166,7 +166,7 @@ typedef enum flow_status_code {
     flow_status_Other_error,
     flow_status____Last_library_error,
     flow_status_First_user_defined_error = 1025,
-    flow_status_Last_user_defined_error = 2147483647,
+    flow_status_Last_user_defined_error = 2147483647
 } flow_status_code;
 
 static const char * const flow_status_code_strings[] = {
@@ -233,7 +233,7 @@ typedef enum flow_io_mode {
     flow_io_mode_write_sequential = 2,
     flow_io_mode_read_seekable = 5, // 1 | 4,
     flow_io_mode_write_seekable = 6, // 2 | 4,
-    flow_io_mode_read_write_seekable = 15, // 1 | 2 | 4 | 8
+    flow_io_mode_read_write_seekable = 15 // 1 | 2 | 4 | 8
 } flow_io_mode;
 
 typedef struct flow_context flow_c;
