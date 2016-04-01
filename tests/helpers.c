@@ -117,7 +117,11 @@ bool fetch_image(const char * url, char * dest_path)
     CURLcode res;
     curl = curl_easy_init();
     if (curl) {
+#ifdef _MSC_VER
+        tmpfile_s(&fp);
+#else
         fp = tmpfile();
+#endif
         if (fp) {
             curl_easy_setopt(curl, CURLOPT_URL, url);
             curl_easy_setopt(curl, CURLOPT_WRITEDATA, fp);
@@ -225,7 +229,7 @@ void flow_utils_ensure_directory_exists(const char * dir_path)
         if ((errno = ENOENT)) {
 // Add more flags to the mode if necessary.
 #ifdef _MSC_VER
-            e = mkdir(dir_path); // Windows doesn't support the last param, S_IRWXU);
+            e = _mkdir(dir_path); // Windows doesn't support the last param, S_IRWXU);
 #else
             e = mkdir(dir_path, S_IRWXU);
 #endif
@@ -253,7 +257,7 @@ bool flow_recursive_mkdir(const char * dir, bool create_last_segment)
         if (*p == '/') {
             *p = 0;
 #ifdef _MSC_VER
-            mkdir(tmp); // Windows doesn't support the last param, S_IRWXU);
+            _mkdir(tmp); // Windows doesn't support the last param, S_IRWXU);
 #else
             mkdir(tmp, S_IRWXU);
 #endif
@@ -261,7 +265,7 @@ bool flow_recursive_mkdir(const char * dir, bool create_last_segment)
         }
     if (create_last_segment){
 #ifdef _MSC_VER
-        mkdir(tmp); // Windows doesn't support the last param, S_IRWXU);
+        _mkdir(tmp); // Windows doesn't support the last param, S_IRWXU);
 #else
         mkdir(tmp, S_IRWXU);
 #endif
