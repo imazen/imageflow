@@ -322,6 +322,11 @@ PUB bool flow_node_set_decoder_downscale_hint(flow_c * c, struct flow_graph * g,
                                               int64_t or_taller_than, int64_t downscaled_min_width,
                                               int64_t downscaled_min_height);
 
+PUB bool flow_job_decoder_set_downscale_hints_by_placeholder_id(flow_c * c, struct flow_job * job,
+                                                                int32_t placeholder_id, int64_t if_wider_than,
+                                                                int64_t or_taller_than, int64_t downscaled_min_width,
+                                                                int64_t downscaled_min_height);
+
 PUB struct flow_graph * flow_graph_create(flow_c * c, uint32_t max_edges, uint32_t max_nodes, uint32_t max_info_bytes,
                                           float growth_factor);
 

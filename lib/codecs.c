@@ -164,6 +164,27 @@ bool flow_job_decoder_set_downscale_hints(flow_c * c, struct flow_job * job, str
     return true;
 }
 
+bool flow_job_decoder_set_downscale_hints_by_placeholder_id(flow_c * c, struct flow_job * job, int32_t placeholder_id,
+                                                            int64_t if_wider_than, int64_t or_taller_than,
+                                                            int64_t downscaled_min_width, int64_t downscaled_min_height)
+{
+    struct flow_decoder_downscale_hints hints;
+    hints.or_if_taller_than = or_taller_than;
+    hints.downscale_if_wider_than = if_wider_than;
+    hints.downscaled_min_height = downscaled_min_height;
+    hints.downscaled_min_width = downscaled_min_width;
+
+    struct flow_codec_instance * codec = flow_job_get_codec_instance(c, job, placeholder_id);
+    if (codec == NULL) {
+        FLOW_error(c, flow_status_Invalid_argument);
+        return false;
+    }
+    if (!flow_job_decoder_set_downscale_hints(c, job, codec, &hints, false)) {
+        FLOW_error_return(c);
+    }
+    return true;
+}
+
 bool flow_job_decoder_read_frame(flow_c * c, struct flow_job * job, void * codec_state, int64_t type,
                                  struct flow_bitmap_bgra * canvas)
 {

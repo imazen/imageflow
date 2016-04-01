@@ -279,7 +279,9 @@ static bool dimensions_crop(flow_c * c, struct flow_graph * g, int32_t node_id, 
         return false;
     }
     if ((int32_t)info->x1 >= input_node->result_width || (int32_t)info->x2 > input_node->result_width) {
-        FLOW_error(c, flow_status_Invalid_argument);
+        FLOW_error_msg(c, flow_status_Invalid_argument, "crop arguments x1=%i, x2=%i are outside the width bound of "
+                                                        "the input frame (%i)",
+                       info->x1, info->x2, input_node->result_width);
         return false;
     }
     if ((int32_t)info->y1 >= input_node->result_height || (int32_t)info->y2 > input_node->result_height) {

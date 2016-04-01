@@ -78,13 +78,19 @@ module Imageflow
       @c.call_method(:job_execute, @ptr, graph.ptr_ptr_graph)
     end
 
-    def get_input_resource_info(placeholder_id:)
+    def get_decoder_info(placeholder_id:)
       info = Imageflow::Native::FlowJobDecoderInfo.new
 
       @c.call_method(:job_get_decoder_info, @ptr, placeholder_id.to_i, info)
 
       info
     end
+    def set_decoder_downscale_hints(placeholder_id:, if_wider_than:,
+                                     or_taller_than:,  downscaled_min_width:,
+                                     downscaled_min_height:)
+      @c.call_method(:job_decoder_set_downscale_hints_by_placeholder_id, @ptr, placeholder_id, if_wider_than, or_taller_than, downscaled_min_width, downscaled_min_height);
+    end
+
 
 
   end

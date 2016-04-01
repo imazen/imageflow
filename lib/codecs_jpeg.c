@@ -335,7 +335,29 @@ static bool jpeg_apply_downscaling(flow_c * c, struct flow_job_jpeg_decoder_stat
     return true;
 }
 static bool flow_job_codecs_jpeg_get_info(flow_c * c, struct flow_job * job, void * codec_state,
-                                          struct flow_decoder_frame_info * decoder_frame_info_ref)
+                                          struct flow_decoder_info * info)
+{
+    struct flow_job_jpeg_decoder_state * state = (struct flow_job_jpeg_decoder_state *)codec_state;
+    if (state->stage < flow_job_jpg_decoder_stage_BeginRead) {
+        if (!flow_job_jpg_decoder_BeginRead(c, state)) {
+            FLOW_error_return(c);
+        }
+    }
+
+    if (!jpeg_apply_downscaling(c, state, &state->w, &state->h)) {
+        FLOW_error_return(c);
+    }
+
+    info->current_frame_index = 0;
+    info->frame_count = 1;
+    info->frame0_post_decode_format = flow_bgra32;
+    info->frame0_width = state->w;
+    info->frame0_height = state->h;
+    return true;
+}
+
+static bool flow_job_codecs_jpeg_get_frame_info(flow_c * c, struct flow_job * job, void * codec_state,
+                                                struct flow_decoder_frame_info * decoder_frame_info_ref)
 {
     struct flow_job_jpeg_decoder_state * state = (struct flow_job_jpeg_decoder_state *)codec_state;
     if (state->stage < flow_job_jpg_decoder_stage_BeginRead) {
@@ -473,7 +495,8 @@ static struct flow_codec_magic_bytes jpeg_magic_bytes[] = { {
 const struct flow_codec_definition flow_codec_definition_decode_jpeg
     = { .codec_id = flow_codec_type_decode_jpeg,
         .initialize = flow_job_codecs_initialize_decode_jpeg,
-        .get_frame_info = flow_job_codecs_jpeg_get_info,
+        .get_info = flow_job_codecs_jpeg_get_info,
+        .get_frame_info = flow_job_codecs_jpeg_get_frame_info,
         .read_frame = flow_job_codecs_jpeg_read_frame,
         .set_downscale_hints = set_downscale_hints,
         .magic_byte_sets = &jpeg_magic_bytes[0],

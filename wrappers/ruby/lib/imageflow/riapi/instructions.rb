@@ -240,6 +240,8 @@ module Imageflow
       attr_hash_decimal :crop_x_units, keys: "cropxunits"
       attr_hash_decimal :crop_y_units, keys: "cropyunits"
 
+      attr_hash_decimal :precise_scaling_ratio, keys: "precise_scaling_ratio"
+
       #todo: croprectangle []
 
       def crop_array

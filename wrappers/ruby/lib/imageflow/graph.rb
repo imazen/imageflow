@@ -15,6 +15,14 @@ module Imageflow
     def add(*args)
       @g.add_child_node(@index, *args)
     end
+
+    #Does not take effect until job is executed! Use job variant instead for immediate changes in get_decoder_info
+    def set_decoder_downscale_hints( if_wider_than:,
+         or_taller_than:,  downscaled_min_width:,
+         downscaled_min_height:)
+      @g.context.call_method(:node_set_decoder_downscale_hint, @g.ptr_graph, @index, if_wider_than, or_taller_than, downscaled_min_width, downscaled_min_height);
+    end
+
   end
   class Graph
 
@@ -33,6 +41,10 @@ module Imageflow
 
       pointer = ptr_graph || @c.call_method(:graph_create, edge_capacity, node_capacity, infobyte_capacity, growth_factor)
       @pointer_reference.put_pointer(0, pointer)
+    end
+
+    def context
+      @c
     end
 
 
