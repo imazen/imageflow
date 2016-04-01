@@ -91,11 +91,12 @@ bool flow_bitmap_float_scale_rows(flow_c * context, struct flow_bitmap_float * f
             const float * __restrict source_buffer = from->pixels + ((from_row + row) * from->float_stride);
             float * __restrict dest_buffer = to->pixels + ((to_row + row) * to->float_stride);
 
-            avg[0] = 0;
-            avg[1] = 0;
-            avg[2] = 0;
-            avg[3] = 0;
+
             for (ndx = 0; ndx < dest_buffer_count; ndx++) {
+                avg[0] = 0;
+                avg[1] = 0;
+                avg[2] = 0;
+                avg[3] = 0;
                 const int left = weights[ndx].Left;
                 const int right = weights[ndx].Right;
 
