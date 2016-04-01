@@ -1,3 +1,5 @@
+#pragma once
+
 /*=====================================================================*
 *                   Copyright (C) 2012 Paul Mineiro                   *
 * All rights reserved.                                                *
@@ -1445,8 +1447,12 @@ static inline v4sf vfastercos(v4sf x)
     const v4sf twooverpi = v4sfl(0.63661977236758134f);
     const v4sf p = v4sfl(0.54641335845679634);
 
-    v4sf vx = v4sf_fabs(x);
-    v4sf qpprox = v4sfl(1.0f) - twooverpi * vx;
+    v4sfv4sipun vx;
+    vx.f = x;
+    vx.i &= v4sil(0x7FFFFFFF);
+    vx.f;
+
+    v4sf qpprox = v4sfl(1.0f) - twooverpi * vx.f;
 
     return qpprox + p * qpprox * (v4sfl(1.0f) - qpprox * qpprox);
 }
