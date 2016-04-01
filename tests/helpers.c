@@ -252,11 +252,20 @@ bool flow_recursive_mkdir(const char * dir, bool create_last_segment)
     for (p = tmp + 1; *p; p++)
         if (*p == '/') {
             *p = 0;
+#ifdef _MSC_VER
+            mkdir(tmp); // Windows doesn't support the last param, S_IRWXU);
+#else
             mkdir(tmp, S_IRWXU);
+#endif
             *p = '/';
         }
-    if (create_last_segment)
+    if (create_last_segment){
+#ifdef _MSC_VER
+        mkdir(tmp); // Windows doesn't support the last param, S_IRWXU);
+#else
         mkdir(tmp, S_IRWXU);
+#endif
+    }
     return true;
 }
 
