@@ -126,7 +126,39 @@ bool flow_job_decoder_get_frame_info(flow_c * c, struct flow_job * job, void * c
         FLOW_error_msg(c, flow_status_Not_implemented, ".get_frame_info is not implemented for codec %s", def->name);
         return false;
     }
+    if (codec_state == NULL) {
+        FLOW_error_msg(c, flow_status_Invalid_internal_state, "Codec has not been initialized.");
+        return false;
+    }
+
     if (!def->get_frame_info(c, job, codec_state, decoder_frame_info_ref)) {
+        FLOW_error_return(c);
+    }
+    return true;
+}
+
+bool flow_job_decoder_set_downscale_hints(flow_c * c, struct flow_job * job, struct flow_codec_instance * codec,
+                                          struct flow_decoder_downscale_hints * hints, bool crash_if_not_implemented)
+{
+    struct flow_codec_definition * def = flow_job_get_codec_definition(c, codec->codec_id);
+    if (def == NULL) {
+        FLOW_error_return(c);
+    }
+    if (def->set_downscale_hints == NULL) {
+        if (crash_if_not_implemented) {
+            FLOW_error_msg(c, flow_status_Not_implemented, ".set_downscale_hints is not implemented for codec %s",
+                           def->name);
+            return false;
+        } else {
+            return true;
+        }
+    }
+    if (codec->codec_state == NULL) {
+        FLOW_error_msg(c, flow_status_Invalid_internal_state, "Codec has not been initialized.");
+        return false;
+    }
+
+    if (!def->set_downscale_hints(c, job, codec, hints)) {
         FLOW_error_return(c);
     }
     return true;

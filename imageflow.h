@@ -250,6 +250,7 @@ struct flow_nodeinfo_bitmap_bgra_pointer;
 struct flow_nodeinfo_codec;
 struct flow_nodeinfo_render_to_canvas_1d;
 struct flow_scanlines_filter;
+struct flow_decoder_downscale_hints;
 struct flow_node;
 struct flow_edge;
 struct flow_graph;
@@ -315,7 +316,11 @@ PUB bool flow_job_add_io(flow_c * c, struct flow_job * job, struct flow_io * io,
 PUB struct flow_codec_instance * flow_job_get_codec_instance(flow_c * c, struct flow_job * job,
                                                              int32_t by_placeholder_id);
 PUB bool flow_job_set_default_encoder(flow_c * c, struct flow_job * job, int32_t by_placeholder_id,
-                                  int64_t default_encoder_id);
+                                      int64_t default_encoder_id);
+
+PUB bool flow_node_set_decoder_downscale_hint(flow_c * c, struct flow_graph * g, int32_t node_id, int64_t if_wider_than,
+                                              int64_t or_taller_than, int64_t downscaled_min_width,
+                                              int64_t downscaled_min_height);
 
 PUB struct flow_graph * flow_graph_create(flow_c * c, uint32_t max_edges, uint32_t max_nodes, uint32_t max_info_bytes,
                                           float growth_factor);
@@ -389,7 +394,8 @@ PUB bool flow_job_configure_recording(flow_c * c, struct flow_job * job, bool re
                                       bool record_frame_images, bool render_last_graph, bool render_graph_versions,
                                       bool render_animated_graph);
 
-PUB bool flow_job_decoder_switch_frame(flow_c * c, struct flow_job * job, int32_t by_placeholder_id, int64_t frame_index);
+PUB bool flow_job_decoder_switch_frame(flow_c * c, struct flow_job * job, int32_t by_placeholder_id,
+                                       int64_t frame_index);
 
 PUB bool flow_graph_validate(flow_c * c, struct flow_graph * g);
 
@@ -414,7 +420,7 @@ PUB bool flow_job_get_decoder_info(flow_c * c, struct flow_job * job, int32_t by
                                    struct flow_decoder_info * info);
 
 PUB bool flow_bitmap_bgra_write_png(flow_c * c, struct flow_job * job, struct flow_bitmap_bgra * frame,
-                                struct flow_io * io);
+                                    struct flow_io * io);
 
 #undef PUB
 

@@ -25,8 +25,8 @@ struct flow_job_jpeg_decoder_state {
     flow_job_jpeg_decoder_stage stage;
     struct jpeg_decompress_struct * cinfo;
     size_t row_stride;
-    size_t w;
-    size_t h;
+    int32_t w;
+    int32_t h;
     int channels;
     struct flow_io * io;
     uint8_t * pixel_buffer;
@@ -36,6 +36,8 @@ struct flow_job_jpeg_decoder_state {
     cmsHPROFILE color_profile;
     flow_codec_color_profile_source color_profile_source;
     double gamma;
+
+    struct flow_decoder_downscale_hints hints;
 };
 struct flow_job_jpeg_codec_state_common {
     struct jpeg_error_mgr error_mgr; // MUST be first
@@ -153,23 +155,8 @@ static bool flow_job_jpg_decoder_BeginRead(flow_c * c, struct flow_job_jpeg_deco
 
     state->cinfo->out_color_space = JCS_EXT_BGRA;
 
-    /* Step 5: Start decompressor */
-
-    (void)jpeg_start_decompress(state->cinfo);
-
-    /* We may need to do some setup of our own at this point before reading
- * the data.  After jpeg_start_decompress() we have the correct scaled
- * output image dimensions available, as well as the output colormap
- * if we asked for color quantization.
- * In this example, we need to make an output work buffer of the right size.
- */
-    /* JSAMPLEs per row in output buffer */
-    state->row_stride = state->cinfo->output_width * state->cinfo->output_components;
-    state->w = state->cinfo->output_width;
-    state->h = state->cinfo->output_height;
-    state->channels = state->cinfo->output_components;
-    state->gamma = state->cinfo->output_gamma;
-
+    state->w = state->cinfo->image_width;
+    state->h = state->cinfo->image_height;
     return true;
 }
 
@@ -187,6 +174,22 @@ static bool flow_job_jpg_decoder_FinishRead(flow_c * c, struct flow_job_jpeg_dec
         FLOW_error(c, flow_status_Out_of_memory);
         return false;
     }
+
+    /* Step 5: Start decompressor */
+
+    (void)jpeg_start_decompress(state->cinfo);
+
+    /* We may need to do some setup of our own at this point before reading
+ * the data.  After jpeg_start_decompress() we have the correct scaled
+ * output image dimensions available, as well as the output colormap
+ * if we asked for color quantization.
+ * In this example, we need to make an output work buffer of the right size.
+ */
+    /* JSAMPLEs per row in output buffer */
+
+    state->row_stride = state->cinfo->output_width * state->cinfo->output_components;
+    state->channels = state->cinfo->output_components;
+    state->gamma = state->cinfo->output_gamma;
 
     state->stage = flow_job_jpg_decoder_stage_FinishRead;
     if (setjmp(state->error_handler_jmp)) {
@@ -244,6 +247,10 @@ static bool flow_job_jpg_decoder_reset(flow_c * c, struct flow_job_jpeg_decoder_
         state->pixel_buffer_row_pointers = NULL;
         state->color_profile = NULL;
         state->cinfo = NULL;
+        state->hints.downscaled_min_height = -1;
+        state->hints.downscaled_min_width = -1;
+        state->hints.or_if_taller_than = -1;
+        state->hints.downscale_if_wider_than = -1;
     } else {
 
         if (state->cinfo != NULL) {
@@ -297,7 +304,36 @@ static bool flow_job_codecs_initialize_decode_jpeg(flow_c * c, struct flow_job *
     }
     return true;
 }
+static bool set_downscale_hints(flow_c * c, struct flow_job * job, struct flow_codec_instance * codec,
+                                struct flow_decoder_downscale_hints * hints)
+{
+    struct flow_job_jpeg_decoder_state * state = (struct flow_job_jpeg_decoder_state *)codec->codec_state;
+    memcpy(&state->hints, hints, sizeof(struct flow_decoder_downscale_hints));
+    return true;
+}
 
+static bool jpeg_apply_downscaling(flow_c * c, struct flow_job_jpeg_decoder_state * state, int32_t * out_w,
+                                   int32_t * out_h)
+{
+    if (state->hints.downscaled_min_width != -1 && state->hints.downscaled_min_height != 1) {
+        if (state->cinfo->image_width > state->hints.downscale_if_wider_than
+            || state->cinfo->image_height > state->hints.or_if_taller_than) {
+
+            for (long i = 1; i < 9; i++) {
+                long new_w = (state->cinfo->image_width * i + 8 - 1L) / 8L;
+                long new_h = (state->cinfo->image_height * i + 8 - 1L) / 8L;
+                if (new_w >= state->hints.downscaled_min_width && new_h >= state->hints.downscaled_min_height) {
+                    state->cinfo->scale_denom = 8;
+                    state->cinfo->scale_num = i;
+                    *out_w = new_w;
+                    *out_h = new_h;
+                    return true;
+                }
+            }
+        }
+    }
+    return true;
+}
 static bool flow_job_codecs_jpeg_get_info(flow_c * c, struct flow_job * job, void * codec_state,
                                           struct flow_decoder_frame_info * decoder_frame_info_ref)
 {
@@ -307,8 +343,12 @@ static bool flow_job_codecs_jpeg_get_info(flow_c * c, struct flow_job * job, voi
             FLOW_error_return(c);
         }
     }
-    decoder_frame_info_ref->w = (int32_t)state->w;
-    decoder_frame_info_ref->h = (int32_t)state->h;
+
+    if (!jpeg_apply_downscaling(c, state, &state->w, &state->h)) {
+        FLOW_error_return(c);
+    }
+    decoder_frame_info_ref->w = state->w;
+    decoder_frame_info_ref->h = state->h;
     decoder_frame_info_ref->format = flow_bgra32; // state->channels == 1 ? flow_gray8 : flow_bgr24;
     return true;
 }
@@ -320,6 +360,15 @@ static bool flow_job_codecs_jpeg_read_frame(flow_c * c, struct flow_job * job, v
     if (state->stage == flow_job_jpg_decoder_stage_BeginRead) {
         state->pixel_buffer = canvas->pixels;
         state->pixel_buffer_size = canvas->stride * canvas->h;
+        if (!jpeg_apply_downscaling(c, state, &state->w, &state->h)) {
+            FLOW_error_return(c);
+        }
+
+        if (state->w != (int32_t)canvas->w || state->h != (int32_t)canvas->h) {
+            FLOW_error(c, flow_status_Invalid_argument);
+            return false;
+        }
+
         if (!flow_job_jpg_decoder_FinishRead(c, state)) {
             FLOW_error_return(c);
         }
@@ -426,6 +475,7 @@ const struct flow_codec_definition flow_codec_definition_decode_jpeg
         .initialize = flow_job_codecs_initialize_decode_jpeg,
         .get_frame_info = flow_job_codecs_jpeg_get_info,
         .read_frame = flow_job_codecs_jpeg_read_frame,
+        .set_downscale_hints = set_downscale_hints,
         .magic_byte_sets = &jpeg_magic_bytes[0],
         .magic_byte_sets_count = sizeof(jpeg_magic_bytes) / sizeof(struct flow_codec_magic_bytes),
         .name = "decode jpeg",

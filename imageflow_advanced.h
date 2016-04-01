@@ -176,6 +176,9 @@ typedef bool (*codec_switch_frame_fn)(flow_c * c, struct flow_job * job, void * 
 typedef bool (*codec_get_frame_info_fn)(flow_c * c, struct flow_job * job, void * codec_state,
                                         struct flow_decoder_frame_info * decoder_frame_info_ref);
 
+typedef bool (*codec_set_downscale_hints_fn)(flow_c * c, struct flow_job * job, struct flow_codec_instance * codec,
+                                             struct flow_decoder_downscale_hints * hints);
+
 typedef bool (*codec_read_frame_fn)(flow_c * c, struct flow_job * job, void * codec_state,
                                     struct flow_bitmap_bgra * canvas);
 
@@ -195,6 +198,7 @@ struct flow_codec_definition {
     codec_intialize initialize;
     codec_get_info_fn get_info;
     codec_get_frame_info_fn get_frame_info;
+    codec_set_downscale_hints_fn set_downscale_hints;
     codec_switch_frame_fn switch_frame;
     codec_read_frame_fn read_frame;
     codec_write_frame_fn write_frame;

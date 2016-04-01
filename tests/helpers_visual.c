@@ -5,41 +5,11 @@ struct named_checksum {
     char * checksum;
 };
 
-static bool create_relative_path(flow_c * c, char * filename, size_t max_filename_length, char * format, ...)
+int64_t flow_getline(char ** lineptr, size_t * n, FILE * stream)
 {
-    const char * this_file = __FILE__;
-    char * last_slash = strrchr(this_file, '/');
-    if (last_slash == NULL) {
-        FLOW_error(c, flow_status_Invalid_internal_state);
-        return false;
-    }
-    size_t length = last_slash - this_file;
-
-    if (max_filename_length < length + 1) {
-        FLOW_error(c, flow_status_Invalid_internal_state);
-        return false;
-    }
-    memcpy(&filename[0], this_file, length);
-    va_list v;
-    va_start(v, format);
-    int res = flow_vsnprintf(&filename[length], max_filename_length - length, format, v);
-    va_end(v);
-    if (res == -1) {
-        // Not enough space in filename
-        FLOW_error(c, flow_status_Invalid_internal_state);
-        return false;
-    }
-    return true;
-}
-
-/* This code is public domain -- Will Hartung 4/9/09 */
-#include <stdio.h>
-#include <stdlib.h>
-
-int64_t flow_getline(char **lineptr, size_t *n, FILE *stream) {
-    char *bufptr = NULL;
-    char *temp_bufptr = NULL;
-    char *p = bufptr;
+    char * bufptr = NULL;
+    char * temp_bufptr = NULL;
+    char * p = bufptr;
     size_t size;
     int c;
 
@@ -71,10 +41,9 @@ int64_t flow_getline(char **lineptr, size_t *n, FILE *stream) {
         if ((p - bufptr + 1) > (int64_t)size) {
             size = size + 128;
             temp_bufptr = (char *)realloc(bufptr, size);
-            if (temp_bufptr == NULL) {          
+            if (temp_bufptr == NULL) {
                 return -1;
-            }
-            else {
+            } else {
                 bufptr = temp_bufptr;
                 p = p + (int64_t)(temp_bufptr - bufptr);
             }
@@ -100,7 +69,7 @@ static bool load_checksums(flow_c * c, struct named_checksum ** checksums, size_
 
     if (list == NULL) {
         char filename[2048];
-        if (!create_relative_path(c, filename, 2048, "/visuals/checksums.list")) {
+        if (!create_relative_path(c, false, filename, 2048, "/visuals/checksums.list")) {
             FLOW_add_to_callstack(c);
             return false;
         }
@@ -166,7 +135,7 @@ bool append_checksum(flow_c * c, char checksum[34], const char * name);
 bool append_checksum(flow_c * c, char checksum[34], const char * name)
 {
     char filename[2048];
-    if (!create_relative_path(c, filename, 2048, "/visuals/checksums.list")) {
+    if (!create_relative_path(c, true, filename, 2048, "/visuals/checksums.list")) {
         FLOW_add_to_callstack(c);
         return false;
     }
@@ -213,7 +182,7 @@ static char * get_checksum_for(flow_c * c, const char * name)
 static bool download_by_checksum(flow_c * c, struct flow_bitmap_bgra * bitmap, char * checksum)
 {
     char filename[2048];
-    if (!create_relative_path(c, filename, 2048, "/visuals/%s.png", checksum)) {
+    if (!create_relative_path(c, true, filename, 2048, "/visuals/%s.png", checksum)) {
         FLOW_add_to_callstack(c);
         return false;
     }
@@ -223,7 +192,8 @@ static bool download_by_checksum(flow_c * c, struct flow_bitmap_bgra * bitmap, c
         return true; // Already exists!
     }
     char url[2048];
-    flow_snprintf(url, 2048, "http://s3/%s.png", checksum); // TODO: fix actual URL
+    flow_snprintf(url, 2048, "http://s3-us-west-2.amazonaws.com/imageflow-resources/visual_test_checksums/%s.png",
+                  checksum); // TODO: fix actual URL
     if (!fetch_image(url, filename)) {
         FLOW_add_to_callstack(c);
         return false;
@@ -234,7 +204,7 @@ static bool download_by_checksum(flow_c * c, struct flow_bitmap_bgra * bitmap, c
 static bool save_bitmap_to_visuals(flow_c * c, struct flow_bitmap_bgra * bitmap, char * checksum)
 {
     char filename[2048];
-    if (!create_relative_path(c, filename, 2048, "/visuals/%s.png", checksum)) {
+    if (!create_relative_path(c, true, filename, 2048, "/visuals/%s.png", checksum)) {
         FLOW_add_to_callstack(c);
         return false;
     }
@@ -249,17 +219,17 @@ static bool save_bitmap_to_visuals(flow_c * c, struct flow_bitmap_bgra * bitmap,
 static bool generate_image_diff(flow_c * c, char * checksum_a, char * checksum_b)
 {
     char filename_a[2048];
-    if (!create_relative_path(c, filename_a, 2048, "/visuals/%s.png", checksum_a)) {
+    if (!create_relative_path(c, false, filename_a, 2048, "/visuals/%s.png", checksum_a)) {
         FLOW_add_to_callstack(c);
         return false;
     }
     char filename_b[2048];
-    if (!create_relative_path(c, filename_b, 2048, "/visuals/%s.png", checksum_b)) {
+    if (!create_relative_path(c, false, filename_b, 2048, "/visuals/%s.png", checksum_b)) {
         FLOW_add_to_callstack(c);
         return false;
     }
     char filename_c[2048];
-    if (!create_relative_path(c, filename_c, 2048, "/visuals/compare_%s_vs_%s.png", checksum_a, checksum_b)) {
+    if (!create_relative_path(c, false, filename_c, 2048, "/visuals/compare_%s_vs_%s.png", checksum_a, checksum_b)) {
         FLOW_add_to_callstack(c);
         return false;
     }
@@ -272,6 +242,8 @@ static bool generate_image_diff(flow_c * c, char * checksum_a, char * checksum_b
 
     char magick_command[4096];
     flow_snprintf(magick_command, 4096, "compare -verbose -metric PSNR %s %s %s", filename_a, filename_b, filename_c);
+    flow_snprintf(magick_command, 4096, "composite %s %s -compose difference %s", filename_a, filename_b, filename_c);
+
     int32_t ignore = system(magick_command);
     ignore++;
     return true;
@@ -280,7 +252,7 @@ static bool generate_image_diff(flow_c * c, char * checksum_a, char * checksum_b
 static bool append_html(flow_c * c, const char * name, const char * checksum_a, const char * checksum_b)
 {
     char filename[2048];
-    if (!create_relative_path(c, filename, 2048, "/visuals/visuals.html")) {
+    if (!create_relative_path(c, true, filename, 2048, "/visuals/visuals.html")) {
         FLOW_add_to_callstack(c);
         return false;
     }

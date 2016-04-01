@@ -75,20 +75,25 @@ uint8_t * read_all_bytes(flow_c * c, size_t * buffer_size, const char * path);
 bool write_all_byte(const char * path, char * buffer, size_t size);
 void copy_file(FILE * from, FILE * to);
 
+bool create_relative_path(flow_c * c, bool create_parent_dirs, char * filename, size_t max_filename_length,
+                          char * format, ...);
+
 unsigned long djb2(unsigned const char * str);
 unsigned long djb2_buffer(uint8_t * str, size_t count);
 size_t nonzero_count(uint8_t * array, size_t length);
 
 struct flow_bitmap_bgra * BitmapBgra_create_test_image(flow_c * c);
 double flow_bitmap_float_compare(flow_c * c, struct flow_bitmap_float * a, struct flow_bitmap_float * b,
-                                             float * out_max_delta);
+                                 float * out_max_delta);
 
 struct flow_io * get_io_for_cached_url(flow_c * c, const char * url, void * owner);
 
 bool has_err(flow_c * c, const char * file, int line, const char * func);
 
+bool flow_recursive_mkdir(const char * dir, bool create_last_segment);
 
 void flow_utils_ensure_directory_exists(const char * dir_path);
+bool flow_dir_exists_eh(const char * dir_path);
 
 #define ERR(c) REQUIRE_FALSE(has_err(c, __FILE__, __LINE__, __func__))
 

@@ -358,22 +358,13 @@ static bool dimensions_decode(flow_c * c, struct flow_graph * g, int32_t node_id
 
     struct flow_node * n = &g->nodes[node_id];
 
-    struct flow_codec_definition * def = flow_job_get_codec_definition(c, info->codec->codec_id);
-
-    if (def == NULL) {
-        FLOW_error_return(c);
-    }
-    if (def->get_frame_info == NULL) {
-        FLOW_error(c, flow_status_Not_implemented);
-        return false;
-    }
-    if (info->codec->codec_state == NULL) {
-        FLOW_error_msg(c, flow_status_Invalid_internal_state, "Codec has not been initialized.");
-        return false;
-    }
     struct flow_decoder_frame_info frame_info;
 
-    if (!def->get_frame_info(c, NULL, info->codec->codec_state, &frame_info)) {
+    if (!flow_job_decoder_set_downscale_hints(c, NULL, info->codec, &info->downscale_hints, force_estimate)) {
+        FLOW_error_return(c);
+    }
+
+    if (!flow_job_decoder_get_frame_info(c, NULL, info->codec->codec_state, info->codec->codec_id, &frame_info)) {
         FLOW_error_return(c);
     }
 
@@ -1068,6 +1059,28 @@ struct flow_node_definition flow_node_defs[] = {
       .pre_optimize_flatten = flatten_decode,
     },
     {
+      .type = flow_ntype_primitive_decoder,
+      .nodeinfo_bytes_fixed = sizeof(struct flow_nodeinfo_codec),
+      .type_name = "decode",
+      .input_count = 0,
+      .canvas_count = 0, //?
+      .stringify = stringify_decode,
+      .populate_dimensions = dimensions_decode,
+      .execute = execute_decode,
+
+    },
+    {
+      .type = flow_ntype_primitive_encoder,
+      .nodeinfo_bytes_fixed = sizeof(struct flow_nodeinfo_codec),
+      .type_name = "encode",
+      .input_count = 1,
+      .canvas_count = 0, //?
+      .stringify = stringify_encode,
+      .execute = execute_encode,
+      .prohibit_output_edges = true,
+    },
+
+    {
       .type = flow_ntype_encoder,
       .nodeinfo_bytes_fixed = sizeof(struct flow_nodeinfo_codec),
       .type_name = "encode",
@@ -1202,27 +1215,6 @@ struct flow_node_definition flow_node_defs[] = {
 
     },
 
-    {
-      .type = flow_ntype_primitive_decoder,
-      .nodeinfo_bytes_fixed = sizeof(struct flow_nodeinfo_codec),
-      .type_name = "decode",
-      .input_count = 0,
-      .canvas_count = 0, //?
-      .stringify = stringify_decode,
-      .populate_dimensions = dimensions_decode,
-      .execute = execute_decode,
-
-    },
-    {
-      .type = flow_ntype_primitive_encoder,
-      .nodeinfo_bytes_fixed = sizeof(struct flow_nodeinfo_codec),
-      .type_name = "encode",
-      .input_count = 1,
-      .canvas_count = 0, //?
-      .stringify = stringify_encode,
-      .execute = execute_encode,
-      .prohibit_output_edges = true,
-    },
     {
       .type = flow_ntype_Null,
       .type_name = "(null)",

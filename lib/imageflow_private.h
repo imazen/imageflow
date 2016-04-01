@@ -216,7 +216,6 @@ PUB bool flow_halve(flow_c * c, const struct flow_bitmap_bgra * from, struct flo
 
 PUB bool flow_halve_in_place(flow_c * c, struct flow_bitmap_bgra * from, int divisor);
 
-
 // https://github.com/imazen/freeimage/blob/master/Source/FreeImage/FreeImageIO.cpp
 // https://github.com/imazen/freeimage/blob/master/Source/FreeImage/PluginJPEG.cpp
 
@@ -268,7 +267,6 @@ struct flow_nodeinfo_fill_rect {
     uint32_t y2;
     uint32_t color_srgb;
 };
-
 struct flow_nodeinfo_size {
     int32_t width;
     int32_t height;
@@ -277,11 +275,20 @@ struct flow_nodeinfo_bitmap_bgra_pointer {
     struct flow_bitmap_bgra ** ref;
 };
 
+struct flow_decoder_downscale_hints {
+
+    int64_t downscale_if_wider_than;
+    int64_t or_if_taller_than;
+    int64_t downscaled_min_width;
+    int64_t downscaled_min_height;
+};
 struct flow_nodeinfo_codec {
     int32_t placeholder_id;
     struct flow_codec_instance * codec;
     // For encoders
     int64_t desired_encoder_id;
+    // For decdoers
+    struct flow_decoder_downscale_hints downscale_hints;
 };
 
 struct flow_nodeinfo_render_to_canvas_1d {
@@ -347,6 +354,9 @@ PUB bool flow_job_notify_node_complete(flow_c * c, struct flow_job * job, struct
 
 PUB bool flow_job_link_codecs(flow_c * c, struct flow_job * job, struct flow_graph ** graph_ref);
 
+PUB bool flow_job_decoder_set_downscale_hints(flow_c * c, struct flow_job * job, struct flow_codec_instance * codec,
+                                              struct flow_decoder_downscale_hints * hints,
+                                              bool crash_if_not_implemented);
 struct flow_scanlines_filter {
     flow_scanlines_filter_type type;
     struct flow_scanlines_filter * next;

@@ -56,36 +56,36 @@
     <orderEntry type="module-library">
       <library name="Header Search Paths">
         <CLASSES>
-          <root url="file:///usr/lib/gcc/x86_64-linux-gnu/5/include-fixed" />
-          <root url="file:///usr/lib/gcc/x86_64-linux-gnu/5/include" />
           <root url="file:///usr/include" />
+          <root url="file:///usr/lib/gcc/x86_64-linux-gnu/4.8/include-fixed" />
+          <root url="file:///usr/lib/gcc/x86_64-linux-gnu/4.8/include" />
           <root url="file:///usr/local/include" />
-          <root url="file://$USER_HOME$/.conan/data/libcurl/7.47.1/lasote/stable/package/1ebbfe05842636ba147936a838046475ab132351/include" />
-          <root url="file://$USER_HOME$/.conan/data/giflib/5.1.2/lasote/stable/package/bff1efc6ad531884db13c96449e8c6c9cc5b7288/include" />
-          <root url="file://$USER_HOME$/.conan/data/theft/0.2.0/lasote/stable/package/9c5cb7abd2e69d5ee3c867436f26f0d50fa7a597/include" />
+          <root url="file://$USER_HOME$/.conan/data/libcurl/7.47.1/lasote/stable/package/c70494b5e1f05ea18da6fd9e97910cf8dc4cc6e8/include" />
+          <root url="file://$USER_HOME$/.conan/data/giflib/5.1.2/lasote/stable/package/3a5f72c8cd50641b8efa6ed13e6914c6ced2747c/include" />
+          <root url="file://$USER_HOME$/.conan/data/theft/0.2.0/lasote/stable/package/755fc07adbed235a7d3eadec4b6882d4912f09bc/include" />
           <root url="file://$USER_HOME$/.conan/data/catch/1.3.0/TyRoXx/stable/package/5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9/include" />
-          <root url="file://$USER_HOME$/.conan/data/zlib/1.2.8/lasote/stable/package/9c5cb7abd2e69d5ee3c867436f26f0d50fa7a597/include" />
-          <root url="file://$USER_HOME$/.conan/data/electric-fence/2.2.0/lasote/stable/package/9c5cb7abd2e69d5ee3c867436f26f0d50fa7a597/include" />
-          <root url="file://$USER_HOME$/.conan/data/libpng/1.6.21/lasote/stable/package/891e420b88833ecaa9806f67d013b1fad57c360e/include" />
-          <root url="file://$USER_HOME$/.conan/data/libjpeg-turbo/1.4.2/lasote/stable/package/bff1efc6ad531884db13c96449e8c6c9cc5b7288/include" />
-          <root url="file://$USER_HOME$/.conan/data/OpenSSL/1.0.2g/lasote/stable/package/7458d7f2aaad5b3d9147dcdb0e548b5beb5ce389/include" />
-          <root url="file://$USER_HOME$/.conan/data/littlecms/2.7/lasote/stable/package/bff1efc6ad531884db13c96449e8c6c9cc5b7288/include" />
+          <root url="file://$USER_HOME$/.conan/data/zlib/1.2.8/lasote/stable/package/755fc07adbed235a7d3eadec4b6882d4912f09bc/include" />
+          <root url="file://$USER_HOME$/.conan/data/libpng/1.6.21/lasote/stable/package/4bed5bcecebb11c5b891863880f3ef10411fb2da/include" />
+          <root url="file://$USER_HOME$/.conan/data/electric-fence/2.2.0/lasote/stable/package/755fc07adbed235a7d3eadec4b6882d4912f09bc/include" />
+          <root url="file://$USER_HOME$/.conan/data/libjpeg-turbo/1.4.2/lasote/stable/package/3a5f72c8cd50641b8efa6ed13e6914c6ced2747c/include" />
+          <root url="file://$USER_HOME$/.conan/data/OpenSSL/1.0.2g/lasote/stable/package/8dc0071dc4241826d308f93b7589b40fa9c51286/include" />
+          <root url="file://$USER_HOME$/.conan/data/littlecms/2.7/lasote/stable/package/3a5f72c8cd50641b8efa6ed13e6914c6ced2747c/include" />
         </CLASSES>
         <SOURCES>
-          <root url="file:///usr/lib/gcc/x86_64-linux-gnu/5/include-fixed" />
-          <root url="file:///usr/lib/gcc/x86_64-linux-gnu/5/include" />
           <root url="file:///usr/include" />
+          <root url="file:///usr/lib/gcc/x86_64-linux-gnu/4.8/include-fixed" />
+          <root url="file:///usr/lib/gcc/x86_64-linux-gnu/4.8/include" />
           <root url="file:///usr/local/include" />
-          <root url="file://$USER_HOME$/.conan/data/libcurl/7.47.1/lasote/stable/package/1ebbfe05842636ba147936a838046475ab132351/include" />
-          <root url="file://$USER_HOME$/.conan/data/giflib/5.1.2/lasote/stable/package/bff1efc6ad531884db13c96449e8c6c9cc5b7288/include" />
-          <root url="file://$USER_HOME$/.conan/data/theft/0.2.0/lasote/stable/package/9c5cb7abd2e69d5ee3c867436f26f0d50fa7a597/include" />
+          <root url="file://$USER_HOME$/.conan/data/libcurl/7.47.1/lasote/stable/package/c70494b5e1f05ea18da6fd9e97910cf8dc4cc6e8/include" />
+          <root url="file://$USER_HOME$/.conan/data/giflib/5.1.2/lasote/stable/package/3a5f72c8cd50641b8efa6ed13e6914c6ced2747c/include" />
+          <root url="file://$USER_HOME$/.conan/data/theft/0.2.0/lasote/stable/package/755fc07adbed235a7d3eadec4b6882d4912f09bc/include" />
           <root url="file://$USER_HOME$/.conan/data/catch/1.3.0/TyRoXx/stable/package/5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9/include" />
-          <root url="file://$USER_HOME$/.conan/data/zlib/1.2.8/lasote/stable/package/9c5cb7abd2e69d5ee3c867436f26f0d50fa7a597/include" />
-          <root url="file://$USER_HOME$/.conan/data/electric-fence/2.2.0/lasote/stable/package/9c5cb7abd2e69d5ee3c867436f26f0d50fa7a597/include" />
-          <root url="file://$USER_HOME$/.conan/data/libpng/1.6.21/lasote/stable/package/891e420b88833ecaa9806f67d013b1fad57c360e/include" />
-          <root url="file://$USER_HOME$/.conan/data/libjpeg-turbo/1.4.2/lasote/stable/package/bff1efc6ad531884db13c96449e8c6c9cc5b7288/include" />
-          <root url="file://$USER_HOME$/.conan/data/OpenSSL/1.0.2g/lasote/stable/package/7458d7f2aaad5b3d9147dcdb0e548b5beb5ce389/include" />
-          <root url="file://$USER_HOME$/.conan/data/littlecms/2.7/lasote/stable/package/bff1efc6ad531884db13c96449e8c6c9cc5b7288/include" />
+          <root url="file://$USER_HOME$/.conan/data/zlib/1.2.8/lasote/stable/package/755fc07adbed235a7d3eadec4b6882d4912f09bc/include" />
+          <root url="file://$USER_HOME$/.conan/data/libpng/1.6.21/lasote/stable/package/4bed5bcecebb11c5b891863880f3ef10411fb2da/include" />
+          <root url="file://$USER_HOME$/.conan/data/electric-fence/2.2.0/lasote/stable/package/755fc07adbed235a7d3eadec4b6882d4912f09bc/include" />
+          <root url="file://$USER_HOME$/.conan/data/libjpeg-turbo/1.4.2/lasote/stable/package/3a5f72c8cd50641b8efa6ed13e6914c6ced2747c/include" />
+          <root url="file://$USER_HOME$/.conan/data/OpenSSL/1.0.2g/lasote/stable/package/8dc0071dc4241826d308f93b7589b40fa9c51286/include" />
+          <root url="file://$USER_HOME$/.conan/data/littlecms/2.7/lasote/stable/package/3a5f72c8cd50641b8efa6ed13e6914c6ced2747c/include" />
         </SOURCES>
       </library>
     </orderEntry>

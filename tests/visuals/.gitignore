@@ -2,3 +2,5 @@
 *.png
 
 !checksums.list
+visuals.html
+/cache

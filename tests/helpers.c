@@ -155,18 +155,32 @@ uint8_t * get_bytes_cached(flow_c * c, size_t * bytes_count_out, const char * ur
 
 #define FLOW_MAX_PATH 255
     char cache_folder[FLOW_MAX_PATH];
-
-    char * cache_dir = getenv("HOME");
-    if (cache_dir == NULL)
-        cache_dir = getenv("TEMP");
-
-    //TODO: move to tests/cache (if the tests folder exists, otherwise use home/temp)
-    flow_snprintf(cache_folder, FLOW_MAX_PATH, "%s/imageflow_cache", cache_dir);
-
-    flow_utils_ensure_directory_exists(cache_folder);
     char cache_path[FLOW_MAX_PATH];
+    long long url_hash = djb2((unsigned const char *)url);
 
-    flow_snprintf(cache_path, FLOW_MAX_PATH, "%s/%lu", cache_folder, djb2((unsigned const char *)url));
+    if (!create_relative_path(c, false, &cache_folder[0], sizeof(cache_folder), "")) {
+        FLOW_add_to_callstack(c);
+        return NULL;
+    }
+    const char * ext = url + strlen(url) - 6;
+    while (*ext != 0 && *ext != '.')
+        ext++;
+
+    if (flow_dir_exists_eh(&cache_folder[0])) {
+        // The tests folder is still around; we can use it
+        if (!create_relative_path(c, false, &cache_path[0], sizeof(cache_path), "/visuals/cache/%lu%s", url_hash,
+                                  ext)) {
+            FLOW_add_to_callstack(c);
+            return NULL;
+        }
+    } else {
+        char * cache_dir = getenv("HOME");
+        if (cache_dir == NULL)
+            cache_dir = getenv("TEMP");
+        flow_snprintf(cache_path, FLOW_MAX_PATH, "%s/imageflow_cache/%lu%s", cache_dir, url_hash, ext);
+    }
+
+    flow_recursive_mkdir(&cache_path[0], false);
 
     if (access(cache_path, F_OK) == -1) {
         // file doesn't exist
@@ -179,6 +193,24 @@ uint8_t * get_bytes_cached(flow_c * c, size_t * bytes_count_out, const char * ur
     return read_all_bytes(c, bytes_count_out, cache_path);
 }
 
+bool flow_dir_exists_eh(const char * dir_path)
+{
+    struct stat sb;
+    int e;
+    e = stat(dir_path, &sb);
+    // I think this logic is vague around permissions. Merits some test if exercised more heavily
+    if (e == 0) {
+        if ((sb.st_mode & S_IFREG) || !(sb.st_mode & S_IFDIR)) {
+            // fprintf(stdout, "%s exists, but is not a directory!\n", dir_path);
+            return false;
+        }
+    } else {
+        if ((errno = ENOENT)) {
+            return false;
+        }
+    }
+    return true;
+}
 void flow_utils_ensure_directory_exists(const char * dir_path)
 {
     struct stat sb;
@@ -205,6 +237,59 @@ void flow_utils_ensure_directory_exists(const char * dir_path)
             }
         }
     }
+}
+
+bool flow_recursive_mkdir(const char * dir, bool create_last_segment)
+{
+    char tmp[4096];
+    char * p = NULL;
+    size_t len;
+
+    flow_snprintf(tmp, sizeof(tmp), "%s", dir);
+    len = strlen(tmp);
+    if (tmp[len - 1] == '/')
+        tmp[len - 1] = 0;
+    for (p = tmp + 1; *p; p++)
+        if (*p == '/') {
+            *p = 0;
+            mkdir(tmp, S_IRWXU);
+            *p = '/';
+        }
+    if (create_last_segment)
+        mkdir(tmp, S_IRWXU);
+    return true;
+}
+
+bool create_relative_path(flow_c * c, bool create_parent_dirs, char * filename, size_t max_filename_length,
+                          char * format, ...)
+{
+    const char * this_file = __FILE__;
+    char * last_slash = strrchr(this_file, '/');
+    if (last_slash == NULL) {
+        FLOW_error(c, flow_status_Invalid_internal_state);
+        return false;
+    }
+    size_t length = last_slash - this_file;
+
+    if (max_filename_length < length + 1) {
+        FLOW_error(c, flow_status_Invalid_internal_state);
+        return false;
+    }
+    memcpy(&filename[0], this_file, length);
+    va_list v;
+    va_start(v, format);
+    int res = flow_vsnprintf(&filename[length], max_filename_length - length, format, v);
+    va_end(v);
+    if (res == -1) {
+        // Not enough space in filename
+        FLOW_error(c, flow_status_Invalid_internal_state);
+        return false;
+    }
+    /// Create directories
+    if (create_parent_dirs) {
+        flow_recursive_mkdir(&filename[0], false);
+    }
+    return true;
 }
 
 bool has_err(flow_c * c, const char * file, int line, const char * func)
