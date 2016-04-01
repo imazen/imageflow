@@ -126,8 +126,10 @@ bool fetch_image(const char * url, char * dest_path)
             curl_easy_setopt(curl, CURLOPT_URL, url);
             curl_easy_setopt(curl, CURLOPT_WRITEDATA, fp);
             res = curl_easy_perform(curl);
-            if (res != CURLE_OK) {
-                fprintf(stderr, "CURL HTTP operation failed (error %d) - GET %s, write to  %s\n", res, url, dest_path);
+            long http_code = 0;
+            curl_easy_getinfo (curl, CURLINFO_RESPONSE_CODE, &http_code);
+            if (res != CURLE_OK || http_code != 200) {
+                fprintf(stderr, "CURL HTTP operation failed (error %d, status code %li) - GET %s, write to  %s\n", res, http_code, url, dest_path);
                 exit(4);
             }
         } else {

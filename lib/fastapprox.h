@@ -1450,7 +1450,6 @@ static inline v4sf vfastercos(v4sf x)
     v4sfv4sipun vx;
     vx.f = x;
     vx.i &= v4sil(0x7FFFFFFF);
-    vx.f;
 
     v4sf qpprox = v4sfl(1.0f) - twooverpi * vx.f;
 

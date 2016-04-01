@@ -359,7 +359,7 @@ TEST_CASE("scale and flip and crop png", "")
     flow_context_destroy(c);
 }
 
-/*
+
 TEST_CASE("scale gif", "")
 {
     flow_context* c = flow_context_create();
@@ -458,7 +458,7 @@ TEST_CASE("export frames of animated gif", "")
     flow_job_destroy(c, job);
     flow_context_destroy(c);
 }
-*/
+
 TEST_CASE("scale and flip and crop jpg", "")
 {
     flow_c * c = flow_context_create();
