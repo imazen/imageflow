@@ -51,7 +51,8 @@ TEST_CASE("Test scale image", "")
 
     last = flow_node_create_decoder(c, &g, -1, input_placeholder);
     // flow_node_set_decoder_downscale_hint(c, g, last, 400,300,400,300);
-    last = flow_node_create_scale(c, &g, last, 400, 300);
+    last = flow_node_create_scale(c, &g, last, 400, 300, (flow_interpolation_filter_Robidoux),
+                                  (flow_interpolation_filter_Robidoux));
     last = flow_node_create_bitmap_bgra_reference(c, &g, last, &b);
     ERR(c);
     if (!flow_job_execute(c, job, &g)) {
@@ -92,7 +93,7 @@ TEST_CASE("Test downscale image during decoding", "")
         ERR(c);
     }
     last = flow_node_create_primitive_crop(c, &g, last, 0, 0, info.frame0_width, info.frame0_height);
-    last = flow_node_create_scale(c, &g, last, 4, 3);
+    last = flow_node_create_scale(c, &g, last, 4, 3, flow_interpolation_filter_Robidoux, flow_interpolation_filter_Robidoux);
     last = flow_node_create_bitmap_bgra_reference(c, &g, last, &b);
     ERR(c);
     if (!flow_job_execute(c, job, &g)) {

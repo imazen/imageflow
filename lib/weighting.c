@@ -296,7 +296,7 @@ InterpolationDetails_create_from_internal(flow_c * context, flow_interpolation_f
                       : flow_interpolation_details_create_custom(context, 3, 1.0 / 1.2196698912665045, filter_jinc);
     }
     if (!checkExistenceOnly) {
-        FLOW_error_msg(context, flow_status_Invalid_argument, "Invalid interpolation filter");
+        FLOW_error_msg(context, flow_status_Invalid_argument, "Invalid interpolation filter %d", (int)filter);
     }
     return NULL;
 }

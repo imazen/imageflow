@@ -58,7 +58,8 @@ TEST_CASE("create tiny graph", "")
     int32_t last;
 
     last = flow_node_create_canvas(c, &g, -1, flow_bgra32, 400, 300, 0xFFFFFFFF);
-    last = flow_node_create_scale(c, &g, last, 300, 200);
+    last = flow_node_create_scale(c, &g, last, 300, 200, (flow_interpolation_filter_Robidoux),
+                                  (flow_interpolation_filter_Robidoux));
     last = flow_node_create_encoder_placeholder(c, &g, last, 0);
 
     ERR(c);
@@ -78,7 +79,8 @@ TEST_CASE("delete a node from a graph", "")
     int32_t last;
 
     last = flow_node_create_canvas(c, &g, -1, flow_bgra32, 400, 300, 0xFFFFFFFF);
-    last = flow_node_create_scale(c, &g, last, 300, 200);
+    last = flow_node_create_scale(c, &g, last, 300, 200, (flow_interpolation_filter_Robidoux),
+                                  (flow_interpolation_filter_Robidoux));
     last = flow_node_create_encoder_placeholder(c, &g, last, 0);
     ERR(c);
 
@@ -112,7 +114,8 @@ TEST_CASE("clone an edge", "")
     flow_graph * g = flow_graph_create(c, 10, 10, 200, 2.0);
     int32_t last;
     last = flow_node_create_canvas(c, &g, -1, flow_bgra32, 400, 300, 0xFFFFFFFF);
-    last = flow_node_create_scale(c, &g, last, 300, 200);
+    last = flow_node_create_scale(c, &g, last, 300, 200, (flow_interpolation_filter_Robidoux),
+                                  (flow_interpolation_filter_Robidoux));
 
     ERR(c);
 
@@ -152,7 +155,8 @@ TEST_CASE("execute tiny graph", "")
 
     last = flow_node_create_canvas(c, &g, -1, flow_bgra32, 400, 300, 0xFFFFFFFF);
     //    last = flow_node_create_fill_rect()
-    last = flow_node_create_scale(c, &g, last, 300, 200);
+    last = flow_node_create_scale(c, &g, last, 300, 200, (flow_interpolation_filter_Robidoux),
+                                  (flow_interpolation_filter_Robidoux));
     last = flow_node_create_bitmap_bgra_reference(c, &g, last, &result);
 
     job = flow_job_create(c);
@@ -186,7 +190,8 @@ TEST_CASE("decode and scale png", "")
 
     int32_t last;
     last = flow_node_create_decoder(c, &g, -1, input_placeholder);
-    last = flow_node_create_scale(c, &g, last, 300, 200);
+    last = flow_node_create_scale(c, &g, last, 300, 200, (flow_interpolation_filter_Robidoux),
+                                  (flow_interpolation_filter_Robidoux));
     last = flow_node_create_bitmap_bgra_reference(c, &g, last, &result);
 
     job = flow_job_create(c);
@@ -241,7 +246,9 @@ bool create_operation_graph(flow_c * c, struct flow_graph ** graph_ref, int32_t 
     }
     int32_t last = flow_node_create_decoder(c, &g, -1, input_placeholder);
     // Double the original width/height
-    last = flow_node_create_scale(c, &g, last, info->frame0_width * 2, info->frame0_height * 2);
+    last = flow_node_create_scale(c, &g, last, info->frame0_width * 2, info->frame0_height * 2,
+                                  (flow_interpolation_filter_Robidoux),
+                                  (flow_interpolation_filter_Robidoux));
     // Keep the original format if png or jpeg
     size_t encoder_id = info->codec_id == flow_codec_type_decode_jpeg ? flow_codec_type_encode_jpeg
                                                                       : flow_codec_type_encode_png;
@@ -341,7 +348,8 @@ TEST_CASE("scale and flip and crop png", "")
     int32_t last, input_placeholder = 0, output_placeholder = 1;
 
     last = flow_node_create_decoder(c, &g, -1, input_placeholder);
-    last = flow_node_create_scale(c, &g, last, 120, 120);
+    last = flow_node_create_scale(c, &g, last, 120, 120, (flow_interpolation_filter_Robidoux),
+                                  (flow_interpolation_filter_Robidoux));
     last = flow_node_create_primitive_flip_vertical(c, &g, last);
     last = flow_node_create_primitive_crop(c, &g, last, 20, 10, 80, 40);
     last = flow_node_create_encoder_placeholder(c, &g, last, output_placeholder);
@@ -361,7 +369,8 @@ TEST_CASE("scale gif", "")
     int32_t last, input_placeholder = 0, output_placeholder = 1;
 
     last = flow_node_create_decoder(c, &g, -1, input_placeholder);
-    last = flow_node_create_scale(c, &g, last, 120, 120);
+    last = flow_node_create_scale(c, &g, last, 120, 120, (flow_interpolation_filter_Robidoux),
+                                  (flow_interpolation_filter_Robidoux));
     last = flow_node_create_encoder_placeholder(c, &g, last, output_placeholder);
 
     execute_graph_for_url(c, "http://z.zr.io/ri/8s.jpg?format=gif&width=800", "gif_scaled.png", &g);
@@ -459,7 +468,8 @@ TEST_CASE("scale and flip and crop jpg", "")
     int32_t last, input_placeholder = 0, output_placeholder = 1;
 
     last = flow_node_create_decoder(c, &g, -1, input_placeholder);
-    last = flow_node_create_scale(c, &g, last, 120, 120);
+    last = flow_node_create_scale(c, &g, last, 120, 120, (flow_interpolation_filter_Robidoux),
+                                  (flow_interpolation_filter_Robidoux));
     last = flow_node_create_primitive_flip_vertical(c, &g, last);
     last = flow_node_create_primitive_crop(c, &g, last, 20, 10, 80, 40);
 
@@ -479,7 +489,8 @@ TEST_CASE("benchmark scaling large progressive jpg", "")
     int32_t last, input_placeholder = 0, output_placeholder = 1;
 
     last = flow_node_create_decoder(c, &g, -1, input_placeholder);
-    last = flow_node_create_scale(c, &g, last, 800, 800);
+    last = flow_node_create_scale(c, &g, last, 800, 800, (flow_interpolation_filter_Robidoux),
+                                  (flow_interpolation_filter_Robidoux));
     last = flow_node_create_encoder(c, &g, last, output_placeholder, flow_codec_type_encode_jpeg);
 
     execute_graph_for_url(c, "http://s3.amazonaws.com/resizer-dynamic-downloads/imageflow_test_suite/4kx4k.jpg",
@@ -497,7 +508,8 @@ TEST_CASE("benchmark scaling large jpg", "")
     int32_t last, input_placeholder = 0, output_placeholder = 1;
 
     last = flow_node_create_decoder(c, &g, -1, input_placeholder);
-    last = flow_node_create_scale(c, &g, last, 800, 800);
+    last = flow_node_create_scale(c, &g, last, 800, 800, (flow_interpolation_filter_Robidoux),
+                                  (flow_interpolation_filter_Robidoux));
     last = flow_node_create_encoder(c, &g, last, output_placeholder, flow_codec_type_encode_jpeg);
 
     execute_graph_for_url(c,
@@ -547,7 +559,8 @@ TEST_CASE("scale copy rect", "")
     int32_t last, input_placeholder = 0, output_placeholder = 1;
 
     last = flow_node_create_decoder(c, &g, -1, input_placeholder);
-    last = flow_node_create_scale(c, &g, last, 200, 200);
+    last = flow_node_create_scale(c, &g, last, 200, 200, (flow_interpolation_filter_Robidoux),
+                                  (flow_interpolation_filter_Robidoux));
     int32_t canvas = flow_node_create_canvas(c, &g, -1, flow_bgra32, 300, 300, 0);
     last = flow_node_create_primitive_copy_rect_to_canvas(c, &g, last, 0, 0, 150, 150, 50, 50);
     flow_edge_create(c, &g, canvas, last, flow_edgetype_canvas);

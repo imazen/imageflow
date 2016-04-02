@@ -293,6 +293,41 @@ bool flow_destroy_by_owner(flow_c * context, void * owner, const char * file, in
     return success;
 }
 
+bool flow_set_destructor(flow_c * c, void * thing, flow_destructor_function destructor)
+{
+    if (thing == NULL) {
+        FLOW_error(c, flow_status_Invalid_argument);
+        return false;
+    }
+    struct flow_heap_object_record * records = &c->object_tracking.allocs[0];
+    for (size_t i = 0; i < c->object_tracking.total_slots; i++) {
+        if (records[i].ptr == thing) {
+            records[i].destructor = destructor;
+            return true;
+        }
+    }
+    FLOW_error(c, flow_status_Item_does_not_exist);
+    return false;
+}
+
+// Thing will only be automatically destroyed and freed at the time that owner is destroyed and freed
+bool flow_set_owner(flow_c * c, void * thing, void * owner)
+{
+    if (thing == NULL) {
+        FLOW_error(c, flow_status_Invalid_argument);
+        return false;
+    }
+    struct flow_heap_object_record * records = &c->object_tracking.allocs[0];
+    for (size_t i = 0; i < c->object_tracking.total_slots; i++) {
+        if (records[i].ptr == thing) {
+            records[i].owner = owner;
+            return true;
+        }
+    }
+    FLOW_error(c, flow_status_Item_does_not_exist);
+    return false;
+}
+
 bool flow_destroy(flow_c * context, void * pointer, const char * file, int line)
 {
     if (pointer == NULL)

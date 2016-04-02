@@ -47,11 +47,10 @@ PUB bool flow_heap_set_custom(flow_c * c, flow_heap_calloc_function calloc, flow
                               flow_heap_realloc_function realloc, flow_heap_free_function free,
                               flow_heap_terminate_function terminate, void * initial_private_state);
 
-//
-// PUB bool flow_set_destructor(flow_context* context, void* thing, flow_destructor_function* destructor);
-//
-//// Thing will only be destroyed and freed at the time that owner is destroyed and freed
-// PUB bool flow_set_owner(flow_context* context, void* thing, void* owner);
+PUB bool flow_set_destructor(flow_c * c, void * thing, flow_destructor_function destructor);
+
+// Thing will only be automatically destroyed and freed at the time that owner is destroyed and freed
+PUB bool flow_set_owner(flow_c * c, void * thing, void * owner);
 
 ////////////////////////////////////////////
 // use imageflow memory management

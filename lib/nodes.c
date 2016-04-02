@@ -447,7 +447,7 @@ static bool flatten_scale(flow_c * c, struct flow_graph ** g, int32_t node_id, s
     int32_t height = size->height;
     int32_t width = size->width;
 
-    //TODO: swap out for upscale filter
+    // TODO: swap out for upscale filter
     flow_interpolation_filter filter = size->downscale_filter;
     *first_replacement_node = create_render1d_node(c, g, -1, width, true, filter);
     if (*first_replacement_node < 0) {
@@ -614,7 +614,10 @@ static bool flatten_crop(flow_c * c, struct flow_graph ** g, int32_t node_id, st
                          int32_t * last_replacement_node)
 {
 
-    FLOW_GET_INFOBYTES((*g), node_id, flow_nodeinfo_crop, info)
+    struct flow_nodeinfo_crop info;
+
+    memcpy(&info, &(*g)->info_bytes[(*g)->nodes[node_id].info_byte_index], (*g)->nodes[node_id].info_bytes);
+
     FLOW_GET_INPUT_EDGE((*g), node_id);
 
     bool must_clone = false;
@@ -630,7 +633,7 @@ static bool flatten_crop(flow_c * c, struct flow_graph ** g, int32_t node_id, st
         *first_replacement_node = -1;
     }
     *last_replacement_node
-        = flow_node_create_primitive_crop(c, g, *first_replacement_node, info->x1, info->y1, info->x2, info->y2);
+        = flow_node_create_primitive_crop(c, g, *first_replacement_node, info.x1, info.y1, info.x2, info.y2);
     if (*last_replacement_node < 0) {
         FLOW_error_return(c);
     }
@@ -645,21 +648,23 @@ static bool flatten_expand_canvas(flow_c * c, struct flow_graph ** g, int32_t no
                                   int32_t * last_replacement_node)
 {
 
-    FLOW_GET_INFOBYTES((*g), node_id, flow_nodeinfo_expand_canvas, info)
+    struct flow_nodeinfo_expand_canvas info;
+
+    memcpy(&info, &(*g)->info_bytes[(*g)->nodes[node_id].info_byte_index], (*g)->nodes[node_id].info_bytes);
 
     // TODO: If edges are all zero, replace this node with a nullop
-
-    int canvas_width = input_node->result_width + info->left + info->right;
-    int canvas_height = input_node->result_height + info->top + info->bottom;
+    int input_width = input_node->result_width;
+    int input_height = input_node->result_height;
+    int canvas_width = input_node->result_width + info.left + info.right;
+    int canvas_height = input_node->result_height + info.top + info.bottom;
 
     int canvas_node_id = flow_node_create_canvas(c, g, -1, input_node->result_format, canvas_width, canvas_height, 0);
     if (canvas_node_id < 0) {
         FLOW_error_return(c);
     }
 
-    *first_replacement_node
-        = flow_node_create_primitive_copy_rect_to_canvas(c, g, *first_replacement_node, 0, 0, input_node->result_width,
-                                                         input_node->result_height, info->left, info->top);
+    *first_replacement_node = flow_node_create_primitive_copy_rect_to_canvas(
+        c, g, *first_replacement_node, 0, 0, input_width, input_height, info.left, info.top);
     if (*first_replacement_node < 0) {
         FLOW_error_return(c);
     }
@@ -670,30 +675,30 @@ static bool flatten_expand_canvas(flow_c * c, struct flow_graph ** g, int32_t no
 
     *last_replacement_node = *first_replacement_node;
 
-    if (info->left > 0)
-        *last_replacement_node = flow_node_create_fill_rect(c, g, *first_replacement_node, 0, 0, info->left,
-                                                            canvas_height, info->canvas_color_srgb);
+    if (info.left > 0)
+        *last_replacement_node = flow_node_create_fill_rect(c, g, *first_replacement_node, 0, 0, info.left,
+                                                            canvas_height, info.canvas_color_srgb);
     if (*last_replacement_node < 0) {
         FLOW_error_return(c);
     }
 
-    if (info->top > 0)
-        *last_replacement_node = flow_node_create_fill_rect(c, g, *last_replacement_node, info->left, 0, canvas_width,
-                                                            info->top, info->canvas_color_srgb);
+    if (info.top > 0)
+        *last_replacement_node = flow_node_create_fill_rect(c, g, *last_replacement_node, info.left, 0, canvas_width,
+                                                            info.top, info.canvas_color_srgb);
     if (*last_replacement_node < 0) {
         FLOW_error_return(c);
     }
-    if (info->bottom > 0)
+    if (info.bottom > 0)
         *last_replacement_node
-            = flow_node_create_fill_rect(c, g, *last_replacement_node, info->left, canvas_height - info->bottom,
-                                         canvas_width, canvas_height, info->canvas_color_srgb);
+            = flow_node_create_fill_rect(c, g, *last_replacement_node, info.left, canvas_height - info.bottom,
+                                         canvas_width, canvas_height, info.canvas_color_srgb);
     if (*last_replacement_node < 0) {
         FLOW_error_return(c);
     }
-    if (info->right > 0)
+    if (info.right > 0)
         *last_replacement_node
-            = flow_node_create_fill_rect(c, g, *last_replacement_node, canvas_width - info->left, info->top,
-                                         canvas_width, canvas_height - info->top, info->canvas_color_srgb);
+            = flow_node_create_fill_rect(c, g, *last_replacement_node, canvas_width - info.left, info.top, canvas_width,
+                                         canvas_height - info.top, info.canvas_color_srgb);
     if (*last_replacement_node < 0) {
         FLOW_error_return(c);
     }

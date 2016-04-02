@@ -344,7 +344,8 @@ PUB int32_t flow_node_create_decoder(flow_c * c, struct flow_graph ** g, int32_t
 PUB int32_t flow_node_create_canvas(flow_c * c, struct flow_graph ** g, int32_t prev_node, flow_pixel_format format,
                                     size_t width, size_t height, uint32_t bgcolor);
 PUB int32_t flow_node_create_scale(flow_c * c, struct flow_graph ** g, int32_t prev_node, size_t width, size_t height,
-                                   flow_interpolation_filter downscale_filter, flow_interpolation_filter upscale_filter);
+                                   flow_interpolation_filter downscale_filter,
+                                   flow_interpolation_filter upscale_filter);
 
 PUB int32_t flow_node_create_primitive_flip_vertical(flow_c * c, struct flow_graph ** g, int32_t prev_node);
 PUB int32_t flow_node_create_primitive_flip_horizontal(flow_c * c, struct flow_graph ** g, int32_t prev_node);
