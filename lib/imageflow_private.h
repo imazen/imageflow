@@ -271,6 +271,12 @@ struct flow_nodeinfo_size {
     int32_t width;
     int32_t height;
 };
+struct flow_nodeinfo_scale {
+    int32_t width;
+    int32_t height;
+    flow_interpolation_filter downscale_filter;
+    flow_interpolation_filter upscale_filter;
+};
 struct flow_nodeinfo_bitmap_bgra_pointer {
     struct flow_bitmap_bgra ** ref;
 };

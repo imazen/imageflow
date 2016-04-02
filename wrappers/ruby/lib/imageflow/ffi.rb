@@ -119,38 +119,40 @@ module Imageflow
     # 																											flow_scanlines_filter__FORCE_ENUM_SIZE_INT32 = 2147483647
     # } flow_scanlines_filter_type;
 
-    # typedef enum flow_interpolation_filter {
-    # 	flow_interpolation_filter_RobidouxFast = 1,
-    # 			flow_interpolation_filter_Robidoux = 2,
-    # 			flow_interpolation_filter_RobidouxSharp = 3,
-    # 			flow_interpolation_filter_Ginseng,
-    # 			flow_interpolation_filter_GinsengSharp,
-    # 			flow_interpolation_filter_Lanczos,
-    # 			flow_interpolation_filter_LanczosSharp,
-    # 			flow_interpolation_filter_Lanczos2,
-    # 			flow_interpolation_filter_Lanczos2Sharp,
-    # 			flow_interpolation_filter_CubicFast,
-    # 			flow_interpolation_filter_Cubic,
-    # 			flow_interpolation_filter_CubicSharp,
-    # 			flow_interpolation_filter_CatmullRom,
-    # 			flow_interpolation_filter_Mitchell,
-    #
-    # 			flow_interpolation_filter_CubicBSpline,
-    # 			flow_interpolation_filter_Hermite,
-    # 			flow_interpolation_filter_Jinc,
-    # 			flow_interpolation_filter_RawLanczos3,
-    # 			flow_interpolation_filter_RawLanczos3Sharp,
-    # 			flow_interpolation_filter_RawLanczos2,
-    # 			flow_interpolation_filter_RawLanczos2Sharp,
-    # 			flow_interpolation_filter_Triangle,
-    # 			flow_interpolation_filter_Linear,
-    # 			flow_interpolation_filter_Box,
-    # 			flow_interpolation_filter_CatmullRomFast,
-    # 			flow_interpolation_filter_CatmullRomFastSharp,
-    #
-    # 			flow_interpolation_filter_Fastest,
-    #
-    # 			flow_interpolation_filter_MitchellFast
+    enum :interpolation_filter, [
+
+        	:filter_RobidouxFast, 1,
+    			:filter_Robidoux, 2,
+    			:filter_RobidouxSharp, 3,
+    			:filter_Ginseng,
+    			:filter_GinsengSharp,
+    			:filter_Lanczos,
+    			:filter_LanczosSharp,
+    			:filter_Lanczos2,
+    			:filter_Lanczos2Sharp,
+    			:filter_CubicFast,
+    			:filter_Cubic,
+    			:filter_CubicSharp,
+    			:filter_CatmullRom,
+    			:filter_Mitchell,
+
+    			:filter_CubicBSpline,
+    			:filter_Hermite,
+    			:filter_Jinc,
+    			:filter_RawLanczos3,
+    			:filter_RawLanczos3Sharp,
+    			:filter_RawLanczos2,
+    			:filter_RawLanczos2Sharp,
+    			:filter_Triangle,
+    			:filter_Linear,
+    			:filter_Box,
+    			:filter_CatmullRomFast,
+    			:filter_CatmullRomFastSharp,
+
+    			:filter_Fastest,
+
+    			:filter_MitchellFast
+    ]
     # } flow_interpolation_filter;
     #
     # typedef enum flow_profiling_entry_flags {
@@ -470,7 +472,7 @@ module Imageflow
     attach_function :flow_graph_copy_info_bytes_to, [:pointer, :pointer, :pointer, :int32, :int32], :int32
     attach_function :flow_edge_duplicate, [:pointer, :pointer, :int32], :int32
     attach_function :flow_node_create_canvas, [:pointer, :pointer, :int32, :pixel_format, :uint, :uint, :uint32], :int32
-    attach_function :flow_node_create_scale, [:pointer, :pointer, :int32, :uint, :uint], :int32
+    attach_function :flow_node_create_scale, [:pointer, :pointer, :int32, :uint, :uint, :interpolation_filter, :interpolation_filter], :int32
     attach_function :flow_node_create_primitive_flip_vertical, [:pointer, :pointer, :int32], :int32
     attach_function :flow_node_create_primitive_flip_horizontal, [:pointer, :pointer, :int32], :int32
     attach_function :flow_node_create_clone, [:pointer, :pointer, :int32], :int32

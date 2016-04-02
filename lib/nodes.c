@@ -90,7 +90,7 @@ static const char * get_format_name(flow_pixel_format f, bool alpha_meaningful)
 
 static bool stringify_scale(flow_c * c, struct flow_graph * g, int32_t node_id, char * buffer, size_t buffer_size)
 {
-    FLOW_GET_INFOBYTES(g, node_id, flow_nodeinfo_size, info);
+    FLOW_GET_INFOBYTES(g, node_id, flow_nodeinfo_scale, info);
 
     char state[64];
     if (!stringify_state(state, 63, &g->nodes[node_id])) {
@@ -441,13 +441,14 @@ static bool flatten_scale(flow_c * c, struct flow_graph ** g, int32_t node_id, s
         FLOW_error(c, flow_status_Graph_invalid);
         return false;
     }
-    //INFOBYTES ARE INVALID AFTER THE FIRST create_*_nodec call, since the graph has been swapped out.
-    //TODO: check them all
-    FLOW_GET_INFOBYTES((*g), node_id, flow_nodeinfo_size, size)
+    // INFOBYTES ARE INVALID AFTER THE FIRST create_*_nodec call, since the graph has been swapped out.
+    // TODO: check them all
+    FLOW_GET_INFOBYTES((*g), node_id, flow_nodeinfo_scale, size)
     int32_t height = size->height;
     int32_t width = size->width;
 
-    flow_interpolation_filter filter = flow_interpolation_filter_Robidoux;
+    //TODO: swap out for upscale filter
+    flow_interpolation_filter filter = size->downscale_filter;
     *first_replacement_node = create_render1d_node(c, g, -1, width, true, filter);
     if (*first_replacement_node < 0) {
         FLOW_error_return(c);
@@ -1024,7 +1025,7 @@ struct flow_node_definition flow_node_defs[] = {
       .input_count = 1,
       .canvas_count = 0,
       .type_name = "scale",
-      .nodeinfo_bytes_fixed = sizeof(struct flow_nodeinfo_size),
+      .nodeinfo_bytes_fixed = sizeof(struct flow_nodeinfo_scale),
       .stringify = stringify_scale,
       .populate_dimensions = dimensions_scale,
       .pre_optimize_flatten = flatten_scale,
