@@ -309,8 +309,7 @@ bool flow_node_set_decoder_downscale_hint(flow_c * c, struct flow_graph * g, int
 }
 
 int32_t flow_node_create_scale(flow_c * c, struct flow_graph ** g, int32_t prev_node, size_t width, size_t height,
-                               flow_interpolation_filter downscale_filter,
-                               flow_interpolation_filter upscale_filter)
+                               flow_interpolation_filter downscale_filter, flow_interpolation_filter upscale_filter)
 {
     int32_t id = flow_node_create_generic(c, g, prev_node, flow_ntype_Scale);
     if (id < 0) {

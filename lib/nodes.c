@@ -214,14 +214,14 @@ static bool dimensions_bitmap_bgra_pointer(flow_c * c, struct flow_graph * g, in
     struct flow_node * n = &g->nodes[node_id];
 
     if (*info->ref == NULL) {
-        //Could be acting as a pass-through node. If bitmap is null, require an input be present
+        // Could be acting as a pass-through node. If bitmap is null, require an input be present
         FLOW_GET_INPUT_NODE(g, node_id)
 
         n->result_height = input_node->result_height;
         n->result_width = input_node->result_width;
         n->result_alpha_meaningful = input_node->result_alpha_meaningful;
         n->result_format = input_node->result_format;
-    }else {
+    } else {
         struct flow_bitmap_bgra * b = *info->ref;
         n->result_width = b->w;
         n->result_height = b->h;
@@ -441,8 +441,8 @@ static bool flatten_scale(flow_c * c, struct flow_graph ** g, int32_t node_id, s
                           struct flow_node * input_node, int32_t * first_replacement_node,
                           int32_t * last_replacement_node)
 {
-    if ((*g)->nodes[node_id].type != flow_ntype_Scale ||
-            (*g)->nodes[node_id].info_byte_index > (int64_t)((*g)->next_info_byte - sizeof(struct flow_nodeinfo_size))){
+    if ((*g)->nodes[node_id].type != flow_ntype_Scale
+        || (*g)->nodes[node_id].info_byte_index > (int64_t)((*g)->next_info_byte - sizeof(struct flow_nodeinfo_size))) {
         FLOW_error(c, flow_status_Graph_invalid);
         return false;
     }
@@ -732,8 +732,8 @@ static bool flatten_render1d(flow_c * c, struct flow_graph ** g, int32_t node_id
         FLOW_error_return(c);
     }
 
-    *first_replacement_node = create_primitve_render_to_canvas_1d_node(
-        c, g, *first_replacement_node, scale_to_width, true, flow_interpolation_filter_Robidoux);
+    *first_replacement_node = create_primitve_render_to_canvas_1d_node(c, g, *first_replacement_node, scale_to_width,
+                                                                       true, flow_interpolation_filter_Robidoux);
     if (*first_replacement_node < 0) {
         FLOW_error_return(c);
     }
@@ -788,7 +788,7 @@ static bool flatten_clone(flow_c * c, struct flow_graph ** g, int32_t node_id, s
                           int32_t * last_replacement_node)
 {
 
-    if (input_node == NULL){
+    if (input_node == NULL) {
         FLOW_error_msg(c, flow_status_Graph_invalid, "A Clone node must have one input.");
         return false;
     }
@@ -796,14 +796,12 @@ static bool flatten_clone(flow_c * c, struct flow_graph ** g, int32_t node_id, s
     int32_t rh = input_node->result_height;
     flow_pixel_format rf = input_node->result_format;
     // create canvas
-    int32_t canvas = flow_node_create_canvas(c, g, -1, rf, rw,
-                                             rh, 0);
+    int32_t canvas = flow_node_create_canvas(c, g, -1, rf, rw, rh, 0);
     if (canvas < 0) {
         FLOW_error_return(c);
     }
     // Blit from image
-    *first_replacement_node = flow_node_create_primitive_copy_rect_to_canvas(c, g, -1, 0, 0, rw,
-                                                                             rh, 0, 0);
+    *first_replacement_node = flow_node_create_primitive_copy_rect_to_canvas(c, g, -1, 0, 0, rw, rh, 0, 0);
     if (*first_replacement_node < 0) {
         FLOW_error_return(c);
     }

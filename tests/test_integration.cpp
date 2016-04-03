@@ -15,10 +15,10 @@ uint8_t gif_bytes_32[]
 uint8_t gif_bytes_43[] = { 0x47, 0x49, 0x46, 0x38, 0x39, 0x61, 0x01, 0x00, 0x01, 0x00, 0x80, 0x00, 0x00, 0xFF, 0xFF,
                            0xFF, 0x00, 0x00, 0x00, 0x21, 0xF9, 0x04, 0x00, 0x00, 0x00, 0x00, 0x00, 0x2C, 0x00, 0x00,
                            0x00, 0x00, 0x01, 0x00, 0x01, 0x00, 0x00, 0x02, 0x02, 0x44, 0x01, 0x00, 0x3B };
- static int read_func(GifFileType* gif, GifByteType* buffer, int bytes_please)
+static int read_func(GifFileType * gif, GifByteType * buffer, int bytes_please)
 {
     int gif_byte_count = sizeof(gif_bytes_43);
-    int* cursor = (int*)gif->UserData;
+    int * cursor = (int *)gif->UserData;
     if (*cursor + bytes_please > gif_byte_count) {
         fprintf(stderr, "More bytes requested (%i) by giflib than available (%i)", bytes_please,
                 gif_byte_count - *cursor);
@@ -29,16 +29,16 @@ uint8_t gif_bytes_43[] = { 0x47, 0x49, 0x46, 0x38, 0x39, 0x61, 0x01, 0x00, 0x01,
     return bytes_please;
 }
 
- TEST_CASE("Test overlapped slurp", "")
+TEST_CASE("Test overlapped slurp", "")
 {
     int cursor_a = 0, cursor_b = 0, error = 0;
-    GifFileType* a = DGifOpen(&cursor_a, read_func, &error);
+    GifFileType * a = DGifOpen(&cursor_a, read_func, &error);
     REQUIRE(error == D_GIF_SUCCEEDED);
 
     REQUIRE(DGifSlurp(a) == GIF_OK);
     REQUIRE(a->Error == D_GIF_SUCCEEDED);
 
-    GifFileType* b = DGifOpen(&cursor_b, read_func, &error);
+    GifFileType * b = DGifOpen(&cursor_b, read_func, &error);
     REQUIRE(error == D_GIF_SUCCEEDED);
     REQUIRE(DGifSlurp(b) == GIF_OK);
 }

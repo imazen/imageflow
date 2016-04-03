@@ -325,6 +325,9 @@ struct flow_convolution_kernel {
     float * buffer;
 };
 
+PUB bool flow_bitmap_bgra_transpose(flow_c * c, struct flow_bitmap_bgra * from, struct flow_bitmap_bgra * to);
+PUB bool flow_bitmap_bgra_sharpen_block_edges(flow_c * c, struct flow_bitmap_bgra * im, int block_size, float pct);
+
 struct flow_RenderDetails {
     // Interpolation and scaling details
     struct flow_interpolation_details * interpolation;

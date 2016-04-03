@@ -127,9 +127,10 @@ bool fetch_image(const char * url, char * dest_path)
             curl_easy_setopt(curl, CURLOPT_WRITEDATA, fp);
             res = curl_easy_perform(curl);
             long http_code = 0;
-            curl_easy_getinfo (curl, CURLINFO_RESPONSE_CODE, &http_code);
+            curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &http_code);
             if (res != CURLE_OK || http_code != 200) {
-                fprintf(stderr, "CURL HTTP operation failed (error %d, status code %li) - GET %s, write to  %s\n", res, http_code, url, dest_path);
+                fprintf(stderr, "CURL HTTP operation failed (error %d, status code %li) - GET %s, write to  %s\n", res,
+                        http_code, url, dest_path);
                 exit(4);
             }
         } else {
@@ -265,7 +266,7 @@ bool flow_recursive_mkdir(const char * dir, bool create_last_segment)
 #endif
             *p = '/';
         }
-    if (create_last_segment){
+    if (create_last_segment) {
 #ifdef _MSC_VER
         _mkdir(tmp); // Windows doesn't support the last param, S_IRWXU);
 #else

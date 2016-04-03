@@ -4,7 +4,6 @@
 #include "imageflow_private.h"
 #include "lcms2.h"
 #include "codecs.h"
-#include "jerror.h"
 
 static uint8_t jpeg_bytes_a[] = { 0xFF, 0xD8, 0xFF, 0xDB };
 static uint8_t jpeg_bytes_b[] = { 0xFF, 0xD8, 0xFF, 0xE0 };
@@ -22,7 +21,8 @@ struct flow_job_jpeg_decoder_state {
     struct jpeg_error_mgr error_mgr; // MUST be first
     jmp_buf error_handler_jmp; // MUST be second
     flow_c * context; // MUST be third
-    size_t codec_id; // MUST be fourht
+    size_t codec_id; // MUST be fourth
+    int idct_downscale_function; // Must be fifth
     flow_job_jpeg_decoder_stage stage;
     struct jpeg_decompress_struct * cinfo;
     size_t row_stride;
@@ -252,6 +252,7 @@ static bool flow_job_jpg_decoder_reset(flow_c * c, struct flow_job_jpeg_decoder_
         state->hints.downscaled_min_width = -1;
         state->hints.or_if_taller_than = -1;
         state->hints.downscale_if_wider_than = -1;
+        state->idct_downscale_function = 0;
     } else {
 
         if (state->cinfo != NULL) {
@@ -313,9 +314,36 @@ static bool set_downscale_hints(flow_c * c, struct flow_job * job, struct flow_c
     return true;
 }
 
+void jpeg_idct_downscale_wrap_islow_fast(j_decompress_ptr cinfo, jpeg_component_info * compptr, JCOEFPTR coef_block,
+                                         JSAMPARRAY output_buf, JDIMENSION output_col);
+
+static void flow_jpeg_idct_method_selector(j_decompress_ptr cinfo, jpeg_component_info * compptr,
+                                           jpeg_idct_method * set_idct_method, int * set_idct_category)
+{
+    if (compptr->component_id != 1)
+        return;
+#if JPEG_LIB_VERSION >= 70
+    int scaled = compptr->DCT_h_scaled_size;
+#else
+    int scaled = compptr->DCT_scaled_size;
+#endif
+
+    struct flow_job_jpeg_decoder_state * state = (struct flow_job_jpeg_decoder_state *)cinfo->err;
+
+    if (scaled > 0 && scaled < 8) {
+        if (state->idct_downscale_function == 2) {
+            *set_idct_method = jpeg_idct_downscale_wrap_islow_fast;
+            *set_idct_category = JDCT_ISLOW;
+        }
+        fprintf(stdout, "IDCT downscaling fn %d to %d/8.", state->idct_downscale_function, scaled);
+    }
+}
+
 static bool jpeg_apply_downscaling(flow_c * c, struct flow_job_jpeg_decoder_state * state, int32_t * out_w,
                                    int32_t * out_h)
 {
+
+    jpeg_set_idct_method_selector(state->cinfo, flow_jpeg_idct_method_selector);
     if (state->hints.downscaled_min_width != -1 && state->hints.downscaled_min_height != 1) {
         if (state->cinfo->image_width > state->hints.downscale_if_wider_than
             || state->cinfo->image_height > state->hints.or_if_taller_than) {

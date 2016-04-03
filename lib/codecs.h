@@ -1,7 +1,6 @@
 #pragma once
 
 #include "imageflow_private.h"
-#include <jpeglib.h>
 #include "lcms2.h"
 
 #ifdef __cplusplus
@@ -36,6 +35,9 @@ bool flow_job_decoder_read_frame(flow_c * c, struct flow_job * job, void * codec
 png_bytepp flow_job_create_row_pointers(flow_c * c, void * buffer, size_t buffer_size, size_t stride, size_t height);
 
 bool flow_bitmap_bgra_transform_to_srgb(flow_c * c, cmsHPROFILE current_profile, struct flow_bitmap_bgra * frame);
+
+typedef struct jpeg_compress_struct * j_compress_ptr;
+typedef struct jpeg_decompress_struct * j_decompress_ptr;
 
 void flow_codecs_jpeg_setup_source_manager(j_decompress_ptr cinfo, struct flow_io * io);
 void flow_codecs_jpeg_setup_dest_manager(j_compress_ptr cinfo, struct flow_io * io);
