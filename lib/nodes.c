@@ -211,18 +211,23 @@ static bool dimensions_scale(flow_c * c, struct flow_graph * g, int32_t node_id,
 static bool dimensions_bitmap_bgra_pointer(flow_c * c, struct flow_graph * g, int32_t node_id, bool force_estimate)
 {
     FLOW_GET_INFOBYTES(g, node_id, flow_nodeinfo_bitmap_bgra_pointer, info)
+    struct flow_node * n = &g->nodes[node_id];
 
     if (*info->ref == NULL) {
-        FLOW_error(c, flow_status_Invalid_inputs_to_node);
-        return false; // If this is acting as an source node, info->data MUST be populated
-    }
-    struct flow_bitmap_bgra * b = *info->ref;
+        //Could be acting as a pass-through node. If bitmap is null, require an input be present
+        FLOW_GET_INPUT_NODE(g, node_id)
 
-    struct flow_node * n = &g->nodes[node_id];
-    n->result_width = b->w;
-    n->result_height = b->h;
-    n->result_alpha_meaningful = b->alpha_meaningful;
-    n->result_format = b->fmt;
+        n->result_height = input_node->result_height;
+        n->result_width = input_node->result_width;
+        n->result_alpha_meaningful = input_node->result_alpha_meaningful;
+        n->result_format = input_node->result_format;
+    }else {
+        struct flow_bitmap_bgra * b = *info->ref;
+        n->result_width = b->w;
+        n->result_height = b->h;
+        n->result_alpha_meaningful = b->alpha_meaningful;
+        n->result_format = b->fmt;
+    }
     return true;
 }
 
