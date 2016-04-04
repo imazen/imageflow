@@ -295,18 +295,7 @@ int32_t flow_node_create_fill_rect(flow_c * c, struct flow_graph ** g, int32_t p
     info->color_srgb = color_srgb;
     return id;
 }
-bool flow_node_set_decoder_downscale_hint(flow_c * c, struct flow_graph * g, int32_t node_id, int64_t if_wider_than,
-                                          int64_t or_taller_than, int64_t downscaled_min_width,
-                                          int64_t downscaled_min_height)
-{
 
-    struct flow_nodeinfo_codec * info = (struct flow_nodeinfo_codec *)FrameNode_get_node_info_pointer(g, node_id);
-    info->downscale_hints.downscaled_min_height = downscaled_min_height;
-    info->downscale_hints.downscaled_min_width = downscaled_min_width;
-    info->downscale_hints.downscale_if_wider_than = if_wider_than;
-    info->downscale_hints.or_if_taller_than = or_taller_than;
-    return true;
-}
 
 int32_t flow_node_create_scale(flow_c * c, struct flow_graph ** g, int32_t prev_node, size_t width, size_t height,
                                flow_interpolation_filter downscale_filter, flow_interpolation_filter upscale_filter)
@@ -339,6 +328,8 @@ int32_t flow_node_create_decoder(flow_c * c, struct flow_graph ** g, int32_t pre
     info->downscale_hints.or_if_taller_than = -1;
     info->downscale_hints.downscaled_min_height = -1;
     info->downscale_hints.downscaled_min_width = -1;
+    info->downscale_hints.gamma_to_lift_during_scaling = 1;
+    info->downscale_hints.scale_spatially = false;
 
     return id;
 }

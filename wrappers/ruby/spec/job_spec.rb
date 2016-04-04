@@ -32,7 +32,7 @@ module Imageflow
         g = @c.create_graph
 
         g.create_node(:decoder, 0)
-            .add(:scale, 300, 200)
+            .add(:scale, 300, 200, :filter_Robidoux, :filter_Robidoux)
             .add(:encoder, 1, 4) #4 is the id of the jpeg encoder
 
 

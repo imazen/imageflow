@@ -11,7 +11,10 @@
 //#include "libjpeg-turbo_private/jmorecfg.h" /* Private declarations for DCT subsystem */
 #include "jdct.h" /* Private declarations for DCT subsystem */
 
+#include "codecs_jpeg.h"
 #include "fastapprox.h"
+
+
 
 void jpeg_idct_downscale_wrap_islow_fast(j_decompress_ptr cinfo, jpeg_component_info * compptr, JCOEFPTR coef_block,
                                          JSAMPARRAY output_buf, JDIMENSION output_col);
@@ -185,6 +188,9 @@ void jpeg_idct_downscale_wrap_islow_fast(j_decompress_ptr cinfo, jpeg_component_
     int scaled = compptr->DCT_scaled_size;
 #endif
 
+//    struct flow_job_jpeg_decoder_state * state = (struct flow_job_jpeg_decoder_state *)cinfo->err;
+
+    //state->hints.
     // Linearize
     float linearized[DCTSIZE2];
     for (i = 0; i < DCTSIZE2; i++)

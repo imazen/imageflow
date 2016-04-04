@@ -166,13 +166,17 @@ bool flow_job_decoder_set_downscale_hints(flow_c * c, struct flow_job * job, str
 
 bool flow_job_decoder_set_downscale_hints_by_placeholder_id(flow_c * c, struct flow_job * job, int32_t placeholder_id,
                                                             int64_t if_wider_than, int64_t or_taller_than,
-                                                            int64_t downscaled_min_width, int64_t downscaled_min_height)
+                                                            int64_t downscaled_min_width, int64_t downscaled_min_height,
+                                                            bool scale_spatially,
+                                                            float gamma_to_lift_during_scaling)
 {
     struct flow_decoder_downscale_hints hints;
     hints.or_if_taller_than = or_taller_than;
     hints.downscale_if_wider_than = if_wider_than;
     hints.downscaled_min_height = downscaled_min_height;
     hints.downscaled_min_width = downscaled_min_width;
+    hints.scale_spatially = scale_spatially;
+    hints.gamma_to_lift_during_scaling = gamma_to_lift_during_scaling;
 
     struct flow_codec_instance * codec = flow_job_get_codec_instance(c, job, placeholder_id);
     if (codec == NULL) {

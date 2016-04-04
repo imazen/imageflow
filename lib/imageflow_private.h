@@ -287,6 +287,8 @@ struct flow_decoder_downscale_hints {
     int64_t or_if_taller_than;
     int64_t downscaled_min_width;
     int64_t downscaled_min_height;
+    bool scale_spatially;
+    float gamma_to_lift_during_scaling;
 };
 struct flow_nodeinfo_codec {
     int32_t placeholder_id;

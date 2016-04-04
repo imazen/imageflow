@@ -4,56 +4,11 @@
 #include "imageflow_private.h"
 #include "lcms2.h"
 #include "codecs.h"
+#include "codecs_jpeg.h"
 
 static uint8_t jpeg_bytes_a[] = { 0xFF, 0xD8, 0xFF, 0xDB };
 static uint8_t jpeg_bytes_b[] = { 0xFF, 0xD8, 0xFF, 0xE0 };
 static uint8_t jpeg_bytes_c[] = { 0xFF, 0xD8, 0xFF, 0xE1 };
-
-typedef enum flow_job_jpeg_decoder_stage {
-    flow_job_jpg_decoder_stage_Null = 0,
-    flow_job_jpg_decoder_stage_Failed,
-    flow_job_jpg_decoder_stage_NotStarted,
-    flow_job_jpg_decoder_stage_BeginRead,
-    flow_job_jpg_decoder_stage_FinishRead,
-} flow_job_jpeg_decoder_stage;
-
-struct flow_job_jpeg_decoder_state {
-    struct jpeg_error_mgr error_mgr; // MUST be first
-    jmp_buf error_handler_jmp; // MUST be second
-    flow_c * context; // MUST be third
-    size_t codec_id; // MUST be fourth
-    int idct_downscale_function; // Must be fifth
-    flow_job_jpeg_decoder_stage stage;
-    struct jpeg_decompress_struct * cinfo;
-    size_t row_stride;
-    int32_t w;
-    int32_t h;
-    int channels;
-    struct flow_io * io;
-    uint8_t * pixel_buffer;
-    size_t pixel_buffer_size;
-    uint8_t ** pixel_buffer_row_pointers;
-
-    cmsHPROFILE color_profile;
-    flow_codec_color_profile_source color_profile_source;
-    double gamma;
-
-    struct flow_decoder_downscale_hints hints;
-};
-struct flow_job_jpeg_codec_state_common {
-    struct jpeg_error_mgr error_mgr; // MUST be first
-    jmp_buf error_handler_jmp; // MUST be second
-    flow_c * context; // MUST be third
-    size_t codec_id; // MUST be fourht
-};
-struct flow_job_jpeg_encoder_state {
-    struct jpeg_error_mgr error_mgr; // MUST be first
-    jmp_buf error_handler_jmp; // MUST be second
-    flow_c * context; // MUST be third
-    size_t codec_id; // MUST be fourht
-    struct jpeg_compress_struct cinfo;
-    struct flow_io * io;
-};
 
 static bool flow_job_jpg_decoder_reset(flow_c * c, struct flow_job_jpeg_decoder_state * state);
 
@@ -248,11 +203,6 @@ static bool flow_job_jpg_decoder_reset(flow_c * c, struct flow_job_jpeg_decoder_
         state->pixel_buffer_row_pointers = NULL;
         state->color_profile = NULL;
         state->cinfo = NULL;
-        state->hints.downscaled_min_height = -1;
-        state->hints.downscaled_min_width = -1;
-        state->hints.or_if_taller_than = -1;
-        state->hints.downscale_if_wider_than = -1;
-        state->idct_downscale_function = 0;
     } else {
 
         if (state->cinfo != NULL) {
@@ -296,6 +246,13 @@ static bool flow_job_codecs_initialize_decode_jpeg(flow_c * c, struct flow_job *
         }
         state->stage = flow_job_jpg_decoder_stage_Null;
 
+        state->hints.scale_spatially = false;
+        state->hints.gamma_to_lift_during_scaling = 1;
+        state->hints.downscale_if_wider_than = -1;
+        state->hints.downscaled_min_width = -1;
+        state->hints.downscaled_min_height = -1;
+        state->hints.or_if_taller_than = -1;
+
         if (!flow_job_jpg_decoder_reset(c, state)) {
             FLOW_add_to_callstack(c);
             return false;
@@ -330,12 +287,9 @@ static void flow_jpeg_idct_method_selector(j_decompress_ptr cinfo, jpeg_componen
 
     struct flow_job_jpeg_decoder_state * state = (struct flow_job_jpeg_decoder_state *)cinfo->err;
 
-    if (scaled > 0 && scaled < 8) {
-        if (state->idct_downscale_function == 2) {
-            *set_idct_method = jpeg_idct_downscale_wrap_islow_fast;
-            *set_idct_category = JDCT_ISLOW;
-        }
-        fprintf(stdout, "IDCT downscaling fn %d to %d/8.", state->idct_downscale_function, scaled);
+    if (scaled > 0 && scaled < 8 && state->hints.scale_spatially) {
+        *set_idct_method = jpeg_idct_downscale_wrap_islow_fast;
+        *set_idct_category = JDCT_ISLOW;
     }
 }
 

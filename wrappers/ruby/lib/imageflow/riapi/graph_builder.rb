@@ -49,9 +49,11 @@ module Imageflow
 
         job.set_decoder_downscale_hints(placeholder_id: input_placeholder_id,
                                         if_wider_than: trigger_decoder_scaling[0].to_i,
-                                           or_taller_than: trigger_decoder_scaling[1].to_i,
-                                           downscaled_min_width: target_decoder_size[0].to_i,
-                                           downscaled_min_height: target_decoder_size[1].to_i)
+                                        or_taller_than: trigger_decoder_scaling[1].to_i,
+                                        downscaled_min_width: target_decoder_size[0].to_i,
+                                        downscaled_min_height: target_decoder_size[1].to_i,
+                                        scale_spatially: true,
+                                        gamma_to_lift_during_scaling: 2.4)
 
         updated_info = job.get_decoder_info(placeholder_id: input_placeholder_id)
 
@@ -81,7 +83,7 @@ module Imageflow
 
         add_crop(crop: ile.result[:copy_from])
 
-        @last = @last.add(:scale, ile.result[:copy_to_size][0], ile.result[:copy_to_size][1])
+        @last = @last.add(:scale, ile.result[:copy_to_size][0], ile.result[:copy_to_size][1], :filter_Robidoux, :filter_Robidoux)
 
         add_expand_canvas(left: ile.result[:copy_to_rect][0],
                           top: ile.result[:copy_to_rect][1],

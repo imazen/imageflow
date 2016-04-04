@@ -367,10 +367,6 @@ static bool dimensions_decode(flow_c * c, struct flow_graph * g, int32_t node_id
 
     struct flow_decoder_frame_info frame_info;
 
-    if (!flow_job_decoder_set_downscale_hints(c, NULL, info->codec, &info->downscale_hints, force_estimate)) {
-        FLOW_error_return(c);
-    }
-
     if (!flow_job_decoder_get_frame_info(c, NULL, info->codec->codec_state, info->codec->codec_id, &frame_info)) {
         FLOW_error_return(c);
     }
