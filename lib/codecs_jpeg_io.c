@@ -1,5 +1,5 @@
 #include <stdio.h>
-#include <jpeglib.h>
+#include "jpeglib.h"
 #include "imageflow_private.h"
 #include "lcms2.h"
 #include "codecs.h"

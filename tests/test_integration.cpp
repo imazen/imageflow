@@ -1,6 +1,6 @@
 #include "catch.hpp"
 #include "helpers.h"
-#include <png.h>
+#include "png.h"
 #include "gif_lib.h"
 #include "test_weighting_helpers.h"
 #include "trim_whitespace.h"

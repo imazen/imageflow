@@ -1,4 +1,4 @@
-#include <png.h>
+#include "png.h"
 #include "catch.hpp"
 #include "helpers.h"
 

@@ -1,5 +1,7 @@
 #include "catch.hpp"
 #include "helpers_visual.h"
+#include "jpeglib.h"
+#include "jversion.h"
 //#define FLOW_STORE_CHECKSUMS
 
 #ifdef FLOW_STORE_CHECKSUMS
