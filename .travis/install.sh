@@ -8,6 +8,7 @@ if [[ "$(uname -s)" == 'Darwin' ]]; then
     brew install cmake || true
     brew install lcov || true
     brew install conan
+    brew install nasm
 else
     cd ${TRAVIS_BUILD_DIR}
     # install latest LCOV
