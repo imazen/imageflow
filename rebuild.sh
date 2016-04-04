@@ -18,5 +18,5 @@ rm *~
 mkdir build
 cd build
 conan install -u --file ../conanfile.py -o build_tests=True --build missing
-conan build --file ../conanfile.py
 cd ..
+conan build
