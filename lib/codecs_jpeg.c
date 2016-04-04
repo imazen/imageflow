@@ -274,6 +274,37 @@ static bool set_downscale_hints(flow_c * c, struct flow_job * job, struct flow_c
 void jpeg_idct_downscale_wrap_islow_fast(j_decompress_ptr cinfo, jpeg_component_info * compptr, JCOEFPTR coef_block,
                                          JSAMPARRAY output_buf, JDIMENSION output_col);
 
+static inline uint8_t fast_linear_to_srgb(struct flow_job_jpeg_decoder_state * state, float x)
+{
+    if (state->hints.gamma_to_lift_during_scaling == 2.4f) {
+        return uchar_clamp_ff(linear_to_srgb(x));
+    }else{
+        return uchar_clamp_ff(255.0f * pow(x, 1.0f / state->hints.gamma_to_lift_during_scaling));
+    }
+}
+
+static void populate_lookup_tables(struct flow_job_jpeg_decoder_state * state){
+    int count = sizeof(state->lut_to_linear) / sizeof(float);
+    if (state->hints.gamma_to_lift_during_scaling == 2.4f) {
+        for (int i = 0; i < count; i++) {
+            state->lut_to_linear[i] = srgb_to_linear(((float)i) * (float)(1.0f / 255.0f));
+        }
+    }else{
+        for (int i = 0; i < count; i++) {
+            state->lut_to_linear[i] = (float)pow(((float)i) * (1.0f / 255.0f), state->hints.gamma_to_lift_during_scaling);
+            //fprintf(stdout, "Delta gamma %0.3f <-> srgb for byte %i == %.020f\n", state->hints.gamma_to_lift_during_scaling, i, srgb_to_linear(((float)i) * (float)(1.0f / 255.0f)) - state->lut_to_linear[i]);
+        }
+    }
+    state->linear_to_srgb = fast_linear_to_srgb;
+
+    for (int i = 0; i < count; i++) {
+        float linear = state->lut_to_linear[i];
+        if (state->linear_to_srgb(state,linear) != i){
+            fprintf(stderr, "Failed to roundrip byte %i - linear= %.020f, but converted back to %i", i, linear, state->linear_to_srgb(state,linear) );
+        }
+    }
+}
+
 static void flow_jpeg_idct_method_selector(j_decompress_ptr cinfo, jpeg_component_info * compptr,
                                            jpeg_idct_method * set_idct_method, int * set_idct_category)
 {
@@ -290,6 +321,7 @@ static void flow_jpeg_idct_method_selector(j_decompress_ptr cinfo, jpeg_componen
     if (scaled > 0 && scaled < 8 && state->hints.scale_spatially) {
         *set_idct_method = jpeg_idct_downscale_wrap_islow_fast;
         *set_idct_category = JDCT_ISLOW;
+        populate_lookup_tables(state);
     }
 }
 

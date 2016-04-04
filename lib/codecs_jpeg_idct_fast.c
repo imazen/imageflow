@@ -151,21 +151,7 @@ const float lut_srgb_to_linear[256] = {
     0.9559735059738159180, 0.9646865725517272949, 0.9734454751014709473, 0.9822508692741394043, 0.9911022186279296875,
     1.0000000000000000000,
 };
-static inline uint8_t fast_linear_to_srgb(float x)
-{
-    return uchar_clamp_ff(linear_to_srgb(x));
 
-    //    // Gamma correction
-    //    // http://www.4p8.com/eric.brasseur/gamma.html#formulas
-    //    if (x < 0.0f)
-    //        return 0;
-    //    if (x > 1.0f)
-    //        return 255.0f;
-    //    float r = 255.0f * fasterpow(x, 1.0f / 2.2f);
-    //    // return 255.0f * (float)pow(clr, 1.0f / 2.2f);
-    //    // printf("Linear %f to srgb %f\n", x, r);
-    //    return r;
-}
 
 void jpeg_idct_downscale_wrap_islow_fast(j_decompress_ptr cinfo, jpeg_component_info * compptr, JCOEFPTR coef_block,
                                          JSAMPARRAY output_buf, JDIMENSION output_col)
@@ -188,13 +174,13 @@ void jpeg_idct_downscale_wrap_islow_fast(j_decompress_ptr cinfo, jpeg_component_
     int scaled = compptr->DCT_scaled_size;
 #endif
 
-//    struct flow_job_jpeg_decoder_state * state = (struct flow_job_jpeg_decoder_state *)cinfo->err;
+    struct flow_job_jpeg_decoder_state * state = (struct flow_job_jpeg_decoder_state *)cinfo->err;
 
     //state->hints.
     // Linearize
     float linearized[DCTSIZE2];
     for (i = 0; i < DCTSIZE2; i++)
-        linearized[i] = lut_srgb_to_linear[intermediate[i]];
+        linearized[i] = state->lut_to_linear[intermediate[i]];
 
     // Scale and transpose
     float scaled_h[DCTSIZE2];
@@ -226,7 +212,7 @@ void jpeg_idct_downscale_wrap_islow_fast(j_decompress_ptr cinfo, jpeg_component_
     for (ctr = 0; ctr < target_size; ctr++) {
         outptr = output_buf[ctr] + output_col;
         for (ctr_x = 0; ctr_x < target_size; ctr_x++) {
-            outptr[ctr_x] = fast_linear_to_srgb(scaled_final[ctr_x + ctr * target_size]);
+            outptr[ctr_x] = state->linear_to_srgb(state, scaled_final[ctr_x + ctr * target_size]);
         }
     }
 }

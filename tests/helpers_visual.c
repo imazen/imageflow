@@ -179,7 +179,7 @@ static char * get_checksum_for(flow_c * c, const char * name)
     return NULL;
 }
 
-static bool download_by_checksum(flow_c * c, struct flow_bitmap_bgra * bitmap, char * checksum)
+static bool download_by_checksum(flow_c * c, char * checksum)
 {
     char filename[2048];
     if (!create_relative_path(c, true, filename, 2048, "/visuals/%s.png", checksum)) {
@@ -346,6 +346,10 @@ bool visual_compare(flow_c * c, struct flow_bitmap_bgra * bitmap, const char * n
 
     // Compare
     if (stored_checksum != NULL && strcmp(checksum, stored_checksum) == 0) {
+        //Make sure the file is created for later
+        if (!save_bitmap_to_visuals(c, bitmap, checksum, "trusted")) {
+            FLOW_error_return(c);
+        }
         return true; // It matches!
     }
 
@@ -379,7 +383,7 @@ bool visual_compare(flow_c * c, struct flow_bitmap_bgra * bitmap, const char * n
 
     if (stored_checksum != NULL) {
         // Try to download "old" png from S3 using the checksums as an address.
-        if (!download_by_checksum(c, bitmap, stored_checksum)) {
+        if (!download_by_checksum(c, stored_checksum)) {
             FLOW_error_return(c);
         }
 
@@ -388,6 +392,7 @@ bool visual_compare(flow_c * c, struct flow_bitmap_bgra * bitmap, const char * n
         if (!diff_images(c, checksum, stored_checksum, &dssim, true)) {
             FLOW_error_return(c);
         }
+        fprintf(stdout, "DSSIM %.20f between %s and %s\n", dssim, stored_checksum, checksum);
 
         // Dump to HTML=
         if (!append_html(c, name, checksum, stored_checksum)) {

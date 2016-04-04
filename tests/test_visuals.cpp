@@ -11,6 +11,9 @@ bool store_checksums = true;
 bool store_checksums = false;
 #endif
 
+
+//#define GENERATE_CODE_LITERALS
+
 TEST_CASE("Test fill_rect", "")
 {
     flow_c * c = flow_context_create();
@@ -197,10 +200,17 @@ TEST_CASE("Test faster block downscale method", "")
     int32_t input_placeholder = 0;
     struct flow_io * input = flow_io_create_from_memory(c, flow_io_mode_read_seekable, bytes, bytes_count, job, NULL);
     flow_job_add_io(c, job, input, input_placeholder, FLOW_INPUT);
-    if (!flow_job_decoder_set_downscale_hints_by_placeholder_id(c, job, input_placeholder, 400, 300, 400, 300, true, 2.4f)) {
+    long new_w = (800 * 4 + 8 - 1L) / 8L;
+    long new_h = (600 * 4 + 8 - 1L) / 8L;
+
+    if (!flow_job_decoder_set_downscale_hints_by_placeholder_id(c, job, input_placeholder, new_w, new_h, new_w, new_h, true, 2.4f)) {
         ERR(c);
     }
-
+    // DSSIM 0.00002442000000000000 with 2.1f vs true srgb
+    // DSSIM 0.00001457000000000000  with 2.2f
+    // DSSIM 0.00002413000000000000 with 2.3f
+    // DSSIM 0.00004514000000000000  with 2.39f
+    // DSSIM 0.00128068999999999991 with 1.0f
     struct flow_graph * g = flow_graph_create(c, 10, 10, 200, 2.0);
     ERR(c);
     struct flow_bitmap_bgra * b;
@@ -219,6 +229,46 @@ TEST_CASE("Test faster block downscale method", "")
     ERR(c);
     flow_context_destroy(c);
 }
+
+TEST_CASE("Test gamma 2.2 gamma approximations downscale method", "")
+{
+    flow_c * c = flow_context_create();
+    size_t bytes_count = 0;
+    uint8_t * bytes = get_bytes_cached(c, &bytes_count, "http://s3.amazonaws.com/resizer-images/u1.jpg");
+    REQUIRE(djb2_buffer(bytes, bytes_count) == 0x41acd8388399c2cb); // Test the checksum. I/O can be flaky
+
+    struct flow_job * job = flow_job_create(c);
+    ERR(c);
+    int32_t input_placeholder = 0;
+    struct flow_io * input = flow_io_create_from_memory(c, flow_io_mode_read_seekable, bytes, bytes_count, job, NULL);
+    flow_job_add_io(c, job, input, input_placeholder, FLOW_INPUT);
+    int original_width, original_height;
+    if (!get_image_dimensions(c, bytes,bytes_count, &original_width, &original_height)) ERR(c);
+    long new_w = (original_width * 7 + 8 - 1L) / 8L;
+    long new_h = (original_height * 7 + 8 - 1L) / 8L;
+    if (!flow_job_decoder_set_downscale_hints_by_placeholder_id(c, job, input_placeholder, new_w, new_h, new_w, new_h, true, 2.2f)) {
+        ERR(c);
+    }
+    //Execution time for gamma 2.2 decoding (ticks): 1791750
+
+    struct flow_graph * g = flow_graph_create(c, 10, 10, 200, 2.0);
+    ERR(c);
+    struct flow_bitmap_bgra * b;
+    int32_t decode_node = flow_node_create_decoder(c, &g, -1, input_placeholder);
+
+    flow_node_create_bitmap_bgra_reference(c, &g, decode_node, &b);
+    ERR(c);
+    if (!flow_job_execute(c, job, &g)) {
+        ERR(c);
+    }
+    fprintf(stdout, "Execution time for gamma 2.2 decoding (ticks): %d \n", g->nodes[decode_node].ticks_elapsed);
+
+    bool match = visual_compare(c, b, "ScaleIDCT_approx_gamma", store_checksums, __FILE__, __func__, __LINE__);
+    REQUIRE(match == true);
+    ERR(c);
+    flow_context_destroy(c);
+}
+
 TEST_CASE("Test blurring", "")
 {
 
@@ -286,6 +336,7 @@ TEST_CASE("Test 8->4 downscaling contrib windows", "")
     flow_context_destroy(c);
 }
 
+#ifdef GENERATE_CODE_LITERALS
 TEST_CASE("Export weights", "")
 {
     flow_c * c = flow_context_create();
@@ -336,6 +387,7 @@ TEST_CASE("Export LUT", "")
     fprintf(stdout, "};\n");
     flow_context_destroy(c);
 }
+#endif
 
 static const char * const test_images[] = {
 
@@ -343,7 +395,7 @@ static const char * const test_images[] = {
     "http://s3-us-west-2.amazonaws.com/imageflow-resources/reference_image_originals/vgl_6434_0018.jpg",
     "http://s3-us-west-2.amazonaws.com/imageflow-resources/reference_image_originals/vgl_5674_0098.jpg",
     "http://s3.amazonaws.com/resizer-images/u6.jpg",
-    "https://s3.amazonaws.com/resizer-images/u1.jpg",
+    "http://s3.amazonaws.com/resizer-images/u1.jpg",
     "http://s3-us-west-2.amazonaws.com/imageflow-resources/reference_image_originals/artificial.jpg",
     "http://www.rollthepotato.net/~john/kevill/test_800x600.jpg",
     "http://s3-us-west-2.amazonaws.com/imageflow-resources/reference_image_originals/nightshot_iso_100.jpg",

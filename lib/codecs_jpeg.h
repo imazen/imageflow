@@ -11,6 +11,10 @@ typedef enum flow_job_jpeg_decoder_stage {
     flow_job_jpg_decoder_stage_FinishRead,
 } flow_job_jpeg_decoder_stage;
 
+struct flow_job_jpeg_decoder_state;
+
+typedef uint8_t (*flow_job_jpeg_linear_to_srgb)(struct flow_job_jpeg_decoder_state * state, float v);
+
 struct flow_job_jpeg_decoder_state {
     struct jpeg_error_mgr error_mgr; // MUST be first
     jmp_buf error_handler_jmp; // MUST be second
@@ -32,7 +36,11 @@ struct flow_job_jpeg_decoder_state {
     double gamma;
 
     struct flow_decoder_downscale_hints hints;
+    float lut_to_linear[256];
+    flow_job_jpeg_linear_to_srgb linear_to_srgb;
 };
+
+
 struct flow_job_jpeg_codec_state_common {
     struct jpeg_error_mgr error_mgr; // MUST be first
     jmp_buf error_handler_jmp; // MUST be second
