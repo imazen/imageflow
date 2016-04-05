@@ -230,7 +230,7 @@ TEST_CASE("Test faster block downscale method", "")
     flow_context_destroy(c);
 }
 
-TEST_CASE("Test gamma 2.2 gamma approximations downscale method", "")
+TEST_CASE("Test srgb lookup table downscale method", "")
 {
     flow_c * c = flow_context_create();
     size_t bytes_count = 0;
@@ -244,9 +244,9 @@ TEST_CASE("Test gamma 2.2 gamma approximations downscale method", "")
     flow_job_add_io(c, job, input, input_placeholder, FLOW_INPUT);
     int original_width, original_height;
     if (!get_image_dimensions(c, bytes,bytes_count, &original_width, &original_height)) ERR(c);
-    long new_w = (original_width * 1 + 8 - 1L) / 8L;
-    long new_h = (original_height * 1 + 8 - 1L) / 8L;
-    if (!flow_job_decoder_set_downscale_hints_by_placeholder_id(c, job, input_placeholder, new_w, new_h, new_w, new_h, true, 1.5f)) {
+    long new_w = (original_width * 7 + 8 - 1L) / 8L;
+    long new_h = (original_height * 7 + 8 - 1L) / 8L;
+    if (!flow_job_decoder_set_downscale_hints_by_placeholder_id(c, job, input_placeholder, new_w, new_h, new_w, new_h, true, 2.4f)) {
         ERR(c);
     }
     // Execution time for gamma 2.2 decoding (ticks): 1791750 (pow)
@@ -278,7 +278,7 @@ TEST_CASE("Test gamma 2.2 gamma approximations downscale method", "")
     if (!flow_job_execute(c, job, &g)) {
         ERR(c);
     }
-    fprintf(stdout, "Execution time for gamma 2.2 decoding (ms): %d \n", (int)(g->nodes[decode_node].ticks_elapsed * 1000/ flow_get_profiler_ticks_per_second()));
+    fprintf(stdout, "Execution time for srgb decoding (ms): %d \n", (int)(g->nodes[decode_node].ticks_elapsed * 1000/ flow_get_profiler_ticks_per_second()));
     fflush(stdout);
     exit(0);
 

@@ -102,63 +102,7 @@ static const float jpeg_scale_to_1_x_1_weights[1][8] = {
       0.1392842531204223633, 0.1178331747651100159, 0.0911070853471755981 },
 };
 
-static const float * weights_by_target[7]
-    = { &jpeg_scale_to_1_x_1_weights[0][0], &jpeg_scale_to_2_x_2_weights[0][0], &jpeg_scale_to_3_x_3_weights[0][0],
-        &jpeg_scale_to_4_x_4_weights[0][0], &jpeg_scale_to_5_x_5_weights[0][0], &jpeg_scale_to_6_x_6_weights[0][0],
-        &jpeg_scale_to_7_x_7_weights[0][0]
-
-    };
-
-
-
-//static inline void jpeg_idct_downscale_wrap_islow_fast_generic(j_decompress_ptr cinfo, jpeg_component_info * compptr, JCOEFPTR coef_block,
-//                                         JSAMPARRAY output_buf, JDIMENSION output_col, int scaled)
-//{
-//
-//    JSAMPLE intermediate[DCTSIZE2];
-//    JSAMPROW rows[DCTSIZE];
-//    int i;
-//
-//    for (i = 0; i < DCTSIZE; i++)
-//        rows[i] = &intermediate[i * DCTSIZE];
-//
-//    jpeg_idct_islow(cinfo, compptr, coef_block, &rows[0], 0);
-//
-//    struct flow_job_jpeg_decoder_state * state = (struct flow_job_jpeg_decoder_state *)cinfo->err;
-//
-//    // Linearize
-//    float linearized[DCTSIZE2];
-//    for (i = 0; i < DCTSIZE2; i++)
-//        linearized[i] = state->lut_to_linear[intermediate[i]];
-//
-//    // Scale and transpose
-//    float scaled_h[DCTSIZE2];
-//    for (int row = 0; row < DCTSIZE; row++) {
-//        float * linearized_row = &linearized[row * DCTSIZE];
-//        for (int to = 0; to < scaled; to++) {
-//            const float * weights = weights_by_target[scaled - 1] + DCTSIZE * to;
-//            float sum = 0;
-//            for (int from = 0; from < DCTSIZE; from++) {
-//                sum += weights[from] * linearized_row[from];
-//            }
-//            scaled_h[to * DCTSIZE + row] = sum;
-//        }
-//    }
-//    // Scale and transpose again
-//    for (int row = 0; row < scaled; row++) {
-//        for (int to = 0; to < scaled; to++) {
-//            const float * weights = weights_by_target[scaled - 1] + DCTSIZE * to;
-//            float sum = 0;
-//            for (int from = 0; from < DCTSIZE; from++) {
-//                sum += weights[from] * scaled_h[row * DCTSIZE + from];
-//            }
-//            *(output_buf[to] + output_col + row) =  state->flat_lut_linear[(size_t)(sum * (sizeof(state->flat_lut_linear) -1))];
-//        }
-//    }
-//
-//}
-
-#define jpeg_idct_downscale_wrap_islow_fast_generic(cinfo, compptr, coef_block, output_buf, output_col, scaled, weight_matrix) \
+#define jpeg_idct_downscale_wrap_islow_fast_generic(cinfo, compptr, coef_block, output_buf, output_col, scaled, summation) \
 JSAMPLE result[DCTSIZE2];\
 JSAMPROW rows[DCTSIZE] = {&result[0], &result[DCTSIZE], &result[DCTSIZE * 2], &result[DCTSIZE * 3], &result[DCTSIZE * 4], &result[DCTSIZE *5], &result[DCTSIZE * 6], &result[DCTSIZE *7]};\
 int i; \
@@ -169,72 +113,86 @@ for (i = 0; i < DCTSIZE2; i++)\
     linearized[i] = state->lut_to_linear[result[i]]; \
 float scaled_h[DCTSIZE2];\
 for (int row = 0; row < DCTSIZE; row++) {\
-    float * linearized_row = &linearized[row * DCTSIZE];\
-    for (int to = 0; to < scaled; to++) {\
-        float sum = 0;\
-        for (int from = 0; from < DCTSIZE; from++) {\
-            sum += weight_matrix[to][from] * linearized_row[from];\
-        }\
-        scaled_h[to * DCTSIZE + row] = sum;\
-    }\
+    float * r = &linearized[row * DCTSIZE];\
+    float * dest = &scaled_h[row]; \
+    summation \
 }\
 for (int row = 0; row < scaled; row++) {\
-    float * transposed_row = &scaled_h[row * DCTSIZE]; \
-    for (int to = 0; to < scaled; to++) {\
+    float * r = &scaled_h[row * DCTSIZE]; \
+    float * dest = &linearized[row]; \
+    summation \
+} \
+for (int row = 0; row < scaled; row++) {\
+    for (int col = 0; col < scaled; col++) {\
+        *(output_buf[row] + output_col + col) =  state->flat_lut_linear[(size_t)(linearized[row * DCTSIZE + col] * (sizeof(state->flat_lut_linear) -1))];\
+    }\
+} \
+
+#define DEFAULT_WEIGHTED_SUM(scaled, matrix) \
+  for (int to = 0; to < scaled; to++) {\
         float sum = 0;\
         for (int from = 0; from < DCTSIZE; from++) {\
-            sum += weight_matrix[to][from] * transposed_row[from];\
+            sum += matrix[to][from] * r[from];\
         }\
-        *(output_buf[to] + output_col + row) =  state->flat_lut_linear[(size_t)(sum * (sizeof(state->flat_lut_linear) -1))];\
+        dest[to * DCTSIZE] = sum; \
     }\
-}
 
 void jpeg_idct_downscale_wrap_islow_fast_1x1(j_decompress_ptr cinfo, jpeg_component_info * compptr, JCOEFPTR coef_block,
                                          JSAMPARRAY output_buf, JDIMENSION output_col){
-    jpeg_idct_downscale_wrap_islow_fast_generic(cinfo, compptr, coef_block, output_buf, output_col, 1, jpeg_scale_to_1_x_1_weights);
+    jpeg_idct_downscale_wrap_islow_fast_generic(cinfo, compptr, coef_block, output_buf, output_col, 1, DEFAULT_WEIGHTED_SUM(1, jpeg_scale_to_1_x_1_weights));
 }
 
 void jpeg_idct_downscale_wrap_islow_fast_2x2(j_decompress_ptr cinfo, jpeg_component_info * compptr, JCOEFPTR coef_block,
                                              JSAMPARRAY output_buf, JDIMENSION output_col){
-    jpeg_idct_downscale_wrap_islow_fast_generic(cinfo, compptr, coef_block, output_buf, output_col, 2, jpeg_scale_to_2_x_2_weights);
+    jpeg_idct_downscale_wrap_islow_fast_generic(cinfo, compptr, coef_block, output_buf, output_col, 2, DEFAULT_WEIGHTED_SUM(2, jpeg_scale_to_2_x_2_weights));
 }
 
 void jpeg_idct_downscale_wrap_islow_fast_3x3(j_decompress_ptr cinfo, jpeg_component_info * compptr, JCOEFPTR coef_block,
                                              JSAMPARRAY output_buf, JDIMENSION output_col){
-    jpeg_idct_downscale_wrap_islow_fast_generic(cinfo, compptr, coef_block, output_buf, output_col, 3, jpeg_scale_to_3_x_3_weights);
+    jpeg_idct_downscale_wrap_islow_fast_generic(cinfo, compptr, coef_block, output_buf, output_col, 3, DEFAULT_WEIGHTED_SUM(3, jpeg_scale_to_3_x_3_weights));
 }
 
 void jpeg_idct_downscale_wrap_islow_fast_4x4(j_decompress_ptr cinfo, jpeg_component_info * compptr, JCOEFPTR coef_block,
                                              JSAMPARRAY output_buf, JDIMENSION output_col){
-    jpeg_idct_downscale_wrap_islow_fast_generic(cinfo, compptr, coef_block, output_buf, output_col, 4, jpeg_scale_to_4_x_4_weights);
+    jpeg_idct_downscale_wrap_islow_fast_generic(cinfo, compptr, coef_block, output_buf, output_col, 4, DEFAULT_WEIGHTED_SUM(4, jpeg_scale_to_4_x_4_weights));
 }
 
 void jpeg_idct_downscale_wrap_islow_fast_5x5(j_decompress_ptr cinfo, jpeg_component_info * compptr, JCOEFPTR coef_block,
                                              JSAMPARRAY output_buf, JDIMENSION output_col){
-    jpeg_idct_downscale_wrap_islow_fast_generic(cinfo, compptr, coef_block, output_buf, output_col, 5, jpeg_scale_to_5_x_5_weights);
+    jpeg_idct_downscale_wrap_islow_fast_generic(cinfo, compptr, coef_block, output_buf, output_col, 5, DEFAULT_WEIGHTED_SUM(5, jpeg_scale_to_5_x_5_weights));
 }
 
 void jpeg_idct_downscale_wrap_islow_fast_6x6(j_decompress_ptr cinfo, jpeg_component_info * compptr, JCOEFPTR coef_block,
                                              JSAMPARRAY output_buf, JDIMENSION output_col){
-    jpeg_idct_downscale_wrap_islow_fast_generic(cinfo, compptr, coef_block, output_buf, output_col, 6, jpeg_scale_to_6_x_6_weights);
+    jpeg_idct_downscale_wrap_islow_fast_generic(cinfo, compptr, coef_block, output_buf, output_col, 6, DEFAULT_WEIGHTED_SUM(6, jpeg_scale_to_6_x_6_weights));
 }
 
 void jpeg_idct_downscale_wrap_islow_fast_7x7(j_decompress_ptr cinfo, jpeg_component_info * compptr, JCOEFPTR coef_block,
                                              JSAMPARRAY output_buf, JDIMENSION output_col){
-    jpeg_idct_downscale_wrap_islow_fast_generic(cinfo, compptr, coef_block, output_buf, output_col, 7, jpeg_scale_to_7_x_7_weights);
+
+#define WEIGHTED_SUM_7x7 \
+dest[0 * DCTSIZE] = r[0] * 0.9039465785026550293 + r[1] * 0.0960534214973449707 + 0 + 0 + 0 + 0 + 0 + 0; \
+dest[1 * DCTSIZE] = r[0] *-0.0159397963434457779 + r[1] * 0.8046712279319763184 + r[2] * 0.2112685889005661011 + 0 + 0 + 0 + 0 + 0; \
+dest[2 * DCTSIZE] = 0 + r[1] * -0.0307929217815399170 +r[2] * 0.6724552512168884277 + r[3] * 0.3583376407623291016 + 0 + 0 + 0 + 0; \
+dest[3 * DCTSIZE] = 0 + 0 + r[2] * -0.0303521882742643356 +r[3] * 0.5303522348403930664 + r[4] * 0.5303522348403930664 + r[5] * -0.0303521882742643356 +0 + 0; \
+dest[4 * DCTSIZE] = 0 + 0 + 0 + 0 + r[4] * 0.3583376407623291016 + r[5] * 0.6724552512168884277 + r[6] * -0.0307929217815399170 +0; \
+dest[5 * DCTSIZE] = 0 + 0 + 0 + 0 + 0 + r[5] * 0.2112685889005661011 + r[6] * 0.8046712279319763184 + r[7] * -0.0159397963434457779; \
+dest[6 * DCTSIZE] = 0 + 0 + 0 + 0 + 0 + 0 + r[6] * 0.0960534214973449707 + r[7] * 0.9039465785026550293; \
+
+    jpeg_idct_downscale_wrap_islow_fast_generic(cinfo, compptr, coef_block, output_buf, output_col, 7, WEIGHTED_SUM_7x7);
 }
 
 
-void jpeg_idct_downscale_wrap_islow_fast(j_decompress_ptr cinfo, jpeg_component_info * compptr, JCOEFPTR coef_block,
-                                             JSAMPARRAY output_buf, JDIMENSION output_col){
+// void jpeg_idct_downscale_wrap_islow_fast(j_decompress_ptr cinfo, jpeg_component_info * compptr, JCOEFPTR coef_block,
+//                                              JSAMPARRAY output_buf, JDIMENSION output_col){
 
-#if JPEG_LIB_VERSION >= 70
-    int scaled = compptr->DCT_h_scaled_size;
-#else
-    int scaled = compptr->DCT_scaled_size;
-#endif
+// #if JPEG_LIB_VERSION >= 70
+//     int scaled = compptr->DCT_h_scaled_size;
+// #else
+//     int scaled = compptr->DCT_scaled_size;
+// #endif
 
 
-    jpeg_idct_downscale_wrap_islow_fast_generic(cinfo, compptr, coef_block, output_buf, output_col, scaled, (&weights_by_target[scaled - 1]));
-}
+//     jpeg_idct_downscale_wrap_islow_fast_generic(cinfo, compptr, coef_block, output_buf, output_col, scaled, DEFAULT_WEIGHTED_SUM(scaled,&weights_by_target[scaled - 1]));
+// }
 
