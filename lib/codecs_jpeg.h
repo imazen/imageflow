@@ -37,6 +37,7 @@ struct flow_job_jpeg_decoder_state {
 
     struct flow_decoder_downscale_hints hints;
     float lut_to_linear[256];
+    uint16_t lut_linear_to_srgb[258];
     flow_job_jpeg_linear_to_srgb linear_to_srgb;
 };
 

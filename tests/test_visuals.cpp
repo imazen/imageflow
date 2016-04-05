@@ -249,8 +249,14 @@ TEST_CASE("Test gamma 2.2 gamma approximations downscale method", "")
     if (!flow_job_decoder_set_downscale_hints_by_placeholder_id(c, job, input_placeholder, new_w, new_h, new_w, new_h, true, 2.2f)) {
         ERR(c);
     }
-    //Execution time for gamma 2.2 decoding (ticks): 1791750
-
+    // Execution time for gamma 2.2 decoding (ticks): 1791750 (pow)
+    // Execution time for gamma 2.2 decoding (ticks): 1428526 (fastpow) 75 -> 42
+    //Execution time for gamma 2.2 decoding (ticks): 638640
+    // Execution time for gamma 2.2 decoding (ticks): 1291405 (fasterpow - bad) 75 -> 25
+    // Execution time for gamma 1.0 decoding (ticks): 1044632
+    // Execution time for gamma 1.0 decoding (ticks): 501,865
+    // Execution time for gamma 2.2 decoding LUT in two directions (ticks): 1565, 698
+    // Execution time for gamma 2.2 decoding LUT in two directions (ticks): 762,585
     struct flow_graph * g = flow_graph_create(c, 10, 10, 200, 2.0);
     ERR(c);
     struct flow_bitmap_bgra * b;

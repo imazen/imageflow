@@ -5,6 +5,7 @@
 #include "lcms2.h"
 #include "codecs.h"
 #include "codecs_jpeg.h"
+#include "fastapprox.h"
 
 static uint8_t jpeg_bytes_a[] = { 0xFF, 0xD8, 0xFF, 0xDB };
 static uint8_t jpeg_bytes_b[] = { 0xFF, 0xD8, 0xFF, 0xE0 };
@@ -274,12 +275,32 @@ static bool set_downscale_hints(flow_c * c, struct flow_job * job, struct flow_c
 void jpeg_idct_downscale_wrap_islow_fast(j_decompress_ptr cinfo, jpeg_component_info * compptr, JCOEFPTR coef_block,
                                          JSAMPARRAY output_buf, JDIMENSION output_col);
 
-static inline uint8_t fast_linear_to_srgb(struct flow_job_jpeg_decoder_state * state, float x)
+static inline uint8_t fast_linear_to_srgb(struct flow_job_jpeg_decoder_state * state, float value_0_to_1)
 {
+//    uint16_t x = (uint16_t)(value_0_to_1 * (256.0f * 256.0f - 1));
+//    int min = 1;
+//    int max = 258;
+//    int n = (min + max) /2;
+//    while (min != max){
+//        if (x < state->lut_linear_to_srgb[n]) {
+//            if ( x >= state->lut_linear_to_srgb[n -1]) return n-1;
+//            else max = n -1;
+//        }
+//        else min = n + 1;
+//        n = (min + max) / 2;
+//    }
+//    return n - 1;
+//    //fprintf(stderr, "Failed to locate value for %.08f\n", value_0_to_1);
+//    return 0;
+//
+
+    float x =value_0_to_1;
     if (state->hints.gamma_to_lift_during_scaling == 2.4f) {
         return uchar_clamp_ff(linear_to_srgb(x));
+    }else if (state->hints.gamma_to_lift_during_scaling == 1.0){
+        return uchar_clamp_ff(255.0f * x);
     }else{
-        return uchar_clamp_ff(255.0f * pow(x, 1.0f / state->hints.gamma_to_lift_during_scaling));
+        return uchar_clamp_ff(255.0f * fastpow(x, 1.0f / state->hints.gamma_to_lift_during_scaling));
     }
 }
 
@@ -295,6 +316,14 @@ static void populate_lookup_tables(struct flow_job_jpeg_decoder_state * state){
             //fprintf(stdout, "Delta gamma %0.3f <-> srgb for byte %i == %.020f\n", state->hints.gamma_to_lift_during_scaling, i, srgb_to_linear(((float)i) * (float)(1.0f / 255.0f)) - state->lut_to_linear[i]);
         }
     }
+    for (int i = 0; i < count -1; i++) {
+        state->lut_linear_to_srgb[i + 1] = (short)round(
+            (state->lut_to_linear[i] + state->lut_to_linear[i + 1]) * (256.0f * 256.0f - 1) / 2.0f);
+    }
+    state->lut_linear_to_srgb[0] = 0;
+    state->lut_linear_to_srgb[count + 1] = (256 * 256 - 1);
+
+
     state->linear_to_srgb = fast_linear_to_srgb;
 
     for (int i = 0; i < count; i++) {
