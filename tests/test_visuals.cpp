@@ -279,11 +279,9 @@ TEST_CASE("Test srgb lookup table downscale method", "")
         ERR(c);
     }
     fprintf(stdout, "Execution time for srgb decoding (ms): %d \n", (int)(g->nodes[decode_node].ticks_elapsed * 1000/ flow_get_profiler_ticks_per_second()));
-    fflush(stdout);
-    exit(0);
 
-    bool match = visual_compare(c, b, "ScaleIDCT_approx_gamma", store_checksums, __FILE__, __func__, __LINE__);
-    REQUIRE(match == true);
+//    bool match = visual_compare(c, b, "ScaleIDCT_approx_gamma", store_checksums, __FILE__, __func__, __LINE__);
+//    REQUIRE(match == true);
     ERR(c);
     flow_context_destroy(c);
 }
@@ -356,7 +354,7 @@ TEST_CASE("Test 8->4 downscaling contrib windows", "")
 }
 
 #ifdef GENERATE_CODE_LITERALS
-TEST_CASE("Export weights", "")
+TEST_CASE("Export float weights", "")
 {
     flow_c * c = flow_context_create();
 
@@ -385,7 +383,7 @@ TEST_CASE("Export weights", "")
     flow_context_destroy(c);
 }
 
-TEST_CASE("Export LUT", "")
+TEST_CASE("Export float LUT", "")
 {
     flow_c * c = flow_context_create();
 
@@ -406,6 +404,79 @@ TEST_CASE("Export LUT", "")
     fprintf(stdout, "};\n");
     flow_context_destroy(c);
 }
+#endif
+
+#ifdef GENERATE_CODE_LITERALS
+
+#define FLOW_SHORT_MAX (256 * 64)
+#define FLOW_SHORT_REVERSE_LUT_DIVISOR
+#define FLOW_SHORTS_PER_LINE 16
+#define REVERSE_LUT_SIZE (256 * 14)
+#define FLOW_WEIGHT_DIVISOR FLOW_SHORT_MAX
+TEST_CASE("Export short LUTs", "")
+{
+    uint8_t reverse_lut[REVERSE_LUT_SIZE];
+    fprintf(stdout, "static const uint8_t lut_linear_short_to_srgb[%d] = {\n", REVERSE_LUT_SIZE);
+    for (int a = 0; a < REVERSE_LUT_SIZE / FLOW_SHORTS_PER_LINE; a++) {
+        fprintf(stdout, "    ");
+        for (int b = 0; b < FLOW_SHORTS_PER_LINE; b++) {
+            int index = a * FLOW_SHORTS_PER_LINE + b;
+            uint8_t v = uchar_clamp_ff(linear_to_srgb(((float)index + 0.5) / (float)(REVERSE_LUT_SIZE - 0.5) ));
+            reverse_lut[index] = v;
+            fprintf(stdout, "%d, ", v);
+        }
+        fprintf(stdout, "\n");
+    }
+    fprintf(stdout, "};\n");
+
+    int16_t lut[256];
+    fprintf(stdout, "static const int16_t lut_srgb_to_linear_short[256] = {\n");
+    for (int a = 0; a < 256 / FLOW_SHORTS_PER_LINE; a++) {
+        fprintf(stdout, "    ");
+        for (int b = 0; b < FLOW_SHORTS_PER_LINE; b++) {
+            uint8_t index = (uint8_t)(a * FLOW_SHORTS_PER_LINE + b);
+            lut[index] = (int16_t)round(srgb_to_linear((float)index * (1.0f / 255.0f)) * FLOW_SHORT_MAX);
+            uint32_t reverse_lut_index = (uint32_t)lut[index] * (REVERSE_LUT_SIZE -1) / FLOW_SHORT_MAX;
+            int roundtrip = reverse_lut[reverse_lut_index > REVERSE_LUT_SIZE -1 ? REVERSE_LUT_SIZE -1 : reverse_lut_index];
+            if (roundtrip != index){
+                fprintf(stderr, "/* Failed to roundtrip byte %d - linear short = %d, but roundtripped to %d */\n", index, lut[index], roundtrip);
+            }
+            fprintf(stdout, "%d, ", lut[index]);
+        }
+        fprintf(stdout, "\n");
+    }
+    fprintf(stdout, "};\n");
+
+}
+TEST_CASE("Export short weights", "")
+{
+    flow_c * c = flow_context_create();
+
+    struct flow_interpolation_details * details
+        = flow_interpolation_details_create_from(c, flow_interpolation_filter_Robidoux);
+    if (details == NULL) {
+        ERR(c);
+    }
+
+    for (int size = 7; size > 0; size--) {
+        fprintf(stdout, "static const int16_t jpeg_scale_to_%d_x_%d_weights[%d][8] = {\n", size, size, size);
+        struct flow_interpolation_line_contributions * contrib
+            = flow_interpolation_line_contributions_create(c, size, 8, details);
+        for (int i = 0; i < size; i++) {
+            int16_t eight[] = { 0, 0, 0, 0, 0, 0, 0, 0 };
+
+            for (int input_ix = contrib->ContribRow[i].Left; input_ix <= contrib->ContribRow[i].Right; input_ix++) {
+                eight[input_ix] = (int16_t)round(FLOW_WEIGHT_DIVISOR * (contrib->ContribRow[i].Weights[input_ix - contrib->ContribRow[i].Left]));
+            }
+
+            fprintf(stdout, "    { %d, %d, %d, %d, %d, %d, %d, %d },\n", eight[0],
+                    eight[1], eight[2], eight[3], eight[4], eight[5], eight[6], eight[7]);
+        }
+        fprintf(stdout, "};\n");
+    }
+    flow_context_destroy(c);
+}
+
 #endif
 
 static const char * const test_images[] = {
