@@ -275,61 +275,61 @@ static bool set_downscale_hints(flow_c * c, struct flow_job * job, struct flow_c
 void jpeg_idct_downscale_wrap_islow_fast(j_decompress_ptr cinfo, jpeg_component_info * compptr, JCOEFPTR coef_block,
                                          JSAMPARRAY output_buf, JDIMENSION output_col);
 
-static inline uint8_t fast_linear_to_srgb(struct flow_job_jpeg_decoder_state * state, float value_0_to_1)
-{
-//    uint16_t x = (uint16_t)(value_0_to_1 * (256.0f * 256.0f - 1));
-//    int min = 1;
-//    int max = 258;
-//    int n = (min + max) /2;
-//    while (min != max){
-//        if (x < state->lut_linear_to_srgb[n]) {
-//            if ( x >= state->lut_linear_to_srgb[n -1]) return n-1;
-//            else max = n -1;
-//        }
-//        else min = n + 1;
-//        n = (min + max) / 2;
-//    }
-//    return n - 1;
-//    //fprintf(stderr, "Failed to locate value for %.08f\n", value_0_to_1);
-//    return 0;
-//
+void jpeg_idct_downscale_wrap_islow_fast_1x1(j_decompress_ptr cinfo, jpeg_component_info * compptr, JCOEFPTR coef_block,
+                                             JSAMPARRAY output_buf, JDIMENSION output_col);
 
-    float x =value_0_to_1;
+void jpeg_idct_downscale_wrap_islow_fast_2x2(j_decompress_ptr cinfo, jpeg_component_info * compptr, JCOEFPTR coef_block,
+                                             JSAMPARRAY output_buf, JDIMENSION output_col);
+
+void jpeg_idct_downscale_wrap_islow_fast_3x3(j_decompress_ptr cinfo, jpeg_component_info * compptr, JCOEFPTR coef_block,
+                                             JSAMPARRAY output_buf, JDIMENSION output_col);
+
+void jpeg_idct_downscale_wrap_islow_fast_4x4(j_decompress_ptr cinfo, jpeg_component_info * compptr, JCOEFPTR coef_block,
+                                             JSAMPARRAY output_buf, JDIMENSION output_col);
+
+void jpeg_idct_downscale_wrap_islow_fast_5x5(j_decompress_ptr cinfo, jpeg_component_info * compptr, JCOEFPTR coef_block,
+                                             JSAMPARRAY output_buf, JDIMENSION output_col);
+
+void jpeg_idct_downscale_wrap_islow_fast_6x6(j_decompress_ptr cinfo, jpeg_component_info * compptr, JCOEFPTR coef_block,
+                                             JSAMPARRAY output_buf, JDIMENSION output_col);
+
+void jpeg_idct_downscale_wrap_islow_fast_7x7(j_decompress_ptr cinfo, jpeg_component_info * compptr, JCOEFPTR coef_block,
+                                             JSAMPARRAY output_buf, JDIMENSION output_col);
+
+static inline uint8_t fast_linear_to_srgb(struct flow_job_jpeg_decoder_state * state, float x)
+{
     if (state->hints.gamma_to_lift_during_scaling == 2.4f) {
         return uchar_clamp_ff(linear_to_srgb(x));
-    }else if (state->hints.gamma_to_lift_during_scaling == 1.0){
-        return uchar_clamp_ff(255.0f * x);
     }else{
-        return uchar_clamp_ff(255.0f * fastpow(x, 1.0f / state->hints.gamma_to_lift_during_scaling));
+        return uchar_clamp_ff(255.0f * powf(x, 1.0f / state->hints.gamma_to_lift_during_scaling));
     }
 }
 
 static void populate_lookup_tables(struct flow_job_jpeg_decoder_state * state){
     int count = sizeof(state->lut_to_linear) / sizeof(float);
+    int i;
     if (state->hints.gamma_to_lift_during_scaling == 2.4f) {
-        for (int i = 0; i < count; i++) {
-            state->lut_to_linear[i] = srgb_to_linear(((float)i) * (float)(1.0f / 255.0f));
+        for ( i = 0; i < count; i++) {
+            state->lut_to_linear[i] = srgb_to_linear((float)i * (1.0f / 255.0f));
         }
+
     }else{
-        for (int i = 0; i < count; i++) {
-            state->lut_to_linear[i] = (float)pow(((float)i) * (1.0f / 255.0f), state->hints.gamma_to_lift_during_scaling);
-            //fprintf(stdout, "Delta gamma %0.3f <-> srgb for byte %i == %.020f\n", state->hints.gamma_to_lift_during_scaling, i, srgb_to_linear(((float)i) * (float)(1.0f / 255.0f)) - state->lut_to_linear[i]);
+        for ( i = 0; i < count; i++) {
+            state->lut_to_linear[i] = powf((float)i * (1.0f / 255.0f),state->hints.gamma_to_lift_during_scaling);
+        }
+        for (i = 0; i < (int)sizeof(state->flat_lut_linear); i++) {
+            state->flat_lut_linear[i] = uchar_clamp_ff(255.0f * powf( (float)i / ((float)sizeof(state->flat_lut_linear) - 1),state->hints.gamma_to_lift_during_scaling));
         }
     }
-    for (int i = 0; i < count -1; i++) {
-        state->lut_linear_to_srgb[i + 1] = (short)round(
-            (state->lut_to_linear[i] + state->lut_to_linear[i + 1]) * (256.0f * 256.0f - 1) / 2.0f);
+    for (i = 0; i < (int)sizeof(state->flat_lut_linear); i++) {
+        state->flat_lut_linear[i] = fast_linear_to_srgb(state, (float)i / ((float)sizeof(state->flat_lut_linear) - 1));
     }
-    state->lut_linear_to_srgb[0] = 0;
-    state->lut_linear_to_srgb[count + 1] = (256 * 256 - 1);
 
-
-    state->linear_to_srgb = fast_linear_to_srgb;
-
-    for (int i = 0; i < count; i++) {
+    for (i = 0; i < count; i++) {
         float linear = state->lut_to_linear[i];
-        if (state->linear_to_srgb(state,linear) != i){
-            fprintf(stderr, "Failed to roundrip byte %i - linear= %.020f, but converted back to %i", i, linear, state->linear_to_srgb(state,linear) );
+        uint8_t reversed =  state->flat_lut_linear[(uint16_t)(linear * ((float)sizeof(state->flat_lut_linear) -1) + 0.5f)];
+        if (reversed != i){
+            fprintf(stderr, "Failed to roundrip byte %i - linear= %.020f, but converted back to %i\n", i, linear, reversed );
         }
     }
 }
@@ -348,7 +348,15 @@ static void flow_jpeg_idct_method_selector(j_decompress_ptr cinfo, jpeg_componen
     struct flow_job_jpeg_decoder_state * state = (struct flow_job_jpeg_decoder_state *)cinfo->err;
 
     if (scaled > 0 && scaled < 8 && state->hints.scale_spatially) {
-        *set_idct_method = jpeg_idct_downscale_wrap_islow_fast;
+        switch (scaled){
+            case 1: *set_idct_method = jpeg_idct_downscale_wrap_islow_fast_1x1; break;
+            case 2: *set_idct_method = jpeg_idct_downscale_wrap_islow_fast_2x2; break;
+            case 3: *set_idct_method = jpeg_idct_downscale_wrap_islow_fast_3x3; break;
+            case 4: *set_idct_method = jpeg_idct_downscale_wrap_islow_fast_4x4; break;
+            case 5: *set_idct_method = jpeg_idct_downscale_wrap_islow_fast_5x5; break;
+            case 6: *set_idct_method = jpeg_idct_downscale_wrap_islow_fast_6x6; break;
+            case 7: *set_idct_method = jpeg_idct_downscale_wrap_islow_fast_7x7; break;
+        }
         *set_idct_category = JDCT_ISLOW;
         populate_lookup_tables(state);
     }

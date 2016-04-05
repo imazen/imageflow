@@ -86,39 +86,39 @@ bool get_image_dimensions(flow_c * c, uint8_t * bytes, size_t bytes_count, int32
     flow_job_destroy(c, job);
     return true;
 }
-
-extern "C" {
-extern float * weights_by_target[7];
-}
-
-bool set_scale_weights(flow_c * c, flow_interpolation_filter filter, float blur)
-{
-    struct flow_interpolation_details * details
-        = flow_interpolation_details_create_from(c, flow_interpolation_filter_Robidoux);
-    if (details == NULL) {
-        FLOW_add_to_callstack(c);
-        return false;
-    }
-    for (int size = 1; size < 8; size++) {
-        struct flow_interpolation_line_contributions * contrib
-            = flow_interpolation_line_contributions_create(c, size, 8, details);
-        if (contrib == NULL) {
-            FLOW_add_to_callstack(c);
-            return false;
-        }
-        for (int i = 0; i < size; i++) {
-            float * eight = weights_by_target[size - 1] + i * 8;
-            memset(eight, 0, sizeof(float) * 8);
-            for (int input_ix = contrib->ContribRow[i].Left; input_ix <= contrib->ContribRow[i].Right; input_ix++) {
-                eight[input_ix] = contrib->ContribRow[i].Weights[input_ix - contrib->ContribRow[i].Left];
-            }
-        }
-        flow_interpolation_line_contributions_destroy(c, contrib);
-    }
-
-    flow_interpolation_details_destroy(c, details);
-    return true;
-}
+//
+//extern "C" {
+//extern float * weights_by_target[7];
+//}
+//
+//bool set_scale_weights(flow_c * c, flow_interpolation_filter filter, float blur)
+//{
+//    struct flow_interpolation_details * details
+//        = flow_interpolation_details_create_from(c, flow_interpolation_filter_Robidoux);
+//    if (details == NULL) {
+//        FLOW_add_to_callstack(c);
+//        return false;
+//    }
+//    for (int size = 1; size < 8; size++) {
+//        struct flow_interpolation_line_contributions * contrib
+//            = flow_interpolation_line_contributions_create(c, size, 8, details);
+//        if (contrib == NULL) {
+//            FLOW_add_to_callstack(c);
+//            return false;
+//        }
+//        for (int i = 0; i < size; i++) {
+//            float * eight = weights_by_target[size - 1] + i * 8;
+//            memset(eight, 0, sizeof(float) * 8);
+//            for (int input_ix = contrib->ContribRow[i].Left; input_ix <= contrib->ContribRow[i].Right; input_ix++) {
+//                eight[input_ix] = contrib->ContribRow[i].Weights[input_ix - contrib->ContribRow[i].Left];
+//            }
+//        }
+//        flow_interpolation_line_contributions_destroy(c, contrib);
+//    }
+//
+//    flow_interpolation_details_destroy(c, details);
+//    return true;
+//}
 
 bool scale_down(flow_c * c, uint8_t * bytes, size_t bytes_count, int idct_downscale_fn, int target_block_size,
                 int block_scale_to_x, int block_scale_to_y, int scale_to_x, int scale_to_y,
@@ -244,9 +244,9 @@ TEST_CASE("Test gamma 2.2 gamma approximations downscale method", "")
     flow_job_add_io(c, job, input, input_placeholder, FLOW_INPUT);
     int original_width, original_height;
     if (!get_image_dimensions(c, bytes,bytes_count, &original_width, &original_height)) ERR(c);
-    long new_w = (original_width * 7 + 8 - 1L) / 8L;
-    long new_h = (original_height * 7 + 8 - 1L) / 8L;
-    if (!flow_job_decoder_set_downscale_hints_by_placeholder_id(c, job, input_placeholder, new_w, new_h, new_w, new_h, true, 2.2f)) {
+    long new_w = (original_width * 1 + 8 - 1L) / 8L;
+    long new_h = (original_height * 1 + 8 - 1L) / 8L;
+    if (!flow_job_decoder_set_downscale_hints_by_placeholder_id(c, job, input_placeholder, new_w, new_h, new_w, new_h, true, 1.5f)) {
         ERR(c);
     }
     // Execution time for gamma 2.2 decoding (ticks): 1791750 (pow)
@@ -257,6 +257,17 @@ TEST_CASE("Test gamma 2.2 gamma approximations downscale method", "")
     // Execution time for gamma 1.0 decoding (ticks): 501,865
     // Execution time for gamma 2.2 decoding LUT in two directions (ticks): 1565, 698
     // Execution time for gamma 2.2 decoding LUT in two directions (ticks): 762,585
+
+    //Execution time when we add no code, let it decode to 8x8, then ignore
+    //Execution time for gamma 2.2 decoding (ticks): 375254
+    //Execution time for gamma 2.2 decoding (ms): 374  (7/8)
+    //Execution time for gamma 2.2 decoding (ms): 125  (1/8)
+
+    //Execution time for gamma 2.2 decoding (ms): 196  using lookup table. 1/8
+    //Execution time for gamma 2.2 decoding (ms): 513 7/8
+    // Execution time for gamma 2.2 decoding (ms): 490 7/8, no gamma decoding
+    //Execution time for gamma 2.2 decoding (ms): 452 6/8
+
     struct flow_graph * g = flow_graph_create(c, 10, 10, 200, 2.0);
     ERR(c);
     struct flow_bitmap_bgra * b;
@@ -267,7 +278,9 @@ TEST_CASE("Test gamma 2.2 gamma approximations downscale method", "")
     if (!flow_job_execute(c, job, &g)) {
         ERR(c);
     }
-    fprintf(stdout, "Execution time for gamma 2.2 decoding (ticks): %d \n", g->nodes[decode_node].ticks_elapsed);
+    fprintf(stdout, "Execution time for gamma 2.2 decoding (ms): %d \n", (int)(g->nodes[decode_node].ticks_elapsed * 1000/ flow_get_profiler_ticks_per_second()));
+    fflush(stdout);
+    exit(0);
 
     bool match = visual_compare(c, b, "ScaleIDCT_approx_gamma", store_checksums, __FILE__, __func__, __LINE__);
     REQUIRE(match == true);
