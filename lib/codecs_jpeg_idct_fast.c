@@ -1,3 +1,104 @@
+/*
+ * Copyright (C) 2016 Nathanael Jones.  Dual-licensed under the AGPL v3 and
+ * the following 3-clause BSD license.
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions are met:
+ *
+ * - Redistributions of source code must retain the above copyright notice,
+ *   this list of conditions and the following disclaimer.
+ * - Redistributions in binary form must reproduce the above copyright notice,
+ *   this list of conditions and the following disclaimer in the documentation
+ *   and/or other materials provided with the distribution.
+ * - Neither the name of the libjpeg-turbo Project nor the names of its
+ *   contributors may be used to endorse or promote products derived from this
+ *   software without specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS",
+ * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+ * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+ * ARE DISCLAIMED.  IN NO EVENT SHALL THE COPYRIGHT HOLDERS OR CONTRIBUTORS BE
+ * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+ * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+ * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+ * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+ * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+ * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+ * POSSIBILITY OF SUCH DAMAGE.
+ */
+
+// Usage example
+// Suggested configuration names: scale_luma_spatially and
+// gamma_correct_for_srgb_during_spatial_luma_scaling
+/*
+ static void flow_jpeg_idct_method_selector(j_decompress_ptr cinfo, jpeg_component_info * compptr,
+                                           jpeg_idct_method * set_idct_method, int * set_idct_category)
+{
+    if (compptr->component_id != 1)
+        return;
+#if JPEG_LIB_VERSION >= 70
+    int scaled = compptr->DCT_h_scaled_size;
+#else
+    int scaled = compptr->DCT_scaled_size;
+#endif
+
+    struct flow_job_jpeg_decoder_state * state = (struct flow_job_jpeg_decoder_state *)cinfo->err;
+
+    if (scaled > 0 && scaled < 8 && state->hints.scale_luma_spatially) {
+        if (state->hints.gamma_correct_for_srgb_during_spatial_luma_scaling) {
+            switch (scaled) {
+                case 1:
+                    *set_idct_method = jpeg_idct_spatial_srgb_1x1;
+                    break;
+                case 2:
+                    *set_idct_method = jpeg_idct_spatial_srgb_2x2;
+                    break;
+                case 3:
+                    *set_idct_method = jpeg_idct_spatial_srgb_3x3;
+                    break;
+                case 4:
+                    *set_idct_method = jpeg_idct_spatial_srgb_4x4;
+                    break;
+                case 5:
+                    *set_idct_method = jpeg_idct_spatial_srgb_5x5;
+                    break;
+                case 6:
+                    *set_idct_method = jpeg_idct_spatial_srgb_6x6;
+                    break;
+                case 7:
+                    *set_idct_method = jpeg_idct_spatial_srgb_7x7;
+                    break;
+            }
+        } else {
+            switch (scaled) {
+                case 1:
+                    *set_idct_method = jpeg_idct_spatial_1x1;
+                    break;
+                case 2:
+                    *set_idct_method = jpeg_idct_spatial_2x2;
+                    break;
+                case 3:
+                    *set_idct_method = jpeg_idct_spatial_3x3;
+                    break;
+                case 4:
+                    *set_idct_method = jpeg_idct_spatial_4x4;
+                    break;
+                case 5:
+                    *set_idct_method = jpeg_idct_spatial_5x5;
+                    break;
+                case 6:
+                    *set_idct_method = jpeg_idct_spatial_6x6;
+                    break;
+                case 7:
+                    *set_idct_method = jpeg_idct_spatial_7x7;
+                    break;
+            }
+        }
+        *set_idct_category = JDCT_ISLOW;
+    }
+}
+*/
+
 #include <stdio.h>
 #include <stdint.h>
 
