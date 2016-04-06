@@ -1,9 +1,19 @@
 #include <stdio.h>
-#include "imageflow_private.h"
+#include <stdint.h>
 
 #define JPEG_INTERNALS
 #include "jpeglib.h"
 #include "jdct.h" /* Private declarations for DCT subsystem */
+
+static inline uint8_t uchar_clamp_ff(float clr)
+{
+    uint16_t result;
+    result = (uint16_t)(int16_t)(clr + 0.5);
+    if (result > 255) {
+        result = (clr < 0) ? 0 : 255;
+    }
+    return (uint8_t)result;
+}
 
 void jpeg_idct_spatial_srgb_1x1(j_decompress_ptr cinfo, jpeg_component_info * compptr, JCOEFPTR coef_block,
                                 JSAMPARRAY output_buf, JDIMENSION output_col);
