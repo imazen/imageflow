@@ -16,6 +16,7 @@ Don't try to open anything in any IDE until you've run `conan install`, as cmake
 1. [Install Conan](https://www.conan.io/downloads) - installers available for download (all platforms).
 2. Install cmake (`cinst -y cmake.portable` on windows w/ chocolatey, `sudo apt-get install cmake` elsewhere)
 3. Install git (`cinst -y git.install` or `sudo apt-get install git`) 
+3. Install build tools for dependencies if they aren't pre-build: `sudo apt-get install build-essential libtool autoconf nasm`
 
 
 ```bash

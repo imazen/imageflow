@@ -64,6 +64,8 @@ if(ENABLE_TEST)
 	endfunction()
 
 	create_test(test_imageflow tests/test_context.cpp tests/test_io.cpp tests/test_graph.cpp tests/test_error_handling.cpp tests/test_visuals.cpp)
+
+	create_test(test_variations tests/test_variations.cpp)
 	#create_test(test_context tests/test_context.cpp)
 	#create_test(test_io tests/test_io.cpp)
 	#create_test(test_visuals tests/test_visuals.cpp)

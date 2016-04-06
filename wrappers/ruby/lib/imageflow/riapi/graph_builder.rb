@@ -52,8 +52,8 @@ module Imageflow
                                         or_taller_than: trigger_decoder_scaling[1].to_i,
                                         downscaled_min_width: target_decoder_size[0].to_i,
                                         downscaled_min_height: target_decoder_size[1].to_i,
-                                        scale_spatially: true,
-                                        gamma_to_lift_during_scaling: 2.4)
+                                        scale_luma_spatially: true,
+                                        gamma_correct_for_srgb_during_spatial_luma_scaling: true)
 
         updated_info = job.get_decoder_info(placeholder_id: input_placeholder_id)
 

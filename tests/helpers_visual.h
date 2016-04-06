@@ -5,6 +5,8 @@
 extern "C" {
 #endif
 
+bool get_image_dimensions(flow_c * c, uint8_t * bytes, size_t bytes_count, int32_t * width, int32_t * height);
+
 bool visual_compare(flow_c * c, struct flow_bitmap_bgra * bitmap, const char * name, bool store_checksums,
                     const char * file_, const char * func_, int line_number);
 

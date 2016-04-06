@@ -346,7 +346,7 @@ bool visual_compare(flow_c * c, struct flow_bitmap_bgra * bitmap, const char * n
 
     // Compare
     if (stored_checksum != NULL && strcmp(checksum, stored_checksum) == 0) {
-        //Make sure the file is created for later
+        // Make sure the file is created for later
         if (!save_bitmap_to_visuals(c, bitmap, checksum, "trusted")) {
             FLOW_error_return(c);
         }
@@ -450,4 +450,29 @@ bool visual_compare_two(flow_c * c, struct flow_bitmap_bgra * a, struct flow_bit
     }
 
     return false;
+}
+
+bool get_image_dimensions(flow_c * c, uint8_t * bytes, size_t bytes_count, int32_t * width, int32_t * height)
+{
+    struct flow_job * job = flow_job_create(c);
+    if (job == NULL) {
+        FLOW_error_return(c);
+    }
+
+    struct flow_io * input = flow_io_create_from_memory(c, flow_io_mode_read_seekable, bytes, bytes_count, job, NULL);
+    if (input == NULL) {
+        FLOW_error_return(c);
+    }
+    if (!flow_job_add_io(c, job, input, 0, FLOW_INPUT)) {
+    }
+    struct flow_decoder_info info;
+    if (!flow_job_get_decoder_info(c, job, 0, &info)) {
+        FLOW_error_return(c);
+    }
+    *width = info.frame0_width;
+    *height = info.frame0_height;
+    if (!flow_job_destroy(c, job)) {
+        FLOW_error_return(c);
+    }
+    return true;
 }

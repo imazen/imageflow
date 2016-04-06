@@ -42,7 +42,6 @@ struct flow_job_jpeg_decoder_state {
     uint8_t flat_lut_linear[256 * 13];
 };
 
-
 struct flow_job_jpeg_codec_state_common {
     struct jpeg_error_mgr error_mgr; // MUST be first
     jmp_buf error_handler_jmp; // MUST be second

@@ -247,8 +247,8 @@ static bool flow_job_codecs_initialize_decode_jpeg(flow_c * c, struct flow_job *
         }
         state->stage = flow_job_jpg_decoder_stage_Null;
 
-        state->hints.scale_spatially = false;
-        state->hints.gamma_to_lift_during_scaling = 1;
+        state->hints.scale_luma_spatially = false;
+        state->hints.gamma_correct_for_srgb_during_spatial_luma_scaling = false;
         state->hints.downscale_if_wider_than = -1;
         state->hints.downscaled_min_width = -1;
         state->hints.downscaled_min_height = -1;
@@ -272,67 +272,47 @@ static bool set_downscale_hints(flow_c * c, struct flow_job * job, struct flow_c
     return true;
 }
 
-void jpeg_idct_downscale_wrap_islow_fast(j_decompress_ptr cinfo, jpeg_component_info * compptr, JCOEFPTR coef_block,
-                                         JSAMPARRAY output_buf, JDIMENSION output_col);
+void jpeg_idct_spatial_srgb_1x1(j_decompress_ptr cinfo, jpeg_component_info * compptr, JCOEFPTR coef_block,
+                                JSAMPARRAY output_buf, JDIMENSION output_col);
 
-void jpeg_idct_downscale_wrap_islow_fast_1x1(j_decompress_ptr cinfo, jpeg_component_info * compptr, JCOEFPTR coef_block,
-                                             JSAMPARRAY output_buf, JDIMENSION output_col);
+void jpeg_idct_spatial_srgb_2x2(j_decompress_ptr cinfo, jpeg_component_info * compptr, JCOEFPTR coef_block,
+                                JSAMPARRAY output_buf, JDIMENSION output_col);
 
-void jpeg_idct_downscale_wrap_islow_fast_2x2(j_decompress_ptr cinfo, jpeg_component_info * compptr, JCOEFPTR coef_block,
-                                             JSAMPARRAY output_buf, JDIMENSION output_col);
+void jpeg_idct_spatial_srgb_3x3(j_decompress_ptr cinfo, jpeg_component_info * compptr, JCOEFPTR coef_block,
+                                JSAMPARRAY output_buf, JDIMENSION output_col);
 
-void jpeg_idct_downscale_wrap_islow_fast_3x3(j_decompress_ptr cinfo, jpeg_component_info * compptr, JCOEFPTR coef_block,
-                                             JSAMPARRAY output_buf, JDIMENSION output_col);
+void jpeg_idct_spatial_srgb_4x4(j_decompress_ptr cinfo, jpeg_component_info * compptr, JCOEFPTR coef_block,
+                                JSAMPARRAY output_buf, JDIMENSION output_col);
 
-void jpeg_idct_downscale_wrap_islow_fast_4x4(j_decompress_ptr cinfo, jpeg_component_info * compptr, JCOEFPTR coef_block,
-                                             JSAMPARRAY output_buf, JDIMENSION output_col);
+void jpeg_idct_spatial_srgb_5x5(j_decompress_ptr cinfo, jpeg_component_info * compptr, JCOEFPTR coef_block,
+                                JSAMPARRAY output_buf, JDIMENSION output_col);
 
-void jpeg_idct_downscale_wrap_islow_fast_5x5(j_decompress_ptr cinfo, jpeg_component_info * compptr, JCOEFPTR coef_block,
-                                             JSAMPARRAY output_buf, JDIMENSION output_col);
+void jpeg_idct_spatial_srgb_6x6(j_decompress_ptr cinfo, jpeg_component_info * compptr, JCOEFPTR coef_block,
+                                JSAMPARRAY output_buf, JDIMENSION output_col);
 
-void jpeg_idct_downscale_wrap_islow_fast_6x6(j_decompress_ptr cinfo, jpeg_component_info * compptr, JCOEFPTR coef_block,
-                                             JSAMPARRAY output_buf, JDIMENSION output_col);
+void jpeg_idct_spatial_srgb_7x7(j_decompress_ptr cinfo, jpeg_component_info * compptr, JCOEFPTR coef_block,
+                                JSAMPARRAY output_buf, JDIMENSION output_col);
 
-void jpeg_idct_downscale_wrap_islow_fast_7x7(j_decompress_ptr cinfo, jpeg_component_info * compptr, JCOEFPTR coef_block,
-                                             JSAMPARRAY output_buf, JDIMENSION output_col);
+void jpeg_idct_spatial_1x1(j_decompress_ptr cinfo, jpeg_component_info * compptr, JCOEFPTR coef_block,
+                           JSAMPARRAY output_buf, JDIMENSION output_col);
 
-static inline uint8_t fast_linear_to_srgb(struct flow_job_jpeg_decoder_state * state, float x)
-{
-    if (state->hints.gamma_to_lift_during_scaling == 2.4f) {
-        return uchar_clamp_ff(linear_to_srgb(x));
-    }else{
-        return uchar_clamp_ff(255.0f * powf(x, 1.0f / state->hints.gamma_to_lift_during_scaling));
-    }
-}
+void jpeg_idct_spatial_2x2(j_decompress_ptr cinfo, jpeg_component_info * compptr, JCOEFPTR coef_block,
+                           JSAMPARRAY output_buf, JDIMENSION output_col);
 
-static void populate_lookup_tables(struct flow_job_jpeg_decoder_state * state){
-    int count = sizeof(state->lut_to_linear) / sizeof(float);
-    int i;
-    if (state->hints.gamma_to_lift_during_scaling == 2.4f) {
-        for ( i = 0; i < count; i++) {
-            state->lut_to_linear[i] = srgb_to_linear((float)i * (1.0f / 255.0f));
-        }
+void jpeg_idct_spatial_3x3(j_decompress_ptr cinfo, jpeg_component_info * compptr, JCOEFPTR coef_block,
+                           JSAMPARRAY output_buf, JDIMENSION output_col);
 
-    }else{
-        for ( i = 0; i < count; i++) {
-            state->lut_to_linear[i] = powf((float)i * (1.0f / 255.0f),state->hints.gamma_to_lift_during_scaling);
-        }
-        for (i = 0; i < (int)sizeof(state->flat_lut_linear); i++) {
-            state->flat_lut_linear[i] = uchar_clamp_ff(255.0f * powf( (float)i / ((float)sizeof(state->flat_lut_linear) - 1),state->hints.gamma_to_lift_during_scaling));
-        }
-    }
-    for (i = 0; i < (int)sizeof(state->flat_lut_linear); i++) {
-        state->flat_lut_linear[i] = fast_linear_to_srgb(state, (float)i / ((float)sizeof(state->flat_lut_linear) - 1));
-    }
+void jpeg_idct_spatial_4x4(j_decompress_ptr cinfo, jpeg_component_info * compptr, JCOEFPTR coef_block,
+                           JSAMPARRAY output_buf, JDIMENSION output_col);
 
-    for (i = 0; i < count; i++) {
-        float linear = state->lut_to_linear[i];
-        uint8_t reversed =  state->flat_lut_linear[(uint16_t)(linear * ((float)sizeof(state->flat_lut_linear) -1) + 0.5f)];
-        if (reversed != i){
-            fprintf(stderr, "Failed to roundrip byte %i - linear= %.020f, but converted back to %i\n", i, linear, reversed );
-        }
-    }
-}
+void jpeg_idct_spatial_5x5(j_decompress_ptr cinfo, jpeg_component_info * compptr, JCOEFPTR coef_block,
+                           JSAMPARRAY output_buf, JDIMENSION output_col);
+
+void jpeg_idct_spatial_6x6(j_decompress_ptr cinfo, jpeg_component_info * compptr, JCOEFPTR coef_block,
+                           JSAMPARRAY output_buf, JDIMENSION output_col);
+
+void jpeg_idct_spatial_7x7(j_decompress_ptr cinfo, jpeg_component_info * compptr, JCOEFPTR coef_block,
+                           JSAMPARRAY output_buf, JDIMENSION output_col);
 
 static void flow_jpeg_idct_method_selector(j_decompress_ptr cinfo, jpeg_component_info * compptr,
                                            jpeg_idct_method * set_idct_method, int * set_idct_category)
@@ -347,18 +327,58 @@ static void flow_jpeg_idct_method_selector(j_decompress_ptr cinfo, jpeg_componen
 
     struct flow_job_jpeg_decoder_state * state = (struct flow_job_jpeg_decoder_state *)cinfo->err;
 
-    if (scaled > 0 && scaled < 8 && state->hints.scale_spatially) {
-        switch (scaled){
-            case 1: *set_idct_method = jpeg_idct_downscale_wrap_islow_fast_1x1; break;
-            case 2: *set_idct_method = jpeg_idct_downscale_wrap_islow_fast_2x2; break;
-            case 3: *set_idct_method = jpeg_idct_downscale_wrap_islow_fast_3x3; break;
-            case 4: *set_idct_method = jpeg_idct_downscale_wrap_islow_fast_4x4; break;
-            case 5: *set_idct_method = jpeg_idct_downscale_wrap_islow_fast_5x5; break;
-            case 6: *set_idct_method = jpeg_idct_downscale_wrap_islow_fast_6x6; break;
-            case 7: *set_idct_method = jpeg_idct_downscale_wrap_islow_fast_7x7; break;
+    if (scaled > 0 && scaled < 8 && state->hints.scale_luma_spatially) {
+        if (state->hints.gamma_correct_for_srgb_during_spatial_luma_scaling) {
+            switch (scaled) {
+                case 1:
+                    *set_idct_method = jpeg_idct_spatial_srgb_1x1;
+                    break;
+                case 2:
+                    *set_idct_method = jpeg_idct_spatial_srgb_2x2;
+                    break;
+                case 3:
+                    *set_idct_method = jpeg_idct_spatial_srgb_3x3;
+                    break;
+                case 4:
+                    *set_idct_method = jpeg_idct_spatial_srgb_4x4;
+                    break;
+                case 5:
+                    *set_idct_method = jpeg_idct_spatial_srgb_5x5;
+                    break;
+                case 6:
+                    *set_idct_method = jpeg_idct_spatial_srgb_6x6;
+                    break;
+                case 7:
+                    *set_idct_method = jpeg_idct_spatial_srgb_7x7;
+                    break;
+            }
+        } else {
+            switch (scaled) {
+                case 1:
+                    *set_idct_method = jpeg_idct_spatial_1x1;
+                    break;
+                case 2:
+                    *set_idct_method = jpeg_idct_spatial_2x2;
+                    break;
+                case 3:
+                    *set_idct_method = jpeg_idct_spatial_3x3;
+                    break;
+                case 4:
+                    *set_idct_method = jpeg_idct_spatial_4x4;
+                    break;
+                case 5:
+                    *set_idct_method = jpeg_idct_spatial_5x5;
+                    break;
+                case 6:
+                    *set_idct_method = jpeg_idct_spatial_6x6;
+                    break;
+                case 7:
+                    *set_idct_method = jpeg_idct_spatial_7x7;
+                    break;
+            }
         }
         *set_idct_category = JDCT_ISLOW;
-        populate_lookup_tables(state);
+        // populate_lookup_tables(state);
     }
 }
 

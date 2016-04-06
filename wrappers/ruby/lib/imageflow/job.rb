@@ -88,9 +88,9 @@ module Imageflow
     def set_decoder_downscale_hints(placeholder_id:, if_wider_than:,
                                      or_taller_than:,  downscaled_min_width:,
                                      downscaled_min_height:,
-                                    scale_spatially: true,
-                                    gamma_to_lift_during_scaling: 2.4)
-      @c.call_method(:job_decoder_set_downscale_hints_by_placeholder_id, @ptr, placeholder_id, if_wider_than, or_taller_than, downscaled_min_width, downscaled_min_height, scale_spatially, gamma_to_lift_during_scaling);
+                                    scale_luma_spatially: true,
+                                    gamma_correct_for_srgb_during_spatial_luma_scaling: true)
+      @c.call_method(:job_decoder_set_downscale_hints_by_placeholder_id, @ptr, placeholder_id, if_wider_than, or_taller_than, downscaled_min_width, downscaled_min_height, scale_luma_spatially, gamma_correct_for_srgb_during_spatial_luma_scaling);
     end
 
 

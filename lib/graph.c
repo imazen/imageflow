@@ -296,7 +296,6 @@ int32_t flow_node_create_fill_rect(flow_c * c, struct flow_graph ** g, int32_t p
     return id;
 }
 
-
 int32_t flow_node_create_scale(flow_c * c, struct flow_graph ** g, int32_t prev_node, size_t width, size_t height,
                                flow_interpolation_filter downscale_filter, flow_interpolation_filter upscale_filter)
 {
@@ -328,8 +327,8 @@ int32_t flow_node_create_decoder(flow_c * c, struct flow_graph ** g, int32_t pre
     info->downscale_hints.or_if_taller_than = -1;
     info->downscale_hints.downscaled_min_height = -1;
     info->downscale_hints.downscaled_min_width = -1;
-    info->downscale_hints.gamma_to_lift_during_scaling = 1;
-    info->downscale_hints.scale_spatially = false;
+    info->downscale_hints.gamma_correct_for_srgb_during_spatial_luma_scaling = false;
+    info->downscale_hints.scale_luma_spatially = false;
 
     return id;
 }
