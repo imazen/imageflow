@@ -32,7 +32,8 @@
 // gamma_correct_for_srgb_during_spatial_luma_scaling
 /*
  static void flow_jpeg_idct_method_selector(j_decompress_ptr cinfo, jpeg_component_info * compptr,
-                                           jpeg_idct_method * set_idct_method, int * set_idct_category)
+                                           jpeg_idct_method * set_idct_method, int *
+set_idct_category)
 {
     if (compptr->component_id != 1)
         return;
@@ -436,7 +437,7 @@ static const float lut_srgb_to_linear[256] = {
     1.0000000000000000000,
 };
 
-#define jpeg_idct_spatial_srgb_generic(cinfo, compptr, coef_block, output_buf, output_col, scaled, summation)          \
+#define JPEG_IDCT_SPATIAL_SRGB_GENERIC(cinfo, compptr, coef_block, output_buf, output_col, scaled, summation)          \
     JSAMPLE result[DCTSIZE2];                                                                                          \
     JSAMPROW rows[DCTSIZE]                                                                                             \
         = { &result[0],           &result[DCTSIZE],     &result[DCTSIZE * 2], &result[DCTSIZE * 3],                    \
@@ -473,7 +474,7 @@ static const float lut_srgb_to_linear[256] = {
         dest[to * DCTSIZE] = sum;                                                                                      \
     }
 
-#define jpeg_idct_spatial_generic(cinfo, compptr, coef_block, output_buf, output_col, scaled, summation)               \
+#define JPEG_IDCT_SPATIAL_GENERIC(cinfo, compptr, coef_block, output_buf, output_col, scaled, summation)               \
     JSAMPLE result[DCTSIZE2];                                                                                          \
     JSAMPROW rows[DCTSIZE]                                                                                             \
         = { &result[0],           &result[DCTSIZE],     &result[DCTSIZE * 2], &result[DCTSIZE * 3],                    \
@@ -503,42 +504,42 @@ static const float lut_srgb_to_linear[256] = {
 void jpeg_idct_spatial_srgb_1x1(j_decompress_ptr cinfo, jpeg_component_info * compptr, JCOEFPTR coef_block,
                                 JSAMPARRAY output_buf, JDIMENSION output_col)
 {
-    jpeg_idct_spatial_srgb_generic(cinfo, compptr, coef_block, output_buf, output_col, 1,
+    JPEG_IDCT_SPATIAL_SRGB_GENERIC(cinfo, compptr, coef_block, output_buf, output_col, 1,
                                    DEFAULT_WEIGHTED_SUM(1, jpeg_scale_to_1_x_1_weights));
 }
 
 void jpeg_idct_spatial_srgb_2x2(j_decompress_ptr cinfo, jpeg_component_info * compptr, JCOEFPTR coef_block,
                                 JSAMPARRAY output_buf, JDIMENSION output_col)
 {
-    jpeg_idct_spatial_srgb_generic(cinfo, compptr, coef_block, output_buf, output_col, 2,
+    JPEG_IDCT_SPATIAL_SRGB_GENERIC(cinfo, compptr, coef_block, output_buf, output_col, 2,
                                    DEFAULT_WEIGHTED_SUM(2, jpeg_scale_to_2_x_2_weights));
 }
 
 void jpeg_idct_spatial_srgb_3x3(j_decompress_ptr cinfo, jpeg_component_info * compptr, JCOEFPTR coef_block,
                                 JSAMPARRAY output_buf, JDIMENSION output_col)
 {
-    jpeg_idct_spatial_srgb_generic(cinfo, compptr, coef_block, output_buf, output_col, 3,
+    JPEG_IDCT_SPATIAL_SRGB_GENERIC(cinfo, compptr, coef_block, output_buf, output_col, 3,
                                    DEFAULT_WEIGHTED_SUM(3, jpeg_scale_to_3_x_3_weights));
 }
 
 void jpeg_idct_spatial_srgb_4x4(j_decompress_ptr cinfo, jpeg_component_info * compptr, JCOEFPTR coef_block,
                                 JSAMPARRAY output_buf, JDIMENSION output_col)
 {
-    jpeg_idct_spatial_srgb_generic(cinfo, compptr, coef_block, output_buf, output_col, 4,
+    JPEG_IDCT_SPATIAL_SRGB_GENERIC(cinfo, compptr, coef_block, output_buf, output_col, 4,
                                    DEFAULT_WEIGHTED_SUM(4, jpeg_scale_to_4_x_4_weights));
 }
 
 void jpeg_idct_spatial_srgb_5x5(j_decompress_ptr cinfo, jpeg_component_info * compptr, JCOEFPTR coef_block,
                                 JSAMPARRAY output_buf, JDIMENSION output_col)
 {
-    jpeg_idct_spatial_srgb_generic(cinfo, compptr, coef_block, output_buf, output_col, 5,
+    JPEG_IDCT_SPATIAL_SRGB_GENERIC(cinfo, compptr, coef_block, output_buf, output_col, 5,
                                    DEFAULT_WEIGHTED_SUM(5, jpeg_scale_to_5_x_5_weights));
 }
 
 void jpeg_idct_spatial_srgb_6x6(j_decompress_ptr cinfo, jpeg_component_info * compptr, JCOEFPTR coef_block,
                                 JSAMPARRAY output_buf, JDIMENSION output_col)
 {
-    jpeg_idct_spatial_srgb_generic(cinfo, compptr, coef_block, output_buf, output_col, 6,
+    JPEG_IDCT_SPATIAL_SRGB_GENERIC(cinfo, compptr, coef_block, output_buf, output_col, 6,
                                    DEFAULT_WEIGHTED_SUM(6, jpeg_scale_to_6_x_6_weights));
 }
 
@@ -555,49 +556,49 @@ void jpeg_idct_spatial_srgb_7x7(j_decompress_ptr cinfo, jpeg_component_info * co
     dest[4 * DCTSIZE] = r[4] * 0.3583376407623291016 + r[5] * 0.6724552512168884277 + r[6] * -0.0307929217815399170;   \
     dest[5 * DCTSIZE] = r[5] * 0.2112685889005661011 + r[6] * 0.8046712279319763184 + r[7] * -0.0159397963434457779;   \
     dest[6 * DCTSIZE] = r[6] * 0.0960534214973449707 + r[7] * 0.9039465785026550293;
-
-    jpeg_idct_spatial_srgb_generic(cinfo, compptr, coef_block, output_buf, output_col, 7, WEIGHTED_SUM_7x7);
+    JPEG_IDCT_SPATIAL_SRGB_GENERIC(cinfo, compptr, coef_block, output_buf, output_col, 7, WEIGHTED_SUM_7x7);
+#undef WEIGHTED_SUM_7x7
 }
 
 void jpeg_idct_spatial_1x1(j_decompress_ptr cinfo, jpeg_component_info * compptr, JCOEFPTR coef_block,
                            JSAMPARRAY output_buf, JDIMENSION output_col)
 {
-    jpeg_idct_spatial_generic(cinfo, compptr, coef_block, output_buf, output_col, 1,
+    JPEG_IDCT_SPATIAL_GENERIC(cinfo, compptr, coef_block, output_buf, output_col, 1,
                               DEFAULT_WEIGHTED_SUM(1, jpeg_scale_to_1_x_1_weights));
 }
 
 void jpeg_idct_spatial_2x2(j_decompress_ptr cinfo, jpeg_component_info * compptr, JCOEFPTR coef_block,
                            JSAMPARRAY output_buf, JDIMENSION output_col)
 {
-    jpeg_idct_spatial_generic(cinfo, compptr, coef_block, output_buf, output_col, 2,
+    JPEG_IDCT_SPATIAL_GENERIC(cinfo, compptr, coef_block, output_buf, output_col, 2,
                               DEFAULT_WEIGHTED_SUM(2, jpeg_scale_to_2_x_2_weights));
 }
 
 void jpeg_idct_spatial_3x3(j_decompress_ptr cinfo, jpeg_component_info * compptr, JCOEFPTR coef_block,
                            JSAMPARRAY output_buf, JDIMENSION output_col)
 {
-    jpeg_idct_spatial_generic(cinfo, compptr, coef_block, output_buf, output_col, 3,
+    JPEG_IDCT_SPATIAL_GENERIC(cinfo, compptr, coef_block, output_buf, output_col, 3,
                               DEFAULT_WEIGHTED_SUM(3, jpeg_scale_to_3_x_3_weights));
 }
 
 void jpeg_idct_spatial_4x4(j_decompress_ptr cinfo, jpeg_component_info * compptr, JCOEFPTR coef_block,
                            JSAMPARRAY output_buf, JDIMENSION output_col)
 {
-    jpeg_idct_spatial_generic(cinfo, compptr, coef_block, output_buf, output_col, 4,
+    JPEG_IDCT_SPATIAL_GENERIC(cinfo, compptr, coef_block, output_buf, output_col, 4,
                               DEFAULT_WEIGHTED_SUM(4, jpeg_scale_to_4_x_4_weights));
 }
 
 void jpeg_idct_spatial_5x5(j_decompress_ptr cinfo, jpeg_component_info * compptr, JCOEFPTR coef_block,
                            JSAMPARRAY output_buf, JDIMENSION output_col)
 {
-    jpeg_idct_spatial_generic(cinfo, compptr, coef_block, output_buf, output_col, 5,
+    JPEG_IDCT_SPATIAL_GENERIC(cinfo, compptr, coef_block, output_buf, output_col, 5,
                               DEFAULT_WEIGHTED_SUM(5, jpeg_scale_to_5_x_5_weights));
 }
 
 void jpeg_idct_spatial_6x6(j_decompress_ptr cinfo, jpeg_component_info * compptr, JCOEFPTR coef_block,
                            JSAMPARRAY output_buf, JDIMENSION output_col)
 {
-    jpeg_idct_spatial_srgb_generic(cinfo, compptr, coef_block, output_buf, output_col, 6,
+    JPEG_IDCT_SPATIAL_SRGB_GENERIC(cinfo, compptr, coef_block, output_buf, output_col, 6,
                                    DEFAULT_WEIGHTED_SUM(6, jpeg_scale_to_6_x_6_weights));
 }
 
@@ -614,6 +615,8 @@ void jpeg_idct_spatial_7x7(j_decompress_ptr cinfo, jpeg_component_info * compptr
     dest[4 * DCTSIZE] = r[4] * 0.3583376407623291016 + r[5] * 0.6724552512168884277 + r[6] * -0.0307929217815399170;   \
     dest[5 * DCTSIZE] = r[5] * 0.2112685889005661011 + r[6] * 0.8046712279319763184 + r[7] * -0.0159397963434457779;   \
     dest[6 * DCTSIZE] = r[6] * 0.0960534214973449707 + r[7] * 0.9039465785026550293;
-
-    jpeg_idct_spatial_generic(cinfo, compptr, coef_block, output_buf, output_col, 7, WEIGHTED_SUM_7x7);
+    JPEG_IDCT_SPATIAL_GENERIC(cinfo, compptr, coef_block, output_buf, output_col, 7, WEIGHTED_SUM_7x7);
+#undef WEIGHTED_SUM_7x7
 }
+#undef JPEG_IDCT_SPATIAL_GENERIC
+#undef JPEG_IDCT_SPATIAL_SRGB_GENERIC
