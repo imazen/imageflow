@@ -1,0 +1,9 @@
+require 'optparse'
+require 'benchmark'
+require "imageflow/riapi/url"
+require "imageflow/riapi/instructions"
+require "imageflow/riapi/image_layout_engine"
+require "imageflow/riapi/graph_builder"
+require "imageflow/vips/thumbnail_options"
+require "imageflow/vips/engine"
+require "imageflow/vips/cli"
