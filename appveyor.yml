@@ -9,9 +9,12 @@ configuration: Release
 platform:
 - x86
 - x64
-
+#We install nasm in case libjpeg-turbo has to be built from source
 install:
-  - set PATH=%PATH%;%PYTHON%/Scripts/
+  - curl -L -o nasminst.exe http://libgd.blob.core.windows.net/nasm/nasm-2.07-installer.exe
+  - start /wait nasminst.exe /S
+  - ps: $env:path="C:\Program Files (x86)\nasm;$($env:path)"
+  - set PATH=%PATH%;%PYTHON%/Scripts/;C:\Program Files (x86)\nasm
   - pip.exe install conan
   - conan user # It creates the conan data directory
 
