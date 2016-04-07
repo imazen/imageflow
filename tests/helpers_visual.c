@@ -223,7 +223,11 @@ static bool save_bitmap_to_visuals(flow_c * c, struct flow_bitmap_bgra * bitmap,
 static double get_dssim_from_command(flow_c * c, const char * command)
 {
     FILE * fd;
+#ifdef _MSC_VER
+    fd = _popen(command, "r");
+#else
     fd = popen(command, "r");
+#endif
     if (!fd)
         return 200;
 
@@ -243,7 +247,11 @@ static double get_dssim_from_command(flow_c * c, const char * command)
         memmove(comout + comlen, buffer, chread);
         comlen += chread;
     }
+#ifdef _MSC_VER
+    int exit_code = _pclose(fd);
+#else
     int exit_code = pclose(fd);
+#endif
     /* We can now work with the output as we please. Just print
      * out to confirm output is as expected */
     // fwrite(comout, 1, comlen, stdout);
