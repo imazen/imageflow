@@ -254,17 +254,21 @@ bool flow_recursive_mkdir(const char * dir, bool create_last_segment)
 
     flow_snprintf(tmp, sizeof(tmp), "%s", dir);
     len = strlen(tmp);
-    if (tmp[len - 1] == '/')
+    if (tmp[len - 1] == '/' || tmp[len - 1] == '\\')
         tmp[len - 1] = 0;
     for (p = tmp + 1; *p; p++)
-        if (*p == '/') {
+        if (*p == '/' || *p == '\\') {
             *p = 0;
 #ifdef _MSC_VER
             _mkdir(tmp); // Windows doesn't support the last param, S_IRWXU);
 #else
             mkdir(tmp, S_IRWXU);
 #endif
+#ifdef _MSC_VER
+            *p = '\\';
+#else
             *p = '/';
+#endif
         }
     if (create_last_segment) {
 #ifdef _MSC_VER
@@ -282,6 +286,9 @@ bool create_relative_path(flow_c * c, bool create_parent_dirs, char * filename, 
     const char * this_file = __FILE__;
     char * last_slash = strrchr(this_file, '/');
     if (last_slash == NULL) {
+        last_slash = strrchr(this_file, '\\');
+    }
+    if (last_slash == NULL){
         FLOW_error(c, flow_status_Invalid_internal_state);
         return false;
     }
