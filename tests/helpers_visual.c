@@ -394,31 +394,36 @@ static bool append_html(flow_c * c, const char * name, const char * checksum_a, 
 }
 
 bool diff_image_pixels(flow_c * c, struct flow_bitmap_bgra * a, struct flow_bitmap_bgra * b, size_t * diff_count,
-                       size_t limit_output_count)
+                       size_t * total_delta, size_t print_this_many_differences, size_t stop_counting_at)
 {
     if (a->w != b->w || a->h != b->h || a->fmt != b->fmt || a->fmt != flow_bgra32) {
         FLOW_error(c, flow_status_Invalid_argument);
         return false;
     }
     *diff_count = 0;
+    *total_delta = 0;
     for (size_t pixel_index = 0; pixel_index < a->h * a->stride; pixel_index++) {
         if (a->pixels[pixel_index] != b->pixels[pixel_index]) {
             int x = (pixel_index % (a->stride)) / 4;
             int y = pixel_index / a->stride;
             int channel = pixel_index % 4;
             const char channels[] = { "BGRA" };
-            if (*diff_count < limit_output_count) {
+            if (*diff_count < print_this_many_differences) {
                 fprintf(stderr, " (%d,%d) %ca=%d %cb=%d ", x, y, channels[channel], a->pixels[pixel_index],
                         channels[channel], b->pixels[pixel_index]);
             }
             (*diff_count)++;
+            (*total_delta) += abs(a->pixels[pixel_index] - b->pixels[pixel_index]);
+            if (stop_counting_at == *diff_count)
+                return true; // We stop comparing after X many differences
         }
     }
     return true;
 }
 
 bool visual_compare(flow_c * c, struct flow_bitmap_bgra * bitmap, const char * name, bool store_checksums,
-                    const char * file_, const char * func_, int line_number)
+                    size_t off_by_one_byte_differences_permitted, const char * file_, const char * func_,
+                    int line_number)
 {
 
     char checksum[34];
@@ -474,30 +479,42 @@ bool visual_compare(flow_c * c, struct flow_bitmap_bgra * bitmap, const char * n
             FLOW_error_return(c);
         }
 
-        double dssim;
-        // Diff the two, generate a third PNG. Also get PSNR metrics from imagemagick
-        if (!diff_images(c, checksum, stored_checksum, &dssim, true)) {
+        // First try a byte-by-byte comparison to eliminate floating-point error
+        struct flow_bitmap_bgra * old;
+        if (!load_image(c, stored_checksum, &old, c)) {
             FLOW_error_return(c);
         }
-        fprintf(stdout, "DSSIM %.20f between %s and %s\n", dssim, stored_checksum, checksum);
-
-        // Dump to HTML=
-        if (!append_html(c, name, checksum, stored_checksum)) {
+        size_t differences;
+        size_t total_delta;
+        if (!diff_image_pixels(c, old, bitmap, &differences, &total_delta, 0,
+                               off_by_one_byte_differences_permitted + 4096)) {
             FLOW_error_return(c);
         }
+        // If the difference is a handful of off-by-one rounding changes, just print the different bytes.
+        if (differences < off_by_one_byte_differences_permitted && total_delta == differences) {
+            if (!diff_image_pixels(c, old, bitmap, &differences, &total_delta, 100,
+                                   off_by_one_byte_differences_permitted + 4096)) {
+                FLOW_error_return(c);
+            }
+            fprintf(stderr, "\nA total of %lu bytes (of %lu) differed between the bitmaps (off by one). Less than "
+                            "failure threshold of %lu\n",
+                    differences, (size_t)old->stride * (size_t)old->h, off_by_one_byte_differences_permitted);
+            return true;
+        } else {
 
-        if ((float)dssim == 0.0f) {
-            // Practically no difference. Let's track down which pixel changed
-            struct flow_bitmap_bgra * old;
-            if (!load_image(c, stored_checksum, &old, c)) {
+            double dssim;
+            // Diff the two, generate a third PNG. Also get PSNR metrics from imagemagick
+            if (!diff_images(c, checksum, stored_checksum, &dssim, true)) {
                 FLOW_error_return(c);
             }
-            size_t differences;
-            if (!diff_image_pixels(c, old, bitmap, &differences, 50)) {
+            fprintf(stdout, "DSSIM %.20f between %s and %s\n", dssim, stored_checksum, checksum);
+
+            // Dump to HTML=
+            if (!append_html(c, name, checksum, stored_checksum)) {
                 FLOW_error_return(c);
             }
-            fprintf(stderr, "\nA total of %lu bytes differed between the bitmaps.\n", differences);
         }
+        flow_bitmap_bgra_destroy(c, old);
     }
 
     return false;

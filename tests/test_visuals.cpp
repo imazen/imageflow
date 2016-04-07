@@ -29,7 +29,7 @@ TEST_CASE("Test fill_rect", "")
         ERR(c);
     }
 
-    REQUIRE(visual_compare(c, b, "FillRect", store_checksums, __FILE__, __func__, __LINE__) == true);
+    REQUIRE(visual_compare(c, b, "FillRect", store_checksums, 0, __FILE__, __func__, __LINE__) == true);
     ERR(c);
     flow_context_destroy(c);
 }
@@ -63,7 +63,7 @@ TEST_CASE("Test scale image", "")
         ERR(c);
     }
 
-    REQUIRE(visual_compare(c, b, "ScaleThePotato", store_checksums, __FILE__, __func__, __LINE__) == true);
+    REQUIRE(visual_compare(c, b, "ScaleThePotato", store_checksums, 50, __FILE__, __func__, __LINE__) == true);
     ERR(c);
     flow_context_destroy(c);
 }
@@ -101,7 +101,7 @@ TEST_CASE("Test spatial IDCT downscale in linear light", "")
         ERR(c);
     }
 
-    bool match = visual_compare(c, b, "ScaleIDCTFastvsSlow", store_checksums, __FILE__, __func__, __LINE__);
+    bool match = visual_compare(c, b, "ScaleIDCTFastvsSlow", store_checksums, 100, __FILE__, __func__, __LINE__);
     REQUIRE(match == true);
     ERR(c);
     flow_context_destroy(c);
@@ -143,7 +143,7 @@ TEST_CASE("Test spatial IDCT downscale without gamma correction", "")
             (int)(g->nodes[decode_node].ticks_elapsed * 1000 / flow_get_profiler_ticks_per_second()));
     fflush(stdout);
 
-    bool match = visual_compare(c, b, "ScaleIDCT_approx_gamma", store_checksums, __FILE__, __func__, __LINE__);
+    bool match = visual_compare(c, b, "ScaleIDCT_approx_gamma", store_checksums, 100, __FILE__, __func__, __LINE__);
     REQUIRE(match == true);
     ERR(c);
     flow_context_destroy(c);
