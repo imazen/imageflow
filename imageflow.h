@@ -295,6 +295,10 @@ typedef bool (*flow_destructor_function)(flow_c * c, void * thing);
 #define FLOW_OWNER_IMMORTAL ((void *)42)
 
 PUB struct flow_io * flow_io_create_for_file(flow_c * c, flow_io_mode mode, const char * filename, void * owner);
+
+PUB struct flow_io * flow_io_create_from_file_pointer(flow_c * c, flow_io_mode mode, FILE * file_pointer,
+                                                      int64_t optional_file_length, void * owner);
+
 PUB struct flow_io * flow_io_create_from_memory(flow_c * c, flow_io_mode mode, uint8_t * memory, size_t length,
                                                 void * owner, flow_destructor_function memory_free);
 PUB struct flow_io * flow_io_create_for_output_buffer(flow_c * c, void * owner);

@@ -259,7 +259,15 @@ module Imageflow
 
 
 
-    #PUB struct flow_io* flow_io_create_for_file(flow_context* c, flow_io_mode mode, const char* filename, void* owner);
+
+    #PUB struct flow_io * flow_io_create_for_file(flow_c * c, flow_io_mode mode, const char * filename, void * owner);
+
+    attach_function :flow_io_create_for_file, [:pointer, :flow_io_mode, :string, :pointer], :pointer
+
+    #PUB struct flow_io * flow_io_create_from_file_pointer(flow_c * c, flow_io_mode mode, FILE * file_pointer, int64_t optional_file_length, void * owner);
+
+    attach_function :flow_io_create_from_file_pointer, [:pointer, :flow_io_mode, :pointer, :int64, :pointer], :pointer
+
     #attach_function :flow_io_create_for_file, [:pointer, :flow_io_mode, :string, :pointer], :pointer
     #
     # PUB bool flow_job_initialize_encoder(flow_context* c, struct flow_job* job, int32_t by_placeholder_id,

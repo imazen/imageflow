@@ -17,6 +17,19 @@ module Imageflow
       @ptr.nil? || @ptr.null?
     end
 
+
+    def add_input_file(placeholder_id:, filename:)
+      io_in = @c.call_method(:io_create_for_file, :mode_read_seekable, filename, @c.ptr)
+
+      @c.call_method(:job_add_io, @ptr, io_in, placeholder_id,  :flow_input)
+    end
+
+    def add_output_file(placeholder_id:, filename:)
+      io_out = @c.call_method(:io_create_for_file, :mode_write_seekable, filename, @c.ptr)
+
+      @c.call_method(:job_add_io, @ptr, io_out, placeholder_id,  :flow_output)
+    end
+
     def add_input_buffer(placeholder_id:, bytes:)
       buffer = FFI::MemoryPointer.new(:char, bytes.bytesize) # Allocate memory sized to the data
       buffer.put_bytes(0, bytes)

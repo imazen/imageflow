@@ -288,7 +288,7 @@ bool create_relative_path(flow_c * c, bool create_parent_dirs, char * filename, 
     if (last_slash == NULL) {
         last_slash = strrchr(this_file, '\\');
     }
-    if (last_slash == NULL){
+    if (last_slash == NULL) {
         FLOW_error(c, flow_status_Invalid_internal_state);
         return false;
     }

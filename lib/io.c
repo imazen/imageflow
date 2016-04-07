@@ -53,9 +53,10 @@ static bool flow_io_obuf_seek(flow_c * c, struct flow_io * io, int64_t position)
 {
     struct flow_io_obuf * state = (struct flow_io_obuf *)io->user_data;
     if (position < 0 || position > (int64_t)state->uncleared_memory_begins) {
-        FLOW_error_msg(c, flow_status_IO_error, "Codec tried to seek to position %il - valid values are between 0 and "
-                                                "%il inclusive (You cannot seek past the written area of an output "
-                                                "buffer).",
+        FLOW_error_msg(c, flow_status_IO_error,
+                       "Codec tried to seek to position %" PRId64 " - valid values are between 0 and "
+                       "%" PRId64 " inclusive (You cannot seek past the written area of an output "
+                       "buffer).",
                        position, state->length);
         return false;
     }
@@ -114,7 +115,8 @@ static int64_t flow_io_obuf_write(flow_c * c, struct flow_io * io, const uint8_t
         state->buffer = (uint8_t *)FLOW_realloc(c, state->buffer, new_size);
 
         if (state->buffer == NULL) {
-            FLOW_error_msg(c, flow_status_Out_of_memory, "Failed to allocate %ul bytes for output buffer", new_size);
+            FLOW_error_msg(c, flow_status_Out_of_memory, "Failed to allocate %" PRIu64 " bytes for output buffer",
+                           new_size);
             return 0;
         } else {
             state->length = new_size;
@@ -189,8 +191,9 @@ static bool flow_io_memory_seek(flow_c * c, struct flow_io * io, int64_t positio
 {
     struct flow_io_memory * state = (struct flow_io_memory *)io->user_data;
     if (position < 0 || position > (int64_t)state->length) {
-        FLOW_error_msg(c, flow_status_IO_error, "Codec tried to seek to position %l - valid values are between 0 and "
-                                                "%l inclusive (fixed-size memory buffer).",
+        FLOW_error_msg(c, flow_status_IO_error,
+                       "Codec tried to seek to position %" PRId64 " - valid values are between 0 and "
+                       "%" PRId64 " inclusive (fixed-size memory buffer).",
                        position, state->length);
         return false;
     }
@@ -273,5 +276,223 @@ struct flow_io * flow_io_create_from_memory(flow_c * c, flow_io_mode mode, uint8
     mem_struct->length = length;
     mem_struct->free = memory_free;
     mem_struct->cursor = 0;
+    return io;
+}
+
+////////////////////////////////////////////////////////////////////////
+// flow_io_from_file_ptr section
+
+struct flow_io_fileptr {
+    FILE * fp;
+    int64_t cursor;
+};
+
+// Return false if something goes wrong.
+static bool flow_io_fileptr_dispose(flow_c * c, void * io)
+{
+    struct flow_io_fileptr * state = (struct flow_io_fileptr *)((struct flow_io *)io)->user_data;
+    if (state == NULL)
+        return false;
+    bool success = true;
+    if (state->fp != NULL) {
+        int result = fflush(state->fp);
+        if (result != 0) {
+            int error = ferror(state->fp);
+
+            FLOW_error_msg(c, flow_status_IO_error,
+                           "Codec tried to dispose flow_io, but fflush failed with ferror %d. ", error);
+            success = false;
+        }
+    }
+    return success;
+}
+
+static bool flow_io_fileptr_seek(flow_c * c, struct flow_io * io, int64_t position)
+{
+    struct flow_io_fileptr * state = (struct flow_io_fileptr *)io->user_data;
+    if (position < 0) {
+        FLOW_error_msg(c, flow_status_IO_error, "Codec tried to seek to %" PRId64 " - valid values are 0 and above",
+                       position);
+        return false;
+    }
+    int64_t result = fseek(state->fp, position, SEEK_SET);
+    if (result != 0) {
+        int error = ferror(state->fp);
+
+        FLOW_error_msg(c, flow_status_IO_error,
+                       "Codec tried to seek to %" PRId64 " - fseek failed with %d, ferror=%d, errno=%d", position,
+                       result, error, errno);
+        return false;
+    }
+    state->cursor = position;
+    return true;
+}
+
+// Returns negative on failure - check context for more detail. Returns the current position in the stream when
+// successful
+static int64_t flow_io_fileptr_position(flow_c * c, struct flow_io * io)
+{
+    struct flow_io_fileptr * state = (struct flow_io_fileptr *)io->user_data;
+    int64_t result = ftell(state->fp);
+    if (result == -1L) {
+        FLOW_error_msg(c, flow_status_IO_error,
+                       "Codec tried to access the current position, but ftell failed with errno=%d", errno);
+        return result;
+    }
+    return result; //((struct flow_io_fileptr *)io->user_data)->cursor;
+}
+// Returns the number of bytes read into the buffer. Failure to read 'count' bytes could mean EOF or failure. Check
+// context status. Pass NULL to buffer if you want to skip 'count' many bytes, seeking ahead.
+static int64_t flow_io_fileptr_read(flow_c * c, struct flow_io * io, uint8_t * buffer, size_t count)
+{
+    struct flow_io_fileptr * state = (struct flow_io_fileptr *)io->user_data;
+    if (buffer == NULL) {
+        if (!flow_io_fileptr_seek(c, io, state->cursor + count)) {
+            FLOW_add_to_callstack(c);
+            return 0;
+        }
+        return count;
+    } else {
+        int64_t read_bytes = fread(buffer, 1, count, state->fp);
+        if (read_bytes != (int64_t)count) {
+            int error = ferror(state->fp);
+            if (error != 0) {
+                FLOW_error_msg(c, flow_status_IO_error,
+                               "Codec tried to read %" PRIu64 " bytes, but fread failed with ferror %d. %" PRIu64
+                               " bytes read successfully",
+                               count, error, read_bytes);
+            }
+        }
+        state->cursor += read_bytes;
+        return read_bytes;
+    }
+}
+// Returns the number of bytes written. If it doesn't equal 'count', there was an error. Check context status
+static int64_t flow_io_fileptr_write(flow_c * c, struct flow_io * io, const uint8_t * buffer, size_t count)
+{
+    struct flow_io_fileptr * state = (struct flow_io_fileptr *)io->user_data;
+    if (buffer == NULL) {
+        FLOW_error_msg(c, flow_status_Null_argument, "Buffer pointer was null");
+        return 0;
+    }
+    size_t bytes_written = fwrite(buffer, 1, count, state->fp);
+    if (bytes_written != count) {
+        int error = ferror(state->fp);
+
+        FLOW_error_msg(c, flow_status_IO_error, "Codec tried to write %" PRIu64
+                                                " bytes, but write failed with ferror %d. %" PRIu64 " bytes written",
+                       count, error, bytes_written);
+    }
+    state->cursor += bytes_written;
+    return bytes_written;
+}
+
+struct flow_io * flow_io_create_from_file_pointer(flow_c * c, flow_io_mode mode, FILE * file_pointer,
+                                                  int64_t optional_file_length, void * owner)
+{
+    struct flow_io * io = (struct flow_io *)FLOW_malloc_owned(c, sizeof(struct flow_io), owner);
+    if (io == NULL) {
+        FLOW_error(c, flow_status_Out_of_memory);
+        return NULL;
+    }
+    io->user_data = FLOW_malloc_owned(c, sizeof(struct flow_io_fileptr), io);
+    if (io->user_data == NULL) {
+        FLOW_error(c, flow_status_Out_of_memory);
+        FLOW_destroy(c, io);
+        return NULL;
+    }
+
+    if (!flow_set_destructor(c, io, flow_io_fileptr_dispose)) {
+        FLOW_destroy(c, io);
+        return NULL;
+    }
+
+    io->context = c;
+    io->dispose_func = flow_io_fileptr_dispose;
+    io->write_func = flow_io_fileptr_write;
+    io->read_func = flow_io_fileptr_read;
+    io->seek_function = flow_io_fileptr_seek;
+    io->position_func = flow_io_fileptr_position;
+    io->mode = mode;
+    io->optional_file_length = optional_file_length;
+
+    struct flow_io_fileptr * state = (struct flow_io_fileptr *)io->user_data;
+    state->fp = file_pointer;
+    state->cursor = 0;
+    return io;
+}
+
+////////////////////////////////////////////////////////////////////////
+// flow_io_filename section
+
+struct flow_io_filename {
+    struct flow_io_fileptr ifp;
+    const char * name;
+};
+
+// Return false if something goes wrong.
+static bool flow_io_filename_dispose(flow_c * c, void * io)
+{
+    struct flow_io_filename * state = (struct flow_io_filename *)((struct flow_io *)io)->user_data;
+    if (state == NULL)
+        return false;
+    bool success = flow_io_fileptr_dispose(c, io);
+    if (state->ifp.fp != NULL) {
+        int result = fclose(state->ifp.fp);
+        state->ifp.fp = NULL;
+        if (result != 0) {
+            FLOW_error_msg(c, flow_status_IO_error,
+                           "Codec tried to dispose flow_io, but fclose failed with error %d, errno=%d ", result, errno);
+            success = false;
+        }
+    }
+    return success;
+}
+
+struct flow_io * flow_io_create_for_file(flow_c * c, flow_io_mode mode, const char * filename, void * owner)
+{
+    struct flow_io * io = (struct flow_io *)FLOW_malloc_owned(c, sizeof(struct flow_io), owner);
+    if (io == NULL) {
+        FLOW_error(c, flow_status_Out_of_memory);
+        return NULL;
+    }
+    io->user_data = FLOW_malloc_owned(c, sizeof(struct flow_io_filename), io);
+    if (io->user_data == NULL) {
+        FLOW_error(c, flow_status_Out_of_memory);
+        FLOW_destroy(c, io);
+        return NULL;
+    }
+    if (!flow_set_destructor(c, io, flow_io_filename_dispose)) {
+        FLOW_destroy(c, io);
+        return NULL;
+    }
+
+    io->context = c;
+    io->dispose_func = flow_io_filename_dispose;
+    io->write_func = flow_io_fileptr_write;
+    io->read_func = flow_io_fileptr_read;
+    io->seek_function = flow_io_fileptr_seek;
+    io->position_func = flow_io_fileptr_position;
+    io->mode = mode;
+    io->optional_file_length = -1;
+
+    char * file_mode = "rb";
+    if ((mode & flow_io_mode_write_sequential) == flow_io_mode_write_sequential)
+        file_mode = "wb";
+    if (mode == flow_io_mode_read_write_seekable)
+        file_mode = "rb+";
+
+    struct flow_io_filename * state = (struct flow_io_filename *)io->user_data;
+    state->name = filename;
+    state->ifp.cursor = 0;
+    state->ifp.fp = fopen(filename, file_mode);
+    if (state->ifp.fp == NULL) {
+        FLOW_destroy(c, io->user_data);
+        FLOW_destroy(c, io);
+        FLOW_error_msg(c, flow_status_IO_error,
+                       "Codec tried to open file %s, but fopen(filename, \"%s\") failed with errno=%d ", filename,
+                       file_mode, errno);
+        return NULL;
+    }
     return io;
 }

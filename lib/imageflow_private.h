@@ -332,7 +332,7 @@ struct flow_io {
     flow_io_seek_function seek_function; // Optional for sequential modes
     flow_destructor_function dispose_func; // Optional.
     void * user_data;
-    uint64_t optional_file_length; // Whoever sets up this structure can populate this value - or set it to -1 - as they
+    int64_t optional_file_length; // Whoever sets up this structure can populate this value - or set it to -1 - as they
     // wish. useful for resource estimation.
 };
 

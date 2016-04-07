@@ -5,7 +5,7 @@ module Imageflow
   describe 'imageflow' do
     describe 'Job' do
       before(:each) do
-        @c = Context.new
+        @c = Imageflow::Context.new
       end
 
       after(:each) do
@@ -42,6 +42,46 @@ module Imageflow
 
         expect(out_bytes[:buffer_size]).to be_between(200, 900)
 
+      end
+
+      it 'can write to a file, then read from it' do
+        job = @c.create_job
+
+        bytes = "\x89\x50\x4E\x47\x0D\x0A\x1A\x0A\x00\x00\x00\x0D\x49\x48\x44\x52\x00\x00\x00\x01\x00\x00\x00\x01\x08\x06\x00\x00\x00\x1F\x15\xC4\x89\x00\x00\x00\x0A\x49\x44\x41\x54\x78\x9C\x63\x00\x01\x00\x00\x05\x00\x01\x0D\x0A\x2D\xB4\x00\x00\x00\x00\x49\x45\x4E\x44\xAE\x42\x60\x82".b
+        job.add_input_buffer(placeholder_id: 0, bytes: bytes)
+        job.add_output_file(placeholder_id: 1, filename: "hello.png")
+
+        g = @c.create_graph
+
+        g.create_node(:decoder, 0)
+            .add(:scale, 300, 200, :filter_Robidoux, :filter_Robidoux)
+            .add(:encoder, 1, 2) #2 is the id of the png encoder
+
+
+        job.execute graph: g
+        job = nil
+        g = nil
+        #reset the context to ensure the file stream is closed
+        @c.destroy!
+        @c = Imageflow::Context.new
+
+
+
+        job = @c.create_job
+        job.add_input_file(placeholder_id: 0, filename: "hello.png")
+        job.add_output_buffer(placeholder_id: 1)
+        g = @c.create_graph
+        g.create_node(:decoder, 0)
+            .add(:scale, 300, 200, :filter_Robidoux, :filter_Robidoux)
+            .add(:encoder, 1, 4) #4 is the id of the jpeg encoder
+
+        job.execute graph: g
+
+        out_bytes = job.get_buffer(placeholder_id: 1)
+
+        expect(out_bytes[:buffer_size]).to be_between(200, 900)
+
+        File.delete("hello.png")
       end
     end
   end
