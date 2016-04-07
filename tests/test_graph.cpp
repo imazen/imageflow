@@ -353,7 +353,7 @@ TEST_CASE("scale and flip and crop png", "")
     last = flow_node_create_primitive_crop(c, &g, last, 20, 10, 80, 40);
     last = flow_node_create_encoder_placeholder(c, &g, last, output_placeholder);
 
-    execute_graph_for_url(c, "http://z.zr.io/ri/8s.jpg?format=png&width=800", "graph_flipped_cropped_png.png", &g);
+    execute_graph_for_url(c, "http://s3-us-west-2.amazonaws.com/imageflow-resources/test_inputs/mountain_800.png", "graph_flipped_cropped_png.png", &g);
 
     flow_context_destroy(c);
 }
@@ -371,7 +371,7 @@ TEST_CASE("scale gif", "")
                                   (flow_interpolation_filter_Robidoux));
     last = flow_node_create_encoder_placeholder(c, &g, last, output_placeholder);
 
-    execute_graph_for_url(c, "http://z.zr.io/ri/8s.jpg?format=gif&width=800", "gif_scaled.png", &g);
+    execute_graph_for_url(c, "http://s3-us-west-2.amazonaws.com/imageflow-resources/test_inputs/mountain_800.gif", "gif_scaled.png", &g);
 
     flow_context_destroy(c);
 }
@@ -382,11 +382,11 @@ TEST_CASE("read gif overlapped", "")
     REQUIRE(c != NULL);
     // Get the input gif
     struct flow_io * input = get_io_for_cached_url(
-        c, "http://z.zr.io/rw/pluginexamples/example-animated.gif",
+        c, "http://s3-us-west-2.amazonaws.com/imageflow-resources/test_inputs/example-animated.gif",
         c); //"http://i.kinja-img.com/gawker-media/image/upload/s--dM0nT5E4--/mn3sov5id06ppjkfb1b2.gif", c);
     ERR(c);
     struct flow_io * input2 = get_io_for_cached_url(
-        c, "http://z.zr.io/rw/pluginexamples/example-animated.gif",
+        c, "http://s3-us-west-2.amazonaws.com/imageflow-resources/test_inputs/example-animated.gif",
         c); //"http://i.kinja-img.com/gawker-media/image/upload/s--dM0nT5E4--/mn3sov5id06ppjkfb1b2.gif", c);
     ERR(c);
     // Create the job and add the input
@@ -413,7 +413,7 @@ TEST_CASE("export frames of animated gif", "")
     REQUIRE(c != NULL);
     // Get the input gif
     struct flow_io * input = get_io_for_cached_url(
-        c, "http://z.zr.io/rw/pluginexamples/example-animated.gif",
+        c, "http://s3-us-west-2.amazonaws.com/imageflow-resources/test_inputs/example-animated.gif",
         c); //"http://i.kinja-img.com/gawker-media/image/upload/s--dM0nT5E4--/mn3sov5id06ppjkfb1b2.gif", c);
     ERR(c);
     // Create the job and add the input
@@ -473,7 +473,7 @@ TEST_CASE("scale and flip and crop jpg", "")
 
     last = flow_node_create_encoder(c, &g, last, output_placeholder, flow_codec_type_encode_jpeg);
 
-    execute_graph_for_url(c, "http://z.zr.io/ri/8s.jpg?width=800", "graph_flipped_cropped_from_jpeg.jpg", &g);
+    execute_graph_for_url(c, "http://s3-us-west-2.amazonaws.com/imageflow-resources/test_inputs/mountain_800.jpg", "graph_flipped_cropped_from_jpeg.jpg", &g);
 
     flow_context_destroy(c);
 }
@@ -565,7 +565,7 @@ TEST_CASE("scale copy rect", "")
     last = flow_node_create_expand_canvas(c, &g, last, 10, 20, 30, 40, 0xFF99FF99);
     last = flow_node_create_encoder_placeholder(c, &g, last, output_placeholder);
 
-    execute_graph_for_url(c, "http://z.zr.io/ri/8s.jpg?format=png&width=800", "graph_scaled_blitted_png.png", &g);
+    execute_graph_for_url(c, "http://s3-us-west-2.amazonaws.com/imageflow-resources/test_inputs/mountain_800.png", "graph_scaled_blitted_png.png", &g);
 
     flow_context_destroy(c);
 }
@@ -586,7 +586,7 @@ TEST_CASE("test frame clone", "")
 
     flow_node_create_encoder_placeholder(c, &g, clone_a, output_placeholder);
 
-    execute_graph_for_url(c, "http://z.zr.io/ri/8s.jpg?format=png&width=400", "unflipped.png", &g);
+    execute_graph_for_url(c, "http://s3-us-west-2.amazonaws.com/imageflow-resources/test_inputs/mountain_400.png", "unflipped.png", &g);
 
     flow_context_destroy(c);
 }
@@ -605,7 +605,7 @@ TEST_CASE("test rotation", "")
     int32_t c_n = flow_node_create_rotate_270(c, &g, input);
     flow_node_create_encoder_placeholder(c, &g, a, output_placeholder);
 
-    execute_graph_for_url(c, "http://z.zr.io/ri/Oriented.jpg?format=png", "rotated.png", &g);
+    execute_graph_for_url(c, "http://s3-us-west-2.amazonaws.com/imageflow-resources/test_inputs/orientation.png", "rotated.png", &g);
 
     flow_context_destroy(c);
 }
@@ -631,7 +631,7 @@ TEST_CASE("test memory corruption", "")
     clone_c = flow_node_create_rotate_270(c, &g, clone_c);
     flow_node_create_encoder_placeholder(c, &g, clone_a, output_placeholder);
 
-    execute_graph_for_url(c, "http://z.zr.io/ri/Oriented.jpg?format=png", "rotated.png", &g);
+    execute_graph_for_url(c, "http://s3-us-west-2.amazonaws.com/imageflow-resources/test_inputs/orientation.png", "rotated.png", &g);
 
     flow_context_destroy(c);
 }
