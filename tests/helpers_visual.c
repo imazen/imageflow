@@ -257,6 +257,61 @@ static double get_dssim_from_command(flow_c * c, const char * command)
     return result;
 }
 
+bool load_image(flow_c * c, char * checksum, struct flow_bitmap_bgra ** ref, void * bitmap_owner)
+{
+    char filename[2048];
+    if (!create_relative_path(c, false, filename, 2048, "/visuals/%s.png", checksum)) {
+        FLOW_add_to_callstack(c);
+        return false;
+    }
+
+    struct flow_job * job = flow_job_create(c);
+    if (job == NULL) {
+        FLOW_error_return(c);
+    }
+    size_t bytes_count;
+    uint8_t * bytes = read_all_bytes(c, &bytes_count, filename);
+    if (bytes == NULL) {
+        FLOW_error_return(c);
+    }
+    struct flow_io * input = flow_io_create_from_memory(c, flow_io_mode_read_seekable, bytes, bytes_count, job, NULL);
+    if (input == NULL) {
+        FLOW_error_return(c);
+    }
+    if (!flow_job_add_io(c, job, input, 0, FLOW_INPUT)) {
+        FLOW_error_return(c);
+    }
+
+    struct flow_graph * g = flow_graph_create(c, 10, 10, 200, 2.0);
+    if (g == NULL) {
+        FLOW_add_to_callstack(c);
+        return false;
+    }
+    int32_t last;
+    last = flow_node_create_decoder(c, &g, -1, 0);
+    last = flow_node_create_bitmap_bgra_reference(c, &g, last, ref);
+
+    if (flow_context_has_error(c)) {
+        FLOW_add_to_callstack(c);
+        return false;
+    }
+    if (!flow_job_execute(c, job, &g)) {
+        FLOW_add_to_callstack(c);
+        return false;
+    }
+
+    // Let the bitmap last longer than the job
+    if (!flow_set_owner(c, *ref, bitmap_owner)) {
+        FLOW_add_to_callstack(c);
+        return false;
+    }
+
+    if (!flow_job_destroy(c, job)) {
+        FLOW_error_return(c);
+    }
+    FLOW_free(c, bytes);
+    return true;
+}
 static bool diff_images(flow_c * c, char * checksum_a, char * checksum_b, double * out_dssim, bool generate_visual_diff)
 {
     char filename_a[2048];
@@ -330,6 +385,30 @@ static bool append_html(flow_c * c, const char * name, const char * checksum_a, 
     return true;
 }
 
+bool diff_image_pixels(flow_c * c, struct flow_bitmap_bgra * a, struct flow_bitmap_bgra * b, size_t * diff_count,
+                       size_t limit_output_count)
+{
+    if (a->w != b->w || a->h != b->h || a->fmt != b->fmt || a->fmt != flow_bgra32) {
+        FLOW_error(c, flow_status_Invalid_argument);
+        return false;
+    }
+    *diff_count = 0;
+    for (size_t pixel_index = 0; pixel_index < a->h * a->stride; pixel_index++) {
+        if (a->pixels[pixel_index] != b->pixels[pixel_index]) {
+            int x = (pixel_index % (a->stride)) / 4;
+            int y = pixel_index / a->stride;
+            int channel = pixel_index % 4;
+            const char channels[] = { "BGRA" };
+            if (*diff_count < limit_output_count) {
+                fprintf(stderr, " (%d,%d) %ca=%d %cb=%d ", x, y, channels[channel], a->pixels[pixel_index],
+                        channels[channel], b->pixels[pixel_index]);
+            }
+            (*diff_count)++;
+        }
+    }
+    return true;
+}
+
 bool visual_compare(flow_c * c, struct flow_bitmap_bgra * bitmap, const char * name, bool store_checksums,
                     const char * file_, const char * func_, int line_number)
 {
@@ -397,6 +476,19 @@ bool visual_compare(flow_c * c, struct flow_bitmap_bgra * bitmap, const char * n
         // Dump to HTML=
         if (!append_html(c, name, checksum, stored_checksum)) {
             FLOW_error_return(c);
+        }
+
+        if ((float)dssim == 0.0f) {
+            // Practically no difference. Let's track down which pixel changed
+            struct flow_bitmap_bgra * old;
+            if (!load_image(c, stored_checksum, &old, c)) {
+                FLOW_error_return(c);
+            }
+            size_t differences;
+            if (!diff_image_pixels(c, old, bitmap, &differences, 50)) {
+                FLOW_error_return(c);
+            }
+            fprintf(stderr, "\nA total of %lu bytes differed between the bitmaps.\n", differences);
         }
     }
 
