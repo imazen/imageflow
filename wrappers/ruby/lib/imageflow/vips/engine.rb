@@ -35,6 +35,9 @@ module Imageflow
         #todo - autorotate!
         instructions.mode = opts.crop_image ? :crop : :max
         instructions.precise_scaling_ratio = 2.0
+        instructions.format = :jpg if output_path =~ /\.jpe?g$/i
+        instructions.format = :png if output_path =~ /\.png$/i
+
 
         ##todo linear vs asis
         # instructions.

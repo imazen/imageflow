@@ -10,14 +10,20 @@ module Imageflow::Vips
       dir = File.expand_path("temp_vips_benchmarking")
       Dir.mkdir(dir) unless Dir.exist? dir
 
-      input_file = "#{dir}/u1.jpg"
-      url = "http://s3.amazonaws.com/resizer-images/u1.jpg"
-      IO.binwrite(input_file,Net::HTTP.get(URI(url))) unless File.exist? input_file
+      input_file_basename = "u1.jpg"
+
+      input_file = "#{dir}/#{input_file_basename}"
+      url = "http://s3.amazonaws.com/resizer-images/#{input_file_basename}"
+      puts "Fetching test image #{url}\n"
+      IO.binwrite(input_file, Net::HTTP.get(URI(url))) unless File.exist? input_file
 
 
-      executables = ["vipsthumbnail", File.expand_path("../../bin/imageflow-vips", __FILE__)]
+      puts `vipsthumbnail --vips-version`
+      skip if $?.exitstatus != 0
 
-      output_format = "#{dir}/thumb_%s.jpg"
+      executables = ["vipsthumbnail", "imageflow-vips"]
+
+      output_path_for = lambda { |exe| exe =~ /imageflow-vips/ ? "#{dir}/imageflow_%s.png" : "#{dir}/vips_%s.png" }
 
       argument_sets = ["", "--linear"]
 
@@ -26,7 +32,7 @@ module Imageflow::Vips
         Benchmark.bmbm(80) do |bench|
           executables.each do |program|
 
-            args = "#{argset} --output=#{output_format} #{input_file}"
+            args = "#{argset} --output=#{output_path_for.call(program)} #{input_file}"
             puts "Using #{program} #{args}\n"
 
             bench.report(File.basename(program)) do
@@ -46,10 +52,15 @@ module Imageflow::Vips
             end
           end
         end
+
+        sleep(1)
+
+        paths = executables.map { |exe| output_path_for.call(exe).gsub(/%s/, input_file_basename.gsub(/\.[a-zA-Z]+$/, '')) }
+        puts "\nComparing result images...\n"
+        puts `dssim #{paths[0]} #{paths[1]}`
+        puts "            #{paths[0]}\n"
+
       end
-
-
-
     end
   end
 end
