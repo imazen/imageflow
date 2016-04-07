@@ -113,6 +113,7 @@ struct flow_heap_object_record {
     size_t bytes;
     void * owner;
     flow_destructor_function destructor;
+    bool destructor_called;
     const char * allocated_by;
     int allocated_by_line;
     bool is_owner;

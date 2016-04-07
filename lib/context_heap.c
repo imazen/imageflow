@@ -81,6 +81,7 @@ static bool flow_objtracking_add(flow_c * context, void * ptr, size_t byte_count
     next->bytes = byte_count;
     next->ptr = ptr;
     next->owner = owner;
+    next->destructor_called = false;
     next->destructor = destructor;
     next->is_owner = false;
 
@@ -217,7 +218,8 @@ void * flow_context_realloc(flow_c * context, void * old_pointer, size_t new_byt
 
 static bool flow_objtracking_call_destructor(flow_c * context, struct flow_heap_object_record * record)
 {
-    if (record->destructor != NULL && record->ptr != NULL) {
+    if (record->destructor != NULL && record->ptr != NULL && !record->destructor_called) {
+        record->destructor_called = true;
         if (!record->destructor(context, record->ptr)) {
             if (!flow_context_has_error(context)) {
                 // Raise the error if the destructor was too lazy, but returned false
@@ -235,6 +237,32 @@ static bool flow_objtracking_call_destructor(flow_c * context, struct flow_heap_
     return true;
 }
 
+static bool flow_call_destructors_recursive(flow_c * context, void * owner, const char * file, int line)
+{
+    struct flow_heap_object_record * records = &context->object_tracking.allocs[0];
+    bool success = true;
+    for (size_t i = 0; i < context->object_tracking.total_slots; i++) {
+        if (records[i].ptr != NULL && records[i].owner == owner) {
+            struct flow_heap_object_record * record = &records[i];
+
+            // Step 1. Call child destructors recursively
+            if (record->is_owner) {
+                if (!flow_call_destructors_recursive(context, record->ptr, file, line)) {
+                    FLOW_add_to_callstack(context);
+                    success = false;
+                }
+            }
+            //Step 2. Call destructor
+            if (!flow_objtracking_call_destructor(context, record)) {
+                FLOW_add_to_callstack(context);
+                success = false;
+            }
+        }
+    }
+    return success;
+}
+
+
 bool flow_objtracking_partial_destroy_by_record(flow_c * context, struct flow_heap_object_record * record,
                                                 const char * file, int line)
 {
@@ -245,18 +273,24 @@ bool flow_objtracking_partial_destroy_by_record(flow_c * context, struct flow_he
     bool success = true;
     struct flow_heap * heap = &context->underlying_heap;
 
-    // Step 1. Destroy owned objects
+    //Step 1. Call child destructors (depth first)
+    if (record->is_owner && !flow_call_destructors_recursive(context, record->ptr, file, line)){
+        FLOW_add_to_callstack(context);
+        success = false;
+    }
+
+    // Step 1. Call destructor
+    if (!flow_objtracking_call_destructor(context, record)) {
+        FLOW_add_to_callstack(context);
+        success = false;
+    }
+
+    // Step 2. Destroy owned objects recursively
     if (record->is_owner) {
         if (!flow_destroy_by_owner(context, record->ptr, file, line)) {
             FLOW_add_to_callstack(context);
             success = false;
         }
-    }
-
-    // Step 2. Call destructor
-    if (!flow_objtracking_call_destructor(context, record)) {
-        FLOW_add_to_callstack(context);
-        success = false;
     }
 
     // Step 3. Free bytes
