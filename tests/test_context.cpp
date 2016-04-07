@@ -78,10 +78,11 @@ static bool bad_destructor(flow_c * c, void * p) { return false; }
 TEST_CASE("Test reporting of a failing destructor", "")
 {
     flow_c * c = flow_context_create();
+    REQUIRE_FALSE(c == NULL);
     ERR(c);
 
     void * data = flow_context_malloc(c, 20, bad_destructor, c, __FILE__, __LINE__);
-
+    ERR(c);
     // begin_terminate should trigger the destructor
     REQUIRE(flow_context_begin_terminate(c) == false);
 
