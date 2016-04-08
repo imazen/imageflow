@@ -48,6 +48,13 @@ module Imageflow
       def acquire (info_only: false)
         c = Context.new
 
+
+        instructions.floatspace ||= :linear
+
+        c.set_floatspace_linear! if instructions.floatspace == :linear
+        c.set_floatspace_srgb! if instructions.floatspace == :srgb
+
+
         source.load_bytes!
 
         #Dir.mkdir("./node_frames") unless Dir.exist? "./node_frames"

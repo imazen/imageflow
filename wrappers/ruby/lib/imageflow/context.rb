@@ -73,5 +73,14 @@ module Imageflow
       result
     end
 
+
+    def set_floatspace_linear!
+      call_method(:context_set_floatspace, 1, 0, 0, 0)
+    end
+
+    def set_floatspace_srgb!
+      call_method(:context_set_floatspace, 0, 0, 0, 0)
+    end
+
   end
 end

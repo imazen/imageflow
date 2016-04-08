@@ -23,16 +23,16 @@ module Imageflow::Vips
 
       executables = ["vipsthumbnail", "imageflow-vips"]
 
-      output_path_for = lambda { |exe| exe =~ /imageflow-vips/ ? "#{dir}/imageflow_%s.png" : "#{dir}/vips_%s.png" }
+      output_path_for = lambda { |exe, index| exe =~ /imageflow-vips/ ? "#{dir}/imageflow_%s_#{index}.png" : "#{dir}/vips_%s_#{index}.png" }
 
       argument_sets = ["", "--linear"]
 
-      argument_sets.each do |argset|
+      argument_sets.each_with_index do |argset, index|
         puts "\nComparing both with arguments: #{argset}\n"
         Benchmark.bmbm(80) do |bench|
           executables.each do |program|
 
-            args = "#{argset} --output=#{output_path_for.call(program)} #{input_file}"
+            args = "#{argset} --output=#{output_path_for.call(program, index)} #{input_file}"
             puts "Using #{program} #{args}\n"
 
             bench.report(File.basename(program)) do
@@ -55,7 +55,7 @@ module Imageflow::Vips
 
         sleep(1)
 
-        paths = executables.map { |exe| output_path_for.call(exe).gsub(/%s/, input_file_basename.gsub(/\.[a-zA-Z]+$/, '')) }
+        paths = executables.map { |exe| output_path_for.call(exe, index).gsub(/%s/, input_file_basename.gsub(/\.[a-zA-Z]+$/, '')) }
         puts "\nComparing result images...\n"
         puts `dssim #{paths[0]} #{paths[1]}`
         puts "            #{paths[0]}\n"

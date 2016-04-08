@@ -39,7 +39,8 @@ module Imageflow
         instructions.format = :png if output_path =~ /\.png$/i
 
 
-        ##todo linear vs asis
+        instructions.floatspace = opts.linear ? :linear : :srgb
+
         # instructions.
 
         cpu_time = Benchmark.realtime do

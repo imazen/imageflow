@@ -284,6 +284,13 @@ module Imageflow
       attr_hash_string :border_color, keys: "bordercolor"
       attr_hash_string :preset, keys: "preset"
 
+      attr_hash_enum :floatspace, keys: ["floatspace"],
+                     values: [:linear, :srgb],
+                     map: {asis: :srgb}
+
+
+
+      attr_hash_bool :jpeg_idct_downscale_linear, keys: "jpeg_idct_downscale_linear"
       #skipping watermark
       #attr_hash_string :watermark, keys: "watermark"
 

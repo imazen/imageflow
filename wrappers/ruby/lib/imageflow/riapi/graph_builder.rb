@@ -47,13 +47,15 @@ module Imageflow
         target_decoder_size.reverse! unless instructions.source_rotate.nil? || instructions.source_rotate % 180 == 0
         trigger_decoder_scaling = target_decoder_size.map{|v| v.to_f * trigger_ratio / min_precise_scaling}
 
+        gamma_correct_for_srgb_during_spatial_luma_scaling = instructions.jpeg_idct_downscale_linear.nil? ? (instructions.floatspace == :linear) : instructions.jpeg_idct_downscale_linear
+
         job.set_decoder_downscale_hints(placeholder_id: input_placeholder_id,
                                         if_wider_than: trigger_decoder_scaling[0].to_i,
                                         or_taller_than: trigger_decoder_scaling[1].to_i,
                                         downscaled_min_width: target_decoder_size[0].to_i,
                                         downscaled_min_height: target_decoder_size[1].to_i,
-                                        scale_luma_spatially: true,
-                                        gamma_correct_for_srgb_during_spatial_luma_scaling: true)
+                                        scale_luma_spatially: gamma_correct_for_srgb_during_spatial_luma_scaling,
+                                        gamma_correct_for_srgb_during_spatial_luma_scaling: gamma_correct_for_srgb_during_spatial_luma_scaling)
 
         updated_info = job.get_decoder_info(placeholder_id: input_placeholder_id)
 
