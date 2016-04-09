@@ -164,6 +164,10 @@ static bool stringify_decode(flow_c * c, struct flow_graph * g, int32_t node_id,
     FLOW_GET_INFOBYTES(g, node_id, flow_nodeinfo_codec, info);
     // TODO - fix when codec_id == 0
 
+    if (info->codec == NULL) {
+        flow_snprintf(buffer, buffer_size, "(codec undetermined)");
+        return true;
+    }
     struct flow_codec_definition * def = flow_job_get_codec_definition(c, info->codec->codec_id);
     if (def == NULL) {
         FLOW_error_return(c);

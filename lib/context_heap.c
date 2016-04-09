@@ -252,7 +252,7 @@ static bool flow_call_destructors_recursive(flow_c * context, void * owner, cons
                     success = false;
                 }
             }
-            //Step 2. Call destructor
+            // Step 2. Call destructor
             if (!flow_objtracking_call_destructor(context, record)) {
                 FLOW_add_to_callstack(context);
                 success = false;
@@ -261,7 +261,6 @@ static bool flow_call_destructors_recursive(flow_c * context, void * owner, cons
     }
     return success;
 }
-
 
 bool flow_objtracking_partial_destroy_by_record(flow_c * context, struct flow_heap_object_record * record,
                                                 const char * file, int line)
@@ -273,8 +272,8 @@ bool flow_objtracking_partial_destroy_by_record(flow_c * context, struct flow_he
     bool success = true;
     struct flow_heap * heap = &context->underlying_heap;
 
-    //Step 1. Call child destructors (depth first)
-    if (record->is_owner && !flow_call_destructors_recursive(context, record->ptr, file, line)){
+    // Step 1. Call child destructors (depth first)
+    if (record->is_owner && !flow_call_destructors_recursive(context, record->ptr, file, line)) {
         FLOW_add_to_callstack(context);
         success = false;
     }
