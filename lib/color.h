@@ -26,7 +26,7 @@ static inline float linear_to_srgb(float clr)
         return 12.92f * clr * 255.0f;
 
     // a = 0.055; ret ((1+a) * s**(1/2.4) - a) * 255
-    return 1.055f * 255.0f * powf(clr, 0.41666666f) - 14.025f;
+    return 1.055f * 255.0f * pow(clr, 0.41666666f) - 14.025f;
 }
 
 static inline float srgb_to_linear(float s)
@@ -34,14 +34,14 @@ static inline float srgb_to_linear(float s)
     if (s <= 0.04045f)
         return s / 12.92f;
     else
-        return powf((s + 0.055f) / (1 + 0.055f), 2.4f);
+        return pow((s + 0.055f) / (1 + 0.055f), 2.4f);
 }
 
-static inline float remove_gamma(flow_c * context, float value) { return powf(value, context->colorspace.gamma); }
+static inline float remove_gamma(flow_c * context, float value) { return pow(value, context->colorspace.gamma); }
 
 static inline float apply_gamma(flow_c * context, float value)
 {
-    return powf(value, context->colorspace.gamma_inverse);
+    return pow(value, context->colorspace.gamma_inverse);
 }
 
 #ifdef EXPOSE_SIGMOID

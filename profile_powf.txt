@@ -1,0 +1,1092 @@
+Flat profile:
+
+Each sample counts as 0.01 seconds.
+  %   cumulative   self              self     total           
+ time   seconds   seconds    calls  ms/call  ms/call  name    
+ 25.00      0.07     0.07     1048     0.07     0.07  flow_bitmap_float_copy_linear_over_srgb
+ 21.43      0.13     0.06     1048     0.06     0.06  flow_bitmap_float_scale_rows
+ 14.29      0.17     0.04                             decode_mcu
+ 10.71      0.20     0.03     1048     0.03     0.03  flow_bitmap_float_convert_srgb_to_linear
+  7.14      0.22     0.02                             jsimd_idct_islow_sse2
+  7.14      0.24     0.02                             jsimd_ycc_extbgrx_convert_sse2
+  3.57      0.25     0.01     1048     0.01     0.01  flow_bitmap_float_demultiply_alpha
+  3.57      0.26     0.01                             decompress_onepass
+  3.57      0.27     0.01                             jpeg_fill_bit_buffer
+  3.57      0.28     0.01                             jpeg_huff_decode
+  0.00      0.28     0.00    15680     0.00     0.00  filter_flex_cubic
+  0.00      0.28     0.00     4195     0.00     0.00  flow_pixel_format_bytes_per_pixel
+  0.00      0.28     0.00     3148     0.00     0.00  flow_context_profiler_start
+  0.00      0.28     0.00     3148     0.00     0.00  flow_context_profiler_stop
+  0.00      0.28     0.00     1819     0.00     0.00  flow_io_memory_read
+  0.00      0.28     0.00     1817     0.00     0.00  _flow_jpeg_io_source_fill_input_buffer
+  0.00      0.28     0.00     1048     0.00     0.08  flow_bitmap_float_pivoting_composite_linear_over_srgb
+  0.00      0.28     0.00      120     0.00     0.00  flow_graph_get_edge_count
+  0.00      0.28     0.00      118     0.00     0.00  flow_node_has_dimensions
+  0.00      0.28     0.00       75     0.00     0.00  flow_node_inputs_have_dimensions
+  0.00      0.28     0.00       75     0.00     0.00  flow_node_update_state
+  0.00      0.28     0.00       73     0.00     0.00  flow_nodedef_get
+  0.00      0.28     0.00       64     0.00     0.00  f_default_free
+  0.00      0.28     0.00       63     0.00     0.00  flow_objtracking_partial_destroy_by_record
+  0.00      0.28     0.00       61     0.00     0.00  node_visitor_dimensions
+  0.00      0.28     0.00       59     0.00     0.00  flow_graph_get_inbound_edge_count_of_type
+  0.00      0.28     0.00       54     0.00     0.00  flow_objtracking_get_record_id_by_ptr
+  0.00      0.28     0.00       46     0.00     0.00  flow_job_notify_graph_changed
+  0.00      0.28     0.00       39     0.00     0.00  f_default_calloc
+  0.00      0.28     0.00       38     0.00     0.00  flow_context_calloc
+  0.00      0.28     0.00       38     0.00     4.47  flow_graph_walk_recursive
+  0.00      0.28     0.00       32     0.00     0.00  flow_deprecated_free
+  0.00      0.28     0.00       29     0.00     0.00  flow_node_validate_edges
+  0.00      0.28     0.00       28     0.00     0.00  node_visitor_post_optimize_flatten
+  0.00      0.28     0.00       25     0.00     0.00  f_default_malloc
+  0.00      0.28     0.00       25     0.00     0.00  flow_context_malloc
+  0.00      0.28     0.00       23     0.00     0.00  node_visitor_optimize
+  0.00      0.28     0.00       22     0.00     0.00  flow_graph_walk_dependency_wise
+  0.00      0.28     0.00       19     0.00     0.00  flow_vsnprintf
+  0.00      0.28     0.00       17     0.00     0.00  flow_snprintf
+  0.00      0.28     0.00       17     0.00     0.00  node_visitor_flatten
+  0.00      0.28     0.00       16     0.00     0.00  flow_objtracking_get_record_by_ptr
+  0.00      0.28     0.00       14     0.00    12.14  node_visitor_execute
+  0.00      0.28     0.00       13     0.00     0.00  flow_destroy_by_owner
+  0.00      0.28     0.00       12     0.00     0.00  flow_call_destructors_recursive
+  0.00      0.28     0.00       12     0.00     4.72  flow_job_populate_dimensions_where_certain
+  0.00      0.28     0.00       11     0.00     0.00  flow_edge_create
+  0.00      0.28     0.00       10     0.00     0.00  flow_graph_get_first_inbound_edge_of_type
+  0.00      0.28     0.00        9     0.00     0.00  flow_graph_replace_if_too_small
+  0.00      0.28     0.00        9     0.00     0.00  flow_node_create_generic
+  0.00      0.28     0.00        9     0.00     0.00  flow_node_fixed_infobyte_count
+  0.00      0.28     0.00        8     0.00     9.44  flow_graph_walk
+  0.00      0.28     0.00        8     0.00     0.00  flow_job_get_codec_definition
+  0.00      0.28     0.00        8     0.00     0.00  flow_node_populate_dimensions
+  0.00      0.28     0.00        6     0.00     0.00  flow_edge_delete
+  0.00      0.28     0.00        6     0.00     0.00  flow_edge_duplicate
+  0.00      0.28     0.00        6     0.00     0.00  flow_graph_duplicate_edges_to_another_node
+  0.00      0.28     0.00        6     0.00     0.00  flow_job_notify_node_complete
+  0.00      0.28     0.00        6     0.00    28.33  flow_node_execute
+  0.00      0.28     0.00        6     0.00     0.00  flow_node_stringify
+  0.00      0.28     0.00        5     0.00     0.00  flow_destroy
+  0.00      0.28     0.00        4     0.00     0.00  flow_bitmap_float_create
+  0.00      0.28     0.00        4     0.00     0.00  flow_bitmap_float_create_header
+  0.00      0.28     0.00        4     0.00     0.00  flow_bitmap_float_destroy
+  0.00      0.28     0.00        4     0.00     0.00  flow_graph_get_first_inbound_node_of_type
+  0.00      0.28     0.00        4     0.00     0.00  flow_job_get_codec_instance
+  0.00      0.28     0.00        4     0.00     0.00  flow_job_graph_fully_executed
+  0.00      0.28     0.00        3     0.00     0.00  flow_bitmap_bgra_create
+  0.00      0.28     0.00        3     0.00     0.00  flow_bitmap_bgra_create_header
+  0.00      0.28     0.00        3     0.00     0.00  flow_edge_delete_all_connected_to_node
+  0.00      0.28     0.00        3     0.00     9.44  flow_graph_optimize
+  0.00      0.28     0.00        3     0.00    15.74  flow_graph_post_optimize_flatten
+  0.00      0.28     0.00        3     0.00     7.87  flow_graph_pre_optimize_flatten
+  0.00      0.28     0.00        3     0.00     4.72  flow_job_execute_where_certain
+  0.00      0.28     0.00        3     0.00     0.00  flow_jpeg_idct_method_selector
+  0.00      0.28     0.00        3     0.00     0.00  flow_node_delete
+  0.00      0.28     0.00        2     0.00     0.00  _flow_jpeg_io_source_init
+  0.00      0.28     0.00        2     0.00     0.00  _flow_jpeg_io_source_skip_input_data
+  0.00      0.28     0.00        2     0.00     0.00  create_relative_path
+  0.00      0.28     0.00        2     0.00     0.00  dimensions_canvas
+  0.00      0.28     0.00        2     0.00     0.00  dimensions_render1d
+  0.00      0.28     0.00        2     0.00     0.00  dimensions_render_to_canvas_1d
+  0.00      0.28     0.00        2     0.00     0.00  execute_canvas
+  0.00      0.28     0.00        2     0.00    85.00  execute_render1d
+  0.00      0.28     0.00        2     0.00     0.00  flatten_render1d
+  0.00      0.28     0.00        2     0.00     0.00  flow_codecs_jpeg_setup_source_manager
+  0.00      0.28     0.00        2     0.00     0.00  flow_context_has_error
+  0.00      0.28     0.00        2     0.00     0.00  flow_context_objtracking_initialize
+  0.00      0.28     0.00        2     0.00     0.00  flow_graph_validate
+  0.00      0.28     0.00        2     0.00     0.00  flow_interpolation_details_create
+  0.00      0.28     0.00        2     0.00     0.00  flow_interpolation_details_create_bicubic_custom
+  0.00      0.28     0.00        2     0.00     0.00  flow_interpolation_details_create_from
+  0.00      0.28     0.00        2     0.00     0.00  flow_interpolation_details_destroy
+  0.00      0.28     0.00        2     0.00     0.00  flow_interpolation_details_percent_negative_weight
+  0.00      0.28     0.00        2     0.00     0.00  flow_interpolation_line_contributions_create
+  0.00      0.28     0.00        2     0.00     0.00  flow_interpolation_line_contributions_destroy
+  0.00      0.28     0.00        2     0.00     0.00  flow_io_memory_seek
+  0.00      0.28     0.00        2     0.00     0.00  flow_job_codec_select
+  0.00      0.28     0.00        2     0.00     0.00  flow_job_codecs_initialize_decode_jpeg
+  0.00      0.28     0.00        2     0.00     0.00  flow_job_codecs_jpeg_get_frame_info
+  0.00      0.28     0.00        2     0.00     0.00  flow_job_configure_recording
+  0.00      0.28     0.00        2     0.00     0.00  flow_job_initialize_codec
+  0.00      0.28     0.00        2     0.00     0.00  flow_job_jpg_decoder_BeginRead
+  0.00      0.28     0.00        2     0.00     0.00  flow_node_create_canvas
+  0.00      0.28     0.00        2     0.00     0.00  flow_node_create_render1d
+  0.00      0.28     0.00        2     0.00     0.00  flow_node_create_render_to_canvas_1d
+  0.00      0.28     0.00        2     0.00    85.00  flow_node_execute_render_to_canvas_1d
+  0.00      0.28     0.00        2     0.00     0.00  flow_node_post_optimize_flatten
+  0.00      0.28     0.00        2     0.00     0.00  flow_node_pre_optimize_flatten
+  0.00      0.28     0.00        2     0.00     0.00  stringify_canvas
+  0.00      0.28     0.00        2     0.00     0.00  stringify_render1d
+  0.00      0.28     0.00        1     0.00     0.00  _flow_jpeg_io_source_terminate
+  0.00      0.28     0.00        1     0.00     0.00  dimensions_decode
+  0.00      0.28     0.00        1     0.00     0.00  dimensions_scale
+  0.00      0.28     0.00        1     0.00     0.00  djb2
+  0.00      0.28     0.00        1     0.00     0.00  execute_bitmap_bgra_pointer
+  0.00      0.28     0.00        1     0.00     0.00  execute_decode
+  0.00      0.28     0.00        1     0.00     0.00  flatten_decode
+  0.00      0.28     0.00        1     0.00     0.00  flatten_scale
+  0.00      0.28     0.00        1     0.00     0.00  flow_bitmap_bgra_transform_to_srgb
+  0.00      0.28     0.00        1     0.00     0.00  flow_context_begin_terminate
+  0.00      0.28     0.00        1     0.00     0.00  flow_context_end_terminate
+  0.00      0.28     0.00        1     0.00     0.00  flow_context_get_default_codec_set
+  0.00      0.28     0.00        1     0.00     0.00  flow_context_initialize
+  0.00      0.28     0.00        1     0.00     0.00  flow_context_objtracking_terminate
+  0.00      0.28     0.00        1     0.00     0.00  flow_context_set_floatspace
+  0.00      0.28     0.00        1     0.00     0.00  flow_dir_exists_eh
+  0.00      0.28     0.00        1     0.00     0.00  flow_graph_copy_and_resize
+  0.00      0.28     0.00        1     0.00     0.00  flow_graph_create
+  0.00      0.28     0.00        1     0.00     0.00  flow_graph_destroy
+  0.00      0.28     0.00        1     0.00     0.00  flow_heap_set_default
+  0.00      0.28     0.00        1     0.00     0.00  flow_io_create_from_memory
+  0.00      0.28     0.00        1     0.00     0.00  flow_job_add_io
+  0.00      0.28     0.00        1     0.00     0.00  flow_job_codecs_jpeg_get_info
+  0.00      0.28     0.00        1     0.00     0.00  flow_job_codecs_jpeg_read_frame
+  0.00      0.28     0.00        1     0.00     0.00  flow_job_create
+  0.00      0.28     0.00        1     0.00     0.00  flow_job_create_row_pointers
+  0.00      0.28     0.00        1     0.00     0.00  flow_job_decoder_get_frame_info
+  0.00      0.28     0.00        1     0.00     0.00  flow_job_decoder_set_downscale_hints
+  0.00      0.28     0.00        1     0.00     0.00  flow_job_destroy
+  0.00      0.28     0.00        1     0.00     0.00  flow_job_get_decoder_info
+  0.00      0.28     0.00        1     0.00     0.00  flow_job_jpg_decoder_FinishRead
+  0.00      0.28     0.00        1     0.00     0.00  flow_job_link_codecs
+  0.00      0.28     0.00        1     0.00     0.00  flow_recursive_mkdir
+  0.00      0.28     0.00        1     0.00     0.00  read_all_bytes
+  0.00      0.28     0.00        1     0.00     0.00  set_downscale_hints
+  0.00      0.28     0.00        1     0.00     0.00  stringify_bitmap_bgra_pointer
+  0.00      0.28     0.00        1     0.00     0.00  stringify_decode
+
+ %         the percentage of the total running time of the
+time       program used by this function.
+
+cumulative a running sum of the number of seconds accounted
+ seconds   for by this function and those listed above it.
+
+ self      the number of seconds accounted for by this
+seconds    function alone.  This is the major sort for this
+           listing.
+
+calls      the number of times this function was invoked, if
+           this function is profiled, else blank.
+ 
+ self      the average number of milliseconds spent in this
+ms/call    function per call, if this function is profiled,
+	   else blank.
+
+ total     the average number of milliseconds spent in this
+ms/call    function and its descendents per call, if this 
+	   function is profiled, else blank.
+
+name       the name of the function.  This is the minor sort
+           for this listing. The index shows the location of
+	   the function in the gprof listing. If the index is
+	   in parenthesis it shows where it would appear in
+	   the gprof listing if it were to be printed.
+
+Copyright (C) 2012 Free Software Foundation, Inc.
+
+Copying and distribution of this file, with or without modification,
+are permitted in any medium without royalty provided the copyright
+notice and this notice are preserved.
+
+		     Call graph (explanation follows)
+
+
+granularity: each sample hit covers 2 byte(s) for 3.57% of 0.28 seconds
+
+index % time    self  children    called     name
+[1]     60.7    0.00    0.17      36+54      <cycle 1 as a whole> [1]
+                0.00    0.17      38+123         flow_graph_walk_recursive <cycle 1> [2]
+                0.00    0.00      28             node_visitor_post_optimize_flatten <cycle 1> [46]
+                0.00    0.00      22             flow_graph_walk_dependency_wise <cycle 1> [50]
+                0.00    0.00       2             flow_graph_validate <cycle 1> [90]
+-----------------------------------------------
+                                 123             flow_graph_walk_recursive <cycle 1> [2]
+                                  22             flow_graph_walk_dependency_wise <cycle 1> [50]
+                0.00    0.08      16/36          flow_graph_walk [9]
+[2]     60.7    0.00    0.17      38+123     flow_graph_walk_recursive <cycle 1> [2]
+                0.00    0.17      14/14          node_visitor_execute [3]
+                0.00    0.00      61/61          node_visitor_dimensions [38]
+                0.00    0.00      23/23          node_visitor_optimize [49]
+                0.00    0.00      17/17          node_visitor_flatten [53]
+                                  28             node_visitor_post_optimize_flatten <cycle 1> [46]
+                                 123             flow_graph_walk_recursive <cycle 1> [2]
+-----------------------------------------------
+                0.00    0.17      14/14          flow_graph_walk_recursive <cycle 1> [2]
+[3]     60.7    0.00    0.17      14         node_visitor_execute [3]
+                0.00    0.17       6/6           flow_node_execute [4]
+                0.00    0.00      14/75          flow_node_update_state [34]
+                0.00    0.00      12/46          flow_job_notify_graph_changed [41]
+                0.00    0.00       6/6           flow_job_notify_node_complete [67]
+-----------------------------------------------
+                0.00    0.17       6/6           node_visitor_execute [3]
+[4]     60.7    0.00    0.17       6         flow_node_execute [4]
+                0.00    0.17       2/2           execute_render1d [5]
+                0.00    0.00       6/29          flow_node_validate_edges [45]
+                0.00    0.00       6/73          flow_nodedef_get [35]
+                0.00    0.00       6/75          flow_node_update_state [34]
+                0.00    0.00       2/2           execute_canvas [85]
+                0.00    0.00       1/1           execute_bitmap_bgra_pointer [115]
+                0.00    0.00       1/1           execute_decode [116]
+-----------------------------------------------
+                0.00    0.17       2/2           flow_node_execute [4]
+[5]     60.7    0.00    0.17       2         execute_render1d [5]
+                0.00    0.17       2/2           flow_node_execute_render_to_canvas_1d [6]
+                0.00    0.00       4/10          flow_graph_get_first_inbound_edge_of_type [58]
+-----------------------------------------------
+                0.00    0.17       2/2           execute_render1d [5]
+[6]     60.7    0.00    0.17       2         flow_node_execute_render_to_canvas_1d [6]
+                0.00    0.08    1048/1048        flow_bitmap_float_pivoting_composite_linear_over_srgb [8]
+                0.06    0.00    1048/1048        flow_bitmap_float_scale_rows [11]
+                0.03    0.00    1048/1048        flow_bitmap_float_convert_srgb_to_linear [15]
+                0.00    0.00    3148/3148        flow_context_profiler_start [28]
+                0.00    0.00    3148/3148        flow_context_profiler_stop [29]
+                0.00    0.00       4/4           flow_bitmap_float_create [70]
+                0.00    0.00       4/32          flow_deprecated_free [44]
+                0.00    0.00       4/5           flow_destroy [69]
+                0.00    0.00       4/4           flow_bitmap_float_destroy [72]
+                0.00    0.00       2/2           flow_interpolation_details_create_bicubic_custom [92]
+                0.00    0.00       2/2           flow_interpolation_details_create_from [93]
+                0.00    0.00       2/2           flow_interpolation_line_contributions_create [96]
+                0.00    0.00       2/2           flow_interpolation_line_contributions_destroy [97]
+                0.00    0.00       2/2           flow_interpolation_details_destroy [94]
+-----------------------------------------------
+                                                 <spontaneous>
+[7]     60.7    0.00    0.17                 flow_job_execute [7]
+                0.00    0.06      12/12          flow_job_populate_dimensions_where_certain [12]
+                0.00    0.05       3/3           flow_graph_post_optimize_flatten [13]
+                0.00    0.03       3/3           flow_graph_optimize [16]
+                0.00    0.02       3/3           flow_graph_pre_optimize_flatten [17]
+                0.00    0.01       3/3           flow_job_execute_where_certain [20]
+                0.00    0.00      25/46          flow_job_notify_graph_changed [41]
+                0.00    0.00       4/4           flow_job_graph_fully_executed [75]
+                0.00    0.00       1/1           flow_job_link_codecs [142]
+-----------------------------------------------
+                0.00    0.08    1048/1048        flow_node_execute_render_to_canvas_1d [6]
+[8]     28.6    0.00    0.08    1048         flow_bitmap_float_pivoting_composite_linear_over_srgb [8]
+                0.07    0.00    1048/1048        flow_bitmap_float_copy_linear_over_srgb [10]
+                0.01    0.00    1048/1048        flow_bitmap_float_demultiply_alpha [21]
+-----------------------------------------------
+                0.00    0.03       3/8           flow_graph_optimize [16]
+                0.00    0.05       5/8           flow_graph_post_optimize_flatten [13]
+[9]     27.0    0.00    0.08       8         flow_graph_walk [9]
+                0.00    0.08      16/36          flow_graph_walk_recursive <cycle 1> [2]
+-----------------------------------------------
+                0.07    0.00    1048/1048        flow_bitmap_float_pivoting_composite_linear_over_srgb [8]
+[10]    25.0    0.07    0.00    1048         flow_bitmap_float_copy_linear_over_srgb [10]
+                0.00    0.00    1048/4195        flow_pixel_format_bytes_per_pixel [27]
+-----------------------------------------------
+                0.06    0.00    1048/1048        flow_node_execute_render_to_canvas_1d [6]
+[11]    21.4    0.06    0.00    1048         flow_bitmap_float_scale_rows [11]
+-----------------------------------------------
+                0.00    0.06      12/12          flow_job_execute [7]
+[12]    20.2    0.00    0.06      12         flow_job_populate_dimensions_where_certain [12]
+                0.00    0.06      12/36          flow_graph_walk_dependency_wise <cycle 1> [50]
+-----------------------------------------------
+                0.00    0.05       3/3           flow_job_execute [7]
+[13]    16.9    0.00    0.05       3         flow_graph_post_optimize_flatten [13]
+                0.00    0.05       5/8           flow_graph_walk [9]
+-----------------------------------------------
+                                                 <spontaneous>
+[14]    14.3    0.04    0.00                 decode_mcu [14]
+-----------------------------------------------
+                0.03    0.00    1048/1048        flow_node_execute_render_to_canvas_1d [6]
+[15]    10.7    0.03    0.00    1048         flow_bitmap_float_convert_srgb_to_linear [15]
+                0.00    0.00    3144/4195        flow_pixel_format_bytes_per_pixel [27]
+-----------------------------------------------
+                0.00    0.03       3/3           flow_job_execute [7]
+[16]    10.1    0.00    0.03       3         flow_graph_optimize [16]
+                0.00    0.03       3/8           flow_graph_walk [9]
+-----------------------------------------------
+                0.00    0.02       3/3           flow_job_execute [7]
+[17]     8.4    0.00    0.02       3         flow_graph_pre_optimize_flatten [17]
+                0.00    0.02       5/36          flow_graph_walk_dependency_wise <cycle 1> [50]
+-----------------------------------------------
+                                                 <spontaneous>
+[18]     7.1    0.02    0.00                 jsimd_idct_islow_sse2 [18]
+-----------------------------------------------
+                                                 <spontaneous>
+[19]     7.1    0.02    0.00                 jsimd_ycc_extbgrx_convert_sse2 [19]
+-----------------------------------------------
+                0.00    0.01       3/3           flow_job_execute [7]
+[20]     5.1    0.00    0.01       3         flow_job_execute_where_certain [20]
+                0.00    0.01       3/36          flow_graph_walk_dependency_wise <cycle 1> [50]
+-----------------------------------------------
+                0.01    0.00    1048/1048        flow_bitmap_float_pivoting_composite_linear_over_srgb [8]
+[21]     3.6    0.01    0.00    1048         flow_bitmap_float_demultiply_alpha [21]
+-----------------------------------------------
+                                                 <spontaneous>
+[22]     3.6    0.01    0.00                 decompress_onepass [22]
+-----------------------------------------------
+                                                 <spontaneous>
+[23]     3.6    0.01    0.00                 jpeg_fill_bit_buffer [23]
+                0.00    0.00    1815/1817        _flow_jpeg_io_source_fill_input_buffer [7687]
+-----------------------------------------------
+                                                 <spontaneous>
+[24]     3.6    0.01    0.00                 jpeg_huff_decode [24]
+-----------------------------------------------
+[25]     0.0    0.00    0.00      39+37      <cycle 2 as a whole> [25]
+                0.00    0.00      63             flow_objtracking_partial_destroy_by_record <cycle 2> [37]
+                0.00    0.00      13             flow_destroy_by_owner <cycle 2> [55]
+-----------------------------------------------
+                0.00    0.00     108/15680       flow_interpolation_details_percent_negative_weight [95]
+                0.00    0.00   15572/15680       flow_interpolation_line_contributions_create [96]
+[26]     0.0    0.00    0.00   15680         filter_flex_cubic [26]
+-----------------------------------------------
+                0.00    0.00       3/4195        flow_bitmap_bgra_create [76]
+                0.00    0.00    1048/4195        flow_bitmap_float_copy_linear_over_srgb [10]
+                0.00    0.00    3144/4195        flow_bitmap_float_convert_srgb_to_linear [15]
+[27]     0.0    0.00    0.00    4195         flow_pixel_format_bytes_per_pixel [27]
+-----------------------------------------------
+                0.00    0.00    3148/3148        flow_node_execute_render_to_canvas_1d [6]
+[28]     0.0    0.00    0.00    3148         flow_context_profiler_start [28]
+-----------------------------------------------
+                0.00    0.00    3148/3148        flow_node_execute_render_to_canvas_1d [6]
+[29]     0.0    0.00    0.00    3148         flow_context_profiler_stop [29]
+-----------------------------------------------
+                0.00    0.00       2/1819        flow_job_add_io [132]
+                0.00    0.00    1817/1819        _flow_jpeg_io_source_fill_input_buffer [7687]
+[30]     0.0    0.00    0.00    1819         flow_io_memory_read [30]
+-----------------------------------------------
+                0.00    0.00      59/120         flow_graph_get_inbound_edge_count_of_type [39]
+                0.00    0.00      61/120         node_visitor_dimensions [38]
+[31]     0.0    0.00    0.00     120         flow_graph_get_edge_count [31]
+-----------------------------------------------
+                0.00    0.00      57/118         node_visitor_dimensions [38]
+                0.00    0.00      61/118         flow_node_inputs_have_dimensions [33]
+[32]     0.0    0.00    0.00     118         flow_node_has_dimensions [32]
+-----------------------------------------------
+                0.00    0.00      75/75          flow_node_update_state [34]
+[33]     0.0    0.00    0.00      75         flow_node_inputs_have_dimensions [33]
+                0.00    0.00      61/118         flow_node_has_dimensions [32]
+-----------------------------------------------
+                0.00    0.00       2/75          flatten_render1d [86]
+                0.00    0.00       6/75          flow_node_execute [4]
+                0.00    0.00       8/75          node_visitor_dimensions [38]
+                0.00    0.00      14/75          node_visitor_execute [3]
+                0.00    0.00      17/75          node_visitor_flatten [53]
+                0.00    0.00      28/75          node_visitor_post_optimize_flatten <cycle 1> [46]
+[34]     0.0    0.00    0.00      75         flow_node_update_state [34]
+                0.00    0.00      75/75          flow_node_inputs_have_dimensions [33]
+-----------------------------------------------
+                0.00    0.00       2/73          flow_node_pre_optimize_flatten [109]
+                0.00    0.00       2/73          flow_node_post_optimize_flatten [108]
+                0.00    0.00       6/73          flow_node_stringify [68]
+                0.00    0.00       6/73          flow_node_execute [4]
+                0.00    0.00       8/73          flow_node_populate_dimensions [63]
+                0.00    0.00       9/73          flow_node_fixed_infobyte_count [61]
+                0.00    0.00      11/73          flow_graph_validate <cycle 1> [90]
+                0.00    0.00      29/73          flow_node_validate_edges [45]
+[35]     0.0    0.00    0.00      73         flow_nodedef_get [35]
+-----------------------------------------------
+                0.00    0.00       1/64          flow_context_objtracking_terminate [124]
+                0.00    0.00      63/64          flow_objtracking_partial_destroy_by_record <cycle 2> [37]
+[36]     0.0    0.00    0.00      64         f_default_free [36]
+-----------------------------------------------
+                                  25             flow_destroy_by_owner <cycle 2> [55]
+                0.00    0.00       6/39          flow_destroy [69]
+                0.00    0.00      32/39          flow_deprecated_free [44]
+[37]     0.0    0.00    0.00      63         flow_objtracking_partial_destroy_by_record <cycle 2> [37]
+                0.00    0.00      63/64          f_default_free [36]
+                0.00    0.00      12/12          flow_call_destructors_recursive [56]
+                                  12             flow_destroy_by_owner <cycle 2> [55]
+-----------------------------------------------
+                0.00    0.00      61/61          flow_graph_walk_recursive <cycle 1> [2]
+[38]     0.0    0.00    0.00      61         node_visitor_dimensions [38]
+                0.00    0.00      61/120         flow_graph_get_edge_count [31]
+                0.00    0.00      57/118         flow_node_has_dimensions [32]
+                0.00    0.00       8/75          flow_node_update_state [34]
+                0.00    0.00       8/8           flow_node_populate_dimensions [63]
+                0.00    0.00       8/46          flow_job_notify_graph_changed [41]
+-----------------------------------------------
+                0.00    0.00       1/59          execute_bitmap_bgra_pointer [115]
+                0.00    0.00      58/59          flow_node_validate_edges [45]
+[39]     0.0    0.00    0.00      59         flow_graph_get_inbound_edge_count_of_type [39]
+                0.00    0.00      59/120         flow_graph_get_edge_count [31]
+-----------------------------------------------
+                0.00    0.00       6/54          flow_destroy [69]
+                0.00    0.00      16/54          flow_objtracking_get_record_by_ptr [54]
+                0.00    0.00      32/54          flow_deprecated_free [44]
+[40]     0.0    0.00    0.00      54         flow_objtracking_get_record_id_by_ptr [40]
+-----------------------------------------------
+                0.00    0.00       1/46          flow_job_link_codecs [142]
+                0.00    0.00       8/46          node_visitor_dimensions [38]
+                0.00    0.00      12/46          node_visitor_execute [3]
+                0.00    0.00      25/46          flow_job_execute [7]
+[41]     0.0    0.00    0.00      46         flow_job_notify_graph_changed [41]
+-----------------------------------------------
+                0.00    0.00       1/39          flow_context_malloc [48]
+                0.00    0.00      38/39          flow_context_calloc [43]
+[42]     0.0    0.00    0.00      39         f_default_calloc [42]
+-----------------------------------------------
+                0.00    0.00       2/38          flow_interpolation_details_create [91]
+                0.00    0.00       2/38          flow_interpolation_line_contributions_create [96]
+                0.00    0.00       2/38          flow_job_jpg_decoder_BeginRead [104]
+                0.00    0.00       3/38          flow_bitmap_bgra_create_header [77]
+                0.00    0.00       3/38          flow_bitmap_bgra_create [76]
+                0.00    0.00       4/38          flow_bitmap_float_create_header [71]
+                0.00    0.00      22/38          flow_graph_walk_dependency_wise <cycle 1> [50]
+[43]     0.0    0.00    0.00      38         flow_context_calloc [43]
+                0.00    0.00      38/39          f_default_calloc [42]
+                0.00    0.00       3/16          flow_objtracking_get_record_by_ptr [54]
+-----------------------------------------------
+                0.00    0.00       1/32          flow_graph_replace_if_too_small [59]
+                0.00    0.00       1/32          flow_job_jpg_decoder_FinishRead [141]
+                0.00    0.00       4/32          flow_interpolation_line_contributions_destroy [97]
+                0.00    0.00       4/32          flow_node_execute_render_to_canvas_1d [6]
+                0.00    0.00      22/32          flow_graph_walk_dependency_wise <cycle 1> [50]
+[44]     0.0    0.00    0.00      32         flow_deprecated_free [44]
+                0.00    0.00      32/54          flow_objtracking_get_record_id_by_ptr [40]
+                0.00    0.00      32/39          flow_objtracking_partial_destroy_by_record <cycle 2> [37]
+-----------------------------------------------
+                0.00    0.00       2/29          flow_node_pre_optimize_flatten [109]
+                0.00    0.00       2/29          flow_node_post_optimize_flatten [108]
+                0.00    0.00       6/29          flow_node_execute [4]
+                0.00    0.00       8/29          flow_node_populate_dimensions [63]
+                0.00    0.00      11/29          flow_graph_validate <cycle 1> [90]
+[45]     0.0    0.00    0.00      29         flow_node_validate_edges [45]
+                0.00    0.00      58/59          flow_graph_get_inbound_edge_count_of_type [39]
+                0.00    0.00      29/73          flow_nodedef_get [35]
+-----------------------------------------------
+                                  28             flow_graph_walk_recursive <cycle 1> [2]
+[46]     0.0    0.00    0.00      28         node_visitor_post_optimize_flatten <cycle 1> [46]
+                0.00    0.00      28/75          flow_node_update_state [34]
+                0.00    0.00       2/2           flow_node_post_optimize_flatten [108]
+                                   2             flow_graph_validate <cycle 1> [90]
+-----------------------------------------------
+                0.00    0.00      25/25          flow_context_malloc [48]
+[47]     0.0    0.00    0.00      25         f_default_malloc [47]
+-----------------------------------------------
+                0.00    0.00       1/25          read_all_bytes [144]
+                0.00    0.00       1/25          flow_job_create_row_pointers [136]
+                0.00    0.00       2/25          flow_job_create [135]
+                0.00    0.00       2/25          flow_io_create_for_output_buffer [5361]
+                0.00    0.00       2/25          flow_graph_create [128]
+                0.00    0.00       2/25          flow_job_codecs_initialize_decode_jpeg [100]
+                0.00    0.00       3/25          flow_job_add_io [132]
+                0.00    0.00       4/25          flow_interpolation_line_contributions_create [96]
+                0.00    0.00       4/25          flow_io_create_from_memory [131]
+                0.00    0.00       4/25          flow_bitmap_float_create [70]
+[48]     0.0    0.00    0.00      25         flow_context_malloc [48]
+                0.00    0.00      25/25          f_default_malloc [47]
+                0.00    0.00      13/16          flow_objtracking_get_record_by_ptr [54]
+                0.00    0.00       1/39          f_default_calloc [42]
+-----------------------------------------------
+                0.00    0.00      23/23          flow_graph_walk_recursive <cycle 1> [2]
+[49]     0.0    0.00    0.00      23         node_visitor_optimize [49]
+-----------------------------------------------
+                                   2             flow_graph_validate <cycle 1> [90]
+                0.00    0.01       3/36          flow_job_execute_where_certain [20]
+                0.00    0.02       5/36          flow_graph_pre_optimize_flatten [17]
+                0.00    0.06      12/36          flow_job_populate_dimensions_where_certain [12]
+[50]     0.0    0.00    0.00      22         flow_graph_walk_dependency_wise <cycle 1> [50]
+                0.00    0.00      22/38          flow_context_calloc [43]
+                0.00    0.00      22/32          flow_deprecated_free [44]
+                                  22             flow_graph_walk_recursive <cycle 1> [2]
+-----------------------------------------------
+                0.00    0.00       2/19          create_relative_path [81]
+                0.00    0.00      17/19          flow_snprintf [52]
+[51]     0.0    0.00    0.00      19         flow_vsnprintf [51]
+-----------------------------------------------
+                0.00    0.00       1/17          flow_recursive_mkdir [143]
+                0.00    0.00       1/17          stringify_bitmap_bgra_pointer [146]
+                0.00    0.00       2/17          stringify_decode [147]
+                0.00    0.00       4/17          stringify_canvas [110]
+                0.00    0.00       4/17          stringify_render1d [111]
+                0.00    0.00       5/17          flow_graph_print_to_dot [5352]
+[52]     0.0    0.00    0.00      17         flow_snprintf [52]
+                0.00    0.00      17/19          flow_vsnprintf [51]
+-----------------------------------------------
+                0.00    0.00      17/17          flow_graph_walk_recursive <cycle 1> [2]
+[53]     0.0    0.00    0.00      17         node_visitor_flatten [53]
+                0.00    0.00      17/75          flow_node_update_state [34]
+                0.00    0.00       2/2           flow_node_pre_optimize_flatten [109]
+-----------------------------------------------
+                0.00    0.00       3/16          flow_context_calloc [43]
+                0.00    0.00      13/16          flow_context_malloc [48]
+[54]     0.0    0.00    0.00      16         flow_objtracking_get_record_by_ptr [54]
+                0.00    0.00      16/54          flow_objtracking_get_record_id_by_ptr [40]
+-----------------------------------------------
+                                  12             flow_objtracking_partial_destroy_by_record <cycle 2> [37]
+                0.00    0.00       1/39          flow_context_begin_terminate [120]
+[55]     0.0    0.00    0.00      13         flow_destroy_by_owner <cycle 2> [55]
+                                  25             flow_objtracking_partial_destroy_by_record <cycle 2> [37]
+-----------------------------------------------
+                                   3             flow_call_destructors_recursive [56]
+                0.00    0.00      12/12          flow_objtracking_partial_destroy_by_record <cycle 2> [37]
+[56]     0.0    0.00    0.00      12+3       flow_call_destructors_recursive [56]
+                                   3             flow_call_destructors_recursive [56]
+-----------------------------------------------
+                0.00    0.00       2/11          flatten_render1d [86]
+                0.00    0.00       3/11          flow_node_create_generic [60]
+                0.00    0.00       6/11          flow_edge_duplicate [65]
+[57]     0.0    0.00    0.00      11         flow_edge_create [57]
+-----------------------------------------------
+                0.00    0.00       1/10          execute_bitmap_bgra_pointer [115]
+                0.00    0.00       1/10          dimensions_scale [113]
+                0.00    0.00       2/10          dimensions_render_to_canvas_1d [84]
+                0.00    0.00       2/10          dimensions_render1d [83]
+                0.00    0.00       4/10          execute_render1d [5]
+[58]     0.0    0.00    0.00      10         flow_graph_get_first_inbound_edge_of_type [58]
+-----------------------------------------------
+                0.00    0.00       9/9           flow_node_create_generic [60]
+[59]     0.0    0.00    0.00       9         flow_graph_replace_if_too_small [59]
+                0.00    0.00       1/1           flow_graph_copy_and_resize [127]
+                0.00    0.00       1/32          flow_deprecated_free [44]
+                0.00    0.00       1/1           flow_graph_destroy [129]
+-----------------------------------------------
+                0.00    0.00       1/9           flow_node_create_scale [5423]
+                0.00    0.00       1/9           flow_node_create_decoder [5410]
+                0.00    0.00       1/9           flow_node_create_bitmap_bgra_reference [5408]
+                0.00    0.00       2/9           flow_node_create_canvas [105]
+                0.00    0.00       2/9           flow_node_create_render_to_canvas_1d [107]
+                0.00    0.00       2/9           flow_node_create_render1d [106]
+[60]     0.0    0.00    0.00       9         flow_node_create_generic [60]
+                0.00    0.00       9/9           flow_node_fixed_infobyte_count [61]
+                0.00    0.00       9/9           flow_graph_replace_if_too_small [59]
+                0.00    0.00       3/11          flow_edge_create [57]
+-----------------------------------------------
+                0.00    0.00       9/9           flow_node_create_generic [60]
+[61]     0.0    0.00    0.00       9         flow_node_fixed_infobyte_count [61]
+                0.00    0.00       9/73          flow_nodedef_get [35]
+-----------------------------------------------
+                0.00    0.00       1/8           execute_decode [116]
+                0.00    0.00       1/8           stringify_decode [147]
+                0.00    0.00       1/8           flow_job_decoder_get_frame_info [137]
+                0.00    0.00       1/8           flow_job_decoder_set_downscale_hints [138]
+                0.00    0.00       2/8           flow_job_initialize_codec [103]
+                0.00    0.00       2/8           flow_job_get_decoder_info [140]
+[62]     0.0    0.00    0.00       8         flow_job_get_codec_definition [62]
+-----------------------------------------------
+                0.00    0.00       8/8           node_visitor_dimensions [38]
+[63]     0.0    0.00    0.00       8         flow_node_populate_dimensions [63]
+                0.00    0.00       8/29          flow_node_validate_edges [45]
+                0.00    0.00       8/73          flow_nodedef_get [35]
+                0.00    0.00       2/2           dimensions_render_to_canvas_1d [84]
+                0.00    0.00       2/2           dimensions_canvas [82]
+                0.00    0.00       2/2           dimensions_render1d [83]
+                0.00    0.00       1/1           dimensions_scale [113]
+                0.00    0.00       1/1           dimensions_decode [112]
+-----------------------------------------------
+                0.00    0.00       6/6           flow_edge_delete_all_connected_to_node [78]
+[64]     0.0    0.00    0.00       6         flow_edge_delete [64]
+-----------------------------------------------
+                0.00    0.00       6/6           flow_graph_duplicate_edges_to_another_node [66]
+[65]     0.0    0.00    0.00       6         flow_edge_duplicate [65]
+                0.00    0.00       6/11          flow_edge_create [57]
+-----------------------------------------------
+                0.00    0.00       2/6           flow_node_pre_optimize_flatten [109]
+                0.00    0.00       4/6           flow_node_post_optimize_flatten [108]
+[66]     0.0    0.00    0.00       6         flow_graph_duplicate_edges_to_another_node [66]
+                0.00    0.00       6/6           flow_edge_duplicate [65]
+-----------------------------------------------
+                0.00    0.00       6/6           node_visitor_execute [3]
+[67]     0.0    0.00    0.00       6         flow_job_notify_node_complete [67]
+-----------------------------------------------
+                0.00    0.00       6/6           flow_graph_print_to_dot [5352]
+[68]     0.0    0.00    0.00       6         flow_node_stringify [68]
+                0.00    0.00       6/73          flow_nodedef_get [35]
+                0.00    0.00       2/2           stringify_render1d [111]
+                0.00    0.00       2/2           stringify_canvas [110]
+                0.00    0.00       1/1           stringify_bitmap_bgra_pointer [146]
+                0.00    0.00       1/1           stringify_decode [147]
+-----------------------------------------------
+                0.00    0.00       1/5           get_image_dimensions [5501]
+                0.00    0.00       4/5           flow_node_execute_render_to_canvas_1d [6]
+[69]     0.0    0.00    0.00       5         flow_destroy [69]
+                0.00    0.00       6/54          flow_objtracking_get_record_id_by_ptr [40]
+                0.00    0.00       6/39          flow_objtracking_partial_destroy_by_record <cycle 2> [37]
+-----------------------------------------------
+                0.00    0.00       4/4           flow_node_execute_render_to_canvas_1d [6]
+[70]     0.0    0.00    0.00       4         flow_bitmap_float_create [70]
+                0.00    0.00       4/4           flow_bitmap_float_create_header [71]
+                0.00    0.00       4/25          flow_context_malloc [48]
+-----------------------------------------------
+                0.00    0.00       4/4           flow_bitmap_float_create [70]
+[71]     0.0    0.00    0.00       4         flow_bitmap_float_create_header [71]
+                0.00    0.00       4/38          flow_context_calloc [43]
+-----------------------------------------------
+                0.00    0.00       4/4           flow_node_execute_render_to_canvas_1d [6]
+[72]     0.0    0.00    0.00       4         flow_bitmap_float_destroy [72]
+-----------------------------------------------
+                0.00    0.00       2/4           flow_node_pre_optimize_flatten [109]
+                0.00    0.00       2/4           flow_node_post_optimize_flatten [108]
+[73]     0.0    0.00    0.00       4         flow_graph_get_first_inbound_node_of_type [73]
+-----------------------------------------------
+                0.00    0.00       1/4           flow_job_link_codecs [142]
+                0.00    0.00       1/4           flow_job_set_default_encoder [5406]
+                0.00    0.00       1/4           flow_job_decoder_set_downscale_hints_by_placeholder_id [5393]
+                0.00    0.00       1/4           flow_job_get_decoder_info [140]
+[74]     0.0    0.00    0.00       4         flow_job_get_codec_instance [74]
+-----------------------------------------------
+                0.00    0.00       4/4           flow_job_execute [7]
+[75]     0.0    0.00    0.00       4         flow_job_graph_fully_executed [75]
+-----------------------------------------------
+                0.00    0.00       1/3           execute_decode [116]
+                0.00    0.00       2/3           execute_canvas [85]
+[76]     0.0    0.00    0.00       3         flow_bitmap_bgra_create [76]
+                0.00    0.00       3/3           flow_bitmap_bgra_create_header [77]
+                0.00    0.00       3/4195        flow_pixel_format_bytes_per_pixel [27]
+                0.00    0.00       3/38          flow_context_calloc [43]
+-----------------------------------------------
+                0.00    0.00       3/3           flow_bitmap_bgra_create [76]
+[77]     0.0    0.00    0.00       3         flow_bitmap_bgra_create_header [77]
+                0.00    0.00       3/38          flow_context_calloc [43]
+-----------------------------------------------
+                0.00    0.00       3/3           flow_node_delete [80]
+[78]     0.0    0.00    0.00       3         flow_edge_delete_all_connected_to_node [78]
+                0.00    0.00       6/6           flow_edge_delete [64]
+-----------------------------------------------
+                0.00    0.00       3/3           start_pass [7457]
+[79]     0.0    0.00    0.00       3         flow_jpeg_idct_method_selector [79]
+-----------------------------------------------
+                0.00    0.00       1/3           flow_node_pre_optimize_flatten [109]
+                0.00    0.00       2/3           flow_node_post_optimize_flatten [108]
+[80]     0.0    0.00    0.00       3         flow_node_delete [80]
+                0.00    0.00       3/3           flow_edge_delete_all_connected_to_node [78]
+-----------------------------------------------
+                0.00    0.00       2/2           get_bytes_cached [5492]
+[81]     0.0    0.00    0.00       2         create_relative_path [81]
+                0.00    0.00       2/19          flow_vsnprintf [51]
+-----------------------------------------------
+                0.00    0.00       2/2           flow_node_populate_dimensions [63]
+[82]     0.0    0.00    0.00       2         dimensions_canvas [82]
+-----------------------------------------------
+                0.00    0.00       2/2           flow_node_populate_dimensions [63]
+[83]     0.0    0.00    0.00       2         dimensions_render1d [83]
+                0.00    0.00       2/10          flow_graph_get_first_inbound_edge_of_type [58]
+-----------------------------------------------
+                0.00    0.00       2/2           flow_node_populate_dimensions [63]
+[84]     0.0    0.00    0.00       2         dimensions_render_to_canvas_1d [84]
+                0.00    0.00       2/10          flow_graph_get_first_inbound_edge_of_type [58]
+-----------------------------------------------
+                0.00    0.00       2/2           flow_node_execute [4]
+[85]     0.0    0.00    0.00       2         execute_canvas [85]
+                0.00    0.00       2/3           flow_bitmap_bgra_create [76]
+-----------------------------------------------
+                0.00    0.00       2/2           flow_node_post_optimize_flatten [108]
+[86]     0.0    0.00    0.00       2         flatten_render1d [86]
+                0.00    0.00       2/2           flow_node_create_canvas [105]
+                0.00    0.00       2/75          flow_node_update_state [34]
+                0.00    0.00       2/2           flow_node_create_render_to_canvas_1d [107]
+                0.00    0.00       2/11          flow_edge_create [57]
+-----------------------------------------------
+                0.00    0.00       2/2           flow_job_jpg_decoder_BeginRead [104]
+[87]     0.0    0.00    0.00       2         flow_codecs_jpeg_setup_source_manager [87]
+-----------------------------------------------
+                0.00    0.00       2/2           has_err [5590]
+[88]     0.0    0.00    0.00       2         flow_context_has_error [88]
+-----------------------------------------------
+                0.00    0.00       1/2           flow_context_initialize [123]
+                0.00    0.00       1/2           flow_context_end_terminate [121]
+[89]     0.0    0.00    0.00       2         flow_context_objtracking_initialize [89]
+-----------------------------------------------
+                                   2             node_visitor_post_optimize_flatten <cycle 1> [46]
+[90]     0.0    0.00    0.00       2         flow_graph_validate <cycle 1> [90]
+                0.00    0.00      11/29          flow_node_validate_edges [45]
+                0.00    0.00      11/73          flow_nodedef_get [35]
+                                   2             flow_graph_walk_dependency_wise <cycle 1> [50]
+-----------------------------------------------
+                0.00    0.00       2/2           flow_interpolation_details_create_bicubic_custom [92]
+[91]     0.0    0.00    0.00       2         flow_interpolation_details_create [91]
+                0.00    0.00       2/38          flow_context_calloc [43]
+-----------------------------------------------
+                0.00    0.00       2/2           flow_node_execute_render_to_canvas_1d [6]
+[92]     0.0    0.00    0.00       2         flow_interpolation_details_create_bicubic_custom [92]
+                0.00    0.00       2/2           flow_interpolation_details_create [91]
+-----------------------------------------------
+                0.00    0.00       2/2           flow_node_execute_render_to_canvas_1d [6]
+[93]     0.0    0.00    0.00       2         flow_interpolation_details_create_from [93]
+-----------------------------------------------
+                0.00    0.00       2/2           flow_node_execute_render_to_canvas_1d [6]
+[94]     0.0    0.00    0.00       2         flow_interpolation_details_destroy [94]
+-----------------------------------------------
+                0.00    0.00       2/2           flow_interpolation_line_contributions_create [96]
+[95]     0.0    0.00    0.00       2         flow_interpolation_details_percent_negative_weight [95]
+                0.00    0.00     108/15680       filter_flex_cubic [26]
+-----------------------------------------------
+                0.00    0.00       2/2           flow_node_execute_render_to_canvas_1d [6]
+[96]     0.0    0.00    0.00       2         flow_interpolation_line_contributions_create [96]
+                0.00    0.00   15572/15680       filter_flex_cubic [26]
+                0.00    0.00       4/25          flow_context_malloc [48]
+                0.00    0.00       2/2           flow_interpolation_details_percent_negative_weight [95]
+                0.00    0.00       2/38          flow_context_calloc [43]
+-----------------------------------------------
+                0.00    0.00       2/2           flow_node_execute_render_to_canvas_1d [6]
+[97]     0.0    0.00    0.00       2         flow_interpolation_line_contributions_destroy [97]
+                0.00    0.00       4/32          flow_deprecated_free [44]
+-----------------------------------------------
+                0.00    0.00       2/2           flow_job_add_io [132]
+[98]     0.0    0.00    0.00       2         flow_io_memory_seek [98]
+-----------------------------------------------
+                0.00    0.00       2/2           flow_job_add_io [132]
+[99]     0.0    0.00    0.00       2         flow_job_codec_select [99]
+-----------------------------------------------
+                0.00    0.00       2/2           flow_job_add_io [132]
+[100]    0.0    0.00    0.00       2         flow_job_codecs_initialize_decode_jpeg [100]
+                0.00    0.00       2/25          flow_context_malloc [48]
+-----------------------------------------------
+                0.00    0.00       1/2           execute_decode [116]
+                0.00    0.00       1/2           flow_job_decoder_get_frame_info [137]
+[101]    0.0    0.00    0.00       2         flow_job_codecs_jpeg_get_frame_info [101]
+                0.00    0.00       1/2           flow_job_jpg_decoder_BeginRead [104]
+-----------------------------------------------
+                0.00    0.00       2/2           flow_job_create [135]
+[102]    0.0    0.00    0.00       2         flow_job_configure_recording [102]
+-----------------------------------------------
+                0.00    0.00       2/2           flow_job_add_io [132]
+[103]    0.0    0.00    0.00       2         flow_job_initialize_codec [103]
+                0.00    0.00       2/8           flow_job_get_codec_definition [62]
+-----------------------------------------------
+                0.00    0.00       1/2           flow_job_codecs_jpeg_get_frame_info [101]
+                0.00    0.00       1/2           flow_job_codecs_jpeg_get_info [133]
+[104]    0.0    0.00    0.00       2         flow_job_jpg_decoder_BeginRead [104]
+                0.00    0.00       2/38          flow_context_calloc [43]
+                0.00    0.00       2/2           flow_codecs_jpeg_setup_source_manager [87]
+-----------------------------------------------
+                0.00    0.00       2/2           flatten_render1d [86]
+[105]    0.0    0.00    0.00       2         flow_node_create_canvas [105]
+                0.00    0.00       2/9           flow_node_create_generic [60]
+-----------------------------------------------
+                0.00    0.00       2/2           flatten_scale [118]
+[106]    0.0    0.00    0.00       2         flow_node_create_render1d [106]
+                0.00    0.00       2/9           flow_node_create_generic [60]
+-----------------------------------------------
+                0.00    0.00       2/2           flatten_render1d [86]
+[107]    0.0    0.00    0.00       2         flow_node_create_render_to_canvas_1d [107]
+                0.00    0.00       2/9           flow_node_create_generic [60]
+-----------------------------------------------
+                0.00    0.00       2/2           node_visitor_post_optimize_flatten <cycle 1> [46]
+[108]    0.0    0.00    0.00       2         flow_node_post_optimize_flatten [108]
+                0.00    0.00       4/6           flow_graph_duplicate_edges_to_another_node [66]
+                0.00    0.00       2/29          flow_node_validate_edges [45]
+                0.00    0.00       2/73          flow_nodedef_get [35]
+                0.00    0.00       2/4           flow_graph_get_first_inbound_node_of_type [73]
+                0.00    0.00       2/2           flatten_render1d [86]
+                0.00    0.00       2/3           flow_node_delete [80]
+-----------------------------------------------
+                0.00    0.00       2/2           node_visitor_flatten [53]
+[109]    0.0    0.00    0.00       2         flow_node_pre_optimize_flatten [109]
+                0.00    0.00       2/29          flow_node_validate_edges [45]
+                0.00    0.00       2/73          flow_nodedef_get [35]
+                0.00    0.00       2/4           flow_graph_get_first_inbound_node_of_type [73]
+                0.00    0.00       2/6           flow_graph_duplicate_edges_to_another_node [66]
+                0.00    0.00       1/1           flatten_scale [118]
+                0.00    0.00       1/1           flatten_decode [117]
+                0.00    0.00       1/3           flow_node_delete [80]
+-----------------------------------------------
+                0.00    0.00       2/2           flow_node_stringify [68]
+[110]    0.0    0.00    0.00       2         stringify_canvas [110]
+                0.00    0.00       4/17          flow_snprintf [52]
+-----------------------------------------------
+                0.00    0.00       2/2           flow_node_stringify [68]
+[111]    0.0    0.00    0.00       2         stringify_render1d [111]
+                0.00    0.00       4/17          flow_snprintf [52]
+-----------------------------------------------
+                0.00    0.00       1/1           flow_node_populate_dimensions [63]
+[112]    0.0    0.00    0.00       1         dimensions_decode [112]
+                0.00    0.00       1/1           flow_job_decoder_get_frame_info [137]
+-----------------------------------------------
+                0.00    0.00       1/1           flow_node_populate_dimensions [63]
+[113]    0.0    0.00    0.00       1         dimensions_scale [113]
+                0.00    0.00       1/10          flow_graph_get_first_inbound_edge_of_type [58]
+-----------------------------------------------
+                0.00    0.00       1/1           get_bytes_cached [5492]
+[114]    0.0    0.00    0.00       1         djb2 [114]
+-----------------------------------------------
+                0.00    0.00       1/1           flow_node_execute [4]
+[115]    0.0    0.00    0.00       1         execute_bitmap_bgra_pointer [115]
+                0.00    0.00       1/59          flow_graph_get_inbound_edge_count_of_type [39]
+                0.00    0.00       1/10          flow_graph_get_first_inbound_edge_of_type [58]
+-----------------------------------------------
+                0.00    0.00       1/1           flow_node_execute [4]
+[116]    0.0    0.00    0.00       1         execute_decode [116]
+                0.00    0.00       1/8           flow_job_get_codec_definition [62]
+                0.00    0.00       1/2           flow_job_codecs_jpeg_get_frame_info [101]
+                0.00    0.00       1/3           flow_bitmap_bgra_create [76]
+                0.00    0.00       1/1           flow_job_codecs_jpeg_read_frame [134]
+-----------------------------------------------
+                0.00    0.00       1/1           flow_node_pre_optimize_flatten [109]
+[117]    0.0    0.00    0.00       1         flatten_decode [117]
+-----------------------------------------------
+                0.00    0.00       1/1           flow_node_pre_optimize_flatten [109]
+[118]    0.0    0.00    0.00       1         flatten_scale [118]
+                0.00    0.00       2/2           flow_node_create_render1d [106]
+-----------------------------------------------
+                0.00    0.00       1/1           flow_job_codecs_jpeg_read_frame [134]
+[119]    0.0    0.00    0.00       1         flow_bitmap_bgra_transform_to_srgb [119]
+-----------------------------------------------
+                0.00    0.00       1/1           flow_context_destroy [5325]
+[120]    0.0    0.00    0.00       1         flow_context_begin_terminate [120]
+                0.00    0.00       1/39          flow_destroy_by_owner <cycle 2> [55]
+-----------------------------------------------
+                0.00    0.00       1/1           flow_context_destroy [5325]
+[121]    0.0    0.00    0.00       1         flow_context_end_terminate [121]
+                0.00    0.00       1/2           flow_context_objtracking_initialize [89]
+                0.00    0.00       1/1           flow_context_objtracking_terminate [124]
+-----------------------------------------------
+                0.00    0.00       1/1           flow_context_initialize [123]
+[122]    0.0    0.00    0.00       1         flow_context_get_default_codec_set [122]
+-----------------------------------------------
+                0.00    0.00       1/1           flow_context_create [5324]
+[123]    0.0    0.00    0.00       1         flow_context_initialize [123]
+                0.00    0.00       1/1           flow_heap_set_default [130]
+                0.00    0.00       1/2           flow_context_objtracking_initialize [89]
+                0.00    0.00       1/1           flow_context_get_default_codec_set [122]
+                0.00    0.00       1/1           flow_context_set_floatspace [125]
+-----------------------------------------------
+                0.00    0.00       1/1           flow_context_end_terminate [121]
+[124]    0.0    0.00    0.00       1         flow_context_objtracking_terminate [124]
+                0.00    0.00       1/64          f_default_free [36]
+-----------------------------------------------
+                0.00    0.00       1/1           flow_context_initialize [123]
+[125]    0.0    0.00    0.00       1         flow_context_set_floatspace [125]
+-----------------------------------------------
+                0.00    0.00       1/1           get_bytes_cached [5492]
+[126]    0.0    0.00    0.00       1         flow_dir_exists_eh [126]
+-----------------------------------------------
+                0.00    0.00       1/1           flow_graph_replace_if_too_small [59]
+[127]    0.0    0.00    0.00       1         flow_graph_copy_and_resize [127]
+                0.00    0.00       1/1           flow_graph_create [128]
+-----------------------------------------------
+                0.00    0.00       1/1           flow_graph_copy_and_resize [127]
+[128]    0.0    0.00    0.00       1         flow_graph_create [128]
+                0.00    0.00       2/25          flow_context_malloc [48]
+-----------------------------------------------
+                0.00    0.00       1/1           flow_graph_replace_if_too_small [59]
+[129]    0.0    0.00    0.00       1         flow_graph_destroy [129]
+-----------------------------------------------
+                0.00    0.00       1/1           flow_context_initialize [123]
+[130]    0.0    0.00    0.00       1         flow_heap_set_default [130]
+-----------------------------------------------
+                0.00    0.00       1/1           get_image_dimensions [5501]
+[131]    0.0    0.00    0.00       1         flow_io_create_from_memory [131]
+                0.00    0.00       4/25          flow_context_malloc [48]
+-----------------------------------------------
+                0.00    0.00       1/1           get_image_dimensions [5501]
+[132]    0.0    0.00    0.00       1         flow_job_add_io [132]
+                0.00    0.00       3/25          flow_context_malloc [48]
+                0.00    0.00       2/1819        flow_io_memory_read [30]
+                0.00    0.00       2/2           flow_io_memory_seek [98]
+                0.00    0.00       2/2           flow_job_codec_select [99]
+                0.00    0.00       2/2           flow_job_codecs_initialize_decode_jpeg [100]
+                0.00    0.00       2/2           flow_job_initialize_codec [103]
+-----------------------------------------------
+                0.00    0.00       1/1           flow_job_get_decoder_info [140]
+[133]    0.0    0.00    0.00       1         flow_job_codecs_jpeg_get_info [133]
+                0.00    0.00       1/2           flow_job_jpg_decoder_BeginRead [104]
+-----------------------------------------------
+                0.00    0.00       1/1           execute_decode [116]
+[134]    0.0    0.00    0.00       1         flow_job_codecs_jpeg_read_frame [134]
+                0.00    0.00       1/1           flow_job_jpg_decoder_FinishRead [141]
+                0.00    0.00       1/1           flow_bitmap_bgra_transform_to_srgb [119]
+-----------------------------------------------
+                0.00    0.00       1/1           get_image_dimensions [5501]
+[135]    0.0    0.00    0.00       1         flow_job_create [135]
+                0.00    0.00       2/25          flow_context_malloc [48]
+                0.00    0.00       2/2           flow_job_configure_recording [102]
+-----------------------------------------------
+                0.00    0.00       1/1           flow_job_jpg_decoder_FinishRead [141]
+[136]    0.0    0.00    0.00       1         flow_job_create_row_pointers [136]
+                0.00    0.00       1/25          flow_context_malloc [48]
+-----------------------------------------------
+                0.00    0.00       1/1           dimensions_decode [112]
+[137]    0.0    0.00    0.00       1         flow_job_decoder_get_frame_info [137]
+                0.00    0.00       1/8           flow_job_get_codec_definition [62]
+                0.00    0.00       1/2           flow_job_codecs_jpeg_get_frame_info [101]
+-----------------------------------------------
+                0.00    0.00       1/1           flow_job_decoder_set_downscale_hints_by_placeholder_id [5393]
+[138]    0.0    0.00    0.00       1         flow_job_decoder_set_downscale_hints [138]
+                0.00    0.00       1/8           flow_job_get_codec_definition [62]
+                0.00    0.00       1/1           set_downscale_hints [145]
+-----------------------------------------------
+                0.00    0.00       1/1           get_image_dimensions [5501]
+[139]    0.0    0.00    0.00       1         flow_job_destroy [139]
+-----------------------------------------------
+                0.00    0.00       1/1           get_image_dimensions [5501]
+[140]    0.0    0.00    0.00       1         flow_job_get_decoder_info [140]
+                0.00    0.00       2/8           flow_job_get_codec_definition [62]
+                0.00    0.00       1/4           flow_job_get_codec_instance [74]
+                0.00    0.00       1/1           flow_job_codecs_jpeg_get_info [133]
+-----------------------------------------------
+                0.00    0.00       1/1           flow_job_codecs_jpeg_read_frame [134]
+[141]    0.0    0.00    0.00       1         flow_job_jpg_decoder_FinishRead [141]
+                0.00    0.00       1/1           flow_job_create_row_pointers [136]
+                0.00    0.00       1/32          flow_deprecated_free [44]
+-----------------------------------------------
+                0.00    0.00       1/1           flow_job_execute [7]
+[142]    0.0    0.00    0.00       1         flow_job_link_codecs [142]
+                0.00    0.00       1/46          flow_job_notify_graph_changed [41]
+                0.00    0.00       1/4           flow_job_get_codec_instance [74]
+-----------------------------------------------
+                0.00    0.00       1/1           get_bytes_cached [5492]
+[143]    0.0    0.00    0.00       1         flow_recursive_mkdir [143]
+                0.00    0.00       1/17          flow_snprintf [52]
+-----------------------------------------------
+                0.00    0.00       1/1           get_bytes_cached [5492]
+[144]    0.0    0.00    0.00       1         read_all_bytes [144]
+                0.00    0.00       1/25          flow_context_malloc [48]
+-----------------------------------------------
+                0.00    0.00       1/1           flow_job_decoder_set_downscale_hints [138]
+[145]    0.0    0.00    0.00       1         set_downscale_hints [145]
+-----------------------------------------------
+                0.00    0.00       1/1           flow_node_stringify [68]
+[146]    0.0    0.00    0.00       1         stringify_bitmap_bgra_pointer [146]
+                0.00    0.00       1/17          flow_snprintf [52]
+-----------------------------------------------
+                0.00    0.00       1/1           flow_node_stringify [68]
+[147]    0.0    0.00    0.00       1         stringify_decode [147]
+                0.00    0.00       2/17          flow_snprintf [52]
+                0.00    0.00       1/8           flow_job_get_codec_definition [62]
+-----------------------------------------------
+                0.00    0.00       2/1817        read_markers [7034]
+                0.00    0.00    1815/1817        jpeg_fill_bit_buffer [23]
+[7687]   0.0    0.00    0.00    1817         _flow_jpeg_io_source_fill_input_buffer [7687]
+                0.00    0.00    1817/1819        flow_io_memory_read [30]
+-----------------------------------------------
+                0.00    0.00       2/2           jpeg_consume_input [6006]
+[7688]   0.0    0.00    0.00       2         _flow_jpeg_io_source_init [7688]
+-----------------------------------------------
+                0.00    0.00       2/2           skip_variable [7205]
+[7689]   0.0    0.00    0.00       2         _flow_jpeg_io_source_skip_input_data [7689]
+-----------------------------------------------
+                0.00    0.00       1/1           jpeg_finish_decompress [6017]
+[7690]   0.0    0.00    0.00       1         _flow_jpeg_io_source_terminate [7690]
+-----------------------------------------------
+
+ This table describes the call tree of the program, and was sorted by
+ the total amount of time spent in each function and its children.
+
+ Each entry in this table consists of several lines.  The line with the
+ index number at the left hand margin lists the current function.
+ The lines above it list the functions that called this function,
+ and the lines below it list the functions this one called.
+ This line lists:
+     index	A unique number given to each element of the table.
+		Index numbers are sorted numerically.
+		The index number is printed next to every function name so
+		it is easier to look up where the function is in the table.
+
+     % time	This is the percentage of the `total' time that was spent
+		in this function and its children.  Note that due to
+		different viewpoints, functions excluded by options, etc,
+		these numbers will NOT add up to 100%.
+
+     self	This is the total amount of time spent in this function.
+
+     children	This is the total amount of time propagated into this
+		function by its children.
+
+     called	This is the number of times the function was called.
+		If the function called itself recursively, the number
+		only includes non-recursive calls, and is followed by
+		a `+' and the number of recursive calls.
+
+     name	The name of the current function.  The index number is
+		printed after it.  If the function is a member of a
+		cycle, the cycle number is printed between the
+		function's name and the index number.
+
+
+ For the function's parents, the fields have the following meanings:
+
+     self	This is the amount of time that was propagated directly
+		from the function into this parent.
+
+     children	This is the amount of time that was propagated from
+		the function's children into this parent.
+
+     called	This is the number of times this parent called the
+		function `/' the total number of times the function
+		was called.  Recursive calls to the function are not
+		included in the number after the `/'.
+
+     name	This is the name of the parent.  The parent's index
+		number is printed after it.  If the parent is a
+		member of a cycle, the cycle number is printed between
+		the name and the index number.
+
+ If the parents of the function cannot be determined, the word
+ `<spontaneous>' is printed in the `name' field, and all the other
+ fields are blank.
+
+ For the function's children, the fields have the following meanings:
+
+     self	This is the amount of time that was propagated directly
+		from the child into the function.
+
+     children	This is the amount of time that was propagated from the
+		child's children to the function.
+
+     called	This is the number of times the function called
+		this child `/' the total number of times the child
+		was called.  Recursive calls by the child are not
+		listed in the number after the `/'.
+
+     name	This is the name of the child.  The child's index
+		number is printed after it.  If the child is a
+		member of a cycle, the cycle number is printed
+		between the name and the index number.
+
+ If there are any cycles (circles) in the call graph, there is an
+ entry for the cycle-as-a-whole.  This entry shows who called the
+ cycle (as parents) and the members of the cycle (as children.)
+ The `+' recursive calls entry shows the number of function calls that
+ were internal to the cycle, and the calls entry for each member shows,
+ for that member, how many times it was called from other members of
+ the cycle.
+
+Copyright (C) 2012 Free Software Foundation, Inc.
+
+Copying and distribution of this file, with or without modification,
+are permitted in any medium without royalty provided the copyright
+notice and this notice are preserved.
+
+Index by function name
+
+ [7687] _flow_jpeg_io_source_fill_input_buffer [69] flow_destroy [75] flow_job_graph_fully_executed
+ [7688] _flow_jpeg_io_source_init [55] flow_destroy_by_owner [103] flow_job_initialize_codec
+ [7689] _flow_jpeg_io_source_skip_input_data [126] flow_dir_exists_eh [104] flow_job_jpg_decoder_BeginRead
+ [7690] _flow_jpeg_io_source_terminate [57] flow_edge_create [141] flow_job_jpg_decoder_FinishRead
+  [81] create_relative_path   [64] flow_edge_delete      [142] flow_job_link_codecs
+  [14] decode_mcu             [78] flow_edge_delete_all_connected_to_node [41] flow_job_notify_graph_changed
+  [22] decompress_onepass     [65] flow_edge_duplicate    [67] flow_job_notify_node_complete
+  [82] dimensions_canvas     [127] flow_graph_copy_and_resize [12] flow_job_populate_dimensions_where_certain
+ [112] dimensions_decode     [128] flow_graph_create      [79] flow_jpeg_idct_method_selector
+  [83] dimensions_render1d   [129] flow_graph_destroy    [105] flow_node_create_canvas
+  [84] dimensions_render_to_canvas_1d [66] flow_graph_duplicate_edges_to_another_node [60] flow_node_create_generic
+ [113] dimensions_scale       [31] flow_graph_get_edge_count [106] flow_node_create_render1d
+ [114] djb2                   [58] flow_graph_get_first_inbound_edge_of_type [107] flow_node_create_render_to_canvas_1d
+ [115] execute_bitmap_bgra_pointer [73] flow_graph_get_first_inbound_node_of_type [80] flow_node_delete
+  [85] execute_canvas         [39] flow_graph_get_inbound_edge_count_of_type [4] flow_node_execute
+ [116] execute_decode         [16] flow_graph_optimize     [6] flow_node_execute_render_to_canvas_1d
+   [5] execute_render1d       [13] flow_graph_post_optimize_flatten [61] flow_node_fixed_infobyte_count
+  [42] f_default_calloc       [17] flow_graph_pre_optimize_flatten [32] flow_node_has_dimensions
+  [36] f_default_free         [59] flow_graph_replace_if_too_small [33] flow_node_inputs_have_dimensions
+  [47] f_default_malloc       [90] flow_graph_validate    [63] flow_node_populate_dimensions
+  [26] filter_flex_cubic       [9] flow_graph_walk       [108] flow_node_post_optimize_flatten
+ [117] flatten_decode         [50] flow_graph_walk_dependency_wise [109] flow_node_pre_optimize_flatten
+  [86] flatten_render1d        [2] flow_graph_walk_recursive [68] flow_node_stringify
+ [118] flatten_scale         [130] flow_heap_set_default  [34] flow_node_update_state
+  [76] flow_bitmap_bgra_create [91] flow_interpolation_details_create [45] flow_node_validate_edges
+  [77] flow_bitmap_bgra_create_header [92] flow_interpolation_details_create_bicubic_custom [35] flow_nodedef_get
+ [119] flow_bitmap_bgra_transform_to_srgb [93] flow_interpolation_details_create_from [54] flow_objtracking_get_record_by_ptr
+  [15] flow_bitmap_float_convert_srgb_to_linear [94] flow_interpolation_details_destroy [40] flow_objtracking_get_record_id_by_ptr
+  [10] flow_bitmap_float_copy_linear_over_srgb [95] flow_interpolation_details_percent_negative_weight [37] flow_objtracking_partial_destroy_by_record
+  [70] flow_bitmap_float_create [96] flow_interpolation_line_contributions_create [27] flow_pixel_format_bytes_per_pixel
+  [71] flow_bitmap_float_create_header [97] flow_interpolation_line_contributions_destroy [143] flow_recursive_mkdir
+  [21] flow_bitmap_float_demultiply_alpha [131] flow_io_create_from_memory [52] flow_snprintf
+  [72] flow_bitmap_float_destroy [30] flow_io_memory_read [51] flow_vsnprintf
+   [8] flow_bitmap_float_pivoting_composite_linear_over_srgb [98] flow_io_memory_seek [23] jpeg_fill_bit_buffer
+  [11] flow_bitmap_float_scale_rows [132] flow_job_add_io [24] jpeg_huff_decode
+  [56] flow_call_destructors_recursive [99] flow_job_codec_select [18] jsimd_idct_islow_sse2
+  [87] flow_codecs_jpeg_setup_source_manager [100] flow_job_codecs_initialize_decode_jpeg [19] jsimd_ycc_extbgrx_convert_sse2
+ [120] flow_context_begin_terminate [101] flow_job_codecs_jpeg_get_frame_info [38] node_visitor_dimensions
+  [43] flow_context_calloc   [133] flow_job_codecs_jpeg_get_info [3] node_visitor_execute
+ [121] flow_context_end_terminate [134] flow_job_codecs_jpeg_read_frame [53] node_visitor_flatten
+ [122] flow_context_get_default_codec_set [102] flow_job_configure_recording [49] node_visitor_optimize
+  [88] flow_context_has_error [135] flow_job_create       [46] node_visitor_post_optimize_flatten
+ [123] flow_context_initialize [136] flow_job_create_row_pointers [144] read_all_bytes
+  [48] flow_context_malloc   [137] flow_job_decoder_get_frame_info [145] set_downscale_hints
+  [89] flow_context_objtracking_initialize [138] flow_job_decoder_set_downscale_hints [146] stringify_bitmap_bgra_pointer
+ [124] flow_context_objtracking_terminate [139] flow_job_destroy [110] stringify_canvas
+  [28] flow_context_profiler_start [20] flow_job_execute_where_certain [147] stringify_decode
+  [29] flow_context_profiler_stop [62] flow_job_get_codec_definition [111] stringify_render1d
+ [125] flow_context_set_floatspace [74] flow_job_get_codec_instance [1] <cycle 1>
+  [44] flow_deprecated_free  [140] flow_job_get_decoder_info [25] <cycle 2>
