@@ -140,12 +140,15 @@ static char * stringify_filter(flow_interpolation_filter filter)
 static bool stringify_render1d(flow_c * c, struct flow_graph * g, int32_t node_id, char * buffer, size_t buffer_size)
 {
     FLOW_GET_INFOBYTES(g, node_id, flow_nodeinfo_render_to_canvas_1d, info);
+    FLOW_GET_INPUT_NODE(g, node_id)
+
+
     char state[64];
     if (!stringify_state(state, 63, &g->nodes[node_id])) {
         FLOW_error_return(c);
     }
 
-    flow_snprintf(buffer, buffer_size, "render1d x%d %s %s\nat %d,%d. %s sharp%d%%. %s", info->scale_to_width,
+    flow_snprintf(buffer, buffer_size, "render1d %d -> %d %s %s\nat %d,%d. %s sharp%d%%. %s",input_node->result_width,  info->scale_to_width,
                   stringify_filter(info->interpolation_filter), (const char *)&state, info->canvas_x, info->canvas_y,
                   info->transpose_on_write ? "transpose. " : "", (int)info->sharpen_percent_goal,
                   stringify_colorspace(info->scale_in_colorspace));
