@@ -17,7 +17,7 @@ module Imageflow
         OptionParser.new do |opt|
           opt.banner = "Usage: imageflow-vips [options] image1.jpg image2.png image3.gif\n"
 
-          opt.on('-s', '-size SIZE', 'shrink to SIZE or to WIDTHxHEIGHT') do |v|
+          opt.on('-s', '--size SIZE', 'shrink to SIZE or to WIDTHxHEIGHT') do |v|
             opts.thumbnail_size_str = v
             if v =~ /^\d+x\d+$/
               opts.width, opts.height = v.scan(/\d+/).map{|s| s.to_i}

@@ -262,11 +262,11 @@ module Imageflow
 
     #PUB struct flow_io * flow_io_create_for_file(flow_c * c, flow_io_mode mode, const char * filename, void * owner);
 
-    attach_function :flow_io_create_for_file, [:pointer, :flow_io_mode, :string, :pointer], :pointer
+    attach_function :flow_io_create_for_file, [:pointer, :flow_io_mode, :string, :pointer], :pointer, blocking: true
 
     #PUB struct flow_io * flow_io_create_from_file_pointer(flow_c * c, flow_io_mode mode, FILE * file_pointer, int64_t optional_file_length, void * owner);
 
-    attach_function :flow_io_create_from_file_pointer, [:pointer, :flow_io_mode, :pointer, :int64, :pointer], :pointer
+    attach_function :flow_io_create_from_file_pointer, [:pointer, :flow_io_mode, :pointer, :int64, :pointer], :pointer, blocking: true
 
     #attach_function :flow_io_create_for_file, [:pointer, :flow_io_mode, :string, :pointer], :pointer
     #
@@ -278,28 +278,28 @@ module Imageflow
 
     # PUB struct flow_io* flow_io_create_from_memory(flow_context* c, flow_io_mode mode, uint8_t* memory, size_t length,
     #    void* owner, flow_destructor_function memory_free);
-    attach_function :flow_io_create_from_memory, [:pointer, :flow_io_mode, :pointer, :uint64, :pointer, :pointer], :pointer
+    attach_function :flow_io_create_from_memory, [:pointer, :flow_io_mode, :pointer, :uint64, :pointer, :pointer], :pointer, blocking: true
     #PUB struct flow_io* flow_io_create_for_output_buffer(flow_context* c, void* owner);
-    attach_function :flow_io_create_for_output_buffer, [:pointer, :pointer], :pointer
+    attach_function :flow_io_create_for_output_buffer, [:pointer, :pointer], :pointer, blocking: true
 
 
     # // Returns false if the flow_io struct is disposed or not an output buffer type (or for any other error)
     # PUB bool flow_io_get_output_buffer(flow_context* c, struct flow_io* io, uint8_t** out_pointer_to_buffer,
     #                                                            size_t* out_length);
-    attach_function :flow_io_get_output_buffer, [:pointer, :pointer, :pointer, :pointer], :bool
+    attach_function :flow_io_get_output_buffer, [:pointer, :pointer, :pointer, :pointer], :bool, blocking: true
 
     # PUB bool flow_io_write_output_buffer_to_file(flow_context* c, struct flow_io* io, const char* file_path);
-    attach_function :flow_io_write_output_buffer_to_file, [:pointer, :pointer, :string], :bool
+    attach_function :flow_io_write_output_buffer_to_file, [:pointer, :pointer, :string], :bool, blocking: true
 
     #PUB struct flow_io * flow_job_get_io(flow_context* c, struct flow_job * job, int32_t placeholder_id);
-    attach_function :flow_job_get_io, [:pointer, :pointer, :int32], :pointer
+    attach_function :flow_job_get_io, [:pointer, :pointer, :int32], :pointer, blocking: true
 
     #PUB bool flow_job_get_output_buffer_by_placeholder(flow_context* c, struct flow_job * job, int32_t placeholder_id, uint8_t** out_pointer_to_buffer,
     #                                                                                                   size_t* out_length)
     attach_function :flow_job_get_output_buffer, [:pointer, :pointer, :int32,  :pointer, :pointer], :bool
     # PUB bool flow_job_add_io(flow_context* c, struct flow_job* job, struct flow_io* io, int32_t placeholder_id,
     #                                                                                             FLOW_DIRECTION direction);
-    attach_function :flow_job_add_io, [:pointer, :pointer, :pointer, :int32, :flow_direction], :bool
+    attach_function :flow_job_add_io, [:pointer, :pointer, :pointer, :int32, :flow_direction], :bool, blocking: true
 
     # bool flow_job_set_default_encoder(flow_context* c, struct flow_job* job, int32_t by_placeholder_id,
     #                                                                                  flow_codec_type default_encoder_id);
@@ -471,7 +471,7 @@ module Imageflow
           :growth_factor, :float
       )
     end
-    attach_function :flow_graph_create, [:pointer, :uint32, :uint32, :uint32, :float], :pointer
+    attach_function :flow_graph_create, [:pointer, :uint32, :uint32, :uint32, :float], :pointer, blocking: true
     attach_function :flow_graph_destroy, [:pointer, :pointer], :void
     attach_function :flow_graph_replace_if_too_small, [:pointer, :pointer, :uint32, :uint32, :uint32], :bool
     attach_function :flow_graph_copy_and_resize, [:pointer, :pointer, :uint32, :uint32, :uint32], :pointer
@@ -496,6 +496,7 @@ module Imageflow
 
     attach_function :flow_job_decoder_set_downscale_hints_by_placeholder_id, [:pointer, :pointer, :int32, :int64, :int64, :int64, :int64, :bool, :bool], :bool
 
+    #should probably add to everything: , blocking: true
 
     attach_function :flow_node_create_encoder, [:pointer, :pointer, :int32, :int32, :uint64], :int32
     attach_function :flow_node_create_primitive_copy_rect_to_canvas, [:pointer, :pointer, :int32, :uint32, :uint32, :uint32, :uint32, :uint32, :uint32], :int32
@@ -591,7 +592,7 @@ module Imageflow
     attach_function :flow_job_execute_where_certain, [:pointer, :pointer, :pointer], :bool
     attach_function :flow_job_graph_fully_executed, [:pointer, :pointer, :pointer], :bool
     attach_function :flow_job_notify_graph_changed, [:pointer, :pointer, :pointer], :bool
-    attach_function :flow_job_execute, [:pointer, :pointer, :pointer], :bool
+    attach_function :flow_job_execute, [:pointer, :pointer, :pointer], :bool, blocking: true
     attach_function :flow_graph_post_optimize_flatten, [:pointer, :pointer, :pointer], :bool
     attach_function :flow_graph_optimize, [:pointer, :pointer, :pointer], :bool
     attach_function :flow_graph_pre_optimize_flatten, [:pointer, :pointer], :bool
@@ -620,8 +621,6 @@ module Imageflow
 
 
 
-    attach_function :flow_job_get_decoder_info, [:pointer, :pointer, :int32, :pointer], :pointer
-
-
+    attach_function :flow_job_get_decoder_info, [:pointer, :pointer, :int32, :pointer], :pointer, blocking: true
   end
 end

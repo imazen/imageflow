@@ -7,6 +7,16 @@ module Imageflow
       record_nothing #Don't record anything by default
     end
 
+    def self.get_image_info_by_filename(filename, context: nil)
+      c = context || Imageflow::Context.new
+      job = Job.new context:c
+      job.add_input_file placeholder_id: 0, filename: filename
+      info = job.get_decoder_info placeholder_id: 0
+      job.destroy!
+      c.destroy! unless context == c
+
+      {width: info[:frame0_width],  height: info[:frame0_height], filename: filename}
+    end
 
     def destroy!
       @c.call_method(:job_destroy, @ptr)

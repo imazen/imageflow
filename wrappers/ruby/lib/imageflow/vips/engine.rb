@@ -35,7 +35,7 @@ module Imageflow
         #todo - autorotate!
         instructions.mode = opts.crop_image ? :crop : :max
         instructions.precise_scaling_ratio = 2.0
-        instructions.format = :jpg if output_path =~ /\.jpe?g$/i
+        instructions.format = :jpeg if output_path =~ /\.jpe?g$/i
         instructions.format = :png if output_path =~ /\.png$/i
 
 
@@ -43,13 +43,13 @@ module Imageflow
 
         # instructions.
 
-        cpu_time = Benchmark.realtime do
-          gb = Imageflow::Riapi::GraphBuilder.new context: c
-          g = gb.build_graph(job: job, input_placeholder_id: 0, output_placeholder_id: 1, source_info: input_info, instructions: instructions)
-          job.execute graph: g
-          c.destroy!
-          c = nil
-        end
+        #cpu_time = ::Benchmark.realtime do
+        gb = Imageflow::Riapi::GraphBuilder.new context: c
+        g = gb.build_graph(job: job, input_placeholder_id: 0, output_placeholder_id: 1, source_info: input_info, instructions: instructions)
+        job.execute graph: g
+        c.destroy!
+        c = nil
+        #end
 
 
 
