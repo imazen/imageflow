@@ -24,7 +24,7 @@ static bool are_valid_bitmap_dimensions(int sx, int sy)
             && sx * FLOW_MAX_BYTES_PP < ((INT_MAX - FLOW_MAX_BYTES_PP) / sy)); // then we can safely check
 }
 
-uint32_t flow_pixel_format_bytes_per_pixel(flow_pixel_format format) { return (uint32_t)format; }
+uint32_t flow_pixel_format_bytes_per_pixel(flow_pixel_format format) { return (uint32_t)format; } __attribute__((hot)) __attribute__((pure))
 
 struct flow_bitmap_bgra * flow_bitmap_bgra_create_header(flow_c * context, int sx, int sy)
 {
