@@ -34,12 +34,14 @@ int main(void)
         int original_width, original_height;
         if (!get_image_dimensions(c, bytes, bytes_count, &original_width, &original_height)) ERR2(c);
 
+        int min_factor = 3;
+
         int32_t target_w = original_width / i;
         int32_t target_h = (int32_t)ceil((float)target_w / (float)original_width * (float)original_height);
 
-        if (!flow_job_decoder_set_downscale_hints_by_placeholder_id(c, job, input_placeholder, target_w * 2,
-                                                                    target_h * 2, target_w * 2,
-                                                                    target_h * 2 - 1, false, false)) {
+        if (!flow_job_decoder_set_downscale_hints_by_placeholder_id(c, job, input_placeholder,  (target_w -1)  * min_factor,
+                                                                    (target_h -1) * min_factor, (target_w -1) * min_factor,
+                                                                    (target_h -1) * min_factor, false, false)) {
             ERR2(c);
         }
 
