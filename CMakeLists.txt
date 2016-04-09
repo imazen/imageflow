@@ -10,25 +10,32 @@ endif()
 conan_basic_setup()
 
 option(ENABLE_TEST OFF)
+option(ENABLE_PROFILING OFF)
+option(SKIP_LIBRARY OFF)
 
-if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/build/conanbuildinfo.cmake)
-	set(ENABLE_TEST ON)
+if (NOT SKIP_LIBRARY)
+	if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/build/conanbuildinfo.cmake)
+		set(ENABLE_TEST ON)
+	endif()
 endif()
 
 list(REMOVE_ITEM CONAN_LIBS efence) # FIXME: Maybe efence should be a private dep of openssls
+
 
 file(GLOB LIB_SRCS lib/*.c)
 file(GLOB LIB_HDRS lib/*.h)
 list(APPEND LIB_HDRS imageflow.h)
 list(APPEND LIB_HDRS imageflow_advanced.h)
 
-add_library(imageflow SHARED ${LIB_SRCS} ${LIB_HDRS})
-target_link_libraries(imageflow ${CONAN_LIBS})
-target_include_directories(imageflow PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
+if (NOT SKIP_LIBRARY)
+	add_library(imageflow SHARED ${LIB_SRCS} ${LIB_HDRS})
+	target_link_libraries(imageflow ${CONAN_LIBS})
+	target_include_directories(imageflow PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
+endif()
 
 # -ffast-math changes results
 if (UNIX)
-	set(FASTSCALING_FLAGS "-iquotelib -fPIC -O3 -fstrict-aliasing -ffast-math -funroll-loops -fomit-frame-pointer -ffinite-math-only -march=native -Wpointer-arith -Wcast-qual -Wpedantic -Wall -Wextra -Wno-unused-parameter -Wuninitialized -Wredundant-decls -Werror")
+	set(FASTSCALING_FLAGS "-iquotelib -fPIC -O3 -fstrict-aliasing -ffast-math -funroll-loops  -ffinite-math-only -march=native -Wpointer-arith -Wcast-qual -Wpedantic -Wall -Wextra -Wno-unused-parameter -Wuninitialized -Wredundant-decls -Werror")
 	set(CMAKE_C_FLAGS  "${CMAKE_C_FLAGS} ${FASTSCALING_FLAGS} -std=gnu11 -Wstrict-prototypes -Wmissing-prototypes -Wc++-compat -Wshadow" )
 	set(CMAKE_CXX_FLAGS  "${CMAKE_CXX_FLAGS} ${FASTSCALING_FLAGS} -std=gnu++11" )
 else()
@@ -45,6 +52,16 @@ if (COVERAGE)
 	set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} --coverage ") # enabling coverage
 else()
 
+endif()
+
+if (ENABLE_PROFILING)
+	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -pg")
+	set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -pg")
+
+	add_executable(profile_imageflow tests/profile_imageflow.c tests/helpers_visual.c tests/helpers.c ${LIB_SRCS} ${LIB_HDRS})
+	target_link_libraries(profile_imageflow ${CONAN_LIBS})
+	target_include_directories(profile_imageflow PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
+	target_include_directories(profile_imageflow PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/lib)
 endif()
 
 
@@ -84,6 +101,8 @@ if(ENABLE_TEST)
 	endif()
 
 endif()
+
+
 
 if(${CMAKE_GENERATOR} MATCHES "Unix Makefiles")
 	message(STATUS ${CMAKE_BUILD_TOOL})
