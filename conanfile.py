@@ -4,9 +4,9 @@ import os
 class ImageFlowConan(ConanFile):
     settings = "os", "compiler", "build_type", "arch"
     requires = "littlecms/2.7@lasote/stable", "libpng/1.6.21@lasote/stable", "libjpeg-turbo/1.4.2@imazen/testing" , "giflib/5.1.3@lasote/stable"
-    options = {"build_tests": [True, False], "profiling": [True, False]}
+    options = {"build_tests": [True, False], "profiling": [True, False], "coverage": [True, False]}
     generators = "cmake"
-    default_options = "build_tests=True", "libjpeg-turbo:shared=False", "libpng:shared=False", \
+    default_options = "build_tests=True", "coverage=False", "profiling=False", "libjpeg-turbo:shared=False", "libpng:shared=False", \
    					  "zlib:shared=False", "libcurl:shared=False", "OpenSSL:shared=True", \
    					  "imageflow:shared=True"
 
@@ -39,8 +39,10 @@ class ImageFlowConan(ConanFile):
         os.chdir("./build")
         cmake = CMake(self.settings)
         cmake_settings = ""
+        if self.options.coverage:
+            cmake_settings += " -DCOVERAGE=ON"
         if self.options.build_tests:
-            cmake_settings += " -DENABLE_TEST=ON -DCOVERAGE=ON"
+            cmake_settings += " -DENABLE_TEST=ON"
         if self.options.profiling:
             cmake_settings += " -DSKIP_LIBRARY=ON -DENABLE_TEST=OFF -DENABLE_PROFILING=ON"
 

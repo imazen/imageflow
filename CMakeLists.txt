@@ -31,6 +31,8 @@ if (NOT SKIP_LIBRARY)
 	add_library(imageflow SHARED ${LIB_SRCS} ${LIB_HDRS})
 	target_link_libraries(imageflow ${CONAN_LIBS})
 	target_include_directories(imageflow PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
+	target_compile_options(imageflow PRIVATE "-flto")
+	target_compile_options(imageflow PRIVATE "-fverbose-asm")
 endif()
 
 # -ffast-math changes results
@@ -55,13 +57,14 @@ else()
 endif()
 
 if (ENABLE_PROFILING)
-	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -pg")
-	set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -pg")
+	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -pg ")
+	set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -pg ")
 
 	add_executable(profile_imageflow tests/profile_imageflow.c tests/helpers_visual.c tests/helpers.c ${LIB_SRCS} ${LIB_HDRS})
 	target_link_libraries(profile_imageflow ${CONAN_LIBS})
 	target_include_directories(profile_imageflow PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 	target_include_directories(profile_imageflow PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/lib)
+	target_compile_options(profile_imageflow PRIVATE "-flto")
 endif()
 
 
