@@ -34,7 +34,9 @@ module Imageflow
         instructions.height = opts.height
         #todo - autorotate!
         instructions.mode = opts.crop_image ? :crop : :max
-        instructions.precise_scaling_ratio = 2.0
+
+        instructions.precise_scaling_ratio = 5 # 2.1
+
         instructions.format = :jpeg if output_path =~ /\.jpe?g$/i
         instructions.format = :png if output_path =~ /\.png$/i
 
