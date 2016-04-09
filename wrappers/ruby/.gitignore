@@ -88,6 +88,3 @@ fabric.properties
 
 #Test stuff
 temp_vips_benchmarking/
-
-# Assembly output
-*.s

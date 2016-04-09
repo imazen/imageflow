@@ -256,3 +256,8 @@ imageflow_cache/
 
 /profiling/
 profile.txt
+
+
+# Assembly output
+*.s
+*.c.s
