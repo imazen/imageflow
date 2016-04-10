@@ -39,10 +39,7 @@ static inline float srgb_to_linear(float s)
 
 static inline float remove_gamma(flow_c * context, float value) { return pow(value, context->colorspace.gamma); }
 
-static inline float apply_gamma(flow_c * context, float value)
-{
-    return pow(value, context->colorspace.gamma_inverse);
-}
+static inline float apply_gamma(flow_c * context, float value) { return pow(value, context->colorspace.gamma_inverse); }
 
 #ifdef EXPOSE_SIGMOID
 
@@ -93,7 +90,8 @@ static inline float Context_srgb_to_floatspace(flow_c * context, uint8_t value)
     // context->colorspace.byte_to_float[value];
     return context->colorspace
         .byte_to_float[value]; // 2x faster, even if just multiplying by 1/255. 3x faster than the entire calculation.
-} __attribute__((pure))
+}
+__attribute__((pure))
 
 static inline uint8_t Context_floatspace_to_srgb(flow_c * context, float space_value)
 {
@@ -107,7 +105,8 @@ static inline uint8_t Context_floatspace_to_srgb(flow_c * context, float space_v
     if (context->colorspace.apply_srgb)
         return uchar_clamp_ff(linear_to_srgb(v));
     return uchar_clamp_ff(255.0f * v);
-} __attribute__((pure))
+}
+__attribute__((pure))
 
 static inline void linear_to_yxz(float * bgr)
 {

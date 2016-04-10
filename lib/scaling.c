@@ -13,8 +13,6 @@
 #include "imageflow_private.h"
 #include <emmintrin.h>
 
-
-
 bool flow_bitmap_float_scale_rows(flow_c * context, struct flow_bitmap_float * from, uint32_t from_row,
                                   struct flow_bitmap_float * to, uint32_t to_row, uint32_t row_count,
                                   struct flow_interpolation_pixel_contributions * weights)
@@ -34,11 +32,12 @@ bool flow_bitmap_float_scale_rows(flow_c * context, struct flow_bitmap_float * f
     // if both have alpha, process it
     if (from_step == 4 && to_step == 4) {
         for (uint32_t row = 0; row < row_count; row++) {
-            const __m128 * __restrict source_buffer = (__m128 *)(from->pixels + ((from_row + row) * from->float_stride));
-            __m128 * __restrict dest_buffer =  (__m128 *)(to->pixels + ((to_row + row) * to->float_stride));
+            const __m128 * __restrict source_buffer
+                = (__m128 *)(from->pixels + ((from_row + row) * from->float_stride));
+            __m128 * __restrict dest_buffer = (__m128 *)(to->pixels + ((to_row + row) * to->float_stride));
 
             for (ndx = 0; ndx < dest_buffer_count; ndx++) {
-                __m128 sums = {0.0f};
+                __m128 sums = { 0.0f };
                 const int left = weights[ndx].Left;
                 const int right = weights[ndx].Right;
 
@@ -59,7 +58,7 @@ bool flow_bitmap_float_scale_rows(flow_c * context, struct flow_bitmap_float * f
             float * __restrict dest_buffer = to->pixels + ((to_row + row) * to->float_stride);
 
             for (ndx = 0; ndx < dest_buffer_count; ndx++) {
-                float bgr[3] = {0.0f, 0.0f, 0.0f};
+                float bgr[3] = { 0.0f, 0.0f, 0.0f };
                 const int left = weights[ndx].Left;
                 const int right = weights[ndx].Right;
 
@@ -109,7 +108,8 @@ bool flow_bitmap_float_scale_rows(flow_c * context, struct flow_bitmap_float * f
         }
     }
     return true;
-} __attribute__((hot)) __attribute__((optimize("-funsafe-math-optimizations")))
+}
+__attribute__((hot)) __attribute__((optimize("-funsafe-math-optimizations")))
 /*
 This halves in sRGB space instead of linear. Not significantly faster on modern hardware, it appears?
 #define  HALVING_TYPE unsigned short

@@ -12,36 +12,34 @@ int main(void)
         flow_c * c = flow_context_create();
 
         size_t bytes_count = 0;
-        uint8_t * bytes
-            = get_bytes_cached(c, &bytes_count,
-                               "http://s3-us-west-2.amazonaws.com/imageflow-resources/test_inputs/u6.jpg");
+        uint8_t * bytes = get_bytes_cached(c, &bytes_count,
+                                           "http://s3-us-west-2.amazonaws.com/imageflow-resources/test_inputs/u6.jpg");
 
         struct flow_graph * g = flow_graph_create(c, 10, 10, 200, 2.0);
         ERR2(c);
 
         int32_t last, input_placeholder = 0;
 
-
-
         struct flow_job * job = flow_job_create(c);
         ERR2(c);
         // flow_job_configure_recording(c, job, true, true, true, true, true);
 
-        struct flow_io * input = flow_io_create_from_memory(c, flow_io_mode_read_seekable, bytes, bytes_count, job,
-                                                            NULL);
+        struct flow_io * input
+            = flow_io_create_from_memory(c, flow_io_mode_read_seekable, bytes, bytes_count, job, NULL);
         flow_job_add_io(c, job, input, input_placeholder, FLOW_INPUT);
 
         int original_width, original_height;
-        if (!get_image_dimensions(c, bytes, bytes_count, &original_width, &original_height)) ERR2(c);
+        if (!get_image_dimensions(c, bytes, bytes_count, &original_width, &original_height))
+            ERR2(c);
 
         int min_factor = 3;
 
         int32_t target_w = original_width / i;
         int32_t target_h = (int32_t)ceil((float)target_w / (float)original_width * (float)original_height);
 
-        if (!flow_job_decoder_set_downscale_hints_by_placeholder_id(c, job, input_placeholder,  (target_w -1)  * min_factor,
-                                                                    (target_h -1) * min_factor, (target_w -1) * min_factor,
-                                                                    (target_h -1) * min_factor, false, false)) {
+        if (!flow_job_decoder_set_downscale_hints_by_placeholder_id(
+                c, job, input_placeholder, (target_w - 1) * min_factor, (target_h - 1) * min_factor,
+                (target_w - 1) * min_factor, (target_h - 1) * min_factor, false, false)) {
             ERR2(c);
         }
 
@@ -51,8 +49,6 @@ int main(void)
 
         struct flow_bitmap_bgra * b;
         last = flow_node_create_bitmap_bgra_reference(c, &g, last, &b);
-
-
 
         if (!flow_job_execute(c, job, &g)) {
             ERR2(c);

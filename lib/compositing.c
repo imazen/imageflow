@@ -13,20 +13,24 @@
 
 #include <string.h>
 
-#define likely(x)    (__builtin_expect (!!(x), 1))
-#define unlikely(x)  (__builtin_expect (!!(x), 0))
+#define likely(x) (__builtin_expect(!!(x), 1))
+#define unlikely(x) (__builtin_expect(!!(x), 0))
 
 bool flow_bitmap_float_convert_srgb_to_linear(flow_c * context, struct flow_bitmap_bgra * src, uint32_t from_row,
                                               struct flow_bitmap_float * dest, uint32_t dest_row, uint32_t row_count)
 {
-    if unlikely(src->w != dest->w || flow_pixel_format_bytes_per_pixel(src->fmt) < dest->channels) {
-        FLOW_error(context, flow_status_Invalid_internal_state);
-        return false;
-    }
-    if unlikely(!(from_row + row_count <= src->h && dest_row + row_count <= dest->h)) {
-        FLOW_error(context, flow_status_Invalid_internal_state);
-        return false;
-    }
+    if
+        unlikely(src->w != dest->w || flow_pixel_format_bytes_per_pixel(src->fmt) < dest->channels)
+        {
+            FLOW_error(context, flow_status_Invalid_internal_state);
+            return false;
+        }
+    if
+        unlikely(!(from_row + row_count <= src->h && dest_row + row_count <= dest->h))
+        {
+            FLOW_error(context, flow_status_Invalid_internal_state);
+            return false;
+        }
 
     const uint32_t w = src->w;
     const uint32_t units = w * flow_pixel_format_bytes_per_pixel(src->fmt);
@@ -34,28 +38,32 @@ bool flow_bitmap_float_convert_srgb_to_linear(flow_c * context, struct flow_bitm
     const uint32_t to_step = dest->channels;
     const uint32_t copy_step = umin(from_step, to_step);
 
-    if unlikely(copy_step != 3 && copy_step != 4) {
-        FLOW_error(context, flow_status_Unsupported_pixel_format);
-        return false;
-    }
-
-
-    if likely(copy_step == 4) {
-        for (uint32_t row = 0; row < row_count; row++) {
-            uint8_t * src_start = src->pixels + (from_row + row) * src->stride;
-            float * buf = dest->pixels + (dest->float_stride * (row + dest_row));
-            for (uint32_t to_x = 0, bix = 0; bix < units; to_x += to_step, bix += from_step) {
-                {
-                    const float alpha = ((float)src_start[bix + 3]) / 255.0f;
-                    buf[to_x] = alpha * Context_srgb_to_floatspace(context, src_start[bix]);
-                    buf[to_x + 1] = alpha * Context_srgb_to_floatspace(context, src_start[bix + 1]);
-                    buf[to_x + 2] = alpha * Context_srgb_to_floatspace(context, src_start[bix + 2]);
-                    buf[to_x + 3] = alpha;
-                }
-            }
-            // We're only working on a portion... dest->alpha_premultiplied = true;
+    if
+        unlikely(copy_step != 3 && copy_step != 4)
+        {
+            FLOW_error(context, flow_status_Unsupported_pixel_format);
+            return false;
         }
-    } else {
+
+    if
+        likely(copy_step == 4)
+        {
+            for (uint32_t row = 0; row < row_count; row++) {
+                uint8_t * src_start = src->pixels + (from_row + row) * src->stride;
+                float * buf = dest->pixels + (dest->float_stride * (row + dest_row));
+                for (uint32_t to_x = 0, bix = 0; bix < units; to_x += to_step, bix += from_step) {
+                    {
+                        const float alpha = ((float)src_start[bix + 3]) / 255.0f;
+                        buf[to_x] = alpha * Context_srgb_to_floatspace(context, src_start[bix]);
+                        buf[to_x + 1] = alpha * Context_srgb_to_floatspace(context, src_start[bix + 1]);
+                        buf[to_x + 2] = alpha * Context_srgb_to_floatspace(context, src_start[bix + 2]);
+                        buf[to_x + 3] = alpha;
+                    }
+                }
+                // We're only working on a portion... dest->alpha_premultiplied = true;
+            }
+        }
+    else {
         for (uint32_t row = 0; row < row_count; row++) {
             uint8_t * src_start = src->pixels + (from_row + row) * src->stride;
 
@@ -70,7 +78,8 @@ bool flow_bitmap_float_convert_srgb_to_linear(flow_c * context, struct flow_bitm
         }
     }
     return true;
-} __attribute__((hot))
+}
+__attribute__((hot))
 
 /*
 static void unpack24bitRow(uint32_t width, unsigned char* sourceLine, unsigned char* destArray){
@@ -202,34 +211,33 @@ bool flow_bitmap_float_copy_linear_over_srgb(flow_c * context, struct flow_bitma
 
     const uint32_t dest_bytes_pp = flow_pixel_format_bytes_per_pixel(dest->fmt);
 
-
     const uint32_t srcitems = umin(from_col + col_count, src->w) * src->channels;
 
     const uint32_t ch = src->channels;
     const bool copy_alpha = dest->fmt == flow_bgra32 && ch == 4 && src->alpha_meaningful;
     const bool clean_alpha = !copy_alpha && dest->fmt == flow_bgra32;
 
-#define FLOAT_COPY_LINEAR(ch, copy_alpha, clean_alpha)    \
-    const uint32_t dest_row_stride = transpose ? dest_bytes_pp : dest->stride;\
-    const uint32_t dest_pixel_stride = transpose ? dest->stride : dest_bytes_pp;\
-    for (uint32_t row = 0; row < row_count; row++) {\
-        float * src_row = src->pixels + (row + from_row) * src->float_stride;\
+#define FLOAT_COPY_LINEAR(ch, copy_alpha, clean_alpha)                                                                 \
+    const uint32_t dest_row_stride = transpose ? dest_bytes_pp : dest->stride;                                         \
+    const uint32_t dest_pixel_stride = transpose ? dest->stride : dest_bytes_pp;                                       \
+    for (uint32_t row = 0; row < row_count; row++) {                                                                   \
+        float * src_row = src->pixels + (row + from_row) * src->float_stride;                                          \
         uint8_t * dest_row_bytes = dest->pixels + (dest_row + row) * dest_row_stride + (from_col * dest_pixel_stride); \
-        for (uint32_t ix = from_col * ch; ix < srcitems; ix += ch) { \
-            dest_row_bytes[0] = Context_floatspace_to_srgb(context, src_row[ix]);\
-            dest_row_bytes[1] = Context_floatspace_to_srgb(context, src_row[ix + 1]);\
-            dest_row_bytes[2] = Context_floatspace_to_srgb(context, src_row[ix + 2]);\
-            if (copy_alpha) {\
-                dest_row_bytes[3] = uchar_clamp_ff(src_row[ix + 3] * 255.0f);\
-            }\
-            if (clean_alpha) {\
-                dest_row_bytes[3] = 0xff; \
-            }\
-            dest_row_bytes += dest_pixel_stride;\
-        }\
-    }\
+        for (uint32_t ix = from_col * ch; ix < srcitems; ix += ch) {                                                   \
+            dest_row_bytes[0] = Context_floatspace_to_srgb(context, src_row[ix]);                                      \
+            dest_row_bytes[1] = Context_floatspace_to_srgb(context, src_row[ix + 1]);                                  \
+            dest_row_bytes[2] = Context_floatspace_to_srgb(context, src_row[ix + 2]);                                  \
+            if (copy_alpha) {                                                                                          \
+                dest_row_bytes[3] = uchar_clamp_ff(src_row[ix + 3] * 255.0f);                                          \
+            }                                                                                                          \
+            if (clean_alpha) {                                                                                         \
+                dest_row_bytes[3] = 0xff;                                                                              \
+            }                                                                                                          \
+            dest_row_bytes += dest_pixel_stride;                                                                       \
+        }                                                                                                              \
+    }
 
-    if (ch == 3){
+    if (ch == 3) {
         if (copy_alpha == true && clean_alpha == false) {
             FLOAT_COPY_LINEAR(3, true, false)
         }
@@ -240,7 +248,7 @@ bool flow_bitmap_float_copy_linear_over_srgb(flow_c * context, struct flow_bitma
             FLOAT_COPY_LINEAR(3, false, true)
         }
     }
-    if (ch == 4){
+    if (ch == 4) {
         if (copy_alpha == true && clean_alpha == false) {
             FLOAT_COPY_LINEAR(4, true, false)
         }
@@ -252,7 +260,8 @@ bool flow_bitmap_float_copy_linear_over_srgb(flow_c * context, struct flow_bitma
         }
     }
     return true;
-} __attribute__((hot))
+}
+__attribute__((hot))
 
 static bool BitmapFloat_compose_linear_over_srgb(flow_c * context, struct flow_bitmap_float * src,
                                                  const uint32_t from_row, struct flow_bitmap_bgra * dest,

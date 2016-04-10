@@ -477,7 +477,6 @@ static void flow_bitmap_bgra32_sharpen_block_edges_x(struct flow_bitmap_bgra * i
     if (im->w < 3 || flow_pixel_format_bytes_per_pixel(im->fmt) != 4)
         return;
 
-
     for (y = 0; y < sy; y++) {
         unsigned char * row = im->pixels + y * stride;
         float left_b = (float)row[0];
@@ -501,7 +500,8 @@ static void flow_bitmap_bgra32_sharpen_block_edges_x(struct flow_bitmap_bgra * i
             coord++;
         }
     }
-}__attribute__((hot)) __attribute__((optimize("-funsafe-math-optimizations")))
+}
+__attribute__((hot)) __attribute__((optimize("-funsafe-math-optimizations")))
 
 bool flow_bitmap_bgra_transpose(flow_c * c, struct flow_bitmap_bgra * from, struct flow_bitmap_bgra * to)
 {
@@ -512,17 +512,19 @@ bool flow_bitmap_bgra_transpose(flow_c * c, struct flow_bitmap_bgra * from, stru
     int step = flow_pixel_format_bytes_per_pixel(to->fmt);
     for (uint32_t x = 0; x < to->w; x++) {
         for (uint32_t y = 0; y < to->h; y++) {
-            *((uint32_t *)&to->pixels[x * step + y * to->stride]) = *((uint32_t *)&from->pixels[x * from->stride + y * step]);
+            *((uint32_t *)&to->pixels[x * step + y * to->stride])
+                = *((uint32_t *)&from->pixels[x * from->stride + y * step]);
         }
     }
     return true;
-}__attribute__((hot)) __attribute__((optimize("-funsafe-math-optimizations")))
+}
+__attribute__((hot)) __attribute__((optimize("-funsafe-math-optimizations")))
 
 bool flow_bitmap_bgra_sharpen_block_edges(flow_c * c, struct flow_bitmap_bgra * im, int block_size, float pct)
 {
     if (pct == 0.0f)
         return true;
-    if (im->fmt != flow_bgra32){
+    if (im->fmt != flow_bgra32) {
         FLOW_error(c, flow_status_Unsupported_pixel_format);
         return false;
     }
@@ -545,7 +547,8 @@ bool flow_bitmap_bgra_sharpen_block_edges(flow_c * c, struct flow_bitmap_bgra * 
     }
     flow_bitmap_bgra_destroy(c, temp);
     return true;
-}__attribute__((hot))
+}
+__attribute__((hot))
 
 static void SharpenBgraFloatInPlace(float * buf, unsigned int count, double pct, int step)
 {
