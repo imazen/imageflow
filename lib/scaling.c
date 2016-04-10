@@ -11,7 +11,9 @@
 #endif
 
 #include "imageflow_private.h"
-#include <string.h>
+#include <emmintrin.h>
+
+
 
 bool flow_bitmap_float_scale_rows(flow_c * context, struct flow_bitmap_float * from, uint32_t from_row,
                                   struct flow_bitmap_float * to, uint32_t to_row, uint32_t row_count,
@@ -32,11 +34,11 @@ bool flow_bitmap_float_scale_rows(flow_c * context, struct flow_bitmap_float * f
     // if both have alpha, process it
     if (from_step == 4 && to_step == 4) {
         for (uint32_t row = 0; row < row_count; row++) {
-            const float * __restrict source_buffer = from->pixels + ((from_row + row) * from->float_stride);
-            float * __restrict dest_buffer = to->pixels + ((to_row + row) * to->float_stride);
+            const __m128 * __restrict source_buffer = (__m128 *)(from->pixels + ((from_row + row) * from->float_stride));
+            __m128 * __restrict dest_buffer =  (__m128 *)(to->pixels + ((to_row + row) * to->float_stride));
 
             for (ndx = 0; ndx < dest_buffer_count; ndx++) {
-                float r = 0, g = 0, b = 0, a = 0;
+                __m128 sums = {0.0f};
                 const int left = weights[ndx].Left;
                 const int right = weights[ndx].Right;
 
@@ -45,18 +47,10 @@ bool flow_bitmap_float_scale_rows(flow_c * context, struct flow_bitmap_float * f
 
                 /* Accumulate each channel */
                 for (i = left; i <= right; i++) {
-                    const float weight = weightArray[i - left];
-
-                    b += weight * source_buffer[i * from_step];
-                    g += weight * source_buffer[i * from_step + 1];
-                    r += weight * source_buffer[i * from_step + 2];
-                    a += weight * source_buffer[i * from_step + 3];
+                    sums += weightArray[i - left] * source_buffer[i];
                 }
 
-                dest_buffer[ndx * to_step] = b;
-                dest_buffer[ndx * to_step + 1] = g;
-                dest_buffer[ndx * to_step + 2] = r;
-                dest_buffer[ndx * to_step + 3] = a;
+                dest_buffer[ndx] = sums;
             }
         }
     } else if (from_step == 3 && to_step == 3) {
@@ -65,7 +59,7 @@ bool flow_bitmap_float_scale_rows(flow_c * context, struct flow_bitmap_float * f
             float * __restrict dest_buffer = to->pixels + ((to_row + row) * to->float_stride);
 
             for (ndx = 0; ndx < dest_buffer_count; ndx++) {
-                float r = 0, g = 0, b = 0;
+                float bgr[3] = {0.0f, 0.0f, 0.0f};
                 const int left = weights[ndx].Left;
                 const int right = weights[ndx].Right;
 
@@ -76,14 +70,14 @@ bool flow_bitmap_float_scale_rows(flow_c * context, struct flow_bitmap_float * f
                 for (i = left; i <= right; i++) {
                     const float weight = weightArray[i - left];
 
-                    b += weight * source_buffer[i * from_step];
-                    g += weight * source_buffer[i * from_step + 1];
-                    r += weight * source_buffer[i * from_step + 2];
+                    bgr[0] += weight * source_buffer[i * from_step];
+                    bgr[1] += weight * source_buffer[i * from_step + 1];
+                    bgr[2] += weight * source_buffer[i * from_step + 2];
                 }
 
-                dest_buffer[ndx * to_step] = b;
-                dest_buffer[ndx * to_step + 1] = g;
-                dest_buffer[ndx * to_step + 2] = r;
+                dest_buffer[ndx * to_step] = bgr[0];
+                dest_buffer[ndx * to_step + 1] = bgr[1];
+                dest_buffer[ndx * to_step + 2] = bgr[2];
             }
         }
     } else {
@@ -115,7 +109,7 @@ bool flow_bitmap_float_scale_rows(flow_c * context, struct flow_bitmap_float * f
         }
     }
     return true;
-} __attribute__((hot))
+} __attribute__((hot)) __attribute__((optimize("-funsafe-math-optimizations")))
 /*
 This halves in sRGB space instead of linear. Not significantly faster on modern hardware, it appears?
 #define  HALVING_TYPE unsigned short
