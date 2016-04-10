@@ -29,6 +29,7 @@ struct flow_job_jpeg_decoder_state {
     int32_t h;
     int channels;
     struct flow_io * io;
+    struct flow_bitmap_bgra * canvas;
     uint8_t * pixel_buffer;
     size_t pixel_buffer_size;
     uint8_t ** pixel_buffer_row_pointers;

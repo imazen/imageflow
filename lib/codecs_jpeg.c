@@ -125,7 +125,7 @@ static bool flow_job_jpg_decoder_FinishRead(flow_c * c, struct flow_job_jpeg_dec
     }
     // We let the caller create the buffer
     //    state->pixel_buffer =  (jpg_bytep)FLOW_calloc (c, state->pixel_buffer_size, sizeof(jpg_bytep));
-    if (state->pixel_buffer == NULL) {
+    if (state->pixel_buffer == NULL || state->canvas == NULL) {
         flow_job_jpg_decoder_reset(c, state);
         state->stage = flow_job_jpg_decoder_stage_Failed;
         FLOW_error(c, flow_status_Out_of_memory);
@@ -188,6 +188,37 @@ static bool flow_job_jpg_decoder_FinishRead(flow_c * c, struct flow_job_jpeg_dec
      * with the stdio data source.
      */
 
+    /* Step 8: Blur block edges if IDCT downscaling was used */
+    // Least bad configuration (6) for 7/8: (worst dssim 0.0033935200, rank 0.000) - sharpen=-14.00
+// Least bad configuration (6) for 3/8: (worst dssim 0.0051482800, rank 0.000) - sharpen=-14.00
+// Least bad configuration (5) for 2/8: (worst dssim 0.0047244700, rank 0.000) - sharpen=-15.00
+// Least bad configuration (5) for 1/8: (worst dssim 0.0040946400, rank 0.000) - sharpen=-15.00
+// Least bad configuration (4) for 4/8: (worst dssim 0.0014033400, rank 0.000) - sharpen=-7.00
+// Least bad configuration (5) for 5/8: (worst dssim 0.0011648900, rank 0.000) - sharpen=-6.00
+// Least bad configuration (7) for 6/8: (worst dssim 0.0017093100, rank 0.000) - sharpen=-4.00
+
+
+    if (state->cinfo->scale_num != 8 && state->cinfo->scale_denom == 8){
+        float blur = 0;
+        switch (state->cinfo->scale_num){
+            case 7: blur = 14; break;
+            case 6: blur = 4; break;
+            case 5: blur = 6; break;
+            case 4: blur = 7; break;
+            case 3: blur = 14; break;
+            case 2: blur = 15; break;
+            case 1: blur = 15; break;
+        }
+
+        if (blur != 0){
+            if (!flow_bitmap_bgra_sharpen_block_edges(c, state->canvas, state->cinfo->scale_num, -blur)) {
+                FLOW_add_to_callstack(c);
+                return false;
+            }
+        }
+
+    }
+
     jpeg_destroy_decompress(state->cinfo);
     FLOW_free(c, state->cinfo);
     state->cinfo = NULL;
@@ -229,6 +260,7 @@ static bool flow_job_jpg_decoder_reset(flow_c * c, struct flow_job_jpeg_decoder_
     state->h = 0;
     state->gamma = 0.45455;
     state->pixel_buffer = NULL;
+    state->canvas =  NULL;
     state->pixel_buffer_size = -1;
     state->channels = 0;
     state->stage = flow_job_jpg_decoder_stage_NotStarted;
@@ -453,6 +485,7 @@ static bool flow_job_codecs_jpeg_read_frame(flow_c * c, struct flow_job * job, v
     struct flow_job_jpeg_decoder_state * state = (struct flow_job_jpeg_decoder_state *)codec_state;
     if (state->stage == flow_job_jpg_decoder_stage_BeginRead) {
         state->pixel_buffer = canvas->pixels;
+        state->canvas = canvas;
         state->pixel_buffer_size = canvas->stride * canvas->h;
         if (!jpeg_apply_downscaling(c, state, &state->w, &state->h)) {
             FLOW_error_return(c);

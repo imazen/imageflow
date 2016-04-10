@@ -443,7 +443,7 @@ bool flow_bitmap_float_approx_gaussian_blur_rows(flow_c * context, struct flow_b
 //    }
 //}
 
-static void flow_bitmap_bgra_sharpen_block_edges_x(struct flow_bitmap_bgra * im, int block_size, float pct)
+static void flow_bitmap_bgra32_sharpen_block_edges_x(struct flow_bitmap_bgra * im, int block_size, float pct)
 {
     pct = pct / 100.0f;
     if (pct < -1.0f)
@@ -472,9 +472,12 @@ static void flow_bitmap_bgra_sharpen_block_edges_x(struct flow_bitmap_bgra * im,
     uint32_t y, current, next;
     const uint32_t sy = im->h;
     const uint32_t stride = im->stride;
-    const uint32_t bytes_pp = flow_pixel_format_bytes_per_pixel(im->fmt);
-    if (im->w < 3 || bytes_pp < 3)
+    const uint32_t bytes_pp = 4;
+
+    if (im->w < 3 || flow_pixel_format_bytes_per_pixel(im->fmt) != 4)
         return;
+
+
     for (y = 0; y < sy; y++) {
         unsigned char * row = im->pixels + y * stride;
         float left_b = (float)row[0];
@@ -498,27 +501,32 @@ static void flow_bitmap_bgra_sharpen_block_edges_x(struct flow_bitmap_bgra * im,
             coord++;
         }
     }
-}
+}__attribute__((hot)) __attribute__((optimize("-funsafe-math-optimizations")))
 
 bool flow_bitmap_bgra_transpose(flow_c * c, struct flow_bitmap_bgra * from, struct flow_bitmap_bgra * to)
 {
-    if (from->w != to->h || from->h != to->w || from->fmt != to->fmt) {
+    if (from->w != to->h || from->h != to->w || from->fmt != to->fmt && from->fmt != flow_bgra32) {
         FLOW_error(c, flow_status_Invalid_argument);
         return false;
     }
     int step = flow_pixel_format_bytes_per_pixel(to->fmt);
     for (uint32_t x = 0; x < to->w; x++) {
         for (uint32_t y = 0; y < to->h; y++) {
-            memcpy(&to->pixels[x * step + y * to->stride], &from->pixels[x * from->stride + y * step], step);
+            *((uint32_t *)&to->pixels[x * step + y * to->stride]) = *((uint32_t *)&from->pixels[x * from->stride + y * step]);
         }
     }
     return true;
-}
+}__attribute__((hot)) __attribute__((optimize("-funsafe-math-optimizations")))
+
 bool flow_bitmap_bgra_sharpen_block_edges(flow_c * c, struct flow_bitmap_bgra * im, int block_size, float pct)
 {
     if (pct == 0.0f)
         return true;
-    flow_bitmap_bgra_sharpen_block_edges_x(im, block_size, pct);
+    if (im->fmt != flow_bgra32){
+        FLOW_error(c, flow_status_Unsupported_pixel_format);
+        return false;
+    }
+    flow_bitmap_bgra32_sharpen_block_edges_x(im, block_size, pct);
     struct flow_bitmap_bgra * temp = flow_bitmap_bgra_create(c, im->h, im->w, false, im->fmt);
     if (temp == NULL) {
         FLOW_add_to_callstack(c);
@@ -529,7 +537,7 @@ bool flow_bitmap_bgra_sharpen_block_edges(flow_c * c, struct flow_bitmap_bgra * 
         FLOW_add_to_callstack(c);
         return false;
     }
-    flow_bitmap_bgra_sharpen_block_edges_x(temp, block_size, pct);
+    flow_bitmap_bgra32_sharpen_block_edges_x(temp, block_size, pct);
     if (!flow_bitmap_bgra_transpose(c, temp, im)) {
         flow_bitmap_bgra_destroy(c, temp);
         FLOW_add_to_callstack(c);
@@ -537,7 +545,7 @@ bool flow_bitmap_bgra_sharpen_block_edges(flow_c * c, struct flow_bitmap_bgra * 
     }
     flow_bitmap_bgra_destroy(c, temp);
     return true;
-}
+}__attribute__((hot))
 
 static void SharpenBgraFloatInPlace(float * buf, unsigned int count, double pct, int step)
 {
