@@ -505,7 +505,7 @@ static void flow_bitmap_bgra32_sharpen_block_edges_x(struct flow_bitmap_bgra * i
 
 bool flow_bitmap_bgra_transpose(flow_c * c, struct flow_bitmap_bgra * from, struct flow_bitmap_bgra * to)
 {
-    if (from->w != to->h || from->h != to->w || from->fmt != to->fmt && from->fmt != flow_bgra32) {
+    if (from->w != to->h || from->h != to->w || from->fmt != to->fmt || from->fmt != flow_bgra32) {
         FLOW_error(c, flow_status_Invalid_argument);
         return false;
     }
