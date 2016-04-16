@@ -436,6 +436,7 @@ static bool jpeg_apply_downscaling(flow_c * c, struct flow_job_jpeg_decoder_stat
             || state->cinfo->image_height > state->hints.or_if_taller_than) {
 
             for (long i = 1; i < 9; i++) {
+                if (i == 7) continue; // Because 7/8ths is slower than 8/8
                 long new_w = (state->cinfo->image_width * i + 8 - 1L) / 8L;
                 long new_h = (state->cinfo->image_height * i + 8 - 1L) / 8L;
                 if (new_w >= state->hints.downscaled_min_width && new_h >= state->hints.downscaled_min_height) {
