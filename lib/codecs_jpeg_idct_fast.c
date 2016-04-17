@@ -92,59 +92,59 @@ static inline uint8_t uchar_clamp_ff(float clr)
 
 void jpeg_idct_spatial_srgb_1x1(j_decompress_ptr cinfo, jpeg_component_info * compptr, JCOEFPTR coef_block,
                                 JSAMPARRAY output_buf, JDIMENSION output_col) __attribute__((hot))
-__attribute__((optimize("-funsafe-math-optimizations")));
+__attribute__((optimize("-funsafe-math-optimizations", "-ffinite-math-only", "-fsingle-precision-constant", "-fno-signaling-nans")));
 
 void jpeg_idct_spatial_srgb_2x2(j_decompress_ptr cinfo, jpeg_component_info * compptr, JCOEFPTR coef_block,
                                 JSAMPARRAY output_buf, JDIMENSION output_col) __attribute__((hot))
-__attribute__((optimize("-funsafe-math-optimizations")));
+__attribute__((optimize("-funsafe-math-optimizations", "-ffinite-math-only", "-fsingle-precision-constant", "-fno-signaling-nans")));
 
 void jpeg_idct_spatial_srgb_3x3(j_decompress_ptr cinfo, jpeg_component_info * compptr, JCOEFPTR coef_block,
                                 JSAMPARRAY output_buf, JDIMENSION output_col) __attribute__((hot))
-__attribute__((optimize("-funsafe-math-optimizations")));
+__attribute__((optimize("-funsafe-math-optimizations", "-ffinite-math-only", "-fsingle-precision-constant", "-fno-signaling-nans")));
 
 void jpeg_idct_spatial_srgb_4x4(j_decompress_ptr cinfo, jpeg_component_info * compptr, JCOEFPTR coef_block,
                                 JSAMPARRAY output_buf, JDIMENSION output_col) __attribute__((hot))
-__attribute__((optimize("-funsafe-math-optimizations")));
+__attribute__((optimize("-funsafe-math-optimizations", "-ffinite-math-only", "-fsingle-precision-constant", "-fno-signaling-nans")));
 
 void jpeg_idct_spatial_srgb_5x5(j_decompress_ptr cinfo, jpeg_component_info * compptr, JCOEFPTR coef_block,
                                 JSAMPARRAY output_buf, JDIMENSION output_col) __attribute__((hot))
-__attribute__((optimize("-funsafe-math-optimizations")));
+__attribute__((optimize("-funsafe-math-optimizations", "-ffinite-math-only", "-fsingle-precision-constant", "-fno-signaling-nans")));
 
 void jpeg_idct_spatial_srgb_6x6(j_decompress_ptr cinfo, jpeg_component_info * compptr, JCOEFPTR coef_block,
                                 JSAMPARRAY output_buf, JDIMENSION output_col) __attribute__((hot))
-__attribute__((optimize("-funsafe-math-optimizations")));
+__attribute__((optimize("-funsafe-math-optimizations", "-ffinite-math-only", "-fsingle-precision-constant", "-fno-signaling-nans")));
 
 void jpeg_idct_spatial_srgb_7x7(j_decompress_ptr cinfo, jpeg_component_info * compptr, JCOEFPTR coef_block,
                                 JSAMPARRAY output_buf, JDIMENSION output_col) __attribute__((hot))
-__attribute__((optimize("-funsafe-math-optimizations")));
+__attribute__((optimize("-funsafe-math-optimizations", "-ffinite-math-only", "-fsingle-precision-constant", "-fno-signaling-nans")));
 
 void jpeg_idct_spatial_1x1(j_decompress_ptr cinfo, jpeg_component_info * compptr, JCOEFPTR coef_block,
                            JSAMPARRAY output_buf, JDIMENSION output_col) __attribute__((hot))
-__attribute__((optimize("-funsafe-math-optimizations")));
+__attribute__((optimize("-funsafe-math-optimizations", "-ffinite-math-only", "-fsingle-precision-constant", "-fno-signaling-nans")));
 
 void jpeg_idct_spatial_2x2(j_decompress_ptr cinfo, jpeg_component_info * compptr, JCOEFPTR coef_block,
                            JSAMPARRAY output_buf, JDIMENSION output_col) __attribute__((hot))
-__attribute__((optimize("-funsafe-math-optimizations")));
+__attribute__((optimize("-funsafe-math-optimizations", "-ffinite-math-only", "-fsingle-precision-constant", "-fno-signaling-nans")));
 
 void jpeg_idct_spatial_3x3(j_decompress_ptr cinfo, jpeg_component_info * compptr, JCOEFPTR coef_block,
                            JSAMPARRAY output_buf, JDIMENSION output_col) __attribute__((hot))
-__attribute__((optimize("-funsafe-math-optimizations")));
+__attribute__((optimize("-funsafe-math-optimizations", "-ffinite-math-only", "-fsingle-precision-constant", "-fno-signaling-nans")));
 
 void jpeg_idct_spatial_4x4(j_decompress_ptr cinfo, jpeg_component_info * compptr, JCOEFPTR coef_block,
                            JSAMPARRAY output_buf, JDIMENSION output_col) __attribute__((hot))
-__attribute__((optimize("-funsafe-math-optimizations")));
+__attribute__((optimize("-funsafe-math-optimizations", "-ffinite-math-only", "-fsingle-precision-constant", "-fno-signaling-nans")));
 
 void jpeg_idct_spatial_5x5(j_decompress_ptr cinfo, jpeg_component_info * compptr, JCOEFPTR coef_block,
                            JSAMPARRAY output_buf, JDIMENSION output_col) __attribute__((hot))
-__attribute__((optimize("-funsafe-math-optimizations")));
+__attribute__((optimize("-funsafe-math-optimizations", "-ffinite-math-only", "-fsingle-precision-constant", "-fno-signaling-nans")));
 
 void jpeg_idct_spatial_6x6(j_decompress_ptr cinfo, jpeg_component_info * compptr, JCOEFPTR coef_block,
                            JSAMPARRAY output_buf, JDIMENSION output_col) __attribute__((hot))
-__attribute__((optimize("-funsafe-math-optimizations")));
+__attribute__((optimize("-funsafe-math-optimizations", "-ffinite-math-only", "-fsingle-precision-constant", "-fno-signaling-nans")));
 
 void jpeg_idct_spatial_7x7(j_decompress_ptr cinfo, jpeg_component_info * compptr, JCOEFPTR coef_block,
                            JSAMPARRAY output_buf, JDIMENSION output_col) __attribute__((hot))
-__attribute__((optimize("-funsafe-math-optimizations")));
+__attribute__((optimize("-funsafe-math-optimizations", "-ffinite-math-only", "-fsingle-precision-constant", "-fno-signaling-nans")));
 
 static const float jpeg_scale_to_6_x_6_weights[6][8] = {
     { 0.7491279840469360352, 0.2508720457553863525, 0.0000000000000000000, 0.0000000000000000000, 0.0000000000000000000,
