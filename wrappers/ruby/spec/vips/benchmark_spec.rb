@@ -9,7 +9,7 @@ module Imageflow::Vips
     it 'should run benchmarks' do
 
       #Setting blocking:false made total CPU time plummet, but real time triple. Much overhead may be in ruby thread switching
-      c = [{linear: true, w: 1600, format: :png}]
+      c = [{linear: true, w: 400, format: :jpg}]
       urls = ["u1.jpg", "u6.jpg","u1.jpg", "u6.jpg","u1.jpg", "u6.jpg","u1.jpg", "u6.jpg","u1.jpg", "u6.jpg","u1.jpg", "u6.jpg","u1.jpg", "u6.jpg","u1.jpg", "u6.jpg"].map do |name|
         "https://s3-us-west-2.amazonaws.com/imageflow-resources/test_inputs/#{name}"
       end

@@ -12,7 +12,7 @@ time build/bin/profile_imageflow
 gprof build/bin/profile_imageflow gmon.out > ../profile.txt
 cd ..
 cd build
-declare -a arr=("compositing" "render1d" "scaling" "color" "convolution" "codecs_jpeg_idct_fast")
+declare -a arr=("compositing" "render1d" "scaling" "color" "convolution" "codecs_jpeg_idct_fast" "scale2d")
 for i in "${arr[@]}"
 do
     make "lib/$i.s"

@@ -85,7 +85,7 @@ module Imageflow
 
         add_crop(crop: ile.result[:copy_from])
 
-        @last = @last.add(:scale, ile.result[:copy_to_size][0], ile.result[:copy_to_size][1], :filter_Robidoux, :filter_Robidoux)
+        @last = @last.add(:scale, ile.result[:copy_to_size][0], ile.result[:copy_to_size][1], :filter_Robidoux, :filter_Robidoux, 1) #Passing 1 for flags invokes faster path
 
         add_expand_canvas(left: ile.result[:copy_to_rect][0],
                           top: ile.result[:copy_to_rect][1],

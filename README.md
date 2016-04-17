@@ -334,7 +334,7 @@ typedef enum flow_ntype {
     flow_ntype_primitive_CopyRectToCanvas = 3, //Overwrite only, no compositing
     flow_ntype_Create_Canvas = 4,
     flow_ntype_primitive_RenderToCanvas1D = 5,
-
+    flow_ntype_primitive_Scale2D_RenderToCanvas1D = 6,
     flow_ntype_primitive_bitmap_bgra_pointer,
     flow_ntype_primitive_decoder,
     flow_ntype_primitive_encoder,

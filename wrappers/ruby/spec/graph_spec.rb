@@ -26,7 +26,7 @@ module Imageflow
         g = @c.create_graph
 
         g.create_node(:canvas, :bgra32, 400, 300, 0xFFFFFFFF)
-            .add(:scale, 300, 200, :filter_Robidoux, :filter_Robidoux)
+            .add(:scale, 300, 200, :filter_Robidoux, :filter_Robidoux, 0)
             .add(:encoder_placeholder, 0)
 
       end

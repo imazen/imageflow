@@ -78,7 +78,7 @@ TEST_CASE("Test file I/O within job", ""){
     int32_t last;
     last = flow_node_create_decoder(c, &g, -1, input_placeholder);
     last = flow_node_create_scale(c, &g, last, 300, 200, (flow_interpolation_filter_Robidoux),
-                                  (flow_interpolation_filter_Robidoux));
+                                  (flow_interpolation_filter_Robidoux), 0);
     last = flow_node_create_encoder(c,&g,last, 1, flow_codec_type_encode_png);
 
     job = flow_job_create(c);
@@ -123,7 +123,7 @@ TEST_CASE("Test file I/O within job", ""){
 
     last = flow_node_create_decoder(c, &g, -1, input_placeholder);
     last = flow_node_create_scale(c, &g, last, 300, 200, (flow_interpolation_filter_Robidoux),
-                                  (flow_interpolation_filter_Robidoux));
+                                  (flow_interpolation_filter_Robidoux), 0);
     last = flow_node_create_bitmap_bgra_reference(c, &g, last, &result);
 
     job = flow_job_create(c);

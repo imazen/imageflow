@@ -45,7 +45,7 @@ typedef enum flow_ntype {
     flow_ntype_primitive_CopyRectToCanvas = 3, // Overwrite only, no compositing
     flow_ntype_Create_Canvas = 4,
     flow_ntype_primitive_RenderToCanvas1D = 5,
-
+    flow_ntype_primitive_Scale2D_RenderToCanvas1D = 6,
     flow_ntype_primitive_bitmap_bgra_pointer,
     flow_ntype_primitive_decoder,
     flow_ntype_primitive_encoder,
@@ -255,6 +255,7 @@ struct flow_node;
 struct flow_edge;
 struct flow_graph;
 struct flow_bitmap_bgra;
+struct flow_nodeinfo_scale2d_render_to_canvas1d;
 
 PUB flow_c * flow_context_create(void);
 
@@ -344,8 +345,8 @@ PUB int32_t flow_node_create_decoder(flow_c * c, struct flow_graph ** g, int32_t
 PUB int32_t flow_node_create_canvas(flow_c * c, struct flow_graph ** g, int32_t prev_node, flow_pixel_format format,
                                     size_t width, size_t height, uint32_t bgcolor);
 PUB int32_t flow_node_create_scale(flow_c * c, struct flow_graph ** g, int32_t prev_node, size_t width, size_t height,
-                                   flow_interpolation_filter downscale_filter,
-                                   flow_interpolation_filter upscale_filter);
+                                   flow_interpolation_filter downscale_filter, flow_interpolation_filter upscale_filter,
+                                   size_t flags);
 
 PUB int32_t flow_node_create_primitive_flip_vertical(flow_c * c, struct flow_graph ** g, int32_t prev_node);
 PUB int32_t flow_node_create_primitive_flip_horizontal(flow_c * c, struct flow_graph ** g, int32_t prev_node);
@@ -387,6 +388,10 @@ PUB int32_t flow_node_create_render_to_canvas_1d(flow_c * c, struct flow_graph *
                                                  float sharpen_percent, flow_compositing_mode compositing_mode,
                                                  uint8_t * matte_color[4], struct flow_scanlines_filter * filter_list,
                                                  flow_interpolation_filter interpolation_filter);
+
+PUB int32_t flow_node_create_scale_2d(flow_c * c, struct flow_graph ** g, int32_t prev_node, int32_t scale_to_width,
+                                      int32_t scale_to_height, flow_working_floatspace scale_and_filter_in_colorspace,
+                                      float sharpen_percent, flow_interpolation_filter interpolation_filter);
 
 PUB int32_t flow_edge_create(flow_c * c, struct flow_graph ** g, int32_t from, int32_t to, flow_edgetype type);
 

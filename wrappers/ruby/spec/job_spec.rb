@@ -32,7 +32,7 @@ module Imageflow
         g = @c.create_graph
 
         g.create_node(:decoder, 0)
-            .add(:scale, 300, 200, :filter_Robidoux, :filter_Robidoux)
+            .add(:scale, 300, 200, :filter_Robidoux, :filter_Robidoux, 0)
             .add(:encoder, 1, 4) #4 is the id of the jpeg encoder
 
 
@@ -54,7 +54,7 @@ module Imageflow
         g = @c.create_graph
 
         g.create_node(:decoder, 0)
-            .add(:scale, 300, 200, :filter_Robidoux, :filter_Robidoux)
+            .add(:scale, 300, 200, :filter_Robidoux, :filter_Robidoux, 0)
             .add(:encoder, 1, 2) #2 is the id of the png encoder
 
 
@@ -72,7 +72,7 @@ module Imageflow
         job.add_output_buffer(placeholder_id: 1)
         g = @c.create_graph
         g.create_node(:decoder, 0)
-            .add(:scale, 300, 200, :filter_Robidoux, :filter_Robidoux)
+            .add(:scale, 300, 200, :filter_Robidoux, :filter_Robidoux, 0)
             .add(:encoder, 1, 4) #4 is the id of the jpeg encoder
 
         job.execute graph: g

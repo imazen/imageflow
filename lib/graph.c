@@ -297,7 +297,8 @@ int32_t flow_node_create_fill_rect(flow_c * c, struct flow_graph ** g, int32_t p
 }
 
 int32_t flow_node_create_scale(flow_c * c, struct flow_graph ** g, int32_t prev_node, size_t width, size_t height,
-                               flow_interpolation_filter downscale_filter, flow_interpolation_filter upscale_filter)
+                               flow_interpolation_filter downscale_filter, flow_interpolation_filter upscale_filter,
+                               size_t flags)
 {
     int32_t id = flow_node_create_generic(c, g, prev_node, flow_ntype_Scale);
     if (id < 0) {
@@ -309,6 +310,7 @@ int32_t flow_node_create_scale(flow_c * c, struct flow_graph ** g, int32_t prev_
     info->height = (int32_t)height;
     info->downscale_filter = downscale_filter;
     info->upscale_filter = upscale_filter;
+    info->flags = flags;
     return id;
 }
 
@@ -392,7 +394,33 @@ int32_t flow_node_create_render_to_canvas_1d(flow_c * c, struct flow_graph ** g,
     info->filter_list = filter_list;
     info->canvas_x = canvas_x;
     info->canvas_y = canvas_y;
-    memcpy(&info->matte_color, matte_color, 4);
+    if (matte_color != NULL){
+        memset(&info->matte_color[0], 0, 4);
+    }else {
+        info->matte_color[0] = 0;
+        info->matte_color[1] = 0;
+        info->matte_color[2] = 0;
+        info->matte_color[3] = 0;
+    }
+    return id;
+}
+
+int32_t flow_node_create_scale_2d(flow_c * c, struct flow_graph ** g, int32_t prev_node, int32_t scale_to_width,
+                                  int32_t scale_to_height, flow_working_floatspace scale_and_filter_in_colorspace,
+                                  float sharpen_percent, flow_interpolation_filter interpolation_filter)
+{
+    int32_t id = flow_node_create_generic(c, g, prev_node, flow_ntype_primitive_Scale2D_RenderToCanvas1D);
+    if (id < 0) {
+        FLOW_add_to_callstack(c);
+        return id;
+    }
+    struct flow_nodeinfo_scale2d_render_to_canvas1d * info
+        = (struct flow_nodeinfo_scale2d_render_to_canvas1d *)FrameNode_get_node_info_pointer(*g, id);
+    info->scale_to_width = scale_to_width;
+    info->scale_to_height = scale_to_height;
+    info->interpolation_filter = interpolation_filter;
+    info->scale_in_colorspace = scale_and_filter_in_colorspace;
+    info->sharpen_percent_goal = sharpen_percent;
     return id;
 }
 

@@ -150,6 +150,9 @@ PUB bool write_frame_to_disk(flow_c * c, const char * path, struct flow_bitmap_b
 PUB bool flow_node_execute_render_to_canvas_1d(flow_c * c, struct flow_job * job, struct flow_bitmap_bgra * input,
                                                struct flow_bitmap_bgra * canvas,
                                                struct flow_nodeinfo_render_to_canvas_1d * info);
+PUB bool flow_node_execute_scale2d_render1d(flow_c * c, struct flow_job * job, struct flow_bitmap_bgra * input,
+                                            struct flow_bitmap_bgra * canvas,
+                                            struct flow_nodeinfo_scale2d_render_to_canvas1d * info)__attribute__((hot)) __attribute__((optimize("-funsafe-math-optimizations")));
 
 PUB bool flow_job_populate_dimensions_where_certain(flow_c * c, struct flow_job * job, struct flow_graph ** graph_ref);
 // For doing execution cost estimates, we force estimate, then flatten, then calculate cost
@@ -277,7 +280,14 @@ struct flow_nodeinfo_scale {
     int32_t height;
     flow_interpolation_filter downscale_filter;
     flow_interpolation_filter upscale_filter;
+    size_t flags;
 };
+typedef enum flow_scale_flags{
+    flow_scale_flags_none = 0,
+    flow_scale_flags_use_scale2d = 1,
+
+} flow_scale_flags;
+
 struct flow_nodeinfo_bitmap_bgra_pointer {
     struct flow_bitmap_bgra ** ref;
 };
@@ -319,6 +329,18 @@ struct flow_nodeinfo_render_to_canvas_1d {
     uint8_t matte_color[4];
 
     struct flow_scanlines_filter * filter_list;
+};
+
+struct flow_nodeinfo_scale2d_render_to_canvas1d {
+    // There will need to be consistency checks against the createcanvas node
+
+    flow_interpolation_filter interpolation_filter;
+    // struct flow_interpolation_details * interpolationDetails;
+    int32_t scale_to_width;
+    int32_t scale_to_height;
+    flow_working_floatspace scale_in_colorspace;
+
+    float sharpen_percent_goal;
 };
 
 // If you want to know what kind of I/O structure is inside user_data, compare the read_func/write_func function
