@@ -9,12 +9,14 @@ int main(void)
 {
 
 
-    for (int flags = 0; flags < 3; flags++) {
+    for (int flags = 0; flags < 4; flags++) {
         int64_t start = flow_get_high_precision_ticks();
         for (int i = 2; i < 8; i++) {
             flow_c * c = flow_context_create();
 
-            //flow_context_set_floatspace(c, flow_working_floatspace_as_is, 0,0,0);
+            if ((flags & 2) == 0){
+                flow_context_set_floatspace(c, flow_working_floatspace_as_is, 0,0,0);
+            }
 
             size_t bytes_count = 0;
             uint8_t * bytes = get_bytes_cached(c, &bytes_count,
@@ -43,7 +45,7 @@ int main(void)
 
             if (!flow_job_decoder_set_downscale_hints_by_placeholder_id(
                 c, job, input_placeholder, (target_w - 1) * min_factor, (target_h - 1) * min_factor,
-                (target_w - 1) * min_factor, (target_h - 1) * min_factor, false, false)) {
+                (target_w - 1) * min_factor, (target_h - 1) * min_factor, (flags & 2) > 0, (flags & 2) > 0)) {
                 ERR2(c);
             }
 
@@ -71,4 +73,22 @@ int main(void)
     }
     return 0; // Zero indicates success, while any
     // Non-Zero value indicates a failure/error
+
+    /*  Before changing idct_fast
+     *  With flags=0, took 839ms: srgb, standard
+        With flags=1, took 743ms: srgb, reducev
+        With flags=2, took 3778ms: linear, standard
+        With flags=3, took 1703ms: srgb, reducev
+
+
+        Using fastpow in linear_to_srgb
+
+        With flags=0, took 819ms
+        With flags=1, took 738ms
+        With flags=2, took 1588ms
+        With flags=3, took 1062ms
+
+
+
+     */
 }

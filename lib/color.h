@@ -15,6 +15,8 @@
 extern "C" {
 #endif
 
+#include "fastapprox.h"
+
 typedef struct flow_context flow_c;
 
 static inline float linear_to_srgb(float clr)
@@ -26,7 +28,7 @@ static inline float linear_to_srgb(float clr)
         return 12.92f * clr * 255.0f;
 
     // a = 0.055; ret ((1+a) * s**(1/2.4) - a) * 255
-    return 1.055f * 255.0f * pow(clr, 0.41666666f) - 14.025f;
+    return 1.055f * 255.0f * fastpow(clr, 0.41666666f) - 14.025f;
 }
 
 static inline float srgb_to_linear(float s)
