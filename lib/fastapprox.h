@@ -1,5 +1,11 @@
 #pragma once
 
+
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wpedantic"
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wnarrowing"
+
 /*=====================================================================*
 *                   Copyright (C) 2012 Paul Mineiro                   *
 * All rights reserved.                                                *
@@ -1507,3 +1513,7 @@ static inline v4sf vfastertanfull(const v4sf x)
 #endif //__SSE2__
 
 #endif // __FAST_TRIG_H_
+
+
+#pragma GCC diagnostic pop
+#pragma GCC diagnostic pop
