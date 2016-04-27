@@ -1,5 +1,11 @@
 #include "../nodes.h"
 
+inline void * FrameNode_get_node_info_pointer(struct flow_graph * g, int32_t node_id);
+
+inline void * FrameNode_get_node_info_pointer(struct flow_graph * g, int32_t node_id)
+{
+    return &(g->info_bytes[g->nodes[node_id].info_byte_index]);
+}
 
 #define FLOW_GET_INPUT_EDGE(g, node_id)                                                                                \
     int32_t input_edge_id = flow_graph_get_first_inbound_edge_of_type(c, g, node_id, flow_edgetype_input);             \

@@ -90,16 +90,26 @@ void flow_graph_destroy(flow_c * c, struct flow_graph * g) { FLOW_free(c, g); }
 
 int32_t flow_node_create_generic(flow_c * c, struct flow_graph ** graph_ref, int32_t prev_node, flow_ntype type)
 {
-    if (graph_ref == NULL || (*graph_ref) == NULL) {
-        FLOW_error(c, flow_status_Null_argument);
-        return -20;
-    }
     int32_t nodeinfo_size = flow_node_fixed_infobyte_count(c, type);
     if (nodeinfo_size < 0) {
         FLOW_add_to_callstack(c);
         return nodeinfo_size;
     }
-    if (!flow_graph_replace_if_too_small(c, graph_ref, 1, prev_node >= 0 ? 1 : 0, nodeinfo_size)) {
+    int32_t ret = flow_node_create_generic_with_data(c, graph_ref, prev_node, type, NULL, nodeinfo_size);
+    if (ret < 0) {
+        FLOW_add_to_callstack(c);
+    }
+    return ret;
+}
+
+int32_t flow_node_create_generic_with_data(flow_c * c, struct flow_graph ** graph_ref, int32_t prev_node,
+                                           flow_ntype type, uint8_t * bytes, size_t byte_count)
+{
+    if (graph_ref == NULL || (*graph_ref) == NULL) {
+        FLOW_error(c, flow_status_Null_argument);
+        return -20;
+    }
+    if (!flow_graph_replace_if_too_small(c, graph_ref, 1, prev_node >= 0 ? 1 : 0, byte_count)) {
         FLOW_add_to_callstack(c);
         return -2;
     }
@@ -108,7 +118,12 @@ int32_t flow_node_create_generic(flow_c * c, struct flow_graph ** graph_ref, int
 
     g->nodes[id].type = type;
     g->nodes[id].info_byte_index = g->next_info_byte;
-    g->nodes[id].info_bytes = nodeinfo_size;
+    g->nodes[id].info_bytes = byte_count;
+    if (bytes != NULL) {
+        memcpy(&g->info_bytes[g->nodes[id].info_byte_index], bytes, byte_count);
+    } else {
+        memset(&g->info_bytes[g->nodes[id].info_byte_index], 0, byte_count);
+    }
     g->nodes[id].state = flow_node_state_Blank;
     g->nodes[id].result_bitmap = NULL;
     g->nodes[id].ticks_elapsed = 0;
@@ -293,24 +308,6 @@ int32_t flow_node_create_fill_rect(flow_c * c, struct flow_graph ** g, int32_t p
     info->x2 = x2;
     info->y2 = y2;
     info->color_srgb = color_srgb;
-    return id;
-}
-
-int32_t flow_node_create_scale(flow_c * c, struct flow_graph ** g, int32_t prev_node, size_t width, size_t height,
-                               flow_interpolation_filter downscale_filter, flow_interpolation_filter upscale_filter,
-                               size_t flags)
-{
-    int32_t id = flow_node_create_generic(c, g, prev_node, flow_ntype_Scale);
-    if (id < 0) {
-        FLOW_add_to_callstack(c);
-        return id;
-    }
-    struct flow_nodeinfo_scale * info = (struct flow_nodeinfo_scale *)FrameNode_get_node_info_pointer(*g, id);
-    info->width = (int32_t)width;
-    info->height = (int32_t)height;
-    info->downscale_filter = downscale_filter;
-    info->upscale_filter = upscale_filter;
-    info->flags = flags;
     return id;
 }
 

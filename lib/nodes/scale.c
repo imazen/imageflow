@@ -1,6 +1,27 @@
 #include "../imageflow_private.h"
 #include "nodes_private.h"
 
+
+
+int32_t flow_node_create_scale(flow_c * c, struct flow_graph ** g, int32_t prev_node, size_t width, size_t height,
+                               flow_interpolation_filter downscale_filter, flow_interpolation_filter upscale_filter,
+                               size_t flags)
+{
+    int32_t id = flow_node_create_generic(c, g, prev_node, flow_ntype_Scale);
+    if (id < 0) {
+        FLOW_add_to_callstack(c);
+        return id;
+    }
+    struct flow_nodeinfo_scale * info = (struct flow_nodeinfo_scale *)FrameNode_get_node_info_pointer(*g, id);
+    info->width = (int32_t)width;
+    info->height = (int32_t)height;
+    info->downscale_filter = downscale_filter;
+    info->upscale_filter = upscale_filter;
+    info->flags = flags;
+    return id;
+}
+
+
 static int32_t create_render1d_node(flow_c * c, struct flow_graph ** g, int32_t last, int32_t to_width, bool transpose,
                                     flow_interpolation_filter filter)
 {

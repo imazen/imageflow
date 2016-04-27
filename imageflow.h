@@ -416,6 +416,9 @@ PUB bool flow_graph_validate(flow_c * c, struct flow_graph * g);
 
 PUB int32_t flow_node_create_generic(flow_c * c, struct flow_graph ** graph_ref, int32_t prev_node, flow_ntype type);
 
+PUB int32_t flow_node_create_generic_with_data(flow_c * c, struct flow_graph ** graph_ref, int32_t prev_node,
+                                               flow_ntype type, uint8_t * bytes, size_t byte_count);
+
 PUB uint32_t flow_pixel_format_bytes_per_pixel(flow_pixel_format format);
 
 struct flow_decoder_info {
