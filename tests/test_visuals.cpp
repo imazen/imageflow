@@ -56,14 +56,14 @@ TEST_CASE("Test scale image", "")
     last = flow_node_create_decoder(c, &g, -1, input_placeholder);
     // flow_node_set_decoder_downscale_hint(c, g, last, 400, 300, 400, 300, false, 0);
     last = flow_node_create_scale(c, &g, last, 400, 300, (flow_interpolation_filter_Robidoux),
-                                  (flow_interpolation_filter_Robidoux), 1);
+                                  (flow_interpolation_filter_Robidoux), 0);
     last = flow_node_create_bitmap_bgra_reference(c, &g, last, &b);
     ERR(c);
     if (!flow_job_execute(c, job, &g)) {
         ERR(c);
     }
 
-    REQUIRE(visual_compare(c, b, "ScaleThePotato", store_checksums, 50, __FILE__, __func__, __LINE__) == true);
+    REQUIRE(visual_compare(c, b, "ScaleThePotato", store_checksums, 500, __FILE__, __func__, __LINE__) == true);
     ERR(c);
     flow_context_destroy(c);
 }
