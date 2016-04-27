@@ -265,9 +265,11 @@ PUB flow_c * flow_context_create(void);
 // flow_context_destroy
 PUB size_t flow_context_sizeof_context_struct(void);
 PUB void flow_context_initialize(flow_c * c);
-// Want to ensure there were no memory leaks due to incorrect API use, and that all files flushed and close
-// successfully?
+// Did you allocate memory without an owner? Check remaining allocation records after begin_terminate to verify correctness.
 // Call begin_terminate, then check on error status and memory stats.
+// Or, you may call begin/end simply because the context was on the stack
+// Or, because you want to check error status after all destructors are called, but before the stacktrace and message
+// are freed
 PUB bool flow_context_begin_terminate(flow_c * c);
 PUB void flow_context_end_terminate(flow_c * c);
 
