@@ -222,6 +222,8 @@ PUB bool flow_halve(flow_c * c, const struct flow_bitmap_bgra * from, struct flo
 
 PUB bool flow_halve_in_place(flow_c * c, struct flow_bitmap_bgra * from, int divisor);
 
+PUB const char * flow_pixel_format_get_name(flow_pixel_format f, bool alpha_meaningful);
+
 // https://github.com/imazen/freeimage/blob/master/Source/FreeImage/FreeImageIO.cpp
 // https://github.com/imazen/freeimage/blob/master/Source/FreeImage/PluginJPEG.cpp
 

@@ -148,3 +148,15 @@ bool flow_bitmap_bgra_compare(flow_c * c, struct flow_bitmap_bgra * a, struct fl
     *equal_out = true;
     return true;
 }
+
+const char * flow_pixel_format_get_name(flow_pixel_format f, bool alpha_meaningful)
+{
+    switch (f) {
+        case flow_bgr24:
+            return "flow_bgr24";
+        case flow_bgra32:
+            return alpha_meaningful ? "flow_bgra32" : "Bgr32";
+        default:
+            return "?";
+    }
+}
