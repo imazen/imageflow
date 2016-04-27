@@ -247,8 +247,7 @@ bool create_operation_graph(flow_c * c, struct flow_graph ** graph_ref, int32_t 
     int32_t last = flow_node_create_decoder(c, &g, -1, input_placeholder);
     // Double the original width/height
     last = flow_node_create_scale(c, &g, last, info->frame0_width * 2, info->frame0_height * 2,
-                                  (flow_interpolation_filter_Robidoux),
-                                  (flow_interpolation_filter_Robidoux), 0);
+                                  (flow_interpolation_filter_Robidoux), (flow_interpolation_filter_Robidoux), 0);
     // Keep the original format if png or jpeg
     size_t encoder_id = info->codec_id == flow_codec_type_decode_jpeg ? flow_codec_type_encode_jpeg
                                                                       : flow_codec_type_encode_png;
@@ -354,7 +353,8 @@ TEST_CASE("scale and flip and crop png", "")
     last = flow_node_create_primitive_crop(c, &g, last, 20, 10, 80, 40);
     last = flow_node_create_encoder_placeholder(c, &g, last, output_placeholder);
 
-    execute_graph_for_url(c, "http://s3-us-west-2.amazonaws.com/imageflow-resources/test_inputs/mountain_800.png", "graph_flipped_cropped_png.png", &g);
+    execute_graph_for_url(c, "http://s3-us-west-2.amazonaws.com/imageflow-resources/test_inputs/mountain_800.png",
+                          "graph_flipped_cropped_png.png", &g);
 
     flow_context_destroy(c);
 }
@@ -372,7 +372,8 @@ TEST_CASE("scale gif", "")
                                   (flow_interpolation_filter_Robidoux), 0);
     last = flow_node_create_encoder_placeholder(c, &g, last, output_placeholder);
 
-    execute_graph_for_url(c, "http://s3-us-west-2.amazonaws.com/imageflow-resources/test_inputs/mountain_800.gif", "gif_scaled.png", &g);
+    execute_graph_for_url(c, "http://s3-us-west-2.amazonaws.com/imageflow-resources/test_inputs/mountain_800.gif",
+                          "gif_scaled.png", &g);
 
     flow_context_destroy(c);
 }
@@ -474,7 +475,8 @@ TEST_CASE("scale and flip and crop jpg", "")
 
     last = flow_node_create_encoder(c, &g, last, output_placeholder, flow_codec_type_encode_jpeg);
 
-    execute_graph_for_url(c, "http://s3-us-west-2.amazonaws.com/imageflow-resources/test_inputs/mountain_800.jpg", "graph_flipped_cropped_from_jpeg.jpg", &g);
+    execute_graph_for_url(c, "http://s3-us-west-2.amazonaws.com/imageflow-resources/test_inputs/mountain_800.jpg",
+                          "graph_flipped_cropped_from_jpeg.jpg", &g);
 
     flow_context_destroy(c);
 }
@@ -566,7 +568,8 @@ TEST_CASE("scale copy rect", "")
     last = flow_node_create_expand_canvas(c, &g, last, 10, 20, 30, 40, 0xFF99FF99);
     last = flow_node_create_encoder_placeholder(c, &g, last, output_placeholder);
 
-    execute_graph_for_url(c, "http://s3-us-west-2.amazonaws.com/imageflow-resources/test_inputs/mountain_800.png", "graph_scaled_blitted_png.png", &g);
+    execute_graph_for_url(c, "http://s3-us-west-2.amazonaws.com/imageflow-resources/test_inputs/mountain_800.png",
+                          "graph_scaled_blitted_png.png", &g);
 
     flow_context_destroy(c);
 }
@@ -587,7 +590,8 @@ TEST_CASE("test frame clone", "")
 
     flow_node_create_encoder_placeholder(c, &g, clone_a, output_placeholder);
 
-    execute_graph_for_url(c, "http://s3-us-west-2.amazonaws.com/imageflow-resources/test_inputs/mountain_400.png", "unflipped.png", &g);
+    execute_graph_for_url(c, "http://s3-us-west-2.amazonaws.com/imageflow-resources/test_inputs/mountain_400.png",
+                          "unflipped.png", &g);
 
     flow_context_destroy(c);
 }
@@ -606,7 +610,8 @@ TEST_CASE("test rotation", "")
     int32_t c_n = flow_node_create_rotate_270(c, &g, input);
     flow_node_create_encoder_placeholder(c, &g, a, output_placeholder);
 
-    execute_graph_for_url(c, "http://s3-us-west-2.amazonaws.com/imageflow-resources/test_inputs/orientation.png", "rotated.png", &g);
+    execute_graph_for_url(c, "http://s3-us-west-2.amazonaws.com/imageflow-resources/test_inputs/orientation.png",
+                          "rotated.png", &g);
 
     flow_context_destroy(c);
 }
@@ -632,7 +637,8 @@ TEST_CASE("test memory corruption", "")
     clone_c = flow_node_create_rotate_270(c, &g, clone_c);
     flow_node_create_encoder_placeholder(c, &g, clone_a, output_placeholder);
 
-    execute_graph_for_url(c, "http://s3-us-west-2.amazonaws.com/imageflow-resources/test_inputs/orientation.png", "rotated.png", &g);
+    execute_graph_for_url(c, "http://s3-us-west-2.amazonaws.com/imageflow-resources/test_inputs/orientation.png",
+                          "rotated.png", &g);
 
     flow_context_destroy(c);
 }

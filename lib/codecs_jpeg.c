@@ -197,40 +197,40 @@ static bool flow_job_jpg_decoder_FinishRead(flow_c * c, struct flow_job_jpeg_dec
     // Least bad configuration (5) for 5/8: (worst dssim 0.0011648900, rank 0.000) - sharpen=-6.00
     // Least bad configuration (7) for 6/8: (worst dssim 0.0017093100, rank 0.000) - sharpen=-4.00
 
-    //TODO: This is far too slow
-//    if (state->cinfo->scale_num != 8 && state->cinfo->scale_denom == 8) {
-//        float blur = 0;
-//        switch (state->cinfo->scale_num) {
-//            case 7:
-//                blur = 14;
-//                break;
-//            case 6:
-//                blur = 4;
-//                break;
-//            case 5:
-//                blur = 6;
-//                break;
-//            case 4:
-//                blur = 7;
-//                break;
-//            case 3:
-//                blur = 14;
-//                break;
-//            case 2:
-//                blur = 15;
-//                break;
-//            case 1:
-//                blur = 15;
-//                break;
-//        }
-//
-//        if (blur != 0) {
-//            if (!flow_bitmap_bgra_sharpen_block_edges(c, state->canvas, state->cinfo->scale_num, -blur)) {
-//                FLOW_add_to_callstack(c);
-//                return false;
-//            }
-//        }
-//    }
+    // TODO: This is far too slow
+    //    if (state->cinfo->scale_num != 8 && state->cinfo->scale_denom == 8) {
+    //        float blur = 0;
+    //        switch (state->cinfo->scale_num) {
+    //            case 7:
+    //                blur = 14;
+    //                break;
+    //            case 6:
+    //                blur = 4;
+    //                break;
+    //            case 5:
+    //                blur = 6;
+    //                break;
+    //            case 4:
+    //                blur = 7;
+    //                break;
+    //            case 3:
+    //                blur = 14;
+    //                break;
+    //            case 2:
+    //                blur = 15;
+    //                break;
+    //            case 1:
+    //                blur = 15;
+    //                break;
+    //        }
+    //
+    //        if (blur != 0) {
+    //            if (!flow_bitmap_bgra_sharpen_block_edges(c, state->canvas, state->cinfo->scale_num, -blur)) {
+    //                FLOW_add_to_callstack(c);
+    //                return false;
+    //            }
+    //        }
+    //    }
 
     jpeg_destroy_decompress(state->cinfo);
     FLOW_free(c, state->cinfo);
@@ -437,7 +437,8 @@ static bool jpeg_apply_downscaling(flow_c * c, struct flow_job_jpeg_decoder_stat
             || state->cinfo->image_height > state->hints.or_if_taller_than) {
 
             for (long i = 1; i < 9; i++) {
-                if (i == 7) continue; // Because 7/8ths is slower than 8/8
+                if (i == 7)
+                    continue; // Because 7/8ths is slower than 8/8
                 long new_w = (state->cinfo->image_width * i + 8 - 1L) / 8L;
                 long new_h = (state->cinfo->image_height * i + 8 - 1L) / 8L;
                 if (new_w >= state->hints.downscaled_min_width && new_h >= state->hints.downscaled_min_height) {

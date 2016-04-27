@@ -174,13 +174,13 @@ static bool stringify_scale2d(flow_c * c, struct flow_graph * g, int32_t node_id
         FLOW_error_return(c);
     }
 
-    flow_snprintf(buffer, buffer_size, "scale2d %dx%d -> %dx%d %s %s sharp%d%%. %s", input_node->result_width, input_node->result_height,
-                  info->scale_to_width, info->scale_to_height, stringify_filter(info->interpolation_filter), (const char *)&state,
+    flow_snprintf(buffer, buffer_size, "scale2d %dx%d -> %dx%d %s %s sharp%d%%. %s", input_node->result_width,
+                  input_node->result_height, info->scale_to_width, info->scale_to_height,
+                  stringify_filter(info->interpolation_filter), (const char *)&state,
 
                   (int)info->sharpen_percent_goal, stringify_colorspace(info->scale_in_colorspace));
     return true;
 }
-
 
 static bool stringify_bitmap_bgra_pointer(flow_c * c, struct flow_graph * g, int32_t node_id, char * buffer,
                                           size_t buffer_size)
@@ -379,7 +379,6 @@ static bool dimensions_render1d(flow_c * c, struct flow_graph * g, int32_t node_
     return true;
 }
 
-
 static bool dimensions_of_canvas(flow_c * c, struct flow_graph * g, int32_t node_id, bool force_estimate)
 {
     // FLOW_GET_INFOBYTES(g,node_id, flow_nodeinfo_size, info)
@@ -485,9 +484,7 @@ static bool flatten_scale(flow_c * c, struct flow_graph ** g, int32_t node_id, s
     // TODO: swap out for upscale filter
     flow_interpolation_filter filter = size->downscale_filter;
 
-
-    if ((size->flags & flow_scale_flags_use_scale2d) > 0){
-
+    if ((size->flags & flow_scale_flags_use_scale2d) > 0) {
 
         flow_pixel_format input_format = input_node->result_format;
 
@@ -500,9 +497,9 @@ static bool flatten_scale(flow_c * c, struct flow_graph ** g, int32_t node_id, s
             FLOW_error_return(c);
         }
 
-        *first_replacement_node = flow_node_create_scale_2d(c, g, *first_replacement_node,width, height,
-                                                            (flow_working_floatspace_as_is), 0,
-                                                            (flow_interpolation_filter_Robidoux));
+        *first_replacement_node
+            = flow_node_create_scale_2d(c, g, *first_replacement_node, width, height, (flow_working_floatspace_as_is),
+                                        0, (flow_interpolation_filter_Robidoux));
         if (*first_replacement_node < 0) {
             FLOW_error_return(c);
         }
@@ -512,7 +509,7 @@ static bool flatten_scale(flow_c * c, struct flow_graph ** g, int32_t node_id, s
 
         *last_replacement_node = *first_replacement_node;
         return true;
-    }else {
+    } else {
         *first_replacement_node = create_render1d_node(c, g, -1, width, true, filter);
         if (*first_replacement_node < 0) {
             FLOW_error_return(c);
@@ -605,8 +602,6 @@ static bool node_has_other_dependents(flow_c * c, struct flow_graph * g, int32_t
     *has_other_dependents = true;
     return true;
 }
-
-
 
 static bool flatten_flip_v(flow_c * c, struct flow_graph ** g, int32_t node_id, struct flow_node * node,
                            struct flow_node * input_node, int32_t * first_replacement_node,
@@ -1256,13 +1251,13 @@ struct flow_node_definition flow_node_defs[] = {
 
     },
     { .type = flow_ntype_primitive_Scale2D_RenderToCanvas1D,
-        .nodeinfo_bytes_fixed = sizeof(struct flow_nodeinfo_scale2d_render_to_canvas1d),
-        .type_name = "scale2d_p",
-        .input_count = 1,
-        .canvas_count = 1,
-        .stringify = stringify_scale2d,
-        .populate_dimensions = dimensions_of_canvas,
-        .execute = execute_scale2d
+      .nodeinfo_bytes_fixed = sizeof(struct flow_nodeinfo_scale2d_render_to_canvas1d),
+      .type_name = "scale2d_p",
+      .input_count = 1,
+      .canvas_count = 1,
+      .stringify = stringify_scale2d,
+      .populate_dimensions = dimensions_of_canvas,
+      .execute = execute_scale2d
 
     },
     { .type = flow_ntype_Create_Canvas,

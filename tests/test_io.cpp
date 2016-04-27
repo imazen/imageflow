@@ -30,16 +30,13 @@ TEST_CASE("Test memory io", "")
     flow_context_destroy(c);
 }
 
-
 TEST_CASE("Test file read", "")
 {
     flow_c * c = flow_context_create();
     uint8_t buf[] = { 3, 25, 1, 2, 3, 4, 5 };
     write_all_byte("test_io_file.txt", (char *)&buf[0], sizeof(buf));
 
-
-    struct flow_io * mem
-        = flow_io_create_for_file(c, flow_io_mode_read_write_seekable, "test_io_file.txt", c);
+    struct flow_io * mem = flow_io_create_for_file(c, flow_io_mode_read_write_seekable, "test_io_file.txt", c);
 
     uint8_t buf2[] = { 0, 0 };
     REQUIRE(mem->read_func(c, mem, &buf2[0], sizeof(buf2)) == 2);
@@ -63,8 +60,8 @@ TEST_CASE("Test file read", "")
     unlink("test_io_file.txt");
 }
 
-
-TEST_CASE("Test file I/O within job", ""){
+TEST_CASE("Test file I/O within job", "")
+{
     flow_c * c = flow_context_create();
     struct flow_graph * g = nullptr;
     struct flow_job * job = nullptr;
@@ -79,7 +76,7 @@ TEST_CASE("Test file I/O within job", ""){
     last = flow_node_create_decoder(c, &g, -1, input_placeholder);
     last = flow_node_create_scale(c, &g, last, 300, 200, (flow_interpolation_filter_Robidoux),
                                   (flow_interpolation_filter_Robidoux), 0);
-    last = flow_node_create_encoder(c,&g,last, 1, flow_codec_type_encode_png);
+    last = flow_node_create_encoder(c, &g, last, 1, flow_codec_type_encode_png);
 
     job = flow_job_create(c);
     ERR(c);
@@ -95,7 +92,7 @@ TEST_CASE("Test file I/O within job", ""){
     if (!flow_job_add_io(c, job, input_io, input_placeholder, FLOW_INPUT)) {
         ERR(c);
     }
-    struct flow_io * output_io = flow_io_create_for_file(c, flow_io_mode_write_seekable,"test_io.png", job);
+    struct flow_io * output_io = flow_io_create_for_file(c, flow_io_mode_write_seekable, "test_io.png", job);
 
     if (!flow_job_add_io(c, job, output_io, 1, FLOW_OUTPUT)) {
         ERR(c);
@@ -114,9 +111,7 @@ TEST_CASE("Test file I/O within job", ""){
     job = NULL;
     input_io = NULL;
 
-
     c = flow_context_create();
-
 
     g = flow_graph_create(c, 10, 10, 200, 2.0);
     ERR(c);
@@ -141,7 +136,7 @@ TEST_CASE("Test file I/O within job", ""){
     REQUIRE(result != NULL);
     REQUIRE(result->w == 300);
 
-    //unlink ("test_io.png");
+    // unlink ("test_io.png");
 
     flow_context_destroy(c);
 }

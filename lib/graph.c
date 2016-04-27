@@ -394,9 +394,9 @@ int32_t flow_node_create_render_to_canvas_1d(flow_c * c, struct flow_graph ** g,
     info->filter_list = filter_list;
     info->canvas_x = canvas_x;
     info->canvas_y = canvas_y;
-    if (matte_color != NULL){
+    if (matte_color != NULL) {
         memset(&info->matte_color[0], 0, 4);
-    }else {
+    } else {
         info->matte_color[0] = 0;
         info->matte_color[1] = 0;
         info->matte_color[2] = 0;

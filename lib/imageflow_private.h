@@ -152,7 +152,8 @@ PUB bool flow_node_execute_render_to_canvas_1d(flow_c * c, struct flow_job * job
                                                struct flow_nodeinfo_render_to_canvas_1d * info);
 PUB bool flow_node_execute_scale2d_render1d(flow_c * c, struct flow_job * job, struct flow_bitmap_bgra * input,
                                             struct flow_bitmap_bgra * canvas,
-                                            struct flow_nodeinfo_scale2d_render_to_canvas1d * info)__attribute__((hot)) __attribute__((optimize("-funsafe-math-optimizations")));
+                                            struct flow_nodeinfo_scale2d_render_to_canvas1d * info) __attribute__((hot))
+__attribute__((optimize("-funsafe-math-optimizations")));
 
 PUB bool flow_job_populate_dimensions_where_certain(flow_c * c, struct flow_job * job, struct flow_graph ** graph_ref);
 // For doing execution cost estimates, we force estimate, then flatten, then calculate cost
@@ -282,7 +283,7 @@ struct flow_nodeinfo_scale {
     flow_interpolation_filter upscale_filter;
     size_t flags;
 };
-typedef enum flow_scale_flags{
+typedef enum flow_scale_flags {
     flow_scale_flags_none = 0,
     flow_scale_flags_use_scale2d = 1,
 

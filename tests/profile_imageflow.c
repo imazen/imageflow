@@ -8,19 +8,18 @@
 int main(void)
 {
 
-
     for (int flags = 0; flags < 4; flags++) {
         int64_t start = flow_get_high_precision_ticks();
         for (int i = 2; i < 8; i++) {
             flow_c * c = flow_context_create();
 
-            if ((flags & 2) == 0){
-                flow_context_set_floatspace(c, flow_working_floatspace_as_is, 0,0,0);
+            if ((flags & 2) == 0) {
+                flow_context_set_floatspace(c, flow_working_floatspace_as_is, 0, 0, 0);
             }
 
             size_t bytes_count = 0;
-            uint8_t * bytes = get_bytes_cached(c, &bytes_count,
-                                               "http://s3-us-west-2.amazonaws.com/imageflow-resources/test_inputs/u6.jpg");
+            uint8_t * bytes = get_bytes_cached(
+                c, &bytes_count, "http://s3-us-west-2.amazonaws.com/imageflow-resources/test_inputs/u6.jpg");
 
             struct flow_graph * g = flow_graph_create(c, 10, 10, 200, 2.0);
             ERR2(c);
@@ -36,7 +35,8 @@ int main(void)
             flow_job_add_io(c, job, input, input_placeholder, FLOW_INPUT);
 
             int original_width, original_height;
-            if (!get_image_dimensions(c, bytes, bytes_count, &original_width, &original_height)) ERR2(c);
+            if (!get_image_dimensions(c, bytes, bytes_count, &original_width, &original_height))
+                ERR2(c);
 
             int min_factor = 3;
 
@@ -44,8 +44,8 @@ int main(void)
             int32_t target_h = (int32_t)ceil((float)target_w / (float)original_width * (float)original_height);
 
             if (!flow_job_decoder_set_downscale_hints_by_placeholder_id(
-                c, job, input_placeholder, (target_w - 1) * min_factor, (target_h - 1) * min_factor,
-                (target_w - 1) * min_factor, (target_h - 1) * min_factor, (flags & 2) > 0, (flags & 2) > 0)) {
+                    c, job, input_placeholder, (target_w - 1) * min_factor, (target_h - 1) * min_factor,
+                    (target_w - 1) * min_factor, (target_h - 1) * min_factor, (flags & 2) > 0, (flags & 2) > 0)) {
                 ERR2(c);
             }
 
@@ -60,7 +60,7 @@ int main(void)
                 ERR2(c);
             }
 
-            //flow_graph_print_to_dot(c, g, stdout, "");
+            // flow_graph_print_to_dot(c, g, stdout, "");
             flow_job_destroy(c, job);
 
             flow_context_destroy(c);
