@@ -2,7 +2,7 @@ mkdir -p build
 cd build
 
 #Download and build DSSIM
-sudo apt-get install -y libpng12-dev
+sudo apt-get install -y pkg-config libpng12-dev
 wget https://github.com/pornel/dssim/archive/master.tar.gz
 tar xvzf master.tar.gz
 cd dssim-master
