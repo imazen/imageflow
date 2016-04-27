@@ -58,7 +58,11 @@ void * flow_node_get_infobytes_pointer(flow_c * c, struct flow_graph * g, int32_
 #define FLOW_GET_INFOBYTES(g, node_id, type, varname)                                                                  \
     struct type * varname = (struct type *)&g->info_bytes[g->nodes[node_id].info_byte_index];
 
+bool set_node_optimized_and_update_state(flow_c * c, struct flow_graph * g, int32_t node_id);
+
+bool stringify_state(char * buffer, size_t buffer_isze, struct flow_node * n);
 bool flow_node_stringify(flow_c * c, struct flow_graph * g, int32_t node_id, char * buffer, size_t buffer_size);
+
 int32_t flow_node_fixed_infobyte_count(flow_c * c, flow_ntype type);
 bool flow_node_infobyte_count(flow_c * c, struct flow_graph * g, int32_t node_id, int32_t * infobytes_count_out);
 bool flow_node_populate_dimensions(flow_c * c, struct flow_graph * g, int32_t node_id, bool force_estimate);

@@ -213,7 +213,15 @@ struct flow_context_codec_set {
     struct flow_codec_definition * codecs;
     size_t codecs_count;
 };
+
+struct flow_context_node_set {
+    struct flow_node_definition * node_definitions;
+    size_t node_definitions_count;
+};
+
 PUB struct flow_context_codec_set * flow_context_get_default_codec_set(void);
+
+PUB struct flow_context_node_set * flow_context_get_default_node_set(void);
 
 ////////////////////////////////////////////
 // Deal with graphs

@@ -1,76 +1,8 @@
 #include "imageflow_private.h"
-#include "nodes.h"
+#include "nodes/nodes_private.h"
 #include "codecs.h"
 
-//
-// typedef bool (*flow_nodedef_fn_stringify)(flow_context *c, struct flow_graph *g, int32_t node_id, char * buffer,
-// size_t
-// buffer_size);
-//
-//
-//
-// typedef bool (*flow_nodedef_fn_infobyte_count)(flow_context *c, struct flow_graph *g, int32_t node_id, int32_t *
-// infobytes_count_out);
-//
-// typedef bool (*flow_nodedef_fn_populate_dimensions)(flow_context *c, struct flow_graph *g, int32_t node_id, int32_t
-// outbound_edge_id);
-//
-//
-// typedef bool (*flow_nodedef_fn_flatten)(flow_context *c, struct flow_graph **graph_ref, int32_t node_id);
-//
-// typedef bool (*flow_nodedef_fn_execute)(flow_context *c, struct flow_graph *g, int32_t node_id);
-//
-//
-//
-//
-// struct flow_node_definition{
-//    flow_ntype type;
-//    int32_t input_count;
-//    int32_t canvas_count;
-//    const char * type_name;
-//
-//    flow_nodedef_fn_stringify stringify;
-//    flow_nodedef_fn_infobyte_count count_infobytes;
-//    int32_t nodeinfo_bytes_fixed;
-//    flow_nodedef_fn_populate_dimensions populate_dimensions;
-//    flow_nodedef_fn_flatten flatten;
-//    flow_nodedef_fn_execute execute;
-//
-//};
-
-#define FLOW_GET_INPUT_EDGE(g, node_id)                                                                                \
-    int32_t input_edge_id = flow_graph_get_first_inbound_edge_of_type(c, g, node_id, flow_edgetype_input);             \
-    if (input_edge_id < 0) {                                                                                           \
-        FLOW_error(c, flow_status_Invalid_inputs_to_node);                                                             \
-        return false;                                                                                                  \
-    }                                                                                                                  \
-    struct flow_edge * input_edge = &g->edges[input_edge_id];
-
-#define FLOW_GET_INPUT_NODE(g, node_id)                                                                                \
-    int32_t input_edge_id = flow_graph_get_first_inbound_edge_of_type(c, g, node_id, flow_edgetype_input);             \
-    if (input_edge_id < 0) {                                                                                           \
-        FLOW_error(c, flow_status_Invalid_inputs_to_node);                                                             \
-        return false;                                                                                                  \
-    }                                                                                                                  \
-    struct flow_node * input_node = &g->nodes[g->edges[input_edge_id].from];
-
-#define FLOW_GET_CANVAS_EDGE(g, node_id)                                                                               \
-    int32_t canvas_edge_id = flow_graph_get_first_inbound_edge_of_type(c, g, node_id, flow_edgetype_canvas);           \
-    if (canvas_edge_id < 0) {                                                                                          \
-        FLOW_error(c, flow_status_Invalid_inputs_to_node);                                                             \
-        return false;                                                                                                  \
-    }                                                                                                                  \
-    struct flow_edge * canvas_edge = &g->edges[canvas_edge_id];
-
-#define FLOW_GET_CANVAS_NODE(g, node_id)                                                                               \
-    int32_t canvas_edge_id = flow_graph_get_first_inbound_edge_of_type(c, g, node_id, flow_edgetype_canvas);           \
-    if (canvas_edge_id < 0) {                                                                                          \
-        FLOW_error(c, flow_status_Invalid_inputs_to_node);                                                             \
-        return false;                                                                                                  \
-    }                                                                                                                  \
-    struct flow_node * canvas_node = &g->nodes[g->edges[canvas_edge_id].from];
-
-static bool stringify_state(char * buffer, size_t buffer_isze, struct flow_node * n)
+bool stringify_state(char * buffer, size_t buffer_isze, struct flow_node * n)
 {
     flow_snprintf(buffer, buffer_isze, "[%d/%d]", n->state, flow_node_state_Done);
     return true;
@@ -87,7 +19,7 @@ static const char * get_format_name(flow_pixel_format f, bool alpha_meaningful)
             return "?";
     }
 }
-static bool set_node_optimized_and_update_state(flow_c * c, struct flow_graph * g, int32_t node_id)
+bool set_node_optimized_and_update_state(flow_c * c, struct flow_graph * g, int32_t node_id)
 {
     struct flow_node * n = &g->nodes[node_id];
 
@@ -95,20 +27,6 @@ static bool set_node_optimized_and_update_state(flow_c * c, struct flow_graph * 
     if (!flow_node_update_state(c, g, node_id)) {
         FLOW_error_return(c);
     }
-    return true;
-}
-
-static bool stringify_scale(flow_c * c, struct flow_graph * g, int32_t node_id, char * buffer, size_t buffer_size)
-{
-    FLOW_GET_INFOBYTES(g, node_id, flow_nodeinfo_scale, info);
-
-    char state[64];
-    if (!stringify_state(state, 63, &g->nodes[node_id])) {
-        FLOW_error_return(c);
-    }
-
-    flow_snprintf(buffer, buffer_size, "scale %lux%lu %s", info->width, info->height,
-                  (const char *)(const char *) & state);
     return true;
 }
 
@@ -226,20 +144,6 @@ static bool stringify_decode(flow_c * c, struct flow_graph * g, int32_t node_id,
 static bool stringify_encode(flow_c * c, struct flow_graph * g, int32_t node_id, char * buffer, size_t buffer_size)
 {
     return stringify_decode(c, g, node_id, buffer, buffer_size);
-}
-
-static bool dimensions_scale(flow_c * c, struct flow_graph * g, int32_t node_id, bool force_estimate)
-{
-    FLOW_GET_INFOBYTES(g, node_id, flow_nodeinfo_size, info)
-    FLOW_GET_INPUT_NODE(g, node_id)
-
-    struct flow_node * n = &g->nodes[node_id];
-
-    n->result_width = info->width;
-    n->result_height = info->height;
-    n->result_alpha_meaningful = input_node->result_alpha_meaningful;
-    n->result_format = input_node->result_format;
-    return true;
 }
 
 static bool dimensions_bitmap_bgra_pointer(flow_c * c, struct flow_graph * g, int32_t node_id, bool force_estimate)
@@ -430,19 +334,6 @@ static int32_t create_primitve_render_to_canvas_1d_node(flow_c * c, struct flow_
     return id;
 }
 
-static int32_t create_render1d_node(flow_c * c, struct flow_graph ** g, int32_t last, int32_t to_width, bool transpose,
-                                    flow_interpolation_filter filter)
-{
-
-    flow_working_floatspace floatspace = flow_working_floatspace_linear;
-    float sharpen_percent = 0;
-
-    int32_t id = flow_node_create_render1d(c, g, last, transpose, to_width, floatspace, sharpen_percent, NULL, filter);
-    if (id < 0) {
-        FLOW_add_to_callstack(c);
-    }
-    return id;
-}
 static bool flatten_delete_node(flow_c * c, struct flow_graph ** graph_ref, int32_t node_id)
 {
     int32_t input_edge_id = flow_graph_get_first_inbound_edge_of_type(c, *graph_ref, node_id, flow_edgetype_input);
@@ -463,64 +354,6 @@ static bool flatten_delete_node(flow_c * c, struct flow_graph ** graph_ref, int3
     // Delete the original
     if (!flow_node_delete(c, *graph_ref, node_id)) {
         FLOW_error_return(c);
-    }
-    return true;
-}
-
-static bool flatten_scale(flow_c * c, struct flow_graph ** g, int32_t node_id, struct flow_node * node,
-                          struct flow_node * input_node, int32_t * first_replacement_node,
-                          int32_t * last_replacement_node)
-{
-    if ((*g)->nodes[node_id].type != flow_ntype_Scale
-        || (*g)->nodes[node_id].info_byte_index > (int64_t)((*g)->next_info_byte - sizeof(struct flow_nodeinfo_size))) {
-        FLOW_error(c, flow_status_Graph_invalid);
-        return false;
-    }
-    // INFOBYTES ARE INVALID AFTER THE FIRST create_*_nodec call, since the graph has been swapped out.
-    // TODO: check them all
-    FLOW_GET_INFOBYTES((*g), node_id, flow_nodeinfo_scale, size)
-    int32_t height = size->height;
-    int32_t width = size->width;
-    // TODO: swap out for upscale filter
-    flow_interpolation_filter filter = size->downscale_filter;
-
-    if ((size->flags & flow_scale_flags_use_scale2d) > 0) {
-
-        flow_pixel_format input_format = input_node->result_format;
-
-        int32_t canvas = flow_node_create_canvas(c, g, -1, input_format, width, height, 0);
-        if (canvas < 0) {
-            FLOW_error_return(c);
-        }
-
-        if (!set_node_optimized_and_update_state(c, *g, canvas)) {
-            FLOW_error_return(c);
-        }
-
-        *first_replacement_node
-            = flow_node_create_scale_2d(c, g, *first_replacement_node, width, height, (flow_working_floatspace_as_is),
-                                        0, (flow_interpolation_filter_Robidoux));
-        if (*first_replacement_node < 0) {
-            FLOW_error_return(c);
-        }
-        if (flow_edge_create(c, g, canvas, *first_replacement_node, flow_edgetype_canvas) < 0) {
-            FLOW_error_return(c);
-        }
-
-        *last_replacement_node = *first_replacement_node;
-        return true;
-    } else {
-        *first_replacement_node = create_render1d_node(c, g, -1, width, true, filter);
-        if (*first_replacement_node < 0) {
-            FLOW_error_return(c);
-        }
-
-        int32_t copy = *first_replacement_node;
-
-        *last_replacement_node = create_render1d_node(c, g, copy, height, true, filter);
-        if (*last_replacement_node < 0) {
-            FLOW_error_return(c);
-        }
     }
     return true;
 }
@@ -1092,17 +925,17 @@ static bool execute_encode(flow_c * c, struct flow_job * job, struct flow_graph 
 
 struct flow_node_definition flow_node_defs[] = {
     // High level (non-executable). These *flatten* into more primitive nodes
-    {
-      .type = flow_ntype_Scale,
-      .input_count = 1,
-      .canvas_count = 0,
-      .type_name = "scale",
-      .nodeinfo_bytes_fixed = sizeof(struct flow_nodeinfo_scale),
-      .stringify = stringify_scale,
-      .populate_dimensions = dimensions_scale,
-      .pre_optimize_flatten = flatten_scale,
-
-    },
+    //    {
+    //      .type = flow_ntype_Scale,
+    //      .input_count = 1,
+    //      .canvas_count = 0,
+    //      .type_name = "scale",
+    //      .nodeinfo_bytes_fixed = sizeof(struct flow_nodeinfo_scale),
+    //      .stringify = stringify_scale,
+    //      .populate_dimensions = dimensions_scale,
+    //      .pre_optimize_flatten = flatten_scale,
+    //
+    //    },
     {
       .type = flow_ntype_Noop,
       .input_count = 1,
@@ -1332,10 +1165,10 @@ int32_t flow_node_defs_count = sizeof(flow_node_defs) / sizeof(struct flow_node_
 
 struct flow_node_definition * flow_nodedef_get(flow_c * c, flow_ntype type)
 {
-    int i = 0;
-    for (i = 0; i < flow_node_defs_count; i++) {
-        if (flow_node_defs[i].type == type)
-            return &flow_node_defs[i];
+    size_t i = 0;
+    for (i = 0; i < c->node_set->node_definitions_count; i++) {
+        if (c->node_set->node_definitions[i].type == type)
+            return &c->node_set->node_definitions[i];
     }
     FLOW_error(c, flow_status_Not_implemented);
     return NULL;
@@ -1642,4 +1475,21 @@ bool flow_node_estimate_execution_cost(flow_c * c, struct flow_graph * g, int32_
 {
     FLOW_error(c, flow_status_Not_implemented);
     return false;
+}
+
+extern const struct flow_node_definition flow_define_scale;
+
+static struct flow_context_node_set cached_default_node_set;
+static struct flow_node_definition cached_default_set[sizeof(flow_node_defs) / sizeof(struct flow_node_definition) + 1];
+
+struct flow_context_node_set * flow_context_get_default_node_set()
+{
+    int i = 0;
+    for (uint32_t j = 0; j < sizeof(flow_node_defs) / sizeof(struct flow_node_definition); j++) {
+        cached_default_set[i++] = flow_node_defs[j];
+    }
+    cached_default_set[i++] = flow_define_scale;
+    cached_default_node_set.node_definitions = &cached_default_set[0];
+    cached_default_node_set.node_definitions_count = sizeof(cached_default_set) / sizeof(struct flow_node_definition);
+    return &cached_default_node_set;
 }

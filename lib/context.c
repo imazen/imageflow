@@ -204,6 +204,7 @@ void flow_context_initialize(flow_c * context)
     flow_context_objtracking_initialize(&context->object_tracking);
     flow_context_set_floatspace(context, flow_working_floatspace_linear, 0.0f, 0.0f, 0.0f);
     context->codec_set = flow_context_get_default_codec_set();
+    context->node_set = flow_context_get_default_node_set();
 }
 
 flow_c * flow_context_create(void)

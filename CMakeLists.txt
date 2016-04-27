@@ -22,7 +22,7 @@ endif()
 list(REMOVE_ITEM CONAN_LIBS efence) # FIXME: Maybe efence should be a private dep of openssls
 
 
-file(GLOB LIB_SRCS lib/*.c)
+file(GLOB_RECURSE LIB_SRCS lib/*.c)
 file(GLOB LIB_HDRS lib/*.h)
 list(APPEND LIB_HDRS imageflow.h)
 list(APPEND LIB_HDRS imageflow_advanced.h)

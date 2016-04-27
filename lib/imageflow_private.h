@@ -140,6 +140,7 @@ struct flow_context {
     struct flow_colorspace_info colorspace;
     struct flow_objtracking_info object_tracking;
     struct flow_context_codec_set * codec_set;
+    struct flow_context_node_set * node_set;
 };
 
 typedef struct flow_context flow_c;
