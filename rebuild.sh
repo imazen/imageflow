@@ -1,3 +1,4 @@
+#!/bin/bash
 rm -rf build
 rm libimageflow.so
 rm conaninfo.txt

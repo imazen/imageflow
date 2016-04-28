@@ -169,13 +169,6 @@ typedef enum flow_status_code {
     flow_status_Last_user_defined_error = 2147483647
 } flow_status_code;
 
-static const char * const flow_status_code_strings[] = {
-    "No error",      "Out Of Memory",          "Not implemented",               "Pixel format unsupported by algorithm",
-    "Null argument", "Invalid argument",       "Invalid dimensions",            "Internal state invalid",
-    "I/O error",     "Image decoding failed",  "Image encoding failed",         "Item does not exist",
-    "Graph invalid", "Invalid inputs to node", "Maximum graph passes exceeded", "Graph is cyclic",
-    "Other error:",
-};
 
 typedef enum flow_interpolation_filter {
     flow_interpolation_filter_RobidouxFast = 1,
