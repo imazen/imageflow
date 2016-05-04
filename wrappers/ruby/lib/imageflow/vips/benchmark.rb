@@ -76,6 +76,19 @@ module Imageflow
         ""
       end
     end
+
+    class ImageflowVipsNoBlockscale < ImageflowVips
+      def shortname
+        "flowhq"
+      end
+      def to_s
+        "#{super} --stop_block_scaling_at=300"
+      end
+    end
+
+
+
+
     class ImageMagick < BaseBenchmarkee
       def shortname
         "magick"
@@ -99,6 +112,19 @@ module Imageflow
       end
       def to_s
         if linear
+          "#{exe_name} #{path} -set colorspace sRGB -colorspace RGB -filter Robidoux -resize  #{output_w}x#{output_h} -colorspace sRGB #{output_path}"
+        else
+          "#{exe_name} #{path} -set colorspace sRGB -filter Robidoux -resize #{output_w}x#{output_h} -colorspace sRGB #{output_path}"
+        end
+
+      end
+    end
+    class IdealReference < ImageMagick
+      def shortname
+        "ideal_reference"
+      end
+      def to_s
+        if linear
           "#{exe_name} #{path} -set colorspace sRGB -colorspace RGB -filter Mitchell -distort Resize #{output_w}x#{output_h} -colorspace sRGB #{output_path}"
         else
           "#{exe_name} #{path} -set colorspace sRGB  -filter Mitchell -distort Resize #{output_w}x#{output_h} -colorspace sRGB #{output_path}"
@@ -107,10 +133,9 @@ module Imageflow
       end
     end
 
-
     class Benchmark
 
-      def initialize(output_stream: STDOUT, configs: nil, image_urls: nil)
+      def initialize(output_stream: STDOUT, configs: nil, image_urls: nil, benchmarkees: nil)
         @log = output_stream
         @dir = File.expand_path("temp_vips_benchmarking")
         @image_urls = image_urls || ["gamma_dalai_lama_gray.jpg", "u1.jpg", "u6.jpg", "u1.jpg","u1.jpg","u1.jpg","u1.jpg","u1.jpg","u1.jpg", "mountain_800.jpg"].map do |name|
@@ -120,7 +145,7 @@ module Imageflow
         @op_configs = configs || [{linear: true, w: 128}, {linear: true, w: 400,}, {linear: true, w: 800 }, {linear: true, w: 1600}]
         #@op_configs = @op_configs + @op_configs.map{|h| h.dup.merge({linear: false})}
 
-        @benchmarkees = [ImageflowVips, VipsThumbnail, ImageMagick, Reference]
+        @benchmarkees = benchmarkees || [ImageflowVips, VipsThumbnail, ImageMagick, Reference]
 
 
         @cpu_count = get_cpu_count
@@ -215,6 +240,7 @@ module Imageflow
             log << "\nComparing against #{reference}\n"
             png_images.each do |output|
               log << `dssim #{reference} #{output}`
+              log << "Viusalize with > compare #{reference} #{output} -fuzz 1%  x:\n"
             end
           end
         end
@@ -264,7 +290,7 @@ module Imageflow
             @log << "You must execute this benchmark with 'sudo' or a ramdisk cannot be used\n" if ENV['USER'] !=~ /root/
             @log << `mount -t tmpfs -o size=512M tmpfs #{dir}`
             @using_ramdisk = $?.exitstatus == 0
-            @log << "Failed to mount ramdisk at #{dir}! Disk speed may affect benchmark.\n" unless @using_ramdisk
+            @log << "Failed to mount ramdisk at #{dir}! Disk speed may affect benchmark.\nTry running `sudo mount -t tmpfs -o size=512M tmpfs #{dir}`\n" unless @using_ramdisk
           end
         end
 

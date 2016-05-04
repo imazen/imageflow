@@ -11,10 +11,11 @@ module Imageflow
         @height = 128
         @output_format_string = "tn_%s.jpg"
         @import_profile = @export_profile = nil
+        @stop_block_scaling_at = nil
         @input_files = []
       end
 
-      attr_accessor :thumbnail_size_str, :width, :height, :output_format_string, :import_profile, :export_profile, :delete_profile, :linear, :crop_image, :rotate_image, :input_files
+      attr_accessor :thumbnail_size_str, :width, :height, :output_format_string, :import_profile, :export_profile, :delete_profile, :linear, :crop_image, :rotate_image, :input_files, :stop_block_scaling_at
     end
   end
 end

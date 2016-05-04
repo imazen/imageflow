@@ -39,7 +39,7 @@ module Imageflow
         ile = ImageLayoutEngine.new original_size: original_size
         ile.apply_instructions instructions
 
-        min_precise_scaling = instructions.precise_scaling_ratio || 3.0;
+        min_precise_scaling = instructions.precise_scaling_ratio || 3.0
         trigger_ratio = min_precise_scaling
         crop_ratios = [original_size[0].to_f / (ile.result[:copy_from][2] - ile.result[:copy_from][0]).to_f, original_size[1].to_f / (ile.result[:copy_from][3] - ile.result[:copy_from][1]).to_f]
         target_decoder_size = ile.result[:copy_to_size].zip(crop_ratios).map {|v, ratio| (v.to_f * ratio.to_f * min_precise_scaling)}

@@ -37,6 +37,7 @@ module Imageflow
           opt.on('-c', '--crop', 'crop exactly to SIZE') { |v| opts.crop = v }
           opt.on('-t', '--rotate', 'auto-rotate based on EXIF data') { |v| opts.rotate_image = v }
           opt.on('-d', '--delete', 'delete profile from exported image') { |v| opts.delete_profile = v }
+          opt.on('--stop_block_scaling_at RATIO', 'stop block scaling at ratio') { |v| opts.stop_block_scaling_at = v.to_f }
         end.parse!(args)
         opts.input_files = args.reject{|f| f.nil? || f.empty?}
         if args.empty?

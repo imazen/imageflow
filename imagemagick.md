@@ -18,7 +18,7 @@ cd ImageMagick-6.9.3-7
 sudo apt-get remove imagemagick
 
 # Configure for HDRI support (don't truncate color depth)
-./configure --enable-hdri
+./configure --enable-hdri --with-modules
 #Build
 make
 #Install
