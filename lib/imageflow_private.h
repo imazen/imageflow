@@ -26,6 +26,15 @@ extern "C" {
 
 #define PUB FLOW_EXPORT
 
+
+#define FLOW_HINT_HOT __attribute__((hot))
+#define FLOW_HINT_PURE __attribute__((pure))
+#ifdef __GNUC__
+#define FLOW_HINT_UNSAFE_MATH_OPTIMIZATIONS __attribute__((optimize("-funsafe-math-optimizations")))
+#else
+#define FLOW_HINT_UNSAFE_MATH_OPTIMIZATIONS
+#endif
+
 // floating-point bitmap, typically linear RGBA, premultiplied
 struct flow_bitmap_float {
     // buffer width in pixels
@@ -162,8 +171,7 @@ PUB bool flow_node_execute_render_to_canvas_1d(flow_c * c, struct flow_job * job
                                                struct flow_nodeinfo_render_to_canvas_1d * info);
 PUB bool flow_node_execute_scale2d_render1d(flow_c * c, struct flow_job * job, struct flow_bitmap_bgra * input,
                                             struct flow_bitmap_bgra * canvas,
-                                            struct flow_nodeinfo_scale2d_render_to_canvas1d * info) __attribute__((hot))
-__attribute__((optimize("-funsafe-math-optimizations")));
+                                            struct flow_nodeinfo_scale2d_render_to_canvas1d * info) FLOW_HINT_HOT FLOW_HINT_UNSAFE_MATH_OPTIMIZATIONS;
 
 PUB bool flow_job_populate_dimensions_where_certain(flow_c * c, struct flow_job * job, struct flow_graph ** graph_ref);
 // For doing execution cost estimates, we force estimate, then flatten, then calculate cost

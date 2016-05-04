@@ -7,14 +7,14 @@ static void multiply_row(float * row, const size_t length, const float coefficie
     }
 }
 __attribute__((hot))
-__attribute__((optimize("-funsafe-math-optimizations"))) static void add_row(float * mutate_row, float * input_row,
+ FLOW_HINT_UNSAFE_MATH_OPTIMIZATIONS static void add_row(float * mutate_row, float * input_row,
                                                                              const size_t length)
 {
     for (size_t i = 0; i < length; i++) {
         mutate_row[i] += input_row[i];
     }
 }
-__attribute__((hot)) __attribute__((optimize("-funsafe-math-optimizations")))
+FLOW_HINT_HOT FLOW_HINT_UNSAFE_MATH_OPTIMIZATIONS
 
 bool flow_node_execute_scale2d_render1d(flow_c * c, struct flow_job * job, struct flow_bitmap_bgra * input,
                                         struct flow_bitmap_bgra * canvas,

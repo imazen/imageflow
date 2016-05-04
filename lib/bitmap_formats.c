@@ -25,7 +25,7 @@ static bool are_valid_bitmap_dimensions(int sx, int sy)
 }
 
 uint32_t flow_pixel_format_bytes_per_pixel(flow_pixel_format format) { return (uint32_t)format; }
-__attribute__((hot)) __attribute__((pure))
+FLOW_HINT_HOT FLOW_HINT_PURE
 
 struct flow_bitmap_bgra * flow_bitmap_bgra_create_header(flow_c * context, int sx, int sy)
 {

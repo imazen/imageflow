@@ -501,7 +501,7 @@ static void flow_bitmap_bgra32_sharpen_block_edges_x(struct flow_bitmap_bgra * i
         }
     }
 }
-__attribute__((hot)) __attribute__((optimize("-funsafe-math-optimizations")))
+FLOW_HINT_HOT FLOW_HINT_UNSAFE_MATH_OPTIMIZATIONS
 
 bool flow_bitmap_bgra_transpose(flow_c * c, struct flow_bitmap_bgra * from, struct flow_bitmap_bgra * to)
 {
@@ -518,7 +518,7 @@ bool flow_bitmap_bgra_transpose(flow_c * c, struct flow_bitmap_bgra * from, stru
     }
     return true;
 }
-__attribute__((hot)) __attribute__((optimize("-funsafe-math-optimizations")))
+FLOW_HINT_HOT FLOW_HINT_UNSAFE_MATH_OPTIMIZATIONS
 
 bool flow_bitmap_bgra_sharpen_block_edges(flow_c * c, struct flow_bitmap_bgra * im, int block_size, float pct)
 {
@@ -547,8 +547,7 @@ bool flow_bitmap_bgra_sharpen_block_edges(flow_c * c, struct flow_bitmap_bgra * 
     }
     flow_bitmap_bgra_destroy(c, temp);
     return true;
-}
-__attribute__((hot))
+} FLOW_HINT_HOT
 
 static void SharpenBgraFloatInPlace(float * buf, unsigned int count, double pct, int step)
 {

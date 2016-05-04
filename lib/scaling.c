@@ -109,7 +109,7 @@ bool flow_bitmap_float_scale_rows(flow_c * context, struct flow_bitmap_float * f
     }
     return true;
 }
-__attribute__((hot)) __attribute__((optimize("-funsafe-math-optimizations")))
+FLOW_HINT_HOT FLOW_HINT_UNSAFE_MATH_OPTIMIZATIONS
 /*
 This halves in sRGB space instead of linear. Not significantly faster on modern hardware, it appears?
 #define  HALVING_TYPE unsigned short
