@@ -11,5 +11,5 @@ cd bin
 export PATH=$PATH:$(pwd)
 cd ../..
 
-conan install --file ../conanfile.py -o build_tests=True -o coverage=True --build missing -u
-conan build --file ../conanfile.py
+conan install -o build_tests=True -o coverage=True --build missing -u ../
+conan build ../
