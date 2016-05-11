@@ -169,7 +169,6 @@ typedef enum flow_status_code {
     flow_status_Last_user_defined_error = 2147483647
 } flow_status_code;
 
-
 typedef enum flow_interpolation_filter {
     flow_interpolation_filter_RobidouxFast = 1,
     flow_interpolation_filter_Robidoux = 2,
@@ -265,13 +264,17 @@ PUB void flow_context_initialize(flow_c * c);
 // Or, because you want to check error status after all destructors are called, but before the stacktrace and message
 // are freed
 PUB bool flow_context_begin_terminate(flow_c * c);
+// You should call flow_context_destroy unless the context is stack allocated.
 PUB void flow_context_end_terminate(flow_c * c);
+
+// Terminates the context, but does not permit you to check errors that happen during tear-down as begin/end terminate
+// do
+PUB void flow_context_terminate(flow_c * context);
 
 PUB void flow_context_destroy(flow_c * c); // Don't pass this a pointer on the stack! use begin/end terminate
 
 PUB int64_t flow_context_error_and_stacktrace(flow_c * c, char * buffer, size_t buffer_size, bool full_file_path);
 PUB int64_t flow_context_error_message(flow_c * c, char * buffer, size_t buffer_size);
-
 PUB int64_t flow_context_stacktrace(flow_c * c, char * buffer, size_t buffer_size, bool full_file_path);
 
 PUB bool flow_context_has_error(flow_c * c);
@@ -395,6 +398,10 @@ PUB int32_t flow_node_create_render1d(flow_c * c, struct flow_graph ** g, int32_
                                       int32_t scale_to_width, flow_working_floatspace scale_and_filter_in_colorspace,
                                       float sharpen_percent, struct flow_scanlines_filter * filter_list,
                                       flow_interpolation_filter interpolation_filter);
+PUB int32_t flow_node_create_generic(flow_c * c, struct flow_graph ** graph_ref, int32_t prev_node, flow_ntype type);
+
+PUB int32_t flow_node_create_generic_with_data(flow_c * c, struct flow_graph ** graph_ref, int32_t prev_node,
+                                               flow_ntype type, uint8_t * bytes, size_t byte_count);
 
 PUB struct flow_job * flow_job_create(flow_c * c);
 PUB bool flow_job_destroy(flow_c * c, struct flow_job * job);
@@ -406,11 +413,6 @@ PUB bool flow_job_decoder_switch_frame(flow_c * c, struct flow_job * job, int32_
                                        int64_t frame_index);
 
 PUB bool flow_graph_validate(flow_c * c, struct flow_graph * g);
-
-PUB int32_t flow_node_create_generic(flow_c * c, struct flow_graph ** graph_ref, int32_t prev_node, flow_ntype type);
-
-PUB int32_t flow_node_create_generic_with_data(flow_c * c, struct flow_graph ** graph_ref, int32_t prev_node,
-                                               flow_ntype type, uint8_t * bytes, size_t byte_count);
 
 PUB uint32_t flow_pixel_format_bytes_per_pixel(flow_pixel_format format);
 

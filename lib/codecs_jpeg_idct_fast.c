@@ -80,11 +80,12 @@ set_idct_category)
 #include "jpeglib.h"
 #include "jdct.h" /* Private declarations for DCT subsystem */
 #ifdef __GNUC__
-#define HOT __attribute__((hot)) __attribute__((optimize("-funsafe-math-optimizations", "-ffinite-math-only", "-fsingle-precision-constant", "-fno-signaling-nans")))
+#define HOT                                                                                                            \
+    __attribute__((hot)) __attribute__((optimize("-funsafe-math-optimizations", "-ffinite-math-only",                  \
+                                                 "-fsingle-precision-constant", "-fno-signaling-nans")))
 #else
 #define HOT __attribute__((hot))
 #endif
-
 
 static inline uint8_t uchar_clamp_ff(float clr)
 {
@@ -94,10 +95,12 @@ static inline uint8_t uchar_clamp_ff(float clr)
         result = (clr < 0) ? 0 : 255;
     }
     return (uint8_t)result;
-} HOT
+}
+HOT
 
-void jpeg_idct_spatial_srgb_1x1(j_decompress_ptr cinfo, jpeg_component_info * compptr, JCOEFPTR coef_block,
-                                JSAMPARRAY output_buf, JDIMENSION output_col) HOT;
+    void
+    jpeg_idct_spatial_srgb_1x1(j_decompress_ptr cinfo, jpeg_component_info * compptr, JCOEFPTR coef_block,
+                               JSAMPARRAY output_buf, JDIMENSION output_col) HOT;
 
 void jpeg_idct_spatial_srgb_2x2(j_decompress_ptr cinfo, jpeg_component_info * compptr, JCOEFPTR coef_block,
                                 JSAMPARRAY output_buf, JDIMENSION output_col) HOT;

@@ -246,10 +246,16 @@ void flow_context_end_terminate(flow_c * context)
         context->underlying_heap._context_terminate(context, &context->underlying_heap);
     }
 }
-void flow_context_destroy(flow_c * context)
+
+void flow_context_terminate(flow_c * context)
 {
     flow_context_begin_terminate(context);
     flow_context_end_terminate(context);
+}
+
+void flow_context_destroy(flow_c * context)
+{
+    flow_context_terminate(context);
     free(context);
 }
 

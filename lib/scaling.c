@@ -124,8 +124,9 @@ This halves in sRGB space instead of linear. Not significantly faster on modern 
 #define HALVE_ROW_NAME HalveRowByDivisorColorSpaceAware
 #define HALVE_INTERNAL_NAME HalveInternalColorSpaceAware
 
-static inline void HALVE_ROW_NAME(flow_c * context, const unsigned char * from, HALVING_TYPE * to,
-                                  const unsigned int to_count, const int divisor, const int step)
+    static inline void
+    HALVE_ROW_NAME(flow_c * context, const unsigned char * from, HALVING_TYPE * to, const unsigned int to_count,
+                   const int divisor, const int step)
 {
     int to_b, from_b;
     const int to_bytes = to_count * step;

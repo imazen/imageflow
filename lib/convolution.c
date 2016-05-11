@@ -503,7 +503,8 @@ static void flow_bitmap_bgra32_sharpen_block_edges_x(struct flow_bitmap_bgra * i
 }
 FLOW_HINT_HOT FLOW_HINT_UNSAFE_MATH_OPTIMIZATIONS
 
-bool flow_bitmap_bgra_transpose(flow_c * c, struct flow_bitmap_bgra * from, struct flow_bitmap_bgra * to)
+    bool
+    flow_bitmap_bgra_transpose(flow_c * c, struct flow_bitmap_bgra * from, struct flow_bitmap_bgra * to)
 {
     if (from->w != to->h || from->h != to->w || from->fmt != to->fmt || from->fmt != flow_bgra32) {
         FLOW_error(c, flow_status_Invalid_argument);
@@ -520,7 +521,8 @@ bool flow_bitmap_bgra_transpose(flow_c * c, struct flow_bitmap_bgra * from, stru
 }
 FLOW_HINT_HOT FLOW_HINT_UNSAFE_MATH_OPTIMIZATIONS
 
-bool flow_bitmap_bgra_sharpen_block_edges(flow_c * c, struct flow_bitmap_bgra * im, int block_size, float pct)
+    bool
+    flow_bitmap_bgra_sharpen_block_edges(flow_c * c, struct flow_bitmap_bgra * im, int block_size, float pct)
 {
     if (pct == 0.0f)
         return true;
@@ -547,7 +549,8 @@ bool flow_bitmap_bgra_sharpen_block_edges(flow_c * c, struct flow_bitmap_bgra * 
     }
     flow_bitmap_bgra_destroy(c, temp);
     return true;
-} FLOW_HINT_HOT
+}
+FLOW_HINT_HOT
 
 static void SharpenBgraFloatInPlace(float * buf, unsigned int count, double pct, int step)
 {

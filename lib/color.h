@@ -93,7 +93,7 @@ static inline float Context_srgb_to_floatspace(flow_c * context, uint8_t value)
     return context->colorspace
         .byte_to_float[value]; // 2x faster, even if just multiplying by 1/255. 3x faster than the entire calculation.
 }
- FLOW_HINT_PURE
+FLOW_HINT_PURE
 
 static inline uint8_t Context_floatspace_to_srgb(flow_c * context, float space_value)
 {
@@ -108,7 +108,7 @@ static inline uint8_t Context_floatspace_to_srgb(flow_c * context, float space_v
         return uchar_clamp_ff(linear_to_srgb(v));
     return uchar_clamp_ff(255.0f * v);
 }
- FLOW_HINT_PURE
+FLOW_HINT_PURE
 
 static inline void linear_to_yxz(float * bgr)
 {
