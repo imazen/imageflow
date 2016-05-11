@@ -106,30 +106,11 @@ struct flow_bitmap_bgra * crop_window(flow_c * context, struct flow_bitmap_bgra 
     return cropped;
 }
 
-void clear_bitmap(struct flow_bitmap_bgra * b, uint8_t fill_red, uint8_t fill_green, uint8_t fill_blue,
-                  uint8_t fill_alpha)
-{
-    const uint32_t bytes_pp = flow_pixel_format_bytes_per_pixel(b->fmt);
-    const uint32_t row_bytes = bytes_pp * b->w;
-    for (uint32_t i = 0; i < row_bytes; i += 4) {
-        b->pixels[i] = fill_blue;
-        b->pixels[i + 1] = fill_green;
-        b->pixels[i + 2] = fill_red;
-        if (bytes_pp == 4) {
-            b->pixels[i + 3] = fill_alpha;
-        }
-    }
-    for (uint32_t i = 0; i < b->h; i++) {
-        memcpy(b->pixels + (i * b->stride), b->pixels, row_bytes);
-    }
-}
-
 void fill_rect(flow_c * context, struct flow_bitmap_bgra * b, uint32_t x, uint32_t y, uint32_t w, uint32_t h,
                uint8_t fill_red, uint8_t fill_green, uint8_t fill_blue, uint8_t fill_alpha)
 {
-    struct flow_bitmap_bgra * cropped = crop_window(context, b, x, y, w, h);
-    clear_bitmap(cropped, fill_red, fill_green, fill_blue, fill_alpha);
-    flow_bitmap_bgra_destroy(context, cropped);
+    flow_bitmap_bgra_fill_rect(context, b, x, y, x + w, y + h,
+                               (fill_blue << 24) | (fill_red << 16) | (fill_green << 8) | fill_alpha);
 }
 
 /*/ segfaults the process if you uncomment this

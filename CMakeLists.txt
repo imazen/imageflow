@@ -84,7 +84,7 @@ if(ENABLE_TEST)
 		target_include_directories(${target} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/lib)
 	endfunction()
 
-	create_test(test_imageflow tests/test_context.cpp tests/test_io.cpp tests/test_graph.cpp tests/test_error_handling.cpp tests/test_visuals.cpp)
+	create_test(test_imageflow tests/test_operations.cpp tests/test_context.cpp tests/test_io.cpp tests/test_graph.cpp tests/test_error_handling.cpp tests/test_visuals.cpp)
 
 	create_test(test_variations tests/test_variations.cpp)
 	#create_test(test_context tests/test_context.cpp)

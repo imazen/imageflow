@@ -100,7 +100,6 @@ bool flatten_delete_node(flow_c * c, struct flow_graph ** graph_ref, int32_t nod
     return true;
 }
 
-
 inline void * FrameNode_get_node_info_pointer(struct flow_graph * g, int32_t node_id)
 {
     return &(g->info_bytes[g->nodes[node_id].info_byte_index]);
