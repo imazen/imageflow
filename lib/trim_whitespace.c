@@ -63,6 +63,16 @@ bool check_regions(flow_c * context, struct flow_SearchInfo * info, struct scan_
 
 struct flow_rect detect_content(flow_c * context, struct flow_bitmap_bgra * b, uint8_t threshold)
 {
+    // If the image is too small to apply a 3x3 filter, don't do it
+    if (b->w < 3 || b->h < 3) {
+        struct flow_rect result;
+        result.x1 = 0;
+        result.y1 = 0;
+        result.y2 = b->h;
+        result.x2 = b->w;
+        return result;
+    }
+
     struct flow_SearchInfo info;
     info.w = b->w;
     info.h = b->h;
@@ -108,6 +118,14 @@ struct flow_rect detect_content(flow_c * context, struct flow_bitmap_bgra * b, u
             FLOW_free(context, info.buf);
             return RectFailure;
         }
+    }
+
+    // Consider the entire image as content if it is blank (or we were unable to detect any energy).
+    if (info.min_x == b->w && info.max_x == 0 && info.min_y == b->h && info.max_y == 0) {
+        info.min_x = 0;
+        info.max_x = b->w;
+        info.min_y = 0;
+        info.max_y = b->h;
     }
 
     struct flow_rect result;
@@ -297,11 +315,11 @@ bool check_region(flow_c * context, int edgeTRBL, float x_1_percent, float x_2_p
     uint32_t min_region_width = (edgeTRBL == 2 || edgeTRBL == 4) ? 3 : 7;
     uint32_t min_region_height = (edgeTRBL == 1 || edgeTRBL == 3) ? 3 : 7;
 
-    while (y2 - y1 < min_region_height) {
+    while (y2 - y1 < min_region_height && (y1 > 0 || y2 < info->h)) {
         y1 = y1 > 0 ? y1 - 1 : 0;
         y2 = umin(info->h, y2 + 1);
     }
-    while (x2 - x1 < min_region_width) {
+    while (x2 - x1 < min_region_width && (x1 > 0 || x2 < info->w)) {
         x1 = x1 > 0 ? x1 - 1 : 0;
         x2 = umin(info->w, x2 + 1);
     }
@@ -330,7 +348,6 @@ bool check_region(flow_c * context, int edgeTRBL, float x_1_percent, float x_2_p
             info->buf_h = umin(umax(3, y2 - info->buf_y), window_height);
             uint32_t buf_x2 = info->buf_x + info->buf_w;
             uint32_t buf_y2 = info->buf_y + info->buf_h;
-
 
             const bool excluded_x = (info->min_x < info->buf_x && info->max_x > buf_x2);
             const bool excluded_y = (info->min_y < info->buf_y && info->max_y > buf_y2);

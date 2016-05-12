@@ -27,6 +27,51 @@ flow_rect test_detect_content_for(uint32_t w, uint32_t h, uint32_t x1, uint32_t 
     flow_context_destroy(c);
     return r;
 }
+
+TEST_CASE("Exhasutive test of detect_content for small images", "")
+{
+    flow_c * c = flow_context_create();
+
+    flow_rect r;
+    for (int w = 3; w < 9; w++) {
+        for (int h = 3; h < 9; h++) {
+            flow_bitmap_bgra * b = flow_bitmap_bgra_create(c, w, h, true, flow_bgra32);
+
+            for (int x = 0; x < w; x++) {
+                for (int y = 0; y < h; y++) {
+                    flow_bitmap_bgra_fill_rect(c, b, 0, 0, w, h, 0xFF000000);
+
+                    flow_bitmap_bgra_fill_rect(c, b, x, y, x + 1, y + 1, 0xFF0000FF);
+
+                    flow_context_print_and_exit_if_err(c);
+
+                    flow_rect r = detect_content(c, b, 1);
+
+                    bool correct = (r.x1 == x && r.y1 == y && r.x2 == x + 1 && r.y2 == x + 1);
+
+                    if (!correct) {
+                        CAPTURE(w);
+                        CAPTURE(h);
+                        CAPTURE(x);
+                        CAPTURE(y);
+                        CAPTURE(r.x1);
+                        CAPTURE(r.y1);
+                        CAPTURE(r.x2);
+                        CAPTURE(r.y2);
+                        REQUIRE(r.x2 == x + 1);
+                        REQUIRE(r.y2 == y + 1);
+                        REQUIRE(r.x1 == x);
+                        REQUIRE(r.y1 == y);
+                    }
+                }
+            }
+            FLOW_destroy(c, b);
+        }
+    }
+
+    flow_context_destroy(c);
+}
+
 TEST_CASE("Test detect_content", "")
 {
     flow_rect r;
