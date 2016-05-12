@@ -234,45 +234,71 @@ bool sobel_scharr_detect(flow_c * context, struct flow_SearchInfo * info)
 
             const int gy = 3 * a11 + 10 * a12 + 3 * a13 + -3 * a31 + -10 * a32 + -3 * a33;
 
-            const uint32_t value = (uint32_t)abs(gx) + (uint32_t)abs(gy);
-            if (value > threshold) {
-                // Now apply an approx roberts operator to 4 overlapping counter-clockwise quadrants to determine edges
+            const uint32_t scharr_value = (uint32_t)abs(gx) + (uint32_t)abs(gy);
 
-                bool q1 = roberts_cross_approx(a12, a13, a22, a23) > threshold;
-                bool q2 = roberts_cross_approx(a11, a12, a21, a22) > threshold;
-                bool q3 = roberts_cross_approx(a21, a22, a31, a32) > threshold;
-                bool q4 = roberts_cross_approx(a22, a23, a32, a33) > threshold;
+            if (scharr_value > threshold) {
+                // Now use differences to find the exact pixel
+                int thresh = threshold; // Maybe it should be smaller?
+                const uint8_t matrix[] = { a11, a12, a13, a21, a22, a23, a31, a32, a33 };
 
-                uint32_t x1 = info->buf_x + x;
-                uint32_t x2 = x1 + 1;
-                uint32_t y1 = info->buf_y + y;
-                uint32_t y2 = y1 + 1;
-                if (q1 || q2 || q3 || q4) {
-                    if (!q1 && !q4) {
-                        x2--;
+                uint32_t local_min_x = 2, local_min_y = 2, local_max_x = 1, local_max_y = 1;
+
+                // Check horizontal and vertical differences.
+                for (uint32_t my = 0; my < 3; my++) {
+                    bool edge_found = false;
+                    if (abs((int)matrix[my * 3] - (int)matrix[my * 3 + 1]) > thresh) {
+                        // vertical edge between x = 0,1
+                        local_min_x = umin(local_min_x, 1);
+                        local_max_x = umax(local_max_x, 1);
+                        edge_found = true;
                     }
-                    if (!q2 && !q3) {
-                        x1++;
+                    if (abs((int)matrix[my * 3 + 1] - (int)matrix[my * 3 + 2]) > thresh) {
+                        // vertical edge between x = 1,2
+                        local_min_x = umin(local_min_x, 2);
+                        local_max_x = umax(local_max_x, 2);
+                        edge_found = true;
                     }
-                    if (!q1 && !q2) {
-                        y1++;
+                    if (edge_found) {
+                        local_min_y = umin(local_min_y, my);
+                        local_max_y = umax(local_max_y, my + 1);
                     }
-                    if (!q3 && !q4) {
-                        y2--;
+                }
+                for (uint32_t mx = 0; mx < 3; mx++) {
+                    bool edge_found = false;
+                    if (abs((int)matrix[mx] - (int)matrix[mx + 3]) > thresh) {
+                        // horizontal edge between y = 0,1
+                        local_min_y = umin(local_min_y, 1);
+                        local_max_y = umax(local_max_y, 1);
+                        edge_found = true;
+                    }
+                    if (abs((int)matrix[mx + 3] - (int)matrix[mx + 6]) > thresh) {
+                        // horizontal edge between y = 1,2
+                        local_min_y = umin(local_min_y, 2);
+                        local_max_y = umax(local_max_y, 2);
+                        edge_found = true;
+                    }
+                    if (edge_found) {
+                        local_min_x = umin(local_min_x, mx);
+                        local_max_x = umax(local_max_x, mx + 1);
                     }
                 }
 
-                if (x1 < info->min_x) {
-                    info->min_x = x1;
+                local_min_x += info->buf_x + x - 1;
+                local_max_x += info->buf_x + x - 1;
+                local_min_y += info->buf_y + y - 1;
+                local_max_y += info->buf_y + y - 1;
+
+                if (local_min_x < info->min_x) {
+                    info->min_x = local_min_x;
                 }
-                if (x2 > info->max_x) {
-                    info->max_x = x2;
+                if (local_max_x > info->max_x) {
+                    info->max_x = local_max_x;
                 }
-                if (y1 < info->min_y) {
-                    info->min_y = y1;
+                if (local_min_y < info->min_y) {
+                    info->min_y = local_min_y;
                 }
-                if (y2 > info->max_y) {
-                    info->max_y = y2;
+                if (local_max_y > info->max_y) {
+                    info->max_y = local_max_y;
                 }
             }
             buf_ix++;
