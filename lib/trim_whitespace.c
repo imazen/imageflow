@@ -180,6 +180,12 @@ bool fill_buffer(flow_c * context, struct flow_SearchInfo * __restrict info)
     return true;
 }
 
+static inline uint32_t roberts_cross_approx(uint8_t a11, uint8_t a12, uint8_t a21, uint8_t a22)
+{
+    // we use |Gx| + |Gy| instead of sqrt(Gx^2 + Gy^2), thus an approximation
+    return (uint32_t)(abs((int)a11 - (int)a22) + abs((int)a12 - (int)a21));
+}
+
 bool sobel_scharr_detect(flow_c * context, struct flow_SearchInfo * info)
 {
 #define COEFFA = 3
@@ -195,16 +201,48 @@ bool sobel_scharr_detect(flow_c * context, struct flow_SearchInfo * info)
     for (uint32_t y = 1; y < y_end; y++) {
         for (uint32_t x = 1; x < x_end; x++) {
 
-            const int gx = -3 * buf[buf_ix - w - 1] + -10 * buf[buf_ix - 1] + -3 * buf[buf_ix + w - 1]
-                           + +3 * buf[buf_ix - w + 1] + 10 * buf[buf_ix + 1] + 3 * buf[buf_ix + w + 1];
-            const int gy = 3 * buf[buf_ix - w - 1] + 10 * (buf[buf_ix - w]) + 3 * buf[buf_ix - w + 1]
-                           + -3 * buf[buf_ix + w - 1] + -10 * (buf[buf_ix + w]) + -3 * buf[buf_ix + w + 1];
-            const size_t value = abs(gx) + abs(gy);
+            const uint8_t a11 = buf[buf_ix - w - 1];
+            const uint8_t a12 = buf[buf_ix - w];
+            const uint8_t a13 = buf[buf_ix - w + 1];
+            const uint8_t a21 = buf[buf_ix - 1];
+            const uint8_t a22 = buf[buf_ix];
+            const uint8_t a23 = buf[buf_ix + 1];
+            const uint8_t a31 = buf[buf_ix + w - 1];
+            const uint8_t a32 = buf[buf_ix + w];
+            const uint8_t a33 = buf[buf_ix + w + 1];
+
+            // We have not implemented any aliasing operations. A checkerboard of pixels will produce zeroes.
+            const int gx = 3 * a11 + 10 * a21 + 3 * a31 + -3 * a13 + -10 * a23 + -3 * a33;
+
+            const int gy = 3 * a11 + 10 * a12 + 3 * a13 + -3 * a31 + -10 * a32 + -3 * a33;
+
+            const uint32_t value = (uint32_t)abs(gx) + (uint32_t)abs(gy);
             if (value > threshold) {
-                const uint32_t x1 = info->buf_x + x - 1;
-                const uint32_t x2 = info->buf_x + x + 1;
-                const uint32_t y1 = info->buf_y + y - 1;
-                const uint32_t y2 = info->buf_y + y + 1;
+                // Now apply an approx roberts operator to 4 overlapping counter-clockwise quadrants to determine edges
+
+                bool q1 = roberts_cross_approx(a12, a13, a22, a23) > threshold;
+                bool q2 = roberts_cross_approx(a11, a12, a21, a22) > threshold;
+                bool q3 = roberts_cross_approx(a21, a22, a31, a32) > threshold;
+                bool q4 = roberts_cross_approx(a22, a23, a32, a33) > threshold;
+
+                uint32_t x1 = info->buf_x + x;
+                uint32_t x2 = x1 + 1;
+                uint32_t y1 = info->buf_y + y;
+                uint32_t y2 = y1 + 1;
+                if (q1 || q2 || q3 || q4) {
+                    if (!q1 && !q4) {
+                        x2--;
+                    }
+                    if (!q2 && !q3) {
+                        x1++;
+                    }
+                    if (!q1 && !q2) {
+                        y1++;
+                    }
+                    if (!q3 && !q4) {
+                        y2--;
+                    }
+                }
 
                 if (x1 < info->min_x) {
                     info->min_x = x1;
@@ -285,17 +323,17 @@ bool check_region(flow_c * context, int edgeTRBL, float x_1_percent, float x_2_p
     for (uint32_t window_row = 0; window_row < vertical_windows; window_row++) {
         for (uint32_t window_column = 0; window_column < horizontal_windows; window_column++) {
 
+            // Set up default overlapping windows. These may be shrunk or shifted later
             info->buf_x = x1 + ((window_width - 2) * window_column);
             info->buf_y = y1 + ((window_height - 2) * window_row);
-
             info->buf_w = umin(umax(3, x2 - info->buf_x), window_width);
             info->buf_h = umin(umax(3, y2 - info->buf_y), window_height);
             uint32_t buf_x2 = info->buf_x + info->buf_w;
             uint32_t buf_y2 = info->buf_y + info->buf_h;
 
-            const bool excluded_x = (info->min_x <= info->buf_x && info->max_x >= buf_x2);
 
-            const bool excluded_y = (info->min_y <= info->buf_y && info->max_y >= buf_y2);
+            const bool excluded_x = (info->min_x < info->buf_x && info->max_x > buf_x2);
+            const bool excluded_y = (info->min_y < info->buf_y && info->max_y > buf_y2);
 
             if (excluded_x && excluded_y) {
                 // Entire window has already been excluded
@@ -314,9 +352,24 @@ bool check_region(flow_c * context, int edgeTRBL, float x_1_percent, float x_2_p
                 info->buf_h = buf_y2 - info->buf_y;
             }
 
-            if (info->buf_y + info->buf_h > info->h || info->buf_x + info->buf_w > info->w) {
-                // We're out of bounds on the image somehow.
-                continue;
+            // Shift window back within image bounds
+            if (info->buf_y + info->buf_h > info->h) {
+                if (info->buf_h <= info->h) {
+                    info->buf_y = info->h - info->buf_h;
+                } else {
+                    // We tried to make the buffer wider than the image; reduce
+                    info->buf_y = 0;
+                    info->buf_h = info->h;
+                }
+            }
+            if (info->buf_x + info->buf_w > info->w) {
+                if (info->buf_w <= info->w) {
+                    info->buf_x = info->w - info->buf_w;
+                } else {
+                    // We tried to make the buffer wider than the image
+                    info->buf_x = 0;
+                    info->buf_w = info->w;
+                }
             }
 
             if (!fill_buffer(context, info)) {

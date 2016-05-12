@@ -213,9 +213,7 @@ TEST_CASE("Load png from URL", "[fastscaling]")
 
                 flow_bitmap_bgra_destroy(c, canvas);
 
-            }
-
-            else {
+            } else {
                 fprintf(stderr, "png_image_finish_read: %s\n", image.message);
 
                 /* This is the only place where a 'free' is required; libpng does
