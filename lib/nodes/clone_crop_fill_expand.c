@@ -321,9 +321,10 @@ bool flow_bitmap_bgra_fill_rect(flow_c * c, struct flow_bitmap_bgra * b, uint32_
         return false;
     }
 
-    uint8_t * topleft = b->pixels + (b->stride * y1) + flow_pixel_format_bytes_per_pixel(b->fmt) * x1;
-
     uint8_t step = flow_pixel_format_bytes_per_pixel(b->fmt);
+
+    uint8_t * topleft = b->pixels + (b->stride * y1) + step * x1;
+
     size_t rect_width_bytes = step * (x2 - x1);
 
     uint32_t color = color_srgb_argb;
@@ -334,8 +335,8 @@ bool flow_bitmap_bgra_fill_rect(flow_c * c, struct flow_bitmap_bgra * b, uint32_
     } else if (step == 3) {
         color = color >> 8; // Drop the alpha bits
     }
-    for (uint32_t x = x1; x < x2; x++) {
-        memcpy(topleft + (x * step), &color, step);
+    for (uint32_t byte_offset = 0; byte_offset < rect_width_bytes; byte_offset += step) {
+        memcpy(topleft + byte_offset, &color, step);
     }
     // Copy downwards
     for (uint32_t y = 1; y < (y2 - y1); y++) {
