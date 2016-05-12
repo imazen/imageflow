@@ -256,6 +256,7 @@ imageflow_cache/
 
 /profiling/
 profile.txt
+gmon.out
 
 
 # Assembly output
