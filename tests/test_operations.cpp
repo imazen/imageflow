@@ -104,3 +104,47 @@ TEST_CASE("Test detect_content", "")
     REQUIRE(r.x1 == 2);
     REQUIRE(r.y1 == 3);
 }
+
+// TODO: Compare to a reference scaling
+
+void test_all_scaling(uint8_t input[64])
+{
+    uint8_t output[64];
+    uint8_t * rows[8] = { &output[0],     &output[8],     &output[8 * 2], &output[8 * 3],
+                          &output[8 * 4], &output[8 * 5], &output[8 * 6], &output[8 * 7] };
+
+    flow_scale_spatial_srgb_7x7(input, rows, 0);
+
+    flow_scale_spatial_srgb_6x6(input, rows, 0);
+
+    flow_scale_spatial_srgb_5x5(input, rows, 0);
+
+    flow_scale_spatial_srgb_4x4(input, rows, 0);
+
+    flow_scale_spatial_srgb_3x3(input, rows, 0);
+
+    flow_scale_spatial_srgb_2x2(input, rows, 0);
+
+    flow_scale_spatial_srgb_1x1(input, rows, 0);
+
+    flow_scale_spatial_7x7(input, rows, 0);
+
+    flow_scale_spatial_6x6(input, rows, 0);
+
+    flow_scale_spatial_5x5(input, rows, 0);
+
+    flow_scale_spatial_4x4(input, rows, 0);
+
+    flow_scale_spatial_3x3(input, rows, 0);
+
+    flow_scale_spatial_2x2(input, rows, 0);
+
+    flow_scale_spatial_1x1(input, rows, 0);
+}
+
+TEST_CASE("Test block downscaling", "")
+{
+
+    uint8_t input[64];
+    test_all_scaling(input);
+}

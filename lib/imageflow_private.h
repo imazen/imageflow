@@ -242,6 +242,33 @@ PUB bool flow_halve_in_place(flow_c * c, struct flow_bitmap_bgra * from, int div
 
 PUB const char * flow_pixel_format_get_name(flow_pixel_format f, bool alpha_meaningful);
 
+PUB void flow_scale_spatial_srgb_7x7(uint8_t input[64], uint8_t ** output_rows, uint32_t output_col);
+
+PUB void flow_scale_spatial_srgb_6x6(uint8_t input[64], uint8_t ** output_rows, uint32_t output_col);
+
+PUB void flow_scale_spatial_srgb_5x5(uint8_t input[64], uint8_t ** output_rows, uint32_t output_col);
+
+PUB void flow_scale_spatial_srgb_4x4(uint8_t input[64], uint8_t ** output_rows, uint32_t output_col);
+
+PUB void flow_scale_spatial_srgb_3x3(uint8_t input[64], uint8_t ** output_rows, uint32_t output_col);
+
+PUB void flow_scale_spatial_srgb_2x2(uint8_t input[64], uint8_t ** output_rows, uint32_t output_col);
+
+PUB void flow_scale_spatial_srgb_1x1(uint8_t input[64], uint8_t ** output_rows, uint32_t output_col);
+
+PUB void flow_scale_spatial_7x7(uint8_t input[64], uint8_t ** output_rows, uint32_t output_col);
+
+PUB void flow_scale_spatial_6x6(uint8_t input[64], uint8_t ** output_rows, uint32_t output_col);
+
+PUB void flow_scale_spatial_5x5(uint8_t input[64], uint8_t ** output_rows, uint32_t output_col);
+
+PUB void flow_scale_spatial_4x4(uint8_t input[64], uint8_t ** output_rows, uint32_t output_col);
+
+PUB void flow_scale_spatial_3x3(uint8_t input[64], uint8_t ** output_rows, uint32_t output_col);
+
+PUB void flow_scale_spatial_2x2(uint8_t input[64], uint8_t ** output_rows, uint32_t output_col);
+
+PUB void flow_scale_spatial_1x1(uint8_t input[64], uint8_t ** output_rows, uint32_t output_col);
 // https://github.com/imazen/freeimage/blob/master/Source/FreeImage/FreeImageIO.cpp
 // https://github.com/imazen/freeimage/blob/master/Source/FreeImage/PluginJPEG.cpp
 

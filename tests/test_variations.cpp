@@ -1,14 +1,18 @@
 #include "catch.hpp"
 #include "helpers_visual.h"
 
-//#define GENERATE_CODE_LITERALS
+#define GENERATE_CODE_LITERALS
+//#define GENERATE_INTEGER_WEIGHTS
+//#define GENERATE_FLOAT_LITERALS
 //#define SEARCH_FOR_BEST_LOOKUP_PARAMS
 //#define SEARCH_FOR_BEST_BLOCK_BLURRING
 
 #define REVERSE_LUT_SIZE (256 * 15)
 
+#define REVERSE_LUT_SIZE_SHORT (256 * 16)
+
 #ifdef SEARCH_FOR_BEST_LOOKUP_PARAMS
-TEST_CASE("Search for best lookup table", "")
+TEST_CASE("Search for best lookup table (float)", "")
 {
     // These 3 results were generated with test_count = 10000
     // Average LUT loss in linear space (net) = 0.0007372895 - (abs) = 0.0013200855  (for a=0.50000, b=256.00000)
@@ -32,14 +36,166 @@ TEST_CASE("Search for best lookup table", "")
     }
     lut_loss = lut_loss / (float)test_count;
     lut_net_loss = lut_net_loss / (float)test_count;
-    fprintf(stdout, "Average LUT loss in linear space (net) = %.010f - (abs) = %.010f  (for a=%.5f, b=%.5f)\n",
+    fprintf(stdout, "Average (float) LUT loss in linear space (net) = %.010f - (abs) = %.010f  (for a=%.5f, b=%.5f)\n",
             lut_net_loss, lut_loss, a, b);
 
     fflush(stdout);
 }
-TEST_CASE("Search for best reverse lookup table", "")
+TEST_CASE("Search for best lookup table (short)", "")
 {
+    // These results were generated with test_count = 10000
+    // Average (short) LUT loss in linear space (net) = 0.0001204859 - (abs) = 0.0009929209  (for a=0.00000, b=1.00000)
+    // Average (short) LUT loss in linear space (net) = 0.0000238070 - (abs) = 0.0009835264  (for a=0.40000, b=1.00000)
+    // Average (short) LUT loss in linear space (net) = -0.0000288181 - (abs) = 0.0009837616  (for a=0.60000, b=1.00000)
+    // Average (short) LUT loss in linear space (net) = -0.0000011525 - (abs) = 0.0009832300  (for a=0.50000, b=0.90000)
+    // Average (short) LUT loss in linear space (net) = 0.0000028483 - (abs) = 0.0009834122  (for a=0.50000, b=1.10000)
+    // Average (short) LUT loss in linear space (net) = 0.0000008766 - (abs) = 0.0009833045  (for a=0.50000, b=1.00000)
+    // (equivalent to roundf)
 
+    uint16_t lut[256];
+    float a = 0.5; // Affects rounding
+    float b = 1; // Affects scaling
+    for (int index = 0; index < 256; index++) {
+        float f = (srgb_to_linear((float)index / 255.0f) * (float)(REVERSE_LUT_SIZE_SHORT - b));
+        lut[index] = (uint16_t)(a + f);
+    }
+    int test_count = 10000;
+    double lut_loss = 0;
+    double lut_net_loss = 0;
+    for (int i = 0; i < test_count; i++) {
+        float srgb = (float)i / (float)(test_count - 1);
+        uint8_t srgb_byte = uchar_clamp_ff(srgb * 255.0f);
+        float linear = srgb_to_linear(srgb);
+        float linear_from_lut = ((float)lut[srgb_byte] / (float)(REVERSE_LUT_SIZE_SHORT - b));
+        lut_loss += fabs(linear - linear_from_lut);
+        lut_net_loss += (linear - linear_from_lut);
+    }
+    lut_loss = lut_loss / (float)test_count;
+    lut_net_loss = lut_net_loss / (float)test_count;
+    fprintf(stdout, "Average (short) LUT loss in linear space (net) = %.010f - (abs) = %.010f  (for a=%.5f, b=%.5f)\n",
+            lut_net_loss, lut_loss, a, b);
+
+    fflush(stdout);
+}
+
+TEST_CASE("Search for best reverse lookup table (short)", "")
+{
+    /*
+        Searching for best params for a (short) reverse lookup table of size 4096
+        Searching for 0.18750 <= a <= 0.25195, 0.50000 <= b <= 0.50000 with step size 0.00195
+        Over 180224 samples: lowest avg absolute error (0.0009844434680417180), a=0.1875000000000000000,
+       b=0.5000000000000000000
+        Over 180224 samples: lowest roundtrip error (0.0008267489611171186), a=0.1875000000000000000,
+       b=0.5000000000000000000
+        Over 180224 samples: lowest maximum error (0.0038072306197136641), a=0.1875000000000000000,
+       b=0.5000000000000000000
+        Searching for best params for a (short) reverse lookup table of size 4096
+        Searching for 0.00000 <= a <= 0.25195, 0.50000 <= b <= 0.50000 with step size 0.00195
+        Over 180224 samples: lowest avg absolute error (0.0009833504445850849), a=0.0117187500000000000,
+       b=0.5000000000000000000
+        Over 180224 samples: lowest roundtrip error (0.0008267489611171186), a=0.1875000000000000000,
+       b=0.5000000000000000000
+        Over 180224 samples: lowest maximum error (0.0032975813373923302), a=0.0000000000000000000,
+       b=0.5000000000000000000\
+        Searching for 0.00000 <= a <= 0.00195, 0.50000 <= b <= 0.50000 with step size 0.00195
+        Over 180224 samples: lowest avg absolute error (0.0009833538206294179), a=0.0000000000000000000,
+       b=0.5000000000000000000
+        Over 180224 samples: lowest roundtrip error (0.1902798712253570557), a=0.0000000000000000000,
+       b=0.5000000000000000000
+        Over 180224 samples: lowest maximum error (0.0032975813373923302), a=0.0000000000000000000,
+       b=0.5000000000000000000
+    */
+
+    int test_count = 16384 * 11;
+    float step_size = (1.0 / 512.0f);
+    float min_a = 0; // 0.1875 seems best
+    float max_a = 0 + step_size;
+    float min_b = 0.5; // Not using b
+    float max_b = 0.5;
+    uint16_t lut[256];
+
+    uint8_t reverse_lut[REVERSE_LUT_SIZE_SHORT];
+    for (uint32_t reverse_lut_size = REVERSE_LUT_SIZE_SHORT; reverse_lut_size >= 4096; reverse_lut_size -= 256) {
+        float best_abs_a = -10, best_abs_b = -10, best_net_a = -10, best_net_b = -10, best_net_loss = 3000,
+              best_abs_loss = 3000;
+        float best_max_a = -10, best_max_b = -10, best_max_error = 3000;
+        for (float a = min_a; a <= max_a; a += step_size) {
+            for (float b = min_b; b <= max_b; b += step_size) {
+                // Build LUT with constants a and b
+                // uchar_clamp_ff adds 0.5 to float for fast rounding; we could fix that and experiment with
+                // pre-rounding
+                for (uint32_t index = 0; index < reverse_lut_size; index++) {
+                    reverse_lut[index] = (uint8_t)umin(
+                        255,
+                        umax(0, (uint32_t)(b + linear_to_srgb(((float)index + a) / (float)(reverse_lut_size - 1)))));
+                }
+                int roundtrip_failures = 0;
+                for (uint32_t index = 0; index < 256; index++) {
+                    float f = (srgb_to_linear((float)index / 255.0f) * (float)(reverse_lut_size - 1));
+                    lut[index] = (uint16_t)(0.5f + f);
+
+                    if (reverse_lut[lut[index]] != index)
+                        roundtrip_failures++;
+                }
+                // Skip any options that fail to round-trip
+                if (roundtrip_failures > 0)
+                    continue;
+
+                float net_loss = 0;
+                float abs_loss = 0;
+                float max_abs_loss = 0;
+                for (int i = 0; i < test_count; i++) {
+                    float linear_float = (float)i / (float)(test_count - 1);
+                    uint32_t linear_integer
+                        = (uint32_t)(0.5f + (float)i * ((float)reverse_lut_size - 1) / (float)test_count);
+
+                    uint8_t srgb_lut = reverse_lut[linear_integer];
+                    uint8_t srgb_calc = uchar_clamp_ff(linear_to_srgb(linear_float));
+
+                    float current_loss = fabs((float)srgb_lut - linear_to_srgb(linear_float)) / 255.0f;
+                    net_loss += ((float)linear_integer - (float)lut[srgb_lut]);
+                    abs_loss += current_loss;
+                    if (max_abs_loss < current_loss)
+                        max_abs_loss = current_loss;
+                }
+                net_loss = net_loss / (float)test_count;
+                abs_loss = abs_loss / (float)test_count;
+
+                if (best_abs_loss > abs_loss) {
+                    best_abs_a = a;
+                    best_abs_b = b;
+                    best_abs_loss = abs_loss;
+                }
+                if (fabs(best_net_loss) > fabs(net_loss)) {
+                    best_net_a = a;
+                    best_net_b = b;
+                    best_net_loss = net_loss;
+                }
+                if (best_max_error > max_abs_loss) {
+                    best_max_a = a;
+                    best_max_b = b;
+                    best_max_error = max_abs_loss;
+                }
+            }
+        }
+        fprintf(stdout, "\nSearching for best params for a (short) reverse lookup table of size %d\n",
+                reverse_lut_size);
+        fprintf(stdout, "Searching for %0.5f <= a <= %.5f, %.5f <= b <= %.5f with step size %.5f\n", min_a, max_a,
+                min_b, max_b, step_size);
+        fprintf(stdout, "Over %d samples: lowest avg absolute error (%0.019f), a=%.019f, b=%.019f\n", test_count,
+                best_abs_loss, best_abs_a, best_abs_b);
+        fprintf(stdout, "Over %d samples: lowest roundtrip error (%0.019f), a=%.019f, b=%.019f\n", test_count,
+                best_net_loss, best_net_a, best_net_b);
+        fprintf(stdout, "Over %d samples: lowest maximum error (%0.019f), a=%.019f, b=%.019f\n", test_count,
+                best_max_error, best_max_a, best_max_b);
+        if (best_max_error > (0.99 / 255.0f)) {
+            fprintf(stdout, "WARNING - accuracy may be worse than 8-bit per channel sRGB!\n\n");
+        }
+    }
+}
+
+TEST_CASE("Search for best reverse lookup table (float)", "")
+{
     // When LUT is index/ 255 and reverse_lut is (index + a) / (reverse_lut_size -b), and lookup uses (linear *
     // (reverse_lut_size -1)
 
@@ -117,7 +273,7 @@ TEST_CASE("Search for best reverse lookup table", "")
                 }
             }
         }
-        fprintf(stdout, "\nSearching for best parmas for reverse lookup table of size %d\n", reverse_lut_size);
+        fprintf(stdout, "\nSearching for best params for a reverse lookup table of size %d\n", reverse_lut_size);
         fprintf(stdout, "Searching for %0.5f <= a <= %.5f, %.5f <= b <= %.5f with step size %.5f\n", min_a, max_a,
                 min_b, max_b, step_size);
         fprintf(stdout, "Over %d samples: lowest avg absolute error (%0.019f), a=%.019f, b=%.019f\n", test_count,
@@ -133,10 +289,12 @@ TEST_CASE("Search for best reverse lookup table", "")
 }
 #endif
 
-#ifdef GENERATE_CODE_LITERALS
+#define FLOW_bytes_PER_LINE 23
+#define FLOW_shorts_PER_LINE 19
+
+#ifdef GENERATE_FLOAT_LITERALS
 
 #define FLOW_FLOATS_PER_LINE 8
-#define FLOW_bytes_PER_LINE 32
 
 TEST_CASE("Export float LUT", "")
 {
@@ -176,8 +334,7 @@ TEST_CASE("Export float LUT", "")
     fflush(stdout);
     fflush(stderr);
 }
-
-TEST_CASE("Export weights", "")
+TEST_CASE("Export weights (float)", "")
 {
     flow_c * c = flow_context_create();
 
@@ -205,6 +362,384 @@ TEST_CASE("Export weights", "")
     }
     flow_context_destroy(c);
 }
+
+#endif
+
+#ifdef GENERATE_CODE_LITERALS
+
+void print_header(FILE * stream, int scale_size, bool linear, const char * end)
+{
+    fprintf(
+        stream,
+        "void jpeg_idct_spatial%s_%dx%d(j_decompress_ptr cinfo, jpeg_component_info * compptr, JCOEFPTR coef_block,\n"
+        "                                JSAMPARRAY output_buf, JDIMENSION output_col)%s",
+        linear ? "_srgb" : "", scale_size, scale_size, end);
+}
+
+void print_scale_header(FILE * stream, int scale_size, bool linear, const char * end)
+{
+    fprintf(stream, "void flow_scale_spatial%s_%dx%d(uint8_t input[64], uint8_t ** output_rows, uint32_t output_col)%s",
+            linear ? "_srgb" : "", scale_size, scale_size, end);
+}
+
+// uint8_t result[64], uint8_t ** output_buf, uint32_t output_col){
+
+bool find_integral_weights(FILE * stream, int8_t weights[8], uint32_t * divisor,
+                           struct flow_interpolation_pixel_contributions * contribs, bool print_info)
+{
+    int8_t eight[] = { 0, 0, 0, 0, 0, 0, 0, 0 };
+
+    // we use up to 24 bits when we sum all factors. We then downshift back to 12
+
+    // 256 * 16 * 8 * (512 / 8) * 8 * (512 / 8)
+    // desired sums = 128, 256, 512  (overflow of a single factor invalidates a sum)
+
+    // We discovered that rounding is redundant and produces asymmetry, so we adjust the scalar value exclusively.
+
+    for (int divisor_bits = 10; divisor_bits > 6; divisor_bits--) {
+        *divisor = 1 << divisor_bits;
+        for (float scalar = *divisor; scalar < (float)*divisor + 10;
+             scalar = *divisor + (scalar > *divisor ? -(scalar - *divisor + 0.125) : -(scalar - *divisor - 0.125))) {
+
+            bool failed = false;
+            memset(&eight[0], 0, 8);
+
+            int16_t sum = 0;
+            for (int input_ix = contribs->Left; input_ix <= contribs->Right; input_ix++) {
+                float f = contribs->Weights[input_ix - contribs->Left];
+                f *= scalar;
+
+                if ((int32_t)f > INT_LEAST8_MAX || (int32_t)f < INT_LEAST8_MIN) {
+                    // Out of bounds.
+                    failed = true;
+                    break;
+                }
+
+                eight[input_ix] = (int8_t)f;
+                sum += eight[input_ix];
+            }
+            if ((uint32_t)sum != *divisor) {
+                failed = true;
+            }
+            int original_divisor = *divisor;
+            if (!failed) {
+                for (int reduce = 4; reduce > 0; reduce--) {
+                    int new_divisor = 1 << reduce;
+                    bool all_divisible = true;
+                    for (int i = 0; i < 8; i++) {
+                        if (eight[i] % new_divisor != 0)
+                            all_divisible = false;
+                    }
+                    if (all_divisible) {
+                        *divisor /= new_divisor;
+                        for (int i = 0; i < 8; i++)
+                            eight[i] /= new_divisor;
+                        break;
+                    }
+                }
+            }
+
+            if (!failed) {
+                if (print_info)
+                    fprintf(stream, "    /* divisor=%d; Found with divisor=%d, scalar=%0.04f*/\n", *divisor,
+                            original_divisor, scalar);
+                memcpy(&weights[0], &eight[0], 8);
+                return true;
+            }
+        }
+    }
+    fprintf(stream, " /* failed */ ");
+    return false;
+}
+
+int get_max_window_size(int8_t matrix[64], int rows)
+{
+    int max_window_size = 0;
+    for (int i = 0; i < rows; i++) {
+        int first_sampled = 8;
+        int last_sampled = 0;
+        for (int j = 0; j < 8; j++) {
+            int8_t value = matrix[i * 8 + j];
+            if (value != 0) {
+                if (j < first_sampled)
+                    first_sampled = j;
+                if (j > last_sampled)
+                    last_sampled = j;
+            }
+        }
+        int window = last_sampled - first_sampled + 1;
+        if (window > max_window_size)
+            max_window_size = window;
+    }
+    return max_window_size;
+}
+
+int index_of_first_nonzero(int8_t * array, size_t count)
+{
+    for (size_t i = 0; i < count; i++) {
+        if (array[i] != 0)
+            return i;
+    }
+    return -1;
+}
+void print_function(FILE * stream, int scale_size, struct flow_interpolation_line_contributions * contribs, bool linear)
+{
+
+    int8_t matrix[64];
+    uint32_t divisors[8];
+    memset(&matrix[0], 0, 64);
+    memset(&divisors[0], 0, 32);
+
+    int row, input_row, col;
+
+    for (row = 0; row < scale_size; row++) {
+        if (!find_integral_weights(stream, &matrix[row * 8], &divisors[row], &contribs->ContribRow[row], false)) {
+            fprintf(stream, "!!!! Failed to find integral weights !!!!\n");
+        }
+    }
+
+    int max_window_size = get_max_window_size(matrix, scale_size);
+
+    fprintf(stream, "    int32_t i, sum;\n");
+    if (linear) {
+        fprintf(stream, "    uint16_t linearized[64] __attribute__ ((aligned (16)));\n"
+                        "    for (i = 0; i < 64; i++)\n"
+                        "        linearized[i] = lut_srgb_to_linear[input[i]];\n\n");
+    }
+    fprintf(stream, "    int32_t temp[%d] __attribute__ ((aligned (16)));\n", 8 * (max_window_size + 2));
+
+    // Scale vertically, then horizontally
+    for (row = 0; row < scale_size; row++) {
+        fprintf(stream, "\n    // Begin work for output row %d\n", row);
+
+        int input_starts_at = index_of_first_nonzero(&matrix[row * 8], 8);
+        int input_row_count = 0;
+        // Multiply rows
+        for (input_row = input_starts_at; input_row < 8; input_row++) {
+            int8_t weight = matrix[row * 8 + input_row];
+            int relative_row = input_row - input_starts_at;
+            if (weight != 0) {
+                fprintf(stream, "    for (i = 0; i < 8; i++) temp[i + %2d] = %3d * %s[i + %2d];\n", relative_row * 8,
+                        weight, linear ? "linearized" : "input", input_row * 8);
+                input_row_count++;
+            } else {
+                break;
+            }
+        }
+        int temp_row_index_a = 8 * max_window_size;
+        int temp_row_index_b = 8 * (max_window_size + 1);
+        // Add rows
+        for (col = 0; col < 8; col++) {
+            fprintf(stream, "    temp[%2d] = ", temp_row_index_a + col);
+            for (input_row = 0; input_row < input_row_count; input_row++) {
+                fprintf(stream, "temp[%2d] + ", col + (input_row * 8));
+            }
+            fprintf(stream, "0;\n");
+        }
+
+        // Scale horizontally now
+        for (col = 0; col < scale_size; col++) {
+            fprintf(stream, "\n    // Begin work for output pixel %d,%d\n", col, row);
+            int left = index_of_first_nonzero(&matrix[col * 8], 8);
+            int col_inputs = 0;
+            // Do input multiplications for 1 output pixel
+            for (int input_col = left; input_col < 8; input_col++) {
+                int8_t weight = matrix[col * 8 + input_col];
+                if (weight != 0) {
+                    fprintf(stream, "    temp[%2d] = %3d * temp[%2d];\n", temp_row_index_b + input_col - left, weight,
+                            temp_row_index_a + input_col);
+                    col_inputs++;
+                } else {
+                    break;
+                }
+            }
+
+            // Sum values
+            fprintf(stream, "    sum = ");
+            for (int input_col = 0; input_col < col_inputs; input_col++) {
+                fprintf(stream, "temp[%2d] + ", temp_row_index_b + input_col);
+            }
+
+            int divisor_sum = divisors[row] * divisors[col]; // Add the rounding offset
+            fprintf(stream, "%d;\n", divisor_sum / 2);
+
+            int upper_bound = REVERSE_LUT_SIZE_SHORT * divisor_sum;
+
+            // Add and shift (divides with rounding), then perform lookup
+            fprintf(stream, "    *(output_rows[%2d] + output_col + %d) = sum < 0 ? (uint8_t)0 : (sum >= %d ? "
+                            "(uint8_t)255 : (uint8_t)%s(sum >> %d)%s);\n",
+                    row, col, upper_bound, linear ? "lut_linear_to_srgb[" : "", intlog2(divisor_sum),
+                    linear ? "]" : "");
+
+            fprintf(stream, "    // Pixel %d,%d complete\n\n", col, row);
+        }
+    }
+}
+
+void print_short_luts(FILE * stream)
+{
+    uint8_t reverse_lut[REVERSE_LUT_SIZE_SHORT];
+    fprintf(stream, "static const uint8_t lut_linear_to_srgb[%d] = {\n", REVERSE_LUT_SIZE_SHORT);
+    for (int a = 0; a < REVERSE_LUT_SIZE_SHORT / FLOW_bytes_PER_LINE; a++) {
+        fprintf(stream, "    ");
+        for (int b = 0; b < FLOW_bytes_PER_LINE; b++) {
+            int index = a * FLOW_bytes_PER_LINE + b;
+            uint8_t v
+                = (uint8_t)umin(255, umax(0, (uint32_t)(0.5f + linear_to_srgb(((float)index + 0.1875f)
+                                                                              / (float)(REVERSE_LUT_SIZE_SHORT - 1)))));
+            reverse_lut[index] = v;
+            fprintf(stream, "%d, ", v);
+        }
+        fprintf(stream, "\n");
+    }
+    fprintf(stream, "};\n");
+
+    uint16_t lut[256];
+    fprintf(stream, "static const uint16_t lut_srgb_to_linear[256] = {\n");
+    for (int a = 0; a < 256 / FLOW_shorts_PER_LINE; a++) {
+        fprintf(stream, "    ");
+        for (int b = 0; b < FLOW_shorts_PER_LINE; b++) {
+            uint8_t index = (uint8_t)(a * FLOW_shorts_PER_LINE + b);
+
+            float f = srgb_to_linear((float)index / 255.0f);
+            lut[index] = (uint16_t)(0.5f + f * (float)(REVERSE_LUT_SIZE_SHORT - 1));
+
+            uint32_t reverse_lut_index = lut[index];
+            int roundtrip = reverse_lut[reverse_lut_index];
+            if (roundtrip != index) {
+                fprintf(stderr, "/* Failed to round-trip byte %d  linear = %.010f, but round-tripped to %d */\n", index,
+                        f, roundtrip);
+            }
+            fprintf(stream, "%i, ", lut[index]);
+        }
+        fprintf(stream, "\n");
+    }
+    fprintf(stream, "};\n");
+    fflush(stream);
+    fflush(stderr);
+}
+
+const char * idct_function_begin = "    JSAMPLE input[64];\n"
+                                   "    JSAMPROW rows[8]\n"
+                                   "        = { &input[0],     &input[8],     &input[8 * 2], &input[8 * 3],\n"
+                                   "            &input[8 * 4], &input[8 * 5], &input[8 * 6], &input[8 * 7] };\n"
+                                   "    jpeg_idct_islow(cinfo, compptr, coef_block, &rows[0], 0);\n\n";
+
+void print_all_idct_functions(FILE * stream)
+{
+    flow_c * c = flow_context_create();
+
+    struct flow_interpolation_details * details
+        = flow_interpolation_details_create_from(c, flow_interpolation_filter_Robidoux);
+    if (details == NULL) {
+        ERR(c);
+    }
+
+    for (int linear = 0; linear < 2; linear++) {
+        for (int size = 7; size > 0; size--) {
+            print_scale_header(stream, size, linear, "{\n");
+            struct flow_interpolation_line_contributions * contrib
+                = flow_interpolation_line_contributions_create(c, size, 8, details);
+            print_function(stream, size, contrib, linear);
+            fprintf(stream, "}\n\n");
+
+            print_header(stream, size, linear, "{\n");
+            fprintf(stream, "%s", idct_function_begin);
+            fprintf(stream, "    flow_scale_spatial%s_%dx%d(input, output_buf, output_col);\n", linear ? "_srgb" : "",
+                    size, size);
+            fprintf(stream, "}\n\n");
+        }
+    }
+
+    flow_context_destroy(c);
+}
+
+void print_c_intro(FILE * stream)
+{
+    fprintf(stream, "// This file is autogenerated by test_variations. Do not edit; regenerate\n"
+                    "#include <stdint.h>\n"
+                    "#include <stdio.h>\n"
+                    "\n"
+                    "#define JPEG_INTERNALS\n"
+                    "#include \"jpeglib.h\"\n"
+                    "#include \"jdct.h\" /* Private declarations for DCT subsystem */\n"
+                    "#ifdef __GNUC__\n"
+                    "#define HOT                                                                                       "
+                    "                     \\\n"
+                    "    __attribute__((hot)) __attribute__((optimize(\"-funsafe-math-optimizations\", "
+                    "\"-ftree-vectorize\",                  \\\n"
+                    "                                                 \"-ftree-vectorizer-verbose=7\")))\n"
+                    "#else\n"
+                    "#define HOT __attribute__((hot))\n"
+                    "#endif\n\n");
+}
+TEST_CASE("Generate code to disk", "")
+{
+    FILE * f = fopen("generated_idct.c", "w");
+
+    print_c_intro(f);
+    for (int size = 7; size > 0; size--) {
+        print_scale_header(f, size, true, " HOT;\n\n");
+    }
+    for (int size = 7; size > 0; size--) {
+        print_scale_header(f, size, false, " HOT;\n\n");
+    }
+    for (int size = 7; size > 0; size--) {
+        print_header(f, size, true, " HOT;\n\n");
+    }
+    for (int size = 7; size > 0; size--) {
+        print_header(f, size, false, " HOT;\n\n");
+    }
+    print_short_luts(f);
+    print_all_idct_functions(f);
+    fflush(f);
+    fclose(f);
+}
+
+// TEST_CASE("Print code", "")
+//{
+//    for (int size = 7; size > 0; size--) {
+//        print_header(stdout, size, true, ";\n\n");
+//    }
+//    for (int size = 7; size > 0; size--) {
+//        print_header(stdout, size, false, ";\n\n");
+//    }
+//    print_short_luts(stdout);
+//    print_all_idct_functions(stdout);
+//}
+
+#ifdef GENERATE_INTEGER_WEIGHTS
+TEST_CASE("Export weights (int8_t)", "")
+{
+    flow_c * c = flow_context_create();
+
+    struct flow_interpolation_details * details
+        = flow_interpolation_details_create_from(c, flow_interpolation_filter_Robidoux);
+    if (details == NULL) {
+        ERR(c);
+    }
+
+    for (int size = 7; size > 0; size--) {
+        fprintf(stdout, "static const int8_t jpeg_scale_to_%d_x_%d_weights[%d][8] = {\n", size, size, size);
+        struct flow_interpolation_line_contributions * contrib
+            = flow_interpolation_line_contributions_create(c, size, 8, details);
+        for (int i = 0; i < size; i++) {
+            int8_t eight[] = { 0, 0, 0, 0, 0, 0, 0, 0 };
+            uint32_t divisor = 0;
+            if (!find_integral_weights(&eight[0], &divisor, &contrib->ContribRow[i], true)) {
+                fprintf(stderr, "!!!! Failed to find integral weights !!!!\n");
+            } else {
+                fprintf(stdout, "    { %i, %i, %i, %i, %i, %i, %i, %i },\n", eight[0], eight[1], eight[2], eight[3],
+                        eight[4], eight[5], eight[6], eight[7]);
+            }
+        }
+        fprintf(stdout, "};\n");
+    }
+    flow_context_destroy(c);
+}
+
+#endif
+
 #endif
 
 #ifdef SEARCH_FOR_BEST_BLOCK_BLURRING
