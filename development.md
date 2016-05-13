@@ -62,6 +62,11 @@ Vs. Imagemagick
 https://github.com/mm2/Little-CMS/blob/master/utils/jpgicc/iccjpeg.c
 
 
+## Look at vectorization
+
+    gcc -DFLOW_GCC_IDCT -fopt-info-vec-missed  -std=gnu11 -iquotelib  -ffast-math -funroll-loops -mfpmath=both -mtune=native -march=native -O3 lib/codecs_jpeg_idct_fast.c
+
+
 
 ## (out of date) API sketches
 

@@ -500,13 +500,32 @@ void print_function(FILE * stream, int scale_size, struct flow_interpolation_lin
 
     int max_window_size = get_max_window_size(matrix, scale_size);
 
-    fprintf(stream, "    int32_t i, sum;\n");
+    fprintf(stream, "    int32_t i, sum, j;\n");
     if (linear) {
-        fprintf(stream, "    uint16_t linearized[64] __attribute__ ((aligned (16)));\n"
+        fprintf(stream, "    int32_t linearized[64] __attribute__ ((aligned (16)));\n"
                         "    for (i = 0; i < 64; i++)\n"
                         "        linearized[i] = lut_srgb_to_linear[input[i]];\n\n");
     }
     fprintf(stream, "    int32_t temp[%d] __attribute__ ((aligned (16)));\n", 8 * (max_window_size + 2));
+
+    int matrix_counts[8];
+    for (col = 0; col < scale_size; col++) {
+        int left = index_of_first_nonzero(&matrix[col * 8], 8);
+        int col_inputs = 0;
+        // Write down weights for 1 output pixel
+        fprintf(stream, "    int32_t weights_for_col_%d[] __attribute__((aligned(16))) = {", col);
+        for (int input_col = left; input_col < 8; input_col++) {
+            int8_t weight = matrix[col * 8 + input_col];
+            if (weight != 0) {
+                fprintf(stream, "%d,", weight);
+                col_inputs++;
+            } else {
+                break;
+            }
+        }
+        matrix_counts[col] = col_inputs;
+        fprintf(stream, "};\n");
+    }
 
     // Scale vertically, then horizontally
     for (row = 0; row < scale_size; row++) {
@@ -528,40 +547,30 @@ void print_function(FILE * stream, int scale_size, struct flow_interpolation_lin
         }
         int temp_row_index_a = 8 * max_window_size;
         int temp_row_index_b = 8 * (max_window_size + 1);
-        // Add rows
-        for (col = 0; col < 8; col++) {
-            fprintf(stream, "    temp[%2d] = ", temp_row_index_a + col);
-            for (input_row = 0; input_row < input_row_count; input_row++) {
-                fprintf(stream, "temp[%2d] + ", col + (input_row * 8));
-            }
-            fprintf(stream, "0;\n");
-        }
+
+        fprintf(stream, "    for (i = 0; i < 8; i++){\n"
+                        "        sum = 0;\n"
+                        "        for (j = 0; j < %d; j++)\n"
+                        "            sum += temp[j * 8 + i];\n"
+                        "\n"
+                        "        temp[%d + i] = sum;\n"
+                        "    }",
+                input_row_count, temp_row_index_a);
 
         // Scale horizontally now
         for (col = 0; col < scale_size; col++) {
             fprintf(stream, "\n    // Begin work for output pixel %d,%d\n", col, row);
             int left = index_of_first_nonzero(&matrix[col * 8], 8);
-            int col_inputs = 0;
-            // Do input multiplications for 1 output pixel
-            for (int input_col = left; input_col < 8; input_col++) {
-                int8_t weight = matrix[col * 8 + input_col];
-                if (weight != 0) {
-                    fprintf(stream, "    temp[%2d] = %3d * temp[%2d];\n", temp_row_index_b + input_col - left, weight,
-                            temp_row_index_a + input_col);
-                    col_inputs++;
-                } else {
-                    break;
-                }
-            }
+            int col_inputs = matrix_counts[col];
+
+            // Multiply weights
+            fprintf(stream, "    for (i = 0; i < %d; i++) temp[%d + i] = temp[%d + i] * weights_for_col_%d[i];\n",
+                    col_inputs, temp_row_index_b, temp_row_index_a + left, col);
 
             // Sum values
-            fprintf(stream, "    sum = ");
-            for (int input_col = 0; input_col < col_inputs; input_col++) {
-                fprintf(stream, "temp[%2d] + ", temp_row_index_b + input_col);
-            }
-
-            int divisor_sum = divisors[row] * divisors[col]; // Add the rounding offset
-            fprintf(stream, "%d;\n", divisor_sum / 2);
+            int divisor_sum = divisors[row] * divisors[col]; // Add the rounding offset first
+            fprintf(stream, "    sum = %d;\n", divisor_sum / 2);
+            fprintf(stream, "    for (i = 0; i < %d; i++) sum += temp[%d + i];\n", col_inputs, temp_row_index_b);
 
             int upper_bound = REVERSE_LUT_SIZE_SHORT * divisor_sum;
 
@@ -571,7 +580,7 @@ void print_function(FILE * stream, int scale_size, struct flow_interpolation_lin
                     row, col, upper_bound, linear ? "lut_linear_to_srgb[" : "", intlog2(divisor_sum),
                     linear ? "]" : "");
 
-            fprintf(stream, "    // Pixel %d,%d complete\n\n", col, row);
+            fprintf(stream, "    // Pixel %d,%d complete\n", col, row);
         }
     }
 }
@@ -579,7 +588,8 @@ void print_function(FILE * stream, int scale_size, struct flow_interpolation_lin
 void print_short_luts(FILE * stream)
 {
     uint8_t reverse_lut[REVERSE_LUT_SIZE_SHORT];
-    fprintf(stream, "static const uint8_t lut_linear_to_srgb[%d] = {\n", REVERSE_LUT_SIZE_SHORT);
+    fprintf(stream, "__attribute__((aligned(16)))\nstatic const uint8_t lut_linear_to_srgb[%d] = {\n",
+            REVERSE_LUT_SIZE_SHORT);
     for (int a = 0; a < REVERSE_LUT_SIZE_SHORT / FLOW_bytes_PER_LINE; a++) {
         fprintf(stream, "    ");
         for (int b = 0; b < FLOW_bytes_PER_LINE; b++) {
@@ -592,10 +602,10 @@ void print_short_luts(FILE * stream)
         }
         fprintf(stream, "\n");
     }
-    fprintf(stream, "};\n");
+    fprintf(stream, "};\n\n");
 
     uint16_t lut[256];
-    fprintf(stream, "static const uint16_t lut_srgb_to_linear[256] = {\n");
+    fprintf(stream, "__attribute__((aligned(16)))\nstatic const uint16_t lut_srgb_to_linear[256] = {\n");
     for (int a = 0; a < 256 / FLOW_shorts_PER_LINE; a++) {
         fprintf(stream, "    ");
         for (int b = 0; b < FLOW_shorts_PER_LINE; b++) {
@@ -614,7 +624,7 @@ void print_short_luts(FILE * stream)
         }
         fprintf(stream, "\n");
     }
-    fprintf(stream, "};\n");
+    fprintf(stream, "};\n\n");
     fflush(stream);
     fflush(stderr);
 }
@@ -641,13 +651,15 @@ void print_all_idct_functions(FILE * stream)
             struct flow_interpolation_line_contributions * contrib
                 = flow_interpolation_line_contributions_create(c, size, 8, details);
             print_function(stream, size, contrib, linear);
-            fprintf(stream, "}\n\n");
+            fprintf(stream, "}\n");
 
+            fprintf(stream, "\n#ifndef FLOW_GCC_IDCT\n");
             print_header(stream, size, linear, "{\n");
             fprintf(stream, "%s", idct_function_begin);
             fprintf(stream, "    flow_scale_spatial%s_%dx%d(input, output_buf, output_col);\n", linear ? "_srgb" : "",
                     size, size);
-            fprintf(stream, "}\n\n");
+            fprintf(stream, "}\n");
+            fprintf(stream, "#endif\n\n");
         }
     }
 
@@ -658,12 +670,14 @@ void print_c_intro(FILE * stream)
 {
     fprintf(stream, "// This file is autogenerated by test_variations. Do not edit; regenerate\n"
                     "#include <stdint.h>\n"
-                    "#include <stdio.h>\n"
                     "\n"
+                    "#ifndef FLOW_GCC_IDCT\n"
                     "#define JPEG_INTERNALS\n"
+                    "#include <stdio.h>\n"
                     "#include \"jpeglib.h\"\n"
                     "#include \"jdct.h\" /* Private declarations for DCT subsystem */\n"
-                    "#ifdef __GNUC__\n"
+                    "#endif\n\n"
+                    "#if defined(__GNUC__) && !defined(__clang__)\n"
                     "#define HOT                                                                                       "
                     "                     \\\n"
                     "    __attribute__((hot)) __attribute__((optimize(\"-funsafe-math-optimizations\", "
@@ -684,14 +698,18 @@ TEST_CASE("Generate code to disk", "")
     for (int size = 7; size > 0; size--) {
         print_scale_header(f, size, false, " HOT;\n\n");
     }
+    fprintf(f, "\n#ifndef FLOW_GCC_IDCT\n");
     for (int size = 7; size > 0; size--) {
         print_header(f, size, true, " HOT;\n\n");
     }
     for (int size = 7; size > 0; size--) {
         print_header(f, size, false, " HOT;\n\n");
     }
+    fprintf(f, "#endif\n\n");
     print_short_luts(f);
     print_all_idct_functions(f);
+
+    fprintf(f, "#ifdef FLOW_GCC_IDCT\n void main(void){}\n#endif\n");
     fflush(f);
     fclose(f);
 }

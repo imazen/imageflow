@@ -10,7 +10,7 @@ module Imageflow::Mimick
 
 
 
-      c = [{linear: true, w: 400, format: :png}]
+      c = [{linear: true, w: 400, format: :png}, {linear: true, w: 2560, format: :jpg}, {linear: false, w: 2560, format: :jpg}]
       urls = ["u1.jpg", "u6.jpg"].map do |name|
         "https://s3-us-west-2.amazonaws.com/imageflow-resources/test_inputs/#{name}"
       end\
