@@ -28,7 +28,7 @@ extern "C" {
 
 #define FLOW_HINT_HOT __attribute__((hot))
 #define FLOW_HINT_PURE __attribute__((pure))
-#ifdef __GNUC__
+#if defined(__GNUC__) && !defined(__clang__)
 #define FLOW_HINT_UNSAFE_MATH_OPTIMIZATIONS __attribute__((optimize("-funsafe-math-optimizations")))
 #else
 #define FLOW_HINT_UNSAFE_MATH_OPTIMIZATIONS

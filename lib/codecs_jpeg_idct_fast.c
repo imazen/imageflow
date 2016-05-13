@@ -5,7 +5,7 @@
 #define JPEG_INTERNALS
 #include "jpeglib.h"
 #include "jdct.h" /* Private declarations for DCT subsystem */
-#ifdef __GNUC__
+#if defined(__GNUC__) && !defined(__clang__)
 #define HOT                                                                                                            \
     __attribute__((hot))                                                                                               \
         __attribute__((optimize("-funsafe-math-optimizations", "-ftree-vectorize", "-ftree-vectorizer-verbose=7")))
