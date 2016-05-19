@@ -1,17 +1,7 @@
 imageflow - Real-time image processing for the web.
 =========
 
-[![travis-master](https://img.shields.io/travis/imazen/imageflow/master.svg?label=travis%20master%20mac%20linux)
-[![AppVeyor build status](https://ci.appveyor.com/api/projects/status/0356x95fa312m3wy/branch/master?svg=true)](https://ci.appveyor.com/project/imazen/imageflow/branch/master)
-](https://travis-ci.org/imazen/imageflow/builds) 
-[![Coverage Status](https://coveralls.io/repos/github/imazen/imageflow/badge.svg?branch=master)](https://coveralls.io/github/imazen/imageflow?branch=master)
-[![Coverity Scan Build Status](https://scan.coverity.com/projects/8403/badge.svg)](https://scan.coverity.com/projects/imazen-imageflow)
-
-
-
 ## The Elevator Pitch
-
-----
 
 The 2016 releases of ImageMagick and Vips offer remarkable image quality and support thousands of different operations on hundreds of image formats. These are fantastic pieces of software maintained by wonderful developers; and they are building blocks of today's web applications.  
 
@@ -22,7 +12,7 @@ Despite comprising over a million lines of code (counting codecs), ImageMagick's
 Focusing exclusively on the transform and re-encode use case permits Imageflow to have a small, auditable codebase. It also frees time to spend on mathematical correctness and performance. Our early prototype of Imageflow is 2.5x faster than tuned copies of Vips or ImageMagick; and has equivalent or higher scaling quality. Most users will see an order of magnitude increase in server throughput. 
 
 Most visual artefacts you see in images today are entirely avoidable. Decades of hacky approximations, bad mathematical and color space reasoning, and legacy compression behaviors combine to establish a very low bar for image quality. 
-**There's no valid reason your web server can't deliver image quality on par with Adobe Lightroom, and do so in milliseconds.**
+**There's no valid reason your web server can't deliver image quality on par with Adobe Lightroom, and do so in 8 to 200 milliseconds.**
 
 **Imageflow enables that scenario. We don't need to shy away from on-the-fly image processing; we just need to focus on it and invest in our tools.**
 
@@ -32,11 +22,20 @@ Most visual artefacts you see in images today are entirely avoidable. Decades of
 
 Imageflow is AGPLv3 licensed, with commercial licenses planned to ensure sustainability.
 
-Nathanael Jones has a decade of experience in low-latency image server development. He created ImageResizer Server in 2006. ImageResizer v3 and v4 have since reached over one million downloads on NuGet, despite only supporting the IIS for Windows.
+> About the author: Nathanael Jones has a decade of experience in low-latency image server development. He created ImageResizer Server in 2006. ImageResizer v3 and v4 have since reached over one million downloads on NuGet, despite only supporting the IIS for Windows.
 
 ImageFlow will bring world-class image quality and performance to all languages through a C-compatible API and an evolvable operation graph, with initial focus on Node and Ruby. Linux, Mac, and Windows support is planned.  
 
 ----
+
+
+[![travis-master](https://img.shields.io/travis/imazen/imageflow/master.svg?label=travis%20master%20mac%20linux)
+[![AppVeyor build status](https://ci.appveyor.com/api/projects/status/0356x95fa312m3wy/branch/master?svg=true)](https://ci.appveyor.com/project/imazen/imageflow/branch/master)
+](https://travis-ci.org/imazen/imageflow/builds) 
+[![Coverage Status](https://coveralls.io/repos/github/imazen/imageflow/badge.svg?branch=master)](https://coveralls.io/github/imazen/imageflow?branch=master)
+[![Coverity Scan Build Status](https://scan.coverity.com/projects/8403/badge.svg)](https://scan.coverity.com/projects/imazen-imageflow)
+
+
 
 ### How to download, build, and run tests. 
 
