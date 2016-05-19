@@ -26,18 +26,7 @@ Most visual artefacts you see in images today are entirely avoidable. Decades of
 
 **Imageflow enables that scenario. We don't need to shy away from on-the-fly image processing; we just need to focus on it and invest in our tools.**
 
-Interested in our Kickstarter? Give us your e-mail and we'll ping you when it goes live.
-
-<form action="http://news.imazen.io/subscribe" method="POST" accept-charset="utf-8">
-	<label for="name">Name</label><br/>
-	<input type="text" name="name" id="name"/>
-	<br/>
-	<label for="email">Email</label><br/>
-	<input type="text" name="email" id="email"/>
-	<br/>
-	<input type="hidden" name="list" value="oo52t6j1wep40uJn6JTM0g"/>
-	<input type="submit" name="submit" id="submit"/>
-</form>
+**Interested in our Kickstarter?** [Give us your e-mail and we'll ping you when it goes live](https://www.surveymonkey.com/r/5M6CSFJ). You use the same link to [vote for your favorite language bindings](https://www.surveymonkey.com/r/5M6CSFJ).
 
 ----
 
@@ -49,7 +38,7 @@ ImageFlow will bring world-class image quality and performance to all languages 
 
 ----
 
-How to download, build, and run tests. 
+### How to download, build, and run tests. 
 
 ### Universal steps for all platforms - get Conan, Cmake, and Git
 
