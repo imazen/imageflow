@@ -1,15 +1,15 @@
 imageflow - Real-time image processing for the web.
 =========
 
-## The Elevator Pitch
+## Elevator Pitch
 
 The 2016 releases of ImageMagick and Vips offer remarkable image quality and support thousands of different operations on hundreds of image formats. These are fantastic pieces of software maintained by wonderful developers; and they are building blocks of today's web applications.  
 
-But Vips and ImageMagick are intended to be used in a sandbox. In practice, they are run in-process by privileged user accounts that often have administrative access to application databases. ImageMagick executes shell scripts within SVG files, so one can a server by uploading a simple file with any image extension. A recent string of vulnerabilities in ImageMagick were given the [ImageTragick](https://imagetragick.com) moniker to raise awareness.
+But Vips and ImageMagick are intended to be used in a sandbox. In practice, they are run in-process by privileged user accounts that often have administrative access to application databases. ImageMagick executes shell scripts within SVG files, so one can own a server by uploading a simple file with any image extension. A recent string of vulnerabilities in ImageMagick were given the [ImageTragick](https://imagetragick.com) moniker to raise awareness.
 
 Despite comprising over a million lines of code (counting codecs), ImageMagick's primary usage is straightforward: **transform and re-encode web images with optimal quality**. A sizable task, but one that merits only a fraction of that codebase.
 
-Focusing exclusively on the transform and re-encode use case permits Imageflow to have a small, auditable codebase. It also frees time to spend on mathematical correctness and performance. Our early prototype of Imageflow is 2.5x faster than tuned copies of Vips or ImageMagick; and has equivalent or higher scaling quality. Most users will see an order of magnitude increase in server throughput. 
+Focusing exclusively on the transform and re-encode use case permits Imageflow to have a small, auditable codebase. It also frees developer time to spend on mathematical correctness and performance. Our early prototype of Imageflow is 2.5x faster than tuned copies of Vips or ImageMagick; and has equivalent or higher scaling quality. Most users will see an order of magnitude increase in server throughput. 
 
 Most visual artefacts you see in images today are entirely avoidable. Decades of hacky approximations, bad mathematical and color space reasoning, and legacy compression behaviors combine to establish a very low bar for image quality. 
 **There's no valid reason your web server can't deliver image quality on par with Adobe Lightroom, and do so in 8 to 200 milliseconds.**
