@@ -21,7 +21,7 @@ install:
 test_script:
   - mkdir build
   - cd build
-  - if "%PLATFORM%"=="x86" conan install --file ../conanfile.py -o build_tests=True --build missing  -s build_type=Release -s arch=x86
-  - if "%PLATFORM%"=="x64" conan install --file ../conanfile.py -o build_tests=True --build missing  -s build_type=Release -s arch=x86_64
-  - conan build --file ../conanfile.py && ctest -V -C Release
+  - if "%PLATFORM%"=="x86" conan install -o build_tests=True --build missing  -s build_type=Release -s arch=x86 -u ../
+  - if "%PLATFORM%"=="x64" conan install -o build_tests=True --build missing  -s build_type=Release -s arch=x86_64  -u ../
+  - conan build ../
 
