@@ -27,7 +27,7 @@ struct flow_SearchInfo {
 extern "C" {
 #endif
 
-struct flow_rect detect_content(flow_c * context, struct flow_bitmap_bgra * b, uint8_t threshold);
+FLOW_EXPORT struct flow_rect detect_content(flow_c * context, struct flow_bitmap_bgra * b, uint8_t threshold);
 bool fill_buffer(flow_c * context, struct flow_SearchInfo * __restrict info);
 bool sobel_scharr_detect(flow_c * context, struct flow_SearchInfo * __restrict info);
 bool check_region(flow_c * context, int edgeTRBL, float x_1_percent, float x_2_percent, float y_1_percent,
