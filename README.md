@@ -1,4 +1,4 @@
-imageflow - Real-time image processing for the web.
+libimageflow + imageflow-server
 =========
 
 ## Elevator Pitch
