@@ -26,8 +26,14 @@ extern "C" {
 
 #define PUB FLOW_EXPORT
 
+#if defined(__GNUC__)
 #define FLOW_HINT_HOT __attribute__((hot))
 #define FLOW_HINT_PURE __attribute__((pure))
+#else
+#define FLOW_HINT_HOT
+#define FLOW_HINT_PURE
+#endif
+
 #if defined(__GNUC__) && !defined(__clang__)
 #define FLOW_HINT_UNSAFE_MATH_OPTIMIZATIONS __attribute__((optimize("-funsafe-math-optimizations")))
 #else

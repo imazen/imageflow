@@ -110,7 +110,7 @@ static inline uint8_t Context_floatspace_to_srgb(flow_c * context, float space_v
 }
 FLOW_HINT_PURE
 
-static inline void linear_to_yxz(float * bgr)
+static inline void linear_to_yxz(float bgr[])
 {
 
     const float R = bgr[2];
