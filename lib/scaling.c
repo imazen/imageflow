@@ -51,7 +51,9 @@ bool flow_bitmap_float_scale_rows(flow_c * context, struct flow_bitmap_float * f
                     __m128 factor = _mm_set1_ps(weightArray[i - left]);
                      sums += factor * source_buffer[i];
 #else
-                    sums += weightArray[i - left] * source_buffer[i];
+                    __m128 factor = _mm_set1_ps(weightArray[i - left]);
+                    __m128 mid = _mm_mul_ps(factor, source_buffer[i]);
+                    sums = _mm_add_ps(sums, mid);
 #endif
                 }
 
