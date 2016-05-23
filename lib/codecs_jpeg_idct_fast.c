@@ -13,7 +13,11 @@
     __attribute__((hot))                                                                                               \
         __attribute__((optimize("-funsafe-math-optimizations", "-ftree-vectorize", "-ftree-vectorizer-verbose=7")))
 #else
+#if defined(__GNUC__)
 #define HOT __attribute__((hot))
+#else
+#define HOT
+#endif
 #endif
 
 void flow_scale_spatial_srgb_7x7(uint8_t input[64], uint8_t ** output_rows, uint32_t output_col) HOT;
