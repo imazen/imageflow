@@ -239,7 +239,7 @@ PUB bool flow_bitmap_float_copy_linear_over_srgb(flow_c * c, struct flow_bitmap_
                                                  const uint32_t row_count, const uint32_t from_col,
                                                  const uint32_t col_count, const bool transpose);
 
-bool flow_bitmap_bgra_fill_rect(flow_c * c, struct flow_bitmap_bgra * b, uint32_t x1, uint32_t y1, uint32_t x2,
+PUB bool flow_bitmap_bgra_fill_rect(flow_c * c, struct flow_bitmap_bgra * b, uint32_t x1, uint32_t y1, uint32_t x2,
                                 uint32_t y2, uint32_t color_srgb_argb);
 
 PUB bool flow_halve(flow_c * c, const struct flow_bitmap_bgra * from, struct flow_bitmap_bgra * to, int divisor);
