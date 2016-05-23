@@ -6,7 +6,7 @@ static void multiply_row(float * row, const size_t length, const float coefficie
         row[i] *= coefficient;
     }
 }
-__attribute__((hot)) FLOW_HINT_UNSAFE_MATH_OPTIMIZATIONS
+FLOW_HINT_HOT FLOW_HINT_UNSAFE_MATH_OPTIMIZATIONS
     static void add_row(float * mutate_row, float * input_row, const size_t length)
 {
     for (size_t i = 0; i < length; i++) {
