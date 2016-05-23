@@ -79,7 +79,7 @@ bool flow_bitmap_float_convert_srgb_to_linear(flow_c * context, struct flow_bitm
     }
     return true;
 }
-__attribute__((hot))
+FLOW_HINT_HOT
 
 /*
 static void unpack24bitRow(uint32_t width, unsigned char* sourceLine, unsigned char* destArray){
@@ -261,7 +261,7 @@ bool flow_bitmap_float_copy_linear_over_srgb(flow_c * context, struct flow_bitma
     }
     return true;
 }
-__attribute__((hot))
+FLOW_HINT_HOT
 
 static bool BitmapFloat_compose_linear_over_srgb(flow_c * context, struct flow_bitmap_float * src,
                                                  const uint32_t from_row, struct flow_bitmap_bgra * dest,
