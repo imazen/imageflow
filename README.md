@@ -24,7 +24,7 @@ Imageflow is AGPLv3 licensed, with commercial licenses planned to ensure sustain
 
 > About the author: Nathanael Jones has a decade of experience in low-latency image server development. He created ImageResizer Server in 2006. ImageResizer v3 and v4 have since reached over one million downloads on NuGet, despite only supporting the IIS for Windows.
 
-ImageFlow will bring world-class image quality and performance to all languages through a C-compatible API and an evolvable operation graph, with initial focus on Node and Ruby. Linux, Mac, and Windows support is planned.  
+ImageFlow will bring world-class image quality and performance to all languages through a C-compatible API (libimageflow) and an evolvable operation graph, with initial focus on Node and Ruby. Linux, Mac, and Windows support is planned.  
 
 ----
 
@@ -86,10 +86,10 @@ Install nasm (`cinst -y nasm` on windows, followed by `set PATH=%PATH%;%ProgramF
 
 ======
 
-**imageflow is still in the prototype phase. It is neither API-stable nor secure.**
+**libimageflow is still in the prototype phase. It is neither API-stable nor secure.**
 
 
-![ImageFlow diagram](https://rawgit.com/imazen/imageflow/master/docs/ImageFlow_Core.svg)
+![libimageflow diagram](https://rawgit.com/imazen/imageflow/master/docs/ImageFlow_Core.svg)
 
 
 ## Using the long-form graph API (with proper error handling)
