@@ -21,40 +21,42 @@
 #endif
 
 #ifdef _MSC_VER
+#define FLOW_EXPORT __declspec(dllexport)
 #define FLOW_ALIGN_16 __declspec(align(16))
 #define FLOW_ALIGN_16_VAR(X) __declspec(align(16)) X
 #else
+#define FLOW_EXPORT
 #define FLOW_ALIGN_16 __attribute__((aligned(16)))
 #define FLOW_ALIGN_16_VAR(X) X __attribute__((aligned(16)))
 #endif
 
-void flow_scale_spatial_srgb_7x7(uint8_t input[64], uint8_t ** output_rows, uint32_t output_col) HOT;
+FLOW_EXPORT void flow_scale_spatial_srgb_7x7(uint8_t input[64], uint8_t ** output_rows, uint32_t output_col) HOT;
 
-void flow_scale_spatial_srgb_6x6(uint8_t input[64], uint8_t ** output_rows, uint32_t output_col) HOT;
+FLOW_EXPORT void flow_scale_spatial_srgb_6x6(uint8_t input[64], uint8_t ** output_rows, uint32_t output_col) HOT;
 
-void flow_scale_spatial_srgb_5x5(uint8_t input[64], uint8_t ** output_rows, uint32_t output_col) HOT;
+FLOW_EXPORT void flow_scale_spatial_srgb_5x5(uint8_t input[64], uint8_t ** output_rows, uint32_t output_col) HOT;
 
-void flow_scale_spatial_srgb_4x4(uint8_t input[64], uint8_t ** output_rows, uint32_t output_col) HOT;
+FLOW_EXPORT void flow_scale_spatial_srgb_4x4(uint8_t input[64], uint8_t ** output_rows, uint32_t output_col) HOT;
 
-void flow_scale_spatial_srgb_3x3(uint8_t input[64], uint8_t ** output_rows, uint32_t output_col) HOT;
+FLOW_EXPORT void flow_scale_spatial_srgb_3x3(uint8_t input[64], uint8_t ** output_rows, uint32_t output_col) HOT;
 
-void flow_scale_spatial_srgb_2x2(uint8_t input[64], uint8_t ** output_rows, uint32_t output_col) HOT;
+FLOW_EXPORT void flow_scale_spatial_srgb_2x2(uint8_t input[64], uint8_t ** output_rows, uint32_t output_col) HOT;
 
-void flow_scale_spatial_srgb_1x1(uint8_t input[64], uint8_t ** output_rows, uint32_t output_col) HOT;
+FLOW_EXPORT void flow_scale_spatial_srgb_1x1(uint8_t input[64], uint8_t ** output_rows, uint32_t output_col) HOT;
 
-void flow_scale_spatial_7x7(uint8_t input[64], uint8_t ** output_rows, uint32_t output_col) HOT;
+FLOW_EXPORT void flow_scale_spatial_7x7(uint8_t input[64], uint8_t ** output_rows, uint32_t output_col) HOT;
 
-void flow_scale_spatial_6x6(uint8_t input[64], uint8_t ** output_rows, uint32_t output_col) HOT;
+FLOW_EXPORT void flow_scale_spatial_6x6(uint8_t input[64], uint8_t ** output_rows, uint32_t output_col) HOT;
 
-void flow_scale_spatial_5x5(uint8_t input[64], uint8_t ** output_rows, uint32_t output_col) HOT;
+FLOW_EXPORT void flow_scale_spatial_5x5(uint8_t input[64], uint8_t ** output_rows, uint32_t output_col) HOT;
 
-void flow_scale_spatial_4x4(uint8_t input[64], uint8_t ** output_rows, uint32_t output_col) HOT;
+FLOW_EXPORT void flow_scale_spatial_4x4(uint8_t input[64], uint8_t ** output_rows, uint32_t output_col) HOT;
 
-void flow_scale_spatial_3x3(uint8_t input[64], uint8_t ** output_rows, uint32_t output_col) HOT;
+FLOW_EXPORT void flow_scale_spatial_3x3(uint8_t input[64], uint8_t ** output_rows, uint32_t output_col) HOT;
 
-void flow_scale_spatial_2x2(uint8_t input[64], uint8_t ** output_rows, uint32_t output_col) HOT;
+FLOW_EXPORT void flow_scale_spatial_2x2(uint8_t input[64], uint8_t ** output_rows, uint32_t output_col) HOT;
 
-void flow_scale_spatial_1x1(uint8_t input[64], uint8_t ** output_rows, uint32_t output_col) HOT;
+FLOW_EXPORT void flow_scale_spatial_1x1(uint8_t input[64], uint8_t ** output_rows, uint32_t output_col) HOT;
 
 #ifndef FLOW_GCC_IDCT
 void jpeg_idct_spatial_srgb_7x7(j_decompress_ptr cinfo, jpeg_component_info * compptr, JCOEFPTR coef_block,
