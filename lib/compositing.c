@@ -13,8 +13,13 @@
 
 #include <string.h>
 
+#ifdef _MSC_VER
+#define likely(x) x
+#define unlikely(x) x
+#else
 #define likely(x) (__builtin_expect(!!(x), 1))
 #define unlikely(x) (__builtin_expect(!!(x), 0))
+#endif
 
 bool flow_bitmap_float_convert_srgb_to_linear(flow_c * context, struct flow_bitmap_bgra * src, uint32_t from_row,
                                               struct flow_bitmap_float * dest, uint32_t dest_row, uint32_t row_count)
