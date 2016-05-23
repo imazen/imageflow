@@ -20,6 +20,14 @@
 #endif
 #endif
 
+#ifdef _MSC_VER
+#define FLOW_ALIGN_16 __declspec(align(16))
+#define FLOW_ALIGN_16_VAR(X) __declspec(align(16)) X
+#else
+#define FLOW_ALIGN_16 __attribute__((aligned(16)))
+#define FLOW_ALIGN_16_VAR(X) X __attribute__((aligned(16)))
+#endif
+
 void flow_scale_spatial_srgb_7x7(uint8_t input[64], uint8_t ** output_rows, uint32_t output_col) HOT;
 
 void flow_scale_spatial_srgb_6x6(uint8_t input[64], uint8_t ** output_rows, uint32_t output_col) HOT;
@@ -93,7 +101,7 @@ void jpeg_idct_spatial_1x1(j_decompress_ptr cinfo, jpeg_component_info * compptr
 
 #endif
 
-__attribute__((aligned(16))) static const uint8_t lut_linear_to_srgb[4096] = {
+FLOW_ALIGN_16 static const uint8_t lut_linear_to_srgb[4096] = {
     0,   1,   2,   3,   3,   4,   5,   6,   7,   7,   8,   9,   10,  11,  11,  12,  13,  13,  14,  15,  15,  16,  17,
     17,  18,  18,  19,  19,  20,  20,  21,  21,  22,  22,  23,  23,  23,  24,  24,  25,  25,  26,  26,  26,  27,  27,
     27,  28,  28,  29,  29,  29,  30,  30,  30,  31,  31,  31,  32,  32,  32,  33,  33,  33,  34,  34,  34,  35,  35,
@@ -274,7 +282,7 @@ __attribute__((aligned(16))) static const uint8_t lut_linear_to_srgb[4096] = {
     254, 254, 254, 254, 254, 254, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255,
 };
 
-__attribute__((aligned(16))) static const uint16_t lut_srgb_to_linear[256] = {
+FLOW_ALIGN_16 static const uint16_t lut_srgb_to_linear[256] = {
     0,    1,    2,    4,    5,    6,    7,    9,    10,   11,   12,   14,   15,   16,   18,   20,   21,   23,   25,
     27,   29,   31,   33,   35,   37,   40,   42,   45,   48,   50,   53,   56,   59,   62,   66,   69,   72,   76,
     79,   83,   87,   91,   95,   99,   103,  107,  112,  116,  121,  126,  131,  136,  141,  146,  151,  156,  162,
@@ -293,26 +301,26 @@ __attribute__((aligned(16))) static const uint16_t lut_srgb_to_linear[256] = {
 void flow_scale_spatial_7x7(uint8_t input[64], uint8_t ** output_rows, uint32_t output_col)
 {
     int32_t i, sum, j;
-    int32_t temp[48] __attribute__((aligned(16)));
-    int32_t weights_for_col_0[] __attribute__((aligned(16))) = {
+    FLOW_ALIGN_16_VAR(int32_t temp[48]);
+    FLOW_ALIGN_16_VAR(int32_t weights_for_col_0[]) = {
         29, 3,
     };
-    int32_t weights_for_col_1[] __attribute__((aligned(16))) = {
+    FLOW_ALIGN_16_VAR(int32_t weights_for_col_1[]) = {
         -2, 103, 27,
     };
-    int32_t weights_for_col_2[] __attribute__((aligned(16))) = {
+    FLOW_ALIGN_16_VAR(int32_t weights_for_col_2[]) = {
         -3, 86, 45,
     };
-    int32_t weights_for_col_3[] __attribute__((aligned(16))) = {
+    FLOW_ALIGN_16_VAR(int32_t weights_for_col_3[]) = {
         -3, 67, 67, -3,
     };
-    int32_t weights_for_col_4[] __attribute__((aligned(16))) = {
+    FLOW_ALIGN_16_VAR(int32_t weights_for_col_4[]) = {
         45, 86, -3,
     };
-    int32_t weights_for_col_5[] __attribute__((aligned(16))) = {
+    FLOW_ALIGN_16_VAR(int32_t weights_for_col_5[]) = {
         27, 103, -2,
     };
-    int32_t weights_for_col_6[] __attribute__((aligned(16))) = {
+    FLOW_ALIGN_16_VAR(int32_t weights_for_col_6[]) = {
         3, 29,
     };
 
@@ -870,23 +878,23 @@ void jpeg_idct_spatial_7x7(j_decompress_ptr cinfo, jpeg_component_info * compptr
 void flow_scale_spatial_6x6(uint8_t input[64], uint8_t ** output_rows, uint32_t output_col)
 {
     int32_t i, sum, j;
-    int32_t temp[48] __attribute__((aligned(16)));
-    int32_t weights_for_col_0[] __attribute__((aligned(16))) = {
+    FLOW_ALIGN_16_VAR(int32_t temp[48]);
+    FLOW_ALIGN_16_VAR(int32_t weights_for_col_0[]) = {
         6, 2,
     };
-    int32_t weights_for_col_1[] __attribute__((aligned(16))) = {
+    FLOW_ALIGN_16_VAR(int32_t weights_for_col_1[]) = {
         -1, 33, 33, -1,
     };
-    int32_t weights_for_col_2[] __attribute__((aligned(16))) = {
+    FLOW_ALIGN_16_VAR(int32_t weights_for_col_2[]) = {
         31, 92, 5,
     };
-    int32_t weights_for_col_3[] __attribute__((aligned(16))) = {
+    FLOW_ALIGN_16_VAR(int32_t weights_for_col_3[]) = {
         5, 92, 31,
     };
-    int32_t weights_for_col_4[] __attribute__((aligned(16))) = {
+    FLOW_ALIGN_16_VAR(int32_t weights_for_col_4[]) = {
         -1, 33, 33, -1,
     };
-    int32_t weights_for_col_5[] __attribute__((aligned(16))) = {
+    FLOW_ALIGN_16_VAR(int32_t weights_for_col_5[]) = {
         2, 6,
     };
 
@@ -1315,20 +1323,20 @@ void jpeg_idct_spatial_6x6(j_decompress_ptr cinfo, jpeg_component_info * compptr
 void flow_scale_spatial_5x5(uint8_t input[64], uint8_t ** output_rows, uint32_t output_col)
 {
     int32_t i, sum, j;
-    int32_t temp[48] __attribute__((aligned(16)));
-    int32_t weights_for_col_0[] __attribute__((aligned(16))) = {
+    FLOW_ALIGN_16_VAR(int32_t temp[48]);
+    FLOW_ALIGN_16_VAR(int32_t weights_for_col_0[]) = {
         78, 51, -1,
     };
-    int32_t weights_for_col_1[] __attribute__((aligned(16))) = {
+    FLOW_ALIGN_16_VAR(int32_t weights_for_col_1[]) = {
         -2, 32, 79, 19,
     };
-    int32_t weights_for_col_2[] __attribute__((aligned(16))) = {
+    FLOW_ALIGN_16_VAR(int32_t weights_for_col_2[]) = {
         1, 31, 31, 1,
     };
-    int32_t weights_for_col_3[] __attribute__((aligned(16))) = {
+    FLOW_ALIGN_16_VAR(int32_t weights_for_col_3[]) = {
         19, 79, 32, -2,
     };
-    int32_t weights_for_col_4[] __attribute__((aligned(16))) = {
+    FLOW_ALIGN_16_VAR(int32_t weights_for_col_4[]) = {
         -1, 51, 78,
     };
 
@@ -1650,17 +1658,17 @@ void jpeg_idct_spatial_5x5(j_decompress_ptr cinfo, jpeg_component_info * compptr
 void flow_scale_spatial_4x4(uint8_t input[64], uint8_t ** output_rows, uint32_t output_col)
 {
     int32_t i, sum, j;
-    int32_t temp[48] __attribute__((aligned(16)));
-    int32_t weights_for_col_0[] __attribute__((aligned(16))) = {
+    FLOW_ALIGN_16_VAR(int32_t temp[48]);
+    FLOW_ALIGN_16_VAR(int32_t weights_for_col_0[]) = {
         117, 117, 22,
     };
-    int32_t weights_for_col_1[] __attribute__((aligned(16))) = {
+    FLOW_ALIGN_16_VAR(int32_t weights_for_col_1[]) = {
         21, 107, 107, 21,
     };
-    int32_t weights_for_col_2[] __attribute__((aligned(16))) = {
+    FLOW_ALIGN_16_VAR(int32_t weights_for_col_2[]) = {
         21, 107, 107, 21,
     };
-    int32_t weights_for_col_3[] __attribute__((aligned(16))) = {
+    FLOW_ALIGN_16_VAR(int32_t weights_for_col_3[]) = {
         22, 117, 117,
     };
 
@@ -1901,14 +1909,14 @@ void jpeg_idct_spatial_4x4(j_decompress_ptr cinfo, jpeg_component_info * compptr
 void flow_scale_spatial_3x3(uint8_t input[64], uint8_t ** output_rows, uint32_t output_col)
 {
     int32_t i, sum, j;
-    int32_t temp[64] __attribute__((aligned(16)));
-    int32_t weights_for_col_0[] __attribute__((aligned(16))) = {
+    FLOW_ALIGN_16_VAR(int32_t temp[64]);
+    FLOW_ALIGN_16_VAR(int32_t weights_for_col_0[]) = {
         80, 103, 62, 11,
     };
-    int32_t weights_for_col_1[] __attribute__((aligned(16))) = {
+    FLOW_ALIGN_16_VAR(int32_t weights_for_col_1[]) = {
         2, 39, 87, 87, 39, 2,
     };
-    int32_t weights_for_col_2[] __attribute__((aligned(16))) = {
+    FLOW_ALIGN_16_VAR(int32_t weights_for_col_2[]) = {
         11, 62, 103, 80,
     };
 
@@ -2071,11 +2079,11 @@ void jpeg_idct_spatial_3x3(j_decompress_ptr cinfo, jpeg_component_info * compptr
 void flow_scale_spatial_2x2(uint8_t input[64], uint8_t ** output_rows, uint32_t output_col)
 {
     int32_t i, sum, j;
-    int32_t temp[64] __attribute__((aligned(16)));
-    int32_t weights_for_col_0[] __attribute__((aligned(16))) = {
+    FLOW_ALIGN_16_VAR(int32_t temp[64]);
+    FLOW_ALIGN_16_VAR(int32_t weights_for_col_0[]) = {
         48, 67, 67, 48, 22, 4,
     };
-    int32_t weights_for_col_1[] __attribute__((aligned(16))) = {
+    FLOW_ALIGN_16_VAR(int32_t weights_for_col_1[]) = {
         4, 22, 48, 67, 67, 48,
     };
 
@@ -2176,8 +2184,8 @@ void jpeg_idct_spatial_2x2(j_decompress_ptr cinfo, jpeg_component_info * compptr
 void flow_scale_spatial_1x1(uint8_t input[64], uint8_t ** output_rows, uint32_t output_col)
 {
     int32_t i, sum, j;
-    int32_t temp[80] __attribute__((aligned(16)));
-    int32_t weights_for_col_0[] __attribute__((aligned(16))) = {
+    FLOW_ALIGN_16_VAR(int32_t temp[80]);
+    FLOW_ALIGN_16_VAR(int32_t weights_for_col_0[]) = {
         47, 60, 71, 78, 78, 71, 60, 47,
     };
 
@@ -2232,30 +2240,30 @@ void jpeg_idct_spatial_1x1(j_decompress_ptr cinfo, jpeg_component_info * compptr
 void flow_scale_spatial_srgb_7x7(uint8_t input[64], uint8_t ** output_rows, uint32_t output_col)
 {
     int32_t i, sum, j;
-    int32_t linearized[64] __attribute__((aligned(16)));
+    FLOW_ALIGN_16_VAR(int32_t linearized[64]);
     for (i = 0; i < 64; i++)
         linearized[i] = lut_srgb_to_linear[input[i]];
 
-    int32_t temp[48] __attribute__((aligned(16)));
-    int32_t weights_for_col_0[] __attribute__((aligned(16))) = {
+    FLOW_ALIGN_16_VAR(int32_t temp[48]);
+    FLOW_ALIGN_16_VAR(int32_t weights_for_col_0[]) = {
         29, 3,
     };
-    int32_t weights_for_col_1[] __attribute__((aligned(16))) = {
+    FLOW_ALIGN_16_VAR(int32_t weights_for_col_1[]) = {
         -2, 103, 27,
     };
-    int32_t weights_for_col_2[] __attribute__((aligned(16))) = {
+    FLOW_ALIGN_16_VAR(int32_t weights_for_col_2[]) = {
         -3, 86, 45,
     };
-    int32_t weights_for_col_3[] __attribute__((aligned(16))) = {
+    FLOW_ALIGN_16_VAR(int32_t weights_for_col_3[]) = {
         -3, 67, 67, -3,
     };
-    int32_t weights_for_col_4[] __attribute__((aligned(16))) = {
+    FLOW_ALIGN_16_VAR(int32_t weights_for_col_4[]) = {
         45, 86, -3,
     };
-    int32_t weights_for_col_5[] __attribute__((aligned(16))) = {
+    FLOW_ALIGN_16_VAR(int32_t weights_for_col_5[]) = {
         27, 103, -2,
     };
-    int32_t weights_for_col_6[] __attribute__((aligned(16))) = {
+    FLOW_ALIGN_16_VAR(int32_t weights_for_col_6[]) = {
         3, 29,
     };
 
@@ -2862,27 +2870,27 @@ void jpeg_idct_spatial_srgb_7x7(j_decompress_ptr cinfo, jpeg_component_info * co
 void flow_scale_spatial_srgb_6x6(uint8_t input[64], uint8_t ** output_rows, uint32_t output_col)
 {
     int32_t i, sum, j;
-    int32_t linearized[64] __attribute__((aligned(16)));
+    FLOW_ALIGN_16_VAR(int32_t linearized[64]);
     for (i = 0; i < 64; i++)
         linearized[i] = lut_srgb_to_linear[input[i]];
 
-    int32_t temp[48] __attribute__((aligned(16)));
-    int32_t weights_for_col_0[] __attribute__((aligned(16))) = {
+    FLOW_ALIGN_16_VAR(int32_t temp[48]);
+    FLOW_ALIGN_16_VAR(int32_t weights_for_col_0[]) = {
         6, 2,
     };
-    int32_t weights_for_col_1[] __attribute__((aligned(16))) = {
+    FLOW_ALIGN_16_VAR(int32_t weights_for_col_1[]) = {
         -1, 33, 33, -1,
     };
-    int32_t weights_for_col_2[] __attribute__((aligned(16))) = {
+    FLOW_ALIGN_16_VAR(int32_t weights_for_col_2[]) = {
         31, 92, 5,
     };
-    int32_t weights_for_col_3[] __attribute__((aligned(16))) = {
+    FLOW_ALIGN_16_VAR(int32_t weights_for_col_3[]) = {
         5, 92, 31,
     };
-    int32_t weights_for_col_4[] __attribute__((aligned(16))) = {
+    FLOW_ALIGN_16_VAR(int32_t weights_for_col_4[]) = {
         -1, 33, 33, -1,
     };
-    int32_t weights_for_col_5[] __attribute__((aligned(16))) = {
+    FLOW_ALIGN_16_VAR(int32_t weights_for_col_5[]) = {
         2, 6,
     };
 
@@ -3347,24 +3355,24 @@ void jpeg_idct_spatial_srgb_6x6(j_decompress_ptr cinfo, jpeg_component_info * co
 void flow_scale_spatial_srgb_5x5(uint8_t input[64], uint8_t ** output_rows, uint32_t output_col)
 {
     int32_t i, sum, j;
-    int32_t linearized[64] __attribute__((aligned(16)));
+    FLOW_ALIGN_16_VAR(int32_t linearized[64]);
     for (i = 0; i < 64; i++)
         linearized[i] = lut_srgb_to_linear[input[i]];
 
-    int32_t temp[48] __attribute__((aligned(16)));
-    int32_t weights_for_col_0[] __attribute__((aligned(16))) = {
+    FLOW_ALIGN_16_VAR(int32_t temp[48]);
+    FLOW_ALIGN_16_VAR(int32_t weights_for_col_0[]) = {
         78, 51, -1,
     };
-    int32_t weights_for_col_1[] __attribute__((aligned(16))) = {
+    FLOW_ALIGN_16_VAR(int32_t weights_for_col_1[]) = {
         -2, 32, 79, 19,
     };
-    int32_t weights_for_col_2[] __attribute__((aligned(16))) = {
+    FLOW_ALIGN_16_VAR(int32_t weights_for_col_2[]) = {
         1, 31, 31, 1,
     };
-    int32_t weights_for_col_3[] __attribute__((aligned(16))) = {
+    FLOW_ALIGN_16_VAR(int32_t weights_for_col_3[]) = {
         19, 79, 32, -2,
     };
-    int32_t weights_for_col_4[] __attribute__((aligned(16))) = {
+    FLOW_ALIGN_16_VAR(int32_t weights_for_col_4[]) = {
         -1, 51, 78,
     };
 
@@ -3711,21 +3719,21 @@ void jpeg_idct_spatial_srgb_5x5(j_decompress_ptr cinfo, jpeg_component_info * co
 void flow_scale_spatial_srgb_4x4(uint8_t input[64], uint8_t ** output_rows, uint32_t output_col)
 {
     int32_t i, sum, j;
-    int32_t linearized[64] __attribute__((aligned(16)));
+    FLOW_ALIGN_16_VAR(int32_t linearized[64]);
     for (i = 0; i < 64; i++)
         linearized[i] = lut_srgb_to_linear[input[i]];
 
-    int32_t temp[48] __attribute__((aligned(16)));
-    int32_t weights_for_col_0[] __attribute__((aligned(16))) = {
+    FLOW_ALIGN_16_VAR(int32_t temp[48]);
+    FLOW_ALIGN_16_VAR(int32_t weights_for_col_0[]) = {
         117, 117, 22,
     };
-    int32_t weights_for_col_1[] __attribute__((aligned(16))) = {
+    FLOW_ALIGN_16_VAR(int32_t weights_for_col_1[]) = {
         21, 107, 107, 21,
     };
-    int32_t weights_for_col_2[] __attribute__((aligned(16))) = {
+    FLOW_ALIGN_16_VAR(int32_t weights_for_col_2[]) = {
         21, 107, 107, 21,
     };
-    int32_t weights_for_col_3[] __attribute__((aligned(16))) = {
+    FLOW_ALIGN_16_VAR(int32_t weights_for_col_3[]) = {
         22, 117, 117,
     };
 
@@ -3966,18 +3974,18 @@ void jpeg_idct_spatial_srgb_4x4(j_decompress_ptr cinfo, jpeg_component_info * co
 void flow_scale_spatial_srgb_3x3(uint8_t input[64], uint8_t ** output_rows, uint32_t output_col)
 {
     int32_t i, sum, j;
-    int32_t linearized[64] __attribute__((aligned(16)));
+    FLOW_ALIGN_16_VAR(int32_t linearized[64]);
     for (i = 0; i < 64; i++)
         linearized[i] = lut_srgb_to_linear[input[i]];
 
-    int32_t temp[64] __attribute__((aligned(16)));
-    int32_t weights_for_col_0[] __attribute__((aligned(16))) = {
+    FLOW_ALIGN_16_VAR(int32_t temp[64]);
+    FLOW_ALIGN_16_VAR(int32_t weights_for_col_0[]) = {
         80, 103, 62, 11,
     };
-    int32_t weights_for_col_1[] __attribute__((aligned(16))) = {
+    FLOW_ALIGN_16_VAR(int32_t weights_for_col_1[]) = {
         2, 39, 87, 87, 39, 2,
     };
-    int32_t weights_for_col_2[] __attribute__((aligned(16))) = {
+    FLOW_ALIGN_16_VAR(int32_t weights_for_col_2[]) = {
         11, 62, 103, 80,
     };
 
@@ -4140,15 +4148,15 @@ void jpeg_idct_spatial_srgb_3x3(j_decompress_ptr cinfo, jpeg_component_info * co
 void flow_scale_spatial_srgb_2x2(uint8_t input[64], uint8_t ** output_rows, uint32_t output_col)
 {
     int32_t i, sum, j;
-    int32_t linearized[64] __attribute__((aligned(16)));
+    FLOW_ALIGN_16_VAR(int32_t linearized[64]);
     for (i = 0; i < 64; i++)
         linearized[i] = lut_srgb_to_linear[input[i]];
 
-    int32_t temp[64] __attribute__((aligned(16)));
-    int32_t weights_for_col_0[] __attribute__((aligned(16))) = {
+    FLOW_ALIGN_16_VAR(int32_t temp[64]);
+    FLOW_ALIGN_16_VAR(int32_t weights_for_col_0[]) = {
         48, 67, 67, 48, 22, 4,
     };
-    int32_t weights_for_col_1[] __attribute__((aligned(16))) = {
+    FLOW_ALIGN_16_VAR(int32_t weights_for_col_1[]) = {
         4, 22, 48, 67, 67, 48,
     };
 
@@ -4249,12 +4257,12 @@ void jpeg_idct_spatial_srgb_2x2(j_decompress_ptr cinfo, jpeg_component_info * co
 void flow_scale_spatial_srgb_1x1(uint8_t input[64], uint8_t ** output_rows, uint32_t output_col)
 {
     int32_t i, sum, j;
-    int32_t linearized[64] __attribute__((aligned(16)));
+    FLOW_ALIGN_16_VAR(int32_t linearized[64]);
     for (i = 0; i < 64; i++)
         linearized[i] = lut_srgb_to_linear[input[i]];
 
-    int32_t temp[80] __attribute__((aligned(16)));
-    int32_t weights_for_col_0[] __attribute__((aligned(16))) = {
+    FLOW_ALIGN_16_VAR(int32_t temp[80]);
+    FLOW_ALIGN_16_VAR(int32_t weights_for_col_0[]) = {
         47, 60, 71, 78, 78, 71, 60, 47,
     };
 
