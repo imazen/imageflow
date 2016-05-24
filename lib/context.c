@@ -103,6 +103,7 @@ void flow_context_print_error_to(flow_c * c, FILE * stream)
     char buffer[FLOW_ERROR_MESSAGE_SIZE + 2048];
     flow_context_error_and_stacktrace(c, buffer, sizeof(buffer), true);
     fprintf(stream, "%s", buffer);
+    fflush(stream);
 }
 int64_t flow_context_error_and_stacktrace(flow_c * context, char * buffer, size_t buffer_size, bool full_file_path)
 {
