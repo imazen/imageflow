@@ -120,6 +120,7 @@ TEST_CASE("Test block downscaling", "")
 {
 
     uint8_t input[64];
+    memset(&input[0], 0, 64);
     uint8_t output[64];
     uint8_t * rows[8] = { &output[0],     &output[8],     &output[8 * 2], &output[8 * 3],
                           &output[8 * 4], &output[8 * 5], &output[8 * 6], &output[8 * 7] };
@@ -133,6 +134,7 @@ TEST_CASE("Benchmark block downscaling", "")
 {
 
     uint8_t input[64];
+    memset(&input[0], 0, 64);
     uint8_t output[64];
     uint8_t * rows[8] = { &output[0],     &output[8],     &output[8 * 2], &output[8 * 3],
                           &output[8 * 4], &output[8 * 5], &output[8 * 6], &output[8 * 7] };
