@@ -82,6 +82,7 @@ TEST_CASE("Test reporting of a failing destructor", "")
     ERR(c);
 
     void * data = flow_context_malloc(c, 20, bad_destructor, c, __FILE__, __LINE__);
+    REQUIRE(data != NULL);
     ERR(c);
     // begin_terminate should trigger the destructor
     REQUIRE(flow_context_begin_terminate(c) == false);
