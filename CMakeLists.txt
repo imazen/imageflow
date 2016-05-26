@@ -37,7 +37,7 @@ endif()
 
 # -ffast-math changes results
 if (UNIX)
-	set(FASTSCALING_FLAGS "-iquotelib -fPIC -ffast-math -funroll-loops -mtune=native -march=native -Wpointer-arith -Wcast-qual -Wpedantic -Wall -Wextra -Wno-unused-parameter -Wuninitialized -Wredundant-decls -Werror")
+	set(FASTSCALING_FLAGS "-O3 -iquotelib -fPIC -ffast-math -funroll-loops -mtune=native -march=native -Wpointer-arith -Wcast-qual -Wpedantic -Wall -Wextra -Wno-unused-parameter -Wuninitialized -Wredundant-decls -Werror")
 	set(CMAKE_C_FLAGS  "${CMAKE_C_FLAGS} ${FASTSCALING_FLAGS} -std=gnu11 -Wstrict-prototypes -Wmissing-prototypes -Wc++-compat -Wshadow" )
 	set(CMAKE_CXX_FLAGS  "${CMAKE_CXX_FLAGS} ${FASTSCALING_FLAGS} -std=gnu++11" )
 else()
