@@ -289,8 +289,9 @@ TEST_CASE("Search for best reverse lookup table (float)", "")
 }
 #endif
 
-#define FLOW_bytes_PER_LINE 23
-#define FLOW_shorts_PER_LINE 19
+//Non multiples of two will cause segfaults due to tiny arrays.
+#define FLOW_bytes_PER_LINE 16
+#define FLOW_shorts_PER_LINE 16
 
 #ifdef GENERATE_FLOAT_LITERALS
 
@@ -378,7 +379,7 @@ void print_header(FILE * stream, int scale_size, bool linear, const char * end)
 
 void print_scale_header(FILE * stream, int scale_size, bool linear, const char * end)
 {
-    fprintf(stream, "void flow_scale_spatial%s_%dx%d(uint8_t input[64], uint8_t ** output_rows, uint32_t output_col)%s",
+    fprintf(stream, "FLOW_EXPORT void flow_scale_spatial%s_%dx%d(uint8_t input[64], uint8_t ** output_rows, uint32_t output_col)%s",
             linear ? "_srgb" : "", scale_size, scale_size, end);
 }
 
@@ -502,18 +503,18 @@ void print_function(FILE * stream, int scale_size, struct flow_interpolation_lin
 
     fprintf(stream, "    int32_t i, sum, j;\n");
     if (linear) {
-        fprintf(stream, "    int32_t linearized[64] __attribute__ ((aligned (16)));\n"
+        fprintf(stream, "    FLOW_ALIGN_16_VAR(int32_t linearized[64]);\n"
                         "    for (i = 0; i < 64; i++)\n"
                         "        linearized[i] = lut_srgb_to_linear[input[i]];\n\n");
     }
-    fprintf(stream, "    int32_t temp[%d] __attribute__ ((aligned (16)));\n", 8 * (max_window_size + 2));
+    fprintf(stream, "    FLOW_ALIGN_16_VAR(int32_t temp[%d]);\n", 8 * (max_window_size + 2));
 
     int matrix_counts[8];
     for (col = 0; col < scale_size; col++) {
         int left = index_of_first_nonzero(&matrix[col * 8], 8);
         int col_inputs = 0;
         // Write down weights for 1 output pixel
-        fprintf(stream, "    int32_t weights_for_col_%d[] __attribute__((aligned(16))) = {", col);
+        fprintf(stream, "    FLOW_ALIGN_16_VAR(int32_t weights_for_col_%d[]) = {", col);
         for (int input_col = left; input_col < 8; input_col++) {
             int8_t weight = matrix[col * 8 + input_col];
             if (weight != 0) {
@@ -588,7 +589,7 @@ void print_function(FILE * stream, int scale_size, struct flow_interpolation_lin
 void print_short_luts(FILE * stream)
 {
     uint8_t reverse_lut[REVERSE_LUT_SIZE_SHORT];
-    fprintf(stream, "__attribute__((aligned(16)))\nstatic const uint8_t lut_linear_to_srgb[%d] = {\n",
+    fprintf(stream, "FLOW_ALIGN_16 static const uint8_t lut_linear_to_srgb[%d] = {\n",
             REVERSE_LUT_SIZE_SHORT);
     for (int a = 0; a < REVERSE_LUT_SIZE_SHORT / FLOW_bytes_PER_LINE; a++) {
         fprintf(stream, "    ");
@@ -605,7 +606,7 @@ void print_short_luts(FILE * stream)
     fprintf(stream, "};\n\n");
 
     uint16_t lut[256];
-    fprintf(stream, "__attribute__((aligned(16)))\nstatic const uint16_t lut_srgb_to_linear[256] = {\n");
+    fprintf(stream, "FLOW_ALIGN_16 static const uint16_t lut_srgb_to_linear[256] = {\n");
     for (int a = 0; a < 256 / FLOW_shorts_PER_LINE; a++) {
         fprintf(stream, "    ");
         for (int b = 0; b < FLOW_shorts_PER_LINE; b++) {
@@ -684,7 +685,20 @@ void print_c_intro(FILE * stream)
                     "\"-ftree-vectorize\",                  \\\n"
                     "                                                 \"-ftree-vectorizer-verbose=7\")))\n"
                     "#else\n"
+        "#if defined(__GNUC__)\n"
                     "#define HOT __attribute__((hot))\n"
+                    "#else\n"
+                    "#define HOT\n"
+                    "#endif\n"
+                    "#endif\n"
+                    "#ifdef _MSC_VER\n"
+        "#define FLOW_EXPORT __declspec(dllexport)\n"
+                    "#define FLOW_ALIGN_16 __declspec(align(16))\n"
+                    "#define FLOW_ALIGN_16_VAR(X) __declspec(align(16)) X\n"
+                    "#else\n"
+        "#define FLOW_EXPORT\n"
+                    "#define FLOW_ALIGN_16 __attribute__((aligned(16)))\n"
+                    "#define FLOW_ALIGN_16_VAR(X) X __attribute__((aligned(16)))\n"
                     "#endif\n\n");
 }
 TEST_CASE("Generate code to disk", "")

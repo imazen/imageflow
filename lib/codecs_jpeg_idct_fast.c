@@ -10,8 +10,8 @@
 
 #if defined(__GNUC__) && !defined(__clang__)
 #define HOT                                                                                                            \
-    __attribute__((hot))                                                                                               \
-        __attribute__((optimize("-funsafe-math-optimizations", "-ftree-vectorize", "-ftree-vectorizer-verbose=7")))
+    __attribute__((hot)) __attribute__((optimize("-funsafe-math-optimizations", "-ftree-vectorize",                  \
+                                                 "-ftree-vectorizer-verbose=7")))
 #else
 #if defined(__GNUC__)
 #define HOT __attribute__((hot))
@@ -19,7 +19,6 @@
 #define HOT
 #endif
 #endif
-
 #ifdef _MSC_VER
 #define FLOW_EXPORT __declspec(dllexport)
 #define FLOW_ALIGN_16 __declspec(align(16))
@@ -57,6 +56,7 @@ FLOW_EXPORT void flow_scale_spatial_3x3(uint8_t input[64], uint8_t ** output_row
 FLOW_EXPORT void flow_scale_spatial_2x2(uint8_t input[64], uint8_t ** output_rows, uint32_t output_col) HOT;
 
 FLOW_EXPORT void flow_scale_spatial_1x1(uint8_t input[64], uint8_t ** output_rows, uint32_t output_col) HOT;
+
 
 #ifndef FLOW_GCC_IDCT
 void jpeg_idct_spatial_srgb_7x7(j_decompress_ptr cinfo, jpeg_component_info * compptr, JCOEFPTR coef_block,
@@ -381,38 +381,21 @@ FLOW_ALIGN_16 static const uint16_t lut_srgb_to_linear[256] = {
     3568, 3602, 3636, 3670, 3705, 3739, 3774, 3809, 3844, 3879, 3915, 3950, 3986, 4022, 4059, 4095,
 };
 
-void flow_scale_spatial_7x7(uint8_t input[64], uint8_t ** output_rows, uint32_t output_col)
-{
+FLOW_EXPORT void flow_scale_spatial_7x7(uint8_t input[64], uint8_t ** output_rows, uint32_t output_col){
     int32_t i, sum, j;
     FLOW_ALIGN_16_VAR(int32_t temp[48]);
-    FLOW_ALIGN_16_VAR(int32_t weights_for_col_0[]) = {
-        29, 3,
-    };
-    FLOW_ALIGN_16_VAR(int32_t weights_for_col_1[]) = {
-        -2, 103, 27,
-    };
-    FLOW_ALIGN_16_VAR(int32_t weights_for_col_2[]) = {
-        -3, 86, 45,
-    };
-    FLOW_ALIGN_16_VAR(int32_t weights_for_col_3[]) = {
-        -3, 67, 67, -3,
-    };
-    FLOW_ALIGN_16_VAR(int32_t weights_for_col_4[]) = {
-        45, 86, -3,
-    };
-    FLOW_ALIGN_16_VAR(int32_t weights_for_col_5[]) = {
-        27, 103, -2,
-    };
-    FLOW_ALIGN_16_VAR(int32_t weights_for_col_6[]) = {
-        3, 29,
-    };
+    FLOW_ALIGN_16_VAR(int32_t weights_for_col_0[]) = {29,3,};
+    FLOW_ALIGN_16_VAR(int32_t weights_for_col_1[]) = {-2,103,27,};
+    FLOW_ALIGN_16_VAR(int32_t weights_for_col_2[]) = {-3,86,45,};
+    FLOW_ALIGN_16_VAR(int32_t weights_for_col_3[]) = {-3,67,67,-3,};
+    FLOW_ALIGN_16_VAR(int32_t weights_for_col_4[]) = {45,86,-3,};
+    FLOW_ALIGN_16_VAR(int32_t weights_for_col_5[]) = {27,103,-2,};
+    FLOW_ALIGN_16_VAR(int32_t weights_for_col_6[]) = {3,29,};
 
     // Begin work for output row 0
-    for (i = 0; i < 8; i++)
-        temp[i + 0] = 29 * input[i + 0];
-    for (i = 0; i < 8; i++)
-        temp[i + 8] = 3 * input[i + 8];
-    for (i = 0; i < 8; i++) {
+    for (i = 0; i < 8; i++) temp[i +  0] =  29 * input[i +  0];
+    for (i = 0; i < 8; i++) temp[i +  8] =   3 * input[i +  8];
+    for (i = 0; i < 8; i++){
         sum = 0;
         for (j = 0; j < 2; j++)
             sum += temp[j * 8 + i];
@@ -420,76 +403,59 @@ void flow_scale_spatial_7x7(uint8_t input[64], uint8_t ** output_rows, uint32_t 
         temp[32 + i] = sum;
     }
     // Begin work for output pixel 0,0
-    for (i = 0; i < 2; i++)
-        temp[40 + i] = temp[32 + i] * weights_for_col_0[i];
+    for (i = 0; i < 2; i++) temp[40 + i] = temp[32 + i] * weights_for_col_0[i];
     sum = 512;
-    for (i = 0; i < 2; i++)
-        sum += temp[40 + i];
-    *(output_rows[0] + output_col + 0) = sum < 0 ? (uint8_t)0 : (sum >= 4194304 ? (uint8_t)255 : (uint8_t)(sum >> 10));
+    for (i = 0; i < 2; i++) sum += temp[40 + i];
+    *(output_rows[ 0] + output_col + 0) = sum < 0 ? (uint8_t)0 : (sum >= 4194304 ? (uint8_t)255 : (uint8_t)(sum >> 10));
     // Pixel 0,0 complete
 
     // Begin work for output pixel 1,0
-    for (i = 0; i < 3; i++)
-        temp[40 + i] = temp[32 + i] * weights_for_col_1[i];
+    for (i = 0; i < 3; i++) temp[40 + i] = temp[32 + i] * weights_for_col_1[i];
     sum = 2048;
-    for (i = 0; i < 3; i++)
-        sum += temp[40 + i];
-    *(output_rows[0] + output_col + 1) = sum < 0 ? (uint8_t)0 : (sum >= 16777216 ? (uint8_t)255 : (uint8_t)(sum >> 12));
+    for (i = 0; i < 3; i++) sum += temp[40 + i];
+    *(output_rows[ 0] + output_col + 1) = sum < 0 ? (uint8_t)0 : (sum >= 16777216 ? (uint8_t)255 : (uint8_t)(sum >> 12));
     // Pixel 1,0 complete
 
     // Begin work for output pixel 2,0
-    for (i = 0; i < 3; i++)
-        temp[40 + i] = temp[33 + i] * weights_for_col_2[i];
+    for (i = 0; i < 3; i++) temp[40 + i] = temp[33 + i] * weights_for_col_2[i];
     sum = 2048;
-    for (i = 0; i < 3; i++)
-        sum += temp[40 + i];
-    *(output_rows[0] + output_col + 2) = sum < 0 ? (uint8_t)0 : (sum >= 16777216 ? (uint8_t)255 : (uint8_t)(sum >> 12));
+    for (i = 0; i < 3; i++) sum += temp[40 + i];
+    *(output_rows[ 0] + output_col + 2) = sum < 0 ? (uint8_t)0 : (sum >= 16777216 ? (uint8_t)255 : (uint8_t)(sum >> 12));
     // Pixel 2,0 complete
 
     // Begin work for output pixel 3,0
-    for (i = 0; i < 4; i++)
-        temp[40 + i] = temp[34 + i] * weights_for_col_3[i];
+    for (i = 0; i < 4; i++) temp[40 + i] = temp[34 + i] * weights_for_col_3[i];
     sum = 2048;
-    for (i = 0; i < 4; i++)
-        sum += temp[40 + i];
-    *(output_rows[0] + output_col + 3) = sum < 0 ? (uint8_t)0 : (sum >= 16777216 ? (uint8_t)255 : (uint8_t)(sum >> 12));
+    for (i = 0; i < 4; i++) sum += temp[40 + i];
+    *(output_rows[ 0] + output_col + 3) = sum < 0 ? (uint8_t)0 : (sum >= 16777216 ? (uint8_t)255 : (uint8_t)(sum >> 12));
     // Pixel 3,0 complete
 
     // Begin work for output pixel 4,0
-    for (i = 0; i < 3; i++)
-        temp[40 + i] = temp[36 + i] * weights_for_col_4[i];
+    for (i = 0; i < 3; i++) temp[40 + i] = temp[36 + i] * weights_for_col_4[i];
     sum = 2048;
-    for (i = 0; i < 3; i++)
-        sum += temp[40 + i];
-    *(output_rows[0] + output_col + 4) = sum < 0 ? (uint8_t)0 : (sum >= 16777216 ? (uint8_t)255 : (uint8_t)(sum >> 12));
+    for (i = 0; i < 3; i++) sum += temp[40 + i];
+    *(output_rows[ 0] + output_col + 4) = sum < 0 ? (uint8_t)0 : (sum >= 16777216 ? (uint8_t)255 : (uint8_t)(sum >> 12));
     // Pixel 4,0 complete
 
     // Begin work for output pixel 5,0
-    for (i = 0; i < 3; i++)
-        temp[40 + i] = temp[37 + i] * weights_for_col_5[i];
+    for (i = 0; i < 3; i++) temp[40 + i] = temp[37 + i] * weights_for_col_5[i];
     sum = 2048;
-    for (i = 0; i < 3; i++)
-        sum += temp[40 + i];
-    *(output_rows[0] + output_col + 5) = sum < 0 ? (uint8_t)0 : (sum >= 16777216 ? (uint8_t)255 : (uint8_t)(sum >> 12));
+    for (i = 0; i < 3; i++) sum += temp[40 + i];
+    *(output_rows[ 0] + output_col + 5) = sum < 0 ? (uint8_t)0 : (sum >= 16777216 ? (uint8_t)255 : (uint8_t)(sum >> 12));
     // Pixel 5,0 complete
 
     // Begin work for output pixel 6,0
-    for (i = 0; i < 2; i++)
-        temp[40 + i] = temp[38 + i] * weights_for_col_6[i];
+    for (i = 0; i < 2; i++) temp[40 + i] = temp[38 + i] * weights_for_col_6[i];
     sum = 512;
-    for (i = 0; i < 2; i++)
-        sum += temp[40 + i];
-    *(output_rows[0] + output_col + 6) = sum < 0 ? (uint8_t)0 : (sum >= 4194304 ? (uint8_t)255 : (uint8_t)(sum >> 10));
+    for (i = 0; i < 2; i++) sum += temp[40 + i];
+    *(output_rows[ 0] + output_col + 6) = sum < 0 ? (uint8_t)0 : (sum >= 4194304 ? (uint8_t)255 : (uint8_t)(sum >> 10));
     // Pixel 6,0 complete
 
     // Begin work for output row 1
-    for (i = 0; i < 8; i++)
-        temp[i + 0] = -2 * input[i + 0];
-    for (i = 0; i < 8; i++)
-        temp[i + 8] = 103 * input[i + 8];
-    for (i = 0; i < 8; i++)
-        temp[i + 16] = 27 * input[i + 16];
-    for (i = 0; i < 8; i++) {
+    for (i = 0; i < 8; i++) temp[i +  0] =  -2 * input[i +  0];
+    for (i = 0; i < 8; i++) temp[i +  8] = 103 * input[i +  8];
+    for (i = 0; i < 8; i++) temp[i + 16] =  27 * input[i + 16];
+    for (i = 0; i < 8; i++){
         sum = 0;
         for (j = 0; j < 3; j++)
             sum += temp[j * 8 + i];
@@ -497,76 +463,59 @@ void flow_scale_spatial_7x7(uint8_t input[64], uint8_t ** output_rows, uint32_t 
         temp[32 + i] = sum;
     }
     // Begin work for output pixel 0,1
-    for (i = 0; i < 2; i++)
-        temp[40 + i] = temp[32 + i] * weights_for_col_0[i];
+    for (i = 0; i < 2; i++) temp[40 + i] = temp[32 + i] * weights_for_col_0[i];
     sum = 2048;
-    for (i = 0; i < 2; i++)
-        sum += temp[40 + i];
-    *(output_rows[1] + output_col + 0) = sum < 0 ? (uint8_t)0 : (sum >= 16777216 ? (uint8_t)255 : (uint8_t)(sum >> 12));
+    for (i = 0; i < 2; i++) sum += temp[40 + i];
+    *(output_rows[ 1] + output_col + 0) = sum < 0 ? (uint8_t)0 : (sum >= 16777216 ? (uint8_t)255 : (uint8_t)(sum >> 12));
     // Pixel 0,1 complete
 
     // Begin work for output pixel 1,1
-    for (i = 0; i < 3; i++)
-        temp[40 + i] = temp[32 + i] * weights_for_col_1[i];
+    for (i = 0; i < 3; i++) temp[40 + i] = temp[32 + i] * weights_for_col_1[i];
     sum = 8192;
-    for (i = 0; i < 3; i++)
-        sum += temp[40 + i];
-    *(output_rows[1] + output_col + 1) = sum < 0 ? (uint8_t)0 : (sum >= 67108864 ? (uint8_t)255 : (uint8_t)(sum >> 14));
+    for (i = 0; i < 3; i++) sum += temp[40 + i];
+    *(output_rows[ 1] + output_col + 1) = sum < 0 ? (uint8_t)0 : (sum >= 67108864 ? (uint8_t)255 : (uint8_t)(sum >> 14));
     // Pixel 1,1 complete
 
     // Begin work for output pixel 2,1
-    for (i = 0; i < 3; i++)
-        temp[40 + i] = temp[33 + i] * weights_for_col_2[i];
+    for (i = 0; i < 3; i++) temp[40 + i] = temp[33 + i] * weights_for_col_2[i];
     sum = 8192;
-    for (i = 0; i < 3; i++)
-        sum += temp[40 + i];
-    *(output_rows[1] + output_col + 2) = sum < 0 ? (uint8_t)0 : (sum >= 67108864 ? (uint8_t)255 : (uint8_t)(sum >> 14));
+    for (i = 0; i < 3; i++) sum += temp[40 + i];
+    *(output_rows[ 1] + output_col + 2) = sum < 0 ? (uint8_t)0 : (sum >= 67108864 ? (uint8_t)255 : (uint8_t)(sum >> 14));
     // Pixel 2,1 complete
 
     // Begin work for output pixel 3,1
-    for (i = 0; i < 4; i++)
-        temp[40 + i] = temp[34 + i] * weights_for_col_3[i];
+    for (i = 0; i < 4; i++) temp[40 + i] = temp[34 + i] * weights_for_col_3[i];
     sum = 8192;
-    for (i = 0; i < 4; i++)
-        sum += temp[40 + i];
-    *(output_rows[1] + output_col + 3) = sum < 0 ? (uint8_t)0 : (sum >= 67108864 ? (uint8_t)255 : (uint8_t)(sum >> 14));
+    for (i = 0; i < 4; i++) sum += temp[40 + i];
+    *(output_rows[ 1] + output_col + 3) = sum < 0 ? (uint8_t)0 : (sum >= 67108864 ? (uint8_t)255 : (uint8_t)(sum >> 14));
     // Pixel 3,1 complete
 
     // Begin work for output pixel 4,1
-    for (i = 0; i < 3; i++)
-        temp[40 + i] = temp[36 + i] * weights_for_col_4[i];
+    for (i = 0; i < 3; i++) temp[40 + i] = temp[36 + i] * weights_for_col_4[i];
     sum = 8192;
-    for (i = 0; i < 3; i++)
-        sum += temp[40 + i];
-    *(output_rows[1] + output_col + 4) = sum < 0 ? (uint8_t)0 : (sum >= 67108864 ? (uint8_t)255 : (uint8_t)(sum >> 14));
+    for (i = 0; i < 3; i++) sum += temp[40 + i];
+    *(output_rows[ 1] + output_col + 4) = sum < 0 ? (uint8_t)0 : (sum >= 67108864 ? (uint8_t)255 : (uint8_t)(sum >> 14));
     // Pixel 4,1 complete
 
     // Begin work for output pixel 5,1
-    for (i = 0; i < 3; i++)
-        temp[40 + i] = temp[37 + i] * weights_for_col_5[i];
+    for (i = 0; i < 3; i++) temp[40 + i] = temp[37 + i] * weights_for_col_5[i];
     sum = 8192;
-    for (i = 0; i < 3; i++)
-        sum += temp[40 + i];
-    *(output_rows[1] + output_col + 5) = sum < 0 ? (uint8_t)0 : (sum >= 67108864 ? (uint8_t)255 : (uint8_t)(sum >> 14));
+    for (i = 0; i < 3; i++) sum += temp[40 + i];
+    *(output_rows[ 1] + output_col + 5) = sum < 0 ? (uint8_t)0 : (sum >= 67108864 ? (uint8_t)255 : (uint8_t)(sum >> 14));
     // Pixel 5,1 complete
 
     // Begin work for output pixel 6,1
-    for (i = 0; i < 2; i++)
-        temp[40 + i] = temp[38 + i] * weights_for_col_6[i];
+    for (i = 0; i < 2; i++) temp[40 + i] = temp[38 + i] * weights_for_col_6[i];
     sum = 2048;
-    for (i = 0; i < 2; i++)
-        sum += temp[40 + i];
-    *(output_rows[1] + output_col + 6) = sum < 0 ? (uint8_t)0 : (sum >= 16777216 ? (uint8_t)255 : (uint8_t)(sum >> 12));
+    for (i = 0; i < 2; i++) sum += temp[40 + i];
+    *(output_rows[ 1] + output_col + 6) = sum < 0 ? (uint8_t)0 : (sum >= 16777216 ? (uint8_t)255 : (uint8_t)(sum >> 12));
     // Pixel 6,1 complete
 
     // Begin work for output row 2
-    for (i = 0; i < 8; i++)
-        temp[i + 0] = -3 * input[i + 8];
-    for (i = 0; i < 8; i++)
-        temp[i + 8] = 86 * input[i + 16];
-    for (i = 0; i < 8; i++)
-        temp[i + 16] = 45 * input[i + 24];
-    for (i = 0; i < 8; i++) {
+    for (i = 0; i < 8; i++) temp[i +  0] =  -3 * input[i +  8];
+    for (i = 0; i < 8; i++) temp[i +  8] =  86 * input[i + 16];
+    for (i = 0; i < 8; i++) temp[i + 16] =  45 * input[i + 24];
+    for (i = 0; i < 8; i++){
         sum = 0;
         for (j = 0; j < 3; j++)
             sum += temp[j * 8 + i];
@@ -574,78 +523,60 @@ void flow_scale_spatial_7x7(uint8_t input[64], uint8_t ** output_rows, uint32_t 
         temp[32 + i] = sum;
     }
     // Begin work for output pixel 0,2
-    for (i = 0; i < 2; i++)
-        temp[40 + i] = temp[32 + i] * weights_for_col_0[i];
+    for (i = 0; i < 2; i++) temp[40 + i] = temp[32 + i] * weights_for_col_0[i];
     sum = 2048;
-    for (i = 0; i < 2; i++)
-        sum += temp[40 + i];
-    *(output_rows[2] + output_col + 0) = sum < 0 ? (uint8_t)0 : (sum >= 16777216 ? (uint8_t)255 : (uint8_t)(sum >> 12));
+    for (i = 0; i < 2; i++) sum += temp[40 + i];
+    *(output_rows[ 2] + output_col + 0) = sum < 0 ? (uint8_t)0 : (sum >= 16777216 ? (uint8_t)255 : (uint8_t)(sum >> 12));
     // Pixel 0,2 complete
 
     // Begin work for output pixel 1,2
-    for (i = 0; i < 3; i++)
-        temp[40 + i] = temp[32 + i] * weights_for_col_1[i];
+    for (i = 0; i < 3; i++) temp[40 + i] = temp[32 + i] * weights_for_col_1[i];
     sum = 8192;
-    for (i = 0; i < 3; i++)
-        sum += temp[40 + i];
-    *(output_rows[2] + output_col + 1) = sum < 0 ? (uint8_t)0 : (sum >= 67108864 ? (uint8_t)255 : (uint8_t)(sum >> 14));
+    for (i = 0; i < 3; i++) sum += temp[40 + i];
+    *(output_rows[ 2] + output_col + 1) = sum < 0 ? (uint8_t)0 : (sum >= 67108864 ? (uint8_t)255 : (uint8_t)(sum >> 14));
     // Pixel 1,2 complete
 
     // Begin work for output pixel 2,2
-    for (i = 0; i < 3; i++)
-        temp[40 + i] = temp[33 + i] * weights_for_col_2[i];
+    for (i = 0; i < 3; i++) temp[40 + i] = temp[33 + i] * weights_for_col_2[i];
     sum = 8192;
-    for (i = 0; i < 3; i++)
-        sum += temp[40 + i];
-    *(output_rows[2] + output_col + 2) = sum < 0 ? (uint8_t)0 : (sum >= 67108864 ? (uint8_t)255 : (uint8_t)(sum >> 14));
+    for (i = 0; i < 3; i++) sum += temp[40 + i];
+    *(output_rows[ 2] + output_col + 2) = sum < 0 ? (uint8_t)0 : (sum >= 67108864 ? (uint8_t)255 : (uint8_t)(sum >> 14));
     // Pixel 2,2 complete
 
     // Begin work for output pixel 3,2
-    for (i = 0; i < 4; i++)
-        temp[40 + i] = temp[34 + i] * weights_for_col_3[i];
+    for (i = 0; i < 4; i++) temp[40 + i] = temp[34 + i] * weights_for_col_3[i];
     sum = 8192;
-    for (i = 0; i < 4; i++)
-        sum += temp[40 + i];
-    *(output_rows[2] + output_col + 3) = sum < 0 ? (uint8_t)0 : (sum >= 67108864 ? (uint8_t)255 : (uint8_t)(sum >> 14));
+    for (i = 0; i < 4; i++) sum += temp[40 + i];
+    *(output_rows[ 2] + output_col + 3) = sum < 0 ? (uint8_t)0 : (sum >= 67108864 ? (uint8_t)255 : (uint8_t)(sum >> 14));
     // Pixel 3,2 complete
 
     // Begin work for output pixel 4,2
-    for (i = 0; i < 3; i++)
-        temp[40 + i] = temp[36 + i] * weights_for_col_4[i];
+    for (i = 0; i < 3; i++) temp[40 + i] = temp[36 + i] * weights_for_col_4[i];
     sum = 8192;
-    for (i = 0; i < 3; i++)
-        sum += temp[40 + i];
-    *(output_rows[2] + output_col + 4) = sum < 0 ? (uint8_t)0 : (sum >= 67108864 ? (uint8_t)255 : (uint8_t)(sum >> 14));
+    for (i = 0; i < 3; i++) sum += temp[40 + i];
+    *(output_rows[ 2] + output_col + 4) = sum < 0 ? (uint8_t)0 : (sum >= 67108864 ? (uint8_t)255 : (uint8_t)(sum >> 14));
     // Pixel 4,2 complete
 
     // Begin work for output pixel 5,2
-    for (i = 0; i < 3; i++)
-        temp[40 + i] = temp[37 + i] * weights_for_col_5[i];
+    for (i = 0; i < 3; i++) temp[40 + i] = temp[37 + i] * weights_for_col_5[i];
     sum = 8192;
-    for (i = 0; i < 3; i++)
-        sum += temp[40 + i];
-    *(output_rows[2] + output_col + 5) = sum < 0 ? (uint8_t)0 : (sum >= 67108864 ? (uint8_t)255 : (uint8_t)(sum >> 14));
+    for (i = 0; i < 3; i++) sum += temp[40 + i];
+    *(output_rows[ 2] + output_col + 5) = sum < 0 ? (uint8_t)0 : (sum >= 67108864 ? (uint8_t)255 : (uint8_t)(sum >> 14));
     // Pixel 5,2 complete
 
     // Begin work for output pixel 6,2
-    for (i = 0; i < 2; i++)
-        temp[40 + i] = temp[38 + i] * weights_for_col_6[i];
+    for (i = 0; i < 2; i++) temp[40 + i] = temp[38 + i] * weights_for_col_6[i];
     sum = 2048;
-    for (i = 0; i < 2; i++)
-        sum += temp[40 + i];
-    *(output_rows[2] + output_col + 6) = sum < 0 ? (uint8_t)0 : (sum >= 16777216 ? (uint8_t)255 : (uint8_t)(sum >> 12));
+    for (i = 0; i < 2; i++) sum += temp[40 + i];
+    *(output_rows[ 2] + output_col + 6) = sum < 0 ? (uint8_t)0 : (sum >= 16777216 ? (uint8_t)255 : (uint8_t)(sum >> 12));
     // Pixel 6,2 complete
 
     // Begin work for output row 3
-    for (i = 0; i < 8; i++)
-        temp[i + 0] = -3 * input[i + 16];
-    for (i = 0; i < 8; i++)
-        temp[i + 8] = 67 * input[i + 24];
-    for (i = 0; i < 8; i++)
-        temp[i + 16] = 67 * input[i + 32];
-    for (i = 0; i < 8; i++)
-        temp[i + 24] = -3 * input[i + 40];
-    for (i = 0; i < 8; i++) {
+    for (i = 0; i < 8; i++) temp[i +  0] =  -3 * input[i + 16];
+    for (i = 0; i < 8; i++) temp[i +  8] =  67 * input[i + 24];
+    for (i = 0; i < 8; i++) temp[i + 16] =  67 * input[i + 32];
+    for (i = 0; i < 8; i++) temp[i + 24] =  -3 * input[i + 40];
+    for (i = 0; i < 8; i++){
         sum = 0;
         for (j = 0; j < 4; j++)
             sum += temp[j * 8 + i];
@@ -653,76 +584,59 @@ void flow_scale_spatial_7x7(uint8_t input[64], uint8_t ** output_rows, uint32_t 
         temp[32 + i] = sum;
     }
     // Begin work for output pixel 0,3
-    for (i = 0; i < 2; i++)
-        temp[40 + i] = temp[32 + i] * weights_for_col_0[i];
+    for (i = 0; i < 2; i++) temp[40 + i] = temp[32 + i] * weights_for_col_0[i];
     sum = 2048;
-    for (i = 0; i < 2; i++)
-        sum += temp[40 + i];
-    *(output_rows[3] + output_col + 0) = sum < 0 ? (uint8_t)0 : (sum >= 16777216 ? (uint8_t)255 : (uint8_t)(sum >> 12));
+    for (i = 0; i < 2; i++) sum += temp[40 + i];
+    *(output_rows[ 3] + output_col + 0) = sum < 0 ? (uint8_t)0 : (sum >= 16777216 ? (uint8_t)255 : (uint8_t)(sum >> 12));
     // Pixel 0,3 complete
 
     // Begin work for output pixel 1,3
-    for (i = 0; i < 3; i++)
-        temp[40 + i] = temp[32 + i] * weights_for_col_1[i];
+    for (i = 0; i < 3; i++) temp[40 + i] = temp[32 + i] * weights_for_col_1[i];
     sum = 8192;
-    for (i = 0; i < 3; i++)
-        sum += temp[40 + i];
-    *(output_rows[3] + output_col + 1) = sum < 0 ? (uint8_t)0 : (sum >= 67108864 ? (uint8_t)255 : (uint8_t)(sum >> 14));
+    for (i = 0; i < 3; i++) sum += temp[40 + i];
+    *(output_rows[ 3] + output_col + 1) = sum < 0 ? (uint8_t)0 : (sum >= 67108864 ? (uint8_t)255 : (uint8_t)(sum >> 14));
     // Pixel 1,3 complete
 
     // Begin work for output pixel 2,3
-    for (i = 0; i < 3; i++)
-        temp[40 + i] = temp[33 + i] * weights_for_col_2[i];
+    for (i = 0; i < 3; i++) temp[40 + i] = temp[33 + i] * weights_for_col_2[i];
     sum = 8192;
-    for (i = 0; i < 3; i++)
-        sum += temp[40 + i];
-    *(output_rows[3] + output_col + 2) = sum < 0 ? (uint8_t)0 : (sum >= 67108864 ? (uint8_t)255 : (uint8_t)(sum >> 14));
+    for (i = 0; i < 3; i++) sum += temp[40 + i];
+    *(output_rows[ 3] + output_col + 2) = sum < 0 ? (uint8_t)0 : (sum >= 67108864 ? (uint8_t)255 : (uint8_t)(sum >> 14));
     // Pixel 2,3 complete
 
     // Begin work for output pixel 3,3
-    for (i = 0; i < 4; i++)
-        temp[40 + i] = temp[34 + i] * weights_for_col_3[i];
+    for (i = 0; i < 4; i++) temp[40 + i] = temp[34 + i] * weights_for_col_3[i];
     sum = 8192;
-    for (i = 0; i < 4; i++)
-        sum += temp[40 + i];
-    *(output_rows[3] + output_col + 3) = sum < 0 ? (uint8_t)0 : (sum >= 67108864 ? (uint8_t)255 : (uint8_t)(sum >> 14));
+    for (i = 0; i < 4; i++) sum += temp[40 + i];
+    *(output_rows[ 3] + output_col + 3) = sum < 0 ? (uint8_t)0 : (sum >= 67108864 ? (uint8_t)255 : (uint8_t)(sum >> 14));
     // Pixel 3,3 complete
 
     // Begin work for output pixel 4,3
-    for (i = 0; i < 3; i++)
-        temp[40 + i] = temp[36 + i] * weights_for_col_4[i];
+    for (i = 0; i < 3; i++) temp[40 + i] = temp[36 + i] * weights_for_col_4[i];
     sum = 8192;
-    for (i = 0; i < 3; i++)
-        sum += temp[40 + i];
-    *(output_rows[3] + output_col + 4) = sum < 0 ? (uint8_t)0 : (sum >= 67108864 ? (uint8_t)255 : (uint8_t)(sum >> 14));
+    for (i = 0; i < 3; i++) sum += temp[40 + i];
+    *(output_rows[ 3] + output_col + 4) = sum < 0 ? (uint8_t)0 : (sum >= 67108864 ? (uint8_t)255 : (uint8_t)(sum >> 14));
     // Pixel 4,3 complete
 
     // Begin work for output pixel 5,3
-    for (i = 0; i < 3; i++)
-        temp[40 + i] = temp[37 + i] * weights_for_col_5[i];
+    for (i = 0; i < 3; i++) temp[40 + i] = temp[37 + i] * weights_for_col_5[i];
     sum = 8192;
-    for (i = 0; i < 3; i++)
-        sum += temp[40 + i];
-    *(output_rows[3] + output_col + 5) = sum < 0 ? (uint8_t)0 : (sum >= 67108864 ? (uint8_t)255 : (uint8_t)(sum >> 14));
+    for (i = 0; i < 3; i++) sum += temp[40 + i];
+    *(output_rows[ 3] + output_col + 5) = sum < 0 ? (uint8_t)0 : (sum >= 67108864 ? (uint8_t)255 : (uint8_t)(sum >> 14));
     // Pixel 5,3 complete
 
     // Begin work for output pixel 6,3
-    for (i = 0; i < 2; i++)
-        temp[40 + i] = temp[38 + i] * weights_for_col_6[i];
+    for (i = 0; i < 2; i++) temp[40 + i] = temp[38 + i] * weights_for_col_6[i];
     sum = 2048;
-    for (i = 0; i < 2; i++)
-        sum += temp[40 + i];
-    *(output_rows[3] + output_col + 6) = sum < 0 ? (uint8_t)0 : (sum >= 16777216 ? (uint8_t)255 : (uint8_t)(sum >> 12));
+    for (i = 0; i < 2; i++) sum += temp[40 + i];
+    *(output_rows[ 3] + output_col + 6) = sum < 0 ? (uint8_t)0 : (sum >= 16777216 ? (uint8_t)255 : (uint8_t)(sum >> 12));
     // Pixel 6,3 complete
 
     // Begin work for output row 4
-    for (i = 0; i < 8; i++)
-        temp[i + 0] = 45 * input[i + 32];
-    for (i = 0; i < 8; i++)
-        temp[i + 8] = 86 * input[i + 40];
-    for (i = 0; i < 8; i++)
-        temp[i + 16] = -3 * input[i + 48];
-    for (i = 0; i < 8; i++) {
+    for (i = 0; i < 8; i++) temp[i +  0] =  45 * input[i + 32];
+    for (i = 0; i < 8; i++) temp[i +  8] =  86 * input[i + 40];
+    for (i = 0; i < 8; i++) temp[i + 16] =  -3 * input[i + 48];
+    for (i = 0; i < 8; i++){
         sum = 0;
         for (j = 0; j < 3; j++)
             sum += temp[j * 8 + i];
@@ -730,76 +644,59 @@ void flow_scale_spatial_7x7(uint8_t input[64], uint8_t ** output_rows, uint32_t 
         temp[32 + i] = sum;
     }
     // Begin work for output pixel 0,4
-    for (i = 0; i < 2; i++)
-        temp[40 + i] = temp[32 + i] * weights_for_col_0[i];
+    for (i = 0; i < 2; i++) temp[40 + i] = temp[32 + i] * weights_for_col_0[i];
     sum = 2048;
-    for (i = 0; i < 2; i++)
-        sum += temp[40 + i];
-    *(output_rows[4] + output_col + 0) = sum < 0 ? (uint8_t)0 : (sum >= 16777216 ? (uint8_t)255 : (uint8_t)(sum >> 12));
+    for (i = 0; i < 2; i++) sum += temp[40 + i];
+    *(output_rows[ 4] + output_col + 0) = sum < 0 ? (uint8_t)0 : (sum >= 16777216 ? (uint8_t)255 : (uint8_t)(sum >> 12));
     // Pixel 0,4 complete
 
     // Begin work for output pixel 1,4
-    for (i = 0; i < 3; i++)
-        temp[40 + i] = temp[32 + i] * weights_for_col_1[i];
+    for (i = 0; i < 3; i++) temp[40 + i] = temp[32 + i] * weights_for_col_1[i];
     sum = 8192;
-    for (i = 0; i < 3; i++)
-        sum += temp[40 + i];
-    *(output_rows[4] + output_col + 1) = sum < 0 ? (uint8_t)0 : (sum >= 67108864 ? (uint8_t)255 : (uint8_t)(sum >> 14));
+    for (i = 0; i < 3; i++) sum += temp[40 + i];
+    *(output_rows[ 4] + output_col + 1) = sum < 0 ? (uint8_t)0 : (sum >= 67108864 ? (uint8_t)255 : (uint8_t)(sum >> 14));
     // Pixel 1,4 complete
 
     // Begin work for output pixel 2,4
-    for (i = 0; i < 3; i++)
-        temp[40 + i] = temp[33 + i] * weights_for_col_2[i];
+    for (i = 0; i < 3; i++) temp[40 + i] = temp[33 + i] * weights_for_col_2[i];
     sum = 8192;
-    for (i = 0; i < 3; i++)
-        sum += temp[40 + i];
-    *(output_rows[4] + output_col + 2) = sum < 0 ? (uint8_t)0 : (sum >= 67108864 ? (uint8_t)255 : (uint8_t)(sum >> 14));
+    for (i = 0; i < 3; i++) sum += temp[40 + i];
+    *(output_rows[ 4] + output_col + 2) = sum < 0 ? (uint8_t)0 : (sum >= 67108864 ? (uint8_t)255 : (uint8_t)(sum >> 14));
     // Pixel 2,4 complete
 
     // Begin work for output pixel 3,4
-    for (i = 0; i < 4; i++)
-        temp[40 + i] = temp[34 + i] * weights_for_col_3[i];
+    for (i = 0; i < 4; i++) temp[40 + i] = temp[34 + i] * weights_for_col_3[i];
     sum = 8192;
-    for (i = 0; i < 4; i++)
-        sum += temp[40 + i];
-    *(output_rows[4] + output_col + 3) = sum < 0 ? (uint8_t)0 : (sum >= 67108864 ? (uint8_t)255 : (uint8_t)(sum >> 14));
+    for (i = 0; i < 4; i++) sum += temp[40 + i];
+    *(output_rows[ 4] + output_col + 3) = sum < 0 ? (uint8_t)0 : (sum >= 67108864 ? (uint8_t)255 : (uint8_t)(sum >> 14));
     // Pixel 3,4 complete
 
     // Begin work for output pixel 4,4
-    for (i = 0; i < 3; i++)
-        temp[40 + i] = temp[36 + i] * weights_for_col_4[i];
+    for (i = 0; i < 3; i++) temp[40 + i] = temp[36 + i] * weights_for_col_4[i];
     sum = 8192;
-    for (i = 0; i < 3; i++)
-        sum += temp[40 + i];
-    *(output_rows[4] + output_col + 4) = sum < 0 ? (uint8_t)0 : (sum >= 67108864 ? (uint8_t)255 : (uint8_t)(sum >> 14));
+    for (i = 0; i < 3; i++) sum += temp[40 + i];
+    *(output_rows[ 4] + output_col + 4) = sum < 0 ? (uint8_t)0 : (sum >= 67108864 ? (uint8_t)255 : (uint8_t)(sum >> 14));
     // Pixel 4,4 complete
 
     // Begin work for output pixel 5,4
-    for (i = 0; i < 3; i++)
-        temp[40 + i] = temp[37 + i] * weights_for_col_5[i];
+    for (i = 0; i < 3; i++) temp[40 + i] = temp[37 + i] * weights_for_col_5[i];
     sum = 8192;
-    for (i = 0; i < 3; i++)
-        sum += temp[40 + i];
-    *(output_rows[4] + output_col + 5) = sum < 0 ? (uint8_t)0 : (sum >= 67108864 ? (uint8_t)255 : (uint8_t)(sum >> 14));
+    for (i = 0; i < 3; i++) sum += temp[40 + i];
+    *(output_rows[ 4] + output_col + 5) = sum < 0 ? (uint8_t)0 : (sum >= 67108864 ? (uint8_t)255 : (uint8_t)(sum >> 14));
     // Pixel 5,4 complete
 
     // Begin work for output pixel 6,4
-    for (i = 0; i < 2; i++)
-        temp[40 + i] = temp[38 + i] * weights_for_col_6[i];
+    for (i = 0; i < 2; i++) temp[40 + i] = temp[38 + i] * weights_for_col_6[i];
     sum = 2048;
-    for (i = 0; i < 2; i++)
-        sum += temp[40 + i];
-    *(output_rows[4] + output_col + 6) = sum < 0 ? (uint8_t)0 : (sum >= 16777216 ? (uint8_t)255 : (uint8_t)(sum >> 12));
+    for (i = 0; i < 2; i++) sum += temp[40 + i];
+    *(output_rows[ 4] + output_col + 6) = sum < 0 ? (uint8_t)0 : (sum >= 16777216 ? (uint8_t)255 : (uint8_t)(sum >> 12));
     // Pixel 6,4 complete
 
     // Begin work for output row 5
-    for (i = 0; i < 8; i++)
-        temp[i + 0] = 27 * input[i + 40];
-    for (i = 0; i < 8; i++)
-        temp[i + 8] = 103 * input[i + 48];
-    for (i = 0; i < 8; i++)
-        temp[i + 16] = -2 * input[i + 56];
-    for (i = 0; i < 8; i++) {
+    for (i = 0; i < 8; i++) temp[i +  0] =  27 * input[i + 40];
+    for (i = 0; i < 8; i++) temp[i +  8] = 103 * input[i + 48];
+    for (i = 0; i < 8; i++) temp[i + 16] =  -2 * input[i + 56];
+    for (i = 0; i < 8; i++){
         sum = 0;
         for (j = 0; j < 3; j++)
             sum += temp[j * 8 + i];
@@ -807,74 +704,58 @@ void flow_scale_spatial_7x7(uint8_t input[64], uint8_t ** output_rows, uint32_t 
         temp[32 + i] = sum;
     }
     // Begin work for output pixel 0,5
-    for (i = 0; i < 2; i++)
-        temp[40 + i] = temp[32 + i] * weights_for_col_0[i];
+    for (i = 0; i < 2; i++) temp[40 + i] = temp[32 + i] * weights_for_col_0[i];
     sum = 2048;
-    for (i = 0; i < 2; i++)
-        sum += temp[40 + i];
-    *(output_rows[5] + output_col + 0) = sum < 0 ? (uint8_t)0 : (sum >= 16777216 ? (uint8_t)255 : (uint8_t)(sum >> 12));
+    for (i = 0; i < 2; i++) sum += temp[40 + i];
+    *(output_rows[ 5] + output_col + 0) = sum < 0 ? (uint8_t)0 : (sum >= 16777216 ? (uint8_t)255 : (uint8_t)(sum >> 12));
     // Pixel 0,5 complete
 
     // Begin work for output pixel 1,5
-    for (i = 0; i < 3; i++)
-        temp[40 + i] = temp[32 + i] * weights_for_col_1[i];
+    for (i = 0; i < 3; i++) temp[40 + i] = temp[32 + i] * weights_for_col_1[i];
     sum = 8192;
-    for (i = 0; i < 3; i++)
-        sum += temp[40 + i];
-    *(output_rows[5] + output_col + 1) = sum < 0 ? (uint8_t)0 : (sum >= 67108864 ? (uint8_t)255 : (uint8_t)(sum >> 14));
+    for (i = 0; i < 3; i++) sum += temp[40 + i];
+    *(output_rows[ 5] + output_col + 1) = sum < 0 ? (uint8_t)0 : (sum >= 67108864 ? (uint8_t)255 : (uint8_t)(sum >> 14));
     // Pixel 1,5 complete
 
     // Begin work for output pixel 2,5
-    for (i = 0; i < 3; i++)
-        temp[40 + i] = temp[33 + i] * weights_for_col_2[i];
+    for (i = 0; i < 3; i++) temp[40 + i] = temp[33 + i] * weights_for_col_2[i];
     sum = 8192;
-    for (i = 0; i < 3; i++)
-        sum += temp[40 + i];
-    *(output_rows[5] + output_col + 2) = sum < 0 ? (uint8_t)0 : (sum >= 67108864 ? (uint8_t)255 : (uint8_t)(sum >> 14));
+    for (i = 0; i < 3; i++) sum += temp[40 + i];
+    *(output_rows[ 5] + output_col + 2) = sum < 0 ? (uint8_t)0 : (sum >= 67108864 ? (uint8_t)255 : (uint8_t)(sum >> 14));
     // Pixel 2,5 complete
 
     // Begin work for output pixel 3,5
-    for (i = 0; i < 4; i++)
-        temp[40 + i] = temp[34 + i] * weights_for_col_3[i];
+    for (i = 0; i < 4; i++) temp[40 + i] = temp[34 + i] * weights_for_col_3[i];
     sum = 8192;
-    for (i = 0; i < 4; i++)
-        sum += temp[40 + i];
-    *(output_rows[5] + output_col + 3) = sum < 0 ? (uint8_t)0 : (sum >= 67108864 ? (uint8_t)255 : (uint8_t)(sum >> 14));
+    for (i = 0; i < 4; i++) sum += temp[40 + i];
+    *(output_rows[ 5] + output_col + 3) = sum < 0 ? (uint8_t)0 : (sum >= 67108864 ? (uint8_t)255 : (uint8_t)(sum >> 14));
     // Pixel 3,5 complete
 
     // Begin work for output pixel 4,5
-    for (i = 0; i < 3; i++)
-        temp[40 + i] = temp[36 + i] * weights_for_col_4[i];
+    for (i = 0; i < 3; i++) temp[40 + i] = temp[36 + i] * weights_for_col_4[i];
     sum = 8192;
-    for (i = 0; i < 3; i++)
-        sum += temp[40 + i];
-    *(output_rows[5] + output_col + 4) = sum < 0 ? (uint8_t)0 : (sum >= 67108864 ? (uint8_t)255 : (uint8_t)(sum >> 14));
+    for (i = 0; i < 3; i++) sum += temp[40 + i];
+    *(output_rows[ 5] + output_col + 4) = sum < 0 ? (uint8_t)0 : (sum >= 67108864 ? (uint8_t)255 : (uint8_t)(sum >> 14));
     // Pixel 4,5 complete
 
     // Begin work for output pixel 5,5
-    for (i = 0; i < 3; i++)
-        temp[40 + i] = temp[37 + i] * weights_for_col_5[i];
+    for (i = 0; i < 3; i++) temp[40 + i] = temp[37 + i] * weights_for_col_5[i];
     sum = 8192;
-    for (i = 0; i < 3; i++)
-        sum += temp[40 + i];
-    *(output_rows[5] + output_col + 5) = sum < 0 ? (uint8_t)0 : (sum >= 67108864 ? (uint8_t)255 : (uint8_t)(sum >> 14));
+    for (i = 0; i < 3; i++) sum += temp[40 + i];
+    *(output_rows[ 5] + output_col + 5) = sum < 0 ? (uint8_t)0 : (sum >= 67108864 ? (uint8_t)255 : (uint8_t)(sum >> 14));
     // Pixel 5,5 complete
 
     // Begin work for output pixel 6,5
-    for (i = 0; i < 2; i++)
-        temp[40 + i] = temp[38 + i] * weights_for_col_6[i];
+    for (i = 0; i < 2; i++) temp[40 + i] = temp[38 + i] * weights_for_col_6[i];
     sum = 2048;
-    for (i = 0; i < 2; i++)
-        sum += temp[40 + i];
-    *(output_rows[5] + output_col + 6) = sum < 0 ? (uint8_t)0 : (sum >= 16777216 ? (uint8_t)255 : (uint8_t)(sum >> 12));
+    for (i = 0; i < 2; i++) sum += temp[40 + i];
+    *(output_rows[ 5] + output_col + 6) = sum < 0 ? (uint8_t)0 : (sum >= 16777216 ? (uint8_t)255 : (uint8_t)(sum >> 12));
     // Pixel 6,5 complete
 
     // Begin work for output row 6
-    for (i = 0; i < 8; i++)
-        temp[i + 0] = 3 * input[i + 48];
-    for (i = 0; i < 8; i++)
-        temp[i + 8] = 29 * input[i + 56];
-    for (i = 0; i < 8; i++) {
+    for (i = 0; i < 8; i++) temp[i +  0] =   3 * input[i + 48];
+    for (i = 0; i < 8; i++) temp[i +  8] =  29 * input[i + 56];
+    for (i = 0; i < 8; i++){
         sum = 0;
         for (j = 0; j < 2; j++)
             sum += temp[j * 8 + i];
@@ -882,111 +763,82 @@ void flow_scale_spatial_7x7(uint8_t input[64], uint8_t ** output_rows, uint32_t 
         temp[32 + i] = sum;
     }
     // Begin work for output pixel 0,6
-    for (i = 0; i < 2; i++)
-        temp[40 + i] = temp[32 + i] * weights_for_col_0[i];
+    for (i = 0; i < 2; i++) temp[40 + i] = temp[32 + i] * weights_for_col_0[i];
     sum = 512;
-    for (i = 0; i < 2; i++)
-        sum += temp[40 + i];
-    *(output_rows[6] + output_col + 0) = sum < 0 ? (uint8_t)0 : (sum >= 4194304 ? (uint8_t)255 : (uint8_t)(sum >> 10));
+    for (i = 0; i < 2; i++) sum += temp[40 + i];
+    *(output_rows[ 6] + output_col + 0) = sum < 0 ? (uint8_t)0 : (sum >= 4194304 ? (uint8_t)255 : (uint8_t)(sum >> 10));
     // Pixel 0,6 complete
 
     // Begin work for output pixel 1,6
-    for (i = 0; i < 3; i++)
-        temp[40 + i] = temp[32 + i] * weights_for_col_1[i];
+    for (i = 0; i < 3; i++) temp[40 + i] = temp[32 + i] * weights_for_col_1[i];
     sum = 2048;
-    for (i = 0; i < 3; i++)
-        sum += temp[40 + i];
-    *(output_rows[6] + output_col + 1) = sum < 0 ? (uint8_t)0 : (sum >= 16777216 ? (uint8_t)255 : (uint8_t)(sum >> 12));
+    for (i = 0; i < 3; i++) sum += temp[40 + i];
+    *(output_rows[ 6] + output_col + 1) = sum < 0 ? (uint8_t)0 : (sum >= 16777216 ? (uint8_t)255 : (uint8_t)(sum >> 12));
     // Pixel 1,6 complete
 
     // Begin work for output pixel 2,6
-    for (i = 0; i < 3; i++)
-        temp[40 + i] = temp[33 + i] * weights_for_col_2[i];
+    for (i = 0; i < 3; i++) temp[40 + i] = temp[33 + i] * weights_for_col_2[i];
     sum = 2048;
-    for (i = 0; i < 3; i++)
-        sum += temp[40 + i];
-    *(output_rows[6] + output_col + 2) = sum < 0 ? (uint8_t)0 : (sum >= 16777216 ? (uint8_t)255 : (uint8_t)(sum >> 12));
+    for (i = 0; i < 3; i++) sum += temp[40 + i];
+    *(output_rows[ 6] + output_col + 2) = sum < 0 ? (uint8_t)0 : (sum >= 16777216 ? (uint8_t)255 : (uint8_t)(sum >> 12));
     // Pixel 2,6 complete
 
     // Begin work for output pixel 3,6
-    for (i = 0; i < 4; i++)
-        temp[40 + i] = temp[34 + i] * weights_for_col_3[i];
+    for (i = 0; i < 4; i++) temp[40 + i] = temp[34 + i] * weights_for_col_3[i];
     sum = 2048;
-    for (i = 0; i < 4; i++)
-        sum += temp[40 + i];
-    *(output_rows[6] + output_col + 3) = sum < 0 ? (uint8_t)0 : (sum >= 16777216 ? (uint8_t)255 : (uint8_t)(sum >> 12));
+    for (i = 0; i < 4; i++) sum += temp[40 + i];
+    *(output_rows[ 6] + output_col + 3) = sum < 0 ? (uint8_t)0 : (sum >= 16777216 ? (uint8_t)255 : (uint8_t)(sum >> 12));
     // Pixel 3,6 complete
 
     // Begin work for output pixel 4,6
-    for (i = 0; i < 3; i++)
-        temp[40 + i] = temp[36 + i] * weights_for_col_4[i];
+    for (i = 0; i < 3; i++) temp[40 + i] = temp[36 + i] * weights_for_col_4[i];
     sum = 2048;
-    for (i = 0; i < 3; i++)
-        sum += temp[40 + i];
-    *(output_rows[6] + output_col + 4) = sum < 0 ? (uint8_t)0 : (sum >= 16777216 ? (uint8_t)255 : (uint8_t)(sum >> 12));
+    for (i = 0; i < 3; i++) sum += temp[40 + i];
+    *(output_rows[ 6] + output_col + 4) = sum < 0 ? (uint8_t)0 : (sum >= 16777216 ? (uint8_t)255 : (uint8_t)(sum >> 12));
     // Pixel 4,6 complete
 
     // Begin work for output pixel 5,6
-    for (i = 0; i < 3; i++)
-        temp[40 + i] = temp[37 + i] * weights_for_col_5[i];
+    for (i = 0; i < 3; i++) temp[40 + i] = temp[37 + i] * weights_for_col_5[i];
     sum = 2048;
-    for (i = 0; i < 3; i++)
-        sum += temp[40 + i];
-    *(output_rows[6] + output_col + 5) = sum < 0 ? (uint8_t)0 : (sum >= 16777216 ? (uint8_t)255 : (uint8_t)(sum >> 12));
+    for (i = 0; i < 3; i++) sum += temp[40 + i];
+    *(output_rows[ 6] + output_col + 5) = sum < 0 ? (uint8_t)0 : (sum >= 16777216 ? (uint8_t)255 : (uint8_t)(sum >> 12));
     // Pixel 5,6 complete
 
     // Begin work for output pixel 6,6
-    for (i = 0; i < 2; i++)
-        temp[40 + i] = temp[38 + i] * weights_for_col_6[i];
+    for (i = 0; i < 2; i++) temp[40 + i] = temp[38 + i] * weights_for_col_6[i];
     sum = 512;
-    for (i = 0; i < 2; i++)
-        sum += temp[40 + i];
-    *(output_rows[6] + output_col + 6) = sum < 0 ? (uint8_t)0 : (sum >= 4194304 ? (uint8_t)255 : (uint8_t)(sum >> 10));
+    for (i = 0; i < 2; i++) sum += temp[40 + i];
+    *(output_rows[ 6] + output_col + 6) = sum < 0 ? (uint8_t)0 : (sum >= 4194304 ? (uint8_t)255 : (uint8_t)(sum >> 10));
     // Pixel 6,6 complete
 }
 
 #ifndef FLOW_GCC_IDCT
 void jpeg_idct_spatial_7x7(j_decompress_ptr cinfo, jpeg_component_info * compptr, JCOEFPTR coef_block,
-                           JSAMPARRAY output_buf, JDIMENSION output_col)
-{
+                           JSAMPARRAY output_buf, JDIMENSION output_col){
     JSAMPLE input[64];
-    JSAMPROW rows[8] = { &input[0],     &input[8],     &input[8 * 2], &input[8 * 3],
-                         &input[8 * 4], &input[8 * 5], &input[8 * 6], &input[8 * 7] };
+    JSAMPROW rows[8]
+        = { &input[0],     &input[8],     &input[8 * 2], &input[8 * 3],
+            &input[8 * 4], &input[8 * 5], &input[8 * 6], &input[8 * 7] };
     jpeg_idct_islow(cinfo, compptr, coef_block, &rows[0], 0);
 
     flow_scale_spatial_7x7(input, output_buf, output_col);
 }
 #endif
 
-void flow_scale_spatial_6x6(uint8_t input[64], uint8_t ** output_rows, uint32_t output_col)
-{
+FLOW_EXPORT void flow_scale_spatial_6x6(uint8_t input[64], uint8_t ** output_rows, uint32_t output_col){
     int32_t i, sum, j;
     FLOW_ALIGN_16_VAR(int32_t temp[48]);
-    FLOW_ALIGN_16_VAR(int32_t weights_for_col_0[]) = {
-        6, 2,
-    };
-    FLOW_ALIGN_16_VAR(int32_t weights_for_col_1[]) = {
-        -1, 33, 33, -1,
-    };
-    FLOW_ALIGN_16_VAR(int32_t weights_for_col_2[]) = {
-        31, 92, 5,
-    };
-    FLOW_ALIGN_16_VAR(int32_t weights_for_col_3[]) = {
-        5, 92, 31,
-    };
-    FLOW_ALIGN_16_VAR(int32_t weights_for_col_4[]) = {
-        -1, 33, 33, -1,
-    };
-    FLOW_ALIGN_16_VAR(int32_t weights_for_col_5[]) = {
-        2, 6,
-    };
+    FLOW_ALIGN_16_VAR(int32_t weights_for_col_0[]) = {6,2,};
+    FLOW_ALIGN_16_VAR(int32_t weights_for_col_1[]) = {-1,33,33,-1,};
+    FLOW_ALIGN_16_VAR(int32_t weights_for_col_2[]) = {31,92,5,};
+    FLOW_ALIGN_16_VAR(int32_t weights_for_col_3[]) = {5,92,31,};
+    FLOW_ALIGN_16_VAR(int32_t weights_for_col_4[]) = {-1,33,33,-1,};
+    FLOW_ALIGN_16_VAR(int32_t weights_for_col_5[]) = {2,6,};
 
     // Begin work for output row 0
-    for (i = 0; i < 8; i++)
-        temp[i + 0] = 6 * input[i + 0];
-    for (i = 0; i < 8; i++)
-        temp[i + 8] = 2 * input[i + 8];
-    for (i = 0; i < 8; i++) {
+    for (i = 0; i < 8; i++) temp[i +  0] =   6 * input[i +  0];
+    for (i = 0; i < 8; i++) temp[i +  8] =   2 * input[i +  8];
+    for (i = 0; i < 8; i++){
         sum = 0;
         for (j = 0; j < 2; j++)
             sum += temp[j * 8 + i];
@@ -994,69 +846,53 @@ void flow_scale_spatial_6x6(uint8_t input[64], uint8_t ** output_rows, uint32_t 
         temp[32 + i] = sum;
     }
     // Begin work for output pixel 0,0
-    for (i = 0; i < 2; i++)
-        temp[40 + i] = temp[32 + i] * weights_for_col_0[i];
+    for (i = 0; i < 2; i++) temp[40 + i] = temp[32 + i] * weights_for_col_0[i];
     sum = 32;
-    for (i = 0; i < 2; i++)
-        sum += temp[40 + i];
-    *(output_rows[0] + output_col + 0) = sum < 0 ? (uint8_t)0 : (sum >= 262144 ? (uint8_t)255 : (uint8_t)(sum >> 6));
+    for (i = 0; i < 2; i++) sum += temp[40 + i];
+    *(output_rows[ 0] + output_col + 0) = sum < 0 ? (uint8_t)0 : (sum >= 262144 ? (uint8_t)255 : (uint8_t)(sum >> 6));
     // Pixel 0,0 complete
 
     // Begin work for output pixel 1,0
-    for (i = 0; i < 4; i++)
-        temp[40 + i] = temp[32 + i] * weights_for_col_1[i];
+    for (i = 0; i < 4; i++) temp[40 + i] = temp[32 + i] * weights_for_col_1[i];
     sum = 256;
-    for (i = 0; i < 4; i++)
-        sum += temp[40 + i];
-    *(output_rows[0] + output_col + 1) = sum < 0 ? (uint8_t)0 : (sum >= 2097152 ? (uint8_t)255 : (uint8_t)(sum >> 9));
+    for (i = 0; i < 4; i++) sum += temp[40 + i];
+    *(output_rows[ 0] + output_col + 1) = sum < 0 ? (uint8_t)0 : (sum >= 2097152 ? (uint8_t)255 : (uint8_t)(sum >> 9));
     // Pixel 1,0 complete
 
     // Begin work for output pixel 2,0
-    for (i = 0; i < 3; i++)
-        temp[40 + i] = temp[34 + i] * weights_for_col_2[i];
+    for (i = 0; i < 3; i++) temp[40 + i] = temp[34 + i] * weights_for_col_2[i];
     sum = 512;
-    for (i = 0; i < 3; i++)
-        sum += temp[40 + i];
-    *(output_rows[0] + output_col + 2) = sum < 0 ? (uint8_t)0 : (sum >= 4194304 ? (uint8_t)255 : (uint8_t)(sum >> 10));
+    for (i = 0; i < 3; i++) sum += temp[40 + i];
+    *(output_rows[ 0] + output_col + 2) = sum < 0 ? (uint8_t)0 : (sum >= 4194304 ? (uint8_t)255 : (uint8_t)(sum >> 10));
     // Pixel 2,0 complete
 
     // Begin work for output pixel 3,0
-    for (i = 0; i < 3; i++)
-        temp[40 + i] = temp[35 + i] * weights_for_col_3[i];
+    for (i = 0; i < 3; i++) temp[40 + i] = temp[35 + i] * weights_for_col_3[i];
     sum = 512;
-    for (i = 0; i < 3; i++)
-        sum += temp[40 + i];
-    *(output_rows[0] + output_col + 3) = sum < 0 ? (uint8_t)0 : (sum >= 4194304 ? (uint8_t)255 : (uint8_t)(sum >> 10));
+    for (i = 0; i < 3; i++) sum += temp[40 + i];
+    *(output_rows[ 0] + output_col + 3) = sum < 0 ? (uint8_t)0 : (sum >= 4194304 ? (uint8_t)255 : (uint8_t)(sum >> 10));
     // Pixel 3,0 complete
 
     // Begin work for output pixel 4,0
-    for (i = 0; i < 4; i++)
-        temp[40 + i] = temp[36 + i] * weights_for_col_4[i];
+    for (i = 0; i < 4; i++) temp[40 + i] = temp[36 + i] * weights_for_col_4[i];
     sum = 256;
-    for (i = 0; i < 4; i++)
-        sum += temp[40 + i];
-    *(output_rows[0] + output_col + 4) = sum < 0 ? (uint8_t)0 : (sum >= 2097152 ? (uint8_t)255 : (uint8_t)(sum >> 9));
+    for (i = 0; i < 4; i++) sum += temp[40 + i];
+    *(output_rows[ 0] + output_col + 4) = sum < 0 ? (uint8_t)0 : (sum >= 2097152 ? (uint8_t)255 : (uint8_t)(sum >> 9));
     // Pixel 4,0 complete
 
     // Begin work for output pixel 5,0
-    for (i = 0; i < 2; i++)
-        temp[40 + i] = temp[38 + i] * weights_for_col_5[i];
+    for (i = 0; i < 2; i++) temp[40 + i] = temp[38 + i] * weights_for_col_5[i];
     sum = 32;
-    for (i = 0; i < 2; i++)
-        sum += temp[40 + i];
-    *(output_rows[0] + output_col + 5) = sum < 0 ? (uint8_t)0 : (sum >= 262144 ? (uint8_t)255 : (uint8_t)(sum >> 6));
+    for (i = 0; i < 2; i++) sum += temp[40 + i];
+    *(output_rows[ 0] + output_col + 5) = sum < 0 ? (uint8_t)0 : (sum >= 262144 ? (uint8_t)255 : (uint8_t)(sum >> 6));
     // Pixel 5,0 complete
 
     // Begin work for output row 1
-    for (i = 0; i < 8; i++)
-        temp[i + 0] = -1 * input[i + 0];
-    for (i = 0; i < 8; i++)
-        temp[i + 8] = 33 * input[i + 8];
-    for (i = 0; i < 8; i++)
-        temp[i + 16] = 33 * input[i + 16];
-    for (i = 0; i < 8; i++)
-        temp[i + 24] = -1 * input[i + 24];
-    for (i = 0; i < 8; i++) {
+    for (i = 0; i < 8; i++) temp[i +  0] =  -1 * input[i +  0];
+    for (i = 0; i < 8; i++) temp[i +  8] =  33 * input[i +  8];
+    for (i = 0; i < 8; i++) temp[i + 16] =  33 * input[i + 16];
+    for (i = 0; i < 8; i++) temp[i + 24] =  -1 * input[i + 24];
+    for (i = 0; i < 8; i++){
         sum = 0;
         for (j = 0; j < 4; j++)
             sum += temp[j * 8 + i];
@@ -1064,67 +900,52 @@ void flow_scale_spatial_6x6(uint8_t input[64], uint8_t ** output_rows, uint32_t 
         temp[32 + i] = sum;
     }
     // Begin work for output pixel 0,1
-    for (i = 0; i < 2; i++)
-        temp[40 + i] = temp[32 + i] * weights_for_col_0[i];
+    for (i = 0; i < 2; i++) temp[40 + i] = temp[32 + i] * weights_for_col_0[i];
     sum = 256;
-    for (i = 0; i < 2; i++)
-        sum += temp[40 + i];
-    *(output_rows[1] + output_col + 0) = sum < 0 ? (uint8_t)0 : (sum >= 2097152 ? (uint8_t)255 : (uint8_t)(sum >> 9));
+    for (i = 0; i < 2; i++) sum += temp[40 + i];
+    *(output_rows[ 1] + output_col + 0) = sum < 0 ? (uint8_t)0 : (sum >= 2097152 ? (uint8_t)255 : (uint8_t)(sum >> 9));
     // Pixel 0,1 complete
 
     // Begin work for output pixel 1,1
-    for (i = 0; i < 4; i++)
-        temp[40 + i] = temp[32 + i] * weights_for_col_1[i];
+    for (i = 0; i < 4; i++) temp[40 + i] = temp[32 + i] * weights_for_col_1[i];
     sum = 2048;
-    for (i = 0; i < 4; i++)
-        sum += temp[40 + i];
-    *(output_rows[1] + output_col + 1) = sum < 0 ? (uint8_t)0 : (sum >= 16777216 ? (uint8_t)255 : (uint8_t)(sum >> 12));
+    for (i = 0; i < 4; i++) sum += temp[40 + i];
+    *(output_rows[ 1] + output_col + 1) = sum < 0 ? (uint8_t)0 : (sum >= 16777216 ? (uint8_t)255 : (uint8_t)(sum >> 12));
     // Pixel 1,1 complete
 
     // Begin work for output pixel 2,1
-    for (i = 0; i < 3; i++)
-        temp[40 + i] = temp[34 + i] * weights_for_col_2[i];
+    for (i = 0; i < 3; i++) temp[40 + i] = temp[34 + i] * weights_for_col_2[i];
     sum = 4096;
-    for (i = 0; i < 3; i++)
-        sum += temp[40 + i];
-    *(output_rows[1] + output_col + 2) = sum < 0 ? (uint8_t)0 : (sum >= 33554432 ? (uint8_t)255 : (uint8_t)(sum >> 13));
+    for (i = 0; i < 3; i++) sum += temp[40 + i];
+    *(output_rows[ 1] + output_col + 2) = sum < 0 ? (uint8_t)0 : (sum >= 33554432 ? (uint8_t)255 : (uint8_t)(sum >> 13));
     // Pixel 2,1 complete
 
     // Begin work for output pixel 3,1
-    for (i = 0; i < 3; i++)
-        temp[40 + i] = temp[35 + i] * weights_for_col_3[i];
+    for (i = 0; i < 3; i++) temp[40 + i] = temp[35 + i] * weights_for_col_3[i];
     sum = 4096;
-    for (i = 0; i < 3; i++)
-        sum += temp[40 + i];
-    *(output_rows[1] + output_col + 3) = sum < 0 ? (uint8_t)0 : (sum >= 33554432 ? (uint8_t)255 : (uint8_t)(sum >> 13));
+    for (i = 0; i < 3; i++) sum += temp[40 + i];
+    *(output_rows[ 1] + output_col + 3) = sum < 0 ? (uint8_t)0 : (sum >= 33554432 ? (uint8_t)255 : (uint8_t)(sum >> 13));
     // Pixel 3,1 complete
 
     // Begin work for output pixel 4,1
-    for (i = 0; i < 4; i++)
-        temp[40 + i] = temp[36 + i] * weights_for_col_4[i];
+    for (i = 0; i < 4; i++) temp[40 + i] = temp[36 + i] * weights_for_col_4[i];
     sum = 2048;
-    for (i = 0; i < 4; i++)
-        sum += temp[40 + i];
-    *(output_rows[1] + output_col + 4) = sum < 0 ? (uint8_t)0 : (sum >= 16777216 ? (uint8_t)255 : (uint8_t)(sum >> 12));
+    for (i = 0; i < 4; i++) sum += temp[40 + i];
+    *(output_rows[ 1] + output_col + 4) = sum < 0 ? (uint8_t)0 : (sum >= 16777216 ? (uint8_t)255 : (uint8_t)(sum >> 12));
     // Pixel 4,1 complete
 
     // Begin work for output pixel 5,1
-    for (i = 0; i < 2; i++)
-        temp[40 + i] = temp[38 + i] * weights_for_col_5[i];
+    for (i = 0; i < 2; i++) temp[40 + i] = temp[38 + i] * weights_for_col_5[i];
     sum = 256;
-    for (i = 0; i < 2; i++)
-        sum += temp[40 + i];
-    *(output_rows[1] + output_col + 5) = sum < 0 ? (uint8_t)0 : (sum >= 2097152 ? (uint8_t)255 : (uint8_t)(sum >> 9));
+    for (i = 0; i < 2; i++) sum += temp[40 + i];
+    *(output_rows[ 1] + output_col + 5) = sum < 0 ? (uint8_t)0 : (sum >= 2097152 ? (uint8_t)255 : (uint8_t)(sum >> 9));
     // Pixel 5,1 complete
 
     // Begin work for output row 2
-    for (i = 0; i < 8; i++)
-        temp[i + 0] = 31 * input[i + 16];
-    for (i = 0; i < 8; i++)
-        temp[i + 8] = 92 * input[i + 24];
-    for (i = 0; i < 8; i++)
-        temp[i + 16] = 5 * input[i + 32];
-    for (i = 0; i < 8; i++) {
+    for (i = 0; i < 8; i++) temp[i +  0] =  31 * input[i + 16];
+    for (i = 0; i < 8; i++) temp[i +  8] =  92 * input[i + 24];
+    for (i = 0; i < 8; i++) temp[i + 16] =   5 * input[i + 32];
+    for (i = 0; i < 8; i++){
         sum = 0;
         for (j = 0; j < 3; j++)
             sum += temp[j * 8 + i];
@@ -1132,67 +953,52 @@ void flow_scale_spatial_6x6(uint8_t input[64], uint8_t ** output_rows, uint32_t 
         temp[32 + i] = sum;
     }
     // Begin work for output pixel 0,2
-    for (i = 0; i < 2; i++)
-        temp[40 + i] = temp[32 + i] * weights_for_col_0[i];
+    for (i = 0; i < 2; i++) temp[40 + i] = temp[32 + i] * weights_for_col_0[i];
     sum = 512;
-    for (i = 0; i < 2; i++)
-        sum += temp[40 + i];
-    *(output_rows[2] + output_col + 0) = sum < 0 ? (uint8_t)0 : (sum >= 4194304 ? (uint8_t)255 : (uint8_t)(sum >> 10));
+    for (i = 0; i < 2; i++) sum += temp[40 + i];
+    *(output_rows[ 2] + output_col + 0) = sum < 0 ? (uint8_t)0 : (sum >= 4194304 ? (uint8_t)255 : (uint8_t)(sum >> 10));
     // Pixel 0,2 complete
 
     // Begin work for output pixel 1,2
-    for (i = 0; i < 4; i++)
-        temp[40 + i] = temp[32 + i] * weights_for_col_1[i];
+    for (i = 0; i < 4; i++) temp[40 + i] = temp[32 + i] * weights_for_col_1[i];
     sum = 4096;
-    for (i = 0; i < 4; i++)
-        sum += temp[40 + i];
-    *(output_rows[2] + output_col + 1) = sum < 0 ? (uint8_t)0 : (sum >= 33554432 ? (uint8_t)255 : (uint8_t)(sum >> 13));
+    for (i = 0; i < 4; i++) sum += temp[40 + i];
+    *(output_rows[ 2] + output_col + 1) = sum < 0 ? (uint8_t)0 : (sum >= 33554432 ? (uint8_t)255 : (uint8_t)(sum >> 13));
     // Pixel 1,2 complete
 
     // Begin work for output pixel 2,2
-    for (i = 0; i < 3; i++)
-        temp[40 + i] = temp[34 + i] * weights_for_col_2[i];
+    for (i = 0; i < 3; i++) temp[40 + i] = temp[34 + i] * weights_for_col_2[i];
     sum = 8192;
-    for (i = 0; i < 3; i++)
-        sum += temp[40 + i];
-    *(output_rows[2] + output_col + 2) = sum < 0 ? (uint8_t)0 : (sum >= 67108864 ? (uint8_t)255 : (uint8_t)(sum >> 14));
+    for (i = 0; i < 3; i++) sum += temp[40 + i];
+    *(output_rows[ 2] + output_col + 2) = sum < 0 ? (uint8_t)0 : (sum >= 67108864 ? (uint8_t)255 : (uint8_t)(sum >> 14));
     // Pixel 2,2 complete
 
     // Begin work for output pixel 3,2
-    for (i = 0; i < 3; i++)
-        temp[40 + i] = temp[35 + i] * weights_for_col_3[i];
+    for (i = 0; i < 3; i++) temp[40 + i] = temp[35 + i] * weights_for_col_3[i];
     sum = 8192;
-    for (i = 0; i < 3; i++)
-        sum += temp[40 + i];
-    *(output_rows[2] + output_col + 3) = sum < 0 ? (uint8_t)0 : (sum >= 67108864 ? (uint8_t)255 : (uint8_t)(sum >> 14));
+    for (i = 0; i < 3; i++) sum += temp[40 + i];
+    *(output_rows[ 2] + output_col + 3) = sum < 0 ? (uint8_t)0 : (sum >= 67108864 ? (uint8_t)255 : (uint8_t)(sum >> 14));
     // Pixel 3,2 complete
 
     // Begin work for output pixel 4,2
-    for (i = 0; i < 4; i++)
-        temp[40 + i] = temp[36 + i] * weights_for_col_4[i];
+    for (i = 0; i < 4; i++) temp[40 + i] = temp[36 + i] * weights_for_col_4[i];
     sum = 4096;
-    for (i = 0; i < 4; i++)
-        sum += temp[40 + i];
-    *(output_rows[2] + output_col + 4) = sum < 0 ? (uint8_t)0 : (sum >= 33554432 ? (uint8_t)255 : (uint8_t)(sum >> 13));
+    for (i = 0; i < 4; i++) sum += temp[40 + i];
+    *(output_rows[ 2] + output_col + 4) = sum < 0 ? (uint8_t)0 : (sum >= 33554432 ? (uint8_t)255 : (uint8_t)(sum >> 13));
     // Pixel 4,2 complete
 
     // Begin work for output pixel 5,2
-    for (i = 0; i < 2; i++)
-        temp[40 + i] = temp[38 + i] * weights_for_col_5[i];
+    for (i = 0; i < 2; i++) temp[40 + i] = temp[38 + i] * weights_for_col_5[i];
     sum = 512;
-    for (i = 0; i < 2; i++)
-        sum += temp[40 + i];
-    *(output_rows[2] + output_col + 5) = sum < 0 ? (uint8_t)0 : (sum >= 4194304 ? (uint8_t)255 : (uint8_t)(sum >> 10));
+    for (i = 0; i < 2; i++) sum += temp[40 + i];
+    *(output_rows[ 2] + output_col + 5) = sum < 0 ? (uint8_t)0 : (sum >= 4194304 ? (uint8_t)255 : (uint8_t)(sum >> 10));
     // Pixel 5,2 complete
 
     // Begin work for output row 3
-    for (i = 0; i < 8; i++)
-        temp[i + 0] = 5 * input[i + 24];
-    for (i = 0; i < 8; i++)
-        temp[i + 8] = 92 * input[i + 32];
-    for (i = 0; i < 8; i++)
-        temp[i + 16] = 31 * input[i + 40];
-    for (i = 0; i < 8; i++) {
+    for (i = 0; i < 8; i++) temp[i +  0] =   5 * input[i + 24];
+    for (i = 0; i < 8; i++) temp[i +  8] =  92 * input[i + 32];
+    for (i = 0; i < 8; i++) temp[i + 16] =  31 * input[i + 40];
+    for (i = 0; i < 8; i++){
         sum = 0;
         for (j = 0; j < 3; j++)
             sum += temp[j * 8 + i];
@@ -1200,69 +1006,53 @@ void flow_scale_spatial_6x6(uint8_t input[64], uint8_t ** output_rows, uint32_t 
         temp[32 + i] = sum;
     }
     // Begin work for output pixel 0,3
-    for (i = 0; i < 2; i++)
-        temp[40 + i] = temp[32 + i] * weights_for_col_0[i];
+    for (i = 0; i < 2; i++) temp[40 + i] = temp[32 + i] * weights_for_col_0[i];
     sum = 512;
-    for (i = 0; i < 2; i++)
-        sum += temp[40 + i];
-    *(output_rows[3] + output_col + 0) = sum < 0 ? (uint8_t)0 : (sum >= 4194304 ? (uint8_t)255 : (uint8_t)(sum >> 10));
+    for (i = 0; i < 2; i++) sum += temp[40 + i];
+    *(output_rows[ 3] + output_col + 0) = sum < 0 ? (uint8_t)0 : (sum >= 4194304 ? (uint8_t)255 : (uint8_t)(sum >> 10));
     // Pixel 0,3 complete
 
     // Begin work for output pixel 1,3
-    for (i = 0; i < 4; i++)
-        temp[40 + i] = temp[32 + i] * weights_for_col_1[i];
+    for (i = 0; i < 4; i++) temp[40 + i] = temp[32 + i] * weights_for_col_1[i];
     sum = 4096;
-    for (i = 0; i < 4; i++)
-        sum += temp[40 + i];
-    *(output_rows[3] + output_col + 1) = sum < 0 ? (uint8_t)0 : (sum >= 33554432 ? (uint8_t)255 : (uint8_t)(sum >> 13));
+    for (i = 0; i < 4; i++) sum += temp[40 + i];
+    *(output_rows[ 3] + output_col + 1) = sum < 0 ? (uint8_t)0 : (sum >= 33554432 ? (uint8_t)255 : (uint8_t)(sum >> 13));
     // Pixel 1,3 complete
 
     // Begin work for output pixel 2,3
-    for (i = 0; i < 3; i++)
-        temp[40 + i] = temp[34 + i] * weights_for_col_2[i];
+    for (i = 0; i < 3; i++) temp[40 + i] = temp[34 + i] * weights_for_col_2[i];
     sum = 8192;
-    for (i = 0; i < 3; i++)
-        sum += temp[40 + i];
-    *(output_rows[3] + output_col + 2) = sum < 0 ? (uint8_t)0 : (sum >= 67108864 ? (uint8_t)255 : (uint8_t)(sum >> 14));
+    for (i = 0; i < 3; i++) sum += temp[40 + i];
+    *(output_rows[ 3] + output_col + 2) = sum < 0 ? (uint8_t)0 : (sum >= 67108864 ? (uint8_t)255 : (uint8_t)(sum >> 14));
     // Pixel 2,3 complete
 
     // Begin work for output pixel 3,3
-    for (i = 0; i < 3; i++)
-        temp[40 + i] = temp[35 + i] * weights_for_col_3[i];
+    for (i = 0; i < 3; i++) temp[40 + i] = temp[35 + i] * weights_for_col_3[i];
     sum = 8192;
-    for (i = 0; i < 3; i++)
-        sum += temp[40 + i];
-    *(output_rows[3] + output_col + 3) = sum < 0 ? (uint8_t)0 : (sum >= 67108864 ? (uint8_t)255 : (uint8_t)(sum >> 14));
+    for (i = 0; i < 3; i++) sum += temp[40 + i];
+    *(output_rows[ 3] + output_col + 3) = sum < 0 ? (uint8_t)0 : (sum >= 67108864 ? (uint8_t)255 : (uint8_t)(sum >> 14));
     // Pixel 3,3 complete
 
     // Begin work for output pixel 4,3
-    for (i = 0; i < 4; i++)
-        temp[40 + i] = temp[36 + i] * weights_for_col_4[i];
+    for (i = 0; i < 4; i++) temp[40 + i] = temp[36 + i] * weights_for_col_4[i];
     sum = 4096;
-    for (i = 0; i < 4; i++)
-        sum += temp[40 + i];
-    *(output_rows[3] + output_col + 4) = sum < 0 ? (uint8_t)0 : (sum >= 33554432 ? (uint8_t)255 : (uint8_t)(sum >> 13));
+    for (i = 0; i < 4; i++) sum += temp[40 + i];
+    *(output_rows[ 3] + output_col + 4) = sum < 0 ? (uint8_t)0 : (sum >= 33554432 ? (uint8_t)255 : (uint8_t)(sum >> 13));
     // Pixel 4,3 complete
 
     // Begin work for output pixel 5,3
-    for (i = 0; i < 2; i++)
-        temp[40 + i] = temp[38 + i] * weights_for_col_5[i];
+    for (i = 0; i < 2; i++) temp[40 + i] = temp[38 + i] * weights_for_col_5[i];
     sum = 512;
-    for (i = 0; i < 2; i++)
-        sum += temp[40 + i];
-    *(output_rows[3] + output_col + 5) = sum < 0 ? (uint8_t)0 : (sum >= 4194304 ? (uint8_t)255 : (uint8_t)(sum >> 10));
+    for (i = 0; i < 2; i++) sum += temp[40 + i];
+    *(output_rows[ 3] + output_col + 5) = sum < 0 ? (uint8_t)0 : (sum >= 4194304 ? (uint8_t)255 : (uint8_t)(sum >> 10));
     // Pixel 5,3 complete
 
     // Begin work for output row 4
-    for (i = 0; i < 8; i++)
-        temp[i + 0] = -1 * input[i + 32];
-    for (i = 0; i < 8; i++)
-        temp[i + 8] = 33 * input[i + 40];
-    for (i = 0; i < 8; i++)
-        temp[i + 16] = 33 * input[i + 48];
-    for (i = 0; i < 8; i++)
-        temp[i + 24] = -1 * input[i + 56];
-    for (i = 0; i < 8; i++) {
+    for (i = 0; i < 8; i++) temp[i +  0] =  -1 * input[i + 32];
+    for (i = 0; i < 8; i++) temp[i +  8] =  33 * input[i + 40];
+    for (i = 0; i < 8; i++) temp[i + 16] =  33 * input[i + 48];
+    for (i = 0; i < 8; i++) temp[i + 24] =  -1 * input[i + 56];
+    for (i = 0; i < 8; i++){
         sum = 0;
         for (j = 0; j < 4; j++)
             sum += temp[j * 8 + i];
@@ -1270,65 +1060,51 @@ void flow_scale_spatial_6x6(uint8_t input[64], uint8_t ** output_rows, uint32_t 
         temp[32 + i] = sum;
     }
     // Begin work for output pixel 0,4
-    for (i = 0; i < 2; i++)
-        temp[40 + i] = temp[32 + i] * weights_for_col_0[i];
+    for (i = 0; i < 2; i++) temp[40 + i] = temp[32 + i] * weights_for_col_0[i];
     sum = 256;
-    for (i = 0; i < 2; i++)
-        sum += temp[40 + i];
-    *(output_rows[4] + output_col + 0) = sum < 0 ? (uint8_t)0 : (sum >= 2097152 ? (uint8_t)255 : (uint8_t)(sum >> 9));
+    for (i = 0; i < 2; i++) sum += temp[40 + i];
+    *(output_rows[ 4] + output_col + 0) = sum < 0 ? (uint8_t)0 : (sum >= 2097152 ? (uint8_t)255 : (uint8_t)(sum >> 9));
     // Pixel 0,4 complete
 
     // Begin work for output pixel 1,4
-    for (i = 0; i < 4; i++)
-        temp[40 + i] = temp[32 + i] * weights_for_col_1[i];
+    for (i = 0; i < 4; i++) temp[40 + i] = temp[32 + i] * weights_for_col_1[i];
     sum = 2048;
-    for (i = 0; i < 4; i++)
-        sum += temp[40 + i];
-    *(output_rows[4] + output_col + 1) = sum < 0 ? (uint8_t)0 : (sum >= 16777216 ? (uint8_t)255 : (uint8_t)(sum >> 12));
+    for (i = 0; i < 4; i++) sum += temp[40 + i];
+    *(output_rows[ 4] + output_col + 1) = sum < 0 ? (uint8_t)0 : (sum >= 16777216 ? (uint8_t)255 : (uint8_t)(sum >> 12));
     // Pixel 1,4 complete
 
     // Begin work for output pixel 2,4
-    for (i = 0; i < 3; i++)
-        temp[40 + i] = temp[34 + i] * weights_for_col_2[i];
+    for (i = 0; i < 3; i++) temp[40 + i] = temp[34 + i] * weights_for_col_2[i];
     sum = 4096;
-    for (i = 0; i < 3; i++)
-        sum += temp[40 + i];
-    *(output_rows[4] + output_col + 2) = sum < 0 ? (uint8_t)0 : (sum >= 33554432 ? (uint8_t)255 : (uint8_t)(sum >> 13));
+    for (i = 0; i < 3; i++) sum += temp[40 + i];
+    *(output_rows[ 4] + output_col + 2) = sum < 0 ? (uint8_t)0 : (sum >= 33554432 ? (uint8_t)255 : (uint8_t)(sum >> 13));
     // Pixel 2,4 complete
 
     // Begin work for output pixel 3,4
-    for (i = 0; i < 3; i++)
-        temp[40 + i] = temp[35 + i] * weights_for_col_3[i];
+    for (i = 0; i < 3; i++) temp[40 + i] = temp[35 + i] * weights_for_col_3[i];
     sum = 4096;
-    for (i = 0; i < 3; i++)
-        sum += temp[40 + i];
-    *(output_rows[4] + output_col + 3) = sum < 0 ? (uint8_t)0 : (sum >= 33554432 ? (uint8_t)255 : (uint8_t)(sum >> 13));
+    for (i = 0; i < 3; i++) sum += temp[40 + i];
+    *(output_rows[ 4] + output_col + 3) = sum < 0 ? (uint8_t)0 : (sum >= 33554432 ? (uint8_t)255 : (uint8_t)(sum >> 13));
     // Pixel 3,4 complete
 
     // Begin work for output pixel 4,4
-    for (i = 0; i < 4; i++)
-        temp[40 + i] = temp[36 + i] * weights_for_col_4[i];
+    for (i = 0; i < 4; i++) temp[40 + i] = temp[36 + i] * weights_for_col_4[i];
     sum = 2048;
-    for (i = 0; i < 4; i++)
-        sum += temp[40 + i];
-    *(output_rows[4] + output_col + 4) = sum < 0 ? (uint8_t)0 : (sum >= 16777216 ? (uint8_t)255 : (uint8_t)(sum >> 12));
+    for (i = 0; i < 4; i++) sum += temp[40 + i];
+    *(output_rows[ 4] + output_col + 4) = sum < 0 ? (uint8_t)0 : (sum >= 16777216 ? (uint8_t)255 : (uint8_t)(sum >> 12));
     // Pixel 4,4 complete
 
     // Begin work for output pixel 5,4
-    for (i = 0; i < 2; i++)
-        temp[40 + i] = temp[38 + i] * weights_for_col_5[i];
+    for (i = 0; i < 2; i++) temp[40 + i] = temp[38 + i] * weights_for_col_5[i];
     sum = 256;
-    for (i = 0; i < 2; i++)
-        sum += temp[40 + i];
-    *(output_rows[4] + output_col + 5) = sum < 0 ? (uint8_t)0 : (sum >= 2097152 ? (uint8_t)255 : (uint8_t)(sum >> 9));
+    for (i = 0; i < 2; i++) sum += temp[40 + i];
+    *(output_rows[ 4] + output_col + 5) = sum < 0 ? (uint8_t)0 : (sum >= 2097152 ? (uint8_t)255 : (uint8_t)(sum >> 9));
     // Pixel 5,4 complete
 
     // Begin work for output row 5
-    for (i = 0; i < 8; i++)
-        temp[i + 0] = 2 * input[i + 48];
-    for (i = 0; i < 8; i++)
-        temp[i + 8] = 6 * input[i + 56];
-    for (i = 0; i < 8; i++) {
+    for (i = 0; i < 8; i++) temp[i +  0] =   2 * input[i + 48];
+    for (i = 0; i < 8; i++) temp[i +  8] =   6 * input[i + 56];
+    for (i = 0; i < 8; i++){
         sum = 0;
         for (j = 0; j < 2; j++)
             sum += temp[j * 8 + i];
@@ -1336,101 +1112,75 @@ void flow_scale_spatial_6x6(uint8_t input[64], uint8_t ** output_rows, uint32_t 
         temp[32 + i] = sum;
     }
     // Begin work for output pixel 0,5
-    for (i = 0; i < 2; i++)
-        temp[40 + i] = temp[32 + i] * weights_for_col_0[i];
+    for (i = 0; i < 2; i++) temp[40 + i] = temp[32 + i] * weights_for_col_0[i];
     sum = 32;
-    for (i = 0; i < 2; i++)
-        sum += temp[40 + i];
-    *(output_rows[5] + output_col + 0) = sum < 0 ? (uint8_t)0 : (sum >= 262144 ? (uint8_t)255 : (uint8_t)(sum >> 6));
+    for (i = 0; i < 2; i++) sum += temp[40 + i];
+    *(output_rows[ 5] + output_col + 0) = sum < 0 ? (uint8_t)0 : (sum >= 262144 ? (uint8_t)255 : (uint8_t)(sum >> 6));
     // Pixel 0,5 complete
 
     // Begin work for output pixel 1,5
-    for (i = 0; i < 4; i++)
-        temp[40 + i] = temp[32 + i] * weights_for_col_1[i];
+    for (i = 0; i < 4; i++) temp[40 + i] = temp[32 + i] * weights_for_col_1[i];
     sum = 256;
-    for (i = 0; i < 4; i++)
-        sum += temp[40 + i];
-    *(output_rows[5] + output_col + 1) = sum < 0 ? (uint8_t)0 : (sum >= 2097152 ? (uint8_t)255 : (uint8_t)(sum >> 9));
+    for (i = 0; i < 4; i++) sum += temp[40 + i];
+    *(output_rows[ 5] + output_col + 1) = sum < 0 ? (uint8_t)0 : (sum >= 2097152 ? (uint8_t)255 : (uint8_t)(sum >> 9));
     // Pixel 1,5 complete
 
     // Begin work for output pixel 2,5
-    for (i = 0; i < 3; i++)
-        temp[40 + i] = temp[34 + i] * weights_for_col_2[i];
+    for (i = 0; i < 3; i++) temp[40 + i] = temp[34 + i] * weights_for_col_2[i];
     sum = 512;
-    for (i = 0; i < 3; i++)
-        sum += temp[40 + i];
-    *(output_rows[5] + output_col + 2) = sum < 0 ? (uint8_t)0 : (sum >= 4194304 ? (uint8_t)255 : (uint8_t)(sum >> 10));
+    for (i = 0; i < 3; i++) sum += temp[40 + i];
+    *(output_rows[ 5] + output_col + 2) = sum < 0 ? (uint8_t)0 : (sum >= 4194304 ? (uint8_t)255 : (uint8_t)(sum >> 10));
     // Pixel 2,5 complete
 
     // Begin work for output pixel 3,5
-    for (i = 0; i < 3; i++)
-        temp[40 + i] = temp[35 + i] * weights_for_col_3[i];
+    for (i = 0; i < 3; i++) temp[40 + i] = temp[35 + i] * weights_for_col_3[i];
     sum = 512;
-    for (i = 0; i < 3; i++)
-        sum += temp[40 + i];
-    *(output_rows[5] + output_col + 3) = sum < 0 ? (uint8_t)0 : (sum >= 4194304 ? (uint8_t)255 : (uint8_t)(sum >> 10));
+    for (i = 0; i < 3; i++) sum += temp[40 + i];
+    *(output_rows[ 5] + output_col + 3) = sum < 0 ? (uint8_t)0 : (sum >= 4194304 ? (uint8_t)255 : (uint8_t)(sum >> 10));
     // Pixel 3,5 complete
 
     // Begin work for output pixel 4,5
-    for (i = 0; i < 4; i++)
-        temp[40 + i] = temp[36 + i] * weights_for_col_4[i];
+    for (i = 0; i < 4; i++) temp[40 + i] = temp[36 + i] * weights_for_col_4[i];
     sum = 256;
-    for (i = 0; i < 4; i++)
-        sum += temp[40 + i];
-    *(output_rows[5] + output_col + 4) = sum < 0 ? (uint8_t)0 : (sum >= 2097152 ? (uint8_t)255 : (uint8_t)(sum >> 9));
+    for (i = 0; i < 4; i++) sum += temp[40 + i];
+    *(output_rows[ 5] + output_col + 4) = sum < 0 ? (uint8_t)0 : (sum >= 2097152 ? (uint8_t)255 : (uint8_t)(sum >> 9));
     // Pixel 4,5 complete
 
     // Begin work for output pixel 5,5
-    for (i = 0; i < 2; i++)
-        temp[40 + i] = temp[38 + i] * weights_for_col_5[i];
+    for (i = 0; i < 2; i++) temp[40 + i] = temp[38 + i] * weights_for_col_5[i];
     sum = 32;
-    for (i = 0; i < 2; i++)
-        sum += temp[40 + i];
-    *(output_rows[5] + output_col + 5) = sum < 0 ? (uint8_t)0 : (sum >= 262144 ? (uint8_t)255 : (uint8_t)(sum >> 6));
+    for (i = 0; i < 2; i++) sum += temp[40 + i];
+    *(output_rows[ 5] + output_col + 5) = sum < 0 ? (uint8_t)0 : (sum >= 262144 ? (uint8_t)255 : (uint8_t)(sum >> 6));
     // Pixel 5,5 complete
 }
 
 #ifndef FLOW_GCC_IDCT
 void jpeg_idct_spatial_6x6(j_decompress_ptr cinfo, jpeg_component_info * compptr, JCOEFPTR coef_block,
-                           JSAMPARRAY output_buf, JDIMENSION output_col)
-{
+                           JSAMPARRAY output_buf, JDIMENSION output_col){
     JSAMPLE input[64];
-    JSAMPROW rows[8] = { &input[0],     &input[8],     &input[8 * 2], &input[8 * 3],
-                         &input[8 * 4], &input[8 * 5], &input[8 * 6], &input[8 * 7] };
+    JSAMPROW rows[8]
+        = { &input[0],     &input[8],     &input[8 * 2], &input[8 * 3],
+            &input[8 * 4], &input[8 * 5], &input[8 * 6], &input[8 * 7] };
     jpeg_idct_islow(cinfo, compptr, coef_block, &rows[0], 0);
 
     flow_scale_spatial_6x6(input, output_buf, output_col);
 }
 #endif
 
-void flow_scale_spatial_5x5(uint8_t input[64], uint8_t ** output_rows, uint32_t output_col)
-{
+FLOW_EXPORT void flow_scale_spatial_5x5(uint8_t input[64], uint8_t ** output_rows, uint32_t output_col){
     int32_t i, sum, j;
     FLOW_ALIGN_16_VAR(int32_t temp[48]);
-    FLOW_ALIGN_16_VAR(int32_t weights_for_col_0[]) = {
-        78, 51, -1,
-    };
-    FLOW_ALIGN_16_VAR(int32_t weights_for_col_1[]) = {
-        -2, 32, 79, 19,
-    };
-    FLOW_ALIGN_16_VAR(int32_t weights_for_col_2[]) = {
-        1, 31, 31, 1,
-    };
-    FLOW_ALIGN_16_VAR(int32_t weights_for_col_3[]) = {
-        19, 79, 32, -2,
-    };
-    FLOW_ALIGN_16_VAR(int32_t weights_for_col_4[]) = {
-        -1, 51, 78,
-    };
+    FLOW_ALIGN_16_VAR(int32_t weights_for_col_0[]) = {78,51,-1,};
+    FLOW_ALIGN_16_VAR(int32_t weights_for_col_1[]) = {-2,32,79,19,};
+    FLOW_ALIGN_16_VAR(int32_t weights_for_col_2[]) = {1,31,31,1,};
+    FLOW_ALIGN_16_VAR(int32_t weights_for_col_3[]) = {19,79,32,-2,};
+    FLOW_ALIGN_16_VAR(int32_t weights_for_col_4[]) = {-1,51,78,};
 
     // Begin work for output row 0
-    for (i = 0; i < 8; i++)
-        temp[i + 0] = 78 * input[i + 0];
-    for (i = 0; i < 8; i++)
-        temp[i + 8] = 51 * input[i + 8];
-    for (i = 0; i < 8; i++)
-        temp[i + 16] = -1 * input[i + 16];
-    for (i = 0; i < 8; i++) {
+    for (i = 0; i < 8; i++) temp[i +  0] =  78 * input[i +  0];
+    for (i = 0; i < 8; i++) temp[i +  8] =  51 * input[i +  8];
+    for (i = 0; i < 8; i++) temp[i + 16] =  -1 * input[i + 16];
+    for (i = 0; i < 8; i++){
         sum = 0;
         for (j = 0; j < 3; j++)
             sum += temp[j * 8 + i];
@@ -1438,60 +1188,46 @@ void flow_scale_spatial_5x5(uint8_t input[64], uint8_t ** output_rows, uint32_t 
         temp[32 + i] = sum;
     }
     // Begin work for output pixel 0,0
-    for (i = 0; i < 3; i++)
-        temp[40 + i] = temp[32 + i] * weights_for_col_0[i];
+    for (i = 0; i < 3; i++) temp[40 + i] = temp[32 + i] * weights_for_col_0[i];
     sum = 8192;
-    for (i = 0; i < 3; i++)
-        sum += temp[40 + i];
-    *(output_rows[0] + output_col + 0) = sum < 0 ? (uint8_t)0 : (sum >= 67108864 ? (uint8_t)255 : (uint8_t)(sum >> 14));
+    for (i = 0; i < 3; i++) sum += temp[40 + i];
+    *(output_rows[ 0] + output_col + 0) = sum < 0 ? (uint8_t)0 : (sum >= 67108864 ? (uint8_t)255 : (uint8_t)(sum >> 14));
     // Pixel 0,0 complete
 
     // Begin work for output pixel 1,0
-    for (i = 0; i < 4; i++)
-        temp[40 + i] = temp[32 + i] * weights_for_col_1[i];
+    for (i = 0; i < 4; i++) temp[40 + i] = temp[32 + i] * weights_for_col_1[i];
     sum = 8192;
-    for (i = 0; i < 4; i++)
-        sum += temp[40 + i];
-    *(output_rows[0] + output_col + 1) = sum < 0 ? (uint8_t)0 : (sum >= 67108864 ? (uint8_t)255 : (uint8_t)(sum >> 14));
+    for (i = 0; i < 4; i++) sum += temp[40 + i];
+    *(output_rows[ 0] + output_col + 1) = sum < 0 ? (uint8_t)0 : (sum >= 67108864 ? (uint8_t)255 : (uint8_t)(sum >> 14));
     // Pixel 1,0 complete
 
     // Begin work for output pixel 2,0
-    for (i = 0; i < 4; i++)
-        temp[40 + i] = temp[34 + i] * weights_for_col_2[i];
+    for (i = 0; i < 4; i++) temp[40 + i] = temp[34 + i] * weights_for_col_2[i];
     sum = 4096;
-    for (i = 0; i < 4; i++)
-        sum += temp[40 + i];
-    *(output_rows[0] + output_col + 2) = sum < 0 ? (uint8_t)0 : (sum >= 33554432 ? (uint8_t)255 : (uint8_t)(sum >> 13));
+    for (i = 0; i < 4; i++) sum += temp[40 + i];
+    *(output_rows[ 0] + output_col + 2) = sum < 0 ? (uint8_t)0 : (sum >= 33554432 ? (uint8_t)255 : (uint8_t)(sum >> 13));
     // Pixel 2,0 complete
 
     // Begin work for output pixel 3,0
-    for (i = 0; i < 4; i++)
-        temp[40 + i] = temp[36 + i] * weights_for_col_3[i];
+    for (i = 0; i < 4; i++) temp[40 + i] = temp[36 + i] * weights_for_col_3[i];
     sum = 8192;
-    for (i = 0; i < 4; i++)
-        sum += temp[40 + i];
-    *(output_rows[0] + output_col + 3) = sum < 0 ? (uint8_t)0 : (sum >= 67108864 ? (uint8_t)255 : (uint8_t)(sum >> 14));
+    for (i = 0; i < 4; i++) sum += temp[40 + i];
+    *(output_rows[ 0] + output_col + 3) = sum < 0 ? (uint8_t)0 : (sum >= 67108864 ? (uint8_t)255 : (uint8_t)(sum >> 14));
     // Pixel 3,0 complete
 
     // Begin work for output pixel 4,0
-    for (i = 0; i < 3; i++)
-        temp[40 + i] = temp[37 + i] * weights_for_col_4[i];
+    for (i = 0; i < 3; i++) temp[40 + i] = temp[37 + i] * weights_for_col_4[i];
     sum = 8192;
-    for (i = 0; i < 3; i++)
-        sum += temp[40 + i];
-    *(output_rows[0] + output_col + 4) = sum < 0 ? (uint8_t)0 : (sum >= 67108864 ? (uint8_t)255 : (uint8_t)(sum >> 14));
+    for (i = 0; i < 3; i++) sum += temp[40 + i];
+    *(output_rows[ 0] + output_col + 4) = sum < 0 ? (uint8_t)0 : (sum >= 67108864 ? (uint8_t)255 : (uint8_t)(sum >> 14));
     // Pixel 4,0 complete
 
     // Begin work for output row 1
-    for (i = 0; i < 8; i++)
-        temp[i + 0] = -2 * input[i + 0];
-    for (i = 0; i < 8; i++)
-        temp[i + 8] = 32 * input[i + 8];
-    for (i = 0; i < 8; i++)
-        temp[i + 16] = 79 * input[i + 16];
-    for (i = 0; i < 8; i++)
-        temp[i + 24] = 19 * input[i + 24];
-    for (i = 0; i < 8; i++) {
+    for (i = 0; i < 8; i++) temp[i +  0] =  -2 * input[i +  0];
+    for (i = 0; i < 8; i++) temp[i +  8] =  32 * input[i +  8];
+    for (i = 0; i < 8; i++) temp[i + 16] =  79 * input[i + 16];
+    for (i = 0; i < 8; i++) temp[i + 24] =  19 * input[i + 24];
+    for (i = 0; i < 8; i++){
         sum = 0;
         for (j = 0; j < 4; j++)
             sum += temp[j * 8 + i];
@@ -1499,60 +1235,46 @@ void flow_scale_spatial_5x5(uint8_t input[64], uint8_t ** output_rows, uint32_t 
         temp[32 + i] = sum;
     }
     // Begin work for output pixel 0,1
-    for (i = 0; i < 3; i++)
-        temp[40 + i] = temp[32 + i] * weights_for_col_0[i];
+    for (i = 0; i < 3; i++) temp[40 + i] = temp[32 + i] * weights_for_col_0[i];
     sum = 8192;
-    for (i = 0; i < 3; i++)
-        sum += temp[40 + i];
-    *(output_rows[1] + output_col + 0) = sum < 0 ? (uint8_t)0 : (sum >= 67108864 ? (uint8_t)255 : (uint8_t)(sum >> 14));
+    for (i = 0; i < 3; i++) sum += temp[40 + i];
+    *(output_rows[ 1] + output_col + 0) = sum < 0 ? (uint8_t)0 : (sum >= 67108864 ? (uint8_t)255 : (uint8_t)(sum >> 14));
     // Pixel 0,1 complete
 
     // Begin work for output pixel 1,1
-    for (i = 0; i < 4; i++)
-        temp[40 + i] = temp[32 + i] * weights_for_col_1[i];
+    for (i = 0; i < 4; i++) temp[40 + i] = temp[32 + i] * weights_for_col_1[i];
     sum = 8192;
-    for (i = 0; i < 4; i++)
-        sum += temp[40 + i];
-    *(output_rows[1] + output_col + 1) = sum < 0 ? (uint8_t)0 : (sum >= 67108864 ? (uint8_t)255 : (uint8_t)(sum >> 14));
+    for (i = 0; i < 4; i++) sum += temp[40 + i];
+    *(output_rows[ 1] + output_col + 1) = sum < 0 ? (uint8_t)0 : (sum >= 67108864 ? (uint8_t)255 : (uint8_t)(sum >> 14));
     // Pixel 1,1 complete
 
     // Begin work for output pixel 2,1
-    for (i = 0; i < 4; i++)
-        temp[40 + i] = temp[34 + i] * weights_for_col_2[i];
+    for (i = 0; i < 4; i++) temp[40 + i] = temp[34 + i] * weights_for_col_2[i];
     sum = 4096;
-    for (i = 0; i < 4; i++)
-        sum += temp[40 + i];
-    *(output_rows[1] + output_col + 2) = sum < 0 ? (uint8_t)0 : (sum >= 33554432 ? (uint8_t)255 : (uint8_t)(sum >> 13));
+    for (i = 0; i < 4; i++) sum += temp[40 + i];
+    *(output_rows[ 1] + output_col + 2) = sum < 0 ? (uint8_t)0 : (sum >= 33554432 ? (uint8_t)255 : (uint8_t)(sum >> 13));
     // Pixel 2,1 complete
 
     // Begin work for output pixel 3,1
-    for (i = 0; i < 4; i++)
-        temp[40 + i] = temp[36 + i] * weights_for_col_3[i];
+    for (i = 0; i < 4; i++) temp[40 + i] = temp[36 + i] * weights_for_col_3[i];
     sum = 8192;
-    for (i = 0; i < 4; i++)
-        sum += temp[40 + i];
-    *(output_rows[1] + output_col + 3) = sum < 0 ? (uint8_t)0 : (sum >= 67108864 ? (uint8_t)255 : (uint8_t)(sum >> 14));
+    for (i = 0; i < 4; i++) sum += temp[40 + i];
+    *(output_rows[ 1] + output_col + 3) = sum < 0 ? (uint8_t)0 : (sum >= 67108864 ? (uint8_t)255 : (uint8_t)(sum >> 14));
     // Pixel 3,1 complete
 
     // Begin work for output pixel 4,1
-    for (i = 0; i < 3; i++)
-        temp[40 + i] = temp[37 + i] * weights_for_col_4[i];
+    for (i = 0; i < 3; i++) temp[40 + i] = temp[37 + i] * weights_for_col_4[i];
     sum = 8192;
-    for (i = 0; i < 3; i++)
-        sum += temp[40 + i];
-    *(output_rows[1] + output_col + 4) = sum < 0 ? (uint8_t)0 : (sum >= 67108864 ? (uint8_t)255 : (uint8_t)(sum >> 14));
+    for (i = 0; i < 3; i++) sum += temp[40 + i];
+    *(output_rows[ 1] + output_col + 4) = sum < 0 ? (uint8_t)0 : (sum >= 67108864 ? (uint8_t)255 : (uint8_t)(sum >> 14));
     // Pixel 4,1 complete
 
     // Begin work for output row 2
-    for (i = 0; i < 8; i++)
-        temp[i + 0] = 1 * input[i + 16];
-    for (i = 0; i < 8; i++)
-        temp[i + 8] = 31 * input[i + 24];
-    for (i = 0; i < 8; i++)
-        temp[i + 16] = 31 * input[i + 32];
-    for (i = 0; i < 8; i++)
-        temp[i + 24] = 1 * input[i + 40];
-    for (i = 0; i < 8; i++) {
+    for (i = 0; i < 8; i++) temp[i +  0] =   1 * input[i + 16];
+    for (i = 0; i < 8; i++) temp[i +  8] =  31 * input[i + 24];
+    for (i = 0; i < 8; i++) temp[i + 16] =  31 * input[i + 32];
+    for (i = 0; i < 8; i++) temp[i + 24] =   1 * input[i + 40];
+    for (i = 0; i < 8; i++){
         sum = 0;
         for (j = 0; j < 4; j++)
             sum += temp[j * 8 + i];
@@ -1560,60 +1282,46 @@ void flow_scale_spatial_5x5(uint8_t input[64], uint8_t ** output_rows, uint32_t 
         temp[32 + i] = sum;
     }
     // Begin work for output pixel 0,2
-    for (i = 0; i < 3; i++)
-        temp[40 + i] = temp[32 + i] * weights_for_col_0[i];
+    for (i = 0; i < 3; i++) temp[40 + i] = temp[32 + i] * weights_for_col_0[i];
     sum = 4096;
-    for (i = 0; i < 3; i++)
-        sum += temp[40 + i];
-    *(output_rows[2] + output_col + 0) = sum < 0 ? (uint8_t)0 : (sum >= 33554432 ? (uint8_t)255 : (uint8_t)(sum >> 13));
+    for (i = 0; i < 3; i++) sum += temp[40 + i];
+    *(output_rows[ 2] + output_col + 0) = sum < 0 ? (uint8_t)0 : (sum >= 33554432 ? (uint8_t)255 : (uint8_t)(sum >> 13));
     // Pixel 0,2 complete
 
     // Begin work for output pixel 1,2
-    for (i = 0; i < 4; i++)
-        temp[40 + i] = temp[32 + i] * weights_for_col_1[i];
+    for (i = 0; i < 4; i++) temp[40 + i] = temp[32 + i] * weights_for_col_1[i];
     sum = 4096;
-    for (i = 0; i < 4; i++)
-        sum += temp[40 + i];
-    *(output_rows[2] + output_col + 1) = sum < 0 ? (uint8_t)0 : (sum >= 33554432 ? (uint8_t)255 : (uint8_t)(sum >> 13));
+    for (i = 0; i < 4; i++) sum += temp[40 + i];
+    *(output_rows[ 2] + output_col + 1) = sum < 0 ? (uint8_t)0 : (sum >= 33554432 ? (uint8_t)255 : (uint8_t)(sum >> 13));
     // Pixel 1,2 complete
 
     // Begin work for output pixel 2,2
-    for (i = 0; i < 4; i++)
-        temp[40 + i] = temp[34 + i] * weights_for_col_2[i];
+    for (i = 0; i < 4; i++) temp[40 + i] = temp[34 + i] * weights_for_col_2[i];
     sum = 2048;
-    for (i = 0; i < 4; i++)
-        sum += temp[40 + i];
-    *(output_rows[2] + output_col + 2) = sum < 0 ? (uint8_t)0 : (sum >= 16777216 ? (uint8_t)255 : (uint8_t)(sum >> 12));
+    for (i = 0; i < 4; i++) sum += temp[40 + i];
+    *(output_rows[ 2] + output_col + 2) = sum < 0 ? (uint8_t)0 : (sum >= 16777216 ? (uint8_t)255 : (uint8_t)(sum >> 12));
     // Pixel 2,2 complete
 
     // Begin work for output pixel 3,2
-    for (i = 0; i < 4; i++)
-        temp[40 + i] = temp[36 + i] * weights_for_col_3[i];
+    for (i = 0; i < 4; i++) temp[40 + i] = temp[36 + i] * weights_for_col_3[i];
     sum = 4096;
-    for (i = 0; i < 4; i++)
-        sum += temp[40 + i];
-    *(output_rows[2] + output_col + 3) = sum < 0 ? (uint8_t)0 : (sum >= 33554432 ? (uint8_t)255 : (uint8_t)(sum >> 13));
+    for (i = 0; i < 4; i++) sum += temp[40 + i];
+    *(output_rows[ 2] + output_col + 3) = sum < 0 ? (uint8_t)0 : (sum >= 33554432 ? (uint8_t)255 : (uint8_t)(sum >> 13));
     // Pixel 3,2 complete
 
     // Begin work for output pixel 4,2
-    for (i = 0; i < 3; i++)
-        temp[40 + i] = temp[37 + i] * weights_for_col_4[i];
+    for (i = 0; i < 3; i++) temp[40 + i] = temp[37 + i] * weights_for_col_4[i];
     sum = 4096;
-    for (i = 0; i < 3; i++)
-        sum += temp[40 + i];
-    *(output_rows[2] + output_col + 4) = sum < 0 ? (uint8_t)0 : (sum >= 33554432 ? (uint8_t)255 : (uint8_t)(sum >> 13));
+    for (i = 0; i < 3; i++) sum += temp[40 + i];
+    *(output_rows[ 2] + output_col + 4) = sum < 0 ? (uint8_t)0 : (sum >= 33554432 ? (uint8_t)255 : (uint8_t)(sum >> 13));
     // Pixel 4,2 complete
 
     // Begin work for output row 3
-    for (i = 0; i < 8; i++)
-        temp[i + 0] = 19 * input[i + 32];
-    for (i = 0; i < 8; i++)
-        temp[i + 8] = 79 * input[i + 40];
-    for (i = 0; i < 8; i++)
-        temp[i + 16] = 32 * input[i + 48];
-    for (i = 0; i < 8; i++)
-        temp[i + 24] = -2 * input[i + 56];
-    for (i = 0; i < 8; i++) {
+    for (i = 0; i < 8; i++) temp[i +  0] =  19 * input[i + 32];
+    for (i = 0; i < 8; i++) temp[i +  8] =  79 * input[i + 40];
+    for (i = 0; i < 8; i++) temp[i + 16] =  32 * input[i + 48];
+    for (i = 0; i < 8; i++) temp[i + 24] =  -2 * input[i + 56];
+    for (i = 0; i < 8; i++){
         sum = 0;
         for (j = 0; j < 4; j++)
             sum += temp[j * 8 + i];
@@ -1621,58 +1329,45 @@ void flow_scale_spatial_5x5(uint8_t input[64], uint8_t ** output_rows, uint32_t 
         temp[32 + i] = sum;
     }
     // Begin work for output pixel 0,3
-    for (i = 0; i < 3; i++)
-        temp[40 + i] = temp[32 + i] * weights_for_col_0[i];
+    for (i = 0; i < 3; i++) temp[40 + i] = temp[32 + i] * weights_for_col_0[i];
     sum = 8192;
-    for (i = 0; i < 3; i++)
-        sum += temp[40 + i];
-    *(output_rows[3] + output_col + 0) = sum < 0 ? (uint8_t)0 : (sum >= 67108864 ? (uint8_t)255 : (uint8_t)(sum >> 14));
+    for (i = 0; i < 3; i++) sum += temp[40 + i];
+    *(output_rows[ 3] + output_col + 0) = sum < 0 ? (uint8_t)0 : (sum >= 67108864 ? (uint8_t)255 : (uint8_t)(sum >> 14));
     // Pixel 0,3 complete
 
     // Begin work for output pixel 1,3
-    for (i = 0; i < 4; i++)
-        temp[40 + i] = temp[32 + i] * weights_for_col_1[i];
+    for (i = 0; i < 4; i++) temp[40 + i] = temp[32 + i] * weights_for_col_1[i];
     sum = 8192;
-    for (i = 0; i < 4; i++)
-        sum += temp[40 + i];
-    *(output_rows[3] + output_col + 1) = sum < 0 ? (uint8_t)0 : (sum >= 67108864 ? (uint8_t)255 : (uint8_t)(sum >> 14));
+    for (i = 0; i < 4; i++) sum += temp[40 + i];
+    *(output_rows[ 3] + output_col + 1) = sum < 0 ? (uint8_t)0 : (sum >= 67108864 ? (uint8_t)255 : (uint8_t)(sum >> 14));
     // Pixel 1,3 complete
 
     // Begin work for output pixel 2,3
-    for (i = 0; i < 4; i++)
-        temp[40 + i] = temp[34 + i] * weights_for_col_2[i];
+    for (i = 0; i < 4; i++) temp[40 + i] = temp[34 + i] * weights_for_col_2[i];
     sum = 4096;
-    for (i = 0; i < 4; i++)
-        sum += temp[40 + i];
-    *(output_rows[3] + output_col + 2) = sum < 0 ? (uint8_t)0 : (sum >= 33554432 ? (uint8_t)255 : (uint8_t)(sum >> 13));
+    for (i = 0; i < 4; i++) sum += temp[40 + i];
+    *(output_rows[ 3] + output_col + 2) = sum < 0 ? (uint8_t)0 : (sum >= 33554432 ? (uint8_t)255 : (uint8_t)(sum >> 13));
     // Pixel 2,3 complete
 
     // Begin work for output pixel 3,3
-    for (i = 0; i < 4; i++)
-        temp[40 + i] = temp[36 + i] * weights_for_col_3[i];
+    for (i = 0; i < 4; i++) temp[40 + i] = temp[36 + i] * weights_for_col_3[i];
     sum = 8192;
-    for (i = 0; i < 4; i++)
-        sum += temp[40 + i];
-    *(output_rows[3] + output_col + 3) = sum < 0 ? (uint8_t)0 : (sum >= 67108864 ? (uint8_t)255 : (uint8_t)(sum >> 14));
+    for (i = 0; i < 4; i++) sum += temp[40 + i];
+    *(output_rows[ 3] + output_col + 3) = sum < 0 ? (uint8_t)0 : (sum >= 67108864 ? (uint8_t)255 : (uint8_t)(sum >> 14));
     // Pixel 3,3 complete
 
     // Begin work for output pixel 4,3
-    for (i = 0; i < 3; i++)
-        temp[40 + i] = temp[37 + i] * weights_for_col_4[i];
+    for (i = 0; i < 3; i++) temp[40 + i] = temp[37 + i] * weights_for_col_4[i];
     sum = 8192;
-    for (i = 0; i < 3; i++)
-        sum += temp[40 + i];
-    *(output_rows[3] + output_col + 4) = sum < 0 ? (uint8_t)0 : (sum >= 67108864 ? (uint8_t)255 : (uint8_t)(sum >> 14));
+    for (i = 0; i < 3; i++) sum += temp[40 + i];
+    *(output_rows[ 3] + output_col + 4) = sum < 0 ? (uint8_t)0 : (sum >= 67108864 ? (uint8_t)255 : (uint8_t)(sum >> 14));
     // Pixel 4,3 complete
 
     // Begin work for output row 4
-    for (i = 0; i < 8; i++)
-        temp[i + 0] = -1 * input[i + 40];
-    for (i = 0; i < 8; i++)
-        temp[i + 8] = 51 * input[i + 48];
-    for (i = 0; i < 8; i++)
-        temp[i + 16] = 78 * input[i + 56];
-    for (i = 0; i < 8; i++) {
+    for (i = 0; i < 8; i++) temp[i +  0] =  -1 * input[i + 40];
+    for (i = 0; i < 8; i++) temp[i +  8] =  51 * input[i + 48];
+    for (i = 0; i < 8; i++) temp[i + 16] =  78 * input[i + 56];
+    for (i = 0; i < 8; i++){
         sum = 0;
         for (j = 0; j < 3; j++)
             sum += temp[j * 8 + i];
@@ -1680,89 +1375,67 @@ void flow_scale_spatial_5x5(uint8_t input[64], uint8_t ** output_rows, uint32_t 
         temp[32 + i] = sum;
     }
     // Begin work for output pixel 0,4
-    for (i = 0; i < 3; i++)
-        temp[40 + i] = temp[32 + i] * weights_for_col_0[i];
+    for (i = 0; i < 3; i++) temp[40 + i] = temp[32 + i] * weights_for_col_0[i];
     sum = 8192;
-    for (i = 0; i < 3; i++)
-        sum += temp[40 + i];
-    *(output_rows[4] + output_col + 0) = sum < 0 ? (uint8_t)0 : (sum >= 67108864 ? (uint8_t)255 : (uint8_t)(sum >> 14));
+    for (i = 0; i < 3; i++) sum += temp[40 + i];
+    *(output_rows[ 4] + output_col + 0) = sum < 0 ? (uint8_t)0 : (sum >= 67108864 ? (uint8_t)255 : (uint8_t)(sum >> 14));
     // Pixel 0,4 complete
 
     // Begin work for output pixel 1,4
-    for (i = 0; i < 4; i++)
-        temp[40 + i] = temp[32 + i] * weights_for_col_1[i];
+    for (i = 0; i < 4; i++) temp[40 + i] = temp[32 + i] * weights_for_col_1[i];
     sum = 8192;
-    for (i = 0; i < 4; i++)
-        sum += temp[40 + i];
-    *(output_rows[4] + output_col + 1) = sum < 0 ? (uint8_t)0 : (sum >= 67108864 ? (uint8_t)255 : (uint8_t)(sum >> 14));
+    for (i = 0; i < 4; i++) sum += temp[40 + i];
+    *(output_rows[ 4] + output_col + 1) = sum < 0 ? (uint8_t)0 : (sum >= 67108864 ? (uint8_t)255 : (uint8_t)(sum >> 14));
     // Pixel 1,4 complete
 
     // Begin work for output pixel 2,4
-    for (i = 0; i < 4; i++)
-        temp[40 + i] = temp[34 + i] * weights_for_col_2[i];
+    for (i = 0; i < 4; i++) temp[40 + i] = temp[34 + i] * weights_for_col_2[i];
     sum = 4096;
-    for (i = 0; i < 4; i++)
-        sum += temp[40 + i];
-    *(output_rows[4] + output_col + 2) = sum < 0 ? (uint8_t)0 : (sum >= 33554432 ? (uint8_t)255 : (uint8_t)(sum >> 13));
+    for (i = 0; i < 4; i++) sum += temp[40 + i];
+    *(output_rows[ 4] + output_col + 2) = sum < 0 ? (uint8_t)0 : (sum >= 33554432 ? (uint8_t)255 : (uint8_t)(sum >> 13));
     // Pixel 2,4 complete
 
     // Begin work for output pixel 3,4
-    for (i = 0; i < 4; i++)
-        temp[40 + i] = temp[36 + i] * weights_for_col_3[i];
+    for (i = 0; i < 4; i++) temp[40 + i] = temp[36 + i] * weights_for_col_3[i];
     sum = 8192;
-    for (i = 0; i < 4; i++)
-        sum += temp[40 + i];
-    *(output_rows[4] + output_col + 3) = sum < 0 ? (uint8_t)0 : (sum >= 67108864 ? (uint8_t)255 : (uint8_t)(sum >> 14));
+    for (i = 0; i < 4; i++) sum += temp[40 + i];
+    *(output_rows[ 4] + output_col + 3) = sum < 0 ? (uint8_t)0 : (sum >= 67108864 ? (uint8_t)255 : (uint8_t)(sum >> 14));
     // Pixel 3,4 complete
 
     // Begin work for output pixel 4,4
-    for (i = 0; i < 3; i++)
-        temp[40 + i] = temp[37 + i] * weights_for_col_4[i];
+    for (i = 0; i < 3; i++) temp[40 + i] = temp[37 + i] * weights_for_col_4[i];
     sum = 8192;
-    for (i = 0; i < 3; i++)
-        sum += temp[40 + i];
-    *(output_rows[4] + output_col + 4) = sum < 0 ? (uint8_t)0 : (sum >= 67108864 ? (uint8_t)255 : (uint8_t)(sum >> 14));
+    for (i = 0; i < 3; i++) sum += temp[40 + i];
+    *(output_rows[ 4] + output_col + 4) = sum < 0 ? (uint8_t)0 : (sum >= 67108864 ? (uint8_t)255 : (uint8_t)(sum >> 14));
     // Pixel 4,4 complete
 }
 
 #ifndef FLOW_GCC_IDCT
 void jpeg_idct_spatial_5x5(j_decompress_ptr cinfo, jpeg_component_info * compptr, JCOEFPTR coef_block,
-                           JSAMPARRAY output_buf, JDIMENSION output_col)
-{
+                           JSAMPARRAY output_buf, JDIMENSION output_col){
     JSAMPLE input[64];
-    JSAMPROW rows[8] = { &input[0],     &input[8],     &input[8 * 2], &input[8 * 3],
-                         &input[8 * 4], &input[8 * 5], &input[8 * 6], &input[8 * 7] };
+    JSAMPROW rows[8]
+        = { &input[0],     &input[8],     &input[8 * 2], &input[8 * 3],
+            &input[8 * 4], &input[8 * 5], &input[8 * 6], &input[8 * 7] };
     jpeg_idct_islow(cinfo, compptr, coef_block, &rows[0], 0);
 
     flow_scale_spatial_5x5(input, output_buf, output_col);
 }
 #endif
 
-void flow_scale_spatial_4x4(uint8_t input[64], uint8_t ** output_rows, uint32_t output_col)
-{
+FLOW_EXPORT void flow_scale_spatial_4x4(uint8_t input[64], uint8_t ** output_rows, uint32_t output_col){
     int32_t i, sum, j;
     FLOW_ALIGN_16_VAR(int32_t temp[48]);
-    FLOW_ALIGN_16_VAR(int32_t weights_for_col_0[]) = {
-        117, 117, 22,
-    };
-    FLOW_ALIGN_16_VAR(int32_t weights_for_col_1[]) = {
-        21, 107, 107, 21,
-    };
-    FLOW_ALIGN_16_VAR(int32_t weights_for_col_2[]) = {
-        21, 107, 107, 21,
-    };
-    FLOW_ALIGN_16_VAR(int32_t weights_for_col_3[]) = {
-        22, 117, 117,
-    };
+    FLOW_ALIGN_16_VAR(int32_t weights_for_col_0[]) = {117,117,22,};
+    FLOW_ALIGN_16_VAR(int32_t weights_for_col_1[]) = {21,107,107,21,};
+    FLOW_ALIGN_16_VAR(int32_t weights_for_col_2[]) = {21,107,107,21,};
+    FLOW_ALIGN_16_VAR(int32_t weights_for_col_3[]) = {22,117,117,};
 
     // Begin work for output row 0
-    for (i = 0; i < 8; i++)
-        temp[i + 0] = 117 * input[i + 0];
-    for (i = 0; i < 8; i++)
-        temp[i + 8] = 117 * input[i + 8];
-    for (i = 0; i < 8; i++)
-        temp[i + 16] = 22 * input[i + 16];
-    for (i = 0; i < 8; i++) {
+    for (i = 0; i < 8; i++) temp[i +  0] = 117 * input[i +  0];
+    for (i = 0; i < 8; i++) temp[i +  8] = 117 * input[i +  8];
+    for (i = 0; i < 8; i++) temp[i + 16] =  22 * input[i + 16];
+    for (i = 0; i < 8; i++){
         sum = 0;
         for (j = 0; j < 3; j++)
             sum += temp[j * 8 + i];
@@ -1770,55 +1443,39 @@ void flow_scale_spatial_4x4(uint8_t input[64], uint8_t ** output_rows, uint32_t 
         temp[32 + i] = sum;
     }
     // Begin work for output pixel 0,0
-    for (i = 0; i < 3; i++)
-        temp[40 + i] = temp[32 + i] * weights_for_col_0[i];
+    for (i = 0; i < 3; i++) temp[40 + i] = temp[32 + i] * weights_for_col_0[i];
     sum = 32768;
-    for (i = 0; i < 3; i++)
-        sum += temp[40 + i];
-    *(output_rows[0] + output_col + 0) = sum < 0 ? (uint8_t)0
-                                                 : (sum >= 268435456 ? (uint8_t)255 : (uint8_t)(sum >> 16));
+    for (i = 0; i < 3; i++) sum += temp[40 + i];
+    *(output_rows[ 0] + output_col + 0) = sum < 0 ? (uint8_t)0 : (sum >= 268435456 ? (uint8_t)255 : (uint8_t)(sum >> 16));
     // Pixel 0,0 complete
 
     // Begin work for output pixel 1,0
-    for (i = 0; i < 4; i++)
-        temp[40 + i] = temp[33 + i] * weights_for_col_1[i];
+    for (i = 0; i < 4; i++) temp[40 + i] = temp[33 + i] * weights_for_col_1[i];
     sum = 32768;
-    for (i = 0; i < 4; i++)
-        sum += temp[40 + i];
-    *(output_rows[0] + output_col + 1) = sum < 0 ? (uint8_t)0
-                                                 : (sum >= 268435456 ? (uint8_t)255 : (uint8_t)(sum >> 16));
+    for (i = 0; i < 4; i++) sum += temp[40 + i];
+    *(output_rows[ 0] + output_col + 1) = sum < 0 ? (uint8_t)0 : (sum >= 268435456 ? (uint8_t)255 : (uint8_t)(sum >> 16));
     // Pixel 1,0 complete
 
     // Begin work for output pixel 2,0
-    for (i = 0; i < 4; i++)
-        temp[40 + i] = temp[35 + i] * weights_for_col_2[i];
+    for (i = 0; i < 4; i++) temp[40 + i] = temp[35 + i] * weights_for_col_2[i];
     sum = 32768;
-    for (i = 0; i < 4; i++)
-        sum += temp[40 + i];
-    *(output_rows[0] + output_col + 2) = sum < 0 ? (uint8_t)0
-                                                 : (sum >= 268435456 ? (uint8_t)255 : (uint8_t)(sum >> 16));
+    for (i = 0; i < 4; i++) sum += temp[40 + i];
+    *(output_rows[ 0] + output_col + 2) = sum < 0 ? (uint8_t)0 : (sum >= 268435456 ? (uint8_t)255 : (uint8_t)(sum >> 16));
     // Pixel 2,0 complete
 
     // Begin work for output pixel 3,0
-    for (i = 0; i < 3; i++)
-        temp[40 + i] = temp[37 + i] * weights_for_col_3[i];
+    for (i = 0; i < 3; i++) temp[40 + i] = temp[37 + i] * weights_for_col_3[i];
     sum = 32768;
-    for (i = 0; i < 3; i++)
-        sum += temp[40 + i];
-    *(output_rows[0] + output_col + 3) = sum < 0 ? (uint8_t)0
-                                                 : (sum >= 268435456 ? (uint8_t)255 : (uint8_t)(sum >> 16));
+    for (i = 0; i < 3; i++) sum += temp[40 + i];
+    *(output_rows[ 0] + output_col + 3) = sum < 0 ? (uint8_t)0 : (sum >= 268435456 ? (uint8_t)255 : (uint8_t)(sum >> 16));
     // Pixel 3,0 complete
 
     // Begin work for output row 1
-    for (i = 0; i < 8; i++)
-        temp[i + 0] = 21 * input[i + 8];
-    for (i = 0; i < 8; i++)
-        temp[i + 8] = 107 * input[i + 16];
-    for (i = 0; i < 8; i++)
-        temp[i + 16] = 107 * input[i + 24];
-    for (i = 0; i < 8; i++)
-        temp[i + 24] = 21 * input[i + 32];
-    for (i = 0; i < 8; i++) {
+    for (i = 0; i < 8; i++) temp[i +  0] =  21 * input[i +  8];
+    for (i = 0; i < 8; i++) temp[i +  8] = 107 * input[i + 16];
+    for (i = 0; i < 8; i++) temp[i + 16] = 107 * input[i + 24];
+    for (i = 0; i < 8; i++) temp[i + 24] =  21 * input[i + 32];
+    for (i = 0; i < 8; i++){
         sum = 0;
         for (j = 0; j < 4; j++)
             sum += temp[j * 8 + i];
@@ -1826,55 +1483,39 @@ void flow_scale_spatial_4x4(uint8_t input[64], uint8_t ** output_rows, uint32_t 
         temp[32 + i] = sum;
     }
     // Begin work for output pixel 0,1
-    for (i = 0; i < 3; i++)
-        temp[40 + i] = temp[32 + i] * weights_for_col_0[i];
+    for (i = 0; i < 3; i++) temp[40 + i] = temp[32 + i] * weights_for_col_0[i];
     sum = 32768;
-    for (i = 0; i < 3; i++)
-        sum += temp[40 + i];
-    *(output_rows[1] + output_col + 0) = sum < 0 ? (uint8_t)0
-                                                 : (sum >= 268435456 ? (uint8_t)255 : (uint8_t)(sum >> 16));
+    for (i = 0; i < 3; i++) sum += temp[40 + i];
+    *(output_rows[ 1] + output_col + 0) = sum < 0 ? (uint8_t)0 : (sum >= 268435456 ? (uint8_t)255 : (uint8_t)(sum >> 16));
     // Pixel 0,1 complete
 
     // Begin work for output pixel 1,1
-    for (i = 0; i < 4; i++)
-        temp[40 + i] = temp[33 + i] * weights_for_col_1[i];
+    for (i = 0; i < 4; i++) temp[40 + i] = temp[33 + i] * weights_for_col_1[i];
     sum = 32768;
-    for (i = 0; i < 4; i++)
-        sum += temp[40 + i];
-    *(output_rows[1] + output_col + 1) = sum < 0 ? (uint8_t)0
-                                                 : (sum >= 268435456 ? (uint8_t)255 : (uint8_t)(sum >> 16));
+    for (i = 0; i < 4; i++) sum += temp[40 + i];
+    *(output_rows[ 1] + output_col + 1) = sum < 0 ? (uint8_t)0 : (sum >= 268435456 ? (uint8_t)255 : (uint8_t)(sum >> 16));
     // Pixel 1,1 complete
 
     // Begin work for output pixel 2,1
-    for (i = 0; i < 4; i++)
-        temp[40 + i] = temp[35 + i] * weights_for_col_2[i];
+    for (i = 0; i < 4; i++) temp[40 + i] = temp[35 + i] * weights_for_col_2[i];
     sum = 32768;
-    for (i = 0; i < 4; i++)
-        sum += temp[40 + i];
-    *(output_rows[1] + output_col + 2) = sum < 0 ? (uint8_t)0
-                                                 : (sum >= 268435456 ? (uint8_t)255 : (uint8_t)(sum >> 16));
+    for (i = 0; i < 4; i++) sum += temp[40 + i];
+    *(output_rows[ 1] + output_col + 2) = sum < 0 ? (uint8_t)0 : (sum >= 268435456 ? (uint8_t)255 : (uint8_t)(sum >> 16));
     // Pixel 2,1 complete
 
     // Begin work for output pixel 3,1
-    for (i = 0; i < 3; i++)
-        temp[40 + i] = temp[37 + i] * weights_for_col_3[i];
+    for (i = 0; i < 3; i++) temp[40 + i] = temp[37 + i] * weights_for_col_3[i];
     sum = 32768;
-    for (i = 0; i < 3; i++)
-        sum += temp[40 + i];
-    *(output_rows[1] + output_col + 3) = sum < 0 ? (uint8_t)0
-                                                 : (sum >= 268435456 ? (uint8_t)255 : (uint8_t)(sum >> 16));
+    for (i = 0; i < 3; i++) sum += temp[40 + i];
+    *(output_rows[ 1] + output_col + 3) = sum < 0 ? (uint8_t)0 : (sum >= 268435456 ? (uint8_t)255 : (uint8_t)(sum >> 16));
     // Pixel 3,1 complete
 
     // Begin work for output row 2
-    for (i = 0; i < 8; i++)
-        temp[i + 0] = 21 * input[i + 24];
-    for (i = 0; i < 8; i++)
-        temp[i + 8] = 107 * input[i + 32];
-    for (i = 0; i < 8; i++)
-        temp[i + 16] = 107 * input[i + 40];
-    for (i = 0; i < 8; i++)
-        temp[i + 24] = 21 * input[i + 48];
-    for (i = 0; i < 8; i++) {
+    for (i = 0; i < 8; i++) temp[i +  0] =  21 * input[i + 24];
+    for (i = 0; i < 8; i++) temp[i +  8] = 107 * input[i + 32];
+    for (i = 0; i < 8; i++) temp[i + 16] = 107 * input[i + 40];
+    for (i = 0; i < 8; i++) temp[i + 24] =  21 * input[i + 48];
+    for (i = 0; i < 8; i++){
         sum = 0;
         for (j = 0; j < 4; j++)
             sum += temp[j * 8 + i];
@@ -1882,53 +1523,38 @@ void flow_scale_spatial_4x4(uint8_t input[64], uint8_t ** output_rows, uint32_t 
         temp[32 + i] = sum;
     }
     // Begin work for output pixel 0,2
-    for (i = 0; i < 3; i++)
-        temp[40 + i] = temp[32 + i] * weights_for_col_0[i];
+    for (i = 0; i < 3; i++) temp[40 + i] = temp[32 + i] * weights_for_col_0[i];
     sum = 32768;
-    for (i = 0; i < 3; i++)
-        sum += temp[40 + i];
-    *(output_rows[2] + output_col + 0) = sum < 0 ? (uint8_t)0
-                                                 : (sum >= 268435456 ? (uint8_t)255 : (uint8_t)(sum >> 16));
+    for (i = 0; i < 3; i++) sum += temp[40 + i];
+    *(output_rows[ 2] + output_col + 0) = sum < 0 ? (uint8_t)0 : (sum >= 268435456 ? (uint8_t)255 : (uint8_t)(sum >> 16));
     // Pixel 0,2 complete
 
     // Begin work for output pixel 1,2
-    for (i = 0; i < 4; i++)
-        temp[40 + i] = temp[33 + i] * weights_for_col_1[i];
+    for (i = 0; i < 4; i++) temp[40 + i] = temp[33 + i] * weights_for_col_1[i];
     sum = 32768;
-    for (i = 0; i < 4; i++)
-        sum += temp[40 + i];
-    *(output_rows[2] + output_col + 1) = sum < 0 ? (uint8_t)0
-                                                 : (sum >= 268435456 ? (uint8_t)255 : (uint8_t)(sum >> 16));
+    for (i = 0; i < 4; i++) sum += temp[40 + i];
+    *(output_rows[ 2] + output_col + 1) = sum < 0 ? (uint8_t)0 : (sum >= 268435456 ? (uint8_t)255 : (uint8_t)(sum >> 16));
     // Pixel 1,2 complete
 
     // Begin work for output pixel 2,2
-    for (i = 0; i < 4; i++)
-        temp[40 + i] = temp[35 + i] * weights_for_col_2[i];
+    for (i = 0; i < 4; i++) temp[40 + i] = temp[35 + i] * weights_for_col_2[i];
     sum = 32768;
-    for (i = 0; i < 4; i++)
-        sum += temp[40 + i];
-    *(output_rows[2] + output_col + 2) = sum < 0 ? (uint8_t)0
-                                                 : (sum >= 268435456 ? (uint8_t)255 : (uint8_t)(sum >> 16));
+    for (i = 0; i < 4; i++) sum += temp[40 + i];
+    *(output_rows[ 2] + output_col + 2) = sum < 0 ? (uint8_t)0 : (sum >= 268435456 ? (uint8_t)255 : (uint8_t)(sum >> 16));
     // Pixel 2,2 complete
 
     // Begin work for output pixel 3,2
-    for (i = 0; i < 3; i++)
-        temp[40 + i] = temp[37 + i] * weights_for_col_3[i];
+    for (i = 0; i < 3; i++) temp[40 + i] = temp[37 + i] * weights_for_col_3[i];
     sum = 32768;
-    for (i = 0; i < 3; i++)
-        sum += temp[40 + i];
-    *(output_rows[2] + output_col + 3) = sum < 0 ? (uint8_t)0
-                                                 : (sum >= 268435456 ? (uint8_t)255 : (uint8_t)(sum >> 16));
+    for (i = 0; i < 3; i++) sum += temp[40 + i];
+    *(output_rows[ 2] + output_col + 3) = sum < 0 ? (uint8_t)0 : (sum >= 268435456 ? (uint8_t)255 : (uint8_t)(sum >> 16));
     // Pixel 3,2 complete
 
     // Begin work for output row 3
-    for (i = 0; i < 8; i++)
-        temp[i + 0] = 22 * input[i + 40];
-    for (i = 0; i < 8; i++)
-        temp[i + 8] = 117 * input[i + 48];
-    for (i = 0; i < 8; i++)
-        temp[i + 16] = 117 * input[i + 56];
-    for (i = 0; i < 8; i++) {
+    for (i = 0; i < 8; i++) temp[i +  0] =  22 * input[i + 40];
+    for (i = 0; i < 8; i++) temp[i +  8] = 117 * input[i + 48];
+    for (i = 0; i < 8; i++) temp[i + 16] = 117 * input[i + 56];
+    for (i = 0; i < 8; i++){
         sum = 0;
         for (j = 0; j < 3; j++)
             sum += temp[j * 8 + i];
@@ -1936,83 +1562,60 @@ void flow_scale_spatial_4x4(uint8_t input[64], uint8_t ** output_rows, uint32_t 
         temp[32 + i] = sum;
     }
     // Begin work for output pixel 0,3
-    for (i = 0; i < 3; i++)
-        temp[40 + i] = temp[32 + i] * weights_for_col_0[i];
+    for (i = 0; i < 3; i++) temp[40 + i] = temp[32 + i] * weights_for_col_0[i];
     sum = 32768;
-    for (i = 0; i < 3; i++)
-        sum += temp[40 + i];
-    *(output_rows[3] + output_col + 0) = sum < 0 ? (uint8_t)0
-                                                 : (sum >= 268435456 ? (uint8_t)255 : (uint8_t)(sum >> 16));
+    for (i = 0; i < 3; i++) sum += temp[40 + i];
+    *(output_rows[ 3] + output_col + 0) = sum < 0 ? (uint8_t)0 : (sum >= 268435456 ? (uint8_t)255 : (uint8_t)(sum >> 16));
     // Pixel 0,3 complete
 
     // Begin work for output pixel 1,3
-    for (i = 0; i < 4; i++)
-        temp[40 + i] = temp[33 + i] * weights_for_col_1[i];
+    for (i = 0; i < 4; i++) temp[40 + i] = temp[33 + i] * weights_for_col_1[i];
     sum = 32768;
-    for (i = 0; i < 4; i++)
-        sum += temp[40 + i];
-    *(output_rows[3] + output_col + 1) = sum < 0 ? (uint8_t)0
-                                                 : (sum >= 268435456 ? (uint8_t)255 : (uint8_t)(sum >> 16));
+    for (i = 0; i < 4; i++) sum += temp[40 + i];
+    *(output_rows[ 3] + output_col + 1) = sum < 0 ? (uint8_t)0 : (sum >= 268435456 ? (uint8_t)255 : (uint8_t)(sum >> 16));
     // Pixel 1,3 complete
 
     // Begin work for output pixel 2,3
-    for (i = 0; i < 4; i++)
-        temp[40 + i] = temp[35 + i] * weights_for_col_2[i];
+    for (i = 0; i < 4; i++) temp[40 + i] = temp[35 + i] * weights_for_col_2[i];
     sum = 32768;
-    for (i = 0; i < 4; i++)
-        sum += temp[40 + i];
-    *(output_rows[3] + output_col + 2) = sum < 0 ? (uint8_t)0
-                                                 : (sum >= 268435456 ? (uint8_t)255 : (uint8_t)(sum >> 16));
+    for (i = 0; i < 4; i++) sum += temp[40 + i];
+    *(output_rows[ 3] + output_col + 2) = sum < 0 ? (uint8_t)0 : (sum >= 268435456 ? (uint8_t)255 : (uint8_t)(sum >> 16));
     // Pixel 2,3 complete
 
     // Begin work for output pixel 3,3
-    for (i = 0; i < 3; i++)
-        temp[40 + i] = temp[37 + i] * weights_for_col_3[i];
+    for (i = 0; i < 3; i++) temp[40 + i] = temp[37 + i] * weights_for_col_3[i];
     sum = 32768;
-    for (i = 0; i < 3; i++)
-        sum += temp[40 + i];
-    *(output_rows[3] + output_col + 3) = sum < 0 ? (uint8_t)0
-                                                 : (sum >= 268435456 ? (uint8_t)255 : (uint8_t)(sum >> 16));
+    for (i = 0; i < 3; i++) sum += temp[40 + i];
+    *(output_rows[ 3] + output_col + 3) = sum < 0 ? (uint8_t)0 : (sum >= 268435456 ? (uint8_t)255 : (uint8_t)(sum >> 16));
     // Pixel 3,3 complete
 }
 
 #ifndef FLOW_GCC_IDCT
 void jpeg_idct_spatial_4x4(j_decompress_ptr cinfo, jpeg_component_info * compptr, JCOEFPTR coef_block,
-                           JSAMPARRAY output_buf, JDIMENSION output_col)
-{
+                           JSAMPARRAY output_buf, JDIMENSION output_col){
     JSAMPLE input[64];
-    JSAMPROW rows[8] = { &input[0],     &input[8],     &input[8 * 2], &input[8 * 3],
-                         &input[8 * 4], &input[8 * 5], &input[8 * 6], &input[8 * 7] };
+    JSAMPROW rows[8]
+        = { &input[0],     &input[8],     &input[8 * 2], &input[8 * 3],
+            &input[8 * 4], &input[8 * 5], &input[8 * 6], &input[8 * 7] };
     jpeg_idct_islow(cinfo, compptr, coef_block, &rows[0], 0);
 
     flow_scale_spatial_4x4(input, output_buf, output_col);
 }
 #endif
 
-void flow_scale_spatial_3x3(uint8_t input[64], uint8_t ** output_rows, uint32_t output_col)
-{
+FLOW_EXPORT void flow_scale_spatial_3x3(uint8_t input[64], uint8_t ** output_rows, uint32_t output_col){
     int32_t i, sum, j;
     FLOW_ALIGN_16_VAR(int32_t temp[64]);
-    FLOW_ALIGN_16_VAR(int32_t weights_for_col_0[]) = {
-        80, 103, 62, 11,
-    };
-    FLOW_ALIGN_16_VAR(int32_t weights_for_col_1[]) = {
-        2, 39, 87, 87, 39, 2,
-    };
-    FLOW_ALIGN_16_VAR(int32_t weights_for_col_2[]) = {
-        11, 62, 103, 80,
-    };
+    FLOW_ALIGN_16_VAR(int32_t weights_for_col_0[]) = {80,103,62,11,};
+    FLOW_ALIGN_16_VAR(int32_t weights_for_col_1[]) = {2,39,87,87,39,2,};
+    FLOW_ALIGN_16_VAR(int32_t weights_for_col_2[]) = {11,62,103,80,};
 
     // Begin work for output row 0
-    for (i = 0; i < 8; i++)
-        temp[i + 0] = 80 * input[i + 0];
-    for (i = 0; i < 8; i++)
-        temp[i + 8] = 103 * input[i + 8];
-    for (i = 0; i < 8; i++)
-        temp[i + 16] = 62 * input[i + 16];
-    for (i = 0; i < 8; i++)
-        temp[i + 24] = 11 * input[i + 24];
-    for (i = 0; i < 8; i++) {
+    for (i = 0; i < 8; i++) temp[i +  0] =  80 * input[i +  0];
+    for (i = 0; i < 8; i++) temp[i +  8] = 103 * input[i +  8];
+    for (i = 0; i < 8; i++) temp[i + 16] =  62 * input[i + 16];
+    for (i = 0; i < 8; i++) temp[i + 24] =  11 * input[i + 24];
+    for (i = 0; i < 8; i++){
         sum = 0;
         for (j = 0; j < 4; j++)
             sum += temp[j * 8 + i];
@@ -2020,49 +1623,34 @@ void flow_scale_spatial_3x3(uint8_t input[64], uint8_t ** output_rows, uint32_t 
         temp[48 + i] = sum;
     }
     // Begin work for output pixel 0,0
-    for (i = 0; i < 4; i++)
-        temp[56 + i] = temp[48 + i] * weights_for_col_0[i];
+    for (i = 0; i < 4; i++) temp[56 + i] = temp[48 + i] * weights_for_col_0[i];
     sum = 32768;
-    for (i = 0; i < 4; i++)
-        sum += temp[56 + i];
-    *(output_rows[0] + output_col + 0) = sum < 0 ? (uint8_t)0
-                                                 : (sum >= 268435456 ? (uint8_t)255 : (uint8_t)(sum >> 16));
+    for (i = 0; i < 4; i++) sum += temp[56 + i];
+    *(output_rows[ 0] + output_col + 0) = sum < 0 ? (uint8_t)0 : (sum >= 268435456 ? (uint8_t)255 : (uint8_t)(sum >> 16));
     // Pixel 0,0 complete
 
     // Begin work for output pixel 1,0
-    for (i = 0; i < 6; i++)
-        temp[56 + i] = temp[49 + i] * weights_for_col_1[i];
+    for (i = 0; i < 6; i++) temp[56 + i] = temp[49 + i] * weights_for_col_1[i];
     sum = 32768;
-    for (i = 0; i < 6; i++)
-        sum += temp[56 + i];
-    *(output_rows[0] + output_col + 1) = sum < 0 ? (uint8_t)0
-                                                 : (sum >= 268435456 ? (uint8_t)255 : (uint8_t)(sum >> 16));
+    for (i = 0; i < 6; i++) sum += temp[56 + i];
+    *(output_rows[ 0] + output_col + 1) = sum < 0 ? (uint8_t)0 : (sum >= 268435456 ? (uint8_t)255 : (uint8_t)(sum >> 16));
     // Pixel 1,0 complete
 
     // Begin work for output pixel 2,0
-    for (i = 0; i < 4; i++)
-        temp[56 + i] = temp[52 + i] * weights_for_col_2[i];
+    for (i = 0; i < 4; i++) temp[56 + i] = temp[52 + i] * weights_for_col_2[i];
     sum = 32768;
-    for (i = 0; i < 4; i++)
-        sum += temp[56 + i];
-    *(output_rows[0] + output_col + 2) = sum < 0 ? (uint8_t)0
-                                                 : (sum >= 268435456 ? (uint8_t)255 : (uint8_t)(sum >> 16));
+    for (i = 0; i < 4; i++) sum += temp[56 + i];
+    *(output_rows[ 0] + output_col + 2) = sum < 0 ? (uint8_t)0 : (sum >= 268435456 ? (uint8_t)255 : (uint8_t)(sum >> 16));
     // Pixel 2,0 complete
 
     // Begin work for output row 1
-    for (i = 0; i < 8; i++)
-        temp[i + 0] = 2 * input[i + 8];
-    for (i = 0; i < 8; i++)
-        temp[i + 8] = 39 * input[i + 16];
-    for (i = 0; i < 8; i++)
-        temp[i + 16] = 87 * input[i + 24];
-    for (i = 0; i < 8; i++)
-        temp[i + 24] = 87 * input[i + 32];
-    for (i = 0; i < 8; i++)
-        temp[i + 32] = 39 * input[i + 40];
-    for (i = 0; i < 8; i++)
-        temp[i + 40] = 2 * input[i + 48];
-    for (i = 0; i < 8; i++) {
+    for (i = 0; i < 8; i++) temp[i +  0] =   2 * input[i +  8];
+    for (i = 0; i < 8; i++) temp[i +  8] =  39 * input[i + 16];
+    for (i = 0; i < 8; i++) temp[i + 16] =  87 * input[i + 24];
+    for (i = 0; i < 8; i++) temp[i + 24] =  87 * input[i + 32];
+    for (i = 0; i < 8; i++) temp[i + 32] =  39 * input[i + 40];
+    for (i = 0; i < 8; i++) temp[i + 40] =   2 * input[i + 48];
+    for (i = 0; i < 8; i++){
         sum = 0;
         for (j = 0; j < 6; j++)
             sum += temp[j * 8 + i];
@@ -2070,45 +1658,32 @@ void flow_scale_spatial_3x3(uint8_t input[64], uint8_t ** output_rows, uint32_t 
         temp[48 + i] = sum;
     }
     // Begin work for output pixel 0,1
-    for (i = 0; i < 4; i++)
-        temp[56 + i] = temp[48 + i] * weights_for_col_0[i];
+    for (i = 0; i < 4; i++) temp[56 + i] = temp[48 + i] * weights_for_col_0[i];
     sum = 32768;
-    for (i = 0; i < 4; i++)
-        sum += temp[56 + i];
-    *(output_rows[1] + output_col + 0) = sum < 0 ? (uint8_t)0
-                                                 : (sum >= 268435456 ? (uint8_t)255 : (uint8_t)(sum >> 16));
+    for (i = 0; i < 4; i++) sum += temp[56 + i];
+    *(output_rows[ 1] + output_col + 0) = sum < 0 ? (uint8_t)0 : (sum >= 268435456 ? (uint8_t)255 : (uint8_t)(sum >> 16));
     // Pixel 0,1 complete
 
     // Begin work for output pixel 1,1
-    for (i = 0; i < 6; i++)
-        temp[56 + i] = temp[49 + i] * weights_for_col_1[i];
+    for (i = 0; i < 6; i++) temp[56 + i] = temp[49 + i] * weights_for_col_1[i];
     sum = 32768;
-    for (i = 0; i < 6; i++)
-        sum += temp[56 + i];
-    *(output_rows[1] + output_col + 1) = sum < 0 ? (uint8_t)0
-                                                 : (sum >= 268435456 ? (uint8_t)255 : (uint8_t)(sum >> 16));
+    for (i = 0; i < 6; i++) sum += temp[56 + i];
+    *(output_rows[ 1] + output_col + 1) = sum < 0 ? (uint8_t)0 : (sum >= 268435456 ? (uint8_t)255 : (uint8_t)(sum >> 16));
     // Pixel 1,1 complete
 
     // Begin work for output pixel 2,1
-    for (i = 0; i < 4; i++)
-        temp[56 + i] = temp[52 + i] * weights_for_col_2[i];
+    for (i = 0; i < 4; i++) temp[56 + i] = temp[52 + i] * weights_for_col_2[i];
     sum = 32768;
-    for (i = 0; i < 4; i++)
-        sum += temp[56 + i];
-    *(output_rows[1] + output_col + 2) = sum < 0 ? (uint8_t)0
-                                                 : (sum >= 268435456 ? (uint8_t)255 : (uint8_t)(sum >> 16));
+    for (i = 0; i < 4; i++) sum += temp[56 + i];
+    *(output_rows[ 1] + output_col + 2) = sum < 0 ? (uint8_t)0 : (sum >= 268435456 ? (uint8_t)255 : (uint8_t)(sum >> 16));
     // Pixel 2,1 complete
 
     // Begin work for output row 2
-    for (i = 0; i < 8; i++)
-        temp[i + 0] = 11 * input[i + 32];
-    for (i = 0; i < 8; i++)
-        temp[i + 8] = 62 * input[i + 40];
-    for (i = 0; i < 8; i++)
-        temp[i + 16] = 103 * input[i + 48];
-    for (i = 0; i < 8; i++)
-        temp[i + 24] = 80 * input[i + 56];
-    for (i = 0; i < 8; i++) {
+    for (i = 0; i < 8; i++) temp[i +  0] =  11 * input[i + 32];
+    for (i = 0; i < 8; i++) temp[i +  8] =  62 * input[i + 40];
+    for (i = 0; i < 8; i++) temp[i + 16] = 103 * input[i + 48];
+    for (i = 0; i < 8; i++) temp[i + 24] =  80 * input[i + 56];
+    for (i = 0; i < 8; i++){
         sum = 0;
         for (j = 0; j < 4; j++)
             sum += temp[j * 8 + i];
@@ -2116,74 +1691,54 @@ void flow_scale_spatial_3x3(uint8_t input[64], uint8_t ** output_rows, uint32_t 
         temp[48 + i] = sum;
     }
     // Begin work for output pixel 0,2
-    for (i = 0; i < 4; i++)
-        temp[56 + i] = temp[48 + i] * weights_for_col_0[i];
+    for (i = 0; i < 4; i++) temp[56 + i] = temp[48 + i] * weights_for_col_0[i];
     sum = 32768;
-    for (i = 0; i < 4; i++)
-        sum += temp[56 + i];
-    *(output_rows[2] + output_col + 0) = sum < 0 ? (uint8_t)0
-                                                 : (sum >= 268435456 ? (uint8_t)255 : (uint8_t)(sum >> 16));
+    for (i = 0; i < 4; i++) sum += temp[56 + i];
+    *(output_rows[ 2] + output_col + 0) = sum < 0 ? (uint8_t)0 : (sum >= 268435456 ? (uint8_t)255 : (uint8_t)(sum >> 16));
     // Pixel 0,2 complete
 
     // Begin work for output pixel 1,2
-    for (i = 0; i < 6; i++)
-        temp[56 + i] = temp[49 + i] * weights_for_col_1[i];
+    for (i = 0; i < 6; i++) temp[56 + i] = temp[49 + i] * weights_for_col_1[i];
     sum = 32768;
-    for (i = 0; i < 6; i++)
-        sum += temp[56 + i];
-    *(output_rows[2] + output_col + 1) = sum < 0 ? (uint8_t)0
-                                                 : (sum >= 268435456 ? (uint8_t)255 : (uint8_t)(sum >> 16));
+    for (i = 0; i < 6; i++) sum += temp[56 + i];
+    *(output_rows[ 2] + output_col + 1) = sum < 0 ? (uint8_t)0 : (sum >= 268435456 ? (uint8_t)255 : (uint8_t)(sum >> 16));
     // Pixel 1,2 complete
 
     // Begin work for output pixel 2,2
-    for (i = 0; i < 4; i++)
-        temp[56 + i] = temp[52 + i] * weights_for_col_2[i];
+    for (i = 0; i < 4; i++) temp[56 + i] = temp[52 + i] * weights_for_col_2[i];
     sum = 32768;
-    for (i = 0; i < 4; i++)
-        sum += temp[56 + i];
-    *(output_rows[2] + output_col + 2) = sum < 0 ? (uint8_t)0
-                                                 : (sum >= 268435456 ? (uint8_t)255 : (uint8_t)(sum >> 16));
+    for (i = 0; i < 4; i++) sum += temp[56 + i];
+    *(output_rows[ 2] + output_col + 2) = sum < 0 ? (uint8_t)0 : (sum >= 268435456 ? (uint8_t)255 : (uint8_t)(sum >> 16));
     // Pixel 2,2 complete
 }
 
 #ifndef FLOW_GCC_IDCT
 void jpeg_idct_spatial_3x3(j_decompress_ptr cinfo, jpeg_component_info * compptr, JCOEFPTR coef_block,
-                           JSAMPARRAY output_buf, JDIMENSION output_col)
-{
+                           JSAMPARRAY output_buf, JDIMENSION output_col){
     JSAMPLE input[64];
-    JSAMPROW rows[8] = { &input[0],     &input[8],     &input[8 * 2], &input[8 * 3],
-                         &input[8 * 4], &input[8 * 5], &input[8 * 6], &input[8 * 7] };
+    JSAMPROW rows[8]
+        = { &input[0],     &input[8],     &input[8 * 2], &input[8 * 3],
+            &input[8 * 4], &input[8 * 5], &input[8 * 6], &input[8 * 7] };
     jpeg_idct_islow(cinfo, compptr, coef_block, &rows[0], 0);
 
     flow_scale_spatial_3x3(input, output_buf, output_col);
 }
 #endif
 
-void flow_scale_spatial_2x2(uint8_t input[64], uint8_t ** output_rows, uint32_t output_col)
-{
+FLOW_EXPORT void flow_scale_spatial_2x2(uint8_t input[64], uint8_t ** output_rows, uint32_t output_col){
     int32_t i, sum, j;
     FLOW_ALIGN_16_VAR(int32_t temp[64]);
-    FLOW_ALIGN_16_VAR(int32_t weights_for_col_0[]) = {
-        48, 67, 67, 48, 22, 4,
-    };
-    FLOW_ALIGN_16_VAR(int32_t weights_for_col_1[]) = {
-        4, 22, 48, 67, 67, 48,
-    };
+    FLOW_ALIGN_16_VAR(int32_t weights_for_col_0[]) = {48,67,67,48,22,4,};
+    FLOW_ALIGN_16_VAR(int32_t weights_for_col_1[]) = {4,22,48,67,67,48,};
 
     // Begin work for output row 0
-    for (i = 0; i < 8; i++)
-        temp[i + 0] = 48 * input[i + 0];
-    for (i = 0; i < 8; i++)
-        temp[i + 8] = 67 * input[i + 8];
-    for (i = 0; i < 8; i++)
-        temp[i + 16] = 67 * input[i + 16];
-    for (i = 0; i < 8; i++)
-        temp[i + 24] = 48 * input[i + 24];
-    for (i = 0; i < 8; i++)
-        temp[i + 32] = 22 * input[i + 32];
-    for (i = 0; i < 8; i++)
-        temp[i + 40] = 4 * input[i + 40];
-    for (i = 0; i < 8; i++) {
+    for (i = 0; i < 8; i++) temp[i +  0] =  48 * input[i +  0];
+    for (i = 0; i < 8; i++) temp[i +  8] =  67 * input[i +  8];
+    for (i = 0; i < 8; i++) temp[i + 16] =  67 * input[i + 16];
+    for (i = 0; i < 8; i++) temp[i + 24] =  48 * input[i + 24];
+    for (i = 0; i < 8; i++) temp[i + 32] =  22 * input[i + 32];
+    for (i = 0; i < 8; i++) temp[i + 40] =   4 * input[i + 40];
+    for (i = 0; i < 8; i++){
         sum = 0;
         for (j = 0; j < 6; j++)
             sum += temp[j * 8 + i];
@@ -2191,39 +1746,27 @@ void flow_scale_spatial_2x2(uint8_t input[64], uint8_t ** output_rows, uint32_t 
         temp[48 + i] = sum;
     }
     // Begin work for output pixel 0,0
-    for (i = 0; i < 6; i++)
-        temp[56 + i] = temp[48 + i] * weights_for_col_0[i];
+    for (i = 0; i < 6; i++) temp[56 + i] = temp[48 + i] * weights_for_col_0[i];
     sum = 32768;
-    for (i = 0; i < 6; i++)
-        sum += temp[56 + i];
-    *(output_rows[0] + output_col + 0) = sum < 0 ? (uint8_t)0
-                                                 : (sum >= 268435456 ? (uint8_t)255 : (uint8_t)(sum >> 16));
+    for (i = 0; i < 6; i++) sum += temp[56 + i];
+    *(output_rows[ 0] + output_col + 0) = sum < 0 ? (uint8_t)0 : (sum >= 268435456 ? (uint8_t)255 : (uint8_t)(sum >> 16));
     // Pixel 0,0 complete
 
     // Begin work for output pixel 1,0
-    for (i = 0; i < 6; i++)
-        temp[56 + i] = temp[50 + i] * weights_for_col_1[i];
+    for (i = 0; i < 6; i++) temp[56 + i] = temp[50 + i] * weights_for_col_1[i];
     sum = 32768;
-    for (i = 0; i < 6; i++)
-        sum += temp[56 + i];
-    *(output_rows[0] + output_col + 1) = sum < 0 ? (uint8_t)0
-                                                 : (sum >= 268435456 ? (uint8_t)255 : (uint8_t)(sum >> 16));
+    for (i = 0; i < 6; i++) sum += temp[56 + i];
+    *(output_rows[ 0] + output_col + 1) = sum < 0 ? (uint8_t)0 : (sum >= 268435456 ? (uint8_t)255 : (uint8_t)(sum >> 16));
     // Pixel 1,0 complete
 
     // Begin work for output row 1
-    for (i = 0; i < 8; i++)
-        temp[i + 0] = 4 * input[i + 16];
-    for (i = 0; i < 8; i++)
-        temp[i + 8] = 22 * input[i + 24];
-    for (i = 0; i < 8; i++)
-        temp[i + 16] = 48 * input[i + 32];
-    for (i = 0; i < 8; i++)
-        temp[i + 24] = 67 * input[i + 40];
-    for (i = 0; i < 8; i++)
-        temp[i + 32] = 67 * input[i + 48];
-    for (i = 0; i < 8; i++)
-        temp[i + 40] = 48 * input[i + 56];
-    for (i = 0; i < 8; i++) {
+    for (i = 0; i < 8; i++) temp[i +  0] =   4 * input[i + 16];
+    for (i = 0; i < 8; i++) temp[i +  8] =  22 * input[i + 24];
+    for (i = 0; i < 8; i++) temp[i + 16] =  48 * input[i + 32];
+    for (i = 0; i < 8; i++) temp[i + 24] =  67 * input[i + 40];
+    for (i = 0; i < 8; i++) temp[i + 32] =  67 * input[i + 48];
+    for (i = 0; i < 8; i++) temp[i + 40] =  48 * input[i + 56];
+    for (i = 0; i < 8; i++){
         sum = 0;
         for (j = 0; j < 6; j++)
             sum += temp[j * 8 + i];
@@ -2231,65 +1774,48 @@ void flow_scale_spatial_2x2(uint8_t input[64], uint8_t ** output_rows, uint32_t 
         temp[48 + i] = sum;
     }
     // Begin work for output pixel 0,1
-    for (i = 0; i < 6; i++)
-        temp[56 + i] = temp[48 + i] * weights_for_col_0[i];
+    for (i = 0; i < 6; i++) temp[56 + i] = temp[48 + i] * weights_for_col_0[i];
     sum = 32768;
-    for (i = 0; i < 6; i++)
-        sum += temp[56 + i];
-    *(output_rows[1] + output_col + 0) = sum < 0 ? (uint8_t)0
-                                                 : (sum >= 268435456 ? (uint8_t)255 : (uint8_t)(sum >> 16));
+    for (i = 0; i < 6; i++) sum += temp[56 + i];
+    *(output_rows[ 1] + output_col + 0) = sum < 0 ? (uint8_t)0 : (sum >= 268435456 ? (uint8_t)255 : (uint8_t)(sum >> 16));
     // Pixel 0,1 complete
 
     // Begin work for output pixel 1,1
-    for (i = 0; i < 6; i++)
-        temp[56 + i] = temp[50 + i] * weights_for_col_1[i];
+    for (i = 0; i < 6; i++) temp[56 + i] = temp[50 + i] * weights_for_col_1[i];
     sum = 32768;
-    for (i = 0; i < 6; i++)
-        sum += temp[56 + i];
-    *(output_rows[1] + output_col + 1) = sum < 0 ? (uint8_t)0
-                                                 : (sum >= 268435456 ? (uint8_t)255 : (uint8_t)(sum >> 16));
+    for (i = 0; i < 6; i++) sum += temp[56 + i];
+    *(output_rows[ 1] + output_col + 1) = sum < 0 ? (uint8_t)0 : (sum >= 268435456 ? (uint8_t)255 : (uint8_t)(sum >> 16));
     // Pixel 1,1 complete
 }
 
 #ifndef FLOW_GCC_IDCT
 void jpeg_idct_spatial_2x2(j_decompress_ptr cinfo, jpeg_component_info * compptr, JCOEFPTR coef_block,
-                           JSAMPARRAY output_buf, JDIMENSION output_col)
-{
+                           JSAMPARRAY output_buf, JDIMENSION output_col){
     JSAMPLE input[64];
-    JSAMPROW rows[8] = { &input[0],     &input[8],     &input[8 * 2], &input[8 * 3],
-                         &input[8 * 4], &input[8 * 5], &input[8 * 6], &input[8 * 7] };
+    JSAMPROW rows[8]
+        = { &input[0],     &input[8],     &input[8 * 2], &input[8 * 3],
+            &input[8 * 4], &input[8 * 5], &input[8 * 6], &input[8 * 7] };
     jpeg_idct_islow(cinfo, compptr, coef_block, &rows[0], 0);
 
     flow_scale_spatial_2x2(input, output_buf, output_col);
 }
 #endif
 
-void flow_scale_spatial_1x1(uint8_t input[64], uint8_t ** output_rows, uint32_t output_col)
-{
+FLOW_EXPORT void flow_scale_spatial_1x1(uint8_t input[64], uint8_t ** output_rows, uint32_t output_col){
     int32_t i, sum, j;
     FLOW_ALIGN_16_VAR(int32_t temp[80]);
-    FLOW_ALIGN_16_VAR(int32_t weights_for_col_0[]) = {
-        47, 60, 71, 78, 78, 71, 60, 47,
-    };
+    FLOW_ALIGN_16_VAR(int32_t weights_for_col_0[]) = {47,60,71,78,78,71,60,47,};
 
     // Begin work for output row 0
-    for (i = 0; i < 8; i++)
-        temp[i + 0] = 47 * input[i + 0];
-    for (i = 0; i < 8; i++)
-        temp[i + 8] = 60 * input[i + 8];
-    for (i = 0; i < 8; i++)
-        temp[i + 16] = 71 * input[i + 16];
-    for (i = 0; i < 8; i++)
-        temp[i + 24] = 78 * input[i + 24];
-    for (i = 0; i < 8; i++)
-        temp[i + 32] = 78 * input[i + 32];
-    for (i = 0; i < 8; i++)
-        temp[i + 40] = 71 * input[i + 40];
-    for (i = 0; i < 8; i++)
-        temp[i + 48] = 60 * input[i + 48];
-    for (i = 0; i < 8; i++)
-        temp[i + 56] = 47 * input[i + 56];
-    for (i = 0; i < 8; i++) {
+    for (i = 0; i < 8; i++) temp[i +  0] =  47 * input[i +  0];
+    for (i = 0; i < 8; i++) temp[i +  8] =  60 * input[i +  8];
+    for (i = 0; i < 8; i++) temp[i + 16] =  71 * input[i + 16];
+    for (i = 0; i < 8; i++) temp[i + 24] =  78 * input[i + 24];
+    for (i = 0; i < 8; i++) temp[i + 32] =  78 * input[i + 32];
+    for (i = 0; i < 8; i++) temp[i + 40] =  71 * input[i + 40];
+    for (i = 0; i < 8; i++) temp[i + 48] =  60 * input[i + 48];
+    for (i = 0; i < 8; i++) temp[i + 56] =  47 * input[i + 56];
+    for (i = 0; i < 8; i++){
         sum = 0;
         for (j = 0; j < 8; j++)
             sum += temp[j * 8 + i];
@@ -2297,65 +1823,45 @@ void flow_scale_spatial_1x1(uint8_t input[64], uint8_t ** output_rows, uint32_t 
         temp[64 + i] = sum;
     }
     // Begin work for output pixel 0,0
-    for (i = 0; i < 8; i++)
-        temp[72 + i] = temp[64 + i] * weights_for_col_0[i];
+    for (i = 0; i < 8; i++) temp[72 + i] = temp[64 + i] * weights_for_col_0[i];
     sum = 131072;
-    for (i = 0; i < 8; i++)
-        sum += temp[72 + i];
-    *(output_rows[0] + output_col + 0) = sum < 0 ? (uint8_t)0
-                                                 : (sum >= 1073741824 ? (uint8_t)255 : (uint8_t)(sum >> 18));
+    for (i = 0; i < 8; i++) sum += temp[72 + i];
+    *(output_rows[ 0] + output_col + 0) = sum < 0 ? (uint8_t)0 : (sum >= 1073741824 ? (uint8_t)255 : (uint8_t)(sum >> 18));
     // Pixel 0,0 complete
 }
 
 #ifndef FLOW_GCC_IDCT
 void jpeg_idct_spatial_1x1(j_decompress_ptr cinfo, jpeg_component_info * compptr, JCOEFPTR coef_block,
-                           JSAMPARRAY output_buf, JDIMENSION output_col)
-{
+                           JSAMPARRAY output_buf, JDIMENSION output_col){
     JSAMPLE input[64];
-    JSAMPROW rows[8] = { &input[0],     &input[8],     &input[8 * 2], &input[8 * 3],
-                         &input[8 * 4], &input[8 * 5], &input[8 * 6], &input[8 * 7] };
+    JSAMPROW rows[8]
+        = { &input[0],     &input[8],     &input[8 * 2], &input[8 * 3],
+            &input[8 * 4], &input[8 * 5], &input[8 * 6], &input[8 * 7] };
     jpeg_idct_islow(cinfo, compptr, coef_block, &rows[0], 0);
 
     flow_scale_spatial_1x1(input, output_buf, output_col);
 }
 #endif
 
-void flow_scale_spatial_srgb_7x7(uint8_t input[64], uint8_t ** output_rows, uint32_t output_col)
-{
+FLOW_EXPORT void flow_scale_spatial_srgb_7x7(uint8_t input[64], uint8_t ** output_rows, uint32_t output_col){
     int32_t i, sum, j;
     FLOW_ALIGN_16_VAR(int32_t linearized[64]);
     for (i = 0; i < 64; i++)
         linearized[i] = lut_srgb_to_linear[input[i]];
 
     FLOW_ALIGN_16_VAR(int32_t temp[48]);
-    FLOW_ALIGN_16_VAR(int32_t weights_for_col_0[]) = {
-        29, 3,
-    };
-    FLOW_ALIGN_16_VAR(int32_t weights_for_col_1[]) = {
-        -2, 103, 27,
-    };
-    FLOW_ALIGN_16_VAR(int32_t weights_for_col_2[]) = {
-        -3, 86, 45,
-    };
-    FLOW_ALIGN_16_VAR(int32_t weights_for_col_3[]) = {
-        -3, 67, 67, -3,
-    };
-    FLOW_ALIGN_16_VAR(int32_t weights_for_col_4[]) = {
-        45, 86, -3,
-    };
-    FLOW_ALIGN_16_VAR(int32_t weights_for_col_5[]) = {
-        27, 103, -2,
-    };
-    FLOW_ALIGN_16_VAR(int32_t weights_for_col_6[]) = {
-        3, 29,
-    };
+    FLOW_ALIGN_16_VAR(int32_t weights_for_col_0[]) = {29,3,};
+    FLOW_ALIGN_16_VAR(int32_t weights_for_col_1[]) = {-2,103,27,};
+    FLOW_ALIGN_16_VAR(int32_t weights_for_col_2[]) = {-3,86,45,};
+    FLOW_ALIGN_16_VAR(int32_t weights_for_col_3[]) = {-3,67,67,-3,};
+    FLOW_ALIGN_16_VAR(int32_t weights_for_col_4[]) = {45,86,-3,};
+    FLOW_ALIGN_16_VAR(int32_t weights_for_col_5[]) = {27,103,-2,};
+    FLOW_ALIGN_16_VAR(int32_t weights_for_col_6[]) = {3,29,};
 
     // Begin work for output row 0
-    for (i = 0; i < 8; i++)
-        temp[i + 0] = 29 * linearized[i + 0];
-    for (i = 0; i < 8; i++)
-        temp[i + 8] = 3 * linearized[i + 8];
-    for (i = 0; i < 8; i++) {
+    for (i = 0; i < 8; i++) temp[i +  0] =  29 * linearized[i +  0];
+    for (i = 0; i < 8; i++) temp[i +  8] =   3 * linearized[i +  8];
+    for (i = 0; i < 8; i++){
         sum = 0;
         for (j = 0; j < 2; j++)
             sum += temp[j * 8 + i];
@@ -2363,83 +1869,59 @@ void flow_scale_spatial_srgb_7x7(uint8_t input[64], uint8_t ** output_rows, uint
         temp[32 + i] = sum;
     }
     // Begin work for output pixel 0,0
-    for (i = 0; i < 2; i++)
-        temp[40 + i] = temp[32 + i] * weights_for_col_0[i];
+    for (i = 0; i < 2; i++) temp[40 + i] = temp[32 + i] * weights_for_col_0[i];
     sum = 512;
-    for (i = 0; i < 2; i++)
-        sum += temp[40 + i];
-    *(output_rows[0] + output_col + 0)
-        = sum < 0 ? (uint8_t)0 : (sum >= 4194304 ? (uint8_t)255 : (uint8_t)lut_linear_to_srgb[(sum >> 10)]);
+    for (i = 0; i < 2; i++) sum += temp[40 + i];
+    *(output_rows[ 0] + output_col + 0) = sum < 0 ? (uint8_t)0 : (sum >= 4194304 ? (uint8_t)255 : (uint8_t)lut_linear_to_srgb[(sum >> 10)]);
     // Pixel 0,0 complete
 
     // Begin work for output pixel 1,0
-    for (i = 0; i < 3; i++)
-        temp[40 + i] = temp[32 + i] * weights_for_col_1[i];
+    for (i = 0; i < 3; i++) temp[40 + i] = temp[32 + i] * weights_for_col_1[i];
     sum = 2048;
-    for (i = 0; i < 3; i++)
-        sum += temp[40 + i];
-    *(output_rows[0] + output_col + 1)
-        = sum < 0 ? (uint8_t)0 : (sum >= 16777216 ? (uint8_t)255 : (uint8_t)lut_linear_to_srgb[(sum >> 12)]);
+    for (i = 0; i < 3; i++) sum += temp[40 + i];
+    *(output_rows[ 0] + output_col + 1) = sum < 0 ? (uint8_t)0 : (sum >= 16777216 ? (uint8_t)255 : (uint8_t)lut_linear_to_srgb[(sum >> 12)]);
     // Pixel 1,0 complete
 
     // Begin work for output pixel 2,0
-    for (i = 0; i < 3; i++)
-        temp[40 + i] = temp[33 + i] * weights_for_col_2[i];
+    for (i = 0; i < 3; i++) temp[40 + i] = temp[33 + i] * weights_for_col_2[i];
     sum = 2048;
-    for (i = 0; i < 3; i++)
-        sum += temp[40 + i];
-    *(output_rows[0] + output_col + 2)
-        = sum < 0 ? (uint8_t)0 : (sum >= 16777216 ? (uint8_t)255 : (uint8_t)lut_linear_to_srgb[(sum >> 12)]);
+    for (i = 0; i < 3; i++) sum += temp[40 + i];
+    *(output_rows[ 0] + output_col + 2) = sum < 0 ? (uint8_t)0 : (sum >= 16777216 ? (uint8_t)255 : (uint8_t)lut_linear_to_srgb[(sum >> 12)]);
     // Pixel 2,0 complete
 
     // Begin work for output pixel 3,0
-    for (i = 0; i < 4; i++)
-        temp[40 + i] = temp[34 + i] * weights_for_col_3[i];
+    for (i = 0; i < 4; i++) temp[40 + i] = temp[34 + i] * weights_for_col_3[i];
     sum = 2048;
-    for (i = 0; i < 4; i++)
-        sum += temp[40 + i];
-    *(output_rows[0] + output_col + 3)
-        = sum < 0 ? (uint8_t)0 : (sum >= 16777216 ? (uint8_t)255 : (uint8_t)lut_linear_to_srgb[(sum >> 12)]);
+    for (i = 0; i < 4; i++) sum += temp[40 + i];
+    *(output_rows[ 0] + output_col + 3) = sum < 0 ? (uint8_t)0 : (sum >= 16777216 ? (uint8_t)255 : (uint8_t)lut_linear_to_srgb[(sum >> 12)]);
     // Pixel 3,0 complete
 
     // Begin work for output pixel 4,0
-    for (i = 0; i < 3; i++)
-        temp[40 + i] = temp[36 + i] * weights_for_col_4[i];
+    for (i = 0; i < 3; i++) temp[40 + i] = temp[36 + i] * weights_for_col_4[i];
     sum = 2048;
-    for (i = 0; i < 3; i++)
-        sum += temp[40 + i];
-    *(output_rows[0] + output_col + 4)
-        = sum < 0 ? (uint8_t)0 : (sum >= 16777216 ? (uint8_t)255 : (uint8_t)lut_linear_to_srgb[(sum >> 12)]);
+    for (i = 0; i < 3; i++) sum += temp[40 + i];
+    *(output_rows[ 0] + output_col + 4) = sum < 0 ? (uint8_t)0 : (sum >= 16777216 ? (uint8_t)255 : (uint8_t)lut_linear_to_srgb[(sum >> 12)]);
     // Pixel 4,0 complete
 
     // Begin work for output pixel 5,0
-    for (i = 0; i < 3; i++)
-        temp[40 + i] = temp[37 + i] * weights_for_col_5[i];
+    for (i = 0; i < 3; i++) temp[40 + i] = temp[37 + i] * weights_for_col_5[i];
     sum = 2048;
-    for (i = 0; i < 3; i++)
-        sum += temp[40 + i];
-    *(output_rows[0] + output_col + 5)
-        = sum < 0 ? (uint8_t)0 : (sum >= 16777216 ? (uint8_t)255 : (uint8_t)lut_linear_to_srgb[(sum >> 12)]);
+    for (i = 0; i < 3; i++) sum += temp[40 + i];
+    *(output_rows[ 0] + output_col + 5) = sum < 0 ? (uint8_t)0 : (sum >= 16777216 ? (uint8_t)255 : (uint8_t)lut_linear_to_srgb[(sum >> 12)]);
     // Pixel 5,0 complete
 
     // Begin work for output pixel 6,0
-    for (i = 0; i < 2; i++)
-        temp[40 + i] = temp[38 + i] * weights_for_col_6[i];
+    for (i = 0; i < 2; i++) temp[40 + i] = temp[38 + i] * weights_for_col_6[i];
     sum = 512;
-    for (i = 0; i < 2; i++)
-        sum += temp[40 + i];
-    *(output_rows[0] + output_col + 6)
-        = sum < 0 ? (uint8_t)0 : (sum >= 4194304 ? (uint8_t)255 : (uint8_t)lut_linear_to_srgb[(sum >> 10)]);
+    for (i = 0; i < 2; i++) sum += temp[40 + i];
+    *(output_rows[ 0] + output_col + 6) = sum < 0 ? (uint8_t)0 : (sum >= 4194304 ? (uint8_t)255 : (uint8_t)lut_linear_to_srgb[(sum >> 10)]);
     // Pixel 6,0 complete
 
     // Begin work for output row 1
-    for (i = 0; i < 8; i++)
-        temp[i + 0] = -2 * linearized[i + 0];
-    for (i = 0; i < 8; i++)
-        temp[i + 8] = 103 * linearized[i + 8];
-    for (i = 0; i < 8; i++)
-        temp[i + 16] = 27 * linearized[i + 16];
-    for (i = 0; i < 8; i++) {
+    for (i = 0; i < 8; i++) temp[i +  0] =  -2 * linearized[i +  0];
+    for (i = 0; i < 8; i++) temp[i +  8] = 103 * linearized[i +  8];
+    for (i = 0; i < 8; i++) temp[i + 16] =  27 * linearized[i + 16];
+    for (i = 0; i < 8; i++){
         sum = 0;
         for (j = 0; j < 3; j++)
             sum += temp[j * 8 + i];
@@ -2447,83 +1929,59 @@ void flow_scale_spatial_srgb_7x7(uint8_t input[64], uint8_t ** output_rows, uint
         temp[32 + i] = sum;
     }
     // Begin work for output pixel 0,1
-    for (i = 0; i < 2; i++)
-        temp[40 + i] = temp[32 + i] * weights_for_col_0[i];
+    for (i = 0; i < 2; i++) temp[40 + i] = temp[32 + i] * weights_for_col_0[i];
     sum = 2048;
-    for (i = 0; i < 2; i++)
-        sum += temp[40 + i];
-    *(output_rows[1] + output_col + 0)
-        = sum < 0 ? (uint8_t)0 : (sum >= 16777216 ? (uint8_t)255 : (uint8_t)lut_linear_to_srgb[(sum >> 12)]);
+    for (i = 0; i < 2; i++) sum += temp[40 + i];
+    *(output_rows[ 1] + output_col + 0) = sum < 0 ? (uint8_t)0 : (sum >= 16777216 ? (uint8_t)255 : (uint8_t)lut_linear_to_srgb[(sum >> 12)]);
     // Pixel 0,1 complete
 
     // Begin work for output pixel 1,1
-    for (i = 0; i < 3; i++)
-        temp[40 + i] = temp[32 + i] * weights_for_col_1[i];
+    for (i = 0; i < 3; i++) temp[40 + i] = temp[32 + i] * weights_for_col_1[i];
     sum = 8192;
-    for (i = 0; i < 3; i++)
-        sum += temp[40 + i];
-    *(output_rows[1] + output_col + 1)
-        = sum < 0 ? (uint8_t)0 : (sum >= 67108864 ? (uint8_t)255 : (uint8_t)lut_linear_to_srgb[(sum >> 14)]);
+    for (i = 0; i < 3; i++) sum += temp[40 + i];
+    *(output_rows[ 1] + output_col + 1) = sum < 0 ? (uint8_t)0 : (sum >= 67108864 ? (uint8_t)255 : (uint8_t)lut_linear_to_srgb[(sum >> 14)]);
     // Pixel 1,1 complete
 
     // Begin work for output pixel 2,1
-    for (i = 0; i < 3; i++)
-        temp[40 + i] = temp[33 + i] * weights_for_col_2[i];
+    for (i = 0; i < 3; i++) temp[40 + i] = temp[33 + i] * weights_for_col_2[i];
     sum = 8192;
-    for (i = 0; i < 3; i++)
-        sum += temp[40 + i];
-    *(output_rows[1] + output_col + 2)
-        = sum < 0 ? (uint8_t)0 : (sum >= 67108864 ? (uint8_t)255 : (uint8_t)lut_linear_to_srgb[(sum >> 14)]);
+    for (i = 0; i < 3; i++) sum += temp[40 + i];
+    *(output_rows[ 1] + output_col + 2) = sum < 0 ? (uint8_t)0 : (sum >= 67108864 ? (uint8_t)255 : (uint8_t)lut_linear_to_srgb[(sum >> 14)]);
     // Pixel 2,1 complete
 
     // Begin work for output pixel 3,1
-    for (i = 0; i < 4; i++)
-        temp[40 + i] = temp[34 + i] * weights_for_col_3[i];
+    for (i = 0; i < 4; i++) temp[40 + i] = temp[34 + i] * weights_for_col_3[i];
     sum = 8192;
-    for (i = 0; i < 4; i++)
-        sum += temp[40 + i];
-    *(output_rows[1] + output_col + 3)
-        = sum < 0 ? (uint8_t)0 : (sum >= 67108864 ? (uint8_t)255 : (uint8_t)lut_linear_to_srgb[(sum >> 14)]);
+    for (i = 0; i < 4; i++) sum += temp[40 + i];
+    *(output_rows[ 1] + output_col + 3) = sum < 0 ? (uint8_t)0 : (sum >= 67108864 ? (uint8_t)255 : (uint8_t)lut_linear_to_srgb[(sum >> 14)]);
     // Pixel 3,1 complete
 
     // Begin work for output pixel 4,1
-    for (i = 0; i < 3; i++)
-        temp[40 + i] = temp[36 + i] * weights_for_col_4[i];
+    for (i = 0; i < 3; i++) temp[40 + i] = temp[36 + i] * weights_for_col_4[i];
     sum = 8192;
-    for (i = 0; i < 3; i++)
-        sum += temp[40 + i];
-    *(output_rows[1] + output_col + 4)
-        = sum < 0 ? (uint8_t)0 : (sum >= 67108864 ? (uint8_t)255 : (uint8_t)lut_linear_to_srgb[(sum >> 14)]);
+    for (i = 0; i < 3; i++) sum += temp[40 + i];
+    *(output_rows[ 1] + output_col + 4) = sum < 0 ? (uint8_t)0 : (sum >= 67108864 ? (uint8_t)255 : (uint8_t)lut_linear_to_srgb[(sum >> 14)]);
     // Pixel 4,1 complete
 
     // Begin work for output pixel 5,1
-    for (i = 0; i < 3; i++)
-        temp[40 + i] = temp[37 + i] * weights_for_col_5[i];
+    for (i = 0; i < 3; i++) temp[40 + i] = temp[37 + i] * weights_for_col_5[i];
     sum = 8192;
-    for (i = 0; i < 3; i++)
-        sum += temp[40 + i];
-    *(output_rows[1] + output_col + 5)
-        = sum < 0 ? (uint8_t)0 : (sum >= 67108864 ? (uint8_t)255 : (uint8_t)lut_linear_to_srgb[(sum >> 14)]);
+    for (i = 0; i < 3; i++) sum += temp[40 + i];
+    *(output_rows[ 1] + output_col + 5) = sum < 0 ? (uint8_t)0 : (sum >= 67108864 ? (uint8_t)255 : (uint8_t)lut_linear_to_srgb[(sum >> 14)]);
     // Pixel 5,1 complete
 
     // Begin work for output pixel 6,1
-    for (i = 0; i < 2; i++)
-        temp[40 + i] = temp[38 + i] * weights_for_col_6[i];
+    for (i = 0; i < 2; i++) temp[40 + i] = temp[38 + i] * weights_for_col_6[i];
     sum = 2048;
-    for (i = 0; i < 2; i++)
-        sum += temp[40 + i];
-    *(output_rows[1] + output_col + 6)
-        = sum < 0 ? (uint8_t)0 : (sum >= 16777216 ? (uint8_t)255 : (uint8_t)lut_linear_to_srgb[(sum >> 12)]);
+    for (i = 0; i < 2; i++) sum += temp[40 + i];
+    *(output_rows[ 1] + output_col + 6) = sum < 0 ? (uint8_t)0 : (sum >= 16777216 ? (uint8_t)255 : (uint8_t)lut_linear_to_srgb[(sum >> 12)]);
     // Pixel 6,1 complete
 
     // Begin work for output row 2
-    for (i = 0; i < 8; i++)
-        temp[i + 0] = -3 * linearized[i + 8];
-    for (i = 0; i < 8; i++)
-        temp[i + 8] = 86 * linearized[i + 16];
-    for (i = 0; i < 8; i++)
-        temp[i + 16] = 45 * linearized[i + 24];
-    for (i = 0; i < 8; i++) {
+    for (i = 0; i < 8; i++) temp[i +  0] =  -3 * linearized[i +  8];
+    for (i = 0; i < 8; i++) temp[i +  8] =  86 * linearized[i + 16];
+    for (i = 0; i < 8; i++) temp[i + 16] =  45 * linearized[i + 24];
+    for (i = 0; i < 8; i++){
         sum = 0;
         for (j = 0; j < 3; j++)
             sum += temp[j * 8 + i];
@@ -2531,85 +1989,60 @@ void flow_scale_spatial_srgb_7x7(uint8_t input[64], uint8_t ** output_rows, uint
         temp[32 + i] = sum;
     }
     // Begin work for output pixel 0,2
-    for (i = 0; i < 2; i++)
-        temp[40 + i] = temp[32 + i] * weights_for_col_0[i];
+    for (i = 0; i < 2; i++) temp[40 + i] = temp[32 + i] * weights_for_col_0[i];
     sum = 2048;
-    for (i = 0; i < 2; i++)
-        sum += temp[40 + i];
-    *(output_rows[2] + output_col + 0)
-        = sum < 0 ? (uint8_t)0 : (sum >= 16777216 ? (uint8_t)255 : (uint8_t)lut_linear_to_srgb[(sum >> 12)]);
+    for (i = 0; i < 2; i++) sum += temp[40 + i];
+    *(output_rows[ 2] + output_col + 0) = sum < 0 ? (uint8_t)0 : (sum >= 16777216 ? (uint8_t)255 : (uint8_t)lut_linear_to_srgb[(sum >> 12)]);
     // Pixel 0,2 complete
 
     // Begin work for output pixel 1,2
-    for (i = 0; i < 3; i++)
-        temp[40 + i] = temp[32 + i] * weights_for_col_1[i];
+    for (i = 0; i < 3; i++) temp[40 + i] = temp[32 + i] * weights_for_col_1[i];
     sum = 8192;
-    for (i = 0; i < 3; i++)
-        sum += temp[40 + i];
-    *(output_rows[2] + output_col + 1)
-        = sum < 0 ? (uint8_t)0 : (sum >= 67108864 ? (uint8_t)255 : (uint8_t)lut_linear_to_srgb[(sum >> 14)]);
+    for (i = 0; i < 3; i++) sum += temp[40 + i];
+    *(output_rows[ 2] + output_col + 1) = sum < 0 ? (uint8_t)0 : (sum >= 67108864 ? (uint8_t)255 : (uint8_t)lut_linear_to_srgb[(sum >> 14)]);
     // Pixel 1,2 complete
 
     // Begin work for output pixel 2,2
-    for (i = 0; i < 3; i++)
-        temp[40 + i] = temp[33 + i] * weights_for_col_2[i];
+    for (i = 0; i < 3; i++) temp[40 + i] = temp[33 + i] * weights_for_col_2[i];
     sum = 8192;
-    for (i = 0; i < 3; i++)
-        sum += temp[40 + i];
-    *(output_rows[2] + output_col + 2)
-        = sum < 0 ? (uint8_t)0 : (sum >= 67108864 ? (uint8_t)255 : (uint8_t)lut_linear_to_srgb[(sum >> 14)]);
+    for (i = 0; i < 3; i++) sum += temp[40 + i];
+    *(output_rows[ 2] + output_col + 2) = sum < 0 ? (uint8_t)0 : (sum >= 67108864 ? (uint8_t)255 : (uint8_t)lut_linear_to_srgb[(sum >> 14)]);
     // Pixel 2,2 complete
 
     // Begin work for output pixel 3,2
-    for (i = 0; i < 4; i++)
-        temp[40 + i] = temp[34 + i] * weights_for_col_3[i];
+    for (i = 0; i < 4; i++) temp[40 + i] = temp[34 + i] * weights_for_col_3[i];
     sum = 8192;
-    for (i = 0; i < 4; i++)
-        sum += temp[40 + i];
-    *(output_rows[2] + output_col + 3)
-        = sum < 0 ? (uint8_t)0 : (sum >= 67108864 ? (uint8_t)255 : (uint8_t)lut_linear_to_srgb[(sum >> 14)]);
+    for (i = 0; i < 4; i++) sum += temp[40 + i];
+    *(output_rows[ 2] + output_col + 3) = sum < 0 ? (uint8_t)0 : (sum >= 67108864 ? (uint8_t)255 : (uint8_t)lut_linear_to_srgb[(sum >> 14)]);
     // Pixel 3,2 complete
 
     // Begin work for output pixel 4,2
-    for (i = 0; i < 3; i++)
-        temp[40 + i] = temp[36 + i] * weights_for_col_4[i];
+    for (i = 0; i < 3; i++) temp[40 + i] = temp[36 + i] * weights_for_col_4[i];
     sum = 8192;
-    for (i = 0; i < 3; i++)
-        sum += temp[40 + i];
-    *(output_rows[2] + output_col + 4)
-        = sum < 0 ? (uint8_t)0 : (sum >= 67108864 ? (uint8_t)255 : (uint8_t)lut_linear_to_srgb[(sum >> 14)]);
+    for (i = 0; i < 3; i++) sum += temp[40 + i];
+    *(output_rows[ 2] + output_col + 4) = sum < 0 ? (uint8_t)0 : (sum >= 67108864 ? (uint8_t)255 : (uint8_t)lut_linear_to_srgb[(sum >> 14)]);
     // Pixel 4,2 complete
 
     // Begin work for output pixel 5,2
-    for (i = 0; i < 3; i++)
-        temp[40 + i] = temp[37 + i] * weights_for_col_5[i];
+    for (i = 0; i < 3; i++) temp[40 + i] = temp[37 + i] * weights_for_col_5[i];
     sum = 8192;
-    for (i = 0; i < 3; i++)
-        sum += temp[40 + i];
-    *(output_rows[2] + output_col + 5)
-        = sum < 0 ? (uint8_t)0 : (sum >= 67108864 ? (uint8_t)255 : (uint8_t)lut_linear_to_srgb[(sum >> 14)]);
+    for (i = 0; i < 3; i++) sum += temp[40 + i];
+    *(output_rows[ 2] + output_col + 5) = sum < 0 ? (uint8_t)0 : (sum >= 67108864 ? (uint8_t)255 : (uint8_t)lut_linear_to_srgb[(sum >> 14)]);
     // Pixel 5,2 complete
 
     // Begin work for output pixel 6,2
-    for (i = 0; i < 2; i++)
-        temp[40 + i] = temp[38 + i] * weights_for_col_6[i];
+    for (i = 0; i < 2; i++) temp[40 + i] = temp[38 + i] * weights_for_col_6[i];
     sum = 2048;
-    for (i = 0; i < 2; i++)
-        sum += temp[40 + i];
-    *(output_rows[2] + output_col + 6)
-        = sum < 0 ? (uint8_t)0 : (sum >= 16777216 ? (uint8_t)255 : (uint8_t)lut_linear_to_srgb[(sum >> 12)]);
+    for (i = 0; i < 2; i++) sum += temp[40 + i];
+    *(output_rows[ 2] + output_col + 6) = sum < 0 ? (uint8_t)0 : (sum >= 16777216 ? (uint8_t)255 : (uint8_t)lut_linear_to_srgb[(sum >> 12)]);
     // Pixel 6,2 complete
 
     // Begin work for output row 3
-    for (i = 0; i < 8; i++)
-        temp[i + 0] = -3 * linearized[i + 16];
-    for (i = 0; i < 8; i++)
-        temp[i + 8] = 67 * linearized[i + 24];
-    for (i = 0; i < 8; i++)
-        temp[i + 16] = 67 * linearized[i + 32];
-    for (i = 0; i < 8; i++)
-        temp[i + 24] = -3 * linearized[i + 40];
-    for (i = 0; i < 8; i++) {
+    for (i = 0; i < 8; i++) temp[i +  0] =  -3 * linearized[i + 16];
+    for (i = 0; i < 8; i++) temp[i +  8] =  67 * linearized[i + 24];
+    for (i = 0; i < 8; i++) temp[i + 16] =  67 * linearized[i + 32];
+    for (i = 0; i < 8; i++) temp[i + 24] =  -3 * linearized[i + 40];
+    for (i = 0; i < 8; i++){
         sum = 0;
         for (j = 0; j < 4; j++)
             sum += temp[j * 8 + i];
@@ -2617,83 +2050,59 @@ void flow_scale_spatial_srgb_7x7(uint8_t input[64], uint8_t ** output_rows, uint
         temp[32 + i] = sum;
     }
     // Begin work for output pixel 0,3
-    for (i = 0; i < 2; i++)
-        temp[40 + i] = temp[32 + i] * weights_for_col_0[i];
+    for (i = 0; i < 2; i++) temp[40 + i] = temp[32 + i] * weights_for_col_0[i];
     sum = 2048;
-    for (i = 0; i < 2; i++)
-        sum += temp[40 + i];
-    *(output_rows[3] + output_col + 0)
-        = sum < 0 ? (uint8_t)0 : (sum >= 16777216 ? (uint8_t)255 : (uint8_t)lut_linear_to_srgb[(sum >> 12)]);
+    for (i = 0; i < 2; i++) sum += temp[40 + i];
+    *(output_rows[ 3] + output_col + 0) = sum < 0 ? (uint8_t)0 : (sum >= 16777216 ? (uint8_t)255 : (uint8_t)lut_linear_to_srgb[(sum >> 12)]);
     // Pixel 0,3 complete
 
     // Begin work for output pixel 1,3
-    for (i = 0; i < 3; i++)
-        temp[40 + i] = temp[32 + i] * weights_for_col_1[i];
+    for (i = 0; i < 3; i++) temp[40 + i] = temp[32 + i] * weights_for_col_1[i];
     sum = 8192;
-    for (i = 0; i < 3; i++)
-        sum += temp[40 + i];
-    *(output_rows[3] + output_col + 1)
-        = sum < 0 ? (uint8_t)0 : (sum >= 67108864 ? (uint8_t)255 : (uint8_t)lut_linear_to_srgb[(sum >> 14)]);
+    for (i = 0; i < 3; i++) sum += temp[40 + i];
+    *(output_rows[ 3] + output_col + 1) = sum < 0 ? (uint8_t)0 : (sum >= 67108864 ? (uint8_t)255 : (uint8_t)lut_linear_to_srgb[(sum >> 14)]);
     // Pixel 1,3 complete
 
     // Begin work for output pixel 2,3
-    for (i = 0; i < 3; i++)
-        temp[40 + i] = temp[33 + i] * weights_for_col_2[i];
+    for (i = 0; i < 3; i++) temp[40 + i] = temp[33 + i] * weights_for_col_2[i];
     sum = 8192;
-    for (i = 0; i < 3; i++)
-        sum += temp[40 + i];
-    *(output_rows[3] + output_col + 2)
-        = sum < 0 ? (uint8_t)0 : (sum >= 67108864 ? (uint8_t)255 : (uint8_t)lut_linear_to_srgb[(sum >> 14)]);
+    for (i = 0; i < 3; i++) sum += temp[40 + i];
+    *(output_rows[ 3] + output_col + 2) = sum < 0 ? (uint8_t)0 : (sum >= 67108864 ? (uint8_t)255 : (uint8_t)lut_linear_to_srgb[(sum >> 14)]);
     // Pixel 2,3 complete
 
     // Begin work for output pixel 3,3
-    for (i = 0; i < 4; i++)
-        temp[40 + i] = temp[34 + i] * weights_for_col_3[i];
+    for (i = 0; i < 4; i++) temp[40 + i] = temp[34 + i] * weights_for_col_3[i];
     sum = 8192;
-    for (i = 0; i < 4; i++)
-        sum += temp[40 + i];
-    *(output_rows[3] + output_col + 3)
-        = sum < 0 ? (uint8_t)0 : (sum >= 67108864 ? (uint8_t)255 : (uint8_t)lut_linear_to_srgb[(sum >> 14)]);
+    for (i = 0; i < 4; i++) sum += temp[40 + i];
+    *(output_rows[ 3] + output_col + 3) = sum < 0 ? (uint8_t)0 : (sum >= 67108864 ? (uint8_t)255 : (uint8_t)lut_linear_to_srgb[(sum >> 14)]);
     // Pixel 3,3 complete
 
     // Begin work for output pixel 4,3
-    for (i = 0; i < 3; i++)
-        temp[40 + i] = temp[36 + i] * weights_for_col_4[i];
+    for (i = 0; i < 3; i++) temp[40 + i] = temp[36 + i] * weights_for_col_4[i];
     sum = 8192;
-    for (i = 0; i < 3; i++)
-        sum += temp[40 + i];
-    *(output_rows[3] + output_col + 4)
-        = sum < 0 ? (uint8_t)0 : (sum >= 67108864 ? (uint8_t)255 : (uint8_t)lut_linear_to_srgb[(sum >> 14)]);
+    for (i = 0; i < 3; i++) sum += temp[40 + i];
+    *(output_rows[ 3] + output_col + 4) = sum < 0 ? (uint8_t)0 : (sum >= 67108864 ? (uint8_t)255 : (uint8_t)lut_linear_to_srgb[(sum >> 14)]);
     // Pixel 4,3 complete
 
     // Begin work for output pixel 5,3
-    for (i = 0; i < 3; i++)
-        temp[40 + i] = temp[37 + i] * weights_for_col_5[i];
+    for (i = 0; i < 3; i++) temp[40 + i] = temp[37 + i] * weights_for_col_5[i];
     sum = 8192;
-    for (i = 0; i < 3; i++)
-        sum += temp[40 + i];
-    *(output_rows[3] + output_col + 5)
-        = sum < 0 ? (uint8_t)0 : (sum >= 67108864 ? (uint8_t)255 : (uint8_t)lut_linear_to_srgb[(sum >> 14)]);
+    for (i = 0; i < 3; i++) sum += temp[40 + i];
+    *(output_rows[ 3] + output_col + 5) = sum < 0 ? (uint8_t)0 : (sum >= 67108864 ? (uint8_t)255 : (uint8_t)lut_linear_to_srgb[(sum >> 14)]);
     // Pixel 5,3 complete
 
     // Begin work for output pixel 6,3
-    for (i = 0; i < 2; i++)
-        temp[40 + i] = temp[38 + i] * weights_for_col_6[i];
+    for (i = 0; i < 2; i++) temp[40 + i] = temp[38 + i] * weights_for_col_6[i];
     sum = 2048;
-    for (i = 0; i < 2; i++)
-        sum += temp[40 + i];
-    *(output_rows[3] + output_col + 6)
-        = sum < 0 ? (uint8_t)0 : (sum >= 16777216 ? (uint8_t)255 : (uint8_t)lut_linear_to_srgb[(sum >> 12)]);
+    for (i = 0; i < 2; i++) sum += temp[40 + i];
+    *(output_rows[ 3] + output_col + 6) = sum < 0 ? (uint8_t)0 : (sum >= 16777216 ? (uint8_t)255 : (uint8_t)lut_linear_to_srgb[(sum >> 12)]);
     // Pixel 6,3 complete
 
     // Begin work for output row 4
-    for (i = 0; i < 8; i++)
-        temp[i + 0] = 45 * linearized[i + 32];
-    for (i = 0; i < 8; i++)
-        temp[i + 8] = 86 * linearized[i + 40];
-    for (i = 0; i < 8; i++)
-        temp[i + 16] = -3 * linearized[i + 48];
-    for (i = 0; i < 8; i++) {
+    for (i = 0; i < 8; i++) temp[i +  0] =  45 * linearized[i + 32];
+    for (i = 0; i < 8; i++) temp[i +  8] =  86 * linearized[i + 40];
+    for (i = 0; i < 8; i++) temp[i + 16] =  -3 * linearized[i + 48];
+    for (i = 0; i < 8; i++){
         sum = 0;
         for (j = 0; j < 3; j++)
             sum += temp[j * 8 + i];
@@ -2701,83 +2110,59 @@ void flow_scale_spatial_srgb_7x7(uint8_t input[64], uint8_t ** output_rows, uint
         temp[32 + i] = sum;
     }
     // Begin work for output pixel 0,4
-    for (i = 0; i < 2; i++)
-        temp[40 + i] = temp[32 + i] * weights_for_col_0[i];
+    for (i = 0; i < 2; i++) temp[40 + i] = temp[32 + i] * weights_for_col_0[i];
     sum = 2048;
-    for (i = 0; i < 2; i++)
-        sum += temp[40 + i];
-    *(output_rows[4] + output_col + 0)
-        = sum < 0 ? (uint8_t)0 : (sum >= 16777216 ? (uint8_t)255 : (uint8_t)lut_linear_to_srgb[(sum >> 12)]);
+    for (i = 0; i < 2; i++) sum += temp[40 + i];
+    *(output_rows[ 4] + output_col + 0) = sum < 0 ? (uint8_t)0 : (sum >= 16777216 ? (uint8_t)255 : (uint8_t)lut_linear_to_srgb[(sum >> 12)]);
     // Pixel 0,4 complete
 
     // Begin work for output pixel 1,4
-    for (i = 0; i < 3; i++)
-        temp[40 + i] = temp[32 + i] * weights_for_col_1[i];
+    for (i = 0; i < 3; i++) temp[40 + i] = temp[32 + i] * weights_for_col_1[i];
     sum = 8192;
-    for (i = 0; i < 3; i++)
-        sum += temp[40 + i];
-    *(output_rows[4] + output_col + 1)
-        = sum < 0 ? (uint8_t)0 : (sum >= 67108864 ? (uint8_t)255 : (uint8_t)lut_linear_to_srgb[(sum >> 14)]);
+    for (i = 0; i < 3; i++) sum += temp[40 + i];
+    *(output_rows[ 4] + output_col + 1) = sum < 0 ? (uint8_t)0 : (sum >= 67108864 ? (uint8_t)255 : (uint8_t)lut_linear_to_srgb[(sum >> 14)]);
     // Pixel 1,4 complete
 
     // Begin work for output pixel 2,4
-    for (i = 0; i < 3; i++)
-        temp[40 + i] = temp[33 + i] * weights_for_col_2[i];
+    for (i = 0; i < 3; i++) temp[40 + i] = temp[33 + i] * weights_for_col_2[i];
     sum = 8192;
-    for (i = 0; i < 3; i++)
-        sum += temp[40 + i];
-    *(output_rows[4] + output_col + 2)
-        = sum < 0 ? (uint8_t)0 : (sum >= 67108864 ? (uint8_t)255 : (uint8_t)lut_linear_to_srgb[(sum >> 14)]);
+    for (i = 0; i < 3; i++) sum += temp[40 + i];
+    *(output_rows[ 4] + output_col + 2) = sum < 0 ? (uint8_t)0 : (sum >= 67108864 ? (uint8_t)255 : (uint8_t)lut_linear_to_srgb[(sum >> 14)]);
     // Pixel 2,4 complete
 
     // Begin work for output pixel 3,4
-    for (i = 0; i < 4; i++)
-        temp[40 + i] = temp[34 + i] * weights_for_col_3[i];
+    for (i = 0; i < 4; i++) temp[40 + i] = temp[34 + i] * weights_for_col_3[i];
     sum = 8192;
-    for (i = 0; i < 4; i++)
-        sum += temp[40 + i];
-    *(output_rows[4] + output_col + 3)
-        = sum < 0 ? (uint8_t)0 : (sum >= 67108864 ? (uint8_t)255 : (uint8_t)lut_linear_to_srgb[(sum >> 14)]);
+    for (i = 0; i < 4; i++) sum += temp[40 + i];
+    *(output_rows[ 4] + output_col + 3) = sum < 0 ? (uint8_t)0 : (sum >= 67108864 ? (uint8_t)255 : (uint8_t)lut_linear_to_srgb[(sum >> 14)]);
     // Pixel 3,4 complete
 
     // Begin work for output pixel 4,4
-    for (i = 0; i < 3; i++)
-        temp[40 + i] = temp[36 + i] * weights_for_col_4[i];
+    for (i = 0; i < 3; i++) temp[40 + i] = temp[36 + i] * weights_for_col_4[i];
     sum = 8192;
-    for (i = 0; i < 3; i++)
-        sum += temp[40 + i];
-    *(output_rows[4] + output_col + 4)
-        = sum < 0 ? (uint8_t)0 : (sum >= 67108864 ? (uint8_t)255 : (uint8_t)lut_linear_to_srgb[(sum >> 14)]);
+    for (i = 0; i < 3; i++) sum += temp[40 + i];
+    *(output_rows[ 4] + output_col + 4) = sum < 0 ? (uint8_t)0 : (sum >= 67108864 ? (uint8_t)255 : (uint8_t)lut_linear_to_srgb[(sum >> 14)]);
     // Pixel 4,4 complete
 
     // Begin work for output pixel 5,4
-    for (i = 0; i < 3; i++)
-        temp[40 + i] = temp[37 + i] * weights_for_col_5[i];
+    for (i = 0; i < 3; i++) temp[40 + i] = temp[37 + i] * weights_for_col_5[i];
     sum = 8192;
-    for (i = 0; i < 3; i++)
-        sum += temp[40 + i];
-    *(output_rows[4] + output_col + 5)
-        = sum < 0 ? (uint8_t)0 : (sum >= 67108864 ? (uint8_t)255 : (uint8_t)lut_linear_to_srgb[(sum >> 14)]);
+    for (i = 0; i < 3; i++) sum += temp[40 + i];
+    *(output_rows[ 4] + output_col + 5) = sum < 0 ? (uint8_t)0 : (sum >= 67108864 ? (uint8_t)255 : (uint8_t)lut_linear_to_srgb[(sum >> 14)]);
     // Pixel 5,4 complete
 
     // Begin work for output pixel 6,4
-    for (i = 0; i < 2; i++)
-        temp[40 + i] = temp[38 + i] * weights_for_col_6[i];
+    for (i = 0; i < 2; i++) temp[40 + i] = temp[38 + i] * weights_for_col_6[i];
     sum = 2048;
-    for (i = 0; i < 2; i++)
-        sum += temp[40 + i];
-    *(output_rows[4] + output_col + 6)
-        = sum < 0 ? (uint8_t)0 : (sum >= 16777216 ? (uint8_t)255 : (uint8_t)lut_linear_to_srgb[(sum >> 12)]);
+    for (i = 0; i < 2; i++) sum += temp[40 + i];
+    *(output_rows[ 4] + output_col + 6) = sum < 0 ? (uint8_t)0 : (sum >= 16777216 ? (uint8_t)255 : (uint8_t)lut_linear_to_srgb[(sum >> 12)]);
     // Pixel 6,4 complete
 
     // Begin work for output row 5
-    for (i = 0; i < 8; i++)
-        temp[i + 0] = 27 * linearized[i + 40];
-    for (i = 0; i < 8; i++)
-        temp[i + 8] = 103 * linearized[i + 48];
-    for (i = 0; i < 8; i++)
-        temp[i + 16] = -2 * linearized[i + 56];
-    for (i = 0; i < 8; i++) {
+    for (i = 0; i < 8; i++) temp[i +  0] =  27 * linearized[i + 40];
+    for (i = 0; i < 8; i++) temp[i +  8] = 103 * linearized[i + 48];
+    for (i = 0; i < 8; i++) temp[i + 16] =  -2 * linearized[i + 56];
+    for (i = 0; i < 8; i++){
         sum = 0;
         for (j = 0; j < 3; j++)
             sum += temp[j * 8 + i];
@@ -2785,81 +2170,58 @@ void flow_scale_spatial_srgb_7x7(uint8_t input[64], uint8_t ** output_rows, uint
         temp[32 + i] = sum;
     }
     // Begin work for output pixel 0,5
-    for (i = 0; i < 2; i++)
-        temp[40 + i] = temp[32 + i] * weights_for_col_0[i];
+    for (i = 0; i < 2; i++) temp[40 + i] = temp[32 + i] * weights_for_col_0[i];
     sum = 2048;
-    for (i = 0; i < 2; i++)
-        sum += temp[40 + i];
-    *(output_rows[5] + output_col + 0)
-        = sum < 0 ? (uint8_t)0 : (sum >= 16777216 ? (uint8_t)255 : (uint8_t)lut_linear_to_srgb[(sum >> 12)]);
+    for (i = 0; i < 2; i++) sum += temp[40 + i];
+    *(output_rows[ 5] + output_col + 0) = sum < 0 ? (uint8_t)0 : (sum >= 16777216 ? (uint8_t)255 : (uint8_t)lut_linear_to_srgb[(sum >> 12)]);
     // Pixel 0,5 complete
 
     // Begin work for output pixel 1,5
-    for (i = 0; i < 3; i++)
-        temp[40 + i] = temp[32 + i] * weights_for_col_1[i];
+    for (i = 0; i < 3; i++) temp[40 + i] = temp[32 + i] * weights_for_col_1[i];
     sum = 8192;
-    for (i = 0; i < 3; i++)
-        sum += temp[40 + i];
-    *(output_rows[5] + output_col + 1)
-        = sum < 0 ? (uint8_t)0 : (sum >= 67108864 ? (uint8_t)255 : (uint8_t)lut_linear_to_srgb[(sum >> 14)]);
+    for (i = 0; i < 3; i++) sum += temp[40 + i];
+    *(output_rows[ 5] + output_col + 1) = sum < 0 ? (uint8_t)0 : (sum >= 67108864 ? (uint8_t)255 : (uint8_t)lut_linear_to_srgb[(sum >> 14)]);
     // Pixel 1,5 complete
 
     // Begin work for output pixel 2,5
-    for (i = 0; i < 3; i++)
-        temp[40 + i] = temp[33 + i] * weights_for_col_2[i];
+    for (i = 0; i < 3; i++) temp[40 + i] = temp[33 + i] * weights_for_col_2[i];
     sum = 8192;
-    for (i = 0; i < 3; i++)
-        sum += temp[40 + i];
-    *(output_rows[5] + output_col + 2)
-        = sum < 0 ? (uint8_t)0 : (sum >= 67108864 ? (uint8_t)255 : (uint8_t)lut_linear_to_srgb[(sum >> 14)]);
+    for (i = 0; i < 3; i++) sum += temp[40 + i];
+    *(output_rows[ 5] + output_col + 2) = sum < 0 ? (uint8_t)0 : (sum >= 67108864 ? (uint8_t)255 : (uint8_t)lut_linear_to_srgb[(sum >> 14)]);
     // Pixel 2,5 complete
 
     // Begin work for output pixel 3,5
-    for (i = 0; i < 4; i++)
-        temp[40 + i] = temp[34 + i] * weights_for_col_3[i];
+    for (i = 0; i < 4; i++) temp[40 + i] = temp[34 + i] * weights_for_col_3[i];
     sum = 8192;
-    for (i = 0; i < 4; i++)
-        sum += temp[40 + i];
-    *(output_rows[5] + output_col + 3)
-        = sum < 0 ? (uint8_t)0 : (sum >= 67108864 ? (uint8_t)255 : (uint8_t)lut_linear_to_srgb[(sum >> 14)]);
+    for (i = 0; i < 4; i++) sum += temp[40 + i];
+    *(output_rows[ 5] + output_col + 3) = sum < 0 ? (uint8_t)0 : (sum >= 67108864 ? (uint8_t)255 : (uint8_t)lut_linear_to_srgb[(sum >> 14)]);
     // Pixel 3,5 complete
 
     // Begin work for output pixel 4,5
-    for (i = 0; i < 3; i++)
-        temp[40 + i] = temp[36 + i] * weights_for_col_4[i];
+    for (i = 0; i < 3; i++) temp[40 + i] = temp[36 + i] * weights_for_col_4[i];
     sum = 8192;
-    for (i = 0; i < 3; i++)
-        sum += temp[40 + i];
-    *(output_rows[5] + output_col + 4)
-        = sum < 0 ? (uint8_t)0 : (sum >= 67108864 ? (uint8_t)255 : (uint8_t)lut_linear_to_srgb[(sum >> 14)]);
+    for (i = 0; i < 3; i++) sum += temp[40 + i];
+    *(output_rows[ 5] + output_col + 4) = sum < 0 ? (uint8_t)0 : (sum >= 67108864 ? (uint8_t)255 : (uint8_t)lut_linear_to_srgb[(sum >> 14)]);
     // Pixel 4,5 complete
 
     // Begin work for output pixel 5,5
-    for (i = 0; i < 3; i++)
-        temp[40 + i] = temp[37 + i] * weights_for_col_5[i];
+    for (i = 0; i < 3; i++) temp[40 + i] = temp[37 + i] * weights_for_col_5[i];
     sum = 8192;
-    for (i = 0; i < 3; i++)
-        sum += temp[40 + i];
-    *(output_rows[5] + output_col + 5)
-        = sum < 0 ? (uint8_t)0 : (sum >= 67108864 ? (uint8_t)255 : (uint8_t)lut_linear_to_srgb[(sum >> 14)]);
+    for (i = 0; i < 3; i++) sum += temp[40 + i];
+    *(output_rows[ 5] + output_col + 5) = sum < 0 ? (uint8_t)0 : (sum >= 67108864 ? (uint8_t)255 : (uint8_t)lut_linear_to_srgb[(sum >> 14)]);
     // Pixel 5,5 complete
 
     // Begin work for output pixel 6,5
-    for (i = 0; i < 2; i++)
-        temp[40 + i] = temp[38 + i] * weights_for_col_6[i];
+    for (i = 0; i < 2; i++) temp[40 + i] = temp[38 + i] * weights_for_col_6[i];
     sum = 2048;
-    for (i = 0; i < 2; i++)
-        sum += temp[40 + i];
-    *(output_rows[5] + output_col + 6)
-        = sum < 0 ? (uint8_t)0 : (sum >= 16777216 ? (uint8_t)255 : (uint8_t)lut_linear_to_srgb[(sum >> 12)]);
+    for (i = 0; i < 2; i++) sum += temp[40 + i];
+    *(output_rows[ 5] + output_col + 6) = sum < 0 ? (uint8_t)0 : (sum >= 16777216 ? (uint8_t)255 : (uint8_t)lut_linear_to_srgb[(sum >> 12)]);
     // Pixel 6,5 complete
 
     // Begin work for output row 6
-    for (i = 0; i < 8; i++)
-        temp[i + 0] = 3 * linearized[i + 48];
-    for (i = 0; i < 8; i++)
-        temp[i + 8] = 29 * linearized[i + 56];
-    for (i = 0; i < 8; i++) {
+    for (i = 0; i < 8; i++) temp[i +  0] =   3 * linearized[i + 48];
+    for (i = 0; i < 8; i++) temp[i +  8] =  29 * linearized[i + 56];
+    for (i = 0; i < 8; i++){
         sum = 0;
         for (j = 0; j < 2; j++)
             sum += temp[j * 8 + i];
@@ -2867,122 +2229,86 @@ void flow_scale_spatial_srgb_7x7(uint8_t input[64], uint8_t ** output_rows, uint
         temp[32 + i] = sum;
     }
     // Begin work for output pixel 0,6
-    for (i = 0; i < 2; i++)
-        temp[40 + i] = temp[32 + i] * weights_for_col_0[i];
+    for (i = 0; i < 2; i++) temp[40 + i] = temp[32 + i] * weights_for_col_0[i];
     sum = 512;
-    for (i = 0; i < 2; i++)
-        sum += temp[40 + i];
-    *(output_rows[6] + output_col + 0)
-        = sum < 0 ? (uint8_t)0 : (sum >= 4194304 ? (uint8_t)255 : (uint8_t)lut_linear_to_srgb[(sum >> 10)]);
+    for (i = 0; i < 2; i++) sum += temp[40 + i];
+    *(output_rows[ 6] + output_col + 0) = sum < 0 ? (uint8_t)0 : (sum >= 4194304 ? (uint8_t)255 : (uint8_t)lut_linear_to_srgb[(sum >> 10)]);
     // Pixel 0,6 complete
 
     // Begin work for output pixel 1,6
-    for (i = 0; i < 3; i++)
-        temp[40 + i] = temp[32 + i] * weights_for_col_1[i];
+    for (i = 0; i < 3; i++) temp[40 + i] = temp[32 + i] * weights_for_col_1[i];
     sum = 2048;
-    for (i = 0; i < 3; i++)
-        sum += temp[40 + i];
-    *(output_rows[6] + output_col + 1)
-        = sum < 0 ? (uint8_t)0 : (sum >= 16777216 ? (uint8_t)255 : (uint8_t)lut_linear_to_srgb[(sum >> 12)]);
+    for (i = 0; i < 3; i++) sum += temp[40 + i];
+    *(output_rows[ 6] + output_col + 1) = sum < 0 ? (uint8_t)0 : (sum >= 16777216 ? (uint8_t)255 : (uint8_t)lut_linear_to_srgb[(sum >> 12)]);
     // Pixel 1,6 complete
 
     // Begin work for output pixel 2,6
-    for (i = 0; i < 3; i++)
-        temp[40 + i] = temp[33 + i] * weights_for_col_2[i];
+    for (i = 0; i < 3; i++) temp[40 + i] = temp[33 + i] * weights_for_col_2[i];
     sum = 2048;
-    for (i = 0; i < 3; i++)
-        sum += temp[40 + i];
-    *(output_rows[6] + output_col + 2)
-        = sum < 0 ? (uint8_t)0 : (sum >= 16777216 ? (uint8_t)255 : (uint8_t)lut_linear_to_srgb[(sum >> 12)]);
+    for (i = 0; i < 3; i++) sum += temp[40 + i];
+    *(output_rows[ 6] + output_col + 2) = sum < 0 ? (uint8_t)0 : (sum >= 16777216 ? (uint8_t)255 : (uint8_t)lut_linear_to_srgb[(sum >> 12)]);
     // Pixel 2,6 complete
 
     // Begin work for output pixel 3,6
-    for (i = 0; i < 4; i++)
-        temp[40 + i] = temp[34 + i] * weights_for_col_3[i];
+    for (i = 0; i < 4; i++) temp[40 + i] = temp[34 + i] * weights_for_col_3[i];
     sum = 2048;
-    for (i = 0; i < 4; i++)
-        sum += temp[40 + i];
-    *(output_rows[6] + output_col + 3)
-        = sum < 0 ? (uint8_t)0 : (sum >= 16777216 ? (uint8_t)255 : (uint8_t)lut_linear_to_srgb[(sum >> 12)]);
+    for (i = 0; i < 4; i++) sum += temp[40 + i];
+    *(output_rows[ 6] + output_col + 3) = sum < 0 ? (uint8_t)0 : (sum >= 16777216 ? (uint8_t)255 : (uint8_t)lut_linear_to_srgb[(sum >> 12)]);
     // Pixel 3,6 complete
 
     // Begin work for output pixel 4,6
-    for (i = 0; i < 3; i++)
-        temp[40 + i] = temp[36 + i] * weights_for_col_4[i];
+    for (i = 0; i < 3; i++) temp[40 + i] = temp[36 + i] * weights_for_col_4[i];
     sum = 2048;
-    for (i = 0; i < 3; i++)
-        sum += temp[40 + i];
-    *(output_rows[6] + output_col + 4)
-        = sum < 0 ? (uint8_t)0 : (sum >= 16777216 ? (uint8_t)255 : (uint8_t)lut_linear_to_srgb[(sum >> 12)]);
+    for (i = 0; i < 3; i++) sum += temp[40 + i];
+    *(output_rows[ 6] + output_col + 4) = sum < 0 ? (uint8_t)0 : (sum >= 16777216 ? (uint8_t)255 : (uint8_t)lut_linear_to_srgb[(sum >> 12)]);
     // Pixel 4,6 complete
 
     // Begin work for output pixel 5,6
-    for (i = 0; i < 3; i++)
-        temp[40 + i] = temp[37 + i] * weights_for_col_5[i];
+    for (i = 0; i < 3; i++) temp[40 + i] = temp[37 + i] * weights_for_col_5[i];
     sum = 2048;
-    for (i = 0; i < 3; i++)
-        sum += temp[40 + i];
-    *(output_rows[6] + output_col + 5)
-        = sum < 0 ? (uint8_t)0 : (sum >= 16777216 ? (uint8_t)255 : (uint8_t)lut_linear_to_srgb[(sum >> 12)]);
+    for (i = 0; i < 3; i++) sum += temp[40 + i];
+    *(output_rows[ 6] + output_col + 5) = sum < 0 ? (uint8_t)0 : (sum >= 16777216 ? (uint8_t)255 : (uint8_t)lut_linear_to_srgb[(sum >> 12)]);
     // Pixel 5,6 complete
 
     // Begin work for output pixel 6,6
-    for (i = 0; i < 2; i++)
-        temp[40 + i] = temp[38 + i] * weights_for_col_6[i];
+    for (i = 0; i < 2; i++) temp[40 + i] = temp[38 + i] * weights_for_col_6[i];
     sum = 512;
-    for (i = 0; i < 2; i++)
-        sum += temp[40 + i];
-    *(output_rows[6] + output_col + 6)
-        = sum < 0 ? (uint8_t)0 : (sum >= 4194304 ? (uint8_t)255 : (uint8_t)lut_linear_to_srgb[(sum >> 10)]);
+    for (i = 0; i < 2; i++) sum += temp[40 + i];
+    *(output_rows[ 6] + output_col + 6) = sum < 0 ? (uint8_t)0 : (sum >= 4194304 ? (uint8_t)255 : (uint8_t)lut_linear_to_srgb[(sum >> 10)]);
     // Pixel 6,6 complete
 }
 
 #ifndef FLOW_GCC_IDCT
 void jpeg_idct_spatial_srgb_7x7(j_decompress_ptr cinfo, jpeg_component_info * compptr, JCOEFPTR coef_block,
-                                JSAMPARRAY output_buf, JDIMENSION output_col)
-{
+                                JSAMPARRAY output_buf, JDIMENSION output_col){
     JSAMPLE input[64];
-    JSAMPROW rows[8] = { &input[0],     &input[8],     &input[8 * 2], &input[8 * 3],
-                         &input[8 * 4], &input[8 * 5], &input[8 * 6], &input[8 * 7] };
+    JSAMPROW rows[8]
+        = { &input[0],     &input[8],     &input[8 * 2], &input[8 * 3],
+            &input[8 * 4], &input[8 * 5], &input[8 * 6], &input[8 * 7] };
     jpeg_idct_islow(cinfo, compptr, coef_block, &rows[0], 0);
 
     flow_scale_spatial_srgb_7x7(input, output_buf, output_col);
 }
 #endif
 
-void flow_scale_spatial_srgb_6x6(uint8_t input[64], uint8_t ** output_rows, uint32_t output_col)
-{
+FLOW_EXPORT void flow_scale_spatial_srgb_6x6(uint8_t input[64], uint8_t ** output_rows, uint32_t output_col){
     int32_t i, sum, j;
     FLOW_ALIGN_16_VAR(int32_t linearized[64]);
     for (i = 0; i < 64; i++)
         linearized[i] = lut_srgb_to_linear[input[i]];
 
     FLOW_ALIGN_16_VAR(int32_t temp[48]);
-    FLOW_ALIGN_16_VAR(int32_t weights_for_col_0[]) = {
-        6, 2,
-    };
-    FLOW_ALIGN_16_VAR(int32_t weights_for_col_1[]) = {
-        -1, 33, 33, -1,
-    };
-    FLOW_ALIGN_16_VAR(int32_t weights_for_col_2[]) = {
-        31, 92, 5,
-    };
-    FLOW_ALIGN_16_VAR(int32_t weights_for_col_3[]) = {
-        5, 92, 31,
-    };
-    FLOW_ALIGN_16_VAR(int32_t weights_for_col_4[]) = {
-        -1, 33, 33, -1,
-    };
-    FLOW_ALIGN_16_VAR(int32_t weights_for_col_5[]) = {
-        2, 6,
-    };
+    FLOW_ALIGN_16_VAR(int32_t weights_for_col_0[]) = {6,2,};
+    FLOW_ALIGN_16_VAR(int32_t weights_for_col_1[]) = {-1,33,33,-1,};
+    FLOW_ALIGN_16_VAR(int32_t weights_for_col_2[]) = {31,92,5,};
+    FLOW_ALIGN_16_VAR(int32_t weights_for_col_3[]) = {5,92,31,};
+    FLOW_ALIGN_16_VAR(int32_t weights_for_col_4[]) = {-1,33,33,-1,};
+    FLOW_ALIGN_16_VAR(int32_t weights_for_col_5[]) = {2,6,};
 
     // Begin work for output row 0
-    for (i = 0; i < 8; i++)
-        temp[i + 0] = 6 * linearized[i + 0];
-    for (i = 0; i < 8; i++)
-        temp[i + 8] = 2 * linearized[i + 8];
-    for (i = 0; i < 8; i++) {
+    for (i = 0; i < 8; i++) temp[i +  0] =   6 * linearized[i +  0];
+    for (i = 0; i < 8; i++) temp[i +  8] =   2 * linearized[i +  8];
+    for (i = 0; i < 8; i++){
         sum = 0;
         for (j = 0; j < 2; j++)
             sum += temp[j * 8 + i];
@@ -2990,75 +2316,53 @@ void flow_scale_spatial_srgb_6x6(uint8_t input[64], uint8_t ** output_rows, uint
         temp[32 + i] = sum;
     }
     // Begin work for output pixel 0,0
-    for (i = 0; i < 2; i++)
-        temp[40 + i] = temp[32 + i] * weights_for_col_0[i];
+    for (i = 0; i < 2; i++) temp[40 + i] = temp[32 + i] * weights_for_col_0[i];
     sum = 32;
-    for (i = 0; i < 2; i++)
-        sum += temp[40 + i];
-    *(output_rows[0] + output_col + 0)
-        = sum < 0 ? (uint8_t)0 : (sum >= 262144 ? (uint8_t)255 : (uint8_t)lut_linear_to_srgb[(sum >> 6)]);
+    for (i = 0; i < 2; i++) sum += temp[40 + i];
+    *(output_rows[ 0] + output_col + 0) = sum < 0 ? (uint8_t)0 : (sum >= 262144 ? (uint8_t)255 : (uint8_t)lut_linear_to_srgb[(sum >> 6)]);
     // Pixel 0,0 complete
 
     // Begin work for output pixel 1,0
-    for (i = 0; i < 4; i++)
-        temp[40 + i] = temp[32 + i] * weights_for_col_1[i];
+    for (i = 0; i < 4; i++) temp[40 + i] = temp[32 + i] * weights_for_col_1[i];
     sum = 256;
-    for (i = 0; i < 4; i++)
-        sum += temp[40 + i];
-    *(output_rows[0] + output_col + 1)
-        = sum < 0 ? (uint8_t)0 : (sum >= 2097152 ? (uint8_t)255 : (uint8_t)lut_linear_to_srgb[(sum >> 9)]);
+    for (i = 0; i < 4; i++) sum += temp[40 + i];
+    *(output_rows[ 0] + output_col + 1) = sum < 0 ? (uint8_t)0 : (sum >= 2097152 ? (uint8_t)255 : (uint8_t)lut_linear_to_srgb[(sum >> 9)]);
     // Pixel 1,0 complete
 
     // Begin work for output pixel 2,0
-    for (i = 0; i < 3; i++)
-        temp[40 + i] = temp[34 + i] * weights_for_col_2[i];
+    for (i = 0; i < 3; i++) temp[40 + i] = temp[34 + i] * weights_for_col_2[i];
     sum = 512;
-    for (i = 0; i < 3; i++)
-        sum += temp[40 + i];
-    *(output_rows[0] + output_col + 2)
-        = sum < 0 ? (uint8_t)0 : (sum >= 4194304 ? (uint8_t)255 : (uint8_t)lut_linear_to_srgb[(sum >> 10)]);
+    for (i = 0; i < 3; i++) sum += temp[40 + i];
+    *(output_rows[ 0] + output_col + 2) = sum < 0 ? (uint8_t)0 : (sum >= 4194304 ? (uint8_t)255 : (uint8_t)lut_linear_to_srgb[(sum >> 10)]);
     // Pixel 2,0 complete
 
     // Begin work for output pixel 3,0
-    for (i = 0; i < 3; i++)
-        temp[40 + i] = temp[35 + i] * weights_for_col_3[i];
+    for (i = 0; i < 3; i++) temp[40 + i] = temp[35 + i] * weights_for_col_3[i];
     sum = 512;
-    for (i = 0; i < 3; i++)
-        sum += temp[40 + i];
-    *(output_rows[0] + output_col + 3)
-        = sum < 0 ? (uint8_t)0 : (sum >= 4194304 ? (uint8_t)255 : (uint8_t)lut_linear_to_srgb[(sum >> 10)]);
+    for (i = 0; i < 3; i++) sum += temp[40 + i];
+    *(output_rows[ 0] + output_col + 3) = sum < 0 ? (uint8_t)0 : (sum >= 4194304 ? (uint8_t)255 : (uint8_t)lut_linear_to_srgb[(sum >> 10)]);
     // Pixel 3,0 complete
 
     // Begin work for output pixel 4,0
-    for (i = 0; i < 4; i++)
-        temp[40 + i] = temp[36 + i] * weights_for_col_4[i];
+    for (i = 0; i < 4; i++) temp[40 + i] = temp[36 + i] * weights_for_col_4[i];
     sum = 256;
-    for (i = 0; i < 4; i++)
-        sum += temp[40 + i];
-    *(output_rows[0] + output_col + 4)
-        = sum < 0 ? (uint8_t)0 : (sum >= 2097152 ? (uint8_t)255 : (uint8_t)lut_linear_to_srgb[(sum >> 9)]);
+    for (i = 0; i < 4; i++) sum += temp[40 + i];
+    *(output_rows[ 0] + output_col + 4) = sum < 0 ? (uint8_t)0 : (sum >= 2097152 ? (uint8_t)255 : (uint8_t)lut_linear_to_srgb[(sum >> 9)]);
     // Pixel 4,0 complete
 
     // Begin work for output pixel 5,0
-    for (i = 0; i < 2; i++)
-        temp[40 + i] = temp[38 + i] * weights_for_col_5[i];
+    for (i = 0; i < 2; i++) temp[40 + i] = temp[38 + i] * weights_for_col_5[i];
     sum = 32;
-    for (i = 0; i < 2; i++)
-        sum += temp[40 + i];
-    *(output_rows[0] + output_col + 5)
-        = sum < 0 ? (uint8_t)0 : (sum >= 262144 ? (uint8_t)255 : (uint8_t)lut_linear_to_srgb[(sum >> 6)]);
+    for (i = 0; i < 2; i++) sum += temp[40 + i];
+    *(output_rows[ 0] + output_col + 5) = sum < 0 ? (uint8_t)0 : (sum >= 262144 ? (uint8_t)255 : (uint8_t)lut_linear_to_srgb[(sum >> 6)]);
     // Pixel 5,0 complete
 
     // Begin work for output row 1
-    for (i = 0; i < 8; i++)
-        temp[i + 0] = -1 * linearized[i + 0];
-    for (i = 0; i < 8; i++)
-        temp[i + 8] = 33 * linearized[i + 8];
-    for (i = 0; i < 8; i++)
-        temp[i + 16] = 33 * linearized[i + 16];
-    for (i = 0; i < 8; i++)
-        temp[i + 24] = -1 * linearized[i + 24];
-    for (i = 0; i < 8; i++) {
+    for (i = 0; i < 8; i++) temp[i +  0] =  -1 * linearized[i +  0];
+    for (i = 0; i < 8; i++) temp[i +  8] =  33 * linearized[i +  8];
+    for (i = 0; i < 8; i++) temp[i + 16] =  33 * linearized[i + 16];
+    for (i = 0; i < 8; i++) temp[i + 24] =  -1 * linearized[i + 24];
+    for (i = 0; i < 8; i++){
         sum = 0;
         for (j = 0; j < 4; j++)
             sum += temp[j * 8 + i];
@@ -3066,73 +2370,52 @@ void flow_scale_spatial_srgb_6x6(uint8_t input[64], uint8_t ** output_rows, uint
         temp[32 + i] = sum;
     }
     // Begin work for output pixel 0,1
-    for (i = 0; i < 2; i++)
-        temp[40 + i] = temp[32 + i] * weights_for_col_0[i];
+    for (i = 0; i < 2; i++) temp[40 + i] = temp[32 + i] * weights_for_col_0[i];
     sum = 256;
-    for (i = 0; i < 2; i++)
-        sum += temp[40 + i];
-    *(output_rows[1] + output_col + 0)
-        = sum < 0 ? (uint8_t)0 : (sum >= 2097152 ? (uint8_t)255 : (uint8_t)lut_linear_to_srgb[(sum >> 9)]);
+    for (i = 0; i < 2; i++) sum += temp[40 + i];
+    *(output_rows[ 1] + output_col + 0) = sum < 0 ? (uint8_t)0 : (sum >= 2097152 ? (uint8_t)255 : (uint8_t)lut_linear_to_srgb[(sum >> 9)]);
     // Pixel 0,1 complete
 
     // Begin work for output pixel 1,1
-    for (i = 0; i < 4; i++)
-        temp[40 + i] = temp[32 + i] * weights_for_col_1[i];
+    for (i = 0; i < 4; i++) temp[40 + i] = temp[32 + i] * weights_for_col_1[i];
     sum = 2048;
-    for (i = 0; i < 4; i++)
-        sum += temp[40 + i];
-    *(output_rows[1] + output_col + 1)
-        = sum < 0 ? (uint8_t)0 : (sum >= 16777216 ? (uint8_t)255 : (uint8_t)lut_linear_to_srgb[(sum >> 12)]);
+    for (i = 0; i < 4; i++) sum += temp[40 + i];
+    *(output_rows[ 1] + output_col + 1) = sum < 0 ? (uint8_t)0 : (sum >= 16777216 ? (uint8_t)255 : (uint8_t)lut_linear_to_srgb[(sum >> 12)]);
     // Pixel 1,1 complete
 
     // Begin work for output pixel 2,1
-    for (i = 0; i < 3; i++)
-        temp[40 + i] = temp[34 + i] * weights_for_col_2[i];
+    for (i = 0; i < 3; i++) temp[40 + i] = temp[34 + i] * weights_for_col_2[i];
     sum = 4096;
-    for (i = 0; i < 3; i++)
-        sum += temp[40 + i];
-    *(output_rows[1] + output_col + 2)
-        = sum < 0 ? (uint8_t)0 : (sum >= 33554432 ? (uint8_t)255 : (uint8_t)lut_linear_to_srgb[(sum >> 13)]);
+    for (i = 0; i < 3; i++) sum += temp[40 + i];
+    *(output_rows[ 1] + output_col + 2) = sum < 0 ? (uint8_t)0 : (sum >= 33554432 ? (uint8_t)255 : (uint8_t)lut_linear_to_srgb[(sum >> 13)]);
     // Pixel 2,1 complete
 
     // Begin work for output pixel 3,1
-    for (i = 0; i < 3; i++)
-        temp[40 + i] = temp[35 + i] * weights_for_col_3[i];
+    for (i = 0; i < 3; i++) temp[40 + i] = temp[35 + i] * weights_for_col_3[i];
     sum = 4096;
-    for (i = 0; i < 3; i++)
-        sum += temp[40 + i];
-    *(output_rows[1] + output_col + 3)
-        = sum < 0 ? (uint8_t)0 : (sum >= 33554432 ? (uint8_t)255 : (uint8_t)lut_linear_to_srgb[(sum >> 13)]);
+    for (i = 0; i < 3; i++) sum += temp[40 + i];
+    *(output_rows[ 1] + output_col + 3) = sum < 0 ? (uint8_t)0 : (sum >= 33554432 ? (uint8_t)255 : (uint8_t)lut_linear_to_srgb[(sum >> 13)]);
     // Pixel 3,1 complete
 
     // Begin work for output pixel 4,1
-    for (i = 0; i < 4; i++)
-        temp[40 + i] = temp[36 + i] * weights_for_col_4[i];
+    for (i = 0; i < 4; i++) temp[40 + i] = temp[36 + i] * weights_for_col_4[i];
     sum = 2048;
-    for (i = 0; i < 4; i++)
-        sum += temp[40 + i];
-    *(output_rows[1] + output_col + 4)
-        = sum < 0 ? (uint8_t)0 : (sum >= 16777216 ? (uint8_t)255 : (uint8_t)lut_linear_to_srgb[(sum >> 12)]);
+    for (i = 0; i < 4; i++) sum += temp[40 + i];
+    *(output_rows[ 1] + output_col + 4) = sum < 0 ? (uint8_t)0 : (sum >= 16777216 ? (uint8_t)255 : (uint8_t)lut_linear_to_srgb[(sum >> 12)]);
     // Pixel 4,1 complete
 
     // Begin work for output pixel 5,1
-    for (i = 0; i < 2; i++)
-        temp[40 + i] = temp[38 + i] * weights_for_col_5[i];
+    for (i = 0; i < 2; i++) temp[40 + i] = temp[38 + i] * weights_for_col_5[i];
     sum = 256;
-    for (i = 0; i < 2; i++)
-        sum += temp[40 + i];
-    *(output_rows[1] + output_col + 5)
-        = sum < 0 ? (uint8_t)0 : (sum >= 2097152 ? (uint8_t)255 : (uint8_t)lut_linear_to_srgb[(sum >> 9)]);
+    for (i = 0; i < 2; i++) sum += temp[40 + i];
+    *(output_rows[ 1] + output_col + 5) = sum < 0 ? (uint8_t)0 : (sum >= 2097152 ? (uint8_t)255 : (uint8_t)lut_linear_to_srgb[(sum >> 9)]);
     // Pixel 5,1 complete
 
     // Begin work for output row 2
-    for (i = 0; i < 8; i++)
-        temp[i + 0] = 31 * linearized[i + 16];
-    for (i = 0; i < 8; i++)
-        temp[i + 8] = 92 * linearized[i + 24];
-    for (i = 0; i < 8; i++)
-        temp[i + 16] = 5 * linearized[i + 32];
-    for (i = 0; i < 8; i++) {
+    for (i = 0; i < 8; i++) temp[i +  0] =  31 * linearized[i + 16];
+    for (i = 0; i < 8; i++) temp[i +  8] =  92 * linearized[i + 24];
+    for (i = 0; i < 8; i++) temp[i + 16] =   5 * linearized[i + 32];
+    for (i = 0; i < 8; i++){
         sum = 0;
         for (j = 0; j < 3; j++)
             sum += temp[j * 8 + i];
@@ -3140,73 +2423,52 @@ void flow_scale_spatial_srgb_6x6(uint8_t input[64], uint8_t ** output_rows, uint
         temp[32 + i] = sum;
     }
     // Begin work for output pixel 0,2
-    for (i = 0; i < 2; i++)
-        temp[40 + i] = temp[32 + i] * weights_for_col_0[i];
+    for (i = 0; i < 2; i++) temp[40 + i] = temp[32 + i] * weights_for_col_0[i];
     sum = 512;
-    for (i = 0; i < 2; i++)
-        sum += temp[40 + i];
-    *(output_rows[2] + output_col + 0)
-        = sum < 0 ? (uint8_t)0 : (sum >= 4194304 ? (uint8_t)255 : (uint8_t)lut_linear_to_srgb[(sum >> 10)]);
+    for (i = 0; i < 2; i++) sum += temp[40 + i];
+    *(output_rows[ 2] + output_col + 0) = sum < 0 ? (uint8_t)0 : (sum >= 4194304 ? (uint8_t)255 : (uint8_t)lut_linear_to_srgb[(sum >> 10)]);
     // Pixel 0,2 complete
 
     // Begin work for output pixel 1,2
-    for (i = 0; i < 4; i++)
-        temp[40 + i] = temp[32 + i] * weights_for_col_1[i];
+    for (i = 0; i < 4; i++) temp[40 + i] = temp[32 + i] * weights_for_col_1[i];
     sum = 4096;
-    for (i = 0; i < 4; i++)
-        sum += temp[40 + i];
-    *(output_rows[2] + output_col + 1)
-        = sum < 0 ? (uint8_t)0 : (sum >= 33554432 ? (uint8_t)255 : (uint8_t)lut_linear_to_srgb[(sum >> 13)]);
+    for (i = 0; i < 4; i++) sum += temp[40 + i];
+    *(output_rows[ 2] + output_col + 1) = sum < 0 ? (uint8_t)0 : (sum >= 33554432 ? (uint8_t)255 : (uint8_t)lut_linear_to_srgb[(sum >> 13)]);
     // Pixel 1,2 complete
 
     // Begin work for output pixel 2,2
-    for (i = 0; i < 3; i++)
-        temp[40 + i] = temp[34 + i] * weights_for_col_2[i];
+    for (i = 0; i < 3; i++) temp[40 + i] = temp[34 + i] * weights_for_col_2[i];
     sum = 8192;
-    for (i = 0; i < 3; i++)
-        sum += temp[40 + i];
-    *(output_rows[2] + output_col + 2)
-        = sum < 0 ? (uint8_t)0 : (sum >= 67108864 ? (uint8_t)255 : (uint8_t)lut_linear_to_srgb[(sum >> 14)]);
+    for (i = 0; i < 3; i++) sum += temp[40 + i];
+    *(output_rows[ 2] + output_col + 2) = sum < 0 ? (uint8_t)0 : (sum >= 67108864 ? (uint8_t)255 : (uint8_t)lut_linear_to_srgb[(sum >> 14)]);
     // Pixel 2,2 complete
 
     // Begin work for output pixel 3,2
-    for (i = 0; i < 3; i++)
-        temp[40 + i] = temp[35 + i] * weights_for_col_3[i];
+    for (i = 0; i < 3; i++) temp[40 + i] = temp[35 + i] * weights_for_col_3[i];
     sum = 8192;
-    for (i = 0; i < 3; i++)
-        sum += temp[40 + i];
-    *(output_rows[2] + output_col + 3)
-        = sum < 0 ? (uint8_t)0 : (sum >= 67108864 ? (uint8_t)255 : (uint8_t)lut_linear_to_srgb[(sum >> 14)]);
+    for (i = 0; i < 3; i++) sum += temp[40 + i];
+    *(output_rows[ 2] + output_col + 3) = sum < 0 ? (uint8_t)0 : (sum >= 67108864 ? (uint8_t)255 : (uint8_t)lut_linear_to_srgb[(sum >> 14)]);
     // Pixel 3,2 complete
 
     // Begin work for output pixel 4,2
-    for (i = 0; i < 4; i++)
-        temp[40 + i] = temp[36 + i] * weights_for_col_4[i];
+    for (i = 0; i < 4; i++) temp[40 + i] = temp[36 + i] * weights_for_col_4[i];
     sum = 4096;
-    for (i = 0; i < 4; i++)
-        sum += temp[40 + i];
-    *(output_rows[2] + output_col + 4)
-        = sum < 0 ? (uint8_t)0 : (sum >= 33554432 ? (uint8_t)255 : (uint8_t)lut_linear_to_srgb[(sum >> 13)]);
+    for (i = 0; i < 4; i++) sum += temp[40 + i];
+    *(output_rows[ 2] + output_col + 4) = sum < 0 ? (uint8_t)0 : (sum >= 33554432 ? (uint8_t)255 : (uint8_t)lut_linear_to_srgb[(sum >> 13)]);
     // Pixel 4,2 complete
 
     // Begin work for output pixel 5,2
-    for (i = 0; i < 2; i++)
-        temp[40 + i] = temp[38 + i] * weights_for_col_5[i];
+    for (i = 0; i < 2; i++) temp[40 + i] = temp[38 + i] * weights_for_col_5[i];
     sum = 512;
-    for (i = 0; i < 2; i++)
-        sum += temp[40 + i];
-    *(output_rows[2] + output_col + 5)
-        = sum < 0 ? (uint8_t)0 : (sum >= 4194304 ? (uint8_t)255 : (uint8_t)lut_linear_to_srgb[(sum >> 10)]);
+    for (i = 0; i < 2; i++) sum += temp[40 + i];
+    *(output_rows[ 2] + output_col + 5) = sum < 0 ? (uint8_t)0 : (sum >= 4194304 ? (uint8_t)255 : (uint8_t)lut_linear_to_srgb[(sum >> 10)]);
     // Pixel 5,2 complete
 
     // Begin work for output row 3
-    for (i = 0; i < 8; i++)
-        temp[i + 0] = 5 * linearized[i + 24];
-    for (i = 0; i < 8; i++)
-        temp[i + 8] = 92 * linearized[i + 32];
-    for (i = 0; i < 8; i++)
-        temp[i + 16] = 31 * linearized[i + 40];
-    for (i = 0; i < 8; i++) {
+    for (i = 0; i < 8; i++) temp[i +  0] =   5 * linearized[i + 24];
+    for (i = 0; i < 8; i++) temp[i +  8] =  92 * linearized[i + 32];
+    for (i = 0; i < 8; i++) temp[i + 16] =  31 * linearized[i + 40];
+    for (i = 0; i < 8; i++){
         sum = 0;
         for (j = 0; j < 3; j++)
             sum += temp[j * 8 + i];
@@ -3214,75 +2476,53 @@ void flow_scale_spatial_srgb_6x6(uint8_t input[64], uint8_t ** output_rows, uint
         temp[32 + i] = sum;
     }
     // Begin work for output pixel 0,3
-    for (i = 0; i < 2; i++)
-        temp[40 + i] = temp[32 + i] * weights_for_col_0[i];
+    for (i = 0; i < 2; i++) temp[40 + i] = temp[32 + i] * weights_for_col_0[i];
     sum = 512;
-    for (i = 0; i < 2; i++)
-        sum += temp[40 + i];
-    *(output_rows[3] + output_col + 0)
-        = sum < 0 ? (uint8_t)0 : (sum >= 4194304 ? (uint8_t)255 : (uint8_t)lut_linear_to_srgb[(sum >> 10)]);
+    for (i = 0; i < 2; i++) sum += temp[40 + i];
+    *(output_rows[ 3] + output_col + 0) = sum < 0 ? (uint8_t)0 : (sum >= 4194304 ? (uint8_t)255 : (uint8_t)lut_linear_to_srgb[(sum >> 10)]);
     // Pixel 0,3 complete
 
     // Begin work for output pixel 1,3
-    for (i = 0; i < 4; i++)
-        temp[40 + i] = temp[32 + i] * weights_for_col_1[i];
+    for (i = 0; i < 4; i++) temp[40 + i] = temp[32 + i] * weights_for_col_1[i];
     sum = 4096;
-    for (i = 0; i < 4; i++)
-        sum += temp[40 + i];
-    *(output_rows[3] + output_col + 1)
-        = sum < 0 ? (uint8_t)0 : (sum >= 33554432 ? (uint8_t)255 : (uint8_t)lut_linear_to_srgb[(sum >> 13)]);
+    for (i = 0; i < 4; i++) sum += temp[40 + i];
+    *(output_rows[ 3] + output_col + 1) = sum < 0 ? (uint8_t)0 : (sum >= 33554432 ? (uint8_t)255 : (uint8_t)lut_linear_to_srgb[(sum >> 13)]);
     // Pixel 1,3 complete
 
     // Begin work for output pixel 2,3
-    for (i = 0; i < 3; i++)
-        temp[40 + i] = temp[34 + i] * weights_for_col_2[i];
+    for (i = 0; i < 3; i++) temp[40 + i] = temp[34 + i] * weights_for_col_2[i];
     sum = 8192;
-    for (i = 0; i < 3; i++)
-        sum += temp[40 + i];
-    *(output_rows[3] + output_col + 2)
-        = sum < 0 ? (uint8_t)0 : (sum >= 67108864 ? (uint8_t)255 : (uint8_t)lut_linear_to_srgb[(sum >> 14)]);
+    for (i = 0; i < 3; i++) sum += temp[40 + i];
+    *(output_rows[ 3] + output_col + 2) = sum < 0 ? (uint8_t)0 : (sum >= 67108864 ? (uint8_t)255 : (uint8_t)lut_linear_to_srgb[(sum >> 14)]);
     // Pixel 2,3 complete
 
     // Begin work for output pixel 3,3
-    for (i = 0; i < 3; i++)
-        temp[40 + i] = temp[35 + i] * weights_for_col_3[i];
+    for (i = 0; i < 3; i++) temp[40 + i] = temp[35 + i] * weights_for_col_3[i];
     sum = 8192;
-    for (i = 0; i < 3; i++)
-        sum += temp[40 + i];
-    *(output_rows[3] + output_col + 3)
-        = sum < 0 ? (uint8_t)0 : (sum >= 67108864 ? (uint8_t)255 : (uint8_t)lut_linear_to_srgb[(sum >> 14)]);
+    for (i = 0; i < 3; i++) sum += temp[40 + i];
+    *(output_rows[ 3] + output_col + 3) = sum < 0 ? (uint8_t)0 : (sum >= 67108864 ? (uint8_t)255 : (uint8_t)lut_linear_to_srgb[(sum >> 14)]);
     // Pixel 3,3 complete
 
     // Begin work for output pixel 4,3
-    for (i = 0; i < 4; i++)
-        temp[40 + i] = temp[36 + i] * weights_for_col_4[i];
+    for (i = 0; i < 4; i++) temp[40 + i] = temp[36 + i] * weights_for_col_4[i];
     sum = 4096;
-    for (i = 0; i < 4; i++)
-        sum += temp[40 + i];
-    *(output_rows[3] + output_col + 4)
-        = sum < 0 ? (uint8_t)0 : (sum >= 33554432 ? (uint8_t)255 : (uint8_t)lut_linear_to_srgb[(sum >> 13)]);
+    for (i = 0; i < 4; i++) sum += temp[40 + i];
+    *(output_rows[ 3] + output_col + 4) = sum < 0 ? (uint8_t)0 : (sum >= 33554432 ? (uint8_t)255 : (uint8_t)lut_linear_to_srgb[(sum >> 13)]);
     // Pixel 4,3 complete
 
     // Begin work for output pixel 5,3
-    for (i = 0; i < 2; i++)
-        temp[40 + i] = temp[38 + i] * weights_for_col_5[i];
+    for (i = 0; i < 2; i++) temp[40 + i] = temp[38 + i] * weights_for_col_5[i];
     sum = 512;
-    for (i = 0; i < 2; i++)
-        sum += temp[40 + i];
-    *(output_rows[3] + output_col + 5)
-        = sum < 0 ? (uint8_t)0 : (sum >= 4194304 ? (uint8_t)255 : (uint8_t)lut_linear_to_srgb[(sum >> 10)]);
+    for (i = 0; i < 2; i++) sum += temp[40 + i];
+    *(output_rows[ 3] + output_col + 5) = sum < 0 ? (uint8_t)0 : (sum >= 4194304 ? (uint8_t)255 : (uint8_t)lut_linear_to_srgb[(sum >> 10)]);
     // Pixel 5,3 complete
 
     // Begin work for output row 4
-    for (i = 0; i < 8; i++)
-        temp[i + 0] = -1 * linearized[i + 32];
-    for (i = 0; i < 8; i++)
-        temp[i + 8] = 33 * linearized[i + 40];
-    for (i = 0; i < 8; i++)
-        temp[i + 16] = 33 * linearized[i + 48];
-    for (i = 0; i < 8; i++)
-        temp[i + 24] = -1 * linearized[i + 56];
-    for (i = 0; i < 8; i++) {
+    for (i = 0; i < 8; i++) temp[i +  0] =  -1 * linearized[i + 32];
+    for (i = 0; i < 8; i++) temp[i +  8] =  33 * linearized[i + 40];
+    for (i = 0; i < 8; i++) temp[i + 16] =  33 * linearized[i + 48];
+    for (i = 0; i < 8; i++) temp[i + 24] =  -1 * linearized[i + 56];
+    for (i = 0; i < 8; i++){
         sum = 0;
         for (j = 0; j < 4; j++)
             sum += temp[j * 8 + i];
@@ -3290,71 +2530,51 @@ void flow_scale_spatial_srgb_6x6(uint8_t input[64], uint8_t ** output_rows, uint
         temp[32 + i] = sum;
     }
     // Begin work for output pixel 0,4
-    for (i = 0; i < 2; i++)
-        temp[40 + i] = temp[32 + i] * weights_for_col_0[i];
+    for (i = 0; i < 2; i++) temp[40 + i] = temp[32 + i] * weights_for_col_0[i];
     sum = 256;
-    for (i = 0; i < 2; i++)
-        sum += temp[40 + i];
-    *(output_rows[4] + output_col + 0)
-        = sum < 0 ? (uint8_t)0 : (sum >= 2097152 ? (uint8_t)255 : (uint8_t)lut_linear_to_srgb[(sum >> 9)]);
+    for (i = 0; i < 2; i++) sum += temp[40 + i];
+    *(output_rows[ 4] + output_col + 0) = sum < 0 ? (uint8_t)0 : (sum >= 2097152 ? (uint8_t)255 : (uint8_t)lut_linear_to_srgb[(sum >> 9)]);
     // Pixel 0,4 complete
 
     // Begin work for output pixel 1,4
-    for (i = 0; i < 4; i++)
-        temp[40 + i] = temp[32 + i] * weights_for_col_1[i];
+    for (i = 0; i < 4; i++) temp[40 + i] = temp[32 + i] * weights_for_col_1[i];
     sum = 2048;
-    for (i = 0; i < 4; i++)
-        sum += temp[40 + i];
-    *(output_rows[4] + output_col + 1)
-        = sum < 0 ? (uint8_t)0 : (sum >= 16777216 ? (uint8_t)255 : (uint8_t)lut_linear_to_srgb[(sum >> 12)]);
+    for (i = 0; i < 4; i++) sum += temp[40 + i];
+    *(output_rows[ 4] + output_col + 1) = sum < 0 ? (uint8_t)0 : (sum >= 16777216 ? (uint8_t)255 : (uint8_t)lut_linear_to_srgb[(sum >> 12)]);
     // Pixel 1,4 complete
 
     // Begin work for output pixel 2,4
-    for (i = 0; i < 3; i++)
-        temp[40 + i] = temp[34 + i] * weights_for_col_2[i];
+    for (i = 0; i < 3; i++) temp[40 + i] = temp[34 + i] * weights_for_col_2[i];
     sum = 4096;
-    for (i = 0; i < 3; i++)
-        sum += temp[40 + i];
-    *(output_rows[4] + output_col + 2)
-        = sum < 0 ? (uint8_t)0 : (sum >= 33554432 ? (uint8_t)255 : (uint8_t)lut_linear_to_srgb[(sum >> 13)]);
+    for (i = 0; i < 3; i++) sum += temp[40 + i];
+    *(output_rows[ 4] + output_col + 2) = sum < 0 ? (uint8_t)0 : (sum >= 33554432 ? (uint8_t)255 : (uint8_t)lut_linear_to_srgb[(sum >> 13)]);
     // Pixel 2,4 complete
 
     // Begin work for output pixel 3,4
-    for (i = 0; i < 3; i++)
-        temp[40 + i] = temp[35 + i] * weights_for_col_3[i];
+    for (i = 0; i < 3; i++) temp[40 + i] = temp[35 + i] * weights_for_col_3[i];
     sum = 4096;
-    for (i = 0; i < 3; i++)
-        sum += temp[40 + i];
-    *(output_rows[4] + output_col + 3)
-        = sum < 0 ? (uint8_t)0 : (sum >= 33554432 ? (uint8_t)255 : (uint8_t)lut_linear_to_srgb[(sum >> 13)]);
+    for (i = 0; i < 3; i++) sum += temp[40 + i];
+    *(output_rows[ 4] + output_col + 3) = sum < 0 ? (uint8_t)0 : (sum >= 33554432 ? (uint8_t)255 : (uint8_t)lut_linear_to_srgb[(sum >> 13)]);
     // Pixel 3,4 complete
 
     // Begin work for output pixel 4,4
-    for (i = 0; i < 4; i++)
-        temp[40 + i] = temp[36 + i] * weights_for_col_4[i];
+    for (i = 0; i < 4; i++) temp[40 + i] = temp[36 + i] * weights_for_col_4[i];
     sum = 2048;
-    for (i = 0; i < 4; i++)
-        sum += temp[40 + i];
-    *(output_rows[4] + output_col + 4)
-        = sum < 0 ? (uint8_t)0 : (sum >= 16777216 ? (uint8_t)255 : (uint8_t)lut_linear_to_srgb[(sum >> 12)]);
+    for (i = 0; i < 4; i++) sum += temp[40 + i];
+    *(output_rows[ 4] + output_col + 4) = sum < 0 ? (uint8_t)0 : (sum >= 16777216 ? (uint8_t)255 : (uint8_t)lut_linear_to_srgb[(sum >> 12)]);
     // Pixel 4,4 complete
 
     // Begin work for output pixel 5,4
-    for (i = 0; i < 2; i++)
-        temp[40 + i] = temp[38 + i] * weights_for_col_5[i];
+    for (i = 0; i < 2; i++) temp[40 + i] = temp[38 + i] * weights_for_col_5[i];
     sum = 256;
-    for (i = 0; i < 2; i++)
-        sum += temp[40 + i];
-    *(output_rows[4] + output_col + 5)
-        = sum < 0 ? (uint8_t)0 : (sum >= 2097152 ? (uint8_t)255 : (uint8_t)lut_linear_to_srgb[(sum >> 9)]);
+    for (i = 0; i < 2; i++) sum += temp[40 + i];
+    *(output_rows[ 4] + output_col + 5) = sum < 0 ? (uint8_t)0 : (sum >= 2097152 ? (uint8_t)255 : (uint8_t)lut_linear_to_srgb[(sum >> 9)]);
     // Pixel 5,4 complete
 
     // Begin work for output row 5
-    for (i = 0; i < 8; i++)
-        temp[i + 0] = 2 * linearized[i + 48];
-    for (i = 0; i < 8; i++)
-        temp[i + 8] = 6 * linearized[i + 56];
-    for (i = 0; i < 8; i++) {
+    for (i = 0; i < 8; i++) temp[i +  0] =   2 * linearized[i + 48];
+    for (i = 0; i < 8; i++) temp[i +  8] =   6 * linearized[i + 56];
+    for (i = 0; i < 8; i++){
         sum = 0;
         for (j = 0; j < 2; j++)
             sum += temp[j * 8 + i];
@@ -3362,111 +2582,79 @@ void flow_scale_spatial_srgb_6x6(uint8_t input[64], uint8_t ** output_rows, uint
         temp[32 + i] = sum;
     }
     // Begin work for output pixel 0,5
-    for (i = 0; i < 2; i++)
-        temp[40 + i] = temp[32 + i] * weights_for_col_0[i];
+    for (i = 0; i < 2; i++) temp[40 + i] = temp[32 + i] * weights_for_col_0[i];
     sum = 32;
-    for (i = 0; i < 2; i++)
-        sum += temp[40 + i];
-    *(output_rows[5] + output_col + 0)
-        = sum < 0 ? (uint8_t)0 : (sum >= 262144 ? (uint8_t)255 : (uint8_t)lut_linear_to_srgb[(sum >> 6)]);
+    for (i = 0; i < 2; i++) sum += temp[40 + i];
+    *(output_rows[ 5] + output_col + 0) = sum < 0 ? (uint8_t)0 : (sum >= 262144 ? (uint8_t)255 : (uint8_t)lut_linear_to_srgb[(sum >> 6)]);
     // Pixel 0,5 complete
 
     // Begin work for output pixel 1,5
-    for (i = 0; i < 4; i++)
-        temp[40 + i] = temp[32 + i] * weights_for_col_1[i];
+    for (i = 0; i < 4; i++) temp[40 + i] = temp[32 + i] * weights_for_col_1[i];
     sum = 256;
-    for (i = 0; i < 4; i++)
-        sum += temp[40 + i];
-    *(output_rows[5] + output_col + 1)
-        = sum < 0 ? (uint8_t)0 : (sum >= 2097152 ? (uint8_t)255 : (uint8_t)lut_linear_to_srgb[(sum >> 9)]);
+    for (i = 0; i < 4; i++) sum += temp[40 + i];
+    *(output_rows[ 5] + output_col + 1) = sum < 0 ? (uint8_t)0 : (sum >= 2097152 ? (uint8_t)255 : (uint8_t)lut_linear_to_srgb[(sum >> 9)]);
     // Pixel 1,5 complete
 
     // Begin work for output pixel 2,5
-    for (i = 0; i < 3; i++)
-        temp[40 + i] = temp[34 + i] * weights_for_col_2[i];
+    for (i = 0; i < 3; i++) temp[40 + i] = temp[34 + i] * weights_for_col_2[i];
     sum = 512;
-    for (i = 0; i < 3; i++)
-        sum += temp[40 + i];
-    *(output_rows[5] + output_col + 2)
-        = sum < 0 ? (uint8_t)0 : (sum >= 4194304 ? (uint8_t)255 : (uint8_t)lut_linear_to_srgb[(sum >> 10)]);
+    for (i = 0; i < 3; i++) sum += temp[40 + i];
+    *(output_rows[ 5] + output_col + 2) = sum < 0 ? (uint8_t)0 : (sum >= 4194304 ? (uint8_t)255 : (uint8_t)lut_linear_to_srgb[(sum >> 10)]);
     // Pixel 2,5 complete
 
     // Begin work for output pixel 3,5
-    for (i = 0; i < 3; i++)
-        temp[40 + i] = temp[35 + i] * weights_for_col_3[i];
+    for (i = 0; i < 3; i++) temp[40 + i] = temp[35 + i] * weights_for_col_3[i];
     sum = 512;
-    for (i = 0; i < 3; i++)
-        sum += temp[40 + i];
-    *(output_rows[5] + output_col + 3)
-        = sum < 0 ? (uint8_t)0 : (sum >= 4194304 ? (uint8_t)255 : (uint8_t)lut_linear_to_srgb[(sum >> 10)]);
+    for (i = 0; i < 3; i++) sum += temp[40 + i];
+    *(output_rows[ 5] + output_col + 3) = sum < 0 ? (uint8_t)0 : (sum >= 4194304 ? (uint8_t)255 : (uint8_t)lut_linear_to_srgb[(sum >> 10)]);
     // Pixel 3,5 complete
 
     // Begin work for output pixel 4,5
-    for (i = 0; i < 4; i++)
-        temp[40 + i] = temp[36 + i] * weights_for_col_4[i];
+    for (i = 0; i < 4; i++) temp[40 + i] = temp[36 + i] * weights_for_col_4[i];
     sum = 256;
-    for (i = 0; i < 4; i++)
-        sum += temp[40 + i];
-    *(output_rows[5] + output_col + 4)
-        = sum < 0 ? (uint8_t)0 : (sum >= 2097152 ? (uint8_t)255 : (uint8_t)lut_linear_to_srgb[(sum >> 9)]);
+    for (i = 0; i < 4; i++) sum += temp[40 + i];
+    *(output_rows[ 5] + output_col + 4) = sum < 0 ? (uint8_t)0 : (sum >= 2097152 ? (uint8_t)255 : (uint8_t)lut_linear_to_srgb[(sum >> 9)]);
     // Pixel 4,5 complete
 
     // Begin work for output pixel 5,5
-    for (i = 0; i < 2; i++)
-        temp[40 + i] = temp[38 + i] * weights_for_col_5[i];
+    for (i = 0; i < 2; i++) temp[40 + i] = temp[38 + i] * weights_for_col_5[i];
     sum = 32;
-    for (i = 0; i < 2; i++)
-        sum += temp[40 + i];
-    *(output_rows[5] + output_col + 5)
-        = sum < 0 ? (uint8_t)0 : (sum >= 262144 ? (uint8_t)255 : (uint8_t)lut_linear_to_srgb[(sum >> 6)]);
+    for (i = 0; i < 2; i++) sum += temp[40 + i];
+    *(output_rows[ 5] + output_col + 5) = sum < 0 ? (uint8_t)0 : (sum >= 262144 ? (uint8_t)255 : (uint8_t)lut_linear_to_srgb[(sum >> 6)]);
     // Pixel 5,5 complete
 }
 
 #ifndef FLOW_GCC_IDCT
 void jpeg_idct_spatial_srgb_6x6(j_decompress_ptr cinfo, jpeg_component_info * compptr, JCOEFPTR coef_block,
-                                JSAMPARRAY output_buf, JDIMENSION output_col)
-{
+                                JSAMPARRAY output_buf, JDIMENSION output_col){
     JSAMPLE input[64];
-    JSAMPROW rows[8] = { &input[0],     &input[8],     &input[8 * 2], &input[8 * 3],
-                         &input[8 * 4], &input[8 * 5], &input[8 * 6], &input[8 * 7] };
+    JSAMPROW rows[8]
+        = { &input[0],     &input[8],     &input[8 * 2], &input[8 * 3],
+            &input[8 * 4], &input[8 * 5], &input[8 * 6], &input[8 * 7] };
     jpeg_idct_islow(cinfo, compptr, coef_block, &rows[0], 0);
 
     flow_scale_spatial_srgb_6x6(input, output_buf, output_col);
 }
 #endif
 
-void flow_scale_spatial_srgb_5x5(uint8_t input[64], uint8_t ** output_rows, uint32_t output_col)
-{
+FLOW_EXPORT void flow_scale_spatial_srgb_5x5(uint8_t input[64], uint8_t ** output_rows, uint32_t output_col){
     int32_t i, sum, j;
     FLOW_ALIGN_16_VAR(int32_t linearized[64]);
     for (i = 0; i < 64; i++)
         linearized[i] = lut_srgb_to_linear[input[i]];
 
     FLOW_ALIGN_16_VAR(int32_t temp[48]);
-    FLOW_ALIGN_16_VAR(int32_t weights_for_col_0[]) = {
-        78, 51, -1,
-    };
-    FLOW_ALIGN_16_VAR(int32_t weights_for_col_1[]) = {
-        -2, 32, 79, 19,
-    };
-    FLOW_ALIGN_16_VAR(int32_t weights_for_col_2[]) = {
-        1, 31, 31, 1,
-    };
-    FLOW_ALIGN_16_VAR(int32_t weights_for_col_3[]) = {
-        19, 79, 32, -2,
-    };
-    FLOW_ALIGN_16_VAR(int32_t weights_for_col_4[]) = {
-        -1, 51, 78,
-    };
+    FLOW_ALIGN_16_VAR(int32_t weights_for_col_0[]) = {78,51,-1,};
+    FLOW_ALIGN_16_VAR(int32_t weights_for_col_1[]) = {-2,32,79,19,};
+    FLOW_ALIGN_16_VAR(int32_t weights_for_col_2[]) = {1,31,31,1,};
+    FLOW_ALIGN_16_VAR(int32_t weights_for_col_3[]) = {19,79,32,-2,};
+    FLOW_ALIGN_16_VAR(int32_t weights_for_col_4[]) = {-1,51,78,};
 
     // Begin work for output row 0
-    for (i = 0; i < 8; i++)
-        temp[i + 0] = 78 * linearized[i + 0];
-    for (i = 0; i < 8; i++)
-        temp[i + 8] = 51 * linearized[i + 8];
-    for (i = 0; i < 8; i++)
-        temp[i + 16] = -1 * linearized[i + 16];
-    for (i = 0; i < 8; i++) {
+    for (i = 0; i < 8; i++) temp[i +  0] =  78 * linearized[i +  0];
+    for (i = 0; i < 8; i++) temp[i +  8] =  51 * linearized[i +  8];
+    for (i = 0; i < 8; i++) temp[i + 16] =  -1 * linearized[i + 16];
+    for (i = 0; i < 8; i++){
         sum = 0;
         for (j = 0; j < 3; j++)
             sum += temp[j * 8 + i];
@@ -3474,65 +2662,46 @@ void flow_scale_spatial_srgb_5x5(uint8_t input[64], uint8_t ** output_rows, uint
         temp[32 + i] = sum;
     }
     // Begin work for output pixel 0,0
-    for (i = 0; i < 3; i++)
-        temp[40 + i] = temp[32 + i] * weights_for_col_0[i];
+    for (i = 0; i < 3; i++) temp[40 + i] = temp[32 + i] * weights_for_col_0[i];
     sum = 8192;
-    for (i = 0; i < 3; i++)
-        sum += temp[40 + i];
-    *(output_rows[0] + output_col + 0)
-        = sum < 0 ? (uint8_t)0 : (sum >= 67108864 ? (uint8_t)255 : (uint8_t)lut_linear_to_srgb[(sum >> 14)]);
+    for (i = 0; i < 3; i++) sum += temp[40 + i];
+    *(output_rows[ 0] + output_col + 0) = sum < 0 ? (uint8_t)0 : (sum >= 67108864 ? (uint8_t)255 : (uint8_t)lut_linear_to_srgb[(sum >> 14)]);
     // Pixel 0,0 complete
 
     // Begin work for output pixel 1,0
-    for (i = 0; i < 4; i++)
-        temp[40 + i] = temp[32 + i] * weights_for_col_1[i];
+    for (i = 0; i < 4; i++) temp[40 + i] = temp[32 + i] * weights_for_col_1[i];
     sum = 8192;
-    for (i = 0; i < 4; i++)
-        sum += temp[40 + i];
-    *(output_rows[0] + output_col + 1)
-        = sum < 0 ? (uint8_t)0 : (sum >= 67108864 ? (uint8_t)255 : (uint8_t)lut_linear_to_srgb[(sum >> 14)]);
+    for (i = 0; i < 4; i++) sum += temp[40 + i];
+    *(output_rows[ 0] + output_col + 1) = sum < 0 ? (uint8_t)0 : (sum >= 67108864 ? (uint8_t)255 : (uint8_t)lut_linear_to_srgb[(sum >> 14)]);
     // Pixel 1,0 complete
 
     // Begin work for output pixel 2,0
-    for (i = 0; i < 4; i++)
-        temp[40 + i] = temp[34 + i] * weights_for_col_2[i];
+    for (i = 0; i < 4; i++) temp[40 + i] = temp[34 + i] * weights_for_col_2[i];
     sum = 4096;
-    for (i = 0; i < 4; i++)
-        sum += temp[40 + i];
-    *(output_rows[0] + output_col + 2)
-        = sum < 0 ? (uint8_t)0 : (sum >= 33554432 ? (uint8_t)255 : (uint8_t)lut_linear_to_srgb[(sum >> 13)]);
+    for (i = 0; i < 4; i++) sum += temp[40 + i];
+    *(output_rows[ 0] + output_col + 2) = sum < 0 ? (uint8_t)0 : (sum >= 33554432 ? (uint8_t)255 : (uint8_t)lut_linear_to_srgb[(sum >> 13)]);
     // Pixel 2,0 complete
 
     // Begin work for output pixel 3,0
-    for (i = 0; i < 4; i++)
-        temp[40 + i] = temp[36 + i] * weights_for_col_3[i];
+    for (i = 0; i < 4; i++) temp[40 + i] = temp[36 + i] * weights_for_col_3[i];
     sum = 8192;
-    for (i = 0; i < 4; i++)
-        sum += temp[40 + i];
-    *(output_rows[0] + output_col + 3)
-        = sum < 0 ? (uint8_t)0 : (sum >= 67108864 ? (uint8_t)255 : (uint8_t)lut_linear_to_srgb[(sum >> 14)]);
+    for (i = 0; i < 4; i++) sum += temp[40 + i];
+    *(output_rows[ 0] + output_col + 3) = sum < 0 ? (uint8_t)0 : (sum >= 67108864 ? (uint8_t)255 : (uint8_t)lut_linear_to_srgb[(sum >> 14)]);
     // Pixel 3,0 complete
 
     // Begin work for output pixel 4,0
-    for (i = 0; i < 3; i++)
-        temp[40 + i] = temp[37 + i] * weights_for_col_4[i];
+    for (i = 0; i < 3; i++) temp[40 + i] = temp[37 + i] * weights_for_col_4[i];
     sum = 8192;
-    for (i = 0; i < 3; i++)
-        sum += temp[40 + i];
-    *(output_rows[0] + output_col + 4)
-        = sum < 0 ? (uint8_t)0 : (sum >= 67108864 ? (uint8_t)255 : (uint8_t)lut_linear_to_srgb[(sum >> 14)]);
+    for (i = 0; i < 3; i++) sum += temp[40 + i];
+    *(output_rows[ 0] + output_col + 4) = sum < 0 ? (uint8_t)0 : (sum >= 67108864 ? (uint8_t)255 : (uint8_t)lut_linear_to_srgb[(sum >> 14)]);
     // Pixel 4,0 complete
 
     // Begin work for output row 1
-    for (i = 0; i < 8; i++)
-        temp[i + 0] = -2 * linearized[i + 0];
-    for (i = 0; i < 8; i++)
-        temp[i + 8] = 32 * linearized[i + 8];
-    for (i = 0; i < 8; i++)
-        temp[i + 16] = 79 * linearized[i + 16];
-    for (i = 0; i < 8; i++)
-        temp[i + 24] = 19 * linearized[i + 24];
-    for (i = 0; i < 8; i++) {
+    for (i = 0; i < 8; i++) temp[i +  0] =  -2 * linearized[i +  0];
+    for (i = 0; i < 8; i++) temp[i +  8] =  32 * linearized[i +  8];
+    for (i = 0; i < 8; i++) temp[i + 16] =  79 * linearized[i + 16];
+    for (i = 0; i < 8; i++) temp[i + 24] =  19 * linearized[i + 24];
+    for (i = 0; i < 8; i++){
         sum = 0;
         for (j = 0; j < 4; j++)
             sum += temp[j * 8 + i];
@@ -3540,65 +2709,46 @@ void flow_scale_spatial_srgb_5x5(uint8_t input[64], uint8_t ** output_rows, uint
         temp[32 + i] = sum;
     }
     // Begin work for output pixel 0,1
-    for (i = 0; i < 3; i++)
-        temp[40 + i] = temp[32 + i] * weights_for_col_0[i];
+    for (i = 0; i < 3; i++) temp[40 + i] = temp[32 + i] * weights_for_col_0[i];
     sum = 8192;
-    for (i = 0; i < 3; i++)
-        sum += temp[40 + i];
-    *(output_rows[1] + output_col + 0)
-        = sum < 0 ? (uint8_t)0 : (sum >= 67108864 ? (uint8_t)255 : (uint8_t)lut_linear_to_srgb[(sum >> 14)]);
+    for (i = 0; i < 3; i++) sum += temp[40 + i];
+    *(output_rows[ 1] + output_col + 0) = sum < 0 ? (uint8_t)0 : (sum >= 67108864 ? (uint8_t)255 : (uint8_t)lut_linear_to_srgb[(sum >> 14)]);
     // Pixel 0,1 complete
 
     // Begin work for output pixel 1,1
-    for (i = 0; i < 4; i++)
-        temp[40 + i] = temp[32 + i] * weights_for_col_1[i];
+    for (i = 0; i < 4; i++) temp[40 + i] = temp[32 + i] * weights_for_col_1[i];
     sum = 8192;
-    for (i = 0; i < 4; i++)
-        sum += temp[40 + i];
-    *(output_rows[1] + output_col + 1)
-        = sum < 0 ? (uint8_t)0 : (sum >= 67108864 ? (uint8_t)255 : (uint8_t)lut_linear_to_srgb[(sum >> 14)]);
+    for (i = 0; i < 4; i++) sum += temp[40 + i];
+    *(output_rows[ 1] + output_col + 1) = sum < 0 ? (uint8_t)0 : (sum >= 67108864 ? (uint8_t)255 : (uint8_t)lut_linear_to_srgb[(sum >> 14)]);
     // Pixel 1,1 complete
 
     // Begin work for output pixel 2,1
-    for (i = 0; i < 4; i++)
-        temp[40 + i] = temp[34 + i] * weights_for_col_2[i];
+    for (i = 0; i < 4; i++) temp[40 + i] = temp[34 + i] * weights_for_col_2[i];
     sum = 4096;
-    for (i = 0; i < 4; i++)
-        sum += temp[40 + i];
-    *(output_rows[1] + output_col + 2)
-        = sum < 0 ? (uint8_t)0 : (sum >= 33554432 ? (uint8_t)255 : (uint8_t)lut_linear_to_srgb[(sum >> 13)]);
+    for (i = 0; i < 4; i++) sum += temp[40 + i];
+    *(output_rows[ 1] + output_col + 2) = sum < 0 ? (uint8_t)0 : (sum >= 33554432 ? (uint8_t)255 : (uint8_t)lut_linear_to_srgb[(sum >> 13)]);
     // Pixel 2,1 complete
 
     // Begin work for output pixel 3,1
-    for (i = 0; i < 4; i++)
-        temp[40 + i] = temp[36 + i] * weights_for_col_3[i];
+    for (i = 0; i < 4; i++) temp[40 + i] = temp[36 + i] * weights_for_col_3[i];
     sum = 8192;
-    for (i = 0; i < 4; i++)
-        sum += temp[40 + i];
-    *(output_rows[1] + output_col + 3)
-        = sum < 0 ? (uint8_t)0 : (sum >= 67108864 ? (uint8_t)255 : (uint8_t)lut_linear_to_srgb[(sum >> 14)]);
+    for (i = 0; i < 4; i++) sum += temp[40 + i];
+    *(output_rows[ 1] + output_col + 3) = sum < 0 ? (uint8_t)0 : (sum >= 67108864 ? (uint8_t)255 : (uint8_t)lut_linear_to_srgb[(sum >> 14)]);
     // Pixel 3,1 complete
 
     // Begin work for output pixel 4,1
-    for (i = 0; i < 3; i++)
-        temp[40 + i] = temp[37 + i] * weights_for_col_4[i];
+    for (i = 0; i < 3; i++) temp[40 + i] = temp[37 + i] * weights_for_col_4[i];
     sum = 8192;
-    for (i = 0; i < 3; i++)
-        sum += temp[40 + i];
-    *(output_rows[1] + output_col + 4)
-        = sum < 0 ? (uint8_t)0 : (sum >= 67108864 ? (uint8_t)255 : (uint8_t)lut_linear_to_srgb[(sum >> 14)]);
+    for (i = 0; i < 3; i++) sum += temp[40 + i];
+    *(output_rows[ 1] + output_col + 4) = sum < 0 ? (uint8_t)0 : (sum >= 67108864 ? (uint8_t)255 : (uint8_t)lut_linear_to_srgb[(sum >> 14)]);
     // Pixel 4,1 complete
 
     // Begin work for output row 2
-    for (i = 0; i < 8; i++)
-        temp[i + 0] = 1 * linearized[i + 16];
-    for (i = 0; i < 8; i++)
-        temp[i + 8] = 31 * linearized[i + 24];
-    for (i = 0; i < 8; i++)
-        temp[i + 16] = 31 * linearized[i + 32];
-    for (i = 0; i < 8; i++)
-        temp[i + 24] = 1 * linearized[i + 40];
-    for (i = 0; i < 8; i++) {
+    for (i = 0; i < 8; i++) temp[i +  0] =   1 * linearized[i + 16];
+    for (i = 0; i < 8; i++) temp[i +  8] =  31 * linearized[i + 24];
+    for (i = 0; i < 8; i++) temp[i + 16] =  31 * linearized[i + 32];
+    for (i = 0; i < 8; i++) temp[i + 24] =   1 * linearized[i + 40];
+    for (i = 0; i < 8; i++){
         sum = 0;
         for (j = 0; j < 4; j++)
             sum += temp[j * 8 + i];
@@ -3606,65 +2756,46 @@ void flow_scale_spatial_srgb_5x5(uint8_t input[64], uint8_t ** output_rows, uint
         temp[32 + i] = sum;
     }
     // Begin work for output pixel 0,2
-    for (i = 0; i < 3; i++)
-        temp[40 + i] = temp[32 + i] * weights_for_col_0[i];
+    for (i = 0; i < 3; i++) temp[40 + i] = temp[32 + i] * weights_for_col_0[i];
     sum = 4096;
-    for (i = 0; i < 3; i++)
-        sum += temp[40 + i];
-    *(output_rows[2] + output_col + 0)
-        = sum < 0 ? (uint8_t)0 : (sum >= 33554432 ? (uint8_t)255 : (uint8_t)lut_linear_to_srgb[(sum >> 13)]);
+    for (i = 0; i < 3; i++) sum += temp[40 + i];
+    *(output_rows[ 2] + output_col + 0) = sum < 0 ? (uint8_t)0 : (sum >= 33554432 ? (uint8_t)255 : (uint8_t)lut_linear_to_srgb[(sum >> 13)]);
     // Pixel 0,2 complete
 
     // Begin work for output pixel 1,2
-    for (i = 0; i < 4; i++)
-        temp[40 + i] = temp[32 + i] * weights_for_col_1[i];
+    for (i = 0; i < 4; i++) temp[40 + i] = temp[32 + i] * weights_for_col_1[i];
     sum = 4096;
-    for (i = 0; i < 4; i++)
-        sum += temp[40 + i];
-    *(output_rows[2] + output_col + 1)
-        = sum < 0 ? (uint8_t)0 : (sum >= 33554432 ? (uint8_t)255 : (uint8_t)lut_linear_to_srgb[(sum >> 13)]);
+    for (i = 0; i < 4; i++) sum += temp[40 + i];
+    *(output_rows[ 2] + output_col + 1) = sum < 0 ? (uint8_t)0 : (sum >= 33554432 ? (uint8_t)255 : (uint8_t)lut_linear_to_srgb[(sum >> 13)]);
     // Pixel 1,2 complete
 
     // Begin work for output pixel 2,2
-    for (i = 0; i < 4; i++)
-        temp[40 + i] = temp[34 + i] * weights_for_col_2[i];
+    for (i = 0; i < 4; i++) temp[40 + i] = temp[34 + i] * weights_for_col_2[i];
     sum = 2048;
-    for (i = 0; i < 4; i++)
-        sum += temp[40 + i];
-    *(output_rows[2] + output_col + 2)
-        = sum < 0 ? (uint8_t)0 : (sum >= 16777216 ? (uint8_t)255 : (uint8_t)lut_linear_to_srgb[(sum >> 12)]);
+    for (i = 0; i < 4; i++) sum += temp[40 + i];
+    *(output_rows[ 2] + output_col + 2) = sum < 0 ? (uint8_t)0 : (sum >= 16777216 ? (uint8_t)255 : (uint8_t)lut_linear_to_srgb[(sum >> 12)]);
     // Pixel 2,2 complete
 
     // Begin work for output pixel 3,2
-    for (i = 0; i < 4; i++)
-        temp[40 + i] = temp[36 + i] * weights_for_col_3[i];
+    for (i = 0; i < 4; i++) temp[40 + i] = temp[36 + i] * weights_for_col_3[i];
     sum = 4096;
-    for (i = 0; i < 4; i++)
-        sum += temp[40 + i];
-    *(output_rows[2] + output_col + 3)
-        = sum < 0 ? (uint8_t)0 : (sum >= 33554432 ? (uint8_t)255 : (uint8_t)lut_linear_to_srgb[(sum >> 13)]);
+    for (i = 0; i < 4; i++) sum += temp[40 + i];
+    *(output_rows[ 2] + output_col + 3) = sum < 0 ? (uint8_t)0 : (sum >= 33554432 ? (uint8_t)255 : (uint8_t)lut_linear_to_srgb[(sum >> 13)]);
     // Pixel 3,2 complete
 
     // Begin work for output pixel 4,2
-    for (i = 0; i < 3; i++)
-        temp[40 + i] = temp[37 + i] * weights_for_col_4[i];
+    for (i = 0; i < 3; i++) temp[40 + i] = temp[37 + i] * weights_for_col_4[i];
     sum = 4096;
-    for (i = 0; i < 3; i++)
-        sum += temp[40 + i];
-    *(output_rows[2] + output_col + 4)
-        = sum < 0 ? (uint8_t)0 : (sum >= 33554432 ? (uint8_t)255 : (uint8_t)lut_linear_to_srgb[(sum >> 13)]);
+    for (i = 0; i < 3; i++) sum += temp[40 + i];
+    *(output_rows[ 2] + output_col + 4) = sum < 0 ? (uint8_t)0 : (sum >= 33554432 ? (uint8_t)255 : (uint8_t)lut_linear_to_srgb[(sum >> 13)]);
     // Pixel 4,2 complete
 
     // Begin work for output row 3
-    for (i = 0; i < 8; i++)
-        temp[i + 0] = 19 * linearized[i + 32];
-    for (i = 0; i < 8; i++)
-        temp[i + 8] = 79 * linearized[i + 40];
-    for (i = 0; i < 8; i++)
-        temp[i + 16] = 32 * linearized[i + 48];
-    for (i = 0; i < 8; i++)
-        temp[i + 24] = -2 * linearized[i + 56];
-    for (i = 0; i < 8; i++) {
+    for (i = 0; i < 8; i++) temp[i +  0] =  19 * linearized[i + 32];
+    for (i = 0; i < 8; i++) temp[i +  8] =  79 * linearized[i + 40];
+    for (i = 0; i < 8; i++) temp[i + 16] =  32 * linearized[i + 48];
+    for (i = 0; i < 8; i++) temp[i + 24] =  -2 * linearized[i + 56];
+    for (i = 0; i < 8; i++){
         sum = 0;
         for (j = 0; j < 4; j++)
             sum += temp[j * 8 + i];
@@ -3672,63 +2803,45 @@ void flow_scale_spatial_srgb_5x5(uint8_t input[64], uint8_t ** output_rows, uint
         temp[32 + i] = sum;
     }
     // Begin work for output pixel 0,3
-    for (i = 0; i < 3; i++)
-        temp[40 + i] = temp[32 + i] * weights_for_col_0[i];
+    for (i = 0; i < 3; i++) temp[40 + i] = temp[32 + i] * weights_for_col_0[i];
     sum = 8192;
-    for (i = 0; i < 3; i++)
-        sum += temp[40 + i];
-    *(output_rows[3] + output_col + 0)
-        = sum < 0 ? (uint8_t)0 : (sum >= 67108864 ? (uint8_t)255 : (uint8_t)lut_linear_to_srgb[(sum >> 14)]);
+    for (i = 0; i < 3; i++) sum += temp[40 + i];
+    *(output_rows[ 3] + output_col + 0) = sum < 0 ? (uint8_t)0 : (sum >= 67108864 ? (uint8_t)255 : (uint8_t)lut_linear_to_srgb[(sum >> 14)]);
     // Pixel 0,3 complete
 
     // Begin work for output pixel 1,3
-    for (i = 0; i < 4; i++)
-        temp[40 + i] = temp[32 + i] * weights_for_col_1[i];
+    for (i = 0; i < 4; i++) temp[40 + i] = temp[32 + i] * weights_for_col_1[i];
     sum = 8192;
-    for (i = 0; i < 4; i++)
-        sum += temp[40 + i];
-    *(output_rows[3] + output_col + 1)
-        = sum < 0 ? (uint8_t)0 : (sum >= 67108864 ? (uint8_t)255 : (uint8_t)lut_linear_to_srgb[(sum >> 14)]);
+    for (i = 0; i < 4; i++) sum += temp[40 + i];
+    *(output_rows[ 3] + output_col + 1) = sum < 0 ? (uint8_t)0 : (sum >= 67108864 ? (uint8_t)255 : (uint8_t)lut_linear_to_srgb[(sum >> 14)]);
     // Pixel 1,3 complete
 
     // Begin work for output pixel 2,3
-    for (i = 0; i < 4; i++)
-        temp[40 + i] = temp[34 + i] * weights_for_col_2[i];
+    for (i = 0; i < 4; i++) temp[40 + i] = temp[34 + i] * weights_for_col_2[i];
     sum = 4096;
-    for (i = 0; i < 4; i++)
-        sum += temp[40 + i];
-    *(output_rows[3] + output_col + 2)
-        = sum < 0 ? (uint8_t)0 : (sum >= 33554432 ? (uint8_t)255 : (uint8_t)lut_linear_to_srgb[(sum >> 13)]);
+    for (i = 0; i < 4; i++) sum += temp[40 + i];
+    *(output_rows[ 3] + output_col + 2) = sum < 0 ? (uint8_t)0 : (sum >= 33554432 ? (uint8_t)255 : (uint8_t)lut_linear_to_srgb[(sum >> 13)]);
     // Pixel 2,3 complete
 
     // Begin work for output pixel 3,3
-    for (i = 0; i < 4; i++)
-        temp[40 + i] = temp[36 + i] * weights_for_col_3[i];
+    for (i = 0; i < 4; i++) temp[40 + i] = temp[36 + i] * weights_for_col_3[i];
     sum = 8192;
-    for (i = 0; i < 4; i++)
-        sum += temp[40 + i];
-    *(output_rows[3] + output_col + 3)
-        = sum < 0 ? (uint8_t)0 : (sum >= 67108864 ? (uint8_t)255 : (uint8_t)lut_linear_to_srgb[(sum >> 14)]);
+    for (i = 0; i < 4; i++) sum += temp[40 + i];
+    *(output_rows[ 3] + output_col + 3) = sum < 0 ? (uint8_t)0 : (sum >= 67108864 ? (uint8_t)255 : (uint8_t)lut_linear_to_srgb[(sum >> 14)]);
     // Pixel 3,3 complete
 
     // Begin work for output pixel 4,3
-    for (i = 0; i < 3; i++)
-        temp[40 + i] = temp[37 + i] * weights_for_col_4[i];
+    for (i = 0; i < 3; i++) temp[40 + i] = temp[37 + i] * weights_for_col_4[i];
     sum = 8192;
-    for (i = 0; i < 3; i++)
-        sum += temp[40 + i];
-    *(output_rows[3] + output_col + 4)
-        = sum < 0 ? (uint8_t)0 : (sum >= 67108864 ? (uint8_t)255 : (uint8_t)lut_linear_to_srgb[(sum >> 14)]);
+    for (i = 0; i < 3; i++) sum += temp[40 + i];
+    *(output_rows[ 3] + output_col + 4) = sum < 0 ? (uint8_t)0 : (sum >= 67108864 ? (uint8_t)255 : (uint8_t)lut_linear_to_srgb[(sum >> 14)]);
     // Pixel 4,3 complete
 
     // Begin work for output row 4
-    for (i = 0; i < 8; i++)
-        temp[i + 0] = -1 * linearized[i + 40];
-    for (i = 0; i < 8; i++)
-        temp[i + 8] = 51 * linearized[i + 48];
-    for (i = 0; i < 8; i++)
-        temp[i + 16] = 78 * linearized[i + 56];
-    for (i = 0; i < 8; i++) {
+    for (i = 0; i < 8; i++) temp[i +  0] =  -1 * linearized[i + 40];
+    for (i = 0; i < 8; i++) temp[i +  8] =  51 * linearized[i + 48];
+    for (i = 0; i < 8; i++) temp[i + 16] =  78 * linearized[i + 56];
+    for (i = 0; i < 8; i++){
         sum = 0;
         for (j = 0; j < 3; j++)
             sum += temp[j * 8 + i];
@@ -3736,98 +2849,71 @@ void flow_scale_spatial_srgb_5x5(uint8_t input[64], uint8_t ** output_rows, uint
         temp[32 + i] = sum;
     }
     // Begin work for output pixel 0,4
-    for (i = 0; i < 3; i++)
-        temp[40 + i] = temp[32 + i] * weights_for_col_0[i];
+    for (i = 0; i < 3; i++) temp[40 + i] = temp[32 + i] * weights_for_col_0[i];
     sum = 8192;
-    for (i = 0; i < 3; i++)
-        sum += temp[40 + i];
-    *(output_rows[4] + output_col + 0)
-        = sum < 0 ? (uint8_t)0 : (sum >= 67108864 ? (uint8_t)255 : (uint8_t)lut_linear_to_srgb[(sum >> 14)]);
+    for (i = 0; i < 3; i++) sum += temp[40 + i];
+    *(output_rows[ 4] + output_col + 0) = sum < 0 ? (uint8_t)0 : (sum >= 67108864 ? (uint8_t)255 : (uint8_t)lut_linear_to_srgb[(sum >> 14)]);
     // Pixel 0,4 complete
 
     // Begin work for output pixel 1,4
-    for (i = 0; i < 4; i++)
-        temp[40 + i] = temp[32 + i] * weights_for_col_1[i];
+    for (i = 0; i < 4; i++) temp[40 + i] = temp[32 + i] * weights_for_col_1[i];
     sum = 8192;
-    for (i = 0; i < 4; i++)
-        sum += temp[40 + i];
-    *(output_rows[4] + output_col + 1)
-        = sum < 0 ? (uint8_t)0 : (sum >= 67108864 ? (uint8_t)255 : (uint8_t)lut_linear_to_srgb[(sum >> 14)]);
+    for (i = 0; i < 4; i++) sum += temp[40 + i];
+    *(output_rows[ 4] + output_col + 1) = sum < 0 ? (uint8_t)0 : (sum >= 67108864 ? (uint8_t)255 : (uint8_t)lut_linear_to_srgb[(sum >> 14)]);
     // Pixel 1,4 complete
 
     // Begin work for output pixel 2,4
-    for (i = 0; i < 4; i++)
-        temp[40 + i] = temp[34 + i] * weights_for_col_2[i];
+    for (i = 0; i < 4; i++) temp[40 + i] = temp[34 + i] * weights_for_col_2[i];
     sum = 4096;
-    for (i = 0; i < 4; i++)
-        sum += temp[40 + i];
-    *(output_rows[4] + output_col + 2)
-        = sum < 0 ? (uint8_t)0 : (sum >= 33554432 ? (uint8_t)255 : (uint8_t)lut_linear_to_srgb[(sum >> 13)]);
+    for (i = 0; i < 4; i++) sum += temp[40 + i];
+    *(output_rows[ 4] + output_col + 2) = sum < 0 ? (uint8_t)0 : (sum >= 33554432 ? (uint8_t)255 : (uint8_t)lut_linear_to_srgb[(sum >> 13)]);
     // Pixel 2,4 complete
 
     // Begin work for output pixel 3,4
-    for (i = 0; i < 4; i++)
-        temp[40 + i] = temp[36 + i] * weights_for_col_3[i];
+    for (i = 0; i < 4; i++) temp[40 + i] = temp[36 + i] * weights_for_col_3[i];
     sum = 8192;
-    for (i = 0; i < 4; i++)
-        sum += temp[40 + i];
-    *(output_rows[4] + output_col + 3)
-        = sum < 0 ? (uint8_t)0 : (sum >= 67108864 ? (uint8_t)255 : (uint8_t)lut_linear_to_srgb[(sum >> 14)]);
+    for (i = 0; i < 4; i++) sum += temp[40 + i];
+    *(output_rows[ 4] + output_col + 3) = sum < 0 ? (uint8_t)0 : (sum >= 67108864 ? (uint8_t)255 : (uint8_t)lut_linear_to_srgb[(sum >> 14)]);
     // Pixel 3,4 complete
 
     // Begin work for output pixel 4,4
-    for (i = 0; i < 3; i++)
-        temp[40 + i] = temp[37 + i] * weights_for_col_4[i];
+    for (i = 0; i < 3; i++) temp[40 + i] = temp[37 + i] * weights_for_col_4[i];
     sum = 8192;
-    for (i = 0; i < 3; i++)
-        sum += temp[40 + i];
-    *(output_rows[4] + output_col + 4)
-        = sum < 0 ? (uint8_t)0 : (sum >= 67108864 ? (uint8_t)255 : (uint8_t)lut_linear_to_srgb[(sum >> 14)]);
+    for (i = 0; i < 3; i++) sum += temp[40 + i];
+    *(output_rows[ 4] + output_col + 4) = sum < 0 ? (uint8_t)0 : (sum >= 67108864 ? (uint8_t)255 : (uint8_t)lut_linear_to_srgb[(sum >> 14)]);
     // Pixel 4,4 complete
 }
 
 #ifndef FLOW_GCC_IDCT
 void jpeg_idct_spatial_srgb_5x5(j_decompress_ptr cinfo, jpeg_component_info * compptr, JCOEFPTR coef_block,
-                                JSAMPARRAY output_buf, JDIMENSION output_col)
-{
+                                JSAMPARRAY output_buf, JDIMENSION output_col){
     JSAMPLE input[64];
-    JSAMPROW rows[8] = { &input[0],     &input[8],     &input[8 * 2], &input[8 * 3],
-                         &input[8 * 4], &input[8 * 5], &input[8 * 6], &input[8 * 7] };
+    JSAMPROW rows[8]
+        = { &input[0],     &input[8],     &input[8 * 2], &input[8 * 3],
+            &input[8 * 4], &input[8 * 5], &input[8 * 6], &input[8 * 7] };
     jpeg_idct_islow(cinfo, compptr, coef_block, &rows[0], 0);
 
     flow_scale_spatial_srgb_5x5(input, output_buf, output_col);
 }
 #endif
 
-void flow_scale_spatial_srgb_4x4(uint8_t input[64], uint8_t ** output_rows, uint32_t output_col)
-{
+FLOW_EXPORT void flow_scale_spatial_srgb_4x4(uint8_t input[64], uint8_t ** output_rows, uint32_t output_col){
     int32_t i, sum, j;
     FLOW_ALIGN_16_VAR(int32_t linearized[64]);
     for (i = 0; i < 64; i++)
         linearized[i] = lut_srgb_to_linear[input[i]];
 
     FLOW_ALIGN_16_VAR(int32_t temp[48]);
-    FLOW_ALIGN_16_VAR(int32_t weights_for_col_0[]) = {
-        117, 117, 22,
-    };
-    FLOW_ALIGN_16_VAR(int32_t weights_for_col_1[]) = {
-        21, 107, 107, 21,
-    };
-    FLOW_ALIGN_16_VAR(int32_t weights_for_col_2[]) = {
-        21, 107, 107, 21,
-    };
-    FLOW_ALIGN_16_VAR(int32_t weights_for_col_3[]) = {
-        22, 117, 117,
-    };
+    FLOW_ALIGN_16_VAR(int32_t weights_for_col_0[]) = {117,117,22,};
+    FLOW_ALIGN_16_VAR(int32_t weights_for_col_1[]) = {21,107,107,21,};
+    FLOW_ALIGN_16_VAR(int32_t weights_for_col_2[]) = {21,107,107,21,};
+    FLOW_ALIGN_16_VAR(int32_t weights_for_col_3[]) = {22,117,117,};
 
     // Begin work for output row 0
-    for (i = 0; i < 8; i++)
-        temp[i + 0] = 117 * linearized[i + 0];
-    for (i = 0; i < 8; i++)
-        temp[i + 8] = 117 * linearized[i + 8];
-    for (i = 0; i < 8; i++)
-        temp[i + 16] = 22 * linearized[i + 16];
-    for (i = 0; i < 8; i++) {
+    for (i = 0; i < 8; i++) temp[i +  0] = 117 * linearized[i +  0];
+    for (i = 0; i < 8; i++) temp[i +  8] = 117 * linearized[i +  8];
+    for (i = 0; i < 8; i++) temp[i + 16] =  22 * linearized[i + 16];
+    for (i = 0; i < 8; i++){
         sum = 0;
         for (j = 0; j < 3; j++)
             sum += temp[j * 8 + i];
@@ -3835,55 +2921,39 @@ void flow_scale_spatial_srgb_4x4(uint8_t input[64], uint8_t ** output_rows, uint
         temp[32 + i] = sum;
     }
     // Begin work for output pixel 0,0
-    for (i = 0; i < 3; i++)
-        temp[40 + i] = temp[32 + i] * weights_for_col_0[i];
+    for (i = 0; i < 3; i++) temp[40 + i] = temp[32 + i] * weights_for_col_0[i];
     sum = 32768;
-    for (i = 0; i < 3; i++)
-        sum += temp[40 + i];
-    *(output_rows[0] + output_col + 0)
-        = sum < 0 ? (uint8_t)0 : (sum >= 268435456 ? (uint8_t)255 : (uint8_t)lut_linear_to_srgb[(sum >> 16)]);
+    for (i = 0; i < 3; i++) sum += temp[40 + i];
+    *(output_rows[ 0] + output_col + 0) = sum < 0 ? (uint8_t)0 : (sum >= 268435456 ? (uint8_t)255 : (uint8_t)lut_linear_to_srgb[(sum >> 16)]);
     // Pixel 0,0 complete
 
     // Begin work for output pixel 1,0
-    for (i = 0; i < 4; i++)
-        temp[40 + i] = temp[33 + i] * weights_for_col_1[i];
+    for (i = 0; i < 4; i++) temp[40 + i] = temp[33 + i] * weights_for_col_1[i];
     sum = 32768;
-    for (i = 0; i < 4; i++)
-        sum += temp[40 + i];
-    *(output_rows[0] + output_col + 1)
-        = sum < 0 ? (uint8_t)0 : (sum >= 268435456 ? (uint8_t)255 : (uint8_t)lut_linear_to_srgb[(sum >> 16)]);
+    for (i = 0; i < 4; i++) sum += temp[40 + i];
+    *(output_rows[ 0] + output_col + 1) = sum < 0 ? (uint8_t)0 : (sum >= 268435456 ? (uint8_t)255 : (uint8_t)lut_linear_to_srgb[(sum >> 16)]);
     // Pixel 1,0 complete
 
     // Begin work for output pixel 2,0
-    for (i = 0; i < 4; i++)
-        temp[40 + i] = temp[35 + i] * weights_for_col_2[i];
+    for (i = 0; i < 4; i++) temp[40 + i] = temp[35 + i] * weights_for_col_2[i];
     sum = 32768;
-    for (i = 0; i < 4; i++)
-        sum += temp[40 + i];
-    *(output_rows[0] + output_col + 2)
-        = sum < 0 ? (uint8_t)0 : (sum >= 268435456 ? (uint8_t)255 : (uint8_t)lut_linear_to_srgb[(sum >> 16)]);
+    for (i = 0; i < 4; i++) sum += temp[40 + i];
+    *(output_rows[ 0] + output_col + 2) = sum < 0 ? (uint8_t)0 : (sum >= 268435456 ? (uint8_t)255 : (uint8_t)lut_linear_to_srgb[(sum >> 16)]);
     // Pixel 2,0 complete
 
     // Begin work for output pixel 3,0
-    for (i = 0; i < 3; i++)
-        temp[40 + i] = temp[37 + i] * weights_for_col_3[i];
+    for (i = 0; i < 3; i++) temp[40 + i] = temp[37 + i] * weights_for_col_3[i];
     sum = 32768;
-    for (i = 0; i < 3; i++)
-        sum += temp[40 + i];
-    *(output_rows[0] + output_col + 3)
-        = sum < 0 ? (uint8_t)0 : (sum >= 268435456 ? (uint8_t)255 : (uint8_t)lut_linear_to_srgb[(sum >> 16)]);
+    for (i = 0; i < 3; i++) sum += temp[40 + i];
+    *(output_rows[ 0] + output_col + 3) = sum < 0 ? (uint8_t)0 : (sum >= 268435456 ? (uint8_t)255 : (uint8_t)lut_linear_to_srgb[(sum >> 16)]);
     // Pixel 3,0 complete
 
     // Begin work for output row 1
-    for (i = 0; i < 8; i++)
-        temp[i + 0] = 21 * linearized[i + 8];
-    for (i = 0; i < 8; i++)
-        temp[i + 8] = 107 * linearized[i + 16];
-    for (i = 0; i < 8; i++)
-        temp[i + 16] = 107 * linearized[i + 24];
-    for (i = 0; i < 8; i++)
-        temp[i + 24] = 21 * linearized[i + 32];
-    for (i = 0; i < 8; i++) {
+    for (i = 0; i < 8; i++) temp[i +  0] =  21 * linearized[i +  8];
+    for (i = 0; i < 8; i++) temp[i +  8] = 107 * linearized[i + 16];
+    for (i = 0; i < 8; i++) temp[i + 16] = 107 * linearized[i + 24];
+    for (i = 0; i < 8; i++) temp[i + 24] =  21 * linearized[i + 32];
+    for (i = 0; i < 8; i++){
         sum = 0;
         for (j = 0; j < 4; j++)
             sum += temp[j * 8 + i];
@@ -3891,55 +2961,39 @@ void flow_scale_spatial_srgb_4x4(uint8_t input[64], uint8_t ** output_rows, uint
         temp[32 + i] = sum;
     }
     // Begin work for output pixel 0,1
-    for (i = 0; i < 3; i++)
-        temp[40 + i] = temp[32 + i] * weights_for_col_0[i];
+    for (i = 0; i < 3; i++) temp[40 + i] = temp[32 + i] * weights_for_col_0[i];
     sum = 32768;
-    for (i = 0; i < 3; i++)
-        sum += temp[40 + i];
-    *(output_rows[1] + output_col + 0)
-        = sum < 0 ? (uint8_t)0 : (sum >= 268435456 ? (uint8_t)255 : (uint8_t)lut_linear_to_srgb[(sum >> 16)]);
+    for (i = 0; i < 3; i++) sum += temp[40 + i];
+    *(output_rows[ 1] + output_col + 0) = sum < 0 ? (uint8_t)0 : (sum >= 268435456 ? (uint8_t)255 : (uint8_t)lut_linear_to_srgb[(sum >> 16)]);
     // Pixel 0,1 complete
 
     // Begin work for output pixel 1,1
-    for (i = 0; i < 4; i++)
-        temp[40 + i] = temp[33 + i] * weights_for_col_1[i];
+    for (i = 0; i < 4; i++) temp[40 + i] = temp[33 + i] * weights_for_col_1[i];
     sum = 32768;
-    for (i = 0; i < 4; i++)
-        sum += temp[40 + i];
-    *(output_rows[1] + output_col + 1)
-        = sum < 0 ? (uint8_t)0 : (sum >= 268435456 ? (uint8_t)255 : (uint8_t)lut_linear_to_srgb[(sum >> 16)]);
+    for (i = 0; i < 4; i++) sum += temp[40 + i];
+    *(output_rows[ 1] + output_col + 1) = sum < 0 ? (uint8_t)0 : (sum >= 268435456 ? (uint8_t)255 : (uint8_t)lut_linear_to_srgb[(sum >> 16)]);
     // Pixel 1,1 complete
 
     // Begin work for output pixel 2,1
-    for (i = 0; i < 4; i++)
-        temp[40 + i] = temp[35 + i] * weights_for_col_2[i];
+    for (i = 0; i < 4; i++) temp[40 + i] = temp[35 + i] * weights_for_col_2[i];
     sum = 32768;
-    for (i = 0; i < 4; i++)
-        sum += temp[40 + i];
-    *(output_rows[1] + output_col + 2)
-        = sum < 0 ? (uint8_t)0 : (sum >= 268435456 ? (uint8_t)255 : (uint8_t)lut_linear_to_srgb[(sum >> 16)]);
+    for (i = 0; i < 4; i++) sum += temp[40 + i];
+    *(output_rows[ 1] + output_col + 2) = sum < 0 ? (uint8_t)0 : (sum >= 268435456 ? (uint8_t)255 : (uint8_t)lut_linear_to_srgb[(sum >> 16)]);
     // Pixel 2,1 complete
 
     // Begin work for output pixel 3,1
-    for (i = 0; i < 3; i++)
-        temp[40 + i] = temp[37 + i] * weights_for_col_3[i];
+    for (i = 0; i < 3; i++) temp[40 + i] = temp[37 + i] * weights_for_col_3[i];
     sum = 32768;
-    for (i = 0; i < 3; i++)
-        sum += temp[40 + i];
-    *(output_rows[1] + output_col + 3)
-        = sum < 0 ? (uint8_t)0 : (sum >= 268435456 ? (uint8_t)255 : (uint8_t)lut_linear_to_srgb[(sum >> 16)]);
+    for (i = 0; i < 3; i++) sum += temp[40 + i];
+    *(output_rows[ 1] + output_col + 3) = sum < 0 ? (uint8_t)0 : (sum >= 268435456 ? (uint8_t)255 : (uint8_t)lut_linear_to_srgb[(sum >> 16)]);
     // Pixel 3,1 complete
 
     // Begin work for output row 2
-    for (i = 0; i < 8; i++)
-        temp[i + 0] = 21 * linearized[i + 24];
-    for (i = 0; i < 8; i++)
-        temp[i + 8] = 107 * linearized[i + 32];
-    for (i = 0; i < 8; i++)
-        temp[i + 16] = 107 * linearized[i + 40];
-    for (i = 0; i < 8; i++)
-        temp[i + 24] = 21 * linearized[i + 48];
-    for (i = 0; i < 8; i++) {
+    for (i = 0; i < 8; i++) temp[i +  0] =  21 * linearized[i + 24];
+    for (i = 0; i < 8; i++) temp[i +  8] = 107 * linearized[i + 32];
+    for (i = 0; i < 8; i++) temp[i + 16] = 107 * linearized[i + 40];
+    for (i = 0; i < 8; i++) temp[i + 24] =  21 * linearized[i + 48];
+    for (i = 0; i < 8; i++){
         sum = 0;
         for (j = 0; j < 4; j++)
             sum += temp[j * 8 + i];
@@ -3947,53 +3001,38 @@ void flow_scale_spatial_srgb_4x4(uint8_t input[64], uint8_t ** output_rows, uint
         temp[32 + i] = sum;
     }
     // Begin work for output pixel 0,2
-    for (i = 0; i < 3; i++)
-        temp[40 + i] = temp[32 + i] * weights_for_col_0[i];
+    for (i = 0; i < 3; i++) temp[40 + i] = temp[32 + i] * weights_for_col_0[i];
     sum = 32768;
-    for (i = 0; i < 3; i++)
-        sum += temp[40 + i];
-    *(output_rows[2] + output_col + 0)
-        = sum < 0 ? (uint8_t)0 : (sum >= 268435456 ? (uint8_t)255 : (uint8_t)lut_linear_to_srgb[(sum >> 16)]);
+    for (i = 0; i < 3; i++) sum += temp[40 + i];
+    *(output_rows[ 2] + output_col + 0) = sum < 0 ? (uint8_t)0 : (sum >= 268435456 ? (uint8_t)255 : (uint8_t)lut_linear_to_srgb[(sum >> 16)]);
     // Pixel 0,2 complete
 
     // Begin work for output pixel 1,2
-    for (i = 0; i < 4; i++)
-        temp[40 + i] = temp[33 + i] * weights_for_col_1[i];
+    for (i = 0; i < 4; i++) temp[40 + i] = temp[33 + i] * weights_for_col_1[i];
     sum = 32768;
-    for (i = 0; i < 4; i++)
-        sum += temp[40 + i];
-    *(output_rows[2] + output_col + 1)
-        = sum < 0 ? (uint8_t)0 : (sum >= 268435456 ? (uint8_t)255 : (uint8_t)lut_linear_to_srgb[(sum >> 16)]);
+    for (i = 0; i < 4; i++) sum += temp[40 + i];
+    *(output_rows[ 2] + output_col + 1) = sum < 0 ? (uint8_t)0 : (sum >= 268435456 ? (uint8_t)255 : (uint8_t)lut_linear_to_srgb[(sum >> 16)]);
     // Pixel 1,2 complete
 
     // Begin work for output pixel 2,2
-    for (i = 0; i < 4; i++)
-        temp[40 + i] = temp[35 + i] * weights_for_col_2[i];
+    for (i = 0; i < 4; i++) temp[40 + i] = temp[35 + i] * weights_for_col_2[i];
     sum = 32768;
-    for (i = 0; i < 4; i++)
-        sum += temp[40 + i];
-    *(output_rows[2] + output_col + 2)
-        = sum < 0 ? (uint8_t)0 : (sum >= 268435456 ? (uint8_t)255 : (uint8_t)lut_linear_to_srgb[(sum >> 16)]);
+    for (i = 0; i < 4; i++) sum += temp[40 + i];
+    *(output_rows[ 2] + output_col + 2) = sum < 0 ? (uint8_t)0 : (sum >= 268435456 ? (uint8_t)255 : (uint8_t)lut_linear_to_srgb[(sum >> 16)]);
     // Pixel 2,2 complete
 
     // Begin work for output pixel 3,2
-    for (i = 0; i < 3; i++)
-        temp[40 + i] = temp[37 + i] * weights_for_col_3[i];
+    for (i = 0; i < 3; i++) temp[40 + i] = temp[37 + i] * weights_for_col_3[i];
     sum = 32768;
-    for (i = 0; i < 3; i++)
-        sum += temp[40 + i];
-    *(output_rows[2] + output_col + 3)
-        = sum < 0 ? (uint8_t)0 : (sum >= 268435456 ? (uint8_t)255 : (uint8_t)lut_linear_to_srgb[(sum >> 16)]);
+    for (i = 0; i < 3; i++) sum += temp[40 + i];
+    *(output_rows[ 2] + output_col + 3) = sum < 0 ? (uint8_t)0 : (sum >= 268435456 ? (uint8_t)255 : (uint8_t)lut_linear_to_srgb[(sum >> 16)]);
     // Pixel 3,2 complete
 
     // Begin work for output row 3
-    for (i = 0; i < 8; i++)
-        temp[i + 0] = 22 * linearized[i + 40];
-    for (i = 0; i < 8; i++)
-        temp[i + 8] = 117 * linearized[i + 48];
-    for (i = 0; i < 8; i++)
-        temp[i + 16] = 117 * linearized[i + 56];
-    for (i = 0; i < 8; i++) {
+    for (i = 0; i < 8; i++) temp[i +  0] =  22 * linearized[i + 40];
+    for (i = 0; i < 8; i++) temp[i +  8] = 117 * linearized[i + 48];
+    for (i = 0; i < 8; i++) temp[i + 16] = 117 * linearized[i + 56];
+    for (i = 0; i < 8; i++){
         sum = 0;
         for (j = 0; j < 3; j++)
             sum += temp[j * 8 + i];
@@ -4001,87 +3040,64 @@ void flow_scale_spatial_srgb_4x4(uint8_t input[64], uint8_t ** output_rows, uint
         temp[32 + i] = sum;
     }
     // Begin work for output pixel 0,3
-    for (i = 0; i < 3; i++)
-        temp[40 + i] = temp[32 + i] * weights_for_col_0[i];
+    for (i = 0; i < 3; i++) temp[40 + i] = temp[32 + i] * weights_for_col_0[i];
     sum = 32768;
-    for (i = 0; i < 3; i++)
-        sum += temp[40 + i];
-    *(output_rows[3] + output_col + 0)
-        = sum < 0 ? (uint8_t)0 : (sum >= 268435456 ? (uint8_t)255 : (uint8_t)lut_linear_to_srgb[(sum >> 16)]);
+    for (i = 0; i < 3; i++) sum += temp[40 + i];
+    *(output_rows[ 3] + output_col + 0) = sum < 0 ? (uint8_t)0 : (sum >= 268435456 ? (uint8_t)255 : (uint8_t)lut_linear_to_srgb[(sum >> 16)]);
     // Pixel 0,3 complete
 
     // Begin work for output pixel 1,3
-    for (i = 0; i < 4; i++)
-        temp[40 + i] = temp[33 + i] * weights_for_col_1[i];
+    for (i = 0; i < 4; i++) temp[40 + i] = temp[33 + i] * weights_for_col_1[i];
     sum = 32768;
-    for (i = 0; i < 4; i++)
-        sum += temp[40 + i];
-    *(output_rows[3] + output_col + 1)
-        = sum < 0 ? (uint8_t)0 : (sum >= 268435456 ? (uint8_t)255 : (uint8_t)lut_linear_to_srgb[(sum >> 16)]);
+    for (i = 0; i < 4; i++) sum += temp[40 + i];
+    *(output_rows[ 3] + output_col + 1) = sum < 0 ? (uint8_t)0 : (sum >= 268435456 ? (uint8_t)255 : (uint8_t)lut_linear_to_srgb[(sum >> 16)]);
     // Pixel 1,3 complete
 
     // Begin work for output pixel 2,3
-    for (i = 0; i < 4; i++)
-        temp[40 + i] = temp[35 + i] * weights_for_col_2[i];
+    for (i = 0; i < 4; i++) temp[40 + i] = temp[35 + i] * weights_for_col_2[i];
     sum = 32768;
-    for (i = 0; i < 4; i++)
-        sum += temp[40 + i];
-    *(output_rows[3] + output_col + 2)
-        = sum < 0 ? (uint8_t)0 : (sum >= 268435456 ? (uint8_t)255 : (uint8_t)lut_linear_to_srgb[(sum >> 16)]);
+    for (i = 0; i < 4; i++) sum += temp[40 + i];
+    *(output_rows[ 3] + output_col + 2) = sum < 0 ? (uint8_t)0 : (sum >= 268435456 ? (uint8_t)255 : (uint8_t)lut_linear_to_srgb[(sum >> 16)]);
     // Pixel 2,3 complete
 
     // Begin work for output pixel 3,3
-    for (i = 0; i < 3; i++)
-        temp[40 + i] = temp[37 + i] * weights_for_col_3[i];
+    for (i = 0; i < 3; i++) temp[40 + i] = temp[37 + i] * weights_for_col_3[i];
     sum = 32768;
-    for (i = 0; i < 3; i++)
-        sum += temp[40 + i];
-    *(output_rows[3] + output_col + 3)
-        = sum < 0 ? (uint8_t)0 : (sum >= 268435456 ? (uint8_t)255 : (uint8_t)lut_linear_to_srgb[(sum >> 16)]);
+    for (i = 0; i < 3; i++) sum += temp[40 + i];
+    *(output_rows[ 3] + output_col + 3) = sum < 0 ? (uint8_t)0 : (sum >= 268435456 ? (uint8_t)255 : (uint8_t)lut_linear_to_srgb[(sum >> 16)]);
     // Pixel 3,3 complete
 }
 
 #ifndef FLOW_GCC_IDCT
 void jpeg_idct_spatial_srgb_4x4(j_decompress_ptr cinfo, jpeg_component_info * compptr, JCOEFPTR coef_block,
-                                JSAMPARRAY output_buf, JDIMENSION output_col)
-{
+                                JSAMPARRAY output_buf, JDIMENSION output_col){
     JSAMPLE input[64];
-    JSAMPROW rows[8] = { &input[0],     &input[8],     &input[8 * 2], &input[8 * 3],
-                         &input[8 * 4], &input[8 * 5], &input[8 * 6], &input[8 * 7] };
+    JSAMPROW rows[8]
+        = { &input[0],     &input[8],     &input[8 * 2], &input[8 * 3],
+            &input[8 * 4], &input[8 * 5], &input[8 * 6], &input[8 * 7] };
     jpeg_idct_islow(cinfo, compptr, coef_block, &rows[0], 0);
 
     flow_scale_spatial_srgb_4x4(input, output_buf, output_col);
 }
 #endif
 
-void flow_scale_spatial_srgb_3x3(uint8_t input[64], uint8_t ** output_rows, uint32_t output_col)
-{
+FLOW_EXPORT void flow_scale_spatial_srgb_3x3(uint8_t input[64], uint8_t ** output_rows, uint32_t output_col){
     int32_t i, sum, j;
     FLOW_ALIGN_16_VAR(int32_t linearized[64]);
     for (i = 0; i < 64; i++)
         linearized[i] = lut_srgb_to_linear[input[i]];
 
     FLOW_ALIGN_16_VAR(int32_t temp[64]);
-    FLOW_ALIGN_16_VAR(int32_t weights_for_col_0[]) = {
-        80, 103, 62, 11,
-    };
-    FLOW_ALIGN_16_VAR(int32_t weights_for_col_1[]) = {
-        2, 39, 87, 87, 39, 2,
-    };
-    FLOW_ALIGN_16_VAR(int32_t weights_for_col_2[]) = {
-        11, 62, 103, 80,
-    };
+    FLOW_ALIGN_16_VAR(int32_t weights_for_col_0[]) = {80,103,62,11,};
+    FLOW_ALIGN_16_VAR(int32_t weights_for_col_1[]) = {2,39,87,87,39,2,};
+    FLOW_ALIGN_16_VAR(int32_t weights_for_col_2[]) = {11,62,103,80,};
 
     // Begin work for output row 0
-    for (i = 0; i < 8; i++)
-        temp[i + 0] = 80 * linearized[i + 0];
-    for (i = 0; i < 8; i++)
-        temp[i + 8] = 103 * linearized[i + 8];
-    for (i = 0; i < 8; i++)
-        temp[i + 16] = 62 * linearized[i + 16];
-    for (i = 0; i < 8; i++)
-        temp[i + 24] = 11 * linearized[i + 24];
-    for (i = 0; i < 8; i++) {
+    for (i = 0; i < 8; i++) temp[i +  0] =  80 * linearized[i +  0];
+    for (i = 0; i < 8; i++) temp[i +  8] = 103 * linearized[i +  8];
+    for (i = 0; i < 8; i++) temp[i + 16] =  62 * linearized[i + 16];
+    for (i = 0; i < 8; i++) temp[i + 24] =  11 * linearized[i + 24];
+    for (i = 0; i < 8; i++){
         sum = 0;
         for (j = 0; j < 4; j++)
             sum += temp[j * 8 + i];
@@ -4089,49 +3105,34 @@ void flow_scale_spatial_srgb_3x3(uint8_t input[64], uint8_t ** output_rows, uint
         temp[48 + i] = sum;
     }
     // Begin work for output pixel 0,0
-    for (i = 0; i < 4; i++)
-        temp[56 + i] = temp[48 + i] * weights_for_col_0[i];
+    for (i = 0; i < 4; i++) temp[56 + i] = temp[48 + i] * weights_for_col_0[i];
     sum = 32768;
-    for (i = 0; i < 4; i++)
-        sum += temp[56 + i];
-    *(output_rows[0] + output_col + 0)
-        = sum < 0 ? (uint8_t)0 : (sum >= 268435456 ? (uint8_t)255 : (uint8_t)lut_linear_to_srgb[(sum >> 16)]);
+    for (i = 0; i < 4; i++) sum += temp[56 + i];
+    *(output_rows[ 0] + output_col + 0) = sum < 0 ? (uint8_t)0 : (sum >= 268435456 ? (uint8_t)255 : (uint8_t)lut_linear_to_srgb[(sum >> 16)]);
     // Pixel 0,0 complete
 
     // Begin work for output pixel 1,0
-    for (i = 0; i < 6; i++)
-        temp[56 + i] = temp[49 + i] * weights_for_col_1[i];
+    for (i = 0; i < 6; i++) temp[56 + i] = temp[49 + i] * weights_for_col_1[i];
     sum = 32768;
-    for (i = 0; i < 6; i++)
-        sum += temp[56 + i];
-    *(output_rows[0] + output_col + 1)
-        = sum < 0 ? (uint8_t)0 : (sum >= 268435456 ? (uint8_t)255 : (uint8_t)lut_linear_to_srgb[(sum >> 16)]);
+    for (i = 0; i < 6; i++) sum += temp[56 + i];
+    *(output_rows[ 0] + output_col + 1) = sum < 0 ? (uint8_t)0 : (sum >= 268435456 ? (uint8_t)255 : (uint8_t)lut_linear_to_srgb[(sum >> 16)]);
     // Pixel 1,0 complete
 
     // Begin work for output pixel 2,0
-    for (i = 0; i < 4; i++)
-        temp[56 + i] = temp[52 + i] * weights_for_col_2[i];
+    for (i = 0; i < 4; i++) temp[56 + i] = temp[52 + i] * weights_for_col_2[i];
     sum = 32768;
-    for (i = 0; i < 4; i++)
-        sum += temp[56 + i];
-    *(output_rows[0] + output_col + 2)
-        = sum < 0 ? (uint8_t)0 : (sum >= 268435456 ? (uint8_t)255 : (uint8_t)lut_linear_to_srgb[(sum >> 16)]);
+    for (i = 0; i < 4; i++) sum += temp[56 + i];
+    *(output_rows[ 0] + output_col + 2) = sum < 0 ? (uint8_t)0 : (sum >= 268435456 ? (uint8_t)255 : (uint8_t)lut_linear_to_srgb[(sum >> 16)]);
     // Pixel 2,0 complete
 
     // Begin work for output row 1
-    for (i = 0; i < 8; i++)
-        temp[i + 0] = 2 * linearized[i + 8];
-    for (i = 0; i < 8; i++)
-        temp[i + 8] = 39 * linearized[i + 16];
-    for (i = 0; i < 8; i++)
-        temp[i + 16] = 87 * linearized[i + 24];
-    for (i = 0; i < 8; i++)
-        temp[i + 24] = 87 * linearized[i + 32];
-    for (i = 0; i < 8; i++)
-        temp[i + 32] = 39 * linearized[i + 40];
-    for (i = 0; i < 8; i++)
-        temp[i + 40] = 2 * linearized[i + 48];
-    for (i = 0; i < 8; i++) {
+    for (i = 0; i < 8; i++) temp[i +  0] =   2 * linearized[i +  8];
+    for (i = 0; i < 8; i++) temp[i +  8] =  39 * linearized[i + 16];
+    for (i = 0; i < 8; i++) temp[i + 16] =  87 * linearized[i + 24];
+    for (i = 0; i < 8; i++) temp[i + 24] =  87 * linearized[i + 32];
+    for (i = 0; i < 8; i++) temp[i + 32] =  39 * linearized[i + 40];
+    for (i = 0; i < 8; i++) temp[i + 40] =   2 * linearized[i + 48];
+    for (i = 0; i < 8; i++){
         sum = 0;
         for (j = 0; j < 6; j++)
             sum += temp[j * 8 + i];
@@ -4139,45 +3140,32 @@ void flow_scale_spatial_srgb_3x3(uint8_t input[64], uint8_t ** output_rows, uint
         temp[48 + i] = sum;
     }
     // Begin work for output pixel 0,1
-    for (i = 0; i < 4; i++)
-        temp[56 + i] = temp[48 + i] * weights_for_col_0[i];
+    for (i = 0; i < 4; i++) temp[56 + i] = temp[48 + i] * weights_for_col_0[i];
     sum = 32768;
-    for (i = 0; i < 4; i++)
-        sum += temp[56 + i];
-    *(output_rows[1] + output_col + 0)
-        = sum < 0 ? (uint8_t)0 : (sum >= 268435456 ? (uint8_t)255 : (uint8_t)lut_linear_to_srgb[(sum >> 16)]);
+    for (i = 0; i < 4; i++) sum += temp[56 + i];
+    *(output_rows[ 1] + output_col + 0) = sum < 0 ? (uint8_t)0 : (sum >= 268435456 ? (uint8_t)255 : (uint8_t)lut_linear_to_srgb[(sum >> 16)]);
     // Pixel 0,1 complete
 
     // Begin work for output pixel 1,1
-    for (i = 0; i < 6; i++)
-        temp[56 + i] = temp[49 + i] * weights_for_col_1[i];
+    for (i = 0; i < 6; i++) temp[56 + i] = temp[49 + i] * weights_for_col_1[i];
     sum = 32768;
-    for (i = 0; i < 6; i++)
-        sum += temp[56 + i];
-    *(output_rows[1] + output_col + 1)
-        = sum < 0 ? (uint8_t)0 : (sum >= 268435456 ? (uint8_t)255 : (uint8_t)lut_linear_to_srgb[(sum >> 16)]);
+    for (i = 0; i < 6; i++) sum += temp[56 + i];
+    *(output_rows[ 1] + output_col + 1) = sum < 0 ? (uint8_t)0 : (sum >= 268435456 ? (uint8_t)255 : (uint8_t)lut_linear_to_srgb[(sum >> 16)]);
     // Pixel 1,1 complete
 
     // Begin work for output pixel 2,1
-    for (i = 0; i < 4; i++)
-        temp[56 + i] = temp[52 + i] * weights_for_col_2[i];
+    for (i = 0; i < 4; i++) temp[56 + i] = temp[52 + i] * weights_for_col_2[i];
     sum = 32768;
-    for (i = 0; i < 4; i++)
-        sum += temp[56 + i];
-    *(output_rows[1] + output_col + 2)
-        = sum < 0 ? (uint8_t)0 : (sum >= 268435456 ? (uint8_t)255 : (uint8_t)lut_linear_to_srgb[(sum >> 16)]);
+    for (i = 0; i < 4; i++) sum += temp[56 + i];
+    *(output_rows[ 1] + output_col + 2) = sum < 0 ? (uint8_t)0 : (sum >= 268435456 ? (uint8_t)255 : (uint8_t)lut_linear_to_srgb[(sum >> 16)]);
     // Pixel 2,1 complete
 
     // Begin work for output row 2
-    for (i = 0; i < 8; i++)
-        temp[i + 0] = 11 * linearized[i + 32];
-    for (i = 0; i < 8; i++)
-        temp[i + 8] = 62 * linearized[i + 40];
-    for (i = 0; i < 8; i++)
-        temp[i + 16] = 103 * linearized[i + 48];
-    for (i = 0; i < 8; i++)
-        temp[i + 24] = 80 * linearized[i + 56];
-    for (i = 0; i < 8; i++) {
+    for (i = 0; i < 8; i++) temp[i +  0] =  11 * linearized[i + 32];
+    for (i = 0; i < 8; i++) temp[i +  8] =  62 * linearized[i + 40];
+    for (i = 0; i < 8; i++) temp[i + 16] = 103 * linearized[i + 48];
+    for (i = 0; i < 8; i++) temp[i + 24] =  80 * linearized[i + 56];
+    for (i = 0; i < 8; i++){
         sum = 0;
         for (j = 0; j < 4; j++)
             sum += temp[j * 8 + i];
@@ -4185,78 +3173,58 @@ void flow_scale_spatial_srgb_3x3(uint8_t input[64], uint8_t ** output_rows, uint
         temp[48 + i] = sum;
     }
     // Begin work for output pixel 0,2
-    for (i = 0; i < 4; i++)
-        temp[56 + i] = temp[48 + i] * weights_for_col_0[i];
+    for (i = 0; i < 4; i++) temp[56 + i] = temp[48 + i] * weights_for_col_0[i];
     sum = 32768;
-    for (i = 0; i < 4; i++)
-        sum += temp[56 + i];
-    *(output_rows[2] + output_col + 0)
-        = sum < 0 ? (uint8_t)0 : (sum >= 268435456 ? (uint8_t)255 : (uint8_t)lut_linear_to_srgb[(sum >> 16)]);
+    for (i = 0; i < 4; i++) sum += temp[56 + i];
+    *(output_rows[ 2] + output_col + 0) = sum < 0 ? (uint8_t)0 : (sum >= 268435456 ? (uint8_t)255 : (uint8_t)lut_linear_to_srgb[(sum >> 16)]);
     // Pixel 0,2 complete
 
     // Begin work for output pixel 1,2
-    for (i = 0; i < 6; i++)
-        temp[56 + i] = temp[49 + i] * weights_for_col_1[i];
+    for (i = 0; i < 6; i++) temp[56 + i] = temp[49 + i] * weights_for_col_1[i];
     sum = 32768;
-    for (i = 0; i < 6; i++)
-        sum += temp[56 + i];
-    *(output_rows[2] + output_col + 1)
-        = sum < 0 ? (uint8_t)0 : (sum >= 268435456 ? (uint8_t)255 : (uint8_t)lut_linear_to_srgb[(sum >> 16)]);
+    for (i = 0; i < 6; i++) sum += temp[56 + i];
+    *(output_rows[ 2] + output_col + 1) = sum < 0 ? (uint8_t)0 : (sum >= 268435456 ? (uint8_t)255 : (uint8_t)lut_linear_to_srgb[(sum >> 16)]);
     // Pixel 1,2 complete
 
     // Begin work for output pixel 2,2
-    for (i = 0; i < 4; i++)
-        temp[56 + i] = temp[52 + i] * weights_for_col_2[i];
+    for (i = 0; i < 4; i++) temp[56 + i] = temp[52 + i] * weights_for_col_2[i];
     sum = 32768;
-    for (i = 0; i < 4; i++)
-        sum += temp[56 + i];
-    *(output_rows[2] + output_col + 2)
-        = sum < 0 ? (uint8_t)0 : (sum >= 268435456 ? (uint8_t)255 : (uint8_t)lut_linear_to_srgb[(sum >> 16)]);
+    for (i = 0; i < 4; i++) sum += temp[56 + i];
+    *(output_rows[ 2] + output_col + 2) = sum < 0 ? (uint8_t)0 : (sum >= 268435456 ? (uint8_t)255 : (uint8_t)lut_linear_to_srgb[(sum >> 16)]);
     // Pixel 2,2 complete
 }
 
 #ifndef FLOW_GCC_IDCT
 void jpeg_idct_spatial_srgb_3x3(j_decompress_ptr cinfo, jpeg_component_info * compptr, JCOEFPTR coef_block,
-                                JSAMPARRAY output_buf, JDIMENSION output_col)
-{
+                                JSAMPARRAY output_buf, JDIMENSION output_col){
     JSAMPLE input[64];
-    JSAMPROW rows[8] = { &input[0],     &input[8],     &input[8 * 2], &input[8 * 3],
-                         &input[8 * 4], &input[8 * 5], &input[8 * 6], &input[8 * 7] };
+    JSAMPROW rows[8]
+        = { &input[0],     &input[8],     &input[8 * 2], &input[8 * 3],
+            &input[8 * 4], &input[8 * 5], &input[8 * 6], &input[8 * 7] };
     jpeg_idct_islow(cinfo, compptr, coef_block, &rows[0], 0);
 
     flow_scale_spatial_srgb_3x3(input, output_buf, output_col);
 }
 #endif
 
-void flow_scale_spatial_srgb_2x2(uint8_t input[64], uint8_t ** output_rows, uint32_t output_col)
-{
+FLOW_EXPORT void flow_scale_spatial_srgb_2x2(uint8_t input[64], uint8_t ** output_rows, uint32_t output_col){
     int32_t i, sum, j;
     FLOW_ALIGN_16_VAR(int32_t linearized[64]);
     for (i = 0; i < 64; i++)
         linearized[i] = lut_srgb_to_linear[input[i]];
 
     FLOW_ALIGN_16_VAR(int32_t temp[64]);
-    FLOW_ALIGN_16_VAR(int32_t weights_for_col_0[]) = {
-        48, 67, 67, 48, 22, 4,
-    };
-    FLOW_ALIGN_16_VAR(int32_t weights_for_col_1[]) = {
-        4, 22, 48, 67, 67, 48,
-    };
+    FLOW_ALIGN_16_VAR(int32_t weights_for_col_0[]) = {48,67,67,48,22,4,};
+    FLOW_ALIGN_16_VAR(int32_t weights_for_col_1[]) = {4,22,48,67,67,48,};
 
     // Begin work for output row 0
-    for (i = 0; i < 8; i++)
-        temp[i + 0] = 48 * linearized[i + 0];
-    for (i = 0; i < 8; i++)
-        temp[i + 8] = 67 * linearized[i + 8];
-    for (i = 0; i < 8; i++)
-        temp[i + 16] = 67 * linearized[i + 16];
-    for (i = 0; i < 8; i++)
-        temp[i + 24] = 48 * linearized[i + 24];
-    for (i = 0; i < 8; i++)
-        temp[i + 32] = 22 * linearized[i + 32];
-    for (i = 0; i < 8; i++)
-        temp[i + 40] = 4 * linearized[i + 40];
-    for (i = 0; i < 8; i++) {
+    for (i = 0; i < 8; i++) temp[i +  0] =  48 * linearized[i +  0];
+    for (i = 0; i < 8; i++) temp[i +  8] =  67 * linearized[i +  8];
+    for (i = 0; i < 8; i++) temp[i + 16] =  67 * linearized[i + 16];
+    for (i = 0; i < 8; i++) temp[i + 24] =  48 * linearized[i + 24];
+    for (i = 0; i < 8; i++) temp[i + 32] =  22 * linearized[i + 32];
+    for (i = 0; i < 8; i++) temp[i + 40] =   4 * linearized[i + 40];
+    for (i = 0; i < 8; i++){
         sum = 0;
         for (j = 0; j < 6; j++)
             sum += temp[j * 8 + i];
@@ -4264,39 +3232,27 @@ void flow_scale_spatial_srgb_2x2(uint8_t input[64], uint8_t ** output_rows, uint
         temp[48 + i] = sum;
     }
     // Begin work for output pixel 0,0
-    for (i = 0; i < 6; i++)
-        temp[56 + i] = temp[48 + i] * weights_for_col_0[i];
+    for (i = 0; i < 6; i++) temp[56 + i] = temp[48 + i] * weights_for_col_0[i];
     sum = 32768;
-    for (i = 0; i < 6; i++)
-        sum += temp[56 + i];
-    *(output_rows[0] + output_col + 0)
-        = sum < 0 ? (uint8_t)0 : (sum >= 268435456 ? (uint8_t)255 : (uint8_t)lut_linear_to_srgb[(sum >> 16)]);
+    for (i = 0; i < 6; i++) sum += temp[56 + i];
+    *(output_rows[ 0] + output_col + 0) = sum < 0 ? (uint8_t)0 : (sum >= 268435456 ? (uint8_t)255 : (uint8_t)lut_linear_to_srgb[(sum >> 16)]);
     // Pixel 0,0 complete
 
     // Begin work for output pixel 1,0
-    for (i = 0; i < 6; i++)
-        temp[56 + i] = temp[50 + i] * weights_for_col_1[i];
+    for (i = 0; i < 6; i++) temp[56 + i] = temp[50 + i] * weights_for_col_1[i];
     sum = 32768;
-    for (i = 0; i < 6; i++)
-        sum += temp[56 + i];
-    *(output_rows[0] + output_col + 1)
-        = sum < 0 ? (uint8_t)0 : (sum >= 268435456 ? (uint8_t)255 : (uint8_t)lut_linear_to_srgb[(sum >> 16)]);
+    for (i = 0; i < 6; i++) sum += temp[56 + i];
+    *(output_rows[ 0] + output_col + 1) = sum < 0 ? (uint8_t)0 : (sum >= 268435456 ? (uint8_t)255 : (uint8_t)lut_linear_to_srgb[(sum >> 16)]);
     // Pixel 1,0 complete
 
     // Begin work for output row 1
-    for (i = 0; i < 8; i++)
-        temp[i + 0] = 4 * linearized[i + 16];
-    for (i = 0; i < 8; i++)
-        temp[i + 8] = 22 * linearized[i + 24];
-    for (i = 0; i < 8; i++)
-        temp[i + 16] = 48 * linearized[i + 32];
-    for (i = 0; i < 8; i++)
-        temp[i + 24] = 67 * linearized[i + 40];
-    for (i = 0; i < 8; i++)
-        temp[i + 32] = 67 * linearized[i + 48];
-    for (i = 0; i < 8; i++)
-        temp[i + 40] = 48 * linearized[i + 56];
-    for (i = 0; i < 8; i++) {
+    for (i = 0; i < 8; i++) temp[i +  0] =   4 * linearized[i + 16];
+    for (i = 0; i < 8; i++) temp[i +  8] =  22 * linearized[i + 24];
+    for (i = 0; i < 8; i++) temp[i + 16] =  48 * linearized[i + 32];
+    for (i = 0; i < 8; i++) temp[i + 24] =  67 * linearized[i + 40];
+    for (i = 0; i < 8; i++) temp[i + 32] =  67 * linearized[i + 48];
+    for (i = 0; i < 8; i++) temp[i + 40] =  48 * linearized[i + 56];
+    for (i = 0; i < 8; i++){
         sum = 0;
         for (j = 0; j < 6; j++)
             sum += temp[j * 8 + i];
@@ -4304,69 +3260,52 @@ void flow_scale_spatial_srgb_2x2(uint8_t input[64], uint8_t ** output_rows, uint
         temp[48 + i] = sum;
     }
     // Begin work for output pixel 0,1
-    for (i = 0; i < 6; i++)
-        temp[56 + i] = temp[48 + i] * weights_for_col_0[i];
+    for (i = 0; i < 6; i++) temp[56 + i] = temp[48 + i] * weights_for_col_0[i];
     sum = 32768;
-    for (i = 0; i < 6; i++)
-        sum += temp[56 + i];
-    *(output_rows[1] + output_col + 0)
-        = sum < 0 ? (uint8_t)0 : (sum >= 268435456 ? (uint8_t)255 : (uint8_t)lut_linear_to_srgb[(sum >> 16)]);
+    for (i = 0; i < 6; i++) sum += temp[56 + i];
+    *(output_rows[ 1] + output_col + 0) = sum < 0 ? (uint8_t)0 : (sum >= 268435456 ? (uint8_t)255 : (uint8_t)lut_linear_to_srgb[(sum >> 16)]);
     // Pixel 0,1 complete
 
     // Begin work for output pixel 1,1
-    for (i = 0; i < 6; i++)
-        temp[56 + i] = temp[50 + i] * weights_for_col_1[i];
+    for (i = 0; i < 6; i++) temp[56 + i] = temp[50 + i] * weights_for_col_1[i];
     sum = 32768;
-    for (i = 0; i < 6; i++)
-        sum += temp[56 + i];
-    *(output_rows[1] + output_col + 1)
-        = sum < 0 ? (uint8_t)0 : (sum >= 268435456 ? (uint8_t)255 : (uint8_t)lut_linear_to_srgb[(sum >> 16)]);
+    for (i = 0; i < 6; i++) sum += temp[56 + i];
+    *(output_rows[ 1] + output_col + 1) = sum < 0 ? (uint8_t)0 : (sum >= 268435456 ? (uint8_t)255 : (uint8_t)lut_linear_to_srgb[(sum >> 16)]);
     // Pixel 1,1 complete
 }
 
 #ifndef FLOW_GCC_IDCT
 void jpeg_idct_spatial_srgb_2x2(j_decompress_ptr cinfo, jpeg_component_info * compptr, JCOEFPTR coef_block,
-                                JSAMPARRAY output_buf, JDIMENSION output_col)
-{
+                                JSAMPARRAY output_buf, JDIMENSION output_col){
     JSAMPLE input[64];
-    JSAMPROW rows[8] = { &input[0],     &input[8],     &input[8 * 2], &input[8 * 3],
-                         &input[8 * 4], &input[8 * 5], &input[8 * 6], &input[8 * 7] };
+    JSAMPROW rows[8]
+        = { &input[0],     &input[8],     &input[8 * 2], &input[8 * 3],
+            &input[8 * 4], &input[8 * 5], &input[8 * 6], &input[8 * 7] };
     jpeg_idct_islow(cinfo, compptr, coef_block, &rows[0], 0);
 
     flow_scale_spatial_srgb_2x2(input, output_buf, output_col);
 }
 #endif
 
-void flow_scale_spatial_srgb_1x1(uint8_t input[64], uint8_t ** output_rows, uint32_t output_col)
-{
+FLOW_EXPORT void flow_scale_spatial_srgb_1x1(uint8_t input[64], uint8_t ** output_rows, uint32_t output_col){
     int32_t i, sum, j;
     FLOW_ALIGN_16_VAR(int32_t linearized[64]);
     for (i = 0; i < 64; i++)
         linearized[i] = lut_srgb_to_linear[input[i]];
 
     FLOW_ALIGN_16_VAR(int32_t temp[80]);
-    FLOW_ALIGN_16_VAR(int32_t weights_for_col_0[]) = {
-        47, 60, 71, 78, 78, 71, 60, 47,
-    };
+    FLOW_ALIGN_16_VAR(int32_t weights_for_col_0[]) = {47,60,71,78,78,71,60,47,};
 
     // Begin work for output row 0
-    for (i = 0; i < 8; i++)
-        temp[i + 0] = 47 * linearized[i + 0];
-    for (i = 0; i < 8; i++)
-        temp[i + 8] = 60 * linearized[i + 8];
-    for (i = 0; i < 8; i++)
-        temp[i + 16] = 71 * linearized[i + 16];
-    for (i = 0; i < 8; i++)
-        temp[i + 24] = 78 * linearized[i + 24];
-    for (i = 0; i < 8; i++)
-        temp[i + 32] = 78 * linearized[i + 32];
-    for (i = 0; i < 8; i++)
-        temp[i + 40] = 71 * linearized[i + 40];
-    for (i = 0; i < 8; i++)
-        temp[i + 48] = 60 * linearized[i + 48];
-    for (i = 0; i < 8; i++)
-        temp[i + 56] = 47 * linearized[i + 56];
-    for (i = 0; i < 8; i++) {
+    for (i = 0; i < 8; i++) temp[i +  0] =  47 * linearized[i +  0];
+    for (i = 0; i < 8; i++) temp[i +  8] =  60 * linearized[i +  8];
+    for (i = 0; i < 8; i++) temp[i + 16] =  71 * linearized[i + 16];
+    for (i = 0; i < 8; i++) temp[i + 24] =  78 * linearized[i + 24];
+    for (i = 0; i < 8; i++) temp[i + 32] =  78 * linearized[i + 32];
+    for (i = 0; i < 8; i++) temp[i + 40] =  71 * linearized[i + 40];
+    for (i = 0; i < 8; i++) temp[i + 48] =  60 * linearized[i + 48];
+    for (i = 0; i < 8; i++) temp[i + 56] =  47 * linearized[i + 56];
+    for (i = 0; i < 8; i++){
         sum = 0;
         for (j = 0; j < 8; j++)
             sum += temp[j * 8 + i];
@@ -4374,23 +3313,20 @@ void flow_scale_spatial_srgb_1x1(uint8_t input[64], uint8_t ** output_rows, uint
         temp[64 + i] = sum;
     }
     // Begin work for output pixel 0,0
-    for (i = 0; i < 8; i++)
-        temp[72 + i] = temp[64 + i] * weights_for_col_0[i];
+    for (i = 0; i < 8; i++) temp[72 + i] = temp[64 + i] * weights_for_col_0[i];
     sum = 131072;
-    for (i = 0; i < 8; i++)
-        sum += temp[72 + i];
-    *(output_rows[0] + output_col + 0)
-        = sum < 0 ? (uint8_t)0 : (sum >= 1073741824 ? (uint8_t)255 : (uint8_t)lut_linear_to_srgb[(sum >> 18)]);
+    for (i = 0; i < 8; i++) sum += temp[72 + i];
+    *(output_rows[ 0] + output_col + 0) = sum < 0 ? (uint8_t)0 : (sum >= 1073741824 ? (uint8_t)255 : (uint8_t)lut_linear_to_srgb[(sum >> 18)]);
     // Pixel 0,0 complete
 }
 
 #ifndef FLOW_GCC_IDCT
 void jpeg_idct_spatial_srgb_1x1(j_decompress_ptr cinfo, jpeg_component_info * compptr, JCOEFPTR coef_block,
-                                JSAMPARRAY output_buf, JDIMENSION output_col)
-{
+                                JSAMPARRAY output_buf, JDIMENSION output_col){
     JSAMPLE input[64];
-    JSAMPROW rows[8] = { &input[0],     &input[8],     &input[8 * 2], &input[8 * 3],
-                         &input[8 * 4], &input[8 * 5], &input[8 * 6], &input[8 * 7] };
+    JSAMPROW rows[8]
+        = { &input[0],     &input[8],     &input[8 * 2], &input[8 * 3],
+            &input[8 * 4], &input[8 * 5], &input[8 * 6], &input[8 * 7] };
     jpeg_idct_islow(cinfo, compptr, coef_block, &rows[0], 0);
 
     flow_scale_spatial_srgb_1x1(input, output_buf, output_col);
@@ -4398,5 +3334,5 @@ void jpeg_idct_spatial_srgb_1x1(j_decompress_ptr cinfo, jpeg_component_info * co
 #endif
 
 #ifdef FLOW_GCC_IDCT
-void main(void) {}
+void main(void){}
 #endif
