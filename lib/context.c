@@ -314,3 +314,9 @@ void flow_context_profiler_stop(flow_c * context, const char * name, bool assert
 }
 
 struct flow_profiling_log * flow_context_get_profiler_log(flow_c * context) { return &context->log; }
+
+void flow_sanity_check(struct flow_sanity_check * info){
+    info->sizeof_bool = sizeof(bool);
+    info->sizeof_int = sizeof(int);
+    info->sizeof_size_t = sizeof(size_t);
+}

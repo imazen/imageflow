@@ -496,6 +496,15 @@ struct flow_graph {
 
     float growth_factor;
 };
+struct flow_sanity_check{
+    uint32_t sizeof_bool;
+    uint32_t sizeof_int;
+    uint32_t sizeof_size_t;
+};
+
+
+PUB void flow_sanity_check(struct flow_sanity_check * info);
+
 
 #undef PUB
 
