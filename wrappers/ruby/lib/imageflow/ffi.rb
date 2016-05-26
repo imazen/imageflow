@@ -1,7 +1,8 @@
 module Imageflow
   module Native
     extend FFI::Library
-    ffi_lib File.expand_path('../../../../../build/libimageflow.so', __FILE__)
+    extension = FFI::Platform.is_os("darwin") ? "dylib" : "so"
+    ffi_lib File.expand_path("../../../../../build/libimageflow.#{extension}", __FILE__)
 
     def self.attach_function (prefixed_name, *vars)
       super prefixed_name.to_s.gsub(/^flow_/, "").to_sym, prefixed_name, *vars
