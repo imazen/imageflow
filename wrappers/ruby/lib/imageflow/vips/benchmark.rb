@@ -100,7 +100,7 @@ module Imageflow
       def to_s
         final_scale_factor = 2
         if linear
-          "#{exe_name} -define jpeg:size=#{output_w * final_scale_factor}x#{output_h * final_scale_factor} #{path} -set colorspace sRGB -colorspace RGB -filter Robidoux -resize #{output_w}x#{output_h} -colorspace sRGB #{output_path}"
+          "#{exe_name}  #{path} -set colorspace sRGB -colorspace RGB -filter Robidoux -resize #{output_w}x#{output_h} -colorspace sRGB #{output_path}"
         else
           "#{exe_name} -define jpeg:size=#{output_w * final_scale_factor}x#{output_h * final_scale_factor} #{path} -set colorspace sRGB -filter Robidoux -resize #{output_w}x#{output_h} -colorspace sRGB #{output_path}"
         end
