@@ -1,5 +1,5 @@
-libimageflow + imageflow-server
-=========
+# ![imageflow](https://www.imageflow.io/images/imageflow.svg) = libimageflow + imageflow-server
+
 
 ## What's libimageflow? [Find out imageflow.io](https://www.imageflow.io)
 
