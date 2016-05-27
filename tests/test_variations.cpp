@@ -871,7 +871,7 @@ TEST_CASE("Exhasutive search for best block downscaling params", "")
             flow_c * c = flow_context_create();
             size_t bytes_count = 0;
             uint8_t * bytes = get_bytes_cached(c, &bytes_count, test_images[test_image_index]);
-            unsigned long input_checksum = djb2_buffer(bytes, bytes_count);
+            uint64_t input_checksum = djb2_buffer(bytes, bytes_count);
             REQUIRE(input_checksum == test_image_checksums[test_image_index]); // Test the checksum. I/O can be flaky
             int original_width, original_height;
             REQUIRE(get_image_dimensions(c, bytes, bytes_count, &original_width, &original_height) == true);

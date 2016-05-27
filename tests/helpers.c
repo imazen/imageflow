@@ -16,9 +16,9 @@ size_t nonzero_count(uint8_t * array, size_t length)
     return nonzero;
 }
 
-unsigned long djb2(unsigned const char * str)
+uint64_t djb2(unsigned const char * str)
 {
-    unsigned long hash = 5381;
+    uint64_t hash = 5381;
     int c;
 
     while ((c = *str++))
@@ -27,9 +27,9 @@ unsigned long djb2(unsigned const char * str)
     return hash;
 }
 
-unsigned long djb2_buffer(uint8_t * str, size_t count)
+uint64_t djb2_buffer(uint8_t * str, size_t count)
 {
-    unsigned long hash = 5381;
+    uint64_t hash = 5381;
     int c;
 
     for (size_t i = 0; i < count; i++) {
@@ -163,7 +163,7 @@ uint8_t * get_bytes_cached(flow_c * c, size_t * bytes_count_out, const char * ur
 #define FLOW_MAX_PATH 255
     char cache_folder[FLOW_MAX_PATH];
     char cache_path[FLOW_MAX_PATH];
-    long long url_hash = djb2((unsigned const char *)url);
+    uint64_t url_hash = djb2((unsigned const char *)url);
 
     if (!create_relative_path(c, false, &cache_folder[0], sizeof(cache_folder), "")) {
         FLOW_add_to_callstack(c);
@@ -175,7 +175,7 @@ uint8_t * get_bytes_cached(flow_c * c, size_t * bytes_count_out, const char * ur
 
     if (flow_dir_exists_eh(&cache_folder[0])) {
         // The tests folder is still around; we can use it
-        if (!create_relative_path(c, false, &cache_path[0], sizeof(cache_path), "/visuals/cache/%lu%s", url_hash,
+        if (!create_relative_path(c, false, &cache_path[0], sizeof(cache_path), "/visuals/cache/%llu%s", url_hash,
                                   ext)) {
             FLOW_add_to_callstack(c);
             return NULL;
@@ -184,7 +184,7 @@ uint8_t * get_bytes_cached(flow_c * c, size_t * bytes_count_out, const char * ur
         char * cache_dir = getenv("HOME");
         if (cache_dir == NULL)
             cache_dir = getenv("TEMP");
-        flow_snprintf(cache_path, FLOW_MAX_PATH, "%s/imageflow_cache/%lu%s", cache_dir, url_hash, ext);
+        flow_snprintf(cache_path, FLOW_MAX_PATH, "%s/imageflow_cache/%llu%s", cache_dir, url_hash, ext);
     }
 
     flow_recursive_mkdir(&cache_path[0], false);

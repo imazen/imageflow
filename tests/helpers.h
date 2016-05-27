@@ -81,8 +81,8 @@ void copy_file(FILE * from, FILE * to);
 bool create_relative_path(flow_c * c, bool create_parent_dirs, char * filename, size_t max_filename_length,
                           char * format, ...);
 
-unsigned long djb2(unsigned const char * str);
-unsigned long djb2_buffer(uint8_t * str, size_t count);
+uint64_t djb2(unsigned const char * str);
+uint64_t djb2_buffer(uint8_t * str, size_t count);
 size_t nonzero_count(uint8_t * array, size_t length);
 
 struct flow_bitmap_bgra * BitmapBgra_create_test_image(flow_c * c);
