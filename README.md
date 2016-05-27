@@ -19,6 +19,28 @@ ImageFlow will bring world-class image quality and performance to all languages 
 [![Coverage Status](https://coveralls.io/repos/github/imazen/imageflow/badge.svg?branch=master)](https://coveralls.io/github/imazen/imageflow?branch=master)
 [![Coverity Scan Build Status](https://scan.coverity.com/projects/8403/badge.svg)](https://scan.coverity.com/projects/imazen-imageflow)
 
+- [x] Fast image resampling (scaling) with superb quality
+- [x] Basic operations (crop, rotate, flip, expand canvas, fill rectangle)
+- [x] Support color profiles
+- [ ] Finish API design and test coverage for image composition, whitespace detection/cropping, sharpening, blurring, contrast/saturation, and white balance (algorithms already complete or well defined). 
+- [x] Integrate and optimize libjpeg-turbo
+- [x] Integrate libpng (32-bit only)
+- [ ] Replace giflib and support animated gifs
+- [ ] Integrate libimagequant for optimal 8-bit png and gif file sizes.
+- [ ] Replace direct graph maniupulation with JSON API
+- [ ] Replace ruby prototype of libimageflow-server with a Rust version
+- [ ] Complete Ruby bindings w/ JSON wrappers
+- [ ] Build command-line tool for users to play with during Kickstarter. 
+- [ ] Add fuzz testing for JSON and I/O 
+- [ ] Documentation
+- [ ] Begin porting bits to Rust
+- [ ] Support metadata reading and writing
+- [ ] Histogram support
+- [ ] Document type detection
+- [ ] Generic convolution support
+- [ ] Add 128-bit color depth support for all operations
+- [ ] Expose plugin interface
+- [ ] Create face and object detection plugin for smart cropping
 
 
 ### How to download, build, and run tests. 
@@ -30,23 +52,19 @@ Don't try to open anything in any IDE until you've run `conan install`, as cmake
 1. [Install Conan](https://www.conan.io/downloads) - installers available for download (all platforms).
 2. Install cmake (`cinst -y cmake.portable` on windows w/ chocolatey, `sudo apt-get install cmake` elsewhere)
 3. Install git (`cinst -y git.install` or `sudo apt-get install git`) 
-3. Install build tools for dependencies if they aren't pre-build: `sudo apt-get install build-essential binutils libtool autoconf nasm`
+3. Install build tools for dependencies: `sudo apt-get install build-essential binutils libtool autoconf nasm`
 
 
 ```bash
      git clone git@github.com:imazen/imageflow.git
      cd imageflow
-     mkdir build
-     cd build 
-     conan install -u --file ../conanfile.py -o build_tests=True --build missing  -s build_type=Release
-     cd ..
-     conan build
+     ./rebuild.sh
 ```
 
 ### Visual Studio 2015 Update 1
 
 
-Windows: build/Imageflow.sln will be created during 'conan build', but is only set up for Release mode compilation by default. Switch configuration to Release to get a build.
+Windows: build/Imageflow.sln will be created during 'conan build', but is only set up for Release mode compilation by default. Switch configuration to Release to get a build. You'll need to run conan install directly if you want to change architecture, since the solutions need to be regeneterated.
  
 Install nasm (`cinst -y nasm` on windows, followed by `set PATH=%PATH%;%ProgramFiles(x86)%\nasm`) (only if you have to build dependencies from source).
  
@@ -66,8 +84,6 @@ Install nasm (`cinst -y nasm` on windows, followed by `set PATH=%PATH%;%ProgramF
     #Backed by the same S3 buckets as z.zr.io demo server
     #X-CPU-Time HTTP header lets you know how much time was spent inside the imageflow library
 
-    
-
 ======
 
 **libimageflow is still in the prototype phase. It is neither API-stable nor secure.**
@@ -76,7 +92,7 @@ Install nasm (`cinst -y nasm` on windows, followed by `set PATH=%PATH%;%ProgramF
 ![libimageflow diagram](https://rawgit.com/imazen/imageflow/master/docs/ImageFlow_Core.svg)
 
 
-## Using the long-form graph API (with proper error handling)
+## Using the deprecated long-form graph API (with proper error handling)
 
     
 ```c++
@@ -263,45 +279,6 @@ Among the many shiny advanced features that I've published over the years, a cou
 
 The former (whitespace cropping) doesn't require any dependencies. The latter, face rectangle detection may or may not be easily extracted from OpenCV/ccv; this might involve a dependency. The data set is also several megabytes, so it justifies a separate assembly anyway.
 
-## Key low-level, high-performance primitives
-
-### Color adjustments
-
-* Convert from arbitrary color space and profile to sRGB
-* sRGB<->Linear functions, on scan-line sets at a time (Operations that do any blending of pixels need to operate in linear).
-* Apply gamma/adjust channels independently
-* Color adjustment matrix application
-
-### Image analysis
-
-* Calculate histogram
-* Auto white balance
-* Fast octree quantizer
-* Face detection (cropping heads off selfies to meet an aspect ratio need is uncool). <- tricky to do a compact implementation, data set is heavy.
-* Document type detection (photograph, document, line art, etc). This would let us pick the ideal resampling filter and image codec.
-* Detect boundaries (sobel filter, edges inward - can be applied locally with tiny alloc req.s)
-
-### Operations requiring a matrix transposition
-
-* Mathematically correct interpolation, with custom interpolation weighting callback. Cached weights mean this callback will be invoked only (w x h x scale factor) number of times.
-* Generic convolution kernel applicator, with and without thresholds. Size matters; large kernels will drastically affect performance, and this needs to be clearly documented.
-* Rotate 90 degree intervals
-* Performance constant blur (3x box blur approximates gaussian)
-* Performance constant sharpen
-
-Scale, convolve, rotate 90 degrees, blur, and sharpen - can be all composed and require a single transposition. Separately they would require 7.
-
-### Trivial operations
-
-* Flip
-* Crop (doesn't require a copy, just stride & pointer adjustment)
-* Create canvas
-* Fill rectangle with solid color
-* Copy (overwrite)
-* Compositing *(ok, not trivial, but easily managed if you lock down color spaces and alpha premultiplication).
-
-You'll note that affine transform/distort is notably absent. Distortion has exponentially bad performance with image size - it's not linear. Large convolution kernels have a similar effect. Distortion is rarely needed and use should be minimized.
-
 
 ## How does one learn image processing?
 
@@ -330,112 +307,3 @@ I'm not aware of any implementations of (say, resampling) that are completely co
 I have found the source code for OpenCV, LibGD, FreeImage, Libvips, Pixman, Cairo, ImageMagick, stb_image, Skia, and FrameWave is very useful for understanding real-world implementations and considerations. Most textbooks assume an infinite plane, ignore off-by-one errors, floating-point limitations, color space accuracy, and operational symmetry within a bounded region. I cannot recommend any textbook  as an accurate reference, only as a conceptual starting point.
 
 Also, keep in mind that computer vision is very different from image creation. In computer vision, resampling accuracy matters very little, for example. But in image creation, you are serving images to photographers, people with far keener visual perception than the average developer. The images produced will be rendered side-by-side with other CSS and images, and the least significant bit of inaccuracy is quite visible. You are competing with Lightroom; with offline tools that produce visually perfect results. End-user software will be discarded if photographers feel it is corrupting their work.
-
-## Potential problem areas
-
-* EXIF and XMP metadata parsing to access camera orientation - this needs to be resolved (and the image rotated) before we send it to the client. Clients are notoriously inconsistent about handling rotation metadata, and they take a significant perf hit as well. We also will likely need to preserve Copyright metadata strings, which means at least rudimentary metadata APIs.
-* Dealing with color management on a block or scan-line level. I haven't used littlecms yet.
-* Scaling at the jpeg block level may introduce a small amount of error on the right/bottom col/row of pixels if the image size is not a multiple of 8. As we only 'halve' down to 3x the target image size before resampling, this would present as a very slight weighting error. Using floating-point image dimensions could permit this to be solved, or having "subpixel_left" "subpixel_right" inputs to Render1D that describe the remainder to crop from the input.
-
-## Node types
-
-```c++
-typedef enum flow_ntype {
-    flow_ntype_Null = 0,
-    flow_ntype_primitive_Flip_Vertical_Mutate = 1,
-    flow_ntype_primitive_Flip_Horizontal_Mutate = 1,
-    flow_ntype_primitive_Crop_Mutate_Alias = 2,
-    flow_ntype_primitive_CopyRectToCanvas = 3, //Overwrite only, no compositing
-    flow_ntype_Create_Canvas = 4,
-    flow_ntype_primitive_RenderToCanvas1D = 5,
-    flow_ntype_primitive_Scale2D_RenderToCanvas1D = 6,
-    flow_ntype_primitive_bitmap_bgra_pointer,
-    flow_ntype_primitive_decoder,
-    flow_ntype_primitive_encoder,
-
-
-    flow_ntype_non_primitive_nodes_begin = 256,
-
-    flow_ntype_Transpose,
-    flow_ntype_Flip_Vertical,
-    flow_ntype_Flip_Horizontal,
-    flow_ntype_Render1D,
-    flow_ntype_Crop,
-    flow_ntype_non_optimizable_nodes_begin = 512,
-
-
-    flow_ntype_Clone,
-    flow_ntype_decoder,
-    flow_ntype_encoder,
-
-
-    flow_ntype_Rotate_90,
-    flow_ntype_Rotate_180,
-    flow_ntype_Rotate_270,
-    flow_ntype_Scale, //(preserve colorspace), interpolation filter
-
-
-    //Not implemented below here:
-    flow_ntype_Rotate_Flip_Per_Orientation,
-    flow_ntype_Crop_Percentage,
-    flow_ntype_Crop_Percentage_Infinite_Canvas, //canvas_color
-    flow_ntype_Crop_Rectangle,
-    flow_ntype_Constrain, //(mode=pad|max|crop|stretch) (width, height) (scale=down|up|both|canvas) (anchor=9 points)
-    flow_ntype_Matte,
-    flow_ntype_EnlargeCanvas,
-    flow_ntype_Sharpen,
-    flow_ntype_Blur,
-    flow_ntype_Convolve_Custom,
-    flow_ntype_AdjustContrast,
-    flow_ntype_AdjustSaturation,
-    flow_ntype_AdjustBrightness,
-    flow_ntype_CropWhitespace, //tolerances and padding
-    flow_ntype_Opacity,
-    flow_ntype_Sepia,
-    flow_ntype_Grayscale, //true|y|ry|ntsc|bt709|flat
-    flow_ntype_DrawImage,
-    flow_ntype_RemoveNoise,
-    flow_ntype_ColorMatrixsRGB,
-    flow_ntype__FORCE_ENUM_SIZE_INT32 = 2147483647
-} flow_ntype;
-
-
-typedef enum flow_node_state{
-    flow_node_state_Blank = 0,
-    flow_node_state_InputDimensionsKnown = 1,
-    flow_node_state_ReadyForPreOptimizeFlatten = 1,
-    flow_node_state_PreOptimizeFlattened = 2,
-    flow_node_state_ReadyForOptimize = 3,
-    flow_node_state_Optimized = 4,
-    flow_node_state_ReadyForPostOptimizeFlatten = 7,
-    flow_node_state_PostOptimizeFlattened = 8,
-    flow_node_state_InputsExecuted = 16,
-    flow_node_state_ReadyForExecution = 31,
-    flow_node_state_Executed = 32,
-    flow_node_state_Done = 63
-} flow_node_state;
-
-typedef enum flow_edgetype {
-    flow_edgetype_null,
-    flow_edgetype_input,
-    flow_edgetype_canvas,
-    flow_edgetype_info,
-    flow_edgetype_FORCE_ENUM_SIZE_INT32 = 2147483647
-} flow_edgetype;
-         `                                                                                                                                                                                                         `
-```
-
-## Operation equivalency and composition
-
-| Action | Equivalent action | Notes |
-| ------------- |------------- | ----- |
-| Rotate 270  | Transpose, Vflip |
-| Rotate 90   | Vflip, Transpose |
-| Rotate 180  | Vflip, Hflip |
-| Transpose, Vflip | HFlip, Transpose | Slower |
-| Hflip, Transpose | Transpose, VFlip | VFlip is faster than HFlip |
-| Hflip, Hflip | nop |
-| Vflip, Vflip | nop |
-| Crop, VFlip | VFlip, Crop(adjusted) | ..etc, for HFlip, Transpose, Scale |
-| Scale (new_width,new_height) | CreateCanvas(width=old_height, height=new_width), RenderToCanvas1D(new_width, Copy, transpose=true), CreateCanvas(width=new_width,height=new_height), RenderToCanvas1D(new_height,Copy,transpose=true) |
-
