@@ -15,7 +15,7 @@ option(SKIP_LIBRARY OFF)
 
 if (NOT SKIP_LIBRARY)
 	if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/build/conanbuildinfo.cmake)
-		set(ENABLE_TEST ON)
+		set(ENABLE_TEST OFF)
 	endif()
 endif()
 
