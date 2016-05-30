@@ -39,11 +39,5 @@ matrix:
 install:
   - .travis/install.sh
 
-before_script:
-  - .travis/before_script.sh
-
 script:
   - .travis/run.sh
-
-after_success:
-  - .travis/after_success.sh
