@@ -1,6 +1,6 @@
 # ![imageflow](https://www.imageflow.io/images/imageflow.svg) = libimageflow + imageflow-server
 
-**The Imageflow Kickstarter goes live in 5 days**  - Wednesday, June 1st!
+**The Imageflow Kickstarter goes live in less than 20 hours **  - Wednesday, June 1st!
 
 ## What's libimageflow? [Find out at imageflow.io](https://www.imageflow.io) (also, please give us your e-mail so we can ping you about the Kickstarter).
 
