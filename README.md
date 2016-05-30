@@ -19,28 +19,65 @@ ImageFlow will bring world-class image quality and performance to all languages 
 [![Coverage Status](https://coveralls.io/repos/github/imazen/imageflow/badge.svg?branch=master)](https://coveralls.io/github/imazen/imageflow?branch=master)
 [![Coverity Scan Build Status](https://scan.coverity.com/projects/8403/badge.svg)](https://scan.coverity.com/projects/imazen-imageflow)
 
-- [x] Fast image resampling (scaling) with superb quality
+### Algorithm implementation work
+
+- [x] Fast image resampling (scaling) with superb quality & speed
 - [x] Basic operations (crop, rotate, flip, expand canvas, fill rectangle)
-- [x] Support color profiles
-- [ ] Finish API design and test coverage for image composition, whitespace detection/cropping, sharpening, blurring, contrast/saturation, and white balance (algorithms already complete or well defined). 
-- [x] Integrate and optimize libjpeg-turbo
-- [x] Integrate libpng (32-bit only)
-- [ ] Replace giflib and support animated gifs
-- [ ] Integrate libimagequant for optimal 8-bit png and gif file sizes.
-- [ ] Replace direct graph maniupulation with JSON API
-- [ ] Replace ruby prototype of libimageflow-server with a Rust version
-- [ ] Complete Ruby bindings w/ JSON wrappers
-- [ ] Build command-line tool for users to play with during Kickstarter. 
-- [ ] Add fuzz testing for JSON and I/O 
-- [ ] Documentation
-- [ ] Begin porting bits to Rust
+- [x] Support color profile, convert to sRGB
+- [x] Image blending and composition (no external API yet)
+- [x] Whitespace detection/cropping (no external API yet)
+- [x] Ideal scaling-integrated sharpening for subpixel accuracy. (no external API yet)
+- [x] Automatic white balance correction.  (no external API yet)
+- [ ] Time-constant guassian approximation (%97) blur (1 bug remaining)
+- [ ] Improve contrast/saturation/luma adjustment ergonomics
+- [x] Integrate libjpeg-turbo (read/write)
+- [x] Create correct and ooptimized IDCT downscaling for libjpeg-turbo (linear light, robidoux filter)
+- [x] Integrate libpng (read/write) (32-bit only)
+- [x] Integrate libgif (readonly, single frame)
+- [ ] Support animated gifs
 - [ ] Support metadata reading and writing
 - [ ] Histogram support
 - [ ] Document type detection
 - [ ] Generic convolution support
-- [ ] Add 128-bit color depth support for all operations
-- [ ] Expose plugin interface
-- [ ] Create face and object detection plugin for smart cropping
+- [ ] Add 128-bit color depth support for all operations (most already use 128-bit internally)
+- [ ] Integrate libimagequant for optimal 8-bit png and gif file sizes.
+- [ ] Build command-line tool for users to experiment with during Kickstarter. 
+- [ ] Implement cost estimation for all operations
+- [ ] Add subpixel cropping during scale to compensate for IDCT block scaling where subpixel accuracy can be reduced.
+- [x] Auto-generate animated gifs of the operation graph evolution during execution.  
+- [ ] Create face and object detection plugin for smart cropping. Not in main binary, though. 
+- [ ] Reason about signal-to-noise ratio changes, decoder hints, and determine best codec tuning for optimal quality. Let's make a better photocopier (jpeg). 
+
+
+### API Work
+- [x] Expose an xplat API (using direct operation graph construction) and test via Ruby FFI bindings.
+- [x] Validate basic functionality via simple ruby REST [RIAPI](http://riapi.org) server to wrap libimageflow
+- [x] Design correct error handling protocol so all APIs report detailed stacktrace w/ line numbers and useful error messages for all API surfaces. 
+- [x] Expose custom memory managment interface, so callers can use custom allocators or reusable slab allocation (great to avoid fragmentation on large allocations). This may go away if we introduce Rust, although with 1.9 we can still handle malloc failure gracefully.
+- [x] Expose flexible I/O interface so a variety if I/O types can be cleanly supported from host languages (I.e, .NET Stream, FILE *, membuffer, circular buffer, etc)
+- [ ] Replace direct graph maniupulation with JSON API
+- [ ] Finish API design and test coverage for image composition, whitespace detection/cropping, sharpening, blurring, contrast/saturation, and white balance (algorithms already complete or well defined). 
+- [ ] Expose plugin interface for codecs (70%)
+- [ ] Expose custom operations API so host languages can add new algoroithms (50%)
+- [ ] Create documentation
+- [ ] Create .NET Full/Core bindings
+- [ ] Create Node bindings 
+
+### Refactorings
+
+- [x] Explicit control flow at all points.
+- [x] Full debugging information by recording errors at failure point, then appending the stacktract
+- [x] Give user complete control over allocation method and timing.
+- [x] Use [Conan.io](http://conan.io) for package management and builds to eliminate dependency hell.
+- [x] Make codecs and node definitions uniform
+- [x] Establish automated code formatting rules in .clang-format
+- [ ] Replace giflib
+- [ ] replace zlib with zlib-ng
+- [ ] Replace ruby prototype of libimageflow-server with a Rust version
+- [ ] Look into replacing parts of the jpeg codec with concurrent alternatives. 
+- [ ] Add fuzz testing for JSON and I/O 
+- [ ] Begin porting the most complex bits to Rust. 
+- [ ] Find cleaner way to use SSE2 constructs with scalar fallbacks, it is messy in a few areas.
 
 
 ### How to download, build, and run tests. 
