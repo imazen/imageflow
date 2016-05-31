@@ -19,6 +19,7 @@ ImageFlow will bring world-class image quality and performance to all languages 
 [![Coverage Status](https://coveralls.io/repos/github/imazen/imageflow/badge.svg?branch=master)](https://coveralls.io/github/imazen/imageflow?branch=master)
 [![Coverity Scan Build Status](https://scan.coverity.com/projects/8403/badge.svg)](https://scan.coverity.com/projects/imazen-imageflow)
 
+
 ### Algorithm implementation work
 
 - [x] Fast image resampling (scaling) with superb quality & speed
