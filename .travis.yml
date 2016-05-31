@@ -9,12 +9,12 @@ sudo:
 
 env:
   global:
-   - secure: "ZCnVl71wkTwMMS4F0aiYQJ6DHW3sPRPAto2daS0KjZ7fF0Z7mgWuF2yr2MARuUWRLYyVMp4rC493ZnB4NBLf1vzFmX1ZzPzAt1JTkHr6PHpaPEDlWs26XvkwirW/EPMk6vjpO0MSfzPLoo9z3Ph1csbAF6lxRgFtCo9QsCRfCA0="
+   - secure: "iYEL5uBGImCZb4V8uTcpm0OSBfxWZ4Ix/DreVFtU0B+6X3/DguGw1XtBFwmtqlISmAHbweddQhTOL4kgpPQ6sjrPrcck4KVmR8npcySJ/wcIsMjEQAWdYmHdGJlJGxYHENJ5vlobLO0CQbdNaXuBxrZfo4Pz7UshMV5oRPmP0GQ="
 
 addons:
   coverity_scan:
     project:
-      name: "memsharded/imageflow"
+      name: "imazen/imageflow"
       description: "Imageflow + imageflow server"
     notification_email: james@conan.io
     build_command_prepend: "chmod +x .travis/pre_coverity.sh && .travis/pre_coverity.sh"
