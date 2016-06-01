@@ -1,12 +1,6 @@
 # ![imageflow](https://www.imageflow.io/images/imageflow.svg) = libimageflow + imageflow-server
 
-**The Imageflow Kickstarter goes live in less than 20 hours **  - Wednesday, June 1st!
-
-## What's libimageflow? [Find out at imageflow.io](https://www.imageflow.io) (also, please give us your e-mail so we can ping you about the Kickstarter).
-
-----
-
-Imageflow is AGPLv3 licensed, with commercial licenses planned to ensure sustainability.
+## [Support our Kickstarter!](https://www.kickstarter.com/projects/njones/imageflow-respect-the-pixels-a-secure-alt-to-image)
 
 ImageFlow will bring world-class image quality and performance to all languages through a C-compatible API (libimageflow) and an evolvable operation graph, with initial focus on Node and Ruby. Linux, Mac, and Windows support is planned.  
 
