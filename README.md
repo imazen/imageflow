@@ -2,6 +2,8 @@
 
 ## [Support our Kickstarter!](https://www.kickstarter.com/projects/njones/imageflow-respect-the-pixels-a-secure-alt-to-image)
 
+**We desperately need to build more momentum! If possible, please promote it and pledge $1 or get a friend to. We'll re-evalute Tuesday, June 7th to check our statistical changes, and if it makes sense to shut the Kickstarter down early.** 
+
 ImageFlow will bring world-class image quality and performance to all languages through a C-compatible API (libimageflow) and an evolvable operation graph, with initial focus on Node and Ruby. Linux, Mac, and Windows support is planned.  
 
 ----
