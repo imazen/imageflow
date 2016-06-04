@@ -1,0 +1,9 @@
+[package]
+name = "imageflow-server"
+version = "0.1.0"
+authors = ["Nathanael Jones <nathanael.jones@gmail.com>"]
+
+[dependencies]
+
+[dependencies.iron]
+version = "*"
