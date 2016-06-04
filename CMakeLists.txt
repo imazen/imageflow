@@ -34,7 +34,7 @@ if (NOT SKIP_LIBRARY)
    
 	target_link_libraries(imageflow ${CONAN_LIBS})
 	target_include_directories(imageflow PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
-	target_compile_options(imageflow PRIVATE "-flto")
+	# target_compile_options(imageflow PRIVATE "-flto")
 	target_compile_options(imageflow PRIVATE "-fverbose-asm")
 endif()
 
