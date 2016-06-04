@@ -2,8 +2,14 @@
 name = "imageflow-server"
 version = "0.1.0"
 authors = ["Nathanael Jones <nathanael.jones@gmail.com>"]
+build = "build.rs"
+links = "imageflow"
 
 [dependencies]
+libc = "0.2.0"
 
 [dependencies.iron]
 version = "*"
+
+[build-dependencies]
+cmake = "0.1.17"
