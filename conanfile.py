@@ -33,6 +33,7 @@ class ImageFlowConan(ConanFile):
         self.copy("*.dylib*", dst="bin", src="lib")  # From lib to bin
         self.copy("*cacert.pem", dst="bin")  # Allows use libcurl with https without problems - except on darwin
         self.copy("*cacert.pem", dst=".")  # Allows use libcurl with https without problems
+        self.copy("*.a", dst=".") # Copy all static libs to use in cargo build.
 
     def clean_cmake_cache(self, build_dir):
         def on_build_dir(x):
