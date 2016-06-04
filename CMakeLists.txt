@@ -13,11 +13,11 @@ option(ENABLE_TEST OFF)
 option(ENABLE_PROFILING OFF)
 option(SKIP_LIBRARY OFF)
 
-if (NOT SKIP_LIBRARY)
-	if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/build/conanbuildinfo.cmake)
-		set(ENABLE_TEST ON)
-	endif()
-endif()
+# if (NOT SKIP_LIBRARY)
+#	if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/build/conanbuildinfo.cmake)
+#		set(ENABLE_TEST ON)
+#	endif()
+# endif()
 
 list(REMOVE_ITEM CONAN_LIBS efence) # FIXME: Maybe efence should be a private dep of openssls
 
@@ -26,12 +26,15 @@ file(GLOB_RECURSE LIB_SRCS lib/*.c)
 file(GLOB LIB_HDRS lib/*.h)
 list(APPEND LIB_HDRS imageflow.h)
 list(APPEND LIB_HDRS imageflow_advanced.h)
-
+	
 if (NOT SKIP_LIBRARY)
-	add_library(imageflow SHARED ${LIB_SRCS} ${LIB_HDRS})
+	add_library(imageflow ${LIB_SRCS} ${LIB_HDRS})
+	set_target_properties(imageflow PROPERTIES LIBRARY_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/lib)
+	set_target_properties(imageflow PROPERTIES ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/lib)
+   
 	target_link_libraries(imageflow ${CONAN_LIBS})
 	target_include_directories(imageflow PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
-	target_compile_options(imageflow PRIVATE "-flto")
+	# target_compile_options(imageflow PRIVATE "-flto")
 	target_compile_options(imageflow PRIVATE "-fverbose-asm")
 endif()
 
