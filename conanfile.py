@@ -3,13 +3,18 @@ import os
 import shutil
 
 class ImageFlowConan(ConanFile):
+    name = "imageflow"
+    version = "0.1.0"
+    license = "AGPLv3"
     settings = "os", "compiler", "build_type", "arch"
     requires = "littlecms/2.7@lasote/stable", "libpng/1.6.21@lasote/stable", "libjpeg-turbo/1.4.2@imazen/testing" , "giflib/5.1.3@lasote/stable"
     options = {"shared": [True, False], "build_tests": [True, False], "profiling": [True, False], "coverage": [True, False]}
     generators = "cmake"
-    default_options = "shared=False", "build_tests=True", "coverage=False", "profiling=False", "libjpeg-turbo:shared=False", "libpng:shared=False", \
+    default_options = "shared=False", "build_tests=False", "coverage=False", "profiling=False", "libjpeg-turbo:shared=False", "libpng:shared=False", \
    					  "zlib:shared=False", "libcurl:shared=False", "OpenSSL:shared=True", \
    					  "imageflow:shared=True"
+    exports = "lib/*", "CMakeLists.txt", "imageflow.h", "imageflow_advanced.h"
+    
 
     def config(self):
         if self.settings.os != "Windows":  #giflib must be shared on windows?
@@ -75,4 +80,15 @@ class ImageFlowConan(ConanFile):
         self.run(cmake_build_command)
         if self.options.build_tests:
             self.run('ctest -V -C Release')
+            
+    def package(self):
+        self.copy("imageflow.h", dst="include", src="", keep_path=False)
+        self.copy("imageflow_advanced.h", dst="include", src="", keep_path=False)
+        self.copy("*.h", dst="include", src="lib", keep_path=True)
+        self.copy("*.so*", dst="lib", src="build/", keep_path=False)
+        self.copy("*.a", dst="lib", src="build", keep_path=False)
+        self.copy("*.lib", dst="lib", src="build", keep_path=False)
+        self.copy("*.dll", dst="bin", src="build", keep_path=False)
 
+    def package_info(self):
+        self.cpp_info.libs = ['imageflow']

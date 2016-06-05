@@ -3,6 +3,8 @@ cmake_minimum_required(VERSION 2.8.12)
 
 if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/build/conanbuildinfo.cmake) #Clion, with conanbuildinfo.cmake in root
     include(${CMAKE_CURRENT_SOURCE_DIR}/build/conanbuildinfo.cmake)
+elseif(EXISTS ${CMAKE_BINARY_DIR}/../conanbuildinfo.cmake) # Imageflow as a conan package
+    include(${CMAKE_BINARY_DIR}/../conanbuildinfo.cmake)
 else()
     include(${CMAKE_BINARY_DIR}/conanbuildinfo.cmake) # Not CLion
 endif()
@@ -115,3 +117,4 @@ if(${CMAKE_GENERATOR} MATCHES "Unix Makefiles")
 	set(CMAKE_MAKE_PROGRAM "${CMAKE_MAKE_PROGRAM} -j10")
 	message(STATUS "Added arguments to CMAKE_BUILD_TOOL: ${CMAKE_MAKE_PROGRAM}")
 endif()
+

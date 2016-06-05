@@ -232,6 +232,8 @@ FakesAssemblies/
 .pydevproject
 # Compiled conanfile
 conanfile.pyc
+# Test package builds from conna
+test_package/build/
 
 #Generated for tests
 build/
