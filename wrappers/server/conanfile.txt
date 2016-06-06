@@ -1,0 +1,8 @@
+[requires]
+ConanCargoWrapper/0.1@lasote/testing
+imageflow/0.1.0@lasote/testing
+
+[generators]
+ConanCargoWrapper
+
+
