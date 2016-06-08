@@ -2,7 +2,7 @@
 name = "imageflow-server"
 version = "0.1.0"
 authors = ["Nathanael Jones <nathanael.jones@gmail.com>"]
-build = "build.rs"
+build = "conan_cargo_build.rs"
 links = "imageflow"
 
 [dependencies]

@@ -3,6 +3,8 @@ cmake_minimum_required(VERSION 2.8.12)
 
 if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/build/conanbuildinfo.cmake) #Clion, with conanbuildinfo.cmake in root
     include(${CMAKE_CURRENT_SOURCE_DIR}/build/conanbuildinfo.cmake)
+elseif(EXISTS ${CMAKE_BINARY_DIR}/../conanbuildinfo.cmake) # Imageflow as a conan package
+    include(${CMAKE_BINARY_DIR}/../conanbuildinfo.cmake)
 else()
     include(${CMAKE_BINARY_DIR}/conanbuildinfo.cmake) # Not CLion
 endif()
@@ -13,11 +15,11 @@ option(ENABLE_TEST OFF)
 option(ENABLE_PROFILING OFF)
 option(SKIP_LIBRARY OFF)
 
-if (NOT SKIP_LIBRARY)
-	if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/build/conanbuildinfo.cmake)
-		set(ENABLE_TEST ON)
-	endif()
-endif()
+# if (NOT SKIP_LIBRARY)
+#	if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/build/conanbuildinfo.cmake)
+#		set(ENABLE_TEST ON)
+#	endif()
+# endif()
 
 list(REMOVE_ITEM CONAN_LIBS efence) # FIXME: Maybe efence should be a private dep of openssls
 
@@ -26,12 +28,15 @@ file(GLOB_RECURSE LIB_SRCS lib/*.c)
 file(GLOB LIB_HDRS lib/*.h)
 list(APPEND LIB_HDRS imageflow.h)
 list(APPEND LIB_HDRS imageflow_advanced.h)
-
+	
 if (NOT SKIP_LIBRARY)
-	add_library(imageflow SHARED ${LIB_SRCS} ${LIB_HDRS})
+	add_library(imageflow ${LIB_SRCS} ${LIB_HDRS})
+	set_target_properties(imageflow PROPERTIES LIBRARY_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/lib)
+	set_target_properties(imageflow PROPERTIES ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/lib)
+   
 	target_link_libraries(imageflow ${CONAN_LIBS})
 	target_include_directories(imageflow PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
-	target_compile_options(imageflow PRIVATE "-flto")
+	# target_compile_options(imageflow PRIVATE "-flto")
 	target_compile_options(imageflow PRIVATE "-fverbose-asm")
 endif()
 
@@ -112,3 +117,4 @@ if(${CMAKE_GENERATOR} MATCHES "Unix Makefiles")
 	set(CMAKE_MAKE_PROGRAM "${CMAKE_MAKE_PROGRAM} -j10")
 	message(STATUS "Added arguments to CMAKE_BUILD_TOOL: ${CMAKE_MAKE_PROGRAM}")
 endif()
+
