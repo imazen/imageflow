@@ -173,34 +173,34 @@ typedef enum flow_interpolation_filter {
     flow_interpolation_filter_RobidouxFast = 1,
     flow_interpolation_filter_Robidoux = 2,
     flow_interpolation_filter_RobidouxSharp = 3,
-    flow_interpolation_filter_Ginseng,
-    flow_interpolation_filter_GinsengSharp,
-    flow_interpolation_filter_Lanczos,
-    flow_interpolation_filter_LanczosSharp,
-    flow_interpolation_filter_Lanczos2,
-    flow_interpolation_filter_Lanczos2Sharp,
-    flow_interpolation_filter_CubicFast,
-    flow_interpolation_filter_Cubic,
-    flow_interpolation_filter_CubicSharp,
-    flow_interpolation_filter_CatmullRom,
-    flow_interpolation_filter_Mitchell,
+    flow_interpolation_filter_Ginseng = 4,
+    flow_interpolation_filter_GinsengSharp = 5,
+    flow_interpolation_filter_Lanczos = 6,
+    flow_interpolation_filter_LanczosSharp = 7,
+    flow_interpolation_filter_Lanczos2 = 8,
+    flow_interpolation_filter_Lanczos2Sharp = 9,
+    flow_interpolation_filter_CubicFast = 10,
+    flow_interpolation_filter_Cubic = 11,
+    flow_interpolation_filter_CubicSharp = 12,
+    flow_interpolation_filter_CatmullRom = 13,
+    flow_interpolation_filter_Mitchell = 14,
 
-    flow_interpolation_filter_CubicBSpline,
-    flow_interpolation_filter_Hermite,
-    flow_interpolation_filter_Jinc,
-    flow_interpolation_filter_RawLanczos3,
-    flow_interpolation_filter_RawLanczos3Sharp,
-    flow_interpolation_filter_RawLanczos2,
-    flow_interpolation_filter_RawLanczos2Sharp,
-    flow_interpolation_filter_Triangle,
-    flow_interpolation_filter_Linear,
-    flow_interpolation_filter_Box,
-    flow_interpolation_filter_CatmullRomFast,
-    flow_interpolation_filter_CatmullRomFastSharp,
+    flow_interpolation_filter_CubicBSpline = 15,
+    flow_interpolation_filter_Hermite = 16,
+    flow_interpolation_filter_Jinc = 17,
+    flow_interpolation_filter_RawLanczos3 = 18,
+    flow_interpolation_filter_RawLanczos3Sharp = 19,
+    flow_interpolation_filter_RawLanczos2 = 20,
+    flow_interpolation_filter_RawLanczos2Sharp = 21,
+    flow_interpolation_filter_Triangle = 22,
+    flow_interpolation_filter_Linear = 23,
+    flow_interpolation_filter_Box = 24,
+    flow_interpolation_filter_CatmullRomFast = 25,
+    flow_interpolation_filter_CatmullRomFastSharp = 26,
 
-    flow_interpolation_filter_Fastest,
+    flow_interpolation_filter_Fastest = 27,
 
-    flow_interpolation_filter_MitchellFast
+    flow_interpolation_filter_MitchellFast = 28
 } flow_interpolation_filter;
 
 // TODO: So many more - 8-bit, compressed data,
@@ -329,6 +329,8 @@ PUB bool flow_job_decoder_set_downscale_hints_by_placeholder_id(
 
 PUB struct flow_graph * flow_graph_create(flow_c * c, uint32_t max_edges, uint32_t max_nodes, uint32_t max_info_bytes,
                                           float growth_factor);
+
+PUB bool flow_job_execute(flow_c * c, struct flow_job * job, struct flow_graph ** graph_ref);
 
 PUB void flow_graph_destroy(flow_c * c, struct flow_graph * target);
 
