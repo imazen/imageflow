@@ -16,8 +16,19 @@ rm *.jpg
 rm *.jpeg
 rm *.gif
 rm *~
-mkdir build
+
+mkdir -p build
 cd build
-conan install -u --file ../conanfile.py -o build_tests=True --build missing
-cd ..
-conan build
+conan install -o build_tests=True --build missing -u ../
+conan build ../
+
+
+conan export lasote/testing
+
+cd ../wrappers/server
+
+conan install --build missing # Will build imageflow package with your current settings
+cargo build
+cargo test
+
+cd ../..
