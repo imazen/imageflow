@@ -11,7 +11,7 @@ int32_t flow_node_create_bitmap_bgra_reference(flow_c * c, struct flow_graph ** 
         return id;
     }
     struct flow_nodeinfo_bitmap_bgra_pointer * info
-        = (struct flow_nodeinfo_bitmap_bgra_pointer *)FrameNode_get_node_info_pointer(*g, id);
+        = (struct flow_nodeinfo_bitmap_bgra_pointer *) flow_node_get_info_pointer(*g, id);
     info->ref = pointer_to_pointer_to_bitmap_bgra;
     return id;
 }
@@ -24,7 +24,7 @@ int32_t flow_node_create_decoder(flow_c * c, struct flow_graph ** g, int32_t pre
         return id;
     }
 
-    struct flow_nodeinfo_codec * info = (struct flow_nodeinfo_codec *)FrameNode_get_node_info_pointer(*g, id);
+    struct flow_nodeinfo_codec * info = (struct flow_nodeinfo_codec *) flow_node_get_info_pointer(*g, id);
     info->placeholder_id = placeholder_id;
     info->codec = NULL;
     info->downscale_hints.downscale_if_wider_than = -1;
@@ -50,7 +50,7 @@ int32_t flow_node_create_encoder(flow_c * c, struct flow_graph ** g, int32_t pre
         return id;
     }
 
-    struct flow_nodeinfo_codec * info = (struct flow_nodeinfo_codec *)FrameNode_get_node_info_pointer(*g, id);
+    struct flow_nodeinfo_codec * info = (struct flow_nodeinfo_codec *) flow_node_get_info_pointer(*g, id);
     info->placeholder_id = placeholder_id;
     info->codec = NULL;
     info->desired_encoder_id = desired_encoder_id;

@@ -10,7 +10,7 @@ int32_t flow_node_create_canvas(flow_c * c, struct flow_graph ** g, int32_t prev
         return id;
     }
     struct flow_nodeinfo_createcanvas * info
-        = (struct flow_nodeinfo_createcanvas *)FrameNode_get_node_info_pointer(*g, id);
+        = (struct flow_nodeinfo_createcanvas *) flow_node_get_info_pointer(*g, id);
     info->format = format;
     info->width = width;
     info->height = height;

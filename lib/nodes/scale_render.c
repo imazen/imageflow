@@ -15,7 +15,7 @@ int32_t flow_node_create_render_to_canvas_1d(flow_c * c, struct flow_graph ** g,
         return id;
     }
     struct flow_nodeinfo_render_to_canvas_1d * info
-        = (struct flow_nodeinfo_render_to_canvas_1d *)FrameNode_get_node_info_pointer(*g, id);
+        = (struct flow_nodeinfo_render_to_canvas_1d *) flow_node_get_info_pointer(*g, id);
     info->transpose_on_write = transpose_on_write;
 
     info->scale_to_width = scale_to_width;
@@ -47,7 +47,7 @@ int32_t flow_node_create_scale_2d(flow_c * c, struct flow_graph ** g, int32_t pr
         return id;
     }
     struct flow_nodeinfo_scale2d_render_to_canvas1d * info
-        = (struct flow_nodeinfo_scale2d_render_to_canvas1d *)FrameNode_get_node_info_pointer(*g, id);
+        = (struct flow_nodeinfo_scale2d_render_to_canvas1d *) flow_node_get_info_pointer(*g, id);
     info->scale_to_width = scale_to_width;
     info->scale_to_height = scale_to_height;
     info->interpolation_filter = interpolation_filter;
@@ -67,7 +67,7 @@ int32_t flow_node_create_render1d(flow_c * c, struct flow_graph ** g, int32_t pr
         return id;
     }
     struct flow_nodeinfo_render_to_canvas_1d * info
-        = (struct flow_nodeinfo_render_to_canvas_1d *)FrameNode_get_node_info_pointer(*g, id);
+        = (struct flow_nodeinfo_render_to_canvas_1d *) flow_node_get_info_pointer(*g, id);
     info->transpose_on_write = transpose_on_write;
 
     info->scale_to_width = scale_to_width;
@@ -94,7 +94,7 @@ int32_t flow_node_create_scale(flow_c * c, struct flow_graph ** g, int32_t prev_
         FLOW_add_to_callstack(c);
         return id;
     }
-    struct flow_nodeinfo_scale * info = (struct flow_nodeinfo_scale *)FrameNode_get_node_info_pointer(*g, id);
+    struct flow_nodeinfo_scale * info = (struct flow_nodeinfo_scale *) flow_node_get_info_pointer(*g, id);
     info->width = (int32_t)width;
     info->height = (int32_t)height;
     info->downscale_filter = downscale_filter;
