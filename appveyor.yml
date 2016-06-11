@@ -7,8 +7,9 @@ environment:
 configuration: Release
 
 platform:
-- x86
 - x64
+- x86
+
 #We install nasm in case libjpeg-turbo has to be built from source
 install:
   - curl -L -o nasminst.exe http://libgd.blob.core.windows.net/nasm/nasm-2.07-installer.exe
@@ -29,11 +30,14 @@ test_script:
   - if "%PLATFORM%"=="x86" conan install -o build_tests=True -o shared=True --build missing  -s build_type=Release -s arch=x86 -u ../
   - if "%PLATFORM%"=="x64" conan install -o build_tests=True -o shared=True --build missing  -s build_type=Release -s arch=x86_64  -u ../
   - conan build ../
+  - cd ..
   - conan export lasote/testing
-  - cd ../wrappers/server
+  - cd wrappers/server
   - conan install --build missing
-  - cargo build
+  - if "%PLATFORM%"=="x86" cargo build --target=i686-pc-windows-msvc
+  - if "%PLATFORM%"=="x64" cargo build --target=x86_64-pc-windows-msvc
   - cargo test
+
 
 artifacts:
   - path: 'wrappers/server/target/release/*.*'
