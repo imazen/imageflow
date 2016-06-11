@@ -1,5 +1,9 @@
 #include "../nodes.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 bool stringify_state(char * buffer, size_t buffer_isze, struct flow_node * n);
 
 bool set_node_optimized_and_update_state(flow_c * c, struct flow_graph * g, int32_t node_id);
@@ -55,3 +59,7 @@ FLOW_EXPORT void * FrameNode_get_node_info_pointer(struct flow_graph * g, int32_
         return false;                                                                                                  \
     }                                                                                                                  \
     struct flow_node * canvas_node = &g->nodes[g->edges[canvas_edge_id].from];
+
+#ifdef __cplusplus
+}
+#endif
