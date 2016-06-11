@@ -40,10 +40,12 @@ done
 
 
 
-export TIME_COMMAND=time
 
-#comment out this line for 
-export TIME_COMMAND="perf stat" 
+if [[ "$OSTYPE" == "linux-gnu" ]]; then
+  export TIME_COMMAND="perf stat" 
+else
+  export TIME_COMMAND=time
+fi
 
 cd bench_in
 

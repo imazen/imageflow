@@ -26,7 +26,8 @@ git commit -m"Reformatting"
 
 4. Reformat the whole repository
 
-clang-format -i {lib,tests,.}/*.{c,h,cpp,hpp}
+clang-format -i {lib,tests,lib/nodes.}/*.{c,h,cpp,hpp}
+
 
 5. Import code style .clion.codestyle.xml into CLion to reduce the number of differences clang-format creates.
 
