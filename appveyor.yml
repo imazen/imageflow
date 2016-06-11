@@ -37,13 +37,14 @@ test_script:
   - cd wrappers/server
   - conan install --build missing
   - ps: (Get-Content conan_cargo_build.rs).replace('\', '\\') | Set-Content conan_cargo_build.rs
-  - if "%PLATFORM%"=="x86" cargo build --target=i686-pc-windows-msvc
-  - if "%PLATFORM%"=="x64" cargo build --target=x86_64-pc-windows-msvc
+  - if "%PLATFORM%"=="x86" cargo build --target=i686-pc-windows-msvc --release
+  - if "%PLATFORM%"=="x64" cargo build --target=x86_64-pc-windows-msvc --release
   - cargo test
 
 
 artifacts:
-  - path: 'wrappers/server/target/release/*.*'
+  - path: 'wrappers/server/target/release/*'
     name: Rust binaries
     type: zip
-
+  - path: 'wrappers/server/target/release/flow-proto1.exe'
+    name: flow-proto1
