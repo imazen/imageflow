@@ -22,10 +22,10 @@ cd build
 conan install -o build_tests=True --build missing -u ../
 conan build ../
 
-
+cd ..
 conan export lasote/testing
 
-cd ../wrappers/server
+cd wrappers/server
 
 conan install --build missing # Will build imageflow package with your current settings
 cargo build
