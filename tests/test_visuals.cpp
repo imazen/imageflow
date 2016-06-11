@@ -75,7 +75,7 @@ TEST_CASE("Test spatial IDCT downscale in linear light", "")
 {
     flow_c * c = flow_context_create();
     size_t bytes_count = 0;
-    uint8_t * bytes = get_bytes_cached(c, &bytes_count, "http://www.rollthepotato.net/~john/kevill/test_800x600.jpg");
+    uint8_t * bytes = get_bytes_cached(c, &bytes_count, "http://s3-us-west-2.amazonaws.com/imageflow-resources/test_inputs/roof_test_800x600.jpg");
     REQUIRE(djb2_buffer(bytes, bytes_count) == 0x8ff8ec7a8539a2d5); // Test the checksum. I/O can be flaky
 
     struct flow_job * job = flow_job_create(c);
