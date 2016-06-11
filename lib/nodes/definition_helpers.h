@@ -23,10 +23,14 @@ bool node_has_other_dependents(flow_c * c, struct flow_graph * g, int32_t node_i
 
 bool flatten_delete_node(flow_c * c, struct flow_graph ** graph_ref, int32_t node_id);
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wunused-function"
 static void *flow_node_get_info_pointer(struct flow_graph *g, int32_t node_id)
 {
     return &(g->info_bytes[g->nodes[node_id].info_byte_index]);
 }
+#pragma GCC diagnostic pop
+
 
 #define FLOW_GET_INFOBYTES(g, node_id, type, varname)                                                                  \
     struct type * varname = (struct type *)&g->info_bytes[g->nodes[node_id].info_byte_index];

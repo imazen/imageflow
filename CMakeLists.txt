@@ -40,6 +40,12 @@ if (NOT SKIP_LIBRARY)
 	target_compile_options(imageflow PRIVATE "-fverbose-asm")
 endif()
 
+if (BUILD_SHARED_LIBS)
+add_definitions(-Dimageflow_BUILD_SHARED)
+else()
+add_definitions(-Dimageflow_BUILD_STATIC)
+endif()
+
 # -ffast-math changes results
 if (UNIX)
 	set(FASTSCALING_FLAGS "-O3 -iquotelib -fPIC -ffast-math -funroll-loops -mtune=native -march=native -Wpointer-arith -Wcast-qual -Wpedantic -Wall -Wextra -Wno-unused-parameter -Wuninitialized -Wredundant-decls -Werror")
