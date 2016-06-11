@@ -571,8 +571,10 @@ static bool flow_job_codecs_jpeg_write_frame(flow_c * c, struct flow_job * job, 
     jpeg_set_defaults(&state->cinfo);
 
     int32_t quality = hints == NULL ? 90 : hints->jpeg_encode_quality;
-    if (quality <= 0) quality = 90;
-    if (quality > 100) quality = 100;
+    if (quality <= 0)
+        quality = 90;
+    if (quality > 100)
+        quality = 100;
 
     jpeg_set_quality(&state->cinfo, quality, TRUE /* limit to baseline-JPEG values */);
 

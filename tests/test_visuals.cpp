@@ -29,11 +29,11 @@ TEST_CASE("Test fill_rect", "")
         ERR(c);
     }
 
-    //FIXME: This test passes in Win64, but fails in Win32
-    #ifndef _WIN32
+// FIXME: This test passes in Win64, but fails in Win32
+#ifndef _WIN32
     REQUIRE(visual_compare(c, b, "FillRect", store_checksums, 0, __FILE__, __func__, __LINE__) == true);
     ERR(c);
-    #endif
+#endif
     flow_context_destroy(c);
 }
 
@@ -42,7 +42,8 @@ TEST_CASE("Test scale image", "")
 
     flow_c * c = flow_context_create();
     size_t bytes_count = 0;
-    uint8_t * bytes = get_bytes_cached(c, &bytes_count, "http://s3-us-west-2.amazonaws.com/imageflow-resources/test_inputs/waterhouse.jpg");
+    uint8_t * bytes = get_bytes_cached(
+        c, &bytes_count, "http://s3-us-west-2.amazonaws.com/imageflow-resources/test_inputs/waterhouse.jpg");
     REQUIRE(djb2_buffer(bytes, bytes_count) == 0xbb9cca928a69bea7); // Test the checksum. I/O can be flaky
 
     struct flow_job * job = flow_job_create(c);
@@ -75,7 +76,8 @@ TEST_CASE("Test spatial IDCT downscale in linear light", "")
 {
     flow_c * c = flow_context_create();
     size_t bytes_count = 0;
-    uint8_t * bytes = get_bytes_cached(c, &bytes_count, "http://s3-us-west-2.amazonaws.com/imageflow-resources/test_inputs/roof_test_800x600.jpg");
+    uint8_t * bytes = get_bytes_cached(
+        c, &bytes_count, "http://s3-us-west-2.amazonaws.com/imageflow-resources/test_inputs/roof_test_800x600.jpg");
     REQUIRE(djb2_buffer(bytes, bytes_count) == 0x8ff8ec7a8539a2d5); // Test the checksum. I/O can be flaky
 
     struct flow_job * job = flow_job_create(c);

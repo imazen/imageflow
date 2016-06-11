@@ -198,7 +198,7 @@ bool fill_buffer(flow_c * context, struct flow_SearchInfo * __restrict info)
     return true;
 }
 
-//static inline uint32_t roberts_cross_approx(uint8_t a11, uint8_t a12, uint8_t a21, uint8_t a22)
+// static inline uint32_t roberts_cross_approx(uint8_t a11, uint8_t a12, uint8_t a21, uint8_t a22)
 //{
 //    // we use |Gx| + |Gy| instead of sqrt(Gx^2 + Gy^2), thus an approximation
 //    return (uint32_t)(abs((int)a11 - (int)a22) + abs((int)a12 - (int)a21));

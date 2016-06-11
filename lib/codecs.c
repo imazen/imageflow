@@ -164,7 +164,6 @@ bool flow_job_decoder_set_downscale_hints(flow_c * c, struct flow_job * job, str
     return true;
 }
 
-
 bool flow_job_decoder_set_downscale_hints_by_placeholder_id(flow_c * c, struct flow_job * job, int32_t placeholder_id,
                                                             int64_t if_wider_than, int64_t or_taller_than,
                                                             int64_t downscaled_min_width, int64_t downscaled_min_height,
@@ -189,7 +188,6 @@ bool flow_job_decoder_set_downscale_hints_by_placeholder_id(flow_c * c, struct f
     }
     return true;
 }
-
 
 bool flow_job_decoder_read_frame(flow_c * c, struct flow_job * job, void * codec_state, int64_t type,
                                  struct flow_bitmap_bgra * canvas)

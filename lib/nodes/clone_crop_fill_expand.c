@@ -19,7 +19,7 @@ int32_t flow_node_create_primitive_crop(flow_c * c, struct flow_graph ** g, int3
         FLOW_add_to_callstack(c);
         return id;
     }
-    struct flow_nodeinfo_crop * info = (struct flow_nodeinfo_crop *) flow_node_get_info_pointer(*g, id);
+    struct flow_nodeinfo_crop * info = (struct flow_nodeinfo_crop *)flow_node_get_info_pointer(*g, id);
     info->x1 = x1;
     info->y1 = y1;
     info->x2 = x2;
@@ -37,7 +37,7 @@ int32_t flow_node_create_primitive_copy_rect_to_canvas(flow_c * c, struct flow_g
         return id;
     }
     struct flow_nodeinfo_copy_rect_to_canvas * info
-        = (struct flow_nodeinfo_copy_rect_to_canvas *) flow_node_get_info_pointer(*g, id);
+        = (struct flow_nodeinfo_copy_rect_to_canvas *)flow_node_get_info_pointer(*g, id);
     info->x = x;
     info->y = y;
     info->width = width;
@@ -56,7 +56,7 @@ int32_t flow_node_create_expand_canvas(flow_c * c, struct flow_graph ** g, int32
         return id;
     }
     struct flow_nodeinfo_expand_canvas * info
-        = (struct flow_nodeinfo_expand_canvas *) flow_node_get_info_pointer(*g, id);
+        = (struct flow_nodeinfo_expand_canvas *)flow_node_get_info_pointer(*g, id);
     info->left = left;
     info->top = top;
     info->right = right;
@@ -73,7 +73,7 @@ int32_t flow_node_create_fill_rect(flow_c * c, struct flow_graph ** g, int32_t p
         FLOW_add_to_callstack(c);
         return id;
     }
-    struct flow_nodeinfo_fill_rect * info = (struct flow_nodeinfo_fill_rect *) flow_node_get_info_pointer(*g, id);
+    struct flow_nodeinfo_fill_rect * info = (struct flow_nodeinfo_fill_rect *)flow_node_get_info_pointer(*g, id);
     info->x1 = x1;
     info->y1 = y1;
     info->x2 = x2;

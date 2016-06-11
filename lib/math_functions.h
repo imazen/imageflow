@@ -58,7 +58,6 @@ static inline int intlog2(unsigned int val)
 
 static inline int isPowerOfTwo(unsigned int x) { return ((x != 0) && !(x & (x - 1))); }
 
-
 #ifdef __cplusplus
 }
 #endif

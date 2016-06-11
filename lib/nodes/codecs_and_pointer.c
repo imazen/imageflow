@@ -11,7 +11,7 @@ int32_t flow_node_create_bitmap_bgra_reference(flow_c * c, struct flow_graph ** 
         return id;
     }
     struct flow_nodeinfo_bitmap_bgra_pointer * info
-        = (struct flow_nodeinfo_bitmap_bgra_pointer *) flow_node_get_info_pointer(*g, id);
+        = (struct flow_nodeinfo_bitmap_bgra_pointer *)flow_node_get_info_pointer(*g, id);
     info->ref = pointer_to_pointer_to_bitmap_bgra;
     return id;
 }
@@ -24,7 +24,7 @@ int32_t flow_node_create_decoder(flow_c * c, struct flow_graph ** g, int32_t pre
         return id;
     }
 
-    struct flow_nodeinfo_codec * info = (struct flow_nodeinfo_codec *) flow_node_get_info_pointer(*g, id);
+    struct flow_nodeinfo_codec * info = (struct flow_nodeinfo_codec *)flow_node_get_info_pointer(*g, id);
     info->placeholder_id = placeholder_id;
     info->codec = NULL;
     info->downscale_hints.downscale_if_wider_than = -1;
@@ -37,7 +37,6 @@ int32_t flow_node_create_decoder(flow_c * c, struct flow_graph ** g, int32_t pre
 
     return id;
 }
-
 
 int32_t flow_node_create_encoder_placeholder(flow_c * c, struct flow_graph ** g, int32_t prev_node,
                                              int32_t placeholder_id)
@@ -53,13 +52,13 @@ int32_t flow_node_create_encoder(flow_c * c, struct flow_graph ** g, int32_t pre
         return id;
     }
 
-    struct flow_nodeinfo_codec * info = (struct flow_nodeinfo_codec *) flow_node_get_info_pointer(*g, id);
+    struct flow_nodeinfo_codec * info = (struct flow_nodeinfo_codec *)flow_node_get_info_pointer(*g, id);
     info->placeholder_id = placeholder_id;
     info->codec = NULL;
     info->desired_encoder_id = desired_encoder_id;
 
     info->encoder_hints.jpeg_encode_quality = 90;
-    if (hints != NULL){
+    if (hints != NULL) {
         memcpy(&info->encoder_hints, hints, sizeof(struct flow_encoder_hints));
     }
     return id;
@@ -206,7 +205,7 @@ static bool execute_encode(flow_c * c, struct flow_job * job, struct flow_graph 
         return false;
     }
 
-    if (!def->write_frame(c, NULL,  info->codec->codec_state, n->result_bitmap, &info->encoder_hints)) {
+    if (!def->write_frame(c, NULL, info->codec->codec_state, n->result_bitmap, &info->encoder_hints)) {
         FLOW_error_return(c);
     }
     return true;

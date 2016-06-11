@@ -99,5 +99,3 @@ bool flatten_delete_node(flow_c * c, struct flow_graph ** graph_ref, int32_t nod
     }
     return true;
 }
-
-

@@ -240,7 +240,7 @@ PUB bool flow_bitmap_float_copy_linear_over_srgb(flow_c * c, struct flow_bitmap_
                                                  const uint32_t col_count, const bool transpose);
 
 PUB bool flow_bitmap_bgra_fill_rect(flow_c * c, struct flow_bitmap_bgra * b, uint32_t x1, uint32_t y1, uint32_t x2,
-                                uint32_t y2, uint32_t color_srgb_argb);
+                                    uint32_t y2, uint32_t color_srgb_argb);
 
 PUB bool flow_halve(flow_c * c, const struct flow_bitmap_bgra * from, struct flow_bitmap_bgra * to, int divisor);
 
@@ -356,7 +356,6 @@ struct flow_decoder_downscale_hints {
     bool scale_luma_spatially;
     bool gamma_correct_for_srgb_during_spatial_luma_scaling;
 };
-
 
 struct flow_nodeinfo_codec {
     int32_t placeholder_id;
@@ -499,15 +498,13 @@ struct flow_graph {
 
     float growth_factor;
 };
-struct flow_sanity_check{
+struct flow_sanity_check {
     uint32_t sizeof_bool;
     uint32_t sizeof_int;
     uint32_t sizeof_size_t;
 };
 
-
 PUB void flow_sanity_check(struct flow_sanity_check * info);
-
 
 #undef PUB
 

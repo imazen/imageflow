@@ -2,7 +2,8 @@
 #include "imageflow_private.h"
 #include "helpers.h"
 
-TEST_CASE("Verify .cpp and .c files are being compiled with compatible type sizes"){
+TEST_CASE("Verify .cpp and .c files are being compiled with compatible type sizes")
+{
     struct flow_sanity_check info;
     flow_sanity_check(&info);
     REQUIRE(info.sizeof_bool == sizeof(bool));

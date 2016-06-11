@@ -74,10 +74,10 @@ bool flow_bitmap_float_scale_rows(flow_c * context, struct flow_bitmap_float * f
 
                 /* Accumulate each channel */
                 for (i = left; i <= right; i++) {
-//TODO: Do a better job with this.
+// TODO: Do a better job with this.
 #ifdef __clang__
                     __m128 factor = _mm_set1_ps(weightArray[i - left]);
-                     sums += factor * source_buffer[i];
+                    sums += factor * source_buffer[i];
 #else
                     __m128 factor = _mm_set1_ps(weightArray[i - left]);
                     __m128 mid = _mm_mul_ps(factor, source_buffer[i]);

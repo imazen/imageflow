@@ -220,8 +220,6 @@ struct flow_context_node_set {
     size_t node_definitions_count;
 };
 
-
-
 PUB struct flow_context_codec_set * flow_context_get_default_codec_set(void);
 
 PUB struct flow_context_node_set * flow_context_get_default_node_set(void);
