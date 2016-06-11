@@ -102,6 +102,10 @@ pub struct DecoderInfo {
     pub frame0_post_decode_format: PixelFormat,
 }
 
+#[repr(C)]
+pub struct EncoderHints {
+    pub jpeg_quality: i32
+}
 
 extern "C" {
     pub fn flow_context_create() -> *mut Context;
@@ -192,7 +196,7 @@ extern "C" {
                                     g: *mut *mut Graph,
                                     prev_node: i32,
                                     placeholder_id: i32,
-                                    desired_encoder_id: i64)
+                                    desired_encoder_id: i64, hints: &EncoderHints)
                                     -> i32;
 
     pub fn flow_node_create_primitive_flip_vertical(c: *mut Context,

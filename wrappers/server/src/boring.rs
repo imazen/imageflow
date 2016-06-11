@@ -13,6 +13,7 @@ pub struct BoringCommands {
     pub h: i32,
     pub precise_scaling_ratio: f32,
     pub luma_correct: bool,
+    pub jpeg_quality: i32
 }
 
 pub fn proccess_image(input_path: PathBuf,
@@ -126,8 +127,12 @@ pub fn proccess_image(input_path: PathBuf,
 
         assert!(last > 0);
 
-        last = flow_node_create_encoder(c, (&mut g) as *mut *mut Graph, last, 1, 4);
-        assert!(last == 0);
+        let mut hints = EncoderHints{
+          jpeg_quality: commands.jpeg_quality
+        };
+
+        last = flow_node_create_encoder(c, (&mut g) as *mut *mut Graph, last, 1, 4, &hints);
+        assert!(last > 0);
 
 
         if !flow_job_execute(c, j, (&mut g) as *mut *mut Graph) {
