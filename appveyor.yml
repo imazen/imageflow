@@ -18,8 +18,8 @@ install:
   - set PATH=%PATH%;%PYTHON%/Scripts/;C:\Program Files (x86)\nasm
   - pip.exe install conan
   - conan user # It creates the conan data directory
-  - ps: Start-FileDownload 'https://static.rust-lang.org/dist/rust-nightly-i686-pc-windows-gnu.exe'
-  - rust-nightly-i686-pc-windows-gnu.exe /VERYSILENT /NORESTART /DIR="C:\Program Files (x86)\Rust"
+  - ps: Start-FileDownload 'https://static.rust-lang.org/dist/rust-1.9.0-i686-pc-windows-msvc.exe'
+  - rust-1.9.0-i686-pc-windows-msvc.exe /VERYSILENT /NORESTART /DIR="C:\Program Files (x86)\Rust"
   - SET PATH=%PATH%;C:\Program Files (x86)\Rust\bin
   - rustc -V
   - cargo -V
