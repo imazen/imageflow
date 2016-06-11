@@ -40,6 +40,10 @@ test_script:
   - if "%PLATFORM%"=="x86" cargo build --target=i686-pc-windows-msvc --release
   - if "%PLATFORM%"=="x64" cargo build --target=x86_64-pc-windows-msvc --release
   - cargo test
+  - cd target/release
+  - 7z a %PROJECT_NAME%-%APPVEYOR_REPO_TAG_NAME%-%PLATFORM%.zip *
+  - appveyor PushArtifact %PROJECT_NAME%-%APPVEYOR_REPO_TAG_NAME%-%PLATFORM%.zip
+
 
 
 artifacts:
