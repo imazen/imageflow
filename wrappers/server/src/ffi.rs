@@ -245,7 +245,7 @@ extern "C" {
 #[test]
 fn flow_context_create_destroy_works() {
     unsafe {
-        let mut c = flow_context_create();
+        let c = flow_context_create();
         assert!(!c.is_null());
 
         flow_context_destroy(c);
@@ -255,10 +255,10 @@ fn flow_context_create_destroy_works() {
 #[test]
 fn flow_job_creation_works() {
     unsafe {
-        let mut c = flow_context_create();
+        let c = flow_context_create();
         assert!(!c.is_null());
 
-        let mut j = flow_job_create(c);
+        let j = flow_job_create(c);
         assert!(!j.is_null());
 
         flow_context_destroy(c);
@@ -269,22 +269,22 @@ fn flow_job_creation_works() {
 #[test]
 fn flow_graph_creation_works() {
     unsafe {
-        let mut c = flow_context_create();
+        let c = flow_context_create();
         assert!(!c.is_null());
 
         let mut g = flow_graph_create(c, 10, 10, 10, 2.0);
         assert!(!g.is_null());
 
-        let mut j = flow_job_create(c);
+        let j = flow_job_create(c);
         assert!(!j.is_null());
 
-        let mut last = flow_node_create_canvas(c,
-                                               (&mut g) as *mut *mut Graph,
-                                               -1,
-                                               PixelFormat::bgra32,
-                                               100,
-                                               100,
-                                               0);
+        let last = flow_node_create_canvas(c,
+                                           (&mut g) as *mut *mut Graph,
+                                           -1,
+                                           PixelFormat::bgra32,
+                                           100,
+                                           100,
+                                           0);
         assert!(last == 0);
 
         flow_context_destroy(c);

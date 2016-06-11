@@ -1,6 +1,7 @@
 use ffi::*;
 use std::ffi::*;
 extern crate libc;
+use std::path::PathBuf;
 
 pub enum ConstraintMode {
     Max,
@@ -14,7 +15,10 @@ pub struct BoringCommands {
     pub luma_correct: bool,
 }
 
-pub fn proccess_image(input_path: &str, output_path: &str, commands: BoringCommands) {
+pub fn proccess_image(input_path: PathBuf,
+                      output_path: PathBuf,
+                      commands: BoringCommands)
+                      -> Result<(), String> {
     unsafe {
 
         let c = flow_context_create();
@@ -30,32 +34,42 @@ pub fn proccess_image(input_path: &str, output_path: &str, commands: BoringComma
         let j = flow_job_create(c);
         assert!(!j.is_null());
 
+        let c_input_path = CString::new(input_path.to_str().unwrap().as_bytes()).unwrap();
 
-
-        let c_input_path = CString::new(input_path.as_bytes()).unwrap();
-
-        let c_output_path = CString::new(output_path.as_bytes()).unwrap();
+        let c_output_path = CString::new(output_path.to_str().unwrap().as_bytes()).unwrap();
 
         let input_io = flow_io_create_for_file(c,
                                                IoMode::read_seekable,
                                                c_input_path.as_ptr(),
                                                c as *mut libc::c_void);
-        assert!(!input_io.is_null());
 
-        assert!(flow_job_add_io(c, j, input_io, 0, IoDirection::In));
+        // TODO! Lots of error handling needed here. IO create/add can fail
+        if input_io.is_null() {
+            flow_context_print_and_exit_if_err(c);
+        }
+
+        if !flow_job_add_io(c, j, input_io, 0, IoDirection::In) {
+            flow_context_print_and_exit_if_err(c);
+        }
 
         let output_io = flow_io_create_for_file(c,
                                                 IoMode::write_seekable,
                                                 c_output_path.as_ptr(),
                                                 c as *mut libc::c_void);
 
-        assert!(!output_io.is_null());
+        if output_io.is_null() {
+            flow_context_print_and_exit_if_err(c);
+        }
 
-        assert!(flow_job_add_io(c, j, output_io, 1, IoDirection::Out));
+        if !flow_job_add_io(c, j, output_io, 1, IoDirection::Out) {
+            flow_context_print_and_exit_if_err(c);
+        }
 
         let mut info = DecoderInfo { ..Default::default() };
 
-        assert!(flow_job_get_decoder_info(c, j, 0, &mut info));
+        if !flow_job_get_decoder_info(c, j, 0, &mut info) {
+            flow_context_print_and_exit_if_err(c);
+        }
 
 
         let constraint_ratio = (commands.w as f32) / (commands.h as f32);
@@ -79,15 +93,17 @@ pub fn proccess_image(input_path: &str, output_path: &str, commands: BoringComma
 
         let pre_w = ((final_w as f32) * trigger_ratio).round() as i64;
         let pre_h = ((final_h as f32) * trigger_ratio).round() as i64;
-        flow_job_decoder_set_downscale_hints_by_placeholder_id(c,
-                                                               j,
-                                                               0,
-                                                               pre_w,
-                                                               pre_h,
-                                                               pre_w,
-                                                               pre_h,
-                                                               commands.luma_correct,
-                                                               commands.luma_correct);
+        if !flow_job_decoder_set_downscale_hints_by_placeholder_id(c,
+                                                                   j,
+                                                                   0,
+                                                                   pre_w,
+                                                                   pre_h,
+                                                                   pre_w,
+                                                                   pre_h,
+                                                                   commands.luma_correct,
+                                                                   commands.luma_correct) {
+            flow_context_print_and_exit_if_err(c);
+        }
 
 
         // println!("Scale {}x{} down to {}x{} (jpeg)", info.frame0_width, info.frame0_height, final_w, final_h);
@@ -108,29 +124,24 @@ pub fn proccess_image(input_path: &str, output_path: &str, commands: BoringComma
                                       Filter::Robidoux,
                                       0);
 
+        assert!(last > 0);
 
-
-        flow_node_create_encoder(c, (&mut g) as *mut *mut Graph, last, 1, 4);
-
+        last = flow_node_create_encoder(c, (&mut g) as *mut *mut Graph, last, 1, 4);
+        assert!(last == 0);
 
 
         if !flow_job_execute(c, j, (&mut g) as *mut *mut Graph) {
             flow_context_print_and_exit_if_err(c);
         }
 
-        // (&mut x) as *mut _ as *mut *mut libc::c_voi
+        // TODO: call both cleanup functions and print errors
+
+        if !flow_context_begin_terminate(c) {
+            flow_context_print_and_exit_if_err(c);
+        }
 
         flow_context_destroy(c);
 
-        // println!("Done.");
-
-
-    }
-}
-
-#[test]
-fn it_works() {
-    unsafe {
-        let c = flow_context_create();
+        Ok(())
     }
 }
