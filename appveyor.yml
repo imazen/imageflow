@@ -45,8 +45,6 @@ test_script:
 
 
 artifacts:
-  - path: 'wrappers/server/target/release/*'
+  - path: 'wrappers/server/target/**/flow-proto1.exe'
     name: Rust binaries
-    type: zip
-  - path: 'wrappers/server/target/release/flow-proto1.exe'
-    name: flow-proto1
+
