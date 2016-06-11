@@ -39,10 +39,8 @@ test_script:
   - ps: (Get-Content conan_cargo_build.rs).replace('\', '\\') | Set-Content conan_cargo_build.rs
   - if "%PLATFORM%"=="x86" cargo build --target=i686-pc-windows-msvc --release
   - if "%PLATFORM%"=="x64" cargo build --target=x86_64-pc-windows-msvc --release
-  - cargo test
-  - cd target/release
-  - 7z a "%PROJECT_NAME%_%APPVEYOR_REPO_TAG_NAME%_%PLATFORM%.zip" *
-  - appveyor PushArtifact "%PROJECT_NAME%_%APPVEYOR_REPO_TAG_NAME%_%PLATFORM%.zip"
+  - 7z a "%APPVEYOR_PROJECT_SLUG%_%APPVEYOR_REPO_TAG_NAME%_%PLATFORM%.zip" *
+  - appveyor PushArtifact "%APPVEYOR_PROJECT_SLUG%_%APPVEYOR_REPO_TAG_NAME%_%PLATFORM%.zip"
 
 
 
