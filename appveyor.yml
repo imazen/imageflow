@@ -18,8 +18,8 @@ install:
   - set PATH=%PATH%;%PYTHON%/Scripts/;C:\Program Files (x86)\nasm
   - pip.exe install conan
   - conan user # It creates the conan data directory
-  - ps: Start-FileDownload 'https://static.rust-lang.org/dist/rust-1.9.0-i686-pc-windows-msvc.exe'
-  - rust-1.9.0-i686-pc-windows-msvc.exe /VERYSILENT /NORESTART /DIR="C:\Program Files (x86)\Rust"
+  - ps: Start-FileDownload 'https://static.rust-lang.org/dist/rust-1.9.0-x86_64-pc-windows-msvc.exe'
+  - rust-1.9.0-x86_64-pc-windows-msvc.exe /VERYSILENT /NORESTART /DIR="C:\Program Files (x86)\Rust"
   - SET PATH=%PATH%;C:\Program Files (x86)\Rust\bin
   - rustc -V
   - cargo -V
@@ -34,6 +34,7 @@ test_script:
   - conan export lasote/testing
   - cd wrappers/server
   - conan install --build missing
+  - ps: (Get-Content conan_cargo_build.rs).replace('\', '\\') | Set-Content conan_cargo_build.rs
   - if "%PLATFORM%"=="x86" cargo build --target=i686-pc-windows-msvc
   - if "%PLATFORM%"=="x64" cargo build --target=x86_64-pc-windows-msvc
   - cargo test
