@@ -17,6 +17,11 @@ install:
   - set PATH=%PATH%;%PYTHON%/Scripts/;C:\Program Files (x86)\nasm
   - pip.exe install conan
   - conan user # It creates the conan data directory
+  - ps: Start-FileDownload 'https://static.rust-lang.org/dist/rust-nightly-i686-pc-windows-gnu.exe'
+  - rust-nightly-i686-pc-windows-gnu.exe /VERYSILENT /NORESTART /DIR="C:\Program Files (x86)\Rust"
+  - SET PATH=%PATH%;C:\Program Files (x86)\Rust\bin
+  - rustc -V
+  - cargo -V
 
 test_script:
   - mkdir build
@@ -24,4 +29,14 @@ test_script:
   - if "%PLATFORM%"=="x86" conan install -o build_tests=True -o shared=True --build missing  -s build_type=Release -s arch=x86 -u ../
   - if "%PLATFORM%"=="x64" conan install -o build_tests=True -o shared=True --build missing  -s build_type=Release -s arch=x86_64  -u ../
   - conan build ../
+  - conan export lasote/testing
+  - cd ../wrappers/server
+  - conan install --build missing
+  - cargo build
+  - cargo test
+
+artifacts:
+  - path: 'wrappers/server/target/release/*.*'
+    name: Rust binaries
+    type: zip
 
