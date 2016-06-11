@@ -56,6 +56,7 @@ struct flow_job_jpeg_encoder_state {
     size_t codec_id; // MUST be fourth
     struct jpeg_compress_struct cinfo;
     struct flow_io * io;
+    int32_t quality;
 };
 
 #ifdef __cplusplus

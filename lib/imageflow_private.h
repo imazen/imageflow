@@ -356,6 +356,8 @@ struct flow_decoder_downscale_hints {
     bool scale_luma_spatially;
     bool gamma_correct_for_srgb_during_spatial_luma_scaling;
 };
+
+
 struct flow_nodeinfo_codec {
     int32_t placeholder_id;
     struct flow_codec_instance * codec;
@@ -363,6 +365,7 @@ struct flow_nodeinfo_codec {
     int64_t desired_encoder_id;
     // For decdoers
     struct flow_decoder_downscale_hints downscale_hints;
+    struct flow_encoder_hints encoder_hints;
 };
 
 struct flow_nodeinfo_render_to_canvas_1d {

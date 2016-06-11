@@ -33,16 +33,19 @@ int32_t flow_node_create_decoder(flow_c * c, struct flow_graph ** g, int32_t pre
     info->downscale_hints.downscaled_min_width = -1;
     info->downscale_hints.gamma_correct_for_srgb_during_spatial_luma_scaling = false;
     info->downscale_hints.scale_luma_spatially = false;
+    info->encoder_hints.jpeg_encode_quality = 0;
 
     return id;
 }
+
+
 int32_t flow_node_create_encoder_placeholder(flow_c * c, struct flow_graph ** g, int32_t prev_node,
                                              int32_t placeholder_id)
 {
-    return flow_node_create_encoder(c, g, prev_node, placeholder_id, 0);
+    return flow_node_create_encoder(c, g, prev_node, placeholder_id, 0, NULL);
 }
 int32_t flow_node_create_encoder(flow_c * c, struct flow_graph ** g, int32_t prev_node, int32_t placeholder_id,
-                                 int64_t desired_encoder_id)
+                                 int64_t desired_encoder_id, struct flow_encoder_hints * hints)
 {
     int32_t id = flow_node_create_generic(c, g, prev_node, flow_ntype_encoder);
     if (id < 0) {
@@ -54,6 +57,11 @@ int32_t flow_node_create_encoder(flow_c * c, struct flow_graph ** g, int32_t pre
     info->placeholder_id = placeholder_id;
     info->codec = NULL;
     info->desired_encoder_id = desired_encoder_id;
+
+    info->encoder_hints.jpeg_encode_quality = 90;
+    if (hints != NULL){
+        memcpy(&info->encoder_hints, hints, sizeof(struct flow_encoder_hints));
+    }
     return id;
 }
 
@@ -198,7 +206,7 @@ static bool execute_encode(flow_c * c, struct flow_job * job, struct flow_graph 
         return false;
     }
 
-    if (!def->write_frame(c, NULL, info->codec->codec_state, n->result_bitmap)) {
+    if (!def->write_frame(c, NULL,  info->codec->codec_state, n->result_bitmap, &info->encoder_hints)) {
         FLOW_error_return(c);
     }
     return true;

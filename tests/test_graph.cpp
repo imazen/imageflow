@@ -251,7 +251,7 @@ bool create_operation_graph(flow_c * c, struct flow_graph ** graph_ref, int32_t 
     // Keep the original format if png or jpeg
     size_t encoder_id = info->codec_id == flow_codec_type_decode_jpeg ? flow_codec_type_encode_jpeg
                                                                       : flow_codec_type_encode_png;
-    last = flow_node_create_encoder(c, &g, last, output_placeholder, encoder_id);
+    last = flow_node_create_encoder(c, &g, last, output_placeholder, encoder_id, NULL);
 
     if (flow_context_has_error(c)) {
         FLOW_add_to_callstack(c);
@@ -438,7 +438,7 @@ TEST_CASE("export frames of animated gif", "")
         struct flow_graph * g = flow_graph_create(c, 10, 10, 200, 2.0);
         ERR(c);
         last = flow_node_create_decoder(c, &g, -1, input_placeholder);
-        last = flow_node_create_encoder(c, &g, last, output_placeholder, flow_codec_type_encode_png);
+        last = flow_node_create_encoder(c, &g, last, output_placeholder, flow_codec_type_encode_png, NULL);
 
         if (!flow_job_decoder_switch_frame(c, job, input_placeholder, i)) {
             ERR(c);
@@ -473,7 +473,7 @@ TEST_CASE("scale and flip and crop jpg", "")
     last = flow_node_create_primitive_flip_vertical(c, &g, last);
     last = flow_node_create_primitive_crop(c, &g, last, 20, 10, 80, 40);
 
-    last = flow_node_create_encoder(c, &g, last, output_placeholder, flow_codec_type_encode_jpeg);
+    last = flow_node_create_encoder(c, &g, last, output_placeholder, flow_codec_type_encode_jpeg, NULL);
 
     execute_graph_for_url(c, "http://s3-us-west-2.amazonaws.com/imageflow-resources/test_inputs/mountain_800.jpg",
                           "graph_flipped_cropped_from_jpeg.jpg", &g);
@@ -492,7 +492,7 @@ TEST_CASE("benchmark scaling large progressive jpg", "")
     last = flow_node_create_decoder(c, &g, -1, input_placeholder);
     last = flow_node_create_scale(c, &g, last, 800, 800, (flow_interpolation_filter_Robidoux),
                                   (flow_interpolation_filter_Robidoux), 0);
-    last = flow_node_create_encoder(c, &g, last, output_placeholder, flow_codec_type_encode_jpeg);
+    last = flow_node_create_encoder(c, &g, last, output_placeholder, flow_codec_type_encode_jpeg, NULL);
 
     execute_graph_for_url(c, "http://s3.amazonaws.com/resizer-dynamic-downloads/imageflow_test_suite/4kx4k.jpg",
                           "graph_large_jpeg.jpg", &g);
@@ -511,7 +511,7 @@ TEST_CASE("benchmark scaling large jpg", "")
     last = flow_node_create_decoder(c, &g, -1, input_placeholder);
     last = flow_node_create_scale(c, &g, last, 800, 800, (flow_interpolation_filter_Robidoux),
                                   (flow_interpolation_filter_Robidoux), 0);
-    last = flow_node_create_encoder(c, &g, last, output_placeholder, flow_codec_type_encode_jpeg);
+    last = flow_node_create_encoder(c, &g, last, output_placeholder, flow_codec_type_encode_jpeg, NULL);
 
     execute_graph_for_url(c,
                           "http://s3.amazonaws.com/resizer-dynamic-downloads/imageflow_test_suite/4kx4k_baseline.jpg",

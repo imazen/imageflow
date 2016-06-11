@@ -420,7 +420,7 @@ static void png_encoder_error_handler(png_structp png_ptr, png_const_charp msg)
 static void png_flush_nullop(png_structp png_ptr) {}
 
 static bool flow_job_codecs_png_write_frame(flow_c * c, struct flow_job * job, void * codec_state,
-                                            struct flow_bitmap_bgra * frame)
+                                            struct flow_bitmap_bgra * frame, struct flow_encoder_hints * hints)
 {
     struct flow_job_png_encoder_state * state = (struct flow_job_png_encoder_state *)codec_state;
     state->context = c;
@@ -505,7 +505,7 @@ bool flow_bitmap_bgra_write_png(flow_c * c, struct flow_job * job, struct flow_b
         FLOW_error_return(c);
     }
 
-    if (!flow_job_codecs_png_write_frame(c, job, instance.codec_state, frame)) {
+    if (!flow_job_codecs_png_write_frame(c, job, instance.codec_state, frame, NULL)) {
         FLOW_error_return(c);
     }
     return true;

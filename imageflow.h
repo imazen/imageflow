@@ -254,6 +254,10 @@ struct flow_graph;
 struct flow_bitmap_bgra;
 struct flow_nodeinfo_scale2d_render_to_canvas1d;
 
+struct flow_encoder_hints{
+    int32_t jpeg_encode_quality;
+};
+
 PUB flow_c * flow_context_create(void);
 
 // When you need to control 100% of heap operations, you can allocate
@@ -373,7 +377,7 @@ PUB int32_t
     flow_node_create_encoder_placeholder(flow_c * c, struct flow_graph ** g, int32_t prev_node, int32_t output_slot_id);
 
 PUB int32_t flow_node_create_encoder(flow_c * c, struct flow_graph ** g, int32_t prev_node, int32_t placeholder_id,
-                                     int64_t desired_encoder_id);
+                                     int64_t desired_encoder_id, struct flow_encoder_hints * hints);
 
 PUB int32_t flow_node_create_noop(flow_c * c, struct flow_graph ** g, int32_t prev_node);
 

@@ -19,6 +19,7 @@ struct flow_profiling_log;
 struct flow_profiling_entry;
 struct flow_convolution_kernel;
 struct flow_Renderer;
+struct flow_encoder_hints;
 
 ////////////////////////////////////////////
 //  Portable snprintf
@@ -182,7 +183,7 @@ typedef bool (*codec_read_frame_fn)(flow_c * c, struct flow_job * job, void * co
                                     struct flow_bitmap_bgra * canvas);
 
 typedef bool (*codec_write_frame_fn)(flow_c * c, struct flow_job * job, void * codec_state,
-                                     struct flow_bitmap_bgra * frame);
+                                     struct flow_bitmap_bgra * frame, struct flow_encoder_hints * hints);
 
 typedef bool (*codec_stringify_fn)(flow_c * c, struct flow_job * job, void * codec_state, char * buffer,
                                    size_t buffer_size);
@@ -218,6 +219,8 @@ struct flow_context_node_set {
     struct flow_node_definition * node_definitions;
     size_t node_definitions_count;
 };
+
+
 
 PUB struct flow_context_codec_set * flow_context_get_default_codec_set(void);
 

@@ -499,7 +499,7 @@ module Imageflow
 
     #should probably add to everything: , blocking: true
 
-    attach_function :flow_node_create_encoder, [:pointer, :pointer, :int32, :int32, :uint64], :int32
+    attach_function :flow_node_create_encoder, [:pointer, :pointer, :int32, :int32, :uint64, :pointer], :int32
     attach_function :flow_node_create_primitive_copy_rect_to_canvas, [:pointer, :pointer, :int32, :uint32, :uint32, :uint32, :uint32, :uint32, :uint32], :int32
     attach_function :flow_node_create_primitive_crop, [:pointer, :pointer, :int32, :uint32, :uint32, :uint32, :uint32], :int32
     attach_function :flow_node_create_render_to_canvas_1d, [:pointer, :pointer, :int32, :bool, :uint32, :uint32, :int32, :int, :float, :int, :pointer, :pointer, :int], :pointer

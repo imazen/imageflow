@@ -544,7 +544,7 @@ static bool flow_job_codecs_initialize_encode_jpeg(flow_c * c, struct flow_job *
 }
 
 static bool flow_job_codecs_jpeg_write_frame(flow_c * c, struct flow_job * job, void * codec_state,
-                                             struct flow_bitmap_bgra * frame)
+                                             struct flow_bitmap_bgra * frame, struct flow_encoder_hints * hints)
 {
     struct flow_job_jpeg_encoder_state * state = (struct flow_job_jpeg_encoder_state *)codec_state;
     state->context = c;
@@ -570,7 +570,9 @@ static bool flow_job_codecs_jpeg_write_frame(flow_c * c, struct flow_job * job, 
 
     jpeg_set_defaults(&state->cinfo);
 
-    int quality = 90;
+    int32_t quality = hints == NULL ? 90 : hints->jpeg_encode_quality;
+    if (quality <= 0) quality = 90;
+    if (quality > 100) quality = 100;
 
     jpeg_set_quality(&state->cinfo, quality, TRUE /* limit to baseline-JPEG values */);
 
