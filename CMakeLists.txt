@@ -103,7 +103,7 @@ if(ENABLE_TEST)
 #	create_test(test_weighting  tests/test_weighting.cpp tests/test_weighting_helpers.cpp )
 
 	add_custom_target(do_nothing)
-	# Theft library don't compile in windows
+	# Theft library doesn't compile in windows
 	if(UNIX)
 		create_test(test_theft_render tests/test_theft_render.cpp)
 	endif()

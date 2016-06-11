@@ -92,3 +92,5 @@ class ImageFlowConan(ConanFile):
 
     def package_info(self):
         self.cpp_info.libs = ['imageflow']
+        self.cpp_info.defines = ["imageflow_BUILD_SHARED"] if self.options.shared else ["imageflow_BUILD_STATIC"]
+
