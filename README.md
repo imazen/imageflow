@@ -1,10 +1,11 @@
 # ![imageflow](https://www.imageflow.io/images/imageflow.svg) = libimageflow + imageflow-server
 
-## [Support our Kickstarter!](https://www.kickstarter.com/projects/njones/imageflow-respect-the-pixels-a-secure-alt-to-image)
+## [Kickstarter ends June 27th](https://www.kickstarter.com/projects/njones/imageflow-respect-the-pixels-a-secure-alt-to-image)
+Access precompiled binaries (just a command-line tool now; server coming later) by pledging $1. 
 
-Pledge $1 to get early access to binaries. 
+--- 
 
-ImageFlow will bring world-class image quality and performance to all languages through a C-compatible API (libimageflow) and an evolvable operation graph, with initial focus on Node and Ruby. Linux, Mac, and Windows support is planned.  
+Imageflow will bring world-class image quality and performance to all languages through a C-compatible API (libimageflow) and a separate RESTful turnkey HTTP server. Linux, Mac, and Windows are supported.
 
 ----
 
