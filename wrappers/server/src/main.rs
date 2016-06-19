@@ -17,6 +17,18 @@ use router::Router;
 use std::io::Read;
 use time::precise_time_ns;
 
+// This Rust server was built one saturday evening to exercise various
+// bits of the stack. It's not safe (nor safer than a C equivalent), and
+// we're not using Rust idomatically or correctly. Nothing is re-entrant,
+// and errors panic the process. It's one build to throw away; a learning experiment.
+//
+// Run with cargo run --bin imageflow-server
+//
+// Open in your browser: http://localhost:3000/proto1/scale_unsplash_jpeg/1200/1200/photo-1436891678271-9c672565d8f6
+//
+
+
+
 
 fn create_io(c: *mut Context, source_bytes: *const u8, count: usize) -> Vec<IoResource> {
     unsafe {
@@ -100,9 +112,11 @@ fn get_jpeg_bytes(source: &str, w: Option<u32>, h: Option<u32>) -> Vec<u8> {
 
     std::mem::forget(source_bytes);
 
-    let fetch =  downloaded - start;
+    let fetch = downloaded - start;
     let delta = precise_time_ns() - downloaded;
-    println!("HTTP fetch took: {} ms, processing took {} ms",(fetch as f64) / 1000000.0,  (delta as f64) / 1000000.0);
+    println!("HTTP fetch took: {} ms, processing took {} ms",
+             (fetch as f64) / 1000000.0,
+             (delta as f64) / 1000000.0);
 
     return bytes.unwrap();
 
