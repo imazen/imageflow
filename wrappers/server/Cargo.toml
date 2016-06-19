@@ -8,9 +8,11 @@ links = "imageflow"
 [dependencies]
 libc = "0.2.0"
 clap = "2"
-
-[dependencies.iron]
-version = "*"
+router = "*"
+iron = "*"
+time = "*"
+hyper = "*"
+rustc-serialize = "*"
 
 [build-dependencies]
 cmake = "0.1.17"

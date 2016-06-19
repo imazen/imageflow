@@ -17,43 +17,52 @@ fn build_app() -> App<'static, 'static> {
     App::new("flow-proto1")
         .version("0.0.1")
         .author("Email us at imageflow@imazen.io")
-        .about("Throwaway prototype tool to play with downscaling jpegs via libimageflow. Not for production use. Optimizations disabled on Windows; expect poor perf there. Lots of things are broken, but you should still tell us about them.")
+        .about("Throwaway prototype tool to play with downscaling jpegs via libimageflow. Not for \
+                production use. Optimizations disabled on Windows; expect poor perf there. Lots \
+                of things are broken, but you should still tell us about them.")
         .arg(Arg::with_name("v")
-            .short("v").long("verbose")
+            .short("v")
+            .long("verbose")
             .multiple(true)
             .help("Sets the level of verbosity"))
         .arg(Arg::with_name("input")
-            .short("i").long("input")
+            .short("i")
+            .long("input")
             .value_name("FILEIN")
             .takes_value(true)
             .required(true)
             .help("path to input file"))
         .arg(Arg::with_name("output")
-            .short("o").long("output")
+            .short("o")
+            .long("output")
             .value_name("FILEOUT")
             .takes_value(true)
             .required(true)
             .help("path to output file"))
         .arg(Arg::with_name("width")
-            .short("w").long("width")
+            .short("w")
+            .long("width")
             .value_name("WIDTH")
             .takes_value(true)
             .required(true)
             .help("scale to this width or smaller."))
         .arg(Arg::with_name("height")
-            .short("h").long("height")
+            .short("h")
+            .long("height")
             .value_name("HEIGHT")
             .takes_value(true)
             .required(true)
             .help("scale to this height or smaller."))
-        .arg(Arg::with_name("jpeg-quality").long("jpeg-quality")
+        .arg(Arg::with_name("jpeg-quality")
+            .long("jpeg-quality")
             .value_name("0..100")
             .takes_value(true)
             .help("Jpeg compression level."))
         .arg(Arg::with_name("incorrectgamma")
             .long("incorrectgamma")
             .help("Enables incorrect gamma handling (for benchmarking comparison purposes)."))
-        .arg(Arg::with_name("min_precise_scaling_ratio").long("min_precise_scaling_ratio")
+        .arg(Arg::with_name("min_precise_scaling_ratio")
+            .long("min_precise_scaling_ratio")
             .short("mpsr")
             .value_name("MINRATIO")
             .takes_value(true)
@@ -126,7 +135,7 @@ fn main() {
     let matches = build_app().get_matches();
 
     let result = match parse(matches) {
-        Ok(c) => proccess_image(c.input_file, c.output_file, c.commands),
+        Ok(c) => process_image_by_paths(c.input_file, c.output_file, c.commands),
         Err(e) => Err(e),
     };
 
@@ -149,7 +158,7 @@ fn test_correct_parsing() {
     parse(build_app().get_matches_from(valid_args)).expect("To parse correctly");
 
 
-    //std::fs::remove_file("delete.jpg").unwrap();
+    // std::fs::remove_file("delete.jpg").unwrap();
 
 
 }
@@ -158,17 +167,21 @@ fn test_correct_parsing() {
 fn test_correct_execution() {
 
     {
-  
+
         let mut f = File::create("test_input.jpg").unwrap();
 
 
-        let jpeg_bytes = &[0xFF, 0xD8, 0xFF, 0xE0, 0x00, 0x10, 0x4A, 0x46, 0x49, 0x46, 0x00, 0x01, 0x01, 0x01, 0x00, 0x48, 0x00, 0x48, 0x00, 0x00,
-            0xFF, 0xDB, 0x00, 0x43, 0x00, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
-            0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
-            0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
-            0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xC2, 0x00, 0x0B, 0x08, 0x00, 0x01, 0x00, 0x01, 0x01, 0x01,
-            0x11, 0x00, 0xFF, 0xC4, 0x00, 0x14, 0x10, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-            0x00, 0x00, 0x00, 0x00, 0xFF, 0xDA, 0x00, 0x08, 0x01, 0x01, 0x00, 0x01, 0x3F, 0x10];
+        let jpeg_bytes =
+            &[0xFF, 0xD8, 0xFF, 0xE0, 0x00, 0x10, 0x4A, 0x46, 0x49, 0x46, 0x00, 0x01, 0x01, 0x01,
+              0x00, 0x48, 0x00, 0x48, 0x00, 0x00, 0xFF, 0xDB, 0x00, 0x43, 0x00, 0xFF, 0xFF, 0xFF,
+              0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
+              0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
+              0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
+              0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
+              0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xC2, 0x00, 0x0B, 0x08, 0x00, 0x01, 0x00, 0x01,
+              0x01, 0x01, 0x11, 0x00, 0xFF, 0xC4, 0x00, 0x14, 0x10, 0x01, 0x00, 0x00, 0x00, 0x00,
+              0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xFF, 0xDA,
+              0x00, 0x08, 0x01, 0x01, 0x00, 0x01, 0x3F, 0x10];
 
 
         f.write_all(jpeg_bytes).unwrap();
@@ -176,14 +189,18 @@ fn test_correct_execution() {
         drop(f);
     }
 
-    let valid_args = vec!["flow-proto1", "-i", "test_input.jpg", "-o", "b.jpg", "-w", "20", "-h", "20"];
+    let valid_args =
+        vec!["flow-proto1", "-i", "test_input.jpg", "-o", "b.jpg", "-w", "20", "-h", "20"];
 
-    let parsed_result = parse(build_app().get_matches_from(valid_args)).expect("To parse correctly");
+    let parsed_result = parse(build_app().get_matches_from(valid_args))
+        .expect("To parse correctly");
 
-    let result = proccess_image(parsed_result.input_file, parsed_result.output_file, parsed_result.commands);
+    process_image_by_paths(parsed_result.input_file,
+                           parsed_result.output_file,
+                           parsed_result.commands)
+        .unwrap();
 
-    //std::fs::remove_file("delete.jpg").unwrap();
+    // std::fs::remove_file("delete.jpg").unwrap();
 
 
 }
-

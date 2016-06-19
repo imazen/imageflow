@@ -13,13 +13,78 @@ pub struct BoringCommands {
     pub h: i32,
     pub precise_scaling_ratio: f32,
     pub luma_correct: bool,
-    pub jpeg_quality: i32
+    pub jpeg_quality: i32,
 }
 
-pub fn proccess_image(input_path: PathBuf,
-                      output_path: PathBuf,
-                      commands: BoringCommands)
-                      -> Result<(), String> {
+
+pub fn process_image_by_paths(input_path: PathBuf,
+                              output_path: PathBuf,
+                              commands: BoringCommands)
+                              -> Result<(), String> {
+
+
+    let c_input_path = CString::new(input_path.to_str().unwrap().as_bytes()).unwrap().into_raw();
+
+    let c_output_path = CString::new(output_path.to_str().unwrap().as_bytes()).unwrap().into_raw();
+
+    let result = process_image(commands,
+                               |c| {
+
+        unsafe {
+
+
+
+            let input_io = flow_io_create_for_file(c,
+                                                   IoMode::read_seekable,
+                                                   c_input_path,
+                                                   c as *mut libc::c_void);
+
+            // TODO! Lots of error handling needed here. IO create/add can fail
+            if input_io.is_null() {
+                flow_context_print_and_exit_if_err(c);
+            }
+            let output_io = flow_io_create_for_file(c,
+                                                    IoMode::write_seekable,
+                                                    c_output_path,
+                                                    c as *mut libc::c_void);
+            if output_io.is_null() {
+                flow_context_print_and_exit_if_err(c);
+            }
+
+
+            vec![IoResource {
+                     io: input_io,
+                     direction: IoDirection::In,
+                 },
+                 IoResource {
+                     io: output_io,
+                     direction: IoDirection::Out,
+                 }]
+        }
+    },
+                               |_, _| Ok(()));
+
+    // Bring the paths back into Rust ownership so they can be collected.
+    unsafe {
+        CString::from_raw(c_input_path);
+        CString::from_raw(c_output_path);
+    }
+    return result;
+}
+
+
+pub struct IoResource {
+    pub io: *mut JobIO,
+    pub direction: IoDirection,
+}
+
+pub fn process_image<F, C, R>(commands: BoringCommands,
+                              io_provider: F,
+                              cleanup: C)
+                              -> Result<R, String>
+    where F: Fn(*mut Context) -> Vec<IoResource>,
+          C: Fn(*mut Context, *mut Job) -> Result<R, String>
+{
     unsafe {
 
         let c = flow_context_create();
@@ -35,35 +100,16 @@ pub fn proccess_image(input_path: PathBuf,
         let j = flow_job_create(c);
         assert!(!j.is_null());
 
-        let c_input_path = CString::new(input_path.to_str().unwrap().as_bytes()).unwrap();
 
-        let c_output_path = CString::new(output_path.to_str().unwrap().as_bytes()).unwrap();
+        let mut inputs = io_provider(c);
 
-        let input_io = flow_io_create_for_file(c,
-                                               IoMode::read_seekable,
-                                               c_input_path.as_ptr(),
-                                               c as *mut libc::c_void);
 
-        // TODO! Lots of error handling needed here. IO create/add can fail
-        if input_io.is_null() {
-            flow_context_print_and_exit_if_err(c);
-        }
+        for (index, input) in inputs.iter_mut().enumerate() {
+            // TODO! Lots of error handling needed here. IO create/add can fail
+            if !flow_job_add_io(c, j, input.io, index as i32, input.direction.clone()) {
+                flow_context_print_and_exit_if_err(c);
+            }
 
-        if !flow_job_add_io(c, j, input_io, 0, IoDirection::In) {
-            flow_context_print_and_exit_if_err(c);
-        }
-
-        let output_io = flow_io_create_for_file(c,
-                                                IoMode::write_seekable,
-                                                c_output_path.as_ptr(),
-                                                c as *mut libc::c_void);
-
-        if output_io.is_null() {
-            flow_context_print_and_exit_if_err(c);
-        }
-
-        if !flow_job_add_io(c, j, output_io, 1, IoDirection::Out) {
-            flow_context_print_and_exit_if_err(c);
         }
 
         let mut info = DecoderInfo { ..Default::default() };
@@ -127,9 +173,7 @@ pub fn proccess_image(input_path: PathBuf,
 
         assert!(last > 0);
 
-        let mut hints = EncoderHints{
-          jpeg_quality: commands.jpeg_quality
-        };
+        let hints = EncoderHints { jpeg_quality: commands.jpeg_quality };
 
         last = flow_node_create_encoder(c, (&mut g) as *mut *mut Graph, last, 1, 4, &hints);
         assert!(last > 0);
@@ -139,6 +183,7 @@ pub fn proccess_image(input_path: PathBuf,
             flow_context_print_and_exit_if_err(c);
         }
 
+        let result = cleanup(c, j);
         // TODO: call both cleanup functions and print errors
 
         if !flow_context_begin_terminate(c) {
@@ -147,6 +192,6 @@ pub fn proccess_image(input_path: PathBuf,
 
         flow_context_destroy(c);
 
-        Ok(())
+        return result;
     }
 }

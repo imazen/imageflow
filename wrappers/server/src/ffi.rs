@@ -20,12 +20,14 @@ pub enum IoMode {
     read_write_seekable = 15, // 1 | 2 | 4 | 8
 }
 #[repr(C)]
+#[derive(Copy,Clone)]
 pub enum IoDirection {
     Out = 8,
     In = 4,
 }
 
 #[repr(C)]
+#[derive(Copy,Clone)]
 pub enum PixelFormat {
     bgr24 = 3,
     bgra32 = 4,
@@ -33,6 +35,7 @@ pub enum PixelFormat {
 }
 
 #[repr(C)]
+#[derive(Copy,Clone)]
 pub enum Floatspace {
     srgb = 0,
     linear = 1,
@@ -41,6 +44,7 @@ pub enum Floatspace {
 
 
 #[repr(C)]
+#[derive(Copy,Clone)]
 pub enum Filter {
     RobidouxFast = 1,
     Robidoux = 2,
@@ -104,7 +108,7 @@ pub struct DecoderInfo {
 
 #[repr(C)]
 pub struct EncoderHints {
-    pub jpeg_quality: i32
+    pub jpeg_quality: i32,
 }
 
 extern "C" {
@@ -127,6 +131,35 @@ extern "C" {
                                    filename: *const libc::c_char,
                                    owner: *mut libc::c_void)
                                    -> *mut JobIO;
+
+    pub fn flow_io_create_from_memory(context: *mut Context,
+                                      mode: IoMode,
+                                      memory: *const u8,
+                                      length: libc::size_t,
+                                      owner: *mut libc::c_void,
+                                      destructor_function: *mut libc::c_void)
+                                      -> *mut JobIO;
+
+    pub fn flow_io_create_for_output_buffer(context: *mut Context,
+                                            owner: *mut libc::c_void)
+                                            -> *mut JobIO;
+
+
+    // Returns false if the flow_io struct is disposed or not an output buffer type (or for any other error)
+    //
+    pub fn flow_io_get_output_buffer(context: *mut Context,
+                                     io: *mut JobIO,
+                                     result_buffer: *mut *mut u8,
+                                     result_buffer_length: *mut libc::size_t)
+                                     -> bool;
+
+    pub fn flow_job_get_io(context: *mut Context,
+                           job: *mut Job,
+                           placeholder_id: i32)
+                           -> *mut JobIO;
+
+
+
     pub fn flow_job_add_io(context: *mut Context,
                            job: *mut Job,
                            io: *mut JobIO,
@@ -196,7 +229,8 @@ extern "C" {
                                     g: *mut *mut Graph,
                                     prev_node: i32,
                                     placeholder_id: i32,
-                                    desired_encoder_id: i64, hints: &EncoderHints)
+                                    desired_encoder_id: i64,
+                                    hints: &EncoderHints)
                                     -> i32;
 
     pub fn flow_node_create_primitive_flip_vertical(c: *mut Context,
