@@ -336,6 +336,7 @@ struct flow_nodeinfo_scale {
     flow_interpolation_filter downscale_filter;
     flow_interpolation_filter upscale_filter;
     size_t flags;
+    float sharpen;
 };
 typedef enum flow_scale_flags {
     flow_scale_flags_none = 0,

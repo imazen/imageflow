@@ -481,7 +481,7 @@ module Imageflow
     attach_function :flow_graph_copy_info_bytes_to, [:pointer, :pointer, :pointer, :int32, :int32], :int32
     attach_function :flow_edge_duplicate, [:pointer, :pointer, :int32], :int32
     attach_function :flow_node_create_canvas, [:pointer, :pointer, :int32, :pixel_format, :uint, :uint, :uint32], :int32
-    attach_function :flow_node_create_scale, [:pointer, :pointer, :int32, :uint, :uint, :interpolation_filter, :interpolation_filter, :uint64], :int32
+    attach_function :flow_node_create_scale, [:pointer, :pointer, :int32, :uint, :uint, :interpolation_filter, :interpolation_filter, :uint64, :f32], :int32
     attach_function :flow_node_create_primitive_flip_vertical, [:pointer, :pointer, :int32], :int32
     attach_function :flow_node_create_primitive_flip_horizontal, [:pointer, :pointer, :int32], :int32
     attach_function :flow_node_create_clone, [:pointer, :pointer, :int32], :int32

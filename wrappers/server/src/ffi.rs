@@ -198,7 +198,7 @@ extern "C" {
                                   height: usize,
                                   downscale_filter: Filter,
                                   upscale_filter: Filter,
-                                  flags: usize)
+                                  flags: usize, sharpen: f32)
                                   -> i32;
 
     pub fn flow_node_create_expand_canvas(c: *mut Context,

@@ -87,7 +87,7 @@ int32_t flow_node_create_render1d(flow_c * c, struct flow_graph ** g, int32_t pr
 
 int32_t flow_node_create_scale(flow_c * c, struct flow_graph ** g, int32_t prev_node, size_t width, size_t height,
                                flow_interpolation_filter downscale_filter, flow_interpolation_filter upscale_filter,
-                               size_t flags)
+                               size_t flags, float sharpen)
 {
     int32_t id = flow_node_create_generic(c, g, prev_node, flow_ntype_Scale);
     if (id < 0) {
@@ -100,6 +100,7 @@ int32_t flow_node_create_scale(flow_c * c, struct flow_graph ** g, int32_t prev_
     info->downscale_filter = downscale_filter;
     info->upscale_filter = upscale_filter;
     info->flags = flags;
+    info->sharpen = sharpen;
     return id;
 }
 
@@ -177,7 +178,7 @@ static bool flatten_scale(flow_c * c, struct flow_graph ** g, int32_t node_id, s
 
         *first_replacement_node
             = flow_node_create_scale_2d(c, g, *first_replacement_node, width, height, (flow_working_floatspace_as_is),
-                                        0, (flow_interpolation_filter_Robidoux));
+                                        size->sharpen, (flow_interpolation_filter_Robidoux));
         if (*first_replacement_node < 0) {
             FLOW_error_return(c);
         }

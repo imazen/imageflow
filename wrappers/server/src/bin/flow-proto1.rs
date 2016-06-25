@@ -4,9 +4,6 @@ use clap::{App, Arg, ArgMatches};
 extern crate imageflow_server;
 use imageflow_server::boring::*;
 use std::path::{PathBuf, Path};
-use std::fs::File;
-use std::io::Write;
-
 // TODO
 // Disclaim use for jpeg optimization
 // Disclaim use for png or gif files
@@ -59,6 +56,11 @@ fn build_app() -> App<'static, 'static> {
             .value_name("0..100")
             .takes_value(true)
             .help("Jpeg compression level."))
+        .arg(Arg::with_name("sharpen")
+                 .long("sharpen")
+                 .value_name("0..100")
+                 .takes_value(true)
+                 .help("Percent sharpening to apply."))
         .arg(Arg::with_name("format")
                  .long("format")
                  .value_name("png | jpg")
@@ -89,11 +91,14 @@ fn parse(matches: ArgMatches) -> Result<ParsedResult, String> {
     let w = matches.value_of("width").and_then(|x| x.parse::<u32>().ok());
     let h = matches.value_of("height").and_then(|x| x.parse::<u32>().ok());
 
+    let sharpen = matches.value_of("sharpen").and_then(|x| x.parse::<f32>().ok()); //.and_then(|x| Some(x / 100f32));
+
+
     let q = matches.value_of("jpeg-quality").and_then(|x| x.parse::<i32>().ok());
 
 
     let fmt =  value_t!(matches, "format", ImageFormat).unwrap_or(ImageFormat::Jpeg);
-    
+
     // Clap requires these to exist, thus the safe unwrap()
     let in_file = Path::new(matches.value_of("input").unwrap());
     let out_file = Path::new(matches.value_of("output").unwrap());
@@ -131,6 +136,7 @@ fn parse(matches: ArgMatches) -> Result<ParsedResult, String> {
         commands: BoringCommands {
             w: w.unwrap_or(0) as i32,
             h: h.unwrap_or(0) as i32,
+            sharpen: sharpen.unwrap_or(0f32) as f32,
             jpeg_quality: q.unwrap_or(90),
             fit: ConstraintMode::Max,
             precise_scaling_ratio: min_precise_scaling_ratio.unwrap_or(2.1f32),

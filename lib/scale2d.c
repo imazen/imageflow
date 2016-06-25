@@ -34,6 +34,7 @@ FLOW_HINT_HOT FLOW_HINT_UNSAFE_MATH_OPTIMIZATIONS
     if (details == NULL) {
         FLOW_error_return(c);
     }
+    details->sharpen_percent_goal = info->sharpen_percent_goal;
 
     struct flow_interpolation_line_contributions * contrib_v = NULL;
     struct flow_interpolation_line_contributions * contrib_h = NULL;
