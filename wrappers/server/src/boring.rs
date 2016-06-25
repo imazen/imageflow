@@ -7,7 +7,7 @@ use std::str::FromStr;
 
 pub enum ConstraintMode {
     Max,
-    Distort
+    Distort,
 }
 
 
@@ -27,7 +27,7 @@ impl FromStr for ImageFormat {
             "jpg" => Ok(ImageFormat::Jpeg),
             "png" => Ok(ImageFormat::Png),
             "png24" => Ok(ImageFormat::Png24),
-            _     => Err("no match")
+            _ => Err("no match"),
         }
     }
 }
@@ -40,7 +40,7 @@ impl FromStr for ConstraintMode {
         match s {
             "max" => Ok(ConstraintMode::Max),
             "distort" => Ok(ConstraintMode::Distort),
-            _     => Err("no match")
+            _ => Err("no match"),
         }
     }
 }
@@ -55,7 +55,7 @@ pub struct BoringCommands {
     pub format: ImageFormat,
     pub sharpen: f32,
     pub down_filter: Filter,
-    pub up_filter: Filter
+    pub up_filter: Filter,
 }
 
 
@@ -220,25 +220,30 @@ pub fn process_image<F, C, R>(commands: BoringCommands,
                                       final_h,
                                       commands.down_filter,
                                       commands.up_filter,
-                                      1, commands.sharpen);
+                                      1,
+                                      commands.sharpen);
 
         assert!(last > 0);
 
         let disable_png_alpha = match commands.format {
             ImageFormat::Png24 => true,
-            _ => false
+            _ => false,
         };
 
-        let hints = EncoderHints { jpeg_quality: commands.jpeg_quality , disable_png_alpha: disable_png_alpha};
+        let hints = EncoderHints {
+            jpeg_quality: commands.jpeg_quality,
+            disable_png_alpha: disable_png_alpha,
+        };
 
         let encoder_id = match commands.format {
-        ImageFormat::Png24 => ImageFormat::Png,
-            f => f
+            ImageFormat::Png24 => ImageFormat::Png,
+            f => f,
 
         } as i64;
 
 
-        last = flow_node_create_encoder(c, (&mut g) as *mut *mut Graph, last, 1, encoder_id, &hints);
+        last =
+            flow_node_create_encoder(c, (&mut g) as *mut *mut Graph, last, 1, encoder_id, &hints);
         assert!(last > 0);
 
 

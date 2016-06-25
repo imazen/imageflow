@@ -63,34 +63,34 @@ fn build_app() -> App<'static, 'static> {
             .takes_value(true)
             .help("Jpeg compression level."))
         .arg(Arg::with_name("sharpen")
-                 .long("sharpen")
-                 .value_name("0..100")
-                 .takes_value(true)
-                 .help("Percent sharpening to apply."))
+            .long("sharpen")
+            .value_name("0..100")
+            .takes_value(true)
+            .help("Percent sharpening to apply."))
         .arg(Arg::with_name("format")
-                 .long("format")
-                 .value_name("png | jpg | png24")
-                 .takes_value(true)
-                 .possible_values(&["png", "jpeg", "jpg", "png24"])
-                 .help("Output image format to use. Baseline jpeg and 32-bit PNG supported."))
+            .long("format")
+            .value_name("png | jpg | png24")
+            .takes_value(true)
+            .possible_values(&["png", "jpeg", "jpg", "png24"])
+            .help("Output image format to use. Baseline jpeg and 32-bit PNG supported."))
         .arg(Arg::with_name("constrain")
-                 .long("constrain")
-                 .value_name("max | distort")
-                 .takes_value(true)
-                 .possible_values(&["max", "distort"])
-                 .help("Output image format to use. Baseline jpeg and 32-bit PNG supported."))
+            .long("constrain")
+            .value_name("max | distort")
+            .takes_value(true)
+            .possible_values(&["max", "distort"])
+            .help("Output image format to use. Baseline jpeg and 32-bit PNG supported."))
         .arg(Arg::with_name("down-filter")
-                 .long("down-filter")
-                 .value_name("FILTER")
-                 .takes_value(true)
-                 .possible_values(FILTER_OPTIONS)
-                 .help("Filter to use when downscaling"))
+            .long("down-filter")
+            .value_name("FILTER")
+            .takes_value(true)
+            .possible_values(FILTER_OPTIONS)
+            .help("Filter to use when downscaling"))
         .arg(Arg::with_name("up-filter")
-                 .long("up-filter")
-                 .value_name("FILTER")
-                 .possible_values(FILTER_OPTIONS)
-                 .takes_value(true)
-                 .help("Filter to use when upscaling"))
+            .long("up-filter")
+            .value_name("FILTER")
+            .possible_values(FILTER_OPTIONS)
+            .takes_value(true)
+            .help("Filter to use when upscaling"))
         .arg(Arg::with_name("incorrectgamma")
             .long("incorrectgamma")
             .help("Enables incorrect gamma handling (for benchmarking comparison purposes)."))
@@ -121,12 +121,12 @@ fn parse(matches: ArgMatches) -> Result<ParsedResult, String> {
     let q = matches.value_of("jpeg-quality").and_then(|x| x.parse::<i32>().ok());
 
 
-    let fmt =  value_t!(matches, "format", ImageFormat).unwrap_or(ImageFormat::Jpeg);
+    let fmt = value_t!(matches, "format", ImageFormat).unwrap_or(ImageFormat::Jpeg);
 
-    let constrain =  value_t!(matches, "constrain", ConstraintMode).unwrap_or(ConstraintMode::Max);
+    let constrain = value_t!(matches, "constrain", ConstraintMode).unwrap_or(ConstraintMode::Max);
 
-    let down_filter =  value_t!(matches, "down-filter", Filter).unwrap_or(Filter::Robidoux);
-    let up_filter =  value_t!(matches, "up-filter", Filter).unwrap_or(Filter::Ginseng);
+    let down_filter = value_t!(matches, "down-filter", Filter).unwrap_or(Filter::Robidoux);
+    let up_filter = value_t!(matches, "up-filter", Filter).unwrap_or(Filter::Ginseng);
 
 
     // Clap requires these to exist, thus the safe unwrap()
@@ -201,7 +201,17 @@ fn test_correct_parsing() {
 
 
 
-    let valid_args = vec!["flow-proto1", "-i", "delete.jpg", "-o", "b.jpg", "-w", "20", "-h", "20", "--down-filter", "mitchell"];
+    let valid_args = vec!["flow-proto1",
+                          "-i",
+                          "delete.jpg",
+                          "-o",
+                          "b.jpg",
+                          "-w",
+                          "20",
+                          "-h",
+                          "20",
+                          "--down-filter",
+                          "mitchell"];
 
     let result = parse(build_app().get_matches_from(valid_args)).expect("To parse correctly");
 
