@@ -412,7 +412,7 @@ static void png_encoder_error_handler(png_structp png_ptr, png_const_charp msg)
         exit(42);
         abort(); // WTF?
     }
-    FLOW_error_msg(state->context, flow_status_Image_encoding_failed, "PNG encoding failed");
+    FLOW_error_msg(state->context, flow_status_Image_encoding_failed, "PNG encoding failed: %s", msg);
 
     longjmp(state->error_handler_jmp_buf, 1);
 }
@@ -459,12 +459,26 @@ static bool flow_job_codecs_png_write_frame(flow_c * c, struct flow_job * job, v
 
         png_set_rows(png_ptr, info_ptr, rows);
 
-        png_set_IHDR(png_ptr, info_ptr, (png_uint_32)frame->w, (png_uint_32)frame->h, 8, PNG_COLOR_TYPE_RGB_ALPHA,
+        int color_type = PNG_COLOR_TYPE_RGB_ALPHA;
+        int transform = PNG_TRANSFORM_BGR;
+
+        if (hints->disable_png_alpha) {
+            color_type = PNG_COLOR_TYPE_RGB;
+            transform = transform | PNG_TRANSFORM_STRIP_FILLER_AFTER;
+
+        }
+
+        png_set_IHDR(png_ptr, info_ptr, (png_uint_32)frame->w, (png_uint_32)frame->h, 8, color_type,
                      PNG_INTERLACE_NONE, PNG_COMPRESSION_TYPE_BASE, PNG_FILTER_TYPE_BASE);
 
         png_set_sRGB_gAMA_and_cHRM(png_ptr, info_ptr, PNG_sRGB_INTENT_PERCEPTUAL);
 
-        png_write_png(png_ptr, info_ptr, PNG_TRANSFORM_BGR, NULL);
+        if (hints->disable_png_alpha) {
+            //png_set_filler(png_ptr, (png_uint_32)0, PNG_FILLER_AFTER);
+        }
+
+
+        png_write_png(png_ptr, info_ptr, transform, NULL);
 
         FLOW_free(c, rows);
         rows = NULL;

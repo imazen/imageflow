@@ -12,7 +12,8 @@ pub enum ConstraintMode {
 
 pub enum ImageFormat {
     Jpeg = 4,
-    Png = 2
+    Png = 2,
+    Png24 = 9,
 }
 
 
@@ -24,6 +25,7 @@ impl FromStr for ImageFormat {
             "jpeg" => Ok(ImageFormat::Jpeg),
             "jpg" => Ok(ImageFormat::Jpeg),
             "png" => Ok(ImageFormat::Png),
+            "png24" => Ok(ImageFormat::Png24),
             _     => Err("no match")
         }
     }
@@ -197,11 +199,21 @@ pub fn process_image<F, C, R>(commands: BoringCommands,
 
         assert!(last > 0);
 
-        let hints = EncoderHints { jpeg_quality: commands.jpeg_quality };
+        let disable_png_alpha = match commands.format {
+            ImageFormat::Png24 => true,
+            _ => false
+        };
+
+        let hints = EncoderHints { jpeg_quality: commands.jpeg_quality , disable_png_alpha: disable_png_alpha};
+
+        let encoder_id = match commands.format {
+        ImageFormat::Png24 => ImageFormat::Png,
+            f => f
+
+        } as i64;
 
 
-
-        last = flow_node_create_encoder(c, (&mut g) as *mut *mut Graph, last, 1, commands.format as i64, &hints);
+        last = flow_node_create_encoder(c, (&mut g) as *mut *mut Graph, last, 1, encoder_id, &hints);
         assert!(last > 0);
 
 

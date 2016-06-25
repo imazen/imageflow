@@ -256,6 +256,7 @@ struct flow_nodeinfo_scale2d_render_to_canvas1d;
 
 struct flow_encoder_hints {
     int32_t jpeg_encode_quality;
+    bool disable_png_alpha;
 };
 
 PUB flow_c * flow_context_create(void);

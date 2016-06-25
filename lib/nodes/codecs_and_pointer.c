@@ -34,7 +34,7 @@ int32_t flow_node_create_decoder(flow_c * c, struct flow_graph ** g, int32_t pre
     info->downscale_hints.gamma_correct_for_srgb_during_spatial_luma_scaling = false;
     info->downscale_hints.scale_luma_spatially = false;
     info->encoder_hints.jpeg_encode_quality = 0;
-
+    info->encoder_hints.disable_png_alpha = false;
     return id;
 }
 
@@ -58,6 +58,7 @@ int32_t flow_node_create_encoder(flow_c * c, struct flow_graph ** g, int32_t pre
     info->desired_encoder_id = desired_encoder_id;
 
     info->encoder_hints.jpeg_encode_quality = 90;
+    info->encoder_hints.disable_png_alpha = false;
     if (hints != NULL) {
         memcpy(&info->encoder_hints, hints, sizeof(struct flow_encoder_hints));
     }

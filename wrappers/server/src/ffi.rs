@@ -109,6 +109,7 @@ pub struct DecoderInfo {
 #[repr(C)]
 pub struct EncoderHints {
     pub jpeg_quality: i32,
+    pub disable_png_alpha: bool,
 }
 
 extern "C" {
