@@ -54,6 +54,8 @@ pub struct BoringCommands {
     pub jpeg_quality: i32,
     pub format: ImageFormat,
     pub sharpen: f32,
+    pub down_filter: Filter,
+    pub up_filter: Filter
 }
 
 
@@ -216,8 +218,8 @@ pub fn process_image<F, C, R>(commands: BoringCommands,
                                       last,
                                       final_w,
                                       final_h,
-                                      Filter::Robidoux,
-                                      Filter::Robidoux,
+                                      commands.down_filter,
+                                      commands.up_filter,
                                       1, commands.sharpen);
 
         assert!(last > 0);

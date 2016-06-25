@@ -3,7 +3,11 @@ extern crate clap;
 use clap::{App, Arg, ArgMatches};
 extern crate imageflow_server;
 use imageflow_server::boring::*;
+
+use imageflow_server::ffi::{Filter, FILTER_OPTIONS};
 use std::path::{PathBuf, Path};
+use std::fs::File;
+use std::io::Write;
 // TODO
 // Disclaim use for jpeg optimization
 // Disclaim use for png or gif files
@@ -12,6 +16,8 @@ use std::path::{PathBuf, Path};
 // Let users adjust quality setting
 
 fn build_app() -> App<'static, 'static> {
+
+
     App::new("flow-proto1")
         .version("0.0.1")
         .author("Email us at imageflow@imazen.io")
@@ -73,6 +79,18 @@ fn build_app() -> App<'static, 'static> {
                  .takes_value(true)
                  .possible_values(&["max", "distort"])
                  .help("Output image format to use. Baseline jpeg and 32-bit PNG supported."))
+        .arg(Arg::with_name("down-filter")
+                 .long("down-filter")
+                 .value_name("FILTER")
+                 .takes_value(true)
+                 .possible_values(FILTER_OPTIONS)
+                 .help("Filter to use when downscaling"))
+        .arg(Arg::with_name("up-filter")
+                 .long("up-filter")
+                 .value_name("FILTER")
+                 .possible_values(FILTER_OPTIONS)
+                 .takes_value(true)
+                 .help("Filter to use when upscaling"))
         .arg(Arg::with_name("incorrectgamma")
             .long("incorrectgamma")
             .help("Enables incorrect gamma handling (for benchmarking comparison purposes)."))
@@ -106,6 +124,9 @@ fn parse(matches: ArgMatches) -> Result<ParsedResult, String> {
     let fmt =  value_t!(matches, "format", ImageFormat).unwrap_or(ImageFormat::Jpeg);
 
     let constrain =  value_t!(matches, "constrain", ConstraintMode).unwrap_or(ConstraintMode::Max);
+
+    let down_filter =  value_t!(matches, "down-filter", Filter).unwrap_or(Filter::Robidoux);
+    let up_filter =  value_t!(matches, "up-filter", Filter).unwrap_or(Filter::Ginseng);
 
 
     // Clap requires these to exist, thus the safe unwrap()
@@ -151,6 +172,8 @@ fn parse(matches: ArgMatches) -> Result<ParsedResult, String> {
             precise_scaling_ratio: min_precise_scaling_ratio.unwrap_or(2.1f32),
             luma_correct: !matches.is_present("incorrectgamma"),
             format: fmt,
+            up_filter: up_filter,
+            down_filter: down_filter,
         },
     })
 
@@ -178,9 +201,11 @@ fn test_correct_parsing() {
 
 
 
-    let valid_args = vec!["flow-proto1", "-i", "delete.jpg", "-o", "b.jpg", "-w", "20", "-h", "20"];
+    let valid_args = vec!["flow-proto1", "-i", "delete.jpg", "-o", "b.jpg", "-w", "20", "-h", "20", "--down-filter", "mitchell"];
 
-    parse(build_app().get_matches_from(valid_args)).expect("To parse correctly");
+    let result = parse(build_app().get_matches_from(valid_args)).expect("To parse correctly");
+
+    assert_eq!(result.commands.down_filter, Filter::Mitchell);
 
 
     // std::fs::remove_file("delete.jpg").unwrap();

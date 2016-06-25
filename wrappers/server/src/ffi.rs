@@ -1,6 +1,8 @@
 extern crate libc;
 use std::ptr;
 
+use std::str::FromStr;
+use std::ascii::AsciiExt;
 
 pub enum Context {}
 
@@ -44,7 +46,7 @@ pub enum Floatspace {
 
 
 #[repr(C)]
-#[derive(Copy,Clone)]
+#[derive(Copy,Clone,Debug, PartialEq)]
 pub enum Filter {
     RobidouxFast = 1,
     Robidoux = 2,
@@ -77,6 +79,50 @@ pub enum Filter {
     Fastest = 27,
 
     MitchellFast = 28,
+}
+
+
+pub const FILTER_OPTIONS: &'static [ &'static str ] = & ["robidouxfast" ,
+        "robidoux","robidouxsharp","ginseng","ginsengsharp","lanczos","lanczossharp","lanczos2","lanczos2sharp","cubicfast","cubic","cubicsharp","catmullrom","catrom","mitchell","cubicbspline","hermite","jinc","rawlanczos3","rawlanczos3sharp","rawlanczos2","rawlanczos2sharp","triangle","linear","box","catmullromfast","catmullromfastsharp","fastest","mitchellfast"];
+
+
+impl FromStr for Filter {
+    type Err = &'static str;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match &*s.to_ascii_lowercase() {
+        "robidouxfast" => Ok(Filter::RobidouxFast),
+        "robidoux" => Ok(Filter::Robidoux),
+        "robidouxsharp" => Ok(Filter::RobidouxSharp),
+        "ginseng" => Ok(Filter::Ginseng),
+        "ginsengsharp" => Ok(Filter::GinsengSharp),
+        "lanczos" => Ok(Filter::Lanczos),
+        "lanczossharp" => Ok(Filter::LanczosSharp),
+        "lanczos2" => Ok(Filter::Lanczos2),
+        "lanczos2sharp" => Ok(Filter::Lanczos2Sharp),
+        "cubicfast" => Ok(Filter::CubicFast ),
+        "cubic" => Ok(Filter::Cubic ),
+        "cubicsharp" => Ok(Filter::CubicSharp ),
+        "catmullrom" => Ok(Filter::CatmullRom ),
+        "catrom" => Ok(Filter::CatmullRom ),
+        "mitchell" => Ok(Filter::Mitchell ),
+        "cubicbspline" => Ok(Filter::CubicBSpline ),
+        "hermite" => Ok(Filter::Hermite ),
+        "jinc" => Ok(Filter::Jinc ),
+        "rawlanczos3" => Ok(Filter::RawLanczos3 ),
+        "rawlanczos3sharp" => Ok(Filter::RawLanczos3Sharp ),
+        "rawlanczos2" => Ok(Filter::RawLanczos2 ),
+        "rawlanczos2sharp" => Ok(Filter::RawLanczos2Sharp ),
+        "triangle" => Ok(Filter::Triangle ),
+        "linear" => Ok(Filter::Linear ),
+        "box" => Ok(Filter::Box),
+        "catmullromfast" => Ok(Filter::CatmullRomFast ),
+        "catmullromfastsharp" => Ok(Filter::CatmullRomFastSharp ),
+        "fastest" => Ok(Filter::Fastest ),
+        "mitchellfast" => Ok(Filter::MitchellFast ),
+            _     => Err("no match")
+        }
+    }
 }
 
 impl Default for DecoderInfo {

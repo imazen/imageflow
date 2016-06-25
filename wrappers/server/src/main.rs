@@ -103,6 +103,8 @@ fn get_jpeg_bytes(source: &str, w: Option<u32>, h: Option<u32>) -> Vec<u8> {
         luma_correct: true,
         sharpen: 0f32,
         format: ImageFormat::Jpeg,
+        down_filter: Filter::Robidoux,
+        up_filter: Filter::Ginseng,
     };
 
 
