@@ -1,3 +1,4 @@
+#[macro_use]
 extern crate clap;
 use clap::{App, Arg, ArgMatches};
 extern crate imageflow_server;
@@ -58,6 +59,12 @@ fn build_app() -> App<'static, 'static> {
             .value_name("0..100")
             .takes_value(true)
             .help("Jpeg compression level."))
+        .arg(Arg::with_name("format")
+                 .long("format")
+                 .value_name("png | jpg")
+                 .takes_value(true)
+                 .possible_values(&["png", "jpeg", "jpg"])
+                 .help("Output image format to use. Baseline jpeg and 32-bit PNG supported."))
         .arg(Arg::with_name("incorrectgamma")
             .long("incorrectgamma")
             .help("Enables incorrect gamma handling (for benchmarking comparison purposes)."))
@@ -77,14 +84,16 @@ struct ParsedResult {
 }
 
 
-
-
 fn parse(matches: ArgMatches) -> Result<ParsedResult, String> {
 
     let w = matches.value_of("width").and_then(|x| x.parse::<u32>().ok());
     let h = matches.value_of("height").and_then(|x| x.parse::<u32>().ok());
 
     let q = matches.value_of("jpeg-quality").and_then(|x| x.parse::<i32>().ok());
+
+
+    let fmt =  value_t!(matches, "format", ImageFormat).unwrap_or(ImageFormat::Jpeg);
+    
     // Clap requires these to exist, thus the safe unwrap()
     let in_file = Path::new(matches.value_of("input").unwrap());
     let out_file = Path::new(matches.value_of("output").unwrap());
@@ -126,6 +135,7 @@ fn parse(matches: ArgMatches) -> Result<ParsedResult, String> {
             fit: ConstraintMode::Max,
             precise_scaling_ratio: min_precise_scaling_ratio.unwrap_or(2.1f32),
             luma_correct: !matches.is_present("incorrectgamma"),
+            format: fmt,
         },
     })
 

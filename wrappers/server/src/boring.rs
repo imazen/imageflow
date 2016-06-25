@@ -3,8 +3,30 @@ use std::ffi::*;
 extern crate libc;
 use std::path::PathBuf;
 
+use std::str::FromStr;
+
 pub enum ConstraintMode {
     Max,
+}
+
+
+pub enum ImageFormat {
+    Jpeg = 4,
+    Png = 2
+}
+
+
+impl FromStr for ImageFormat {
+    type Err = &'static str;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "jpeg" => Ok(ImageFormat::Jpeg),
+            "jpg" => Ok(ImageFormat::Jpeg),
+            "png" => Ok(ImageFormat::Png),
+            _     => Err("no match")
+        }
+    }
 }
 
 pub struct BoringCommands {
@@ -14,6 +36,7 @@ pub struct BoringCommands {
     pub precise_scaling_ratio: f32,
     pub luma_correct: bool,
     pub jpeg_quality: i32,
+    pub format: ImageFormat,
 }
 
 
@@ -175,7 +198,9 @@ pub fn process_image<F, C, R>(commands: BoringCommands,
 
         let hints = EncoderHints { jpeg_quality: commands.jpeg_quality };
 
-        last = flow_node_create_encoder(c, (&mut g) as *mut *mut Graph, last, 1, 4, &hints);
+
+
+        last = flow_node_create_encoder(c, (&mut g) as *mut *mut Graph, last, 1, commands.format as i64, &hints);
         assert!(last > 0);
 
 
