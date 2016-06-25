@@ -2,7 +2,7 @@
 
 
 cd ../..
-conan remove imageflow/*
+conan remove imageflow/* -f
 conan export lasote/testing
 
 cd wrappers/server

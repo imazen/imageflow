@@ -7,6 +7,7 @@ use std::str::FromStr;
 
 pub enum ConstraintMode {
     Max,
+    Distort
 }
 
 
@@ -26,6 +27,19 @@ impl FromStr for ImageFormat {
             "jpg" => Ok(ImageFormat::Jpeg),
             "png" => Ok(ImageFormat::Png),
             "png24" => Ok(ImageFormat::Png24),
+            _     => Err("no match")
+        }
+    }
+}
+
+
+impl FromStr for ConstraintMode {
+    type Err = &'static str;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "max" => Ok(ConstraintMode::Max),
+            "distort" => Ok(ConstraintMode::Distort),
             _     => Err("no match")
         }
     }
@@ -149,13 +163,22 @@ pub fn process_image<F, C, R>(commands: BoringCommands,
         let natural_ratio = (info.frame0_width as f32) / (info.frame0_height as f32);
         let final_w;
         let final_h;
-        if constraint_ratio > natural_ratio {
-            final_h = commands.h as usize;
-            final_w = (commands.h as f32 * natural_ratio).round() as usize;
-        } else {
-            final_w = commands.w as usize;
-            final_h = (commands.w as f32 / natural_ratio).round() as usize;
-        }
+
+        match commands.fit {
+            ConstraintMode::Max => {
+                if constraint_ratio > natural_ratio {
+                    final_h = commands.h as usize;
+                    final_w = (commands.h as f32 * natural_ratio).round() as usize;
+                } else {
+                    final_w = commands.w as usize;
+                    final_h = (commands.w as f32 / natural_ratio).round() as usize;
+                }
+            }
+            ConstraintMode::Distort => {
+                final_h = commands.h as usize;
+                final_w = commands.w as usize;
+            }
+        };
 
         let trigger_ratio = if 1.0f32 > commands.precise_scaling_ratio {
             3.0f32

@@ -67,6 +67,12 @@ fn build_app() -> App<'static, 'static> {
                  .takes_value(true)
                  .possible_values(&["png", "jpeg", "jpg", "png24"])
                  .help("Output image format to use. Baseline jpeg and 32-bit PNG supported."))
+        .arg(Arg::with_name("constrain")
+                 .long("constrain")
+                 .value_name("max | distort")
+                 .takes_value(true)
+                 .possible_values(&["max", "distort"])
+                 .help("Output image format to use. Baseline jpeg and 32-bit PNG supported."))
         .arg(Arg::with_name("incorrectgamma")
             .long("incorrectgamma")
             .help("Enables incorrect gamma handling (for benchmarking comparison purposes)."))
@@ -98,6 +104,9 @@ fn parse(matches: ArgMatches) -> Result<ParsedResult, String> {
 
 
     let fmt =  value_t!(matches, "format", ImageFormat).unwrap_or(ImageFormat::Jpeg);
+
+    let constrain =  value_t!(matches, "constrain", ConstraintMode).unwrap_or(ConstraintMode::Max);
+
 
     // Clap requires these to exist, thus the safe unwrap()
     let in_file = Path::new(matches.value_of("input").unwrap());
@@ -138,7 +147,7 @@ fn parse(matches: ArgMatches) -> Result<ParsedResult, String> {
             h: h.unwrap_or(0) as i32,
             sharpen: sharpen.unwrap_or(0f32) as f32,
             jpeg_quality: q.unwrap_or(90),
-            fit: ConstraintMode::Max,
+            fit: constrain,
             precise_scaling_ratio: min_precise_scaling_ratio.unwrap_or(2.1f32),
             luma_correct: !matches.is_present("incorrectgamma"),
             format: fmt,
