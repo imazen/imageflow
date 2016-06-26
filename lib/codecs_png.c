@@ -462,7 +462,7 @@ static bool flow_job_codecs_png_write_frame(flow_c * c, struct flow_job * job, v
         int color_type = PNG_COLOR_TYPE_RGB_ALPHA;
         int transform = PNG_TRANSFORM_BGR;
 
-        if (hints->disable_png_alpha) {
+        if (hints != NULL && hints->disable_png_alpha) {
             color_type = PNG_COLOR_TYPE_RGB;
             transform = transform | PNG_TRANSFORM_STRIP_FILLER_AFTER;
 
@@ -473,7 +473,7 @@ static bool flow_job_codecs_png_write_frame(flow_c * c, struct flow_job * job, v
 
         png_set_sRGB_gAMA_and_cHRM(png_ptr, info_ptr, PNG_sRGB_INTENT_PERCEPTUAL);
 
-        if (hints->disable_png_alpha) {
+        if (hints != NULL && hints->disable_png_alpha) {
             //png_set_filler(png_ptr, (png_uint_32)0, PNG_FILLER_AFTER);
         }
 
