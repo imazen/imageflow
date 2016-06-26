@@ -16,12 +16,6 @@ In-process use requires [FFI](https://en.wikipedia.org/wiki/Foreign_function_int
 
 @samuelenglard has volunteered to create C# bindings for Imageflow. We're tracking [design here](https://github.com/imazen/imageflow/issues/67).
 
-### Node bindings
-
-Unofficial Node bindings (via Neon) are likely to happen before December 2016. Sooner, if we get any volunteers. 
-
-Official Node bindings will be released by August 2017. 
-
 ### Ruby bindings
 
 We have a [limited set of Ruby bindings already](https://github.com/imazen/imageflow/tree/master/wrappers/ruby), but the FFI API will soon be refactored to use JSON, and these may lag behind Rust bindings initially.
@@ -34,8 +28,28 @@ Official Ruby bindings will be released by August 2017.
 Our [prototypes of imageflow-tool and imageflow-server](https://github.com/imazen/imageflow/tree/master/wrappers/server) are already written in Rust. We haven't yet exposed a crate that makes these bindings ergonomic, though.
 Given we're moving the libimageflow FFI surface to Rust, these will likely improve soon.
 
+
+### Node bindings
+
+Unofficial Node bindings (via Neon) are likely to happen before December 2016. Sooner, if we get any volunteers. 
+
+Official Node bindings will be released by August 2017. 
+
+
+### C/C++ 'bindings'
+
+Status: active/complete. imageflow.h always tracks the current API. 
+
+### PHP/Python/Java/Go/Haskell/Swift bindings
+
+Unless we reach our stretch goal, we can't guarantee official PHP bindings. That said, we're happy to work with volunteers who want to create bindings for any language. Please reach out if you're interested!
+
+### Erlang/Elixr
+
+Oooh, fun.
+
 Have you created bindings you want to list here? Send us a PR, we'll add your project!
 
 # REST API Clients 
 
-none yet. The JSON schema hasn't been finalized yet. 
+Delayed until JSON schema is finalized. Not really neccessary for the querystring API, unless you need signatures.
