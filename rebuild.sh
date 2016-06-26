@@ -23,7 +23,7 @@ conan install -o build_tests=True --build missing -u ../
 conan build ../
 
 cd ..
-conan remove imageflow/*
+conan remove imageflow/* -f
 conan export lasote/testing
 
 cd wrappers/server
