@@ -54,6 +54,7 @@ class ImageFlowConan(ConanFile):
 
 
     def build(self):
+        self.output.warn('build_tests=%s coverage=%s profiling=%s shared=%s' % (self.options.build_tests, self.options.coverage, self.options.profiling, self.options.shared))
         build_dir = os.path.join(self.conanfile_directory, "build")
         if not os.path.exists(build_dir):
             os.mkdir(build_dir)
@@ -69,18 +70,22 @@ class ImageFlowConan(ConanFile):
             cmake_settings += " -DENABLE_TEST=ON"
         if self.options.profiling:
             cmake_settings += " -DSKIP_LIBRARY=ON -DENABLE_TEST=OFF -DENABLE_PROFILING=ON"
-        
+
         cmake_settings += " -DBUILD_SHARED_LIBS=ON" if self.options.shared else " -DBUILD_SHARED_LIBS=OFF"
 
         cmake_command = 'cmake "%s" %s %s' % (self.conanfile_directory, cmake.command_line, cmake_settings)
         cmake_build_command = 'cmake --build . %s' % cmake.build_config
+        cmake_test_command = 'ctest -V -C Release'
         self.output.warn(cmake_command)
         self.run(cmake_command)
         self.output.warn(cmake_build_command)
         self.run(cmake_build_command)
         if self.options.build_tests:
-            self.run('ctest -V -C Release')
-            
+            self.output.warn(cmake_test_command)
+            self.run(cmake_test_command)
+        else:
+            self.output.warn("Skipping tests; build_tests=False")
+
     def package(self):
         self.copy("imageflow.h", dst="include", src="", keep_path=False)
         self.copy("imageflow_advanced.h", dst="include", src="", keep_path=False)
