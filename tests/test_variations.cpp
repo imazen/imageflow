@@ -1040,7 +1040,7 @@ bool scale_down(flow_c * c, uint8_t * bytes, size_t bytes_count, bool scale_luma
     }
 
     if (scale_to_x != block_scale_to_x || scale_to_y != block_scale_to_y) {
-        last = flow_node_create_scale(c, &g, last, scale_to_x, scale_to_y, precise_filter, precise_filter);
+        last = flow_node_create_scale(c, &g, last, scale_to_x, scale_to_y, precise_filter, precise_filter, 0, 0);
     }
     last = flow_node_create_bitmap_bgra_reference(c, &g, last, ref);
 

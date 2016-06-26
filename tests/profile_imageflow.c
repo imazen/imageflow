@@ -51,7 +51,7 @@ int main(void)
 
             last = flow_node_create_decoder(c, &g, -1, input_placeholder);
             last = flow_node_create_scale(c, &g, last, target_w, target_h, (flow_interpolation_filter_Robidoux),
-                                          (flow_interpolation_filter_Robidoux), flags);
+                                          (flow_interpolation_filter_Robidoux), flags, 0);
 
             struct flow_bitmap_bgra * b;
             last = flow_node_create_bitmap_bgra_reference(c, &g, last, &b);
