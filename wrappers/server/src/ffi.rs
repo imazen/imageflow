@@ -79,6 +79,9 @@ pub enum Filter {
     Fastest = 27,
 
     MitchellFast = 28,
+    NCubic = 29,
+    NCubicSharp = 30
+
 }
 
 
@@ -110,7 +113,9 @@ pub const FILTER_OPTIONS: &'static [&'static str] = &["robidouxfast",
                                                       "catmullromfast",
                                                       "catmullromfastsharp",
                                                       "fastest",
-                                                      "mitchellfast"];
+                                                      "mitchellfast",
+                                                    "ncubic",
+                                                    "ncubicsharp"];
 
 
 impl FromStr for Filter {
@@ -147,6 +152,8 @@ impl FromStr for Filter {
             "catmullromfastsharp" => Ok(Filter::CatmullRomFastSharp),
             "fastest" => Ok(Filter::Fastest),
             "mitchellfast" => Ok(Filter::MitchellFast),
+            "ncubic" => Ok(Filter::NCubic),
+            "ncubicsharp" => Ok(Filter::NCubicSharp),
             _ => Err("no match"),
         }
     }

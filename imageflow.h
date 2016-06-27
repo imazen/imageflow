@@ -205,7 +205,11 @@ typedef enum flow_interpolation_filter {
 
     flow_interpolation_filter_Fastest = 27,
 
-    flow_interpolation_filter_MitchellFast = 28
+    flow_interpolation_filter_MitchellFast = 28,
+
+    flow_interpolation_filter_NCubic = 29,
+
+    flow_interpolation_filter_NCubicSharp = 30
 } flow_interpolation_filter;
 
 // TODO: So many more - 8-bit, compressed data,

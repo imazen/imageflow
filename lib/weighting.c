@@ -266,6 +266,12 @@ InterpolationDetails_create_from_internal(flow_c * context, flow_interpolation_f
             return ex ? truePtr
                       : flow_interpolation_details_create_bicubic_custom(context, 1, 7.0 / 8.0, 1.0 / 3.0, 1.0 / 3.0);
 
+        case flow_interpolation_filter_NCubic:
+            return ex ? truePtr : flow_interpolation_details_create_bicubic_custom(
+                context, 2.5, 1. / 1.1685777620836932, 0.37821575509399867, 0.31089212245300067);
+        case flow_interpolation_filter_NCubicSharp:
+            return ex ? truePtr : flow_interpolation_details_create_bicubic_custom(
+                context, 2.5, 1. / 1.105822933719019, 0.2620145123990142, 0.3689927438004929);
         case flow_interpolation_filter_Robidoux:
             return ex ? truePtr : flow_interpolation_details_create_bicubic_custom(
                                       context, 2, 1. / 1.1685777620836932, 0.37821575509399867, 0.31089212245300067);
@@ -392,6 +398,7 @@ flow_interpolation_line_contributions_create(flow_c * context, const uint32_t ou
         const uint32_t right_src_pixel = (uint32_t)int_min(right_edge, (int)input_line_size - 1);
 
         double total_weight = 0.0;
+        double total_negative_weight = 0.0;
 
         const uint32_t source_pixel_count = right_src_pixel - left_src_pixel + 1;
 
@@ -417,7 +424,9 @@ flow_interpolation_line_contributions_create(flow_c * context, const uint32_t ou
             }
             weights[tx] = (float)add;
             total_weight += add;
+            total_negative_weight -= fmin(0,add);
         }
+
 
         if (total_weight <= TONY) {
             flow_interpolation_line_contributions_destroy(context, res);
@@ -425,12 +434,12 @@ flow_interpolation_line_contributions_create(flow_c * context, const uint32_t ou
             return NULL;
         }
 
-        const float total_factor = (float)(1.0f / total_weight);
+        const float positive_factor = (1.0f + total_negative_weight)/(total_weight + total_negative_weight);
         for (ix = 0; ix < source_pixel_count; ix++) {
-            weights[ix] *= total_factor;
             if (weights[ix] < 0) {
                 negative_area -= weights[ix];
             } else {
+                weights[ix] *= positive_factor;
                 positive_area += weights[ix];
             }
         }
