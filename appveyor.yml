@@ -29,8 +29,8 @@ install:
 test_script:
   - mkdir build
   - cd build
-  - if "%PLATFORM%"=="x86" conan install -o build_tests=True -o shared=True --build missing  -s build_type=Release -s arch=x86 -u ../
-  - if "%PLATFORM%"=="x64" conan install -o build_tests=True -o shared=True --build missing  -s build_type=Release -s arch=x86_64  -u ../
+  - if "%PLATFORM%"=="x86" conan install --scope build_tests=True -o shared=True --build missing -s build_type=Release -s arch=x86 -u ../
+  - if "%PLATFORM%"=="x64" conan install --scope build_tests=True -o shared=True --build missing -s build_type=Release -s arch=x86_64  -u ../
   - conan build ../
   - cd ..
   - conan export lasote/testing

@@ -104,7 +104,7 @@ Install nasm (`cinst -y nasm` on windows, followed by `set PATH=%PATH%;%ProgramF
  
  
     cd build
-    conan install -u --file ../conanfile.py -o build_tests=True --build missing  -s build_type=Release -s arch=x86_64
+    conan install -u --file ../conanfile.py --scope build_tests=True --build missing  -s build_type=Release -s arch=x86_64
     cd ..
     conan build
     

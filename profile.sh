@@ -5,7 +5,7 @@ if [ -d "profiling" ]; then
 else
     mkdir profiling
     cd profiling
-    conan install --file ../conanfile.py -o profiling=True -o build_tests=False --build missing
+    conan install --file ../conanfile.py --scope profiling=True --scope build_tests=False --build missing
 fi
 conan build --file ../conanfile.py
 time build/bin/profile_imageflow

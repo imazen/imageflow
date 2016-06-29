@@ -8,29 +8,29 @@ class ImageFlowConan(ConanFile):
     license = "AGPLv3"
     settings = "os", "compiler", "build_type", "arch"
     requires = "littlecms/2.7@lasote/stable", "libpng/1.6.21@lasote/stable", "libjpeg-turbo/1.4.2@imazen/testing" , "giflib/5.1.3@lasote/stable"
-    options = {"shared": [True, False], "build_tests": [True, False], "profiling": [True, False], "coverage": [True, False]}
+    options = {"shared": [True, False]}
     generators = "cmake"
-    default_options = "shared=False", "build_tests=False", "coverage=False", "profiling=False", "libjpeg-turbo:shared=False", "libpng:shared=False", \
+    default_options = "shared=False", "libjpeg-turbo:shared=False", "libpng:shared=False", \
    					  "zlib:shared=False", "libcurl:shared=False", "OpenSSL:shared=True", \
    					  "imageflow:shared=True"
     exports = "lib/*", "CMakeLists.txt", "imageflow.h", "imageflow_advanced.h"
     
 
     def config(self):
-        if self.settings.os != "Windows":  #giflib must be shared on windows?
+        if self.settings.os != "Windows":  # giflib must be shared on windows?
             self.options["giflib"].shared = False
 
-        if self.options.build_tests or self.options.profiling:
-            self.requires("libcurl/7.47.1@lasote/stable")
+        if self.scope.build_tests or self.scope.profiling:
+            self.requires("libcurl/7.47.1@lasote/stable", dev=True)
             if self.settings.os == "Macos":
                 self.options["libcurl"].darwin_ssl = False
                 self.options["libcurl"].custom_cacert = True
 
-        if self.options.build_tests:
-            self.requires("catch/1.3.0@TyRoXx/stable")
+        if self.scope.build_tests:
+            self.requires("catch/1.3.0@TyRoXx/stable", dev=True)
             if self.settings.os != "Windows":  # Not supported in windows
-                self.requires("theft/0.2.0@lasote/stable")
-                self.requires("electric-fence/2.2.0@lasote/stable") ##### SLOWS IT DOWN
+                self.requires("theft/0.2.0@lasote/stable", dev=True)
+                self.requires("electric-fence/2.2.0@lasote/stable", dev=True) ##### SLOWS IT DOWN
 
     def imports(self):
         self.copy("*.so", dst="bin", src="bin")  # From bin to bin
@@ -54,7 +54,7 @@ class ImageFlowConan(ConanFile):
 
 
     def build(self):
-        self.output.warn('build_tests=%s coverage=%s profiling=%s shared=%s' % (self.options.build_tests, self.options.coverage, self.options.profiling, self.options.shared))
+        self.output.warn('build_tests=%s coverage=%s profiling=%s shared=%s' % (self.scope.build_tests, self.scope.coverage, self.scope.profiling, self.options.shared))
         build_dir = os.path.join(self.conanfile_directory, "build")
         if not os.path.exists(build_dir):
             os.mkdir(build_dir)
@@ -63,24 +63,27 @@ class ImageFlowConan(ConanFile):
         os.chdir(build_dir)
         cmake = CMake(self.settings)
         cmake_settings = ""
-
-        if self.options.coverage:
+        
+        if self.scope.dev and self.scope.coverage:
             cmake_settings += " -DCOVERAGE=ON"
-        if self.options.build_tests:
+        if self.scope.dev and self.scope.build_tests:
             cmake_settings += " -DENABLE_TEST=ON"
-        if self.options.profiling:
+        if self.scope.dev and self.scope.profiling:
             cmake_settings += " -DSKIP_LIBRARY=ON -DENABLE_TEST=OFF -DENABLE_PROFILING=ON"
 
         cmake_settings += " -DBUILD_SHARED_LIBS=ON" if self.options.shared else " -DBUILD_SHARED_LIBS=OFF"
 
         cmake_command = 'cmake "%s" %s %s' % (self.conanfile_directory, cmake.command_line, cmake_settings)
         cmake_build_command = 'cmake --build . %s' % cmake.build_config
-        cmake_test_command = 'ctest -V -C Release'
+        cmake_valgrind = "-D ExperimentalMemCheck" if self.scope.valgrind else ""
+        
+        cmake_test_command = 'ctest -V -C Release %s' % cmake_valgrind
         self.output.warn(cmake_command)
         self.run(cmake_command)
         self.output.warn(cmake_build_command)
         self.run(cmake_build_command)
-        if self.options.build_tests:
+
+        if self.scope.dev and self.scope.build_tests:
             self.output.warn(cmake_test_command)
             self.run(cmake_test_command)
         else:
