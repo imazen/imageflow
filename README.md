@@ -1,11 +1,10 @@
 # ![imageflow](https://www.imageflow.io/images/imageflow.svg) = libimageflow + imageflow-server
 
-## [Kickstarter ends June 27th](https://www.kickstarter.com/projects/njones/imageflow-respect-the-pixels-a-secure-alt-to-image)
-Access precompiled binaries (just a command-line tool now; server coming later) by pledging $1. 
+## [The Imageflow Kickstarter ended successfully!](https://www.kickstarter.com/projects/njones/imageflow-respect-the-pixels-a-secure-alt-to-image/posts/1616122)
 
 --- 
 
-Imageflow will bring world-class image quality and performance to all languages through a C-compatible API (libimageflow) and a separate RESTful turnkey HTTP server. Linux, Mac, and Windows are supported.
+Imageflow will bring world-class image quality and performance to all languages through a C-compatible API (libimageflow) and a separate RESTful turnkey HTTP server and command-line tool. Linux, Mac, and Windows are supported.
 
 ----
 
@@ -62,6 +61,8 @@ Imageflow will bring world-class image quality and performance to all languages 
 
 ### Refactorings
 
+
+- [ ] Begin porting to Rust. 
 - [x] Explicit control flow at all points.
 - [x] Full debugging information by recording errors at failure point, then appending the stacktract
 - [x] Give user complete control over allocation method and timing.
@@ -73,7 +74,6 @@ Imageflow will bring world-class image quality and performance to all languages 
 - [ ] Replace ruby prototype of libimageflow-server with a Rust version
 - [ ] Look into replacing parts of the jpeg codec with concurrent alternatives. 
 - [ ] Add fuzz testing for JSON and I/O 
-- [ ] Begin porting the most complex bits to Rust. 
 - [ ] Find cleaner way to use SSE2 constructs with scalar fallbacks, it is messy in a few areas.
 
 
