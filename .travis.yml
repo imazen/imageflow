@@ -16,6 +16,9 @@ env:
     - GCC_VERSION=49
     - GCC_VERSION=52
     - GCC_VERSION=53
+    - GCC_VERSION=48 COVERALLS=True
+    - GCC_VERSION=48 VALGRIND=True
+
 
 matrix:
    include:

@@ -19,7 +19,7 @@ rm *~
 
 mkdir -p build
 cd build
-conan install -o build_tests=True --build missing -u ../
+conan install --scope build_tests=True --build missing -u ../
 conan build ../
 
 cd ..

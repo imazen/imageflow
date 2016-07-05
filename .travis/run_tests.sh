@@ -11,5 +11,5 @@ cd bin
 export PATH=$PATH:$(pwd)
 cd ../..
 
-conan install -o build_tests=True -o coverage=True --build missing -u ../
+conan install --scope build_tests=True --scope coverage=True --scope valgrind=${VALGRIND} --build missing -u ../
 conan build ../
