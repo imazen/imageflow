@@ -168,6 +168,12 @@ FLOW_HINT_HOT FLOW_HINT_UNSAFE_MATH_OPTIMIZATIONS
         }
         flow_prof_stop(c, "ScaleBgraFloatRows", true, false);
 
+        if (dest_buf->alpha_premultiplied) {
+            if (!flow_bitmap_float_demultiply_alpha(c, dest_buf, 0, 1)) {
+                FLOW_destroy(c, details);
+                FLOW_error_return(c);
+            }
+        }
         if (!flow_bitmap_float_copy_linear_over_srgb(c, dest_buf, 0, canvas, out_row, 1, 0, dest_buf->w, false)) {
             FLOW_destroy(c, details);
             FLOW_error_return(c);
