@@ -296,9 +296,8 @@ static bool flatten_render1d(flow_c * c, struct flow_graph ** g, int32_t node_id
     if (!set_node_optimized_and_update_state(c, *g, canvas)) {
         FLOW_error_return(c);
     }
-
     *first_replacement_node = create_primitve_render_to_canvas_1d_node(c, g, *first_replacement_node, scale_to_width,
-                                                                       true, flow_interpolation_filter_Robidoux);
+                                                                       true, info->interpolation_filter);
     if (*first_replacement_node < 0) {
         FLOW_error_return(c);
     }
