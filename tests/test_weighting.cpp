@@ -42,20 +42,20 @@ TEST_CASE("Test Weighting", "[fastscaling]")
           == nullptr);
     CHECK(test_filter(&context, flow_interpolation_filter::flow_interpolation_filter_CubicFast, msg, 1, 2, 1, 0.08, 2)
           == nullptr);
-    CHECK(test_filter(&context, flow_interpolation_filter::flow_interpolation_filter_Cubic, msg, 1, 2, 1, 0.08, 2)
+    CHECK(test_filter(&context, flow_interpolation_filter::flow_interpolation_filter_Cubic, msg, 0, 0, 2.0, 0.08, 2)
           == nullptr);
 
     // BSpline is a smoothing filter, always positive
     CHECK(test_filter(&context, flow_interpolation_filter::flow_interpolation_filter_CubicBSpline, msg, 0, 0, 1.75,
                       0.08, 2) == nullptr);
 
-    CHECK(test_filter(&context, flow_interpolation_filter::flow_interpolation_filter_Mitchell, msg, 1.0f, 1.75f, 1,
-                      0.08, 1.75) == nullptr);
+    CHECK(test_filter(&context, flow_interpolation_filter::flow_interpolation_filter_Mitchell, msg, 8.0/7.0, 2.0, 1,
+                      0.08, 2.0) == nullptr);
 
-    CHECK(test_filter(&context, flow_interpolation_filter::flow_interpolation_filter_Robidoux, msg, 1, 1.65, 1, 0.08,
-                      1.75) == nullptr);
-    CHECK(test_filter(&context, flow_interpolation_filter::flow_interpolation_filter_RobidouxSharp, msg, 1, 1.8, 1,
-                      0.08, 1.8) == nullptr);
+    CHECK(test_filter(&context, flow_interpolation_filter::flow_interpolation_filter_Robidoux, msg, 1.1685777620836932, 2, 1, 0.08,
+                      2) == nullptr);
+    CHECK(test_filter(&context, flow_interpolation_filter::flow_interpolation_filter_RobidouxSharp, msg, 1.105822933719019, 2, 1,
+                      0.08, 2) == nullptr);
 
     // Sinc filters. These have second crossings.
     CHECK(test_filter(&context, flow_interpolation_filter::flow_interpolation_filter_RawLanczos2, msg, 1, 2, 1, 0.08, 2)

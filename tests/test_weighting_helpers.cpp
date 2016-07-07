@@ -16,13 +16,13 @@ bool test_contrib_windows(flow_c * context, char * msg)
 
     // assumes included edge cases
 
-    struct flow_interpolation_details * cubicFast = flow_interpolation_details_create_from(
-        context, flow_interpolation_filter::flow_interpolation_filter_CubicFast);
+    struct flow_interpolation_details *triangle = flow_interpolation_details_create_from(
+        context, flow_interpolation_filter::flow_interpolation_filter_Triangle);
 
     unsigned int from_w = 6;
     unsigned int to_w = 3;
-    unsigned int corr36[3][2] = { { 0, 1 }, { 2, 3 }, { 4, 5 } };
-    lct = flow_interpolation_line_contributions_create(context, to_w, from_w, cubicFast);
+    unsigned int corr36[3][2] = { { 0, 2 }, { 1, 4 }, { 3, 5 } };
+    lct = flow_interpolation_line_contributions_create(context, to_w, from_w, triangle);
 
     for (uint32_t i = 0; i < lct->LineLength; i++)
         if (lct->ContribRow[i].Left != (int)corr36[i][0]) {
@@ -43,9 +43,9 @@ bool test_contrib_windows(flow_c * context, char * msg)
 
     from_w = 6;
     to_w = 4;
-    unsigned int corr46[4][2] = { { 0, 1 }, { 1, 2 }, { 3, 4 }, { 4, 5 } };
-    lct = flow_interpolation_line_contributions_create(context, to_w, from_w, cubicFast);
-    flow_interpolation_details_destroy(context, cubicFast);
+    unsigned int corr46[4][2] = { { 0, 1 }, { 1, 3 }, { 2, 4 }, { 4, 5 } };
+    lct = flow_interpolation_line_contributions_create(context, to_w, from_w, triangle);
+    flow_interpolation_details_destroy(context, triangle);
 
     for (uint32_t i = 0; i < lct->LineLength; i++)
         if (lct->ContribRow[i].Left != (int)corr46[i][0]) {
@@ -117,9 +117,12 @@ bool test_details(flow_c * context, struct flow_interpolation_details * details,
                              near0_threshold, "should near 0"))
         return false;
 
+    char sub_msg[1024];
+    flow_snprintf(sub_msg, 1024, "should end at expected_end (%f)", expected_end);
+
     // Ensure ended at expected_end
     if (!function_bounded_bi(context, details, msg, expected_end, expected_end + 1, 0.05, -0.0001f, 0.0001f,
-                             "should end at expected_end"))
+                             sub_msg))
         return false;
 
     if (expected_first_crossing != 0 && expected_second_crossing != 0) {
@@ -130,8 +133,10 @@ bool test_details(flow_c * context, struct flow_interpolation_details * details,
 
         // Ensure everything between second crossing and end is positive - if significant
         if (expected_end > expected_second_crossing + 0.1) {
+
+            flow_snprintf(sub_msg, 1024, "should be positive between crossing 2 (%f) and end (%f)", expected_second_crossing, expected_end);
             if (!function_bounded_bi(context, details, msg, expected_second_crossing + 0.05, expected_end - 0.02, 0.02,
-                                     0, 500, "should be positive between crossing 2 and expected_end"))
+                                     0, 500, sub_msg))
                 return false;
         }
     } else {
