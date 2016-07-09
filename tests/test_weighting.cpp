@@ -248,7 +248,7 @@ TEST_CASE("Test output weights", "[fastscaling]") {
         char diff_command[4096];
 
         flow_snprintf(diff_command, 4096, "diff -w %s %s", filename, reference_filename);
-        system(diff_command); //Ignore result; just for the benefit of STDOUT
+        int ignore_result = system(diff_command); //just for the benefit of STDOUT
     }
     REQUIRE(are_equal);
 
