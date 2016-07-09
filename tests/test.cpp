@@ -9,10 +9,10 @@ bool test(int sx, int sy, flow_pixel_format sbpp, int cx, int cy, flow_pixel_for
 
     struct flow_bitmap_bgra * source = flow_bitmap_bgra_create(&context, sx, sy, true, sbpp);
     struct flow_bitmap_bgra * canvas = flow_bitmap_bgra_create(&context, cx, cy, true, cbpp);
-    if (canvas == NULL || source == NULL)
+    if (PRINT_IF_ERR(&context))
         return false;
     struct flow_RenderDetails * details = flow_RenderDetails_create_with(&context, filter);
-    if (details == NULL)
+    if (PRINT_IF_ERR(&context))
         return false;
     details->sharpen_percent_goal = 50;
     details->post_flip_x = flipx;
@@ -24,7 +24,8 @@ bool test(int sx, int sy, flow_pixel_format sbpp, int cx, int cy, flow_pixel_for
     // If we add memory use estimation, we should keep flow_Renderer
 
     if (!flow_RenderDetails_render(&context, details, source, canvas)) {
-        return false;
+        if (PRINT_IF_ERR(&context))
+            return false;
     }
 
     bool success = flow_context_begin_terminate(&context);

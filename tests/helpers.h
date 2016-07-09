@@ -102,6 +102,9 @@ bool flow_dir_exists_eh(const char * dir_path);
 bool flow_compare_file_contents(flow_c * c, const char * filename1, const char * filename2, char *difference_message_buffer, size_t buffer_size, bool * are_equal);
 
 #define ERR(c) REQUIRE_FALSE(has_err(c, __FILE__, __LINE__, __func__))
+#define PRINT_IF_ERR(c) has_err(c, __FILE__, __LINE__, __func__)
+
+
 
 #ifdef __cplusplus
 }
