@@ -144,9 +144,8 @@ FLOW_HINT_HOT FLOW_HINT_UNSAFE_MATH_OPTIMIZATIONS
                 row_indexes[active_buf_ix] = input_row;
                 loaded = true;
             }
-
             float weight = contrib.Weights[input_row - contrib.Left];
-            if (fabs(weight) > 0.002) {
+            if (fabs(weight) > 0.00000002) {
                 // Apply coefficent, update tracking
                 float delta_coefficient = weight / row_coefficients[active_buf_ix];
                 multiply_row(rows[active_buf_ix], row_floats, delta_coefficient);
