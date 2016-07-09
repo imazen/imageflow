@@ -4,7 +4,7 @@ use clap::{App, Arg, ArgMatches};
 extern crate imageflow_server;
 use imageflow_server::boring::*;
 
-use imageflow_server::ffi::{Filter, FILTER_OPTIONS};
+use imageflow_server::ffi::{Filter, TESTED_FILTER_OPTIONS};
 use std::path::{PathBuf, Path};
 use std::fs::File;
 use std::io::Write;
@@ -83,12 +83,12 @@ fn build_app() -> App<'static, 'static> {
             .long("down-filter")
             .value_name("FILTER")
             .takes_value(true)
-            .possible_values(FILTER_OPTIONS)
+            .possible_values(TESTED_FILTER_OPTIONS)
             .help("Filter to use when downscaling"))
         .arg(Arg::with_name("up-filter")
             .long("up-filter")
             .value_name("FILTER")
-            .possible_values(FILTER_OPTIONS)
+            .possible_values(TESTED_FILTER_OPTIONS)
             .takes_value(true)
             .help("Filter to use when upscaling"))
         .arg(Arg::with_name("incorrectgamma")

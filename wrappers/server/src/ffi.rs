@@ -80,10 +80,25 @@ pub enum Filter {
 
     MitchellFast = 28,
     NCubic = 29,
-    NCubicSharp = 30
-
+    NCubicSharp = 30,
 }
 
+
+pub const TESTED_FILTER_OPTIONS: &'static [&'static str] = &["",
+                                                             "robidoux",
+                                                             "robidouxsharp",
+                                                             "ginseng",
+                                                             "lanczos",
+                                                             "lanczos2",
+                                                             "catmullrom",
+                                                             "catrom",
+                                                             "mitchell",
+                                                             "cubicbspline",
+                                                             "bspline",
+                                                             "hermite",
+                                                             "triangle",
+                                                             "ncubic",
+                                                             "ncubicsharp"];
 
 pub const FILTER_OPTIONS: &'static [&'static str] = &["robidouxfast",
                                                       "robidoux",
@@ -101,7 +116,7 @@ pub const FILTER_OPTIONS: &'static [&'static str] = &["robidouxfast",
                                                       "catrom",
                                                       "mitchell",
                                                       "cubicbspline",
-    "bspline",
+                                                      "bspline",
                                                       "hermite",
                                                       "jinc",
                                                       "rawlanczos3",
@@ -115,8 +130,8 @@ pub const FILTER_OPTIONS: &'static [&'static str] = &["robidouxfast",
                                                       "catmullromfastsharp",
                                                       "fastest",
                                                       "mitchellfast",
-                                                    "ncubic",
-                                                    "ncubicsharp"];
+                                                      "ncubic",
+                                                      "ncubicsharp"];
 
 
 impl FromStr for Filter {
