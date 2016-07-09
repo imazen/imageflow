@@ -169,7 +169,7 @@ TEST_CASE("Test output weights", "[fastscaling]") {
     flow_context_initialize(&context);
 
     char filename[2048];
-    if (!create_relative_path(&context, true, filename, 2048, (char *)"/visuals/weights.txt")) {
+    if (!create_relative_path(&context, true, filename, 2048, "/visuals/weights.txt")) {
         ERR(c);
     }
 
@@ -235,7 +235,7 @@ TEST_CASE("Test output weights", "[fastscaling]") {
 
 
     char reference_filename[2048];
-    if (!create_relative_path(&context, true, reference_filename, 2048, (char *)"/visuals/reference_weights.txt")) {
+    if (!create_relative_path(&context, true, reference_filename, 2048, "/visuals/reference_weights.txt")) {
         ERR(c);
     }
 

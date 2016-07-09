@@ -281,7 +281,7 @@ bool flow_recursive_mkdir(const char * dir, bool create_last_segment)
 }
 
 bool create_relative_path(flow_c * c, bool create_parent_dirs, char * filename, size_t max_filename_length,
-                          char * format, ...)
+                          const char * format, ...)
 {
     const char * this_file = __FILE__;
     char * last_slash = strrchr(this_file, '/');
