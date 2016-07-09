@@ -17,7 +17,7 @@ rm ./*.png
 rm ./rscope*.htm*
 
 
-declare -a arr=("ncubic" "ncubicsharp" "lanczos" "lanczos2" "ginseng" "robidoux" "robidouxsharp" "box" "triangle" "cubic" "hermite" "catrom" "mitchell")
+declare -a arr=("ncubic" "ncubicsharp" "lanczos" "lanczos2" "ginseng" "robidoux" "robidouxsharp" "box" "triangle" "bspline" "hermite" "catrom" "mitchell")
 
 ## now loop through the above array
 for i in "${arr[@]}"
@@ -36,8 +36,9 @@ do
   if [ "${i}" = "robidouxsharp" ]; then
     w=" -filter cubic0.2620145123990142,0.3689927438004929 "
   fi
-  if [ "${i}" = "cubic" ]; then
+  if [ "${i}" = "bspline" ]; then
     w=" -filter bspline "
+    m=" -filter spline "
   fi
 
   if [ "${i}" = "ncubic" ]; then
