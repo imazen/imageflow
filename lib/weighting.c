@@ -370,8 +370,6 @@ flow_interpolation_line_contributions_create(flow_c * context, const uint32_t ou
 {
     const double sharpen_ratio = flow_interpolation_details_percent_negative_weight(details);
     const double desired_sharpen_ratio = details->sharpen_percent_goal / 100.0;
-    const double extra_negative_weight
-        = sharpen_ratio > 0 && desired_sharpen_ratio > 0 ? (desired_sharpen_ratio + sharpen_ratio) / sharpen_ratio : 0;
 
     const double scale_factor = (double)output_line_size / (double)input_line_size;
     const double downscale_factor = fmin(1.0, scale_factor);
@@ -419,27 +417,26 @@ flow_interpolation_line_contributions_create(flow_c * context, const uint32_t ou
             int tx = ix - left_src_pixel;
             // int tx = min(max(ix, left_src_pixel), right_src_pixel) - left_src_pixel;
             double add = (*details->filter)(details, downscale_factor *((double)ix - center_src_pixel));
-            if (add < 0 && extra_negative_weight != 0) {
-                add *= extra_negative_weight;
-            }
             weights[tx] = (float)add;
             total_weight += add;
             total_negative_weight -= fmin(0,add);
         }
 
-
-        if (total_weight <= TONY) {
-            flow_interpolation_line_contributions_destroy(context, res);
-            FLOW_error(context, flow_status_Invalid_internal_state);
-            return NULL;
+        float neg_factor, pos_factor;
+        if (total_weight <= 0 || desired_sharpen_ratio > sharpen_ratio){
+            float total_positive_weight = total_weight + total_negative_weight;
+            float target_negative_weight = desired_sharpen_ratio * total_positive_weight;
+            pos_factor = 1;
+            neg_factor = target_negative_weight / total_negative_weight;
+        }else{
+            neg_factor = pos_factor = (float)(1.0f / total_weight);
         }
-
-        const float positive_factor = (1.0f + total_negative_weight)/(total_weight + total_negative_weight);
         for (ix = 0; ix < source_pixel_count; ix++) {
             if (weights[ix] < 0) {
+                weights[ix] *= neg_factor;
                 negative_area -= weights[ix];
             } else {
-                weights[ix] *= positive_factor;
+                weights[ix] *= pos_factor;
                 positive_area += weights[ix];
             }
         }
