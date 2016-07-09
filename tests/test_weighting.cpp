@@ -88,3 +88,167 @@ TEST_CASE("Test Weighting", "[fastscaling]")
     REQUIRE(flow_context_begin_terminate(&context) == true);
     flow_context_end_terminate(&context);
 }
+
+TEST_CASE("Verify weights are symmetric and bounded", "[fastscaling]"){
+    flow_c context;
+    flow_c *c = &context;
+    flow_context_initialize(&context);
+
+    //Loop through every filter type, and for each filter type, try a variety of scaling ratios.
+    //For each scaling ratio, export a row where columns contain the weights for the input pixels
+    //filter, 2, from, 200, to, 300, weights, src, 0, (0.00001, 0.00200, 1.2200), 1, ...
+    int32_t filter_id = 1;
+    int32_t scalings[] = {/*downscale to 1px*/ 1,1,2,1,3,1,4,1,5,1,6,1,7,1,17,1,
+        /*upscale from 2px*/ 2,3,2,4,2,5,2,17,
+        /*other*/ 11, 7, 7, 3, 8,4};
+
+    flow_interpolation_filter first_filter = flow_interpolation_filter_NCubicSharp;
+    flow_interpolation_filter last_filter = flow_interpolation_filter_NCubicSharp;
+    uint32_t scaling_ix;
+    for (filter_id = (int32_t)first_filter; filter_id <= (int32_t)last_filter; filter_id++){
+        for (scaling_ix = 0; scaling_ix < sizeof(scalings) / sizeof(int32_t); scaling_ix +=2){
+            int32_t from_width = scalings[scaling_ix];
+            int32_t to_width = scalings[scaling_ix + 1];
+            flow_interpolation_filter filter = (flow_interpolation_filter)filter_id;
+
+            struct flow_interpolation_details * details = flow_interpolation_details_create_from(&context, filter);
+
+            ERR(c);
+
+            struct flow_interpolation_line_contributions * lct = flow_interpolation_line_contributions_create(&context, to_width, from_width, details);
+
+            CAPTURE(filter);
+            CAPTURE(from_width);
+            CAPTURE(to_width);
+            if (flow_context_has_error(c)) {
+
+                ERR(c);
+            }
+
+
+            for (uint32_t output_pixel = 0; output_pixel < lct->LineLength / 2; output_pixel++){
+
+                uint32_t opposite_output_pixel = lct->LineLength - 1 - output_pixel;
+                CAPTURE(output_pixel);
+                CAPTURE(opposite_output_pixel);
+                struct flow_interpolation_pixel_contributions * current = &lct->ContribRow[output_pixel];
+
+                struct flow_interpolation_pixel_contributions * opposite = &lct->ContribRow[opposite_output_pixel];
+
+                //printf("%d[%d,%d] vs %d[%d,%d]\n", output_pixel, current->Left, current->Right, opposite_output_pixel, opposite->Left, opposite->Right);
+                CAPTURE(current->Left);
+                CAPTURE(current->Right);
+                CAPTURE(opposite->Left);
+                CAPTURE(opposite->Right);
+                REQUIRE(from_width - 1 - opposite->Right == current->Left); // "Outer bounds must be symmetrical."
+
+
+                REQUIRE(from_width - 1 - current->Right == opposite->Left); // "Outer bounds must be symmetrical."
+
+
+                for (int32_t ix = current->Left; ix <= current->Right; ix++ ){
+
+                    REQUIRE(fabs(current->Weights[ix - current->Left] - opposite->Weights[current->Right - ix]) < 0.00001);
+
+                    REQUIRE(fabs(current->Weights[ix - current->Left]) < 5);
+                }
+            }
+
+            FLOW_destroy(c, lct);
+        }
+    }
+    REQUIRE(flow_context_begin_terminate(&context) == true);
+    flow_context_end_terminate(&context);
+}
+
+
+TEST_CASE("Test output weights", "[fastscaling]") {
+
+    flow_c context;
+    flow_c *c = &context;
+    flow_context_initialize(&context);
+
+    char filename[2048];
+    if (!create_relative_path(&context, true, filename, 2048, (char *)"/visuals/weights.txt")) {
+        ERR(c);
+    }
+
+    FILE * output;
+    if ((output = fopen(filename, "w")) == NULL) {
+        ERR(c);
+    }
+
+    fprintf(output, "filter, from_width, to_width, weights");
+
+
+
+    //Loop through every filter type, and for each filter type, try a variety of scaling ratios.
+    //For each scaling ratio, export a row where columns contain the weights for the input pixels
+    //filter, 2, from, 200, to, 300, weights, src, 0, (0.00001, 0.00200, 1.2200), 1, ...
+    int32_t filter_id = 1;
+    int32_t scalings[] = {/*downscale to 1px*/ 1,1,2,1,3,1,4,1,5,1,6,1,7,1,17,1,
+                          /*upscale from 2px*/ 2,3,2,4,2,5,2,17,
+                            /*other*/ 11, 7, 7, 3, 8,4};
+    flow_interpolation_filter last_filter = flow_interpolation_filter_NCubicSharp;
+    uint32_t scaling_ix;
+    for (filter_id = 1; filter_id <= (int32_t)last_filter; filter_id++){
+        for (scaling_ix = 0; scaling_ix < sizeof(scalings) / sizeof(int32_t); scaling_ix +=2){
+            int32_t from_width = scalings[scaling_ix];
+            int32_t to_width = scalings[scaling_ix + 1];
+            flow_interpolation_filter filter = (flow_interpolation_filter)filter_id;
+
+            struct flow_interpolation_details * details = flow_interpolation_details_create_from(&context, filter);
+
+            ERR(c);
+
+            struct flow_interpolation_line_contributions * lct = flow_interpolation_line_contributions_create(&context, to_width, from_width, details);
+
+            if (flow_context_has_error(c)) {
+                CAPTURE(filter);
+                ERR(c);
+            }
+
+            fprintf(output, "\nfilter_%02d,%3d,%3d, ", filter_id, from_width, to_width);
+
+
+            for (uint32_t output_pixel = 0; output_pixel < lct->LineLength; output_pixel++){
+                struct flow_interpolation_pixel_contributions * current = &lct->ContribRow[output_pixel];
+
+                fprintf(output, "to %i: ", output_pixel);
+
+                for (int32_t ix = current->Left; ix <= current->Right; ix++ ){
+                    float weight = current->Weights[ix - current->Left];
+                    fprintf(output,(ix == current->Left) ? "(" : " ");
+                    fprintf(output, "%.06f", weight);
+
+                }
+                fprintf(output, "), ");
+            }
+
+            FLOW_destroy(&context, lct);
+        }
+    }
+
+
+
+    fclose(output);
+
+
+    char reference_filename[2048];
+    if (!create_relative_path(&context, true, reference_filename, 2048, (char *)"/visuals/reference_weights.txt")) {
+        ERR(c);
+    }
+
+    char result_buffer[2048];
+    bool are_equal;
+    REQUIRE(flow_compare_file_contents(&context, filename, reference_filename, &result_buffer[0], 2048 , &are_equal));
+    ERR(c);
+    CAPTURE(result_buffer);
+    REQUIRE(are_equal);
+
+
+    REQUIRE(flow_context_begin_terminate(&context) == true);
+    flow_context_end_terminate(&context);
+
+
+}
