@@ -417,6 +417,12 @@ flow_interpolation_line_contributions_create(flow_c * context, const uint32_t ou
             int tx = ix - left_src_pixel;
             // int tx = min(max(ix, left_src_pixel), right_src_pixel) - left_src_pixel;
             double add = (*details->filter)(details, downscale_factor *((double)ix - center_src_pixel));
+            if (fabs(add) <= 0.00000002){
+                add = 0.0;
+                // Weights below a certain threshold make consistent x-plat
+                // integration test results impossible. pos/neg zero, etc.
+                // They should be rounded down to zero at the threshold at which results are consistent.
+            }
             weights[tx] = (float)add;
             total_weight += add;
             total_negative_weight -= fmin(0,add);
