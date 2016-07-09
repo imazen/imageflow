@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title></title>
+
+  <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.0.0/jquery.min.js"></script>
+  <script src="data.js" ></script>
+  <script src="script.js" ></script>
+</head>
+<body>
+    baseline: 
+    <select  class="compare-dd" id="baselinetool">
+    </select>
+    mouseover: 
+    <select  class="compare-dd" id="tool">
+    </select>
+    img: 
+    <select class="compare-dd" id="image">
+    </select>
+    w:
+    <select  class="compare-dd" id="width">
+    </select>
+    g:
+    <select  class="compare-dd" id="gamma">
+    </select>
+    s: 
+    <select  class="compare-dd" id="sharpen">
+    </select>
+    filter:
+    <select  class="compare-dd" id="filter">
+    </select>
+    
+  
+    <hr />
+
+    <img id="cmp" src="" alt="" /><br />
+
+    <input readonly="readonly" id="status" style="width: 900px" /> <br />
+    
+    <div id="commandoutput"></div>
+
+    <br />
+    <div>
+    Baseline: 
+    <a id ="baseline_link" />
+    </div>
+    <div>Hover: 
+
+    <a id ="hover_link" /></div>
+
+    Dssim (Imageflow compared to ImageWorsener), if selected:<br />
+    <input readonly="readonly" id="dssim" style="width: 500px" /> <br />
+    Diff the two:<br />
+    <input readonly="readonly" id="diff" style="width: 900px" /> <br />
+    
+ 
+</body>
+</html>
