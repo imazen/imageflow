@@ -244,6 +244,12 @@ TEST_CASE("Test output weights", "[fastscaling]") {
     REQUIRE(flow_compare_file_contents(&context, filename, reference_filename, &result_buffer[0], 2048 , &are_equal));
     ERR(c);
     CAPTURE(result_buffer);
+    if (!are_equal){
+        char diff_command[4096];
+
+        flow_snprintf(diff_command, 4096, "diff -w %s %s", filename, reference_filename);
+        system(diff_command); //Ignore result; just for the benefit of STDOUT
+    }
     REQUIRE(are_equal);
 
 
