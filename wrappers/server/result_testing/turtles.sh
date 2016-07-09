@@ -24,26 +24,26 @@ cd turtles
 export IMAGE_PATH=../source_images/turtleegglarge.jpg
 
 echo Using imageflow linearly
-$MEM_COMMAND ../flow-proto1 -i $IMAGE_PATH -o flow_linear_s0_400x400.png -w 400 -h 400 --format png24 -m 100 --sharpen 0 --down-filter bspline --up-filter bspline 
+$MEM_COMMAND ../flow-proto1 -i $IMAGE_PATH -o flow_linear_s0_400x400.png -w 400 -h 400 --format png24 -m 100 --sharpen 0 --down-filter lanczos --up-filter lanczos 
 
 echo
 echo Using ImageMagick to thumbnail
-$MEM_COMMAND convert $IMAGE_PATH -set colorspace sRGB -colorspace RGB -filter bspline -resize 400x400  -colorspace sRGB  magick_linear_400x400.png
+$MEM_COMMAND convert $IMAGE_PATH -set colorspace sRGB -colorspace RGB -filter lanczos -resize 400x400  -colorspace sRGB  magick_linear_400x400.png
 
 echo
 echo Using ImageWorsener to thumbnail
-$MEM_COMMAND ../imagew -filter bspline  $IMAGE_PATH -w 400   imagew_linear_400x400.png
+$MEM_COMMAND ../imagew -filter lanczos  $IMAGE_PATH -w 400   imagew_linear_400x400.png
 
 echo Using imageflow wrong
-$MEM_COMMAND ../flow-proto1 -i $IMAGE_PATH -o flow_wrong_400x400.png -w 400 -h 400 --format png24 --incorrectgamma -m 100 --down-filter bspline --up-filter bspline 
+$MEM_COMMAND ../flow-proto1 -i $IMAGE_PATH -o flow_wrong_400x400.png -w 400 -h 400 --format png24 --incorrectgamma -m 100 --down-filter lanczos --up-filter lanczos 
 
 echo
 echo Using ImageMagick to thumbnail wrong
-$MEM_COMMAND convert $IMAGE_PATH -filter bspline -resize 400x400 magick_wrong_400x400.png
+$MEM_COMMAND convert $IMAGE_PATH -filter lanczos -resize 400x400 magick_wrong_400x400.png
 
 echo
 echo Using ImageWorsener with -nogamma
-$MEM_COMMAND ../imagew -nogamma -filter bspline  $IMAGE_PATH -w 400    imagew_wrong_400x400.png
+$MEM_COMMAND ../imagew -nogamma -filter lanczos  $IMAGE_PATH -w 400    imagew_wrong_400x400.png
 
 
 echo Comparing linear results without sharpening
