@@ -443,6 +443,21 @@ flow_interpolation_line_contributions_create(flow_c * context, const uint32_t ou
                 positive_area += weights[ix];
             }
         }
+
+        //Shrink to improve perf & result consistency
+        int32_t iix;
+        //Shrink region from the right
+        for (iix = source_pixel_count - 1; iix >= 0; iix--){
+            if (weights[iix] != 0) break;
+            res->ContribRow[u].Right--;
+        }
+        //Shrink region from the left
+        for (iix = 0; iix < (int32_t)source_pixel_count; iix++){
+            if (weights[0] != 0) break;
+            res->ContribRow[u].Weights++;
+            weights++;
+            res->ContribRow[u].Left++;
+        }
     }
     res->percent_negative = negative_area / positive_area;
     return res;
