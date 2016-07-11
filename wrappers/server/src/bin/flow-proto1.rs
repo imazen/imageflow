@@ -62,6 +62,17 @@ fn build_app() -> App<'static, 'static> {
             .value_name("0..100")
             .takes_value(true)
             .help("Jpeg compression level."))
+        .arg(Arg::with_name("benchmark-threads")
+            .long("benchmark-threads")
+            .value_name("1..16")
+            .takes_value(true)
+            .help("Number of concurrent threads to use when benchmarking (one operation per \
+                   thread)."))
+        .arg(Arg::with_name("benchmark-count")
+            .long("benchmark-count")
+            .value_name("1..1000")
+            .takes_value(true)
+            .help("How many times to perform the specified operation."))
         .arg(Arg::with_name("sharpen")
             .long("sharpen")
             .value_name("0..100")
@@ -103,10 +114,12 @@ fn build_app() -> App<'static, 'static> {
                    final size"))
 }
 
+
 struct ParsedResult {
     input_file: PathBuf,
     output_file: PathBuf,
     commands: BoringCommands,
+    bench: Option<BenchmarkOptions>,
 }
 
 
@@ -119,6 +132,7 @@ fn parse(matches: ArgMatches) -> Result<ParsedResult, String> {
 
 
     let q = matches.value_of("jpeg-quality").and_then(|x| x.parse::<i32>().ok());
+
 
 
     let fmt = value_t!(matches, "format", ImageFormat).unwrap_or(ImageFormat::Jpeg);
@@ -160,21 +174,41 @@ fn parse(matches: ArgMatches) -> Result<ParsedResult, String> {
                            out_file.parent().unwrap().to_str().unwrap()));
     }
 
+
+    let commands = BoringCommands {
+        w: w.unwrap_or(0) as i32,
+        h: h.unwrap_or(0) as i32,
+        sharpen: sharpen.unwrap_or(0f32) as f32,
+        jpeg_quality: q.unwrap_or(90),
+        fit: constrain,
+        precise_scaling_ratio: min_precise_scaling_ratio.unwrap_or(2.1f32),
+        luma_correct: !matches.is_present("incorrectgamma"),
+        format: fmt,
+        up_filter: up_filter,
+        down_filter: down_filter,
+    };
+
+    let b_threads = matches.value_of("benchmark-threads").and_then(|x| x.parse::<usize>().ok());
+
+    let b_count = matches.value_of("benchmark-count").and_then(|x| x.parse::<usize>().ok());
+
+    let bench;
+    if b_threads.is_some() || b_count.is_some() {
+        bench = Some(BenchmarkOptions {
+            thread_count: b_threads.unwrap_or(1),
+            run_count: b_count.unwrap_or(10),
+            input_path: in_file.to_path_buf(),
+            commands: commands.clone(),
+        });
+    } else {
+        bench = None;
+    }
+
     Ok(ParsedResult {
         input_file: in_file.to_path_buf(),
         output_file: out_file.to_path_buf(),
-        commands: BoringCommands {
-            w: w.unwrap_or(0) as i32,
-            h: h.unwrap_or(0) as i32,
-            sharpen: sharpen.unwrap_or(0f32) as f32,
-            jpeg_quality: q.unwrap_or(90),
-            fit: constrain,
-            precise_scaling_ratio: min_precise_scaling_ratio.unwrap_or(2.1f32),
-            luma_correct: !matches.is_present("incorrectgamma"),
-            format: fmt,
-            up_filter: up_filter,
-            down_filter: down_filter,
-        },
+        commands: commands,
+        bench: bench,
     })
 
 }
@@ -183,7 +217,21 @@ fn main() {
     let matches = build_app().get_matches();
 
     let result = match parse(matches) {
-        Ok(c) => process_image_by_paths(c.input_file, c.output_file, c.commands),
+        Ok(c) => {
+            match process_image_by_paths(c.input_file, c.output_file, c.commands) {
+                Ok(_) if c.bench.is_some() => {
+                    match benchmark(c.bench.unwrap()) {
+                        Ok(results) => {
+                            println!("{}", results.to_json_string());
+                            Ok(())
+                        }
+                        Err(e) => Err(e),
+                    }
+                }
+                Ok(res) => Ok(res),
+                Err(e) => Err(e),
+            }
+        }
         Err(e) => Err(e),
     };
 

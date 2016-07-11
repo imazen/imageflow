@@ -13,6 +13,9 @@ iron = "*"
 time = "*"
 hyper = "*"
 rustc-serialize = "*"
+threadpool = "1.0"
+serde = "*"
+serde_json = "*"
 
 [build-dependencies]
 cmake = "0.1.17"

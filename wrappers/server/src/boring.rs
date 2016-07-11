@@ -1,16 +1,27 @@
+// Boring, because we're not doing any kind of op graph, just a static list of configurable ops.
 use ffi::*;
 use std::ffi::*;
+use std::fs::File;
+use std::mem;
+use std::ptr;
+use std::io::Read;
 extern crate libc;
+extern crate threadpool;
+extern crate serde;
+extern crate serde_json;
+extern crate time;
 use std::path::PathBuf;
-
+use std::sync::mpsc::channel;
 use std::str::FromStr;
 
+
+#[derive(Copy,Clone, Debug)]
 pub enum ConstraintMode {
     Max,
     Distort,
 }
 
-
+#[derive(Copy,Clone, Debug)]
 pub enum ImageFormat {
     Jpeg = 4,
     Png = 2,
@@ -45,6 +56,7 @@ impl FromStr for ConstraintMode {
     }
 }
 
+#[derive(Copy,Clone, Debug)]
 pub struct BoringCommands {
     pub fit: ConstraintMode,
     pub w: i32,
@@ -112,6 +124,166 @@ pub fn process_image_by_paths(input_path: PathBuf,
         CString::from_raw(c_output_path);
     }
     return result;
+}
+
+pub struct BenchmarkOptions {
+    pub input_path: PathBuf,
+    pub commands: BoringCommands,
+    pub thread_count: usize,
+    pub run_count: usize,
+}
+
+#[derive(Debug, Clone)]
+pub struct BenchmarkResult {
+    result: Result<(), String>,
+    wall_nanoseconds: i64,
+}
+#[derive(Debug, Clone)]
+pub struct BenchmarkResults {
+    list: Vec<BenchmarkResult>,
+    wall_nanoseconds: i64,
+    threads: usize,
+    count: usize,
+}
+
+
+impl BenchmarkResults {
+    pub fn to_json_string(&self) -> String {
+
+        let mut list = Vec::new();
+        for i in &self.list {
+
+            let mut map = serde_json::Map::new();
+            map.insert(String::from("ns"),
+                       serde_json::Value::I64(i.wall_nanoseconds));
+            let ms_str = format!("{:?}ms",
+                                 time::Duration::nanoseconds(i.wall_nanoseconds)
+                                     .num_milliseconds());
+
+            map.insert(String::from("wall_ms"), serde_json::Value::String(ms_str));
+
+            list.push(serde_json::Value::Object(map));
+        }
+
+        let mut root = serde_json::Map::new();
+        root.insert("runs", serde_json::Value::Array(list));
+        root.insert("wall_ns", serde_json::Value::I64(self.wall_nanoseconds));
+
+        let ms_str = format!("{:?}ms",
+                             time::Duration::nanoseconds(self.wall_nanoseconds).num_milliseconds());
+
+        let avg_str = format!("{:?}ms",
+                              time::Duration::nanoseconds(self.wall_nanoseconds /
+                                                          (self.count as i64))
+                                  .num_milliseconds());
+
+        root.insert("wall_ms", serde_json::Value::String(ms_str));
+
+        root.insert("avg_ms", serde_json::Value::String(avg_str));
+        return serde_json::to_string(&root).unwrap();
+
+    }
+}
+
+
+
+fn benchmark_op(cmds: BoringCommands, mem: *mut u8, len: usize) -> BenchmarkResult {
+    let begin_at = time::precise_time_ns();
+    let result = process_image(cmds,
+                               |c| {
+        unsafe {
+            let input_io = flow_io_create_from_memory(c,
+                                                      IoMode::read_seekable,
+                                                      mem,
+                                                      len,
+                                                      c as *mut libc::c_void,
+                                                      ptr::null());
+
+            if input_io.is_null() {
+                flow_context_print_and_exit_if_err(c);
+            }
+            let output_io = flow_io_create_for_output_buffer(c, c as *mut libc::c_void);
+            if output_io.is_null() {
+                flow_context_print_and_exit_if_err(c);
+            }
+
+            vec![IoResource {
+                     io: input_io,
+                     direction: IoDirection::In,
+                 },
+                 IoResource {
+                     io: output_io,
+                     direction: IoDirection::Out,
+                 }]
+        }
+    },
+                               |_, _| Ok(()));
+    let end_at = time::precise_time_ns();
+    BenchmarkResult {
+        result: result,
+        wall_nanoseconds: (end_at - begin_at) as i64,
+    }
+}
+pub fn benchmark(bench: BenchmarkOptions) -> Result<BenchmarkResults, String> {
+
+    let mut f = File::open(bench.input_path).unwrap();//bad
+    let mut buffer = Vec::new();
+
+    // read the whole file
+    f.read_to_end(&mut buffer).unwrap();//bad
+
+
+    let len = buffer.len();
+
+    let mem = buffer.as_mut_ptr();
+
+    let cap = buffer.capacity();
+
+
+    mem::forget(buffer);
+
+    let pool = threadpool::ThreadPool::new(bench.thread_count);
+
+    let (tx, rx) = channel();
+
+
+
+    let begin_at = time::precise_time_ns();
+
+    for _ in 0..bench.run_count {
+        let tx = tx.clone();
+        let m = mem.clone() as i64;
+        let l = len.clone();
+        let cmds = bench.commands.clone();
+        pool.execute(move || {
+            tx.send(benchmark_op(cmds, m as *mut u8, l)).unwrap();
+        });
+    }
+
+    let mut res_list = Vec::new();
+    let result_iterator = rx.iter().take(bench.run_count as usize);
+    for i in result_iterator {
+        match i.result {
+            Ok(_) => {
+                res_list.push(i);
+            }
+            Err(e) => {
+                return Err(e);
+            }
+        }
+    }
+    let end_at = time::precise_time_ns();
+
+    unsafe {
+        let _ = Vec::from_raw_parts(mem, len, cap);
+    }
+
+    return Ok(BenchmarkResults {
+        list: res_list,
+        wall_nanoseconds: (end_at - begin_at) as i64,
+        threads: bench.thread_count,
+        count: bench.run_count,
+    });
 }
 
 

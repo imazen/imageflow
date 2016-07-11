@@ -235,7 +235,7 @@ extern "C" {
                                       memory: *const u8,
                                       length: libc::size_t,
                                       owner: *mut libc::c_void,
-                                      destructor_function: *mut libc::c_void)
+                                      destructor_function: *const libc::c_void)
                                       -> *mut JobIO;
 
     pub fn flow_io_create_for_output_buffer(context: *mut Context,
