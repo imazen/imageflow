@@ -23,21 +23,17 @@ env:
 matrix:
    include:
        - os: osx
-         osx_image: xcode7.3 # apple-clang 7.3
+         osx_image: xcode8
          language: generic
          env:
        - os: osx
-         osx_image: xcode7.1 # apple-clang 7.0
+         osx_image: xcode7.3 
          language: generic
          env:
-#       - os: osx
-#         osx_image: xcode6.4 # apple-clang 6.1
-#         language: generic
-#         env:
-#       - os: osx
-#         osx_image: xcode6.2 # apple-clang 6.0
-#         language: generic
-#         env:
+       - os: osx
+         osx_image: xcode7.1 
+         language: generic
+         env:
 
 install:
   - .travis/install.sh
