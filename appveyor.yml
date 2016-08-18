@@ -18,10 +18,10 @@ install:
   - set PATH=%PATH%;%PYTHON%/Scripts/;C:\Program Files (x86)\nasm
   - pip.exe install conan
   - conan user # It creates the conan data directory
-  - ps: if ($env:PLATFORM -eq "x64") { Start-FileDownload 'https://static.rust-lang.org/dist/rust-1.9.0-x86_64-pc-windows-msvc.exe' }
-  - ps: if ($env:PLATFORM -eq "x86") { Start-FileDownload 'https://static.rust-lang.org/dist/rust-1.9.0-i686-pc-windows-msvc.exe' }
-  - if "%PLATFORM%"=="x86" rust-1.9.0-i686-pc-windows-msvc.exe /VERYSILENT /NORESTART /DIR="C:\Program Files (x86)\Rust"
-  - if "%PLATFORM%"=="x64" rust-1.9.0-x86_64-pc-windows-msvc.exe /VERYSILENT /NORESTART /DIR="C:\Program Files (x86)\Rust"
+  - ps: if ($env:PLATFORM -eq "x64") { Start-FileDownload 'https://static.rust-lang.org/dist/rust-1.11.0-x86_64-pc-windows-msvc.exe' }
+  - ps: if ($env:PLATFORM -eq "x86") { Start-FileDownload 'https://static.rust-lang.org/dist/rust-1.11.0-i686-pc-windows-msvc.exe' }
+  - if "%PLATFORM%"=="x86" rust-1.11.0-i686-pc-windows-msvc.exe /VERYSILENT /NORESTART /DIR="C:\Program Files (x86)\Rust"
+  - if "%PLATFORM%"=="x64" rust-1.11.0-x86_64-pc-windows-msvc.exe /VERYSILENT /NORESTART /DIR="C:\Program Files (x86)\Rust"
   - if "%PLATFORM%"=="x86" SET OPENSSL_LIB_DIR=C:/OpenSSL-Win32
   - if "%PLATFORM%"=="x64" SET OPENSSL_LIB_DIR=C:/OpenSSL-Win64
   - if "%PLATFORM%"=="x86" SET OPENSSL_INCLUDE_DIR=C:/OpenSSL-Win32/include
