@@ -1,12 +1,12 @@
 sudo: required
-langage: generic
+language: generic
 
 services:
   - docker
 
 cache:
-  - ccache
-  - cargo
+  ccache: true
+  cargo: true
   directories:
     - $HOME/.conan/data
 
@@ -19,9 +19,8 @@ matrix:
       env: DOCKER_IMAGE=imazen/build_if_gcc54 RUST_CHANNEL=nightly UPLOAD_BUILD=true VALGRIND=true JOB_NAME="build_if_gcc54_rust_nightly"
     - os: osx
       osx_image: xcode7.3
-      rust: stable
-      env: TARGET=x86_64-apple-darwin
-      env: RUST_CHANNEL=stable UPLOAD_BUILD=true JOB_NAME="xcode73"
+      rust: 1.11
+      env: TARGET=x86_64-apple-darwin RUST_CHANNEL=stable UPLOAD_BUILD=true JOB_NAME="xcode73"
     - os: linux
       env: DOCKER_IMAGE=imazen/build_if_gcc_48 RUST_CHANNEL=stable UPLOAD_BUILD=true JOB_NAME="build_if_gcc48_rust_stable"
     - os: linux
