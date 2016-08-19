@@ -29,10 +29,10 @@ install:
   - set PATH=%PATH%;%PYTHON%/Scripts/;C:\Program Files (x86)\nasm;C:\Program Files (x86)\Rust\bin
   - pip.exe install conan
   - conan user # It creates the conan data directory
-  - rustc -V
-  - cargo -V
 
 test_script:
+  - rustc -V
+  - cargo -V
   - mkdir build
   - cd build
   - if "%PLATFORM%"=="x86" conan install --scope build_tests=True -o shared=True --build missing -s build_type=Release -s arch=x86 -u ../
