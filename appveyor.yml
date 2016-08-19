@@ -3,6 +3,9 @@ environment:
     PYTHON: "C:\\Python27"
     PYTHON_VERSION: "2.7.8"
     PYTHON_ARCH: "32"
+    OPENSSL_INCLUDE_DIR: C:\OpenSSL\include
+    OPENSSL_LIB_DIR: C:\OpenSSL\lib
+    OPENSSL_LIBS: ssleay32:libeay32
 
 configuration: Release
 
@@ -12,23 +15,20 @@ platform:
 
 #We install nasm in case libjpeg-turbo has to be built from source
 install:
+  - if "%PLATFORM%"=="x86" SET BITS=32
+  - if "%PLATFORM%"=="x64" SET BITS=64
+  - if "%PLATFORM%"=="x86" SET RUST_TARGET=i686-pc-windows-msvc
+  - if "%PLATFORM%"=="x64" SET RUST_TARGET=x86_64-pc-windows-msvc
+  - SET RUST_ARTIFACT=rust-1.11.0-%RUST_TARGET%.exe
+  - ps: Start-FileDownload "http://slproweb.com/download/Win${env:BITS}OpenSSL-1_0_2h.exe"
+  - Win%BITS%OpenSSL-1_0_2h.exe /SILENT /VERYSILENT /SP- /DIR="C:\OpenSSL"
   - curl -L -o nasminst.exe http://libgd.blob.core.windows.net/nasm/nasm-2.07-installer.exe
   - start /wait nasminst.exe /S
-  - ps: $env:path="C:\Program Files (x86)\nasm;$($env:path)"
-  - set PATH=%PATH%;%PYTHON%/Scripts/;C:\Program Files (x86)\nasm
+  - ps: Start-FileDownload 'https://static.rust-lang.org/dist/($env:RUST_ARTIFACT)' }
+  - "%RUST_ARTIFACT% /VERYSILENT /NORESTART /DIR=C:\Program Files\ (x86)\Rust"
+  - set PATH=%PATH%;%PYTHON%/Scripts/;C:\Program Files (x86)\nasm;C:\Program Files (x86)\Rust\bin
   - pip.exe install conan
   - conan user # It creates the conan data directory
-  - ps: if ($env:PLATFORM -eq "x64") { Start-FileDownload 'https://static.rust-lang.org/dist/rust-1.11.0-x86_64-pc-windows-msvc.exe' }
-  - ps: if ($env:PLATFORM -eq "x86") { Start-FileDownload 'https://static.rust-lang.org/dist/rust-1.11.0-i686-pc-windows-msvc.exe' }
-  - if "%PLATFORM%"=="x86" rust-1.11.0-i686-pc-windows-msvc.exe /VERYSILENT /NORESTART /DIR="C:\Program Files (x86)\Rust"
-  - if "%PLATFORM%"=="x64" rust-1.11.0-x86_64-pc-windows-msvc.exe /VERYSILENT /NORESTART /DIR="C:\Program Files (x86)\Rust"
-  - if "%PLATFORM%"=="x86" SET OPENSSL_ROOT_DIR=C:/OpenSSL-Win32
-  - if "%PLATFORM%"=="x64" SET OPENSSL_ROOT_DIR=C:/OpenSSL-Win64
-  - if "%PLATFORM%"=="x86" SET OPENSSL_LIB_DIR=C:/OpenSSL-Win32/lib
-  - if "%PLATFORM%"=="x64" SET OPENSSL_LIB_DIR=C:/OpenSSL-Win64/lib
-  - if "%PLATFORM%"=="x86" SET OPENSSL_INCLUDE_DIR=C:/OpenSSL-Win32/include
-  - if "%PLATFORM%"=="x64" SET OPENSSL_INCLUDE_DIR=C:/OpenSSL-Win64/include
-  - SET PATH=%PATH%;C:\Program Files (x86)\Rust\bin
   - rustc -V
   - cargo -V
 
@@ -43,8 +43,7 @@ test_script:
   - cd wrappers/server
   - conan install --build missing
   - ps: (Get-Content conan_cargo_build.rs).replace('\', '\\') | Set-Content conan_cargo_build.rs
-  - if "%PLATFORM%"=="x86" cargo build --target=i686-pc-windows-msvc --release
-  - if "%PLATFORM%"=="x64" cargo build --target=x86_64-pc-windows-msvc --release
+  - cargo build --target=%RUST_TARGET% --release
   - 7z a "%APPVEYOR_PROJECT_SLUG%_%APPVEYOR_REPO_TAG_NAME%_%PLATFORM%.zip" *
   - appveyor PushArtifact "%APPVEYOR_PROJECT_SLUG%_%APPVEYOR_REPO_TAG_NAME%_%PLATFORM%.zip"
 
