@@ -20,12 +20,12 @@ install:
   - if "%PLATFORM%"=="x86" SET RUST_TARGET=i686-pc-windows-msvc
   - if "%PLATFORM%"=="x64" SET RUST_TARGET=x86_64-pc-windows-msvc
   - SET RUST_ARTIFACT=rust-1.11.0-%RUST_TARGET%.exe
-  - ps: Start-FileDownload "http://slproweb.com/download/Win${env:BITS}OpenSSL-1_0_2h.exe"
-  - Win%BITS%OpenSSL-1_0_2h.exe /SILENT /VERYSILENT /SP- /DIR="C:\OpenSSL"
+  - curl -L -o install_openssl.exe http://slproweb.com/download/Win%BITS%OpenSSL-1_0_2h.exe
+  - install_openssl.exe /SILENT /VERYSILENT /SP- /DIR="C:\OpenSSL"
   - curl -L -o nasminst.exe http://libgd.blob.core.windows.net/nasm/nasm-2.07-installer.exe
   - start /wait nasminst.exe /S
-  - ps: Start-FileDownload 'https://static.rust-lang.org/dist/($env:RUST_ARTIFACT)' }
-  - cmd: \%RUST_ARTIFACT% /VERYSILENT /NORESTART /DIR="C:\Program Files\ (x86)\Rust"
+  - curl -L -o  install_rust.exe https://static.rust-lang.org/dist/%RUST_ARTIFACT%
+  - install_rust.exe /VERYSILENT /NORESTART /DIR="C:\Program Files\ (x86)\Rust"
   - set PATH=%PATH%;%PYTHON%/Scripts/;C:\Program Files (x86)\nasm;C:\Program Files (x86)\Rust\bin
   - pip.exe install conan
   - conan user # It creates the conan data directory
