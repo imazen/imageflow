@@ -37,4 +37,6 @@ if [[ -t 1 ]]; then
   export DOCKER_TTY_FLAG="--tty"
 fi
 
-docker run --interactive $DOCKER_TTY_FLAG --rm -v ${SHARED_CACHE}/conan_data:/home/conan/.conan/data -v ${SHARED_CACHE}/cargo:/home/conan/.cargo  -v ${WORKING_DIR}_cache/wrappers_server_target:/home/conan/wrappers/server/target -v ${WORKING_DIR}_cache/build:/home/conan/build  -v ${WORKING_DIR}_cache/ccache:/home/conan/.ccache -e "JOB_NAME=${JOB_NAME}"  -e "UPLOAD_BUILD=false" -e "RUST_CHANNEL=${RUST_CHANNEL}" -e "VALGRIND=${VALGRIND}" -v ${WORKING_DIR}:/home/conan ${DOCKER_IMAGE} /bin/bash -c "./ci/travis_run_docker.sh"
+#Ensure that .cargo is NOT volume mapped; cargo will not work. Also, cargo fetches faster than rsync, it seems?
+
+docker run --interactive $DOCKER_TTY_FLAG --rm -v ${WORKING_DIR}:/home/conan/imageflow -v ${WORKING_DIR}_cache/wrappers_server_target:/home/conan/imageflow/wrappers/server/target -v ${WORKING_DIR}:/home/conan/imageflow -v ${SHARED_CACHE}/conan_data:/home/conan/.conan/data -v ${WORKING_DIR}_cache/build:/home/conan/imageflow/build  -v ${WORKING_DIR}_cache/ccache:/home/conan/.ccache -e "JOB_NAME=${JOB_NAME}"  -e "UPLOAD_BUILD=false" -e "RUST_CHANNEL=${RUST_CHANNEL}" -e "VALGRIND=${VALGRIND}" ${DOCKER_IMAGE} /bin/bash -c "./ci/travis_run_docker.sh"  

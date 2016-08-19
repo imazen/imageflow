@@ -15,4 +15,4 @@ else
     sudo docker pull ${DOCKER_IMAGE}
 fi
 
-
+cp ./ci/updated_conan_settings.yml ~/.conan/settings.yml

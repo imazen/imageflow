@@ -6,5 +6,12 @@ set -x
 
 eval "$(docker-machine env default)"
 
+docker images
 
-docker inspect -f "{{.Volumes}}" imazen/build_if_gcc54 | sed 's/map\[//' | sed 's/]//' | tr ' ' '\n' | sed 's/.*://' | xargs sudo du -d 1 -h
+
+docker history imazen/build_if_gcc54
+docker history imazen/build_if_gcc48
+docker history imazen/build_if_gcc49
+
+docker run imazen/build_if_gcc48 du -h / | grep '[0-9\.]\+M'
+
