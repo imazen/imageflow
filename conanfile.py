@@ -12,13 +12,14 @@ class ImageFlowConan(ConanFile):
     generators = "cmake"
     default_options = "shared=False", "libjpeg-turbo:shared=False", "libpng:shared=False", \
    					  "zlib:shared=False", "libcurl:shared=False", "OpenSSL:shared=True", \
-   					  "imageflow:shared=True", "littlecms:shared=False"
+   					  "imageflow:shared=True"
     exports = "lib/*", "CMakeLists.txt", "imageflow.h", "imageflow_advanced.h"
 
 
     def config(self):
-        if self.settings.os != "Windows":  # giflib must be shared on windows?
+        if self.settings.os != "Windows":  # giflib/littlecms must be shared on windows?
             self.options["giflib"].shared = False
+            self.options["littlecms"].shared = False
 
         if self.scope.build_tests or self.scope.profiling:
             self.requires("libcurl/7.47.1@lasote/stable", dev=True)
