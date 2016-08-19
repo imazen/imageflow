@@ -31,6 +31,7 @@ install:
   - conan user # It creates the conan data directory
 
 test_script:
+  - echo %PATH%
   - rustc -V
   - cargo -V
   - mkdir build
