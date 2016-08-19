@@ -26,6 +26,7 @@
 # Folders
 /_obj/
 /_test/
+.docker_*
 
 # Architecture specific extensions/prefixes
 *.[568vq]

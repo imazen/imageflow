@@ -1,0 +1,40 @@
+#!/bin/bash
+
+rust_channels=(stable nightly)
+
+set -e
+set -x
+shopt -s extglob
+
+export SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )/$1"
+
+export IMAGE_NAME=$1
+
+export DOCKER_IMAGE=imazen/$IMAGE_NAME
+
+export RUST_CHANNEL=$2
+
+export JOB_NAME=${IMAGE_NAME}_rust_$RUST_CHANNEL
+export WORKING_DIR=${SCRIPT_DIR}/.docker_$JOB_NAME
+export SHARED_CACHE=${SCRIPT_DIR}/../.shared_cache
+
+echo $JOB_NAME
+mkdir $WORKING_DIR | true
+rsync -av --delete "${SCRIPT_DIR}/../../.." "$WORKING_DIR" --filter=':- .gitignore' --exclude=".git/" #--exclude-from "${SCRIPT_DIR}/../exclude_paths.txt" 
+
+cd $WORKING_DIR
+
+export VALGRIND=false
+if [[ "${RUST_CHANNEL}" == 'nightly' ]]; then
+  export VALGRIND=true
+fi
+
+eval "$(docker-machine env default)"
+
+
+export DOCKER_TTY_FLAG=
+if [[ -t 1 ]]; then
+  export DOCKER_TTY_FLAG="--tty"
+fi
+
+docker run --interactive $DOCKER_TTY_FLAG --rm -v ${SHARED_CACHE}/conan_data:/home/conan/.conan/data -v ${SHARED_CACHE}/cargo:/home/conan/.cargo  -v ${WORKING_DIR}_cache/wrappers_server_target:/home/conan/wrappers/server/target -v ${WORKING_DIR}_cache/build:/home/conan/build  -v ${WORKING_DIR}_cache/ccache:/home/conan/.ccache -e "JOB_NAME=${JOB_NAME}"  -e "UPLOAD_BUILD=false" -e "RUST_CHANNEL=${RUST_CHANNEL}" -e "VALGRIND=${VALGRIND}" -v ${WORKING_DIR}:/home/conan ${DOCKER_IMAGE} /bin/bash -c "./ci/travis_run_docker.sh"

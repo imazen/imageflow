@@ -1,36 +1,31 @@
-os:
-  - linux
-
-language:
-  - cpp
-
-sudo:
-  - required
+sudo: required
+langage: generic
 
 services:
   - docker
 
-env:
-  matrix:
-    - GCC_VERSION=48
-    - GCC_VERSION=49
-    - GCC_VERSION=52
-    - GCC_VERSION=53
-    - GCC_VERSION=48 COVERALLS=True
-    - GCC_VERSION=48 VALGRIND=True
-
+cache:
+  - ccache
+  - cargo
+  directories:
+    - $HOME/.conan/data
 
 matrix:
-   include:
-       - os: osx
-         osx_image: xcode7.3
-         language: generic
-         env:
-       - os: osx
-         osx_image: xcode7.1
-         language: generic
-         env:
-
+  fast_finish: true
+  include:
+    - os: linux
+      env: DOCKER_IMAGE=imazen/build_if_gcc54 RUST_CHANNEL=stable UPLOAD_BUILD=true COVERALLS=True JOB_NAME="build_if_gcc54_rust_stable"
+    - os: linux
+      env: DOCKER_IMAGE=imazen/build_if_gcc54 RUST_CHANNEL=nightly UPLOAD_BUILD=true VALGRIND=true JOB_NAME="build_if_gcc54_rust_nightly"
+    - os: osx
+      osx_image: xcode7.3
+      rust: stable
+      env: TARGET=x86_64-apple-darwin
+      env: RUST_CHANNEL=stable UPLOAD_BUILD=true JOB_NAME="xcode73"
+    - os: linux
+      env: DOCKER_IMAGE=imazen/build_if_gcc_48 RUST_CHANNEL=stable UPLOAD_BUILD=true JOB_NAME="build_if_gcc48_rust_stable"
+    - os: linux
+      env: DOCKER_IMAGE=imazen/build_if_gcc_49 RUST_CHANNEL=stable UPLOAD_BUILD=true JOB_NAME="build_if_gcc49_rust_stable"
 install:
   - .travis/install.sh
 
