@@ -12,7 +12,7 @@ if [[ "$(uname -s)" == 'Darwin' ]]; then
     brew install nasm
     ./ci/install_dssim.sh
 else
-    sudo docker pull ${DOCKER_IMAGE}
+    docker pull ${DOCKER_IMAGE}
 fi
 
 cp ./ci/updated_conan_settings.yml ~/.conan/settings.yml

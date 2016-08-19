@@ -10,7 +10,7 @@ sudo rm -rf /rust
 export RUST_ARCHIVE=rust-nightly-x86_64-unknown-linux-gnu.tar.gz
 export RUST_DOWNLOAD_URL=https://static.rust-lang.org/dist/$RUST_ARCHIVE
 
-mkdir ~/rust
+mkdir -p ~/rust
 cd ~/rust
 
 curl -fsOSL $RUST_DOWNLOAD_URL \
