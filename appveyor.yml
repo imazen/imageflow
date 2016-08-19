@@ -3,9 +3,6 @@ environment:
     PYTHON: "C:\\Python27"
     PYTHON_VERSION: "2.7.8"
     PYTHON_ARCH: "32"
-    OPENSSL_INCLUDE_DIR: C:\OpenSSL\include
-    OPENSSL_LIB_DIR: C:\OpenSSL\lib
-    OPENSSL_LIBS: ssleay32:libeay32
 
 configuration: Release
 
@@ -15,16 +12,9 @@ platform:
 
 #We install nasm in case libjpeg-turbo has to be built from source
 install:
-  - dir /s C:\OpenSSL-Win64
-  - dir /s C:\OpenSSL-Win32
-  - if "%PLATFORM%"=="x86" SET BITS=32
-  - if "%PLATFORM%"=="x64" SET BITS=64
   - if "%PLATFORM%"=="x86" SET RUST_TARGET=i686-pc-windows-msvc
   - if "%PLATFORM%"=="x64" SET RUST_TARGET=x86_64-pc-windows-msvc
   - SET RUST_ARTIFACT=rust-1.11.0-%RUST_TARGET%.exe
-  - echo Fetching http://slproweb.com/download/Win%BITS%OpenSSL-1_0_2h.exe
-  - curl -L -o install_openssl.exe http://slproweb.com/download/Win%BITS%OpenSSL-1_0_2h.exe
-  - install_openssl.exe /SILENT /VERYSILENT /SP- /DIR="C:\OpenSSL"
   - curl -L -o nasminst.exe http://libgd.blob.core.windows.net/nasm/nasm-2.07-installer.exe
   - start /wait nasminst.exe /S
   - echo Fetching https://static.rust-lang.org/dist/%RUST_ARTIFACT%
