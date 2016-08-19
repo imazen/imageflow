@@ -15,8 +15,8 @@ platform:
 
 #We install nasm in case libjpeg-turbo has to be built from source
 install:
-  - dir /s C:/OpenSSL-Win64
-  - dir /s C:/OpenSSL-Win32
+  - dir /s C:\OpenSSL-Win64
+  - dir /s C:\OpenSSL-Win32
   - if "%PLATFORM%"=="x86" SET BITS=32
   - if "%PLATFORM%"=="x64" SET BITS=64
   - if "%PLATFORM%"=="x86" SET RUST_TARGET=i686-pc-windows-msvc
