@@ -25,7 +25,7 @@ install:
   - curl -L -o nasminst.exe http://libgd.blob.core.windows.net/nasm/nasm-2.07-installer.exe
   - start /wait nasminst.exe /S
   - ps: Start-FileDownload 'https://static.rust-lang.org/dist/($env:RUST_ARTIFACT)' }
-  - "%RUST_ARTIFACT% /VERYSILENT /NORESTART /DIR=C:\Program Files\ (x86)\Rust"
+  - cmd: \%RUST_ARTIFACT% /VERYSILENT /NORESTART /DIR="C:\Program Files\ (x86)\Rust"
   - set PATH=%PATH%;%PYTHON%/Scripts/;C:\Program Files (x86)\nasm;C:\Program Files (x86)\Rust\bin
   - pip.exe install conan
   - conan user # It creates the conan data directory
