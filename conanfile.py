@@ -12,9 +12,9 @@ class ImageFlowConan(ConanFile):
     generators = "cmake"
     default_options = "shared=False", "libjpeg-turbo:shared=False", "libpng:shared=False", \
    					  "zlib:shared=False", "libcurl:shared=False", "OpenSSL:shared=True", \
-   					  "imageflow:shared=True"
+   					  "imageflow:shared=True", "littlecms:shared=False"
     exports = "lib/*", "CMakeLists.txt", "imageflow.h", "imageflow_advanced.h"
-    
+
 
     def config(self):
         if self.settings.os != "Windows":  # giflib must be shared on windows?
@@ -43,7 +43,7 @@ class ImageFlowConan(ConanFile):
     def clean_cmake_cache(self, build_dir):
         def on_build_dir(x):
             return os.path.join(build_dir, x)
-        
+
         try:
             shutil.rmtree(on_build_dir("CMakeFiles"))
             os.remove(on_build_dir("CMakeCache.txt"))
@@ -63,7 +63,7 @@ class ImageFlowConan(ConanFile):
         os.chdir(build_dir)
         cmake = CMake(self.settings)
         cmake_settings = ""
-        
+
         if self.scope.dev and self.scope.coverage:
             cmake_settings += " -DCOVERAGE=ON"
         if self.scope.dev and self.scope.build_tests:
@@ -76,7 +76,7 @@ class ImageFlowConan(ConanFile):
         cmake_command = 'cmake "%s" %s %s' % (self.conanfile_directory, cmake.command_line, cmake_settings)
         cmake_build_command = 'cmake --build . %s' % cmake.build_config
         cmake_valgrind = "-D ExperimentalMemCheck" if self.scope.valgrind else ""
-        
+
         cmake_test_command = 'ctest -V -C Release %s' % cmake_valgrind
         self.output.warn(cmake_command)
         self.run(cmake_command)
