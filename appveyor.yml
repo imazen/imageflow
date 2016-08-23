@@ -3,9 +3,6 @@ environment:
     PYTHON: "C:\\Python27"
     PYTHON_VERSION: "2.7.8"
     PYTHON_ARCH: "32"
-    OPENSSL_INCLUDE_DIR: C:\OpenSSL\include
-    OPENSSL_LIB_DIR: C:\OpenSSL\lib
-    OPENSSL_LIBS: ssleay32:libeay32
 configuration: Release
 
 platform:
@@ -14,10 +11,6 @@ platform:
 
 #We install nasm in case libjpeg-turbo has to be built from source
 install:
-  - if "%PLATFORM%"=="x86" SET BITS=32
-  - if "%PLATFORM%"=="x64" SET BITS=64
-  - ps: Start-FileDownload "http://slproweb.com/download/Win${env:BITS}OpenSSL-1_0_2h.exe"
-  - Win%BITS%OpenSSL-1_0_2h.exe /SILENT /VERYSILENT /SP- /DIR="C:\OpenSSL"
   - if "%PLATFORM%"=="x86" SET RUST_TARGET=i686-pc-windows-msvc
   - if "%PLATFORM%"=="x64" SET RUST_TARGET=x86_64-pc-windows-msvc
   - SET RUST_ARTIFACT=rust-1.11.0-%RUST_TARGET%.exe
@@ -41,16 +34,20 @@ test_script:
   - conan build ../
   - cd ..
   - conan export lasote/testing
-  - cd wrappers/server
+  - cd imageflow_core
   - conan install --build missing
-  - ps: (Get-Content conan_cargo_build.rs).replace('\', '\\') | Set-Content conan_cargo_build.rs
+  - cargo test
   - cargo build --target=%RUST_TARGET% --release
-  - 7z a "%APPVEYOR_PROJECT_SLUG%_%APPVEYOR_REPO_TAG_NAME%_%PLATFORM%.zip" *
+  - cd ..
+  - cd imageflow_tool
+  - cargo build --target=%RUST_TARGET% --release
+  - copy target/release/flow-proto1  ../artifacts/
+  - cd ..
+  - 7z a "%APPVEYOR_PROJECT_SLUG%_%APPVEYOR_REPO_TAG_NAME%_%PLATFORM%.zip" artifacts/*
   - appveyor PushArtifact "%APPVEYOR_PROJECT_SLUG%_%APPVEYOR_REPO_TAG_NAME%_%PLATFORM%.zip"
 
 
-
 artifacts:
-  - path: 'wrappers/server/target/**/flow-proto1.exe'
+  - path: 'artifacts/*'
     name: Rust binaries
 
