@@ -1,11 +1,13 @@
 #!/bin/bash
 
+set -e 
+set -x
 
-cd ../..
+cd ..
 conan remove imageflow/* -f
 conan export lasote/testing
 
-cd wrappers/server
+cd imageflow_core
 
 conan install --build missing # Will build imageflow package with your current settings
 cargo build

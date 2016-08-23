@@ -5,9 +5,9 @@ extern crate hyper;
 extern crate libc;
 extern crate time;
 
-extern crate imageflow_server;
-use imageflow_server::boring::*;
-use imageflow_server::ffi::*;
+extern crate imageflow_core;
+use imageflow_core::boring::*;
+use imageflow_core::ffi::*;
 
 use hyper::Client;
 use iron::mime::Mime;
@@ -110,7 +110,7 @@ fn get_jpeg_bytes(source: &str, w: Option<u32>, h: Option<u32>) -> Vec<u8> {
 
     let source_ptr = source_bytes.as_mut_ptr();
 
-    let bytes = imageflow_server::boring::process_image(commands,
+    let bytes = imageflow_core::boring::process_image(commands,
                                                         |c| create_io(c, source_ptr, count),
                                                         collect_result);
 

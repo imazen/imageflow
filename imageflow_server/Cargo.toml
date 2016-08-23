@@ -4,6 +4,7 @@ version = "0.1.0"
 authors = ["Nathanael Jones <nathanael.jones@gmail.com>"]
 
 [dependencies]
+imageflow_core = { path = "../imageflow_core", version = "*" }
 libc = "0.2.0"
 clap = "2"
 router = "*"
