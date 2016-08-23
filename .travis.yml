@@ -10,8 +10,6 @@ addons:
     paths: $TRAVIS_BUILD_DIR/artifacts/*
     debug: true
 
-deploy:
-  skip_cleanup: true
 
 cache:
   ccache: true
