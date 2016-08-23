@@ -29,6 +29,15 @@ cargo build --release
 cp target/release/flow-proto1  ../artifacts/staging/
 cd ..
 
+#We can also build imageflow_server (linux only)
+cd imageflow_server
+cargo test
+cargo build --release
+cp target/release/imageflow_server  ../artifacts/staging/
+cd ..
+
+
+
 
 if [[ "$COVERALLS" == 'true' ]]; then
   pwd
