@@ -29,13 +29,14 @@ test_script:
   - cargo -V
   - mkdir build
   - cd build
-  - if "%PLATFORM%"=="x86" conan install --scope build_tests=True -o shared=True --build missing -s build_type=Release -s arch=x86 -u ../
-  - if "%PLATFORM%"=="x64" conan install --scope build_tests=True -o shared=True --build missing -s build_type=Release -s arch=x86_64  -u ../
+  - if "%PLATFORM%"=="x86" set CONAN_ARCH=x86
+  - if "%PLATFORM%"=="x64" set CONAN_ARCH=x86_64
+  - conan install --scope build_tests=True -o shared=True --build missing -s build_type=Release -s arch=%CONAN_ARCH%  -u ../
   - conan build ../
   - cd ..
   - conan export lasote/testing
   - cd imageflow_core
-  - conan install --build missing
+  - conan install --build missing -s build_type=Release -s arch=%CONAN_ARCH%
   - cargo test
   - cargo build --target=%RUST_TARGET% --release
   - cd ..
