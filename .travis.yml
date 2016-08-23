@@ -4,9 +4,6 @@ language: generic
 services:
   - docker
 
-env:
-  - PACKAGE_PREFIX=imageflow
-
 addons:
   artifacts:
     s3_region: "us-west-1" # defaults to "us-east-1"
