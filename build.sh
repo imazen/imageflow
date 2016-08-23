@@ -3,11 +3,13 @@
 set -e #Exit on failure.
 set -x
 
-mkdir -p artifacts
-mkdir -p build
+mkdir -p artifacts || true
+mkdir -p build || true
 cd build
-conan install --scope build_tests=True --scope coverage=True --scope valgrind=${VALGRIND} --build missing -u ../
+conan install --scope build_tests=True --build missing -u ../
 conan build ../
+
+mkdir -p artifacts || true
 
 cd ..
 conan export lasote/testing
@@ -19,9 +21,6 @@ cargo build --release
 cargo test
 cd ..
 cd imageflow_tool
-cargo test
 cargo build --release
 cp target/release/flow-proto1  ../artifacts/
 cd ..
-
-

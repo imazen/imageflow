@@ -1,0 +1,19 @@
+[package]
+name = "imageflow_server"
+version = "0.1.0"
+authors = ["Nathanael Jones <nathanael.jones@gmail.com>"]
+
+[dependencies]
+libc = "0.2.0"
+clap = "2"
+router = "*"
+iron = "*"
+time = "*"
+hyper = "*"
+rustc-serialize = "*"
+threadpool = "1.0"
+serde = "*"
+serde_json = "*"
+
+[build-dependencies]
+cmake = "0.1.17"

@@ -1,0 +1,21 @@
+[package]
+name = "imageflow_core"
+version = "0.1.0"
+authors = ["Nathanael Jones <nathanael.jones@gmail.com>"]
+build = "conan_cargo_build.rs"
+links = "imageflow"
+
+[lib]
+name = "imageflow_core"
+
+[dependencies]
+libc = "0.2.0"
+clap = "2"
+time = "*"
+rustc-serialize = "*"
+threadpool = "1.0"
+serde = "*"
+serde_json = "*"
+
+[build-dependencies]
+cmake = "0.1.17"

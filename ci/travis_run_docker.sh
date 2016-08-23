@@ -7,15 +7,27 @@ if [[ "$RUST_CHANNEL" == 'nightly' ]]; then
   ./ci/install_nightly_rust.sh
 fi 
 
+
+mkdir -p artifacts
 mkdir -p build
 cd build
 conan install --scope build_tests=True --scope coverage=True --scope valgrind=${VALGRIND} --build missing -u ../
 conan build ../
+
 cd ..
 conan export lasote/testing
-cd wrappers/server
-conan install --build missing
-cargo test --verbose
+
+cd imageflow_core
+
+conan install --build missing # Will build imageflow package with your current settings
+cargo build --release
+cargo test
+cd ..
+cd imageflow_tool
+cargo test
+cargo build --release
+cp target/release/flow-proto1  ../artifacts/
+cd ..
 
 
 if [[ "$COVERALLS" == 'true' ]]; then

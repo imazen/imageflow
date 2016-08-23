@@ -1,0 +1,24 @@
+[package]
+name = "imageflow_tool"
+version = "0.1.0"
+authors = ["Nathanael Jones <nathanael.jones@gmail.com>"]
+workspace = "../"
+
+[dependencies]
+imageflow_core = { path = "../imageflow_core", version = "*" }
+libc = "0.2.0"
+clap = "2"
+time = "*"
+rustc-serialize = "*"
+threadpool = "1.0"
+serde = "*"
+serde_json = "*"
+
+[[bin]]
+name = "flow-proto1"
+path = "src/bin/flow-proto1.rs"
+
+
+[[bin]]
+name = "imageflow_tool"
+path = "src/main.rs"

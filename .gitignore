@@ -1,5 +1,8 @@
 ## Rust .gitignore
 
+Cargo.lock
+/artifacts/
+
 # Compiled files
 *.o
 *.so

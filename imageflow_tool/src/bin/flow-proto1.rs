@@ -1,10 +1,10 @@
 #[macro_use]
 extern crate clap;
 use clap::{App, Arg, ArgMatches};
-extern crate imageflow_server;
-use imageflow_server::boring::*;
+extern crate imageflow_core;
+use imageflow_core::boring::*;
 
-use imageflow_server::ffi::{Filter, TESTED_FILTER_OPTIONS};
+use imageflow_core::ffi::{Filter, TESTED_FILTER_OPTIONS};
 use std::path::{PathBuf, Path};
 use std::fs::File;
 use std::io::Write;

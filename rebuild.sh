@@ -1,4 +1,9 @@
 #!/bin/bash
+
+set -e #Exit on failure.
+set -x
+
+rm -rf artifacts
 rm -rf build
 rm libimageflow.so
 rm conaninfo.txt
@@ -16,20 +21,6 @@ rm *.jpg
 rm *.jpeg
 rm *.gif
 rm *~
-
-mkdir -p build
-cd build
-conan install --scope build_tests=True --build missing -u ../
-conan build ../
-
-cd ..
 conan remove imageflow/* -f
-conan export lasote/testing
 
-cd wrappers/server
-
-conan install --build missing # Will build imageflow package with your current settings
-cargo build
-cargo test
-
-cd ../..
+./build.sh
