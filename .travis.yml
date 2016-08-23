@@ -30,11 +30,11 @@ matrix:
       env: TARGET=x86_64-apple-darwin RUST_CHANNEL=stable UPLOAD_BUILD=true JOB_NAME="xcode73"
       language: rust
       rust: stable
-    - os: osx
-      osx_image: xcode8
-      rust: stable
-      env: TARGET=x86_64-apple-darwin RUST_CHANNEL=stable UPLOAD_BUILD=true JOB_NAME="xcode8"
-      language: rust
+#    - os: osx
+#      osx_image: xcode8
+#      rust: stable
+#      env: TARGET=x86_64-apple-darwin RUST_CHANNEL=stable UPLOAD_BUILD=true JOB_NAME="xcode8"
+#      language: rust
     - os: linux
       dist: trusty
       env: DOCKER_IMAGE=imazen/build_if_gcc48 RUST_CHANNEL=stable UPLOAD_BUILD=true JOB_NAME="build_if_gcc48_rust_stable"
