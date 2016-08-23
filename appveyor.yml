@@ -41,7 +41,7 @@ test_script:
   - cd ..
   - cd imageflow_tool
   - cargo build --target=%RUST_TARGET% --release
-  - copy target/release/flow-proto1  ../artifacts/
+  - xcopy target\release\flow-proto1  ..\artifacts\
   - cd ..
   - 7z a "%APPVEYOR_PROJECT_SLUG%_%APPVEYOR_REPO_TAG_NAME%_%PLATFORM%.zip" artifacts/*
   - appveyor PushArtifact "%APPVEYOR_PROJECT_SLUG%_%APPVEYOR_REPO_TAG_NAME%_%PLATFORM%.zip"
