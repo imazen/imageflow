@@ -4,6 +4,15 @@ language: generic
 services:
   - docker
 
+addons:
+  artifacts:
+    s3_region: "us-west-1" # defaults to "us-east-1"
+    paths: $TRAVIS_BUILD_DIR/artifacts/*
+    debug: true
+
+deploy:
+  skip_cleanup: true
+
 cache:
   ccache: true
   cargo: true
@@ -15,7 +24,7 @@ matrix:
   include:
     - os: linux
       dist: trusty
-      env: DOCKER_IMAGE=imazen/build_if_gcc54 RUST_CHANNEL=stable UPLOAD_BUILD=true COVERALLS=True JOB_NAME="build_if_gcc54_rust_stable"
+      env: PACKAGE_SUFFIX=x86_64-linux-gcc54-rust-stable DOCKER_IMAGE=imazen/build_if_gcc54 RUST_CHANNEL=stable UPLOAD_BUILD=true COVERALLS=True JOB_NAME="build_if_gcc54_rust_stable"
       sudo: required
       services:
         - docker
@@ -27,7 +36,7 @@ matrix:
         - docker
     - os: osx
       osx_image: xcode7.3
-      env: TARGET=x86_64-apple-darwin RUST_CHANNEL=stable UPLOAD_BUILD=true JOB_NAME="xcode73"
+      env: PACKAGE_SUFFIX=x86_64-apple-darwin-xcode73-rust-stable  TARGET=x86_64-apple-darwin RUST_CHANNEL=stable UPLOAD_BUILD=true JOB_NAME="xcode73"
       language: rust
       rust: stable
 #    - os: osx
@@ -37,13 +46,13 @@ matrix:
 #      language: rust
     - os: linux
       dist: trusty
-      env: DOCKER_IMAGE=imazen/build_if_gcc48 RUST_CHANNEL=stable UPLOAD_BUILD=true JOB_NAME="build_if_gcc48_rust_stable"
+      env: PACKAGE_SUFFIX=x86_64-linux-gcc48-rust-stable DOCKER_IMAGE=imazen/build_if_gcc48 RUST_CHANNEL=stable UPLOAD_BUILD=true JOB_NAME="build_if_gcc48_rust_stable"
       sudo: required
       services:
         - docker
     - os: linux
       dist: trusty
-      env: DOCKER_IMAGE=imazen/build_if_gcc49 RUST_CHANNEL=stable UPLOAD_BUILD=true JOB_NAME="build_if_gcc49_rust_stable"
+      env: PACKAGE_SUFFIX=x86_64-linux-gcc49-rust-stable DOCKER_IMAGE=imazen/build_if_gcc49 RUST_CHANNEL=stable UPLOAD_BUILD=true JOB_NAME="build_if_gcc49_rust_stable"
       sudo: required
       services:
         - docker
@@ -52,3 +61,6 @@ install:
 
 script:
   - ci/travis_run.sh
+
+before_deploy:
+  - bash ci/travis_before_deploy.sh

@@ -8,7 +8,7 @@ if [[ "$RUST_CHANNEL" == 'nightly' ]]; then
 fi 
 
 
-mkdir -p artifacts
+mkdir -p artifacts/staging
 mkdir -p build
 cd build
 conan install --scope build_tests=True --scope coverage=True --scope valgrind=${VALGRIND} --build missing -u ../
@@ -26,7 +26,7 @@ cd ..
 cd imageflow_tool
 cargo test
 cargo build --release
-cp target/release/flow-proto1  ../artifacts/
+cp target/release/flow-proto1.exe  ../artifacts/staging/
 cd ..
 
 
