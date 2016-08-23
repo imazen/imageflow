@@ -26,7 +26,7 @@ cd ..
 cd imageflow_tool
 cargo test
 cargo build --release
-cp target/release/flow-proto1.exe  ../artifacts/staging/
+cp target/release/flow-proto1  ../artifacts/staging/
 cd ..
 
 

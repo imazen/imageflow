@@ -43,7 +43,7 @@ test_script:
   - cargo build --target=%RUST_TARGET% --release
   - mkdir ..\artifacts
   - mkdir ..\artifacts\staging
-  - xcopy target\release\flow-proto1.exe  ..\artifacts\staging\
+  - xcopy target\%RUST_TARGET%\release\flow-proto1.exe  ..\artifacts\staging\
   - cd ..
   - set ARTIFACT_NAME="%APPVEYOR_PROJECT_SLUG%_%APPVEYOR_BUILD_NUMBER%-%APPVEYOR_REPO_BRANCH%-%APPVEYOR_REPO_COMMIT%-%APPVEYOR_REPO_TAG_NAME%_%PLATFORM%.zip"
   - 7z a "%ARTIFACT_NAME%.zip" artifacts/staging/*
