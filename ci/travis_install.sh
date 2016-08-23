@@ -8,8 +8,7 @@ cd ${TRAVIS_BUILD_DIR}
 if [[ "$(uname -s)" == 'Darwin' ]]; then
     brew update || brew update
     brew install cmake || true
-    brew install conan
-    brew install nasm
+    brew install conan nasm
     ./ci/install_dssim.sh
 else
     docker pull ${DOCKER_IMAGE}

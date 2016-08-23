@@ -46,6 +46,12 @@ RUN RUST_ARCHIVE=rust-1.11.0-x86_64-unknown-linux-gnu.tar.gz &&\
 #Install coveralls-lcov
 RUN sudo gem install coveralls-lcov
 
+#Install valgrind
+RUN rm -rf /var/lib/apt/lists/* && apt-get update \
+  && apt-get install --no-install-recommends -y \
+  valgrind \
+  && rm -rf /var/lib/apt/lists/* && rm -rf /usr/share/doc
+
 ENV PATH=/usr/lib/ccache:$PATH
 
 RUN pip3 install conan
