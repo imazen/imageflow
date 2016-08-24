@@ -8,6 +8,9 @@ ls -R ./artifacts/*
 if [ -z "$PACKAGE_SUFFIX" ]; then
   echo "Dropping artifacts; PACKAGE_SUFFIX not set for this job"
   rm -rf ${TRAVIS_BUILD_DIR}/artifacts
+  mkdir ${TRAVIS_BUILD_DIR}/artifacts
+  #Because we can't have no artifacts or travis complains. 
+  echo "hi" >> ${TRAVIS_BUILD_DIR}/artifacts/ignorethis.txt
 else
   cd ${TRAVIS_BUILD_DIR}/artifacts/staging
   tar czf ${TRAVIS_BUILD_DIR}/artifacts/${PACKAGE_PREFIX}-${TRAVIS_BRANCH}-travisjob-${TRAVIS_JOB_NUMBER}-${TRAVIS_COMMIT}-${PACKAGE_SUFFIX}.tar.gz *
