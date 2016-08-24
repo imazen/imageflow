@@ -18,3 +18,6 @@ else
   ls -R ./artifacts/staging/*
 fi
 ls -R ./artifacts/*
+
+export ARTIFACTS_PATHS="$(ls artifacts/*.tar.gz | tr "\n" ":")"
+export ARTIFACTS_TARGET_PATHS="[:]"
