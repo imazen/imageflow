@@ -60,5 +60,3 @@ install:
 script:
   - ci/travis_run.sh
 
-before_deploy:
-  - bash ci/travis_before_deploy.sh

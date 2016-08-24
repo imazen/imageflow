@@ -36,9 +36,6 @@ cargo build --release
 cp target/release/imageflow_server  ../artifacts/staging/
 cd ..
 
-ls -R artifacts/staging/*
-
-
 if [[ "$COVERALLS" == 'true' ]]; then
   pwd
   echo "*******  Cleaning cov **************"

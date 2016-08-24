@@ -24,6 +24,4 @@ cargo build --release
 cp target/release/flow-proto1  ../artifacts/staging/
 cd ..
 
-ls -R ./artifacts/staging/*
-
 

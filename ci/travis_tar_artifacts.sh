@@ -3,6 +3,7 @@
 set -e
 set -x
 
+ls -R ./artifacts/*
 #Don't accidentally upload build artifacts unless PACKAGE_SUFFIX is set
 if [ -z "$PACKAGE_SUFFIX" ]; then
   echo "Dropping artifacts; PACKAGE_SUFFIX not set for this job"
@@ -13,3 +14,4 @@ else
   cd ${TRAVIS_BUILD_DIR}
   ls -R ./artifacts/staging/*
 fi
+ls -R ./artifacts/*
