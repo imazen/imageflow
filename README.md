@@ -16,11 +16,15 @@ Imageflow will bring world-class image quality and performance to all languages 
 
 We're starting to port large parts of Imageflow to Rust, and code review / design feedback is invaluable.
 
-We need a GIF codec. GIFLIB is not acceptable, for both security and licensing reasons. Most image libraries write their own, as it's not a huge task. We'd like ours to be written in Rust.
-
-There are a few Rust gif codecs out there, but none that combine all the features we need together. This is a medium-size, but reasonably self-contained task with copious amounts of prior art to reference. Existing codecs are appropriately licensed, so the largest task may be setting up a test suite.
-
 Have you worked with directed acyclic graphs in Rust? [It would help if you could share your findings here](https://github.com/imazen/imageflow/issues/79).
+
+Do you find codec work fun? We need to test *image-gif* as a [potential GIF codec for imageflow](https://github.com/imazen/imageflow/issues/80).
+
+#### Do you like designing integration tests?
+
+This ties into the JSON API design, but we'd like to set up a very, very comprehensive integration suite with a lot of images. Determining desired/correct results and evaluating them is the hard part. Bit-level correctness is unlikely - at minimum off-by-one rounding differences will occur between platforms with different floating-point precision. DSSIM is more reliable/reasonable. 
+
+A good starting point might be [compare.rb](https://github.com/imazen/imageflow/tree/master/imageflow_tool/result_testing).
 
 #### Do you have a physical Windows box?
 
