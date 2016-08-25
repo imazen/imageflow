@@ -1,19 +1,39 @@
 # ![imageflow](https://www.imageflow.io/images/imageflow.svg) = libimageflow + imageflow-server
 
-## [The Imageflow Kickstarter ended successfully!](https://www.kickstarter.com/projects/njones/imageflow-respect-the-pixels-a-secure-alt-to-image/posts/1616122)
-
---- 
-
-Imageflow will bring world-class image quality and performance to all languages through a C-compatible API (libimageflow) and a separate RESTful turnkey HTTP server and command-line tool. Linux, Mac, and Windows are supported.
+Imageflow will bring world-class image quality and performance to all languages through a C-compatible API (libimageflow) and a separate RESTful turnkey HTTP server and command-line tool. Linux, Mac, and Windows are supported. [The Imageflow Kickstarter ended successfully!](https://www.kickstarter.com/projects/njones/imageflow-respect-the-pixels-a-secure-alt-to-image/posts/1616122)
 
 ----
-
 
 [![travis-master](https://img.shields.io/travis/imazen/imageflow/master.svg?label=travis%20master%20mac%20linux)
 [![AppVeyor build status](https://ci.appveyor.com/api/projects/status/0356x95fa312m3wy/branch/master?svg=true)](https://ci.appveyor.com/project/imazen/imageflow/branch/master)
 ](https://travis-ci.org/imazen/imageflow/builds) 
 [![Coverage Status](https://coveralls.io/repos/github/imazen/imageflow/badge.svg?branch=HEAD)](https://coveralls.io/github/imazen/imageflow?branch=HEAD)
 [![Coverity Scan Build Status](https://scan.coverity.com/projects/8403/badge.svg)](https://scan.coverity.com/projects/imazen-imageflow)
+
+### How can I help?
+
+#### Do you know a little Rust, or are you interested in learning?
+
+We're starting to port large parts of Imageflow to Rust, and code review / design feedback is invaluable.
+
+We need a GIF codec. GIFLIB is not acceptable, for both security and licensing reasons. Most image libraries write their own, as it's not a huge task. We'd like ours to be written in Rust.
+
+There are a few Rust gif codecs out there, but none that combine all the features we need together. This is a medium-size, but reasonably self-contained task with copious amounts of prior art to reference. Existing codecs are appropriately licensed, so the largest task may be setting up a test suite.
+
+Have you worked with directed acyclic graphs in Rust? [It would help if you could share your findings here](https://github.com/imazen/imageflow/issues/79).
+
+#### Do you have a physical Windows box?
+
+Virtual machines aren't great for benchmarks. Imageflow (flow-proto1, for now) could benefit from independent benchmarking on physical machines.
+
+#### Are you comfortable using Docker? 
+
+Our linux build enivornment is fully Dockerized. But there are parts that we haven't yet set up
+
+* Documentation generation & upload
+* Release automation
+* Triggering a second CI round for long-running (i.e, 40m+) comparison tests. 
+* We haven't set up a tutorial for building Imageflow via docker.
 
 ### Algorithm implementation work
 
