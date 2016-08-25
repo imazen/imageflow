@@ -89,7 +89,7 @@ fn build_app() -> App<'static, 'static> {
             .value_name("max | distort")
             .takes_value(true)
             .possible_values(&["max", "distort"])
-            .help("Output image format to use. Baseline jpeg and 32-bit PNG supported."))
+            .help("Constrain the image within a bounding box (max) or stretch to fit (distort)"))
         .arg(Arg::with_name("down-filter")
             .long("down-filter")
             .value_name("FILTER")
