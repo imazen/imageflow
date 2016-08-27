@@ -1,0 +1,17 @@
+[package]
+name = "imageflow_serde"
+version = "0.1.0"
+authors = ["Me <user@rust-lang.org>"]
+build = "build.rs"
+
+[features]
+default = ["serde_codegen"]
+unstable = ["serde_macros"]
+
+[build-dependencies]
+serde_codegen = { version = "0.8", optional = true }
+
+[dependencies]
+serde = "0.8"
+serde_json = "0.8"  # just for the example, not required in general
+serde_macros = { version = "0.8", optional = true }
