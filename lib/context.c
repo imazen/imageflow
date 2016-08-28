@@ -30,13 +30,17 @@ int flow_snprintf(char * s, size_t n, const char * fmt, ...)
 
 int flow_context_error_reason(flow_c * context) { return context->error.reason; }
 
-void flow_context_raise_error(flow_c * context, flow_status_code code, char * message, const char * file, int line,
+bool flow_context_raise_error(flow_c * context, flow_status_code code, char * message, const char * file, int line,
                               const char * function_name)
 {
     char * buffer = flow_context_set_error_get_message_buffer(context, code, file, line, function_name);
+    if (context->error.locked == true){
+        return false; //There was already another error reported, and uncleared.
+    }
     if (message != NULL) {
         flow_snprintf(buffer, FLOW_ERROR_MESSAGE_SIZE, "%s", message);
     }
+    return true;
 }
 
 char * flow_context_set_error_get_message_buffer(flow_c * context, flow_status_code code, const char * file, int line,
@@ -49,19 +53,26 @@ char * flow_context_set_error_get_message_buffer(flow_c * context, flow_status_c
         context->error.locked = true;
         return &throwaway_buffer[0];
     }
-    context->error.reason = code;
+    if (code == flow_status_No_Error){
+        context->error.reason = flow_status_Other_error;
+    }else{
+        context->error.reason = code;
+    }
     flow_context_add_to_callstack(context, file, line, function_name);
     return &context->error.message[0];
 }
 
-void flow_context_add_to_callstack(flow_c * context, const char * file, int line, const char * function_name)
+bool flow_context_add_to_callstack(flow_c * context, const char * file, int line, const char * function_name)
 {
-    if (context->error.callstack_count < context->error.callstack_capacity && !context->error.locked) {
+    if (context->error.callstack_count < context->error.callstack_capacity &&
+        !context->error.locked && context->error.reason != flow_status_No_Error) {
         context->error.callstack[context->error.callstack_count].file = file;
         context->error.callstack[context->error.callstack_count].line = line;
         context->error.callstack[context->error.callstack_count].function_name = function_name;
         context->error.callstack_count++;
+        return true;
     }
+    return false;
 }
 
 void flow_context_clear_error(flow_c * context)
@@ -83,10 +94,26 @@ static const char * status_code_to_string(flow_status_code code)
     if (code >= flow_status_First_user_defined_error && code <= flow_status_Last_user_defined_error) {
         return "User defined error";
     }
-    if (code >= flow_status____Last_library_error) {
-        return "Unknown status code";
+    switch (code){
+        case 0: return "No error";
+        case 10: return "Out Of Memory";
+        case 20: return "I/O Error";
+        case 30: return "Internal state invalid";
+        case 40: return "Not implemented";
+        case 50: return "Invalid argument";
+        case 51: return "Null argument";
+        case 52: return "Invalid dimensions";
+        case 53: return "Pixel format unsupported by algorithm";
+        case 54: return "Item does not exist";
+        case 60: return "Image decoding failed";
+        case 61: return "Image encoding failed";
+        case 70: return "Graph invalid";
+        case 71: return "Graph is cyclic";
+        case 72: return "Invalid inputs to node";
+        case 73: return "Maximum graph passes exceeded";
+        case 1024: return "Other error";
+        default: return "Unknown status code";
     }
-    return flow_status_code_strings[code];
 }
 
 bool flow_context_print_and_exit_if_err(flow_c * c)
@@ -105,8 +132,10 @@ void flow_context_print_error_to(flow_c * c, FILE * stream)
     fprintf(stream, "%s", buffer);
     fflush(stream);
 }
-int64_t flow_context_error_and_stacktrace(flow_c * context, char * buffer, size_t buffer_size, bool full_file_path)
+int64_t   flow_context_error_and_stacktrace(flow_c * context, char * buffer, size_t buffer_size, bool full_file_path)
 {
+    if (buffer == NULL) return -1;
+
     size_t original_buffer_size = buffer_size;
     int64_t chars_written = flow_context_error_message(context, buffer, buffer_size);
     if (chars_written < 0) {

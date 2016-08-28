@@ -121,13 +121,6 @@ struct flow_colorspace_info {
 #endif
 };
 
-static const char * const flow_status_code_strings[] = {
-    "No error",      "Out Of Memory",          "Not implemented",               "Pixel format unsupported by algorithm",
-    "Null argument", "Invalid argument",       "Invalid dimensions",            "Internal state invalid",
-    "I/O error",     "Image decoding failed",  "Image encoding failed",         "Item does not exist",
-    "Graph invalid", "Invalid inputs to node", "Maximum graph passes exceeded", "Graph is cyclic",
-    "Other error:",
-};
 
 #define FLOW_USER_IS_OWNER
 struct flow_heap_object_record {

@@ -72,7 +72,7 @@ TEST_CASE("Test error message printing with null files or functions in the stack
     flow_c * c = flow_context_create();
     ERR(c);
 
-    flow_context_raise_error(c, flow_status_Invalid_argument, NULL, NULL, 25, NULL);
+    REQUIRE(flow_context_raise_error(c, flow_status_Invalid_argument, NULL, NULL, 25, NULL) == true);
 
     char buf[4096];
     int64_t chars_written = flow_context_error_and_stacktrace(c, buf, 4096, false);
@@ -98,7 +98,7 @@ TEST_CASE("Test reporting of a failing destructor", "")
     char buf[4096];
     int64_t chars_written = flow_context_error_and_stacktrace(c, buf, 4096, false);
     REQUIRE(chars_written > 0);
-    REQUIRE_THAT(buf, StartsWith("Other error: : Destructor returned false, indicating failure"));
+    REQUIRE_THAT(buf, StartsWith("Other error : Destructor returned false, indicating failure"));
 
     flow_context_destroy(c);
 }

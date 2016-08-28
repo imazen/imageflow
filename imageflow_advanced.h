@@ -86,11 +86,12 @@ PUB bool flow_destroy(flow_c * c, void * pointer, const char * file, int line);
 
 ////////////////////////////////////////////
 // use imageflow's error system
-PUB void flow_context_raise_error(flow_c * c, flow_status_code code, char * message, const char * file, int line,
+PUB bool flow_context_raise_error(flow_c * c, flow_status_code code, char * message, const char * file, int line,
                                   const char * function_name);
 PUB char * flow_context_set_error_get_message_buffer(flow_c * c, flow_status_code code, const char * file, int line,
                                                      const char * function_name);
-PUB void flow_context_add_to_callstack(flow_c * c, const char * file, int line, const char * function_name);
+
+PUB bool flow_context_add_to_callstack(flow_c * c, const char * file, int line, const char * function_name);
 
 #define FLOW_error(context, status_code)                                                                               \
     flow_context_set_error_get_message_buffer(context, status_code, __FILE__, __LINE__, __func__)

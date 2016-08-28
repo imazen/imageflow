@@ -1,7 +1,5 @@
 #!/bin/bash
 
-set -e #Exit on failure.
-set -x
 
 rm -rf artifacts
 rm -rf build
@@ -21,6 +19,7 @@ rm *.jpg
 rm *.jpeg
 rm *.gif
 rm *~
+
 conan remove imageflow/* -f
 
 ./build.sh
