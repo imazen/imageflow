@@ -209,7 +209,7 @@ pub struct EncoderHints {
     pub disable_png_alpha: bool,
 }
 
-extern "C" {
+extern {
     pub fn flow_context_create() -> *mut Context;
     pub fn flow_context_begin_terminate(context: *mut Context) -> bool;
     pub fn flow_context_destroy(context: *mut Context);
@@ -217,10 +217,31 @@ extern "C" {
     pub fn flow_context_clear_error(context: *mut Context);
     pub fn flow_context_error_and_stacktrace(context: *mut Context,
                                              buffer: *mut u8,
-                                             buffer_length: *mut libc::size_t,
+                                             buffer_length:  libc::size_t,
                                              full_file_path: bool)
                                              -> i64;
     pub fn flow_context_print_and_exit_if_err(context: *mut Context) -> bool;
+
+    pub fn flow_context_error_reason(context: *mut Context) -> i32;
+
+    pub fn flow_context_raise_error(context: *mut Context,
+                    error_code: i32, message: *const libc::c_char,
+        file: *const libc::c_char, line: i32, function_name: *const libc::c_char) -> bool;
+
+
+    pub fn flow_context_add_to_callstack(context: *mut Context,
+        file: *const libc::c_char, line: i32, function_name: *const libc::c_char) -> bool;
+
+
+
+    pub fn flow_context_calloc(context: *mut Context, instance_count: usize, instance_size: usize, destructor: *const libc::c_void,
+    owner: *const libc::c_void, file: *const libc::c_char, line: i32) -> *mut libc::c_void;
+
+    pub fn flow_destroy(context: *mut Context, pointer: *const libc::c_void, file: *const libc::uint8_t, line: i32) -> bool;
+
+    pub fn flow_job_destroy(context: *mut Context, job: *mut Job) -> bool;
+
+
 
 
     pub fn flow_job_create(context: *mut Context) -> *mut Job;

@@ -135,3 +135,9 @@ pub struct Graph{
     nodes: std::collections::HashMap<u32, Node>,
     edges: Vec<Edge>
 }
+
+#[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
+pub enum TestEnum{
+    A,
+    B{c: i32}
+}

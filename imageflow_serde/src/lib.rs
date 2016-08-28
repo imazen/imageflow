@@ -51,7 +51,7 @@ macro_rules! hashmap {
 }
 
 #[test]
-fn test_decode_graph(){
+fn decode_graph(){
     let text = r#"{
         "nodes": {
             "0": {"Decode": { "io_id": 1 } },
@@ -76,3 +76,47 @@ fn test_decode_graph(){
     assert_eq!(obj, expected);
 }
 
+#[test]
+fn error_from_string(){
+    let text = r#"{ "B": { "c": "hi" } }"#;
+
+    let val: Result<TestEnum, serde_json::Error> = serde_json::from_str(text);
+
+    let (code, line, chr) = match val {
+        Err(e) => match e {
+            serde_json::Error::Syntax(code, line, char) => (code, line, char),
+            _ => { assert!(false); unreachable!()}
+        },
+        _ => { assert!(false); unreachable!()}
+    };
+
+    assert_eq!(code, serde_json::ErrorCode::InvalidType(serde::de::Type::Str));
+    assert_eq!(line, 1);
+    assert_eq!(chr, 18);
+}
+
+#[test]
+fn error_from_value(){
+
+    let text = r#"{ "B": { "c": "hi" } }"#;
+
+    let val:  serde_json::Value = serde_json::from_str(text).unwrap();
+
+    let x: Result<TestEnum, serde_json::Error> = serde_json::from_value(val);
+
+    let (code, line, chr) = match x {
+        Err(e) => match e {
+            serde_json::Error::Syntax(code, line, char) => (code, line, char),
+            _ => { assert!(false); unreachable!()}
+        },
+        _ => { assert!(false); unreachable!()}
+    };
+
+    assert_eq!(code, serde_json::ErrorCode::InvalidType(serde::de::Type::Str));
+    assert_eq!(line, 0);
+    assert_eq!(chr, 0);
+    // When parsing from a value, we cannot tell which line or character caused it. I suppose we
+    // must serialize/deserialize again, in order to inject an indicator into the text?
+    // We cannot recreate the original location AFAICT
+
+}
