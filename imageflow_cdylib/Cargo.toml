@@ -1,0 +1,15 @@
+[package]
+name = "imageflow_cdylib"
+version = "0.1.0"
+authors = ["Nathanael Jones <nathanael.jones@gmail.com>"]
+build = "conan_cargo_build.rs"
+
+[lib]
+name = "imageflowrs"
+doc = true
+crate-type = ["cdylib"]
+
+
+[dependencies]
+libc = "0.2.0"
+imageflow_core = { path = "../imageflow_core", version = "*" }

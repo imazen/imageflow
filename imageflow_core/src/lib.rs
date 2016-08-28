@@ -1,7 +1,6 @@
 pub mod ffi;
 pub mod boring;
 pub mod parsing;
-pub mod abi;
 
 #[macro_use]
 extern crate json;

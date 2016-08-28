@@ -1,3 +1,10 @@
+//! # Do not use
+//! Do not use functions from this module outside of imageflow_core
+//!
+//! **Use imageflow_core::abi functions instead when creating bindings**
+//!
+//! These aren't to be exposed, but rather to connect to C internals
+
 extern crate libc;
 use std::ptr;
 
