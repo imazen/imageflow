@@ -127,7 +127,22 @@ use std::{ptr, mem};
 use std::str;
 
 #[cfg(test)]
-use std::ffi::CString;
+use std::ffi::{CStr};
+
+
+
+/// Creates a static, null-terminated Rust string, and
+/// returns a ` *const libc::c_char` pointer to it.
+///
+/// Useful for API invocations that require a static C string
+#[macro_export]
+macro_rules! static_char {
+    ($lit:expr) => {
+        concat!($lit, "\0").as_ptr() as *const libc::c_char
+    }
+}
+
+
 
 /// Creates and returns an imageflow context.
 /// An imageflow context is required for all other imageflow API calls.
@@ -335,12 +350,9 @@ pub fn test_error_handling() {
 
         // While the strings are static, the CStrings are not.
         // But they will persist until the end of the block, which is all we need
-        let message_str = CString::new("Test message").unwrap();
-        let message = message_str.as_ptr();
-        let filename_str = CString::new(file!()).unwrap();
-        let filename = filename_str.as_ptr();
-        let function_name_str = CString::new("test_error_handling").unwrap();
-        let function_name = function_name_str.as_ptr();
+        let message = static_char!("Test message");
+        let filename = static_char!(file!());
+        let function_name = static_char!("test_error_handling");
 
         //Let's raise a nice error
         assert!(imageflow_context_raise_error(c, 1025, message, filename, 335, function_name));
@@ -422,7 +434,7 @@ pub struct ImageflowJsonResponse {
 ///
 #[no_mangle]
 pub unsafe extern fn imageflow_json_response_read(context: *mut Context,
-                                                  response_in: *mut ImageflowJsonResponse,
+                                                  response_in: *const ImageflowJsonResponse,
                                                   status_code_out: *mut i64,
                                                   buffer_utf8_no_nulls_out: *mut *const libc::uint8_t,
                                                   buffer_size_out: *mut libc::size_t) -> bool {
@@ -430,7 +442,7 @@ pub unsafe extern fn imageflow_json_response_read(context: *mut Context,
         return false;
     }
     if response_in.is_null() {
-        //[TODO]: RAISE ERROR ON CONTEXT
+        imageflow_context_raise_error(context, 51, static_char!("response_in is null"), static_char!(file!()), line!() as i32, ptr::null());
         return false;
     }
 
@@ -493,26 +505,93 @@ pub unsafe extern fn imageflow_json_response_destroy(context: *mut Context, resp
 pub unsafe extern fn imageflow_send_json(context: *mut Context,
                                          job: *mut Job,
                                          io: *mut JobIO,
-                                         method: *const libc::uint8_t,
+                                         method: *const i8,
                                          json_buffer: *const libc::uint8_t,
                                          json_buffer_size: libc::size_t) -> *const ImageflowJsonResponse {
-    let json_bytes = "{}".as_bytes();
+
+
+
+    // It doesn't appear that this allocates anything
+    // But I'm curious how that Rust knows not to deallocate the string itself
+    // Oh. It's borrowed. CStr is borrowed from the pointer. Pointers don't have lifetimes. &str is borrowed from CStr
+    let method_str = CStr::from_ptr(method as *const i8).to_str().unwrap(); //TODO, throw exception if not UTF-8, argument error
+
+    let json_bytes = std::slice::from_raw_parts(json_buffer, json_buffer_size);
+
+    //TODO: possibly iterate access to force segfaults earlier?
+
+
+    let ctx = ::imageflow_core::FlowContext::from_ptr(context);
+
+
+
+    let response = ctx.message(method_str, json_bytes);
+
+
+
+    let json_bytes = response.response_json;
     let sizeof_struct = mem::size_of::<ImageflowJsonResponse>();
 
 
     let pointer = ffi::flow_context_calloc(context, 1, sizeof_struct + json_bytes.len(),
                                              ptr::null(), context as *mut libc::c_void, ptr::null(), 0) as *mut ImageflowJsonResponse;
 
+    //TODO: handle null ptr, report OOM
 
-    let ref mut response = *pointer;
-    response.buffer_utf8_no_nulls = pointer.offset(sizeof_struct as isize) as *const libc::uint8_t;
-    response.buffer_size = json_bytes.len();
-    response.status_code = 501;
+    let pointer_to_final_buffer = pointer.offset(sizeof_struct as isize) as *mut libc::uint8_t;
+    let ref mut imageflow_response = *pointer;
+    imageflow_response.buffer_utf8_no_nulls = pointer_to_final_buffer;
+    imageflow_response.buffer_size = json_bytes.len();
+    imageflow_response.status_code = response.status_code;
 
-    return (response) as *const ImageflowJsonResponse;
+    let mut out_json_bytes = std::slice::from_raw_parts_mut(pointer_to_final_buffer, json_bytes.len());
+
+    out_json_bytes.clone_from_slice(&json_bytes);
+
+
+    return (imageflow_response) as *const ImageflowJsonResponse;
 }
 
 
+
+#[test]
+fn test_message(){
+    unsafe {
+        let c = imageflow_context_create();
+        assert!(!c.is_null());
+
+        let method_in = static_char!("teapot");
+        let json_in = "{}";
+        let expected_json_out= "{\"success\": \"false\",\"code\": 418,\"message\": \"I\'m a teapot, short and stout\"}";
+        let expected_reponse_status = 418;
+
+        let response = imageflow_send_json(c, ptr::null_mut(), ptr::null_mut(), method_in, json_in.as_ptr(), json_in.len());
+
+        assert!(response != ptr::null());
+
+        let mut json_out_ptr: *const u8 = ptr::null_mut();
+        let mut json_out_size: usize = 0;
+        let mut json_status_code: i64 = 0;
+
+        assert!(imageflow_json_response_read(c, response, &mut json_status_code, &mut json_out_ptr, &mut json_out_size));
+
+
+        let json_out_str = str::from_utf8(std::slice::from_raw_parts(json_out_ptr, json_out_size)).unwrap();
+        assert_eq!(json_out_str, expected_json_out);
+
+        assert_eq!(json_status_code,expected_reponse_status);
+
+        imageflow_context_destroy(c);
+    }
+}
+
+///
+/// Creates an imageflow_io object to wrap a filename.
+///
+/// If the filename is fopen compatible, you're probably OK.
+///
+/// As always, `mode` is not enforced except for the file open flags.
+///
 #[no_mangle]
 pub unsafe extern fn imageflow_io_create_for_file(context: *mut Context,
                                                   mode: IoMode,
@@ -536,9 +615,8 @@ pub unsafe extern fn imageflow_io_create_for_file(context: *mut Context,
 ///
 ///
 /// Destructor functions are not yet supported.
-/// Destructor functions cannot be reliably written until
-/// access to flow_context error raising methods is provided. \
 ///
+/// `mode` is ignored, and not enforced.
 ///
 /// destructor_function should be
 ///
@@ -592,12 +670,19 @@ pub unsafe extern fn imageflow_io_get_output_buffer(context: *mut Context,
 }
 
 
+///
+/// Creates an imageflow_job, which permits the association of imageflow_io instances with
+/// numeric identifiers and provides a 'sub-context' for job execution
+///
 #[no_mangle]
 pub unsafe extern fn imageflow_job_create(context: *mut Context) -> *mut Job {
     ffi::flow_job_create(context)
 }
 
 
+///
+/// Looks up the imageflow_io pointer from the provided placeholder_id
+///
 #[no_mangle]
 pub unsafe extern fn imageflow_job_get_io(context: *mut Context,
                                           job: *mut Job,
@@ -606,7 +691,12 @@ pub unsafe extern fn imageflow_job_get_io(context: *mut Context,
     ffi::flow_job_get_io(context, job, placeholder_id)
 }
 
-
+///
+/// Associates the imageflow_io object with the job and the assigned placeholder_id.
+///
+/// The placeholder_id will correspond with io_id in the graph
+///
+/// direction is in or out.
 #[no_mangle]
 pub unsafe extern fn imageflow_job_add_io(context: *mut Context,
                                           job: *mut Job,
@@ -617,6 +707,9 @@ pub unsafe extern fn imageflow_job_add_io(context: *mut Context,
     ffi::flow_job_add_io(context, job, io, placeholder_id, direction)
 }
 
+///
+/// Destroys the provided imageflow_job
+///
 #[no_mangle]
 pub unsafe extern fn imageflow_job_destroy(context: *mut Context, job: *mut Job) -> bool {
     ffi::flow_job_destroy(context, job)
@@ -650,24 +743,6 @@ pub unsafe extern fn imageflow_job_destroy(context: *mut Context, job: *mut Job)
 
 
 
-
-
-// Exposing the ability to report an error is a prerequisite for any i/o structure
-// AND for any destructor - or any kind of callback, for that matter
-
-//
-//PUB void flow_context_raise_error(flow_c * c, flow_status_code code, char * message, const char * file, int line,
-//const char * function_name);
-//PUB char * flow_context_set_error_get_message_buffer(flow_c * c, flow_status_code code, const char * file, int line,
-//const char * function_name);
-//PUB void flow_context_add_to_callstack(flow_c * c, const char * file, int line, const char * function_name);
-//
-
-
-
-
-
-//flow context/job/io send message
 // malloc/calloc/free
 // flow_set_owner
 // flow_set_destructor

@@ -483,7 +483,7 @@ struct flow_io * flow_io_create_for_file(flow_c * c, flow_io_mode mode, const ch
         file_mode = "rb+";
 
     struct flow_io_filename * state = (struct flow_io_filename *)io->user_data;
-    state->name = filename;
+    state->name = filename; // [TODO] this string's lifetime will not outlive the function call. Danger
     state->ifp.cursor = 0;
     state->ifp.fp = fopen(filename, file_mode);
     if (state->ifp.fp == NULL) {
