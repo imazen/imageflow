@@ -68,7 +68,7 @@ fn collect_result(c: *mut Context, job: *mut Job) -> Result<Vec<u8>, String> {
             flow_context_print_and_exit_if_err(c);
         }
 
-        let mut buf: *mut u8 = std::mem::uninitialized(); //This is okay, it's write-only
+        let mut buf: *const u8 = std::mem::uninitialized(); //This is okay, it's write-only
         let mut buf_length: libc::size_t = 0;
         // Returns false if the flow_io struct is disposed or not an output buffer type (or for any other error)
 
@@ -146,7 +146,7 @@ fn main() {
     let mut router = Router::new();
 
     router.get("/proto1/scale_unsplash_jpeg/:w/:h/:url",
-               move |r: &mut Request| proto1(r));
+               move |r: &mut Request| proto1(r), "proto1-unsplash");
 
     Iron::new(router).http("localhost:3000").unwrap();
 }
