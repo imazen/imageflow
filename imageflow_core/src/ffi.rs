@@ -255,7 +255,7 @@ extern {
     pub fn flow_io_create_for_file(context: *mut Context,
                                    mode: IoMode,
                                    filename: *const libc::c_char,
-                                   owner: *mut libc::c_void)
+                                   owner: *const libc::c_void)
                                    -> *mut JobIO;
 
     pub fn flow_io_create_from_memory(context: *mut Context,
@@ -267,7 +267,7 @@ extern {
                                       -> *mut JobIO;
 
     pub fn flow_io_create_for_output_buffer(context: *mut Context,
-                                            owner: *mut libc::c_void)
+                                            owner: *const libc::c_void)
                                             -> *mut JobIO;
 
 
@@ -275,7 +275,7 @@ extern {
     //
     pub fn flow_io_get_output_buffer(context: *mut Context,
                                      io: *mut JobIO,
-                                     result_buffer: *mut *mut u8,
+                                     result_buffer: *mut *const u8,
                                      result_buffer_length: *mut libc::size_t)
                                      -> bool;
 

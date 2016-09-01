@@ -12,11 +12,12 @@ pub mod boring;
 pub mod parsing;
 
 
+pub use ::ffi::{IoDirection, IoMode};
+
 #[macro_use]
 extern crate json;
 extern crate libc;
 extern crate alloc;
-
 use std::marker;
 use std::ptr;
 use std::cell::RefCell;
@@ -46,10 +47,18 @@ pub struct JobIo<'a, T: 'a>{
     _marker: marker::PhantomData<&'a T>
 }
 
+
+#[derive(Debug, PartialEq)]
+pub struct FlowErr{
+    code: i32,
+    message_and_stack: String
+}
+
 #[derive(Debug, PartialEq)]
 pub enum FlowError {
     ContextInvalid,
     Oom,
+    Err(FlowErr),
     ErrNotImpl
 
 }
@@ -65,6 +74,44 @@ impl ContextPtr {
                     None
                 }
                 _ => None
+            }
+        }
+    }
+
+    unsafe fn get_flow_err(&self, c: *mut ::ffi::Context) -> FlowErr{
+
+
+        let code = ::ffi::flow_context_error_reason(c);
+        let mut buf = vec![0u8; 2048];
+
+
+        let chars_written = ::ffi::flow_context_error_and_stacktrace(c, buf.as_mut_ptr(), buf.len(),false);
+
+        if chars_written < 0 {
+            panic!("Error msg doesn't fit in 2kb");
+        }else {
+            buf.resize(chars_written as usize, 0u8);
+        }
+
+        FlowErr {
+            code: code,
+            message_and_stack: String::from_utf8(buf).unwrap()
+        }
+
+    }
+
+    fn get_error_copy(&self) -> Option<FlowError> {
+        unsafe {
+            match self.ptr {
+                Some(ptr) if ::ffi::flow_context_has_error(ptr) => {
+                    match ::ffi::flow_context_error_reason(ptr){
+                        0 => panic!("Inconsistent errors"),
+                        10 => Some(FlowError::Oom),
+                        _ => Some(FlowError::Err(self.get_flow_err(ptr)))
+                    }
+                },
+                None => Some(FlowError::ContextInvalid),
+                Some(_) => None
             }
         }
     }
@@ -92,13 +139,7 @@ impl Context {
     }
 
     fn get_error_copy(&self) -> Option<FlowError> {
-        unsafe {
-            match (*self.p.borrow()).ptr {
-                Some(ptr) if ::ffi::flow_context_has_error(ptr) => Some(FlowError::ErrNotImpl),
-                None => Some(FlowError::ContextInvalid),
-                Some(_) => None
-            }
-        }
+        (*self.p.borrow()).get_error_copy()
     }
 
     pub fn destroy(self) -> Result<()> {
@@ -113,7 +154,10 @@ impl Context {
                     //One against the ContextPtr, to be reused
                     //One exposed publicly against the Context, which performs the borrowing
                     //Same scenario will occur with other types.
-                    let copy = self.get_error_copy().unwrap();
+                    //let copy = self.get_error_copy().unwrap();
+
+                    //So use the ContextPtr version
+                    let copy = b.get_error_copy().unwrap();
                     b.destroy();
                     Err(copy)
                 } else {
@@ -131,7 +175,7 @@ impl Context {
             Some(ptr) => unsafe {
                 let p = ::ffi::flow_job_create(ptr);
                 if p.is_null() {
-                    Err(FlowError::Oom)
+                    Err(b.get_error_copy().unwrap())
                 } else {
                     Ok(Job { p: RefCell::new(JobPtr { ptr: Some(p) }) })
                 }
@@ -147,7 +191,7 @@ impl Context {
             Some(ptr) => unsafe {
                 let p = ::ffi::flow_io_create_from_memory(ptr, ::ffi::IoMode::read_seekable, bytes.as_ptr(), bytes.len(), ptr as *const libc::c_void, ptr::null());
                 if p.is_null() {
-                    Err(FlowError::Oom)
+                    Err(b.get_error_copy().unwrap())
                 } else {
                     Ok(JobIo{ _marker: marker::PhantomData, p: RefCell::new(JobIoPtr { ptr: Some(p) }) })
                 }
@@ -155,22 +199,92 @@ impl Context {
         }
     }
 
+
+    pub fn create_io_output_buffer<'a, 'b>(&'a mut self) -> Result<JobIo<'b,()>> {
+        let ref b = *self.p.borrow_mut();
+        match b.ptr {
+            None => Err(FlowError::ContextInvalid),
+            Some(ptr) => unsafe {
+                let p = ::ffi::flow_io_create_for_output_buffer(ptr, ptr as *const libc::c_void);
+                if p.is_null() {
+                    Err(b.get_error_copy().unwrap())
+                } else {
+                    Ok(JobIo{ _marker: marker::PhantomData, p: RefCell::new(JobIoPtr { ptr: Some(p) }) })
+                }
+            }
+        }
+    }
+
+    pub fn job_add_io<T>(&mut self, job: &mut Job, io: JobIo<T>, io_id: i32, direction: IoDirection) -> Result<()> {
+        let ref b = *self.p.borrow_mut();
+        match b.ptr {
+            None => Err(FlowError::ContextInvalid),
+            Some(ptr) => unsafe {
+                let p = ::ffi::flow_job_add_io(ptr, (*job.p.borrow_mut()).ptr.unwrap(),  (*io.p.borrow_mut()).ptr.unwrap(), io_id, direction);
+                if !p {
+                    Err(b.get_error_copy().unwrap())
+                } else {
+                    Ok(())
+                }
+            }
+        }
+    }
+
+    pub fn io_get_output_buffer<'a, 'b>(&'a mut self, job: &'b Job, io_id: i32) -> Result<&'b [u8]> {
+        let ref b = *self.p.borrow_mut();
+        match b.ptr {
+            None => Err(FlowError::ContextInvalid),
+            Some(ptr) => unsafe {
+
+                let io_p = ::ffi::flow_job_get_io(ptr,  (*job.p.borrow_mut()).ptr.unwrap(), io_id);
+                if io_p.is_null() {
+                    Err(b.get_error_copy().unwrap())
+                } else {
+                    let mut buf_start: *const u8 = ptr::null();
+                    let mut buf_len: usize = 0;
+                    let worked = ::ffi::flow_io_get_output_buffer(ptr, io_p, &mut buf_start as *mut *const u8, &mut buf_len as *mut usize);
+                    if !worked{
+                        Err(b.get_error_copy().unwrap())
+                    } else {
+                        if buf_start.is_null(){
+                            Err(FlowError::ErrNotImpl) //Not sure how output buffer is null... no writes yet?
+                        }else {
+                            Ok((std::slice::from_raw_parts(buf_start, buf_len)))
+                        }
+                    }
+                }
+
+
+
+            }
+        }
+    }
+
+
+
 }
 
 #[test]
 fn it_works() {
     let mut c = Context::create();
 
-    let j = c.create_job().unwrap();
-
-    let j2 = c.create_job().unwrap();
+    let mut j = c.create_job().unwrap();
 
 
-    let j3 = c.create_job().unwrap();
+    let bytes = [ 0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, 0x00, 0x00, 0x00, 0x0D, 0x49, 0x48, 0x44, 0x52, 0x00,
+    0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x08, 0x06, 0x00, 0x00, 0x00, 0x1F, 0x15, 0xC4, 0x89, 0x00,
+    0x00, 0x00, 0x0A, 0x49, 0x44, 0x41, 0x54, 0x78, 0x9C, 0x63, 0x00, 0x01, 0x00, 0x00, 0x05, 0x00, 0x01,
+    0x0D, 0x0A, 0x2D, 0xB4, 0x00, 0x00, 0x00, 0x00, 0x49, 0x45, 0x4E, 0x44, 0xAE, 0x42, 0x60, 0x82 ];
 
-    let bytes: [u8;3] = [2,3,4];
+    let input = c.create_io_from_slice(&bytes).unwrap();
 
-    let i1 = c.create_io_from_slice(&bytes).unwrap();
+    let output = c.create_io_output_buffer().unwrap();
+
+    c.job_add_io(&mut j, input, 0, IoDirection::In).unwrap();
+    c.job_add_io(&mut j, output, 1, IoDirection::Out).unwrap();
+
+
+    //let output_bytes = c.io_get_output_buffer(&j, 1).unwrap();
 
     assert_eq!(c.destroy(), Ok(()));
 
