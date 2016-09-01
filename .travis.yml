@@ -4,10 +4,10 @@ language: generic
 services:
   - docker
 
-addons:
-  artifacts:
-    s3_region: "us-west-1" # defaults to "us-east-1"
-    debug: true
+# addons:
+#   artifacts:
+#     s3_region: "us-west-1" # defaults to "us-east-1"
+#     debug: true
 
 
 cache:
