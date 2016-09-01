@@ -1,6 +1,12 @@
 #![feature(alloc)]
 #![feature(oom)]
 
+#![allow(unused_features)]
+#![allow(unused_imports)]
+#![allow(dead_code)]
+#![allow(unused_variables)]
+
+
 pub mod ffi;
 pub mod boring;
 pub mod parsing;
@@ -11,6 +17,7 @@ extern crate json;
 extern crate libc;
 extern crate alloc;
 
+use std::marker;
 use std::ptr;
 use std::cell::RefCell;
 
@@ -28,6 +35,15 @@ struct JobPtr{
 
 pub struct Job{
     p: RefCell<JobPtr>
+}
+
+struct JobIoPtr{
+    ptr: Option<*mut ::ffi::JobIO>
+}
+
+pub struct JobIo<'a, T: 'a>{
+    p: RefCell<JobIoPtr>,
+    _marker: marker::PhantomData<&'a T>
 }
 
 #[derive(Debug, PartialEq)]
@@ -64,7 +80,9 @@ impl Context {
             let ptr = ::ffi::flow_context_create();
 
             if ptr.is_null() {
-                panic!("OOM");
+                Context {
+                    p: RefCell::new(ContextPtr { ptr: None }),
+                }
             } else {
                 Context {
                     p: RefCell::new(ContextPtr { ptr: Some(ptr) }),
@@ -121,6 +139,22 @@ impl Context {
         }
     }
 
+
+    pub fn create_io_from_slice<'a, 'c>(&'c mut self, bytes: &'a [u8]) -> Result<JobIo<'a, &'a [u8]>> {
+        let ref b = *self.p.borrow_mut();
+        match b.ptr {
+            None => Err(FlowError::ContextInvalid),
+            Some(ptr) => unsafe {
+                let p = ::ffi::flow_io_create_from_memory(ptr, ::ffi::IoMode::read_seekable, bytes.as_ptr(), bytes.len(), ptr as *const libc::c_void, ptr::null());
+                if p.is_null() {
+                    Err(FlowError::Oom)
+                } else {
+                    Ok(JobIo{ _marker: marker::PhantomData, p: RefCell::new(JobIoPtr { ptr: Some(p) }) })
+                }
+            }
+        }
+    }
+
 }
 
 #[test]
@@ -131,10 +165,16 @@ fn it_works() {
 
     let j2 = c.create_job().unwrap();
 
+
+    let j3 = c.create_job().unwrap();
+
+    let bytes: [u8;3] = [2,3,4];
+
+    let i1 = c.create_io_from_slice(&bytes).unwrap();
+
     assert_eq!(c.destroy(), Ok(()));
 
 }
-
 
 //pub struct FlowIoRef{
 //    ptr: *mut ::ffi::JobIO
@@ -143,20 +183,7 @@ fn it_works() {
 
 
 
-//
-//    pub fn create_io_from_slice<'a>(&'a mut self, bytes: &'a [u8]) -> &mut FlowIoRef {
-//        unsafe {
-//            let ctx_ptr = *self.ptr.borrow_mut();
-//            let p = ::ffi::flow_io_create_from_memory(ctx_ptr, ::ffi::IoMode::read_seekable, bytes.as_ptr(), bytes.len(), ctx_ptr as *mut libc::c_void, ptr::null());
-//            if p.is_null() {
-//                panic!("Out of memory");
-//            }
-//
-//            let io = RefCell::new(FlowIoRef { ptr: p });
-//            self.ios.push(io);
-//            &mut *io.borrow_mut()
-//        }
-//    }
+
 
 pub struct JsonResponse<'a>{
     pub status_code: i64,

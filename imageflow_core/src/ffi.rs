@@ -262,7 +262,7 @@ extern {
                                       mode: IoMode,
                                       memory: *const u8,
                                       length: libc::size_t,
-                                      owner: *mut libc::c_void,
+                                      owner: *const libc::c_void,
                                       destructor_function: *const libc::c_void)
                                       -> *mut JobIO;
 
