@@ -305,7 +305,7 @@ pub struct JsonResponse<'a>{
 }
 
 impl Context{
-    pub fn message(&self, method: &str, json: &[u8]) -> JsonResponse{
+    pub fn message(&mut self, method: &str, json: &[u8]) -> JsonResponse{
 
         match method {
             "teapot" => JsonResponse {
@@ -323,7 +323,41 @@ impl Context{
             }
         }
     }
+
+    fn build_graph(&mut self, json: &[u8]){
+
+    }
+
 }
+
+impl Job{
+
+
+    pub fn message(&self, context: &mut Context, method: &str, json: &[u8]) -> JsonResponse{
+
+        match method {
+            "execute" => {
+
+                //build graph
+                //execute graph
+                JsonResponse {
+                    status_code: 200,
+                    response_json:
+                    r#"{"success": "false","code": 418,"message": "I'm a teapot, short and stout"}"#
+                        .as_bytes()
+                }
+            },
+            _ => JsonResponse {
+                status_code: 404,
+                response_json: r#"{
+                                        "success": "false",
+                                        "code": 404,
+                                        "message": "Method not understood"}"#.as_bytes()
+            }
+        }
+    }
+}
+
 //
 //impl SpeakJson for FlowContext{
 //    fn message(&self, method: &str, json: &str) -> &JsonResponse{

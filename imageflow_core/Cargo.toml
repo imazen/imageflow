@@ -17,6 +17,7 @@ threadpool = "1.0"
 serde = "*"
 serde_json = "*"
 json = "*"
+imageflow_serde = { path = "../imageflow_serde", version = "*" }
 
 [build-dependencies]
 cmake = "0.1.17"
