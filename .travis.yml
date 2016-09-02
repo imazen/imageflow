@@ -35,7 +35,7 @@ matrix:
       osx_image: xcode7.3
       env: PACKAGE_SUFFIX=x86_64-apple-darwin-xcode73-rust-nightly  TARGET=x86_64-apple-darwin RUST_CHANNEL=nightly UPLOAD_BUILD=true JOB_NAME="xcode73"
       language: rust
-      rust: stable
+      rust: nightly
 #    - os: osx
 #      osx_image: xcode8
 #      rust: stable

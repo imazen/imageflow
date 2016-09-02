@@ -7,9 +7,10 @@ MAINTAINER Nathanael Jones
 RUN rm -rf /var/lib/apt/lists/* && apt-get update \
   && apt-get install --no-install-recommends -y \
   apt-utils python3-pip python3-setuptools sudo build-essential wget git nasm dh-autoreconf pkg-config curl ccache libpng-dev libssl-dev ca-certificates \
-  rubygems-integration ruby \
+  rubygems-integration ruby valgrind \
   && pip3 install --upgrade pip \
-  && rm -rf /var/lib/apt/lists/* && rm -rf /usr/share/doc
+  && rm -rf /var/lib/apt/lists/* \
+  && rm -rf {/usr/share/doc,/usr/share/man,/var/cache,/usr/doc,/usr/local/share/doc,/usr/local/share/man}
 
 #RUN dpkg --add-architecture i386 && rm -rf /var/lib/apt/lists/* && apt-get update && apt-get install --no-install-recommends -y libc6-dev-i386 g++-multilib vim && rm -rf /var/lib/apt/lists/*
 
@@ -29,28 +30,8 @@ RUN wget -O dssim.tar.gz https://github.com/pornel/dssim/archive/c6ad29c5a2dc37d
     && tar xvzf dssim.tar.gz && rm dssim.tar.gz && mv dssim-c6ad29c5a2dc37d8610120486f09eda145621c84 dssim \
     && cd dssim && make && sudo cp bin/dssim /usr/local/bin/dssim && cd .. && rm -rf dssim 
 
-#Install Rust 1.11
-RUN mkdir /rust | true
-WORKDIR /rust
-
-RUN RUST_ARCHIVE=rust-1.11.0-x86_64-unknown-linux-gnu.tar.gz &&\
-    RUST_DOWNLOAD_URL=https://static.rust-lang.org/dist/$RUST_ARCHIVE &&\
-    curl -fsOSL $RUST_DOWNLOAD_URL \
-    && curl -s $RUST_DOWNLOAD_URL.sha256 | sha256sum -c - \
-    && tar -C /rust -xzf $RUST_ARCHIVE --strip-components=1 \
-    && rm $RUST_ARCHIVE \
-    && ./install.sh --without=rust-docs && sudo rm -rf {/rust/rust-docs,/usr/doc,/usr/share/doc,/usr/share/man} \
-    && sudo rm -rf /rust \
-    && ln -sf -t /usr/local/lib/ /usr/local/lib/rustlib/x86_64-unknown-linux-gnu/lib/*.so
-    
 #Install coveralls-lcov
 RUN sudo gem install coveralls-lcov
-
-#Install valgrind
-RUN rm -rf /var/lib/apt/lists/* && apt-get update \
-  && apt-get install --no-install-recommends -y \
-  valgrind \
-  && rm -rf /var/lib/apt/lists/* && rm -rf /usr/share/doc
 
 ENV PATH=/usr/lib/ccache:$PATH
 
@@ -64,4 +45,33 @@ RUN groupadd 1001 -g 1001 &&\
     mkdir -p /home/conan/.conan && sudo chown conan: /home/conan/.conan
 
 USER conan
+
+#Install Rustup & Rust stable plus x86_64-unknown-linux-musl
+
+ENV PATH=/home/conan/.cargo/bin:$PATH
+
+RUN curl https://sh.rustup.rs -sSf | sh -s -- -y --default-toolchain stable -v \
+    && rustup target add x86_64-unknown-linux-musl \
+    && HI=$(rustup which rustc) && HI=${HI%/bin/rustc} && export TOOLCHAIN_DIR=$HI && echo TOOLCHAIN_DIR=$TOOLCHAIN_DIR \
+    && sudo rm -rf $TOOLCHAIN_DIR/share/doc \
+    && sudo rm -rf $TOOLCHAIN_DIR/share/man \
+    && ln -sf -t $TOOLCHAIN_DIR/lib/ $TOOLCHAIN_DIR/lib/rustlib/x86_64-unknown-linux-gnu/lib/*.so \
+    && rustup show \
+    && rustc -V
+
+#Install nightly Rust and make default (add x86_64-unknown-linux-musl)
+
+RUN rustup install nightly \
+    && rustup default nightly \
+    && rustup target add x86_64-unknown-linux-musl \
+    && HI=$(rustup which rustc) && HI=${HI%/bin/rustc} && export TOOLCHAIN_DIR=$HI && echo TOOLCHAIN_DIR=$TOOLCHAIN_DIR \
+    && sudo rm -rf $TOOLCHAIN_DIR/share/doc \
+    && sudo rm -rf $TOOLCHAIN_DIR/share/man \
+    && ln -sf -t $TOOLCHAIN_DIR/lib/ $TOOLCHAIN_DIR/lib/rustlib/x86_64-unknown-linux-gnu/lib/*.so \
+    && rustup show \
+    && rustc -V
+
+RUN conan user
+
+
 WORKDIR /home/conan/imageflow

@@ -3,10 +3,15 @@
 set -e #Exit on failure.
 set -x
 
-if [[ "$RUST_CHANNEL" == 'nightly' ]]; then
-  ./ci/install_nightly_rust.sh
-fi 
+# rustup update perhaps?
+# if [[ "$RUST_CHANNEL" == 'nightly' ]]; then
+#   ./ci/install_nightly_rust.sh
+# fi 
 
+# Take ownership of the home directory
+# Otherwise docker folder mapping can fuck things up
+sudo chown -R $(id -u -n): ~/
+conan user
 
 mkdir -p artifacts/staging
 mkdir -p build
@@ -17,9 +22,10 @@ conan build ../
 cd ..
 conan export lasote/testing
 
+
 cd imageflow_core
 
-conan install --build missing # Will build imageflow package with your current settings
+conan install --build missing  # Will build imageflow package with your current settings
 cargo build --release
 cargo test
 cd ..

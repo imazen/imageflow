@@ -6,6 +6,8 @@ set -e
 set -x
 shopt -s extglob
 
+conan user
+
 export SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )/$1"
 
 export IMAGE_NAME=$1
@@ -25,11 +27,13 @@ rsync -av --delete "${SCRIPT_DIR}/../../.." "$WORKING_DIR" --filter=':- .gitigno
 cd $WORKING_DIR
 
 export VALGRIND=false
-if [[ "${RUST_CHANNEL}" == 'nightly' ]]; then
-  export VALGRIND=true
-fi
+# if [[ "${RUST_CHANNEL}" == 'nightly' ]]; then
+#   #export VALGRIND=true
+# fi
 
-eval "$(docker-machine env default)"
+if [[ "$(uname -s)" == 'Darwin' ]]; then
+	eval "$(docker-machine env default)"
+fi
 
 
 export DOCKER_TTY_FLAG=
@@ -40,3 +44,6 @@ fi
 #Ensure that .cargo is NOT volume mapped; cargo will not work. Also, cargo fetches faster than rsync, it seems?
 
 docker run --interactive $DOCKER_TTY_FLAG --rm -v ${WORKING_DIR}:/home/conan/imageflow -v ${WORKING_DIR}_cache/wrappers_server_target:/home/conan/imageflow/wrappers/server/target -v ${WORKING_DIR}:/home/conan/imageflow -v ${SHARED_CACHE}/conan_data:/home/conan/.conan/data -v ${WORKING_DIR}_cache/build:/home/conan/imageflow/build  -v ${WORKING_DIR}_cache/ccache:/home/conan/.ccache -e "JOB_NAME=${JOB_NAME}"  -e "UPLOAD_BUILD=false" -e "RUST_CHANNEL=${RUST_CHANNEL}" -e "VALGRIND=${VALGRIND}" ${DOCKER_IMAGE} /bin/bash -c "./ci/travis_run_docker.sh"  
+
+# uncomment for interactive
+#docker run --interactive $DOCKER_TTY_FLAG --rm -v ${WORKING_DIR}:/home/conan/imageflow -v ${WORKING_DIR}_cache/wrappers_server_target:/home/conan/imageflow/wrappers/server/target -v ${WORKING_DIR}:/home/conan/imageflow -v ${SHARED_CACHE}/conan_data:/home/conan/.conan/data -v ${WORKING_DIR}_cache/build:/home/conan/imageflow/build  -v ${WORKING_DIR}_cache/ccache:/home/conan/.ccache -e "JOB_NAME=${JOB_NAME}"  -e "UPLOAD_BUILD=false" -e "RUST_CHANNEL=${RUST_CHANNEL}" -e "VALGRIND=${VALGRIND}" ${DOCKER_IMAGE} /bin/bash 
