@@ -10,6 +10,7 @@ set -e #Exit on failure.
 # lcov (if coverage is used)
 # valgrind (if valgrind is used)
 
+set -x
 
 # All variables are 'True' or "False", case-sensitive!
 
@@ -27,8 +28,28 @@ export VALGRIND=${VALGRIND:-False}
 export COVERAGE=${COVERAGE:-False}
 export IMAGEFLOW_SERVER=${IMAGEFLOW_SERVER:-False}
 
+if [[ "$(uname -s)" == 'Darwin' ]]; then
+	export PACKAGE_SUFFIX=${PACKAGE_SUFFIX:-unknown-mac}
+else
+	export PACKAGE_SUFFIX=${PACKAGE_SUFFIX:-unknown-linux}
+fi
+
+export PACKAGE_PREFIX=imageflow 
+export GIT_BRANCH_NAME=${TRAVIS_BRANCH:-$(git symbolic-ref HEAD | sed -e 's,.*/\(.*\),\1,')}
+export GIT_COMMIT=$(git rev-parse --short HEAD)
+
+if [ -z ${TRAVIS_JOB_NUMBER+x} ]; then
+	export JOB_BADGE="local-build"
+else
+	export JOB_BADGE="travisjob-${TRAVIS_JOB_NUMBER}"
+fi 
+
+export PACKAGE_ARCHIVE_NAME=${PACKAGE_PREFIX}-${GIT_BRANCH_NAME}-${JOB_BADGE}-${GIT_COMMIT}-${PACKAGE_SUFFIX}
+
 #Turn off coverage if lcov is missing
 command -v lcov >/dev/null 2>&1 || { export COVERAGE=False; }
+
+set +x
 
 mkdir -p build || true
 
@@ -98,9 +119,22 @@ if [[ "$BUILD_RELEASE" == 'True' ]]; then
 
 
 	mkdir -p artifacts/staging/doc || true
+	mkdir -p artifacts/upload || true
 
 
 	cp target/release/{flow-,imageflow_,libimageflow}*  ./artifacts/staging/
 	cp -a target/doc ./artifacts/staging/
-	rm ./artifacts/staging/*.{o,d}
+	rm ./artifacts/staging/*.{o,d} || true
+
+	#Remove these lines when these binaries actually do something
+	rm ./artifacts/staging/flow-client || true
+	rm ./artifacts/staging/imageflow_tool || true
+
+	cd ./artifacts/staging
+	tar czf ../upload/${PACKAGE_ARCHIVE_NAME}.tar.gz *
+	cd ../..
+	cp -a target/doc ./artifacts/upload/${GIT_BRANCH_NAME}/
+
+
 fi
+	

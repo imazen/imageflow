@@ -1,55 +1,54 @@
 sudo: required
 language: generic
-
 services:
-  - docker
-
-# addons:
-#   artifacts:
-#     s3_region: "us-west-1" # defaults to "us-east-1"
-#     debug: true
-
-
+- docker
 cache:
   ccache: true
   cargo: true
   directories:
-    - $HOME/.conan/data
-
+  - "$HOME/.conan/data"
 matrix:
   fast_finish: true
   include:
-    - os: linux
-      dist: trusty
-      env: PACKAGE_SUFFIX=x86_64-linux-gcc48-rust-nightly DOCKER_IMAGE=imazen/build_if_gcc48 RUST_CHANNEL=nightly UPLOAD_BUILD=true JOB_NAME="build_if_gcc48_rust_nightly"
-      sudo: required
-      services:
-        - docker
-    - os: linux
-      dist: trusty
-      env: PACKAGE_SUFFIX=x86_64-linux-gcc54-rust-nightly DOCKER_IMAGE=imazen/build_if_gcc54 RUST_CHANNEL=nightly UPLOAD_BUILD=true VALGRIND=true JOB_NAME="build_if_gcc54_rust_nightly"
-      sudo: required
-      services:
-        - docker
-    - os: osx
-      osx_image: xcode7.3
-      env: PACKAGE_SUFFIX=x86_64-apple-darwin-xcode73-rust-nightly  TARGET=x86_64-apple-darwin RUST_CHANNEL=nightly UPLOAD_BUILD=true JOB_NAME="xcode73"
-      language: rust
-      rust: nightly
-#    - os: osx
-#      osx_image: xcode8
-#      rust: stable
-#      env: TARGET=x86_64-apple-darwin RUST_CHANNEL=nightly UPLOAD_BUILD=true JOB_NAME="xcode8"
-#      language: rust
-    - os: linux
-      dist: trusty
-      env: PACKAGE_SUFFIX=x86_64-linux-gcc49-rust-nightly DOCKER_IMAGE=imazen/build_if_gcc49 RUST_CHANNEL=nightly UPLOAD_BUILD=true JOB_NAME="build_if_gcc49_rust_nightly"
-      sudo: required
-      services:
-        - docker
+  - os: linux
+    dist: trusty
+    env: PACKAGE_SUFFIX=x86_64-linux-gcc48-rust-nightly DOCKER_IMAGE=imazen/build_if_gcc48
+      RUST_CHANNEL=nightly UPLOAD_BUILD=true JOB_NAME="build_if_gcc48_rust_nightly"
+    sudo: required
+    services:
+    - docker
+  - os: linux
+    dist: trusty
+    env: PACKAGE_SUFFIX=x86_64-linux-gcc54-rust-nightly DOCKER_IMAGE=imazen/build_if_gcc54
+      RUST_CHANNEL=nightly UPLOAD_BUILD=true VALGRIND=true JOB_NAME="build_if_gcc54_rust_nightly"
+    sudo: required
+    services:
+    - docker
+  - os: osx
+    osx_image: xcode7.3
+    env: PACKAGE_SUFFIX=x86_64-apple-darwin-xcode73-rust-nightly  TARGET=x86_64-apple-darwin
+      RUST_CHANNEL=nightly UPLOAD_BUILD=true JOB_NAME="xcode73"
+    language: rust
+    rust: nightly
+  - os: linux
+    dist: trusty
+    env: PACKAGE_SUFFIX=x86_64-linux-gcc49-rust-nightly DOCKER_IMAGE=imazen/build_if_gcc49
+      RUST_CHANNEL=nightly UPLOAD_BUILD=true JOB_NAME="build_if_gcc49_rust_nightly"
+    sudo: required
+    services:
+    - docker
 install:
-  - ci/travis_install.sh
-
+- ci/travis_install.sh
 script:
-  - ci/travis_run.sh
-
+- ci/travis_run.sh
+deploy:
+  provider: s3
+  access_key_id: AKIAIMZ7QOL24GUASH6A
+  secret_access_key:
+    secure: izS5sgSOhDwjuQaFTTgMlhUd5759ZnuoxxoFDo41XZATNw58P6FtzdfslfoVa+xXjq/1N0GDAM+ENm7XYNITVqq1aJARYKy5X+IUwVKQw/UYx0rb1X2ZV7oDHsFvY5pSRiVFD1tQ0fZ9JKAkb1LTnSutfVYHNYvPHiyYQf07nig=
+  bucket: imageflow-nightlies
+  acl: public_read
+  skip_cleanup: true
+  local_dir: artifacts/upload
+  on:
+    repo: imazen/imageflow
