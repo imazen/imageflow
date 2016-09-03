@@ -23,7 +23,7 @@ use std::ptr;
 use std::cell::RefCell;
 
 
-struct ContextPtr {
+pub struct ContextPtr {
     ptr: Option<*mut ::ffi::Context>
 }
 pub struct Context{
@@ -74,6 +74,15 @@ impl ContextPtr {
                     None
                 }
                 _ => None
+            }
+        }
+    }
+
+    pub fn from_ptr(ptr: *mut ::ffi::Context) -> ContextPtr{
+        ContextPtr{
+            ptr: match ptr.is_null() {
+                false => Some(ptr),
+                true => None
             }
         }
     }
@@ -304,10 +313,12 @@ pub struct JsonResponse<'a>{
     pub response_json: &'a [u8]
 }
 
-impl Context{
-    pub fn message(&mut self, method: &str, json: &[u8]) -> JsonResponse{
-
-        match method {
+impl ContextPtr{
+    pub fn message<'a, 'b, 'c>(&'a mut self, method: &'b str, json: &'b [u8]) -> Result<JsonResponse<'c>>{
+        if self.ptr.is_none(){
+            return Err(FlowError::ContextInvalid)
+        }
+        let response = match method {
             "teapot" => JsonResponse {
                 status_code: 418,
                 response_json:
@@ -321,7 +332,8 @@ impl Context{
                                         "code": 404,
                                         "message": "Method not understood"}"#.as_bytes()
             }
-        }
+        };
+        Ok(response)
     }
 
     fn build_graph(&mut self, json: &[u8]){
@@ -330,6 +342,12 @@ impl Context{
 
 }
 
+impl Context{
+    pub fn message<'a, 'b, 'c>(&'a mut self, method: &'b str, json: &'b [u8]) -> Result<JsonResponse>{
+        let ref mut b = *self.p.borrow_mut();
+        b.message(method, json)
+    }
+}
 impl Job{
 
 

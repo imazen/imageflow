@@ -514,18 +514,18 @@ pub unsafe extern fn imageflow_send_json(context: *mut Context,
     // It doesn't appear that this allocates anything
     // But I'm curious how that Rust knows not to deallocate the string itself
     // Oh. It's borrowed. CStr is borrowed from the pointer. Pointers don't have lifetimes. &str is borrowed from CStr
-    let method_str = CStr::from_ptr(method as *const i8).to_str().unwrap(); //TODO, throw exception if not UTF-8, argument error
+    let method_str = ::std::ffi::CStr::from_ptr(method as *const i8).to_str().unwrap(); //TODO, throw exception if not UTF-8, argument error
 
     let json_bytes = std::slice::from_raw_parts(json_buffer, json_buffer_size);
 
     //TODO: possibly iterate access to force segfaults earlier?
 
 
-    let ctx = ::imageflow_core::FlowContext::from_ptr(context);
+    let mut ctx = ::imageflow_core::ContextPtr::from_ptr(context);
 
 
 
-    let response = ctx.message(method_str, json_bytes);
+    let response = ctx.message(method_str, json_bytes).unwrap(); //Unwrap for invalid context
 
 
 
@@ -663,7 +663,7 @@ pub unsafe extern fn imageflow_io_create_for_output_buffer(context: *mut Context
 #[no_mangle]
 pub unsafe extern fn imageflow_io_get_output_buffer(context: *mut Context,
                                                     io: *mut JobIO,
-                                                    result_buffer: *mut *mut u8,
+                                                    result_buffer: *mut *const u8,
                                                     result_buffer_length: *mut libc::size_t)
                                                     -> bool {
     ffi::flow_io_get_output_buffer(context, io, result_buffer, result_buffer_length)
