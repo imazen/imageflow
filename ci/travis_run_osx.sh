@@ -11,3 +11,4 @@ export COVERAGE=True
 export IMAGEFLOW_SERVER=False
 
 ./build.sh
+

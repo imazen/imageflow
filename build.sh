@@ -35,19 +35,20 @@ else
 	export PACKAGE_SUFFIX=${PACKAGE_SUFFIX:-unknown-linux}
 fi
 
-export PACKAGE_PREFIX=imageflow 
-export GIT_BRANCH_NAME=${TRAVIS_BRANCH:-$(git symbolic-ref HEAD | sed -e 's,.*/\(.*\),\1,')}
+export PACKAGE_PREFIX=${PACKAGE_PREFIX:-imageflow}
+export GIT_BRANCH_NAME=${GIT_BRANCH_NAME:-$(git symbolic-ref HEAD | sed -e 's,.*/\(.*\),\1,')}
 export GIT_BRANCH_NAME=${GIT_BRANCH_NAME:-unknown-branch}
-export GIT_COMMIT=$(git rev-parse --short HEAD)
+export GIT_COMMIT=${GIT_COMMIT:-$(git rev-parse --short HEAD)}
 export GIT_COMMIT=${GIT_COMMIT:-unknown-commit}
+export JOB_BADGE=${JOB_BADGE:-local-build}
 
-if [ -z ${TRAVIS_JOB_NUMBER+x} ]; then
-	export JOB_BADGE="local-build"
-else
-	export JOB_BADGE="travisjob-${TRAVIS_JOB_NUMBER}"
-fi 
+# UPLOAD_AS_LATEST overrides the nightly build for the branch
+export UPLOAD_AS_LATEST=${UPLOAD_AS_LATEST:False}
+export PACKAGE_DIR=${GIT_BRANCH_NAME}
+export PACKAGE_ARCHIVE_NAME=${PACKAGE_PREFIX}-${JOB_BADGE}-${GIT_COMMIT}-${PACKAGE_SUFFIX}
 
-export PACKAGE_ARCHIVE_NAME=${PACKAGE_PREFIX}-${GIT_BRANCH_NAME}-${JOB_BADGE}-${GIT_COMMIT}-${PACKAGE_SUFFIX}
+export PACKAGE_LATEST_NAME=${PACKAGE_PREFIX}-nightly-${PACKAGE_SUFFIX}
+
 
 #Turn off coverage if lcov is missing
 command -v lcov >/dev/null 2>&1 || { export COVERAGE=False; }
@@ -122,7 +123,7 @@ if [[ "$BUILD_RELEASE" == 'True' ]]; then
 
 
 	mkdir -p artifacts/staging/doc || true
-	mkdir -p artifacts/upload || true
+	mkdir -p artifacts/upload/${PACKAGE_DIR}/doc || true
 
 
 	cp target/release/{flow-,imageflow_,libimageflow}*  ./artifacts/staging/
@@ -134,10 +135,13 @@ if [[ "$BUILD_RELEASE" == 'True' ]]; then
 	rm ./artifacts/staging/imageflow_tool || true
 
 	cd ./artifacts/staging
-	tar czf ../upload/${PACKAGE_ARCHIVE_NAME}.tar.gz *
+	tar czf ../upload/${PACKAGE_DIR}/${PACKAGE_ARCHIVE_NAME}.tar.gz *
 	cd ../..
-	cp -a target/doc ./artifacts/upload/${GIT_BRANCH_NAME}/
+	cp -a target/doc/ ./artifacts/upload/${PACKAGE_DIR}/doc/
 
+	if [[ "$UPLOAD_AS_LATEST" == 'True' ]]; then
+		cp ./artifacts/upload/${PACKAGE_DIR}/${PACKAGE_ARCHIVE_NAME}.tar.gz ./artifacts/upload/${PACKAGE_DIR}/${PACKAGE_LATEST_NAME}.tar.gz
+	fi
 
 fi
 	
