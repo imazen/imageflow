@@ -79,24 +79,28 @@ if [[ "$BUILD_RELEASE" == 'True' ]]; then
 
 	cd imageflow_tool
 	cargo build --release
+	cargo doc --no-deps
 	cd ..
 
 	echo "Building libimageflow"
 
 	cd imageflow_cdylib
 	cargo build --release
+	cargo doc --no-deps
 	cd ..
 
 	if [[ "$IMAGEFLOW_SERVER" == 'True' ]]; then
 		cd imageflow_server
 		cargo build --release
+		cargo doc --no-deps
 		cd ..
 	fi
 
 
-	mkdir -p artifacts/staging || true
+	mkdir -p artifacts/staging/doc || true
 
 
 	cp target/release/{flow-,imageflow_,libimageflow}*  ./artifacts/staging/
-
+	cp -a target/doc ./artifacts/staging/
+	rm ./artifacts/staging/*.{o,d}
 fi
