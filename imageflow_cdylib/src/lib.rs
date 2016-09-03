@@ -380,7 +380,7 @@ pub fn test_error_handling() {
 
 
         let expected_string = "User defined error : Test message\nsrc/lib.rs:335: in function test_error_handling\nsrc/lib.rs:342: in function (unknown)\nsrc/lib.rs:20: in function (unknown)\n(unknown):0: in function (unknown)\n";
-        assert_eq!(expected_string, actual_string);
+        assert_eq!(expected_string, actual_string.replace("\\", "/"));
 
         // raising a second error should fail
         assert!(!imageflow_context_raise_error(c, 1025, message, filename,line!() as i32, ptr::null()));
