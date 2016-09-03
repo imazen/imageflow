@@ -39,20 +39,25 @@ test_script:
   - conan install --build missing -s build_type=Release -s arch=%CONAN_ARCH%
   - cargo test
   - cargo build --target=%RUST_TARGET% --release
+  - cargo doc --no-deps
   - cd ..
   - cd imageflow_tool
   - cargo test
   - cargo build --target=%RUST_TARGET% --release
+  - cargo doc --no-deps
   - cd ..
   - cd imageflow_cdylib
   - cargo test
   - cargo build --target=%RUST_TARGET% --release
+  - cargo doc --no-deps
   - cd .. 
   - mkdir artifacts
   - mkdir artifacts\staging
+  - mkdir artifacts\staging\doc
   - xcopy target\%RUST_TARGET%\release\flow-proto1.exe  artifacts\staging\
   - xcopy target\%RUST_TARGET%\release\libimageflowrs.dll  artifacts\staging\
   - xcopy target\%RUST_TARGET%\release\imageflow_tool.exe  artifacts\staging\
+  - xcopy /d target\%RUST_TARGET%\doc  artifacts\staging\doc
   - cd artifacts\staging
   - set ARTIFACT_NAME="imageflow-%APPVEYOR_REPO_BRANCH%-appveyorjob-%APPVEYOR_BUILD_NUMBER%-%APPVEYOR_REPO_COMMIT%-%PLATFORM%.zip"
   - 7z a "..\..\%ARTIFACT_NAME%.zip" *
