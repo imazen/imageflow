@@ -27,6 +27,7 @@ export BUILD_RELEASE=${BUILD_RELEASE:-True}
 export VALGRIND=${VALGRIND:-False}
 export COVERAGE=${COVERAGE:-False}
 export IMAGEFLOW_SERVER=${IMAGEFLOW_SERVER:-False}
+export RUST_BACKTRACE=1
 
 if [[ "$(uname -s)" == 'Darwin' ]]; then
 	export PACKAGE_SUFFIX=${PACKAGE_SUFFIX:-unknown-mac}
