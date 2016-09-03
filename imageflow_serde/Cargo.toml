@@ -1,14 +1,16 @@
 [package]
 name = "imageflow_serde"
 version = "0.1.0"
-authors = ["Me <user@rust-lang.org>"]
+authors = ["Nathanael Jones <imageflow@imazen.io>"]
 build = "build.rs"
 workspace = "../"
 
 
 [features]
-default = ["serde_codegen"]
-unstable = ["serde_macros"]
+#default = ["serde_codegen"]
+#unstable = ["serde_macros"]
+# We can change the default when/if we go back to stable
+default = ["serde_macros"]
 
 [build-dependencies]
 serde_codegen = { version = "0.8", optional = true }
