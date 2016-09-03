@@ -3,6 +3,8 @@ name = "imageflow_serde"
 version = "0.1.0"
 authors = ["Me <user@rust-lang.org>"]
 build = "build.rs"
+workspace = "../"
+
 
 [features]
 default = ["serde_codegen"]

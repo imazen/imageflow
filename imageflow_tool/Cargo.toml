@@ -2,6 +2,8 @@
 name = "imageflow_tool"
 version = "0.1.0"
 authors = ["Nathanael Jones <nathanael.jones@gmail.com>"]
+workspace = "../"
+
 
 [dependencies]
 imageflow_core = { path = "../imageflow_core", version = "*" }

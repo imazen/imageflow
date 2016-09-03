@@ -3,6 +3,8 @@ name = "imageflow_cdylib"
 version = "0.1.0"
 authors = ["Nathanael Jones <nathanael.jones@gmail.com>"]
 build = "conan_cargo_build.rs"
+workspace = "../"
+
 
 [lib]
 name = "imageflowrs"

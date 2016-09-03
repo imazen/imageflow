@@ -1,0 +1,2 @@
+[workspace]
+members = ["imageflow_serde", "imageflow_core", "imageflow_cdylib", "imageflow_tool", "imageflow_server"]
