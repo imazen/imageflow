@@ -1,0 +1,1 @@
+%COMSPEC% /c ""ci\wintools\SETUP_PATH.bat""

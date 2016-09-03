@@ -20,6 +20,8 @@ Cargo.lock
 
 /wrappers/ruby/bin
 
+/__cmake_systeminformation
+
 # VSCode
 /.vscode/
 

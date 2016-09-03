@@ -26,8 +26,12 @@ install:
 
 test_script:
   - echo %PATH%
+  - conan --version
+  - cmake --version
   - rustc -V
   - cargo -V
+  - nasm -v
+  - cl
   - mkdir build
   - cd build
   - if "%PLATFORM%"=="x86" set CONAN_ARCH=x86
