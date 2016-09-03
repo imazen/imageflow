@@ -37,7 +37,9 @@ fi
 
 export PACKAGE_PREFIX=imageflow 
 export GIT_BRANCH_NAME=${TRAVIS_BRANCH:-$(git symbolic-ref HEAD | sed -e 's,.*/\(.*\),\1,')}
+export GIT_BRANCH_NAME=${GIT_BRANCH_NAME:-unknown-branch}
 export GIT_COMMIT=$(git rev-parse --short HEAD)
+export GIT_COMMIT=${GIT_COMMIT:-unknown-commit}
 
 if [ -z ${TRAVIS_JOB_NUMBER+x} ]; then
 	export JOB_BADGE="local-build"
