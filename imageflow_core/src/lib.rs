@@ -412,23 +412,23 @@ fn test_panics2(){
 }
 
 
-fn new_oom_handler() -> ! {
-    panic!("OOM");
-}
-
-#[allow(unused_variables)]
-#[test]
-fn test_panics3(){
-
-    alloc::oom::set_oom_handler(new_oom_handler);
-
-    // let input_bytes = [0u8;3000000];
-    let result = ::std::panic::catch_unwind(|| {
-        let b = vec![0;30 * 1024 * 1024 * 1024];
-    });
-
-    if let Err(err) = result {
-        let str = format!("{:?}", err.downcast::<&'static str>());
-        assert_eq!(str, "Ok(\"OOM\")");
-    }
-}
+//fn new_oom_handler() -> ! {
+//    panic!("OOM");
+//}
+//
+//#[allow(unused_variables)]
+//#[test]
+//fn test_panics3(){
+//
+//    alloc::oom::set_oom_handler(new_oom_handler);
+//
+//    // let input_bytes = [0u8;3000000];
+//    let result = ::std::panic::catch_unwind(|| {
+//        let b = vec![0;30 * 1024 * 1024 * 1024];
+//    });
+//
+//    if let Err(err) = result {
+//        let str = format!("{:?}", err.downcast::<&'static str>());
+//        assert_eq!(str, "Ok(\"OOM\")");
+//    }
+//}
