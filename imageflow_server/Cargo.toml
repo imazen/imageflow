@@ -6,7 +6,6 @@ workspace = "../"
 
 
 [dependencies]
-imageflow_core = { path = "../imageflow_core", version = "*" }
 libc = "0.2.0"
 clap = "2"
 router = "*"
@@ -17,6 +16,7 @@ rustc-serialize = "*"
 threadpool = "1.0"
 serde = "*"
 serde_json = "*"
+imageflow_core = { path = "../imageflow_core", version = "*" }
 
 [build-dependencies]
 cmake = "0.1.17"

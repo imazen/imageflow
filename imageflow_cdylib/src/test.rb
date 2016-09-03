@@ -15,4 +15,4 @@ end
 
 c = F.imageflow_context_create
 error = F.imageflow_context_error_code(c)
-puts "Current error code is #{error}"
+puts "Current error code is #{error} (should be zero)"

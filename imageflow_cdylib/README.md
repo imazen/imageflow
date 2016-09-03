@@ -6,7 +6,7 @@ Exposes an ABI for other languages; this is the new 'libimageflow'.
 
 `cargo test` does the most, and tests correctness,
 
-`ruby src/test.rb` (if the FFI gem is installed) will actually make FFI calls happen, in case you're skeptical of symbol name mangling et. al.
+`ruby imageflow_cdylib/src/test.rb` (if the FFI gem is installed) will actually make FFI calls happen, in case you're skeptical of symbol name mangling et. al.
 
 ### Documentation
 

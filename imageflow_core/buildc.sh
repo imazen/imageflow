@@ -4,8 +4,8 @@ set -e
 set -x
 
 cd ..
-conan remove imageflow/* -f
-conan export lasote/testing
+conan remove imazen/* -f
+conan export imazen/testing
 
 cd imageflow_core
 

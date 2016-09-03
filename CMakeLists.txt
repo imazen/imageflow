@@ -29,12 +29,12 @@ file(GLOB_RECURSE LIB_SRCS lib/*.c)
 file(GLOB LIB_HDRS lib/*.h)
 list(APPEND LIB_HDRS imageflow.h)
 list(APPEND LIB_HDRS imageflow_advanced.h)
-	
+
 if (NOT SKIP_LIBRARY)
 	add_library(imageflow ${LIB_SRCS} ${LIB_HDRS})
 	set_target_properties(imageflow PROPERTIES LIBRARY_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/lib)
 	set_target_properties(imageflow PROPERTIES ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/lib)
-   
+
 	target_link_libraries(imageflow ${CONAN_LIBS})
 	target_include_directories(imageflow PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 	# target_compile_options(imageflow PRIVATE "-flto")
@@ -48,8 +48,10 @@ add_definitions(-Dimageflow_BUILD_STATIC)
 endif()
 
 # -ffast-math changes results
+# -no-parenthesis is unfortunate, but gcc 4.8.5 broke all unit test macros.
+
 if (UNIX)
-	set(FASTSCALING_FLAGS "-O3 -iquotelib -fPIC -ffast-math -mfpmath=sse  -msse2 -funroll-loops -mtune=native -march=native -Wpointer-arith -Wcast-qual -Wpedantic -Wall -Wextra -Wno-unused-parameter -Wuninitialized -Wredundant-decls -Wno-error=unused-function -Werror")
+	set(FASTSCALING_FLAGS "-O3 -iquotelib -fPIC -ffast-math -mfpmath=sse  -msse2 -funroll-loops -mtune=native -march=native -Wpointer-arith -Wcast-qual -Wpedantic -Wall -Wextra -Wno-unused-parameter -Wuninitialized -Wredundant-decls -Wno-error=unused-function -Wno-parentheses -Werror")
 	set(CMAKE_C_FLAGS  "${CMAKE_C_FLAGS} ${FASTSCALING_FLAGS} -std=gnu11 -Wstrict-prototypes -Wmissing-prototypes -Wc++-compat -Wshadow" )
 	set(CMAKE_CXX_FLAGS  "${CMAKE_CXX_FLAGS} ${FASTSCALING_FLAGS} -std=gnu++11" )
 else()

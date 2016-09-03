@@ -3,25 +3,11 @@
 set -e #Exit on failure.
 set -x
 
-mkdir -p artifacts/staging
-mkdir -p build
-cd build
-conan install --scope build_tests=True --scope coverage=True --scope valgrind=${VALGRIND} --build missing -u ../
-conan build ../
+export TEST_RUST=True
+export TEST_C=True
+export BUILD_RELEASE=True
+export VALGRIND=${VALGRIND:-False}
+export COVERAGE=True
+export IMAGEFLOW_SERVER=False
 
-cd ..
-conan export lasote/testing
-
-cd imageflow_core
-
-conan install --build missing # Will build imageflow package with your current settings
-cargo build --release
-cargo test
-cd ..
-cd imageflow_tool
-cargo test
-cargo build --release
-cp target/release/flow-proto1  ../artifacts/staging/
-cd ..
-
-
+./build.sh

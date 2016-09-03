@@ -13,12 +13,10 @@ if [ -e "./flow-proto1" ]
 then
   echo "Skipping compilation of imageflow, ./flow-proto1 exists. Delete to rebuild"
 else
-  cd ../../imageflow_core
-  ./buildc.sh
-  cd ../imageflow_tool
-  cargo build --release
-  cd result_testing
-  cp ../target/release/flow-proto1 .
+  cd ../..
+  ./build_only.sh
+  cd imageflow_tool/result_testing
+  cp ../../target/release/flow-proto1 .
 fi 
 
 if [ -e "./rscope" ]

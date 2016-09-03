@@ -1,3 +1,5 @@
+# Not used much
+# ignore this
 from conan.packager import ConanMultiPackager
 import platform
 

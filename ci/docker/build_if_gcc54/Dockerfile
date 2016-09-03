@@ -71,6 +71,41 @@ RUN rustup install nightly \
     && rustup show \
     && rustc -V
 
+USER root
+
+RUN rm -rf /var/lib/apt/lists/* && apt-get update 
+
+RUN apt-get install --no-install-recommends -y \
+  libcurl4-openssl-dev libelf-dev libdw-dev python2.7-minimal \
+  && rm -rf /var/lib/apt/lists/* \
+  && rm -rf {/usr/share/doc,/usr/share/man,/var/cache,/usr/doc,/usr/local/share/doc,/usr/local/share/man}
+
+RUN sudo ln -sf /usr/bin/python2.7 /usr/bin/python2
+RUN which python2
+
+
+
+RUN wget -O kcov.tar.gz https://github.com/SimonKagstrom/kcov/archive/master.tar.gz \
+    && tar xvzf kcov.tar.gz && rm kcov.tar.gz && mv kcov-master kcov \
+    && mkdir kcov/build \
+    && cd kcov/build \
+    && cmake .. \
+    && make \
+    && sudo make install \
+    && cd ../.. \
+    && rm -rf kcov \
+    && rm -rf /usr/local/share/man
+
+
+RUN wget -O lcov.tar.gz http://ftp.de.debian.org/debian/pool/main/l/lcov/lcov_1.11.orig.tar.gz \
+    && tar xvzf lcov.tar.gz && rm lcov.tar.gz && mv lcov-1.11 lcov \
+    && sudo make -C lcov/ install \
+    && rm -rf lcov && rm -rf /usr/share/man
+
+
+
+USER conan
+
 RUN conan user
 
 
