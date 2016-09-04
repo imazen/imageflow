@@ -16,16 +16,13 @@ else
 fi 
 
 #Put tagged commits in their own folder instead of using the branch name
-if [ -z ${TRAVIS_TAG+x} ]; then
-	export GIT_BRANCH_NAME=$TRAVIS_BRANCH
+if [ -n "${TRAVIS_TAG}" ]; then
+  export GIT_BRANCH_NAME=${TRAVIS_TAG}
+  export UPLOAD_AS_LATEST=False
+else
+	export GIT_BRANCH_NAME=${TRAVIS_BRANCH}
 	export UPLOAD_AS_LATEST=True
 else
-	export GIT_BRANCH_NAME=$TRAVIS_TAG
-	export UPLOAD_AS_LATEST=False
-fi 
-
-#Fall back to asking git for the branch name
-export GIT_BRANCH_NAME=${GIT_BRANCH_NAME:-$(git symbolic-ref HEAD | sed -e 's,.*/\(.*\),\1,')}
 
 #Don't upload pull requests
 if [ "${TRAVIS_PULL_REQUEST}" == "false" ]; then

@@ -62,7 +62,7 @@ test_script:
   - xcopy target\%RUST_TARGET%\release\flow-proto1.exe  artifacts\staging\
   - xcopy target\%RUST_TARGET%\release\imageflowrs.dll  artifacts\staging\
   - xcopy target\%RUST_TARGET%\release\imageflow_tool.exe  artifacts\staging\
-  - xcopy /d target\%RUST_TARGET%\doc  artifacts\staging\doc
+  - xcopy /d target\doc  artifacts\staging\doc
   - cd artifacts\staging
   - set ARTIFACT_NAME="imageflow-%APPVEYOR_REPO_BRANCH%-appveyorjob-%APPVEYOR_BUILD_NUMBER%-%APPVEYOR_REPO_COMMIT%-%PLATFORM%.zip"
   - 7z a "..\..\%ARTIFACT_NAME%.zip" *
