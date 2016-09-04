@@ -65,7 +65,7 @@ test_script:
   - xcopy /d target\doc  artifacts\staging\doc
   - cd artifacts\staging
   - set ARTIFACT_NAME="imageflow-%APPVEYOR_REPO_BRANCH%-appveyorjob-%APPVEYOR_BUILD_NUMBER%-%APPVEYOR_REPO_COMMIT%-%PLATFORM%.zip"
-  - 7z a "..\..\%ARTIFACT_NAME%.zip" *
+  - 7z a -r "..\..\%ARTIFACT_NAME%.zip" *
   - cd ..\..
   - appveyor PushArtifact "%ARTIFACT_NAME%.zip"
 
