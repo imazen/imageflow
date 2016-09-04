@@ -137,7 +137,7 @@ if [[ "$BUILD_RELEASE" == 'True' ]]; then
 	cd ./artifacts/staging
 	tar czf ../upload/${PACKAGE_DIR}/${PACKAGE_ARCHIVE_NAME}.tar.gz *
 	cd ../..
-	cp -a target/doc/ ./artifacts/upload/${PACKAGE_DIR}/doc/
+	cp -a target/doc/* ./artifacts/upload/${PACKAGE_DIR}/doc/
 
 	if [[ "$UPLOAD_AS_LATEST" == 'True' ]]; then
 		cp ./artifacts/upload/${PACKAGE_DIR}/${PACKAGE_ARCHIVE_NAME}.tar.gz ./artifacts/upload/${PACKAGE_DIR}/${PACKAGE_LATEST_NAME}.tar.gz
