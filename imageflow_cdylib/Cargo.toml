@@ -10,7 +10,6 @@ name = "imageflowrs"
 doc = true
 crate-type = ["cdylib"]
 
-
 [dependencies]
 libc = "0.2.0"
 imageflow_core = { path = "../imageflow_core", version = "*" }

@@ -115,6 +115,8 @@
 //!
 
 #![crate_type = "cdylib"]
+
+#![crate_name = "imageflowrs"]
 #![feature(alloc_system)]
 
 extern crate libc;
@@ -188,6 +190,10 @@ pub unsafe extern fn imageflow_context_destroy(context: *mut Context) {
 
 #[test]
 fn test_create_destroy() {
+  exercise_create_destroy();
+}
+
+pub fn exercise_create_destroy() {
     unsafe {
         let c = imageflow_context_create();
         assert!(!c.is_null());
@@ -343,6 +349,9 @@ pub unsafe extern fn imageflow_context_add_to_callstack(context: *mut Context, f
 
 #[test]
 pub fn test_error_handling() {
+  exercise_error_handling();
+}
+pub fn exercise_error_handling() {
     unsafe {
         let c = imageflow_context_create();
         assert!(!c.is_null());
@@ -378,7 +387,7 @@ pub fn test_error_handling() {
         let buf_used = imageflow_context_error_and_stacktrace(c, &mut buf[0], 2048, true);
 
         assert!(buf_used >= 0);
-        let actual_string = str::from_utf8(&buf[0..buf_used as usize]).unwrap();
+        let actual_string = ::std::str::from_utf8(&buf[0..buf_used as usize]).unwrap();
 
 
         let expected_string = "User defined error : Test message\nsrc/lib.rs:335: in function test_error_handling\nsrc/lib.rs:342: in function (unknown)\nsrc/lib.rs:20: in function (unknown)\n(unknown):0: in function (unknown)\n";
@@ -534,14 +543,15 @@ pub unsafe extern fn imageflow_send_json(context: *mut Context,
     let json_bytes = response.response_json;
     let sizeof_struct = mem::size_of::<ImageflowJsonResponse>();
 
-
     let pointer = ffi::flow_context_calloc(context, 1, sizeof_struct + json_bytes.len(),
-                                             ptr::null(), context as *mut libc::c_void, ptr::null(), 0) as *mut ImageflowJsonResponse;
-
+                                             ptr::null(), context as *mut libc::c_void, ptr::null(), 0) as *mut u8;
+    if pointer.is_null() {
+      return ::std::ptr::null()
+    }
     //TODO: handle null ptr, report OOM
 
     let pointer_to_final_buffer = pointer.offset(sizeof_struct as isize) as *mut libc::uint8_t;
-    let ref mut imageflow_response = *pointer;
+    let ref mut imageflow_response  = *(pointer as *mut ImageflowJsonResponse);
     imageflow_response.buffer_utf8_no_nulls = pointer_to_final_buffer;
     imageflow_response.buffer_size = json_bytes.len();
     imageflow_response.status_code = response.status_code;
@@ -558,6 +568,10 @@ pub unsafe extern fn imageflow_send_json(context: *mut Context,
 
 #[test]
 fn test_message(){
+  exercise_json_message();
+}
+
+pub fn exercise_json_message(){
     unsafe {
         let c = imageflow_context_create();
         assert!(!c.is_null());
@@ -578,7 +592,7 @@ fn test_message(){
         assert!(imageflow_json_response_read(c, response, &mut json_status_code, &mut json_out_ptr, &mut json_out_size));
 
 
-        let json_out_str = str::from_utf8(std::slice::from_raw_parts(json_out_ptr, json_out_size)).unwrap();
+        let json_out_str = ::std::str::from_utf8(std::slice::from_raw_parts(json_out_ptr, json_out_size)).unwrap();
         assert_eq!(json_out_str, expected_json_out);
 
         assert_eq!(json_status_code,expected_reponse_status);
