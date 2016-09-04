@@ -10,6 +10,7 @@ export GIT_COMMIT=$(git rev-parse --short HEAD)
 
 #Use a travis build number so artifacts sort nicely
 if [ -z ${TRAVIS_JOB_NUMBER+x} ]; then
+  echo "TRAVIS_JOB_NUMBER is missing"
 else
 	export JOB_BADGE="travisjob-${TRAVIS_JOB_NUMBER}"
 fi 
