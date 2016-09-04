@@ -31,7 +31,6 @@ test_script:
   - rustc -V
   - cargo -V
   - nasm -v
-  - cl
   - mkdir build
   - cd build
   - if "%PLATFORM%"=="x86" set CONAN_ARCH=x86
@@ -55,7 +54,7 @@ test_script:
   - cargo test
   - cargo build --target=%RUST_TARGET% --release
   - cargo doc --no-deps
-  - cd .. 
+  - cd ..
   - mkdir artifacts
   - mkdir artifacts\staging
   - mkdir artifacts\staging\doc
