@@ -100,6 +100,12 @@ fi
 
 if [[ "$BUILD_RELEASE" == 'True' ]]; then
 
+  echo "Building imageflow_core docs"
+
+  cd imageflow_core
+  cargo doc --no-deps
+  cd ..
+
 	echo "Building imageflow_tool"
 
 	cd imageflow_tool
