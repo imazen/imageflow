@@ -115,8 +115,10 @@
 //!
 
 #![crate_type = "cdylib"]
-extern crate libc;
+#![feature(alloc_system)]
 
+extern crate libc;
+extern crate alloc_system;
 extern crate imageflow_core;
 
 use ::imageflow_core::ffi as ffi;
