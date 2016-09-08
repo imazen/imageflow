@@ -485,6 +485,7 @@ bool visual_compare(flow_c * c, struct flow_bitmap_bgra * bitmap, const char * n
             FLOW_error_return(c);
         }
         size_t differences;
+        size_t differences_to_print = 0; //100
         size_t total_delta;
         if (!diff_image_pixels(c, old, bitmap, &differences, &total_delta, 0,
                                off_by_one_byte_differences_permitted + 4096)) {
@@ -492,7 +493,7 @@ bool visual_compare(flow_c * c, struct flow_bitmap_bgra * bitmap, const char * n
         }
         // If the difference is a handful of off-by-one rounding changes, just print the different bytes.
         if (differences < off_by_one_byte_differences_permitted && total_delta == differences) {
-            if (!diff_image_pixels(c, old, bitmap, &differences, &total_delta, 100,
+            if (!diff_image_pixels(c, old, bitmap, &differences, &total_delta, differences_to_print,
                                    off_by_one_byte_differences_permitted + 4096)) {
                 FLOW_error_return(c);
             }

@@ -1,5 +1,6 @@
 #!/bin/bash
 set -e #Exit on failure.
+set -x
 
 # You're going to need:
 # Conan
@@ -34,7 +35,6 @@ export VALGRIND_COMMAND="valgrind -q --error-exitcode=9 --gen-suppressions=all"
 export VALGRIND_RUST_COMMAND="$VALGRIND_COMMAND cargo test"
 echo VALGRIND_COMMAND=$VALGRIND_COMMAND
 
-set -x
 
 export COVERAGE=${COVERAGE:-False}
 export IMAGEFLOW_SERVER=${IMAGEFLOW_SERVER:-True}
@@ -119,7 +119,7 @@ if [[ "$TEST_RUST" == 'True' ]]; then
 		cd ..
 		if [[ "$IMAGEFLOW_SERVER" == 'True' ]]; then
 			cd imageflow_server
-			$COPY_VALGRINDRC
+			eval $COPY_VALGRINDRC
 			$VALGRIND_CARGO_COMMAND
 			cd ..
 		fi

@@ -9,6 +9,11 @@ insert_final_newline = true
 [*.{c,cpp,hpp,h,py,rb,yml}]
 trim_trailing_whitespace = true
 
+[*.{toml,rs}]
+trim_trailing_whitespace = true
+indent_style = space
+indent_size = 4
+
 [*.{c,cpp,hpp,h,py,md}]
 tab_width = 8
 indent_style = space

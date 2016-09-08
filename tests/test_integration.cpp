@@ -42,6 +42,10 @@ TEST_CASE("Test overlapped slurp", "")
     GifFileType * b = DGifOpen(&cursor_b, read_func, &error);
     REQUIRE(error == D_GIF_SUCCEEDED);
     REQUIRE(DGifSlurp(b) == GIF_OK);
+
+    int err = 0;
+    DGifCloseFile(a, &err);
+    DGifCloseFile(b, &err);
 }
 
 TEST_CASE("Load png", "[fastscaling]")
@@ -101,6 +105,7 @@ TEST_CASE("Load png", "[fastscaling]")
                  */
                 png_image_free(&image);
             }
+            free(buffer);
         }
 
         else

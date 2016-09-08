@@ -5,6 +5,9 @@ authors = ["Nathanael Jones <imageflow@imazen.io>"]
 build = "build.rs"
 workspace = "../"
 
+[lib]
+name="imageflow_serde"
+
 
 [features]
 #default = ["serde_codegen"]

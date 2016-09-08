@@ -240,6 +240,7 @@ TEST_CASE("Test output weights", "[fastscaling]") {
     }
 
     char result_buffer[2048];
+    memset(&result_buffer[0],0,2048);
     bool are_equal;
     REQUIRE(flow_compare_file_contents(&context, filename, reference_filename, &result_buffer[0], 2048 , &are_equal));
     ERR(c);

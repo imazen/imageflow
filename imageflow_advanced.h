@@ -267,7 +267,7 @@ PUB int32_t flow_edge_duplicate(flow_c * c, struct flow_graph ** g, int32_t edge
 
 PUB bool flow_graph_print_to_dot(flow_c * c, struct flow_graph * g, FILE * stream,
                                  const char * image_node_filename_prefix);
-
+PUB bool flow_graph_print_to_stdout(flow_c * c, struct flow_graph * g);
 ////////////////////////////////////////////
 // Deal with bitmaps
 

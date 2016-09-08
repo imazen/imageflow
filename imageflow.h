@@ -116,10 +116,10 @@ typedef enum flow_node_state {
 } flow_node_state;
 
 typedef enum flow_edgetype {
-    flow_edgetype_null,
-    flow_edgetype_input,
-    flow_edgetype_canvas,
-    flow_edgetype_info,
+    flow_edgetype_null = 0,
+    flow_edgetype_input = 1,
+    flow_edgetype_canvas = 2,
+    flow_edgetype_info = 3,
     flow_edgetype_FORCE_ENUM_SIZE_INT32 = 2147483647
 } flow_edgetype;
 
@@ -132,12 +132,12 @@ typedef enum flow_compositing_mode {
 struct flow_job;
 
 typedef enum flow_codec_type {
-    flow_codec_type_null,
-    flow_codec_type_decode_png,
-    flow_codec_type_encode_png,
-    flow_codec_type_decode_jpeg,
-    flow_codec_type_encode_jpeg,
-    flow_codec_type_decode_gif
+    flow_codec_type_null = 0,
+    flow_codec_type_decode_png = 1,
+    flow_codec_type_encode_png = 2,
+    flow_codec_type_decode_jpeg = 3,
+    flow_codec_type_encode_jpeg = 4,
+    flow_codec_type_decode_gif = 5
 } flow_codec_type;
 
 typedef enum flow_scanlines_filter_type {

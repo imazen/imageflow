@@ -140,7 +140,11 @@ TEST_CASE("Benchmark block downscaling", "")
                           &output[8 * 4], &output[8 * 5], &output[8 * 6], &output[8 * 7] };
 
     for (size_t i = 0; i < sizeof(blockscale_funclist) / sizeof(blockscale_fn); i++) {
+#ifdef DEBUG
         int reps = 90000;
+#else
+        int reps = 900;
+#endif
         int64_t start = flow_get_high_precision_ticks();
         for (int j = 0; j < reps; j++) {
             blockscale_funclist[i](input, rows, 0);

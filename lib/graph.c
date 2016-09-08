@@ -630,6 +630,11 @@ int32_t flow_graph_get_inbound_edge_count_of_type(flow_c * c, struct flow_graph 
     return flow_graph_get_edge_count(c, g, node_id, true, type, true, false);
 }
 
+bool flow_graph_print_to_stdout(flow_c * c, struct flow_graph * g){
+    return flow_graph_print_to_dot(c, g, stdout, NULL);
+}
+
+
 bool flow_graph_print_to_dot(flow_c * c, struct flow_graph * g, FILE * stream, const char * image_node_filename_prefix)
 {
     fprintf(stream, "digraph g {\n");

@@ -27,13 +27,24 @@ pub enum IoMode {
     read_seekable = 5, // 1 | 4,
     write_seekable = 6, // 2 | 4,
     read_write_seekable = 15, // 1 | 2 | 4 | 8
-}
+    }
+    #[repr(C)]
+    #[derive(Copy,Clone)]
+    pub enum IoDirection {
+        Out = 8,
+        In = 4,
+    }
+
+
 #[repr(C)]
 #[derive(Copy,Clone)]
-pub enum IoDirection {
-    Out = 8,
-    In = 4,
+pub enum EdgeKind {
+    None = 0,
+    Input = 1,
+    Canvas = 2,
+    Info = 3
 }
+
 
 #[repr(C)]
 #[derive(Copy,Clone)]
@@ -303,6 +314,12 @@ extern {
                              -> *mut Graph;
 
 
+    pub fn flow_edge_create(c: *mut Context,
+                                    g: *mut *mut Graph,
+                                    from: i32,
+                                    to: i32,
+                                    kind: EdgeKind)
+                                    -> i32;
     pub fn flow_node_create_decoder(c: *mut Context,
                                     g: *mut *mut Graph,
                                     prev_node: i32,
@@ -357,7 +374,7 @@ extern {
                                     prev_node: i32,
                                     placeholder_id: i32,
                                     desired_encoder_id: i64,
-                                    hints: &EncoderHints)
+                                    hints: *const EncoderHints)
                                     -> i32;
 
     pub fn flow_node_create_primitive_flip_vertical(c: *mut Context,
@@ -395,6 +412,7 @@ extern {
     pub fn flow_job_execute(c: *mut Context, job: *mut Job, g: *mut *mut Graph) -> bool;
 
 
+    pub fn flow_graph_print_to_stdout(c: *mut Context, g: *const Graph) -> bool;
     pub fn flow_context_set_floatspace(c: *mut Context,
                                        space: Floatspace,
                                        a: f32,

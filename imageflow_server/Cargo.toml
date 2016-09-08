@@ -5,13 +5,12 @@ authors = ["Nathanael Jones <nathanael.jones@gmail.com>"]
 workspace = "../"
 
 [replace]
-"openssl:0.8.2" = { path = "../../../github/rust-openssl/openssl" }
-"openssl-sys:0.7.17"= { path = "../../../github/rust-openssl/openssl-sys" }
-#"openssl:0.8.2" = { git = "https://github.com/imazen/rust-openssl.git", branch="master"}
-#"openssl-sys:0.7.17"= { git = "https://github.com/imazen/rust-openssl.git", branch="master"}
+"pkg-config:0.3.8" = { git = "https://github.com/imazen/pkg-config-rs", branch="master"}
+"pkg_config:0.3.8" = { git = "https://github.com/imazen/pkg-config-rs", branch="master"}
 
 
 [dependencies]
+
 libc = "0.2.0"
 clap = "2"
 router = "*"

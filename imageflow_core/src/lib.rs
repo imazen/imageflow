@@ -1,10 +1,14 @@
 #![feature(alloc)]
 #![feature(oom)]
+#![feature(alloc_system)]
+
 
 #![allow(unused_features)]
 #![allow(unused_imports)]
 #![allow(dead_code)]
 #![allow(unused_variables)]
+
+extern crate alloc_system;
 
 
 pub mod ffi;
@@ -12,8 +16,11 @@ pub mod boring;
 pub mod parsing;
 pub mod abi;
 
+use std::ops::DerefMut;
 
 pub use ::ffi::{IoDirection, IoMode};
+
+use parsing::JsonResponseError;
 
 #[macro_use]
 extern crate json;
@@ -110,6 +117,41 @@ impl ContextPtr {
 
     }
 
+
+    unsafe fn  assert_ok(&self, g : Option<*const ::ffi::Graph>) {
+        match self.get_error_copy(){
+            Some(which_error) => {
+                match which_error {
+                    FlowError::Err(e) => {
+
+                        println!("Error {} {}\n", e.code, e.message_and_stack);
+                        match e.code{
+                            72 if g.is_some() => {
+                                let _ = ::ffi::flow_graph_print_to_stdout(self.ptr.unwrap(), g.unwrap());
+                            }
+                            _ => {}
+                        }
+
+                        panic!();
+                    },
+                    FlowError::Oom => {
+                        panic!("Out of memory.");
+                    },
+                    FlowError::ErrNotImpl => {
+                        panic!("Error not implemented");
+                    },
+                    FlowError::ContextInvalid => {
+                        panic!("Context pointer null");
+                    }
+
+
+                }
+            },
+            None => {}
+        }
+    }
+
+
     fn get_error_copy(&self) -> Option<FlowError> {
         unsafe {
             match self.ptr {
@@ -146,6 +188,9 @@ impl Context {
                 }
             }
         }
+    }
+    pub fn unsafe_borrow_mut_context_pointer(&mut self) -> std::cell::RefMut<ContextPtr>{
+        self.p.borrow_mut()
     }
 
     fn get_error_copy(&self) -> Option<FlowError> {
@@ -299,6 +344,14 @@ fn it_works() {
     assert_eq!(c.destroy(), Ok(()));
 
 }
+//
+//#[test]
+//fn leak_mem() {
+//
+//    let mut v = Vec::with_capacity(333);
+//    v.push(0u8);
+//    std::mem::forget(v)
+//}
 
 //pub struct FlowIoRef{
 //    ptr: *mut ::ffi::JobIO
@@ -326,6 +379,12 @@ impl ContextPtr{
                 r#"{"success": "false","code": 418,"message": "I'm a teapot, short and stout"}"#
                     .as_bytes()
             },
+            "v0.0.1/build" => JsonResponse {
+                status_code: 418,
+                response_json:
+                r#"{"success": "false","code": 418,"message": "I'm a teapot, short and stout"}"#
+                    .as_bytes()
+            },
             _ => JsonResponse {
                 status_code: 404,
                 response_json: r#"{
@@ -337,8 +396,15 @@ impl ContextPtr{
         Ok(response)
     }
 
-    fn build_graph(&mut self, json: &[u8]){
-
+    fn build_0_0_1<'a, 'b, 'c>(&'a mut self, json: &'b [u8])  -> Result<JsonResponse<'c>>{
+        match ::parsing::BuildRequestHandler::new().do_and_respond(self, json) {
+            Ok(response) => Ok(response),
+            Err(original_err) => Err(match original_err {
+                JsonResponseError::Oom(()) => FlowError::Oom,
+                JsonResponseError::NotImplemented(()) => FlowError::ErrNotImpl,
+                JsonResponseError::Other(e) => FlowError::ErrNotImpl
+            })
+        }
     }
 
 }
