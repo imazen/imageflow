@@ -105,15 +105,7 @@ if(ENABLE_TEST)
 	create_test(test_imageflow tests/test_operations.cpp tests/test_context.cpp tests/test_io.cpp tests/test_graph.cpp tests/test_error_handling.cpp tests/test_visuals.cpp)
 
 	create_test(test_variations tests/test_variations.cpp)
-	#create_test(test_context tests/test_context.cpp)
-	#create_test(test_io tests/test_io.cpp)
-	#create_test(test_visuals tests/test_visuals.cpp)
-	#create_test(test_graph_program tests/test_graph.cpp )
-	#create_test(test_error_handling  tests/test_error_handling.cpp)
 	create_test(test_fastscaling tests/test_simple_fastscaling.cpp  tests/test_integration.cpp tests/test.cpp tests/test_weighting.cpp tests/test_weighting_helpers.cpp  )
-#	create_test(test_integration_program  tests/test_integration.cpp )
-#	create_test(test_test  tests/test.cpp  )
-#	create_test(test_weighting  tests/test_weighting.cpp tests/test_weighting_helpers.cpp )
 
 	add_custom_target(do_nothing)
 	# Theft library doesn't compile in windows
