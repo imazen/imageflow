@@ -1,10 +1,11 @@
 #!/bin/bash
 
-set -e 
+set -e
 set -x
 
 cd ..
-conan remove imazen/* -f
+
+conan remove imageflow/* -f
 conan export imazen/testing
 
 cd imageflow_core
