@@ -85,8 +85,12 @@ class ImageFlowConan(ConanFile):
         self.run(cmake_build_command)
 
         if self.scope.dev and self.scope.build_tests:
-            self.output.warn(cmake_test_command)
-            self.run(cmake_test_command)
+            if self.scope.skip_test_run:
+                self.output.warn("Skipping tests; skip_test_run=False (perhaps for later valgrind use?)")
+                self.output.warn("Would have run %s" % cmake_test_command)
+            else:
+                self.output.warn(cmake_test_command)
+                self.run(cmake_test_command)
         else:
             self.output.warn("Skipping tests; build_tests=False")
 

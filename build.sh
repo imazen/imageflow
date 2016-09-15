@@ -11,9 +11,11 @@ set -e #Exit on failure.
 # lcov (if coverage is used)
 # valgrind (if valgrind is used)
 
-set -x
+
 
 # All variables are 'True' or "False", case-sensitive!
+
+# COVERAGE=True disables all optimizations! Don't upload if true.
 
 # default(True) TEST_RUST=True - Runs Rust unit and integration tests
 # default(True) TEST_C=True - Runs C unit and integration tests
@@ -26,6 +28,14 @@ export TEST_RUST=${TEST_RUST:-True}
 export TEST_C=${TEST_C:-True}
 export BUILD_RELEASE=${BUILD_RELEASE:-True}
 export VALGRIND=${VALGRIND:-False}
+export SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+export COPY_VALGRINDRC="cp ${SCRIPT_DIR}/.valgrindrc ./.valgrindrc; cp ${SCRIPT_DIR}/valgrind_suppressions.txt ./valgrind_suppressions.txt"
+export VALGRIND_COMMAND="valgrind -q --error-exitcode=9 --gen-suppressions=all"
+export VALGRIND_RUST_COMMAND="$VALGRIND_COMMAND cargo test"
+echo VALGRIND_COMMAND=$VALGRIND_COMMAND
+
+set -x
+
 export COVERAGE=${COVERAGE:-False}
 export IMAGEFLOW_SERVER=${IMAGEFLOW_SERVER:-True}
 export RUST_BACKTRACE=1
@@ -62,8 +72,17 @@ if [[ "$TEST_C" == 'True' ]]; then
 	echo -e "\nBuilding C/C++ components and dependencies of Imageflow\n\n"
 
 	cd build
-	conan install --scope build_tests=True --scope coverage=${COVERAGE:-False} --scope valgrind=${VALGRIND:-False} --build missing -u ../
+	eval $COPY_VALGRINDRC
+	conan install --scope build_tests=True --scope coverage=${COVERAGE:-False} --scope skip_test_run=${VALGRIND:-False} --build missing -u ../
 	conan build ../
+	if [[ "$VALGRIND" == 'True' ]]; then
+		#Sync to build/CTestTestfile.cmake
+		$VALGRIND_COMMAND ./bin/test_imageflow
+		$VALGRIND_COMMAND ./bin/test_variations
+		$VALGRIND_COMMAND ./bin/test_fastscaling
+		$VALGRIND_COMMAND ./bin/test_theft_render
+	fi 
+
 	cd ..
 	if [[ "$COVERAGE" == 'True' ]]; then
 	  lcov --directory ./build --capture --output-file coverage.info # capture coverage info
@@ -79,6 +98,33 @@ conan install --build missing
 cd ..
 
 if [[ "$TEST_RUST" == 'True' ]]; then
+
+	if [[ "$VALGRIND" == 'True' ]]; then
+		echo "Running crate tests"
+		cd imageflow_core
+		eval $COPY_VALGRINDRC
+		eval $VALGRIND_CARGO_COMMAND
+		cd ..
+		cd imageflow_cdylib
+		eval $COPY_VALGRINDRC
+		eval $VALGRIND_CARGO_COMMAND
+		cd ..
+		cd imageflow_serde
+		eval $COPY_VALGRINDRC
+		eval $VALGRIND_CARGO_COMMAND
+		cd ..
+		cd imageflow_tool
+		eval $COPY_VALGRINDRC
+		eval $VALGRIND_CARGO_COMMAND
+		cd ..
+		if [[ "$IMAGEFLOW_SERVER" == 'True' ]]; then
+			cd imageflow_server
+			$COPY_VALGRINDRC
+			$VALGRIND_CARGO_COMMAND
+			cd ..
+		fi
+	fi
+
 	echo "Running crate tests"
 	cd imageflow_core
 	cargo test
@@ -151,3 +197,5 @@ if [[ "$BUILD_RELEASE" == 'True' ]]; then
 	fi
 
 fi
+
+echo "Build complete :)"

@@ -1,0 +1,219 @@
+
+{
+   Rust reads terminal information from disk; Valgrind sees this as uninitialized memory
+   Memcheck:Cond
+   ...
+   fun:*TerminfoTerminal*
+   ...
+}
+{
+   Rust reads terminal information from disk; Valgrind sees this as uninitialized memory
+   Memcheck:Cond
+   ...
+   fun:*TermInfo*
+   ...
+}
+
+{
+   Don't show uninit issues inside cargo
+   Memcheck:Cond
+   ...
+   obj: */rustc
+   ...
+}
+
+{
+   Don't show uninit issues inside cargo
+   Memcheck:Cond
+   ...
+   obj: */cargo
+   ...
+}
+{
+   Rustup also reads things valgrind thinks are uninitialized. Rustup used in many binaries.
+   Memcheck:Cond
+   ...
+   fun:*rustup_init*
+   ...
+}
+{
+   <insert_a_suppression_name_here>
+   Memcheck:Cond
+   ...
+   fun:*cargo_compile*
+   ...
+}
+{
+   <insert_a_suppression_name_here>
+   Memcheck:Cond
+   ...
+   fun:*cargo_rustc*
+   ...
+}
+{
+   <insert_a_suppression_name_here>
+   Memcheck:Cond
+   ...
+   fun:*cargo?main*
+   ...
+}
+{
+   <insert_a_suppression_name_here>
+   Memcheck:Cond
+   ...
+   fun:*cargo?process*
+   ...
+}
+{
+   Rustdoc compiles tests; we can't block the process, though, since it's parent to the actual code.
+   Memcheck:Cond
+   ...
+   fun:*rustc_driver*
+   ...
+}
+{
+   Rustdoc compiles tests; we can't block the process, though, since it's parent to the actual code.
+   Memcheck:Cond
+   ...
+   fun:*rustc_trans*
+   ...
+}
+
+{
+   <insert_a_suppression_name_here>
+   Memcheck:Leak
+   match-leak-kinds: possible
+   fun:calloc
+   fun:allocate_dtv
+   fun:_dl_allocate_tls
+   fun:allocate_stack
+   fun:pthread_create@@GLIBC_2.2.5
+   fun:_ZN3std3sys6thread6Thread3new17hf5b8840585b43596E
+   fun:_ZN4test8run_test14run_test_inner17h2c72a6693d5d8bd9E
+   fun:_ZN4test8run_test17h323c09a62e75e276E
+   fun:_ZN4test9run_tests17hed5287d168e8000fE
+   fun:_ZN4test17run_tests_console17h998882fc96468efdE
+   fun:_ZN4test9test_main17hc901c0d849eaa3a3E
+   fun:_ZN4test16test_main_static17h443a9e246b7295a5E
+   fun:_ZN14imageflow_core6__test4main17hea3c44c4180eb43cE
+   fun:__rust_maybe_catch_panic
+}
+
+{
+   Our test runner isn't the most careful
+   Memcheck:Cond
+   fun:_ZNK5Catch12TestRegistry17getAllTestsSortedERKNS_7IConfigE
+   fun:_ZN5Catch8runTestsERKNS_3PtrINS_6ConfigEEE
+   fun:main
+}
+{
+   <insert_a_suppression_name_here>
+   Memcheck:Leak
+   match-leak-kinds: definite
+   ...
+   fun:*Catch*CompositeGenerator*
+   ...
+}
+{
+   <insert_a_suppression_name_here>
+   Memcheck:Leak
+   match-leak-kinds: definite
+   ...
+   fun:*Catch*getGeneratorIndex*
+   ...
+}
+{
+   <insert_a_suppression_name_here>
+   Memcheck:Cond
+   ...
+   fun:*getAllTestCasesSorted*
+   ...
+}
+
+{
+   <insert_a_suppression_name_here>
+   Memcheck:Cond
+   ...
+   fun:*getAllTestCasesSorted*
+   ...
+}
+
+
+
+{
+   Reported to https://github.com/glennrp/libpng/issues/97
+   Memcheck:Cond
+   fun:fill_window
+   fun:deflate_fast
+   fun:deflate
+   fun:png_compress_IDAT
+   fun:png_write_filtered_row
+   fun:png_write_find_filter
+   fun:png_write_row
+   fun:png_write_image
+   fun:png_write_png
+   ...
+}
+
+
+{
+   BUG TO FIX
+   Memcheck:Leak
+   match-leak-kinds: definite
+   fun:calloc
+   fun:calloc
+   fun:_ZN7Fixture7_callocEP12flow_contextP9flow_heapmmPKci
+   fun:flow_objtracking_expand_record_array
+   fun:flow_objtracking_add
+   fun:flow_context_calloc
+   fun:flow_bitmap_bgra_create_header
+   fun:flow_bitmap_bgra_create
+   fun:_ZN12_GLOBAL__N_131____C_A_T_C_H____T_E_S_T____1884testEv
+   fun:_ZNK5Catch14MethodTestCaseIN12_GLOBAL__N_131____C_A_T_C_H____T_E_S_T____188EE6invokeEv
+   fun:_ZNK5Catch8TestCase6invokeEv
+   fun:_ZN5Catch10RunContext20invokeActiveTestCaseEv.isra.47
+   fun:runCurrentTest
+   fun:runTest
+   fun:_ZN5Catch8runTestsERKNS_3PtrINS_6ConfigEEE
+   fun:run
+   fun:run
+   fun:main
+}
+{
+   BUG TO FIX
+   Memcheck:Leak
+   match-leak-kinds: possible
+   fun:malloc
+   fun:alloc_small
+   fun:get_sof
+   fun:read_markers
+   fun:consume_markers
+   fun:jpeg_consume_input
+   fun:jpeg_read_header
+   fun:flow_job_jpg_decoder_BeginRead
+   fun:flow_job_codecs_jpeg_get_info
+   fun:flow_job_decoder_get_info
+   fun:flow_job_get_decoder_info
+   fun:get_image_dimensions
+   fun:_ZL31____C_A_T_C_H____T_E_S_T____115v
+}
+{
+   BUG TO FIX
+   Memcheck:Leak
+   match-leak-kinds: definite
+   fun:malloc
+   fun:jinit_memory_mgr
+   fun:jpeg_CreateDecompress
+   fun:flow_job_jpg_decoder_BeginRead
+   fun:flow_job_codecs_jpeg_get_info
+   fun:flow_job_decoder_get_info
+   fun:flow_job_get_decoder_info
+   fun:get_image_dimensions
+   fun:_ZL31____C_A_T_C_H____T_E_S_T____115v
+   fun:_ZNK5Catch20FreeFunctionTestCase6invokeEv
+   fun:_ZNK5Catch8TestCase6invokeEv
+   fun:_ZN5Catch10RunContext20invokeActiveTestCaseEv.isra.47
+   fun:runCurrentTest
+   fun:runTest
+   fun:_ZN5Catch8runTestsERKNS_3PtrINS_6ConfigEEE
+}
