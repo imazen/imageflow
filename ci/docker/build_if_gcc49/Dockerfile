@@ -105,6 +105,9 @@ RUN curl https://sh.rustup.rs -sSf | sh -s -- -y --default-toolchain nightly -v 
     && rustup show \
     && rustc -V
 
+RUN sudo easy_install3 -U pip
+RUN sudo pip3 install conan --upgrade
+
 RUN conan user
 
 WORKDIR /home/conan/imageflow

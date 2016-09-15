@@ -14,11 +14,20 @@ export IMAGE_NAME=$1
 
 export DOCKER_IMAGE=imazen/$IMAGE_NAME
 
-export RUST_CHANNEL=$2
+
+export VALGRIND=${VALGRIND:-False}
+export RUST_CHANNEL=${$2:-nightly}
 
 export JOB_NAME=${IMAGE_NAME}_rust_$RUST_CHANNEL
 export WORKING_DIR=${SCRIPT_DIR}/.docker_$JOB_NAME
 export SHARED_CACHE=${SCRIPT_DIR}/../.shared_cache
+
+export UPLOAD_BUILD=False
+export UPLOAD_AS_LATEST=False
+
+export GIT_COMMIT=$(git rev-parse --short HEAD)
+export GIT_BRANCH_NAME=$(git symbolic-ref HEAD | sed -e 's,.*/\(.*\),\1,')
+
 
 echo $JOB_NAME
 mkdir $WORKING_DIR | true
@@ -26,21 +35,12 @@ rsync -av --delete "${SCRIPT_DIR}/../../.." "$WORKING_DIR" --filter=':- .gitigno
 
 cd $WORKING_DIR
 
-export UPLOAD_BUILD=false
-export UPLOAD_AS_LATEST=false
 
-export GIT_COMMIT=$(git rev-parse --short HEAD)
-export GIT_BRANCH_NAME=$(git symbolic-ref HEAD | sed -e 's,.*/\(.*\),\1,')
 
-export VALGRIND=false
-# if [[ "${RUST_CHANNEL}" == 'nightly' ]]; then
-#   #export VALGRIND=true
-# fi
 
 if [[ "$(uname -s)" == 'Darwin' ]]; then
 	eval "$(docker-machine env default)"
 fi
-
 
 
 export DOCKER_TTY_FLAG=
