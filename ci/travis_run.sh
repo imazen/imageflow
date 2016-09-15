@@ -17,8 +17,8 @@ fi
 
 #Put tagged commits in their own folder instead of using the branch name
 if [ -n "${TRAVIS_TAG}" ]; then
-  export GIT_BRANCH_NAME=${TRAVIS_TAG}
-  export UPLOAD_AS_LATEST=False
+	export GIT_BRANCH_NAME=${TRAVIS_TAG}
+	export UPLOAD_AS_LATEST=False
 else
 	export GIT_BRANCH_NAME=${TRAVIS_BRANCH}
 	export UPLOAD_AS_LATEST=True
