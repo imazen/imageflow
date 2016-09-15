@@ -6,6 +6,7 @@ set -e #Exit on failure.
 # Rust nightly
 # nasm
 # Cmake
+# OpenSSL
 # DSSIM
 # lcov (if coverage is used)
 # valgrind (if valgrind is used)
@@ -150,4 +151,3 @@ if [[ "$BUILD_RELEASE" == 'True' ]]; then
 	fi
 
 fi
-	
