@@ -26,7 +26,7 @@ matrix:
     osx_image: xcode7.3
     env: PACKAGE_SUFFIX=x86_64-apple-darwin-xcode73-rust-nightly UPLOAD_BUILD=True  TARGET=x86_64-apple-darwin 
     language: rust
-    rust: nightly
+    rust: nightly-2016-09-14
   - os: linux
     dist: trusty
     env: PACKAGE_SUFFIX=x86_64-linux-gcc49-rust-nightly DOCKER_IMAGE=imazen/build_if_gcc49 UPLOAD_BUILD=True 

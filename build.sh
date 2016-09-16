@@ -159,6 +159,8 @@ conan export imazen/testing
 echo 
 echo "================================== Rust ============================ [build.sh]"
 
+rustc --version
+cargo --version
 
 if [[ "$TEST_RUST" == 'True' ]]; then
 
