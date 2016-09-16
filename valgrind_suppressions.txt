@@ -80,7 +80,7 @@
 }
 
 {
-   <insert_a_suppression_name_here>
+   Rust test harness
    Memcheck:Leak
    match-leak-kinds: possible
    fun:calloc
@@ -108,6 +108,13 @@
 }
 {
    <insert_a_suppression_name_here>
+   Memcheck:Cond
+   fun:*getAllTestCasesSorted*
+   ...
+}
+
+{
+   <insert_a_suppression_name_here>
    Memcheck:Leak
    match-leak-kinds: definite
    ...
@@ -129,15 +136,6 @@
    fun:*getAllTestCasesSorted*
    ...
 }
-
-{
-   <insert_a_suppression_name_here>
-   Memcheck:Cond
-   ...
-   fun:*getAllTestCasesSorted*
-   ...
-}
-
 
 
 {
@@ -182,6 +180,21 @@
 {
    BUG TO FIX
    Memcheck:Leak
+   match-leak-kinds: definite
+   fun:calloc
+   fun:flow_context_calloc
+   fun:flow_bitmap_bgra_create_header
+   fun:flow_bitmap_bgra_create
+   fun:_ZN12_GLOBAL__N_131____C_A_T_C_H____T_E_S_T____1884testEv
+   fun:_ZNK5Catch14MethodTestCaseIN12_GLOBAL__N_131____C_A_T_C_H____T_E_S_T____188EE6invokeEv
+   fun:_ZN5Catch8runTestsERKNS_3PtrINS_6ConfigEEE
+   fun:main
+}
+
+
+{
+   BUG TO FIX
+   Memcheck:Leak
    match-leak-kinds: possible
    fun:malloc
    fun:alloc_small
@@ -216,4 +229,19 @@
    fun:runCurrentTest
    fun:runTest
    fun:_ZN5Catch8runTestsERKNS_3PtrINS_6ConfigEEE
+}
+{
+   BUG TO FIX
+   Memcheck:Leak
+   match-leak-kinds: definite
+   fun:malloc
+   fun:jinit_memory_mgr
+   fun:jpeg_CreateDecompress
+   fun:flow_job_jpg_decoder_BeginRead
+   fun:flow_job_codecs_jpeg_get_info
+   fun:flow_job_get_decoder_info
+   fun:get_image_dimensions
+   fun:_ZL31____C_A_T_C_H____T_E_S_T____115v
+   fun:_ZN5Catch8runTestsERKNS_3PtrINS_6ConfigEEE
+   fun:main
 }

@@ -65,13 +65,21 @@ else()
 endif()
 
 option(COVERAGE "Generate coverage data" OFF)
+
+option(DEBUG_BUILD "Generate debug build data" OFF)
+
 if (COVERAGE)
 	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g -O0") # debug, no optimisation
 	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} --coverage")#--fprofile-arcs --ftest-coverage") # enabling coverage
 	set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -g -O0") # debug, no optimisation
 	set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} --coverage ") # enabling coverage
 else()
+	if (DEBUG_BUILD)
+		set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g -O0") # debug, no optimisation
+		set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -g -O0") # debug, no optimisation
+	else()
 
+	endif()
 endif()
 
 if (ENABLE_PROFILING)

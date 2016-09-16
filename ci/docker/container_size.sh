@@ -1,7 +1,10 @@
 #!/bin/bash
 
 
-eval "$(docker-machine env default)"
+# For os x convenience
+if [[ "$(uname -s)" == 'Darwin' ]]; then
+	eval "$(docker-machine env default)"
+fi
 
 docker images
 

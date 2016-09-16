@@ -12,35 +12,30 @@ matrix:
   include:
   - os: linux
     dist: trusty
-    env: PACKAGE_SUFFIX=x86_64-linux-gcc48-rust-nightly DOCKER_IMAGE=imazen/build_if_gcc48
-      RUST_CHANNEL=nightly UPLOAD_BUILD=True JOB_NAME="build_if_gcc48_rust_nightly" RUST_BACKTRACE=1
+    env: PACKAGE_SUFFIX=x86_64-linux-gcc48-rust-nightly DOCKER_IMAGE=imazen/build_if_gcc48 UPLOAD_BUILD=True
     sudo: required
     services:
     - docker
   - os: linux
     dist: trusty
-    env: PACKAGE_SUFFIX=x86_64-linux-gcc54-rust-nightly DOCKER_IMAGE=imazen/build_if_gcc54
-      RUST_CHANNEL=nightly UPLOAD_BUILD=True JOB_NAME="build_if_gcc54_rust_nightly" RUST_BACKTRACE=1
+    env: PACKAGE_SUFFIX=x86_64-linux-gcc54-rust-nightly DOCKER_IMAGE=imazen/build_if_gcc54 UPLOAD_BUILD=True
     sudo: required
     services:
     - docker
   - os: osx
     osx_image: xcode7.3
-    env: PACKAGE_SUFFIX=x86_64-apple-darwin-xcode73-rust-nightly  TARGET=x86_64-apple-darwin
-      RUST_CHANNEL=nightly UPLOAD_BUILD=True JOB_NAME="xcode73" RUST_BACKTRACE=1
+    env: PACKAGE_SUFFIX=x86_64-apple-darwin-xcode73-rust-nightly UPLOAD_BUILD=True  TARGET=x86_64-apple-darwin 
     language: rust
     rust: nightly
   - os: linux
     dist: trusty
-    env: PACKAGE_SUFFIX=x86_64-linux-gcc49-rust-nightly DOCKER_IMAGE=imazen/build_if_gcc49
-      RUST_CHANNEL=nightly UPLOAD_BUILD=True JOB_NAME="build_if_gcc49_rust_nightly" RUST_BACKTRACE=1
+    env: PACKAGE_SUFFIX=x86_64-linux-gcc49-rust-nightly DOCKER_IMAGE=imazen/build_if_gcc49 UPLOAD_BUILD=True 
     sudo: required
     services:
     - docker
   - os: linux
     dist: trusty
-    env: PACKAGE_SUFFIX=x86_64-linux-gcc54-rust-nightly DOCKER_IMAGE=imazen/build_if_gcc54
-      RUST_CHANNEL=nightly UPLOAD_BUILD=False COVERAGE=True VALGRIND=True JOB_NAME="build_if_gcc54_rust_nightly_coverage_valgrind" RUST_BACKTRACE=1
+    env: UPLOAD_BUILD=False COVERAGE=True VALGRIND=True PACKAGE_SUFFIX=x86_64-linux-gcc54-rust-nightly DOCKER_IMAGE=imazen/build_if_gcc54
     sudo: required
     services:
     - docker

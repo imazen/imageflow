@@ -55,7 +55,7 @@ class ImageFlowConan(ConanFile):
 
 
     def build(self):
-        self.output.warn('build_tests=%s coverage=%s profiling=%s shared=%s' % (self.scope.build_tests, self.scope.coverage, self.scope.profiling, self.options.shared))
+        self.output.warn('build_tests=%s debug_build=%s coverage=%s profiling=%s shared=%s' % (self.scope.build_tests, self.scope.debug_build, self.scope.coverage, self.scope.profiling, self.options.shared))
         build_dir = os.path.join(self.conanfile_directory, "build")
         if not os.path.exists(build_dir):
             os.mkdir(build_dir)
@@ -67,6 +67,8 @@ class ImageFlowConan(ConanFile):
 
         if self.scope.dev and self.scope.coverage:
             cmake_settings += " -DCOVERAGE=ON"
+        if self.scope.dev and self.scope.debug_build:
+            cmake_settings += " -DDEBUG_BUILD=ON"
         if self.scope.dev and self.scope.build_tests:
             cmake_settings += " -DENABLE_TEST=ON"
         if self.scope.dev and self.scope.profiling:
