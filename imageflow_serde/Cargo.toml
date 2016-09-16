@@ -2,23 +2,12 @@
 name = "imageflow_serde"
 version = "0.1.0"
 authors = ["Nathanael Jones <imageflow@imazen.io>"]
-build = "build.rs"
 workspace = "../"
 
 [lib]
 name="imageflow_serde"
 
-
-[features]
-#default = ["serde_codegen"]
-#unstable = ["serde_macros"]
-# We can change the default when/if we go back to stable
-default = ["serde_macros"]
-
-[build-dependencies]
-serde_codegen = { version = "0.8", optional = true }
-
 [dependencies]
 serde = "0.8"
-serde_json = "0.8"  # just for the example, not required in general
-serde_macros = { version = "0.8", optional = true }
+serde_json = "0.8"
+serde_macros = "0.8"

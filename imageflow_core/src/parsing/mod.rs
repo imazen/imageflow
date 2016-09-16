@@ -98,7 +98,7 @@ impl BuildRequestHandler{
             */
             let mut io_list = Vec::new();
             for io_obj in io_vec {
-                let mut io_ptr: *mut ffi::JobIO = match io_obj.io {
+                let io_ptr: *mut ffi::JobIO = match io_obj.io {
                     s::IoEnum::BytesHex(hex_string) => {
                         let bytes = hex_string.as_str().from_hex().unwrap();
 
@@ -110,7 +110,7 @@ impl BuildRequestHandler{
                         }
                         ptr::copy_nonoverlapping(bytes.as_ptr(), buf, bytes.len());
 
-                        let mut io_ptr = ::ffi::flow_io_create_from_memory(p, ::ffi::IoMode::read_seekable,buf, bytes.len(), p as *const libc::c_void, ptr::null());
+                        let io_ptr = ::ffi::flow_io_create_from_memory(p, ::ffi::IoMode::read_seekable,buf, bytes.len(), p as *const libc::c_void, ptr::null());
 
                         if io_ptr.is_null() {
                             panic!("Failed to create I/O");
