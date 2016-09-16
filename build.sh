@@ -1,8 +1,7 @@
 #!/bin/bash
 set -e #Exit on failure.
 
-echo "build.sh:"
-echo "Building Imageflow "
+echo "============================= [build.sh] ======================================"
 # You're going to need:
 # Conan
 # clang or gcc 4.8, 4.9, or 5.4
@@ -62,7 +61,16 @@ fi
 
 export SCRIPT_DIR
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
-export COPY_VALGRINDRC="cp ${SCRIPT_DIR}/.valgrindrc ./.valgrindrc; cp ${SCRIPT_DIR}/valgrind_suppressions.txt ./valgrind_suppressions.txt; sudo chown conan: ./.valgrindrc; sudo chown conan: ./valgrind_suppressions.txt; sudo chmod o-w ./.valgrindrc; sudo chmod o-w ./valgrind_suppressions.txt"
+export COPY_VALGRINDRC="cp ${SCRIPT_DIR}/.valgrindrc ./.valgrindrc; cp ${SCRIPT_DIR}/valgrind_suppressions.txt ./valgrind_suppressions.txt"
+
+# If we're running as 'conan' (we assume this indicates we are in a docker container)
+# Then we need to also change permissions so that .valgrindrc is respected
+# It cannot be world-writable, and should be owned by the current user (according to valgrind)
+USERNAME_WHEN_DOCKERIZED=conan
+if [[ "$(id -u -n)" == "${USERNAME_WHEN_DOCKERIZED}" ]]; then
+	COPY_VALGRINDRC="${COPY_VALGRINDRC}; sudo chown ${USERNAME_WHEN_DOCKERIZED}: ./.valgrindrc; sudo chown ${USERNAME_WHEN_DOCKERIZED}: ./valgrind_suppressions.txt; sudo chmod o-w ./.valgrindrc; sudo chmod o-w ./valgrind_suppressions.txt"
+fi
+
 export VALGRIND_COMMAND="valgrind -q --error-exitcode=9 --gen-suppressions=all"
 export VALGRIND_RUST_COMMAND="$VALGRIND_COMMAND cargo test"
 export RUST_BACKTRACE=1
@@ -103,14 +111,11 @@ BUILD_VARS=(
 )
 
 
-echo "==================================================================== [build.sh]"
+
 echo "build.sh sees these relevant variables: ${BUILD_VARS[*]}"
-echo "==================================================================== [build.sh]"
-echo 
 
 [[ -d build ]] || mkdir build
 
-echo 
 echo "================================== C/C++ =========================== [build.sh]"
 
 if [[ "$TEST_C" == 'True' ]]; then
@@ -122,7 +127,7 @@ if [[ "$TEST_C" == 'True' ]]; then
 	(
 		cd build
 		eval "$COPY_VALGRINDRC"
-		conan install --scope build_tests=True --scope debug_build=${TEST_C_DEBUG_BUILD:-False} --scope coverage=${COVERAGE:-False} --scope skip_test_run=${VALGRIND:-False} --build missing -u ../
+		conan install --scope build_tests=True --scope "debug_build=${TEST_C_DEBUG_BUILD:-False}" --scope "coverage=${COVERAGE:-False}" --scope "skip_test_run=${VALGRIND:-False}" --build missing -u ../
 		conan build ../
 		if [[ "$VALGRIND" == 'True' ]]; then
 			#Sync to build/CTestTestfile.cmake
