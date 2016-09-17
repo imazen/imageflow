@@ -98,7 +98,7 @@ ENV PATH=/home/conan/.cargo/bin:$PATH
 
 #Install nightly Rust and make default (add x86_64-unknown-linux-musl)
 
-RUN curl https://sh.rustup.rs -sSf | sh -s -- -y --default-toolchain nightly -v \
+RUN curl https://sh.rustup.rs -sSf | sh -s -- -y --default-toolchain nightly-2016-09-01 -v \
     && rustup default nightly \
     && rustup target add x86_64-unknown-linux-musl \
     && HI=$(rustup which rustc) && HI=${HI%/bin/rustc} && export TOOLCHAIN_DIR=$HI && echo TOOLCHAIN_DIR=$TOOLCHAIN_DIR \
