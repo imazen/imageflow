@@ -1,8 +1,11 @@
 extern crate imageflow_serde as s;
 use std::collections::HashMap;
 use std;
-
 use ffi::EdgeKind;
+
+extern crate rustc_serialize;
+use parsing::rustc_serialize::hex::FromHex;
+
 
 pub struct GraphTranslator {
     ctx: *mut ::ffi::Context
@@ -24,15 +27,49 @@ typedef enum flow_codec_type {
     flow_codec_type_decode_gif = 5
 } flow_codec_type;
 */
+    fn color_to_i32(&self, c: s::Color) -> std::result::Result<u32, std::num::ParseIntError> {
+        match c {
+            s::Color::Srgb(srgb) => match srgb {
+                s::ColorSrgb::Hex(hex_srgb) => {
+                    u32::from_str_radix(hex_srgb.as_str(), 16)
+                }
+            }
+        }
+    }
 
     unsafe fn create_node(&self,  g: *mut *mut ::ffi::Graph, node: s::Node )-> i32{
         match node {
+
             s::Node::FlipV => ::ffi::flow_node_create_primitive_flip_vertical(self.ctx, g, -1),
             s::Node::Decode{io_id } => ::ffi::flow_node_create_decoder(self.ctx, g, -1, io_id ),
             s::Node::Encode{io_id, encoder_id: enc_id, encoder: _, hints: _} => ::ffi::flow_node_create_encoder(self.ctx, g, -1, io_id, enc_id.unwrap_or(2), std::ptr::null() as *const ::ffi::EncoderHints),
+            s::Node::Crop{ x1, y1, x2, y2} => ::ffi::flow_node_create_primitive_crop(self.ctx,g,-1, x1, y1, x2, y2),
+            s::Node::FlipH => ::ffi::flow_node_create_primitive_flip_horizontal(self.ctx, g, -1),
+            s::Node::Rotate90 => ::ffi::flow_node_create_rotate_90(self.ctx, g, -1),
+            s::Node::Rotate180 => ::ffi::flow_node_create_rotate_180(self.ctx, g, -1),
+            s::Node::Rotate270 => ::ffi::flow_node_create_rotate_270(self.ctx, g, -1),
+            s::Node::CreateCanvas{format, w, h, color}  => {
+                let ffi_format = match format {
+                    s::PixelFormat::Bgr24 => ::ffi::PixelFormat::bgr24,
+                    s::PixelFormat::Bgra32 => ::ffi::PixelFormat::bgra32,
+                    s::PixelFormat::Gray8 => ::ffi::PixelFormat::gray8
+                };
+
+                ::ffi::flow_node_create_canvas(self.ctx, g, -1, ffi_format, w, h, self.color_to_i32(color).unwrap())
+            },
+            //s::Node::CopyRectToCanvas {from_x, from_y, width, height, x, y} =>
+            //s::Node::Transpose
+            s::Node::ExpandCanvas{left, top, right, bottom, color} => ::ffi::flow_node_create_expand_canvas(self.ctx, g, -1, left, top, right, bottom, self.color_to_i32(color).unwrap()),
+            s::Node::Scale{ w, h, down_filter, up_filter,
+                sharpen_percent, flags} => {
+                ::ffi::flow_node_create_scale(self.ctx, g, -1, w, h, down_filter.unwrap_or(s::Filter::RobidouxSharp) as i32, up_filter.unwrap_or(s::Filter::Ginseng) as i32,  flags.unwrap_or(1), sharpen_percent.unwrap_or(0f32) )
+            }
+
+
             _ => panic!("Node not implemented")
         }
     }
+
 
     unsafe fn create_edge(&self,  g: *mut *mut ::ffi::Graph, from_node: i32, to_node: i32, edge_kind: ::ffi::EdgeKind )-> i32{
         ::ffi::flow_edge_create(self.ctx, g, from_node,to_node,edge_kind)

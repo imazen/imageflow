@@ -143,7 +143,7 @@ pub enum Node{
     #[serde(rename="rotate90")]
     Rotate90,
     #[serde(rename="rotate180")]
-    Rotae180,
+    Rotate180,
     #[serde(rename="rotate270")]
     Rotate270,
     #[serde(rename="scale")]

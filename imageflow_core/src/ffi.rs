@@ -339,8 +339,8 @@ extern {
                                   prev_node: i32,
                                   width: usize,
                                   height: usize,
-                                  downscale_filter: Filter,
-                                  upscale_filter: Filter,
+                                  downscale_filter: i32,
+                                  upscale_filter: i32,
                                   flags: usize,
                                   sharpen: f32)
                                   -> i32;

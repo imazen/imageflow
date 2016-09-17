@@ -395,8 +395,8 @@ pub fn process_image<F, C, R>(commands: BoringCommands,
                                       last,
                                       final_w,
                                       final_h,
-                                      commands.down_filter,
-                                      commands.up_filter,
+                                      commands.down_filter as i32,
+                                      commands.up_filter as i32,
                                       1,
                                       commands.sharpen);
 
