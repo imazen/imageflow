@@ -125,11 +125,10 @@ impl ContextPtr {
                     FlowError::Err(e) => {
 
                         println!("Error {} {}\n", e.code, e.message_and_stack);
-                        match e.code{
-                            72 if g.is_some() => {
-                                let _ = ::ffi::flow_graph_print_to_stdout(self.ptr.unwrap(), g.unwrap());
+                        if e.code == 72 || e.code == 73 {
+                            if g.is_some() {
+                                let _ =::ffi::flow_graph_print_to_stdout( self.ptr.unwrap(), g.unwrap());
                             }
-                            _ => {}
                         }
 
                         panic!();

@@ -16,7 +16,7 @@ struct flow_job * flow_job_create(flow_c * c)
     job->debug_job_id = job_id++;
     job->codecs_head = NULL;
     job->codecs_tail = NULL;
-    job->max_calc_flatten_execute_passes = 6;
+    job->max_calc_flatten_execute_passes = 20;
     return job;
 }
 

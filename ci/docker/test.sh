@@ -4,6 +4,7 @@ shopt -s extglob
 
 echo "Preparing to build Imageflow"
 
+
 # First parameter to script must be the name of the docker image (excluding imazen/)
 export IMAGE_NAME=$1
 # Set DOCKER_IMAGE to override entire name
@@ -14,6 +15,16 @@ export OPEN_DOCKER_BASH_INSTEAD=${OPEN_DOCKER_BASH_INSTEAD:-False}
 
 # RUST_CHANNEL doesn't do anything right now, just part of some names
 export RUST_CHANNEL=${RUST_CHANNEL:-nightly}
+
+
+############## Paths for caching
+export SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )/$1"
+export TEST_SH_CACHE_DIR=~/.docker_imageflow_caches
+#export TEST_SH_CACHE_DIR=${SCRIPT_DIR}/../.docker_imageflow_caches
+
+export WORKING_DIR=${TEST_SH_CACHE_DIR}/.docker_${IMAGE_NAME}_rust_${RUST_CHANNEL}
+export SHARED_CACHE=${TEST_SH_CACHE_DIR}/.shared_cache
+
 
 ############## Overrides for test.sh
 
@@ -94,10 +105,6 @@ echo ===================================================================== [test
 echo "DOCKER_ENV_VARS: ${DOCKER_ENV_VARS[@]}"
 echo ===================================================================== [test.sh]
 ##############################
-
-export SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )/$1"
-export WORKING_DIR=${SCRIPT_DIR}/.docker_${IMAGE_NAME}_rust_${RUST_CHANNEL}
-export SHARED_CACHE=${SCRIPT_DIR}/../.shared_cache
 
 
 OTHER_VARS=(

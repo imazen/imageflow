@@ -4,9 +4,6 @@ version = "0.1.0"
 authors = ["Nathanael Jones <nathanael.jones@gmail.com>"]
 workspace = "../"
 
-[replace]
-"pkg-config:0.3.8" = { git = "https://github.com/imazen/pkg-config-rs", branch="master"}
-"pkg_config:0.3.8" = { git = "https://github.com/imazen/pkg-config-rs", branch="master"}
 
 
 [dependencies]

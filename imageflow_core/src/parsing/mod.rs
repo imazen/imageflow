@@ -73,7 +73,7 @@ impl BuildRequestHandler{
     pub fn do_and_respond<'a, 'b, 'c, 'd>(&'a self, ctx: &'d mut ContextPtr, json: &'b [u8])  -> Result<JsonResponse<'c>, JsonResponseError> {
 
         let parsed : s::Build001 = serde_json::from_slice(json).unwrap();
-        let cfg = parsed.builder_config;
+
         let io_vec = parsed.io;
         let graph = match parsed.framewise{
             s::Framewise::Graph(g) => g,
@@ -89,6 +89,23 @@ impl BuildRequestHandler{
 
             let job = ::ffi::flow_job_create(p);
 
+            println!("builder_config ={:?}", parsed.builder_config );
+            match parsed.builder_config {
+                Some(build_cfg) => match build_cfg.graph_recording{
+                    Some(r) => {
+                        println!("Setting record_graph_versions={}", r.record_graph_versions.unwrap_or(false) );
+                        let _ = ::ffi::flow_job_configure_recording(p, job,
+                                                                    r.record_graph_versions.unwrap_or(false),
+                                                                    r.record_frame_images.unwrap_or(false),
+                                                                    r.render_last_graph.unwrap_or(false),
+                                                                    r.render_graph_versions.unwrap_or(false),
+                                                                    r.render_animated_graph.unwrap_or(false));
+
+                    },
+                    _ => {}
+                },
+                _ => {}
+            }
 
             /*
                 pub io_id: i32,
@@ -150,16 +167,10 @@ impl BuildRequestHandler{
             if !::ffi::flow_job_execute(p, job, &mut g) {
                 ctx.assert_ok(Some(g));
             }
-            //Create job
-            //Add i/o
 
-            //Build
 
             //TODO: Question, should JSON endpoints populate the Context error stacktrace when something goes wrong? Or populate both (except for OOM).
 
-            //        ::ffi::flow_node_create_canvas
-            //
-            //        ::ffi::flow_context_
             Err(JsonResponseError::NotImplemented(()))
         }
     }
@@ -187,11 +198,30 @@ fn test_handler(){
 
     let mut steps = vec![];
     steps.push(s::Node::Decode {io_id: 0});
+    steps.push(s::Node::Scale{ w: 20, h: 30, down_filter: None, up_filter: None, sharpen_percent: None, flags: None });
     steps.push(s::Node::FlipV);
+    steps.push(s::Node::FlipH);
+    steps.push(s::Node::Rotate90);
+    steps.push(s::Node::Rotate180);
+    steps.push(s::Node::Rotate270);
+    steps.push(s::Node::Transpose);
+    steps.push(s::Node::ExpandCanvas {top:2, left: 3, bottom: 4, right: 5, color: s::Color::Srgb(s::ColorSrgb::Hex("aeae22".to_owned()))});
+    steps.push(s::Node::FillRect {x1: 0, x2: 10, y1: 0, y2: 10, color: s::Color::Srgb(s::ColorSrgb::Hex("ffee00".to_owned()))});
     steps.push(s::Node::Encode {io_id: 1, encoder: None, encoder_id: None, hints: None});
 
+//    let recording = s::Build001_Graph_Recording{
+//        record_graph_versions: Some(true),
+//        record_frame_images: Some(true),
+//        render_last_graph: Some(true),
+//        render_animated_graph: Some(true),
+//        render_graph_versions : Some(true),
+//    };
+
     let build = s::Build001{
-        builder_config: None,
+        builder_config: Some(s::Build001Config{graph_recording: None,
+        process_all_gif_frames: Some(false),
+            enable_jpeg_block_scaling: Some(false)
+        }),
         io: vec![input_io, output_io],
         framewise: s::Framewise::Steps(steps)
     };
@@ -203,6 +233,11 @@ fn test_handler(){
     let mut context = Context::create();
 
     let mut ctx_cell = context.unsafe_borrow_mut_context_pointer();
+
+    //println!("{}", json_str);
+
+    let p = std::env::current_dir().unwrap();
+    println!("The current directory is {}", p.display());
 
     let response = handler.do_and_respond(&mut *ctx_cell, json_str.into_bytes().as_slice());
 

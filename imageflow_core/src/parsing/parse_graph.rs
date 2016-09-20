@@ -16,17 +16,6 @@ impl GraphTranslator{
         GraphTranslator{ ctx: ctx}
     }
 
-/*
-
-typedef enum flow_codec_type {
-    flow_codec_type_null = 0,
-    flow_codec_type_decode_png = 1,
-    flow_codec_type_encode_png = 2,
-    flow_codec_type_decode_jpeg = 3,
-    flow_codec_type_encode_jpeg = 4,
-    flow_codec_type_decode_gif = 5
-} flow_codec_type;
-*/
     fn color_to_i32(&self, c: s::Color) -> std::result::Result<u32, std::num::ParseIntError> {
         match c {
             s::Color::Srgb(srgb) => match srgb {
@@ -40,10 +29,25 @@ typedef enum flow_codec_type {
     unsafe fn create_node(&self,  g: *mut *mut ::ffi::Graph, node: s::Node )-> i32{
         match node {
 
-            s::Node::FlipV => ::ffi::flow_node_create_primitive_flip_vertical(self.ctx, g, -1),
             s::Node::Decode{io_id } => ::ffi::flow_node_create_decoder(self.ctx, g, -1, io_id ),
-            s::Node::Encode{io_id, encoder_id: enc_id, encoder: _, hints: _} => ::ffi::flow_node_create_encoder(self.ctx, g, -1, io_id, enc_id.unwrap_or(2), std::ptr::null() as *const ::ffi::EncoderHints),
+            s::Node::Encode{io_id, encoder_id, encoder, hints: _} => {
+                let encoder_id = encoder_id.unwrap_or(
+                match encoder.unwrap_or(s::Encoder::Png) {
+                    s::Encoder::Jpeg => 4,
+                    s::Encoder::Png => 2
+                }
+                );
+                let encoder_hints = ::ffi::EncoderHints {
+                    jpeg_quality: 100,
+                    disable_png_alpha: false
+                };
+
+
+
+                ::ffi::flow_node_create_encoder(self.ctx, g, -1, io_id, encoder_id, &encoder_hints as *const ::ffi::EncoderHints)
+            },
             s::Node::Crop{ x1, y1, x2, y2} => ::ffi::flow_node_create_primitive_crop(self.ctx,g,-1, x1, y1, x2, y2),
+            s::Node::FlipV => ::ffi::flow_node_create_primitive_flip_vertical(self.ctx, g, -1),
             s::Node::FlipH => ::ffi::flow_node_create_primitive_flip_horizontal(self.ctx, g, -1),
             s::Node::Rotate90 => ::ffi::flow_node_create_rotate_90(self.ctx, g, -1),
             s::Node::Rotate180 => ::ffi::flow_node_create_rotate_180(self.ctx, g, -1),
@@ -57,16 +61,16 @@ typedef enum flow_codec_type {
 
                 ::ffi::flow_node_create_canvas(self.ctx, g, -1, ffi_format, w, h, self.color_to_i32(color).unwrap())
             },
-            //s::Node::CopyRectToCanvas {from_x, from_y, width, height, x, y} =>
-            //s::Node::Transpose
+            s::Node::CopyRectToCanvas {from_x, from_y, width, height, x, y} => ::ffi::flow_node_create_primitive_copy_rect_to_canvas(self.ctx, g, -1, from_x, from_y, width, height, x, y),
+            s::Node::Transpose => ::ffi::flow_node_create_transpose(self.ctx, g, -1),
             s::Node::ExpandCanvas{left, top, right, bottom, color} => ::ffi::flow_node_create_expand_canvas(self.ctx, g, -1, left, top, right, bottom, self.color_to_i32(color).unwrap()),
             s::Node::Scale{ w, h, down_filter, up_filter,
                 sharpen_percent, flags} => {
                 ::ffi::flow_node_create_scale(self.ctx, g, -1, w, h, down_filter.unwrap_or(s::Filter::RobidouxSharp) as i32, up_filter.unwrap_or(s::Filter::Ginseng) as i32,  flags.unwrap_or(1), sharpen_percent.unwrap_or(0f32) )
-            }
+            },
+            s::Node::FillRect {x1, x2, y1, y2, color} => ::ffi::flow_node_create_fill_rect(self.ctx, g, -1, x1, y1, x2, y2, self.color_to_i32(color).unwrap())
 
 
-            _ => panic!("Node not implemented")
         }
     }
 

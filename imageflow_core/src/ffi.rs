@@ -263,7 +263,21 @@ extern {
 
 
     pub fn flow_job_create(context: *mut Context) -> *mut Job;
-    pub fn flow_io_create_for_file(context: *mut Context,
+
+
+    pub fn flow_job_configure_recording(context: *mut Context,
+                                    job: *mut Job,
+                                    record_graph_versions: bool,
+                                    record_frame_images: bool,
+                                    render_last_graph: bool,
+                                    render_graph_versions: bool,
+                                    render_animated_graph: bool) -> bool;
+
+
+
+
+
+pub fn flow_io_create_for_file(context: *mut Context,
                                    mode: IoMode,
                                    filename: *const libc::c_char,
                                    owner: *const libc::c_void)
@@ -368,6 +382,10 @@ extern {
     pub fn flow_node_create_rotate_90(c: *mut Context, g: *mut *mut Graph, prev_node: i32) -> i32;
     pub fn flow_node_create_rotate_180(c: *mut Context, g: *mut *mut Graph, prev_node: i32) -> i32;
     pub fn flow_node_create_rotate_270(c: *mut Context, g: *mut *mut Graph, prev_node: i32) -> i32;
+
+    pub fn flow_node_create_transpose(c: *mut Context, g: *mut *mut Graph, prev_node: i32) -> i32;
+
+    pub fn flow_node_create_primitive_copy_rect_to_canvas(c: *mut Context, g: *mut *mut Graph, prev_node: i32, from_x:u32, from_y: u32, width: u32, height: u32, x: u32, y: u32) -> i32;
 
     pub fn flow_node_create_encoder(c: *mut Context,
                                     g: *mut *mut Graph,

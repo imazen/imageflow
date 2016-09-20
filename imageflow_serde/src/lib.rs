@@ -223,12 +223,24 @@ pub enum Framewise {
     #[serde(rename="steps")]
     Steps(Vec<Node>)
 }
+
+#[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
+pub struct Build001_Graph_Recording {
+    pub record_graph_versions: Option<bool>,
+    pub record_frame_images: Option<bool>,
+    pub render_last_graph: Option<bool>,
+    pub render_graph_versions: Option<bool>,
+    pub render_animated_graph:Option<bool>,
+}
+
 #[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
 pub struct Build001Config {
     #[serde(rename="enableJpegBlockScaling")]
     pub enable_jpeg_block_scaling: Option<bool>,
     #[serde(rename="processAllGifFrames")]
     pub process_all_gif_frames: Option<bool>,
+    #[serde(rename="graphRecording")]
+    pub graph_recording: Option<Build001_Graph_Recording>
 }
 #[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
 pub struct Build001 {
