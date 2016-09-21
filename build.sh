@@ -24,6 +24,8 @@ export BUILD_RELEASE=${BUILD_RELEASE:-True}
 export VALGRIND=${VALGRIND:-False}
 # Compile and run C tests
 export TEST_C=${TEST_C:-True}
+# Rebuild C part of libimageflow
+export REBUILD_C=${REBUILD_C:-True}
 # Build C Tests in debug mode for clearer valgrind output
 export TEST_C_DEBUG_BUILD=${TEST_C_DEBUG_BUILD:${VALGRIND}}
 # Run Rust tests
@@ -89,6 +91,7 @@ BUILD_VARS=(
 	"BUILD_RELEASE=${BUILD_RELEASE}"
 	"VALGRIND=${VALGRIND}" 
 	"TEST_C=${TEST_C}"
+  "REBUILD_C=${REBUILD_C}"
 	"TEST_C_DEBUG_BUILD=${TEST_C_DEBUG_BUILD}"
 	"TEST_RUST=${TEST_RUST}"
 	"IMAGEFLOW_SERVER=${IMAGEFLOW_SERVER}"
@@ -150,6 +153,9 @@ fi
 echo "==================================================================== [build.sh]"
 echo "Build C/C++ parts of Imageflow & dependencies as needed"
 echo 
+if [[ "$REBUILD_C" == 'True' ]]; then
+  conan remove imageflow/* -f
+fi
 conan export imazen/testing
 (
 	cd imageflow_core
