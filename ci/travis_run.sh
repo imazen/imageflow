@@ -3,7 +3,7 @@ set -e
 
 echo "travis_run.sh:"
 ########## Travis defaults ###################
-export IMAGEFLOW_SERVER=${IMAGEFLOW_SERVER:-False}
+export IMAGEFLOW_SERVER=${IMAGEFLOW_SERVER:-True}
 export COVERAGE=${COVERAGE:-False}
 export VALGRIND=${VALGRIND:-False}
 
