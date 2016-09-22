@@ -7,6 +7,7 @@ if [[ "$(uname -s)" == 'Darwin' ]]; then
 	set -x
     brew update || brew update
     brew install cmake || true
+    brew install --force openssl
     brew install conan nasm
     ./ci/nixtools/install_dssim.sh
     set +x
