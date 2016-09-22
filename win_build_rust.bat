@@ -28,8 +28,8 @@ mkdir artifacts
 mkdir artifacts\staging
 mkdir artifacts\staging\doc
 dir target\%RUST_TARGET%\release\
-xcopy target\%RUST_TARGET%\release\flow-proto1.exe  artifacts\staging\
-xcopy target\%RUST_TARGET%\release\imageflowrs.dll  artifacts\staging\
-xcopy target\%RUST_TARGET%\release\imageflow_tool.exe  artifacts\staging\
-xcopy /d target\doc  artifacts\staging\doc
+xcopy /Y target\%RUST_TARGET%\release\flow-proto1.exe  artifacts\staging\
+xcopy /Y target\%RUST_TARGET%\release\imageflowrs.dll  artifacts\staging\
+xcopy /Y target\%RUST_TARGET%\release\imageflow_tool.exe  artifacts\staging\
+xcopy /Y /d target\doc  artifacts\staging\doc
 
