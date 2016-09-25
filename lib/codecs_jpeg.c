@@ -7,6 +7,13 @@
 #include "codecs_jpeg.h"
 #include "fastapprox.h"
 
+
+#define ICC_MARKER  (JPEG_APP0 + 2)	/* JPEG marker code for ICC */
+#define ICC_OVERHEAD_LEN  14		/* size of non-profile data in APP2 */
+#define MAX_BYTES_IN_MARKER  65533	/* maximum data len of a JPEG marker */
+#define MAX_DATA_BYTES_IN_MARKER  (MAX_BYTES_IN_MARKER - ICC_OVERHEAD_LEN)
+
+
 static uint8_t jpeg_bytes_a[] = { 0xFF, 0xD8, 0xFF, 0xDB };
 static uint8_t jpeg_bytes_b[] = { 0xFF, 0xD8, 0xFF, 0xE0 };
 static uint8_t jpeg_bytes_c[] = { 0xFF, 0xD8, 0xFF, 0xE1 };
@@ -56,6 +63,135 @@ static void flow_jpeg_output_message(j_common_ptr cinfo)
     fprintf(stderr, "%s", &buffer[0]);
 }
 
+static boolean
+marker_is_icc (jpeg_saved_marker_ptr marker)
+{
+    return
+        marker->marker == ICC_MARKER &&
+        marker->data_length >= ICC_OVERHEAD_LEN &&
+        /* verify the identifying string */
+        GETJOCTET(marker->data[0]) == 0x49 &&
+        GETJOCTET(marker->data[1]) == 0x43 &&
+        GETJOCTET(marker->data[2]) == 0x43 &&
+        GETJOCTET(marker->data[3]) == 0x5F &&
+        GETJOCTET(marker->data[4]) == 0x50 &&
+        GETJOCTET(marker->data[5]) == 0x52 &&
+        GETJOCTET(marker->data[6]) == 0x4F &&
+        GETJOCTET(marker->data[7]) == 0x46 &&
+        GETJOCTET(marker->data[8]) == 0x49 &&
+        GETJOCTET(marker->data[9]) == 0x4C &&
+        GETJOCTET(marker->data[10]) == 0x45 &&
+        GETJOCTET(marker->data[11]) == 0x0;
+}
+
+
+
+/*
+ * See if there was an ICC profile in the JPEG file being read;
+ * if so, reassemble and return the profile data.
+ *
+ * TRUE is returned if an ICC profile was found, FALSE if not.
+ * If TRUE is returned, *icc_data_ptr is set to point to the
+ * returned data, and *icc_data_len is set to its length.
+ *
+ * IMPORTANT: the data at **icc_data_ptr has been allocated with malloc()
+ * and must be freed by the caller with free() when the caller no longer
+ * needs it.  (Alternatively, we could write this routine to use the
+ * IJG library's memory allocator, so that the data would be freed implicitly
+ * at jpeg_finish_decompress() time.  But it seems likely that many apps
+ * will prefer to have the data stick around after decompression finishes.)
+ *
+ * NOTE: if the file contains invalid ICC APP2 markers, we just silently
+ * return FALSE.  You might want to issue an error message instead.
+ */
+
+static boolean
+read_icc_profile (flow_c * c, j_decompress_ptr cinfo,
+                  JOCTET **icc_data_ptr,
+                  unsigned int *icc_data_len)
+{
+    jpeg_saved_marker_ptr marker;
+    int num_markers = 0;
+    int seq_no;
+    JOCTET *icc_data;
+    unsigned int total_length;
+#define MAX_SEQ_NO  255		/* sufficient since marker numbers are bytes */
+    char marker_present[MAX_SEQ_NO+1];	  /* 1 if marker found */
+    unsigned int data_length[MAX_SEQ_NO+1]; /* size of profile data in marker */
+    unsigned int data_offset[MAX_SEQ_NO+1]; /* offset for data in marker */
+
+    *icc_data_ptr = NULL;		/* avoid confusion if FALSE return */
+    *icc_data_len = 0;
+
+    /* This first pass over the saved markers discovers whether there are
+     * any ICC markers and verifies the consistency of the marker numbering.
+     */
+
+    for (seq_no = 1; seq_no <= MAX_SEQ_NO; seq_no++)
+        marker_present[seq_no] = 0;
+
+    for (marker = cinfo->marker_list; marker != NULL; marker = marker->next) {
+        if (marker_is_icc(marker)) {
+            if (num_markers == 0)
+                num_markers = GETJOCTET(marker->data[13]);
+            else if (num_markers != GETJOCTET(marker->data[13]))
+                return FALSE;		/* inconsistent num_markers fields */
+            seq_no = GETJOCTET(marker->data[12]);
+            if (seq_no <= 0 || seq_no > num_markers)
+                return FALSE;		/* bogus sequence number */
+            if (marker_present[seq_no])
+                return FALSE;		/* duplicate sequence numbers */
+            marker_present[seq_no] = 1;
+            data_length[seq_no] = marker->data_length - ICC_OVERHEAD_LEN;
+        }
+    }
+
+    if (num_markers == 0)
+        return FALSE;
+
+    /* Check for missing markers, count total space needed,
+     * compute offset of each marker's part of the data.
+     */
+
+    total_length = 0;
+    for (seq_no = 1; seq_no <= num_markers; seq_no++) {
+        if (marker_present[seq_no] == 0)
+            return FALSE;		/* missing sequence number */
+        data_offset[seq_no] = total_length;
+        total_length += data_length[seq_no];
+    }
+
+    if (total_length <= 0)
+        return FALSE;		/* found only empty markers? */
+
+    /* Allocate space for assembled data */
+    icc_data = (JOCTET *) FLOW_malloc_owned(c, total_length * sizeof(JOCTET), c);
+    if (icc_data == NULL)
+        return FALSE;		/* oops, out of memory */
+
+    /* and fill it in */
+    for (marker = cinfo->marker_list; marker != NULL; marker = marker->next) {
+        if (marker_is_icc(marker)) {
+            JOCTET FAR *src_ptr;
+            JOCTET *dst_ptr;
+            unsigned int length;
+            seq_no = GETJOCTET(marker->data[12]);
+            dst_ptr = icc_data + data_offset[seq_no];
+            src_ptr = marker->data + ICC_OVERHEAD_LEN;
+            length = data_length[seq_no];
+            while (length--) {
+                *dst_ptr++ = *src_ptr++;
+            }
+        }
+    }
+
+    *icc_data_ptr = icc_data;
+    *icc_data_len = total_length;
+
+    return TRUE;
+}
+
+
 static bool flow_job_jpg_decoder_BeginRead(flow_c * c, struct flow_job_jpeg_decoder_state * state)
 {
     if (state->stage != flow_job_jpg_decoder_stage_NotStarted) {
@@ -97,7 +233,12 @@ static bool flow_job_jpg_decoder_BeginRead(flow_c * c, struct flow_job_jpeg_deco
 
     /* Step 3: read file parameters with jpeg_read_header() */
 
+    /* Tell the library to keep any APP2 data it may find */
+    jpeg_save_markers(state->cinfo, ICC_MARKER, 0xFFFF);
+
     (void)jpeg_read_header(state->cinfo, TRUE);
+
+
     /* We can ignore the return value from jpeg_read_header since
      *   (a) suspension is not possible with the stdio data source, and
      *   (b) we passed TRUE to reject a tables-only JPEG file as an error.
@@ -181,9 +322,27 @@ static bool flow_job_jpg_decoder_FinishRead(flow_c * c, struct flow_job_jpeg_dec
     if (scanlines_read < 1) {
         return false;
     }
+
+    //We must read the markers before jpeg_finish_decompress destroys them
+
+    JOCTET * icc_buffer;
+    unsigned int icc_buffer_len;
+
+
+    if (read_icc_profile(c, state->cinfo, &icc_buffer, &icc_buffer_len))
+    {
+        // One may set, then unset the thread-local logger function to debug
+        // cmsSetLogErrorHandlerTHR(cmsContext ContextID, cmsLogErrorHandlerFunction Fn);
+        state->color_profile = cmsOpenProfileFromMem(icc_buffer, icc_buffer_len);
+        if (state->color_profile != NULL) state->color_profile_source = flow_codec_color_profile_source_ICCP;
+        FLOW_destroy(c, icc_buffer);
+    }
+
+
     /* Step 7: Finish decompression */
 
     (void)jpeg_finish_decompress(state->cinfo);
+
     /* We can ignore the return value since suspension is not possible
      * with the stdio data source.
      */
@@ -232,9 +391,16 @@ static bool flow_job_jpg_decoder_FinishRead(flow_c * c, struct flow_job_jpeg_dec
     //        }
     //    }
 
+
+
     jpeg_destroy_decompress(state->cinfo);
     FLOW_free(c, state->cinfo);
     state->cinfo = NULL;
+
+    if (!flow_bitmap_bgra_transform_to_srgb(c, state->color_profile, state->canvas)) {
+        FLOW_error_return(c);
+    }
+
 
     return true;
 }
