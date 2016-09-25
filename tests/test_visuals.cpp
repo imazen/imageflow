@@ -79,7 +79,7 @@ TEST_CASE("Test jpeg color profile (ICC2) support", "")
     flow_c * c = flow_context_create();
     size_t bytes_count = 0;
     uint8_t * bytes = get_bytes_cached(
-        c, &bytes_count, "http://images.cameratico.com/media/images/tools/browser-color-management/MarsRGB_tagged.jpg");
+        c, &bytes_count, "http://s3-us-west-2.amazonaws.com/imageflow-resources/test_inputs/MarsRGB_tagged.jpg");
     REQUIRE(djb2_buffer(bytes, bytes_count) == 0x706592343c9f6b3d); // Test the checksum. I/O can be flaky
 
     struct flow_job * job = flow_job_create(c);
@@ -117,7 +117,7 @@ TEST_CASE("Test jpeg color profile (ICC4) support", "")
     flow_c * c = flow_context_create();
     size_t bytes_count = 0;
     uint8_t * bytes = get_bytes_cached(
-        c, &bytes_count, "http://images.cameratico.com/media/images/tools/browser-color-management/MarsRGB_v4_sYCC_8bit.jpg");
+        c, &bytes_count, "http://s3-us-west-2.amazonaws.com/imageflow-resources/test_inputs/MarsRGB_v4_sYCC_8bit.jpg");
     REQUIRE(djb2_buffer(bytes, bytes_count) == 0xc8ad27419e0dd65b); // Test the checksum. I/O can be flaky
 
     struct flow_job * job = flow_job_create(c);
