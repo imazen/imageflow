@@ -56,6 +56,14 @@ bool flow_bitmap_bgra_transform_to_srgb(flow_c * c, cmsHPROFILE current_profile,
         cmsUInt32Number format = frame->fmt == flow_bgr24 ? TYPE_BGR_8
                                                           : (frame->fmt == flow_bgra32 ? TYPE_BGRA_8 : TYPE_GRAY_8);
 
+//        char infobuf[2048];
+//
+//        int retval = cmsGetProfileInfoASCII(current_profile,  cmsInfoDescription, "en", "US", &infobuf[0], sizeof(infobuf));
+//        infobuf[retval] = '\0';
+//        fprintf(stdout, "%s", &infobuf[0]);
+//
+
+
         cmsHTRANSFORM transform
             = cmsCreateTransform(current_profile, format, target_profile, format, INTENT_PERCEPTUAL, 0);
         if (transform == NULL) {
