@@ -19,8 +19,8 @@ install:
   - if "%PLATFORM%"=="x64" SET RUST_TARGET=x86_64-pc-windows-msvc
   - if "%PLATFORM%"=="x86" SET BITS=32
   - if "%PLATFORM%"=="x64" SET BITS=64
-  - ps: Start-FileDownload "http://slproweb.com/download/Win${env:BITS}OpenSSL-1_0_2h.exe"
-  - Win%BITS%OpenSSL-1_0_2h.exe /SILENT /VERYSILENT /SP- /DIR="C:\OpenSSL"
+  - curl -L -o openssl.exe "http://slproweb.com/download/Win%BITS%OpenSSL-1_0_2h.exe"
+  - openssl.exe /SILENT /VERYSILENT /SP- /DIR="C:\OpenSSL"
   - SET RUST_ARTIFACT=2016-09-01/rust-nightly-%RUST_TARGET%.exe
   - curl -L -o nasminst.exe http://libgd.blob.core.windows.net/nasm/nasm-2.07-installer.exe
   - start /wait nasminst.exe /S
