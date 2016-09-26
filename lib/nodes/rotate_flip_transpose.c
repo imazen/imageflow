@@ -305,7 +305,7 @@ static bool execute_flip_vertical(flow_c * c, struct flow_job * job, struct flow
     FLOW_GET_INPUT_EDGE(g, node_id)
     struct flow_node * n = &g->nodes[node_id];
     n->result_bitmap = g->nodes[input_edge->from].result_bitmap;
-    flow_bitmap_float_flip_vertical(c, n->result_bitmap);
+    flow_bitmap_bgra_flip_vertical(c, n->result_bitmap);
     return true;
 }
 

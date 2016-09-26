@@ -96,7 +96,7 @@ static void unpack24bitRow(uint32_t width, unsigned char* sourceLine, unsigned c
 }
 */
 
-bool flow_bitmap_float_flip_vertical(flow_c * context, struct flow_bitmap_bgra * b)
+bool flow_bitmap_bgra_flip_vertical(flow_c * context, struct flow_bitmap_bgra * b)
 {
     void * swap = FLOW_malloc(context, b->stride);
     if (swap == NULL) {

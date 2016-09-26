@@ -558,7 +558,7 @@ bool Renderer_perform_render(flow_c * context, struct flow_Renderer * r)
         = ((r->details->post_flip_x && !skip_last_transpose) || (skip_last_transpose && r->details->post_flip_y));
 
     // vertical flip before transposition is the same as a horizontal flip afterwards. Dealing with more pixels, though.
-    if (vflip_source && !flow_bitmap_float_flip_vertical(context, r->source)) {
+    if (vflip_source && !flow_bitmap_bgra_flip_vertical(context, r->source)) {
         FLOW_add_to_callstack(context);
         return false;
     }
@@ -596,12 +596,12 @@ bool Renderer_perform_render(flow_c * context, struct flow_Renderer * r)
     }
 
     // Apply flip to transposed
-    if (vflip_transposed && !flow_bitmap_float_flip_vertical(context, r->transposed)) {
+    if (vflip_transposed && !flow_bitmap_bgra_flip_vertical(context, r->transposed)) {
         FLOW_add_to_callstack(context);
         return false;
     }
     // Restore the source bitmap if we flipped it in place incorrectly
-    if (vflip_source && r->source->pixels_readonly && !flow_bitmap_float_flip_vertical(context, r->source)) {
+    if (vflip_source && r->source->pixels_readonly && !flow_bitmap_bgra_flip_vertical(context, r->source)) {
         FLOW_add_to_callstack(context);
         return false;
     }
