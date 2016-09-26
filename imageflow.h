@@ -64,6 +64,7 @@ typedef enum flow_ntype {
     flow_ntype_Flip_Horizontal,
     flow_ntype_Render1D,
     flow_ntype_Crop,
+    flow_ntype_Apply_Orientation,
     flow_ntype_non_optimizable_nodes_begin = 512,
 
     flow_ntype_Clone,
@@ -372,6 +373,8 @@ PUB int32_t flow_node_create_expand_canvas(flow_c * c, struct flow_graph ** g, i
 PUB int32_t flow_node_create_fill_rect(flow_c * c, struct flow_graph ** g, int32_t prev_node, uint32_t x1, uint32_t y1,
                                        uint32_t x2, uint32_t y2, uint32_t color_srgb);
 PUB int32_t flow_node_create_transpose(flow_c * c, struct flow_graph ** g, int32_t prev_node);
+
+PUB int32_t flow_node_create_apply_orientation(flow_c * c, struct flow_graph ** g,  int32_t prev_node, int32_t exif_orientation_flag);
 
 PUB int32_t flow_node_create_rotate_90(flow_c * c, struct flow_graph ** g, int32_t prev_node);
 

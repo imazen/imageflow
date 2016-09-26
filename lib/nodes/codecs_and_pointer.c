@@ -123,17 +123,50 @@ static bool stringify_encode(flow_c * c, struct flow_graph * g, int32_t node_id,
     return stringify_decode(c, g, node_id, buffer, buffer_size);
 }
 
-static bool flatten_decode(flow_c * c, struct flow_graph ** g, int32_t node_id, struct flow_node * node,
-                           struct flow_node * input_node, int32_t * first_replacement_node,
-                           int32_t * last_replacement_node)
+int32_t flow_job_jpg_decoder_get_exif(flow_c * c, struct flow_codec_instance * codec_instance);
+
+
+static bool flatten_decode_complex(flow_c * c, struct flow_graph ** graph_ref, int32_t node_id)
 {
+    struct flow_node * node = node_id < 0 ? NULL : &(*graph_ref)->nodes[node_id];
 
     node->type = flow_ntype_primitive_decoder;
+    FLOW_GET_INFOBYTES((*graph_ref), node_id, flow_nodeinfo_codec, info)
+    int32_t exif_orientation = flow_job_jpg_decoder_get_exif(c, info->codec);
 
-    *first_replacement_node = *last_replacement_node = node_id;
-    // TODO, inject color space correction and other filters
+
+    //Create isolated node chain
+    int last_node_id = -1;
+    int first_node_id = -1;
+
+    if (exif_orientation > 0){
+        last_node_id = flow_node_create_apply_orientation(c, graph_ref, last_node_id, exif_orientation);
+        if (last_node_id < 0) {
+            FLOW_error_return(c);
+        }
+        if (first_node_id < 0) first_node_id = last_node_id;
+    }
+
+
+    if (last_node_id > -1) {
+        //Duplicate edges to end of chain
+        // Clone outbound edges
+        if (!flow_graph_duplicate_edges_to_another_node(c, graph_ref, node_id, last_node_id, false, true)) {
+            FLOW_error_return(c);
+        }
+        //Delete all original decoder edges
+        if (!flow_edge_delete_connected_to_node(c, *graph_ref, node_id, true, true)) {
+            FLOW_error_return(c);
+        }
+
+        //Recreate one edge between decoder and first_node_id
+        if (!flow_edge_create(c, graph_ref, node_id, first_node_id, flow_edgetype_input)) {
+            FLOW_error_return(c);
+        }
+    }
     return true;
 }
+
 
 static bool flatten_encode(flow_c * c, struct flow_graph ** g, int32_t node_id, struct flow_node * node,
                            struct flow_node * input_node, int32_t * first_replacement_node,
@@ -269,7 +302,7 @@ const struct flow_node_definition flow_define_decoder = {
     .canvas_count = 0, //?
     .stringify = stringify_decode,
     .populate_dimensions = dimensions_decode,
-    .pre_optimize_flatten = flatten_decode,
+    .pre_optimize_flatten_complex = flatten_decode_complex,
 };
 const struct flow_node_definition flow_define_primitive_decoder = {
     .type = flow_ntype_primitive_decoder,

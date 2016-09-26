@@ -361,6 +361,10 @@ struct flow_nodeinfo_codec {
     struct flow_encoder_hints encoder_hints;
 };
 
+struct flow_nodeinfo_apply_orientation{
+    int32_t orientation; //Values 1-8, per the EXIF Orientation spec
+};
+
 struct flow_nodeinfo_render_to_canvas_1d {
     // There will need to be consistency checks against the createcanvas node
 

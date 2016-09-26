@@ -7,6 +7,7 @@ extern const struct flow_node_definition flow_define_decoder;
 extern const struct flow_node_definition flow_define_primitive_decoder;
 extern const struct flow_node_definition flow_define_primitive_encoder;
 extern const struct flow_node_definition flow_define_encoder;
+extern const struct flow_node_definition flow_define_apply_orientation;
 extern const struct flow_node_definition flow_define_rotate_90;
 extern const struct flow_node_definition flow_define_rotate_180;
 extern const struct flow_node_definition flow_define_rotate_270;
@@ -42,7 +43,7 @@ const struct flow_node_definition flow_define_null = {
 struct flow_context_node_set * flow_context_get_default_node_set()
 {
     static struct flow_context_node_set cached_default_node_set;
-    static struct flow_node_definition cached_default_set[26];
+    static struct flow_node_definition cached_default_set[27];
 
     int i = 0;
     cached_default_set[i++] = flow_define_null;
@@ -53,6 +54,7 @@ struct flow_context_node_set * flow_context_get_default_node_set()
     cached_default_set[i++] = flow_define_primitive_decoder;
     cached_default_set[i++] = flow_define_primitive_encoder;
     cached_default_set[i++] = flow_define_encoder;
+    cached_default_set[i++] = flow_define_apply_orientation;
     cached_default_set[i++] = flow_define_rotate_90;
     cached_default_set[i++] = flow_define_rotate_180;
     cached_default_set[i++] = flow_define_rotate_270;

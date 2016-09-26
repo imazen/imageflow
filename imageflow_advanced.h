@@ -239,6 +239,7 @@ PUB bool flow_node_delete(flow_c * c, struct flow_graph * g, int32_t node_id);
 PUB bool flow_edge_delete(flow_c * c, struct flow_graph * g, int32_t edge_id);
 
 PUB bool flow_edge_delete_all_connected_to_node(flow_c * c, struct flow_graph * g, int32_t node_id);
+PUB bool flow_edge_delete_connected_to_node(flow_c * c, struct flow_graph * g, int32_t node_id, bool inbound, bool outbound);
 
 PUB int32_t
     flow_graph_get_inbound_edge_count_of_type(flow_c * c, struct flow_graph * g, int32_t node_id, flow_edgetype type);

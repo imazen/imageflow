@@ -146,6 +146,63 @@ TEST_CASE("Test jpeg color profile (ICC4) support", "")
     flow_context_destroy(c);
 }
 
+TEST_CASE("Test jpeg rotation", "")
+{
+
+    char modes[2][14];
+    strcpy(modes[0], "Landscape");
+    strcpy(modes[1], "Portrait");
+
+    char url[256];
+    char expected_checksum_name[100];
+    for (int32_t mode_ix = 0; mode_ix < 2; mode_ix++) {
+        for (int32_t flag = 1; flag < 9; flag++) {
+            snprintf(&url[0], sizeof(url), "https://raw.githubusercontent.com/recurser/exif-orientation-examples/master/%s_%d.jpg",
+                     &modes[mode_ix][0], flag);
+            snprintf(&expected_checksum_name[0], sizeof(expected_checksum_name), "Test_Apply_Orientation_%s_%d.jpg",
+                     &modes[mode_ix][0], flag);
+
+            flow_c * c = flow_context_create();
+
+
+            size_t bytes_count = 0;
+            uint8_t * bytes = get_bytes_cached(
+                c, &bytes_count, &url[0]);
+
+            struct flow_job * job = flow_job_create(c);
+            ERR(c);
+
+            //flow_job_configure_recording(c, job, true,true,true,false,false);
+            int32_t input_placeholder = 0;
+            struct flow_io * input = flow_io_create_from_memory(c, flow_io_mode_read_seekable, bytes, bytes_count, job,
+                                                                NULL);
+            flow_job_add_io(c, job, input, input_placeholder, FLOW_INPUT);
+
+            struct flow_graph * g = flow_graph_create(c, 10, 10, 200, 2.0);
+            ERR(c);
+            struct flow_bitmap_bgra * b;
+            int32_t last;
+
+            last = flow_node_create_decoder(c, &g, -1, input_placeholder);
+            last = flow_node_create_bitmap_bgra_reference(c, &g, last, &b);
+            ERR(c);
+            if (!flow_job_execute(c, job, &g)) {
+                ERR(c);
+            }
+
+            CAPTURE(&expected_checksum_name[0]);
+            REQUIRE(visual_compare(c, b, &expected_checksum_name[0], store_checksums, 500, __FILE__,
+                                   __func__, __LINE__) == true);
+            ERR(c);
+            flow_context_destroy(c);
+        }
+    }
+}
+
+
+
+
+
 
 TEST_CASE("Test spatial IDCT downscale in linear light", "")
 {

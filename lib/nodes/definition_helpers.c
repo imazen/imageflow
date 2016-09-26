@@ -78,17 +78,14 @@ bool node_has_other_dependents(flow_c * c, struct flow_graph * g, int32_t node_i
 
 bool flatten_delete_node(flow_c * c, struct flow_graph ** graph_ref, int32_t node_id)
 {
+    int outbound_count = flow_graph_get_edge_count(c, *graph_ref, node_id, false, flow_edgetype_null, false, true);
+
     int32_t input_edge_id = flow_graph_get_first_inbound_edge_of_type(c, *graph_ref, node_id, flow_edgetype_input);
-
-    int32_t output_edge_id = flow_graph_get_first_outbound_edge_of_type(c, *graph_ref, node_id, flow_edgetype_input);
-
     struct flow_edge * input_edge = input_edge_id < 0 ? NULL : &(*graph_ref)->edges[input_edge_id];
 
-    struct flow_edge * output_edge = output_edge_id < 0 ? NULL : &(*graph_ref)->edges[output_edge_id];
-
-    if (output_edge != NULL && input_edge != NULL) {
-        // Clone edges
-        if (!flow_graph_duplicate_edges_to_another_node(c, graph_ref, input_edge->from, output_edge->to, true, false)) {
+    if (outbound_count > 0 && input_edge != NULL) {
+        // Clone all outbound edges to our first input node
+        if (!flow_graph_duplicate_edges_to_another_node(c, graph_ref, node_id, input_edge->from, false, true)) {
             FLOW_error_return(c);
         }
     }

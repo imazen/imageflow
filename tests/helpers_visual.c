@@ -472,6 +472,10 @@ bool visual_compare(flow_c * c, struct flow_bitmap_bgra * bitmap, const char * n
     if (!save_bitmap_to_visuals(c, bitmap, checksum, "current")) {
         FLOW_error_return(c);
     }
+    if (stored_checksum == NULL && store_checksums){
+        //Don't fail the test for an non-stored checksum. We may be trying to commit several new checksums
+        return true;
+    }
 
     if (stored_checksum != NULL) {
         // Try to download "old" png from S3 using the checksums as an address.

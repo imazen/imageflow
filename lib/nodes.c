@@ -251,21 +251,27 @@ static bool flow_node_flatten_generic(flow_c * c, struct flow_graph ** graph_ref
 
             if (first_replacement_node == last_replacement_node && last_replacement_node == node_id) {
                 // do nothing
-            } else {
-                // Clone edges
+            } else if (first_replacement_node == node_id || last_replacement_node == node_id) {
+                FLOW_error_msg(c, flow_status_Invalid_inputs_to_node,
+                               "You may not reuse the original node AND add additional nodes.");
+                return false;
+            }else{
+
+                // Clone inbound edges
                 if (!flow_graph_duplicate_edges_to_another_node(c, graph_ref, node_id, first_replacement_node, true,
                                                                 false)) {
                     FLOW_error_return(c);
                 }
+                //Clone outbound edges
                 if (!flow_graph_duplicate_edges_to_another_node(c, graph_ref, node_id, last_replacement_node, false,
                                                                 true)) {
                     FLOW_error_return(c);
                 }
-
                 // Delete the original
                 if (!flow_node_delete(c, *graph_ref, node_id)) {
                     FLOW_error_return(c);
                 }
+
             }
         }
     } else {

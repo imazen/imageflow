@@ -178,14 +178,15 @@ bool flow_edge_delete(flow_c * c, struct flow_graph * g, int32_t edge_id)
     }
 }
 
-bool flow_edge_delete_all_connected_to_node(flow_c * c, struct flow_graph * g, int32_t node_id)
+
+bool flow_edge_delete_connected_to_node(flow_c * c, struct flow_graph * g, int32_t node_id, bool inbound, bool outbound)
 {
     struct flow_edge * current_edge;
     int32_t i;
     for (i = 0; i < g->next_edge_id; i++) {
         current_edge = &g->edges[i];
         if (current_edge->type != flow_edgetype_null) {
-            if (current_edge->from == node_id || current_edge->to == node_id) {
+            if ((current_edge->from == node_id && outbound) || (current_edge->to == node_id && inbound)) {
                 if (!flow_edge_delete(c, g, i)) {
                     FLOW_error_return(c);
                 }
@@ -193,6 +194,12 @@ bool flow_edge_delete_all_connected_to_node(flow_c * c, struct flow_graph * g, i
         }
     }
     return true;
+}
+
+
+bool flow_edge_delete_all_connected_to_node(flow_c * c, struct flow_graph * g, int32_t node_id)
+{
+    return flow_edge_delete_connected_to_node(c, g, node_id, true, true);
 }
 
 bool flow_graph_replace_if_too_small(flow_c * c, struct flow_graph ** g, uint32_t free_nodes_required,

@@ -27,6 +27,7 @@ struct flow_job_jpeg_decoder_state {
     size_t row_stride;
     int32_t w;
     int32_t h;
+    int32_t exif_orientation;
     int channels;
     struct flow_io * io;
     struct flow_bitmap_bgra * canvas;

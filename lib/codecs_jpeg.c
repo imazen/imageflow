@@ -192,6 +192,267 @@ read_icc_profile (flow_c * c, j_decompress_ptr cinfo,
 }
 
 
+/// From http://src.gnu-darwin.org/ports/x11-toolkits/gtk20/work/gtk+-2.12.3/gdk-pixbuf/io-jpeg.c
+
+// TODO: Remove before relicensing as anything other than LGPL v2+ compatible
+
+/* -*- mode: C; c-file-style: "linux" -*- */
+/* GdkPixbuf library - JPEG image loader
+ *
+ * Copyright (C) 1999 Michael Zucchi
+ * Copyright (C) 1999 The Free Software Foundation
+ *
+ * Progressive loading code Copyright (C) 1999 Red Hat, Inc.
+ *
+ * Authors: Michael Zucchi <zucchi@zedzone.mmc.com.au>
+ *          Federico Mena-Quintero <federico@gimp.org>
+ *          Michael Fulbright <drmike@redhat.com>
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2 of the License, or (at your option) any later version.
+ *
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library; if not, write to the
+ * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
+ * Boston, MA 02111-1307, USA.
+ */
+
+
+#define G_LITTLE_ENDIAN 1234
+
+#define G_BIG_ENDIAN    4321
+
+const char leth[]  = {0x49, 0x49, 0x2a, 0x00};	// Little endian TIFF header
+const char beth[]  = {0x4d, 0x4d, 0x00, 0x2a};	// Big endian TIFF header
+const char types[] = {0x00, 0x01, 0x01, 0x02, 0x04, 0x08, 0x00,
+    0x08, 0x00, 0x04, 0x08}; 	// size in bytes for EXIF types
+
+
+#define GUINT16_SWAP_LE_BE_CONSTANT(val)	((uint16_t) ( \
+    (uint16_t) ((uint16_t) (val) >> 8) |	\
+    (uint16_t) ((uint16_t) (val) << 8)))
+
+#define GUINT32_SWAP_LE_BE_CONSTANT(val)	((uint32_t) ( \
+    (((uint32_t) (val) & (uint32_t) 0x000000ffU) << 24) | \
+    (((uint32_t) (val) & (uint32_t) 0x0000ff00U) <<  8) | \
+    (((uint32_t) (val) & (uint32_t) 0x00ff0000U) >>  8) | \
+    (((uint32_t) (val) & (uint32_t) 0xff000000U) >> 24)))
+
+#    define GUINT32_SWAP_LE_BE(val) (GUINT32_SWAP_LE_BE_CONSTANT (val))
+#    define GUINT16_SWAP_LE_BE(val) (GUINT16_SWAP_LE_BE_CONSTANT (val))
+
+#define GUINT16_TO_LE(val) ((uint16_t) (val))
+#define GUINT16_TO_BE(val) (GUINT16_SWAP_LE_BE (val))
+#define GUINT32_TO_LE(val) ((uint32_t) (val))
+#define GUINT32_TO_BE(val) (GUINT32_SWAP_LE_BE (val))
+
+#define GUINT16_FROM_LE(val)	(GUINT16_TO_LE (val))
+#define GUINT16_FROM_BE(val)	(GUINT16_TO_BE (val))
+#define GUINT32_FROM_BE(val) (GUINT32_TO_BE (val))
+#define GUINT32_FROM_LE(val) (GUINT32_TO_LE (val))
+
+
+#define DE_ENDIAN16(val) endian == G_BIG_ENDIAN ? GUINT16_FROM_BE(val) : GUINT16_FROM_LE(val)
+#define DE_ENDIAN32(val) endian == G_BIG_ENDIAN ? GUINT32_FROM_BE(val) : GUINT32_FROM_LE(val)
+
+#define ENDIAN16_IT(val) endian == G_BIG_ENDIAN ? GUINT16_TO_BE(val) : GUINT16_TO_LE(val)
+#define ENDIAN32_IT(val) endian == G_BIG_ENDIAN ? GUINT32_TO_BE(val) : GUINT32_TO_LE(val)
+
+#define EXIF_JPEG_MARKER   JPEG_APP0+1
+#define EXIF_IDENT_STRING  "Exif\000\000"
+
+static unsigned short de_get16(void *ptr, uint32_t endian)
+{
+    unsigned short val;
+
+    memcpy(&val, ptr, sizeof(val));
+    val = DE_ENDIAN16(val);
+
+    return val;
+}
+
+static unsigned int de_get32(void *ptr, uint32_t endian)
+{
+    unsigned int val;
+
+    memcpy(&val, ptr, sizeof(val));
+    val = DE_ENDIAN32(val);
+
+    return val;
+}
+
+
+static int32_t
+get_orientation (j_decompress_ptr cinfo)
+{
+    /* This function looks through the meta data in the libjpeg decompress structure to
+       determine if an EXIF Orientation tag is present and if so return its value (1-8).
+       If no EXIF Orientation tag is found 0 (zero) is returned. */
+
+    uint32_t   i;              /* index into working buffer */
+    uint32_t   orient_tag_id;  /* endianed version of orientation tag ID */
+    uint32_t   ret;            /* Return value */
+    uint32_t   offset;        	/* de-endianed offset in various situations */
+    uint32_t   tags;           /* number of tags in current ifd */
+    uint32_t   type;           /* de-endianed type of tag used as index into types[] */
+    uint32_t   count;          /* de-endianed count of elements in a tag */
+    uint32_t   tiff = 0;   	/* offset to active tiff header */
+    uint32_t   endian = 0;   	/* detected endian of data */
+
+    jpeg_saved_marker_ptr exif_marker;  /* Location of the Exif APP1 marker */
+    jpeg_saved_marker_ptr cmarker;	    /* Location to check for Exif APP1 marker */
+
+    /* check for Exif marker (also called the APP1 marker) */
+    exif_marker = NULL;
+    cmarker = cinfo->marker_list;
+    while (cmarker) {
+        if (cmarker->marker == EXIF_JPEG_MARKER) {
+            /* The Exif APP1 marker should contain a unique
+               identification string ("Exif\0\0"). Check for it. */
+            if (!memcmp (cmarker->data, EXIF_IDENT_STRING, 6)) {
+                exif_marker = cmarker;
+            }
+        }
+        cmarker = cmarker->next;
+    }
+
+    /* Did we find the Exif APP1 marker? */
+    if (exif_marker == NULL)
+        return 0;
+
+    /* Do we have enough data? */
+    if (exif_marker->data_length < 32)
+        return 0;
+
+    /* Check for TIFF header and catch endianess */
+    i = 0;
+
+    /* Just skip data until TIFF header - it should be within 16 bytes from marker start.
+       Normal structure relative to APP1 marker -
+            0x0000: APP1 marker entry = 2 bytes
+               0x0002: APP1 length entry = 2 bytes
+            0x0004: Exif Identifier entry = 6 bytes
+            0x000A: Start of TIFF header (Byte order entry) - 4 bytes
+                        - This is what we look for, to determine endianess.
+            0x000E: 0th IFD offset pointer - 4 bytes
+
+            exif_marker->data points to the first data after the APP1 marker
+            and length entries, which is the exif identification string.
+            The TIFF header should thus normally be found at i=6, below,
+            and the pointer to IFD0 will be at 6+4 = 10.
+     */
+
+    while (i < 16) {
+
+        /* Little endian TIFF header */
+        if (memcmp (&exif_marker->data[i], leth, 4) == 0){
+            endian = G_LITTLE_ENDIAN;
+        }
+
+            /* Big endian TIFF header */
+        else if (memcmp (&exif_marker->data[i], beth, 4) == 0){
+            endian = G_BIG_ENDIAN;
+        }
+
+            /* Keep looking through buffer */
+        else {
+            i++;
+            continue;
+        }
+        /* We have found either big or little endian TIFF header */
+        tiff = i;
+        break;
+    }
+
+    /* So did we find a TIFF header or did we just hit end of buffer? */
+    if (tiff == 0)
+        return 0;
+
+    /* Endian the orientation tag ID, to locate it more easily */
+    orient_tag_id = ENDIAN16_IT(0x112);
+
+    /* Read out the offset pointer to IFD0 */
+    offset  = de_get32(&exif_marker->data[i] + 4, endian);
+    i       = i + offset;
+
+    /* Check that we still are within the buffer and can read the tag count */
+    if ((i + 2) > exif_marker->data_length)
+        return 0;
+
+    /* Find out how many tags we have in IFD0. As per the TIFF spec, the first
+       two bytes of the IFD contain a count of the number of tags. */
+    tags    = de_get16(&exif_marker->data[i], endian);
+    i       = i + 2;
+
+    /* Check that we still have enough data for all tags to check. The tags
+       are listed in consecutive 12-byte blocks. The tag ID, type, size, and
+       a pointer to the actual value, are packed into these 12 byte entries. */
+    if ((i + tags * 12) > exif_marker->data_length)
+        return 0;
+
+    /* Check through IFD0 for tags of interest */
+    while (tags--){
+        type   = de_get16(&exif_marker->data[i + 2], endian);
+        count  = de_get32(&exif_marker->data[i + 4], endian);
+
+        /* Is this the orientation tag? */
+        if (memcmp (&exif_marker->data[i], (char *) &orient_tag_id, 2) == 0){
+
+            /* Check that type and count fields are OK. The orientation field
+               will consist of a single (count=1) 2-byte integer (type=3). */
+            if (type != 3 || count != 1) return 0;
+
+            /* Return the orientation value. Within the 12-byte block, the
+               pointer to the actual data is at offset 8. */
+            ret =  de_get16(&exif_marker->data[i + 8], endian);
+            return ret <= 8 ? ret : 0;
+        }
+        /* move the pointer to the next 12-byte tag field. */
+        i = i + 12;
+    }
+
+    return 0; /* No EXIF Orientation tag found */
+}
+
+
+//////////////////////////////////////////////////
+///// END LGPL licensed code ///////////////////
+//////////////////////////////////////////////////
+
+
+static bool flow_job_jpg_decoder_interpret_metadata(flow_c * c, struct flow_job_jpeg_decoder_state * state){
+
+
+    //Called twice, avoid repeating work
+
+    JOCTET * icc_buffer;
+    unsigned int icc_buffer_len;
+
+    if (state->color_profile == NULL) {
+        if (read_icc_profile(c, state->cinfo, &icc_buffer, &icc_buffer_len)) {
+            // One may set, then unset the thread-local logger function to debug
+            // cmsSetLogErrorHandlerTHR(cmsContext ContextID, cmsLogErrorHandlerFunction Fn);
+            state->color_profile = cmsOpenProfileFromMem(icc_buffer, icc_buffer_len);
+            if (state->color_profile != NULL) state->color_profile_source = flow_codec_color_profile_source_ICCP;
+            FLOW_destroy(c, icc_buffer);
+        }
+    }
+
+    if (state->exif_orientation == 0){
+        state->exif_orientation = get_orientation(state->cinfo);
+    }
+
+    //FLOW_error(c, flow_status_Image_decoding_failed);
+    return true;
+}
+
 static bool flow_job_jpg_decoder_BeginRead(flow_c * c, struct flow_job_jpeg_decoder_state * state)
 {
     if (state->stage != flow_job_jpg_decoder_stage_NotStarted) {
@@ -235,10 +496,16 @@ static bool flow_job_jpg_decoder_BeginRead(flow_c * c, struct flow_job_jpeg_deco
 
     /* Tell the library to keep any APP2 data it may find */
     jpeg_save_markers(state->cinfo, ICC_MARKER, 0xFFFF);
+    jpeg_save_markers (state->cinfo, EXIF_JPEG_MARKER, 0xffff);
 
     (void)jpeg_read_header(state->cinfo, TRUE);
 
 
+    if (!flow_job_jpg_decoder_interpret_metadata(c, state)){
+        flow_job_jpg_decoder_reset(c, state);
+        state->stage = flow_job_jpg_decoder_stage_Failed;
+        FLOW_error_return(c);
+    }
     /* We can ignore the return value from jpeg_read_header since
      *   (a) suspension is not possible with the stdio data source, and
      *   (b) we passed TRUE to reject a tables-only JPEG file as an error.
@@ -325,17 +592,10 @@ static bool flow_job_jpg_decoder_FinishRead(flow_c * c, struct flow_job_jpeg_dec
 
     //We must read the markers before jpeg_finish_decompress destroys them
 
-    JOCTET * icc_buffer;
-    unsigned int icc_buffer_len;
-
-
-    if (read_icc_profile(c, state->cinfo, &icc_buffer, &icc_buffer_len))
-    {
-        // One may set, then unset the thread-local logger function to debug
-        // cmsSetLogErrorHandlerTHR(cmsContext ContextID, cmsLogErrorHandlerFunction Fn);
-        state->color_profile = cmsOpenProfileFromMem(icc_buffer, icc_buffer_len);
-        if (state->color_profile != NULL) state->color_profile_source = flow_codec_color_profile_source_ICCP;
-        FLOW_destroy(c, icc_buffer);
+    if (!flow_job_jpg_decoder_interpret_metadata(c, state)){
+        flow_job_jpg_decoder_reset(c, state);
+        state->stage = flow_job_jpg_decoder_stage_Failed;
+        FLOW_error_return(c);
     }
 
 
@@ -405,6 +665,16 @@ static bool flow_job_jpg_decoder_FinishRead(flow_c * c, struct flow_job_jpeg_dec
     return true;
 }
 
+int32_t flow_job_jpg_decoder_get_exif(flow_c * c, struct flow_codec_instance * codec_instance);
+
+int32_t flow_job_jpg_decoder_get_exif(flow_c * c, struct flow_codec_instance * codec_instance){
+    if (codec_instance == NULL || codec_instance->codec_state == NULL || codec_instance->codec_id!= flow_codec_type_decode_jpeg){
+        return -1;
+    }
+    struct flow_job_jpeg_decoder_state * inner_state  = (struct flow_job_jpeg_decoder_state *) codec_instance->codec_state;
+    return inner_state->exif_orientation;
+}
+
 static bool flow_job_jpg_decoder_reset(flow_c * c, struct flow_job_jpeg_decoder_state * state)
 {
     if (state->stage == flow_job_jpg_decoder_stage_FinishRead) {
@@ -434,6 +704,7 @@ static bool flow_job_jpg_decoder_reset(flow_c * c, struct flow_job_jpeg_decoder_
     }
     state->color_profile_source = flow_codec_color_profile_source_null;
     state->row_stride = 0;
+    state->exif_orientation = 0;
     state->context = c;
     state->w = 0;
     state->h = 0;
