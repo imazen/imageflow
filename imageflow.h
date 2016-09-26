@@ -45,12 +45,12 @@ typedef enum FLOW_DIRECTION { FLOW_OUTPUT = 8, FLOW_INPUT = 4 } FLOW_DIRECTION;
 typedef enum flow_ntype {
     flow_ntype_Null = 0,
     flow_ntype_primitive_Flip_Vertical_Mutate = 1,
-    flow_ntype_primitive_Flip_Horizontal_Mutate = 1,
-    flow_ntype_primitive_Crop_Mutate_Alias = 2,
-    flow_ntype_primitive_CopyRectToCanvas = 3, // Overwrite only, no compositing
-    flow_ntype_Create_Canvas = 4,
-    flow_ntype_primitive_RenderToCanvas1D = 5,
-    flow_ntype_primitive_Scale2D_RenderToCanvas1D = 6,
+    flow_ntype_primitive_Flip_Horizontal_Mutate = 2,
+    flow_ntype_primitive_Crop_Mutate_Alias = 3,
+    flow_ntype_primitive_CopyRectToCanvas = 4, // Overwrite only, no compositing
+    flow_ntype_Create_Canvas = 5,
+    flow_ntype_primitive_RenderToCanvas1D = 6,
+    flow_ntype_primitive_Scale2D_RenderToCanvas1D = 7,
     flow_ntype_primitive_bitmap_bgra_pointer,
     flow_ntype_primitive_decoder,
     flow_ntype_primitive_encoder,
