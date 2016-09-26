@@ -153,12 +153,11 @@ TEST_CASE("Test jpeg rotation", "")
     strcpy(modes[0], "Landscape");
     strcpy(modes[1], "Portrait");
 
-    char url[256];
+    char url[300];
     char expected_checksum_name[100];
     for (int32_t mode_ix = 0; mode_ix < 2; mode_ix++) {
         for (int32_t flag = 1; flag < 9; flag++) {
-            snprintf(&url[0], sizeof(url), " \t\n"
-                         "http://s3-us-west-2.amazonaws.com/imageflow-resources/test_inputs/orientation/%s_%d.jpg",
+            snprintf(&url[0], sizeof(url), "http://s3-us-west-2.amazonaws.com/imageflow-resources/test_inputs/orientation/%s_%d.jpg",
                      &modes[mode_ix][0], flag);
             snprintf(&expected_checksum_name[0], sizeof(expected_checksum_name), "Test_Apply_Orientation_%s_%d.jpg",
                      &modes[mode_ix][0], flag);
