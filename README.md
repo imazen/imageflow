@@ -34,8 +34,6 @@ Virtual machines aren't great for benchmarks. Imageflow (flow-proto1, for now) c
 
 Our linux build enivornment is fully Dockerized. But there are parts that we haven't yet set up
 
-* Documentation generation & upload
-* Release automation
 * Triggering a second CI round for long-running (i.e, 40m+) comparison tests. 
 * We haven't set up a tutorial for building Imageflow via docker.
 
@@ -73,7 +71,6 @@ Our linux build enivornment is fully Dockerized. But there are parts that we hav
 - [x] Expose an xplat API (using direct operation graph construction) and test via Ruby FFI bindings.
 - [x] Validate basic functionality via simple ruby REST [RIAPI](http://riapi.org) server to wrap libimageflow
 - [x] Design correct error handling protocol so all APIs report detailed stacktrace w/ line numbers and useful error messages for all API surfaces. 
-- [x] Expose custom memory managment interface, so callers can use custom allocators or reusable slab allocation (great to avoid fragmentation on large allocations). This may go away if we introduce Rust, although with 1.9 we can still handle malloc failure gracefully.
 - [x] Expose flexible I/O interface so a variety if I/O types can be cleanly supported from host languages (I.e, .NET Stream, FILE *, membuffer, circular buffer, etc)
 - [ ] Replace direct graph maniupulation with JSON API
 - [ ] Finish API design and test coverage for image composition, whitespace detection/cropping, sharpening, blurring, contrast/saturation, and white balance (algorithms already complete or well defined). 
@@ -86,7 +83,7 @@ Our linux build enivornment is fully Dockerized. But there are parts that we hav
 ### Refactorings
 
 
-- [ ] Begin porting to Rust. 
+- [x] Begin porting to Rust. 
 - [x] Explicit control flow at all points.
 - [x] Full debugging information by recording errors at failure point, then appending the stacktract
 - [x] Give user complete control over allocation method and timing.
@@ -101,30 +98,96 @@ Our linux build enivornment is fully Dockerized. But there are parts that we hav
 - [ ] Find cleaner way to use SSE2 constructs with scalar fallbacks, it is messy in a few areas.
 
 
-### How to download, build, and run tests. 
+# How to build
 
-### Universal steps for all platforms - get Conan, Cmake, and Git
-
-Don't try to open anything in any IDE until you've run `conan install`, as cmake won't be complete.
-
-1. [Install Conan](https://www.conan.io/downloads) - installers available for download (all platforms).
-2. Install cmake (`cinst -y cmake.portable` on windows w/ chocolatey, `sudo apt-get install cmake` elsewhere)
-3. Install git (`cinst -y git.install` or `sudo apt-get install git`)
-3. Install build tools for dependencies: `sudo apt-get install build-essential binutils libtool autoconf nasm openssl libssl-dev`
-
+We're assuming you've cloned already. 
 
 ```bash
      git clone git@github.com:imazen/imageflow.git
      cd imageflow
-     ./rebuild.sh
 ```
 
-### Visual Studio 2015 Update 1
+All build scripts support `VALGRIND=True` to enable valgrind instrumentation of automated tests.
+
+## Docker (linux/macOS)
+
+```bash
+docker pull imazen/build_if_gcc54
+cd ci/docker
+./test.sh build_if_gcc54
+```
+
+## Linux
+
+We need quite a few packages in order to build all dependencies. You probably have most of these already.
+
+You'll need both Python 3 and Python 2.7. Ruby is optional, but useful for extras.
 
 
-Windows: build/Imageflow.sln will be created during 'conan build', but is only set up for Release mode compilation by default. Switch configuration to Release to get a build. You'll need to run conan install directly if you want to change architecture, since the solutions need to be regeneterated.
- 
-Install nasm (`cinst -y nasm` on windows, followed by `set PATH=%PATH%;%ProgramFiles(x86)%\nasm`) (only if you have to build dependencies from source).
+
+## apt-get for Ubuntu Trusty 
+
+```bash
+sudo apt-get install --no-install-recommends \
+  apt-utils sudo build-essential wget git nasm dh-autoreconf pkg-config curl \
+  libpng-dev libssl-dev ca-certificates \
+  libcurl4-openssl-dev libelf-dev libdw-dev python2.7-minimal \
+  python3-minimal python3-pip python3-setuptools valgrind
+```
+
+## apt-get Ubuntu Xenial
+
+```bash
+sudo apt-get install --no-install-recommends \
+    apt-utils sudo build-essential wget git nasm dh-autoreconf pkg-config curl \
+    libpng-dev libssl-dev ca-certificates \
+    rubygems-integration ruby libcurl4-openssl-dev libelf-dev libdw-dev python2.7-minimal \
+    python3-minimal python3-pip python3-setuptools valgrind 
+```
+
+If you don't have Xenial or Trusty, adapt the above to work with your distro.
+
+After running apt-get (or your package manager), you'll need conan, cmake, dssim, and Rust Nightly 2016-09-01.
+
+
+```bash
+curl https://sh.rustup.rs -sSf | sh -s -- -y --default-toolchain nightly-2016-09-01
+sudo pip3 install conan
+./ci/nixtools/install_cmake.sh
+./ci/nixtools/install_dssim.sh
+./build.sh
+```
+
+## OS X
+
+You'll need a bit less on OS X, although this may not be comprehensive:
+
+```bash
+brew update || brew update
+brew install cmake || true
+brew install --force openssl || true
+brew link openssl --force || true
+brew install conan nasm
+./ci/nixtools/install_dssim.sh
+./build.sh
+```
+
+## Windows
+
+Don't try to open anything in any IDE until you've run `conan install`, as cmake won't be complete.
+
+You'll need Git, NASM, curl, Rust, OpenSSL, Conan, CMake, and Chocolatey. 
+
+See `ci/wintools` for installation scripts for the above tools.
+
+1. Run `win_verify_tools.bat` to check on your tool status.
+2. Run `win_enter_env.bat` to start a sub-shell with VS tools loaded and a proper PATH
+3. Run `win_build_c.bat` to compile the C components
+4. Run `win_build_rust.bat` to compile everything except the web server.
+5. Run `win_build_rust_server.bat` to compile the HTTP server.
+
+
+Windows: `build/Imageflow.sln` will be created during 'win_build_c.bat', but is only set up for Release mode compilation by default. Switch configuration to Release to get a build. You'll need to run conan install directly if you want to change architecture, since the solutions need to be regeneterated.
  
  
     cd build
@@ -133,16 +196,6 @@ Install nasm (`cinst -y nasm` on windows, followed by `set PATH=%PATH%;%ProgramF
     conan build
     
 
-### Starting the demo ruby image server (complete Universal steps above first!)
-
-    cd wrappers/ruby
-    bundle install
-    bundle exec thin start
-    #Browse to localhost:3000/ri/7s.jpg?width=800
-    #Backed by the same S3 buckets as z.zr.io demo server
-    #X-CPU-Time HTTP header lets you know how much time was spent inside the imageflow library
-
-======
 
 **libimageflow is still in the prototype phase. It is neither API-stable nor secure.**
 
