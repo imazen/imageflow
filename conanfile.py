@@ -11,8 +11,8 @@ class ImageFlowConan(ConanFile):
     options = {"shared": [True, False]}
     generators = "cmake"
     default_options = "shared=False", "libjpeg-turbo:shared=False", "libpng:shared=False", \
-   					  "zlib:shared=False", "libcurl:shared=False", "OpenSSL:shared=True", \
-   					  "imageflow:shared=True"
+                      "zlib:shared=False", "libcurl:shared=False", "OpenSSL:shared=True", \
+                      "imageflow:shared=True"
     exports = "lib/*", "CMakeLists.txt", "imageflow.h", "imageflow_advanced.h"
 
 
@@ -21,11 +21,11 @@ class ImageFlowConan(ConanFile):
             self.options["giflib"].shared = False
             self.options["littlecms"].shared = False
 
-
-        self.requires("libcurl/7.47.1@lasote/stable", dev=True)
-        if self.settings.os == "Macos":
-            self.options["libcurl"].darwin_ssl = False
-            self.options["libcurl"].custom_cacert = True
+        if self.scope.build_tests or self.scope.profiling:
+            self.requires("libcurl/7.47.1@lasote/stable", dev=True)
+            if self.settings.os == "Macos":
+                self.options["libcurl"].darwin_ssl = False
+                self.options["libcurl"].custom_cacert = True
 
         if self.scope.build_tests:
             self.requires("catch/1.3.0@TyRoXx/stable", dev=True)
@@ -107,4 +107,3 @@ class ImageFlowConan(ConanFile):
 
     def package_info(self):
         self.cpp_info.libs = ['imageflow']
-
