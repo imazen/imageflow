@@ -9,6 +9,8 @@
 #![allow(unused_variables)]
 
 extern crate alloc_system;
+extern crate petgraph;
+extern crate daggy;
 
 
 pub mod ffi;

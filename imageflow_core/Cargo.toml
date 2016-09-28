@@ -20,6 +20,8 @@ serde_json = "*"
 curl = "*"
 json = "*"
 imageflow_serde = { path = "../imageflow_serde", version = "*" }
+petgraph = "^0.2.8"
+daggy = "^0.4.1"
 
 [build-dependencies]
 cmake = "0.1.17"
