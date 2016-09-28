@@ -32,7 +32,8 @@ use std::cell::RefCell;
 
 
 pub struct ContextPtr {
-    ptr: Option<*mut ::ffi::Context>
+    //TODO: Remove pub as soon as tests/visuals.rs doesn't need access (i.e, unit test helpers are ported, or the helper becomes cfgtest on the struct itself)
+    pub ptr: Option<*mut ::ffi::Context>
 }
 pub struct Context{
     p: RefCell<ContextPtr>

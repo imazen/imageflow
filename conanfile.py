@@ -21,11 +21,11 @@ class ImageFlowConan(ConanFile):
             self.options["giflib"].shared = False
             self.options["littlecms"].shared = False
 
-        if self.scope.build_tests or self.scope.profiling:
-            self.requires("libcurl/7.47.1@lasote/stable", dev=True)
-            if self.settings.os == "Macos":
-                self.options["libcurl"].darwin_ssl = False
-                self.options["libcurl"].custom_cacert = True
+
+        self.requires("libcurl/7.47.1@lasote/stable", dev=True)
+        if self.settings.os == "Macos":
+            self.options["libcurl"].darwin_ssl = False
+            self.options["libcurl"].custom_cacert = True
 
         if self.scope.build_tests:
             self.requires("catch/1.3.0@TyRoXx/stable", dev=True)

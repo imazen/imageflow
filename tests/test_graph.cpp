@@ -2,6 +2,9 @@
 #include "catch.hpp"
 #include "helpers.h"
 #include "rewrite_in_rust/rewrite_in_rust.h"
+
+// Port Priority 0 - lowest priority to create rust equivalent. 1 - medium priority, 2 - likely useful
+
 // Assumes placeholders 0 and 1 for input/output respectively
 bool execute_graph_for_url(flow_c * c, const char * input_image_url, const char * output_image_path,
                            struct flow_graph ** graph_ref)

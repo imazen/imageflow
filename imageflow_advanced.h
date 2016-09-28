@@ -398,6 +398,15 @@ PUB struct flow_convolution_kernel * flow_convolution_kernel_create_guassian_sha
 PUB bool flow_bitmap_bgra_populate_histogram(flow_c * c, struct flow_bitmap_bgra * bmp, uint64_t * histograms,
                                              uint32_t histogram_size_per_channel, uint32_t histogram_count,
                                              uint64_t * pixels_sampled);
+
+
+
+// This is exposed as test helper in Rust. We should just port this functionality to Rust instead.
+
+PUB bool flow_bitmap_bgra_test_compare_to_record(flow_c * c, struct flow_bitmap_bgra * bitmap, const char * storage_name, bool store_if_missing, size_t off_by_one_byte_differences_permitted, const char * caller_filename, int caller_linenumber);
+
+
+
 #undef PUB
 #ifdef __cplusplus
 }

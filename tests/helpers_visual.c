@@ -1,5 +1,13 @@
 #include "helpers_visual.h"
 
+bool flow_bitmap_bgra_test_compare_to_record(flow_c * c, struct flow_bitmap_bgra * bitmap, const char * storage_name, bool store_if_missing,
+                    size_t off_by_one_byte_differences_permitted, const char * caller_filename, int caller_linenumber)
+{
+    return visual_compare(c, bitmap, storage_name, store_if_missing, off_by_one_byte_differences_permitted,
+                          caller_filename, NULL, caller_linenumber);
+}
+
+
 struct named_checksum {
     char * name;
     char * checksum;

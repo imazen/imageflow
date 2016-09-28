@@ -62,6 +62,15 @@ pub enum Floatspace {
     gamma = 2,
 }
 
+#[repr(C)]
+#[derive(Copy,Clone)]
+pub enum BitmapCompositingMode {
+    replace_with_self = 0,
+    blend_with_self = 1,
+    blend_with_matte = 2,
+}
+
+
 
 #[repr(C)]
 #[derive(Copy,Clone,Debug, PartialEq)]
@@ -227,6 +236,36 @@ pub struct EncoderHints {
     pub disable_png_alpha: bool,
 }
 
+
+#[repr(C)]
+pub struct FlowBitmapBgra {
+
+    // bitmap width in pixels
+    pub w: u32,
+    // bitmap height in pixels
+    pub h: u32,
+    // byte length of each row (may include any amount of padding)
+    pub stride: u32,
+    // pointer to pixel 0,0; should be of length > h * stride
+    pub pixels: *mut u8,
+    // If true, we don't dispose of *pixels when we dispose the struct
+    pub borrowed_pixels: bool,
+    // If false, we can even ignore the alpha channel on 4bpp
+    pub alpha_meaningful: bool,
+    // If false, we can edit pixels without affecting the stride
+    pub pixels_readonly: bool,
+    // If false, we can change the stride of the image.
+    pub stride_readonly: bool,
+    // If true, we can reuse the allocated memory for other purposes.
+    pub can_reuse_space: bool,
+
+    pub fmt: PixelFormat,
+    // When using compositing mode blend_with_matte, this color will be used. We should probably define this as always
+    // being sRGBA, 4 bytes.
+    pub matte_color: [u8;4],
+    pub compositing_mode: BitmapCompositingMode
+}
+
 extern {
     pub fn flow_context_create() -> *mut Context;
     pub fn flow_context_begin_terminate(context: *mut Context) -> bool;
@@ -277,7 +316,7 @@ extern {
 
 
 
-pub fn flow_io_create_for_file(context: *mut Context,
+    pub fn flow_io_create_for_file(context: *mut Context,
                                    mode: IoMode,
                                    filename: *const libc::c_char,
                                    owner: *const libc::c_void)
@@ -340,8 +379,10 @@ pub fn flow_io_create_for_file(context: *mut Context,
                                        b: f32,
                                        c: f32);
 
+    pub fn flow_bitmap_bgra_test_compare_to_record(c: *mut Context, bitmap: *mut FlowBitmapBgra, storage_name: *const libc::c_char, store_if_missing: bool, off_by_one_byte_differences_permitted: usize, caller_filename: *const libc::c_char, caller_linenumber: i32) -> bool;
 
-    /// THESE SHOULD BE DELETED AS THEY ARE BEING REWRITTEN IN RUST
+
+/// THESE SHOULD BE DELETED AS THEY ARE BEING REWRITTEN IN RUST
     // Creating and manipulating graphs directly is going away very soon in favor of a JSON string.
 
     pub fn flow_job_execute(c: *mut Context, job: *mut Job, g: *mut *mut Graph) -> bool;
