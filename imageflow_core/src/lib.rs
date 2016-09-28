@@ -129,7 +129,7 @@ impl ContextPtr {
                         println!("Error {} {}\n", e.code, e.message_and_stack);
                         if e.code == 72 || e.code == 73 {
                             if g.is_some() {
-                                let _ = ::ffi::flow_graph_print_to_stdout(self.ptr.unwrap(),
+                                let _ = ::flow::graph::flow_graph_print_to_stdout(self.ptr.unwrap(),
                                                                           g.unwrap());
                             }
                         }

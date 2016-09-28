@@ -2,6 +2,9 @@ use ffi::*;
 use libc::{self, int32_t};
 use std::ffi::CStr;
 
+pub mod graph;
+
+#[macro_export]
 macro_rules! error_return (
     ($context:expr) => (
         unsafe {
@@ -11,6 +14,7 @@ macro_rules! error_return (
     );
 );
 
+#[macro_export]
 macro_rules! error_msg (
     ($context:expr, $status: expr) => (
         unsafe {

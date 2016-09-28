@@ -386,15 +386,14 @@ pub fn process_image<F, C, R>(commands: BoringCommands,
         // println!("Scale {}x{} down to {}x{} (jpeg)", info.frame0_width, info.frame0_height, final_w, final_h);
 
         //TODO: Replace with s::Node, s::Graph, etc.
-
-        let mut g = flow_graph_create(c, 10, 10, 10, 2.0);
+        let mut g = flow::graph::flow_graph_create(c, 10, 10, 10, 2.0);
         assert!(!g.is_null());
 
 
-        let mut last = flow_node_create_decoder(c, (&mut g) as *mut *mut Graph, -1, 0);
+        let mut last = flow::graph::flow_node_create_decoder(c, (&mut g) as *mut *mut Graph, -1, 0);
         assert!(last == 0);
 
-        last = flow_node_create_scale(c,
+        last = flow::graph::flow_node_create_scale(c,
                                       (&mut g) as *mut *mut Graph,
                                       last,
                                       final_w,
@@ -424,7 +423,7 @@ pub fn process_image<F, C, R>(commands: BoringCommands,
 
 
         last =
-            flow_node_create_encoder(c, (&mut g) as *mut *mut Graph, last, 1, encoder_id, &hints);
+            flow::graph::flow_node_create_encoder(c, (&mut g) as *mut *mut Graph, last, 1, encoder_id, &hints);
         assert!(last > 0);
 
 

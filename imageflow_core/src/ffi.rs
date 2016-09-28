@@ -12,6 +12,8 @@ use std::ptr;
 use std::str::FromStr;
 use libc::int32_t;
 
+use flow;
+
 pub enum Context {}
 
 pub enum JobIO {}
@@ -471,129 +473,6 @@ extern "C" {
                                                     storage_relative_to: *const libc::c_char)
                                                    -> bool;
 
-
-    /// THESE SHOULD BE DELETED AS THEY ARE BEING REWRITTEN IN RUST
-    /// Creating and manipulating graphs directly is going away very soon in favor of a JSON string.
-
-    /*
-    pub fn flow_job_execute(c: *mut Context, job: *mut Job, g: *mut *mut Graph) -> bool;
-*/
-
-    /**/
-    pub fn flow_graph_print_to_stdout(c: *mut Context, g: *const Graph) -> bool;
-
-    pub fn flow_graph_create(context: *mut Context,
-                             max_edges: u32,
-                             max_nodes: u32,
-                             max_info_bytes: u32,
-                             growth_factor: f32)
-                             -> *mut Graph;
-
-
-    pub fn flow_edge_create(c: *mut Context,
-                            g: *mut *mut Graph,
-                            from: i32,
-                            to: i32,
-                            kind: EdgeKind)
-                            -> i32;
-    pub fn flow_node_create_decoder(c: *mut Context,
-                                    g: *mut *mut Graph,
-                                    prev_node: i32,
-                                    placeholder_id: i32)
-                                    -> i32;
-    pub fn flow_node_create_canvas(c: *mut Context,
-                                   g: *mut *mut Graph,
-                                   prev_node: i32,
-                                   format: PixelFormat,
-                                   width: usize,
-                                   height: usize,
-                                   bgcolor: u32)
-                                   -> i32;
-
-    pub fn flow_node_create_scale(c: *mut Context,
-                                  g: *mut *mut Graph,
-                                  prev_node: i32,
-                                  width: usize,
-                                  height: usize,
-                                  downscale_filter: i32,
-                                  upscale_filter: i32,
-                                  flags: usize,
-                                  sharpen: f32)
-                                  -> i32;
-
-    pub fn flow_node_create_expand_canvas(c: *mut Context,
-                                          g: *mut *mut Graph,
-                                          prev_node: i32,
-                                          left: u32,
-                                          top: u32,
-                                          right: u32,
-                                          bottom: u32,
-                                          canvas_color_srgb: u32)
-                                          -> i32;
-
-    pub fn flow_node_create_fill_rect(c: *mut Context,
-                                      g: *mut *mut Graph,
-                                      prev_node: i32,
-                                      x1: u32,
-                                      y1: u32,
-                                      x2: u32,
-                                      y2: u32,
-                                      color_srgb: u32)
-                                      -> i32;
-
-    pub fn flow_node_create_bitmap_bgra_reference(c: *mut Context,
-                                        g: *mut *mut Graph,
-                                        prev_node: i32, reference: *mut *mut FlowBitmapBgra) -> i32;
-
-
-    pub fn flow_node_create_rotate_90(c: *mut Context, g: *mut *mut Graph, prev_node: i32) -> i32;
-    pub fn flow_node_create_rotate_180(c: *mut Context, g: *mut *mut Graph, prev_node: i32) -> i32;
-    pub fn flow_node_create_rotate_270(c: *mut Context, g: *mut *mut Graph, prev_node: i32) -> i32;
-
-    pub fn flow_node_create_transpose(c: *mut Context, g: *mut *mut Graph, prev_node: i32) -> i32;
-
-    pub fn flow_node_create_primitive_copy_rect_to_canvas(c: *mut Context,
-                                                          g: *mut *mut Graph,
-                                                          prev_node: i32,
-                                                          from_x: u32,
-                                                          from_y: u32,
-                                                          width: u32,
-                                                          height: u32,
-                                                          x: u32,
-                                                          y: u32)
-                                                          -> i32;
-
-    pub fn flow_node_create_encoder(c: *mut Context,
-                                    g: *mut *mut Graph,
-                                    prev_node: i32,
-                                    placeholder_id: i32,
-                                    desired_encoder_id: i64,
-                                    hints: *const EncoderHints)
-                                    -> i32;
-
-    pub fn flow_node_create_primitive_flip_vertical(c: *mut Context,
-                                                    g: *mut *mut Graph,
-                                                    prev_node: i32)
-                                                    -> i32;
-
-    pub fn flow_node_create_primitive_flip_horizontal(c: *mut Context,
-                                                      g: *mut *mut Graph,
-                                                      prev_node: i32)
-                                                      -> i32;
-
-    pub fn flow_node_create_primitive_crop(c: *mut Context,
-                                           g: *mut *mut Graph,
-                                           prev_node: i32,
-                                           x1: u32,
-                                           y1: u32,
-                                           x2: u32,
-                                           y2: u32)
-                                           -> i32;
-
-    /**/
-//  /////////// END HEADERS TO DELETE
-
-
 }
 
 
@@ -630,13 +509,13 @@ fn flow_graph_creation_works() {
         let c = flow_context_create();
         assert!(!c.is_null());
 
-        let mut g = flow_graph_create(c, 10, 10, 10, 2.0);
+        let mut g = flow::graph::flow_graph_create(c, 10, 10, 10, 2.0);
         assert!(!g.is_null());
 
         let j = flow_job_create(c);
         assert!(!j.is_null());
 
-        let last = flow_node_create_canvas(c,
+        let last = flow::graph::flow_node_create_canvas(c,
                                            (&mut g) as *mut *mut Graph,
                                            -1,
                                            PixelFormat::bgra32,
