@@ -10,6 +10,10 @@ Imageflow will bring world-class image quality and performance to all languages 
 [![Coverage Status](https://coveralls.io/repos/github/imazen/imageflow/badge.svg?branch=HEAD)](https://coveralls.io/github/imazen/imageflow?branch=HEAD)
 [![Coverity Scan Build Status](https://scan.coverity.com/projects/8403/badge.svg)](https://scan.coverity.com/projects/imazen-imageflow)
 
+graph-rewrite: [![travis-master](https://img.shields.io/travis/imazen/imageflow/graph-rewrite.svg?label=travis%graph-rewrite%20mac%20linux)
+[![AppVeyor build status](https://ci.appveyor.com/api/projects/status/0356x95fa312m3wy/branch/graph-rewrite?svg=true)](https://ci.appveyor.com/project/imazen/imageflow/branch/graph-rewrite)
+](https://travis-ci.org/imazen/imageflow/builds) 
+
 ### How can I help?
 
 #### Do you know a little Rust, or are you interested in learning?
