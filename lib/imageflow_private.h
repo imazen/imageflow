@@ -121,7 +121,6 @@ struct flow_colorspace_info {
 #endif
 };
 
-
 #define FLOW_USER_IS_OWNER
 struct flow_heap_object_record {
     void * ptr;
@@ -340,8 +339,8 @@ struct flow_nodeinfo_codec {
     struct flow_encoder_hints encoder_hints;
 };
 
-struct flow_nodeinfo_apply_orientation{
-    int32_t orientation; //Values 1-8, per the EXIF Orientation spec
+struct flow_nodeinfo_apply_orientation {
+    int32_t orientation; // Values 1-8, per the EXIF Orientation spec
 };
 
 struct flow_nodeinfo_render_to_canvas_1d {
@@ -416,7 +415,8 @@ struct flow_job {
 
 PUB bool flow_bitmap_bgra_load_png(flow_c * c, struct flow_bitmap_bgra ** b_ref, const char * path);
 PUB bool flow_bitmap_bgra_save_png(flow_c * c, struct flow_bitmap_bgra * b, const char * path);
-PUB uint8_t ** flow_bitmap_create_row_pointers(flow_c * c, void * buffer, size_t buffer_size, size_t stride, size_t height);
+PUB uint8_t ** flow_bitmap_create_row_pointers(flow_c * c, void * buffer, size_t buffer_size, size_t stride,
+                                               size_t height);
 
 PUB bool flow_job_decoder_set_downscale_hints(flow_c * c, struct flow_job * job, struct flow_codec_instance * codec,
                                               struct flow_decoder_downscale_hints * hints,

@@ -5,11 +5,9 @@
 extern "C" {
 #endif
 
-
 struct flow_node;
 struct flow_edge;
 struct flow_graph;
-
 
 // RN: this is the entry point that you will replace in rust, with rust
 PUB bool flow_job_execute(flow_c * c, struct flow_job * job, struct flow_graph ** graph_ref);
@@ -17,12 +15,10 @@ PUB bool flow_job_execute(flow_c * c, struct flow_job * job, struct flow_graph *
 // This call will, of course, turn into {:?} (.fmt())
 PUB bool flow_graph_print_to_stdout(flow_c * c, struct flow_graph * g);
 
-
 // RN: nothing else matters, delete all apis  in this file and those marked in src/ffi.rs
 
 PUB struct flow_graph * flow_graph_create(flow_c * c, uint32_t max_edges, uint32_t max_nodes, uint32_t max_info_bytes,
                                           float growth_factor);
-
 
 PUB void flow_graph_destroy(flow_c * c, struct flow_graph * target);
 
@@ -50,7 +46,8 @@ PUB int32_t flow_node_create_fill_rect(flow_c * c, struct flow_graph ** g, int32
                                        uint32_t x2, uint32_t y2, uint32_t color_srgb);
 PUB int32_t flow_node_create_transpose(flow_c * c, struct flow_graph ** g, int32_t prev_node);
 
-PUB int32_t flow_node_create_apply_orientation(flow_c * c, struct flow_graph ** g,  int32_t prev_node, int32_t exif_orientation_flag);
+PUB int32_t flow_node_create_apply_orientation(flow_c * c, struct flow_graph ** g, int32_t prev_node,
+                                               int32_t exif_orientation_flag);
 
 PUB int32_t flow_node_create_rotate_90(flow_c * c, struct flow_graph ** g, int32_t prev_node);
 
@@ -59,7 +56,7 @@ PUB int32_t flow_node_create_rotate_180(flow_c * c, struct flow_graph ** g, int3
 PUB int32_t flow_node_create_rotate_270(flow_c * c, struct flow_graph ** g, int32_t prev_node);
 
 PUB int32_t
-flow_node_create_encoder_placeholder(flow_c * c, struct flow_graph ** g, int32_t prev_node, int32_t output_slot_id);
+    flow_node_create_encoder_placeholder(flow_c * c, struct flow_graph ** g, int32_t prev_node, int32_t output_slot_id);
 
 PUB int32_t flow_node_create_encoder(flow_c * c, struct flow_graph ** g, int32_t prev_node, int32_t placeholder_id,
                                      int64_t desired_encoder_id, struct flow_encoder_hints * hints);
@@ -114,21 +111,22 @@ PUB bool flow_node_delete(flow_c * c, struct flow_graph * g, int32_t node_id);
 PUB bool flow_edge_delete(flow_c * c, struct flow_graph * g, int32_t edge_id);
 
 PUB bool flow_edge_delete_all_connected_to_node(flow_c * c, struct flow_graph * g, int32_t node_id);
-PUB bool flow_edge_delete_connected_to_node(flow_c * c, struct flow_graph * g, int32_t node_id, bool inbound, bool outbound);
+PUB bool flow_edge_delete_connected_to_node(flow_c * c, struct flow_graph * g, int32_t node_id, bool inbound,
+                                            bool outbound);
 
 PUB int32_t
-flow_graph_get_inbound_edge_count_of_type(flow_c * c, struct flow_graph * g, int32_t node_id, flow_edgetype type);
+    flow_graph_get_inbound_edge_count_of_type(flow_c * c, struct flow_graph * g, int32_t node_id, flow_edgetype type);
 PUB int32_t
-flow_graph_get_first_inbound_edge_of_type(flow_c * c, struct flow_graph * g, int32_t node_id, flow_edgetype type);
+    flow_graph_get_first_inbound_edge_of_type(flow_c * c, struct flow_graph * g, int32_t node_id, flow_edgetype type);
 
 PUB int32_t
-flow_graph_get_first_outbound_edge_of_type(flow_c * c, struct flow_graph * g, int32_t node_id, flow_edgetype type);
+    flow_graph_get_first_outbound_edge_of_type(flow_c * c, struct flow_graph * g, int32_t node_id, flow_edgetype type);
 
 PUB int32_t
-flow_graph_get_first_inbound_node_of_type(flow_c * c, struct flow_graph * g, int32_t node_id, flow_edgetype type);
+    flow_graph_get_first_inbound_node_of_type(flow_c * c, struct flow_graph * g, int32_t node_id, flow_edgetype type);
 
 PUB int32_t
-flow_graph_get_first_outbound_node_of_type(flow_c * c, struct flow_graph * g, int32_t node_id, flow_edgetype type);
+    flow_graph_get_first_outbound_node_of_type(flow_c * c, struct flow_graph * g, int32_t node_id, flow_edgetype type);
 
 PUB bool flow_node_has_dimensions(flow_c * c, struct flow_graph * g, int32_t node_id);
 
@@ -169,7 +167,6 @@ PUB bool flow_job_render_graph_to_png(flow_c * c, struct flow_job * job, struct 
 PUB bool flow_job_notify_node_complete(flow_c * c, struct flow_job * job, struct flow_graph * g, int32_t node_id);
 
 PUB bool flow_job_link_codecs(flow_c * c, struct flow_job * job, struct flow_graph ** graph_ref);
-
 
 typedef bool (*flow_nodedef_fn_stringify)(flow_c * c, struct flow_graph * g, int32_t node_id, char * buffer,
                                           size_t buffer_size);

@@ -206,7 +206,7 @@ TEST_CASE("Load png from URL", "[fastscaling]")
                 // TODO, write out PNG here
 
                 struct flow_io * buf = flow_io_create_for_output_buffer(c, c);
-                //memset(canvas->pixels, 0, canvas->stride * canvas->h);
+                // memset(canvas->pixels, 0, canvas->stride * canvas->h);
                 if (!flow_bitmap_bgra_write_png(c, NULL, canvas, buf)) {
                     // FLOW_error_return(context);
                     FAIL("Failed to write png");
@@ -242,8 +242,8 @@ TEST_CASE("Load png from URL", "[fastscaling]")
     REQUIRE(success);
 }
 
-//This test is windows only
-//TEST_CASE("Test png writing; repro uninitialized value", "[libpng]"){
+// This test is windows only
+// TEST_CASE("Test png writing; repro uninitialized value", "[libpng]"){
 //    png_structp png_ptr = png_create_write_struct(PNG_LIBPNG_VER_STRING, NULL, NULL,
 //                                                  NULL); // makepng_error, makepng_warning);
 //

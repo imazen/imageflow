@@ -6,10 +6,10 @@ extern crate libc;
 extern crate time;
 
 extern crate imageflow_core;
-use imageflow_core::boring::*;
-use imageflow_core::ffi::*;
 
 use hyper::Client;
+use imageflow_core::boring::*;
+use imageflow_core::ffi::*;
 use iron::mime::Mime;
 use iron::prelude::*;
 use iron::status;
@@ -111,8 +111,8 @@ fn get_jpeg_bytes(source: &str, w: Option<u32>, h: Option<u32>) -> Vec<u8> {
     let source_ptr = source_bytes.as_mut_ptr();
 
     let bytes = imageflow_core::boring::process_image(commands,
-                                                        |c| create_io(c, source_ptr, count),
-                                                        collect_result);
+                                                      |c| create_io(c, source_ptr, count),
+                                                      collect_result);
 
     std::mem::forget(source_bytes);
 
@@ -146,7 +146,8 @@ fn main() {
     let mut router = Router::new();
 
     router.get("/proto1/scale_unsplash_jpeg/:w/:h/:url",
-               move |r: &mut Request| proto1(r), "proto1-unsplash");
+               move |r: &mut Request| proto1(r),
+               "proto1-unsplash");
 
     Iron::new(router).http("localhost:3000").unwrap();
 }

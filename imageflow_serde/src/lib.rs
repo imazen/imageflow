@@ -14,22 +14,21 @@ struct Point {
 mod nodes {
     #[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
     pub struct Decode {
-        pub io_id: i32
+        pub io_id: i32,
     }
 
     #[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
-    pub enum Encoder{
+    pub enum Encoder {
         Png,
         Png24,
         Png8,
-        Jpeg
-
+        Jpeg,
     }
 
     #[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
     pub struct Encode {
         pub io_id: i32,
-        pub encoder: Option<Encoder>
+        pub encoder: Option<Encoder>,
     }
 
     #[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
@@ -42,17 +41,22 @@ mod nodes {
 
 #[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
 pub enum MNode {
-    Decode{io_id: i32},
-    Encode{io_id: i32, encoder: Option<nodes::Encoder>},
+    Decode { io_id: i32 },
+    Encode {
+        io_id: i32,
+        encoder: Option<nodes::Encoder>,
+    },
 }
 #[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
-pub enum PixelFormat{
-    Bgra32, Bgr24, Gray8
+pub enum PixelFormat {
+    Bgra32,
+    Bgr24,
+    Gray8,
 }
 #[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
-pub enum Encoder{
+pub enum Encoder {
     Png,
-    Jpeg
+    Jpeg,
 }
 
 
@@ -95,49 +99,75 @@ pub enum Filter {
     NCubicSharp = 30,
 }
 #[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
-pub enum EncoderHints{
-    Jpeg{quality: Option<i32>},
-    Png{disable_alpha: Option<bool>}
+pub enum EncoderHints {
+    Jpeg { quality: Option<i32> },
+    Png { disable_alpha: Option<bool> },
 }
 
 #[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
-pub enum ColorSrgb{
-    Hex(String)
+pub enum ColorSrgb {
+    Hex(String),
 }
 #[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
-pub enum Color{
-    Srgb(ColorSrgb)
+pub enum Color {
+    Srgb(ColorSrgb),
 }
 #[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
-pub enum Node{
+pub enum Node {
     #[serde(rename="flipV")]
     FlipV,
     #[serde(rename="flipH")]
     FlipH,
     #[serde(rename="crop")]
-    Crop{ x1: u32, y1: u32, x2: u32, y2: u32},
+    Crop { x1: u32, y1: u32, x2: u32, y2: u32 },
     #[serde(rename="createCanvas")]
-    CreateCanvas{ format: PixelFormat, w: usize, h: usize, color: Color},
+    CreateCanvas {
+        format: PixelFormat,
+        w: usize,
+        h: usize,
+        color: Color,
+    },
     #[serde(rename="copyRectToCanvas")]
     CopyRectToCanvas {
         #[serde(rename="fromX")]
         from_x: u32,
         #[serde(rename="fromY")]
-        from_y: u32, width: u32, height: u32, x: u32, y: u32},
+        from_y: u32,
+        width: u32,
+        height: u32,
+        x: u32,
+        y: u32,
+    },
     #[serde(rename="decode")]
-    Decode{
+    Decode {
         #[serde(rename="ioId")]
-        io_id: i32},
+        io_id: i32,
+    },
     #[serde(rename="encode")]
-    Encode{
+    Encode {
         #[serde(rename="ioId")]
-        io_id: i32, encoder: Option<Encoder>,
+        io_id: i32,
+        encoder: Option<Encoder>,
         #[serde(rename="encoderId")]
-        encoder_id: Option<i64>, hints: Option<EncoderHints> },
+        encoder_id: Option<i64>,
+        hints: Option<EncoderHints>,
+    },
     #[serde(rename="fillRect")]
-    FillRect {x1: u32, y1: u32, x2: u32, y2: u32, color: Color},
+    FillRect {
+        x1: u32,
+        y1: u32,
+        x2: u32,
+        y2: u32,
+        color: Color,
+    },
     #[serde(rename="expandCanvas")]
-    ExpandCanvas {left: u32, top: u32, right: u32, bottom: u32, color: Color},
+    ExpandCanvas {
+        left: u32,
+        top: u32,
+        right: u32,
+        bottom: u32,
+        color: Color,
+    },
     #[serde(rename="transpose")]
     Transpose,
     #[serde(rename="rotate90")]
@@ -147,37 +177,41 @@ pub enum Node{
     #[serde(rename="rotate270")]
     Rotate270,
     #[serde(rename="scale")]
-    Scale{ w: usize, h: usize,
+    Scale {
+        w: usize,
+        h: usize,
         #[serde(rename="downFilter")]
         down_filter: Option<Filter>,
         #[serde(rename="upFilter")]
         up_filter: Option<Filter>,
         #[serde(rename="sharpenPercent")]
-        sharpen_percent: Option<f32>, flags: Option<usize>}
+        sharpen_percent: Option<f32>,
+        flags: Option<usize>,
+    },
 }
 #[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
-pub enum EdgeKind{
+pub enum EdgeKind {
     #[serde(rename="input")]
     Input,
     #[serde(rename="canvas")]
-    Canvas
+    Canvas,
 }
 #[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
-pub struct Edge{
+pub struct Edge {
     pub from: i32,
     pub to: i32,
-    pub kind: EdgeKind
+    pub kind: EdgeKind,
 }
 #[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
-pub struct Graph{
+pub struct Graph {
     pub nodes: std::collections::HashMap<String, Node>,
-    pub edges: Vec<Edge>
+    pub edges: Vec<Edge>,
 }
 
 #[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
-pub enum TestEnum{
+pub enum TestEnum {
     A,
-    B{c: i32}
+    B { c: i32 },
 }
 
 
@@ -189,7 +223,7 @@ pub enum IoDirection {
     Input = 4,
 }
 #[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
-pub enum IoEnum{
+pub enum IoEnum {
     #[serde(rename="bytesHex")]
     BytesHex(String),
     #[serde(rename="file")]
@@ -197,23 +231,23 @@ pub enum IoEnum{
     #[serde(rename="url")]
     Url(String),
     #[serde(rename="outputBuffer")]
-    OutputBuffer
+    OutputBuffer,
 }
 
 #[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
 
-pub enum IoChecksum{
+pub enum IoChecksum {
     #[serde(rename="djb2Hex")]
-    Djb2Hex(String)
+    Djb2Hex(String),
 }
 
 #[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
-pub struct IoObject{
+pub struct IoObject {
     #[serde(rename="ioId")]
     pub io_id: i32,
     pub direction: IoDirection,
     pub io: IoEnum,
-    pub checksum: Option<IoChecksum>
+    pub checksum: Option<IoChecksum>,
 }
 
 #[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
@@ -221,7 +255,7 @@ pub enum Framewise {
     #[serde(rename="graph")]
     Graph(Graph),
     #[serde(rename="steps")]
-    Steps(Vec<Node>)
+    Steps(Vec<Node>),
 }
 
 #[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
@@ -230,7 +264,7 @@ pub struct Build001_Graph_Recording {
     pub record_frame_images: Option<bool>,
     pub render_last_graph: Option<bool>,
     pub render_graph_versions: Option<bool>,
-    pub render_animated_graph:Option<bool>,
+    pub render_animated_graph: Option<bool>,
 }
 
 #[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
@@ -240,12 +274,12 @@ pub struct Build001Config {
     #[serde(rename="processAllGifFrames")]
     pub process_all_gif_frames: Option<bool>,
     #[serde(rename="graphRecording")]
-    pub graph_recording: Option<Build001_Graph_Recording>
+    pub graph_recording: Option<Build001_Graph_Recording>,
 }
 #[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
 pub struct Build001 {
     #[serde(rename="builderConfig")]
-    pub  builder_config: Option<Build001Config>,
+    pub builder_config: Option<Build001Config>,
     pub io: Vec<IoObject>,
     pub framewise: Framewise,
 }
@@ -259,27 +293,32 @@ fn test_roundtrip() {
 
     let deserialized: Point = serde_json::from_str(&serialized).unwrap();
 
-    assert_eq!(deserialized,  Point { x: 1, y: 2 });
+    assert_eq!(deserialized, Point { x: 1, y: 2 });
 }
 
 
 #[test]
-fn test_decode_node(){
+fn test_decode_node() {
     let text = r#"{"Decode": { "io_id": 1 } }"#;
 
-    let obj : nodes::AnyNode = serde_json::from_str(&text).unwrap();
+    let obj: nodes::AnyNode = serde_json::from_str(&text).unwrap();
 
-    assert_eq!(obj, nodes::AnyNode::Decode(nodes::Decode{ io_id: 1 }));
+    assert_eq!(obj, nodes::AnyNode::Decode(nodes::Decode { io_id: 1 }));
 }
 
 
 #[test]
-fn test_decode_mnode(){
+fn test_decode_mnode() {
     let text = r#"[{"Decode": { "io_id": 1 } }, {"Encode": { "io_id": 2 } }]"#;
 
-    let obj : Vec<MNode> = serde_json::from_str(&text).unwrap();
+    let obj: Vec<MNode> = serde_json::from_str(&text).unwrap();
 
-    assert_eq!(obj, vec![MNode::Decode{ io_id: 1 }, MNode::Encode{ io_id: 2, encoder: None }]);
+    assert_eq!(obj,
+               vec![MNode::Decode { io_id: 1 },
+                    MNode::Encode {
+                        io_id: 2,
+                        encoder: None,
+                    }]);
 }
 
 macro_rules! hashmap {
@@ -291,7 +330,7 @@ macro_rules! hashmap {
 }
 
 #[test]
-fn decode_graph(){
+fn decode_graph() {
     let text = r#"{
         "nodes": {
             "0": {"decode": { "ioId": 1 } },
@@ -303,56 +342,76 @@ fn decode_graph(){
         ]
     }"#;
 
-    let obj : Graph = serde_json::from_str(&text).unwrap();
-    let expected = Graph{
+    let obj: Graph = serde_json::from_str(&text).unwrap();
+    let expected = Graph {
         nodes: hashmap![ "0".to_owned() => Node::Decode{ io_id: 1 },
                          "1".to_owned() => Node::Rotate90
         ],
-        edges: vec![
-            Edge{from: 0, to: 1, kind: EdgeKind::Input}
-        ]
+        edges: vec![Edge {
+                        from: 0,
+                        to: 1,
+                        kind: EdgeKind::Input,
+                    }],
     };
 
     assert_eq!(obj, expected);
 }
 
 #[test]
-fn error_from_string(){
+fn error_from_string() {
     let text = r#"{ "B": { "c": "hi" } }"#;
 
     let val: Result<TestEnum, serde_json::Error> = serde_json::from_str(text);
 
     let (code, line, chr) = match val {
-        Err(e) => match e {
-            serde_json::Error::Syntax(code, line, char) => (code, line, char),
-            _ => { assert!(false); unreachable!()}
-        },
-        _ => { assert!(false); unreachable!()}
+        Err(e) => {
+            match e {
+                serde_json::Error::Syntax(code, line, char) => (code, line, char),
+                _ => {
+                    assert!(false);
+                    unreachable!()
+                }
+            }
+        }
+        _ => {
+            assert!(false);
+            unreachable!()
+        }
     };
 
-    assert_eq!(code, serde_json::ErrorCode::InvalidType(serde::de::Type::Str));
+    assert_eq!(code,
+               serde_json::ErrorCode::InvalidType(serde::de::Type::Str));
     assert_eq!(line, 1);
     assert_eq!(chr, 18);
 }
 
 #[test]
-fn error_from_value(){
+fn error_from_value() {
 
     let text = r#"{ "B": { "c": "hi" } }"#;
 
-    let val:  serde_json::Value = serde_json::from_str(text).unwrap();
+    let val: serde_json::Value = serde_json::from_str(text).unwrap();
 
     let x: Result<TestEnum, serde_json::Error> = serde_json::from_value(val);
 
     let (code, line, chr) = match x {
-        Err(e) => match e {
-            serde_json::Error::Syntax(code, line, char) => (code, line, char),
-            _ => { assert!(false); unreachable!()}
-        },
-        _ => { assert!(false); unreachable!()}
+        Err(e) => {
+            match e {
+                serde_json::Error::Syntax(code, line, char) => (code, line, char),
+                _ => {
+                    assert!(false);
+                    unreachable!()
+                }
+            }
+        }
+        _ => {
+            assert!(false);
+            unreachable!()
+        }
     };
 
-    assert_eq!(code, serde_json::ErrorCode::InvalidType(serde::de::Type::Str));
+    assert_eq!(code,
+               serde_json::ErrorCode::InvalidType(serde::de::Type::Str));
     assert_eq!(line, 0);
     assert_eq!(chr, 0);
     // When parsing from a value, we cannot tell which line or character caused it. I suppose we

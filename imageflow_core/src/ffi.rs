@@ -6,10 +6,10 @@
 //! These aren't to be exposed, but rather to connect to C internals
 
 extern crate libc;
+use std::ascii::AsciiExt;
 use std::ptr;
 
 use std::str::FromStr;
-use std::ascii::AsciiExt;
 
 pub enum Context {}
 
@@ -27,13 +27,13 @@ pub enum IoMode {
     read_seekable = 5, // 1 | 4,
     write_seekable = 6, // 2 | 4,
     read_write_seekable = 15, // 1 | 2 | 4 | 8
-    }
-    #[repr(C)]
-    #[derive(Copy,Clone)]
-    pub enum IoDirection {
-        Out = 8,
-        In = 4,
-    }
+}
+#[repr(C)]
+#[derive(Copy,Clone)]
+pub enum IoDirection {
+    Out = 8,
+    In = 4,
+}
 
 
 #[repr(C)]
@@ -42,7 +42,7 @@ pub enum EdgeKind {
     None = 0,
     Input = 1,
     Canvas = 2,
-    Info = 3
+    Info = 3,
 }
 
 
@@ -239,7 +239,6 @@ pub struct EncoderHints {
 
 #[repr(C)]
 pub struct FlowBitmapBgra {
-
     // bitmap width in pixels
     pub w: u32,
     // bitmap height in pixels
@@ -262,11 +261,11 @@ pub struct FlowBitmapBgra {
     pub fmt: PixelFormat,
     // When using compositing mode blend_with_matte, this color will be used. We should probably define this as always
     // being sRGBA, 4 bytes.
-    pub matte_color: [u8;4],
-    pub compositing_mode: BitmapCompositingMode
+    pub matte_color: [u8; 4],
+    pub compositing_mode: BitmapCompositingMode,
 }
 
-extern {
+extern "C" {
     pub fn flow_context_create() -> *mut Context;
     pub fn flow_context_begin_terminate(context: *mut Context) -> bool;
     pub fn flow_context_destroy(context: *mut Context);
@@ -274,7 +273,7 @@ extern {
     pub fn flow_context_clear_error(context: *mut Context);
     pub fn flow_context_error_and_stacktrace(context: *mut Context,
                                              buffer: *mut u8,
-                                             buffer_length:  libc::size_t,
+                                             buffer_length: libc::size_t,
                                              full_file_path: bool)
                                              -> i64;
     pub fn flow_context_print_and_exit_if_err(context: *mut Context) -> bool;
@@ -282,19 +281,36 @@ extern {
     pub fn flow_context_error_reason(context: *mut Context) -> i32;
 
     pub fn flow_context_raise_error(context: *mut Context,
-                    error_code: i32, message: *const libc::c_char,
-        file: *const libc::c_char, line: i32, function_name: *const libc::c_char) -> bool;
+                                    error_code: i32,
+                                    message: *const libc::c_char,
+                                    file: *const libc::c_char,
+                                    line: i32,
+                                    function_name: *const libc::c_char)
+                                    -> bool;
 
 
     pub fn flow_context_add_to_callstack(context: *mut Context,
-        file: *const libc::c_char, line: i32, function_name: *const libc::c_char) -> bool;
+                                         file: *const libc::c_char,
+                                         line: i32,
+                                         function_name: *const libc::c_char)
+                                         -> bool;
 
 
 
-    pub fn flow_context_calloc(context: *mut Context, instance_count: usize, instance_size: usize, destructor: *const libc::c_void,
-    owner: *const libc::c_void, file: *const libc::c_char, line: i32) -> *mut libc::c_void;
+    pub fn flow_context_calloc(context: *mut Context,
+                               instance_count: usize,
+                               instance_size: usize,
+                               destructor: *const libc::c_void,
+                               owner: *const libc::c_void,
+                               file: *const libc::c_char,
+                               line: i32)
+                               -> *mut libc::c_void;
 
-    pub fn flow_destroy(context: *mut Context, pointer: *const libc::c_void, file: *const libc::uint8_t, line: i32) -> bool;
+    pub fn flow_destroy(context: *mut Context,
+                        pointer: *const libc::c_void,
+                        file: *const libc::uint8_t,
+                        line: i32)
+                        -> bool;
 
     pub fn flow_job_destroy(context: *mut Context, job: *mut Job) -> bool;
 
@@ -305,12 +321,13 @@ extern {
 
 
     pub fn flow_job_configure_recording(context: *mut Context,
-                                    job: *mut Job,
-                                    record_graph_versions: bool,
-                                    record_frame_images: bool,
-                                    render_last_graph: bool,
-                                    render_graph_versions: bool,
-                                    render_animated_graph: bool) -> bool;
+                                        job: *mut Job,
+                                        record_graph_versions: bool,
+                                        record_frame_images: bool,
+                                        render_last_graph: bool,
+                                        render_graph_versions: bool,
+                                        render_animated_graph: bool)
+                                        -> bool;
 
 
 
@@ -379,11 +396,18 @@ extern {
                                        b: f32,
                                        c: f32);
 
-    pub fn flow_bitmap_bgra_test_compare_to_record(c: *mut Context, bitmap: *mut FlowBitmapBgra, storage_name: *const libc::c_char, store_if_missing: bool, off_by_one_byte_differences_permitted: usize, caller_filename: *const libc::c_char, caller_linenumber: i32) -> bool;
+    pub fn flow_bitmap_bgra_test_compare_to_record(c: *mut Context,
+                                                   bitmap: *mut FlowBitmapBgra,
+                                                   storage_name: *const libc::c_char,
+                                                   store_if_missing: bool,
+                                                   off_by_one_byte_differences_permitted: usize,
+                                                   caller_filename: *const libc::c_char,
+                                                   caller_linenumber: i32)
+                                                   -> bool;
 
 
-/// THESE SHOULD BE DELETED AS THEY ARE BEING REWRITTEN IN RUST
-    // Creating and manipulating graphs directly is going away very soon in favor of a JSON string.
+    /// THESE SHOULD BE DELETED AS THEY ARE BEING REWRITTEN IN RUST
+    /// Creating and manipulating graphs directly is going away very soon in favor of a JSON string.
 
     pub fn flow_job_execute(c: *mut Context, job: *mut Job, g: *mut *mut Graph) -> bool;
 
@@ -399,11 +423,11 @@ extern {
 
 
     pub fn flow_edge_create(c: *mut Context,
-                                    g: *mut *mut Graph,
-                                    from: i32,
-                                    to: i32,
-                                    kind: EdgeKind)
-                                    -> i32;
+                            g: *mut *mut Graph,
+                            from: i32,
+                            to: i32,
+                            kind: EdgeKind)
+                            -> i32;
     pub fn flow_node_create_decoder(c: *mut Context,
                                     g: *mut *mut Graph,
                                     prev_node: i32,
@@ -455,7 +479,16 @@ extern {
 
     pub fn flow_node_create_transpose(c: *mut Context, g: *mut *mut Graph, prev_node: i32) -> i32;
 
-    pub fn flow_node_create_primitive_copy_rect_to_canvas(c: *mut Context, g: *mut *mut Graph, prev_node: i32, from_x:u32, from_y: u32, width: u32, height: u32, x: u32, y: u32) -> i32;
+    pub fn flow_node_create_primitive_copy_rect_to_canvas(c: *mut Context,
+                                                          g: *mut *mut Graph,
+                                                          prev_node: i32,
+                                                          from_x: u32,
+                                                          from_y: u32,
+                                                          width: u32,
+                                                          height: u32,
+                                                          x: u32,
+                                                          y: u32)
+                                                          -> i32;
 
     pub fn flow_node_create_encoder(c: *mut Context,
                                     g: *mut *mut Graph,
@@ -484,7 +517,7 @@ extern {
                                            y2: u32)
                                            -> i32;
 
-    ////////////// END HEADERS TO DELETE
+//  /////////// END HEADERS TO DELETE
 
 
 }

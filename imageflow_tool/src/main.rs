@@ -1,4 +1,2 @@
 
-fn main() {
-  
-}
+fn main() {}

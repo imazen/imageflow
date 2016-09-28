@@ -7,12 +7,10 @@
 #include "codecs_jpeg.h"
 #include "fastapprox.h"
 
-
-#define ICC_MARKER  (JPEG_APP0 + 2)	/* JPEG marker code for ICC */
-#define ICC_OVERHEAD_LEN  14		/* size of non-profile data in APP2 */
-#define MAX_BYTES_IN_MARKER  65533	/* maximum data len of a JPEG marker */
-#define MAX_DATA_BYTES_IN_MARKER  (MAX_BYTES_IN_MARKER - ICC_OVERHEAD_LEN)
-
+#define ICC_MARKER (JPEG_APP0 + 2) /* JPEG marker code for ICC */
+#define ICC_OVERHEAD_LEN 14 /* size of non-profile data in APP2 */
+#define MAX_BYTES_IN_MARKER 65533 /* maximum data len of a JPEG marker */
+#define MAX_DATA_BYTES_IN_MARKER (MAX_BYTES_IN_MARKER - ICC_OVERHEAD_LEN)
 
 static uint8_t jpeg_bytes_a[] = { 0xFF, 0xD8, 0xFF, 0xDB };
 static uint8_t jpeg_bytes_b[] = { 0xFF, 0xD8, 0xFF, 0xE0 };
@@ -63,28 +61,17 @@ static void flow_jpeg_output_message(j_common_ptr cinfo)
     fprintf(stderr, "%s", &buffer[0]);
 }
 
-static boolean
-marker_is_icc (jpeg_saved_marker_ptr marker)
+static boolean marker_is_icc(jpeg_saved_marker_ptr marker)
 {
-    return
-        marker->marker == ICC_MARKER &&
-        marker->data_length >= ICC_OVERHEAD_LEN &&
-        /* verify the identifying string */
-        GETJOCTET(marker->data[0]) == 0x49 &&
-        GETJOCTET(marker->data[1]) == 0x43 &&
-        GETJOCTET(marker->data[2]) == 0x43 &&
-        GETJOCTET(marker->data[3]) == 0x5F &&
-        GETJOCTET(marker->data[4]) == 0x50 &&
-        GETJOCTET(marker->data[5]) == 0x52 &&
-        GETJOCTET(marker->data[6]) == 0x4F &&
-        GETJOCTET(marker->data[7]) == 0x46 &&
-        GETJOCTET(marker->data[8]) == 0x49 &&
-        GETJOCTET(marker->data[9]) == 0x4C &&
-        GETJOCTET(marker->data[10]) == 0x45 &&
-        GETJOCTET(marker->data[11]) == 0x0;
+    return marker->marker == ICC_MARKER && marker->data_length >= ICC_OVERHEAD_LEN &&
+           /* verify the identifying string */
+           GETJOCTET(marker->data[0]) == 0x49 && GETJOCTET(marker->data[1]) == 0x43
+           && GETJOCTET(marker->data[2]) == 0x43 && GETJOCTET(marker->data[3]) == 0x5F
+           && GETJOCTET(marker->data[4]) == 0x50 && GETJOCTET(marker->data[5]) == 0x52
+           && GETJOCTET(marker->data[6]) == 0x4F && GETJOCTET(marker->data[7]) == 0x46
+           && GETJOCTET(marker->data[8]) == 0x49 && GETJOCTET(marker->data[9]) == 0x4C
+           && GETJOCTET(marker->data[10]) == 0x45 && GETJOCTET(marker->data[11]) == 0x0;
 }
-
-
 
 /*
  * See if there was an ICC profile in the JPEG file being read;
@@ -105,22 +92,19 @@ marker_is_icc (jpeg_saved_marker_ptr marker)
  * return FALSE.  You might want to issue an error message instead.
  */
 
-static boolean
-read_icc_profile (flow_c * c, j_decompress_ptr cinfo,
-                  JOCTET **icc_data_ptr,
-                  unsigned int *icc_data_len)
+static boolean read_icc_profile(flow_c * c, j_decompress_ptr cinfo, JOCTET ** icc_data_ptr, unsigned int * icc_data_len)
 {
     jpeg_saved_marker_ptr marker;
     int num_markers = 0;
     int seq_no;
-    JOCTET *icc_data;
+    JOCTET * icc_data;
     unsigned int total_length;
-#define MAX_SEQ_NO  255		/* sufficient since marker numbers are bytes */
-    char marker_present[MAX_SEQ_NO+1];	  /* 1 if marker found */
-    unsigned int data_length[MAX_SEQ_NO+1]; /* size of profile data in marker */
-    unsigned int data_offset[MAX_SEQ_NO+1]; /* offset for data in marker */
+#define MAX_SEQ_NO 255 /* sufficient since marker numbers are bytes */
+    char marker_present[MAX_SEQ_NO + 1]; /* 1 if marker found */
+    unsigned int data_length[MAX_SEQ_NO + 1]; /* size of profile data in marker */
+    unsigned int data_offset[MAX_SEQ_NO + 1]; /* offset for data in marker */
 
-    *icc_data_ptr = NULL;		/* avoid confusion if FALSE return */
+    *icc_data_ptr = NULL; /* avoid confusion if FALSE return */
     *icc_data_len = 0;
 
     /* This first pass over the saved markers discovers whether there are
@@ -135,12 +119,12 @@ read_icc_profile (flow_c * c, j_decompress_ptr cinfo,
             if (num_markers == 0)
                 num_markers = GETJOCTET(marker->data[13]);
             else if (num_markers != GETJOCTET(marker->data[13]))
-                return FALSE;		/* inconsistent num_markers fields */
+                return FALSE; /* inconsistent num_markers fields */
             seq_no = GETJOCTET(marker->data[12]);
             if (seq_no <= 0 || seq_no > num_markers)
-                return FALSE;		/* bogus sequence number */
+                return FALSE; /* bogus sequence number */
             if (marker_present[seq_no])
-                return FALSE;		/* duplicate sequence numbers */
+                return FALSE; /* duplicate sequence numbers */
             marker_present[seq_no] = 1;
             data_length[seq_no] = marker->data_length - ICC_OVERHEAD_LEN;
         }
@@ -156,24 +140,24 @@ read_icc_profile (flow_c * c, j_decompress_ptr cinfo,
     total_length = 0;
     for (seq_no = 1; seq_no <= num_markers; seq_no++) {
         if (marker_present[seq_no] == 0)
-            return FALSE;		/* missing sequence number */
+            return FALSE; /* missing sequence number */
         data_offset[seq_no] = total_length;
         total_length += data_length[seq_no];
     }
 
     if (total_length <= 0)
-        return FALSE;		/* found only empty markers? */
+        return FALSE; /* found only empty markers? */
 
     /* Allocate space for assembled data */
-    icc_data = (JOCTET *) FLOW_malloc_owned(c, total_length * sizeof(JOCTET), c);
+    icc_data = (JOCTET *)FLOW_malloc_owned(c, total_length * sizeof(JOCTET), c);
     if (icc_data == NULL)
-        return FALSE;		/* oops, out of memory */
+        return FALSE; /* oops, out of memory */
 
     /* and fill it in */
     for (marker = cinfo->marker_list; marker != NULL; marker = marker->next) {
         if (marker_is_icc(marker)) {
-            JOCTET FAR *src_ptr;
-            JOCTET *dst_ptr;
+            JOCTET FAR * src_ptr;
+            JOCTET * dst_ptr;
             unsigned int length;
             seq_no = GETJOCTET(marker->data[12]);
             dst_ptr = icc_data + data_offset[seq_no];
@@ -190,7 +174,6 @@ read_icc_profile (flow_c * c, j_decompress_ptr cinfo,
 
     return TRUE;
 }
-
 
 /// From http://src.gnu-darwin.org/ports/x11-toolkits/gtk20/work/gtk+-2.12.3/gdk-pixbuf/io-jpeg.c
 
@@ -224,40 +207,35 @@ read_icc_profile (flow_c * c, j_decompress_ptr cinfo,
  * Boston, MA 02111-1307, USA.
  */
 
-
 #define G_LITTLE_ENDIAN 1234
 
-#define G_BIG_ENDIAN    4321
+#define G_BIG_ENDIAN 4321
 
-const char leth[]  = {0x49, 0x49, 0x2a, 0x00};	// Little endian TIFF header
-const char beth[]  = {0x4d, 0x4d, 0x00, 0x2a};	// Big endian TIFF header
-const char types[] = {0x00, 0x01, 0x01, 0x02, 0x04, 0x08, 0x00,
-    0x08, 0x00, 0x04, 0x08}; 	// size in bytes for EXIF types
+const char leth[] = { 0x49, 0x49, 0x2a, 0x00 }; // Little endian TIFF header
+const char beth[] = { 0x4d, 0x4d, 0x00, 0x2a }; // Big endian TIFF header
+const char types[]
+    = { 0x00, 0x01, 0x01, 0x02, 0x04, 0x08, 0x00, 0x08, 0x00, 0x04, 0x08 }; // size in bytes for EXIF types
 
+#define GUINT16_SWAP_LE_BE_CONSTANT(val)                                                                               \
+    ((uint16_t)((uint16_t)((uint16_t)(val) >> 8) | (uint16_t)((uint16_t)(val) << 8)))
 
-#define GUINT16_SWAP_LE_BE_CONSTANT(val)	((uint16_t) ( \
-    (uint16_t) ((uint16_t) (val) >> 8) |	\
-    (uint16_t) ((uint16_t) (val) << 8)))
+#define GUINT32_SWAP_LE_BE_CONSTANT(val)                                                                               \
+    ((uint32_t)((((uint32_t)(val) & (uint32_t)0x000000ffU) << 24) | (((uint32_t)(val) & (uint32_t)0x0000ff00U) << 8)   \
+                | (((uint32_t)(val) & (uint32_t)0x00ff0000U) >> 8)                                                     \
+                | (((uint32_t)(val) & (uint32_t)0xff000000U) >> 24)))
 
-#define GUINT32_SWAP_LE_BE_CONSTANT(val)	((uint32_t) ( \
-    (((uint32_t) (val) & (uint32_t) 0x000000ffU) << 24) | \
-    (((uint32_t) (val) & (uint32_t) 0x0000ff00U) <<  8) | \
-    (((uint32_t) (val) & (uint32_t) 0x00ff0000U) >>  8) | \
-    (((uint32_t) (val) & (uint32_t) 0xff000000U) >> 24)))
+#define GUINT32_SWAP_LE_BE(val) (GUINT32_SWAP_LE_BE_CONSTANT(val))
+#define GUINT16_SWAP_LE_BE(val) (GUINT16_SWAP_LE_BE_CONSTANT(val))
 
-#    define GUINT32_SWAP_LE_BE(val) (GUINT32_SWAP_LE_BE_CONSTANT (val))
-#    define GUINT16_SWAP_LE_BE(val) (GUINT16_SWAP_LE_BE_CONSTANT (val))
+#define GUINT16_TO_LE(val) ((uint16_t)(val))
+#define GUINT16_TO_BE(val) (GUINT16_SWAP_LE_BE(val))
+#define GUINT32_TO_LE(val) ((uint32_t)(val))
+#define GUINT32_TO_BE(val) (GUINT32_SWAP_LE_BE(val))
 
-#define GUINT16_TO_LE(val) ((uint16_t) (val))
-#define GUINT16_TO_BE(val) (GUINT16_SWAP_LE_BE (val))
-#define GUINT32_TO_LE(val) ((uint32_t) (val))
-#define GUINT32_TO_BE(val) (GUINT32_SWAP_LE_BE (val))
-
-#define GUINT16_FROM_LE(val)	(GUINT16_TO_LE (val))
-#define GUINT16_FROM_BE(val)	(GUINT16_TO_BE (val))
-#define GUINT32_FROM_BE(val) (GUINT32_TO_BE (val))
-#define GUINT32_FROM_LE(val) (GUINT32_TO_LE (val))
-
+#define GUINT16_FROM_LE(val) (GUINT16_TO_LE(val))
+#define GUINT16_FROM_BE(val) (GUINT16_TO_BE(val))
+#define GUINT32_FROM_BE(val) (GUINT32_TO_BE(val))
+#define GUINT32_FROM_LE(val) (GUINT32_TO_LE(val))
 
 #define DE_ENDIAN16(val) endian == G_BIG_ENDIAN ? GUINT16_FROM_BE(val) : GUINT16_FROM_LE(val)
 #define DE_ENDIAN32(val) endian == G_BIG_ENDIAN ? GUINT32_FROM_BE(val) : GUINT32_FROM_LE(val)
@@ -265,10 +243,10 @@ const char types[] = {0x00, 0x01, 0x01, 0x02, 0x04, 0x08, 0x00,
 #define ENDIAN16_IT(val) endian == G_BIG_ENDIAN ? GUINT16_TO_BE(val) : GUINT16_TO_LE(val)
 #define ENDIAN32_IT(val) endian == G_BIG_ENDIAN ? GUINT32_TO_BE(val) : GUINT32_TO_LE(val)
 
-#define EXIF_JPEG_MARKER   JPEG_APP0+1
-#define EXIF_IDENT_STRING  "Exif\000\000"
+#define EXIF_JPEG_MARKER JPEG_APP0 + 1
+#define EXIF_IDENT_STRING "Exif\000\000"
 
-static unsigned short de_get16(void *ptr, uint32_t endian)
+static unsigned short de_get16(void * ptr, uint32_t endian)
 {
     unsigned short val;
 
@@ -278,7 +256,7 @@ static unsigned short de_get16(void *ptr, uint32_t endian)
     return val;
 }
 
-static unsigned int de_get32(void *ptr, uint32_t endian)
+static unsigned int de_get32(void * ptr, uint32_t endian)
 {
     unsigned int val;
 
@@ -288,26 +266,24 @@ static unsigned int de_get32(void *ptr, uint32_t endian)
     return val;
 }
 
-
-static int32_t
-get_orientation (j_decompress_ptr cinfo)
+static int32_t get_orientation(j_decompress_ptr cinfo)
 {
     /* This function looks through the meta data in the libjpeg decompress structure to
        determine if an EXIF Orientation tag is present and if so return its value (1-8).
        If no EXIF Orientation tag is found 0 (zero) is returned. */
 
-    uint32_t   i;              /* index into working buffer */
-    uint32_t   orient_tag_id;  /* endianed version of orientation tag ID */
-    uint32_t   ret;            /* Return value */
-    uint32_t   offset;        	/* de-endianed offset in various situations */
-    uint32_t   tags;           /* number of tags in current ifd */
-    uint32_t   type;           /* de-endianed type of tag used as index into types[] */
-    uint32_t   count;          /* de-endianed count of elements in a tag */
-    uint32_t   tiff = 0;   	/* offset to active tiff header */
-    uint32_t   endian = 0;   	/* detected endian of data */
+    uint32_t i; /* index into working buffer */
+    uint32_t orient_tag_id; /* endianed version of orientation tag ID */
+    uint32_t ret; /* Return value */
+    uint32_t offset; /* de-endianed offset in various situations */
+    uint32_t tags; /* number of tags in current ifd */
+    uint32_t type; /* de-endianed type of tag used as index into types[] */
+    uint32_t count; /* de-endianed count of elements in a tag */
+    uint32_t tiff = 0; /* offset to active tiff header */
+    uint32_t endian = 0; /* detected endian of data */
 
-    jpeg_saved_marker_ptr exif_marker;  /* Location of the Exif APP1 marker */
-    jpeg_saved_marker_ptr cmarker;	    /* Location to check for Exif APP1 marker */
+    jpeg_saved_marker_ptr exif_marker; /* Location of the Exif APP1 marker */
+    jpeg_saved_marker_ptr cmarker; /* Location to check for Exif APP1 marker */
 
     /* check for Exif marker (also called the APP1 marker) */
     exif_marker = NULL;
@@ -316,7 +292,7 @@ get_orientation (j_decompress_ptr cinfo)
         if (cmarker->marker == EXIF_JPEG_MARKER) {
             /* The Exif APP1 marker should contain a unique
                identification string ("Exif\0\0"). Check for it. */
-            if (!memcmp (cmarker->data, EXIF_IDENT_STRING, 6)) {
+            if (!memcmp(cmarker->data, EXIF_IDENT_STRING, 6)) {
                 exif_marker = cmarker;
             }
         }
@@ -352,16 +328,16 @@ get_orientation (j_decompress_ptr cinfo)
     while (i < 16) {
 
         /* Little endian TIFF header */
-        if (memcmp (&exif_marker->data[i], leth, 4) == 0){
+        if (memcmp(&exif_marker->data[i], leth, 4) == 0) {
             endian = G_LITTLE_ENDIAN;
         }
 
-            /* Big endian TIFF header */
-        else if (memcmp (&exif_marker->data[i], beth, 4) == 0){
+        /* Big endian TIFF header */
+        else if (memcmp(&exif_marker->data[i], beth, 4) == 0) {
             endian = G_BIG_ENDIAN;
         }
 
-            /* Keep looking through buffer */
+        /* Keep looking through buffer */
         else {
             i++;
             continue;
@@ -379,8 +355,8 @@ get_orientation (j_decompress_ptr cinfo)
     orient_tag_id = ENDIAN16_IT(0x112);
 
     /* Read out the offset pointer to IFD0 */
-    offset  = de_get32(&exif_marker->data[i] + 4, endian);
-    i       = i + offset;
+    offset = de_get32(&exif_marker->data[i] + 4, endian);
+    i = i + offset;
 
     /* Check that we still are within the buffer and can read the tag count */
     if ((i + 2) > exif_marker->data_length)
@@ -388,8 +364,8 @@ get_orientation (j_decompress_ptr cinfo)
 
     /* Find out how many tags we have in IFD0. As per the TIFF spec, the first
        two bytes of the IFD contain a count of the number of tags. */
-    tags    = de_get16(&exif_marker->data[i], endian);
-    i       = i + 2;
+    tags = de_get16(&exif_marker->data[i], endian);
+    i = i + 2;
 
     /* Check that we still have enough data for all tags to check. The tags
        are listed in consecutive 12-byte blocks. The tag ID, type, size, and
@@ -398,20 +374,21 @@ get_orientation (j_decompress_ptr cinfo)
         return 0;
 
     /* Check through IFD0 for tags of interest */
-    while (tags--){
-        type   = de_get16(&exif_marker->data[i + 2], endian);
-        count  = de_get32(&exif_marker->data[i + 4], endian);
+    while (tags--) {
+        type = de_get16(&exif_marker->data[i + 2], endian);
+        count = de_get32(&exif_marker->data[i + 4], endian);
 
         /* Is this the orientation tag? */
-        if (memcmp (&exif_marker->data[i], (char *) &orient_tag_id, 2) == 0){
+        if (memcmp(&exif_marker->data[i], (char *)&orient_tag_id, 2) == 0) {
 
             /* Check that type and count fields are OK. The orientation field
                will consist of a single (count=1) 2-byte integer (type=3). */
-            if (type != 3 || count != 1) return 0;
+            if (type != 3 || count != 1)
+                return 0;
 
             /* Return the orientation value. Within the 12-byte block, the
                pointer to the actual data is at offset 8. */
-            ret =  de_get16(&exif_marker->data[i + 8], endian);
+            ret = de_get16(&exif_marker->data[i + 8], endian);
             return ret <= 8 ? ret : 0;
         }
         /* move the pointer to the next 12-byte tag field. */
@@ -421,16 +398,14 @@ get_orientation (j_decompress_ptr cinfo)
     return 0; /* No EXIF Orientation tag found */
 }
 
-
 //////////////////////////////////////////////////
 ///// END LGPL licensed code ///////////////////
 //////////////////////////////////////////////////
 
+static bool flow_job_jpg_decoder_interpret_metadata(flow_c * c, struct flow_job_jpeg_decoder_state * state)
+{
 
-static bool flow_job_jpg_decoder_interpret_metadata(flow_c * c, struct flow_job_jpeg_decoder_state * state){
-
-
-    //Called twice, avoid repeating work
+    // Called twice, avoid repeating work
 
     JOCTET * icc_buffer;
     unsigned int icc_buffer_len;
@@ -440,16 +415,17 @@ static bool flow_job_jpg_decoder_interpret_metadata(flow_c * c, struct flow_job_
             // One may set, then unset the thread-local logger function to debug
             // cmsSetLogErrorHandlerTHR(cmsContext ContextID, cmsLogErrorHandlerFunction Fn);
             state->color_profile = cmsOpenProfileFromMem(icc_buffer, icc_buffer_len);
-            if (state->color_profile != NULL) state->color_profile_source = flow_codec_color_profile_source_ICCP;
+            if (state->color_profile != NULL)
+                state->color_profile_source = flow_codec_color_profile_source_ICCP;
             FLOW_destroy(c, icc_buffer);
         }
     }
 
-    if (state->exif_orientation == 0){
+    if (state->exif_orientation == 0) {
         state->exif_orientation = get_orientation(state->cinfo);
     }
 
-    //FLOW_error(c, flow_status_Image_decoding_failed);
+    // FLOW_error(c, flow_status_Image_decoding_failed);
     return true;
 }
 
@@ -496,12 +472,11 @@ static bool flow_job_jpg_decoder_BeginRead(flow_c * c, struct flow_job_jpeg_deco
 
     /* Tell the library to keep any APP2 data it may find */
     jpeg_save_markers(state->cinfo, ICC_MARKER, 0xFFFF);
-    jpeg_save_markers (state->cinfo, EXIF_JPEG_MARKER, 0xffff);
+    jpeg_save_markers(state->cinfo, EXIF_JPEG_MARKER, 0xffff);
 
     (void)jpeg_read_header(state->cinfo, TRUE);
 
-
-    if (!flow_job_jpg_decoder_interpret_metadata(c, state)){
+    if (!flow_job_jpg_decoder_interpret_metadata(c, state)) {
         flow_job_jpg_decoder_reset(c, state);
         state->stage = flow_job_jpg_decoder_stage_Failed;
         FLOW_error_return(c);
@@ -562,8 +537,8 @@ static bool flow_job_jpg_decoder_FinishRead(flow_c * c, struct flow_job_jpeg_dec
         return false;
     }
 
-    state->pixel_buffer_row_pointers
-        = flow_bitmap_create_row_pointers(c, state->pixel_buffer, state->pixel_buffer_size, state->row_stride, state->h);
+    state->pixel_buffer_row_pointers = flow_bitmap_create_row_pointers(c, state->pixel_buffer, state->pixel_buffer_size,
+                                                                       state->row_stride, state->h);
     if (state->pixel_buffer_row_pointers == NULL) {
         flow_job_jpg_decoder_reset(c, state);
         state->stage = flow_job_jpg_decoder_stage_Failed;
@@ -590,14 +565,13 @@ static bool flow_job_jpg_decoder_FinishRead(flow_c * c, struct flow_job_jpeg_dec
         return false;
     }
 
-    //We must read the markers before jpeg_finish_decompress destroys them
+    // We must read the markers before jpeg_finish_decompress destroys them
 
-    if (!flow_job_jpg_decoder_interpret_metadata(c, state)){
+    if (!flow_job_jpg_decoder_interpret_metadata(c, state)) {
         flow_job_jpg_decoder_reset(c, state);
         state->stage = flow_job_jpg_decoder_stage_Failed;
         FLOW_error_return(c);
     }
-
 
     /* Step 7: Finish decompression */
 
@@ -651,8 +625,6 @@ static bool flow_job_jpg_decoder_FinishRead(flow_c * c, struct flow_job_jpeg_dec
     //        }
     //    }
 
-
-
     jpeg_destroy_decompress(state->cinfo);
     FLOW_free(c, state->cinfo);
     state->cinfo = NULL;
@@ -661,17 +633,19 @@ static bool flow_job_jpg_decoder_FinishRead(flow_c * c, struct flow_job_jpeg_dec
         FLOW_error_return(c);
     }
 
-
     return true;
 }
 
 int32_t flow_job_jpg_decoder_get_exif(flow_c * c, struct flow_codec_instance * codec_instance);
 
-int32_t flow_job_jpg_decoder_get_exif(flow_c * c, struct flow_codec_instance * codec_instance){
-    if (codec_instance == NULL || codec_instance->codec_state == NULL || codec_instance->codec_id!= flow_codec_type_decode_jpeg){
+int32_t flow_job_jpg_decoder_get_exif(flow_c * c, struct flow_codec_instance * codec_instance)
+{
+    if (codec_instance == NULL || codec_instance->codec_state == NULL
+        || codec_instance->codec_id != flow_codec_type_decode_jpeg) {
         return -1;
     }
-    struct flow_job_jpeg_decoder_state * inner_state  = (struct flow_job_jpeg_decoder_state *) codec_instance->codec_state;
+    struct flow_job_jpeg_decoder_state * inner_state
+        = (struct flow_job_jpeg_decoder_state *)codec_instance->codec_state;
     return inner_state->exif_orientation;
 }
 
@@ -1019,8 +993,8 @@ static bool flow_job_codecs_jpeg_write_frame(flow_c * c, struct flow_job * job, 
 
     jpeg_start_compress(&state->cinfo, TRUE);
 
-    uint8_t ** rows = flow_bitmap_create_row_pointers(c, frame->pixels, frame->stride * frame->h, frame->stride,
-                                                      frame->h);
+    uint8_t ** rows
+        = flow_bitmap_create_row_pointers(c, frame->pixels, frame->stride * frame->h, frame->stride, frame->h);
     if (rows == NULL) {
         FLOW_add_to_callstack(c);
         jpeg_destroy_compress(&state->cinfo);

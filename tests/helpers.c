@@ -391,18 +391,21 @@ struct flow_io * get_io_for_cached_url(flow_c * c, const char * url, void * owne
     return input;
 }
 
-
-bool flow_compare_file_contents(flow_c * c, const char * filename1, const char * filename2, char *difference_message_buffer, size_t buffer_size, bool * are_equal){
-    FILE *fp1, *fp2;
+bool flow_compare_file_contents(flow_c * c, const char * filename1, const char * filename2,
+                                char * difference_message_buffer, size_t buffer_size, bool * are_equal)
+{
+    FILE * fp1, *fp2;
 
     if ((fp1 = fopen(filename1, "r")) == NULL) {
-        if (difference_message_buffer != NULL) flow_snprintf(difference_message_buffer, buffer_size, "Unable to open file A (%s)", filename1);
+        if (difference_message_buffer != NULL)
+            flow_snprintf(difference_message_buffer, buffer_size, "Unable to open file A (%s)", filename1);
         *are_equal = false;
         return true;
     }
 
     if ((fp2 = fopen(filename2, "r")) == NULL) {
-        if (difference_message_buffer != NULL) flow_snprintf(difference_message_buffer, buffer_size, "Unable to open file B (%s)", filename2);
+        if (difference_message_buffer != NULL)
+            flow_snprintf(difference_message_buffer, buffer_size, "Unable to open file B (%s)", filename2);
         *are_equal = false;
         return true;
     }
@@ -415,28 +418,33 @@ bool flow_compare_file_contents(flow_c * c, const char * filename1, const char *
         do {
             f1 = getc(fp1);
             byte_ix++;
-        }while (f1 == 13); //Ignore carriage returns
+        } while (f1 == 13); // Ignore carriage returns
 
         do {
             f2 = getc(fp2);
-        }while (f2 == 13); //Ignore carriage returns
+        } while (f2 == 13); // Ignore carriage returns
 
-        if ((f1 == EOF) ^ (f2 == EOF)){
-            //Only one of the files ended
+        if ((f1 == EOF) ^ (f2 == EOF)) {
+            // Only one of the files ended
             mismatch = true;
 
-            if (difference_message_buffer != NULL) flow_snprintf(difference_message_buffer, buffer_size, "Files are of different lengths: reached EOF at byte %d in %s first.", byte_ix, f1 == EOF ? filename1 : filename2);
+            if (difference_message_buffer != NULL)
+                flow_snprintf(difference_message_buffer, buffer_size,
+                              "Files are of different lengths: reached EOF at byte %d in %s first.", byte_ix,
+                              f1 == EOF ? filename1 : filename2);
             break;
         }
 
-        if (f1 == EOF){
+        if (f1 == EOF) {
             break;
         }
 
         if (f1 != f2) {
             mismatch = true;
 
-            if (difference_message_buffer != NULL) flow_snprintf(difference_message_buffer, buffer_size, "Files differ at byte %d: %d vs %d", byte_ix, f1, f2);
+            if (difference_message_buffer != NULL)
+                flow_snprintf(difference_message_buffer, buffer_size, "Files differ at byte %d: %d vs %d", byte_ix, f1,
+                              f2);
             break;
         }
     }

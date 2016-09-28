@@ -16,7 +16,7 @@ bool test_contrib_windows(flow_c * context, char * msg)
 
     // assumes included edge cases
 
-    struct flow_interpolation_details *triangle = flow_interpolation_details_create_from(
+    struct flow_interpolation_details * triangle = flow_interpolation_details_create_from(
         context, flow_interpolation_filter::flow_interpolation_filter_Triangle);
 
     unsigned int from_w = 6;
@@ -121,8 +121,7 @@ bool test_details(flow_c * context, struct flow_interpolation_details * details,
     flow_snprintf(sub_msg, 1024, "should end at expected_end (%f)", expected_end);
 
     // Ensure ended at expected_end
-    if (!function_bounded_bi(context, details, msg, expected_end, expected_end + 1, 0.05, -0.0001f, 0.0001f,
-                             sub_msg))
+    if (!function_bounded_bi(context, details, msg, expected_end, expected_end + 1, 0.05, -0.0001f, 0.0001f, sub_msg))
         return false;
 
     if (expected_first_crossing != 0 && expected_second_crossing != 0) {
@@ -134,7 +133,8 @@ bool test_details(flow_c * context, struct flow_interpolation_details * details,
         // Ensure everything between second crossing and end is positive - if significant
         if (expected_end > expected_second_crossing + 0.1) {
 
-            flow_snprintf(sub_msg, 1024, "should be positive between crossing 2 (%f) and end (%f)", expected_second_crossing, expected_end);
+            flow_snprintf(sub_msg, 1024, "should be positive between crossing 2 (%f) and end (%f)",
+                          expected_second_crossing, expected_end);
             if (!function_bounded_bi(context, details, msg, expected_second_crossing + 0.05, expected_end - 0.02, 0.02,
                                      0, 500, sub_msg))
                 return false;

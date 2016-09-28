@@ -114,7 +114,7 @@ TEST_CASE("Verify that graph remains valid, free of orphaned edges, after flow_n
     flow_context_destroy(c);
 }
 
-//Port priority 0
+// Port priority 0
 
 TEST_CASE("Verify flow_edge_duplicate preserves from/to indicies", "")
 {
@@ -228,7 +228,7 @@ TEST_CASE("Decode and scale a PNG image; bitamp result width should be correct",
     flow_context_destroy(c);
 }
 
-//Port priority 2
+// Port priority 2
 TEST_CASE("Test reading from memory, writing to file (test flow_io through job)", "")
 {
     flow_c * c = flow_context_create();
@@ -310,7 +310,6 @@ TEST_CASE("Test reading from memory, writing to file (test flow_io through job)"
     flow_context_destroy(c);
 }
 
-
 // Port priority 2
 TEST_CASE("Decode/scale/flip/crop/encode PNG (smoke test)", "")
 {
@@ -354,7 +353,7 @@ TEST_CASE("Decode GIF frame, scale, encode as PNG", "")
     flow_context_destroy(c);
 }
 
-//Don't port. Specific to libgif bugs
+// Don't port. Specific to libgif bugs
 TEST_CASE("read gif overlapped", "")
 {
     flow_context * c = flow_context_create();
@@ -460,7 +459,6 @@ TEST_CASE("scale and flip and crop and encode jpg", "")
     flow_context_destroy(c);
 }
 
-
 // Port priority 1
 TEST_CASE("Roundtrip flipping both horizontal and vertical", "")
 {
@@ -495,7 +493,7 @@ TEST_CASE("Roundtrip flipping both horizontal and vertical", "")
     flow_context_destroy(c);
 }
 
-//Port priority 1
+// Port priority 1
 TEST_CASE("copy_rect_to_canvas (smoke test)", "")
 {
     flow_c * c = flow_context_create();
@@ -519,7 +517,7 @@ TEST_CASE("copy_rect_to_canvas (smoke test)", "")
     flow_context_destroy(c);
 }
 
-//Port priority 2
+// Port priority 2
 TEST_CASE("Test graph with 3 nodes pulling from decoder (smoke test)", "")
 {
     // This test case helped expose a flaw in graph creation, where we swapped max_edges and max_nodes and caused memory
@@ -547,7 +545,7 @@ TEST_CASE("Test graph with 3 nodes pulling from decoder (smoke test)", "")
     flow_context_destroy(c);
 }
 
-//Port priority 0: petgraph probably already covers this
+// Port priority 0: petgraph probably already covers this
 TEST_CASE("Verify cycles are caught with and without tangents", "")
 {
 
@@ -573,8 +571,10 @@ TEST_CASE("Verify cycles are caught with and without tangents", "")
     flow_context_destroy(c);
 }
 
-//Port priority 2
-TEST_CASE("Verify origin nodes (like decoders) are prevented from having inputs; encoder nodes can't have more than 1 input", "")
+// Port priority 2
+TEST_CASE(
+    "Verify origin nodes (like decoders) are prevented from having inputs; encoder nodes can't have more than 1 input",
+    "")
 {
     flow_c * c = flow_context_create();
     struct flow_graph * g = flow_graph_create(c, 10, 10, 200, 2.0);

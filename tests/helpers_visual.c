@@ -1,12 +1,12 @@
 #include "helpers_visual.h"
 
-bool flow_bitmap_bgra_test_compare_to_record(flow_c * c, struct flow_bitmap_bgra * bitmap, const char * storage_name, bool store_if_missing,
-                    size_t off_by_one_byte_differences_permitted, const char * caller_filename, int caller_linenumber)
+bool flow_bitmap_bgra_test_compare_to_record(flow_c * c, struct flow_bitmap_bgra * bitmap, const char * storage_name,
+                                             bool store_if_missing, size_t off_by_one_byte_differences_permitted,
+                                             const char * caller_filename, int caller_linenumber)
 {
     return visual_compare(c, bitmap, storage_name, store_if_missing, off_by_one_byte_differences_permitted,
                           caller_filename, NULL, caller_linenumber);
 }
-
 
 struct named_checksum {
     char * name;
@@ -281,8 +281,8 @@ bool load_image(flow_c * c, char * checksum, struct flow_bitmap_bgra ** ref, voi
         return false;
     }
 
-    //load PNG
-    if (!flow_bitmap_bgra_load_png(c, ref, filename)){
+    // load PNG
+    if (!flow_bitmap_bgra_load_png(c, ref, filename)) {
         FLOW_add_to_callstack(c);
         return false;
     }
@@ -446,8 +446,8 @@ bool visual_compare(flow_c * c, struct flow_bitmap_bgra * bitmap, const char * n
     if (!save_bitmap_to_visuals(c, bitmap, checksum, "current")) {
         FLOW_error_return(c);
     }
-    if (stored_checksum == NULL && store_checksums){
-        //Don't fail the test for an non-stored checksum. We may be trying to commit several new checksums
+    if (stored_checksum == NULL && store_checksums) {
+        // Don't fail the test for an non-stored checksum. We may be trying to commit several new checksums
         return true;
     }
 
@@ -463,7 +463,7 @@ bool visual_compare(flow_c * c, struct flow_bitmap_bgra * bitmap, const char * n
             FLOW_error_return(c);
         }
         size_t differences;
-        size_t differences_to_print = 0; //100
+        size_t differences_to_print = 0; // 100
         size_t total_delta;
         if (!diff_image_pixels(c, old, bitmap, &differences, &total_delta, 0,
                                off_by_one_byte_differences_permitted + 4096)) {

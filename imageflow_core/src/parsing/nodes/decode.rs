@@ -3,15 +3,16 @@ extern crate json;
 
 
 #[test]
-fn test_parse_decode(){
+fn test_parse_decode() {
     let parsed = json::parse(r#"
         { "type": "decode",
           "io_id": 0
           }
 
-        "#).unwrap();
+        "#)
+        .unwrap();
 
-      let instantiated = object!{
+    let instantiated = object!{
             "type" => "decode",
             "io_id" => 0
         };

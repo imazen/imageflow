@@ -112,8 +112,6 @@ bool flow_job_add_io(flow_c * c, struct flow_job * job, struct flow_io * io, int
     return true;
 }
 
-
-
 struct flow_codec_instance * flow_job_get_codec_instance(flow_c * c, struct flow_job * job, int32_t by_placeholder_id)
 {
     struct flow_codec_instance * current = job->codecs_head;

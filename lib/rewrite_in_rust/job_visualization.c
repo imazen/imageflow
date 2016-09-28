@@ -3,7 +3,6 @@
 // Responsible for writing frames to disk as rendering happens
 // Responsible for writing new versions of the graph to disk as it mutates and node states change
 
-
 static bool files_identical(flow_c * c, const char * path1, const char * path2, bool * identical)
 {
     FILE * fp1 = fopen(path1, "r");

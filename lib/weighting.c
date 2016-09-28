@@ -260,21 +260,19 @@ InterpolationDetails_create_from_internal(flow_c * context, flow_interpolation_f
         case flow_interpolation_filter_CatmullRomFastSharp:
             return ex ? truePtr : flow_interpolation_details_create_bicubic_custom(context, 1, 13.0 / 16.0, 0, 0.5);
         case flow_interpolation_filter_Mitchell:
-            return ex ? truePtr
-                      : flow_interpolation_details_create_bicubic_custom(context, 2, 1, 1.0 / 3.0, 1.0 / 3.0);
+            return ex ? truePtr : flow_interpolation_details_create_bicubic_custom(context, 2, 1, 1.0 / 3.0, 1.0 / 3.0);
         case flow_interpolation_filter_MitchellFast:
-            return ex ? truePtr
-                      : flow_interpolation_details_create_bicubic_custom(context, 1, 1, 1.0 / 3.0, 1.0 / 3.0);
+            return ex ? truePtr : flow_interpolation_details_create_bicubic_custom(context, 1, 1, 1.0 / 3.0, 1.0 / 3.0);
 
         case flow_interpolation_filter_NCubic:
             return ex ? truePtr : flow_interpolation_details_create_bicubic_custom(
-                context, 2.5, 1. / 1.1685777620836932, 0.37821575509399867, 0.31089212245300067);
+                                      context, 2.5, 1. / 1.1685777620836932, 0.37821575509399867, 0.31089212245300067);
         case flow_interpolation_filter_NCubicSharp:
             return ex ? truePtr : flow_interpolation_details_create_bicubic_custom(
-                context, 2.5, 1. / 1.105822933719019, 0.2620145123990142, 0.3689927438004929);
+                                      context, 2.5, 1. / 1.105822933719019, 0.2620145123990142, 0.3689927438004929);
         case flow_interpolation_filter_Robidoux:
-            return ex ? truePtr : flow_interpolation_details_create_bicubic_custom(
-                                      context, 2, 1, 0.37821575509399867, 0.31089212245300067);
+            return ex ? truePtr : flow_interpolation_details_create_bicubic_custom(context, 2, 1, 0.37821575509399867,
+                                                                                   0.31089212245300067);
         case flow_interpolation_filter_Fastest:
             return ex ? truePtr : flow_interpolation_details_create_bicubic_custom(
                                       context, 0.74, 0.74, 0.37821575509399867, 0.31089212245300067);
@@ -283,8 +281,8 @@ InterpolationDetails_create_from_internal(flow_c * context, flow_interpolation_f
             return ex ? truePtr : flow_interpolation_details_create_bicubic_custom(
                                       context, 1.05, 1, 0.37821575509399867, 0.31089212245300067);
         case flow_interpolation_filter_RobidouxSharp:
-            return ex ? truePtr : flow_interpolation_details_create_bicubic_custom(
-                                      context, 2, 1, 0.2620145123990142, 0.3689927438004929);
+            return ex ? truePtr : flow_interpolation_details_create_bicubic_custom(context, 2, 1, 0.2620145123990142,
+                                                                                   0.3689927438004929);
         case flow_interpolation_filter_Hermite:
             return ex ? truePtr : flow_interpolation_details_create_bicubic_custom(context, 1, 1, 0, 0);
         case flow_interpolation_filter_Box:
@@ -298,8 +296,7 @@ InterpolationDetails_create_from_internal(flow_c * context, flow_interpolation_f
                       : flow_interpolation_details_create_custom(context, 3, 0.9812505644269356, filter_ginseng);
 
         case flow_interpolation_filter_Jinc:
-            return ex ? truePtr
-                      : flow_interpolation_details_create_custom(context, 6, 1.0, filter_jinc);
+            return ex ? truePtr : flow_interpolation_details_create_custom(context, 6, 1.0, filter_jinc);
     }
     if (!checkExistenceOnly) {
         FLOW_error_msg(context, flow_status_Invalid_argument, "Invalid interpolation filter %d", (int)filter);
@@ -417,7 +414,7 @@ flow_interpolation_line_contributions_create(flow_c * context, const uint32_t ou
             int tx = ix - left_src_pixel;
             // int tx = min(max(ix, left_src_pixel), right_src_pixel) - left_src_pixel;
             double add = (*details->filter)(details, downscale_factor *((double)ix - center_src_pixel));
-            if (fabs(add) <= 0.00000002){
+            if (fabs(add) <= 0.00000002) {
                 add = 0.0;
                 // Weights below a certain threshold make consistent x-plat
                 // integration test results impossible. pos/neg zero, etc.
@@ -425,16 +422,16 @@ flow_interpolation_line_contributions_create(flow_c * context, const uint32_t ou
             }
             weights[tx] = (float)add;
             total_weight += add;
-            total_negative_weight -= fmin(0,add);
+            total_negative_weight -= fmin(0, add);
         }
 
         float neg_factor, pos_factor;
-        if (total_weight <= 0 || desired_sharpen_ratio > sharpen_ratio){
+        if (total_weight <= 0 || desired_sharpen_ratio > sharpen_ratio) {
             float total_positive_weight = total_weight + total_negative_weight;
             float target_negative_weight = desired_sharpen_ratio * total_positive_weight;
             pos_factor = 1;
             neg_factor = target_negative_weight / total_negative_weight;
-        }else{
+        } else {
             neg_factor = pos_factor = (float)(1.0f / total_weight);
         }
         for (ix = 0; ix < source_pixel_count; ix++) {
@@ -447,16 +444,18 @@ flow_interpolation_line_contributions_create(flow_c * context, const uint32_t ou
             }
         }
 
-        //Shrink to improve perf & result consistency
+        // Shrink to improve perf & result consistency
         int32_t iix;
-        //Shrink region from the right
-        for (iix = source_pixel_count - 1; iix >= 0; iix--){
-            if (weights[iix] != 0) break;
+        // Shrink region from the right
+        for (iix = source_pixel_count - 1; iix >= 0; iix--) {
+            if (weights[iix] != 0)
+                break;
             res->ContribRow[u].Right--;
         }
-        //Shrink region from the left
-        for (iix = 0; iix < (int32_t)source_pixel_count; iix++){
-            if (weights[0] != 0) break;
+        // Shrink region from the left
+        for (iix = 0; iix < (int32_t)source_pixel_count; iix++) {
+            if (weights[0] != 0)
+                break;
             res->ContribRow[u].Weights++;
             weights++;
             res->ContribRow[u].Left++;

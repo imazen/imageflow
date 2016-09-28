@@ -9,11 +9,11 @@ extern crate imageflow_core;
 use imageflow_core::boring::*;
 
 use imageflow_core::ffi::{Filter, TESTED_FILTER_OPTIONS};
-use std::path::{PathBuf, Path};
 #[cfg(test)]
 use std::fs::File;
 #[cfg(test)]
 use std::io::Write;
+use std::path::{PathBuf, Path};
 // TODO
 // Disclaim use for jpeg optimization
 // Disclaim use for png or gif files

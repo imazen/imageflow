@@ -1,6 +1,5 @@
 #include "imageflow_private.h"
 
-
 uint8_t ** flow_bitmap_create_row_pointers(flow_c * c, void * buffer, size_t buffer_size, size_t stride, size_t height)
 {
     if (buffer_size < stride * height) {
@@ -18,7 +17,6 @@ uint8_t ** flow_bitmap_create_row_pointers(flow_c * c, void * buffer, size_t buf
     }
     return rows;
 }
-
 
 bool flow_bitmap_bgra_save_png(flow_c * c, struct flow_bitmap_bgra * b, const char * path)
 {
@@ -42,8 +40,8 @@ bool flow_bitmap_bgra_save_png(flow_c * c, struct flow_bitmap_bgra * b, const ch
     return true;
 }
 
-
-static bool flow_bitmap_bgra_load_png_fileptr(flow_c * c, struct flow_bitmap_bgra ** b_ref, FILE * file){
+static bool flow_bitmap_bgra_load_png_fileptr(flow_c * c, struct flow_bitmap_bgra ** b_ref, FILE * file)
+{
 
     png_structp png_ptr;
     png_infop info_ptr;
@@ -51,7 +49,6 @@ static bool flow_bitmap_bgra_load_png_fileptr(flow_c * c, struct flow_bitmap_bgr
     uint32_t h;
     int color_type, bit_depth;
     png_bytepp pixel_buffer_row_pointers;
-
 
     png_ptr = png_create_read_struct(PNG_LIBPNG_VER_STRING, NULL, NULL, NULL);
     if (png_ptr == NULL) {
@@ -62,7 +59,7 @@ static bool flow_bitmap_bgra_load_png_fileptr(flow_c * c, struct flow_bitmap_bgr
     info_ptr = png_create_info_struct(png_ptr);
     if (info_ptr == NULL) {
         FLOW_error(c, flow_status_Out_of_memory);
-        //TODO free png_ptr
+        // TODO free png_ptr
         return false;
     }
     png_init_io(png_ptr, file);
@@ -72,7 +69,6 @@ static bool flow_bitmap_bgra_load_png_fileptr(flow_c * c, struct flow_bitmap_bgr
 
     // Get dimensions and info
     png_get_IHDR(png_ptr, info_ptr, &w, &h, &bit_depth, &color_type, NULL, NULL, NULL);
-
 
     // Now we need to figure out how big our pixel buffer needs to be to hold the entire image.
     // We need to apply some normalization filters so we have fewer variants.
@@ -106,7 +102,7 @@ static bool flow_bitmap_bgra_load_png_fileptr(flow_c * c, struct flow_bitmap_bgr
     // NOT USED: rowbytes = png_get_rowbytes(png_ptr, info_ptr);
 
     if (png_get_channels(png_ptr, info_ptr) != 4) {
-        //TODO: free png_ptr, png_info
+        // TODO: free png_ptr, png_info
         FLOW_error(c, flow_status_Invalid_internal_state);
         return false; // Should always be 4
     }
@@ -117,7 +113,7 @@ static bool flow_bitmap_bgra_load_png_fileptr(flow_c * c, struct flow_bitmap_bgr
     pixel_buffer_row_pointers
         = flow_bitmap_create_row_pointers(c, canvas->pixels, canvas->h * canvas->stride, canvas->stride, h);
     if (pixel_buffer_row_pointers == NULL) {
-        //TODO: free memory
+        // TODO: free memory
         FLOW_error_return(c);
     }
     // The real work
@@ -131,16 +127,15 @@ static bool flow_bitmap_bgra_load_png_fileptr(flow_c * c, struct flow_bitmap_bgr
     *b_ref = canvas;
 
     return true;
-
 }
 bool flow_bitmap_bgra_load_png(flow_c * c, struct flow_bitmap_bgra ** b_ref, const char * path)
 {
     FILE * f = fopen(path, "rb");
-    if (f == NULL){
+    if (f == NULL) {
         FLOW_error(c, flow_status_IO_error);
         return false;
     }
-    if (!flow_bitmap_bgra_load_png_fileptr(c, b_ref, f)){
+    if (!flow_bitmap_bgra_load_png_fileptr(c, b_ref, f)) {
         fclose(f);
         FLOW_error_return(c);
     }

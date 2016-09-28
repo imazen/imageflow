@@ -32,7 +32,6 @@ bool flow_job_link_codecs(flow_c * c, struct flow_job * job, struct flow_graph *
     return true;
 }
 
-
 bool flow_job_execute(flow_c * c, struct flow_job * job, struct flow_graph ** graph_ref)
 {
     if (!flow_job_notify_graph_changed(c, job, *graph_ref)) {

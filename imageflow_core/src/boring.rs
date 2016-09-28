@@ -1,18 +1,19 @@
 // Boring, because we're not doing any kind of op graph, just a static list of configurable ops.
+
 use ffi::*;
 use std::ffi::*;
 use std::fs::File;
+use std::io::Read;
 use std::mem;
 use std::ptr;
-use std::io::Read;
 extern crate libc;
 extern crate threadpool;
 extern crate serde;
 extern crate serde_json;
 extern crate time;
 use std::path::PathBuf;
-use std::sync::mpsc::channel;
 use std::str::FromStr;
+use std::sync::mpsc::channel;
 
 
 #[derive(Copy,Clone, Debug)]
@@ -340,17 +341,17 @@ pub fn process_image<F, C, R>(commands: BoringCommands,
 
         match commands.fit {
             ConstraintMode::Max => {
-                if info.frame0_width > commands.w || info.frame0_height > commands.h{
-                  if constraint_ratio > natural_ratio {
-                      final_h = commands.h as usize;
-                      final_w = (commands.h as f32 * natural_ratio).round() as usize;
-                  } else {
-                      final_w = commands.w as usize;
-                      final_h = (commands.w as f32 / natural_ratio).round() as usize;
-                  }
-                }else{
-                  final_w = info.frame0_width as usize;
-                  final_h = info.frame0_height as usize;
+                if info.frame0_width > commands.w || info.frame0_height > commands.h {
+                    if constraint_ratio > natural_ratio {
+                        final_h = commands.h as usize;
+                        final_w = (commands.h as f32 * natural_ratio).round() as usize;
+                    } else {
+                        final_w = commands.w as usize;
+                        final_h = (commands.w as f32 / natural_ratio).round() as usize;
+                    }
+                } else {
+                    final_w = info.frame0_width as usize;
+                    final_h = info.frame0_height as usize;
                 }
             }
             ConstraintMode::Distort => {

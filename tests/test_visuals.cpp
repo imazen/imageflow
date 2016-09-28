@@ -74,7 +74,6 @@ TEST_CASE("Test scale image", "")
     flow_context_destroy(c);
 }
 
-
 TEST_CASE("Test jpeg color profile (ICC2) support", "")
 {
 
@@ -105,13 +104,11 @@ TEST_CASE("Test jpeg color profile (ICC2) support", "")
         ERR(c);
     }
 
-    REQUIRE(visual_compare(c, b, "MarsRGB_ICC_Scaled400300", store_checksums, 500, __FILE__, __func__, __LINE__) == true);
+    REQUIRE(visual_compare(c, b, "MarsRGB_ICC_Scaled400300", store_checksums, 500, __FILE__, __func__, __LINE__)
+            == true);
     ERR(c);
     flow_context_destroy(c);
 }
-
-
-
 
 TEST_CASE("Test jpeg color profile (ICC4) support", "")
 {
@@ -143,7 +140,8 @@ TEST_CASE("Test jpeg color profile (ICC4) support", "")
         ERR(c);
     }
 
-    REQUIRE(visual_compare(c, b, "MarsRGB_ICCv4_Scaled400300_INCORRECT_TOO_PINK", store_checksums, 500, __FILE__, __func__, __LINE__) == true);
+    REQUIRE(visual_compare(c, b, "MarsRGB_ICCv4_Scaled400300_INCORRECT_TOO_PINK", store_checksums, 500, __FILE__,
+                           __func__, __LINE__) == true);
     ERR(c);
     flow_context_destroy(c);
 }
@@ -159,25 +157,24 @@ TEST_CASE("Test jpeg rotation", "")
     char expected_checksum_name[100];
     for (int32_t mode_ix = 0; mode_ix < 2; mode_ix++) {
         for (int32_t flag = 1; flag < 9; flag++) {
-            snprintf(&url[0], sizeof(url), "http://s3-us-west-2.amazonaws.com/imageflow-resources/test_inputs/orientation/%s_%d.jpg",
+            snprintf(&url[0], sizeof(url),
+                     "http://s3-us-west-2.amazonaws.com/imageflow-resources/test_inputs/orientation/%s_%d.jpg",
                      &modes[mode_ix][0], flag);
             snprintf(&expected_checksum_name[0], sizeof(expected_checksum_name), "Test_Apply_Orientation_%s_%d.jpg",
                      &modes[mode_ix][0], flag);
 
             flow_c * c = flow_context_create();
 
-
             size_t bytes_count = 0;
-            uint8_t * bytes = get_bytes_cached(
-                c, &bytes_count, &url[0]);
+            uint8_t * bytes = get_bytes_cached(c, &bytes_count, &url[0]);
 
             struct flow_job * job = flow_job_create(c);
             ERR(c);
 
-            //flow_job_configure_recording(c, job, true,true,true,false,false);
+            // flow_job_configure_recording(c, job, true,true,true,false,false);
             int32_t input_placeholder = 0;
-            struct flow_io * input = flow_io_create_from_memory(c, flow_io_mode_read_seekable, bytes, bytes_count, job,
-                                                                NULL);
+            struct flow_io * input
+                = flow_io_create_from_memory(c, flow_io_mode_read_seekable, bytes, bytes_count, job, NULL);
             flow_job_add_io(c, job, input, input_placeholder, FLOW_INPUT);
 
             struct flow_graph * g = flow_graph_create(c, 10, 10, 200, 2.0);
@@ -193,18 +190,13 @@ TEST_CASE("Test jpeg rotation", "")
             }
 
             CAPTURE(&expected_checksum_name[0]);
-            REQUIRE(visual_compare(c, b, &expected_checksum_name[0], store_checksums, 500, __FILE__,
-                                   __func__, __LINE__) == true);
+            REQUIRE(visual_compare(c, b, &expected_checksum_name[0], store_checksums, 500, __FILE__, __func__, __LINE__)
+                    == true);
             ERR(c);
             flow_context_destroy(c);
         }
     }
 }
-
-
-
-
-
 
 TEST_CASE("Test spatial IDCT downscale in linear light", "")
 {
@@ -340,14 +332,13 @@ TEST_CASE("Test blurring", "")
     flow_context_destroy(c);
 }
 
-
 TEST_CASE("Test scale rings", "")
 {
 
     flow_c * c = flow_context_create();
     size_t bytes_count = 0;
-    uint8_t * bytes = get_bytes_cached(
-        c, &bytes_count, "http://s3-us-west-2.amazonaws.com/imageflow-resources/test_inputs/rings2.png");
+    uint8_t * bytes = get_bytes_cached(c, &bytes_count,
+                                       "http://s3-us-west-2.amazonaws.com/imageflow-resources/test_inputs/rings2.png");
     REQUIRE(djb2_buffer(bytes, bytes_count) == 0x10af96849915728b); // Test the checksum. I/O can be flaky
 
     struct flow_job * job = flow_job_create(c);
