@@ -1,5 +1,6 @@
 #include "catch.hpp"
 #include "helpers_visual.h"
+#include "rewrite_in_rust/rewrite_in_rust.h"
 
 // Uncomment to store new checksums. To replace them, you'll have to hand-edit visuals/checksums.list yourself and
 // delete the old entry.

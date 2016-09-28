@@ -1,4 +1,5 @@
 #pragma once
+#define PUB FLOW_EXPORT
 
 #ifdef __cplusplus
 extern "C" {
