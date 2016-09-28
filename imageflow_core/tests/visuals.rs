@@ -129,6 +129,6 @@ fn try_visual(){
         
         //let matched = imageflow_core::ffi::flow_bitmap_bgra_test_compare_to_record(ctx_cell.ptr.unwrap(), &mut dest_bitmap as *mut ffi::FlowBitmapBgra, static_char!("rust_test_a"), store_if_missing, 500, static_char!("rust"), 0);
 
-        ///assert!(matched);
+        // assert!(matched);
     }
 }
