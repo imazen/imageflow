@@ -185,9 +185,16 @@ impl BuildRequestHandler {
             }
 
 
+            //TODO: flow_job_destroy
+
             // TODO: Question, should JSON endpoints populate the Context error stacktrace when something goes wrong? Or populate both (except for OOM).
 
-            Err(JsonResponseError::NotImplemented(()))
+            Ok(JsonResponse {
+                status_code: 200,
+                response_json:
+                r#"{"success": "true","code": 200,"message": "Tutto bene."}"#
+                    .as_bytes()
+            })
         }
     }
 }

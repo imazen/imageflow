@@ -119,7 +119,7 @@ impl ContextPtr {
     }
 
 
-    unsafe fn assert_ok(&self, g: Option<*const ::ffi::Graph>) {
+    pub unsafe fn assert_ok(&self, g: Option<*const ::ffi::Graph>) {
         match self.get_error_copy() {
             Some(which_error) => {
                 match which_error {

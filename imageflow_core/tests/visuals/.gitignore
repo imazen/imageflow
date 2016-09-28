@@ -1,0 +1,6 @@
+*.html
+*.png
+
+!checksums.list
+visuals.html
+/cache

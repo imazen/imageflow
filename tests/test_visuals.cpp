@@ -32,7 +32,7 @@ TEST_CASE("Test fill_rect", "")
 
 // FIXME: This test passes in Win64, but fails in Win32
 #ifndef _WIN32
-    REQUIRE(visual_compare(c, b, "FillRect", store_checksums, 0, __FILE__, __func__, __LINE__) == true);
+    REQUIRE(visual_compare(c, b, "FillRect", store_checksums, 0, __FILE__, __func__, __LINE__, __FILE__) == true);
     ERR(c);
 #endif
     flow_context_destroy(c);
@@ -43,8 +43,9 @@ TEST_CASE("Test scale image", "")
 
     flow_c * c = flow_context_create();
     size_t bytes_count = 0;
-    uint8_t * bytes = get_bytes_cached(
-        c, &bytes_count, "http://s3-us-west-2.amazonaws.com/imageflow-resources/test_inputs/waterhouse.jpg");
+    uint8_t * bytes = get_bytes_cached(c, &bytes_count,
+                                       "http://s3-us-west-2.amazonaws.com/imageflow-resources/test_inputs/waterhouse.jpg",
+                                       __FILE__);
     REQUIRE(djb2_buffer(bytes, bytes_count) == 0xbb9cca928a69bea7); // Test the checksum. I/O can be flaky
 
     struct flow_job * job = flow_job_create(c);
@@ -68,7 +69,7 @@ TEST_CASE("Test scale image", "")
         ERR(c);
     }
 
-    bool result = visual_compare(c, b, "ScaleTheHouse", store_checksums, 500, __FILE__, __func__, __LINE__);
+    bool result = visual_compare(c, b, "ScaleTheHouse", store_checksums, 500, __FILE__, __func__, __LINE__, __FILE__);
     ERR(c);
     REQUIRE(result == true);
     flow_context_destroy(c);
@@ -79,8 +80,9 @@ TEST_CASE("Test jpeg color profile (ICC2) support", "")
 
     flow_c * c = flow_context_create();
     size_t bytes_count = 0;
-    uint8_t * bytes = get_bytes_cached(
-        c, &bytes_count, "http://s3-us-west-2.amazonaws.com/imageflow-resources/test_inputs/MarsRGB_tagged.jpg");
+    uint8_t * bytes = get_bytes_cached(c, &bytes_count,
+                                       "http://s3-us-west-2.amazonaws.com/imageflow-resources/test_inputs/MarsRGB_tagged.jpg",
+                                       __FILE__);
     REQUIRE(djb2_buffer(bytes, bytes_count) == 0x706592343c9f6b3d); // Test the checksum. I/O can be flaky
 
     struct flow_job * job = flow_job_create(c);
@@ -104,7 +106,7 @@ TEST_CASE("Test jpeg color profile (ICC2) support", "")
         ERR(c);
     }
 
-    REQUIRE(visual_compare(c, b, "MarsRGB_ICC_Scaled400300", store_checksums, 500, __FILE__, __func__, __LINE__)
+    REQUIRE(visual_compare(c, b, "MarsRGB_ICC_Scaled400300", store_checksums, 500, __FILE__, __func__, __LINE__, __FILE__)
             == true);
     ERR(c);
     flow_context_destroy(c);
@@ -115,8 +117,9 @@ TEST_CASE("Test jpeg color profile (ICC4) support", "")
 
     flow_c * c = flow_context_create();
     size_t bytes_count = 0;
-    uint8_t * bytes = get_bytes_cached(
-        c, &bytes_count, "http://s3-us-west-2.amazonaws.com/imageflow-resources/test_inputs/MarsRGB_v4_sYCC_8bit.jpg");
+    uint8_t * bytes = get_bytes_cached(c, &bytes_count,
+                                       "http://s3-us-west-2.amazonaws.com/imageflow-resources/test_inputs/MarsRGB_v4_sYCC_8bit.jpg",
+                                       __FILE__);
     REQUIRE(djb2_buffer(bytes, bytes_count) == 0xc8ad27419e0dd65b); // Test the checksum. I/O can be flaky
 
     struct flow_job * job = flow_job_create(c);
@@ -140,8 +143,9 @@ TEST_CASE("Test jpeg color profile (ICC4) support", "")
         ERR(c);
     }
 
-    REQUIRE(visual_compare(c, b, "MarsRGB_ICCv4_Scaled400300_INCORRECT_TOO_PINK", store_checksums, 500, __FILE__,
-                           __func__, __LINE__) == true);
+    REQUIRE(
+        visual_compare(c, b, "MarsRGB_ICCv4_Scaled400300_INCORRECT_TOO_PINK", store_checksums, 500, __FILE__, __func__,
+                       __LINE__, __FILE__) == true);
     ERR(c);
     flow_context_destroy(c);
 }
@@ -166,7 +170,7 @@ TEST_CASE("Test jpeg rotation", "")
             flow_c * c = flow_context_create();
 
             size_t bytes_count = 0;
-            uint8_t * bytes = get_bytes_cached(c, &bytes_count, &url[0]);
+            uint8_t * bytes = get_bytes_cached(c, &bytes_count, &url[0], __FILE__);
 
             struct flow_job * job = flow_job_create(c);
             ERR(c);
@@ -190,7 +194,8 @@ TEST_CASE("Test jpeg rotation", "")
             }
 
             CAPTURE(&expected_checksum_name[0]);
-            REQUIRE(visual_compare(c, b, &expected_checksum_name[0], store_checksums, 500, __FILE__, __func__, __LINE__)
+            REQUIRE(visual_compare(c, b, &expected_checksum_name[0], store_checksums, 500, __FILE__, __func__, __LINE__,
+                                   __FILE__)
                     == true);
             ERR(c);
             flow_context_destroy(c);
@@ -202,8 +207,9 @@ TEST_CASE("Test spatial IDCT downscale in linear light", "")
 {
     flow_c * c = flow_context_create();
     size_t bytes_count = 0;
-    uint8_t * bytes = get_bytes_cached(
-        c, &bytes_count, "http://s3-us-west-2.amazonaws.com/imageflow-resources/test_inputs/roof_test_800x600.jpg");
+    uint8_t * bytes = get_bytes_cached(c, &bytes_count,
+                                       "http://s3-us-west-2.amazonaws.com/imageflow-resources/test_inputs/roof_test_800x600.jpg",
+                                       __FILE__);
     REQUIRE(djb2_buffer(bytes, bytes_count) == 0x8ff8ec7a8539a2d5); // Test the checksum. I/O can be flaky
 
     struct flow_job * job = flow_job_create(c);
@@ -232,7 +238,7 @@ TEST_CASE("Test spatial IDCT downscale in linear light", "")
         ERR(c);
     }
 
-    bool match = visual_compare(c, b, "ScaleIDCTFastvsSlow", store_checksums, 100, __FILE__, __func__, __LINE__);
+    bool match = visual_compare(c, b, "ScaleIDCTFastvsSlow", store_checksums, 100, __FILE__, __func__, __LINE__, __FILE__);
     REQUIRE(match == true);
     ERR(c);
     flow_context_destroy(c);
@@ -242,7 +248,7 @@ TEST_CASE("Test spatial IDCT downscale without gamma correction", "")
 {
     flow_c * c = flow_context_create();
     size_t bytes_count = 0;
-    uint8_t * bytes = get_bytes_cached(c, &bytes_count, "http://s3.amazonaws.com/resizer-images/u1.jpg");
+    uint8_t * bytes = get_bytes_cached(c, &bytes_count, "http://s3.amazonaws.com/resizer-images/u1.jpg", __FILE__);
     REQUIRE(djb2_buffer(bytes, bytes_count) == 0x41acd8388399c2cb); // Test the checksum. I/O can be flaky
 
     struct flow_job * job = flow_job_create(c);
@@ -274,7 +280,8 @@ TEST_CASE("Test spatial IDCT downscale without gamma correction", "")
             (int)(g->nodes[decode_node].ticks_elapsed * 1000 / flow_get_profiler_ticks_per_second()));
     fflush(stdout);
 
-    bool match = visual_compare(c, b, "ScaleIDCT_approx_gamma", store_checksums, 100, __FILE__, __func__, __LINE__);
+    bool match = visual_compare(c, b, "ScaleIDCT_approx_gamma", store_checksums, 100, __FILE__, __func__, __LINE__,
+                                __FILE__);
     REQUIRE(match == true);
     ERR(c);
     flow_context_destroy(c);
@@ -285,9 +292,9 @@ TEST_CASE("Test blurring", "")
 
     flow_c * c = flow_context_create();
     size_t bytes_count = 0;
-    uint8_t * bytes = get_bytes_cached(
-        c, &bytes_count,
-        "http://s3-us-west-2.amazonaws.com/imageflow-resources/reference_image_originals/vgl_6548_0026.jpg");
+    uint8_t * bytes = get_bytes_cached(c, &bytes_count,
+                                       "http://s3-us-west-2.amazonaws.com/imageflow-resources/reference_image_originals/vgl_6548_0026.jpg",
+                                       __FILE__);
 
     struct flow_job * job = flow_job_create(c);
 
@@ -323,7 +330,7 @@ TEST_CASE("Test blurring", "")
         ERR(c);
     }
     double dssim;
-    visual_compare_two(c, reference, b, "Blur", &dssim, true, true, __FILE__, __func__, __LINE__);
+    visual_compare_two(c, reference, b, "Blur", &dssim, true, true, __FILE__, __func__, __LINE__, __FILE__);
 
     fprintf(stdout, " DSSIM=%.010f\n", dssim);
 
@@ -338,7 +345,8 @@ TEST_CASE("Test scale rings", "")
     flow_c * c = flow_context_create();
     size_t bytes_count = 0;
     uint8_t * bytes = get_bytes_cached(c, &bytes_count,
-                                       "http://s3-us-west-2.amazonaws.com/imageflow-resources/test_inputs/rings2.png");
+                                       "http://s3-us-west-2.amazonaws.com/imageflow-resources/test_inputs/rings2.png",
+                                       __FILE__);
     REQUIRE(djb2_buffer(bytes, bytes_count) == 0x10af96849915728b); // Test the checksum. I/O can be flaky
 
     struct flow_job * job = flow_job_create(c);
@@ -361,7 +369,7 @@ TEST_CASE("Test scale rings", "")
         ERR(c);
     }
 
-    REQUIRE(visual_compare(c, b, "RingsDownscaling", store_checksums, 500, __FILE__, __func__, __LINE__) == true);
+    REQUIRE(visual_compare(c, b, "RingsDownscaling", store_checksums, 500, __FILE__, __func__, __LINE__, __FILE__) == true);
     ERR(c);
     flow_context_destroy(c);
 }

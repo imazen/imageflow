@@ -47,7 +47,7 @@ pub enum EdgeKind {
 
 
 #[repr(C)]
-#[derive(Copy,Clone)]
+#[derive(Copy,Clone, Debug)]
 pub enum PixelFormat {
     bgr24 = 3,
     bgra32 = 4,
@@ -63,7 +63,7 @@ pub enum Floatspace {
 }
 
 #[repr(C)]
-#[derive(Copy,Clone)]
+#[derive(Copy,Clone, Debug)]
 pub enum BitmapCompositingMode {
     replace_with_self = 0,
     blend_with_self = 1,
@@ -238,6 +238,7 @@ pub struct EncoderHints {
 
 
 #[repr(C)]
+#[derive(Debug)]
 pub struct FlowBitmapBgra {
     // bitmap width in pixels
     pub w: u32,
@@ -264,6 +265,20 @@ pub struct FlowBitmapBgra {
     pub matte_color: [u8; 4],
     pub compositing_mode: BitmapCompositingMode,
 }
+/*imageflow_core::ffi::FlowBitmapBgra{
+        alpha_meaningful: false,
+        can_reuse_space: false,
+        compositing_mode: ffi::BitmapCompositingMode::blend_with_self,
+        matte_color: [0,0,0,0],
+        pixels_readonly: false,
+        stride_readonly: false,
+        pixels: ptr::null_mut(),
+        stride: 0,
+        w: 0,
+        h: 0,
+        borrowed_pixels: false,
+        fmt: ffi::PixelFormat::bgra32
+    };*/
 
 extern "C" {
     pub fn flow_context_create() -> *mut Context;
@@ -402,7 +417,8 @@ extern "C" {
                                                    store_if_missing: bool,
                                                    off_by_one_byte_differences_permitted: usize,
                                                    caller_filename: *const libc::c_char,
-                                                   caller_linenumber: i32)
+                                                   caller_linenumber: i32,
+                                                    storage_relative_to: *const libc::c_char)
                                                    -> bool;
 
 
@@ -472,6 +488,11 @@ extern "C" {
                                       y2: u32,
                                       color_srgb: u32)
                                       -> i32;
+
+    pub fn flow_node_create_bitmap_bgra_reference(c: *mut Context,
+                                        g: *mut *mut Graph,
+                                        prev_node: i32, reference: *mut *mut FlowBitmapBgra) -> i32;
+
 
     pub fn flow_node_create_rotate_90(c: *mut Context, g: *mut *mut Graph, prev_node: i32) -> i32;
     pub fn flow_node_create_rotate_180(c: *mut Context, g: *mut *mut Graph, prev_node: i32) -> i32;

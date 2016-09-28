@@ -107,6 +107,12 @@ impl GraphTranslator {
                                                   x2,
                                                   y2,
                                                   self.color_to_i32(color).unwrap())
+            },
+
+
+            s::Node::FlowBitmapBgraPtr {ptr_to_flow_bitmap_bgra_ptr} => {
+                let ptr_to_ptr = ptr_to_flow_bitmap_bgra_ptr as *mut *mut ::ffi::FlowBitmapBgra;
+                ::ffi::flow_node_create_bitmap_bgra_reference(self.ctx, g, -1, ptr_to_ptr)
             }
 
         }

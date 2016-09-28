@@ -157,7 +157,7 @@ bool fetch_image(const char * url, char * dest_path)
     return true;
 }
 
-uint8_t * get_bytes_cached(flow_c * c, size_t * bytes_count_out, const char * url)
+uint8_t * get_bytes_cached(flow_c * c, size_t * bytes_count_out, const char * url, const char * storage_relative_to)
 {
 
 #define FLOW_MAX_PATH 255
@@ -165,7 +165,7 @@ uint8_t * get_bytes_cached(flow_c * c, size_t * bytes_count_out, const char * ur
     char cache_path[FLOW_MAX_PATH];
     uint64_t url_hash = djb2((unsigned const char *)url);
 
-    if (!create_relative_path(c, false, &cache_folder[0], sizeof(cache_folder), "")) {
+    if (!create_path_from_relative(c, storage_relative_to, false, &cache_folder[0], sizeof(cache_folder), "")) {
         FLOW_add_to_callstack(c);
         return NULL;
     }
@@ -175,8 +175,8 @@ uint8_t * get_bytes_cached(flow_c * c, size_t * bytes_count_out, const char * ur
 
     if (flow_dir_exists_eh(&cache_folder[0])) {
         // The tests folder is still around; we can use it
-        if (!create_relative_path(c, false, &cache_path[0], sizeof(cache_path), "/visuals/cache/%llu%s", url_hash,
-                                  ext)) {
+        if (!create_path_from_relative(c, storage_relative_to, false, &cache_path[0], sizeof(cache_path), "/visuals/cache/%llu%s", url_hash,
+                                       ext)) {
             FLOW_add_to_callstack(c);
             return NULL;
         }
@@ -280,10 +280,14 @@ bool flow_recursive_mkdir(const char * dir, bool create_last_segment)
     return true;
 }
 
-bool create_relative_path(flow_c * c, bool create_parent_dirs, char * filename, size_t max_filename_length,
-                          const char * format, ...)
+bool create_path_from_relative(flow_c * c, const char * base_file, bool create_parent_dirs, char * filename, size_t max_filename_length,
+                               const char * format, ...)
 {
-    const char * this_file = __FILE__;
+    if (base_file == NULL){
+        FLOW_error(c, flow_status_Null_argument);
+        return false;
+    }
+    const char * this_file = base_file;
     char * last_slash = strrchr(this_file, '/');
     if (last_slash == NULL) {
         last_slash = strrchr(this_file, '\\');
@@ -374,10 +378,10 @@ double flow_bitmap_float_compare(flow_c * c, struct flow_bitmap_float * a, struc
     return difference_total / a->h;
 }
 
-struct flow_io * get_io_for_cached_url(flow_c * c, const char * url, void * owner)
+struct flow_io * get_io_for_cached_url(flow_c * c, const char * url, void * owner, const char * storage_relative_to)
 {
     size_t bytes_count = 0;
-    uint8_t * bytes = get_bytes_cached(c, &bytes_count, url);
+    uint8_t * bytes = get_bytes_cached(c, &bytes_count, url, storage_relative_to);
     if (bytes == NULL) {
         FLOW_error(c, flow_status_IO_error);
         return NULL;

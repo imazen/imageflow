@@ -72,14 +72,14 @@ These may be OR'd together.  */
 #include "unistd.h"
 #endif
 
-uint8_t * get_bytes_cached(flow_c * c, size_t * bytes_count_out, const char * url);
+uint8_t * get_bytes_cached(flow_c * c, size_t * bytes_count_out, const char * url, const char * storage_relative_to);
 bool fetch_image(const char * url, char * dest_path);
 uint8_t * read_all_bytes(flow_c * c, size_t * buffer_size, const char * path);
 bool write_all_byte(const char * path, char * buffer, size_t size);
 void copy_file(FILE * from, FILE * to);
 
-bool create_relative_path(flow_c * c, bool create_parent_dirs, char * filename, size_t max_filename_length,
-                          const char * format, ...);
+bool create_path_from_relative(flow_c * c, const char * base_file, bool create_parent_dirs, char * filename, size_t max_filename_length,
+                               const char * format, ...);
 
 uint64_t djb2(unsigned const char * str);
 uint64_t djb2_buffer(uint8_t * str, size_t count);
@@ -89,7 +89,7 @@ struct flow_bitmap_bgra * BitmapBgra_create_test_image(flow_c * c);
 double flow_bitmap_float_compare(flow_c * c, struct flow_bitmap_float * a, struct flow_bitmap_float * b,
                                  float * out_max_delta);
 
-struct flow_io * get_io_for_cached_url(flow_c * c, const char * url, void * owner);
+struct flow_io * get_io_for_cached_url(flow_c * c, const char * url, void * owner, const char * storage_relative_to);
 
 bool has_err(flow_c * c, const char * file, int line, const char * func);
 

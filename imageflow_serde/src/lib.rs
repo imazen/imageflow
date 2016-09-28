@@ -188,6 +188,12 @@ pub enum Node {
         sharpen_percent: Option<f32>,
         flags: Option<usize>,
     },
+    //TODO: Block use except from FFI/unit test use
+    #[serde(rename="flowBitmapBgraPtr")]
+    FlowBitmapBgraPtr{
+        #[serde(rename="ptrToFlowBitmapBgraPtr")]
+        ptr_to_flow_bitmap_bgra_ptr: usize
+    }
 }
 #[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
 pub enum EdgeKind {
@@ -231,7 +237,7 @@ pub enum IoEnum {
     #[serde(rename="url")]
     Url(String),
     #[serde(rename="outputBuffer")]
-    OutputBuffer,
+    OutputBuffer
 }
 
 #[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]

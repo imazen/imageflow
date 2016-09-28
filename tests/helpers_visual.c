@@ -2,10 +2,11 @@
 
 bool flow_bitmap_bgra_test_compare_to_record(flow_c * c, struct flow_bitmap_bgra * bitmap, const char * storage_name,
                                              bool store_if_missing, size_t off_by_one_byte_differences_permitted,
-                                             const char * caller_filename, int caller_linenumber)
+                                             const char * caller_filename, int caller_linenumber,
+                                             const char * storage_relative_to)
 {
     return visual_compare(c, bitmap, storage_name, store_if_missing, off_by_one_byte_differences_permitted,
-                          caller_filename, NULL, caller_linenumber);
+                          caller_filename, NULL, caller_linenumber, storage_relative_to);
 }
 
 struct named_checksum {
@@ -70,17 +71,19 @@ int64_t flow_getline(char ** lineptr, size_t * n, FILE * stream)
     return p - bufptr - 1;
 }
 
-static bool load_checksums(flow_c * c, struct named_checksum ** checksums, size_t * checksum_count)
+static bool load_checksums(flow_c * c, struct named_checksum ** checksums, size_t * checksum_count,
+                          const char * storage_relative_to)
 {
     static struct named_checksum * list = NULL;
     static size_t list_size = 0;
 
     if (list == NULL) {
         char filename[2048];
-        if (!create_relative_path(c, false, filename, 2048, "/visuals/checksums.list")) {
+        if (!create_path_from_relative(c,storage_relative_to, false, filename, 2048, "/visuals/checksums.list")) {
             FLOW_add_to_callstack(c);
             return false;
         }
+        //fprintf(stderr, "Using checkums from %s.", filename);
         FILE * fp;
         char * line_a = NULL;
         size_t len_a = 0;
@@ -139,11 +142,11 @@ static bool load_checksums(flow_c * c, struct named_checksum ** checksums, size_
 
     return true;
 }
-bool append_checksum(flow_c * c, char checksum[34], const char * name);
-bool append_checksum(flow_c * c, char checksum[34], const char * name)
+bool append_checksum(flow_c * c, char checksum[34], const char * name, const char * storage_relative_to);
+bool append_checksum(flow_c * c, char checksum[34], const char * name, const char * storage_relative_to)
 {
     char filename[2048];
-    if (!create_relative_path(c, true, filename, 2048, "/visuals/checksums.list")) {
+    if (!create_path_from_relative(c, storage_relative_to, true, filename, 2048, "/visuals/checksums.list")) {
         FLOW_add_to_callstack(c);
         return false;
     }
@@ -170,12 +173,12 @@ static bool checksum_bitmap(flow_c * c, struct flow_bitmap_bgra * bitmap, char *
     return printed_chars != -1;
 }
 
-static char * get_checksum_for(flow_c * c, const char * name)
+static char * get_checksum_for(flow_c * c, const char * name, const char * storage_relative_to)
 {
     struct named_checksum * checksums = NULL;
     size_t checksum_count = 0;
 
-    if (!load_checksums(c, &checksums, &checksum_count)) {
+    if (!load_checksums(c, &checksums, &checksum_count, storage_relative_to)) {
         FLOW_add_to_callstack(c);
         return NULL;
     }
@@ -187,10 +190,10 @@ static char * get_checksum_for(flow_c * c, const char * name)
     return NULL;
 }
 
-static bool download_by_checksum(flow_c * c, char * checksum)
+static bool download_by_checksum(flow_c * c, char * checksum, const char * storage_relative_to)
 {
     char filename[2048];
-    if (!create_relative_path(c, true, filename, 2048, "/visuals/%s.png", checksum)) {
+    if (!create_path_from_relative(c, storage_relative_to, true, filename, 2048, "/visuals/%s.png", checksum)) {
         FLOW_add_to_callstack(c);
         return false;
     }
@@ -209,10 +212,11 @@ static bool download_by_checksum(flow_c * c, char * checksum)
     return true;
 }
 
-static bool save_bitmap_to_visuals(flow_c * c, struct flow_bitmap_bgra * bitmap, char * checksum, char * name)
+static bool save_bitmap_to_visuals(flow_c * c, struct flow_bitmap_bgra * bitmap, char * checksum, char * name,
+                                  const char * storage_relative_to)
 {
     char filename[2048];
-    if (!create_relative_path(c, true, filename, 2048, "/visuals/%s.png", checksum)) {
+    if (!create_path_from_relative(c, storage_relative_to, true, filename, 2048, "/visuals/%s.png", checksum)) {
         FLOW_add_to_callstack(c);
         return false;
     }
@@ -273,10 +277,11 @@ static double get_dssim_from_command(flow_c * c, const char * command)
     return result;
 }
 
-bool load_image(flow_c * c, char * checksum, struct flow_bitmap_bgra ** ref, void * bitmap_owner)
+bool load_image(flow_c * c, char * checksum, struct flow_bitmap_bgra ** ref, void * bitmap_owner,
+                const char * storage_relative_to)
 {
     char filename[2048];
-    if (!create_relative_path(c, false, filename, 2048, "/visuals/%s.png", checksum)) {
+    if (!create_path_from_relative(c, storage_relative_to,  false, filename, 2048, "/visuals/%s.png", checksum)) {
         FLOW_add_to_callstack(c);
         return false;
     }
@@ -294,20 +299,21 @@ bool load_image(flow_c * c, char * checksum, struct flow_bitmap_bgra ** ref, voi
     }
     return true;
 }
-static bool diff_images(flow_c * c, char * checksum_a, char * checksum_b, double * out_dssim, bool generate_visual_diff)
+static bool diff_images(flow_c * c, char * checksum_a, char * checksum_b, double * out_dssim, bool generate_visual_diff,
+                       const char * storage_relative_to)
 {
     char filename_a[2048];
-    if (!create_relative_path(c, false, filename_a, 2048, "/visuals/%s.png", checksum_a)) {
+    if (!create_path_from_relative(c, storage_relative_to, false, filename_a, 2048, "/visuals/%s.png", checksum_a)) {
         FLOW_add_to_callstack(c);
         return false;
     }
     char filename_b[2048];
-    if (!create_relative_path(c, false, filename_b, 2048, "/visuals/%s.png", checksum_b)) {
+    if (!create_path_from_relative(c, storage_relative_to, false, filename_b, 2048, "/visuals/%s.png", checksum_b)) {
         FLOW_add_to_callstack(c);
         return false;
     }
     char filename_c[2048];
-    if (!create_relative_path(c, false, filename_c, 2048, "/visuals/compare_%s_vs_%s.png", checksum_a, checksum_b)) {
+    if (!create_path_from_relative(c, storage_relative_to, false, filename_c, 2048, "/visuals/compare_%s_vs_%s.png", checksum_a, checksum_b)) {
         FLOW_add_to_callstack(c);
         return false;
     }
@@ -337,10 +343,11 @@ static bool diff_images(flow_c * c, char * checksum_a, char * checksum_b, double
     return true;
 }
 
-static bool append_html(flow_c * c, const char * name, const char * checksum_a, const char * checksum_b)
+static bool append_html(flow_c * c, const char * name, const char * checksum_a, const char * checksum_b,
+                       const char * storage_relative_to)
 {
     char filename[2048];
-    if (!create_relative_path(c, true, filename, 2048, "/visuals/visuals.html")) {
+    if (!create_path_from_relative(c, storage_relative_to, true, filename, 2048, "/visuals/visuals.html")) {
         FLOW_add_to_callstack(c);
         return false;
     }
@@ -397,7 +404,7 @@ bool diff_image_pixels(flow_c * c, struct flow_bitmap_bgra * a, struct flow_bitm
 
 bool visual_compare(flow_c * c, struct flow_bitmap_bgra * bitmap, const char * name, bool store_checksums,
                     size_t off_by_one_byte_differences_permitted, const char * file_, const char * func_,
-                    int line_number)
+                    int line_number, const char * storage_relative_to)
 {
 
     char checksum[34];
@@ -408,12 +415,12 @@ bool visual_compare(flow_c * c, struct flow_bitmap_bgra * bitmap, const char * n
         return false;
     }
     // Load stored checksum
-    char * stored_checksum = get_checksum_for(c, name);
+    char * stored_checksum = get_checksum_for(c, name, storage_relative_to);
 
     // Compare
     if (stored_checksum != NULL && strcmp(checksum, stored_checksum) == 0) {
         // Make sure the file is created for later
-        if (!save_bitmap_to_visuals(c, bitmap, checksum, "trusted")) {
+        if (!save_bitmap_to_visuals(c, bitmap, checksum, "trusted", storage_relative_to)) {
             FLOW_error_return(c);
         }
         return true; // It matches!
@@ -422,7 +429,7 @@ bool visual_compare(flow_c * c, struct flow_bitmap_bgra * bitmap, const char * n
     if (stored_checksum == NULL) {
         // No stored checksum for this name
         if (store_checksums) {
-            if (!append_checksum(c, checksum, name)) {
+            if (!append_checksum(c, checksum, name, storage_relative_to)) {
                 FLOW_error_return(c);
             }
             fprintf(stderr, "===============\n%s\nStoring checksum %s, since FLOW_STORE_CHECKSUMS was set.\n ", name,
@@ -443,7 +450,7 @@ bool visual_compare(flow_c * c, struct flow_bitmap_bgra * bitmap, const char * n
 
     // The hash differs
     // Save ours so we can see it
-    if (!save_bitmap_to_visuals(c, bitmap, checksum, "current")) {
+    if (!save_bitmap_to_visuals(c, bitmap, checksum, "current", storage_relative_to)) {
         FLOW_error_return(c);
     }
     if (stored_checksum == NULL && store_checksums) {
@@ -453,13 +460,13 @@ bool visual_compare(flow_c * c, struct flow_bitmap_bgra * bitmap, const char * n
 
     if (stored_checksum != NULL) {
         // Try to download "old" png from S3 using the checksums as an address.
-        if (!download_by_checksum(c, stored_checksum)) {
+        if (!download_by_checksum(c, stored_checksum, storage_relative_to)) {
             FLOW_error_return(c);
         }
 
         // First try a byte-by-byte comparison to eliminate floating-point error
         struct flow_bitmap_bgra * old;
-        if (!load_image(c, stored_checksum, &old, c)) {
+        if (!load_image(c, stored_checksum, &old, c, storage_relative_to)) {
             FLOW_error_return(c);
         }
         size_t differences;
@@ -483,13 +490,13 @@ bool visual_compare(flow_c * c, struct flow_bitmap_bgra * bitmap, const char * n
 
             double dssim;
             // Diff the two, generate a third PNG. Also get PSNR metrics from imagemagick
-            if (!diff_images(c, checksum, stored_checksum, &dssim, true)) {
+            if (!diff_images(c, checksum, stored_checksum, &dssim, true, storage_relative_to)) {
                 FLOW_error_return(c);
             }
             fprintf(stdout, "DSSIM %.20f between %s and %s\n", dssim, stored_checksum, checksum);
 
             // Dump to HTML=
-            if (!append_html(c, name, checksum, stored_checksum)) {
+            if (!append_html(c, name, checksum, stored_checksum, storage_relative_to)) {
                 FLOW_error_return(c);
             }
         }
@@ -499,9 +506,9 @@ bool visual_compare(flow_c * c, struct flow_bitmap_bgra * bitmap, const char * n
     return false;
 }
 
-bool visual_compare_two(flow_c * c, struct flow_bitmap_bgra * a, struct flow_bitmap_bgra * b,
-                        const char * comparison_title, double * out_dssim, bool save_bitmaps, bool generate_visual_diff,
-                        const char * file_, const char * func_, int line_number)
+bool visual_compare_two(flow_c * c, struct flow_bitmap_bgra * a, struct flow_bitmap_bgra * b, const char * comparison_title,
+                        double * out_dssim, bool save_bitmaps, bool generate_visual_diff, const char * file_,
+                        const char * func_, int line_number, const char * storage_relative_to)
 {
 
     char checksum_a[34];
@@ -529,18 +536,18 @@ bool visual_compare_two(flow_c * c, struct flow_bitmap_bgra * a, struct flow_bit
     }
     if (save_bitmaps) {
         // They differ
-        if (!save_bitmap_to_visuals(c, a, checksum_a, "A")) {
+        if (!save_bitmap_to_visuals(c, a, checksum_a, "A", storage_relative_to)) {
             FLOW_error_return(c);
         }
-        if (!save_bitmap_to_visuals(c, b, checksum_b, "B")) {
+        if (!save_bitmap_to_visuals(c, b, checksum_b, "B", storage_relative_to)) {
             FLOW_error_return(c);
         }
         // Diff the two, generate a third PNG. Also get PSNR metrics from imagemagick
-        if (!diff_images(c, checksum_a, checksum_b, out_dssim, generate_visual_diff && save_bitmaps)) {
+        if (!diff_images(c, checksum_a, checksum_b, out_dssim, generate_visual_diff && save_bitmaps, storage_relative_to)) {
             FLOW_error_return(c);
         }
         // Dump to HTML=
-        if (!append_html(c, comparison_title, checksum_a, checksum_b)) {
+        if (!append_html(c, comparison_title, checksum_a, checksum_b, storage_relative_to)) {
             FLOW_error_return(c);
         }
     }

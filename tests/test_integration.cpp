@@ -127,7 +127,7 @@ TEST_CASE("Load png from URL", "[fastscaling]")
     size_t bytes_count = 0;
     flow_c * c = flow_context_create();
 
-    uint8_t * bytes = get_bytes_cached(c, &bytes_count, "http://s3.amazonaws.com/resizer-images/sun_256.png");
+    uint8_t * bytes = get_bytes_cached(c, &bytes_count, "http://s3.amazonaws.com/resizer-images/sun_256.png", __FILE__);
     REQUIRE_FALSE(bytes == NULL);
     png_size_t image_bytes_count = bytes_count;
     png_const_voidp image_bytes = bytes;
