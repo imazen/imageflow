@@ -120,7 +120,7 @@ impl ContextPtr {
     }
 
 
-    pub unsafe fn assert_ok(&self, g: Option<*const ::ffi::Graph>) {
+    pub unsafe fn assert_ok(&self, g: Option<&::flow::graph::Graph>) {
         match self.get_error_copy() {
             Some(which_error) => {
                 match which_error {
@@ -129,8 +129,8 @@ impl ContextPtr {
                         println!("Error {} {}\n", e.code, e.message_and_stack);
                         if e.code == 72 || e.code == 73 {
                             if g.is_some() {
-                                let _ = ::flow::graph::flow_graph_print_to_stdout(self.ptr.unwrap(),
-                                                                          g.unwrap());
+                                let _ = ::flow::graph::print_to_stdout(self.ptr.unwrap(),
+                                                                          g.unwrap() as &flow::graph::Graph);
                             }
                         }
 

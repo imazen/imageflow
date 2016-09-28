@@ -216,7 +216,7 @@ impl BuildRequestHandler {
 
 
             if !flow::job_execute(p, job, &mut g) {
-                ctx.assert_ok(Some(g));
+                ctx.assert_ok(Some(&mut g));
             }
 
 

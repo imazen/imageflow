@@ -386,15 +386,15 @@ pub fn process_image<F, C, R>(commands: BoringCommands,
         // println!("Scale {}x{} down to {}x{} (jpeg)", info.frame0_width, info.frame0_height, final_w, final_h);
 
         //TODO: Replace with s::Node, s::Graph, etc.
-        let mut g = flow::graph::flow_graph_create(c, 10, 10, 10, 2.0);
-        assert!(!g.is_null());
+        let mut g = flow::graph::create(c, 10, 10, 10, 2.0);
+        //FIXME: should we still check for null?
+        //assert!(!g.is_null());
 
-
-        let mut last = flow::graph::flow_node_create_decoder(c, (&mut g) as *mut *mut Graph, -1, 0);
+        let mut last = flow::graph::node_create_decoder(c, &mut g, -1, 0);
         assert!(last == 0);
 
-        last = flow::graph::flow_node_create_scale(c,
-                                      (&mut g) as *mut *mut Graph,
+        last = flow::graph::node_create_scale(c,
+                                      &mut g,
                                       last,
                                       final_w,
                                       final_h,
@@ -423,11 +423,11 @@ pub fn process_image<F, C, R>(commands: BoringCommands,
 
 
         last =
-            flow::graph::flow_node_create_encoder(c, (&mut g) as *mut *mut Graph, last, 1, encoder_id, &hints);
+            flow::graph::node_create_encoder(c, &mut g, last, 1, encoder_id, &hints);
         assert!(last > 0);
 
 
-        if !flow::job_execute(c, j, (&mut g) as *mut *mut Graph) {
+        if !flow::job_execute(c, j, &mut g) {
             flow_context_print_and_exit_if_err(c);
         }
 

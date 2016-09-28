@@ -3,6 +3,7 @@ use libc::{self, int32_t};
 use std::ffi::CStr;
 
 pub mod graph;
+use self::graph::Graph;
 
 #[macro_export]
 macro_rules! error_return (
@@ -33,8 +34,8 @@ macro_rules! error_msg (
     );
 );
 
-pub fn job_execute(c: *mut Context, job: *mut Job, graph_ref: *mut *mut Graph) -> bool {
-  if !job_notify_graph_changed(c, job, unsafe { *graph_ref }) {
+pub fn job_execute(c: *mut Context, job: *mut Job, graph_ref: &mut Graph) -> bool {
+  if !job_notify_graph_changed(c, job, graph_ref) {
         error_return!(c);
     }
     if !job_link_codecs(c, job, graph_ref) {
@@ -48,7 +49,7 @@ pub fn job_execute(c: *mut Context, job: *mut Job, graph_ref: *mut *mut Graph) -
     // LockedForExecution
     // Executed
     let mut passes: libc::int32_t = 0;
-    while !job_graph_fully_executed(c, job, unsafe { *graph_ref }) {
+    while !job_graph_fully_executed(c, job, graph_ref) {
         if passes >= unsafe { (*job).max_calc_flatten_execute_passes } {
             error_msg!(c, FlowStatusCode::MaximumGraphPassesExceeded);
             return false;
@@ -56,43 +57,43 @@ pub fn job_execute(c: *mut Context, job: *mut Job, graph_ref: *mut *mut Graph) -
         if !job_populate_dimensions_where_certain(c, job, graph_ref) {
             error_return!(c);
         }
-        if !job_notify_graph_changed(c, job, unsafe { *graph_ref }) {
+        if !job_notify_graph_changed(c, job, graph_ref) {
             error_return!(c);
         }
         if !graph_pre_optimize_flatten(c, graph_ref) {
             error_return!(c);
         }
-        if !job_notify_graph_changed(c, job, unsafe { *graph_ref }) {
+        if !job_notify_graph_changed(c, job, graph_ref) {
             error_return!(c);
         }
         if !job_populate_dimensions_where_certain(c, job, graph_ref) {
             error_return!(c);
         }
-        if !job_notify_graph_changed(c, job, unsafe { *graph_ref }) {
+        if !job_notify_graph_changed(c, job, graph_ref) {
             error_return!(c);
         }
         if !graph_optimize(c, job, graph_ref) {
             error_return!(c);
         }
-        if !job_notify_graph_changed(c, job, unsafe { *graph_ref }) {
+        if !job_notify_graph_changed(c, job, graph_ref) {
             error_return!(c);
         }
         if !job_populate_dimensions_where_certain(c, job, graph_ref) {
             error_return!(c);
         }
-        if !job_notify_graph_changed(c, job, unsafe { *graph_ref }) {
+        if !job_notify_graph_changed(c, job, graph_ref) {
             error_return!(c);
         }
         if !graph_post_optimize_flatten(c, job, graph_ref) {
             error_return!(c);
         }
-        if !job_notify_graph_changed(c, job, unsafe { *graph_ref }) {
+        if !job_notify_graph_changed(c, job, graph_ref) {
             error_return!(c);
         }
         if !job_populate_dimensions_where_certain(c, job, graph_ref) {
             error_return!(c);
         }
-        if !job_notify_graph_changed(c, job, unsafe { *graph_ref }) {
+        if !job_notify_graph_changed(c, job, graph_ref) {
             error_return!(c);
         }
         if !job_execute_where_certain(c, job, graph_ref) {
@@ -100,24 +101,25 @@ pub fn job_execute(c: *mut Context, job: *mut Job, graph_ref: *mut *mut Graph) -
         }
         passes += 1;
 
-        if !job_notify_graph_changed(c, job, unsafe { *graph_ref }) {
+        if !job_notify_graph_changed(c, job, graph_ref) {
             error_return!(c);
         }
     }
     if unsafe { (*job).next_graph_version > 0 && (*job).render_last_graph
-        && !job_render_graph_to_png(c, job, *graph_ref, (*job).next_graph_version - 1)} {
+        && !job_render_graph_to_png(c, job, graph_ref, (*job).next_graph_version - 1)} {
         error_return!(c);
     }
   true
 }
 
-pub fn job_link_codecs(c: *mut Context, job: *mut Job, graph_ref: *mut *mut Graph) -> bool {
-
+pub fn job_link_codecs(c: *mut Context, job: *mut Job, graph_ref: &mut Graph) -> bool {
+    /*FIXME: will it still be needed?
     if graph_ref.is_null() || unsafe { (*graph_ref).is_null() } {
         error_msg!(c, FlowStatusCode::NullArgument);
         return false;
     }
-    if !job_notify_graph_changed(c, job, unsafe {*graph_ref}) {
+    */
+    if !job_notify_graph_changed(c, job, graph_ref) {
         error_return!(c);
     }
 
@@ -143,7 +145,7 @@ pub fn job_link_codecs(c: *mut Context, job: *mut Job, graph_ref: *mut *mut Grap
     return true;
 }
 
-fn job_notify_graph_changed(c: *mut Context, job: *mut Job, graph_ref: *mut Graph) -> bool {
+fn job_notify_graph_changed(c: *mut Context, job: *mut Job, graph_ref: &mut Graph) -> bool {
 /* FIXME
     if (job == NULL || !job->record_graph_versions || job->next_graph_version > FLOW_MAX_GRAPH_VERSIONS)
         return true;
@@ -208,7 +210,7 @@ fn job_notify_graph_changed(c: *mut Context, job: *mut Job, graph_ref: *mut Grap
     return true;
 }
 
-pub fn job_graph_fully_executed(c: *mut Context, job: *mut Job, graph_ref: *mut Graph) -> bool
+pub fn job_graph_fully_executed(c: *mut Context, job: *mut Job, graph_ref: &mut Graph) -> bool
 {
 /*FIXME
     int32_t i;
@@ -223,7 +225,7 @@ pub fn job_graph_fully_executed(c: *mut Context, job: *mut Job, graph_ref: *mut 
     return true;
 }
 
-pub fn job_populate_dimensions_where_certain(c:*mut Context, job: *mut Job, graph_ref: *mut *mut Graph) -> bool
+pub fn job_populate_dimensions_where_certain(c:*mut Context, job: *mut Job, graph_ref: &mut Graph) -> bool
 {
     /*
     // TODO: would be good to verify graph is acyclic.
@@ -234,12 +236,14 @@ pub fn job_populate_dimensions_where_certain(c:*mut Context, job: *mut Job, grap
     return true;
 }
 
-pub fn graph_pre_optimize_flatten(c: *mut Context, graph_ref: *mut *mut Graph) -> bool
+pub fn graph_pre_optimize_flatten(c: *mut Context, graph_ref: &mut Graph) -> bool
 {
+    /*FIXME: is it still needed?
     if unsafe {(*graph_ref).is_null()} {
         error_msg!(c, FlowStatusCode::NullArgument);
         return false;
     }
+    */
     /*FIXME
     bool re_walk;
     do {
@@ -252,12 +256,14 @@ pub fn graph_pre_optimize_flatten(c: *mut Context, graph_ref: *mut *mut Graph) -
     return true;
 }
 
-pub fn graph_optimize(c: *mut Context,job: *mut Job, graph_ref: *mut *mut Graph) -> bool
+pub fn graph_optimize(c: *mut Context,job: *mut Job, graph_ref: &mut Graph) -> bool
 {
+    /*FIXME: is it still needed?
     if unsafe { (*graph_ref).is_null()} {
         error_msg!(c, FlowStatusCode::NullArgument);
         return false;
     }
+    */
     /*FIXME
     bool re_walk;
     do {
@@ -270,12 +276,14 @@ pub fn graph_optimize(c: *mut Context,job: *mut Job, graph_ref: *mut *mut Graph)
     return true;
 }
 
-pub fn graph_post_optimize_flatten(c: *mut Context, job: *mut Job, graph_ref: *mut *mut Graph) -> bool
+pub fn graph_post_optimize_flatten(c: *mut Context, job: *mut Job, graph_ref: &mut Graph) -> bool
 {
+    /*FIXME: is it still needed?
     if unsafe { (*graph_ref).is_null()} {
         error_msg!(c, FlowStatusCode::NullArgument);
         return false;
     }
+    */
 
     /*FIXME
     bool re_walk;
@@ -289,12 +297,14 @@ pub fn graph_post_optimize_flatten(c: *mut Context, job: *mut Job, graph_ref: *m
     return true;
 }
 
-pub fn job_execute_where_certain(c: *mut Context, job: *mut Job, graph_ref: *mut *mut Graph) -> bool
+pub fn job_execute_where_certain(c: *mut Context, job: *mut Job, graph_ref: &mut Graph) -> bool
 {
+    /*FIXME: is it still needed?
     if unsafe { (*graph_ref).is_null()} {
         error_msg!(c, FlowStatusCode::NullArgument);
         return false;
     }
+    */
 
     //    //Resets and creates state tracking for this graph
     //    if (!flow_job_create_state(c,job, *g)){
@@ -309,7 +319,7 @@ pub fn job_execute_where_certain(c: *mut Context, job: *mut Job, graph_ref: *mut
     return true;
 }
 
-pub fn job_render_graph_to_png(c: *mut Context, job: *mut Job, g: *mut Graph, graph_version: int32_t) -> bool
+pub fn job_render_graph_to_png(c: *mut Context, job: *mut Job, g: &mut Graph, graph_version: int32_t) -> bool
 {
 /*FIXME
     char filename[255];
