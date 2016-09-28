@@ -1,6 +1,6 @@
-#include "imageflow_private.h"
-#include "lib/nodes/definition_helpers.h"
-#include "codecs.h"
+#include "../imageflow_private.h"
+#include "./nodes/definition_helpers.h"
+#include "../codecs.h"
 
 struct flow_node_definition * flow_nodedef_get(flow_c * c, flow_ntype type)
 {

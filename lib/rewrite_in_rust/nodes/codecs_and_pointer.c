@@ -1,6 +1,6 @@
-#include "../imageflow_private.h"
+#include "lib/imageflow_private.h"
 #include "definition_helpers.h"
-#include "../codecs.h"
+#include "lib/codecs.h"
 
 int32_t flow_node_create_bitmap_bgra_reference(flow_c * c, struct flow_graph ** g, int32_t prev_node,
                                                struct flow_bitmap_bgra ** pointer_to_pointer_to_bitmap_bgra)

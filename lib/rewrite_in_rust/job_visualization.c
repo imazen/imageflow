@@ -1,4 +1,4 @@
-#include "imageflow_private.h"
+#include "lib/imageflow_private.h"
 // Responsible for writing frames to disk as rendering happens
 // Responsible for writing new versions of the graph to disk as it mutates and node states change
 

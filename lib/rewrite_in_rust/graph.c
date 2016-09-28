@@ -1,5 +1,5 @@
-#include "imageflow_private.h"
-#include "math_functions.h"
+#include "lib/imageflow_private.h"
+#include "lib/math_functions.h"
 
 #include "rewrite_in_rust.h"
 

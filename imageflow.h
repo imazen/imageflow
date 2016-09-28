@@ -372,7 +372,7 @@ PUB bool flow_job_get_decoder_info(flow_c * c, struct flow_job * job, int32_t by
 PUB bool flow_bitmap_bgra_write_png(flow_c * c, struct flow_job * job, struct flow_bitmap_bgra * frame,
                                     struct flow_io * io);
 
-#include "lib/rewrite_in_rust.h"
+#include "lib/rewrite_in_rust/rewrite_in_rust.h"
 
 #undef PUB
 

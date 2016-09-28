@@ -1,4 +1,4 @@
-#include "../imageflow_private.h"
+#include "lib/imageflow_private.h"
 #include "definition_helpers.h"
 
 int32_t flow_node_create_clone(flow_c * c, struct flow_graph ** g, int32_t prev_node)

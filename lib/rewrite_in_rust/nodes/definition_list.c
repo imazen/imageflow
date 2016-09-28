@@ -1,4 +1,4 @@
-#include "../imageflow_private.h"
+#include "lib/imageflow_private.h"
 #include "definition_helpers.h"
 
 extern const struct flow_node_definition flow_define_scale;

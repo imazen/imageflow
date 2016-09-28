@@ -1,4 +1,4 @@
-#include "../imageflow_private.h"
+#include "lib/imageflow_private.h"
 #include "definition_helpers.h"
 
 bool stringify_state(char * buffer, size_t buffer_isze, struct flow_node * n)
