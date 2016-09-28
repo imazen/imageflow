@@ -298,7 +298,7 @@ static bool flow_job_png_decoder_FinishRead(flow_c * c, struct flow_job_png_deco
     }
 
     state->pixel_buffer_row_pointers
-        = flow_job_create_row_pointers(c, state->pixel_buffer, state->pixel_buffer_size, state->rowbytes, state->h);
+        = flow_bitmap_create_row_pointers(c, state->pixel_buffer, state->pixel_buffer_size, state->rowbytes, state->h);
     if (state->pixel_buffer_row_pointers == NULL) {
         flow_job_png_decoder_reset(c, state);
         state->stage = flow_job_png_decoder_stage_Failed;
@@ -450,7 +450,7 @@ static bool flow_job_codecs_png_write_frame(flow_c * c, struct flow_job * job, v
     {
 
         png_bytepp rows
-            = flow_job_create_row_pointers(c, frame->pixels, frame->stride * frame->h, frame->stride, frame->h);
+            = flow_bitmap_create_row_pointers(c, frame->pixels, frame->stride * frame->h, frame->stride, frame->h);
         if (rows == NULL) {
             FLOW_add_to_callstack(c);
             return false;

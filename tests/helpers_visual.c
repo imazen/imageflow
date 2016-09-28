@@ -212,7 +212,7 @@ static bool save_bitmap_to_visuals(flow_c * c, struct flow_bitmap_bgra * bitmap,
         return true; // Already exists!
     }
 
-    if (!write_frame_to_disk(c, &filename[0], bitmap)) {
+    if (!flow_bitmap_bgra_save_png(c, bitmap, &filename[0])) {
         FLOW_add_to_callstack(c);
         return false;
     }
@@ -273,37 +273,8 @@ bool load_image(flow_c * c, char * checksum, struct flow_bitmap_bgra ** ref, voi
         return false;
     }
 
-    struct flow_job * job = flow_job_create(c);
-    if (job == NULL) {
-        FLOW_error_return(c);
-    }
-    size_t bytes_count;
-    uint8_t * bytes = read_all_bytes(c, &bytes_count, filename);
-    if (bytes == NULL) {
-        FLOW_error_return(c);
-    }
-    struct flow_io * input = flow_io_create_from_memory(c, flow_io_mode_read_seekable, bytes, bytes_count, job, NULL);
-    if (input == NULL) {
-        FLOW_error_return(c);
-    }
-    if (!flow_job_add_io(c, job, input, 0, FLOW_INPUT)) {
-        FLOW_error_return(c);
-    }
-
-    struct flow_graph * g = flow_graph_create(c, 10, 10, 200, 2.0);
-    if (g == NULL) {
-        FLOW_add_to_callstack(c);
-        return false;
-    }
-    int32_t last;
-    last = flow_node_create_decoder(c, &g, -1, 0);
-    last = flow_node_create_bitmap_bgra_reference(c, &g, last, ref);
-
-    if (flow_context_has_error(c)) {
-        FLOW_add_to_callstack(c);
-        return false;
-    }
-    if (!flow_job_execute(c, job, &g)) {
+    //load PNG
+    if (!flow_bitmap_bgra_load_png(c, ref, filename)){
         FLOW_add_to_callstack(c);
         return false;
     }
@@ -313,11 +284,6 @@ bool load_image(flow_c * c, char * checksum, struct flow_bitmap_bgra ** ref, voi
         FLOW_add_to_callstack(c);
         return false;
     }
-
-    if (!flow_job_destroy(c, job)) {
-        FLOW_error_return(c);
-    }
-    FLOW_free(c, bytes);
     return true;
 }
 static bool diff_images(flow_c * c, char * checksum_a, char * checksum_b, double * out_dssim, bool generate_visual_diff)

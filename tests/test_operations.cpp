@@ -17,7 +17,7 @@ flow_rect test_detect_content_for(uint32_t w, uint32_t h, uint32_t x1, uint32_t 
 
     char path[256];
     flow_snprintf(&path[0], sizeof(path), "rect_%i_%i_%i_%i.png", x1, y1, x2, y2);
-    write_frame_to_disk(c, &path[0], b);
+    flow_bitmap_bgra_save_png(c, b, &path[0]);
 
     flow_context_print_and_exit_if_err(c);
 

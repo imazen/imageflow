@@ -435,6 +435,10 @@ struct flow_job {
     bool render_last_graph;
 };
 
+PUB bool flow_bitmap_bgra_load_png(flow_c * c, struct flow_bitmap_bgra ** b_ref, const char * path);
+PUB bool flow_bitmap_bgra_save_png(flow_c * c, struct flow_bitmap_bgra * b, const char * path);
+PUB uint8_t ** flow_bitmap_create_row_pointers(flow_c * c, void * buffer, size_t buffer_size, size_t stride, size_t height);
+
 PUB bool flow_job_render_graph_to_png(flow_c * c, struct flow_job * job, struct flow_graph * g, int32_t graph_version);
 PUB bool flow_job_notify_node_complete(flow_c * c, struct flow_job * job, struct flow_graph * g, int32_t node_id);
 

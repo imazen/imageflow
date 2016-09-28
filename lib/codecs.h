@@ -32,7 +32,6 @@ bool flow_job_decoder_get_frame_info(flow_c * c, struct flow_job * job, void * c
 bool flow_job_decoder_read_frame(flow_c * c, struct flow_job * job, void * codec_state, int64_t codec_id,
                                  struct flow_bitmap_bgra * canvas);
 
-png_bytepp flow_job_create_row_pointers(flow_c * c, void * buffer, size_t buffer_size, size_t stride, size_t height);
 
 bool flow_bitmap_bgra_transform_to_srgb(flow_c * c, cmsHPROFILE current_profile, struct flow_bitmap_bgra * frame);
 

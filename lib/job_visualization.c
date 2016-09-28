@@ -3,28 +3,6 @@
 // Responsible for writing new versions of the graph to disk as it mutates and node states change
 
 
-bool write_frame_to_disk(flow_c * c, const char * path, struct flow_bitmap_bgra * b)
-{
-
-    png_image target_image;
-    memset(&target_image, 0, sizeof target_image);
-    target_image.version = PNG_IMAGE_VERSION;
-    target_image.opaque = NULL;
-    target_image.width = b->w;
-    target_image.height = b->h;
-    target_image.format = PNG_FORMAT_BGRA;
-    target_image.flags = 0;
-    target_image.colormap_entries = 0;
-
-    if (!png_image_write_to_file(&target_image, path, 0 /*convert_to_8bit*/, b->pixels, 0 /*row_stride*/,
-                                 NULL /*colormap*/)) {
-        FLOW_error_msg(c, flow_status_Image_encoding_failed, "Failed to export frame as png: %s  output path: %s.",
-                       target_image.message, path);
-        return false;
-    }
-    return true;
-}
-
 static bool files_identical(flow_c * c, const char * path1, const char * path2, bool * identical)
 {
     FILE * fp1 = fopen(path1, "r");
@@ -59,7 +37,7 @@ bool flow_job_notify_node_complete(flow_c * c, struct flow_job * job, struct flo
     if (n->result_bitmap != NULL && job->record_frame_images == true) {
         char path[1024];
         flow_snprintf(path, 1023, "node_frames/job_%d_node_%d.png", job->debug_job_id, node_id);
-        if (!write_frame_to_disk(c, path, n->result_bitmap)) {
+        if (!flow_bitmap_bgra_save_png(c, n->result_bitmap, path)) {
             FLOW_error_return(c);
         }
     }

@@ -27,23 +27,6 @@ struct flow_context_codec_set * flow_context_get_default_codec_set()
     return &cached_default_codec_set;
 }
 
-uint8_t ** flow_job_create_row_pointers(flow_c * c, void * buffer, size_t buffer_size, size_t stride, size_t height)
-{
-    if (buffer_size < stride * height) {
-        FLOW_error(c, flow_status_Invalid_internal_state);
-        return NULL;
-    }
-    uint8_t ** rows = (uint8_t **)FLOW_malloc(c, sizeof(uint8_t *) * height);
-    if (rows == NULL) {
-        FLOW_error(c, flow_status_Out_of_memory);
-        return NULL;
-    }
-    unsigned int y;
-    for (y = 0; y < height; ++y) {
-        rows[y] = ((uint8_t *)buffer + (stride * y));
-    }
-    return rows;
-}
 
 bool flow_bitmap_bgra_transform_to_srgb(flow_c * c, cmsHPROFILE current_profile, struct flow_bitmap_bgra * frame)
 {

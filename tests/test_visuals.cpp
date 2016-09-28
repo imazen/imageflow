@@ -67,8 +67,9 @@ TEST_CASE("Test scale image", "")
         ERR(c);
     }
 
-    REQUIRE(visual_compare(c, b, "ScaleTheHouse", store_checksums, 500, __FILE__, __func__, __LINE__) == true);
+    bool result = visual_compare(c, b, "ScaleTheHouse", store_checksums, 500, __FILE__, __func__, __LINE__);
     ERR(c);
+    REQUIRE(result == true);
     flow_context_destroy(c);
 }
 
