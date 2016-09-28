@@ -10,12 +10,32 @@ use std::ascii::AsciiExt;
 use std::ptr;
 
 use std::str::FromStr;
+use libc::int32_t;
 
 pub enum Context {}
 
 pub enum JobIO {}
 
-pub enum Job {}
+//FIXME: fill in
+#[repr(C)]
+pub struct CodecInstance {
+
+}
+
+#[repr(C)]
+pub struct Job {
+    pub debug_job_id: int32_t,
+    pub next_graph_version: int32_t,
+    pub max_calc_flatten_execute_passes: int32_t,
+    //FIXME: find a safer way to store them
+    pub codecs_head:           *mut CodecInstance,
+    pub codecs_tail:           *mut CodecInstance,
+    pub record_graph_versions: bool,
+    pub record_frame_images:   bool,
+    pub render_graph_versions: bool,
+    pub render_animated_graph: bool,
+    pub render_last_graph:     bool,
+}
 
 pub enum Graph {}
 
