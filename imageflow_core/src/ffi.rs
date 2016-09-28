@@ -318,7 +318,36 @@ pub fn flow_io_create_for_file(context: *mut Context,
                            direction: IoDirection)
                            -> bool;
 
+    pub fn flow_job_get_decoder_info(c: *mut Context,
+                                     job: *mut Job,
+                                     by_placeholder_id: i32,
+                                     info: *mut DecoderInfo)
+                                     -> bool;
+
+
+
+
+    pub fn flow_job_decoder_set_downscale_hints_by_placeholder_id(c: *mut Context,
+                                                                  job: *mut Job, placeholder_id:i32,
+                                                                  if_wider_than: i64,  or_taller_than: i64,
+                                                                  downscaled_min_width: i64,  downscaled_min_height:i64,  scale_luma_spatially:bool,
+                                                                  gamma_correct_for_srgb_during_spatial_luma_scaling:bool) -> bool;
+
+
+    pub fn flow_context_set_floatspace(c: *mut Context,
+                                       space: Floatspace,
+                                       a: f32,
+                                       b: f32,
+                                       c: f32);
+
+
+    /// THESE SHOULD BE DELETED AS THEY ARE BEING REWRITTEN IN RUST
     // Creating and manipulating graphs directly is going away very soon in favor of a JSON string.
+
+    pub fn flow_job_execute(c: *mut Context, job: *mut Job, g: *mut *mut Graph) -> bool;
+
+
+    pub fn flow_graph_print_to_stdout(c: *mut Context, g: *const Graph) -> bool;
 
     pub fn flow_graph_create(context: *mut Context,
                              max_edges: u32,
@@ -414,28 +443,8 @@ pub fn flow_io_create_for_file(context: *mut Context,
                                            y2: u32)
                                            -> i32;
 
+    ////////////// END HEADERS TO DELETE
 
-    pub fn flow_job_get_decoder_info(c: *mut Context,
-                                     job: *mut Job,
-                                     by_placeholder_id: i32,
-                                     info: *mut DecoderInfo)
-                                     -> bool;
-
-    pub fn flow_job_decoder_set_downscale_hints_by_placeholder_id(c: *mut Context,
-     job: *mut Job, placeholder_id:i32,
-        if_wider_than: i64,  or_taller_than: i64,
-         downscaled_min_width: i64,  downscaled_min_height:i64,  scale_luma_spatially:bool,
-         gamma_correct_for_srgb_during_spatial_luma_scaling:bool) -> bool;
-
-    pub fn flow_job_execute(c: *mut Context, job: *mut Job, g: *mut *mut Graph) -> bool;
-
-
-    pub fn flow_graph_print_to_stdout(c: *mut Context, g: *const Graph) -> bool;
-    pub fn flow_context_set_floatspace(c: *mut Context,
-                                       space: Floatspace,
-                                       a: f32,
-                                       b: f32,
-                                       c: f32);
 
 }
 

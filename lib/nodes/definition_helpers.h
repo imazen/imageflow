@@ -1,4 +1,4 @@
-#include "../nodes.h"
+#include "lib/rewrite_in_rust.h"
 
 #ifdef __cplusplus
 extern "C" {

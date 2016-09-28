@@ -170,27 +170,6 @@ PUB bool flow_node_execute_scale2d_render1d(
     flow_c * c, struct flow_job * job, struct flow_bitmap_bgra * input, struct flow_bitmap_bgra * canvas,
     struct flow_nodeinfo_scale2d_render_to_canvas1d * info) FLOW_HINT_HOT FLOW_HINT_UNSAFE_MATH_OPTIMIZATIONS;
 
-PUB bool flow_job_populate_dimensions_where_certain(flow_c * c, struct flow_job * job, struct flow_graph ** graph_ref);
-// For doing execution cost estimates, we force estimate, then flatten, then calculate cost
-PUB bool flow_job_force_populate_dimensions(flow_c * c, struct flow_job * job, struct flow_graph ** graph_ref);
-PUB bool flow_job_execute_where_certain(flow_c * c, struct flow_job * job, struct flow_graph ** graph_ref);
-PUB bool flow_job_graph_fully_executed(flow_c * c, struct flow_job * job, struct flow_graph * g);
-
-PUB bool flow_job_notify_graph_changed(flow_c * c, struct flow_job * job, struct flow_graph * g);
-
-PUB bool flow_graph_post_optimize_flatten(flow_c * c, struct flow_job * job, struct flow_graph ** graph_ref);
-
-PUB bool flow_graph_optimize(flow_c * c, struct flow_job * job, struct flow_graph ** graph_ref);
-PUB bool flow_graph_pre_optimize_flatten(flow_c * c, struct flow_graph ** graph_ref);
-PUB int32_t flow_graph_get_edge_count(flow_c * c, struct flow_graph * g, int32_t node_id, bool filter_by_edge_type,
-                                      flow_edgetype type, bool include_inbound, bool include_outbound);
-
-PUB bool flow_node_post_optimize_flatten(flow_c * c, struct flow_graph ** graph_ref, int32_t node_id);
-
-PUB bool flow_graph_walk_dependency_wise(flow_c * c, struct flow_job * job, struct flow_graph ** graph_ref,
-                                         flow_graph_visitor node_visitor, flow_graph_visitor edge_visitor,
-                                         void * custom_data);
-
 PUB struct flow_bitmap_float * flow_bitmap_float_create_header(flow_c * c, int sx, int sy, int channels);
 
 PUB struct flow_bitmap_float * flow_bitmap_float_create(flow_c * c, int sx, int sy, int channels, bool zeroed);
@@ -438,11 +417,6 @@ struct flow_job {
 PUB bool flow_bitmap_bgra_load_png(flow_c * c, struct flow_bitmap_bgra ** b_ref, const char * path);
 PUB bool flow_bitmap_bgra_save_png(flow_c * c, struct flow_bitmap_bgra * b, const char * path);
 PUB uint8_t ** flow_bitmap_create_row_pointers(flow_c * c, void * buffer, size_t buffer_size, size_t stride, size_t height);
-
-PUB bool flow_job_render_graph_to_png(flow_c * c, struct flow_job * job, struct flow_graph * g, int32_t graph_version);
-PUB bool flow_job_notify_node_complete(flow_c * c, struct flow_job * job, struct flow_graph * g, int32_t node_id);
-
-PUB bool flow_job_link_codecs(flow_c * c, struct flow_job * job, struct flow_graph ** graph_ref);
 
 PUB bool flow_job_decoder_set_downscale_hints(flow_c * c, struct flow_job * job, struct flow_codec_instance * codec,
                                               struct flow_decoder_downscale_hints * hints,

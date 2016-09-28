@@ -226,50 +226,6 @@ PUB struct flow_context_codec_set * flow_context_get_default_codec_set(void);
 PUB struct flow_context_node_set * flow_context_get_default_node_set(void);
 
 ////////////////////////////////////////////
-// Deal with graphs
-
-typedef bool (*flow_graph_visitor)(flow_c * c, struct flow_job * job, struct flow_graph ** graph_ref, int32_t id,
-                                   bool * quit, bool * skip_outbound_paths, void * custom_data);
-
-PUB bool flow_graph_walk(flow_c * c, struct flow_job * job, struct flow_graph ** graph_ref,
-                         flow_graph_visitor node_visitor, flow_graph_visitor edge_visitor, void * custom_data);
-
-PUB bool flow_node_delete(flow_c * c, struct flow_graph * g, int32_t node_id);
-
-PUB bool flow_edge_delete(flow_c * c, struct flow_graph * g, int32_t edge_id);
-
-PUB bool flow_edge_delete_all_connected_to_node(flow_c * c, struct flow_graph * g, int32_t node_id);
-PUB bool flow_edge_delete_connected_to_node(flow_c * c, struct flow_graph * g, int32_t node_id, bool inbound, bool outbound);
-
-PUB int32_t
-    flow_graph_get_inbound_edge_count_of_type(flow_c * c, struct flow_graph * g, int32_t node_id, flow_edgetype type);
-PUB int32_t
-    flow_graph_get_first_inbound_edge_of_type(flow_c * c, struct flow_graph * g, int32_t node_id, flow_edgetype type);
-
-PUB int32_t
-    flow_graph_get_first_outbound_edge_of_type(flow_c * c, struct flow_graph * g, int32_t node_id, flow_edgetype type);
-
-PUB int32_t
-    flow_graph_get_first_inbound_node_of_type(flow_c * c, struct flow_graph * g, int32_t node_id, flow_edgetype type);
-
-PUB int32_t
-    flow_graph_get_first_outbound_node_of_type(flow_c * c, struct flow_graph * g, int32_t node_id, flow_edgetype type);
-
-PUB bool flow_node_has_dimensions(flow_c * c, struct flow_graph * g, int32_t node_id);
-
-PUB bool flow_node_inputs_have_dimensions(flow_c * c, struct flow_graph * g, int32_t node_id);
-PUB bool flow_graph_duplicate_edges_to_another_node(flow_c * c, struct flow_graph ** graph_ref, int32_t from_node,
-                                                    int32_t to_node, bool copy_inbound, bool copy_outbound);
-
-PUB int32_t flow_graph_copy_info_bytes_to(flow_c * c, struct flow_graph * from, struct flow_graph ** to,
-                                          int32_t byte_index, int32_t byte_count);
-
-PUB int32_t flow_edge_duplicate(flow_c * c, struct flow_graph ** g, int32_t edge_id);
-
-PUB bool flow_graph_print_to_dot(flow_c * c, struct flow_graph * g, FILE * stream,
-                                 const char * image_node_filename_prefix);
-PUB bool flow_graph_print_to_stdout(flow_c * c, struct flow_graph * g);
-////////////////////////////////////////////
 // Deal with bitmaps
 
 // non-indexed bitmap

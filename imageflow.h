@@ -254,9 +254,6 @@ struct flow_nodeinfo_codec;
 struct flow_nodeinfo_render_to_canvas_1d;
 struct flow_scanlines_filter;
 struct flow_decoder_downscale_hints;
-struct flow_node;
-struct flow_edge;
-struct flow_graph;
 struct flow_bitmap_bgra;
 struct flow_nodeinfo_scale2d_render_to_canvas1d;
 
@@ -343,86 +340,6 @@ PUB bool flow_job_decoder_set_downscale_hints_by_placeholder_id(
     int64_t downscaled_min_width, int64_t downscaled_min_height, bool scale_luma_spatially,
     bool gamma_correct_for_srgb_during_spatial_luma_scaling);
 
-PUB struct flow_graph * flow_graph_create(flow_c * c, uint32_t max_edges, uint32_t max_nodes, uint32_t max_info_bytes,
-                                          float growth_factor);
-
-PUB bool flow_job_execute(flow_c * c, struct flow_job * job, struct flow_graph ** graph_ref);
-
-PUB void flow_graph_destroy(flow_c * c, struct flow_graph * target);
-
-PUB bool flow_graph_replace_if_too_small(flow_c * c, struct flow_graph ** g, uint32_t free_nodes_required,
-                                         uint32_t free_edges_required, uint32_t free_bytes_required);
-PUB struct flow_graph * flow_graph_copy_and_resize(flow_c * c, struct flow_graph * from, uint32_t max_edges,
-                                                   uint32_t max_nodes, uint32_t max_info_bytes);
-
-PUB struct flow_graph * flow_graph_copy(flow_c * c, struct flow_graph * from);
-
-PUB int32_t flow_node_create_decoder(flow_c * c, struct flow_graph ** g, int32_t prev_node, int32_t placeholder_id);
-
-PUB int32_t flow_node_create_canvas(flow_c * c, struct flow_graph ** g, int32_t prev_node, flow_pixel_format format,
-                                    size_t width, size_t height, uint32_t bgcolor);
-PUB int32_t flow_node_create_scale(flow_c * c, struct flow_graph ** g, int32_t prev_node, size_t width, size_t height,
-                                   flow_interpolation_filter downscale_filter, flow_interpolation_filter upscale_filter,
-                                   size_t flags, float sharpen);
-
-PUB int32_t flow_node_create_primitive_flip_vertical(flow_c * c, struct flow_graph ** g, int32_t prev_node);
-PUB int32_t flow_node_create_primitive_flip_horizontal(flow_c * c, struct flow_graph ** g, int32_t prev_node);
-PUB int32_t flow_node_create_clone(flow_c * c, struct flow_graph ** g, int32_t prev_node);
-PUB int32_t flow_node_create_expand_canvas(flow_c * c, struct flow_graph ** g, int32_t prev_node, uint32_t left,
-                                           uint32_t top, uint32_t right, uint32_t bottom, uint32_t canvas_color_srgb);
-PUB int32_t flow_node_create_fill_rect(flow_c * c, struct flow_graph ** g, int32_t prev_node, uint32_t x1, uint32_t y1,
-                                       uint32_t x2, uint32_t y2, uint32_t color_srgb);
-PUB int32_t flow_node_create_transpose(flow_c * c, struct flow_graph ** g, int32_t prev_node);
-
-PUB int32_t flow_node_create_apply_orientation(flow_c * c, struct flow_graph ** g,  int32_t prev_node, int32_t exif_orientation_flag);
-
-PUB int32_t flow_node_create_rotate_90(flow_c * c, struct flow_graph ** g, int32_t prev_node);
-
-PUB int32_t flow_node_create_rotate_180(flow_c * c, struct flow_graph ** g, int32_t prev_node);
-
-PUB int32_t flow_node_create_rotate_270(flow_c * c, struct flow_graph ** g, int32_t prev_node);
-
-PUB int32_t
-    flow_node_create_encoder_placeholder(flow_c * c, struct flow_graph ** g, int32_t prev_node, int32_t output_slot_id);
-
-PUB int32_t flow_node_create_encoder(flow_c * c, struct flow_graph ** g, int32_t prev_node, int32_t placeholder_id,
-                                     int64_t desired_encoder_id, struct flow_encoder_hints * hints);
-
-PUB int32_t flow_node_create_noop(flow_c * c, struct flow_graph ** g, int32_t prev_node);
-
-PUB int32_t flow_node_create_bitmap_bgra_reference(flow_c * c, struct flow_graph ** g, int32_t prev_node,
-                                                   struct flow_bitmap_bgra ** pointer_to_pointer_to_bitmap_bgra);
-
-PUB int32_t flow_node_create_primitive_copy_rect_to_canvas(flow_c * c, struct flow_graph ** g, int32_t prev_node,
-                                                           uint32_t from_x, uint32_t from_y, uint32_t width,
-                                                           uint32_t height, uint32_t x, uint32_t y);
-
-PUB int32_t flow_node_create_primitive_crop(flow_c * c, struct flow_graph ** g, int32_t prev_node, uint32_t x1,
-                                            uint32_t x2, uint32_t y1, uint32_t y2);
-
-PUB int32_t flow_node_create_render_to_canvas_1d(flow_c * c, struct flow_graph ** g, int32_t prev_node,
-                                                 bool transpose_on_write, uint32_t canvas_x, uint32_t canvas_y,
-                                                 int32_t scale_to_width,
-                                                 flow_working_floatspace scale_and_filter_in_colorspace,
-                                                 float sharpen_percent, flow_compositing_mode compositing_mode,
-                                                 uint8_t * matte_color[4], struct flow_scanlines_filter * filter_list,
-                                                 flow_interpolation_filter interpolation_filter);
-
-PUB int32_t flow_node_create_scale_2d(flow_c * c, struct flow_graph ** g, int32_t prev_node, int32_t scale_to_width,
-                                      int32_t scale_to_height, flow_working_floatspace scale_and_filter_in_colorspace,
-                                      float sharpen_percent, flow_interpolation_filter interpolation_filter);
-
-PUB int32_t flow_edge_create(flow_c * c, struct flow_graph ** g, int32_t from, int32_t to, flow_edgetype type);
-
-PUB int32_t flow_node_create_render1d(flow_c * c, struct flow_graph ** g, int32_t prev_node, bool transpose_on_write,
-                                      int32_t scale_to_width, flow_working_floatspace scale_and_filter_in_colorspace,
-                                      float sharpen_percent, struct flow_scanlines_filter * filter_list,
-                                      flow_interpolation_filter interpolation_filter);
-PUB int32_t flow_node_create_generic(flow_c * c, struct flow_graph ** graph_ref, int32_t prev_node, flow_ntype type);
-
-PUB int32_t flow_node_create_generic_with_data(flow_c * c, struct flow_graph ** graph_ref, int32_t prev_node,
-                                               flow_ntype type, uint8_t * bytes, size_t byte_count);
-
 PUB struct flow_job * flow_job_create(flow_c * c);
 PUB bool flow_job_destroy(flow_c * c, struct flow_job * job);
 PUB bool flow_job_configure_recording(flow_c * c, struct flow_job * job, bool record_graph_versions,
@@ -432,7 +349,7 @@ PUB bool flow_job_configure_recording(flow_c * c, struct flow_job * job, bool re
 PUB bool flow_job_decoder_switch_frame(flow_c * c, struct flow_job * job, int32_t by_placeholder_id,
                                        int64_t frame_index);
 
-PUB bool flow_graph_validate(flow_c * c, struct flow_graph * g);
+
 
 PUB uint32_t flow_pixel_format_bytes_per_pixel(flow_pixel_format format);
 
@@ -454,6 +371,8 @@ PUB bool flow_job_get_decoder_info(flow_c * c, struct flow_job * job, int32_t by
 
 PUB bool flow_bitmap_bgra_write_png(flow_c * c, struct flow_job * job, struct flow_bitmap_bgra * frame,
                                     struct flow_io * io);
+
+#include "lib/rewrite_in_rust.h"
 
 #undef PUB
 
