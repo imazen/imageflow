@@ -110,6 +110,33 @@ pub enum Filter {
     NCubicSharp = 30,
 }
 
+#[repr(C)]
+#[derive(Copy,Clone,Debug, PartialEq)]
+pub enum FlowStatusCode {
+    NoError                    = 0,
+    OutOfMemory                = 10,
+    IOError                    = 20,
+    InvalidInternalState       = 30,
+    NotImplemented             = 40,
+    InvalidArgument            = 50,
+    NullArgument               = 51,
+    InvalidDimensions          = 52,
+    UnsupportedPixelFormat     = 53,
+    ItemDoesNotExist           = 54,
+
+    ImageDecodingFailed        = 60,
+    ImageEncodingFailed        = 61,
+    GraphInvalid               = 70,
+    GraphIsCyclic              = 71,
+    InvalidInputsToNode        = 72,
+    MaximumGraphPassesExceeded = 73,
+    OtherError                 = 1024,
+    //FIXME: FirstUserDefinedError is 1025 in C but it conflicts with __LastLibraryError
+    //___LastLibraryError,
+    FirstUserDefinedError      = 1025,
+    LastUserDefinedError       = 2147483647,
+}
+
 
 pub const TESTED_FILTER_OPTIONS: &'static [&'static str] = &["",
                                                              "robidoux",
@@ -295,6 +322,9 @@ extern "C" {
 
     pub fn flow_context_error_reason(context: *mut Context) -> i32;
 
+    pub fn flow_context_set_error_get_message_buffer(context: *mut Context, code: i32/*FlowStatusCode*/,
+        file: *const libc::c_char, line: i32, function_name: *const libc::c_char) -> *const libc::c_char;
+
     pub fn flow_context_raise_error(context: *mut Context,
                                     error_code: i32,
                                     message: *const libc::c_char,
@@ -425,9 +455,11 @@ extern "C" {
     /// THESE SHOULD BE DELETED AS THEY ARE BEING REWRITTEN IN RUST
     /// Creating and manipulating graphs directly is going away very soon in favor of a JSON string.
 
+    /*
     pub fn flow_job_execute(c: *mut Context, job: *mut Job, g: *mut *mut Graph) -> bool;
+*/
 
-
+    /**/
     pub fn flow_graph_print_to_stdout(c: *mut Context, g: *const Graph) -> bool;
 
     pub fn flow_graph_create(context: *mut Context,
@@ -538,6 +570,7 @@ extern "C" {
                                            y2: u32)
                                            -> i32;
 
+    /**/
 //  /////////// END HEADERS TO DELETE
 
 

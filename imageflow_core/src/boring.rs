@@ -1,6 +1,7 @@
 // Boring, because we're not doing any kind of op graph, just a static list of configurable ops.
 
 use ffi::*;
+use flow;
 use std::ffi::*;
 use std::fs::File;
 use std::io::Read;
@@ -427,7 +428,7 @@ pub fn process_image<F, C, R>(commands: BoringCommands,
         assert!(last > 0);
 
 
-        if !flow_job_execute(c, j, (&mut g) as *mut *mut Graph) {
+        if !flow::job_execute(c, j, (&mut g) as *mut *mut Graph) {
             flow_context_print_and_exit_if_err(c);
         }
 

@@ -5,6 +5,7 @@ use std;
 extern crate rustc_serialize;
 extern crate libc;
 
+use flow;
 use ContextPtr;
 use JsonResponse;
 use libc::c_void;
@@ -214,7 +215,7 @@ impl BuildRequestHandler {
             }
 
 
-            if !::ffi::flow_job_execute(p, job, &mut g) {
+            if !flow::job_execute(p, job, &mut g) {
                 ctx.assert_ok(Some(g));
             }
 
