@@ -51,7 +51,9 @@ bool execute_graph_for_bitmap_bgra(flow_c * c, struct flow_graph ** graph_ref)
     return true;
 }
 
-TEST_CASE("create tiny graph", "")
+// Port priority 0 - petgraph should already test this
+
+TEST_CASE("After building a graph, ensure that the node/edge count is correct, and that edges point between nodes", "")
 {
     flow_c * c = flow_context_create();
     flow_graph * g = flow_graph_create(c, 10, 10, 200, 2.0);
@@ -72,7 +74,8 @@ TEST_CASE("create tiny graph", "")
     flow_context_destroy(c);
 }
 
-TEST_CASE("delete a node from a graph", "")
+/// Port priority 0
+TEST_CASE("Verify that graph remains valid, free of orphaned edges, after flow_node_delete", "")
 {
     flow_c * c = flow_context_create();
     flow_graph * g = flow_graph_create(c, 10, 10, 200, 2.0);
@@ -108,7 +111,9 @@ TEST_CASE("delete a node from a graph", "")
     flow_context_destroy(c);
 }
 
-TEST_CASE("clone an edge", "")
+//Port priority 0
+
+TEST_CASE("Verify flow_edge_duplicate preserves from/to indicies", "")
 {
     flow_c * c = flow_context_create();
     flow_graph * g = flow_graph_create(c, 10, 10, 200, 2.0);
@@ -136,9 +141,9 @@ TEST_CASE("clone an edge", "")
     flow_context_destroy(c);
 }
 
-// TODO test paths where adding nodes/edges exceeds the max size
+// Port priority 1
 
-TEST_CASE("execute tiny graph", "")
+TEST_CASE("Verify that a bitmap_bgra result has the correct width post job execution (no IO)", "")
 {
 
     flow_c * c = flow_context_create();
@@ -161,8 +166,6 @@ TEST_CASE("execute tiny graph", "")
 
     job = flow_job_create(c);
     ERR(c);
-    REQUIRE(g->edges[1].from == 1);
-    REQUIRE(g->edges[1].to == 2);
 
     if (!flow_job_execute(c, job, &g)) {
         ERR(c);
@@ -175,7 +178,8 @@ TEST_CASE("execute tiny graph", "")
     flow_context_destroy(c);
 }
 
-TEST_CASE("decode and scale png", "")
+// Port priority 1
+TEST_CASE("Decode and scale a PNG image; bitamp result width should be correct", "")
 {
 
     flow_c * c = flow_context_create();
@@ -221,124 +225,91 @@ TEST_CASE("decode and scale png", "")
     flow_context_destroy(c);
 }
 
-uint8_t image_bytes_literal[]
-    = { 0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, 0x00, 0x00, 0x00, 0x0D, 0x49, 0x48, 0x44, 0x52, 0x00,
-        0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x08, 0x06, 0x00, 0x00, 0x00, 0x1F, 0x15, 0xC4, 0x89, 0x00,
-        0x00, 0x00, 0x0A, 0x49, 0x44, 0x41, 0x54, 0x78, 0x9C, 0x63, 0x00, 0x01, 0x00, 0x00, 0x05, 0x00, 0x01,
-        0x0D, 0x0A, 0x2D, 0xB4, 0x00, 0x00, 0x00, 0x00, 0x49, 0x45, 0x4E, 0x44, 0xAE, 0x42, 0x60, 0x82 };
-
-bool create_operation_graph(flow_c * c, struct flow_graph ** graph_ref, int32_t input_placeholder,
-                            int32_t output_placeholder, struct flow_decoder_info * info)
+//Port priority 2
+TEST_CASE("Test reading from memory, writing to file (test flow_io through job)", "")
 {
-
-    REQUIRE(info->frame0_post_decode_format == flow_bgra32);
-    REQUIRE(info->frame0_width == 1);
-    REQUIRE(info->frame0_height == 1);
-    REQUIRE(strcmp(info->preferred_extension, "png") == 0);
-    REQUIRE(strcmp(info->preferred_mime_type, "image/png") == 0);
-    REQUIRE(info->codec_id == flow_codec_type_decode_png);
-
-    // We'll create a simple operation graph that scales the image up 200%
-    struct flow_graph * g = flow_graph_create(c, 10, 10, 200, 2.0);
-    if (g == NULL) {
-        FLOW_add_to_callstack(c);
-        return false;
-    }
-    int32_t last = flow_node_create_decoder(c, &g, -1, input_placeholder);
-    // Double the original width/height
-    last = flow_node_create_scale(c, &g, last, info->frame0_width * 2, info->frame0_height * 2,
-                                  (flow_interpolation_filter_Robidoux), (flow_interpolation_filter_Robidoux), 0, 0);
-    // Keep the original format if png or jpeg
-    size_t encoder_id = info->codec_id == flow_codec_type_decode_jpeg ? flow_codec_type_encode_jpeg
-                                                                      : flow_codec_type_encode_png;
-    last = flow_node_create_encoder(c, &g, last, output_placeholder, encoder_id, NULL);
-
-    if (flow_context_has_error(c)) {
-        FLOW_add_to_callstack(c);
-        return false;
-    }
-    *graph_ref = g;
-    return true;
-}
-
-bool scale_image_inner(flow_c * c, flow_io * input, flow_io * output)
-{
-    // We associate codecs and nodes using integer IDs that you select
-    int32_t input_placeholder = 42;
-    int32_t output_placeholder = 0xbad1dea;
-
-    // We create a job to create I/O resources and attach them to our abstract graph above
-    struct flow_job * job = flow_job_create(c);
-    if (job == NULL) {
-        FLOW_add_to_callstack(c);
-        return false;
-    }
-    // Uncomment to make an animation. Requires sudo apt-get install libav-tools graphviz gifsicle
-    // flow_job_configure_recording(c, job, true, true, true, true, true);
-
-    // Add I/O to the job. First bytes are read here
-    if (!flow_job_add_io(c, job, input, input_placeholder, FLOW_INPUT)
-        || !flow_job_add_io(c, job, output, output_placeholder, FLOW_OUTPUT)) {
-        FLOW_add_to_callstack(c);
-        return false;
-    }
-    // Let's read information about the input file
-    struct flow_decoder_info info;
-    if (!flow_job_get_decoder_info(c, job, input_placeholder, &info)) {
-        FLOW_add_to_callstack(c);
-        return false;
-    }
-    // And give it to the operation graph designer
-    struct flow_graph * g;
-    if (!create_operation_graph(c, &g, input_placeholder, output_placeholder, &info)) {
-        FLOW_add_to_callstack(c);
-        return false;
-    }
-    // Execute the graph we created
-    if (!flow_job_execute(c, job, &g)) {
-        FLOW_add_to_callstack(c);
-        return false;
-    }
-    return true;
-}
-
-bool scale_image_to_disk()
-{
-    // flow_context provides error tracking and memory management
     flow_c * c = flow_context_create();
-    if (c == NULL) {
-        return false;
-    }
-    // We're going to use an embedded image, but you could get bytes from anywhere
-    struct flow_io * input = flow_io_create_from_memory(c, flow_io_mode_read_seekable, &image_bytes_literal[0],
-                                                        sizeof(image_bytes_literal), c, NULL);
-    // Output to an in-memory expanding buffer. This could be a stream or file instead.
-    struct flow_io * output = flow_io_create_for_output_buffer(c, c);
+    struct flow_graph * g = nullptr;
+    struct flow_job * job = nullptr;
+    struct flow_bitmap_bgra * result = nullptr;
 
-    // Using an inner function makes it easier to deal with errors
-    if (input == NULL || output == NULL || !scale_image_inner(c, input, output)) {
-        FLOW_add_to_callstack(c);
-        flow_context_print_error_to(c, stderr); // prints the callstack, too
-        flow_context_destroy(c);
-        return false;
-    }
-    // Write the output to file. We could use flow_io_get_output_buffer to get the bytes directly if we wanted them
-    if (!flow_io_write_output_buffer_to_file(c, output, "graph_scaled_png.png")) {
+    g = flow_graph_create(c, 10, 10, 200, 2.0);
+    ERR(c);
 
-        FLOW_add_to_callstack(c);
-        flow_context_print_error_to(c, stderr);
-        flow_context_destroy(c);
-        return false;
+    int32_t input_placeholder = 0;
+
+    int32_t last;
+    last = flow_node_create_decoder(c, &g, -1, input_placeholder);
+    last = flow_node_create_scale(c, &g, last, 300, 200, (flow_interpolation_filter_Robidoux),
+                                  (flow_interpolation_filter_Robidoux), 0, 0);
+    last = flow_node_create_encoder(c, &g, last, 1, flow_codec_type_encode_png, NULL);
+
+    job = flow_job_create(c);
+    ERR(c);
+    uint8_t image_bytes_literal[]
+        = { 0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, 0x00, 0x00, 0x00, 0x0D, 0x49, 0x48, 0x44, 0x52, 0x00,
+            0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x08, 0x06, 0x00, 0x00, 0x00, 0x1F, 0x15, 0xC4, 0x89, 0x00,
+            0x00, 0x00, 0x0A, 0x49, 0x44, 0x41, 0x54, 0x78, 0x9C, 0x63, 0x00, 0x01, 0x00, 0x00, 0x05, 0x00, 0x01,
+            0x0D, 0x0A, 0x2D, 0xB4, 0x00, 0x00, 0x00, 0x00, 0x49, 0x45, 0x4E, 0x44, 0xAE, 0x42, 0x60, 0x82 };
+
+    struct flow_io * input_io = flow_io_create_from_memory(c, flow_io_mode_read_seekable, &image_bytes_literal[0],
+                                                           sizeof(image_bytes_literal), job, NULL);
+
+    if (!flow_job_add_io(c, job, input_io, input_placeholder, FLOW_INPUT)) {
+        ERR(c);
     }
-    // This will destroy the input/output objects, but if there are underlying streams that need to be
-    // closed, you would do that here after flow_context_destroy
+    struct flow_io * output_io = flow_io_create_for_file(c, flow_io_mode_write_seekable, "test_io.png", job);
+
+    if (!flow_job_add_io(c, job, output_io, 1, FLOW_OUTPUT)) {
+        ERR(c);
+    }
+
+    if (!flow_job_execute(c, job, &g)) {
+        ERR(c);
+    }
+
+    ERR(c);
+
     flow_context_destroy(c);
-    return true;
+    c = NULL;
+    g = NULL;
+    last = -1;
+    job = NULL;
+    input_io = NULL;
+
+    c = flow_context_create();
+
+    g = flow_graph_create(c, 10, 10, 200, 2.0);
+    ERR(c);
+
+    last = flow_node_create_decoder(c, &g, -1, input_placeholder);
+    last = flow_node_create_scale(c, &g, last, 300, 200, (flow_interpolation_filter_Robidoux),
+                                  (flow_interpolation_filter_Robidoux), 0, 0);
+    last = flow_node_create_bitmap_bgra_reference(c, &g, last, &result);
+
+    job = flow_job_create(c);
+    ERR(c);
+    input_io = flow_io_create_for_file(c, flow_io_mode_read_seekable, "test_io.png", job);
+
+    if (!flow_job_add_io(c, job, input_io, input_placeholder, FLOW_INPUT)) {
+        ERR(c);
+    }
+
+    if (!flow_job_execute(c, job, &g)) {
+        ERR(c);
+    }
+
+    REQUIRE(result != NULL);
+    REQUIRE(result->w == 300);
+
+    // unlink ("test_io.png");
+
+    flow_context_destroy(c);
 }
 
-TEST_CASE("decode, scale, and re-encode png", "") { REQUIRE(scale_image_to_disk()); }
 
-TEST_CASE("scale and flip and crop png", "")
+// Port priority 2
+TEST_CASE("Decode/scale/flip/crop/encode PNG (smoke test)", "")
 {
     flow_c * c = flow_context_create();
     struct flow_graph * g = flow_graph_create(c, 10, 10, 200, 2.0);
@@ -359,7 +330,9 @@ TEST_CASE("scale and flip and crop png", "")
     flow_context_destroy(c);
 }
 
-TEST_CASE("scale gif", "")
+// Port priority 1
+
+TEST_CASE("Decode GIF frame, scale, encode as PNG", "")
 {
     flow_context * c = flow_context_create();
     struct flow_graph * g = flow_graph_create(c, 10, 10, 200, 2.0);
@@ -378,6 +351,7 @@ TEST_CASE("scale gif", "")
     flow_context_destroy(c);
 }
 
+//Don't port. Specific to libgif bugs
 TEST_CASE("read gif overlapped", "")
 {
     flow_context * c = flow_context_create();
@@ -407,6 +381,7 @@ TEST_CASE("read gif overlapped", "")
     flow_context_destroy(c);
 }
 
+// Port priority 1
 TEST_CASE("export frames of animated gif", "")
 {
     int32_t last, input_placeholder = 0;
@@ -459,7 +434,8 @@ TEST_CASE("export frames of animated gif", "")
     flow_context_destroy(c);
 }
 
-TEST_CASE("scale and flip and crop jpg", "")
+// Port priority 2
+TEST_CASE("scale and flip and crop and encode jpg", "")
 {
     flow_c * c = flow_context_create();
     struct flow_graph * g = flow_graph_create(c, 10, 10, 200, 2.0);
@@ -481,47 +457,12 @@ TEST_CASE("scale and flip and crop jpg", "")
     flow_context_destroy(c);
 }
 
-TEST_CASE("benchmark scaling large progressive jpg", "")
+
+// Port priority 1
+TEST_CASE("Roundtrip flipping both horizontal and vertical", "")
 {
-    flow_c * c = flow_context_create();
-    struct flow_graph * g = flow_graph_create(c, 10, 10, 200, 2.0);
-    ERR(c);
-
-    int32_t last, input_placeholder = 0, output_placeholder = 1;
-
-    last = flow_node_create_decoder(c, &g, -1, input_placeholder);
-    last = flow_node_create_scale(c, &g, last, 800, 800, (flow_interpolation_filter_Robidoux),
-                                  (flow_interpolation_filter_Robidoux), 0, 0);
-    last = flow_node_create_encoder(c, &g, last, output_placeholder, flow_codec_type_encode_jpeg, NULL);
-
-    execute_graph_for_url(c, "http://s3.amazonaws.com/resizer-dynamic-downloads/imageflow_test_suite/4kx4k.jpg",
-                          "graph_large_jpeg.jpg", &g);
-
-    flow_context_destroy(c);
-}
-
-TEST_CASE("benchmark scaling large jpg", "")
-{
-    flow_c * c = flow_context_create();
-    struct flow_graph * g = flow_graph_create(c, 10, 10, 200, 2.0);
-    ERR(c);
-
-    int32_t last, input_placeholder = 0, output_placeholder = 1;
-
-    last = flow_node_create_decoder(c, &g, -1, input_placeholder);
-    last = flow_node_create_scale(c, &g, last, 800, 800, (flow_interpolation_filter_Robidoux),
-                                  (flow_interpolation_filter_Robidoux), 0, 0);
-    last = flow_node_create_encoder(c, &g, last, output_placeholder, flow_codec_type_encode_jpeg, NULL);
-
-    execute_graph_for_url(c,
-                          "http://s3.amazonaws.com/resizer-dynamic-downloads/imageflow_test_suite/4kx4k_baseline.jpg",
-                          "graph_large_jpeg.jpg", &g);
-
-    flow_context_destroy(c);
-}
-
-TEST_CASE("Roundtrip flipping", "")
-{
+    // Vertical and horizatal roundtrip should be separate tests
+    // This didn't catch the bug where horizontal and vertical nodes both flipped vertically
     flow_c * c = flow_context_create();
     struct flow_graph * g = flow_graph_create(c, 10, 10, 200, 2.0);
     ERR(c);
@@ -551,7 +492,8 @@ TEST_CASE("Roundtrip flipping", "")
     flow_context_destroy(c);
 }
 
-TEST_CASE("scale copy rect", "")
+//Port priority 1
+TEST_CASE("copy_rect_to_canvas (smoke test)", "")
 {
     flow_c * c = flow_context_create();
     struct flow_graph * g = flow_graph_create(c, 10, 10, 200, 2.0);
@@ -574,49 +516,8 @@ TEST_CASE("scale copy rect", "")
     flow_context_destroy(c);
 }
 
-TEST_CASE("test frame clone", "")
-{
-    flow_c * c = flow_context_create();
-    struct flow_graph * g = flow_graph_create(c, 10, 10, 200, 2.0);
-    ERR(c);
-
-    int32_t input_placeholder = 0, output_placeholder = 1;
-
-    int32_t input = flow_node_create_decoder(c, &g, -1, input_placeholder);
-    int32_t clone_a = flow_node_create_clone(c, &g, input);
-    int32_t clone_b = flow_node_create_clone(c, &g, input);
-    int32_t last = flow_node_create_primitive_flip_vertical(c, &g, clone_b); // mutate b, leave a alone
-    flow_node_create_transpose(c, &g, last);
-
-    flow_node_create_encoder_placeholder(c, &g, clone_a, output_placeholder);
-
-    execute_graph_for_url(c, "http://s3-us-west-2.amazonaws.com/imageflow-resources/test_inputs/mountain_400.png",
-                          "unflipped.png", &g);
-
-    flow_context_destroy(c);
-}
-
-TEST_CASE("test rotation", "")
-{
-    flow_c * c = flow_context_create();
-    struct flow_graph * g = flow_graph_create(c, 10, 10, 200, 2.0);
-    ERR(c);
-
-    int32_t input_placeholder = 0, output_placeholder = 1;
-
-    int32_t input = flow_node_create_decoder(c, &g, -1, input_placeholder);
-    int32_t a = flow_node_create_rotate_90(c, &g, input);
-    int32_t b = flow_node_create_rotate_180(c, &g, input);
-    int32_t c_n = flow_node_create_rotate_270(c, &g, input);
-    flow_node_create_encoder_placeholder(c, &g, a, output_placeholder);
-
-    execute_graph_for_url(c, "http://s3-us-west-2.amazonaws.com/imageflow-resources/test_inputs/orientation.png",
-                          "rotated.png", &g);
-
-    flow_context_destroy(c);
-}
-
-TEST_CASE("test memory corruption", "")
+//Port priority 2
+TEST_CASE("Test graph with 3 nodes pulling from decoder (smoke test)", "")
 {
     // This test case helped expose a flaw in graph creation, where we swapped max_edges and max_nodes and caused memory
     // overlap
@@ -643,12 +544,10 @@ TEST_CASE("test memory corruption", "")
     flow_context_destroy(c);
 }
 
-TEST_CASE("check for cycles", "")
+//Port priority 0: petgraph probably already covers this
+TEST_CASE("Verify cycles are caught with and without tangents", "")
 {
-    // This test case helped expose a flaw in graph creation, where we swapped max_edges and max_nodes and caused memory
-    // overlap
-    // It also showed how that post_optimize_flatten calls which create pre_optimize_flattenable nodes
-    // Can cause execution to fail in fewer than 6 passes. We may want to re-evaluate our graph exeuction approach
+
     flow_c * c = flow_context_create();
     struct flow_graph * g = flow_graph_create(c, 10, 10, 200, 2.0);
     ERR(c);
@@ -670,12 +569,10 @@ TEST_CASE("check for cycles", "")
 
     flow_context_destroy(c);
 }
-TEST_CASE("test outbound edge validation", "")
+
+//Port priority 2
+TEST_CASE("Verify origin nodes (like decoders) are prevented from having inputs; encoder nodes can't have more than 1 input", "")
 {
-    // This test case helped expose a flaw in graph creation, where we swapped max_edges and max_nodes and caused memory
-    // overlap
-    // It also showed how that post_optimize_flatten calls which create pre_optimize_flattenable nodes
-    // Can cause execution to fail in fewer than 6 passes. We may want to re-evaluate our graph exeuction approach
     flow_c * c = flow_context_create();
     struct flow_graph * g = flow_graph_create(c, 10, 10, 200, 2.0);
     ERR(c);
