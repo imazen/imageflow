@@ -17,7 +17,8 @@ use std::ptr;
 extern crate imageflow_serde as s;
 extern crate serde;
 extern crate serde_json;
-
+extern crate curl;
+use self::curl::easy::Easy;
 
 use ::Context;
 
@@ -132,7 +133,6 @@ impl BuildRequestHandler {
                             let bytes = hex_string.as_str().from_hex().unwrap();
 
 
-                            // Leak it until we figure out a better way
                             let buf : *mut u8 = ::ffi::flow_context_calloc(p, 1, bytes.len(), ptr::null(), p as *const libc::c_void, ptr::null(), 0) as *mut u8 ;
                             if buf.is_null() {
                                 panic!("OOM");
@@ -153,7 +153,42 @@ impl BuildRequestHandler {
                             io_ptr
                         }
                         s::IoEnum::Filename(path) => ptr::null(),
-                        s::IoEnum::Url(url) => ptr::null(),
+                        s::IoEnum::Url(url) => {
+                            let mut dst = Vec::new();
+                            {
+                                let mut easy = Easy::new();
+                                easy.url(&url).unwrap();
+
+                                let mut transfer = easy.transfer();
+                                transfer.write_function(|data| {
+                                    dst.extend_from_slice(data);
+                                    Ok(data.len())
+                                }).unwrap();
+                                transfer.perform().unwrap();
+                            }
+
+                            let bytes = dst;
+
+
+                            let buf : *mut u8 = ::ffi::flow_context_calloc(p, 1, bytes.len(), ptr::null(), p as *const libc::c_void, ptr::null(), 0) as *mut u8 ;
+                            if buf.is_null() {
+                            panic!("OOM");
+                            }
+                            ptr::copy_nonoverlapping(bytes.as_ptr(), buf, bytes.len());
+
+                            let io_ptr =
+                            ::ffi::flow_io_create_from_memory(p,
+                            ::ffi::IoMode::read_seekable,
+                            buf,
+                            bytes.len(),
+                            p as *const libc::c_void,
+                            ptr::null());
+
+                            if io_ptr.is_null() {
+                            panic!("Failed to create I/O");
+                            }
+                            io_ptr
+                        },
                         s::IoEnum::OutputBuffer => {
                             let io_ptr =
                                 ::ffi::flow_io_create_for_output_buffer(p,
