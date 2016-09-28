@@ -11,9 +11,10 @@ class ImageFlowConan(ConanFile):
     options = {"shared": [True, False]}
     generators = "cmake"
     default_options = "shared=False", "libjpeg-turbo:shared=False", "libpng:shared=False", \
-                      "zlib:shared=False", "libcurl:shared=False", "OpenSSL:shared=True", \
-                      "imageflow:shared=True"
-    exports = "lib/*", "CMakeLists.txt", "imageflow.h", "imageflow_advanced.h"
+   					  "zlib:shared=False", "libcurl:shared=False", "OpenSSL:shared=True", \
+                        "OpenSSL:no_electric_fence=True", \
+   					  "imageflow:shared=True"
+    exports = "lib/*", "tests/*", "CMakeLists.txt", "imageflow.h", "imageflow_advanced.h"
 
 
     def config(self):
@@ -21,17 +22,19 @@ class ImageFlowConan(ConanFile):
             self.options["giflib"].shared = False
             self.options["littlecms"].shared = False
 
-        if self.scope.build_tests or self.scope.profiling:
-            self.requires("libcurl/7.47.1@lasote/stable", dev=True)
-            if self.settings.os == "Macos":
-                self.options["libcurl"].darwin_ssl = False
-                self.options["libcurl"].custom_cacert = True
+
+        #TODO: Drop libcurl dependency when we port visual tests to Rust
+        self.requires("libcurl/7.47.1@lasote/stable")
+        self.requires("OpenSSL/1.0.2i@lasote/stable")
+        if self.settings.os == "Macos":
+            self.options["libcurl"].darwin_ssl = False
+            self.options["libcurl"].custom_cacert = True
+
 
         if self.scope.build_tests:
             self.requires("catch/1.3.0@TyRoXx/stable", dev=True)
             if self.settings.os != "Windows":  # Not supported in windows
                 self.requires("theft/0.2.0@lasote/stable", dev=True)
-                self.requires("electric-fence/2.2.0@lasote/stable", dev=True) ##### SLOWS IT DOWN
 
     def imports(self):
         self.copy("*.so", dst="bin", src="bin")  # From bin to bin

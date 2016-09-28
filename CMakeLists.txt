@@ -30,6 +30,12 @@ file(GLOB LIB_HDRS lib/*.h)
 list(APPEND LIB_HDRS imageflow.h)
 list(APPEND LIB_HDRS imageflow_advanced.h)
 
+list(APPEND LIB_SRCS tests/helpers.c)
+list(APPEND LIB_SRCS tests/helpers_visual.c)
+list(APPEND LIB_HDRS tests/helpers.h)
+list(APPEND LIB_HDRS tests/helpers_visual.h)
+
+
 SET_SOURCE_FILES_PROPERTIES(LIB_SRCS PROPERTIES LANGUAGE CXX )
 SET_SOURCE_FILES_PROPERTIES(LIB_HDRS PROPERTIES LANGUAGE CXX )
 

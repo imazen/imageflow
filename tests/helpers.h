@@ -10,7 +10,7 @@
 #include "curl/easy.h"
 #include <stdlib.h>
 #include "imageflow.h"
-#include "imageflow_private.h"
+#include "lib/imageflow_private.h"
 #ifdef _MSC_VER
 #include "direct.h" //for _mkdir
 #endif
