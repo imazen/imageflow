@@ -4,14 +4,16 @@ Imageflow will bring world-class image quality and performance to all languages 
 
 ----
 
-[![travis-master](https://img.shields.io/travis/imazen/imageflow/master.svg?label=travis%20master%20mac%20linux)
-[![AppVeyor build status](https://ci.appveyor.com/api/projects/status/0356x95fa312m3wy/branch/master?svg=true)](https://ci.appveyor.com/project/imazen/imageflow/branch/master)
+&passingText=develop%20-%20passing&failingText=develop%20-%20faile
+
+[![travis-master](https://img.shields.io/travis/imazen/imageflow/master.svg?label=master%3A%20mac64%20ubuntu64%2014.04%2015.04%2016.04)
+[![AppVeyor build status](https://ci.appveyor.com/api/projects/status/0356x95fa312m3wy/branch/master?svg=true&passingText=master%3A%20win32%20win64%20-%20passing&failingText=master%3A%20win32%20win64%20-%20failed)](https://ci.appveyor.com/project/imazen/imageflow/branch/master)
 ](https://travis-ci.org/imazen/imageflow/builds) 
 [![Coverage Status](https://coveralls.io/repos/github/imazen/imageflow/badge.svg?branch=HEAD)](https://coveralls.io/github/imazen/imageflow?branch=HEAD)
 [![Coverity Scan Build Status](https://scan.coverity.com/projects/8403/badge.svg)](https://scan.coverity.com/projects/imazen-imageflow)
 
-graph-rewrite: [![travis-master](https://img.shields.io/travis/imazen/imageflow/graph-rewrite.svg?label=travis%graph-rewrite%20mac%20linux)
-[![AppVeyor build status](https://ci.appveyor.com/api/projects/status/0356x95fa312m3wy/branch/graph-rewrite?svg=true)](https://ci.appveyor.com/project/imazen/imageflow/branch/graph-rewrite)
+graph-rewrite: [![travis-master](https://img.shields.io/travis/imazen/imageflow/graph-rewrite.svg?label=graph-rewrite%3A%20mac64%20ubuntu64%2014.04%2015.04%2016.04)
+[![AppVeyor build status](https://ci.appveyor.com/api/projects/status/0356x95fa312m3wy/branch/graph-rewrite?svg=true&passingText=graph-rewrite%3A%20win32%20win64%20-%20passing&failingText=graph-rewrite%3A%20win32%20win64%20-%20failed)](https://ci.appveyor.com/project/imazen/imageflow/branch/graph-rewrite)
 ](https://travis-ci.org/imazen/imageflow/builds) 
 
 ### How can I help?
