@@ -10,7 +10,7 @@ use std::ascii::AsciiExt;
 use std::ptr;
 
 use std::str::FromStr;
-use libc::int32_t;
+use libc::{int32_t,int64_t};
 
 use flow;
 
@@ -20,8 +20,18 @@ pub enum JobIO {}
 
 //FIXME: fill in
 #[repr(C)]
-pub struct CodecInstance {
+pub struct FlowIO {
+  //FIXME: placeholder, not real data
+  test: int32_t,
+}
 
+#[repr(C)]
+pub struct CodecInstance {
+  pub graph_placeholder_id: int32_t,
+  pub codec_id: int64_t,
+  pub codec_state: *mut u8, // void *
+  pub io: *mut FlowIO,
+  pub next: *mut CodecInstance,
 }
 
 #[repr(C)]
