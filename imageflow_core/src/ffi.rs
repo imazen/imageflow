@@ -13,6 +13,7 @@ use std::str::FromStr;
 use libc::{int32_t,int64_t};
 
 use flow;
+use flow::graph::BitmapCompositingMode;
 
 pub enum Context {}
 
@@ -67,7 +68,7 @@ pub enum IoDirection {
 
 
 #[repr(C)]
-#[derive(Copy,Clone)]
+#[derive(Copy,Clone,Debug,PartialEq)]
 pub enum EdgeKind {
     None = 0,
     Input = 1,
@@ -75,7 +76,7 @@ pub enum EdgeKind {
     Info = 3,
 }
 
-
+/*
 #[repr(C)]
 #[derive(Copy,Clone, Debug)]
 pub enum PixelFormat {
@@ -83,6 +84,7 @@ pub enum PixelFormat {
     bgra32 = 4,
     gray8 = 1,
 }
+*/
 
 #[repr(C)]
 #[derive(Copy,Clone)]
@@ -92,6 +94,7 @@ pub enum Floatspace {
     gamma = 2,
 }
 
+/*
 #[repr(C)]
 #[derive(Copy,Clone, Debug)]
 pub enum BitmapCompositingMode {
@@ -99,7 +102,7 @@ pub enum BitmapCompositingMode {
     blend_with_self = 1,
     blend_with_matte = 2,
 }
-
+*/
 
 
 #[repr(C)]
@@ -270,7 +273,7 @@ impl Default for DecoderInfo {
             current_frame_index: 0,
             frame0_width: 0,
             frame0_height: 0,
-            frame0_post_decode_format: PixelFormat::bgra32,
+            frame0_post_decode_format: flow::graph::PixelFormat::BGRA32,
         }
     }
 }
@@ -284,7 +287,7 @@ pub struct DecoderInfo {
     pub current_frame_index: i64,
     pub frame0_width: i32,
     pub frame0_height: i32,
-    pub frame0_post_decode_format: PixelFormat,
+    pub frame0_post_decode_format: flow::graph::PixelFormat,
 }
 
 #[repr(C)]
@@ -316,7 +319,7 @@ pub struct FlowBitmapBgra {
     // If true, we can reuse the allocated memory for other purposes.
     pub can_reuse_space: bool,
 
-    pub fmt: PixelFormat,
+    pub fmt: flow::graph::PixelFormat,
     // When using compositing mode blend_with_matte, this color will be used. We should probably define this as always
     // being sRGBA, 4 bytes.
     pub matte_color: [u8; 4],
@@ -527,7 +530,7 @@ fn flow_graph_creation_works() {
         let last = flow::graph::node_create_canvas(c,
                                            &mut g,
                                            -1,
-                                           PixelFormat::bgra32,
+                                           flow::graph::PixelFormat::BGRA32,
                                            100,
                                            100,
                                            0);

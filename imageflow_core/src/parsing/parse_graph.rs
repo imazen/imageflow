@@ -59,9 +59,9 @@ impl GraphTranslator {
             s::Node::Rotate270 => ::flow::graph::node_create_rotate_270(self.ctx, g, -1),
             s::Node::CreateCanvas { format, w, h, color } => {
                 let ffi_format = match format {
-                    s::PixelFormat::Bgr24 => ::ffi::PixelFormat::bgr24,
-                    s::PixelFormat::Bgra32 => ::ffi::PixelFormat::bgra32,
-                    s::PixelFormat::Gray8 => ::ffi::PixelFormat::gray8,
+                    s::PixelFormat::Bgr24 => ::flow::graph::PixelFormat::BGR24,
+                    s::PixelFormat::Bgra32 => ::flow::graph::PixelFormat::BGRA32,
+                    s::PixelFormat::Gray8 => ::flow::graph::PixelFormat::Gray8,
                 };
 
                 ::flow::graph::node_create_canvas(self.ctx,

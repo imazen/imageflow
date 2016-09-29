@@ -1,11 +1,157 @@
 use ffi::*;
-use libc::{self, int32_t};
+use libc::{self, int32_t,uint32_t};
 use std::ffi::CStr;
 use petgraph;
 use daggy::{Dag,EdgeIndex,NodeIndex};
 
-//pub struct Graph{}
-pub struct Node {}
+#[repr(C)]
+#[derive(Copy,Clone,Debug,PartialEq)]
+pub enum NodeType {
+    Null = 0,
+    primitive_Flip_Vertical_Mutate = 1,
+    primitive_Flip_Horizontal_Mutate = 2,
+    primitive_Crop_Mutate_Alias = 3,
+    primitive_CopyRectToCanvas = 4, // Overwrite only, no compositing
+    Create_Canvas = 5,
+    primitive_RenderToCanvas1D = 6,
+    primitive_Scale2D_RenderToCanvas1D = 7,
+    primitive_bitmap_bgra_pointer,
+    primitive_decoder,
+    primitive_encoder,
+
+    Fill_Rect_Mutate,
+    non_primitive_nodes_begin = 256,
+
+    Expand_Canvas,
+    Transpose,
+    Flip_Vertical,
+    Flip_Horizontal,
+    Render1D,
+    Crop,
+    Apply_Orientation,
+    non_optimizable_nodes_begin = 512,
+
+    Clone,
+    decoder,
+    encoder,
+
+    Rotate_90,
+    Rotate_180,
+    Rotate_270,
+    Scale, //(preserve colorspace), interpolation filter
+    Noop,
+
+    // Not implemented below here:
+    Rotate_Flip_Per_Orientation,
+    Crop_Percentage,
+    Crop_Percentage_Infinite_Canvas, // canvas_color
+    Crop_Rectangle,
+    Constrain, //(mode=pad|max|crop|stretch) (width, height) (scale=down|up|both|canvas) (anchor=9 points)
+    Matte,
+    EnlargeCanvas,
+    Sharpen,
+    Blur,
+    Convolve_Custom,
+    AdjustContrast,
+    AdjustSaturation,
+    AdjustBrightness,
+    CropWhitespace, // tolerances and padding
+    Opacity,
+    Sepia,
+    Grayscale, // true|y|ry|ntsc|bt709|flat
+    DrawImage,
+    RemoveNoise,
+    ColorMatrixsRGB,
+    _FORCE_ENUM_SIZE_INT32 = 2147483647,
+}
+
+#[repr(C)]
+#[derive(Copy,Clone,Debug,PartialEq)]
+pub enum NodeState {
+  Blank = 0,
+  InputDimensionsKnown = 1,
+  //FIXME: we shouldn't reuse the value
+  //ReadyForPreOptimizeFlatten = 1,
+  PreOptimizeFlattened = 2,
+  ReadyForOptimize = 3,
+  Optimized = 4,
+  ReadyForPostOptimizeFlatten = 7,
+  PostOptimizeFlattened = 8,
+  InputsExecuted = 16,
+  ReadyForExecution = 31,
+  Executed = 32,
+  Done = 63,
+}
+
+#[repr(C)]
+#[derive(Copy,Clone,Debug,PartialEq)]
+pub enum PixelFormat {
+  Gray8  = 1,
+  BGR24  = 3,
+  BGRA32 = 4,
+}
+
+#[repr(C)]
+#[derive(Copy,Clone,Debug,PartialEq)]
+pub enum EdgeType {
+  Null   = 0,
+  Input  = 1,
+  Canvas = 2,
+  info   = 3,
+  FORCE_ENUM_SIZE_INT32 = 2147483647,
+}
+
+#[repr(C)]
+#[derive(Copy,Clone,Debug,PartialEq)]
+pub enum BitmapCompositingMode {
+  ReplaceSelf    = 0,
+  BlendWithSelf  = 1,
+  BlendWithMatte = 2,
+}
+
+#[repr(C)]
+#[derive(Clone,Debug,PartialEq)]
+pub struct BitmapBGRA {
+  /// bitmap width in pixels
+  pub w: uint32_t,
+  /// bitmap height in pixels
+  pub h: uint32_t,
+  /// byte length of each row (may include any amount of padding)
+  pub stride: uint32_t,
+  //FIXME: replace with a vec or slice
+  ///pointer to pixel 0,0; should be of length > h * stride
+  pub pixels: *mut u8,
+  /// If true, we don't dispose of *pixels when we dispose the struct
+  pub borrowed_pixels: bool,
+  /// If false, we can even ignore the alpha channel on 4bpp
+  pub alpha_meaningful: bool,
+  /// If false, we can edit pixels without affecting the stride
+  pub pixels_readonly: bool,
+  ///If false, we can change the stride of the image
+  pub stride_readonly: bool,
+  /// If true, we can reuse the allocated memory for other purposes
+  pub can_reuse_space: bool,
+  pub fmt: PixelFormat,
+  ///When using compositing mode blend_with_matte, this color will be used. We should probably define this as
+  ///always being sRGBA, 4 bytes.
+  pub matte_color: [u8;4],
+
+  pub compositing_mode: BitmapCompositingMode,
+}
+
+#[repr(C)]
+#[derive(Clone,Debug,PartialEq)]
+pub struct Node {
+  pub node_type: NodeType,
+  pub state:     NodeState,
+  pub result_width: int32_t,
+  pub result_height: int32_t,
+  pub result_format: PixelFormat,
+  pub result_alpha_meaningful: bool,
+  pub result_bitmap: BitmapBGRA,
+  pub ticks_elapsed: uint32_t,
+
+}
 pub type Graph = Dag<Node,EdgeKind>;
 
 pub fn print_to_stdout(c: *mut Context, g: &Graph) -> bool {
