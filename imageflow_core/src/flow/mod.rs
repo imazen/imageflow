@@ -1,9 +1,15 @@
 use ffi::*;
-use libc::{self, int32_t};
+use libc::{self, int32_t, c_void};
 use std::ffi::CStr;
+use std::fs::File;
+use std::io::Write;
+use std::process::Command;
+use petgraph::dot::Dot;
+use petgraph::graph::node_index;
+use time;
 
 pub mod graph;
-use self::graph::Graph;
+use self::graph::{Graph,NodeState,NodeType};
 
 #[macro_export]
 macro_rules! error_return (
@@ -210,18 +216,14 @@ fn job_notify_graph_changed(c: *mut Context, job: *mut Job, graph_ref: &mut Grap
     return true;
 }
 
+use daggy::walker::Walker;
 pub fn job_graph_fully_executed(c: *mut Context, job: *mut Job, graph_ref: &mut Graph) -> bool
 {
-/*FIXME
-    int32_t i;
-    for (i = 0; i < g->next_node_id; i++) {
-        if (g->nodes[i].type != flow_ntype_Null) {
-            if (!flow_job_node_is_executed(c, job, g, i)) {
-                return false;
-            }
+    for node in graph_ref.raw_nodes() {
+        if node.weight.node_type != NodeType::Null && node.weight.state != NodeState::Executed {
+            return false
         }
     }
-*/
     return true;
 }
 
@@ -321,15 +323,91 @@ pub fn job_execute_where_certain(c: *mut Context, job: *mut Job, graph_ref: &mut
 
 pub fn job_render_graph_to_png(c: *mut Context, job: *mut Job, g: &mut Graph, graph_version: int32_t) -> bool
 {
-/*FIXME
-    char filename[255];
-    flow_snprintf(filename, 254, "job_%d_graph_version_%d.dot", job->debug_job_id, graph_version);
+    let filename = format!("job_{}_graph_version_{}.dot", unsafe { (*job).debug_job_id }, graph_version);
+    let mut file = File::create(&filename).unwrap();
+    file.write_fmt(format_args!("{:?}", Dot::new(g.graph())));
+    Command::new("dot").arg("-Tpng").arg("-Gsize=11,16\\!").arg("-Gdpi=150").arg("-O").arg(filename)
+                       .spawn().expect("dot command failed");
+    return true;
+}
 
-    char dotfile_command[2048];
-    flow_snprintf(dotfile_command, 2048, "dot -Tpng -Gsize=11,16\\! -Gdpi=150  -O %s", filename);
-    int32_t ignore = system(dotfile_command);
-    ignore++;
-*/
+pub fn node_visitor_optimize(c: *mut Context, job: *mut Job, graph_ref: &mut Graph, node_id: int32_t,
+                                  quit:*mut bool, skip_outbound_paths: *mut bool, custom_data: *mut c_void) -> bool
+{
+    graph_ref.node_weight_mut(node_index(node_id as usize)).map(|node| {
+        // Implement optimizations
+        if node.state == NodeState::ReadyForOptimize {
+            //FIXME: should we implement AND on NodeState?
+            //node.state |= NodeState::Optimized;
+            node.state = NodeState::Optimized;
+        }
+        true
+    }).unwrap_or(false)
+}
+
+pub fn flow_node_has_dimensions(c: *mut Context, g: &Graph, node_id: int32_t) -> bool
+{
+    g.node_weight(node_index(node_id as usize)).map(|node| node.result_width > 0).unwrap_or(false)
+}
+
+pub fn flow_node_inputs_have_dimensions(c: *mut Context, g: &mut Graph, node_id: int32_t) -> bool
+{
+    for (edge_index, node_index) in g.parents(node_index(node_id as usize)).iter(g) {
+        if *g.edge_weight(edge_index).unwrap() != EdgeKind::None {
+            if !flow_node_has_dimensions(c, g, node_index.index() as int32_t) {
+                return false;
+            }
+        }
+    }
+    return true;
+}
+
+pub fn flow_job_populate_dimensions_for_node(c: *mut Context, job: *mut Job, g: &mut Graph,
+                                                  node_id: int32_t, force_estimate: bool) -> bool
+{
+    let now = time::precise_time_ns();
+    if ! flow_node_populate_dimensions(c, g, node_id, force_estimate) {
+        error_return!(c);
+    }
+
+    g.node_weight_mut(node_index(node_id as usize)).map(|node| {
+        let elapsed = (time::precise_time_ns() - now) as u32;
+        node.ticks_elapsed += elapsed;
+    });
+    return true;
+}
+
+pub fn flow_job_force_populate_dimensions(c: *mut Context, job: *mut Job, graph_ref: &mut Graph) -> bool
+{
+    //FIXME: reimplement
+    // TODO: would be good to verify graph is acyclic.
+    //if (!flow_graph_walk(c, job, graph_ref, node_visitor_dimensions, NULL, (void *)true)) {
+    //    FLOW_error_return(c);
+    //}
+    return true;
+}
+
+pub fn flow_node_populate_dimensions(c: *mut Context, g: &mut Graph, node_id: int32_t, force_estimate: bool) -> bool
+{
+    // FIXME: do we need to validate if daggy ensures the graph is valid?
+    /*if (!flow_node_validate_edges(c, g, node_id)) {
+        FLOW_error_return(c);
+    }
+    struct flow_node * node = &g->nodes[node_id];
+    struct flow_node_definition * def = flow_nodedef_get(c, node->type);
+    if (def == NULL) {
+        FLOW_error_return(c);
+    }
+    if (def->populate_dimensions == NULL) {
+        FLOW_error_msg(c, flow_status_Not_implemented, "populate_dimensions is not implemented for node type %s",
+                       def->type_name);
+        return false;
+    } else {
+        if (!def->populate_dimensions(c, g, node_id, force_estimate)) {
+            FLOW_error_return(c);
+        }
+    }
+    */
     return true;
 }
 
@@ -357,50 +435,6 @@ static bool node_visitor_post_optimize_flatten(flow_c * c, struct flow_job * job
     } else if ((n->state & flow_node_state_InputDimensionsKnown) == 0) {
         // we can't flatten past missing dimensions
         *skip_outbound_paths = true;
-    }
-    return true;
-}
-
-static bool node_visitor_optimize(flow_c * c, struct flow_job * job, struct flow_graph ** graph_ref, int32_t node_id,
-                                  bool * quit, bool * skip_outbound_paths, void * custom_data)
-{
-
-    struct flow_node * node = &(*graph_ref)->nodes[node_id];
-    if (node->state == flow_node_state_ReadyForOptimize) {
-        node->state = (flow_node_state)(node->state | flow_node_state_Optimized);
-    }
-
-    // Implement optimizations
-    return true;
-}
-
-static bool flow_job_populate_dimensions_for_node(flow_c * c, struct flow_job * job, struct flow_graph * g,
-                                                  int32_t node_id, bool force_estimate)
-{
-    uint64_t now = flow_get_high_precision_ticks();
-
-    if (!flow_node_populate_dimensions(c, g, node_id, force_estimate)) {
-        FLOW_error_return(c);
-    }
-    g->nodes[node_id].ticks_elapsed += (int32_t)(flow_get_high_precision_ticks() - now);
-    return true;
-}
-
-bool flow_node_has_dimensions(flow_c * c, struct flow_graph * g, int32_t node_id)
-{
-    struct flow_node * n = &g->nodes[node_id];
-    return n->result_width > 0;
-}
-
-bool flow_node_inputs_have_dimensions(flow_c * c, struct flow_graph * g, int32_t node_id)
-{
-    int32_t i;
-    for (i = 0; i < g->next_edge_id; i++) {
-        if (g->edges[i].type != flow_edgetype_null && g->edges[i].to == node_id) {
-            if (!flow_node_has_dimensions(c, g, g->edges[i].from)) {
-                return false;
-            }
-        }
     }
     return true;
 }
@@ -438,15 +472,8 @@ static bool node_visitor_dimensions(flow_c * c, struct flow_job * job, struct fl
 }
 
 
-bool flow_job_force_populate_dimensions(flow_c * c, struct flow_job * job, struct flow_graph ** graph_ref)
-{
-    // TODO: would be good to verify graph is acyclic.
-    if (!flow_graph_walk(c, job, graph_ref, node_visitor_dimensions, NULL, (void *)true)) {
-        FLOW_error_return(c);
-    }
-    return true;
-}
 
+//FIXME: can be deleted
 static bool flow_job_node_is_executed(flow_c * c, struct flow_job * job, struct flow_graph * g, int32_t node_id)
 {
     return (g->nodes[node_id].state & flow_node_state_Executed) > 0;

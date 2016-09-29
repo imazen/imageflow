@@ -11,6 +11,7 @@
 extern crate alloc_system;
 extern crate petgraph;
 extern crate daggy;
+extern crate time;
 
 
 pub mod ffi;
