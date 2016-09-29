@@ -9,7 +9,9 @@ use petgraph::graph::node_index;
 use time;
 
 pub mod graph;
-use self::graph::{Graph,NodeState,NodeType};
+pub mod definitions;
+use self::graph::Graph;
+use self::definitions::{NodeState,NodeType};
 
 #[macro_export]
 macro_rules! error_return (

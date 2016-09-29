@@ -13,7 +13,7 @@ use std::str::FromStr;
 use libc::{int32_t,int64_t};
 
 use flow;
-use flow::graph::BitmapCompositingMode;
+use flow::definitions::BitmapCompositingMode;
 
 pub enum Context {}
 
@@ -273,7 +273,7 @@ impl Default for DecoderInfo {
             current_frame_index: 0,
             frame0_width: 0,
             frame0_height: 0,
-            frame0_post_decode_format: flow::graph::PixelFormat::BGRA32,
+            frame0_post_decode_format: flow::definitions::PixelFormat::BGRA32,
         }
     }
 }
@@ -287,7 +287,7 @@ pub struct DecoderInfo {
     pub current_frame_index: i64,
     pub frame0_width: i32,
     pub frame0_height: i32,
-    pub frame0_post_decode_format: flow::graph::PixelFormat,
+    pub frame0_post_decode_format: flow::definitions::PixelFormat,
 }
 
 #[repr(C)]
@@ -319,7 +319,7 @@ pub struct FlowBitmapBgra {
     // If true, we can reuse the allocated memory for other purposes.
     pub can_reuse_space: bool,
 
-    pub fmt: flow::graph::PixelFormat,
+    pub fmt: flow::definitions::PixelFormat,
     // When using compositing mode blend_with_matte, this color will be used. We should probably define this as always
     // being sRGBA, 4 bytes.
     pub matte_color: [u8; 4],
@@ -530,7 +530,7 @@ fn flow_graph_creation_works() {
         let last = flow::graph::node_create_canvas(c,
                                            &mut g,
                                            -1,
-                                           flow::graph::PixelFormat::BGRA32,
+                                           flow::definitions::PixelFormat::BGRA32,
                                            100,
                                            100,
                                            0);
