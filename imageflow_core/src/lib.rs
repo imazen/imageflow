@@ -404,11 +404,13 @@ impl ContextPtr {
                 r#"{"success": "false","code": 418,"message": "I'm a teapot, short and stout"}"#
                     .as_bytes()
             },
-            "v0.0.1/build" => JsonResponse {
-                status_code: 418,
-                response_json:
-                r#"{"success": "false","code": 418,"message": "I'm a teapot, short and stout"}"#
-                    .as_bytes()
+            "v0.0.1/build" => unsafe {
+
+                let handler = parsing::BuildRequestHandler::new();
+                let response = handler.do_and_respond(&mut *self, json);
+                self.assert_ok(None);
+
+                response.unwrap()
             },
             _ => {
                 JsonResponse {
@@ -452,6 +454,8 @@ impl Job {
 
         match method {
             "execute" => {
+                //TODO:
+
 
                 // build graph
                 // execute graph

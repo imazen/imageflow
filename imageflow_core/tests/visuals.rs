@@ -53,37 +53,27 @@ fn compare(input: s::IoEnum, allowed_off_by_one_bytes: usize, checksum_name: Str
         framewise: s::Framewise::Steps(steps)
     };
 
-    let json_str = serde_json::to_string_pretty(&build).unwrap();
 
-    let handler = BuildRequestHandler::new();
+    if debug {
+        println!("{}", serde_json::to_string_pretty(&build).unwrap());
+    }
+
 
     let mut context = Context::create();
 
-    let mut ctx_cell = context.unsafe_borrow_mut_context_pointer();
-
-    if debug {
-        println!("{}", json_str);
-    }
-
-    let p = std::env::current_dir().unwrap();
-    if debug {
-        println!("The current directory is {}", p.display());
-    }
-
-    let response = handler.do_and_respond(&mut *ctx_cell, json_str.into_bytes().as_slice());
-
-    let json_response = response.unwrap();
+    context.message("v0.0.1/build", &serde_json::to_vec(&build).unwrap()).unwrap();
 
     unsafe {
-        ctx_cell.assert_ok(None);
-
         if debug {
             println!("{:?}", *ptr_to_ptr);
         }
     }
 
      unsafe {
-        let matched: bool;
+         let mut ctx_cell = context.unsafe_borrow_mut_context_pointer();
+
+
+         let matched: bool;
          let c_checksum_name = CString::new(checksum_name).unwrap();
         {
             matched = imageflow_core::ffi::flow_bitmap_bgra_test_compare_to_record(ctx_cell.ptr.unwrap(), *ptr_to_ptr, c_checksum_name.as_ptr(), store_if_missing, allowed_off_by_one_bytes, static_char!(file!()), 0, static_char!(file!()));
