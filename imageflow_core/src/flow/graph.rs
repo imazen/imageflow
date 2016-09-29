@@ -231,6 +231,9 @@ pub fn node_create_fill_rect(c: *mut Context,
                                       color_srgb: u32)
                                       -> i32 { 0 }
 
+pub fn node_create_bitmap_bgra_reference(c: *mut Context,
+                                              g: &mut Graph,
+                                              prev_node: i32, reference: *mut *mut FlowBitmapBgra) -> i32 { 0 }
 pub fn node_create_rotate_90(c: *mut Context, g: &mut Graph, prev_node: i32) -> i32 { 0 }
 pub fn node_create_rotate_180(c: *mut Context, g: &mut Graph, prev_node: i32) -> i32 { 0 }
 pub fn node_create_rotate_270(c: *mut Context, g: &mut Graph, prev_node: i32) -> i32 { 0 }
@@ -338,6 +341,9 @@ extern "C" {
                                       color_srgb: u32)
                                       -> i32;
 
+pub fn flow_node_create_bitmap_bgra_reference(c: *mut Context,
+                                              g: *mut *mut Graph,
+                                              prev_node: i32, reference: *mut *mut FlowBitmapBgra) -> i32 { 0 }
     fn flow_node_create_rotate_90(c: *mut Context, g: *mut *mut Graph, prev_node: i32) -> i32;
     fn flow_node_create_rotate_180(c: *mut Context, g: *mut *mut Graph, prev_node: i32) -> i32;
     fn flow_node_create_rotate_270(c: *mut Context, g: *mut *mut Graph, prev_node: i32) -> i32;
