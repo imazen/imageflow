@@ -11,7 +11,7 @@ class ImageFlowConan(ConanFile):
     options = {"shared": [True, False]}
     generators = "cmake"
     default_options = "shared=False", "libjpeg-turbo:shared=False", "libpng:shared=False", \
-   					  "zlib:shared=False", "libcurl:shared=False", "OpenSSL:shared=True", \
+   					  "zlib:shared=False", "libcurl:shared=False", "OpenSSL:shared=False", \
                         "OpenSSL:no_electric_fence=True", \
    					  "imageflow:shared=True"
     exports = "lib/*", "tests/*", "CMakeLists.txt", "imageflow.h", "imageflow_advanced.h"
