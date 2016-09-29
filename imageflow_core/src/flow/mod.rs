@@ -10,6 +10,7 @@ use time;
 
 pub mod graph;
 pub mod definitions;
+pub mod nodes;
 use self::graph::Graph;
 use self::definitions::{NodeState,NodeType};
 
