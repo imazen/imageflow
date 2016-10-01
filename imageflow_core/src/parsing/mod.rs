@@ -95,6 +95,10 @@ impl BuildRequestHandler {
             println!("builder_config ={:?}", parsed.builder_config);
             match parsed.builder_config {
                 Some(build_cfg) => {
+                    match build_cfg.no_gamma_correction {
+                        false => flow_context_set_floatspace(c, Floatspace::linear, 0f32, 0f32, 0f32),
+                        true => flow_context_set_floatspace(c, Floatspace::srgb, 0f32, 0f32, 0f32)
+                    };
                     match build_cfg.graph_recording {
                         Some(r) => {
                             println!("Setting record_graph_versions={}",
@@ -213,7 +217,7 @@ impl BuildRequestHandler {
                 }
             }
 
-
+            //TODO: REPLACE THIS
             if !::ffi::flow_job_execute(p, job, &mut g) {
                 ctx.assert_ok(Some(g));
             }
