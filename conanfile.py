@@ -24,8 +24,7 @@ class ImageFlowConan(ConanFile):
 
 
         #TODO: Drop libcurl dependency when we port visual tests to Rust
-        self.requires("libcurl/7.47.1@lasote/stable")
-        self.requires("OpenSSL/1.0.2i@lasote/stable")
+        self.requires("libcurl/7.50.3@lasote/stable")
         if self.settings.os == "Macos":
             self.options["libcurl"].darwin_ssl = False
             self.options["libcurl"].custom_cacert = True
