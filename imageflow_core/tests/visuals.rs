@@ -47,7 +47,8 @@ fn compare(input: s::IoEnum, allowed_off_by_one_bytes: usize, checksum_name: Str
     let build = s::Build001{
         builder_config: Some(s::Build001Config{graph_recording: match debug{ true => Some(recording), false => None} ,
             process_all_gif_frames: Some(false),
-            enable_jpeg_block_scaling: Some(false)
+            enable_jpeg_block_scaling: Some(false),
+            no_gamma_correction: false
         }),
         io: vec![input_io],
         framewise: s::Framewise::Steps(steps)

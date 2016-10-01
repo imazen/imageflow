@@ -5,6 +5,7 @@ use std;
 extern crate rustc_serialize;
 extern crate libc;
 
+use flow;
 use ContextPtr;
 use JsonResponse;
 use libc::c_void;
@@ -95,10 +96,10 @@ impl BuildRequestHandler {
             println!("builder_config ={:?}", parsed.builder_config);
             match parsed.builder_config {
                 Some(build_cfg) => {
-                    match build_cfg.no_gamma_correction {
-                        false => flow_context_set_floatspace(c, Floatspace::linear, 0f32, 0f32, 0f32),
-                        true => flow_context_set_floatspace(c, Floatspace::srgb, 0f32, 0f32, 0f32)
-                    };
+//                    match build_cfg.no_gamma_correction {
+//                        false => flow_context_set_floatspace(c, Floatspace::linear, 0f32, 0f32, 0f32),
+//                        true => flow_context_set_floatspace(c, Floatspace::srgb, 0f32, 0f32, 0f32)
+//                    };
                     match build_cfg.graph_recording {
                         Some(r) => {
                             println!("Setting record_graph_versions={}",
@@ -217,9 +218,9 @@ impl BuildRequestHandler {
                 }
             }
 
-            //TODO: REPLACE THIS
-            if !::ffi::flow_job_execute(p, job, &mut g) {
-                ctx.assert_ok(Some(g));
+
+            if !flow::job_execute(p, job, &mut g) {
+                ctx.assert_ok(Some(&mut g));
             }
 
 
@@ -304,6 +305,7 @@ fn test_handler() {
             graph_recording: None,
             process_all_gif_frames: Some(false),
             enable_jpeg_block_scaling: Some(false),
+            no_gamma_correction: false,
         }),
         io: vec![input_io, output_io],
         framewise: s::Framewise::Steps(steps),

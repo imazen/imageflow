@@ -10,14 +10,45 @@ use std::ascii::AsciiExt;
 use std::ptr;
 
 use std::str::FromStr;
+use libc::{int32_t,int64_t};
+
+use flow;
+use flow::definitions::BitmapCompositingMode;
 
 pub enum Context {}
 
 pub enum JobIO {}
 
-pub enum Job {}
+//FIXME: fill in
+#[repr(C)]
+pub struct FlowIO {
+  //FIXME: placeholder, not real data
+  test: int32_t,
+}
 
-pub enum Graph {}
+#[repr(C)]
+pub struct CodecInstance {
+  pub graph_placeholder_id: int32_t,
+  pub codec_id: int64_t,
+  pub codec_state: *mut u8, // void *
+  pub io: *mut FlowIO,
+  pub next: *mut CodecInstance,
+}
+
+#[repr(C)]
+pub struct Job {
+    pub debug_job_id: int32_t,
+    pub next_graph_version: int32_t,
+    pub max_calc_flatten_execute_passes: int32_t,
+    //FIXME: find a safer way to store them
+    pub codecs_head:           *mut CodecInstance,
+    pub codecs_tail:           *mut CodecInstance,
+    pub record_graph_versions: bool,
+    pub record_frame_images:   bool,
+    pub render_graph_versions: bool,
+    pub render_animated_graph: bool,
+    pub render_last_graph:     bool,
+}
 
 #[repr(C)]
 pub enum IoMode {
@@ -37,7 +68,7 @@ pub enum IoDirection {
 
 
 #[repr(C)]
-#[derive(Copy,Clone)]
+#[derive(Copy,Clone,Debug,PartialEq)]
 pub enum EdgeKind {
     None = 0,
     Input = 1,
@@ -45,7 +76,7 @@ pub enum EdgeKind {
     Info = 3,
 }
 
-
+/*
 #[repr(C)]
 #[derive(Copy,Clone, Debug)]
 pub enum PixelFormat {
@@ -53,6 +84,7 @@ pub enum PixelFormat {
     bgra32 = 4,
     gray8 = 1,
 }
+*/
 
 #[repr(C)]
 #[derive(Copy,Clone)]
@@ -62,6 +94,7 @@ pub enum Floatspace {
     gamma = 2,
 }
 
+/*
 #[repr(C)]
 #[derive(Copy,Clone, Debug)]
 pub enum BitmapCompositingMode {
@@ -69,7 +102,7 @@ pub enum BitmapCompositingMode {
     blend_with_self = 1,
     blend_with_matte = 2,
 }
-
+*/
 
 
 #[repr(C)]
@@ -108,6 +141,33 @@ pub enum Filter {
     MitchellFast = 28,
     NCubic = 29,
     NCubicSharp = 30,
+}
+
+#[repr(C)]
+#[derive(Copy,Clone,Debug, PartialEq)]
+pub enum FlowStatusCode {
+    NoError                    = 0,
+    OutOfMemory                = 10,
+    IOError                    = 20,
+    InvalidInternalState       = 30,
+    NotImplemented             = 40,
+    InvalidArgument            = 50,
+    NullArgument               = 51,
+    InvalidDimensions          = 52,
+    UnsupportedPixelFormat     = 53,
+    ItemDoesNotExist           = 54,
+
+    ImageDecodingFailed        = 60,
+    ImageEncodingFailed        = 61,
+    GraphInvalid               = 70,
+    GraphIsCyclic              = 71,
+    InvalidInputsToNode        = 72,
+    MaximumGraphPassesExceeded = 73,
+    OtherError                 = 1024,
+    //FIXME: FirstUserDefinedError is 1025 in C but it conflicts with __LastLibraryError
+    //___LastLibraryError,
+    FirstUserDefinedError      = 1025,
+    LastUserDefinedError       = 2147483647,
 }
 
 
@@ -213,7 +273,7 @@ impl Default for DecoderInfo {
             current_frame_index: 0,
             frame0_width: 0,
             frame0_height: 0,
-            frame0_post_decode_format: PixelFormat::bgra32,
+            frame0_post_decode_format: flow::definitions::PixelFormat::BGRA32,
         }
     }
 }
@@ -227,7 +287,7 @@ pub struct DecoderInfo {
     pub current_frame_index: i64,
     pub frame0_width: i32,
     pub frame0_height: i32,
-    pub frame0_post_decode_format: PixelFormat,
+    pub frame0_post_decode_format: flow::definitions::PixelFormat,
 }
 
 #[repr(C)]
@@ -259,7 +319,7 @@ pub struct FlowBitmapBgra {
     // If true, we can reuse the allocated memory for other purposes.
     pub can_reuse_space: bool,
 
-    pub fmt: PixelFormat,
+    pub fmt: flow::definitions::PixelFormat,
     // When using compositing mode blend_with_matte, this color will be used. We should probably define this as always
     // being sRGBA, 4 bytes.
     pub matte_color: [u8; 4],
@@ -294,6 +354,9 @@ extern "C" {
     pub fn flow_context_print_and_exit_if_err(context: *mut Context) -> bool;
 
     pub fn flow_context_error_reason(context: *mut Context) -> i32;
+
+    pub fn flow_context_set_error_get_message_buffer(context: *mut Context, code: i32/*FlowStatusCode*/,
+        file: *const libc::c_char, line: i32, function_name: *const libc::c_char) -> *const libc::c_char;
 
     pub fn flow_context_raise_error(context: *mut Context,
                                     error_code: i32,
@@ -421,126 +484,6 @@ extern "C" {
                                                     storage_relative_to: *const libc::c_char)
                                                    -> bool;
 
-
-    /// THESE SHOULD BE DELETED AS THEY ARE BEING REWRITTEN IN RUST
-    /// Creating and manipulating graphs directly is going away very soon in favor of a JSON string.
-
-    pub fn flow_job_execute(c: *mut Context, job: *mut Job, g: *mut *mut Graph) -> bool;
-
-
-    pub fn flow_graph_print_to_stdout(c: *mut Context, g: *const Graph) -> bool;
-
-    pub fn flow_graph_create(context: *mut Context,
-                             max_edges: u32,
-                             max_nodes: u32,
-                             max_info_bytes: u32,
-                             growth_factor: f32)
-                             -> *mut Graph;
-
-
-    pub fn flow_edge_create(c: *mut Context,
-                            g: *mut *mut Graph,
-                            from: i32,
-                            to: i32,
-                            kind: EdgeKind)
-                            -> i32;
-    pub fn flow_node_create_decoder(c: *mut Context,
-                                    g: *mut *mut Graph,
-                                    prev_node: i32,
-                                    placeholder_id: i32)
-                                    -> i32;
-    pub fn flow_node_create_canvas(c: *mut Context,
-                                   g: *mut *mut Graph,
-                                   prev_node: i32,
-                                   format: PixelFormat,
-                                   width: usize,
-                                   height: usize,
-                                   bgcolor: u32)
-                                   -> i32;
-
-    pub fn flow_node_create_scale(c: *mut Context,
-                                  g: *mut *mut Graph,
-                                  prev_node: i32,
-                                  width: usize,
-                                  height: usize,
-                                  downscale_filter: i32,
-                                  upscale_filter: i32,
-                                  flags: usize,
-                                  sharpen: f32)
-                                  -> i32;
-
-    pub fn flow_node_create_expand_canvas(c: *mut Context,
-                                          g: *mut *mut Graph,
-                                          prev_node: i32,
-                                          left: u32,
-                                          top: u32,
-                                          right: u32,
-                                          bottom: u32,
-                                          canvas_color_srgb: u32)
-                                          -> i32;
-
-    pub fn flow_node_create_fill_rect(c: *mut Context,
-                                      g: *mut *mut Graph,
-                                      prev_node: i32,
-                                      x1: u32,
-                                      y1: u32,
-                                      x2: u32,
-                                      y2: u32,
-                                      color_srgb: u32)
-                                      -> i32;
-
-    pub fn flow_node_create_bitmap_bgra_reference(c: *mut Context,
-                                        g: *mut *mut Graph,
-                                        prev_node: i32, reference: *mut *mut FlowBitmapBgra) -> i32;
-
-
-    pub fn flow_node_create_rotate_90(c: *mut Context, g: *mut *mut Graph, prev_node: i32) -> i32;
-    pub fn flow_node_create_rotate_180(c: *mut Context, g: *mut *mut Graph, prev_node: i32) -> i32;
-    pub fn flow_node_create_rotate_270(c: *mut Context, g: *mut *mut Graph, prev_node: i32) -> i32;
-
-    pub fn flow_node_create_transpose(c: *mut Context, g: *mut *mut Graph, prev_node: i32) -> i32;
-
-    pub fn flow_node_create_primitive_copy_rect_to_canvas(c: *mut Context,
-                                                          g: *mut *mut Graph,
-                                                          prev_node: i32,
-                                                          from_x: u32,
-                                                          from_y: u32,
-                                                          width: u32,
-                                                          height: u32,
-                                                          x: u32,
-                                                          y: u32)
-                                                          -> i32;
-
-    pub fn flow_node_create_encoder(c: *mut Context,
-                                    g: *mut *mut Graph,
-                                    prev_node: i32,
-                                    placeholder_id: i32,
-                                    desired_encoder_id: i64,
-                                    hints: *const EncoderHints)
-                                    -> i32;
-
-    pub fn flow_node_create_primitive_flip_vertical(c: *mut Context,
-                                                    g: *mut *mut Graph,
-                                                    prev_node: i32)
-                                                    -> i32;
-
-    pub fn flow_node_create_primitive_flip_horizontal(c: *mut Context,
-                                                      g: *mut *mut Graph,
-                                                      prev_node: i32)
-                                                      -> i32;
-
-    pub fn flow_node_create_primitive_crop(c: *mut Context,
-                                           g: *mut *mut Graph,
-                                           prev_node: i32,
-                                           x1: u32,
-                                           y1: u32,
-                                           x2: u32,
-                                           y2: u32)
-                                           -> i32;
-
-//  /////////// END HEADERS TO DELETE
-
-
 }
 
 
@@ -577,16 +520,17 @@ fn flow_graph_creation_works() {
         let c = flow_context_create();
         assert!(!c.is_null());
 
-        let mut g = flow_graph_create(c, 10, 10, 10, 2.0);
-        assert!(!g.is_null());
+        let mut g = flow::graph::create(c, 10, 10, 10, 2.0);
+        //FIXME: should we still check for null?
+        //assert!(!g.is_null());
 
         let j = flow_job_create(c);
         assert!(!j.is_null());
 
-        let last = flow_node_create_canvas(c,
-                                           (&mut g) as *mut *mut Graph,
+        let last = flow::graph::node_create_canvas(c,
+                                           &mut g,
                                            -1,
-                                           PixelFormat::bgra32,
+                                           flow::definitions::PixelFormat::BGRA32,
                                            100,
                                            100,
                                            0);
