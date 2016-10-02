@@ -45,7 +45,7 @@ pub struct OpCtx<'a>{
 pub struct OpCtxMut<'a> {
     pub c: *mut Context,
     pub job: *mut Job,
-    pub graph: &'a Graph
+    pub graph: &'a mut Graph
 }
 
 pub type OptionalNodeFnMut = Option<fn(&mut OpCtxMut, NodeIndex<u32>)>;
@@ -84,6 +84,25 @@ impl fmt::Debug for NodeDefinition {
         write!(f, "NodeDefinition {{ name: '{}', id: {} }}", self.name, self.id as i32)
     }
 }
+
+impl Default for NodeDefinition {
+    fn default() -> NodeDefinition {
+        NodeDefinition {
+            id: NodeType::Null,
+            inbound_edges: EdgesIn::OneInput,
+            outbound_edges: true,
+            name: "(null)",
+            description: "",
+            fn_graphviz_text: None,
+            fn_flatten_post_optimize: None,
+            fn_execute: None,
+            fn_cleanup: None,
+            fn_estimate: None,
+            fn_flatten_pre_optimize: None
+        }
+    }
+}
+
 
 
 #[derive(Clone,Debug,PartialEq)]
@@ -136,6 +155,26 @@ pub struct Node {
     pub cost: CostInfo,
     pub result: NodeResult,
     pub custom_state: *mut u8, //For simple metadata, we might just use JSON?
+}
+
+impl Node{
+   pub fn new(def: &'static NodeDefinition, params: Option<s::Node>) -> Node{
+        Node{
+            def: def,
+            custom_state: ::std::ptr::null_mut(),
+            frame_est: FrameEstimate::None,
+            cost_est: CostEstimate::None,
+            cost: CostInfo {
+                cpu_ticks: None,
+                wall_ticks: 0,
+                heap_bytes: 0,
+                peak_temp_bytes: 0
+            },
+            params: params,
+            stage: NodeStage::Blank,
+            result: NodeResult::None
+        }
+    }
 }
 
 

@@ -17,6 +17,7 @@ rustc-serialize = "*"
 threadpool = "1.0"
 serde = "*"
 serde_json = "*"
+lazy_static = "0.1.*"
 curl = "*"
 json = "*"
 imageflow_serde = { path = "../imageflow_serde", version = "*" }

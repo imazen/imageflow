@@ -13,6 +13,8 @@ extern crate petgraph;
 extern crate daggy;
 extern crate time;
 
+#[macro_use]
+extern crate lazy_static;
 
 pub mod ffi;
 pub mod boring;

@@ -328,7 +328,7 @@ pub fn job_render_graph_to_png(c: *mut Context, job: *mut Job, g: &mut Graph, gr
 {
     let filename = format!("job_{}_graph_version_{}.dot", unsafe { (*job).debug_job_id }, graph_version);
     let mut file = File::create(&filename).unwrap();
-    file.write_fmt(format_args!("{:?}", Dot::new(g.graph())));
+    let _ = file.write_fmt(format_args!("{:?}", Dot::new(g.graph())));
     Command::new("dot").arg("-Tpng").arg("-Gsize=11,16\\!").arg("-Gdpi=150").arg("-O").arg(filename)
                        .spawn().expect("dot command failed");
     return true;
