@@ -36,7 +36,7 @@ impl GraphTranslator {
                     s::Encoder::Png => 2,
                 });
                 let encoder_hints = ::ffi::EncoderHints {
-                    jpeg_quality: 100,
+                    jpeg_encode_quality: 100,
                     disable_png_alpha: false,
                 };
 
@@ -59,9 +59,9 @@ impl GraphTranslator {
             s::Node::Rotate270 => ::flow::graph::node_create_rotate_270(self.ctx, g, -1),
             s::Node::CreateCanvas { format, w, h, color } => {
                 let ffi_format = match format {
-                    s::PixelFormat::Bgr24 => ::flow::definitions::PixelFormat::BGR24,
-                    s::PixelFormat::Bgra32 => ::flow::definitions::PixelFormat::BGRA32,
-                    s::PixelFormat::Gray8 => ::flow::definitions::PixelFormat::Gray8,
+                    s::PixelFormat::Bgr24 => ::ffi::PixelFormat::BGR24,
+                    s::PixelFormat::Bgra32 => ::ffi::PixelFormat::BGRA32,
+                    s::PixelFormat::Gray8 => ::ffi::PixelFormat::Gray8,
                 };
 
                 ::flow::graph::node_create_canvas(self.ctx,

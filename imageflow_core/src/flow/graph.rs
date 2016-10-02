@@ -3,9 +3,9 @@ use libc::{self, int32_t,uint32_t};
 use std::ffi::CStr;
 use petgraph;
 use daggy::{Dag,EdgeIndex,NodeIndex};
-use super::definitions::{Node,PixelFormat};
 
-pub type Graph = Dag<Node,EdgeKind>;
+
+pub type Graph = Dag<::flow::definitions::Node,EdgeKind>;
 
 pub fn print_to_stdout(c: *mut Context, g: &Graph) -> bool {
     true

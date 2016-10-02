@@ -411,7 +411,7 @@ pub fn process_image<F, C, R>(commands: BoringCommands,
         };
 
         let hints = EncoderHints {
-            jpeg_quality: commands.jpeg_quality,
+            jpeg_encode_quality: commands.jpeg_quality,
             disable_png_alpha: disable_png_alpha,
         };
 

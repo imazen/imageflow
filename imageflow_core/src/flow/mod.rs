@@ -12,7 +12,7 @@ pub mod graph;
 pub mod definitions;
 pub mod nodes;
 use self::graph::Graph;
-use self::definitions::{NodeState,NodeType};
+use self::definitions::*;
 
 #[macro_export]
 macro_rules! error_return (
@@ -223,7 +223,7 @@ use daggy::walker::Walker;
 pub fn job_graph_fully_executed(c: *mut Context, job: *mut Job, graph_ref: &mut Graph) -> bool
 {
     for node in graph_ref.raw_nodes() {
-        if node.weight.node_type != NodeType::Null && node.weight.state != NodeState::Executed {
+        if node.weight.stage != NodeStage::Executed {
             return false
         }
     }
@@ -339,10 +339,10 @@ pub fn node_visitor_optimize(c: *mut Context, job: *mut Job, graph_ref: &mut Gra
 {
     graph_ref.node_weight_mut(node_index(node_id as usize)).map(|node| {
         // Implement optimizations
-        if node.state == NodeState::ReadyForOptimize {
-            //FIXME: should we implement AND on NodeState?
-            //node.state |= NodeState::Optimized;
-            node.state = NodeState::Optimized;
+        if node.stage == NodeStage::ReadyForOptimize {
+            //FIXME: should we implement AND on NodeStage?
+            //node.stage |= NodeStage::Optimized;
+            node.stage = NodeStage::Optimized;
         }
         true
     }).unwrap_or(false)
@@ -350,7 +350,7 @@ pub fn node_visitor_optimize(c: *mut Context, job: *mut Job, graph_ref: &mut Gra
 
 pub fn flow_node_has_dimensions(c: *mut Context, g: &Graph, node_id: int32_t) -> bool
 {
-    g.node_weight(node_index(node_id as usize)).map(|node| node.result_width > 0).unwrap_or(false)
+    g.node_weight(node_index(node_id as usize)).map(|node| match node.frame_est { FrameEstimate::Some(_) => true, _ => false}).unwrap_or(false)
 }
 
 pub fn flow_node_inputs_have_dimensions(c: *mut Context, g: &mut Graph, node_id: int32_t) -> bool
@@ -375,7 +375,7 @@ pub fn flow_job_populate_dimensions_for_node(c: *mut Context, job: *mut Job, g: 
 
     g.node_weight_mut(node_index(node_id as usize)).map(|node| {
         let elapsed = (time::precise_time_ns() - now) as u32;
-        node.ticks_elapsed += elapsed;
+        node.cost.wall_ticks += elapsed;
     });
     return true;
 }
@@ -479,7 +479,7 @@ static bool node_visitor_dimensions(flow_c * c, struct flow_job * job, struct fl
 //FIXME: can be deleted
 static bool flow_job_node_is_executed(flow_c * c, struct flow_job * job, struct flow_graph * g, int32_t node_id)
 {
-    return (g->nodes[node_id].state & flow_node_state_Executed) > 0;
+    return (g->nodes[node_id].stage & flow_node_state_Executed) > 0;
 }
 */
 
