@@ -281,8 +281,6 @@ pub struct Build001Config {
     pub process_all_gif_frames: Option<bool>,
     #[serde(rename="graphRecording")]
     pub graph_recording: Option<Build001_Graph_Recording>,
-    #[serde(rename="noGammaCorrection")]
-    pub no_gamma_correction: bool,
 }
 #[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
 pub struct Build001 {
