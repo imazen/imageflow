@@ -23,9 +23,9 @@ macro_rules! static_char {
 }
 
 fn compare(input: s::IoEnum, allowed_off_by_one_bytes: usize, checksum_name: String, store_if_missing: bool, debug: bool, mut steps: Vec<s::Node>) -> bool {
-    let mut dest_bitmap: *mut imageflow_core::ffi::FlowBitmapBgra = std::ptr::null_mut();
+    let mut dest_bitmap: *mut imageflow_core::ffi::BitmapBgra = std::ptr::null_mut();
 
-    let ptr_to_ptr = &mut dest_bitmap as *mut *mut imageflow_core::ffi::FlowBitmapBgra;
+    let ptr_to_ptr = &mut dest_bitmap as *mut *mut imageflow_core::ffi::BitmapBgra;
 
     let input_io = s::IoObject {
         io_id: 0,

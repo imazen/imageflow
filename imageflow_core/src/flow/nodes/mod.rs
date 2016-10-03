@@ -1,6 +1,6 @@
 use libc::{int32_t,size_t};
 use super::graph::Graph;
-use ffi::{Context,Job,PixelFormat,NodeType, BitmapBGRA};
+use ffi::{Context,Job,PixelFormat,NodeType, BitmapBgra};
 use daggy::{Dag,EdgeIndex,NodeIndex};
 mod simple_nodes;
 

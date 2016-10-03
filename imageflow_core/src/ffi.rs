@@ -4,7 +4,7 @@
 //! **Use imageflow_core::abi functions instead when creating bindings**
 //!
 //! These aren't to be exposed, but rather to connect to C internals
-
+extern crate imageflow_serde as s;
 extern crate libc;
 use std::ascii::AsciiExt;
 use std::ptr;
@@ -346,32 +346,34 @@ pub struct DecoderInfo {
 }
 
 
-#[repr(C)]
-#[derive(Debug)]
-pub struct FlowBitmapBgra {
-    // bitmap width in pixels
-    pub w: u32,
-    // bitmap height in pixels
-    pub h: u32,
-    // byte length of each row (may include any amount of padding)
-    pub stride: u32,
-    // pointer to pixel 0,0; should be of length > h * stride
-    pub pixels: *mut u8,
-    // If true, we don't dispose of *pixels when we dispose the struct
-    pub borrowed_pixels: bool,
-    // If false, we can even ignore the alpha channel on 4bpp
-    pub alpha_meaningful: bool,
-    // If false, we can edit pixels without affecting the stride
-    pub pixels_readonly: bool,
-    // If false, we can change the stride of the image.
-    pub stride_readonly: bool,
-    // If true, we can reuse the allocated memory for other purposes.
-    pub can_reuse_space: bool,
 
+#[repr(C)]
+#[derive(Clone,Debug,PartialEq)]
+pub struct BitmapBgra {
+    /// bitmap width in pixels
+    pub w: uint32_t,
+    /// bitmap height in pixels
+    pub h: uint32_t,
+    /// byte length of each row (may include any amount of padding)
+    pub stride: uint32_t,
+    //FIXME: replace with a vec or slice
+    ///pointer to pixel 0,0; should be of length > h * stride
+    pub pixels: *mut u8,
+    /// If true, we don't dispose of *pixels when we dispose the struct
+    pub borrowed_pixels: bool,
+    /// If false, we can even ignore the alpha channel on 4bpp
+    pub alpha_meaningful: bool,
+    /// If false, we can edit pixels without affecting the stride
+    pub pixels_readonly: bool,
+    ///If false, we can change the stride of the image
+    pub stride_readonly: bool,
+    /// If true, we can reuse the allocated memory for other purposes
+    pub can_reuse_space: bool,
     pub fmt: PixelFormat,
-    // When using compositing mode blend_with_matte, this color will be used. We should probably define this as always
-    // being sRGBA, 4 bytes.
-    pub matte_color: [u8; 4],
+    ///When using compositing mode blend_with_matte, this color will be used. We should probably define this as
+    ///always being sRGBA, 4 bytes.
+    pub matte_color: [u8;4],
+
     pub compositing_mode: BitmapCompositingMode,
 }
 /*imageflow_core::ffi::FlowBitmapBgra{
@@ -399,6 +401,36 @@ pub enum PixelFormat {
     BGRA32 = 4,
 }
 
+impl From<s::PixelFormat> for PixelFormat{
+    fn from(f: s::PixelFormat) -> PixelFormat{
+        match f {
+            s::PixelFormat::Bgr24 => PixelFormat::BGR24,
+            s::PixelFormat::Bgra32 => PixelFormat::BGRA32,
+            s::PixelFormat::Gray8 => PixelFormat::Gray8
+        }
+    }
+}
+impl <'a> From<&'a s::PixelFormat> for PixelFormat{
+    fn from(f: &'a s::PixelFormat) -> PixelFormat{
+        match *f {
+            s::PixelFormat::Bgr24 => PixelFormat::BGR24,
+            s::PixelFormat::Bgra32 => PixelFormat::BGRA32,
+            s::PixelFormat::Gray8 => PixelFormat::Gray8
+        }
+    }
+}
+impl From<PixelFormat> for s::PixelFormat{
+    fn from(f: PixelFormat) -> s::PixelFormat{
+        match f {
+            PixelFormat::BGR24 => s::PixelFormat::Bgr24,
+            PixelFormat::BGRA32 => s::PixelFormat::Bgra32,
+            PixelFormat::Gray8 => s::PixelFormat::Gray8
+        }
+    }
+}
+
+
+
 #[repr(C)]
 #[derive(Copy,Clone,Debug,PartialEq)]
 pub enum EdgeType {
@@ -417,35 +449,6 @@ pub enum BitmapCompositingMode {
     BlendWithMatte = 2,
 }
 
-#[repr(C)]
-#[derive(Clone,Debug,PartialEq)]
-pub struct BitmapBGRA {
-    /// bitmap width in pixels
-    pub w: uint32_t,
-    /// bitmap height in pixels
-    pub h: uint32_t,
-    /// byte length of each row (may include any amount of padding)
-    pub stride: uint32_t,
-    //FIXME: replace with a vec or slice
-    ///pointer to pixel 0,0; should be of length > h * stride
-    pub pixels: *mut u8,
-    /// If true, we don't dispose of *pixels when we dispose the struct
-    pub borrowed_pixels: bool,
-    /// If false, we can even ignore the alpha channel on 4bpp
-    pub alpha_meaningful: bool,
-    /// If false, we can edit pixels without affecting the stride
-    pub pixels_readonly: bool,
-    ///If false, we can change the stride of the image
-    pub stride_readonly: bool,
-    /// If true, we can reuse the allocated memory for other purposes
-    pub can_reuse_space: bool,
-    pub fmt: PixelFormat,
-    ///When using compositing mode blend_with_matte, this color will be used. We should probably define this as
-    ///always being sRGBA, 4 bytes.
-    pub matte_color: [u8;4],
-
-    pub compositing_mode: BitmapCompositingMode,
-}
 
 
 /// floating-point bitmap, typically linear RGBA, premultiplied
@@ -763,7 +766,7 @@ enum ScaleFlags {
 #[repr(C)]
 #[derive(Clone,Debug,PartialEq)]
 pub struct NodeInfoBitmapBgraPointer {
-    ptr: *mut *mut BitmapBGRA,
+    ptr: *mut *mut BitmapBgra,
 }
 
 #[repr(C)]
@@ -842,7 +845,7 @@ extern "C" {
     pub fn flow_context_error_reason(context: *mut Context) -> i32;
 
     pub fn flow_context_set_error_get_message_buffer(context: *mut Context, code: i32/*FlowStatusCode*/,
-        file: *const libc::c_char, line: i32, function_name: *const libc::c_char) -> *const libc::c_char;
+                                                     file: *const libc::c_char, line: i32, function_name: *const libc::c_char) -> *const libc::c_char;
 
     pub fn flow_context_raise_error(context: *mut Context,
                                     error_code: i32,
@@ -948,10 +951,10 @@ extern "C" {
 
 
     pub fn flow_job_decoder_set_downscale_hints_by_placeholder_id(c: *mut Context,
-                                                                  job: *mut Job, placeholder_id:i32,
-                                                                  if_wider_than: i64,  or_taller_than: i64,
-                                                                  downscaled_min_width: i64,  downscaled_min_height:i64,  scale_luma_spatially:bool,
-                                                                  gamma_correct_for_srgb_during_spatial_luma_scaling:bool) -> bool;
+                                                                  job: *mut Job, placeholder_id: i32,
+                                                                  if_wider_than: i64, or_taller_than: i64,
+                                                                  downscaled_min_width: i64, downscaled_min_height: i64, scale_luma_spatially: bool,
+                                                                  gamma_correct_for_srgb_during_spatial_luma_scaling: bool) -> bool;
 
 
     pub fn flow_context_set_floatspace(c: *mut Context,
@@ -961,15 +964,23 @@ extern "C" {
                                        c: f32);
 
     pub fn flow_bitmap_bgra_test_compare_to_record(c: *mut Context,
-                                                   bitmap: *mut FlowBitmapBgra,
+                                                   bitmap: *mut BitmapBgra,
                                                    storage_name: *const libc::c_char,
                                                    store_if_missing: bool,
                                                    off_by_one_byte_differences_permitted: usize,
                                                    caller_filename: *const libc::c_char,
                                                    caller_linenumber: i32,
-                                                    storage_relative_to: *const libc::c_char)
+                                                   storage_relative_to: *const libc::c_char)
                                                    -> bool;
 
+
+    pub fn flow_bitmap_bgra_flip_vertical(c: *mut Context,
+                                          bitmap: *mut BitmapBgra);
+    pub fn flow_bitmap_bgra_flip_horizontal(c: *mut Context,
+                                          bitmap: *mut BitmapBgra);
+
+    pub fn flow_bitmap_bgra_create(c: *mut Context,
+                                          sx: i32, sy: i32, zeroed: bool, format: PixelFormat) -> *mut BitmapBgra;
 }
 
 

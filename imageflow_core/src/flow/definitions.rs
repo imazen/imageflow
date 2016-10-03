@@ -141,15 +141,33 @@ pub enum CostEstimate {
 pub enum NodeResult{
     None, // No result yet
     Consumed, //Ownership has been transferred to another node for exclusive mutation. If another node tries to access, a panic will occur. Don't consume without verifying no other nodes want access.
-    Frame(BitmapBGRA), //Should this be boxed?
+    Frame(*mut BitmapBgra), //Should this be boxed?
 }
-
+#[derive(Clone,Debug,PartialEq)]
+pub enum NodeParamsInternal{
+    Render1D{
+        scale_to_width: usize,
+        canvas_x: usize,
+        canvas_y: usize,
+        filter: Option<s::Filter>,
+        sharpen_percent_goal: Option<f32>,
+        transpose_on_write: bool,
+        matte_color: Option<s::Color>,
+        compositing_mode: ::ffi::BitmapCompositingMode,
+    },
+}
+#[derive(Clone,Debug,PartialEq)]
+pub enum NodeParams{
+    None,
+    Json(s::Node),
+    Internal(NodeParamsInternal)
+}
 
 #[derive(Clone,Debug,PartialEq)]
 pub struct Node {
     pub def: &'static NodeDefinition,
     pub stage: NodeStage,
-    pub params: Option<s::Node>,
+    pub params: NodeParams,
     pub frame_est: FrameEstimate,
     pub cost_est: CostEstimate,
     pub cost: CostInfo,
@@ -158,7 +176,7 @@ pub struct Node {
 }
 
 impl Node{
-   pub fn new(def: &'static NodeDefinition, params: Option<s::Node>) -> Node{
+   pub fn new(def: &'static NodeDefinition, params: NodeParams) -> Node{
         Node{
             def: def,
             custom_state: ::std::ptr::null_mut(),

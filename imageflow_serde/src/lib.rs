@@ -110,6 +110,7 @@ pub enum ColorSrgb {
 }
 #[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
 pub enum Color {
+    Transparent,
     Srgb(ColorSrgb),
 }
 #[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]

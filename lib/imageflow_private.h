@@ -200,6 +200,7 @@ PUB bool flow_bitmap_float_pivoting_composite_linear_over_srgb(flow_c * c, struc
                                                                uint32_t from_row, struct flow_bitmap_bgra * dest,
                                                                uint32_t dest_row, uint32_t row_count, bool transpose);
 
+
 PUB bool flow_bitmap_bgra_flip_vertical(flow_c * c, struct flow_bitmap_bgra * b);
 
 PUB bool flow_bitmap_float_demultiply_alpha(flow_c * c, struct flow_bitmap_float * src, const uint32_t from_row,

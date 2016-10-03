@@ -7,7 +7,7 @@ extern crate rustc_serialize;
 use parsing::rustc_serialize::hex::FromHex;
 use daggy::{Dag,EdgeIndex,NodeIndex};
 use flow::nodes as nodes;
-use flow::definitions::{Node};
+use flow::definitions::{Node, NodeParams};
 
 pub struct GraphTranslator {
     ctx: *mut ::ffi::Context,
@@ -25,6 +25,7 @@ impl GraphTranslator {
                     s::ColorSrgb::Hex(hex_srgb) => u32::from_str_radix(hex_srgb.as_str(), 16),
                 }
             }
+            s::Color::Transparent => Ok(0)
         }
     }
 
@@ -54,7 +55,7 @@ impl GraphTranslator {
 //            s::Node::Crop { x1, y1, x2, y2 } => {
 //                ::flow::graph::node_create_primitive_crop(self.ctx, g, -1, x1, y1, x2, y2)
 //            }
-            s::Node::FlipV => Node::new(&nodes::FLIP_V, Some(node)),
+            s::Node::FlipV => Node::new(&nodes::FLIP_V, NodeParams::Json(node)),
 //            s::Node::FlipH => ::flow::graph::node_create_primitive_flip_horizontal(self.ctx, g, -1),
 //            s::Node::Rotate90 => ::flow::graph::node_create_rotate_90(self.ctx, g, -1),
 //            s::Node::Rotate180 => ::flow::graph::node_create_rotate_180(self.ctx, g, -1),
@@ -116,7 +117,7 @@ impl GraphTranslator {
 //                let ptr_to_ptr = ptr_to_flow_bitmap_bgra_ptr as *mut *mut ::ffi::FlowBitmapBgra;
 //                ::flow::graph::node_create_bitmap_bgra_reference(self.ctx, g, -1, ptr_to_ptr)
 //            }
-            _ => Node::new(&nodes::NO_OP, Some(node)),
+            _ => Node::new(&nodes::NO_OP, NodeParams::Json(node)),
         };
         g.add_node(new_node)
     }
