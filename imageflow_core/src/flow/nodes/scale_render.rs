@@ -1,5 +1,140 @@
-use flow::graph::Graph;
-use ffi::{Context,Job,NodeType};
-use daggy::{Dag,EdgeIndex,NodeIndex};
+extern crate imageflow_serde as s;
+use daggy::{Dag, EdgeIndex, NodeIndex};
+use ffi;
+use ffi::{Context, Job, NodeType, EdgeKind};
 use flow::definitions::*;
+use flow::graph::Graph;
 use petgraph;
+use super::*;
+use super::NodeDefHelpers;
+
+struct ScaleRenderHelpers {}
+impl ScaleRenderHelpers {
+
+}
+
+lazy_static! {
+
+ pub static ref SCALE: NodeDefinition = NodeDefinition {
+        id: NodeType::Scale,
+        name: "scale",
+        description: "scale",
+        fn_estimate: Some({
+            fn f(ctx: &mut OpCtxMut, ix: NodeIndex<u32>){
+
+                let input_info = ctx.first_parent_frame_info_some(ix).unwrap();
+
+                let ref mut weight = ctx.weight_mut(ix);
+                match weight.params{
+                    NodeParams::Json(s::Node::Scale{ref  w, ref h, ..}) => {
+                        weight.frame_est = FrameEstimate::Some(
+                        FrameInfo{
+                            w: *w as i32,
+                            h: *h as i32,
+                            fmt: ffi::PixelFormat::from(input_info.fmt),
+                            alpha_meaningful: input_info.alpha_meaningful});
+                    },
+                    _ => { panic!("Node params missing");}
+                }
+            }
+            f
+        }),
+        fn_flatten_pre_optimize: Some({
+            fn f(ctx: &mut OpCtxMut, ix: NodeIndex<u32>){
+                let input = ctx.first_parent_frame_info_some(ix).unwrap();
+
+                if let s::Node::Scale {w, h, down_filter, up_filter, sharpen_percent, flags } =
+                            ctx.get_json_params(ix).unwrap() {
+
+                    let filter =  if input.w < w as i32 || input.h < h as i32 { up_filter }
+                                    else { down_filter};
+
+                    match flags {
+                        Some(1) => {
+                            let canvas_params = s::Node::CreateCanvas{w: w as usize, h: h as usize, format: s::PixelFormat::from(input.fmt), color: s::Color::Transparent };
+                            //TODO: Not the right params!
+                            let scale2d_params = s::Node::CopyRectToCanvas{from_x: 0, from_y: 0, x: 0, y: 0, width: w as u32, height: h as u32};
+                            let canvas = ctx.graph.add_node(Node::new(&CREATE_CANVAS, NodeParams::Json(canvas_params)));
+                            let scale2d = ctx.graph.add_node(Node::new(&SCALE_2D_RENDER_TO_CANVAS_1D, NodeParams::Json(scale2d_params)));
+                            ctx.graph.add_edge(canvas, scale2d, EdgeKind::Canvas).unwrap();
+                            ctx.replace_node_with_existing(ix, scale2d);
+                        },
+                        _ => {
+                            panic!("panic");
+//                            ctx.replace_node_with_existing(ix, vec![
+//                                Node::new(&RENDER_1D, )
+//                            ]);
+                        }
+                    }
+
+                }
+
+            }
+            f
+        }),
+        .. Default::default()
+    };
+
+//    pub static ref RENDER_1D: NodeDefinition = NodeDefinition {
+//        id: NodeType::Render1D,
+//        name: "render1d",
+//        description: "Render1D",
+//        fn_estimate: Some({
+//            fn f(ctx: &mut OpCtxMut, ix: NodeIndex<u32>){
+//                ctx.replace_node(ix, vec![
+//                Node::new(&RENDER_TO_CANVAS_1D, NodeParams::None)
+//                ]);
+//            }
+//            f
+//        }),
+//        fn_flatten_pre_optimize: Some({
+//            fn f(ctx: &mut OpCtxMut, ix: NodeIndex<u32>){
+//
+//            }
+//            f
+//        }),
+//        .. Default::default()
+//    };
+//
+//    pub static ref RENDER_TO_CANVAS_1D: NodeDefinition = NodeDefinition {
+//        id: NodeType::Render1D,
+//        name: "render1d",
+//        description: "Render1D",
+//        fn_estimate: Some({
+//            fn f(ctx: &mut OpCtxMut, ix: NodeIndex<u32>){
+//                ctx.replace_node(ix, vec![
+//                Node::new(&RENDER_TO_CANVAS_1D, NodeParams::None)
+//                ]);
+//            }
+//            f
+//        }),
+//        fn_flatten_pre_optimize: Some({
+//            fn f(ctx: &mut OpCtxMut, ix: NodeIndex<u32>){
+//
+//            }
+//            f
+//        }),
+//        .. Default::default()
+//    };
+
+    pub static ref SCALE_2D_RENDER_TO_CANVAS_1D: NodeDefinition = NodeDefinition {
+        id: NodeType::Render1D,
+        name: "render1d",
+        description: "Render1D",
+        fn_estimate: Some({
+            fn f(ctx: &mut OpCtxMut, ix: NodeIndex<u32>){
+//                ctx.replace_node(ix, vec![
+//                Node::new(&RENDER_TO_CANVAS_1D, NodeParams::None)
+//                ]);
+            }
+            f
+        }),
+        fn_flatten_pre_optimize: Some({
+            fn f(ctx: &mut OpCtxMut, ix: NodeIndex<u32>){
+
+            }
+            f
+        }),
+        .. Default::default()
+    };
+}

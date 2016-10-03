@@ -105,7 +105,7 @@ impl Default for NodeDefinition {
 
 
 
-#[derive(Clone,Debug,PartialEq)]
+#[derive(Copy, Clone,Debug,PartialEq)]
 pub struct FrameInfo{
     pub w: i32,
     pub h: i32,
@@ -113,7 +113,7 @@ pub struct FrameInfo{
     pub alpha_meaningful: bool,
 }
 
-#[derive(Clone,Debug,PartialEq)]
+#[derive(Copy, Clone,Debug,PartialEq)]
 pub enum FrameEstimate {
     None,
     Impossible,

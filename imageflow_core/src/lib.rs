@@ -38,7 +38,8 @@ use std::ptr;
 
 
 pub struct ContextPtr {
-    // TODO: Remove pub as soon as tests/visuals.rs doesn't need access (i.e, unit test helpers are ported, or the helper becomes cfgtest on the struct itself)
+    // TODO: Remove pub as soon as tests/visuals.rs doesn't need access
+    // (i.e, unit test helpers are ported, or the helper becomes cfgtest on the struct itself)
     pub ptr: Option<*mut ::ffi::Context>,
 }
 pub struct Context {
@@ -134,8 +135,9 @@ impl ContextPtr {
                         println!("Error {} {}\n", e.code, e.message_and_stack);
                         if e.code == 72 || e.code == 73 {
                             if g.is_some() {
-                                let _ = ::flow::graph::print_to_stdout(self.ptr.unwrap(),
-                                                                          g.unwrap() as &flow::graph::Graph);
+                                let _ = ::flow::graph::print_to_stdout(
+                                    self.ptr.unwrap(),
+                                    g.unwrap() as &flow::graph::Graph);
                             }
                         }
 
@@ -332,7 +334,8 @@ impl Context {
                         Err(b.get_error_copy().unwrap())
                     } else {
                         if buf_start.is_null() {
-                            Err(FlowError::ErrNotImpl) //Not sure how output buffer is null... no writes yet?
+                            //Not sure how output buffer is null... no writes yet?
+                            Err(FlowError::ErrNotImpl)
                         } else {
                             Ok((std::slice::from_raw_parts(buf_start, buf_len)))
                         }
