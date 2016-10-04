@@ -990,29 +990,3 @@ fn flow_job_creation_works() {
     }
 }
 
-
-#[test]
-fn flow_graph_creation_works() {
-    unsafe {
-        let c = flow_context_create();
-        assert!(!c.is_null());
-
-        let mut g = flow::graph::create(c, 10, 10, 10, 2.0);
-        //FIXME: should we still check for null?
-        //assert!(!g.is_null());
-
-        let j = flow_job_create(c);
-        assert!(!j.is_null());
-
-        let last = flow::graph::node_create_canvas(c,
-                                           &mut g,
-                                           -1,
-                                           PixelFormat::BGRA32,
-                                           100,
-                                           100,
-                                           0);
-        assert!(last == 0);
-
-        flow_context_destroy(c);
-    }
-}

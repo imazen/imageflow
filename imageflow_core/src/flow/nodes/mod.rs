@@ -3,7 +3,7 @@ use super::graph::Graph;
 use ffi::{Context,Job,PixelFormat, EdgeKind, NodeType, BitmapBgra};
 use daggy::{Dag,EdgeIndex,NodeIndex};
 use petgraph::{EdgeDirection};
-mod simple_nodes;
+mod rotate_flip_transpose;
 mod clone_crop_fill_expand;
 mod scale_render;
 mod create_canvas;
@@ -16,16 +16,16 @@ use super::definitions::*;
 pub use self::create_canvas::CREATE_CANVAS;
 pub use self::clone_crop_fill_expand::CLONE;
 pub use self::clone_crop_fill_expand::COPY_RECT;
-pub use self::simple_nodes::FLIP_V;
-pub use self::simple_nodes::FLIP_V_PRIMITIVE;
-pub use self::simple_nodes::FLIP_H;
-pub use self::simple_nodes::FLIP_H_PRIMITIVE;
-pub use self::simple_nodes::ROTATE_90;
-pub use self::simple_nodes::ROTATE_180;
-pub use self::simple_nodes::ROTATE_270;
-pub use self::simple_nodes::TRANSPOSE;
-pub use self::simple_nodes::APPLY_ORIENTATION;
-pub use self::simple_nodes::NO_OP;
+pub use self::rotate_flip_transpose::FLIP_V;
+pub use self::rotate_flip_transpose::FLIP_V_PRIMITIVE;
+pub use self::rotate_flip_transpose::FLIP_H;
+pub use self::rotate_flip_transpose::FLIP_H_PRIMITIVE;
+pub use self::rotate_flip_transpose::ROTATE_90;
+pub use self::rotate_flip_transpose::ROTATE_180;
+pub use self::rotate_flip_transpose::ROTATE_270;
+pub use self::rotate_flip_transpose::TRANSPOSE;
+pub use self::rotate_flip_transpose::APPLY_ORIENTATION;
+pub use self::rotate_flip_transpose::NO_OP;
 
 struct NodeDefHelpers {}
 impl NodeDefHelpers {

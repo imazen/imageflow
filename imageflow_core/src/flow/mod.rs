@@ -340,7 +340,7 @@ pub fn node_visitor_optimize(c: *mut Context, job: *mut Job, graph_ref: &mut Gra
     graph_ref.node_weight_mut(node_index(node_id as usize)).map(|node| {
         // Implement optimizations
         if node.stage == NodeStage::ReadyForOptimize {
-            //FIXME: should we implement AND on NodeStage?
+            //FIXME: should we implement AND on NodeStage? Yes
             //node.stage |= NodeStage::Optimized;
             node.stage = NodeStage::Optimized;
         }
