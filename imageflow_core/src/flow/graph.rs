@@ -20,17 +20,6 @@ pub fn create(context: *mut Context,
     Graph::with_capacity(max_nodes as usize, max_edges as usize)
 }
 
-pub fn edge_create(c: *mut Context,
-                   g: &mut Graph,
-                   from: i32,
-                   to: i32,
-                   kind: EdgeKind) -> i32 {
-  //edges are nodeindex, not just u32
-  //FIXME: error management. We should return something else than i32
-  // we should also get index as U32 instead of i32
-  g.add_edge(NodeIndex::new(from as usize), NodeIndex::new(to as usize), kind).unwrap_or(EdgeIndex::new(0usize)).index() as i32
-}
-
 pub fn node_create_decoder(c: *mut Context,
                                 g: &mut Graph,
                                 prev_node: i32,

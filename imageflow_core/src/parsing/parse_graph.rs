@@ -123,14 +123,6 @@ impl GraphTranslator {
     }
 
 
-    unsafe fn create_edge(&self,
-                          g: &mut ::flow::graph::Graph,
-                          from_node: i32,
-                          to_node: i32,
-                          edge_kind: ::ffi::EdgeKind)
-                          -> i32 {
-        ::flow::graph::edge_create(self.ctx, g, from_node, to_node, edge_kind)
-    }
 
     pub unsafe fn translate_graph(&self, from: s::Graph) -> ::flow::graph::Graph {
         let mut g = ::flow::graph::create(self.ctx, 10, 10, 3000, 2.0f32);

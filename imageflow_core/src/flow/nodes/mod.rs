@@ -13,6 +13,12 @@ mod codecs_and_pointer;
 extern crate imageflow_serde as s;
 use super::definitions::*;
 
+//TODO: Implement BitmapBgraPointer, Decoder, Encoder
+//TODO: implement TRANSPOSE, APPLY_ORIENTATION
+//TODO: implement COPY_RECT
+//TODO: Implement FILL_RECT, EXPAND_CANVAS, CROP
+
+
 pub use self::create_canvas::CREATE_CANVAS;
 pub use self::clone_crop_fill_expand::CLONE;
 pub use self::clone_crop_fill_expand::COPY_RECT;
@@ -92,7 +98,7 @@ impl<'c> OpCtxMut<'c> {
         self.first_parent_canvas(of_node).map(|ix| self.graph.node_weight(ix).unwrap())
     }
 
-    pub fn first_parent_result_frame<'a>(&'a self, of_node: NodeIndex<u32>, kind: EdgeKind) -> Option<*mut BitmapBgra> {
+    pub fn first_parent_result_frame<'a, 'b>(&'a self, of_node: NodeIndex<u32>, kind: EdgeKind) -> Option<*mut BitmapBgra> {
         self.first_parent_of_kind(of_node, kind)
             .and_then(|ix| self.graph.node_weight(ix))
             .and_then(|w|

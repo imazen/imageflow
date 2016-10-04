@@ -8,9 +8,8 @@ use petgraph;
 use super::*;
 use super::NodeDefHelpers;
 
-lazy_static! {
-
-    pub static ref CREATE_CANVAS: NodeDefinition = NodeDefinition {
+fn create_canvas_def() -> NodeDefinition{
+    NodeDefinition {
         id: NodeType::Create_Canvas,
         name: "create_canvas",
         description: "Create Canvas",
@@ -31,8 +30,9 @@ lazy_static! {
                 let c = ctx.c;
                 let ref mut weight = ctx.weight_mut(ix);
                 match  weight.params{
-// TODO: support color
+                    // TODO: support color
                     NodeParams::Json(s::Node::CreateCanvas{ ref format, ref  w, ref h, ref color}) => unsafe {
+                        //TODO: handle creation failure. Most likely OOM in entire codebase
                         weight.result = NodeResult::Frame(::ffi::flow_bitmap_bgra_create(c, *w as i32, *h as i32, true, ffi::PixelFormat::from(format)))
                     },
                     _ => { panic!("Node params missing");}
@@ -42,7 +42,9 @@ lazy_static! {
             f
         }),
         .. Default::default()
-    };
+    }
+}
 
-
+lazy_static! {
+    pub static ref CREATE_CANVAS: NodeDefinition = create_canvas_def();
 }

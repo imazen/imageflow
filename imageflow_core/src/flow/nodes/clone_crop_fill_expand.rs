@@ -1,15 +1,66 @@
 extern crate imageflow_serde as s;
 use daggy::{Dag, EdgeIndex, NodeIndex};
 use ffi;
-use ffi::{Context, Job, NodeType, EdgeKind};
+use ffi::{Context, Job, NodeType, EdgeKind, PixelFormat};
 use flow::definitions::*;
 use flow::graph::Graph;
 use petgraph;
+use std::ptr;
 use super::*;
 use super::NodeDefHelpers;
 
-lazy_static! {
-    pub static ref CLONE: NodeDefinition = NodeDefinition {
+
+fn copy_rect_def() -> NodeDefinition {
+    NodeDefinition {
+        id: NodeType::primitive_CopyRectToCanvas,
+        name: "copy_rect",
+        inbound_edges: EdgesIn::OneInputOneCanvas,
+        description: "Copy Rect",
+        fn_estimate:  Some(NodeDefHelpers::copy_frame_est_from_first_canvas),
+        fn_execute: Some({
+
+            fn f(ctx: &mut OpCtxMut, ix: NodeIndex<u32>){
+
+                if let s::Node::CopyRectToCanvas {from_x, from_y, width, height, x, y} =
+                    ctx.get_json_params(ix).unwrap() {
+                    let input = ctx.first_parent_result_frame(ix, EdgeKind::Input).unwrap();
+                    let canvas = ctx.first_parent_result_frame(ix, EdgeKind::Canvas).unwrap();
+
+                    unsafe {
+                        if (*input).fmt != (*canvas).fmt { panic!("Can't copy between bitmaps with different pixel formats")}
+
+                        //TODO: Implement faster path for common (full clone) path
+                        //    if (info->x == 0 && info->from_x == 0 && info->from_y == 0 && info->y == 0 && info->width == input->w
+                        //        && info->width == canvas->w && info->height == input->h && info->height == canvas->h
+                        //        && canvas->stride == input->stride) {
+                        //        memcpy(canvas->pixels, input->pixels, input->stride * input->h);
+                        //        canvas->alpha_meaningful = input->alpha_meaningful;
+
+                        let bytes_pp = match (*input).fmt { PixelFormat::Gray8 => 1, PixelFormat::BGRA32 => 4, PixelFormat::BGR24 => 3};
+                        for row in 0..height {
+                            let from_offset = (*input).stride * (from_y + row) + bytes_pp * from_x;
+                            let from_ptr = (*input).pixels.offset(from_offset as isize);
+                            let to_offset = (*canvas).stride * (y + row) + bytes_pp * x;
+                            let to_ptr = (*canvas).pixels.offset(to_offset as isize);
+                            ptr::copy_nonoverlapping(from_ptr, to_ptr, (width * bytes_pp) as usize);
+                        }
+
+
+                        ctx.weight_mut(ix).result = NodeResult::Frame(canvas);
+                    }
+
+                }else{
+                    panic!("Missing params")
+                }
+            }
+            f
+        }),
+        .. Default::default()
+    }
+}
+
+fn clone_def() -> NodeDefinition{
+    NodeDefinition {
         id: NodeType::Clone,
         name: "Clone",
         description: "Clone",
@@ -32,57 +83,11 @@ lazy_static! {
             f
         }),
         .. Default::default()
-    };
+    }
+}
+lazy_static! {
+    pub static ref CLONE: NodeDefinition = clone_def();
 
 
-    pub static ref COPY_RECT: NodeDefinition = NodeDefinition {
-        id: NodeType::primitive_CopyRectToCanvas,
-        name: "copy_rect",
-        inbound_edges: EdgesIn::OneInputOneCanvas,
-        description: "Copy Rect",
-        fn_estimate:  Some(NodeDefHelpers::copy_frame_est_from_first_canvas),
-        fn_execute: Some({
-
-            fn f(ctx: &mut OpCtxMut, ix: NodeIndex<u32>){
-
-            //              FLOW_GET_INFOBYTES(g, node_id, flow_nodeinfo_copy_rect_to_canvas, info)
-            //    FLOW_GET_INPUT_EDGE(g, node_id)
-            //    FLOW_GET_CANVAS_EDGE(g, node_id)
-            //    struct flow_node * n = &g->nodes[node_id];
-            //
-            //    struct flow_bitmap_bgra * input = g->nodes[input_edge->from].result_bitmap;
-            //    struct flow_bitmap_bgra * canvas = g->nodes[canvas_edge->from].result_bitmap;
-            //
-            //    // TODO: implement bounds checks!!!
-            //    if (input->fmt != canvas->fmt) {
-            //        FLOW_error(c, flow_status_Invalid_argument);
-            //        return false;
-            //    }
-            //    if (info->x == 0 && info->from_x == 0 && info->from_y == 0 && info->y == 0 && info->width == input->w
-            //        && info->width == canvas->w && info->height == input->h && info->height == canvas->h
-            //        && canvas->stride == input->stride) {
-            //        memcpy(canvas->pixels, input->pixels, input->stride * input->h);
-            //        canvas->alpha_meaningful = input->alpha_meaningful;
-            //    } else {
-            //        int32_t bytes_pp = flow_pixel_format_bytes_per_pixel(input->fmt);
-            //        for (uint32_t y = 0; y < info->height; y++) {
-            //            void * from_ptr = input->pixels + (size_t)(input->stride * (info->from_y + y) + bytes_pp * info->from_x);
-            //            void * to_ptr = canvas->pixels + (size_t)(canvas->stride * (info->y + y) + bytes_pp * info->x);
-            //            memcpy(to_ptr, from_ptr, info->width * bytes_pp);
-            //        }
-            //    }
-            //    n->result_bitmap = canvas;
-            //                let ref mut weight = ctx.weight_mut(ix);
-            //                match weight.params{
-            //                    NodeParams::Json(s::Node::CreateCanvas{format,w,h,color}) => {
-            //                        weight.result = NodeResult::Frame(::ffi::flow_bitmap_bgra_create(ctx.c, w as i32, h as i32, true, ffi::PixelFormat::from(format)))
-            //                    },
-            //                    _ => { panic!("Node params missing");}
-            //                }
-
-            }
-            f
-        }),
-        .. Default::default()
-    };
+    pub static ref COPY_RECT: NodeDefinition = copy_rect_def();
 }

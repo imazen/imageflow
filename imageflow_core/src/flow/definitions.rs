@@ -27,6 +27,7 @@ pub enum NodeStage {
 pub enum EdgesIn{
     NoInput,
     OneInput,
+    OneOptionalInput,
     OneInputOneCanvas,
     Aribtary{
         inputs: i32,
