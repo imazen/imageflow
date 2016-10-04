@@ -142,7 +142,7 @@ pub enum PixelFormat {
 */
 
 #[repr(C)]
-#[derive(Copy,Clone)]
+#[derive(Copy,Clone, Debug)]
 pub enum Floatspace {
     srgb = 0,
     linear = 1,
@@ -159,44 +159,46 @@ pub enum BitmapCompositingMode {
 }
 */
 
+//
+//#[repr(C)]
+//#[derive(Copy,Clone,Debug, PartialEq)]
+//pub enum Filter {
+//    RobidouxFast = 1,
+//    Robidoux = 2,
+//    RobidouxSharp = 3,
+//    Ginseng = 4,
+//    GinsengSharp = 5,
+//    Lanczos = 6,
+//    LanczosSharp = 7,
+//    Lanczos2 = 8,
+//    Lanczos2Sharp = 9,
+//    CubicFast = 10,
+//    Cubic = 11,
+//    CubicSharp = 12,
+//    CatmullRom = 13,
+//    Mitchell = 14,
+//
+//    CubicBSpline = 15,
+//    Hermite = 16,
+//    Jinc = 17,
+//    RawLanczos3 = 18,
+//    RawLanczos3Sharp = 19,
+//    RawLanczos2 = 20,
+//    RawLanczos2Sharp = 21,
+//    Triangle = 22,
+//    Linear = 23,
+//    Box = 24,
+//    CatmullRomFast = 25,
+//    CatmullRomFastSharp = 26,
+//
+//    Fastest = 27,
+//
+//    MitchellFast = 28,
+//    NCubic = 29,
+//    NCubicSharp = 30,
+//}
 
-#[repr(C)]
-#[derive(Copy,Clone,Debug, PartialEq)]
-pub enum Filter {
-    RobidouxFast = 1,
-    Robidoux = 2,
-    RobidouxSharp = 3,
-    Ginseng = 4,
-    GinsengSharp = 5,
-    Lanczos = 6,
-    LanczosSharp = 7,
-    Lanczos2 = 8,
-    Lanczos2Sharp = 9,
-    CubicFast = 10,
-    Cubic = 11,
-    CubicSharp = 12,
-    CatmullRom = 13,
-    Mitchell = 14,
-
-    CubicBSpline = 15,
-    Hermite = 16,
-    Jinc = 17,
-    RawLanczos3 = 18,
-    RawLanczos3Sharp = 19,
-    RawLanczos2 = 20,
-    RawLanczos2Sharp = 21,
-    Triangle = 22,
-    Linear = 23,
-    Box = 24,
-    CatmullRomFast = 25,
-    CatmullRomFastSharp = 26,
-
-    Fastest = 27,
-
-    MitchellFast = 28,
-    NCubic = 29,
-    NCubicSharp = 30,
-}
+pub use self::s::Filter as Filter;
 
 #[repr(C)]
 #[derive(Copy,Clone,Debug, PartialEq)]
@@ -276,47 +278,6 @@ pub const FILTER_OPTIONS: &'static [&'static str] = &["robidouxfast",
                                                       "ncubicsharp"];
 
 
-impl FromStr for Filter {
-    type Err = &'static str;
-
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        match &*s.to_ascii_lowercase() {
-            "robidouxfast" => Ok(Filter::RobidouxFast),
-            "robidoux" => Ok(Filter::Robidoux),
-            "robidouxsharp" => Ok(Filter::RobidouxSharp),
-            "ginseng" => Ok(Filter::Ginseng),
-            "ginsengsharp" => Ok(Filter::GinsengSharp),
-            "lanczos" => Ok(Filter::Lanczos),
-            "lanczossharp" => Ok(Filter::LanczosSharp),
-            "lanczos2" => Ok(Filter::Lanczos2),
-            "lanczos2sharp" => Ok(Filter::Lanczos2Sharp),
-            "cubicfast" => Ok(Filter::CubicFast),
-            "cubic" => Ok(Filter::Cubic),
-            "cubicsharp" => Ok(Filter::CubicSharp),
-            "catmullrom" => Ok(Filter::CatmullRom),
-            "catrom" => Ok(Filter::CatmullRom),
-            "mitchell" => Ok(Filter::Mitchell),
-            "cubicbspline" => Ok(Filter::CubicBSpline),
-            "bspline" => Ok(Filter::CubicBSpline),
-            "hermite" => Ok(Filter::Hermite),
-            "jinc" => Ok(Filter::Jinc),
-            "rawlanczos3" => Ok(Filter::RawLanczos3),
-            "rawlanczos3sharp" => Ok(Filter::RawLanczos3Sharp),
-            "rawlanczos2" => Ok(Filter::RawLanczos2),
-            "rawlanczos2sharp" => Ok(Filter::RawLanczos2Sharp),
-            "triangle" => Ok(Filter::Triangle),
-            "linear" => Ok(Filter::Linear),
-            "box" => Ok(Filter::Box),
-            "catmullromfast" => Ok(Filter::CatmullRomFast),
-            "catmullromfastsharp" => Ok(Filter::CatmullRomFastSharp),
-            "fastest" => Ok(Filter::Fastest),
-            "mitchellfast" => Ok(Filter::MitchellFast),
-            "ncubic" => Ok(Filter::NCubic),
-            "ncubicsharp" => Ok(Filter::NCubicSharp),
-            _ => Err("no match"),
-        }
-    }
-}
 
 impl Default for DecoderInfo {
     fn default() -> DecoderInfo {
@@ -829,6 +790,19 @@ pub struct NodeInfoCodec {
 }
 
 
+#[repr(C)]
+#[derive(Clone,Debug,Copy)]
+pub struct Scale2dRenderToCanvas1d {
+    // There will need to be consistency checks against the createcanvas node
+
+    pub interpolation_filter: Filter,
+    // struct flow_interpolation_details * interpolationDetails;
+    pub scale_to_width: i32,
+    pub scale_to_height: i32,
+    pub scale_in_colorspace: Floatspace,
+    pub sharpen_percent_goal: f32
+}
+
 extern "C" {
     pub fn flow_context_create() -> *mut Context;
     pub fn flow_context_begin_terminate(context: *mut Context) -> bool;
@@ -981,6 +955,12 @@ extern "C" {
 
     pub fn flow_bitmap_bgra_create(c: *mut Context,
                                           sx: i32, sy: i32, zeroed: bool, format: PixelFormat) -> *mut BitmapBgra;
+
+
+    pub fn flow_node_execute_scale2d_render1d(c: *mut Context,
+        job: *mut Job, input: *mut BitmapBgra, canvas: *mut BitmapBgra, info: *const Scale2dRenderToCanvas1d) -> bool;
+
+
 }
 
 

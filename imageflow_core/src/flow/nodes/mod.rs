@@ -48,21 +48,20 @@ impl NodeDefHelpers {
 }
 
 impl<'c> OpCtxMut<'c> {
-    pub fn first_parent_input<'a>(&'a self, of_node: NodeIndex<u32>) -> Option<NodeIndex<u32>> {
+    pub fn first_parent_of_kind<'a>(&'a self, of_node: NodeIndex<u32>, kind: EdgeKind) -> Option<NodeIndex<u32>> {
         self.graph
             .graph()
             .edges_directed(of_node, EdgeDirection::Incoming)
-            .filter(|&(node, &kind)| kind == EdgeKind::Input)
+            .filter(|&(node, &kind)| kind == kind)
             .map(|(node, kind)| node)
             .nth(0)
     }
+
+    pub fn first_parent_input<'a>(&'a self, of_node: NodeIndex<u32>) -> Option<NodeIndex<u32>> {
+        self.first_parent_of_kind(of_node, EdgeKind::Input)
+    }
     pub fn first_parent_canvas<'a>(&'a self, of_node: NodeIndex<u32>) -> Option<NodeIndex<u32>> {
-        self.graph
-            .graph()
-            .edges_directed(of_node, EdgeDirection::Incoming)
-            .filter(|&(node, &kind)| kind == EdgeKind::Canvas)
-            .map(|(node, kind)| node)
-            .nth(0)
+        self.first_parent_of_kind(of_node, EdgeKind::Input)
     }
 
     pub fn first_parent_input_weight<'a>(&'a self, of_node: NodeIndex<u32>) -> Option<Node> {
@@ -92,6 +91,19 @@ impl<'c> OpCtxMut<'c> {
     pub fn first_parent_canvas_weight<'a>(&'a self, of_node: NodeIndex<u32>) -> Option<&Node> {
         self.first_parent_canvas(of_node).map(|ix| self.graph.node_weight(ix).unwrap())
     }
+
+    pub fn first_parent_result_frame<'a>(&'a self, of_node: NodeIndex<u32>, kind: EdgeKind) -> Option<*mut BitmapBgra> {
+        self.first_parent_of_kind(of_node, kind)
+            .and_then(|ix| self.graph.node_weight(ix))
+            .and_then(|w|
+            match w.result {
+                NodeResult::Frame(ptr) => Some(ptr),
+                _ => None
+            }
+        )
+    }
+
+
 
     pub fn first_parent_input_weight_mut<'a>(&'a mut self,
                                              of_node: NodeIndex<u32>)

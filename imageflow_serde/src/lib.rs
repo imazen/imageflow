@@ -4,6 +4,9 @@
 extern crate serde;
 extern crate serde_json;
 
+use std::str::FromStr;
+use std::ascii::AsciiExt;
+
 #[derive(Serialize, Deserialize, Debug, PartialEq)]
 struct Point {
     x: i32,
@@ -62,7 +65,7 @@ pub enum Encoder {
 
 
 #[repr(C)]
-#[derive(Serialize, Deserialize, Clone, PartialEq, PartialOrd, Debug)]
+#[derive(Copy, Serialize, Deserialize, Clone, PartialEq, PartialOrd, Debug)]
 pub enum Filter {
     RobidouxFast = 1,
     Robidoux = 2,
@@ -98,6 +101,49 @@ pub enum Filter {
     NCubic = 29,
     NCubicSharp = 30,
 }
+impl FromStr for Filter {
+    type Err = &'static str;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match &*s.to_ascii_lowercase() {
+            "robidouxfast" => Ok(Filter::RobidouxFast),
+            "robidoux" => Ok(Filter::Robidoux),
+            "robidouxsharp" => Ok(Filter::RobidouxSharp),
+            "ginseng" => Ok(Filter::Ginseng),
+            "ginsengsharp" => Ok(Filter::GinsengSharp),
+            "lanczos" => Ok(Filter::Lanczos),
+            "lanczossharp" => Ok(Filter::LanczosSharp),
+            "lanczos2" => Ok(Filter::Lanczos2),
+            "lanczos2sharp" => Ok(Filter::Lanczos2Sharp),
+            "cubicfast" => Ok(Filter::CubicFast),
+            "cubic" => Ok(Filter::Cubic),
+            "cubicsharp" => Ok(Filter::CubicSharp),
+            "catmullrom" => Ok(Filter::CatmullRom),
+            "catrom" => Ok(Filter::CatmullRom),
+            "mitchell" => Ok(Filter::Mitchell),
+            "cubicbspline" => Ok(Filter::CubicBSpline),
+            "bspline" => Ok(Filter::CubicBSpline),
+            "hermite" => Ok(Filter::Hermite),
+            "jinc" => Ok(Filter::Jinc),
+            "rawlanczos3" => Ok(Filter::RawLanczos3),
+            "rawlanczos3sharp" => Ok(Filter::RawLanczos3Sharp),
+            "rawlanczos2" => Ok(Filter::RawLanczos2),
+            "rawlanczos2sharp" => Ok(Filter::RawLanczos2Sharp),
+            "triangle" => Ok(Filter::Triangle),
+            "linear" => Ok(Filter::Linear),
+            "box" => Ok(Filter::Box),
+            "catmullromfast" => Ok(Filter::CatmullRomFast),
+            "catmullromfastsharp" => Ok(Filter::CatmullRomFastSharp),
+            "fastest" => Ok(Filter::Fastest),
+            "mitchellfast" => Ok(Filter::MitchellFast),
+            "ncubic" => Ok(Filter::NCubic),
+            "ncubicsharp" => Ok(Filter::NCubicSharp),
+            _ => Err("no match"),
+        }
+    }
+}
+
+
 #[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
 pub enum EncoderHints {
     Jpeg { quality: Option<i32> },

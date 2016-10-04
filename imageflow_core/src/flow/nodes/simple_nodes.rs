@@ -148,6 +148,7 @@ lazy_static! {
     pub static ref APPLY_ORIENTATION: NodeDefinition = NodeDefinition {
         id: NodeType::Apply_Orientation,
         name: "Apply orientation",
+        //TODO: Implement
         fn_estimate: Some(NodeDefHelpers::copy_frame_est_from_first_input),
         fn_flatten_pre_optimize: Some(NodeDefHelpers::delete_node_and_snap_together),
         .. Default::default()
@@ -157,6 +158,8 @@ lazy_static! {
         id: NodeType::Transpose,
         name: "Transpose",
         fn_estimate: Some(NodeDefHelpers::rotate_frame_info),
+
+        //TODO: Implement
         fn_flatten_pre_optimize: Some({
             fn f(ctx: &mut OpCtxMut, ix: NodeIndex<u32>){
 
@@ -167,7 +170,6 @@ lazy_static! {
     };
 
     //TODO: Render1D
-    //TODO: APPLY_ORIENTATION
     //RENDER2d
     //BitmapBgra
     //Encoder

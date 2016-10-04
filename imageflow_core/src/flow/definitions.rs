@@ -50,8 +50,6 @@ pub struct OpCtxMut<'a> {
 
 pub type OptionalNodeFnMut = Option<fn(&mut OpCtxMut, NodeIndex<u32>)>;
 
-
-
 //#[derive(Clone,Debug,PartialEq, Default)]
 pub struct NodeDefinition {
     //When comparing equality, we just check 'id' (for now)
@@ -68,42 +66,6 @@ pub struct NodeDefinition {
     pub fn_execute: OptionalNodeFnMut,
     pub fn_cleanup: OptionalNodeFnMut,
 }
-//impl<'a> Clone for &'a NodeDefinition {
-//    fn clone(&self) -> &'a NodeDefinition {
-//        *self
-//    }
-//}
-impl PartialEq for NodeDefinition {
-    fn eq(&self, other: &NodeDefinition) -> bool {
-        self.id == other.id
-    }
-}
-
-impl fmt::Debug for NodeDefinition {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "NodeDefinition {{ name: '{}', id: {} }}", self.name, self.id as i32)
-    }
-}
-
-impl Default for NodeDefinition {
-    fn default() -> NodeDefinition {
-        NodeDefinition {
-            id: NodeType::Null,
-            inbound_edges: EdgesIn::OneInput,
-            outbound_edges: true,
-            name: "(null)",
-            description: "",
-            fn_graphviz_text: None,
-            fn_flatten_post_optimize: None,
-            fn_execute: None,
-            fn_cleanup: None,
-            fn_estimate: None,
-            fn_flatten_pre_optimize: None
-        }
-    }
-}
-
-
 
 #[derive(Copy, Clone,Debug,PartialEq)]
 pub struct FrameInfo{
@@ -195,5 +157,35 @@ impl Node{
     }
 }
 
+
+impl PartialEq for NodeDefinition {
+    fn eq(&self, other: &NodeDefinition) -> bool {
+        self.id == other.id
+    }
+}
+
+impl fmt::Debug for NodeDefinition {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "NodeDefinition {{ name: '{}', id: {} }}", self.name, self.id as i32)
+    }
+}
+
+impl Default for NodeDefinition {
+    fn default() -> NodeDefinition {
+        NodeDefinition {
+            id: NodeType::Null,
+            inbound_edges: EdgesIn::OneInput,
+            outbound_edges: true,
+            name: "(null)",
+            description: "",
+            fn_graphviz_text: None,
+            fn_flatten_post_optimize: None,
+            fn_execute: None,
+            fn_cleanup: None,
+            fn_estimate: None,
+            fn_flatten_pre_optimize: None
+        }
+    }
+}
 
 
