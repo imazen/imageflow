@@ -125,7 +125,7 @@ pub enum IoDirection {
 #[repr(C)]
 #[derive(Copy,Clone,Debug,PartialEq)]
 pub enum EdgeKind {
-    None = 0,
+    //None = 0, In the managed version, we don't need None edges
     Input = 1,
     Canvas = 2,
     Info = 3,

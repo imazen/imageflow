@@ -1,11 +1,12 @@
 use ffi::*;
 use libc::{self, int32_t, c_void};
 use std::ffi::CStr;
+use std;
 use std::fs::File;
 use std::io::Write;
 use std::process::Command;
 use petgraph::dot::Dot;
-use petgraph::graph::node_index;
+use petgraph::graph::{NodeIndex};
 use time;
 
 pub mod graph;
@@ -69,7 +70,7 @@ pub fn job_execute(c: *mut Context, job: *mut Job, graph_ref: &mut Graph) -> boo
         if !job_notify_graph_changed(c, job, graph_ref) {
             error_return!(c);
         }
-        if !graph_pre_optimize_flatten(c, graph_ref) {
+        if !graph_pre_optimize_flatten(c, job, graph_ref) {
             error_return!(c);
         }
         if !job_notify_graph_changed(c, job, graph_ref) {
@@ -223,42 +224,128 @@ use daggy::walker::Walker;
 pub fn job_graph_fully_executed(c: *mut Context, job: *mut Job, graph_ref: &mut Graph) -> bool
 {
     for node in graph_ref.raw_nodes() {
-        if node.weight.stage != NodeStage::Executed {
+        if node.weight.result != NodeResult::None {
             return false
         }
     }
     return true;
 }
 
-pub fn job_populate_dimensions_where_certain(c:*mut Context, job: *mut Job, graph_ref: &mut Graph) -> bool
+
+pub fn flow_node_has_dimensions(g: &Graph, node_id: NodeIndex<u32>) -> bool
 {
-    /*
-    // TODO: would be good to verify graph is acyclic.
-    if (!flow_graph_walk_dependency_wise(c, job, graph_ref, node_visitor_dimensions, NULL, (void *)false)) {
-        FLOW_error_return(c);
+    g.node_weight(node_id).map(|node| match node.frame_est { FrameEstimate::Some(_) => true, _ => false}).unwrap_or(false)
+}
+
+pub fn inputs_estimated(g: &Graph, node_id: NodeIndex<u32>) -> bool
+{
+    inputs_estimates(g,node_id).iter().any (|est| match *est { FrameEstimate::Some(_) => true, _ => false})
+}
+
+//-> impl Iterator<Item = FrameEstimate> caused compiler panic
+
+pub fn inputs_estimates(g: &Graph, node_id: NodeIndex<u32>) -> Vec<FrameEstimate>
+{
+    g.parents(node_id).iter(g).filter_map(|(_, node_index)| {
+        g.node_weight(node_index).map(|w| w.frame_est)
+    }).collect()
+}
+
+pub fn estimate_node(c: *mut Context, job: *mut Job, g: &mut Graph,
+                                             node_id: NodeIndex<u32>) -> FrameEstimate
+{
+    let now = time::precise_time_ns();
+    let mut ctx = OpCtxMut{
+        c: c,
+        graph: g,
+        job: job
+    };
+    //Invoke estimation
+    ctx.weight(node_id).def.fn_estimate.unwrap()(&mut ctx, node_id);
+    ctx.weight_mut(node_id).cost.wall_ticks + (time::precise_time_ns() - now) as u32;
+
+    ctx.weight(node_id).frame_est
+}
+
+pub fn estimate_node_recursive(c: *mut Context, job: *mut Job, g: &mut Graph,
+                                             node_id: NodeIndex<u32>) -> FrameEstimate
+{
+    //If we're already done, no need
+    if let FrameEstimate::Some(info) = g.node_weight(node_id).unwrap().frame_est{
+        return FrameEstimate::Some(info);
     }
-    */
+
+    //Otherwise let's try again
+    let inputs_good = inputs_estimated(g, node_id);
+    if !inputs_good{
+        //TODO: support UpperBound eventually; for now, use Impossible until all nodes implement
+        let give_up = inputs_estimates(g, node_id).iter().any(|est| match *est { FrameEstimate::Impossible => true, FrameEstimate::UpperBound(_) => true, _ => false} );
+
+        //If it's possible, let's try to estimate parent nodes
+        //This is problematic if we want a single call to 'fix' all Impossible nodes.
+        //For nodes already populated by Impossible/UpperBound, they will have to be called directly.
+        //We won't retry them recursively
+        if !give_up {
+
+            let input_indexes =  g.parents(node_id).iter(g).map(|(edge_ix, ix)| ix).collect::<Vec<NodeIndex<u32>>>();
+
+            for ix in input_indexes {
+                estimate_node_recursive(c, job, g, ix);
+            }
+        }
+
+        if give_up || !inputs_estimated(g, node_id){
+            g.node_weight_mut(node_id).unwrap().frame_est = FrameEstimate::Impossible;
+            return FrameEstimate::Impossible;
+        }
+    }
+    //Should be good on inputs here
+    if estimate_node(c, job, g, node_id) == FrameEstimate::None {
+        panic!("Node estimation misbehaved. Cannot leave FrameEstimate::None, must chose an alternative");
+    }
+    g.node_weight(node_id).unwrap().frame_est
+}
+
+pub fn job_populate_dimensions_where_certain(c:*mut Context, job: *mut Job, g: &mut Graph) -> bool
+{
+
+    for ix in 0..g.node_count(){
+        //If any node returns FrameEstimate::Impossible, we might as well move on to execution pass.
+        estimate_node_recursive(c, job, g, NodeIndex::new(ix));
+    }
+
     return true;
 }
 
-pub fn graph_pre_optimize_flatten(c: *mut Context, graph_ref: &mut Graph) -> bool
+
+pub fn graph_pre_optimize_flatten(c: *mut Context, job: *mut Job, g: &mut Graph) -> bool
 {
-    /*FIXME: is it still needed?
-    if unsafe {(*graph_ref).is_null()} {
-        error_msg!(c, FlowStatusCode::NullArgument);
-        return false;
-    }
-    */
-    /*FIXME
-    bool re_walk;
-    do {
-        re_walk = false;
-        if (!flow_graph_walk_dependency_wise(c, NULL, graph_ref, node_visitor_flatten, NULL, &re_walk)) {
-            FLOW_error_return(c);
+    //Just find all nodes that offer fn_flatten_pre_optimize and have been estimated.
+    // TODO: Compare Node value; should differ afterwards
+    loop {
+        let mut next = None;
+        for ix in 0..(g.node_count()){
+            if let Some(func) = g.node_weight(NodeIndex::new(ix)).unwrap().def.fn_flatten_pre_optimize{
+                if let FrameEstimate::Some(_) = g.node_weight(NodeIndex::new(ix)).unwrap().frame_est {
+                    next = Some((NodeIndex::new(ix), func));
+                    break;
+                }
+            }
         }
-    } while (re_walk);
-    */
-    return true;
+        match next {
+            None => {return true},
+            Some((next_ix, next_func)) => {
+                let mut ctx = OpCtxMut{
+                    c: c,
+                    graph: g,
+                    job: job
+                };
+                next_func(&mut ctx, next_ix);
+
+            }
+        }
+
+    }
 }
 
 pub fn graph_optimize(c: *mut Context,job: *mut Job, graph_ref: &mut Graph) -> bool
@@ -334,10 +421,10 @@ pub fn job_render_graph_to_png(c: *mut Context, job: *mut Job, g: &mut Graph, gr
     return true;
 }
 
-pub fn node_visitor_optimize(c: *mut Context, job: *mut Job, graph_ref: &mut Graph, node_id: int32_t,
+pub fn node_visitor_optimize(c: *mut Context, job: *mut Job, graph_ref: &mut Graph, node_id: NodeIndex<u32>,
                                   quit:*mut bool, skip_outbound_paths: *mut bool, custom_data: *mut c_void) -> bool
 {
-    graph_ref.node_weight_mut(node_index(node_id as usize)).map(|node| {
+    graph_ref.node_weight_mut(node_id).map(|node| {
         // Implement optimizations
         if node.stage == NodeStage::ReadyForOptimize {
             //FIXME: should we implement AND on NodeStage? Yes
@@ -346,38 +433,6 @@ pub fn node_visitor_optimize(c: *mut Context, job: *mut Job, graph_ref: &mut Gra
         }
         true
     }).unwrap_or(false)
-}
-
-pub fn flow_node_has_dimensions(c: *mut Context, g: &Graph, node_id: int32_t) -> bool
-{
-    g.node_weight(node_index(node_id as usize)).map(|node| match node.frame_est { FrameEstimate::Some(_) => true, _ => false}).unwrap_or(false)
-}
-
-pub fn flow_node_inputs_have_dimensions(c: *mut Context, g: &mut Graph, node_id: int32_t) -> bool
-{
-    for (edge_index, node_index) in g.parents(node_index(node_id as usize)).iter(g) {
-        if *g.edge_weight(edge_index).unwrap() != EdgeKind::None {
-            if !flow_node_has_dimensions(c, g, node_index.index() as int32_t) {
-                return false;
-            }
-        }
-    }
-    return true;
-}
-
-pub fn flow_job_populate_dimensions_for_node(c: *mut Context, job: *mut Job, g: &mut Graph,
-                                                  node_id: int32_t, force_estimate: bool) -> bool
-{
-    let now = time::precise_time_ns();
-    if ! flow_node_populate_dimensions(c, g, node_id, force_estimate) {
-        error_return!(c);
-    }
-
-    g.node_weight_mut(node_index(node_id as usize)).map(|node| {
-        let elapsed = (time::precise_time_ns() - now) as u32;
-        node.cost.wall_ticks += elapsed;
-    });
-    return true;
 }
 
 pub fn flow_job_force_populate_dimensions(c: *mut Context, job: *mut Job, graph_ref: &mut Graph) -> bool
@@ -390,7 +445,7 @@ pub fn flow_job_force_populate_dimensions(c: *mut Context, job: *mut Job, graph_
     return true;
 }
 
-pub fn flow_node_populate_dimensions(c: *mut Context, g: &mut Graph, node_id: int32_t, force_estimate: bool) -> bool
+pub fn flow_node_populate_dimensions(c: *mut Context, g: &mut Graph, node_id: NodeIndex<u32>, force_estimate: bool) -> bool
 {
     // FIXME: do we need to validate if daggy ensures the graph is valid?
     /*if (!flow_node_validate_edges(c, g, node_id)) {

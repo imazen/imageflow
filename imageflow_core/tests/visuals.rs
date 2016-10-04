@@ -7,7 +7,6 @@ extern crate serde_json;
 
 use std::ffi::CString;
 use imageflow_core::Context;
-use imageflow_core::parsing::BuildRequestHandler;
 
 
 
@@ -71,7 +70,7 @@ fn compare(input: s::IoEnum, allowed_off_by_one_bytes: usize, checksum_name: Str
     }
 
      unsafe {
-         let mut ctx_cell = context.unsafe_borrow_mut_context_pointer();
+         let ctx_cell = context.unsafe_borrow_mut_context_pointer();
 
 
          let matched: bool;

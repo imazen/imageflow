@@ -409,6 +409,11 @@ bool visual_compare(flow_c * c, struct flow_bitmap_bgra * bitmap, const char * n
 
     char checksum[34];
 
+    if (bitmap == NULL){
+        FLOW_error(c, flow_status_Null_argument);
+        return false;
+    }
+
     // compute checksum of bitmap (two checksums, actually - one for configuration, another for bitmap bytes)
     if (!checksum_bitmap(c, bitmap, checksum, 34)) {
         FLOW_error(c, flow_status_Invalid_argument);
