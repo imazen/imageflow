@@ -21,17 +21,20 @@ macro_rules! static_char {
     }
 }
 
-fn compare(input: s::IoEnum, allowed_off_by_one_bytes: usize, checksum_name: String, store_if_missing: bool, debug: bool, mut steps: Vec<s::Node>) -> bool {
+fn compare(input: Option<s::IoEnum>, allowed_off_by_one_bytes: usize, checksum_name: String, store_if_missing: bool, debug: bool, mut steps: Vec<s::Node>) -> bool {
     let mut dest_bitmap: *mut imageflow_core::ffi::BitmapBgra = std::ptr::null_mut();
 
     let ptr_to_ptr = &mut dest_bitmap as *mut *mut imageflow_core::ffi::BitmapBgra;
 
-    let input_io = s::IoObject {
-        io_id: 0,
-        direction: s::IoDirection::Input,
-        checksum: None,
-        io: input
-    };
+    let mut inputs = Vec::new();
+    if input.is_some() {
+        inputs.push(s::IoObject {
+            io_id: 0,
+            direction: s::IoDirection::Input,
+            checksum: None,
+            io: input.unwrap()
+        });
+    }
 
     steps.push(s::Node::FlowBitmapBgraPtr { ptr_to_flow_bitmap_bgra_ptr: ptr_to_ptr as usize});
 
@@ -49,7 +52,7 @@ fn compare(input: s::IoEnum, allowed_off_by_one_bytes: usize, checksum_name: Str
             enable_jpeg_block_scaling: Some(false),
             no_gamma_correction: false
         }),
-        io: vec![input_io],
+        io: inputs,
         framewise: s::Framewise::Steps(steps)
     };
 
@@ -84,11 +87,23 @@ fn compare(input: s::IoEnum, allowed_off_by_one_bytes: usize, checksum_name: Str
     }
 }
 
+#[test]
+fn test_fill_rect(){
+    let matched = compare(None, 500,
+                          "RingsDownscaling".to_owned(), false, false, vec![
+        s::Node::CreateCanvas {w: 200, h: 200, format: s::PixelFormat::Bgra32, color: s::Color::Transparent},
+        s::Node::FillRect{x1:0, y1:0, x2:10, y2:10, color: s::Color::Srgb(s::ColorSrgb::Hex("EECCFF".to_owned()))},
+        s::Node::Scale{ w: 400, h: 400, down_filter: Some(s::Filter::Hermite), up_filter: Some(s::Filter::Hermite), sharpen_percent: Some(0f32), flags: Some(1) }
+        ]
+    );
+    assert!(matched);
+}
+
 
 // Replaces TEST_CASE("Test scale rings", "")
 #[test]
 fn test_scale_rings(){
-    let matched = compare(s::IoEnum::Url("http://s3-us-west-2.amazonaws.com/imageflow-resources/test_inputs/rings2.png".to_owned()), 500,
+    let matched = compare(Some(s::IoEnum::Url("http://s3-us-west-2.amazonaws.com/imageflow-resources/test_inputs/rings2.png".to_owned())), 500,
         "RingsDownscaling".to_owned(), false, false, vec![
         s::Node::Decode {io_id: 0},
         s::Node::Scale{ w: 400, h: 400, down_filter: Some(s::Filter::Hermite), up_filter: Some(s::Filter::Hermite), sharpen_percent: Some(0f32), flags: Some(1) }
@@ -96,6 +111,9 @@ fn test_scale_rings(){
     );
     assert!(matched);
 }
+
+
+
 
 //// Replaces TEST_CASE("Test fill_rect", "")
 //#[test]
@@ -129,7 +147,7 @@ fn test_scale_rings(){
 
 #[test]
 fn test_scale_image() {
-    let matched = compare(s::IoEnum::Url("http://s3-us-west-2.amazonaws.com/imageflow-resources/test_inputs/waterhouse.jpg".to_owned()), 500,
+    let matched = compare(Some(s::IoEnum::Url("http://s3-us-west-2.amazonaws.com/imageflow-resources/test_inputs/waterhouse.jpg".to_owned())), 500,
                           "ScaleTheHouse".to_owned(), false, false, vec![
 s::Node::Decode {io_id: 0},
 s::Node::Scale{ w: 400, h: 300, down_filter: Some(s::Filter::Robidoux), up_filter: Some(s::Filter::Robidoux), sharpen_percent: Some(0f32), flags: Some(0) }
@@ -142,7 +160,7 @@ s::Node::Scale{ w: 400, h: 300, down_filter: Some(s::Filter::Robidoux), up_filte
 
 #[test]
 fn test_jpeg_icc2_color_profile() {
-    let matched = compare(s::IoEnum::Url("http://s3-us-west-2.amazonaws.com/imageflow-resources/test_inputs/MarsRGB_tagged.jpg".to_owned()), 500,
+    let matched = compare(Some(s::IoEnum::Url("http://s3-us-west-2.amazonaws.com/imageflow-resources/test_inputs/MarsRGB_tagged.jpg".to_owned())), 500,
                           "MarsRGB_ICC_Scaled400300".to_owned(), false, false, vec![
 s::Node::Decode {io_id: 0},
 s::Node::Scale{ w: 400, h: 300, down_filter: Some(s::Filter::Robidoux), up_filter: Some(s::Filter::Robidoux), sharpen_percent: Some(0f32), flags: Some(0) }
@@ -153,7 +171,7 @@ s::Node::Scale{ w: 400, h: 300, down_filter: Some(s::Filter::Robidoux), up_filte
 
 #[test]
 fn test_jpeg_icc4_color_profile() {
-    let matched = compare(s::IoEnum::Url("http://s3-us-west-2.amazonaws.com/imageflow-resources/test_inputs/MarsRGB_v4_sYCC_8bit.jpg".to_owned()), 500,
+    let matched = compare(Some(s::IoEnum::Url("http://s3-us-west-2.amazonaws.com/imageflow-resources/test_inputs/MarsRGB_v4_sYCC_8bit.jpg".to_owned())), 500,
                           "MarsRGB_ICCv4_Scaled400300_INCORRECT_TOO_PINK".to_owned(), false, false, vec![
 s::Node::Decode {io_id: 0},
 s::Node::Scale{ w: 400, h: 300, down_filter: Some(s::Filter::Robidoux), up_filter: Some(s::Filter::Robidoux), sharpen_percent: Some(0f32), flags: Some(0) }

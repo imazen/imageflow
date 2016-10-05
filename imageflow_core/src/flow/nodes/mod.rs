@@ -18,10 +18,12 @@ use super::definitions::*;
 //TODO: implement COPY_RECT
 //TODO: Implement FILL_RECT, EXPAND_CANVAS, CROP
 
-
+pub use self::codecs_and_pointer::BITMAP_BGRA_POINTER;
 pub use self::create_canvas::CREATE_CANVAS;
 pub use self::clone_crop_fill_expand::CLONE;
 pub use self::clone_crop_fill_expand::COPY_RECT;
+pub use self::clone_crop_fill_expand::FILL_RECT;
+pub use self::scale_render::SCALE;
 pub use self::rotate_flip_transpose::FLIP_V;
 pub use self::rotate_flip_transpose::FLIP_V_PRIMITIVE;
 pub use self::rotate_flip_transpose::FLIP_H;

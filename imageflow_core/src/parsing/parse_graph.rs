@@ -18,16 +18,6 @@ impl GraphTranslator {
         GraphTranslator { ctx: ctx }
     }
 
-    fn color_to_i32(&self, c: s::Color) -> std::result::Result<u32, std::num::ParseIntError> {
-        match c {
-            s::Color::Srgb(srgb) => {
-                match srgb {
-                    s::ColorSrgb::Hex(hex_srgb) => u32::from_str_radix(hex_srgb.as_str(), 16),
-                }
-            }
-            s::Color::Transparent => Ok(0)
-        }
-    }
 
     unsafe fn create_node(&self, g: &mut ::flow::graph::Graph, node: s::Node) -> NodeIndex<u32> {
         let new_node = match node {
@@ -55,38 +45,17 @@ impl GraphTranslator {
 //            s::Node::Crop { x1, y1, x2, y2 } => {
 //                ::flow::graph::node_create_primitive_crop(self.ctx, g, -1, x1, y1, x2, y2)
 //            }
+            s::Node::FlowBitmapBgraPtr{..} => Node::new(&nodes::BITMAP_BGRA_POINTER, NodeParams::Json(node)),
             s::Node::FlipV => Node::new(&nodes::FLIP_V, NodeParams::Json(node)),
-//            s::Node::FlipH => ::flow::graph::node_create_primitive_flip_horizontal(self.ctx, g, -1),
-//            s::Node::Rotate90 => ::flow::graph::node_create_rotate_90(self.ctx, g, -1),
-//            s::Node::Rotate180 => ::flow::graph::node_create_rotate_180(self.ctx, g, -1),
-//            s::Node::Rotate270 => ::flow::graph::node_create_rotate_270(self.ctx, g, -1),
-//            s::Node::CreateCanvas { format, w, h, color } => {
-//                let ffi_format = match format {
-//                    s::PixelFormat::Bgr24 => ::ffi::PixelFormat::BGR24,
-//                    s::PixelFormat::Bgra32 => ::ffi::PixelFormat::BGRA32,
-//                    s::PixelFormat::Gray8 => ::ffi::PixelFormat::Gray8,
-//                };
-//
-//                ::flow::graph::node_create_canvas(self.ctx,
-//                                               g,
-//                                               -1,
-//                                               ffi_format,
-//                                               w,
-//                                               h,
-//                                               self.color_to_i32(color).unwrap())
-//            }
-//            s::Node::CopyRectToCanvas { from_x, from_y, width, height, x, y } => {
-//                ::flow::graph::node_create_primitive_copy_rect_to_canvas(self.ctx,
-//                                                                      g,
-//                                                                      -1,
-//                                                                      from_x,
-//                                                                      from_y,
-//                                                                      width,
-//                                                                      height,
-//                                                                      x,
-//                                                                      y)
-//            }
-//            s::Node::Transpose => ::flow::graph::node_create_transpose(self.ctx, g, -1),
+            s::Node::FlipH => Node::new(&nodes::FLIP_H, NodeParams::Json(node)),
+            s::Node::Rotate90 => Node::new(&nodes::ROTATE_90, NodeParams::Json(node)),
+            s::Node::Rotate180 => Node::new(&nodes::ROTATE_180, NodeParams::Json(node)),
+            s::Node::Rotate270 => Node::new(&nodes::ROTATE_270, NodeParams::Json(node)),
+            //s::Node::Transpose => Node::new(&nodes::TRANSPOSE, NodeParams::Json(node)),
+            s::Node::CreateCanvas{..} => Node::new(&nodes::CREATE_CANVAS, NodeParams::Json(node)),
+            s::Node::CopyRectToCanvas{..} => Node::new(&nodes::COPY_RECT, NodeParams::Json(node)),
+            s::Node::FillRect{..} => Node::new(&nodes::FILL_RECT, NodeParams::Json(node)),
+            s::Node::Scale{..} => Node::new(&nodes::SCALE, NodeParams::Json(node)),
 //            s::Node::ExpandCanvas { left, top, right, bottom, color } => {
 //                ::flow::graph::node_create_expand_canvas(self.ctx,
 //                                                      g,
@@ -97,22 +66,7 @@ impl GraphTranslator {
 //                                                      bottom,
 //                                                      self.color_to_i32(color).unwrap())
 //            }
-//            s::Node::Scale{ w, h, down_filter, up_filter,
-//                sharpen_percent, flags} => {
-//                ::flow::graph::node_create_scale(self.ctx, g, -1, w, h, down_filter.unwrap_or(s::Filter::RobidouxSharp) as i32, up_filter.unwrap_or(s::Filter::Ginseng) as i32,  flags.unwrap_or(1), sharpen_percent.unwrap_or(0f32) )
-//            }
-//            s::Node::FillRect { x1, x2, y1, y2, color } => {
-//                ::flow::graph::node_create_fill_rect(self.ctx,
-//                                                  g,
-//                                                  -1,
-//                                                  x1,
-//                                                  y1,
-//                                                  x2,
-//                                                  y2,
-//                                                  self.color_to_i32(color).unwrap())
-//            },
-//
-//
+
 //            s::Node::FlowBitmapBgraPtr {ptr_to_flow_bitmap_bgra_ptr} => {
 //                let ptr_to_ptr = ptr_to_flow_bitmap_bgra_ptr as *mut *mut ::ffi::FlowBitmapBgra;
 //                ::flow::graph::node_create_bitmap_bgra_reference(self.ctx, g, -1, ptr_to_ptr)

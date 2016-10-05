@@ -106,7 +106,7 @@ pub fn job_execute(c: *mut Context, job: *mut Job, graph_ref: &mut Graph) -> boo
         if !job_notify_graph_changed(c, job, graph_ref) {
             error_return!(c);
         }
-        if !job_execute_where_certain(c, job, graph_ref) {
+        if !graph_execute(c, job, graph_ref) {
             error_return!(c);
         }
         passes += 1;
@@ -224,7 +224,7 @@ use daggy::walker::Walker;
 pub fn job_graph_fully_executed(c: *mut Context, job: *mut Job, graph_ref: &mut Graph) -> bool
 {
     for node in graph_ref.raw_nodes() {
-        if node.weight.result != NodeResult::None {
+        if node.weight.result == NodeResult::None {
             return false
         }
     }
@@ -368,47 +368,74 @@ pub fn graph_optimize(c: *mut Context,job: *mut Job, graph_ref: &mut Graph) -> b
     return true;
 }
 
-pub fn graph_post_optimize_flatten(c: *mut Context, job: *mut Job, graph_ref: &mut Graph) -> bool
-{
-    /*FIXME: is it still needed?
-    if unsafe { (*graph_ref).is_null()} {
-        error_msg!(c, FlowStatusCode::NullArgument);
-        return false;
-    }
-    */
 
-    /*FIXME
-    bool re_walk;
-    do {
-        re_walk = false;
-        if (!flow_graph_walk(c, job, graph_ref, node_visitor_post_optimize_flatten, NULL, &re_walk)) {
-            FLOW_error_return(c);
+
+pub fn graph_post_optimize_flatten(c: *mut Context, job: *mut Job, g: &mut Graph) -> bool
+{
+    //Just find all nodes that offer fn_flatten_pre_optimize and have been estimated.
+    // TODO: Compare Node value; should differ afterwards
+    loop {
+        let mut next = None;
+        for ix in 0..(g.node_count()){
+            if let Some(func) = g.node_weight(NodeIndex::new(ix)).unwrap().def.fn_flatten_post_optimize{
+                if let FrameEstimate::Some(_) = g.node_weight(NodeIndex::new(ix)).unwrap().frame_est {
+                    next = Some((NodeIndex::new(ix), func));
+                    break;
+                }
+            }
         }
-    } while (re_walk);
-    */
-    return true;
+        match next {
+            None => {return true},
+            Some((next_ix, next_func)) => {
+                let mut ctx = OpCtxMut{
+                    c: c,
+                    graph: g,
+                    job: job
+                };
+                next_func(&mut ctx, next_ix);
+
+            }
+        }
+
+    }
 }
 
-pub fn job_execute_where_certain(c: *mut Context, job: *mut Job, graph_ref: &mut Graph) -> bool
+
+
+pub fn graph_execute(c: *mut Context, job: *mut Job, g: &mut Graph) -> bool
 {
-    /*FIXME: is it still needed?
-    if unsafe { (*graph_ref).is_null()} {
-        error_msg!(c, FlowStatusCode::NullArgument);
-        return false;
-    }
-    */
+    //Just find all nodes that offer fn_flatten_pre_optimize and have been estimated.
+    // TODO: Check result
+    //Verify all nodes remaining have fn_execute
 
-    //    //Resets and creates state tracking for this graph
-    //    if (!flow_job_create_state(c,job, *g)){
-    //        FLOW_error_return(c);
-    //    }
+    loop {
+        let mut next = None;
+        for ix in 0..(g.node_count()){
+            if let Some(func) = g.node_weight(NodeIndex::new(ix)).unwrap().def.fn_execute{
+                if let FrameEstimate::Some(_) = g.node_weight(NodeIndex::new(ix)).unwrap().frame_est {
+                    if g.node_weight(NodeIndex::new(ix)).unwrap().result == NodeResult::None {
+                        if g.parents(NodeIndex::new(ix)).iter(g).all(|(ex,ix)| g.node_weight(ix).unwrap().result != NodeResult::None){
+                            next = Some((NodeIndex::new(ix), func));
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+        match next {
+            None => {return true},
+            Some((next_ix, next_func)) => {
+                let mut ctx = OpCtxMut{
+                    c: c,
+                    graph: g,
+                    job: job
+                };
+                next_func(&mut ctx, next_ix);
 
-    /*FIXME
-    if (!flow_graph_walk_dependency_wise(c, job, graph_ref, node_visitor_execute, NULL, NULL)) {
-        FLOW_error_return(c);
+            }
+        }
+
     }
-    */
-    return true;
 }
 
 pub fn job_render_graph_to_png(c: *mut Context, job: *mut Job, g: &mut Graph, graph_version: int32_t) -> bool

@@ -59,6 +59,42 @@ fn copy_rect_def() -> NodeDefinition {
     }
 }
 
+
+
+fn fill_rect_def() -> NodeDefinition {
+    NodeDefinition {
+        id: NodeType::Fill_Rect_Mutate,
+        name: "fill_rect",
+        inbound_edges: EdgesIn::OneInput,
+        fn_estimate:  Some(NodeDefHelpers::copy_frame_est_from_first_input),
+        fn_execute: Some({
+
+            fn f(ctx: &mut OpCtxMut, ix: NodeIndex<u32>){
+
+                if let s::Node::FillRect {x1,x2,y1,y2, color} =
+                ctx.get_json_params(ix).unwrap() {
+
+
+                    let input = ctx.first_parent_result_frame(ix, EdgeKind::Input).unwrap();
+                    unsafe {
+
+                        if !ffi::flow_bitmap_bgra_fill_rect(ctx.c, input, x1, y1, x2, y2, color.to_u32().unwrap()) {
+                            panic!("failed to fill rect. epic.");
+                        }
+
+                        ctx.weight_mut(ix).result = NodeResult::Frame(input);
+                    }
+
+                }else{
+                    panic!("Missing params")
+                }
+            }
+            f
+        }),
+        .. Default::default()
+    }
+}
+
 fn clone_def() -> NodeDefinition{
     NodeDefinition {
         id: NodeType::Clone,
@@ -90,4 +126,5 @@ lazy_static! {
 
 
     pub static ref COPY_RECT: NodeDefinition = copy_rect_def();
+    pub static ref FILL_RECT: NodeDefinition = fill_rect_def();
 }

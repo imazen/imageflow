@@ -159,6 +159,22 @@ pub enum Color {
     Transparent,
     Srgb(ColorSrgb),
 }
+
+impl Color {
+    pub fn to_u32(self) -> std::result::Result<u32, std::num::ParseIntError> {
+        match self {
+            Color::Srgb(srgb) => {
+                match srgb {
+                   ColorSrgb::Hex(hex_srgb) => u32::from_str_radix(hex_srgb.as_str(), 16),
+                }
+            }
+            Color::Transparent => Ok(0)
+        }
+    }
+}
+
+
+
 #[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
 pub enum Node {
     #[serde(rename="flipV")]
