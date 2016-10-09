@@ -56,11 +56,11 @@ impl NodeDefHelpers {
 }
 
 impl<'c> OpCtxMut<'c> {
-    pub fn first_parent_of_kind<'a>(&'a self, of_node: NodeIndex<u32>, kind: EdgeKind) -> Option<NodeIndex<u32>> {
+    pub fn first_parent_of_kind<'a>(&'a self, of_node: NodeIndex<u32>, filter_by_kind: EdgeKind) -> Option<NodeIndex<u32>> {
         self.graph
             .graph()
             .edges_directed(of_node, EdgeDirection::Incoming)
-            .filter(|&(node, &kind)| kind == kind)
+            .filter(|&(node, &kind)| kind == filter_by_kind)
             .map(|(node, kind)| node)
             .nth(0)
     }
@@ -139,6 +139,9 @@ impl<'c> OpCtxMut<'c> {
     pub fn copy_frame_est_from_first_input<'a>(&'a mut self, node_to_update: NodeIndex<u32>) {
         match self.first_parent_input(node_to_update) {
             Some(input_ix) => {
+                if self.graph.node_weight(input_ix).unwrap().frame_est == FrameEstimate::None{
+                    panic!("Parent frame {} is not estimated", input_ix.index());
+                }
                 self.graph.node_weight_mut(node_to_update).unwrap().frame_est =
                     self.graph.node_weight(input_ix).unwrap().frame_est.clone();
             }

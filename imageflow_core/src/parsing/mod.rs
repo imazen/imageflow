@@ -238,7 +238,7 @@ impl BuildRequestHandler {
     }
 }
 
-#[test]
+//#[test]
 fn test_handler() {
 
     let input_io = s::IoObject {

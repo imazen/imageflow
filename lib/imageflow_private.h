@@ -368,13 +368,13 @@ struct flow_nodeinfo_render_to_canvas_1d {
 struct flow_nodeinfo_scale2d_render_to_canvas1d {
     // There will need to be consistency checks against the createcanvas node
 
-    flow_interpolation_filter interpolation_filter;
     // struct flow_interpolation_details * interpolationDetails;
     int32_t scale_to_width;
     int32_t scale_to_height;
-    flow_working_floatspace scale_in_colorspace;
-
     float sharpen_percent_goal;
+    flow_interpolation_filter interpolation_filter;
+
+    flow_working_floatspace scale_in_colorspace;
 };
 
 // If you want to know what kind of I/O structure is inside user_data, compare the read_func/write_func function
@@ -403,6 +403,7 @@ struct flow_codec_instance {
 
 struct flow_job {
     int32_t debug_job_id;
+    int32_t next_stable_node_id;
     int32_t next_graph_version;
     int32_t max_calc_flatten_execute_passes;
     struct flow_codec_instance * codecs_head;

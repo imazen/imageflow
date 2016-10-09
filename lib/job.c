@@ -13,6 +13,7 @@ struct flow_job * flow_job_create(flow_c * c)
     static int32_t job_id = 0;
     flow_job_configure_recording(c, job, false, false, false, false, false);
     job->next_graph_version = 0;
+    job->next_stable_node_id = 0;
     job->debug_job_id = job_id++;
     job->codecs_head = NULL;
     job->codecs_tail = NULL;

@@ -90,9 +90,9 @@ fn compare(input: Option<s::IoEnum>, allowed_off_by_one_bytes: usize, checksum_n
 #[test]
 fn test_fill_rect(){
     let matched = compare(None, 500,
-                          "RingsDownscaling".to_owned(), false, false, vec![
+                          "FillRectEECCFF".to_owned(), true, true, vec![
         s::Node::CreateCanvas {w: 200, h: 200, format: s::PixelFormat::Bgra32, color: s::Color::Transparent},
-        s::Node::FillRect{x1:0, y1:0, x2:10, y2:10, color: s::Color::Srgb(s::ColorSrgb::Hex("EECCFF".to_owned()))},
+        s::Node::FillRect{x1:0, y1:0, x2:100, y2:100, color: s::Color::Srgb(s::ColorSrgb::Hex("EECCFFFF".to_owned()))},
         s::Node::Scale{ w: 400, h: 400, down_filter: Some(s::Filter::Hermite), up_filter: Some(s::Filter::Hermite), sharpen_percent: Some(0f32), flags: Some(1) }
         ]
     );
@@ -100,7 +100,7 @@ fn test_fill_rect(){
 }
 
 
-// Replaces TEST_CASE("Test scale rings", "")
+//  Replaces TEST_CASE("Test scale rings", "")
 #[test]
 fn test_scale_rings(){
     let matched = compare(Some(s::IoEnum::Url("http://s3-us-west-2.amazonaws.com/imageflow-resources/test_inputs/rings2.png".to_owned())), 500,
@@ -144,40 +144,40 @@ fn test_scale_rings(){
 //if (!flow_job_execute(c, job, &g)) {
 //ERR(c);
 //}
-
-#[test]
-fn test_scale_image() {
-    let matched = compare(Some(s::IoEnum::Url("http://s3-us-west-2.amazonaws.com/imageflow-resources/test_inputs/waterhouse.jpg".to_owned())), 500,
-                          "ScaleTheHouse".to_owned(), false, false, vec![
-s::Node::Decode {io_id: 0},
-s::Node::Scale{ w: 400, h: 300, down_filter: Some(s::Filter::Robidoux), up_filter: Some(s::Filter::Robidoux), sharpen_percent: Some(0f32), flags: Some(0) }
-]
-    );
-    assert!(matched);
-}
-
-
-
-#[test]
-fn test_jpeg_icc2_color_profile() {
-    let matched = compare(Some(s::IoEnum::Url("http://s3-us-west-2.amazonaws.com/imageflow-resources/test_inputs/MarsRGB_tagged.jpg".to_owned())), 500,
-                          "MarsRGB_ICC_Scaled400300".to_owned(), false, false, vec![
-s::Node::Decode {io_id: 0},
-s::Node::Scale{ w: 400, h: 300, down_filter: Some(s::Filter::Robidoux), up_filter: Some(s::Filter::Robidoux), sharpen_percent: Some(0f32), flags: Some(0) }
-]
-    );
-    assert!(matched);
-}
-
-#[test]
-fn test_jpeg_icc4_color_profile() {
-    let matched = compare(Some(s::IoEnum::Url("http://s3-us-west-2.amazonaws.com/imageflow-resources/test_inputs/MarsRGB_v4_sYCC_8bit.jpg".to_owned())), 500,
-                          "MarsRGB_ICCv4_Scaled400300_INCORRECT_TOO_PINK".to_owned(), false, false, vec![
-s::Node::Decode {io_id: 0},
-s::Node::Scale{ w: 400, h: 300, down_filter: Some(s::Filter::Robidoux), up_filter: Some(s::Filter::Robidoux), sharpen_percent: Some(0f32), flags: Some(0) }
-]
-    );
-    assert!(matched);
-}
-
+//
+//#[test]
+//fn test_scale_image() {
+//    let matched = compare(Some(s::IoEnum::Url("http://s3-us-west-2.amazonaws.com/imageflow-resources/test_inputs/waterhouse.jpg".to_owned())), 500,
+//                          "ScaleTheHouse".to_owned(), false, false, vec![
+//s::Node::Decode {io_id: 0},
+//s::Node::Scale{ w: 400, h: 300, down_filter: Some(s::Filter::Robidoux), up_filter: Some(s::Filter::Robidoux), sharpen_percent: Some(0f32), flags: Some(0) }
+//]
+//    );
+//    assert!(matched);
+//}
+//
+//
+//
+//#[test]
+//fn test_jpeg_icc2_color_profile() {
+//    let matched = compare(Some(s::IoEnum::Url("http://s3-us-west-2.amazonaws.com/imageflow-resources/test_inputs/MarsRGB_tagged.jpg".to_owned())), 500,
+//                          "MarsRGB_ICC_Scaled400300".to_owned(), false, false, vec![
+//s::Node::Decode {io_id: 0},
+//s::Node::Scale{ w: 400, h: 300, down_filter: Some(s::Filter::Robidoux), up_filter: Some(s::Filter::Robidoux), sharpen_percent: Some(0f32), flags: Some(0) }
+//]
+//    );
+//    assert!(matched);
+//}
+//
+//#[test]
+//fn test_jpeg_icc4_color_profile() {
+//    let matched = compare(Some(s::IoEnum::Url("http://s3-us-west-2.amazonaws.com/imageflow-resources/test_inputs/MarsRGB_v4_sYCC_8bit.jpg".to_owned())), 500,
+//                          "MarsRGB_ICCv4_Scaled400300_INCORRECT_TOO_PINK".to_owned(), false, false, vec![
+//s::Node::Decode {io_id: 0},
+//s::Node::Scale{ w: 400, h: 300, down_filter: Some(s::Filter::Robidoux), up_filter: Some(s::Filter::Robidoux), sharpen_percent: Some(0f32), flags: Some(0) }
+//]
+//    );
+//    assert!(matched);
+//}
+//
 

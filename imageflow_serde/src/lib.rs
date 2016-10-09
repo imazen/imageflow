@@ -173,6 +173,12 @@ impl Color {
     }
 }
 
+#[test]
+fn test_color(){
+
+    assert_eq!(Color::Srgb(ColorSrgb::Hex("FFAAEEDD".to_owned())).to_u32().unwrap(), 0xFFAAEEDD);
+}
+
 
 
 #[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]

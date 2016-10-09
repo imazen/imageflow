@@ -4,6 +4,7 @@ use daggy::{Dag,EdgeIndex,NodeIndex};
 use super::graph::Graph;
 use ffi::*;
 use std::fmt;
+use std;
 
 #[repr(C)]
 #[derive(Copy,Clone,Debug,PartialEq)]
@@ -86,7 +87,7 @@ pub enum FrameEstimate {
 
 #[derive(Clone,Debug,PartialEq)]
 pub struct CostInfo{
-    pub wall_ticks: u32, //Estimated wall ticks to execute
+    pub wall_ns: u32, //Estimated wall ticks to execute
     pub cpu_ticks: Option<u32>, //Estimate overall CPU ticks (larger, if multi-threaded)
     pub heap_bytes: u32,
     pub peak_temp_bytes: u32,
@@ -129,12 +130,13 @@ pub enum NodeParams{
 #[derive(Clone,Debug,PartialEq)]
 pub struct Node {
     pub def: &'static NodeDefinition,
-    pub stage: NodeStage,
+    pub stage: NodeStage, //TODO: delete
     pub params: NodeParams,
     pub frame_est: FrameEstimate,
     pub cost_est: CostEstimate,
     pub cost: CostInfo,
     pub result: NodeResult,
+    pub stable_id: i32,
     pub custom_state: *mut u8, //For simple metadata, we might just use JSON?
 }
 
@@ -147,14 +149,28 @@ impl Node{
             cost_est: CostEstimate::None,
             cost: CostInfo {
                 cpu_ticks: None,
-                wall_ticks: 0,
+                wall_ns: 0,
                 heap_bytes: 0,
                 peak_temp_bytes: 0
             },
+            stable_id: -1,
             params: params,
             stage: NodeStage::Blank,
             result: NodeResult::None
         }
+    }
+
+
+    pub fn graphviz_node_label(&self,  f: &mut std::io::Write) -> std::io::Result<()> {
+        // name { est f1, f2, ex } none
+        let a = match self.def.fn_estimate.is_some() { true => "est ", false => ""};
+        let b = match self.def.fn_flatten_pre_optimize.is_some() { true => "f1 ", false => ""};
+        let c = match self.def.fn_flatten_post_optimize.is_some() { true => "f2 ", false => ""};
+        let d = match self.def.fn_execute.is_some() { true => "exec ", false => ""};
+
+        let e = match self.result { NodeResult::None => "none", NodeResult::Consumed => "reused", NodeResult::Frame(ptr) => "done"};
+        try!(write!(f, "{}{{{}{}{}{}}} {}", self.def.name, a, b, c, d, e ));
+        Ok(())
     }
 }
 

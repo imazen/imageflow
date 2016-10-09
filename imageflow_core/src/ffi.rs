@@ -93,6 +93,7 @@ pub struct CodecInstance {
 #[repr(C)]
 pub struct Job {
     pub debug_job_id: int32_t,
+    pub next_stable_node_id: int32_t,
     pub next_graph_version: int32_t,
     pub max_calc_flatten_execute_passes: int32_t,
     //FIXME: find a safer way to store them
@@ -795,12 +796,12 @@ pub struct NodeInfoCodec {
 pub struct Scale2dRenderToCanvas1d {
     // There will need to be consistency checks against the createcanvas node
 
-    pub interpolation_filter: Filter,
     // struct flow_interpolation_details * interpolationDetails;
     pub scale_to_width: i32,
     pub scale_to_height: i32,
+    pub sharpen_percent_goal: f32,
+    pub interpolation_filter: Filter,
     pub scale_in_colorspace: Floatspace,
-    pub sharpen_percent_goal: f32
 }
 
 extern "C" {
