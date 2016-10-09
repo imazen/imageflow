@@ -123,7 +123,7 @@ static bool stringify_encode(flow_c * c, struct flow_graph * g, int32_t node_id,
     return stringify_decode(c, g, node_id, buffer, buffer_size);
 }
 
-int32_t flow_job_jpg_decoder_get_exif(flow_c * c, struct flow_codec_instance * codec_instance);
+int32_t flow_codecs_jpg_decoder_get_exif(flow_c * c, struct flow_codec_instance * codec_instance);
 
 
 static bool flatten_decode_complex(flow_c * c, struct flow_graph ** graph_ref, int32_t node_id)
@@ -132,7 +132,7 @@ static bool flatten_decode_complex(flow_c * c, struct flow_graph ** graph_ref, i
 
     node->type = flow_ntype_primitive_decoder;
     FLOW_GET_INFOBYTES((*graph_ref), node_id, flow_nodeinfo_codec, info)
-    int32_t exif_orientation = flow_job_jpg_decoder_get_exif(c, info->codec);
+    int32_t exif_orientation = flow_codecs_jpg_decoder_get_exif(c, info->codec);
 
 
     //Create isolated node chain
