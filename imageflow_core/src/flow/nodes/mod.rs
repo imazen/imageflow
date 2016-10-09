@@ -13,10 +13,10 @@ mod codecs_and_pointer;
 extern crate imageflow_serde as s;
 use super::definitions::*;
 
-//TODO: Implement BitmapBgraPointer, Decoder, Encoder
+//TODO: Implement Scale1D
+//TODO: Implement Decoder + APPLY_ORIENTATION, Encoder
 //TODO: implement TRANSPOSE, APPLY_ORIENTATION
-//TODO: implement COPY_RECT
-//TODO: Implement FILL_RECT, EXPAND_CANVAS, CROP
+//TODO: Implement EXPAND_CANVAS, CROP
 
 
 pub use self::codecs_and_pointer::PRIMITIVE_DECODER;
