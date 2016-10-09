@@ -292,7 +292,7 @@ bool flow_node_post_optimize_flatten(flow_c * c, struct flow_graph ** graph_ref,
     }
     return true;
 }
-bool flow_node_execute(flow_c * c, struct flow_job * job, struct flow_graph * g, int32_t node_id)
+bool flow_node_execute(flow_c * c, struct flow_graph * g, int32_t node_id)
 {
     if (!flow_node_validate_edges(c, g, node_id)) {
         FLOW_error_return(c);
@@ -306,7 +306,7 @@ bool flow_node_execute(flow_c * c, struct flow_job * job, struct flow_graph * g,
         FLOW_error(c, flow_status_Not_implemented);
         return false;
     } else {
-        if (!def->execute(c, job, g, node_id)) {
+        if (!def->execute(c, g, node_id)) {
             FLOW_error_return(c);
         } else {
             node->state = (flow_node_state)(node->state | flow_node_state_Executed);

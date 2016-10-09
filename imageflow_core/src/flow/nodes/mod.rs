@@ -18,6 +18,9 @@ use super::definitions::*;
 //TODO: implement COPY_RECT
 //TODO: Implement FILL_RECT, EXPAND_CANVAS, CROP
 
+
+pub use self::codecs_and_pointer::PRIMITIVE_DECODER;
+pub use self::codecs_and_pointer::DECODER;
 pub use self::codecs_and_pointer::BITMAP_BGRA_POINTER;
 pub use self::create_canvas::CREATE_CANVAS;
 pub use self::clone_crop_fill_expand::CLONE;
@@ -155,6 +158,12 @@ impl<'c> OpCtxMut<'c> {
                     self.graph.node_weight(input_ix).unwrap().frame_est.clone();
             }
             None => {}
+        }
+    }
+
+    pub fn assert_ok(&self){
+        unsafe {
+            ::ContextPtr::from_ptr(self.c).assert_ok(None);
         }
     }
 

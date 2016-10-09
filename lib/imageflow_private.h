@@ -162,12 +162,10 @@ typedef struct flow_context flow_c;
 
 PUB bool write_frame_to_disk(flow_c * c, const char * path, struct flow_bitmap_bgra * b);
 
-PUB bool flow_node_execute_render_to_canvas_1d(flow_c * c, struct flow_job * job, struct flow_bitmap_bgra * input,
-                                               struct flow_bitmap_bgra * canvas,
+PUB bool flow_node_execute_render_to_canvas_1d(flow_c * c, struct flow_bitmap_bgra * input, struct flow_bitmap_bgra * canvas,
                                                struct flow_nodeinfo_render_to_canvas_1d * info);
-PUB bool flow_node_execute_scale2d_render1d(
-    flow_c * c, struct flow_job * job, struct flow_bitmap_bgra * input, struct flow_bitmap_bgra * canvas,
-    struct flow_nodeinfo_scale2d_render_to_canvas1d * info) FLOW_HINT_HOT FLOW_HINT_UNSAFE_MATH_OPTIMIZATIONS;
+PUB bool flow_node_execute_scale2d_render1d(flow_c * c, struct flow_bitmap_bgra * input, struct flow_bitmap_bgra * canvas,
+                                            struct flow_nodeinfo_scale2d_render_to_canvas1d * info) FLOW_HINT_HOT FLOW_HINT_UNSAFE_MATH_OPTIMIZATIONS;
 
 PUB struct flow_bitmap_float * flow_bitmap_float_create_header(flow_c * c, int sx, int sy, int channels);
 
@@ -420,9 +418,10 @@ PUB bool flow_bitmap_bgra_save_png(flow_c * c, struct flow_bitmap_bgra * b, cons
 PUB uint8_t ** flow_bitmap_create_row_pointers(flow_c * c, void * buffer, size_t buffer_size, size_t stride,
                                                size_t height);
 
-PUB bool flow_job_decoder_set_downscale_hints(flow_c * c, struct flow_job * job, struct flow_codec_instance * codec,
-                                              struct flow_decoder_downscale_hints * hints,
-                                              bool crash_if_not_implemented);
+PUB bool flow_codec_decoder_set_downscale_hints(flow_c * c, struct flow_codec_instance * codec,
+                                                struct flow_decoder_downscale_hints * hints, bool crash_if_not_implemented);
+PUB struct flow_bitmap_bgra * flow_codec_execute_read_frame(flow_c * c, struct flow_codec_instance * codec);
+
 struct flow_scanlines_filter {
     flow_scanlines_filter_type type;
     struct flow_scanlines_filter * next;

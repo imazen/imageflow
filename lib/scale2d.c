@@ -15,10 +15,9 @@ FLOW_HINT_HOT FLOW_HINT_UNSAFE_MATH_OPTIMIZATIONS static void add_row(float * mu
 }
 FLOW_HINT_HOT FLOW_HINT_UNSAFE_MATH_OPTIMIZATIONS
 
-    bool
-    flow_node_execute_scale2d_render1d(flow_c * c, struct flow_job * job, struct flow_bitmap_bgra * input,
-                                       struct flow_bitmap_bgra * canvas,
-                                       struct flow_nodeinfo_scale2d_render_to_canvas1d * info)
+bool
+    flow_node_execute_scale2d_render1d(flow_c * c, struct flow_bitmap_bgra * input, struct flow_bitmap_bgra * canvas,
+                                           struct flow_nodeinfo_scale2d_render_to_canvas1d * info)
 {
     if (info->scale_to_height != (int32_t)canvas->h || info->scale_to_width != (int32_t)canvas->w) {
         FLOW_error(c, flow_status_Not_implemented); // Requires cropping the target canvas

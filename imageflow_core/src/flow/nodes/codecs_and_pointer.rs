@@ -82,6 +82,86 @@ fn bitmap_bgra_def() -> NodeDefinition{
     }
 }
 
+fn decoder_io_id(ctx: &mut OpCtxMut, ix: NodeIndex<u32>) -> Option<i32> {
+    match ctx.weight(ix).params {
+        NodeParams::Json(s::Node::Decode { io_id }) => Some(io_id),
+        _ => None
+    }
+}
+
+fn decoder_estimate(ctx: &mut OpCtxMut, ix: NodeIndex<u32>) {
+
+    let codec = ctx.weight(ix).custom_state as *mut ffi::CodecInstance;
+
+    let io_id = decoder_io_id(ctx, ix).unwrap();
+    let mut frame_info: ffi::DecoderInfo = Default::default();
+    unsafe {
+        if !ffi::flow_job_get_decoder_info(ctx.c, ctx.job, io_id, &mut frame_info as *mut ffi::DecoderInfo) {
+            ctx.assert_ok();
+        }
+    }
+
+    ctx.weight_mut(ix).frame_est = FrameEstimate::Some(FrameInfo{
+        fmt: frame_info.frame0_post_decode_format,
+        w: frame_info.frame0_width,
+        h: frame_info.frame0_height,
+        alpha_meaningful: true //WRONG
+    });
+}
+
+//Todo list codec name in stringify
+
+fn decoder_def() -> NodeDefinition{
+    NodeDefinition {
+        id: NodeType::decoder,
+        name: "decoder",
+        outbound_edges: true,
+        inbound_edges: EdgesIn::NoInput,
+        fn_estimate: Some(decoder_estimate),
+
+        //Allow link-up
+        fn_link_state_to_this_io_id: Some(decoder_io_id),
+        fn_flatten_pre_optimize: {
+            fn f(ctx: &mut OpCtxMut, ix: NodeIndex<u32>) {
+                ctx.weight_mut(ix).def = &PRIMITIVE_DECODER; //Better if a reference, right?
+                //TODO
+                //Add apply_orientation
+            }
+            Some(f)
+        },
+        .. Default::default()
+    }
+}
+fn primitive_decoder_def() -> NodeDefinition{
+    NodeDefinition {
+        id: NodeType::primitive_decoder,
+        name: "primitive_decoder",
+        outbound_edges: true,
+        inbound_edges: EdgesIn::NoInput,
+        fn_estimate: Some(decoder_estimate),
+
+        fn_execute: Some({
+            fn f(ctx: &mut OpCtxMut, ix: NodeIndex<u32>){
+                let codec = ctx.weight(ix).custom_state as *mut ffi::CodecInstance;
+
+                unsafe {
+                    let result = ffi::flow_codec_execute_read_frame(ctx.c, codec);
+                    if result == ptr::null_mut() {
+                        ctx.assert_ok();
+                    } else {
+                        ctx.weight_mut(ix).result = NodeResult::Frame(result);
+                    }
+                }
+            }
+            f
+        }),
+        .. Default::default()
+    }
+}
+
+
 lazy_static! {
     pub static ref BITMAP_BGRA_POINTER: NodeDefinition = bitmap_bgra_def();
+    pub static ref DECODER: NodeDefinition = decoder_def();
+    pub static ref PRIMITIVE_DECODER: NodeDefinition = primitive_decoder_def();
 }

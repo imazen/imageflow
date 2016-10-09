@@ -105,6 +105,10 @@ PUB bool flow_context_add_to_callstack(flow_c * c, const char * file, int line, 
     flow_context_add_to_callstack(context, __FILE__, __LINE__, __func__);                                              \
     return false
 
+#define FLOW_error_return_null(context)                                                                                     \
+    flow_context_add_to_callstack(context, __FILE__, __LINE__, __func__);                                              \
+    return NULL
+
 ////////////////////////////////////////////
 // profiling (not widely used ATM)
 
@@ -168,25 +172,25 @@ typedef bool (*flow_io_seek_function)(flow_c * c, struct flow_io * io, int64_t p
 // Make your own codecs
 struct flow_decoder_frame_info;
 
-typedef bool (*codec_intialize)(flow_c * c, struct flow_job * job, struct flow_codec_instance * instance);
+typedef bool (*codec_intialize)(flow_c * c, struct flow_codec_instance * instance);
 
-typedef bool (*codec_get_info_fn)(flow_c * c, struct flow_job * job, void * codec_state,
+typedef bool (*codec_get_info_fn)(flow_c * c, void * codec_state,
                                   struct flow_decoder_info * decoder_info_ref);
-typedef bool (*codec_switch_frame_fn)(flow_c * c, struct flow_job * job, void * codec_state, size_t frame_index);
+typedef bool (*codec_switch_frame_fn)(flow_c * c, void * codec_state, size_t frame_index);
 
-typedef bool (*codec_get_frame_info_fn)(flow_c * c, struct flow_job * job, void * codec_state,
+typedef bool (*codec_get_frame_info_fn)(flow_c * c, void * codec_state,
                                         struct flow_decoder_frame_info * decoder_frame_info_ref);
 
-typedef bool (*codec_set_downscale_hints_fn)(flow_c * c, struct flow_job * job, struct flow_codec_instance * codec,
+typedef bool (*codec_set_downscale_hints_fn)(flow_c * c, struct flow_codec_instance * codec,
                                              struct flow_decoder_downscale_hints * hints);
 
-typedef bool (*codec_read_frame_fn)(flow_c * c, struct flow_job * job, void * codec_state,
+typedef bool (*codec_read_frame_fn)(flow_c * c, void * codec_state,
                                     struct flow_bitmap_bgra * canvas);
 
-typedef bool (*codec_write_frame_fn)(flow_c * c, struct flow_job * job, void * codec_state,
+typedef bool (*codec_write_frame_fn)(flow_c * c, void * codec_state,
                                      struct flow_bitmap_bgra * frame, struct flow_encoder_hints * hints);
 
-typedef bool (*codec_stringify_fn)(flow_c * c, struct flow_job * job, void * codec_state, char * buffer,
+typedef bool (*codec_stringify_fn)(flow_c * c, void * codec_state, char * buffer,
                                    size_t buffer_size);
 
 struct flow_codec_magic_bytes {

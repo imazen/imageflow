@@ -300,7 +300,7 @@ static bool flatten_flip_h(flow_c * c, struct flow_graph ** g, int32_t node_id, 
     return true;
 }
 
-static bool execute_flip_vertical(flow_c * c, struct flow_job * job, struct flow_graph * g, int32_t node_id)
+static bool execute_flip_vertical(flow_c * c, struct flow_graph * g, int32_t node_id)
 {
     FLOW_GET_INPUT_EDGE(g, node_id)
     struct flow_node * n = &g->nodes[node_id];
@@ -309,7 +309,7 @@ static bool execute_flip_vertical(flow_c * c, struct flow_job * job, struct flow
     return true;
 }
 
-static bool execute_flip_horizontal(flow_c * c, struct flow_job * job, struct flow_graph * g, int32_t node_id)
+static bool execute_flip_horizontal(flow_c * c, struct flow_graph * g, int32_t node_id)
 {
     FLOW_GET_INPUT_EDGE(g, node_id)
     struct flow_node * n = &g->nodes[node_id];

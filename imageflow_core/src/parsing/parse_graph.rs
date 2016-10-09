@@ -22,7 +22,6 @@ impl GraphTranslator {
     unsafe fn create_node(&self, g: &mut ::flow::graph::Graph, node: s::Node) -> NodeIndex<u32> {
         let new_node = match node {
 
-//            s::Node::Decode { io_id } => ::flow::graph::node_create_decoder(self.ctx, g, -1, io_id),
 //            s::Node::Encode { io_id, encoder_id, encoder, hints: _ } => {
 //                let encoder_id = encoder_id.unwrap_or(match encoder.unwrap_or(s::Encoder::Png) {
 //                    s::Encoder::Jpeg => 4,
@@ -45,6 +44,7 @@ impl GraphTranslator {
 //            s::Node::Crop { x1, y1, x2, y2 } => {
 //                ::flow::graph::node_create_primitive_crop(self.ctx, g, -1, x1, y1, x2, y2)
 //            }
+            s::Node::Decode{..} => Node::new(&nodes::DECODER, NodeParams::Json(node)),
             s::Node::FlowBitmapBgraPtr{..} => Node::new(&nodes::BITMAP_BGRA_POINTER, NodeParams::Json(node)),
             s::Node::FlipV => Node::new(&nodes::FLIP_V, NodeParams::Json(node)),
             s::Node::FlipH => Node::new(&nodes::FLIP_H, NodeParams::Json(node)),

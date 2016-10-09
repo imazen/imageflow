@@ -96,7 +96,7 @@ bool flow_job_add_io(flow_c * c, struct flow_job * job, struct flow_io * io, int
         return false;
     }
 
-    int64_t ctype = flow_job_codec_select(c, job, &buffer[0], bytes_read);
+    int64_t ctype = flow_codec_select(c, &buffer[0], bytes_read);
     if (ctype == flow_codec_type_null) {
         // unknown
         FLOW_error_msg(c, flow_status_Not_implemented,
@@ -106,7 +106,7 @@ bool flow_job_add_io(flow_c * c, struct flow_job * job, struct flow_io * io, int
         return false;
     }
     r->codec_id = ctype;
-    if (!flow_job_initialize_codec(c, job, r)) {
+    if (!flow_codec_initialize(c, r)) {
         FLOW_add_to_callstack(c);
         return false;
     }

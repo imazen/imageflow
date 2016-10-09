@@ -691,7 +691,7 @@ static bool flow_job_jpg_decoder_reset(flow_c * c, struct flow_job_jpeg_decoder_
     return true;
 }
 
-static bool flow_job_codecs_initialize_decode_jpeg(flow_c * c, struct flow_job * job, struct flow_codec_instance * item)
+static bool flow_codecs_initialize_decode_jpeg(flow_c * c, struct flow_codec_instance * item)
 {
     // flow_job_jpeg_decoder_state
     if (item->codec_state == NULL) {
@@ -720,7 +720,7 @@ static bool flow_job_codecs_initialize_decode_jpeg(flow_c * c, struct flow_job *
     }
     return true;
 }
-static bool set_downscale_hints(flow_c * c, struct flow_job * job, struct flow_codec_instance * codec,
+static bool set_downscale_hints(flow_c * c, struct flow_codec_instance * codec,
                                 struct flow_decoder_downscale_hints * hints)
 {
     struct flow_job_jpeg_decoder_state * state = (struct flow_job_jpeg_decoder_state *)codec->codec_state;
@@ -864,7 +864,7 @@ static bool jpeg_apply_downscaling(flow_c * c, struct flow_job_jpeg_decoder_stat
     }
     return true;
 }
-static bool flow_job_codecs_jpeg_get_info(flow_c * c, struct flow_job * job, void * codec_state,
+static bool flow_codecs_jpeg_get_info(flow_c * c, void * codec_state,
                                           struct flow_decoder_info * info)
 {
     struct flow_job_jpeg_decoder_state * state = (struct flow_job_jpeg_decoder_state *)codec_state;
@@ -886,7 +886,7 @@ static bool flow_job_codecs_jpeg_get_info(flow_c * c, struct flow_job * job, voi
     return true;
 }
 
-static bool flow_job_codecs_jpeg_get_frame_info(flow_c * c, struct flow_job * job, void * codec_state,
+static bool flow_codecs_jpeg_get_frame_info(flow_c * c, void * codec_state,
                                                 struct flow_decoder_frame_info * decoder_frame_info_ref)
 {
     struct flow_job_jpeg_decoder_state * state = (struct flow_job_jpeg_decoder_state *)codec_state;
@@ -905,7 +905,7 @@ static bool flow_job_codecs_jpeg_get_frame_info(flow_c * c, struct flow_job * jo
     return true;
 }
 
-static bool flow_job_codecs_jpeg_read_frame(flow_c * c, struct flow_job * job, void * codec_state,
+static bool flow_codecs_jpeg_read_frame(flow_c * c, void * codec_state,
                                             struct flow_bitmap_bgra * canvas)
 {
     struct flow_job_jpeg_decoder_state * state = (struct flow_job_jpeg_decoder_state *)codec_state;
@@ -936,7 +936,7 @@ static bool flow_job_codecs_jpeg_read_frame(flow_c * c, struct flow_job * job, v
     }
 }
 
-static bool flow_job_codecs_initialize_encode_jpeg(flow_c * c, struct flow_job * job, struct flow_codec_instance * item)
+static bool flow_codecs_initialize_encode_jpeg(flow_c * c, struct flow_codec_instance * item)
 {
     // flow_job_png_decoder_state
     if (item->codec_state == NULL) {
@@ -954,7 +954,7 @@ static bool flow_job_codecs_initialize_encode_jpeg(flow_c * c, struct flow_job *
     return true;
 }
 
-static bool flow_job_codecs_jpeg_write_frame(flow_c * c, struct flow_job * job, void * codec_state,
+static bool flow_codecs_jpeg_write_frame(flow_c * c, void * codec_state,
                                              struct flow_bitmap_bgra * frame, struct flow_encoder_hints * hints)
 {
     struct flow_job_jpeg_encoder_state * state = (struct flow_job_jpeg_encoder_state *)codec_state;
@@ -1030,10 +1030,10 @@ static struct flow_codec_magic_bytes jpeg_magic_bytes[] = { {
 
 const struct flow_codec_definition flow_codec_definition_decode_jpeg
     = { .codec_id = flow_codec_type_decode_jpeg,
-        .initialize = flow_job_codecs_initialize_decode_jpeg,
-        .get_info = flow_job_codecs_jpeg_get_info,
-        .get_frame_info = flow_job_codecs_jpeg_get_frame_info,
-        .read_frame = flow_job_codecs_jpeg_read_frame,
+        .initialize = flow_codecs_initialize_decode_jpeg,
+        .get_info = flow_codecs_jpeg_get_info,
+        .get_frame_info = flow_codecs_jpeg_get_frame_info,
+        .read_frame = flow_codecs_jpeg_read_frame,
         .set_downscale_hints = set_downscale_hints,
         .magic_byte_sets = &jpeg_magic_bytes[0],
         .magic_byte_sets_count = sizeof(jpeg_magic_bytes) / sizeof(struct flow_codec_magic_bytes),
@@ -1043,8 +1043,8 @@ const struct flow_codec_definition flow_codec_definition_decode_jpeg
 
 const struct flow_codec_definition flow_codec_definition_encode_jpeg
     = { .codec_id = flow_codec_type_encode_jpeg,
-        .initialize = flow_job_codecs_initialize_encode_jpeg,
-        .write_frame = flow_job_codecs_jpeg_write_frame,
+        .initialize = flow_codecs_initialize_encode_jpeg,
+        .write_frame = flow_codecs_jpeg_write_frame,
         .name = "encode jpeg",
         .preferred_mime_type = "image/jpeg",
         .preferred_extension = "jpg" };

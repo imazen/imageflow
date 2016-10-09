@@ -61,6 +61,7 @@ pub struct NodeDefinition {
     pub name: &'static str,
     pub description: &'static str,
 
+    pub fn_link_state_to_this_io_id: Option<fn(&mut OpCtxMut, NodeIndex<u32>) -> Option<i32>>,
     pub fn_graphviz_text: Option<fn(&mut OpCtxMut, NodeIndex<u32>,  &Node, &mut fmt::Formatter) -> fmt::Result>,
     pub fn_estimate: OptionalNodeFnMut,
     pub fn_flatten_pre_optimize: OptionalNodeFnMut,
@@ -200,7 +201,8 @@ impl Default for NodeDefinition {
             fn_execute: None,
             fn_cleanup: None,
             fn_estimate: None,
-            fn_flatten_pre_optimize: None
+            fn_flatten_pre_optimize: None,
+            fn_link_state_to_this_io_id: None
         }
     }
 }

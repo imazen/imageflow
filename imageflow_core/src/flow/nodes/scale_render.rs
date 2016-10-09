@@ -57,7 +57,7 @@ fn scale_def() -> NodeDefinition {
                             ctx.replace_node_with_existing(ix, scale2d);
                         },
                         _ => {
-                            panic!("panic");
+                            panic!("Scale1D not yet implemented");
                             //                            ctx.replace_node_with_existing(ix, vec![
                             //                                Node::new(&RENDER_1D, )
                             //                            ]);
@@ -106,7 +106,7 @@ fn scale2d_render_def() ->NodeDefinition{
 
 
                         if !::ffi::flow_node_execute_scale2d_render1d(ctx.c,
-                                                                      ctx.job, input, canvas, &ffi_struct as *const ffi::Scale2dRenderToCanvas1d) {
+                                                                      input, canvas, &ffi_struct as *const ffi::Scale2dRenderToCanvas1d) {
                             //ctx.c.assert_ok();
 
                             ::ContextPtr::from_ptr(ctx.c).assert_ok(Some(ctx.graph));

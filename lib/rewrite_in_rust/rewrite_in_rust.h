@@ -183,9 +183,9 @@ typedef bool (*flow_nodedef_fn_flatten_shorthand)(flow_c * c, struct flow_graph 
                                                   struct flow_node * node, struct flow_node * input_node,
                                                   int32_t * first_replacement_node, int32_t * last_replacement_node);
 
-typedef bool (*flow_nodedef_fn_execute)(flow_c * c, struct flow_job * job, struct flow_graph * g, int32_t node_id);
+typedef bool (*flow_nodedef_fn_execute)(flow_c * c, struct flow_graph * g, int32_t node_id);
 
-typedef bool (*flow_nodedef_fn_estimate_cost)(flow_c * c, struct flow_job * job, struct flow_graph * g, int32_t node_id,
+typedef bool (*flow_nodedef_fn_estimate_cost)(flow_c * c, struct flow_graph * g, int32_t node_id,
                                               size_t * bytes_required, size_t * cpu_cost);
 
 struct flow_node_definition {
@@ -223,7 +223,7 @@ int32_t flow_node_fixed_infobyte_count(flow_c * c, flow_ntype type);
 bool flow_node_infobyte_count(flow_c * c, struct flow_graph * g, int32_t node_id, int32_t * infobytes_count_out);
 bool flow_node_populate_dimensions(flow_c * c, struct flow_graph * g, int32_t node_id, bool force_estimate);
 bool flow_node_pre_optimize_flatten(flow_c * c, struct flow_graph ** graph_ref, int32_t node_id);
-bool flow_node_execute(flow_c * c, struct flow_job * job, struct flow_graph * g, int32_t node_id);
+bool flow_node_execute(flow_c * c, struct flow_graph * g, int32_t node_id);
 bool flow_node_estimate_execution_cost(flow_c * c, struct flow_graph * g, int32_t node_id, size_t * bytes_required,
                                        size_t * cpu_cost);
 bool flow_node_validate_edges(flow_c * c, struct flow_graph * g, int32_t node_id);

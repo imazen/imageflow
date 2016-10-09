@@ -922,7 +922,7 @@ extern "C" {
                                      info: *mut DecoderInfo)
                                      -> bool;
 
-
+    pub fn flow_codec_execute_read_frame(c: *mut Context, context: *mut CodecInstance) -> *mut BitmapBgra;
 
 
     pub fn flow_job_decoder_set_downscale_hints_by_placeholder_id(c: *mut Context,
@@ -958,10 +958,11 @@ extern "C" {
                                    sx: i32, sy: i32, zeroed: bool, format: PixelFormat) -> *mut BitmapBgra;
 
 
-    pub fn flow_node_execute_scale2d_render1d(c: *mut Context,
-                                              job: *mut Job, input: *mut BitmapBgra, canvas: *mut BitmapBgra, info: *const Scale2dRenderToCanvas1d) -> bool;
+    pub fn flow_node_execute_scale2d_render1d(c: *mut Context, input: *mut BitmapBgra, canvas: *mut BitmapBgra, info: *const Scale2dRenderToCanvas1d) -> bool;
 
     pub fn flow_bitmap_bgra_fill_rect(c: *mut Context, input: *mut BitmapBgra, x1: u32, y1: u32, x2: u32, y2: u32, color_srgb_argb: u32) -> bool;
+
+    pub fn flow_job_get_codec_instance(c: *mut Context, job: *mut Job, by_placeholder_id: i32 ) -> *mut CodecInstance;
 }
 
 

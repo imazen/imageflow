@@ -131,14 +131,29 @@ pub fn job_execute(c: *mut Context, job: *mut Job, graph_ref: &mut Graph) -> boo
   true
 }
 
-pub fn job_link_codecs(c: *mut Context, job: *mut Job, graph_ref: &mut Graph) -> bool {
-    /*FIXME: will it still be needed? Yes
-    if graph_ref.is_null() || unsafe { (*graph_ref).is_null() } {
-        error_msg!(c, FlowStatusCode::NullArgument);
-        return false;
+pub fn job_link_codecs(c: *mut Context, job: *mut Job, g: &mut Graph) -> bool {
+
+    job_notify_graph_changed(c, job, g);
+
+    //Assign stable IDs;
+    for index in 0..g.node_count() {
+
+        if let Some(func) = g.node_weight(NodeIndex::new(index)).unwrap().def.fn_link_state_to_this_io_id {
+            let placeholder_id;
+            {
+                let mut ctx = OpCtxMut {
+                    c: c,
+                    graph: g,
+                    job: job
+                };
+                placeholder_id = func(&mut ctx, NodeIndex::new(index));
+            }
+            if let Some(io_id) = placeholder_id{
+                g.node_weight_mut(NodeIndex::new(index)).unwrap().custom_state = unsafe { ::ffi::flow_job_get_codec_instance(c, job, io_id) as *mut u8 };
+            }
+        }
     }
-    */
-    job_notify_graph_changed(c, job, graph_ref);
+
 /* FIXME
     struct flow_graph * g = *graph_ref;
     let mut i: int32_t = 0;

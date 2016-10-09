@@ -309,7 +309,7 @@ static bool flatten_render1d(flow_c * c, struct flow_graph ** g, int32_t node_id
     return true;
 }
 
-static bool execute_render1d(flow_c * c, struct flow_job * job, struct flow_graph * g, int32_t node_id)
+static bool execute_render1d(flow_c * c, struct flow_graph * g, int32_t node_id)
 {
     FLOW_GET_INFOBYTES(g, node_id, flow_nodeinfo_render_to_canvas_1d, info)
     FLOW_GET_INPUT_EDGE(g, node_id)
@@ -319,14 +319,14 @@ static bool execute_render1d(flow_c * c, struct flow_job * job, struct flow_grap
     struct flow_bitmap_bgra * input = g->nodes[input_edge->from].result_bitmap;
     struct flow_bitmap_bgra * canvas = g->nodes[canvas_edge->from].result_bitmap;
 
-    if (!flow_node_execute_render_to_canvas_1d(c, job, input, canvas, info)) {
+    if (!flow_node_execute_render_to_canvas_1d(c, input, canvas, info)) {
         FLOW_error_return(c);
     }
     n->result_bitmap = canvas;
     return true;
 }
 
-static bool execute_scale2d(flow_c * c, struct flow_job * job, struct flow_graph * g, int32_t node_id)
+static bool execute_scale2d(flow_c * c, struct flow_graph * g, int32_t node_id)
 {
 
     FLOW_GET_INFOBYTES(g, node_id, flow_nodeinfo_scale2d_render_to_canvas1d, info)
@@ -337,7 +337,7 @@ static bool execute_scale2d(flow_c * c, struct flow_job * job, struct flow_graph
     struct flow_bitmap_bgra * input = g->nodes[input_edge->from].result_bitmap;
     struct flow_bitmap_bgra * canvas = g->nodes[canvas_edge->from].result_bitmap;
 
-    if (!flow_node_execute_scale2d_render1d(c, job, input, canvas, info)) {
+    if (!flow_node_execute_scale2d_render1d(c, input, canvas, info)) {
         FLOW_error_return(c);
     }
     n->result_bitmap = canvas;

@@ -11,32 +11,32 @@ static struct flow_codec_magic_bytes gif_magic_bytes[] = { {
 
 } };
 
-typedef enum flow_job_gif_decoder_stage {
-    flow_job_gif_decoder_stage_Null = 0,
-    flow_job_gif_decoder_stage_Failed,
-    flow_job_gif_decoder_stage_NotStarted,
-    flow_job_gif_decoder_stage_BeginRead,
-    flow_job_gif_decoder_stage_FinishRead,
-} flow_job_gif_decoder_stage;
+typedef enum flow_codecs_gif_decoder_stage {
+    flow_codecs_gif_decoder_stage_Null = 0,
+    flow_codecs_gif_decoder_stage_Failed,
+    flow_codecs_gif_decoder_stage_NotStarted,
+    flow_codecs_gif_decoder_stage_BeginRead,
+    flow_codecs_gif_decoder_stage_FinishRead,
+} flow_codecs_gif_decoder_stage;
 
 typedef void (*read_function_data_cleanup)(flow_c * c, void ** read_function_data);
 
-struct flow_job_gif_decoder_state {
+struct flow_codecs_gif_decoder_state {
     GifFileType * gif;
     int32_t w;
     int32_t h;
     int64_t current_frame_index;
     struct flow_io * io;
     flow_c * context;
-    flow_job_gif_decoder_stage stage;
+    flow_codecs_gif_decoder_stage stage;
 };
 
 // TODO: context errors must be translated to codec-specific exit flags for every codec (don't think return count is
 // enough)
 
-static int flow_job_gif_read_function(GifFileType * gif, GifByteType * buffer, int bytes_please)
+static int flow_codecs_gif_read_function(GifFileType * gif, GifByteType * buffer, int bytes_please)
 {
-    struct flow_job_gif_decoder_state * state = (struct flow_job_gif_decoder_state *)gif->UserData;
+    struct flow_codecs_gif_decoder_state * state = (struct flow_codecs_gif_decoder_state *)gif->UserData;
     if (state == NULL || state->io == NULL || state->io->read_func == NULL || state->context == NULL) {
         fprintf(stderr, "Fatal invocation of gif_read_function\n");
     }
@@ -53,8 +53,8 @@ static int flow_job_gif_read_function(GifFileType * gif, GifByteType * buffer, i
     return (int)bytes_read;
 }
 
-// static int flow_job_gif_write_function (GifFileType * gif, const GifByteType * buffer, int count){
-//    struct flow_job_gif_decoder_state * state = (struct flow_job_gif_decoder_state *)gif->UserData;
+// static int flow_codecs_gif_write_function (GifFileType * gif, const GifByteType * buffer, int count){
+//    struct flow_codecs_gif_decoder_state * state = (struct flow_codecs_gif_decoder_state *)gif->UserData;
 //
 //    int64_t bytes_written = state->io->write_func(state->context,state->io,buffer,count);
 //    if (bytes_written != count){
@@ -69,9 +69,9 @@ static int flow_job_gif_read_function(GifFileType * gif, GifByteType * buffer, i
 //}
 
 // Flush buffers; close files     ; release underlying resources - the job has been ended.
-static bool flow_job_gif_dispose(flow_c * c, void * codec_state)
+static bool flow_codecs_gif_dispose(flow_c * c, void * codec_state)
 {
-    struct flow_job_gif_decoder_state * state = (struct flow_job_gif_decoder_state *)codec_state;
+    struct flow_codecs_gif_decoder_state * state = (struct flow_codecs_gif_decoder_state *)codec_state;
     if (state->gif != NULL) {
         int error = 0;
         // fprintf(stderr, "Closing gif %p\n", (void *)state->gif);
@@ -85,12 +85,12 @@ static bool flow_job_gif_dispose(flow_c * c, void * codec_state)
     return true;
 }
 
-static bool flow_job_gif_decoder_reset(flow_c * c, struct flow_job_gif_decoder_state * state)
+static bool flow_codecs_gif_decoder_reset(flow_c * c, struct flow_codecs_gif_decoder_state * state)
 {
-    if (state->stage == flow_job_gif_decoder_stage_FinishRead) {
+    if (state->stage == flow_codecs_gif_decoder_stage_FinishRead) {
         // FLOW_free(c, state->pixel_buffer);
     }
-    if (state->stage == flow_job_gif_decoder_stage_Null) {
+    if (state->stage == flow_codecs_gif_decoder_stage_Null) {
         state->gif = NULL;
 
     } else {
@@ -109,21 +109,21 @@ static bool flow_job_gif_decoder_reset(flow_c * c, struct flow_job_gif_decoder_s
     state->context = c;
     state->w = 0;
     state->h = 0;
-    state->stage = flow_job_gif_decoder_stage_NotStarted;
+    state->stage = flow_codecs_gif_decoder_stage_NotStarted;
     return true;
 }
 
-static bool flow_job_gif_decoder_FinishRead(flow_c * c, struct flow_job_gif_decoder_state * state)
+static bool flow_codecs_gif_decoder_FinishRead(flow_c * c, struct flow_codecs_gif_decoder_state * state)
 {
-    if (state->stage < flow_job_gif_decoder_stage_BeginRead) {
+    if (state->stage < flow_codecs_gif_decoder_stage_BeginRead) {
         FLOW_error(c, flow_status_Invalid_internal_state);
         return false;
     }
-    if (state->stage == flow_job_gif_decoder_stage_FinishRead) {
+    if (state->stage == flow_codecs_gif_decoder_stage_FinishRead) {
         return true;
     }
 
-    state->stage = flow_job_gif_decoder_stage_FinishRead;
+    state->stage = flow_codecs_gif_decoder_stage_FinishRead;
 
     // fprintf(stderr, "DGifSlurp on %p\n", (void *)state->gif);
     if (DGifSlurp(state->gif) != GIF_OK) {
@@ -135,20 +135,20 @@ static bool flow_job_gif_decoder_FinishRead(flow_c * c, struct flow_job_gif_deco
     return true;
 }
 
-static bool flow_job_gif_decoder_BeginRead(flow_c * c, struct flow_job_gif_decoder_state * state)
+static bool flow_codecs_gif_decoder_BeginRead(flow_c * c, struct flow_codecs_gif_decoder_state * state)
 {
-    if (state->stage != flow_job_gif_decoder_stage_NotStarted) {
+    if (state->stage != flow_codecs_gif_decoder_stage_NotStarted) {
         FLOW_error(c, flow_status_Invalid_internal_state);
         return false;
     }
-    if (!flow_job_gif_decoder_reset(c, state)) {
-        state->stage = flow_job_gif_decoder_stage_Failed;
+    if (!flow_codecs_gif_decoder_reset(c, state)) {
+        state->stage = flow_codecs_gif_decoder_stage_Failed;
         FLOW_error_return(c);
     }
-    state->stage = flow_job_gif_decoder_stage_BeginRead;
+    state->stage = flow_codecs_gif_decoder_stage_BeginRead;
 
     int error = 0;
-    state->gif = DGifOpen(state, flow_job_gif_read_function, &error);
+    state->gif = DGifOpen(state, flow_codecs_gif_read_function, &error);
     // fprintf(stderr, "DGifOpen returned %p\n", (void *) state->gif);
 
     if (error != D_GIF_SUCCEEDED) {
@@ -159,8 +159,8 @@ static bool flow_job_gif_decoder_BeginRead(flow_c * c, struct flow_job_gif_decod
 
     if (state->gif == NULL) {
         FLOW_error(c, flow_status_Out_of_memory);
-        flow_job_gif_decoder_reset(c, state);
-        state->stage = flow_job_gif_decoder_stage_Failed;
+        flow_codecs_gif_decoder_reset(c, state);
+        state->stage = flow_codecs_gif_decoder_stage_Failed;
         return false;
     }
     state->w = state->gif->SWidth;
@@ -169,19 +169,19 @@ static bool flow_job_gif_decoder_BeginRead(flow_c * c, struct flow_job_gif_decod
     return true;
 }
 
-static bool flow_job_codecs_gif_initialize(flow_c * c, struct flow_job * job, struct flow_codec_instance * codec)
+static bool flow_codecs_gif_decoder_initialize(flow_c * c, struct flow_codec_instance * codec)
 {
-    // flow_job_gif_decoder_state
+    // flow_codecs_gif_decoder_state
     if (codec->codec_state == NULL) {
-        struct flow_job_gif_decoder_state * state = (struct flow_job_gif_decoder_state *)flow_context_malloc(
-            c, sizeof(struct flow_job_gif_decoder_state), flow_job_gif_dispose, job, __FILE__, __LINE__);
+        struct flow_codecs_gif_decoder_state * state = (struct flow_codecs_gif_decoder_state *)flow_context_malloc(
+            c, sizeof(struct flow_codecs_gif_decoder_state), flow_codecs_gif_dispose, c, __FILE__, __LINE__);
         if (state == NULL) {
             FLOW_error(c, flow_status_Out_of_memory);
             return false;
         }
-        state->stage = flow_job_gif_decoder_stage_Null;
+        state->stage = flow_codecs_gif_decoder_stage_Null;
 
-        if (!flow_job_gif_decoder_reset(c, state)) {
+        if (!flow_codecs_gif_decoder_reset(c, state)) {
             FLOW_add_to_callstack(c);
             return false;
         }
@@ -192,29 +192,29 @@ static bool flow_job_codecs_gif_initialize(flow_c * c, struct flow_job * job, st
     }
     return true;
 }
-static bool flow_job_codecs_decode_gif_switch_frame(flow_c * c, struct flow_job * job, void * codec_state,
-                                                    size_t frame_index)
+static bool flow_codecs_gif_decode_switch_frame(flow_c * c, void * codec_state,
+                                         size_t frame_index)
 {
-    struct flow_job_gif_decoder_state * state = (struct flow_job_gif_decoder_state *)codec_state;
-    if (state->stage < flow_job_gif_decoder_stage_BeginRead) {
-        if (!flow_job_gif_decoder_BeginRead(c, state)) {
+    struct flow_codecs_gif_decoder_state * state = (struct flow_codecs_gif_decoder_state *)codec_state;
+    if (state->stage < flow_codecs_gif_decoder_stage_BeginRead) {
+        if (!flow_codecs_gif_decoder_BeginRead(c, state)) {
             FLOW_error_return(c);
         }
     }
     state->current_frame_index = frame_index;
     return true;
 }
-static bool flow_job_codecs_gif_get_info(flow_c * c, struct flow_job * job, void * codec_state,
+static bool flow_codecs_gif_get_info(flow_c * c, void * codec_state,
                                          struct flow_decoder_info * info_ref)
 {
-    struct flow_job_gif_decoder_state * state = (struct flow_job_gif_decoder_state *)codec_state;
-    if (state->stage < flow_job_gif_decoder_stage_BeginRead) {
-        if (!flow_job_gif_decoder_BeginRead(c, state)) {
+    struct flow_codecs_gif_decoder_state * state = (struct flow_codecs_gif_decoder_state *)codec_state;
+    if (state->stage < flow_codecs_gif_decoder_stage_BeginRead) {
+        if (!flow_codecs_gif_decoder_BeginRead(c, state)) {
             FLOW_error_return(c);
         }
     }
-    if (state->stage < flow_job_gif_decoder_stage_FinishRead) {
-        if (!flow_job_gif_decoder_FinishRead(c, state)) {
+    if (state->stage < flow_codecs_gif_decoder_stage_FinishRead) {
+        if (!flow_codecs_gif_decoder_FinishRead(c, state)) {
             FLOW_error_return(c);
         }
     }
@@ -226,12 +226,12 @@ static bool flow_job_codecs_gif_get_info(flow_c * c, struct flow_job * job, void
     return true;
 }
 
-static bool flow_job_codecs_gif_get_frame_info(flow_c * c, struct flow_job * job, void * codec_state,
+static bool flow_codecs_gif_get_frame_info(flow_c * c, void * codec_state,
                                                struct flow_decoder_frame_info * decoder_frame_info_ref)
 {
-    struct flow_job_gif_decoder_state * state = (struct flow_job_gif_decoder_state *)codec_state;
-    if (state->stage < flow_job_gif_decoder_stage_BeginRead) {
-        if (!flow_job_gif_decoder_BeginRead(c, state)) {
+    struct flow_codecs_gif_decoder_state * state = (struct flow_codecs_gif_decoder_state *)codec_state;
+    if (state->stage < flow_codecs_gif_decoder_stage_BeginRead) {
+        if (!flow_codecs_gif_decoder_BeginRead(c, state)) {
             FLOW_error_return(c);
         }
     }
@@ -296,20 +296,20 @@ static bool dequantize(flow_c * c, GifFileType * gif, int frame_index, struct fl
     return true;
 }
 
-static bool flow_job_codecs_gif_read_frame(flow_c * c, struct flow_job * job, void * codec_state,
+static bool flow_codecs_gif_read_frame(flow_c * c, void * codec_state,
                                            struct flow_bitmap_bgra * canvas)
 {
-    struct flow_job_gif_decoder_state * state = (struct flow_job_gif_decoder_state *)codec_state;
-    if (state->stage >= flow_job_gif_decoder_stage_BeginRead) {
+    struct flow_codecs_gif_decoder_state * state = (struct flow_codecs_gif_decoder_state *)codec_state;
+    if (state->stage >= flow_codecs_gif_decoder_stage_BeginRead) {
 
         if (canvas == NULL || canvas->pixels == NULL) {
-            flow_job_gif_decoder_reset(c, state);
-            state->stage = flow_job_gif_decoder_stage_Failed;
+            flow_codecs_gif_decoder_reset(c, state);
+            state->stage = flow_codecs_gif_decoder_stage_Failed;
             FLOW_error(c, flow_status_Out_of_memory);
             return false;
         }
 
-        if (!flow_job_gif_decoder_FinishRead(c, state)) {
+        if (!flow_codecs_gif_decoder_FinishRead(c, state)) {
             FLOW_error_return(c);
         }
 
@@ -325,13 +325,13 @@ static bool flow_job_codecs_gif_read_frame(flow_c * c, struct flow_job * job, vo
 }
 
 //
-// void* flow_job_codecs_aquire_encode_gif_on_buffer(flow_context* c, struct flow_job* job,
+// void* flow_aquire_encode_gif_on_buffer(flow_context* c, struct flow_job* job,
 //                                                   struct flow_job_resource_buffer* buffer)
 //{
-//    // flow_job_gif_decoder_state
+//    // flow_codecs_gif_decoder_state
 //    if (buffer->codec_state == NULL) {
-//        struct flow_job_gif_encoder_state* state
-//                = (struct flow_job_gif_encoder_state*)FLOW_malloc(c, sizeof(struct flow_job_gif_encoder_state));
+//        struct flow_codecs_gif_encoder_state* state
+//                = (struct flow_codecs_gif_encoder_state*)FLOW_malloc(c, sizeof(struct flow_codecs_gif_encoder_state));
 //        if (state == NULL) {
 //            FLOW_error(c, flow_status_Out_of_memory);
 //            return NULL;
@@ -346,10 +346,10 @@ static bool flow_job_codecs_gif_read_frame(flow_c * c, struct flow_job * job, vo
 //    return buffer->codec_state;
 //}
 //
-// bool flow_job_codecs_gif_write_frame(flow_context* c, struct flow_job* job, void* codec_state, flow_bitmap_bgra*
+// bool flow_codecs_gif_write_frame(flow_context* c, struct flow_job* job, void* codec_state, flow_bitmap_bgra*
 // frame)
 //{
-//    struct flow_job_gif_encoder_state* state = (struct flow_job_gif_encoder_state*)codec_state;
+//    struct flow_codecs_gif_encoder_state* state = (struct flow_codecs_gif_encoder_state*)codec_state;
 //    state->buffer = NULL;
 //    state->size = 0;
 //    state->context = c;
@@ -413,11 +413,11 @@ static bool flow_job_codecs_gif_read_frame(flow_c * c, struct flow_job * job, vo
 
 const struct flow_codec_definition flow_codec_definition_decode_gif
     = { .codec_id = flow_codec_type_decode_gif,
-        .initialize = flow_job_codecs_gif_initialize,
-        .get_frame_info = flow_job_codecs_gif_get_frame_info,
-        .get_info = flow_job_codecs_gif_get_info,
-        .switch_frame = flow_job_codecs_decode_gif_switch_frame,
-        .read_frame = flow_job_codecs_gif_read_frame,
+        .initialize = flow_codecs_gif_decoder_initialize,
+        .get_frame_info = flow_codecs_gif_get_frame_info,
+        .get_info = flow_codecs_gif_get_info,
+        .switch_frame = flow_codecs_gif_decode_switch_frame,
+        .read_frame = flow_codecs_gif_read_frame,
         .magic_byte_sets = &gif_magic_bytes[0],
         .magic_byte_sets_count = sizeof(gif_magic_bytes) / sizeof(struct flow_codec_magic_bytes),
         .name = "decode gif",

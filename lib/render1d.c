@@ -118,8 +118,7 @@ cleanup:
     return success;
 }
 
-bool flow_node_execute_render_to_canvas_1d(flow_c * c, struct flow_job * job, struct flow_bitmap_bgra * input,
-                                           struct flow_bitmap_bgra * canvas,
+bool flow_node_execute_render_to_canvas_1d(flow_c * c, struct flow_bitmap_bgra * input, struct flow_bitmap_bgra * canvas,
                                            struct flow_nodeinfo_render_to_canvas_1d * info)
 {
 

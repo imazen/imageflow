@@ -272,7 +272,7 @@ static bool flatten_clone(flow_c * c, struct flow_graph ** g, int32_t node_id, s
     return true;
 }
 
-static bool execute_crop(flow_c * c, struct flow_job * job, struct flow_graph * g, int32_t node_id)
+static bool execute_crop(flow_c * c, struct flow_graph * g, int32_t node_id)
 {
     FLOW_GET_INFOBYTES(g, node_id, flow_nodeinfo_crop, info)
     FLOW_GET_INPUT_EDGE(g, node_id)
@@ -297,7 +297,7 @@ static bool execute_crop(flow_c * c, struct flow_job * job, struct flow_graph * 
     return true;
 }
 
-static bool execute_fill_rect(flow_c * c, struct flow_job * job, struct flow_graph * g, int32_t node_id)
+static bool execute_fill_rect(flow_c * c, struct flow_graph * g, int32_t node_id)
 {
     FLOW_GET_INFOBYTES(g, node_id, flow_nodeinfo_fill_rect, info)
     FLOW_GET_INPUT_EDGE(g, node_id)
@@ -345,7 +345,7 @@ bool flow_bitmap_bgra_fill_rect(flow_c * c, struct flow_bitmap_bgra * b, uint32_
     return true;
 }
 
-static bool execute_copy_rect(flow_c * c, struct flow_job * job, struct flow_graph * g, int32_t node_id)
+static bool execute_copy_rect(flow_c * c, struct flow_graph * g, int32_t node_id)
 {
     FLOW_GET_INFOBYTES(g, node_id, flow_nodeinfo_copy_rect_to_canvas, info)
     FLOW_GET_INPUT_EDGE(g, node_id)
