@@ -122,7 +122,7 @@ if [[ "$(uname -s)" == 'Darwin' ]]; then
 	./ci/travis_run_osx.sh
 else
 	set -x
-	docker run --rm -v "$HOME/.ccache:/home/conan/.ccache" -v "$HOME/.conan/data:/home/conan/.conan/data" -v "${TRAVIS_BUILD_DIR}:/home/conan/imageflow" "${DOCKER_ENV_VARS[*]}" "${DOCKER_IMAGE}" /bin/bash -c "./ci/travis_run_docker.sh"
+	docker run --rm -v "$HOME/.ccache:/home/conan/.ccache" -v "$HOME/.conan/data:/home/conan/.conan/data" -v "${TRAVIS_BUILD_DIR}:/home/conan/imageflow" ${DOCKER_ENV_VARS[*]} "${DOCKER_IMAGE}" /bin/bash -c "./ci/travis_run_docker.sh"
 	set +x
 fi
 

@@ -159,5 +159,5 @@ echo "Launching docker "
 echo
 #Ensure that .cargo is NOT volume mapped; cargo will not work. Also, cargo fetches faster than rsync, it seems?
 set -x
-docker run --interactive $DOCKER_TTY_FLAG --rm -v ${WORKING_DIR}:/home/conan/imageflow -v ${WORKING_DIR}_cache/wrappers_server_target:/home/conan/imageflow/wrappers/server/target -v ${WORKING_DIR}:/home/conan/imageflow -v ${SHARED_CACHE}/conan_data:/home/conan/.conan/data -v ${WORKING_DIR}_cache/build:/home/conan/imageflow/build  -v ${WORKING_DIR}_cache/ccache:/home/conan/.ccache  "${DOCKER_ENV_VARS[@]}" ${DOCKER_IMAGE} "${DOCKER_COMMAND[@]}" 
+docker run --interactive $DOCKER_TTY_FLAG --rm -v ${WORKING_DIR}:/home/conan/imageflow -v ${WORKING_DIR}_cache/wrappers_server_target:/home/conan/imageflow/wrappers/server/target -v ${WORKING_DIR}:/home/conan/imageflow -v ${SHARED_CACHE}/conan_data:/home/conan/.conan/data -v ${WORKING_DIR}_cache/build:/home/conan/imageflow/build  -v ${WORKING_DIR}_cache/ccache:/home/conan/.ccache  ${DOCKER_ENV_VARS[@]} ${DOCKER_IMAGE} "${DOCKER_COMMAND[@]}" 
 set +x
