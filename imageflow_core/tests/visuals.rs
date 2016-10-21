@@ -40,7 +40,7 @@ fn compare(input: Option<s::IoEnum>, allowed_off_by_one_bytes: usize, checksum_n
 
         let recording = s::Build001_Graph_Recording{
             record_graph_versions: Some(true),
-            record_frame_images: Some(false),
+            record_frame_images: Some(true),
             render_last_graph: Some(true),
             render_animated_graph: Some(false),
             render_graph_versions : Some(false),
