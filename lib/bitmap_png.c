@@ -36,7 +36,7 @@ bool flow_bitmap_bgra_save_png(flow_c * c, struct flow_bitmap_bgra * b, const ch
         return false;
     }
 
-    if (!png_image_write_to_file(&target_image, path, 0 /*convert_to_8bit*/, b->pixels, 0 /*row_stride*/,
+    if (!png_image_write_to_file(&target_image, path, 0 /*convert_to_8bit*/, b->pixels, b->stride /*row_stride*/,
                                  NULL /*colormap*/)) {
         FLOW_error_msg(c, flow_status_Image_encoding_failed, "Failed to export frame as png: %s  output path: %s.",
                        target_image.message, path);

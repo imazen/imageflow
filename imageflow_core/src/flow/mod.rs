@@ -533,6 +533,22 @@ pub fn graph_execute(c: *mut Context, job: *mut Job, g: &mut Graph) -> bool
                 }
                 if g.node_weight(next_ix).unwrap().result == NodeResult::None {
                     panic!("fn_execute of {} failed to save a result", g.node_weight(next_ix).unwrap().def.name);
+                }else{
+                    unsafe {
+                        if (*job).record_frame_images {
+                            if let NodeResult::Frame(ptr) = g.node_weight(next_ix).unwrap().result {
+                                let path = format!("node_frames/job_{}_node_{}.png", (*job).debug_job_id, g.node_weight(next_ix).unwrap().stable_id);
+                                let path_copy = path.clone();
+                                let path_cstr = std::ffi::CString::new(path).unwrap();
+                                let _ = std::fs::create_dir("node_frames");
+                                if !::ffi::flow_bitmap_bgra_save_png(c, ptr, path_cstr.as_ptr()) {
+                                    println!("Failed to save frame {} (from node {})", path_copy, next_ix.index());
+                                    ::ContextPtr::from_ptr(c).assert_ok(None);
+
+                                }
+                            }
+                        }
+                    }
                 }
             }
         }

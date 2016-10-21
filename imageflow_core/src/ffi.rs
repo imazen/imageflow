@@ -313,11 +313,11 @@ pub struct DecoderInfo {
 #[derive(Clone,Debug,PartialEq)]
 pub struct BitmapBgra {
     /// bitmap width in pixels
-    pub w: uint32_t,
+    pub w: u32,
     /// bitmap height in pixels
-    pub h: uint32_t,
+    pub h: u32,
     /// byte length of each row (may include any amount of padding)
-    pub stride: uint32_t,
+    pub stride: u32,
     //FIXME: replace with a vec or slice
     ///pointer to pixel 0,0; should be of length > h * stride
     pub pixels: *mut u8,
@@ -964,6 +964,8 @@ extern "C" {
     pub fn flow_bitmap_bgra_fill_rect(c: *mut Context, input: *mut BitmapBgra, x1: u32, y1: u32, x2: u32, y2: u32, color_srgb_argb: u32) -> bool;
 
     pub fn flow_job_get_codec_instance(c: *mut Context, job: *mut Job, by_placeholder_id: i32 ) -> *mut CodecInstance;
+
+    pub fn flow_bitmap_bgra_save_png(c: *mut Context, input: *mut BitmapBgra, path:  *const libc::c_char) -> bool;
 }
 
 
