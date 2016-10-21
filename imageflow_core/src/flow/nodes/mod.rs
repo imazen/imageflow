@@ -237,6 +237,7 @@ impl<'c> OpCtxMut<'c> {
         };
     }
 
+    //Links nodes with Input edges
     pub fn replace_node<'a>(&'a mut self, index: NodeIndex<u32>, with_list: Vec<Node>) {
         let mut with = with_list.clone();
         match with.len() {
@@ -246,7 +247,9 @@ impl<'c> OpCtxMut<'c> {
                 let mut last_ix = self.graph.add_node(with.pop().unwrap());
                 self.copy_edges_to(index, last_ix, EdgeDirection::Incoming);
                 while with.len() > 0 {
-                    last_ix = self.graph.add_node(with.pop().unwrap());
+                    let new_ix = self.graph.add_node(with.pop().unwrap());
+                    self.graph.add_edge(last_ix, new_ix, EdgeKind::Input).unwrap();
+                    last_ix = new_ix;
                 }
                 self.copy_edges_to(index, last_ix, EdgeDirection::Outgoing);
                 self.graph.remove_node(index).unwrap();
