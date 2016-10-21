@@ -161,11 +161,22 @@ pub enum Color {
 }
 
 impl Color {
-    pub fn to_u32(self) -> std::result::Result<u32, std::num::ParseIntError> {
+    pub fn to_u32_bgra(self) -> std::result::Result<u32, std::num::ParseIntError> {
+        self.to_u32_rgba().and_then(|u| Ok(u.swap_bytes().rotate_left(8)))
+    }
+    pub fn to_u32_rgba(self) -> std::result::Result<u32, std::num::ParseIntError> {
         match self {
             Color::Srgb(srgb) => {
                 match srgb {
-                   ColorSrgb::Hex(hex_srgb) => u32::from_str_radix(hex_srgb.as_str(), 16),
+                    ColorSrgb::Hex(hex_srgb) => {
+                        u32::from_str_radix(hex_srgb.as_str(), 16).and_then(|value|
+                            if value.leading_zeros() >= 8 {
+                                Ok(value.checked_shl(8).unwrap() | 0xFF)
+                            }else{
+                                Ok(value)
+                            }
+                        )
+                    },
                 }
             }
             Color::Transparent => Ok(0)
@@ -173,10 +184,19 @@ impl Color {
     }
 }
 
+
 #[test]
 fn test_color(){
 
-    assert_eq!(Color::Srgb(ColorSrgb::Hex("FFAAEEDD".to_owned())).to_u32().unwrap(), 0xFFAAEEDD);
+    assert_eq!(Color::Srgb(ColorSrgb::Hex("FFAAEEDD".to_owned())).to_u32_rgba().unwrap(), 0xFFAAEEDD);
+    assert_eq!(Color::Srgb(ColorSrgb::Hex("FFAAEE".to_owned())).to_u32_rgba().unwrap(), 0xFFAAEEFF);
+}
+
+#[test]
+fn test_bgra(){
+
+    assert_eq!(Color::Srgb(ColorSrgb::Hex("FFAAEEDD".to_owned())).to_u32_bgra().unwrap(), 0xEEAAFFDD);
+    assert_eq!(Color::Srgb(ColorSrgb::Hex("FFAAEE".to_owned())).to_u32_bgra().unwrap(), 0xEEAAFFFF);
 }
 
 

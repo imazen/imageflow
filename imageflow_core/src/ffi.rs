@@ -804,6 +804,7 @@ pub struct Scale2dRenderToCanvas1d {
     pub scale_in_colorspace: Floatspace,
 }
 
+//TODO: mark these as unsafe
 extern "C" {
     pub fn flow_context_create() -> *mut Context;
     pub fn flow_context_begin_terminate(context: *mut Context) -> bool;

@@ -78,7 +78,7 @@ fn fill_rect_def() -> NodeDefinition {
                     let input = ctx.first_parent_result_frame(ix, EdgeKind::Input).unwrap();
                     unsafe {
 
-                        if !ffi::flow_bitmap_bgra_fill_rect(ctx.c, input, x1, y1, x2, y2, color.to_u32().unwrap()) {
+                        if !ffi::flow_bitmap_bgra_fill_rect(ctx.c, input, x1, y1, x2, y2, color.to_u32_bgra().unwrap()) {
                             panic!("failed to fill rect. epic.");
                         }
 
@@ -121,8 +121,61 @@ fn clone_def() -> NodeDefinition{
         .. Default::default()
     }
 }
+fn expand_canvas_size(ctx: &mut OpCtxMut, ix: NodeIndex<u32>){
+
+    let input_info = ctx.first_parent_frame_info_some(ix).unwrap();
+
+    let ref mut weight = ctx.weight_mut(ix);
+    match weight.params{
+        NodeParams::Json(s::Node::ExpandCanvas{ref  left, ref top, ref bottom, ref right, ref color}) => {
+            weight.frame_est = FrameEstimate::Some(
+                FrameInfo{
+                    w: input_info.w + *left as i32 + *right as i32,
+                    h: input_info.h + *top as i32 + *bottom as i32,
+                    fmt: ffi::PixelFormat::from(input_info.fmt),
+                    alpha_meaningful: input_info.alpha_meaningful}); //TODO: May change if color has alpha
+        },
+        _ => { panic!("Node params missing");}
+    }
+}
+
+fn expand_canvas_def() -> NodeDefinition {
+    NodeDefinition {
+        id: NodeType::Expand_Canvas,
+        name: "expand canvas",
+        inbound_edges: EdgesIn::OneInput,
+        description: "Expand Canvas",
+        fn_estimate:  Some(expand_canvas_size),
+        fn_flatten_pre_optimize: Some({
+            fn f(ctx: &mut OpCtxMut, ix: NodeIndex<u32>){
+                match ctx.first_parent_input_weight(ix).unwrap().frame_est{
+                    FrameEstimate::Some(FrameInfo{w,h,fmt,alpha_meaningful}) => {
+                        if let s::Node::ExpandCanvas {left, top, right, bottom, color} =
+                            ctx.get_json_params(ix).unwrap() {
+                            let new_w = w as usize + left as usize + right as usize;
+                            let new_h = h as usize + top as usize + bottom as usize;
+                            let canvas_params = s::Node::CreateCanvas{w: new_w as usize, h: new_h as usize, format: s::PixelFormat::from(fmt), color: color };
+                            let copy_params = s::Node::CopyRectToCanvas{from_x: 0, from_y: 0, x: left, y: top, width: w as u32, height: h as u32};
+                            let canvas = ctx.graph.add_node(Node::new(&CREATE_CANVAS, NodeParams::Json(canvas_params)));
+                            let copy = ctx.graph.add_node(Node::new(&COPY_RECT, NodeParams::Json(copy_params)));
+                            ctx.graph.add_edge(canvas, copy, EdgeKind::Canvas).unwrap();
+                            ctx.replace_node_with_existing(ix, copy);
+                        }
+                    }
+                    _ => {panic!("")}
+                }
+            }
+            f
+        }),
+        .. Default::default()
+    }
+}
+
+
+
 lazy_static! {
     pub static ref CLONE: NodeDefinition = clone_def();
+    pub static ref EXPAND_CANVAS: NodeDefinition = expand_canvas_def();
 
 
     pub static ref COPY_RECT: NodeDefinition = copy_rect_def();

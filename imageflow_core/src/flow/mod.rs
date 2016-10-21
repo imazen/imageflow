@@ -3,6 +3,7 @@ use libc::{self, int32_t, c_void};
 use std::ffi::CStr;
 use std;
 use std::ptr;
+use std::string;
 use std::fs::File;
 use std::io::prelude::*;
 use std::io;
@@ -291,6 +292,16 @@ fn job_notify_graph_changed(c: *mut Context, job: *mut Job, graph_ref: &mut Grap
     }
 }
 
+impl<'a>  OpCtxMut<'a> {
+    //TODO: Should return Result<String,??>
+    pub fn graph_to_str(&mut self) -> String{
+        let mut vec = Vec::new();
+        print_graph(&mut vec, self.graph, None).unwrap();
+        String::from_utf8(vec).unwrap()
+    }
+
+}
+
 fn files_identical(filename_a: &str, filename_b: &str) -> std::io::Result<bool> {
     let mut a = try!(File::open(filename_a));
     let mut a_str = Vec::new();
@@ -405,14 +416,17 @@ pub fn job_populate_dimensions_where_certain(c:*mut Context, job: *mut Job, g: &
 pub fn graph_pre_optimize_flatten(c: *mut Context, job: *mut Job, g: &mut Graph) -> bool
 {
     //Just find all nodes that offer fn_flatten_pre_optimize and have been estimated.
+    //Oops, we also need to insure inputs have been estimated
     // TODO: Compare Node value; should differ afterwards
     loop {
         let mut next = None;
         for ix in 0..(g.node_count()){
             if let Some(func) = g.node_weight(NodeIndex::new(ix)).unwrap().def.fn_flatten_pre_optimize{
                 if let FrameEstimate::Some(_) = g.node_weight(NodeIndex::new(ix)).unwrap().frame_est {
-                    next = Some((NodeIndex::new(ix), func));
-                    break;
+                    if g.parents(NodeIndex::new(ix)).iter(g).all(|(ex,ix)| g.node_weight(ix).unwrap().result != NodeResult::None) {
+                        next = Some((NodeIndex::new(ix), func));
+                        break;
+                    }
                 }
             }
         }
@@ -463,8 +477,10 @@ pub fn graph_post_optimize_flatten(c: *mut Context, job: *mut Job, g: &mut Graph
         for ix in 0..(g.node_count()){
             if let Some(func) = g.node_weight(NodeIndex::new(ix)).unwrap().def.fn_flatten_post_optimize{
                 if let FrameEstimate::Some(_) = g.node_weight(NodeIndex::new(ix)).unwrap().frame_est {
-                    next = Some((NodeIndex::new(ix), func));
-                    break;
+                    if g.parents(NodeIndex::new(ix)).iter(g).all(|(ex,ix)| g.node_weight(ix).unwrap().result != NodeResult::None) {
+                        next = Some((NodeIndex::new(ix), func));
+                        break;
+                    }
                 }
             }
         }

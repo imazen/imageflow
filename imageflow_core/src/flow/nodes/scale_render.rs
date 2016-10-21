@@ -34,6 +34,7 @@ fn scale_def() -> NodeDefinition {
     NodeDefinition {
         id: NodeType::Scale,
         name: "scale",
+        inbound_edges: EdgesIn::OneInput,
         description: "scale",
         fn_estimate: Some(ScaleRenderHelpers::scale_size_but_input_format),
         fn_flatten_pre_optimize: Some({

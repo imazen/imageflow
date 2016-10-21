@@ -56,18 +56,7 @@ impl GraphTranslator {
             s::Node::CopyRectToCanvas{..} => Node::new(&nodes::COPY_RECT, NodeParams::Json(node)),
             s::Node::FillRect{..} => Node::new(&nodes::FILL_RECT, NodeParams::Json(node)),
             s::Node::Scale{..} => Node::new(&nodes::SCALE, NodeParams::Json(node)),
-//            s::Node::ExpandCanvas { left, top, right, bottom, color } => {
-//                ::flow::graph::node_create_expand_canvas(self.ctx,
-//                                                      g,
-//                                                      -1,
-//                                                      left,
-//                                                      top,
-//                                                      right,
-//                                                      bottom,
-//                                                      self.color_to_i32(color).unwrap())
-//            }
-
-//
+            s::Node::ExpandCanvas {..} => Node::new(&nodes::EXPAND_CANVAS, NodeParams::Json(node)),
             _ => Node::new(&nodes::NO_OP, NodeParams::Json(node)),
         };
         g.add_node(new_node)
