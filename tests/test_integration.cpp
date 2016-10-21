@@ -207,7 +207,7 @@ TEST_CASE("Load png from URL", "[fastscaling]")
 
                 struct flow_io * buf = flow_io_create_for_output_buffer(c, c);
                 // memset(canvas->pixels, 0, canvas->stride * canvas->h);
-                if (!flow_bitmap_bgra_write_png(c, NULL, canvas, buf)) {
+                if (!flow_bitmap_bgra_write_png(c, canvas, buf)) {
                     // FLOW_error_return(context);
                     FAIL("Failed to write png");
                 } else {
