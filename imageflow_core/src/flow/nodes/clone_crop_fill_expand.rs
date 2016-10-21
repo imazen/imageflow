@@ -172,11 +172,90 @@ fn expand_canvas_def() -> NodeDefinition {
 }
 
 
+fn crop_size(ctx: &mut OpCtxMut, ix: NodeIndex<u32>){
 
+    let input_info = ctx.first_parent_frame_info_some(ix).unwrap_or_else(|| {
+        println!("{}", ctx.graph_to_str());
+        panic!("");
+    });
+
+    let ref mut weight = ctx.weight_mut(ix);
+    match weight.params{
+        NodeParams::Json(s::Node::Crop{ref  x1, ref y1, ref x2, ref y2}) => {
+            weight.frame_est = FrameEstimate::Some(
+                FrameInfo{
+                    w: *x2 as i32 - *x1 as i32,
+                    h: *y2 as i32 - *y1 as i32,
+                    fmt: ffi::PixelFormat::from(input_info.fmt),
+                    alpha_meaningful: input_info.alpha_meaningful});
+        },
+        _ => { panic!("Node params missing");}
+    }
+}
+fn crop_mutate_def() -> NodeDefinition {
+    NodeDefinition { //TODO: As a mutating node, shouldn't this verify no siblings exist? 'Consumed' might be non-deterministic
+        id: NodeType::Crop,
+        name: "crop_mutate",
+        inbound_edges: EdgesIn::OneInput,
+        fn_estimate:  Some(crop_size),
+        fn_execute: Some({
+
+            fn f(ctx: &mut OpCtxMut, ix: NodeIndex<u32>){
+
+                if let s::Node::Crop {x1,x2,y1,y2} =
+                ctx.get_json_params(ix).unwrap() {
+
+                    let input = ctx.first_parent_result_frame(ix, EdgeKind::Input).unwrap();
+                    unsafe {
+                        println!("Cropping {}x{} to ({},{}) ({},{})", (*input).w, (*input).h, x1, y1, x2, y2);
+
+                        let bytes_pp = match (*input).fmt { PixelFormat::Gray8 => 1, PixelFormat::BGRA32 => 4, PixelFormat::BGR24 => 3};
+                        let offset = (*input).stride as isize * y1 as isize + bytes_pp * x1 as isize;
+                        (*input).pixels = (*input).pixels.offset(offset);
+                        (*input).w = x2 - x1;
+                        (*input).h = y2 - y1;
+                        println!("Changing pointer by {}, w{}, h{}", offset, (*input).w, (*input).h);
+
+
+                        ctx.weight_mut(ix).result = NodeResult::Frame(input);
+                        ctx.first_parent_input_weight_mut(ix).unwrap().result = NodeResult::Consumed;
+                    }
+
+                }else{
+                    panic!("Missing params")
+                }
+            }
+            f
+        }),
+        .. Default::default()
+    }
+}
+
+fn crop_def() -> NodeDefinition {
+    NodeDefinition {
+        id: NodeType::Crop,
+        name: "crop",
+        inbound_edges: EdgesIn::OneInput,
+        fn_estimate:  Some(crop_size),
+        fn_flatten_pre_optimize: Some({
+            fn f(ctx: &mut OpCtxMut, ix: NodeIndex<u32>){
+                let mut new_nodes = Vec::with_capacity(2);
+                if ctx.has_other_children(ctx.first_parent_input(ix).unwrap(), ix) {
+                    new_nodes.push(Node::new(&CLONE, NodeParams::None));
+                }
+                new_nodes.push(Node::new(&CROP_MUTATE, NodeParams::Json(ctx.get_json_params(ix).unwrap())));
+                ctx.replace_node(ix, new_nodes);
+            }
+            f
+        }),
+        .. Default::default()
+    }
+}
 lazy_static! {
     pub static ref CLONE: NodeDefinition = clone_def();
+    pub static ref CROP_MUTATE: NodeDefinition = crop_mutate_def();
+    pub static ref CROP: NodeDefinition = crop_def();
     pub static ref EXPAND_CANVAS: NodeDefinition = expand_canvas_def();
-
 
     pub static ref COPY_RECT: NodeDefinition = copy_rect_def();
     pub static ref FILL_RECT: NodeDefinition = fill_rect_def();

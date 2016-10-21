@@ -41,9 +41,8 @@ impl GraphTranslator {
 //                                                encoder_id,
 //                                                &encoder_hints as *const ::ffi::EncoderHints)
 //            }
-//            s::Node::Crop { x1, y1, x2, y2 } => {
-//                ::flow::graph::node_create_primitive_crop(self.ctx, g, -1, x1, y1, x2, y2)
-//            }
+
+            s::Node::Crop {..} => Node::new(&nodes::CROP, NodeParams::Json(node)),
             s::Node::Decode{..} => Node::new(&nodes::DECODER, NodeParams::Json(node)),
             s::Node::FlowBitmapBgraPtr{..} => Node::new(&nodes::BITMAP_BGRA_POINTER, NodeParams::Json(node)),
             s::Node::FlipV => Node::new(&nodes::FLIP_V, NodeParams::Json(node)),

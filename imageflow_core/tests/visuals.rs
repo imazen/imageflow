@@ -102,7 +102,7 @@ fn test_fill_rect(){
 #[test]
 fn test_expand_rect(){
     let matched = compare(None, 500,
-                          "FillRectEECCFFExpand2233AAFF".to_owned(), true, true, vec![
+                          "FillRectEECCFFExpand2233AAFF".to_owned(), true, false, vec![
         s::Node::CreateCanvas {w: 200, h: 200, format: s::PixelFormat::Bgra32, color: s::Color::Transparent},
         s::Node::FillRect{x1:0, y1:0, x2:100, y2:100, color: s::Color::Srgb(s::ColorSrgb::Hex("EECCFFFF".to_owned()))},
         s::Node::ExpandCanvas{left: 10, top: 15, right: 20, bottom: 25, color: s::Color::Srgb(s::ColorSrgb::Hex("2233AAFF".to_owned()))},
@@ -113,6 +113,17 @@ fn test_expand_rect(){
 }
 
 
+#[test]
+fn test_crop(){
+    let matched = compare(None, 500,
+                          "FillRectAndCrop".to_owned(), true, true, vec![
+        s::Node::CreateCanvas {w: 200, h: 200, format: s::PixelFormat::Bgra32, color: s::Color::Srgb(s::ColorSrgb::Hex("FF5555FF".to_owned()))},
+        s::Node::FillRect{x1:0, y1:0, x2:10, y2:100, color: s::Color::Srgb(s::ColorSrgb::Hex("0000FFFF".to_owned()))},
+        s::Node::Crop{x1: 0, y1: 50, x2: 100, y2: 100}
+        ]
+    );
+    assert!(matched);
+}
 
 
 

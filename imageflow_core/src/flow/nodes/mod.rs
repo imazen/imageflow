@@ -16,13 +16,13 @@ use super::definitions::*;
 //TODO: Implement Scale1D
 //TODO: Implement Decoder + APPLY_ORIENTATION, Encoder
 //TODO: implement TRANSPOSE, APPLY_ORIENTATION
-//TODO: Implement EXPAND_CANVAS, CROP
-
 
 pub use self::codecs_and_pointer::PRIMITIVE_DECODER;
 pub use self::codecs_and_pointer::DECODER;
 pub use self::codecs_and_pointer::BITMAP_BGRA_POINTER;
 pub use self::create_canvas::CREATE_CANVAS;
+pub use self::clone_crop_fill_expand::CROP_MUTATE;
+pub use self::clone_crop_fill_expand::CROP;
 pub use self::clone_crop_fill_expand::CLONE;
 pub use self::clone_crop_fill_expand::COPY_RECT;
 pub use self::clone_crop_fill_expand::FILL_RECT;
