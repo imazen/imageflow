@@ -78,8 +78,8 @@ uint8_t * read_all_bytes(flow_c * c, size_t * buffer_size, const char * path);
 bool write_all_byte(const char * path, char * buffer, size_t size);
 void copy_file(FILE * from, FILE * to);
 
-bool create_path_from_relative(flow_c * c, const char * base_file, bool create_parent_dirs, char * filename, size_t max_filename_length,
-                               const char * format, ...);
+bool create_path_from_relative(flow_c * c, const char * base_file, bool create_parent_dirs, char * filename,
+                               size_t max_filename_length, const char * format, ...);
 
 uint64_t djb2(unsigned const char * str);
 uint64_t djb2_buffer(uint8_t * str, size_t count);

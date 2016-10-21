@@ -175,8 +175,8 @@ uint8_t * get_bytes_cached(flow_c * c, size_t * bytes_count_out, const char * ur
 
     if (flow_dir_exists_eh(&cache_folder[0])) {
         // The tests folder is still around; we can use it
-        if (!create_path_from_relative(c, storage_relative_to, false, &cache_path[0], sizeof(cache_path), "/visuals/cache/%llu%s", url_hash,
-                                       ext)) {
+        if (!create_path_from_relative(c, storage_relative_to, false, &cache_path[0], sizeof(cache_path),
+                                       "/visuals/cache/%llu%s", url_hash, ext)) {
             FLOW_add_to_callstack(c);
             return NULL;
         }
@@ -280,10 +280,10 @@ bool flow_recursive_mkdir(const char * dir, bool create_last_segment)
     return true;
 }
 
-bool create_path_from_relative(flow_c * c, const char * base_file, bool create_parent_dirs, char * filename, size_t max_filename_length,
-                               const char * format, ...)
+bool create_path_from_relative(flow_c * c, const char * base_file, bool create_parent_dirs, char * filename,
+                               size_t max_filename_length, const char * format, ...)
 {
-    if (base_file == NULL){
+    if (base_file == NULL) {
         FLOW_error(c, flow_status_Null_argument);
         return false;
     }

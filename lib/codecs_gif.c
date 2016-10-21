@@ -192,8 +192,7 @@ static bool flow_codecs_gif_decoder_initialize(flow_c * c, struct flow_codec_ins
     }
     return true;
 }
-static bool flow_codecs_gif_decode_switch_frame(flow_c * c, void * codec_state,
-                                         size_t frame_index)
+static bool flow_codecs_gif_decode_switch_frame(flow_c * c, void * codec_state, size_t frame_index)
 {
     struct flow_codecs_gif_decoder_state * state = (struct flow_codecs_gif_decoder_state *)codec_state;
     if (state->stage < flow_codecs_gif_decoder_stage_BeginRead) {
@@ -204,8 +203,7 @@ static bool flow_codecs_gif_decode_switch_frame(flow_c * c, void * codec_state,
     state->current_frame_index = frame_index;
     return true;
 }
-static bool flow_codecs_gif_get_info(flow_c * c, void * codec_state,
-                                         struct flow_decoder_info * info_ref)
+static bool flow_codecs_gif_get_info(flow_c * c, void * codec_state, struct flow_decoder_info * info_ref)
 {
     struct flow_codecs_gif_decoder_state * state = (struct flow_codecs_gif_decoder_state *)codec_state;
     if (state->stage < flow_codecs_gif_decoder_stage_BeginRead) {
@@ -227,7 +225,7 @@ static bool flow_codecs_gif_get_info(flow_c * c, void * codec_state,
 }
 
 static bool flow_codecs_gif_get_frame_info(flow_c * c, void * codec_state,
-                                               struct flow_decoder_frame_info * decoder_frame_info_ref)
+                                           struct flow_decoder_frame_info * decoder_frame_info_ref)
 {
     struct flow_codecs_gif_decoder_state * state = (struct flow_codecs_gif_decoder_state *)codec_state;
     if (state->stage < flow_codecs_gif_decoder_stage_BeginRead) {
@@ -296,8 +294,7 @@ static bool dequantize(flow_c * c, GifFileType * gif, int frame_index, struct fl
     return true;
 }
 
-static bool flow_codecs_gif_read_frame(flow_c * c, void * codec_state,
-                                           struct flow_bitmap_bgra * canvas)
+static bool flow_codecs_gif_read_frame(flow_c * c, void * codec_state, struct flow_bitmap_bgra * canvas)
 {
     struct flow_codecs_gif_decoder_state * state = (struct flow_codecs_gif_decoder_state *)codec_state;
     if (state->stage >= flow_codecs_gif_decoder_stage_BeginRead) {

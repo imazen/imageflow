@@ -864,8 +864,7 @@ static bool jpeg_apply_downscaling(flow_c * c, struct flow_codecs_jpeg_decoder_s
     }
     return true;
 }
-static bool flow_codecs_jpeg_get_info(flow_c * c, void * codec_state,
-                                          struct flow_decoder_info * info)
+static bool flow_codecs_jpeg_get_info(flow_c * c, void * codec_state, struct flow_decoder_info * info)
 {
     struct flow_codecs_jpeg_decoder_state * state = (struct flow_codecs_jpeg_decoder_state *)codec_state;
     if (state->stage < flow_codecs_jpg_decoder_stage_BeginRead) {
@@ -887,7 +886,7 @@ static bool flow_codecs_jpeg_get_info(flow_c * c, void * codec_state,
 }
 
 static bool flow_codecs_jpeg_get_frame_info(flow_c * c, void * codec_state,
-                                                struct flow_decoder_frame_info * decoder_frame_info_ref)
+                                            struct flow_decoder_frame_info * decoder_frame_info_ref)
 {
     struct flow_codecs_jpeg_decoder_state * state = (struct flow_codecs_jpeg_decoder_state *)codec_state;
     if (state->stage < flow_codecs_jpg_decoder_stage_BeginRead) {
@@ -905,8 +904,7 @@ static bool flow_codecs_jpeg_get_frame_info(flow_c * c, void * codec_state,
     return true;
 }
 
-static bool flow_codecs_jpeg_read_frame(flow_c * c, void * codec_state,
-                                            struct flow_bitmap_bgra * canvas)
+static bool flow_codecs_jpeg_read_frame(flow_c * c, void * codec_state, struct flow_bitmap_bgra * canvas)
 {
     struct flow_codecs_jpeg_decoder_state * state = (struct flow_codecs_jpeg_decoder_state *)codec_state;
     if (state->stage == flow_codecs_jpg_decoder_stage_BeginRead) {
@@ -954,8 +952,8 @@ static bool flow_codecs_initialize_encode_jpeg(flow_c * c, struct flow_codec_ins
     return true;
 }
 
-static bool flow_codecs_jpeg_write_frame(flow_c * c, void * codec_state,
-                                             struct flow_bitmap_bgra * frame, struct flow_encoder_hints * hints)
+static bool flow_codecs_jpeg_write_frame(flow_c * c, void * codec_state, struct flow_bitmap_bgra * frame,
+                                         struct flow_encoder_hints * hints)
 {
     struct flow_codecs_jpeg_encoder_state * state = (struct flow_codecs_jpeg_encoder_state *)codec_state;
     state->context = c;

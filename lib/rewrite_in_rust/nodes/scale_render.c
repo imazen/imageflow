@@ -161,11 +161,10 @@ static bool flatten_scale(flow_c * c, struct flow_graph ** g, int32_t node_id, s
     int32_t height = size->height;
     int32_t width = size->width;
 
-
     // TODO: swap out for upscale filter on a per-axis basis
     flow_interpolation_filter filter = size->downscale_filter;
 
-    if (input_node->result_width < width || input_node->result_height < height){
+    if (input_node->result_width < width || input_node->result_height < height) {
         filter = size->upscale_filter;
     }
 
@@ -182,9 +181,8 @@ static bool flatten_scale(flow_c * c, struct flow_graph ** g, int32_t node_id, s
             FLOW_error_return(c);
         }
 
-        *first_replacement_node
-            = flow_node_create_scale_2d(c, g, *first_replacement_node, width, height, (flow_working_floatspace_as_is),
-                                        size->sharpen, filter);
+        *first_replacement_node = flow_node_create_scale_2d(c, g, *first_replacement_node, width, height,
+                                                            (flow_working_floatspace_as_is), size->sharpen, filter);
         if (*first_replacement_node < 0) {
             FLOW_error_return(c);
         }

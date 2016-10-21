@@ -235,6 +235,8 @@ int64_t flow_context_stacktrace(flow_c * context, char * buffer, size_t buffer_s
     return buffer_size - remaining_space;
 }
 
+struct flow_context_node_set * flow_context_get_default_node_set(void);
+
 void flow_context_initialize(flow_c * context)
 {
     context->log.log = NULL;

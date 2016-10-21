@@ -162,10 +162,47 @@ typedef struct flow_context flow_c;
 
 PUB bool write_frame_to_disk(flow_c * c, const char * path, struct flow_bitmap_bgra * b);
 
-PUB bool flow_node_execute_render_to_canvas_1d(flow_c * c, struct flow_bitmap_bgra * input, struct flow_bitmap_bgra * canvas,
+struct flow_nodeinfo_render_to_canvas_1d;
+struct flow_nodeinfo_scale2d_render_to_canvas1d;
+
+struct flow_nodeinfo_render_to_canvas_1d {
+    // There will need to be consistency checks against the createcanvas node
+
+    flow_interpolation_filter interpolation_filter;
+    // struct flow_interpolation_details * interpolationDetails;
+    int32_t scale_to_width;
+    uint32_t canvas_x;
+    uint32_t canvas_y;
+    bool transpose_on_write;
+    flow_working_floatspace scale_in_colorspace;
+
+    float sharpen_percent_goal;
+
+    flow_compositing_mode compositing_mode;
+    // When using compositing mode blend_with_matte, this color will be used. We should probably define this as always
+    // being sRGBA, 4 bytes.
+    uint8_t matte_color[4];
+
+    struct flow_scanlines_filter * filter_list;
+};
+
+struct flow_nodeinfo_scale2d_render_to_canvas1d {
+    // There will need to be consistency checks against the createcanvas node
+
+    // struct flow_interpolation_details * interpolationDetails;
+    int32_t scale_to_width;
+    int32_t scale_to_height;
+    float sharpen_percent_goal;
+    flow_interpolation_filter interpolation_filter;
+
+    flow_working_floatspace scale_in_colorspace;
+};
+PUB bool flow_node_execute_render_to_canvas_1d(flow_c * c, struct flow_bitmap_bgra * input,
+                                               struct flow_bitmap_bgra * canvas,
                                                struct flow_nodeinfo_render_to_canvas_1d * info);
-PUB bool flow_node_execute_scale2d_render1d(flow_c * c, struct flow_bitmap_bgra * input, struct flow_bitmap_bgra * canvas,
-                                            struct flow_nodeinfo_scale2d_render_to_canvas1d * info) FLOW_HINT_HOT FLOW_HINT_UNSAFE_MATH_OPTIMIZATIONS;
+PUB bool flow_node_execute_scale2d_render1d(
+    flow_c * c, struct flow_bitmap_bgra * input, struct flow_bitmap_bgra * canvas,
+    struct flow_nodeinfo_scale2d_render_to_canvas1d * info) FLOW_HINT_HOT FLOW_HINT_UNSAFE_MATH_OPTIMIZATIONS;
 
 PUB struct flow_bitmap_float * flow_bitmap_float_create_header(flow_c * c, int sx, int sy, int channels);
 
@@ -197,7 +234,6 @@ PUB bool flow_bitmap_float_approx_gaussian_blur_rows(flow_c * c, struct flow_bit
 PUB bool flow_bitmap_float_pivoting_composite_linear_over_srgb(flow_c * c, struct flow_bitmap_float * src,
                                                                uint32_t from_row, struct flow_bitmap_bgra * dest,
                                                                uint32_t dest_row, uint32_t row_count, bool transpose);
-
 
 PUB bool flow_bitmap_bgra_flip_vertical(flow_c * c, struct flow_bitmap_bgra * b);
 
@@ -251,72 +287,11 @@ PUB void flow_scale_spatial_1x1(uint8_t input[64], uint8_t ** output_rows, uint3
 // shutdown
 // nature - memory, FILE *,
 
-struct flow_nodeinfo_index {
-    int32_t index;
-};
-
-struct flow_nodeinfo_encoder_placeholder {
-    struct flow_nodeinfo_index index; // MUST BE FIRST
-    flow_codec_type codec_type;
-};
-
-struct flow_nodeinfo_createcanvas {
-    flow_pixel_format format;
-    size_t width;
-    size_t height;
-    uint32_t bgcolor;
-};
-
-struct flow_nodeinfo_crop {
-    uint32_t x1;
-    uint32_t x2;
-    uint32_t y1;
-    uint32_t y2;
-};
-
-struct flow_nodeinfo_copy_rect_to_canvas {
-    uint32_t x;
-    uint32_t y;
-    uint32_t from_x;
-    uint32_t from_y;
-    uint32_t width;
-    uint32_t height;
-};
-struct flow_nodeinfo_expand_canvas {
-    uint32_t left;
-    uint32_t top;
-    uint32_t right;
-    uint32_t bottom;
-    uint32_t canvas_color_srgb;
-};
-struct flow_nodeinfo_fill_rect {
-    uint32_t x1;
-    uint32_t y1;
-    uint32_t x2;
-    uint32_t y2;
-    uint32_t color_srgb;
-};
-struct flow_nodeinfo_size {
-    int32_t width;
-    int32_t height;
-};
-struct flow_nodeinfo_scale {
-    int32_t width;
-    int32_t height;
-    flow_interpolation_filter downscale_filter;
-    flow_interpolation_filter upscale_filter;
-    size_t flags;
-    float sharpen;
-};
 typedef enum flow_scale_flags {
     flow_scale_flags_none = 0,
     flow_scale_flags_use_scale2d = 1,
 
 } flow_scale_flags;
-
-struct flow_nodeinfo_bitmap_bgra_pointer {
-    struct flow_bitmap_bgra ** ref;
-};
 
 struct flow_decoder_downscale_hints {
 
@@ -326,53 +301,6 @@ struct flow_decoder_downscale_hints {
     int64_t downscaled_min_height;
     bool scale_luma_spatially;
     bool gamma_correct_for_srgb_during_spatial_luma_scaling;
-};
-
-struct flow_nodeinfo_codec {
-    int32_t placeholder_id;
-    struct flow_codec_instance * codec;
-    // For encoders
-    int64_t desired_encoder_id;
-    // For decdoers
-    struct flow_decoder_downscale_hints downscale_hints;
-    struct flow_encoder_hints encoder_hints;
-};
-
-struct flow_nodeinfo_apply_orientation {
-    int32_t orientation; // Values 1-8, per the EXIF Orientation spec
-};
-
-struct flow_nodeinfo_render_to_canvas_1d {
-    // There will need to be consistency checks against the createcanvas node
-
-    flow_interpolation_filter interpolation_filter;
-    // struct flow_interpolation_details * interpolationDetails;
-    int32_t scale_to_width;
-    uint32_t canvas_x;
-    uint32_t canvas_y;
-    bool transpose_on_write;
-    flow_working_floatspace scale_in_colorspace;
-
-    float sharpen_percent_goal;
-
-    flow_compositing_mode compositing_mode;
-    // When using compositing mode blend_with_matte, this color will be used. We should probably define this as always
-    // being sRGBA, 4 bytes.
-    uint8_t matte_color[4];
-
-    struct flow_scanlines_filter * filter_list;
-};
-
-struct flow_nodeinfo_scale2d_render_to_canvas1d {
-    // There will need to be consistency checks against the createcanvas node
-
-    // struct flow_interpolation_details * interpolationDetails;
-    int32_t scale_to_width;
-    int32_t scale_to_height;
-    float sharpen_percent_goal;
-    flow_interpolation_filter interpolation_filter;
-
-    flow_working_floatspace scale_in_colorspace;
 };
 
 // If you want to know what kind of I/O structure is inside user_data, compare the read_func/write_func function
@@ -419,7 +347,8 @@ PUB uint8_t ** flow_bitmap_create_row_pointers(flow_c * c, void * buffer, size_t
                                                size_t height);
 
 PUB bool flow_codec_decoder_set_downscale_hints(flow_c * c, struct flow_codec_instance * codec,
-                                                struct flow_decoder_downscale_hints * hints, bool crash_if_not_implemented);
+                                                struct flow_decoder_downscale_hints * hints,
+                                                bool crash_if_not_implemented);
 PUB struct flow_bitmap_bgra * flow_codec_execute_read_frame(flow_c * c, struct flow_codec_instance * codec);
 
 struct flow_scanlines_filter {
@@ -434,47 +363,6 @@ struct flow_scanlines_filter {
 //    bool alpha_meaningful;
 //};
 
-struct flow_edge {
-    flow_edgetype type;
-    int32_t from;
-    int32_t to;
-    int32_t info_byte_index;
-    int32_t info_bytes;
-};
-
-struct flow_node {
-    flow_ntype type;
-    int32_t info_byte_index;
-    int32_t info_bytes;
-    flow_node_state state;
-    int32_t result_width;
-    int32_t result_height;
-    flow_pixel_format result_format;
-    bool result_alpha_meaningful;
-    struct flow_bitmap_bgra * result_bitmap;
-    uint32_t ticks_elapsed;
-};
-
-struct flow_graph {
-    uint32_t memory_layout_version; // This progresses differently from the library version, as internals are subject to
-    // refactoring. If we are given a graph to copy, we check this number.
-    struct flow_edge * edges;
-    int32_t edge_count;
-    int32_t next_edge_id;
-    int32_t max_edges;
-
-    struct flow_node * nodes;
-    int32_t node_count;
-    int32_t next_node_id;
-    int32_t max_nodes;
-
-    uint8_t * info_bytes;
-    int32_t max_info_bytes;
-    int32_t next_info_byte;
-    int32_t deleted_bytes;
-
-    float growth_factor;
-};
 struct flow_sanity_check {
     uint32_t sizeof_bool;
     uint32_t sizeof_int;

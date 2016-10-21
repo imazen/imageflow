@@ -179,8 +179,7 @@ bool flow_job_decoder_set_downscale_hints_by_placeholder_id(flow_c * c, struct f
     return true;
 }
 
-bool flow_codec_decoder_read_frame(flow_c * c, void * codec_state, int64_t type,
-                                   struct flow_bitmap_bgra * canvas)
+bool flow_codec_decoder_read_frame(flow_c * c, void * codec_state, int64_t type, struct flow_bitmap_bgra * canvas)
 {
     struct flow_codec_definition * def = flow_codec_get_definition(c, type);
     if (def == NULL) {
@@ -196,7 +195,8 @@ bool flow_codec_decoder_read_frame(flow_c * c, void * codec_state, int64_t type,
     return true;
 }
 
-static bool flow_codec_decoder_get_info(flow_c * c, void * codec_state, int64_t type, struct flow_decoder_info * decoder_info_ref)
+static bool flow_codec_decoder_get_info(flow_c * c, void * codec_state, int64_t type,
+                                        struct flow_decoder_info * decoder_info_ref)
 {
     struct flow_codec_definition * def = flow_codec_get_definition(c, type);
     if (def == NULL) {
@@ -331,7 +331,6 @@ int64_t flow_codec_select(flow_c * c, uint8_t * data, size_t data_bytes)
     return flow_codec_type_null;
 }
 
-
 struct flow_bitmap_bgra * flow_codec_execute_read_frame(flow_c * c, struct flow_codec_instance * codec)
 {
     struct flow_codec_definition * def = flow_codec_get_definition(c, codec->codec_id);
@@ -347,7 +346,8 @@ struct flow_bitmap_bgra * flow_codec_execute_read_frame(flow_c * c, struct flow_
         FLOW_error_return_null(c);
     }
 
-    struct flow_bitmap_bgra * result_bitmap = flow_bitmap_bgra_create(c, frame_info.w, frame_info.h, true, frame_info.format);
+    struct flow_bitmap_bgra * result_bitmap
+        = flow_bitmap_bgra_create(c, frame_info.w, frame_info.h, true, frame_info.format);
     if (result_bitmap == NULL) {
         FLOW_error_return_null(c);
     }

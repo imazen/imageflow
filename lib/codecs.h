@@ -29,8 +29,7 @@ bool flow_codec_initialize(flow_c * c, struct flow_codec_instance * item);
 bool flow_codec_decoder_get_frame_info(flow_c * c, void * codec_state, int64_t codec_id,
                                        struct flow_decoder_frame_info * decoder_frame_info_ref);
 
-bool flow_codec_decoder_read_frame(flow_c * c, void * codec_state, int64_t codec_id,
-                                   struct flow_bitmap_bgra * canvas);
+bool flow_codec_decoder_read_frame(flow_c * c, void * codec_state, int64_t codec_id, struct flow_bitmap_bgra * canvas);
 
 bool flow_bitmap_bgra_transform_to_srgb(flow_c * c, cmsHPROFILE current_profile, struct flow_bitmap_bgra * frame);
 

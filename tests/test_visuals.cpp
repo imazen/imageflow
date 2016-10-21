@@ -83,8 +83,7 @@ TEST_CASE("Test jpeg rotation", "")
 
             CAPTURE(&expected_checksum_name[0]);
             REQUIRE(visual_compare(c, b, &expected_checksum_name[0], store_checksums, 500, __FILE__, __func__, __LINE__,
-                                   __FILE__)
-                    == true);
+                                   __FILE__) == true);
             ERR(c);
             flow_context_destroy(c);
         }
@@ -95,9 +94,9 @@ TEST_CASE("Test spatial IDCT downscale in linear light", "")
 {
     flow_c * c = flow_context_create();
     size_t bytes_count = 0;
-    uint8_t * bytes = get_bytes_cached(c, &bytes_count,
-                                       "http://s3-us-west-2.amazonaws.com/imageflow-resources/test_inputs/roof_test_800x600.jpg",
-                                       __FILE__);
+    uint8_t * bytes = get_bytes_cached(
+        c, &bytes_count, "http://s3-us-west-2.amazonaws.com/imageflow-resources/test_inputs/roof_test_800x600.jpg",
+        __FILE__);
     REQUIRE(djb2_buffer(bytes, bytes_count) == 0x8ff8ec7a8539a2d5); // Test the checksum. I/O can be flaky
 
     struct flow_job * job = flow_job_create(c);
@@ -126,7 +125,8 @@ TEST_CASE("Test spatial IDCT downscale in linear light", "")
         ERR(c);
     }
 
-    bool match = visual_compare(c, b, "ScaleIDCTFastvsSlow", store_checksums, 100, __FILE__, __func__, __LINE__, __FILE__);
+    bool match
+        = visual_compare(c, b, "ScaleIDCTFastvsSlow", store_checksums, 100, __FILE__, __func__, __LINE__, __FILE__);
     REQUIRE(match == true);
     ERR(c);
     flow_context_destroy(c);
@@ -168,8 +168,8 @@ TEST_CASE("Test spatial IDCT downscale without gamma correction", "")
             (int)(g->nodes[decode_node].ticks_elapsed * 1000 / flow_get_profiler_ticks_per_second()));
     fflush(stdout);
 
-    bool match = visual_compare(c, b, "ScaleIDCT_approx_gamma", store_checksums, 100, __FILE__, __func__, __LINE__,
-                                __FILE__);
+    bool match
+        = visual_compare(c, b, "ScaleIDCT_approx_gamma", store_checksums, 100, __FILE__, __func__, __LINE__, __FILE__);
     REQUIRE(match == true);
     ERR(c);
     flow_context_destroy(c);
@@ -180,9 +180,9 @@ TEST_CASE("Test blurring", "")
 
     flow_c * c = flow_context_create();
     size_t bytes_count = 0;
-    uint8_t * bytes = get_bytes_cached(c, &bytes_count,
-                                       "http://s3-us-west-2.amazonaws.com/imageflow-resources/reference_image_originals/vgl_6548_0026.jpg",
-                                       __FILE__);
+    uint8_t * bytes = get_bytes_cached(
+        c, &bytes_count,
+        "http://s3-us-west-2.amazonaws.com/imageflow-resources/reference_image_originals/vgl_6548_0026.jpg", __FILE__);
 
     struct flow_job * job = flow_job_create(c);
 

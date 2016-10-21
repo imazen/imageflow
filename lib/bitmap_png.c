@@ -31,9 +31,8 @@ bool flow_bitmap_bgra_save_png(flow_c * c, struct flow_bitmap_bgra * b, const ch
     target_image.flags = 0;
     target_image.colormap_entries = 0;
 
-    if (b->w < 1 || b->h < 1 || b->w > 20000 || b->h > 20000){
-        FLOW_error_msg(c, flow_status_Image_encoding_failed, "Cannot encode image of dimensions %dx%d",
-                       b->w, b->h);
+    if (b->w < 1 || b->h < 1 || b->w > 20000 || b->h > 20000) {
+        FLOW_error_msg(c, flow_status_Image_encoding_failed, "Cannot encode image of dimensions %dx%d", b->w, b->h);
         return false;
     }
 

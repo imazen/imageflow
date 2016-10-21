@@ -72,18 +72,18 @@ int64_t flow_getline(char ** lineptr, size_t * n, FILE * stream)
 }
 
 static bool load_checksums(flow_c * c, struct named_checksum ** checksums, size_t * checksum_count,
-                          const char * storage_relative_to)
+                           const char * storage_relative_to)
 {
     static struct named_checksum * list = NULL;
     static size_t list_size = 0;
 
     if (list == NULL) {
         char filename[2048];
-        if (!create_path_from_relative(c,storage_relative_to, false, filename, 2048, "/visuals/checksums.list")) {
+        if (!create_path_from_relative(c, storage_relative_to, false, filename, 2048, "/visuals/checksums.list")) {
             FLOW_add_to_callstack(c);
             return false;
         }
-        //fprintf(stderr, "Using checkums from %s.", filename);
+        // fprintf(stderr, "Using checkums from %s.", filename);
         FILE * fp;
         char * line_a = NULL;
         size_t len_a = 0;
@@ -213,7 +213,7 @@ static bool download_by_checksum(flow_c * c, char * checksum, const char * stora
 }
 
 static bool save_bitmap_to_visuals(flow_c * c, struct flow_bitmap_bgra * bitmap, char * checksum, char * name,
-                                  const char * storage_relative_to)
+                                   const char * storage_relative_to)
 {
     char filename[2048];
     if (!create_path_from_relative(c, storage_relative_to, true, filename, 2048, "/visuals/%s.png", checksum)) {
@@ -281,7 +281,7 @@ bool load_image(flow_c * c, char * checksum, struct flow_bitmap_bgra ** ref, voi
                 const char * storage_relative_to)
 {
     char filename[2048];
-    if (!create_path_from_relative(c, storage_relative_to,  false, filename, 2048, "/visuals/%s.png", checksum)) {
+    if (!create_path_from_relative(c, storage_relative_to, false, filename, 2048, "/visuals/%s.png", checksum)) {
         FLOW_add_to_callstack(c);
         return false;
     }
@@ -300,7 +300,7 @@ bool load_image(flow_c * c, char * checksum, struct flow_bitmap_bgra ** ref, voi
     return true;
 }
 static bool diff_images(flow_c * c, char * checksum_a, char * checksum_b, double * out_dssim, bool generate_visual_diff,
-                       const char * storage_relative_to)
+                        const char * storage_relative_to)
 {
     char filename_a[2048];
     if (!create_path_from_relative(c, storage_relative_to, false, filename_a, 2048, "/visuals/%s.png", checksum_a)) {
@@ -313,7 +313,8 @@ static bool diff_images(flow_c * c, char * checksum_a, char * checksum_b, double
         return false;
     }
     char filename_c[2048];
-    if (!create_path_from_relative(c, storage_relative_to, false, filename_c, 2048, "/visuals/compare_%s_vs_%s.png", checksum_a, checksum_b)) {
+    if (!create_path_from_relative(c, storage_relative_to, false, filename_c, 2048, "/visuals/compare_%s_vs_%s.png",
+                                   checksum_a, checksum_b)) {
         FLOW_add_to_callstack(c);
         return false;
     }
@@ -344,7 +345,7 @@ static bool diff_images(flow_c * c, char * checksum_a, char * checksum_b, double
 }
 
 static bool append_html(flow_c * c, const char * name, const char * checksum_a, const char * checksum_b,
-                       const char * storage_relative_to)
+                        const char * storage_relative_to)
 {
     char filename[2048];
     if (!create_path_from_relative(c, storage_relative_to, true, filename, 2048, "/visuals/visuals.html")) {
@@ -409,7 +410,7 @@ bool visual_compare(flow_c * c, struct flow_bitmap_bgra * bitmap, const char * n
 
     char checksum[34];
 
-    if (bitmap == NULL){
+    if (bitmap == NULL) {
         FLOW_error(c, flow_status_Null_argument);
         return false;
     }
@@ -511,9 +512,9 @@ bool visual_compare(flow_c * c, struct flow_bitmap_bgra * bitmap, const char * n
     return false;
 }
 
-bool visual_compare_two(flow_c * c, struct flow_bitmap_bgra * a, struct flow_bitmap_bgra * b, const char * comparison_title,
-                        double * out_dssim, bool save_bitmaps, bool generate_visual_diff, const char * file_,
-                        const char * func_, int line_number, const char * storage_relative_to)
+bool visual_compare_two(flow_c * c, struct flow_bitmap_bgra * a, struct flow_bitmap_bgra * b,
+                        const char * comparison_title, double * out_dssim, bool save_bitmaps, bool generate_visual_diff,
+                        const char * file_, const char * func_, int line_number, const char * storage_relative_to)
 {
 
     char checksum_a[34];
@@ -548,7 +549,8 @@ bool visual_compare_two(flow_c * c, struct flow_bitmap_bgra * a, struct flow_bit
             FLOW_error_return(c);
         }
         // Diff the two, generate a third PNG. Also get PSNR metrics from imagemagick
-        if (!diff_images(c, checksum_a, checksum_b, out_dssim, generate_visual_diff && save_bitmaps, storage_relative_to)) {
+        if (!diff_images(c, checksum_a, checksum_b, out_dssim, generate_visual_diff && save_bitmaps,
+                         storage_relative_to)) {
             FLOW_error_return(c);
         }
         // Dump to HTML=

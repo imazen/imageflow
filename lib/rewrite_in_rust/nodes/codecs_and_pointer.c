@@ -125,7 +125,6 @@ static bool stringify_encode(flow_c * c, struct flow_graph * g, int32_t node_id,
 
 int32_t flow_codecs_jpg_decoder_get_exif(flow_c * c, struct flow_codec_instance * codec_instance);
 
-
 static bool flatten_decode_complex(flow_c * c, struct flow_graph ** graph_ref, int32_t node_id)
 {
     struct flow_node * node = node_id < 0 ? NULL : &(*graph_ref)->nodes[node_id];
@@ -134,39 +133,37 @@ static bool flatten_decode_complex(flow_c * c, struct flow_graph ** graph_ref, i
     FLOW_GET_INFOBYTES((*graph_ref), node_id, flow_nodeinfo_codec, info)
     int32_t exif_orientation = flow_codecs_jpg_decoder_get_exif(c, info->codec);
 
-
-    //Create isolated node chain
+    // Create isolated node chain
     int last_node_id = -1;
     int first_node_id = -1;
 
-    if (exif_orientation > 0){
+    if (exif_orientation > 0) {
         last_node_id = flow_node_create_apply_orientation(c, graph_ref, last_node_id, exif_orientation);
         if (last_node_id < 0) {
             FLOW_error_return(c);
         }
-        if (first_node_id < 0) first_node_id = last_node_id;
+        if (first_node_id < 0)
+            first_node_id = last_node_id;
     }
 
-
     if (last_node_id > -1) {
-        //Duplicate edges to end of chain
+        // Duplicate edges to end of chain
         // Clone outbound edges
         if (!flow_graph_duplicate_edges_to_another_node(c, graph_ref, node_id, last_node_id, false, true)) {
             FLOW_error_return(c);
         }
-        //Delete all original decoder edges
+        // Delete all original decoder edges
         if (!flow_edge_delete_connected_to_node(c, *graph_ref, node_id, true, true)) {
             FLOW_error_return(c);
         }
 
-        //Recreate one edge between decoder and first_node_id
+        // Recreate one edge between decoder and first_node_id
         if (!flow_edge_create(c, graph_ref, node_id, first_node_id, flow_edgetype_input)) {
             FLOW_error_return(c);
         }
     }
     return true;
 }
-
 
 static bool flatten_encode(flow_c * c, struct flow_graph ** g, int32_t node_id, struct flow_node * node,
                            struct flow_node * input_node, int32_t * first_replacement_node,

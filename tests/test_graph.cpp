@@ -359,13 +359,13 @@ TEST_CASE("read gif overlapped", "")
     flow_context * c = flow_context_create();
     REQUIRE(c != NULL);
     // Get the input gif
-    struct flow_io * input = get_io_for_cached_url(c,
-                                                   "http://s3-us-west-2.amazonaws.com/imageflow-resources/test_inputs/example-animated.gif",
-                                                   c, __FILE__); //"http://i.kinja-img.com/gawker-media/image/upload/s--dM0nT5E4--/mn3sov5id06ppjkfb1b2.gif", c);
+    struct flow_io * input = get_io_for_cached_url(
+        c, "http://s3-us-west-2.amazonaws.com/imageflow-resources/test_inputs/example-animated.gif", c,
+        __FILE__); //"http://i.kinja-img.com/gawker-media/image/upload/s--dM0nT5E4--/mn3sov5id06ppjkfb1b2.gif", c);
     ERR(c);
-    struct flow_io * input2 = get_io_for_cached_url(c,
-                                                    "http://s3-us-west-2.amazonaws.com/imageflow-resources/test_inputs/example-animated.gif",
-                                                    c, __FILE__); //"http://i.kinja-img.com/gawker-media/image/upload/s--dM0nT5E4--/mn3sov5id06ppjkfb1b2.gif", c);
+    struct flow_io * input2 = get_io_for_cached_url(
+        c, "http://s3-us-west-2.amazonaws.com/imageflow-resources/test_inputs/example-animated.gif", c,
+        __FILE__); //"http://i.kinja-img.com/gawker-media/image/upload/s--dM0nT5E4--/mn3sov5id06ppjkfb1b2.gif", c);
     ERR(c);
     // Create the job and add the input
     struct flow_job * job = flow_job_create(c);
@@ -391,9 +391,9 @@ TEST_CASE("export frames of animated gif", "")
     flow_context * c = flow_context_create();
     REQUIRE(c != NULL);
     // Get the input gif
-    struct flow_io * input = get_io_for_cached_url(c,
-                                                   "http://s3-us-west-2.amazonaws.com/imageflow-resources/test_inputs/example-animated.gif",
-                                                   c, __FILE__); //"http://i.kinja-img.com/gawker-media/image/upload/s--dM0nT5E4--/mn3sov5id06ppjkfb1b2.gif", c);
+    struct flow_io * input = get_io_for_cached_url(
+        c, "http://s3-us-west-2.amazonaws.com/imageflow-resources/test_inputs/example-animated.gif", c,
+        __FILE__); //"http://i.kinja-img.com/gawker-media/image/upload/s--dM0nT5E4--/mn3sov5id06ppjkfb1b2.gif", c);
     ERR(c);
     // Create the job and add the input
     struct flow_job * job = flow_job_create(c);
