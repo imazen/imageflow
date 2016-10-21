@@ -129,7 +129,7 @@ impl<'c> OpCtxMut<'c> {
                                   -> bool {
         self.graph
             .graph()
-            .neighbors_directed(of_node, EdgeDirection::Incoming)
+            .neighbors_directed(of_node, EdgeDirection::Outgoing)
             .any(|n| n != except_child)
     }
 
