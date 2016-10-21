@@ -170,7 +170,7 @@ impl Color {
                 match srgb {
                     ColorSrgb::Hex(hex_srgb) => {
                         u32::from_str_radix(hex_srgb.as_str(), 16).and_then(|value|
-                            if value.leading_zeros() >= 8 {
+                            if hex_srgb.len() <= 6 {
                                 Ok(value.checked_shl(8).unwrap() | 0xFF)
                             }else{
                                 Ok(value)
@@ -197,6 +197,9 @@ fn test_bgra(){
 
     assert_eq!(Color::Srgb(ColorSrgb::Hex("FFAAEEDD".to_owned())).to_u32_bgra().unwrap(), 0xEEAAFFDD);
     assert_eq!(Color::Srgb(ColorSrgb::Hex("FFAAEE".to_owned())).to_u32_bgra().unwrap(), 0xEEAAFFFF);
+    assert_eq!(Color::Srgb(ColorSrgb::Hex("000000FF".to_owned())).to_u32_bgra().unwrap(), 0x000000FF);
+
+
 }
 
 
