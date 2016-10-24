@@ -28,6 +28,8 @@ pub use self::clone_crop_fill_expand::COPY_RECT;
 pub use self::clone_crop_fill_expand::FILL_RECT;
 pub use self::clone_crop_fill_expand::EXPAND_CANVAS;
 pub use self::scale_render::SCALE;
+pub use self::scale_render::SCALE_1D_TO_CANVAS_1D;
+pub use self::scale_render::SCALE_1D;
 pub use self::rotate_flip_transpose::FLIP_V;
 pub use self::rotate_flip_transpose::FLIP_V_PRIMITIVE;
 pub use self::rotate_flip_transpose::FLIP_H;

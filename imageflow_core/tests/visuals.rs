@@ -173,40 +173,40 @@ fn test_scale_rings(){
 //}
 
 
-//
-//#[test]
-//fn test_scale_image() {
-//    let matched = compare(Some(s::IoEnum::Url("http://s3-us-west-2.amazonaws.com/imageflow-resources/test_inputs/waterhouse.jpg".to_owned())), 500,
-//                          "ScaleTheHouse".to_owned(), false, false, vec![
-//s::Node::Decode {io_id: 0},
-//s::Node::Scale{ w: 400, h: 300, down_filter: Some(s::Filter::Robidoux), up_filter: Some(s::Filter::Robidoux), sharpen_percent: Some(0f32), flags: Some(0) }
-//]
-//    );
-//    assert!(matched);
-//}
-//
-//
-//
-//#[test]
-//fn test_jpeg_icc2_color_profile() {
-//    let matched = compare(Some(s::IoEnum::Url("http://s3-us-west-2.amazonaws.com/imageflow-resources/test_inputs/MarsRGB_tagged.jpg".to_owned())), 500,
-//                          "MarsRGB_ICC_Scaled400300".to_owned(), false, false, vec![
-//s::Node::Decode {io_id: 0},
-//s::Node::Scale{ w: 400, h: 300, down_filter: Some(s::Filter::Robidoux), up_filter: Some(s::Filter::Robidoux), sharpen_percent: Some(0f32), flags: Some(0) }
-//]
-//    );
-//    assert!(matched);
-//}
-//
-//#[test]
-//fn test_jpeg_icc4_color_profile() {
-//    let matched = compare(Some(s::IoEnum::Url("http://s3-us-west-2.amazonaws.com/imageflow-resources/test_inputs/MarsRGB_v4_sYCC_8bit.jpg".to_owned())), 500,
-//                          "MarsRGB_ICCv4_Scaled400300_INCORRECT_TOO_PINK".to_owned(), false, false, vec![
-//s::Node::Decode {io_id: 0},
-//s::Node::Scale{ w: 400, h: 300, down_filter: Some(s::Filter::Robidoux), up_filter: Some(s::Filter::Robidoux), sharpen_percent: Some(0f32), flags: Some(0) }
-//]
-//    );
-//    assert!(matched);
-//}
-//
-//
+
+#[test]
+fn test_scale_image() {
+    let matched = compare(Some(s::IoEnum::Url("http://s3-us-west-2.amazonaws.com/imageflow-resources/test_inputs/waterhouse.jpg".to_owned())), 500,
+                          "ScaleTheHouse".to_owned(), false, false, vec![
+        s::Node::Decode {io_id: 0},
+        s::Node::Scale{ w: 400, h: 300, down_filter: Some(s::Filter::Robidoux), up_filter: Some(s::Filter::Robidoux), sharpen_percent: Some(0f32), flags: Some(0) }
+        ]
+    );
+    assert!(matched);
+}
+
+
+
+#[test]
+fn test_jpeg_icc2_color_profile() {
+    let matched = compare(Some(s::IoEnum::Url("http://s3-us-west-2.amazonaws.com/imageflow-resources/test_inputs/MarsRGB_tagged.jpg".to_owned())), 500,
+                          "MarsRGB_ICC_Scaled400300".to_owned(), false, false, vec![
+s::Node::Decode {io_id: 0},
+s::Node::Scale{ w: 400, h: 300, down_filter: Some(s::Filter::Robidoux), up_filter: Some(s::Filter::Robidoux), sharpen_percent: Some(0f32), flags: Some(0) }
+]
+    );
+    assert!(matched);
+}
+
+#[test]
+fn test_jpeg_icc4_color_profile() {
+    let matched = compare(Some(s::IoEnum::Url("http://s3-us-west-2.amazonaws.com/imageflow-resources/test_inputs/MarsRGB_v4_sYCC_8bit.jpg".to_owned())), 500,
+                          "MarsRGB_ICCv4_Scaled400300_INCORRECT_TOO_PINK".to_owned(), false, false, vec![
+s::Node::Decode {io_id: 0},
+s::Node::Scale{ w: 400, h: 300, down_filter: Some(s::Filter::Robidoux), up_filter: Some(s::Filter::Robidoux), sharpen_percent: Some(0f32), flags: Some(0) }
+]
+    );
+    assert!(matched);
+}
+
+

@@ -280,6 +280,11 @@ pub enum Node {
         sharpen_percent: Option<f32>,
         flags: Option<usize>,
     },
+    Render1D {
+        scale_to_width: usize,
+        transpose_on_write: bool,
+        interpolation_filter: Option<Filter>
+    },
     //TODO: Block use except from FFI/unit test use
     #[serde(rename="flowBitmapBgraPtr")]
     FlowBitmapBgraPtr{

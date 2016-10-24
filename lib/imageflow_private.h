@@ -171,9 +171,12 @@ struct flow_nodeinfo_render_to_canvas_1d {
     flow_interpolation_filter interpolation_filter;
     // struct flow_interpolation_details * interpolationDetails;
     int32_t scale_to_width;
+
+    bool transpose_on_write;
+
+    //Dont' use the rest
     uint32_t canvas_x;
     uint32_t canvas_y;
-    bool transpose_on_write;
     flow_working_floatspace scale_in_colorspace;
 
     float sharpen_percent_goal;

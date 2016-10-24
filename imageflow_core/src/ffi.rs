@@ -803,6 +803,37 @@ pub struct Scale2dRenderToCanvas1d {
     pub interpolation_filter: Filter,
     pub scale_in_colorspace: Floatspace,
 }
+#[repr(C)]
+#[derive(Clone,Debug,Copy)]
+pub struct RenderToCanvas1d {
+    // There will need to be consistency checks against the createcanvas node
+
+    pub interpolation_filter: Filter,
+    pub scale_to_width: i32,
+    pub transpose_on_write: bool,
+    //Other fields skipped, not acessed.
+}
+
+//
+//struct flow_nodeinfo_render_to_canvas_1d {
+//    // There will need to be consistency checks against the createcanvas node
+//
+//    flow_interpolation_filter interpolation_filter;
+//    // struct flow_interpolation_details * interpolationDetails;
+//    int32_t scale_to_width;
+//    bool transpose_on_write;
+//    flow_working_floatspace scale_in_colorspace;
+//
+//    float sharpen_percent_goal;
+//
+//    flow_compositing_mode compositing_mode;
+//    // When using compositing mode blend_with_matte, this color will be used. We should probably define this as always
+//    // being sRGBA, 4 bytes.
+//    uint8_t matte_color[4];
+//
+//    struct flow_scanlines_filter * filter_list;
+//};
+
 
 //TODO: mark these as unsafe
 extern "C" {
@@ -960,6 +991,7 @@ extern "C" {
 
 
     pub fn flow_node_execute_scale2d_render1d(c: *mut Context, input: *mut BitmapBgra, canvas: *mut BitmapBgra, info: *const Scale2dRenderToCanvas1d) -> bool;
+    pub fn flow_node_execute_render_to_canvas_1d(c: *mut Context, input: *mut BitmapBgra, canvas: *mut BitmapBgra, info: *const RenderToCanvas1d) -> bool;
 
     pub fn flow_bitmap_bgra_fill_rect(c: *mut Context, input: *mut BitmapBgra, x1: u32, y1: u32, x2: u32, y2: u32, color_srgb_argb: u32) -> bool;
 
