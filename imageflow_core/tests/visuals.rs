@@ -139,9 +139,20 @@ fn test_scale_rings(){
     assert!(matched);
 }
 
+#[test]
+fn test_fill_rect_original(){
+    //let white = s::Color::Srgb(s::ColorSrgb::Hex("FFFFFFFF".to_owned()));
+    let blue = s::Color::Srgb(s::ColorSrgb::Hex("0000FFFF".to_owned()));
+    let matched = compare(None, 1,
+                          "FillRect".to_owned(), false, false, vec![
+        s::Node::CreateCanvas {w: 400, h: 300, format: s::PixelFormat::Bgra32, color: s::Color::Transparent},
+        s::Node::FillRect{x1:0, y1:0, x2:50, y2:100, color: blue},
+        ]
+    );
+    assert!(matched);
+}
 
-
-
+//
 //// Replaces TEST_CASE("Test fill_rect", "")
 //#[test]
 //fn test_fill_rect(){
