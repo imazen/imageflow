@@ -152,39 +152,6 @@ fn test_fill_rect_original(){
     assert!(matched);
 }
 
-//
-//// Replaces TEST_CASE("Test fill_rect", "")
-//#[test]
-//fn test_fill_rect(){
-//    let matched = compare(s::IoEnum::Url("http://s3-us-west-2.amazonaws.com/imageflow-resources/test_inputs/rings2.png".to_owned()), 500,
-//                          "RingsDownscaling".to_owned(), false, false, vec![
-//        s::Node::CreateCanvas{}
-//        s::Node::Scale{ w: 400, h: 400, down_filter: Some(s::Filter::Hermite), up_filter: Some(s::Filter::Hermite), sharpen_percent: Some(0f32), flags: Some(1) }
-//        ]
-//    );
-//    assert!(matched);
-//}
-
-
-//TEST_CASE("Test fill_rect", "")
-//{
-//flow_c * c = flow_context_create();
-//struct flow_graph * g = flow_graph_create(c, 10, 10, 200, 2.0);
-//ERR(c);
-//struct flow_bitmap_bgra * b;
-//int32_t last;
-//
-//last = flow_node_create_canvas(c, &g, -1, flow_bgra32, 400, 300, 0xFFFFFFFF);
-//last = flow_node_create_fill_rect(c, &g, last, 0, 0, 50, 100, 0xFF0000FF);
-//last = flow_node_create_bitmap_bgra_reference(c, &g, last, &b);
-//struct flow_job * job = flow_job_create(c);
-//ERR(c);
-//if (!flow_job_execute(c, job, &g)) {
-//ERR(c);
-//}
-
-
-
 #[test]
 fn test_scale_image() {
     let matched = compare(Some(s::IoEnum::Url("http://s3-us-west-2.amazonaws.com/imageflow-resources/test_inputs/waterhouse.jpg".to_owned())), 500,
@@ -218,6 +185,22 @@ s::Node::Scale{ w: 400, h: 300, down_filter: Some(s::Filter::Robidoux), up_filte
 ]
     );
     assert!(matched);
+}
+
+
+#[test]
+fn test_jpeg_rotation() {
+    let orientations = vec!["Landscape", "Portrait"];
+
+    for orientation in orientations {
+        for flag in 1..9 {
+            let url = format!("http://s3-us-west-2.amazonaws.com/imageflow-resources/test_inputs/orientation/{}_{}.jpg", orientation, flag);
+            let title = format!("Test_Apply_Orientation_{}_{}.jpg", orientation, flag);
+            let matched = compare(Some(s::IoEnum::Url(url)), 500, title, false, true, vec![s::Node::Decode {io_id: 0}]);
+            assert!(matched);
+        }
+    }
+
 }
 
 

@@ -8,6 +8,84 @@ use petgraph;
 use super::*;
 use super::NodeDefHelpers;
 
+
+fn apply_orientation_def() -> NodeDefinition {
+    NodeDefinition {
+        id: NodeType::Apply_Orientation,
+        name: "Apply orientation",
+        fn_estimate: Some({
+            fn f(ctx: &mut OpCtxMut, ix: NodeIndex<u32>) {
+                NodeDefHelpers::copy_frame_est_from_first_input(ctx, ix);
+                let ref mut weight = ctx.weight_mut(ix);
+                match weight.params {
+                    NodeParams::Json(s::Node::ApplyOrientation { ref flag }) => {
+                        let swap = *flag >= 5 && *flag <= 8;
+                        if let FrameEstimate::Some(frame_info) = weight.frame_est {
+                            weight.frame_est = FrameEstimate::Some(FrameInfo {
+                                w: match swap {
+                                    true => frame_info.h,
+                                    _ => frame_info.w
+                                },
+                                h: match swap {
+                                    true => frame_info.w,
+                                    _ => frame_info.h
+                                },
+                                ..frame_info
+                            });
+                        }
+                    },
+                    _ => { panic!("Node params missing"); }
+                }
+            }
+            f
+        }),
+        fn_flatten_pre_optimize: Some({
+            fn f(ctx: &mut OpCtxMut, ix: NodeIndex<u32>) {
+                if let NodeParams::Json(s::Node::ApplyOrientation { flag }) = ctx.weight(ix).params {
+                    let replacement_nodes: Vec<&NodeDefinition> = match flag {
+                        7 => vec![&ROTATE_180, &TRANSPOSE],
+                        8 => vec![&ROTATE_90],
+                        6 => vec![&ROTATE_270],
+                        5 => vec![&TRANSPOSE],
+                        4 => vec![&FLIP_V],
+                        3 => vec![&ROTATE_180],
+                        2 => vec![&FLIP_H],
+                        _ => vec![]
+                    };
+                    ctx.replace_node(ix, replacement_nodes.iter().map(|v| Node::new(v, NodeParams::None)).collect());
+                } else {
+                    panic!("");
+                }
+            }
+            f
+        }),
+        ..Default::default()
+    }
+}
+fn transpose_def() -> NodeDefinition {
+    NodeDefinition {
+        id: NodeType::Transpose,
+        name: "Transpose",
+        fn_estimate: Some(NodeDefHelpers::rotate_frame_info),
+        fn_flatten_pre_optimize: Some({
+            fn f(ctx: &mut OpCtxMut, ix: NodeIndex<u32>){
+                if let FrameEstimate::Some(FrameInfo{h, ..}) = ctx.weight(ix).frame_est {
+                    //TODO: Shouldn't the filter be triangle, or (better) not be a filter at all?
+                    let scale_params = s::Node::Render1D{ scale_to_width: h as usize, interpolation_filter: Some(s::Filter::Robidoux), transpose_on_write: true };
+                    ctx.replace_node(ix, vec![
+                        Node::new(&SCALE_1D, NodeParams::Json(scale_params)),
+                    ]);
+                }else{
+                    panic!("");
+                }
+            }
+            f
+        }),
+        .. Default::default()
+    }
+}
+
+
 lazy_static! {
     pub static ref NO_OP: NodeDefinition = NodeDefinition {
         id: NodeType::Noop,
@@ -145,38 +223,7 @@ lazy_static! {
         }),
         .. Default::default()
     };
-    pub static ref APPLY_ORIENTATION: NodeDefinition = NodeDefinition {
-        id: NodeType::Apply_Orientation,
-        name: "Apply orientation",
-        //TODO: Implement
-        fn_estimate: Some(NodeDefHelpers::copy_frame_est_from_first_input),
-        fn_flatten_pre_optimize: Some(NodeDefHelpers::delete_node_and_snap_together),
-        .. Default::default()
-    };
+    pub static ref APPLY_ORIENTATION: NodeDefinition = apply_orientation_def();
 
-    pub static ref TRANSPOSE: NodeDefinition = NodeDefinition {
-        id: NodeType::Transpose,
-        name: "Transpose",
-        fn_estimate: Some(NodeDefHelpers::rotate_frame_info),
-
-        //TODO: Implement
-        fn_flatten_pre_optimize: Some({
-            fn f(ctx: &mut OpCtxMut, ix: NodeIndex<u32>){
-
-            }
-            f
-        }),
-        .. Default::default()
-    };
-
-    //TODO: Render1D
-    //RENDER2d
-    //BitmapBgra
-    //Encoder
-    //Decoder
-    //Crop
-    //Fill
-    //Expand
-
-
+    pub static ref TRANSPOSE: NodeDefinition = transpose_def();
 }

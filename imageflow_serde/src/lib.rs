@@ -268,6 +268,10 @@ pub enum Node {
     Rotate180,
     #[serde(rename="rotate270")]
     Rotate270,
+    #[serde(rename="applyOrientation")]
+    ApplyOrientation {
+        flag: i32,
+    },
     #[serde(rename="scale")]
     Scale {
         w: usize,

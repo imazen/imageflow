@@ -13,9 +13,8 @@ mod codecs_and_pointer;
 extern crate imageflow_serde as s;
 use super::definitions::*;
 
-//TODO: Implement Scale1D
 //TODO: Implement Decoder + APPLY_ORIENTATION, Encoder
-//TODO: implement TRANSPOSE, APPLY_ORIENTATION
+
 
 pub use self::codecs_and_pointer::PRIMITIVE_DECODER;
 pub use self::codecs_and_pointer::DECODER;
@@ -224,6 +223,16 @@ impl<'c> OpCtxMut<'c> {
             };
         }
     }
+    pub fn delete_child_edges_for<'a>(&'a mut self,
+                             from_node: NodeIndex<u32>) {
+        loop {
+            match self.graph.raw_edges().iter().position(|e| e.source() == from_node).and_then(|ix| self.graph.remove_edge(EdgeIndex::new(ix))){
+                None => { break;}
+                _ => {}
+            }
+        }
+    }
+
     pub fn delete_node_and_snap_together<'a>(&'a mut self, node_to_delete: NodeIndex<u32>) {
         // Prefer EdgeKind=Input
         let input = self.graph

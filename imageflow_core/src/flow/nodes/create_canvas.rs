@@ -30,7 +30,6 @@ fn create_canvas_def() -> NodeDefinition{
                 let c = ctx.c;
                 let ref mut weight = ctx.weight_mut(ix);
                 match  weight.params{
-                    // TODO: support color
                     NodeParams::Json(s::Node::CreateCanvas{ ref format, ref  w, ref h, ref color}) => unsafe {
                         //TODO: handle creation failure. Most likely OOM in entire codebase
                         let ptr = ::ffi::flow_bitmap_bgra_create(c, *w as i32, *h as i32, true, ffi::PixelFormat::from(format));

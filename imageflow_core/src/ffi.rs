@@ -870,6 +870,7 @@ extern "C" {
                                          -> bool;
 
 
+    pub fn flow_codecs_jpg_decoder_get_exif(context: *mut Context, codec_instance: *mut CodecInstance) -> i32;
 
     pub fn flow_context_calloc(context: *mut Context,
                                instance_count: usize,

@@ -6,6 +6,7 @@ use ffi::{Context, Job, NodeType, EdgeKind, BitmapBgra};
 use flow::definitions::*;
 use flow::graph::Graph;
 use petgraph;
+use petgraph::{EdgeDirection};
 use super::*;
 use super::NodeDefHelpers;
 
@@ -123,9 +124,18 @@ fn decoder_def() -> NodeDefinition{
         fn_link_state_to_this_io_id: Some(decoder_io_id),
         fn_flatten_pre_optimize: {
             fn f(ctx: &mut OpCtxMut, ix: NodeIndex<u32>) {
-                ctx.weight_mut(ix).def = &PRIMITIVE_DECODER; //Better if a reference, right?
-                //TODO
-                //Add apply_orientation
+
+                //Mutate instead of replace (custom_state is populated)
+                ctx.weight_mut(ix).def = &PRIMITIVE_DECODER;
+
+
+                let exif_flag = unsafe {ffi::flow_codecs_jpg_decoder_get_exif(ctx.c, ctx.weight(ix).custom_state as *mut ffi::CodecInstance) };
+                if exif_flag > 0 {
+                    let  new_node = ctx.graph.add_node(Node::new(&APPLY_ORIENTATION, NodeParams::Json(s::Node::ApplyOrientation { flag: exif_flag })));
+                    ctx.copy_edges_to(ix, new_node, EdgeDirection::Outgoing);
+                    ctx.delete_child_edges_for(ix);
+                    ctx.graph.add_edge(ix, new_node, EdgeKind::Input).unwrap();
+                }
             }
             Some(f)
         },
