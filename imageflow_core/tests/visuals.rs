@@ -196,7 +196,7 @@ fn test_jpeg_rotation() {
         for flag in 1..9 {
             let url = format!("http://s3-us-west-2.amazonaws.com/imageflow-resources/test_inputs/orientation/{}_{}.jpg", orientation, flag);
             let title = format!("Test_Apply_Orientation_{}_{}.jpg", orientation, flag);
-            let matched = compare(Some(s::IoEnum::Url(url)), 500, title, false, true, vec![s::Node::Decode {io_id: 0}]);
+            let matched = compare(Some(s::IoEnum::Url(url)), 500, title, false, false, vec![s::Node::Decode {io_id: 0}]);
             assert!(matched);
         }
     }

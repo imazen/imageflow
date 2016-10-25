@@ -24,24 +24,27 @@ fn apply_orientation_def() -> NodeDefinition {
                             weight.frame_est = FrameEstimate::Some(FrameInfo {
                                 w: match swap {
                                     true => frame_info.h,
-                                    _ => frame_info.w
+                                    _ => frame_info.w,
                                 },
                                 h: match swap {
                                     true => frame_info.w,
-                                    _ => frame_info.h
+                                    _ => frame_info.h,
                                 },
                                 ..frame_info
                             });
                         }
-                    },
-                    _ => { panic!("Node params missing"); }
+                    }
+                    _ => {
+                        panic!("Node params missing");
+                    }
                 }
             }
             f
         }),
         fn_flatten_pre_optimize: Some({
             fn f(ctx: &mut OpCtxMut, ix: NodeIndex<u32>) {
-                if let NodeParams::Json(s::Node::ApplyOrientation { flag }) = ctx.weight(ix).params {
+                if let NodeParams::Json(s::Node::ApplyOrientation { flag }) = ctx.weight(ix)
+                    .params {
                     let replacement_nodes: Vec<&NodeDefinition> = match flag {
                         7 => vec![&ROTATE_180, &TRANSPOSE],
                         8 => vec![&ROTATE_90],
@@ -50,9 +53,12 @@ fn apply_orientation_def() -> NodeDefinition {
                         4 => vec![&FLIP_V],
                         3 => vec![&ROTATE_180],
                         2 => vec![&FLIP_H],
-                        _ => vec![]
+                        _ => vec![],
                     };
-                    ctx.replace_node(ix, replacement_nodes.iter().map(|v| Node::new(v, NodeParams::None)).collect());
+                    ctx.replace_node(ix,
+                                     replacement_nodes.iter()
+                                         .map(|v| Node::new(v, NodeParams::None))
+                                         .collect());
                 } else {
                     panic!("");
                 }
@@ -68,20 +74,25 @@ fn transpose_def() -> NodeDefinition {
         name: "Transpose",
         fn_estimate: Some(NodeDefHelpers::rotate_frame_info),
         fn_flatten_pre_optimize: Some({
-            fn f(ctx: &mut OpCtxMut, ix: NodeIndex<u32>){
-                if let FrameEstimate::Some(FrameInfo{h, ..}) = ctx.weight(ix).frame_est {
-                    //TODO: Shouldn't the filter be triangle, or (better) not be a filter at all?
-                    let scale_params = s::Node::Render1D{ scale_to_width: h as usize, interpolation_filter: Some(s::Filter::Robidoux), transpose_on_write: true };
-                    ctx.replace_node(ix, vec![
+            fn f(ctx: &mut OpCtxMut, ix: NodeIndex<u32>) {
+                if let FrameEstimate::Some(FrameInfo { h, .. }) = ctx.weight(ix).frame_est {
+                    // TODO: Shouldn't the filter be triangle, or (better) not be a filter at all?
+                    let scale_params = s::Node::Render1D {
+                        scale_to_width: h as usize,
+                        interpolation_filter: Some(s::Filter::Robidoux),
+                        transpose_on_write: true,
+                    };
+                    ctx.replace_node(ix,
+                                     vec![
                         Node::new(&SCALE_1D, NodeParams::Json(scale_params)),
                     ]);
-                }else{
+                } else {
                     panic!("");
                 }
             }
             f
         }),
-        .. Default::default()
+        ..Default::default()
     }
 }
 

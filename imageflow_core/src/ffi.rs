@@ -6,13 +6,13 @@
 //! These aren't to be exposed, but rather to connect to C internals
 extern crate imageflow_serde as s;
 extern crate libc;
+
+use flow;
+use libc::{c_void, c_float, int32_t, int64_t, size_t, uint32_t};
 use std::ascii::AsciiExt;
 use std::ptr;
 
 use std::str::FromStr;
-use libc::{c_void,c_float,int32_t,int64_t,size_t,uint32_t};
-
-use flow;
 
 pub enum JobIO {}
 
@@ -52,7 +52,7 @@ pub enum NodeType {
     Rotate_90,
     Rotate_180,
     Rotate_270,
-    Scale, //(preserve colorspace), interpolation filter
+    Scale, // (preserve colorspace), interpolation filter
     Noop,
 
     // Not implemented below here:
@@ -60,7 +60,7 @@ pub enum NodeType {
     Crop_Percentage,
     Crop_Percentage_Infinite_Canvas, // canvas_color
     Crop_Rectangle,
-    Constrain, //(mode=pad|max|crop|stretch) (width, height) (scale=down|up|both|canvas) (anchor=9 points)
+    Constrain, /* (mode=pad|max|crop|stretch) (width, height) (scale=down|up|both|canvas) (anchor=9 points) */
     Matte,
     EnlargeCanvas,
     Sharpen,
@@ -96,14 +96,14 @@ pub struct Job {
     pub next_stable_node_id: int32_t,
     pub next_graph_version: int32_t,
     pub max_calc_flatten_execute_passes: int32_t,
-    //FIXME: find a safer way to store them
-    pub codecs_head:           *mut CodecInstance,
-    pub codecs_tail:           *mut CodecInstance,
+    // FIXME: find a safer way to store them
+    pub codecs_head: *mut CodecInstance,
+    pub codecs_tail: *mut CodecInstance,
     pub record_graph_versions: bool,
-    pub record_frame_images:   bool,
+    pub record_frame_images: bool,
     pub render_graph_versions: bool,
     pub render_animated_graph: bool,
-    pub render_last_graph:     bool,
+    pub render_last_graph: bool,
 }
 
 #[repr(C)]
@@ -126,21 +126,20 @@ pub enum IoDirection {
 #[repr(C)]
 #[derive(Copy,Clone,Debug,PartialEq)]
 pub enum EdgeKind {
-    //None = 0, In the managed version, we don't need None edges
+    // None = 0, In the managed version, we don't need None edges
     Input = 1,
     Canvas = 2,
     Info = 3,
 }
 
-/*
-#[repr(C)]
-#[derive(Copy,Clone, Debug)]
-pub enum PixelFormat {
-    bgr24 = 3,
-    bgra32 = 4,
-    gray8 = 1,
-}
-*/
+// #[repr(C)]
+// #[derive(Copy,Clone, Debug)]
+// pub enum PixelFormat {
+// bgr24 = 3,
+// bgra32 = 4,
+// gray8 = 1,
+// }
+//
 
 #[repr(C)]
 #[derive(Copy,Clone, Debug)]
@@ -150,20 +149,18 @@ pub enum Floatspace {
     gamma = 2,
 }
 
-/*
-#[repr(C)]
-#[derive(Copy,Clone, Debug)]
-pub enum BitmapCompositingMode {
-    replace_with_self = 0,
-    blend_with_self = 1,
-    blend_with_matte = 2,
-}
-*/
-
+// #[repr(C)]
+// #[derive(Copy,Clone, Debug)]
+// pub enum BitmapCompositingMode {
+// replace_with_self = 0,
+// blend_with_self = 1,
+// blend_with_matte = 2,
+// }
 //
-//#[repr(C)]
-//#[derive(Copy,Clone,Debug, PartialEq)]
-//pub enum Filter {
+
+// #[repr(C)]
+// #[derive(Copy,Clone,Debug, PartialEq)]
+// pub enum Filter {
 //    RobidouxFast = 1,
 //    Robidoux = 2,
 //    RobidouxSharp = 3,
@@ -197,35 +194,35 @@ pub enum BitmapCompositingMode {
 //    MitchellFast = 28,
 //    NCubic = 29,
 //    NCubicSharp = 30,
-//}
+// }
 
-pub use self::s::Filter as Filter;
+pub use self::s::Filter;
 
 #[repr(C)]
 #[derive(Copy,Clone,Debug, PartialEq)]
 pub enum FlowStatusCode {
-    NoError                    = 0,
-    OutOfMemory                = 10,
-    IOError                    = 20,
-    InvalidInternalState       = 30,
-    NotImplemented             = 40,
-    InvalidArgument            = 50,
-    NullArgument               = 51,
-    InvalidDimensions          = 52,
-    UnsupportedPixelFormat     = 53,
-    ItemDoesNotExist           = 54,
+    NoError = 0,
+    OutOfMemory = 10,
+    IOError = 20,
+    InvalidInternalState = 30,
+    NotImplemented = 40,
+    InvalidArgument = 50,
+    NullArgument = 51,
+    InvalidDimensions = 52,
+    UnsupportedPixelFormat = 53,
+    ItemDoesNotExist = 54,
 
-    ImageDecodingFailed        = 60,
-    ImageEncodingFailed        = 61,
-    GraphInvalid               = 70,
-    GraphIsCyclic              = 71,
-    InvalidInputsToNode        = 72,
+    ImageDecodingFailed = 60,
+    ImageEncodingFailed = 61,
+    GraphInvalid = 70,
+    GraphIsCyclic = 71,
+    InvalidInputsToNode = 72,
     MaximumGraphPassesExceeded = 73,
-    OtherError                 = 1024,
-    //FIXME: FirstUserDefinedError is 1025 in C but it conflicts with __LastLibraryError
-    //___LastLibraryError,
-    FirstUserDefinedError      = 1025,
-    LastUserDefinedError       = 2147483647,
+    OtherError = 1024,
+    // FIXME: FirstUserDefinedError is 1025 in C but it conflicts with __LastLibraryError
+    // ___LastLibraryError,
+    FirstUserDefinedError = 1025,
+    LastUserDefinedError = 2147483647,
 }
 
 
@@ -318,8 +315,8 @@ pub struct BitmapBgra {
     pub h: u32,
     /// byte length of each row (may include any amount of padding)
     pub stride: u32,
-    //FIXME: replace with a vec or slice
-    ///pointer to pixel 0,0; should be of length > h * stride
+    // FIXME: replace with a vec or slice
+    /// pointer to pixel 0,0; should be of length > h * stride
     pub pixels: *mut u8,
     /// If true, we don't dispose of *pixels when we dispose the struct
     pub borrowed_pixels: bool,
@@ -327,66 +324,66 @@ pub struct BitmapBgra {
     pub alpha_meaningful: bool,
     /// If false, we can edit pixels without affecting the stride
     pub pixels_readonly: bool,
-    ///If false, we can change the stride of the image
+    /// If false, we can change the stride of the image
     pub stride_readonly: bool,
     /// If true, we can reuse the allocated memory for other purposes
     pub can_reuse_space: bool,
     pub fmt: PixelFormat,
-    ///When using compositing mode blend_with_matte, this color will be used. We should probably define this as
-    ///always being sRGBA, 4 bytes.
-    pub matte_color: [u8;4],
+    /// When using compositing mode blend_with_matte, this color will be used. We should probably define this as
+    /// always being sRGBA, 4 bytes.
+    pub matte_color: [u8; 4],
 
     pub compositing_mode: BitmapCompositingMode,
 }
-/*imageflow_core::ffi::FlowBitmapBgra{
-        alpha_meaningful: false,
-        can_reuse_space: false,
-        compositing_mode: ffi::BitmapCompositingMode::blend_with_self,
-        matte_color: [0,0,0,0],
-        pixels_readonly: false,
-        stride_readonly: false,
-        pixels: ptr::null_mut(),
-        stride: 0,
-        w: 0,
-        h: 0,
-        borrowed_pixels: false,
-        fmt: ffi::PixelFormat::bgra32
-    };*/
+// imageflow_core::ffi::FlowBitmapBgra{
+// alpha_meaningful: false,
+// can_reuse_space: false,
+// compositing_mode: ffi::BitmapCompositingMode::blend_with_self,
+// matte_color: [0,0,0,0],
+// pixels_readonly: false,
+// stride_readonly: false,
+// pixels: ptr::null_mut(),
+// stride: 0,
+// w: 0,
+// h: 0,
+// borrowed_pixels: false,
+// fmt: ffi::PixelFormat::bgra32
+// };
 
 
 
 #[repr(C)]
 #[derive(Copy,Clone,Debug,PartialEq)]
 pub enum PixelFormat {
-    Gray8  = 1,
-    BGR24  = 3,
+    Gray8 = 1,
+    BGR24 = 3,
     BGRA32 = 4,
 }
 
-impl From<s::PixelFormat> for PixelFormat{
-    fn from(f: s::PixelFormat) -> PixelFormat{
+impl From<s::PixelFormat> for PixelFormat {
+    fn from(f: s::PixelFormat) -> PixelFormat {
         match f {
             s::PixelFormat::Bgr24 => PixelFormat::BGR24,
             s::PixelFormat::Bgra32 => PixelFormat::BGRA32,
-            s::PixelFormat::Gray8 => PixelFormat::Gray8
+            s::PixelFormat::Gray8 => PixelFormat::Gray8,
         }
     }
 }
-impl <'a> From<&'a s::PixelFormat> for PixelFormat{
-    fn from(f: &'a s::PixelFormat) -> PixelFormat{
+impl<'a> From<&'a s::PixelFormat> for PixelFormat {
+    fn from(f: &'a s::PixelFormat) -> PixelFormat {
         match *f {
             s::PixelFormat::Bgr24 => PixelFormat::BGR24,
             s::PixelFormat::Bgra32 => PixelFormat::BGRA32,
-            s::PixelFormat::Gray8 => PixelFormat::Gray8
+            s::PixelFormat::Gray8 => PixelFormat::Gray8,
         }
     }
 }
-impl From<PixelFormat> for s::PixelFormat{
-    fn from(f: PixelFormat) -> s::PixelFormat{
+impl From<PixelFormat> for s::PixelFormat {
+    fn from(f: PixelFormat) -> s::PixelFormat {
         match f {
             PixelFormat::BGR24 => s::PixelFormat::Bgr24,
             PixelFormat::BGRA32 => s::PixelFormat::Bgra32,
-            PixelFormat::Gray8 => s::PixelFormat::Gray8
+            PixelFormat::Gray8 => s::PixelFormat::Gray8,
         }
     }
 }
@@ -396,18 +393,18 @@ impl From<PixelFormat> for s::PixelFormat{
 #[repr(C)]
 #[derive(Copy,Clone,Debug,PartialEq)]
 pub enum EdgeType {
-    Null   = 0,
-    Input  = 1,
+    Null = 0,
+    Input = 1,
     Canvas = 2,
-    info   = 3,
+    info = 3,
     FORCE_ENUM_SIZE_INT32 = 2147483647,
 }
 
 #[repr(C)]
 #[derive(Copy,Clone,Debug,PartialEq)]
 pub enum BitmapCompositingMode {
-    ReplaceSelf    = 0,
-    BlendWithSelf  = 1,
+    ReplaceSelf = 0,
+    BlendWithSelf = 1,
     BlendWithMatte = 2,
 }
 
@@ -439,94 +436,85 @@ pub struct BitmapFloat {
 }
 
 /** flow_context: Heap Manager **/
-
 #[repr(C)]
 #[derive(Clone,Debug,PartialEq)]
 pub struct Heap {
-    placeholder: u8,
-    /*FIXME: fill in the rest
-    flow_heap_calloc_function _calloc;
-    flow_heap_malloc_function _malloc;
-    flow_heap_realloc_function _realloc;
-    flow_heap_free_function _free;
-    flow_heap_terminate_function _context_terminate;
-    void * _private_state;
-*/
+    placeholder: u8, /* FIXME: fill in the rest
+                      * flow_heap_calloc_function _calloc;
+                      * flow_heap_malloc_function _malloc;
+                      * flow_heap_realloc_function _realloc;
+                      * flow_heap_free_function _free;
+                      * flow_heap_terminate_function _context_terminate;
+                      * void * _private_state;
+                      * */
 }
 
-//struct flow_objtracking_info;
-//void flow_context_objtracking_initialize(struct flow_objtracking_info * heap_tracking);
-//void flow_context_objtracking_terminate(flow_c * c);
+// struct flow_objtracking_info;
+// void flow_context_objtracking_initialize(struct flow_objtracking_info * heap_tracking);
+// void flow_context_objtracking_terminate(flow_c * c);
 
 /** flow_context: struct flow_error_info **/
-
-/*
-struct flow_error_callstack_line {
-    const char * file;
-    int line;
-    const char * function_name;
-};
-*/
-
+// struct flow_error_callstack_line {
+// const char * file;
+// int line;
+// const char * function_name;
+// };
+//
 #[repr(C)]
 #[derive(Clone,Debug,PartialEq)]
 pub struct ErrorInfo {
-    placeholder: u8,
-    /*FIXME: replace
-    flow_status_code reason;
-    struct flow_error_callstack_line callstack[14];
-    int callstack_count;
-    int callstack_capacity;
-    bool locked;
-    char message[FLOW_ERROR_MESSAGE_SIZE + 1];
-*/
+    placeholder: u8, /* FIXME: replace
+                      * flow_status_code reason;
+                      * struct flow_error_callstack_line callstack[14];
+                      * int callstack_count;
+                      * int callstack_capacity;
+                      * bool locked;
+                      * char message[FLOW_ERROR_MESSAGE_SIZE + 1];
+                      * */
 }
 
-/*
-#ifdef EXPOSE_SIGMOID
+// #ifdef EXPOSE_SIGMOID
 // flow_context: Colorspace
-struct flow_SigmoidInfo {
-    float constant;
-    float x_coeff;
-    float x_offset;
-    float y_offset;
-    float y_coeff;
-};
-#endif
-*/
+// struct flow_SigmoidInfo {
+// float constant;
+// float x_coeff;
+// float x_offset;
+// float y_offset;
+// float y_coeff;
+// };
+// #endif
+//
 
 #[repr(C)]
 #[derive(Clone,Debug,PartialEq)]
 pub struct ColorspaceInfo {
-    placeholder: u8,
-    /*FIXME: replace
-    float byte_to_float[256]; // Converts 0..255 -> 0..1, but knowing that 0.255 has sRGB gamma.
-    flow_working_floatspace floatspace;
-    bool apply_srgb;
-    bool apply_gamma;
-    float gamma;
-    float gamma_inverse;
-#ifdef EXPOSE_SIGMOID
-    struct flow_SigmoidInfo sigmoid;
-    bool apply_sigmoid;
-#endif
-*/
+    placeholder: u8, /* FIXME: replace
+                      * float byte_to_float[256]; // Converts 0..255 -> 0..1, but knowing that 0.255 has sRGB gamma.
+                      * flow_working_floatspace floatspace;
+                      * bool apply_srgb;
+                      * bool apply_gamma;
+                      * float gamma;
+                      * float gamma_inverse;
+                      * #ifdef EXPOSE_SIGMOID
+                      * struct flow_SigmoidInfo sigmoid;
+                      * bool apply_sigmoid;
+                      * #endif
+                      * */
 }
 
 #[repr(C)]
 #[derive(Clone,Debug,PartialEq)]
 pub struct HeapObjectRecord {
-    placeholder: u8,
-    /*FIXME: fill in the rest
-    void * ptr;
-    size_t bytes;
-    void * owner;
-    flow_destructor_function destructor;
-    bool destructor_called;
-    const char * allocated_by;
-    int allocated_by_line;
-    bool is_owner;
-*/
+    placeholder: u8, /* FIXME: fill in the rest
+                      * void * ptr;
+                      * size_t bytes;
+                      * void * owner;
+                      * flow_destructor_function destructor;
+                      * bool destructor_called;
+                      * const char * allocated_by;
+                      * int allocated_by_line;
+                      * bool is_owner;
+                      * */
 }
 
 #[repr(C)]
@@ -548,14 +536,13 @@ pub struct ObjTrackingInfo {
 #[repr(C)]
 #[derive(Clone,Debug,PartialEq)]
 pub struct CodecDefinition {
-    placeholder: u8,
-    //FIXME: replace
+    placeholder: u8, // FIXME: replace
 }
 
 #[repr(C)]
 #[derive(Clone,Debug,PartialEq)]
 pub struct ContextCodecSet {
-    //FIXME: replace with a Vec?
+    // FIXME: replace with a Vec?
     codecs: *mut CodecDefinition,
     codecs_count: size_t,
 }
@@ -563,7 +550,7 @@ pub struct ContextCodecSet {
 #[repr(C)]
 #[derive(Clone,Debug,PartialEq)]
 pub struct ContextNodeSet {
-    //FIXME: replace with a Vec?
+    // FIXME: replace with a Vec?
     codecs: *mut c_void,
     codecs_count: size_t,
 }
@@ -571,8 +558,7 @@ pub struct ContextNodeSet {
 #[repr(C)]
 #[derive(Clone,Debug,PartialEq)]
 pub struct ProfilingLog {
-    placeholder: u8,
-    //FIXME: replace
+    placeholder: u8, // FIXME: replace
 }
 
 #[repr(C)]
@@ -584,7 +570,7 @@ pub struct Context {
     pub colorspace: ColorspaceInfo,
     pub object_tracking: ObjTrackingInfo,
     pub codec_set: *mut ContextCodecSet,
-    pub node_set:  *mut ContextNodeSet,
+    pub node_set: *mut ContextNodeSet,
 }
 
 #[repr(C)]
@@ -596,12 +582,12 @@ pub struct NodeInfoIndex {
 #[repr(C)]
 #[derive(Copy,Clone,Debug,PartialEq)]
 pub enum CodecType {
-    Null       = 0,
-    DecodePng  = 1,
-    EncodePng  = 2,
+    Null = 0,
+    DecodePng = 1,
+    EncodePng = 2,
     DecodeJpeg = 3,
     EncodeJpeg = 4,
-    DecodeGif  = 5,
+    DecodeGif = 5,
 }
 
 #[repr(C)]
@@ -704,7 +690,7 @@ enum InterpolationFilter {
 
     NCubic = 29,
 
-    NCubicSharp = 30
+    NCubicSharp = 30,
 }
 
 #[repr(C)]
@@ -713,7 +699,7 @@ struct NodeInfoScale {
     width: int32_t,
     height: int32_t,
     downscale_filter: InterpolationFilter,
-    upscale_filter:   InterpolationFilter,
+    upscale_filter: InterpolationFilter,
     flags: size_t,
     sharpen: c_float,
 }
@@ -739,7 +725,7 @@ pub struct DecoderDownscaleHints {
     downscaled_min_width: int64_t,
     downscaled_min_height: int64_t,
     scale_luma_spatially: bool,
-    gamma_correct_for_srgb_during_spatial_luma_scaling: bool
+    gamma_correct_for_srgb_during_spatial_luma_scaling: bool,
 }
 
 #[repr(C)]
@@ -754,19 +740,17 @@ pub struct EncoderHints {
 #[repr(C)]
 #[derive(Clone,Debug,PartialEq)]
 struct FlowIO {
-    placeholder: u8,
-    /*
-        flow_c * context;
-        flow_io_mode mode; // Call nothing, dereference nothing, if this is 0
-        flow_io_read_function read_func; // Optional for write modes
-        flow_io_write_function write_func; // Optional for read modes
-        flow_io_position_function position_func; // Optional for sequential modes
-        flow_io_seek_function seek_function; // Optional for sequential modes
-        flow_destructor_function dispose_func; // Optional.
-        void * user_data;
-        int64_t optional_file_length; // Whoever sets up this structure can populate this value - or set it to -1 - as they
-        // wish. useful for resource estimation.
-    */
+    placeholder: u8, /* flow_c * context;
+                      * flow_io_mode mode; // Call nothing, dereference nothing, if this is 0
+                      * flow_io_read_function read_func; // Optional for write modes
+                      * flow_io_write_function write_func; // Optional for read modes
+                      * flow_io_position_function position_func; // Optional for sequential modes
+                      * flow_io_seek_function seek_function; // Optional for sequential modes
+                      * flow_destructor_function dispose_func; // Optional.
+                      * void * user_data;
+                      * int64_t optional_file_length; // Whoever sets up this structure can populate this value - or set it to -1 - as they
+                      * wish. useful for resource estimation.
+                      * */
 }
 
 #[repr(C)]
@@ -787,7 +771,7 @@ pub struct NodeInfoCodec {
     desired_encoder_id: int64_t,
     // For decoders
     downscale_hints: DecoderDownscaleHints,
-    encoder_hints:   EncoderHints,
+    encoder_hints: EncoderHints,
 }
 
 
@@ -795,7 +779,7 @@ pub struct NodeInfoCodec {
 #[derive(Clone,Debug,Copy)]
 pub struct Scale2dRenderToCanvas1d {
     // There will need to be consistency checks against the createcanvas node
-
+    //
     // struct flow_interpolation_details * interpolationDetails;
     pub scale_to_width: i32,
     pub scale_to_height: i32,
@@ -807,15 +791,12 @@ pub struct Scale2dRenderToCanvas1d {
 #[derive(Clone,Debug,Copy)]
 pub struct RenderToCanvas1d {
     // There will need to be consistency checks against the createcanvas node
-
     pub interpolation_filter: Filter,
     pub scale_to_width: i32,
-    pub transpose_on_write: bool,
-    //Other fields skipped, not acessed.
+    pub transpose_on_write: bool, // Other fields skipped, not acessed.
 }
 
-//
-//struct flow_nodeinfo_render_to_canvas_1d {
+// struct flow_nodeinfo_render_to_canvas_1d {
 //    // There will need to be consistency checks against the createcanvas node
 //
 //    flow_interpolation_filter interpolation_filter;
@@ -832,10 +813,10 @@ pub struct RenderToCanvas1d {
 //    uint8_t matte_color[4];
 //
 //    struct flow_scanlines_filter * filter_list;
-//};
+// };
 
 
-//TODO: mark these as unsafe
+// TODO: mark these as unsafe
 extern "C" {
     pub fn flow_context_create() -> *mut Context;
     pub fn flow_context_begin_terminate(context: *mut Context) -> bool;
@@ -851,8 +832,12 @@ extern "C" {
 
     pub fn flow_context_error_reason(context: *mut Context) -> i32;
 
-    pub fn flow_context_set_error_get_message_buffer(context: *mut Context, code: i32/*FlowStatusCode*/,
-                                                     file: *const libc::c_char, line: i32, function_name: *const libc::c_char) -> *const libc::c_char;
+    pub fn flow_context_set_error_get_message_buffer(context: *mut Context,
+                                                     code: i32, // FlowStatusCode
+                                                     file: *const libc::c_char,
+                                                     line: i32,
+                                                     function_name: *const libc::c_char)
+                                                     -> *const libc::c_char;
 
     pub fn flow_context_raise_error(context: *mut Context,
                                     error_code: i32,
@@ -870,7 +855,9 @@ extern "C" {
                                          -> bool;
 
 
-    pub fn flow_codecs_jpg_decoder_get_exif(context: *mut Context, codec_instance: *mut CodecInstance) -> i32;
+    pub fn flow_codecs_jpg_decoder_get_exif(context: *mut Context,
+                                            codec_instance: *mut CodecInstance)
+                                            -> i32;
 
     pub fn flow_context_calloc(context: *mut Context,
                                instance_count: usize,
@@ -955,7 +942,9 @@ extern "C" {
                                      info: *mut DecoderInfo)
                                      -> bool;
 
-    pub fn flow_codec_execute_read_frame(c: *mut Context, context: *mut CodecInstance) -> *mut BitmapBgra;
+    pub fn flow_codec_execute_read_frame(c: *mut Context,
+                                         context: *mut CodecInstance)
+                                         -> *mut BitmapBgra;
 
 
     pub fn flow_job_decoder_set_downscale_hints_by_placeholder_id(c: *mut Context,
@@ -982,23 +971,46 @@ extern "C" {
                                                    -> bool;
 
 
-    pub fn flow_bitmap_bgra_flip_vertical(c: *mut Context,
-                                          bitmap: *mut BitmapBgra);
-    pub fn flow_bitmap_bgra_flip_horizontal(c: *mut Context,
-                                            bitmap: *mut BitmapBgra);
+    pub fn flow_bitmap_bgra_flip_vertical(c: *mut Context, bitmap: *mut BitmapBgra);
+    pub fn flow_bitmap_bgra_flip_horizontal(c: *mut Context, bitmap: *mut BitmapBgra);
 
     pub fn flow_bitmap_bgra_create(c: *mut Context,
-                                   sx: i32, sy: i32, zeroed: bool, format: PixelFormat) -> *mut BitmapBgra;
+                                   sx: i32,
+                                   sy: i32,
+                                   zeroed: bool,
+                                   format: PixelFormat)
+                                   -> *mut BitmapBgra;
 
 
-    pub fn flow_node_execute_scale2d_render1d(c: *mut Context, input: *mut BitmapBgra, canvas: *mut BitmapBgra, info: *const Scale2dRenderToCanvas1d) -> bool;
-    pub fn flow_node_execute_render_to_canvas_1d(c: *mut Context, input: *mut BitmapBgra, canvas: *mut BitmapBgra, info: *const RenderToCanvas1d) -> bool;
+    pub fn flow_node_execute_scale2d_render1d(c: *mut Context,
+                                              input: *mut BitmapBgra,
+                                              canvas: *mut BitmapBgra,
+                                              info: *const Scale2dRenderToCanvas1d)
+                                              -> bool;
+    pub fn flow_node_execute_render_to_canvas_1d(c: *mut Context,
+                                                 input: *mut BitmapBgra,
+                                                 canvas: *mut BitmapBgra,
+                                                 info: *const RenderToCanvas1d)
+                                                 -> bool;
 
-    pub fn flow_bitmap_bgra_fill_rect(c: *mut Context, input: *mut BitmapBgra, x1: u32, y1: u32, x2: u32, y2: u32, color_srgb_argb: u32) -> bool;
+    pub fn flow_bitmap_bgra_fill_rect(c: *mut Context,
+                                      input: *mut BitmapBgra,
+                                      x1: u32,
+                                      y1: u32,
+                                      x2: u32,
+                                      y2: u32,
+                                      color_srgb_argb: u32)
+                                      -> bool;
 
-    pub fn flow_job_get_codec_instance(c: *mut Context, job: *mut Job, by_placeholder_id: i32 ) -> *mut CodecInstance;
+    pub fn flow_job_get_codec_instance(c: *mut Context,
+                                       job: *mut Job,
+                                       by_placeholder_id: i32)
+                                       -> *mut CodecInstance;
 
-    pub fn flow_bitmap_bgra_save_png(c: *mut Context, input: *mut BitmapBgra, path:  *const libc::c_char) -> bool;
+    pub fn flow_bitmap_bgra_save_png(c: *mut Context,
+                                     input: *mut BitmapBgra,
+                                     path: *const libc::c_char)
+                                     -> bool;
 }
 
 
@@ -1027,4 +1039,3 @@ fn flow_job_creation_works() {
         flow_context_destroy(c);
     }
 }
-

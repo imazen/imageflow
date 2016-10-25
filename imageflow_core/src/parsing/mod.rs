@@ -5,9 +5,9 @@ use std;
 extern crate rustc_serialize;
 extern crate libc;
 
-use flow;
 use ContextPtr;
 use JsonResponse;
+use flow;
 use libc::c_void;
 
 use parsing::rustc_serialize::hex::FromHex;
@@ -18,11 +18,11 @@ extern crate imageflow_serde as s;
 extern crate serde;
 extern crate serde_json;
 extern crate curl;
-use self::curl::easy::Easy;
 
 use ::Context;
 
 use ffi;
+use self::curl::easy::Easy;
 
 use self::parse_graph::GraphTranslator;
 use std::error;
@@ -96,10 +96,10 @@ impl BuildRequestHandler {
             println!("builder_config ={:?}", parsed.builder_config);
             match parsed.builder_config {
                 Some(build_cfg) => {
-//                    match build_cfg.no_gamma_correction {
-//                        false => flow_context_set_floatspace(c, Floatspace::linear, 0f32, 0f32, 0f32),
-//                        true => flow_context_set_floatspace(c, Floatspace::srgb, 0f32, 0f32, 0f32)
-//                    };
+                    //                    match build_cfg.no_gamma_correction {
+                    //                        false => flow_context_set_floatspace(c, Floatspace::linear, 0f32, 0f32, 0f32),
+                    //                        true => flow_context_set_floatspace(c, Floatspace::srgb, 0f32, 0f32, 0f32)
+                    //                    };
                     match build_cfg.graph_recording {
                         Some(r) => {
                             println!("Setting record_graph_versions={}",
@@ -165,9 +165,10 @@ impl BuildRequestHandler {
 
                                 let mut transfer = easy.transfer();
                                 transfer.write_function(|data| {
-                                    dst.extend_from_slice(data);
-                                    Ok(data.len())
-                                }).unwrap();
+                                        dst.extend_from_slice(data);
+                                        Ok(data.len())
+                                    })
+                                    .unwrap();
                                 transfer.perform().unwrap();
                             }
 
@@ -176,23 +177,23 @@ impl BuildRequestHandler {
 
                             let buf : *mut u8 = ::ffi::flow_context_calloc(p, 1, bytes.len(), ptr::null(), p as *const libc::c_void, ptr::null(), 0) as *mut u8 ;
                             if buf.is_null() {
-                            panic!("OOM");
+                                panic!("OOM");
                             }
                             ptr::copy_nonoverlapping(bytes.as_ptr(), buf, bytes.len());
 
                             let io_ptr =
-                            ::ffi::flow_io_create_from_memory(p,
-                            ::ffi::IoMode::read_seekable,
-                            buf,
-                            bytes.len(),
-                            p as *const libc::c_void,
-                            ptr::null());
+                                ::ffi::flow_io_create_from_memory(p,
+                                                                  ::ffi::IoMode::read_seekable,
+                                                                  buf,
+                                                                  bytes.len(),
+                                                                  p as *const libc::c_void,
+                                                                  ptr::null());
 
                             if io_ptr.is_null() {
-                            panic!("Failed to create I/O");
+                                panic!("Failed to create I/O");
                             }
                             io_ptr
-                        },
+                        }
                         s::IoEnum::OutputBuffer => {
                             let io_ptr =
                                 ::ffi::flow_io_create_for_output_buffer(p,
@@ -224,21 +225,20 @@ impl BuildRequestHandler {
             }
 
 
-            //TODO: flow_job_destroy
+            // TODO: flow_job_destroy
 
             // TODO: Question, should JSON endpoints populate the Context error stacktrace when something goes wrong? Or populate both (except for OOM).
 
             Ok(JsonResponse {
                 status_code: 200,
-                response_json:
-                r#"{"success": "true","code": 200,"message": "Tutto bene."}"#
-                    .as_bytes()
+                response_json: r#"{"success": "true","code": 200,"message": "Tutto bene."}"#
+                    .as_bytes(),
             })
         }
     }
 }
 
-//#[test]
+// #[test]
 fn test_handler() {
 
     let input_io = s::IoObject {

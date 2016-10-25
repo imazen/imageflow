@@ -1,26 +1,26 @@
 use ffi::*;
 use libc::{self, int32_t, c_void};
-use std::ffi::CStr;
-use std;
-use std::ptr;
-use std::string;
-use std::fs::File;
-use std::io::prelude::*;
-use std::io;
-use std::process::Command;
 use petgraph::dot::Dot;
 use petgraph::graph::{NodeIndex, EdgeIndex};
-use time;
-//use std::fs::PathExt;
+use std;
+use std::ffi::CStr;
+use std::fmt;
+use std::fs::File;
+use std::io;
+use std::io::prelude::*;
+// use std::fs::PathExt;
 use std::path::Path;
 use std::path::PathBuf;
-use std::fmt;
+use std::process::Command;
+use std::ptr;
+use std::string;
+use time;
 
 pub mod graph;
 pub mod definitions;
 pub mod nodes;
-use self::graph::Graph;
 use self::definitions::*;
+use self::graph::Graph;
 
 #[macro_export]
 macro_rules! error_return (
@@ -75,8 +75,8 @@ pub fn job_execute(c: *mut Context, job: *mut Job, graph_ref: &mut Graph) -> boo
 
 
             panic!("Maximum graph passes exceeded");
-//            error_msg!(c, FlowStatusCode::MaximumGraphPassesExceeded);
-//            return false;
+            //            error_msg!(c, FlowStatusCode::MaximumGraphPassesExceeded);
+            //            return false;
         }
         if !job_populate_dimensions_where_certain(c, job, graph_ref) {
             error_return!(c);
@@ -129,60 +129,64 @@ pub fn job_execute(c: *mut Context, job: *mut Job, graph_ref: &mut Graph) -> boo
 
         }
     }
-  true
+    true
 }
 
 pub fn job_link_codecs(c: *mut Context, job: *mut Job, g: &mut Graph) -> bool {
 
     job_notify_graph_changed(c, job, g);
 
-    //Assign stable IDs;
+    // Assign stable IDs;
     for index in 0..g.node_count() {
 
-        if let Some(func) = g.node_weight(NodeIndex::new(index)).unwrap().def.fn_link_state_to_this_io_id {
+        if let Some(func) = g.node_weight(NodeIndex::new(index))
+            .unwrap()
+            .def
+            .fn_link_state_to_this_io_id {
             let placeholder_id;
             {
                 let mut ctx = OpCtxMut {
                     c: c,
                     graph: g,
-                    job: job
+                    job: job,
                 };
                 placeholder_id = func(&mut ctx, NodeIndex::new(index));
             }
-            if let Some(io_id) = placeholder_id{
-                g.node_weight_mut(NodeIndex::new(index)).unwrap().custom_state = unsafe { ::ffi::flow_job_get_codec_instance(c, job, io_id) as *mut u8 };
+            if let Some(io_id) = placeholder_id {
+                g.node_weight_mut(NodeIndex::new(index)).unwrap().custom_state =
+                    unsafe { ::ffi::flow_job_get_codec_instance(c, job, io_id) as *mut u8 };
             }
         }
     }
 
-/* FIXME
-    struct flow_graph * g = *graph_ref;
-    let mut i: int32_t = 0;
-    for (i = 0; i < g->next_node_id; i++) {
-        if (g->nodes[i].type == flow_ntype_decoder || g->nodes[i].type == flow_ntype_encoder) {
-            uint8_t * info_bytes = &g->info_bytes[g->nodes[i].info_byte_index];
-            struct flow_nodeinfo_codec * info = (struct flow_nodeinfo_codec *)info_bytes;
-            if (info->codec == NULL) {
-                info->codec = flow_job_get_codec_instance(c, job, info->placeholder_id);
-
-                if (info->codec == NULL)
-                    FLOW_error_msg(c, flow_status_Graph_invalid,
-                                   "No matching codec or io found for placeholder id %d (node #%d).",
-                                   info->placeholder_id, i);
-            }
-        }
-    }
-*/
+    // FIXME
+    // struct flow_graph * g = *graph_ref;
+    // let mut i: int32_t = 0;
+    // for (i = 0; i < g->next_node_id; i++) {
+    // if (g->nodes[i].type == flow_ntype_decoder || g->nodes[i].type == flow_ntype_encoder) {
+    // uint8_t * info_bytes = &g->info_bytes[g->nodes[i].info_byte_index];
+    // struct flow_nodeinfo_codec * info = (struct flow_nodeinfo_codec *)info_bytes;
+    // if (info->codec == NULL) {
+    // info->codec = flow_job_get_codec_instance(c, job, info->placeholder_id);
+    //
+    // if (info->codec == NULL)
+    // FLOW_error_msg(c, flow_status_Graph_invalid,
+    // "No matching codec or io found for placeholder id %d (node #%d).",
+    // info->placeholder_id, i);
+    // }
+    // }
+    // }
+    //
 
     return true;
 }
 
-const FLOW_MAX_GRAPH_VERSIONS:i32 = 100;
+const FLOW_MAX_GRAPH_VERSIONS: i32 = 100;
 
 fn remove_file_if_exists(path: &str) -> io::Result<()> {
     let result = std::fs::remove_file(path);
-    if  result.as_ref().err().and_then(|e| Some(e.kind() == io::ErrorKind::NotFound) ) == Some(true) {
-        return Ok(())
+    if result.as_ref().err().and_then(|e| Some(e.kind() == io::ErrorKind::NotFound)) == Some(true) {
+        return Ok(());
     }
     result
 }
@@ -191,7 +195,7 @@ fn job_delete_graphviz(c: *mut Context, job: *mut Job) -> io::Result<()> {
     let job_id = unsafe { (*job).debug_job_id };
     let safety_limit = 8000;
 
-    //Keep deleting until we run out of files or hit a safety limit
+    // Keep deleting until we run out of files or hit a safety limit
     let mut node_index = 0;
     loop {
         let next = format!("./node_frames/job_{}_node_{}.png", job_id, node_index);
@@ -219,8 +223,8 @@ fn job_delete_graphviz(c: *mut Context, job: *mut Job) -> io::Result<()> {
     Ok(())
 }
 
-fn assign_stable_ids(job: *mut Job, graph_ref: &mut Graph){
-    //Assign stable IDs;
+fn assign_stable_ids(job: *mut Job, graph_ref: &mut Graph) {
+    // Assign stable IDs;
     for index in 0..graph_ref.node_count() {
         let mut weight = graph_ref.node_weight_mut(NodeIndex::new(index)).unwrap();
         if weight.stable_id < 0 {
@@ -235,21 +239,22 @@ fn assign_stable_ids(job: *mut Job, graph_ref: &mut Graph){
 
 
 
-fn job_notify_graph_changed(c: *mut Context, job: *mut Job, graph_ref: &mut Graph){
+fn job_notify_graph_changed(c: *mut Context, job: *mut Job, graph_ref: &mut Graph) {
 
     assign_stable_ids(job, graph_ref);
 
 
-    //Write out graphviz files
+    // Write out graphviz files
     let debug_job_id = unsafe { (*job).debug_job_id };
     let current_graph_version: i32 = unsafe { (*job).next_graph_version };
     let prev_graph_version = current_graph_version - 1;
-    let record_graph_versions = unsafe {(*job).record_graph_versions };
+    let record_graph_versions = unsafe { (*job).record_graph_versions };
 
     if record_graph_versions {
-       // println!("record_graph_versions=true, current_graph_version={}", current_graph_version);
+        // println!("record_graph_versions=true, current_graph_version={}", current_graph_version);
     }
-    if job == ptr::null_mut() || !record_graph_versions || current_graph_version > FLOW_MAX_GRAPH_VERSIONS {
+    if job == ptr::null_mut() || !record_graph_versions ||
+       current_graph_version > FLOW_MAX_GRAPH_VERSIONS {
 
         return;
     }
@@ -259,21 +264,21 @@ fn job_notify_graph_changed(c: *mut Context, job: *mut Job, graph_ref: &mut Grap
     }
 
 
-    //increment graph version
-    unsafe {
-        (*job).next_graph_version += 1
-    };
+    // increment graph version
+    unsafe { (*job).next_graph_version += 1 };
 
     let frame_prefix = format!("./node_frames/job_{}_node_", debug_job_id);
 
-    let current_filename = format!("job_{}_graph_version_{}.dot", debug_job_id, current_graph_version);
+    let current_filename =
+        format!("job_{}_graph_version_{}.dot", debug_job_id, current_graph_version);
     {
         let mut f = File::create(&current_filename).unwrap();
         print_graph(&mut f, graph_ref, Some(&frame_prefix)).unwrap();
         println!("Writing file {}", &current_filename);
     }
-    if prev_graph_version >= 0{
-        let prev_filename = format!("job_{}_graph_version_{}.dot", debug_job_id, prev_graph_version);
+    if prev_graph_version >= 0 {
+        let prev_filename =
+            format!("job_{}_graph_version_{}.dot", debug_job_id, prev_graph_version);
         match files_identical(&current_filename, &prev_filename).expect(&format!("Comparison err'd for {} and {}", &current_filename, &prev_filename)){
             true => {
                 unsafe {
@@ -292,14 +297,13 @@ fn job_notify_graph_changed(c: *mut Context, job: *mut Job, graph_ref: &mut Grap
     }
 }
 
-impl<'a>  OpCtxMut<'a> {
-    //TODO: Should return Result<String,??>
-    pub fn graph_to_str(&mut self) -> String{
+impl<'a> OpCtxMut<'a> {
+    // TODO: Should return Result<String,??>
+    pub fn graph_to_str(&mut self) -> String {
         let mut vec = Vec::new();
         print_graph(&mut vec, self.graph, None).unwrap();
         String::from_utf8(vec).unwrap()
     }
-
 }
 
 fn files_identical(filename_a: &str, filename_b: &str) -> std::io::Result<bool> {
@@ -314,73 +318,87 @@ fn files_identical(filename_a: &str, filename_b: &str) -> std::io::Result<bool> 
 }
 
 use daggy::walker::Walker;
-pub fn job_graph_fully_executed(c: *mut Context, job: *mut Job, graph_ref: &mut Graph) -> bool
-{
+pub fn job_graph_fully_executed(c: *mut Context, job: *mut Job, graph_ref: &mut Graph) -> bool {
     for node in graph_ref.raw_nodes() {
         if node.weight.result == NodeResult::None {
-            return false
+            return false;
         }
     }
     return true;
 }
 
 
-pub fn flow_node_has_dimensions(g: &Graph, node_id: NodeIndex<u32>) -> bool
-{
-    g.node_weight(node_id).map(|node| match node.frame_est { FrameEstimate::Some(_) => true, _ => false}).unwrap_or(false)
+pub fn flow_node_has_dimensions(g: &Graph, node_id: NodeIndex<u32>) -> bool {
+    g.node_weight(node_id)
+        .map(|node| match node.frame_est {
+            FrameEstimate::Some(_) => true,
+            _ => false,
+        })
+        .unwrap_or(false)
 }
 
-pub fn inputs_estimated(g: &Graph, node_id: NodeIndex<u32>) -> bool
-{
-    inputs_estimates(g,node_id).iter().all (|est| match *est { FrameEstimate::Some(_) => true, _ => false})
+pub fn inputs_estimated(g: &Graph, node_id: NodeIndex<u32>) -> bool {
+    inputs_estimates(g, node_id).iter().all(|est| match *est {
+        FrameEstimate::Some(_) => true,
+        _ => false,
+    })
 }
 
-//-> impl Iterator<Item = FrameEstimate> caused compiler panic
+// -> impl Iterator<Item = FrameEstimate> caused compiler panic
 
-pub fn inputs_estimates(g: &Graph, node_id: NodeIndex<u32>) -> Vec<FrameEstimate>
-{
-    g.parents(node_id).iter(g).filter_map(|(_, node_index)| {
-        g.node_weight(node_index).map(|w| w.frame_est)
-    }).collect()
+pub fn inputs_estimates(g: &Graph, node_id: NodeIndex<u32>) -> Vec<FrameEstimate> {
+    g.parents(node_id)
+        .iter(g)
+        .filter_map(|(_, node_index)| g.node_weight(node_index).map(|w| w.frame_est))
+        .collect()
 }
 
-pub fn estimate_node(c: *mut Context, job: *mut Job, g: &mut Graph,
-                                             node_id: NodeIndex<u32>) -> FrameEstimate
-{
+pub fn estimate_node(c: *mut Context,
+                     job: *mut Job,
+                     g: &mut Graph,
+                     node_id: NodeIndex<u32>)
+                     -> FrameEstimate {
     let now = time::precise_time_ns();
-    let mut ctx = OpCtxMut{
+    let mut ctx = OpCtxMut {
         c: c,
         graph: g,
-        job: job
+        job: job,
     };
-    //Invoke estimation
+    // Invoke estimation
     ctx.weight(node_id).def.fn_estimate.unwrap()(&mut ctx, node_id);
     ctx.weight_mut(node_id).cost.wall_ns + (time::precise_time_ns() - now) as u32;
 
     ctx.weight(node_id).frame_est
 }
 
-pub fn estimate_node_recursive(c: *mut Context, job: *mut Job, g: &mut Graph,
-                                             node_id: NodeIndex<u32>) -> FrameEstimate
-{
-    //If we're already done, no need
-    if let FrameEstimate::Some(info) = g.node_weight(node_id).unwrap().frame_est{
+pub fn estimate_node_recursive(c: *mut Context,
+                               job: *mut Job,
+                               g: &mut Graph,
+                               node_id: NodeIndex<u32>)
+                               -> FrameEstimate {
+    // If we're already done, no need
+    if let FrameEstimate::Some(info) = g.node_weight(node_id).unwrap().frame_est {
         return FrameEstimate::Some(info);
     }
 
-    //Otherwise let's try again
+    // Otherwise let's try again
     let inputs_good = inputs_estimated(g, node_id);
-    if !inputs_good{
-        //TODO: support UpperBound eventually; for now, use Impossible until all nodes implement
-        let give_up = inputs_estimates(g, node_id).iter().any(|est| match *est { FrameEstimate::Impossible => true, FrameEstimate::UpperBound(_) => true, _ => false} );
+    if !inputs_good {
+        // TODO: support UpperBound eventually; for now, use Impossible until all nodes implement
+        let give_up = inputs_estimates(g, node_id).iter().any(|est| match *est {
+            FrameEstimate::Impossible => true,
+            FrameEstimate::UpperBound(_) => true,
+            _ => false,
+        });
 
-        //If it's possible, let's try to estimate parent nodes
-        //This is problematic if we want a single call to 'fix' all Impossible nodes.
-        //For nodes already populated by Impossible/UpperBound, they will have to be called directly.
-        //We won't retry them recursively
+        // If it's possible, let's try to estimate parent nodes
+        // This is problematic if we want a single call to 'fix' all Impossible nodes.
+        // For nodes already populated by Impossible/UpperBound, they will have to be called directly.
+        // We won't retry them recursively
         if !give_up {
 
-            let input_indexes =  g.parents(node_id).iter(g).map(|(edge_ix, ix)| ix).collect::<Vec<NodeIndex<u32>>>();
+            let input_indexes =
+                g.parents(node_id).iter(g).map(|(edge_ix, ix)| ix).collect::<Vec<NodeIndex<u32>>>();
 
             println!("Estimating recursively {:?}", input_indexes);
             for ix in input_indexes {
@@ -389,23 +407,25 @@ pub fn estimate_node_recursive(c: *mut Context, job: *mut Job, g: &mut Graph,
             }
         }
 
-        if give_up || !inputs_estimated(g, node_id){
+        if give_up || !inputs_estimated(g, node_id) {
             g.node_weight_mut(node_id).unwrap().frame_est = FrameEstimate::Impossible;
             return FrameEstimate::Impossible;
         }
     }
-    //Should be good on inputs here
+    // Should be good on inputs here
     if estimate_node(c, job, g, node_id) == FrameEstimate::None {
         panic!("Node estimation misbehaved on {}. Cannot leave FrameEstimate::None, must chose an alternative", g.node_weight(node_id).unwrap().def.name);
     }
     g.node_weight(node_id).unwrap().frame_est
 }
 
-pub fn job_populate_dimensions_where_certain(c:*mut Context, job: *mut Job, g: &mut Graph) -> bool
-{
+pub fn job_populate_dimensions_where_certain(c: *mut Context,
+                                             job: *mut Job,
+                                             g: &mut Graph)
+                                             -> bool {
 
-    for ix in 0..g.node_count(){
-        //If any node returns FrameEstimate::Impossible, we might as well move on to execution pass.
+    for ix in 0..g.node_count() {
+        // If any node returns FrameEstimate::Impossible, we might as well move on to execution pass.
         estimate_node_recursive(c, job, g, NodeIndex::new(ix));
     }
 
@@ -413,17 +433,23 @@ pub fn job_populate_dimensions_where_certain(c:*mut Context, job: *mut Job, g: &
 }
 
 
-pub fn graph_pre_optimize_flatten(c: *mut Context, job: *mut Job, g: &mut Graph) -> bool
-{
-    //Just find all nodes that offer fn_flatten_pre_optimize and have been estimated.
-    //Oops, we also need to insure inputs have been estimated
+pub fn graph_pre_optimize_flatten(c: *mut Context, job: *mut Job, g: &mut Graph) -> bool {
+    // Just find all nodes that offer fn_flatten_pre_optimize and have been estimated.
+    // Oops, we also need to insure inputs have been estimated
     // TODO: Compare Node value; should differ afterwards
     loop {
         let mut next = None;
-        for ix in 0..(g.node_count()){
-            if let Some(func) = g.node_weight(NodeIndex::new(ix)).unwrap().def.fn_flatten_pre_optimize{
-                if let FrameEstimate::Some(_) = g.node_weight(NodeIndex::new(ix)).unwrap().frame_est {
-                    if g.parents(NodeIndex::new(ix)).iter(g).all(|(ex,ix)| g.node_weight(ix).unwrap().result != NodeResult::None) {
+        for ix in 0..(g.node_count()) {
+            if let Some(func) = g.node_weight(NodeIndex::new(ix))
+                .unwrap()
+                .def
+                .fn_flatten_pre_optimize {
+                if let FrameEstimate::Some(_) = g.node_weight(NodeIndex::new(ix))
+                    .unwrap()
+                    .frame_est {
+                    if g.parents(NodeIndex::new(ix))
+                        .iter(g)
+                        .all(|(ex, ix)| g.node_weight(ix).unwrap().result != NodeResult::None) {
                         next = Some((NodeIndex::new(ix), func));
                         break;
                     }
@@ -431,12 +457,12 @@ pub fn graph_pre_optimize_flatten(c: *mut Context, job: *mut Job, g: &mut Graph)
             }
         }
         match next {
-            None => {return true},
+            None => return true,
             Some((next_ix, next_func)) => {
-                let mut ctx = OpCtxMut{
+                let mut ctx = OpCtxMut {
                     c: c,
                     graph: g,
-                    job: job
+                    job: job,
                 };
                 next_func(&mut ctx, next_ix);
 
@@ -446,38 +472,43 @@ pub fn graph_pre_optimize_flatten(c: *mut Context, job: *mut Job, g: &mut Graph)
     }
 }
 
-pub fn graph_optimize(c: *mut Context,job: *mut Job, graph_ref: &mut Graph) -> bool
-{
-    /*FIXME: is it still needed?
-    if unsafe { (*graph_ref).is_null()} {
-        error_msg!(c, FlowStatusCode::NullArgument);
-        return false;
-    }
-    */
-    /*FIXME
-    bool re_walk;
-    do {
-        re_walk = false;
-        if (!flow_graph_walk(c, job, graph_ref, node_visitor_optimize, NULL, &re_walk)) {
-            FLOW_error_return(c);
-        }
-    } while (re_walk);
-    */
+pub fn graph_optimize(c: *mut Context, job: *mut Job, graph_ref: &mut Graph) -> bool {
+    // FIXME: is it still needed?
+    // if unsafe { (*graph_ref).is_null()} {
+    // error_msg!(c, FlowStatusCode::NullArgument);
+    // return false;
+    // }
+    //
+    // FIXME
+    // bool re_walk;
+    // do {
+    // re_walk = false;
+    // if (!flow_graph_walk(c, job, graph_ref, node_visitor_optimize, NULL, &re_walk)) {
+    // FLOW_error_return(c);
+    // }
+    // } while (re_walk);
+    //
     return true;
 }
 
 
 
-pub fn graph_post_optimize_flatten(c: *mut Context, job: *mut Job, g: &mut Graph) -> bool
-{
-    //Just find all nodes that offer fn_flatten_pre_optimize and have been estimated.
+pub fn graph_post_optimize_flatten(c: *mut Context, job: *mut Job, g: &mut Graph) -> bool {
+    // Just find all nodes that offer fn_flatten_pre_optimize and have been estimated.
     // TODO: Compare Node value; should differ afterwards
     loop {
         let mut next = None;
-        for ix in 0..(g.node_count()){
-            if let Some(func) = g.node_weight(NodeIndex::new(ix)).unwrap().def.fn_flatten_post_optimize{
-                if let FrameEstimate::Some(_) = g.node_weight(NodeIndex::new(ix)).unwrap().frame_est {
-                    if g.parents(NodeIndex::new(ix)).iter(g).all(|(ex,ix)| g.node_weight(ix).unwrap().result != NodeResult::None) {
+        for ix in 0..(g.node_count()) {
+            if let Some(func) = g.node_weight(NodeIndex::new(ix))
+                .unwrap()
+                .def
+                .fn_flatten_post_optimize {
+                if let FrameEstimate::Some(_) = g.node_weight(NodeIndex::new(ix))
+                    .unwrap()
+                    .frame_est {
+                    if g.parents(NodeIndex::new(ix))
+                        .iter(g)
+                        .all(|(ex, ix)| g.node_weight(ix).unwrap().result != NodeResult::None) {
                         next = Some((NodeIndex::new(ix), func));
                         break;
                     }
@@ -485,12 +516,12 @@ pub fn graph_post_optimize_flatten(c: *mut Context, job: *mut Job, g: &mut Graph
             }
         }
         match next {
-            None => {return true},
+            None => return true,
             Some((next_ix, next_func)) => {
-                let mut ctx = OpCtxMut{
+                let mut ctx = OpCtxMut {
                     c: c,
                     graph: g,
-                    job: job
+                    job: job,
                 };
                 next_func(&mut ctx, next_ix);
 
@@ -502,17 +533,20 @@ pub fn graph_post_optimize_flatten(c: *mut Context, job: *mut Job, g: &mut Graph
 
 
 
-pub fn graph_execute(c: *mut Context, job: *mut Job, g: &mut Graph) -> bool
-{
-    //Find nodes with fn_execute, which also have been estimated, and whose parents are complete
+pub fn graph_execute(c: *mut Context, job: *mut Job, g: &mut Graph) -> bool {
+    // Find nodes with fn_execute, which also have been estimated, and whose parents are complete
     // AND who are not already complete
     loop {
         let mut next = None;
-        for ix in 0..(g.node_count()){
-            if let Some(func) = g.node_weight(NodeIndex::new(ix)).unwrap().def.fn_execute{
-                if let FrameEstimate::Some(_) = g.node_weight(NodeIndex::new(ix)).unwrap().frame_est {
+        for ix in 0..(g.node_count()) {
+            if let Some(func) = g.node_weight(NodeIndex::new(ix)).unwrap().def.fn_execute {
+                if let FrameEstimate::Some(_) = g.node_weight(NodeIndex::new(ix))
+                    .unwrap()
+                    .frame_est {
                     if g.node_weight(NodeIndex::new(ix)).unwrap().result == NodeResult::None {
-                        if g.parents(NodeIndex::new(ix)).iter(g).all(|(ex,ix)| g.node_weight(ix).unwrap().result != NodeResult::None){
+                        if g.parents(NodeIndex::new(ix))
+                            .iter(g)
+                            .all(|(ex, ix)| g.node_weight(ix).unwrap().result != NodeResult::None) {
                             next = Some((NodeIndex::new(ix), func));
                             break;
                         }
@@ -521,19 +555,19 @@ pub fn graph_execute(c: *mut Context, job: *mut Job, g: &mut Graph) -> bool
             }
         }
         match next {
-            None => {return true},
+            None => return true,
             Some((next_ix, next_func)) => {
                 {
                     let mut ctx = OpCtxMut {
                         c: c,
                         graph: g,
-                        job: job
+                        job: job,
                     };
                     next_func(&mut ctx, next_ix);
                 }
                 if g.node_weight(next_ix).unwrap().result == NodeResult::None {
                     panic!("fn_execute of {} failed to save a result", g.node_weight(next_ix).unwrap().def.name);
-                }else{
+                } else {
                     unsafe {
                         if (*job).record_frame_images {
                             if let NodeResult::Frame(ptr) = g.node_weight(next_ix).unwrap().result {
@@ -556,53 +590,67 @@ pub fn graph_execute(c: *mut Context, job: *mut Job, g: &mut Graph) -> bool
     }
 }
 
-pub fn render_dotfile_to_png(dotfile_path: &str, )
-{
-    Command::new("dot").arg("-Tpng").arg("-Gsize=11,16\\!").arg("-Gdpi=150").arg("-O").arg(dotfile_path)
-        .spawn().expect("dot command failed");
+pub fn render_dotfile_to_png(dotfile_path: &str) {
+    Command::new("dot")
+        .arg("-Tpng")
+        .arg("-Gsize=11,16\\!")
+        .arg("-Gdpi=150")
+        .arg("-O")
+        .arg(dotfile_path)
+        .spawn()
+        .expect("dot command failed");
 }
-//pub fn job_render_graph_to_png(c: *mut Context, job: *mut Job, g: &mut Graph, graph_version: int32_t) -> bool
-//{
+// pub fn job_render_graph_to_png(c: *mut Context, job: *mut Job, g: &mut Graph, graph_version: int32_t) -> bool
+// {
 //    let filename = format!("job_{}_graph_version_{}.dot", unsafe { (*job).debug_job_id }, graph_version);
 //    let mut file = File::create(&filename).unwrap();
 //    let _ = file.write_fmt(format_args!("{:?}", Dot::new(g.graph())));
 //
 //    return true;
-//}
+// }
 
-pub fn node_visitor_optimize(c: *mut Context, job: *mut Job, graph_ref: &mut Graph, node_id: NodeIndex<u32>,
-                                  quit:*mut bool, skip_outbound_paths: *mut bool, custom_data: *mut c_void) -> bool
-{
-    graph_ref.node_weight_mut(node_id).map(|node| {
-        // Implement optimizations
-        if node.stage == NodeStage::ReadyForOptimize {
-            //FIXME: should we implement AND on NodeStage? Yes
-            //node.stage |= NodeStage::Optimized;
-            node.stage = NodeStage::Optimized;
-        }
-        true
-    }).unwrap_or(false)
+pub fn node_visitor_optimize(c: *mut Context,
+                             job: *mut Job,
+                             graph_ref: &mut Graph,
+                             node_id: NodeIndex<u32>,
+                             quit: *mut bool,
+                             skip_outbound_paths: *mut bool,
+                             custom_data: *mut c_void)
+                             -> bool {
+    graph_ref.node_weight_mut(node_id)
+        .map(|node| {
+            // Implement optimizations
+            if node.stage == NodeStage::ReadyForOptimize {
+                // FIXME: should we implement AND on NodeStage? Yes
+                // node.stage |= NodeStage::Optimized;
+                node.stage = NodeStage::Optimized;
+            }
+            true
+        })
+        .unwrap_or(false)
 }
 
 
 static INDENT: &'static str = "    ";
 
-fn get_pixel_format_name_for(bitmap: *const BitmapBgra) -> &'static str{
+fn get_pixel_format_name_for(bitmap: *const BitmapBgra) -> &'static str {
     unsafe { get_pixel_format_name((*bitmap).fmt, (*bitmap).alpha_meaningful) }
 }
 
-fn get_pixel_format_name(fmt: PixelFormat, alpha_meaningful: bool) -> &'static str{
+fn get_pixel_format_name(fmt: PixelFormat, alpha_meaningful: bool) -> &'static str {
     match fmt {
         PixelFormat::BGR24 => "bgra24",
         PixelFormat::Gray8 => "gray8",
         PixelFormat::BGRA32 if alpha_meaningful => "bgra32",
         PixelFormat::BGRA32 => "bgr32",
-        //_ => "?"
+        // _ => "?"
     }
 }
 
-pub fn print_graph(f: &mut std::io::Write, g: &Graph, node_frame_filename_prefix: Option<&str>) -> std::io::Result<()>
-{
+pub fn print_graph(f: &mut std::io::Write,
+                   g: &Graph,
+                   node_frame_filename_prefix: Option<&str>)
+                   -> std::io::Result<()> {
     try!(writeln!(f, "digraph g {{\n"));
     try!(writeln!(f, "{}node [shape=box, fontsize=20, fontcolor=\"#5AFA0A\" fontname=\"sans-serif bold\"]\n  size=\"12,18\"\n", INDENT));
     try!(writeln!(f, "{}edge [fontsize=20, fontname=\"sans-serif\"]\n", INDENT));
@@ -620,12 +668,12 @@ pub fn print_graph(f: &mut std::io::Write, g: &Graph, node_frame_filename_prefix
         let dimensions = match weight.result {
             NodeResult::Frame(ptr) => {
                 unsafe { format!("{}x{} {}", (*ptr).w, (*ptr).h, get_pixel_format_name_for(ptr)) }
-            },
+            }
             _ => {
                 match weight.frame_est {
                     FrameEstimate::None => "?x?".to_owned(),
                     FrameEstimate::Some(info) => format!("{}x{} {}", info.w, info.h, get_pixel_format_name(info.fmt, info.alpha_meaningful)),
-                    _ => "!x!".to_owned()
+                    _ => "!x!".to_owned(),
                 }
             }
         };

@@ -14,6 +14,7 @@ bool store_checksums = false;
 #endif
 
 
+
 TEST_CASE("Test spatial IDCT downscale in linear light", "")
 {
     flow_c * c = flow_context_create();

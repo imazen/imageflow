@@ -334,7 +334,7 @@ impl Context {
                         Err(b.get_error_copy().unwrap())
                     } else {
                         if buf_start.is_null() {
-                            //Not sure how output buffer is null... no writes yet?
+                            // Not sure how output buffer is null... no writes yet?
                             Err(FlowError::ErrNotImpl)
                         } else {
                             Ok((std::slice::from_raw_parts(buf_start, buf_len)))

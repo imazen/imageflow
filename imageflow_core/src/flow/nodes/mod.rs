@@ -1,8 +1,9 @@
-use libc::{int32_t,size_t};
+
+use daggy::{Dag, EdgeIndex, NodeIndex};
+use ffi::{Context, Job, PixelFormat, EdgeKind, NodeType, BitmapBgra};
+use libc::{int32_t, size_t};
+use petgraph::EdgeDirection;
 use super::graph::Graph;
-use ffi::{Context,Job,PixelFormat, EdgeKind, NodeType, BitmapBgra};
-use daggy::{Dag,EdgeIndex,NodeIndex};
-use petgraph::{EdgeDirection};
 mod rotate_flip_transpose;
 mod clone_crop_fill_expand;
 mod scale_render;
@@ -11,34 +12,34 @@ mod codecs_and_pointer;
 
 
 extern crate imageflow_serde as s;
-use super::definitions::*;
+pub use self::clone_crop_fill_expand::CLONE;
+pub use self::clone_crop_fill_expand::COPY_RECT;
+pub use self::clone_crop_fill_expand::CROP;
+pub use self::clone_crop_fill_expand::CROP_MUTATE;
+pub use self::clone_crop_fill_expand::EXPAND_CANVAS;
+pub use self::clone_crop_fill_expand::FILL_RECT;
+pub use self::codecs_and_pointer::BITMAP_BGRA_POINTER;
+pub use self::codecs_and_pointer::DECODER;
 
-//TODO: Implement Decoder + APPLY_ORIENTATION, Encoder
+// TODO: Implement Decoder + APPLY_ORIENTATION, Encoder
 
 
 pub use self::codecs_and_pointer::PRIMITIVE_DECODER;
-pub use self::codecs_and_pointer::DECODER;
-pub use self::codecs_and_pointer::BITMAP_BGRA_POINTER;
 pub use self::create_canvas::CREATE_CANVAS;
-pub use self::clone_crop_fill_expand::CROP_MUTATE;
-pub use self::clone_crop_fill_expand::CROP;
-pub use self::clone_crop_fill_expand::CLONE;
-pub use self::clone_crop_fill_expand::COPY_RECT;
-pub use self::clone_crop_fill_expand::FILL_RECT;
-pub use self::clone_crop_fill_expand::EXPAND_CANVAS;
-pub use self::scale_render::SCALE;
-pub use self::scale_render::SCALE_1D_TO_CANVAS_1D;
-pub use self::scale_render::SCALE_1D;
-pub use self::rotate_flip_transpose::FLIP_V;
-pub use self::rotate_flip_transpose::FLIP_V_PRIMITIVE;
+pub use self::rotate_flip_transpose::APPLY_ORIENTATION;
 pub use self::rotate_flip_transpose::FLIP_H;
 pub use self::rotate_flip_transpose::FLIP_H_PRIMITIVE;
-pub use self::rotate_flip_transpose::ROTATE_90;
+pub use self::rotate_flip_transpose::FLIP_V;
+pub use self::rotate_flip_transpose::FLIP_V_PRIMITIVE;
+pub use self::rotate_flip_transpose::NO_OP;
 pub use self::rotate_flip_transpose::ROTATE_180;
 pub use self::rotate_flip_transpose::ROTATE_270;
+pub use self::rotate_flip_transpose::ROTATE_90;
 pub use self::rotate_flip_transpose::TRANSPOSE;
-pub use self::rotate_flip_transpose::APPLY_ORIENTATION;
-pub use self::rotate_flip_transpose::NO_OP;
+pub use self::scale_render::SCALE;
+pub use self::scale_render::SCALE_1D;
+pub use self::scale_render::SCALE_1D_TO_CANVAS_1D;
+use super::definitions::*;
 
 struct NodeDefHelpers {}
 impl NodeDefHelpers {
@@ -61,7 +62,10 @@ impl NodeDefHelpers {
 }
 
 impl<'c> OpCtxMut<'c> {
-    pub fn first_parent_of_kind<'a>(&'a self, of_node: NodeIndex<u32>, filter_by_kind: EdgeKind) -> Option<NodeIndex<u32>> {
+    pub fn first_parent_of_kind<'a>(&'a self,
+                                    of_node: NodeIndex<u32>,
+                                    filter_by_kind: EdgeKind)
+                                    -> Option<NodeIndex<u32>> {
         self.graph
             .graph()
             .edges_directed(of_node, EdgeDirection::Incoming)
@@ -81,12 +85,14 @@ impl<'c> OpCtxMut<'c> {
         self.first_parent_input(of_node).map(|ix| self.graph.node_weight(ix).unwrap().clone())
     }
 
-    pub fn first_parent_frame_info_some<'a>(&'a self, of_node: NodeIndex<u32>) -> Option<FrameInfo> {
+    pub fn first_parent_frame_info_some<'a>(&'a self,
+                                            of_node: NodeIndex<u32>)
+                                            -> Option<FrameInfo> {
         self.first_parent_input(of_node).and_then(|ix| {
             self.graph.node_weight(ix).and_then(|w| {
-                match w.frame_est{
+                match w.frame_est {
                     FrameEstimate::Some(ref frame_info) => Some(*frame_info),
-                    _ => None
+                    _ => None,
                 }
             })
         })
@@ -96,7 +102,7 @@ impl<'c> OpCtxMut<'c> {
         self.graph.node_weight(ix).and_then(|w| {
             match w.params {
                 NodeParams::Json(ref node) => Some(node.clone()),
-                _ => None
+                _ => None,
             }
         })
     }
@@ -105,15 +111,16 @@ impl<'c> OpCtxMut<'c> {
         self.first_parent_canvas(of_node).map(|ix| self.graph.node_weight(ix).unwrap())
     }
 
-    pub fn first_parent_result_frame<'a, 'b>(&'a self, of_node: NodeIndex<u32>, kind: EdgeKind) -> Option<*mut BitmapBgra> {
+    pub fn first_parent_result_frame<'a, 'b>(&'a self,
+                                             of_node: NodeIndex<u32>,
+                                             kind: EdgeKind)
+                                             -> Option<*mut BitmapBgra> {
         self.first_parent_of_kind(of_node, kind)
             .and_then(|ix| self.graph.node_weight(ix))
-            .and_then(|w|
-            match w.result {
+            .and_then(|w| match w.result {
                 NodeResult::Frame(ptr) => Some(ptr),
-                _ => None
-            }
-        )
+                _ => None,
+            })
     }
 
 
@@ -144,7 +151,7 @@ impl<'c> OpCtxMut<'c> {
     pub fn copy_frame_est_from_first_input<'a>(&'a mut self, node_to_update: NodeIndex<u32>) {
         match self.first_parent_input(node_to_update) {
             Some(input_ix) => {
-                if self.graph.node_weight(input_ix).unwrap().frame_est == FrameEstimate::None{
+                if self.graph.node_weight(input_ix).unwrap().frame_est == FrameEstimate::None {
                     panic!("Parent frame {} is not estimated", input_ix.index());
                 }
                 self.graph.node_weight_mut(node_to_update).unwrap().frame_est =
@@ -163,7 +170,7 @@ impl<'c> OpCtxMut<'c> {
         }
     }
 
-    pub fn assert_ok(&self){
+    pub fn assert_ok(&self) {
         unsafe {
             ::ContextPtr::from_ptr(self.c).assert_ok(None);
         }
@@ -223,11 +230,16 @@ impl<'c> OpCtxMut<'c> {
             };
         }
     }
-    pub fn delete_child_edges_for<'a>(&'a mut self,
-                             from_node: NodeIndex<u32>) {
+    pub fn delete_child_edges_for<'a>(&'a mut self, from_node: NodeIndex<u32>) {
         loop {
-            match self.graph.raw_edges().iter().position(|e| e.source() == from_node).and_then(|ix| self.graph.remove_edge(EdgeIndex::new(ix))){
-                None => { break;}
+            match self.graph
+                .raw_edges()
+                .iter()
+                .position(|e| e.source() == from_node)
+                .and_then(|ix| self.graph.remove_edge(EdgeIndex::new(ix))) {
+                None => {
+                    break;
+                }
                 _ => {}
             }
         }
@@ -248,7 +260,7 @@ impl<'c> OpCtxMut<'c> {
         };
     }
 
-    //Links nodes with Input edges
+    // Links nodes with Input edges
     pub fn replace_node<'a>(&'a mut self, index: NodeIndex<u32>, with_list: Vec<Node>) {
         let mut with = with_list.clone();
         match with.len() {

@@ -4,8 +4,8 @@
 extern crate serde;
 extern crate serde_json;
 
-use std::str::FromStr;
 use std::ascii::AsciiExt;
+use std::str::FromStr;
 
 #[derive(Serialize, Deserialize, Debug, PartialEq)]
 struct Point {
@@ -169,35 +169,39 @@ impl Color {
             Color::Srgb(srgb) => {
                 match srgb {
                     ColorSrgb::Hex(hex_srgb) => {
-                        u32::from_str_radix(hex_srgb.as_str(), 16).and_then(|value|
-                            if hex_srgb.len() <= 6 {
+                        u32::from_str_radix(hex_srgb.as_str(), 16)
+                            .and_then(|value| if hex_srgb.len() <= 6 {
                                 Ok(value.checked_shl(8).unwrap() | 0xFF)
-                            }else{
+                            } else {
                                 Ok(value)
-                            }
-                        )
-                    },
+                            })
+                    }
                 }
             }
-            Color::Transparent => Ok(0)
+            Color::Transparent => Ok(0),
         }
     }
 }
 
 
 #[test]
-fn test_color(){
+fn test_color() {
 
-    assert_eq!(Color::Srgb(ColorSrgb::Hex("FFAAEEDD".to_owned())).to_u32_rgba().unwrap(), 0xFFAAEEDD);
-    assert_eq!(Color::Srgb(ColorSrgb::Hex("FFAAEE".to_owned())).to_u32_rgba().unwrap(), 0xFFAAEEFF);
+    assert_eq!(Color::Srgb(ColorSrgb::Hex("FFAAEEDD".to_owned())).to_u32_rgba().unwrap(),
+               0xFFAAEEDD);
+    assert_eq!(Color::Srgb(ColorSrgb::Hex("FFAAEE".to_owned())).to_u32_rgba().unwrap(),
+               0xFFAAEEFF);
 }
 
 #[test]
-fn test_bgra(){
+fn test_bgra() {
 
-    assert_eq!(Color::Srgb(ColorSrgb::Hex("FFAAEEDD".to_owned())).to_u32_bgra().unwrap(), 0xEEAAFFDD);
-    assert_eq!(Color::Srgb(ColorSrgb::Hex("FFAAEE".to_owned())).to_u32_bgra().unwrap(), 0xEEAAFFFF);
-    assert_eq!(Color::Srgb(ColorSrgb::Hex("000000FF".to_owned())).to_u32_bgra().unwrap(), 0x000000FF);
+    assert_eq!(Color::Srgb(ColorSrgb::Hex("FFAAEEDD".to_owned())).to_u32_bgra().unwrap(),
+               0xEEAAFFDD);
+    assert_eq!(Color::Srgb(ColorSrgb::Hex("FFAAEE".to_owned())).to_u32_bgra().unwrap(),
+               0xEEAAFFFF);
+    assert_eq!(Color::Srgb(ColorSrgb::Hex("000000FF".to_owned())).to_u32_bgra().unwrap(),
+               0x000000FF);
 
 
 }
@@ -269,9 +273,7 @@ pub enum Node {
     #[serde(rename="rotate270")]
     Rotate270,
     #[serde(rename="applyOrientation")]
-    ApplyOrientation {
-        flag: i32,
-    },
+    ApplyOrientation { flag: i32 },
     #[serde(rename="scale")]
     Scale {
         w: usize,
@@ -287,14 +289,14 @@ pub enum Node {
     Render1D {
         scale_to_width: usize,
         transpose_on_write: bool,
-        interpolation_filter: Option<Filter>
+        interpolation_filter: Option<Filter>,
     },
-    //TODO: Block use except from FFI/unit test use
+    // TODO: Block use except from FFI/unit test use
     #[serde(rename="flowBitmapBgraPtr")]
-    FlowBitmapBgraPtr{
+    FlowBitmapBgraPtr {
         #[serde(rename="ptrToFlowBitmapBgraPtr")]
-        ptr_to_flow_bitmap_bgra_ptr: usize
-    }
+        ptr_to_flow_bitmap_bgra_ptr: usize,
+    },
 }
 #[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
 pub enum EdgeKind {
@@ -338,7 +340,7 @@ pub enum IoEnum {
     #[serde(rename="url")]
     Url(String),
     #[serde(rename="outputBuffer")]
-    OutputBuffer
+    OutputBuffer,
 }
 
 #[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]

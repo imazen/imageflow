@@ -1,18 +1,18 @@
-use libc::{c_void,c_float,int32_t,int64_t,size_t,uint32_t};
+use libc::{c_void, c_float, int32_t, int64_t, size_t, uint32_t};
 extern crate imageflow_serde as s;
-use daggy::{Dag,EdgeIndex,NodeIndex};
-use super::graph::Graph;
+use daggy::{Dag, EdgeIndex, NodeIndex};
 use ffi::*;
-use std::fmt;
 use std;
+use std::fmt;
+use super::graph::Graph;
 
 #[repr(C)]
 #[derive(Copy,Clone,Debug,PartialEq)]
 pub enum NodeStage {
     Blank = 0,
     InputDimensionsKnown = 1,
-    //FIXME: we shouldn't reuse the value
-    //ReadyForPreOptimizeFlatten = 1,
+    // FIXME: we shouldn't reuse the value
+    // ReadyForPreOptimizeFlatten = 1,
     PreOptimizeFlattened = 2,
     ReadyForOptimize = 3,
     Optimized = 4,
@@ -25,36 +25,36 @@ pub enum NodeStage {
 }
 
 #[derive(Clone,Debug,PartialEq)]
-pub enum EdgesIn{
+pub enum EdgesIn {
     NoInput,
     OneInput,
     OneOptionalInput,
     OneInputOneCanvas,
-    Aribtary{
+    Aribtary {
         inputs: i32,
         canvases: i32,
-        infos: i32
-    }
+        infos: i32,
+    },
 }
 
 
-pub struct OpCtx<'a>{
+pub struct OpCtx<'a> {
     pub c: *mut Context,
     pub job: *const Job,
-    pub graph: &'a Graph
+    pub graph: &'a Graph,
 }
 
 pub struct OpCtxMut<'a> {
     pub c: *mut Context,
     pub job: *mut Job,
-    pub graph: &'a mut Graph
+    pub graph: &'a mut Graph,
 }
 
 pub type OptionalNodeFnMut = Option<fn(&mut OpCtxMut, NodeIndex<u32>)>;
 
-//#[derive(Clone,Debug,PartialEq, Default)]
+// #[derive(Clone,Debug,PartialEq, Default)]
 pub struct NodeDefinition {
-    //When comparing equality, we just check 'id' (for now)
+    // When comparing equality, we just check 'id' (for now)
     pub id: NodeType,
     pub inbound_edges: EdgesIn,
     pub outbound_edges: bool,
@@ -62,7 +62,8 @@ pub struct NodeDefinition {
     pub description: &'static str,
 
     pub fn_link_state_to_this_io_id: Option<fn(&mut OpCtxMut, NodeIndex<u32>) -> Option<i32>>,
-    pub fn_graphviz_text: Option<fn(&mut OpCtxMut, NodeIndex<u32>,  &Node, &mut fmt::Formatter) -> fmt::Result>,
+    pub fn_graphviz_text: Option<fn(&mut OpCtxMut, NodeIndex<u32>, &Node, &mut fmt::Formatter)
+                                    -> fmt::Result>,
     pub fn_estimate: OptionalNodeFnMut,
     pub fn_flatten_pre_optimize: OptionalNodeFnMut,
     pub fn_flatten_post_optimize: OptionalNodeFnMut,
@@ -71,7 +72,7 @@ pub struct NodeDefinition {
 }
 
 #[derive(Copy, Clone,Debug,PartialEq)]
-pub struct FrameInfo{
+pub struct FrameInfo {
     pub w: i32,
     pub h: i32,
     pub fmt: PixelFormat,
@@ -83,13 +84,13 @@ pub enum FrameEstimate {
     None,
     Impossible,
     UpperBound(FrameInfo),
-    Some(FrameInfo)
+    Some(FrameInfo),
 }
 
 #[derive(Clone,Debug,PartialEq)]
-pub struct CostInfo{
-    pub wall_ns: u32, //Estimated wall ticks to execute
-    pub cpu_ticks: Option<u32>, //Estimate overall CPU ticks (larger, if multi-threaded)
+pub struct CostInfo {
+    pub wall_ns: u32, // Estimated wall ticks to execute
+    pub cpu_ticks: Option<u32>, // Estimate overall CPU ticks (larger, if multi-threaded)
     pub heap_bytes: u32,
     pub peak_temp_bytes: u32,
 }
@@ -103,14 +104,14 @@ pub enum CostEstimate {
     NotImplemented,
 }
 #[derive(Clone,Debug,PartialEq)]
-pub enum NodeResult{
+pub enum NodeResult {
     None, // No result yet
-    Consumed, //Ownership has been transferred to another node for exclusive mutation. If another node tries to access, a panic will occur. Don't consume without verifying no other nodes want access.
-    Frame(*mut BitmapBgra), //Should this be boxed?
+    Consumed, /* Ownership has been transferred to another node for exclusive mutation. If another node tries to access, a panic will occur. Don't consume without verifying no other nodes want access. */
+    Frame(*mut BitmapBgra), // Should this be boxed?
 }
 #[derive(Clone,Debug,PartialEq)]
-pub enum NodeParamsInternal{
-    Render1D{
+pub enum NodeParamsInternal {
+    Render1D {
         scale_to_width: usize,
         canvas_x: usize,
         canvas_y: usize,
@@ -122,28 +123,28 @@ pub enum NodeParamsInternal{
     },
 }
 #[derive(Clone,Debug,PartialEq)]
-pub enum NodeParams{
+pub enum NodeParams {
     None,
     Json(s::Node),
-    Internal(NodeParamsInternal)
+    Internal(NodeParamsInternal),
 }
 
 #[derive(Clone,Debug,PartialEq)]
 pub struct Node {
     pub def: &'static NodeDefinition,
-    pub stage: NodeStage, //TODO: delete
+    pub stage: NodeStage, // TODO: delete
     pub params: NodeParams,
     pub frame_est: FrameEstimate,
     pub cost_est: CostEstimate,
     pub cost: CostInfo,
     pub result: NodeResult,
     pub stable_id: i32,
-    pub custom_state: *mut u8, //For simple metadata, we might just use JSON?
+    pub custom_state: *mut u8, // For simple metadata, we might just use JSON?
 }
 
-impl Node{
-   pub fn new(def: &'static NodeDefinition, params: NodeParams) -> Node{
-        Node{
+impl Node {
+    pub fn new(def: &'static NodeDefinition, params: NodeParams) -> Node {
+        Node {
             def: def,
             custom_state: ::std::ptr::null_mut(),
             frame_est: FrameEstimate::None,
@@ -152,25 +153,41 @@ impl Node{
                 cpu_ticks: None,
                 wall_ns: 0,
                 heap_bytes: 0,
-                peak_temp_bytes: 0
+                peak_temp_bytes: 0,
             },
             stable_id: -1,
             params: params,
             stage: NodeStage::Blank,
-            result: NodeResult::None
+            result: NodeResult::None,
         }
     }
 
 
-    pub fn graphviz_node_label(&self,  f: &mut std::io::Write) -> std::io::Result<()> {
+    pub fn graphviz_node_label(&self, f: &mut std::io::Write) -> std::io::Result<()> {
         // name { est f1, f2, ex } none
-        let a = match self.def.fn_estimate.is_some() { true => "est ", false => ""};
-        let b = match self.def.fn_flatten_pre_optimize.is_some() { true => "f1 ", false => ""};
-        let c = match self.def.fn_flatten_post_optimize.is_some() { true => "f2 ", false => ""};
-        let d = match self.def.fn_execute.is_some() { true => "exec ", false => ""};
+        let a = match self.def.fn_estimate.is_some() {
+            true => "est ",
+            false => "",
+        };
+        let b = match self.def.fn_flatten_pre_optimize.is_some() {
+            true => "f1 ",
+            false => "",
+        };
+        let c = match self.def.fn_flatten_post_optimize.is_some() {
+            true => "f2 ",
+            false => "",
+        };
+        let d = match self.def.fn_execute.is_some() {
+            true => "exec ",
+            false => "",
+        };
 
-        let e = match self.result { NodeResult::None => "none", NodeResult::Consumed => "reused", NodeResult::Frame(ptr) => "done"};
-        try!(write!(f, "{}{{{}{}{}{}}} {}", self.def.name, a, b, c, d, e ));
+        let e = match self.result {
+            NodeResult::None => "none",
+            NodeResult::Consumed => "reused",
+            NodeResult::Frame(ptr) => "done",
+        };
+        try!(write!(f, "{}{{{}{}{}{}}} {}", self.def.name, a, b, c, d, e));
         Ok(())
     }
 }
@@ -184,7 +201,10 @@ impl PartialEq for NodeDefinition {
 
 impl fmt::Debug for NodeDefinition {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "NodeDefinition {{ name: '{}', id: {} }}", self.name, self.id as i32)
+        write!(f,
+               "NodeDefinition {{ name: '{}', id: {} }}",
+               self.name,
+               self.id as i32)
     }
 }
 
@@ -202,9 +222,7 @@ impl Default for NodeDefinition {
             fn_cleanup: None,
             fn_estimate: None,
             fn_flatten_pre_optimize: None,
-            fn_link_state_to_this_io_id: None
+            fn_link_state_to_this_io_id: None,
         }
     }
 }
-
-
