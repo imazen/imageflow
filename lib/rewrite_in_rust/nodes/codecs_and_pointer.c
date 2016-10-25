@@ -123,7 +123,6 @@ static bool stringify_encode(flow_c * c, struct flow_graph * g, int32_t node_id,
     return stringify_decode(c, g, node_id, buffer, buffer_size);
 }
 
-int32_t flow_codecs_jpg_decoder_get_exif(flow_c * c, struct flow_codec_instance * codec_instance);
 
 static bool flatten_decode_complex(flow_c * c, struct flow_graph ** graph_ref, int32_t node_id)
 {
