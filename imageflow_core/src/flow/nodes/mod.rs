@@ -20,8 +20,9 @@ pub use self::clone_crop_fill_expand::EXPAND_CANVAS;
 pub use self::clone_crop_fill_expand::FILL_RECT;
 pub use self::codecs_and_pointer::BITMAP_BGRA_POINTER;
 pub use self::codecs_and_pointer::DECODER;
+pub use self::codecs_and_pointer::ENCODE;
 
-// TODO: Implement Decoder + APPLY_ORIENTATION, Encoder
+// TODO: Implement decoder IDCT
 
 
 pub use self::codecs_and_pointer::PRIMITIVE_DECODER;
@@ -85,6 +86,7 @@ impl<'c> OpCtxMut<'c> {
         self.first_parent_input(of_node).map(|ix| self.graph.node_weight(ix).unwrap().clone())
     }
 
+
     pub fn first_parent_frame_info_some<'a>(&'a self,
                                             of_node: NodeIndex<u32>)
                                             -> Option<FrameInfo> {
@@ -141,8 +143,8 @@ impl<'c> OpCtxMut<'c> {
             .any(|n| n != except_child)
     }
 
-    pub fn weight<'a>(&'a mut self, node_to_update: NodeIndex<u32>) -> &'a Node {
-        self.graph.node_weight(node_to_update).unwrap()
+    pub fn weight<'a>(&'a self, ix: NodeIndex<u32>) -> &'a Node {
+        self.graph.node_weight(ix).unwrap()
     }
 
     pub fn weight_mut<'a>(&'a mut self, node_to_update: NodeIndex<u32>) -> &'a mut Node {

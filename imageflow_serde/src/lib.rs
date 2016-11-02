@@ -143,12 +143,18 @@ impl FromStr for Filter {
     }
 }
 
+#[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
+pub enum PngBitDepth{
+    Png32,
+    Png24,
+}
 
 #[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
-pub enum EncoderHints {
-    Jpeg { quality: Option<i32> },
-    Png { disable_alpha: Option<bool> },
+pub enum EncoderPreset {
+    LibjpegTurbo { quality: Option<i32> },
+    Libpng {  depth: Option<PngBitDepth>, matte: Option<Color>, zlib_compression: Option<i32>}
 }
+
 
 #[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
 pub enum ColorSrgb {
@@ -243,10 +249,7 @@ pub enum Node {
     Encode {
         #[serde(rename="ioId")]
         io_id: i32,
-        encoder: Option<Encoder>,
-        #[serde(rename="encoderId")]
-        encoder_id: Option<i64>,
-        hints: Option<EncoderHints>,
+        preset: EncoderPreset
     },
     #[serde(rename="fillRect")]
     FillRect {

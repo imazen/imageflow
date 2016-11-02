@@ -153,8 +153,11 @@ pub fn job_link_codecs(c: *mut Context, job: *mut Job, g: &mut Graph) -> bool {
                 placeholder_id = func(&mut ctx, NodeIndex::new(index));
             }
             if let Some(io_id) = placeholder_id {
-                g.node_weight_mut(NodeIndex::new(index)).unwrap().custom_state =
-                    unsafe { ::ffi::flow_job_get_codec_instance(c, job, io_id) as *mut u8 };
+                let codec_instance =
+                unsafe { ::ffi::flow_job_get_codec_instance(c, job, io_id) as *mut u8 };
+                if codec_instance == ptr::null_mut() { panic!("")}
+
+                g.node_weight_mut(NodeIndex::new(index)).unwrap().custom_state = codec_instance;
             }
         }
     }

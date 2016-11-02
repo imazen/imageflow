@@ -9,6 +9,24 @@ use std::ffi::CString;
 use imageflow_core::Context;
 
 
+fn graph_recording_debug() -> s::Build001_Graph_Recording{
+    s::Build001_Graph_Recording{
+        record_graph_versions: Some(true),
+        record_frame_images: Some(true),
+        render_last_graph: Some(true),
+        render_animated_graph: Some(false),
+        render_graph_versions : Some(false),
+    }
+}
+
+fn default_build_config(debug: bool) -> s::Build001Config {
+    s::Build001Config{graph_recording: match debug{ true => Some(graph_recording_debug()), false => None} ,
+        process_all_gif_frames: Some(false),
+        enable_jpeg_block_scaling: Some(false),
+        no_gamma_correction: false
+    }
+}
+
 
 /// Creates a static, null-terminated Rust string, and
 /// returns a ` *const libc::c_char` pointer to it.
@@ -19,6 +37,33 @@ macro_rules! static_char {
     ($lit:expr) => {
         concat!($lit, "\0").as_ptr() as *const libc::c_char
     }
+}
+
+fn smoke_test(input: Option<s::IoEnum>, output: Option<s::IoEnum>,  debug: bool, steps: Vec<s::Node>){
+    let mut io_list = Vec::new();
+    if input.is_some() {
+        io_list.push(s::IoObject {
+            io_id: 0,
+            direction: s::IoDirection::Input,
+            checksum: None,
+            io: input.unwrap()
+        });
+    }
+    if output.is_some() {
+        io_list.push(s::IoObject {
+            io_id: 1,
+            direction: s::IoDirection::Output,
+            checksum: None,
+            io: output.unwrap()
+        });
+    }
+    let build = s::Build001{
+        builder_config: Some(default_build_config(debug)),
+        io: io_list,
+        framewise: s::Framewise::Steps(steps)
+    };
+    let mut context = Context::create();
+    context.message("v0.0.1/build", &serde_json::to_vec(&build).unwrap()).unwrap();
 }
 
 fn compare(input: Option<s::IoEnum>, allowed_off_by_one_bytes: usize, checksum_name: String, store_if_missing: bool, debug: bool, mut steps: Vec<s::Node>) -> bool {
@@ -38,16 +83,8 @@ fn compare(input: Option<s::IoEnum>, allowed_off_by_one_bytes: usize, checksum_n
 
     steps.push(s::Node::FlowBitmapBgraPtr { ptr_to_flow_bitmap_bgra_ptr: ptr_to_ptr as usize});
 
-        let recording = s::Build001_Graph_Recording{
-            record_graph_versions: Some(true),
-            record_frame_images: Some(true),
-            render_last_graph: Some(true),
-            render_animated_graph: Some(false),
-            render_graph_versions : Some(false),
-        };
-
     let build = s::Build001{
-        builder_config: Some(s::Build001Config{graph_recording: match debug{ true => Some(recording), false => None} ,
+        builder_config: Some(s::Build001Config{graph_recording: match debug{ true => Some(graph_recording_debug()), false => None} ,
             process_all_gif_frames: Some(false),
             enable_jpeg_block_scaling: Some(false),
             no_gamma_correction: false
@@ -187,7 +224,6 @@ s::Node::Scale{ w: 400, h: 300, down_filter: Some(s::Filter::Robidoux), up_filte
     assert!(matched);
 }
 
-
 #[test]
 fn test_jpeg_rotation() {
     let orientations = vec!["Landscape", "Portrait"];
@@ -203,4 +239,34 @@ fn test_jpeg_rotation() {
 
 }
 
+
+#[test]
+fn test_encode_jpeg_smoke() {
+    let steps = vec![
+    s::Node::Decode {io_id: 0},
+    s::Node::Scale{ w: 400, h: 300, down_filter: Some(s::Filter::Robidoux), up_filter: Some(s::Filter::Robidoux), sharpen_percent: Some(0f32), flags: Some(1) },
+    s::Node::Encode{ io_id: 1, preset: s::EncoderPreset::LibjpegTurbo {quality: Some(100)}}
+    ];
+
+    smoke_test(Some(s::IoEnum::Url("http://s3-us-west-2.amazonaws.com/imageflow-resources/test_inputs/MarsRGB_v4_sYCC_8bit.jpg".to_owned())),
+               Some(s::IoEnum::OutputBuffer),
+               false,
+               steps,
+    );
+}
+
+#[test]
+fn test_encode_png32_smoke() {
+    let steps = vec![
+    s::Node::Decode {io_id: 0},
+    s::Node::Scale{ w: 400, h: 300, down_filter: Some(s::Filter::Robidoux), up_filter: Some(s::Filter::Robidoux), sharpen_percent: Some(0f32), flags: Some(1) },
+    s::Node::Encode{ io_id: 1, preset: s::EncoderPreset::Libpng {depth: Some(s::PngBitDepth::Png32), matte: None,  zlib_compression: None}}
+    ];
+
+    smoke_test(Some(s::IoEnum::Url("http://s3-us-west-2.amazonaws.com/imageflow-resources/test_inputs/MarsRGB_v4_sYCC_8bit.jpg".to_owned())),
+               Some(s::IoEnum::OutputBuffer),
+               false,
+               steps,
+    );
+}
 

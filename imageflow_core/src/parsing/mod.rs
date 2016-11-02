@@ -287,9 +287,7 @@ fn test_handler() {
     });
     steps.push(s::Node::Encode {
         io_id: 1,
-        encoder: None,
-        encoder_id: None,
-        hints: None,
+        preset: s::EncoderPreset::LibjpegTurbo{ quality: Some(90)}
     });
 
     //    let recording = s::Build001_Graph_Recording{

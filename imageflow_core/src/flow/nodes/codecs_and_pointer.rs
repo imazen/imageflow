@@ -87,9 +87,10 @@ fn bitmap_bgra_def() -> NodeDefinition {
     }
 }
 
-fn decoder_io_id(ctx: &mut OpCtxMut, ix: NodeIndex<u32>) -> Option<i32> {
+fn decoder_encoder_io_id(ctx: &mut OpCtxMut, ix: NodeIndex<u32>) -> Option<i32> {
     match ctx.weight(ix).params {
         NodeParams::Json(s::Node::Decode { io_id }) => Some(io_id),
+        NodeParams::Json(s::Node::Encode { io_id, .. }) => Some(io_id),
         _ => None,
     }
 }
@@ -98,7 +99,7 @@ fn decoder_estimate(ctx: &mut OpCtxMut, ix: NodeIndex<u32>) {
 
     let codec = ctx.weight(ix).custom_state as *mut ffi::CodecInstance;
 
-    let io_id = decoder_io_id(ctx, ix).unwrap();
+    let io_id = decoder_encoder_io_id(ctx, ix).unwrap();
     let mut frame_info: ffi::DecoderInfo = Default::default();
     unsafe {
         if !ffi::flow_job_get_decoder_info(ctx.c,
@@ -128,7 +129,7 @@ fn decoder_def() -> NodeDefinition {
         fn_estimate: Some(decoder_estimate),
 
         // Allow link-up
-        fn_link_state_to_this_io_id: Some(decoder_io_id),
+        fn_link_state_to_this_io_id: Some(decoder_encoder_io_id),
         fn_flatten_pre_optimize: {
             fn f(ctx: &mut OpCtxMut, ix: NodeIndex<u32>) {
 
@@ -160,9 +161,9 @@ fn primitive_decoder_def() -> NodeDefinition {
         outbound_edges: true,
         inbound_edges: EdgesIn::NoInput,
         fn_estimate: Some(decoder_estimate),
-
         fn_execute: Some({
             fn f(ctx: &mut OpCtxMut, ix: NodeIndex<u32>) {
+                //TODO______
                 let codec = ctx.weight(ix).custom_state as *mut ffi::CodecInstance;
 
                 unsafe {
@@ -180,9 +181,84 @@ fn primitive_decoder_def() -> NodeDefinition {
     }
 }
 
+fn encoder_def() -> NodeDefinition {
+    NodeDefinition {
+        id: NodeType::primitive_encoder,
+        name: "primitive_encoder",
+        outbound_edges: false,
+        inbound_edges: EdgesIn::OneInput,
+        // Allow link-up
+        fn_link_state_to_this_io_id: Some(decoder_encoder_io_id),
+        fn_estimate: Some(NodeDefHelpers::copy_frame_est_from_first_input),
+
+        fn_execute: Some({
+            fn f(ctx: &mut OpCtxMut, ix: NodeIndex<u32>) {
+                if let Some(input_bitmap) = ctx.first_parent_result_frame(ix, EdgeKind::Input) {
+                    {
+                        let weight = ctx.weight(ix);
+                        if let NodeParams::Json(s::Node::Encode { ref preset, .. }) = weight.params {
+                            let codec = weight.custom_state as *mut ffi::CodecInstance;
+
+                            if codec == ptr::null_mut() { panic!("") }
+
+                            let (wanted_id, hints) = match *preset {
+                                s::EncoderPreset::LibjpegTurbo { quality } =>
+                                (ffi::CodecType::EncodeJpeg as i64,
+                                 ffi::EncoderHints {
+                                    jpeg_encode_quality: quality.unwrap_or(90),
+                                    disable_png_alpha: false,
+                                 }),
+                                s::EncoderPreset::Libpng { ref matte, zlib_compression, ref depth } =>
+                                    (ffi::CodecType::EncodePng as i64,
+                                     ffi::EncoderHints {
+                                         jpeg_encode_quality: -1,
+                                         disable_png_alpha: match *depth {
+                                             Some(s::PngBitDepth::Png24) => false,
+                                             _ => true },
+                                     })
+                            };
+
+                            unsafe {
+                                (*codec).codec_id = wanted_id;
+                                if !ffi::flow_codec_initialize(ctx.c, codec) {
+                                    ctx.assert_ok();
+                                }
+                                let codec_def = ffi::flow_codec_get_definition(ctx.c, wanted_id);
+                                if codec_def == ptr::null_mut() {
+                                    ctx.assert_ok();
+                                }
+                                let write_fn = (*codec_def).write_frame;
+                                if write_fn == None {
+                                    panic!("Codec didn't implement write_frame");
+                                }
+
+                                if !write_fn.unwrap()(ctx.c, (*codec).codec_state, input_bitmap, &hints as *const ffi::EncoderHints) {
+                                    ctx.assert_ok();
+                                }
+                            }
+                        } else {
+                            panic!("");
+                        }
+                    }
+                    {
+                        ctx.weight_mut(ix).result = NodeResult::Frame(input_bitmap);
+                    }
+                }else {
+                    panic!("");
+                }
+
+            }
+            f
+        }),
+
+        ..Default::default()
+    }
+}
+
 
 lazy_static! {
     pub static ref BITMAP_BGRA_POINTER: NodeDefinition = bitmap_bgra_def();
     pub static ref DECODER: NodeDefinition = decoder_def();
+    pub static ref ENCODE: NodeDefinition = encoder_def();
     pub static ref PRIMITIVE_DECODER: NodeDefinition = primitive_decoder_def();
 }

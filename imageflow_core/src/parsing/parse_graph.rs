@@ -51,7 +51,10 @@ impl GraphTranslator {
             s::Node::Rotate90 => Node::new(&nodes::ROTATE_90, NodeParams::Json(node)),
             s::Node::Rotate180 => Node::new(&nodes::ROTATE_180, NodeParams::Json(node)),
             s::Node::Rotate270 => Node::new(&nodes::ROTATE_270, NodeParams::Json(node)),
-            // s::Node::Transpose => Node::new(&nodes::TRANSPOSE, NodeParams::Json(node)),
+            s::Node::ApplyOrientation { .. } => Node::new(&nodes::APPLY_ORIENTATION, NodeParams::Json(node)),
+            s::Node::Transpose => Node::new(&nodes::TRANSPOSE, NodeParams::Json(node)),
+            s::Node::Render1D{ ..} => Node::new(&nodes::SCALE_1D, NodeParams::Json(node)),
+            s::Node::Encode { .. }=> Node::new(&nodes::ENCODE, NodeParams::Json(node)),
             s::Node::CreateCanvas { .. } => {
                 Node::new(&nodes::CREATE_CANVAS, NodeParams::Json(node))
             }
@@ -63,7 +66,7 @@ impl GraphTranslator {
             s::Node::ExpandCanvas { .. } => {
                 Node::new(&nodes::EXPAND_CANVAS, NodeParams::Json(node))
             }
-            _ => Node::new(&nodes::NO_OP, NodeParams::Json(node)),
+            //_ => Node::new(&nodes::NO_OP, NodeParams::Json(node)),
         };
         g.add_node(new_node)
     }

@@ -83,8 +83,8 @@ pub enum NodeType {
 #[derive(Clone,Debug,PartialEq)]
 pub struct CodecInstance {
     graph_placeholder_id: int32_t,
-    codec_id: int64_t,
-    codec_state: *mut c_void,
+    pub codec_id: int64_t,
+    pub codec_state: *mut c_void,
     io: *mut FlowIO,
     next: *mut CodecInstance,
     direction: FlowDirection,
@@ -532,10 +532,24 @@ pub struct ObjTrackingInfo {
     pub bytes_allocations_net_peak: size_t,
 }
 
+type CodecInitializeFn = extern fn(*mut Context, *mut CodecInstance) -> bool;
+type CodecWriteFrameFn = extern fn(*mut Context, *mut libc::c_void, *mut BitmapBgra, *const EncoderHints) -> bool;
+
 
 #[repr(C)]
 #[derive(Clone,Debug,PartialEq)]
 pub struct CodecDefinition {
+    pub codec_id: i64,
+    pub initialize: Option<CodecInitializeFn>,
+    get_info: *const libc::c_void,
+    get_frame_info: *const libc::c_void,
+    set_downscale_hints: *const libc::c_void,
+    switch_frame: *const libc::c_void,
+    read_frame: *const libc::c_void,
+    pub write_frame: Option<CodecWriteFrameFn>,
+    name: *const u8,
+    preferred_mime_type: *const u8,
+    preferred_extension: *const u8,
     placeholder: u8, // FIXME: replace
 }
 
@@ -941,6 +955,11 @@ extern "C" {
                                      by_placeholder_id: i32,
                                      info: *mut DecoderInfo)
                                      -> bool;
+
+
+    pub fn flow_codec_initialize(c: *mut Context, instance: *mut CodecInstance) -> bool;
+
+    pub fn flow_codec_get_definition(c: *mut Context, codec_id: i64) -> *mut CodecDefinition;
 
     pub fn flow_codec_execute_read_frame(c: *mut Context,
                                          context: *mut CodecInstance)
