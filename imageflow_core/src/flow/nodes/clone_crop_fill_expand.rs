@@ -1,7 +1,7 @@
 extern crate imageflow_serde as s;
 use daggy::{Dag, EdgeIndex, NodeIndex};
 use ffi;
-use ffi::{Context, Job, NodeType, EdgeKind, PixelFormat};
+use ffi::{Context, Job, EdgeKind, PixelFormat};
 use flow::definitions::*;
 use flow::graph::Graph;
 use petgraph;
@@ -12,7 +12,7 @@ use super::NodeDefHelpers;
 
 fn copy_rect_def() -> NodeDefinition {
     NodeDefinition {
-        id: NodeType::primitive_CopyRectToCanvas,
+        fqn: "imazen.copy_rect_to_canvas",
         name: "copy_rect",
         inbound_edges: EdgesIn::OneInputOneCanvas,
         description: "Copy Rect",
@@ -69,7 +69,7 @@ fn copy_rect_def() -> NodeDefinition {
 
 fn fill_rect_def() -> NodeDefinition {
     NodeDefinition {
-        id: NodeType::Fill_Rect_Mutate,
+        fqn: "imazen.fill_rect_mutate",
         name: "fill_rect",
         inbound_edges: EdgesIn::OneInput,
         fn_estimate: Some(NodeDefHelpers::copy_frame_est_from_first_input),
@@ -109,7 +109,7 @@ fn fill_rect_def() -> NodeDefinition {
 
 fn clone_def() -> NodeDefinition {
     NodeDefinition {
-        id: NodeType::Clone,
+        fqn: "imazen.clone",
         name: "Clone",
         description: "Clone",
         fn_estimate: Some(NodeDefHelpers::copy_frame_est_from_first_input),
@@ -173,7 +173,7 @@ fn expand_canvas_size(ctx: &mut OpCtxMut, ix: NodeIndex<u32>) {
 
 fn expand_canvas_def() -> NodeDefinition {
     NodeDefinition {
-        id: NodeType::Expand_Canvas,
+        fqn: "imazen.expand_canvas",
         name: "expand canvas",
         inbound_edges: EdgesIn::OneInput,
         description: "Expand Canvas",
@@ -244,7 +244,7 @@ fn crop_size(ctx: &mut OpCtxMut, ix: NodeIndex<u32>) {
 fn crop_mutate_def() -> NodeDefinition {
     NodeDefinition {
         // TODO: As a mutating node, shouldn't this verify no siblings exist? 'Consumed' might be non-deterministic
-        id: NodeType::Crop,
+        fqn: "imazen.crop_mutate",
         name: "crop_mutate",
         inbound_edges: EdgesIn::OneInput,
         fn_estimate: Some(crop_size),
@@ -288,7 +288,7 @@ fn crop_mutate_def() -> NodeDefinition {
 
 fn crop_def() -> NodeDefinition {
     NodeDefinition {
-        id: NodeType::Crop,
+        fqn: "imazen.crop",
         name: "crop",
         inbound_edges: EdgesIn::OneInput,
         fn_estimate: Some(crop_size),

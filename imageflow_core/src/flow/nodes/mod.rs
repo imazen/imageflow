@@ -1,6 +1,6 @@
 
 use daggy::{Dag, EdgeIndex, NodeIndex};
-use ffi::{Context, Job, PixelFormat, EdgeKind, NodeType, BitmapBgra};
+use ffi::{Context, Job, PixelFormat, EdgeKind, BitmapBgra};
 use libc::{int32_t, size_t};
 use petgraph::EdgeDirection;
 use super::graph::Graph;

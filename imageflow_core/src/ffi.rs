@@ -19,67 +19,6 @@ pub enum JobIO {}
 
 
 #[repr(C)]
-#[derive(Copy,Clone,Debug,PartialEq)]
-pub enum NodeType {
-    Null = 0,
-    primitive_Flip_Vertical_Mutate = 1,
-    primitive_Flip_Horizontal_Mutate = 2,
-    primitive_Crop_Mutate_Alias = 3,
-    primitive_CopyRectToCanvas = 4, // Overwrite only, no compositing
-    Create_Canvas = 5,
-    primitive_RenderToCanvas1D = 6,
-    primitive_Scale2D_RenderToCanvas1D = 7,
-    primitive_bitmap_bgra_pointer,
-    primitive_decoder,
-    primitive_encoder,
-
-    Fill_Rect_Mutate,
-    non_primitive_nodes_begin = 256,
-
-    Expand_Canvas,
-    Transpose,
-    Flip_Vertical,
-    Flip_Horizontal,
-    Render1D,
-    Crop,
-    Apply_Orientation,
-    non_optimizable_nodes_begin = 512,
-
-    Clone,
-    decoder,
-    encoder,
-
-    Rotate_90,
-    Rotate_180,
-    Rotate_270,
-    Scale, // (preserve colorspace), interpolation filter
-    Noop,
-
-    // Not implemented below here:
-    Rotate_Flip_Per_Orientation,
-    Crop_Percentage,
-    Crop_Percentage_Infinite_Canvas, // canvas_color
-    Crop_Rectangle,
-    Constrain, /* (mode=pad|max|crop|stretch) (width, height) (scale=down|up|both|canvas) (anchor=9 points) */
-    Matte,
-    EnlargeCanvas,
-    Sharpen,
-    Blur,
-    Convolve_Custom,
-    AdjustContrast,
-    AdjustSaturation,
-    AdjustBrightness,
-    CropWhitespace, // tolerances and padding
-    Opacity,
-    Sepia,
-    Grayscale, // true|y|ry|ntsc|bt709|flat
-    DrawImage,
-    RemoveNoise,
-    ColorMatrixsRGB,
-    _FORCE_ENUM_SIZE_INT32 = 2147483647,
-}
-
-#[repr(C)]
 #[derive(Clone,Debug,PartialEq)]
 pub struct CodecInstance {
     graph_placeholder_id: int32_t,
@@ -157,44 +96,6 @@ pub enum Floatspace {
 // blend_with_matte = 2,
 // }
 //
-
-// #[repr(C)]
-// #[derive(Copy,Clone,Debug, PartialEq)]
-// pub enum Filter {
-//    RobidouxFast = 1,
-//    Robidoux = 2,
-//    RobidouxSharp = 3,
-//    Ginseng = 4,
-//    GinsengSharp = 5,
-//    Lanczos = 6,
-//    LanczosSharp = 7,
-//    Lanczos2 = 8,
-//    Lanczos2Sharp = 9,
-//    CubicFast = 10,
-//    Cubic = 11,
-//    CubicSharp = 12,
-//    CatmullRom = 13,
-//    Mitchell = 14,
-//
-//    CubicBSpline = 15,
-//    Hermite = 16,
-//    Jinc = 17,
-//    RawLanczos3 = 18,
-//    RawLanczos3Sharp = 19,
-//    RawLanczos2 = 20,
-//    RawLanczos2Sharp = 21,
-//    Triangle = 22,
-//    Linear = 23,
-//    Box = 24,
-//    CatmullRomFast = 25,
-//    CatmullRomFastSharp = 26,
-//
-//    Fastest = 27,
-//
-//    MitchellFast = 28,
-//    NCubic = 29,
-//    NCubicSharp = 30,
-// }
 
 pub use self::s::Filter;
 
@@ -588,12 +489,6 @@ pub struct Context {
 }
 
 #[repr(C)]
-#[derive(Clone,Debug,PartialEq)]
-pub struct NodeInfoIndex {
-    pub index: int32_t,
-}
-
-#[repr(C)]
 #[derive(Copy,Clone,Debug,PartialEq)]
 pub enum CodecType {
     Null = 0,
@@ -604,68 +499,6 @@ pub enum CodecType {
     DecodeGif = 5,
 }
 
-#[repr(C)]
-#[derive(Clone,Debug,PartialEq)]
-struct NodeInfoEncoderPlaceholder {
-    index: NodeInfoIndex,
-    codec_type: CodecType,
-}
-
-#[repr(C)]
-#[derive(Clone,Debug,PartialEq)]
-struct NodeInfoCreateCanvas {
-    format: PixelFormat,
-    width: size_t,
-    height: size_t,
-    bgcolor: uint32_t,
-}
-
-#[repr(C)]
-#[derive(Clone,Debug,PartialEq)]
-struct NodeInfoCrop {
-    x1: uint32_t,
-    x2: uint32_t,
-    y1: uint32_t,
-    y2: uint32_t,
-}
-
-#[repr(C)]
-#[derive(Clone,Debug,PartialEq)]
-struct NodeInfoCopyRectToCanvas {
-    x: uint32_t,
-    y: uint32_t,
-    from_x: uint32_t,
-    from_y: uint32_t,
-    width: uint32_t,
-    height: uint32_t,
-}
-
-#[repr(C)]
-#[derive(Clone,Debug,PartialEq)]
-struct NodeInfoExpandCanvas {
-    left: uint32_t,
-    top: uint32_t,
-    right: uint32_t,
-    bottom: uint32_t,
-    canvas_color_srgb: uint32_t,
-}
-
-#[repr(C)]
-#[derive(Clone,Debug,PartialEq)]
-struct NodeInfoFillRect {
-    x1: uint32_t,
-    y1: uint32_t,
-    x2: uint32_t,
-    y2: uint32_t,
-    color_srgb: uint32_t,
-}
-
-#[repr(C)]
-#[derive(Clone,Debug,PartialEq)]
-struct NodeInfoSize {
-    width: int32_t,
-    height: int32_t,
-}
 
 #[repr(C)]
 #[derive(Copy,Clone,Debug,PartialEq)]
@@ -707,28 +540,12 @@ enum InterpolationFilter {
     NCubicSharp = 30,
 }
 
-#[repr(C)]
-#[derive(Clone,Debug,PartialEq)]
-struct NodeInfoScale {
-    width: int32_t,
-    height: int32_t,
-    downscale_filter: InterpolationFilter,
-    upscale_filter: InterpolationFilter,
-    flags: size_t,
-    sharpen: c_float,
-}
 
 #[repr(C)]
 #[derive(Copy,Clone,Debug,PartialEq)]
 enum ScaleFlags {
     None = 0,
     UseScale2d = 1,
-}
-
-#[repr(C)]
-#[derive(Clone,Debug,PartialEq)]
-pub struct NodeInfoBitmapBgraPointer {
-    ptr: *mut *mut BitmapBgra,
 }
 
 #[repr(C)]
@@ -772,20 +589,6 @@ struct FlowIO {
 pub enum FlowDirection {
     Output = 8,
     Input = 4,
-}
-
-
-
-#[repr(C)]
-#[derive(Clone,Debug,PartialEq)]
-pub struct NodeInfoCodec {
-    placeholder_id: int32_t,
-    codec: *mut CodecInstance,
-    // For encoders
-    desired_encoder_id: int64_t,
-    // For decoders
-    downscale_hints: DecoderDownscaleHints,
-    encoder_hints: EncoderHints,
 }
 
 

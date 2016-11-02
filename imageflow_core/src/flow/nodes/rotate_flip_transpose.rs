@@ -1,7 +1,7 @@
 extern crate imageflow_serde as s;
 use daggy::{Dag, EdgeIndex, NodeIndex};
 use ffi;
-use ffi::{Context, Job, NodeType, EdgeKind};
+use ffi::{Context, Job, EdgeKind};
 use flow::definitions::*;
 use flow::graph::Graph;
 use petgraph;
@@ -11,7 +11,7 @@ use super::NodeDefHelpers;
 
 fn apply_orientation_def() -> NodeDefinition {
     NodeDefinition {
-        id: NodeType::Apply_Orientation,
+        fqn: "imazen.apply_orientation",
         name: "Apply orientation",
         fn_estimate: Some({
             fn f(ctx: &mut OpCtxMut, ix: NodeIndex<u32>) {
@@ -70,7 +70,7 @@ fn apply_orientation_def() -> NodeDefinition {
 }
 fn transpose_def() -> NodeDefinition {
     NodeDefinition {
-        id: NodeType::Transpose,
+        fqn: "imazen.transpose",
         name: "Transpose",
         fn_estimate: Some(NodeDefHelpers::rotate_frame_info),
         fn_flatten_pre_optimize: Some({
@@ -96,20 +96,19 @@ fn transpose_def() -> NodeDefinition {
     }
 }
 
-
-lazy_static! {
-    pub static ref NO_OP: NodeDefinition = NodeDefinition {
-        id: NodeType::Noop,
+fn no_op_def() -> NodeDefinition {
+    NodeDefinition {
+        fqn: "imazen.noop",
         name: "NoOp",
         description: "Does nothing; pass-through node",
         fn_estimate: Some(NodeDefHelpers::copy_frame_est_from_first_input),
         fn_flatten_pre_optimize: Some(NodeDefHelpers::delete_node_and_snap_together),
-        .. Default::default()};
-
-
-
-   pub static ref FLIP_V_PRIMITIVE: NodeDefinition = NodeDefinition {
-        id: NodeType::primitive_Flip_Vertical_Mutate,
+        .. Default::default()
+    }
+}
+fn flip_v_p_def() -> NodeDefinition {
+    NodeDefinition {
+        fqn: "imazen.flip_vertical_mutate",
         name: "FlipVPrimitive",
         description: "Flip frame vertical",
         fn_estimate: Some(NodeDefHelpers::copy_frame_est_from_first_input),
@@ -128,27 +127,11 @@ lazy_static! {
             f
         }),
         .. Default::default()
-    };
-    pub static ref FLIP_V: NodeDefinition = NodeDefinition {
-        id: NodeType::Flip_Vertical,
-        name: "FlipV",
-        description: "Flip frame vertical",
-        fn_estimate: Some(NodeDefHelpers::copy_frame_est_from_first_input),
-        fn_flatten_pre_optimize: Some({
-            fn f(ctx: &mut OpCtxMut, ix: NodeIndex<u32>){
-                let mut new_nodes = Vec::with_capacity(2);
-                if ctx.has_other_children(ctx.first_parent_input(ix).unwrap(), ix) {
-                    new_nodes.push(Node::new(&CLONE, NodeParams::None));
-                }
-                new_nodes.push(Node::new(&FLIP_V_PRIMITIVE, NodeParams::None));
-                ctx.replace_node(ix, new_nodes);
-            }
-            f
-        }),
-        .. Default::default()
-    };
-     pub static ref FLIP_H_PRIMITIVE: NodeDefinition = NodeDefinition {
-        id: NodeType::primitive_Flip_Horizontal_Mutate,
+    }
+}
+fn flip_h_p_def() -> NodeDefinition {
+    NodeDefinition {
+        fqn: "imazen.flip_horizontal_mutate",
         name: "FlipHPrimitive",
         description: "Flip frame horizontal",
         fn_estimate: Some(NodeDefHelpers::copy_frame_est_from_first_input),
@@ -167,13 +150,35 @@ lazy_static! {
             f
         }),
         .. Default::default()
-    };
-    pub static ref FLIP_H: NodeDefinition = NodeDefinition {
-        id: NodeType::Flip_Horizontal,
+    }
+}
+fn flip_v_def() -> NodeDefinition {
+    NodeDefinition {
+        fqn: "imazen.flipv",
+        name: "FlipV",
+        description: "Flip frame vertical",
+        fn_estimate: Some(NodeDefHelpers::copy_frame_est_from_first_input),
+        fn_flatten_pre_optimize: Some({
+            fn f(ctx: &mut OpCtxMut, ix: NodeIndex<u32>){
+                let mut new_nodes = Vec::with_capacity(2);
+                if ctx.has_other_children(ctx.first_parent_input(ix).unwrap(), ix) {
+                    new_nodes.push(Node::new(&CLONE, NodeParams::None));
+                }
+                new_nodes.push(Node::new(&FLIP_V_PRIMITIVE, NodeParams::None));
+                ctx.replace_node(ix, new_nodes);
+            }
+            f
+        }),
+        .. Default::default()
+    }
+}
+fn flip_h_def() -> NodeDefinition {
+    NodeDefinition {
+        fqn: "imazen.fliph",
         name: "FlipH",
         description: "Flip frame horizontal",
         fn_estimate: Some(NodeDefHelpers::copy_frame_est_from_first_input),
-         fn_flatten_pre_optimize: Some({
+        fn_flatten_pre_optimize: Some({
             fn f(ctx: &mut OpCtxMut, ix: NodeIndex<u32>){
                 let mut new_nodes = Vec::with_capacity(2);
                 if ctx.has_other_children(ctx.first_parent_input(ix).unwrap(), ix) {
@@ -186,54 +191,70 @@ lazy_static! {
         }),
 
         .. Default::default()
-    };
-    pub static ref ROTATE_90: NodeDefinition = NodeDefinition {
-        id: NodeType::Rotate_90,
+    }
+}
+fn rotate90_def() -> NodeDefinition {
+    NodeDefinition {
+        fqn: "imazen.rot90",
         name: "Rot90",
-        description: "Rotate",
         fn_estimate: Some(NodeDefHelpers::rotate_frame_info),
         fn_flatten_pre_optimize: Some({
             fn f(ctx: &mut OpCtxMut, ix: NodeIndex<u32>){
                 ctx.replace_node(ix, vec![
-                    Node::new(&TRANSPOSE, NodeParams::None),
-                    Node::new(&FLIP_V, NodeParams::None),
+                Node::new(&TRANSPOSE, NodeParams::None),
+                Node::new(&FLIP_V, NodeParams::None),
                 ]);
             }
             f
         }),
         .. Default::default()
-    };
-     pub static ref ROTATE_180: NodeDefinition = NodeDefinition {
-        id: NodeType::Rotate_180,
+    }
+}
+fn rotate180_def() -> NodeDefinition {
+    NodeDefinition {
+        fqn: "imazen.rot180",
         name: "Rot180",
-        description: "Rotate",
         fn_estimate: Some(NodeDefHelpers::copy_frame_est_from_first_input),
         fn_flatten_pre_optimize: Some({
             fn f(ctx: &mut OpCtxMut, ix: NodeIndex<u32>){
                 ctx.replace_node(ix, vec![
-                    Node::new(&FLIP_V, NodeParams::None),
-                    Node::new(&FLIP_H, NodeParams::None),
+                Node::new(&FLIP_V, NodeParams::None),
+                Node::new(&FLIP_H, NodeParams::None),
                 ]);
             }
             f
         }),
         .. Default::default()
-    };
-    pub static ref ROTATE_270: NodeDefinition = NodeDefinition {
-        id: NodeType::Rotate_270,
+    }
+}
+
+fn rotate270_def() -> NodeDefinition {
+    NodeDefinition {
+        fqn: "imazen.rot270",
         name: "Rot270",
         fn_estimate: Some(NodeDefHelpers::rotate_frame_info),
         fn_flatten_pre_optimize: Some({
             fn f(ctx: &mut OpCtxMut, ix: NodeIndex<u32>){
                 ctx.replace_node(ix, vec![
-                    Node::new(&FLIP_V, NodeParams::None),
-                    Node::new(&TRANSPOSE, NodeParams::None),
+                Node::new(&FLIP_V, NodeParams::None),
+                Node::new(&TRANSPOSE, NodeParams::None),
                 ]);
             }
             f
         }),
         .. Default::default()
-    };
+    }
+}
+lazy_static! {
+    pub static ref NO_OP: NodeDefinition = no_op_def();
+
+   pub static ref FLIP_V_PRIMITIVE: NodeDefinition = flip_v_p_def() ;
+    pub static ref FLIP_V: NodeDefinition = flip_v_def();
+     pub static ref FLIP_H_PRIMITIVE: NodeDefinition = flip_h_p_def();
+    pub static ref FLIP_H: NodeDefinition = flip_h_def();
+    pub static ref ROTATE_90: NodeDefinition = rotate90_def();
+     pub static ref ROTATE_180: NodeDefinition = rotate180_def();
+    pub static ref ROTATE_270: NodeDefinition = rotate270_def();
     pub static ref APPLY_ORIENTATION: NodeDefinition = apply_orientation_def();
 
     pub static ref TRANSPOSE: NodeDefinition = transpose_def();

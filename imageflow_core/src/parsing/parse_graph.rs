@@ -21,31 +21,10 @@ impl GraphTranslator {
 
     unsafe fn create_node(&self, g: &mut ::flow::graph::Graph, node: s::Node) -> NodeIndex<u32> {
         let new_node = match node {
-
-            //            s::Node::Encode { io_id, encoder_id, encoder, hints: _ } => {
-            //                let encoder_id = encoder_id.unwrap_or(match encoder.unwrap_or(s::Encoder::Png) {
-            //                    s::Encoder::Jpeg => 4,
-            //                    s::Encoder::Png => 2,
-            //                });
-            //                let encoder_hints = ::ffi::EncoderHints {
-            //                    jpeg_encode_quality: 100,
-            //                    disable_png_alpha: false,
-            //                };
-            //
-            //
-            //
-            //                ::flow::graph::node_create_encoder(self.ctx,
-            //                                                g,
-            //                                                -1,
-            //                                                io_id,
-            //                                                encoder_id,
-            //                                                &encoder_hints as *const ::ffi::EncoderHints)
-            //            }
             s::Node::Crop { .. } => Node::new(&nodes::CROP, NodeParams::Json(node)),
             s::Node::Decode { .. } => Node::new(&nodes::DECODER, NodeParams::Json(node)),
-            s::Node::FlowBitmapBgraPtr { .. } => {
-                Node::new(&nodes::BITMAP_BGRA_POINTER, NodeParams::Json(node))
-            }
+            s::Node::FlowBitmapBgraPtr { .. } =>
+                Node::new(&nodes::BITMAP_BGRA_POINTER, NodeParams::Json(node)),
             s::Node::FlipV => Node::new(&nodes::FLIP_V, NodeParams::Json(node)),
             s::Node::FlipH => Node::new(&nodes::FLIP_H, NodeParams::Json(node)),
             s::Node::Rotate90 => Node::new(&nodes::ROTATE_90, NodeParams::Json(node)),
@@ -55,18 +34,15 @@ impl GraphTranslator {
             s::Node::Transpose => Node::new(&nodes::TRANSPOSE, NodeParams::Json(node)),
             s::Node::Render1D{ ..} => Node::new(&nodes::SCALE_1D, NodeParams::Json(node)),
             s::Node::Encode { .. }=> Node::new(&nodes::ENCODE, NodeParams::Json(node)),
-            s::Node::CreateCanvas { .. } => {
-                Node::new(&nodes::CREATE_CANVAS, NodeParams::Json(node))
-            }
-            s::Node::CopyRectToCanvas { .. } => {
-                Node::new(&nodes::COPY_RECT, NodeParams::Json(node))
-            }
+            s::Node::CreateCanvas { .. } =>
+                Node::new(&nodes::CREATE_CANVAS, NodeParams::Json(node)),
+            s::Node::CopyRectToCanvas { .. } =>
+                Node::new(&nodes::COPY_RECT, NodeParams::Json(node)),
             s::Node::FillRect { .. } => Node::new(&nodes::FILL_RECT, NodeParams::Json(node)),
             s::Node::Scale { .. } => Node::new(&nodes::SCALE, NodeParams::Json(node)),
-            s::Node::ExpandCanvas { .. } => {
+            s::Node::ExpandCanvas { .. } =>
                 Node::new(&nodes::EXPAND_CANVAS, NodeParams::Json(node))
-            }
-            //_ => Node::new(&nodes::NO_OP, NodeParams::Json(node)),
+
         };
         g.add_node(new_node)
     }
@@ -74,7 +50,7 @@ impl GraphTranslator {
 
 
     pub unsafe fn translate_graph(&self, from: s::Graph) -> ::flow::graph::Graph {
-        let mut g = ::flow::graph::create(self.ctx, 10, 10, 3000, 2.0f32);
+        let mut g = ::flow::graph::create(self.ctx, 10, 10);
 
         let mut node_id_map: HashMap<i32, NodeIndex<u32>> = HashMap::new();
 

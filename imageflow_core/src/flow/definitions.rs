@@ -55,7 +55,7 @@ pub type OptionalNodeFnMut = Option<fn(&mut OpCtxMut, NodeIndex<u32>)>;
 // #[derive(Clone,Debug,PartialEq, Default)]
 pub struct NodeDefinition {
     // When comparing equality, we just check 'id' (for now)
-    pub id: NodeType,
+    pub fqn: &'static str,
     pub inbound_edges: EdgesIn,
     pub outbound_edges: bool,
     pub name: &'static str,
@@ -195,23 +195,22 @@ impl Node {
 
 impl PartialEq for NodeDefinition {
     fn eq(&self, other: &NodeDefinition) -> bool {
-        self.id == other.id
+        self.fqn == other.fqn && self.fqn != ""
     }
 }
 
 impl fmt::Debug for NodeDefinition {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f,
-               "NodeDefinition {{ name: '{}', id: {} }}",
-               self.name,
-               self.id as i32)
+               "NodeDefinition {{ fqn: '{}' }}",
+               self.fqn)
     }
 }
 
 impl Default for NodeDefinition {
     fn default() -> NodeDefinition {
         NodeDefinition {
-            id: NodeType::Null,
+            fqn: "",
             inbound_edges: EdgesIn::OneInput,
             outbound_edges: true,
             name: "(null)",

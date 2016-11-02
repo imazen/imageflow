@@ -152,14 +152,16 @@ fn test_expand_rect(){
 
 #[test]
 fn test_crop(){
-    let matched = compare(None, 500,
-                          "FillRectAndCrop".to_owned(), false, false, vec![
-        s::Node::CreateCanvas {w: 200, h: 200, format: s::PixelFormat::Bgra32, color: s::Color::Srgb(s::ColorSrgb::Hex("FF5555FF".to_owned()))},
-        s::Node::FillRect{x1:0, y1:0, x2:10, y2:100, color: s::Color::Srgb(s::ColorSrgb::Hex("0000FFFF".to_owned()))},
-        s::Node::Crop{x1: 0, y1: 50, x2: 100, y2: 100}
-        ]
-    );
-    assert!(matched);
+    for ix in 1..100 {
+        let matched = compare(None, 500,
+                              "FillRectAndCrop".to_owned(), false, false, vec![
+            s::Node::CreateCanvas { w: 200, h: 200, format: s::PixelFormat::Bgra32, color: s::Color::Srgb(s::ColorSrgb::Hex("FF5555FF".to_owned())) },
+            s::Node::FillRect { x1: 0, y1: 0, x2: 10, y2: 100, color: s::Color::Srgb(s::ColorSrgb::Hex("0000FFFF".to_owned())) },
+            s::Node::Crop { x1: 0, y1: 50, x2: 100, y2: 100 }
+            ]
+        );
+        assert!(matched);
+    }
 }
 
 

@@ -182,7 +182,7 @@ TEST_CASE("Verify that a bitmap_bgra result has the correct width post job execu
 }
 
 // Port priority 1
-TEST_CASE("Decode and scale a PNG image; bitamp result width should be correct", "")
+TEST_CASE("Decode and scale a PNG image; bitmap result width should be correct", "")
 {
 
     flow_c * c = flow_context_create();

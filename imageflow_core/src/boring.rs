@@ -386,7 +386,7 @@ pub fn process_image<F, C, R>(commands: BoringCommands,
         // println!("Scale {}x{} down to {}x{} (jpeg)", info.frame0_width, info.frame0_height, final_w, final_h);
 
         // TODO: Replace with s::Node, s::Graph, etc.
-        let mut g = flow::graph::create(c, 10, 10, 10, 2.0);
+        let mut g = flow::graph::create(c, 10, 10);
         // FIXME: should we still check for null? Depends on whether we panic on OOM, or panic + Result
         // assert!(!g.is_null());
 

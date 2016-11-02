@@ -1,7 +1,7 @@
 extern crate imageflow_serde as s;
 use daggy::{Dag, EdgeIndex, NodeIndex};
 use ffi;
-use ffi::{Context, Job, NodeType, EdgeKind, BitmapBgra};
+use ffi::{Context, Job, EdgeKind, BitmapBgra};
 use flow::definitions::*;
 use flow::graph::Graph;
 use petgraph;
@@ -12,8 +12,8 @@ use super::NodeDefHelpers;
 
 fn bitmap_bgra_def() -> NodeDefinition {
     NodeDefinition {
-        id: NodeType::primitive_bitmap_bgra_pointer,
-        name: "primitive_bitmap_bgra_pointer",
+        fqn: "imazen.bitmap_bgra_pointer",
+        name: "bitmap_bgra_pointer",
         outbound_edges: true,
         inbound_edges: EdgesIn::OneOptionalInput,
 
@@ -122,7 +122,7 @@ fn decoder_estimate(ctx: &mut OpCtxMut, ix: NodeIndex<u32>) {
 
 fn decoder_def() -> NodeDefinition {
     NodeDefinition {
-        id: NodeType::decoder,
+        fqn: "imazen.decoder",
         name: "decoder",
         outbound_edges: true,
         inbound_edges: EdgesIn::NoInput,
@@ -156,7 +156,7 @@ fn decoder_def() -> NodeDefinition {
 }
 fn primitive_decoder_def() -> NodeDefinition {
     NodeDefinition {
-        id: NodeType::primitive_decoder,
+        fqn: "imazen.primitive_decoder",
         name: "primitive_decoder",
         outbound_edges: true,
         inbound_edges: EdgesIn::NoInput,
@@ -183,7 +183,7 @@ fn primitive_decoder_def() -> NodeDefinition {
 
 fn encoder_def() -> NodeDefinition {
     NodeDefinition {
-        id: NodeType::primitive_encoder,
+        fqn: "imazen.primitive_encoder",
         name: "primitive_encoder",
         outbound_edges: false,
         inbound_edges: EdgesIn::OneInput,

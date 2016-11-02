@@ -1,7 +1,7 @@
 extern crate imageflow_serde as s;
 use daggy::{Dag, EdgeIndex, NodeIndex};
 use ffi;
-use ffi::{Context, Job, NodeType, EdgeKind};
+use ffi::{Context, Job, EdgeKind};
 use flow::definitions::*;
 use flow::graph::Graph;
 use petgraph;
@@ -64,7 +64,7 @@ impl ScaleRenderHelpers {
 
 fn scale_def() -> NodeDefinition {
     NodeDefinition {
-        id: NodeType::Scale,
+        fqn: "imazen.scale",
         name: "scale",
         inbound_edges: EdgesIn::OneInput,
         description: "scale",
@@ -137,7 +137,7 @@ fn scale_def() -> NodeDefinition {
 
 fn render1d_def() -> NodeDefinition {
     NodeDefinition {
-        id: NodeType::Render1D,
+        fqn: "imazen.render1d",
         name: "render1d",
         inbound_edges: EdgesIn::OneInput,
         fn_estimate: Some(ScaleRenderHelpers::render1d_size),
@@ -169,7 +169,7 @@ fn render1d_def() -> NodeDefinition {
 }
 fn render1d_to_canvas_def() -> NodeDefinition {
     NodeDefinition {
-        id: NodeType::primitive_RenderToCanvas1D,
+        fqn: "imazen.render1d_to_canvas",
         name: "render1d_p",
         inbound_edges: EdgesIn::OneInputOneCanvas,
         fn_estimate: Some(ScaleRenderHelpers::render1d_size),
@@ -222,7 +222,7 @@ fn render1d_to_canvas_def() -> NodeDefinition {
 }
 fn scale2d_render_def() -> NodeDefinition {
     NodeDefinition {
-        id: NodeType::primitive_Scale2D_RenderToCanvas1D,
+        fqn: "imazen.scale2d_render_to_canvas_1d",
         name: "scale2d_p",
         inbound_edges: EdgesIn::OneInputOneCanvas,
         fn_estimate: Some(NodeDefHelpers::copy_frame_est_from_first_canvas),

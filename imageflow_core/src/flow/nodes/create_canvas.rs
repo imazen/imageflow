@@ -1,7 +1,7 @@
 extern crate imageflow_serde as s;
 use daggy::{Dag, EdgeIndex, NodeIndex};
 use ffi;
-use ffi::{Context, Job, NodeType, EdgeKind};
+use ffi::{Context, Job, EdgeKind};
 use flow::definitions::*;
 use flow::graph::Graph;
 use petgraph;
@@ -10,9 +10,8 @@ use super::NodeDefHelpers;
 
 fn create_canvas_def() -> NodeDefinition {
     NodeDefinition {
-        id: NodeType::Create_Canvas,
+        fqn: "imazen.create_canvas",
         name: "create_canvas",
-        description: "Create Canvas",
         fn_estimate: Some({
             fn f(ctx: &mut OpCtxMut, ix: NodeIndex<u32>) {
                 let ref mut weight = ctx.weight_mut(ix);
