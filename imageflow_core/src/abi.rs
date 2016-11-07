@@ -119,6 +119,7 @@ pub use ::ffi::{Job, JobIO, Context, IoMode, IoDirection};
 use std;
 use std::{ptr, mem};
 
+
 #[cfg(test)]
 use std::ffi::CStr;
 
@@ -503,7 +504,7 @@ pub unsafe extern "C" fn imageflow_json_response_destroy(context: *mut Context,
 ///
 /// Sends a JSON message to one of 3 recipients.
 ///
-/// 1. `imageflow_context`, If both `job` and `io` are both null
+/// 1. `imageflow_context`, If both `job` and `io` are both null. Required.
 /// 2. `imageflow_job`, if only `io` is null.
 /// 3. `imageflow_io`, if `io` is not null. `job` is ignored.
 ///
@@ -530,8 +531,7 @@ pub unsafe extern "C" fn imageflow_send_json(context: *mut Context,
                                              json_buffer: *const libc::uint8_t,
                                              json_buffer_size: libc::size_t)
                                              -> *const ImageflowJsonResponse {
-
-
+    //TODO: check for nulls in json_BUFFER AND METHOD
 
     // It doesn't appear that this allocates anything
     // But I'm curious how that Rust knows not to deallocate the string itself
@@ -546,42 +546,56 @@ pub unsafe extern "C" fn imageflow_send_json(context: *mut Context,
     let mut ctx = ::ContextPtr::from_ptr(context);
 
 
+    let response;
 
-    let response = ctx.message(method_str, json_bytes).unwrap(); //Unwrap for invalid context
-
-
-
-    let json_bytes = response.response_json;
-    let sizeof_struct = mem::size_of::<ImageflowJsonResponse>();
-
-    let pointer = ffi::flow_context_calloc(context,
-                                           1,
-                                           sizeof_struct + json_bytes.len(),
-                                           ptr::null(),
-                                           context as *mut libc::c_void,
-                                           ptr::null(),
-                                           0) as *mut u8;
-    if pointer.is_null() {
-        return ::std::ptr::null();
+    if job == ptr::null_mut() && io == ptr::null_mut() {
+        response = ctx.message(method_str, json_bytes).unwrap(); //Unwrap for invalid context
+    } else if io == ptr::null_mut() {
+        panic!("Messaging Job not implemented")
+//        let mut job_obj = ::JobPtr::from_ptr(job);
+//        response = ctx.message(method_str, json_bytes).unwrap(); //Unwrap for invalid context
+    } else{
+        panic!("Messaging JobIo not implemented");
     }
-    // TODO: handle null ptr, report OOM
-
-    let pointer_to_final_buffer = pointer.offset(sizeof_struct as isize) as *mut libc::uint8_t;
-    let ref mut imageflow_response = *(pointer as *mut ImageflowJsonResponse);
-    imageflow_response.buffer_utf8_no_nulls = pointer_to_final_buffer;
-    imageflow_response.buffer_size = json_bytes.len();
-    imageflow_response.status_code = response.status_code;
-
-    let mut out_json_bytes = std::slice::from_raw_parts_mut(pointer_to_final_buffer,
-                                                            json_bytes.len());
-
-    out_json_bytes.clone_from_slice(&json_bytes);
 
 
-    return (imageflow_response) as *const ImageflowJsonResponse;
+    let ptr = ctx.create_abi_json_response(response.response_json, response.status_code);
+    //TODO: if ptr == null,
+    //Handle alloc failure
+    ptr
 }
 
+impl ::ContextPtr {
+    fn create_abi_json_response(&self, json_bytes: &[u8], status_code: i64) -> *const ImageflowJsonResponse{
+        unsafe {
+            let sizeof_struct = mem::size_of::<ImageflowJsonResponse>();
 
+            let pointer = ffi::flow_context_calloc(self.ptr.unwrap(),
+                                                   1,
+                                                   sizeof_struct + json_bytes.len(),
+                                                   ptr::null(),
+                                                   self.ptr.unwrap() as *mut libc::c_void,
+                                                   ptr::null(),
+                                                   0) as *mut u8;
+            //Return null on OOM
+            if pointer.is_null() {
+                return ::std::ptr::null();
+            }
+            let pointer_to_final_buffer = pointer.offset(sizeof_struct as isize) as *mut libc::uint8_t;
+            let ref mut imageflow_response = *(pointer as *mut ImageflowJsonResponse);
+            imageflow_response.buffer_utf8_no_nulls = pointer_to_final_buffer;
+            imageflow_response.buffer_size = json_bytes.len();
+            imageflow_response.status_code = status_code;
+
+            let mut out_json_bytes = std::slice::from_raw_parts_mut(pointer_to_final_buffer,
+                                                                    json_bytes.len());
+
+            out_json_bytes.clone_from_slice(&json_bytes);
+
+            imageflow_response as *const ImageflowJsonResponse
+        }
+    }
+}
 
 #[test]
 fn test_message() {

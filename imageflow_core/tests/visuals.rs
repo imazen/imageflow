@@ -152,7 +152,7 @@ fn test_expand_rect(){
 
 #[test]
 fn test_crop(){
-    for ix in 1..100 {
+    for _ in 1..100 {
         let matched = compare(None, 500,
                               "FillRectAndCrop".to_owned(), false, false, vec![
             s::Node::CreateCanvas { w: 200, h: 200, format: s::PixelFormat::Bgra32, color: s::Color::Srgb(s::ColorSrgb::Hex("FF5555FF".to_owned())) },
