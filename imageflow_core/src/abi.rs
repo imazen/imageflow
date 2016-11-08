@@ -500,6 +500,60 @@ pub unsafe extern "C" fn imageflow_json_response_destroy(context: *mut Context,
     ffi::flow_destroy(context, response as *mut libc::c_void, ptr::null(), 0)
 }
 
+///
+/// Sends a JSON message to the imageflow_context
+///
+/// The context is provided `method`, which determines which code path will be used to
+/// process the provided JSON data and compose a response.
+///
+/// * `method` and `json_buffer` are only borrowed for the duration of the function call. You are
+///    responsible for their cleanup (if necessary - static strings are handy for things like
+///    `method`).
+///
+/// The function will return NULL if a JSON response could not be allocated (or if some other
+/// bug occurred). If a null pointer is returned, consult the standard error methods of `context`
+/// for more detail.
+///
+/// The response can be cleaned up with `imageflow_json_response_destroy`
+///
+/// Behavior is undefined if `context` is a null or invalid ptr; segfault likely.
+#[no_mangle]
+#[allow(unused_variables)]
+pub unsafe extern "C" fn imageflow_context_send_json(context: *mut Context,
+                                             method: *const i8,
+                                             json_buffer: *const libc::uint8_t,
+                                             json_buffer_size: libc::size_t)
+                                             -> *const ImageflowJsonResponse {
+    imageflow_send_json(context, ptr::null_mut(), ptr::null_mut(), method, json_buffer, json_buffer_size)
+}
+
+///
+/// Sends a JSON message to the imageflow_job
+///
+/// The recipient is provided `method`, which determines which code path will be used to
+/// process the provided JSON data and compose a response.
+///
+/// * `method` and `json_buffer` are only borrowed for the duration of the function call. You are
+///    responsible for their cleanup (if necessary - static strings are handy for things like
+///    `method`).
+///
+/// The function will return NULL if a JSON response could not be allocated (or if some other
+/// bug occurred). If a null pointer is returned, consult the standard error methods of `context`
+/// for more detail.
+///
+/// The response can be cleaned up with `imageflow_json_response_destroy`
+///
+/// Behavior is undefined if `context` is a null or invalid ptr; segfault likely.
+#[no_mangle]
+#[allow(unused_variables)]
+pub unsafe extern "C" fn imageflow_job_send_json(context: *mut Context,
+                                             job: *mut Job,
+                                             method: *const i8,
+                                             json_buffer: *const libc::uint8_t,
+                                             json_buffer_size: libc::size_t)
+                                             -> *const ImageflowJsonResponse {
+    imageflow_send_json(context, job, ptr::null_mut(), method, json_buffer, json_buffer_size)
+}
 
 ///
 /// Sends a JSON message to one of 3 recipients.
@@ -522,9 +576,8 @@ pub unsafe extern "C" fn imageflow_json_response_destroy(context: *mut Context,
 /// The response can be cleaned up with `imageflow_json_response_destroy`
 ///
 /// Behavior is undefined if `context` is a null or invalid ptr; segfault likely.
-#[no_mangle]
 #[allow(unused_variables)]
-pub unsafe extern "C" fn imageflow_send_json(context: *mut Context,
+unsafe fn imageflow_send_json(context: *mut Context,
                                              job: *mut Job,
                                              io: *mut JobIO,
                                              method: *const i8,
@@ -551,9 +604,7 @@ pub unsafe extern "C" fn imageflow_send_json(context: *mut Context,
     if job == ptr::null_mut() && io == ptr::null_mut() {
         response = ctx.message(method_str, json_bytes).unwrap(); //Unwrap for invalid context
     } else if io == ptr::null_mut() {
-        panic!("Messaging Job not implemented")
-//        let mut job_obj = ::JobPtr::from_ptr(job);
-//        response = ctx.message(method_str, json_bytes).unwrap(); //Unwrap for invalid context
+        response = ::JobPtr::from_ptr(context, job).unwrap().message(method_str, json_bytes).unwrap();
     } else{
         panic!("Messaging JobIo not implemented");
     }
@@ -566,7 +617,7 @@ pub unsafe extern "C" fn imageflow_send_json(context: *mut Context,
 }
 
 impl ::ContextPtr {
-    fn create_abi_json_response(&self, json_bytes: &[u8], status_code: i64) -> *const ImageflowJsonResponse{
+    fn create_abi_json_response(&self, json_bytes: std::borrow::Cow<[u8]>, status_code: i64) -> *const ImageflowJsonResponse{
         unsafe {
             let sizeof_struct = mem::size_of::<ImageflowJsonResponse>();
 
@@ -607,10 +658,12 @@ pub fn exercise_json_message() {
         let c = imageflow_context_create();
         assert!(!c.is_null());
 
-        let method_in = static_char!("teapot");
+        let method_in = static_char!("brew_coffee");
         let json_in = "{}";
-        let expected_json_out = "{\"success\": \"false\",\"code\": 418,\"message\": \"I\'m a teapot, short and stout\"}";
-        let expected_reponse_status = 418;
+        let expected_response = ::JsonResponse::teapot();
+        let expected_json_out = ::std::str::from_utf8(
+            expected_response.response_json.as_ref()).unwrap();
+        let expected_reponse_status = expected_response.status_code;
 
         let response = imageflow_send_json(c,
                                            ptr::null_mut(),

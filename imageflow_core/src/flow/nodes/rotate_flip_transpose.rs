@@ -3,7 +3,6 @@ use daggy::{Dag, EdgeIndex, NodeIndex};
 use ffi;
 use ffi::{Context, Job, EdgeKind};
 use flow::definitions::*;
-use flow::graph::Graph;
 use petgraph;
 use super::*;
 use super::NodeDefHelpers;

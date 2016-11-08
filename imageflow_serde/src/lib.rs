@@ -371,7 +371,7 @@ pub enum Framewise {
 }
 
 #[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
-pub struct Build001_Graph_Recording {
+pub struct Build001GraphRecording {
     pub record_graph_versions: Option<bool>,
     pub record_frame_images: Option<bool>,
     pub render_last_graph: Option<bool>,
@@ -386,7 +386,7 @@ pub struct Build001Config {
     #[serde(rename="processAllGifFrames")]
     pub process_all_gif_frames: Option<bool>,
     #[serde(rename="graphRecording")]
-    pub graph_recording: Option<Build001_Graph_Recording>,
+    pub graph_recording: Option<Build001GraphRecording>,
     #[serde(rename="noGammaCorrection")]
     pub no_gamma_correction: bool,
 }
@@ -397,6 +397,69 @@ pub struct Build001 {
     pub io: Vec<IoObject>,
     pub framewise: Framewise,
 }
+
+#[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
+pub struct Execute001 {
+    #[serde(rename="graphRecording")]
+    pub graph_recording: Option<Build001GraphRecording>,
+    pub framewise: Framewise,
+}
+
+#[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
+pub struct GetImageInfo001 {
+    #[serde(rename="ioId")]
+    pub io_id: i32,
+}
+#[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
+pub struct JpegIDCTDownscaleHints {
+    pub width: i64,
+    pub height: i64,
+    #[serde(rename="scaleLumaSpatially")]
+    pub scale_luma_spatially: Option<bool>,
+    #[serde(rename="gammaCorrectForSrgbDuringSpatialLumaScaling")]
+    pub gamma_correct_for_srgb_during_spatial_luma_scaling: Option<bool>
+}
+#[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
+pub enum TellDecoderWhat {
+    JpegDownscaleHints(JpegIDCTDownscaleHints)
+}
+#[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
+pub struct TellDecoder001 {
+    #[serde(rename="ioId")]
+    pub io_id: i32,
+    pub command: TellDecoderWhat
+}
+
+#[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
+pub struct ImageInfo {
+    #[serde(rename="preferredMimeType")]
+    pub preferred_mime_type: String,
+    #[serde(rename="preferredExtension")]
+    pub preferred_extension: String,
+    #[serde(rename="frameCount")]
+    pub frame_count: usize,
+    #[serde(rename="currentFrameIndex")]
+    pub current_frame_index: i64,
+    #[serde(rename="frame0Width")]
+    pub frame0_width: i32,
+    #[serde(rename="frame0Height")]
+    pub frame0_height: i32,
+    #[serde(rename="frame0PostDecodeFormat")]
+    pub frame0_post_decode_format: PixelFormat,
+}
+#[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
+pub enum ResponsePayload {
+    ImageInfo(ImageInfo),
+    None,
+}
+#[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
+pub struct Response001 {
+    pub code: i64,
+    pub success: bool,
+    pub message: Option<String>,
+    pub data: ResponsePayload
+}
+
 
 #[test]
 fn test_roundtrip() {

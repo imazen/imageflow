@@ -313,9 +313,9 @@ pub fn process_image<F, C, R>(commands: BoringCommands,
         }
 
 
-        let j = flow_job_create(c);
-        assert!(!j.is_null());
+        let job = ::JobPtr::create(c).unwrap();
 
+        let j = job.as_ptr();
 
         let mut inputs = io_provider(c);
 
@@ -386,7 +386,7 @@ pub fn process_image<F, C, R>(commands: BoringCommands,
         // println!("Scale {}x{} down to {}x{} (jpeg)", info.frame0_width, info.frame0_height, final_w, final_h);
 
         // TODO: Replace with s::Node, s::Graph, etc.
-        let mut g = flow::graph::create(c, 10, 10);
+        let mut g = flow::graph::create( 10, 10);
         // FIXME: should we still check for null? Depends on whether we panic on OOM, or panic + Result
         // assert!(!g.is_null());
 
@@ -427,7 +427,7 @@ pub fn process_image<F, C, R>(commands: BoringCommands,
         //        assert!(last > 0);
 
 
-        if !flow::job_execute(c, j, &mut g) {
+        if !job.execute(&mut g) {
             flow_context_print_and_exit_if_err(c);
         }
 

@@ -1,11 +1,12 @@
 mod parse_graph;
+mod parse_io;
 
 use std;
 
 extern crate rustc_serialize;
 extern crate libc;
 
-use ContextPtr;
+use {ContextPtr, JobPtr};
 use JsonResponse;
 use flow;
 use libc::c_void;
@@ -17,26 +18,18 @@ use std::ptr;
 extern crate imageflow_serde as s;
 extern crate serde;
 extern crate serde_json;
-extern crate curl;
 
 use ::Context;
 
 use ffi;
-use self::curl::easy::Easy;
+
 
 use self::parse_graph::GraphTranslator;
+use self::parse_io::IoTranslator;
 use std::error;
 pub struct BuildRequestHandler {
 
 }
-
-// #[test]
-// fn leak_mem2() {
-//
-//    let mut v = Vec::with_capacity(333);
-//    v.push(0u8);
-//    std::mem::forget(v)
-// }
 
 #[derive(Debug)]
 pub enum JsonResponseError {
@@ -49,28 +42,6 @@ impl BuildRequestHandler {
     pub fn new() -> BuildRequestHandler {
         BuildRequestHandler {}
     }
-
-
-
-    fn steps_to_graph(steps: Vec<s::Node>) -> s::Graph {
-        let mut nodes = HashMap::new();
-        let mut edges = vec![];
-        for (i, item) in steps.into_iter().enumerate() {
-            nodes.insert(i.to_string(), item);
-            edges.push(s::Edge {
-                from: i as i32,
-                to: i as i32 + 1,
-                kind: s::EdgeKind::Input,
-            });
-        }
-        let _ = edges.pop();
-        // TODO: implement
-        s::Graph {
-            nodes: nodes,
-            edges: edges,
-        }
-    }
-
     pub fn do_and_respond<'a, 'b, 'c, 'd>(&'a self,
                                           ctx: &'d mut ContextPtr,
                                           json: &'b [u8])
@@ -79,148 +50,21 @@ impl BuildRequestHandler {
         let parsed: s::Build001 = serde_json::from_slice(json).unwrap();
 
         let io_vec = parsed.io;
-        let graph = match parsed.framewise {
-            s::Framewise::Graph(g) => g,
-            s::Framewise::Steps(s) => BuildRequestHandler::steps_to_graph(s),
-        };
 
         unsafe {
             let p = ctx.ptr.unwrap();
 
-            // create nodes, develop a map of desired vs. actual node ids.
-
-            let mut g = GraphTranslator::new(p).translate_graph(graph);
-
-            let job = ::ffi::flow_job_create(p);
-
-            println!("builder_config ={:?}", parsed.builder_config);
-            match parsed.builder_config {
-                Some(build_cfg) => {
-                    //                    match build_cfg.no_gamma_correction {
-                    //                        false => flow_context_set_floatspace(c, Floatspace::linear, 0f32, 0f32, 0f32),
-                    //                        true => flow_context_set_floatspace(c, Floatspace::srgb, 0f32, 0f32, 0f32)
-                    //                    };
-                    match build_cfg.graph_recording {
-                        Some(r) => {
-                            println!("Setting record_graph_versions={}",
-                                     r.record_graph_versions.unwrap_or(false));
-                            let _ = ::ffi::flow_job_configure_recording(p,
-                                                                        job,
-                                                                        r.record_graph_versions
-                                                                            .unwrap_or(false),
-                                                                        r.record_frame_images
-                                                                            .unwrap_or(false),
-                                                                        r.render_last_graph
-                                                                            .unwrap_or(false),
-                                                                        r.render_graph_versions
-                                                                            .unwrap_or(false),
-                                                                        r.render_animated_graph
-                                                                            .unwrap_or(false));
-
-                        }
-                        _ => {}
-                    }
-                }
-                _ => {}
-            }
-
-            // pub io_id: i32,
-            // pub direction: IoDirection,
-            // pub io: IoEnum,
-            // pub checksum: Option<IoChecksum>
-            //
-            let mut io_list = Vec::new();
-            for io_obj in io_vec {
-                let io_ptr: *mut ffi::JobIO =
-                    match io_obj.io {
-                        s::IoEnum::BytesHex(hex_string) => {
-                            let bytes = hex_string.as_str().from_hex().unwrap();
-
-
-                            let buf : *mut u8 = ::ffi::flow_context_calloc(p, 1, bytes.len(), ptr::null(), p as *const libc::c_void, ptr::null(), 0) as *mut u8 ;
-                            if buf.is_null() {
-                                panic!("OOM");
-                            }
-                            ptr::copy_nonoverlapping(bytes.as_ptr(), buf, bytes.len());
-
-                            let io_ptr =
-                                ::ffi::flow_io_create_from_memory(p,
-                                                                  ::ffi::IoMode::read_seekable,
-                                                                  buf,
-                                                                  bytes.len(),
-                                                                  p as *const libc::c_void,
-                                                                  ptr::null());
-
-                            if io_ptr.is_null() {
-                                panic!("Failed to create I/O");
-                            }
-                            io_ptr
-                        }
-                        s::IoEnum::Filename(path) => ptr::null(),
-                        s::IoEnum::Url(url) => {
-                            let mut dst = Vec::new();
-                            {
-                                let mut easy = Easy::new();
-                                easy.url(&url).unwrap();
-
-                                let mut transfer = easy.transfer();
-                                transfer.write_function(|data| {
-                                        dst.extend_from_slice(data);
-                                        Ok(data.len())
-                                    })
-                                    .unwrap();
-                                transfer.perform().unwrap();
-                            }
-
-                            let bytes = dst;
-
-
-                            let buf : *mut u8 = ::ffi::flow_context_calloc(p, 1, bytes.len(), ptr::null(), p as *const libc::c_void, ptr::null(), 0) as *mut u8 ;
-                            if buf.is_null() {
-                                panic!("OOM");
-                            }
-                            ptr::copy_nonoverlapping(bytes.as_ptr(), buf, bytes.len());
-
-                            let io_ptr =
-                                ::ffi::flow_io_create_from_memory(p,
-                                                                  ::ffi::IoMode::read_seekable,
-                                                                  buf,
-                                                                  bytes.len(),
-                                                                  p as *const libc::c_void,
-                                                                  ptr::null());
-
-                            if io_ptr.is_null() {
-                                panic!("Failed to create I/O");
-                            }
-                            io_ptr
-                        }
-                        s::IoEnum::OutputBuffer => {
-                            let io_ptr =
-                                ::ffi::flow_io_create_for_output_buffer(p,
-                                                                        p as *const libc::c_void);
-                            if io_ptr.is_null() {
-                                panic!("Failed to create I/O");
-                            }
-                            io_ptr
-                        }
-                    } as *mut ffi::JobIO;
-
-                let new_direction = match io_obj.direction {
-                    s::IoDirection::Input => ffi::IoDirection::In,
-                    s::IoDirection::Output => ffi::IoDirection::Out,
-                };
-
-                io_list.push((io_ptr, io_obj.io_id, new_direction));
-            }
-
-            for io_list in io_list {
-                if !::ffi::flow_job_add_io(p, job, io_list.0, io_list.1, io_list.2) {
-                    panic!("flow_job_add_io failed");
+            let mut g = GraphTranslator::new().translate_framewise(parsed.framewise);
+            let job = JobPtr::create(p).unwrap();
+            if let Some(s::Build001Config{ graph_recording, ..}) = parsed.builder_config {
+                if let Some(r) = graph_recording {
+                    job.configure_graph_recording(r);
                 }
             }
 
+            IoTranslator::new(p).add_to_job(job.as_ptr(), io_vec);
 
-            if !flow::job_execute(p, job, &mut g) {
+            if !job.execute(&mut g){
                 ctx.assert_ok(Some(&mut g));
             }
 
@@ -229,11 +73,7 @@ impl BuildRequestHandler {
 
             // TODO: Question, should JSON endpoints populate the Context error stacktrace when something goes wrong? Or populate both (except for OOM).
 
-            Ok(JsonResponse {
-                status_code: 200,
-                response_json: r#"{"success": "true","code": 200,"message": "Tutto bene."}"#
-                    .as_bytes(),
-            })
+            Ok(JsonResponse::ok())
         }
     }
 }
@@ -313,7 +153,7 @@ fn test_handler() {
 
     let handler = BuildRequestHandler::new();
 
-    let mut context = Context::create();
+    let mut context = Context::create().unwrap();
 
     let mut ctx_cell = context.unsafe_borrow_mut_context_pointer();
 

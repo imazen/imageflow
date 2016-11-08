@@ -10,16 +10,44 @@ use flow::nodes;
 use parsing::rustc_serialize::hex::FromHex;
 
 pub struct GraphTranslator {
-    ctx: *mut ::ffi::Context,
 }
 
 impl GraphTranslator {
-    pub fn new(ctx: *mut ::ffi::Context) -> GraphTranslator {
-        GraphTranslator { ctx: ctx }
+    pub fn new() -> GraphTranslator {
+        GraphTranslator { }
     }
 
 
-    unsafe fn create_node(&self, g: &mut ::flow::graph::Graph, node: s::Node) -> NodeIndex<u32> {
+    pub fn translate_framewise(&self, framewise: s::Framewise) -> ::flow::graph::Graph {
+        let graph = match framewise {
+            s::Framewise::Graph(g) => g,
+            s::Framewise::Steps(s) => self.steps_to_graph(s),
+        };
+        self.translate_graph(graph)
+    }
+
+
+    fn steps_to_graph(&self, steps: Vec<s::Node>) -> s::Graph {
+        let mut nodes = HashMap::new();
+        let mut edges = vec![];
+        for (i, item) in steps.into_iter().enumerate() {
+            nodes.insert(i.to_string(), item);
+            edges.push(s::Edge {
+                from: i as i32,
+                to: i as i32 + 1,
+                kind: s::EdgeKind::Input,
+            });
+        }
+        let _ = edges.pop();
+        s::Graph {
+            nodes: nodes,
+            edges: edges,
+        }
+    }
+
+
+
+    fn create_node(&self, g: &mut ::flow::graph::Graph, node: s::Node) -> NodeIndex<u32> {
         let new_node = match node {
             s::Node::Crop { .. } => Node::new(&nodes::CROP, NodeParams::Json(node)),
             s::Node::Decode { .. } => Node::new(&nodes::DECODER, NodeParams::Json(node)),
@@ -49,8 +77,8 @@ impl GraphTranslator {
 
 
 
-    pub unsafe fn translate_graph(&self, from: s::Graph) -> ::flow::graph::Graph {
-        let mut g = ::flow::graph::create(self.ctx, 10, 10);
+    pub fn translate_graph(&self, from: s::Graph) -> ::flow::graph::Graph {
+        let mut g = ::flow::graph::create(10, 10);
 
         let mut node_id_map: HashMap<i32, NodeIndex<u32>> = HashMap::new();
 
@@ -70,6 +98,6 @@ impl GraphTranslator {
 
             g.add_edge(from_id, to_id, new_edge_kind).unwrap();
         }
-        return g;
+        g
     }
 }

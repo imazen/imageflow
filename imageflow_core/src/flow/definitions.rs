@@ -4,7 +4,9 @@ use daggy::{Dag, EdgeIndex, NodeIndex};
 use ffi::*;
 use std;
 use std::fmt;
-use super::graph::Graph;
+
+pub type Graph = Dag<Node, EdgeKind>;
+
 
 #[repr(C)]
 #[derive(Copy,Clone,Debug,PartialEq)]

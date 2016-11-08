@@ -2,7 +2,8 @@ use std;
 use std::{ptr,marker,slice,cell};
 use libc;
 use ::{FlowError,FlowErr,JsonResponse,JsonResponseError,Result,IoDirection};
-
+extern crate imageflow_serde as s;
+extern crate serde_json;
 
 pub struct ContextPtr {
     // TODO: Remove pub as soon as tests/visuals.rs doesn't need access
@@ -14,7 +15,114 @@ pub struct Context {
 }
 
 pub struct JobPtr {
-    pub ptr: Option<*mut ::ffi::Job>,
+    ptr: *mut ::ffi::Job,
+    c: *mut ::ffi::Context
+}
+
+impl JobPtr {
+    pub fn context_ptr(&self) -> *mut ::ffi::Context{ self.c }
+    pub fn as_ptr(&self) -> *mut ::ffi::Job { self.ptr}
+
+    pub fn from_ptr(context: *mut ::ffi::Context, job: *mut ::ffi::Job) -> Result<JobPtr> {
+        if context.is_null() || job.is_null() {
+            Err(FlowError::NullArgument)
+        }else {
+            Ok(JobPtr {
+                ptr: job,
+                c: context
+            })
+        }
+    }
+    pub fn create(context: *mut ::ffi::Context) -> Result<JobPtr> {
+        if context.is_null() {
+            return Err(FlowError::ContextInvalid)
+        }
+        unsafe {
+            let job = ::ffi::flow_job_create(context);
+            if job.is_null() {
+                Err(FlowError::Oom)
+            }else{
+                Ok(JobPtr { ptr: job, c: context})
+            }
+        }
+    }
+    pub fn configure_graph_recording(&self, r: s::Build001GraphRecording){
+        let _ = unsafe { ::ffi::flow_job_configure_recording(self.context_ptr(),
+                                                    self.as_ptr(),
+                                                    r.record_graph_versions
+                                                        .unwrap_or(false),
+                                                    r.record_frame_images
+                                                        .unwrap_or(false),
+                                                    r.render_last_graph
+                                                        .unwrap_or(false),
+                                                    r.render_graph_versions
+                                                        .unwrap_or(false),
+                                                    r.render_animated_graph
+                                                        .unwrap_or(false)) };
+    }
+
+    pub fn get_image_info(&self, io_id: i32) -> Result<s::ImageInfo> {
+        unsafe {
+            let mut info: ::ffi::DecoderInfo = ::ffi::DecoderInfo { ..Default::default() };
+
+            if !::ffi::flow_job_get_decoder_info(self.context_ptr(), self.as_ptr(), 0, &mut info) {
+                ContextPtr::from_ptr(self.context_ptr()).assert_ok(None);
+            }
+            Ok(s::ImageInfo {
+                frame0_post_decode_format: s::PixelFormat::from(info.frame0_post_decode_format),
+                frame0_height: info.frame0_height,
+                frame0_width: info.frame0_width,
+                frame_count: info.frame_count,
+                current_frame_index: info.current_frame_index,
+                preferred_extension: std::ffi::CStr::from_ptr(info.preferred_extension).to_owned().into_string().unwrap(),
+                preferred_mime_type: std::ffi::CStr::from_ptr(info.preferred_mime_type).to_owned().into_string().unwrap(),
+            })
+        }
+
+    }
+
+    pub fn tell_decoder(&self, io_id: i32, tell: s::TellDecoderWhat ) -> Result<()> {
+        unsafe {
+            match tell {
+                s::TellDecoderWhat::JpegDownscaleHints(hints) => {
+                    if !::ffi::flow_job_decoder_set_downscale_hints_by_placeholder_id(self.context_ptr(),
+                                                                                      self.as_ptr(), io_id,
+                                                                                      hints.width, hints.height,
+                                                                                      hints.width, hints.height,
+                                                                                      hints.scale_luma_spatially.unwrap_or(false),
+                                                                                      hints.gamma_correct_for_srgb_during_spatial_luma_scaling.unwrap_or(false)
+
+                    ){
+                        panic!("");
+                    }
+                }
+            }
+        }
+        Ok(())
+
+    }
+
+
+    pub fn message<'a, 'b, 'c>(&'a mut self,
+                               method: &'b str,
+                               json: &'b [u8])
+                               -> Result<JsonResponse<'c>> {
+
+        match method {
+            "v0.0.1/get_image_info" => {
+                let parsed: s::GetImageInfo001 = serde_json::from_slice(json).unwrap();
+                let info = self.get_image_info(parsed.io_id).unwrap();
+                Ok(JsonResponse::success_with_payload(s::ResponsePayload::ImageInfo(info)))
+            }
+            "v0.0.1/tell_decoder" => {
+                let parsed: s::TellDecoder001 = serde_json::from_slice(json).unwrap();
+                self.tell_decoder(parsed.io_id, parsed.command).unwrap();
+                Ok(JsonResponse::ok())
+            }
+            "brew_coffee" => Ok(JsonResponse::teapot()),
+            _ => Ok(JsonResponse::method_not_understood())
+        }
+    }
 }
 
 pub struct Job {
@@ -50,12 +158,7 @@ impl ContextPtr {
             return Err(FlowError::ContextInvalid);
         }
         let response = match method {
-            "teapot" => JsonResponse {
-                status_code: 418,
-                response_json:
-                r#"{"success": "false","code": 418,"message": "I'm a teapot, short and stout"}"#
-                    .as_bytes()
-            },
+            "brew_coffee" => JsonResponse::teapot(),
             "v0.0.1/build" => unsafe {
 
                 let handler = ::parsing::BuildRequestHandler::new();
@@ -64,16 +167,7 @@ impl ContextPtr {
 
                 response.unwrap()
             },
-            _ => {
-                JsonResponse {
-                    status_code: 404,
-                    response_json: r#"{
-                                        "success": "false",
-                                        "code": 404,
-                                        "message": "Method not understood"}"#
-                        .as_bytes(),
-                }
-            }
+            _ => JsonResponse::method_not_understood()
         };
         Ok(response)
     }
@@ -87,37 +181,6 @@ impl ContextPtr {
                     JsonResponseError::NotImplemented(()) => FlowError::ErrNotImpl,
                     JsonResponseError::Other(e) => FlowError::ErrNotImpl,
                 })
-            }
-        }
-    }
-}
-
-impl Job {
-    pub fn message(&self, context: &mut Context, method: &str, json: &[u8]) -> JsonResponse {
-
-        match method {
-            "execute" => {
-                // TODO:
-
-
-                // build graph
-                // execute graph
-                JsonResponse {
-                    status_code: 200,
-                    response_json:
-                    r#"{"success": "false","code": 418,"message": "I'm a teapot, short and stout"}"#
-                        .as_bytes()
-                }
-            }
-            _ => {
-                JsonResponse {
-                    status_code: 404,
-                    response_json: r#"{
-                                        "success": "false",
-                                        "code": 404,
-                                        "message": "Method not understood"}"#
-                        .as_bytes(),
-                }
             }
         }
     }
@@ -154,17 +217,18 @@ impl Drop for Context {
     }
 }
 impl Context {
-    pub fn create() -> Context {
+    pub fn create() -> Result<Context> {
         unsafe {
             let ptr = ::ffi::flow_context_create();
 
             if ptr.is_null() {
-                Context { p: cell::RefCell::new(ContextPtr { ptr: None }) }
+                Err(FlowError::Oom)
             } else {
-                Context { p: cell::RefCell::new(ContextPtr { ptr: Some(ptr) }) }
+                Ok(Context { p: cell::RefCell::new(ContextPtr { ptr: Some(ptr) }) })
             }
         }
     }
+
     pub fn unsafe_borrow_mut_context_pointer(&mut self) -> std::cell::RefMut<ContextPtr> {
         self.p.borrow_mut()
     }
@@ -208,7 +272,7 @@ impl Context {
                 if p.is_null() {
                     Err(b.get_error_copy().unwrap())
                 } else {
-                    Ok(Job { p: cell::RefCell::new(JobPtr { ptr: Some(p) }) })
+                    Ok(Job { p: cell::RefCell::new(JobPtr::from_ptr(ptr, p).unwrap()) })
                 }
             },
         }
@@ -270,7 +334,7 @@ impl Context {
             None => Err(FlowError::ContextInvalid),
             Some(ptr) => unsafe {
                 let p = ::ffi::flow_job_add_io(ptr,
-                                               (*job.p.borrow_mut()).ptr.unwrap(),
+                                               (*job.p.borrow_mut()).ptr,
                                                (*io.p.borrow_mut()).ptr.unwrap(),
                                                io_id,
                                                direction);
@@ -292,7 +356,7 @@ impl Context {
             None => Err(FlowError::ContextInvalid),
             Some(ptr) => unsafe {
 
-                let io_p = ::ffi::flow_job_get_io(ptr, (*job.p.borrow_mut()).ptr.unwrap(), io_id);
+                let io_p = ::ffi::flow_job_get_io(ptr, (*job.p.borrow_mut()).ptr, io_id);
                 if io_p.is_null() {
                     Err(b.get_error_copy().unwrap())
                 } else {
@@ -373,6 +437,9 @@ impl ContextPtr {
                     FlowError::ContextInvalid => {
                         panic!("Context pointer null");
                     }
+                    FlowError::NullArgument => {
+                        panic!("Context pointer null");
+                    }
 
                 }
             }
@@ -402,7 +469,7 @@ impl ContextPtr {
 
 #[test]
 fn it_works() {
-    let mut c = Context::create();
+    let mut c = Context::create().unwrap();
 
     let mut j = c.create_job().unwrap();
 

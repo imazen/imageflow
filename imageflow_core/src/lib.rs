@@ -12,10 +12,12 @@ extern crate alloc_system;
 extern crate petgraph;
 extern crate daggy;
 extern crate time;
+extern crate imageflow_serde as s;
 
 #[macro_use]
 extern crate lazy_static;
 
+extern crate serde_json;
 pub mod ffi;
 pub mod boring;
 pub mod parsing;
@@ -34,6 +36,7 @@ extern crate libc;
 extern crate alloc;
 use std::cell::RefCell;
 use std::marker;
+use std::borrow::Cow;
 use std::ptr;
 
 #[derive(Debug, PartialEq)]
@@ -44,6 +47,7 @@ pub struct FlowErr {
 
 #[derive(Debug, PartialEq)]
 pub enum FlowError {
+    NullArgument,
     ContextInvalid,
     Oom,
     Err(FlowErr),
@@ -51,12 +55,58 @@ pub enum FlowError {
 }
 pub struct JsonResponse<'a> {
     pub status_code: i64,
-    pub response_json: &'a [u8],
+    pub response_json: Cow<'a,[u8]>,
 }
 
 
 pub type Result<T> = std::result::Result<T, FlowError>;
 
+impl<'a> JsonResponse<'a> {
+
+    fn from_response001(r: s::Response001) -> JsonResponse<'a> {
+        JsonResponse {
+            status_code: r.code,
+            response_json: Cow::Owned(serde_json::to_vec_pretty(&r).unwrap())
+        }
+    }
+    fn success_with_payload(r: s::ResponsePayload) -> JsonResponse<'a> {
+        let r = s::Response001{ success: true, code: 200,
+            message: Some("OK".to_owned()),
+            data: r};
+        JsonResponse {
+            status_code: r.code,
+            response_json: Cow::Owned(serde_json::to_vec_pretty(&r).unwrap())
+        }
+    }
+
+
+    fn ok() -> JsonResponse<'a> {
+        JsonResponse {
+            status_code: 200,
+            response_json:
+            Cow::Borrowed( r#"{"success": "true","code": 200,"message": "OK"}"#
+                .as_bytes())
+        }
+    }
+    fn teapot() -> JsonResponse<'a> {
+        JsonResponse {
+            status_code: 418,
+            response_json: /* HTTP 418 I'm a teapot per RFC 2324 */
+            Cow::Borrowed(r#"{"success": "false","code": 418, "message": "I'm a little teapot, short and stout..."}"#
+                .as_bytes())
+        }
+    }
+    fn method_not_understood() -> JsonResponse<'a>{
+        JsonResponse {
+            status_code: 404,
+            response_json: Cow::Borrowed(r#"{
+                                        "success": "false",
+                                        "code": 404,
+                                        "message": "Endpoint name not understood"}"#
+                .as_bytes())
+        }
+    }
+}
 
 
 

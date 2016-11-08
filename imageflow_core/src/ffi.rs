@@ -85,7 +85,7 @@ pub enum EdgeKind {
 pub enum Floatspace {
     srgb = 0,
     linear = 1,
-    gamma = 2,
+    //gamma = 2,
 }
 
 // #[repr(C)]

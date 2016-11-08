@@ -9,8 +9,8 @@ use std::ffi::CString;
 use imageflow_core::Context;
 
 
-fn graph_recording_debug() -> s::Build001_Graph_Recording{
-    s::Build001_Graph_Recording{
+fn graph_recording_debug() -> s::Build001GraphRecording{
+    s::Build001GraphRecording{
         record_graph_versions: Some(true),
         record_frame_images: Some(true),
         render_last_graph: Some(true),
@@ -62,7 +62,7 @@ fn smoke_test(input: Option<s::IoEnum>, output: Option<s::IoEnum>,  debug: bool,
         io: io_list,
         framewise: s::Framewise::Steps(steps)
     };
-    let mut context = Context::create();
+    let mut context = Context::create().unwrap();
     context.message("v0.0.1/build", &serde_json::to_vec(&build).unwrap()).unwrap();
 }
 
@@ -99,7 +99,7 @@ fn compare(input: Option<s::IoEnum>, allowed_off_by_one_bytes: usize, checksum_n
     }
 
 
-    let mut context = Context::create();
+    let mut context = Context::create().unwrap();
 
     context.message("v0.0.1/build", &serde_json::to_vec(&build).unwrap()).unwrap();
 

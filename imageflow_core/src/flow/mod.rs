@@ -16,11 +16,19 @@ use std::ptr;
 use std::string;
 use time;
 
-pub mod graph;
 pub mod definitions;
 pub mod nodes;
 use self::definitions::*;
-use self::graph::Graph;
+
+pub mod graph {
+    pub use ::flow::definitions::Graph;
+    pub fn create(max_edges: u32,
+                  max_nodes: u32)
+                  -> Graph {
+        Graph::with_capacity(max_nodes as usize, max_edges as usize)
+    }
+
+}
 
 #[macro_export]
 macro_rules! error_return (
@@ -51,137 +59,139 @@ macro_rules! error_msg (
     );
 );
 
-pub fn job_execute(c: *mut Context, job: *mut Job, graph_ref: &mut Graph) -> bool {
-    job_notify_graph_changed(c, job, graph_ref);
+impl ::JobPtr {
+    pub fn execute(&self, graph_ref: &mut Graph) -> bool {
+        let c = self.context_ptr();
+        let job = self.as_ptr();
 
-    if !job_link_codecs(c, job, graph_ref) {
-        error_return!(c);
-    }
-    // States for a node
-    // New
-    // OutboundDimensionsKnown
-    // Flattened
-    // Optimized
-    // LockedForExecution
-    // Executed
-    let mut passes: libc::int32_t = 0;
-    while !job_graph_fully_executed(c, job, graph_ref) {
-        if passes >= unsafe { (*job).max_calc_flatten_execute_passes } {
+        job_notify_graph_changed(c, job, graph_ref);
 
-            unsafe {
+        if !self.link_codecs(graph_ref) {
+            error_return!(c);
+        }
+        // States for a node
+        // New
+        // OutboundDimensionsKnown
+        // Flattened
+        // Optimized
+        // LockedForExecution
+        // Executed
+        let mut passes: libc::int32_t = 0;
+        while !job_graph_fully_executed(c, job, graph_ref) {
+            if passes >= unsafe { (*job).max_calc_flatten_execute_passes } {
+                unsafe {
+                    let prev_filename = format!("job_{}_graph_version_{}.dot", (*job).debug_job_id, (*job).next_graph_version - 1);
+                    render_dotfile_to_png(&prev_filename);
+                }
+
+
+                panic!("Maximum graph passes exceeded");
+                //            error_msg!(c, FlowStatusCode::MaximumGraphPassesExceeded);
+                //            return false;
+            }
+            if !job_populate_dimensions_where_certain(c, job, graph_ref) {
+                error_return!(c);
+            }
+            job_notify_graph_changed(c, job, graph_ref);
+
+            if !graph_pre_optimize_flatten(c, job, graph_ref) {
+                error_return!(c);
+            }
+            job_notify_graph_changed(c, job, graph_ref);
+
+            if !job_populate_dimensions_where_certain(c, job, graph_ref) {
+                error_return!(c);
+            }
+            job_notify_graph_changed(c, job, graph_ref);
+
+            if !graph_optimize(c, job, graph_ref) {
+                error_return!(c);
+            }
+            job_notify_graph_changed(c, job, graph_ref);
+
+            if !job_populate_dimensions_where_certain(c, job, graph_ref) {
+                error_return!(c);
+            }
+            job_notify_graph_changed(c, job, graph_ref);
+
+            if !graph_post_optimize_flatten(c, job, graph_ref) {
+                error_return!(c);
+            }
+            job_notify_graph_changed(c, job, graph_ref);
+
+            if !job_populate_dimensions_where_certain(c, job, graph_ref) {
+                error_return!(c);
+            }
+            job_notify_graph_changed(c, job, graph_ref);
+
+            if !graph_execute(c, job, graph_ref) {
+                error_return!(c);
+            }
+            passes += 1;
+
+            job_notify_graph_changed(c, job, graph_ref);
+        }
+        unsafe {
+            if (*job).next_graph_version > 0 && (*job).render_last_graph {
                 let prev_filename = format!("job_{}_graph_version_{}.dot", (*job).debug_job_id, (*job).next_graph_version - 1);
+
                 render_dotfile_to_png(&prev_filename);
             }
-
-
-            panic!("Maximum graph passes exceeded");
-            //            error_msg!(c, FlowStatusCode::MaximumGraphPassesExceeded);
-            //            return false;
         }
-        if !job_populate_dimensions_where_certain(c, job, graph_ref) {
-            error_return!(c);
-        }
-        job_notify_graph_changed(c, job, graph_ref);
-
-        if !graph_pre_optimize_flatten(c, job, graph_ref) {
-            error_return!(c);
-        }
-        job_notify_graph_changed(c, job, graph_ref);
-
-        if !job_populate_dimensions_where_certain(c, job, graph_ref) {
-            error_return!(c);
-        }
-        job_notify_graph_changed(c, job, graph_ref);
-
-        if !graph_optimize(c, job, graph_ref) {
-            error_return!(c);
-        }
-        job_notify_graph_changed(c, job, graph_ref);
-
-        if !job_populate_dimensions_where_certain(c, job, graph_ref) {
-            error_return!(c);
-        }
-        job_notify_graph_changed(c, job, graph_ref);
-
-        if !graph_post_optimize_flatten(c, job, graph_ref) {
-            error_return!(c);
-        }
-        job_notify_graph_changed(c, job, graph_ref);
-
-        if !job_populate_dimensions_where_certain(c, job, graph_ref) {
-            error_return!(c);
-        }
-        job_notify_graph_changed(c, job, graph_ref);
-
-        if !graph_execute(c, job, graph_ref) {
-            error_return!(c);
-        }
-        passes += 1;
-
-        job_notify_graph_changed(c, job, graph_ref);
-
+        true
     }
-    unsafe {
-        if (*job).next_graph_version > 0 && (*job).render_last_graph {
-            let prev_filename = format!("job_{}_graph_version_{}.dot", (*job).debug_job_id, (*job).next_graph_version - 1);
 
-            render_dotfile_to_png(&prev_filename);
+    pub fn link_codecs(&self, g: &mut Graph) -> bool {
+        let c = self.context_ptr();
+        let job = self.as_ptr();
+        job_notify_graph_changed(c, job, g);
 
-        }
-    }
-    true
-}
+        // Assign stable IDs;
+        for index in 0..g.node_count() {
+            if let Some(func) = g.node_weight(NodeIndex::new(index))
+                .unwrap()
+                .def
+                .fn_link_state_to_this_io_id {
+                let placeholder_id;
+                {
+                    let mut ctx = OpCtxMut {
+                        c: c,
+                        graph: g,
+                        job: job,
+                    };
+                    placeholder_id = func(&mut ctx, NodeIndex::new(index));
+                }
+                if let Some(io_id) = placeholder_id {
+                    let codec_instance =
+                    unsafe { ::ffi::flow_job_get_codec_instance(c, job, io_id) as *mut u8 };
+                    if codec_instance == ptr::null_mut() { panic!("") }
 
-pub fn job_link_codecs(c: *mut Context, job: *mut Job, g: &mut Graph) -> bool {
-
-    job_notify_graph_changed(c, job, g);
-
-    // Assign stable IDs;
-    for index in 0..g.node_count() {
-
-        if let Some(func) = g.node_weight(NodeIndex::new(index))
-            .unwrap()
-            .def
-            .fn_link_state_to_this_io_id {
-            let placeholder_id;
-            {
-                let mut ctx = OpCtxMut {
-                    c: c,
-                    graph: g,
-                    job: job,
-                };
-                placeholder_id = func(&mut ctx, NodeIndex::new(index));
-            }
-            if let Some(io_id) = placeholder_id {
-                let codec_instance =
-                unsafe { ::ffi::flow_job_get_codec_instance(c, job, io_id) as *mut u8 };
-                if codec_instance == ptr::null_mut() { panic!("")}
-
-                g.node_weight_mut(NodeIndex::new(index)).unwrap().custom_state = codec_instance;
+                    g.node_weight_mut(NodeIndex::new(index)).unwrap().custom_state = codec_instance;
+                }
             }
         }
+
+        // FIXME
+        // struct flow_graph * g = *graph_ref;
+        // let mut i: int32_t = 0;
+        // for (i = 0; i < g->next_node_id; i++) {
+        // if (g->nodes[i].type == flow_ntype_decoder || g->nodes[i].type == flow_ntype_encoder) {
+        // uint8_t * info_bytes = &g->info_bytes[g->nodes[i].info_byte_index];
+        // struct flow_nodeinfo_codec * info = (struct flow_nodeinfo_codec *)info_bytes;
+        // if (info->codec == NULL) {
+        // info->codec = flow_job_get_codec_instance(c, job, info->placeholder_id);
+        //
+        // if (info->codec == NULL)
+        // FLOW_error_msg(c, flow_status_Graph_invalid,
+        // "No matching codec or io found for placeholder id %d (node #%d).",
+        // info->placeholder_id, i);
+        // }
+        // }
+        // }
+        //
+
+        true
     }
-
-    // FIXME
-    // struct flow_graph * g = *graph_ref;
-    // let mut i: int32_t = 0;
-    // for (i = 0; i < g->next_node_id; i++) {
-    // if (g->nodes[i].type == flow_ntype_decoder || g->nodes[i].type == flow_ntype_encoder) {
-    // uint8_t * info_bytes = &g->info_bytes[g->nodes[i].info_byte_index];
-    // struct flow_nodeinfo_codec * info = (struct flow_nodeinfo_codec *)info_bytes;
-    // if (info->codec == NULL) {
-    // info->codec = flow_job_get_codec_instance(c, job, info->placeholder_id);
-    //
-    // if (info->codec == NULL)
-    // FLOW_error_msg(c, flow_status_Graph_invalid,
-    // "No matching codec or io found for placeholder id %d (node #%d).",
-    // info->placeholder_id, i);
-    // }
-    // }
-    // }
-    //
-
-    return true;
 }
 
 const FLOW_MAX_GRAPH_VERSIONS: i32 = 100;
