@@ -11,7 +11,7 @@ module Imageflow
       c = context || Imageflow::Context.new
       job = Job.new context:c
       job.add_input_file placeholder_id: 0, filename: filename
-      info = job.get_decoder_info placeholder_id: 0
+      info = job.get_image_info placeholder_id: 0
       job.destroy!
       c.destroy! unless context == c
 
@@ -73,7 +73,7 @@ module Imageflow
       buffer[:buffer].get_bytes(0, buffer[:buffer_size])
     end
 
-    def send_json(method:, data: )
+    def send_json(method, data )
       @c.message_internal(optional_job: @ptr, method: method, data: data).to_parsed
     end
 
@@ -105,15 +105,16 @@ module Imageflow
 
 
     def execute (framewise:, graph_recording: nil)
-      result = send_json("v0.0.1/execute", {"framewise": framewise})
+      result = self.send_json("v0.0.1/execute", {"framewise": framewise})
       raise result.message unless result.ok?
     end
 
     def get_image_info(placeholder_id:)
-      result = send_json("v0.0.1/get_image_info", {"ioId": placeholder_id})
+      result = self.send_json("v0.0.1/get_image_info", {"ioId": placeholder_id})
       raise result.message unless result.ok?
 
-      result.data["ImageInfo"]
+      info = result.data["ImageInfo"]
+      info.nil? ? info : info.inject({}){|memo,(k,v)| memo[k.to_sym] = v; memo}
     end
 
 

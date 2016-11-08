@@ -14,20 +14,35 @@ use std::ptr;
 
 use std::str::FromStr;
 
+
+/* These are reused in the external ABI, but only as opaque pointers*/
+///
+/// imageflow_response contains a buffer and buffer length (in bytes), as well as a status code
+/// The status code can be used to avoid actual parsing of the response in some cases.
+/// For example, you may not care about parsing an error message if you're hacking around -
+/// Or, you may not care about success details if you were sending a command that doesn't imply
+/// a result.
+///
+/// The contents of the buffer MAY NOT include any null characters.
+/// The contents of the buffer MUST be a valid UTF-8 byte sequence.
+/// The contents of the buffer MUST be valid JSON per RFC 7159.
+///
+/// The schema of the JSON response is not globally defined; consult the API methods in use.
+///
+/// Use `imageflow_json_response_destroy` to free (it will otherwise remain on the heap and
+/// tracking list until the context is destroyed).
+///
+/// Use `imageflow_context_read_response` to access
+#[repr(C)]
+pub struct ImageflowJsonResponse {
+    pub status_code: i64,
+    pub buffer_utf8_no_nulls: *const libc::uint8_t,
+    pub buffer_size: libc::size_t,
+}
+
+
 pub enum JobIO {}
 
-
-
-#[repr(C)]
-#[derive(Clone,Debug,PartialEq)]
-pub struct CodecInstance {
-    graph_placeholder_id: int32_t,
-    pub codec_id: int64_t,
-    pub codec_state: *mut c_void,
-    io: *mut FlowIO,
-    next: *mut CodecInstance,
-    direction: FlowDirection,
-}
 
 #[repr(C)]
 pub struct Job {
@@ -60,6 +75,36 @@ pub enum IoDirection {
     Out = 8,
     In = 4,
 }
+
+#[repr(C)]
+#[derive(Clone,Debug,PartialEq)]
+pub struct Context {
+    pub error: ErrorInfo,
+    pub underlying_heap: Heap,
+    pub log: ProfilingLog,
+    pub colorspace: ColorspaceInfo,
+    pub object_tracking: ObjTrackingInfo,
+    pub codec_set: *mut ContextCodecSet,
+    pub node_set: *mut ContextNodeSet,
+}
+
+/*end reuse */
+
+
+
+
+#[repr(C)]
+#[derive(Clone,Debug,PartialEq)]
+pub struct CodecInstance {
+    graph_placeholder_id: int32_t,
+    pub codec_id: int64_t,
+    pub codec_state: *mut c_void,
+    io: *mut FlowIO,
+    next: *mut CodecInstance,
+    direction: FlowDirection,
+}
+
+
 
 
 #[repr(C)]
@@ -476,17 +521,7 @@ pub struct ProfilingLog {
     placeholder: u8, // FIXME: replace
 }
 
-#[repr(C)]
-#[derive(Clone,Debug,PartialEq)]
-pub struct Context {
-    pub error: ErrorInfo,
-    pub underlying_heap: Heap,
-    pub log: ProfilingLog,
-    pub colorspace: ColorspaceInfo,
-    pub object_tracking: ObjTrackingInfo,
-    pub codec_set: *mut ContextCodecSet,
-    pub node_set: *mut ContextNodeSet,
-}
+
 
 #[repr(C)]
 #[derive(Copy,Clone,Debug,PartialEq)]

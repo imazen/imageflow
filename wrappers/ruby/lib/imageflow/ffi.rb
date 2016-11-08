@@ -83,6 +83,10 @@ module Imageflow
         :mode_read_write_seekable, 15, #1 | 2 | 4 | 8
 
     ]
+    enum :flow_direction, [
+        :flow_output, 8,
+        :flow_input, 4
+    ]
 
 
     attach_function :imageflow_context_create, [], :pointer

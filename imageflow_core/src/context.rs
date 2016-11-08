@@ -1,7 +1,9 @@
 use std;
 use std::{ptr,marker,slice,cell};
 use libc;
-use ::{FlowError,FlowErr,JsonResponse,JsonResponseError,Result,IoDirection};
+use ::{FlowError,FlowErr, JsonResponse,JsonResponseError,Result,IoDirection};
+use ::ffi::ImageflowJsonResponse;
+
 extern crate imageflow_serde as s;
 extern crate serde_json;
 
@@ -137,6 +139,38 @@ impl JobPtr {
 
     fn ctx(&self) -> ContextPtr{
         ContextPtr::from_ptr(self.context_ptr())
+    }
+}
+
+impl ContextPtr {
+    pub fn create_abi_json_response(&self, json_bytes: std::borrow::Cow<[u8]>, status_code: i64) -> *const ImageflowJsonResponse{
+        unsafe {
+            let sizeof_struct = std::mem::size_of::<ImageflowJsonResponse>();
+
+            let pointer = ::ffi::flow_context_calloc(self.ptr.unwrap(),
+                                                   1,
+                                                   sizeof_struct + json_bytes.len(),
+                                                   ptr::null(),
+                                                   self.ptr.unwrap() as *mut libc::c_void,
+                                                   ptr::null(),
+                                                   0) as *mut u8;
+            //Return null on OOM
+            if pointer.is_null() {
+                return ::std::ptr::null();
+            }
+            let pointer_to_final_buffer = pointer.offset(sizeof_struct as isize) as *mut libc::uint8_t;
+            let ref mut imageflow_response = *(pointer as *mut ImageflowJsonResponse);
+            imageflow_response.buffer_utf8_no_nulls = pointer_to_final_buffer;
+            imageflow_response.buffer_size = json_bytes.len();
+            imageflow_response.status_code = status_code;
+
+            let mut out_json_bytes = std::slice::from_raw_parts_mut(pointer_to_final_buffer,
+                                                                    json_bytes.len());
+
+            out_json_bytes.clone_from_slice(&json_bytes);
+
+            imageflow_response as *const ImageflowJsonResponse
+        }
     }
 }
 
