@@ -48,18 +48,14 @@ module Imageflow
       "\n" + buffer.read_string
     end
 
-    def stack_trace(full_file_paths: true)
-      raise_if_destroyed
-      buffer = FFI::MemoryPointer.new(:char, 4096, true)
-
-      Native.context_stack_trace(@c, buffer, 4096, full_file_paths)
-
-      buffer.read_string
-    end
-
-    def create_graph (**args)
-      Graph.new context: self, **args
-    end
+    # def stack_trace(full_file_paths: true)
+    #   raise_if_destroyed
+    #   buffer = FFI::MemoryPointer.new(:char, 4096, true)
+    #
+    #   Native.context_stack_trace(@c, buffer, 4096, full_file_paths)
+    #
+    #   buffer.read_string
+    # end
 
     def create_job (**args)
       Job.new context: self, **args
@@ -73,14 +69,67 @@ module Imageflow
       result
     end
 
-
-    def set_floatspace_linear!
-      call_method(:context_set_floatspace, 1, 0, 0, 0)
+    class JsonResponse
+      attr_accessor :success, :status_code, :message, :data
+      def ok?
+        !!success
+      end
     end
 
-    def set_floatspace_srgb!
-      call_method(:context_set_floatspace, 0, 0, 0, 0)
+    def send_json(method:, data: )
+      message_internal(method: method, data: data).to_parsed
     end
+
+    class UnparsedResponse
+      def self.from_pointer(buffer_ptr, size, status_code)
+        r = UnparsedResponse::new()
+        r.json_str = buffer_ptr.read_string(size)
+        r.status_code = status_code
+        r
+      end
+      attr_accessor :status_code, :json_str
+
+      def to_parsed
+        hash = JSON.parse self.json_str
+        if hash["code"] != self.status_code
+          raise "status_code #{response.status_code} is inconsistent with json code #{hash['code']}"
+        end
+        r = JsonResponse.new
+        r.success = !!hash["success"]
+        r.status_code = self.status_code
+        r.message = hash["message"]
+        r.data = hash["data"]
+        r
+      end
+    end
+
+
+    def message_internal(optional_job:  nil, method: , data:)
+      json_str = JSON.generate data
+      json_buffer = FFI::MemoryPointer.from_string(json_str)
+      response = if optional_job.nil?
+                   call_method(:context_send_json, method, json_buffer, json_buffer.size)
+      else
+        call_method(:job_send_json, optional_job, method, json_buffer, json_buffer.size)
+      end
+
+      if response.nil?
+        raise "Why didn't call_method catch this error? Was no error raised on the context?"
+      end
+
+      out_status_code = FFI::MemoryPointer.new(:int64, 1) # Allocate memory sized to the data
+      out_buffer_ptr = buffer_pointer = FFI::MemoryPointer.new(:pointer, 1) # Allocate memory sized to the data
+      out_buffer_size = FFI::MemoryPointer.new(:size_t, 1) # Allocate memory sized to the data
+
+
+      if call_method(:json_response_read, response,out_status_code, out_buffer_ptr, out_buffer_size )
+        UnparsedResponse.from_pointer(out_buffer_ptr.read_pointer, out_buffer_size.read_size_t, out_status_code.read_int64)
+      else
+        raise "imageflow_json_response_read failed"
+      end
+    end
+
+
 
   end
 end

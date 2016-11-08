@@ -24,8 +24,8 @@ use ::Context;
 use ffi;
 
 
-use self::parse_graph::GraphTranslator;
-use self::parse_io::IoTranslator;
+pub use self::parse_graph::GraphTranslator;
+pub use self::parse_io::IoTranslator;
 use std::error;
 pub struct BuildRequestHandler {
 

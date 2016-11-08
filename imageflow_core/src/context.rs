@@ -119,9 +119,24 @@ impl JobPtr {
                 self.tell_decoder(parsed.io_id, parsed.command).unwrap();
                 Ok(JsonResponse::ok())
             }
+            "v0.0.1/execute" => {
+                let parsed: s::Execute001 = serde_json::from_slice(json).unwrap();
+                let mut g = ::parsing::GraphTranslator::new().translate_framewise(parsed.framewise);
+                if let Some(r) = parsed.graph_recording {
+                    self.configure_graph_recording(r);
+                }
+                if !self.execute(&mut g){
+                    unsafe { self.ctx().assert_ok(Some(&mut g)); }
+                }
+                Ok(JsonResponse::ok())
+            }
             "brew_coffee" => Ok(JsonResponse::teapot()),
             _ => Ok(JsonResponse::method_not_understood())
         }
+    }
+
+    fn ctx(&self) -> ContextPtr{
+        ContextPtr::from_ptr(self.context_ptr())
     }
 }
 

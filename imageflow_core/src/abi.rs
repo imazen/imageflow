@@ -285,7 +285,7 @@ pub unsafe extern "C" fn imageflow_context_print_and_exit_if_error(context: *mut
 /// # Expectations
 ///
 /// * All strings must be null-terminated, C-style, valid UTF-8.
-/// * The lifetime of `message` is expected to match or exceed the duration of this function call.
+/// * The lifetime of `message` is expected to exceed the duration of this function call.
 /// * The lifetime of `file` and `function_name` (if provided), is expected to match or exceed the lifetime of `context`.
 /// * You may provide a null value for `filename` or `function_name`, but for the love of puppies,
 /// don't provide a dangling or invalid pointer, that will segfault... a long time later.
@@ -779,6 +779,25 @@ pub unsafe extern "C" fn imageflow_io_get_output_buffer(context: *mut Context,
     ffi::flow_io_get_output_buffer(context, io, result_buffer, result_buffer_length)
 }
 
+///
+/// Provides access to the underlying buffer for the given imageflow_io object.
+///
+#[no_mangle]
+pub unsafe extern "C" fn imageflow_job_get_output_buffer_by_id(context: *mut Context,
+                                                        job: *mut Job,
+                                                        io_id: i32,
+                                                        result_buffer: *mut *const u8,
+                                                        result_buffer_length: *mut libc::size_t)
+                                                        -> bool {
+    let io = ffi::flow_job_get_io(context,job, io_id);
+    if io.is_null(){
+        return false;
+    }else {
+        ffi::flow_io_get_output_buffer(context, io, result_buffer, result_buffer_length);
+        return true;
+    }
+}
+
 
 ///
 /// Creates an imageflow_job, which permits the association of imageflow_io instances with
@@ -824,32 +843,6 @@ pub unsafe extern "C" fn imageflow_job_add_io(context: *mut Context,
 pub unsafe extern "C" fn imageflow_job_destroy(context: *mut Context, job: *mut Job) -> bool {
     ffi::flow_job_destroy(context, job)
 }
-
-// malloc/calloc/free/raiseerror/addtocallstack/
-
-// #[no_mangle]
-// pub unsafe extern fn imageflow_job_get_decoder_info(c: *mut libc::c_void,
-//                                     job: *mut Job,
-//                                     by_placeholder_id: i32,
-//                                     info: *mut DecoderInfo)
-//                                     -> bool{
-//
-// }
-//
-// #[no_mangle]
-// pub unsafe extern fn imageflow_job_decoder_set_downscale_hints_by_placeholder_id(c: *mut libc::c_void,
-//                                                                  job: *mut Job, placeholder_id:i32,
-//                                                                  if_wider_than: i64,  or_taller_than: i64,
-//                                                                  downscaled_min_width: i64,  downscaled_min_height:i64,  scale_luma_spatially:bool,
-//                                                                  gamma_correct_for_srgb_during_spatial_luma_scaling:bool) -> bool{
-//
-// }
-
-// #[no_mangle]
-// pub unsafe extern fn imageflow_job_execute(c: *mut libc::c_void, job: *mut Job, g: *mut *mut Graph) -> bool{
-//
-// }
-//
 
 
 

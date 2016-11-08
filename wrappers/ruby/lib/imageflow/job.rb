@@ -59,13 +59,24 @@ module Imageflow
 
     def get_buffer(placeholder_id:)
       buffer_pointer = FFI::MemoryPointer.new(:pointer, 1) # Allocate memory sized to the data
-      buffer_size = FFI::MemoryPointer.new(:uint64, 1) # Allocate memory sized to the data
+      buffer_size = FFI::MemoryPointer.new(:size_t, 1) # Allocate memory sized to the data
 
-      @c.call_method(:job_get_output_buffer, @ptr, placeholder_id, buffer_pointer, buffer_size)
+      @c.call_method(:job_get_output_buffer_by_id, @ptr, placeholder_id, buffer_pointer, buffer_size)
 
       {buffer: buffer_pointer.get_pointer(0),
        buffer_size: buffer_size.get_uint64(0)}
     end
+
+    def get_buffer_bytes(placeholder_id:)
+      buffer = get_buffer(placeholder_id: placeholder_id)
+      raise "Buffer pointer null" if buffer[:buffer] == FFI::Pointer.new(0)
+      buffer[:buffer].get_bytes(0, buffer[:buffer_size])
+    end
+
+    def send_json(method:, data: )
+      @c.message_internal(optional_job: @ptr, method: method, data: data).to_parsed
+    end
+
 
     def record_nothing
       configure_recording record_graph_versions: false,
@@ -88,35 +99,34 @@ module Imageflow
     end
 
     def configure_recording(record_graph_versions:, record_frame_images:, render_last_graph:, render_graph_versions:, render_animated_graph:)
-      @c.call_method(:job_configure_recording, @ptr, record_graph_versions, record_frame_images, render_last_graph, render_graph_versions, render_animated_graph)
+      #@c.call_method(:job_configure_recording, @ptr, record_graph_versions, record_frame_images, render_last_graph, render_graph_versions, render_animated_graph)
     end
 
-    def get_buffer_bytes(placeholder_id:)
-      buffer = get_buffer(placeholder_id: placeholder_id)
-      raise "Buffer pointer null" if buffer[:buffer] == FFI::Pointer.new(0)
-      buffer[:buffer].get_bytes(0, buffer[:buffer_size])
+
+
+    def execute (framewise:, graph_recording: nil)
+      result = send_json("v0.0.1/execute", {"framewise": framewise})
+      raise result.message unless result.ok?
     end
 
-    def execute (graph:)
-      @c.call_method(:job_execute, @ptr, graph.ptr_ptr_graph)
+    def get_image_info(placeholder_id:)
+      result = send_json("v0.0.1/get_image_info", {"ioId": placeholder_id})
+      raise result.message unless result.ok?
+
+      result.data["ImageInfo"]
     end
 
-    def get_decoder_info(placeholder_id:)
-      info = Imageflow::Native::FlowJobDecoderInfo.new
 
-      @c.call_method(:job_get_decoder_info, @ptr, placeholder_id.to_i, info)
-
-      info
-    end
-    def set_decoder_downscale_hints(placeholder_id:, if_wider_than:,
-                                     or_taller_than:,  downscaled_min_width:,
+    def set_decoder_downscale_hints(placeholder_id:, downscaled_min_width:,
                                      downscaled_min_height:,
                                     scale_luma_spatially: true,
                                     gamma_correct_for_srgb_during_spatial_luma_scaling: true)
-      @c.call_method(:job_decoder_set_downscale_hints_by_placeholder_id, @ptr, placeholder_id, if_wider_than, or_taller_than, downscaled_min_width, downscaled_min_height, scale_luma_spatially, gamma_correct_for_srgb_during_spatial_luma_scaling);
+
+      hints = {width: downscaled_min_width, height: downscaled_min_height, scaleLumaSpatially: scale_luma_spatially, "gammaCorrectForSrgbDuringSpatialLumaScaling": gamma_correct_for_srgb_during_spatial_luma_scaling}
+
+      result = send_json("v0.0.1/tell_decoder", {"ioId": placeholder_id, "command": {"JpegDownscaleHints": hints}})
+      raise result.message unless result.ok?
     end
-
-
 
   end
 end
