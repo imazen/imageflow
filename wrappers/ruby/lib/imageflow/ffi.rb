@@ -1,3 +1,4 @@
+ENV["RUST_BACKTRACE"] ="1"
 module Imageflow
   module Native
     extend FFI::Library
