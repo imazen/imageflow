@@ -112,9 +112,17 @@ impl JobPtr {
 
         match method {
             "v0.0.1/get_image_info" => {
-                let parsed: s::GetImageInfo001 = serde_json::from_slice(json).unwrap();
-                let info = self.get_image_info(parsed.io_id).unwrap();
-                Ok(JsonResponse::success_with_payload(s::ResponsePayload::ImageInfo(info)))
+                let parsed_maybe: std::result::Result<s::GetImageInfo001, serde_json::Error> = serde_json::from_slice(json);
+                match parsed_maybe {
+                    Ok(parsed) => {
+                        let info = self.get_image_info(parsed.io_id).unwrap();
+                        Ok(JsonResponse::success_with_payload(s::ResponsePayload::ImageInfo(info)))
+                    }
+                    Err(e) => {
+                        Ok(JsonResponse::from_parse_error(e,json))
+                    }
+                }
+
             }
             "v0.0.1/tell_decoder" => {
                 let parsed: s::TellDecoder001 = serde_json::from_slice(json).unwrap();

@@ -64,9 +64,18 @@ pub type Result<T> = std::result::Result<T, FlowError>;
 
 impl<'a> JsonResponse<'a> {
 
+    pub fn from_parse_error<'b>(err: serde_json::error::Error, json: &'b [u8]) -> JsonResponse<'a>{
+
+        let message = format!("Parse error: {}\n Received {}", err, std::str::from_utf8(json).unwrap_or("[INVALID UTF-8]") );
+
+        let r = s::Response001{ success: false, code: 400,
+            message: Some(message.to_owned()),
+            data: s::ResponsePayload::None};
+        JsonResponse::from_response001(r)
+    }
     pub fn from_response001(r: s::Response001) -> JsonResponse<'a> {
         JsonResponse {
-            status_code: r.code,
+            status_code: 400,
             response_json: Cow::Owned(serde_json::to_vec_pretty(&r).unwrap())
         }
     }

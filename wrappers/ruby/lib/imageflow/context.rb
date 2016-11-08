@@ -107,10 +107,11 @@ module Imageflow
     def message_internal(optional_job:  nil, method: , data:)
       json_str = JSON.generate data
       json_buffer = FFI::MemoryPointer.from_string(json_str)
+      json_buffer_size = json_buffer.size - 1 #Drop null char
       response = if optional_job.nil?
-                   call_method(:context_send_json, method, json_buffer, json_buffer.size)
+                   call_method(:context_send_json, method, json_buffer, json_buffer_size)
       else
-        call_method(:job_send_json, optional_job, method, json_buffer, json_buffer.size)
+        call_method(:job_send_json, optional_job, method, json_buffer, json_buffer_size)
       end
 
       if response.nil?
@@ -123,7 +124,9 @@ module Imageflow
 
 
       if call_method(:json_response_read, response,out_status_code, out_buffer_ptr, out_buffer_size )
-        UnparsedResponse.from_pointer(out_buffer_ptr.read_pointer, out_buffer_size.read_size_t, out_status_code.read_int64)
+        #size = out_buffer_size.read(:size_t)
+        size = out_buffer_size.read_pointer.address
+        UnparsedResponse.from_pointer(out_buffer_ptr.read_pointer,size , out_status_code.read_int64)
       else
         raise "imageflow_json_response_read failed"
       end

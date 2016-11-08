@@ -24,10 +24,10 @@ module Imageflow
         job.add_input_file(placeholder_id: 0, filename: input_path)
         job.add_output_file(placeholder_id: 1, filename: output_path)
 
-        input_info = job.get_decoder_info placeholder_id: 0
+        input_info = job.get_image_info placeholder_id: 0
 
-        w = input_info[:frame0_width]
-        h = input_info[:frame0_height]
+        w = input_info[:frame0Width]
+        h = input_info[:frame0Height]
 
         instructions = Imageflow::Riapi::Instructions.new
         instructions.width = opts.width
@@ -43,8 +43,9 @@ module Imageflow
 
         instructions.floatspace = opts.linear ? :linear : :srgb
 
-        c.set_floatspace_linear! if instructions.floatspace == :linear
-        c.set_floatspace_srgb! if instructions.floatspace == :srgb
+        #TODO: restore switiching
+        #c.set_floatspace_linear! if instructions.floatspace == :linear
+        #c.set_floatspace_srgb! if instructions.floatspace == :srgb
 
 
 

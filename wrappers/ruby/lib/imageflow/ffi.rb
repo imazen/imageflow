@@ -1,9 +1,27 @@
-ENV["RUST_BACKTRACE"] ="1"
 module Imageflow
   module Native
     extend FFI::Library
-    extension = FFI::Platform.is_os("darwin") ? "dylib" : "so"
-    ffi_lib File.expand_path("../../../../../target/debug/libimageflowrs.#{extension}", __FILE__)
+
+    def self.dylib_build_dir
+      File.expand_path("../../../../../imageflow_cdylib", __FILE__)
+    end
+    def self.dylib_path
+      extension = FFI::Platform.is_os("darwin") ? "dylib" : "so"
+      File.expand_path("../../../../../target/debug/libimageflowrs.#{extension}", __FILE__)
+    end
+
+    def self.ensure_compiled
+      #How old before we skip
+      seconds = 15
+      unless File.exist?(self.dylib_path) && (Time.now - File.stat(self.dylib_path).mtime) < seconds
+        %x[cd #{self.dylib_build_dir} && cargo build]
+      end
+      self.dylib_path
+    end
+
+    ENV["RUST_BACKTRACE"] ="1"
+
+    ffi_lib self.ensure_compiled
 
     def self.attach_function (prefixed_name, *vars)
       super prefixed_name.to_s.gsub(/^imageflow_/, "").to_sym, prefixed_name, *vars

@@ -15,7 +15,7 @@ module Imageflow
       job.destroy!
       c.destroy! unless context == c
 
-      {width: info[:frame0_width],  height: info[:frame0_height], filename: filename}
+      {width: info[:frame0Width],  height: info[:frame0Height], filename: filename}
     end
 
     def destroy!
