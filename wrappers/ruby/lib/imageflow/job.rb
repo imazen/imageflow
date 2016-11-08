@@ -114,7 +114,11 @@ module Imageflow
       raise result.message unless result.ok?
 
       info = result.data["ImageInfo"]
-      info.nil? ? info : info.inject({}){|memo,(k,v)| memo[k.to_sym] = v; memo}
+      info = info.nil? ? info : info.inject({}){|memo,(k,v)| memo[k.to_sym] = v; memo}
+      info[:frame0_width] = info[:frame0Width]
+      info[:frame0_height] = info[:frame0Height]
+      info[:frame0_post_decode_format] = info[:frame0PostDecodeFormat]
+      info
     end
 
 

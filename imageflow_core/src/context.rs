@@ -48,6 +48,15 @@ impl JobPtr {
             }
         }
     }
+    pub fn record_graphs(&self){
+        let _ = unsafe { ::ffi::flow_job_configure_recording(self.context_ptr(),
+                                                             self.as_ptr(),
+                                                             true,
+                                                             true,
+                                                             true,
+                                                             false,
+                                                             false) };
+    }
     pub fn configure_graph_recording(&self, r: s::Build001GraphRecording){
         let _ = unsafe { ::ffi::flow_job_configure_recording(self.context_ptr(),
                                                     self.as_ptr(),
@@ -135,6 +144,7 @@ impl JobPtr {
                 if let Some(r) = parsed.graph_recording {
                     self.configure_graph_recording(r);
                 }
+                self.record_graphs();
                 if !self.execute(&mut g){
                     unsafe { self.ctx().assert_ok(Some(&mut g)); }
                 }

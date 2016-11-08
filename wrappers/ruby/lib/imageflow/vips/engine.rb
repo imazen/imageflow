@@ -53,8 +53,8 @@ module Imageflow
 
         #cpu_time = ::Benchmark.realtime do
         gb = Imageflow::Riapi::GraphBuilder.new context: c
-        g = gb.build_graph(job: job, input_placeholder_id: 0, output_placeholder_id: 1, source_info: input_info, instructions: instructions)
-        job.execute graph: g
+        framewise = gb.build_framewise(job: job, input_placeholder_id: 0, output_placeholder_id: 1, source_info: input_info, instructions: instructions)
+        job.execute framewise: framewise
         c.destroy!
         c = nil
         #end

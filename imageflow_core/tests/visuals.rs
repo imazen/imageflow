@@ -83,6 +83,11 @@ fn compare(input: Option<s::IoEnum>, allowed_off_by_one_bytes: usize, checksum_n
 
     steps.push(s::Node::FlowBitmapBgraPtr { ptr_to_flow_bitmap_bgra_ptr: ptr_to_ptr as usize});
 
+    {
+
+        //println!("{}", serde_json::to_string_pretty(&steps).unwrap());
+    }
+
     let build = s::Build001{
         builder_config: Some(s::Build001Config{graph_recording: match debug{ true => Some(graph_recording_debug()), false => None} ,
             process_all_gif_frames: Some(false),

@@ -3,31 +3,73 @@ module Imageflow
     class GraphBuilder
       def initialize(context:)
         @context = context
+        @steps = []
       end
 
       attr_accessor :result_mime_type
+
+      def add_decoder(io_id:)
+        @steps << {decode: {ioId: io_id}}
+      end
+
+      def add_encoder(io_id:, codec: , instructions: )
+        preset = {"LibjpegTurbo": {}} if codec == :jpg
+        preset = {"Libpng": {}} if codec == :png
+
+        @steps << {encode: {ioId: io_id, preset: preset}}
+      end
+
+      def add_scale(w:,h:, down_filter: :filter_Robidoux, up_filter: :filter_Robidoux)
+        @steps <<  {"scale": {
+            "w": w,
+            "h": h,
+            "downFilter": "Robidoux",
+            "upFilter": "Robidoux",
+            "sharpenPercent": 0.0,
+            "flags": 1
+        }}
+      end
 
       def add_rotate(degress)
         raise "Invalid degree value (#{degrees}) - must be multiple of 90" unless degress % 90 == 0
         degrees = degrees % 360
         return if degress == 0
-        @last = @last.add("rotate_#{degrees}".to_sym)
+        @steps << {"rotate#{degress}": {}}
       end
 
       def add_flip(flip)
         accepted = [:none, :x, :y, :xy]
         raise "Invalid flip value (#{degrees}) - must be one of #{accepted.inspect}" unless accepted.include? (flip)
         return if flip == :none
-        @last = @last.add(:primitive_flip_horizontal) if flip.to_s.start_with?("x")
-        @last = @last.add(:primitive_flip_vertical) if flip.to_s.end_width?("y")
+        @steps << {flipH: {}} if flip.to_s.start_with?("x")
+        @steps << {flipV: {}} if flip.to_s.end_width?("y")
       end
 
       def add_crop(crop:)
-        @last = @last.add(:primitive_crop, crop[0], crop[1], crop[2], crop[3])
+        @steps << {"crop": {
+            "x1": crop[0],
+            "y1": crop[1],
+            "x2": crop[2],
+            "y2": crop[3]
+        }}
       end
 
       def add_expand_canvas(left:, top:, right:, bottom:, color:)
-        @last = @last.add(:expand_canvas, left, top, right, bottom, color)
+        @steps <<  {"expandCanvas": {
+            "left": left,
+            "top": top,
+            "right": right,
+            "bottom": bottom,
+            "color": {
+                "Srgb": {
+                    "Hex": color
+                }
+            }
+        }}
+      end
+
+      def framewise
+        {steps: @steps}
       end
 
       def apply_decoder_scaling_and_get_dimensions(source_info:, instructions:, job:, input_placeholder_id:)
@@ -50,28 +92,25 @@ module Imageflow
         gamma_correct_for_srgb_during_spatial_luma_scaling = instructions.jpeg_idct_downscale_linear.nil? ? (instructions.floatspace == :linear) : instructions.jpeg_idct_downscale_linear
 
         job.set_decoder_downscale_hints(placeholder_id: input_placeholder_id,
-                                        if_wider_than: trigger_decoder_scaling[0].to_i,
-                                        or_taller_than: trigger_decoder_scaling[1].to_i,
                                         downscaled_min_width: target_decoder_size[0].to_i,
                                         downscaled_min_height: target_decoder_size[1].to_i,
                                         scale_luma_spatially: gamma_correct_for_srgb_during_spatial_luma_scaling,
                                         gamma_correct_for_srgb_during_spatial_luma_scaling: gamma_correct_for_srgb_during_spatial_luma_scaling)
 
-        updated_info = job.get_decoder_info(placeholder_id: input_placeholder_id)
+        updated_info = job.get_image_info(placeholder_id: input_placeholder_id)
 
         [updated_info[:frame0_width],updated_info[:frame0_height]]
       end
 
 
-      def build_graph(job:, input_placeholder_id:, output_placeholder_id:, instructions:, source_info:)
+      def build_framewise(job:, input_placeholder_id:, output_placeholder_id:, instructions:, source_info:)
 
         original_size = apply_decoder_scaling_and_get_dimensions source_info: source_info, instructions: instructions, job: job, input_placeholder_id: input_placeholder_id
 
         #TODO: apply autorotate & autorotate.default (false)
-        g = @context.create_graph
         i = instructions
 
-        @last = g.create_node(:decoder, 0)
+        add_decoder(io_id: 0)
 
         #swap coords if we're rotating
         original_size.reverse! unless i.source_rotate.nil? || i.source_rotate % 180 == 0
@@ -85,13 +124,13 @@ module Imageflow
 
         add_crop(crop: ile.result[:copy_from])
 
-        @last = @last.add(:scale, ile.result[:copy_to_size][0], ile.result[:copy_to_size][1], :filter_Robidoux, :filter_Robidoux, 1) #Passing 1 for flags invokes faster path
+        add_scale(w: ile.result[:copy_to_size][0], h: ile.result[:copy_to_size][1])
 
         add_expand_canvas(left: ile.result[:copy_to_rect][0],
                           top: ile.result[:copy_to_rect][1],
                           right: ile.result[:canvas_size][0] - ile.result[:copy_to_size][0] - ile.result[:copy_to_rect][0],
                           bottom: ile.result[:canvas_size][1] - ile.result[:copy_to_size][1] - ile.result[:copy_to_rect][1],
-                          color: 0xFFFFFFFF) #instructions.background_color)
+                          color: "FFFFFFFF") #instructions.background_color)
 
 
         #TODO: Add parsing for these
@@ -114,16 +153,15 @@ module Imageflow
 
         if instructions.format == :png || instructions.format.nil? && source_info[:codec_id] == 1
           @result_mime_type = 'image/png'
-          output_codec = 2 #:encode_png
+          output_codec = :png #:encode_png
         else
           @result_mime_type = 'image/jpeg'
-          output_codec = 4 #:encode_jpeg
+          output_codec = :jpg #:encode_jpeg
         end
 
+        add_encoder(io_id: output_placeholder_id, codec: output_codec, instructions: instructions)
 
-        @last = @last.add(:encoder, output_placeholder_id, output_codec)
-
-        g
+        self.framewise
       end
     end
   end

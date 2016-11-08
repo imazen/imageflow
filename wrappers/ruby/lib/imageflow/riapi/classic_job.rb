@@ -31,13 +31,13 @@ module Imageflow
 
 
       def get_source_info(job:, placeholder_id:)
-        info = job.get_decoder_info placeholder_id: placeholder_id
+        info = job.get_image_info placeholder_id: placeholder_id
 
         {
             preferred_mime_type: info[:preferred_mime_type],
             preferred_extension: info[:preferred_extension],
-            frame0_width: info[:frame0_width],
-            frame0_height: info[:frame0_height],
+            frame0_width: info[:frame0Width],
+            frame0_height: info[:frame0Height],
             frame0_post_decode_format: info[:frame0_post_decode_format],
             codec_id: info[:codec_id]
         }
@@ -51,8 +51,9 @@ module Imageflow
 
         instructions.floatspace ||= :linear
 
-        c.set_floatspace_linear! if instructions.floatspace == :linear
-        c.set_floatspace_srgb! if instructions.floatspace == :srgb
+        #TODO: restore floatspace
+        #c.set_floatspace_linear! if instructions.floatspace == :linear
+        #c.set_floatspace_srgb! if instructions.floatspace == :srgb
 
 
         source.load_bytes!
@@ -76,12 +77,12 @@ module Imageflow
 
         gb = GraphBuilder.new context: c
 
-        g = gb.build_graph(job: job, input_placeholder_id: 0, output_placeholder_id: 1, source_info: result_info[:source], instructions: instructions)
+        framewise = gb.build_framewise(job: job, input_placeholder_id: 0, output_placeholder_id: 1, source_info: result_info[:source], instructions: instructions)
 
         @result_info[:mime_type] = gb.result_mime_type
 
 
-        job.execute graph: g
+        job.execute framewise: framewise
 
         @result_bytes = job.get_buffer_bytes(placeholder_id: 1)
       ensure
