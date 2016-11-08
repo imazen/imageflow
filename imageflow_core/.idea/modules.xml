@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="ProjectModuleManager">
+    <modules>
+      <module fileurl="file://$PROJECT_DIR$/../imageflow_cdylib/imageflow_cdylib.iml" filepath="$PROJECT_DIR$/../imageflow_cdylib/imageflow_cdylib.iml" />
+      <module fileurl="file://$PROJECT_DIR$/imageflow_core.iml" filepath="$PROJECT_DIR$/imageflow_core.iml" />
+      <module fileurl="file://$PROJECT_DIR$/../imageflow_serde/imageflow_serde.iml" filepath="$PROJECT_DIR$/../imageflow_serde/imageflow_serde.iml" />
+      <module fileurl="file://$PROJECT_DIR$/../imageflow_server/imageflow_server.iml" filepath="$PROJECT_DIR$/../imageflow_server/imageflow_server.iml" />
+      <module fileurl="file://$PROJECT_DIR$/../imageflow_tool/imageflow_tool.iml" filepath="$PROJECT_DIR$/../imageflow_tool/imageflow_tool.iml" />
+    </modules>
+  </component>
+</project>
