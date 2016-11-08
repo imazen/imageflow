@@ -116,7 +116,7 @@ impl FromStr for Filter {
             "lanczos2" => Ok(Filter::Lanczos2),
             "lanczos2sharp" => Ok(Filter::Lanczos2Sharp),
             "cubicfast" => Ok(Filter::CubicFast),
-            "cubic" => Ok(Filter::Cubic),
+            "cubic_0_1" => Ok(Filter::Cubic),
             "cubicsharp" => Ok(Filter::CubicSharp),
             "catmullrom" => Ok(Filter::CatmullRom),
             "catrom" => Ok(Filter::CatmullRom),

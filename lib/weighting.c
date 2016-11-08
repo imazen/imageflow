@@ -408,11 +408,8 @@ flow_interpolation_line_contributions_create(flow_c * context, const uint32_t ou
 
         float * weights = res->ContribRow[u].Weights;
 
-        // commented: additional weight for edges (doesn't seem to be too effective)
-        // for (ix = left_edge; ix <= right_edge; ix++) {
         for (ix = left_src_pixel; ix <= right_src_pixel; ix++) {
             int tx = ix - left_src_pixel;
-            // int tx = min(max(ix, left_src_pixel), right_src_pixel) - left_src_pixel;
             double add = (*details->filter)(details, downscale_factor *((double)ix - center_src_pixel));
             if (fabs(add) <= 0.00000002) {
                 add = 0.0;
