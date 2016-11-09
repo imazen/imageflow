@@ -604,14 +604,14 @@ pub fn graph_execute(c: *mut Context, job: *mut Job, g: &mut Graph) -> bool {
 }
 
 pub fn render_dotfile_to_png(dotfile_path: &str) {
-    Command::new("dot")
+    let _ = Command::new("dot")
         .arg("-Tpng")
         .arg("-Gsize=11,16\\!")
         .arg("-Gdpi=150")
         .arg("-O")
         .arg(dotfile_path)
-        .spawn()
-        .expect("dot command failed");
+        .spawn();
+        //.expect("dot command failed");
 }
 // pub fn job_render_graph_to_png(c: *mut Context, job: *mut Job, g: &mut Graph, graph_version: int32_t) -> bool
 // {
