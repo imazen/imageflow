@@ -381,6 +381,28 @@ pub struct Build001GraphRecording {
     pub render_animated_graph: Option<bool>,
 }
 
+impl  Build001GraphRecording {
+    pub fn debug_defaults() -> Build001GraphRecording {
+        Build001GraphRecording {
+            record_graph_versions: Some(true),
+            record_frame_images: Some(true),
+            render_last_graph: Some(true),
+            render_animated_graph: Some(false),
+            render_graph_versions: Some(false),
+        }
+    }
+    pub fn off() -> Build001GraphRecording {
+        Build001GraphRecording {
+            record_graph_versions: Some(false),
+            record_frame_images: Some(false),
+            render_last_graph: Some(false),
+            render_animated_graph: Some(false),
+            render_graph_versions: Some(false),
+        }
+    }
+}
+
+
 #[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
 pub struct Build001Config {
     #[serde(rename="enableJpegBlockScaling")]

@@ -8,19 +8,8 @@ extern crate serde_json;
 use std::ffi::CString;
 use imageflow_core::Context;
 
-
-fn graph_recording_debug() -> s::Build001GraphRecording{
-    s::Build001GraphRecording{
-        record_graph_versions: Some(true),
-        record_frame_images: Some(true),
-        render_last_graph: Some(true),
-        render_animated_graph: Some(false),
-        render_graph_versions : Some(false),
-    }
-}
-
 fn default_build_config(debug: bool) -> s::Build001Config {
-    s::Build001Config{graph_recording: match debug{ true => Some(graph_recording_debug()), false => None} ,
+    s::Build001Config{graph_recording: match debug{ true => Some(s::Build001GraphRecording::debug_defaults()), false => None} ,
         process_all_gif_frames: Some(false),
         enable_jpeg_block_scaling: Some(false),
         no_gamma_correction: false
@@ -89,7 +78,7 @@ fn compare(input: Option<s::IoEnum>, allowed_off_by_one_bytes: usize, checksum_n
     }
 
     let build = s::Build001{
-        builder_config: Some(s::Build001Config{graph_recording: match debug{ true => Some(graph_recording_debug()), false => None} ,
+        builder_config: Some(s::Build001Config{graph_recording: match debug{ true => Some(s::Build001GraphRecording::debug_defaults()), false => None} ,
             process_all_gif_frames: Some(false),
             enable_jpeg_block_scaling: Some(false),
             no_gamma_correction: false

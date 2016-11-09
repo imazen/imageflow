@@ -57,19 +57,26 @@ impl JobPtr {
                                                              false,
                                                              false) };
     }
-    pub fn configure_graph_recording(&self, r: s::Build001GraphRecording){
-        let _ = unsafe { ::ffi::flow_job_configure_recording(self.context_ptr(),
-                                                    self.as_ptr(),
-                                                    r.record_graph_versions
-                                                        .unwrap_or(false),
-                                                    r.record_frame_images
-                                                        .unwrap_or(false),
-                                                    r.render_last_graph
-                                                        .unwrap_or(false),
-                                                    r.render_graph_versions
-                                                        .unwrap_or(false),
-                                                    r.render_animated_graph
-                                                        .unwrap_or(false)) };
+    pub fn configure_graph_recording(&self, recording: s::Build001GraphRecording) {
+        let r = if std::env::var("CI") == Ok("true".to_owned()) {
+            s::Build001GraphRecording::off()
+        } else {
+            recording
+        };
+        let _ = unsafe {
+            ::ffi::flow_job_configure_recording(self.context_ptr(),
+                                                self.as_ptr(),
+                                                r.record_graph_versions
+                                                    .unwrap_or(false),
+                                                r.record_frame_images
+                                                    .unwrap_or(false),
+                                                r.render_last_graph
+                                                    .unwrap_or(false),
+                                                r.render_graph_versions
+                                                    .unwrap_or(false),
+                                                r.render_animated_graph
+                                                    .unwrap_or(false))
+        };
     }
 
     pub fn get_image_info(&self, io_id: i32) -> Result<s::ImageInfo> {
