@@ -680,12 +680,12 @@ pub fn print_graph(f: &mut std::io::Write,
 
         let dimensions = match weight.result {
             NodeResult::Frame(ptr) => {
-                unsafe { format!("{}x{} {}", (*ptr).w, (*ptr).h, get_pixel_format_name_for(ptr)) }
+                unsafe { format!("frame {}x{} {}", (*ptr).w, (*ptr).h, get_pixel_format_name_for(ptr)) }
             }
             _ => {
                 match weight.frame_est {
                     FrameEstimate::None => "?x?".to_owned(),
-                    FrameEstimate::Some(info) => format!("{}x{} {}", info.w, info.h, get_pixel_format_name(info.fmt, info.alpha_meaningful)),
+                    FrameEstimate::Some(info) => format!("est {}x{} {}", info.w, info.h, get_pixel_format_name(info.fmt, info.alpha_meaningful)),
                     _ => "!x!".to_owned(),
                 }
             }
