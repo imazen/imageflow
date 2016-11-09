@@ -277,3 +277,35 @@ fn test_encode_png32_smoke() {
     );
 }
 
+fn get_result_dimensions(steps: Vec<s::Node>, debug: bool) -> (u32, u32) {
+    let mut steps = steps.clone();
+
+    let mut dest_bitmap: *mut imageflow_core::ffi::BitmapBgra = std::ptr::null_mut();
+    let ptr_to_ptr = &mut dest_bitmap as *mut *mut imageflow_core::ffi::BitmapBgra;
+
+    steps.push(s::Node::FlowBitmapBgraPtr { ptr_to_flow_bitmap_bgra_ptr: ptr_to_ptr as usize});
+
+    let build = s::Build001{
+        builder_config: Some(default_build_config(debug)),
+        io: vec![],
+        framewise: s::Framewise::Steps(steps)
+    };
+    let mut context = Context::create().unwrap();
+    context.message("v0.0.1/build", &serde_json::to_vec(&build).unwrap()).unwrap();
+    unsafe { ((*dest_bitmap).w, (*dest_bitmap).h) }
+}
+
+
+#[test]
+fn test_dimensions(){
+    let steps = vec![
+    s::Node::CreateCanvas{w: 638, h: 423, format: s::PixelFormat::Bgra32, color: s::Color::Black},
+    //s::Node::Crop { x1: 0, y1: 0, x2: 638, y2: 423},
+    s::Node::Scale{w:200,h:133, flags:Some(1), down_filter: None, up_filter: None, sharpen_percent: None},
+    s::Node::ExpandCanvas{left:1, top: 0, right:0, bottom: 0, color: s::Color::Transparent},
+    ];
+    let (w, h) = get_result_dimensions(steps, true);
+    assert_eq!(w,201);
+    assert_eq!(h,133);
+
+}

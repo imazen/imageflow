@@ -78,7 +78,7 @@ impl<'c> OpCtxMut<'c> {
         self.first_parent_of_kind(of_node, EdgeKind::Input)
     }
     pub fn first_parent_canvas<'a>(&'a self, of_node: NodeIndex<u32>) -> Option<NodeIndex<u32>> {
-        self.first_parent_of_kind(of_node, EdgeKind::Input)
+        self.first_parent_of_kind(of_node, EdgeKind::Canvas)
     }
 
     pub fn first_parent_input_weight<'a>(&'a self, of_node: NodeIndex<u32>) -> Option<Node> {

@@ -163,6 +163,7 @@ pub enum ColorSrgb {
 #[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
 pub enum Color {
     Transparent,
+    Black,
     Srgb(ColorSrgb),
 }
 
@@ -183,7 +184,8 @@ impl Color {
                             })
                     }
                 }
-            }
+            },
+            Color::Black => Ok(0x000000FF),
             Color::Transparent => Ok(0),
         }
     }
