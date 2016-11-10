@@ -42,88 +42,6 @@ configures to build a shared library.*/
 
 typedef enum FLOW_DIRECTION { FLOW_OUTPUT = 8, FLOW_INPUT = 4 } FLOW_DIRECTION;
 
-typedef enum flow_ntype {
-    flow_ntype_Null = 0,
-    flow_ntype_primitive_Flip_Vertical_Mutate = 1,
-    flow_ntype_primitive_Flip_Horizontal_Mutate = 2,
-    flow_ntype_primitive_Crop_Mutate_Alias = 3,
-    flow_ntype_primitive_CopyRectToCanvas = 4, // Overwrite only, no compositing
-    flow_ntype_Create_Canvas = 5,
-    flow_ntype_primitive_RenderToCanvas1D = 6,
-    flow_ntype_primitive_Scale2D_RenderToCanvas1D = 7,
-    flow_ntype_primitive_bitmap_bgra_pointer,
-    flow_ntype_primitive_decoder,
-    flow_ntype_primitive_encoder,
-
-    flow_ntype_Fill_Rect_Mutate,
-    flow_ntype_non_primitive_nodes_begin = 256,
-
-    flow_ntype_Expand_Canvas,
-    flow_ntype_Transpose,
-    flow_ntype_Flip_Vertical,
-    flow_ntype_Flip_Horizontal,
-    flow_ntype_Render1D,
-    flow_ntype_Crop,
-    flow_ntype_Apply_Orientation,
-    flow_ntype_non_optimizable_nodes_begin = 512,
-
-    flow_ntype_Clone,
-    flow_ntype_decoder,
-    flow_ntype_encoder,
-
-    flow_ntype_Rotate_90,
-    flow_ntype_Rotate_180,
-    flow_ntype_Rotate_270,
-    flow_ntype_Scale, //(preserve colorspace), interpolation filter
-    flow_ntype_Noop,
-
-    // Not implemented below here:
-    flow_ntype_Rotate_Flip_Per_Orientation,
-    flow_ntype_Crop_Percentage,
-    flow_ntype_Crop_Percentage_Infinite_Canvas, // canvas_color
-    flow_ntype_Crop_Rectangle,
-    flow_ntype_Constrain, //(mode=pad|max|crop|stretch) (width, height) (scale=down|up|both|canvas) (anchor=9 points)
-    flow_ntype_Matte,
-    flow_ntype_EnlargeCanvas,
-    flow_ntype_Sharpen,
-    flow_ntype_Blur,
-    flow_ntype_Convolve_Custom,
-    flow_ntype_AdjustContrast,
-    flow_ntype_AdjustSaturation,
-    flow_ntype_AdjustBrightness,
-    flow_ntype_CropWhitespace, // tolerances and padding
-    flow_ntype_Opacity,
-    flow_ntype_Sepia,
-    flow_ntype_Grayscale, // true|y|ry|ntsc|bt709|flat
-    flow_ntype_DrawImage,
-    flow_ntype_RemoveNoise,
-    flow_ntype_ColorMatrixsRGB,
-    flow_ntype__FORCE_ENUM_SIZE_INT32 = 2147483647
-} flow_ntype;
-
-typedef enum flow_node_state {
-    flow_node_state_Blank = 0,
-    flow_node_state_InputDimensionsKnown = 1,
-    flow_node_state_ReadyForPreOptimizeFlatten = 1,
-    flow_node_state_PreOptimizeFlattened = 2,
-    flow_node_state_ReadyForOptimize = 3,
-    flow_node_state_Optimized = 4,
-    flow_node_state_ReadyForPostOptimizeFlatten = 7,
-    flow_node_state_PostOptimizeFlattened = 8,
-    flow_node_state_InputsExecuted = 16,
-    flow_node_state_ReadyForExecution = 31,
-    flow_node_state_Executed = 32,
-    flow_node_state_Done = 63
-} flow_node_state;
-
-typedef enum flow_edgetype {
-    flow_edgetype_null = 0,
-    flow_edgetype_input = 1,
-    flow_edgetype_canvas = 2,
-    flow_edgetype_info = 3,
-    flow_edgetype_FORCE_ENUM_SIZE_INT32 = 2147483647
-} flow_edgetype;
-
 typedef enum flow_compositing_mode {
     flow_compositing_mode_overwrite,
     flow_compositing_mode_compose,
@@ -242,20 +160,10 @@ typedef enum flow_io_mode {
 typedef struct flow_context flow_c;
 struct flow_codec_definition;
 struct flow_codec_instance; // All methods should center around this
-struct flow_nodeinfo_index;
-struct flow_nodeinfo_createcanvas;
-struct flow_nodeinfo_crop;
-struct flow_nodeinfo_copy_rect_to_canvas;
-struct flow_nodeinfo_expand_canvas;
-struct flow_nodeinfo_fill_rect;
-struct flow_nodinfo_size;
-struct flow_nodeinfo_bitmap_bgra_pointer;
-struct flow_nodeinfo_codec;
-struct flow_nodeinfo_render_to_canvas_1d;
+
 struct flow_scanlines_filter;
 struct flow_decoder_downscale_hints;
 struct flow_bitmap_bgra;
-struct flow_nodeinfo_scale2d_render_to_canvas1d;
 
 struct flow_encoder_hints {
     int32_t jpeg_encode_quality;
@@ -369,7 +277,7 @@ struct flow_decoder_info {
 PUB bool flow_job_get_decoder_info(flow_c * c, struct flow_job * job, int32_t by_placeholder_id,
                                    struct flow_decoder_info * info);
 
-PUB bool flow_bitmap_bgra_write_png(flow_c * c, struct flow_job * job, struct flow_bitmap_bgra * frame,
+PUB bool flow_bitmap_bgra_write_png(flow_c * c, struct flow_bitmap_bgra * frame,
                                     struct flow_io * io);
 
 #undef PUB

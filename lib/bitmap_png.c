@@ -31,13 +31,12 @@ bool flow_bitmap_bgra_save_png(flow_c * c, struct flow_bitmap_bgra * b, const ch
     target_image.flags = 0;
     target_image.colormap_entries = 0;
 
-    if (b->w < 1 || b->h < 1 || b->w > 20000 || b->h > 20000){
-        FLOW_error_msg(c, flow_status_Image_encoding_failed, "Cannot encode image of dimensions %dx%d",
-                       b->w, b->h);
+    if (b->w < 1 || b->h < 1 || b->w > 20000 || b->h > 20000) {
+        FLOW_error_msg(c, flow_status_Image_encoding_failed, "Cannot encode image of dimensions %dx%d", b->w, b->h);
         return false;
     }
 
-    if (!png_image_write_to_file(&target_image, path, 0 /*convert_to_8bit*/, b->pixels, 0 /*row_stride*/,
+    if (!png_image_write_to_file(&target_image, path, 0 /*convert_to_8bit*/, b->pixels, b->stride /*row_stride*/,
                                  NULL /*colormap*/)) {
         FLOW_error_msg(c, flow_status_Image_encoding_failed, "Failed to export frame as png: %s  output path: %s.",
                        target_image.message, path);

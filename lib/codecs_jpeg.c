@@ -16,12 +16,12 @@ static uint8_t jpeg_bytes_a[] = { 0xFF, 0xD8, 0xFF, 0xDB };
 static uint8_t jpeg_bytes_b[] = { 0xFF, 0xD8, 0xFF, 0xE0 };
 static uint8_t jpeg_bytes_c[] = { 0xFF, 0xD8, 0xFF, 0xE1 };
 
-static bool flow_job_jpg_decoder_reset(flow_c * c, struct flow_job_jpeg_decoder_state * state);
+static bool flow_codecs_jpg_decoder_reset(flow_c * c, struct flow_codecs_jpeg_decoder_state * state);
 
 static void jpeg_error_exit(j_common_ptr cinfo)
 {
     /* cinfo->err really points to a my_error_mgr struct, so coerce pointer */
-    struct flow_job_jpeg_codec_state_common * state = (struct flow_job_jpeg_codec_state_common *)cinfo->err;
+    struct flow_codecs_jpeg_codec_state_common * state = (struct flow_codecs_jpeg_codec_state_common *)cinfo->err;
 
     /* Always display the message. */
     /* We could postpone this until after returning, if we chose. */
@@ -39,9 +39,9 @@ static void jpeg_error_exit(j_common_ptr cinfo)
             FLOW_error(state->context, flow_status_Image_encoding_failed);
         }
     } else if (state->codec_id == flow_codec_type_decode_jpeg) {
-        struct flow_job_jpeg_decoder_state * decoder = (struct flow_job_jpeg_decoder_state *)state;
-        flow_job_jpg_decoder_reset(decoder->context, decoder);
-        decoder->stage = flow_job_jpg_decoder_stage_Failed;
+        struct flow_codecs_jpeg_decoder_state * decoder = (struct flow_codecs_jpeg_decoder_state *)state;
+        flow_codecs_jpg_decoder_reset(decoder->context, decoder);
+        decoder->stage = flow_codecs_jpg_decoder_stage_Failed;
         if (!flow_context_has_error(state->context)) {
             FLOW_error(state->context, flow_status_Image_decoding_failed);
         }
@@ -402,7 +402,7 @@ static int32_t get_orientation(j_decompress_ptr cinfo)
 ///// END LGPL licensed code ///////////////////
 //////////////////////////////////////////////////
 
-static bool flow_job_jpg_decoder_interpret_metadata(flow_c * c, struct flow_job_jpeg_decoder_state * state)
+static bool flow_codecs_jpg_decoder_interpret_metadata(flow_c * c, struct flow_codecs_jpeg_decoder_state * state)
 {
 
     // Called twice, avoid repeating work
@@ -429,17 +429,17 @@ static bool flow_job_jpg_decoder_interpret_metadata(flow_c * c, struct flow_job_
     return true;
 }
 
-static bool flow_job_jpg_decoder_BeginRead(flow_c * c, struct flow_job_jpeg_decoder_state * state)
+static bool flow_codecs_jpg_decoder_BeginRead(flow_c * c, struct flow_codecs_jpeg_decoder_state * state)
 {
-    if (state->stage != flow_job_jpg_decoder_stage_NotStarted) {
+    if (state->stage != flow_codecs_jpg_decoder_stage_NotStarted) {
         FLOW_error(c, flow_status_Invalid_internal_state);
         return false;
     }
-    if (!flow_job_jpg_decoder_reset(c, state)) {
-        state->stage = flow_job_jpg_decoder_stage_Failed;
+    if (!flow_codecs_jpg_decoder_reset(c, state)) {
+        state->stage = flow_codecs_jpg_decoder_stage_Failed;
         FLOW_error_return(c);
     }
-    state->stage = flow_job_jpg_decoder_stage_BeginRead;
+    state->stage = flow_codecs_jpg_decoder_stage_BeginRead;
 
     state->cinfo = (struct jpeg_decompress_struct *)FLOW_calloc(c, 1, sizeof(struct jpeg_decompress_struct));
 
@@ -449,15 +449,15 @@ static bool flow_job_jpg_decoder_BeginRead(flow_c * c, struct flow_job_jpeg_deco
 
     if (state->cinfo == NULL) {
         FLOW_error(c, flow_status_Out_of_memory);
-        flow_job_jpg_decoder_reset(c, state);
-        state->stage = flow_job_jpg_decoder_stage_Failed;
+        flow_codecs_jpg_decoder_reset(c, state);
+        state->stage = flow_codecs_jpg_decoder_stage_Failed;
         return false;
     }
     /* Establish the setjmp return context for jpeg_error_exit to use. */
     if (setjmp(state->error_handler_jmp)) {
         /* If we get here, the JPEG code has signaled an error.
          */
-        if (state->stage != flow_job_jpg_decoder_stage_Failed) {
+        if (state->stage != flow_codecs_jpg_decoder_stage_Failed) {
             exit(404); // This should never happen, jpeg_error_exit should fix it.
         }
         return false;
@@ -476,9 +476,9 @@ static bool flow_job_jpg_decoder_BeginRead(flow_c * c, struct flow_job_jpeg_deco
 
     (void)jpeg_read_header(state->cinfo, TRUE);
 
-    if (!flow_job_jpg_decoder_interpret_metadata(c, state)) {
-        flow_job_jpg_decoder_reset(c, state);
-        state->stage = flow_job_jpg_decoder_stage_Failed;
+    if (!flow_codecs_jpg_decoder_interpret_metadata(c, state)) {
+        flow_codecs_jpg_decoder_reset(c, state);
+        state->stage = flow_codecs_jpg_decoder_stage_Failed;
         FLOW_error_return(c);
     }
     /* We can ignore the return value from jpeg_read_header since
@@ -500,17 +500,17 @@ static bool flow_job_jpg_decoder_BeginRead(flow_c * c, struct flow_job_jpeg_deco
     return true;
 }
 
-static bool flow_job_jpg_decoder_FinishRead(flow_c * c, struct flow_job_jpeg_decoder_state * state)
+static bool flow_codecs_jpg_decoder_FinishRead(flow_c * c, struct flow_codecs_jpeg_decoder_state * state)
 {
-    if (state->stage != flow_job_jpg_decoder_stage_BeginRead) {
+    if (state->stage != flow_codecs_jpg_decoder_stage_BeginRead) {
         FLOW_error(c, flow_status_Invalid_internal_state);
         return false;
     }
     // We let the caller create the buffer
     //    state->pixel_buffer =  (jpg_bytep)FLOW_calloc (c, state->pixel_buffer_size, sizeof(jpg_bytep));
     if (state->pixel_buffer == NULL || state->canvas == NULL) {
-        flow_job_jpg_decoder_reset(c, state);
-        state->stage = flow_job_jpg_decoder_stage_Failed;
+        flow_codecs_jpg_decoder_reset(c, state);
+        state->stage = flow_codecs_jpg_decoder_stage_Failed;
         FLOW_error(c, flow_status_Out_of_memory);
         return false;
     }
@@ -531,7 +531,7 @@ static bool flow_job_jpg_decoder_FinishRead(flow_c * c, struct flow_job_jpeg_dec
     state->channels = state->cinfo->output_components;
     state->gamma = state->cinfo->output_gamma;
 
-    state->stage = flow_job_jpg_decoder_stage_FinishRead;
+    state->stage = flow_codecs_jpg_decoder_stage_FinishRead;
     if (setjmp(state->error_handler_jmp)) {
         // Execution comes back to this point if an error happens
         return false;
@@ -540,8 +540,8 @@ static bool flow_job_jpg_decoder_FinishRead(flow_c * c, struct flow_job_jpeg_dec
     state->pixel_buffer_row_pointers = flow_bitmap_create_row_pointers(c, state->pixel_buffer, state->pixel_buffer_size,
                                                                        state->row_stride, state->h);
     if (state->pixel_buffer_row_pointers == NULL) {
-        flow_job_jpg_decoder_reset(c, state);
-        state->stage = flow_job_jpg_decoder_stage_Failed;
+        flow_codecs_jpg_decoder_reset(c, state);
+        state->stage = flow_codecs_jpg_decoder_stage_Failed;
         FLOW_error_return(c);
     }
 
@@ -567,9 +567,9 @@ static bool flow_job_jpg_decoder_FinishRead(flow_c * c, struct flow_job_jpeg_dec
 
     // We must read the markers before jpeg_finish_decompress destroys them
 
-    if (!flow_job_jpg_decoder_interpret_metadata(c, state)) {
-        flow_job_jpg_decoder_reset(c, state);
-        state->stage = flow_job_jpg_decoder_stage_Failed;
+    if (!flow_codecs_jpg_decoder_interpret_metadata(c, state)) {
+        flow_codecs_jpg_decoder_reset(c, state);
+        state->stage = flow_codecs_jpg_decoder_stage_Failed;
         FLOW_error_return(c);
     }
 
@@ -636,25 +636,24 @@ static bool flow_job_jpg_decoder_FinishRead(flow_c * c, struct flow_job_jpeg_dec
     return true;
 }
 
-int32_t flow_job_jpg_decoder_get_exif(flow_c * c, struct flow_codec_instance * codec_instance);
 
-int32_t flow_job_jpg_decoder_get_exif(flow_c * c, struct flow_codec_instance * codec_instance)
+int32_t flow_codecs_jpg_decoder_get_exif(flow_c * c, struct flow_codec_instance * codec_instance)
 {
     if (codec_instance == NULL || codec_instance->codec_state == NULL
         || codec_instance->codec_id != flow_codec_type_decode_jpeg) {
         return -1;
     }
-    struct flow_job_jpeg_decoder_state * inner_state
-        = (struct flow_job_jpeg_decoder_state *)codec_instance->codec_state;
+    struct flow_codecs_jpeg_decoder_state * inner_state
+        = (struct flow_codecs_jpeg_decoder_state *)codec_instance->codec_state;
     return inner_state->exif_orientation;
 }
 
-static bool flow_job_jpg_decoder_reset(flow_c * c, struct flow_job_jpeg_decoder_state * state)
+static bool flow_codecs_jpg_decoder_reset(flow_c * c, struct flow_codecs_jpeg_decoder_state * state)
 {
-    if (state->stage == flow_job_jpg_decoder_stage_FinishRead) {
+    if (state->stage == flow_codecs_jpg_decoder_stage_FinishRead) {
         FLOW_free(c, state->pixel_buffer);
     }
-    if (state->stage == flow_job_jpg_decoder_stage_Null) {
+    if (state->stage == flow_codecs_jpg_decoder_stage_Null) {
         state->pixel_buffer_row_pointers = NULL;
         state->color_profile = NULL;
         state->cinfo = NULL;
@@ -687,21 +686,21 @@ static bool flow_job_jpg_decoder_reset(flow_c * c, struct flow_job_jpeg_decoder_
     state->canvas = NULL;
     state->pixel_buffer_size = -1;
     state->channels = 0;
-    state->stage = flow_job_jpg_decoder_stage_NotStarted;
+    state->stage = flow_codecs_jpg_decoder_stage_NotStarted;
     return true;
 }
 
-static bool flow_job_codecs_initialize_decode_jpeg(flow_c * c, struct flow_job * job, struct flow_codec_instance * item)
+static bool flow_codecs_initialize_decode_jpeg(flow_c * c, struct flow_codec_instance * item)
 {
-    // flow_job_jpeg_decoder_state
+    // flow_codecs_jpeg_decoder_state
     if (item->codec_state == NULL) {
-        struct flow_job_jpeg_decoder_state * state
-            = (struct flow_job_jpeg_decoder_state *)FLOW_malloc(c, sizeof(struct flow_job_jpeg_decoder_state));
+        struct flow_codecs_jpeg_decoder_state * state
+            = (struct flow_codecs_jpeg_decoder_state *)FLOW_malloc(c, sizeof(struct flow_codecs_jpeg_decoder_state));
         if (state == NULL) {
             FLOW_error(c, flow_status_Out_of_memory);
             return false;
         }
-        state->stage = flow_job_jpg_decoder_stage_Null;
+        state->stage = flow_codecs_jpg_decoder_stage_Null;
 
         state->hints.scale_luma_spatially = false;
         state->hints.gamma_correct_for_srgb_during_spatial_luma_scaling = false;
@@ -710,7 +709,7 @@ static bool flow_job_codecs_initialize_decode_jpeg(flow_c * c, struct flow_job *
         state->hints.downscaled_min_height = -1;
         state->hints.or_if_taller_than = -1;
 
-        if (!flow_job_jpg_decoder_reset(c, state)) {
+        if (!flow_codecs_jpg_decoder_reset(c, state)) {
             FLOW_add_to_callstack(c);
             return false;
         }
@@ -720,10 +719,10 @@ static bool flow_job_codecs_initialize_decode_jpeg(flow_c * c, struct flow_job *
     }
     return true;
 }
-static bool set_downscale_hints(flow_c * c, struct flow_job * job, struct flow_codec_instance * codec,
+static bool set_downscale_hints(flow_c * c, struct flow_codec_instance * codec,
                                 struct flow_decoder_downscale_hints * hints)
 {
-    struct flow_job_jpeg_decoder_state * state = (struct flow_job_jpeg_decoder_state *)codec->codec_state;
+    struct flow_codecs_jpeg_decoder_state * state = (struct flow_codecs_jpeg_decoder_state *)codec->codec_state;
     memcpy(&state->hints, hints, sizeof(struct flow_decoder_downscale_hints));
     return true;
 }
@@ -781,7 +780,7 @@ static void flow_jpeg_idct_method_selector(j_decompress_ptr cinfo, jpeg_componen
     int scaled = compptr->DCT_scaled_size;
 #endif
 
-    struct flow_job_jpeg_decoder_state * state = (struct flow_job_jpeg_decoder_state *)cinfo->err;
+    struct flow_codecs_jpeg_decoder_state * state = (struct flow_codecs_jpeg_decoder_state *)cinfo->err;
 
     if (scaled > 0 && scaled < 8 && state->hints.scale_luma_spatially) {
         if (state->hints.gamma_correct_for_srgb_during_spatial_luma_scaling) {
@@ -838,7 +837,7 @@ static void flow_jpeg_idct_method_selector(j_decompress_ptr cinfo, jpeg_componen
     }
 }
 
-static bool jpeg_apply_downscaling(flow_c * c, struct flow_job_jpeg_decoder_state * state, int32_t * out_w,
+static bool jpeg_apply_downscaling(flow_c * c, struct flow_codecs_jpeg_decoder_state * state, int32_t * out_w,
                                    int32_t * out_h)
 {
 
@@ -864,12 +863,11 @@ static bool jpeg_apply_downscaling(flow_c * c, struct flow_job_jpeg_decoder_stat
     }
     return true;
 }
-static bool flow_job_codecs_jpeg_get_info(flow_c * c, struct flow_job * job, void * codec_state,
-                                          struct flow_decoder_info * info)
+static bool flow_codecs_jpeg_get_info(flow_c * c, void * codec_state, struct flow_decoder_info * info)
 {
-    struct flow_job_jpeg_decoder_state * state = (struct flow_job_jpeg_decoder_state *)codec_state;
-    if (state->stage < flow_job_jpg_decoder_stage_BeginRead) {
-        if (!flow_job_jpg_decoder_BeginRead(c, state)) {
+    struct flow_codecs_jpeg_decoder_state * state = (struct flow_codecs_jpeg_decoder_state *)codec_state;
+    if (state->stage < flow_codecs_jpg_decoder_stage_BeginRead) {
+        if (!flow_codecs_jpg_decoder_BeginRead(c, state)) {
             FLOW_error_return(c);
         }
     }
@@ -886,12 +884,12 @@ static bool flow_job_codecs_jpeg_get_info(flow_c * c, struct flow_job * job, voi
     return true;
 }
 
-static bool flow_job_codecs_jpeg_get_frame_info(flow_c * c, struct flow_job * job, void * codec_state,
-                                                struct flow_decoder_frame_info * decoder_frame_info_ref)
+static bool flow_codecs_jpeg_get_frame_info(flow_c * c, void * codec_state,
+                                            struct flow_decoder_frame_info * decoder_frame_info_ref)
 {
-    struct flow_job_jpeg_decoder_state * state = (struct flow_job_jpeg_decoder_state *)codec_state;
-    if (state->stage < flow_job_jpg_decoder_stage_BeginRead) {
-        if (!flow_job_jpg_decoder_BeginRead(c, state)) {
+    struct flow_codecs_jpeg_decoder_state * state = (struct flow_codecs_jpeg_decoder_state *)codec_state;
+    if (state->stage < flow_codecs_jpg_decoder_stage_BeginRead) {
+        if (!flow_codecs_jpg_decoder_BeginRead(c, state)) {
             FLOW_error_return(c);
         }
     }
@@ -905,11 +903,10 @@ static bool flow_job_codecs_jpeg_get_frame_info(flow_c * c, struct flow_job * jo
     return true;
 }
 
-static bool flow_job_codecs_jpeg_read_frame(flow_c * c, struct flow_job * job, void * codec_state,
-                                            struct flow_bitmap_bgra * canvas)
+static bool flow_codecs_jpeg_read_frame(flow_c * c, void * codec_state, struct flow_bitmap_bgra * canvas)
 {
-    struct flow_job_jpeg_decoder_state * state = (struct flow_job_jpeg_decoder_state *)codec_state;
-    if (state->stage == flow_job_jpg_decoder_stage_BeginRead) {
+    struct flow_codecs_jpeg_decoder_state * state = (struct flow_codecs_jpeg_decoder_state *)codec_state;
+    if (state->stage == flow_codecs_jpg_decoder_stage_BeginRead) {
         state->pixel_buffer = canvas->pixels;
         state->canvas = canvas;
         state->pixel_buffer_size = canvas->stride * canvas->h;
@@ -922,7 +919,7 @@ static bool flow_job_codecs_jpeg_read_frame(flow_c * c, struct flow_job * job, v
             return false;
         }
 
-        if (!flow_job_jpg_decoder_FinishRead(c, state)) {
+        if (!flow_codecs_jpg_decoder_FinishRead(c, state)) {
             FLOW_error_return(c);
         }
 
@@ -936,12 +933,12 @@ static bool flow_job_codecs_jpeg_read_frame(flow_c * c, struct flow_job * job, v
     }
 }
 
-static bool flow_job_codecs_initialize_encode_jpeg(flow_c * c, struct flow_job * job, struct flow_codec_instance * item)
+static bool flow_codecs_initialize_encode_jpeg(flow_c * c, struct flow_codec_instance * item)
 {
-    // flow_job_png_decoder_state
+    // flow_codecs_png_decoder_state
     if (item->codec_state == NULL) {
-        struct flow_job_jpeg_encoder_state * state = (struct flow_job_jpeg_encoder_state *)FLOW_malloc(
-            c, sizeof(struct flow_job_jpeg_encoder_state)); // TODO: ownership other than context?
+        struct flow_codecs_jpeg_encoder_state * state = (struct flow_codecs_jpeg_encoder_state *)FLOW_malloc(
+            c, sizeof(struct flow_codecs_jpeg_encoder_state)); // TODO: ownership other than context?
         if (state == NULL) {
             FLOW_error(c, flow_status_Out_of_memory);
             return false;
@@ -954,10 +951,10 @@ static bool flow_job_codecs_initialize_encode_jpeg(flow_c * c, struct flow_job *
     return true;
 }
 
-static bool flow_job_codecs_jpeg_write_frame(flow_c * c, struct flow_job * job, void * codec_state,
-                                             struct flow_bitmap_bgra * frame, struct flow_encoder_hints * hints)
+static bool flow_codecs_jpeg_write_frame(flow_c * c, void * codec_state, struct flow_bitmap_bgra * frame,
+                                         struct flow_encoder_hints * hints)
 {
-    struct flow_job_jpeg_encoder_state * state = (struct flow_job_jpeg_encoder_state *)codec_state;
+    struct flow_codecs_jpeg_encoder_state * state = (struct flow_codecs_jpeg_encoder_state *)codec_state;
     state->context = c;
 
     state->cinfo.err = jpeg_std_error(&state->error_mgr);
@@ -1030,10 +1027,10 @@ static struct flow_codec_magic_bytes jpeg_magic_bytes[] = { {
 
 const struct flow_codec_definition flow_codec_definition_decode_jpeg
     = { .codec_id = flow_codec_type_decode_jpeg,
-        .initialize = flow_job_codecs_initialize_decode_jpeg,
-        .get_info = flow_job_codecs_jpeg_get_info,
-        .get_frame_info = flow_job_codecs_jpeg_get_frame_info,
-        .read_frame = flow_job_codecs_jpeg_read_frame,
+        .initialize = flow_codecs_initialize_decode_jpeg,
+        .get_info = flow_codecs_jpeg_get_info,
+        .get_frame_info = flow_codecs_jpeg_get_frame_info,
+        .read_frame = flow_codecs_jpeg_read_frame,
         .set_downscale_hints = set_downscale_hints,
         .magic_byte_sets = &jpeg_magic_bytes[0],
         .magic_byte_sets_count = sizeof(jpeg_magic_bytes) / sizeof(struct flow_codec_magic_bytes),
@@ -1043,8 +1040,8 @@ const struct flow_codec_definition flow_codec_definition_decode_jpeg
 
 const struct flow_codec_definition flow_codec_definition_encode_jpeg
     = { .codec_id = flow_codec_type_encode_jpeg,
-        .initialize = flow_job_codecs_initialize_encode_jpeg,
-        .write_frame = flow_job_codecs_jpeg_write_frame,
+        .initialize = flow_codecs_initialize_encode_jpeg,
+        .write_frame = flow_codecs_jpeg_write_frame,
         .name = "encode jpeg",
         .preferred_mime_type = "image/jpeg",
         .preferred_extension = "jpg" };

@@ -13,91 +13,15 @@ bool store_checksums = true;
 bool store_checksums = false;
 #endif
 
-TEST_CASE("Test fill_rect", "")
-{
-    flow_c * c = flow_context_create();
-    struct flow_graph * g = flow_graph_create(c, 10, 10, 200, 2.0);
-    ERR(c);
-    struct flow_bitmap_bgra * b;
-    int32_t last;
 
-    last = flow_node_create_canvas(c, &g, -1, flow_bgra32, 400, 300, 0xFFFFFFFF);
-    last = flow_node_create_fill_rect(c, &g, last, 0, 0, 50, 100, 0xFF0000FF);
-    last = flow_node_create_bitmap_bgra_reference(c, &g, last, &b);
-    struct flow_job * job = flow_job_create(c);
-    ERR(c);
-    if (!flow_job_execute(c, job, &g)) {
-        ERR(c);
-    }
-
-// FIXME: This test passes in Win64, but fails in Win32
-#ifndef _WIN32
-    REQUIRE(visual_compare(c, b, "FillRect", store_checksums, 0, __FILE__, __func__, __LINE__, __FILE__) == true);
-    ERR(c);
-#endif
-    flow_context_destroy(c);
-}
-
-TEST_CASE("Test jpeg rotation", "")
-{
-
-    char modes[2][14];
-    strcpy(modes[0], "Landscape");
-    strcpy(modes[1], "Portrait");
-
-    char url[300];
-    char expected_checksum_name[100];
-    for (int32_t mode_ix = 0; mode_ix < 2; mode_ix++) {
-        for (int32_t flag = 1; flag < 9; flag++) {
-            snprintf(&url[0], sizeof(url),
-                     "http://s3-us-west-2.amazonaws.com/imageflow-resources/test_inputs/orientation/%s_%d.jpg",
-                     &modes[mode_ix][0], flag);
-            snprintf(&expected_checksum_name[0], sizeof(expected_checksum_name), "Test_Apply_Orientation_%s_%d.jpg",
-                     &modes[mode_ix][0], flag);
-
-            flow_c * c = flow_context_create();
-
-            size_t bytes_count = 0;
-            uint8_t * bytes = get_bytes_cached(c, &bytes_count, &url[0], __FILE__);
-
-            struct flow_job * job = flow_job_create(c);
-            ERR(c);
-
-            // flow_job_configure_recording(c, job, true,true,true,false,false);
-            int32_t input_placeholder = 0;
-            struct flow_io * input
-                = flow_io_create_from_memory(c, flow_io_mode_read_seekable, bytes, bytes_count, job, NULL);
-            flow_job_add_io(c, job, input, input_placeholder, FLOW_INPUT);
-
-            struct flow_graph * g = flow_graph_create(c, 10, 10, 200, 2.0);
-            ERR(c);
-            struct flow_bitmap_bgra * b;
-            int32_t last;
-
-            last = flow_node_create_decoder(c, &g, -1, input_placeholder);
-            last = flow_node_create_bitmap_bgra_reference(c, &g, last, &b);
-            ERR(c);
-            if (!flow_job_execute(c, job, &g)) {
-                ERR(c);
-            }
-
-            CAPTURE(&expected_checksum_name[0]);
-            REQUIRE(visual_compare(c, b, &expected_checksum_name[0], store_checksums, 500, __FILE__, __func__, __LINE__,
-                                   __FILE__)
-                    == true);
-            ERR(c);
-            flow_context_destroy(c);
-        }
-    }
-}
 
 TEST_CASE("Test spatial IDCT downscale in linear light", "")
 {
     flow_c * c = flow_context_create();
     size_t bytes_count = 0;
-    uint8_t * bytes = get_bytes_cached(c, &bytes_count,
-                                       "http://s3-us-west-2.amazonaws.com/imageflow-resources/test_inputs/roof_test_800x600.jpg",
-                                       __FILE__);
+    uint8_t * bytes = get_bytes_cached(
+        c, &bytes_count, "http://s3-us-west-2.amazonaws.com/imageflow-resources/test_inputs/roof_test_800x600.jpg",
+        __FILE__);
     REQUIRE(djb2_buffer(bytes, bytes_count) == 0x8ff8ec7a8539a2d5); // Test the checksum. I/O can be flaky
 
     struct flow_job * job = flow_job_create(c);
@@ -126,7 +50,8 @@ TEST_CASE("Test spatial IDCT downscale in linear light", "")
         ERR(c);
     }
 
-    bool match = visual_compare(c, b, "ScaleIDCTFastvsSlow", store_checksums, 100, __FILE__, __func__, __LINE__, __FILE__);
+    bool match
+        = visual_compare(c, b, "ScaleIDCTFastvsSlow", store_checksums, 100, __FILE__, __func__, __LINE__, __FILE__);
     REQUIRE(match == true);
     ERR(c);
     flow_context_destroy(c);
@@ -168,8 +93,8 @@ TEST_CASE("Test spatial IDCT downscale without gamma correction", "")
             (int)(g->nodes[decode_node].ticks_elapsed * 1000 / flow_get_profiler_ticks_per_second()));
     fflush(stdout);
 
-    bool match = visual_compare(c, b, "ScaleIDCT_approx_gamma", store_checksums, 100, __FILE__, __func__, __LINE__,
-                                __FILE__);
+    bool match
+        = visual_compare(c, b, "ScaleIDCT_approx_gamma", store_checksums, 100, __FILE__, __func__, __LINE__, __FILE__);
     REQUIRE(match == true);
     ERR(c);
     flow_context_destroy(c);
@@ -180,9 +105,9 @@ TEST_CASE("Test blurring", "")
 
     flow_c * c = flow_context_create();
     size_t bytes_count = 0;
-    uint8_t * bytes = get_bytes_cached(c, &bytes_count,
-                                       "http://s3-us-west-2.amazonaws.com/imageflow-resources/reference_image_originals/vgl_6548_0026.jpg",
-                                       __FILE__);
+    uint8_t * bytes = get_bytes_cached(
+        c, &bytes_count,
+        "http://s3-us-west-2.amazonaws.com/imageflow-resources/reference_image_originals/vgl_6548_0026.jpg", __FILE__);
 
     struct flow_job * job = flow_job_create(c);
 

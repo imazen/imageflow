@@ -57,18 +57,19 @@ int32_t flow_node_create_rotate_270(flow_c * c, struct flow_graph ** g, int32_t 
     return id;
 }
 
-int32_t flow_node_create_apply_orientation(flow_c * c, struct flow_graph ** g, int32_t prev_node, int32_t exif_orientation_flag)
+int32_t flow_node_create_apply_orientation(flow_c * c, struct flow_graph ** g, int32_t prev_node,
+                                           int32_t exif_orientation_flag)
 {
     int32_t id = flow_node_create_generic(c, g, prev_node, flow_ntype_Apply_Orientation);
     if (id < 0) {
         FLOW_add_to_callstack(c);
         return id;
     }
-    struct flow_nodeinfo_apply_orientation * info = (struct flow_nodeinfo_apply_orientation *)flow_node_get_info_pointer(*g, id);
+    struct flow_nodeinfo_apply_orientation * info
+        = (struct flow_nodeinfo_apply_orientation *)flow_node_get_info_pointer(*g, id);
     info->orientation = exif_orientation_flag;
     return id;
 }
-
 
 static bool dimensions_transpose(flow_c * c, struct flow_graph * g, int32_t node_id, bool force_estimate)
 {
@@ -111,7 +112,6 @@ static bool dimensions_apply_orientation(flow_c * c, struct flow_graph * g, int3
 {
     FLOW_GET_INFOBYTES(g, node_id, flow_nodeinfo_apply_orientation, info)
 
-
     FLOW_GET_INPUT_NODE(g, node_id)
 
     struct flow_node * n = &g->nodes[node_id];
@@ -119,7 +119,7 @@ static bool dimensions_apply_orientation(flow_c * c, struct flow_graph * g, int3
     if (info->orientation >= 5 && info->orientation <= 8) {
         n->result_width = input_node->result_height; // we just swap with and height
         n->result_height = input_node->result_width;
-    }else{
+    } else {
         n->result_width = input_node->result_width;
         n->result_height = input_node->result_height;
     }
@@ -129,14 +129,14 @@ static bool dimensions_apply_orientation(flow_c * c, struct flow_graph * g, int3
 }
 
 static bool flatten_apply_orientation(flow_c * c, struct flow_graph ** g, int32_t node_id, struct flow_node * node,
-                              struct flow_node * input_node, int32_t * first_replacement_node,
-                              int32_t * last_replacement_node)
+                                      struct flow_node * input_node, int32_t * first_replacement_node,
+                                      int32_t * last_replacement_node)
 {
     FLOW_GET_INFOBYTES((*g), node_id, flow_nodeinfo_apply_orientation, info)
     int32_t orientation = info->orientation;
 
-    if (orientation < 2 || orientation > 8){
-        //Replace with flow_ntype_Noop
+    if (orientation < 2 || orientation > 8) {
+        // Replace with flow_ntype_Noop
         *first_replacement_node = flow_node_create_noop(c, g, -1);
         *last_replacement_node = *first_replacement_node;
         if (*last_replacement_node < 0) {
@@ -146,23 +146,23 @@ static bool flatten_apply_orientation(flow_c * c, struct flow_graph ** g, int32_
     }
     int32_t last_node = -1;
 
-    //2,3, 6, 7, 8, need rotate 180
-    if (orientation == 2){
+    // 2,3, 6, 7, 8, need rotate 180
+    if (orientation == 2) {
         last_node = flow_node_create_generic(c, g, -1, flow_ntype_Flip_Horizontal);
     }
-    if (orientation == 3){
+    if (orientation == 3) {
         last_node = flow_node_create_rotate_180(c, g, -1);
     }
-    if (orientation == 4){
+    if (orientation == 4) {
         last_node = flow_node_create_generic(c, g, -1, flow_ntype_Flip_Vertical);
     }
-    if (orientation == 5){
+    if (orientation == 5) {
         last_node = flow_node_create_transpose(c, g, -1);
     }
-    if (orientation == 6){
+    if (orientation == 6) {
         last_node = flow_node_create_rotate_270(c, g, -1);
     }
-    if (orientation == 8){
+    if (orientation == 8) {
         last_node = flow_node_create_rotate_90(c, g, -1);
     }
     if (orientation != 7) {
@@ -172,16 +172,15 @@ static bool flatten_apply_orientation(flow_c * c, struct flow_graph ** g, int32_
         *first_replacement_node = last_node;
         *last_replacement_node = last_node;
         return true;
-    }else {
+    } else {
         *first_replacement_node = flow_node_create_rotate_180(c, g, -1);
         *last_replacement_node = flow_node_create_transpose(c, g, *first_replacement_node);
         return true;
     }
-
-
 }
 
-static bool stringify_apply_orientation(flow_c * c, struct flow_graph * g, int32_t node_id, char * buffer, size_t buffer_size)
+static bool stringify_apply_orientation(flow_c * c, struct flow_graph * g, int32_t node_id, char * buffer,
+                                        size_t buffer_size)
 {
     FLOW_GET_INFOBYTES((g), node_id, flow_nodeinfo_apply_orientation, info)
     int32_t orientation = info->orientation;
@@ -195,7 +194,6 @@ static bool stringify_apply_orientation(flow_c * c, struct flow_graph * g, int32
 
     return true;
 }
-
 
 static bool flatten_rotate_90(flow_c * c, struct flow_graph ** g, int32_t node_id, struct flow_node * node,
                               struct flow_node * input_node, int32_t * first_replacement_node,
@@ -300,7 +298,7 @@ static bool flatten_flip_h(flow_c * c, struct flow_graph ** g, int32_t node_id, 
     return true;
 }
 
-static bool execute_flip_vertical(flow_c * c, struct flow_job * job, struct flow_graph * g, int32_t node_id)
+static bool execute_flip_vertical(flow_c * c, struct flow_graph * g, int32_t node_id)
 {
     FLOW_GET_INPUT_EDGE(g, node_id)
     struct flow_node * n = &g->nodes[node_id];
@@ -309,7 +307,7 @@ static bool execute_flip_vertical(flow_c * c, struct flow_job * job, struct flow
     return true;
 }
 
-static bool execute_flip_horizontal(flow_c * c, struct flow_job * job, struct flow_graph * g, int32_t node_id)
+static bool execute_flip_horizontal(flow_c * c, struct flow_graph * g, int32_t node_id)
 {
     FLOW_GET_INPUT_EDGE(g, node_id)
     struct flow_node * n = &g->nodes[node_id];
@@ -381,11 +379,12 @@ const struct flow_node_definition flow_define_flip_h_primitive = { .type = flow_
                                                                    .populate_dimensions = dimensions_mimic_input,
                                                                    .type_name = "flip horizontal mutate",
                                                                    .execute = execute_flip_horizontal };
-const struct flow_node_definition flow_define_apply_orientation = { .type = flow_ntype_Apply_Orientation,
-                                                                .nodeinfo_bytes_fixed = sizeof(struct flow_nodeinfo_apply_orientation),
-                                                                .input_count = 1,
-                                                                .canvas_count = 0,
-                                                                .stringify = stringify_apply_orientation,
-                                                                .populate_dimensions = dimensions_apply_orientation,
-                                                                .type_name = "apply_orientation",
-                                                                .post_optimize_flatten = flatten_apply_orientation };
+const struct flow_node_definition flow_define_apply_orientation
+    = { .type = flow_ntype_Apply_Orientation,
+        .nodeinfo_bytes_fixed = sizeof(struct flow_nodeinfo_apply_orientation),
+        .input_count = 1,
+        .canvas_count = 0,
+        .stringify = stringify_apply_orientation,
+        .populate_dimensions = dimensions_apply_orientation,
+        .type_name = "apply_orientation",
+        .post_optimize_flatten = flatten_apply_orientation };

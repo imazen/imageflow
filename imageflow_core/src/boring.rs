@@ -1,6 +1,7 @@
 // Boring, because we're not doing any kind of op graph, just a static list of configurable ops.
 
 use ffi::*;
+use flow;
 use std::ffi::*;
 use std::fs::File;
 use std::io::Read;
@@ -312,9 +313,9 @@ pub fn process_image<F, C, R>(commands: BoringCommands,
         }
 
 
-        let j = flow_job_create(c);
-        assert!(!j.is_null());
+        let job = ::JobPtr::create(c).unwrap();
 
+        let j = job.as_ptr();
 
         let mut inputs = io_provider(c);
 
@@ -384,26 +385,25 @@ pub fn process_image<F, C, R>(commands: BoringCommands,
 
         // println!("Scale {}x{} down to {}x{} (jpeg)", info.frame0_width, info.frame0_height, final_w, final_h);
 
-        //TODO: Replace with s::Node, s::Graph, etc.
+        // TODO: Replace with s::Node, s::Graph, etc.
+        let mut g = flow::graph::create( 10, 10);
+        // FIXME: should we still check for null? Depends on whether we panic on OOM, or panic + Result
+        // assert!(!g.is_null());
 
-        let mut g = flow_graph_create(c, 10, 10, 10, 2.0);
-        assert!(!g.is_null());
-
-
-        let mut last = flow_node_create_decoder(c, (&mut g) as *mut *mut Graph, -1, 0);
-        assert!(last == 0);
-
-        last = flow_node_create_scale(c,
-                                      (&mut g) as *mut *mut Graph,
-                                      last,
-                                      final_w,
-                                      final_h,
-                                      commands.down_filter as i32,
-                                      commands.up_filter as i32,
-                                      1,
-                                      commands.sharpen);
-
-        assert!(last > 0);
+        //        let mut last = flow::graph::node_create_decoder(c, &mut g, -1, 0);
+        //        assert!(last == 0);
+        //
+        //        last = flow::graph::node_create_scale(c,
+        //                                      &mut g,
+        //                                      last,
+        //                                      final_w,
+        //                                      final_h,
+        //                                      commands.down_filter as i32,
+        //                                      commands.up_filter as i32,
+        //                                      1,
+        //                                      commands.sharpen);
+        //
+        //        assert!(last > 0);
 
         let disable_png_alpha = match commands.format {
             ImageFormat::Png24 => true,
@@ -411,7 +411,7 @@ pub fn process_image<F, C, R>(commands: BoringCommands,
         };
 
         let hints = EncoderHints {
-            jpeg_quality: commands.jpeg_quality,
+            jpeg_encode_quality: commands.jpeg_quality,
             disable_png_alpha: disable_png_alpha,
         };
 
@@ -422,12 +422,12 @@ pub fn process_image<F, C, R>(commands: BoringCommands,
         } as i64;
 
 
-        last =
-            flow_node_create_encoder(c, (&mut g) as *mut *mut Graph, last, 1, encoder_id, &hints);
-        assert!(last > 0);
+        //        last =
+        //            flow::graph::node_create_encoder(c, &mut g, last, 1, encoder_id, &hints);
+        //        assert!(last > 0);
 
 
-        if !flow_job_execute(c, j, (&mut g) as *mut *mut Graph) {
+        if !job.execute(&mut g) {
             flow_context_print_and_exit_if_err(c);
         }
 

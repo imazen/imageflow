@@ -13,6 +13,7 @@ struct flow_job * flow_job_create(flow_c * c)
     static int32_t job_id = 0;
     flow_job_configure_recording(c, job, false, false, false, false, false);
     job->next_graph_version = 0;
+    job->next_stable_node_id = 0;
     job->debug_job_id = job_id++;
     job->codecs_head = NULL;
     job->codecs_tail = NULL;
@@ -95,7 +96,7 @@ bool flow_job_add_io(flow_c * c, struct flow_job * job, struct flow_io * io, int
         return false;
     }
 
-    int64_t ctype = flow_job_codec_select(c, job, &buffer[0], bytes_read);
+    int64_t ctype = flow_codec_select(c, &buffer[0], bytes_read);
     if (ctype == flow_codec_type_null) {
         // unknown
         FLOW_error_msg(c, flow_status_Not_implemented,
@@ -105,7 +106,7 @@ bool flow_job_add_io(flow_c * c, struct flow_job * job, struct flow_io * io, int
         return false;
     }
     r->codec_id = ctype;
-    if (!flow_job_initialize_codec(c, job, r)) {
+    if (!flow_codec_initialize(c, r)) {
         FLOW_add_to_callstack(c);
         return false;
     }

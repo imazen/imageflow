@@ -4,141 +4,87 @@ use std;
 use std::collections::HashMap;
 
 extern crate rustc_serialize;
+use daggy::{Dag, EdgeIndex, NodeIndex};
+use flow::definitions::{Node, NodeParams};
+use flow::nodes;
 use parsing::rustc_serialize::hex::FromHex;
 
-
 pub struct GraphTranslator {
-    ctx: *mut ::ffi::Context,
 }
 
 impl GraphTranslator {
-    pub fn new(ctx: *mut ::ffi::Context) -> GraphTranslator {
-        GraphTranslator { ctx: ctx }
+    pub fn new() -> GraphTranslator {
+        GraphTranslator { }
     }
 
-    fn color_to_i32(&self, c: s::Color) -> std::result::Result<u32, std::num::ParseIntError> {
-        match c {
-            s::Color::Srgb(srgb) => {
-                match srgb {
-                    s::ColorSrgb::Hex(hex_srgb) => u32::from_str_radix(hex_srgb.as_str(), 16),
-                }
-            }
+
+    pub fn translate_framewise(&self, framewise: s::Framewise) -> ::flow::graph::Graph {
+        let graph = match framewise {
+            s::Framewise::Graph(g) => g,
+            s::Framewise::Steps(s) => self.steps_to_graph(s),
+        };
+        self.translate_graph(graph)
+    }
+
+
+    fn steps_to_graph(&self, steps: Vec<s::Node>) -> s::Graph {
+        let mut nodes = HashMap::new();
+        let mut edges = vec![];
+        for (i, item) in steps.into_iter().enumerate() {
+            nodes.insert(i.to_string(), item);
+            edges.push(s::Edge {
+                from: i as i32,
+                to: i as i32 + 1,
+                kind: s::EdgeKind::Input,
+            });
         }
-    }
-
-    unsafe fn create_node(&self, g: *mut *mut ::ffi::Graph, node: s::Node) -> i32 {
-        match node {
-
-            s::Node::Decode { io_id } => ::ffi::flow_node_create_decoder(self.ctx, g, -1, io_id),
-            s::Node::Encode { io_id, encoder_id, encoder, hints: _ } => {
-                let encoder_id = encoder_id.unwrap_or(match encoder.unwrap_or(s::Encoder::Png) {
-                    s::Encoder::Jpeg => 4,
-                    s::Encoder::Png => 2,
-                });
-                let encoder_hints = ::ffi::EncoderHints {
-                    jpeg_quality: 100,
-                    disable_png_alpha: false,
-                };
-
-
-
-                ::ffi::flow_node_create_encoder(self.ctx,
-                                                g,
-                                                -1,
-                                                io_id,
-                                                encoder_id,
-                                                &encoder_hints as *const ::ffi::EncoderHints)
-            }
-            s::Node::Crop { x1, y1, x2, y2 } => {
-                ::ffi::flow_node_create_primitive_crop(self.ctx, g, -1, x1, y1, x2, y2)
-            }
-            s::Node::FlipV => ::ffi::flow_node_create_primitive_flip_vertical(self.ctx, g, -1),
-            s::Node::FlipH => ::ffi::flow_node_create_primitive_flip_horizontal(self.ctx, g, -1),
-            s::Node::Rotate90 => ::ffi::flow_node_create_rotate_90(self.ctx, g, -1),
-            s::Node::Rotate180 => ::ffi::flow_node_create_rotate_180(self.ctx, g, -1),
-            s::Node::Rotate270 => ::ffi::flow_node_create_rotate_270(self.ctx, g, -1),
-            s::Node::CreateCanvas { format, w, h, color } => {
-                let ffi_format = match format {
-                    s::PixelFormat::Bgr24 => ::ffi::PixelFormat::bgr24,
-                    s::PixelFormat::Bgra32 => ::ffi::PixelFormat::bgra32,
-                    s::PixelFormat::Gray8 => ::ffi::PixelFormat::gray8,
-                };
-
-                ::ffi::flow_node_create_canvas(self.ctx,
-                                               g,
-                                               -1,
-                                               ffi_format,
-                                               w,
-                                               h,
-                                               self.color_to_i32(color).unwrap())
-            }
-            s::Node::CopyRectToCanvas { from_x, from_y, width, height, x, y } => {
-                ::ffi::flow_node_create_primitive_copy_rect_to_canvas(self.ctx,
-                                                                      g,
-                                                                      -1,
-                                                                      from_x,
-                                                                      from_y,
-                                                                      width,
-                                                                      height,
-                                                                      x,
-                                                                      y)
-            }
-            s::Node::Transpose => ::ffi::flow_node_create_transpose(self.ctx, g, -1),
-            s::Node::ExpandCanvas { left, top, right, bottom, color } => {
-                ::ffi::flow_node_create_expand_canvas(self.ctx,
-                                                      g,
-                                                      -1,
-                                                      left,
-                                                      top,
-                                                      right,
-                                                      bottom,
-                                                      self.color_to_i32(color).unwrap())
-            }
-            s::Node::Scale{ w, h, down_filter, up_filter,
-                sharpen_percent, flags} => {
-                ::ffi::flow_node_create_scale(self.ctx, g, -1, w, h, down_filter.unwrap_or(s::Filter::RobidouxSharp) as i32, up_filter.unwrap_or(s::Filter::Ginseng) as i32,  flags.unwrap_or(1), sharpen_percent.unwrap_or(0f32) )
-            }
-            s::Node::FillRect { x1, x2, y1, y2, color } => {
-                ::ffi::flow_node_create_fill_rect(self.ctx,
-                                                  g,
-                                                  -1,
-                                                  x1,
-                                                  y1,
-                                                  x2,
-                                                  y2,
-                                                  self.color_to_i32(color).unwrap())
-            },
-
-
-            s::Node::FlowBitmapBgraPtr {ptr_to_flow_bitmap_bgra_ptr} => {
-                let ptr_to_ptr = ptr_to_flow_bitmap_bgra_ptr as *mut *mut ::ffi::FlowBitmapBgra;
-                ::ffi::flow_node_create_bitmap_bgra_reference(self.ctx, g, -1, ptr_to_ptr)
-            }
-
+        let _ = edges.pop();
+        s::Graph {
+            nodes: nodes,
+            edges: edges,
         }
     }
 
 
-    unsafe fn create_edge(&self,
-                          g: *mut *mut ::ffi::Graph,
-                          from_node: i32,
-                          to_node: i32,
-                          edge_kind: ::ffi::EdgeKind)
-                          -> i32 {
-        ::ffi::flow_edge_create(self.ctx, g, from_node, to_node, edge_kind)
+
+    fn create_node(&self, g: &mut ::flow::graph::Graph, node: s::Node) -> NodeIndex<u32> {
+        let new_node = match node {
+            s::Node::Crop { .. } => Node::new(&nodes::CROP, NodeParams::Json(node)),
+            s::Node::Decode { .. } => Node::new(&nodes::DECODER, NodeParams::Json(node)),
+            s::Node::FlowBitmapBgraPtr { .. } =>
+                Node::new(&nodes::BITMAP_BGRA_POINTER, NodeParams::Json(node)),
+            s::Node::FlipV => Node::new(&nodes::FLIP_V, NodeParams::Json(node)),
+            s::Node::FlipH => Node::new(&nodes::FLIP_H, NodeParams::Json(node)),
+            s::Node::Rotate90 => Node::new(&nodes::ROTATE_90, NodeParams::Json(node)),
+            s::Node::Rotate180 => Node::new(&nodes::ROTATE_180, NodeParams::Json(node)),
+            s::Node::Rotate270 => Node::new(&nodes::ROTATE_270, NodeParams::Json(node)),
+            s::Node::ApplyOrientation { .. } => Node::new(&nodes::APPLY_ORIENTATION, NodeParams::Json(node)),
+            s::Node::Transpose => Node::new(&nodes::TRANSPOSE, NodeParams::Json(node)),
+            s::Node::Render1D{ ..} => Node::new(&nodes::SCALE_1D, NodeParams::Json(node)),
+            s::Node::Encode { .. }=> Node::new(&nodes::ENCODE, NodeParams::Json(node)),
+            s::Node::CreateCanvas { .. } =>
+                Node::new(&nodes::CREATE_CANVAS, NodeParams::Json(node)),
+            s::Node::CopyRectToCanvas { .. } =>
+                Node::new(&nodes::COPY_RECT, NodeParams::Json(node)),
+            s::Node::FillRect { .. } => Node::new(&nodes::FILL_RECT, NodeParams::Json(node)),
+            s::Node::Scale { .. } => Node::new(&nodes::SCALE, NodeParams::Json(node)),
+            s::Node::ExpandCanvas { .. } =>
+                Node::new(&nodes::EXPAND_CANVAS, NodeParams::Json(node))
+
+        };
+        g.add_node(new_node)
     }
 
 
-    pub unsafe fn translate_graph(&self, from: s::Graph) -> *mut ::ffi::Graph {
-        let mut g = ::ffi::flow_graph_create(self.ctx, 10, 10, 3000, 2.0f32);
 
-        let mut node_id_map: HashMap<i32, i32> = HashMap::new();
+    pub fn translate_graph(&self, from: s::Graph) -> ::flow::graph::Graph {
+        let mut g = ::flow::graph::create(10, 10);
+
+        let mut node_id_map: HashMap<i32, NodeIndex<u32>> = HashMap::new();
 
         for (old_id, node) in from.nodes {
             let new_id = self.create_node(&mut g, node);
-            if new_id < 0 {
-                panic!("node creation failed");
-            }
+
             node_id_map.insert(old_id.parse::<i32>().unwrap(), new_id);
         }
 
@@ -150,11 +96,8 @@ impl GraphTranslator {
                 s::EdgeKind::Canvas => EdgeKind::Canvas,
             };
 
-            let edge_id = self.create_edge(&mut g, from_id, to_id, new_edge_kind);
-            if edge_id < 0 {
-                panic!("edge creation failed");
-            }
+            g.add_edge(from_id, to_id, new_edge_kind).unwrap();
         }
-        return g;
+        g
     }
 }

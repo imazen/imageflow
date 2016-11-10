@@ -44,7 +44,7 @@ static bool dimensions_canvas(flow_c * c, struct flow_graph * g, int32_t node_id
     return true;
 }
 
-static bool execute_canvas(flow_c * c, struct flow_job * job, struct flow_graph * g, int32_t node_id)
+static bool execute_canvas(flow_c * c, struct flow_graph * g, int32_t node_id)
 {
     FLOW_GET_INFOBYTES(g, node_id, flow_nodeinfo_createcanvas, info)
 

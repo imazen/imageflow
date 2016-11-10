@@ -1,0 +1,18 @@
+Add JSON endpoint for querying decoder info
+Add JSON endpoint for sending decoder hints
+Add JSON endpoint for executing a job
+
+
+Add tests for IDCT downscaling, linear and not
+
+Verify input/output node quantities are validated
+Check for cycles
+Test pulling from a decoder into several different nodes
+
+Smoke tests with dimension verification
+
+Roundtrip and compare various things (like flips)
+
+Don't panic on bad JSON or input; return a Result, and get it right.
+
+It's okay to panic on OOM, but 

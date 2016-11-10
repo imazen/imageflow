@@ -19,7 +19,7 @@ use time::precise_time_ns;
 
 // This Rust server was built one saturday evening to exercise various
 // bits of the stack. It's not safe (nor safer than a C equivalent), and
-// we're not using Rust idomatically or correctly. Nothing is re-entrant,
+// we're not using Rust idiomatically or correctly. Nothing is re-entrant,
 // and errors panic the process. It's one build to throw away; a learning experiment.
 //
 // Run with cargo run --bin imageflow-server

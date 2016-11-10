@@ -73,7 +73,7 @@ static bool dimensions_decode(flow_c * c, struct flow_graph * g, int32_t node_id
 
     struct flow_decoder_frame_info frame_info;
 
-    if (!flow_job_decoder_get_frame_info(c, NULL, info->codec->codec_state, info->codec->codec_id, &frame_info)) {
+    if (!flow_codec_decoder_get_frame_info(c, info->codec->codec_state, info->codec->codec_id, &frame_info)) {
         FLOW_error_return(c);
     }
 
@@ -93,7 +93,7 @@ static bool stringify_decode(flow_c * c, struct flow_graph * g, int32_t node_id,
         flow_snprintf(buffer, buffer_size, "(codec undetermined)");
         return true;
     }
-    struct flow_codec_definition * def = flow_job_get_codec_definition(c, info->codec->codec_id);
+    struct flow_codec_definition * def = flow_codec_get_definition(c, info->codec->codec_id);
     if (def == NULL) {
         FLOW_error_return(c);
     }
@@ -113,7 +113,7 @@ static bool stringify_decode(flow_c * c, struct flow_graph * g, int32_t node_id,
             flow_snprintf(buffer, buffer_size, "%s %s", def->name, (const char *)&state);
         }
     } else {
-        def->stringify(c, NULL, info->codec->codec_state, buffer, buffer_size);
+        def->stringify(c, info->codec->codec_state, buffer, buffer_size);
     }
     return true;
 }
@@ -123,8 +123,6 @@ static bool stringify_encode(flow_c * c, struct flow_graph * g, int32_t node_id,
     return stringify_decode(c, g, node_id, buffer, buffer_size);
 }
 
-int32_t flow_job_jpg_decoder_get_exif(flow_c * c, struct flow_codec_instance * codec_instance);
-
 
 static bool flatten_decode_complex(flow_c * c, struct flow_graph ** graph_ref, int32_t node_id)
 {
@@ -132,41 +130,39 @@ static bool flatten_decode_complex(flow_c * c, struct flow_graph ** graph_ref, i
 
     node->type = flow_ntype_primitive_decoder;
     FLOW_GET_INFOBYTES((*graph_ref), node_id, flow_nodeinfo_codec, info)
-    int32_t exif_orientation = flow_job_jpg_decoder_get_exif(c, info->codec);
+    int32_t exif_orientation = flow_codecs_jpg_decoder_get_exif(c, info->codec);
 
-
-    //Create isolated node chain
+    // Create isolated node chain
     int last_node_id = -1;
     int first_node_id = -1;
 
-    if (exif_orientation > 0){
+    if (exif_orientation > 0) {
         last_node_id = flow_node_create_apply_orientation(c, graph_ref, last_node_id, exif_orientation);
         if (last_node_id < 0) {
             FLOW_error_return(c);
         }
-        if (first_node_id < 0) first_node_id = last_node_id;
+        if (first_node_id < 0)
+            first_node_id = last_node_id;
     }
 
-
     if (last_node_id > -1) {
-        //Duplicate edges to end of chain
+        // Duplicate edges to end of chain
         // Clone outbound edges
         if (!flow_graph_duplicate_edges_to_another_node(c, graph_ref, node_id, last_node_id, false, true)) {
             FLOW_error_return(c);
         }
-        //Delete all original decoder edges
+        // Delete all original decoder edges
         if (!flow_edge_delete_connected_to_node(c, *graph_ref, node_id, true, true)) {
             FLOW_error_return(c);
         }
 
-        //Recreate one edge between decoder and first_node_id
+        // Recreate one edge between decoder and first_node_id
         if (!flow_edge_create(c, graph_ref, node_id, first_node_id, flow_edgetype_input)) {
             FLOW_error_return(c);
         }
     }
     return true;
 }
-
 
 static bool flatten_encode(flow_c * c, struct flow_graph ** g, int32_t node_id, struct flow_node * node,
                            struct flow_node * input_node, int32_t * first_replacement_node,
@@ -183,7 +179,7 @@ static bool flatten_encode(flow_c * c, struct flow_graph ** g, int32_t node_id, 
             info->codec->codec_id = info->desired_encoder_id;
         }
         // TODO: establish NULL as a valid flow_job * value for initialize_codec?
-        if (!flow_job_initialize_codec(c, NULL, info->codec)) {
+        if (!flow_codec_initialize(c, info->codec)) {
             FLOW_add_to_callstack(c);
             return false;
         }
@@ -194,13 +190,13 @@ static bool flatten_encode(flow_c * c, struct flow_graph ** g, int32_t node_id, 
     return true;
 }
 
-static bool execute_decode(flow_c * c, struct flow_job * job, struct flow_graph * g, int32_t node_id)
+static bool execute_decode(flow_c * c, struct flow_graph * g, int32_t node_id)
 {
     FLOW_GET_INFOBYTES(g, node_id, flow_nodeinfo_codec, info)
 
     struct flow_node * n = &g->nodes[node_id];
 
-    struct flow_codec_definition * def = flow_job_get_codec_definition(c, info->codec->codec_id);
+    struct flow_codec_definition * def = flow_codec_get_definition(c, info->codec->codec_id);
     if (def == NULL) {
         FLOW_error_return(c);
     }
@@ -209,7 +205,7 @@ static bool execute_decode(flow_c * c, struct flow_job * job, struct flow_graph 
         return false;
     }
     struct flow_decoder_frame_info frame_info;
-    if (!def->get_frame_info(c, NULL, info->codec->codec_state, &frame_info)) {
+    if (!def->get_frame_info(c, info->codec->codec_state, &frame_info)) {
         FLOW_error_return(c);
     }
 
@@ -217,20 +213,20 @@ static bool execute_decode(flow_c * c, struct flow_job * job, struct flow_graph 
     if (n->result_bitmap == NULL) {
         FLOW_error_return(c);
     }
-    if (!def->read_frame(c, NULL, info->codec->codec_state, n->result_bitmap)) {
+    if (!def->read_frame(c, info->codec->codec_state, n->result_bitmap)) {
         FLOW_error_return(c);
     }
     return true;
 }
 
-static bool execute_encode(flow_c * c, struct flow_job * job, struct flow_graph * g, int32_t node_id)
+static bool execute_encode(flow_c * c, struct flow_graph * g, int32_t node_id)
 {
     FLOW_GET_INFOBYTES(g, node_id, flow_nodeinfo_codec, info)
     FLOW_GET_INPUT_EDGE(g, node_id)
     struct flow_node * n = &g->nodes[node_id];
     n->result_bitmap = g->nodes[input_edge->from].result_bitmap;
 
-    struct flow_codec_definition * def = flow_job_get_codec_definition(c, info->codec->codec_id);
+    struct flow_codec_definition * def = flow_codec_get_definition(c, info->codec->codec_id);
     if (def == NULL) {
         FLOW_error_return(c);
     }
@@ -239,7 +235,7 @@ static bool execute_encode(flow_c * c, struct flow_job * job, struct flow_graph 
         return false;
     }
 
-    if (!def->write_frame(c, NULL, info->codec->codec_state, n->result_bitmap, &info->encoder_hints)) {
+    if (!def->write_frame(c, info->codec->codec_state, n->result_bitmap, &info->encoder_hints)) {
         FLOW_error_return(c);
     }
     return true;
@@ -275,7 +271,7 @@ static bool dimensions_bitmap_bgra_pointer(flow_c * c, struct flow_graph * g, in
     return true;
 }
 
-static bool execute_bitmap_bgra_pointer(flow_c * c, struct flow_job * job, struct flow_graph * g, int32_t node_id)
+static bool execute_bitmap_bgra_pointer(flow_c * c, struct flow_graph * g, int32_t node_id)
 {
     FLOW_GET_INFOBYTES(g, node_id, flow_nodeinfo_bitmap_bgra_pointer, info)
     struct flow_node * n = &g->nodes[node_id];

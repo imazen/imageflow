@@ -293,7 +293,7 @@ static bool node_visitor_execute(flow_c * c, struct flow_job * job, struct flow_
 
     if (!flow_job_node_is_executed(c, job, *graph_ref, node_id) && n->state == flow_node_state_ReadyForExecution) {
         uint64_t now = flow_get_high_precision_ticks();
-        if (!flow_node_execute(c, job, *graph_ref, node_id)) {
+        if (!flow_node_execute(c, *graph_ref, node_id)) {
             FLOW_error_return(c);
         } else {
             (*graph_ref)->nodes[node_id].ticks_elapsed += (int32_t)(flow_get_high_precision_ticks() - now);

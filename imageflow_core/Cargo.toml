@@ -17,9 +17,12 @@ rustc-serialize = "*"
 threadpool = "1.0"
 serde = "*"
 serde_json = "*"
+lazy_static = "0.1.*"
 curl = "*"
 json = "*"
 imageflow_serde = { path = "../imageflow_serde", version = "*" }
+petgraph = "^0.2.8"
+daggy = "^0.4.1"
 
 [build-dependencies]
 cmake = "0.1.17"

@@ -24,10 +24,10 @@ module Imageflow
         job.add_input_file(placeholder_id: 0, filename: input_path)
         job.add_output_file(placeholder_id: 1, filename: output_path)
 
-        input_info = job.get_decoder_info placeholder_id: 0
+        input_info = job.get_image_info placeholder_id: 0
 
-        w = input_info[:frame0_width]
-        h = input_info[:frame0_height]
+        w = input_info[:frame0Width]
+        h = input_info[:frame0Height]
 
         instructions = Imageflow::Riapi::Instructions.new
         instructions.width = opts.width
@@ -43,8 +43,9 @@ module Imageflow
 
         instructions.floatspace = opts.linear ? :linear : :srgb
 
-        c.set_floatspace_linear! if instructions.floatspace == :linear
-        c.set_floatspace_srgb! if instructions.floatspace == :srgb
+        #TODO: restore switiching
+        #c.set_floatspace_linear! if instructions.floatspace == :linear
+        #c.set_floatspace_srgb! if instructions.floatspace == :srgb
 
 
 
@@ -52,8 +53,8 @@ module Imageflow
 
         #cpu_time = ::Benchmark.realtime do
         gb = Imageflow::Riapi::GraphBuilder.new context: c
-        g = gb.build_graph(job: job, input_placeholder_id: 0, output_placeholder_id: 1, source_info: input_info, instructions: instructions)
-        job.execute graph: g
+        framewise = gb.build_framewise(job: job, input_placeholder_id: 0, output_placeholder_id: 1, source_info: input_info, instructions: instructions)
+        job.execute framewise: framewise
         c.destroy!
         c = nil
         #end

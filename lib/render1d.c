@@ -118,20 +118,20 @@ cleanup:
     return success;
 }
 
-bool flow_node_execute_render_to_canvas_1d(flow_c * c, struct flow_job * job, struct flow_bitmap_bgra * input,
+bool flow_node_execute_render_to_canvas_1d(flow_c * c, struct flow_bitmap_bgra * input,
                                            struct flow_bitmap_bgra * canvas,
                                            struct flow_nodeinfo_render_to_canvas_1d * info)
 {
 
-    if (info->canvas_x != 0 || info->canvas_y != 0
-        || info->scale_to_width != (int32_t)(info->transpose_on_write ? canvas->h : canvas->w)) {
-        FLOW_error(c, flow_status_Not_implemented); // Requires cropping the target canvas
-        return false;
-    }
-    if (info->filter_list != NULL || info->sharpen_percent_goal != 0) {
-        FLOW_error(c, flow_status_Not_implemented); // Requires cropping the target canvas
-        return false;
-    }
+//    if (info->canvas_x != 0 || info->canvas_y != 0
+//        || info->scale_to_width != (int32_t)(info->transpose_on_write ? canvas->h : canvas->w)) {
+//        FLOW_error(c, flow_status_Not_implemented); // Requires cropping the target canvas
+//        return false;
+//    }
+//    if (info->filter_list != NULL || info->sharpen_percent_goal != 0) {
+//        FLOW_error(c, flow_status_Not_implemented); // Requires cropping the target canvas
+//        return false;
+//    }
     struct flow_interpolation_details * d = flow_interpolation_details_create_from(c, info->interpolation_filter);
     if (d == NULL) {
         FLOW_error_return(c);

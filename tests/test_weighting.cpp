@@ -230,7 +230,8 @@ TEST_CASE("Test output weights", "[fastscaling]")
     fclose(output);
 
     char reference_filename[2048];
-    if (!create_path_from_relative(&context, __FILE__, true, reference_filename, 2048, "/visuals/reference_weights.txt")) {
+    if (!create_path_from_relative(&context, __FILE__, true, reference_filename, 2048,
+                                   "/visuals/reference_weights.txt")) {
         ERR(c);
     }
 

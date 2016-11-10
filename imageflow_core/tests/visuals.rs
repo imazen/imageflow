@@ -7,8 +7,14 @@ extern crate serde_json;
 
 use std::ffi::CString;
 use imageflow_core::Context;
-use imageflow_core::parsing::BuildRequestHandler;
 
+fn default_build_config(debug: bool) -> s::Build001Config {
+    s::Build001Config{graph_recording: match debug{ true => Some(s::Build001GraphRecording::debug_defaults()), false => None} ,
+        process_all_gif_frames: Some(false),
+        enable_jpeg_block_scaling: Some(false),
+        no_gamma_correction: false
+    }
+}
 
 
 /// Creates a static, null-terminated Rust string, and
@@ -22,34 +28,62 @@ macro_rules! static_char {
     }
 }
 
-fn compare(input: s::IoEnum, allowed_off_by_one_bytes: usize, checksum_name: String, store_if_missing: bool, debug: bool, mut steps: Vec<s::Node>) -> bool {
-    let mut dest_bitmap: *mut imageflow_core::ffi::FlowBitmapBgra = std::ptr::null_mut();
-
-    let ptr_to_ptr = &mut dest_bitmap as *mut *mut imageflow_core::ffi::FlowBitmapBgra;
-
-    let input_io = s::IoObject {
-        io_id: 0,
-        direction: s::IoDirection::Input,
-        checksum: None,
-        io: input
+fn smoke_test(input: Option<s::IoEnum>, output: Option<s::IoEnum>,  debug: bool, steps: Vec<s::Node>){
+    let mut io_list = Vec::new();
+    if input.is_some() {
+        io_list.push(s::IoObject {
+            io_id: 0,
+            direction: s::IoDirection::Input,
+            checksum: None,
+            io: input.unwrap()
+        });
+    }
+    if output.is_some() {
+        io_list.push(s::IoObject {
+            io_id: 1,
+            direction: s::IoDirection::Output,
+            checksum: None,
+            io: output.unwrap()
+        });
+    }
+    let build = s::Build001{
+        builder_config: Some(default_build_config(debug)),
+        io: io_list,
+        framewise: s::Framewise::Steps(steps)
     };
+    let mut context = Context::create().unwrap();
+    context.message("v0.0.1/build", &serde_json::to_vec(&build).unwrap()).unwrap();
+}
+
+fn compare(input: Option<s::IoEnum>, allowed_off_by_one_bytes: usize, checksum_name: String, store_if_missing: bool, debug: bool, mut steps: Vec<s::Node>) -> bool {
+    let mut dest_bitmap: *mut imageflow_core::ffi::BitmapBgra = std::ptr::null_mut();
+
+    let ptr_to_ptr = &mut dest_bitmap as *mut *mut imageflow_core::ffi::BitmapBgra;
+
+    let mut inputs = Vec::new();
+    if input.is_some() {
+        inputs.push(s::IoObject {
+            io_id: 0,
+            direction: s::IoDirection::Input,
+            checksum: None,
+            io: input.unwrap()
+        });
+    }
 
     steps.push(s::Node::FlowBitmapBgraPtr { ptr_to_flow_bitmap_bgra_ptr: ptr_to_ptr as usize});
 
-        let recording = s::Build001_Graph_Recording{
-            record_graph_versions: Some(true),
-            record_frame_images: Some(false),
-            render_last_graph: Some(true),
-            render_animated_graph: Some(false),
-            render_graph_versions : Some(false),
-        };
+    {
+
+        //println!("{}", serde_json::to_string_pretty(&steps).unwrap());
+    }
 
     let build = s::Build001{
-        builder_config: Some(s::Build001Config{graph_recording: match debug{ true => Some(recording), false => None} ,
+        builder_config: Some(s::Build001Config{graph_recording: match debug{ true => Some(s::Build001GraphRecording::debug_defaults()), false => None} ,
             process_all_gif_frames: Some(false),
-            enable_jpeg_block_scaling: Some(false)
+            enable_jpeg_block_scaling: Some(false),
+            no_gamma_correction: false
         }),
-        io: vec![input_io],
+        io: inputs,
         framewise: s::Framewise::Steps(steps)
     };
 
@@ -59,7 +93,7 @@ fn compare(input: s::IoEnum, allowed_off_by_one_bytes: usize, checksum_name: Str
     }
 
 
-    let mut context = Context::create();
+    let mut context = Context::create().unwrap();
 
     context.message("v0.0.1/build", &serde_json::to_vec(&build).unwrap()).unwrap();
 
@@ -70,7 +104,7 @@ fn compare(input: s::IoEnum, allowed_off_by_one_bytes: usize, checksum_name: Str
     }
 
      unsafe {
-         let mut ctx_cell = context.unsafe_borrow_mut_context_pointer();
+         let ctx_cell = context.unsafe_borrow_mut_context_pointer();
 
 
          let matched: bool;
@@ -84,11 +118,52 @@ fn compare(input: s::IoEnum, allowed_off_by_one_bytes: usize, checksum_name: Str
     }
 }
 
+#[test]
+fn test_fill_rect(){
+    let matched = compare(None, 500,
+                          "FillRectEECCFF".to_owned(), false, false, vec![
+        s::Node::CreateCanvas {w: 200, h: 200, format: s::PixelFormat::Bgra32, color: s::Color::Transparent},
+        s::Node::FillRect{x1:0, y1:0, x2:100, y2:100, color: s::Color::Srgb(s::ColorSrgb::Hex("EECCFFFF".to_owned()))},
+        s::Node::Scale{ w: 400, h: 400, down_filter: Some(s::Filter::Hermite), up_filter: Some(s::Filter::Hermite), sharpen_percent: Some(0f32), flags: Some(1) }
+        ]
+    );
+    assert!(matched);
+}
 
-// Replaces TEST_CASE("Test scale rings", "")
+#[test]
+fn test_expand_rect(){
+    let matched = compare(None, 500,
+                          "FillRectEECCFFExpand2233AAFF".to_owned(), false, false, vec![
+        s::Node::CreateCanvas {w: 200, h: 200, format: s::PixelFormat::Bgra32, color: s::Color::Transparent},
+        s::Node::FillRect{x1:0, y1:0, x2:100, y2:100, color: s::Color::Srgb(s::ColorSrgb::Hex("EECCFFFF".to_owned()))},
+        s::Node::ExpandCanvas{left: 10, top: 15, right: 20, bottom: 25, color: s::Color::Srgb(s::ColorSrgb::Hex("2233AAFF".to_owned()))},
+        s::Node::Scale{ w: 400, h: 400, down_filter: Some(s::Filter::Hermite), up_filter: Some(s::Filter::Hermite), sharpen_percent: Some(0f32), flags: Some(1) }
+        ]
+    );
+    assert!(matched);
+}
+
+
+#[test]
+fn test_crop(){
+    for _ in 1..100 {
+        let matched = compare(None, 500,
+                              "FillRectAndCrop".to_owned(), false, false, vec![
+            s::Node::CreateCanvas { w: 200, h: 200, format: s::PixelFormat::Bgra32, color: s::Color::Srgb(s::ColorSrgb::Hex("FF5555FF".to_owned())) },
+            s::Node::FillRect { x1: 0, y1: 0, x2: 10, y2: 100, color: s::Color::Srgb(s::ColorSrgb::Hex("0000FFFF".to_owned())) },
+            s::Node::Crop { x1: 0, y1: 50, x2: 100, y2: 100 }
+            ]
+        );
+        assert!(matched);
+    }
+}
+
+
+
+//  Replaces TEST_CASE("Test scale rings", "")
 #[test]
 fn test_scale_rings(){
-    let matched = compare(s::IoEnum::Url("http://s3-us-west-2.amazonaws.com/imageflow-resources/test_inputs/rings2.png".to_owned()), 500,
+    let matched = compare(Some(s::IoEnum::Url("http://s3-us-west-2.amazonaws.com/imageflow-resources/test_inputs/rings2.png".to_owned())), 500,
         "RingsDownscaling".to_owned(), false, false, vec![
         s::Node::Decode {io_id: 0},
         s::Node::Scale{ w: 400, h: 400, down_filter: Some(s::Filter::Hermite), up_filter: Some(s::Filter::Hermite), sharpen_percent: Some(0f32), flags: Some(1) }
@@ -97,43 +172,26 @@ fn test_scale_rings(){
     assert!(matched);
 }
 
-//// Replaces TEST_CASE("Test fill_rect", "")
-//#[test]
-//fn test_fill_rect(){
-//    let matched = compare(s::IoEnum::Url("http://s3-us-west-2.amazonaws.com/imageflow-resources/test_inputs/rings2.png".to_owned()), 500,
-//                          "RingsDownscaling".to_owned(), false, false, vec![
-//        s::Node::CreateCanvas{}
-//        s::Node::Scale{ w: 400, h: 400, down_filter: Some(s::Filter::Hermite), up_filter: Some(s::Filter::Hermite), sharpen_percent: Some(0f32), flags: Some(1) }
-//        ]
-//    );
-//    assert!(matched);
-//}
-
-
-//TEST_CASE("Test fill_rect", "")
-//{
-//flow_c * c = flow_context_create();
-//struct flow_graph * g = flow_graph_create(c, 10, 10, 200, 2.0);
-//ERR(c);
-//struct flow_bitmap_bgra * b;
-//int32_t last;
-//
-//last = flow_node_create_canvas(c, &g, -1, flow_bgra32, 400, 300, 0xFFFFFFFF);
-//last = flow_node_create_fill_rect(c, &g, last, 0, 0, 50, 100, 0xFF0000FF);
-//last = flow_node_create_bitmap_bgra_reference(c, &g, last, &b);
-//struct flow_job * job = flow_job_create(c);
-//ERR(c);
-//if (!flow_job_execute(c, job, &g)) {
-//ERR(c);
-//}
+#[test]
+fn test_fill_rect_original(){
+    //let white = s::Color::Srgb(s::ColorSrgb::Hex("FFFFFFFF".to_owned()));
+    let blue = s::Color::Srgb(s::ColorSrgb::Hex("0000FFFF".to_owned()));
+    let matched = compare(None, 1,
+                          "FillRect".to_owned(), false, false, vec![
+        s::Node::CreateCanvas {w: 400, h: 300, format: s::PixelFormat::Bgra32, color: s::Color::Transparent},
+        s::Node::FillRect{x1:0, y1:0, x2:50, y2:100, color: blue},
+        ]
+    );
+    assert!(matched);
+}
 
 #[test]
 fn test_scale_image() {
-    let matched = compare(s::IoEnum::Url("http://s3-us-west-2.amazonaws.com/imageflow-resources/test_inputs/waterhouse.jpg".to_owned()), 500,
+    let matched = compare(Some(s::IoEnum::Url("http://s3-us-west-2.amazonaws.com/imageflow-resources/test_inputs/waterhouse.jpg".to_owned())), 500,
                           "ScaleTheHouse".to_owned(), false, false, vec![
-s::Node::Decode {io_id: 0},
-s::Node::Scale{ w: 400, h: 300, down_filter: Some(s::Filter::Robidoux), up_filter: Some(s::Filter::Robidoux), sharpen_percent: Some(0f32), flags: Some(0) }
-]
+        s::Node::Decode {io_id: 0},
+        s::Node::Scale{ w: 400, h: 300, down_filter: Some(s::Filter::Robidoux), up_filter: Some(s::Filter::Robidoux), sharpen_percent: Some(0f32), flags: Some(0) }
+        ]
     );
     assert!(matched);
 }
@@ -142,7 +200,7 @@ s::Node::Scale{ w: 400, h: 300, down_filter: Some(s::Filter::Robidoux), up_filte
 
 #[test]
 fn test_jpeg_icc2_color_profile() {
-    let matched = compare(s::IoEnum::Url("http://s3-us-west-2.amazonaws.com/imageflow-resources/test_inputs/MarsRGB_tagged.jpg".to_owned()), 500,
+    let matched = compare(Some(s::IoEnum::Url("http://s3-us-west-2.amazonaws.com/imageflow-resources/test_inputs/MarsRGB_tagged.jpg".to_owned())), 500,
                           "MarsRGB_ICC_Scaled400300".to_owned(), false, false, vec![
 s::Node::Decode {io_id: 0},
 s::Node::Scale{ w: 400, h: 300, down_filter: Some(s::Filter::Robidoux), up_filter: Some(s::Filter::Robidoux), sharpen_percent: Some(0f32), flags: Some(0) }
@@ -153,7 +211,7 @@ s::Node::Scale{ w: 400, h: 300, down_filter: Some(s::Filter::Robidoux), up_filte
 
 #[test]
 fn test_jpeg_icc4_color_profile() {
-    let matched = compare(s::IoEnum::Url("http://s3-us-west-2.amazonaws.com/imageflow-resources/test_inputs/MarsRGB_v4_sYCC_8bit.jpg".to_owned()), 500,
+    let matched = compare(Some(s::IoEnum::Url("http://s3-us-west-2.amazonaws.com/imageflow-resources/test_inputs/MarsRGB_v4_sYCC_8bit.jpg".to_owned())), 500,
                           "MarsRGB_ICCv4_Scaled400300_INCORRECT_TOO_PINK".to_owned(), false, false, vec![
 s::Node::Decode {io_id: 0},
 s::Node::Scale{ w: 400, h: 300, down_filter: Some(s::Filter::Robidoux), up_filter: Some(s::Filter::Robidoux), sharpen_percent: Some(0f32), flags: Some(0) }
@@ -162,4 +220,81 @@ s::Node::Scale{ w: 400, h: 300, down_filter: Some(s::Filter::Robidoux), up_filte
     assert!(matched);
 }
 
+#[test]
+fn test_jpeg_rotation() {
+    let orientations = vec!["Landscape", "Portrait"];
 
+    for orientation in orientations {
+        for flag in 1..9 {
+            let url = format!("http://s3-us-west-2.amazonaws.com/imageflow-resources/test_inputs/orientation/{}_{}.jpg", orientation, flag);
+            let title = format!("Test_Apply_Orientation_{}_{}.jpg", orientation, flag);
+            let matched = compare(Some(s::IoEnum::Url(url)), 500, title, false, false, vec![s::Node::Decode {io_id: 0}]);
+            assert!(matched);
+        }
+    }
+
+}
+
+
+#[test]
+fn test_encode_jpeg_smoke() {
+    let steps = vec![
+    s::Node::Decode {io_id: 0},
+    s::Node::Scale{ w: 400, h: 300, down_filter: Some(s::Filter::Robidoux), up_filter: Some(s::Filter::Robidoux), sharpen_percent: Some(0f32), flags: Some(1) },
+    s::Node::Encode{ io_id: 1, preset: s::EncoderPreset::LibjpegTurbo {quality: Some(100)}}
+    ];
+
+    smoke_test(Some(s::IoEnum::Url("http://s3-us-west-2.amazonaws.com/imageflow-resources/test_inputs/MarsRGB_v4_sYCC_8bit.jpg".to_owned())),
+               Some(s::IoEnum::OutputBuffer),
+               false,
+               steps,
+    );
+}
+
+#[test]
+fn test_encode_png32_smoke() {
+    let steps = vec![
+    s::Node::Decode {io_id: 0},
+    s::Node::Scale{ w: 400, h: 300, down_filter: Some(s::Filter::Robidoux), up_filter: Some(s::Filter::Robidoux), sharpen_percent: Some(0f32), flags: Some(1) },
+    s::Node::Encode{ io_id: 1, preset: s::EncoderPreset::Libpng {depth: Some(s::PngBitDepth::Png32), matte: None,  zlib_compression: None}}
+    ];
+
+    smoke_test(Some(s::IoEnum::Url("http://s3-us-west-2.amazonaws.com/imageflow-resources/test_inputs/MarsRGB_v4_sYCC_8bit.jpg".to_owned())),
+               Some(s::IoEnum::OutputBuffer),
+               false,
+               steps,
+    );
+}
+
+fn get_result_dimensions(steps: Vec<s::Node>, debug: bool) -> (u32, u32) {
+    let mut steps = steps.clone();
+
+    let mut dest_bitmap: *mut imageflow_core::ffi::BitmapBgra = std::ptr::null_mut();
+    let ptr_to_ptr = &mut dest_bitmap as *mut *mut imageflow_core::ffi::BitmapBgra;
+
+    steps.push(s::Node::FlowBitmapBgraPtr { ptr_to_flow_bitmap_bgra_ptr: ptr_to_ptr as usize});
+
+    let build = s::Build001{
+        builder_config: Some(default_build_config(debug)),
+        io: vec![],
+        framewise: s::Framewise::Steps(steps)
+    };
+    let mut context = Context::create().unwrap();
+    context.message("v0.0.1/build", &serde_json::to_vec(&build).unwrap()).unwrap();
+    unsafe { ((*dest_bitmap).w, (*dest_bitmap).h) }
+}
+
+
+#[test]
+fn test_dimensions(){
+    let steps = vec![
+    s::Node::CreateCanvas{w: 638, h: 423, format: s::PixelFormat::Bgra32, color: s::Color::Black},
+    //s::Node::Crop { x1: 0, y1: 0, x2: 638, y2: 423},
+    s::Node::Scale{w:200,h:133, flags:Some(1), down_filter: None, up_filter: None, sharpen_percent: None},
+    s::Node::ExpandCanvas{left:1, top: 0, right:0, bottom: 0, color: s::Color::Transparent},
+    ];
+    let (w, h) = get_result_dimensions(steps, true);
+    assert_eq!(w,201);
+    assert_eq!(h,133);
+
+}

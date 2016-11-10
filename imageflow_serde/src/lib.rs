@@ -4,6 +4,9 @@
 extern crate serde;
 extern crate serde_json;
 
+use std::ascii::AsciiExt;
+use std::str::FromStr;
+
 #[derive(Serialize, Deserialize, Debug, PartialEq)]
 struct Point {
     x: i32,
@@ -62,7 +65,7 @@ pub enum Encoder {
 
 
 #[repr(C)]
-#[derive(Serialize, Deserialize, Clone, PartialEq, PartialOrd, Debug)]
+#[derive(Copy, Serialize, Deserialize, Clone, PartialEq, PartialOrd, Debug)]
 pub enum Filter {
     RobidouxFast = 1,
     Robidoux = 2,
@@ -98,11 +101,60 @@ pub enum Filter {
     NCubic = 29,
     NCubicSharp = 30,
 }
-#[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
-pub enum EncoderHints {
-    Jpeg { quality: Option<i32> },
-    Png { disable_alpha: Option<bool> },
+impl FromStr for Filter {
+    type Err = &'static str;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match &*s.to_ascii_lowercase() {
+            "robidouxfast" => Ok(Filter::RobidouxFast),
+            "robidoux" => Ok(Filter::Robidoux),
+            "robidouxsharp" => Ok(Filter::RobidouxSharp),
+            "ginseng" => Ok(Filter::Ginseng),
+            "ginsengsharp" => Ok(Filter::GinsengSharp),
+            "lanczos" => Ok(Filter::Lanczos),
+            "lanczossharp" => Ok(Filter::LanczosSharp),
+            "lanczos2" => Ok(Filter::Lanczos2),
+            "lanczos2sharp" => Ok(Filter::Lanczos2Sharp),
+            "cubicfast" => Ok(Filter::CubicFast),
+            "cubic_0_1" => Ok(Filter::Cubic),
+            "cubicsharp" => Ok(Filter::CubicSharp),
+            "catmullrom" => Ok(Filter::CatmullRom),
+            "catrom" => Ok(Filter::CatmullRom),
+            "mitchell" => Ok(Filter::Mitchell),
+            "cubicbspline" => Ok(Filter::CubicBSpline),
+            "bspline" => Ok(Filter::CubicBSpline),
+            "hermite" => Ok(Filter::Hermite),
+            "jinc" => Ok(Filter::Jinc),
+            "rawlanczos3" => Ok(Filter::RawLanczos3),
+            "rawlanczos3sharp" => Ok(Filter::RawLanczos3Sharp),
+            "rawlanczos2" => Ok(Filter::RawLanczos2),
+            "rawlanczos2sharp" => Ok(Filter::RawLanczos2Sharp),
+            "triangle" => Ok(Filter::Triangle),
+            "linear" => Ok(Filter::Linear),
+            "box" => Ok(Filter::Box),
+            "catmullromfast" => Ok(Filter::CatmullRomFast),
+            "catmullromfastsharp" => Ok(Filter::CatmullRomFastSharp),
+            "fastest" => Ok(Filter::Fastest),
+            "mitchellfast" => Ok(Filter::MitchellFast),
+            "ncubic" => Ok(Filter::NCubic),
+            "ncubicsharp" => Ok(Filter::NCubicSharp),
+            _ => Err("no match"),
+        }
+    }
 }
+
+#[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
+pub enum PngBitDepth{
+    Png32,
+    Png24,
+}
+
+#[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
+pub enum EncoderPreset {
+    LibjpegTurbo { quality: Option<i32> },
+    Libpng {  depth: Option<PngBitDepth>, matte: Option<Color>, zlib_compression: Option<i32>}
+}
+
 
 #[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
 pub enum ColorSrgb {
@@ -110,8 +162,60 @@ pub enum ColorSrgb {
 }
 #[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
 pub enum Color {
+    Transparent,
+    Black,
     Srgb(ColorSrgb),
 }
+
+impl Color {
+    pub fn to_u32_bgra(self) -> std::result::Result<u32, std::num::ParseIntError> {
+        self.to_u32_rgba().and_then(|u| Ok(u.swap_bytes().rotate_left(8)))
+    }
+    pub fn to_u32_rgba(self) -> std::result::Result<u32, std::num::ParseIntError> {
+        match self {
+            Color::Srgb(srgb) => {
+                match srgb {
+                    ColorSrgb::Hex(hex_srgb) => {
+                        u32::from_str_radix(hex_srgb.as_str(), 16)
+                            .and_then(|value| if hex_srgb.len() <= 6 {
+                                Ok(value.checked_shl(8).unwrap() | 0xFF)
+                            } else {
+                                Ok(value)
+                            })
+                    }
+                }
+            },
+            Color::Black => Ok(0x000000FF),
+            Color::Transparent => Ok(0),
+        }
+    }
+}
+
+
+#[test]
+fn test_color() {
+
+    assert_eq!(Color::Srgb(ColorSrgb::Hex("FFAAEEDD".to_owned())).to_u32_rgba().unwrap(),
+               0xFFAAEEDD);
+    assert_eq!(Color::Srgb(ColorSrgb::Hex("FFAAEE".to_owned())).to_u32_rgba().unwrap(),
+               0xFFAAEEFF);
+}
+
+#[test]
+fn test_bgra() {
+
+    assert_eq!(Color::Srgb(ColorSrgb::Hex("FFAAEEDD".to_owned())).to_u32_bgra().unwrap(),
+               0xEEAAFFDD);
+    assert_eq!(Color::Srgb(ColorSrgb::Hex("FFAAEE".to_owned())).to_u32_bgra().unwrap(),
+               0xEEAAFFFF);
+    assert_eq!(Color::Srgb(ColorSrgb::Hex("000000FF".to_owned())).to_u32_bgra().unwrap(),
+               0x000000FF);
+
+
+}
+
+
+
 #[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
 pub enum Node {
     #[serde(rename="flipV")]
@@ -147,10 +251,7 @@ pub enum Node {
     Encode {
         #[serde(rename="ioId")]
         io_id: i32,
-        encoder: Option<Encoder>,
-        #[serde(rename="encoderId")]
-        encoder_id: Option<i64>,
-        hints: Option<EncoderHints>,
+        preset: EncoderPreset
     },
     #[serde(rename="fillRect")]
     FillRect {
@@ -176,6 +277,8 @@ pub enum Node {
     Rotate180,
     #[serde(rename="rotate270")]
     Rotate270,
+    #[serde(rename="applyOrientation")]
+    ApplyOrientation { flag: i32 },
     #[serde(rename="scale")]
     Scale {
         w: usize,
@@ -188,12 +291,17 @@ pub enum Node {
         sharpen_percent: Option<f32>,
         flags: Option<usize>,
     },
-    //TODO: Block use except from FFI/unit test use
+    Render1D {
+        scale_to_width: usize,
+        transpose_on_write: bool,
+        interpolation_filter: Option<Filter>,
+    },
+    // TODO: Block use except from FFI/unit test use
     #[serde(rename="flowBitmapBgraPtr")]
-    FlowBitmapBgraPtr{
+    FlowBitmapBgraPtr {
         #[serde(rename="ptrToFlowBitmapBgraPtr")]
-        ptr_to_flow_bitmap_bgra_ptr: usize
-    }
+        ptr_to_flow_bitmap_bgra_ptr: usize,
+    },
 }
 #[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
 pub enum EdgeKind {
@@ -237,7 +345,7 @@ pub enum IoEnum {
     #[serde(rename="url")]
     Url(String),
     #[serde(rename="outputBuffer")]
-    OutputBuffer
+    OutputBuffer,
 }
 
 #[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
@@ -265,13 +373,35 @@ pub enum Framewise {
 }
 
 #[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
-pub struct Build001_Graph_Recording {
+pub struct Build001GraphRecording {
     pub record_graph_versions: Option<bool>,
     pub record_frame_images: Option<bool>,
     pub render_last_graph: Option<bool>,
     pub render_graph_versions: Option<bool>,
     pub render_animated_graph: Option<bool>,
 }
+
+impl  Build001GraphRecording {
+    pub fn debug_defaults() -> Build001GraphRecording {
+        Build001GraphRecording {
+            record_graph_versions: Some(true),
+            record_frame_images: Some(true),
+            render_last_graph: Some(true),
+            render_animated_graph: Some(false),
+            render_graph_versions: Some(false),
+        }
+    }
+    pub fn off() -> Build001GraphRecording {
+        Build001GraphRecording {
+            record_graph_versions: Some(false),
+            record_frame_images: Some(false),
+            render_last_graph: Some(false),
+            render_animated_graph: Some(false),
+            render_graph_versions: Some(false),
+        }
+    }
+}
+
 
 #[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
 pub struct Build001Config {
@@ -280,7 +410,9 @@ pub struct Build001Config {
     #[serde(rename="processAllGifFrames")]
     pub process_all_gif_frames: Option<bool>,
     #[serde(rename="graphRecording")]
-    pub graph_recording: Option<Build001_Graph_Recording>,
+    pub graph_recording: Option<Build001GraphRecording>,
+    #[serde(rename="noGammaCorrection")]
+    pub no_gamma_correction: bool,
 }
 #[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
 pub struct Build001 {
@@ -289,6 +421,69 @@ pub struct Build001 {
     pub io: Vec<IoObject>,
     pub framewise: Framewise,
 }
+
+#[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
+pub struct Execute001 {
+    #[serde(rename="graphRecording")]
+    pub graph_recording: Option<Build001GraphRecording>,
+    pub framewise: Framewise,
+}
+
+#[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
+pub struct GetImageInfo001 {
+    #[serde(rename="ioId")]
+    pub io_id: i32,
+}
+#[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
+pub struct JpegIDCTDownscaleHints {
+    pub width: i64,
+    pub height: i64,
+    #[serde(rename="scaleLumaSpatially")]
+    pub scale_luma_spatially: Option<bool>,
+    #[serde(rename="gammaCorrectForSrgbDuringSpatialLumaScaling")]
+    pub gamma_correct_for_srgb_during_spatial_luma_scaling: Option<bool>
+}
+#[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
+pub enum TellDecoderWhat {
+    JpegDownscaleHints(JpegIDCTDownscaleHints)
+}
+#[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
+pub struct TellDecoder001 {
+    #[serde(rename="ioId")]
+    pub io_id: i32,
+    pub command: TellDecoderWhat
+}
+
+#[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
+pub struct ImageInfo {
+    #[serde(rename="preferredMimeType")]
+    pub preferred_mime_type: String,
+    #[serde(rename="preferredExtension")]
+    pub preferred_extension: String,
+    #[serde(rename="frameCount")]
+    pub frame_count: usize,
+    #[serde(rename="currentFrameIndex")]
+    pub current_frame_index: i64,
+    #[serde(rename="frame0Width")]
+    pub frame0_width: i32,
+    #[serde(rename="frame0Height")]
+    pub frame0_height: i32,
+    #[serde(rename="frame0PostDecodeFormat")]
+    pub frame0_post_decode_format: PixelFormat,
+}
+#[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
+pub enum ResponsePayload {
+    ImageInfo(ImageInfo),
+    None,
+}
+#[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
+pub struct Response001 {
+    pub code: i64,
+    pub success: bool,
+    pub message: Option<String>,
+    pub data: ResponsePayload
+}
+
 
 #[test]
 fn test_roundtrip() {
