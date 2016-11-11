@@ -424,6 +424,8 @@ pub struct Build001 {
 
 #[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
 pub struct Execute001 {
+    #[serde(rename="noGammaCorrection")]
+    pub no_gamma_correction: Option<bool>,
     #[serde(rename="graphRecording")]
     pub graph_recording: Option<Build001GraphRecording>,
     pub framewise: Framewise,

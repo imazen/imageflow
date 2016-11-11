@@ -56,6 +56,10 @@ impl BuildRequestHandler {
 
             let mut g = GraphTranslator::new().translate_framewise(parsed.framewise);
             let job = JobPtr::create(p).unwrap();
+            if let Some(s::Build001Config{ ref no_gamma_correction, ..}) = parsed.builder_config {
+                ::ffi::flow_context_set_floatspace(p, match *no_gamma_correction { true => ::ffi::Floatspace::srgb, _ => ::ffi::Floatspace::linear},0f32,0f32,0f32)
+            }
+
             if let Some(s::Build001Config{ graph_recording, ..}) = parsed.builder_config {
                 if let Some(r) = graph_recording {
                     job.configure_graph_recording(r);
@@ -63,6 +67,8 @@ impl BuildRequestHandler {
             }
 
             IoTranslator::new(p).add_to_job(job.as_ptr(), io_vec);
+
+
 
             if !job.execute(&mut g){
                 ctx.assert_ok(Some(&mut g));

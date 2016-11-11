@@ -16,6 +16,29 @@ pub struct Context {
     p: cell::RefCell<ContextPtr>,
 }
 
+pub struct SelfDisposingContextPtr{
+    ptr: ContextPtr
+}
+impl SelfDisposingContextPtr{
+    pub fn create() -> Result<SelfDisposingContextPtr> {
+        let p = ContextPtr::create()?;
+        Ok(SelfDisposingContextPtr{ptr: p})
+    }
+    pub fn inner(&self) -> &ContextPtr{
+        &self.ptr
+    }
+
+    pub fn destroy_allowing_panics(mut self) -> () {
+        self.ptr.destroy_allowing_panics()
+    }
+
+}
+impl Drop for SelfDisposingContextPtr {
+    fn drop(&mut self) {
+        self.ptr.force_destroy();
+    }
+}
+
 pub struct JobPtr {
     ptr: *mut ::ffi::Job,
     c: *mut ::ffi::Context
@@ -48,6 +71,27 @@ impl JobPtr {
             }
         }
     }
+    pub unsafe fn add_io_ptr(&self,
+                         io: *mut ::ffi::JobIO,
+                         io_id: i32,
+                         direction: IoDirection)
+                         -> Result<()> {
+
+        let ctx_ptr = self.ctx().as_ptr()?;
+        let p = ::ffi::flow_job_add_io(self.context_ptr(),
+                                       self.as_ptr(),
+                                       io,
+                                       io_id,
+                                       direction);
+        if !p {
+            Err(self.ctx().get_error_copy().unwrap())
+        } else {
+            Ok(())
+        }
+
+    }
+
+
     pub fn record_graphs(&self){
         let _ = unsafe { ::ffi::flow_job_configure_recording(self.context_ptr(),
                                                              self.as_ptr(),
@@ -78,6 +122,7 @@ impl JobPtr {
                                                     .unwrap_or(false))
         };
     }
+
 
     pub fn get_image_info(&self, io_id: i32) -> Result<s::ImageInfo> {
         unsafe {
@@ -152,6 +197,14 @@ impl JobPtr {
                     self.configure_graph_recording(r);
                 }
                 self.record_graphs();
+                unsafe {
+                    if let Some(b) = parsed.no_gamma_correction {
+                        ::ffi::flow_context_set_floatspace(self.c, match b {
+                            true => ::ffi::Floatspace::srgb,
+                            false => ::ffi::Floatspace::linear
+                        }, 0f32, 0f32, 0f32)
+                    }
+                }
                 if !self.execute(&mut g){
                     unsafe { self.ctx().assert_ok(Some(&mut g)); }
                 }
@@ -197,6 +250,7 @@ impl ContextPtr {
             imageflow_response as *const ImageflowJsonResponse
         }
     }
+
 }
 
 pub struct Job {
@@ -261,10 +315,37 @@ impl ContextPtr {
 }
 
 impl ContextPtr {
-    fn destroy(&mut self) {
+    pub fn create() -> Result<ContextPtr> {
+        unsafe {
+            let ptr = ::ffi::flow_context_create();
+
+            if ptr.is_null() {
+                Err(FlowError::Oom)
+            } else {
+                Ok(ContextPtr { ptr: Some(ptr) })
+            }
+        }
+    }
+
+    fn force_destroy(&mut self) {
         unsafe {
             self.ptr = match self.ptr {
                 Some(ptr) => {
+                    ::ffi::flow_context_destroy(ptr);
+                    None
+                }
+                _ => None,
+            }
+        }
+    }
+
+    fn destroy_allowing_panics(&mut self) {
+        unsafe {
+            self.ptr = match self.ptr {
+                Some(ptr) => {
+                    if !::ffi::flow_context_begin_terminate(ptr){
+                        panic!("Error during context shutdown{:?}", self.get_error_copy().unwrap());
+                    }
                     ::ffi::flow_context_destroy(ptr);
                     None
                 }
@@ -281,13 +362,19 @@ impl ContextPtr {
             },
         }
     }
+    pub fn as_ptr(&self) -> Result<*mut ::ffi::Context> {
+        match self.ptr {
+            Some(p) if p != ptr::null_mut() => Ok(p),
+            _ =>  Err(FlowError::ContextInvalid),
+        }
+    }
 }
 
 
 
 impl Drop for Context {
     fn drop(&mut self) {
-        (*self.p.borrow_mut()).destroy();
+        (*self.p.borrow_mut()).force_destroy();
     }
 }
 impl Context {
@@ -327,10 +414,10 @@ impl Context {
 
                     // So use the ContextPtr version
                     let copy = b.get_error_copy().unwrap();
-                    b.destroy();
+                    b.force_destroy();
                     Err(copy)
                 } else {
-                    b.destroy();
+                    b.force_destroy();
                     Ok(())
                 }
             },

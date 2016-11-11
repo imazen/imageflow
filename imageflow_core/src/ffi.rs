@@ -116,15 +116,6 @@ pub enum EdgeKind {
     Info = 3,
 }
 
-// #[repr(C)]
-// #[derive(Copy,Clone, Debug)]
-// pub enum PixelFormat {
-// bgr24 = 3,
-// bgra32 = 4,
-// gray8 = 1,
-// }
-//
-
 #[repr(C)]
 #[derive(Copy,Clone, Debug)]
 pub enum Floatspace {

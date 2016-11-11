@@ -1,8 +1,3 @@
-Add JSON endpoint for querying decoder info
-Add JSON endpoint for sending decoder hints
-Add JSON endpoint for executing a job
-
-
 Add tests for IDCT downscaling, linear and not
 
 Verify input/output node quantities are validated

@@ -12,9 +12,14 @@ extern crate threadpool;
 extern crate serde;
 extern crate serde_json;
 extern crate time;
+extern crate imageflow_serde as s;
 use std::path::PathBuf;
 use std::str::FromStr;
 use std::sync::mpsc::channel;
+use ContextPtr;
+use SelfDisposingContextPtr;
+use JsonResponse;
+use JobPtr;
 
 
 #[derive(Copy,Clone, Debug)]
@@ -228,6 +233,8 @@ fn benchmark_op(cmds: BoringCommands, mem: *mut u8, len: usize) -> BenchmarkResu
 }
 pub fn benchmark(bench: BenchmarkOptions) -> Result<BenchmarkResults, String> {
 
+    //Switch to Arc instead of pointers
+
     let mut f = File::open(bench.input_path).unwrap();//bad
     let mut buffer = Vec::new();
 
@@ -265,6 +272,7 @@ pub fn benchmark(bench: BenchmarkOptions) -> Result<BenchmarkResults, String> {
     let mut res_list = Vec::new();
     let result_iterator = rx.iter().take(bench.run_count as usize);
     for i in result_iterator {
+        //res_list.push(i.result?)
         match i.result {
             Ok(_) => {
                 res_list.push(i);
@@ -280,12 +288,12 @@ pub fn benchmark(bench: BenchmarkOptions) -> Result<BenchmarkResults, String> {
         let _ = Vec::from_raw_parts(mem, len, cap);
     }
 
-    return Ok(BenchmarkResults {
+    Ok(BenchmarkResults {
         list: res_list,
         wall_nanoseconds: (end_at - begin_at) as i64,
         threads: bench.thread_count,
         count: bench.run_count,
-    });
+    })
 }
 
 
@@ -301,48 +309,42 @@ pub fn process_image<F, C, R>(commands: BoringCommands,
     where F: Fn(*mut Context) -> Vec<IoResource>,
           C: Fn(*mut Context, *mut Job) -> Result<R, String>
 {
+    let context = SelfDisposingContextPtr::create().unwrap();
+    let result;
+
     unsafe {
+        let c = context.inner();
+        let mut job: JobPtr = JobPtr::create(c.as_ptr().unwrap()).unwrap();
 
-        let c = flow_context_create();
-        assert!(!c.is_null());
+        //Add I/O
+        let inputs: Vec<IoResource> = io_provider(c.as_ptr().unwrap());
+        for (index, input) in inputs.iter().enumerate() {
+            let dir = input.direction.clone();
+            let io = input.io;
 
-        if commands.luma_correct {
-            flow_context_set_floatspace(c, Floatspace::linear, 0f32, 0f32, 0f32);
-        } else {
-            flow_context_set_floatspace(c, Floatspace::srgb, 0f32, 0f32, 0f32);
+            job.add_io_ptr(io, index as i32, dir).unwrap();
         }
 
 
-        let job = ::JobPtr::create(c).unwrap();
-
-        let j = job.as_ptr();
-
-        let mut inputs = io_provider(c);
-
-
-        for (index, input) in inputs.iter_mut().enumerate() {
-            // TODO! Lots of error handling needed here. IO create/add can fail
-            if !flow_job_add_io(c, j, input.io, index as i32, input.direction.clone()) {
-                flow_context_print_and_exit_if_err(c);
-            }
-
+        let info_blob: JsonResponse = job.message("v0.0.1/get_image_info", "{\"ioId\": 0}".as_bytes()).unwrap();
+        let info_response: s::Response001 = serde_json::from_slice(info_blob.response_json.as_ref()).unwrap();
+        if !info_response.success {
+            panic!("get_image_info failed: {:?}",info_response);
         }
-
-        let mut info = DecoderInfo { ..Default::default() };
-
-        if !flow_job_get_decoder_info(c, j, 0, &mut info) {
-            flow_context_print_and_exit_if_err(c);
-        }
+        let (frame0_width, frame0_height) = match info_response.data {
+            s::ResponsePayload::ImageInfo(info) => (info.frame0_width, info.frame0_height),
+            _ => panic!("")
+        };
 
 
         let constraint_ratio = (commands.w as f32) / (commands.h as f32);
-        let natural_ratio = (info.frame0_width as f32) / (info.frame0_height as f32);
+        let natural_ratio = (frame0_width as f32) / (frame0_height as f32);
         let final_w;
         let final_h;
 
         match commands.fit {
             ConstraintMode::Max => {
-                if info.frame0_width > commands.w || info.frame0_height > commands.h {
+                if frame0_width > commands.w || frame0_height > commands.h {
                     if constraint_ratio > natural_ratio {
                         final_h = commands.h as usize;
                         final_w = (commands.h as f32 * natural_ratio).round() as usize;
@@ -351,8 +353,8 @@ pub fn process_image<F, C, R>(commands: BoringCommands,
                         final_h = (commands.w as f32 / natural_ratio).round() as usize;
                     }
                 } else {
-                    final_w = info.frame0_width as usize;
-                    final_h = info.frame0_height as usize;
+                    final_w = frame0_width as usize;
+                    final_h = frame0_height as usize;
                 }
             }
             ConstraintMode::Distort => {
@@ -370,76 +372,47 @@ pub fn process_image<F, C, R>(commands: BoringCommands,
 
         let pre_w = ((final_w as f32) * trigger_ratio).round() as i64;
         let pre_h = ((final_h as f32) * trigger_ratio).round() as i64;
-        if !flow_job_decoder_set_downscale_hints_by_placeholder_id(c,
-                                                                   j,
-                                                                   0,
-                                                                   pre_w,
-                                                                   pre_h,
-                                                                   pre_w,
-                                                                   pre_h,
-                                                                   commands.luma_correct,
-                                                                   commands.luma_correct) {
-            flow_context_print_and_exit_if_err(c);
-        }
+
+        let send_hints = s::TellDecoder001{
+            io_id: 0,
+            command: s::TellDecoderWhat::JpegDownscaleHints(s::JpegIDCTDownscaleHints{
+                height: pre_h,
+                width: pre_w,
+                scale_luma_spatially: Some(commands.luma_correct),
+                gamma_correct_for_srgb_during_spatial_luma_scaling: Some(commands.luma_correct)
+            })
+        };
+        let send_hints_str = serde_json::to_string_pretty(&send_hints).unwrap();
+        job.message("v0.0.1/tell_decoder", send_hints_str.as_bytes()).unwrap().assert_ok();
 
 
-        // println!("Scale {}x{} down to {}x{} (jpeg)", info.frame0_width, info.frame0_height, final_w, final_h);
 
-        // TODO: Replace with s::Node, s::Graph, etc.
-        let mut g = flow::graph::create( 10, 10);
-        // FIXME: should we still check for null? Depends on whether we panic on OOM, or panic + Result
-        // assert!(!g.is_null());
 
-        //        let mut last = flow::graph::node_create_decoder(c, &mut g, -1, 0);
-        //        assert!(last == 0);
-        //
-        //        last = flow::graph::node_create_scale(c,
-        //                                      &mut g,
-        //                                      last,
-        //                                      final_w,
-        //                                      final_h,
-        //                                      commands.down_filter as i32,
-        //                                      commands.up_filter as i32,
-        //                                      1,
-        //                                      commands.sharpen);
-        //
-        //        assert!(last > 0);
-
-        let disable_png_alpha = match commands.format {
-            ImageFormat::Png24 => true,
-            _ => false,
+        let encoder_preset = match commands.format{
+            ImageFormat::Jpeg => s::EncoderPreset::LibjpegTurbo{quality: Some(commands.jpeg_quality)},
+            ImageFormat::Png => s::EncoderPreset::Libpng{ zlib_compression: None, matte: None, depth: Some(s::PngBitDepth::Png32)},
+            ImageFormat::Png24 => s::EncoderPreset::Libpng{ zlib_compression: None, matte: Some(s::Color::Black), depth: Some(s::PngBitDepth::Png24)},
         };
 
-        let hints = EncoderHints {
-            jpeg_encode_quality: commands.jpeg_quality,
-            disable_png_alpha: disable_png_alpha,
+        let steps = vec![
+        s::Node::Decode{ io_id: 0},
+        s::Node::Scale{ w: final_w, h: final_h, down_filter: Some(commands.down_filter), up_filter: Some(commands.up_filter), sharpen_percent: Some(commands.sharpen), flags: Some(1)},
+        s::Node::Encode{ io_id: 1, preset: encoder_preset}
+        ];
+
+        let send_execute = s::Execute001{
+            framewise: s::Framewise::Steps(steps),
+            graph_recording: None,
+            no_gamma_correction: Some(!commands.luma_correct)
         };
 
-        let encoder_id = match commands.format {
-            ImageFormat::Png24 => ImageFormat::Png,
-            f => f,
-
-        } as i64;
+        let send_execute_str = serde_json::to_string_pretty(&send_execute).unwrap();
+        job.message("v0.0.1/execute", send_execute_str.as_bytes()).unwrap().assert_ok();
 
 
-        //        last =
-        //            flow::graph::node_create_encoder(c, &mut g, last, 1, encoder_id, &hints);
-        //        assert!(last > 0);
+        result = cleanup(c.as_ptr().unwrap(), job.as_ptr());
 
-
-        if !job.execute(&mut g) {
-            flow_context_print_and_exit_if_err(c);
-        }
-
-        let result = cleanup(c, j);
-        // TODO: call both cleanup functions and print errors
-
-        if !flow_context_begin_terminate(c) {
-            flow_context_print_and_exit_if_err(c);
-        }
-
-        flow_context_destroy(c);
-
-        return result;
     }
+    context.destroy_allowing_panics();
+    result
 }

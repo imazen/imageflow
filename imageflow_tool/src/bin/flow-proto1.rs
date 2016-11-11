@@ -25,7 +25,7 @@ fn build_app() -> App<'static, 'static> {
 
 
     App::new("flow-proto1")
-        .version("0.0.3")
+        .version("0.0.4")
         .author("Email us at imageflow@imazen.io")
         .about("Throwaway prototype tool to play with downscaling jpegs via libimageflow. Not for \
                 production use. Optimizations disabled on Windows; expect poor perf there. Lots \

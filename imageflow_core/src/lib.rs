@@ -2,6 +2,7 @@
 #![feature(oom)]
 #![feature(alloc_system)]
 #![feature(conservative_impl_trait)]
+#![feature(question_mark)]
 
 #![allow(unused_features)]
 #![allow(unused_imports)]
@@ -23,7 +24,7 @@ pub mod boring;
 pub mod parsing;
 mod flow;
 mod context;
-pub use context::{Context, ContextPtr, Job, JobPtr, JobIo, JobIoPtr};
+pub use context::{Context, ContextPtr, Job, JobPtr, JobIo, JobIoPtr, SelfDisposingContextPtr};
 pub use ::ffi::{IoDirection, IoMode};
 
 pub use parsing::JsonResponseError;
@@ -60,6 +61,7 @@ pub struct JsonResponse<'a> {
 
 
 
+
 pub type Result<T> = std::result::Result<T, FlowError>;
 
 impl<'a> JsonResponse<'a> {
@@ -89,6 +91,18 @@ impl<'a> JsonResponse<'a> {
         }
     }
 
+    pub fn status_2xx(&self) -> bool{
+        self.status_code >= 200 && self.status_code < 300
+    }
+    pub fn assert_ok(&self){
+        if !self.status_2xx() {
+            panic!("status {} - {:?}", self.status_code, std::str::from_utf8(self.response_json.as_ref()).unwrap());
+        }
+    }
+    pub fn unwrap_status200(&self) -> &JsonResponse<'a>{
+        self.assert_ok();
+        self
+    }
 
     pub fn ok() -> JsonResponse<'a> {
         JsonResponse {
