@@ -166,7 +166,7 @@ fn test_handler() {
     // println!("{}", json_str);
 
     let p = std::env::current_dir().unwrap();
-    println!("The current directory is {}", p.display());
+    //println!("The current directory is {}", p.display());
 
     let response = handler.do_and_respond(&mut *ctx_cell, json_str.into_bytes().as_slice());
 

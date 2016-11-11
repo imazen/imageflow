@@ -102,7 +102,7 @@ impl JobPtr {
                                                              false) };
     }
     pub fn configure_graph_recording(&self, recording: s::Build001GraphRecording) {
-        let r = if std::env::var("CI") == Ok("true".to_owned()) {
+        let r = if std::env::var("CI").and_then(|s| Ok(s.to_uppercase()))  == Ok("TRUE".to_owned()) {
             s::Build001GraphRecording::off()
         } else {
             recording
@@ -196,7 +196,6 @@ impl JobPtr {
                 if let Some(r) = parsed.graph_recording {
                     self.configure_graph_recording(r);
                 }
-                self.record_graphs();
                 unsafe {
                     if let Some(b) = parsed.no_gamma_correction {
                         ::ffi::flow_context_set_floatspace(self.c, match b {

@@ -413,7 +413,7 @@ pub fn estimate_node_recursive(c: *mut Context,
             let input_indexes =
                 g.parents(node_id).iter(g).map(|(edge_ix, ix)| ix).collect::<Vec<NodeIndex<u32>>>();
 
-            println!("Estimating recursively {:?}", input_indexes);
+            //println!("Estimating recursively {:?}", input_indexes);
             for ix in input_indexes {
 
                 estimate_node_recursive(c, job, g, ix);

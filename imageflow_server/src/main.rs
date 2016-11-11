@@ -17,6 +17,8 @@ use router::Router;
 use std::io::Read;
 use time::precise_time_ns;
 
+//Todo: consider lru_cache crate
+
 // This Rust server was built one saturday evening to exercise various
 // bits of the stack. It's not safe (nor safer than a C equivalent), and
 // we're not using Rust idiomatically or correctly. Nothing is re-entrant,

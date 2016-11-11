@@ -10,4 +10,4 @@ Roundtrip and compare various things (like flips)
 
 Don't panic on bad JSON or input; return a Result, and get it right.
 
-It's okay to panic on OOM, but 
+It's okay to panic on OOM, but catch it
