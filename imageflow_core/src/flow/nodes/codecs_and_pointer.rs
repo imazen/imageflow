@@ -212,8 +212,8 @@ fn encoder_def() -> NodeDefinition {
                                      ffi::EncoderHints {
                                          jpeg_encode_quality: -1,
                                          disable_png_alpha: match *depth {
-                                             Some(s::PngBitDepth::Png24) => false,
-                                             _ => true },
+                                             Some(s::PngBitDepth::Png24) => true,
+                                             _ => false },
                                      })
                             };
 
