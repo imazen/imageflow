@@ -98,8 +98,8 @@ fn get_jpeg_bytes(source: &str, w: Option<u32>, h: Option<u32>) -> Vec<u8> {
 
     let commands = BoringCommands {
         fit: ConstraintMode::Max,
-        w: w.unwrap_or(0) as i32,
-        h: h.unwrap_or(0) as i32,
+        w: w.and_then(|w| Some(w as i32)),
+        h: h.and_then(|h| Some(h as i32)),
         jpeg_quality: 90,
         precise_scaling_ratio: 2.1f32,
         luma_correct: true,
@@ -142,7 +142,7 @@ fn proto1(req: &mut Request) -> IronResult<Response> {
 
     Ok(Response::with((content_type, status::Ok, payload)))
 }
- 
+
 
 fn main() {
     let mut router = Router::new();

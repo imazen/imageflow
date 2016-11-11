@@ -61,7 +61,7 @@ def create_command(tool, image, nogamma, filter, sharpen, w)
   end
   if tool == :flow
     outputformat = image =~ /\.png/ ? "png" : "png24"
-    command = "#{EXEPATH}flow-proto1 #{nogamma ? '--incorrectgamma' : ''} --down-filter #{filter} --up-filter #{filter} --format #{outputformat} -m 100 -h 9999  --sharpen #{sharpen} -w #{w} -i #{infile} -o #{OUTPATH}#{outfile}"
+    command = "#{EXEPATH}flow-proto1 #{nogamma ? '--incorrectgamma' : ''} --down-filter #{filter} --up-filter #{filter} --format #{outputformat} -m 100 --constrain distort  --sharpen #{sharpen} -w #{w} -i #{infile} -o #{OUTPATH}#{outfile}"
   end
   {command: command, image: image, gamma: nogamma ? 'nogamma' : 'linear', filter: filter, sharpen: sharpen,
     w: w, tool: tool,
@@ -134,7 +134,13 @@ consumers = (0..5).map do |t|
         work[:dssim] = IO.read(dssim_path)
       else
         work[:dssim] = `dssim #{work[:path]} #{compare_to_path}`
-        IO.write(dssim_path, work[:dssim]) if $?.exitstatus == 0
+        if $?.exitstatus == 0
+          IO.write(dssim_path, work[:dssim]) 
+        else
+          puts `identify #{work[:path]}`
+          puts `identify #{compare_to_path}`
+        end 
+
       end
       work[:dssim_value] = work[:dssim].strip.to_f
     end

@@ -54,14 +54,12 @@ fn build_app() -> App<'static, 'static> {
             .long("width")
             .value_name("WIDTH")
             .takes_value(true)
-            .required(true)
             .help("scale to this width or smaller."))
         .arg(Arg::with_name("height")
             .short("h")
             .long("height")
             .value_name("HEIGHT")
             .takes_value(true)
-            .required(true)
             .help("scale to this height or smaller."))
         .arg(Arg::with_name("jpeg-quality")
             .long("jpeg-quality")
@@ -182,8 +180,8 @@ fn parse(matches: ArgMatches) -> Result<ParsedResult, String> {
 
 
     let commands = BoringCommands {
-        w: w.unwrap_or(0) as i32,
-        h: h.unwrap_or(0) as i32,
+        w: w.and_then(|w| Some(w as i32)),
+        h: h.and_then(|h| Some(h as i32)),
         sharpen: sharpen.unwrap_or(0f32) as f32,
         jpeg_quality: q.unwrap_or(100),
         fit: constrain,
@@ -304,7 +302,7 @@ fn test_correct_execution() {
     }
 
     let valid_args =
-        vec!["flow-proto1", "-i", "test_input.jpg", "-o", "b.jpg", "-w", "20", "-h", "20"];
+        vec!["flow-proto1", "-i", "test_input.jpg", "-o", "b.jpg", "-w", "20",  "--constrain", "distort"];
 
     let parsed_result = parse(build_app().get_matches_from(valid_args))
         .expect("To parse correctly");

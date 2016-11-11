@@ -66,8 +66,8 @@ impl FromStr for ConstraintMode {
 #[derive(Copy,Clone, Debug)]
 pub struct BoringCommands {
     pub fit: ConstraintMode,
-    pub w: i32,
-    pub h: i32,
+    pub w: Option<i32>,
+    pub h: Option<i32>,
     pub precise_scaling_ratio: f32,
     pub luma_correct: bool,
     pub jpeg_quality: i32,
@@ -302,6 +302,57 @@ pub struct IoResource {
     pub direction: IoDirection,
 }
 
+fn constrain(original_width: i32, original_height: i32, constrain: ConstraintMode, constrain_w: Option<i32>, constrain_h: Option<i32>) -> (usize, usize){
+
+    let natural_ratio = (original_width as f32) / (original_height as f32);
+    let final_w;
+    let final_h;
+
+    //println!("{:?}", commands);
+    if constrain_h.is_none() && constrain_w.is_none(){
+        final_w = original_width as usize;
+        final_h = original_height as usize;
+    }else {
+        let w = match constrain_w {
+            Some(w) => w,
+            None => (constrain_h.unwrap() as f32 * natural_ratio).round() as i32
+        };
+        let h = match constrain_h {
+            Some(h) => h,
+            None => (constrain_w.unwrap() as f32 / natural_ratio).round() as i32
+        };
+
+        match constrain{
+            ConstraintMode::Max => {
+                if original_width > w || original_height > h {
+                    let constraint_ratio = (w as f32) / (h as f32);
+                    if constraint_ratio > natural_ratio {
+                        final_h = h as usize;
+                        final_w = (h as f32 * natural_ratio).round() as usize;
+                    } else {
+                        final_w = w as usize;
+                        final_h = (w as f32 / natural_ratio).round() as usize;
+                    }
+                } else {
+                    final_w = original_width as usize;
+                    final_h = original_height as usize;
+                }
+            }
+            ConstraintMode::Distort => {
+                final_h = h as usize;
+                final_w = w as usize;
+            }
+        };
+    }
+        (final_w, final_h)
+}
+
+#[test]
+fn test_constraining(){
+    assert_eq!((100,50), constrain(200,100,ConstraintMode::Max, Some(100), None));
+    assert_eq!((400,200), constrain(200,100,ConstraintMode::Distort, Some(400), None));
+}
+
 pub fn process_image<F, C, R>(commands: BoringCommands,
                               io_provider: F,
                               cleanup: C)
@@ -336,32 +387,9 @@ pub fn process_image<F, C, R>(commands: BoringCommands,
             _ => panic!("")
         };
 
+        let (final_w, final_h) = constrain(frame0_width,frame0_height, commands.fit, commands.w, commands.h);
 
-        let constraint_ratio = (commands.w as f32) / (commands.h as f32);
-        let natural_ratio = (frame0_width as f32) / (frame0_height as f32);
-        let final_w;
-        let final_h;
-
-        match commands.fit {
-            ConstraintMode::Max => {
-                if frame0_width > commands.w || frame0_height > commands.h {
-                    if constraint_ratio > natural_ratio {
-                        final_h = commands.h as usize;
-                        final_w = (commands.h as f32 * natural_ratio).round() as usize;
-                    } else {
-                        final_w = commands.w as usize;
-                        final_h = (commands.w as f32 / natural_ratio).round() as usize;
-                    }
-                } else {
-                    final_w = frame0_width as usize;
-                    final_h = frame0_height as usize;
-                }
-            }
-            ConstraintMode::Distort => {
-                final_h = commands.h as usize;
-                final_w = commands.w as usize;
-            }
-        };
+        //Should we IDCT downscale?
 
         let trigger_ratio = if 1.0f32 > commands.precise_scaling_ratio {
             3.0f32
@@ -369,21 +397,22 @@ pub fn process_image<F, C, R>(commands: BoringCommands,
             commands.precise_scaling_ratio
         };
 
+        let pre_w = ((final_w as f32) * trigger_ratio).round() as i32;
+        let pre_h = ((final_h as f32) * trigger_ratio).round() as i32;
 
-        let pre_w = ((final_w as f32) * trigger_ratio).round() as i64;
-        let pre_h = ((final_h as f32) * trigger_ratio).round() as i64;
-
-        let send_hints = s::TellDecoder001{
-            io_id: 0,
-            command: s::TellDecoderWhat::JpegDownscaleHints(s::JpegIDCTDownscaleHints{
-                height: pre_h,
-                width: pre_w,
-                scale_luma_spatially: Some(commands.luma_correct),
-                gamma_correct_for_srgb_during_spatial_luma_scaling: Some(commands.luma_correct)
-            })
-        };
-        let send_hints_str = serde_json::to_string_pretty(&send_hints).unwrap();
-        job.message("v0.0.1/tell_decoder", send_hints_str.as_bytes()).unwrap().assert_ok();
+        if pre_w < frame0_width && pre_h < frame0_height {
+            let send_hints = s::TellDecoder001 {
+                io_id: 0,
+                command: s::TellDecoderWhat::JpegDownscaleHints(s::JpegIDCTDownscaleHints {
+                    height: pre_h as i64,
+                    width: pre_w as i64,
+                    scale_luma_spatially: Some(commands.luma_correct),
+                    gamma_correct_for_srgb_during_spatial_luma_scaling: Some(commands.luma_correct)
+                })
+            };
+            let send_hints_str = serde_json::to_string_pretty(&send_hints).unwrap();
+            job.message("v0.0.1/tell_decoder", send_hints_str.as_bytes()).unwrap().assert_ok();
+        }
 
 
 
