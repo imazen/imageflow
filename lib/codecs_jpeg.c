@@ -651,6 +651,7 @@ int32_t flow_codecs_jpg_decoder_get_exif(flow_c * c, struct flow_codec_instance 
 static bool flow_codecs_jpg_decoder_reset(flow_c * c, struct flow_codecs_jpeg_decoder_state * state)
 {
     if (state->stage == flow_codecs_jpg_decoder_stage_FinishRead) {
+        //TODO: This may be a double-free.... I don't think we own this.
         FLOW_free(c, state->pixel_buffer);
     }
     if (state->stage == flow_codecs_jpg_decoder_stage_Null) {
@@ -690,16 +691,28 @@ static bool flow_codecs_jpg_decoder_reset(flow_c * c, struct flow_codecs_jpeg_de
     return true;
 }
 
+static bool flow_jpeg_cleanup_decoder(flow_c * c, void * state){
+    if (!flow_codecs_jpg_decoder_reset(c, (struct flow_codecs_jpeg_decoder_state *)state)) {
+        FLOW_add_to_callstack(c);
+        return false;
+    }
+    return true;
+}
+
 static bool flow_codecs_initialize_decode_jpeg(flow_c * c, struct flow_codec_instance * item)
 {
     // flow_codecs_jpeg_decoder_state
     if (item->codec_state == NULL) {
+
+
         struct flow_codecs_jpeg_decoder_state * state
             = (struct flow_codecs_jpeg_decoder_state *)FLOW_malloc(c, sizeof(struct flow_codecs_jpeg_decoder_state));
         if (state == NULL) {
             FLOW_error(c, flow_status_Out_of_memory);
             return false;
         }
+        flow_set_destructor(c, state, flow_jpeg_cleanup_decoder);
+
         state->stage = flow_codecs_jpg_decoder_stage_Null;
 
         state->hints.scale_luma_spatially = false;

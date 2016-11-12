@@ -233,7 +233,8 @@ TEST_CASE_METHOD(Fixture, "Creating flow_bitmap_bgra", "[error_handling]")
         REQUIRE(flow_context_has_error(&context));
         REQUIRE(flow_context_error_reason(&context) == flow_status_Out_of_memory);
     }
-    flow_bitmap_bgra_destroy(&context, source);
+    REQUIRE(flow_context_begin_terminate(&context) == true);
+    flow_context_end_terminate(&context);
 }
 
 TEST_CASE("flow_context", "[error_handling]")

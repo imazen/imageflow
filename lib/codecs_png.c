@@ -1,4 +1,4 @@
-#include <zlib.h>
+#include "zlib.h"
 #include <stdio.h>
 #include "jpeglib.h"
 #include "imageflow_private.h"
