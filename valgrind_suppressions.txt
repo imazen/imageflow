@@ -137,3 +137,19 @@
    ...
 }
 
+
+{
+   Reported to https://github.com/glennrp/libpng/issues/97
+   Memcheck:Cond
+   fun:fill_window
+   fun:deflate_fast
+   fun:deflate
+   fun:png_compress_IDAT
+   fun:png_write_filtered_row
+   fun:png_write_find_filter
+   fun:png_write_row
+   fun:png_write_image
+   fun:png_write_png
+   ...
+}
+
