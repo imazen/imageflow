@@ -8,7 +8,7 @@ wget -nc https://sourceforge.net/projects/libpng/files/libpng16/older-releases/1
 
 tar -xvzf libpng-1.6.23.tar.gz
 cd libpng-1.6.23
-./configure --prefix=$(pwd)/..
+CFLAGS="-fPIC" ./configure --prefix=$(pwd)/..
 make
 make install
 cd ..
@@ -16,9 +16,6 @@ echo Compiling
 
 gcc testread.c -lpng16 -lz -lm -static -L./lib -I./include -o testread.out
 
-#-fsanitize=address
-
-export LD_LIBRARY_PATH=./lib:${LD_LIBRARY_PATH}
 
 ./testread.out
 
