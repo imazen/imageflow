@@ -1,5 +1,7 @@
 ## Rust .gitignore
 
+*.dot
+*.dot.png
 
 /artifacts/
 

@@ -1,4 +1,16 @@
+Troubleshoot memleaks/valgrind reports
+
 Add tests for IDCT downscaling, linear and not
+
+Move C to a subfolder, change component names to be clearer
+
+Give nodes a validate function.
+
+Give nodes a document/permute function.
+
+Put all graph recording in a graph_recording subfolder
+
+Implement builtin off-by-one comparison nodes with json and image output
 
 Verify input/output node quantities are validated
 Check for cycles

@@ -7,39 +7,40 @@ Imageflow will bring world-class image quality and performance to all languages 
 [![travis-master](https://img.shields.io/travis/imazen/imageflow/master.svg?label=master%3A%20mac64%20ubuntu64%2014.04%2015.04%2016.04)
 [![AppVeyor build status](https://ci.appveyor.com/api/projects/status/0356x95fa312m3wy/branch/master?svg=true&passingText=master%3A%20win32%20win64%20-%20passing&failingText=master%3A%20win32%20win64%20-%20failed)](https://ci.appveyor.com/project/imazen/imageflow/branch/master)
 ](https://travis-ci.org/imazen/imageflow/builds) 
-[![Coverage Status](https://coveralls.io/repos/github/imazen/imageflow/badge.svg?branch=HEAD)](https://coveralls.io/github/imazen/imageflow?branch=HEAD)
+[![Coverage Status (Excluding Rust test coverage of C)](https://coveralls.io/repos/github/imazen/imageflow/badge.svg?branch=HEAD)](https://coveralls.io/github/imazen/imageflow?branch=HEAD)
 [![Coverity Scan Build Status](https://scan.coverity.com/projects/8403/badge.svg)](https://scan.coverity.com/projects/imazen-imageflow)
-
-[![travis-master](https://img.shields.io/travis/imazen/imageflow/graph-rewrite.svg?label=graph-rewrite%3A%20mac64%20ubuntu64%2014.04%2015.04%2016.04)
-[![AppVeyor build status](https://ci.appveyor.com/api/projects/status/0356x95fa312m3wy/branch/graph-rewrite?svg=true&passingText=graph-rewrite%3A%20win32%20win64%20-%20passing&failingText=graph-rewrite%3A%20win32%20win64%20-%20failed)](https://ci.appveyor.com/project/imazen/imageflow/branch/graph-rewrite)
-](https://travis-ci.org/imazen/imageflow/builds) 
 
 ### How can I help?
 
-#### Do you know a little Rust, or are you interested in learning?
+## [Send us 'challenging' images and tasks.](https://github.com/imazen/imageflow/issues/98)
 
-We're starting to port large parts of Imageflow to Rust, and code review / design feedback is invaluable.
+1. Verifiably valid images that tend to fail with other tools,
+2. Tasks that are complex and unexpected
+3. Sets of (input/task/expected output) triples that meet the above criteria, or fail with other tools. 
 
-Have you worked with directed acyclic graphs in Rust? [It would help if you could share your findings here](https://github.com/imazen/imageflow/issues/79).
+## Explore the new JSON API and give us feedback. 
 
-Do you find codec work fun? We need to test *image-gif* as a [potential GIF codec for imageflow](https://github.com/imazen/imageflow/issues/80).
+[docs coming soon]
 
-#### Do you like designing integration tests?
+## Help us set up post-CI test suites and benchmark runners. 
 
-This ties into the JSON API design, but we'd like to set up a very, very comprehensive integration suite with a lot of images. Determining desired/correct results and evaluating them is the hard part. Bit-level correctness is unlikely - at minimum off-by-one rounding differences will occur between platforms with different floating-point precision. DSSIM is more reliable/reasonable. 
+* We have [compare.rb](https://github.com/imazen/imageflow/tree/master/imageflow_tool/result_testing) to compare results with ImageWorsener and ImageMagick
+* We have `scope.sh` (same folder) to analyze Imageflow output with ResampleScope.
+* We have integration tests, with checksummed and expected image results stored on S3.
+* We use DSSIM from @pornel for checking expected/actual similarity when it's expected to differ by more than rounding errors.
+* We use off-by-one checking for everything else, to avoid floating-point differences becoming PITA.
+* Off-by-one checking mean we have to store the 'expected' somewhere, and can't rely exclusively on hashes. We currently put them on S3 manually and pull them down automatically. See imageflow_core/tests/visuals.rs
 
-A good starting point might be [compare.rb](https://github.com/imazen/imageflow/tree/master/imageflow_tool/result_testing).
+The above is not nearly enough. Now that we have a JSON API, we can store and run integration tests on a larger scale. 
+
+It would be ideal to have a set of scripts capable of updating, uploading, and launching linux docker containers in the cloud (almost any cloud, although I prefer DO and AWS), running tests, and having them upload their results to S3 and shut themselves down when they're done. AWS Lambda's 5-minute limit is not enough, unfortuantely. We use AppVeyor and Travis for our core tests, but I expect our suite to hit 1-2 hours for exericising all edge cases for all the images involved (also, basic fuzz testing is slow). This is particularly valuable for benchmarks, where running a psuedo-baremetal machine for long periods is cost-prohibitive - but lanuching a docker container on a maximum-size AWS instance gets us pretty close to baremetal performance, and might even work for logging and evaluating performance results/regressions over time.
+
 
 #### Do you have a physical Windows box?
 
-Virtual machines aren't great for benchmarks. Imageflow (flow-proto1, for now) could benefit from independent benchmarking on physical machines.
-
-#### Are you comfortable using Docker? 
-
-Our linux build enivornment is fully Dockerized. But there are parts that we haven't yet set up
-
-* Triggering a second CI round for long-running (i.e, 40m+) comparison tests. 
-* We haven't set up a tutorial for building Imageflow via docker.
+Virtual machines aren't great for benchmarks. Imageflow (flow-proto1, for now) could benefit from independent benchmarking on physical machines. 
+Or, if you know how to script borrowing a consistent-performing Windows box in the cloud, and setting it up/tearing it down, that would be ideal. 
+We have build scripts that work on AppVeyor, but that's not very useful for benchmarking. 
 
 ### Algorithm implementation work
 
@@ -48,22 +49,22 @@ Our linux build enivornment is fully Dockerized. But there are parts that we hav
 - [x] Support color profile, convert to sRGB
 - [x] Image blending and composition (no external API yet)
 - [x] Whitespace detection/cropping (no external API yet)
-- [x] Ideal scaling-integrated sharpening for subpixel accuracy. (no external API yet)
+- [x] Ideal scaling-integrated sharpening for subpixel accuracy.
 - [x] Automatic white balance correction.  (no external API yet)
 - [ ] Time-constant guassian approximation (%97) blur (1 bug remaining)
 - [ ] Improve contrast/saturation/luma adjustment ergonomics
 - [x] Integrate libjpeg-turbo (read/write)
 - [x] Create correct and ooptimized IDCT downscaling for libjpeg-turbo (linear light, robidoux filter)
 - [x] Integrate libpng (read/write) (32-bit only)
-- [x] Integrate libgif (readonly, single frame)
+- [ ] Integrate Rust gif codec
 - [ ] Support animated gifs
-- [ ] Support metadata reading and writing
+- [ ] Support metadata reading and writing (exif orientation and color profile support done)
 - [ ] Histogram support
 - [ ] Document type detection
 - [ ] Generic convolution support
 - [ ] Add 128-bit color depth support for all operations (most already use 128-bit internally)
 - [ ] Integrate libimagequant for optimal 8-bit png and gif file sizes.
-- [ ] Build command-line tool for users to experiment with during Kickstarter. 
+- [x] Build command-line tool for users to experiment with during Kickstarter. 
 - [ ] Implement cost estimation for all operations
 - [ ] Add subpixel cropping during scale to compensate for IDCT block scaling where subpixel accuracy can be reduced.
 - [x] Auto-generate animated gifs of the operation graph evolution during execution.  
@@ -76,10 +77,9 @@ Our linux build enivornment is fully Dockerized. But there are parts that we hav
 - [x] Validate basic functionality via simple ruby REST [RIAPI](http://riapi.org) server to wrap libimageflow
 - [x] Design correct error handling protocol so all APIs report detailed stacktrace w/ line numbers and useful error messages for all API surfaces. 
 - [x] Expose flexible I/O interface so a variety if I/O types can be cleanly supported from host languages (I.e, .NET Stream, FILE *, membuffer, circular buffer, etc)
-- [ ] Replace direct graph maniupulation with JSON API
+- [x] Replace direct graph maniupulation with JSON API
 - [ ] Finish API design and test coverage for image composition, whitespace detection/cropping, sharpening, blurring, contrast/saturation, and white balance (algorithms already complete or well defined). 
-- [ ] Expose plugin interface for codecs (70%)
-- [ ] Expose custom operations API so host languages can add new algoroithms (50%)
+- [ ] Create plugin interface for codecs 
 - [ ] Create documentation
 - [ ] Create .NET Full/Core bindings
 - [ ] Create Node bindings 
@@ -88,8 +88,8 @@ Our linux build enivornment is fully Dockerized. But there are parts that we hav
 
 
 - [x] Begin porting to Rust. 
-- [x] Explicit control flow at all points.
-- [x] Full debugging information by recording errors at failure point, then appending the stacktract
+- [x] Explicit control flow in all C code.
+- [x] Full debugging information by recording errors at failure point, then appending the stacktrace (C only)
 - [x] Give user complete control over allocation method and timing.
 - [x] Use [Conan.io](http://conan.io) for package management and builds to eliminate dependency hell.
 - [x] Make codecs and node definitions uniform
