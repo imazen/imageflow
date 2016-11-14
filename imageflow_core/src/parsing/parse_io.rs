@@ -26,6 +26,29 @@ impl IoTranslator {
     unsafe fn create_jobio_ptr_from_enum(&self, io_enum: s::IoEnum) -> *mut ::ffi::JobIO {
         let p = self.ctx;
         let result_ptr = match io_enum {
+            s::IoEnum::ByteArray(vec) => {
+                let bytes = vec;
+
+
+                let buf : *mut u8 = ::ffi::flow_context_calloc(p, 1, bytes.len(), ptr::null(), p as *const libc::c_void, ptr::null(), 0) as *mut u8 ;
+                if buf.is_null() {
+                    panic!("OOM");
+                }
+                ptr::copy_nonoverlapping(bytes.as_ptr(), buf, bytes.len());
+
+                let io_ptr =
+                ::ffi::flow_io_create_from_memory(p,
+                                                  ::ffi::IoMode::read_seekable,
+                                                  buf,
+                                                  bytes.len(),
+                                                  p as *const libc::c_void,
+                                                  ptr::null());
+
+                if io_ptr.is_null() {
+                    panic!("Failed to create I/O");
+                }
+                io_ptr
+            }
             s::IoEnum::BytesHex(hex_string) => {
                 let bytes = hex_string.as_str().from_hex().unwrap();
 

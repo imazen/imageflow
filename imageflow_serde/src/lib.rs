@@ -340,6 +340,8 @@ pub enum IoDirection {
 pub enum IoEnum {
     #[serde(rename="bytesHex")]
     BytesHex(String),
+    #[serde(rename="byteArray")]
+    ByteArray(Vec<u8>),
     #[serde(rename="file")]
     Filename(String),
     #[serde(rename="url")]
