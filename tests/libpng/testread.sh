@@ -3,11 +3,14 @@ set -e #Exit on failure.
 
 gcc -v
 
+VER=1.6.26
+FOLDER=/${VER}
+#FOLDER=/older-releases/${VER}
 
-wget -nc https://sourceforge.net/projects/libpng/files/libpng16/older-releases/1.6.23/libpng-1.6.23.tar.gz
+wget -nc https://sourceforge.net/projects/libpng/files/libpng16${FOLDER}/libpng-${VER}.tar.gz
 wget -nc http://zlib.net/zlib128.zip
-tar -xvzf libpng-1.6.23.tar.gz
-cd libpng-1.6.23
+tar -xvzf libpng-${VER}.tar.gz
+cd libpng-${VER}
 CFLAGS="-fPIC" ./configure --prefix=$(pwd)/..
 make
 make install
