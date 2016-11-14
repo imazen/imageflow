@@ -1,5 +1,3 @@
-Troubleshoot memleaks/valgrind reports
-
 Add tests for IDCT downscaling, linear and not
 
 Move C to a subfolder, change component names to be clearer

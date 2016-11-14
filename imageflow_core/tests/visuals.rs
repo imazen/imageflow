@@ -6,6 +6,7 @@ extern crate serde;
 extern crate serde_json;
 
 use std::ffi::CString;
+use imageflow_core::{JobPtr, JsonResponse, SelfDisposingContextPtr};
 use imageflow_core::Context;
 
 fn default_build_config(debug: bool) -> s::Build001Config {
@@ -304,4 +305,136 @@ fn test_dimensions(){
     assert_eq!(w,201);
     assert_eq!(h,133);
 
+}
+
+fn test_idct_callback(_: s::ImageInfo) -> (Option<s::TellDecoderWhat>, Vec<s::Node>, bool)
+{
+    let new_w = (800 * 4 + 8 - 1) / 8;
+    let new_h = (600 * 4 + 8 - 1) / 8;
+    let hints = s::JpegIDCTDownscaleHints{
+        gamma_correct_for_srgb_during_spatial_luma_scaling: Some(true),
+        scale_luma_spatially: Some(true),
+        width: new_w,
+        height: new_h
+    };
+    (Some(s::TellDecoderWhat::JpegDownscaleHints(hints)), vec![s::Node::Decode{io_id:0}], false)
+
+}
+//fn test_idct_callback_no_gamma(_: s::ImageInfo) -> (Option<s::TellDecoderWhat>, Vec<s::Node>, bool)
+//{
+//    let new_w = (800 * 4 + 8 - 1) / 8;
+//    let new_h = (600 * 4 + 8 - 1) / 8;
+//    let hints = s::JpegIDCTDownscaleHints{
+//        gamma_correct_for_srgb_during_spatial_luma_scaling: Some(false),
+//        scale_luma_spatially: Some(true),
+//        width: new_w,
+//        height: new_h
+//    };
+//    (Some(s::TellDecoderWhat::JpegDownscaleHints(hints)), vec![s::Node::Decode{io_id:0}], false)
+//
+//}
+//
+
+fn test_idct_no_gamma_callback(info: s::ImageInfo) -> (Option<s::TellDecoderWhat>, Vec<s::Node>, bool)
+{
+    let new_w = (info.frame0_width * 6 + 8 - 1) / 8;
+    let new_h = (info.frame0_height * 6 + 8 - 1) / 8;
+    let hints = s::JpegIDCTDownscaleHints{
+        gamma_correct_for_srgb_during_spatial_luma_scaling: Some(false),
+        scale_luma_spatially: Some(true),
+        width: new_w as i64,
+        height: new_h as i64
+    };
+    (Some(s::TellDecoderWhat::JpegDownscaleHints(hints)), vec![s::Node::Decode{io_id:0}], false)
+
+}
+
+#[test]
+fn test_idct_linear(){
+    let matched = test_with_callback("ScaleIDCTFastvsSlow".to_owned(), s::IoEnum::Url("http://s3-us-west-2.amazonaws.com/imageflow-resources/test_inputs/roof_test_800x600.jpg".to_owned()),
+    test_idct_callback);
+    assert!(matched);
+}
+
+#[test]
+fn test_idct_spatial_no_gamma(){
+    let matched = test_with_callback("ScaleIDCT_approx_gamma".to_owned(), s::IoEnum::Url("http://s3.amazonaws.com/resizer-images/u1.jpg".to_owned()),
+                                     test_idct_no_gamma_callback);
+    assert!(matched);
+}
+//
+//#[test]
+//fn test_fail(){
+//    let matched = test_with_callback("ScaleIDCTFastvsSlow".to_owned(), s::IoEnum::Url("http://s3-us-west-2.amazonaws.com/imageflow-resources/test_inputs/roof_test_800x600.jpg".to_owned()),
+//                                     test_idct_callback_no_gamma);
+//    assert!(matched);
+//}
+
+fn test_with_callback(checksum_name: String, input: s::IoEnum, callback: fn(s::ImageInfo) -> (Option<s::TellDecoderWhat>, Vec<s::Node>, bool) ) -> bool{
+    let context = SelfDisposingContextPtr::create().unwrap();
+    let matched:bool;
+
+    unsafe {
+        let c = context.inner();
+        let mut job: JobPtr = JobPtr::create(c.as_ptr().unwrap()).unwrap();
+
+        //Add input
+        ::imageflow_core::parsing::IoTranslator::new(c.as_ptr().unwrap()).add_to_job(job.as_ptr(), vec![s::IoObject{ io_id:0, direction: s::IoDirection::Input, io: input, checksum: None}]);
+
+
+        let info_blob: JsonResponse = job.message("v0.0.1/get_image_info", "{\"ioId\": 0}".as_bytes()).unwrap();
+        let info_response: s::Response001 = serde_json::from_slice(info_blob.response_json.as_ref()).unwrap();
+        if !info_response.success {
+            panic!("get_image_info failed: {:?}",info_response);
+        }
+        let image_info = match info_response.data {
+            s::ResponsePayload::ImageInfo(info) => info,
+            _ => panic!("")
+        };
+
+        let (tell_decoder, mut steps, no_gamma_correction) = callback(image_info);
+
+        if let Some(what) = tell_decoder {
+            let send_hints = s::TellDecoder001 {
+                io_id: 0,
+                command: what
+            };
+            let send_hints_str = serde_json::to_string_pretty(&send_hints).unwrap();
+            job.message("v0.0.1/tell_decoder", send_hints_str.as_bytes()).unwrap().assert_ok();
+        }
+
+        let mut dest_bitmap: *mut imageflow_core::ffi::BitmapBgra = std::ptr::null_mut();
+
+        let ptr_to_ptr = &mut dest_bitmap as *mut *mut imageflow_core::ffi::BitmapBgra;
+
+        steps.push(s::Node::FlowBitmapBgraPtr { ptr_to_flow_bitmap_bgra_ptr: ptr_to_ptr as usize});
+
+
+        let send_execute = s::Execute001{
+            framewise: s::Framewise::Steps(steps),
+            graph_recording: None,
+            no_gamma_correction: Some(no_gamma_correction)
+        };
+
+        let send_execute_str = serde_json::to_string_pretty(&send_execute).unwrap();
+        job.message("v0.0.1/execute", send_execute_str.as_bytes()).unwrap().assert_ok();
+
+
+
+            let store_if_missing = false;
+            let allowed_off_by_one_bytes = 500;
+
+            let c_checksum_name = CString::new(checksum_name).unwrap();
+            {
+                matched = imageflow_core::ffi::flow_bitmap_bgra_test_compare_to_record(c.as_ptr().unwrap(), *ptr_to_ptr, c_checksum_name.as_ptr(), store_if_missing, allowed_off_by_one_bytes, static_char!(file!()), 0, static_char!(file!()));
+            }
+
+            c.assert_ok(None);
+
+
+
+
+    }
+    context.destroy_allowing_panics();
+    matched
 }
