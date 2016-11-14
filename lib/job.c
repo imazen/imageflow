@@ -1,5 +1,4 @@
 #include "imageflow_private.h"
-#include "lib/rewrite_in_rust/rewrite_in_rust.h"
 #include "codecs.h"
 
 struct flow_job * flow_job_create(flow_c * c)

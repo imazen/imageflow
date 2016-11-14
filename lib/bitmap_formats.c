@@ -161,3 +161,36 @@ const char * flow_pixel_format_get_name(flow_pixel_format f, bool alpha_meaningf
             return "?";
     }
 }
+
+bool flow_bitmap_bgra_fill_rect(flow_c * c, struct flow_bitmap_bgra * b, uint32_t x1, uint32_t y1, uint32_t x2,
+                                uint32_t y2, uint32_t color_srgb_argb)
+{
+    if (x1 >= x2 || y1 >= y2 || y2 > b->h || x2 > b->w) {
+        FLOW_error(c, flow_status_Invalid_argument);
+        // Either out of bounds or has a width or height of zero.
+        return false;
+    }
+
+    uint8_t step = flow_pixel_format_bytes_per_pixel(b->fmt);
+
+    uint8_t * topleft = b->pixels + (b->stride * y1) + step * x1;
+
+    size_t rect_width_bytes = step * (x2 - x1);
+
+    uint32_t color = color_srgb_argb;
+    if (step == 1) {
+        // TODO: use gamma-correct grayscale conversion
+        FLOW_error(c, flow_status_Not_implemented);
+        return false;
+    } else if (step == 3) {
+        color = color >> 8; // Drop the alpha bits
+    }
+    for (uint32_t byte_offset = 0; byte_offset < rect_width_bytes; byte_offset += step) {
+        memcpy(topleft + byte_offset, &color, step);
+    }
+    // Copy downwards
+    for (uint32_t y = 1; y < (y2 - y1); y++) {
+        memcpy(topleft + (b->stride * y), topleft, rect_width_bytes);
+    }
+    return true;
+}
