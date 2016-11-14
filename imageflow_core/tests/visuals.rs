@@ -438,3 +438,5 @@ fn test_with_callback(checksum_name: String, input: s::IoEnum, callback: fn(s::I
     context.destroy_allowing_panics();
     matched
 }
+
+//TODO: Consider adding test for flow_bitmap_bgra_sharpen_block_edges if we ever bring it back
