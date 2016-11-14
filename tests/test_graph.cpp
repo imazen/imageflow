@@ -54,179 +54,6 @@ bool execute_graph_for_bitmap_bgra(flow_c * c, struct flow_graph ** graph_ref)
     return true;
 }
 
-// Port priority 0 - petgraph should already test this
-
-TEST_CASE("After building a graph, ensure that the node/edge count is correct, and that edges point between nodes", "")
-{
-    flow_c * c = flow_context_create();
-    flow_graph * g = flow_graph_create(c, 10, 10, 200, 2.0);
-    int32_t last;
-
-    last = flow_node_create_canvas(c, &g, -1, flow_bgra32, 400, 300, 0xFFFFFFFF);
-    last = flow_node_create_scale(c, &g, last, 300, 200, (flow_interpolation_filter_Robidoux),
-                                  (flow_interpolation_filter_Robidoux), 0, 0);
-    last = flow_node_create_encoder_placeholder(c, &g, last, 0);
-
-    ERR(c);
-
-    REQUIRE(g->edges[0].from == 0);
-    REQUIRE(g->edges[0].to == 1);
-    REQUIRE(g->edge_count == 2);
-    REQUIRE(g->node_count == 3);
-
-    flow_context_destroy(c);
-}
-
-/// Port priority 0
-TEST_CASE("Verify that graph remains valid, free of orphaned edges, after flow_node_delete", "")
-{
-    flow_c * c = flow_context_create();
-    flow_graph * g = flow_graph_create(c, 10, 10, 200, 2.0);
-    int32_t last;
-
-    last = flow_node_create_canvas(c, &g, -1, flow_bgra32, 400, 300, 0xFFFFFFFF);
-    last = flow_node_create_scale(c, &g, last, 300, 200, (flow_interpolation_filter_Robidoux),
-                                  (flow_interpolation_filter_Robidoux), 0, 0);
-    last = flow_node_create_encoder_placeholder(c, &g, last, 0);
-    ERR(c);
-
-    REQUIRE(g->edges[0].from == 0);
-    REQUIRE(g->edges[0].to == 1);
-    REQUIRE(g->edges[1].from == 1);
-    REQUIRE(g->edges[1].to == 2);
-    REQUIRE(g->edge_count == 2);
-    REQUIRE(g->node_count == 3);
-
-    flow_node_delete(c, g, last);
-    ERR(c);
-
-    REQUIRE(g->edge_count == 1);
-    REQUIRE(g->node_count == 2);
-    REQUIRE(g->nodes[last].type == flow_ntype_Null);
-    REQUIRE(g->nodes[last].info_byte_index == -1);
-    REQUIRE(g->nodes[last].info_bytes == 0);
-    REQUIRE(g->edges[1].type == flow_edgetype_null);
-    REQUIRE(g->edges[1].info_bytes == 0);
-    REQUIRE(g->edges[1].info_byte_index == -1);
-    REQUIRE(g->edges[1].from == -1);
-    REQUIRE(g->edges[1].to == -1);
-
-    flow_context_destroy(c);
-}
-
-// Port priority 0
-
-TEST_CASE("Verify flow_edge_duplicate preserves from/to indicies", "")
-{
-    flow_c * c = flow_context_create();
-    flow_graph * g = flow_graph_create(c, 10, 10, 200, 2.0);
-    int32_t last;
-    last = flow_node_create_canvas(c, &g, -1, flow_bgra32, 400, 300, 0xFFFFFFFF);
-    last = flow_node_create_scale(c, &g, last, 300, 200, (flow_interpolation_filter_Robidoux),
-                                  (flow_interpolation_filter_Robidoux), 0, 0);
-
-    ERR(c);
-
-    REQUIRE(g->edges[0].from == 0);
-    REQUIRE(g->edges[0].to == 1);
-    REQUIRE(g->edge_count == 1);
-    REQUIRE(g->node_count == 2);
-
-    flow_edge_duplicate(c, &g, 0);
-
-    ERR(c);
-
-    REQUIRE(g->edge_count == 2);
-    REQUIRE(g->node_count == 2);
-    REQUIRE(g->edges[1].from == 0);
-    REQUIRE(g->edges[1].to == 1);
-
-    flow_context_destroy(c);
-}
-
-// Port priority 1
-
-TEST_CASE("Verify that a bitmap_bgra result has the correct width post job execution (no IO)", "")
-{
-
-    flow_c * c = flow_context_create();
-    flow_utils_ensure_directory_exists("node_frames");
-    struct flow_graph * g = nullptr;
-    struct flow_job * job = nullptr;
-
-    struct flow_bitmap_bgra * result = nullptr;
-
-    g = flow_graph_create(c, 10, 10, 200, 2.0);
-    ERR(c);
-
-    int32_t last;
-
-    last = flow_node_create_canvas(c, &g, -1, flow_bgra32, 400, 300, 0xFFFFFFFF);
-    //    last = flow_node_create_fill_rect()
-    last = flow_node_create_scale(c, &g, last, 300, 200, (flow_interpolation_filter_Robidoux),
-                                  (flow_interpolation_filter_Robidoux), 0, 0);
-    last = flow_node_create_bitmap_bgra_reference(c, &g, last, &result);
-
-    job = flow_job_create(c);
-    ERR(c);
-
-    if (!flow_job_execute(c, job, &g)) {
-        ERR(c);
-    }
-    ERR(c);
-
-    REQUIRE(result != NULL);
-    REQUIRE(result->w == 300);
-
-    flow_context_destroy(c);
-}
-
-// Port priority 1
-TEST_CASE("Decode and scale a PNG image; bitmap result width should be correct", "")
-{
-
-    flow_c * c = flow_context_create();
-    struct flow_graph * g = nullptr;
-    struct flow_job * job = nullptr;
-    struct flow_bitmap_bgra * result = nullptr;
-
-    g = flow_graph_create(c, 10, 10, 200, 2.0);
-    ERR(c);
-
-    int32_t input_placeholder = 0;
-
-    int32_t last;
-    last = flow_node_create_decoder(c, &g, -1, input_placeholder);
-    last = flow_node_create_scale(c, &g, last, 300, 200, (flow_interpolation_filter_Robidoux),
-                                  (flow_interpolation_filter_Robidoux), 0, 0);
-    last = flow_node_create_bitmap_bgra_reference(c, &g, last, &result);
-
-    job = flow_job_create(c);
-    ERR(c);
-    uint8_t image_bytes_literal[]
-        = { 0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, 0x00, 0x00, 0x00, 0x0D, 0x49, 0x48, 0x44, 0x52, 0x00,
-            0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x08, 0x06, 0x00, 0x00, 0x00, 0x1F, 0x15, 0xC4, 0x89, 0x00,
-            0x00, 0x00, 0x0A, 0x49, 0x44, 0x41, 0x54, 0x78, 0x9C, 0x63, 0x00, 0x01, 0x00, 0x00, 0x05, 0x00, 0x01,
-            0x0D, 0x0A, 0x2D, 0xB4, 0x00, 0x00, 0x00, 0x00, 0x49, 0x45, 0x4E, 0x44, 0xAE, 0x42, 0x60, 0x82 };
-
-    struct flow_io * input_io = flow_io_create_from_memory(c, flow_io_mode_read_seekable, &image_bytes_literal[0],
-                                                           sizeof(image_bytes_literal), job, NULL);
-
-    if (!flow_job_add_io(c, job, input_io, input_placeholder, FLOW_INPUT)) {
-        ERR(c);
-    }
-
-    if (!flow_job_execute(c, job, &g)) {
-        ERR(c);
-    }
-
-    ERR(c);
-
-    REQUIRE(result != NULL);
-    REQUIRE(result->w == 300);
-
-    flow_context_destroy(c);
-}
 
 // Port priority 2
 TEST_CASE("Test reading from memory, writing to file (test flow_io through job)", "")
@@ -310,27 +137,6 @@ TEST_CASE("Test reading from memory, writing to file (test flow_io through job)"
     flow_context_destroy(c);
 }
 
-// Port priority 2
-TEST_CASE("Decode/scale/flip/crop/encode PNG (smoke test)", "")
-{
-    flow_c * c = flow_context_create();
-    struct flow_graph * g = flow_graph_create(c, 10, 10, 200, 2.0);
-    ERR(c);
-
-    int32_t last, input_placeholder = 0, output_placeholder = 1;
-
-    last = flow_node_create_decoder(c, &g, -1, input_placeholder);
-    last = flow_node_create_scale(c, &g, last, 120, 120, (flow_interpolation_filter_Robidoux),
-                                  (flow_interpolation_filter_Robidoux), 0, 0);
-    last = flow_node_create_primitive_flip_vertical(c, &g, last);
-    last = flow_node_create_primitive_crop(c, &g, last, 20, 10, 80, 40);
-    last = flow_node_create_encoder_placeholder(c, &g, last, output_placeholder);
-
-    execute_graph_for_url(c, "http://s3-us-west-2.amazonaws.com/imageflow-resources/test_inputs/mountain_800.png",
-                          "graph_flipped_cropped_png.png", &g);
-
-    flow_context_destroy(c);
-}
 
 // Port priority 1
 
@@ -353,35 +159,7 @@ TEST_CASE("Decode GIF frame, scale, encode as PNG", "")
     flow_context_destroy(c);
 }
 
-// Don't port. Specific to libgif bugs
-TEST_CASE("read gif overlapped", "")
-{
-    flow_context * c = flow_context_create();
-    REQUIRE(c != NULL);
-    // Get the input gif
-    struct flow_io * input = get_io_for_cached_url(
-        c, "http://s3-us-west-2.amazonaws.com/imageflow-resources/test_inputs/example-animated.gif", c,
-        __FILE__); //"http://i.kinja-img.com/gawker-media/image/upload/s--dM0nT5E4--/mn3sov5id06ppjkfb1b2.gif", c);
-    ERR(c);
-    struct flow_io * input2 = get_io_for_cached_url(
-        c, "http://s3-us-west-2.amazonaws.com/imageflow-resources/test_inputs/example-animated.gif", c,
-        __FILE__); //"http://i.kinja-img.com/gawker-media/image/upload/s--dM0nT5E4--/mn3sov5id06ppjkfb1b2.gif", c);
-    ERR(c);
-    // Create the job and add the input
-    struct flow_job * job = flow_job_create(c);
-    ERR(c);
-    flow_job_add_io(c, job, input, 0, FLOW_INPUT);
-    flow_job_add_io(c, job, input2, 1, FLOW_INPUT);
-    // Now we can read metadata about the input
-    struct flow_decoder_info info;
-    if (!flow_job_get_decoder_info(c, job, 0, &info)) {
-        ERR(c);
-    }
-    if (!flow_job_get_decoder_info(c, job, 1, &info)) {
-        ERR(c);
-    }
-    flow_context_destroy(c);
-}
+
 
 // Port priority 1
 TEST_CASE("export frames of animated gif", "")
@@ -436,28 +214,6 @@ TEST_CASE("export frames of animated gif", "")
     flow_context_destroy(c);
 }
 
-// Port priority 2
-TEST_CASE("scale and flip and crop and encode jpg", "")
-{
-    flow_c * c = flow_context_create();
-    struct flow_graph * g = flow_graph_create(c, 10, 10, 200, 2.0);
-    ERR(c);
-
-    int32_t last, input_placeholder = 0, output_placeholder = 1;
-
-    last = flow_node_create_decoder(c, &g, -1, input_placeholder);
-    last = flow_node_create_scale(c, &g, last, 120, 120, (flow_interpolation_filter_Robidoux),
-                                  (flow_interpolation_filter_Robidoux), 0, 0);
-    last = flow_node_create_primitive_flip_vertical(c, &g, last);
-    last = flow_node_create_primitive_crop(c, &g, last, 20, 10, 80, 40);
-
-    last = flow_node_create_encoder(c, &g, last, output_placeholder, flow_codec_type_encode_jpeg, NULL);
-
-    execute_graph_for_url(c, "http://s3-us-west-2.amazonaws.com/imageflow-resources/test_inputs/mountain_800.jpg",
-                          "graph_flipped_cropped_from_jpeg.jpg", &g);
-
-    flow_context_destroy(c);
-}
 
 // Port priority 1
 TEST_CASE("Roundtrip flipping both horizontal and vertical", "")
@@ -541,32 +297,6 @@ TEST_CASE("Test graph with 3 nodes pulling from decoder (smoke test)", "")
 
     execute_graph_for_url(c, "http://s3-us-west-2.amazonaws.com/imageflow-resources/test_inputs/orientation.png",
                           "rotated.png", &g);
-
-    flow_context_destroy(c);
-}
-
-// Port priority 0: petgraph probably already covers this
-TEST_CASE("Verify cycles are caught with and without tangents", "")
-{
-
-    flow_c * c = flow_context_create();
-    struct flow_graph * g = flow_graph_create(c, 10, 10, 200, 2.0);
-    ERR(c);
-
-    int32_t first = flow_node_create_clone(c, &g, -1);
-    int32_t second = flow_node_create_clone(c, &g, first);
-    int32_t third = flow_node_create_clone(c, &g, second);
-    flow_edge_create(c, &g, third, first, flow_edgetype_input); // make a cycle
-
-    REQUIRE_FALSE(flow_graph_validate(c, g));
-    REQUIRE(flow_context_error_reason(c) == flow_status_Graph_is_cyclic);
-
-    flow_context_clear_error(c);
-
-    int32_t fourth = flow_node_create_clone(c, &g, third);
-
-    REQUIRE_FALSE(flow_graph_validate(c, g));
-    REQUIRE(flow_context_error_reason(c) == flow_status_Graph_is_cyclic);
 
     flow_context_destroy(c);
 }

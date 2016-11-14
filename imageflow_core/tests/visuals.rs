@@ -264,6 +264,8 @@ fn test_encode_png32_smoke() {
     let steps = vec![
     s::Node::Decode {io_id: 0},
     s::Node::Scale{ w: 400, h: 300, down_filter: Some(s::Filter::Robidoux), up_filter: Some(s::Filter::Robidoux), sharpen_percent: Some(0f32), flags: Some(1) },
+    s::Node::FlipV,
+    s::Node::Crop{ x1: 20, y1: 20, x2: 380, y2: 280},
     s::Node::Encode{ io_id: 1, preset: s::EncoderPreset::Libpng {depth: Some(s::PngBitDepth::Png32), matte: None,  zlib_compression: None}}
     ];
 
@@ -274,7 +276,7 @@ fn test_encode_png32_smoke() {
     );
 }
 
-fn get_result_dimensions(steps: Vec<s::Node>, debug: bool) -> (u32, u32) {
+fn get_result_dimensions(steps: Vec<s::Node>, io: Vec<s::IoObject>, debug: bool) -> (u32, u32) {
     let mut steps = steps.clone();
 
     let mut dest_bitmap: *mut imageflow_core::ffi::BitmapBgra = std::ptr::null_mut();
@@ -284,7 +286,7 @@ fn get_result_dimensions(steps: Vec<s::Node>, debug: bool) -> (u32, u32) {
 
     let build = s::Build001{
         builder_config: Some(default_build_config(debug)),
-        io: vec![],
+        io: io,
         framewise: s::Framewise::Steps(steps)
     };
     let mut context = Context::create().unwrap();
@@ -301,11 +303,40 @@ fn test_dimensions(){
     s::Node::Scale{w:200,h:133, flags:Some(1), down_filter: None, up_filter: None, sharpen_percent: None},
     s::Node::ExpandCanvas{left:1, top: 0, right:0, bottom: 0, color: s::Color::Transparent},
     ];
-    let (w, h) = get_result_dimensions(steps, true);
+    let (w, h) = get_result_dimensions(steps, vec![], true);
     assert_eq!(w,201);
     assert_eq!(h,133);
 
 }
+
+
+
+
+#[test]
+fn test_decode_png_and_scale_dimensions(){
+
+    let tinypng = vec![0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, 0x00, 0x00, 0x00, 0x0D, 0x49, 0x48, 0x44, 0x52, 0x00,
+    0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x08, 0x06, 0x00, 0x00, 0x00, 0x1F, 0x15, 0xC4, 0x89, 0x00,
+    0x00, 0x00, 0x0A, 0x49, 0x44, 0x41, 0x54, 0x78, 0x9C, 0x63, 0x00, 0x01, 0x00, 0x00, 0x05, 0x00, 0x01,
+        0x0D, 0x0A, 0x2D, 0xB4, 0x00, 0x00, 0x00, 0x00, 0x49, 0x45, 0x4E, 0x44, 0xAE, 0x42, 0x60, 0x82 ];
+
+    let png = s::IoObject{
+        io_id: 0,
+        direction: s::IoDirection::Input,
+        checksum: None,
+        io: s::IoEnum::ByteArray(tinypng)
+    };
+    let steps = vec![
+    s::Node::Decode{io_id: 0},
+    //s::Node::Crop { x1: 0, y1: 0, x2: 638, y2: 423},
+    s::Node::Scale{w:300,h:200, flags:Some(1), down_filter: None, up_filter: None, sharpen_percent: None},
+    ];
+    let (w, h) = get_result_dimensions(steps, vec![png], true);
+    assert_eq!(w,300);
+    assert_eq!(h,200);
+
+}
+
 
 fn test_idct_callback(_: s::ImageInfo) -> (Option<s::TellDecoderWhat>, Vec<s::Node>, bool)
 {
