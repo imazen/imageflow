@@ -12,7 +12,7 @@
 //! ## ... when allocated by Imageflow, assume the lifetime of the `context`
 //!
 //! **In Imageflow, by default, all things created with a context will be destroyed when the
-//! context is destroyed.**
+//! context is destroyed.** Don't try to access ANYTHING imageflow has provided after the context is gone.
 //!
 //! This is very nice, as it means that a client's failure to clean up
 //! will have limited impact on the process as a whole - as long as the client at minimum
@@ -24,18 +24,14 @@
 //!
 //! There are two ways to mitigate this.
 //!
-//! 1. Schedule the destruction to occur earlier, using ownership.
-//! 2. Invoke the corresponding destroy function when you're done with the thing.
-//!
-//! Only certain things may be owners: `context`, `job`, and `io` pointers. Setting a
-//! 'shorter-lived' owner, like the job (vs. context) can help, but can be less effective
-//! than directly invoking the destroy function as soon as it is possible to do so.
+//! 1. When creating an I/O object, request it be cleaned up when the first job it is assigned to is cleaned up (instead of the context).
+//! 2. Manually invoke the corresponding destroy function when you're done with the thing.
 //!
 //! ### Destroying things
 //!
 //! * An `imageflow_context` should ALWAYS be destroyed with `imageflow_context_destroy`
 //! * ImageflowJsonResponse structures should be released with `imageflow_json_response_destroy`
-//! *
+//! * An `imageflow_job` can be destroyed early with `imageflow_job_destroy`
 //!
 //! ## ... when allocated by the client, Imageflow only borrows it for the `invocation`
 //!
@@ -56,7 +52,7 @@
 //!
 //! * When an Imageflow API asks for a filename, function name, or error message, it will
 //!   assume that those strings are pointers that (a) Imageflow is not
-//!   responsible for freeing, and (b) will (at least) outlive the `context`.
+//!   responsible for freeing, and (b) will (at least) outlive the `context`. For C#, GCHandle comes in handy here.
 //!
 //! ## ... and it should be very clear when Imageflow is taking ownership of something you created!
 //!
@@ -68,11 +64,8 @@
 //!
 //! ## What if I need something to outlive the `context`?
 //!
-//! Then you'll need to change the owner - disassociate the thing from the context
-//! , and become responsible for it,
-//! and all the things it might have owned, all the destructors that will now never run.
+//! Copy it before the context is destroyed.
 //!
-//! [TODO] Provide instructions
 //!
 //!
 //! # Data types
@@ -123,6 +116,7 @@ use std::ptr;
 
 
 #[cfg(test)]
+#[allow(unused_imports)]
 use std::ffi::CStr;
 
 #[cfg(test)]
@@ -679,6 +673,7 @@ pub fn exercise_json_message() {
 /// As always, `mode` is not enforced except for the file open flags.
 ///
 #[no_mangle]
+#[allow(unused_variables)]
 pub unsafe extern "C" fn imageflow_io_create_for_file(context: *mut Context,
                                                       mode: IoMode,
                                                       filename: *const libc::c_char,
@@ -697,6 +692,7 @@ pub unsafe extern "C" fn imageflow_io_create_for_file(context: *mut Context,
 ///
 ///
 #[no_mangle]
+#[allow(unused_variables)]
 pub unsafe extern "C" fn imageflow_io_create_from_buffer(context: *mut Context,
                                                          buffer: *const u8,
                                                          buffer_byte_count: libc::size_t,
@@ -826,26 +822,48 @@ pub unsafe extern "C" fn imageflow_job_destroy(context: *mut Context, job: *mut 
 }
 
 
+///
+/// Allocates zeroed memory that will be freed with the context.
+/// filename/line may be used for debugging purposes. They are optional. Provide null/-1 to skip.
+///
+/// Returns null(0) on failure.
+///
+#[no_mangle]
+pub unsafe extern "C" fn imageflow_context_memory_allocate(context: *mut Context,
+                                                    bytes: usize,
+                                                    filename: *const libc::c_char,
+                                                    line: i32) -> *mut libc::c_void {
 
-// malloc/calloc/free
-// flow_set_owner
-// flow_set_destructor
+    ffi::flow_context_calloc(context, 1, bytes, ptr::null(), context as *const libc::c_void, filename, line)
+}
 
+///
+/// Frees memory allocated with imageflow_context_memory_allocate early.
+/// filename/line may be used for debugging purposes. They are optional. Provide null/-1 to skip.
+///
+/// Returns false on failure.
+///
+#[no_mangle]
+pub unsafe extern "C" fn imageflow_context_memory_free(context: *mut Context,
+                                                       pointer: *mut libc::c_void,
+                                                       filename: *const libc::c_char,
+                                                       line: i32) -> bool {
+    ffi::flow_destroy(context, pointer, filename, line)
+}
 
-// PUB bool flow_set_destructor(flow_c * c, void * thing, flow_destructor_function destructor);
-//
-// / Thing will only be automatically destroyed and freed at the time that owner is destroyed and freed
-// PUB bool flow_set_owner(flow_c * c, void * thing, void * owner);
-//
-// ///////////////////////////////////////////
-// / use imageflow memory management
-//
-// PUB void * flow_context_calloc(flow_c * c, size_t instance_count, size_t instance_size,
-// flow_destructor_function destructor, void * owner, const char * file, int line);
-// PUB void * flow_context_malloc(flow_c * c, size_t byte_count, flow_destructor_function destructor, void * owner,
-// const char * file, int line);
-// PUB void * flow_context_realloc(flow_c * c, void * old_pointer, size_t new_byte_count, const char * file, int line);
-// PUB void flow_deprecated_free(flow_c * c, void * pointer, const char * file, int line);
-// PUB bool flow_destroy_by_owner(flow_c * c, void * owner, const char * file, int line);
-// PUB bool flow_destroy(flow_c * c, void * pointer, const char * file, int line);
-//
+#[test]
+fn test_allocate_free() {
+    unsafe{
+        let c = imageflow_context_create();
+        let bytes = 100;
+        let ptr = imageflow_context_memory_allocate(c, bytes, static_char!(file!()),
+                                                    line!() as i32) as *mut u8;
+        assert!(ptr != ptr::null_mut());
+
+        for x in 0..bytes{
+            assert_eq!(*ptr.offset(x as isize), 0);
+        }
+        assert!(imageflow_context_memory_free(c, ptr as *mut libc::c_void, static_char!(file!()),
+                                              line!() as i32));
+    }
+}

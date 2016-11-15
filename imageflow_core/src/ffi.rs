@@ -714,7 +714,7 @@ extern "C" {
 
     pub fn flow_destroy(context: *mut Context,
                         pointer: *const libc::c_void,
-                        file: *const libc::uint8_t,
+                        file: *const libc::c_char,
                         line: i32)
                         -> bool;
 
