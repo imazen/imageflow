@@ -15,7 +15,7 @@ impl ScaleRenderHelpers {
 
         let ref mut weight = ctx.weight_mut(ix);
         match weight.params {
-            NodeParams::Json(s::Node::Scale { ref w, ref h, .. }) => {
+            NodeParams::Json(s::Node::Resample2D { ref w, ref h, .. }) => {
                 weight.frame_est = FrameEstimate::Some(FrameInfo {
                     w: *w as i32,
                     h: *h as i32,
@@ -35,7 +35,7 @@ impl ScaleRenderHelpers {
 
         let ref mut weight = ctx.weight_mut(ix);
         match weight.params {
-            NodeParams::Json(s::Node::Render1D { ref scale_to_width,
+            NodeParams::Json(s::Node::Resample1D { ref scale_to_width,
                                                  ref transpose_on_write,
                                                  ref interpolation_filter }) => {
                 let w = match *transpose_on_write {
@@ -72,7 +72,7 @@ fn scale_def() -> NodeDefinition {
             fn f(ctx: &mut OpCtxMut, ix: NodeIndex<u32>) {
                 let input = ctx.first_parent_frame_info_some(ix).unwrap();
 
-                if let s::Node::Scale { w, h, down_filter, up_filter, hints} =
+                if let s::Node::Resample2D { w, h, down_filter, up_filter, hints} =
                        ctx.get_json_params(ix).unwrap() {
 
                     let filter = if input.w < w as i32 || input.h < h as i32 {
@@ -95,7 +95,7 @@ fn scale_def() -> NodeDefinition {
                                 color: s::Color::Transparent,
                             };
                             // TODO: Not the right params!
-                            let scale2d_params = s::Node::Scale {
+                            let scale2d_params = s::Node::Resample2D {
                                 w: w,
                                 h: h,
                                 up_filter: up_filter,
@@ -113,12 +113,12 @@ fn scale_def() -> NodeDefinition {
                         }
                         true => {
 
-                            let scalew_params = s::Node::Render1D {
+                            let scalew_params = s::Node::Resample1D {
                                 scale_to_width: w,
                                 interpolation_filter: filter,
                                 transpose_on_write: true,
                             };
-                            let scaleh_params = s::Node::Render1D {
+                            let scaleh_params = s::Node::Resample1D {
                                 scale_to_width: h,
                                 interpolation_filter: filter,
                                 transpose_on_write: true,
@@ -178,7 +178,7 @@ fn render1d_to_canvas_def() -> NodeDefinition {
         fn_estimate: Some(ScaleRenderHelpers::render1d_size),
         fn_execute: Some({
             fn f(ctx: &mut OpCtxMut, ix: NodeIndex<u32>) {
-                if let s::Node::Render1D { ref scale_to_width,
+                if let s::Node::Resample1D { ref scale_to_width,
                                            ref transpose_on_write,
                                            ref interpolation_filter } = ctx.get_json_params(ix)
                     .unwrap() {
@@ -231,7 +231,7 @@ fn scale2d_render_def() -> NodeDefinition {
         fn_estimate: Some(NodeDefHelpers::copy_frame_est_from_first_canvas),
         fn_execute: Some({
             fn f(ctx: &mut OpCtxMut, ix: NodeIndex<u32>) {
-                if let s::Node::Scale { w, h, down_filter, up_filter, hints } =
+                if let s::Node::Resample2D { w, h, down_filter, up_filter, hints } =
                        ctx.get_json_params(ix).unwrap() {
                     let input = ctx.first_parent_result_frame(ix, EdgeKind::Input).unwrap();
                     let canvas = ctx.first_parent_result_frame(ix, EdgeKind::Canvas).unwrap();

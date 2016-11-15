@@ -10,10 +10,6 @@
 
 Refine the JSON API
 
-Replace scale flags
-
-Scale and Render1D become Resample2D and Resample1D
-
 Reconsider graph_recording design
 Reconsider no_gamma_correction flag placement
 

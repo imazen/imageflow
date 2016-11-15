@@ -20,13 +20,12 @@ module Imageflow
       end
 
       def add_scale(w:,h:, down_filter: :filter_Robidoux, up_filter: :filter_Robidoux)
-        @steps <<  {"scale": {
+        @steps <<  {"resample2d": {
             "w": w,
             "h": h,
             "downFilter": "Robidoux",
             "upFilter": "Robidoux",
-            "sharpenPercent": 0.0,
-            "flags": 1
+            "hints": nil
         }}
       end
 

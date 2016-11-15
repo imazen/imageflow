@@ -60,14 +60,14 @@ impl GraphTranslator {
             s::Node::Rotate270 => Node::new(&nodes::ROTATE_270, NodeParams::Json(node)),
             s::Node::ApplyOrientation { .. } => Node::new(&nodes::APPLY_ORIENTATION, NodeParams::Json(node)),
             s::Node::Transpose => Node::new(&nodes::TRANSPOSE, NodeParams::Json(node)),
-            s::Node::Render1D{ ..} => Node::new(&nodes::SCALE_1D, NodeParams::Json(node)),
+            s::Node::Resample1D{ ..} => Node::new(&nodes::SCALE_1D, NodeParams::Json(node)),
             s::Node::Encode { .. }=> Node::new(&nodes::ENCODE, NodeParams::Json(node)),
             s::Node::CreateCanvas { .. } =>
                 Node::new(&nodes::CREATE_CANVAS, NodeParams::Json(node)),
             s::Node::CopyRectToCanvas { .. } =>
                 Node::new(&nodes::COPY_RECT, NodeParams::Json(node)),
             s::Node::FillRect { .. } => Node::new(&nodes::FILL_RECT, NodeParams::Json(node)),
-            s::Node::Scale { .. } => Node::new(&nodes::SCALE, NodeParams::Json(node)),
+            s::Node::Resample2D { .. } => Node::new(&nodes::SCALE, NodeParams::Json(node)),
             s::Node::ExpandCanvas { .. } =>
                 Node::new(&nodes::EXPAND_CANVAS, NodeParams::Json(node))
 

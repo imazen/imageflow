@@ -286,8 +286,8 @@ pub enum Node {
     Rotate270,
     #[serde(rename="applyOrientation")]
     ApplyOrientation { flag: i32 },
-    #[serde(rename="scale")]
-    Scale {
+    #[serde(rename="resample2d")]
+    Resample2D {
         w: usize,
         h: usize,
         #[serde(rename="downFilter")]
@@ -296,7 +296,9 @@ pub enum Node {
         up_filter: Option<Filter>,
         hints: Option<ResampleHints>
     },
-    Render1D {
+
+    #[serde(rename="resample1d")]
+    Resample1D {
         scale_to_width: usize,
         transpose_on_write: bool,
         interpolation_filter: Option<Filter>,

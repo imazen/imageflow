@@ -103,7 +103,7 @@ fn test_handler() {
 
     let mut steps = vec![];
     steps.push(s::Node::Decode { io_id: 0 });
-    steps.push(s::Node::Scale {
+    steps.push(s::Node::Resample2D {
         w: 20,
         h: 30,
         down_filter: None,

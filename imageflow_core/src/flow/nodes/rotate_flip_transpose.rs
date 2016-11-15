@@ -76,7 +76,7 @@ fn transpose_def() -> NodeDefinition {
             fn f(ctx: &mut OpCtxMut, ix: NodeIndex<u32>) {
                 if let FrameEstimate::Some(FrameInfo { h, .. }) = ctx.weight(ix).frame_est {
                     // TODO: Shouldn't the filter be triangle, or (better) not be a filter at all?
-                    let scale_params = s::Node::Render1D {
+                    let scale_params = s::Node::Resample1D {
                         scale_to_width: h as usize,
                         interpolation_filter: Some(s::Filter::Robidoux),
                         transpose_on_write: true,
