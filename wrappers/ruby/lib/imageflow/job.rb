@@ -4,7 +4,6 @@ module Imageflow
       @c = context
       @ptr = @c.call_method(:job_create)
       @keepalive = []
-      record_nothing #Don't record anything by default
     end
 
     def self.get_image_info_by_filename(filename, context: nil)
@@ -30,13 +29,11 @@ module Imageflow
 
     def add_input_file(placeholder_id:, filename:)
       io_in = @c.call_method(:io_create_for_file, :mode_read_seekable, filename,  :cleanup_with_context)
-
       @c.call_method(:job_add_io, @ptr, io_in, placeholder_id,  :flow_input)
     end
 
     def add_output_file(placeholder_id:, filename:)
       io_out = @c.call_method(:io_create_for_file, :mode_write_seekable, filename,  :cleanup_with_context)
-
       @c.call_method(:job_add_io, @ptr, io_out, placeholder_id,  :flow_output)
     end
 
@@ -45,21 +42,20 @@ module Imageflow
       buffer.put_bytes(0, bytes)
       @keepalive << buffer
 
-      io_in = @c.call_method(:io_create_from_memory,buffer, bytes.bytesize, :outlives_context, :cleanup_with_context)
+      io_in = @c.call_method(:io_create_from_buffer,buffer, bytes.bytesize, :outlives_context, :cleanup_with_context)
 
       @c.call_method(:job_add_io, @ptr, io_in, placeholder_id,  :flow_input)
     end
 
     def add_output_buffer(placeholder_id:)
-
       io_ptr = @c.call_method(:io_create_for_output_buffer)
-
       @c.call_method(:job_add_io, @ptr, io_ptr, placeholder_id,  :flow_output)
     end
 
     def get_buffer(placeholder_id:)
-      buffer_pointer = FFI::MemoryPointer.new(:pointer, 1) # Allocate memory sized to the data
-      buffer_size = FFI::MemoryPointer.new(:uint64, 1) # Allocate memory sized to the data
+      #Just allocate 128 bytes or so to store out pointers
+      buffer_pointer = FFI::MemoryPointer.new(:pointer, 1)
+      buffer_size = FFI::MemoryPointer.new(:uint64, 1)
 
       @c.call_method(:job_get_output_buffer_by_id, @ptr, placeholder_id, buffer_pointer, buffer_size)
 
@@ -77,33 +73,6 @@ module Imageflow
       @c.message_internal(optional_job: @ptr, method: method, data: data).to_parsed
     end
 
-
-    def record_nothing
-      configure_recording record_graph_versions: false,
-                          record_frame_images: false,
-                          render_graph_versions: false,
-                          render_animated_graph: false,
-                          render_last_graph: false
-
-
-    end
-
-    def debug_record_gif
-      configure_recording record_graph_versions: true,
-                          record_frame_images: true,
-                          render_graph_versions: true,
-                          render_animated_graph: true,
-                          render_last_graph: true
-
-
-    end
-
-    def configure_recording(record_graph_versions:, record_frame_images:, render_last_graph:, render_graph_versions:, render_animated_graph:)
-      #@c.call_method(:job_configure_recording, @ptr, record_graph_versions, record_frame_images, render_last_graph, render_graph_versions, render_animated_graph)
-    end
-
-
-
     def execute (framewise:, graph_recording: nil)
       result = self.send_json("v0.0.1/execute", {"framewise": framewise})
       raise result.message unless result.ok?
@@ -118,9 +87,9 @@ module Imageflow
       info[:frame0_width] = info[:frame0Width]
       info[:frame0_height] = info[:frame0Height]
       info[:frame0_post_decode_format] = info[:frame0PostDecodeFormat]
+      info[:preferred_mime_type] = info[:preferredMimeType]
       info
     end
-
 
     def set_decoder_downscale_hints(placeholder_id:, downscaled_min_width:,
                                      downscaled_min_height:,
@@ -132,6 +101,5 @@ module Imageflow
       result = send_json("v0.0.1/tell_decoder", {"ioId": placeholder_id, "command": {"JpegDownscaleHints": hints}})
       raise result.message unless result.ok?
     end
-
   end
 end

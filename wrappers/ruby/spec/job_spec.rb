@@ -29,14 +29,12 @@ module Imageflow
         job.add_input_buffer(placeholder_id: 0, bytes: bytes)
         job.add_output_buffer(placeholder_id: 1)
 
-        g = @c.create_graph
 
-        g.create_node(:decoder, 0)
-            .add(:scale, 300, 200, :filter_Robidoux, :filter_Robidoux, 0)
-            .add(:encoder, 1, 4) #4 is the id of the jpeg encoder
-
-
-        job.execute graph: g
+        job.execute framewise: {steps: [
+            {decode: {ioId: 0}},
+            {resample2d: {w: 300, h: 200}},
+            {encode: {ioId: 1, preset: {"LibjpegTurbo": {quality: 90}}}}
+        ]}
 
         out_bytes = job.get_buffer(placeholder_id: 1)
 
@@ -51,14 +49,12 @@ module Imageflow
         job.add_input_buffer(placeholder_id: 0, bytes: bytes)
         job.add_output_file(placeholder_id: 1, filename: "hello.png")
 
-        g = @c.create_graph
 
-        g.create_node(:decoder, 0)
-            .add(:scale, 300, 200, :filter_Robidoux, :filter_Robidoux, 0)
-            .add(:encoder, 1, 2) #2 is the id of the png encoder
-
-
-        job.execute graph: g
+        job.execute framewise: {steps: [
+            {decode: {ioId: 0}},
+            {resample2d: {w: 300, h: 200}},
+            {encode: {ioId: 1, preset: {"Libpng": {}}}}
+        ]}
         job = nil
         g = nil
         #reset the context to ensure the file stream is closed
@@ -70,12 +66,11 @@ module Imageflow
         job = @c.create_job
         job.add_input_file(placeholder_id: 0, filename: "hello.png")
         job.add_output_buffer(placeholder_id: 1)
-        g = @c.create_graph
-        g.create_node(:decoder, 0)
-            .add(:scale, 300, 200, :filter_Robidoux, :filter_Robidoux, 0)
-            .add(:encoder, 1, 4) #4 is the id of the jpeg encoder
-
-        job.execute graph: g
+        job.execute framewise: {steps: [
+            {decode: {ioId: 0}},
+            {resample2d: {w: 300, h: 200}},
+            {encode: {ioId: 1, preset: {"LibjpegTurbo": {}}}}
+        ]}
 
         out_bytes = job.get_buffer(placeholder_id: 1)
 

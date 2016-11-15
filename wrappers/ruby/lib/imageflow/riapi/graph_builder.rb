@@ -150,7 +150,7 @@ module Imageflow
         add_flip(i.flip) unless i.flip.nil?
 
 
-        if instructions.format == :png || instructions.format.nil? && source_info[:codec_id] == 1
+        if instructions.format == :png || instructions.format.nil? && source_info[:preferred_mime_type] == "image/png"
           @result_mime_type = 'image/png'
           output_codec = :png #:encode_png
         else

@@ -12,6 +12,7 @@ module Imageflow
     end
 
     def destroy!
+      #Todo, we could use begin_terminate to capture tear-down issues
       Native.context_destroy(@c)
       @c.autorelease = false
       @c = nil
@@ -42,20 +43,9 @@ module Imageflow
     def error_message(full_file_paths: true)
       raise_if_destroyed
       buffer = FFI::MemoryPointer.new(:char, 4096, true)
-
       Native.context_error_and_stacktrace(@c, buffer, 4096, full_file_paths)
-
       "\n" + buffer.read_string
     end
-
-    # def stack_trace(full_file_paths: true)
-    #   raise_if_destroyed
-    #   buffer = FFI::MemoryPointer.new(:char, 4096, true)
-    #
-    #   Native.context_stack_trace(@c, buffer, 4096, full_file_paths)
-    #
-    #   buffer.read_string
-    # end
 
     def create_job (**args)
       Job.new context: self, **args

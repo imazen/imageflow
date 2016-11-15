@@ -37,6 +37,7 @@ struct flow_io * flow_job_get_io(flow_c * c, struct flow_job * job, int32_t plac
 {
     struct flow_codec_instance * codec = flow_job_get_codec_instance(c, job, placeholder_id);
     if (codec == NULL) {
+        //TODO: no error thrown!
         FLOW_add_to_callstack(c);
         return NULL;
     }

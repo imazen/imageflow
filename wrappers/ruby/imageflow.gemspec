@@ -23,9 +23,6 @@ Gem::Specification.new do |s|
   s.require_path = 'lib'
   s.license = "AGPL v3"
 
-
-
-
   s.add_development_dependency "rspec"
   s.add_development_dependency "sinatra"
   s.add_development_dependency "pry"
@@ -35,9 +32,8 @@ Gem::Specification.new do |s|
   s.add_development_dependency "rack-test"
   s.add_development_dependency "rerun"
   s.add_development_dependency "rb-fsevent"
-
+  s.add_development_dependency 'ffi', '>=1.9.10'
   s.add_dependency 'ffi', '>=1.9.10'
 
-  s.add_development_dependency 'ffi', '>=1.9.10'
 end
 

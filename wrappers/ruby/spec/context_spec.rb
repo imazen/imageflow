@@ -26,18 +26,18 @@ module Imageflow
 
 
       it 'can report an error condition' do
-        bitmap = flow.bitmap_bgra_create_header(@c, -1, -1) #invalid size
+        success = flow.json_response_read(@c, FFI::Pointer.new(0),FFI::Pointer.new(0),FFI::Pointer.new(0),FFI::Pointer.new(0))
 
         expect(flow.context_has_error(@c)).to be(true)
 
-        expect(bitmap.null?).to be(true)
+        expect(success).to be(false)
 
 
         buffer = FFI::MemoryPointer.new(:char, 2048, true)
 
-        flow.context_error_message(@c, buffer, 2048)
+        flow.context_error_and_stacktrace(@c, buffer, 2048, true)
 
-        expect(buffer.read_string).to match /Invalid dimensions/
+        expect(buffer.read_string).to match /Null argument/
       end
     end
 
@@ -52,8 +52,8 @@ module Imageflow
 
       it 'can raise an error' do
         expect {
-          @c.call_method(:bitmap_bgra_create_header, -1, -1)
-        }.to raise_error /Invalid dimensions/
+          @c.call_method(:json_response_read, FFI::Pointer.new(0),FFI::Pointer.new(0),FFI::Pointer.new(0),FFI::Pointer.new(0))
+        }.to raise_error /Null argument/
       end
     end
   end

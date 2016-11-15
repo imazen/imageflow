@@ -1,9 +1,42 @@
 
-3. Document JSON API for comment
-3. Modify I/O API around ownership - use an enum instead of a pointer.
+3. Document JSON API for comment. add 'examples trait' or smth in order to document endpoint syntax.
 4. Move C to subfolder
-5. Drop unused C dependencies, like libcurl.
 4. Validate nodes/inputs/outputs
+
+Define error handling convention
+
+Rust panic sources
+* OOM panics, but we want to rescue it.
+* Some invalid input will panic (most, until later in development)
+* Bugs should panic (but some may fail Result instead)
+
+Context error sources:
+* OOM
+* I/O error
+* Not implemented
+* Invalid/null argument, invalid dimensions/format, other invalid args
+* Encoding/decoding failed
+* Item does not exist
+
+Rust error sources:
+* JSON parsing error
+* Node validation
+* Graph validation
+* lots of other things
+
+Constraints:
+* Panics must *always* be caught at the FFI boundary
+* Panics and unwinding are expensive, and should never happen in normal situations.
+
+Hacks
+* We can change the value Panics-on-OOM provide, to treat them differently.
+* backtrace-rs lets us resolve symbols/filenames/line numbers directly.
+
+
+Thoughts:
+Mirror JSON and Context error data, always. If a message doesn't have a successful response, they need to call
+clear_error. We can probably condense status codes, though.
+
 
 Create backend-agnostic Client API (takes binary blobs online). It can use FFI, server, or command-line tool.
 

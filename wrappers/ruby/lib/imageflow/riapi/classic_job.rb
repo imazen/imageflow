@@ -39,7 +39,6 @@ module Imageflow
             frame0_width: info[:frame0Width],
             frame0_height: info[:frame0Height],
             frame0_post_decode_format: info[:frame0_post_decode_format],
-            codec_id: info[:codec_id]
         }
 
       end

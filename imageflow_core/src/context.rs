@@ -186,28 +186,42 @@ impl JobPtr {
 
             }
             "v0.0.1/tell_decoder" => {
-                let parsed: s::TellDecoder001 = serde_json::from_slice(json).unwrap();
-                self.tell_decoder(parsed.io_id, parsed.command).unwrap();
-                Ok(JsonResponse::ok())
-            }
-            "v0.0.1/execute" => {
-                let parsed: s::Execute001 = serde_json::from_slice(json).unwrap();
-                let mut g = ::parsing::GraphTranslator::new().translate_framewise(parsed.framewise);
-                if let Some(r) = parsed.graph_recording {
-                    self.configure_graph_recording(r);
-                }
-                unsafe {
-                    if let Some(b) = parsed.no_gamma_correction {
-                        ::ffi::flow_context_set_floatspace(self.c, match b {
-                            true => ::ffi::Floatspace::srgb,
-                            false => ::ffi::Floatspace::linear
-                        }, 0f32, 0f32, 0f32)
+                let parsed_maybe: std::result::Result<s::TellDecoder001, serde_json::Error> = serde_json::from_slice(json);
+                match parsed_maybe {
+                    Ok(parsed) => {
+                        self.tell_decoder(parsed.io_id, parsed.command).unwrap();
+                        Ok(JsonResponse::ok())
+                    }
+                    Err(e) => {
+                        Ok(JsonResponse::from_parse_error(e,json))
                     }
                 }
-                if !self.execute(&mut g){
-                    unsafe { self.ctx().assert_ok(Some(&mut g)); }
+            }
+            "v0.0.1/execute" => {
+                let parsed_maybe: std::result::Result<s::Execute001, serde_json::Error> = serde_json::from_slice(json);
+                match parsed_maybe {
+                    Ok(parsed) => {
+                        let mut g = ::parsing::GraphTranslator::new().translate_framewise(parsed.framewise);
+                        if let Some(r) = parsed.graph_recording {
+                            self.configure_graph_recording(r);
+                        }
+                        unsafe {
+                            if let Some(b) = parsed.no_gamma_correction {
+                                ::ffi::flow_context_set_floatspace(self.c, match b {
+                                    true => ::ffi::Floatspace::srgb,
+                                    false => ::ffi::Floatspace::linear
+                                }, 0f32, 0f32, 0f32)
+                            }
+                        }
+                        if !self.execute(&mut g){
+                            unsafe { self.ctx().assert_ok(Some(&mut g)); }
+                        }
+                        Ok(JsonResponse::ok())
+                    }
+                    Err(e) => {
+                        Ok(JsonResponse::from_parse_error(e,json))
+                    }
                 }
-                Ok(JsonResponse::ok())
             }
             "brew_coffee" => Ok(JsonResponse::teapot()),
             _ => Ok(JsonResponse::method_not_understood())
