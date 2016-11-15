@@ -1,3 +1,13 @@
+
+2. Resample1D and Resample2D
+3. Document JSON API for comment
+3. Modify I/O API around ownership - use an enum instead of a pointer.
+4. Move C to subfolder
+5. Drop unused C dependencies, like libcurl.
+4. Validate nodes/inputs/outputs
+
+
+
 Refine the JSON API
 
 Replace scale flags

@@ -72,7 +72,7 @@ fn scale_def() -> NodeDefinition {
             fn f(ctx: &mut OpCtxMut, ix: NodeIndex<u32>) {
                 let input = ctx.first_parent_frame_info_some(ix).unwrap();
 
-                if let s::Node::Scale { w, h, down_filter, up_filter, sharpen_percent, flags } =
+                if let s::Node::Scale { w, h, down_filter, up_filter, hints} =
                        ctx.get_json_params(ix).unwrap() {
 
                     let filter = if input.w < w as i32 || input.h < h as i32 {
@@ -81,8 +81,13 @@ fn scale_def() -> NodeDefinition {
                         down_filter
                     };
 
-                    match flags {
-                        Some(1) => {
+                    let old_style = if let Some(s::ResampleHints{ prefer_1d_twice, sharpen_percent}) = hints {
+                        prefer_1d_twice == Some(true)
+                    } else{
+                        false
+                    };
+                    match old_style {
+                        false => {
                             let canvas_params = s::Node::CreateCanvas {
                                 w: w as usize,
                                 h: h as usize,
@@ -95,8 +100,7 @@ fn scale_def() -> NodeDefinition {
                                 h: h,
                                 up_filter: up_filter,
                                 down_filter: down_filter,
-                                flags: Some(1),
-                                sharpen_percent: None,
+                                hints: hints
                             };
                             let canvas = ctx.graph
                                 .add_node(Node::new(&CREATE_CANVAS,
@@ -107,7 +111,7 @@ fn scale_def() -> NodeDefinition {
                             ctx.graph.add_edge(canvas, scale2d, EdgeKind::Canvas).unwrap();
                             ctx.replace_node_with_existing(ix, scale2d);
                         }
-                        _ => {
+                        true => {
 
                             let scalew_params = s::Node::Render1D {
                                 scale_to_width: w,
@@ -227,7 +231,7 @@ fn scale2d_render_def() -> NodeDefinition {
         fn_estimate: Some(NodeDefHelpers::copy_frame_est_from_first_canvas),
         fn_execute: Some({
             fn f(ctx: &mut OpCtxMut, ix: NodeIndex<u32>) {
-                if let s::Node::Scale { w, h, down_filter, up_filter, sharpen_percent, flags } =
+                if let s::Node::Scale { w, h, down_filter, up_filter, hints } =
                        ctx.get_json_params(ix).unwrap() {
                     let input = ctx.first_parent_result_frame(ix, EdgeKind::Input).unwrap();
                     let canvas = ctx.first_parent_result_frame(ix, EdgeKind::Canvas).unwrap();
@@ -245,6 +249,7 @@ fn scale2d_render_def() -> NodeDefinition {
                             down_filter
                         };
 
+                        let sharpen_percent = hints.and_then(|h| h.sharpen_percent );
 
                         let ffi_struct = ffi::Scale2dRenderToCanvas1d {
                             interpolation_filter:

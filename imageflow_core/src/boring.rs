@@ -425,7 +425,11 @@ pub fn process_image<F, C, R>(commands: BoringCommands,
 
         let steps = vec![
         s::Node::Decode{ io_id: 0},
-        s::Node::Scale{ w: final_w, h: final_h, down_filter: Some(commands.down_filter), up_filter: Some(commands.up_filter), sharpen_percent: Some(commands.sharpen), flags: Some(1)},
+        s::Node::Scale {
+            w: final_w,
+            h: final_h, down_filter: Some(commands.down_filter), up_filter: Some(commands.up_filter),
+            hints: Some(s::ResampleHints { sharpen_percent: Some(commands.sharpen), prefer_1d_twice: None })
+        },
         s::Node::Encode{ io_id: 1, preset: encoder_preset}
         ];
 

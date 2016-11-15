@@ -108,8 +108,7 @@ fn test_handler() {
         h: 30,
         down_filter: None,
         up_filter: None,
-        sharpen_percent: None,
-        flags: None,
+        hints: None
     });
     steps.push(s::Node::FlipV);
     steps.push(s::Node::FlipH);

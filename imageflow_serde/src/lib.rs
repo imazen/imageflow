@@ -214,7 +214,14 @@ fn test_bgra() {
 
 }
 
+#[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
+pub struct ResampleHints{
+    #[serde(rename="sharpenPercent")]
+    pub sharpen_percent: Option<f32>,
 
+    #[serde(rename="prefer1dTwice")]
+    pub prefer_1d_twice: Option<bool>
+}
 
 #[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
 pub enum Node {
@@ -287,9 +294,7 @@ pub enum Node {
         down_filter: Option<Filter>,
         #[serde(rename="upFilter")]
         up_filter: Option<Filter>,
-        #[serde(rename="sharpenPercent")]
-        sharpen_percent: Option<f32>,
-        flags: Option<usize>,
+        hints: Option<ResampleHints>
     },
     Render1D {
         scale_to_width: usize,
