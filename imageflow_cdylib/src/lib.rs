@@ -128,6 +128,31 @@ use std::ffi::CStr;
 #[cfg(test)]
 use std::str;
 
+///
+/// When a resource should be closed/freed/cleaned up
+///
+#[repr(C)]
+#[derive(Clone, Copy, PartialEq, Debug)]
+pub enum CleanupWith{
+    /// When the context is destroyed
+    Context = 0,
+    /// When the first job that the item is associated with is destroyed. (Not yet implemented)
+    FirstJob = 1
+}
+
+///
+/// How long the provided pointer/buffer will remain valid.
+/// Callers must prevent the memory from being freed or moved until this contract expires.
+///
+#[repr(C)]
+#[derive(Clone, Copy, PartialEq, Debug)]
+pub enum PointerLifetime{
+    /// Pointer will outlive function call. (I.e, in .NET, the memory has been pinned through the end of the call, perhaps via the 'fixed' keyword)
+    OutlivesFunctionCall = 0,
+    /// Pointer will outlive context (Usually a GCHandle is required to pin an object for a longer time in C#)
+    OutlivesContext = 1,
+}
+
 
 
 /// Creates a static, null-terminated Rust string, and
@@ -432,7 +457,7 @@ pub unsafe extern fn imageflow_json_response_read(context: *mut Context,
                                                   response_in: *const ImageflowJsonResponse,
                                                   status_code_out: *mut i64,
                                                   buffer_utf8_no_nulls_out: *mut *const libc::uint8_t,
-                                                  buffer_size_out: *mut libc::size_t) -> bool {
+                                                  buffer_size_out: *mut u64) -> bool {
     if context.is_null() {
         return false;
     }
@@ -453,7 +478,7 @@ pub unsafe extern fn imageflow_json_response_read(context: *mut Context,
         *buffer_utf8_no_nulls_out = (*response_in).buffer_utf8_no_nulls;
     }
     if !buffer_size_out.is_null() {
-        *buffer_size_out = (*response_in).buffer_size;
+        *buffer_size_out = (*response_in).buffer_size as u64;
     }
     return true;
 }
@@ -625,7 +650,7 @@ pub fn exercise_json_message() {
         assert!(response != ptr::null());
 
         let mut json_out_ptr: *const u8 = ptr::null_mut();
-        let mut json_out_size: usize = 0;
+        let mut json_out_size: u64 = 0;
         let mut json_status_code: i64 = 0;
 
         assert!(imageflow_json_response_read(c,
@@ -635,8 +660,9 @@ pub fn exercise_json_message() {
                                              &mut json_out_size));
 
 
+        let json_out_usize = json_out_size as usize; //TODO: check overflow
         let json_out_str =
-        ::std::str::from_utf8(std::slice::from_raw_parts(json_out_ptr, json_out_size)).unwrap();
+        ::std::str::from_utf8(std::slice::from_raw_parts(json_out_ptr, json_out_usize)).unwrap();
         assert_eq!(json_out_str, expected_json_out);
 
         assert_eq!(json_status_code, expected_reponse_status);
@@ -656,39 +682,40 @@ pub fn exercise_json_message() {
 pub unsafe extern "C" fn imageflow_io_create_for_file(context: *mut Context,
                                                       mode: IoMode,
                                                       filename: *const libc::c_char,
-                                                      owner: *mut libc::c_void)
+                                                      cleanup: CleanupWith)
                                                       -> *mut JobIO {
     // TODO: validate that 'owner' is capable of being an owner
 
-    ffi::flow_io_create_for_file(context, mode, filename, owner)
+    ffi::flow_io_create_for_file(context, mode, filename, context as *const libc::c_void)
 }
 
 
 ///
-/// This method has not been stabilized; monitor its signature for changes.
+/// Creates an imageflow_io structure for reading from the provided buffer.
+/// You are ALWAYS responsible for freeing the memory provided in accordance with the PointerLifetime value.
+/// If you specify OutlivesFunctionCall, then the buffer will be copied.
 ///
-/// Creates an imageflow_io structure for reading from/writing to the provided memory buffer.
-/// You are responsible for freeing the memory provided; ownership does not transfer to Imageflow
-/// unless you provide a destructor_function (which is not yet supported).
-///
-///
-///
-///
-/// Destructor functions are not yet supported.
-///
-/// `mode` is ignored, and not enforced.
-///
-/// destructor_function should be
 ///
 #[no_mangle]
-pub unsafe extern "C" fn imageflow_io_create_from_memory(context: *mut Context,
-                                                         mode: IoMode,
-                                                         memory: *const u8,
-                                                         length: libc::size_t,
-                                                         owner: *mut libc::c_void,
-                                                         destructor_function: *const libc::c_void)
+pub unsafe extern "C" fn imageflow_io_create_from_buffer(context: *mut Context,
+                                                         buffer: *const u8,
+                                                         buffer_byte_count: libc::size_t,
+                                                            lifetime: PointerLifetime,
+                                                            cleanup: CleanupWith)
                                                          -> *mut JobIO {
-    ffi::flow_io_create_from_memory(context, mode, memory, length, owner, destructor_function)
+
+    let mut final_buffer = buffer;
+    if lifetime == PointerLifetime::OutlivesFunctionCall {
+        let buf : *mut u8 = c::ffi::flow_context_calloc(context, 1, buffer_byte_count, ptr::null(), context as *const libc::c_void, ptr::null(), 0) as *mut u8 ;
+        if buf.is_null() {
+            //TODO: raise OOM
+            return ptr::null_mut();
+        }
+        ptr::copy_nonoverlapping(buffer, buf, buffer_byte_count);
+
+        final_buffer = buf;
+    }
+    ffi::flow_io_create_from_memory(context, IoMode::read_seekable, final_buffer, buffer_byte_count, context as *mut libc::c_void, ptr::null())
 }
 
 
@@ -699,14 +726,11 @@ pub unsafe extern "C" fn imageflow_io_create_from_memory(context: *mut Context,
 ///
 /// The I/O structure and buffer will be freed with the context.
 ///
-/// Early destruction is not yet available; the value of `owner`, is, for now, ignored, and the
-/// value of `context` is used instead, as that is when the underlying buffer is freed.
 ///
 /// Returns null if allocation failed; check the context for error details.
 #[no_mangle]
 #[allow(unused_variables)]
-pub unsafe extern "C" fn imageflow_io_create_for_output_buffer(context: *mut Context,
-                                                               owner: *const libc::c_void)
+pub unsafe extern "C" fn imageflow_io_create_for_output_buffer(context: *mut Context)
                                                                -> *mut JobIO {
     // The current implementation of output buffer only sheds its actual buffer with the context.
     // No need for the shell to have an earlier lifetime for mem reasons.
@@ -720,31 +744,38 @@ pub unsafe extern "C" fn imageflow_io_create_for_output_buffer(context: *mut Con
 ///
 /// Provides access to the underlying buffer for the given imageflow_io object.
 ///
+/// Ensure your length variable always holds 64-bits.
+///
 #[no_mangle]
 pub unsafe extern "C" fn imageflow_io_get_output_buffer(context: *mut Context,
                                                         io: *mut JobIO,
                                                         result_buffer: *mut *const u8,
-                                                        result_buffer_length: *mut libc::size_t)
+                                                        result_buffer_length: *mut u64)
                                                         -> bool {
-    ffi::flow_io_get_output_buffer(context, io, result_buffer, result_buffer_length)
+
+    let mut result_len: usize = 0;
+    let b = ffi::flow_io_get_output_buffer(context, io, result_buffer, &mut result_len);
+        (* result_buffer_length) = result_len as u64;
+    b
 }
 
 ///
 /// Provides access to the underlying buffer for the given imageflow_io object.
+///
+/// Ensure your length variable always holds 64-bits
 ///
 #[no_mangle]
 pub unsafe extern "C" fn imageflow_job_get_output_buffer_by_id(context: *mut Context,
                                                                job: *mut Job,
                                                                io_id: i32,
                                                                result_buffer: *mut *const u8,
-                                                               result_buffer_length: *mut libc::size_t)
+                                                               result_buffer_length: *mut u64)
                                                                -> bool {
     let io = ffi::flow_job_get_io(context,job, io_id);
     if io.is_null(){
         return false;
     }else {
-        ffi::flow_io_get_output_buffer(context, io, result_buffer, result_buffer_length);
-        return true;
+        imageflow_io_get_output_buffer(context, io, result_buffer, result_buffer_length)
     }
 }
 

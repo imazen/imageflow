@@ -29,13 +29,13 @@ module Imageflow
 
 
     def add_input_file(placeholder_id:, filename:)
-      io_in = @c.call_method(:io_create_for_file, :mode_read_seekable, filename, @c.ptr)
+      io_in = @c.call_method(:io_create_for_file, :mode_read_seekable, filename,  :cleanup_with_context)
 
       @c.call_method(:job_add_io, @ptr, io_in, placeholder_id,  :flow_input)
     end
 
     def add_output_file(placeholder_id:, filename:)
-      io_out = @c.call_method(:io_create_for_file, :mode_write_seekable, filename, @c.ptr)
+      io_out = @c.call_method(:io_create_for_file, :mode_write_seekable, filename,  :cleanup_with_context)
 
       @c.call_method(:job_add_io, @ptr, io_out, placeholder_id,  :flow_output)
     end
@@ -45,21 +45,21 @@ module Imageflow
       buffer.put_bytes(0, bytes)
       @keepalive << buffer
 
-      io_in = @c.call_method(:io_create_from_memory, :mode_read_write_seekable, buffer, bytes.bytesize, @c.ptr, nil)
+      io_in = @c.call_method(:io_create_from_memory,buffer, bytes.bytesize, :outlives_context, :cleanup_with_context)
 
       @c.call_method(:job_add_io, @ptr, io_in, placeholder_id,  :flow_input)
     end
 
     def add_output_buffer(placeholder_id:)
 
-      io_ptr = @c.call_method(:io_create_for_output_buffer, @c.ptr)
+      io_ptr = @c.call_method(:io_create_for_output_buffer)
 
       @c.call_method(:job_add_io, @ptr, io_ptr, placeholder_id,  :flow_output)
     end
 
     def get_buffer(placeholder_id:)
       buffer_pointer = FFI::MemoryPointer.new(:pointer, 1) # Allocate memory sized to the data
-      buffer_size = FFI::MemoryPointer.new(:size_t, 1) # Allocate memory sized to the data
+      buffer_size = FFI::MemoryPointer.new(:uint64, 1) # Allocate memory sized to the data
 
       @c.call_method(:job_get_output_buffer_by_id, @ptr, placeholder_id, buffer_pointer, buffer_size)
 

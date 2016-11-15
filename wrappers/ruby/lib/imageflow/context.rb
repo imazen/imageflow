@@ -120,13 +120,11 @@ module Imageflow
 
       out_status_code = FFI::MemoryPointer.new(:int64, 1) # Allocate memory sized to the data
       out_buffer_ptr = buffer_pointer = FFI::MemoryPointer.new(:pointer, 1) # Allocate memory sized to the data
-      out_buffer_size = FFI::MemoryPointer.new(:size_t, 1) # Allocate memory sized to the data
+      out_buffer_size = FFI::MemoryPointer.new(:uint64, 1) # Allocate memory sized to the data
 
 
       if call_method(:json_response_read, response,out_status_code, out_buffer_ptr, out_buffer_size )
-        #size = out_buffer_size.read(:size_t)
-        size = out_buffer_size.read_pointer.address
-        UnparsedResponse.from_pointer(out_buffer_ptr.read_pointer,size , out_status_code.read_int64)
+        UnparsedResponse.from_pointer(out_buffer_ptr.read_pointer, out_buffer_size.read_uint64 , out_status_code.read_int64)
       else
         raise "imageflow_json_response_read failed"
       end

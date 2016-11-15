@@ -1,11 +1,11 @@
 
-2. Resample1D and Resample2D
 3. Document JSON API for comment
 3. Modify I/O API around ownership - use an enum instead of a pointer.
 4. Move C to subfolder
 5. Drop unused C dependencies, like libcurl.
 4. Validate nodes/inputs/outputs
 
+Create backend-agnostic Client API (takes binary blobs online). It can use FFI, server, or command-line tool.
 
 
 Refine the JSON API
@@ -20,6 +20,8 @@ width/height/mode/scale/anchor
 We may drop camelCase/snake_case
 
 ------------------
+
+Port visual helpers to Rust and add upload support
 
 
 Move C to a subfolder, change component names to be clearer

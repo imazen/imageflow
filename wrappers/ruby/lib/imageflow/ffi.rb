@@ -107,6 +107,15 @@ module Imageflow
         :flow_input, 4
     ]
 
+    enum :flow_pointer_lifetime, [
+        :outlives_function_call, 0,
+        :outlives_context, 1
+    ]
+    enum :flow_cleanup_with, [
+        :cleanup_with_context, 0,
+        :cleanup_with_first_job, 1
+    ]
+
 
     attach_function :imageflow_context_create, [], :pointer
     attach_function :imageflow_context_begin_terminate, [:pointer], :bool
@@ -133,21 +142,14 @@ module Imageflow
 
 
 
-    #PUB struct flow_io * flow_io_create_for_file(flow_c * c, flow_io_mode mode, const char * filename, void * owner);
-
-    attach_function :imageflow_io_create_for_file, [:pointer, :flow_io_mode, :string, :pointer], :pointer, blocking: true
-
-    # PUB struct flow_io* flow_io_create_from_memory(flow_context* c, flow_io_mode mode, uint8_t* memory, size_t length,
-    #    void* owner, flow_destructor_function memory_free);
-    attach_function :imageflow_io_create_from_memory, [:pointer, :flow_io_mode, :pointer, :size_t, :pointer, :pointer], :pointer, blocking: true
-    #PUB struct flow_io* flow_io_create_for_output_buffer(flow_context* c, void* owner);
-    attach_function :imageflow_io_create_for_output_buffer, [:pointer, :pointer], :pointer, blocking: true
+    attach_function :imageflow_io_create_for_file, [:pointer, :flow_io_mode, :string, :flow_cleanup_with], :pointer, blocking: true
 
 
-    # // Returns false if the flow_io struct is disposed or not an output buffer type (or for any other error)
-    # PUB bool flow_io_get_output_buffer(flow_context* c, struct flow_io* io, uint8_t** out_pointer_to_buffer,
-    #                                                            size_t* out_length);
-    #attach_function :imageflow_io_get_output_buffer, [:pointer, :pointer, :pointer, :pointer], :bool, blocking: true
+    attach_function :imageflow_io_create_from_buffer, [:pointer, :pointer, :size_t, :flow_pointer_lifetime, :flow_cleanup_with], :pointer, blocking: true
+
+    attach_function :imageflow_io_create_for_output_buffer, [:pointer ], :pointer, blocking: true
+
+
 
     attach_function :imageflow_job_get_output_buffer_by_id, [:pointer, :pointer, :int32, :pointer, :pointer], :bool, blocking: true
 
