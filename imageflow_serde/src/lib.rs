@@ -464,6 +464,7 @@ pub struct ImageInfo {
     pub preferred_mime_type: String,
     #[serde(rename="preferredExtension")]
     pub preferred_extension: String,
+    //Warning, one cannot count frames in a GIF without scanning the whole thing.
     #[serde(rename="frameCount")]
     pub frame_count: usize,
     #[serde(rename="currentFrameIndex")]

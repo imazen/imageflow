@@ -422,9 +422,7 @@ bool visual_compare(flow_c * c, struct flow_bitmap_bgra * bitmap, const char * n
     }
     // Load stored checksum
     char * stored_checksum = get_checksum_for(c, name, storage_relative_to);
-    if (stored_checksum == NULL){
-        FLOW_error_return(c);
-    }
+
     // Compare
     if (stored_checksum != NULL && strcmp(checksum, stored_checksum) == 0) {
         // Make sure the file is created for later

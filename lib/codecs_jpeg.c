@@ -628,11 +628,7 @@ static bool flow_codecs_jpg_decoder_FinishRead(flow_c * c, struct flow_codecs_jp
     jpeg_destroy_decompress(state->cinfo);
     FLOW_free(c, state->cinfo);
     state->cinfo = NULL;
-
-    if (!flow_bitmap_bgra_transform_to_srgb(c, state->color_profile, state->canvas)) {
-        FLOW_error_return(c);
-    }
-
+    
     return true;
 }
 

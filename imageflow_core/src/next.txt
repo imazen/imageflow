@@ -1,12 +1,30 @@
-Add tests for IDCT downscaling, linear and not
+Refine the JSON API
+
+Replace scale flags
+
+Scale and Render1D become Resample2D and Resample1D
+
+Reconsider graph_recording design
+Reconsider no_gamma_correction flag placement
+
+Create constraint node
+https://github.com/riapi/riapi/blob/master/level-1.md
+width/height/mode/scale/anchor
+
+We may drop camelCase/snake_case
+
+------------------
+
 
 Move C to a subfolder, change component names to be clearer
 
 Give nodes a validate function.
 
+Validate input/output edges
+
 Give nodes a document/permute function.
 
-Put all graph recording in a graph_recording subfolder
+Put all graph recording results in a graph_recording subfolder
 
 Implement builtin off-by-one comparison nodes with json and image output
 
@@ -21,3 +39,7 @@ Roundtrip and compare various things (like flips)
 Don't panic on bad JSON or input; return a Result, and get it right.
 
 It's okay to panic on OOM, but catch it
+
+Ideas for later:
+
+We probably need a way for clients to hint they're going to reuse an input soon
