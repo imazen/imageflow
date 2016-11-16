@@ -3,6 +3,9 @@ use std::{ptr,marker,slice,cell};
 use libc;
 use ::{FlowError,FlowErr, JsonResponse,JsonResponseError,Result,IoDirection};
 use ::ffi::ImageflowJsonResponse;
+use std::path::Path;
+use std::fs::File;
+use std::io::Write;
 
 extern crate imageflow_serde as s;
 extern crate serde_json;
@@ -165,6 +168,39 @@ impl JobPtr {
 
     }
 
+    pub fn document_message() -> String {
+        let mut s = String::new();
+        s.reserve(8000);
+        s += "JSON API - Job\n\n";
+        s += "imageflow_job responds to these message methods\n\n";
+        s += "## v0.0.1/get_image_info \n";
+        s += "Example message body:\n";
+        s += &serde_json::to_string_pretty(&s::GetImageInfo001::example_get_image_info()).unwrap();
+        s += "\nExample response:\n";
+        s += &serde_json::to_string_pretty(&s::Response001::example_image_info()).unwrap();
+        s += "\n\n";
+
+
+        s += "## v0.0.1/tell_decoder \n";
+        s += "Example message body:\n";
+        s += &serde_json::to_string_pretty(&s::TellDecoder001::example_hints()).unwrap();
+        s += "\nExample response:\n";
+        s += &serde_json::to_string_pretty(&s::Response001::example_ok()).unwrap();
+        s += "\n\n";
+
+        s += "## v0.0.1/execute \n";
+        s += "Example message body (with graph):\n";
+        s += &serde_json::to_string_pretty(&s::Execute001::example_graph()).unwrap();
+        s += "Example message body (with linear steps):\n";
+        s += &serde_json::to_string_pretty(&s::Execute001::example_steps()).unwrap();
+        s += "\nExample response:\n";
+        s += &serde_json::to_string_pretty(&s::Response001::example_ok()).unwrap();
+        s += "\nExample failure response:\n";
+        s += &serde_json::to_string_pretty(&s::Response001::example_error()).unwrap();
+        s += "\n\n";
+
+        s
+    }
 
     pub fn message<'a, 'b, 'c>(&'a mut self,
                                method: &'b str,
@@ -290,7 +326,42 @@ impl Context {
     }
 }
 
+#[test]
+fn write_context_doc(){
+    let path = Path::new(file!()).parent().unwrap().join(Path::new("../../target/doc/context_json_api.txt"));
+    File::create(&path).unwrap().write_all(ContextPtr::document_message().as_bytes()).unwrap();
+}
+
+#[test]
+fn write_job_doc(){
+    let path = Path::new(file!()).parent().unwrap().join(Path::new("../../target/doc/job_json_api.txt"));
+    File::create(&path).unwrap().write_all(JobPtr::document_message().as_bytes()).unwrap();
+}
+
 impl ContextPtr {
+
+    pub fn document_message() -> String {
+        let mut s = String::new();
+        s.reserve(8000);
+        s += "# JSON API - Context\n\n";
+        s += "imageflow_context responds to these message methods\n\n";
+        s += "## v0.0.1/build \n";
+        s += "Example message body:\n";
+        s += &serde_json::to_string_pretty(&s::Build001::example_with_steps()).unwrap();
+        s += "\n\nExample response:\n";
+        s += &serde_json::to_string_pretty(&s::Response001::example_ok()).unwrap();
+        s += "\n\nExample failure response:\n";
+        s += &serde_json::to_string_pretty(&s::Response001::example_error()).unwrap();
+        s += "\n\n";
+
+        s
+    }
+
+
+
+
+
+
     pub fn message<'a, 'b, 'c>(&'a mut self,
                                method: &'b str,
                                json: &'b [u8])

@@ -431,6 +431,62 @@ pub struct Build001 {
     pub framewise: Framewise,
 }
 
+impl IoEnum{
+    pub fn example_byte_array() -> IoEnum{
+        let tinypng = vec![0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, 0x00, 0x00, 0x00, 0x0D, 0x49, 0x48, 0x44, 0x52, 0x00,
+        0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x08, 0x06, 0x00, 0x00, 0x00, 0x1F, 0x15, 0xC4, 0x89, 0x00,
+        0x00, 0x00, 0x0A, 0x49, 0x44, 0x41, 0x54, 0x78, 0x9C, 0x63, 0x00, 0x01, 0x00, 0x00, 0x05, 0x00, 0x01,
+        0x0D, 0x0A, 0x2D, 0xB4, 0x00, 0x00, 0x00, 0x00, 0x49, 0x45, 0x4E, 0x44, 0xAE, 0x42, 0x60, 0x82 ];
+        IoEnum::ByteArray(tinypng)
+    }
+    pub fn example_byte_array_truncated() -> IoEnum{
+        IoEnum::ByteArray(vec![0x89, 0x50, 0x4E, 0x47])
+    }
+    pub fn example_bytes_hex() -> IoEnum{
+        IoEnum::BytesHex("89504E470D0A1A0A0000000D49484452000000010000000108060000001F15C4890000000A49444154789C63000100000500010D0A2DB40000000049454E44AE426082".to_owned())
+    }
+}
+
+impl Build001 {
+    pub fn example_with_steps() -> Build001 {
+        Build001 {
+            builder_config: None,
+            io: vec![
+            IoObject {
+                checksum: None,
+                direction: IoDirection::Input,
+                io_id: 0,
+                io: IoEnum::Url("http://s3-us-west-2.amazonaws.com/imageflow-resources/test_inputs/waterhouse.jpg".to_owned())
+            },
+            IoObject {
+                checksum: None,
+                direction: IoDirection::Input,
+                io_id: 90,
+                io: IoEnum::example_byte_array_truncated(),
+            },
+            IoObject {
+                checksum: None,
+                direction: IoDirection::Input,
+                io_id: 91,
+                io: IoEnum::example_bytes_hex(),
+            },
+            IoObject {
+                io: IoEnum::Filename("output.png".to_owned()),
+                io_id: 1,
+                checksum: None,
+                direction: IoDirection::Output
+            },
+            IoObject {
+                io: IoEnum::OutputBuffer,
+                io_id: 2,
+                checksum: None,
+                direction: IoDirection::Output
+            }
+            ],
+            framewise: Framewise::example_graph()
+        }
+    }
+}
 #[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
 pub struct Execute001 {
     #[serde(rename="noGammaCorrection")]
@@ -440,10 +496,109 @@ pub struct Execute001 {
     pub framewise: Framewise,
 }
 
+impl Framewise {
+    pub fn example_steps() -> Framewise{
+        Framewise::Steps(
+            vec![
+            Node::Decode { io_id: 0 },
+            Node::ApplyOrientation { flag: 7 },
+            Node::ExpandCanvas { left: 10, top: 10, right: 10, bottom: 10, color: Color::Srgb(ColorSrgb::Hex("FFEECCFF".to_owned())) },
+            Node::Crop { x1: 10, y1: 10, x2: 650, y2: 490 },
+            Node::FillRect { x1: 0, y1: 0, x2: 8, y2: 8, color: Color::Transparent },
+            Node::FlipV,
+            Node::FlipH,
+            Node::Rotate90,
+            Node::Rotate180,
+            Node::Rotate270,
+            Node::Transpose,
+            Node::Resample2D {
+                w: 100, h: 75,
+                down_filter: Some(Filter::Robidoux),
+                up_filter: Some(Filter::Ginseng),
+                hints: Some(ResampleHints { sharpen_percent: Some(10f32), prefer_1d_twice: None })
+            },
+            Node::Resample2D {
+                w: 200,
+                h: 150,
+                up_filter: None,
+                down_filter: None,
+                hints: None
+            },
+            Node::Encode { io_id: 1, preset: EncoderPreset::LibjpegTurbo { quality: Some(90) } }
+            ]
+        )
+    }
+    pub fn example_graph() -> Framewise{
+
+        let mut nodes = std::collections::HashMap::new();
+        nodes.insert("0".to_owned(), Node::Decode { io_id: 0});
+        nodes.insert("1".to_owned(), Node::CreateCanvas { w: 200, h: 200, format: PixelFormat::Bgra32, color: Color::Transparent });
+        nodes.insert("2".to_owned(), Node::CopyRectToCanvas { x: 0, y:0, from_x: 0, from_y: 0, width: 100, height: 100});
+        nodes.insert("3".to_owned(), Node::Resample1D{ scale_to_width: 100, interpolation_filter: None, transpose_on_write: false});
+        nodes.insert("4".to_owned(), Node::Encode{ io_id: 1, preset: EncoderPreset::Libpng{ matte: Some(Color::Srgb(ColorSrgb::Hex("999999".to_owned()))), zlib_compression: None,  depth: Some(PngBitDepth::Png24) }});
+        nodes.insert("5".to_owned(), Node::Encode{ io_id: 2, preset: EncoderPreset::LibjpegTurbo { quality: Some(90) }});
+
+        Framewise::Graph(Graph{
+            edges: vec![
+            Edge{
+                from:0,
+                to: 2,
+                kind: EdgeKind::Input
+            },
+            Edge{
+                from:1,
+                to: 2,
+                kind: EdgeKind::Canvas
+            },
+            Edge{
+                from: 2,
+                to: 3,
+                kind: EdgeKind::Input
+            },
+            Edge{
+                from:3,
+                to: 4,
+                kind: EdgeKind::Input
+            },
+            Edge{
+                from:3,
+                to: 5,
+                kind: EdgeKind::Input
+            }
+            ],
+            nodes: nodes
+        })
+    }
+}
+impl Execute001 {
+    pub fn example_steps() -> Execute001{
+        Execute001 {
+            no_gamma_correction: None,
+            graph_recording: None,
+            framewise: Framewise::example_steps()
+        }
+    }
+    pub fn example_graph() -> Execute001 {
+        Execute001{
+            no_gamma_correction: None,
+            graph_recording: None,
+            framewise: Framewise::example_graph()
+        }
+    }
+}
+
 #[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
 pub struct GetImageInfo001 {
     #[serde(rename="ioId")]
     pub io_id: i32,
+}
+
+impl GetImageInfo001 {
+    pub fn example_get_image_info() -> GetImageInfo001{
+        GetImageInfo001{
+            io_id: 0
+        }
+    }
 }
 #[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
 pub struct JpegIDCTDownscaleHints {
@@ -465,6 +620,20 @@ pub struct TellDecoder001 {
     pub command: TellDecoderWhat
 }
 
+impl TellDecoder001 {
+    pub fn example_hints() -> TellDecoder001{
+        TellDecoder001{
+            io_id: 2,
+            command: TellDecoderWhat::JpegDownscaleHints(JpegIDCTDownscaleHints{
+                width: 1000,
+                height: 1000,
+                scale_luma_spatially: Some(true),
+                gamma_correct_for_srgb_during_spatial_luma_scaling: Some(true)
+            })
+        }
+    }
+}
+
 #[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
 pub struct ImageInfo {
     #[serde(rename="preferredMimeType")]
@@ -483,6 +652,7 @@ pub struct ImageInfo {
     #[serde(rename="frame0PostDecodeFormat")]
     pub frame0_post_decode_format: PixelFormat,
 }
+
 #[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
 pub enum ResponsePayload {
     ImageInfo(ImageInfo),
@@ -495,6 +665,45 @@ pub struct Response001 {
     pub message: Option<String>,
     pub data: ResponsePayload
 }
+
+impl Response001 {
+    pub fn example_error() -> Response001 {
+        Response001{
+            code: 500,
+            success: false,
+            message: Some("Invalid internal state".to_owned()),
+            data: ResponsePayload::None
+        }
+    }
+    pub fn example_ok() -> Response001 {
+        Response001{
+            code: 200,
+            success: true,
+            message: None,
+            data: ResponsePayload::None
+        }
+    }
+
+    pub fn example_image_info() -> Response001 {
+        Response001{
+            code: 200,
+            success: true,
+            message: None,
+            data: ResponsePayload::ImageInfo(
+                ImageInfo{
+                    current_frame_index: 0,
+                    frame_count: 1,
+                    frame0_height: 480,
+                    frame0_width: 640,
+                    frame0_post_decode_format: PixelFormat::Bgr24,
+                    preferred_mime_type: "image/png".to_owned(),
+                    preferred_extension: "png".to_owned()
+                }
+            )
+        }
+    }
+}
+
 
 
 #[test]
