@@ -1,4 +1,16 @@
 
+
+Create constraint node
+https://github.com/riapi/riapi/blob/master/level-1.md
+width/height/mode/scale/anchor
+
+Create server
+
+Create RIAPI wrapper
+
+Create backend-agnostic Client API (takes binary blobs online). It can use FFI, server, or command-line tool.
+
+
 * GIF codec
 * Animated GIF codec
 * quantization API
@@ -10,7 +22,6 @@
 4. Move C to subfolder, rename imageflowrs to libimageflow
 
 
-Create backend-agnostic Client API (takes binary blobs online). It can use FFI, server, or command-line tool.
 
 
 Refine the JSON API
@@ -18,9 +29,7 @@ Refine the JSON API
 Reconsider graph_recording design
 Reconsider no_gamma_correction flag placement
 
-Create constraint node
-https://github.com/riapi/riapi/blob/master/level-1.md
-width/height/mode/scale/anchor
+
 
 We probably need a way for clients to hint they're going to reuse an input soon
 

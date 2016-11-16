@@ -16,6 +16,7 @@ export OPEN_DOCKER_BASH_INSTEAD=${OPEN_DOCKER_BASH_INSTEAD:-False}
 # RUST_CHANNEL doesn't do anything right now, just part of some names
 export RUST_CHANNEL=${RUST_CHANNEL:-nightly}
 
+echo DISABLE_COMPILATION_CACHES=${DISABLE_COMPILATION_CACHES:-False}
 
 ############## Paths for caching
 export SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )/$1"
@@ -158,6 +159,17 @@ echo ===================================================================== [test
 echo "Launching docker "
 echo
 #Ensure that .cargo is NOT volume mapped; cargo will not work. Also, cargo fetches faster than rsync, it seems?
+
+DOCKER_CACHE_VARS=(
+	-v ${WORKING_DIR}_cache/wrappers_server_target:/home/conan/imageflow/wrappers/server/target 
+	-v ${SHARED_CACHE}/conan_data:/home/conan/.conan/data 
+	-v ${WORKING_DIR}_cache/build:/home/conan/imageflow/build  
+	-v ${WORKING_DIR}_cache/ccache:/home/conan/.ccache
+)
+if [[ "$DISABLE_COMPILATION_CACHES" == 'True' ]]; then
+	DOCKER_CACHE_VARS=()
+fi
+
 set -x
-docker run --interactive $DOCKER_TTY_FLAG --rm -v ${WORKING_DIR}:/home/conan/imageflow -v ${WORKING_DIR}_cache/wrappers_server_target:/home/conan/imageflow/wrappers/server/target -v ${WORKING_DIR}:/home/conan/imageflow -v ${SHARED_CACHE}/conan_data:/home/conan/.conan/data -v ${WORKING_DIR}_cache/build:/home/conan/imageflow/build  -v ${WORKING_DIR}_cache/ccache:/home/conan/.ccache  ${DOCKER_ENV_VARS[@]} ${DOCKER_IMAGE} "${DOCKER_COMMAND[@]}" 
+docker run --interactive $DOCKER_TTY_FLAG --rm -v ${WORKING_DIR}:/home/conan/imageflow ${DOCKER_CACHE_VARS[@]} ${DOCKER_ENV_VARS[@]} ${DOCKER_IMAGE} "${DOCKER_COMMAND[@]}" 
 set +x
