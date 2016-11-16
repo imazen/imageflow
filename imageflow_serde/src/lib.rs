@@ -52,8 +52,11 @@ pub enum MNode {
 }
 #[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
 pub enum PixelFormat {
+    #[serde(rename="bgra32")]
     Bgra32,
+    #[serde(rename="bgr24")]
     Bgr24,
+    #[serde(rename="gray8")]
     Gray8,
 }
 #[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
@@ -145,25 +148,35 @@ impl FromStr for Filter {
 
 #[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
 pub enum PngBitDepth{
+    #[serde(rename="png32")]
     Png32,
+    #[serde(rename="png24")]
     Png24,
 }
 
 #[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
 pub enum EncoderPreset {
+    #[serde(rename="libjpegturbo")]
     LibjpegTurbo { quality: Option<i32> },
-    Libpng {  depth: Option<PngBitDepth>, matte: Option<Color>, zlib_compression: Option<i32>}
+    #[serde(rename="libpng")]
+    Libpng {  depth: Option<PngBitDepth>, matte: Option<Color>,
+        #[serde(rename="zlibCompression")]
+        zlib_compression: Option<i32>}
 }
 
 
 #[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
 pub enum ColorSrgb {
+    #[serde(rename="hex")]
     Hex(String),
 }
 #[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
 pub enum Color {
+    #[serde(rename="transparent")]
     Transparent,
+    #[serde(rename="black")]
     Black,
+    #[serde(rename="srgb")]
     Srgb(ColorSrgb),
 }
 
@@ -299,8 +312,11 @@ pub enum Node {
 
     #[serde(rename="resample1d")]
     Resample1D {
+        #[serde(rename="scaleToWidth")]
         scale_to_width: usize,
+        #[serde(rename="transposeOnWrite")]
         transpose_on_write: bool,
+        #[serde(rename="interpolationFilter")]
         interpolation_filter: Option<Filter>,
     },
     // TODO: Block use except from FFI/unit test use
@@ -369,8 +385,7 @@ pub struct IoObject {
     #[serde(rename="ioId")]
     pub io_id: i32,
     pub direction: IoDirection,
-    pub io: IoEnum,
-    pub checksum: Option<IoChecksum>,
+    pub io: IoEnum
 }
 
 #[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
@@ -453,19 +468,19 @@ impl Build001 {
             builder_config: None,
             io: vec![
             IoObject {
-                checksum: None,
+
                 direction: IoDirection::Input,
                 io_id: 0,
                 io: IoEnum::Url("http://s3-us-west-2.amazonaws.com/imageflow-resources/test_inputs/waterhouse.jpg".to_owned())
             },
             IoObject {
-                checksum: None,
+
                 direction: IoDirection::Input,
                 io_id: 90,
                 io: IoEnum::example_byte_array_truncated(),
             },
             IoObject {
-                checksum: None,
+
                 direction: IoDirection::Input,
                 io_id: 91,
                 io: IoEnum::example_bytes_hex(),
@@ -473,13 +488,13 @@ impl Build001 {
             IoObject {
                 io: IoEnum::Filename("output.png".to_owned()),
                 io_id: 1,
-                checksum: None,
+
                 direction: IoDirection::Output
             },
             IoObject {
                 io: IoEnum::OutputBuffer,
                 io_id: 2,
-                checksum: None,
+
                 direction: IoDirection::Output
             }
             ],

@@ -90,14 +90,14 @@ fn test_handler() {
     let input_io = s::IoObject {
         io_id: 0,
         direction: s::IoDirection::Input,
-        checksum: None,
+
         io: s::IoEnum::BytesHex("FFD8FFE000104A46494600010101004800480000FFDB004300FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFC2000B080001000101011100FFC40014100100000000000000000000000000000000FFDA0008010100013F10".to_owned())
     };
 
     let output_io = s::IoObject {
         io_id: 1,
         direction: s::IoDirection::Output,
-        checksum: None,
+
         io: s::IoEnum::OutputBuffer,
     };
 

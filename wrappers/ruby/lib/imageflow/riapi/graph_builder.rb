@@ -13,18 +13,18 @@ module Imageflow
       end
 
       def add_encoder(io_id:, codec: , instructions: )
-        preset = {"LibjpegTurbo": {}} if codec == :jpg
-        preset = {"Libpng": {}} if codec == :png
+        preset = {"libjpegturbo": {}} if codec == :jpg
+        preset = {"libpng": {}} if codec == :png
 
         @steps << {encode: {ioId: io_id, preset: preset}}
       end
 
-      def add_scale(w:,h:, down_filter: :filter_Robidoux, up_filter: :filter_Robidoux)
+      def add_scale(w:,h:)
         @steps <<  {"resample2d": {
             "w": w,
             "h": h,
             "downFilter": "Robidoux",
-            "upFilter": "Robidoux",
+            "upFilter": "Ginseng",
             "hints": nil
         }}
       end
@@ -60,8 +60,8 @@ module Imageflow
             "right": right,
             "bottom": bottom,
             "color": {
-                "Srgb": {
-                    "Hex": color
+                "srgb": {
+                    "hex": color
                 }
             }
         }}

@@ -35,7 +35,7 @@ fn smoke_test(input: Option<s::IoEnum>, output: Option<s::IoEnum>,  debug: bool,
         io_list.push(s::IoObject {
             io_id: 0,
             direction: s::IoDirection::Input,
-            checksum: None,
+
             io: input.unwrap()
         });
     }
@@ -43,7 +43,7 @@ fn smoke_test(input: Option<s::IoEnum>, output: Option<s::IoEnum>,  debug: bool,
         io_list.push(s::IoObject {
             io_id: 1,
             direction: s::IoDirection::Output,
-            checksum: None,
+
             io: output.unwrap()
         });
     }
@@ -66,7 +66,7 @@ fn compare(input: Option<s::IoEnum>, allowed_off_by_one_bytes: usize, checksum_n
         inputs.push(s::IoObject {
             io_id: 0,
             direction: s::IoDirection::Input,
-            checksum: None,
+
             io: input.unwrap()
         });
     }
@@ -330,7 +330,7 @@ fn test_decode_png_and_scale_dimensions(){
     let png = s::IoObject{
         io_id: 0,
         direction: s::IoDirection::Input,
-        checksum: None,
+
         io: s::IoEnum::ByteArray(tinypng)
     };
     let steps = vec![
@@ -417,7 +417,7 @@ fn test_with_callback(checksum_name: String, input: s::IoEnum, callback: fn(s::I
         let mut job: JobPtr = JobPtr::create(c.as_ptr().unwrap()).unwrap();
 
         //Add input
-        ::imageflow_core::parsing::IoTranslator::new(c.as_ptr().unwrap()).add_to_job(job.as_ptr(), vec![s::IoObject{ io_id:0, direction: s::IoDirection::Input, io: input, checksum: None}]);
+        ::imageflow_core::parsing::IoTranslator::new(c.as_ptr().unwrap()).add_to_job(job.as_ptr(), vec![s::IoObject{ io_id:0, direction: s::IoDirection::Input, io: input}]);
 
 
         let info_blob: JsonResponse = job.message("v0.0.1/get_image_info", "{\"ioId\": 0}".as_bytes()).unwrap();
