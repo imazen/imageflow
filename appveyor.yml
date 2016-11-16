@@ -6,7 +6,7 @@ environment:
     RUST_BACKTRACE: 1
     OPENSSL_INCLUDE_DIR: C:\OpenSSL\include
     OPENSSL_LIB_DIR: C:\OpenSSL\lib
-    OPENSSL_LIBS: ssleay32:libeay32
+    OPENSSL_LIBS: ssleay32:libeay32:gdi32:User32
 configuration: Release
 
 platform:
