@@ -326,15 +326,20 @@ impl Context {
     }
 }
 
+fn get_create_doc_dir() -> std::path::PathBuf {
+    let path = Path::new(file!()).parent().unwrap().join(Path::new("../../target/doc"));
+    std::fs::create_dir_all(&path).unwrap();
+    path
+}
 #[test]
 fn write_context_doc(){
-    let path = Path::new(file!()).parent().unwrap().join(Path::new("../../target/doc/context_json_api.txt"));
+    let path = get_create_doc_dir().join(Path::new("context_json_api.txt"));
     File::create(&path).unwrap().write_all(ContextPtr::document_message().as_bytes()).unwrap();
 }
 
 #[test]
 fn write_job_doc(){
-    let path = Path::new(file!()).parent().unwrap().join(Path::new("../../target/doc/job_json_api.txt"));
+    let path = get_create_doc_dir().join(Path::new("job_json_api.txt"));
     File::create(&path).unwrap().write_all(JobPtr::document_message().as_bytes()).unwrap();
 }
 

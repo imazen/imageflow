@@ -1,6 +1,6 @@
 
-3. Document JSON API for comment. add 'examples trait' or smth in order to document endpoint syntax.
-4. Move C to subfolder
+
+4. Move C to subfolder, rename imageflowrs to libimageflow
 4. Validate nodes/inputs/outputs
 
 Define error handling convention
