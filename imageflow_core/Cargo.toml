@@ -18,7 +18,7 @@ threadpool = "1.0"
 serde = "*"
 serde_json = "*"
 lazy_static = "0.1.*"
-curl = "*"
+curl = "~0.3.11"
 json = "*"
 imageflow_serde = { path = "../imageflow_serde", version = "*" }
 petgraph = "^0.2.8"

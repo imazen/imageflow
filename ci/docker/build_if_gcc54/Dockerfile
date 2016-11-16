@@ -2,23 +2,30 @@ FROM ubuntu:xenial
 
 MAINTAINER Nathanael Jones 
 
-# We specifically need python3-setuptools with python 3.5 and higher
-
-RUN rm -rf /var/lib/apt/lists/* && apt-get update \
+RUN apt-get update \
   && apt-get install --no-install-recommends -y \
   apt-utils sudo build-essential wget git nasm dh-autoreconf pkg-config curl ccache libpng-dev libssl-dev ca-certificates \
   rubygems-integration ruby \
-  libcurl4-openssl-dev libelf-dev libdw-dev python2.7-minimal \
+  libcurl4-openssl-dev libelf-dev libdw-dev \
+  valgrind \
+  python-minimal python-pip python-setuptools \
+  && pip install conan \
+  && apt-get clean -y \
+  && apt-get autoremove -y \
   && rm -rf /var/lib/apt/lists/* \
-  && rm -rf {/usr/share/doc,/usr/share/man,/var/cache,/usr/doc,/usr/local/share/doc,/usr/local/share/man}
+  && bash -c 'rm -rf {/usr/share/doc,/usr/share/man,/var/cache,/usr/doc,/usr/local/share/doc,/usr/local/share/man}' \
+  && bash -c 'rm -rf /usr/lib/valgrind/*-x86-*' \
+  && bash -c 'rm -rf /usr/lib/valgrind/{power,mips,s390,arm,32bit,i386}*' \
+  && bash -c 'rm -rf /tmp/*' \
+  && bash -c 'rm -rf /var/tmp/*' 
 
-#RUN dpkg --add-architecture i386 && rm -rf /var/lib/apt/lists/* && apt-get update && apt-get install --no-install-recommends -y libc6-dev-i386 g++-multilib vim && rm -rf /var/lib/apt/lists/*
 
-#RUN rm -rf /var/lib/apt/lists/* && apt-get update && apt-get install --no-install-recommends -y libgmp-dev libmpfr-dev libmpc-dev && rm -rf /var/lib/apt/lists/*
+#Try to fix problems deleting /var/cache causes
+RUN sudo mkdir -p /var/cache/apt/archives/partial && sudo touch /var/cache/apt/archives/lock && sudo chmod 640 /var/cache/apt/archives/lock
 
 # Install CMake 3.4.1 (minimal)
 # Mirrored for speed from https://cmake.org/files/v3.4/cmake-3.4.1-Linux-x86_64.tar.gz
-RUN wget https://s3.amazonaws.com/public-unit-test-resources/cmake-3.4.1-Linux-x86_64.tar.gz \
+RUN wget -nv https://s3.amazonaws.com/public-unit-test-resources/cmake-3.4.1-Linux-x86_64.tar.gz \
     && tar -xzf cmake-3.4.1-Linux-x86_64.tar.gz \
     && cp cmake-3.4.1-Linux-x86_64/bin/cmake /usr/bin/cmake \
     && cp cmake-3.4.1-Linux-x86_64/bin/ctest /usr/bin/ctest \
@@ -26,16 +33,22 @@ RUN wget https://s3.amazonaws.com/public-unit-test-resources/cmake-3.4.1-Linux-x
     && rm -rf cmake-3.4.1-Linux-x86_64 && rm cmake-3.4.1-Linux-x86_64.tar.gz
 
 # Install DSSIM (minimal)
-RUN wget -O dssim.tar.gz https://github.com/pornel/dssim/archive/c6ad29c5a2dc37d8610120486f09eda145621c84.tar.gz \
+RUN wget -nv  -O dssim.tar.gz https://github.com/pornel/dssim/archive/c6ad29c5a2dc37d8610120486f09eda145621c84.tar.gz \
     && tar xvzf dssim.tar.gz && rm dssim.tar.gz && mv dssim-c6ad29c5a2dc37d8610120486f09eda145621c84 dssim \
     && cd dssim && make && sudo cp bin/dssim /usr/local/bin/dssim && cd .. && rm -rf dssim 
 
-# Ensure python2 is available for kcov
-RUN command -v python2 >/dev/null 2>&1 || sudo ln -sf /usr/bin/python2.7 /usr/bin/python2
+
+# Install lcov
+RUN wget -nv  -O lcov.tar.gz http://ftp.de.debian.org/debian/pool/main/l/lcov/lcov_1.11.orig.tar.gz \
+    && tar xvzf lcov.tar.gz && rm lcov.tar.gz && mv lcov-1.11 lcov \
+    && sudo make -C lcov/ install \
+    && rm -rf lcov && rm -rf /usr/share/man
+
+#Install coveralls-lcov
+RUN sudo gem install coveralls-lcov
 
 # Install kcov
-
-RUN wget -O kcov.tar.gz https://github.com/SimonKagstrom/kcov/archive/master.tar.gz \
+RUN wget -nv  -O kcov.tar.gz https://github.com/SimonKagstrom/kcov/archive/master.tar.gz \
     && tar xvzf kcov.tar.gz && rm kcov.tar.gz && mv kcov-master kcov \
     && mkdir kcov/build \
     && cd kcov/build \
@@ -45,38 +58,6 @@ RUN wget -O kcov.tar.gz https://github.com/SimonKagstrom/kcov/archive/master.tar
     && cd ../.. \
     && rm -rf kcov \
     && rm -rf /usr/local/share/man
-
-# Install lcov
-
-RUN wget -O lcov.tar.gz http://ftp.de.debian.org/debian/pool/main/l/lcov/lcov_1.11.orig.tar.gz \
-    && tar xvzf lcov.tar.gz && rm lcov.tar.gz && mv lcov-1.11 lcov \
-    && sudo make -C lcov/ install \
-    && rm -rf lcov && rm -rf /usr/share/man
-
-
-
-#Install coveralls-lcov
-RUN sudo gem install coveralls-lcov
-
-ENV PATH=/usr/lib/ccache:$PATH
-
-# Install PIP and conan
-RUN rm -rf /var/lib/apt/lists/* && apt-get update \
-  && apt-get install --no-install-recommends -y \
-  python3-minimal python3-pip python3-setuptools \
-  && pip3 install conan \
-  && rm -rf /var/lib/apt/lists/* \
-  && rm -rf {/usr/share/doc,/usr/share/man,/var/cache,/usr/doc,/usr/local/share/doc,/usr/local/share/man}
-
-# Install valgrind
-RUN rm -rf /var/lib/apt/lists/* && apt-get update \
-  && apt-get install --no-install-recommends -y \
-  valgrind \
-  && rm -rf /var/lib/apt/lists/* \
-  && bash -c 'rm -rf {/usr/share/doc,/usr/share/man,/var/cache,/usr/doc,/usr/local/share/doc,/usr/local/share/man}' \
-  && bash -c 'rm -f /usr/lib/valgrind/*-x86-*' \
-  && bash -c 'rm -f /usr/lib/valgrind/{power,mips,s390,arm,32bit,i386}*' 
-
 
 
 RUN groupadd 1001 -g 1001 &&\
@@ -88,31 +69,23 @@ RUN groupadd 1001 -g 1001 &&\
 
 USER conan
 
+ENV PATH=/usr/lib/ccache:$PATH
 ENV PATH=/home/conan/.cargo/bin:$PATH
 
-#Install Rust stable plus x86_64-unknown-linux-musl
-# RUN curl https://sh.rustup.rs -sSf | sh -s -- -y --default-toolchain stable -v \
-#    && rustup target add x86_64-unknown-linux-musl \
-#    && HI=$(rustup which rustc) && HI=${HI%/bin/rustc} && export TOOLCHAIN_DIR=$HI && echo TOOLCHAIN_DIR=$TOOLCHAIN_DIR \
-#    && sudo rm -rf $TOOLCHAIN_DIR/share/doc \
-#    && sudo rm -rf $TOOLCHAIN_DIR/share/man \
-#    && ln -sf -t $TOOLCHAIN_DIR/lib/ $TOOLCHAIN_DIR/lib/rustlib/x86_64-unknown-linux-gnu/lib/*.so \
-#    && rustup show \
-#    && rustc -V
 
-#Install nightly Rust and make default (add x86_64-unknown-linux-musl)
-
-RUN curl https://sh.rustup.rs -sSf | sh -s -- -y --default-toolchain nightly-2016-09-01 -v \
-    && rustup default nightly \
-    && rustup target add x86_64-unknown-linux-musl \
+#Install nightly Rust and make default
+RUN RUSTVER="nightly-2016-11-03" && curl https://sh.rustup.rs -sSf | sh -s -- -y --default-toolchain $RUSTVER -v \
+    && rustup default $RUSTVER \
     && HI=$(rustup which rustc) && HI=${HI%/bin/rustc} && export TOOLCHAIN_DIR=$HI && echo TOOLCHAIN_DIR=$TOOLCHAIN_DIR \
     && sudo rm -rf $TOOLCHAIN_DIR/share/doc \
     && sudo rm -rf $TOOLCHAIN_DIR/share/man \
+    && sudo rm -rf /home/conan/.multirust/toolchains/${RUSTVER}-x86_64-unknown-linux-gnu/share/doc \
     && ln -sf -t $TOOLCHAIN_DIR/lib/ $TOOLCHAIN_DIR/lib/rustlib/x86_64-unknown-linux-gnu/lib/*.so \
     && rustup show \
     && rustc -V
 
-RUN sudo pip3 install conan --upgrade
+
+# RUN sudo pip install conan --upgrade
 
 RUN conan user
 

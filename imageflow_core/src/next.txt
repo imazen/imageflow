@@ -1,6 +1,45 @@
 
+* GIF codec
+* Animated GIF codec
+* quantization API
+* Composition API
+* White balance API
+* cost estimation
+
 
 4. Move C to subfolder, rename imageflowrs to libimageflow
+
+
+Create backend-agnostic Client API (takes binary blobs online). It can use FFI, server, or command-line tool.
+
+
+Refine the JSON API
+
+Reconsider graph_recording design
+Reconsider no_gamma_correction flag placement
+
+Create constraint node
+https://github.com/riapi/riapi/blob/master/level-1.md
+width/height/mode/scale/anchor
+
+We probably need a way for clients to hint they're going to reuse an input soon
+
+-----
+
+Port visual helpers to Rust and add upload support. Make more general, add JSON support?
+
+Put all graph recording results in a graph_recording subfolder
+
+Test pulling from a decoder into several different nodes
+
+Smoke tests with dimension verification
+
+Roundtrip and compare various things (like flips)
+
+
+## Unhappy path work below
+-------------------------
+
 4. Validate nodes/inputs/outputs
 
 Define error handling convention
@@ -38,49 +77,10 @@ Mirror JSON and Context error data, always. If a message doesn't have a successf
 clear_error. We can probably condense status codes, though.
 
 
-Create backend-agnostic Client API (takes binary blobs online). It can use FFI, server, or command-line tool.
 
-
-Refine the JSON API
-
-Reconsider graph_recording design
-Reconsider no_gamma_correction flag placement
-
-Create constraint node
-https://github.com/riapi/riapi/blob/master/level-1.md
-width/height/mode/scale/anchor
-
-We may drop camelCase/snake_case
-
-------------------
-
-Port visual helpers to Rust and add upload support
-
-
-Move C to a subfolder, change component names to be clearer
-
-Give nodes a validate function.
-
-Validate input/output edges
-
-Give nodes a document/permute function.
-
-Put all graph recording results in a graph_recording subfolder
-
-Implement builtin off-by-one comparison nodes with json and image output
-
-Verify input/output node quantities are validated
-Check for cycles
-Test pulling from a decoder into several different nodes
-
-Smoke tests with dimension verification
-
-Roundtrip and compare various things (like flips)
 
 Don't panic on bad JSON or input; return a Result, and get it right.
 
 It's okay to panic on OOM, but catch it
 
-Ideas for later:
 
-We probably need a way for clients to hint they're going to reuse an input soon

@@ -128,7 +128,7 @@ echo ===================================================================== [test
 echo "Rsync imageflow/* into dedicated work folder"
 echo
 
-[[ -d "$WORKING_DIR" ]] || mkdir "$WORKING_DIR"
+[[ -d "$WORKING_DIR" ]] || mkdir -p "$WORKING_DIR"
 rsync -q -av --delete "${SCRIPT_DIR}/../../.." "$WORKING_DIR" --filter=':- .gitignore' --exclude=".git/" #--exclude-from "${SCRIPT_DIR}/../exclude_paths.txt" 
 cd "$WORKING_DIR"
 
