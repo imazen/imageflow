@@ -328,7 +328,9 @@ impl Context {
 
 fn get_create_doc_dir() -> std::path::PathBuf {
     let path = Path::new(file!()).parent().unwrap().join(Path::new("../../target/doc"));
-    std::fs::create_dir_all(&path).unwrap();
+    let _ = std::fs::create_dir_all(&path);
+    //Error { repr: Os { code: 17, message: "File exists" } }
+    //The above can happen, despite the docs.
     path
 }
 #[test]
