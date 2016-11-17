@@ -9,7 +9,6 @@ mod scale_render;
 mod create_canvas;
 mod codecs_and_pointer;
 
-
 extern crate imageflow_serde as s;
 pub use self::clone_crop_fill_expand::CLONE;
 pub use self::clone_crop_fill_expand::COPY_RECT;

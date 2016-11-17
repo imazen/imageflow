@@ -7,7 +7,7 @@ extern crate time;
 
 extern crate imageflow_core;
 
-use imageflow_core::clients;
+use imageflow_core::clients::stateless;
 
 use hyper::Client;
 use imageflow_core::boring::*;
@@ -21,53 +21,6 @@ use time::precise_time_ns;
 
 //Todo: consider lru_cache crate
 
-// This Rust server was built one saturday evening to exercise various
-// bits of the stack. It's not safe (nor safer than a C equivalent), and
-// we're not using Rust idiomatically or correctly. Nothing is re-entrant,
-// and errors panic the process. It's one build to throw away; a learning experiment.
-//
-// Run with cargo run --bin imageflow-server
-//
-// Open in your browser: http://localhost:3000/proto1/scale_unsplash_jpeg/1200/1200/photo-1436891678271-9c672565d8f6
-//
-
-
-
-
-fn create_io(c: *mut Context, source_bytes: *const u8, count: usize) -> Vec<IoResource> {
-    unsafe {
-        let input_io = flow_io_create_from_memory(c,
-                                                  IoMode::read_seekable,
-                                                  source_bytes,
-                                                  count as libc::size_t,
-                                                  c as *mut libc::c_void,
-                                                  0 as *mut libc::c_void);
-
-        if input_io.is_null() {
-            flow_context_print_and_exit_if_err(c);
-            // bad, we shouldn't exit the process
-        }
-        let output_io = flow_io_create_for_output_buffer(c, c as *mut libc::c_void);
-
-        if output_io.is_null() {
-            flow_context_print_and_exit_if_err(c);
-        }
-
-
-        vec![IoResource {
-                 io: input_io,
-                 direction: IoDirection::In,
-             },
-             IoResource {
-                 io: output_io,
-                 direction: IoDirection::Out,
-             }]
-    }
-}
-
-fn collect_result(c: *mut Context, job: *mut Job) -> Result<Vec<u8>> {
-    JobPtr::from_ptr(c, job).unwrap().io_get_output_buffer_copy(1)
-}
 
 //TODO: Convert parameters into Nodes
 //Implement content-type export from job/execute endpoint
@@ -81,7 +34,7 @@ fn get_jpeg_bytes(source: &str, w: Option<u32>, h: Option<u32>) -> Vec<u8> {
     assert_eq!(res.status, hyper::Ok);
 
     let mut source_bytes = Vec::new();
-    let count = res.read_to_end(&mut source_bytes).unwrap(); //bad
+    let _ = res.read_to_end(&mut source_bytes).unwrap(); //bad
 
     let downloaded = precise_time_ns();
 
@@ -98,14 +51,19 @@ fn get_jpeg_bytes(source: &str, w: Option<u32>, h: Option<u32>) -> Vec<u8> {
         up_filter: Filter::Ginseng,
     };
 
+    let mut client = stateless::LibClient{};
+    let info = client.get_image_info(&source_bytes).unwrap();
 
-    let source_ptr = source_bytes.as_mut_ptr();
+    let (framewise, (pre_w, pre_h)) = create_framewise(info.frame0_width, info.frame0_height, commands).unwrap();
 
-    let bytes = imageflow_core::boring::process_image(commands,
-                                                      |c| create_io(c, source_ptr, count),
-                                                      collect_result);
 
-    std::mem::forget(source_bytes);
+    let result: stateless::BuildSuccess = client.build(stateless::BuildRequest{
+        framewise: framewise,
+        inputs: vec![stateless::BuildInput{io_id: 0, bytes: &source_bytes}],
+        output_ids: vec![1]
+    }).unwrap();
+
+    let bytes = result.outputs.into_iter().next().unwrap().bytes;
 
     let fetch = downloaded - start;
     let delta = precise_time_ns() - downloaded;
@@ -113,7 +71,7 @@ fn get_jpeg_bytes(source: &str, w: Option<u32>, h: Option<u32>) -> Vec<u8> {
              (fetch as f64) / 1000000.0,
              (delta as f64) / 1000000.0);
 
-    return bytes.unwrap();
+    return bytes;
 
 
 

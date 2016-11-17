@@ -353,6 +353,41 @@ fn test_constraining(){
     assert_eq!((400,200), constrain(200,100,ConstraintMode::Distort, Some(400), None));
 }
 
+pub fn create_framewise(original_width: i32, original_height: i32, commands: BoringCommands)
+                              -> Result<(s::Framewise, (i32,i32)), String> {
+    let (final_w, final_h) = constrain(original_width, original_height, commands.fit, commands.w, commands.h);
+
+    //Should we IDCT downscale?
+
+    let trigger_ratio = if 1.0f32 > commands.precise_scaling_ratio {
+        3.0f32
+    } else {
+        commands.precise_scaling_ratio
+    };
+
+    let pre_w = ((final_w as f32) * trigger_ratio).round() as i32;
+    let pre_h = ((final_h as f32) * trigger_ratio).round() as i32;
+
+
+    let encoder_preset = match commands.format {
+        ImageFormat::Jpeg => s::EncoderPreset::LibjpegTurbo { quality: Some(commands.jpeg_quality) },
+        ImageFormat::Png => s::EncoderPreset::Libpng { zlib_compression: None, matte: None, depth: Some(s::PngBitDepth::Png32) },
+        ImageFormat::Png24 => s::EncoderPreset::Libpng { zlib_compression: None, matte: Some(s::Color::Black), depth: Some(s::PngBitDepth::Png24) },
+    };
+
+    let steps = vec![
+    s::Node::Decode { io_id: 0 },
+    s::Node::Resample2D {
+        w: final_w,
+        h: final_h, down_filter: Some(commands.down_filter), up_filter: Some(commands.up_filter),
+        hints: Some(s::ResampleHints { sharpen_percent: Some(commands.sharpen), prefer_1d_twice: None })
+    },
+    s::Node::Encode { io_id: 1, preset: encoder_preset }
+    ];
+    Ok((s::Framewise::Steps(steps), (pre_w,pre_h)))
+}
+
+
 pub fn process_image<F, C, R>(commands: BoringCommands,
                               io_provider: F,
                               cleanup: C)
@@ -387,18 +422,8 @@ pub fn process_image<F, C, R>(commands: BoringCommands,
             _ => panic!("")
         };
 
-        let (final_w, final_h) = constrain(frame0_width,frame0_height, commands.fit, commands.w, commands.h);
 
-        //Should we IDCT downscale?
-
-        let trigger_ratio = if 1.0f32 > commands.precise_scaling_ratio {
-            3.0f32
-        } else {
-            commands.precise_scaling_ratio
-        };
-
-        let pre_w = ((final_w as f32) * trigger_ratio).round() as i32;
-        let pre_h = ((final_h as f32) * trigger_ratio).round() as i32;
+        let (framewise, (pre_w, pre_h)) = create_framewise(frame0_width,frame0_height, commands).unwrap();
 
         if pre_w < frame0_width && pre_h < frame0_height {
             let send_hints = s::TellDecoder001 {
@@ -415,26 +440,8 @@ pub fn process_image<F, C, R>(commands: BoringCommands,
         }
 
 
-
-
-        let encoder_preset = match commands.format{
-            ImageFormat::Jpeg => s::EncoderPreset::LibjpegTurbo{quality: Some(commands.jpeg_quality)},
-            ImageFormat::Png => s::EncoderPreset::Libpng{ zlib_compression: None, matte: None, depth: Some(s::PngBitDepth::Png32)},
-            ImageFormat::Png24 => s::EncoderPreset::Libpng{ zlib_compression: None, matte: Some(s::Color::Black), depth: Some(s::PngBitDepth::Png24)},
-        };
-
-        let steps = vec![
-        s::Node::Decode{ io_id: 0},
-        s::Node::Resample2D {
-            w: final_w,
-            h: final_h, down_filter: Some(commands.down_filter), up_filter: Some(commands.up_filter),
-            hints: Some(s::ResampleHints { sharpen_percent: Some(commands.sharpen), prefer_1d_twice: None })
-        },
-        s::Node::Encode{ io_id: 1, preset: encoder_preset}
-        ];
-
         let send_execute = s::Execute001{
-            framewise: s::Framewise::Steps(steps),
+            framewise: framewise,
             graph_recording: None,
             no_gamma_correction: Some(!commands.luma_correct)
         };

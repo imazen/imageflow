@@ -67,6 +67,29 @@ impl From<::FlowError> for BuildFailure {
 
 impl LibClient{
 
+    pub fn get_image_info<'a>(&mut self, bytes: &'a [u8]) -> std::result::Result<s::ImageInfo,BuildFailure>  {
+        let context = SelfDisposingContextPtr::create()?;
+
+        let result = {
+            let mut job: JobPtr = context.create_job()?;
+            job.add_input_bytes(0, bytes)?;
+            let info_blob: JsonResponse = job.message("v0.0.1/get_image_info", "{\"ioId\": 0}".as_bytes())?;
+            //TODO: add into error conversion
+            let info_response: s::Response001 = serde_json::from_slice(info_blob.response_json.as_ref()).unwrap();
+            if !info_response.success {
+                panic!("get_image_info failed: {:?}",info_response);
+            }
+            match info_response.data {
+                s::ResponsePayload::ImageInfo(info) => Ok(info),
+                _ => Err(BuildFailure::Error{httpish_code: 500, message: "Endpoint failed to return imageinfo".to_owned()})
+            }
+        };
+        //TODO: Catch and report instead of panicing
+        context.destroy_allowing_panics();
+        result
+    }
+
+
     pub fn build(&mut self, task: BuildRequest) -> std::result::Result<BuildSuccess,BuildFailure>  {
         let context = SelfDisposingContextPtr::create()?;
 

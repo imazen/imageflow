@@ -23,7 +23,7 @@ pub mod boring;
 pub mod parsing;
 mod flow;
 mod context;
-mod clients;
+pub mod clients;
 pub use context::{Context, ContextPtr, Job, JobPtr, JobIo, JobIoPtr, SelfDisposingContextPtr};
 pub use ::ffi::{IoDirection, IoMode};
 

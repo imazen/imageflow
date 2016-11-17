@@ -244,6 +244,10 @@ pub struct ResampleHints{
     pub prefer_1d_twice: Option<bool>
 }
 
+pub enum Constraint{
+
+}
+
 #[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
 pub enum Node {
     #[serde(rename="flipV")]
