@@ -31,6 +31,10 @@ impl SelfDisposingContextPtr{
         &self.ptr
     }
 
+    pub fn create_job(&self) -> Result<JobPtr> {
+        JobPtr::create(self.ptr.as_ptr()?)
+    }
+
     pub fn destroy_allowing_panics(mut self) -> () {
         self.ptr.destroy_allowing_panics()
     }
@@ -79,8 +83,6 @@ impl JobPtr {
                          io_id: i32,
                          direction: IoDirection)
                          -> Result<()> {
-
-        let ctx_ptr = self.ctx().as_ptr()?;
         let p = ::ffi::flow_job_add_io(self.context_ptr(),
                                        self.as_ptr(),
                                        io,
@@ -93,6 +95,34 @@ impl JobPtr {
         }
 
     }
+
+    pub fn add_input_bytes<'a>(&'a self, io_id: i32, bytes: &'a [u8]) -> Result<()>{
+        unsafe {
+            let p = ::ffi::flow_io_create_from_memory(self.context_ptr(),
+                                                      ::ffi::IoMode::read_seekable,
+                                                      bytes.as_ptr(),
+                                                      bytes.len(),
+                                                      self.context_ptr() as *const libc::c_void,
+                                                      ptr::null());
+            if p.is_null() {
+                Err(self.ctx().get_error_copy().unwrap())
+            } else {
+                self.add_io_ptr(p, io_id, IoDirection::In)
+            }
+        }
+    }
+
+    pub fn add_output_buffer<'a>(&'a self, io_id: i32) -> Result<()>{
+        unsafe {
+            let p = ::ffi::flow_io_create_for_output_buffer(self.context_ptr(), self.context_ptr() as *const libc::c_void);
+            if p.is_null() {
+                Err(self.ctx().get_error_copy().unwrap())
+            } else {
+                self.add_io_ptr(p, io_id, IoDirection::Out)
+            }
+        }
+    }
+
 
 
     pub fn record_graphs(&self){
@@ -263,6 +293,38 @@ impl JobPtr {
             _ => Ok(JsonResponse::method_not_understood())
         }
     }
+
+
+
+    pub fn io_get_output_buffer_copy<'a, 'b>(&'a mut self,
+                                        io_id: i32)
+                                        -> Result<Vec<u8>> {
+        unsafe {
+            let io_p = ::ffi::flow_job_get_io(self.c, self.ptr, io_id);
+            if io_p.is_null() {
+                Err(self.ctx().get_error_copy().unwrap())
+            } else {
+                let mut buf_start: *const u8 = ptr::null();
+                let mut buf_len: usize = 0;
+                let worked = ::ffi::flow_io_get_output_buffer(self.c,
+                                                              io_p,
+                                                              &mut buf_start as *mut *const u8,
+                                                              &mut buf_len as *mut usize);
+                if !worked {
+                    Err(self.ctx().get_error_copy().unwrap())
+                } else {
+                    if buf_start.is_null() {
+                        // Not sure how output buffer is null... no writes yet?
+                        Err(FlowError::ErrNotImpl)
+                    } else {
+                        Ok((std::slice::from_raw_parts(buf_start, buf_len)).to_vec())
+                    }
+                }
+            }
+        }
+    }
+
+
 
     fn ctx(&self) -> ContextPtr{
         ContextPtr::from_ptr(self.context_ptr())
@@ -599,6 +661,7 @@ impl Context {
         }
     }
 
+
     pub fn io_get_output_buffer<'a, 'b>(&'a mut self,
                                         job: &'b Job,
                                         io_id: i32)
@@ -639,6 +702,8 @@ impl Context {
 
 
 impl ContextPtr {
+
+
     unsafe fn get_flow_err(&self, c: *mut ::ffi::Context) -> FlowErr {
 
 

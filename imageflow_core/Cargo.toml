@@ -8,6 +8,7 @@ workspace = "../"
 
 [lib]
 name = "imageflow_core"
+doctest = false
 
 [dependencies]
 libc = "0.2.0"

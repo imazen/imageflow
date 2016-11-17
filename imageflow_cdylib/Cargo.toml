@@ -9,6 +9,7 @@ workspace = "../"
 name = "imageflowrs"
 doc = true
 crate-type = ["cdylib"]
+doctest = false
 
 [dependencies]
 libc = "0.2.0"

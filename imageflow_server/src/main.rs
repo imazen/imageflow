@@ -7,6 +7,8 @@ extern crate time;
 
 extern crate imageflow_core;
 
+use imageflow_core::clients;
+
 use hyper::Client;
 use imageflow_core::boring::*;
 use imageflow_core::ffi::*;
@@ -63,25 +65,12 @@ fn create_io(c: *mut Context, source_bytes: *const u8, count: usize) -> Vec<IoRe
     }
 }
 
-fn collect_result(c: *mut Context, job: *mut Job) -> Result<Vec<u8>, String> {
-    unsafe {
-        let output_io = flow_job_get_io(c, job, 1);
-        if output_io.is_null() {
-            flow_context_print_and_exit_if_err(c);
-        }
-
-        let mut buf: *const u8 = std::mem::uninitialized(); //This is okay, it's write-only
-        let mut buf_length: libc::size_t = 0;
-        // Returns false if the flow_io struct is disposed or not an output buffer type (or for any other error)
-
-        if !flow_io_get_output_buffer(c, output_io, &mut buf, &mut buf_length) {
-            flow_context_print_and_exit_if_err(c);
-        }
-
-        Ok(std::slice::from_raw_parts(buf as *const u8, buf_length as usize).to_vec())
-    }
+fn collect_result(c: *mut Context, job: *mut Job) -> Result<Vec<u8>> {
+    JobPtr::from_ptr(c, job).unwrap().io_get_output_buffer_copy(1)
 }
 
+//TODO: Convert parameters into Nodes
+//Implement content-type export from job/execute endpoint
 
 fn get_jpeg_bytes(source: &str, w: Option<u32>, h: Option<u32>) -> Vec<u8> {
 

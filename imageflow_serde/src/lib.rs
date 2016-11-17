@@ -167,6 +167,11 @@ pub enum EncoderPreset {
         zlib_compression: Option<i32>}
 }
 
+impl EncoderPreset{
+    pub fn libpng32() -> EncoderPreset{
+        EncoderPreset::Libpng{ depth: Some(PngBitDepth::Png32), matte: None, zlib_compression: None}
+    }
+}
 
 #[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
 pub enum ColorSrgb {
