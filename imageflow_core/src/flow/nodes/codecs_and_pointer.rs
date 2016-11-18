@@ -193,9 +193,10 @@ fn encoder_def() -> NodeDefinition {
         fn_execute: Some({
             fn f(ctx: &mut OpCtxMut, ix: NodeIndex<u32>) {
                 if let Some(input_bitmap) = ctx.first_parent_result_frame(ix, EdgeKind::Input) {
+                    let result;
                     {
                         let weight = ctx.weight(ix);
-                        if let NodeParams::Json(s::Node::Encode { ref preset, .. }) = weight.params {
+                        if let NodeParams::Json(s::Node::Encode { ref preset, ref io_id, .. }) = weight.params {
                             let codec = weight.custom_state as *mut ffi::CodecInstance;
 
                             if codec == ptr::null_mut() { panic!("") }
@@ -218,6 +219,21 @@ fn encoder_def() -> NodeDefinition {
                             };
 
                             unsafe {
+                                let (result_mime, result_ext) = match *preset {
+                                    s::EncoderPreset::Libpng {..} => ("image/png", "png"),
+                                    s::EncoderPreset::LibjpegTurbo{..} => ("image/jpeg", "jpg")
+                                };
+                                result = NodeResult::Encoded(
+                                    s::EncodeResult{
+                                        w: (*input_bitmap).w as i32,
+                                        h: (*input_bitmap).h as i32,
+                                        preferred_mime_type: result_mime.to_owned(),
+                                        preferred_extension: result_ext.to_owned(),
+                                        io_id: *io_id
+                                    });
+
+
+
                                 (*codec).codec_id = wanted_id;
                                 if !ffi::flow_codec_initialize(ctx.c, codec) {
                                     ctx.assert_ok();
@@ -240,7 +256,7 @@ fn encoder_def() -> NodeDefinition {
                         }
                     }
                     {
-                        ctx.weight_mut(ix).result = NodeResult::Frame(input_bitmap);
+                        ctx.weight_mut(ix).result = result;
                     }
                 }else {
                     panic!("");

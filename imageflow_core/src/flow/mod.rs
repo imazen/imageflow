@@ -170,26 +170,6 @@ impl ::JobPtr {
                 }
             }
         }
-
-        // FIXME
-        // struct flow_graph * g = *graph_ref;
-        // let mut i: int32_t = 0;
-        // for (i = 0; i < g->next_node_id; i++) {
-        // if (g->nodes[i].type == flow_ntype_decoder || g->nodes[i].type == flow_ntype_encoder) {
-        // uint8_t * info_bytes = &g->info_bytes[g->nodes[i].info_byte_index];
-        // struct flow_nodeinfo_codec * info = (struct flow_nodeinfo_codec *)info_bytes;
-        // if (info->codec == NULL) {
-        // info->codec = flow_job_get_codec_instance(c, job, info->placeholder_id);
-        //
-        // if (info->codec == NULL)
-        // FLOW_error_msg(c, flow_status_Graph_invalid,
-        // "No matching codec or io found for placeholder id %d (node #%d).",
-        // info->placeholder_id, i);
-        // }
-        // }
-        // }
-        //
-
         true
     }
 }

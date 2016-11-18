@@ -161,7 +161,7 @@ impl JobPtr {
         unsafe {
             let mut info: ::ffi::DecoderInfo = ::ffi::DecoderInfo { ..Default::default() };
 
-            if !::ffi::flow_job_get_decoder_info(self.context_ptr(), self.as_ptr(), 0, &mut info) {
+            if !::ffi::flow_job_get_decoder_info(self.context_ptr(), self.as_ptr(), io_id, &mut info) {
                 ContextPtr::from_ptr(self.context_ptr()).assert_ok(None);
             }
             Ok(s::ImageInfo {
@@ -224,7 +224,7 @@ impl JobPtr {
         s += "Example message body (with linear steps):\n";
         s += &serde_json::to_string_pretty(&s::Execute001::example_steps()).unwrap();
         s += "\nExample response:\n";
-        s += &serde_json::to_string_pretty(&s::Response001::example_ok()).unwrap();
+        s += &serde_json::to_string_pretty(&s::Response001::example_job_result_encoded(2, 200,200, "image/jpg", "jpg")).unwrap();
         s += "\nExample failure response:\n";
         s += &serde_json::to_string_pretty(&s::Response001::example_error()).unwrap();
         s += "\n\n";
@@ -282,7 +282,14 @@ impl JobPtr {
                         if !self.execute(&mut g){
                             unsafe { self.ctx().assert_ok(Some(&mut g)); }
                         }
-                        Ok(JsonResponse::ok())
+                        let mut encodes = Vec::new();
+                        for node in g.raw_nodes(){
+                            if let ::flow::definitions::NodeResult::Encoded(ref r) = node.weight.result{
+                                encodes.push((*r).clone());
+                            }
+                        }
+                        //Iterate g for NodeResult::Encoded to populate response
+                        Ok(JsonResponse::success_with_payload(s::ResponsePayload::JobResult(s::JobResult{encodes:encodes})))
                     }
                     Err(e) => {
                         Ok(JsonResponse::from_parse_error(e,json))
@@ -418,7 +425,7 @@ impl ContextPtr {
         s += "Example message body:\n";
         s += &serde_json::to_string_pretty(&s::Build001::example_with_steps()).unwrap();
         s += "\n\nExample response:\n";
-        s += &serde_json::to_string_pretty(&s::Response001::example_ok()).unwrap();
+        s += &serde_json::to_string_pretty(&s::Response001::example_job_result_encoded(2, 200,200, "image/png", "png")).unwrap();
         s += "\n\nExample failure response:\n";
         s += &serde_json::to_string_pretty(&s::Response001::example_error()).unwrap();
         s += "\n\n";

@@ -110,6 +110,7 @@ pub enum NodeResult {
     None, // No result yet
     Consumed, /* Ownership has been transferred to another node for exclusive mutation. If another node tries to access, a panic will occur. Don't consume without verifying no other nodes want access. */
     Frame(*mut BitmapBgra), // Should this be boxed?
+    Encoded(s::EncodeResult)
 }
 #[derive(Clone,Debug,PartialEq)]
 pub enum NodeParamsInternal {
@@ -187,7 +188,8 @@ impl Node {
         let e = match self.result {
             NodeResult::None => "none",
             NodeResult::Consumed => "reused",
-            NodeResult::Frame(ptr) => "done",
+            NodeResult::Frame(_) => "done",
+            NodeResult::Encoded(_) => "encoded"
         };
         try!(write!(f, "{}{{{}{}{}{}}} {}", self.def.name, a, b, c, d, e));
         Ok(())

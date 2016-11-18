@@ -1,4 +1,5 @@
 #![feature(proc_macro)]
+#![feature(conservative_impl_trait)]
 
 
 #[macro_use]
@@ -408,6 +409,19 @@ pub enum Framewise {
     Steps(Vec<Node>),
 }
 
+impl Framewise{
+    pub fn clone_nodes<'a>(&'a self) -> Vec<&'a Node> {
+        match *self {
+            Framewise::Graph(ref graph) => {
+                graph.nodes.values().collect::<Vec<&Node>>()
+            }
+            Framewise::Steps(ref nodes) => {
+                nodes.iter().collect::<Vec<&Node>>()
+            }
+        }
+    }
+}
+
 #[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
 pub struct Build001GraphRecording {
     pub record_graph_versions: Option<bool>,
@@ -679,10 +693,31 @@ pub struct ImageInfo {
     #[serde(rename="frame0PostDecodeFormat")]
     pub frame0_post_decode_format: PixelFormat,
 }
+#[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
+pub struct EncodeResult{
+    #[serde(rename="preferredMimeType")]
+    pub preferred_mime_type: String,
+    #[serde(rename="preferredExtension")]
+    pub preferred_extension: String,
+
+    #[serde(rename="ioId")]
+    pub io_id: i32,
+    #[serde(rename="w")]
+    pub w: i32,
+    #[serde(rename="h")]
+    pub h: i32
+}
 
 #[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
+pub struct JobResult {
+    pub encodes: Vec<EncodeResult>
+}
+#[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
 pub enum ResponsePayload {
+    #[serde(rename="imageInfo")]
     ImageInfo(ImageInfo),
+    #[serde(rename="jobResult")]
+    JobResult(JobResult),
     None,
 }
 #[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
@@ -710,6 +745,18 @@ impl Response001 {
             data: ResponsePayload::None
         }
     }
+
+    pub fn example_job_result_encoded(io_id: i32, w: i32, h: i32, mime: &'static str, ext: &'static str) -> Response001 {
+        Response001{
+            code: 200,
+            success: true,
+            message: None,
+            data: ResponsePayload::JobResult(JobResult{
+                encodes: vec![EncodeResult{io_id: io_id, w: w, h: h, preferred_mime_type: mime.to_owned(), preferred_extension: ext.to_owned()}]
+            })
+        }
+    }
+
 
     pub fn example_image_info() -> Response001 {
         Response001{
