@@ -3,7 +3,7 @@ name = "imageflow_core"
 version = "0.1.0"
 authors = ["Nathanael Jones <nathanael.jones@gmail.com>"]
 build = "conan_cargo_build.rs"
-links = "imageflow"
+links = "imageflow_c"
 workspace = "../"
 
 [lib]

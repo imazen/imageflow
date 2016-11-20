@@ -108,4 +108,4 @@ class ImageFlowConan(ConanFile):
         self.copy("*.dll", dst="bin", src="build", keep_path=False)
 
     def package_info(self):
-        self.cpp_info.libs = ['imageflow']
+        self.cpp_info.libs = ['imageflow_c']
