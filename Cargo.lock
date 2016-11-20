@@ -176,7 +176,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "imageflow_cdylib"
+name = "imageflow_abi"
 version = "0.1.0"
 dependencies = [
  "imageflow_core 0.1.0",

@@ -7,13 +7,13 @@
 * imageflow_core - Defines the FFI exposed in the shared library. Depends on imageflow_serde
 * imageflow_tool - Command-line app which wraps imageflow_core
 * imageflow_server - prototype HTTP serve around imageflow_core
-* imageflow_cdylib - Empty crate to re-export a dynamic library with dependencies statically linked
+* imageflow_abi - Empty crate to re-export a dynamic library with dependencies statically linked
 * imageflow_riapia - Eventual home of querystring-command interpreter
 
 
 C source is located in the root, ./lib, and ./tests
 
-* imageflow.h - NOT what you use when binding to imageflow_cdylib. The header for the C component
+* imageflow.h - NOT what you use when binding to imageflow_abi. The header for the C component
 
 Understanding the C data structures
 

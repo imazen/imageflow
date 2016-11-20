@@ -182,7 +182,7 @@ if [[ "$TEST_RUST" == 'True' ]]; then
 			eval "$VALGRIND_CARGO_COMMAND"
 		)
 		(
-			cd imageflow_cdylib
+			cd imageflow_abi
 			eval "$COPY_VALGRINDRC"
 			eval "$VALGRIND_CARGO_COMMAND"
 		)
@@ -210,7 +210,7 @@ if [[ "$TEST_RUST" == 'True' ]]; then
 			cargo test
 		)
 		(
-			cd imageflow_cdylib
+			cd imageflow_abi
 			cargo test
 		)
 		(
@@ -257,7 +257,7 @@ if [[ "$BUILD_RELEASE" == 'True' ]]; then
 
 	echo "Building libimageflow (Release) and docs"
 	(
-		cd imageflow_cdylib
+		cd imageflow_abi
 		cargo build --release
 		cargo doc --no-deps
 	)

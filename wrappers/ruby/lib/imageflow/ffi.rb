@@ -3,7 +3,7 @@ module Imageflow
     extend FFI::Library
 
     def self.dylib_build_dir
-      File.expand_path("../../../../../imageflow_cdylib", __FILE__)
+      File.expand_path("../../../../../imageflow_abi", __FILE__)
     end
     def self.dylib_path
       extension = FFI::Platform.is_os("darwin") ? "dylib" : "so"

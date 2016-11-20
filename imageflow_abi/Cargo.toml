@@ -1,5 +1,5 @@
 [package]
-name = "imageflow_cdylib"
+name = "imageflow_abi"
 version = "0.1.0"
 authors = ["Nathanael Jones <nathanael.jones@gmail.com>"]
 workspace = "../"

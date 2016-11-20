@@ -18,7 +18,7 @@ cargo test
 cargo build --target=%RUST_TARGET% --release
 cargo doc --no-deps
 cd ..
-cd imageflow_cdylib
+cd imageflow_abi
 cargo test
 cargo build --target=%RUST_TARGET% --release
 cargo doc --no-deps
