@@ -125,15 +125,15 @@ impl JobPtr {
 
 
 
-    pub fn record_graphs(&self){
-        let _ = unsafe { ::ffi::flow_job_configure_recording(self.context_ptr(),
-                                                             self.as_ptr(),
-                                                             true,
-                                                             true,
-                                                             true,
-                                                             false,
-                                                             false) };
-    }
+//    pub fn record_graphs(&self){
+//        let _ = unsafe { ::ffi::flow_job_configure_recording(self.context_ptr(),
+//                                                             self.as_ptr(),
+//                                                             true,
+//                                                             true,
+//                                                             true,
+//                                                             false,
+//                                                             false) };
+//    }
     pub fn configure_graph_recording(&self, recording: s::Build001GraphRecording) {
         let r = if std::env::var("CI").and_then(|s| Ok(s.to_uppercase()))  == Ok("TRUE".to_owned()) {
             s::Build001GraphRecording::off()
