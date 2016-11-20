@@ -12,7 +12,7 @@ extern crate threadpool;
 extern crate serde;
 extern crate serde_json;
 extern crate time;
-extern crate imageflow_serde as s;
+extern crate imageflow_types as s;
 use std::path::PathBuf;
 use std::str::FromStr;
 use std::sync::mpsc::channel;

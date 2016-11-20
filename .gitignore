@@ -17,8 +17,8 @@
 #Valgrind copes
 /imageflow_core/.valgrindrc
 /imageflow_core/valgrind_suppressions.txt
-/imageflow_serde/.valgrindrc
-/imageflow_serde/valgrind_suppressions.txt
+/imageflow_types/.valgrindrc
+/imageflow_types/valgrind_suppressions.txt
 /imageflow_server/.valgrindrc
 /imageflow_server/valgrind_suppressions.txt
 /imageflow_tool/.valgrindrc

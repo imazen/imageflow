@@ -191,7 +191,7 @@ dependencies = [
  "cmake 0.1.18 (registry+https://github.com/rust-lang/crates.io-index)",
  "curl 0.3.11 (registry+https://github.com/rust-lang/crates.io-index)",
  "daggy 0.4.1 (registry+https://github.com/rust-lang/crates.io-index)",
- "imageflow_serde 0.1.0",
+ "imageflow_types 0.1.0",
  "json 0.11.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "lazy_static 0.1.16 (registry+https://github.com/rust-lang/crates.io-index)",
  "libc 0.2.17 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -204,7 +204,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "imageflow_serde"
+name = "imageflow_types"
 version = "0.1.0"
 dependencies = [
  "serde 0.8.17 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -220,7 +220,7 @@ dependencies = [
  "cmake 0.1.18 (registry+https://github.com/rust-lang/crates.io-index)",
  "hyper 0.9.12 (registry+https://github.com/rust-lang/crates.io-index)",
  "imageflow_core 0.1.0",
- "imageflow_serde 0.1.0",
+ "imageflow_types 0.1.0",
  "iron 0.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "libc 0.2.17 (registry+https://github.com/rust-lang/crates.io-index)",
  "router 0.4.0 (registry+https://github.com/rust-lang/crates.io-index)",

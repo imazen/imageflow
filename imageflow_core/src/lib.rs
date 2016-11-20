@@ -12,7 +12,7 @@ extern crate alloc_system;
 extern crate petgraph;
 extern crate daggy;
 extern crate time;
-extern crate imageflow_serde as s;
+extern crate imageflow_types as s;
 
 #[macro_use]
 extern crate lazy_static;

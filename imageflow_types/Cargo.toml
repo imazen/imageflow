@@ -1,11 +1,11 @@
 [package]
-name = "imageflow_serde"
+name = "imageflow_types"
 version = "0.1.0"
 authors = ["Nathanael Jones <imageflow@imazen.io>"]
 workspace = "../"
 
 [lib]
-name="imageflow_serde"
+name="imageflow_types"
 doctest = false
 
 [dependencies]

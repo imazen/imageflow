@@ -15,7 +15,7 @@ use parsing::rustc_serialize::hex::FromHex;
 use std::collections::HashMap;
 
 use std::ptr;
-extern crate imageflow_serde as s;
+extern crate imageflow_types as s;
 extern crate serde;
 extern crate serde_json;
 

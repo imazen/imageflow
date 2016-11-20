@@ -7,7 +7,7 @@ use std::path::Path;
 use std::fs::File;
 use std::io::Write;
 
-extern crate imageflow_serde as s;
+extern crate imageflow_types as s;
 extern crate serde_json;
 
 pub struct ContextPtr {

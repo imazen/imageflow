@@ -187,7 +187,7 @@ if [[ "$TEST_RUST" == 'True' ]]; then
 			eval "$VALGRIND_CARGO_COMMAND"
 		)
 		(
-			cd imageflow_serde
+			cd imageflow_types
 			eval "$COPY_VALGRINDRC"
 			eval "$VALGRIND_CARGO_COMMAND"
 		)
@@ -214,7 +214,7 @@ if [[ "$TEST_RUST" == 'True' ]]; then
 			cargo test
 		)
 		(
-			cd imageflow_serde
+			cd imageflow_types
 			cargo test
 		)
 		(
@@ -241,9 +241,9 @@ if [[ "$BUILD_RELEASE" == 'True' ]]; then
 		cd imageflow_core
 		cargo doc --no-deps
 	)
-	echo "Building imageflow_serde docs"
+	echo "Building imageflow_types docs"
 	(
-		cd imageflow_serde
+		cd imageflow_types
 		cargo doc --no-deps
 	)
 

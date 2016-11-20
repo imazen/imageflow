@@ -16,7 +16,7 @@ use std::ptr;
 use std::string;
 use time;
 
-extern crate imageflow_serde as s;
+extern crate imageflow_types as s;
 
 pub mod definitions;
 pub mod nodes;

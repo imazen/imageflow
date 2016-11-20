@@ -1,4 +1,4 @@
-extern crate imageflow_serde as s;
+extern crate imageflow_types as s;
 use daggy::{Dag, EdgeIndex, NodeIndex};
 use ffi;
 use ffi::{Context, Job, EdgeKind};

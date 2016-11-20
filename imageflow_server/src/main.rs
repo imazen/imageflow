@@ -6,7 +6,7 @@ extern crate libc;
 extern crate time;
 
 extern crate imageflow_core;
-extern crate imageflow_serde as s;
+extern crate imageflow_types as s;
 
 use imageflow_core::clients::stateless;
 

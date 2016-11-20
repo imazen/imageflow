@@ -1,5 +1,5 @@
 use libc::{c_void, c_float, int32_t, int64_t, size_t, uint32_t};
-extern crate imageflow_serde as s;
+extern crate imageflow_types as s;
 use daggy::{Dag, EdgeIndex, NodeIndex};
 use ffi::*;
 use std;

@@ -1,5 +1,5 @@
 [workspace]
-members = ["imageflow_serde", "imageflow_core", "imageflow_abi", "imageflow_tool", "imageflow_server"]
+members = ["imageflow_types", "imageflow_core", "imageflow_abi", "imageflow_tool", "imageflow_server"]
 
 [replace]
 "pkg-config:0.3.8" = { git = "https://github.com/imazen/pkg-config-rs", branch="master"}

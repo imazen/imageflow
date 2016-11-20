@@ -1,7 +1,7 @@
 extern crate imageflow_core;
 extern crate libc;
 extern crate rustc_serialize;
-extern crate imageflow_serde as s;
+extern crate imageflow_types as s;
 extern crate serde;
 extern crate serde_json;
 

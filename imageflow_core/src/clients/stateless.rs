@@ -1,5 +1,5 @@
 use std;
-extern crate imageflow_serde as s;
+extern crate imageflow_types as s;
 extern crate serde_json;
 use ::ContextPtr;
 use ::SelfDisposingContextPtr;

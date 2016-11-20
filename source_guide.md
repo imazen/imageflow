@@ -3,8 +3,8 @@
 
 ## Rust crates
 
-* imageflow_serde - JSON serialization types
-* imageflow_core - Defines the FFI exposed in the shared library. Depends on imageflow_serde
+* imageflow_types - JSON serialization types
+* imageflow_core - Defines the FFI exposed in the shared library. Depends on imageflow_types
 * imageflow_tool - Command-line app which wraps imageflow_core
 * imageflow_server - prototype HTTP serve around imageflow_core
 * imageflow_abi - Empty crate to re-export a dynamic library with dependencies statically linked

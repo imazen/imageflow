@@ -1,4 +1,4 @@
-extern crate imageflow_serde as s;
+extern crate imageflow_types as s;
 use ffi::EdgeKind;
 use ::ffi;
 use libc;

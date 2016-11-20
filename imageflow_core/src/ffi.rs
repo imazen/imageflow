@@ -4,7 +4,7 @@
 //! **Use imageflow_core::abi functions instead when creating bindings**
 //!
 //! These aren't to be exposed, but rather to connect to C internals
-extern crate imageflow_serde as s;
+extern crate imageflow_types as s;
 extern crate libc;
 
 use flow;
