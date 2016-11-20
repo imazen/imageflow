@@ -376,7 +376,12 @@ pub fn create_framewise(original_width: i32, original_height: i32, commands: Bor
     };
 
     let steps = vec![
-    s::Node::Decode { io_id: 0 },
+    s::Node::Decode { io_id: 0, commands: Some(vec![s::DecoderCommand::JpegDownscaleHints(s::JpegIDCTDownscaleHints{
+        width: pre_w as i64,
+        height: pre_h as i64,
+        scale_luma_spatially: Some(commands.luma_correct),
+        gamma_correct_for_srgb_during_spatial_luma_scaling: Some(commands.luma_correct)
+    })]) },
     s::Node::Resample2D {
         w: final_w,
         h: final_h, down_filter: Some(commands.down_filter), up_filter: Some(commands.up_filter),
@@ -428,7 +433,7 @@ pub fn process_image<F, C, R>(commands: BoringCommands,
         if pre_w < frame0_width && pre_h < frame0_height {
             let send_hints = s::TellDecoder001 {
                 io_id: 0,
-                command: s::TellDecoderWhat::JpegDownscaleHints(s::JpegIDCTDownscaleHints {
+                command: s::DecoderCommand::JpegDownscaleHints(s::JpegIDCTDownscaleHints {
                     height: pre_h as i64,
                     width: pre_w as i64,
                     scale_luma_spatially: Some(commands.luma_correct),

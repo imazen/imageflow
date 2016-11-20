@@ -177,10 +177,10 @@ impl JobPtr {
 
     }
 
-    pub fn tell_decoder(&self, io_id: i32, tell: s::TellDecoderWhat ) -> Result<()> {
+    pub fn tell_decoder(&self, io_id: i32, tell: s::DecoderCommand ) -> Result<()> {
         unsafe {
             match tell {
-                s::TellDecoderWhat::JpegDownscaleHints(hints) => {
+                s::DecoderCommand::JpegDownscaleHints(hints) => {
                     if !::ffi::flow_job_decoder_set_downscale_hints_by_placeholder_id(self.context_ptr(),
                                                                                       self.as_ptr(), io_id,
                                                                                       hints.width, hints.height,

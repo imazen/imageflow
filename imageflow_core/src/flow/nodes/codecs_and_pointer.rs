@@ -88,7 +88,7 @@ fn bitmap_bgra_def() -> NodeDefinition {
 
 fn decoder_encoder_io_id(ctx: &mut OpCtxMut, ix: NodeIndex<u32>) -> Option<i32> {
     match ctx.weight(ix).params {
-        NodeParams::Json(s::Node::Decode { io_id }) => Some(io_id),
+        NodeParams::Json(s::Node::Decode { io_id, .. }) => Some(io_id),
         NodeParams::Json(s::Node::Encode { io_id, .. }) => Some(io_id),
         _ => None,
     }

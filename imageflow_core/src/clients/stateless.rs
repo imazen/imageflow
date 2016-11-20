@@ -180,7 +180,7 @@ fn test_stateless(){
             bytes: &png_bytes
         }],
         framewise: Framewise::Steps(vec![
-        s::Node::Decode{io_id: 0},
+        s::Node::Decode{io_id: 0, commands: None},
         s::Node::Encode{io_id: 1, preset: s::EncoderPreset::libpng32()}
         ])
     };

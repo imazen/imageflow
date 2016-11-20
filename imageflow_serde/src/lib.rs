@@ -279,6 +279,7 @@ pub enum Node {
     Decode {
         #[serde(rename="ioId")]
         io_id: i32,
+        commands: Option<Vec<DecoderCommand>>
     },
     #[serde(rename="encode")]
     Encode {
@@ -541,7 +542,12 @@ impl Framewise {
     pub fn example_steps() -> Framewise{
         Framewise::Steps(
             vec![
-            Node::Decode { io_id: 0 },
+            Node::Decode { io_id: 0, commands: Some(vec![
+                DecoderCommand::JpegDownscaleHints(JpegIDCTDownscaleHints{
+                    width: 800 , height: 600,
+                    gamma_correct_for_srgb_during_spatial_luma_scaling: Some(false),
+                    scale_luma_spatially: Some(false)})])
+            },
             Node::ApplyOrientation { flag: 7 },
             Node::ExpandCanvas { left: 10, top: 10, right: 10, bottom: 10, color: Color::Srgb(ColorSrgb::Hex("FFEECCFF".to_owned())) },
             Node::Crop { x1: 10, y1: 10, x2: 650, y2: 490 },
@@ -572,7 +578,7 @@ impl Framewise {
     pub fn example_graph() -> Framewise{
 
         let mut nodes = std::collections::HashMap::new();
-        nodes.insert("0".to_owned(), Node::Decode { io_id: 0});
+        nodes.insert("0".to_owned(), Node::Decode { io_id: 0, commands: None});
         nodes.insert("1".to_owned(), Node::CreateCanvas { w: 200, h: 200, format: PixelFormat::Bgra32, color: Color::Transparent });
         nodes.insert("2".to_owned(), Node::CopyRectToCanvas { x: 0, y:0, from_x: 0, from_y: 0, width: 100, height: 100});
         nodes.insert("3".to_owned(), Node::Resample1D{ scale_to_width: 100, interpolation_filter: None, transpose_on_write: false});
@@ -651,21 +657,22 @@ pub struct JpegIDCTDownscaleHints {
     pub gamma_correct_for_srgb_during_spatial_luma_scaling: Option<bool>
 }
 #[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
-pub enum TellDecoderWhat {
+pub enum DecoderCommand {
+    #[serde(rename="jpegDownscaleHints")]
     JpegDownscaleHints(JpegIDCTDownscaleHints)
 }
 #[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
 pub struct TellDecoder001 {
     #[serde(rename="ioId")]
     pub io_id: i32,
-    pub command: TellDecoderWhat
+    pub command: DecoderCommand
 }
 
 impl TellDecoder001 {
     pub fn example_hints() -> TellDecoder001{
         TellDecoder001{
             io_id: 2,
-            command: TellDecoderWhat::JpegDownscaleHints(JpegIDCTDownscaleHints{
+            command: DecoderCommand::JpegDownscaleHints(JpegIDCTDownscaleHints{
                 width: 1000,
                 height: 1000,
                 scale_luma_spatially: Some(true),
@@ -840,7 +847,7 @@ fn decode_graph() {
 
     let obj: Graph = serde_json::from_str(&text).unwrap();
     let expected = Graph {
-        nodes: hashmap![ "0".to_owned() => Node::Decode{ io_id: 1 },
+        nodes: hashmap![ "0".to_owned() => Node::Decode{ io_id: 1, commands: None},
                          "1".to_owned() => Node::Rotate90
         ],
         edges: vec![Edge {

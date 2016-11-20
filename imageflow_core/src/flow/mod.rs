@@ -16,6 +16,8 @@ use std::ptr;
 use std::string;
 use time;
 
+extern crate imageflow_serde as s;
+
 pub mod definitions;
 pub mod nodes;
 use self::definitions::*;
@@ -166,7 +168,25 @@ impl ::JobPtr {
                     unsafe { ::ffi::flow_job_get_codec_instance(c, job, io_id) as *mut u8 };
                     if codec_instance == ptr::null_mut() { panic!("") }
 
-                    g.node_weight_mut(NodeIndex::new(index)).unwrap().custom_state = codec_instance;
+                    {
+                        g.node_weight_mut(NodeIndex::new(index)).unwrap().custom_state = codec_instance;
+                    }
+                    {
+                        let weight = g.node_weight(NodeIndex::new(index)).unwrap();
+                        //Now, try to send decoder its commands
+                        // let ref mut weight = ctx.weight_mut(ix);
+
+                        match weight.params {
+                            NodeParams::Json(s::Node::Decode { io_id, ref commands}) => {
+                                if let &Some(ref list) = commands {
+                                    for c in list.iter() {
+                                        self.tell_decoder(io_id, c.to_owned()).unwrap();
+                                    }
+                                }
+                            }
+                            _ => {}
+                        }
+                    }
                 }
             }
         }

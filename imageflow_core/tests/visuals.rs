@@ -173,7 +173,7 @@ fn test_crop(){
 fn test_scale_rings(){
     let matched = compare(Some(s::IoEnum::Url("http://s3-us-west-2.amazonaws.com/imageflow-resources/test_inputs/rings2.png".to_owned())), 500,
         "RingsDownscaling".to_owned(), false, false, vec![
-        s::Node::Decode {io_id: 0},
+        s::Node::Decode {io_id: 0, commands: None},
         s::Node::Resample2D{ w: 400, h: 400, down_filter: Some(s::Filter::Hermite), up_filter: Some(s::Filter::Hermite), hints: None }
         ]
     );
@@ -204,7 +204,7 @@ fn request_1d_twice_mode() -> s::ResampleHints {
 fn test_scale_image() {
     let matched = compare(Some(s::IoEnum::Url("http://s3-us-west-2.amazonaws.com/imageflow-resources/test_inputs/waterhouse.jpg".to_owned())), 500,
                           "ScaleTheHouse".to_owned(), false, false, vec![
-        s::Node::Decode {io_id: 0},
+        s::Node::Decode {io_id: 0, commands: None},
         s::Node::Resample2D{ w: 400, h: 300, down_filter: Some(s::Filter::Robidoux), up_filter: Some(s::Filter::Robidoux), hints: Some(request_1d_twice_mode()) }
         ]
     );
@@ -217,7 +217,7 @@ fn test_scale_image() {
 fn test_jpeg_icc2_color_profile() {
     let matched = compare(Some(s::IoEnum::Url("http://s3-us-west-2.amazonaws.com/imageflow-resources/test_inputs/MarsRGB_tagged.jpg".to_owned())), 500,
                           "MarsRGB_ICC_Scaled400300".to_owned(), false, false, vec![
-s::Node::Decode {io_id: 0},
+s::Node::Decode {io_id: 0, commands: None},
 s::Node::Resample2D{ w: 400, h: 300, down_filter: Some(s::Filter::Robidoux), up_filter: Some(s::Filter::Robidoux), hints: Some(request_1d_twice_mode()) }
 ]
     );
@@ -228,7 +228,7 @@ s::Node::Resample2D{ w: 400, h: 300, down_filter: Some(s::Filter::Robidoux), up_
 fn test_jpeg_icc4_color_profile() {
     let matched = compare(Some(s::IoEnum::Url("http://s3-us-west-2.amazonaws.com/imageflow-resources/test_inputs/MarsRGB_v4_sYCC_8bit.jpg".to_owned())), 500,
                           "MarsRGB_ICCv4_Scaled400300".to_owned(), false, false, vec![
-s::Node::Decode {io_id: 0},
+s::Node::Decode {io_id: 0, commands: None},
 s::Node::Resample2D{ w: 400, h: 300, down_filter: Some(s::Filter::Robidoux), up_filter: Some(s::Filter::Robidoux), hints: Some(request_1d_twice_mode()) }
 ]
     );
@@ -243,7 +243,7 @@ fn test_jpeg_rotation() {
         for flag in 1..9 {
             let url = format!("http://s3-us-west-2.amazonaws.com/imageflow-resources/test_inputs/orientation/{}_{}.jpg", orientation, flag);
             let title = format!("Test_Apply_Orientation_{}_{}.jpg", orientation, flag);
-            let matched = compare(Some(s::IoEnum::Url(url)), 500, title, false, false, vec![s::Node::Decode {io_id: 0}]);
+            let matched = compare(Some(s::IoEnum::Url(url)), 500, title, false, false, vec![s::Node::Decode {io_id: 0, commands: None}]);
             assert!(matched);
         }
     }
@@ -254,7 +254,7 @@ fn test_jpeg_rotation() {
 #[test]
 fn test_encode_jpeg_smoke() {
     let steps = vec![
-    s::Node::Decode {io_id: 0},
+    s::Node::Decode {io_id: 0, commands: None},
     s::Node::Resample2D{ w: 400, h: 300, down_filter: Some(s::Filter::Robidoux), up_filter: Some(s::Filter::Robidoux), hints: None },
     s::Node::Encode{ io_id: 1, preset: s::EncoderPreset::LibjpegTurbo {quality: Some(100)}}
     ];
@@ -269,7 +269,7 @@ fn test_encode_jpeg_smoke() {
 #[test]
 fn test_encode_png32_smoke() {
     let steps = vec![
-    s::Node::Decode {io_id: 0},
+    s::Node::Decode {io_id: 0, commands: None},
     s::Node::Resample2D{ w: 400, h: 300, down_filter: Some(s::Filter::Robidoux), up_filter: Some(s::Filter::Robidoux), hints: None },
     s::Node::FlipV,
     s::Node::Crop{ x1: 20, y1: 20, x2: 380, y2: 280},
@@ -334,7 +334,7 @@ fn test_decode_png_and_scale_dimensions(){
         io: s::IoEnum::ByteArray(tinypng)
     };
     let steps = vec![
-    s::Node::Decode{io_id: 0},
+    s::Node::Decode{io_id: 0, commands: None},
     //s::Node::Crop { x1: 0, y1: 0, x2: 638, y2: 423},
     s::Node::Resample2D{w:300,h:200,  down_filter: None, up_filter: None, hints: None},
     ];
@@ -345,7 +345,7 @@ fn test_decode_png_and_scale_dimensions(){
 }
 
 
-fn test_idct_callback(_: s::ImageInfo) -> (Option<s::TellDecoderWhat>, Vec<s::Node>, bool)
+fn test_idct_callback(_: s::ImageInfo) -> (Option<s::DecoderCommand>, Vec<s::Node>, bool)
 {
     let new_w = (800 * 4 + 8 - 1) / 8;
     let new_h = (600 * 4 + 8 - 1) / 8;
@@ -355,7 +355,7 @@ fn test_idct_callback(_: s::ImageInfo) -> (Option<s::TellDecoderWhat>, Vec<s::No
         width: new_w,
         height: new_h
     };
-    (Some(s::TellDecoderWhat::JpegDownscaleHints(hints)), vec![s::Node::Decode{io_id:0}], false)
+    (Some(s::DecoderCommand::JpegDownscaleHints(hints)), vec![s::Node::Decode{io_id:0, commands: None}], false)
 
 }
 //fn test_idct_callback_no_gamma(_: s::ImageInfo) -> (Option<s::TellDecoderWhat>, Vec<s::Node>, bool)
@@ -373,7 +373,7 @@ fn test_idct_callback(_: s::ImageInfo) -> (Option<s::TellDecoderWhat>, Vec<s::No
 //}
 //
 
-fn test_idct_no_gamma_callback(info: s::ImageInfo) -> (Option<s::TellDecoderWhat>, Vec<s::Node>, bool)
+fn test_idct_no_gamma_callback(info: s::ImageInfo) -> (Option<s::DecoderCommand>, Vec<s::Node>, bool)
 {
     let new_w = (info.frame0_width * 6 + 8 - 1) / 8;
     let new_h = (info.frame0_height * 6 + 8 - 1) / 8;
@@ -383,7 +383,8 @@ fn test_idct_no_gamma_callback(info: s::ImageInfo) -> (Option<s::TellDecoderWhat
         width: new_w as i64,
         height: new_h as i64
     };
-    (Some(s::TellDecoderWhat::JpegDownscaleHints(hints)), vec![s::Node::Decode{io_id:0}], false)
+    //Here we send the hints via the Decode node instead.
+    (None, vec![s::Node::Decode{io_id:0, commands: Some(vec![s::DecoderCommand::JpegDownscaleHints(hints)])}], false)
 
 }
 
@@ -408,7 +409,7 @@ fn test_idct_spatial_no_gamma(){
 //    assert!(matched);
 //}
 
-fn test_with_callback(checksum_name: String, input: s::IoEnum, callback: fn(s::ImageInfo) -> (Option<s::TellDecoderWhat>, Vec<s::Node>, bool) ) -> bool{
+fn test_with_callback(checksum_name: String, input: s::IoEnum, callback: fn(s::ImageInfo) -> (Option<s::DecoderCommand>, Vec<s::Node>, bool) ) -> bool{
     let context = SelfDisposingContextPtr::create().unwrap();
     let matched:bool;
 
@@ -430,7 +431,7 @@ fn test_with_callback(checksum_name: String, input: s::IoEnum, callback: fn(s::I
             _ => panic!("")
         };
 
-        let (tell_decoder, mut steps, no_gamma_correction) = callback(image_info);
+        let (tell_decoder, mut steps, no_gamma_correction): (Option<s::DecoderCommand>, Vec<s::Node>,bool) = callback(image_info);
 
         if let Some(what) = tell_decoder {
             let send_hints = s::TellDecoder001 {
