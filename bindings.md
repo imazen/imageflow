@@ -18,7 +18,7 @@ In-process use requires [FFI](https://en.wikipedia.org/wiki/Foreign_function_int
 
 ### Ruby bindings
 
-We have a [limited set of Ruby bindings already](https://github.com/imazen/imageflow/tree/master/wrappers/ruby), but the FFI API will soon be refactored to use JSON, and these may lag behind Rust bindings initially.
+We have a [limited set of Ruby bindings already](https://github.com/imazen/imageflow/tree/master/bindings/ruby), but the FFI API will soon be refactored to use JSON, and these may lag behind Rust bindings initially.
 Currently, you can't use the Ruby bindings unless you compile Imageflow in shared mode (.dll/.so/.dylib), which isn't the default. 
 
 Official Ruby bindings will be released by August 2017. 

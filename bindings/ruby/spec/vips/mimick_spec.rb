@@ -31,4 +31,4 @@ end
 
 
 
-#compare /home/n/Documents/imazen/imageflow/wrappers/ruby/temp_vips_benchmarking/reference_0_u1_400__23912315f.png /home/n/Documents/imazen/imageflow/wrappers/ruby/temp_vips_benchmarking/flow_0_u1_400__23912315f.png -fuzz 2%  x:
+#compare /home/n/Documents/imazen/imageflow/bindings/ruby/temp_vips_benchmarking/reference_0_u1_400__23912315f.png /home/n/Documents/imazen/imageflow/bindings/ruby/temp_vips_benchmarking/flow_0_u1_400__23912315f.png -fuzz 2%  x:
