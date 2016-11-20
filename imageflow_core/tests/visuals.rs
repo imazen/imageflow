@@ -310,7 +310,7 @@ fn test_dimensions(){
     s::Node::Resample2D{w:200,h:133, down_filter: None, up_filter: None, hints: None},
     s::Node::ExpandCanvas{left:1, top: 0, right:0, bottom: 0, color: s::Color::Transparent},
     ];
-    let (w, h) = get_result_dimensions(steps, vec![], true);
+    let (w, h) = get_result_dimensions(steps, vec![], false);
     assert_eq!(w,201);
     assert_eq!(h,133);
 
@@ -338,7 +338,7 @@ fn test_decode_png_and_scale_dimensions(){
     //s::Node::Crop { x1: 0, y1: 0, x2: 638, y2: 423},
     s::Node::Resample2D{w:300,h:200,  down_filter: None, up_filter: None, hints: None},
     ];
-    let (w, h) = get_result_dimensions(steps, vec![png], true);
+    let (w, h) = get_result_dimensions(steps, vec![png], false);
     assert_eq!(w,300);
     assert_eq!(h,200);
 

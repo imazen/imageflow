@@ -1,20 +1,21 @@
 #!/bin/bash
 
+./clean_dotfiles.sh
 
 rm -rf artifacts
 rm -rf build
 rm -rf c_components/build
 rm -rf target
 rm libimageflow.so
-rm conaninfo.txt
-rm conanbuildinfo.cmake
+rm c_components/conaninfo.txt
+rm c_components/conanbuildinfo.cmake
 rm *.user
-rm conanfile.pyc
+rm c_components/conanfile.pyc
 rm -rf node_frames
-rm tests/visuals/compare*.png
-rm tests/visuals/*.html
-rm tests/visuals/*~
-rm cacert.pem
+rm c_components/tests/visuals/compare*.png
+rm c_components/tests/visuals/*.html
+rm c_components/tests/visuals/*~
+rm c_components/cacert.pem
 rm -rf bin
 rm *.png
 rm *.jpg
