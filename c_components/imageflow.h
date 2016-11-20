@@ -10,12 +10,12 @@ extern "C" {
 #endif
 #if defined(_WIN32)
 
-#if defined(imageflow_BUILD_SHARED)
+#if defined(imageflow_c_BUILD_SHARED)
 /* Cmake will define imageflow_EXPORTS on Windows when it
 configures to build a shared library.*/
 #define FLOW_EXPORT __declspec(dllexport)
 #else
-#if defined(imageflow_BUILD_STATIC)
+#if defined(imageflow_c_BUILD_STATIC)
 #define FLOW_EXPORT
 #else
 #define FLOW_EXPORT __declspec(dllimport)
