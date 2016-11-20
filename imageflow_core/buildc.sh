@@ -6,7 +6,7 @@ set -x
 cd ..
 
 cd c_components
-conan remove imageflow/* -f
+conan remove imageflow_c/* -f
 conan export imazen/testing
 
 cd ../imageflow_core

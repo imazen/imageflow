@@ -17,7 +17,7 @@ class DefaultNameConan(ConanFile):
     version = "0.1"
     settings = "os", "compiler", "arch", "build_type"
     generators = "cmake"
-    requires = "imageflow/0.1.0@%s/%s" % (username, channel)
+    requires = "imageflow_c/0.1.0@%s/%s" % (username, channel)
 
     def build(self):
         cmake = CMake(self.settings)
@@ -27,6 +27,6 @@ class DefaultNameConan(ConanFile):
     def imports(self):
         self.copy(pattern="*.dll", dst="bin", src="bin")
         self.copy(pattern="*.dylib", dst="bin", src="lib")
-        
+
     def test(self):
         self.run(".%sbin%sexample --help" % (os.sep, os.sep))

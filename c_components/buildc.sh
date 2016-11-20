@@ -31,6 +31,6 @@ echo
 
 
 echo Reexport package
-conan remove imageflow/* -f
+conan remove imageflow_c/* -f
 conan export imazen/testing
 

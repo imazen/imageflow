@@ -3,7 +3,7 @@ import os
 import shutil
 
 class ImageFlowConan(ConanFile):
-    name = "imageflow"
+    name = "imageflow_c"
     version = "0.1.0"
     license = "AGPLv3"
     settings = "os", "compiler", "build_type", "arch"
@@ -13,7 +13,7 @@ class ImageFlowConan(ConanFile):
     default_options = "shared=False", "libjpeg-turbo:shared=False", "libpng:shared=False", \
    					  "zlib:shared=False", "libcurl:shared=False", "OpenSSL:shared=False", \
                         "OpenSSL:no_electric_fence=True", \
-   					  "imageflow:shared=True"
+   					  "imageflow_c:shared=True"
     exports = "lib/*", "tests/*", "CMakeLists.txt", "imageflow.h", "imageflow_advanced.h"
 
 

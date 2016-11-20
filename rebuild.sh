@@ -22,6 +22,6 @@ rm *.jpeg
 rm *.gif
 rm *~
 
-conan remove imageflow/* -f
+conan remove imageflow_c/* -f
 
 ./build.sh

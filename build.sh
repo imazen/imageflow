@@ -157,7 +157,7 @@ echo "build.sh sees these relevant variables: ${BUILD_VARS[*]}"
 	echo "Build C/C++ parts of Imageflow & dependencies as needed"
 	echo 
 	if [[ "$REBUILD_C" == 'True' ]]; then
-	  conan remove imageflow/* -f
+	  conan remove imageflow_c/* -f
 	fi
 	conan export imazen/testing
 	(

@@ -12,4 +12,4 @@ cd ..
 cd ..
 
 echo Clearing cached C component
-conan remove imageflow/* -f
+conan remove imageflow_c/* -f
