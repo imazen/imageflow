@@ -4,7 +4,9 @@ REM set CONAN_ARCH=x86
 set CONAN_ARCH=x86_64
 SET RUST_TARGET=x86_64-pc-windows-msvc
 
+cd c_components
 conan export imazen/testing
+cd ..
 cd imageflow_core
 conan install --build missing -s build_type=Release -s arch=%CONAN_ARCH%
 cargo test

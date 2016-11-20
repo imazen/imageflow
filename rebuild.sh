@@ -3,6 +3,7 @@
 
 rm -rf artifacts
 rm -rf build
+rm -rf c_components/build
 rm -rf target
 rm libimageflow.so
 rm conaninfo.txt

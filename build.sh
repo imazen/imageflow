@@ -117,49 +117,53 @@ BUILD_VARS=(
 
 echo "build.sh sees these relevant variables: ${BUILD_VARS[*]}"
 
-[[ -d build ]] || mkdir build
+( 
+	cd c_components
+	[[ -d build ]] || mkdir build
 
-echo "================================== C/C++ =========================== [build.sh]"
+	echo "================================== C/C++ =========================== [build.sh]"
 
-if [[ "$TEST_C" == 'True' ]]; then
-	echo "Testing C/C++ components of Imageflow "
-	echo "(and fetching and compiling dependencies)"
-	echo 
-	echo
+	if [[ "$TEST_C" == 'True' ]]; then
+		echo "Testing C/C++ components of Imageflow "
+		echo "(and fetching and compiling dependencies)"
+		echo 
+		echo
 
-	(
-		cd build
-		eval "$COPY_VALGRINDRC"
-		conan install --scope build_tests=True --scope "debug_build=${TEST_C_DEBUG_BUILD:-False}" --scope "coverage=${COVERAGE:-False}" --scope "skip_test_run=${VALGRIND:-False}" --build missing -u ../
-		conan build ../
-		if [[ "$VALGRIND" == 'True' ]]; then
-			#Sync to build/CTestTestfile.cmake
-			$VALGRIND_COMMAND ./bin/test_imageflow
-			$VALGRIND_COMMAND ./bin/test_variations
-			$VALGRIND_COMMAND ./bin/test_fastscaling
-			#echo "This next test is slow; it's a quickcheck running under valgrind"
-			#$VALGRIND_COMMAND ./bin/test_theft_render
-		fi 
-	)
-	if [[ "$COVERAGE" == 'True' ]]; then
+		(
+			cd build
+			eval "$COPY_VALGRINDRC"
+			conan install --scope build_tests=True --scope "debug_build=${TEST_C_DEBUG_BUILD:-False}" --scope "coverage=${COVERAGE:-False}" --scope "skip_test_run=${VALGRIND:-False}" --build missing -u ../
+			conan build ../
+			if [[ "$VALGRIND" == 'True' ]]; then
+				#Sync to build/CTestTestfile.cmake
+				$VALGRIND_COMMAND ./bin/test_imageflow
+				$VALGRIND_COMMAND ./bin/test_variations
+				$VALGRIND_COMMAND ./bin/test_fastscaling
+				#echo "This next test is slow; it's a quickcheck running under valgrind"
+				#$VALGRIND_COMMAND ./bin/test_theft_render
+			fi 
+		)
+		if [[ "$COVERAGE" == 'True' ]]; then
 
-		echo "==================================================================== [build.sh]"
-		echo "Process coverage information with lcov"
-		lcov -q --directory ./build --capture --output-file coverage.info
-		lcov -q --remove coverage.info 'tests/*' '.conan/*' '/usr/*' --output-file coverage.info
+			echo "==================================================================== [build.sh]"
+			echo "Process coverage information with lcov"
+			lcov -q --directory ./build --capture --output-file coverage.info
+			lcov -q --remove coverage.info 'tests/*' '.conan/*' '/usr/*' --output-file coverage.info
+		fi
 	fi
-fi
 
-echo "==================================================================== [build.sh]"
-echo "Build C/C++ parts of Imageflow & dependencies as needed"
-echo 
-if [[ "$REBUILD_C" == 'True' ]]; then
-  conan remove imageflow/* -f
-fi
-conan export imazen/testing
-(
-	cd imageflow_core
-	conan install --build missing
+
+	echo "==================================================================== [build.sh]"
+	echo "Build C/C++ parts of Imageflow & dependencies as needed"
+	echo 
+	if [[ "$REBUILD_C" == 'True' ]]; then
+	  conan remove imageflow/* -f
+	fi
+	conan export imazen/testing
+	(
+		cd ../imageflow_core
+		conan install --build missing
+	)
 )
 
 echo 

@@ -38,6 +38,7 @@ test_script:
   - rustc -V
   - cargo -V
   - nasm -v
+  - cd c_components
   - mkdir build
   - cd build
   - if "%PLATFORM%"=="x86" set CONAN_ARCH=x86
@@ -47,6 +48,7 @@ test_script:
   - conan build ../
   - cd ..
   - conan export imazen/testing
+  - cd ..
   - cd imageflow_core
   - conan install --build missing -s build_type=Release -s arch=%CONAN_ARCH%
   - cargo test
