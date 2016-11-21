@@ -8,7 +8,7 @@ end
 
 module F
   extend FFI::Library
-  ffi_lib 'target/release/libimageflowrs.' + EXT
+  ffi_lib 'target/release/libimageflow.' + EXT
   attach_function :imageflow_context_create, [], :pointer
   attach_function :imageflow_context_error_code, [:pointer], :int
 end

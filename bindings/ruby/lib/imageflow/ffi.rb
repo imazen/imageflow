@@ -7,7 +7,7 @@ module Imageflow
     end
     def self.dylib_path
       extension = FFI::Platform.is_os("darwin") ? "dylib" : "so"
-      File.expand_path("../../../../../target/debug/libimageflowrs.#{extension}", __FILE__)
+      File.expand_path("../../../../../target/debug/libimageflow.#{extension}", __FILE__)
     end
 
     def self.ensure_compiled

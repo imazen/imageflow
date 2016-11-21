@@ -19,11 +19,6 @@ Create backend-agnostic Client API (takes binary blobs online). It can use FFI, 
 * cost estimation
 
 
-4. Move C to subfolder, rename imageflowrs to libimageflow
-
-
-
-
 Refine the JSON API
 
 Reconsider graph_recording design

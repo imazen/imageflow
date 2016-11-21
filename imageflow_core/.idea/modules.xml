@@ -7,7 +7,6 @@
       <module fileurl="file://$PROJECT_DIR$/../imageflow_server/imageflow_server.iml" filepath="$PROJECT_DIR$/../imageflow_server/imageflow_server.iml" />
       <module fileurl="file://$PROJECT_DIR$/../imageflow_tool/imageflow_tool.iml" filepath="$PROJECT_DIR$/../imageflow_tool/imageflow_tool.iml" />
       <module fileurl="file://$PROJECT_DIR$/../imageflow_types/imageflow_types.iml" filepath="$PROJECT_DIR$/../imageflow_types/imageflow_types.iml" />
-      <module fileurl="file://$PROJECT_DIR$/../imageflow_types/imageflow_types.iml" filepath="$PROJECT_DIR$/../imageflow_types/imageflow_types.iml" />
     </modules>
   </component>
 </project>

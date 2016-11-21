@@ -6,7 +6,7 @@ workspace = "../"
 
 
 [lib]
-name = "imageflowrs"
+name = "imageflow"
 doc = true
 crate-type = ["cdylib"]
 doctest = false
