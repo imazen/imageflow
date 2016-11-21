@@ -1,3 +1,10 @@
+Reorganize into 'engines'.
+Expose the full 'build' through the command line
+
+How do engines, optimization sets, node sets, and frame management interact?
+
+Get the git ID from env vars, or fall back to https://github.com/cstorey/git-build-version/
+Identify the travis or appveyor run for artifact retreival.
 
 
 Create constraint node
@@ -35,8 +42,6 @@ Port visual helpers to Rust and add upload support. Make more general, add JSON 
 Put all graph recording results in a graph_recording subfolder
 
 Test pulling from a decoder into several different nodes
-
-Smoke tests with dimension verification
 
 Roundtrip and compare various things (like flips)
 

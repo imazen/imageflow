@@ -20,7 +20,7 @@ Imageflow will bring world-class image quality and performance to all languages 
 
 ## Explore the new JSON API and give us feedback. 
 
-I frequently [request public comment](https://github.com/imazen/imageflow/issues?q=is%3Aopen+is%3Aissue+label%3Arfc) on potentially controversial API changes. Please discuss; additional perspectives are very helpful for understanding the full scope of tradeoffs and effects a change may have.
+I frequently [request public comment](https://github.com/imazen/imageflow/issues?q=is%3Aopen+is%3Aissue+label%3Arequesting-feedback) on potentially controversial API changes. Please discuss; additional perspectives are very helpful for understanding the full scope of tradeoffs and effects a change may have.
 
 We're currently discussing the JSON API.
 

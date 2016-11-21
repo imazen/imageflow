@@ -278,10 +278,12 @@ if [[ "$BUILD_RELEASE" == 'True' ]]; then
 	echo 
 	echo 
 	mkdir -p artifacts/staging/doc || true
+	mkdir -p artifacts/staging/headers || true
 	mkdir -p "artifacts/upload/${PACKAGE_DIR}/doc" || true
 
 
 	cp target/release/{flow-,imageflow_,libimageflow}*  ./artifacts/staging/
+	cp bindings/headers/*.h  ./artifacts/headers/
 	cp -a target/doc ./artifacts/staging/
 	rm ./artifacts/staging/*.{o,d} || true
 

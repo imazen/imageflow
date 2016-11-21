@@ -3,7 +3,7 @@ name = "imageflow_abi"
 version = "0.1.0"
 authors = ["Nathanael Jones <nathanael.jones@gmail.com>"]
 workspace = "../"
-
+build = "build.rs"
 
 [lib]
 name = "imageflow"
@@ -14,3 +14,7 @@ doctest = false
 [dependencies]
 libc = "0.2.0"
 imageflow_core = { path = "../imageflow_core", version = "*" }
+
+[build-dependencies]
+rusty-cheddar = "0.3.0"
+regex = "*"

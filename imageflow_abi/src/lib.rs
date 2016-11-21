@@ -30,7 +30,7 @@
 //! ### Destroying things
 //!
 //! * An `imageflow_context` should ALWAYS be destroyed with `imageflow_context_destroy`
-//! * ImageflowJsonResponse structures should be released with `imageflow_json_response_destroy`
+//! * JsonResponse structures should be released with `imageflow_json_response_destroy`
 //! * An `imageflow_job` can be destroyed early with `imageflow_job_destroy`
 //!
 //! ## ... when allocated by the client, Imageflow only borrows it for the `invocation`
@@ -76,11 +76,11 @@
 //! your platform.
 //!
 //! * libc::c_void (or anything *mut or *const): Platform-sized pointer. 32 or 64 bits.
-//! * The above includes *mut Context, *mut Job, *mut JobIO, etc.
+//! * The above includes *mut Context, *mut Job, *mut JobIo, etc.
 //! * libc::size_t (or usize): Unsigned integer, platform-sized. 32 or 64 bits.
 //!
 //!
-//! Treat *mut Context, *mut Job, *mut JobIO, *mut ImageflowJsonResponse ALL as opaque pointers.
+//! Treat *mut Context, *mut Job, *mut JobIo, *mut JsonResponse ALL as opaque pointers.
 //!
 //!
 //! Fixed size
@@ -110,9 +110,10 @@ extern crate imageflow_core as c;
 extern crate alloc_system;
 extern crate libc;
 use c::ffi;
-pub use c::ffi::{Job, JobIO, Context, IoMode, IoDirection, ImageflowJsonResponse};
+pub use c::ffi::{Job, Context};
+pub use c::ffi::JobIO as JobIo;
+pub use c::ffi::ImageflowJsonResponse as JsonResponse;
 use std::ptr;
-
 
 #[cfg(test)]
 #[allow(unused_imports)]
@@ -120,6 +121,27 @@ use std::ffi::CStr;
 
 #[cfg(test)]
 use std::str;
+
+///
+/// What is possible with the IO object
+#[repr(C)]
+pub enum IoMode {
+    None = 0,
+    ReadSequential = 1,
+    WriteSequential = 2,
+    ReadSeekable = 5, // 1 | 4,
+    WriteSeekable = 6, // 2 | 4,
+    ReadWriteSeekable = 15, // 1 | 2 | 4 | 8
+}
+
+///
+/// Input or output?
+#[repr(C)]
+#[derive(Copy,Clone)]
+pub enum Direction {
+    Out = 8,
+    In = 4,
+}
 
 ///
 /// When a resource should be closed/freed/cleaned up
@@ -139,7 +161,7 @@ pub enum CleanupWith{
 ///
 #[repr(C)]
 #[derive(Clone, Copy, PartialEq, Debug)]
-pub enum PointerLifetime{
+pub enum Lifetime{
     /// Pointer will outlive function call. (I.e, in .NET, the memory has been pinned through the end of the call, perhaps via the 'fixed' keyword)
     OutlivesFunctionCall = 0,
     /// Pointer will outlive context (Usually a GCHandle is required to pin an object for a longer time in C#)
@@ -447,7 +469,7 @@ pub fn exercise_error_handling() {
 ///
 #[no_mangle]
 pub unsafe extern fn imageflow_json_response_read(context: *mut Context,
-                                                  response_in: *const ImageflowJsonResponse,
+                                                  response_in: *const JsonResponse,
                                                   status_code_out: *mut i64,
                                                   buffer_utf8_no_nulls_out: *mut *const libc::uint8_t,
                                                   buffer_size_out: *mut usize) -> bool {
@@ -493,7 +515,7 @@ pub unsafe extern fn imageflow_json_response_read(context: *mut Context,
 ///
 #[no_mangle]
 pub unsafe extern "C" fn imageflow_json_response_destroy(context: *mut Context,
-                                                         response: *mut ImageflowJsonResponse)
+                                                         response: *mut JsonResponse)
                                                          -> bool {
     ffi::flow_destroy(context, response as *mut libc::c_void, ptr::null(), 0)
 }
@@ -521,7 +543,7 @@ pub unsafe extern "C" fn imageflow_context_send_json(context: *mut Context,
                                                      method: *const i8,
                                                      json_buffer: *const libc::uint8_t,
                                                      json_buffer_size: libc::size_t)
-                                                     -> *const ImageflowJsonResponse {
+                                                     -> *const JsonResponse {
     imageflow_send_json(context, ptr::null_mut(), ptr::null_mut(), method, json_buffer, json_buffer_size)
 }
 
@@ -549,7 +571,7 @@ pub unsafe extern "C" fn imageflow_job_send_json(context: *mut Context,
                                                  method: *const i8,
                                                  json_buffer: *const libc::uint8_t,
                                                  json_buffer_size: libc::size_t)
-                                                 -> *const ImageflowJsonResponse {
+                                                 -> *const JsonResponse {
     imageflow_send_json(context, job, ptr::null_mut(), method, json_buffer, json_buffer_size)
 }
 
@@ -577,11 +599,11 @@ pub unsafe extern "C" fn imageflow_job_send_json(context: *mut Context,
 #[allow(unused_variables)]
 unsafe fn imageflow_send_json(context: *mut Context,
                               job: *mut Job,
-                              io: *mut JobIO,
+                              io: *mut JobIo,
                               method: *const i8,
                               json_buffer: *const libc::uint8_t,
                               json_buffer_size: libc::size_t)
-                              -> *const ImageflowJsonResponse {
+                              -> *const JsonResponse {
     //TODO: check for nulls in json_BUFFER AND METHOD
 
     // It doesn't appear that this allocates anything
@@ -676,16 +698,16 @@ pub unsafe extern "C" fn imageflow_io_create_for_file(context: *mut Context,
                                                       mode: IoMode,
                                                       filename: *const libc::c_char,
                                                       cleanup: CleanupWith)
-                                                      -> *mut JobIO {
+                                                      -> *mut JobIo {
     // TODO: validate that 'owner' is capable of being an owner
 
-    ffi::flow_io_create_for_file(context, mode, filename, context as *const libc::c_void)
+    ffi::flow_io_create_for_file(context, std::mem::transmute(mode), filename, context as *const libc::c_void)
 }
 
 
 ///
 /// Creates an imageflow_io structure for reading from the provided buffer.
-/// You are ALWAYS responsible for freeing the memory provided in accordance with the PointerLifetime value.
+/// You are ALWAYS responsible for freeing the memory provided in accordance with the Lifetime value.
 /// If you specify OutlivesFunctionCall, then the buffer will be copied.
 ///
 ///
@@ -694,12 +716,12 @@ pub unsafe extern "C" fn imageflow_io_create_for_file(context: *mut Context,
 pub unsafe extern "C" fn imageflow_io_create_from_buffer(context: *mut Context,
                                                          buffer: *const u8,
                                                          buffer_byte_count: libc::size_t,
-                                                            lifetime: PointerLifetime,
+                                                            lifetime: Lifetime,
                                                             cleanup: CleanupWith)
-                                                         -> *mut JobIO {
+                                                         -> *mut JobIo {
 
     let mut final_buffer = buffer;
-    if lifetime == PointerLifetime::OutlivesFunctionCall {
+    if lifetime == Lifetime::OutlivesFunctionCall {
         let buf : *mut u8 = c::ffi::flow_context_calloc(context, 1, buffer_byte_count, ptr::null(), context as *const libc::c_void, ptr::null(), 0) as *mut u8 ;
         if buf.is_null() {
             //TODO: raise OOM
@@ -709,7 +731,7 @@ pub unsafe extern "C" fn imageflow_io_create_from_buffer(context: *mut Context,
 
         final_buffer = buf;
     }
-    ffi::flow_io_create_from_memory(context, IoMode::read_seekable, final_buffer, buffer_byte_count, context as *mut libc::c_void, ptr::null())
+    ffi::flow_io_create_from_memory(context, std::mem::transmute(IoMode::ReadSeekable), final_buffer, buffer_byte_count, context as *mut libc::c_void, ptr::null())
 }
 
 
@@ -725,7 +747,7 @@ pub unsafe extern "C" fn imageflow_io_create_from_buffer(context: *mut Context,
 #[no_mangle]
 #[allow(unused_variables)]
 pub unsafe extern "C" fn imageflow_io_create_for_output_buffer(context: *mut Context)
-                                                               -> *mut JobIO {
+                                                               -> *mut JobIo {
     // The current implementation of output buffer only sheds its actual buffer with the context.
     // No need for the shell to have an earlier lifetime for mem reasons.
     ffi::flow_io_create_for_output_buffer(context, context as *mut libc::c_void)
@@ -742,7 +764,7 @@ pub unsafe extern "C" fn imageflow_io_create_for_output_buffer(context: *mut Con
 ///
 #[no_mangle]
 pub unsafe extern "C" fn imageflow_io_get_output_buffer(context: *mut Context,
-                                                        io: *mut JobIO,
+                                                        io: *mut JobIo,
                                                         result_buffer: *mut *const u8,
                                                         result_buffer_length: *mut usize)
                                                         -> bool {
@@ -791,7 +813,7 @@ pub unsafe extern "C" fn imageflow_job_create(context: *mut Context) -> *mut Job
 pub unsafe extern "C" fn imageflow_job_get_io(context: *mut Context,
                                               job: *mut Job,
                                               placeholder_id: i32)
-                                              -> *mut JobIO {
+                                              -> *mut JobIo {
     ffi::flow_job_get_io(context, job, placeholder_id)
 }
 
@@ -804,11 +826,11 @@ pub unsafe extern "C" fn imageflow_job_get_io(context: *mut Context,
 #[no_mangle]
 pub unsafe extern "C" fn imageflow_job_add_io(context: *mut Context,
                                               job: *mut Job,
-                                              io: *mut JobIO,
+                                              io: *mut JobIo,
                                               placeholder_id: i32,
-                                              direction: IoDirection)
+                                              direction: Direction)
                                               -> bool {
-    ffi::flow_job_add_io(context, job, io, placeholder_id, direction)
+    ffi::flow_job_add_io(context, job, io, placeholder_id, std::mem::transmute(direction))
 }
 
 ///
