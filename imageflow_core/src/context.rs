@@ -203,7 +203,7 @@ impl JobPtr {
         s.reserve(8000);
         s += "JSON API - Job\n\n";
         s += "imageflow_job responds to these message methods\n\n";
-        s += "## v0.0.1/get_image_info \n";
+        s += "## v0.1/get_image_info \n";
         s += "Example message body:\n";
         s += &serde_json::to_string_pretty(&s::GetImageInfo001::example_get_image_info()).unwrap();
         s += "\nExample response:\n";
@@ -211,14 +211,14 @@ impl JobPtr {
         s += "\n\n";
 
 
-        s += "## v0.0.1/tell_decoder \n";
+        s += "## v0.1/tell_decoder \n";
         s += "Example message body:\n";
         s += &serde_json::to_string_pretty(&s::TellDecoder001::example_hints()).unwrap();
         s += "\nExample response:\n";
         s += &serde_json::to_string_pretty(&s::Response001::example_ok()).unwrap();
         s += "\n\n";
 
-        s += "## v0.0.1/execute \n";
+        s += "## v0.1/execute \n";
         s += "Example message body (with graph):\n";
         s += &serde_json::to_string_pretty(&s::Execute001::example_graph()).unwrap();
         s += "Example message body (with linear steps):\n";
@@ -238,7 +238,7 @@ impl JobPtr {
                                -> Result<JsonResponse<'c>> {
 
         match method {
-            "v0.0.1/get_image_info" => {
+            "v0.1/get_image_info" => {
                 let parsed_maybe: std::result::Result<s::GetImageInfo001, serde_json::Error> = serde_json::from_slice(json);
                 match parsed_maybe {
                     Ok(parsed) => {
@@ -251,7 +251,7 @@ impl JobPtr {
                 }
 
             }
-            "v0.0.1/tell_decoder" => {
+            "v0.1/tell_decoder" => {
                 let parsed_maybe: std::result::Result<s::TellDecoder001, serde_json::Error> = serde_json::from_slice(json);
                 match parsed_maybe {
                     Ok(parsed) => {
@@ -263,7 +263,7 @@ impl JobPtr {
                     }
                 }
             }
-            "v0.0.1/execute" => {
+            "v0.1/execute" => {
                 let parsed_maybe: std::result::Result<s::Execute001, serde_json::Error> = serde_json::from_slice(json);
                 match parsed_maybe {
                     Ok(parsed) => {
@@ -421,7 +421,7 @@ impl ContextPtr {
         s.reserve(8000);
         s += "# JSON API - Context\n\n";
         s += "imageflow_context responds to these message methods\n\n";
-        s += "## v0.0.1/build \n";
+        s += "## v0.1/build \n";
         s += "Example message body:\n";
         s += &serde_json::to_string_pretty(&s::Build001::example_with_steps()).unwrap();
         s += "\n\nExample response:\n";
@@ -447,7 +447,7 @@ impl ContextPtr {
         }
         let response = match method {
             "brew_coffee" => JsonResponse::teapot(),
-            "v0.0.1/build" => unsafe {
+            "v0.1/build" => unsafe {
 
                 let handler = ::parsing::BuildRequestHandler::new();
                 let response = handler.do_and_respond(&mut *self, json);

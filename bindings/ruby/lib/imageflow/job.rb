@@ -74,12 +74,12 @@ module Imageflow
     end
 
     def execute (framewise:, graph_recording: nil)
-      result = self.send_json("v0.0.1/execute", {"framewise": framewise})
+      result = self.send_json("v0.1/execute", {"framewise": framewise})
       raise result.message unless result.ok?
     end
 
     def get_image_info(placeholder_id:)
-      result = self.send_json("v0.0.1/get_image_info", {"ioId": placeholder_id})
+      result = self.send_json("v0.1/get_image_info", {"ioId": placeholder_id})
       raise result.message unless result.ok?
 
       info = result.data["ImageInfo"]
@@ -98,7 +98,7 @@ module Imageflow
 
       hints = {width: downscaled_min_width, height: downscaled_min_height, scaleLumaSpatially: scale_luma_spatially, "gammaCorrectForSrgbDuringSpatialLumaScaling": gamma_correct_for_srgb_during_spatial_luma_scaling}
 
-      result = send_json("v0.0.1/tell_decoder", {"ioId": placeholder_id, "command": {"JpegDownscaleHints": hints}})
+      result = send_json("v0.1/tell_decoder", {"ioId": placeholder_id, "command": {"JpegDownscaleHints": hints}})
       raise result.message unless result.ok?
     end
   end

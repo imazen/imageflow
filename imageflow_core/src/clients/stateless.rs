@@ -81,7 +81,7 @@ impl LibClient{
         let result = {
             let mut job: JobPtr = context.create_job()?;
             job.add_input_bytes(0, bytes)?;
-            let info_blob: JsonResponse = job.message("v0.0.1/get_image_info", "{\"ioId\": 0}".as_bytes())?;
+            let info_blob: JsonResponse = job.message("v0.1/get_image_info", "{\"ioId\": 0}".as_bytes())?;
             //TODO: add into error conversion
             let info_response: s::Response001 = serde_json::from_slice(info_blob.response_json.as_ref()).unwrap();
             if !info_response.success {
@@ -122,7 +122,7 @@ impl LibClient{
             };
 
             let send_execute_str = serde_json::to_string_pretty(&send_execute).unwrap();
-            let result_blob: JsonResponse =  job.message("v0.0.1/execute", send_execute_str.as_bytes())?;
+            let result_blob: JsonResponse =  job.message("v0.1/execute", send_execute_str.as_bytes())?;
 
             let result: s::Response001 = match serde_json::from_slice(result_blob.response_json.as_ref()) {
                 Ok(r) => r,
@@ -134,7 +134,7 @@ impl LibClient{
             if !result.success {
                 return Err(BuildFailure::Error{
                     httpish_code: 500,
-                    message: format!("v0.0.1/execute failed: {:?}",result)
+                    message: format!("v0.1/execute failed: {:?}",result)
 
                 })
             }

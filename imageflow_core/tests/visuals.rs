@@ -53,7 +53,7 @@ fn smoke_test(input: Option<s::IoEnum>, output: Option<s::IoEnum>,  debug: bool,
         framewise: s::Framewise::Steps(steps)
     };
     let mut context = Context::create().unwrap();
-    context.message("v0.0.1/build", &serde_json::to_vec(&build).unwrap()).unwrap();
+    context.message("v0.1/build", &serde_json::to_vec(&build).unwrap()).unwrap();
 }
 
 fn compare(input: Option<s::IoEnum>, allowed_off_by_one_bytes: usize, checksum_name: String, store_if_missing: bool, debug: bool, mut steps: Vec<s::Node>) -> bool {
@@ -96,7 +96,7 @@ fn compare(input: Option<s::IoEnum>, allowed_off_by_one_bytes: usize, checksum_n
 
     let mut context = Context::create().unwrap();
 
-    context.message("v0.0.1/build", &serde_json::to_vec(&build).unwrap()).unwrap();
+    context.message("v0.1/build", &serde_json::to_vec(&build).unwrap()).unwrap();
 
     unsafe {
         if debug {
@@ -297,7 +297,7 @@ fn get_result_dimensions(steps: Vec<s::Node>, io: Vec<s::IoObject>, debug: bool)
         framewise: s::Framewise::Steps(steps)
     };
     let mut context = Context::create().unwrap();
-    context.message("v0.0.1/build", &serde_json::to_vec(&build).unwrap()).unwrap();
+    context.message("v0.1/build", &serde_json::to_vec(&build).unwrap()).unwrap();
     unsafe { ((*dest_bitmap).w, (*dest_bitmap).h) }
 }
 
@@ -421,7 +421,7 @@ fn test_with_callback(checksum_name: String, input: s::IoEnum, callback: fn(s::I
         ::imageflow_core::parsing::IoTranslator::new(c.as_ptr().unwrap()).add_to_job(job.as_ptr(), vec![s::IoObject{ io_id:0, direction: s::IoDirection::Input, io: input}]);
 
 
-        let info_blob: JsonResponse = job.message("v0.0.1/get_image_info", "{\"ioId\": 0}".as_bytes()).unwrap();
+        let info_blob: JsonResponse = job.message("v0.1/get_image_info", "{\"ioId\": 0}".as_bytes()).unwrap();
         let info_response: s::Response001 = serde_json::from_slice(info_blob.response_json.as_ref()).unwrap();
         if !info_response.success {
             panic!("get_image_info failed: {:?}",info_response);
@@ -439,7 +439,7 @@ fn test_with_callback(checksum_name: String, input: s::IoEnum, callback: fn(s::I
                 command: what
             };
             let send_hints_str = serde_json::to_string_pretty(&send_hints).unwrap();
-            job.message("v0.0.1/tell_decoder", send_hints_str.as_bytes()).unwrap().assert_ok();
+            job.message("v0.1/tell_decoder", send_hints_str.as_bytes()).unwrap().assert_ok();
         }
 
         let mut dest_bitmap: *mut imageflow_core::ffi::BitmapBgra = std::ptr::null_mut();
@@ -456,7 +456,7 @@ fn test_with_callback(checksum_name: String, input: s::IoEnum, callback: fn(s::I
         };
 
         let send_execute_str = serde_json::to_string_pretty(&send_execute).unwrap();
-        job.message("v0.0.1/execute", send_execute_str.as_bytes()).unwrap().assert_ok();
+        job.message("v0.1/execute", send_execute_str.as_bytes()).unwrap().assert_ok();
 
 
 

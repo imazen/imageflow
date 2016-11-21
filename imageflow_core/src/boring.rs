@@ -417,7 +417,7 @@ pub fn process_image<F, C, R>(commands: BoringCommands,
         }
 
 
-        let info_blob: JsonResponse = job.message("v0.0.1/get_image_info", "{\"ioId\": 0}".as_bytes()).unwrap();
+        let info_blob: JsonResponse = job.message("v0.1/get_image_info", "{\"ioId\": 0}".as_bytes()).unwrap();
         let info_response: s::Response001 = serde_json::from_slice(info_blob.response_json.as_ref()).unwrap();
         if !info_response.success {
             panic!("get_image_info failed: {:?}",info_response);
@@ -441,7 +441,7 @@ pub fn process_image<F, C, R>(commands: BoringCommands,
                 })
             };
             let send_hints_str = serde_json::to_string_pretty(&send_hints).unwrap();
-            job.message("v0.0.1/tell_decoder", send_hints_str.as_bytes()).unwrap().assert_ok();
+            job.message("v0.1/tell_decoder", send_hints_str.as_bytes()).unwrap().assert_ok();
         }
 
 
@@ -452,7 +452,7 @@ pub fn process_image<F, C, R>(commands: BoringCommands,
         };
 
         let send_execute_str = serde_json::to_string_pretty(&send_execute).unwrap();
-        job.message("v0.0.1/execute", send_execute_str.as_bytes()).unwrap().assert_ok();
+        job.message("v0.1/execute", send_execute_str.as_bytes()).unwrap().assert_ok();
 
 
         result = cleanup(c.as_ptr().unwrap(), job.as_ptr());
