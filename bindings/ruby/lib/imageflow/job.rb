@@ -55,12 +55,12 @@ module Imageflow
     def get_buffer(placeholder_id:)
       #Just allocate 128 bytes or so to store out pointers
       buffer_pointer = FFI::MemoryPointer.new(:pointer, 1)
-      buffer_size = FFI::MemoryPointer.new(:uint64, 1)
+      buffer_size = FFI::MemoryPointer.new(:size_t, 1)
 
       @c.call_method(:job_get_output_buffer_by_id, @ptr, placeholder_id, buffer_pointer, buffer_size)
 
-      {buffer: buffer_pointer.get_pointer(0),
-       buffer_size: buffer_size.get_uint64(0)}
+      {buffer: buffer_pointer.read_pointer,
+       buffer_size: buffer_size.read_pointer.address}
     end
 
     def get_buffer_bytes(placeholder_id:)
@@ -82,7 +82,7 @@ module Imageflow
       result = self.send_json("v0.1/get_image_info", {"ioId": placeholder_id})
       raise result.message unless result.ok?
 
-      info = result.data["ImageInfo"]
+      info = result.data["imageInfo"]
       info = info.nil? ? info : info.inject({}){|memo,(k,v)| memo[k.to_sym] = v; memo}
       info[:frame0_width] = info[:frame0Width]
       info[:frame0_height] = info[:frame0Height]
@@ -98,7 +98,7 @@ module Imageflow
 
       hints = {width: downscaled_min_width, height: downscaled_min_height, scaleLumaSpatially: scale_luma_spatially, "gammaCorrectForSrgbDuringSpatialLumaScaling": gamma_correct_for_srgb_during_spatial_luma_scaling}
 
-      result = send_json("v0.1/tell_decoder", {"ioId": placeholder_id, "command": {"JpegDownscaleHints": hints}})
+      result = send_json("v0.1/tell_decoder", {"ioId": placeholder_id, "command": {"jpegDownscaleHints": hints}})
       raise result.message unless result.ok?
     end
   end

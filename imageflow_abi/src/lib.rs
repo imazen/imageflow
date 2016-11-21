@@ -450,7 +450,7 @@ pub unsafe extern fn imageflow_json_response_read(context: *mut Context,
                                                   response_in: *const ImageflowJsonResponse,
                                                   status_code_out: *mut i64,
                                                   buffer_utf8_no_nulls_out: *mut *const libc::uint8_t,
-                                                  buffer_size_out: *mut u64) -> bool {
+                                                  buffer_size_out: *mut usize) -> bool {
     if context.is_null() {
         return false;
     }
@@ -471,7 +471,7 @@ pub unsafe extern fn imageflow_json_response_read(context: *mut Context,
         *buffer_utf8_no_nulls_out = (*response_in).buffer_utf8_no_nulls;
     }
     if !buffer_size_out.is_null() {
-        *buffer_size_out = (*response_in).buffer_size as u64;
+        *buffer_size_out = (*response_in).buffer_size;
     }
     return true;
 }
@@ -643,7 +643,7 @@ pub fn exercise_json_message() {
         assert!(response != ptr::null());
 
         let mut json_out_ptr: *const u8 = ptr::null_mut();
-        let mut json_out_size: u64 = 0;
+        let mut json_out_size: usize = 0;
         let mut json_status_code: i64 = 0;
 
         assert!(imageflow_json_response_read(c,
@@ -653,9 +653,8 @@ pub fn exercise_json_message() {
                                              &mut json_out_size));
 
 
-        let json_out_usize = json_out_size as usize; //TODO: check overflow
         let json_out_str =
-        ::std::str::from_utf8(std::slice::from_raw_parts(json_out_ptr, json_out_usize)).unwrap();
+        ::std::str::from_utf8(std::slice::from_raw_parts(json_out_ptr, json_out_size)).unwrap();
         assert_eq!(json_out_str, expected_json_out);
 
         assert_eq!(json_status_code, expected_reponse_status);
@@ -745,12 +744,12 @@ pub unsafe extern "C" fn imageflow_io_create_for_output_buffer(context: *mut Con
 pub unsafe extern "C" fn imageflow_io_get_output_buffer(context: *mut Context,
                                                         io: *mut JobIO,
                                                         result_buffer: *mut *const u8,
-                                                        result_buffer_length: *mut u64)
+                                                        result_buffer_length: *mut usize)
                                                         -> bool {
 
     let mut result_len: usize = 0;
     let b = ffi::flow_io_get_output_buffer(context, io, result_buffer, &mut result_len);
-        (* result_buffer_length) = result_len as u64;
+        (* result_buffer_length) = result_len;
     b
 }
 
@@ -764,7 +763,7 @@ pub unsafe extern "C" fn imageflow_job_get_output_buffer_by_id(context: *mut Con
                                                                job: *mut Job,
                                                                io_id: i32,
                                                                result_buffer: *mut *const u8,
-                                                               result_buffer_length: *mut u64)
+                                                               result_buffer_length: *mut usize)
                                                                -> bool {
     let io = ffi::flow_job_get_io(context,job, io_id);
     if io.is_null(){

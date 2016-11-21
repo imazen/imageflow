@@ -108,13 +108,13 @@ module Imageflow
         raise "Why didn't call_method catch this error? Was no error raised on the context?"
       end
 
-      out_status_code = FFI::MemoryPointer.new(:int64, 1) # Allocate memory sized to the data
-      out_buffer_ptr = buffer_pointer = FFI::MemoryPointer.new(:pointer, 1) # Allocate memory sized to the data
-      out_buffer_size = FFI::MemoryPointer.new(:uint64, 1) # Allocate memory sized to the data
+      out_status_code = FFI::MemoryPointer.new(:int64, 1)
+      out_buffer_ptr = FFI::MemoryPointer.new(:pointer, 1)
+      out_buffer_size = FFI::MemoryPointer.new(:size_t, 1)
 
 
       if call_method(:json_response_read, response,out_status_code, out_buffer_ptr, out_buffer_size )
-        UnparsedResponse.from_pointer(out_buffer_ptr.read_pointer, out_buffer_size.read_uint64 , out_status_code.read_int64)
+        UnparsedResponse.from_pointer(out_buffer_ptr.read_pointer, out_buffer_size.read_pointer.address , out_status_code.read_int64)
       else
         raise "imageflow_json_response_read failed"
       end
