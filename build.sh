@@ -322,7 +322,7 @@ if [[ "$BUILD_RELEASE" == 'True' ]]; then
 
 
 	if [[ -n "$ARTIFACT_UPLOAD_PATH" ]]; then
-		mkdir -p "artifacts/upload/$(dirname "${ARTIFACT_UPLOAD_PATH}")" || true
+		mkdir -p "../upload/$(dirname "${ARTIFACT_UPLOAD_PATH}")" || true
 		tar czf "../upload/${ARTIFACT_UPLOAD_PATH}.tar.gz" ./*
 		cd ../..
 		if [[ -n "$DOCS_UPLOAD_DIR" ]]; then
@@ -334,7 +334,7 @@ if [[ "$BUILD_RELEASE" == 'True' ]]; then
 			cp -a target/doc/* "./artifacts/upload/${DOCS_UPLOAD_DIR_2}/"
 		fi
 		if [[ -n "$ARTIFACT_UPLOAD_PATH_2" ]]; then
-			mkdir -p "artifacts/upload/$(dirname "${ARTIFACT_UPLOAD_PATH_2}")" || true
+			mkdir -p "./artifacts/upload/$(dirname "${ARTIFACT_UPLOAD_PATH_2}")" || true
 			cp "./artifacts/upload/${ARTIFACT_UPLOAD_PATH}.tar.gz" "./artifacts/upload/${ARTIFACT_UPLOAD_PATH_2}.tar.gz"
 		fi
 	fi

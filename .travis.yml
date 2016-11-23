@@ -7,14 +7,12 @@ cache:
   cargo: true
   directories:
   - "$HOME/.conan/data"
-env:
-  UPLOAD_URL: https://s3-us-west-1.amazonaws.com/imageflow-nightlies/
 matrix:
   fast_finish: true
   include:
   - os: linux
     dist: trusty
-    env: PACKAGE_SUFFIX=x86_64-linux-gcc48 DOCKER_IMAGE=imazen/build_if_gcc48 UPLOAD_BUILD=True
+    env: PACKAGE_SUFFIX=x86_64-linux-gcc48 DOCKER_IMAGE=imazen/build_if_gcc48 UPLOAD_BUILD=True 
     sudo: required
     services:
     - docker
