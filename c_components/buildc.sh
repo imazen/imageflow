@@ -3,8 +3,8 @@
 set -e
 set -x
 
-export VALGRIND=${VALGRIND:-False}
-export TEST_C_DEBUG_BUILD=${TEST_C_DEBUG_BUILD:-False}
+export VALGRIND="${VALGRIND:-False}"
+export TEST_C_DEBUG_BUILD="${TEST_C_DEBUG_BUILD:-False}"
 
 [[ -d build ]] || mkdir build
 

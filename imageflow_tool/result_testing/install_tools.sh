@@ -70,7 +70,7 @@ fi
 # tar xvzf ImageMagick-7.0.2-1.tar.gz
 # cd ImageMagick-7.0.2-1
 # ./configure --enable-hdri=yes --with-bzlib=no --with-djvu=no --with-dps=no --with-fftw=no --with-fpx=no --with-fftw=no --with-fontconfig=no --with-freetype=no --with-gvc=no --with-jbig=no --with-magick-plus-plus=no --with-pango=no
-# export DESTDIR=$(cd ..; pwd)/bin
+# export DESTDIR="$(cd ..; pwd)/bin"
 # make
 # make install
 # ln -s ./bin/usr/local/bin/convert ../convert

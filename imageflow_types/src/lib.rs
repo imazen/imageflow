@@ -1,6 +1,7 @@
 #![feature(proc_macro)]
 #![feature(conservative_impl_trait)]
 
+pub mod version;
 
 #[macro_use]
 extern crate serde_derive;

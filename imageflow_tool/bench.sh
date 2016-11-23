@@ -35,9 +35,9 @@ rm bench_in/*.jpg
 export COUNT=32
 
 
-for i in `seq 1 $COUNT`;
+for i in $(seq 1 $COUNT);
 do
-     cp u1.jpg bench_in/c$i.jpg
+     cp "u1.jpg" "bench_in/c$i.jpg"
 done
 
 

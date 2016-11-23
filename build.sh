@@ -1,6 +1,21 @@
 #!/bin/bash
 set -e #Exit on failure.
 
+has_shellcheck() {
+	command -v shellcheck >/dev/null 2>&1 
+}
+if has_shellcheck; then
+	shellcheck ./*.sh
+	shellcheck ./ci/*.sh
+	shellcheck ./imageflow_*/*.sh
+	shellcheck ./c_components/*.sh
+	shellcheck ./ci/docker/*.sh
+	shellcheck ./ci/docker/build_*/*.sh
+	shellcheck ./ci/nixtools/*.sh
+	# wait until v0.44 for this; global ignores are needed shellcheck ./imageflow_tool/result_testing/*.sh
+	
+fi
+
 echo "============================= [build.sh] ======================================"
 # You're going to need:
 # Conan
@@ -19,47 +34,73 @@ echo "============================= [build.sh] =================================
 #### Parameters used by build.sh 
 
 # Build docs; build release mode binaries (separate pass from testing); populate ./artifacts folder
-export BUILD_RELEASE=${BUILD_RELEASE:-True}
+export BUILD_RELEASE="${BUILD_RELEASE:-True}"
 # Run all tests (both C and Rust) under Valgrind
-export VALGRIND=${VALGRIND:-False}
+export VALGRIND="${VALGRIND:-False}"
 # Compile and run C tests
-export TEST_C=${TEST_C:-True}
+export TEST_C="${TEST_C:-True}"
 # Rebuild C part of libimageflow
-export REBUILD_C=${REBUILD_C:-True}
+export REBUILD_C="${REBUILD_C:-True}"
 # Build C Tests in debug mode for clearer valgrind output
-export TEST_C_DEBUG_BUILD=${TEST_C_DEBUG_BUILD:${VALGRIND}}
+export TEST_C_DEBUG_BUILD="${TEST_C_DEBUG_BUILD:${VALGRIND}}"
 # Run Rust tests
-export TEST_RUST=${TEST_RUST:-True}
+export TEST_RUST="${TEST_RUST:-True}"
 # Enable compilation of imageflow_server, which has a problematic openssl dependency
-export IMAGEFLOW_SERVER=${IMAGEFLOW_SERVER:-True}
+export IMAGEFLOW_SERVER="${IMAGEFLOW_SERVER:-True}"
 # Enables generated coverage information for the C portion of the code. 
 # Also forces C tests to build in debug mode
-export COVERAGE=${COVERAGE:-False}
+export COVERAGE="${COVERAGE:-False}"
 # Affects how /artifacts folder is structured by build.sh
 # UPLOAD_AS_LATEST overrides the nightly build for the branch if UPLOAD_BUILD=True and run on travis with s3 uploading on
-export UPLOAD_AS_LATEST=${UPLOAD_AS_LATEST:-False}
-# Used by build.sh to determine the package archive name in ./artifacts
-export JOB_BADGE=${JOB_BADGE:-local-build}
-# Used in build.sh for naming things in ./artifacts; also 
-# eventually should be embedded in output binaries
-# Always ask Git for the commit ID
-export GIT_COMMIT
-GIT_COMMIT=${GIT_COMMIT:-$(git rev-parse --short HEAD)}
-GIT_COMMIT=${GIT_COMMIT:-unknown-commit}
-# But let others override GIT_BRANCH_NAME, as HEAD might not have a symbolic ref, and it could crash
-# I.e, provide GIT_BRANCH_NAME to this script in Travis
-export GIT_BRANCH_NAME
-GIT_BRANCH_NAME=${GIT_BRANCH_NAME:-$(git symbolic-ref HEAD | sed -e 's,.*/\(.*\),\1,')}
-GIT_BRANCH_NAME=${GIT_BRANCH_NAME:-unknown-branch}
+export UPLOAD_AS_LATEST="${UPLOAD_AS_LATEST:-False}"
 
-# Used for naming things in ./artifacts
-export PACKAGE_PREFIX=${PACKAGE_PREFIX:-imageflow}
+############ GIT VALUES ##################
+
+export GIT_COMMIT
+GIT_COMMIT="${GIT_COMMIT:-$(git rev-parse HEAD)}"
+GIT_COMMIT="${GIT_COMMIT:-unknown-commit}"
+export GIT_COMMIT_SHORT
+GIT_COMMIT_SHORT="${GIT_COMMIT_SHORT:-$(git rev-parse --short HEAD)}"
+GIT_COMMIT_SHORT="${GIT_COMMIT_SHORT:-unknown-commit}"
+export GIT_OPTIONAL_TAG
+if git describe --exact-match --tags; then
+	GIT_OPTIONAL_TAG="${GIT_OPTIONAL_TAG:-$(git describe --exact-match --tags)}"
+fi
+export GIT_DESCRIBE_ALWAYS
+GIT_DESCRIBE_ALWAYS="${GIT_DESCRIBE_ALWAYS:-$(git describe --always --tags)}"
+export GIT_DESCRIBE_ALWAYS_LONG
+GIT_DESCRIBE_ALWAYS_LONG="${GIT_DESCRIBE_ALWAYS_LONG:-$(git describe --always --tags --long)}"
+export GIT_DESCRIBE_AAL
+GIT_DESCRIBE_AAL="${GIT_DESCRIBE_AAL:-$(git describe --always --all --long)}"
+
+# But let others override GIT_OPTIONAL_BRANCH, as HEAD might not have a symbolic ref, and it could crash
+# I.e, provide GIT_OPTIONAL_BRANCH to this script in Travis - but NOT For 
+export GIT_OPTIONAL_BRANCH
+if git symbolic-ref HEAD | sed -e 's,.*/\(.*\),\1,'; then 
+	GIT_OPTIONAL_BRANCH="${GIT_OPTIONAL_BRANCH:-$(git symbolic-ref HEAD | sed -e 's,.*/\(.*\),\1,')}"
+fi 
+
+############ NAMING OF ARTIFACTS (local-only, CI should determint the rest) ##################
+
 if [[ "$(uname -s)" == 'Darwin' ]]; then
-	export PACKAGE_SUFFIX=${PACKAGE_SUFFIX:-unknown-mac}
+	export SHORT_OS_NAME="${SHORT_OS_NAME:-mac}"
 else
-	export PACKAGE_SUFFIX=${PACKAGE_SUFFIX:-unknown-linux}
+	export SHORT_OS_NAME="${SHORT_OS_NAME:-linux}"
 fi
 
+if [[ -n "${GIT_OPTIONAL_BRANCH}" ]]; then
+	export ARTIFACT_UPLOAD_PATH="${ARTIFACT_UPLOAD_PATH:-${GIT_OPTIONAL_BRANCH}/imageflow-localbuild-${GIT_COMMIT_SHORT}-${SHORT_OS_NAME}}"
+	export ARTIFACT_UPLOAD_PATH_2="${ARTIFACT_UPLOAD_PATH_2}"
+	export DOCS_UPLOAD_DIR_2="${DOCS_UPLOAD_DIR_2}"
+	export DOCS_UPLOAD_DIR="${DOCS_UPLOAD_DIR:-${GIT_OPTIONAL_BRANCH}/doc}"
+fi
+
+if [[ "${UPLOAD_AS_LATEST}" == "False" ]]; then
+	export ARTIFACT_UPLOAD_PATH_2=
+	export DOCS_UPLOAD_DIR_2=
+fi
+
+##################################
 
 export SCRIPT_DIR
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
@@ -78,35 +119,27 @@ export VALGRIND_RUST_COMMAND="$VALGRIND_COMMAND cargo test"
 export RUST_BACKTRACE=1
 
 
-export PACKAGE_DIR=${GIT_BRANCH_NAME}
-export PACKAGE_ARCHIVE_NAME=${PACKAGE_PREFIX}-${JOB_BADGE}-${GIT_COMMIT}-${PACKAGE_SUFFIX}
-export PACKAGE_LATEST_NAME=${PACKAGE_PREFIX}-nightly-${PACKAGE_SUFFIX}
 
 
 #Turn off coverage if lcov is missing
 command -v lcov >/dev/null 2>&1 || { export COVERAGE=False; }
 
-
+# TODO: Add CI env vars?
 BUILD_VARS=(
 	"BUILD_RELEASE=${BUILD_RELEASE}"
 	"VALGRIND=${VALGRIND}" 
 	"TEST_C=${TEST_C}"
-  "REBUILD_C=${REBUILD_C}"
+	"REBUILD_C=${REBUILD_C}"
 	"TEST_C_DEBUG_BUILD=${TEST_C_DEBUG_BUILD}"
 	"TEST_RUST=${TEST_RUST}"
 	"IMAGEFLOW_SERVER=${IMAGEFLOW_SERVER}"
 	"COVERAGE=${COVERAGE}" 
-	"UPLOAD_AS_LATEST=${UPLOAD_AS_LATEST}"
 	"COVERALLS=${COVERALLS}" 
 	"COVERALLS_TOKEN=${COVERALLS_TOKEN}"
-	"JOB_BADGE=${JOB_BADGE}" 
 	"GIT_COMMIT=${GIT_COMMIT}" 
-	"GIT_BRANCH_NAME=${GIT_BRANCH_NAME}" 
-	"PACKAGE_PREFIX=${PACKAGE_PREFIX}"  
-	"PACKAGE_SUFFIX=${PACKAGE_SUFFIX}" 
-	"PACKAGE_DIR=${PACKAGE_DIR}" 
-	"PACKAGE_ARCHIVE_NAME=${PACKAGE_ARCHIVE_NAME}" 
-	"PACKAGE_LATEST_NAME=${PACKAGE_LATEST_NAME}" 
+	"ARTIFACT_UPLOAD_PATH=${ARTIFACT_UPLOAD_PATH}"  
+	"ARTIFACT_UPLOAD_PATH_2=${ARTIFACT_UPLOAD_PATH_2}" 
+	"DOCS_UPLOAD_DIR=${DOCS_UPLOAD_DIR}" 
 	"VALGRIND_COMMAND=${VALGRIND_COMMAND}" 
 	"VALGRIND_RUST_COMMAND=${VALGRIND_RUST_COMMAND}" 
 	"COPY_VALGRINDRC=${COPY_VALGRINDRC}" 
@@ -279,25 +312,31 @@ if [[ "$BUILD_RELEASE" == 'True' ]]; then
 	echo 
 	mkdir -p artifacts/staging/doc || true
 	mkdir -p artifacts/staging/headers || true
-	mkdir -p "artifacts/upload/${PACKAGE_DIR}/doc" || true
-
 
 	cp target/release/{flow-,imageflow_,libimageflow}*  ./artifacts/staging/
-	cp bindings/headers/*.h  ./artifacts/headers/
+	cp bindings/headers/*.h  ./artifacts/staging/headers/
 	cp -a target/doc ./artifacts/staging/
 	rm ./artifacts/staging/*.{o,d} || true
 
-	#Remove these lines when these binaries actually do something
-	rm ./artifacts/staging/flow-client || true
-	rm ./artifacts/staging/imageflow_tool || true
-
 	cd ./artifacts/staging
-	tar czf "../upload/${PACKAGE_DIR}/${PACKAGE_ARCHIVE_NAME}.tar.gz" ./*
-	cd ../..
-	cp -a target/doc/* "./artifacts/upload/${PACKAGE_DIR}/doc/"
 
-	if [[ "$UPLOAD_AS_LATEST" == 'True' ]]; then
-		cp "./artifacts/upload/${PACKAGE_DIR}/${PACKAGE_ARCHIVE_NAME}.tar.gz" "./artifacts/upload/${PACKAGE_DIR}/${PACKAGE_LATEST_NAME}.tar.gz"
+
+	if [[ -n "$ARTIFACT_UPLOAD_PATH" ]]; then
+		mkdir -p "artifacts/upload/$(dirname "${ARTIFACT_UPLOAD_PATH}")" || true
+		tar czf "../upload/${ARTIFACT_UPLOAD_PATH}.tar.gz" ./*
+		cd ../..
+		if [[ -n "$DOCS_UPLOAD_DIR" ]]; then
+			mkdir -p "./artifacts/upload/${DOCS_UPLOAD_DIR}" || true
+			cp -a target/doc/* "./artifacts/upload/${DOCS_UPLOAD_DIR}/"
+		fi
+		if [[ -n "$DOCS_UPLOAD_DIR_2" ]]; then
+			mkdir -p "./artifacts/upload/${DOCS_UPLOAD_DIR_2}" || true
+			cp -a target/doc/* "./artifacts/upload/${DOCS_UPLOAD_DIR_2}/"
+		fi
+		if [[ -n "$ARTIFACT_UPLOAD_PATH_2" ]]; then
+			mkdir -p "artifacts/upload/$(dirname "${ARTIFACT_UPLOAD_PATH_2}")" || true
+			cp "./artifacts/upload/${ARTIFACT_UPLOAD_PATH}.tar.gz" "./artifacts/upload/${ARTIFACT_UPLOAD_PATH_2}.tar.gz"
+		fi
 	fi
 
 fi

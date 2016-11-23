@@ -3,6 +3,7 @@ name = "imageflow_types"
 version = "0.1.0"
 authors = ["Nathanael Jones <imageflow@imazen.io>"]
 workspace = "../"
+build = "build.rs"
 
 [lib]
 name="imageflow_types"
@@ -12,3 +13,7 @@ doctest = false
 serde = "0.8"
 serde_json = "0.8"
 serde_derive = "0.8"
+
+
+[build-dependencies]
+quick-error = "1.1.0"

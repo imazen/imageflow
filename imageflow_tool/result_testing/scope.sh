@@ -1,4 +1,8 @@
 #!/bin/bash
+# shellcheck disable=SC2086
+
+# we WANT word-splitting behavior for our substitutions below
+
 echo Run install_tools.sh first if you have any issues
 
 

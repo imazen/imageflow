@@ -14,7 +14,7 @@ IMAGE_NAME="$(basename "${SCRIPT_DIR}")"
 
 
 set -x
-
+# shellcheck disable=SC2086
 docker build ${EXTRA_DOCKER_BUILD_PARAMS} -t "imazen/${IMAGE_NAME}" "${SCRIPT_DIR}"
 
 docker history "imazen/${IMAGE_NAME}"

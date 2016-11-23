@@ -1,116 +1,149 @@
 #!/bin/bash
 set -e
 
-echo "Listing TRAVIS env vars"
-echo TRAVIS_BRANCH=${TRAVIS_BRANCH}
-echo TRAVIS_BUILD_DIR=${TRAVIS_BUILD_DIR}
-echo TRAVIS_BUILD_ID=${TRAVIS_BUILD_ID}
-echo TRAVIS_BUILD_NUMBER=${TRAVIS_BUILD_NUMBER}
-echo TRAVIS_COMMIT=${TRAVIS_COMMIT}
-echo TRAVIS_COMMIT_RANGE=${TRAVIS_COMMIT_RANGE}
-echo TRAVIS_EVENT_TYPE=${TRAVIS_EVENT_TYPE}
-echo TRAVIS_JOB_ID=${TRAVIS_JOB_ID}
-echo TRAVIS_JOB_NUMBER=${TRAVIS_JOB_NUMBER}
-echo TRAVIS_OS_NAME=${TRAVIS_OS_NAME}
-echo TRAVIS_PULL_REQUEST=${TRAVIS_PULL_REQUEST}
-echo TRAVIS_PULL_REQUEST_BRANCH=${TRAVIS_PULL_REQUEST_BRANCH}
-echo TRAVIS_PULL_REQUEST_SHA=${TRAVIS_PULL_REQUEST_SHA}
-echo TRAVIS_REPO_SLUG=${TRAVIS_REPO_SLUG}
-echo TRAVIS_SECURE_ENV_VARS=${TRAVIS_SECURE_ENV_VARS}
-echo TRAVIS_SUDO=${TRAVIS_SUDO}
-echo TRAVIS_TEST_RESULT=${TRAVIS_TEST_RESULT}
-echo TRAVIS_TAG=${TRAVIS_TAG}
-
-
 echo "travis_run.sh:"
-
-########## Travis defaults ###################
-export IMAGEFLOW_SERVER=${IMAGEFLOW_SERVER:-True}
-export COVERAGE=${COVERAGE:-False}
-export VALGRIND=${VALGRIND:-False}
-
-########## Travis Overrides ###################
-# JOB_BADGE
-# GIT_BRANCH_NAME
-# UPLOAD_AS_LATEST
-# UPLOAD_BUILD
-
-#Use a travis build number so artifacts sort nicely
-if [ -z "${TRAVIS_JOB_NUMBER+x}" ]; then
-  echo "TRAVIS_JOB_NUMBER is missing"
-else
-	export JOB_BADGE="travisjob-${TRAVIS_JOB_NUMBER}"
-fi 
-
-#Put tagged commits in their own folder instead of using the branch name
-if [ -n "${TRAVIS_TAG}" ]; then
-	export GIT_BRANCH_NAME=${TRAVIS_TAG}
-	export UPLOAD_AS_LATEST=False
-else
-	export GIT_BRANCH_NAME=${TRAVIS_BRANCH}
-	export UPLOAD_AS_LATEST=True
-fi
-
-#Don't upload pull requests
-if [ "${TRAVIS_PULL_REQUEST}" == "false" ]; then
-	export UPLOAD_BUILD=${UPLOAD_BUILD:-True}
-else
-	export UPLOAD_BUILD=False
-	export UPLOAD_AS_LATEST=False
-fi
 
 if [ -n "${TRAVIS_BUILD_DIR}" ]; then
   cd "${TRAVIS_BUILD_DIR}"
 fi
 
+echo "Listing TRAVIS env vars"
+# echo TRAVIS_BRANCH=${TRAVIS_BRANCH}
+# echo TRAVIS_BUILD_DIR=${TRAVIS_BUILD_DIR}
+# echo TRAVIS_BUILD_ID=${TRAVIS_BUILD_ID}
+# echo TRAVIS_BUILD_NUMBER=${TRAVIS_BUILD_NUMBER}
+# echo TRAVIS_COMMIT=${TRAVIS_COMMIT}
+# echo TRAVIS_COMMIT_RANGE=${TRAVIS_COMMIT_RANGE}
+# echo TRAVIS_EVENT_TYPE=${TRAVIS_EVENT_TYPE}
+# echo TRAVIS_JOB_ID=${TRAVIS_JOB_ID}
+# echo TRAVIS_JOB_NUMBER=${TRAVIS_JOB_NUMBER}
+# echo TRAVIS_OS_NAME=${TRAVIS_OS_NAME}
+# echo TRAVIS_PULL_REQUEST=${TRAVIS_PULL_REQUEST}
+# echo TRAVIS_PULL_REQUEST_BRANCH=${TRAVIS_PULL_REQUEST_BRANCH}
+# echo TRAVIS_PULL_REQUEST_SHA=${TRAVIS_PULL_REQUEST_SHA}
+# echo TRAVIS_REPO_SLUG=${TRAVIS_REPO_SLUG}
+# echo TRAVIS_SECURE_ENV_VARS=${TRAVIS_SECURE_ENV_VARS}
+# echo TRAVIS_SUDO=${TRAVIS_SUDO}
+# echo TRAVIS_TEST_RESULT=${TRAVIS_TEST_RESULT}
+# echo TRAVIS_TAG=${TRAVIS_TAG}
 
+#Export CI stuff
+export GIT_COMMIT="${TRAVIS_COMMIT}"
+export CI_SEQUENTIAL_BUILD_NUMBER="${TRAVIS_BUILD_NUMBER}"
+export CI_BUILD_URL="https://travis-ci.org/${TRAVIS_REPO_SLUG}/builds/${TRAVIS_BUILD_ID}"
+export CI_JOB_URL="https://travis-ci.org/${TRAVIS_REPO_SLUG}/jobs/${TRAVIS_JOB_ID}"
+export CI_JOB_TITLE="Travis ${TRAVIS_JOB_NUMBER} ${TRAVIS_OS_NAME}"
+export CI_STRING="name:Travis job_id:${TRAVIS_JOB_ID} build_id:${TRAVIS_BUILD_ID} build_number:${TRAVIS_BUILD_NUMBER} job_number: ${TRAVIS_JOB_NUMBER} repo_slug:${TRAVIS_REPO_SLUG} tag:${TRAVIS_TAG} branch:${TRAVIS_BRANCH} is_pull_request:${TRAVIS_PULL_REQUEST}"
+export CI_PULL_REQUEST_INFO="${TRAVIS_PULL_REQUEST_SHA}"
+export CI_TAG="${TRAVIS_TAG}"
+export CI_RELATED_BRANCH="${TRAVIS_BRANCH}"
+if [[ -z "$CI_PULL_REQUEST_INFO" ]]; then
+	export GIT_OPTIONAL_BRANCH="${CI_RELATED_BRANCH}"
+fi
+
+############ GIT VALUES ##################
+
+export GIT_COMMIT
+GIT_COMMIT="${GIT_COMMIT:-$(git rev-parse HEAD)}"
+GIT_COMMIT="${GIT_COMMIT:-unknown-commit}"
+export GIT_COMMIT_SHORT
+GIT_COMMIT_SHORT="${GIT_COMMIT_SHORT:-$(git rev-parse --short HEAD)}"
+GIT_COMMIT_SHORT="${GIT_COMMIT_SHORT:-unknown-commit}"
+export GIT_OPTIONAL_TAG
+if git describe --exact-match --tags; then
+	GIT_OPTIONAL_TAG="${GIT_OPTIONAL_TAG:-$(git describe --exact-match --tags)}"
+fi
+export GIT_DESCRIBE_ALWAYS
+GIT_DESCRIBE_ALWAYS="${GIT_DESCRIBE_ALWAYS:-$(git describe --always --tags)}"
+export GIT_DESCRIBE_ALWAYS_LONG
+GIT_DESCRIBE_ALWAYS_LONG="${GIT_DESCRIBE_ALWAYS_LONG:-$(git describe --always --tags --long)}"
+export GIT_DESCRIBE_AAL
+GIT_DESCRIBE_AAL="${GIT_DESCRIBE_AAL:-$(git describe --always --all --long)}"
+
+# But let others override GIT_OPTIONAL_BRANCH, as HEAD might not have a symbolic ref, and it could crash
+# I.e, provide GIT_OPTIONAL_BRANCH to this script in Travis - but NOT For 
+export GIT_OPTIONAL_BRANCH
+if git symbolic-ref HEAD | sed -e 's,.*/\(.*\),\1,'; then 
+	GIT_OPTIONAL_BRANCH="${GIT_OPTIONAL_BRANCH:-$(git symbolic-ref HEAD | sed -e 's,.*/\(.*\),\1,')}"
+fi 
+
+################## NAMING THINGS ####################
+
+if [ "${TRAVIS_PULL_REQUEST}" == "false" ]; then
+
+	#Put tagged commits in their own folder instead of using the branch name
+	if [ -n "${TRAVIS_TAG}" ]; then
+		export UPLOAD_DIR="releases/${TRAVIS_TAG}"
+		export ARTIFACT_UPLOAD_PATH="${UPLOAD_DIR}/imageflow-${TRAVIS_TAG}-${GIT_COMMIT_SHORT}-${PACKAGE_SUFFIX}"
+		export DOCS_UPLOAD_DIR="${UPLOAD_DIR}/doc"
+		export ESTIMATED_DOCS_URL="${UPLOAD_URL}/${DOCS_UPLOAD_DIR}"
+	else
+		if [ -n "${GIT_OPTIONAL_BRANCH}" ]; then
+			export ARTIFACT_UPLOAD_PATH="${GIT_OPTIONAL_BRANCH}/imageflow-${CI_SEQUENTIAL_BUILD_NUMBER}-${GIT_DESCRIBE_ALWAYS_LONG}-${PACKAGE_SUFFIX}"
+		fi
+	fi
+
+	export ESTIMATED_ARTIFACT_URL="${UPLOAD_URL}/${ARTIFACT_UPLOAD_PATH}.tar.gz"
+
+	if [ -n "${GIT_OPTIONAL_BRANCH}" ]; then
+		export UPLOAD_AS_LATEST=True
+		export ARTIFACT_UPLOAD_PATH_2="${GIT_OPTIONAL_BRANCH}/imageflow-nightly-${PACKAGE_SUFFIX}"
+		export DOCS_UPLOAD_DIR_2="${GIT_OPTIONAL_BRANCH}/doc"
+		export ESTIMATED_DOCS_URL="${ESTIMATED_DOCS_URL:-${UPLOAD_URL}/${DOCS_UPLOAD_DIR_2}}"
+	fi
+
+fi
+
+
+
+if [ "${TRAVIS_PULL_REQUEST}" == "false" ]; then
+	export UPLOAD_BUILD="${UPLOAD_BUILD:-True}"
+else
+########## Don't upload pull requests
+	export UPLOAD_BUILD=False
+	export UPLOAD_AS_LATEST=False
+fi
+
+
+
+########## Travis defaults ###################
+export IMAGEFLOW_SERVER="${IMAGEFLOW_SERVER:-True}"
+export COVERAGE="${COVERAGE:-False}"
+export VALGRIND="${VALGRIND:-False}"
 
 ######################################################
 #### Parameters passed through docker to build.sh (or used by travis_*.sh) ####
 
 # Not actually used as of 2016-09-16
 # Likely to be used by travis_run_docker.sh if we can ever support 'stable'
-export RUST_CHANNEL=${RUST_CHANNEL:-nightly}
+export RUST_CHANNEL="${RUST_CHANNEL:-nightly}"
 # Build docs; build release mode binaries (separate pass from testing); populate ./artifacts folder
-export BUILD_RELEASE=${BUILD_RELEASE:-True}
+export BUILD_RELEASE="${BUILD_RELEASE:-True}"
 # Run all tests (both C and Rust) under Valgrind
-export VALGRIND=${VALGRIND:-False}
+export VALGRIND="${VALGRIND:-False}"
 # Compile and run C tests
-export TEST_C=${TEST_C:-True}
+export TEST_C="${TEST_C:-True}"
 # Build C Tests in debug mode for clearer valgrind output
-export TEST_C_DEBUG_BUILD=${TEST_C_DEBUG_BUILD:${VALGRIND}}
+export TEST_C_DEBUG_BUILD="${TEST_C_DEBUG_BUILD:${VALGRIND}}"
 # Run Rust tests
-export TEST_RUST=${TEST_RUST:-True}
+export TEST_RUST="${TEST_RUST:-True}"
 # Enable compilation of imageflow_server, which has a problematic openssl dependency
-export IMAGEFLOW_SERVER=${IMAGEFLOW_SERVER:-True}
+export IMAGEFLOW_SERVER="${IMAGEFLOW_SERVER:-True}"
 # Enables generated coverage information for the C portion of the code. 
 # Also forces C tests to build in debug mode
-export COVERAGE=${COVERAGE:-False}
+export COVERAGE="${COVERAGE:-False}"
 # travis_run.sh deletes /artifacts folder if False. Only relevant in Travis itself
-export UPLOAD_BUILD=${UPLOAD_BUILD:-False}
+export UPLOAD_BUILD="${UPLOAD_BUILD:-False}"
 # Affects how /artifacts folder is structured by build.sh
-export UPLOAD_AS_LATEST=${UPLOAD_AS_LATEST:-False}
+export UPLOAD_AS_LATEST="${UPLOAD_AS_LATEST:-False}"
 # travis_run_docker.sh uploads Coverage information when true
-export COVERALLS=${COVERALLS}
-export COVERALLS_TOKEN=${COVERALLS_TOKEN}
-# Used by build.sh to determine the package archive name in ./artifacts
-export JOB_BADGE="${JOB_BADGE}"
+export COVERALLS="${COVERALLS}"
+export COVERALLS_TOKEN="${COVERALLS_TOKEN}"
 
-# Used in build.sh for naming things in ./artifacts; also 
-# eventually should be embedded in output binaries
-# Always ask Git for the commit ID
-export GIT_COMMIT
-GIT_COMMIT=${GIT_COMMIT:-$(git rev-parse --short HEAD)}
-GIT_COMMIT=${GIT_COMMIT:-unknown-commit}
-# But let others override GIT_BRANCH_NAME, as HEAD might not have a symbolic ref, and it could crash
-# I.e, provide GIT_BRANCH_NAME to this script in Travis
-export GIT_BRANCH_NAME
-GIT_BRANCH_NAME=${GIT_BRANCH_NAME:-$(git symbolic-ref HEAD | sed -e 's,.*/\(.*\),\1,')}
-GIT_BRANCH_NAME=${GIT_BRANCH_NAME:-unknown-branch}
+if [ -n "${TRAVIS_BUILD_DIR}" ]; then
+  cd "${TRAVIS_BUILD_DIR}"
+fi
 
-# Used for naming things in ./artifacts
-export PACKAGE_PREFIX=${PACKAGE_PREFIX}
-export PACKAGE_SUFFIX=${PACKAGE_SUFFIX}
 
 DOCKER_ENV_VARS=(
   -e "CI=${CI}"
@@ -126,17 +159,33 @@ DOCKER_ENV_VARS=(
 	-e "UPLOAD_AS_LATEST=${UPLOAD_AS_LATEST}"
 	-e "COVERALLS=${COVERALLS}" 
 	-e "COVERALLS_TOKEN=${COVERALLS_TOKEN}"
-	-e "JOB_BADGE=${JOB_BADGE}" 
-	-e "GIT_COMMIT=${GIT_COMMIT}" 
-	-e "GIT_BRANCH_NAME=${GIT_BRANCH_NAME}" 
-	-e "PACKAGE_PREFIX=${PACKAGE_PREFIX}"  
-	-e "PACKAGE_SUFFIX=${PACKAGE_SUFFIX}" 
+	-e "DOCS_UPLOAD_DIR=${DOCS_UPLOAD_DIR}" 
+	-e "DOCS_UPLOAD_DIR_2=${DOCS_UPLOAD_DIR}" 
+	-e "ARTIFACT_UPLOAD_PATH=${ARTIFACT_UPLOAD_PATH}"  
+	-e "ARTIFACT_UPLOAD_PATH_2=${ARTIFACT_UPLOAD_PATH_2}" 
+    -e "GIT_COMMIT=${GIT_COMMIT}" 
+	-e "GIT_COMMIT_SHORT=${GIT_COMMIT_SHORT}" 
+	-e "GIT_OPTIONAL_TAG=${GIT_OPTIONAL_TAG}" 
+	-e "GIT_DESCRIBE_ALWAYS=${GIT_DESCRIBE_ALWAYS}" 
+	-e "GIT_DESCRIBE_ALWAYS_LONG=${GIT_DESCRIBE_ALWAYS_LONG}" 
+	-e "GIT_DESCRIBE_AAL=${GIT_DESCRIBE_AAL}" 
+	-e "GIT_OPTIONAL_BRANCH=${GIT_OPTIONAL_BRANCH}" 
+	-e "ESTIMATED_ARTIFACT_URL=${ESTIMATED_ARTIFACT_URL}" 
+	-e "ESTIMATED_DOCS_URL=${ESTIMATED_DOCS_URL}" 
+	-e "CI_SEQUENTIAL_BUILD_NUMBER=${CI_SEQUENTIAL_BUILD_NUMBER}" 
+	-e "CI_BUILD_URL=${CI_BUILD_URL}" 
+	-e "CI_JOB_URL=${CI_JOB_URL}" 
+	-e "CI_JOB_TITLE=${CI_JOB_TITLE}" 
+	-e "CI_STRING=${CI_STRING}" 
+	-e "CI_PULL_REQUEST_INFO=${CI_PULL_REQUEST_INFO}" 
+	-e "CI_TAG=${CI_TAG}" 
+	-e "CI_RELATED_BRANCH=${CI_RELATED_BRANCH}" 
 )
 
 echo 
-echo =========================================================
+echo "========================================================="
 echo "Relevant ENV VARS for build.sh: ${DOCKER_ENV_VARS[*]}"
-echo =========================================================
+echo "========================================================="
 echo 
 ##############################
 
