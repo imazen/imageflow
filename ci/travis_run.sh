@@ -40,7 +40,7 @@ export CI_RELATED_BRANCH="${TRAVIS_BRANCH}"
 if [[ -z "$CI_PULL_REQUEST_INFO" ]]; then
 	export GIT_OPTIONAL_BRANCH="${CI_RELATED_BRANCH}"
 fi
-export UPLOAD_URL="https://s3-us-west-1.amazonaws.com/imageflow-nightlies/"
+export UPLOAD_URL="https://s3-us-west-1.amazonaws.com/imageflow-nightlies"
 
 ############ GIT VALUES ##################
 
@@ -95,7 +95,10 @@ if [ "${TRAVIS_PULL_REQUEST}" == "false" ]; then
 
 fi
 
-
+printf "\n=================================================\n"
+printf "\nEstimated upload URLs:\n\n%s\n\n%s\n\n" "${ARTIFACT_UPLOAD_PATH}" "${ARTIFACT_UPLOAD_PATH_2}"
+printf "\nEstimated docs URLs:\n\n%s\n\n%s\n\n" "${DOCS_UPLOAD_DIR}" "${DOCS_UPLOAD_DIR_2}"
+printf "\n=================================================\n"
 
 if [ "${TRAVIS_PULL_REQUEST}" == "false" ]; then
 	export UPLOAD_BUILD="${UPLOAD_BUILD:-True}"
