@@ -41,13 +41,25 @@ const PACKAGE_TOP_DIR : &'static str = ".";
 
 fn main() {
 
+
+//    let output = Command::new("/bin/cat")
+//        .arg("file.txt")
+//        .output()
+//        .expect("failed to execute process");
+
+
+    //Pull in imageflow_core/conaninfo.txt for compiler versions and dependencies
+
+
 //    - git rev-parse --short HEAD | set /P GIT_COMMIT_SHORT
 //        - git describe --always --tags | set /P GIT_DESCRIBE_ALWAYS
 //        - git describe --always --tags --long | set /P GIT_DESCRIBE_ALWAYS_LONG
 //        - git describe --always --all --long | set /P GIT_DESCRIBE_AAL
 //        - git describe --exact-match --tags | set /P GIT_OPTIONAL_TAG
-//
-
+//     git rev-parse --abbrev-ref HEAD | set /P GIT_OPTIONAL_BRANCH
+// rustc -V
+    // cargo -V
+    // cd c_components && cargo info > file
     //RUSTC version
     //Gcc/clang version
     //conan package versions?
