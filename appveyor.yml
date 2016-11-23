@@ -34,8 +34,9 @@ install:
   - if "%CI_TAG%"=="" SET ARTIFACT_NAME="imageflow-nightly-%ARTIFACT_SERIES_NAME%-%CI_SEQUENTIAL_BUILD_NUMBER%-%DESCRIBE_ALWAYS_LONG%-%PLATFORM%"
   - if NOT "%CI_TAG%"=="" SET ARTIFACT_NAME="imageflow-%CI_TAG%-%SHORT_COMMIT%-%PLATFORM%"
   - SET ESTIMATED_ARTIFACT_URL=https://ci.appveyor.com/api/buildjobs/%APPVEYOR_JOB_ID%/artifacts/%ARTIFACT_NAME%.zip
-
-  - echo Installing
+  - echo. && echo. && echo Estimated upload URL && echo. && echo "%ESTIMATED_ARTIFACT_URL" && echo. && echo.
+  - echo GIT_COMMIT=%GIT_COMMIT% && echo CI_STRING=%CI_STRING% && echo CI_TAG="%CI_TAG%" && echo CI_RELATED_BRANCH="%CI_RELATED_BRANCH%" && echo CI_PULL_REQUEST_INFO="%CI_PULL_REQUEST_INFO%" && echo ARTIFACT_SERIES_NAME=%ARTIFACT_SERIES_NAME%
+  - echo. && echo. echo Installing
   - if "%PLATFORM%"=="x86" SET RUST_TARGET=i686-pc-windows-msvc
   - if "%PLATFORM%"=="x64" SET RUST_TARGET=x86_64-pc-windows-msvc
   - if "%PLATFORM%"=="x86" SET BITS=32
@@ -59,17 +60,6 @@ test_script:
   - rustc -V
   - cargo -V
   - nasm -v
-  - echo GIT_COMMIT=%GIT_COMMIT%
-  - echo CI_SEQUENTIAL_BUILD_NUMBER=%CI_SEQUENTIAL_BUILD_NUMBER%
-  - echo CI_BUILD_URL=%CI_BUILD_URL%
-  - echo CI_JOB_URL=%CI_JOB_URL%
-  - echo CI_JOB_TITLE=%CI_JOB_TITLE%
-  - echo ESTIMATED_ARTIFACT_URL=%ESTIMATED_ARTIFACT_URL%
-  - echo CI_STRING=%CI_STRING%
-  - echo CI_TAG=%CI_TAG%
-  - echo CI_RELATED_BRANCH=%CI_RELATED_BRANCH%
-  - echo CI_PULL_REQUEST_INFO=%CI_PULL_REQUEST_INFO%
-  - echo ARTIFACT_SERIES_NAME=%ARTIFACT_SERIES_NAME%
   - cd c_components
   - mkdir build
   - cd build
