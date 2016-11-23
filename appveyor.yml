@@ -25,18 +25,16 @@ install:
   - SET CI_RELATED_BRANCH=%APPVEYOR_REPO_BRANCH%
   - SET CI_PULL_REQUEST_INFO=%APPVEYOR_PULL_REQUEST_NUMBER%
   - SET GIT_OPTIONAL_BRANCH=
-  - if "%CI_PULL_REQUEST_INFO%"=="" SET ARTIFACT_SERIES_NAME=%CI_RELATED_BRANCH%
+  - if "%CI_PULL_REQUEST_INFO%"=="" SET GIT_OPTIONAL_BRANCH=%CI_RELATED_BRANCH%
   - SET ARTIFACT_SERIES_NAME="pullrequest"
   - if "%CI_PULL_REQUEST_INFO%"=="" SET ARTIFACT_SERIES_NAME=%CI_TAG%
   - if "%ARTIFACT_SERIES_NAME%"=="" SET ARTIFACT_SERIES_NAME=%CI_RELATED_BRANCH%
-  - SET ARTIFACT_NAME="imageflow-%APPVEYOR_REPO_BRANCH%-appveyorjob-%CI_SEQUENTIAL_BUILD_NUMBER%-%GIT_COMMIT%-%PLATFORM%"
+  - git rev-parse --short HEAD>tempfile.txt&set /p SHORT_COMMIT=<tempfile.txt
+  - git describe --always --tags --long>tempfile.txt&set /p DESCRIBE_ALWAYS_LONG=<tempfile.txt
+  - if "%CI_TAG%"=="" SET ARTIFACT_NAME="imageflow-nightly-%ARTIFACT_SERIES_NAME%-%CI_SEQUENTIAL_BUILD_NUMBER%-%DESCRIBE_ALWAYS_LONG%-%PLATFORM%"
+  - if NOT "%CI_TAG%"="" SET ARTIFACT_NAME="imageflow-%CI_TAG%-%SHORT_COMMIT%-%PLATFORM%"
   - SET ESTIMATED_ARTIFACT_URL=https://ci.appveyor.com/api/buildjobs/%APPVEYOR_JOB_ID%/artifacts/%ARTIFACT_NAME%.zip
-  - git rev-parse --short HEAD | set /P GIT_COMMIT_SHORT
-  - git describe --always --tags | set /P GIT_DESCRIBE_ALWAYS
-  - git describe --always --tags --long | set /P GIT_DESCRIBE_ALWAYS_LONG
-  - git describe --always --all --long | set /P GIT_DESCRIBE_AAL
-  - git symbolic-ref HEAD | sed -e 's,.*/\(.*\),\1,') | set /P GIT_OPTIONAL_BRANCH
-  - git describe --exact-match --tags | set /P GIT_OPTIONAL_TAG
+
   - echo Installing
   - if "%PLATFORM%"=="x86" SET RUST_TARGET=i686-pc-windows-msvc
   - if "%PLATFORM%"=="x64" SET RUST_TARGET=x86_64-pc-windows-msvc

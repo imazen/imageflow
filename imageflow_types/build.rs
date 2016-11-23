@@ -6,6 +6,7 @@ use std::convert::AsRef;
 use std::fs::{File, create_dir_all};
 use std::io::{Write, Read, BufWriter};
 use std::path::Path;
+use std::process::Command;
 
 quick_error! {
     #[derive(Debug)]

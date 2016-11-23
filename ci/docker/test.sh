@@ -91,26 +91,48 @@ if git symbolic-ref HEAD | sed -e 's,.*/\(.*\),\1,'; then
 	GIT_OPTIONAL_BRANCH="${GIT_OPTIONAL_BRANCH:-$(git symbolic-ref HEAD | sed -e 's,.*/\(.*\),\1,')}"
 fi 
 
+MULTIWORD="a b c d e"
 DOCKER_ENV_VARS=(
-	-e "RUST_CHANNEL=${RUST_CHANNEL}" 
-	-e "BUILD_RELEASE=${BUILD_RELEASE}"
-	-e "VALGRIND=${VALGRIND}" 
-	-e "TEST_C=${TEST_C}"
-	-e "TEST_C_DEBUG_BUILD=${TEST_C_DEBUG_BUILD}"
-	-e "TEST_RUST=${TEST_RUST}"
-	-e "IMAGEFLOW_SERVER=${IMAGEFLOW_SERVER}"
-	-e "COVERAGE=${COVERAGE}" 
-	-e "UPLOAD_BUILD=${UPLOAD_BUILD}" 
-	-e "UPLOAD_AS_LATEST=${UPLOAD_AS_LATEST}"
-	-e "COVERALLS=${COVERALLS}" 
-	-e "COVERALLS_TOKEN=${COVERALLS_TOKEN}"
-	-e "GIT_COMMIT=${GIT_COMMIT}" 
-	-e "GIT_COMMIT_SHORT=${GIT_COMMIT_SHORT}" 
-	-e "GIT_OPTIONAL_TAG=${GIT_OPTIONAL_TAG}" 
-	-e "GIT_DESCRIBE_ALWAYS=${GIT_DESCRIBE_ALWAYS}" 
-	-e "GIT_DESCRIBE_ALWAYS_LONG=${GIT_DESCRIBE_ALWAYS_LONG}" 
-	-e "GIT_DESCRIBE_AAL=${GIT_DESCRIBE_AAL}" 
-	-e "GIT_OPTIONAL_BRANCH=${GIT_OPTIONAL_BRANCH}" 
+	"-e"
+	 "RUST_CHANNEL=${RUST_CHANNEL}" 
+	"-e"
+	 "BUILD_RELEASE=${BUILD_RELEASE}"
+	"-e"
+	 "VALGRIND=${VALGRIND}" 
+	"-e"
+	 "TEST_C=${TEST_C}"
+	"-e"
+	 "TEST_C_DEBUG_BUILD=${TEST_C_DEBUG_BUILD}"
+	"-e"
+	 "TEST_RUST=${TEST_RUST}"
+	"-e"
+	 "IMAGEFLOW_SERVER=${IMAGEFLOW_SERVER}"
+	"-e"
+	 "COVERAGE=${COVERAGE}" 
+	"-e"
+	 "UPLOAD_BUILD=${UPLOAD_BUILD}" 
+	"-e"
+	 "UPLOAD_AS_LATEST=${UPLOAD_AS_LATEST}"
+	"-e"
+	 "COVERALLS=${COVERALLS}" 
+	"-e"
+	 "COVERALLS_TOKEN=${COVERALLS_TOKEN}"
+	"-e"
+	 "GIT_COMMIT=${GIT_COMMIT}" 
+	"-e"
+	 "GIT_COMMIT_SHORT=${GIT_COMMIT_SHORT}" 
+	"-e"
+	 "GIT_OPTIONAL_TAG=${GIT_OPTIONAL_TAG}" 
+	"-e"
+	 "GIT_DESCRIBE_ALWAYS=${GIT_DESCRIBE_ALWAYS}" 
+	"-e"
+	 "GIT_DESCRIBE_ALWAYS_LONG=${GIT_DESCRIBE_ALWAYS_LONG}" 
+	"-e"
+	 "GIT_DESCRIBE_AAL=${GIT_DESCRIBE_AAL}" 
+	"-e"
+	 "GIT_OPTIONAL_BRANCH=${GIT_OPTIONAL_BRANCH}" 
+	"-e"
+	 "ABCDE=${MULTIWORD}" 
 )
 
 echo "===================================================================== [test.sh]"
@@ -172,16 +194,19 @@ echo
 #Ensure that .cargo is NOT volume mapped; cargo will not work. Also, cargo fetches faster than rsync, it seems?
 
 DOCKER_CACHE_VARS=(
-	-v ${WORKING_DIR}_cache/wrappers_server_target:/home/conan/imageflow/wrappers/server/target 
-	-v ${SHARED_CACHE}/conan_data:/home/conan/.conan/data 
-	-v ${WORKING_DIR}_cache/build:/home/conan/imageflow/build  
-	-v ${WORKING_DIR}_cache/ccache:/home/conan/.ccache
+	-v 
+	"${WORKING_DIR}_cache/wrappers_server_target:/home/conan/imageflow/wrappers/server/target"
+	-v 
+	"${SHARED_CACHE}/conan_data:/home/conan/.conan/data" 
+	-v 
+	"${WORKING_DIR}_cache/build:/home/conan/imageflow/build"  
+	-v 
+	"${WORKING_DIR}_cache/ccache:/home/conan/.ccache"
 )
 if [[ "$DISABLE_COMPILATION_CACHES" == 'True' ]]; then
 	DOCKER_CACHE_VARS=()
 fi
 
 set -x
-# shellcheck disable=SC2068
-docker run --interactive "$DOCKER_TTY_FLAG" --rm -v "${WORKING_DIR}:/home/conan/imageflow" ${DOCKER_CACHE_VARS[@]} ${DOCKER_ENV_VARS[@]} "${DOCKER_IMAGE}" "${DOCKER_COMMAND[@]}" 
+docker run --interactive "$DOCKER_TTY_FLAG" --rm -v "${WORKING_DIR}:/home/conan/imageflow" "${DOCKER_CACHE_VARS[@]}" "${DOCKER_ENV_VARS[@]}" "${DOCKER_IMAGE}" "${DOCKER_COMMAND[@]}" 
 set +x
