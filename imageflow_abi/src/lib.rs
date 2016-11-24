@@ -280,11 +280,11 @@ pub unsafe extern "C" fn imageflow_context_clear_error(context: *mut Context) {
 /// Behavior is undefined if `context` is a null or invalid ptr; segfault likely.
 #[no_mangle]
 pub unsafe extern "C" fn imageflow_context_error_and_stacktrace(context: *mut Context,
-                                                                buffer: *mut u8,
+                                                                buffer: *mut libc::c_char,
                                                                 buffer_length: libc::size_t,
                                                                 full_file_path: bool)
                                                                 -> i64 {
-    ffi::flow_context_error_and_stacktrace(context, buffer, buffer_length, full_file_path)
+    ffi::flow_context_error_and_stacktrace(context, buffer as *mut u8, buffer_length, full_file_path)
 }
 
 /// Returns the numeric code associated with the error.
@@ -433,17 +433,17 @@ pub fn exercise_error_handling() {
         assert!(imageflow_context_add_to_callstack(c, ptr::null(), 0, ptr::null()));
 
         // Let's see how it handles a insufficient buffer
-        let mut tiny_buf: [u8; 30] = [0; 30];
+        let mut tiny_buf: [i8; 30] = [0; 30];
         assert_eq!(-1,
         imageflow_context_error_and_stacktrace(c, &mut tiny_buf[0], 30, true));
 
 
         // And check the output looks right
         let mut buf: [u8; 2048] = [0; 2048];
-        let buf_used = imageflow_context_error_and_stacktrace(c, &mut buf[0], 2048, true);
+        let buf_used = imageflow_context_error_and_stacktrace(c, std::mem::transmute(&mut buf[0]), 2048, true);
 
         assert!(buf_used >= 0);
-        let actual_string = ::std::str::from_utf8(&buf[0..buf_used as usize]).unwrap();
+        let actual_string = ::std::str::from_utf8(&buf[0..buf_used as usize] ).unwrap();
 
 
         // let expected_string = "User defined error : Test message\nsrc/lib.rs:335: in function test_error_handling\nsrc/lib.rs:342: in function (unknown)\nsrc/lib.rs:20: in function (unknown)\n(unknown):0: in function (unknown)\n";

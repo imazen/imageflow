@@ -110,7 +110,7 @@ void imageflow_context_clear_error(struct imageflow_context* context);
 /// Please be accurate with the buffer length, or a buffer overflow will occur.
 ///
 /// Behavior is undefined if `context` is a null or invalid ptr; segfault likely.
-int64_t imageflow_context_error_and_stacktrace(struct imageflow_context* context, uint8_t* buffer, size_t buffer_length, bool full_file_path);
+int64_t imageflow_context_error_and_stacktrace(struct imageflow_context* context, char* buffer, size_t buffer_length, bool full_file_path);
 
 /// Returns the numeric code associated with the error.
 ///
