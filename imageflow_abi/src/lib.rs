@@ -82,6 +82,17 @@
 //!
 //! Treat *mut Context, *mut Job, *mut JobIo, *mut JsonResponse ALL as opaque pointers.
 //!
+//! ## Strings
+//!
+//! ASCII is a safe subset of UTF-8; therefore wherever Imageflow asks for UTF-8 encoded bytes, you may provide ASCII instead.
+//!
+//! You will provide Imageflow with strings in one of 3 ways:
+//! * UTF-8 null-terminated. You'll see something like `libc::char`, but no length parameter. Short and likely static strings are usually transmitted this way.
+//! * Operating system null-terminated. Only applicable to `imageflow_io_create_for_file`.
+//! * UTF-8 buffer with length. You'll usually see *const u8 and a length parameter. This is common for buffers of UTF-8 encoded json.
+//!
+//! filename: *const libc::c_char
+//! function_name: *const libc::c_char
 //!
 //! Fixed size
 //!
@@ -256,7 +267,10 @@ pub unsafe extern "C" fn imageflow_context_clear_error(context: *mut Context) {
     ffi::flow_context_clear_error(context)
 }
 
-/// Prints the error messages and stacktrace to the given buffer
+/// Prints the error messages and stacktrace to the given buffer in UTF-8 form; writes a null
+/// character to terminate the string, and *ALSO* returns the number of bytes written.
+///
+///
 /// Happy(ish) path: Returns the length of the error message written to the buffer.
 /// Sad path: Returns -1 if buffer_length was too small or buffer was nullptr.
 /// full_file_path, if true, will display the directory associated with the files in each stack frame.
@@ -326,9 +340,9 @@ pub unsafe extern "C" fn imageflow_context_print_and_exit_if_error(context: *mut
 ///
 /// # Expectations
 ///
-/// * All strings must be null-terminated, C-style, valid UTF-8.
+/// * Strings `message` and `function_name`, and `filename` should be null-terminated UTF-8 strings.
 /// * The lifetime of `message` is expected to exceed the duration of this function call.
-/// * The lifetime of `file` and `function_name` (if provided), is expected to match or exceed the lifetime of `context`.
+/// * The lifetime of `filename` and `function_name` (if provided), is expected to match or exceed the lifetime of `context`.
 /// * You may provide a null value for `filename` or `function_name`, but for the love of puppies,
 /// don't provide a dangling or invalid pointer, that will segfault... a long time later.
 ///
@@ -344,15 +358,16 @@ pub unsafe extern "C" fn imageflow_context_print_and_exit_if_error(context: *mut
 pub unsafe extern "C" fn imageflow_context_raise_error(context: *mut Context,
                                                        error_code: i32,
                                                        message: *const libc::c_char,
-                                                       file: *const libc::c_char,
+                                                       filename: *const libc::c_char,
                                                        line: i32,
                                                        function_name: *const libc::c_char)
                                                        -> bool {
-    ffi::flow_context_raise_error(context, error_code, message, file, line, function_name)
+    ffi::flow_context_raise_error(context, error_code, message, filename, line, function_name)
 }
 
 ///
 /// Adds the given filename, line number, and function name to the call stack.
+/// Strings `function_name`, and `filename` should be null-terminated UTF-8 strings who will outlive `context`
 ///
 /// Returns `true` if add was successful.
 ///
@@ -466,13 +481,15 @@ pub fn exercise_error_handling() {
 
 ///
 /// Writes fields from the given imageflow_json_response to the locations referenced.
+/// The buffer pointer sent out will be a UTF-8 byte array of the given length (not null-terminated). It will
+/// also become invalid if the JsonResponse associated is freed, or if the context is destroyed.
 ///
 #[no_mangle]
 pub unsafe extern fn imageflow_json_response_read(context: *mut Context,
                                                   response_in: *const JsonResponse,
                                                   status_code_out: *mut i64,
-                                                  buffer_utf8_no_nulls_out: *mut *const libc::uint8_t,
-                                                  buffer_size_out: *mut usize) -> bool {
+                                                  buffer_utf8_no_nulls_out: *mut *const u8,
+                                                  buffer_size_out: *mut libc::size_t) -> bool {
     if context.is_null() {
         return false;
     }
@@ -529,6 +546,8 @@ pub unsafe extern "C" fn imageflow_json_response_destroy(context: *mut Context,
 /// * `method` and `json_buffer` are only borrowed for the duration of the function call. You are
 ///    responsible for their cleanup (if necessary - static strings are handy for things like
 ///    `method`).
+/// * `method` should be a UTF-8 null-terminated string.
+///   `json_buffer` should be a UTF-8 encoded buffer (not null terminated) of length json_buffer_size.
 ///
 /// The function will return NULL if a JSON response could not be allocated (or if some other
 /// bug occurred). If a null pointer is returned, consult the standard error methods of `context`
@@ -536,12 +555,13 @@ pub unsafe extern "C" fn imageflow_json_response_destroy(context: *mut Context,
 ///
 /// The response can be cleaned up with `imageflow_json_response_destroy`
 ///
+///
 /// Behavior is undefined if `context` is a null or invalid ptr; segfault likely.
 #[no_mangle]
 #[allow(unused_variables)]
 pub unsafe extern "C" fn imageflow_context_send_json(context: *mut Context,
-                                                     method: *const i8,
-                                                     json_buffer: *const libc::uint8_t,
+                                                     method: *const libc::c_char,
+                                                     json_buffer: *const u8,
                                                      json_buffer_size: libc::size_t)
                                                      -> *const JsonResponse {
     imageflow_send_json(context, ptr::null_mut(), ptr::null_mut(), method, json_buffer, json_buffer_size)
@@ -556,6 +576,8 @@ pub unsafe extern "C" fn imageflow_context_send_json(context: *mut Context,
 /// * `method` and `json_buffer` are only borrowed for the duration of the function call. You are
 ///    responsible for their cleanup (if necessary - static strings are handy for things like
 ///    `method`).
+/// * `method` should be a UTF-8 null-terminated string.
+///   `json_buffer` should be a UTF-8 encoded buffer (not null terminated) of length json_buffer_size.
 ///
 /// The function will return NULL if a JSON response could not be allocated (or if some other
 /// bug occurred). If a null pointer is returned, consult the standard error methods of `context`
@@ -568,7 +590,7 @@ pub unsafe extern "C" fn imageflow_context_send_json(context: *mut Context,
 #[allow(unused_variables)]
 pub unsafe extern "C" fn imageflow_job_send_json(context: *mut Context,
                                                  job: *mut Job,
-                                                 method: *const i8,
+                                                 method: *const libc::c_char,
                                                  json_buffer: *const libc::uint8_t,
                                                  json_buffer_size: libc::size_t)
                                                  -> *const JsonResponse {
@@ -688,6 +710,9 @@ pub fn exercise_json_message() {
 ///
 /// Creates an imageflow_io object to wrap a filename.
 ///
+/// The filename should be a null-terminated string. It should be written in codepage used by your operating system for handling `fopen` calls.
+/// https://msdn.microsoft.com/en-us/library/yeby3zcb.aspx
+///
 /// If the filename is fopen compatible, you're probably OK.
 ///
 /// As always, `mode` is not enforced except for the file open flags.
@@ -766,7 +791,7 @@ pub unsafe extern "C" fn imageflow_io_create_for_output_buffer(context: *mut Con
 pub unsafe extern "C" fn imageflow_io_get_output_buffer(context: *mut Context,
                                                         io: *mut JobIo,
                                                         result_buffer: *mut *const u8,
-                                                        result_buffer_length: *mut usize)
+                                                        result_buffer_length: *mut libc::size_t)
                                                         -> bool {
 
     let mut result_len: usize = 0;
@@ -785,7 +810,7 @@ pub unsafe extern "C" fn imageflow_job_get_output_buffer_by_id(context: *mut Con
                                                                job: *mut Job,
                                                                io_id: i32,
                                                                result_buffer: *mut *const u8,
-                                                               result_buffer_length: *mut usize)
+                                                               result_buffer_length: *mut libc::size_t)
                                                                -> bool {
     let io = ffi::flow_job_get_io(context,job, io_id);
     if io.is_null(){
@@ -844,13 +869,15 @@ pub unsafe extern "C" fn imageflow_job_destroy(context: *mut Context, job: *mut 
 
 ///
 /// Allocates zeroed memory that will be freed with the context.
-/// filename/line may be used for debugging purposes. They are optional. Provide null/-1 to skip.
+///
+/// * filename/line may be used for debugging purposes. They are optional. Provide null/-1 to skip.
+/// * `filename` should be an null-terminated UTF-8 or ASCII string which will outlive the context.
 ///
 /// Returns null(0) on failure.
 ///
 #[no_mangle]
 pub unsafe extern "C" fn imageflow_context_memory_allocate(context: *mut Context,
-                                                    bytes: usize,
+                                                    bytes: libc::size_t,
                                                     filename: *const libc::c_char,
                                                     line: i32) -> *mut libc::c_void {
 
@@ -859,7 +886,9 @@ pub unsafe extern "C" fn imageflow_context_memory_allocate(context: *mut Context
 
 ///
 /// Frees memory allocated with imageflow_context_memory_allocate early.
-/// filename/line may be used for debugging purposes. They are optional. Provide null/-1 to skip.
+///
+/// * filename/line may be used for debugging purposes. They are optional. Provide null/-1 to skip.
+/// * `filename` should be an null-terminated UTF-8 or ASCII string which will outlive the context.
 ///
 /// Returns false on failure.
 ///
