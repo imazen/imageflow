@@ -1,6 +1,7 @@
 #[macro_use]
 extern crate quick_error;
 extern crate chrono;
+extern crate toml;
 use std::env;
 use chrono::*;
 use std::convert::AsRef;
@@ -107,7 +108,7 @@ fn command(key: &str, cmd: &str, result_required: bool, fallback_to_env: bool) -
 }
 
 fn env_or_cmd(key: &str, cmd: &str) -> Option<String>{
-    fetch_env(key, false, true).or(run(cmd).ok()
+    fetch_env(key, false, true).or(run(cmd).ok())
 }
 
 //
@@ -169,7 +170,7 @@ fn what_to_collect() -> Vec<EnvTidbit>{
     c
 }
 
-pub fn write_file(name: &str, file_contents: String) -> std::result::Result<(), Error> {
+fn write_file(name: &str, file_contents: String) -> std::result::Result<(), Error> {
     let path = env::var_os("OUT_DIR").ok_or(Error::MissingEnvVar)?;
     let path : &Path = path.as_ref();
     create_dir_all(path)?;
@@ -180,7 +181,21 @@ pub fn write_file(name: &str, file_contents: String) -> std::result::Result<(), 
     Ok(())
 }
 
+//fn parse_conanfile(info: &mut  HashMap<String, Option<String>>){
+    //conanfile.txt doesn't parse!
 
+    //We'd have to fall back to regex.
+//    let conan_str = info.get("conaninfo.txt").unwrap().to_owned().unwrap();
+//    let mut parser = toml::Parser::new(&conan_str);
+//    let parsed = parser.parse();
+//    match parsed{
+//        None => {panic!("Failed to parse conaninfo.txt: \n{:?}", parser.errors);}
+//        Some(table) => {
+//            println!("{:?}", table);
+//        }
+//    }
+
+//}
 
 fn main() {
     let todo = what_to_collect();
@@ -189,6 +204,8 @@ fn main() {
     let mut results = collect_info(todo);
     results.insert("GENERATED_DATETIME_UTC".to_owned(), Some(utcnow_val.to_rfc3339()));
     results.insert("GENERATED_DATE_UTC".to_owned(), Some(utcnow_val.format("%Y-%m-%d").to_string()));
+    //parse_conanfile(&mut results);
+
 
 
     let mut contents = String::new();
