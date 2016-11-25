@@ -1,10 +1,13 @@
 #![feature(proc_macro)]
 #![feature(conservative_impl_trait)]
 
-pub mod version;
+pub mod build_env_info;
 
 #[macro_use]
 extern crate serde_derive;
+
+#[macro_use]
+extern crate lazy_static; //Used by build_env_info.rs
 
 extern crate serde;
 extern crate serde_json;

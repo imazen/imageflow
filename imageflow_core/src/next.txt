@@ -1,3 +1,76 @@
+Also upload artifacts by full commit ID. This means we can retrieve them easily for x-plat troubleshooting.
+
+
+--export-job-dump
+Add a mode that translates the current job, and all resources it depends on, into a serializable data structure.
+
+Add a 'troubleshooting' module which can load (or use) one of these data structures, then perform various transformations on it.
+We'll call these experiments. The experiments will help narrow down the problem area, or shrink the repro case.
+
+
+### For troubleshooting and reporting panics.
+
+--troubleshoot-package [optional file name - otherwise use current params set to create it].
+
+If the unmodified job fails, but the translated/portable job has a different error (or none), then it may be I/O related.
+If the translated job fails, but we can read dimensions of all input images and decode them, then it is related to the job.
+If we replace jpegs with blank jpegs of the same size, and 24 and 32-bit PNGs with  blank 24 and 32-bit PNGs of the same size,
+and the error is not reproduced, then we know that a detail of the original files is triggering it. If the error is reproduced,
+then we can further shrink the problem.
+We can then use 3x3 (or a tiny, but similar ratio size to original) images, and see if the problem is still reproduced.
+We can then (whether 3x3 works or not, or blanks work or not), start deleting nodes from the encoders inward,
+until we get a success.
+When calling the child imageflow_tool process, we must differentiate between JSON syntax errors and true panics. Thus
+we should return JSON for errors that are unquestionably the user's and use a different exit code.
+
+We store the results of these experiments in JSON, but also in a plain-text human readable summary.
+If we have record of previous experiments results from a different platform, we show a table of comparisons on succeed/fail and exit codes.
+
+
+We store the commit ID of imageflow_tool used alone in a file named "imageflow_commit_id" in the root of the .zip package.
+
+We upload to S3, and have CreateObject trigger an AWS lambda.
+AWS lambda fetches package, then fetches the Imageflow build for that commit ID and a matching glibc. We run that
+imageflow_tool in --troubleshoot-package mode against the uploaded file, and let it augment the report on a different OS.
+We then ship that report to nathanael.jones@gmail.com, or some other system, and upload the
+complete pacakge (perhaps in interactive HTML form) to Amazon S3 again.
+
+If we want to store image output for multiple experiments, we should rename them to their checksum and edit the experiment JSON.
+
+We could also enable graph exporting, and store that result for each experiment.
+Rendering with https://stackoverflow.com/questions/22595493/reading-dot-files-in-javascript-d3 ?
+
+We need to be able to 'fast-forward' a case to a newer commit; see if it changes.
+
+.zip files are the universal container format: https://mvdnes.github.io/rust-docs/zip-rs/zip/write/struct.ZipWriter.html
+compression quality doesn't matter much.
+
+We will end up with many columns (rows per experiment), including (original version on user OS), (linux, same version), (linux, latest version). (linux, latest version that doesn't fail), (linux, next failing version)
+
+ We want an S3 listing that makes it easy to go through and fast-forward everything. Should we use UTC date of plus a hash? Shuffle forward based on success?
+
+
+
+
+
+## For troubleshooting visual bugs
+
+- Let the user try png32 output first.
+
+- These can also be platform-specific.
+
+- for certain known graphs we could craft an equivalent ImageMagick command/script and the compare the result
+
+--result-is-wrong
+
+
+
+
+
+Consider adding 'git status?'
+
+
+
 Reorganize into 'engines'.
 Expose the full 'build' through the command line
 
