@@ -150,6 +150,9 @@ fn what_to_collect() -> Vec<EnvTidbit>{
     }
     c.push(EnvTidbit::Cmd{key: "GIT_STATUS", cmd: "git status"});
     c.push(EnvTidbit::Cmd{key: "CONAN_VERSION", cmd: "conan -V"});
+    c.push(EnvTidbit::Cmd{key: "GLIBC_VERSION", cmd: "ldd --version"});
+    c.push(EnvTidbit::Cmd{key: "UNAME", cmd: "uname -av"});
+    c.push(EnvTidbit::Cmd{key: "WINVER", cmd: "winver"});
     c.push(EnvTidbit::Cmd{key: "DEFAULT_GCC_VERSION", cmd: "gcc -v"});
     c.push(EnvTidbit::Cmd{key: "DEFAULT_CLANG_VERSION", cmd: "clang --version"});
     c.push(EnvTidbit::CmdReq{key: "DEFAULT_RUSTC_VERSION", cmd: "rustc -V"});
