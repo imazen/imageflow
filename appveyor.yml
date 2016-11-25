@@ -34,7 +34,7 @@ install:
   - if "%CI_TAG%"=="" SET "ARTIFACT_NAME=imageflow-nightly-%ARTIFACT_SERIES_NAME%-%CI_SEQUENTIAL_BUILD_NUMBER%-%DESCRIBE_ALWAYS_LONG%-%PLATFORM%"
   - if NOT "%CI_TAG%"=="" SET "ARTIFACT_NAME="imageflow-%CI_TAG%-%SHORT_COMMIT%-%PLATFORM%"
   - SET "ESTIMATED_ARTIFACT_URL=https://ci.appveyor.com/api/buildjobs/%APPVEYOR_JOB_ID%/artifacts/%ARTIFACT_NAME%.zip"
-  - echo. && echo. && echo Estimated upload URL && echo. && echo "%ESTIMATED_ARTIFACT_URL%" && echo. && echo.
+  - echo. && echo. && echo Estimated upload URL && echo. && echo %ESTIMATED_ARTIFACT_URL% && echo. && echo.
   - echo "GIT_COMMIT=%GIT_COMMIT%" && echo "CI_STRING=%CI_STRING%" && echo "CI_TAG=%CI_TAG%" && echo "CI_RELATED_BRANCH=%CI_RELATED_BRANCH%" && echo "CI_PULL_REQUEST_INFO=%CI_PULL_REQUEST_INFO%" && echo "ARTIFACT_SERIES_NAME=%ARTIFACT_SERIES_NAME%"
   - echo. && echo. echo Installing
   - if "%PLATFORM%"=="x86" SET RUST_TARGET=i686-pc-windows-msvc

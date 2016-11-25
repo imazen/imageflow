@@ -65,7 +65,7 @@ GIT_DESCRIBE_AAL="${GIT_DESCRIBE_AAL:-$(git describe --always --all --long)}"
 # I.e, provide GIT_OPTIONAL_BRANCH to this script in Travis - but NOT For 
 export GIT_OPTIONAL_BRANCH
 if git symbolic-ref --short HEAD; then 
-	GIT_OPTIONAL_BRANCH="${GIT_OPTIONAL_BRANCH:-$(git symbolic-ref --short HEAD}"
+	GIT_OPTIONAL_BRANCH="${GIT_OPTIONAL_BRANCH:-$(git symbolic-ref --short HEAD)}"
 fi 
 
 ################## NAMING THINGS ####################
