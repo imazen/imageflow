@@ -77,7 +77,7 @@ GIT_DESCRIBE_AAL="${GIT_DESCRIBE_AAL:-$(git describe --always --all --long)}"
 # I.e, provide GIT_OPTIONAL_BRANCH to this script in Travis - but NOT For 
 export GIT_OPTIONAL_BRANCH
 if git symbolic-ref HEAD | sed -e 's,.*/\(.*\),\1,'; then 
-	GIT_OPTIONAL_BRANCH="${GIT_OPTIONAL_BRANCH:-$(git symbolic-ref HEAD | sed -e 's,.*/\(.*\),\1,')}"
+	GIT_OPTIONAL_BRANCH="${GIT_OPTIONAL_BRANCH:-$(git symbolic-ref --short HEAD}"
 fi 
 
 ############ NAMING OF ARTIFACTS (local-only, CI should determint the rest) ##################

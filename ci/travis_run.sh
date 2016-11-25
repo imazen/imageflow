@@ -64,8 +64,8 @@ GIT_DESCRIBE_AAL="${GIT_DESCRIBE_AAL:-$(git describe --always --all --long)}"
 # But let others override GIT_OPTIONAL_BRANCH, as HEAD might not have a symbolic ref, and it could crash
 # I.e, provide GIT_OPTIONAL_BRANCH to this script in Travis - but NOT For 
 export GIT_OPTIONAL_BRANCH
-if git symbolic-ref HEAD | sed -e 's,.*/\(.*\),\1,'; then 
-	GIT_OPTIONAL_BRANCH="${GIT_OPTIONAL_BRANCH:-$(git symbolic-ref HEAD | sed -e 's,.*/\(.*\),\1,')}"
+if git symbolic-ref --short HEAD; then 
+	GIT_OPTIONAL_BRANCH="${GIT_OPTIONAL_BRANCH:-$(git symbolic-ref --short HEAD}"
 fi 
 
 ################## NAMING THINGS ####################

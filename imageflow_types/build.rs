@@ -34,6 +34,7 @@ pub enum EnvTidbit{
     CmdReq{key: &'static str, cmd: &'static str},
     CmdOrEnvReq{key: &'static str, cmd: &'static str},
     CmdOrEnv{key: &'static str, cmd: &'static str},
+    EnvOrCmdInconsistent{key: &'static str, cmd: &'static str},
     FileContentsReq{key: &'static str, relative_to_build_rs: &'static str}
 }
 
@@ -81,15 +82,16 @@ fn command(key: &str, cmd: &str, result_required: bool, fallback_to_env: bool) -
     let env_val = match fallback_to_env { true => fetch_env(key, false, true), false => None};
 
     //Ensure consistency if both are present
-    if let Ok(ref out_str) = output{
-        if let Some(ref env_str) = env_val{
-            if out_str != env_str{
-                if out_str.trim() != env_str.trim(){
+    if let Ok(ref out_str) = output {
+        if let Some(ref env_str) = env_val {
+            if out_str != env_str {
+                if out_str.trim() != env_str.trim() {
                     panic!("Inconsistent values for {} and {}.\nCommand output: {}\nEnv var: {}", key, cmd, out_str, env_str);
                 }
             }
         }
     }
+
 
     if result_required && output.is_err() && env_val.is_none() {
         if fallback_to_env {
@@ -103,6 +105,11 @@ fn command(key: &str, cmd: &str, result_required: bool, fallback_to_env: bool) -
         output.ok().or(env_val)
     }
 }
+
+fn env_or_cmd(key: &str, cmd: &str) -> Option<String>{
+    fetch_env(key, false, true).or(run(cmd).ok()
+}
+
 //
 //fn get_repo_root() -> PathBuf{
 //    let build_rs_path = file!();
@@ -128,6 +135,7 @@ fn collect_info(shopping_list: Vec<EnvTidbit>) -> HashMap<String, Option<String>
             EnvTidbit::CmdReq{key, cmd} => (key, command(key, cmd, true, false)),
             EnvTidbit::CmdOrEnvReq{key, cmd} => (key, command(key, cmd, true, true)),
             EnvTidbit::CmdOrEnv{key, cmd} => (key, command(key, cmd, false, true)),
+            EnvTidbit::EnvOrCmdInconsistent{key, cmd} => (key, env_or_cmd(key, cmd)),
         };
         info.insert(k.to_owned(),v);
     }
@@ -141,7 +149,7 @@ fn what_to_collect() -> Vec<EnvTidbit>{
     c.push(EnvTidbit::CmdOrEnvReq{key: "GIT_DESCRIBE_ALWAYS_LONG", cmd: "git describe --always --tags --long"});
     c.push(EnvTidbit::CmdOrEnv{key: "GIT_DESCRIBE_AAL", cmd: "git describe --always --all --long"});
     c.push(EnvTidbit::CmdOrEnv{key: "GIT_OPTIONAL_TAG", cmd: "git describe --exact-match --tags"});
-    c.push(EnvTidbit::CmdOrEnv{key: "GIT_OPTIONAL_BRANCH", cmd: "git rev-parse --abbrev-ref HEAD"});
+    c.push(EnvTidbit::CmdOrEnv{key: "GIT_OPTIONAL_BRANCH", cmd: "git symbolic-ref --short HEAD"});
     static ENV_VARS: [&'static str;11] = ["ESTIMATED_ARTIFACT_URL","ESTIMATED_DOCS_URL","CI_SEQUENTIAL_BUILD_NUMBER","CI_BUILD_URL","CI_JOB_URL","CI_JOB_TITLE","CI_STRING",
         "CI_PULL_REQUEST_INFO", "CI_TAG", "CI_RELATED_BRANCH", "CI"
     ];
