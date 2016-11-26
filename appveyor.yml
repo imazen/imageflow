@@ -92,6 +92,8 @@ test_script:
   - cargo build --target=%RUST_TARGET% --release
   - cargo doc --no-deps
   - cd ..
+  - echo. && echo Displaying embedded info
+  - target\%RUST_TARGET%\release\imageflow_tool.exe diagnose --show-compilation-info
   - mkdir artifacts
   - mkdir artifacts\staging
   - mkdir artifacts\staging\doc

@@ -9,7 +9,16 @@ extern crate serde_json;
 use clap::{App, Arg, SubCommand};
 
 fn main() {
-    let matches = App::new("imageflow_tool")
+    let version = s::version::one_line_version();
+    let matches = App::new("imageflow_tool").version(version.as_ref())
+        .subcommand(
+            SubCommand::with_name("diagnose")
+                .about("Diagnostic utilities")
+                .arg(
+                    Arg::with_name("show-compilation-info").long("show-compilation-info")
+                        .help("Show all the information stored in this executable about the environment in which it was compiled.")
+                )
+        )
 
         // --json [path]
         // --response [response_json_path]
@@ -63,6 +72,14 @@ fn main() {
         }
 
 
+    }
+
+    if let Some(ref matches) = matches.subcommand_matches("diagnose") {
+        let m : &&clap::ArgMatches = matches;
+
+        if m.is_present("show-compilation-info"){
+            println!("{}\n{}\n", s::version::one_line_version(), s::version::all_build_info_pairs());
+        }
     }
 
 }

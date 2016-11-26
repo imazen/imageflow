@@ -69,21 +69,20 @@ pub fn all_build_info_pairs() -> String{
             None => 0
         };
         if a_lines > 1 || b_lines > 1{
-            match b_lines.cmp(&a_lines){
-                std::cmp::Ordering::Equal => b.0.cmp(a.0),
+            match a_lines.cmp(&b_lines){
+                std::cmp::Ordering::Equal => a.0.cmp(b.0),
                 other => other
             }
         }else {
-            b.0.cmp(a.0)
+            a.0.cmp(b.0)
         }
     });
-
 
     let mut s = String::new();
 
     for (k, v) in pairs{
         let line = match *v {
-            Some(ref s) => format!("{}={:?}\n", k, s),
+            Some(ref s) => format!("{}={}\n", k, s),
             None => format!("{} (None)\n", k)
         };
         s += &line;

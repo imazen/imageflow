@@ -253,6 +253,7 @@ if [[ "$TEST_RUST" == 'True' ]]; then
 		(
 			cd imageflow_tool
 			cargo test
+			./test_tool.sh
 		)
 		if [[ "$IMAGEFLOW_SERVER" == 'True' ]]; then
 			(
