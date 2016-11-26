@@ -4,6 +4,7 @@
 
 /bench_in/
 /bench_out/
+/self_tests/
 
 # VSCode
 /.vscode/

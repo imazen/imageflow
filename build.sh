@@ -228,8 +228,8 @@ if [[ "$TEST_RUST" == 'True' ]]; then
 			cd imageflow_tool
 			eval "$COPY_VALGRINDRC"
 			eval "$VALGRIND_CARGO_COMMAND"
-			eval "$VALGRIND_COMMAND ../target/debug/imageflow_tool diagnose --self-test"
 			./test_tool.sh
+			eval "$VALGRIND_COMMAND ../target/debug/imageflow_tool diagnose --self-test"
 		)
 		if [[ "$IMAGEFLOW_SERVER" == 'True' ]]; then
 			(
@@ -316,7 +316,7 @@ if [[ "$BUILD_RELEASE" == 'True' ]]; then
 	mkdir -p artifacts/staging/doc || true
 	mkdir -p artifacts/staging/headers || true
 
-	cp target/release/{flow-,imageflow_,libimageflow}*  ./artifacts/staging/
+	cp -R target/release/{flow-,imageflow_,libimageflow}*  ./artifacts/staging/
 	cp bindings/headers/*.h  ./artifacts/staging/headers/
 	cp -a target/doc ./artifacts/staging/
 	rm ./artifacts/staging/*.{o,d} || true
