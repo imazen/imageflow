@@ -28,6 +28,7 @@ fn write_json<T>(dir: &str, filename: &str, info: T)
 
 fn create_blank(dir: &str, filename_without_ext: &str, w: usize, h: usize, encoder: s::EncoderPreset){
 
+    //Invalid read here; the result of create_canvas is not being accessed correctly.
     let req = stateless::BuildRequest{
         inputs: vec![],
         framewise: s::Framewise::Steps(
@@ -35,7 +36,9 @@ fn create_blank(dir: &str, filename_without_ext: &str, w: usize, h: usize, encod
                 s::Node::CreateCanvas{ w: w, h: h, format: s::PixelFormat::Bgr24, color: s::Color::Black},
                 s::Node::Encode{ io_id: 0, preset: encoder }
             ]
-        )
+        ),
+        export_graphs_to: None //Some(std::path::PathBuf::from(format!("./{}/{}_debug", dir, filename_without_ext)))
+
     };
     let result = stateless::LibClient::new().build(req).unwrap();
     let ref out: stateless::BuildOutput = result.outputs[0];

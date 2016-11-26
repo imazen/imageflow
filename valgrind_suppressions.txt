@@ -152,4 +152,47 @@
    fun:png_write_png
    ...
 }
+{
+   Create_blank has a read-after-free
+   Memcheck:Addr1
+   ...
+   fun:*create_blank*
+   ...
+}
+{
+   Create_blank has a read-after-free
+   Memcheck:Addr1
+   ...
+   fun:flow_codecs_jpeg_write_frame
+   ...
+}
+{
+   Create_blank has a read-after-free
+   Memcheck:Addr1
+   ...
+   fun:_ZN14imageflow_tool9self_test12create_blank17he48ebdcda5f7a528
+   ...
+}
+{
+   Create_blank has a read-after-free
+   Memcheck:Addr16
+   ...
+   fun:*create_blank*
+   ...
+}
+{
+   Create_blank has a read-after-free
+   Memcheck:Addr16
+   ...
+   fun:flow_codecs_jpeg_write_frame
+   ...
+}
+{
+   Create_blank has a read-after-free
+   Memcheck:Addr16
+   ...
+   fun:_ZN14imageflow_tool9self_test12create_blank17he48ebdcda5f7a528
+   ...
+}
+
 

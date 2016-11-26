@@ -32,7 +32,8 @@ pub struct BuildOutput{
 #[derive(Clone, PartialEq, Debug)]
 pub struct BuildRequest<'a>{
     pub inputs: Vec<BuildInput<'a>>,
-    pub framewise: s::Framewise
+    pub framewise: s::Framewise,
+    pub export_graphs_to: Option<std::path::PathBuf>
     //TODO: Debugging
     //TODO: Benchmarking
     //TODO: gamma correction
@@ -120,7 +121,10 @@ impl LibClient{
 
             let send_execute = s::Execute001{
                 framewise: task.framewise,
-                graph_recording: None,
+                graph_recording: match task.export_graphs_to {
+                    Some(_) => Some(s::Build001GraphRecording::debug_defaults()),
+                    None => None
+                },
                 no_gamma_correction: None
             };
 
@@ -180,8 +184,9 @@ fn test_stateless(){
     let req = BuildRequest{
         inputs: vec![BuildInput{
             io_id: 0,
-            bytes: &png_bytes
+            bytes: &png_bytes,
         }],
+        export_graphs_to: None,
         framewise: Framewise::Steps(vec![
         s::Node::Decode{io_id: 0, commands: None},
         s::Node::Encode{io_id: 1, preset: s::EncoderPreset::libpng32()}
