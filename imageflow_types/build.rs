@@ -1,7 +1,6 @@
 #[macro_use]
 extern crate quick_error;
 extern crate chrono;
-extern crate toml;
 use std::env;
 use chrono::*;
 use std::convert::AsRef;
@@ -57,7 +56,7 @@ fn run(cmd: &str) -> std::result::Result<String,Error> {
 
     let str_out: &str = std::str::from_utf8(&output.stdout).expect(&utf8_msg);
     if str_out.split_whitespace().count() > 0 {
-        Ok(str_out.to_owned())
+        Ok(str_out.trim().to_owned())
     } else {
         Err(Error::from(str_out.to_owned()))
     }
@@ -151,8 +150,8 @@ fn what_to_collect() -> Vec<EnvTidbit>{
     c.push(EnvTidbit::CmdOrEnv{key: "GIT_DESCRIBE_AAL", cmd: "git describe --always --all --long"});
     c.push(EnvTidbit::CmdOrEnv{key: "GIT_OPTIONAL_TAG", cmd: "git describe --exact-match --tags"});
     c.push(EnvTidbit::CmdOrEnv{key: "GIT_OPTIONAL_BRANCH", cmd: "git symbolic-ref --short HEAD"});
-    static ENV_VARS: [&'static str;11] = ["ESTIMATED_ARTIFACT_URL","ESTIMATED_DOCS_URL","CI_SEQUENTIAL_BUILD_NUMBER","CI_BUILD_URL","CI_JOB_URL","CI_JOB_TITLE","CI_STRING",
-        "CI_PULL_REQUEST_INFO", "CI_TAG", "CI_RELATED_BRANCH", "CI"
+    static ENV_VARS: [&'static str;12] = ["ESTIMATED_ARTIFACT_URL","ESTIMATED_DOCS_URL","CI_SEQUENTIAL_BUILD_NUMBER","CI_BUILD_URL","CI_JOB_URL","CI_JOB_TITLE","CI_STRING",
+        "CI_PULL_REQUEST_INFO", "CI_TAG", "CI_RELATED_BRANCH", "CI", "TARGET"
     ];
     for name in ENV_VARS.iter(){
         c.push(EnvTidbit::Env(name));
@@ -181,21 +180,24 @@ fn write_file(name: &str, file_contents: String) -> std::result::Result<(), Erro
     Ok(())
 }
 
-//fn parse_conanfile(info: &mut  HashMap<String, Option<String>>){
-    //conanfile.txt doesn't parse!
-
-    //We'd have to fall back to regex.
-//    let conan_str = info.get("conaninfo.txt").unwrap().to_owned().unwrap();
-//    let mut parser = toml::Parser::new(&conan_str);
-//    let parsed = parser.parse();
-//    match parsed{
-//        None => {panic!("Failed to parse conaninfo.txt: \n{:?}", parser.errors);}
-//        Some(table) => {
-//            println!("{:?}", table);
-//        }
-//    }
-
-//}
+fn parse_conanfile(info: &mut  HashMap<String, Option<String>>) {
+    let conan_str = info.get("conaninfo.txt").unwrap().to_owned().unwrap();
+    let mut in_requirements_section = false;
+    for line in conan_str.lines() {
+        let t = line.trim();
+        if t.starts_with("[") {
+            in_requirements_section = false;
+        }
+        if t == "[full_requires]" {
+            in_requirements_section = true;
+            continue
+        }
+        if in_requirements_section {
+            let k = format!("C_DEPENDENCY_{}",t.split("/").next().unwrap().to_uppercase());
+            info.insert(k, Some(t.to_owned()));
+        }
+    }
+}
 
 fn main() {
     let todo = what_to_collect();
@@ -204,7 +206,7 @@ fn main() {
     let mut results = collect_info(todo);
     results.insert("GENERATED_DATETIME_UTC".to_owned(), Some(utcnow_val.to_rfc3339()));
     results.insert("GENERATED_DATE_UTC".to_owned(), Some(utcnow_val.format("%Y-%m-%d").to_string()));
-    //parse_conanfile(&mut results);
+    parse_conanfile(&mut results);
 
 
 
@@ -223,7 +225,7 @@ fn main() {
 
 
     //These vars are required for all builds
-    for name in ["GIT_COMMIT", "GIT_DESCRIBE_ALWAYS"].iter(){
+    for name in ["GIT_COMMIT", "GIT_DESCRIBE_ALWAYS", "TARGET", "GENERATED_DATETIME_UTC", "GENERATED_DATE_UTC"].iter(){
         let value = results.get::<str>(name).unwrap().to_owned().unwrap();
         let line = format!("pub static {}: &'static str = {:?};\n", name,&value);
         contents += &line;
@@ -233,10 +235,10 @@ fn main() {
     let line = format!("pub static BUILT_ON_CI: bool = {};\n", ci_value);
     contents += &line;
 
-    let line = format!("pub static GENERATED_DATETIME_UTC: &'static str = {:?};\n", utcnow_val.to_rfc3339());
-    contents += &line;
-    let line = format!("pub static GENERATED_DATE_UTC: &'static str = {:?};\n", utcnow_val.format("%Y-%m-%d").to_string());
-    contents += &line;
+//    let line = format!("pub static GENERATED_DATETIME_UTC: &'static str = {:?};\n", utcnow_val.to_rfc3339());
+//    contents += &line;
+//    let line = format!("pub static GENERATED_DATE_UTC: &'static str = {:?};\n", utcnow_val.format("%Y-%m-%d").to_string());
+//    contents += &line;
 
 
     let _ = write_file("build_env_info.rs", contents ).expect("Saving git version");

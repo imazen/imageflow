@@ -2,6 +2,7 @@
 #![feature(conservative_impl_trait)]
 
 pub mod build_env_info;
+pub mod version;
 
 #[macro_use]
 extern crate serde_derive;
