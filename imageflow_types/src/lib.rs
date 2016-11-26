@@ -16,49 +16,6 @@ extern crate serde_json;
 use std::ascii::AsciiExt;
 use std::str::FromStr;
 
-#[derive(Serialize, Deserialize, Debug, PartialEq)]
-struct Point {
-    x: i32,
-    y: i32,
-}
-
-
-mod nodes {
-    #[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
-    pub struct Decode {
-        pub io_id: i32,
-    }
-
-    #[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
-    pub enum Encoder {
-        Png,
-        Png24,
-        Png8,
-        Jpeg,
-    }
-
-    #[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
-    pub struct Encode {
-        pub io_id: i32,
-        pub encoder: Option<Encoder>,
-    }
-
-    #[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
-    pub enum AnyNode {
-        Decode(Decode),
-        Encode(Encode),
-    }
-
-}
-
-#[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
-pub enum MNode {
-    Decode { io_id: i32 },
-    Encode {
-        io_id: i32,
-        encoder: Option<nodes::Encoder>,
-    },
-}
 #[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
 pub enum PixelFormat {
     #[serde(rename="bgra32")]
@@ -73,8 +30,6 @@ pub enum Encoder {
     Png,
     Jpeg,
 }
-
-
 
 #[repr(C)]
 #[derive(Copy, Serialize, Deserialize, Clone, PartialEq, PartialOrd, Debug)]
@@ -362,12 +317,6 @@ pub struct Edge {
 pub struct Graph {
     pub nodes: std::collections::HashMap<String, Node>,
     pub edges: Vec<Edge>,
-}
-
-#[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
-pub enum TestEnum {
-    A,
-    B { c: i32 },
 }
 
 
@@ -792,42 +741,6 @@ impl Response001 {
 
 
 
-#[test]
-fn test_roundtrip() {
-    let point = Point { x: 1, y: 2 };
-
-    let serialized = serde_json::to_string(&point).unwrap();
-    assert_eq!(serialized, r#"{"x":1,"y":2}"#);
-
-    let deserialized: Point = serde_json::from_str(&serialized).unwrap();
-
-    assert_eq!(deserialized, Point { x: 1, y: 2 });
-}
-
-
-#[test]
-fn test_decode_node() {
-    let text = r#"{"Decode": { "io_id": 1 } }"#;
-
-    let obj: nodes::AnyNode = serde_json::from_str(&text).unwrap();
-
-    assert_eq!(obj, nodes::AnyNode::Decode(nodes::Decode { io_id: 1 }));
-}
-
-
-#[test]
-fn test_decode_mnode() {
-    let text = r#"[{"Decode": { "io_id": 1 } }, {"Encode": { "io_id": 2 } }]"#;
-
-    let obj: Vec<MNode> = serde_json::from_str(&text).unwrap();
-
-    assert_eq!(obj,
-               vec![MNode::Decode { io_id: 1 },
-                    MNode::Encode {
-                        io_id: 2,
-                        encoder: None,
-                    }]);
-}
 
 macro_rules! hashmap {
     ($( $key: expr => $val: expr ),*) => {{
@@ -863,6 +776,12 @@ fn decode_graph() {
     };
 
     assert_eq!(obj, expected);
+}
+
+#[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
+pub enum TestEnum {
+    A,
+    B { c: i32 },
 }
 
 #[test]
