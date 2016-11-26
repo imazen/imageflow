@@ -132,6 +132,9 @@ impl EncoderPreset{
     pub fn libpng32() -> EncoderPreset{
         EncoderPreset::Libpng{ depth: Some(PngBitDepth::Png32), matte: None, zlib_compression: None}
     }
+    pub fn libjpegturbo() -> EncoderPreset{
+        EncoderPreset::LibjpegTurbo{ quality: Some(100)}
+    }
 }
 
 #[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
@@ -320,13 +323,15 @@ pub struct Graph {
 }
 
 
-#[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
+#[derive(Serialize, Deserialize, Clone, Copy, PartialEq, Debug)]
+#[repr(C)]
 pub enum IoDirection {
     #[serde(rename="output")]
     Output = 8,
     #[serde(rename="input")]
     Input = 4,
 }
+
 #[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
 pub enum IoEnum {
     #[serde(rename="bytesHex")]
@@ -339,6 +344,8 @@ pub enum IoEnum {
     Url(String),
     #[serde(rename="outputBuffer")]
     OutputBuffer,
+    #[serde(rename="outputBase64")]
+    OutputBase64,
 }
 
 #[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]

@@ -61,6 +61,7 @@ pub struct Job {
 }
 
 #[repr(C)]
+#[derive(Debug,Copy,Clone, PartialEq)]
 pub enum IoMode {
     None = 0,
     read_sequential = 1,

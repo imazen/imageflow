@@ -23,7 +23,7 @@ impl IoTranslator {
         IoTranslator{ ctx: context}
     }
 
-    unsafe fn create_jobio_ptr_from_enum(&self, io_enum: s::IoEnum) -> *mut ::ffi::JobIO {
+    unsafe fn create_jobio_ptr_from_enum(&self, io_enum: s::IoEnum, dir: s::IoDirection) -> *mut ::ffi::JobIO {
         let p = self.ctx;
         let result_ptr = match io_enum {
             s::IoEnum::ByteArray(vec) => {
@@ -72,7 +72,31 @@ impl IoTranslator {
                 }
                 io_ptr
             }
-            s::IoEnum::Filename(path) => ptr::null(),
+            s::IoEnum::Filename(path) => {
+
+                let path_str: String = path;
+                //TODO: character sets matter!
+                let mode = match dir{
+                    s::IoDirection::Input => ::ffi::IoMode::read_seekable,
+                    s::IoDirection::Output => ::ffi::IoMode::write_sequential,
+                };
+
+                let mut vec = Vec::new();
+                vec.extend_from_slice(path_str.as_bytes());
+                vec.push(0);
+
+                let c_path = std::ffi::CStr::from_bytes_with_nul(vec.as_slice()).unwrap();
+
+
+                let io_ptr = ::ffi::flow_io_create_for_file(p,
+                                               mode,
+                                               c_path.as_ptr(), p as *const libc::c_void);
+                if io_ptr.is_null() {
+                    println!("Failed to open file {} with mode {:?}", &path_str, mode);
+                    ::ContextPtr::from_ptr(p).assert_ok(None);
+                }
+                io_ptr
+            }
             s::IoEnum::Url(url) => {
                 let mut dst = Vec::new();
                 {
@@ -110,7 +134,7 @@ impl IoTranslator {
                 }
                 io_ptr
             }
-            s::IoEnum::OutputBuffer => {
+            s::IoEnum::OutputBuffer | s::IoEnum::OutputBase64 => {
                 let io_ptr =
                 ::ffi::flow_io_create_for_output_buffer(p,
                                                         self.ctx as *const libc::c_void);
@@ -127,7 +151,7 @@ impl IoTranslator {
     pub unsafe fn add_to_job(&self, job: *mut ::ffi::Job, io_vec: Vec<s::IoObject>){
         let mut io_list = Vec::new();
         for io_obj in io_vec {
-            let io_ptr = self.create_jobio_ptr_from_enum(io_obj.io);
+            let io_ptr = self.create_jobio_ptr_from_enum(io_obj.io, io_obj.direction);
 
 
             let new_direction = match io_obj.direction {

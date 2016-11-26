@@ -264,6 +264,7 @@ dependencies = [
 name = "imageflow_tool"
 version = "0.1.0"
 dependencies = [
+ "chrono 0.2.25 (registry+https://github.com/rust-lang/crates.io-index)",
  "clap 2.18.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "imageflow_core 0.1.0",
  "imageflow_types 0.1.0",

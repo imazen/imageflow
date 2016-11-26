@@ -18,3 +18,7 @@ lazy_static = "*"
 [build-dependencies]
 quick-error = "1.1.0"
 chrono =  "0.2"
+
+
+[profile.release]
+debug = true

@@ -2,6 +2,7 @@
 set -e
 set -x
 
+export RUST_BACKTRACE=1
 cargo build --bin imageflow_tool
 
 TOOL="../target/debug/imageflow_tool"

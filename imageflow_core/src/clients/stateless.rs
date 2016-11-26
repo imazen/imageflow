@@ -75,6 +75,9 @@ impl BuildFailure{
 
 impl LibClient{
 
+    pub fn new() -> LibClient{
+        LibClient{}
+    }
     pub fn get_image_info<'a>(&mut self, bytes: &'a [u8]) -> std::result::Result<s::ImageInfo,BuildFailure>  {
         let context = SelfDisposingContextPtr::create()?;
 

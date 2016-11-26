@@ -41,8 +41,8 @@ use std::ptr;
 
 #[derive(Debug, PartialEq)]
 pub struct FlowErr {
-    code: i32,
-    message_and_stack: String,
+    pub code: i32,
+    pub message_and_stack: String,
 }
 
 #[derive(Debug, PartialEq)]
@@ -57,14 +57,22 @@ pub struct JsonResponse<'a> {
     pub status_code: i64,
     pub response_json: Cow<'a,[u8]>,
 }
-
-
-
+pub struct JsonResponseBuf {
+    pub status_code: i64,
+    pub response_json: Vec<u8>,
+}
 
 
 pub type Result<T> = std::result::Result<T, FlowError>;
 
 impl<'a> JsonResponse<'a> {
+
+    pub fn into_buf(self) -> JsonResponseBuf{
+        JsonResponseBuf {
+            status_code: self.status_code,
+            response_json: self.response_json.into_owned()
+        }
+    }
 
     pub fn from_parse_error<'b>(err: serde_json::error::Error, json: &'b [u8]) -> JsonResponse<'a>{
 
