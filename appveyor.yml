@@ -94,6 +94,7 @@ test_script:
   - cd ..
   - echo. && echo Displaying embedded info
   - target\%RUST_TARGET%\release\imageflow_tool.exe diagnose --show-compilation-info
+  - target\%RUST_TARGET%\release\imageflow_tool.exe diagnose --self-test
   - mkdir artifacts
   - mkdir artifacts\staging
   - mkdir artifacts\staging\doc

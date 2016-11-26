@@ -228,6 +228,8 @@ if [[ "$TEST_RUST" == 'True' ]]; then
 			cd imageflow_tool
 			eval "$COPY_VALGRINDRC"
 			eval "$VALGRIND_CARGO_COMMAND"
+			eval "$VALGRIND_COMMAND ../target/debug/imageflow_tool diagnose --self-test"
+			./test_tool.sh
 		)
 		if [[ "$IMAGEFLOW_SERVER" == 'True' ]]; then
 			(

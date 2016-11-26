@@ -4,7 +4,7 @@ extern crate clap;
 extern crate imageflow_types as s;
 extern crate imageflow_core as fc;
 extern crate serde_json;
-
+mod self_test;
 
 use clap::{App, Arg, SubCommand};
 
@@ -17,7 +17,10 @@ fn main() {
                 .arg(
                     Arg::with_name("show-compilation-info").long("show-compilation-info")
                         .help("Show all the information stored in this executable about the environment in which it was compiled.")
-                )
+                ).arg(
+                Arg::with_name("self-test").long("self-test")
+                    .help("Creates a 'self_tests' directory and runs self-tests")
+            )
         )
 
         // --json [path]
@@ -33,10 +36,9 @@ fn main() {
 
 
 
-        //
+
         // file.json --in a.png a.png --out s.png
         // file.json --in 0 a.png 1 b.png --out 3 base64
-
 
 
         .subcommand(SubCommand::with_name("v0.1/build")
@@ -79,6 +81,10 @@ fn main() {
 
         if m.is_present("show-compilation-info"){
             println!("{}\n{}\n", s::version::one_line_version(), s::version::all_build_info_pairs());
+        }
+
+        if m.is_present("self-test"){
+            self_test::run();
         }
     }
 
