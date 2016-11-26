@@ -18,3 +18,6 @@ imageflow_core = { path = "../imageflow_core", version = "*" }
 [build-dependencies]
 rusty-cheddar = "0.3.0"
 regex = "*"
+
+[profile.release]
+debug = true

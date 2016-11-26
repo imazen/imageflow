@@ -27,3 +27,6 @@ daggy = "^0.4.1"
 
 [build-dependencies]
 cmake = "0.1.17"
+
+[profile.release]
+debug = true

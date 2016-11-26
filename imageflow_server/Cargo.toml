@@ -22,3 +22,6 @@ imageflow_types = { path = "../imageflow_types", version = "*" }
 
 [build-dependencies]
 cmake = "0.1.17"
+
+[profile.release]
+debug = true

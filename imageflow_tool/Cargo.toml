@@ -24,3 +24,6 @@ path = "src/bin/flow-proto1.rs"
 [[bin]]
 name = "imageflow_tool"
 path = "src/main.rs"
+
+[profile.release]
+debug = true
