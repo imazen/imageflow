@@ -105,6 +105,7 @@ fn execute_one_to_one<F>(source: &str, framewise_generator: F) -> std::result::R
     let result: stateless::BuildSuccess = client.build(stateless::BuildRequest{
         framewise: framewise_generator(info),
         inputs: vec![stateless::BuildInput{io_id: 0, bytes: &original_bytes}],
+        export_graphs_to: None
     })?;
     let end_execute = precise_time_ns();
     Ok((result.outputs.into_iter().next().unwrap(), RequestPerf{
