@@ -420,6 +420,11 @@ static void png_flush_nullop(png_structp png_ptr) {}
 static bool flow_codecs_png_write_frame(flow_c * c, void * codec_state, struct flow_bitmap_bgra * frame,
                                         struct flow_encoder_hints * hints)
 {
+    if (frame->fmt != flow_bgra32 && frame->fmt != flow_bgr24){
+        FLOW_error(c, flow_status_Unsupported_pixel_format);
+        return false;
+    }
+
     struct flow_codecs_png_encoder_state * state = (struct flow_codecs_png_encoder_state *)codec_state;
     state->context = c;
 
@@ -457,12 +462,18 @@ static bool flow_codecs_png_write_frame(flow_c * c, void * codec_state, struct f
 
         png_set_rows(png_ptr, info_ptr, rows);
 
-        int color_type = PNG_COLOR_TYPE_RGB_ALPHA;
-        int transform = PNG_TRANSFORM_BGR;
-
-        if (hints != NULL && hints->disable_png_alpha) {
+        int color_type;
+        int transform;
+        if (frame->fmt == flow_bgra32){
+            color_type = PNG_COLOR_TYPE_RGB_ALPHA;
+            transform = PNG_TRANSFORM_BGR;
+            if (hints != NULL && hints->disable_png_alpha) {
+                color_type = PNG_COLOR_TYPE_RGB;
+                transform = transform | PNG_TRANSFORM_STRIP_FILLER_AFTER;
+            }
+        } else{
             color_type = PNG_COLOR_TYPE_RGB;
-            transform = transform | PNG_TRANSFORM_STRIP_FILLER_AFTER;
+            transform = PNG_TRANSFORM_BGR;
         }
 
         png_set_IHDR(png_ptr, info_ptr, (png_uint_32)frame->w, (png_uint_32)frame->h, 8, color_type, PNG_INTERLACE_NONE,

@@ -24,10 +24,48 @@ static bool are_valid_bitmap_dimensions(int sx, int sy)
             && sx * FLOW_MAX_BYTES_PP < ((INT_MAX - FLOW_MAX_BYTES_PP) / sy)); // then we can safely check
 }
 
+typedef enum allocation_kind {
+    allocation_kind_none,
+    allocation_kind_bgra_header,
+    allocation_kind_float_header,
+    allocation_kind_bgra_pixbuf,
+    allocation_kind_float_pixbuf,
+} allocation_kind;
+
+// Uncomment below for troubleshooting allocation/free order
+//static bool header_destructor(flow_c * c, void * thing){
+//    printf("Destroying %p\n", thing);
+//    return true;
+//}
+//static bool pixbuf_destructor(flow_c * c, void * thing){
+//    printf("Destroying %p\n", thing);
+//
+//    return true;
+//}
+
+static bool bitmap_allocation_hook(flow_c * context, void * ptr, size_t byte_count , allocation_kind kind ){
+
+//    flow_destructor_function on_destroy = header_destructor;
+//    if (kind == allocation_kind_bgra_pixbuf || kind == allocation_kind_float_pixbuf){
+//        on_destroy = pixbuf_destructor;
+//        printf("Allocating %p-%p (pixel buffer) of size %zd\n", ptr, (void *)((size_t)ptr + byte_count), byte_count);
+//    }else{
+//        printf("Allocating %p-%p (bitmap header) of size %zd\n", ptr, (void*)((size_t)ptr + byte_count), byte_count);
+//    }
+//
+//    if (!flow_set_destructor(context,ptr, on_destroy)){
+//        FLOW_error_return(context);
+//    }
+    return true;
+}
+
+
+
 uint32_t flow_pixel_format_bytes_per_pixel(flow_pixel_format format) { return (uint32_t)format; }
 FLOW_HINT_HOT FLOW_HINT_PURE
 
-    struct flow_bitmap_bgra *
+
+struct flow_bitmap_bgra *
     flow_bitmap_bgra_create_header(flow_c * context, int sx, int sy)
 {
     struct flow_bitmap_bgra * im;
@@ -35,10 +73,15 @@ FLOW_HINT_HOT FLOW_HINT_PURE
         FLOW_error(context, flow_status_Invalid_dimensions);
         return NULL;
     }
-    im = (struct flow_bitmap_bgra *)FLOW_calloc(context, 1, sizeof(struct flow_bitmap_bgra));
+    size_t byte_count = sizeof(struct flow_bitmap_bgra);
+    im = (struct flow_bitmap_bgra *)FLOW_calloc(context, 1, byte_count);
     if (im == NULL) {
         FLOW_error(context, flow_status_Out_of_memory);
         return NULL;
+    }
+    if (!bitmap_allocation_hook(context,im, byte_count, allocation_kind_bgra_header)){
+        FLOW_destroy(context, im);
+        FLOW_error_return_null(context);
     }
     im->w = sx;
     im->h = sy;
@@ -64,20 +107,26 @@ struct flow_bitmap_bgra * flow_bitmap_bgra_create(flow_c * context, int sx, int 
     im->stride_readonly = false;
     im->borrowed_pixels = false;
     im->alpha_meaningful = im->fmt == flow_bgra32;
+    size_t byte_count = im->h * im->stride;
     if (zeroed) {
-        im->pixels = (unsigned char *)FLOW_calloc_owned(context, im->h * im->stride, sizeof(unsigned char), im);
+        im->pixels = (unsigned char *)FLOW_calloc_owned(context, byte_count, sizeof(unsigned char), im);
     } else {
-        im->pixels = (unsigned char *)FLOW_malloc_owned(context, im->h * im->stride, im);
+        im->pixels = (unsigned char *)FLOW_malloc_owned(context, byte_count, im);
     }
     if (im->pixels == NULL) {
         FLOW_destroy(context, im);
         FLOW_error(context, flow_status_Out_of_memory);
         return NULL;
     }
+    if (!bitmap_allocation_hook(context,im->pixels, byte_count, allocation_kind_bgra_pixbuf)){
+        FLOW_destroy(context, im);
+        FLOW_error_return_null(context);
+    }
     return im;
 }
 
 void flow_bitmap_bgra_destroy(flow_c * context, struct flow_bitmap_bgra * im) { FLOW_destroy(context, im); }
+
 
 struct flow_bitmap_float * flow_bitmap_float_create_header(flow_c * context, int sx, int sy, int channels)
 {
@@ -86,11 +135,15 @@ struct flow_bitmap_float * flow_bitmap_float_create_header(flow_c * context, int
     if (!are_valid_bitmap_dimensions(sx, sy)) {
         FLOW_error(context, flow_status_Invalid_dimensions);
     }
-
-    im = (struct flow_bitmap_float *)FLOW_calloc(context, 1, sizeof(struct flow_bitmap_float));
+    size_t byte_count =  sizeof(struct flow_bitmap_float);
+    im = (struct flow_bitmap_float *)FLOW_calloc(context, 1, byte_count);
     if (im == NULL) {
         FLOW_error(context, flow_status_Out_of_memory);
         return NULL;
+    }
+    if (!bitmap_allocation_hook(context,im, byte_count, allocation_kind_float_header)){
+        FLOW_destroy(context, im);
+        FLOW_error_return_null(context);
     }
     im->w = sx;
     im->h = sy;
@@ -112,16 +165,22 @@ struct flow_bitmap_float * flow_bitmap_float_create(flow_c * context, int sx, in
         return NULL;
     }
     im->pixels_borrowed = false;
+    size_t byte_count =  im->float_count * sizeof(float);
     if (zeroed) {
-        im->pixels = (float *)FLOW_calloc_owned(context, im->float_count, sizeof(float), im);
+        im->pixels = (float *)FLOW_calloc_owned(context, 1, byte_count, im);
     } else {
-        im->pixels = (float *)FLOW_malloc_owned(context, im->float_count * sizeof(float), im);
+        im->pixels = (float *)FLOW_malloc_owned(context, byte_count, im);
     }
     if (im->pixels == NULL) {
         FLOW_destroy(context, im);
         FLOW_error(context, flow_status_Out_of_memory);
         return NULL;
     }
+    if (!bitmap_allocation_hook(context,im->pixels, byte_count, allocation_kind_float_pixbuf)){
+        FLOW_destroy(context, im);
+        FLOW_error_return_null(context);
+    }
+
     return im;
 }
 

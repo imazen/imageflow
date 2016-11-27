@@ -15,6 +15,7 @@ uint8_t ** flow_bitmap_create_row_pointers(flow_c * c, void * buffer, size_t buf
     for (y = 0; y < height; ++y) {
         rows[y] = ((uint8_t *)buffer + (stride * y));
     }
+    //printf("Creating row pointers for %p to %p. Last ends at %p\n", buffer, (void *)((uint8_t *)buffer + buffer_size), (void *)(rows[height -1] + stride));
     return rows;
 }
 

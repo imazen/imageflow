@@ -963,6 +963,11 @@ static bool flow_codecs_initialize_encode_jpeg(flow_c * c, struct flow_codec_ins
 static bool flow_codecs_jpeg_write_frame(flow_c * c, void * codec_state, struct flow_bitmap_bgra * frame,
                                          struct flow_encoder_hints * hints)
 {
+    if (frame->fmt != flow_bgra32 && frame->fmt != flow_bgr24){
+        FLOW_error(c, flow_status_Unsupported_pixel_format);
+        return false;
+    }
+
     struct flow_codecs_jpeg_encoder_state * state = (struct flow_codecs_jpeg_encoder_state *)codec_state;
     state->context = c;
 
@@ -979,11 +984,11 @@ static bool flow_codecs_jpeg_write_frame(flow_c * c, void * codec_state, struct 
     jpeg_create_compress(&state->cinfo);
     flow_codecs_jpeg_setup_dest_manager(&state->cinfo, state->io);
 
-    state->cinfo.in_color_space = JCS_EXT_BGRA;
+    state->cinfo.in_color_space = frame->fmt == flow_bgra32 ? JCS_EXT_BGRA : JCS_EXT_BGR;
     state->cinfo.image_height = frame->h;
     state->cinfo.image_width = frame->w;
-    state->cinfo.input_components = 4;
-    state->cinfo.optimize_coding = true;
+    state->cinfo.input_components = frame->fmt == flow_bgra32 ? 4 : 3;
+    state->cinfo.optimize_coding = true; //entropy coding
 
     jpeg_set_defaults(&state->cinfo);
 
