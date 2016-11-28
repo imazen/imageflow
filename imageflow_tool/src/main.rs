@@ -1,5 +1,3 @@
-use std::fs::File;
-use std::io::Read;
 extern crate clap;
 extern crate imageflow_types as s;
 extern crate imageflow_core as fc;

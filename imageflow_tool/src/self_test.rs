@@ -1,11 +1,14 @@
+
 use std;
 use std::convert::AsRef;
 use std::fs::{File, create_dir_all};
+#[allow(unused_imports)]
 use std::io::{Write, Read, BufWriter};
 use std::path::{Path};
+#[allow(unused_imports)]
 use std::process::{Command, Output};
+#[allow(unused_imports)]
 use std::time::{Duration, Instant};
-use std::env;
 use fc::clients::stateless;
 use s;
 use serde_json;
@@ -99,10 +102,17 @@ pub fn run() -> i32{
     let self_path = std::env::current_exe().expect("For --self-test to work, we need to know the binary's location. env::current_exe failed");
 
     let dir = Path::new("self_tests").join(format!("{:032}", UTC::now().timestamp())).to_string_lossy().into_owned();
+
+
+
     if let Err(e) = create_dir_all(&dir) {
         panic!("Failed to create directory {} due to {:?}", dir, e);
     }
+
+
     setup(&dir);
+
+
 
     test(self_path.as_ref(), &dir, "v0.1/build --json example1.json --in 200x200.png 200x200.jpg --out out0.jpg --response out0.json", 0);
 

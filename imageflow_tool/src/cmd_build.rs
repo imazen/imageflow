@@ -4,7 +4,7 @@ use fc;
 use serde_json;
 extern crate core;
 //use self::core::slice::SliceExt;
-use std::fs::{File, create_dir_all};
+use std::fs::{File};
 use std::io::{Write, Read, BufWriter};
 use std::collections::HashMap;
 
@@ -27,7 +27,7 @@ pub enum CmdError{
     IoIdNotInRecipe(i32),
     BadArguments(String),
     InconsistentUseOfIoId(String),
-    NotImplemented,
+    //NotImplemented,
     FlowError(fc::FlowError),
     Incomplete
 
@@ -59,7 +59,7 @@ impl CmdError{
             CmdError::InconsistentUseOfIoId(_) => 64,
             CmdError::IoIdNotInRecipe(_) => 64,
             CmdError::InvalidJson(_) => 65,
-            CmdError::NotImplemented | CmdError::Incomplete => 70,
+             CmdError::Incomplete => 70, //also CmdError::NotImplemented if we bring it back
             CmdError::FlowError(ref fe) => match *fe {
                 fc::FlowError::Oom => 71,
                 fc::FlowError::Err(ref flow_err) => {
@@ -124,7 +124,7 @@ impl CmdBuild {
                 Ok(parsed)
             }
             JobSource::NamedDemo(name) => {
-                Err(CmdError::JsonRecipeNotFound(name))
+                Err(CmdError::DemoNotFound(name))
             }
         }
     }
@@ -141,15 +141,12 @@ impl CmdBuild {
 
         let user_providing_numbers = args.as_slice().iter().any(|v| v.parse::<i32>().is_ok());
 
+        //If they're not all consecutive, we can't assign by io_id. Let's not even try. Just do order of appearance.
+        ////old_io_ids.sort(); //ascending
+        ////let all_consecutive = old_io_ids.as_slice().iter().fold(Some(old_io_ids[0] -1),|prev, current| if let Some(p) = prev && current == p + 1 { Some(current)} else {None}  ).is_some();
+        ////let first_existing_io_id = old_io_ids.as_slice().iter().min().unwrap();
         let old_io_ids = before.io.as_slice().iter().filter(|io| io.direction == dir).map(|io| io.io_id).collect::<Vec<i32>>();
 
-
-        //If they're not all consecutive, we can't assign by io_id. Let's not even try. Just do order of appearance.
-        //old_io_ids.sort(); //ascending
-        //let all_consecutive = old_io_ids.as_slice().iter().fold(Some(old_io_ids[0] -1),|prev, current| if let Some(p) = prev && current == p + 1 { Some(current)} else {None}  ).is_some();
-
-
-        let first_existing_io_id = old_io_ids.as_slice().iter().min().unwrap();
 
 
         let max_possible_args = match user_providing_numbers{

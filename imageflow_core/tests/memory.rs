@@ -1,5 +1,5 @@
-use std::fs::{File, create_dir_all};
-use std::io::{Write, Read, BufWriter};
+use std::fs::{File};
+use std::io::{Write, BufWriter};
 use std::path::{Path};
 extern crate imageflow_core as fc;
 extern crate imageflow_types as s;

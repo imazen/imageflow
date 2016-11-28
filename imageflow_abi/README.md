@@ -15,11 +15,3 @@ Run `cargo doc --no-deps` and look in `target/doc`
 ### Generating the dynamic library
 
 Run `cargo build --release` and look for `target/release/libimageflow`
-
-
-### This was previously libimageflowrs
-
-Until the C component was renamed imageflow_c
- 
-Right now, 'libimageflow' is overloaded, as libimageflow.a/dll/dylib is the C portion of the library.
-

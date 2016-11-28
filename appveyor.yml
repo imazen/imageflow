@@ -73,28 +73,37 @@ test_script:
   - cd ..
   - cd imageflow_core
   - conan install --build missing -s build_type=Release -s arch=%CONAN_ARCH%
-  - cargo test
-  - cargo build --target=%RUST_TARGET% --release
+  - cargo test --target=%RUST_TARGET% 
   - cargo doc --no-deps
   - cd ..
   - cd imageflow_server
-  - cargo test
-  - cargo build --target=%RUST_TARGET% --release
-  - cargo doc --no-deps
+  - cargo test --target=%RUST_TARGET% 
+  - cargo doc --no-deps 
   - cd ..
   - cd imageflow_tool
-  - cargo test
-  - cargo build --target=%RUST_TARGET% --release
+  - cargo test --target=%RUST_TARGET% 
   - cargo doc --no-deps
+  - echo. && echo Displaying embedded info (debug build imageflow_tool)
+  - ..\target\%RUST_TARGET%\debug\imageflow_tool.exe diagnose --show-compilation-info
+  - ..\target\%RUST_TARGET%\debug\imageflow_tool.exe diagnose --self-test
   - cd ..
   - cd imageflow_abi
-  - cargo test
-  - cargo build --target=%RUST_TARGET% --release
+  - cargo test --target=%RUST_TARGET% 
   - cargo doc --no-deps
   - cd ..
-  - echo. && echo Displaying embedded info
-  - target\%RUST_TARGET%\release\imageflow_tool.exe diagnose --show-compilation-info
-  - target\%RUST_TARGET%\release\imageflow_tool.exe diagnose --self-test
+  - echo. && echo. && echo. && echo Building optimized binaries && echo. && echo. && echo.
+  - cd imageflow_tool
+  - cargo build --target=%RUST_TARGET% --release
+  - echo. && echo Displaying embedded info (release build of imageflow_tool) && echo .
+  - ..\target\%RUST_TARGET%\release\imageflow_tool.exe diagnose --show-compilation-info
+  - ..\target\%RUST_TARGET%\release\imageflow_tool.exe diagnose --self-test
+  - cd ..
+  - cd imageflow_server
+  - cargo build --target=%RUST_TARGET% --release
+  - cd ..
+  - cd imageflow_abi
+  - cargo build --target=%RUST_TARGET% --release
+  - cd ..
   - mkdir artifacts
   - mkdir artifacts\staging
   - mkdir artifacts\staging\doc
