@@ -96,7 +96,6 @@ test_script:
   - cargo test --target=%RUST_TARGET% 
   - cargo doc --no-deps
   - cd ..
-  - cd ..
   - cd imageflow_types
   - cargo test --target=%RUST_TARGET% 
   - cargo doc --no-deps
