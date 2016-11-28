@@ -266,7 +266,7 @@ fn crop_mutate_def() -> NodeDefinition {
 
                     let input = ctx.first_parent_result_frame(ix, EdgeKind::Input).unwrap();
                     unsafe {
-                        println!("Cropping {}x{} to ({},{}) ({},{})", (*input).w, (*input).h, x1, y1, x2, y2);
+                        //println!("Cropping {}x{} to ({},{}) ({},{})", (*input).w, (*input).h, x1, y1, x2, y2);
 
                         let bytes_pp = match (*input).fmt {
                             PixelFormat::Gray8 => 1,
@@ -278,7 +278,7 @@ fn crop_mutate_def() -> NodeDefinition {
                         (*input).pixels = (*input).pixels.offset(offset);
                         (*input).w = x2 - x1;
                         (*input).h = y2 - y1;
-                        println!("Changing pointer by {}, w{}, h{}", offset, (*input).w, (*input).h);
+                        //println!("Changing pointer by {}, w{}, h{}", offset, (*input).w, (*input).h);
 
 
                         ctx.weight_mut(ix).result = NodeResult::Frame(input);
