@@ -628,7 +628,7 @@ static bool flow_codecs_jpg_decoder_FinishRead(flow_c * c, struct flow_codecs_jp
     jpeg_destroy_decompress(state->cinfo);
     FLOW_free(c, state->cinfo);
     state->cinfo = NULL;
-    
+
     return true;
 }
 
@@ -887,9 +887,9 @@ static bool flow_codecs_jpeg_get_info(flow_c * c, void * codec_state, struct flo
 
     info->current_frame_index = 0;
     info->frame_count = 1;
-    info->frame0_post_decode_format = flow_bgra32;
-    info->frame0_width = state->w;
-    info->frame0_height = state->h;
+    info->frame_decodes_into = flow_bgra32;
+    info->image_width = state->w;
+    info->image_height = state->h;
     return true;
 }
 

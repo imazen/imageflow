@@ -165,9 +165,9 @@ impl JobPtr {
                 ContextPtr::from_ptr(self.context_ptr()).assert_ok(None);
             }
             Ok(s::ImageInfo {
-                frame0_post_decode_format: s::PixelFormat::from(info.frame0_post_decode_format),
-                frame0_height: info.frame0_height,
-                frame0_width: info.frame0_width,
+                frame_decodes_into: s::PixelFormat::from(info.frame_decodes_into),
+                image_height: info.image_height,
+                image_width: info.image_width,
                 frame_count: info.frame_count,
                 current_frame_index: info.current_frame_index,
                 preferred_extension: std::ffi::CStr::from_ptr(info.preferred_extension).to_owned().into_string().unwrap(),

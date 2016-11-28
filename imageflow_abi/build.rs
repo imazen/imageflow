@@ -87,7 +87,7 @@ enum Style{
 fn transform(s: &str, transform: Transform) -> String {
     match transform {
         Transform::AddUnderscores => {
-            let temp = Regex::new("[0-9]+").unwrap().replace_all(s, "_$0");
+            let temp = Regex::new("([^xy])([0-9]+)").unwrap().replace_all(s, "$1_$2");
             let temp = Regex::new("[A-Z]").unwrap().replace_all(&temp, "_$0");
             let temp = Regex::new(r"(\A|\s+)_+").unwrap().replace_all(&temp, "$1");
             temp.replace("__","_")

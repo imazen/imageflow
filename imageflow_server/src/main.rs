@@ -150,7 +150,7 @@ fn proto1(req: &mut Request) -> IronResult<Response> {
             down_filter: Filter::Robidoux,
             up_filter: Filter::Ginseng,
         };
-        let (framewise, (pre_w, pre_h)) = create_framewise(info.frame0_width, info.frame0_height, commands).unwrap();
+        let (framewise, (pre_w, pre_h)) = create_framewise(info.image_width, info.image_height, commands).unwrap();
         framewise
     })
 }

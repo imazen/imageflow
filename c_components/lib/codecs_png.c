@@ -360,11 +360,11 @@ static bool flow_codecs_png_get_info(flow_c * c, void * codec_state, struct flow
             FLOW_error_return(c);
         }
     }
-    info_ref->frame0_width = (int32_t)state->w;
-    info_ref->frame0_height = (int32_t)state->h;
+    info_ref->image_width = (int32_t)state->w;
+    info_ref->image_height = (int32_t)state->h;
     info_ref->frame_count = 1;
     info_ref->current_frame_index = 0;
-    info_ref->frame0_post_decode_format = flow_bgra32;
+    info_ref->frame_decodes_into = flow_bgra32;
     return true;
 }
 

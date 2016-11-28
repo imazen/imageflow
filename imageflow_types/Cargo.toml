@@ -14,6 +14,8 @@ serde = "0.8"
 serde_json = "0.8"
 serde_derive = "0.8"
 lazy_static = "*"
+regex = "*"
+
 
 [build-dependencies]
 quick-error = "1.1.0"

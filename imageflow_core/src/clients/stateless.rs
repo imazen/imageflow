@@ -85,7 +85,7 @@ impl LibClient{
         let result = {
             let mut job: JobPtr = context.create_job()?;
             job.add_input_bytes(0, bytes)?;
-            let info_blob: JsonResponse = job.message("v0.1/get_image_info", "{\"ioId\": 0}".as_bytes())?;
+            let info_blob: JsonResponse = job.message("v0.1/get_image_info", "{\"io_id\": 0}".as_bytes())?;
             //TODO: add into error conversion
             let info_response: s::Response001 = serde_json::from_slice(info_blob.response_json.as_ref()).unwrap();
             if !info_response.success {

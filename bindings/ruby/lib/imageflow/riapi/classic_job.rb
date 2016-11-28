@@ -36,9 +36,9 @@ module Imageflow
         {
             preferred_mime_type: info[:preferred_mime_type],
             preferred_extension: info[:preferred_extension],
-            frame0_width: info[:frame0Width],
-            frame0_height: info[:frame0Height],
-            frame0_post_decode_format: info[:frame0_post_decode_format],
+            image_width: info[:image_width],
+            image_height: info[:image_height],
+            frame_decodes_into: info[:frame_decodes_into],
         }
 
       end

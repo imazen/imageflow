@@ -1,3 +1,31 @@
+//! # imageflow_types
+//!
+//! Responsible for the schema of the JSON API, as well as for providing types used internally.
+//! (There is a lot of overlap, as there can be, in early versions).
+//!
+//! ## snake_case vs camelCase
+//!
+//! We don't currently do any style transformations, but we have tests to try to ensure they're
+//! always possible.
+//! Here are the transformation rules we use to verify all key names we select can be round-tripped
+//! between styles:
+//!
+//! #### camelCase to snake_case
+//!
+//! 1. Add a leading underscore to every group of numbers unless preceded by a lowercase x or y.
+//!    `/([^xy])([0-9]+)/ with "$1_$2"/`
+//! 2. Add a leading underscore before every uppercase letter: `/[A-Z]/ with "_$0"`
+//! 3. Strip leading underscores from string `/(\A|\s+)_+/ with "$1"`
+//! 4. Collapse all duplicate underscores `replace("__", "_")`
+//! 5. Lowercase the resulting string
+//!
+//! #### snake_case to camelCase
+//!
+//!  1. Uppercase every letter following an underscore or word boundary.
+//!     `Regex::new(r"(_|\b)([a-z])").unwrap().replace_all(&s, |c: &Captures| c[0].to_uppercase())`
+//!  2. Lowercase first character of string
+//!  3. Delete all underscores from string
+
 #![feature(proc_macro)]
 #![feature(conservative_impl_trait)]
 
@@ -12,23 +40,21 @@ extern crate lazy_static; //Used by build_env_info.rs
 
 extern crate serde;
 extern crate serde_json;
-
+extern crate regex;
 use std::ascii::AsciiExt;
 use std::str::FromStr;
 
 #[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
 pub enum PixelFormat {
-    #[serde(rename="bgra32")]
+    // camelCased: #[serde(rename="bgra32")]
+    #[serde(rename="bgra_32")]
     Bgra32,
-    #[serde(rename="bgr24")]
+    // camelCased: #[serde(rename="bgr24")]
+    #[serde(rename="bgr_24")]
     Bgr24,
-    #[serde(rename="gray8")]
+    // camelCased: #[serde(rename="gray8")]
+    #[serde(rename="gray_8")]
     Gray8,
-}
-#[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
-pub enum Encoder {
-    Png,
-    Jpeg,
 }
 
 #[repr(C)]
@@ -112,19 +138,23 @@ impl FromStr for Filter {
 
 #[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
 pub enum PngBitDepth{
-    #[serde(rename="png32")]
+    // camelCased: #[serde(rename="png32")]
+    #[serde(rename="png_32")]
     Png32,
-    #[serde(rename="png24")]
+    // camelCased: #[serde(rename="png24")]
+    #[serde(rename="png_24")]
     Png24,
 }
 
 #[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
 pub enum EncoderPreset {
+    // camelCased: #[serde(rename="libjpegturbo")]
     #[serde(rename="libjpegturbo")]
     LibjpegTurbo { quality: Option<i32> },
+    // camelCased: #[serde(rename="libpng")]
     #[serde(rename="libpng")]
     Libpng {  depth: Option<PngBitDepth>, matte: Option<Color>,
-        #[serde(rename="zlibCompression")]
+        // camelCased: #[serde(rename="zlibCompression")]
         zlib_compression: Option<i32>}
 }
 
@@ -139,15 +169,19 @@ impl EncoderPreset{
 
 #[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
 pub enum ColorSrgb {
+    // camelCased: #[serde(rename="hex")]
     #[serde(rename="hex")]
     Hex(String),
 }
 #[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
 pub enum Color {
+    // camelCased: #[serde(rename="transparent")]
     #[serde(rename="transparent")]
     Transparent,
+    // camelCased: #[serde(rename="black")]
     #[serde(rename="black")]
     Black,
+    // camelCased: #[serde(rename="srgb")]
     #[serde(rename="srgb")]
     Srgb(ColorSrgb),
 }
@@ -201,10 +235,10 @@ fn test_bgra() {
 
 #[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
 pub struct ResampleHints{
-    #[serde(rename="sharpenPercent")]
+    // camelCased: #[serde(rename="sharpenPercent")]
     pub sharpen_percent: Option<f32>,
 
-    #[serde(rename="prefer1dTwice")]
+    // camelCased: #[serde(rename="prefer1dTwice")]
     pub prefer_1d_twice: Option<bool>
 }
 
@@ -214,43 +248,51 @@ pub enum Constraint{
 
 #[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
 pub enum Node {
-    #[serde(rename="flipV")]
+    // camelCased: #[serde(rename="flipV")]
+    #[serde(rename="flip_v")]
     FlipV,
-    #[serde(rename="flipH")]
+    // camelCased: #[serde(rename="flipH")]
+    #[serde(rename="flip_h")]
     FlipH,
+    // camelCased: #[serde(rename="crop")]
     #[serde(rename="crop")]
     Crop { x1: u32, y1: u32, x2: u32, y2: u32 },
-    #[serde(rename="createCanvas")]
+    // camelCased: #[serde(rename="createCanvas")]
+    #[serde(rename="create_canvas")]
     CreateCanvas {
         format: PixelFormat,
         w: usize,
         h: usize,
         color: Color,
     },
-    #[serde(rename="copyRectToCanvas")]
+    // camelCased: #[serde(rename="copyRectToCanvas")]
+    #[serde(rename="copy_rect_to_canvas")]
     CopyRectToCanvas {
-        #[serde(rename="fromX")]
+        // camelCased: #[serde(rename="fromX")]
         from_x: u32,
-        #[serde(rename="fromY")]
+        // camelCased: #[serde(rename="fromY")]
         from_y: u32,
         width: u32,
         height: u32,
         x: u32,
         y: u32,
     },
+    // camelCased: #[serde(rename="decode")]
     #[serde(rename="decode")]
     Decode {
-        #[serde(rename="ioId")]
+        // camelCased: #[serde(rename="ioId")]
         io_id: i32,
         commands: Option<Vec<DecoderCommand>>
     },
+    // camelCased: #[serde(rename="encode")]
     #[serde(rename="encode")]
     Encode {
-        #[serde(rename="ioId")]
+        // camelCased: #[serde(rename="ioId")]
         io_id: i32,
         preset: EncoderPreset
     },
-    #[serde(rename="fillRect")]
+    // camelCased: #[serde(rename="fillRect")]
+    #[serde(rename="fill_rect")]
     FillRect {
         x1: u32,
         y1: u32,
@@ -258,7 +300,8 @@ pub enum Node {
         y2: u32,
         color: Color,
     },
-    #[serde(rename="expandCanvas")]
+    // camelCased: #[serde(rename="expandCanvas")]
+    #[serde(rename="expand_canvas")]
     ExpandCanvas {
         left: u32,
         top: u32,
@@ -266,47 +309,57 @@ pub enum Node {
         bottom: u32,
         color: Color,
     },
+    // camelCased: #[serde(rename="transpose")]
     #[serde(rename="transpose")]
     Transpose,
-    #[serde(rename="rotate90")]
+    // camelCased: #[serde(rename="rotate90")]
+    #[serde(rename="rotate_90")]
     Rotate90,
-    #[serde(rename="rotate180")]
+    // camelCased: #[serde(rename="rotate180")]
+    #[serde(rename="rotate_180")]
     Rotate180,
-    #[serde(rename="rotate270")]
+    // camelCased: #[serde(rename="rotate270")]
+    #[serde(rename="rotate_270")]
     Rotate270,
-    #[serde(rename="applyOrientation")]
+    // camelCased: #[serde(rename="applyOrientation")]
+    #[serde(rename="apply_orientation")]
     ApplyOrientation { flag: i32 },
-    #[serde(rename="resample2d")]
+    // camelCased: #[serde(rename="resample2d")]
+    #[serde(rename="resample_2d")]
     Resample2D {
         w: usize,
         h: usize,
-        #[serde(rename="downFilter")]
+        // camelCased: #[serde(rename="downFilter")]
         down_filter: Option<Filter>,
-        #[serde(rename="upFilter")]
+        // camelCased: #[serde(rename="upFilter")]
         up_filter: Option<Filter>,
         hints: Option<ResampleHints>
     },
 
-    #[serde(rename="resample1d")]
+    // camelCased: #[serde(rename="resample1d")]
+    #[serde(rename="resample_1d")]
     Resample1D {
-        #[serde(rename="scaleToWidth")]
+        // camelCased: #[serde(rename="scaleToWidth")]
         scale_to_width: usize,
-        #[serde(rename="transposeOnWrite")]
+        // camelCased: #[serde(rename="transposeOnWrite")]
         transpose_on_write: bool,
-        #[serde(rename="interpolationFilter")]
+        // camelCased: #[serde(rename="interpolationFilter")]
         interpolation_filter: Option<Filter>,
     },
     // TODO: Block use except from FFI/unit test use
-    #[serde(rename="flowBitmapBgraPtr")]
+    // camelCased: #[serde(rename="flowBitmapBgraPtr")]
+    #[serde(rename="flow_bitmap_bgra_ptr")]
     FlowBitmapBgraPtr {
-        #[serde(rename="ptrToFlowBitmapBgraPtr")]
+        // camelCased: #[serde(rename="ptrToFlowBitmapBgraPtr")]
         ptr_to_flow_bitmap_bgra_ptr: usize,
     },
 }
 #[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
 pub enum EdgeKind {
+    // camelCased: #[serde(rename="input")]
     #[serde(rename="input")]
     Input,
+    // camelCased: #[serde(rename="canvas")]
     #[serde(rename="canvas")]
     Canvas,
 }
@@ -326,38 +379,40 @@ pub struct Graph {
 #[derive(Serialize, Deserialize, Clone, Copy, PartialEq, Debug)]
 #[repr(C)]
 pub enum IoDirection {
+    // camelCased: #[serde(rename="output")]
     #[serde(rename="output")]
     Output = 8,
+    // camelCased: #[serde(rename="input")]
     #[serde(rename="input")]
     Input = 4,
 }
 
 #[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
 pub enum IoEnum {
-    #[serde(rename="bytesHex")]
+    // camelCased: #[serde(rename="bytesHex")]
+    #[serde(rename="bytes_hex")]
     BytesHex(String),
-    #[serde(rename="byteArray")]
+    // camelCased: #[serde(rename="byteArray")]
+    #[serde(rename="byte_array")]
     ByteArray(Vec<u8>),
+    // camelCased: #[serde(rename="file")]
     #[serde(rename="file")]
     Filename(String),
+    // camelCased: #[serde(rename="url")]
     #[serde(rename="url")]
     Url(String),
-    #[serde(rename="outputBuffer")]
+    // camelCased: #[serde(rename="outputBuffer")]
+    #[serde(rename="output_buffer")]
     OutputBuffer,
-    #[serde(rename="outputBase64")]
+    // camelCased: #[serde(rename="outputBase64")]
+    #[serde(rename="output_base64")]
     OutputBase64,
 }
 
-#[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
-
-pub enum IoChecksum {
-    #[serde(rename="djb2Hex")]
-    Djb2Hex(String),
-}
 
 #[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
 pub struct IoObject {
-    #[serde(rename="ioId")]
+    // camelCased: #[serde(rename="ioId")]
     pub io_id: i32,
     pub direction: IoDirection,
     pub io: IoEnum
@@ -365,8 +420,10 @@ pub struct IoObject {
 
 #[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
 pub enum Framewise {
+    // camelCased: #[serde(rename="graph")]
     #[serde(rename="graph")]
     Graph(Graph),
+    // camelCased: #[serde(rename="steps")]
     #[serde(rename="steps")]
     Steps(Vec<Node>),
 }
@@ -417,18 +474,18 @@ impl  Build001GraphRecording {
 
 #[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
 pub struct Build001Config {
-    #[serde(rename="enableJpegBlockScaling")]
+    // camelCased: #[serde(rename="enableJpegBlockScaling")]
     pub enable_jpeg_block_scaling: Option<bool>,
-    #[serde(rename="processAllGifFrames")]
+    // camelCased: #[serde(rename="processAllGifFrames")]
     pub process_all_gif_frames: Option<bool>,
-    #[serde(rename="graphRecording")]
+    // camelCased: #[serde(rename="graphRecording")]
     pub graph_recording: Option<Build001GraphRecording>,
-    #[serde(rename="noGammaCorrection")]
+    // camelCased: #[serde(rename="noGammaCorrection")]
     pub no_gamma_correction: bool,
 }
 #[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
 pub struct Build001 {
-    #[serde(rename="builderConfig")]
+    // camelCased: #[serde(rename="builderConfig")]
     pub builder_config: Option<Build001Config>,
     pub io: Vec<IoObject>,
     pub framewise: Framewise,
@@ -492,9 +549,9 @@ impl Build001 {
 }
 #[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
 pub struct Execute001 {
-    #[serde(rename="noGammaCorrection")]
+    // camelCased: #[serde(rename="noGammaCorrection")]
     pub no_gamma_correction: Option<bool>,
-    #[serde(rename="graphRecording")]
+    // camelCased: #[serde(rename="graphRecording")]
     pub graph_recording: Option<Build001GraphRecording>,
     pub framewise: Framewise,
 }
@@ -597,7 +654,7 @@ impl Execute001 {
 
 #[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
 pub struct GetImageInfo001 {
-    #[serde(rename="ioId")]
+    // camelCased: #[serde(rename="ioId")]
     pub io_id: i32,
 }
 
@@ -612,19 +669,20 @@ impl GetImageInfo001 {
 pub struct JpegIDCTDownscaleHints {
     pub width: i64,
     pub height: i64,
-    #[serde(rename="scaleLumaSpatially")]
+    // camelCased: #[serde(rename="scaleLumaSpatially")]
     pub scale_luma_spatially: Option<bool>,
-    #[serde(rename="gammaCorrectForSrgbDuringSpatialLumaScaling")]
+    // camelCased: #[serde(rename="gammaCorrectForSrgbDuringSpatialLumaScaling")]
     pub gamma_correct_for_srgb_during_spatial_luma_scaling: Option<bool>
 }
 #[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
 pub enum DecoderCommand {
-    #[serde(rename="jpegDownscaleHints")]
+    // camelCased: #[serde(rename="jpegDownscaleHints")]
+    #[serde(rename="jpeg_downscale_hints")]
     JpegDownscaleHints(JpegIDCTDownscaleHints)
 }
 #[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
 pub struct TellDecoder001 {
-    #[serde(rename="ioId")]
+    // camelCased: #[serde(rename="ioId")]
     pub io_id: i32,
     pub command: DecoderCommand
 }
@@ -645,34 +703,34 @@ impl TellDecoder001 {
 
 #[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
 pub struct ImageInfo {
-    #[serde(rename="preferredMimeType")]
+    // camelCased: #[serde(rename="preferredMimeType")]
     pub preferred_mime_type: String,
-    #[serde(rename="preferredExtension")]
+    // camelCased: #[serde(rename="preferredExtension")]
     pub preferred_extension: String,
     //Warning, one cannot count frames in a GIF without scanning the whole thing.
-    #[serde(rename="frameCount")]
+    // camelCased: #[serde(rename="frameCount")]
     pub frame_count: usize,
-    #[serde(rename="currentFrameIndex")]
+    // camelCased: #[serde(rename="currentFrameIndex")]
     pub current_frame_index: i64,
-    #[serde(rename="frame0Width")]
-    pub frame0_width: i32,
-    #[serde(rename="frame0Height")]
-    pub frame0_height: i32,
-    #[serde(rename="frame0PostDecodeFormat")]
-    pub frame0_post_decode_format: PixelFormat,
+    // camelCased: #[serde(rename="frame0Width")]
+    pub image_width: i32,
+    // camelCased: #[serde(rename="frame0Height")]
+    pub image_height: i32,
+    // camelCased: #[serde(rename="frame0PostDecodeFormat")]
+    pub frame_decodes_into: PixelFormat,
 }
 #[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
 pub struct EncodeResult{
-    #[serde(rename="preferredMimeType")]
+    // camelCased: #[serde(rename="preferredMimeType")]
     pub preferred_mime_type: String,
-    #[serde(rename="preferredExtension")]
+    // camelCased: #[serde(rename="preferredExtension")]
     pub preferred_extension: String,
 
-    #[serde(rename="ioId")]
+    // camelCased: #[serde(rename="ioId")]
     pub io_id: i32,
-    #[serde(rename="w")]
+    // camelCased: #[serde(rename="w")]
     pub w: i32,
-    #[serde(rename="h")]
+    // camelCased: #[serde(rename="h")]
     pub h: i32
 }
 
@@ -682,10 +740,13 @@ pub struct JobResult {
 }
 #[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
 pub enum ResponsePayload {
-    #[serde(rename="imageInfo")]
+    // camelCased: #[serde(rename="imageInfo")]
+    #[serde(rename="image_info")]
     ImageInfo(ImageInfo),
-    #[serde(rename="jobResult")]
+    // camelCased: #[serde(rename="jobResult")]
+    #[serde(rename="job_result")]
     JobResult(JobResult),
+    #[serde(rename="none")]
     None,
 }
 #[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
@@ -735,9 +796,9 @@ impl Response001 {
                 ImageInfo{
                     current_frame_index: 0,
                     frame_count: 1,
-                    frame0_height: 480,
-                    frame0_width: 640,
-                    frame0_post_decode_format: PixelFormat::Bgr24,
+                    image_height: 480,
+                    image_width: 640,
+                    frame_decodes_into: PixelFormat::Bgr24,
                     preferred_mime_type: "image/png".to_owned(),
                     preferred_extension: "png".to_owned()
                 }
@@ -745,7 +806,23 @@ impl Response001 {
         }
     }
 }
+pub fn rtf<T>(value: T) -> usize
+    where T: serde::Serialize, T: serde::Deserialize {
+    key_casing::print_keys_not_roundtrippable(&value)
+}
 
+#[test]
+fn roundtrip_example_responses(){
+    let failures = rtf(Response001::example_error()) +
+        rtf(Response001::example_image_info()) +
+        rtf(Response001::example_ok()) +
+        rtf(Response001::example_job_result_encoded(0,200,200,"image/jpeg", "jpg")) +
+        rtf(Build001::example_with_steps()) +
+        rtf(Execute001::example_graph()) +
+        rtf(Execute001::example_steps());
+
+    assert_eq!(0, failures);
+}
 
 
 
@@ -761,8 +838,8 @@ macro_rules! hashmap {
 fn decode_graph() {
     let text = r#"{
         "nodes": {
-            "0": {"decode": { "ioId": 1 } },
-            "1": {"rotate90" : null}
+            "0": {"decode": { "io_id": 1 } },
+            "1": {"rotate_90" : null}
 
         },
         "edges": [
@@ -852,4 +929,148 @@ fn error_from_value() {
     // must serialize/deserialize again, in order to inject an indicator into the text?
     // We cannot recreate the original location AFAICT
 
+}
+
+mod key_casing {
+    use serde;
+    use regex::{Regex, Captures};
+    use serde_json;
+
+    fn collect_keys(list: &mut Vec<String>, from: &serde_json::Value) {
+        match from {
+            &serde_json::Value::Object(ref map) => {
+                for (k, v) in map {
+                    list.push(k.to_owned());
+                    collect_keys(list, &v);
+                }
+            }
+            &serde_json::Value::Array(ref vec) => {
+                for v in vec {
+                    collect_keys(list, &v);
+                }
+            }
+            _ => {}
+        }
+    }
+
+    pub fn collect_active_json_keys<T>(value: &T) -> serde_json::error::Result<Vec<String>>
+        where T: serde::Serialize, T: serde::Deserialize {
+        let bytes = serde_json::to_vec(value)?;
+        let generic: serde_json::Value = serde_json::from_slice(&bytes)?;
+        let mut keys = Vec::new();
+        collect_keys(&mut keys, &generic);
+        Ok(keys)
+    }
+
+
+    pub fn which_json_keys_cannot_roundtrip_casing<T>(value: &T) -> serde_json::error::Result<Vec<String>>
+        where T: serde::Serialize, T: serde::Deserialize {
+        let keys = collect_active_json_keys(value)?;
+
+        Ok(keys.into_iter().filter(|key| {
+            let camelcase = style_id(key, Style::CamelCase);
+            let snake_case = style_id(&camelcase, Style::CamelCase);
+            camelcase != snake_case
+        }).collect::<Vec<String>>())
+    }
+
+    /// Returns the number of roundtrip failures we printed
+    pub fn print_keys_not_roundtrippable<T>(value: &T) -> usize
+        where T: serde::Serialize, T: serde::Deserialize {
+        let keys = collect_active_json_keys(value).expect("Value must be marked Serialize and Deserialize");
+
+        let mut fail_count = 0;
+        for key in keys {
+            let camelcase = style_id(&key, Style::CamelCase);
+            let snake_case = style_id(&camelcase, Style::Snake);
+
+            if key != snake_case {
+                println!("Cannot round-trip {} -> {} -> {}", key, camelcase, snake_case);
+                fail_count += 1;
+            }else{
+                //println!("Round-tripped {} -> {} -> {}", key, camelcase, snake_case);
+            }
+        }
+        fail_count
+    }
+
+    pub fn print_keys_not_roundtrippable_consuming<T>(value: T) -> usize
+        where T: serde::Serialize, T: serde::Deserialize {
+        print_keys_not_roundtrippable(&value)
+    }
+
+
+
+    #[derive(Copy, Clone, PartialEq, Debug)]
+    enum Transform {
+        AddUnderscores,
+        Capitalize,
+        LowerFirst,
+        StripUnderscores
+    }
+
+    #[derive(Copy, Clone, PartialEq, Debug)]
+    enum Style {
+        Snake,
+        ScreamingSnake,
+        PascalCase,
+        PascalSnake,
+        CamelSnake,
+        CamelCase
+    }
+
+
+    fn transform(s: &str, transform: Transform) -> String {
+        match transform {
+            Transform::AddUnderscores => {
+                let temp = Regex::new("([^xy])([0-9]+)").unwrap().replace_all(s, "$1_$2");
+                let temp = Regex::new("[A-Z]").unwrap().replace_all(&temp, "_$0");
+                let temp = Regex::new(r"(\A|\s+)_+").unwrap().replace_all(&temp, "$1");
+                temp.replace("__", "_")
+            },
+            Transform::StripUnderscores => {
+                s.replace("_", "")
+            },
+            Transform::Capitalize => {
+                Regex::new(r"(_|\b)([a-z])").unwrap().replace_all(&s, |c: &Captures| c[0].to_uppercase())
+            }
+            Transform::LowerFirst => {
+                Regex::new(r"(\A|\s+)([A-Z])").unwrap().replace_all(&s, |c: &Captures| c[0].to_lowercase())
+            }
+        }
+    }
+
+    ///
+    /// If the input has any underscores, they must all be in the right places - we'll ignore case
+    ///
+    fn style_id(s: &str, style: Style) -> String {
+        let mut temp = s.to_owned();
+        //Normalize to underscores (unless there are already some)
+        if !temp.contains("_") {
+            temp = transform(&temp, Transform::AddUnderscores);
+        }
+        //Normalize to lower (relying on underscores now)
+        let temp = temp.to_lowercase();
+
+        let temp: String = match style {
+            Style::PascalSnake | Style::PascalCase => {
+                transform(&temp, Transform::Capitalize)
+            },
+            Style::CamelCase | Style::CamelSnake => {
+                let t = transform(&temp, Transform::Capitalize);
+                transform(&t, Transform::LowerFirst)
+            }
+            Style::ScreamingSnake => {
+                temp.to_uppercase()
+            }
+            _ => temp
+        };
+
+        match style {
+            Style::PascalCase | Style::CamelCase => {
+                transform(&temp, Transform::StripUnderscores)
+            }
+            _ => temp
+        }
+    }
 }

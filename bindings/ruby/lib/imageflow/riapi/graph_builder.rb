@@ -9,22 +9,22 @@ module Imageflow
       attr_accessor :result_mime_type
 
       def add_decoder(io_id:)
-        @steps << {decode: {ioId: io_id}}
+        @steps << {decode: {io_id: io_id}}
       end
 
       def add_encoder(io_id:, codec: , instructions: )
         preset = {"libjpegturbo": {}} if codec == :jpg
         preset = {"libpng": {}} if codec == :png
 
-        @steps << {encode: {ioId: io_id, preset: preset}}
+        @steps << {encode: {io_id: io_id, preset: preset}}
       end
 
       def add_scale(w:,h:)
-        @steps <<  {"resample2d": {
+        @steps <<  {"resample_2d": {
             "w": w,
             "h": h,
-            "downFilter": "Robidoux",
-            "upFilter": "Ginseng",
+            "down_filter": "Robidoux",
+            "up_filter": "Ginseng",
             "hints": nil
         }}
       end
@@ -33,15 +33,15 @@ module Imageflow
         raise "Invalid degree value (#{degrees}) - must be multiple of 90" unless degress % 90 == 0
         degrees = degrees % 360
         return if degress == 0
-        @steps << {"rotate#{degress}": {}}
+        @steps << {"rotate_#{degress}": {}}
       end
 
       def add_flip(flip)
         accepted = [:none, :x, :y, :xy]
         raise "Invalid flip value (#{degrees}) - must be one of #{accepted.inspect}" unless accepted.include? (flip)
         return if flip == :none
-        @steps << {flipH: {}} if flip.to_s.start_with?("x")
-        @steps << {flipV: {}} if flip.to_s.end_width?("y")
+        @steps << {flip_h: {}} if flip.to_s.start_with?("x")
+        @steps << {flip_v: {}} if flip.to_s.end_width?("y")
       end
 
       def add_crop(crop:)
@@ -54,7 +54,7 @@ module Imageflow
       end
 
       def add_expand_canvas(left:, top:, right:, bottom:, color:)
-        @steps <<  {"expandCanvas": {
+        @steps <<  {"expand_canvas": {
             "left": left,
             "top": top,
             "right": right,
@@ -72,7 +72,7 @@ module Imageflow
       end
 
       def apply_decoder_scaling_and_get_dimensions(source_info:, instructions:, job:, input_placeholder_id:)
-        original_size = [source_info[:frame0_width], source_info[:frame0_height]]
+        original_size = [source_info[:image_width], source_info[:image_height]]
 
         #swap coords if we're rotating
         original_size.reverse! unless instructions.source_rotate.nil? || instructions.source_rotate % 180 == 0
@@ -98,7 +98,7 @@ module Imageflow
 
         updated_info = job.get_image_info(placeholder_id: input_placeholder_id)
 
-        [updated_info[:frame0_width],updated_info[:frame0_height]]
+        [updated_info[:image_width],updated_info[:image_height]]
       end
 
 

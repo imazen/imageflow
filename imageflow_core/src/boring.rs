@@ -417,20 +417,20 @@ pub fn process_image<F, C, R>(commands: BoringCommands,
         }
 
 
-        let info_blob: JsonResponse = job.message("v0.1/get_image_info", "{\"ioId\": 0}".as_bytes()).unwrap();
+        let info_blob: JsonResponse = job.message("v0.1/get_image_info", "{\"io_id\": 0}".as_bytes()).unwrap();
         let info_response: s::Response001 = serde_json::from_slice(info_blob.response_json.as_ref()).unwrap();
         if !info_response.success {
             panic!("get_image_info failed: {:?}",info_response);
         }
-        let (frame0_width, frame0_height) = match info_response.data {
-            s::ResponsePayload::ImageInfo(info) => (info.frame0_width, info.frame0_height),
+        let (image_width, image_height) = match info_response.data {
+            s::ResponsePayload::ImageInfo(info) => (info.image_width, info.image_height),
             _ => panic!("")
         };
 
 
-        let (framewise, (pre_w, pre_h)) = create_framewise(frame0_width,frame0_height, commands).unwrap();
+        let (framewise, (pre_w, pre_h)) = create_framewise(image_width,image_height, commands).unwrap();
 
-        if pre_w < frame0_width && pre_h < frame0_height {
+        if pre_w < image_width && pre_h < image_height {
             let send_hints = s::TellDecoder001 {
                 io_id: 0,
                 command: s::DecoderCommand::JpegDownscaleHints(s::JpegIDCTDownscaleHints {

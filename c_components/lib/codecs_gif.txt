@@ -216,11 +216,11 @@ static bool flow_codecs_gif_get_info(flow_c * c, void * codec_state, struct flow
             FLOW_error_return(c);
         }
     }
-    info_ref->frame0_width = state->gif->SWidth;
-    info_ref->frame0_height = state->gif->SHeight;
+    info_ref->c = state->gif->SWidth;
+    info_ref->image_height = state->gif->SHeight;
     info_ref->frame_count = state->gif->ImageCount;
     info_ref->current_frame_index = state->current_frame_index;
-    info_ref->frame0_post_decode_format = flow_bgra32;
+    info_ref->frame_decodes_into = flow_bgra32;
     return true;
 }
 

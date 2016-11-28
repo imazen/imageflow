@@ -231,9 +231,9 @@ bool flow_job_get_decoder_info(flow_c * c, struct flow_job * job, int32_t by_pla
         FLOW_error(c, flow_status_Invalid_internal_state); // Codecs should be initialized by this point
         return false;
     }
-    info->frame0_post_decode_format = flow_bgra32;
-    info->frame0_height = 0;
-    info->frame0_width = 0;
+    info->frame_decodes_into = flow_bgra32;
+    info->image_height = 0;
+    info->image_width = 0;
     info->codec_id = current->codec_id;
     info->current_frame_index = 0;
     info->frame_count = 0;

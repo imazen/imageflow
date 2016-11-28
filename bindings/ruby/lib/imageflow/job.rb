@@ -14,7 +14,7 @@ module Imageflow
       job.destroy!
       c.destroy! unless context == c
 
-      {width: info[:frame0Width],  height: info[:frame0Height], filename: filename}
+      {width: info[:image_width],  height: info[:image_height], filename: filename}
     end
 
     def destroy!
@@ -79,15 +79,11 @@ module Imageflow
     end
 
     def get_image_info(placeholder_id:)
-      result = self.send_json("v0.1/get_image_info", {"ioId": placeholder_id})
+      result = self.send_json("v0.1/get_image_info", {"io_id": placeholder_id})
       raise result.message unless result.ok?
 
-      info = result.data["imageInfo"]
+      info = result.data["image_info"]
       info = info.nil? ? info : info.inject({}){|memo,(k,v)| memo[k.to_sym] = v; memo}
-      info[:frame0_width] = info[:frame0Width]
-      info[:frame0_height] = info[:frame0Height]
-      info[:frame0_post_decode_format] = info[:frame0PostDecodeFormat]
-      info[:preferred_mime_type] = info[:preferredMimeType]
       info
     end
 
@@ -96,9 +92,9 @@ module Imageflow
                                     scale_luma_spatially: true,
                                     gamma_correct_for_srgb_during_spatial_luma_scaling: true)
 
-      hints = {width: downscaled_min_width, height: downscaled_min_height, scaleLumaSpatially: scale_luma_spatially, "gammaCorrectForSrgbDuringSpatialLumaScaling": gamma_correct_for_srgb_during_spatial_luma_scaling}
+      hints = {width: downscaled_min_width, height: downscaled_min_height, scale_luma_spatially: scale_luma_spatially, "gamma_correct_for_srgb_during_spatial_luma_scaling": gamma_correct_for_srgb_during_spatial_luma_scaling}
 
-      result = send_json("v0.1/tell_decoder", {"ioId": placeholder_id, "command": {"jpegDownscaleHints": hints}})
+      result = send_json("v0.1/tell_decoder", {"io_id": placeholder_id, "command": {"jpeg_downscale_hints": hints}})
       raise result.message unless result.ok?
     end
   end

@@ -224,9 +224,9 @@ impl Default for DecoderInfo {
             preferred_extension: ptr::null(),
             frame_count: 0,
             current_frame_index: 0,
-            frame0_width: 0,
-            frame0_height: 0,
-            frame0_post_decode_format: PixelFormat::BGRA32,
+            image_width: 0,
+            image_height: 0,
+            frame_decodes_into: PixelFormat::BGRA32,
         }
     }
 }
@@ -238,9 +238,9 @@ pub struct DecoderInfo {
     pub preferred_extension: *const i8,
     pub frame_count: usize,
     pub current_frame_index: i64,
-    pub frame0_width: i32,
-    pub frame0_height: i32,
-    pub frame0_post_decode_format: PixelFormat,
+    pub image_width: i32,
+    pub image_height: i32,
+    pub frame_decodes_into: PixelFormat,
 }
 
 

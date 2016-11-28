@@ -26,8 +26,8 @@ module Imageflow
 
         input_info = job.get_image_info placeholder_id: 0
 
-        w = input_info[:frame0Width]
-        h = input_info[:frame0Height]
+        w = input_info[:image_width]
+        h = input_info[:image_height]
 
         instructions = Imageflow::Riapi::Instructions.new
         instructions.width = opts.width

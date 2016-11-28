@@ -375,8 +375,8 @@ fn test_idct_callback(_: s::ImageInfo) -> (Option<s::DecoderCommand>, Vec<s::Nod
 
 fn test_idct_no_gamma_callback(info: s::ImageInfo) -> (Option<s::DecoderCommand>, Vec<s::Node>, bool)
 {
-    let new_w = (info.frame0_width * 6 + 8 - 1) / 8;
-    let new_h = (info.frame0_height * 6 + 8 - 1) / 8;
+    let new_w = (info.image_width * 6 + 8 - 1) / 8;
+    let new_h = (info.image_height * 6 + 8 - 1) / 8;
     let hints = s::JpegIDCTDownscaleHints{
         gamma_correct_for_srgb_during_spatial_luma_scaling: Some(false),
         scale_luma_spatially: Some(true),
@@ -421,7 +421,7 @@ fn test_with_callback(checksum_name: String, input: s::IoEnum, callback: fn(s::I
         ::imageflow_core::parsing::IoTranslator::new(c.as_ptr().unwrap()).add_to_job(job.as_ptr(), vec![s::IoObject{ io_id:0, direction: s::IoDirection::Input, io: input}]);
 
 
-        let info_blob: JsonResponse = job.message("v0.1/get_image_info", "{\"ioId\": 0}".as_bytes()).unwrap();
+        let info_blob: JsonResponse = job.message("v0.1/get_image_info", "{\"io_id\": 0}".as_bytes()).unwrap();
         let info_response: s::Response001 = serde_json::from_slice(info_blob.response_json.as_ref()).unwrap();
         if !info_response.success {
             panic!("get_image_info failed: {:?}",info_response);

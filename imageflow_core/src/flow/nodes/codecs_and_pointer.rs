@@ -110,9 +110,9 @@ fn decoder_estimate(ctx: &mut OpCtxMut, ix: NodeIndex<u32>) {
     }
 
     ctx.weight_mut(ix).frame_est = FrameEstimate::Some(FrameInfo {
-        fmt: frame_info.frame0_post_decode_format,
-        w: frame_info.frame0_width,
-        h: frame_info.frame0_height,
+        fmt: frame_info.frame_decodes_into,
+        w: frame_info.image_width,
+        h: frame_info.image_height,
         alpha_meaningful: true, // WRONG
     });
 }

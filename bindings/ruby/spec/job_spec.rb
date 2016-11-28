@@ -31,9 +31,9 @@ module Imageflow
 
 
         job.execute framewise: {steps: [
-            {decode: {ioId: 0}},
-            {resample2d: {w: 300, h: 200}},
-            {encode: {ioId: 1, preset: {"libjpegturbo": {quality: 90}}}}
+            {decode: {io_id: 0}},
+            {resample_2d: {w: 300, h: 200}},
+            {encode: {io_id: 1, preset: {"libjpegturbo": {quality: 90}}}}
         ]}
 
         out_bytes = job.get_buffer(placeholder_id: 1)
@@ -51,9 +51,9 @@ module Imageflow
 
 
         job.execute framewise: {steps: [
-            {decode: {ioId: 0}},
-            {resample2d: {w: 300, h: 200}},
-            {encode: {ioId: 1, preset: {"libpng": {}}}}
+            {decode: {io_id: 0}},
+            {resample_2d: {w: 300, h: 200}},
+            {encode: {io_id: 1, preset: {"libpng": {}}}}
         ]}
         job = nil
         g = nil
@@ -67,9 +67,9 @@ module Imageflow
         job.add_input_file(placeholder_id: 0, filename: "hello.png")
         job.add_output_buffer(placeholder_id: 1)
         job.execute framewise: {steps: [
-            {decode: {ioId: 0}},
-            {resample2d: {w: 300, h: 200}},
-            {encode: {ioId: 1, preset: {"libjpegturbo": {}}}}
+            {decode: {io_id: 0}},
+            {resample_2d: {w: 300, h: 200}},
+            {encode: {io_id: 1, preset: {"libjpegturbo": {}}}}
         ]}
 
         out_bytes = job.get_buffer(placeholder_id: 1)

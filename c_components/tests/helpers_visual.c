@@ -579,8 +579,8 @@ bool get_image_dimensions(flow_c * c, uint8_t * bytes, size_t bytes_count, int32
     if (!flow_job_get_decoder_info(c, job, 0, &info)) {
         FLOW_error_return(c);
     }
-    *width = info.frame0_width;
-    *height = info.frame0_height;
+    *width = info.image_width;
+    *height = info.image_height;
     if (!flow_job_destroy(c, job)) {
         FLOW_error_return(c);
     }

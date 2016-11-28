@@ -267,9 +267,10 @@ struct flow_decoder_info {
     const char * preferred_extension;
     size_t frame_count;
     int64_t current_frame_index;
-    int32_t frame0_width;
-    int32_t frame0_height;
-    flow_pixel_format frame0_post_decode_format;
+    //Not applicable to TIFF files - will be the first frame instead
+    int32_t image_width;
+    int32_t image_height;
+    flow_pixel_format frame_decodes_into;
     // const char * format_subtype;
     // bool is_srgb;
 };
