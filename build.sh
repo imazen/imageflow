@@ -117,7 +117,7 @@ fi
 export VALGRIND_COMMAND="valgrind -q --error-exitcode=9 --gen-suppressions=all"
 export VALGRIND_RUST_COMMAND="$VALGRIND_COMMAND cargo test"
 export RUST_BACKTRACE=1
-
+STAMP="+[%H:%M:%S]"
 
 
 
@@ -165,12 +165,17 @@ echo "build.sh sees these relevant variables: ${BUILD_VARS[*]}"
 		(
 			cd build
 			eval "$COPY_VALGRINDRC"
+			date "$STAMP"
 			conan install --scope build_tests=True --scope "debug_build=${TEST_C_DEBUG_BUILD:-False}" --scope "coverage=${COVERAGE:-False}" --scope "skip_test_run=${VALGRIND:-False}" --build missing -u ../
+			date "$STAMP"
 			conan build ../
 			if [[ "$VALGRIND" == 'True' ]]; then
 				#Sync to build/CTestTestfile.cmake
+				date "$STAMP"
 				$VALGRIND_COMMAND ./bin/test_imageflow
+				date "$STAMP"
 				$VALGRIND_COMMAND ./bin/test_variations
+				date "$STAMP"
 				$VALGRIND_COMMAND ./bin/test_fastscaling
 				#echo "This next test is slow; it's a quickcheck running under valgrind"
 				#$VALGRIND_COMMAND ./bin/test_theft_render
@@ -195,7 +200,9 @@ echo "build.sh sees these relevant variables: ${BUILD_VARS[*]}"
 	conan export imazen/testing
 	(
 		cd ../imageflow_core
+		date "$STAMP"
 		conan install --build missing
+		date "$STAMP"
 	)
 )
 
@@ -211,30 +218,38 @@ if [[ "$TEST_RUST" == 'True' ]]; then
 		echo "Running all crate tests under Valgrind"
 		(
 			cd imageflow_core
+			date "$STAMP"
 			eval "$COPY_VALGRINDRC"
 			eval "$VALGRIND_CARGO_COMMAND"
 		)
 		(
 			cd imageflow_abi
+			date "$STAMP"
 			eval "$COPY_VALGRINDRC"
 			eval "$VALGRIND_CARGO_COMMAND"
 		)
 		(
 			cd imageflow_types
+			date "$STAMP"
 			eval "$COPY_VALGRINDRC"
 			eval "$VALGRIND_CARGO_COMMAND"
 		)
 		(
 			cd imageflow_tool
+			date "$STAMP"
 			eval "$COPY_VALGRINDRC"
 			eval "$VALGRIND_CARGO_COMMAND"
+			date "$STAMP"
 			./test_tool.sh
+			date "$STAMP"
 			eval "$VALGRIND_COMMAND ../target/debug/imageflow_tool diagnose --self-test"
+			date "$STAMP"
 		)
 		if [[ "$IMAGEFLOW_SERVER" == 'True' ]]; then
 			(
 				cd imageflow_server
 				eval "$COPY_VALGRINDRC"
+				date "$STAMP"
 				eval "$VALGRIND_CARGO_COMMAND"
 			)
 		fi
@@ -242,24 +257,30 @@ if [[ "$TEST_RUST" == 'True' ]]; then
 		echo "Running all crate tests"
 		(
 			cd imageflow_core
+			date "$STAMP"
 			cargo test
 		)
 		(
 			cd imageflow_abi
+			date "$STAMP"
 			cargo test
 		)
 		(
 			cd imageflow_types
+			date "$STAMP"
 			cargo test
 		)
 		(
 			cd imageflow_tool
+			date "$STAMP"
 			cargo test
+			date "$STAMP"
 			./test_tool.sh
 		)
 		if [[ "$IMAGEFLOW_SERVER" == 'True' ]]; then
 			(
 				cd imageflow_server
+				date "$STAMP"
 				cargo test
 			)
 		fi
@@ -270,9 +291,8 @@ if [[ "$BUILD_RELEASE" == 'True' ]]; then
 	echo "==================================================================== [build.sh]"
 	echo "Building release mode binaries and generating docs"
 	echo 
-
+	date "$STAMP"
 	echo "Building imageflow_core docs"
-
 	(
 		cd imageflow_core
 		cargo doc --no-deps
@@ -282,33 +302,32 @@ if [[ "$BUILD_RELEASE" == 'True' ]]; then
 		cd imageflow_types
 		cargo doc --no-deps
 	)
-
 	echo "Building imageflow_tool (Release) and docs"
-
 	(
 		cd imageflow_tool
+		date "$STAMP"
 		cargo build --release
 		cargo doc --no-deps
 	)
-
 	echo "Building libimageflow (Release) and docs"
 	(
 		cd imageflow_abi
+		date "$STAMP"
 		cargo build --release
 		cargo doc --no-deps
 	)
-
 	if [[ "$IMAGEFLOW_SERVER" == 'True' ]]; then
 		echo "Building imageflow_server (Release) and docs"
 
 		(
 			cd imageflow_server
+			date "$STAMP"
 			cargo build --release
 			cargo doc --no-deps
 		)
 	fi
 
-
+	date "$STAMP"
 	echo "==================================================================== [build.sh]"
 	echo "Copying stuff to artifacts folder"
 	echo 
@@ -344,6 +363,7 @@ if [[ "$BUILD_RELEASE" == 'True' ]]; then
 
 fi
 echo
+date "$STAMP"
 echo "========================== Build complete :) =================== [build.sh]"
 
 
