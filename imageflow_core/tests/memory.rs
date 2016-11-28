@@ -37,5 +37,5 @@ fn setup(dir: &str){
 
 #[test]
 fn repro_mem_access_err(){
-    setup("./");
+    setup(".");
 }

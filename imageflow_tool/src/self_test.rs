@@ -54,7 +54,7 @@ fn setup(dir: &str){
     create_blank(dir, "200x200", 200, 200, s::EncoderPreset::libjpegturbo());
     create_blank(dir, "200x200", 200, 200, s::EncoderPreset::libpng32());
     let to_path =  Path::new(dir).join("valgrind_suppressions.txt");
-    std::fs::copy("../valgrind_suppressions.txt", to_path).unwrap();
+    std::fs::copy(Path::new("..").join("valgrind_suppressions.txt"), to_path).unwrap();
 }
 
 fn test(exe: &Path, dir: &str, args: &str, expected_exit_code: i32 ){
@@ -98,7 +98,7 @@ pub fn run() -> i32{
 
     let self_path = std::env::current_exe().expect("For --self-test to work, we need to know the binary's location. env::current_exe failed");
 
-    let dir = format!("./self_tests/{:032}", UTC::now().timestamp());
+    let dir = Path::new(".").join("self_tests").join(format!("{:032}", UTC::now().timestamp())).to_string_lossy().into_owned();
     create_dir_all(&dir).expect("Failed to create test directory");
     setup(&dir);
 
