@@ -13,6 +13,10 @@ platform:
 - x64
 - x86
 
+matrix:
+  fast_finish: true
+
+
 #We install nasm in case libjpeg-turbo has to be built from source
 install:
   - SET "GIT_COMMIT=%APPVEYOR_REPO_COMMIT%"
@@ -83,11 +87,17 @@ test_script:
   - cd imageflow_tool
   - cargo test --target=%RUST_TARGET% 
   - cargo doc --no-deps
+  - cargo build --target=%RUST_TARGET% --bin imageflow_tool
   - echo. && echo Displaying embedded info (debug build imageflow_tool)
   - ..\target\%RUST_TARGET%\debug\imageflow_tool.exe diagnose --show-compilation-info
   - ..\target\%RUST_TARGET%\debug\imageflow_tool.exe diagnose --self-test
   - cd ..
   - cd imageflow_abi
+  - cargo test --target=%RUST_TARGET% 
+  - cargo doc --no-deps
+  - cd ..
+  - cd ..
+  - cd imageflow_types
   - cargo test --target=%RUST_TARGET% 
   - cargo doc --no-deps
   - cd ..
