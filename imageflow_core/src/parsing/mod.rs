@@ -42,10 +42,10 @@ impl BuildRequestHandler {
     pub fn new() -> BuildRequestHandler {
         BuildRequestHandler {}
     }
-    pub fn do_and_respond<'a, 'b, 'c, 'd>(&'a self,
-                                          ctx: &'d mut ContextPtr,
-                                          json: &'b [u8])
-                                          -> Result<JsonResponse<'c>, JsonResponseError> {
+    pub fn do_and_respond(&self,
+                                          ctx: &mut ContextPtr,
+                                          json: &[u8])
+                                          -> Result<JsonResponse, JsonResponseError> {
 
         let parsed: s::Build001 = serde_json::from_slice(json).unwrap();
 

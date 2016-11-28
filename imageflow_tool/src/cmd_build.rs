@@ -15,7 +15,7 @@ pub enum JobSource{
 
 pub struct CmdBuild{
     job: Result<s::Build001>,
-    response: Option<Result<fc::JsonResponseBuf>>
+    response: Option<Result<fc::JsonResponse>>
 }
 
 #[derive(Debug)]
@@ -315,9 +315,9 @@ impl CmdBuild {
         }
     }
 
-    fn build<'a,'b>(data: &'a s::Build001) -> Result<fc::JsonResponseBuf>{
+    fn build<'a,'b>(data: &'a s::Build001) -> Result<fc::JsonResponse>{
         let mut context = fc::Context::create()?;
-        Ok(context.message("v0.1/build", &serde_json::to_vec(data).unwrap()).map(|r| r.into_buf())?)
+        Ok(context.message("v0.1/build", &serde_json::to_vec(data).unwrap())?)
     }
 
 

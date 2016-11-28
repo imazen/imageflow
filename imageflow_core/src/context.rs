@@ -6,6 +6,7 @@ use ::ffi::ImageflowJsonResponse;
 use std::path::Path;
 use std::fs::File;
 use std::io::Write;
+use ::MethodRouter;
 
 extern crate imageflow_types as s;
 extern crate serde_json;
@@ -50,6 +51,59 @@ pub struct JobPtr {
     ptr: *mut ::ffi::Job,
     c: *mut ::ffi::Context
 }
+
+
+fn create_job_router() -> MethodRouter<'static, JobPtr>{
+    let mut r = MethodRouter::new();
+    r.add_responder("v0.1/get_image_info", Box::new(
+        move |job: &mut JobPtr, data: s::GetImageInfo001| {
+            Ok(s::ResponsePayload::ImageInfo(job.get_image_info(data.io_id)?))
+        }
+    ));
+    r.add_responder("v0.1/tell_decoder", Box::new(
+        move |job: &mut JobPtr, data: s::TellDecoder001| {
+            job.tell_decoder(data.io_id, data.command)?;
+            Ok(s::ResponsePayload::None)
+        }
+    ));
+    r.add_responder("v0.1/execute", Box::new(
+        move |job: &mut JobPtr, parsed: s::Execute001| {
+            let mut g = ::parsing::GraphTranslator::new().translate_framewise(parsed.framewise);
+            if let Some(r) = parsed.graph_recording {
+                job.configure_graph_recording(r);
+            }
+            unsafe {
+                if let Some(b) = parsed.no_gamma_correction {
+                    ::ffi::flow_context_set_floatspace(job.c, match b {
+                        true => ::ffi::Floatspace::srgb,
+                        false => ::ffi::Floatspace::linear
+                    }, 0f32, 0f32, 0f32)
+                }
+            }
+            if !job.execute(&mut g){
+                unsafe { job.ctx().assert_ok(Some(&mut g)); }
+            }
+            let mut encodes = Vec::new();
+            for node in g.raw_nodes(){
+                if let ::flow::definitions::NodeResult::Encoded(ref r) = node.weight.result{
+                    encodes.push((*r).clone());
+                }
+            }
+            Ok(s::ResponsePayload::JobResult(s::JobResult{encodes:encodes}))
+        }
+    ));
+    r.add("brew_coffee", Box::new(
+        move |job: &mut JobPtr, bytes: &[u8] |{
+            Ok(JsonResponse::teapot())
+        }
+    ));
+    r
+}
+
+lazy_static!{
+        static ref JOB_ROUTER: MethodRouter<'static, JobPtr> = create_job_router();
+    }
+
 
 impl JobPtr {
     pub fn context_ptr(&self) -> *mut ::ffi::Context{ self.c }
@@ -232,73 +286,12 @@ impl JobPtr {
         s
     }
 
-    pub fn message<'a, 'b, 'c>(&'a mut self,
-                               method: &'b str,
-                               json: &'b [u8])
-                               -> Result<JsonResponse<'c>> {
+    pub fn message(&mut self,
+                               method: &str,
+                               json: &[u8])
+                               -> Result<JsonResponse> {
 
-        match method {
-            "v0.1/get_image_info" => {
-                let parsed_maybe: std::result::Result<s::GetImageInfo001, serde_json::Error> = serde_json::from_slice(json);
-                match parsed_maybe {
-                    Ok(parsed) => {
-                        let info = self.get_image_info(parsed.io_id).unwrap();
-                        Ok(JsonResponse::success_with_payload(s::ResponsePayload::ImageInfo(info)))
-                    }
-                    Err(e) => {
-                        Ok(JsonResponse::from_parse_error(e,json))
-                    }
-                }
-
-            }
-            "v0.1/tell_decoder" => {
-                let parsed_maybe: std::result::Result<s::TellDecoder001, serde_json::Error> = serde_json::from_slice(json);
-                match parsed_maybe {
-                    Ok(parsed) => {
-                        self.tell_decoder(parsed.io_id, parsed.command).unwrap();
-                        Ok(JsonResponse::ok())
-                    }
-                    Err(e) => {
-                        Ok(JsonResponse::from_parse_error(e,json))
-                    }
-                }
-            }
-            "v0.1/execute" => {
-                let parsed_maybe: std::result::Result<s::Execute001, serde_json::Error> = serde_json::from_slice(json);
-                match parsed_maybe {
-                    Ok(parsed) => {
-                        let mut g = ::parsing::GraphTranslator::new().translate_framewise(parsed.framewise);
-                        if let Some(r) = parsed.graph_recording {
-                            self.configure_graph_recording(r);
-                        }
-                        unsafe {
-                            if let Some(b) = parsed.no_gamma_correction {
-                                ::ffi::flow_context_set_floatspace(self.c, match b {
-                                    true => ::ffi::Floatspace::srgb,
-                                    false => ::ffi::Floatspace::linear
-                                }, 0f32, 0f32, 0f32)
-                            }
-                        }
-                        if !self.execute(&mut g){
-                            unsafe { self.ctx().assert_ok(Some(&mut g)); }
-                        }
-                        let mut encodes = Vec::new();
-                        for node in g.raw_nodes(){
-                            if let ::flow::definitions::NodeResult::Encoded(ref r) = node.weight.result{
-                                encodes.push((*r).clone());
-                            }
-                        }
-                        //Iterate g for NodeResult::Encoded to populate response
-                        Ok(JsonResponse::success_with_payload(s::ResponsePayload::JobResult(s::JobResult{encodes:encodes})))
-                    }
-                    Err(e) => {
-                        Ok(JsonResponse::from_parse_error(e,json))
-                    }
-                }
-            }
-            "brew_coffee" => Ok(JsonResponse::teapot()),
-            _ => Ok(JsonResponse::method_not_understood())
-        }
+        JOB_ROUTER.invoke(self, method, json)
     }
 
 
@@ -438,10 +431,10 @@ impl ContextPtr {
 
 
 
-    pub fn message<'a, 'b, 'c>(&'a mut self,
-                               method: &'b str,
-                               json: &'b [u8])
-                               -> Result<JsonResponse<'c>> {
+    pub fn message(&mut self,
+                               method: &str,
+                               json: &[u8])
+                               -> Result<JsonResponse> {
         if self.ptr.is_none() {
             return Err(FlowError::ContextInvalid);
         }
@@ -460,7 +453,7 @@ impl ContextPtr {
         Ok(response)
     }
 
-    fn build_0_0_1<'a, 'b, 'c>(&'a mut self, json: &'b [u8]) -> Result<JsonResponse<'c>> {
+    fn build_0_0_1(&mut self, json: &[u8]) -> Result<JsonResponse> {
         match ::parsing::BuildRequestHandler::new().do_and_respond(self, json) {
             Ok(response) => Ok(response),
             Err(original_err) => {
