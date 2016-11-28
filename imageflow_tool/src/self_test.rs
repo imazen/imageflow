@@ -98,8 +98,10 @@ pub fn run() -> i32{
 
     let self_path = std::env::current_exe().expect("For --self-test to work, we need to know the binary's location. env::current_exe failed");
 
-    let dir = Path::new(".").join("self_tests").join(format!("{:032}", UTC::now().timestamp())).to_string_lossy().into_owned();
-    create_dir_all(&dir).expect("Failed to create test directory");
+    let dir = Path::new("self_tests").join(format!("{:032}", UTC::now().timestamp())).to_string_lossy().into_owned();
+    if let Err(e) = create_dir_all(&dir) {
+        panic!("Failed to create directory {} due to {:?}", dir, e);
+    }
     setup(&dir);
 
     test(self_path.as_ref(), &dir, "v0.1/build --json example1.json --in 200x200.png 200x200.jpg --out out0.jpg --response out0.json", 0);
