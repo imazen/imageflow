@@ -31,7 +31,9 @@ Given we're moving the libimageflow FFI surface to Rust, these will likely impro
 
 ### Node bindings
 
-Unofficial Node bindings (via Neon) are likely to happen before December 2016. Sooner, if we get any volunteers. 
+Nobody has stepped forward to help with unofficial bindings. 
+
+The FFI API is pretty stable, so someone should [generate bindings from the header files](https://github.com/tjfontaine/node-ffi-generate) and start messing around. 
 
 Official Node bindings will be released by August 2017. 
 
