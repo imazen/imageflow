@@ -3,6 +3,10 @@
 #![feature(alloc_system)]
 #![feature(conservative_impl_trait)]
 #![feature(proc_macro)]
+#![feature(integer_atomics)]
+
+//intellij-rust flags this anyway
+//#![feature(field_init_shorthand)]
 
 #![allow(unused_features)]
 #![allow(unused_imports)]
@@ -73,7 +77,7 @@ mod internal_prelude{
         pub use std::ffi::{CString,CStr};
         pub use std::str::FromStr;
         pub use std::ascii::AsciiExt;
-        pub use std::collections::HashMap;
+        pub use std::collections::{HashSet,HashMap};
         pub use daggy::{Dag, EdgeIndex, NodeIndex};
         pub use std::{ptr,marker,slice,cell,io,string,fmt,mem};
         pub use libc::{c_void, c_float, int32_t, int64_t, size_t, uint32_t};
