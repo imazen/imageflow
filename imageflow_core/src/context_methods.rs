@@ -17,7 +17,7 @@ fn create_context_router() -> MethodRouter<'static, ContextPtr>{
 //    ));
     r.add_responder("v0.1/build", Box::new(
         move |context: &mut ContextPtr, parsed: s::Build001| {
-            Build_1_Handler::from_context(context).build_1(parsed)
+            BuildHandler::from_context(context).build_1(parsed)
         }
     ));
     r.add("brew_coffee", Box::new(
@@ -68,23 +68,23 @@ fn document_message() -> String {
 
 
 
-pub struct Build_1_Handler<'a> {
+pub struct BuildHandler<'a> {
     use_context: Option<&'a ContextPtr>
 }
 
 
-impl<'a> Build_1_Handler<'a> {
-    pub fn new() -> Build_1_Handler<'static> {
-        Build_1_Handler { use_context: None}
+impl<'a> BuildHandler<'a> {
+    pub fn new() -> BuildHandler<'static> {
+        BuildHandler { use_context: None}
     }
 
-    pub fn from_context(context: &'a mut ContextPtr) -> Build_1_Handler<'a> {
-        Build_1_Handler { use_context: Some(context)}
+    pub fn from_context(context: &'a mut ContextPtr) -> BuildHandler<'a> {
+        BuildHandler { use_context: Some(context)}
     }
 
     pub fn build_1(&self, task: s::Build001) -> Result<s::ResponsePayload> {
         if self.use_context.is_none() {
-            let mut ctx = ::SelfDisposingContextPtr::create().unwrap();
+            let ctx = ::SelfDisposingContextPtr::create().unwrap();
             self.build_inner(ctx.inner(),task)
         }else{
             self.build_inner(self.use_context.unwrap(), task)
@@ -194,6 +194,6 @@ fn test_handler() {
         framewise: s::Framewise::Steps(steps),
     };
 
-    let handler = Build_1_Handler::new();
+    let handler = BuildHandler::new();
     let response = handler.build_1(build);
 }

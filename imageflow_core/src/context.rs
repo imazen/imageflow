@@ -6,7 +6,7 @@ use flow::definitions::Graph;
 pub struct ContextPtr {
     // TODO: Remove pub as soon as tests/visuals.rs doesn't need access
     // (i.e, unit test helpers are ported, or the helper becomes cfgtest on the struct itself)
-    pub ptr: Option<*mut ::ffi::Context>,
+    pub ptr: Option<*mut ::ffi::ImageflowContext>,
 }
 pub struct Context {
     p: cell::RefCell<ContextPtr>,
@@ -40,17 +40,17 @@ impl Drop for SelfDisposingContextPtr {
 }
 
 pub struct JobPtr {
-    ptr: *mut ::ffi::Job,
-    c: *mut ::ffi::Context
+    ptr: *mut ::ffi::ImageflowJob,
+    c: *mut ::ffi::ImageflowContext
 }
 
 
 
 impl JobPtr {
-    pub fn context_ptr(&self) -> *mut ::ffi::Context{ self.c }
-    pub fn as_ptr(&self) -> *mut ::ffi::Job { self.ptr}
+    pub fn context_ptr(&self) -> *mut ::ffi::ImageflowContext { self.c }
+    pub fn as_ptr(&self) -> *mut ::ffi::ImageflowJob { self.ptr}
 
-    pub fn from_ptr(context: *mut ::ffi::Context, job: *mut ::ffi::Job) -> Result<JobPtr> {
+    pub fn from_ptr(context: *mut ::ffi::ImageflowContext, job: *mut ::ffi::ImageflowJob) -> Result<JobPtr> {
         if context.is_null() || job.is_null() {
             Err(FlowError::NullArgument)
         }else {
@@ -60,7 +60,7 @@ impl JobPtr {
             })
         }
     }
-    pub fn create(context: *mut ::ffi::Context) -> Result<JobPtr> {
+    pub fn create(context: *mut ::ffi::ImageflowContext) -> Result<JobPtr> {
         if context.is_null() {
             return Err(FlowError::ContextInvalid)
         }
@@ -74,7 +74,7 @@ impl JobPtr {
         }
     }
     pub unsafe fn add_io_ptr(&self,
-                         io: *mut ::ffi::JobIO,
+                         io: *mut ::ffi::ImageflowJobIo,
                          io_id: i32,
                          direction: IoDirection)
                          -> Result<()> {
@@ -94,7 +94,7 @@ impl JobPtr {
     pub fn add_input_bytes<'a>(&'a self, io_id: i32, bytes: &'a [u8]) -> Result<()>{
         unsafe {
             let p = ::ffi::flow_io_create_from_memory(self.context_ptr(),
-                                                      ::ffi::IoMode::read_seekable,
+                                                      ::ffi::IoMode::ReadSeekable,
                                                       bytes.as_ptr(),
                                                       bytes.len(),
                                                       self.context_ptr() as *const libc::c_void,
@@ -277,7 +277,7 @@ pub struct Job {
     pub p: cell::RefCell<JobPtr>,
 }
 pub struct JobIoPtr {
-    pub ptr: Option<*mut ::ffi::JobIO>,
+    pub ptr: Option<*mut ::ffi::ImageflowJobIo>,
 }
 
 pub struct JobIo<'a, T: 'a> {
@@ -353,7 +353,7 @@ impl ContextPtr {
         }
     }
 
-    pub fn from_ptr(ptr: *mut ::ffi::Context) -> ContextPtr {
+    pub fn from_ptr(ptr: *mut ::ffi::ImageflowContext) -> ContextPtr {
         ContextPtr {
             ptr: match ptr.is_null() {
                 false => Some(ptr),
@@ -361,7 +361,7 @@ impl ContextPtr {
             },
         }
     }
-    pub fn as_ptr(&self) -> Result<*mut ::ffi::Context> {
+    pub fn as_ptr(&self) -> Result<*mut ::ffi::ImageflowContext> {
         match self.ptr {
             Some(p) if p != ptr::null_mut() => Ok(p),
             _ =>  Err(FlowError::ContextInvalid),
@@ -447,7 +447,7 @@ impl Context {
             None => Err(FlowError::ContextInvalid),
             Some(ptr) => unsafe {
                 let p = ::ffi::flow_io_create_from_memory(ptr,
-                                                          ::ffi::IoMode::read_seekable,
+                                                          ::ffi::IoMode::ReadSeekable,
                                                           bytes.as_ptr(),
                                                           bytes.len(),
                                                           ptr as *const libc::c_void,
@@ -550,7 +550,7 @@ impl Context {
 impl ContextPtr {
 
 
-    unsafe fn get_flow_err(&self, c: *mut ::ffi::Context) -> FlowErr {
+    unsafe fn get_flow_err(&self, c: *mut ::ffi::ImageflowContext) -> FlowErr {
 
 
         let code = ::ffi::flow_context_error_reason(c);

@@ -8,15 +8,15 @@ use ::rustc_serialize::hex::FromHex;
 use ::ffi;
 
 pub struct IoTranslator {
-    ctx: *mut ::ffi::Context,
+    ctx: *mut ::ffi::ImageflowContext,
 }
 impl IoTranslator {
 
-    pub fn new(context: *mut ::ffi::Context) -> IoTranslator{
+    pub fn new(context: *mut ::ffi::ImageflowContext) -> IoTranslator{
         IoTranslator{ ctx: context}
     }
 
-    unsafe fn create_jobio_ptr_from_enum(&self, io_enum: s::IoEnum, dir: s::IoDirection) -> *mut ::ffi::JobIO {
+    unsafe fn create_jobio_ptr_from_enum(&self, io_enum: s::IoEnum, dir: s::IoDirection) -> *mut ::ffi::ImageflowJobIo {
         let p = self.ctx;
         let result_ptr = match io_enum {
             s::IoEnum::ByteArray(vec) => {
@@ -31,7 +31,7 @@ impl IoTranslator {
 
                 let io_ptr =
                 ::ffi::flow_io_create_from_memory(p,
-                                                  ::ffi::IoMode::read_seekable,
+                                                  ::ffi::IoMode::ReadSeekable,
                                                   buf,
                                                   bytes.len(),
                                                   p as *const libc::c_void,
@@ -54,7 +54,7 @@ impl IoTranslator {
 
                 let io_ptr =
                 ::ffi::flow_io_create_from_memory(p,
-                                                  ::ffi::IoMode::read_seekable,
+                                                  ::ffi::IoMode::ReadSeekable,
                                                   buf,
                                                   bytes.len(),
                                                   p as *const libc::c_void,
@@ -70,8 +70,8 @@ impl IoTranslator {
                 let path_str: String = path;
                 //TODO: character sets matter!
                 let mode = match dir{
-                    s::IoDirection::Input => ::ffi::IoMode::read_seekable,
-                    s::IoDirection::Output => ::ffi::IoMode::write_sequential,
+                    s::IoDirection::Input => ::ffi::IoMode::ReadSeekable,
+                    s::IoDirection::Output => ::ffi::IoMode::WriteSequential,
                 };
 
                 let mut vec = Vec::new();
@@ -116,7 +116,7 @@ impl IoTranslator {
 
                 let io_ptr =
                 ::ffi::flow_io_create_from_memory(p,
-                                                  ::ffi::IoMode::read_seekable,
+                                                  ::ffi::IoMode::ReadSeekable,
                                                   buf,
                                                   bytes.len(),
                                                   p as *const libc::c_void,
@@ -136,12 +136,12 @@ impl IoTranslator {
                 }
                 io_ptr
             }
-        } as *mut ffi::JobIO;
+        } as *mut ffi::ImageflowJobIo;
 
         result_ptr
     }
 
-    pub unsafe fn add_to_job(&self, job: *mut ::ffi::Job, io_vec: Vec<s::IoObject>){
+    pub unsafe fn add_to_job(&self, job: *mut ::ffi::ImageflowJob, io_vec: Vec<s::IoObject>){
         let mut io_list = Vec::new();
         for io_obj in io_vec {
             let io_ptr = self.create_jobio_ptr_from_enum(io_obj.io, io_obj.direction);

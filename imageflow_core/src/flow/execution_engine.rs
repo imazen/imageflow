@@ -6,8 +6,8 @@ use ::{JobPtr};
 use super::visualize::{notify_graph_changed, GraphRecordingUpdate, GraphRecordingInfo};
 
 pub struct Engine<'a,'b> {
-    c: *mut ::ffi::Context,
-    job_p: *mut ::ffi::Job,
+    c: *mut ::ffi::ImageflowContext,
+    job_p: *mut ::ffi::ImageflowJob,
     job: &'a mut JobPtr,
     g: &'b mut Graph
 }
@@ -23,11 +23,11 @@ impl<'a,'b> Engine<'a,'b> {
     }
 
 
-    pub fn execute(&mut self) -> Result<()>  {
+    pub fn execute(&mut self) -> Result<()> {
         let job = self.job_p;
-        { self.notify_graph_changed()?; }
+        self.notify_graph_changed()?;
 
-        { self.link_codecs()?; }
+        self.link_codecs()?;
 
         // States for a node
         // New
@@ -38,55 +38,53 @@ impl<'a,'b> Engine<'a,'b> {
         // Executed
         let mut passes = 0;
         loop {
-            {
-                if self.graph_fully_executed() {
-                    break;
-                }
+            if self.graph_fully_executed() {
+                break;
             }
+
             if passes >= unsafe { (*job).max_calc_flatten_execute_passes } {
                 { self.notify_graph_complete()?; }
                 panic!("Maximum graph passes exceeded");
                 //            error_msg!(c, FlowStatusCode::MaximumGraphPassesExceeded);
                 //            return false;
             }
-            { self.populate_dimensions_where_certain()?; }
-            { self.notify_graph_changed()?; }
+            self.populate_dimensions_where_certain()?;
+            self.notify_graph_changed()?;
 
-            { self.graph_pre_optimize_flatten()?; }
-            { self.notify_graph_changed()?; }
+            self.graph_pre_optimize_flatten()?;
+            self.notify_graph_changed()?;
 
-            { self.populate_dimensions_where_certain()?; }
-            { self.notify_graph_changed()?; }
+            self.populate_dimensions_where_certain()?;
+            self.notify_graph_changed()?;
 
             //graph_optimize()?;
-            { self.notify_graph_changed()?; }
+            self.notify_graph_changed()?;
 
-            { self.populate_dimensions_where_certain()?; }
-            { self.notify_graph_changed()?; }
+            self.populate_dimensions_where_certain()?;
+            self.notify_graph_changed()?;
 
-            { self.graph_post_optimize_flatten()?; }
-            { self.notify_graph_changed()?; }
+            self.graph_post_optimize_flatten()?;
+            self.notify_graph_changed()?;
 
-            { self.populate_dimensions_where_certain()?; }
-            { self.notify_graph_changed()?; }
+            self.populate_dimensions_where_certain()?;
+            self.notify_graph_changed()?;
 
-            { self.graph_execute()?; }
+            self.graph_execute()?;
             passes += 1;
 
-            { self.notify_graph_changed()?; }
+            self.notify_graph_changed()?;
         }
         unsafe {
             if (*job).next_graph_version > 0 && (*job).render_last_graph {
-                { self.notify_graph_complete()?; }
+                self.notify_graph_complete()?;
             }
         }
         Ok(())
     }
 
     pub fn link_codecs(&mut self) -> Result<()> {
-        self.notify_graph_changed();
+        self.notify_graph_changed()?;
 
-        // Assign stable IDs;
         for index in 0..self.g.node_count() {
             if let Some(func) = self.g.node_weight(NodeIndex::new(index))
                 .unwrap()
@@ -280,7 +278,6 @@ impl<'a,'b> Engine<'a,'b> {
             }
 
         }
-        Ok(())
     }
 
 
@@ -318,7 +315,6 @@ impl<'a,'b> Engine<'a,'b> {
             }
 
         }
-        Ok(())
     }
 
 
@@ -375,7 +371,6 @@ impl<'a,'b> Engine<'a,'b> {
             }
 
         }
-        Ok(())
     }
     fn op_ctx_mut<'c>(&'c mut self) -> OpCtxMut<'c>{
         OpCtxMut {

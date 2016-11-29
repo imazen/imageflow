@@ -1,6 +1,6 @@
 
 use daggy::{Dag, EdgeIndex, NodeIndex};
-use ffi::{Context, Job, BitmapBgra};
+use ffi::{ImageflowContext, ImageflowJob, BitmapBgra};
 use libc::{int32_t, size_t};
 use petgraph::EdgeDirection;
 mod rotate_flip_transpose;
@@ -13,7 +13,7 @@ mod internal_prelude{
     pub use ::internal_prelude::works_everywhere::*;
     pub use ::ffi;
     pub use petgraph::EdgeDirection;
-    pub use ffi::{Context, Job};
+    pub use ffi::{ImageflowContext, ImageflowJob};
     pub use flow::definitions::*;
     pub use super::*;
     pub use ffi::{BitmapBgra};
@@ -29,10 +29,6 @@ pub use self::clone_crop_fill_expand::FILL_RECT;
 pub use self::codecs_and_pointer::BITMAP_BGRA_POINTER;
 pub use self::codecs_and_pointer::DECODER;
 pub use self::codecs_and_pointer::ENCODE;
-
-// TODO: Implement decoder IDCT
-
-
 pub use self::codecs_and_pointer::PRIMITIVE_DECODER;
 pub use self::create_canvas::CREATE_CANVAS;
 pub use self::rotate_flip_transpose::APPLY_ORIENTATION;

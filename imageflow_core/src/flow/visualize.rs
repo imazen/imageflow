@@ -18,8 +18,7 @@ pub next_graph_version: i32,
 }
 
 pub fn notify_graph_changed(graph_ref: &mut Graph, r: GraphRecordingInfo) -> Result<Option<GraphRecordingUpdate>> {
-
-    if !r.record_graph_versions || r.current_graph_version > r.maximum_graph_versions{
+    if !r.record_graph_versions || r.current_graph_version > r.maximum_graph_versions {
         return Ok(None);
         // println!("record_graph_versions=true, current_graph_version={}", current_graph_version);
     }
@@ -41,11 +40,10 @@ pub fn notify_graph_changed(graph_ref: &mut Graph, r: GraphRecordingInfo) -> Res
     if prev_graph_version >= 0 {
         let prev_filename =
         format!("job_{}_graph_version_{}.dot", r.debug_job_id, prev_graph_version);
-        match files_identical(&current_filename, &prev_filename).expect(&format!("Comparison err'd for {} and {}", &current_filename, &prev_filename)){
+        match files_identical(&current_filename, &prev_filename).expect(&format!("Comparison err'd for {} and {}", &current_filename, &prev_filename)) {
             true => {
-                unsafe {
-                    std::fs::remove_file(&current_filename).unwrap();
-                }
+                std::fs::remove_file(&current_filename).unwrap();
+
                 // Next time we will overwrite the duplicate graph. The last two graphs may
                 // remain dupes
                 Ok(None)
@@ -54,10 +52,10 @@ pub fn notify_graph_changed(graph_ref: &mut Graph, r: GraphRecordingInfo) -> Res
                 if r.render_graph_versions {
                     render_dotfile_to_png(&prev_filename)
                 }
-                Ok(Some(GraphRecordingUpdate{next_graph_version: r.current_graph_version + 1}))
+                Ok(Some(GraphRecordingUpdate { next_graph_version: r.current_graph_version + 1 }))
             }
         }
-    }else {
+    } else {
         Ok(None)
     }
 }

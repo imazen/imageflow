@@ -82,7 +82,7 @@ pub fn process_image_by_paths(input_path: PathBuf,
 
 
             let input_io = flow_io_create_for_file(c,
-                                                   IoMode::read_seekable,
+                                                   IoMode::ReadSeekable,
                                                    c_input_path,
                                                    c as *mut libc::c_void);
 
@@ -91,7 +91,7 @@ pub fn process_image_by_paths(input_path: PathBuf,
                 flow_context_print_and_exit_if_err(c);
             }
             let output_io = flow_io_create_for_file(c,
-                                                    IoMode::write_seekable,
+                                                    IoMode::WriteSeekable,
                                                     c_output_path,
                                                     c as *mut libc::c_void);
             if output_io.is_null() {
@@ -186,7 +186,7 @@ fn benchmark_op(cmds: BoringCommands, mem: *mut u8, len: usize) -> BenchmarkResu
                                |c| {
         unsafe {
             let input_io = flow_io_create_from_memory(c,
-                                                      IoMode::read_seekable,
+                                                      IoMode::ReadSeekable,
                                                       mem,
                                                       len,
                                                       c as *mut libc::c_void,
@@ -284,7 +284,7 @@ pub fn benchmark(bench: BenchmarkOptions) -> std::result::Result<BenchmarkResult
 
 
 pub struct IoResource {
-    pub io: *mut JobIO,
+    pub io: *mut ImageflowJobIo,
     pub direction: IoDirection,
 }
 
@@ -383,8 +383,8 @@ pub fn process_image<F, C, R>(commands: BoringCommands,
                               io_provider: F,
                               cleanup: C)
                               -> std::result::Result<R, String>
-    where F: Fn(*mut Context) -> Vec<IoResource>,
-          C: Fn(*mut Context, *mut Job) -> std::result::Result<R, String>
+    where F: Fn(*mut ImageflowContext) -> Vec<IoResource>,
+          C: Fn(*mut ImageflowContext, *mut ImageflowJob) -> std::result::Result<R, String>
 {
     let context = SelfDisposingContextPtr::create().unwrap();
     let result;

@@ -1,5 +1,5 @@
 use ::internal_prelude::works_everywhere::*;
-use ffi::{Context, Job, BitmapBgra};
+use ffi::{ImageflowContext, ImageflowJob, BitmapBgra};
 use flow::nodes;
 pub use ::ffi::EdgeKind;
 pub use ::ffi::PixelFormat;
@@ -40,14 +40,14 @@ pub enum EdgesIn {
 
 
 pub struct OpCtx<'a> {
-    pub c: *mut Context,
-    pub job: *const Job,
+    pub c: *mut ImageflowContext,
+    pub job: *const ImageflowJob,
     pub graph: &'a Graph,
 }
 
 pub struct OpCtxMut<'a> {
-    pub c: *mut Context,
-    pub job: *mut Job,
+    pub c: *mut ImageflowContext,
+    pub job: *mut ImageflowJob,
     pub graph: &'a mut Graph,
 }
 

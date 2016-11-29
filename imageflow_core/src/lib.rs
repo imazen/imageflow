@@ -77,14 +77,14 @@ mod internal_prelude{
         pub use daggy::{Dag, EdgeIndex, NodeIndex};
         pub use std::{ptr,marker,slice,cell,io,string,fmt,mem};
         pub use libc::{c_void, c_float, int32_t, int64_t, size_t, uint32_t};
-        pub use std;
-        pub use daggy;
-        pub use petgraph;
-        pub use serde;
-        pub use serde_json;
-        pub use time;
-        pub use libc;
-        pub use imageflow_types as s;
+        pub extern crate std;
+        pub extern crate daggy;
+        pub extern crate petgraph;
+        pub extern crate serde;
+        pub extern crate serde_json;
+        pub extern crate time;
+        pub extern crate libc;
+        pub extern crate imageflow_types as s;
     }
     pub mod works_everywhere{
         pub use ::internal_prelude::external::*;
