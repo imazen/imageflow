@@ -4,16 +4,9 @@
 //! **Use imageflow_core::abi functions instead when creating bindings**
 //!
 //! These aren't to be exposed, but rather to connect to C internals
-extern crate imageflow_types as s;
-extern crate libc;
+use ::internal_prelude::works_everywhere::*;
 
-use flow;
-use libc::{c_void, c_float, int32_t, int64_t, size_t, uint32_t};
-use std::ascii::AsciiExt;
-use std::ptr;
-
-use std::str::FromStr;
-
+pub use imageflow_types::Filter;
 
 /* These are reused in the external ABI, but only as opaque pointers*/
 ///
@@ -134,7 +127,6 @@ pub enum Floatspace {
 // }
 //
 
-pub use self::s::Filter;
 
 #[repr(C)]
 #[derive(Copy,Clone,Debug, PartialEq)]

@@ -1,9 +1,8 @@
-use libc::{c_void, c_float, int32_t, int64_t, size_t, uint32_t};
-extern crate imageflow_types as s;
-use daggy::{Dag, EdgeIndex, NodeIndex};
-use ffi::*;
-use std;
-use std::fmt;
+use ::internal_prelude::works_everywhere::*;
+use ffi::{Context, Job, BitmapBgra};
+use flow::nodes;
+pub use ::ffi::EdgeKind;
+pub use ::ffi::PixelFormat;
 
 pub type Graph = Dag<Node, EdgeKind>;
 
@@ -145,6 +144,35 @@ pub struct Node {
     pub custom_state: *mut u8, // For simple metadata, we might just use JSON?
 }
 
+
+impl From<s::Node> for Node {
+    fn from(node: s::Node) -> Node {
+        match node {
+            s::Node::Crop { .. } => Node::new( & nodes::CROP, NodeParams::Json(node)),
+            s::Node::Decode { .. } => Node::new( & nodes::DECODER, NodeParams::Json(node)),
+            s::Node::FlowBitmapBgraPtr { .. } =>
+                Node::new( & nodes::BITMAP_BGRA_POINTER, NodeParams::Json(node)),
+            s::Node::FlipV => Node::new( & nodes::FLIP_V, NodeParams::Json(node)),
+            s::Node::FlipH => Node::new( & nodes::FLIP_H, NodeParams::Json(node)),
+            s::Node::Rotate90 => Node::new( & nodes::ROTATE_90, NodeParams::Json(node)),
+            s::Node::Rotate180 => Node::new( & nodes::ROTATE_180, NodeParams::Json(node)),
+            s::Node::Rotate270 => Node::new(& nodes::ROTATE_270, NodeParams::Json(node)),
+            s::Node::ApplyOrientation { .. } => Node::new( & nodes::APPLY_ORIENTATION, NodeParams::Json(node)),
+            s::Node::Transpose => Node::new( & nodes::TRANSPOSE, NodeParams::Json(node)),
+            s::Node::Resample1D{ ..} => Node::new( & nodes::SCALE_1D, NodeParams::Json(node)),
+            s::Node::Encode { .. }=> Node::new( & nodes::ENCODE, NodeParams::Json(node)),
+            s::Node::CreateCanvas { .. } =>
+                Node::new( & nodes::CREATE_CANVAS, NodeParams::Json(node)),
+            s::Node::CopyRectToCanvas { .. } =>
+                Node::new( & nodes::COPY_RECT, NodeParams::Json(node)),
+            s::Node::FillRect { .. } => Node::new( & nodes::FILL_RECT, NodeParams::Json(node)),
+            s::Node::Resample2D { .. } => Node::new( & nodes::SCALE, NodeParams::Json(node)),
+            s::Node::ExpandCanvas { .. } =>
+                Node::new( & nodes::EXPAND_CANVAS, NodeParams::Json(node))
+        }
+    }
+}
+
 impl Node {
     pub fn new(def: &'static NodeDefinition, params: NodeParams) -> Node {
         Node {
@@ -164,6 +192,8 @@ impl Node {
             result: NodeResult::None,
         }
     }
+
+
 
 
     pub fn graphviz_node_label(&self, f: &mut std::io::Write) -> std::io::Result<()> {

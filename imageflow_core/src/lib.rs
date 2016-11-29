@@ -13,38 +13,37 @@ extern crate alloc_system;
 extern crate petgraph;
 extern crate daggy;
 extern crate time;
-extern crate imageflow_types as s;
-
+extern crate imageflow_types;
 #[macro_use]
 extern crate lazy_static;
 
 #[macro_use]
 extern crate serde_derive;
-
 extern crate serde_json;
 extern crate serde;
-pub mod ffi;
-pub mod boring;
-pub mod parsing;
-mod json;
-mod flow;
-mod context;
-pub mod clients;
-pub use context::{Context, ContextPtr, Job, JobPtr, JobIo, JobIoPtr, SelfDisposingContextPtr};
-pub use ::ffi::{IoDirection, IoMode};
-
-pub use parsing::JsonResponseError;
-use std::ops::DerefMut;
-
 extern crate libc;
 extern crate alloc;
-use std::cell::RefCell;
-use std::marker;
-use std::borrow::Cow;
-use std::ptr;
+extern crate rustc_serialize;
+
+mod json;
+pub mod flow;
+mod context;
+mod context_methods;
+mod job_methods;
 
 pub use json::JsonResponse;
 pub use json::MethodRouter;
+pub use context::{Context, ContextPtr, Job, JobPtr, JobIo, JobIoPtr, SelfDisposingContextPtr};
+pub use ::ffi::{IoDirection, IoMode};
+pub use ::flow::definitions::Graph;
+//use std::ops::DerefMut;
+pub mod clients;
+pub mod ffi;
+pub mod boring;
+pub mod parsing;
+
+
+
 
 #[derive(Debug, PartialEq)]
 pub struct FlowErr {
@@ -64,3 +63,38 @@ pub enum FlowError {
 pub type Result<T> = std::result::Result<T, FlowError>;
 
 
+mod internal_prelude{
+    pub mod external{
+        pub use std::path::{PathBuf,Path};
+        pub use std::fs::File;
+        pub use std::io::prelude::*;
+        pub use std::cell::RefCell;
+        pub use std::borrow::Cow;
+        pub use std::ffi::{CString,CStr};
+        pub use std::str::FromStr;
+        pub use std::ascii::AsciiExt;
+        pub use std::collections::HashMap;
+        pub use daggy::{Dag, EdgeIndex, NodeIndex};
+        pub use std::{ptr,marker,slice,cell,io,string,fmt,mem};
+        pub use libc::{c_void, c_float, int32_t, int64_t, size_t, uint32_t};
+        pub use std;
+        pub use daggy;
+        pub use petgraph;
+        pub use serde;
+        pub use serde_json;
+        pub use time;
+        pub use libc;
+        pub use imageflow_types as s;
+    }
+    pub mod works_everywhere{
+        pub use ::internal_prelude::external::*;
+        pub use ::{FlowError,FlowErr,Result,flow,clients};
+    }
+    pub mod default{
+        pub use ::internal_prelude::works_everywhere::*;
+        pub use ::{Graph,ContextPtr,JobPtr,JobIoPtr,SelfDisposingContextPtr, JsonResponse, MethodRouter};
+    }
+    pub mod c_components{
+
+    }
+}

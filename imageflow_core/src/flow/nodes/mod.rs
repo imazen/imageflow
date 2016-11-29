@@ -1,6 +1,6 @@
 
 use daggy::{Dag, EdgeIndex, NodeIndex};
-use ffi::{Context, Job, PixelFormat, EdgeKind, BitmapBgra};
+use ffi::{Context, Job, BitmapBgra};
 use libc::{int32_t, size_t};
 use petgraph::EdgeDirection;
 mod rotate_flip_transpose;
@@ -8,6 +8,16 @@ mod clone_crop_fill_expand;
 mod scale_render;
 mod create_canvas;
 mod codecs_and_pointer;
+
+mod internal_prelude{
+    pub use ::internal_prelude::works_everywhere::*;
+    pub use ::ffi;
+    pub use petgraph::EdgeDirection;
+    pub use ffi::{Context, Job};
+    pub use flow::definitions::*;
+    pub use super::*;
+    pub use ffi::{BitmapBgra};
+}
 
 extern crate imageflow_types as s;
 pub use self::clone_crop_fill_expand::CLONE;
@@ -40,7 +50,7 @@ pub use self::scale_render::SCALE_1D;
 pub use self::scale_render::SCALE_1D_TO_CANVAS_1D;
 use super::definitions::*;
 
-struct NodeDefHelpers {}
+pub struct NodeDefHelpers {}
 impl NodeDefHelpers {
     fn copy_frame_est_from_first_input(ctx: &mut OpCtxMut, ix: NodeIndex<u32>) {
         ctx.copy_frame_est_from_first_input(ix);

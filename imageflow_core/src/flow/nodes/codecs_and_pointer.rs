@@ -1,13 +1,4 @@
-extern crate imageflow_types as s;
-use daggy::{Dag, EdgeIndex, NodeIndex};
-use ffi;
-use ffi::{Context, Job, EdgeKind, BitmapBgra};
-use flow::definitions::*;
-use petgraph;
-use petgraph::EdgeDirection;
-use std::ptr;
-use super::*;
-use super::NodeDefHelpers;
+use super::internal_prelude::*;
 
 fn bitmap_bgra_def() -> NodeDefinition {
     NodeDefinition {

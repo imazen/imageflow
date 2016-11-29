@@ -1,13 +1,4 @@
-extern crate imageflow_types as s;
-use daggy::{Dag, EdgeIndex, NodeIndex};
-use ffi;
-use ffi::{Context, Job, EdgeKind, PixelFormat};
-use flow::definitions::*;
-use petgraph;
-use std::ptr;
-use super::*;
-use super::NodeDefHelpers;
-
+use super::internal_prelude::*;
 
 fn copy_rect_def() -> NodeDefinition {
     NodeDefinition {
@@ -232,7 +223,7 @@ fn expand_canvas_def() -> NodeDefinition {
 fn crop_size(ctx: &mut OpCtxMut, ix: NodeIndex<u32>) {
 
     let input_info = ctx.first_parent_frame_info_some(ix).unwrap_or_else(|| {
-        println!("{}", ctx.graph_to_str());
+        println!("{:?}", ctx.graph_to_str());
         panic!("");
     });
 

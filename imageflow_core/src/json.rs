@@ -1,10 +1,4 @@
-use std;
-use ::{Result};
-use ::s;
-use serde_json;
-use std::collections::HashMap;
-use serde;
-use std::borrow::Cow;
+use ::internal_prelude::works_everywhere::*;
 
 type ResponderFn<'a, T, D> = Box<Fn(&mut T, D) -> Result<s::ResponsePayload> + 'a + Sync>;
 type MethodHandler<'a, T> = Box<Fn(&mut T, &[u8]) -> Result<JsonResponse> + 'a + Sync>;

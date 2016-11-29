@@ -746,6 +746,8 @@ pub enum ResponsePayload {
     // camelCased: #[serde(rename="jobResult")]
     #[serde(rename="job_result")]
     JobResult(JobResult),
+    #[serde(rename="build_result")]
+    BuildResult(JobResult),
     #[serde(rename="none")]
     None,
 }
@@ -1073,4 +1075,60 @@ mod key_casing {
             _ => temp
         }
     }
+}
+
+mod try_nested_mut{
+
+    struct C<'a>{
+        v: &'a mut Vec<u8>
+    }
+    impl<'a> C<'a> {
+        fn b<'b>(&'b mut self) -> ::std::result::Result<(),()>{
+            Ok(())
+        }
+        fn a<'b>(&'b mut self) -> ::std::result::Result<(),()>{
+            {
+                self.b()?;
+            }
+            {
+                self.b()?;
+            }
+            {
+                self.b()
+            }
+        }
+    }
+    #[test]
+    fn test_c(){
+        let mut vec = Vec::new();
+        let mut c = C{v: &mut vec};
+        c.a().unwrap();
+    }
+
+
+    struct A<'d>{
+        v: &'d mut Vec<u8>,
+    }
+    struct B<'a>{
+        v: &'a mut Vec<u8>
+    }
+impl<'a> B<'a>{
+    fn ok(&mut self){
+        self.v.sort()
+    }
+}
+    impl<'d> A<'d>{
+        fn try(&mut self){ //&mut self is required to re-use self.v as a mutable reference.
+            let mut b = B{v: self.v};
+            b.ok();
+        }
+    }
+
+    #[test]
+    fn testit(){
+        let mut vec = Vec::new();
+        let mut a = A{v: &mut vec};
+        a.try();
+    }
+
 }

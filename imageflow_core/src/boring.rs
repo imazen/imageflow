@@ -1,26 +1,12 @@
 // Boring, because we're not doing any kind of op graph, just a static list of configurable ops.
-
-use ffi::*;
-use flow;
-use std::ffi::*;
-use std::fs::File;
-use std::io::Read;
-use std::mem;
-use std::ptr;
-extern crate libc;
+use ::internal_prelude::works_everywhere::*;
 extern crate threadpool;
-extern crate serde;
-extern crate serde_json;
-extern crate time;
-extern crate imageflow_types as s;
-use std::path::PathBuf;
-use std::str::FromStr;
 use std::sync::mpsc::channel;
 use ContextPtr;
 use SelfDisposingContextPtr;
 use JsonResponse;
 use JobPtr;
-
+use ::ffi::*;
 
 #[derive(Copy,Clone, Debug)]
 pub enum ConstraintMode {
@@ -39,7 +25,7 @@ pub enum ImageFormat {
 impl FromStr for ImageFormat {
     type Err = &'static str;
 
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
+    fn from_str(s: &str) -> std::result::Result<Self, Self::Err> {
         match s {
             "jpeg" => Ok(ImageFormat::Jpeg),
             "jpg" => Ok(ImageFormat::Jpeg),
@@ -54,7 +40,7 @@ impl FromStr for ImageFormat {
 impl FromStr for ConstraintMode {
     type Err = &'static str;
 
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
+    fn from_str(s: &str) -> std::result::Result<Self, Self::Err> {
         match s {
             "max" => Ok(ConstraintMode::Max),
             "distort" => Ok(ConstraintMode::Distort),
@@ -81,7 +67,7 @@ pub struct BoringCommands {
 pub fn process_image_by_paths(input_path: PathBuf,
                               output_path: PathBuf,
                               commands: BoringCommands)
-                              -> Result<(), String> {
+                              -> std::result::Result<(), String> {
 
 
     let c_input_path = CString::new(input_path.to_str().unwrap().as_bytes()).unwrap().into_raw();
@@ -142,7 +128,7 @@ pub struct BenchmarkOptions {
 
 #[derive(Debug, Clone)]
 pub struct BenchmarkResult {
-    result: Result<(), String>,
+    result: std::result::Result<(), String>,
     wall_nanoseconds: i64,
 }
 #[derive(Debug, Clone)]
@@ -231,7 +217,7 @@ fn benchmark_op(cmds: BoringCommands, mem: *mut u8, len: usize) -> BenchmarkResu
         wall_nanoseconds: (end_at - begin_at) as i64,
     }
 }
-pub fn benchmark(bench: BenchmarkOptions) -> Result<BenchmarkResults, String> {
+pub fn benchmark(bench: BenchmarkOptions) -> std::result::Result<BenchmarkResults, String> {
 
     //Switch to Arc instead of pointers
 
@@ -354,7 +340,7 @@ fn test_constraining(){
 }
 
 pub fn create_framewise(original_width: i32, original_height: i32, commands: BoringCommands)
-                              -> Result<(s::Framewise, (i32,i32)), String> {
+                              -> std::result::Result<(s::Framewise, (i32,i32)), String> {
     let (final_w, final_h) = constrain(original_width, original_height, commands.fit, commands.w, commands.h);
 
     //Should we IDCT downscale?
@@ -396,9 +382,9 @@ pub fn create_framewise(original_width: i32, original_height: i32, commands: Bor
 pub fn process_image<F, C, R>(commands: BoringCommands,
                               io_provider: F,
                               cleanup: C)
-                              -> Result<R, String>
+                              -> std::result::Result<R, String>
     where F: Fn(*mut Context) -> Vec<IoResource>,
-          C: Fn(*mut Context, *mut Job) -> Result<R, String>
+          C: Fn(*mut Context, *mut Job) -> std::result::Result<R, String>
 {
     let context = SelfDisposingContextPtr::create().unwrap();
     let result;

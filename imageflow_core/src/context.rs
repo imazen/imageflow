@@ -1,15 +1,7 @@
-use std;
-use std::{ptr,marker,slice,cell};
-use libc;
-use ::{FlowError,FlowErr, JsonResponse,JsonResponseError,Result,IoDirection};
+use ::internal_prelude::works_everywhere::*;
+use ::{JsonResponse,IoDirection, MethodRouter};
 use ::ffi::ImageflowJsonResponse;
-use std::path::Path;
-use std::fs::File;
-use std::io::Write;
-use ::MethodRouter;
-
-extern crate imageflow_types as s;
-extern crate serde_json;
+use flow::definitions::Graph;
 
 pub struct ContextPtr {
     // TODO: Remove pub as soon as tests/visuals.rs doesn't need access
@@ -52,57 +44,6 @@ pub struct JobPtr {
     c: *mut ::ffi::Context
 }
 
-
-fn create_job_router() -> MethodRouter<'static, JobPtr>{
-    let mut r = MethodRouter::new();
-    r.add_responder("v0.1/get_image_info", Box::new(
-        move |job: &mut JobPtr, data: s::GetImageInfo001| {
-            Ok(s::ResponsePayload::ImageInfo(job.get_image_info(data.io_id)?))
-        }
-    ));
-    r.add_responder("v0.1/tell_decoder", Box::new(
-        move |job: &mut JobPtr, data: s::TellDecoder001| {
-            job.tell_decoder(data.io_id, data.command)?;
-            Ok(s::ResponsePayload::None)
-        }
-    ));
-    r.add_responder("v0.1/execute", Box::new(
-        move |job: &mut JobPtr, parsed: s::Execute001| {
-            let mut g = ::parsing::GraphTranslator::new().translate_framewise(parsed.framewise);
-            if let Some(r) = parsed.graph_recording {
-                job.configure_graph_recording(r);
-            }
-            unsafe {
-                if let Some(b) = parsed.no_gamma_correction {
-                    ::ffi::flow_context_set_floatspace(job.c, match b {
-                        true => ::ffi::Floatspace::srgb,
-                        false => ::ffi::Floatspace::linear
-                    }, 0f32, 0f32, 0f32)
-                }
-            }
-            if !job.execute(&mut g){
-                unsafe { job.ctx().assert_ok(Some(&mut g)); }
-            }
-            let mut encodes = Vec::new();
-            for node in g.raw_nodes(){
-                if let ::flow::definitions::NodeResult::Encoded(ref r) = node.weight.result{
-                    encodes.push((*r).clone());
-                }
-            }
-            Ok(s::ResponsePayload::JobResult(s::JobResult{encodes:encodes}))
-        }
-    ));
-    r.add("brew_coffee", Box::new(
-        move |job: &mut JobPtr, bytes: &[u8] |{
-            Ok(JsonResponse::teapot())
-        }
-    ));
-    r
-}
-
-lazy_static!{
-        static ref JOB_ROUTER: MethodRouter<'static, JobPtr> = create_job_router();
-    }
 
 
 impl JobPtr {
@@ -252,46 +193,14 @@ impl JobPtr {
 
     }
 
-    pub fn document_message() -> String {
-        let mut s = String::new();
-        s.reserve(8000);
-        s += "JSON API - Job\n\n";
-        s += "imageflow_job responds to these message methods\n\n";
-        s += "## v0.1/get_image_info \n";
-        s += "Example message body:\n";
-        s += &serde_json::to_string_pretty(&s::GetImageInfo001::example_get_image_info()).unwrap();
-        s += "\nExample response:\n";
-        s += &serde_json::to_string_pretty(&s::Response001::example_image_info()).unwrap();
-        s += "\n\n";
 
-
-        s += "## v0.1/tell_decoder \n";
-        s += "Example message body:\n";
-        s += &serde_json::to_string_pretty(&s::TellDecoder001::example_hints()).unwrap();
-        s += "\nExample response:\n";
-        s += &serde_json::to_string_pretty(&s::Response001::example_ok()).unwrap();
-        s += "\n\n";
-
-        s += "## v0.1/execute \n";
-        s += "Example message body (with graph):\n";
-        s += &serde_json::to_string_pretty(&s::Execute001::example_graph()).unwrap();
-        s += "Example message body (with linear steps):\n";
-        s += &serde_json::to_string_pretty(&s::Execute001::example_steps()).unwrap();
-        s += "\nExample response:\n";
-        s += &serde_json::to_string_pretty(&s::Response001::example_job_result_encoded(2, 200,200, "image/jpg", "jpg")).unwrap();
-        s += "\nExample failure response:\n";
-        s += &serde_json::to_string_pretty(&s::Response001::example_error()).unwrap();
-        s += "\n\n";
-
-        s
-    }
 
     pub fn message(&mut self,
                                method: &str,
                                json: &[u8])
                                -> Result<JsonResponse> {
 
-        JOB_ROUTER.invoke(self, method, json)
+        ::job_methods::JOB_ROUTER.invoke(self, method, json)
     }
 
 
@@ -379,92 +288,29 @@ pub struct JobIo<'a, T: 'a> {
 
 
 impl Context {
-    pub fn message<'a, 'b, 'c>(&'a mut self,
-                               method: &'b str,
-                               json: &'b [u8])
+    pub fn message(&mut self,
+                               method: &str,
+                               json: &[u8])
                                -> Result<JsonResponse> {
         let ref mut b = *self.p.borrow_mut();
         b.message(method, json)
     }
 }
 
-fn get_create_doc_dir() -> std::path::PathBuf {
-    let path = Path::new(file!()).parent().unwrap().join(Path::new("../../target/doc"));
-    let _ = std::fs::create_dir_all(&path);
-    //Error { repr: Os { code: 17, message: "File exists" } }
-    //The above can happen, despite the docs.
-    path
-}
-#[test]
-fn write_context_doc(){
-    let path = get_create_doc_dir().join(Path::new("context_json_api.txt"));
-    File::create(&path).unwrap().write_all(ContextPtr::document_message().as_bytes()).unwrap();
-}
 
-#[test]
-fn write_job_doc(){
-    let path = get_create_doc_dir().join(Path::new("job_json_api.txt"));
-    File::create(&path).unwrap().write_all(JobPtr::document_message().as_bytes()).unwrap();
-}
 
 impl ContextPtr {
 
-    pub fn document_message() -> String {
-        let mut s = String::new();
-        s.reserve(8000);
-        s += "# JSON API - Context\n\n";
-        s += "imageflow_context responds to these message methods\n\n";
-        s += "## v0.1/build \n";
-        s += "Example message body:\n";
-        s += &serde_json::to_string_pretty(&s::Build001::example_with_steps()).unwrap();
-        s += "\n\nExample response:\n";
-        s += &serde_json::to_string_pretty(&s::Response001::example_job_result_encoded(2, 200,200, "image/png", "png")).unwrap();
-        s += "\n\nExample failure response:\n";
-        s += &serde_json::to_string_pretty(&s::Response001::example_error()).unwrap();
-        s += "\n\n";
-
-        s
-    }
-
-
-
-
-
 
     pub fn message(&mut self,
-                               method: &str,
-                               json: &[u8])
-                               -> Result<JsonResponse> {
-        if self.ptr.is_none() {
-            return Err(FlowError::ContextInvalid);
-        }
-        let response = match method {
-            "brew_coffee" => JsonResponse::teapot(),
-            "v0.1/build" => unsafe {
+                   method: &str,
+                   json: &[u8])
+                   -> Result<JsonResponse> {
 
-                let handler = ::parsing::BuildRequestHandler::new();
-                let response = handler.do_and_respond(&mut *self, json);
-                self.assert_ok(None);
-
-                response.unwrap()
-            },
-            _ => JsonResponse::method_not_understood()
-        };
-        Ok(response)
+        ::context_methods::CONTEXT_ROUTER.invoke(self, method, json)
     }
 
-    fn build_0_0_1(&mut self, json: &[u8]) -> Result<JsonResponse> {
-        match ::parsing::BuildRequestHandler::new().do_and_respond(self, json) {
-            Ok(response) => Ok(response),
-            Err(original_err) => {
-                Err(match original_err {
-                    JsonResponseError::Oom(()) => FlowError::Oom,
-                    JsonResponseError::NotImplemented(()) => FlowError::ErrNotImpl,
-                    JsonResponseError::Other(e) => FlowError::ErrNotImpl,
-                })
-            }
-        }
-    }
+
 }
 
 impl ContextPtr {
@@ -728,7 +574,7 @@ impl ContextPtr {
     }
 
 
-    pub unsafe fn assert_ok(&self, g: Option<&::flow::graph::Graph>) {
+    pub unsafe fn assert_ok(&self, g: Option<&Graph>) {
         match self.get_error_copy() {
             Some(which_error) => {
                 match which_error {
