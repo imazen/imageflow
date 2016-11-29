@@ -7,6 +7,10 @@
 use ::internal_prelude::works_everywhere::*;
 
 pub use imageflow_types::Filter;
+pub use imageflow_types::IoDirection;
+pub use imageflow_types::PixelFormat;
+pub use imageflow_types::EdgeKind;
+
 
 /* These are reused in the external ABI, but only as opaque pointers*/
 ///
@@ -66,12 +70,6 @@ pub enum IoMode {
     ReadWriteSeekable = 15, // 1 | 2 | 4 | 8
 }
 
-#[repr(C)]
-#[derive(Copy,Clone)]
-pub enum IoDirection {
-    Out = 8,
-    In = 4,
-}
 
 #[repr(C)]
 #[derive(Clone,Debug,PartialEq)]
@@ -98,20 +96,13 @@ pub struct CodecInstance {
     pub codec_state: *mut c_void,
     io: *mut FlowIO,
     next: *mut CodecInstance,
-    direction: FlowDirection,
+    direction: IoDirection,
 }
 
 
 
 
-#[repr(C)]
-#[derive(Copy,Clone,Debug,PartialEq)]
-pub enum EdgeKind {
-    // None = 0, In the managed version, we don't need None edges
-    Input = 1,
-    Canvas = 2,
-    Info = 3,
-}
+
 
 #[repr(C)]
 #[derive(Copy,Clone, Debug)]
@@ -221,7 +212,7 @@ impl Default for DecoderInfo {
             current_frame_index: 0,
             image_width: 0,
             image_height: 0,
-            frame_decodes_into: PixelFormat::BGRA32,
+            frame_decodes_into: PixelFormat::Bgra32,
         }
     }
 }
@@ -288,60 +279,11 @@ pub struct BitmapBgra {
 
 #[repr(C)]
 #[derive(Copy,Clone,Debug,PartialEq)]
-pub enum PixelFormat {
-    Gray8 = 1,
-    BGR24 = 3,
-    BGRA32 = 4,
-}
-
-impl From<s::PixelFormat> for PixelFormat {
-    fn from(f: s::PixelFormat) -> PixelFormat {
-        match f {
-            s::PixelFormat::Bgr24 => PixelFormat::BGR24,
-            s::PixelFormat::Bgra32 => PixelFormat::BGRA32,
-            s::PixelFormat::Gray8 => PixelFormat::Gray8,
-        }
-    }
-}
-impl<'a> From<&'a s::PixelFormat> for PixelFormat {
-    fn from(f: &'a s::PixelFormat) -> PixelFormat {
-        match *f {
-            s::PixelFormat::Bgr24 => PixelFormat::BGR24,
-            s::PixelFormat::Bgra32 => PixelFormat::BGRA32,
-            s::PixelFormat::Gray8 => PixelFormat::Gray8,
-        }
-    }
-}
-impl From<PixelFormat> for s::PixelFormat {
-    fn from(f: PixelFormat) -> s::PixelFormat {
-        match f {
-            PixelFormat::BGR24 => s::PixelFormat::Bgr24,
-            PixelFormat::BGRA32 => s::PixelFormat::Bgra32,
-            PixelFormat::Gray8 => s::PixelFormat::Gray8,
-        }
-    }
-}
-
-
-
-#[repr(C)]
-#[derive(Copy,Clone,Debug,PartialEq)]
-pub enum EdgeType {
-    Null = 0,
-    Input = 1,
-    Canvas = 2,
-    info = 3,
-    FORCE_ENUM_SIZE_INT32 = 2147483647,
-}
-
-#[repr(C)]
-#[derive(Copy,Clone,Debug,PartialEq)]
 pub enum BitmapCompositingMode {
     ReplaceSelf = 0,
     BlendWithSelf = 1,
     BlendWithMatte = 2,
 }
-
 
 
 /// floating-point bitmap, typically linear RGBA, premultiplied
@@ -605,13 +547,6 @@ struct FlowIO {
                       * int64_t optional_file_length; // Whoever sets up this structure can populate this value - or set it to -1 - as they
                       * wish. useful for resource estimation.
                       * */
-}
-
-#[repr(C)]
-#[derive(Copy,Clone,Debug,PartialEq)]
-pub enum FlowDirection {
-    Output = 8,
-    Input = 4,
 }
 
 

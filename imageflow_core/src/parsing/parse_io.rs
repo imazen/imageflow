@@ -70,8 +70,8 @@ impl IoTranslator {
                 let path_str: String = path;
                 //TODO: character sets matter!
                 let mode = match dir{
-                    s::IoDirection::Input => ::ffi::IoMode::ReadSeekable,
-                    s::IoDirection::Output => ::ffi::IoMode::WriteSequential,
+                    s::IoDirection::In => ::ffi::IoMode::ReadSeekable,
+                    s::IoDirection::Out => ::ffi::IoMode::WriteSequential,
                 };
 
                 let mut vec = Vec::new();
@@ -146,13 +146,7 @@ impl IoTranslator {
         for io_obj in io_vec {
             let io_ptr = self.create_jobio_ptr_from_enum(io_obj.io, io_obj.direction);
 
-
-            let new_direction = match io_obj.direction {
-                s::IoDirection::Input => ffi::IoDirection::In,
-                s::IoDirection::Output => ffi::IoDirection::Out,
-            };
-
-            io_list.push((io_ptr, io_obj.io_id, new_direction));
+            io_list.push((io_ptr, io_obj.io_id, io_obj.direction));
         }
 
         for io_list in io_list {

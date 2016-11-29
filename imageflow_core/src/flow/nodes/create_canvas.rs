@@ -15,7 +15,7 @@ fn create_canvas_def() -> NodeDefinition {
                         weight.frame_est = FrameEstimate::Some(FrameInfo {
                             w: *w as i32,
                             h: *h as i32,
-                            fmt: ffi::PixelFormat::from(format),
+                            fmt: *format,
                             alpha_meaningful: true,
                         });
                     }
@@ -39,8 +39,7 @@ fn create_canvas_def() -> NodeDefinition {
                         let ptr = ::ffi::flow_bitmap_bgra_create(c,
                                                                  *w as i32,
                                                                  *h as i32,
-                                                                 true,
-                                                                 ffi::PixelFormat::from(format));
+                                                                 true, *format);
                         let color_val = color.clone();
                         if color_val != s::Color::Transparent {
                             if !ffi::flow_bitmap_bgra_fill_rect(c,

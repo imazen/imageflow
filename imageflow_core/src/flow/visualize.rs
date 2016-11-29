@@ -91,10 +91,10 @@ fn get_pixel_format_name_for(bitmap: *const BitmapBgra) -> &'static str {
 
 fn get_pixel_format_name(fmt: PixelFormat, alpha_meaningful: bool) -> &'static str {
     match fmt {
-        PixelFormat::BGR24 => "bgra24",
+        PixelFormat::Bgr24 => "bgra24",
         PixelFormat::Gray8 => "gray8",
-        PixelFormat::BGRA32 if alpha_meaningful => "bgra32",
-        PixelFormat::BGRA32 => "bgr32",
+        PixelFormat::Bgra32 if alpha_meaningful => "bgra32",
+        PixelFormat::Bgra32 => "bgr32",
         // _ => "?"
     }
 }

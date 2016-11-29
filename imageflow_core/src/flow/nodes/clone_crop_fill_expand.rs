@@ -41,8 +41,8 @@ fn copy_rect_def() -> NodeDefinition {
 
                         let bytes_pp = match (*input).fmt {
                             PixelFormat::Gray8 => 1,
-                            PixelFormat::BGRA32 => 4,
-                            PixelFormat::BGR24 => 3,
+                            PixelFormat::Bgra32 => 4,
+                            PixelFormat::Bgr24 => 3,
                         };
                         for row in 0..height {
                             let from_offset = (*input).stride * (from_y + row) + bytes_pp * from_x;
@@ -261,8 +261,8 @@ fn crop_mutate_def() -> NodeDefinition {
 
                         let bytes_pp = match (*input).fmt {
                             PixelFormat::Gray8 => 1,
-                            PixelFormat::BGRA32 => 4,
-                            PixelFormat::BGR24 => 3,
+                            PixelFormat::Bgra32 => 4,
+                            PixelFormat::Bgr24 => 3,
                         };
                         let offset = (*input).stride as isize * y1 as isize +
                                      bytes_pp * x1 as isize;

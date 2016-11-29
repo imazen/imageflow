@@ -44,17 +44,18 @@ extern crate regex;
 use std::ascii::AsciiExt;
 use std::str::FromStr;
 
-#[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
+#[repr(C)]
+#[derive(Serialize, Deserialize, Copy, Clone, PartialEq, Debug)]
 pub enum PixelFormat {
     // camelCased: #[serde(rename="bgra32")]
     #[serde(rename="bgra_32")]
-    Bgra32,
+    Bgra32 = 4,
     // camelCased: #[serde(rename="bgr24")]
     #[serde(rename="bgr_24")]
-    Bgr24,
+    Bgr24 = 3,
     // camelCased: #[serde(rename="gray8")]
     #[serde(rename="gray_8")]
-    Gray8,
+    Gray8 = 1,
 }
 
 #[repr(C)]
@@ -354,7 +355,7 @@ pub enum Node {
         ptr_to_flow_bitmap_bgra_ptr: usize,
     },
 }
-#[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
+#[derive(Serialize, Deserialize, Copy, Clone, PartialEq, Debug)]
 pub enum EdgeKind {
     // camelCased: #[serde(rename="input")]
     #[serde(rename="input")]
@@ -379,13 +380,16 @@ pub struct Graph {
 #[derive(Serialize, Deserialize, Clone, Copy, PartialEq, Debug)]
 #[repr(C)]
 pub enum IoDirection {
-    // camelCased: #[serde(rename="output")]
-    #[serde(rename="output")]
-    Output = 8,
-    // camelCased: #[serde(rename="input")]
-    #[serde(rename="input")]
-    Input = 4,
+    // camelCased: #[serde(rename="out")]
+    #[serde(rename="out")]
+    Out = 8,
+    // camelCased: #[serde(rename="in")]
+    #[serde(rename="in")]
+    In = 4,
 }
+
+
+
 
 #[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
 pub enum IoEnum {
@@ -514,19 +518,19 @@ impl Build001 {
             io: vec![
             IoObject {
 
-                direction: IoDirection::Input,
+                direction: IoDirection::In,
                 io_id: 0,
                 io: IoEnum::Url("http://s3-us-west-2.amazonaws.com/imageflow-resources/test_inputs/waterhouse.jpg".to_owned())
             },
             IoObject {
 
-                direction: IoDirection::Input,
+                direction: IoDirection::In,
                 io_id: 90,
                 io: IoEnum::example_byte_array_truncated(),
             },
             IoObject {
 
-                direction: IoDirection::Input,
+                direction: IoDirection::In,
                 io_id: 91,
                 io: IoEnum::example_bytes_hex(),
             },
@@ -534,13 +538,13 @@ impl Build001 {
                 io: IoEnum::Filename("output.png".to_owned()),
                 io_id: 1,
 
-                direction: IoDirection::Output
+                direction: IoDirection::Out
             },
             IoObject {
                 io: IoEnum::OutputBuffer,
                 io_id: 2,
 
-                direction: IoDirection::Output
+                direction: IoDirection::Out
             }
             ],
             framewise: Framewise::example_graph()
@@ -1076,59 +1080,59 @@ mod key_casing {
         }
     }
 }
-
-mod try_nested_mut{
-
-    struct C<'a>{
-        v: &'a mut Vec<u8>
-    }
-    impl<'a> C<'a> {
-        fn b<'b>(&'b mut self) -> ::std::result::Result<(),()>{
-            Ok(())
-        }
-        fn a<'b>(&'b mut self) -> ::std::result::Result<(),()>{
-            {
-                self.b()?;
-            }
-            {
-                self.b()?;
-            }
-            {
-                self.b()
-            }
-        }
-    }
-    #[test]
-    fn test_c(){
-        let mut vec = Vec::new();
-        let mut c = C{v: &mut vec};
-        c.a().unwrap();
-    }
-
-
-    struct A<'d>{
-        v: &'d mut Vec<u8>,
-    }
-    struct B<'a>{
-        v: &'a mut Vec<u8>
-    }
-impl<'a> B<'a>{
-    fn ok(&mut self){
-        self.v.sort()
-    }
-}
-    impl<'d> A<'d>{
-        fn try(&mut self){ //&mut self is required to re-use self.v as a mutable reference.
-            let mut b = B{v: self.v};
-            b.ok();
-        }
-    }
-
-    #[test]
-    fn testit(){
-        let mut vec = Vec::new();
-        let mut a = A{v: &mut vec};
-        a.try();
-    }
-
-}
+//
+//mod try_nested_mut{
+//
+//    struct C<'a>{
+//        v: &'a mut Vec<u8>
+//    }
+//    impl<'a> C<'a> {
+//        fn b<'b>(&'b mut self) -> ::std::result::Result<(),()>{
+//            Ok(())
+//        }
+//        fn a<'b>(&'b mut self) -> ::std::result::Result<(),()>{
+//            {
+//                self.b()?;
+//            }
+//            {
+//                self.b()?;
+//            }
+//            {
+//                self.b()
+//            }
+//        }
+//    }
+//    #[test]
+//    fn test_c(){
+//        let mut vec = Vec::new();
+//        let mut c = C{v: &mut vec};
+//        c.a().unwrap();
+//    }
+//
+//
+//    struct A<'d>{
+//        v: &'d mut Vec<u8>,
+//    }
+//    struct B<'a>{
+//        v: &'a mut Vec<u8>
+//    }
+//impl<'a> B<'a>{
+//    fn ok(&mut self){
+//        self.v.sort()
+//    }
+//}
+//    impl<'d> A<'d>{
+//        fn try(&mut self){ //&mut self is required to re-use self.v as a mutable reference.
+//            let mut b = B{v: self.v};
+//            b.ok();
+//        }
+//    }
+//
+//    #[test]
+//    fn testit(){
+//        let mut vec = Vec::new();
+//        let mut a = A{v: &mut vec};
+//        a.try();
+//    }
+//
+//}

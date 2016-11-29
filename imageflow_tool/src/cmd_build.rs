@@ -224,8 +224,8 @@ impl CmdBuild {
 
     fn parse_maybe(source: JobSource, in_args: Option<Vec<String>>, out_args: Option<Vec<String>>) -> Result<s::Build001>{
         let original = CmdBuild::load_job(source)?;
-        let a = CmdBuild::inject(original, in_args, s::IoDirection::Input)?;
-        CmdBuild::inject(a, out_args, s::IoDirection::Output)
+        let a = CmdBuild::inject(original, in_args, s::IoDirection::In)?;
+        CmdBuild::inject(a, out_args, s::IoDirection::Out)
     }
     pub fn parse(source: JobSource, in_args: Option<Vec<String>>, out_args: Option<Vec<String>>) -> CmdBuild{
         CmdBuild{
