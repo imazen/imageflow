@@ -1170,7 +1170,7 @@ mod key_casing {
         Ok(keys)
     }
 
-
+    #[allow(dead_code)]
     pub fn which_json_keys_cannot_roundtrip_casing<T>(value: &T)
                                                       -> serde_json::error::Result<Vec<String>>
         where T: serde::Serialize,
@@ -1213,6 +1213,7 @@ mod key_casing {
         fail_count
     }
 
+    #[allow(dead_code)]
     pub fn print_keys_not_roundtrippable_consuming<T>(value: T) -> usize
         where T: serde::Serialize,
               T: serde::Deserialize
@@ -1233,9 +1234,13 @@ mod key_casing {
     #[derive(Copy, Clone, PartialEq, Debug)]
     enum Style {
         Snake,
+        #[allow(dead_code)]
         ScreamingSnake,
+        #[allow(dead_code)]
         PascalCase,
+        #[allow(dead_code)]
         PascalSnake,
+        #[allow(dead_code)]
         CamelSnake,
         CamelCase,
     }
