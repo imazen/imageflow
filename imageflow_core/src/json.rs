@@ -73,8 +73,9 @@ pub fn create_handler_over_responder<'a, T, D>(responder: ResponderFn<'a, T, D>)
                         Ok(JsonResponse::success_with_payload(payload)) //How about failures with payloads!?
                     }
                     Err(error) => {
+                        let message = format!("{:?}", error);
                         Ok(JsonResponse::fail_with_message(500,
-                                                           "error translation not implemented"))
+                                                           &message))
                     }
                 }
             }

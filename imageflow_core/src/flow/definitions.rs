@@ -172,6 +172,7 @@ impl From<s::Node> for Node {
             }
             s::Node::FillRect { .. } => Node::new(&nodes::FILL_RECT, NodeParams::Json(node)),
             s::Node::Resample2D { .. } => Node::new(&nodes::SCALE, NodeParams::Json(node)),
+            s::Node::Constrain (_) => Node::new(&nodes::CONSTRAIN, NodeParams::Json(node)),
             s::Node::ExpandCanvas { .. } => {
                 Node::new(&nodes::EXPAND_CANVAS, NodeParams::Json(node))
             }

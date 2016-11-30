@@ -7,6 +7,7 @@ mod clone_crop_fill_expand;
 mod scale_render;
 mod create_canvas;
 mod codecs_and_pointer;
+mod constrain;
 
 mod internal_prelude {
     pub use ::ffi;
@@ -43,6 +44,7 @@ pub use self::rotate_flip_transpose::TRANSPOSE;
 pub use self::scale_render::SCALE;
 pub use self::scale_render::SCALE_1D;
 pub use self::scale_render::SCALE_1D_TO_CANVAS_1D;
+pub use self::constrain::CONSTRAIN;
 use super::definitions::*;
 
 pub struct NodeDefHelpers {}

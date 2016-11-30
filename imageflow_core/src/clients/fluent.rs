@@ -64,6 +64,15 @@ impl FluentNode {
         FluentGraphBuilder::new_with(self)
     }
 
+    /// Injects placeholders
+    pub fn to_build_0_1(self) -> s::Build001{
+        self.builder().to_framewise().wrap_in_build_0_1()
+    }
+
+    pub fn constrain_within(self, w: Option<u32>, h: Option<u32>, resampling_hints: Option<s::ConstraintResamplingHints>) -> FluentNode{
+        self.to(s::Node::Constrain(s::Constraint::Within{ w: w, h: h, hints: resampling_hints}))
+    }
+
     pub fn canvas_bgra32(self,
                          w: usize,
                          // camelCased: #[serde(rename="fromY")]
@@ -102,6 +111,14 @@ impl FluentNode {
             commands: None,
         })
     }
+    pub fn encode(self, io_id: i32, preset: s::EncoderPreset) -> FluentNode {
+        self.to(s::Node::Encode {
+            io_id: io_id,
+            preset: preset
+        })
+    }
+
+
 
     pub fn flip_vertical(self) -> FluentNode {
         self.to(s::Node::FlipV)

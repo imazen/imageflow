@@ -156,6 +156,9 @@ impl IoTranslator {
                     panic!("Failed to create I/O");
                 }
                 io_ptr
+            },
+            s::IoEnum::Placeholder => {
+                panic!("Placeholder was never substituted!")
             }
         } as *mut ffi::ImageflowJobIo;
 

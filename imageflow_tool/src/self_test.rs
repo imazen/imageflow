@@ -284,6 +284,29 @@ pub fn run(tool_location: Option<PathBuf>) -> i32 {
         }
 
     }
+    {
+        c.write_json("example2.json", fluent::fluently().decode(0).constrain_within(Some(60), Some(45), None).encode(1, s::EncoderPreset::libjpegturbo()).to_build_0_1());
+        c.create_blank("200x200", 200, 200, s::EncoderPreset::libjpegturbo());
+
+        let result =
+        c.exec("v0.1/build --json example2.json --in 200x200.jpg --out out3.jpg");
+
+        result.expect_status_code(Some(0));
+
+        let resp: s::Response001 = result.parse_stdout_as::<s::Response001>().unwrap();
+        match resp.data {
+            s::ResponsePayload::BuildResult(info) => {
+
+                assert!(info.encodes.len() == 1);
+                let encode: &s::EncodeResult = &info.encodes[0];
+                assert_eq!(encode.w, 45);
+                assert_eq!(encode.h, 45);
+            }
+            _ => panic!("Build result not sent"),
+        }
+
+    }
+
 
     // It seems that Clap always uses status code 1 to indicate a parsing failure
     c.exec("bad command").expect_status_code(Some(1));

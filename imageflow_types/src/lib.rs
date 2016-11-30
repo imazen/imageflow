@@ -137,7 +137,7 @@ impl FromStr for Filter {
     }
 }
 
-#[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
+#[derive(Serialize, Deserialize, Clone, Copy, PartialEq, Debug)]
 pub enum PngBitDepth {
     // camelCased: #[serde(rename="png32")]
     #[serde(rename="png_32")]
@@ -241,7 +241,7 @@ fn test_bgra() {
 
 }
 
-#[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
+#[derive(Serialize, Deserialize, Copy, Clone, PartialEq, Debug)]
 pub struct ResampleHints {
     // camelCased: #[serde(rename="sharpenPercent")]
     pub sharpen_percent: Option<f32>,
@@ -250,8 +250,36 @@ pub struct ResampleHints {
     pub prefer_1d_twice: Option<bool>,
 }
 
-pub enum Constraint {
+#[derive(Serialize, Deserialize, Clone, Copy, PartialEq, Debug)]
+pub enum ResampleWhen{
+    #[serde(rename="size_differs")]
+    SizeDiffers,
+    #[serde(rename="size_differs_or_sharpening_requested")]
+    SizeDiffersOrSharpeningRequested,
+    #[serde(rename="always")]
+    Always
+}
 
+#[derive(Serialize, Deserialize, Copy, Clone, PartialEq, Debug)]
+pub struct ConstraintResamplingHints {
+    // camelCased: #[serde(rename="sharpenPercent")]
+    pub sharpen_percent: Option<f32>,
+
+    // camelCased: #[serde(rename="downFilter")]
+    pub down_filter: Option<Filter>,
+    // camelCased: #[serde(rename="upFilter")]
+    pub up_filter: Option<Filter>,
+
+    pub resample_when: Option<ResampleWhen>
+}
+
+
+
+#[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
+pub enum Constraint {
+    #[serde(rename="within")]
+    Within{w: Option<u32>, h: Option<u32>, hints: Option<ConstraintResamplingHints>}
+    //max * {down, up, both, canvas}
 }
 
 #[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
@@ -273,6 +301,8 @@ pub enum Node {
         h: usize,
         color: Color,
     },
+    #[serde(rename="constrain")]
+    Constrain(Constraint),
     // camelCased: #[serde(rename="copyRectToCanvas")]
     #[serde(rename="copy_rect_to_canvas")]
     CopyRectToCanvas {
@@ -418,6 +448,9 @@ pub enum IoEnum {
     // camelCased: #[serde(rename="outputBase64")]
     #[serde(rename="output_base64")]
     OutputBase64,
+    /// To be replaced before execution
+    #[serde(rename="placeholder")]
+    Placeholder
 }
 
 
@@ -444,6 +477,31 @@ impl Framewise {
         match *self {
             Framewise::Graph(ref graph) => graph.nodes.values().collect::<Vec<&Node>>(),
             Framewise::Steps(ref nodes) => nodes.iter().collect::<Vec<&Node>>(),
+        }
+    }
+
+    fn io_ids_and_directions(&self) -> Vec<(i32, IoDirection)>{
+        self.clone_nodes().into_iter().map(|n|{
+            match n{
+                &Node::Decode{io_id, ..} => Some((io_id, IoDirection::In)),
+                &Node::Encode{io_id, ..} => Some((io_id, IoDirection::Out)),
+                _ => None
+            }
+        }).filter(|v| v.is_some()).map(|v| v.unwrap()).collect::<Vec<(i32, IoDirection)>>()
+    }
+
+    pub fn wrap_in_build_0_1(self) -> Build001{
+        let io_vec = self.io_ids_and_directions().into_iter().map(|(id, dir)|
+            IoObject{
+                direction: dir,
+                io_id: id,
+                io: IoEnum::Placeholder
+            }
+        ).collect::<Vec<IoObject>>();
+        Build001 {
+            builder_config: None,
+            framewise: self,
+            io: io_vec,
         }
     }
 }
