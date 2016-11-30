@@ -92,6 +92,7 @@ impl ToolProduct {
         std::str::from_utf8(&self.r.stderr)
             .expect("Implement lossy UTF-8 decoding for test results")
     }
+    #[allow(dead_code)]
     fn stdout_str(&self) -> &str {
         std::str::from_utf8(&self.r.stdout)
             .expect("Implement lossy UTF-8 decoding for test results")
@@ -120,14 +121,7 @@ impl ToolProduct {
         self
     }
 
-    fn expect_stdout_contains(&self, substring: &str) -> &ToolProduct {
-        if !self.stdout_str().contains(substring) {
-            panic!("Failed to locate substring {:?} within stdout output {}",
-                   substring,
-                   self.stdout_str());
-        }
-        self
-    }
+
     fn parse_stdout_as<T>(&self) -> std::result::Result<T, serde_json::error::Error>
         where T: serde::Deserialize
     {
@@ -223,13 +217,13 @@ impl TestContext {
     }
     fn exec_full(&self, full_invocation: &str) -> ToolProduct {
         let mut parts_vec = full_invocation.split_whitespace().collect::<Vec<&str>>();
-        let give_tool_path = parts_vec.remove(0);
+        let _ = parts_vec.remove(0);
 
         let args_vec = parts_vec;
         let dir = self.test_dir.as_path();
         let exe = self.imageflow_tool.as_path();
 
-        writeln!(&mut std::io::stderr(),
+        let _ = writeln!(&mut std::io::stderr(),
                  "Executing from folder {}\n{}",
                  dir.to_str().unwrap(),
                  full_invocation);
@@ -237,7 +231,7 @@ impl TestContext {
         let mut cmd = Command::new(exe);
         cmd.args(args_vec.as_slice()).current_dir(dir).env("RUST_BACKTRACE", "1");
         let output: Output = cmd.output().expect("Failed to start?");
-        writeln!(&mut std::io::stderr(),
+        let _ = writeln!(&mut std::io::stderr(),
                  "exit code {:?}", output.status.code());
 
         // Try to debug segfaults
@@ -298,7 +292,7 @@ impl TestContext {
     }
 
     fn read_file_str(&self, filename: &str) -> String{
-        let mut path = self.test_dir.join(filename);
+        let path = self.test_dir.join(filename);
         let mut file = File::open(&path).unwrap();
         let mut contents = String::new();
         file.read_to_string( &mut contents).unwrap();
@@ -413,7 +407,7 @@ impl ReplacementOutput{
     pub fn parameter(&self) -> String{
         match self.value{
             OutputDestination::File{ref path} => {format!("{} {}", self.io_id, path)},
-            _ => {panic!("")}
+            OutputDestination::Base64 => format!("{} base64:", self.io_id) //We would quote this in real life, but we're splitting on whitespace
         }
     }
 }
@@ -468,6 +462,7 @@ fn scenario_export_4() -> BuildScenario{
     }
 }
 
+const BLUE_PNG32_200X200_B64:&'static str = "iVBORw0KGgoAAAANSUhEUgAAAMgAAADICAYAAACtWK6eAAABiUlEQVR42u3TgRAAQAgAsA/qkaKLK48EIug2h8XP6gesQhAQBAQBQUAQEAQEAUFAEBAEEAQEAUFAEBAEBAFBQBAQBAQRBAQBQUAQEAQEAUFAEBAEBAEEAUFAEBAEBAFBQBAQBAQBQQBBQBAQBAQBQUAQEAQEAUEAQUAQEAQEAUFAEBAEBAFBQBBAEBAEBAFBQBAQBAQBQUAQQBAQBAQBQUAQEAQEAUFAEBAEEAQEAUFAEBAEBAFBQBAQBAQRBAQBQUAQEAQEAUFAEBAEBAEEAUFAEBAEBAFBQBAQBAQBQQQBQUAQEAQEAUFAEBAEBAFBAEFAEBAEBAFBQBAQBAQBQUAQQBAQBAQBQUAQEAQEAUFAEEAQEAQEAUFAEBAEBAFBQBAQBBAEBAFBQBAQBAQBQUAQEAQQBAQBQUAQEAQEAUFAEBAEBAEEAUFAEBAEBAFBQBAQBAQBQQQBQUAQEAQEAUFAEBAEBAFBAEFAEBAEBAFBQBAQBAQBQUAQQUAQEAQEAUFAEBAEBIGLBkZ+sahOjkyUAAAAAElFTkSuQmCC";
 
 fn scenario_pure_json() -> BuildScenario{
     let framewise = fluent::fluently()
@@ -475,12 +470,11 @@ fn scenario_pure_json() -> BuildScenario{
         .constrain_within(Some(40), Some(40), Some(s::ConstraintResamplingHints::with(None, Some(25f32))))
         .encode(1, s::EncoderPreset::libpng32()).builder().to_framewise();
 
-    let blue_png32_200x200_b64 = "iVBORw0KGgoAAAANSUhEUgAAAMgAAADICAYAAACtWK6eAAABiUlEQVR42u3TgRAAQAgAsA/qkaKLK48EIug2h8XP6gesQhAQBAQBQUAQEAQEAUFAEBAEEAQEAUFAEBAEBAFBQBAQBAQRBAQBQUAQEAQEAUFAEBAEBAEEAUFAEBAEBAFBQBAQBAQBQQBBQBAQBAQBQUAQEAQEAUEAQUAQEAQEAUFAEBAEBAFBQBBAEBAEBAFBQBAQBAQBQUAQQBAQBAQBQUAQEAQEAUFAEBAEEAQEAUFAEBAEBAFBQBAQBAQRBAQBQUAQEAQEAUFAEBAEBAEEAUFAEBAEBAFBQBAQBAQBQQQBQUAQEAQEAUFAEBAEBAFBAEFAEBAEBAFBQBAQBAQBQUAQQBAQBAQBQUAQEAQEAUFAEEAQEAQEAUFAEBAEBAFBQBAQBBAEBAFBQBAQBAQBQUAQEAQQBAQBQUAQEAQEAUFAEBAEBAEEAUFAEBAEBAFBQBAQBAQBQQQBQUAQEAQEAUFAEBAEBAFBAEFAEBAEBAFBQBAQBAQBQUAQQUAQEAQEAUFAEBAEBIGLBkZ+sahOjkyUAAAAAElFTkSuQmCC";
     BuildScenario{
         description: "Base64 encoding permits you to embed images in the json recipe itself",
         slug: "pure_json",
         recipe: framewise.wrap_in_build_0_1()
-            .replace_io(0, s::IoEnum::Base64(blue_png32_200x200_b64.to_owned()))
+            .replace_io(0, s::IoEnum::Base64(BLUE_PNG32_200X200_B64.to_owned()))
             .replace_io(1, s::IoEnum::OutputBase64),
         new_inputs: vec![],
         new_outputs: vec![],
@@ -488,14 +482,114 @@ fn scenario_pure_json() -> BuildScenario{
         expectations: Some(ScenarioExpectations{status_code: Some(0)})
     }
 }
+fn scenario_response_stdout() -> BuildScenario{
+    let framewise = fluent::fluently()
+        .decode(0)
+        .constrain_within(Some(40), Some(40), Some(s::ConstraintResamplingHints::with(None, Some(25f32))))
+        .encode(1, s::EncoderPreset::libpng32()).builder().to_framewise();
+
+    BuildScenario{
+        description: "The JSON result is sent to stdout if --response [filename] is not specified.",
+        slug: "pure_json_to_stdout",
+        recipe: framewise.wrap_in_build_0_1()
+            .replace_io(0, s::IoEnum::Base64(BLUE_PNG32_200X200_B64.to_owned()))
+            .replace_io(1, s::IoEnum::OutputBase64),
+        new_inputs: vec![],
+        new_outputs: vec![],
+        json_out: None,
+        expectations: Some(ScenarioExpectations{status_code: Some(0)})
+    }
+}
+
+fn scenario_laundry_list() -> BuildScenario{
+    let chain = fluent::fluently()
+        .to(s::Node::Decode{io_id:0, commands: Some(vec![s::DecoderCommand::JpegDownscaleHints(s::JpegIDCTDownscaleHints{
+            gamma_correct_for_srgb_during_spatial_luma_scaling: Some(false),
+            scale_luma_spatially: Some(false),
+            width: 1600,
+            height:1600
+    })])})
+        .constrain_within(Some(1400), None,None)
+        .constrain_within(Some(1400), Some(1400), Some(s::ConstraintResamplingHints::with(Some(s::Filter::CatmullRom), Some(40f32))))
+        .to(s::Node::Resample2D {
+            w: 800,
+            h: 800,
+            down_filter: Some(s::Filter::Robidoux),
+            up_filter: Some(s::Filter::Ginseng),
+            hints: Some(s::ResampleHints {
+                sharpen_percent: Some(10f32),
+                prefer_1d_twice: None,
+            }),
+        })
+        .to(s::Node::ApplyOrientation{flag: 7}).flip_horizontal().flip_vertical().transpose().rotate_90().rotate_180().rotate_270()
+        .to(s::Node::FillRect {
+            x1: 0,
+            y1: 0,
+            x2: 8,
+            y2: 8,
+            color: s::Color::Transparent,
+        }).to(                              s::Node::ExpandCanvas {
+        left: 10,
+        top: 10,
+        right: 10,
+        bottom: 10,
+        color: s::Color::Srgb(s::ColorSrgb::Hex("FFEECCFF".to_owned())),
+    }).to(s::Node::Crop {
+        x1: 10,
+        y1: 10,
+        x2: 650,
+        y2: 490,
+    }).encode(1, s::EncoderPreset::Libpng{
+        depth: Some(s::PngBitDepth::Png24),
+        matte: Some(s::Color::Srgb(s::ColorSrgb::Hex("9922FF".to_owned()))),
+        zlib_compression: Some(7)
+    });
+
+    let framewise = chain.builder().to_framewise();
+
+    BuildScenario{
+        description: "A rather nonsensical enumeration of operations",
+        slug: "laundry_list",
+        recipe: framewise.wrap_in_build_0_1(),
+        new_inputs: vec![ReplacementInput::File{path: "blank3200.jpg".to_owned(), source: ImageSource::Blank(BlankImage{w: 3200, h:3200, color: s::Color::Black, encoding: s::EncoderPreset::libjpegturbo_q(Some(5))})}
+],
+        new_outputs: vec![ReplacementOutput::file(1,"wat.jpg")],
+        json_out: None,
+        expectations: Some(ScenarioExpectations{status_code: Some(0)})
+    }
+}
+
+
+fn scenario_request_base64() -> BuildScenario{
+    let framewise = fluent::fluently()
+        .decode(0)
+        .constrain_within(Some(5), Some(5), Some(s::ConstraintResamplingHints::with(None, Some(25f32))))
+        .encode(1, s::EncoderPreset::libpng32()).builder().to_framewise();
+
+    BuildScenario{
+        description: "base64: is a keyword: --out \"base64:\" causes the result to be base64 encoded into the response JSON",
+        slug: "give_me_base64",
+        recipe: framewise.wrap_in_build_0_1(),
+        new_inputs: vec![ReplacementInput::File{path: "rings2.png".to_owned(), source: ImageSource::Url("http://s3-us-west-2.amazonaws.com/imageflow-resources/test_inputs/rings2.png".to_owned())}],
+        new_outputs: vec![ReplacementOutput::b64(1)],
+        json_out: Some("operation_result.json"),
+        expectations: Some(ScenarioExpectations{status_code: Some(0)})
+    }
+}
+
+
 
 
 fn scenarios() -> Vec<BuildScenario>{
     vec![
     scenario_export_4(),
-    scenario_pure_json()
+    scenario_pure_json(),
+    scenario_response_stdout(),
+    scenario_laundry_list(),
+    scenario_request_base64()
     ]
 }
+
 
 impl TestContext {
 
@@ -698,7 +792,7 @@ pub fn run(tool_location: Option<PathBuf>) -> i32 {
             io: vec![],
         };
         c.write_json("bad__loop.json",&recipe);
-        let result = c.exec("v0.1/build --json bad__loop.json");
+        let _ = c.exec("v0.1/build --json bad__loop.json");
         // Stack overflow. None on linux, Some(1073741571) on windows
         //assert_eq!(result., None);
     }

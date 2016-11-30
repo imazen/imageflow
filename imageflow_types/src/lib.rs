@@ -638,18 +638,6 @@ impl Build001 {
             IoObject {
 
                 direction: IoDirection::In,
-                io_id: 90,
-                io: IoEnum::example_byte_array_truncated(),
-            },
-            IoObject {
-
-                direction: IoDirection::In,
-                io_id: 91,
-                io: IoEnum::example_bytes_hex(),
-            },
-            IoObject {
-
-                direction: IoDirection::In,
                 io_id: 92,
                 io: IoEnum::example_base64(),
             },
@@ -662,6 +650,12 @@ impl Build001 {
             IoObject {
                 io: IoEnum::OutputBuffer,
                 io_id: 2,
+
+                direction: IoDirection::Out
+            },
+            IoObject {
+                io: IoEnum::OutputBase64,
+                io_id: 3,
 
                 direction: IoDirection::Out
             }

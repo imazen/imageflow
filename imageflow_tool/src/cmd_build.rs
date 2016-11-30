@@ -100,7 +100,7 @@ impl From<fc::FlowError> for CmdError {
 
 fn parse_io_enum(s: &str) -> s::IoEnum {
     match s {
-        "base64" => s::IoEnum::OutputBase64,
+        "base64:" => s::IoEnum::OutputBase64,
         s if s.starts_with("http://") || s.starts_with("https://") => s::IoEnum::Url(s.to_owned()),
         s => s::IoEnum::Filename(s.to_owned()),
     }
