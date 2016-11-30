@@ -20,5 +20,5 @@ $TOOL diagnose --self-test
 (
     mkdir _test || true
     cd _test
-    $TOOL examples --generate
+    ../$TOOL examples --generate
 )
