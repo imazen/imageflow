@@ -232,6 +232,15 @@ impl FluentGraphBuilder {
         for_nodes.iter().map(|n| n.uid).min()
     }
     pub fn to_framewise(&self) -> s::Framewise {
+        let mut nodes = self.collect_unique();
+        if self.output_nodes.len() == 1 && nodes.as_slice().iter().all(|n| n.canvas == None) {
+            nodes.sort_by(|a,b|a.uid.cmp(&b.uid));
+            s::Framewise::Steps(nodes.into_iter().map(|b| b.data.clone().unwrap()).collect::<Vec<s::Node>>())
+        }else{
+            self.to_framewise_graph()
+        }
+    }
+    pub fn to_framewise_graph(&self) -> s::Framewise {
         let nodes = self.collect_unique();
         let lowest_uid = FluentGraphBuilder::lowest_uid(&nodes).unwrap_or(0);
         let edges = self.collect_edges(&nodes);
