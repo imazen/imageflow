@@ -271,7 +271,6 @@ if [[ "$TEST_RUST" == 'True' ]]; then
 			date "$STAMP"
 			cargo test
 			date "$STAMP"
-			./test_tool.sh
 		)
 		if [[ "$IMAGEFLOW_SERVER" == 'True' ]]; then
 			(
