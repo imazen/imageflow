@@ -270,6 +270,10 @@ impl CmdBuild {
         }
     }
 
+//    pub fn get_modified_recipe<'a>(&'a self) -> &'a Result<s::Build001>{
+//        &self.job
+//    }
+
     ///
     /// Write the JSON response (if present) to the given file or STDOUT
     pub fn write_response_maybe(&self, response_file: Option<&str>) -> std::io::Result<()> {
