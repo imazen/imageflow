@@ -90,14 +90,15 @@ if [ "${TRAVIS_PULL_REQUEST}" == "false" ]; then
 		export UPLOAD_AS_LATEST=True
 		export ARTIFACT_UPLOAD_PATH_2="${GIT_OPTIONAL_BRANCH}/imageflow-nightly-${PACKAGE_SUFFIX}"
 		export DOCS_UPLOAD_DIR_2="${GIT_OPTIONAL_BRANCH}/doc"
-		export ESTIMATED_DOCS_URL="${ESTIMATED_DOCS_URL:-${UPLOAD_URL}/${DOCS_UPLOAD_DIR_2}}"
+		export ESTIMATED_DOCS_URL_2="${UPLOAD_URL}/${DOCS_UPLOAD_DIR_2}"
+		export ESTIMATED_DOCS_URL="${ESTIMATED_DOCS_URL:-${ESTIMATED_DOCS_URL_2}}"
 	fi
 
 fi
 
 printf "\n=================================================\n"
-printf "\nEstimated upload URLs:\n\n%s\n\n%s\n\n" "${ARTIFACT_UPLOAD_PATH}" "${ARTIFACT_UPLOAD_PATH_2}"
-printf "\nEstimated docs URLs:\n\n%s\n\n%s\n\n" "${DOCS_UPLOAD_DIR}" "${DOCS_UPLOAD_DIR_2}"
+printf "\nEstimated upload URLs:\n\n%s\n\n%s\n\n" "${ESTIMATED_ARTIFACT_URL}" "${ESTIMATED_ARTIFACT_URL_2}"
+printf "\nEstimated docs URLs:\n\n%s\n\n%s\n\n" "${ESTIMATED_DOCS_URL}" "${DOCS_UPLOAD_DIR_2}"
 printf "\n=================================================\n"
 
 if [ "${TRAVIS_PULL_REQUEST}" == "false" ]; then
