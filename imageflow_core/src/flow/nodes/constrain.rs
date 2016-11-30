@@ -23,7 +23,7 @@ use super::internal_prelude::*;
 
 fn scale_b_to(aspect_ratio_a_over_b: f32, a_from: u32, a_to: u32, b_from: u32) -> u32{
     let scale_factor = a_to as f32 / a_from as f32;
-    let result = b_from as f32 * scale_factor / aspect_ratio_a_over_b;
+    let result = b_from as f32 * scale_factor;// * aspect_ratio_a_over_b;
     result.round() as u32
 }
 fn constrain(old_w: u32, old_h: u32, constraint: &s::Constraint) -> (u32,u32, Option<s::ConstraintResamplingHints>){
@@ -55,19 +55,23 @@ fn constrain(old_w: u32, old_h: u32, constraint: &s::Constraint) -> (u32,u32, Op
 fn test_constrain(){
     //let hints = s::ConstraintResamplingHints{down_filter: None, up_filter: None, resample_when: None, sharpen_percent: None};
     {
-        let constraint = s::Constraint { w: 100, h: 100, hints: None };
+        let constraint = s::Constraint::Within { w: Some(100), h: Some(100), hints: None };
         assert_eq!(constrain(200, 50, &constraint), (100, 25, None));
     }
     {
-        let constraint = s::Constraint { w: 100, h: 100, hints: None };
+        let constraint = s::Constraint::Within { w: Some(100), h: Some(100), hints: None };
         assert_eq!(constrain(50, 200, &constraint), (25, 100, None));
     }
     {
-        let constraint = s::Constraint { w: 640, h: 480, hints: None };
+        let constraint = s::Constraint::Within { w: Some(640), h: Some(480), hints: None };
         assert_eq!(constrain(200, 50, &constraint), (200, 50, None));
     }
     {
-        let constraint = s::Constraint { w: 100, h: 100, hints: None };
+        let constraint = s::Constraint::Within { w: Some(100), h: Some(100), hints: None };
+        assert_eq!(constrain(100, 100, &constraint), (100, 100, None));
+    }
+    {
+        let constraint = s::Constraint::Within { w: Some(100), h: Some(100), hints: None };
         assert_eq!(constrain(100, 100, &constraint), (100, 100, None));
     }
 

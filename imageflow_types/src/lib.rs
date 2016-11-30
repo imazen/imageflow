@@ -173,6 +173,9 @@ impl EncoderPreset {
     pub fn libjpegturbo() -> EncoderPreset {
         EncoderPreset::LibjpegTurbo { quality: Some(100) }
     }
+    pub fn libjpegturbo_q(quality: Option<i32>) -> EncoderPreset {
+        EncoderPreset::LibjpegTurbo { quality: quality }
+    }
 }
 
 #[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
@@ -272,7 +275,16 @@ pub struct ConstraintResamplingHints {
 
     pub resample_when: Option<ResampleWhen>
 }
-
+impl ConstraintResamplingHints{
+    pub fn with(filter: Option<Filter>, sharpen_percent: Option<f32>) -> ConstraintResamplingHints{
+        ConstraintResamplingHints{
+            sharpen_percent: sharpen_percent,
+            down_filter: filter,
+            up_filter: filter,
+            resample_when: None
+        }
+    }
+}
 
 
 #[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
@@ -433,6 +445,8 @@ pub enum IoEnum {
     // camelCased: #[serde(rename="bytesHex")]
     #[serde(rename="bytes_hex")]
     BytesHex(String),
+    #[serde(rename="base_64")]
+    Base64(String),
     // camelCased: #[serde(rename="byteArray")]
     #[serde(rename="byte_array")]
     ByteArray(Vec<u8>),
@@ -446,7 +460,7 @@ pub enum IoEnum {
     #[serde(rename="output_buffer")]
     OutputBuffer,
     // camelCased: #[serde(rename="outputBase64")]
-    #[serde(rename="output_base64")]
+    #[serde(rename="output_base_64")]
     OutputBase64,
     /// To be replaced before execution
     #[serde(rename="placeholder")]
@@ -481,13 +495,15 @@ impl Framewise {
     }
 
     fn io_ids_and_directions(&self) -> Vec<(i32, IoDirection)>{
-        self.clone_nodes().into_iter().map(|n|{
+        let mut vec = self.clone_nodes().into_iter().map(|n|{
             match n{
                 &Node::Decode{io_id, ..} => Some((io_id, IoDirection::In)),
                 &Node::Encode{io_id, ..} => Some((io_id, IoDirection::Out)),
                 _ => None
             }
-        }).filter(|v| v.is_some()).map(|v| v.unwrap()).collect::<Vec<(i32, IoDirection)>>()
+        }).filter(|v| v.is_some()).map(|v| v.unwrap()).collect::<Vec<(i32, IoDirection)>>();
+        vec.sort_by(|&(a,_), &(b,_)| a.cmp(&b));
+        vec
     }
 
     pub fn wrap_in_build_0_1(self) -> Build001{
@@ -555,7 +571,38 @@ pub struct Build001 {
     pub io: Vec<IoObject>,
     pub framewise: Framewise,
 }
+impl Build001{
 
+    // How will things be sorted
+    pub fn add_replace_sort_io(self, obj: IoObject) -> Build001{
+        let mut new_io_vec = self.io.clone();
+        new_io_vec.retain(|v| v.io_id != obj.io_id);
+        new_io_vec.push(obj);
+        Build001{
+            builder_config: self.builder_config,
+            io: new_io_vec,
+            framewise: self.framewise
+        }
+    }
+    // Panics if no io_id found
+    pub fn replace_io(self, io_id: i32, value: IoEnum) -> Build001{
+        let value_ref = &value;
+        let new_io_vec = self.io.into_iter().map(|obj| {
+            if obj.io_id == io_id {
+                IoObject { direction: obj.direction, io_id: io_id, io: value_ref.to_owned() }
+            }else {obj}
+        }).collect::<Vec<IoObject>>();
+        if !new_io_vec.as_slice().iter().any(|obj| obj.io_id == io_id){
+            panic!("No existing IoObject with io_id {} found to replace!",io_id);
+        }
+        Build001{
+            builder_config: self.builder_config,
+            io: new_io_vec,
+            framewise: self.framewise
+        }
+    }
+
+}
 impl IoEnum {
     pub fn example_byte_array() -> IoEnum {
         let tinypng = vec![0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, 0x00, 0x00, 0x00, 0x0D,
@@ -571,6 +618,9 @@ impl IoEnum {
     }
     pub fn example_bytes_hex() -> IoEnum {
         IoEnum::BytesHex("89504E470D0A1A0A0000000D49484452000000010000000108060000001F15C4890000000A49444154789C63000100000500010D0A2DB40000000049454E44AE426082".to_owned())
+    }
+    pub fn example_base64() -> IoEnum {
+        IoEnum::Base64("iVBORw0KGgoAAAANSUhEUgAAAMgAAADICAYAAACtWK6eAAABiUlEQVR42u3TgRAAQAgAsA/qkaKLK48EIug2h8XP6gesQhAQBAQBQUAQEAQEAUFAEBAEEAQEAUFAEBAEBAFBQBAQBAQRBAQBQUAQEAQEAUFAEBAEBAEEAUFAEBAEBAFBQBAQBAQBQQBBQBAQBAQBQUAQEAQEAUEAQUAQEAQEAUFAEBAEBAFBQBBAEBAEBAFBQBAQBAQBQUAQQBAQBAQBQUAQEAQEAUFAEBAEEAQEAUFAEBAEBAFBQBAQBAQRBAQBQUAQEAQEAUFAEBAEBAEEAUFAEBAEBAFBQBAQBAQBQQQBQUAQEAQEAUFAEBAEBAFBAEFAEBAEBAFBQBAQBAQBQUAQQBAQBAQBQUAQEAQEAUFAEEAQEAQEAUFAEBAEBAFBQBAQBBAEBAFBQBAQBAQBQUAQEAQQBAQBQUAQEAQEAUFAEBAEBAEEAUFAEBAEBAFBQBAQBAQBQQQBQUAQEAQEAUFAEBAEBAFBAEFAEBAEBAFBQBAQBAQBQUAQQUAQEAQEAUFAEBAEBIGLBkZ+sahOjkyUAAAAAElFTkSuQmCC".to_owned())
     }
 }
 
@@ -596,6 +646,12 @@ impl Build001 {
                 direction: IoDirection::In,
                 io_id: 91,
                 io: IoEnum::example_bytes_hex(),
+            },
+            IoObject {
+
+                direction: IoDirection::In,
+                io_id: 92,
+                io: IoEnum::example_base64(),
             },
             IoObject {
                 io: IoEnum::Filename("output.png".to_owned()),
@@ -841,9 +897,13 @@ pub struct ImageInfo {
 }
 #[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
 pub enum ResultBytes {
+    #[serde(rename="base_64")]
     Base64(String),
+    #[serde(rename="byte_array")]
     ByteArray(Vec<u8>),
+    #[serde(rename="physical_file")]
     PhysicalFile(String),
+    #[serde(rename="elsewhere")]
     Elsewhere,
 }
 #[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]

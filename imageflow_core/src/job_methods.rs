@@ -37,17 +37,12 @@ fn create_job_router() -> MethodRouter<'static, JobPtr> {
                                                    0f32)
             }
         }
-        ::flow::execution_engine::Engine::create(job, &mut g).execute()?;
+        let encodes = ::flow::execution_engine::Engine::create(job, &mut g).execute()?;
         //            if !job.execute(&mut g){
         //                unsafe { job.ctx().assert_ok(Some(&mut g)); }
         //            }
-        let mut encodes = Vec::new();
-        for node in g.raw_nodes() {
-            if let ::flow::definitions::NodeResult::Encoded(ref r) = node.weight.result {
-                encodes.push((*r).clone());
-            }
-        }
-        Ok(s::ResponsePayload::JobResult(s::JobResult { encodes: encodes }))
+
+        Ok(s::ResponsePayload::JobResult(s::JobResult { encodes: JobPtr::collect_encode_results(&g) }))
     }));
     r.add("brew_coffee",
           Box::new(move |job: &mut JobPtr, bytes: &[u8]| Ok(JsonResponse::teapot())));

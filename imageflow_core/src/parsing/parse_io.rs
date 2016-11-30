@@ -5,6 +5,7 @@ use internal_prelude::works_everywhere::*;
 extern crate curl;
 use ::ffi;
 use ::rustc_serialize::hex::FromHex;
+use ::rustc_serialize::base64::FromBase64;
 use self::curl::easy::Easy;
 
 pub struct IoTranslator {
@@ -33,6 +34,35 @@ impl IoTranslator {
                                                p as *const libc::c_void,
                                                ptr::null(),
                                                0) as *mut u8;
+                if buf.is_null() {
+                    panic!("OOM");
+                }
+                ptr::copy_nonoverlapping(bytes.as_ptr(), buf, bytes.len());
+
+                let io_ptr = ::ffi::flow_io_create_from_memory(p,
+                                                               ::ffi::IoMode::ReadSeekable,
+                                                               buf,
+                                                               bytes.len(),
+                                                               p as *const libc::c_void,
+                                                               ptr::null());
+
+                if io_ptr.is_null() {
+                    panic!("Failed to create I/O");
+                }
+                io_ptr
+            }
+            s::IoEnum::Base64(b64_string) => {
+                let bytes = b64_string.as_str().from_base64().unwrap();
+
+
+                let buf: *mut u8 =
+                ::ffi::flow_context_calloc(p,
+                                           1,
+                                           bytes.len(),
+                                           ptr::null(),
+                                           p as *const libc::c_void,
+                                           ptr::null(),
+                                           0) as *mut u8;
                 if buf.is_null() {
                     panic!("OOM");
                 }

@@ -121,7 +121,7 @@ impl<'a> BuildHandler<'a> {
             }
 
 
-            IoTranslator::new(p).add_to_job(job.as_ptr(), parsed.io);
+            IoTranslator::new(p).add_to_job(job.as_ptr(), parsed.io.clone());
 
             ::flow::execution_engine::Engine::create(&mut job, &mut g).execute()?;
 
@@ -130,13 +130,7 @@ impl<'a> BuildHandler<'a> {
             // TODO: Question, should JSON endpoints populate the Context error stacktrace when something goes wrong? Or populate both (except for OOM).
 
 
-            let mut encodes = Vec::new();
-            for node in g.raw_nodes() {
-                if let ::flow::definitions::NodeResult::Encoded(ref r) = node.weight.result {
-                    encodes.push((*r).clone());
-                }
-            }
-            Ok(s::ResponsePayload::BuildResult(s::JobResult { encodes: encodes }))
+            Ok(s::ResponsePayload::BuildResult(s::JobResult { encodes: job.collect_augmented_encode_results(&g, &parsed.io) }))
         }
     }
 }

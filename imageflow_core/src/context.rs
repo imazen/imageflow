@@ -2,6 +2,8 @@ use ::{JsonResponse, IoDirection, MethodRouter};
 use ::ffi::ImageflowJsonResponse;
 use flow::definitions::Graph;
 use ::internal_prelude::works_everywhere::*;
+use ::rustc_serialize::base64;
+use ::rustc_serialize::base64::ToBase64;
 
 pub struct ContextPtr {
     // TODO: Remove pub as soon as tests/visuals.rs doesn't need access
@@ -245,6 +247,38 @@ impl JobPtr {
     }
 
 
+
+    pub fn collect_encode_results(g: &Graph) -> Vec<s::EncodeResult>{
+        let mut encodes = Vec::new();
+        for node in g.raw_nodes() {
+            if let ::flow::definitions::NodeResult::Encoded(ref r) = node.weight.result {
+                encodes.push((*r).clone());
+            }
+        }
+        encodes
+    }
+    pub fn collect_augmented_encode_results(&mut self, g: &Graph, io: &[s::IoObject]) -> Vec<s::EncodeResult>{
+        JobPtr::collect_encode_results(g).into_iter().map(|r: s::EncodeResult|{
+            if r.bytes == s::ResultBytes::Elsewhere {
+                let obj: &s::IoObject = io.iter().filter(|obj| obj.io_id == r.io_id).next().unwrap();//There's gotta be one
+                let bytes = match obj.io {
+                    s::IoEnum::Filename(ref str) => s::ResultBytes::PhysicalFile(str.to_owned()),
+                    s::IoEnum::OutputBase64 => {
+                        let vec = self.io_get_output_buffer_copy(r.io_id).unwrap();
+                        s::ResultBytes::Base64(vec.as_slice().to_base64(base64::Config{char_set: base64::CharacterSet::Standard, line_length: None, newline: base64::Newline::LF, pad: true}))
+                    },
+                    _ => s::ResultBytes::Elsewhere
+                };
+                s::EncodeResult{
+                    bytes: bytes,
+                    .. r
+                }
+            }else{
+                r
+            }
+
+        }).collect::<Vec<s::EncodeResult>>()
+    }
 
     fn ctx(&self) -> ContextPtr {
         ContextPtr::from_ptr(self.context_ptr())

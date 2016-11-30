@@ -1,3 +1,6 @@
+#![feature(slice_concat_ext)]
+
+
 extern crate clap;
 extern crate imageflow_types as s;
 extern crate imageflow_core as fc;
@@ -26,6 +29,14 @@ pub fn main_with_exit_code() -> i32 {
                 .arg(
                     Arg::with_name("wait").long("wait")
                         .help("Process stays in memory until you press the enter key.")
+                )
+        )
+        .subcommand(
+            SubCommand::with_name("examples")
+                .about("Generate usage examples")
+                .arg(
+                    Arg::with_name("export-build-examples").long("export-build-examples").takes_value(true).possible_values(&["all"])
+                        .help("Create an 'examples' directory")
                 )
         )
 
@@ -59,7 +70,7 @@ pub fn main_with_exit_code() -> i32 {
             )
             .arg(Arg::with_name("out").long("out").min_values(1).multiple(true)
                 .help("Replace/add outputs for the operation file"))
-            .arg(Arg::with_name("demo").long("demo").takes_value(true).possible_values(&["example:200x200_png"]))
+            //.arg(Arg::with_name("demo").long("demo").takes_value(true).possible_values(&["example:200x200_png"]))
             .arg(Arg::with_name("json").long("json").takes_value(true).required_unless("demo"))
             .arg(Arg::with_name("response").long("response").takes_value(true))
         );
@@ -108,5 +119,16 @@ pub fn main_with_exit_code() -> i32 {
             return 0;
         }
     }
+    if let Some(ref matches) = matches.subcommand_matches("examples") {
+        let m: &&clap::ArgMatches = matches;
+
+        if m.is_present("export-build-examples") {
+            if Some("all") == m.value_of("export-build-examples") {
+                self_test::export_examples(None)
+            }
+            return 0;
+        }
+    }
+
     64
 }

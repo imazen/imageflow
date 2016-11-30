@@ -3,7 +3,9 @@ use ::flow::definitions::*;
 use ::internal_prelude::works_everywhere::*;
 use petgraph::dot::Dot;
 use std::process::Command;
+use ::rustc_serialize::base64::ToBase64;
 use super::visualize::{notify_graph_changed, GraphRecordingUpdate, GraphRecordingInfo};
+
 
 pub struct Engine<'a, 'b> {
     c: *mut ::ffi::ImageflowContext,
