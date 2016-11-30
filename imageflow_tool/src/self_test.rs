@@ -181,22 +181,27 @@ impl TestContext {
         }
     }
 
-    fn create_valgrind_suppressions(&self) -> bool{
+    fn copy_ancestral_file_here(&self, filename: &str) -> std::result::Result<(), String>{
         let mut dir = self.test_dir.clone();
         loop{
-            let potential = dir.join("valgrind_suppressions.txt");
+            let potential = dir.join(filename);
             if !potential.exists(){
                 dir = match dir.parent(){
                     Some(v) => v.to_owned(),
                     None => { break; }
                 };
             }else{
-                let to_path = self.test_dir.join("valgrind_suppressions.txt");
+                let to_path = self.test_dir.join(filename);
                 std::fs::copy(potential, to_path).unwrap();
-                return true;
+                return Ok(());
             }
         }
-        false
+        Err(format!("Failed to locate {:?} in ancestors of {:?}", filename, self.test_dir))
+    }
+
+    fn create_valgrind_suppressions(&self) -> std::result::Result<(), String>{
+        self.copy_ancestral_file_here("valgrind_suppressions.txt")?;
+        self.copy_ancestral_file_here(".valgrindrc")
     }
     pub fn subfolder(&self, subfolder: &Path) -> TestContext{
         let new_dir = self.test_dir.join(subfolder);
@@ -223,9 +228,11 @@ impl TestContext {
         let dir = self.test_dir.as_path();
         let exe = self.imageflow_tool.as_path();
 
+        let valgrind_copy_result = self.create_valgrind_suppressions();
         let _ = writeln!(&mut std::io::stderr(),
-                 "Executing from folder {}\n{}",
+                 "Executing from folder {} with valgrind_suppressions {:?}\n{}",
                  dir.to_str().unwrap(),
+            valgrind_copy_result,
                  full_invocation);
         // change working dir to dir
         let mut cmd = Command::new(exe);
@@ -236,7 +243,7 @@ impl TestContext {
 
         // Try to debug segfaults
         if output.status.code() == None {
-            self.create_valgrind_suppressions();
+
 
             std::io::stderr().write(&output.stderr).unwrap();
             std::io::stdout().write(&output.stdout).unwrap();
