@@ -246,7 +246,7 @@ impl TestContext {
             // 11 Segmentation fault
             // 4 illegal instruction 6 abort 8 floating point error
             let _ = writeln!(&mut std::io::stderr(),
-                             "Starting valgrind from within self-test:", output.status.code());
+                             "Starting valgrind from within self-test:");
             let mut cmd = Command::new("valgrind");
             cmd.arg("-q").arg("--error-exitcode=9").arg(exe);
             cmd.args(args_vec.as_slice()).current_dir(dir).env("RUST_BACKTRACE", "1");

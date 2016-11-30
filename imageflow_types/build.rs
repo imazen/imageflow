@@ -156,7 +156,7 @@ fn what_to_collect() -> Vec<EnvTidbit>{
     for name in ENV_VARS.iter(){
         c.push(EnvTidbit::Env(name));
     }
-    c.push(EnvTidbit::Cmd{key: "GIT_STATUS", cmd: "git status"});
+    c.push(EnvTidbit::Cmd{key: "GIT_STATUS", cmd: "git checkout ../c_components/tests/visuals/weights.txt && git status"});
     c.push(EnvTidbit::Cmd{key: "CONAN_VERSION", cmd: "conan -V"});
     c.push(EnvTidbit::Cmd{key: "GLIBC_VERSION", cmd: "ldd --version"});
     c.push(EnvTidbit::Cmd{key: "UNAME", cmd: "uname -av"});
