@@ -36,6 +36,8 @@ impl FluentNode{
             uid: FluentNode::next_uid()
         }
     }
+
+
     pub fn is_empty(&self) -> bool{
         self.data.is_none()
     }
@@ -52,6 +54,32 @@ impl FluentNode{
     pub fn builder(self) -> FluentGraphBuilder{
         FluentGraphBuilder::new_with(self)
     }
+
+    pub fn canvas_bgra32(self,  w: usize,
+                         // camelCased: #[serde(rename="fromY")]
+                         h: usize, color: s::Color) -> FluentNode {
+        self.to(s::Node::CreateCanvas {
+            w: w,
+            h: h,
+            format: s::PixelFormat::Bgra32,
+            color: color
+        })
+    }
+
+
+
+    pub fn create_canvas(self, w: usize,
+                          // camelCased: #[serde(rename="fromY")]
+                          h: usize,
+                          format: s::PixelFormat, color: s::Color) -> FluentNode {
+        self.to(s::Node::CreateCanvas {
+            w: w,
+            h: h,
+            format: format,
+            color: color
+        })
+    }
+
 
     pub fn decode(self, io_id: i32) -> FluentNode{
         self.to(s::Node::Decode{io_id: io_id, commands: None})

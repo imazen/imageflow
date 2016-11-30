@@ -220,7 +220,8 @@ fn encoder_def() -> NodeDefinition {
                                         h: (*input_bitmap).h as i32,
                                         preferred_mime_type: result_mime.to_owned(),
                                         preferred_extension: result_ext.to_owned(),
-                                        io_id: *io_id
+                                        io_id: *io_id,
+                                        bytes: s::ResultBytes::Elsewhere
                                     });
 
 

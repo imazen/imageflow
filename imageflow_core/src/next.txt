@@ -67,19 +67,6 @@ We will end up with many columns (rows per experiment), including (original vers
 
 
 
-Consider adding 'git status?'
-
-
-
-Reorganize into 'engines'.
-Expose the full 'build' through the command line
-
-How do engines, optimization sets, node sets, and frame management interact?
-
-Get the git ID from env vars, or fall back to https://github.com/cstorey/git-build-version/
-Identify the travis or appveyor run for artifact retreival.
-
-
 Create constraint node
 https://github.com/riapi/riapi/blob/master/level-1.md
 width/height/mode/scale/anchor

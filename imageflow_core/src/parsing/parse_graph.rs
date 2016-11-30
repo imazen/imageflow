@@ -56,7 +56,10 @@ impl GraphTranslator {
                 s::EdgeKind::Canvas => EdgeKind::Canvas,
             };
 
-            g.add_edge(from_id, to_id, new_edge_kind).unwrap();
+            match g.add_edge(from_id, to_id, new_edge_kind){
+                Err(daggy::WouldCycle(_)) => { return Err(FlowError::GraphCyclic);}
+                _ => {}
+            }
         }
         Ok(g)
     }

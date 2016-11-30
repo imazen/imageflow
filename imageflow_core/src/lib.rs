@@ -55,9 +55,11 @@ pub struct FlowErr {
     pub message_and_stack: String,
 }
 
+
 #[derive(Debug, PartialEq)]
 pub enum FlowError {
     NullArgument,
+    GraphCyclic,
     ContextInvalid,
     Oom,
     Err(FlowErr),
@@ -68,10 +70,11 @@ pub type Result<T> = std::result::Result<T, FlowError>;
 
 
 mod internal_prelude{
-    pub mod external{
+    pub mod external_without_std{
         pub use std::path::{PathBuf,Path};
-        pub use std::fs::File;
+        pub use std::fs::{File, create_dir_all};
         pub use std::io::prelude::*;
+        pub use std::io::BufWriter;
         pub use std::cell::RefCell;
         pub use std::borrow::Cow;
         pub use std::ffi::{CString,CStr};
@@ -79,9 +82,8 @@ mod internal_prelude{
         pub use std::ascii::AsciiExt;
         pub use std::collections::{HashSet,HashMap};
         pub use daggy::{Dag, EdgeIndex, NodeIndex};
-        pub use std::{ptr,marker,slice,cell,io,string,fmt,mem};
+        pub use std::{ptr,marker,str,slice,cell,io,string,fmt,mem};
         pub use libc::{c_void, c_float, int32_t, int64_t, size_t, uint32_t};
-        pub extern crate std;
         pub extern crate daggy;
         pub extern crate petgraph;
         pub extern crate serde;
@@ -89,6 +91,15 @@ mod internal_prelude{
         pub extern crate time;
         pub extern crate libc;
         pub extern crate imageflow_types as s;
+    }
+    pub mod imageflow_core_all{
+        pub use ::{FlowError,FlowErr,Result,flow,clients};
+        pub use ::{Graph,ContextPtr,JobPtr,JobIoPtr,SelfDisposingContextPtr, JsonResponse, MethodRouter};
+        pub use ::clients::fluent;
+    }
+    pub mod external{
+        pub use ::internal_prelude::external_without_std::*;
+        pub extern crate std;
     }
     pub mod works_everywhere{
         pub use ::internal_prelude::external::*;
@@ -100,5 +111,13 @@ mod internal_prelude{
     }
     pub mod c_components{
 
+    }
+}
+pub mod for_other_imageflow_crates{
+    pub mod preludes {
+        pub mod default {
+            pub use ::internal_prelude::external_without_std::*;
+            pub use ::internal_prelude::imageflow_core_all::*;
+        }
     }
 }

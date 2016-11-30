@@ -572,7 +572,12 @@ impl ContextPtr {
         }
 
     }
-
+    pub unsafe fn err_maybe(&self) -> Result<()> {
+        match self.get_error_copy() {
+            Some(err) => Err(err),
+            None => Ok(())
+        }
+    }
 
     pub unsafe fn assert_ok(&self, g: Option<&Graph>) {
         match self.get_error_copy() {
@@ -602,6 +607,9 @@ impl ContextPtr {
                     }
                     FlowError::NullArgument => {
                         panic!("Context pointer null");
+                    }
+                    other => {
+                        panic!("{:?}", other);
                     }
 
                 }

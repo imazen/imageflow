@@ -724,6 +724,13 @@ pub struct ImageInfo {
     pub frame_decodes_into: PixelFormat,
 }
 #[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
+pub enum ResultBytes{
+    Base64(String),
+    ByteArray(Vec<u8>),
+    PhysicalFile(String),
+    Elsewhere
+}
+#[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
 pub struct EncodeResult{
     // camelCased: #[serde(rename="preferredMimeType")]
     pub preferred_mime_type: String,
@@ -735,7 +742,19 @@ pub struct EncodeResult{
     // camelCased: #[serde(rename="w")]
     pub w: i32,
     // camelCased: #[serde(rename="h")]
-    pub h: i32
+    pub h: i32,
+
+    pub bytes: ResultBytes
+}
+
+#[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
+pub struct BuildResult {
+    pub encodes: Vec<EncodeResult>
+}
+impl BuildResult {
+    pub fn into_job_result(self) -> JobResult {
+        JobResult { encodes: self.encodes }
+    }
 }
 
 #[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
@@ -787,7 +806,7 @@ impl Response001 {
             success: true,
             message: None,
             data: ResponsePayload::JobResult(JobResult{
-                encodes: vec![EncodeResult{io_id: io_id, w: w, h: h, preferred_mime_type: mime.to_owned(), preferred_extension: ext.to_owned()}]
+                encodes: vec![EncodeResult{io_id: io_id, w: w, h: h, preferred_mime_type: mime.to_owned(), preferred_extension: ext.to_owned(), bytes: ResultBytes::Elsewhere}]
             })
         }
     }
