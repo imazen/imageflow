@@ -35,7 +35,7 @@ pub fn main_with_exit_code() -> i32 {
             SubCommand::with_name("examples")
                 .about("Generate usage examples")
                 .arg(
-                    Arg::with_name("export-build-examples").long("export-build-examples").takes_value(true).possible_values(&["all"])
+                    Arg::with_name("generate").long("generate")
                         .help("Create an 'examples' directory")
                 )
         )
@@ -122,10 +122,8 @@ pub fn main_with_exit_code() -> i32 {
     if let Some(ref matches) = matches.subcommand_matches("examples") {
         let m: &&clap::ArgMatches = matches;
 
-        if m.is_present("export-build-examples") {
-            if Some("all") == m.value_of("export-build-examples") {
-                self_test::export_examples(None)
-            }
+        if m.is_present("generate") {
+            self_test::export_examples(None);
             return 0;
         }
     }

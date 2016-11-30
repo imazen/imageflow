@@ -16,3 +16,9 @@ $TOOL --version
 $TOOL -V
 
 $TOOL diagnose --self-test
+
+(
+    mkdir _test || true
+    cd _test
+    $TOOL examples --generate
+)
