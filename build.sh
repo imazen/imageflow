@@ -240,10 +240,6 @@ if [[ "$TEST_RUST" == 'True' ]]; then
 			eval "$COPY_VALGRINDRC"
 			eval "$VALGRIND_CARGO_COMMAND"
 			date "$STAMP"
-			./test_tool.sh
-			date "$STAMP"
-			eval "$VALGRIND_COMMAND ../target/debug/imageflow_tool diagnose --self-test"
-			date "$STAMP"
 		)
 		if [[ "$IMAGEFLOW_SERVER" == 'True' ]]; then
 			(
@@ -308,6 +304,8 @@ if [[ "$BUILD_RELEASE" == 'True' ]]; then
 		date "$STAMP"
 		cargo build --release
 		cargo doc --no-deps
+		date "$STAMP"
+		../target/release/imageflow_tool diagnose --show-compilation-info
 	)
 	echo "Building libimageflow (Release) and docs"
 	(
