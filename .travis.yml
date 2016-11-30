@@ -55,8 +55,20 @@ deploy:
     acl: public_read
     skip_cleanup: true
     local_dir: artifacts/upload
+    all_branches: true
     on:
-      repo: imazen/imageflow
+      condition: $UPLOAD_BUILD = True
+  - provider: s3
+    access_key_id: AKIAIMZ7QOL24GUASH6A
+    secret_access_key:
+      secure: izS5sgSOhDwjuQaFTTgMlhUd5759ZnuoxxoFDo41XZATNw58P6FtzdfslfoVa+xXjq/1N0GDAM+ENm7XYNITVqq1aJARYKy5X+IUwVKQw/UYx0rb1X2ZV7oDHsFvY5pSRiVFD1tQ0fZ9JKAkb1LTnSutfVYHNYvPHiyYQf07nig=
+    bucket: imageflow-nightlies
+    acl: public_read
+    skip_cleanup: true
+    local_dir: artifacts/upload
+    on:
+      tags: true
+      condition: $UPLOAD_BUILD = True
   - deploy:
     provider: releases
     api_key:
@@ -67,3 +79,4 @@ deploy:
     prerelease: true
     on:
       tags: true
+      condition: $UPLOAD_BUILD = True
