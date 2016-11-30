@@ -245,7 +245,8 @@ impl TestContext {
             // Killed by signal.
             // 11 Segmentation fault
             // 4 illegal instruction 6 abort 8 floating point error
-
+            let _ = writeln!(&mut std::io::stderr(),
+                             "Starting valgrind from within self-test:", output.status.code());
             let mut cmd = Command::new("valgrind");
             cmd.arg("-q").arg("--error-exitcode=9").arg(exe);
             cmd.args(args_vec.as_slice()).current_dir(dir).env("RUST_BACKTRACE", "1");
@@ -582,10 +583,10 @@ fn scenario_request_base64() -> BuildScenario{
 
 fn scenarios() -> Vec<BuildScenario>{
     vec![
+    scenario_laundry_list(),
     scenario_export_4(),
     scenario_pure_json(),
     scenario_response_stdout(),
-    scenario_laundry_list(),
     scenario_request_base64()
     ]
 }
