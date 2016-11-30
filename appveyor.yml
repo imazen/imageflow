@@ -140,4 +140,13 @@ test_script:
 artifacts:
   - path: 'artifacts/*'
     name: Rust binaries
-
+deploy:
+  description: 'imageflow-win'
+  provider: GitHub
+  artifact: /.*\.zip/
+  draft: false
+  prerelease: true
+  auth_token:
+      secure: 3h3WYw5/HWY1FxuR89OHsoDenpQWkmGXEFzxTBxLdgID37mmThDEqFM3xyyXk+Tq
+  on:
+    appveyor_repo_tag: true

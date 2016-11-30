@@ -44,13 +44,23 @@ install:
 script:
 - ci/travis_run.sh
 deploy:
-  provider: s3
-  access_key_id: AKIAIMZ7QOL24GUASH6A
-  secret_access_key:
-    secure: izS5sgSOhDwjuQaFTTgMlhUd5759ZnuoxxoFDo41XZATNw58P6FtzdfslfoVa+xXjq/1N0GDAM+ENm7XYNITVqq1aJARYKy5X+IUwVKQw/UYx0rb1X2ZV7oDHsFvY5pSRiVFD1tQ0fZ9JKAkb1LTnSutfVYHNYvPHiyYQf07nig=
-  bucket: imageflow-nightlies
-  acl: public_read
-  skip_cleanup: true
-  local_dir: artifacts/upload
-  on:
-    repo: imazen/imageflow
+  - provider: s3
+    access_key_id: AKIAIMZ7QOL24GUASH6A
+    secret_access_key:
+      secure: izS5sgSOhDwjuQaFTTgMlhUd5759ZnuoxxoFDo41XZATNw58P6FtzdfslfoVa+xXjq/1N0GDAM+ENm7XYNITVqq1aJARYKy5X+IUwVKQw/UYx0rb1X2ZV7oDHsFvY5pSRiVFD1tQ0fZ9JKAkb1LTnSutfVYHNYvPHiyYQf07nig=
+    bucket: imageflow-nightlies
+    acl: public_read
+    skip_cleanup: true
+    local_dir: artifacts/upload
+    on:
+      repo: imazen/imageflow
+  - deploy:
+    provider: releases
+    api_key:
+      - secure: "U9jYsyiN3u9GVPbMtroFDyDmUIrzV6vyvtfCAY7I9YiepjrL+zP7FzmZU8sk56ukV1ZRM7QXP1fs1hTeAkcEPgfhITvqnCsQRcGzIEg3Ri5OZ+HVjt7ATGqVCndadL/cBhydmpq7cDfEIxhdzhmvfhcg/fjqX4oVOh6EM+dUG3E="
+    file_glob: true
+    file: "artifacts/upload/${ARTIFACT_UPLOAD_PATH}"
+    skip_cleanup: true
+    prerelease: true
+    on:
+      tags: true
