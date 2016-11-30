@@ -27,12 +27,12 @@ matrix:
     env: PACKAGE_SUFFIX=x86_64-apple-darwin-xcode73 UPLOAD_BUILD=True  TARGET=x86_64-apple-darwin 
     language: rust
     rust: nightly-2016-11-03
-  - os: linux
-    dist: trusty
-    env: PACKAGE_SUFFIX=x86_64-linux-gcc49 DOCKER_IMAGE=imazen/build_if_gcc49 UPLOAD_BUILD=True 
-    sudo: required
-    services:
-    - docker
+  # - os: linux
+  #   dist: trusty
+  #   env: PACKAGE_SUFFIX=x86_64-linux-gcc49 DOCKER_IMAGE=imazen/build_if_gcc49 UPLOAD_BUILD=True 
+  #   sudo: required
+  #   services:
+  #   - docker
   - os: linux
     dist: trusty
     env: UPLOAD_BUILD=False COVERAGE=True VALGRIND=True PACKAGE_SUFFIX=x86_64-linux-gcc54 DOCKER_IMAGE=imazen/build_if_gcc54
@@ -55,8 +55,8 @@ deploy:
     acl: public_read
     skip_cleanup: true
     local_dir: artifacts/upload
-    all_branches: true
     on:
+      branch: master
       condition: $UPLOAD_BUILD = True
   - provider: s3
     access_key_id: AKIAIMZ7QOL24GUASH6A
