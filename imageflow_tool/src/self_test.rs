@@ -738,6 +738,7 @@ pub fn run(tool_location: Option<PathBuf>) -> i32 {
 
     {
         // Test having both input and canvas point to the same bitmap
+        // This should fail
         let a = fluent::fluently().canvas_bgra32(10, 10, s::Color::Black);
         let b = a.branch().copy_rect_from(a.branch(), 0, 0, 5, 5, 0, 0);
         let recipe = s::Build001 {
@@ -773,6 +774,33 @@ pub fn run(tool_location: Option<PathBuf>) -> i32 {
         };
         c.write_json("bad__cycle.json",&recipe);
         c.exec("v0.1/build --json bad__cycle.json").dump();
+    }
+    {
+        // Test invalid edges (FlipV doesn't take a canvas)
+//        let mut nodes = HashMap::new();
+//        nodes.insert("0".to_owned(), s::Node::FlipH);
+//        nodes.insert("1".to_owned(), s::Node::FlipV);
+//        nodes.insert("2".to_owned(), s::Node::FlipV);
+//        let g = s::Graph {
+//            edges: vec![s::Edge {
+//                from: 0,
+//                to: 1,
+//                kind: s::EdgeKind::Input,
+//            },
+//            s::Edge {
+//                from: 2,
+//                to: 1,
+//                kind: s::EdgeKind::Canvas,
+//            }],
+//            nodes: nodes,
+//        };
+//        let recipe = s::Build001 {
+//            builder_config: None,
+//            framewise: s::Framewise::Graph(g),
+//            io: vec![],
+//        };
+//        c.write_json("bad__node_inputs.json",&recipe);
+//        c.exec("v0.1/build --json bad__node_inputs.json").dump();
     }
     {
         // Test a loop TODO: Fix

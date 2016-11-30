@@ -60,6 +60,7 @@ pub struct FlowErr {
 pub enum FlowError {
     NullArgument,
     GraphCyclic,
+    InvalidConnectionsToNode{index: usize, value: ::flow::definitions::NodeParams, message: String},
     ContextInvalid,
     Oom,
     Err(FlowErr),

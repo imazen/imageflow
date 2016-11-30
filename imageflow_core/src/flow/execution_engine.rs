@@ -5,7 +5,7 @@ use petgraph::dot::Dot;
 use std::process::Command;
 use ::rustc_serialize::base64::ToBase64;
 use super::visualize::{notify_graph_changed, GraphRecordingUpdate, GraphRecordingInfo};
-
+use petgraph::EdgeDirection;
 
 pub struct Engine<'a, 'b> {
     c: *mut ::ffi::ImageflowContext,
@@ -24,8 +24,56 @@ impl<'a, 'b> Engine<'a, 'b> {
         }
     }
 
+    pub fn validate_graph(&self) -> Result<()> {
+        for index in 0..self.g.node_count() {
+            let node_index = NodeIndex::new(index);
+            let node_def: &NodeDefinition = self.g
+                .node_weight(node_index)
+                .unwrap()
+                .def;
+
+            let outbound_count = self.g
+                .graph()
+                .edges_directed(node_index, EdgeDirection::Outgoing).count();
+
+            let input_count = self.g
+                .graph()
+                .edges_directed(node_index, EdgeDirection::Incoming).filter(|&(node, &kind)| kind == EdgeKind::Input).count();
+
+            let canvas_count = self.g
+                .graph()
+                .edges_directed(node_index, EdgeDirection::Incoming).filter(|&(node, &kind)| kind == EdgeKind::Canvas).count();
+
+
+            let inputs_failed = match node_def.inbound_edges {
+                EdgesIn::NoInput if input_count > 0 || canvas_count > 0 => true,
+                EdgesIn::Aribtary { canvases, inputs, .. } if input_count != inputs as usize || canvas_count != canvases as usize => true,
+                EdgesIn::OneInput if input_count != 1 && canvas_count != 0 => true,
+                EdgesIn::OneInputOneCanvas if input_count != 1 && canvas_count != 1 => true,
+                EdgesIn::OneOptionalInput if canvas_count != 0 && (input_count != 0 && input_count != 1) => true,
+                _ =>                false
+            };
+            if inputs_failed {
+                let message = format!("Node type {} requires {:?}, but had {} inputs, {} canvases.", node_def.name, node_def.inbound_edges, input_count, canvas_count);
+                return Err(FlowError::InvalidConnectionsToNode {
+                    value: self.g.node_weight(node_index).unwrap().params.clone(),
+                    index: index, message: message
+                });
+            }
+            if !node_def.outbound_edges && outbound_count > 0 {
+                let message = format!("Node type {} prohibits child nodes, but had {} outbound edges.", node_def.name, outbound_count);
+                return Err(FlowError::InvalidConnectionsToNode {
+                    value: self.g.node_weight(node_index).unwrap().params.clone(),
+                    index: index, message: message
+                });
+            }
+        }
+        Ok(())
+    }
 
     pub fn execute(&mut self) -> Result<()> {
+
+        self.validate_graph()?;
         let job = self.job_p;
         self.notify_graph_changed()?;
 
