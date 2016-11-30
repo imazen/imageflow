@@ -105,7 +105,7 @@ PUB bool flow_context_add_to_callstack(flow_c * c, const char * file, int line, 
     flow_context_add_to_callstack(context, __FILE__, __LINE__, __func__);                                              \
     return false
 
-#define FLOW_error_return_null(context)                                                                                     \
+#define FLOW_error_return_null(context)                                                                                \
     flow_context_add_to_callstack(context, __FILE__, __LINE__, __func__);                                              \
     return NULL
 
@@ -174,8 +174,7 @@ struct flow_decoder_frame_info;
 
 typedef bool (*codec_intialize)(flow_c * c, struct flow_codec_instance * instance);
 
-typedef bool (*codec_get_info_fn)(flow_c * c, void * codec_state,
-                                  struct flow_decoder_info * decoder_info_ref);
+typedef bool (*codec_get_info_fn)(flow_c * c, void * codec_state, struct flow_decoder_info * decoder_info_ref);
 typedef bool (*codec_switch_frame_fn)(flow_c * c, void * codec_state, size_t frame_index);
 
 typedef bool (*codec_get_frame_info_fn)(flow_c * c, void * codec_state,
@@ -184,14 +183,12 @@ typedef bool (*codec_get_frame_info_fn)(flow_c * c, void * codec_state,
 typedef bool (*codec_set_downscale_hints_fn)(flow_c * c, struct flow_codec_instance * codec,
                                              struct flow_decoder_downscale_hints * hints);
 
-typedef bool (*codec_read_frame_fn)(flow_c * c, void * codec_state,
-                                    struct flow_bitmap_bgra * canvas);
+typedef bool (*codec_read_frame_fn)(flow_c * c, void * codec_state, struct flow_bitmap_bgra * canvas);
 
-typedef bool (*codec_write_frame_fn)(flow_c * c, void * codec_state,
-                                     struct flow_bitmap_bgra * frame, struct flow_encoder_hints * hints);
+typedef bool (*codec_write_frame_fn)(flow_c * c, void * codec_state, struct flow_bitmap_bgra * frame,
+                                     struct flow_encoder_hints * hints);
 
-typedef bool (*codec_stringify_fn)(flow_c * c, void * codec_state, char * buffer,
-                                   size_t buffer_size);
+typedef bool (*codec_stringify_fn)(flow_c * c, void * codec_state, char * buffer, size_t buffer_size);
 
 struct flow_codec_magic_bytes {
     size_t byte_count;
@@ -396,16 +393,13 @@ PUB bool flow_bitmap_bgra_populate_histogram(flow_c * c, struct flow_bitmap_bgra
                                              uint32_t histogram_size_per_channel, uint32_t histogram_count,
                                              uint64_t * pixels_sampled);
 
-
-
 // This is exposed as test helper in Rust. We should just port this functionality to Rust instead.
 
-PUB bool flow_bitmap_bgra_test_compare_to_record(flow_c * c, struct flow_bitmap_bgra * bitmap, const char * storage_name,
-                                                 bool store_if_missing, size_t off_by_one_byte_differences_permitted,
+PUB bool flow_bitmap_bgra_test_compare_to_record(flow_c * c, struct flow_bitmap_bgra * bitmap,
+                                                 const char * storage_name, bool store_if_missing,
+                                                 size_t off_by_one_byte_differences_permitted,
                                                  const char * caller_filename, int caller_linenumber,
                                                  const char * storage_relative_to);
-
-
 
 #undef PUB
 #ifdef __cplusplus

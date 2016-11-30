@@ -1,57 +1,56 @@
-use ::internal_prelude::works_everywhere::*;
 
-use ::{Context,ContextPtr, JobPtr};
+
+use ::{Context, ContextPtr, JobPtr};
+use ::internal_prelude::works_everywhere::*;
+use ::json::*;
 use ::parsing::parse_graph::GraphTranslator;
 use ::parsing::parse_io::IoTranslator;
 use std::error;
-use ::json::*;
 
 
-fn create_job_router() -> MethodRouter<'static, JobPtr>{
+fn create_job_router() -> MethodRouter<'static, JobPtr> {
     let mut r = MethodRouter::new();
-    r.add_responder("v0.1/get_image_info", Box::new(
-        move |job: &mut JobPtr, data: s::GetImageInfo001| {
-            Ok(s::ResponsePayload::ImageInfo(job.get_image_info(data.io_id)?))
+    r.add_responder("v0.1/get_image_info",
+                    Box::new(move |job: &mut JobPtr, data: s::GetImageInfo001| {
+                        Ok(s::ResponsePayload::ImageInfo(job.get_image_info(data.io_id)?))
+                    }));
+    r.add_responder("v0.1/tell_decoder",
+                    Box::new(move |job: &mut JobPtr, data: s::TellDecoder001| {
+                        job.tell_decoder(data.io_id, data.command)?;
+                        Ok(s::ResponsePayload::None)
+                    }));
+    r.add_responder("v0.1/execute",
+                    Box::new(move |job: &mut JobPtr, parsed: s::Execute001| {
+        let mut g = ::parsing::GraphTranslator::new().translate_framewise(parsed.framewise)?;
+        if let Some(r) = parsed.graph_recording {
+            job.configure_graph_recording(r);
         }
-    ));
-    r.add_responder("v0.1/tell_decoder", Box::new(
-        move |job: &mut JobPtr, data: s::TellDecoder001| {
-            job.tell_decoder(data.io_id, data.command)?;
-            Ok(s::ResponsePayload::None)
-        }
-    ));
-    r.add_responder("v0.1/execute", Box::new(
-        move |job: &mut JobPtr, parsed: s::Execute001| {
-            let mut g = ::parsing::GraphTranslator::new().translate_framewise(parsed.framewise)?;
-            if let Some(r) = parsed.graph_recording {
-                job.configure_graph_recording(r);
+        unsafe {
+            if let Some(b) = parsed.no_gamma_correction {
+                ::ffi::flow_context_set_floatspace(job.context_ptr(),
+                                                   match b {
+                                                       true => ::ffi::Floatspace::srgb,
+                                                       false => ::ffi::Floatspace::linear,
+                                                   },
+                                                   0f32,
+                                                   0f32,
+                                                   0f32)
             }
-            unsafe {
-                if let Some(b) = parsed.no_gamma_correction {
-                    ::ffi::flow_context_set_floatspace(job.context_ptr(), match b {
-                        true => ::ffi::Floatspace::srgb,
-                        false => ::ffi::Floatspace::linear
-                    }, 0f32, 0f32, 0f32)
-                }
-            }
-            ::flow::execution_engine::Engine::create(job, &mut g).execute()?;
-//            if !job.execute(&mut g){
-//                unsafe { job.ctx().assert_ok(Some(&mut g)); }
-//            }
-            let mut encodes = Vec::new();
-            for node in g.raw_nodes(){
-                if let ::flow::definitions::NodeResult::Encoded(ref r) = node.weight.result{
-                    encodes.push((*r).clone());
-                }
-            }
-            Ok(s::ResponsePayload::JobResult(s::JobResult{encodes:encodes}))
         }
-    ));
-    r.add("brew_coffee", Box::new(
-        move |job: &mut JobPtr, bytes: &[u8] |{
-            Ok(JsonResponse::teapot())
+        ::flow::execution_engine::Engine::create(job, &mut g).execute()?;
+        //            if !job.execute(&mut g){
+        //                unsafe { job.ctx().assert_ok(Some(&mut g)); }
+        //            }
+        let mut encodes = Vec::new();
+        for node in g.raw_nodes() {
+            if let ::flow::definitions::NodeResult::Encoded(ref r) = node.weight.result {
+                encodes.push((*r).clone());
+            }
         }
-    ));
+        Ok(s::ResponsePayload::JobResult(s::JobResult { encodes: encodes }))
+    }));
+    r.add("brew_coffee",
+          Box::new(move |job: &mut JobPtr, bytes: &[u8]| Ok(JsonResponse::teapot())));
     r
 }
 
@@ -86,7 +85,12 @@ fn document_message() -> String {
     s += "Example message body (with linear steps):\n";
     s += &serde_json::to_string_pretty(&s::Execute001::example_steps()).unwrap();
     s += "\nExample response:\n";
-    s += &serde_json::to_string_pretty(&s::Response001::example_job_result_encoded(2, 200,200, "image/jpg", "jpg")).unwrap();
+    s += &serde_json::to_string_pretty(&s::Response001::example_job_result_encoded(2,
+                                                                                   200,
+                                                                                   200,
+                                                                                   "image/jpg",
+                                                                                   "jpg"))
+        .unwrap();
     s += "\nExample failure response:\n";
     s += &serde_json::to_string_pretty(&s::Response001::example_error()).unwrap();
     s += "\n\n";
@@ -97,14 +101,14 @@ fn document_message() -> String {
 fn get_create_doc_dir() -> std::path::PathBuf {
     let path = Path::new(file!()).parent().unwrap().join(Path::new("../../target/doc"));
     let _ = std::fs::create_dir_all(&path);
-    //Error { repr: Os { code: 17, message: "File exists" } }
-    //The above can happen, despite the docs.
+    // Error { repr: Os { code: 17, message: "File exists" } }
+    // The above can happen, despite the docs.
     path
 }
 
 
 #[test]
-fn write_job_doc(){
+fn write_job_doc() {
     let path = get_create_doc_dir().join(Path::new("job_json_api.txt"));
     File::create(&path).unwrap().write_all(document_message().as_bytes()).unwrap();
 }

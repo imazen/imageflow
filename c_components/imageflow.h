@@ -257,8 +257,6 @@ PUB bool flow_job_configure_recording(flow_c * c, struct flow_job * job, bool re
 PUB bool flow_job_decoder_switch_frame(flow_c * c, struct flow_job * job, int32_t by_placeholder_id,
                                        int64_t frame_index);
 
-
-
 PUB uint32_t flow_pixel_format_bytes_per_pixel(flow_pixel_format format);
 
 struct flow_decoder_info {
@@ -267,7 +265,7 @@ struct flow_decoder_info {
     const char * preferred_extension;
     size_t frame_count;
     int64_t current_frame_index;
-    //Not applicable to TIFF files - will be the first frame instead
+    // Not applicable to TIFF files - will be the first frame instead
     int32_t image_width;
     int32_t image_height;
     flow_pixel_format frame_decodes_into;
@@ -278,8 +276,7 @@ struct flow_decoder_info {
 PUB bool flow_job_get_decoder_info(flow_c * c, struct flow_job * job, int32_t by_placeholder_id,
                                    struct flow_decoder_info * info);
 
-PUB bool flow_bitmap_bgra_write_png(flow_c * c, struct flow_bitmap_bgra * frame,
-                                    struct flow_io * io);
+PUB bool flow_bitmap_bgra_write_png(flow_c * c, struct flow_bitmap_bgra * frame, struct flow_io * io);
 
 #undef PUB
 

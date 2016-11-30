@@ -1,13 +1,13 @@
-use internal_prelude::works_everywhere::*;
-use flow::definitions::{Graph,Node, NodeParams, EdgeKind};
+use flow::definitions::{Graph, Node, NodeParams, EdgeKind};
 use flow::nodes;
+use internal_prelude::works_everywhere::*;
 
 pub struct GraphTranslator {
 }
 
 impl GraphTranslator {
     pub fn new() -> GraphTranslator {
-        GraphTranslator { }
+        GraphTranslator {}
     }
 
 
@@ -38,7 +38,7 @@ impl GraphTranslator {
     }
 
     pub fn translate_graph(&self, from: s::Graph) -> Result<Graph> {
-        let mut g = Graph::with_capacity(10,10); //Estimate better than this
+        let mut g = Graph::with_capacity(10, 10); //Estimate better than this
 
         let mut node_id_map: HashMap<i32, NodeIndex<u32>> = HashMap::new();
 
@@ -56,8 +56,10 @@ impl GraphTranslator {
                 s::EdgeKind::Canvas => EdgeKind::Canvas,
             };
 
-            match g.add_edge(from_id, to_id, new_edge_kind){
-                Err(daggy::WouldCycle(_)) => { return Err(FlowError::GraphCyclic);}
+            match g.add_edge(from_id, to_id, new_edge_kind) {
+                Err(daggy::WouldCycle(_)) => {
+                    return Err(FlowError::GraphCyclic);
+                }
                 _ => {}
             }
         }

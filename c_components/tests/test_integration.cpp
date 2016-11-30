@@ -9,13 +9,13 @@
 
 // TODO: https://github.com/pornel/pngquant/
 //
-//uint8_t gif_bytes_32[]
+// uint8_t gif_bytes_32[]
 //    = { 0x47, 0x49, 0x46, 0x38, 0x39, 0x61, 0x01, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x21, 0xF9, 0x04,
 //        0x01, 0x00, 0x00, 0x00, 0x00, 0x2C, 0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x01, 0x00, 0x00, 0x02 };
-//uint8_t gif_bytes_43[] = { 0x47, 0x49, 0x46, 0x38, 0x39, 0x61, 0x01, 0x00, 0x01, 0x00, 0x80, 0x00, 0x00, 0xFF, 0xFF,
+// uint8_t gif_bytes_43[] = { 0x47, 0x49, 0x46, 0x38, 0x39, 0x61, 0x01, 0x00, 0x01, 0x00, 0x80, 0x00, 0x00, 0xFF, 0xFF,
 //                           0xFF, 0x00, 0x00, 0x00, 0x21, 0xF9, 0x04, 0x00, 0x00, 0x00, 0x00, 0x00, 0x2C, 0x00, 0x00,
 //                           0x00, 0x00, 0x01, 0x00, 0x01, 0x00, 0x00, 0x02, 0x02, 0x44, 0x01, 0x00, 0x3B };
-//static int read_func(GifFileType * gif, GifByteType * buffer, int bytes_please)
+// static int read_func(GifFileType * gif, GifByteType * buffer, int bytes_please)
 //{
 //    int gif_byte_count = sizeof(gif_bytes_43);
 //    int * cursor = (int *)gif->UserData;
@@ -29,7 +29,7 @@
 //    return bytes_please;
 //}
 //
-//TEST_CASE("Test overlapped slurp", "")
+// TEST_CASE("Test overlapped slurp", "")
 //{
 //    int cursor_a = 0, cursor_b = 0, error = 0;
 //    GifFileType * a = DGifOpen(&cursor_a, read_func, &error);
@@ -273,10 +273,10 @@ TEST_CASE("Test png writing", "[libpng]")
     png_set_rows(png_ptr, info_ptr, rows);
     int color_type = PNG_COLOR_TYPE_RGB_ALPHA;
     int transform = PNG_TRANSFORM_BGR;
-    png_set_IHDR(png_ptr, info_ptr, (png_uint_32)w, (png_uint_32)h, 8, color_type,
-                 PNG_INTERLACE_NONE, PNG_COMPRESSION_TYPE_BASE, PNG_FILTER_TYPE_BASE);
+    png_set_IHDR(png_ptr, info_ptr, (png_uint_32)w, (png_uint_32)h, 8, color_type, PNG_INTERLACE_NONE,
+                 PNG_COMPRESSION_TYPE_BASE, PNG_FILTER_TYPE_BASE);
     png_set_sRGB_gAMA_and_cHRM(png_ptr, info_ptr, PNG_sRGB_INTENT_PERCEPTUAL);
-//Uninitialized read happens here:
+    // Uninitialized read happens here:
     png_write_png(png_ptr, info_ptr, transform, NULL);
 
     png_destroy_write_struct(&png_ptr, &info_ptr);

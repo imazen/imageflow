@@ -1,7 +1,7 @@
-use ::internal_prelude::works_everywhere::*;
-use ::{JsonResponse,IoDirection, MethodRouter};
+use ::{JsonResponse, IoDirection, MethodRouter};
 use ::ffi::ImageflowJsonResponse;
 use flow::definitions::Graph;
+use ::internal_prelude::works_everywhere::*;
 
 pub struct ContextPtr {
     // TODO: Remove pub as soon as tests/visuals.rs doesn't need access
@@ -12,15 +12,15 @@ pub struct Context {
     p: cell::RefCell<ContextPtr>,
 }
 
-pub struct SelfDisposingContextPtr{
-    ptr: ContextPtr
+pub struct SelfDisposingContextPtr {
+    ptr: ContextPtr,
 }
-impl SelfDisposingContextPtr{
+impl SelfDisposingContextPtr {
     pub fn create() -> Result<SelfDisposingContextPtr> {
         let p = ContextPtr::create()?;
-        Ok(SelfDisposingContextPtr{ptr: p})
+        Ok(SelfDisposingContextPtr { ptr: p })
     }
-    pub fn inner(&self) -> &ContextPtr{
+    pub fn inner(&self) -> &ContextPtr {
         &self.ptr
     }
 
@@ -31,7 +31,6 @@ impl SelfDisposingContextPtr{
     pub fn destroy_allowing_panics(mut self) -> () {
         self.ptr.destroy_allowing_panics()
     }
-
 }
 impl Drop for SelfDisposingContextPtr {
     fn drop(&mut self) {
@@ -41,48 +40,53 @@ impl Drop for SelfDisposingContextPtr {
 
 pub struct JobPtr {
     ptr: *mut ::ffi::ImageflowJob,
-    c: *mut ::ffi::ImageflowContext
+    c: *mut ::ffi::ImageflowContext,
 }
 
 
 
 impl JobPtr {
-    pub fn context_ptr(&self) -> *mut ::ffi::ImageflowContext { self.c }
-    pub fn as_ptr(&self) -> *mut ::ffi::ImageflowJob { self.ptr}
+    pub fn context_ptr(&self) -> *mut ::ffi::ImageflowContext {
+        self.c
+    }
+    pub fn as_ptr(&self) -> *mut ::ffi::ImageflowJob {
+        self.ptr
+    }
 
-    pub fn from_ptr(context: *mut ::ffi::ImageflowContext, job: *mut ::ffi::ImageflowJob) -> Result<JobPtr> {
+    pub fn from_ptr(context: *mut ::ffi::ImageflowContext,
+                    job: *mut ::ffi::ImageflowJob)
+                    -> Result<JobPtr> {
         if context.is_null() || job.is_null() {
             Err(FlowError::NullArgument)
-        }else {
+        } else {
             Ok(JobPtr {
                 ptr: job,
-                c: context
+                c: context,
             })
         }
     }
     pub fn create(context: *mut ::ffi::ImageflowContext) -> Result<JobPtr> {
         if context.is_null() {
-            return Err(FlowError::ContextInvalid)
+            return Err(FlowError::ContextInvalid);
         }
         unsafe {
             let job = ::ffi::flow_job_create(context);
             if job.is_null() {
                 Err(FlowError::Oom)
-            }else{
-                Ok(JobPtr { ptr: job, c: context})
+            } else {
+                Ok(JobPtr {
+                    ptr: job,
+                    c: context,
+                })
             }
         }
     }
     pub unsafe fn add_io_ptr(&self,
-                         io: *mut ::ffi::ImageflowJobIo,
-                         io_id: i32,
-                         direction: IoDirection)
-                         -> Result<()> {
-        let p = ::ffi::flow_job_add_io(self.context_ptr(),
-                                       self.as_ptr(),
-                                       io,
-                                       io_id,
-                                       direction);
+                             io: *mut ::ffi::ImageflowJobIo,
+                             io_id: i32,
+                             direction: IoDirection)
+                             -> Result<()> {
+        let p = ::ffi::flow_job_add_io(self.context_ptr(), self.as_ptr(), io, io_id, direction);
         if !p {
             Err(self.ctx().get_error_copy().unwrap())
         } else {
@@ -91,7 +95,7 @@ impl JobPtr {
 
     }
 
-    pub fn add_input_bytes<'a>(&'a self, io_id: i32, bytes: &'a [u8]) -> Result<()>{
+    pub fn add_input_bytes<'a>(&'a self, io_id: i32, bytes: &'a [u8]) -> Result<()> {
         unsafe {
             let p = ::ffi::flow_io_create_from_memory(self.context_ptr(),
                                                       ::ffi::IoMode::ReadSeekable,
@@ -107,9 +111,11 @@ impl JobPtr {
         }
     }
 
-    pub fn add_output_buffer<'a>(&'a self, io_id: i32) -> Result<()>{
+    pub fn add_output_buffer<'a>(&'a self, io_id: i32) -> Result<()> {
         unsafe {
-            let p = ::ffi::flow_io_create_for_output_buffer(self.context_ptr(), self.context_ptr() as *const libc::c_void);
+            let p =
+                ::ffi::flow_io_create_for_output_buffer(self.context_ptr(),
+                                                        self.context_ptr() as *const libc::c_void);
             if p.is_null() {
                 Err(self.ctx().get_error_copy().unwrap())
             } else {
@@ -120,17 +126,18 @@ impl JobPtr {
 
 
 
-//    pub fn record_graphs(&self){
-//        let _ = unsafe { ::ffi::flow_job_configure_recording(self.context_ptr(),
-//                                                             self.as_ptr(),
-//                                                             true,
-//                                                             true,
-//                                                             true,
-//                                                             false,
-//                                                             false) };
-//    }
+    //    pub fn record_graphs(&self){
+    //        let _ = unsafe { ::ffi::flow_job_configure_recording(self.context_ptr(),
+    //                                                             self.as_ptr(),
+    //                                                             true,
+    //                                                             true,
+    //                                                             true,
+    //                                                             false,
+    //                                                             false) };
+    //    }
     pub fn configure_graph_recording(&self, recording: s::Build001GraphRecording) {
-        let r = if std::env::var("CI").and_then(|s| Ok(s.to_uppercase()))  == Ok("TRUE".to_owned()) {
+        let r = if std::env::var("CI").and_then(|s| Ok(s.to_uppercase())) ==
+                   Ok("TRUE".to_owned()) {
             s::Build001GraphRecording::off()
         } else {
             recording
@@ -156,7 +163,10 @@ impl JobPtr {
         unsafe {
             let mut info: ::ffi::DecoderInfo = ::ffi::DecoderInfo { ..Default::default() };
 
-            if !::ffi::flow_job_get_decoder_info(self.context_ptr(), self.as_ptr(), io_id, &mut info) {
+            if !::ffi::flow_job_get_decoder_info(self.context_ptr(),
+                                                 self.as_ptr(),
+                                                 io_id,
+                                                 &mut info) {
                 ContextPtr::from_ptr(self.context_ptr()).assert_ok(None);
             }
             Ok(s::ImageInfo {
@@ -165,14 +175,20 @@ impl JobPtr {
                 image_width: info.image_width,
                 frame_count: info.frame_count,
                 current_frame_index: info.current_frame_index,
-                preferred_extension: std::ffi::CStr::from_ptr(info.preferred_extension).to_owned().into_string().unwrap(),
-                preferred_mime_type: std::ffi::CStr::from_ptr(info.preferred_mime_type).to_owned().into_string().unwrap(),
+                preferred_extension: std::ffi::CStr::from_ptr(info.preferred_extension)
+                    .to_owned()
+                    .into_string()
+                    .unwrap(),
+                preferred_mime_type: std::ffi::CStr::from_ptr(info.preferred_mime_type)
+                    .to_owned()
+                    .into_string()
+                    .unwrap(),
             })
         }
 
     }
 
-    pub fn tell_decoder(&self, io_id: i32, tell: s::DecoderCommand ) -> Result<()> {
+    pub fn tell_decoder(&self, io_id: i32, tell: s::DecoderCommand) -> Result<()> {
         unsafe {
             match tell {
                 s::DecoderCommand::JpegDownscaleHints(hints) => {
@@ -195,19 +211,14 @@ impl JobPtr {
 
 
 
-    pub fn message(&mut self,
-                               method: &str,
-                               json: &[u8])
-                               -> Result<JsonResponse> {
+    pub fn message(&mut self, method: &str, json: &[u8]) -> Result<JsonResponse> {
 
         ::job_methods::JOB_ROUTER.invoke(self, method, json)
     }
 
 
 
-    pub fn io_get_output_buffer_copy<'a, 'b>(&'a mut self,
-                                        io_id: i32)
-                                        -> Result<Vec<u8>> {
+    pub fn io_get_output_buffer_copy<'a, 'b>(&'a mut self, io_id: i32) -> Result<Vec<u8>> {
         unsafe {
             let io_p = ::ffi::flow_job_get_io(self.c, self.ptr, io_id);
             if io_p.is_null() {
@@ -235,28 +246,32 @@ impl JobPtr {
 
 
 
-    fn ctx(&self) -> ContextPtr{
+    fn ctx(&self) -> ContextPtr {
         ContextPtr::from_ptr(self.context_ptr())
     }
 }
 
 impl ContextPtr {
-    pub fn create_abi_json_response(&self, json_bytes: std::borrow::Cow<[u8]>, status_code: i64) -> *const ImageflowJsonResponse{
+    pub fn create_abi_json_response(&self,
+                                    json_bytes: std::borrow::Cow<[u8]>,
+                                    status_code: i64)
+                                    -> *const ImageflowJsonResponse {
         unsafe {
             let sizeof_struct = std::mem::size_of::<ImageflowJsonResponse>();
 
             let pointer = ::ffi::flow_context_calloc(self.ptr.unwrap(),
-                                                   1,
-                                                   sizeof_struct + json_bytes.len(),
-                                                   ptr::null(),
-                                                   self.ptr.unwrap() as *mut libc::c_void,
-                                                   ptr::null(),
-                                                   0) as *mut u8;
-            //Return null on OOM
+                                                     1,
+                                                     sizeof_struct + json_bytes.len(),
+                                                     ptr::null(),
+                                                     self.ptr.unwrap() as *mut libc::c_void,
+                                                     ptr::null(),
+                                                     0) as *mut u8;
+            // Return null on OOM
             if pointer.is_null() {
                 return ::std::ptr::null();
             }
-            let pointer_to_final_buffer = pointer.offset(sizeof_struct as isize) as *mut libc::uint8_t;
+            let pointer_to_final_buffer =
+                pointer.offset(sizeof_struct as isize) as *mut libc::uint8_t;
             let ref mut imageflow_response = *(pointer as *mut ImageflowJsonResponse);
             imageflow_response.buffer_utf8_no_nulls = pointer_to_final_buffer;
             imageflow_response.buffer_size = json_bytes.len();
@@ -270,7 +285,6 @@ impl ContextPtr {
             imageflow_response as *const ImageflowJsonResponse
         }
     }
-
 }
 
 pub struct Job {
@@ -288,10 +302,7 @@ pub struct JobIo<'a, T: 'a> {
 
 
 impl Context {
-    pub fn message(&mut self,
-                               method: &str,
-                               json: &[u8])
-                               -> Result<JsonResponse> {
+    pub fn message(&mut self, method: &str, json: &[u8]) -> Result<JsonResponse> {
         let ref mut b = *self.p.borrow_mut();
         b.message(method, json)
     }
@@ -300,17 +311,10 @@ impl Context {
 
 
 impl ContextPtr {
-
-
-    pub fn message(&mut self,
-                   method: &str,
-                   json: &[u8])
-                   -> Result<JsonResponse> {
+    pub fn message(&mut self, method: &str, json: &[u8]) -> Result<JsonResponse> {
 
         ::context_methods::CONTEXT_ROUTER.invoke(self, method, json)
     }
-
-
 }
 
 impl ContextPtr {
@@ -342,8 +346,9 @@ impl ContextPtr {
         unsafe {
             self.ptr = match self.ptr {
                 Some(ptr) => {
-                    if !::ffi::flow_context_begin_terminate(ptr){
-                        panic!("Error during context shutdown{:?}", self.get_error_copy().unwrap());
+                    if !::ffi::flow_context_begin_terminate(ptr) {
+                        panic!("Error during context shutdown{:?}",
+                               self.get_error_copy().unwrap());
                     }
                     ::ffi::flow_context_destroy(ptr);
                     None
@@ -364,7 +369,7 @@ impl ContextPtr {
     pub fn as_ptr(&self) -> Result<*mut ::ffi::ImageflowContext> {
         match self.ptr {
             Some(p) if p != ptr::null_mut() => Ok(p),
-            _ =>  Err(FlowError::ContextInvalid),
+            _ => Err(FlowError::ContextInvalid),
         }
     }
 }
@@ -548,8 +553,6 @@ impl Context {
 
 
 impl ContextPtr {
-
-
     unsafe fn get_flow_err(&self, c: *mut ::ffi::ImageflowContext) -> FlowErr {
 
 
@@ -558,7 +561,7 @@ impl ContextPtr {
 
 
         let chars_written =
-        ::ffi::flow_context_error_and_stacktrace(c, buf.as_mut_ptr(), buf.len(), false);
+            ::ffi::flow_context_error_and_stacktrace(c, buf.as_mut_ptr(), buf.len(), false);
 
         if chars_written < 0 {
             panic!("Error msg doesn't fit in 2kb");
@@ -575,7 +578,7 @@ impl ContextPtr {
     pub unsafe fn err_maybe(&self) -> Result<()> {
         match self.get_error_copy() {
             Some(err) => Err(err),
-            None => Ok(())
+            None => Ok(()),
         }
     }
 
@@ -646,11 +649,11 @@ fn it_works() {
 
 
     let bytes = [0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, 0x00, 0x00, 0x00, 0x0D, 0x49,
-        0x48, 0x44, 0x52, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x08, 0x06,
-        0x00, 0x00, 0x00, 0x1F, 0x15, 0xC4, 0x89, 0x00, 0x00, 0x00, 0x0A, 0x49, 0x44,
-        0x41, 0x54, 0x78, 0x9C, 0x63, 0x00, 0x01, 0x00, 0x00, 0x05, 0x00, 0x01, 0x0D,
-        0x0A, 0x2D, 0xB4, 0x00, 0x00, 0x00, 0x00, 0x49, 0x45, 0x4E, 0x44, 0xAE, 0x42,
-        0x60, 0x82];
+                 0x48, 0x44, 0x52, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x08, 0x06,
+                 0x00, 0x00, 0x00, 0x1F, 0x15, 0xC4, 0x89, 0x00, 0x00, 0x00, 0x0A, 0x49, 0x44,
+                 0x41, 0x54, 0x78, 0x9C, 0x63, 0x00, 0x01, 0x00, 0x00, 0x05, 0x00, 0x01, 0x0D,
+                 0x0A, 0x2D, 0xB4, 0x00, 0x00, 0x00, 0x00, 0x49, 0x45, 0x4E, 0x44, 0xAE, 0x42,
+                 0x60, 0x82];
 
     let input = c.create_io_from_slice(&bytes).unwrap();
 

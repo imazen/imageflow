@@ -13,8 +13,10 @@ fn copy_rect_def() -> NodeDefinition {
 
                 if let s::Node::CopyRectToCanvas { from_x, from_y, width, height, x, y } =
                        ctx.get_json_params(ix).unwrap() {
-                    let input: *mut ::ffi::BitmapBgra = ctx.first_parent_result_frame(ix, EdgeKind::Input).unwrap();
-                    let canvas: *mut ::ffi::BitmapBgra = ctx.first_parent_result_frame(ix, EdgeKind::Canvas).unwrap();
+                    let input: *mut ::ffi::BitmapBgra =
+                        ctx.first_parent_result_frame(ix, EdgeKind::Input).unwrap();
+                    let canvas: *mut ::ffi::BitmapBgra =
+                        ctx.first_parent_result_frame(ix, EdgeKind::Canvas).unwrap();
 
                     unsafe {
                         if (*input).fmt != (*canvas).fmt {
@@ -28,14 +30,17 @@ fn copy_rect_def() -> NodeDefinition {
                         //        memcpy(canvas->pixels, input->pixels, input->stride * input->h);
                         //        canvas->alpha_meaningful = input->alpha_meaningful;
 
-                        if (*input).w <= from_x ||
-                            (*input).h <= from_y ||
-                            (*input).w <  from_x + width ||
-                            (*input).h < from_y + height ||
-                            (*canvas).w < x + width ||
-                            (*canvas).h < y + height {
+                        if (*input).w <= from_x || (*input).h <= from_y ||
+                           (*input).w < from_x + width ||
+                           (*input).h < from_y + height ||
+                           (*canvas).w < x + width ||
+                           (*canvas).h < y + height {
                             println!("canvas {}x{}, input {}x{}, command {:?}",
-                                     (*canvas).w, (*canvas).h, (*input).w, (*input).h, ctx.get_json_params(ix).unwrap());
+                                     (*canvas).w,
+                                     (*canvas).h,
+                                     (*input).w,
+                                     (*input).h,
+                                     ctx.get_json_params(ix).unwrap());
                             panic!("Out of bounds")
                         }
 
@@ -257,7 +262,7 @@ fn crop_mutate_def() -> NodeDefinition {
 
                     let input = ctx.first_parent_result_frame(ix, EdgeKind::Input).unwrap();
                     unsafe {
-                        //println!("Cropping {}x{} to ({},{}) ({},{})", (*input).w, (*input).h, x1, y1, x2, y2);
+                        // println!("Cropping {}x{} to ({},{}) ({},{})", (*input).w, (*input).h, x1, y1, x2, y2);
 
                         let bytes_pp = match (*input).fmt {
                             PixelFormat::Gray8 => 1,
@@ -269,7 +274,7 @@ fn crop_mutate_def() -> NodeDefinition {
                         (*input).pixels = (*input).pixels.offset(offset);
                         (*input).w = x2 - x1;
                         (*input).h = y2 - y1;
-                        //println!("Changing pointer by {}, w{}, h{}", offset, (*input).w, (*input).h);
+                        // println!("Changing pointer by {}, w{}, h{}", offset, (*input).w, (*input).h);
 
 
                         ctx.weight_mut(ix).result = NodeResult::Frame(input);

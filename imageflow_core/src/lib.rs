@@ -5,8 +5,8 @@
 #![feature(proc_macro)]
 #![feature(integer_atomics)]
 
-//intellij-rust flags this anyway
-//#![feature(field_init_shorthand)]
+// intellij-rust flags this anyway
+// #![feature(field_init_shorthand)]
 
 #![allow(unused_features)]
 #![allow(unused_imports)]
@@ -35,12 +35,12 @@ mod context;
 mod context_methods;
 mod job_methods;
 
-pub use json::JsonResponse;
-pub use json::MethodRouter;
 pub use context::{Context, ContextPtr, Job, JobPtr, JobIo, JobIoPtr, SelfDisposingContextPtr};
 pub use ::ffi::{IoDirection, IoMode};
 pub use ::flow::definitions::Graph;
-//use std::ops::DerefMut;
+pub use json::JsonResponse;
+pub use json::MethodRouter;
+// use std::ops::DerefMut;
 pub mod clients;
 pub mod ffi;
 pub mod boring;
@@ -69,21 +69,21 @@ pub enum FlowError {
 pub type Result<T> = std::result::Result<T, FlowError>;
 
 
-mod internal_prelude{
-    pub mod external_without_std{
-        pub use std::path::{PathBuf,Path};
-        pub use std::fs::{File, create_dir_all};
-        pub use std::io::prelude::*;
-        pub use std::io::BufWriter;
-        pub use std::cell::RefCell;
-        pub use std::borrow::Cow;
-        pub use std::ffi::{CString,CStr};
-        pub use std::str::FromStr;
-        pub use std::ascii::AsciiExt;
-        pub use std::collections::{HashSet,HashMap};
+mod internal_prelude {
+    pub mod external_without_std {
         pub use daggy::{Dag, EdgeIndex, NodeIndex};
-        pub use std::{ptr,marker,str,slice,cell,io,string,fmt,mem};
         pub use libc::{c_void, c_float, int32_t, int64_t, size_t, uint32_t};
+        pub use std::{ptr, marker, str, slice, cell, io, string, fmt, mem};
+        pub use std::ascii::AsciiExt;
+        pub use std::borrow::Cow;
+        pub use std::cell::RefCell;
+        pub use std::collections::{HashSet, HashMap};
+        pub use std::ffi::{CString, CStr};
+        pub use std::fs::{File, create_dir_all};
+        pub use std::io::BufWriter;
+        pub use std::io::prelude::*;
+        pub use std::path::{PathBuf, Path};
+        pub use std::str::FromStr;
         pub extern crate daggy;
         pub extern crate petgraph;
         pub extern crate serde;
@@ -92,28 +92,28 @@ mod internal_prelude{
         pub extern crate libc;
         pub extern crate imageflow_types as s;
     }
-    pub mod imageflow_core_all{
-        pub use ::{FlowError,FlowErr,Result,flow,clients};
-        pub use ::{Graph,ContextPtr,JobPtr,JobIoPtr,SelfDisposingContextPtr, JsonResponse, MethodRouter};
+    pub mod imageflow_core_all {
+        pub use ::{Graph, ContextPtr, JobPtr, JobIoPtr, SelfDisposingContextPtr, JsonResponse,
+                   MethodRouter};
+        pub use ::{FlowError, FlowErr, Result, flow, clients};
         pub use ::clients::fluent;
     }
-    pub mod external{
+    pub mod external {
         pub use ::internal_prelude::external_without_std::*;
         pub extern crate std;
     }
-    pub mod works_everywhere{
+    pub mod works_everywhere {
+        pub use ::{FlowError, FlowErr, Result, flow, clients};
         pub use ::internal_prelude::external::*;
-        pub use ::{FlowError,FlowErr,Result,flow,clients};
     }
-    pub mod default{
+    pub mod default {
+        pub use ::{Graph, ContextPtr, JobPtr, JobIoPtr, SelfDisposingContextPtr, JsonResponse,
+                   MethodRouter};
         pub use ::internal_prelude::works_everywhere::*;
-        pub use ::{Graph,ContextPtr,JobPtr,JobIoPtr,SelfDisposingContextPtr, JsonResponse, MethodRouter};
     }
-    pub mod c_components{
-
-    }
+    pub mod c_components {}
 }
-pub mod for_other_imageflow_crates{
+pub mod for_other_imageflow_crates {
     pub mod preludes {
         pub mod default {
             pub use ::internal_prelude::external_without_std::*;

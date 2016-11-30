@@ -138,7 +138,7 @@ impl FromStr for Filter {
 }
 
 #[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
-pub enum PngBitDepth{
+pub enum PngBitDepth {
     // camelCased: #[serde(rename="png32")]
     #[serde(rename="png_32")]
     Png32,
@@ -154,17 +154,24 @@ pub enum EncoderPreset {
     LibjpegTurbo { quality: Option<i32> },
     // camelCased: #[serde(rename="libpng")]
     #[serde(rename="libpng")]
-    Libpng {  depth: Option<PngBitDepth>, matte: Option<Color>,
+    Libpng {
+        depth: Option<PngBitDepth>,
+        matte: Option<Color>,
         // camelCased: #[serde(rename="zlibCompression")]
-        zlib_compression: Option<i32>}
+        zlib_compression: Option<i32>,
+    },
 }
 
-impl EncoderPreset{
-    pub fn libpng32() -> EncoderPreset{
-        EncoderPreset::Libpng{ depth: Some(PngBitDepth::Png32), matte: None, zlib_compression: None}
+impl EncoderPreset {
+    pub fn libpng32() -> EncoderPreset {
+        EncoderPreset::Libpng {
+            depth: Some(PngBitDepth::Png32),
+            matte: None,
+            zlib_compression: None,
+        }
     }
-    pub fn libjpegturbo() -> EncoderPreset{
-        EncoderPreset::LibjpegTurbo{ quality: Some(100)}
+    pub fn libjpegturbo() -> EncoderPreset {
+        EncoderPreset::LibjpegTurbo { quality: Some(100) }
     }
 }
 
@@ -204,7 +211,7 @@ impl Color {
                             })
                     }
                 }
-            },
+            }
             Color::Black => Ok(0x000000FF),
             Color::Transparent => Ok(0),
         }
@@ -235,15 +242,15 @@ fn test_bgra() {
 }
 
 #[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
-pub struct ResampleHints{
+pub struct ResampleHints {
     // camelCased: #[serde(rename="sharpenPercent")]
     pub sharpen_percent: Option<f32>,
 
     // camelCased: #[serde(rename="prefer1dTwice")]
-    pub prefer_1d_twice: Option<bool>
+    pub prefer_1d_twice: Option<bool>,
 }
 
-pub enum Constraint{
+pub enum Constraint {
 
 }
 
@@ -283,14 +290,14 @@ pub enum Node {
     Decode {
         // camelCased: #[serde(rename="ioId")]
         io_id: i32,
-        commands: Option<Vec<DecoderCommand>>
+        commands: Option<Vec<DecoderCommand>>,
     },
     // camelCased: #[serde(rename="encode")]
     #[serde(rename="encode")]
     Encode {
         // camelCased: #[serde(rename="ioId")]
         io_id: i32,
-        preset: EncoderPreset
+        preset: EncoderPreset,
     },
     // camelCased: #[serde(rename="fillRect")]
     #[serde(rename="fill_rect")]
@@ -334,7 +341,7 @@ pub enum Node {
         down_filter: Option<Filter>,
         // camelCased: #[serde(rename="upFilter")]
         up_filter: Option<Filter>,
-        hints: Option<ResampleHints>
+        hints: Option<ResampleHints>,
     },
 
     // camelCased: #[serde(rename="resample1d")]
@@ -419,7 +426,7 @@ pub struct IoObject {
     // camelCased: #[serde(rename="ioId")]
     pub io_id: i32,
     pub direction: IoDirection,
-    pub io: IoEnum
+    pub io: IoEnum,
 }
 
 #[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
@@ -432,15 +439,11 @@ pub enum Framewise {
     Steps(Vec<Node>),
 }
 
-impl Framewise{
+impl Framewise {
     pub fn clone_nodes<'a>(&'a self) -> Vec<&'a Node> {
         match *self {
-            Framewise::Graph(ref graph) => {
-                graph.nodes.values().collect::<Vec<&Node>>()
-            }
-            Framewise::Steps(ref nodes) => {
-                nodes.iter().collect::<Vec<&Node>>()
-            }
+            Framewise::Graph(ref graph) => graph.nodes.values().collect::<Vec<&Node>>(),
+            Framewise::Steps(ref nodes) => nodes.iter().collect::<Vec<&Node>>(),
         }
     }
 }
@@ -454,7 +457,7 @@ pub struct Build001GraphRecording {
     pub render_animated_graph: Option<bool>,
 }
 
-impl  Build001GraphRecording {
+impl Build001GraphRecording {
     pub fn debug_defaults() -> Build001GraphRecording {
         Build001GraphRecording {
             record_graph_versions: Some(true),
@@ -495,18 +498,20 @@ pub struct Build001 {
     pub framewise: Framewise,
 }
 
-impl IoEnum{
-    pub fn example_byte_array() -> IoEnum{
-        let tinypng = vec![0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, 0x00, 0x00, 0x00, 0x0D, 0x49, 0x48, 0x44, 0x52, 0x00,
-        0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x08, 0x06, 0x00, 0x00, 0x00, 0x1F, 0x15, 0xC4, 0x89, 0x00,
-        0x00, 0x00, 0x0A, 0x49, 0x44, 0x41, 0x54, 0x78, 0x9C, 0x63, 0x00, 0x01, 0x00, 0x00, 0x05, 0x00, 0x01,
-        0x0D, 0x0A, 0x2D, 0xB4, 0x00, 0x00, 0x00, 0x00, 0x49, 0x45, 0x4E, 0x44, 0xAE, 0x42, 0x60, 0x82 ];
+impl IoEnum {
+    pub fn example_byte_array() -> IoEnum {
+        let tinypng = vec![0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, 0x00, 0x00, 0x00, 0x0D,
+                           0x49, 0x48, 0x44, 0x52, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01,
+                           0x08, 0x06, 0x00, 0x00, 0x00, 0x1F, 0x15, 0xC4, 0x89, 0x00, 0x00, 0x00,
+                           0x0A, 0x49, 0x44, 0x41, 0x54, 0x78, 0x9C, 0x63, 0x00, 0x01, 0x00, 0x00,
+                           0x05, 0x00, 0x01, 0x0D, 0x0A, 0x2D, 0xB4, 0x00, 0x00, 0x00, 0x00, 0x49,
+                           0x45, 0x4E, 0x44, 0xAE, 0x42, 0x60, 0x82];
         IoEnum::ByteArray(tinypng)
     }
-    pub fn example_byte_array_truncated() -> IoEnum{
+    pub fn example_byte_array_truncated() -> IoEnum {
         IoEnum::ByteArray(vec![0x89, 0x50, 0x4E, 0x47])
     }
-    pub fn example_bytes_hex() -> IoEnum{
+    pub fn example_bytes_hex() -> IoEnum {
         IoEnum::BytesHex("89504E470D0A1A0A0000000D49484452000000010000000108060000001F15C4890000000A49444154789C63000100000500010D0A2DB40000000049454E44AE426082".to_owned())
     }
 }
@@ -561,97 +566,152 @@ pub struct Execute001 {
 }
 
 impl Framewise {
-    pub fn example_steps() -> Framewise{
-        Framewise::Steps(
-            vec![
-            Node::Decode { io_id: 0, commands: Some(vec![
+    pub fn example_steps() -> Framewise {
+        Framewise::Steps(vec![Node::Decode {
+                                  io_id: 0,
+                                  commands: Some(vec![
                 DecoderCommand::JpegDownscaleHints(JpegIDCTDownscaleHints{
                     width: 800 , height: 600,
                     gamma_correct_for_srgb_during_spatial_luma_scaling: Some(false),
-                    scale_luma_spatially: Some(false)})])
-            },
-            Node::ApplyOrientation { flag: 7 },
-            Node::ExpandCanvas { left: 10, top: 10, right: 10, bottom: 10, color: Color::Srgb(ColorSrgb::Hex("FFEECCFF".to_owned())) },
-            Node::Crop { x1: 10, y1: 10, x2: 650, y2: 490 },
-            Node::FillRect { x1: 0, y1: 0, x2: 8, y2: 8, color: Color::Transparent },
-            Node::FlipV,
-            Node::FlipH,
-            Node::Rotate90,
-            Node::Rotate180,
-            Node::Rotate270,
-            Node::Transpose,
-            Node::Resample2D {
-                w: 100, h: 75,
-                down_filter: Some(Filter::Robidoux),
-                up_filter: Some(Filter::Ginseng),
-                hints: Some(ResampleHints { sharpen_percent: Some(10f32), prefer_1d_twice: None })
-            },
-            Node::Resample2D {
-                w: 200,
-                h: 150,
-                up_filter: None,
-                down_filter: None,
-                hints: None
-            },
-            Node::Encode { io_id: 1, preset: EncoderPreset::LibjpegTurbo { quality: Some(90) } }
-            ]
-        )
+                    scale_luma_spatially: Some(false)})]),
+                              },
+                              Node::ApplyOrientation { flag: 7 },
+                              Node::ExpandCanvas {
+                                  left: 10,
+                                  top: 10,
+                                  right: 10,
+                                  bottom: 10,
+                                  color: Color::Srgb(ColorSrgb::Hex("FFEECCFF".to_owned())),
+                              },
+                              Node::Crop {
+                                  x1: 10,
+                                  y1: 10,
+                                  x2: 650,
+                                  y2: 490,
+                              },
+                              Node::FillRect {
+                                  x1: 0,
+                                  y1: 0,
+                                  x2: 8,
+                                  y2: 8,
+                                  color: Color::Transparent,
+                              },
+                              Node::FlipV,
+                              Node::FlipH,
+                              Node::Rotate90,
+                              Node::Rotate180,
+                              Node::Rotate270,
+                              Node::Transpose,
+                              Node::Resample2D {
+                                  w: 100,
+                                  h: 75,
+                                  down_filter: Some(Filter::Robidoux),
+                                  up_filter: Some(Filter::Ginseng),
+                                  hints: Some(ResampleHints {
+                                      sharpen_percent: Some(10f32),
+                                      prefer_1d_twice: None,
+                                  }),
+                              },
+                              Node::Resample2D {
+                                  w: 200,
+                                  h: 150,
+                                  up_filter: None,
+                                  down_filter: None,
+                                  hints: None,
+                              },
+                              Node::Encode {
+                                  io_id: 1,
+                                  preset: EncoderPreset::LibjpegTurbo { quality: Some(90) },
+                              }])
     }
-    pub fn example_graph() -> Framewise{
+    pub fn example_graph() -> Framewise {
 
         let mut nodes = std::collections::HashMap::new();
-        nodes.insert("0".to_owned(), Node::Decode { io_id: 0, commands: None});
-        nodes.insert("1".to_owned(), Node::CreateCanvas { w: 200, h: 200, format: PixelFormat::Bgra32, color: Color::Transparent });
-        nodes.insert("2".to_owned(), Node::CopyRectToCanvas { x: 0, y:0, from_x: 0, from_y: 0, width: 100, height: 100});
-        nodes.insert("3".to_owned(), Node::Resample1D{ scale_to_width: 100, interpolation_filter: None, transpose_on_write: false});
-        nodes.insert("4".to_owned(), Node::Encode{ io_id: 1, preset: EncoderPreset::Libpng{ matte: Some(Color::Srgb(ColorSrgb::Hex("999999".to_owned()))), zlib_compression: None,  depth: Some(PngBitDepth::Png24) }});
-        nodes.insert("5".to_owned(), Node::Encode{ io_id: 2, preset: EncoderPreset::LibjpegTurbo { quality: Some(90) }});
+        nodes.insert("0".to_owned(),
+                     Node::Decode {
+                         io_id: 0,
+                         commands: None,
+                     });
+        nodes.insert("1".to_owned(),
+                     Node::CreateCanvas {
+                         w: 200,
+                         h: 200,
+                         format: PixelFormat::Bgra32,
+                         color: Color::Transparent,
+                     });
+        nodes.insert("2".to_owned(),
+                     Node::CopyRectToCanvas {
+                         x: 0,
+                         y: 0,
+                         from_x: 0,
+                         from_y: 0,
+                         width: 100,
+                         height: 100,
+                     });
+        nodes.insert("3".to_owned(),
+                     Node::Resample1D {
+                         scale_to_width: 100,
+                         interpolation_filter: None,
+                         transpose_on_write: false,
+                     });
+        nodes.insert("4".to_owned(),
+                     Node::Encode {
+                         io_id: 1,
+                         preset: EncoderPreset::Libpng {
+                             matte: Some(Color::Srgb(ColorSrgb::Hex("999999".to_owned()))),
+                             zlib_compression: None,
+                             depth: Some(PngBitDepth::Png24),
+                         },
+                     });
+        nodes.insert("5".to_owned(),
+                     Node::Encode {
+                         io_id: 2,
+                         preset: EncoderPreset::LibjpegTurbo { quality: Some(90) },
+                     });
 
-        Framewise::Graph(Graph{
-            edges: vec![
-            Edge{
-                from:0,
-                to: 2,
-                kind: EdgeKind::Input
-            },
-            Edge{
-                from:1,
-                to: 2,
-                kind: EdgeKind::Canvas
-            },
-            Edge{
-                from: 2,
-                to: 3,
-                kind: EdgeKind::Input
-            },
-            Edge{
-                from:3,
-                to: 4,
-                kind: EdgeKind::Input
-            },
-            Edge{
-                from:3,
-                to: 5,
-                kind: EdgeKind::Input
-            }
-            ],
-            nodes: nodes
+        Framewise::Graph(Graph {
+            edges: vec![Edge {
+                            from: 0,
+                            to: 2,
+                            kind: EdgeKind::Input,
+                        },
+                        Edge {
+                            from: 1,
+                            to: 2,
+                            kind: EdgeKind::Canvas,
+                        },
+                        Edge {
+                            from: 2,
+                            to: 3,
+                            kind: EdgeKind::Input,
+                        },
+                        Edge {
+                            from: 3,
+                            to: 4,
+                            kind: EdgeKind::Input,
+                        },
+                        Edge {
+                            from: 3,
+                            to: 5,
+                            kind: EdgeKind::Input,
+                        }],
+            nodes: nodes,
         })
     }
 }
 impl Execute001 {
-    pub fn example_steps() -> Execute001{
+    pub fn example_steps() -> Execute001 {
         Execute001 {
             no_gamma_correction: None,
             graph_recording: None,
-            framewise: Framewise::example_steps()
+            framewise: Framewise::example_steps(),
         }
     }
     pub fn example_graph() -> Execute001 {
-        Execute001{
+        Execute001 {
             no_gamma_correction: None,
             graph_recording: None,
-            framewise: Framewise::example_graph()
+            framewise: Framewise::example_graph(),
         }
     }
 }
@@ -663,10 +723,8 @@ pub struct GetImageInfo001 {
 }
 
 impl GetImageInfo001 {
-    pub fn example_get_image_info() -> GetImageInfo001{
-        GetImageInfo001{
-            io_id: 0
-        }
+    pub fn example_get_image_info() -> GetImageInfo001 {
+        GetImageInfo001 { io_id: 0 }
     }
 }
 #[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
@@ -676,31 +734,31 @@ pub struct JpegIDCTDownscaleHints {
     // camelCased: #[serde(rename="scaleLumaSpatially")]
     pub scale_luma_spatially: Option<bool>,
     // camelCased: #[serde(rename="gammaCorrectForSrgbDuringSpatialLumaScaling")]
-    pub gamma_correct_for_srgb_during_spatial_luma_scaling: Option<bool>
+    pub gamma_correct_for_srgb_during_spatial_luma_scaling: Option<bool>,
 }
 #[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
 pub enum DecoderCommand {
     // camelCased: #[serde(rename="jpegDownscaleHints")]
     #[serde(rename="jpeg_downscale_hints")]
-    JpegDownscaleHints(JpegIDCTDownscaleHints)
+    JpegDownscaleHints(JpegIDCTDownscaleHints),
 }
 #[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
 pub struct TellDecoder001 {
     // camelCased: #[serde(rename="ioId")]
     pub io_id: i32,
-    pub command: DecoderCommand
+    pub command: DecoderCommand,
 }
 
 impl TellDecoder001 {
-    pub fn example_hints() -> TellDecoder001{
-        TellDecoder001{
+    pub fn example_hints() -> TellDecoder001 {
+        TellDecoder001 {
             io_id: 2,
-            command: DecoderCommand::JpegDownscaleHints(JpegIDCTDownscaleHints{
+            command: DecoderCommand::JpegDownscaleHints(JpegIDCTDownscaleHints {
                 width: 1000,
                 height: 1000,
                 scale_luma_spatially: Some(true),
-                gamma_correct_for_srgb_during_spatial_luma_scaling: Some(true)
-            })
+                gamma_correct_for_srgb_during_spatial_luma_scaling: Some(true),
+            }),
         }
     }
 }
@@ -711,7 +769,7 @@ pub struct ImageInfo {
     pub preferred_mime_type: String,
     // camelCased: #[serde(rename="preferredExtension")]
     pub preferred_extension: String,
-    //Warning, one cannot count frames in a GIF without scanning the whole thing.
+    // Warning, one cannot count frames in a GIF without scanning the whole thing.
     // camelCased: #[serde(rename="frameCount")]
     pub frame_count: usize,
     // camelCased: #[serde(rename="currentFrameIndex")]
@@ -724,14 +782,14 @@ pub struct ImageInfo {
     pub frame_decodes_into: PixelFormat,
 }
 #[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
-pub enum ResultBytes{
+pub enum ResultBytes {
     Base64(String),
     ByteArray(Vec<u8>),
     PhysicalFile(String),
-    Elsewhere
+    Elsewhere,
 }
 #[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
-pub struct EncodeResult{
+pub struct EncodeResult {
     // camelCased: #[serde(rename="preferredMimeType")]
     pub preferred_mime_type: String,
     // camelCased: #[serde(rename="preferredExtension")]
@@ -744,12 +802,12 @@ pub struct EncodeResult{
     // camelCased: #[serde(rename="h")]
     pub h: i32,
 
-    pub bytes: ResultBytes
+    pub bytes: ResultBytes,
 }
 
 #[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
 pub struct BuildResult {
-    pub encodes: Vec<EncodeResult>
+    pub encodes: Vec<EncodeResult>,
 }
 impl BuildResult {
     pub fn into_job_result(self) -> JobResult {
@@ -759,7 +817,7 @@ impl BuildResult {
 
 #[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
 pub struct JobResult {
-    pub encodes: Vec<EncodeResult>
+    pub encodes: Vec<EncodeResult>,
 }
 #[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
 pub enum ResponsePayload {
@@ -779,72 +837,83 @@ pub struct Response001 {
     pub code: i64,
     pub success: bool,
     pub message: Option<String>,
-    pub data: ResponsePayload
+    pub data: ResponsePayload,
 }
 
 impl Response001 {
     pub fn example_error() -> Response001 {
-        Response001{
+        Response001 {
             code: 500,
             success: false,
             message: Some("Invalid internal state".to_owned()),
-            data: ResponsePayload::None
+            data: ResponsePayload::None,
         }
     }
     pub fn example_ok() -> Response001 {
-        Response001{
+        Response001 {
             code: 200,
             success: true,
             message: None,
-            data: ResponsePayload::None
+            data: ResponsePayload::None,
         }
     }
 
-    pub fn example_job_result_encoded(io_id: i32, w: i32, h: i32, mime: &'static str, ext: &'static str) -> Response001 {
-        Response001{
+    pub fn example_job_result_encoded(io_id: i32,
+                                      w: i32,
+                                      h: i32,
+                                      mime: &'static str,
+                                      ext: &'static str)
+                                      -> Response001 {
+        Response001 {
             code: 200,
             success: true,
             message: None,
-            data: ResponsePayload::JobResult(JobResult{
-                encodes: vec![EncodeResult{io_id: io_id, w: w, h: h, preferred_mime_type: mime.to_owned(), preferred_extension: ext.to_owned(), bytes: ResultBytes::Elsewhere}]
-            })
+            data: ResponsePayload::JobResult(JobResult {
+                encodes: vec![EncodeResult {
+                                  io_id: io_id,
+                                  w: w,
+                                  h: h,
+                                  preferred_mime_type: mime.to_owned(),
+                                  preferred_extension: ext.to_owned(),
+                                  bytes: ResultBytes::Elsewhere,
+                              }],
+            }),
         }
     }
 
 
     pub fn example_image_info() -> Response001 {
-        Response001{
+        Response001 {
             code: 200,
             success: true,
             message: None,
-            data: ResponsePayload::ImageInfo(
-                ImageInfo{
-                    current_frame_index: 0,
-                    frame_count: 1,
-                    image_height: 480,
-                    image_width: 640,
-                    frame_decodes_into: PixelFormat::Bgr24,
-                    preferred_mime_type: "image/png".to_owned(),
-                    preferred_extension: "png".to_owned()
-                }
-            )
+            data: ResponsePayload::ImageInfo(ImageInfo {
+                current_frame_index: 0,
+                frame_count: 1,
+                image_height: 480,
+                image_width: 640,
+                frame_decodes_into: PixelFormat::Bgr24,
+                preferred_mime_type: "image/png".to_owned(),
+                preferred_extension: "png".to_owned(),
+            }),
         }
     }
 }
 pub fn rtf<T>(value: T) -> usize
-    where T: serde::Serialize, T: serde::Deserialize {
+    where T: serde::Serialize,
+          T: serde::Deserialize
+{
     key_casing::print_keys_not_roundtrippable(&value)
 }
 
 #[test]
-fn roundtrip_example_responses(){
-    let failures = rtf(Response001::example_error()) +
-        rtf(Response001::example_image_info()) +
-        rtf(Response001::example_ok()) +
-        rtf(Response001::example_job_result_encoded(0,200,200,"image/jpeg", "jpg")) +
-        rtf(Build001::example_with_steps()) +
-        rtf(Execute001::example_graph()) +
-        rtf(Execute001::example_steps());
+fn roundtrip_example_responses() {
+    let failures = rtf(Response001::example_error()) + rtf(Response001::example_image_info()) +
+                   rtf(Response001::example_ok()) +
+                   rtf(Response001::example_job_result_encoded(0, 200, 200, "image/jpeg", "jpg")) +
+                   rtf(Build001::example_with_steps()) +
+                   rtf(Execute001::example_graph()) +
+                   rtf(Execute001::example_steps());
 
     assert_eq!(0, failures);
 }
@@ -957,8 +1026,8 @@ fn error_from_value() {
 }
 
 mod key_casing {
-    use serde;
     use regex::{Regex, Captures};
+    use serde;
     use serde_json;
 
     fn collect_keys(list: &mut Vec<String>, from: &serde_json::Value) {
@@ -979,7 +1048,9 @@ mod key_casing {
     }
 
     pub fn collect_active_json_keys<T>(value: &T) -> serde_json::error::Result<Vec<String>>
-        where T: serde::Serialize, T: serde::Deserialize {
+        where T: serde::Serialize,
+              T: serde::Deserialize
+    {
         let bytes = serde_json::to_vec(value)?;
         let generic: serde_json::Value = serde_json::from_slice(&bytes)?;
         let mut keys = Vec::new();
@@ -988,21 +1059,29 @@ mod key_casing {
     }
 
 
-    pub fn which_json_keys_cannot_roundtrip_casing<T>(value: &T) -> serde_json::error::Result<Vec<String>>
-        where T: serde::Serialize, T: serde::Deserialize {
+    pub fn which_json_keys_cannot_roundtrip_casing<T>(value: &T)
+                                                      -> serde_json::error::Result<Vec<String>>
+        where T: serde::Serialize,
+              T: serde::Deserialize
+    {
         let keys = collect_active_json_keys(value)?;
 
-        Ok(keys.into_iter().filter(|key| {
-            let camelcase = style_id(key, Style::CamelCase);
-            let snake_case = style_id(&camelcase, Style::CamelCase);
-            camelcase != snake_case
-        }).collect::<Vec<String>>())
+        Ok(keys.into_iter()
+            .filter(|key| {
+                let camelcase = style_id(key, Style::CamelCase);
+                let snake_case = style_id(&camelcase, Style::CamelCase);
+                camelcase != snake_case
+            })
+            .collect::<Vec<String>>())
     }
 
     /// Returns the number of roundtrip failures we printed
     pub fn print_keys_not_roundtrippable<T>(value: &T) -> usize
-        where T: serde::Serialize, T: serde::Deserialize {
-        let keys = collect_active_json_keys(value).expect("Value must be marked Serialize and Deserialize");
+        where T: serde::Serialize,
+              T: serde::Deserialize
+    {
+        let keys = collect_active_json_keys(value)
+            .expect("Value must be marked Serialize and Deserialize");
 
         let mut fail_count = 0;
         for key in keys {
@@ -1010,17 +1089,22 @@ mod key_casing {
             let snake_case = style_id(&camelcase, Style::Snake);
 
             if key != snake_case {
-                println!("Cannot round-trip {} -> {} -> {}", key, camelcase, snake_case);
+                println!("Cannot round-trip {} -> {} -> {}",
+                         key,
+                         camelcase,
+                         snake_case);
                 fail_count += 1;
-            }else{
-                //println!("Round-tripped {} -> {} -> {}", key, camelcase, snake_case);
+            } else {
+                // println!("Round-tripped {} -> {} -> {}", key, camelcase, snake_case);
             }
         }
         fail_count
     }
 
     pub fn print_keys_not_roundtrippable_consuming<T>(value: T) -> usize
-        where T: serde::Serialize, T: serde::Deserialize {
+        where T: serde::Serialize,
+              T: serde::Deserialize
+    {
         print_keys_not_roundtrippable(&value)
     }
 
@@ -1031,7 +1115,7 @@ mod key_casing {
         AddUnderscores,
         Capitalize,
         LowerFirst,
-        StripUnderscores
+        StripUnderscores,
     }
 
     #[derive(Copy, Clone, PartialEq, Debug)]
@@ -1041,7 +1125,7 @@ mod key_casing {
         PascalCase,
         PascalSnake,
         CamelSnake,
-        CamelCase
+        CamelCase,
     }
 
 
@@ -1052,15 +1136,17 @@ mod key_casing {
                 let temp = Regex::new("[A-Z]").unwrap().replace_all(&temp, "_$0");
                 let temp = Regex::new(r"(\A|\s+)_+").unwrap().replace_all(&temp, "$1");
                 temp.replace("__", "_")
-            },
-            Transform::StripUnderscores => {
-                s.replace("_", "")
-            },
+            }
+            Transform::StripUnderscores => s.replace("_", ""),
             Transform::Capitalize => {
-                Regex::new(r"(_|\b)([a-z])").unwrap().replace_all(&s, |c: &Captures| c[0].to_uppercase())
+                Regex::new(r"(_|\b)([a-z])")
+                    .unwrap()
+                    .replace_all(&s, |c: &Captures| c[0].to_uppercase())
             }
             Transform::LowerFirst => {
-                Regex::new(r"(\A|\s+)([A-Z])").unwrap().replace_all(&s, |c: &Captures| c[0].to_lowercase())
+                Regex::new(r"(\A|\s+)([A-Z])")
+                    .unwrap()
+                    .replace_all(&s, |c: &Captures| c[0].to_lowercase())
             }
         }
     }
@@ -1070,37 +1156,30 @@ mod key_casing {
     ///
     fn style_id(s: &str, style: Style) -> String {
         let mut temp = s.to_owned();
-        //Normalize to underscores (unless there are already some)
+        // Normalize to underscores (unless there are already some)
         if !temp.contains("_") {
             temp = transform(&temp, Transform::AddUnderscores);
         }
-        //Normalize to lower (relying on underscores now)
+        // Normalize to lower (relying on underscores now)
         let temp = temp.to_lowercase();
 
         let temp: String = match style {
-            Style::PascalSnake | Style::PascalCase => {
-                transform(&temp, Transform::Capitalize)
-            },
+            Style::PascalSnake | Style::PascalCase => transform(&temp, Transform::Capitalize),
             Style::CamelCase | Style::CamelSnake => {
                 let t = transform(&temp, Transform::Capitalize);
                 transform(&t, Transform::LowerFirst)
             }
-            Style::ScreamingSnake => {
-                temp.to_uppercase()
-            }
-            _ => temp
+            Style::ScreamingSnake => temp.to_uppercase(),
+            _ => temp,
         };
 
         match style {
-            Style::PascalCase | Style::CamelCase => {
-                transform(&temp, Transform::StripUnderscores)
-            }
-            _ => temp
+            Style::PascalCase | Style::CamelCase => transform(&temp, Transform::StripUnderscores),
+            _ => temp,
         }
     }
 }
-//
-//mod try_nested_mut{
+// mod try_nested_mut{
 //
 //    struct C<'a>{
 //        v: &'a mut Vec<u8>
@@ -1135,11 +1214,11 @@ mod key_casing {
 //    struct B<'a>{
 //        v: &'a mut Vec<u8>
 //    }
-//impl<'a> B<'a>{
+// impl<'a> B<'a>{
 //    fn ok(&mut self){
 //        self.v.sort()
 //    }
-//}
+// }
 //    impl<'d> A<'d>{
 //        fn try(&mut self){ //&mut self is required to re-use self.v as a mutable reference.
 //            let mut b = B{v: self.v};
@@ -1154,4 +1233,4 @@ mod key_casing {
 //        a.try();
 //    }
 //
-//}
+// }

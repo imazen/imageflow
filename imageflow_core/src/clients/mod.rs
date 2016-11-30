@@ -2,9 +2,7 @@ pub mod stateless;
 pub mod fluent;
 
 
-//
-//
-//pub trait BasicClient{
+// pub trait BasicClient{
 //    //Does the server support URL fetches? Local filenames? If so, within which domains/directories?
 //    //Client-local filenames work for tool and lib, but not server.
 //    //URLs should work everywhere, but depending on security policy
@@ -12,55 +10,55 @@ pub mod fluent;
 //
 //    //Does the server support any kind of session/context/state? If not, we have to adapt.
 //
-//}
+// }
 //
-//pub struct LibClient{
+// pub struct LibClient{
 //
 //
 //
-//}
+// }
 //
-//impl LibClient {
+// impl LibClient {
 //    pub fn create_session() -> LibClientSession{
 //
 //    }
-//}
+// }
 //
-////Bytes in, bytes out (starting point!)
+// /Bytes in, bytes out (starting point!)
 //
-////Later we can add these things (which involve more security and caching aspects)
-////read client file
-////write client file - Maybe skip this one??
-////access server resource
-////read URL
+// /Later we can add these things (which involve more security and caching aspects)
+// /read client file
+// /write client file - Maybe skip this one??
+// /access server resource
+// /read URL
 //
 //
-//pub enum ClientIo{
+// pub enum ClientIo{
 //    ReadFile(String),
 //    WriteFile(String),
 //    Url(String),
 //
 //
-//}
+// }
 //
-//pub struct ClientBasicBuild{
+// pub struct ClientBasicBuild{
 //    //Framewise
 //    //DecoderHints
 //    //BuildConfig
-//}
+// }
 //
-//pub struct ClientBasicResult{
+// pub struct ClientBasicResult{
 //    //list of io_id and Vec<8>
 //    //Or failure detail?
 //    //timings/resource info
 //    //
-//}
+// }
 //
-////Sessions can only have as much state as they can universally fake
-//pub struct LibClientSession{
+// /Sessions can only have as much state as they can universally fake
+// pub struct LibClientSession{
 //
-//}
-//impl LibClientSession{
+// }
+// impl LibClientSession{
 //
 //    pub fn add_input(&mut self, io_id: i32, bytes: Vec<u8>) -> Result(){
 //
@@ -76,4 +74,4 @@ pub mod fluent;
 //    //Get output I/O bytes (owned)
 //    //Get output dimensions, content type, preferred extension etc.
 //
-//}
+// }

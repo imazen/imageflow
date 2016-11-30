@@ -1,12 +1,13 @@
 // Boring, because we're not doing any kind of op graph, just a static list of configurable ops.
+
 use ::internal_prelude::works_everywhere::*;
 extern crate threadpool;
-use std::sync::mpsc::channel;
 use ContextPtr;
-use SelfDisposingContextPtr;
-use JsonResponse;
 use JobPtr;
+use JsonResponse;
+use SelfDisposingContextPtr;
 use ::ffi::*;
+use std::sync::mpsc::channel;
 
 #[derive(Copy,Clone, Debug)]
 pub enum ConstraintMode {
@@ -219,7 +220,7 @@ fn benchmark_op(cmds: BoringCommands, mem: *mut u8, len: usize) -> BenchmarkResu
 }
 pub fn benchmark(bench: BenchmarkOptions) -> std::result::Result<BenchmarkResults, String> {
 
-    //Switch to Arc instead of pointers
+    // Switch to Arc instead of pointers
 
     let mut f = File::open(bench.input_path).unwrap();//bad
     let mut buffer = Vec::new();
@@ -258,7 +259,7 @@ pub fn benchmark(bench: BenchmarkOptions) -> std::result::Result<BenchmarkResult
     let mut res_list = Vec::new();
     let result_iterator = rx.iter().take(bench.run_count as usize);
     for i in result_iterator {
-        //res_list.push(i.result?)
+        // res_list.push(i.result?)
         match i.result {
             Ok(_) => {
                 res_list.push(i);
@@ -288,27 +289,32 @@ pub struct IoResource {
     pub direction: IoDirection,
 }
 
-fn constrain(original_width: i32, original_height: i32, constrain: ConstraintMode, constrain_w: Option<i32>, constrain_h: Option<i32>) -> (usize, usize){
+fn constrain(original_width: i32,
+             original_height: i32,
+             constrain: ConstraintMode,
+             constrain_w: Option<i32>,
+             constrain_h: Option<i32>)
+             -> (usize, usize) {
 
     let natural_ratio = (original_width as f32) / (original_height as f32);
     let final_w;
     let final_h;
 
-    //println!("{:?}", commands);
-    if constrain_h.is_none() && constrain_w.is_none(){
+    // println!("{:?}", commands);
+    if constrain_h.is_none() && constrain_w.is_none() {
         final_w = original_width as usize;
         final_h = original_height as usize;
-    }else {
+    } else {
         let w = match constrain_w {
             Some(w) => w,
-            None => (constrain_h.unwrap() as f32 * natural_ratio).round() as i32
+            None => (constrain_h.unwrap() as f32 * natural_ratio).round() as i32,
         };
         let h = match constrain_h {
             Some(h) => h,
-            None => (constrain_w.unwrap() as f32 / natural_ratio).round() as i32
+            None => (constrain_w.unwrap() as f32 / natural_ratio).round() as i32,
         };
 
-        match constrain{
+        match constrain {
             ConstraintMode::Max => {
                 if original_width > w || original_height > h {
                     let constraint_ratio = (w as f32) / (h as f32);
@@ -330,20 +336,28 @@ fn constrain(original_width: i32, original_height: i32, constrain: ConstraintMod
             }
         };
     }
-        (final_w, final_h)
+    (final_w, final_h)
 }
 
 #[test]
-fn test_constraining(){
-    assert_eq!((100,50), constrain(200,100,ConstraintMode::Max, Some(100), None));
-    assert_eq!((400,200), constrain(200,100,ConstraintMode::Distort, Some(400), None));
+fn test_constraining() {
+    assert_eq!((100, 50),
+               constrain(200, 100, ConstraintMode::Max, Some(100), None));
+    assert_eq!((400, 200),
+               constrain(200, 100, ConstraintMode::Distort, Some(400), None));
 }
 
-pub fn create_framewise(original_width: i32, original_height: i32, commands: BoringCommands)
-                              -> std::result::Result<(s::Framewise, (i32,i32)), String> {
-    let (final_w, final_h) = constrain(original_width, original_height, commands.fit, commands.w, commands.h);
+pub fn create_framewise(original_width: i32,
+                        original_height: i32,
+                        commands: BoringCommands)
+                        -> std::result::Result<(s::Framewise, (i32, i32)), String> {
+    let (final_w, final_h) = constrain(original_width,
+                                       original_height,
+                                       commands.fit,
+                                       commands.w,
+                                       commands.h);
 
-    //Should we IDCT downscale?
+    // Should we IDCT downscale?
 
     let trigger_ratio = if 1.0f32 > commands.precise_scaling_ratio {
         3.0f32
@@ -356,26 +370,51 @@ pub fn create_framewise(original_width: i32, original_height: i32, commands: Bor
 
 
     let encoder_preset = match commands.format {
-        ImageFormat::Jpeg => s::EncoderPreset::LibjpegTurbo { quality: Some(commands.jpeg_quality) },
-        ImageFormat::Png => s::EncoderPreset::Libpng { zlib_compression: None, matte: None, depth: Some(s::PngBitDepth::Png32) },
-        ImageFormat::Png24 => s::EncoderPreset::Libpng { zlib_compression: None, matte: Some(s::Color::Black), depth: Some(s::PngBitDepth::Png24) },
+        ImageFormat::Jpeg => {
+            s::EncoderPreset::LibjpegTurbo { quality: Some(commands.jpeg_quality) }
+        }
+        ImageFormat::Png => {
+            s::EncoderPreset::Libpng {
+                zlib_compression: None,
+                matte: None,
+                depth: Some(s::PngBitDepth::Png32),
+            }
+        }
+        ImageFormat::Png24 => {
+            s::EncoderPreset::Libpng {
+                zlib_compression: None,
+                matte: Some(s::Color::Black),
+                depth: Some(s::PngBitDepth::Png24),
+            }
+        }
     };
 
-    let steps = vec![
-    s::Node::Decode { io_id: 0, commands: Some(vec![s::DecoderCommand::JpegDownscaleHints(s::JpegIDCTDownscaleHints{
-        width: pre_w as i64,
-        height: pre_h as i64,
-        scale_luma_spatially: Some(commands.luma_correct),
-        gamma_correct_for_srgb_during_spatial_luma_scaling: Some(commands.luma_correct)
-    })]) },
-    s::Node::Resample2D {
-        w: final_w,
-        h: final_h, down_filter: Some(commands.down_filter), up_filter: Some(commands.up_filter),
-        hints: Some(s::ResampleHints { sharpen_percent: Some(commands.sharpen), prefer_1d_twice: None })
-    },
-    s::Node::Encode { io_id: 1, preset: encoder_preset }
-    ];
-    Ok((s::Framewise::Steps(steps), (pre_w,pre_h)))
+    let steps = vec![s::Node::Decode {
+                 io_id: 0,
+                 commands:
+                     Some(vec![s::DecoderCommand::JpegDownscaleHints(s::JpegIDCTDownscaleHints {
+                                   width: pre_w as i64,
+                                   height: pre_h as i64,
+                                   scale_luma_spatially: Some(commands.luma_correct),
+                                   gamma_correct_for_srgb_during_spatial_luma_scaling:
+                                       Some(commands.luma_correct),
+                               })]),
+             },
+             s::Node::Resample2D {
+                 w: final_w,
+                 h: final_h,
+                 down_filter: Some(commands.down_filter),
+                 up_filter: Some(commands.up_filter),
+                 hints: Some(s::ResampleHints {
+                     sharpen_percent: Some(commands.sharpen),
+                     prefer_1d_twice: None,
+                 }),
+             },
+             s::Node::Encode {
+                 io_id: 1,
+                 preset: encoder_preset,
+             }];
+    Ok((s::Framewise::Steps(steps), (pre_w, pre_h)))
 }
 
 
@@ -393,7 +432,7 @@ pub fn process_image<F, C, R>(commands: BoringCommands,
         let c = context.inner();
         let mut job: JobPtr = JobPtr::create(c.as_ptr().unwrap()).unwrap();
 
-        //Add I/O
+        // Add I/O
         let inputs: Vec<IoResource> = io_provider(c.as_ptr().unwrap());
         for (index, input) in inputs.iter().enumerate() {
             let dir = input.direction.clone();
@@ -403,18 +442,21 @@ pub fn process_image<F, C, R>(commands: BoringCommands,
         }
 
 
-        let info_blob: JsonResponse = job.message("v0.1/get_image_info", "{\"io_id\": 0}".as_bytes()).unwrap();
-        let info_response: s::Response001 = serde_json::from_slice(info_blob.response_json.as_ref()).unwrap();
+        let info_blob: JsonResponse =
+            job.message("v0.1/get_image_info", "{\"io_id\": 0}".as_bytes()).unwrap();
+        let info_response: s::Response001 =
+            serde_json::from_slice(info_blob.response_json.as_ref()).unwrap();
         if !info_response.success {
-            panic!("get_image_info failed: {:?}",info_response);
+            panic!("get_image_info failed: {:?}", info_response);
         }
         let (image_width, image_height) = match info_response.data {
             s::ResponsePayload::ImageInfo(info) => (info.image_width, info.image_height),
-            _ => panic!("")
+            _ => panic!(""),
         };
 
 
-        let (framewise, (pre_w, pre_h)) = create_framewise(image_width,image_height, commands).unwrap();
+        let (framewise, (pre_w, pre_h)) = create_framewise(image_width, image_height, commands)
+            .unwrap();
 
         if pre_w < image_width && pre_h < image_height {
             let send_hints = s::TellDecoder001 {
@@ -423,18 +465,18 @@ pub fn process_image<F, C, R>(commands: BoringCommands,
                     height: pre_h as i64,
                     width: pre_w as i64,
                     scale_luma_spatially: Some(commands.luma_correct),
-                    gamma_correct_for_srgb_during_spatial_luma_scaling: Some(commands.luma_correct)
-                })
+                    gamma_correct_for_srgb_during_spatial_luma_scaling: Some(commands.luma_correct),
+                }),
             };
             let send_hints_str = serde_json::to_string_pretty(&send_hints).unwrap();
             job.message("v0.1/tell_decoder", send_hints_str.as_bytes()).unwrap().assert_ok();
         }
 
 
-        let send_execute = s::Execute001{
+        let send_execute = s::Execute001 {
             framewise: framewise,
             graph_recording: None,
-            no_gamma_correction: Some(!commands.luma_correct)
+            no_gamma_correction: Some(!commands.luma_correct),
         };
 
         let send_execute_str = serde_json::to_string_pretty(&send_execute).unwrap();

@@ -36,10 +36,8 @@ fn create_canvas_def() -> NodeDefinition {
                                                              ref h,
                                                              ref color }) => unsafe {
                         // TODO: handle creation failure. Most likely OOM in entire codebase
-                        let ptr = ::ffi::flow_bitmap_bgra_create(c,
-                                                                 *w as i32,
-                                                                 *h as i32,
-                                                                 true, *format);
+                        let ptr =
+                            ::ffi::flow_bitmap_bgra_create(c, *w as i32, *h as i32, true, *format);
                         let color_val = color.clone();
                         if color_val != s::Color::Transparent {
                             if !ffi::flow_bitmap_bgra_fill_rect(c,

@@ -153,7 +153,7 @@ fn primitive_decoder_def() -> NodeDefinition {
         fn_estimate: Some(decoder_estimate),
         fn_execute: Some({
             fn f(ctx: &mut OpCtxMut, ix: NodeIndex<u32>) {
-                //TODO______
+                // TODO______
                 let codec = ctx.weight(ix).custom_state as *mut ffi::CodecInstance;
 
                 unsafe {
@@ -187,42 +187,49 @@ fn encoder_def() -> NodeDefinition {
                     let result;
                     {
                         let weight = ctx.weight(ix);
-                        if let NodeParams::Json(s::Node::Encode { ref preset, ref io_id, .. }) = weight.params {
+                        if let NodeParams::Json(s::Node::Encode { ref preset, ref io_id, .. }) =
+                               weight.params {
                             let codec = weight.custom_state as *mut ffi::CodecInstance;
 
-                            if codec == ptr::null_mut() { panic!("") }
+                            if codec == ptr::null_mut() {
+                                panic!("")
+                            }
 
                             let (wanted_id, hints) = match *preset {
-                                s::EncoderPreset::LibjpegTurbo { quality } =>
-                                (ffi::CodecType::EncodeJpeg as i64,
-                                 ffi::EncoderHints {
-                                    jpeg_encode_quality: quality.unwrap_or(90),
-                                    disable_png_alpha: false,
-                                 }),
-                                s::EncoderPreset::Libpng { ref matte, zlib_compression, ref depth } =>
+                                s::EncoderPreset::LibjpegTurbo { quality } => {
+                                    (ffi::CodecType::EncodeJpeg as i64,
+                                     ffi::EncoderHints {
+                                        jpeg_encode_quality: quality.unwrap_or(90),
+                                        disable_png_alpha: false,
+                                    })
+                                }
+                                s::EncoderPreset::Libpng { ref matte,
+                                                           zlib_compression,
+                                                           ref depth } => {
                                     (ffi::CodecType::EncodePng as i64,
                                      ffi::EncoderHints {
-                                         jpeg_encode_quality: -1,
-                                         disable_png_alpha: match *depth {
-                                             Some(s::PngBitDepth::Png24) => true,
-                                             _ => false },
-                                     })
+                                        jpeg_encode_quality: -1,
+                                        disable_png_alpha: match *depth {
+                                            Some(s::PngBitDepth::Png24) => true,
+                                            _ => false,
+                                        },
+                                    })
+                                }
                             };
 
                             unsafe {
                                 let (result_mime, result_ext) = match *preset {
-                                    s::EncoderPreset::Libpng {..} => ("image/png", "png"),
-                                    s::EncoderPreset::LibjpegTurbo{..} => ("image/jpeg", "jpg")
+                                    s::EncoderPreset::Libpng { .. } => ("image/png", "png"),
+                                    s::EncoderPreset::LibjpegTurbo { .. } => ("image/jpeg", "jpg"),
                                 };
-                                result = NodeResult::Encoded(
-                                    s::EncodeResult{
-                                        w: (*input_bitmap).w as i32,
-                                        h: (*input_bitmap).h as i32,
-                                        preferred_mime_type: result_mime.to_owned(),
-                                        preferred_extension: result_ext.to_owned(),
-                                        io_id: *io_id,
-                                        bytes: s::ResultBytes::Elsewhere
-                                    });
+                                result = NodeResult::Encoded(s::EncodeResult {
+                                    w: (*input_bitmap).w as i32,
+                                    h: (*input_bitmap).h as i32,
+                                    preferred_mime_type: result_mime.to_owned(),
+                                    preferred_extension: result_ext.to_owned(),
+                                    io_id: *io_id,
+                                    bytes: s::ResultBytes::Elsewhere,
+                                });
 
 
 
@@ -239,7 +246,10 @@ fn encoder_def() -> NodeDefinition {
                                     panic!("Codec didn't implement write_frame");
                                 }
 
-                                if !write_fn.unwrap()(ctx.c, (*codec).codec_state, input_bitmap, &hints as *const ffi::EncoderHints) {
+                                if !write_fn.unwrap()(ctx.c,
+                                                      (*codec).codec_state,
+                                                      input_bitmap,
+                                                      &hints as *const ffi::EncoderHints) {
                                     ctx.assert_ok();
                                 }
                             }
@@ -250,7 +260,7 @@ fn encoder_def() -> NodeDefinition {
                     {
                         ctx.weight_mut(ix).result = result;
                     }
-                }else {
+                } else {
                     panic!("");
                 }
 

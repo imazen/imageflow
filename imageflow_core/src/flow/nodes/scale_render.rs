@@ -29,8 +29,8 @@ impl ScaleRenderHelpers {
         let ref mut weight = ctx.weight_mut(ix);
         match weight.params {
             NodeParams::Json(s::Node::Resample1D { ref scale_to_width,
-                                                 ref transpose_on_write,
-                                                 ref interpolation_filter }) => {
+                                                   ref transpose_on_write,
+                                                   ref interpolation_filter }) => {
                 let w = match *transpose_on_write {
                     true => input_info.h,
                     false => *scale_to_width as i32,
@@ -65,7 +65,7 @@ fn scale_def() -> NodeDefinition {
             fn f(ctx: &mut OpCtxMut, ix: NodeIndex<u32>) {
                 let input = ctx.first_parent_frame_info_some(ix).unwrap();
 
-                if let s::Node::Resample2D { w, h, down_filter, up_filter, hints} =
+                if let s::Node::Resample2D { w, h, down_filter, up_filter, hints } =
                        ctx.get_json_params(ix).unwrap() {
 
                     let filter = if input.w < w as i32 || input.h < h as i32 {
@@ -74,9 +74,10 @@ fn scale_def() -> NodeDefinition {
                         down_filter
                     };
 
-                    let old_style = if let Some(s::ResampleHints{ prefer_1d_twice, sharpen_percent}) = hints {
+                    let old_style = if let Some(s::ResampleHints { prefer_1d_twice,
+                                                                   sharpen_percent }) = hints {
                         prefer_1d_twice == Some(true)
-                    } else{
+                    } else {
                         false
                     };
                     match old_style {
@@ -93,7 +94,7 @@ fn scale_def() -> NodeDefinition {
                                 h: h,
                                 up_filter: up_filter,
                                 down_filter: down_filter,
-                                hints: hints
+                                hints: hints,
                             };
                             let canvas = ctx.graph
                                 .add_node(Node::new(&CREATE_CANVAS,
@@ -118,7 +119,7 @@ fn scale_def() -> NodeDefinition {
                             };
                             let scalew = Node::new(&SCALE_1D, NodeParams::Json(scalew_params));
                             let scaleh = Node::new(&SCALE_1D, NodeParams::Json(scaleh_params));
-                            ctx.replace_node(ix, vec![scalew,scaleh]);
+                            ctx.replace_node(ix, vec![scalew, scaleh]);
                         }
                     }
 
@@ -172,8 +173,8 @@ fn render1d_to_canvas_def() -> NodeDefinition {
         fn_execute: Some({
             fn f(ctx: &mut OpCtxMut, ix: NodeIndex<u32>) {
                 if let s::Node::Resample1D { ref scale_to_width,
-                                           ref transpose_on_write,
-                                           ref interpolation_filter } = ctx.get_json_params(ix)
+                                             ref transpose_on_write,
+                                             ref interpolation_filter } = ctx.get_json_params(ix)
                     .unwrap() {
                     let input = ctx.first_parent_result_frame(ix, EdgeKind::Input).unwrap();
                     let canvas = ctx.first_parent_result_frame(ix, EdgeKind::Canvas).unwrap();
@@ -232,7 +233,9 @@ fn scale2d_render_def() -> NodeDefinition {
                     unsafe {
 
                         if (*canvas).w as usize != w || (*canvas).h as usize != h {
-                            panic!("Inconsistent dimensions between {:?} and {:?}", ctx.get_json_params(ix).unwrap(), *canvas);
+                            panic!("Inconsistent dimensions between {:?} and {:?}",
+                                   ctx.get_json_params(ix).unwrap(),
+                                   *canvas);
                         }
 
 
@@ -242,7 +245,7 @@ fn scale2d_render_def() -> NodeDefinition {
                             down_filter
                         };
 
-                        let sharpen_percent = hints.and_then(|h| h.sharpen_percent );
+                        let sharpen_percent = hints.and_then(|h| h.sharpen_percent);
 
                         let ffi_struct = ffi::Scale2dRenderToCanvas1d {
                             interpolation_filter:

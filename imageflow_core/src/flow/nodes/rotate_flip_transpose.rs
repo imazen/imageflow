@@ -94,7 +94,7 @@ fn no_op_def() -> NodeDefinition {
         description: "Does nothing; pass-through node",
         fn_estimate: Some(NodeDefHelpers::copy_frame_est_from_first_input),
         fn_flatten_pre_optimize: Some(NodeDefHelpers::delete_node_and_snap_together),
-        .. Default::default()
+        ..Default::default()
     }
 }
 fn flip_v_p_def() -> NodeDefinition {
@@ -104,20 +104,25 @@ fn flip_v_p_def() -> NodeDefinition {
         description: "Flip frame vertical",
         fn_estimate: Some(NodeDefHelpers::copy_frame_est_from_first_input),
         fn_execute: Some({
-            fn f(ctx: &mut OpCtxMut, ix: NodeIndex<u32>){
+            fn f(ctx: &mut OpCtxMut, ix: NodeIndex<u32>) {
                 let from_node = ctx.first_parent_input_weight(ix).unwrap().clone();
                 match from_node.result {
                     NodeResult::Frame(bitmap) => {
-                        unsafe {::ffi::flow_bitmap_bgra_flip_vertical(ctx.c, bitmap); }
+                        unsafe {
+                            ::ffi::flow_bitmap_bgra_flip_vertical(ctx.c, bitmap);
+                        }
                         ctx.weight_mut(ix).result = NodeResult::Frame(bitmap);
-                        ctx.first_parent_input_weight_mut(ix).unwrap().result = NodeResult::Consumed;
+                        ctx.first_parent_input_weight_mut(ix).unwrap().result =
+                            NodeResult::Consumed;
                     }
-                    _ => {panic!{"Previous node not ready"}}
+                    _ => {
+                        panic!{"Previous node not ready"}
+                    }
                 }
             }
             f
         }),
-        .. Default::default()
+        ..Default::default()
     }
 }
 fn flip_h_p_def() -> NodeDefinition {
@@ -127,20 +132,25 @@ fn flip_h_p_def() -> NodeDefinition {
         description: "Flip frame horizontal",
         fn_estimate: Some(NodeDefHelpers::copy_frame_est_from_first_input),
         fn_execute: Some({
-            fn f(ctx: &mut OpCtxMut, ix: NodeIndex<u32>){
+            fn f(ctx: &mut OpCtxMut, ix: NodeIndex<u32>) {
                 let from_node = ctx.first_parent_input_weight(ix).unwrap().clone();
                 match from_node.result {
                     NodeResult::Frame(bitmap) => {
-                        unsafe {::ffi::flow_bitmap_bgra_flip_horizontal(ctx.c, bitmap); }
+                        unsafe {
+                            ::ffi::flow_bitmap_bgra_flip_horizontal(ctx.c, bitmap);
+                        }
                         ctx.weight_mut(ix).result = NodeResult::Frame(bitmap);
-                        ctx.first_parent_input_weight_mut(ix).unwrap().result = NodeResult::Consumed;
+                        ctx.first_parent_input_weight_mut(ix).unwrap().result =
+                            NodeResult::Consumed;
                     }
-                    _ => {panic!{"Previous node not ready"}}
+                    _ => {
+                        panic!{"Previous node not ready"}
+                    }
                 }
             }
             f
         }),
-        .. Default::default()
+        ..Default::default()
     }
 }
 fn flip_v_def() -> NodeDefinition {
@@ -150,7 +160,7 @@ fn flip_v_def() -> NodeDefinition {
         description: "Flip frame vertical",
         fn_estimate: Some(NodeDefHelpers::copy_frame_est_from_first_input),
         fn_flatten_pre_optimize: Some({
-            fn f(ctx: &mut OpCtxMut, ix: NodeIndex<u32>){
+            fn f(ctx: &mut OpCtxMut, ix: NodeIndex<u32>) {
                 let mut new_nodes = Vec::with_capacity(2);
                 if ctx.has_other_children(ctx.first_parent_input(ix).unwrap(), ix) {
                     new_nodes.push(Node::new(&CLONE, NodeParams::None));
@@ -160,7 +170,7 @@ fn flip_v_def() -> NodeDefinition {
             }
             f
         }),
-        .. Default::default()
+        ..Default::default()
     }
 }
 fn flip_h_def() -> NodeDefinition {
@@ -170,7 +180,7 @@ fn flip_h_def() -> NodeDefinition {
         description: "Flip frame horizontal",
         fn_estimate: Some(NodeDefHelpers::copy_frame_est_from_first_input),
         fn_flatten_pre_optimize: Some({
-            fn f(ctx: &mut OpCtxMut, ix: NodeIndex<u32>){
+            fn f(ctx: &mut OpCtxMut, ix: NodeIndex<u32>) {
                 let mut new_nodes = Vec::with_capacity(2);
                 if ctx.has_other_children(ctx.first_parent_input(ix).unwrap(), ix) {
                     new_nodes.push(Node::new(&CLONE, NodeParams::None));
@@ -181,7 +191,7 @@ fn flip_h_def() -> NodeDefinition {
             f
         }),
 
-        .. Default::default()
+        ..Default::default()
     }
 }
 fn rotate90_def() -> NodeDefinition {
@@ -190,15 +200,16 @@ fn rotate90_def() -> NodeDefinition {
         name: "Rot90",
         fn_estimate: Some(NodeDefHelpers::rotate_frame_info),
         fn_flatten_pre_optimize: Some({
-            fn f(ctx: &mut OpCtxMut, ix: NodeIndex<u32>){
-                ctx.replace_node(ix, vec![
+            fn f(ctx: &mut OpCtxMut, ix: NodeIndex<u32>) {
+                ctx.replace_node(ix,
+                                 vec![
                 Node::new(&TRANSPOSE, NodeParams::None),
                 Node::new(&FLIP_V, NodeParams::None),
                 ]);
             }
             f
         }),
-        .. Default::default()
+        ..Default::default()
     }
 }
 fn rotate180_def() -> NodeDefinition {
@@ -207,15 +218,16 @@ fn rotate180_def() -> NodeDefinition {
         name: "Rot180",
         fn_estimate: Some(NodeDefHelpers::copy_frame_est_from_first_input),
         fn_flatten_pre_optimize: Some({
-            fn f(ctx: &mut OpCtxMut, ix: NodeIndex<u32>){
-                ctx.replace_node(ix, vec![
+            fn f(ctx: &mut OpCtxMut, ix: NodeIndex<u32>) {
+                ctx.replace_node(ix,
+                                 vec![
                 Node::new(&FLIP_V, NodeParams::None),
                 Node::new(&FLIP_H, NodeParams::None),
                 ]);
             }
             f
         }),
-        .. Default::default()
+        ..Default::default()
     }
 }
 
@@ -225,15 +237,16 @@ fn rotate270_def() -> NodeDefinition {
         name: "Rot270",
         fn_estimate: Some(NodeDefHelpers::rotate_frame_info),
         fn_flatten_pre_optimize: Some({
-            fn f(ctx: &mut OpCtxMut, ix: NodeIndex<u32>){
-                ctx.replace_node(ix, vec![
+            fn f(ctx: &mut OpCtxMut, ix: NodeIndex<u32>) {
+                ctx.replace_node(ix,
+                                 vec![
                 Node::new(&FLIP_V, NodeParams::None),
                 Node::new(&TRANSPOSE, NodeParams::None),
                 ]);
             }
             f
         }),
-        .. Default::default()
+        ..Default::default()
     }
 }
 lazy_static! {

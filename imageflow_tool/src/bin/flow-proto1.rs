@@ -301,8 +301,15 @@ fn test_correct_execution() {
         drop(f);
     }
 
-    let valid_args =
-        vec!["flow-proto1", "-i", "test_input.jpg", "-o", "b.jpg", "-w", "20",  "--constrain", "distort"];
+    let valid_args = vec!["flow-proto1",
+                          "-i",
+                          "test_input.jpg",
+                          "-o",
+                          "b.jpg",
+                          "-w",
+                          "20",
+                          "--constrain",
+                          "distort"];
 
     let parsed_result = parse(build_app().get_matches_from(valid_args))
         .expect("To parse correctly");

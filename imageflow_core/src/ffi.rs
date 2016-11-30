@@ -4,15 +4,16 @@
 //! **Use imageflow_core::abi functions instead when creating bindings**
 //!
 //! These aren't to be exposed, but rather to connect to C internals
-use ::internal_prelude::works_everywhere::*;
+
+pub use imageflow_types::EdgeKind;
 
 pub use imageflow_types::Filter;
 pub use imageflow_types::IoDirection;
 pub use imageflow_types::PixelFormat;
-pub use imageflow_types::EdgeKind;
+use ::internal_prelude::works_everywhere::*;
 
 
-/* These are reused in the external ABI, but only as opaque pointers*/
+// These are reused in the external ABI, but only as opaque pointers
 ///
 /// imageflow_response contains a buffer and buffer length (in bytes), as well as a status code
 /// The status code can be used to avoid actual parsing of the response in some cases.
@@ -39,7 +40,7 @@ pub struct ImageflowJsonResponse {
 
 #[repr(C)]
 pub struct ImageflowJobIo {
-    placeholder: i64
+    placeholder: i64,
 }
 
 
@@ -83,7 +84,7 @@ pub struct ImageflowContext {
     pub node_set: *mut ContextNodeSet,
 }
 
-/*end reuse */
+// end reuse
 
 
 
@@ -108,8 +109,7 @@ pub struct CodecInstance {
 #[derive(Copy,Clone, Debug)]
 pub enum Floatspace {
     srgb = 0,
-    linear = 1,
-    //gamma = 2,
+    linear = 1, // gamma = 2,
 }
 
 // #[repr(C)]
@@ -408,8 +408,12 @@ pub struct ObjTrackingInfo {
     pub bytes_allocations_net_peak: size_t,
 }
 
-type CodecInitializeFn = extern fn(*mut ImageflowContext, *mut CodecInstance) -> bool;
-type CodecWriteFrameFn = extern fn(*mut ImageflowContext, *mut libc::c_void, *mut BitmapBgra, *const EncoderHints) -> bool;
+type CodecInitializeFn = extern "C" fn(*mut ImageflowContext, *mut CodecInstance) -> bool;
+type CodecWriteFrameFn = extern "C" fn(*mut ImageflowContext,
+                                       *mut libc::c_void,
+                                       *mut BitmapBgra,
+                                       *const EncoderHints)
+                                       -> bool;
 
 
 #[repr(C)]
@@ -720,7 +724,9 @@ extern "C" {
 
     pub fn flow_codec_initialize(c: *mut ImageflowContext, instance: *mut CodecInstance) -> bool;
 
-    pub fn flow_codec_get_definition(c: *mut ImageflowContext, codec_id: i64) -> *mut CodecDefinition;
+    pub fn flow_codec_get_definition(c: *mut ImageflowContext,
+                                     codec_id: i64)
+                                     -> *mut CodecDefinition;
 
     pub fn flow_codec_execute_read_frame(c: *mut ImageflowContext,
                                          context: *mut CodecInstance)

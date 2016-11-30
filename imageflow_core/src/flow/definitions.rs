@@ -1,8 +1,8 @@
-use ::internal_prelude::works_everywhere::*;
 use ffi::{ImageflowContext, ImageflowJob, BitmapBgra};
-use flow::nodes;
 pub use ::ffi::EdgeKind;
 pub use ::ffi::PixelFormat;
+use flow::nodes;
+use ::internal_prelude::works_everywhere::*;
 
 pub type Graph = Dag<Node, EdgeKind>;
 
@@ -109,7 +109,7 @@ pub enum NodeResult {
     None, // No result yet
     Consumed, /* Ownership has been transferred to another node for exclusive mutation. If another node tries to access, a panic will occur. Don't consume without verifying no other nodes want access. */
     Frame(*mut BitmapBgra), // Should this be boxed?
-    Encoded(s::EncodeResult)
+    Encoded(s::EncodeResult),
 }
 #[derive(Clone,Debug,PartialEq)]
 pub enum NodeParamsInternal {
@@ -148,27 +148,33 @@ pub struct Node {
 impl From<s::Node> for Node {
     fn from(node: s::Node) -> Node {
         match node {
-            s::Node::Crop { .. } => Node::new( & nodes::CROP, NodeParams::Json(node)),
-            s::Node::Decode { .. } => Node::new( & nodes::DECODER, NodeParams::Json(node)),
-            s::Node::FlowBitmapBgraPtr { .. } =>
-                Node::new( & nodes::BITMAP_BGRA_POINTER, NodeParams::Json(node)),
-            s::Node::FlipV => Node::new( & nodes::FLIP_V, NodeParams::Json(node)),
-            s::Node::FlipH => Node::new( & nodes::FLIP_H, NodeParams::Json(node)),
-            s::Node::Rotate90 => Node::new( & nodes::ROTATE_90, NodeParams::Json(node)),
-            s::Node::Rotate180 => Node::new( & nodes::ROTATE_180, NodeParams::Json(node)),
-            s::Node::Rotate270 => Node::new(& nodes::ROTATE_270, NodeParams::Json(node)),
-            s::Node::ApplyOrientation { .. } => Node::new( & nodes::APPLY_ORIENTATION, NodeParams::Json(node)),
-            s::Node::Transpose => Node::new( & nodes::TRANSPOSE, NodeParams::Json(node)),
-            s::Node::Resample1D{ ..} => Node::new( & nodes::SCALE_1D, NodeParams::Json(node)),
-            s::Node::Encode { .. }=> Node::new( & nodes::ENCODE, NodeParams::Json(node)),
-            s::Node::CreateCanvas { .. } =>
-                Node::new( & nodes::CREATE_CANVAS, NodeParams::Json(node)),
-            s::Node::CopyRectToCanvas { .. } =>
-                Node::new( & nodes::COPY_RECT, NodeParams::Json(node)),
-            s::Node::FillRect { .. } => Node::new( & nodes::FILL_RECT, NodeParams::Json(node)),
-            s::Node::Resample2D { .. } => Node::new( & nodes::SCALE, NodeParams::Json(node)),
-            s::Node::ExpandCanvas { .. } =>
-                Node::new( & nodes::EXPAND_CANVAS, NodeParams::Json(node))
+            s::Node::Crop { .. } => Node::new(&nodes::CROP, NodeParams::Json(node)),
+            s::Node::Decode { .. } => Node::new(&nodes::DECODER, NodeParams::Json(node)),
+            s::Node::FlowBitmapBgraPtr { .. } => {
+                Node::new(&nodes::BITMAP_BGRA_POINTER, NodeParams::Json(node))
+            }
+            s::Node::FlipV => Node::new(&nodes::FLIP_V, NodeParams::Json(node)),
+            s::Node::FlipH => Node::new(&nodes::FLIP_H, NodeParams::Json(node)),
+            s::Node::Rotate90 => Node::new(&nodes::ROTATE_90, NodeParams::Json(node)),
+            s::Node::Rotate180 => Node::new(&nodes::ROTATE_180, NodeParams::Json(node)),
+            s::Node::Rotate270 => Node::new(&nodes::ROTATE_270, NodeParams::Json(node)),
+            s::Node::ApplyOrientation { .. } => {
+                Node::new(&nodes::APPLY_ORIENTATION, NodeParams::Json(node))
+            }
+            s::Node::Transpose => Node::new(&nodes::TRANSPOSE, NodeParams::Json(node)),
+            s::Node::Resample1D { .. } => Node::new(&nodes::SCALE_1D, NodeParams::Json(node)),
+            s::Node::Encode { .. } => Node::new(&nodes::ENCODE, NodeParams::Json(node)),
+            s::Node::CreateCanvas { .. } => {
+                Node::new(&nodes::CREATE_CANVAS, NodeParams::Json(node))
+            }
+            s::Node::CopyRectToCanvas { .. } => {
+                Node::new(&nodes::COPY_RECT, NodeParams::Json(node))
+            }
+            s::Node::FillRect { .. } => Node::new(&nodes::FILL_RECT, NodeParams::Json(node)),
+            s::Node::Resample2D { .. } => Node::new(&nodes::SCALE, NodeParams::Json(node)),
+            s::Node::ExpandCanvas { .. } => {
+                Node::new(&nodes::EXPAND_CANVAS, NodeParams::Json(node))
+            }
         }
     }
 }
@@ -219,7 +225,7 @@ impl Node {
             NodeResult::None => "none",
             NodeResult::Consumed => "reused",
             NodeResult::Frame(_) => "done",
-            NodeResult::Encoded(_) => "encoded"
+            NodeResult::Encoded(_) => "encoded",
         };
         try!(write!(f, "{}{{{}{}{}{}}} {}", self.def.name, a, b, c, d, e));
         Ok(())
@@ -235,9 +241,7 @@ impl PartialEq for NodeDefinition {
 
 impl fmt::Debug for NodeDefinition {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f,
-               "NodeDefinition {{ fqn: '{}' }}",
-               self.fqn)
+        write!(f, "NodeDefinition {{ fqn: '{}' }}", self.fqn)
     }
 }
 

@@ -420,7 +420,7 @@ static void png_flush_nullop(png_structp png_ptr) {}
 static bool flow_codecs_png_write_frame(flow_c * c, void * codec_state, struct flow_bitmap_bgra * frame,
                                         struct flow_encoder_hints * hints)
 {
-    if (frame->fmt != flow_bgra32 && frame->fmt != flow_bgr24){
+    if (frame->fmt != flow_bgra32 && frame->fmt != flow_bgr24) {
         FLOW_error(c, flow_status_Unsupported_pixel_format);
         return false;
     }
@@ -464,14 +464,14 @@ static bool flow_codecs_png_write_frame(flow_c * c, void * codec_state, struct f
 
         int color_type;
         int transform;
-        if (frame->fmt == flow_bgra32){
+        if (frame->fmt == flow_bgra32) {
             color_type = PNG_COLOR_TYPE_RGB_ALPHA;
             transform = PNG_TRANSFORM_BGR;
             if (hints != NULL && hints->disable_png_alpha) {
                 color_type = PNG_COLOR_TYPE_RGB;
                 transform = transform | PNG_TRANSFORM_STRIP_FILLER_AFTER;
             }
-        } else{
+        } else {
             color_type = PNG_COLOR_TYPE_RGB;
             transform = PNG_TRANSFORM_BGR;
         }

@@ -11,7 +11,7 @@ pub mod self_test;
 use clap::{App, Arg, SubCommand};
 
 
-pub fn main_with_exit_code() -> i32{
+pub fn main_with_exit_code() -> i32 {
     let version = s::version::one_line_version();
     let app = App::new("imageflow_tool").version(version.as_ref())
         .subcommand(
@@ -71,32 +71,37 @@ pub fn main_with_exit_code() -> i32{
     //
 
     if let Some(ref matches) = matches.subcommand_matches("v0.1/build") {
-        let m : &&clap::ArgMatches = matches;
+        let m: &&clap::ArgMatches = matches;
 
-        let source = if m.is_present("demo"){
+        let source = if m.is_present("demo") {
             cmd_build::JobSource::NamedDemo(m.value_of("demo").unwrap().to_owned())
-        }else {
-            cmd_build::JobSource::JsonFile( m.value_of("json").unwrap().to_owned())
+        } else {
+            cmd_build::JobSource::JsonFile(m.value_of("json").unwrap().to_owned())
         };
 
-        let builder = cmd_build::CmdBuild::parse(source, m.values_of_lossy("in"), m.values_of_lossy("out")).build_maybe();
-        builder.write_response_maybe( m.value_of("response")).expect("IO error writing JSON output file. Does the directory exist?");
+        let builder =
+            cmd_build::CmdBuild::parse(source, m.values_of_lossy("in"), m.values_of_lossy("out"))
+                .build_maybe();
+        builder.write_response_maybe(m.value_of("response"))
+            .expect("IO error writing JSON output file. Does the directory exist?");
         builder.write_errors_maybe().expect("Writing to stderr failed!");
         return builder.get_exit_code().unwrap();
     }
 
     if let Some(ref matches) = matches.subcommand_matches("diagnose") {
-        let m : &&clap::ArgMatches = matches;
+        let m: &&clap::ArgMatches = matches;
 
-        if m.is_present("show-compilation-info"){
-            println!("{}\n{}\n", s::version::one_line_version(), s::version::all_build_info_pairs());
+        if m.is_present("show-compilation-info") {
+            println!("{}\n{}\n",
+                     s::version::one_line_version(),
+                     s::version::all_build_info_pairs());
             return 0;
         }
 
-        if m.is_present("self-test"){
+        if m.is_present("self-test") {
             return self_test::run(None);
         }
-        if m.is_present("wait"){
+        if m.is_present("wait") {
             let mut input_buf = String::new();
             let input = std::io::stdin().read_line(&mut input_buf).ok().expect("Failed to read from stdin. Are you using --wait in a non-interactive shell?");
             println!("{}", input);
@@ -105,6 +110,3 @@ pub fn main_with_exit_code() -> i32{
     }
     64
 }
-
-
-

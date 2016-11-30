@@ -1,24 +1,24 @@
+use ::JobPtr;
+use ::flow::definitions::*;
 use ::internal_prelude::works_everywhere::*;
 use petgraph::dot::Dot;
 use std::process::Command;
-use ::flow::definitions::*;
-use ::{JobPtr};
 use super::visualize::{notify_graph_changed, GraphRecordingUpdate, GraphRecordingInfo};
 
-pub struct Engine<'a,'b> {
+pub struct Engine<'a, 'b> {
     c: *mut ::ffi::ImageflowContext,
     job_p: *mut ::ffi::ImageflowJob,
     job: &'a mut JobPtr,
-    g: &'b mut Graph
+    g: &'b mut Graph,
 }
 
-impl<'a,'b> Engine<'a,'b> {
+impl<'a, 'b> Engine<'a, 'b> {
     pub fn create(job: &'a mut JobPtr, g: &'b mut Graph) -> Engine<'a, 'b> {
         Engine {
             c: job.context_ptr(),
             job_p: job.as_ptr(),
             job: job,
-            g: g
+            g: g,
         }
     }
 
@@ -43,7 +43,9 @@ impl<'a,'b> Engine<'a,'b> {
             }
 
             if passes >= unsafe { (*job).max_calc_flatten_execute_passes } {
-                { self.notify_graph_complete()?; }
+                {
+                    self.notify_graph_complete()?;
+                }
                 panic!("Maximum graph passes exceeded");
                 //            error_msg!(c, FlowStatusCode::MaximumGraphPassesExceeded);
                 //            return false;
@@ -57,7 +59,7 @@ impl<'a,'b> Engine<'a,'b> {
             self.populate_dimensions_where_certain()?;
             self.notify_graph_changed()?;
 
-            //graph_optimize()?;
+            // graph_optimize()?;
             self.notify_graph_changed()?;
 
             self.populate_dimensions_where_certain()?;
@@ -86,7 +88,8 @@ impl<'a,'b> Engine<'a,'b> {
         self.notify_graph_changed()?;
 
         for index in 0..self.g.node_count() {
-            if let Some(func) = self.g.node_weight(NodeIndex::new(index))
+            if let Some(func) = self.g
+                .node_weight(NodeIndex::new(index))
                 .unwrap()
                 .def
                 .fn_link_state_to_this_io_id {
@@ -97,15 +100,20 @@ impl<'a,'b> Engine<'a,'b> {
                 }
                 if let Some(io_id) = placeholder_id {
                     let codec_instance =
-                    unsafe { ::ffi::flow_job_get_codec_instance(self.c, self.job_p, io_id) as *mut u8 };
-                    if codec_instance == ptr::null_mut() { panic!("") }
+                        unsafe {
+                            ::ffi::flow_job_get_codec_instance(self.c, self.job_p, io_id) as *mut u8
+                        };
+                    if codec_instance == ptr::null_mut() {
+                        panic!("")
+                    }
 
                     {
-                        self.g.node_weight_mut(NodeIndex::new(index)).unwrap().custom_state = codec_instance;
+                        self.g.node_weight_mut(NodeIndex::new(index)).unwrap().custom_state =
+                            codec_instance;
                     }
                     {
                         let weight = self.g.node_weight(NodeIndex::new(index)).unwrap();
-                        //Now, try to send decoder its commands
+                        // Now, try to send decoder its commands
                         // let ref mut weight = ctx.weight_mut(ix);
 
                         match weight.params {
@@ -152,28 +160,31 @@ impl<'a,'b> Engine<'a,'b> {
             record_graph_versions: unsafe { (*job).record_graph_versions },
             current_graph_version: unsafe { (*job).next_graph_version },
             render_graph_versions: unsafe { (*job).render_graph_versions },
-            maximum_graph_versions: 100
+            maximum_graph_versions: 100,
         };
         let update = notify_graph_changed(self.g, info)?;
-        if let Some(GraphRecordingUpdate{next_graph_version}) = update {
-            unsafe
-                { (*job).next_graph_version = next_graph_version; }
+        if let Some(GraphRecordingUpdate { next_graph_version }) = update {
+            unsafe {
+                (*job).next_graph_version = next_graph_version;
+            }
         }
         Ok(())
     }
 
     fn notify_graph_complete(&mut self) -> Result<()> {
         let job = self.job_p;
-        let prev_filename = unsafe{ format!("job_{}_graph_version_{}.dot", (*job).debug_job_id, (*job).next_graph_version - 1)} ;
+        let prev_filename = unsafe {
+            format!("job_{}_graph_version_{}.dot",
+                    (*job).debug_job_id,
+                    (*job).next_graph_version - 1)
+        };
 
         super::visualize::render_dotfile_to_png(&prev_filename);
         Ok(())
     }
 
 
-    pub fn estimate_node(&mut self,
-                         node_id: NodeIndex<u32>)
-                         -> FrameEstimate {
+    pub fn estimate_node(&mut self, node_id: NodeIndex<u32>) -> FrameEstimate {
         let now = time::precise_time_ns();
         let mut ctx = OpCtxMut {
             c: self.c,
@@ -187,9 +198,7 @@ impl<'a,'b> Engine<'a,'b> {
         ctx.weight(node_id).frame_est
     }
 
-    pub fn estimate_node_recursive(&mut self,
-                                   node_id: NodeIndex<u32>)
-                                   -> FrameEstimate {
+    pub fn estimate_node_recursive(&mut self, node_id: NodeIndex<u32>) -> FrameEstimate {
         // If we're already done, no need
         if let FrameEstimate::Some(info) = self.g.node_weight(node_id).unwrap().frame_est {
             return FrameEstimate::Some(info);
@@ -211,10 +220,13 @@ impl<'a,'b> Engine<'a,'b> {
             // We won't retry them recursively
             if !give_up {
 
-                let input_indexes =
-                self.g.parents(node_id).iter(self.g).map(|(edge_ix, ix)| ix).collect::<Vec<NodeIndex<u32>>>();
+                let input_indexes = self.g
+                    .parents(node_id)
+                    .iter(self.g)
+                    .map(|(edge_ix, ix)| ix)
+                    .collect::<Vec<NodeIndex<u32>>>();
 
-                //println!("Estimating recursively {:?}", input_indexes);
+                // println!("Estimating recursively {:?}", input_indexes);
                 for ix in input_indexes {
 
                     self.estimate_node_recursive(ix);
@@ -228,13 +240,13 @@ impl<'a,'b> Engine<'a,'b> {
         }
         // Should be good on inputs here
         if self.estimate_node(node_id) == FrameEstimate::None {
-            panic!("Node estimation misbehaved on {}. Cannot leave FrameEstimate::None, must chose an alternative", self.g.node_weight(node_id).unwrap().def.name);
+            panic!("Node estimation misbehaved on {}. Cannot leave FrameEstimate::None, must chose an alternative",
+                   self.g.node_weight(node_id).unwrap().def.name);
         }
         self.g.node_weight(node_id).unwrap().frame_est
     }
 
-    pub fn populate_dimensions_where_certain(&mut self)
-                                                 -> Result<()> {
+    pub fn populate_dimensions_where_certain(&mut self) -> Result<()> {
 
         for ix in 0..self.g.node_count() {
             // If any node returns FrameEstimate::Impossible, we might as well move on to execution pass.
@@ -252,16 +264,21 @@ impl<'a,'b> Engine<'a,'b> {
         loop {
             let mut next = None;
             for ix in 0..(self.g.node_count()) {
-                if let Some(func) = self.g.node_weight(NodeIndex::new(ix))
+                if let Some(func) = self.g
+                    .node_weight(NodeIndex::new(ix))
                     .unwrap()
                     .def
                     .fn_flatten_pre_optimize {
-                    if let FrameEstimate::Some(_) = self.g.node_weight(NodeIndex::new(ix))
+                    if let FrameEstimate::Some(_) = self.g
+                        .node_weight(NodeIndex::new(ix))
                         .unwrap()
                         .frame_est {
-                        if self.g.parents(NodeIndex::new(ix))
+                        if self.g
+                            .parents(NodeIndex::new(ix))
                             .iter(self.g)
-                            .all(|(ex, ix)| self.g.node_weight(ix).unwrap().result != NodeResult::None) {
+                            .all(|(ex, ix)| {
+                                self.g.node_weight(ix).unwrap().result != NodeResult::None
+                            }) {
                             next = Some((NodeIndex::new(ix), func));
                             break;
                         }
@@ -289,16 +306,21 @@ impl<'a,'b> Engine<'a,'b> {
         loop {
             let mut next = None;
             for ix in 0..(self.g.node_count()) {
-                if let Some(func) = self.g.node_weight(NodeIndex::new(ix))
+                if let Some(func) = self.g
+                    .node_weight(NodeIndex::new(ix))
                     .unwrap()
                     .def
                     .fn_flatten_post_optimize {
-                    if let FrameEstimate::Some(_) = self.g.node_weight(NodeIndex::new(ix))
+                    if let FrameEstimate::Some(_) = self.g
+                        .node_weight(NodeIndex::new(ix))
                         .unwrap()
                         .frame_est {
-                        if self.g.parents(NodeIndex::new(ix))
+                        if self.g
+                            .parents(NodeIndex::new(ix))
                             .iter(self.g)
-                            .all(|(ex, ix)| self.g.node_weight(ix).unwrap().result != NodeResult::None) {
+                            .all(|(ex, ix)| {
+                                self.g.node_weight(ix).unwrap().result != NodeResult::None
+                            }) {
                             next = Some((NodeIndex::new(ix), func));
                             break;
                         }
@@ -326,13 +348,18 @@ impl<'a,'b> Engine<'a,'b> {
             let mut next = None;
             for ix in 0..(self.g.node_count()) {
                 if let Some(func) = self.g.node_weight(NodeIndex::new(ix)).unwrap().def.fn_execute {
-                    if let FrameEstimate::Some(_) = self.g.node_weight(NodeIndex::new(ix))
+                    if let FrameEstimate::Some(_) = self.g
+                        .node_weight(NodeIndex::new(ix))
                         .unwrap()
                         .frame_est {
-                        if self.g.node_weight(NodeIndex::new(ix)).unwrap().result == NodeResult::None {
-                            if self.g.parents(NodeIndex::new(ix))
+                        if self.g.node_weight(NodeIndex::new(ix)).unwrap().result ==
+                           NodeResult::None {
+                            if self.g
+                                .parents(NodeIndex::new(ix))
                                 .iter(self.g)
-                                .all(|(ex, ix)| self.g.node_weight(ix).unwrap().result != NodeResult::None) {
+                                .all(|(ex, ix)| {
+                                    self.g.node_weight(ix).unwrap().result != NodeResult::None
+                                }) {
                                 next = Some((NodeIndex::new(ix), func));
                                 break;
                             }
@@ -348,18 +375,28 @@ impl<'a,'b> Engine<'a,'b> {
                         next_func(&mut ctx, next_ix);
                     }
                     if self.g.node_weight(next_ix).unwrap().result == NodeResult::None {
-                        panic!("fn_execute of {} failed to save a result", self.g.node_weight(next_ix).unwrap().def.name);
+                        panic!("fn_execute of {} failed to save a result",
+                               self.g.node_weight(next_ix).unwrap().def.name);
                     } else {
                         let job = self.job_p;
                         unsafe {
                             if (*job).record_frame_images {
-                                if let NodeResult::Frame(ptr) = self.g.node_weight(next_ix).unwrap().result {
-                                    let path = format!("node_frames/job_{}_node_{}.png", (*job).debug_job_id, self.g.node_weight(next_ix).unwrap().stable_id);
+                                if let NodeResult::Frame(ptr) = self.g
+                                    .node_weight(next_ix)
+                                    .unwrap()
+                                    .result {
+                                    let path = format!("node_frames/job_{}_node_{}.png",
+                                                (*job).debug_job_id,
+                                                self.g.node_weight(next_ix).unwrap().stable_id);
                                     let path_copy = path.clone();
                                     let path_cstr = std::ffi::CString::new(path).unwrap();
                                     let _ = std::fs::create_dir("node_frames");
-                                    if !::ffi::flow_bitmap_bgra_save_png(self.c, ptr, path_cstr.as_ptr()) {
-                                        println!("Failed to save frame {} (from node {})", path_copy, next_ix.index());
+                                    if !::ffi::flow_bitmap_bgra_save_png(self.c,
+                                                                         ptr,
+                                                                         path_cstr.as_ptr()) {
+                                        println!("Failed to save frame {} (from node {})",
+                                                 path_copy,
+                                                 next_ix.index());
                                         ::ContextPtr::from_ptr(self.c).assert_ok(None);
 
                                     }
@@ -372,7 +409,7 @@ impl<'a,'b> Engine<'a,'b> {
 
         }
     }
-    fn op_ctx_mut<'c>(&'c mut self) -> OpCtxMut<'c>{
+    fn op_ctx_mut<'c>(&'c mut self) -> OpCtxMut<'c> {
         OpCtxMut {
             c: self.c,
             graph: self.g,
@@ -388,7 +425,6 @@ impl<'a,'b> Engine<'a,'b> {
         }
         return true;
     }
-
 }
 impl<'a> OpCtxMut<'a> {
     // TODO: Should return Result<String,??>
@@ -429,4 +465,3 @@ pub fn inputs_estimates(g: &Graph, node_id: NodeIndex<u32>) -> Vec<FrameEstimate
         .filter_map(|(_, node_index)| g.node_weight(node_index).map(|w| w.frame_est))
         .collect()
 }
-

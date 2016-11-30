@@ -173,7 +173,7 @@ struct flow_nodeinfo_render_to_canvas_1d {
 
     bool transpose_on_write;
 
-    //Dont' use the rest
+    // Dont' use the rest
     uint32_t canvas_x;
     uint32_t canvas_y;
     flow_working_floatspace scale_in_colorspace;

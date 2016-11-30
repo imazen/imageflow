@@ -1,23 +1,25 @@
-use ::internal_prelude::works_everywhere::*;
-use ::ffi::BitmapBgra;
 use ::Graph;
+use ::ffi::BitmapBgra;
+use ::internal_prelude::works_everywhere::*;
 use super::definitions::{FrameEstimate, Node, PixelFormat, EdgeKind, NodeResult};
 
 
-pub struct GraphRecordingInfo{
-pub  debug_job_id: i32,
-pub  current_graph_version: i32,
-pub  record_graph_versions: bool,
-pub render_graph_versions: bool,
-pub maximum_graph_versions: i32,
+pub struct GraphRecordingInfo {
+    pub debug_job_id: i32,
+    pub current_graph_version: i32,
+    pub record_graph_versions: bool,
+    pub render_graph_versions: bool,
+    pub maximum_graph_versions: i32,
 }
 
 
-pub struct GraphRecordingUpdate{
-pub next_graph_version: i32,
+pub struct GraphRecordingUpdate {
+    pub next_graph_version: i32,
 }
 
-pub fn notify_graph_changed(graph_ref: &mut Graph, r: GraphRecordingInfo) -> Result<Option<GraphRecordingUpdate>> {
+pub fn notify_graph_changed(graph_ref: &mut Graph,
+                            r: GraphRecordingInfo)
+                            -> Result<Option<GraphRecordingUpdate>> {
     if !r.record_graph_versions || r.current_graph_version > r.maximum_graph_versions {
         return Ok(None);
         // println!("record_graph_versions=true, current_graph_version={}", current_graph_version);
@@ -31,7 +33,7 @@ pub fn notify_graph_changed(graph_ref: &mut Graph, r: GraphRecordingInfo) -> Res
     let frame_prefix = format!("./node_frames/job_{}_node_", r.debug_job_id);
 
     let current_filename =
-    format!("job_{}_graph_version_{}.dot", r.debug_job_id, r.current_graph_version);
+        format!("job_{}_graph_version_{}.dot", r.debug_job_id, r.current_graph_version);
     {
         let mut f = File::create(&current_filename).unwrap();
         print_graph(&mut f, graph_ref, Some(&frame_prefix)).unwrap();
@@ -39,15 +41,16 @@ pub fn notify_graph_changed(graph_ref: &mut Graph, r: GraphRecordingInfo) -> Res
     }
     if prev_graph_version >= 0 {
         let prev_filename =
-        format!("job_{}_graph_version_{}.dot", r.debug_job_id, prev_graph_version);
-        match files_identical(&current_filename, &prev_filename).expect(&format!("Comparison err'd for {} and {}", &current_filename, &prev_filename)) {
+            format!("job_{}_graph_version_{}.dot", r.debug_job_id, prev_graph_version);
+        match files_identical(&current_filename, &prev_filename)
+            .expect(&format!("Comparison err'd for {} and {}", &current_filename, &prev_filename)) {
             true => {
                 std::fs::remove_file(&current_filename).unwrap();
 
                 // Next time we will overwrite the duplicate graph. The last two graphs may
                 // remain dupes
                 Ok(None)
-            },
+            }
             false => {
                 if r.render_graph_versions {
                     render_dotfile_to_png(&prev_filename)
@@ -70,7 +73,7 @@ pub fn render_dotfile_to_png(dotfile_path: &str) {
         .arg("-O")
         .arg(dotfile_path)
         .spawn();
-    //.expect("dot command failed");
+    // .expect("dot command failed");
 }
 // pub fn job_render_graph_to_png(c: *mut Context, job: *mut Job, g: &mut Graph, graph_version: int32_t) -> bool
 // {
@@ -119,7 +122,9 @@ pub fn print_graph(f: &mut std::io::Write,
 
         let dimensions = match weight.result {
             NodeResult::Frame(ptr) => {
-                unsafe { format!("frame {}x{} {}", (*ptr).w, (*ptr).h, get_pixel_format_name_for(ptr)) }
+                unsafe {
+                    format!("frame {}x{} {}", (*ptr).w, (*ptr).h, get_pixel_format_name_for(ptr))
+                }
             }
             _ => {
                 match weight.frame_est {

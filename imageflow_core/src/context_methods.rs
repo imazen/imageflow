@@ -1,30 +1,27 @@
-use ::internal_prelude::works_everywhere::*;
 
-use ::{Context,ContextPtr, JobPtr};
+
+use ::{Context, ContextPtr, JobPtr};
+use ::internal_prelude::works_everywhere::*;
+use ::json::*;
 use ::parsing::parse_graph::GraphTranslator;
 use ::parsing::parse_io::IoTranslator;
 use std::error;
-use ::json::*;
 
 
-fn create_context_router() -> MethodRouter<'static, ContextPtr>{
+fn create_context_router() -> MethodRouter<'static, ContextPtr> {
     let mut r = MethodRouter::new();
-//    r.add_responder("v0.1/load_image_info", Box::new(
-//        move |context: &mut ContextPtr, data: s::GetImageInfo001| {
-//            Ok(JsonResponse::method_not_understood())
-//            //Ok(s::ResponsePayload::ImageInfo(job.get_image_info(data.io_id)?))
-//        }
-//    ));
-    r.add_responder("v0.1/build", Box::new(
-        move |context: &mut ContextPtr, parsed: s::Build001| {
-            BuildHandler::from_context(context).build_1(parsed)
-        }
-    ));
-    r.add("brew_coffee", Box::new(
-        move |context: &mut ContextPtr, bytes: &[u8] |{
-            Ok(JsonResponse::teapot())
-        }
-    ));
+    //    r.add_responder("v0.1/load_image_info", Box::new(
+    //        move |context: &mut ContextPtr, data: s::GetImageInfo001| {
+    //            Ok(JsonResponse::method_not_understood())
+    //            //Ok(s::ResponsePayload::ImageInfo(job.get_image_info(data.io_id)?))
+    //        }
+    //    ));
+    r.add_responder("v0.1/build",
+                    Box::new(move |context: &mut ContextPtr, parsed: s::Build001| {
+                        BuildHandler::from_context(context).build_1(parsed)
+                    }));
+    r.add("brew_coffee",
+          Box::new(move |context: &mut ContextPtr, bytes: &[u8]| Ok(JsonResponse::teapot())));
     r
 }
 
@@ -37,12 +34,12 @@ lazy_static! {
 fn get_create_doc_dir() -> std::path::PathBuf {
     let path = Path::new(file!()).parent().unwrap().join(Path::new("../../target/doc"));
     let _ = std::fs::create_dir_all(&path);
-    //Error { repr: Os { code: 17, message: "File exists" } }
-    //The above can happen, despite the docs.
+    // Error { repr: Os { code: 17, message: "File exists" } }
+    // The above can happen, despite the docs.
     path
 }
 #[test]
-fn write_context_doc(){
+fn write_context_doc() {
     let path = get_create_doc_dir().join(Path::new("context_json_api.txt"));
     File::create(&path).unwrap().write_all(document_message().as_bytes()).unwrap();
 }
@@ -58,7 +55,12 @@ fn document_message() -> String {
     s += "Example message body:\n";
     s += &serde_json::to_string_pretty(&s::Build001::example_with_steps()).unwrap();
     s += "\n\nExample response:\n";
-    s += &serde_json::to_string_pretty(&s::Response001::example_job_result_encoded(2, 200,200, "image/png", "png")).unwrap();
+    s += &serde_json::to_string_pretty(&s::Response001::example_job_result_encoded(2,
+                                                                                   200,
+                                                                                   200,
+                                                                                   "image/png",
+                                                                                   "png"))
+        .unwrap();
     s += "\n\nExample failure response:\n";
     s += &serde_json::to_string_pretty(&s::Response001::example_error()).unwrap();
     s += "\n\n";
@@ -69,30 +71,30 @@ fn document_message() -> String {
 
 
 pub struct BuildHandler<'a> {
-    use_context: Option<&'a ContextPtr>
+    use_context: Option<&'a ContextPtr>,
 }
 
 
 impl<'a> BuildHandler<'a> {
     pub fn new() -> BuildHandler<'static> {
-        BuildHandler { use_context: None}
+        BuildHandler { use_context: None }
     }
 
     pub fn from_context(context: &'a mut ContextPtr) -> BuildHandler<'a> {
-        BuildHandler { use_context: Some(context)}
+        BuildHandler { use_context: Some(context) }
     }
 
     pub fn build_1(&self, task: s::Build001) -> Result<s::ResponsePayload> {
         if self.use_context.is_none() {
             let ctx = ::SelfDisposingContextPtr::create().unwrap();
-            self.build_inner(ctx.inner(),task)
-        }else{
+            self.build_inner(ctx.inner(), task)
+        } else {
             self.build_inner(self.use_context.unwrap(), task)
         }
     }
 
 
-    fn build_inner(&self, ctx: &ContextPtr, parsed: s::Build001)  -> Result<s::ResponsePayload>  {
+    fn build_inner(&self, ctx: &ContextPtr, parsed: s::Build001) -> Result<s::ResponsePayload> {
 
         let mut g = ::parsing::GraphTranslator::new().translate_framewise(parsed.framewise)?;
 
@@ -100,12 +102,19 @@ impl<'a> BuildHandler<'a> {
             let p = ctx.ptr.unwrap();
             let mut job = JobPtr::create(p).unwrap();
 
-            if let Some(s::Build001Config{ ref no_gamma_correction, ..}) = parsed.builder_config {
-                ::ffi::flow_context_set_floatspace(p, match *no_gamma_correction { true => ::ffi::Floatspace::srgb, _ => ::ffi::Floatspace::linear},0f32,0f32,0f32)
+            if let Some(s::Build001Config { ref no_gamma_correction, .. }) = parsed.builder_config {
+                ::ffi::flow_context_set_floatspace(p,
+                                                   match *no_gamma_correction {
+                                                       true => ::ffi::Floatspace::srgb,
+                                                       _ => ::ffi::Floatspace::linear,
+                                                   },
+                                                   0f32,
+                                                   0f32,
+                                                   0f32)
 
             }
 
-            if let Some(s::Build001Config{ graph_recording, ..}) = parsed.builder_config {
+            if let Some(s::Build001Config { graph_recording, .. }) = parsed.builder_config {
                 if let Some(r) = graph_recording {
                     job.configure_graph_recording(r);
                 }
@@ -122,12 +131,12 @@ impl<'a> BuildHandler<'a> {
 
 
             let mut encodes = Vec::new();
-            for node in g.raw_nodes(){
-                if let ::flow::definitions::NodeResult::Encoded(ref r) = node.weight.result{
+            for node in g.raw_nodes() {
+                if let ::flow::definitions::NodeResult::Encoded(ref r) = node.weight.result {
                     encodes.push((*r).clone());
                 }
             }
-            Ok(s::ResponsePayload::BuildResult(s::JobResult{encodes:encodes}))
+            Ok(s::ResponsePayload::BuildResult(s::JobResult { encodes: encodes }))
         }
     }
 }
@@ -150,13 +159,16 @@ fn test_handler() {
     };
 
     let mut steps = vec![];
-    steps.push(s::Node::Decode { io_id: 0, commands: None });
+    steps.push(s::Node::Decode {
+        io_id: 0,
+        commands: None,
+    });
     steps.push(s::Node::Resample2D {
         w: 20,
         h: 30,
         down_filter: None,
         up_filter: None,
-        hints: None
+        hints: None,
     });
     steps.push(s::Node::FlipV);
     steps.push(s::Node::FlipH);
@@ -180,7 +192,7 @@ fn test_handler() {
     });
     steps.push(s::Node::Encode {
         io_id: 1,
-        preset: s::EncoderPreset::LibjpegTurbo{ quality: Some(90)}
+        preset: s::EncoderPreset::LibjpegTurbo { quality: Some(90) },
     });
 
     let build = s::Build001 {

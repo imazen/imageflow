@@ -1,4 +1,3 @@
-
 use daggy::{Dag, EdgeIndex, NodeIndex};
 use ffi::{ImageflowContext, ImageflowJob, BitmapBgra};
 use libc::{int32_t, size_t};
@@ -9,14 +8,14 @@ mod scale_render;
 mod create_canvas;
 mod codecs_and_pointer;
 
-mod internal_prelude{
-    pub use ::internal_prelude::works_everywhere::*;
+mod internal_prelude {
     pub use ::ffi;
-    pub use petgraph::EdgeDirection;
     pub use ffi::{ImageflowContext, ImageflowJob};
+    pub use ffi::BitmapBgra;
     pub use flow::definitions::*;
+    pub use ::internal_prelude::works_everywhere::*;
+    pub use petgraph::EdgeDirection;
     pub use super::*;
-    pub use ffi::{BitmapBgra};
 }
 
 extern crate imageflow_types as s;
