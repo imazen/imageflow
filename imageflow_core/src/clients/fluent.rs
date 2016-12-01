@@ -288,8 +288,73 @@ impl FluentGraphBuilder {
     //    }
 }
 
+
 #[test]
-fn test_graph_builder() {
+fn smoke_test_chaining(){
+
+    let chain = fluently()
+        .decode(0)
+        .constrain_within(Some(1400), Some(1400), Some(s::ConstraintResamplingHints::with(Some(s::Filter::CatmullRom), Some(40f32))))
+        .flip_horizontal()
+        .flip_vertical()
+        .transpose()
+        .rotate_90()
+        .rotate_180()
+        .rotate_270().encode(1, s::EncoderPreset::libpng32()).builder().to_framewise();
+}
+
+
+#[test]
+fn smoke_test_many_operations(){
+
+    let chain = fluently()
+        .to(s::Node::Decode{io_id:0, commands: Some(vec![s::DecoderCommand::JpegDownscaleHints(s::JpegIDCTDownscaleHints{
+            gamma_correct_for_srgb_during_spatial_luma_scaling: Some(false),
+            scale_luma_spatially: Some(false),
+            width: 1600,
+            height:1600
+        })])})
+        .constrain_within(Some(1400), None,None)
+        .constrain_within(Some(1400), Some(1400), Some(s::ConstraintResamplingHints::with(Some(s::Filter::CatmullRom), Some(40f32))))
+        .to(s::Node::Resample2D {
+            w: 800,
+            h: 800,
+            down_filter: Some(s::Filter::Robidoux),
+            up_filter: Some(s::Filter::Ginseng),
+            hints: Some(s::ResampleHints {
+                sharpen_percent: Some(10f32),
+                prefer_1d_twice: None,
+            }),
+        })
+        .to(s::Node::ApplyOrientation{flag: 7}).flip_horizontal().flip_vertical().transpose().rotate_90().rotate_180().rotate_270()
+        .to(s::Node::FillRect {
+            x1: 0,
+            y1: 0,
+            x2: 8,
+            y2: 8,
+            color: s::Color::Transparent,
+        }).to(                              s::Node::ExpandCanvas {
+        left: 10,
+        top: 10,
+        right: 10,
+        bottom: 10,
+        color: s::Color::Srgb(s::ColorSrgb::Hex("FFEECCFF".to_owned())),
+    }).to(s::Node::Crop {
+        x1: 10,
+        y1: 10,
+        x2: 650,
+        y2: 490,
+    }).encode(1, s::EncoderPreset::Libpng{
+        depth: Some(s::PngBitDepth::Png24),
+        matte: Some(s::Color::Srgb(s::ColorSrgb::Hex("9922FF".to_owned()))),
+        zlib_compression: Some(7)
+    });
+
+    let framewise = chain.builder().to_framewise();
+}
+#[test]
+fn smoke_test_graph_builder() {
+
 
     // let d = fluently().decode(0).flip_horizontal().rotate_90().
     let a = fluently()
