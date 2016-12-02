@@ -33,6 +33,16 @@ fn one_line_suffix() -> String {
     format!("({}) for {}", c9d, benv::TARGET)
 }
 
+
+
+pub fn get_build_env_value(key: &str) -> &Option<&'static str> {
+    static NONE:Option<&'static str>  = None;
+     match benv::BUILD_ENV_INFO.get(key){
+         Some(v) => v,
+         None => &NONE
+     }
+}
+
 pub fn one_line_version() -> String {
     let branch = benv::BUILD_ENV_INFO.get("GIT_OPTIONAL_BRANCH").unwrap();
     match benv::BUILT_ON_CI {

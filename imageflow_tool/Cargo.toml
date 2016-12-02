@@ -18,6 +18,7 @@ serde_json = "*"
 chrono =  "0.2"
 os_type = "0.5.0"
 curl = "*"
+zip = { version = "0.2", default-features = false }
 
 [[bin]]
 name = "flow-proto1"

@@ -99,9 +99,10 @@ impl ToolProduct {
     }
     fn expect_exit_0_no_output(&self, m: &str) -> &ToolProduct {
         if self.stderr_bytes() > 0 || self.stdout_bytes() > 0 || self.status_code() != Some(0) {
-            panic!("{}\nExpected exit code 0 and no output to stderr or stdout. Received {:?}",
+
+            panic!("{}\nExpected exit code 0 and no output to stderr or stdout. Received\n {:?}\n{}",
                    m,
-                   self.r);
+                   &self.r, std::str::from_utf8(&self.r.stderr).unwrap());
         }
         &self
     }
@@ -663,6 +664,7 @@ pub fn run_examples(tool_location: Option<PathBuf>){
     }
 }
 
+
 pub fn run(tool_location: Option<PathBuf>) -> i32 {
 
     let c = TestContext::create(Path::new("self_tests"), tool_location);
@@ -684,6 +686,9 @@ pub fn run(tool_location: Option<PathBuf>) -> i32 {
 
         c.exec("v0.1/build --json example1.json --in 200x200.png 200x200.jpg --out out0.jpg --response out0.json").expect_exit_0_no_output("");
         // TODO: Verify out0.json exists and was created
+        c.exec("v0.1/build --bundle-to bundle_example_1 --json example1.json --in 200x200.png 200x200.jpg --out out0.jpg --response out0.json").expect_status_code(Some(0));
+        //TODO: verify bundle was created
+        //TODO: test URL fetch
     }
     {
         let recipe =  s::Build001::example_with_steps();
@@ -863,5 +868,33 @@ pub fn run(tool_location: Option<PathBuf>) -> i32 {
 
 
     println!("Self-test complete. All tests passed.");
+    0
+}
+
+pub fn test_capture(tool_location: Option<PathBuf>) -> i32 {
+    let c = TestContext::create(Path::new("self_tests"), tool_location);
+    // encapsulate scenario/example for reuse
+    {
+        let recipe = s::Build001::example_with_steps();
+        c.write_json("example1.json", &recipe);
+        c.create_blank("200x200", 200, 200, s::EncoderPreset::libjpegturbo());
+        c.create_blank("200x200", 200, 200, s::EncoderPreset::libpng32());
+
+        c.exec("v0.1/build --json example1.json --in 200x200.png 200x200.jpg --out out0.jpg --response out0.json").expect_exit_0_no_output("");
+        // TODO: Verify out0.json exists and was created
+        c.exec("v0.1/build --bundle-to bundle_example_1 --json example1.json --in 200x200.png 200x200.jpg --out out0.jpg --response out0.json").expect_status_code(Some(0));
+        //TODO: verify bundle was created
+        //TODO: test URL fetch
+        c.subfolder(Path::new("bundle_example_1")).exec("--capture-to recipe v0.1/build --json recipe.json --response response.json").dump().expect_status_code(Some(0));
+
+    }
+    {
+        let recipe = s::Build001::example_with_steps();
+        c.write_json("example1.json", &recipe);
+        c.create_blank("200x200", 200, 200, s::EncoderPreset::libjpegturbo());
+        c.create_blank("200x200", 200, 200, s::EncoderPreset::libpng32());
+
+        c.exec("v0.1/build --debug-package debug_example --json example1.json --in 200x200.png 200x200.jpg --out out0.jpg --response out0.json").expect_status_code(Some(0));
+    }
     0
 }

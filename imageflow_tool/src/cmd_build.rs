@@ -3,18 +3,60 @@ use s;
 use serde_json;
 use std;
 extern crate core;
+extern crate curl;
+extern crate serde;
 // use self::core::slice::SliceExt;
 
 use std::collections::HashMap;
 use std::fs::File;
+use std::path::{Path,PathBuf};
 use std::io::{Write, Read, BufWriter};
+use self::curl::easy::Easy;
 
 pub enum JobSource {
     JsonFile(String),
     NamedDemo(String),
 }
 
+
+
+// CmdBuild
+// --bundle-into folder
+// Copies physical files referenced into 'folder'
+// Copies recipe into folder (after transforming)
+// Fetches remote URLs into folder
+// Fetches remote paths in b
+
+
+// CmdBuild
+// --debug-?
+// Export transformed .json recipe post-injection
+//
+
+
+//pub struct CmdProxy {
+//    invocation_args: Args,
+//
+//    let m: &&clap::ArgMatches = matches;
+//
+//
+//    let source = if m.is_present("demo") {
+//    cmd_build::JobSource::NamedDemo(m.value_of("demo").unwrap().to_owned())
+//    } else {
+//    cmd_build::JobSource::JsonFile(m.value_of("json").unwrap().to_owned())
+//    };
+//
+//    let builder =
+//    cmd_build::CmdBuild::parse(source, m.values_of_lossy("in"), m.values_of_lossy("out"))
+//    .build_maybe();
+//    builder.write_response_maybe(m.value_of("response"))
+//    .expect("IO error writing JSON output file. Does the directory exist?");
+//    builder.write_errors_maybe().expect("Writing to stderr failed!");
+//    return builder.get_exit_code().unwrap();
+//}
+
 pub struct CmdBuild {
+
     job: Result<s::Build001>,
     response: Option<Result<fc::JsonResponse>>,
 }
@@ -252,6 +294,99 @@ impl CmdBuild {
             job: CmdBuild::parse_maybe(source, in_args, out_args),
             response: None,
         }
+    }
+
+    fn fetch_url(url: &str) -> Vec<u8>{
+
+        let mut dst = Vec::new();
+        {
+            let mut easy = Easy::new();
+            easy.url(&url).unwrap();
+
+            let mut transfer = easy.transfer();
+
+            transfer.write_function(|data| {
+                dst.extend_from_slice(data);
+                Ok(data.len())
+            })
+                .unwrap();
+            transfer.perform().unwrap();
+        }
+        dst
+    }
+
+
+
+    fn transform_build(b: s::Build001, directory: &Path) -> Result<(Vec<String>,s::Build001)>{
+
+        let mut log = Vec::new();
+        let transformed = b.io.into_iter().map(|obj| {
+            let e: s::IoEnum = obj.io;
+            let new_enum = if obj.direction == s::IoDirection::In{
+                match e{
+                    s::IoEnum::Filename(path) => {
+                        let fname = format!("input_{}_{}", obj.io_id, std::path::Path::new(&path).file_name().unwrap().to_str().unwrap());
+                        let new_path = directory.join(&fname).as_os_str().to_str().unwrap().to_owned();
+                        std::fs::copy(&path, &new_path).unwrap();
+                        log.push(format!("Copied {} to {} (referenced as {})", &path, &new_path, &fname));
+                        s::IoEnum::Filename(fname)
+                    }
+                    s::IoEnum::Url(url) => {
+
+                        let fname = format!("input_{}", obj.io_id);
+                        let new_path = directory.join(&fname).as_os_str().to_str().unwrap().to_owned();
+                        let bytes = CmdBuild::fetch_url(&url);
+                        let mut file = BufWriter::new(File::create(&new_path).unwrap());
+                        file.write(&bytes).unwrap();
+                        log.push(format!("Downloaded {} to {} (referenced as {})", &url, &new_path, &fname));
+                        s::IoEnum::Filename(fname)
+                    }
+                    other => other
+                }
+            }else{
+                match e{
+                    s::IoEnum::Filename(path) => {
+                        let fname = format!("output_{}_{}", obj.io_id, &std::path::Path::new(&path).file_name().unwrap().to_str().unwrap());
+                        //let new_path = directory.join(&fname).as_os_str().to_str().unwrap().to_owned();
+                        log.push(format!("Changed output {} to {}", &path, &fname));
+                        s::IoEnum::Filename(fname)
+                    }
+                    other => other
+                }
+            };
+            s::IoObject{
+                direction: obj.direction,
+                io: new_enum,
+                io_id: obj.io_id
+            }
+        }).collect::<Vec<s::IoObject>>();
+        Ok((log, s::Build001{
+            io: transformed,
+            builder_config: b.builder_config,
+            framewise: b.framewise
+        }))
+
+    }
+    fn write_json<T,P: AsRef<Path>>(path: &P, info: &T)
+        where T: serde::Serialize
+    {
+        let mut file = BufWriter::new(File::create(path).unwrap());
+        write!(file, "{}", serde_json::to_string_pretty(info).unwrap()).unwrap();
+    }
+
+
+    // Write new invocation to STDOUT, for execution in 'directory'.
+    // Will write recipe and dependencies into directory
+    pub fn bundle_to(self, directory: &Path) -> i32{
+        std::fs::create_dir(directory).unwrap();
+        let (log, transformed) = CmdBuild::transform_build(self.job.unwrap(), directory).unwrap();
+        CmdBuild::write_json(&directory.join("recipe.json"), &transformed);
+        println!("cd {:?}", &directory);
+        println!("imageflow_tool --json recipe.json\n\n");
+        for s in log {
+            println!("# {}",&s);
+        }
+        0
     }
 
     pub fn build_maybe(self) -> CmdBuild {
