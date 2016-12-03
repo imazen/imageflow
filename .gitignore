@@ -51,7 +51,7 @@ gmon.out
 *.s
 *.c.s
 
-
+/c_components/cmake-build-debug/
 
 #Valgrind suppression copes
 /imageflow_core/.valgrindrc
