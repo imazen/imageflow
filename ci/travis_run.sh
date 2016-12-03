@@ -96,6 +96,10 @@ if [ "${TRAVIS_PULL_REQUEST}" == "false" ]; then
 
 fi
 
+if [ "${UPLOAD_DOCS}" != "True" ]; then
+	export ESTIMATED_DOCS_URL_2=
+	export ESTIMATED_DOCS_URL=
+fi
 printf "\n=================================================\n"
 printf "\nEstimated upload URLs:\n\n%s\n\n%s\n\n" "${ESTIMATED_ARTIFACT_URL}" "${ESTIMATED_ARTIFACT_URL_2}"
 printf "\nEstimated docs URLs:\n\n%s\n\n%s\n\n" "${ESTIMATED_DOCS_URL}" "${DOCS_UPLOAD_DIR_2}"

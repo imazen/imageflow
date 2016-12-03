@@ -52,7 +52,7 @@
 //!
 //! * When an Imageflow API asks for a filename, function name, or error message, it will
 //!   assume that those strings are pointers that (a) Imageflow is not
-//!   responsible for freeing, and (b) will (at least) outlive the `context`. For C#, GCHandle comes in handy here.
+//!   responsible for freeing, and (b) will (at least) outlive the `context`.
 //!
 //! ## ... and it should be very clear when Imageflow is taking ownership of something you created!
 //!
@@ -174,9 +174,9 @@ pub enum CleanupWith{
 #[repr(C)]
 #[derive(Clone, Copy, PartialEq, Debug)]
 pub enum Lifetime{
-    /// Pointer will outlive function call. (I.e, in .NET, the memory has been pinned through the end of the call, perhaps via the 'fixed' keyword)
+    /// Pointer will outlive function call. If the host language has a garbage collector, call the appropriate method to ensure the object pointed to will not be collected or moved until the call returns. You may think host languages do this automatically in their FFI system. Most do not.
     OutlivesFunctionCall = 0,
-    /// Pointer will outlive context (Usually a GCHandle is required to pin an object for a longer time in C#)
+    /// Pointer will outlive context. If the host language has a GC, ensure that you are using a data type guaranteed to neither be moved or collected automatically.
     OutlivesContext = 1,
 }
 

@@ -18,7 +18,7 @@ matrix:
     - docker
   - os: linux
     dist: trusty
-    env: PACKAGE_SUFFIX=x86_64-linux-gcc54 DOCKER_IMAGE=imazen/build_if_gcc54 UPLOAD_BUILD=True
+    env: PACKAGE_SUFFIX=x86_64-linux-gcc54 DOCKER_IMAGE=imazen/build_if_gcc54 UPLOAD_BUILD=True UPLOAD_DOCS=True
     sudo: required
     services:
     - docker
