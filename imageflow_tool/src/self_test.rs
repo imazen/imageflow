@@ -714,7 +714,7 @@ pub fn run(tool_location: Option<PathBuf>) -> i32 {
 
     }
     {
-        let recipe = fluent::fluently().decode(0).constrain_within(Some(60), Some(45), None).encode(1, s::EncoderPreset::libjpegturbo()).to_build_0_1();
+        let recipe = fluent::fluently().decode(0).constrain_within(Some(60), Some(45), None).encode(1, s::EncoderPreset::libjpegturbo()).into_build_0_1();
         c.write_json("example2.json", &recipe);
         c.create_blank("200x200", 200, 200, s::EncoderPreset::libjpegturbo());
 
