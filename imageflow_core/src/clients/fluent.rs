@@ -25,14 +25,10 @@ impl FluentNode {
            canvas_node: Option<FluentNode>)
            -> FluentNode {
         FluentNode {
-            input: input_node.and_then(|v| match v.is_empty() {
-                true => None,
-                false => Some(Box::new(v)),
-            }),
-            canvas: canvas_node.and_then(|v| match v.is_empty() {
-                true => None,
-                false => Some(Box::new(v)),
-            }),
+            input: input_node.and_then(|v| if v.is_empty() {
+                None } else {Some(Box::new(v)) }),
+            canvas: canvas_node.and_then(|v| if v.is_empty() {
+                None } else {Some(Box::new(v)) }),
             data: Some(node),
             uid: FluentNode::next_uid(),
         }
@@ -54,7 +50,7 @@ impl FluentNode {
     pub fn to(self, v: s::Node) -> FluentNode {
         FluentNode::new(v, Some(self), None)
     }
-    pub fn to_canvas(self, canvas: FluentNode, v: s::Node) -> FluentNode {
+    pub fn node_with_canvas(self, canvas: FluentNode, v: s::Node) -> FluentNode {
         FluentNode::new(v, Some(self), Some(canvas))
     }
     pub fn branch(&self) -> FluentNode {
@@ -65,7 +61,7 @@ impl FluentNode {
     }
 
     /// Injects placeholders
-    pub fn to_build_0_1(self) -> s::Build001{
+    pub fn into_build_0_1(self) -> s::Build001{
         self.builder().to_framewise().wrap_in_build_0_1()
     }
 
@@ -141,6 +137,7 @@ impl FluentNode {
     pub fn transpose(self) -> FluentNode {
         self.to(s::Node::Transpose)
     }
+    #[allow(too_many_arguments)]
     pub fn copy_rect_from(self,
                           from: FluentNode,
                           from_x: u32,
@@ -151,8 +148,8 @@ impl FluentNode {
                           x: u32,
                           y: u32)
                           -> FluentNode {
-        from.to_canvas(self,
-                       s::Node::CopyRectToCanvas {
+        from.node_with_canvas(self,
+                              s::Node::CopyRectToCanvas {
                            from_x: from_x,
                            from_y: from_y,
                            width: width,
@@ -169,7 +166,7 @@ impl PartialEq for FluentNode {
 }
 
 
-
+#[derive(Default)]
 pub struct FluentGraphBuilder {
     output_nodes: Vec<Box<FluentNode>>,
 }
@@ -197,7 +194,7 @@ impl FluentGraphBuilder {
         }
 
         loop {
-            if todo.len() == 0 {
+            if todo.is_empty() {
                 break;
             }
             let next = todo.pop().unwrap();
@@ -205,10 +202,10 @@ impl FluentGraphBuilder {
                 set.insert(next.uid);
                 unique.push(next);
                 if let Some(ref c) = next.canvas {
-                    todo.push(&c);
+                    todo.push(c);
                 }
                 if let Some(ref c) = next.input {
-                    todo.push(&c);
+                    todo.push(c);
                 }
             }
         }

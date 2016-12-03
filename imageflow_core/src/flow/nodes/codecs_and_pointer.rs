@@ -13,15 +13,15 @@ fn bitmap_bgra_def() -> NodeDefinition {
                     NodeParams::Json(s::Node::FlowBitmapBgraPtr{ptr_to_flow_bitmap_bgra_ptr}) => {
                         let ptr: *mut *mut BitmapBgra = ptr_to_flow_bitmap_bgra_ptr as *mut *mut BitmapBgra;
                         unsafe {
-                            if ptr == ptr::null_mut() {
+                            if ptr.is_null() {
                                 panic!("Must be a valid pointer to a pointer to BitmapBgra");
                             }
 
-                            if *ptr == ptr::null_mut() {
+                            if (*ptr).is_null() {
                                 NodeDefHelpers::copy_frame_est_from_first_input(ctx, ix);
                             } else {
-                                let ref mut weight = ctx.weight_mut(ix);
-                                let ref b = **ptr;
+                                let weight = &mut ctx.weight_mut(ix);
+                                let b = &(**ptr);
                                 weight.frame_est = FrameEstimate::Some(FrameInfo {
                                     w: b.w as i32,
                                     h: b.h as i32,
@@ -41,24 +41,24 @@ fn bitmap_bgra_def() -> NodeDefinition {
         }),
         fn_execute: Some({
             fn f(ctx: &mut OpCtxMut, ix: NodeIndex<u32>) {
-                // let ref mut weight = ctx.weight_mut(ix);
+                // let weight = &mut ctx.weight_mut(ix);
                 match ctx.weight(ix).params {
                     NodeParams::Json(s::Node::FlowBitmapBgraPtr{ptr_to_flow_bitmap_bgra_ptr}) => {
                         let ptr: *mut *mut BitmapBgra = ptr_to_flow_bitmap_bgra_ptr as *mut *mut BitmapBgra;
                         unsafe {
-                            if ptr == ptr::null_mut() {
+                            if ptr.is_null() {
                                 panic!("Must be a valid pointer to a pointer to BitmapBgra");
                             }
 
                             let frame =     ctx.first_parent_result_frame(ix, EdgeKind::Input);
-                            let ref mut weight = ctx.weight_mut(ix);
+                            let weight = &mut ctx.weight_mut(ix);
                             match frame {
                                 Some(input_ptr) => {
                                     *ptr = input_ptr;
                                     weight.result = NodeResult::Frame(input_ptr);
                                 },
                                 None => {
-                                    if *ptr == ptr::null_mut() {
+                                    if (*ptr).is_null() {
                                         panic!("When serving as an input node, FlowBitmapBgraPtr must point to a valid BitmapBgra. Found null.");
                                     }
                                     weight.result = NodeResult::Frame(*ptr);
@@ -79,7 +79,7 @@ fn bitmap_bgra_def() -> NodeDefinition {
 
 fn decoder_encoder_io_id(ctx: &mut OpCtxMut, ix: NodeIndex<u32>) -> Option<i32> {
     match ctx.weight(ix).params {
-        NodeParams::Json(s::Node::Decode { io_id, .. }) => Some(io_id),
+        NodeParams::Json(s::Node::Decode { io_id, .. }) |
         NodeParams::Json(s::Node::Encode { io_id, .. }) => Some(io_id),
         _ => None,
     }
@@ -158,7 +158,7 @@ fn primitive_decoder_def() -> NodeDefinition {
 
                 unsafe {
                     let result = ffi::flow_codec_execute_read_frame(ctx.c, codec);
-                    if result == ptr::null_mut() {
+                    if result.is_null() {
                         ctx.assert_ok();
                     } else {
                         ctx.weight_mut(ix).result = NodeResult::Frame(result);
@@ -191,7 +191,7 @@ fn encoder_def() -> NodeDefinition {
                                weight.params {
                             let codec = weight.custom_state as *mut ffi::CodecInstance;
 
-                            if codec == ptr::null_mut() {
+                            if codec.is_null() {
                                 panic!("")
                             }
 
@@ -238,7 +238,7 @@ fn encoder_def() -> NodeDefinition {
                                     ctx.assert_ok();
                                 }
                                 let codec_def = ffi::flow_codec_get_definition(ctx.c, wanted_id);
-                                if codec_def == ptr::null_mut() {
+                                if codec_def.is_null() {
                                     ctx.assert_ok();
                                 }
                                 let write_fn = (*codec_def).write_frame;

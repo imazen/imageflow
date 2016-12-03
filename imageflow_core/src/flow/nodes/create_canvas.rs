@@ -6,7 +6,7 @@ fn create_canvas_def() -> NodeDefinition {
         name: "create_canvas",
         fn_estimate: Some({
             fn f(ctx: &mut OpCtxMut, ix: NodeIndex<u32>) {
-                let ref mut weight = ctx.weight_mut(ix);
+                let weight = &mut ctx.weight_mut(ix);
                 match weight.params {
                     NodeParams::Json(s::Node::CreateCanvas { ref format,
                                                              ref w,
@@ -29,7 +29,7 @@ fn create_canvas_def() -> NodeDefinition {
         fn_execute: Some({
             fn f(ctx: &mut OpCtxMut, ix: NodeIndex<u32>) {
                 let c = ctx.c;
-                let ref mut weight = ctx.weight_mut(ix);
+                let weight = &mut ctx.weight_mut(ix);
                 match weight.params {
                     NodeParams::Json(s::Node::CreateCanvas { ref format,
                                                              ref w,
@@ -40,14 +40,16 @@ fn create_canvas_def() -> NodeDefinition {
                             ::ffi::flow_bitmap_bgra_create(c, *w as i32, *h as i32, true, *format);
                         let color_val = color.clone();
                         if color_val != s::Color::Transparent {
-                            if !ffi::flow_bitmap_bgra_fill_rect(c,
-                                                                ptr,
-                                                                0,
-                                                                0,
-                                                                *w as u32,
-                                                                *h as u32,
-                                                                color_val.to_u32_bgra().unwrap()) {
-                                panic!("failed to fill rect. epic.");
+                            {
+                                if !ffi::flow_bitmap_bgra_fill_rect(c,
+                                                                    ptr,
+                                                                    0,
+                                                                    0,
+                                                                    *w as u32,
+                                                                    *h as u32,
+                                                                    color_val.to_u32_bgra().unwrap()) {
+                                    panic!("failed to fill rect. epic.");
+                                }
                             }
                         }
                         weight.result = NodeResult::Frame(ptr);

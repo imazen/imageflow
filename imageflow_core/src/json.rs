@@ -144,26 +144,23 @@ impl JsonResponse {
     pub fn ok() -> JsonResponse {
         JsonResponse {
             status_code: 200,
-            response_json: Cow::Borrowed(r#"{"success": "true","code": 200,"message": "OK"}"#
-                .as_bytes()),
+            response_json: Cow::Borrowed(br#"{"success": "true","code": 200,"message": "OK"}"#),
         }
     }
     pub fn teapot() -> JsonResponse {
         JsonResponse {
             status_code: 418,
             response_json: /* HTTP 418 I'm a teapot per RFC 2324 */
-            Cow::Borrowed(r#"{"success": "false","code": 418, "message": "I'm a little teapot, short and stout..."}"#
-                .as_bytes())
+            Cow::Borrowed(br#"{"success": "false","code": 418, "message": "I'm a little teapot, short and stout..."}"#)
         }
     }
     pub fn method_not_understood() -> JsonResponse {
         JsonResponse {
             status_code: 404,
-            response_json: Cow::Borrowed(r#"{
+            response_json: Cow::Borrowed(br#"{
                                         "success": "false",
                                         "code": 404,
-                                        "message": "Endpoint name not understood"}"#
-                .as_bytes()),
+                                        "message": "Endpoint name not understood"}"#),
         }
     }
 

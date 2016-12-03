@@ -6,7 +6,7 @@ use ::SelfDisposingContextPtr;
 pub use imageflow_types::Framewise;
 use ::internal_prelude::works_everywhere::*;
 
-
+#[derive(Default)]
 pub struct LibClient {
 
 }
@@ -83,8 +83,9 @@ impl LibClient {
     pub fn new() -> LibClient {
         LibClient {}
     }
-    pub fn get_image_info<'a>(&mut self,
-                              bytes: &'a [u8])
+
+    pub fn get_image_info(&mut self,
+                              bytes: &[u8])
                               -> std::result::Result<s::ImageInfo, BuildFailure> {
         let context = SelfDisposingContextPtr::create()?;
 
@@ -92,7 +93,7 @@ impl LibClient {
             let mut job: JobPtr = context.create_job()?;
             job.add_input_bytes(0, bytes)?;
             let info_blob: JsonResponse =
-                job.message("v0.1/get_image_info", "{\"io_id\": 0}".as_bytes())?;
+                job.message("v0.1/get_image_info", b"{\"io_id\": 0}")?;
             // TODO: add into error conversion
             let info_response: s::Response001 =
                 serde_json::from_slice(info_blob.response_json.as_ref()).unwrap();

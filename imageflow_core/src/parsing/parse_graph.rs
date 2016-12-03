@@ -2,6 +2,7 @@ use flow::definitions::{Graph, Node, NodeParams, EdgeKind};
 use flow::nodes;
 use internal_prelude::works_everywhere::*;
 
+#[derive(Default)]
 pub struct GraphTranslator {
 }
 
@@ -56,11 +57,8 @@ impl GraphTranslator {
                 s::EdgeKind::Canvas => EdgeKind::Canvas,
             };
 
-            match g.add_edge(from_id, to_id, new_edge_kind) {
-                Err(daggy::WouldCycle(_)) => {
-                    return Err(FlowError::GraphCyclic);
-                }
-                _ => {}
+            if let  Err(daggy::WouldCycle(_)) = g.add_edge(from_id, to_id, new_edge_kind) {
+                return Err(FlowError::GraphCyclic);
             }
         }
         Ok(g)

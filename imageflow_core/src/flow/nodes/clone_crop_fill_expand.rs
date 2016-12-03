@@ -157,7 +157,7 @@ fn expand_canvas_size(ctx: &mut OpCtxMut, ix: NodeIndex<u32>) {
 
     let input_info = ctx.first_parent_frame_info_some(ix).unwrap();
 
-    let ref mut weight = ctx.weight_mut(ix);
+    let weight = &mut ctx.weight_mut(ix);
     match weight.params {
         NodeParams::Json(s::Node::ExpandCanvas { ref left,
                                                  ref top,
@@ -232,7 +232,7 @@ fn crop_size(ctx: &mut OpCtxMut, ix: NodeIndex<u32>) {
         panic!("");
     });
 
-    let ref mut weight = ctx.weight_mut(ix);
+    let weight = &mut ctx.weight_mut(ix);
     match weight.params {
         NodeParams::Json(s::Node::Crop { ref x1, ref y1, ref x2, ref y2 }) => {
             weight.frame_est = FrameEstimate::Some(FrameInfo {

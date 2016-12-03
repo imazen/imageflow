@@ -1,7 +1,7 @@
 //! # Do not use
-//! Do not use functions from this module outside of imageflow_core
+//! Do not use functions from this module outside of `imageflow_core`
 //!
-//! **Use imageflow_core::abi functions instead when creating bindings**
+//! **Use `imageflow_core::abi` functions instead when creating bindings**
 //!
 //! These aren't to be exposed, but rather to connect to C internals
 
@@ -15,7 +15,7 @@ use ::internal_prelude::works_everywhere::*;
 
 // These are reused in the external ABI, but only as opaque pointers
 ///
-/// imageflow_response contains a buffer and buffer length (in bytes), as well as a status code
+/// `ImaeflowJsonResponse` contains a buffer and buffer length (in bytes), as well as a status code
 /// The status code can be used to avoid actual parsing of the response in some cases.
 /// For example, you may not care about parsing an error message if you're hacking around -
 /// Or, you may not care about success details if you were sending a command that doesn't imply
@@ -311,7 +311,7 @@ pub struct BitmapFloat {
     alpha_meaningful: bool,
 }
 
-/** flow_context: Heap Manager **/
+/** flow context: Heap Manager **/
 #[repr(C)]
 #[derive(Clone,Debug,PartialEq)]
 pub struct Heap {
@@ -329,7 +329,7 @@ pub struct Heap {
 // void flow_context_objtracking_initialize(struct flow_objtracking_info * heap_tracking);
 // void flow_context_objtracking_terminate(flow_c * c);
 
-/** flow_context: struct flow_error_info **/
+/** flow context: struct `flow_error_info` **/
 // struct flow_error_callstack_line {
 // const char * file;
 // int line;
@@ -350,7 +350,7 @@ pub struct ErrorInfo {
 }
 
 // #ifdef EXPOSE_SIGMOID
-// flow_context: Colorspace
+// flow context: Colorspace
 // struct flow_SigmoidInfo {
 // float constant;
 // float x_coeff;

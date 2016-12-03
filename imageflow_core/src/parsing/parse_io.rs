@@ -190,9 +190,8 @@ impl IoTranslator {
             s::IoEnum::Placeholder => {
                 panic!("Placeholder was never substituted!")
             }
-        } as *mut ffi::ImageflowJobIo;
-
-        result_ptr
+        };
+        result_ptr as *mut ffi::ImageflowJobIo
     }
 
     pub unsafe fn add_to_job(&self, job: *mut ::ffi::ImageflowJob, io_vec: Vec<s::IoObject>) {

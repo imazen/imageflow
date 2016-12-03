@@ -28,8 +28,7 @@ impl FromStr for ImageFormat {
 
     fn from_str(s: &str) -> std::result::Result<Self, Self::Err> {
         match s {
-            "jpeg" => Ok(ImageFormat::Jpeg),
-            "jpg" => Ok(ImageFormat::Jpeg),
+            "jpeg" | "jpg" => Ok(ImageFormat::Jpeg),
             "png" => Ok(ImageFormat::Png),
             "png24" => Ok(ImageFormat::Png24),
             _ => Err("no match"),
@@ -117,7 +116,7 @@ pub fn process_image_by_paths(input_path: PathBuf,
         CString::from_raw(c_input_path);
         CString::from_raw(c_output_path);
     }
-    return result;
+    result
 }
 
 pub struct BenchmarkOptions {
@@ -174,7 +173,7 @@ impl BenchmarkResults {
         root.insert("wall_ms", serde_json::Value::String(ms_str));
 
         root.insert("avg_ms", serde_json::Value::String(avg_str));
-        return serde_json::to_string(&root).unwrap();
+        serde_json::to_string(&root).unwrap()
 
     }
 }
@@ -248,9 +247,9 @@ pub fn benchmark(bench: BenchmarkOptions) -> std::result::Result<BenchmarkResult
 
     for _ in 0..bench.run_count {
         let tx = tx.clone();
-        let m = mem.clone() as i64;
-        let l = len.clone();
-        let cmds = bench.commands.clone();
+        let m = mem as i64;
+        let l = len;
+        let cmds = bench.commands;
         pool.execute(move || {
             tx.send(benchmark_op(cmds, m as *mut u8, l)).unwrap();
         });
@@ -435,7 +434,7 @@ pub fn process_image<F, C, R>(commands: BoringCommands,
         // Add I/O
         let inputs: Vec<IoResource> = io_provider(c.as_ptr().unwrap());
         for (index, input) in inputs.iter().enumerate() {
-            let dir = input.direction.clone();
+            let dir = input.direction;
             let io = input.io;
 
             job.add_io_ptr(io, index as i32, dir).unwrap();
@@ -443,7 +442,7 @@ pub fn process_image<F, C, R>(commands: BoringCommands,
 
 
         let info_blob: JsonResponse =
-            job.message("v0.1/get_image_info", "{\"io_id\": 0}".as_bytes()).unwrap();
+            job.message("v0.1/get_image_info", b"{\"io_id\": 0}").unwrap();
         let info_response: s::Response001 =
             serde_json::from_slice(info_blob.response_json.as_ref()).unwrap();
         if !info_response.success {

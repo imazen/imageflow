@@ -53,6 +53,11 @@ pub struct OpCtxMut<'a> {
 
 pub type OptionalNodeFnMut = Option<fn(&mut OpCtxMut, NodeIndex<u32>)>;
 
+pub type OptionalNodeFnMutReturnOptI32 = Option<fn(&mut OpCtxMut, NodeIndex<u32>) -> Option<i32>>;
+pub type OptionalNodeGraphviz = Option<fn(&mut OpCtxMut, NodeIndex<u32>, &Node, &mut fmt::Formatter)
+-> fmt::Result>;
+
+
 // #[derive(Clone,Debug,PartialEq, Default)]
 pub struct NodeDefinition {
     // When comparing equality, we just check 'id' (for now)
@@ -62,9 +67,8 @@ pub struct NodeDefinition {
     pub name: &'static str,
     pub description: &'static str,
 
-    pub fn_link_state_to_this_io_id: Option<fn(&mut OpCtxMut, NodeIndex<u32>) -> Option<i32>>,
-    pub fn_graphviz_text: Option<fn(&mut OpCtxMut, NodeIndex<u32>, &Node, &mut fmt::Formatter)
-                                    -> fmt::Result>,
+    pub fn_link_state_to_this_io_id: OptionalNodeFnMutReturnOptI32,
+    pub fn_graphviz_text: OptionalNodeGraphviz,
     pub fn_estimate: OptionalNodeFnMut,
     pub fn_flatten_pre_optimize: OptionalNodeFnMut,
     pub fn_flatten_post_optimize: OptionalNodeFnMut,
@@ -205,21 +209,25 @@ impl Node {
 
     pub fn graphviz_node_label(&self, f: &mut std::io::Write) -> std::io::Result<()> {
         // name { est f1, f2, ex } none
-        let a = match self.def.fn_estimate.is_some() {
-            true => "est ",
-            false => "",
+        let a = if self.def.fn_estimate.is_some() {
+            "est "
+        } else {
+            ""
         };
-        let b = match self.def.fn_flatten_pre_optimize.is_some() {
-            true => "f1 ",
-            false => "",
+        let b = if self.def.fn_flatten_pre_optimize.is_some() {
+            "f1 "
+        } else {
+            ""
         };
-        let c = match self.def.fn_flatten_post_optimize.is_some() {
-            true => "f2 ",
-            false => "",
+        let c = if self.def.fn_flatten_post_optimize.is_some() {
+            "f2 "
+        } else {
+            ""
         };
-        let d = match self.def.fn_execute.is_some() {
-            true => "exec ",
-            false => "",
+        let d = if self.def.fn_execute.is_some() {
+            "exec "
+        } else {
+            ""
         };
 
         let e = match self.result {

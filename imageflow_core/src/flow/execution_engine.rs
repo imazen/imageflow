@@ -153,7 +153,7 @@ impl<'a, 'b> Engine<'a, 'b> {
                         unsafe {
                             ::ffi::flow_job_get_codec_instance(self.c, self.job_p, io_id) as *mut u8
                         };
-                    if codec_instance == ptr::null_mut() {
+                    if codec_instance.is_null() {
                         panic!("")
                     }
 
@@ -166,16 +166,14 @@ impl<'a, 'b> Engine<'a, 'b> {
                         // Now, try to send decoder its commands
                         // let ref mut weight = ctx.weight_mut(ix);
 
-                        match weight.params {
-                            NodeParams::Json(s::Node::Decode { io_id, ref commands }) => {
-                                if let &Some(ref list) = commands {
-                                    for c in list.iter() {
-                                        self.job.tell_decoder(io_id, c.to_owned()).unwrap();
-                                    }
+                        if let NodeParams::Json(s::Node::Decode { io_id, ref commands }) = weight.params {
+                            if let Some(ref list) = *commands {
+                                for c in list.iter() {
+                                    self.job.tell_decoder(io_id, c.to_owned()).unwrap();
                                 }
                             }
-                            _ => {}
                         }
+
                     }
                 }
             }
@@ -243,7 +241,7 @@ impl<'a, 'b> Engine<'a, 'b> {
         };
         // Invoke estimation
         ctx.weight(node_id).def.fn_estimate.unwrap()(&mut ctx, node_id);
-        ctx.weight_mut(node_id).cost.wall_ns + (time::precise_time_ns() - now) as u32;
+        ctx.weight_mut(node_id).cost.wall_ns += (time::precise_time_ns() - now) as u32;
 
         ctx.weight(node_id).frame_est
     }
@@ -259,7 +257,7 @@ impl<'a, 'b> Engine<'a, 'b> {
         if !inputs_good {
             // TODO: support UpperBound eventually; for now, use Impossible until all nodes implement
             let give_up = inputs_estimates(self.g, node_id).iter().any(|est| match *est {
-                FrameEstimate::Impossible => true,
+                FrameEstimate::Impossible |
                 FrameEstimate::UpperBound(_) => true,
                 _ => false,
             });
@@ -314,22 +312,18 @@ impl<'a, 'b> Engine<'a, 'b> {
         loop {
             let mut next = None;
             for ix in 0..(self.g.node_count()) {
+                let nix = NodeIndex::new(ix);
                 if let Some(func) = self.g
-                    .node_weight(NodeIndex::new(ix))
+                    .node_weight(nix)
                     .unwrap()
                     .def
                     .fn_flatten_pre_optimize {
                     if let FrameEstimate::Some(_) = self.g
-                        .node_weight(NodeIndex::new(ix))
+                        .node_weight(nix)
                         .unwrap()
                         .frame_est {
-                        if self.g
-                            .parents(NodeIndex::new(ix))
-                            .iter(self.g)
-                            .all(|(ex, ix)| {
-                                self.g.node_weight(ix).unwrap().result != NodeResult::None
-                            }) {
-                            next = Some((NodeIndex::new(ix), func));
+                        if self.parents_complete(nix) {
+                            next = Some((nix, func));
                             break;
                         }
                     }
@@ -365,12 +359,7 @@ impl<'a, 'b> Engine<'a, 'b> {
                         .node_weight(NodeIndex::new(ix))
                         .unwrap()
                         .frame_est {
-                        if self.g
-                            .parents(NodeIndex::new(ix))
-                            .iter(self.g)
-                            .all(|(ex, ix)| {
-                                self.g.node_weight(ix).unwrap().result != NodeResult::None
-                            }) {
+                        if self.parents_complete(NodeIndex::new(ix)) {
                             next = Some((NodeIndex::new(ix), func));
                             break;
                         }
@@ -389,6 +378,14 @@ impl<'a, 'b> Engine<'a, 'b> {
         }
     }
 
+    fn parents_complete(&self, ix: NodeIndex) -> bool{
+        self.g
+            .parents(ix)
+            .iter(self.g)
+            .all(|(ex, parent_ix)| {
+                self.g.node_weight(parent_ix).unwrap().result != NodeResult::None
+            })
+    }
 
 
     pub fn graph_execute(&mut self) -> Result<()> {
@@ -403,16 +400,9 @@ impl<'a, 'b> Engine<'a, 'b> {
                         .unwrap()
                         .frame_est {
                         if self.g.node_weight(NodeIndex::new(ix)).unwrap().result ==
-                           NodeResult::None {
-                            if self.g
-                                .parents(NodeIndex::new(ix))
-                                .iter(self.g)
-                                .all(|(ex, ix)| {
-                                    self.g.node_weight(ix).unwrap().result != NodeResult::None
-                                }) {
-                                next = Some((NodeIndex::new(ix), func));
-                                break;
-                            }
+                            NodeResult::None && self.parents_complete(NodeIndex::new(ix)) {
+                            next = Some((NodeIndex::new(ix), func));
+                            break;
                         }
                     }
                 }
@@ -459,7 +449,7 @@ impl<'a, 'b> Engine<'a, 'b> {
 
         }
     }
-    fn op_ctx_mut<'c>(&'c mut self) -> OpCtxMut<'c> {
+    fn op_ctx_mut(&mut self) -> OpCtxMut {
         OpCtxMut {
             c: self.c,
             graph: self.g,
@@ -473,7 +463,7 @@ impl<'a, 'b> Engine<'a, 'b> {
                 return false;
             }
         }
-        return true;
+        true
     }
 }
 impl<'a> OpCtxMut<'a> {

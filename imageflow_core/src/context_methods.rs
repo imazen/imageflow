@@ -104,9 +104,10 @@ impl<'a> BuildHandler<'a> {
 
             if let Some(s::Build001Config { ref no_gamma_correction, .. }) = parsed.builder_config {
                 ::ffi::flow_context_set_floatspace(p,
-                                                   match *no_gamma_correction {
-                                                       true => ::ffi::Floatspace::srgb,
-                                                       _ => ::ffi::Floatspace::linear,
+                                                   if *no_gamma_correction {
+                                                       ::ffi::Floatspace::srgb
+                                                   }else {
+                                                        ::ffi::Floatspace::linear
                                                    },
                                                    0f32,
                                                    0f32,

@@ -28,16 +28,17 @@ fn create_job_router() -> MethodRouter<'static, JobPtr> {
         unsafe {
             if let Some(b) = parsed.no_gamma_correction {
                 ::ffi::flow_context_set_floatspace(job.context_ptr(),
-                                                   match b {
-                                                       true => ::ffi::Floatspace::srgb,
-                                                       false => ::ffi::Floatspace::linear,
+                                                   if b {
+                                                       ::ffi::Floatspace::srgb
+                                                   }else {
+                                                       ::ffi::Floatspace::linear
                                                    },
                                                    0f32,
                                                    0f32,
                                                    0f32)
             }
         }
-        let encodes = ::flow::execution_engine::Engine::create(job, &mut g).execute()?;
+        ::flow::execution_engine::Engine::create(job, &mut g).execute()?;
         //            if !job.execute(&mut g){
         //                unsafe { job.ctx().assert_ok(Some(&mut g)); }
         //            }

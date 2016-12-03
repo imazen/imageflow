@@ -6,7 +6,7 @@ impl ScaleRenderHelpers {
 
         let input_info = ctx.first_parent_frame_info_some(ix).unwrap();
 
-        let ref mut weight = ctx.weight_mut(ix);
+        let weight = &mut ctx.weight_mut(ix);
         match weight.params {
             NodeParams::Json(s::Node::Resample2D { ref w, ref h, .. }) => {
                 weight.frame_est = FrameEstimate::Some(FrameInfo {
@@ -26,18 +26,20 @@ impl ScaleRenderHelpers {
 
         let input_info = ctx.first_parent_frame_info_some(ix).unwrap();
 
-        let ref mut weight = ctx.weight_mut(ix);
+        let weight = &mut ctx.weight_mut(ix);
         match weight.params {
             NodeParams::Json(s::Node::Resample1D { ref scale_to_width,
                                                    ref transpose_on_write,
                                                    ref interpolation_filter }) => {
-                let w = match *transpose_on_write {
-                    true => input_info.h,
-                    false => *scale_to_width as i32,
+                let w = if *transpose_on_write {
+                    input_info.h
+                } else {
+                    *scale_to_width as i32
                 };
-                let h = match *transpose_on_write {
-                    true => *scale_to_width as i32,
-                    false => input_info.h,
+                let h = if *transpose_on_write {
+                    *scale_to_width as i32
+                } else {
+                    input_info.h
                 };
 
                 weight.frame_est = FrameEstimate::Some(FrameInfo {
@@ -67,62 +69,58 @@ fn scale_def() -> NodeDefinition {
 
                 if let s::Node::Resample2D { w, h, down_filter, up_filter, hints } =
                        ctx.get_json_params(ix).unwrap() {
-
                     let filter = if input.w < w as i32 || input.h < h as i32 {
                         up_filter
                     } else {
                         down_filter
                     };
 
-                    let old_style = if let Some(s::ResampleHints { prefer_1d_twice,
-                                                                   sharpen_percent }) = hints {
+                    let old_style = if let Some(s::ResampleHints {
+                                                    prefer_1d_twice,
+                                                    sharpen_percent
+                                                }) = hints {
                         prefer_1d_twice == Some(true)
                     } else {
                         false
                     };
-                    match old_style {
-                        false => {
-                            let canvas_params = s::Node::CreateCanvas {
-                                w: w as usize,
-                                h: h as usize,
-                                format: s::PixelFormat::from(input.fmt),
-                                color: s::Color::Transparent,
-                            };
-                            // TODO: Not the right params!
-                            let scale2d_params = s::Node::Resample2D {
-                                w: w,
-                                h: h,
-                                up_filter: up_filter,
-                                down_filter: down_filter,
-                                hints: hints,
-                            };
-                            let canvas = ctx.graph
-                                .add_node(Node::new(&CREATE_CANVAS,
-                                                    NodeParams::Json(canvas_params)));
-                            let scale2d = ctx.graph
-                                .add_node(Node::new(&SCALE_2D_RENDER_TO_CANVAS_1D,
-                                                    NodeParams::Json(scale2d_params)));
-                            ctx.graph.add_edge(canvas, scale2d, EdgeKind::Canvas).unwrap();
-                            ctx.replace_node_with_existing(ix, scale2d);
-                        }
-                        true => {
-
-                            let scalew_params = s::Node::Resample1D {
-                                scale_to_width: w,
-                                interpolation_filter: filter,
-                                transpose_on_write: true,
-                            };
-                            let scaleh_params = s::Node::Resample1D {
-                                scale_to_width: h,
-                                interpolation_filter: filter,
-                                transpose_on_write: true,
-                            };
-                            let scalew = Node::new(&SCALE_1D, NodeParams::Json(scalew_params));
-                            let scaleh = Node::new(&SCALE_1D, NodeParams::Json(scaleh_params));
-                            ctx.replace_node(ix, vec![scalew, scaleh]);
-                        }
+                    if !old_style {
+                        let canvas_params = s::Node::CreateCanvas {
+                            w: w as usize,
+                            h: h as usize,
+                            format: s::PixelFormat::from(input.fmt),
+                            color: s::Color::Transparent,
+                        };
+                        // TODO: Not the right params!
+                        let scale2d_params = s::Node::Resample2D {
+                            w: w,
+                            h: h,
+                            up_filter: up_filter,
+                            down_filter: down_filter,
+                            hints: hints,
+                        };
+                        let canvas = ctx.graph
+                            .add_node(Node::new(&CREATE_CANVAS,
+                                                NodeParams::Json(canvas_params)));
+                        let scale2d = ctx.graph
+                            .add_node(Node::new(&SCALE_2D_RENDER_TO_CANVAS_1D,
+                                                NodeParams::Json(scale2d_params)));
+                        ctx.graph.add_edge(canvas, scale2d, EdgeKind::Canvas).unwrap();
+                        ctx.replace_node_with_existing(ix, scale2d);
+                    } else {
+                        let scalew_params = s::Node::Resample1D {
+                            scale_to_width: w,
+                            interpolation_filter: filter,
+                            transpose_on_write: true,
+                        };
+                        let scaleh_params = s::Node::Resample1D {
+                            scale_to_width: h,
+                            interpolation_filter: filter,
+                            transpose_on_write: true,
+                        };
+                        let scalew = Node::new(&SCALE_1D, NodeParams::Json(scalew_params));
+                        let scaleh = Node::new(&SCALE_1D, NodeParams::Json(scaleh_params));
+                        ctx.replace_node(ix, vec![scalew, scaleh]);
                     }
-
                 }
 
             }

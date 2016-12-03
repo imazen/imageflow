@@ -27,7 +27,9 @@ impl SelfDisposingContextPtr {
     }
 
     pub fn create_job(&self) -> Result<JobPtr> {
-        JobPtr::create(self.ptr.as_ptr()?)
+        unsafe {
+            JobPtr::create(self.ptr.as_ptr()?)
+        }
     }
 
     pub fn destroy_allowing_panics(mut self) -> () {
@@ -67,20 +69,19 @@ impl JobPtr {
             })
         }
     }
-    pub fn create(context: *mut ::ffi::ImageflowContext) -> Result<JobPtr> {
+    pub unsafe fn create(context: *mut ::ffi::ImageflowContext) -> Result<JobPtr> {
         if context.is_null() {
             return Err(FlowError::ContextInvalid);
         }
-        unsafe {
-            let job = ::ffi::flow_job_create(context);
-            if job.is_null() {
-                Err(FlowError::Oom)
-            } else {
-                Ok(JobPtr {
-                    ptr: job,
-                    c: context,
-                })
-            }
+
+        let job = ::ffi::flow_job_create(context);
+        if job.is_null() {
+            Err(FlowError::Oom)
+        } else {
+            Ok(JobPtr {
+                ptr: job,
+                c: context,
+            })
         }
     }
     pub unsafe fn add_io_ptr(&self,
@@ -113,7 +114,7 @@ impl JobPtr {
         }
     }
 
-    pub fn add_output_buffer<'a>(&'a self, io_id: i32) -> Result<()> {
+    pub fn add_output_buffer(&self, io_id: i32) -> Result<()> {
         unsafe {
             let p =
                 ::ffi::flow_io_create_for_output_buffer(self.context_ptr(),
@@ -220,7 +221,7 @@ impl JobPtr {
 
 
 
-    pub fn io_get_output_buffer_copy<'a, 'b>(&'a mut self, io_id: i32) -> Result<Vec<u8>> {
+    pub fn io_get_output_buffer_copy(&mut self, io_id: i32) -> Result<Vec<u8>> {
         unsafe {
             let io_p = ::ffi::flow_job_get_io(self.c, self.ptr, io_id);
             if io_p.is_null() {
@@ -234,13 +235,11 @@ impl JobPtr {
                                                               &mut buf_len as *mut usize);
                 if !worked {
                     Err(self.ctx().get_error_copy().unwrap())
+                } else if buf_start.is_null() {
+                    // Not sure how output buffer is null... no writes yet?
+                    Err(FlowError::ErrNotImpl)
                 } else {
-                    if buf_start.is_null() {
-                        // Not sure how output buffer is null... no writes yet?
-                        Err(FlowError::ErrNotImpl)
-                    } else {
-                        Ok((std::slice::from_raw_parts(buf_start, buf_len)).to_vec())
-                    }
+                    Ok((std::slice::from_raw_parts(buf_start, buf_len)).to_vec())
                 }
             }
         }
@@ -260,7 +259,7 @@ impl JobPtr {
     pub fn collect_augmented_encode_results(&mut self, g: &Graph, io: &[s::IoObject]) -> Vec<s::EncodeResult>{
         JobPtr::collect_encode_results(g).into_iter().map(|r: s::EncodeResult|{
             if r.bytes == s::ResultBytes::Elsewhere {
-                let obj: &s::IoObject = io.iter().filter(|obj| obj.io_id == r.io_id).next().unwrap();//There's gotta be one
+                let obj: &s::IoObject = io.iter().find(|obj| obj.io_id == r.io_id).unwrap();//There's gotta be one
                 let bytes = match obj.io {
                     s::IoEnum::Filename(ref str) => s::ResultBytes::PhysicalFile(str.to_owned()),
                     s::IoEnum::OutputBase64 => {
@@ -306,7 +305,7 @@ impl ContextPtr {
             }
             let pointer_to_final_buffer =
                 pointer.offset(sizeof_struct as isize) as *mut libc::uint8_t;
-            let ref mut imageflow_response = *(pointer as *mut ImageflowJsonResponse);
+            let imageflow_response = &mut (*(pointer as *mut ImageflowJsonResponse));
             imageflow_response.buffer_utf8_no_nulls = pointer_to_final_buffer;
             imageflow_response.buffer_size = json_bytes.len();
             imageflow_response.status_code = status_code;
@@ -337,7 +336,7 @@ pub struct JobIo<'a, T: 'a> {
 
 impl Context {
     pub fn message(&mut self, method: &str, json: &[u8]) -> Result<JsonResponse> {
-        let ref mut b = *self.p.borrow_mut();
+        let b = &mut (*self.p.borrow_mut());
         b.message(method, json)
     }
 }
@@ -394,15 +393,12 @@ impl ContextPtr {
 
     pub fn from_ptr(ptr: *mut ::ffi::ImageflowContext) -> ContextPtr {
         ContextPtr {
-            ptr: match ptr.is_null() {
-                false => Some(ptr),
-                true => None,
-            },
+            ptr: if ptr.is_null() { None } else { Some(ptr) }
         }
     }
     pub fn as_ptr(&self) -> Result<*mut ::ffi::ImageflowContext> {
         match self.ptr {
-            Some(p) if p != ptr::null_mut() => Ok(p),
+            Some(p) if !p.is_null() => Ok(p),
             _ => Err(FlowError::ContextInvalid),
         }
     }
@@ -437,7 +433,7 @@ impl Context {
     }
 
     pub fn destroy(self) -> Result<()> {
-        let ref mut b = *self.p.borrow_mut();
+        let b = &mut (*self.p.borrow_mut());
         match b.ptr {
             None => Ok(()),
             Some(ptr) => unsafe {
@@ -463,7 +459,7 @@ impl Context {
     }
 
     pub fn create_job(&mut self) -> Result<Job> {
-        let ref b = *self.p.borrow_mut();
+        let b = &(*self.p.borrow_mut());
         match b.ptr {
             None => Err(FlowError::ContextInvalid),
             Some(ptr) => unsafe {
@@ -481,7 +477,7 @@ impl Context {
     pub fn create_io_from_slice<'a, 'c>(&'c mut self,
                                         bytes: &'a [u8])
                                         -> Result<JobIo<'a, &'a [u8]>> {
-        let ref b = *self.p.borrow_mut();
+        let b = &(*self.p.borrow_mut());
         match b.ptr {
             None => Err(FlowError::ContextInvalid),
             Some(ptr) => unsafe {
@@ -505,7 +501,7 @@ impl Context {
 
 
     pub fn create_io_output_buffer<'a, 'b>(&'a mut self) -> Result<JobIo<'b, ()>> {
-        let ref b = *self.p.borrow_mut();
+        let b = &(*self.p.borrow_mut());
         match b.ptr {
             None => Err(FlowError::ContextInvalid),
             Some(ptr) => unsafe {
@@ -528,7 +524,7 @@ impl Context {
                          io_id: i32,
                          direction: IoDirection)
                          -> Result<()> {
-        let ref b = *self.p.borrow_mut();
+        let b = &(*self.p.borrow_mut());
         match b.ptr {
             None => Err(FlowError::ContextInvalid),
             Some(ptr) => unsafe {
@@ -551,7 +547,7 @@ impl Context {
                                         job: &'b Job,
                                         io_id: i32)
                                         -> Result<&'b [u8]> {
-        let ref b = *self.p.borrow_mut();
+        let b = &(*self.p.borrow_mut());
         match b.ptr {
             None => Err(FlowError::ContextInvalid),
             Some(ptr) => unsafe {
@@ -568,13 +564,11 @@ impl Context {
                                                                   &mut buf_len as *mut usize);
                     if !worked {
                         Err(b.get_error_copy().unwrap())
+                    } else if buf_start.is_null() {
+                        // Not sure how output buffer is null... no writes yet?
+                        Err(FlowError::ErrNotImpl)
                     } else {
-                        if buf_start.is_null() {
-                            // Not sure how output buffer is null... no writes yet?
-                            Err(FlowError::ErrNotImpl)
-                        } else {
-                            Ok((std::slice::from_raw_parts(buf_start, buf_len)))
-                        }
+                        Ok((std::slice::from_raw_parts(buf_start, buf_len)))
                     }
                 }
 
@@ -617,41 +611,34 @@ impl ContextPtr {
     }
 
     pub unsafe fn assert_ok(&self, g: Option<&Graph>) {
-        match self.get_error_copy() {
-            Some(which_error) => {
-                match which_error {
-                    FlowError::Err(e) => {
-
-                        println!("Error {} {}\n", e.code, e.message_and_stack);
-                        if e.code == 72 || e.code == 73 {
-                            if g.is_some() {
-                                //                                let _ = ::flow::graph::print_to_stdout(
-                                //                                    self.ptr.unwrap(),
-                                //                                    g.unwrap() as &flow::graph::Graph);
-                            }
-                        }
-
-                        panic!();
-                    }
-                    FlowError::Oom => {
-                        panic!("Out of memory.");
-                    }
-                    FlowError::ErrNotImpl => {
-                        panic!("Error not implemented");
-                    }
-                    FlowError::ContextInvalid => {
-                        panic!("Context pointer null");
-                    }
-                    FlowError::NullArgument => {
-                        panic!("Context pointer null");
-                    }
-                    other => {
-                        panic!("{:?}", other);
+        if let Some(which_error) = self.get_error_copy() {
+            match which_error {
+                FlowError::Err(e) => {
+                    println!("Error {} {}\n", e.code, e.message_and_stack);
+                    if (e.code == 72 || e.code == 73) && g.is_some() {
+                        //                                let _ = ::flow::graph::print_to_stdout(
+                        //                                    self.ptr.unwrap(),
+                        //                                    g.unwrap() as &flow::graph::Graph);
                     }
 
+                    panic!();
+                }
+                FlowError::Oom => {
+                    panic!("Out of memory.");
+                }
+                FlowError::ErrNotImpl => {
+                    panic!("Error not implemented");
+                }
+                FlowError::ContextInvalid => {
+                    panic!("Context pointer null");
+                }
+                FlowError::NullArgument => {
+                    panic!("Context pointer null");
+                }
+                other => {
+                    panic!("{:?}", other);
                 }
             }
-            None => {}
         }
     }
 

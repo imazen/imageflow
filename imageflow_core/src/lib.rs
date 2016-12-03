@@ -4,9 +4,12 @@
 #![feature(conservative_impl_trait)]
 #![feature(proc_macro)]
 #![feature(integer_atomics)]
+#![feature(plugin)]
 
+#![plugin(clippy)]
 // intellij-rust flags this anyway
 // #![feature(field_init_shorthand)]
+
 
 #![allow(unused_features)]
 #![allow(unused_imports)]

@@ -7,20 +7,18 @@ fn apply_orientation_def() -> NodeDefinition {
         fn_estimate: Some({
             fn f(ctx: &mut OpCtxMut, ix: NodeIndex<u32>) {
                 NodeDefHelpers::copy_frame_est_from_first_input(ctx, ix);
-                let ref mut weight = ctx.weight_mut(ix);
+                let weight = &mut ctx.weight_mut(ix);
                 match weight.params {
                     NodeParams::Json(s::Node::ApplyOrientation { ref flag }) => {
                         let swap = *flag >= 5 && *flag <= 8;
                         if let FrameEstimate::Some(frame_info) = weight.frame_est {
                             weight.frame_est = FrameEstimate::Some(FrameInfo {
-                                w: match swap {
-                                    true => frame_info.h,
-                                    _ => frame_info.w,
-                                },
-                                h: match swap {
-                                    true => frame_info.w,
-                                    _ => frame_info.h,
-                                },
+                                w: if swap {
+                                    frame_info.h
+                                } else { frame_info.w },
+                                h: if swap {
+                                    frame_info.w
+                                } else { frame_info.h },
                                 ..frame_info
                             });
                         }

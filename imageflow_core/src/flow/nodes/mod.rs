@@ -68,7 +68,7 @@ impl NodeDefHelpers {
 }
 
 impl<'c> OpCtxMut<'c> {
-    pub fn first_parent_of_kind<'a>(&'a self,
+    pub fn first_parent_of_kind(&self,
                                     of_node: NodeIndex<u32>,
                                     filter_by_kind: EdgeKind)
                                     -> Option<NodeIndex<u32>> {
@@ -80,19 +80,19 @@ impl<'c> OpCtxMut<'c> {
             .nth(0)
     }
 
-    pub fn first_parent_input<'a>(&'a self, of_node: NodeIndex<u32>) -> Option<NodeIndex<u32>> {
+    pub fn first_parent_input(&self, of_node: NodeIndex<u32>) -> Option<NodeIndex<u32>> {
         self.first_parent_of_kind(of_node, EdgeKind::Input)
     }
-    pub fn first_parent_canvas<'a>(&'a self, of_node: NodeIndex<u32>) -> Option<NodeIndex<u32>> {
+    pub fn first_parent_canvas(&self, of_node: NodeIndex<u32>) -> Option<NodeIndex<u32>> {
         self.first_parent_of_kind(of_node, EdgeKind::Canvas)
     }
 
-    pub fn first_parent_input_weight<'a>(&'a self, of_node: NodeIndex<u32>) -> Option<Node> {
+    pub fn first_parent_input_weight(&self, of_node: NodeIndex<u32>) -> Option<Node> {
         self.first_parent_input(of_node).map(|ix| self.graph.node_weight(ix).unwrap().clone())
     }
 
 
-    pub fn first_parent_frame_info_some<'a>(&'a self,
+    pub fn first_parent_frame_info_some(&self,
                                             of_node: NodeIndex<u32>)
                                             -> Option<FrameInfo> {
         self.first_parent_input(of_node).and_then(|ix| {
@@ -105,7 +105,7 @@ impl<'c> OpCtxMut<'c> {
         })
     }
 
-    pub fn get_json_params<'a>(&'a self, ix: NodeIndex<u32>) -> Option<s::Node> {
+    pub fn get_json_params(&self, ix: NodeIndex<u32>) -> Option<s::Node> {
         self.graph.node_weight(ix).and_then(|w| {
             match w.params {
                 NodeParams::Json(ref node) => Some(node.clone()),
@@ -114,11 +114,11 @@ impl<'c> OpCtxMut<'c> {
         })
     }
 
-    pub fn first_parent_canvas_weight<'a>(&'a self, of_node: NodeIndex<u32>) -> Option<&Node> {
+    pub fn first_parent_canvas_weight(&self, of_node: NodeIndex<u32>) -> Option<&Node> {
         self.first_parent_canvas(of_node).map(|ix| self.graph.node_weight(ix).unwrap())
     }
 
-    pub fn first_parent_result_frame<'a, 'b>(&'a self,
+    pub fn first_parent_result_frame(&self,
                                              of_node: NodeIndex<u32>,
                                              kind: EdgeKind)
                                              -> Option<*mut BitmapBgra> {
@@ -132,13 +132,13 @@ impl<'c> OpCtxMut<'c> {
 
 
 
-    pub fn first_parent_input_weight_mut<'a>(&'a mut self,
+    pub fn first_parent_input_weight_mut(&mut self,
                                              of_node: NodeIndex<u32>)
                                              -> Option<&mut Node> {
         self.first_parent_input(of_node).map(move |ix| self.graph.node_weight_mut(ix).unwrap())
     }
 
-    pub fn has_other_children<'a>(&'a self,
+    pub fn has_other_children(&self,
                                   of_node: NodeIndex<u32>,
                                   except_child: NodeIndex<u32>)
                                   -> bool {
@@ -148,32 +148,27 @@ impl<'c> OpCtxMut<'c> {
             .any(|n| n != except_child)
     }
 
-    pub fn weight<'a>(&'a self, ix: NodeIndex<u32>) -> &'a Node {
+    pub fn weight(&self, ix: NodeIndex<u32>) -> &Node {
         self.graph.node_weight(ix).unwrap()
     }
 
-    pub fn weight_mut<'a>(&'a mut self, node_to_update: NodeIndex<u32>) -> &'a mut Node {
+    pub fn weight_mut(&mut self, node_to_update: NodeIndex<u32>) -> &mut Node {
         self.graph.node_weight_mut(node_to_update).unwrap()
     }
-    pub fn copy_frame_est_from_first_input<'a>(&'a mut self, node_to_update: NodeIndex<u32>) {
-        match self.first_parent_input(node_to_update) {
-            Some(input_ix) => {
-                if self.graph.node_weight(input_ix).unwrap().frame_est == FrameEstimate::None {
-                    panic!("Parent frame {} is not estimated", input_ix.index());
-                }
-                self.graph.node_weight_mut(node_to_update).unwrap().frame_est =
-                    self.graph.node_weight(input_ix).unwrap().frame_est.clone();
+    pub fn copy_frame_est_from_first_input(&mut self, node_to_update: NodeIndex<u32>) {
+        if let Some(input_ix) = self.first_parent_input(node_to_update)
+        {
+            if self.graph.node_weight(input_ix).unwrap().frame_est == FrameEstimate::None {
+                panic!("Parent frame {} is not estimated", input_ix.index());
             }
-            None => {}
+            self.graph.node_weight_mut(node_to_update).unwrap().frame_est =
+                self.graph.node_weight(input_ix).unwrap().frame_est;
         }
     }
-    pub fn copy_frame_est_from_first_canvas<'a>(&'a mut self, node_to_update: NodeIndex<u32>) {
-        match self.first_parent_canvas(node_to_update) {
-            Some(input_ix) => {
-                self.graph.node_weight_mut(node_to_update).unwrap().frame_est =
-                    self.graph.node_weight(input_ix).unwrap().frame_est.clone();
-            }
-            None => {}
+    pub fn copy_frame_est_from_first_canvas(&mut self, node_to_update: NodeIndex<u32>) {
+        if let  Some(input_ix) = self.first_parent_canvas(node_to_update) {
+            self.graph.node_weight_mut(node_to_update).unwrap().frame_est =
+                self.graph.node_weight(input_ix).unwrap().frame_est;
         }
     }
 
@@ -183,76 +178,71 @@ impl<'c> OpCtxMut<'c> {
         }
     }
 
-    pub fn rotate_frame_est_from_first_input<'a, 'b>(&'a mut self,
+    pub fn rotate_frame_est_from_first_input(&mut self,
                                                      node_to_update: NodeIndex<u32>) {
         // TODO: select by EdgeKind=Input
         let input = self.graph
             .graph()
             .neighbors_directed(node_to_update, EdgeDirection::Incoming)
             .nth(0);
-        match input {
-            Some(input_ix) => {
-                let input_est = self.graph.node_weight(input_ix).unwrap().frame_est.clone();
-                let mut w = self.graph.node_weight_mut(node_to_update).unwrap();
-                w.frame_est = match input_est {
-                    FrameEstimate::Some(info) => {
-                        FrameEstimate::Some(FrameInfo {
-                            w: info.h,
-                            h: info.w,
-                            ..info
-                        })
-                    }
-                    FrameEstimate::UpperBound(info) => {
-                        FrameEstimate::UpperBound(FrameInfo {
-                            w: info.h,
-                            h: info.w,
-                            ..info
-                        })
-                    }
-                    other => other,
-                };
-            }
-            None => {}
+        if let Some(input_ix) = input {
+            let input_est = self.graph.node_weight(input_ix).unwrap().frame_est;
+            let mut w = self.graph.node_weight_mut(node_to_update).unwrap();
+            w.frame_est = match input_est {
+                FrameEstimate::Some(info) => {
+                    FrameEstimate::Some(FrameInfo {
+                        w: info.h,
+                        h: info.w,
+                        ..info
+                    })
+                }
+                FrameEstimate::UpperBound(info) => {
+                    FrameEstimate::UpperBound(FrameInfo {
+                        w: info.h,
+                        h: info.w,
+                        ..info
+                    })
+                }
+                other => other,
+            };
         }
     }
 
-    pub fn copy_edges_to<'a>(&'a mut self,
+    pub fn copy_edges_to(&mut self,
                              from_node: NodeIndex<u32>,
                              to_node: NodeIndex<u32>,
                              direction: EdgeDirection) {
         let edges = self.graph
             .graph()
             .edges_directed(from_node, direction)
-            .map(|(a, b)| (a, b.clone()))
+            .map(|(a, b)| (a, *b))
             .collect::<Vec<_>>();
 
         for (other_node, weight) in edges {
             match direction {
                 EdgeDirection::Incoming => {
-                    self.graph.add_edge(other_node, to_node, weight.clone()).unwrap()
+                    self.graph.add_edge(other_node, to_node, weight).unwrap()
                 }
                 EdgeDirection::Outgoing => {
-                    self.graph.add_edge(to_node, other_node, weight.clone()).unwrap()
+                    self.graph.add_edge(to_node, other_node, weight).unwrap()
                 }
             };
         }
     }
-    pub fn delete_child_edges_for<'a>(&'a mut self, from_node: NodeIndex<u32>) {
+    pub fn delete_child_edges_for(&mut self, from_node: NodeIndex<u32>) {
         loop {
-            match self.graph
+            if self.graph
                 .raw_edges()
                 .iter()
                 .position(|e| e.source() == from_node)
-                .and_then(|ix| self.graph.remove_edge(EdgeIndex::new(ix))) {
-                None => {
-                    break;
-                }
-                _ => {}
+                .and_then(|ix| self.graph.remove_edge(EdgeIndex::new(ix)))
+                .is_none(){
+                break;
             }
         }
     }
 
-    pub fn delete_node_and_snap_together<'a>(&'a mut self, node_to_delete: NodeIndex<u32>) {
+    pub fn delete_node_and_snap_together(&mut self, node_to_delete: NodeIndex<u32>) {
         // Prefer EdgeKind=Input
         let input = self.graph
             .graph()
@@ -268,7 +258,7 @@ impl<'c> OpCtxMut<'c> {
     }
 
     // Links nodes with Input edges
-    pub fn replace_node<'a>(&'a mut self, index: NodeIndex<u32>, with_list: Vec<Node>) {
+    pub fn replace_node(&mut self, index: NodeIndex<u32>, with_list: Vec<Node>) {
         let mut with = with_list.clone();
         match with.len() {
             0 => self.delete_node_and_snap_together(index),
@@ -276,7 +266,7 @@ impl<'c> OpCtxMut<'c> {
                 with.reverse();
                 let mut last_ix = self.graph.add_node(with.pop().unwrap());
                 self.copy_edges_to(index, last_ix, EdgeDirection::Incoming);
-                while with.len() > 0 {
+                while !with.is_empty() {
                     let new_ix = self.graph.add_node(with.pop().unwrap());
                     self.graph.add_edge(last_ix, new_ix, EdgeKind::Input).unwrap();
                     last_ix = new_ix;
@@ -287,7 +277,7 @@ impl<'c> OpCtxMut<'c> {
         }
     }
 
-    pub fn replace_node_with_existing<'a>(&'a mut self,
+    pub fn replace_node_with_existing(&mut self,
                                           index: NodeIndex<u32>,
                                           with_index: NodeIndex<u32>) {
         self.copy_edges_to(index, with_index, EdgeDirection::Incoming);
