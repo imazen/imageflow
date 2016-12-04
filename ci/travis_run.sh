@@ -92,7 +92,7 @@ if [ "${TRAVIS_PULL_REQUEST}" == "false" ]; then
 
 		export DELETE_UPLOAD_FOLDER="False"
 
-		export RUNTIME_REQUIREMENTS_FILE="${TRAVIS_BUILD_DIR}/ci/packaging_extras/requirements/${PACKAGE_SUFFIX}.txt"
+		export RUNTIME_REQUIREMENTS_FILE="./ci/packaging_extras/requirements/${PACKAGE_SUFFIX}.txt"
 		if [ -f "$RUNTIME_REQUIREMENTS_FILE" ]; then
 			echo "Using runtime requirements file ${RUNTIME_REQUIREMENTS_FILE}"
 		else
