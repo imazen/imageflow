@@ -116,7 +116,7 @@ export VALGRIND_COMMAND="valgrind -q --error-exitcode=9 --gen-suppressions=all"
 export VALGRIND_RUST_COMMAND="$VALGRIND_COMMAND cargo test"
 export RUST_BACKTRACE=1
 STAMP="+[%H:%M:%S]"
-
+date "$STAMP"
 
 
 #Turn off coverage if lcov is missing
@@ -336,7 +336,7 @@ if [[ "$BUILD_RELEASE" == 'True' ]]; then
 	rm ./artifacts/staging/*.{o,d} || true
 
 	if [[ -n "$RUNTIME_REQUIREMENTS_FILE" ]]; then
-		cp RUNTIME_REQUIREMENTS_FILE ./artifacts/staging/runtime_requirements.txt 
+		cp "${RUNTIME_REQUIREMENTS_FILE}" ./artifacts/staging/runtime_requirements.txt 
 	fi
 
 	(

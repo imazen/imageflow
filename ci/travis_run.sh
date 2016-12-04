@@ -7,25 +7,8 @@ if [ -n "${TRAVIS_BUILD_DIR}" ]; then
   cd "${TRAVIS_BUILD_DIR}"
 fi
 
-echo "Listing TRAVIS env vars"
-# echo TRAVIS_BRANCH=${TRAVIS_BRANCH}
-# echo TRAVIS_BUILD_DIR=${TRAVIS_BUILD_DIR}
-# echo TRAVIS_BUILD_ID=${TRAVIS_BUILD_ID}
-# echo TRAVIS_BUILD_NUMBER=${TRAVIS_BUILD_NUMBER}
-# echo TRAVIS_COMMIT=${TRAVIS_COMMIT}
-# echo TRAVIS_COMMIT_RANGE=${TRAVIS_COMMIT_RANGE}
-# echo TRAVIS_EVENT_TYPE=${TRAVIS_EVENT_TYPE}
-# echo TRAVIS_JOB_ID=${TRAVIS_JOB_ID}
-# echo TRAVIS_JOB_NUMBER=${TRAVIS_JOB_NUMBER}
-# echo TRAVIS_OS_NAME=${TRAVIS_OS_NAME}
-# echo TRAVIS_PULL_REQUEST=${TRAVIS_PULL_REQUEST}
-# echo TRAVIS_PULL_REQUEST_BRANCH=${TRAVIS_PULL_REQUEST_BRANCH}
-# echo TRAVIS_PULL_REQUEST_SHA=${TRAVIS_PULL_REQUEST_SHA}
-# echo TRAVIS_REPO_SLUG=${TRAVIS_REPO_SLUG}
-# echo TRAVIS_SECURE_ENV_VARS=${TRAVIS_SECURE_ENV_VARS}
-# echo TRAVIS_SUDO=${TRAVIS_SUDO}
-# echo TRAVIS_TEST_RESULT=${TRAVIS_TEST_RESULT}
-# echo TRAVIS_TAG=${TRAVIS_TAG}
+STAMP="+[%H:%M:%S]"
+date "$STAMP"
 
 #Export CI stuff
 export GIT_COMMIT="${TRAVIS_COMMIT}"
@@ -44,6 +27,7 @@ export UPLOAD_URL="https://s3-us-west-1.amazonaws.com/imageflow-nightlies"
 
 ############ GIT VALUES ##################
 
+echo "Querying git for version and branch information"
 export GIT_COMMIT
 GIT_COMMIT="${GIT_COMMIT:-$(git rev-parse HEAD)}"
 GIT_COMMIT="${GIT_COMMIT:-unknown-commit}"
@@ -67,7 +51,7 @@ export GIT_OPTIONAL_BRANCH
 if git symbolic-ref --short HEAD; then 
 	GIT_OPTIONAL_BRANCH="${GIT_OPTIONAL_BRANCH:-$(git symbolic-ref --short HEAD)}"
 fi 
-
+echo "Naming things... (using TRAVIS_TAG=${TRAVIS_TAG}, GIT_OPTIONAL_BRANCH=${GIT_OPTIONAL_BRANCH}, "
 ################## NAMING THINGS ####################
 
 export DELETE_UPLOAD_FOLDER="${DELETE_UPLOAD_FOLDER:-True}"
@@ -115,7 +99,6 @@ if [ "${TRAVIS_PULL_REQUEST}" == "false" ]; then
 			echo "Failed to locate a runtime requirements file for build variation ${PACKAGE_SUFFIX}"
 			exit 1
 		fi
-
 	fi
 	if [ "${UPLOAD_DOCS}" != "True" ]; then
 		export ESTIMATED_DOCS_URL_2=
@@ -123,6 +106,11 @@ if [ "${TRAVIS_PULL_REQUEST}" == "false" ]; then
 	fi
 
 
+fi
+if [ "${DELETE_UPLOAD_FOLDER}" == "True" ]; then
+	printf "\nSKIPPING UPLOAD\n"
+else
+	printf "\nUPLOAD_BUILD=%s, UPLOAD_DOCS=%s" "${UPLOAD_BUILD}" "${UPLOAD_DOCS}"
 fi
 
 
