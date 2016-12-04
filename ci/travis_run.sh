@@ -248,7 +248,7 @@ else
 	set +x
 fi
 
-if [[ "$DELETE_UPLOAD_FOLDER" != 'True' ]]; then
+if [[ "$DELETE_UPLOAD_FOLDER" == 'True' ]]; then
 	echo -e "\nRemvoing all files scheduled for upload to s3\n\n"
 	rm -rf ./artifacts/upload
 	mkdir -p ./artifacts/upload
