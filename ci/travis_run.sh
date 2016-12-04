@@ -107,19 +107,22 @@ if [ "${TRAVIS_PULL_REQUEST}" == "false" ]; then
 		fi
 
 		export DELETE_UPLOAD_FOLDER="False"
+
+		export RUNTIME_REQUIREMENTS_FILE="${TRAVIS_BUILD_DIR}/ci/packaging_extras/requirements/${PACKAGE_SUFFIX}.txt"
+		if [ -f "$RUNTIME_REQUIREMENTS_FILE" ]; then
+			echo "Using runtime requirements file ${RUNTIME_REQUIREMENTS_FILE}"
+		else
+			echo "Failed to locate a runtime requirements file for build variation ${PACKAGE_SUFFIX}"
+			exit 1
+		fi
+
 	fi
 	if [ "${UPLOAD_DOCS}" != "True" ]; then
 		export ESTIMATED_DOCS_URL_2=
 		export ESTIMATED_DOCS_URL=
 	fi
 
-	export RUNTIME_REQUIREMENTS_FILE="${TRAVIS_BUILD_DIR}/ci/packaging_extras/requirements/${PACKAGE_SUFFIX}.txt"
-	if [ -f "$RUNTIME_REQUIREMENTS_FILE" ]; then
-		echo "Using runtime requirements file ${RUNTIME_REQUIREMENTS_FILE}"
-	else
-		echo "Failed to locate a runtime requirements file for build variation ${PACKAGE_SUFFIX}"
-		exit 1
-	fi
+
 fi
 
 
