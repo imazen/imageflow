@@ -263,8 +263,20 @@ enum Target{
     Raw,
     PInvoke,
     Default,
+    Lua,
     PrefixAll{ prefix: &'static str, struct_name: Style, enum_name: Style, enum_member: Style},
     Other{structs: StructModification, enums: EnumModification}
+}
+
+fn strip_preprocessor_directives(contents: &str) -> String{
+    //Strip the extern C stuff
+    let temp = Regex::new(r"(?im)^\s*\#\s*ifdef\s+__cplusplus[^\#]+\#\s*endif").unwrap().replace_all(&contents, "");
+    //Strip all ifndef/ifdef statements
+    //let temp2 = Regex::new(r"(?im)^\s*\#\s*(ifdef|ifndef|endif).*").unwrap().replace_all(&temp, "");
+    //Strip ALL # preprocessor directives
+    let temp2 = Regex::new(r"(?im)^\s*\#\s*.*").unwrap().replace_all(&temp, "");
+
+    temp2
 }
 
 fn build(file: String, target: Target){
@@ -278,6 +290,7 @@ fn build(file: String, target: Target){
         run_build(cheddar::Cheddar::new().expect("could not read manifest")
                       .insert_code(insert), file, |s| s);
     }else {
+        let should_strip_preprocessor_directives = target == Target::Lua;
         let target = match target {
             Target::PrefixAll { prefix, struct_name, enum_name, enum_member } => Target::Other {
                 structs: StructModification::Prefix { prefix: prefix, style: struct_name },
@@ -286,7 +299,7 @@ fn build(file: String, target: Target){
                     member_prefix: prefix, member_style: enum_member
                 }
             },
-            Target::Default => Target::Other {
+            Target::Default | Target::Lua => Target::Other {
                 structs: StructModification::Prefix { prefix: "Imageflow", style: Style::Snake },
                 enums: EnumModification {
                     name_prefix: "Imageflow", name_style: Style::Snake,
@@ -305,7 +318,12 @@ fn build(file: String, target: Target){
         if let Target::Other { structs, enums } = target {
             run_build(cheddar::Cheddar::new().expect("could not read manifest")
                           .insert_code(insert), file, |s: String| -> String {
-                filter_enums(filter_structs(s, &STRUCT_NAMES, structs), &ENUM_NAMES, enums)
+                let temp = filter_enums(filter_structs(s, &STRUCT_NAMES, structs), &ENUM_NAMES, enums);
+                if should_strip_preprocessor_directives{
+                    strip_preprocessor_directives(&temp)
+                }else {
+                    temp
+                }
             });
         } else {
             panic!("");
@@ -320,6 +338,8 @@ fn main() {
     let base = "../bindings/headers/imageflow_";
 
     build(format!("{}default.h",base), Target::Default);
+
+    build(format!("{}lua.h",base), Target::Lua);
     build(format!("{}raw.h",base), Target::Raw);
     build(format!("{}pinvoke.h",base), Target::PInvoke);
 

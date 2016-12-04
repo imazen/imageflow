@@ -1,9 +1,11 @@
 //! # Do not use
 //! Do not use functions from this module outside of `imageflow_core`
 //!
-//! **Use `imageflow_core::abi` functions instead when creating bindings**
+//! **Use the `imageflow_abi` crate when creating bindings**
 //!
-//! These aren't to be exposed, but rather to connect to C internals
+//! These aren't to be exposed, but rather to connect to `imageflow_c`/`c_components` internals.
+//! Overlaps in naming are artifacts from restructuring
+//!
 
 pub use imageflow_types::EdgeKind;
 
