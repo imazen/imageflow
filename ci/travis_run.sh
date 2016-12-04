@@ -70,48 +70,65 @@ fi
 
 ################## NAMING THINGS ####################
 
+export DELETE_UPLOAD_FOLDER="${DELETE_UPLOAD_FOLDER:-True}"
+
 if [ "${TRAVIS_PULL_REQUEST}" == "false" ]; then
 
-	#Put tagged commits in their own folder instead of using the branch name
-	if [ -n "${TRAVIS_TAG}" ]; then
-		export UPLOAD_DIR="releases/${TRAVIS_TAG}"
-		export ARTIFACT_UPLOAD_PATH="${UPLOAD_DIR}/imageflow-${TRAVIS_TAG}-${GIT_COMMIT_SHORT}-${PACKAGE_SUFFIX}"
-		export DOCS_UPLOAD_DIR="${UPLOAD_DIR}/doc"
-		export ESTIMATED_DOCS_URL="${UPLOAD_URL}/${DOCS_UPLOAD_DIR}"
-	else
-		if [ -n "${GIT_OPTIONAL_BRANCH}" ]; then
-			export ARTIFACT_UPLOAD_PATH="${GIT_OPTIONAL_BRANCH}/imageflow-nightly-${CI_SEQUENTIAL_BUILD_NUMBER}-${GIT_DESCRIBE_ALWAYS_LONG}-${PACKAGE_SUFFIX}"
+	if [ "${UPLOAD_BUILD}" == "True" ]; then
+
+
+		#Put tagged commits in their own folder instead of using the branch name
+		if [ -n "${TRAVIS_TAG}" ]; then
+			export UPLOAD_DIR="releases/${TRAVIS_TAG}"
+			export ARTIFACT_UPLOAD_PATH="${UPLOAD_DIR}/imageflow-${TRAVIS_TAG}-${GIT_COMMIT_SHORT}-${PACKAGE_SUFFIX}"
+			export DOCS_UPLOAD_DIR="${UPLOAD_DIR}/doc"
+			export ESTIMATED_DOCS_URL="${UPLOAD_URL}/${DOCS_UPLOAD_DIR}"
+		else
+			if [ -n "${GIT_OPTIONAL_BRANCH}" ]; then
+				export ARTIFACT_UPLOAD_PATH="${GIT_OPTIONAL_BRANCH}/imageflow-nightly-${CI_SEQUENTIAL_BUILD_NUMBER}-${GIT_DESCRIBE_ALWAYS_LONG}-${PACKAGE_SUFFIX}"
+			fi
 		fi
+
+		export ESTIMATED_ARTIFACT_URL="${UPLOAD_URL}/${ARTIFACT_UPLOAD_PATH}.tar.gz"
+
+		if [ -n "${GIT_OPTIONAL_BRANCH}" ]; then
+			export ARTIFACT_UPLOAD_PATH_2="${GIT_OPTIONAL_BRANCH}/imageflow-nightly-${PACKAGE_SUFFIX}"
+			export ESTIMATED_ARTIFACT_URL_2="${UPLOAD_URL}/${ARTIFACT_UPLOAD_PATH_2}.tar.gz"
+
+			export DOCS_UPLOAD_DIR_2="${GIT_OPTIONAL_BRANCH}/doc"
+			export ESTIMATED_DOCS_URL_2="${UPLOAD_URL}/${DOCS_UPLOAD_DIR_2}"
+			export ESTIMATED_DOCS_URL="${ESTIMATED_DOCS_URL:-${ESTIMATED_DOCS_URL_2}}"
+		fi
+
+		if [ -n "${FETCH_COMMIT_SUFFIX}" ]; then
+			#Always upload by commit ID
+			export ARTIFACT_UPLOAD_PATH_3="commits/${GIT_COMMIT}/${FETCH_COMMIT_SUFFIX}"
+			export ESTIMATED_ARTIFACT_URL_3="${UPLOAD_URL}/${ARTIFACT_UPLOAD_PATH_3}.tar.gz"
+		fi
+
+		export DELETE_UPLOAD_FOLDER="False"
+	fi
+	if [ "${UPLOAD_DOCS}" != "True" ]; then
+		export ESTIMATED_DOCS_URL_2=
+		export ESTIMATED_DOCS_URL=
 	fi
 
-	export ESTIMATED_ARTIFACT_URL="${UPLOAD_URL}/${ARTIFACT_UPLOAD_PATH}.tar.gz"
-
-	if [ -n "${GIT_OPTIONAL_BRANCH}" ]; then
-		export UPLOAD_AS_LATEST=True
-		export ARTIFACT_UPLOAD_PATH_2="${GIT_OPTIONAL_BRANCH}/imageflow-nightly-${PACKAGE_SUFFIX}"
-		export DOCS_UPLOAD_DIR_2="${GIT_OPTIONAL_BRANCH}/doc"
-		export ESTIMATED_DOCS_URL_2="${UPLOAD_URL}/${DOCS_UPLOAD_DIR_2}"
-		export ESTIMATED_DOCS_URL="${ESTIMATED_DOCS_URL:-${ESTIMATED_DOCS_URL_2}}"
+	export RUNTIME_REQUIREMENTS_FILE="${TRAVIS_BUILD_DIR}/ci/packaging_extras/requirements/${PACKAGE_SUFFIX}.txt"
+	if [ -f "$RUNTIME_REQUIREMENTS_FILE" ]; then
+		echo "Using runtime requirements file ${RUNTIME_REQUIREMENTS_FILE}"
+	else
+		echo "Failed to locate a runtime requirements file for build variation ${PACKAGE_SUFFIX}"
+		exit 1
 	fi
-
 fi
 
-if [ "${UPLOAD_DOCS}" != "True" ]; then
-	export ESTIMATED_DOCS_URL_2=
-	export ESTIMATED_DOCS_URL=
-fi
+
 printf "\n=================================================\n"
-printf "\nEstimated upload URLs:\n\n%s\n\n%s\n\n" "${ESTIMATED_ARTIFACT_URL}" "${ESTIMATED_ARTIFACT_URL_2}"
+printf "\nEstimated upload URLs:\n\n%s\n\n%s\n\n" "${ESTIMATED_ARTIFACT_URL}" "${ESTIMATED_ARTIFACT_URL_2}" "${ESTIMATED_ARTIFACT_URL_3}"
 printf "\nEstimated docs URLs:\n\n%s\n\n%s\n\n" "${ESTIMATED_DOCS_URL}" "${DOCS_UPLOAD_DIR_2}"
 printf "\n=================================================\n"
 
-if [ "${TRAVIS_PULL_REQUEST}" == "false" ]; then
-	export UPLOAD_BUILD="${UPLOAD_BUILD:-True}"
-else
-########## Don't upload pull requests
-	export UPLOAD_BUILD=False
-	export UPLOAD_AS_LATEST=False
-fi
+
 
 
 
@@ -141,8 +158,6 @@ export IMAGEFLOW_SERVER="${IMAGEFLOW_SERVER:-True}"
 # Enables generated coverage information for the C portion of the code. 
 # Also forces C tests to build in debug mode
 export COVERAGE="${COVERAGE:-False}"
-# travis_run.sh deletes /artifacts folder if False. Only relevant in Travis itself
-export UPLOAD_BUILD="${UPLOAD_BUILD:-False}"
 # Affects how /artifacts folder is structured by build.sh
 export UPLOAD_AS_LATEST="${UPLOAD_AS_LATEST:-False}"
 # travis_run_docker.sh uploads Coverage information when true
@@ -174,10 +189,6 @@ DOCKER_ENV_VARS=(
 	"-e"
 	 "COVERAGE=${COVERAGE}" 
 	"-e"
-	 "UPLOAD_BUILD=${UPLOAD_BUILD}" 
-	"-e"
-	 "UPLOAD_AS_LATEST=${UPLOAD_AS_LATEST}"
-	"-e"
 	 "COVERALLS=${COVERALLS}" 
 	"-e"
 	 "COVERALLS_TOKEN=${COVERALLS_TOKEN}"
@@ -189,6 +200,8 @@ DOCKER_ENV_VARS=(
 	 "ARTIFACT_UPLOAD_PATH=${ARTIFACT_UPLOAD_PATH}"  
 	"-e"
 	 "ARTIFACT_UPLOAD_PATH_2=${ARTIFACT_UPLOAD_PATH_2}" 
+	"-e"
+	 "ARTIFACT_UPLOAD_PATH_3=${ARTIFACT_UPLOAD_PATH_3}" 
     "-e"
 	 "GIT_COMMIT=${GIT_COMMIT}" 
 	"-e"
@@ -199,6 +212,8 @@ DOCKER_ENV_VARS=(
 	 "GIT_DESCRIBE_ALWAYS=${GIT_DESCRIBE_ALWAYS}" 
 	"-e"
 	 "GIT_DESCRIBE_ALWAYS_LONG=${GIT_DESCRIBE_ALWAYS_LONG}" 
+	 "-e"
+	 "RUNTIME_REQUIREMENTS_FILE=${RUNTIME_REQUIREMENTS_FILE}"
 	"-e"
 	 "GIT_DESCRIBE_AAL=${GIT_DESCRIBE_AAL}" 
 	"-e"
@@ -242,7 +257,7 @@ else
 	set +x
 fi
 
-if [[ "$UPLOAD_BUILD" != 'True' ]]; then
+if [[ "$DELETE_UPLOAD_FOLDER" != 'True' ]]; then
 	echo -e "\nRemvoing all files scheduled for upload to s3\n\n"
 	rm -rf ./artifacts/upload
 	mkdir -p ./artifacts/upload

@@ -50,9 +50,10 @@ export IMAGEFLOW_SERVER="${IMAGEFLOW_SERVER:-True}"
 # Enables generated coverage information for the C portion of the code. 
 # Also forces C tests to build in debug mode
 export COVERAGE="${COVERAGE:-False}"
-# Affects how /artifacts folder is structured by build.sh
-# UPLOAD_AS_LATEST overrides the nightly build for the branch if UPLOAD_BUILD=True and run on travis with s3 uploading on
-export UPLOAD_AS_LATEST="${UPLOAD_AS_LATEST:-False}"
+
+# Chooses values for ARTIFACT_UPLOAD_PATH and DOCS_UPLOAD_DIR if they are empty
+export UPLOAD_BY_DEFAULT="${UPLOAD_BY_DEFAULT:-False}"
+
 
 ############ GIT VALUES ##################
 
@@ -88,16 +89,13 @@ else
 	export SHORT_OS_NAME="${SHORT_OS_NAME:-linux}"
 fi
 
-if [[ -n "${GIT_OPTIONAL_BRANCH}" ]]; then
-	export ARTIFACT_UPLOAD_PATH="${ARTIFACT_UPLOAD_PATH:-${GIT_OPTIONAL_BRANCH}/imageflow-localbuild-${GIT_COMMIT_SHORT}-${SHORT_OS_NAME}}"
-	export ARTIFACT_UPLOAD_PATH_2="${ARTIFACT_UPLOAD_PATH_2}"
-	export DOCS_UPLOAD_DIR_2="${DOCS_UPLOAD_DIR_2}"
-	export DOCS_UPLOAD_DIR="${DOCS_UPLOAD_DIR:-${GIT_OPTIONAL_BRANCH}/doc}"
-fi
-
-if [[ "${UPLOAD_AS_LATEST}" == "False" ]]; then
-	export ARTIFACT_UPLOAD_PATH_2=
-	export DOCS_UPLOAD_DIR_2=
+if [[ "${UPLOAD_BY_DEFAULT}" == "True" ]]; then
+	if [[ -n "${GIT_OPTIONAL_BRANCH}" ]]; then
+		export ARTIFACT_UPLOAD_PATH="${ARTIFACT_UPLOAD_PATH:-${GIT_OPTIONAL_BRANCH}/imageflow-localbuild-${GIT_COMMIT_SHORT}-${SHORT_OS_NAME}}"
+		export DOCS_UPLOAD_DIR="${DOCS_UPLOAD_DIR:-${GIT_OPTIONAL_BRANCH}/doc}"
+		export ARTIFACT_UPLOAD_PATH_2="${ARTIFACT_UPLOAD_PATH_2}"
+		export DOCS_UPLOAD_DIR_2="${DOCS_UPLOAD_DIR_2}"
+	fi
 fi
 
 ##################################
@@ -337,26 +335,39 @@ if [[ "$BUILD_RELEASE" == 'True' ]]; then
 	cp -a target/doc ./artifacts/staging/
 	rm ./artifacts/staging/*.{o,d} || true
 
-	cd ./artifacts/staging
+	if [[ -n "$RUNTIME_REQUIREMENTS_FILE" ]]; then
+		cp RUNTIME_REQUIREMENTS_FILE ./artifacts/staging/runtime_requirements.txt 
+	fi
 
+	(
+		cd ./artifacts/staging
+		tar czf "archive.tar.gz" ./*
+	)
+	ARTIFACT_ARCHIVE_NAME="./artifacts/staging/archive.tar.gz"
 
 	if [[ -n "$ARTIFACT_UPLOAD_PATH" ]]; then
-		mkdir -p "../upload/$(dirname "${ARTIFACT_UPLOAD_PATH}")" || true
-		tar czf "../upload/${ARTIFACT_UPLOAD_PATH}.tar.gz" ./*
-		cd ../..
-		if [[ -n "$DOCS_UPLOAD_DIR" ]]; then
-			mkdir -p "./artifacts/upload/${DOCS_UPLOAD_DIR}" || true
-			cp -a target/doc/* "./artifacts/upload/${DOCS_UPLOAD_DIR}/"
-		fi
-		if [[ -n "$DOCS_UPLOAD_DIR_2" ]]; then
-			mkdir -p "./artifacts/upload/${DOCS_UPLOAD_DIR_2}" || true
-			cp -a target/doc/* "./artifacts/upload/${DOCS_UPLOAD_DIR_2}/"
-		fi
-		if [[ -n "$ARTIFACT_UPLOAD_PATH_2" ]]; then
-			mkdir -p "./artifacts/upload/$(dirname "${ARTIFACT_UPLOAD_PATH_2}")" || true
-			cp "./artifacts/upload/${ARTIFACT_UPLOAD_PATH}.tar.gz" "./artifacts/upload/${ARTIFACT_UPLOAD_PATH_2}.tar.gz"
-		fi
+		mkdir -p "./artifacts/upload/$(dirname "${ARTIFACT_UPLOAD_PATH}")" || true
+		cp "${ARTIFACT_ARCHIVE_NAME}" "./artifacts/upload/${ARTIFACT_UPLOAD_PATH}.tar.gz"
 	fi
+	if [[ -n "$ARTIFACT_UPLOAD_PATH_2" ]]; then
+		mkdir -p "./artifacts/upload/$(dirname "${ARTIFACT_UPLOAD_PATH_2}")" || true
+		cp "${ARTIFACT_ARCHIVE_NAME}" "./artifacts/upload/${ARTIFACT_UPLOAD_PATH_2}.tar.gz"
+	fi
+	if [[ -n "$ARTIFACT_UPLOAD_PATH_3" ]]; then
+		mkdir -p "./artifacts/upload/$(dirname "${ARTIFACT_UPLOAD_PATH_3}")" || true
+		cp "${ARTIFACT_ARCHIVE_NAME}" "./artifacts/upload/${ARTIFACT_UPLOAD_PATH_3}.tar.gz"
+	fi
+
+	if [[ -n "$DOCS_UPLOAD_DIR" ]]; then
+		mkdir -p "./artifacts/upload/${DOCS_UPLOAD_DIR}" || true
+		cp -a target/doc/* "./artifacts/upload/${DOCS_UPLOAD_DIR}/"
+	fi
+	if [[ -n "$DOCS_UPLOAD_DIR_2" ]]; then
+		mkdir -p "./artifacts/upload/${DOCS_UPLOAD_DIR_2}" || true
+		cp -a target/doc/* "./artifacts/upload/${DOCS_UPLOAD_DIR_2}/"
+	fi
+
+
 
 fi
 echo
