@@ -107,36 +107,17 @@ bool flow_codec_decoder_set_downscale_hints(flow_c * c, struct flow_codec_instan
     return true;
 }
 
-bool flow_job_decoder_set_downscale_hints_by_placeholder_id(flow_c * c, struct flow_job * job, int32_t placeholder_id,
-                                                            int64_t if_wider_than, int64_t or_taller_than,
-                                                            int64_t downscaled_min_width, int64_t downscaled_min_height,
-                                                            bool scale_luma_spatially,
-                                                            bool gamma_correct_for_srgb_during_spatial_luma_scaling)
-{
-    struct flow_decoder_downscale_hints hints;
-    hints.or_if_taller_than = or_taller_than;
-    hints.downscale_if_wider_than = if_wider_than;
-    hints.downscaled_min_height = downscaled_min_height;
-    hints.downscaled_min_width = downscaled_min_width;
-    hints.scale_luma_spatially = scale_luma_spatially;
-    hints.gamma_correct_for_srgb_during_spatial_luma_scaling = gamma_correct_for_srgb_during_spatial_luma_scaling;
 
-    struct flow_codec_instance * codec = flow_job_get_codec_instance(c, job, placeholder_id);
-    if (codec == NULL) {
-        FLOW_error(c, flow_status_Invalid_argument);
+bool flow_codec_decoder_get_info(flow_c * c, void * codec_state, int64_t codec_id,
+                                        struct flow_decoder_info * info)
+{
+    if (codec_state == NULL) {
+
+        FLOW_error(c, flow_status_Invalid_internal_state); // Codecs should be initialized by this point
         return false;
     }
-    if (!flow_codec_decoder_set_downscale_hints(c, codec, &hints, false)) {
-        FLOW_error_return(c);
-    }
-    return true;
-}
 
-
-static bool flow_codec_decoder_get_info(flow_c * c, void * codec_state, int64_t type,
-                                        struct flow_decoder_info * decoder_info_ref)
-{
-    struct flow_codec_definition * def = flow_codec_get_definition(c, type);
+    struct flow_codec_definition * def = flow_codec_get_definition(c, codec_id);
     if (def == NULL) {
         FLOW_error_return(c);
     }
@@ -144,48 +125,23 @@ static bool flow_codec_decoder_get_info(flow_c * c, void * codec_state, int64_t 
         FLOW_error_msg(c, flow_status_Not_implemented, ".get_info is not implemented for codec %s", def->name);
         return false;
     }
-    if (!def->get_info(c, codec_state, decoder_info_ref)) {
-        FLOW_error_return(c);
-    }
-    return true;
-}
+    //Reset everything to defaults
 
-bool flow_job_get_decoder_info(flow_c * c, struct flow_job * job, int32_t by_placeholder_id,
-                               struct flow_decoder_info * info)
-{
-    struct flow_codec_instance * current = flow_job_get_codec_instance(c, job, by_placeholder_id);
-    if (current == NULL) {
-        FLOW_error(c, flow_status_Invalid_argument); // Bad placeholder id
-        return false;
-    }
-    if (current->direction != FLOW_INPUT) {
-        FLOW_error(c, flow_status_Invalid_argument); // Bad placeholder id
-        return false;
-    }
-    info->codec_id = current->codec_id;
-
-    if (current->codec_state == NULL) {
-
-        FLOW_error(c, flow_status_Invalid_internal_state); // Codecs should be initialized by this point
-        return false;
-    }
     info->frame_decodes_into = flow_bgra32;
     info->image_height = 0;
     info->image_width = 0;
-    info->codec_id = current->codec_id;
+    info->codec_id = codec_id;
     info->current_frame_index = 0;
     info->frame_count = 0;
     info->preferred_extension = NULL;
     info->preferred_mime_type = NULL;
 
-    if (!flow_codec_decoder_get_info(c, current->codec_state, current->codec_id, info)) {
+
+
+    if (!def->get_info(c, codec_state, info)) {
         FLOW_error_return(c);
     }
-    // Fill in defaults
-    struct flow_codec_definition * def = flow_codec_get_definition(c, current->codec_id);
-    if (def == NULL) {
-        FLOW_error_return(c);
-    }
+    // Fill in fallback values
     if (info->preferred_mime_type == NULL)
         info->preferred_mime_type = def->preferred_mime_type;
     if (info->preferred_extension == NULL)
@@ -193,6 +149,8 @@ bool flow_job_get_decoder_info(flow_c * c, struct flow_job * job, int32_t by_pla
 
     return true;
 }
+
+
 
 struct flow_codec_definition * flow_codec_get_definition(flow_c * c, int64_t codec_id)
 {

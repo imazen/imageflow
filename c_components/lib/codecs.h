@@ -22,6 +22,9 @@ typedef enum flow_codec_color_profile_source {
 } flow_codec_color_profile_source;
 
 struct flow_codec_definition * flow_codec_get_definition(flow_c * c, int64_t codec_id);
+bool flow_codec_decoder_get_info(flow_c * c, void * codec_state, int64_t codec_id,
+                                 struct flow_decoder_info * info);
+
 int64_t flow_codec_select(flow_c * c, uint8_t * data, size_t data_bytes);
 
 bool flow_codec_initialize(flow_c * c, struct flow_codec_instance * item);

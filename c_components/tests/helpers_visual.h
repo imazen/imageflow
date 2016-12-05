@@ -11,8 +11,6 @@ bool diff_image_pixels(flow_c * c, struct flow_bitmap_bgra * a, struct flow_bitm
 bool load_image(flow_c * c, char * checksum, struct flow_bitmap_bgra ** ref, void * bitmap_owner,
                 const char * storage_relative_to);
 
-bool get_image_dimensions(flow_c * c, uint8_t * bytes, size_t bytes_count, int32_t * width, int32_t * height);
-
 bool visual_compare(flow_c * c, struct flow_bitmap_bgra * bitmap, const char * name, bool store_checksums,
                     size_t off_by_one_byte_differences_permitted, const char * file_, const char * func_,
                     int line_number, const char * storage_relative_to);
