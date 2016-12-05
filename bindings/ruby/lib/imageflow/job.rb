@@ -3,6 +3,7 @@ module Imageflow
     def initialize(context:)
       @c = context
       @ptr = @c.call_method(:job_create)
+      raise "OOM" if @ptr.nil? || @ptr.null?
       @keepalive = []
     end
 

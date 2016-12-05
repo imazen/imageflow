@@ -83,7 +83,6 @@ pub struct ImageflowContext {
     pub colorspace: ColorspaceInfo,
     pub object_tracking: ObjTrackingInfo,
     pub codec_set: *mut ContextCodecSet,
-    pub node_set: *mut ContextNodeSet,
 }
 
 // end reuse
@@ -443,13 +442,6 @@ pub struct ContextCodecSet {
     codecs_count: size_t,
 }
 
-#[repr(C)]
-#[derive(Clone,Debug,PartialEq)]
-pub struct ContextNodeSet {
-    // FIXME: replace with a Vec?
-    codecs: *mut c_void,
-    codecs_count: size_t,
-}
 
 #[repr(C)]
 #[derive(Clone,Debug,PartialEq)]

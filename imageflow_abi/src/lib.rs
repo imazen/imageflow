@@ -121,8 +121,10 @@ extern crate imageflow_core as c;
 extern crate alloc_system;
 extern crate libc;
 use c::ffi;
+mod context;
+
 pub use c::ffi::ImageflowJob as Job;
-pub use c::ffi::ImageflowContext as Context;
+pub use context::Context as Context;
 pub use c::ffi::ImageflowJobIo as JobIo;
 pub use c::ffi::ImageflowJsonResponse as JsonResponse;
 use std::ptr;
@@ -192,6 +194,16 @@ macro_rules! static_char {
         concat!($lit, "\0").as_ptr() as *const libc::c_char
     }
 }
+unsafe fn uw(outer: *mut Context) -> *mut c::ffi::ImageflowContext{
+    if outer.is_null(){
+        ptr::null_mut()
+    }else {
+        let mut context = Box::from_raw(outer);
+        let inner = context.unsafe_c_ctx();
+        let _ = Box::into_raw(context);
+        inner
+    }
+}
 
 
 
@@ -210,7 +222,7 @@ macro_rules! static_char {
 /// Returns a null pointer if allocation fails.
 #[no_mangle]
 pub unsafe extern "C" fn imageflow_context_create() -> *mut Context {
-    ffi::flow_context_create()
+    Context::create_boxed().map(|b| Box::into_raw(b)).unwrap_or(std::ptr::null_mut())
 }
 
 /// Begins the process of destroying the context, yet leaves error information intact
@@ -222,7 +234,7 @@ pub unsafe extern "C" fn imageflow_context_create() -> *mut Context {
 /// *Behavior is undefined if context is a null or invalid ptr.*
 #[no_mangle]
 pub unsafe extern "C" fn imageflow_context_begin_terminate(context: *mut Context) -> bool {
-    ffi::flow_context_begin_terminate(context)
+    ffi::flow_context_begin_terminate(uw(context))
 }
 
 /// Destroys the imageflow context and frees the context object.
@@ -231,7 +243,7 @@ pub unsafe extern "C" fn imageflow_context_begin_terminate(context: *mut Context
 /// Behavior is undefined if context is a null or invalid ptr; may segfault on free(NULL);
 #[no_mangle]
 pub unsafe extern "C" fn imageflow_context_destroy(context: *mut Context) {
-    ffi::flow_context_destroy(context)
+    let _ = Box::from_raw(context);
 }
 
 
@@ -255,7 +267,7 @@ pub fn exercise_create_destroy() {
 /// Behavior is undefined if `context` is a null or invalid ptr; segfault likely.
 #[no_mangle]
 pub unsafe extern "C" fn imageflow_context_has_error(context: *mut Context) -> bool {
-    ffi::flow_context_has_error(context)
+    ffi::flow_context_has_error(uw(context))
 }
 
 /// Clear the error state. This assumes that you know which API call failed and the problem has
@@ -265,7 +277,7 @@ pub unsafe extern "C" fn imageflow_context_has_error(context: *mut Context) -> b
 /// Behavior is undefined if `context` is a null or invalid ptr; segfault likely.
 #[no_mangle]
 pub unsafe extern "C" fn imageflow_context_clear_error(context: *mut Context) {
-    ffi::flow_context_clear_error(context)
+    ffi::flow_context_clear_error(uw(context))
 }
 
 /// Prints the error messages and stacktrace to the given buffer in UTF-8 form; writes a null
@@ -285,7 +297,7 @@ pub unsafe extern "C" fn imageflow_context_error_and_stacktrace(context: *mut Co
                                                                 buffer_length: libc::size_t,
                                                                 full_file_path: bool)
                                                                 -> i64 {
-    ffi::flow_context_error_and_stacktrace(context, buffer as *mut u8, buffer_length, full_file_path)
+    ffi::flow_context_error_and_stacktrace(uw(context), buffer as *mut u8, buffer_length, full_file_path)
 }
 
 /// Returns the numeric code associated with the error.
@@ -315,7 +327,7 @@ pub unsafe extern "C" fn imageflow_context_error_and_stacktrace(context: *mut Co
 /// Behavior is undefined if `context` is a null or invalid ptr; segfault likely.
 #[no_mangle]
 pub unsafe extern "C" fn imageflow_context_error_code(context: *mut Context) -> i32 {
-    ffi::flow_context_error_reason(context)
+    ffi::flow_context_error_reason(uw(context))
 }
 
 /// Prints the error to stderr and exits the process if an error has been raised on the context.
@@ -326,7 +338,7 @@ pub unsafe extern "C" fn imageflow_context_error_code(context: *mut Context) -> 
 /// THIS PRINTS DIRECTLY TO STDERR! Do not use in any kind of service! Command-line usage only!
 #[no_mangle]
 pub unsafe extern "C" fn imageflow_context_print_and_exit_if_error(context: *mut Context) -> bool {
-    ffi::flow_context_print_and_exit_if_err(context)
+    ffi::flow_context_print_and_exit_if_err(uw(context))
 }
 
 ///
@@ -363,7 +375,7 @@ pub unsafe extern "C" fn imageflow_context_raise_error(context: *mut Context,
                                                        line: i32,
                                                        function_name: *const libc::c_char)
                                                        -> bool {
-    ffi::flow_context_raise_error(context, error_code, message, filename, line, function_name)
+    ffi::flow_context_raise_error(uw(context), error_code, message, filename, line, function_name)
 }
 
 ///
@@ -399,7 +411,7 @@ pub unsafe extern "C" fn imageflow_context_add_to_callstack(context: *mut Contex
                                                             line: i32,
                                                             function_name: *const libc::c_char)
                                                             -> bool {
-    ffi::flow_context_add_to_callstack(context, filename, line, function_name)
+    ffi::flow_context_add_to_callstack(uw(context), filename, line, function_name)
 }
 
 
@@ -535,7 +547,7 @@ pub unsafe extern fn imageflow_json_response_read(context: *mut Context,
 pub unsafe extern "C" fn imageflow_json_response_destroy(context: *mut Context,
                                                          response: *mut JsonResponse)
                                                          -> bool {
-    ffi::flow_destroy(context, response as *mut libc::c_void, ptr::null(), 0)
+    ffi::flow_destroy(uw(context), response as *mut libc::c_void, ptr::null(), 0)
 }
 
 ///
@@ -639,7 +651,7 @@ unsafe fn imageflow_send_json(context: *mut Context,
     // TODO: possibly iterate access to force segfaults earlier?
 
 
-    let mut ctx = c::ContextPtr::from_ptr(context);
+    let mut ctx = c::ContextPtr::from_ptr(uw(context));
 
 
     let response;
@@ -647,7 +659,7 @@ unsafe fn imageflow_send_json(context: *mut Context,
     if job == ptr::null_mut() && io == ptr::null_mut() {
         response = ctx.message(method_str, json_bytes).unwrap(); //Unwrap for invalid context
     } else if io == ptr::null_mut() {
-        response = c::JobPtr::from_ptr(context, job).unwrap().message(method_str, json_bytes).unwrap();
+        response = c::JobPtr::from_ptr(uw(context), job).unwrap().message(method_str, json_bytes).unwrap();
     } else{
         panic!("Messaging JobIo not implemented");
     }
@@ -727,7 +739,7 @@ pub unsafe extern "C" fn imageflow_io_create_for_file(context: *mut Context,
                                                       -> *mut JobIo {
     // TODO: validate that 'owner' is capable of being an owner
 
-    ffi::flow_io_create_for_file(context, std::mem::transmute(mode), filename, context as *const libc::c_void)
+    ffi::flow_io_create_for_file(uw(context), std::mem::transmute(mode), filename, uw(context) as *const libc::c_void)
 }
 
 
@@ -748,7 +760,7 @@ pub unsafe extern "C" fn imageflow_io_create_from_buffer(context: *mut Context,
 
     let mut final_buffer = buffer;
     if lifetime == Lifetime::OutlivesFunctionCall {
-        let buf : *mut u8 = c::ffi::flow_context_calloc(context, 1, buffer_byte_count, ptr::null(), context as *const libc::c_void, ptr::null(), 0) as *mut u8 ;
+        let buf : *mut u8 = c::ffi::flow_context_calloc(uw(context), 1, buffer_byte_count, ptr::null(), uw(context) as *const libc::c_void, ptr::null(), 0) as *mut u8 ;
         if buf.is_null() {
             //TODO: raise OOM
             return ptr::null_mut();
@@ -757,7 +769,7 @@ pub unsafe extern "C" fn imageflow_io_create_from_buffer(context: *mut Context,
 
         final_buffer = buf;
     }
-    ffi::flow_io_create_from_memory(context, std::mem::transmute(IoMode::ReadSeekable), final_buffer, buffer_byte_count, context as *mut libc::c_void, ptr::null())
+    ffi::flow_io_create_from_memory(uw(context), std::mem::transmute(IoMode::ReadSeekable), final_buffer, buffer_byte_count, uw(context) as *mut libc::c_void, ptr::null())
 }
 
 
@@ -776,7 +788,7 @@ pub unsafe extern "C" fn imageflow_io_create_for_output_buffer(context: *mut Con
                                                                -> *mut JobIo {
     // The current implementation of output buffer only sheds its actual buffer with the context.
     // No need for the shell to have an earlier lifetime for mem reasons.
-    ffi::flow_io_create_for_output_buffer(context, context as *mut libc::c_void)
+    ffi::flow_io_create_for_output_buffer(uw(context), uw(context) as *mut libc::c_void)
 }
 
 
@@ -796,7 +808,7 @@ pub unsafe extern "C" fn imageflow_io_get_output_buffer(context: *mut Context,
                                                         -> bool {
 
     let mut result_len: usize = 0;
-    let b = ffi::flow_io_get_output_buffer(context, io, result_buffer, &mut result_len);
+    let b = ffi::flow_io_get_output_buffer(uw(context), io, result_buffer, &mut result_len);
         (* result_buffer_length) = result_len;
     b
 }
@@ -813,7 +825,7 @@ pub unsafe extern "C" fn imageflow_job_get_output_buffer_by_id(context: *mut Con
                                                                result_buffer: *mut *const u8,
                                                                result_buffer_length: *mut libc::size_t)
                                                                -> bool {
-    let io = ffi::flow_job_get_io(context,job, io_id);
+    let io = ffi::flow_job_get_io(uw(context),job, io_id);
     if io.is_null(){
         return false;
     }else {
@@ -828,7 +840,7 @@ pub unsafe extern "C" fn imageflow_job_get_output_buffer_by_id(context: *mut Con
 ///
 #[no_mangle]
 pub unsafe extern "C" fn imageflow_job_create(context: *mut Context) -> *mut Job {
-    ffi::flow_job_create(context)
+    ffi::flow_job_create(uw(context))
 }
 
 
@@ -840,7 +852,7 @@ pub unsafe extern "C" fn imageflow_job_get_io(context: *mut Context,
                                               job: *mut Job,
                                               placeholder_id: i32)
                                               -> *mut JobIo {
-    ffi::flow_job_get_io(context, job, placeholder_id)
+    ffi::flow_job_get_io(uw(context), job, placeholder_id)
 }
 
 ///
@@ -856,7 +868,7 @@ pub unsafe extern "C" fn imageflow_job_add_io(context: *mut Context,
                                               placeholder_id: i32,
                                               direction: Direction)
                                               -> bool {
-    ffi::flow_job_add_io(context, job, io, placeholder_id, std::mem::transmute(direction))
+    ffi::flow_job_add_io(uw(context), job, io, placeholder_id, std::mem::transmute(direction))
 }
 
 ///
@@ -864,7 +876,7 @@ pub unsafe extern "C" fn imageflow_job_add_io(context: *mut Context,
 ///
 #[no_mangle]
 pub unsafe extern "C" fn imageflow_job_destroy(context: *mut Context, job: *mut Job) -> bool {
-    ffi::flow_job_destroy(context, job)
+    ffi::flow_job_destroy(uw(context), job)
 }
 
 
@@ -882,7 +894,7 @@ pub unsafe extern "C" fn imageflow_context_memory_allocate(context: *mut Context
                                                     filename: *const libc::c_char,
                                                     line: i32) -> *mut libc::c_void {
 
-    ffi::flow_context_calloc(context, 1, bytes, ptr::null(), context as *const libc::c_void, filename, line)
+    ffi::flow_context_calloc(uw(context), 1, bytes, ptr::null(), uw(context) as *const libc::c_void, filename, line)
 }
 
 ///
@@ -898,7 +910,7 @@ pub unsafe extern "C" fn imageflow_context_memory_free(context: *mut Context,
                                                        pointer: *mut libc::c_void,
                                                        filename: *const libc::c_char,
                                                        line: i32) -> bool {
-    ffi::flow_destroy(context, pointer, filename, line)
+    ffi::flow_destroy(uw(context), pointer, filename, line)
 }
 
 #[test]

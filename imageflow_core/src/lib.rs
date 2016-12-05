@@ -119,6 +119,10 @@ mod internal_prelude {
 }
 pub mod for_other_imageflow_crates {
     pub mod preludes {
+        pub mod external_without_std {
+            pub use ::internal_prelude::external_without_std::*;
+        }
+
         pub mod default {
             pub use ::internal_prelude::external_without_std::*;
             pub use ::internal_prelude::imageflow_core_all::*;
