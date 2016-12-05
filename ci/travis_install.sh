@@ -1,6 +1,9 @@
 #!/bin/bash
 set -e #Exit on failure.
 
+STAMP="+[%H:%M:%S]"
+date "$STAMP"
+
 cd "${TRAVIS_BUILD_DIR}"
 
 if [[ "$(uname -s)" == 'Darwin' ]]; then

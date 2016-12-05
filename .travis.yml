@@ -4,9 +4,11 @@ services:
 - docker
 cache:
   ccache: true
-  cargo: true
   directories:
   - "$HOME/.conan/data"
+  - "$HOME/.cargo"
+  - "$TRAVIS_BUILD_DIR/target/release"
+  - "$TRAVIS_BUILD_DIR/target/debug"
 matrix:
   fast_finish: true
   include:
