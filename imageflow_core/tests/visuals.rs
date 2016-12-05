@@ -7,7 +7,6 @@ extern crate serde_json;
 
 use std::ffi::CString;
 use imageflow_core::{JobPtr, JsonResponse, SelfDisposingContextPtr};
-use imageflow_core::Context;
 
 fn default_build_config(debug: bool) -> s::Build001Config {
     s::Build001Config{graph_recording: match debug{ true => Some(s::Build001GraphRecording::debug_defaults()), false => None} ,
@@ -52,8 +51,8 @@ fn smoke_test(input: Option<s::IoEnum>, output: Option<s::IoEnum>,  debug: bool,
         io: io_list,
         framewise: s::Framewise::Steps(steps)
     };
-    let mut context = Context::create().unwrap();
-    context.message("v0.1/build", &serde_json::to_vec(&build).unwrap()).unwrap();
+    let mut context = SelfDisposingContextPtr::create().unwrap();
+    context.inner_mut().message("v0.1/build", &serde_json::to_vec(&build).unwrap()).unwrap();
 }
 
 fn compare(input: Option<s::IoEnum>, allowed_off_by_one_bytes: usize, checksum_name: String, store_if_missing: bool, debug: bool, mut steps: Vec<s::Node>) -> bool {
@@ -94,9 +93,9 @@ fn compare(input: Option<s::IoEnum>, allowed_off_by_one_bytes: usize, checksum_n
     }
 
 
-    let mut context = Context::create().unwrap();
+    let mut context = SelfDisposingContextPtr::create().unwrap();
 
-    context.message("v0.1/build", &serde_json::to_vec(&build).unwrap()).unwrap();
+    context.inner_mut().message("v0.1/build", &serde_json::to_vec(&build).unwrap()).unwrap();
 
     unsafe {
         if debug {
@@ -105,13 +104,13 @@ fn compare(input: Option<s::IoEnum>, allowed_off_by_one_bytes: usize, checksum_n
     }
 
      unsafe {
-         let ctx_cell = context.unsafe_borrow_mut_context_pointer();
+         let ctx_cell = context.inner_mut();
 
 
          let matched: bool;
          let c_checksum_name = CString::new(checksum_name).unwrap();
         {
-            matched = imageflow_core::ffi::flow_bitmap_bgra_test_compare_to_record(ctx_cell.ptr.unwrap(), *ptr_to_ptr, c_checksum_name.as_ptr(), store_if_missing, allowed_off_by_one_bytes, static_char!(file!()), 0, static_char!(file!()));
+            matched = imageflow_core::ffi::flow_bitmap_bgra_test_compare_to_record(ctx_cell.as_ptr().unwrap(), *ptr_to_ptr, c_checksum_name.as_ptr(), store_if_missing, allowed_off_by_one_bytes, static_char!(file!()), 0, static_char!(file!()));
         }
         ctx_cell.assert_ok(None);
 
@@ -296,8 +295,8 @@ fn get_result_dimensions(steps: Vec<s::Node>, io: Vec<s::IoObject>, debug: bool)
         io: io,
         framewise: s::Framewise::Steps(steps)
     };
-    let mut context = Context::create().unwrap();
-    context.message("v0.1/build", &serde_json::to_vec(&build).unwrap()).unwrap();
+    let mut context = SelfDisposingContextPtr::create().unwrap();
+    context.inner_mut().message("v0.1/build", &serde_json::to_vec(&build).unwrap()).unwrap();
     unsafe { ((*dest_bitmap).w, (*dest_bitmap).h) }
 }
 

@@ -10,7 +10,7 @@ pub struct ContextPtr {
     // (i.e, unit test helpers are ported, or the helper becomes cfgtest on the struct itself)
     pub ptr: Option<*mut ::ffi::ImageflowContext>,
 }
-pub struct Context {
+struct Context {
     p: cell::RefCell<ContextPtr>,
 }
 
@@ -24,6 +24,10 @@ impl SelfDisposingContextPtr {
     }
     pub fn inner(&self) -> &ContextPtr {
         &self.ptr
+    }
+
+    pub fn inner_mut(&mut self) -> &mut ContextPtr {
+        &mut self.ptr
     }
 
     pub fn create_job(&self) -> Result<JobPtr> {

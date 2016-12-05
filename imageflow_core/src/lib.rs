@@ -38,7 +38,7 @@ mod context;
 mod context_methods;
 mod job_methods;
 
-pub use context::{Context, ContextPtr, Job, JobPtr, JobIo, JobIoPtr, SelfDisposingContextPtr};
+pub use context::{ContextPtr, Job, JobPtr, JobIo, JobIoPtr, SelfDisposingContextPtr};
 pub use ::ffi::{IoDirection, IoMode};
 pub use ::flow::definitions::Graph;
 pub use json::JsonResponse;

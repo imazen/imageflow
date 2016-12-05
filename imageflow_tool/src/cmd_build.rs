@@ -472,7 +472,7 @@ impl CmdBuild {
     }
 
     fn build<'a, 'b>(data: &'a s::Build001) -> Result<fc::JsonResponse> {
-        let mut context = fc::Context::create()?;
-        Ok(context.message("v0.1/build", &serde_json::to_vec(data).unwrap())?)
+        let mut context = fc::SelfDisposingContextPtr::create()?;
+        Ok(context.inner_mut().message("v0.1/build", &serde_json::to_vec(data).unwrap())?)
     }
 }
