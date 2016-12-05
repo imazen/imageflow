@@ -37,7 +37,9 @@ pub mod flow;
 mod pointer_wrappers;
 mod context_methods;
 mod job_methods;
+mod context;
 
+pub use context::{Context};
 pub use pointer_wrappers::{ContextPtr, JobPtr, SelfDisposingContextPtr};
 pub use ::ffi::{IoDirection, IoMode};
 pub use ::flow::definitions::Graph;

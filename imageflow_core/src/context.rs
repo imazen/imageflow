@@ -1,7 +1,6 @@
-extern crate imageflow_core as fc;
 use ::std;
-use self::fc::for_other_imageflow_crates::preludes::external_without_std::*;
-use self::fc::ffi as ffi;
+use ::for_other_imageflow_crates::preludes::external_without_std::*;
+use ::ffi;
 
 
 pub struct Job{
