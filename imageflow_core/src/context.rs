@@ -48,21 +48,6 @@ pub struct JobPtr {
     c: *mut ::ffi::ImageflowContext,
 }
 
-
-pub struct Job {
-    pub p: cell::RefCell<JobPtr>,
-}
-pub struct JobIoPtr {
-    pub ptr: Option<*mut ::ffi::ImageflowJobIo>,
-}
-
-pub struct JobIo<'a, T: 'a> {
-    pub p: cell::RefCell<JobIoPtr>,
-    pub _marker: marker::PhantomData<&'a T>,
-}
-
-
-
 impl JobPtr {
     pub fn context_ptr(&self) -> *mut ::ffi::ImageflowContext {
         self.c

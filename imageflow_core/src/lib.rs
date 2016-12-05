@@ -38,7 +38,7 @@ mod context;
 mod context_methods;
 mod job_methods;
 
-pub use context::{ContextPtr, Job, JobPtr, JobIo, JobIoPtr, SelfDisposingContextPtr};
+pub use context::{ContextPtr, JobPtr, SelfDisposingContextPtr};
 pub use ::ffi::{IoDirection, IoMode};
 pub use ::flow::definitions::Graph;
 pub use json::JsonResponse;
@@ -97,7 +97,7 @@ mod internal_prelude {
         pub extern crate imageflow_types as s;
     }
     pub mod imageflow_core_all {
-        pub use ::{Graph, ContextPtr, JobPtr, JobIoPtr, SelfDisposingContextPtr, JsonResponse,
+        pub use ::{Graph, ContextPtr, JobPtr, SelfDisposingContextPtr, JsonResponse,
                    MethodRouter};
         pub use ::{FlowError, FlowErr, Result, flow, clients};
         pub use ::clients::fluent;
@@ -111,7 +111,7 @@ mod internal_prelude {
         pub use ::internal_prelude::external::*;
     }
     pub mod default {
-        pub use ::{Graph, ContextPtr, JobPtr, JobIoPtr, SelfDisposingContextPtr, JsonResponse,
+        pub use ::{Graph, ContextPtr, JobPtr, SelfDisposingContextPtr, JsonResponse,
                    MethodRouter};
         pub use ::internal_prelude::works_everywhere::*;
     }
