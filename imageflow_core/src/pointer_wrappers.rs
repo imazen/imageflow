@@ -56,18 +56,6 @@ impl JobPtr {
         self.ptr
     }
 
-    pub fn from_ptr(context: *mut ::ffi::ImageflowContext,
-                    job: *mut ::ffi::ImageflowJob)
-                    -> Result<JobPtr> {
-        if context.is_null() || job.is_null() {
-            Err(FlowError::NullArgument)
-        } else {
-            Ok(JobPtr {
-                ptr: job,
-                c: context,
-            })
-        }
-    }
     pub unsafe fn create(context: *mut ::ffi::ImageflowContext) -> Result<JobPtr> {
         if context.is_null() {
             return Err(FlowError::ContextInvalid);
@@ -83,7 +71,7 @@ impl JobPtr {
             })
         }
     }
-    pub unsafe fn add_io_ptr(&self,
+    pub unsafe fn add_io_ptr(&mut self,
                              io: *mut ::ffi::ImageflowJobIo,
                              io_id: i32,
                              direction: IoDirection)
@@ -97,7 +85,7 @@ impl JobPtr {
 
     }
 
-    pub fn add_input_bytes<'a>(&'a self, io_id: i32, bytes: &'a [u8]) -> Result<()> {
+    pub fn add_input_bytes<'a>(&'a mut self, io_id: i32, bytes: &'a [u8]) -> Result<()> {
         unsafe {
             let p = ::ffi::flow_io_create_from_memory(self.context_ptr(),
                                                       ::ffi::IoMode::ReadSeekable,
@@ -113,7 +101,7 @@ impl JobPtr {
         }
     }
 
-    pub fn add_output_buffer(&self, io_id: i32) -> Result<()> {
+    pub fn add_output_buffer(&mut self, io_id: i32) -> Result<()> {
         unsafe {
             let p =
                 ::ffi::flow_io_create_for_output_buffer(self.context_ptr(),
@@ -137,7 +125,7 @@ impl JobPtr {
     //                                                             false,
     //                                                             false) };
     //    }
-    pub fn configure_graph_recording(&self, recording: s::Build001GraphRecording) {
+    pub fn configure_graph_recording(&mut self, recording: s::Build001GraphRecording) {
         let r = if std::env::var("CI").and_then(|s| Ok(s.to_uppercase())) ==
                    Ok("TRUE".to_owned()) {
             s::Build001GraphRecording::off()
@@ -161,7 +149,7 @@ impl JobPtr {
     }
 
 
-    pub fn get_image_info(&self, io_id: i32) -> Result<s::ImageInfo> {
+    pub fn get_image_info(&mut self, io_id: i32) -> Result<s::ImageInfo> {
         unsafe {
             let mut info: ::ffi::DecoderInfo = ::ffi::DecoderInfo { ..Default::default() };
 
@@ -190,7 +178,7 @@ impl JobPtr {
 
     }
 
-    pub fn tell_decoder(&self, io_id: i32, tell: s::DecoderCommand) -> Result<()> {
+    pub fn tell_decoder(&mut self, io_id: i32, tell: s::DecoderCommand) -> Result<()> {
         unsafe {
             match tell {
                 s::DecoderCommand::JpegDownscaleHints(hints) => {
@@ -284,7 +272,7 @@ impl JobPtr {
 }
 
 impl ContextPtr {
-    pub fn create_abi_json_response(&self,
+    pub fn create_abi_json_response(&mut self,
                                     json_bytes: std::borrow::Cow<[u8]>,
                                     status_code: i64)
                                     -> *const ImageflowJsonResponse {
