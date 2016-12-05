@@ -80,53 +80,6 @@ bool flow_codec_initialize(flow_c * c, struct flow_codec_instance * item)
     return def->initialize(c, item);
 }
 
-bool flow_job_decoder_switch_frame(flow_c * c, struct flow_job * job, int32_t by_placeholder_id, int64_t frame_index)
-{
-    struct flow_codec_instance * current = flow_job_get_codec_instance(c, job, by_placeholder_id);
-    if (current == NULL) {
-        FLOW_error(c, flow_status_Invalid_argument); // Bad placeholder id
-        return false;
-    }
-    if (current->codec_state == NULL) {
-        FLOW_error(c, flow_status_Invalid_internal_state); // Codecs should be initialized by this point
-        return false;
-    }
-    struct flow_codec_definition * def = flow_codec_get_definition(c, current->codec_id);
-    if (def == NULL) {
-        FLOW_error_return(c);
-    }
-    if (def->switch_frame == NULL) {
-        FLOW_error_msg(c, flow_status_Not_implemented, ".switch_frame is not implemented for codec %s", def->name);
-        return false;
-    }
-    if (!def->switch_frame(c, current->codec_state, frame_index)) {
-        FLOW_error_return(c);
-    }
-    return true;
-}
-
-bool flow_codec_decoder_get_frame_info(flow_c * c, void * codec_state, int64_t type,
-                                       struct flow_decoder_frame_info * decoder_frame_info_ref)
-{
-    struct flow_codec_definition * def = flow_codec_get_definition(c, type);
-    if (def == NULL) {
-        FLOW_error_return(c);
-    }
-    if (def->get_frame_info == NULL) {
-        FLOW_error_msg(c, flow_status_Not_implemented, ".get_frame_info is not implemented for codec %s", def->name);
-        return false;
-    }
-    if (codec_state == NULL) {
-        FLOW_error_msg(c, flow_status_Invalid_internal_state, "Codec has not been initialized.");
-        return false;
-    }
-
-    if (!def->get_frame_info(c, codec_state, decoder_frame_info_ref)) {
-        FLOW_error_return(c);
-    }
-    return true;
-}
-
 bool flow_codec_decoder_set_downscale_hints(flow_c * c, struct flow_codec_instance * codec,
                                             struct flow_decoder_downscale_hints * hints, bool crash_if_not_implemented)
 {
@@ -179,21 +132,6 @@ bool flow_job_decoder_set_downscale_hints_by_placeholder_id(flow_c * c, struct f
     return true;
 }
 
-bool flow_codec_decoder_read_frame(flow_c * c, void * codec_state, int64_t type, struct flow_bitmap_bgra * canvas)
-{
-    struct flow_codec_definition * def = flow_codec_get_definition(c, type);
-    if (def == NULL) {
-        FLOW_error_return(c);
-    }
-    if (def->read_frame == NULL) {
-        FLOW_error_msg(c, flow_status_Not_implemented, ".read_frame is not implemented for codec %s", def->name);
-        return false;
-    }
-    if (!def->read_frame(c, codec_state, canvas)) {
-        FLOW_error_return(c);
-    }
-    return true;
-}
 
 static bool flow_codec_decoder_get_info(flow_c * c, void * codec_state, int64_t type,
                                         struct flow_decoder_info * decoder_info_ref)
@@ -253,44 +191,6 @@ bool flow_job_get_decoder_info(flow_c * c, struct flow_job * job, int32_t by_pla
     if (info->preferred_extension == NULL)
         info->preferred_extension = def->preferred_extension;
 
-    return true;
-}
-
-bool flow_job_initialize_encoder(flow_c * c, struct flow_job * job, int32_t by_placeholder_id, int64_t codec_id)
-{
-    struct flow_codec_instance * current = flow_job_get_codec_instance(c, job, by_placeholder_id);
-    if (current == NULL) {
-        FLOW_error(c, flow_status_Invalid_argument); // Bad placeholder id
-        return false;
-    }
-    if (current->direction != FLOW_OUTPUT) {
-        FLOW_error(c, flow_status_Invalid_argument); // Bad placeholder id
-        return false;
-    }
-    current->codec_id = codec_id;
-
-    if (!flow_codec_initialize(c, current)) {
-        FLOW_add_to_callstack(c);
-        return false;
-    }
-    return true;
-}
-
-bool flow_job_set_default_encoder(flow_c * c, struct flow_job * job, int32_t by_placeholder_id,
-                                  int64_t default_encoder_id)
-{
-    struct flow_codec_instance * current = flow_job_get_codec_instance(c, job, by_placeholder_id);
-    if (current == NULL) {
-        FLOW_error(c, flow_status_Invalid_argument); // Bad placeholder id
-        return false;
-    }
-    if (current->direction != FLOW_OUTPUT) {
-        FLOW_error(c, flow_status_Invalid_argument); // Bad placeholder id
-        return false;
-    }
-    if (current->codec_state == NULL && current->codec_id == 0) {
-        current->codec_id = default_encoder_id;
-    }
     return true;
 }
 
