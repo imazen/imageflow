@@ -588,210 +588,226 @@ pub struct RenderToCanvas1d {
 //    struct flow_scanlines_filter * filter_list;
 // };
 
+mod must_replace{
+    use super::*;
+    use ::libc;
+    extern "C" {
+        pub fn flow_context_create() -> *mut ImageflowContext;
+        pub fn flow_context_begin_terminate(context: *mut ImageflowContext) -> bool;
+        pub fn flow_context_destroy(context: *mut ImageflowContext);
+        pub fn flow_destroy(context: *mut ImageflowContext,
+                            pointer: *const libc::c_void,
+                            file: *const libc::c_char,
+                            line: i32)
+                            -> bool;
 
-// TODO: mark these as unsafe
-extern "C" {
-    pub fn flow_context_create() -> *mut ImageflowContext;
-    pub fn flow_context_begin_terminate(context: *mut ImageflowContext) -> bool;
-    pub fn flow_context_destroy(context: *mut ImageflowContext);
-    pub fn flow_context_has_error(context: *mut ImageflowContext) -> bool;
-    pub fn flow_context_clear_error(context: *mut ImageflowContext);
-    pub fn flow_context_error_and_stacktrace(context: *mut ImageflowContext,
-                                             buffer: *mut u8,
-                                             buffer_length: libc::size_t,
-                                             full_file_path: bool)
-                                             -> i64;
-    pub fn flow_context_print_and_exit_if_err(context: *mut ImageflowContext) -> bool;
+        pub fn flow_job_destroy(context: *mut ImageflowContext, job: *mut ImageflowJob) -> bool;
+        pub fn flow_job_create(context: *mut ImageflowContext) -> *mut ImageflowJob;
+        pub fn flow_job_configure_recording(context: *mut ImageflowContext,
+                                            job: *mut ImageflowJob,
+                                            record_graph_versions: bool,
+                                            record_frame_images: bool,
+                                            render_last_graph: bool,
+                                            render_graph_versions: bool,
+                                            render_animated_graph: bool)
+                                            -> bool;
 
-    pub fn flow_context_error_reason(context: *mut ImageflowContext) -> i32;
+        pub fn flow_job_get_io(context: *mut ImageflowContext,
+                               job: *mut ImageflowJob,
+                               placeholder_id: i32)
+                               -> *mut ImageflowJobIo;
 
-    pub fn flow_context_set_error_get_message_buffer(context: *mut ImageflowContext,
-                                                     code: i32, // FlowStatusCode
-                                                     file: *const libc::c_char,
-                                                     line: i32,
-                                                     function_name: *const libc::c_char)
-                                                     -> *const libc::c_char;
+        pub fn flow_job_add_io(context: *mut ImageflowContext,
+                               job: *mut ImageflowJob,
+                               io: *mut ImageflowJobIo,
+                               placeholder_id: i32,
+                               direction: IoDirection)
+                               -> bool;
 
-    pub fn flow_context_raise_error(context: *mut ImageflowContext,
-                                    error_code: i32,
-                                    message: *const libc::c_char,
-                                    file: *const libc::c_char,
-                                    line: i32,
-                                    function_name: *const libc::c_char)
-                                    -> bool;
+        pub fn flow_job_get_codec_instance(c: *mut ImageflowContext,
+                                           job: *mut ImageflowJob,
+                                           by_placeholder_id: i32)
+                                           -> *mut CodecInstance;
 
-
-    pub fn flow_context_add_to_callstack(context: *mut ImageflowContext,
-                                         file: *const libc::c_char,
-                                         line: i32,
-                                         function_name: *const libc::c_char)
+        pub fn flow_job_get_decoder_info(c: *mut ImageflowContext,
+                                         job: *mut ImageflowJob,
+                                         by_placeholder_id: i32,
+                                         info: *mut DecoderInfo)
                                          -> bool;
 
-
-    pub fn flow_codecs_jpg_decoder_get_exif(context: *mut ImageflowContext,
-                                            codec_instance: *mut CodecInstance)
-                                            -> i32;
-
-    pub fn flow_context_calloc(context: *mut ImageflowContext,
-                               instance_count: usize,
-                               instance_size: usize,
-                               destructor: *const libc::c_void,
-                               owner: *const libc::c_void,
-                               file: *const libc::c_char,
-                               line: i32)
-                               -> *mut libc::c_void;
-
-    pub fn flow_destroy(context: *mut ImageflowContext,
-                        pointer: *const libc::c_void,
-                        file: *const libc::c_char,
-                        line: i32)
-                        -> bool;
-
-    pub fn flow_job_destroy(context: *mut ImageflowContext, job: *mut ImageflowJob) -> bool;
+        pub fn flow_job_decoder_set_downscale_hints_by_placeholder_id(c: *mut ImageflowContext,
+                                                                      job: *mut ImageflowJob, placeholder_id: i32,
+                                                                      if_wider_than: i64, or_taller_than: i64,
+                                                                      downscaled_min_width: i64, downscaled_min_height: i64, scale_luma_spatially: bool,
+                                                                      gamma_correct_for_srgb_during_spatial_luma_scaling: bool) -> bool;
 
 
+    }
+
+}
+
+mod long_term{
+    use super::*;
+    use ::libc;
+    extern "C" {
+        pub fn flow_bitmap_bgra_flip_vertical(c: *mut ImageflowContext, bitmap: *mut BitmapBgra);
+        pub fn flow_bitmap_bgra_flip_horizontal(c: *mut ImageflowContext, bitmap: *mut BitmapBgra);
+
+        pub fn flow_bitmap_bgra_create(c: *mut ImageflowContext,
+                                       sx: i32,
+                                       sy: i32,
+                                       zeroed: bool,
+                                       format: PixelFormat)
+                                       -> *mut BitmapBgra;
 
 
-    pub fn flow_job_create(context: *mut ImageflowContext) -> *mut ImageflowJob;
+        pub fn flow_node_execute_scale2d_render1d(c: *mut ImageflowContext,
+                                                  input: *mut BitmapBgra,
+                                                  canvas: *mut BitmapBgra,
+                                                  info: *const Scale2dRenderToCanvas1d)
+                                                  -> bool;
+        pub fn flow_node_execute_render_to_canvas_1d(c: *mut ImageflowContext,
+                                                     input: *mut BitmapBgra,
+                                                     canvas: *mut BitmapBgra,
+                                                     info: *const RenderToCanvas1d)
+                                                     -> bool;
+
+        pub fn flow_bitmap_bgra_fill_rect(c: *mut ImageflowContext,
+                                          input: *mut BitmapBgra,
+                                          x1: u32,
+                                          y1: u32,
+                                          x2: u32,
+                                          y2: u32,
+                                          color_srgb_argb: u32)
+                                          -> bool;
+    }
+}
+
+mod mid_term{
+    use super::*;
+    use ::libc;
+    extern "C" {
+        pub fn flow_context_set_floatspace(c: *mut ImageflowContext,
+                                           space: Floatspace,
+                                           a: f32,
+                                           b: f32,
+                                           c: f32);
+
+        pub fn flow_bitmap_bgra_test_compare_to_record(c: *mut ImageflowContext,
+                                                       bitmap: *mut BitmapBgra,
+                                                       storage_name: *const libc::c_char,
+                                                       store_if_missing: bool,
+                                                       off_by_one_byte_differences_permitted: usize,
+                                                       caller_filename: *const libc::c_char,
+                                                       caller_linenumber: i32,
+                                                       storage_relative_to: *const libc::c_char)
+                                                       -> bool;
 
 
-    pub fn flow_job_configure_recording(context: *mut ImageflowContext,
-                                        job: *mut ImageflowJob,
-                                        record_graph_versions: bool,
-                                        record_frame_images: bool,
-                                        render_last_graph: bool,
-                                        render_graph_versions: bool,
-                                        render_animated_graph: bool)
+
+
+        pub fn flow_bitmap_bgra_save_png(c: *mut ImageflowContext,
+                                         input: *mut BitmapBgra,
+                                         path: *const libc::c_char)
+                                         -> bool;
+
+        pub fn flow_codecs_jpg_decoder_get_exif(context: *mut ImageflowContext,
+                                                codec_instance: *mut CodecInstance)
+                                                -> i32;
+
+        pub fn flow_context_has_error(context: *mut ImageflowContext) -> bool;
+        pub fn flow_context_clear_error(context: *mut ImageflowContext);
+        pub fn flow_context_error_and_stacktrace(context: *mut ImageflowContext,
+                                                 buffer: *mut u8,
+                                                 buffer_length: libc::size_t,
+                                                 full_file_path: bool)
+                                                 -> i64;
+        pub fn flow_context_print_and_exit_if_err(context: *mut ImageflowContext) -> bool;
+
+        pub fn flow_context_error_reason(context: *mut ImageflowContext) -> i32;
+
+        pub fn flow_context_set_error_get_message_buffer(context: *mut ImageflowContext,
+                                                         code: i32, // FlowStatusCode
+                                                         file: *const libc::c_char,
+                                                         line: i32,
+                                                         function_name: *const libc::c_char)
+                                                         -> *const libc::c_char;
+
+        pub fn flow_context_raise_error(context: *mut ImageflowContext,
+                                        error_code: i32,
+                                        message: *const libc::c_char,
+                                        file: *const libc::c_char,
+                                        line: i32,
+                                        function_name: *const libc::c_char)
                                         -> bool;
 
 
+        pub fn flow_context_add_to_callstack(context: *mut ImageflowContext,
+                                             file: *const libc::c_char,
+                                             line: i32,
+                                             function_name: *const libc::c_char)
+                                             -> bool;
 
 
 
-    pub fn flow_io_create_for_file(context: *mut ImageflowContext,
-                                   mode: IoMode,
-                                   filename: *const libc::c_char,
-                                   owner: *const libc::c_void)
-                                   -> *mut ImageflowJobIo;
 
-    pub fn flow_io_create_from_memory(context: *mut ImageflowContext,
-                                      mode: IoMode,
-                                      memory: *const u8,
-                                      length: libc::size_t,
-                                      owner: *const libc::c_void,
-                                      destructor_function: *const libc::c_void)
-                                      -> *mut ImageflowJobIo;
-
-    pub fn flow_io_create_for_output_buffer(context: *mut ImageflowContext,
-                                            owner: *const libc::c_void)
-                                            -> *mut ImageflowJobIo;
+        pub fn flow_context_calloc(context: *mut ImageflowContext,
+                                   instance_count: usize,
+                                   instance_size: usize,
+                                   destructor: *const libc::c_void,
+                                   owner: *const libc::c_void,
+                                   file: *const libc::c_char,
+                                   line: i32)
+                                   -> *mut libc::c_void;
 
 
-    // Returns false if the flow_io struct is disposed or not an output buffer type (or for any other error)
-    //
-    pub fn flow_io_get_output_buffer(context: *mut ImageflowContext,
-                                     io: *mut ImageflowJobIo,
-                                     result_buffer: *mut *const u8,
-                                     result_buffer_length: *mut libc::size_t)
-                                     -> bool;
+        pub fn flow_io_create_for_file(context: *mut ImageflowContext,
+                                       mode: IoMode,
+                                       filename: *const libc::c_char,
+                                       owner: *const libc::c_void)
+                                       -> *mut ImageflowJobIo;
 
-    pub fn flow_job_get_io(context: *mut ImageflowContext,
-                           job: *mut ImageflowJob,
-                           placeholder_id: i32)
-                           -> *mut ImageflowJobIo;
+        pub fn flow_io_create_from_memory(context: *mut ImageflowContext,
+                                          mode: IoMode,
+                                          memory: *const u8,
+                                          length: libc::size_t,
+                                          owner: *const libc::c_void,
+                                          destructor_function: *const libc::c_void)
+                                          -> *mut ImageflowJobIo;
 
-
-
-    pub fn flow_job_add_io(context: *mut ImageflowContext,
-                           job: *mut ImageflowJob,
-                           io: *mut ImageflowJobIo,
-                           placeholder_id: i32,
-                           direction: IoDirection)
-                           -> bool;
-
-    pub fn flow_job_get_decoder_info(c: *mut ImageflowContext,
-                                     job: *mut ImageflowJob,
-                                     by_placeholder_id: i32,
-                                     info: *mut DecoderInfo)
-                                     -> bool;
+        pub fn flow_io_create_for_output_buffer(context: *mut ImageflowContext,
+                                                owner: *const libc::c_void)
+                                                -> *mut ImageflowJobIo;
 
 
-    pub fn flow_codec_initialize(c: *mut ImageflowContext, instance: *mut CodecInstance) -> bool;
-
-    pub fn flow_codec_get_definition(c: *mut ImageflowContext,
-                                     codec_id: i64)
-                                     -> *mut CodecDefinition;
-
-    pub fn flow_codec_execute_read_frame(c: *mut ImageflowContext,
-                                         context: *mut CodecInstance)
-                                         -> *mut BitmapBgra;
+        // Returns false if the flow_io struct is disposed or not an output buffer type (or for any other error)
+        //
+        pub fn flow_io_get_output_buffer(context: *mut ImageflowContext,
+                                         io: *mut ImageflowJobIo,
+                                         result_buffer: *mut *const u8,
+                                         result_buffer_length: *mut libc::size_t)
+                                         -> bool;
 
 
-    pub fn flow_job_decoder_set_downscale_hints_by_placeholder_id(c: *mut ImageflowContext,
-                                                                  job: *mut ImageflowJob, placeholder_id: i32,
-                                                                  if_wider_than: i64, or_taller_than: i64,
-                                                                  downscaled_min_width: i64, downscaled_min_height: i64, scale_luma_spatially: bool,
-                                                                  gamma_correct_for_srgb_during_spatial_luma_scaling: bool) -> bool;
+
+        pub fn flow_codec_initialize(c: *mut ImageflowContext, instance: *mut CodecInstance) -> bool;
+
+        pub fn flow_codec_get_definition(c: *mut ImageflowContext,
+                                         codec_id: i64)
+                                         -> *mut CodecDefinition;
+
+        pub fn flow_codec_execute_read_frame(c: *mut ImageflowContext,
+                                             context: *mut CodecInstance)
+                                             -> *mut BitmapBgra;
 
 
-    pub fn flow_context_set_floatspace(c: *mut ImageflowContext,
-                                       space: Floatspace,
-                                       a: f32,
-                                       b: f32,
-                                       c: f32);
-
-    pub fn flow_bitmap_bgra_test_compare_to_record(c: *mut ImageflowContext,
-                                                   bitmap: *mut BitmapBgra,
-                                                   storage_name: *const libc::c_char,
-                                                   store_if_missing: bool,
-                                                   off_by_one_byte_differences_permitted: usize,
-                                                   caller_filename: *const libc::c_char,
-                                                   caller_linenumber: i32,
-                                                   storage_relative_to: *const libc::c_char)
-                                                   -> bool;
-
-
-    pub fn flow_bitmap_bgra_flip_vertical(c: *mut ImageflowContext, bitmap: *mut BitmapBgra);
-    pub fn flow_bitmap_bgra_flip_horizontal(c: *mut ImageflowContext, bitmap: *mut BitmapBgra);
-
-    pub fn flow_bitmap_bgra_create(c: *mut ImageflowContext,
-                                   sx: i32,
-                                   sy: i32,
-                                   zeroed: bool,
-                                   format: PixelFormat)
-                                   -> *mut BitmapBgra;
-
-
-    pub fn flow_node_execute_scale2d_render1d(c: *mut ImageflowContext,
-                                              input: *mut BitmapBgra,
-                                              canvas: *mut BitmapBgra,
-                                              info: *const Scale2dRenderToCanvas1d)
-                                              -> bool;
-    pub fn flow_node_execute_render_to_canvas_1d(c: *mut ImageflowContext,
-                                                 input: *mut BitmapBgra,
-                                                 canvas: *mut BitmapBgra,
-                                                 info: *const RenderToCanvas1d)
-                                                 -> bool;
-
-    pub fn flow_bitmap_bgra_fill_rect(c: *mut ImageflowContext,
-                                      input: *mut BitmapBgra,
-                                      x1: u32,
-                                      y1: u32,
-                                      x2: u32,
-                                      y2: u32,
-                                      color_srgb_argb: u32)
-                                      -> bool;
-
-    pub fn flow_job_get_codec_instance(c: *mut ImageflowContext,
-                                       job: *mut ImageflowJob,
-                                       by_placeholder_id: i32)
-                                       -> *mut CodecInstance;
-
-    pub fn flow_bitmap_bgra_save_png(c: *mut ImageflowContext,
-                                     input: *mut BitmapBgra,
-                                     path: *const libc::c_char)
-                                     -> bool;
+    }
 }
+
+pub use self::must_replace::*;
+pub use self::long_term::*;
+pub use self::mid_term::*;
+
 
 
 // https://github.com/rust-lang/rust/issues/17417

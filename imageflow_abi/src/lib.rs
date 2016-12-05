@@ -109,9 +109,11 @@
 //! use the accessor functions provided.
 //!
 //!
+//! ## Failure behavior
 //!
-//!
-//!
+//! If you provide a null pointer for `imageflow_context`, then the process *should* terminate.
+//! This "fail fast" behavior offers the best opportunity for a useful stacktrace, and it's not a
+//! recoverable error.
 //!
 //!
 //!
@@ -128,9 +130,7 @@ pub use context::Context as Context;
 pub use c::ffi::ImageflowJobIo as JobIo;
 pub use c::ffi::ImageflowJsonResponse as JsonResponse;
 use std::ptr;
-
-#[cfg(test)]
-#[allow(unused_imports)]
+use std::io::Write;
 use std::ffi::CStr;
 
 #[cfg(test)]
@@ -231,7 +231,14 @@ pub unsafe extern "C" fn imageflow_context_create() -> *mut Context {
 /// *Behavior is undefined if context is a null or invalid ptr.*
 #[no_mangle]
 pub unsafe extern "C" fn imageflow_context_begin_terminate(context: *mut Context) -> bool {
-    ffi::flow_context_begin_terminate(uw(context))
+    if context.is_null() {
+        //Is this the best solution? Failing early is best for detecting bugs... Or we could just let null access do its thing.
+        //but it may wait until farther up the call stack to actually try to dereference data... :(
+        let _ = std::io::stderr().write_all(b"A null pointer was provided to imageflow_context_begin_terminate. Terminating process.\n");
+        std::process::exit(70);
+    }else{
+        (&mut *context).begin_terminate()
+    }
 }
 
 /// Destroys the imageflow context and frees the context object.
@@ -264,7 +271,7 @@ pub fn exercise_create_destroy() {
 /// Behavior is undefined if `context` is a null or invalid ptr; segfault likely.
 #[no_mangle]
 pub unsafe extern "C" fn imageflow_context_has_error(context: *mut Context) -> bool {
-    ffi::flow_context_has_error(uw(context))
+    (&*context).error().has_error()
 }
 
 /// Clear the error state. This assumes that you know which API call failed and the problem has
@@ -274,7 +281,7 @@ pub unsafe extern "C" fn imageflow_context_has_error(context: *mut Context) -> b
 /// Behavior is undefined if `context` is a null or invalid ptr; segfault likely.
 #[no_mangle]
 pub unsafe extern "C" fn imageflow_context_clear_error(context: *mut Context) {
-    ffi::flow_context_clear_error(uw(context))
+    (&mut *context).error_mut().clear_error()
 }
 
 /// Prints the error messages and stacktrace to the given buffer in UTF-8 form; writes a null
@@ -324,7 +331,7 @@ pub unsafe extern "C" fn imageflow_context_error_and_stacktrace(context: *mut Co
 /// Behavior is undefined if `context` is a null or invalid ptr; segfault likely.
 #[no_mangle]
 pub unsafe extern "C" fn imageflow_context_error_code(context: *mut Context) -> i32 {
-    ffi::flow_context_error_reason(uw(context))
+    (&mut *context).error_mut().error_code()
 }
 
 /// Prints the error to stderr and exits the process if an error has been raised on the context.
@@ -335,7 +342,7 @@ pub unsafe extern "C" fn imageflow_context_error_code(context: *mut Context) -> 
 /// THIS PRINTS DIRECTLY TO STDERR! Do not use in any kind of service! Command-line usage only!
 #[no_mangle]
 pub unsafe extern "C" fn imageflow_context_print_and_exit_if_error(context: *mut Context) -> bool {
-    ffi::flow_context_print_and_exit_if_err(uw(context))
+    (&mut *context).error_mut().abort_and_print_on_error()
 }
 
 ///
@@ -372,7 +379,14 @@ pub unsafe extern "C" fn imageflow_context_raise_error(context: *mut Context,
                                                        line: i32,
                                                        function_name: *const libc::c_char)
                                                        -> bool {
-    ffi::flow_context_raise_error(uw(context), error_code, message, filename, line, function_name)
+
+    let message_cstr = if message.is_null() { None } else { Some(CStr::from_ptr(message))};
+    let filename_cstr = if filename.is_null() { None } else { Some(CStr::from_ptr(filename))};
+    let function_name_cstr = if function_name.is_null() { None } else { Some(CStr::from_ptr(function_name))};
+    let line_optional = if line >= 0 { Some(line)} else { None };
+
+    (&mut *context).error_mut().raise_error_c_style(error_code, message_cstr, filename_cstr, line_optional, function_name_cstr)
+
 }
 
 ///
@@ -408,7 +422,12 @@ pub unsafe extern "C" fn imageflow_context_add_to_callstack(context: *mut Contex
                                                             line: i32,
                                                             function_name: *const libc::c_char)
                                                             -> bool {
-    ffi::flow_context_add_to_callstack(uw(context), filename, line, function_name)
+
+    let filename_cstr = if filename.is_null() { None } else { Some(CStr::from_ptr(filename))};
+    let function_name_cstr = if function_name.is_null() { None } else { Some(CStr::from_ptr(function_name))};
+    let line_optional = if line >= 0 { Some(line)} else { None };
+
+    (&mut *context).error_mut().add_to_callstack_c_style(filename_cstr, line_optional, function_name_cstr)
 }
 
 
