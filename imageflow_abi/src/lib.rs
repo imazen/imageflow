@@ -198,10 +198,7 @@ unsafe fn uw(outer: *mut Context) -> *mut c::ffi::ImageflowContext{
     if outer.is_null(){
         ptr::null_mut()
     }else {
-        let mut context = Box::from_raw(outer);
-        let inner = context.unsafe_c_ctx();
-        let _ = Box::into_raw(context);
-        inner
+        (&mut *outer).unsafe_c_ctx()
     }
 }
 
