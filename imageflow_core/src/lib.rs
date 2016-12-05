@@ -74,8 +74,9 @@ pub enum FlowError {
 
 pub type Result<T> = std::result::Result<T, FlowError>;
 
-
+#[doc(hidden)]
 mod internal_prelude {
+    #[doc(hidden)]
     pub mod external_without_std {
         pub use daggy::{Dag, EdgeIndex, NodeIndex};
         pub use libc::{c_void, c_float, int32_t, int64_t, size_t, uint32_t};
@@ -98,35 +99,54 @@ mod internal_prelude {
         pub extern crate libc;
         pub extern crate imageflow_types as s;
     }
+    #[doc(hidden)]
     pub mod imageflow_core_all {
+        #[doc(no_inline)]
         pub use ::{Graph, ContextPtr, JobPtr, SelfDisposingContextPtr, JsonResponse,
                    MethodRouter};
+        #[doc(no_inline)]
         pub use ::{FlowError, FlowErr, Result, flow, clients};
+        #[doc(no_inline)]
         pub use ::clients::fluent;
     }
+    #[doc(hidden)]
     pub mod external {
+        #[doc(no_inline)]
         pub use ::internal_prelude::external_without_std::*;
         pub extern crate std;
     }
+    #[doc(hidden)]
     pub mod works_everywhere {
+        #[doc(no_inline)]
         pub use ::{FlowError, FlowErr, Result, flow, clients};
+        #[doc(no_inline)]
         pub use ::internal_prelude::external::*;
     }
+    #[doc(hidden)]
     pub mod default {
+        #[doc(no_inline)]
         pub use ::{Graph, ContextPtr, JobPtr, SelfDisposingContextPtr, JsonResponse,
                    MethodRouter};
+        #[doc(no_inline)]
         pub use ::internal_prelude::works_everywhere::*;
     }
+    #[doc(hidden)]
     pub mod c_components {}
 }
+#[doc(hidden)]
 pub mod for_other_imageflow_crates {
+    #[doc(hidden)]
     pub mod preludes {
+        #[doc(hidden)]
         pub mod external_without_std {
+            #[doc(no_inline)]
             pub use ::internal_prelude::external_without_std::*;
         }
-
+        #[doc(hidden)]
         pub mod default {
+            #[doc(no_inline)]
             pub use ::internal_prelude::external_without_std::*;
+            #[doc(no_inline)]
             pub use ::internal_prelude::imageflow_core_all::*;
         }
     }
