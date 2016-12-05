@@ -34,11 +34,11 @@ extern crate rustc_serialize;
 
 mod json;
 pub mod flow;
-mod context;
+mod pointer_wrappers;
 mod context_methods;
 mod job_methods;
 
-pub use context::{ContextPtr, JobPtr, SelfDisposingContextPtr};
+pub use pointer_wrappers::{ContextPtr, JobPtr, SelfDisposingContextPtr};
 pub use ::ffi::{IoDirection, IoMode};
 pub use ::flow::definitions::Graph;
 pub use json::JsonResponse;
