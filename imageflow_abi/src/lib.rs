@@ -254,6 +254,7 @@ pub unsafe extern "C" fn imageflow_context_begin_terminate(context: *mut Context
 #[no_mangle]
 pub unsafe extern "C" fn imageflow_context_destroy(context: *mut Context) {
     let _ = Box::from_raw(context);
+
 }
 
 

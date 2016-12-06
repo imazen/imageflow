@@ -44,7 +44,7 @@ export REBUILD_C="${REBUILD_C:-True}"
 # Build C Tests in debug mode for clearer valgrind output
 export TEST_C_DEBUG_BUILD="${TEST_C_DEBUG_BUILD:${VALGRIND}}"
 # Rebuild final Rust artifacts (not deps)
-export REBUILD_RUST="${REBUILD_RUST:-True}"
+export CLEAN_RUST_TARGETS="${CLEAN_RUST_TARGETS:-False}"
 # Run Rust tests
 export TEST_RUST="${TEST_RUST:-True}"
 # Enable compilation of imageflow_server, which has a problematic openssl dependency
@@ -102,19 +102,6 @@ fi
 
 ##################################
 
-export SCRIPT_DIR
-SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
-export COPY_VALGRINDRC="cp ${SCRIPT_DIR}/.valgrindrc ./.valgrindrc; cp ${SCRIPT_DIR}/valgrind_suppressions.txt ./valgrind_suppressions.txt"
-
-# If we're running as 'conan' (we assume this indicates we are in a docker container)
-# Then we need to also change permissions so that .valgrindrc is respected
-# It cannot be world-writable, and should be owned by the current user (according to valgrind)
-USERNAME_WHEN_DOCKERIZED=conan
-if [[ "$(id -u -n)" == "${USERNAME_WHEN_DOCKERIZED}" ]]; then
-	COPY_VALGRINDRC="${COPY_VALGRINDRC}; sudo chown ${USERNAME_WHEN_DOCKERIZED}: ./.valgrindrc; sudo chown ${USERNAME_WHEN_DOCKERIZED}: ./valgrind_suppressions.txt; sudo chmod o-w ./.valgrindrc; sudo chmod o-w ./valgrind_suppressions.txt"
-fi
-
-export VALGRIND_COMMAND="valgrind -q --error-exitcode=9 --gen-suppressions=all"
 export RUST_BACKTRACE=1
 STAMP="+[%H:%M:%S]"
 date "$STAMP"
@@ -129,6 +116,7 @@ BUILD_VARS=(
 	"VALGRIND=${VALGRIND}" 
 	"TEST_C=${TEST_C}"
 	"REBUILD_C=${REBUILD_C}"
+	"CLEAN_RUST_TARGETS=${CLEAN_RUST_TARGETS}"
 	"TEST_C_DEBUG_BUILD=${TEST_C_DEBUG_BUILD}"
 	"TEST_RUST=${TEST_RUST}"
 	"IMAGEFLOW_SERVER=${IMAGEFLOW_SERVER}"
@@ -138,9 +126,10 @@ BUILD_VARS=(
 	"GIT_COMMIT=${GIT_COMMIT}" 
 	"ARTIFACT_UPLOAD_PATH=${ARTIFACT_UPLOAD_PATH}"  
 	"ARTIFACT_UPLOAD_PATH_2=${ARTIFACT_UPLOAD_PATH_2}" 
+	"ARTIFACT_UPLOAD_PATH_3=${ARTIFACT_UPLOAD_PATH_3}" 
 	"DOCS_UPLOAD_DIR=${DOCS_UPLOAD_DIR}" 
-	"VALGRIND_COMMAND=${VALGRIND_COMMAND}" 
-	"COPY_VALGRINDRC=${COPY_VALGRINDRC}" 
+	"DOCS_UPLOAD_DIR_2=${DOCS_UPLOAD_DIR_2}" 
+	"RUNTIME_REQUIREMENTS_FILE=${RUNTIME_REQUIREMENTS_FILE}" 
 	"RUST_BACKTRACE=${RUST_BACKTRACE}" 
 )
 
@@ -167,16 +156,18 @@ echo "build.sh sees these relevant variables: ${BUILD_VARS[*]}"
 			conan install --scope build_tests=True --scope "debug_build=${TEST_C_DEBUG_BUILD:-False}" --scope "coverage=${COVERAGE:-False}" --scope "skip_test_run=${VALGRIND:-False}" --build missing -u ../
 			date "$STAMP"
 			conan build ../
+
+			#Sync to build/CTestTestfile.cmake
 			if [[ "$VALGRIND" == 'True' ]]; then
-				#Sync to build/CTestTestfile.cmake
-				date "$STAMP"
-				$VALGRIND_COMMAND ./bin/test_imageflow
-				date "$STAMP"
-				$VALGRIND_COMMAND ./bin/test_variations
-				date "$STAMP"
-				$VALGRIND_COMMAND ./bin/test_fastscaling
-				#echo "This next test is slow; it's a quickcheck running under valgrind"
-				#$VALGRIND_COMMAND ./bin/test_theft_render
+				(
+					cd ../..
+					./valgrind_existing.sh ./c_components/build/bin/test_imageflow
+					./valgrind_existing.sh ./c_components/build/bin/test_variations
+					./valgrind_existing.sh ./c_components/build/bin/test_fastscaling
+					#echo "This next test is slow; it's a quickcheck running under valgrind"
+					#./valgrind_existing.sh ./c_components/bin/test_theft_render
+				)
+				./bin/test_theft_render
 			fi 
 		)
 		if [[ "$COVERAGE" == 'True' ]]; then
@@ -209,7 +200,7 @@ echo "================================== Rust ============================ [buil
 
 rustc --version
 cargo --version
-if [[ "$REBUILD_RUST" == 'True' ]]; then
+if [[ "$CLEAN_RUST_TARGETS" == 'True' ]]; then
 	echo "Removing output imageflow binaries (but not dependencies)"
 	find  ./target/debug  -maxdepth 1 -type f  -delete
 	find  ./target/release  -maxdepth 1 -type f  -delete

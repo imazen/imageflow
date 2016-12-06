@@ -88,8 +88,13 @@ fn document_message() -> String {
     s
 }
 
+
+// env!(CARGO_PKG_NAME)
+// env!(CARGO_PKG_HOMEPAGE)
+// env!(CARGO_MANIFEST_DIR)
+
 fn get_create_doc_dir() -> std::path::PathBuf {
-    let path = Path::new(file!()).parent().unwrap().join(Path::new("../../target/doc"));
+    let path = ::imageflow_types::version::crate_parent_folder().join(Path::new("target/doc"));
     let _ = std::fs::create_dir_all(&path);
     // Error { repr: Os { code: 17, message: "File exists" } }
     // The above can happen, despite the docs.

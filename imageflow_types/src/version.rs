@@ -10,6 +10,12 @@ fn dirty() -> bool {
     }
 }
 
+/// The parent folder to this crate
+pub fn crate_parent_folder() -> std::path::PathBuf{
+    ::std::path::Path::new(get_build_env_value("CARGO_MANIFEST_DIR").unwrap()).parent().unwrap().to_owned()
+}
+
+
 fn dirty_star() -> &'static str {
     if dirty() { "*" } else { "" }
 }

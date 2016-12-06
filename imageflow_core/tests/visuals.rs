@@ -6,7 +6,9 @@ extern crate serde;
 extern crate serde_json;
 
 use std::ffi::CString;
-use imageflow_core::{Job,Context, JsonResponse};
+use std::path::Path;
+
+use imageflow_core::{Context, JsonResponse};
 
 fn default_build_config(debug: bool) -> s::Build001Config {
     s::Build001Config{graph_recording: match debug{ true => Some(s::Build001GraphRecording::debug_defaults()), false => None} ,
@@ -108,7 +110,10 @@ fn compare(input: Option<s::IoEnum>, allowed_off_by_one_bytes: usize, checksum_n
          let matched: bool;
          let c_checksum_name = CString::new(checksum_name).unwrap();
          {
-             matched = imageflow_core::ffi::flow_bitmap_bgra_test_compare_to_record(context.flow_c(), *ptr_to_ptr, c_checksum_name.as_ptr(), store_if_missing, allowed_off_by_one_bytes, static_char!(file!()), 0, static_char!(file!()));
+             let storage_relative_to = CString::new(Path::new(env!("CARGO_MANIFEST_DIR")).join(Path::new("tests")).join(Path::new("visuals.rs")).into_os_string().as_os_str().to_str().unwrap()).unwrap();
+             let storage_rel =  storage_relative_to.as_bytes_with_nul().as_ptr();
+             let storage_relative_to_ptr: *const i8 = ::std::mem::transmute(storage_rel);
+             matched = imageflow_core::ffi::flow_bitmap_bgra_test_compare_to_record(context.flow_c(), *ptr_to_ptr, c_checksum_name.as_ptr(), store_if_missing, allowed_off_by_one_bytes, static_char!(file!()), 0, storage_relative_to_ptr);
          }
          context.error().assert_ok();
 
@@ -460,7 +465,10 @@ fn test_with_callback(checksum_name: String, input: s::IoEnum, callback: fn(s::I
 
             let c_checksum_name = CString::new(checksum_name).unwrap();
             {
-                matched = imageflow_core::ffi::flow_bitmap_bgra_test_compare_to_record(context.flow_c(), *ptr_to_ptr, c_checksum_name.as_ptr(), store_if_missing, allowed_off_by_one_bytes, static_char!(file!()), 0, static_char!(file!()));
+                let storage_relative_to = CString::new(Path::new(env!("CARGO_MANIFEST_DIR")).join(Path::new("tests")).join(Path::new("visuals.rs")).into_os_string().as_os_str().to_str().unwrap()).unwrap();
+                let storage_rel =  storage_relative_to.as_bytes_with_nul().as_ptr();
+                let storage_relative_to_ptr: *const i8 = ::std::mem::transmute(storage_rel);
+                matched = imageflow_core::ffi::flow_bitmap_bgra_test_compare_to_record(context.flow_c(), *ptr_to_ptr, c_checksum_name.as_ptr(), store_if_missing, allowed_off_by_one_bytes, static_char!(file!()), 0, storage_relative_to_ptr);
             }
 
             context.error().assert_ok();

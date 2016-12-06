@@ -1,5 +1,4 @@
 use ::{JsonResponse, IoDirection, MethodRouter,  Context};
-use ::ffi::ImageflowJsonResponse;
 use ::ffi::CodecInstance;
 use flow::definitions::Graph;
 use ::internal_prelude::works_everywhere::*;

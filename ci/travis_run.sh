@@ -127,13 +127,11 @@ printf "\n=================================================\n"
 export IMAGEFLOW_SERVER="${IMAGEFLOW_SERVER:-True}"
 export COVERAGE="${COVERAGE:-False}"
 export VALGRIND="${VALGRIND:-False}"
+export CLEAN_RUST_TARGETS="${CLEAN_RUST_TARGETS:-True}"
 
 ######################################################
 #### Parameters passed through docker to build.sh (or used by travis_*.sh) ####
 
-# Not actually used as of 2016-09-16
-# Likely to be used by travis_run_docker.sh if we can ever support 'stable'
-export RUST_CHANNEL="${RUST_CHANNEL:-nightly}"
 # Build docs; build release mode binaries (separate pass from testing); populate ./artifacts folder
 export BUILD_RELEASE="${BUILD_RELEASE:-True}"
 # Run all tests (both C and Rust) under Valgrind
@@ -164,8 +162,6 @@ DOCKER_ENV_VARS=(
   "-e"
 	 "CI=${CI}"
 	"-e"
-	 "RUST_CHANNEL=${RUST_CHANNEL}" 
-	"-e"
 	 "BUILD_RELEASE=${BUILD_RELEASE}"
 	"-e"
 	 "VALGRIND=${VALGRIND}" 
@@ -175,6 +171,8 @@ DOCKER_ENV_VARS=(
 	 "TEST_C_DEBUG_BUILD=${TEST_C_DEBUG_BUILD}"
 	"-e"
 	 "TEST_RUST=${TEST_RUST}"
+	"-e"
+	 "CLEAN_RUST_TARGETS=${CLEAN_RUST_TARGETS}"
 	"-e"
 	 "IMAGEFLOW_SERVER=${IMAGEFLOW_SERVER}"
 	"-e"
