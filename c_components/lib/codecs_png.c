@@ -520,7 +520,6 @@ bool flow_bitmap_bgra_write_png(flow_c * c, struct flow_bitmap_bgra * frame, str
     instance.io = io;
     instance.codec_state = NULL;
     instance.io_id = 404;
-    instance.next = NULL;
 
     if (!flow_codecs_initialize_encode_png(c, &instance)) {
         FLOW_error_return(c);
