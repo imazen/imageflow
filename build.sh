@@ -249,7 +249,7 @@ if [[ "$TEST_RUST" == 'True' ]]; then
 	fi
 	if [[ "$VALGRIND" == 'True' ]]; then
 		./valgrind_existing.sh
-	else 
+	fi
 fi
 
 if [[ "$BUILD_RELEASE" == 'True' ]]; then

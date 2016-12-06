@@ -16,15 +16,17 @@ TEST_BINARIES="$(ls ./target/debug/*-[a-f0-9][a-f0-9][a-f0-9][a-f0-9][a-f0-9][a-
 printf "%s Discovered binaries:\n" "$(date '+[%H:%M:%S]')"
 echo "${TEST_BINARIES[@]}"
 
-# The flow_proto1 test suite kills valgrind
-SKIP_BINARIES=("$(ls ./target/debug/flow_proto1* || true )")
-SKIP_BINARIES+=("$(ls ./target/debug/flow_proto1* || true )")
+SKIP_BINARIES=()
+
+#SKIP_BINARIES+=("$(ls ./target/debug/flow_proto1* || true )")
+#SKIP_BINARIES+=("$(ls ./target/debug/flow_proto1* || true )")
+
 echo "Should skip: ${SKIP_BINARIES[@]}"
 
 for f in $TEST_BINARIES
 do
 	printf "\n==============================================================\n%s %s\n" "$(date '+[%H:%M:%S]')" "$f"
-	if [[ " ${SKIP_BINARIES[@]} " =~ " ${f} " ]]; then
+	if [[ " ${SKIP_BINARIES[@]} " == *" ${f} "* ]]; then
 		echo "SKIPPING"
 	else
 	  lastmod "$f"
