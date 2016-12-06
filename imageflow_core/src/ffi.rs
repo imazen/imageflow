@@ -60,23 +60,6 @@ pub struct ImageflowJobIo {
 }
 
 
-
-#[repr(C)]
-pub struct ImageflowJob {
-    pub debug_job_id: int32_t,
-    pub next_stable_node_id: int32_t,
-    pub next_graph_version: int32_t,
-    pub max_calc_flatten_execute_passes: int32_t,
-    // FIXME: find a safer way to store them
-    pub codecs_head: *mut CodecInstance,
-    pub codecs_tail: *mut CodecInstance,
-    pub record_graph_versions: bool,
-    pub record_frame_images: bool,
-    pub render_graph_versions: bool,
-    pub render_animated_graph: bool,
-    pub render_last_graph: bool,
-}
-
 #[repr(C)]
 #[derive(Debug,Copy,Clone, PartialEq)]
 pub enum IoMode {
@@ -102,9 +85,6 @@ pub struct ImageflowContext {
 
 // end reuse
 
-
-
-
 #[repr(C)]
 #[derive(Clone,Debug,PartialEq)]
 pub struct CodecInstance {
@@ -112,7 +92,6 @@ pub struct CodecInstance {
     pub codec_id: int64_t,
     pub codec_state: *mut c_void,
     pub io: *mut ImageflowJobIo,
-    pub _____dontuse: *mut CodecInstance,
     pub direction: IoDirection,
 }
 

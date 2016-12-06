@@ -327,7 +327,6 @@ struct flow_codec_instance {
     int64_t codec_id;
     void * codec_state;
     struct flow_io * io;
-    struct flow_codec_instance * next;
     FLOW_DIRECTION direction;
 };
 

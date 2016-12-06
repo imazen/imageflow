@@ -13,9 +13,6 @@ pub struct Job{
     pub next_stable_node_id: i32,
     pub next_graph_version: i32,
     pub max_calc_flatten_execute_passes: i32,
-    // FIXME: find a safer way to store them
-    //    pub codecs_head: *mut CodecInstance,
-    //    pub codecs_tail: *mut CodecInstance,
     pub graph_recording: s::Build001GraphRecording,
     pub codecs: AppendOnlySet<CodecInstance>,
 
@@ -65,8 +62,7 @@ impl Job{
                 codec_state: ptr::null_mut(),
                 direction: direction,
                 io_id: io_id,
-                io: io,
-                _____dontuse: ptr::null_mut()
+                io: io
             });
             Ok(())
         }else {
@@ -79,8 +75,7 @@ impl Job{
                     codec_state: ptr::null_mut(),
                     direction: direction,
                     io_id: io_id,
-                    io: io,
-                    _____dontuse: ptr::null_mut()
+                    io: io
                 });
 
 

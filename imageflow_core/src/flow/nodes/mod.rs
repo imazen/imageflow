@@ -1,5 +1,5 @@
 use daggy::{Dag, EdgeIndex, NodeIndex};
-use ffi::{ImageflowContext, ImageflowJob, BitmapBgra};
+use ffi::{ImageflowContext, BitmapBgra};
 use libc::{int32_t, size_t};
 use petgraph::EdgeDirection;
 mod rotate_flip_transpose;
@@ -11,7 +11,7 @@ mod constrain;
 
 mod internal_prelude {
     pub use ::ffi;
-    pub use ffi::{ImageflowContext, ImageflowJob};
+    pub use ffi::{ImageflowContext};
     pub use ffi::BitmapBgra;
     pub use flow::definitions::*;
     pub use ::internal_prelude::works_everywhere::*;

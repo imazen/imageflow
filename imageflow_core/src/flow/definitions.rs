@@ -1,4 +1,4 @@
-use ffi::{ImageflowContext, ImageflowJob, BitmapBgra};
+use ffi::{ImageflowContext, BitmapBgra};
 pub use ::ffi::EdgeKind;
 pub use ::ffi::PixelFormat;
 use ::{Context,Job};
