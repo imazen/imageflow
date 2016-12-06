@@ -13,9 +13,6 @@ export DOCKER_IMAGE="${DOCKER_IMAGE:-imazen/$IMAGE_NAME}"
 # OPEN_DOCKER_BASH_INSTEAD=True to open interactive shell
 export OPEN_DOCKER_BASH_INSTEAD="${OPEN_DOCKER_BASH_INSTEAD:-False}"
 
-# RUST_CHANNEL doesn't do anything right now, just part of some names
-export RUST_CHANNEL="${RUST_CHANNEL:-nightly}"
-
 echo "DISABLE_COMPILATION_CACHES=${DISABLE_COMPILATION_CACHES:-False}"
 
 ############## Paths for caching
@@ -30,17 +27,11 @@ export SHARED_CACHE="${TEST_SH_CACHE_DIR}/.shared_cache"
 ############## Overrides for test.sh
 
 
-# travis_run.sh deletes /artifacts folder if False. Only relevant in Travis itself
-export UPLOAD_BUILD=False
-# Affects how /artifacts folder is structured by build.sh
-export UPLOAD_AS_LATEST=False
 
 ######################################################
-#### Parameters passed through docker to build.sh ####
+#### Parameters passed to travis_run_docker.sh ####
 
-# Not actually used as of 2016-09-16
-# Likely to be used by travis_run_docker.sh if we can ever support 'stable'
-export RUST_CHANNEL="${RUST_CHANNEL:-nightly}"
+
 # Build docs; build release mode binaries (separate pass from testing); populate ./artifacts folder
 export BUILD_RELEASE="${BUILD_RELEASE:-True}"
 # Run all tests (both C and Rust) under Valgrind
@@ -94,8 +85,6 @@ fi
 MULTIWORD="a b c d e"
 DOCKER_ENV_VARS=(
 	"-e"
-	 "RUST_CHANNEL=${RUST_CHANNEL}" 
-	"-e"
 	 "BUILD_RELEASE=${BUILD_RELEASE}"
 	"-e"
 	 "VALGRIND=${VALGRIND}" 
@@ -109,10 +98,6 @@ DOCKER_ENV_VARS=(
 	 "IMAGEFLOW_SERVER=${IMAGEFLOW_SERVER}"
 	"-e"
 	 "COVERAGE=${COVERAGE}" 
-	"-e"
-	 "UPLOAD_BUILD=${UPLOAD_BUILD}" 
-	"-e"
-	 "UPLOAD_AS_LATEST=${UPLOAD_AS_LATEST}"
 	"-e"
 	 "COVERALLS=${COVERALLS}" 
 	"-e"

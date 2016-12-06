@@ -84,8 +84,29 @@ RUN RUSTVER="nightly-2016-11-03" && curl https://sh.rustup.rs -sSf | sh -s -- -y
     && rustup show \
     && rustc -V
 
+USER root
+# 3.12 fixes the bug when running against anything linked to openssl
+RUN VALGRIND_VER="valgrind-3.12.0" \
+  && rm /usr/bin/valgrind \
+  && wget -nv http://valgrind.org/downloads/${VALGRIND_VER}.tar.bz2 \
+  && tar -vxjf ${VALGRIND_VER}.tar.bz2 && rm ${VALGRIND_VER}.tar.* \
+  && cd "${VALGRIND_VER}" && ./configure && make install \
+  && cd .. && rm -rf "${VALGRIND_VER}" \
+  && bash -c 'rm -rf {/usr/share/doc,/usr/share/man,/var/cache,/usr/doc,/usr/local/share/doc,/usr/local/share/man}' \
+  && bash -c 'rm -rf /usr/lib/valgrind/*-x86-*' \
+  && bash -c 'rm -rf /usr/local/lib/valgrind/*-x86-*' \
+  && bash -c 'rm -rf /usr/lib/valgrind/{power,mips,s390,arm,32bit,i386}*' \
+  && bash -c 'rm -rf /usr/local/lib/valgrind/{power,mips,s390,arm,32bit,i386}*' \
+  && bash -c 'rm -rf /tmp/*' \
+  && bash -c 'rm -rf /var/tmp/*' 
 
-# RUN sudo pip install conan --upgrade
+USER conan
+
+ENV PATH=/usr/lib/ccache:$PATH
+ENV PATH=/home/conan/.cargo/bin:$PATH
+
+
+RUN sudo pip install conan --upgrade
 
 RUN conan user
 
