@@ -43,6 +43,7 @@ extern crate serde_json;
 extern crate regex;
 use std::ascii::AsciiExt;
 use std::str::FromStr;
+pub mod collections;
 
 #[repr(C)]
 #[derive(Serialize, Deserialize, Copy, Clone, PartialEq, Debug)]
@@ -1296,6 +1297,9 @@ mod key_casing {
         }
     }
 }
+
+
+
 // mod try_nested_mut{
 //
 //    struct C<'a>{
