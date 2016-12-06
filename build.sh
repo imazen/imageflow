@@ -43,6 +43,8 @@ export TEST_C="${TEST_C:-True}"
 export REBUILD_C="${REBUILD_C:-True}"
 # Build C Tests in debug mode for clearer valgrind output
 export TEST_C_DEBUG_BUILD="${TEST_C_DEBUG_BUILD:${VALGRIND}}"
+# Rebuild final Rust artifacts (not deps)
+export REBUILD_RUST="${REBUILD_RUST:-True}"
 # Run Rust tests
 export TEST_RUST="${TEST_RUST:-True}"
 # Enable compilation of imageflow_server, which has a problematic openssl dependency
@@ -113,7 +115,6 @@ if [[ "$(id -u -n)" == "${USERNAME_WHEN_DOCKERIZED}" ]]; then
 fi
 
 export VALGRIND_COMMAND="valgrind -q --error-exitcode=9 --gen-suppressions=all"
-export VALGRIND_CARGO_COMMAND="$VALGRIND_COMMAND cargo test"
 export RUST_BACKTRACE=1
 STAMP="+[%H:%M:%S]"
 date "$STAMP"
@@ -139,7 +140,6 @@ BUILD_VARS=(
 	"ARTIFACT_UPLOAD_PATH_2=${ARTIFACT_UPLOAD_PATH_2}" 
 	"DOCS_UPLOAD_DIR=${DOCS_UPLOAD_DIR}" 
 	"VALGRIND_COMMAND=${VALGRIND_COMMAND}" 
-	"VALGRIND_CARGO_COMMAND=${VALGRIND_CARGO_COMMAND}" 
 	"COPY_VALGRINDRC=${COPY_VALGRINDRC}" 
 	"RUST_BACKTRACE=${RUST_BACKTRACE}" 
 )
@@ -209,75 +209,47 @@ echo "================================== Rust ============================ [buil
 
 rustc --version
 cargo --version
+if [[ "$REBUILD_RUST" == 'True' ]]; then
+	echo "Removing output imageflow binaries (but not dependencies)"
+	find  ./target/debug  -maxdepth 1 -type f  -delete
+	find  ./target/release  -maxdepth 1 -type f  -delete
+fi
 
 if [[ "$TEST_RUST" == 'True' ]]; then
 
+
+	echo "Running all crate tests"
+	(
+		cd imageflow_core
+		date "$STAMP"
+		cargo test
+	)
+	(
+		cd imageflow_abi
+		date "$STAMP"
+		cargo test
+	)
+	(
+		cd imageflow_types
+		date "$STAMP"
+		cargo test
+	)
+	(
+		cd imageflow_tool
+		date "$STAMP"
+		cargo test
+		date "$STAMP"
+	)
+	if [[ "$IMAGEFLOW_SERVER" == 'True' ]]; then
+		(
+			cd imageflow_server
+			date "$STAMP"
+			cargo test
+		)
+	fi
 	if [[ "$VALGRIND" == 'True' ]]; then
-		echo "Running all crate tests under Valgrind"
-		(
-			cd imageflow_core
-			date "$STAMP"
-			eval "$COPY_VALGRINDRC"
-			eval "$VALGRIND_CARGO_COMMAND"
-		)
-		(
-			cd imageflow_abi
-			date "$STAMP"
-			eval "$COPY_VALGRINDRC"
-			eval "$VALGRIND_CARGO_COMMAND"
-		)
-		(
-			cd imageflow_types
-			date "$STAMP"
-			eval "$COPY_VALGRINDRC"
-			eval "$VALGRIND_CARGO_COMMAND"
-		)
-		(
-			cd imageflow_tool
-			date "$STAMP"
-			eval "$COPY_VALGRINDRC"
-			eval "$VALGRIND_CARGO_COMMAND"
-			date "$STAMP"
-		)
-		if [[ "$IMAGEFLOW_SERVER" == 'True' ]]; then
-			(
-				cd imageflow_server
-				eval "$COPY_VALGRINDRC"
-				date "$STAMP"
-				eval "$VALGRIND_CARGO_COMMAND"
-			)
-		fi
+		./valgrind_existing.sh
 	else 
-		echo "Running all crate tests"
-		(
-			cd imageflow_core
-			date "$STAMP"
-			cargo test
-		)
-		(
-			cd imageflow_abi
-			date "$STAMP"
-			cargo test
-		)
-		(
-			cd imageflow_types
-			date "$STAMP"
-			cargo test
-		)
-		(
-			cd imageflow_tool
-			date "$STAMP"
-			cargo test
-			date "$STAMP"
-		)
-		if [[ "$IMAGEFLOW_SERVER" == 'True' ]]; then
-			(
-				cd imageflow_server
-				date "$STAMP"
-				cargo test
-			)
-		fi
-	fi 
 fi
 
 if [[ "$BUILD_RELEASE" == 'True' ]]; then
