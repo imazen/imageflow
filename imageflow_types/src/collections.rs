@@ -44,6 +44,13 @@ impl<T> AppendOnlySet<T> {
         self.get_reference(item).is_some()
     }
 
+    ///
+    /// If you have a mutable reference, you can do whatever you like, since
+    /// there cannot be any other outstanding references
+    pub fn get_mut_vec(&mut self) -> &mut Vec<Box<T>>{
+        self.slots.get_mut()
+    }
+
     pub fn iter(&self) -> IterAppendOnlySet<T>{
         IterAppendOnlySet{
             set: self,
@@ -108,6 +115,23 @@ impl<T> AddRemoveSet<T> {
 
     pub fn iter_mut(&self) -> IterMutAddRemoveSet<T>{
         IterMutAddRemoveSet{ inner: self.inner.iter() }
+    }
+
+
+    pub fn mut_clear(&mut self){
+        self.inner.get_mut_vec().clear();
+    }
+
+    pub fn clear(&self) -> Result<(),BorrowMutError>{
+        for refcell in self.inner.iter() {
+            match refcell.try_borrow_mut() {
+                Ok(mut ref_obj) => {
+                    *ref_obj = None
+                }
+                Err(e) => { return Err(e) }
+            }
+        }
+        Ok(())
     }
 
     /// Ok(true) - removed. Ok(false) - certainly didn't exist. Err() - either borrowed or didn't exist (unknowable)
@@ -262,7 +286,7 @@ mod tests{
     }
 
     #[test]
-    fn test_the_thing(){
+    fn test_sets_with_interior_mutability(){
         let g = Container::new();
 
         let child = g.add_child_get_cell();
@@ -294,4 +318,42 @@ mod tests{
         assert!(!g.b.try_contains(c3_ptr).unwrap());
     }
 
+    struct GenericOfRef<T>{
+
+    }
+    #[test]
+    fn t(){
+        let a = GenericOfRef::<&mut Vec<i32>>{};
+
+    }
+
+//    mod experiment_with_parent_references{
+//        use super::super::*;
+//        use ::std::cell::RefMut;
+//        struct P<'a>{ c: AddRemoveSet<C<'a>> } struct C<'a>{ p: &'a P<'a> }
+//        impl<'a> P<'a>{
+//
+//            pub fn new() -> P<'static>{
+//                P{
+//                    c: AddRemoveSet::with_capacity(1)
+//                }
+//            }
+//
+//            pub fn add_child(&'a self) -> RefMut<C<'a>>{
+//                self.c.add_mut(C{p:self})
+//            }
+//        }
+//
+//        #[test]
+//        fn tryit(){
+//
+//            let mut a = P::new();
+//
+//            let mut child = a.add_child();
+//
+//        }
+//
+//
+//
+//    }
 }

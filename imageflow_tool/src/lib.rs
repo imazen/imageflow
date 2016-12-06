@@ -7,7 +7,6 @@ extern crate imageflow_core as fc;
 extern crate serde_json;
 extern crate chrono;
 extern crate serde;
-use std::io::Write;
 
 use std::path::{Path,PathBuf};
 mod cmd_build;

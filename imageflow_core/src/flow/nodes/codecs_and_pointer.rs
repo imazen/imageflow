@@ -90,15 +90,7 @@ fn decoder_estimate(ctx: &mut OpCtxMut, ix: NodeIndex<u32>) {
     let codec = ctx.weight(ix).custom_state as *mut ffi::CodecInstance;
 
     let io_id = decoder_encoder_io_id(ctx, ix).unwrap();
-    let mut frame_info: ffi::DecoderInfo = Default::default();
-    unsafe {
-        if !ffi::flow_job_get_decoder_info(ctx.c,
-                                           ctx.job,
-                                           io_id,
-                                           &mut frame_info as *mut ffi::DecoderInfo) {
-            ctx.assert_ok();
-        }
-    }
+    let frame_info: s::ImageInfo = ctx.job.get_image_info(io_id).unwrap();
 
     ctx.weight_mut(ix).frame_est = FrameEstimate::Some(FrameInfo {
         fmt: frame_info.frame_decodes_into,
@@ -127,7 +119,7 @@ fn decoder_def() -> NodeDefinition {
                 ctx.weight_mut(ix).def = &PRIMITIVE_DECODER;
 
 
-                let exif_flag = unsafe {ffi::flow_codecs_jpg_decoder_get_exif(ctx.c, ctx.weight(ix).custom_state as *mut ffi::CodecInstance) };
+                let exif_flag = unsafe {ffi::flow_codecs_jpg_decoder_get_exif(ctx.flow_c(), ctx.weight(ix).custom_state as *mut ffi::CodecInstance) };
                 if exif_flag > 0 {
                     let new_node = ctx.graph
                         .add_node(Node::new(&APPLY_ORIENTATION,
@@ -157,7 +149,7 @@ fn primitive_decoder_def() -> NodeDefinition {
                 let codec = ctx.weight(ix).custom_state as *mut ffi::CodecInstance;
 
                 unsafe {
-                    let result = ffi::flow_codec_execute_read_frame(ctx.c, codec);
+                    let result = ffi::flow_codec_execute_read_frame(ctx.flow_c(), codec);
                     if result.is_null() {
                         ctx.assert_ok();
                     } else {
@@ -234,10 +226,10 @@ fn encoder_def() -> NodeDefinition {
 
 
                                 (*codec).codec_id = wanted_id;
-                                if !ffi::flow_codec_initialize(ctx.c, codec) {
+                                if !ffi::flow_codec_initialize(ctx.flow_c(), codec) {
                                     ctx.assert_ok();
                                 }
-                                let codec_def = ffi::flow_codec_get_definition(ctx.c, wanted_id);
+                                let codec_def = ffi::flow_codec_get_definition(ctx.flow_c(), wanted_id);
                                 if codec_def.is_null() {
                                     ctx.assert_ok();
                                 }
@@ -246,7 +238,7 @@ fn encoder_def() -> NodeDefinition {
                                     panic!("Codec didn't implement write_frame");
                                 }
 
-                                if !write_fn.unwrap()(ctx.c,
+                                if !write_fn.unwrap()(ctx.flow_c(),
                                                       (*codec).codec_state,
                                                       input_bitmap,
                                                       &hints as *const ffi::EncoderHints) {

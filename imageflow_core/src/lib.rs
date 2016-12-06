@@ -34,13 +34,13 @@ extern crate rustc_serialize;
 
 mod json;
 pub mod flow;
-mod pointer_wrappers;
+mod job;
 mod context_methods;
 mod job_methods;
 mod context;
 
 pub use context::{Context};
-pub use pointer_wrappers::{ContextPtr, JobPtr, SelfDisposingContextPtr};
+pub use job::Job;
 pub use ::ffi::{IoDirection, IoMode};
 pub use ::flow::definitions::Graph;
 pub use json::JsonResponse;
@@ -52,7 +52,7 @@ pub mod boring;
 pub mod parsing;
 
 
-
+use std::borrow::Cow;
 
 #[derive(Debug, PartialEq)]
 pub struct FlowErr {
@@ -72,6 +72,46 @@ pub enum FlowError {
     ErrNotImpl,
 }
 
+impl FlowError{
+    pub fn to_cow(&self) -> Cow<'static, str> {
+        match *self {
+            FlowError::Err(ref e) => {
+                Cow::from(format!("Error {} {}\n", e.code, e.message_and_stack))
+            }
+            FlowError::Oom => {
+                Cow::from("Out of memory.")
+            }
+            FlowError::ErrNotImpl => {
+                Cow::from("Error not implemented")
+            }
+            FlowError::ContextInvalid => {
+                Cow::from("Context pointer null")
+            }
+            FlowError::NullArgument => {
+                Cow::from("Null argument")
+            }
+            ref other => {
+                Cow::from(format!("{:?}", other))
+            }
+        }
+    }
+    pub fn panic_time(&self){
+        panic!(self.to_cow());
+    }
+    pub fn panic_with(&self, message: &str){
+        panic!("{}\n{}", message, self.to_cow());
+    }
+
+    pub fn write_to_buf(&self, buf: &mut ::context::ErrorBuffer) -> bool{
+        buf.abi_raise_error_c_style(ffi::FlowStatusCode::NotImplemented as i32, None, None, None, None)
+    }
+    pub unsafe fn write_to_context_ptr(&self, c: *const Context) {
+        self.write_to_buf(&mut *(&*c).error_mut());
+    }
+
+
+}
+
 pub type Result<T> = std::result::Result<T, FlowError>;
 
 #[doc(hidden)]
@@ -83,7 +123,7 @@ mod internal_prelude {
         pub use std::{ptr, marker, str, slice, cell, io, string, fmt, mem};
         pub use std::ascii::AsciiExt;
         pub use std::borrow::Cow;
-        pub use std::cell::RefCell;
+        pub use std::cell::{Cell,RefCell,Ref,RefMut};
         pub use std::collections::{HashSet, HashMap};
         pub use std::ffi::{CString, CStr};
         pub use std::fs::{File, create_dir_all};
@@ -102,7 +142,7 @@ mod internal_prelude {
     #[doc(hidden)]
     pub mod imageflow_core_all {
         #[doc(no_inline)]
-        pub use ::{Graph, ContextPtr, JobPtr, SelfDisposingContextPtr, JsonResponse,
+        pub use ::{Graph, Context, Job, JsonResponse,
                    MethodRouter};
         #[doc(no_inline)]
         pub use ::{FlowError, FlowErr, Result, flow, clients};
@@ -125,7 +165,7 @@ mod internal_prelude {
     #[doc(hidden)]
     pub mod default {
         #[doc(no_inline)]
-        pub use ::{Graph, ContextPtr, JobPtr, SelfDisposingContextPtr, JsonResponse,
+        pub use ::{Graph, Context, Job, JsonResponse,
                    MethodRouter};
         #[doc(no_inline)]
         pub use ::internal_prelude::works_everywhere::*;

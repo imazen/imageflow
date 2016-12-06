@@ -1,6 +1,6 @@
 
 
-use ::{ContextPtr, JobPtr};
+use ::{Context, Job};
 use ::internal_prelude::works_everywhere::*;
 use ::json::*;
 use ::parsing::parse_graph::GraphTranslator;
@@ -8,25 +8,25 @@ use ::parsing::parse_io::IoTranslator;
 use std::error;
 
 
-fn create_context_router() -> MethodRouter<'static, ContextPtr> {
+fn create_context_router() -> MethodRouter<'static, Context> {
     let mut r = MethodRouter::new();
     //    r.add_responder("v0.1/load_image_info", Box::new(
-    //        move |context: &mut ContextPtr, data: s::GetImageInfo001| {
+    //        move |context: &mut Context, data: s::GetImageInfo001| {
     //            Ok(JsonResponse::method_not_understood())
     //            //Ok(s::ResponsePayload::ImageInfo(job.get_image_info(data.io_id)?))
     //        }
     //    ));
     r.add_responder("v0.1/build",
-                    Box::new(move |context: &mut ContextPtr, parsed: s::Build001| {
+                    Box::new(move |context: &mut Context, parsed: s::Build001| {
                         BuildHandler::from_context(context).build_1(parsed)
                     }));
     r.add("brew_coffee",
-          Box::new(move |context: &mut ContextPtr, bytes: &[u8]| Ok(JsonResponse::teapot())));
+          Box::new(move |context: &mut Context, bytes: &[u8]| Ok(JsonResponse::teapot())));
     r
 }
 
 lazy_static! {
-        pub static ref  CONTEXT_ROUTER: MethodRouter<'static, ContextPtr> = create_context_router();
+        pub static ref  CONTEXT_ROUTER: MethodRouter<'static, Context> = create_context_router();
     }
 
 
@@ -71,7 +71,7 @@ fn document_message() -> String {
 
 
 pub struct BuildHandler<'a> {
-    use_context: Option<&'a ContextPtr>,
+    use_context: Option<&'a Context>,
 }
 
 
@@ -80,39 +80,34 @@ impl<'a> BuildHandler<'a> {
         BuildHandler { use_context: None }
     }
 
-    pub fn from_context(context: &'a mut ContextPtr) -> BuildHandler<'a> {
+    pub fn from_context(context: &'a mut Context) -> BuildHandler<'a> {
         BuildHandler { use_context: Some(context) }
     }
 
     pub fn build_1(&self, task: s::Build001) -> Result<s::ResponsePayload> {
         if self.use_context.is_none() {
-            let ctx = ::SelfDisposingContextPtr::create().unwrap();
-            self.build_inner(ctx.inner(), task)
+            let ctx = ::Context::create().unwrap();
+            self.build_inner(&ctx, task)
         } else {
             self.build_inner(self.use_context.unwrap(), task)
         }
     }
 
 
-    fn build_inner(&self, ctx: &ContextPtr, parsed: s::Build001) -> Result<s::ResponsePayload> {
+    fn build_inner(&self, ctx: &Context, parsed: s::Build001) -> Result<s::ResponsePayload> {
 
         let mut g = ::parsing::GraphTranslator::new().translate_framewise(parsed.framewise)?;
 
         unsafe {
-            let p = ctx.ptr.unwrap();
-            let mut job = JobPtr::create(p).unwrap();
+            let mut job = ctx.create_job();
 
             if let Some(s::Build001Config { ref no_gamma_correction, .. }) = parsed.builder_config {
-                ::ffi::flow_context_set_floatspace(p,
-                                                   if *no_gamma_correction {
-                                                       ::ffi::Floatspace::srgb
-                                                   }else {
-                                                        ::ffi::Floatspace::linear
-                                                   },
-                                                   0f32,
-                                                   0f32,
-                                                   0f32)
-
+                ctx.todo_remove_set_floatspace(
+                    if *no_gamma_correction {
+                        ::ffi::Floatspace::srgb
+                    } else {
+                        ::ffi::Floatspace::linear
+                    })
             }
 
             if let Some(s::Build001Config { graph_recording, .. }) = parsed.builder_config {
@@ -122,9 +117,9 @@ impl<'a> BuildHandler<'a> {
             }
 
 
-            IoTranslator::new(p).add_to_job(job.as_ptr(), parsed.io.clone());
+            IoTranslator::new(ctx).add_to_job(&mut *job, parsed.io.clone());
 
-            ::flow::execution_engine::Engine::create(&mut job, &mut g).execute()?;
+            ::flow::execution_engine::Engine::create(ctx, &mut job, &mut g).execute()?;
 
             // TODO: flow_job_destroy
 

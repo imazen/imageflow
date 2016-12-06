@@ -160,6 +160,8 @@ typedef struct flow_context flow_c;
 #include "color.h"
 
 PUB bool write_frame_to_disk(flow_c * c, const char * path, struct flow_bitmap_bgra * b);
+PUB int64_t flow_codec_select_from_seekable_io(flow_c * c,struct flow_io * io);
+
 
 struct flow_nodeinfo_render_to_canvas_1d;
 struct flow_nodeinfo_scale2d_render_to_canvas1d;
@@ -329,19 +331,6 @@ struct flow_codec_instance {
     FLOW_DIRECTION direction;
 };
 
-struct flow_job {
-    int32_t debug_job_id;
-    int32_t next_stable_node_id;
-    int32_t next_graph_version;
-    int32_t max_calc_flatten_execute_passes;
-    struct flow_codec_instance * codecs_head;
-    struct flow_codec_instance * codecs_tail; // Makes appends simple. Deletes, not so much
-    bool record_graph_versions;
-    bool record_frame_images;
-    bool render_graph_versions;
-    bool render_animated_graph;
-    bool render_last_graph;
-};
 
 PUB int32_t flow_codecs_jpg_decoder_get_exif(flow_c * c, struct flow_codec_instance * codec_instance);
 

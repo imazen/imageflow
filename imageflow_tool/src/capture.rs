@@ -1,6 +1,5 @@
 extern crate std;
 use fc::for_other_imageflow_crates::preludes::default::*;
-use std::slice::SliceConcatExt;
 extern crate imageflow_core as fc;
 extern crate chrono;
 extern crate curl;
@@ -10,7 +9,6 @@ extern crate zip;
 //
 
 use std::process::{Command, Output};
-use std::env::Args;
 
 
 //

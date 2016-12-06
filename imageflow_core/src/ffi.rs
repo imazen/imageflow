@@ -43,7 +43,22 @@ pub struct ImageflowJsonResponse {
 #[repr(C)]
 pub struct ImageflowJobIo {
     placeholder: i64,
+    // If you want to know what kind of I/O structure is inside user_data, compare the read_func/write_func function
+    // pointers. No need for another human-assigned set of custom structure identifiers.
+
+    /* flow_c * context;
+                      * flow_io_mode mode; // Call nothing, dereference nothing, if this is 0
+                      * flow_io_read_function read_func; // Optional for write modes
+                      * flow_io_write_function write_func; // Optional for read modes
+                      * flow_io_position_function position_func; // Optional for sequential modes
+                      * flow_io_seek_function seek_function; // Optional for sequential modes
+                      * flow_destructor_function dispose_func; // Optional.
+                      * void * user_data;
+                      * int64_t optional_file_length; // Whoever sets up this structure can populate this value - or set it to -1 - as they
+                      * wish. useful for resource estimation.
+                      * */
 }
+
 
 
 #[repr(C)]
@@ -93,12 +108,12 @@ pub struct ImageflowContext {
 #[repr(C)]
 #[derive(Clone,Debug,PartialEq)]
 pub struct CodecInstance {
-    graph_placeholder_id: int32_t,
+    pub graph_placeholder_id: int32_t,
     pub codec_id: int64_t,
     pub codec_state: *mut c_void,
-    io: *mut FlowIO,
-    next: *mut CodecInstance,
-    direction: IoDirection,
+    pub io: *mut ImageflowJobIo,
+    pub _____dontuse: *mut CodecInstance,
+    pub direction: IoDirection,
 }
 
 
@@ -514,12 +529,12 @@ enum ScaleFlags {
 #[repr(C)]
 #[derive(Clone,Debug,PartialEq)]
 pub struct DecoderDownscaleHints {
-    downscale_if_wider_than: int64_t,
-    or_if_taller_than: int64_t,
-    downscaled_min_width: int64_t,
-    downscaled_min_height: int64_t,
-    scale_luma_spatially: bool,
-    gamma_correct_for_srgb_during_spatial_luma_scaling: bool,
+    pub downscale_if_wider_than: int64_t,
+    pub or_if_taller_than: int64_t,
+    pub downscaled_min_width: int64_t,
+    pub downscaled_min_height: int64_t,
+    pub scale_luma_spatially: bool,
+    pub gamma_correct_for_srgb_during_spatial_luma_scaling: bool,
 }
 
 #[repr(C)]
@@ -529,23 +544,6 @@ pub struct EncoderHints {
     pub disable_png_alpha: bool,
 }
 
-// If you want to know what kind of I/O structure is inside user_data, compare the read_func/write_func function
-// pointers. No need for another human-assigned set of custom structure identifiers.
-#[repr(C)]
-#[derive(Clone,Debug,PartialEq)]
-struct FlowIO {
-    placeholder: u8, /* flow_c * context;
-                      * flow_io_mode mode; // Call nothing, dereference nothing, if this is 0
-                      * flow_io_read_function read_func; // Optional for write modes
-                      * flow_io_write_function write_func; // Optional for read modes
-                      * flow_io_position_function position_func; // Optional for sequential modes
-                      * flow_io_seek_function seek_function; // Optional for sequential modes
-                      * flow_destructor_function dispose_func; // Optional.
-                      * void * user_data;
-                      * int64_t optional_file_length; // Whoever sets up this structure can populate this value - or set it to -1 - as they
-                      * wish. useful for resource estimation.
-                      * */
-}
 
 
 #[repr(C)]
@@ -592,55 +590,6 @@ mod must_replace{
     use super::*;
     use ::libc;
     extern "C" {
-        pub fn flow_context_create() -> *mut ImageflowContext;
-        pub fn flow_context_begin_terminate(context: *mut ImageflowContext) -> bool;
-        pub fn flow_context_destroy(context: *mut ImageflowContext);
-        pub fn flow_destroy(context: *mut ImageflowContext,
-                            pointer: *const libc::c_void,
-                            file: *const libc::c_char,
-                            line: i32)
-                            -> bool;
-
-        pub fn flow_job_destroy(context: *mut ImageflowContext, job: *mut ImageflowJob) -> bool;
-        pub fn flow_job_create(context: *mut ImageflowContext) -> *mut ImageflowJob;
-        pub fn flow_job_configure_recording(context: *mut ImageflowContext,
-                                            job: *mut ImageflowJob,
-                                            record_graph_versions: bool,
-                                            record_frame_images: bool,
-                                            render_last_graph: bool,
-                                            render_graph_versions: bool,
-                                            render_animated_graph: bool)
-                                            -> bool;
-
-        pub fn flow_job_get_io(context: *mut ImageflowContext,
-                               job: *mut ImageflowJob,
-                               placeholder_id: i32)
-                               -> *mut ImageflowJobIo;
-
-        pub fn flow_job_add_io(context: *mut ImageflowContext,
-                               job: *mut ImageflowJob,
-                               io: *mut ImageflowJobIo,
-                               placeholder_id: i32,
-                               direction: IoDirection)
-                               -> bool;
-
-        pub fn flow_job_get_codec_instance(c: *mut ImageflowContext,
-                                           job: *mut ImageflowJob,
-                                           by_placeholder_id: i32)
-                                           -> *mut CodecInstance;
-
-        pub fn flow_job_get_decoder_info(c: *mut ImageflowContext,
-                                         job: *mut ImageflowJob,
-                                         by_placeholder_id: i32,
-                                         info: *mut DecoderInfo)
-                                         -> bool;
-
-        pub fn flow_job_decoder_set_downscale_hints_by_placeholder_id(c: *mut ImageflowContext,
-                                                                      job: *mut ImageflowJob, placeholder_id: i32,
-                                                                      if_wider_than: i64, or_taller_than: i64,
-                                                                      downscaled_min_width: i64, downscaled_min_height: i64, scale_luma_spatially: bool,
-                                                                      gamma_correct_for_srgb_during_spatial_luma_scaling: bool) -> bool;
-
 
     }
 
@@ -650,6 +599,17 @@ mod long_term{
     use super::*;
     use ::libc;
     extern "C" {
+        pub fn flow_context_create() -> *mut ImageflowContext;
+        pub fn flow_context_begin_terminate(context: *mut ImageflowContext) -> bool;
+        pub fn flow_context_destroy(context: *mut ImageflowContext);
+        pub fn flow_destroy(context: *mut ImageflowContext,
+                            pointer: *const libc::c_void,
+                            file: *const libc::c_char,
+                            line: i32)
+                            -> bool;
+
+
+
         pub fn flow_bitmap_bgra_flip_vertical(c: *mut ImageflowContext, bitmap: *mut BitmapBgra);
         pub fn flow_bitmap_bgra_flip_horizontal(c: *mut ImageflowContext, bitmap: *mut BitmapBgra);
 
@@ -683,9 +643,10 @@ mod long_term{
     }
 }
 
-mod mid_term{
+mod mid_term {
     use super::*;
     use ::libc;
+
     extern "C" {
         pub fn flow_context_set_floatspace(c: *mut ImageflowContext,
                                            space: Floatspace,
@@ -797,10 +758,16 @@ mod mid_term{
                                          -> *mut CodecDefinition;
 
         pub fn flow_codec_execute_read_frame(c: *mut ImageflowContext,
-                                             context: *mut CodecInstance)
+                                             instance: *mut CodecInstance)
                                              -> *mut BitmapBgra;
 
+        pub fn flow_codec_select_from_seekable_io(context: *mut ImageflowContext, io: *mut ImageflowJobIo) -> i64;
 
+        pub fn flow_codec_decoder_get_info(c: *mut ImageflowContext,
+                                           codec_state: *mut libc::c_void, codec_id: i64, info: *mut DecoderInfo) -> bool;
+
+        pub fn flow_codec_decoder_set_downscale_hints(c: *mut ImageflowContext,
+                                                      instance: *mut CodecInstance, hints: *const DecoderDownscaleHints, crash_if_not_implemented: bool) -> bool;
     }
 }
 
@@ -818,19 +785,6 @@ fn flow_context_create_destroy_works() {
     unsafe {
         let c = flow_context_create();
         assert!(!c.is_null());
-
-        flow_context_destroy(c);
-    }
-}
-
-#[test]
-fn flow_job_creation_works() {
-    unsafe {
-        let c = flow_context_create();
-        assert!(!c.is_null());
-
-        let j = flow_job_create(c);
-        assert!(!j.is_null());
 
         flow_context_destroy(c);
     }

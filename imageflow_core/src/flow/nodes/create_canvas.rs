@@ -28,7 +28,7 @@ fn create_canvas_def() -> NodeDefinition {
         }),
         fn_execute: Some({
             fn f(ctx: &mut OpCtxMut, ix: NodeIndex<u32>) {
-                let c = ctx.c;
+                let flow_pointer = ctx.flow_c();
                 let weight = &mut ctx.weight_mut(ix);
                 match weight.params {
                     NodeParams::Json(s::Node::CreateCanvas { ref format,
@@ -37,11 +37,11 @@ fn create_canvas_def() -> NodeDefinition {
                                                              ref color }) => unsafe {
                         // TODO: handle creation failure. Most likely OOM in entire codebase
                         let ptr =
-                            ::ffi::flow_bitmap_bgra_create(c, *w as i32, *h as i32, true, *format);
+                            ::ffi::flow_bitmap_bgra_create(flow_pointer, *w as i32, *h as i32, true, *format);
                         let color_val = color.clone();
                         if color_val != s::Color::Transparent {
                             {
-                                if !ffi::flow_bitmap_bgra_fill_rect(c,
+                                if !ffi::flow_bitmap_bgra_fill_rect(flow_pointer,
                                                                     ptr,
                                                                     0,
                                                                     0,

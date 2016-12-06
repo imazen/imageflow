@@ -48,8 +48,6 @@ typedef enum flow_compositing_mode {
     flow_compositing_mode_blend_with_matte
 } flow_compositing_mode;
 
-struct flow_job;
-
 typedef enum flow_codec_type {
     flow_codec_type_null = 0,
     flow_codec_type_decode_png = 1,
@@ -227,35 +225,9 @@ PUB struct flow_io * flow_io_create_for_output_buffer(flow_c * c, void * owner);
 // Returns false if the flow_io struct is disposed or not an output buffer type (or for any other error)
 PUB bool flow_io_get_output_buffer(flow_c * c, struct flow_io * io, uint8_t ** out_pointer_to_buffer,
                                    size_t * out_length);
-PUB struct flow_io * flow_job_get_io(flow_c * c, struct flow_job * job, int32_t placeholder_id);
 
-PUB bool flow_job_get_output_buffer(flow_c * c, struct flow_job * job, int32_t placeholder_id,
-                                    uint8_t ** out_pointer_to_buffer, size_t * out_length);
 PUB bool flow_io_write_output_buffer_to_file(flow_c * c, struct flow_io * io, const char * file_path);
 
-PUB bool flow_job_initialize_encoder(flow_c * c, struct flow_job * job, int32_t by_placeholder_id, int64_t codec_id);
-
-PUB bool flow_job_add_io(flow_c * c, struct flow_job * job, struct flow_io * io, int32_t placeholder_id,
-                         FLOW_DIRECTION direction);
-
-PUB struct flow_codec_instance * flow_job_get_codec_instance(flow_c * c, struct flow_job * job,
-                                                             int32_t by_placeholder_id);
-PUB bool flow_job_set_default_encoder(flow_c * c, struct flow_job * job, int32_t by_placeholder_id,
-                                      int64_t default_encoder_id);
-
-PUB bool flow_job_decoder_set_downscale_hints_by_placeholder_id(
-    flow_c * c, struct flow_job * job, int32_t placeholder_id, int64_t if_wider_than, int64_t or_taller_than,
-    int64_t downscaled_min_width, int64_t downscaled_min_height, bool scale_luma_spatially,
-    bool gamma_correct_for_srgb_during_spatial_luma_scaling);
-
-PUB struct flow_job * flow_job_create(flow_c * c);
-PUB bool flow_job_destroy(flow_c * c, struct flow_job * job);
-PUB bool flow_job_configure_recording(flow_c * c, struct flow_job * job, bool record_graph_versions,
-                                      bool record_frame_images, bool render_last_graph, bool render_graph_versions,
-                                      bool render_animated_graph);
-
-PUB bool flow_job_decoder_switch_frame(flow_c * c, struct flow_job * job, int32_t by_placeholder_id,
-                                       int64_t frame_index);
 
 PUB uint32_t flow_pixel_format_bytes_per_pixel(flow_pixel_format format);
 
@@ -272,9 +244,6 @@ struct flow_decoder_info {
     // const char * format_subtype;
     // bool is_srgb;
 };
-
-PUB bool flow_job_get_decoder_info(flow_c * c, struct flow_job * job, int32_t by_placeholder_id,
-                                   struct flow_decoder_info * info);
 
 PUB bool flow_bitmap_bgra_write_png(flow_c * c, struct flow_bitmap_bgra * frame, struct flow_io * io);
 

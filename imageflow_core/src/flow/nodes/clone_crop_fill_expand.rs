@@ -90,7 +90,7 @@ fn fill_rect_def() -> NodeDefinition {
                     let input = ctx.first_parent_result_frame(ix, EdgeKind::Input).unwrap();
                     unsafe {
 
-                        if !ffi::flow_bitmap_bgra_fill_rect(ctx.c,
+                        if !ffi::flow_bitmap_bgra_fill_rect(ctx.c.flow_c(),
                                                             input,
                                                             x1,
                                                             y1,

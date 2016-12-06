@@ -1,6 +1,6 @@
 
 
-use ::{ContextPtr, JobPtr};
+use ::{Job, Context};
 use ::internal_prelude::works_everywhere::*;
 use ::json::*;
 use ::parsing::parse_graph::GraphTranslator;
@@ -8,50 +8,44 @@ use ::parsing::parse_io::IoTranslator;
 use std::error;
 
 
-fn create_job_router() -> MethodRouter<'static, JobPtr> {
+fn create_job_router() -> MethodRouter<'static, Job> {
     let mut r = MethodRouter::new();
     r.add_responder("v0.1/get_image_info",
-                    Box::new(move |job: &mut JobPtr, data: s::GetImageInfo001| {
+                    Box::new(move |job: &mut Job, data: s::GetImageInfo001| {
                         Ok(s::ResponsePayload::ImageInfo(job.get_image_info(data.io_id)?))
                     }));
     r.add_responder("v0.1/tell_decoder",
-                    Box::new(move |job: &mut JobPtr, data: s::TellDecoder001| {
+                    Box::new(move |job: &mut Job, data: s::TellDecoder001| {
                         job.tell_decoder(data.io_id, data.command)?;
                         Ok(s::ResponsePayload::None)
                     }));
     r.add_responder("v0.1/execute",
-                    Box::new(move |job: &mut JobPtr, parsed: s::Execute001| {
+                    Box::new(move |job: &mut Job, parsed: s::Execute001| {
         let mut g = ::parsing::GraphTranslator::new().translate_framewise(parsed.framewise)?;
         if let Some(r) = parsed.graph_recording {
             job.configure_graph_recording(r);
         }
-        unsafe {
-            if let Some(b) = parsed.no_gamma_correction {
-                ::ffi::flow_context_set_floatspace(job.context_ptr(),
-                                                   if b {
-                                                       ::ffi::Floatspace::srgb
-                                                   }else {
-                                                       ::ffi::Floatspace::linear
-                                                   },
-                                                   0f32,
-                                                   0f32,
-                                                   0f32)
-            }
-        }
-        ::flow::execution_engine::Engine::create(job, &mut g).execute()?;
-        //            if !job.execute(&mut g){
-        //                unsafe { job.ctx().assert_ok(Some(&mut g)); }
-        //            }
 
-        Ok(s::ResponsePayload::JobResult(s::JobResult { encodes: JobPtr::collect_encode_results(&g) }))
+        if let Some(b) = parsed.no_gamma_correction {
+            job.context().todo_remove_set_floatspace(if b {
+                ::ffi::Floatspace::srgb
+            }else {
+                ::ffi::Floatspace::linear
+            });
+        };
+        //Cheat on lifetimes so Job can remain mutable
+        let split_context = unsafe{ &*(job.context() as *const Context)};
+        ::flow::execution_engine::Engine::create(split_context, job, &mut g).execute()?;
+
+        Ok(s::ResponsePayload::JobResult(s::JobResult { encodes: Job::collect_encode_results(&g) }))
     }));
     r.add("brew_coffee",
-          Box::new(move |job: &mut JobPtr, bytes: &[u8]| Ok(JsonResponse::teapot())));
+          Box::new(move |job: &mut Job, bytes: &[u8]| Ok(JsonResponse::teapot())));
     r
 }
 
 lazy_static! {
-        pub static ref JOB_ROUTER: MethodRouter<'static, JobPtr> = create_job_router();
+        pub static ref JOB_ROUTER: MethodRouter<'static, Job> = create_job_router();
     }
 
 

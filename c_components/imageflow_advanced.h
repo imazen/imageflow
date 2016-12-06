@@ -10,7 +10,6 @@ extern "C" {
 
 struct flow_heap;
 struct flow_codec_instance;
-struct flow_job;
 struct flow_bitmap_float;
 struct flow_interpolation_details;
 struct flow_interpolation_pixel_contributions;

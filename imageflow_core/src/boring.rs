@@ -2,10 +2,9 @@
 
 use ::internal_prelude::works_everywhere::*;
 extern crate threadpool;
-use ContextPtr;
-use JobPtr;
+use Context;
+use Job;
 use JsonResponse;
-use SelfDisposingContextPtr;
 use ::ffi::*;
 use std::sync::mpsc::channel;
 
@@ -68,55 +67,23 @@ pub fn process_image_by_paths(input_path: PathBuf,
                               output_path: PathBuf,
                               commands: BoringCommands)
                               -> std::result::Result<(), String> {
+    process_image(commands,
+                  |c: &Context| {
+                      let input_io =
+                      c.create_io_from_filename(input_path.as_path().as_os_str().to_str().unwrap(), ::IoDirection::In).unwrap();
+                      let output_io = c.create_io_from_filename(output_path.as_path().as_os_str().to_str().unwrap(), ::IoDirection::Out).unwrap();
 
 
-    let c_input_path = CString::new(input_path.to_str().unwrap().as_bytes()).unwrap().into_raw();
-
-    let c_output_path = CString::new(output_path.to_str().unwrap().as_bytes()).unwrap().into_raw();
-
-    let result = process_image(commands,
-                               |c| {
-
-        unsafe {
-
-
-
-            let input_io = flow_io_create_for_file(c,
-                                                   IoMode::ReadSeekable,
-                                                   c_input_path,
-                                                   c as *mut libc::c_void);
-
-            // TODO! Lots of error handling needed here. IO create/add can fail
-            if input_io.is_null() {
-                flow_context_print_and_exit_if_err(c);
-            }
-            let output_io = flow_io_create_for_file(c,
-                                                    IoMode::WriteSeekable,
-                                                    c_output_path,
-                                                    c as *mut libc::c_void);
-            if output_io.is_null() {
-                flow_context_print_and_exit_if_err(c);
-            }
-
-
-            vec![IoResource {
-                     io: input_io,
-                     direction: IoDirection::In,
-                 },
-                 IoResource {
-                     io: output_io,
-                     direction: IoDirection::Out,
-                 }]
-        }
-    },
-                               |_, _| Ok(()));
-
-    // Bring the paths back into Rust ownership so they can be collected.
-    unsafe {
-        CString::from_raw(c_input_path);
-        CString::from_raw(c_output_path);
-    }
-    result
+                      vec![IoResource {
+                          io: input_io,
+                          direction: IoDirection::In,
+                      },
+                      IoResource {
+                          io: output_io,
+                          direction: IoDirection::Out,
+                      }]
+                  },
+                  |_, _| Ok(()))
 }
 
 pub struct BenchmarkOptions {
@@ -183,29 +150,14 @@ impl BenchmarkResults {
 fn benchmark_op(cmds: BoringCommands, mem: *mut u8, len: usize) -> BenchmarkResult {
     let begin_at = time::precise_time_ns();
     let result = process_image(cmds,
-                               |c| {
+                               |c: &Context| {
         unsafe {
-            let input_io = flow_io_create_from_memory(c,
-                                                      IoMode::ReadSeekable,
-                                                      mem,
-                                                      len,
-                                                      c as *mut libc::c_void,
-                                                      ptr::null());
-
-            if input_io.is_null() {
-                flow_context_print_and_exit_if_err(c);
-            }
-            let output_io = flow_io_create_for_output_buffer(c, c as *mut libc::c_void);
-            if output_io.is_null() {
-                flow_context_print_and_exit_if_err(c);
-            }
-
             vec![IoResource {
-                     io: input_io,
+                     io: c.create_io_from_slice(std::slice::from_raw_parts(mem, len)).unwrap(),
                      direction: IoDirection::In,
                  },
                  IoResource {
-                     io: output_io,
+                     io: c.create_io_output_buffer().unwrap(),
                      direction: IoDirection::Out,
                  }]
         }
@@ -220,28 +172,18 @@ fn benchmark_op(cmds: BoringCommands, mem: *mut u8, len: usize) -> BenchmarkResu
 pub fn benchmark(bench: BenchmarkOptions) -> std::result::Result<BenchmarkResults, String> {
 
     // Switch to Arc instead of pointers
-
-    let mut f = File::open(bench.input_path).unwrap();//bad
+    let mut f = File::open(bench.input_path).unwrap();
     let mut buffer = Vec::new();
-
-    // read the whole file
-    f.read_to_end(&mut buffer).unwrap();//bad
-
+    f.read_to_end(&mut buffer).unwrap();
 
     let len = buffer.len();
-
     let mem = buffer.as_mut_ptr();
-
     let cap = buffer.capacity();
-
 
     mem::forget(buffer);
 
     let pool = threadpool::ThreadPool::new(bench.thread_count);
-
     let (tx, rx) = channel();
-
-
 
     let begin_at = time::precise_time_ns();
 
@@ -421,30 +363,31 @@ pub fn process_image<F, C, R>(commands: BoringCommands,
                               io_provider: F,
                               cleanup: C)
                               -> std::result::Result<R, String>
-    where F: Fn(*mut ImageflowContext) -> Vec<IoResource>,
-          C: Fn(*mut ImageflowContext, *mut ImageflowJob) -> std::result::Result<R, String>
+    where F: Fn(&Context) -> Vec<IoResource>,
+          C: Fn(&Context, &Job) -> std::result::Result<R, String>
 {
-    let context = SelfDisposingContextPtr::create().unwrap();
+    let context = Context::create().unwrap();
     let result;
 
-    unsafe {
-        let c = context.inner();
-        let mut job: JobPtr = JobPtr::create(c.as_ptr().unwrap()).unwrap();
+    {
+        let mut job = context.create_job();
 
         // Add I/O
-        let inputs: Vec<IoResource> = io_provider(c.as_ptr().unwrap());
+        let inputs: Vec<IoResource> = io_provider(&context);
         for (index, input) in inputs.iter().enumerate() {
             let dir = input.direction;
             let io = input.io;
 
-            job.add_io_ptr(io, index as i32, dir).unwrap();
+            unsafe {
+                job.add_io(io, index as i32, dir).unwrap();
+            }
         }
 
 
         let info_blob: JsonResponse =
-            job.message("v0.1/get_image_info", b"{\"io_id\": 0}").unwrap();
+        job.message("v0.1/get_image_info", b"{\"io_id\": 0}").unwrap();
         let info_response: s::Response001 =
-            serde_json::from_slice(info_blob.response_json.as_ref()).unwrap();
+        serde_json::from_slice(info_blob.response_json.as_ref()).unwrap();
         if !info_response.success {
             panic!("get_image_info failed: {:?}", info_response);
         }
@@ -482,9 +425,9 @@ pub fn process_image<F, C, R>(commands: BoringCommands,
         job.message("v0.1/execute", send_execute_str.as_bytes()).unwrap().assert_ok();
 
 
-        result = cleanup(c.as_ptr().unwrap(), job.as_ptr());
-
+        result = cleanup(&context, &*job);
     }
+
     context.destroy_allowing_panics();
     result
 }

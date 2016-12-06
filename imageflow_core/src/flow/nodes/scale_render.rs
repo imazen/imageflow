@@ -195,12 +195,10 @@ fn render1d_to_canvas_def() -> NodeDefinition {
                         };
 
 
-                        if !::ffi::flow_node_execute_render_to_canvas_1d(ctx.c,
+                        if !::ffi::flow_node_execute_render_to_canvas_1d(ctx.flow_c(),
                                                                          input, canvas, &ffi_struct as *const ffi::RenderToCanvas1d) {
                             //ctx.c.assert_ok();
-
-                            ::ContextPtr::from_ptr(ctx.c).assert_ok(Some(ctx.graph));
-                            panic!("TODO: print context error");
+                            ctx.panic_time();
                         }
                     }
 
@@ -255,12 +253,9 @@ fn scale2d_render_def() -> NodeDefinition {
                         };
 
 
-                        if !::ffi::flow_node_execute_scale2d_render1d(ctx.c,
+                        if !::ffi::flow_node_execute_scale2d_render1d(ctx.flow_c(),
                                                                       input, canvas, &ffi_struct as *const ffi::Scale2dRenderToCanvas1d) {
-                            //ctx.c.assert_ok();
-
-                            ::ContextPtr::from_ptr(ctx.c).assert_ok(Some(ctx.graph));
-                            panic!("TODO: print context error");
+                            ctx.panic_time();
                         }
                     }
 

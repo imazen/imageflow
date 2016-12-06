@@ -1,5 +1,6 @@
-use ::JobPtr;
+use ::{Job,Context};
 use ::flow::definitions::*;
+use ::ffi::CodecInstance;
 use ::internal_prelude::works_everywhere::*;
 use petgraph::dot::Dot;
 use std::process::Command;
@@ -8,20 +9,22 @@ use super::visualize::{notify_graph_changed, GraphRecordingUpdate, GraphRecordin
 use petgraph::EdgeDirection;
 
 pub struct Engine<'a, 'b> {
-    c: *mut ::ffi::ImageflowContext,
-    job_p: *mut ::ffi::ImageflowJob,
-    job: &'a mut JobPtr,
+    c: &'a Context,
+    job: &'a mut Job,
     g: &'b mut Graph,
 }
 
 impl<'a, 'b> Engine<'a, 'b> {
-    pub fn create(job: &'a mut JobPtr, g: &'b mut Graph) -> Engine<'a, 'b> {
+    pub fn create(context: &'a Context, job: &'a mut Job, g: &'b mut Graph) -> Engine<'a, 'b> {
         Engine {
-            c: job.context_ptr(),
-            job_p: job.as_ptr(),
+            c: context,
             job: job,
             g: g,
         }
+    }
+
+    fn flow_c(&self) -> *mut ::ffi::ImageflowContext{
+        self.c.flow_c()
     }
 
     pub fn validate_graph(&self) -> Result<()> {
@@ -72,9 +75,7 @@ impl<'a, 'b> Engine<'a, 'b> {
     }
 
     pub fn execute(&mut self) -> Result<()> {
-
         self.validate_graph()?;
-        let job = self.job_p;
         self.notify_graph_changed()?;
 
         self.link_codecs()?;
@@ -92,7 +93,7 @@ impl<'a, 'b> Engine<'a, 'b> {
                 break;
             }
 
-            if passes >= unsafe { (*job).max_calc_flatten_execute_passes } {
+            if passes >= self.job.max_calc_flatten_execute_passes {
                 {
                     self.notify_graph_complete()?;
                 }
@@ -126,11 +127,11 @@ impl<'a, 'b> Engine<'a, 'b> {
 
             self.notify_graph_changed()?;
         }
-        unsafe {
-            if (*job).next_graph_version > 0 && (*job).render_last_graph {
-                self.notify_graph_complete()?;
-            }
+
+        if self.job.next_graph_version > 0 && self.job.graph_recording.render_last_graph.unwrap_or(false) {
+            self.notify_graph_complete()?;
         }
+
         Ok(())
     }
 
@@ -149,17 +150,11 @@ impl<'a, 'b> Engine<'a, 'b> {
                     placeholder_id = func(&mut ctx, NodeIndex::new(index));
                 }
                 if let Some(io_id) = placeholder_id {
-                    let codec_instance =
-                        unsafe {
-                            ::ffi::flow_job_get_codec_instance(self.c, self.job_p, io_id) as *mut u8
-                        };
-                    if codec_instance.is_null() {
-                        panic!("")
-                    }
+                    let codec_instance_ptr = self.job.codec_instance_by_io_id(io_id).unwrap() as *const CodecInstance;
 
                     {
                         self.g.node_weight_mut(NodeIndex::new(index)).unwrap().custom_state =
-                            codec_instance;
+                            unsafe{ mem::transmute(codec_instance_ptr) };
                     }
                     {
                         let weight = self.g.node_weight(NodeIndex::new(index)).unwrap();
@@ -183,16 +178,12 @@ impl<'a, 'b> Engine<'a, 'b> {
 
 
     fn assign_stable_ids(&mut self) -> Result<()> {
-        let job = self.job_p;
-
         // Assign stable IDs;
         for index in 0..self.g.node_count() {
             let mut weight = self.g.node_weight_mut(NodeIndex::new(index)).unwrap();
             if weight.stable_id < 0 {
-                unsafe {
-                    weight.stable_id = (*job).next_stable_node_id;
-                    (*job).next_stable_node_id += 1;
-                }
+                weight.stable_id = self.job.next_stable_node_id;
+                self.job.next_stable_node_id += 1;
             }
         }
         Ok(())
@@ -200,32 +191,27 @@ impl<'a, 'b> Engine<'a, 'b> {
 
 
     fn notify_graph_changed(&mut self) -> Result<()> {
-        let job = self.job_p;
         self.assign_stable_ids()?;
 
         let info = GraphRecordingInfo {
-            debug_job_id: unsafe { (*job).debug_job_id },
-            record_graph_versions: unsafe { (*job).record_graph_versions },
-            current_graph_version: unsafe { (*job).next_graph_version },
-            render_graph_versions: unsafe { (*job).render_graph_versions },
+            debug_job_id: self.job.debug_job_id,
+            record_graph_versions: self.job.graph_recording.record_graph_versions.unwrap_or(false),
+            current_graph_version: self.job.next_graph_version,
+            render_graph_versions: self.job.graph_recording.record_graph_versions.unwrap_or(false),
             maximum_graph_versions: 100,
         };
         let update = notify_graph_changed(self.g, info)?;
         if let Some(GraphRecordingUpdate { next_graph_version }) = update {
-            unsafe {
-                (*job).next_graph_version = next_graph_version;
-            }
+            self.job.next_graph_version = next_graph_version;
         }
         Ok(())
     }
 
     fn notify_graph_complete(&mut self) -> Result<()> {
-        let job = self.job_p;
-        let prev_filename = unsafe {
+        let prev_filename =
             format!("job_{}_graph_version_{}.dot",
-                    (*job).debug_job_id,
-                    (*job).next_graph_version - 1)
-        };
+                    self.job.debug_job_id,
+                    self.job.next_graph_version - 1);
 
         super::visualize::render_dotfile_to_png(&prev_filename);
         Ok(())
@@ -237,7 +223,7 @@ impl<'a, 'b> Engine<'a, 'b> {
         let mut ctx = OpCtxMut {
             c: self.c,
             graph: self.g,
-            job: self.job_p,
+            job: self.job,
         };
         // Invoke estimation
         ctx.weight(node_id).def.fn_estimate.unwrap()(&mut ctx, node_id);
@@ -418,26 +404,26 @@ impl<'a, 'b> Engine<'a, 'b> {
                         panic!("fn_execute of {} failed to save a result",
                                self.g.node_weight(next_ix).unwrap().def.name);
                     } else {
-                        let job = self.job_p;
                         unsafe {
-                            if (*job).record_frame_images {
+                            if self.job.graph_recording.record_frame_images.unwrap_or(false) {
                                 if let NodeResult::Frame(ptr) = self.g
                                     .node_weight(next_ix)
                                     .unwrap()
                                     .result {
                                     let path = format!("node_frames/job_{}_node_{}.png",
-                                                (*job).debug_job_id,
+                                                self.job.debug_job_id,
                                                 self.g.node_weight(next_ix).unwrap().stable_id);
                                     let path_copy = path.clone();
                                     let path_cstr = std::ffi::CString::new(path).unwrap();
                                     let _ = std::fs::create_dir("node_frames");
-                                    if !::ffi::flow_bitmap_bgra_save_png(self.c,
+                                    if !::ffi::flow_bitmap_bgra_save_png(self.c.flow_c(),
                                                                          ptr,
                                                                          path_cstr.as_ptr()) {
+
                                         println!("Failed to save frame {} (from node {})",
                                                  path_copy,
                                                  next_ix.index());
-                                        ::ContextPtr::from_ptr(self.c).assert_ok(None);
+                                        self.c.c_error().unwrap().panic_time();
 
                                     }
                                 }
@@ -453,7 +439,7 @@ impl<'a, 'b> Engine<'a, 'b> {
         OpCtxMut {
             c: self.c,
             graph: self.g,
-            job: self.job_p,
+            job: self.job,
         }
     }
 

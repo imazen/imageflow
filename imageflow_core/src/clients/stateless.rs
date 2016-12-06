@@ -1,7 +1,6 @@
-use ::ContextPtr;
-use ::JobPtr;
+use ::Context;
+use ::Job;
 use ::JsonResponse;
-use ::SelfDisposingContextPtr;
 
 pub use imageflow_types::Framewise;
 use ::internal_prelude::works_everywhere::*;
@@ -87,10 +86,10 @@ impl LibClient {
     pub fn get_image_info(&mut self,
                               bytes: &[u8])
                               -> std::result::Result<s::ImageInfo, BuildFailure> {
-        let context = SelfDisposingContextPtr::create()?;
+        let context = Context::create()?;
 
         let result = {
-            let mut job: JobPtr = context.create_job()?;
+            let mut job = context.create_job();
             job.add_input_bytes(0, bytes)?;
             let info_blob: JsonResponse =
                 job.message("v0.1/get_image_info", b"{\"io_id\": 0}")?;
@@ -117,10 +116,10 @@ impl LibClient {
 
 
     pub fn build(&mut self, task: BuildRequest) -> std::result::Result<BuildSuccess, BuildFailure> {
-        let context = SelfDisposingContextPtr::create()?;
+        let context = Context::create()?;
 
         let result = {
-            let mut job: JobPtr = context.create_job()?;
+            let mut job = context.create_job();
 
             for input in task.inputs {
                 job.add_input_bytes(input.io_id, input.bytes)?;

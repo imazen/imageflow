@@ -107,7 +107,7 @@ fn flip_v_p_def() -> NodeDefinition {
                 match from_node.result {
                     NodeResult::Frame(bitmap) => {
                         unsafe {
-                            ::ffi::flow_bitmap_bgra_flip_vertical(ctx.c, bitmap);
+                            ::ffi::flow_bitmap_bgra_flip_vertical(ctx.flow_c(), bitmap);
                         }
                         ctx.weight_mut(ix).result = NodeResult::Frame(bitmap);
                         ctx.first_parent_input_weight_mut(ix).unwrap().result =
@@ -135,7 +135,7 @@ fn flip_h_p_def() -> NodeDefinition {
                 match from_node.result {
                     NodeResult::Frame(bitmap) => {
                         unsafe {
-                            ::ffi::flow_bitmap_bgra_flip_horizontal(ctx.c, bitmap);
+                            ::ffi::flow_bitmap_bgra_flip_horizontal(ctx.flow_c(), bitmap);
                         }
                         ctx.weight_mut(ix).result = NodeResult::Frame(bitmap);
                         ctx.first_parent_input_weight_mut(ix).unwrap().result =

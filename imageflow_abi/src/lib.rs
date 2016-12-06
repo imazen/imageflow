@@ -5,6 +5,14 @@
 //! If you're writing bindings, you're in the right place. Don't use imageflow_core::ffi, that's
 //! *not* correct - those are unstable and will disappear as C is replaced with Rust.
 //!
+//! Don't call functions against the same context from multiple threads. You can create contexts
+//! from as many threads as you like, but you are responsible for synchronizing API calls
+//! on a per-context basis if you want to use one context from multiple threads. No use
+//! case for multithreaded Context access has been presented, so it  is out of scope for API design.
+//!
+//!
+//!
+//!
 //! # Memory Lifetimes
 //!
 //! In order to prevent dangling pointers, we must be correct about memory lifetimes.
@@ -123,9 +131,8 @@ extern crate imageflow_core as c;
 extern crate alloc_system;
 extern crate libc;
 use c::ffi;
-use c::{Context};
+use c::{Context, Job};
 
-pub use c::ffi::ImageflowJob as Job;
 pub use c::ffi::ImageflowJobIo as JobIo;
 pub use c::ffi::ImageflowJsonResponse as JsonResponse;
 use std::ptr;
@@ -197,7 +204,7 @@ unsafe fn uw(outer: *mut Context) -> *mut c::ffi::ImageflowContext{
     if outer.is_null(){
         ptr::null_mut()
     }else {
-        (&mut *outer).unsafe_c_ctx()
+        (&mut *outer).flow_c()
     }
 }
 
@@ -218,7 +225,7 @@ unsafe fn uw(outer: *mut Context) -> *mut c::ffi::ImageflowContext{
 /// Returns a null pointer if allocation fails.
 #[no_mangle]
 pub unsafe extern "C" fn imageflow_context_create() -> *mut Context {
-    Context::create_boxed().map(|b| Box::into_raw(b)).unwrap_or(std::ptr::null_mut())
+    Context::abi_create_boxed().map(|b| Box::into_raw(b)).unwrap_or(std::ptr::null_mut())
 }
 
 /// Begins the process of destroying the context, yet leaves error information intact
@@ -236,7 +243,7 @@ pub unsafe extern "C" fn imageflow_context_begin_terminate(context: *mut Context
         let _ = std::io::stderr().write_all(b"A null pointer was provided to imageflow_context_begin_terminate. Terminating process.\n");
         std::process::exit(70);
     }else{
-        (&mut *context).begin_terminate()
+        (&mut *context).abi_begin_terminate()
     }
 }
 
@@ -270,7 +277,7 @@ pub fn exercise_create_destroy() {
 /// Behavior is undefined if `context` is a null or invalid ptr; segfault likely.
 #[no_mangle]
 pub unsafe extern "C" fn imageflow_context_has_error(context: *mut Context) -> bool {
-    (&*context).error().has_error()
+    (&*context).error().abi_has_error()
 }
 
 /// Clear the error state. This assumes that you know which API call failed and the problem has
@@ -280,7 +287,7 @@ pub unsafe extern "C" fn imageflow_context_has_error(context: *mut Context) -> b
 /// Behavior is undefined if `context` is a null or invalid ptr; segfault likely.
 #[no_mangle]
 pub unsafe extern "C" fn imageflow_context_clear_error(context: *mut Context) {
-    (&mut *context).error_mut().clear_error()
+    (&mut *context).error_mut().abi_clear_error()
 }
 
 /// Prints the error messages and stacktrace to the given buffer in UTF-8 form; writes a null
@@ -330,7 +337,7 @@ pub unsafe extern "C" fn imageflow_context_error_and_stacktrace(context: *mut Co
 /// Behavior is undefined if `context` is a null or invalid ptr; segfault likely.
 #[no_mangle]
 pub unsafe extern "C" fn imageflow_context_error_code(context: *mut Context) -> i32 {
-    (&mut *context).error_mut().error_code()
+    (&mut *context).error_mut().abi_error_code()
 }
 
 /// Prints the error to stderr and exits the process if an error has been raised on the context.
@@ -341,7 +348,7 @@ pub unsafe extern "C" fn imageflow_context_error_code(context: *mut Context) -> 
 /// THIS PRINTS DIRECTLY TO STDERR! Do not use in any kind of service! Command-line usage only!
 #[no_mangle]
 pub unsafe extern "C" fn imageflow_context_print_and_exit_if_error(context: *mut Context) -> bool {
-    (&mut *context).error_mut().abort_and_print_on_error()
+    (&mut *context).error_mut().abi_abort_and_print_on_error()
 }
 
 ///
@@ -384,7 +391,7 @@ pub unsafe extern "C" fn imageflow_context_raise_error(context: *mut Context,
     let function_name_cstr = if function_name.is_null() { None } else { Some(CStr::from_ptr(function_name))};
     let line_optional = if line >= 0 { Some(line)} else { None };
 
-    (&mut *context).error_mut().raise_error_c_style(error_code, message_cstr, filename_cstr, line_optional, function_name_cstr)
+    (&mut *context).error_mut().abi_raise_error_c_style(error_code, message_cstr, filename_cstr, line_optional, function_name_cstr)
 
 }
 
@@ -426,7 +433,7 @@ pub unsafe extern "C" fn imageflow_context_add_to_callstack(context: *mut Contex
     let function_name_cstr = if function_name.is_null() { None } else { Some(CStr::from_ptr(function_name))};
     let line_optional = if line >= 0 { Some(line)} else { None };
 
-    (&mut *context).error_mut().add_to_callstack_c_style(filename_cstr, line_optional, function_name_cstr)
+    (&mut *context).error_mut().abi_add_to_callstack_c_style(filename_cstr, line_optional, function_name_cstr)
 }
 
 
@@ -666,7 +673,7 @@ unsafe fn imageflow_send_json(context: *mut Context,
     // TODO: possibly iterate access to force segfaults earlier?
 
 
-    let mut ctx = c::ContextPtr::from_ptr(uw(context));
+    let mut ctx = &mut *context;
 
 
     let response;
@@ -674,7 +681,8 @@ unsafe fn imageflow_send_json(context: *mut Context,
     if job == ptr::null_mut() && io == ptr::null_mut() {
         response = ctx.message(method_str, json_bytes).unwrap(); //Unwrap for invalid context
     } else if io == ptr::null_mut() {
-        response = c::JobPtr::from_ptr(uw(context), job).unwrap().message(method_str, json_bytes).unwrap();
+        //TODO: perform lookup instead of dereferencing!
+        response =(&mut *job).message(method_str, json_bytes).unwrap();
     } else{
         panic!("Messaging JobIo not implemented");
     }
@@ -840,12 +848,9 @@ pub unsafe extern "C" fn imageflow_job_get_output_buffer_by_id(context: *mut Con
                                                                result_buffer: *mut *const u8,
                                                                result_buffer_length: *mut libc::size_t)
                                                                -> bool {
-    let io = ffi::flow_job_get_io(uw(context),job, io_id);
-    if io.is_null(){
-        return false;
-    }else {
+    (&*job).get_io(io_id).map(|io|
         imageflow_io_get_output_buffer(context, io, result_buffer, result_buffer_length)
-    }
+    ).unwrap_or_else(|e| { e.write_to_context_ptr(context); false })
 }
 
 
@@ -855,7 +860,7 @@ pub unsafe extern "C" fn imageflow_job_get_output_buffer_by_id(context: *mut Con
 ///
 #[no_mangle]
 pub unsafe extern "C" fn imageflow_job_create(context: *mut Context) -> *mut Job {
-    ffi::flow_job_create(uw(context))
+    &mut *(&*context).create_job()
 }
 
 
@@ -867,7 +872,7 @@ pub unsafe extern "C" fn imageflow_job_get_io(context: *mut Context,
                                               job: *mut Job,
                                               placeholder_id: i32)
                                               -> *mut JobIo {
-    ffi::flow_job_get_io(uw(context), job, placeholder_id)
+    (&*job).get_io(placeholder_id).unwrap_or(ptr::null_mut())
 }
 
 ///
@@ -883,7 +888,10 @@ pub unsafe extern "C" fn imageflow_job_add_io(context: *mut Context,
                                               placeholder_id: i32,
                                               direction: Direction)
                                               -> bool {
-    ffi::flow_job_add_io(uw(context), job, io, placeholder_id, std::mem::transmute(direction))
+    (&mut *job).add_io(io, placeholder_id, std::mem::transmute(direction))
+        .map(|_| true)
+        .unwrap_or_else(|e| { e.write_to_context_ptr(context); false })
+
 }
 
 ///
@@ -891,7 +899,7 @@ pub unsafe extern "C" fn imageflow_job_add_io(context: *mut Context,
 ///
 #[no_mangle]
 pub unsafe extern "C" fn imageflow_job_destroy(context: *mut Context, job: *mut Job) -> bool {
-    ffi::flow_job_destroy(uw(context), job)
+    (&*context).abi_try_remove_job(job)
 }
 
 

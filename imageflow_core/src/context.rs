@@ -1,73 +1,229 @@
 use ::std;
 use ::for_other_imageflow_crates::preludes::external_without_std::*;
 use ::ffi;
+use ::job::Job;
+use ::{FlowErr,FlowError, Result, JsonResponse};
 
-
-pub struct Job{
-    pub debug_job_id: int32_t,
-    pub next_stable_node_id: int32_t,
-    pub next_graph_version: int32_t,
-    pub max_calc_flatten_execute_passes: int32_t,
-    // FIXME: find a safer way to store them
-//    pub codecs_head: *mut CodecInstance,
-//    pub codecs_tail: *mut CodecInstance,
-    pub record_graph_versions: bool,
-    pub record_frame_images: bool,
-    pub render_graph_versions: bool,
-    pub render_animated_graph: bool,
-    pub render_last_graph: bool,
-}
+use ::imageflow_types::collections::AddRemoveSet;
+use ::ffi::ImageflowJsonResponse;
 
 pub struct Context{
+    jobs: AddRemoveSet<Job>,
     c_ctx: *mut ffi::ImageflowContext,
-    error: ErrorBuffer,
-    jobs: Vec<Job>
+    error: RefCell<ErrorBuffer>,
 }
 
+#[derive(Copy,Clone,Debug)]
 pub struct ErrorBuffer{
     c_ctx: *mut ffi::ImageflowContext,
 }
-pub enum ContextError{
-    AllocationFailed
-}
-
-type Result<T> = std::result::Result<T,ContextError>;
-
-
 impl Context {
-    /// Used by abi; should not panic
-    pub fn create_boxed() -> Result<Box<Context>> {
-        std::panic::catch_unwind(|| {
-            let inner = unsafe { ffi::flow_context_create() };
-            if inner.is_null() {
-                Err(ContextError::AllocationFailed)
-            } else {
-                Ok(Box::new(Context {
-                    c_ctx: inner,
-                    error: ErrorBuffer {c_ctx: inner},
-                    jobs: vec![]
-                }))
-            }
-        }).unwrap_or(Err(ContextError::AllocationFailed))
+
+    pub fn create() -> Result<Box<Context>>{
+        Context::abi_create_boxed()
     }
 
     /// Used by abi; should not panic
-    pub fn begin_terminate(&mut self) -> bool {
-        self.jobs.clear();
+    pub fn abi_create_boxed() -> Result<Box<Context>> {
+        std::panic::catch_unwind(|| {
+            let inner = unsafe { ffi::flow_context_create() };
+            if inner.is_null() {
+                Err(FlowError::Oom)
+            } else {
+                Ok(Box::new(Context {
+                    c_ctx: inner,
+                    error: RefCell::new(ErrorBuffer {c_ctx: inner}),
+                    jobs: AddRemoveSet::with_capacity(2)
+                }))
+            }
+        }).unwrap_or(Err(FlowError::Oom))
+    }
+
+    /// Used by abi; should not panic
+    pub fn abi_begin_terminate(&mut self) -> bool {
+        self.jobs.mut_clear();
         unsafe {
             ffi::flow_context_begin_terminate(self.c_ctx)
         }
     }
 
-    pub fn error_mut(&mut self) -> &mut ErrorBuffer{
-        &mut self.error
+    pub fn error_mut(&self) -> RefMut<ErrorBuffer>{
+        self.error.borrow_mut()
     }
-    pub fn error(&self) -> &ErrorBuffer{
-        &self.error
+    pub fn error(&self) -> Ref<ErrorBuffer>{
+        self.error.try_borrow().expect("Another scope has mutably borrowed the ErrorBuffer; readonly access failed.")
     }
-    pub fn unsafe_c_ctx(&mut self) -> *mut ffi::ImageflowContext{
+    pub unsafe fn unsafe_c_context_pointer(&self) -> *mut ffi::ImageflowContext{
         self.c_ctx
     }
+
+    pub fn message(&mut self, method: &str, json: &[u8]) -> Result<JsonResponse> {
+        ::context_methods::CONTEXT_ROUTER.invoke(self, method, json)
+    }
+
+    pub fn create_job(&self) -> RefMut<Job>{
+        self.jobs.add_mut(Job::internal_use_only_create(self))
+    }
+
+    pub fn abi_try_remove_job(&self, job: *const Job) -> bool{
+        self.jobs.try_remove(job).unwrap_or(false)
+    }
+    pub fn flow_c(&self) -> *mut ffi::ImageflowContext{
+        self.c_ctx
+    }
+
+    pub fn c_error(&self) -> Option<FlowError>{
+        self.error().get_error_copy()
+    }
+
+
+
+    pub fn create_io_from_copy_of_slice<'a>(&'a self, bytes: &'a [u8]) -> Result<*mut ::ffi::ImageflowJobIo> {
+        unsafe {
+            let buf: *mut u8 =
+            ::ffi::flow_context_calloc(self.flow_c(),
+                                       1,
+                                       bytes.len(),
+                                       ptr::null(),
+                                       self.flow_c() as *const libc::c_void,
+                                       ptr::null(),
+                                       0) as *mut u8;
+
+            if buf.is_null() {
+                return Err(FlowError::Oom);
+            }
+            ptr::copy_nonoverlapping(bytes.as_ptr(), buf, bytes.len());
+
+            let io_ptr = ::ffi::flow_io_create_from_memory(self.flow_c(),
+                                                           ::ffi::IoMode::ReadSeekable,
+                                                           buf,
+                                                           bytes.len(),
+                                                           self.flow_c() as *const libc::c_void,
+                                                           ptr::null());
+
+            if io_ptr.is_null() {
+                Err(self.c_error().unwrap())
+            } else {
+                Ok(io_ptr)
+            }
+        }
+    }
+    pub fn create_io_from_slice<'a>(&'a self, bytes: &'a [u8]) -> Result<*mut ::ffi::ImageflowJobIo> {
+        unsafe {
+            let p = ::ffi::flow_io_create_from_memory(self.flow_c(),
+                                                      ::ffi::IoMode::ReadSeekable,
+                                                      bytes.as_ptr(),
+                                                      bytes.len(),
+                                                      self.flow_c() as *const libc::c_void,
+                                                      ptr::null());
+            if p.is_null() {
+                Err(self.c_error().unwrap())
+            } else {
+                Ok(p)
+            }
+        }
+    }
+
+    pub fn create_io_from_filename(&self, path: &str, dir: ::IoDirection) -> Result<*mut ::ffi::ImageflowJobIo> {
+        unsafe {
+            // TODO: character sets matter!
+            let mode = match dir {
+                s::IoDirection::In => ::ffi::IoMode::ReadSeekable,
+                s::IoDirection::Out => ::ffi::IoMode::WriteSequential,
+            };
+
+            let mut vec = Vec::new();
+            vec.extend_from_slice(path.as_bytes());
+            vec.push(0);
+
+            let c_path = std::ffi::CStr::from_bytes_with_nul(vec.as_slice()).unwrap();
+            //TODO: make filename lifetime last as long as context
+
+            let p = ::ffi::flow_io_create_for_file(self.flow_c(),
+                                                        mode,
+                                                        c_path.as_ptr(),
+                                                   self.flow_c() as *const libc::c_void);
+            if p.is_null() {
+                Err(self.c_error().unwrap())
+            } else {
+                Ok(p)
+            }
+        }
+    }
+
+    pub fn create_io_output_buffer(&self) -> Result<(*mut ::ffi::ImageflowJobIo)> {
+        unsafe {
+            let p =
+            ::ffi::flow_io_create_for_output_buffer(self.flow_c(),
+                                                    self.flow_c() as *const libc::c_void);
+            if p.is_null() {
+                Err(self.c_error().unwrap())
+            } else {
+                Ok(p)
+            }
+        }
+    }
+
+    pub fn todo_remove_set_floatspace(&self, b: ::ffi::Floatspace){
+        unsafe {
+            ::ffi::flow_context_set_floatspace(self.flow_c(),
+                                               b,
+                                               0f32,
+                                               0f32,
+                                               0f32)
+        }
+    }
+
+    pub fn create_abi_json_response(&mut self,
+                                    json_bytes: std::borrow::Cow<[u8]>,
+                                    status_code: i64)
+                                    -> *const ImageflowJsonResponse {
+        unsafe {
+            let sizeof_struct = std::mem::size_of::<ImageflowJsonResponse>();
+
+            let pointer = ::ffi::flow_context_calloc(self.flow_c(),
+                                                     1,
+                                                     sizeof_struct + json_bytes.len(),
+                                                     ptr::null(),
+                                                     self.flow_c() as *mut libc::c_void,
+                                                     ptr::null(),
+                                                     0) as *mut u8;
+            // Return null on OOM
+            if pointer.is_null() {
+                return ::std::ptr::null();
+            }
+            let pointer_to_final_buffer =
+            pointer.offset(sizeof_struct as isize) as *mut libc::uint8_t;
+            let imageflow_response = &mut (*(pointer as *mut ImageflowJsonResponse));
+            imageflow_response.buffer_utf8_no_nulls = pointer_to_final_buffer;
+            imageflow_response.buffer_size = json_bytes.len();
+            imageflow_response.status_code = status_code;
+
+            let mut out_json_bytes = std::slice::from_raw_parts_mut(pointer_to_final_buffer,
+                                                                    json_bytes.len());
+
+            out_json_bytes.clone_from_slice(&json_bytes);
+
+            imageflow_response as *const ImageflowJsonResponse
+        }
+    }
+
+
+
+
+    pub fn destroy_allowing_panics(mut self) {
+        if !self.abi_begin_terminate(){
+            self.c_error().unwrap().panic_with("Error during context shutdown");
+        }
+    }
+
+
+
+    pub fn abi_destroy(mut self) -> bool{
+        self.jobs.mut_clear();
+        true
+    }
+
 }
 
 type ErrorCode = i32;
@@ -86,26 +242,26 @@ impl ErrorBuffer{
 //
 //
     /// Used by abi; should not panic
-    pub fn has_error(&self) -> bool{
+    pub fn abi_has_error(&self) -> bool{
         unsafe{
             ffi::flow_context_has_error(self.c_ctx)
         }
     }
     /// Used by abi; should not panic
-    pub fn clear_error(&mut self){
+    pub fn abi_clear_error(&mut self){
         unsafe {
             ffi::flow_context_clear_error(self.c_ctx)
         }
     }
     /// Used by abi; should not panic
-    pub fn error_code(&self) -> ErrorCode{
+    pub fn abi_error_code(&self) -> ErrorCode{
         unsafe {
             ffi::flow_context_error_reason(self.c_ctx)
         }
     }
 
     /// Used by abi; should not panic
-    pub fn abort_and_print_on_error(&self) -> bool{
+    pub fn abi_abort_and_print_on_error(&self) -> bool{
         unsafe {
             ffi::flow_context_print_and_exit_if_err(self.c_ctx)
         }
@@ -125,13 +281,13 @@ impl ErrorBuffer{
     ///  `imageflow_context_clear_error`. You'll be ignored, as will future
     ///   `imageflow_add_to_callstack` invocations.
     /// * If you provide an error code of zero (why?!), a different error code will be provided.
-    pub fn raise_error_c_style(&mut self,
-                                                           error_code: ErrorCode,
-                                                           message: Option<&CStr>,
-                                                           filename: Option<&'static CStr>,
-                                                           line: Option<i32>,
-                                                           function_name: Option<&'static CStr>)
-                                                           -> bool {
+    pub fn abi_raise_error_c_style(&mut self,
+                                   error_code: ErrorCode,
+                                   message: Option<&CStr>,
+                                   filename: Option<&'static CStr>,
+                                   line: Option<i32>,
+                                   function_name: Option<&'static CStr>)
+                                   -> bool {
         unsafe {
             ffi::flow_context_raise_error(self.c_ctx, error_code,
                                           message.map(|cstr| cstr.as_ptr()).unwrap_or(ptr::null()),
@@ -153,10 +309,10 @@ impl ErrorBuffer{
     /// * You tried to raise a second error without clearing the first one. Call will be ignored.
     /// * You've exceeded the capacity of the call stack (which, at one point, was 14). But this
     ///   category of failure is acceptable.
-    pub fn add_to_callstack_c_style(&mut self, filename: Option<&'static CStr>,
-                                    line: Option<i32>,
-                                    function_name: Option<&'static CStr>)
-                                    -> bool {
+    pub fn abi_add_to_callstack_c_style(&mut self, filename: Option<&'static CStr>,
+                                        line: Option<i32>,
+                                        function_name: Option<&'static CStr>)
+                                        -> bool {
 
 
         unsafe {
@@ -166,6 +322,48 @@ impl ErrorBuffer{
                                                function_name.map(|cstr| cstr.as_ptr()).unwrap_or(ptr::null()))
         }
     }
+
+    pub fn assert_ok(&self) {
+        if let Some(e) = self.get_error_copy() {
+            e.panic_time();
+        }
+    }
+
+
+    pub fn get_error_copy(&self) -> Option<FlowError> {
+        if self.abi_has_error(){
+            match self.abi_error_code(){
+                0 => panic!("Inconsistent errors"),
+                10 => Some(FlowError::Oom),
+                _ => Some(FlowError::Err(unsafe { ErrorBuffer::get_flow_err(self.c_ctx) })),
+            }
+        }else{
+            None
+        }
+    }
+    unsafe fn get_flow_err(c: *mut ::ffi::ImageflowContext) -> FlowErr {
+
+
+        let code = ::ffi::flow_context_error_reason(c);
+        let mut buf = vec![0u8; 2048];
+
+
+        let chars_written =
+        ::ffi::flow_context_error_and_stacktrace(c, buf.as_mut_ptr(), buf.len(), false);
+
+        if chars_written < 0 {
+            panic!("Error msg doesn't fit in 2kb");
+        } else {
+            buf.resize(chars_written as usize, 0u8);
+        }
+
+        FlowErr {
+            code: code,
+            message_and_stack: String::from_utf8(buf).unwrap(),
+        }
+
+    }
+
 
 }
 impl Drop for Context {
@@ -177,6 +375,6 @@ impl Drop for Context {
             }
         }
         self.c_ctx = ptr::null_mut();
-        self.error.c_ctx = ptr::null_mut();
+        self.error.borrow_mut().c_ctx = ptr::null_mut();
     }
 }

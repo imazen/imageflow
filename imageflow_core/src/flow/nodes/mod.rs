@@ -17,6 +17,7 @@ mod internal_prelude {
     pub use ::internal_prelude::works_everywhere::*;
     pub use petgraph::EdgeDirection;
     pub use super::*;
+    pub use ::{Context, Job};
 }
 
 extern crate imageflow_types as s;
@@ -78,6 +79,10 @@ impl<'c> OpCtxMut<'c> {
             .filter(|&(node, &kind)| kind == filter_by_kind)
             .map(|(node, kind)| node)
             .nth(0)
+    }
+
+    pub fn flow_c(&self) -> *mut ::ffi::ImageflowContext{
+        self.c.flow_c()
     }
 
     pub fn first_parent_input(&self, of_node: NodeIndex<u32>) -> Option<NodeIndex<u32>> {
@@ -171,10 +176,14 @@ impl<'c> OpCtxMut<'c> {
                 self.graph.node_weight(input_ix).unwrap().frame_est;
         }
     }
-
     pub fn assert_ok(&self) {
-        unsafe {
-            ::ContextPtr::from_ptr(self.c).assert_ok(None);
+        self.panic_time()
+    }
+
+
+    pub fn panic_time(&self) {
+        if let Some(e) = self.c.c_error(){
+            e.panic_time();
         }
     }
 
