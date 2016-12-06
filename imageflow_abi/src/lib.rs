@@ -865,30 +865,30 @@ pub unsafe extern "C" fn imageflow_job_create(context: *mut Context) -> *mut Job
 
 
 ///
-/// Looks up the imageflow_io pointer from the provided placeholder_id
+/// Looks up the imageflow_io pointer from the provided io_id
 ///
 #[no_mangle]
 pub unsafe extern "C" fn imageflow_job_get_io(context: *mut Context,
                                               job: *mut Job,
-                                              placeholder_id: i32)
+                                              io_id: i32)
                                               -> *mut JobIo {
-    (&*job).get_io(placeholder_id).unwrap_or(ptr::null_mut())
+    (&*job).get_io(io_id).unwrap_or(ptr::null_mut())
 }
 
 ///
-/// Associates the imageflow_io object with the job and the assigned placeholder_id.
+/// Associates the imageflow_io object with the job and the assigned io_id.
 ///
-/// The placeholder_id will correspond with io_id in the graph
+/// The io_id will correspond with io_id in the graph
 ///
 /// direction is in or out.
 #[no_mangle]
 pub unsafe extern "C" fn imageflow_job_add_io(context: *mut Context,
                                               job: *mut Job,
                                               io: *mut JobIo,
-                                              placeholder_id: i32,
+                                              io_id: i32,
                                               direction: Direction)
                                               -> bool {
-    (&mut *job).add_io(io, placeholder_id, std::mem::transmute(direction))
+    (&mut *job).add_io(io, io_id, std::mem::transmute(direction))
         .map(|_| true)
         .unwrap_or_else(|e| { e.write_to_context_ptr(context); false })
 

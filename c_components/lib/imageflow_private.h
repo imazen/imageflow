@@ -323,7 +323,7 @@ struct flow_io {
 };
 
 struct flow_codec_instance {
-    int32_t graph_placeholder_id;
+    int32_t io_id;
     int64_t codec_id;
     void * codec_state;
     struct flow_io * io;

@@ -108,7 +108,7 @@ pub struct ImageflowContext {
 #[repr(C)]
 #[derive(Clone,Debug,PartialEq)]
 pub struct CodecInstance {
-    pub graph_placeholder_id: int32_t,
+    pub io_id: int32_t,
     pub codec_id: int64_t,
     pub codec_state: *mut c_void,
     pub io: *mut ImageflowJobIo,

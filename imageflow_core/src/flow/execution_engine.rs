@@ -144,12 +144,12 @@ impl<'a, 'b> Engine<'a, 'b> {
                 .unwrap()
                 .def
                 .fn_link_state_to_this_io_id {
-                let placeholder_id;
+                let io_id;
                 {
                     let mut ctx = self.op_ctx_mut();
-                    placeholder_id = func(&mut ctx, NodeIndex::new(index));
+                    io_id = func(&mut ctx, NodeIndex::new(index));
                 }
-                if let Some(io_id) = placeholder_id {
+                if let Some(io_id) = io_id {
                     let codec_instance_ptr = self.job.codec_instance_by_io_id(io_id).unwrap() as *const CodecInstance;
 
                     {

@@ -322,17 +322,17 @@ bool imageflow_job_get_output_buffer_by_id(void* context, void* job, int32_t io_
 void* imageflow_job_create(void* context);
 
 ///
-/// Looks up the imageflow_io pointer from the provided placeholder_id
+/// Looks up the imageflow_io pointer from the provided io_id
 ///
-void* imageflow_job_get_io(void* context, void* job, int32_t placeholder_id);
+void* imageflow_job_get_io(void* context, void* job, int32_t io_id);
 
 ///
-/// Associates the imageflow_io object with the job and the assigned placeholder_id.
+/// Associates the imageflow_io object with the job and the assigned io_id.
 ///
-/// The placeholder_id will correspond with io_id in the graph
+/// The io_id will correspond with io_id in the graph
 ///
 /// direction is in or out.
-bool imageflow_job_add_io(void* context, void* job, void* io, int32_t placeholder_id, Direction direction);
+bool imageflow_job_add_io(void* context, void* job, void* io, int32_t io_id, Direction direction);
 
 ///
 /// Destroys the provided imageflow_job

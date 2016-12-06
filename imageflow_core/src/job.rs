@@ -53,7 +53,7 @@ impl Job{
     }
 
     pub fn codec_instance_by_io_id(&self,io_id: i32) -> Option<&CodecInstance>{
-        self.codecs.iter().find(|r| r.graph_placeholder_id == io_id)
+        self.codecs.iter().find(|r| r.io_id == io_id)
     }
 
     pub unsafe fn add_io(&self, io: *mut ::ffi::ImageflowJobIo, io_id: i32, direction: IoDirection) -> Result<()>{
@@ -64,7 +64,7 @@ impl Job{
                 codec_id: 0,
                 codec_state: ptr::null_mut(),
                 direction: direction,
-                graph_placeholder_id: io_id,
+                io_id: io_id,
                 io: io,
                 _____dontuse: ptr::null_mut()
             });
@@ -78,7 +78,7 @@ impl Job{
                     codec_id: codec_id,
                     codec_state: ptr::null_mut(),
                     direction: direction,
-                    graph_placeholder_id: io_id,
+                    io_id: io_id,
                     io: io,
                     _____dontuse: ptr::null_mut()
                 });
@@ -97,7 +97,7 @@ impl Job{
     pub fn get_io(&self, io_id: i32) -> Result<*mut ::ffi::ImageflowJobIo>{
         //TODO
         //We're treating failed borrows the same as everything else right now... :(
-        self.codecs.iter().find(|c| c.graph_placeholder_id == io_id).map(|res| res.io).ok_or(FlowError::NullArgument)
+        self.codecs.iter().find(|c| c.io_id == io_id).map(|res| res.io).ok_or(FlowError::NullArgument)
     }
 
     fn c_error(&self) -> Option<FlowError>{
