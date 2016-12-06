@@ -950,5 +950,8 @@ fn test_allocate_free() {
         }
         assert!(imageflow_context_memory_free(c, ptr as *mut libc::c_void, static_char!(file!()),
                                               line!() as i32));
+
+        imageflow_context_destroy(c);
+        //imageflow_context_destroy(c);
     }
 }

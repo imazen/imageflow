@@ -87,17 +87,30 @@
    fun:allocate_dtv
    fun:_dl_allocate_tls
    fun:allocate_stack
-   fun:pthread_create@@GLIBC_2.2.5
-   fun:_ZN3std3sys6thread6Thread3new17hf5b8840585b43596E
-   fun:_ZN4test8run_test14run_test_inner17h2c72a6693d5d8bd9E
-   fun:_ZN4test8run_test17h323c09a62e75e276E
-   fun:_ZN4test9run_tests17hed5287d168e8000fE
-   fun:_ZN4test17run_tests_console17h998882fc96468efdE
-   fun:_ZN4test9test_main17hc901c0d849eaa3a3E
-   fun:_ZN4test16test_main_static17h443a9e246b7295a5E
-   fun:_ZN14imageflow_core6__test4main17hea3c44c4180eb43cE
-   fun:__rust_maybe_catch_panic
+   ...
 }
+
+{
+   Rust test harness
+   Memcheck:Leak
+   ...
+   fun:allocate_stack
+   ...
+}
+{
+   <insert_a_suppression_name_here>
+   Memcheck:Cond
+   fun:_ZN5regex4exec11ExecBuilder5build17hd0deb98f11b8ee35E
+   ...
+}
+{
+   <insert_a_suppression_name_here>
+   Memcheck:Cond
+   ...
+   fun:_ZN5cargo3ops7resolve21resolve_with_previous17h35c94e6aca658849E
+}
+
+
 
 {
    Our test runner isn't the most careful
