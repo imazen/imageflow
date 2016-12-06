@@ -245,23 +245,29 @@ impl TestContext {
         // Try to debug segfaults
         if output.status.code() == None {
 
-
             std::io::stderr().write(&output.stderr).unwrap();
             std::io::stdout().write(&output.stdout).unwrap();
-            println!("exit code {:?}", output.status.code());
-
+            let _ = writeln!(&mut std::io::stderr(),
+                             "exit code {:?}", output.status.code());
             // Killed by signal.
             // 11 Segmentation fault
             // 4 illegal instruction 6 abort 8 floating point error
-            let _ = writeln!(&mut std::io::stderr(),
-                             "Starting valgrind from within self-test:");
-            let mut cmd = Command::new("valgrind");
-            cmd.arg("-q").arg("--error-exitcode=9").arg(exe);
-            cmd.args(args_vec.as_slice()).current_dir(dir).env("RUST_BACKTRACE", "1");
 
-            println!("{:?}", cmd);
+            if std::env::var("VALGRIND_RUNNING").is_ok() {
+                let _ = writeln!(&mut std::io::stderr(),
+                                 "VALGRIND_RUNNING defined; skipping valgrind pass");
+            }else{
+                let _ = writeln!(&mut std::io::stderr(),
+                                 "Starting valgrind from within self-test:");
+                let mut cmd = Command::new("valgrind");
+                cmd.arg("-q").arg("--error-exitcode=9").arg(exe);
+                cmd.args(args_vec.as_slice()).current_dir(dir).env("RUST_BACKTRACE", "1").env("VALGRIND_RUNNING", "1");
 
-            let _ = cmd.status(); //.expect("Failed to start valgrind?");
+                let _ = writeln!(&mut std::io::stderr(),
+                                 "{:?}", cmd);
+
+                let _ = cmd.status(); //.expect("Failed to start valgrind?");
+            }
         }
 
         into_product(output)
