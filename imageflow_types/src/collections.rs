@@ -318,14 +318,7 @@ mod tests{
         assert!(!g.b.try_contains(c3_ptr).unwrap());
     }
 
-    struct GenericOfRef<T>{
 
-    }
-    #[test]
-    fn t(){
-        let a = GenericOfRef::<&mut Vec<i32>>{};
-
-    }
 
 //    mod experiment_with_parent_references{
 //        use super::super::*;
