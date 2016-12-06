@@ -53,7 +53,7 @@ impl Job{
         self.codecs.iter().find(|r| r.io_id == io_id)
     }
 
-    pub unsafe fn add_io(&self, io: *mut ::ffi::ImageflowJobIo, io_id: i32, direction: IoDirection) -> Result<()>{
+    pub unsafe fn add_io(&mut self, io: *mut ::ffi::ImageflowJobIo, io_id: i32, direction: IoDirection) -> Result<()>{
 
 
         if direction == IoDirection::Out{
@@ -163,13 +163,13 @@ impl Job{
     }
 
 
-    pub fn add_input_bytes<'b>(&'b self, io_id: i32, bytes: &'b [u8]) -> Result<()> {
+    pub fn add_input_bytes<'b>(&'b mut self, io_id: i32, bytes: &'b [u8]) -> Result<()> {
         unsafe {
             self.add_io(self.c.create_io_from_slice(bytes)?, io_id, IoDirection::In)
         }
     }
 
-    pub fn add_output_buffer(&self, io_id: i32) -> Result<()> {
+    pub fn add_output_buffer(&mut self, io_id: i32) -> Result<()> {
         unsafe {
             self.add_io(self.c.create_io_output_buffer()?, io_id, IoDirection::Out)
         }
