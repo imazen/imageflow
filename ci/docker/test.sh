@@ -79,7 +79,7 @@ rsync -q -av --delete "${SCRIPT_DIR}/../../.." "$WORKING_DIR" --filter=':- .giti
 		-v 
 		"${WORKING_DIR}_cache/target/debug:/home/conan/imageflow/target/debug"
 		-v 
-		"${WORKING_DIR}_cache/target/debug:/home/conan/imageflow/target/debug"
+		"${WORKING_DIR}_cache/target/release:/home/conan/imageflow/target/release"
 		-v 
 		"${WORKING_DIR}_cache/conan_data:/home/conan/.conan/data" 
 		-v 

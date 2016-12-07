@@ -2,25 +2,55 @@ FROM ubuntu:trusty
 
 MAINTAINER Nathanael Jones
 
+#  && apt-get install --no-install-recommends -y software-properties-common apt-utils \  
+#  && apt-add-repository ppa:brightbox/ruby-ng \
+# && apt-get update \
+
+RUN sh -c 'echo "deb [arch=amd64] http://apt-mo.trafficmanager.net/repos/dotnet-release/ trusty main" > /etc/apt/sources.list.d/dotnetdev.list' \
+  && apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys 417A0893 \
+  && apt-get update \
+  && apt-get upgrade -y \
+  && apt-get install --no-install-recommends -y \
+  sudo build-essential nasm dh-autoreconf pkg-config ca-certificates \
+  && apt-get clean -y \
+  && apt-get autoremove -y \
+  && rm -rf /var/lib/apt/lists/* \
+  && bash -c 'rm -rf {/usr/share/doc,/usr/share/man,/var/cache,/usr/doc,/usr/local/share/doc,/usr/local/share/man}' \
+  && bash -c 'rm -f /tmp/*' \
+  && bash -c 'rm -f /var/tmp/*' \
+  && sudo mkdir -p /var/cache/apt/archives/partial \
+  && sudo touch /var/cache/apt/archives/lock \
+  && sudo chmod 640 /var/cache/apt/archives/lock
+
+
 RUN apt-get update \
   && apt-get install --no-install-recommends -y \
-  apt-utils sudo build-essential wget git nasm dh-autoreconf pkg-config curl ccache libpng-dev libssl-dev ca-certificates \
-  libcurl4-openssl-dev libelf-dev libdw-dev \
-  valgrind \
+  wget git libcurl4-openssl-dev libelf-dev libdw-dev curl ccache libpng-dev libssl-dev  \
+  && apt-get clean -y \
+  && apt-get autoremove -y \
+  && rm -rf /var/lib/apt/lists/* \
+  && bash -c 'rm -rf {/usr/share/doc,/usr/share/man,/var/cache,/usr/doc,/usr/local/share/doc,/usr/local/share/man}' \
+  && bash -c 'rm -f /tmp/*' \
+  && bash -c 'rm -f /var/tmp/*' \
+  && sudo mkdir -p /var/cache/apt/archives/partial \
+  && sudo touch /var/cache/apt/archives/lock \
+  && sudo chmod 640 /var/cache/apt/archives/lock
+
+RUN apt-get update \
+  && apt-get install --no-install-recommends -y \
+  luajit \
+  ruby-dev ruby-bundler \
   python-minimal python-pip python-setuptools \
   && pip install conan \
   && apt-get clean -y \
   && apt-get autoremove -y \
   && rm -rf /var/lib/apt/lists/* \
   && bash -c 'rm -rf {/usr/share/doc,/usr/share/man,/var/cache,/usr/doc,/usr/local/share/doc,/usr/local/share/man}' \
-  && bash -c 'rm -f /usr/lib/valgrind/*-x86-*' \
-  && bash -c 'rm -f /usr/lib/valgrind/{power,mips,s390,arm,32bit,i386}*' \
   && bash -c 'rm -f /tmp/*' \
-  && bash -c 'rm -f /var/tmp/*' 
-
-#Try to fix problems deleting /var/cache causes
-RUN sudo mkdir -p /var/cache/apt/archives/partial && sudo touch /var/cache/apt/archives/lock && sudo chmod 640 /var/cache/apt/archives/lock
-
+  && bash -c 'rm -f /var/tmp/*' \
+  && sudo mkdir -p /var/cache/apt/archives/partial \
+  && sudo touch /var/cache/apt/archives/lock \
+  && sudo chmod 640 /var/cache/apt/archives/lock
 
 # Install CMake 3.4.1 (minimal)
 # Mirrored for speed from https://cmake.org/files/v3.4/cmake-3.4.1-Linux-x86_64.tar.gz
@@ -55,6 +85,23 @@ RUN wget  -nv -O lcov.tar.gz http://ftp.de.debian.org/debian/pool/main/l/lcov/lc
     && sudo make -C lcov/ install \
     && rm -rf lcov && rm -rf /usr/share/man
 
+
+#Install dotnetcore
+RUN apt-get update \
+  && apt-get install --no-install-recommends -y \
+  dotnet-dev-1.0.0-preview2.1-003177 \
+  && apt-get clean -y \
+  && apt-get autoremove -y \
+  && rm -rf /var/lib/apt/lists/* \
+  && bash -c 'rm -rf {/usr/share/doc,/usr/share/man,/var/cache,/usr/doc,/usr/local/share/doc,/usr/local/share/man}' \
+  && bash -c 'rm -rf /tmp/*' \
+  && bash -c 'rm -rf /var/tmp/*' \
+  && sudo mkdir -p /var/cache/apt/archives/partial \
+  && sudo touch /var/cache/apt/archives/lock \
+  && sudo chmod 640 /var/cache/apt/archives/lock
+
+
+
 RUN groupadd 1001 -g 1001 &&\
     groupadd 1000 -g 1000 &&\
     useradd -ms /bin/bash conan -g 1001 -G 1000 &&\
@@ -68,6 +115,7 @@ USER conan
 ENV PATH=/usr/lib/ccache:$PATH
 ENV PATH=/home/conan/.cargo/bin:$PATH
 
+
 #Install nightly Rust and make default
 RUN RUSTVER="nightly-2016-11-03" && curl https://sh.rustup.rs -sSf | sh -s -- -y --default-toolchain $RUSTVER -v \
     && rustup default $RUSTVER \
@@ -78,7 +126,6 @@ RUN RUSTVER="nightly-2016-11-03" && curl https://sh.rustup.rs -sSf | sh -s -- -y
     && ln -sf -t $TOOLCHAIN_DIR/lib/ $TOOLCHAIN_DIR/lib/rustlib/x86_64-unknown-linux-gnu/lib/*.so \
     && rustup show \
     && rustc -V
-
 
 RUN conan user
 

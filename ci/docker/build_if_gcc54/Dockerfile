@@ -2,26 +2,68 @@ FROM ubuntu:xenial
 
 MAINTAINER Nathanael Jones 
 
+# && apt-get install --no-install-recommends -y software-properties-common apt-utils \ 
+# && apt-add-repository ppa:brightbox/ruby-ng \
+# && apt-get update \
+
+RUN sh -c 'echo "deb [arch=amd64] http://apt-mo.trafficmanager.net/repos/dotnet-release/ xenial main" > /etc/apt/sources.list.d/dotnetdev.list' \
+  && apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys 417A0893 \
+  && apt-get update \
+  && apt-get upgrade -y \
+  && apt-get install --no-install-recommends -y \
+  sudo \
+  && apt-get clean -y \
+  && apt-get autoremove -y \
+  && rm -rf /var/lib/apt/lists/* \
+  && bash -c 'rm -rf {/usr/share/doc,/usr/share/man,/var/cache,/usr/doc,/usr/local/share/doc,/usr/local/share/man}' \
+  && bash -c 'rm -rf /tmp/*' \
+  && bash -c 'rm -rf /var/tmp/*' \
+  && sudo mkdir -p /var/cache/apt/archives/partial \
+  && sudo touch /var/cache/apt/archives/lock \
+  && sudo chmod 640 /var/cache/apt/archives/lock
+
 RUN apt-get update \
   && apt-get install --no-install-recommends -y \
-  apt-utils sudo build-essential wget git nasm dh-autoreconf pkg-config curl ccache libpng-dev libssl-dev ca-certificates \
-  rubygems-integration ruby \
+  sudo build-essential nasm dh-autoreconf pkg-config ca-certificates \
+  && apt-get clean -y \
+  && apt-get autoremove -y \
+  && rm -rf /var/lib/apt/lists/* \
+  && bash -c 'rm -rf {/usr/share/doc,/usr/share/man,/var/cache,/usr/doc,/usr/local/share/doc,/usr/local/share/man}' \
+  && bash -c 'rm -rf /tmp/*' \
+  && bash -c 'rm -rf /var/tmp/*' \
+  && sudo mkdir -p /var/cache/apt/archives/partial \
+  && sudo touch /var/cache/apt/archives/lock \
+  && sudo chmod 640 /var/cache/apt/archives/lock
+
+RUN apt-get update \
+  && apt-get install --no-install-recommends -y \
+  git curl ccache libpng-dev libssl-dev wget \
   libcurl4-openssl-dev libelf-dev libdw-dev \
-  valgrind \
+  && apt-get clean -y \
+  && apt-get autoremove -y \
+  && rm -rf /var/lib/apt/lists/* \
+  && bash -c 'rm -rf {/usr/share/doc,/usr/share/man,/var/cache,/usr/doc,/usr/local/share/doc,/usr/local/share/man}' \
+  && bash -c 'rm -rf /tmp/*' \
+  && bash -c 'rm -rf /var/tmp/*' \
+  && sudo mkdir -p /var/cache/apt/archives/partial \
+  && sudo touch /var/cache/apt/archives/lock \
+  && sudo chmod 640 /var/cache/apt/archives/lock
+
+RUN apt-get update \
+  && apt-get install --no-install-recommends -y \
+  ruby-dev ruby-bundler rubygems-integration \
+  luajit \
   python-minimal python-pip python-setuptools \
   && pip install conan \
   && apt-get clean -y \
   && apt-get autoremove -y \
   && rm -rf /var/lib/apt/lists/* \
   && bash -c 'rm -rf {/usr/share/doc,/usr/share/man,/var/cache,/usr/doc,/usr/local/share/doc,/usr/local/share/man}' \
-  && bash -c 'rm -rf /usr/lib/valgrind/*-x86-*' \
-  && bash -c 'rm -rf /usr/lib/valgrind/{power,mips,s390,arm,32bit,i386}*' \
   && bash -c 'rm -rf /tmp/*' \
-  && bash -c 'rm -rf /var/tmp/*' 
-
-
-#Try to fix problems deleting /var/cache causes
-RUN sudo mkdir -p /var/cache/apt/archives/partial && sudo touch /var/cache/apt/archives/lock && sudo chmod 640 /var/cache/apt/archives/lock
+  && bash -c 'rm -rf /var/tmp/*' \
+  && sudo mkdir -p /var/cache/apt/archives/partial \
+  && sudo touch /var/cache/apt/archives/lock \
+  && sudo chmod 640 /var/cache/apt/archives/lock
 
 # Install CMake 3.4.1 (minimal)
 # Mirrored for speed from https://cmake.org/files/v3.4/cmake-3.4.1-Linux-x86_64.tar.gz
@@ -60,6 +102,37 @@ RUN wget -nv  -O kcov.tar.gz https://github.com/SimonKagstrom/kcov/archive/maste
     && rm -rf /usr/local/share/man
 
 
+# 3.12 fixes the bug when running against anything linked to openssl
+RUN VALGRIND_VER="valgrind-3.12.0" \
+  && wget -nv http://valgrind.org/downloads/${VALGRIND_VER}.tar.bz2 \
+  && tar -vxjf ${VALGRIND_VER}.tar.bz2 && rm ${VALGRIND_VER}.tar.* \
+  && cd "${VALGRIND_VER}" && ./configure && make install \
+  && cd .. && rm -rf "${VALGRIND_VER}" \
+  && bash -c 'rm -rf {/usr/share/doc,/usr/share/man,/var/cache,/usr/doc,/usr/local/share/doc,/usr/local/share/man}' \
+  && bash -c 'rm -rf /usr/lib/valgrind/*-x86-*' \
+  && bash -c 'rm -rf /usr/local/lib/valgrind/*-x86-*' \
+  && bash -c 'rm -rf /usr/lib/valgrind/{power,mips,s390,arm,32bit,i386}*' \
+  && bash -c 'rm -rf /usr/local/lib/valgrind/{power,mips,s390,arm,32bit,i386}*' \
+  && bash -c 'rm -rf /tmp/*' \
+  && bash -c 'rm -rf /var/tmp/*' 
+
+#Install dotnetcore
+RUN sudo mkdir -p /var/cache/apt/archives/partial \
+  && sudo touch /var/cache/apt/archives/lock \
+  && sudo chmod 640 /var/cache/apt/archives/lock \
+  && apt-get update \
+  && apt-get install --no-install-recommends -y \
+  dotnet-dev-1.0.0-preview2.1-003177 \
+  && apt-get clean -y \
+  && apt-get autoremove -y \
+  && rm -rf /var/lib/apt/lists/* \
+  && bash -c 'rm -rf {/usr/share/doc,/usr/share/man,/var/cache,/usr/doc,/usr/local/share/doc,/usr/local/share/man}' \
+  && bash -c 'rm -rf /tmp/*' \
+  && bash -c 'rm -rf /var/tmp/*' \
+  && sudo mkdir -p /var/cache/apt/archives/partial \
+  && sudo touch /var/cache/apt/archives/lock \
+  && sudo chmod 640 /var/cache/apt/archives/lock
+
 RUN groupadd 1001 -g 1001 &&\
     groupadd 1000 -g 1000 &&\
     useradd -ms /bin/bash conan -g 1001 -G 1000 &&\
@@ -73,6 +146,7 @@ ENV PATH=/usr/lib/ccache:$PATH
 ENV PATH=/home/conan/.cargo/bin:$PATH
 
 
+
 #Install nightly Rust and make default
 RUN RUSTVER="nightly-2016-11-03" && curl https://sh.rustup.rs -sSf | sh -s -- -y --default-toolchain $RUSTVER -v \
     && rustup default $RUSTVER \
@@ -84,29 +158,7 @@ RUN RUSTVER="nightly-2016-11-03" && curl https://sh.rustup.rs -sSf | sh -s -- -y
     && rustup show \
     && rustc -V
 
-USER root
-# 3.12 fixes the bug when running against anything linked to openssl
-RUN VALGRIND_VER="valgrind-3.12.0" \
-  && rm /usr/bin/valgrind \
-  && wget -nv http://valgrind.org/downloads/${VALGRIND_VER}.tar.bz2 \
-  && tar -vxjf ${VALGRIND_VER}.tar.bz2 && rm ${VALGRIND_VER}.tar.* \
-  && cd "${VALGRIND_VER}" && ./configure && make install \
-  && cd .. && rm -rf "${VALGRIND_VER}" \
-  && bash -c 'rm -rf {/usr/share/doc,/usr/share/man,/var/cache,/usr/doc,/usr/local/share/doc,/usr/local/share/man}' \
-  && bash -c 'rm -rf /usr/lib/valgrind/*-x86-*' \
-  && bash -c 'rm -rf /usr/local/lib/valgrind/*-x86-*' \
-  && bash -c 'rm -rf /usr/lib/valgrind/{power,mips,s390,arm,32bit,i386}*' \
-  && bash -c 'rm -rf /usr/local/lib/valgrind/{power,mips,s390,arm,32bit,i386}*' \
-  && bash -c 'rm -rf /tmp/*' \
-  && bash -c 'rm -rf /var/tmp/*' 
-
-USER conan
-
-ENV PATH=/usr/lib/ccache:$PATH
-ENV PATH=/home/conan/.cargo/bin:$PATH
-
-
-RUN sudo pip install conan --upgrade
+# RUN sudo pip install conan --upgrade
 
 RUN conan user
 

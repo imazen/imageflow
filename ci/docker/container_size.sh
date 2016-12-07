@@ -11,6 +11,7 @@ docker images
 
 docker history imazen/build_if_gcc54
 docker history imazen/build_if_gcc48
+docker history imazen/imageflow_server
 
 #docker run imazen/build_if_gcc48 du -h / | grep '[0-9\.]\+M'
 
