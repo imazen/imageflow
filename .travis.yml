@@ -30,12 +30,6 @@ matrix:
     env: PACKAGE_SUFFIX=x86_64-mac-osx10_11 UPLOAD_BUILD=True TARGET=x86_64-apple-darwin FETCH_COMMIT_SUFFIX=mac64
     language: rust
     rust: nightly-2016-11-03
-  # - os: linux
-  #   dist: trusty
-  #   env: PACKAGE_SUFFIX=x86_64-linux-gcc49 DOCKER_IMAGE=imazen/build_if_gcc49 UPLOAD_BUILD=True 
-  #   sudo: required
-  #   services:
-  #   - docker
   - os: linux
     dist: trusty
     env: UPLOAD_BUILD=False COVERAGE=True VALGRIND=True PACKAGE_SUFFIX=x86_64-linux-gcc54 DOCKER_IMAGE=imazen/build_if_gcc54
