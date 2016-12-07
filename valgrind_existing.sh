@@ -9,6 +9,11 @@ TEST_BINARIES=("$@")
 printf "%s valgrind_existing.sh " "$(date '+[%H:%M:%S]')"
 
 if [ "$#" -lt 1 ]; then
+	# Remove old grind folders; they're going to be a problem with discovery
+	(
+		cd ./target/debug
+		find . -type d -name 'grind_*' -exec rm -rf {} +
+	)
 	shopt -s nullglob
 	TEST_BINARIES=(./target/debug/*-[a-f0-9][a-f0-9][a-f0-9][a-f0-9][a-f0-9][a-f0-9][a-f0-9][a-f0-9][a-f0-9][a-f0-9][a-f0-9][a-f0-9][a-f0-9][a-f0-9][a-f0-9][a-f0-9])
 	shopt -u nullglob
@@ -63,7 +68,7 @@ do
 
 	  REL_F=$(basename "${f}")
 	  DIR=$(dirname "${f}")
-	  DIR="${DIR}/grind_${REL_F}"
+	  DIR="${DIR}/valgrind_${REL_F}_temp"
 	  mkdir -p "${DIR}" || true
 
 	  create_valgrind_files_in "$DIR"
@@ -74,7 +79,10 @@ do
 	  export VALGRIND_RUNNING=1
 	  export RUST_BACKTRACE=1
 	  eval "$FULL_COMMAND"
-	  
+
+	  echo "Removing ${DIR}"
+	  rm -rf "${DIR}" || true
+
 	fi
 done
 
