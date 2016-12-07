@@ -257,6 +257,7 @@ impl TestContext {
                 let _ = writeln!(&mut std::io::stderr(),
                                  "VALGRIND_RUNNING defined; skipping valgrind pass");
             }else{
+                //ALLOW TO FAIL; valgrind may not be present
                 let _ = writeln!(&mut std::io::stderr(),
                                  "Starting valgrind from within self-test:");
                 let mut cmd = Command::new("valgrind");

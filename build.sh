@@ -158,6 +158,7 @@ echo "build.sh sees these relevant variables: ${BUILD_VARS[*]}"
 			conan build ../
 
 			#Sync to build/CTestTestfile.cmake
+			#Also update imageflow_core/build_c.sh
 			if [[ "$VALGRIND" == 'True' ]]; then
 				(
 					cd ../..
@@ -202,8 +203,12 @@ rustc --version
 cargo --version
 if [[ "$CLEAN_RUST_TARGETS" == 'True' ]]; then
 	echo "Removing output imageflow binaries (but not dependencies)"
-	find  ./target/debug  -maxdepth 1 -type f  -delete
-	find  ./target/release  -maxdepth 1 -type f  -delete
+	if [ -d "./target/debug" ]; then
+		find  ./target/debug  -maxdepth 1 -type f  -delete
+	fi
+	if [ -d "./target/release" ]; then
+		find  ./target/release  -maxdepth 1 -type f  -delete
+	fi
 fi
 
 if [[ "$TEST_RUST" == 'True' ]]; then

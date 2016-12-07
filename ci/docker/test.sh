@@ -2,7 +2,38 @@
 set -e
 shopt -s extglob
 
+#FOR THE CLEANEST TEST
+# DISABLE_COMPILATION_CACHES=True
+
+#REQUIRES
+# 1 param of build_if_gcc54
+
+# COMMON OPTIONAL PARAMS
+# OPEN_DOCKER_BASH_INSTEAD=True
+# VALGRIND=True
+# SIM_COVERAGE=True
+# TEST_C
+# BUILD_RELEASE
+# TEST_RUST
+# CLEAN_RUST_TARGETS
+# UPLOAD_BUILD, UPLOAD_DOCS
+# DISABLE_COMPILATION_CACHES=True
+
+#OPTIONAL
+# SIM_TRAVIS_TAG=v0.0.99999
+# DOCKER_IMAGE override
+# PACKAGE_SUFFIX like x86_64-linux-gcc48-eglibc219
+# FETCH_COMMIT_SUFFIX like mac64
+# TEST_C_DEBUG_BUILD
+
+
+
+
 echo "Preparing to build Imageflow"
+
+# We change this default (not like Travis), but for speed. 
+# Not relevant when DISABLE_COMPILATION_CACHES=True 
+export CLEAN_RUST_TARGETS="${CLEAN_RUST_TARGETS:-False}"
 
 
 # First parameter to script must be the name of the docker image (excluding imazen/)
@@ -10,188 +41,141 @@ export IMAGE_NAME="$1"
 # Set DOCKER_IMAGE to override entire name
 export DOCKER_IMAGE="${DOCKER_IMAGE:-imazen/$IMAGE_NAME}"
 
-# OPEN_DOCKER_BASH_INSTEAD=True to open interactive shell
-export OPEN_DOCKER_BASH_INSTEAD="${OPEN_DOCKER_BASH_INSTEAD:-False}"
-
-echo "DISABLE_COMPILATION_CACHES=${DISABLE_COMPILATION_CACHES:-False}"
-
 ############## Paths for caching
 export SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )/$1"
 export TEST_SH_CACHE_DIR=~/.docker_imageflow_caches
 #export TEST_SH_CACHE_DIR="${SCRIPT_DIR}/../.docker_imageflow_caches"
 
-export WORKING_DIR="${TEST_SH_CACHE_DIR}/.docker_${IMAGE_NAME}_rust_${RUST_CHANNEL}"
+export WORKING_DIR="${TEST_SH_CACHE_DIR}/.docker_${IMAGE_NAME}"
 export SHARED_CACHE="${TEST_SH_CACHE_DIR}/.shared_cache"
 
-
-############## Overrides for test.sh
-
-
-
-######################################################
-#### Parameters passed to travis_run_docker.sh ####
-
-
-# Build docs; build release mode binaries (separate pass from testing); populate ./artifacts folder
-export BUILD_RELEASE="${BUILD_RELEASE:-True}"
-# Run all tests (both C and Rust) under Valgrind
-export VALGRIND="${VALGRIND:-False}"
-# Compile and run C tests
-export TEST_C="${TEST_C:-True}"
-# Build C Tests in debug mode for clearer valgrind output
-export TEST_C_DEBUG_BUILD="${TEST_C_DEBUG_BUILD:${VALGRIND}}"
-# Run Rust tests
-export TEST_RUST="${TEST_RUST:-True}"
-# Enable compilation of imageflow_server, which has a problematic openssl dependency
-export IMAGEFLOW_SERVER="${IMAGEFLOW_SERVER:-True}"
-# Enables generated coverage information for the C portion of the code. 
-# Also forces C tests to build in debug mode
-export COVERAGE="${COVERAGE:-False}"
-# travis_run.sh deletes /artifacts folder if False. Only relevant in Travis itself
-export UPLOAD_BUILD="${UPLOAD_BUILD:-False}"
-# Affects how /artifacts folder is structured by build.sh
-export UPLOAD_AS_LATEST="${UPLOAD_AS_LATEST:-False}"
-# travis_run_docker.sh uploads Coverage information when true
-export COVERALLS="${COVERALLS}"
-export COVERALLS_TOKEN="${COVERALLS_TOKEN}"
-
-
-############ GIT VALUES ##################
-
-export GIT_COMMIT
-GIT_COMMIT="${GIT_COMMIT:-$(git rev-parse HEAD)}"
-GIT_COMMIT="${GIT_COMMIT:-unknown-commit}"
-export GIT_COMMIT_SHORT
-GIT_COMMIT_SHORT="${GIT_COMMIT_SHORT:-$(git rev-parse --short HEAD)}"
-GIT_COMMIT_SHORT="${GIT_COMMIT_SHORT:-unknown-commit}"
-export GIT_OPTIONAL_TAG
-if git describe --exact-match --tags; then
-	GIT_OPTIONAL_TAG="${GIT_OPTIONAL_TAG:-$(git describe --exact-match --tags)}"
-fi
-export GIT_DESCRIBE_ALWAYS
-GIT_DESCRIBE_ALWAYS="${GIT_DESCRIBE_ALWAYS:-$(git describe --always --tags)}"
-export GIT_DESCRIBE_ALWAYS_LONG
-GIT_DESCRIBE_ALWAYS_LONG="${GIT_DESCRIBE_ALWAYS_LONG:-$(git describe --always --tags --long)}"
-export GIT_DESCRIBE_AAL
-GIT_DESCRIBE_AAL="${GIT_DESCRIBE_AAL:-$(git describe --always --all --long)}"
-
-# But let others override GIT_OPTIONAL_BRANCH, as HEAD might not have a symbolic ref, and it could crash
-# I.e, provide GIT_OPTIONAL_BRANCH to this script in Travis - but NOT For 
-export GIT_OPTIONAL_BRANCH
-if git symbolic-ref --short HEAD; then 
-	GIT_OPTIONAL_BRANCH="${GIT_OPTIONAL_BRANCH:-$(git symbolic-ref --short HEAD)}"
-fi 
-
-MULTIWORD="a b c d e"
-DOCKER_ENV_VARS=(
-	"-e"
-	 "BUILD_RELEASE=${BUILD_RELEASE}"
-	"-e"
-	 "VALGRIND=${VALGRIND}" 
-	"-e"
-	 "TEST_C=${TEST_C}"
-	"-e"
-	 "TEST_C_DEBUG_BUILD=${TEST_C_DEBUG_BUILD}"
-	"-e"
-	 "TEST_RUST=${TEST_RUST}"
-	"-e"
-	 "IMAGEFLOW_SERVER=${IMAGEFLOW_SERVER}"
-	"-e"
-	 "COVERAGE=${COVERAGE}" 
-	"-e"
-	 "COVERALLS=${COVERALLS}" 
-	"-e"
-	 "COVERALLS_TOKEN=${COVERALLS_TOKEN}"
-	"-e"
-	 "GIT_COMMIT=${GIT_COMMIT}" 
-	"-e"
-	 "GIT_COMMIT_SHORT=${GIT_COMMIT_SHORT}" 
-	"-e"
-	 "GIT_OPTIONAL_TAG=${GIT_OPTIONAL_TAG}" 
-	"-e"
-	 "GIT_DESCRIBE_ALWAYS=${GIT_DESCRIBE_ALWAYS}" 
-	"-e"
-	 "GIT_DESCRIBE_ALWAYS_LONG=${GIT_DESCRIBE_ALWAYS_LONG}" 
-	"-e"
-	 "GIT_DESCRIBE_AAL=${GIT_DESCRIBE_AAL}" 
-	"-e"
-	 "GIT_OPTIONAL_BRANCH=${GIT_OPTIONAL_BRANCH}" 
-	"-e"
-	 "ABCDE=${MULTIWORD}" 
-)
-
 echo "===================================================================== [test.sh]"
-echo "DOCKER_ENV_VARS: ${DOCKER_ENV_VARS[@]}"
-echo "===================================================================== [test.sh]"
-##############################
-
-
-OTHER_VARS=(
-	"OPEN_DOCKER_BASH_INSTEAD=${OPEN_DOCKER_BASH_INSTEAD}"
-	"IMAGE_NAME=${IMAGE_NAME}"
-	"RUST_CHANNEL=${RUST_CHANNEL}"
-	"DOCKER_IMAGE=${DOCKER_IMAGE}"
-	"WORKING_DIR=${WORKING_DIR}"
-	"SHARED_CACHE=${SHARED_CACHE}"
-	"SCRIPT_DIR=${SCRIPT_DIR}"
-)
-
-echo "OTHER_VARS: ${OTHER_VARS[@]}"
-echo "===================================================================== [test.sh]"
-echo Initializing Conan
-echo
-
-conan user
-
-echo "===================================================================== [test.sh]"
-echo "Rsync imageflow/* into dedicated work folder"
+echo "Rsync imageflow/* into dedicated work folder ${WORKING_DIR}"
 echo
 
 [[ -d "$WORKING_DIR" ]] || mkdir -p "$WORKING_DIR"
-rsync -q -av --delete "${SCRIPT_DIR}/../../.." "$WORKING_DIR" --filter=':- .gitignore' --exclude=".git/" #--exclude-from "${SCRIPT_DIR}/../exclude_paths.txt" 
-cd "$WORKING_DIR"
+rsync -q -av --delete "${SCRIPT_DIR}/../../.." "$WORKING_DIR" --filter=':- .gitignore' # --exclude=".git/" #--exclude-from "${SCRIPT_DIR}/../exclude_paths.txt" 
+(
+	cd "$WORKING_DIR"
+
+	############## Set up travis env
 
 
-# For os x convenience
-if [[ "$(uname -s)" == 'Darwin' ]]; then
-	eval "$(docker-machine env default)"
-fi
+	## REQUIRED ALWAYS
+	export TRAVIS_BUILD_DIR="${WORKING_DIR}"
+	export DOCKER_IMAGE="${DOCKER_IMAGE}"
+	export CI="true"
 
-export DOCKER_TTY_FLAG=
-if [[ -t 1 ]]; then
-  export DOCKER_TTY_FLAG="--tty"
-fi
+	## REQUIRED FOR SIMULATION
+	export SIM_CI="True"
+	export SIM_OPEN_BASH="${OPEN_DOCKER_BASH_INSTEAD:-False}"
+	export SIM_DOCKER_CACHE_VARS=()
 
 
-if [[ "$OPEN_DOCKER_BASH_INSTEAD" == 'True' ]]; then
-	DOCKER_COMMAND=(
-		/bin/bash
-		)
-else
-	DOCKER_COMMAND=(
-		/bin/bash -c "./ci/travis_run_docker.sh"  
-		)
-fi
+	echo "DISABLE_COMPILATION_CACHES=${DISABLE_COMPILATION_CACHES:-False}"
 
-echo "===================================================================== [test.sh]"
-echo "Launching docker "
-echo
-#Ensure that .cargo is NOT volume mapped; cargo will not work. Also, cargo fetches faster than rsync, it seems?
+	# The first two are only needed in test.sh, since we're rsycning away the whole /target folder
+	SIM_DOCKER_CACHE_VARS=(
+		-v 
+		"${WORKING_DIR}_cache/target/debug:/home/conan/imageflow/target/debug"
+		-v 
+		"${WORKING_DIR}_cache/target/debug:/home/conan/imageflow/target/debug"
+		-v 
+		"${WORKING_DIR}_cache/conan_data:/home/conan/.conan/data" 
+		-v 
+		"${WORKING_DIR}_cache/ccache:/home/conan/.ccache"
+		-v 
+		"${WORKING_DIR}_cache/c_components/build:/home/conan/imageflow/c_components/build"  
+	)
+	# The very last is unique to test.sh (for speed?)
+	#Ensure that .cargo is NOT volume mapped; cargo will not work. Also, cargo fetches faster than rsync, it seems?
 
-DOCKER_CACHE_VARS=(
-	-v 
-	"${WORKING_DIR}_cache/wrappers_server_target:/home/conan/imageflow/wrappers/server/target"
-	-v 
-	"${SHARED_CACHE}/conan_data:/home/conan/.conan/data" 
-	-v 
-	"${WORKING_DIR}_cache/build:/home/conan/imageflow/build"  
-	-v 
-	"${WORKING_DIR}_cache/ccache:/home/conan/.ccache"
+
+	if [[ "$DISABLE_COMPILATION_CACHES" == 'True' ]]; then
+		SIM_DOCKER_CACHE_VARS=()
+	fi
+
+
+	## For artifacts to be created
+	export TRAVIS_PULL_REQUEST=false
+	export TRAVIS_PULL_REQUEST_SHA=
+	export UPLOAD_BUILD="${UPLOAD_BUILD:-True}"
+	export PACKAGE_SUFFIX
+	if [[ "$DOCKER_IMAGE" == 'imazen/build_if_gcc48' ]]; then
+		export PACKAGE_SUFFIX="${PACKAGE_SUFFIX:-x86_64-linux-gcc48-eglibc219}"
+	fi
+	if [[ "$DOCKER_IMAGE" == 'imazen/build_if_gcc54' ]]; then
+		export PACKAGE_SUFFIX="${PACKAGE_SUFFIX:-x86_64-linux-gcc54-glibc223}"
+	fi
+
+	export TRAVIS_BUILD_NUMBER=99999
+	export TRAVIS_BRANCH=
+
+	## For docs
+	export UPLOAD_DOCS="${UPLOAD_DOCS:-True}"
+
+	## For tagged releases
+	export TRAVIS_TAG="$SIM_TRAVIS_TAG"
+	## For artifact-by-commit
+	export FETCH_COMMIT_SUFFIX="${FETCH_COMMIT_SUFFIX}"
+
+	## CONFIGURATION
+	# VALGRIND=True or False
+	# 
+	## MOST LIKELY TO GET POLLUTED
+	# GIT_* vars
+	# BUILD_RELEASE
+	# TEST_C
+	# TEST_C_DEBUG_BUILD
+	# TEST_RUST
+	# CLEAN_RUST_TARGETS
+	# IMAGEFLOW_SERVER
+
+	#In some configurations, true
+	export COVERAGE=${SIM_COVERAGE:-False}
+	export COVERALLS=
+	export COVERALLS_TOKEN=
+
+
+	conan user
+	# For os x convenience
+	if [[ "$(uname -s)" == 'Darwin' ]]; then
+		eval "$(docker-machine env default)"
+	fi
+
+	TRAVIS_RUN_VARS=(
+		"PACKAGE_SUFFIX=${PACKAGE_SUFFIX}"
+		"DOCKER_IMAGE=${DOCKER_IMAGE}"
+		"VALGRIND=${VALGRIND}"
+		"UPLOAD_BUILD=${UPLOAD_BUILD}"
+		"UPLOAD_DOCS=${UPLOAD_DOCS}"
+		"TRAVIS_BUILD_DIR=${TRAVIS_BUILD_DIR}"
+		"CI=${CI}"
+		"SIM_CI=${SIM_CI}"
+		"SIM_OPEN_BASH=${SIM_OPEN_BASH}"
+		"SIM_DOCKER_CACHE_VARS="
+		"${SIM_DOCKER_CACHE_VARS[@]}"
+		"BUILD_RELEASE=${BUILD_RELEASE}"
+		"CLEAN_RUST_TARGETS=${CLEAN_RUST_TARGETS}"
+		"TRAVIS_BUILD_NUMBER=${TRAVIS_BUILD_NUMBER}"
+		"TRAVIS_BRANCH=${TRAVIS_BRANCH}"
+		"TRAVIS_TAG=${TRAVIS_TAG}"
+		"FETCH_COMMIT_SUFFIX=${FETCH_COMMIT_SUFFIX}"
+		"TEST_C_DEBUG_BUILD=${TEST_C_DEBUG_BUILD}"
+		"TEST_RUST=${TEST_RUST}"
+		"TEST_C=${TEST_C}"
+		"IMAGEFLOW_SERVER=${IMAGEFLOW_SERVER}"
+		"COVERAGE=${COVERAGE}"
+		"COVERALLS=${COVERALLS}"
+		"COVERALLS_TOKEN=${COVERALLS_TOKEN}"
+	)
+
+	echo "TRAVIS_RUN_VARS: "
+	printf "%s\n" "${TRAVIS_RUN_VARS[@]}"
+
+	
+
+	echo ""
+	echo "switching to ./ci/travis_run.sh ================================"
+	./ci/travis_run.sh
 )
-if [[ "$DISABLE_COMPILATION_CACHES" == 'True' ]]; then
-	DOCKER_CACHE_VARS=()
-fi
-
-set -x
-docker run --interactive "$DOCKER_TTY_FLAG" --rm -v "${WORKING_DIR}:/home/conan/imageflow" "${DOCKER_CACHE_VARS[@]}" "${DOCKER_ENV_VARS[@]}" "${DOCKER_IMAGE}" "${DOCKER_COMMAND[@]}" 
-set +x

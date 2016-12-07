@@ -3,6 +3,51 @@ set -e
 
 echo "travis_run.sh:"
 
+## REQUIRED ALWAYS
+# TRAVIS_BUILD_DIR (root copy of repo, with .git folder present)
+# DOCKER_IMAGE Ex. imazen/build_if_gcc48 imazen/build_if_gcc49 
+# CI=true
+
+## REQUIRED FOR SIMULATION
+# SIM_CI=True
+# SIM_OPEN_BASH=False
+# SIM_DOCKER_CACHE_VARS=("-v" "mapping:to")
+
+
+## For artifacts to be created
+# TRAVIS_PULL_REQUEST=false
+# TRAVIS_PULL_REQUEST_SHA=
+# UPLOAD_BUILD=True
+# PACKAGE_SUFFIX=  Ex. x86_64-linux-gcc48-eglibc219 x86_64-linux-gcc54-glibc223 x86_64-mac-osx10_11
+# TRAVIS_BUILD_NUMBER=[integer]
+# TRAVIS_BRANCH= (closest relevant - optional if  `git symbolic-ref --short HEAD` works
+
+## For docs
+# UPLOAD_DOCS=True or False
+
+## For tagged releases
+# TRAVIS_TAG= (optional)
+
+## For artifact-by-commit
+# FETCH_COMMIT_SUFFIX=mac64, linux64
+
+## CONFIGURATION
+# VALGRIND=True or False
+# 
+## MOST LIKELY TO GET POLLUTED
+# GIT_* vars
+# BUILD_RELEASE
+# TEST_C
+# TEST_C_DEBUG_BUILD
+# TEST_RUST
+# CLEAN_RUST_TARGETS
+# IMAGEFLOW_SERVER
+# COVERAGE
+# COVERALLS
+# COVERALLS_TOKEN
+
+
+
 if [ -n "${TRAVIS_BUILD_DIR}" ]; then
   cd "${TRAVIS_BUILD_DIR}"
 fi
@@ -11,12 +56,11 @@ STAMP="+[%H:%M:%S]"
 date "$STAMP"
 
 #Export CI stuff
-export GIT_COMMIT="${TRAVIS_COMMIT}"
 export CI_SEQUENTIAL_BUILD_NUMBER="${TRAVIS_BUILD_NUMBER}"
 export CI_BUILD_URL="https://travis-ci.org/${TRAVIS_REPO_SLUG}/builds/${TRAVIS_BUILD_ID}"
 export CI_JOB_URL="https://travis-ci.org/${TRAVIS_REPO_SLUG}/jobs/${TRAVIS_JOB_ID}"
 export CI_JOB_TITLE="Travis ${TRAVIS_JOB_NUMBER} ${TRAVIS_OS_NAME}"
-export CI_STRING="name:Travis job_id:${TRAVIS_JOB_ID} build_id:${TRAVIS_BUILD_ID} build_number:${TRAVIS_BUILD_NUMBER} job_number: ${TRAVIS_JOB_NUMBER} repo_slug:${TRAVIS_REPO_SLUG} tag:${TRAVIS_TAG} branch:${TRAVIS_BRANCH} is_pull_request:${TRAVIS_PULL_REQUEST}"
+export CI_STRING="name:Travis job_id:${TRAVIS_JOB_ID} build_id:${TRAVIS_BUILD_ID} travis_commit:${TRAVIS_COMMIT} build_number:${TRAVIS_BUILD_NUMBER} job_number: ${TRAVIS_JOB_NUMBER} repo_slug:${TRAVIS_REPO_SLUG} tag:${TRAVIS_TAG} branch:${TRAVIS_BRANCH} is_pull_request:${TRAVIS_PULL_REQUEST}"
 export CI_PULL_REQUEST_INFO="${TRAVIS_PULL_REQUEST_SHA}"
 export CI_TAG="${TRAVIS_TAG}"
 export CI_RELATED_BRANCH="${TRAVIS_BRANCH}"
@@ -51,7 +95,7 @@ export GIT_OPTIONAL_BRANCH
 if git symbolic-ref --short HEAD; then 
 	GIT_OPTIONAL_BRANCH="${GIT_OPTIONAL_BRANCH:-$(git symbolic-ref --short HEAD)}"
 fi 
-echo "Naming things... (using TRAVIS_TAG=${TRAVIS_TAG}, GIT_OPTIONAL_BRANCH=${GIT_OPTIONAL_BRANCH}, PACKAGE_SUFFIX=${PACKAGE_SUFFIX}, GIT_DESCRIBE_ALWAYS_LONG=${GIT_DESCRIBE_ALWAYS_LONG}, CI_SEQUENTIAL_BUILD_NUMBER=${CI_SEQUENTIAL_BUILD_NUMBER})"
+echo "Naming things... (using TRAVIS_TAG=${TRAVIS_TAG}, GIT_OPTIONAL_BRANCH=${GIT_OPTIONAL_BRANCH}, PACKAGE_SUFFIX=${PACKAGE_SUFFIX}, GIT_DESCRIBE_ALWAYS_LONG=${GIT_DESCRIBE_ALWAYS_LONG}, CI_SEQUENTIAL_BUILD_NUMBER=${CI_SEQUENTIAL_BUILD_NUMBER}, GIT_COMMIT_SHORT=$GIT_COMMIT_SHORT, GIT_COMMIT=$GIT_COMMIT, FETCH_COMMIT_SUFFIX=${FETCH_COMMIT_SUFFIX})"
 ################## NAMING THINGS ####################
 
 export DELETE_UPLOAD_FOLDER="${DELETE_UPLOAD_FOLDER:-True}"
@@ -122,9 +166,7 @@ printf "\n=================================================\n"
 
 
 
-
 ########## Travis defaults ###################
-export IMAGEFLOW_SERVER="${IMAGEFLOW_SERVER:-True}"
 export COVERAGE="${COVERAGE:-False}"
 export VALGRIND="${VALGRIND:-False}"
 export CLEAN_RUST_TARGETS="${CLEAN_RUST_TARGETS:-True}"
@@ -142,13 +184,9 @@ export TEST_C="${TEST_C:-True}"
 export TEST_C_DEBUG_BUILD="${TEST_C_DEBUG_BUILD:${VALGRIND}}"
 # Run Rust tests
 export TEST_RUST="${TEST_RUST:-True}"
-# Enable compilation of imageflow_server, which has a problematic openssl dependency
-export IMAGEFLOW_SERVER="${IMAGEFLOW_SERVER:-True}"
 # Enables generated coverage information for the C portion of the code. 
 # Also forces C tests to build in debug mode
 export COVERAGE="${COVERAGE:-False}"
-# Affects how /artifacts folder is structured by build.sh
-export UPLOAD_AS_LATEST="${UPLOAD_AS_LATEST:-False}"
 # travis_run_docker.sh uploads Coverage information when true
 export COVERALLS="${COVERALLS}"
 export COVERALLS_TOKEN="${COVERALLS_TOKEN}"
@@ -232,17 +270,48 @@ DOCKER_ENV_VARS=(
 
 echo 
 echo "========================================================="
-echo "Relevant ENV VARS for build.sh: ${DOCKER_ENV_VARS[*]}"
+echo "Relevant dockered ENV VARS for build.sh: ${DOCKER_ENV_VARS[*]}"
 echo "========================================================="
 echo 
 ##############################
 
 
-if [[ "$(uname -s)" == 'Darwin' ]]; then
+if [[ "$(uname -s)" == 'Darwin' && -z "$SIM_CI" ]]; then
 	./ci/travis_run_osx.sh
 else
+	echo "===================================================================== [travis_run.sh]"
+	echo "Launching docker SIM_CI=${SIM_CI}"
+	echo
+
+	DOCKER_COMMAND=(
+			/bin/bash -c "./ci/travis_run_docker.sh"  
+			)
+	DOCKER_CACHE_VARS=(
+		-v 
+		"$HOME/.ccache:/home/conan/.ccache"
+		-v 
+		"$HOME/.conan/data:/home/conan/.conan/data"
+	)
+	DOCKER_INVOCATION=(docker run "--rm")
+
+	if [[ "$SIM_CI" == 'True' ]]; then
+		if [[ "$SIM_OPEN_BASH" == 'True' ]]; then
+			DOCKER_COMMAND=(
+			/bin/bash
+			)
+		fi
+		DOCKER_CACHE_VARS=("${SIM_DOCKER_CACHE_VARS[@]}")
+
+		export DOCKER_TTY_FLAG=
+		if [[ -t 1 ]]; then
+		  export DOCKER_TTY_FLAG="--tty"
+		fi
+
+		DOCKER_INVOCATION=(docker run "--interactive" "$DOCKER_TTY_FLAG" "--rm")
+	fi
+
 	set -x
-	docker run --rm -v "$HOME/.ccache:/home/conan/.ccache" -v "$HOME/.conan/data:/home/conan/.conan/data" -v "${TRAVIS_BUILD_DIR}:/home/conan/imageflow" "${DOCKER_ENV_VARS[@]}" "${DOCKER_IMAGE}" /bin/bash -c "./ci/travis_run_docker.sh"
+	"${DOCKER_INVOCATION[@]}" -v "${TRAVIS_BUILD_DIR}:/home/conan/imageflow" "${DOCKER_CACHE_VARS[@]}" "${DOCKER_ENV_VARS[@]}" "${DOCKER_IMAGE}" "${DOCKER_COMMAND[@]}" 
 	set +x
 fi
 
@@ -254,4 +323,3 @@ else
 	echo -e "\nListing files scheduled for upload to s3\n\n"
 	ls -R ./artifacts/upload/*
 fi
-
