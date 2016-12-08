@@ -1,0 +1,10 @@
+imageflow:
+  image: imazen/imageflow_server
+  autorestart: always
+  ports:
+    - "3000:3000"
+  roles:
+    - global
+  working_dir: /home/conan/imageflow
+  entrypoint: /home/conan/imageflow/imageflow_server
+  user: conan

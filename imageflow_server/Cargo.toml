@@ -19,6 +19,8 @@ serde = "*"
 serde_json = "*"
 imageflow_core = { path = "../imageflow_core", version = "*" }
 imageflow_types = { path = "../imageflow_types", version = "*" }
+# imageflow_tool = { path = "../imageflow_tool", version = "*" }
+
 
 [build-dependencies]
 cmake = "0.1.17"

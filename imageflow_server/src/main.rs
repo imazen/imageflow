@@ -4,10 +4,12 @@ extern crate rustc_serialize;
 extern crate hyper;
 extern crate libc;
 extern crate time;
+extern crate clap;
 
 extern crate imageflow_core;
 extern crate imageflow_types as s;
 
+use clap::{App, Arg, SubCommand};
 
 use hyper::Client;
 use imageflow_core::boring::*;
@@ -237,6 +239,11 @@ fn proto1(req: &mut Request) -> IronResult<Response> {
 // }
 
 fn main() {
+    let exit_code = main_with_exit_code();
+    std::process::exit(exit_code);
+}
+
+fn serve(){
     let mut router = Router::new();
 
     // Mount prefix (external) (url|relative path)
@@ -247,5 +254,73 @@ fn main() {
                move |r: &mut Request| proto1(r),
                "proto1-unsplash");
 
-    Iron::new(router).http("localhost:3000").unwrap();
+    router.get("/",
+               move |r: &mut Request|
+                   Ok(Response::with((iron::status::Ok, "Hello World"))), "home-hello");
+
+    Iron::new(router).http("0.0.0.0:3000").unwrap();
 }
+
+fn main_with_exit_code() -> i32 {
+    let version = s::version::one_line_version();
+    let app = App::new("imageflow_server").version(version.as_ref())
+        .subcommand(
+            SubCommand::with_name("diagnose")
+                .about("Diagnostic utilities")
+                .arg(
+                    Arg::with_name("show-compilation-info").long("show-compilation-info")
+                        .help("Show all the information stored in this executable about the environment in which it was compiled.")
+                ).arg(
+                Arg::with_name("call-panic").long("call-panic")
+                    .help("Triggers a Rust panic (so you can observe failure/backtrace behavior)")
+            )
+        )
+        .subcommand(
+            SubCommand::with_name("start")
+                .about("Start server")
+            //                    .arg(
+            //                        Arg::with_name("generate").long("generate")
+            //                            .help("Create an 'examples' directory")
+            //                    )
+        );
+
+    // --json [path]
+    // --response [response_json_path]
+    // --demo [name]
+    // --in 0 a.png b.png
+    // --out a.png
+
+    //Eventually:
+    // --local-only (prevent remote URL requests)
+    // --no-io-ids (Disables interpretation of numbers in --in and --out as io_id assignment).
+    // --no-clobber
+    // --debug (verbose, graph export, frame export?)
+    // --debug-package
+
+
+    // file.json --in a.png a.png --out s.png
+    // file.json --in 0 a.png 1 b.png --out 3 base64
+
+
+    let matches = app.get_matches();
+
+    if let Some(ref matches) = matches.subcommand_matches("diagnose") {
+        let m: &&clap::ArgMatches = matches;
+
+        if m.is_present("show-compilation-info") {
+            println!("{}\n{}\n",
+                     s::version::one_line_version(),
+                     s::version::all_build_info_pairs());
+            return 0;
+        }
+        if m.is_present("call-panic") {
+            panic!("Panicking on command");
+        }
+    }
+    if let Some(ref matches) = matches.subcommand_matches("start") {
+        serve();
+        return 0;
+    }
+    64
+}
+

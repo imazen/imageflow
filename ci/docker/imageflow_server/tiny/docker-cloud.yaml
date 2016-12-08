@@ -1,0 +1,10 @@
+imageflow:
+  image: imazen/imageflow_server_tiny
+  autorestart: always
+  ports:
+    - "3001:3000"
+  roles:
+    - global
+  entrypoint: /root/imageflow_server start
+  
+#https://docs.docker.com/docker-cloud/apps/stack-yaml-reference/

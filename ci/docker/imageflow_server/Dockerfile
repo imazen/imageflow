@@ -29,5 +29,5 @@ USER conan
 
 WORKDIR /home/conan/imageflow
 
-COPY bin/imageflow_tool /home/conan/imageflow/imageflow_tool
+# COPY bin/imageflow_tool /home/conan/imageflow/imageflow_tool
 COPY bin/imageflow_server /home/conan/imageflow/imageflow_server

@@ -1,0 +1,17 @@
+FROM busybox:glibc
+WORKDIR /root
+COPY ./bin/imageflow_server /root/imageflow_server
+ENV LD_LIBRARY_PATH /root:$LD_LIBRARY_PATH
+COPY ./bin/librt.so.1 ./root/librt.so.1
+
+COPY ./bin/libm.so.6 ./root/libm.so.6
+
+COPY ./bin/libdl.so.2 ./root/libdl.so.2
+
+COPY ./bin/libpthread.so.0 ./root/libpthread.so.0
+
+COPY ./bin/libgcc_s.so.1 ./root/libgcc_s.so.1
+
+COPY ./bin/libc.so.6 ./root/libc.so.6
+
+COPY ./bin/ld-linux-x86-64.so.2 ./root/ld-linux-x86-64.so.2
