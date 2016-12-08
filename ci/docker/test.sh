@@ -74,6 +74,13 @@ rsync -q -av --delete "${SCRIPT_DIR}/../../.." "$WORKING_DIR" --filter=':- .giti
 
 	echo "DISABLE_COMPILATION_CACHES=${DISABLE_COMPILATION_CACHES:-False}"
 
+	mkdir -p "${WORKING_DIR}_cache/target/debug" || true
+	mkdir -p "${WORKING_DIR}_cache/target/release" || true
+	mkdir -p "${WORKING_DIR}_cache/conan_data" || true
+	mkdir -p "${WORKING_DIR}_cache/ccache" || true
+	mkdir -p "${WORKING_DIR}_cache/c_components/build" || true
+
+
 	# The first two are only needed in test.sh, since we're rsycning away the whole /target folder
 	SIM_DOCKER_CACHE_VARS=(
 		-v 
@@ -106,6 +113,9 @@ rsync -q -av --delete "${SCRIPT_DIR}/../../.." "$WORKING_DIR" --filter=':- .giti
 	fi
 	if [[ "$DOCKER_IMAGE" == 'imazen/build_if_gcc54' ]]; then
 		export PACKAGE_SUFFIX="${PACKAGE_SUFFIX:-x86_64-linux-gcc54-glibc223}"
+	fi
+	if [[ "$DOCKER_IMAGE" == 'imazen/musl' ]]; then
+		export PACKAGE_SUFFIX="${PACKAGE_SUFFIX:-x86_64-linux-musl}"
 	fi
 
 	export TRAVIS_BUILD_NUMBER=99999

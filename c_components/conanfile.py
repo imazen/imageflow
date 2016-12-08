@@ -16,7 +16,7 @@ class ImageFlowConan(ConanFile):
    					  "imageflow_c:shared=True"
     exports = "lib/*", "tests/*", "CMakeLists.txt", "imageflow.h", "imageflow_advanced.h"
 
-
+#"libcurl:with_openssl=False"
     def config(self):
         if self.settings.os != "Windows":  # giflib/littlecms must be shared on windows?
             #self.options["giflib"].shared = False
