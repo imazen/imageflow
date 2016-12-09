@@ -633,21 +633,15 @@ mod mid_term {
                                            b: f32,
                                            c: f32);
 
-        pub fn flow_bitmap_bgra_test_compare_to_record(c: *mut ImageflowContext,
-                                                       bitmap: *mut BitmapBgra,
-                                                       storage_name: *const libc::c_char,
-                                                       store_if_missing: bool,
-                                                       off_by_one_byte_differences_permitted: usize,
-                                                       caller_filename: *const libc::c_char,
-                                                       caller_linenumber: i32,
-                                                       storage_relative_to: *const libc::c_char)
-                                                       -> bool;
 
 
-
+    pub fn flow_bitmap_bgra_load_png(c: *mut ImageflowContext,
+    b_ref: *mut *const BitmapBgra,
+    path: *const libc::c_char)
+    -> bool;
 
         pub fn flow_bitmap_bgra_save_png(c: *mut ImageflowContext,
-                                         input: *mut BitmapBgra,
+                                         input: *const BitmapBgra,
                                          path: *const libc::c_char)
                                          -> bool;
 

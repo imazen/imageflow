@@ -96,7 +96,7 @@ impl FlowError{
         }
     }
     pub fn panic_time(&self){
-        panic!(self.to_cow());
+        panic!("{}",self.to_cow());
     }
     pub fn panic_with(&self, message: &str){
         panic!("{}\n{}", message, self.to_cow());

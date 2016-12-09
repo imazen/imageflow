@@ -1,3 +1,4 @@
+extern crate hyper;
 extern crate imageflow_core;
 extern crate libc;
 extern crate rustc_serialize;
@@ -7,6 +8,7 @@ extern crate serde_json;
 
 use std::ffi::CString;
 use std::path::Path;
+use std::io::Read;
 
 use imageflow_core::{Context, JsonResponse};
 
@@ -72,15 +74,18 @@ fn compare(input: Option<s::IoEnum>, allowed_off_by_one_bytes: usize, checksum_n
         });
     }
 
-    steps.push(s::Node::FlowBitmapBgraPtr { ptr_to_flow_bitmap_bgra_ptr: ptr_to_ptr as usize});
+    steps.push(s::Node::FlowBitmapBgraPtr { ptr_to_flow_bitmap_bgra_ptr: ptr_to_ptr as usize });
 
     {
-
         //println!("{}", serde_json::to_string_pretty(&steps).unwrap());
     }
 
-    let build = s::Build001{
-        builder_config: Some(s::Build001Config{graph_recording: match debug{ true => Some(s::Build001GraphRecording::debug_defaults()), false => None} ,
+    let build = s::Build001 {
+        builder_config: Some(s::Build001Config {
+            graph_recording: match debug {
+                true => Some(s::Build001GraphRecording::debug_defaults()),
+                false => None
+            },
             process_all_gif_frames: Some(false),
             enable_jpeg_block_scaling: Some(false),
             no_gamma_correction: false
@@ -101,24 +106,26 @@ fn compare(input: Option<s::IoEnum>, allowed_off_by_one_bytes: usize, checksum_n
 
     unsafe {
         if debug {
-            println!("{:?}", *ptr_to_ptr);
+            println!("{:?}", dest_bitmap);
         }
+
+        let mut ctx = checkums_ctx_for(&context);
+        ctx.create_if_missing = store_if_missing;
+        ctx.max_off_by_one_ratio = allowed_off_by_one_bytes as f32 / ((*dest_bitmap).h * (*dest_bitmap).stride) as f32;
+        regression_check(&ctx, dest_bitmap, &checksum_name)
     }
-
-     unsafe {
-
-         let matched: bool;
-         let c_checksum_name = CString::new(checksum_name).unwrap();
-         {
-             let storage_relative_to = CString::new(Path::new(env!("CARGO_MANIFEST_DIR")).join(Path::new("tests")).join(Path::new("visuals.rs")).into_os_string().as_os_str().to_str().unwrap()).unwrap();
-             let storage_rel =  storage_relative_to.as_bytes_with_nul().as_ptr();
-             let storage_relative_to_ptr: *const i8 = ::std::mem::transmute(storage_rel);
-             matched = imageflow_core::ffi::flow_bitmap_bgra_test_compare_to_record(context.flow_c(), *ptr_to_ptr, c_checksum_name.as_ptr(), store_if_missing, allowed_off_by_one_bytes, static_char!(file!()), 0, storage_relative_to_ptr);
-         }
-         context.error().assert_ok();
-
-         return matched;
-     }
+}
+fn checkums_ctx_for<'a>(c: &'a Context) -> ChecksumCtx<'a>{
+    let visuals = Path::new(env!("CARGO_MANIFEST_DIR")).join(Path::new("tests")).join(Path::new("visuals"));
+    std::fs::create_dir_all(&visuals).unwrap();
+    ChecksumCtx {
+        c: c,
+        visuals_dir: visuals.clone(),
+        cache_dir: visuals.join(Path::new("cache")),
+        create_if_missing: true,
+        checksum_file: visuals.join(Path::new("checksums.json")),
+        max_off_by_one_ratio: 0.01
+    }
 }
 
 #[test]
@@ -460,20 +467,8 @@ fn test_with_callback(checksum_name: String, input: s::IoEnum, callback: fn(s::I
 
 
 
-            let store_if_missing = false;
-            let allowed_off_by_one_bytes = 500;
-
-            let c_checksum_name = CString::new(checksum_name).unwrap();
-            {
-                let storage_relative_to = CString::new(Path::new(env!("CARGO_MANIFEST_DIR")).join(Path::new("tests")).join(Path::new("visuals.rs")).into_os_string().as_os_str().to_str().unwrap()).unwrap();
-                let storage_rel =  storage_relative_to.as_bytes_with_nul().as_ptr();
-                let storage_relative_to_ptr: *const i8 = ::std::mem::transmute(storage_rel);
-                matched = imageflow_core::ffi::flow_bitmap_bgra_test_compare_to_record(context.flow_c(), *ptr_to_ptr, c_checksum_name.as_ptr(), store_if_missing, allowed_off_by_one_bytes, static_char!(file!()), 0, storage_relative_to_ptr);
-            }
-
-            context.error().assert_ok();
-
-
+        let ctx = checkums_ctx_for(&context);
+        matched = regression_check(&ctx, *ptr_to_ptr, &checksum_name)
 
 
     }
@@ -481,4 +476,170 @@ fn test_with_callback(checksum_name: String, input: s::IoEnum, callback: fn(s::I
     matched
 }
 
-//TODO: Consider adding test for flow_bitmap_bgra_sharpen_block_edges if we ever bring it back
+fn djb2(bytes: &[u8]) -> u64{
+    bytes.iter().fold(5381u64, |hash, c| ((hash << 5).wrapping_add(hash)).wrapping_add(*c as u64))
+}
+
+use imageflow_core::ffi::BitmapBgra;
+use std::collections::HashMap;
+use ::std::fs::File;
+use ::std::path::{PathBuf};
+use ::std::io::Write;
+use hyper::Client;
+
+
+fn checksum_bitmap(bitmap: &BitmapBgra) -> String {
+    unsafe {
+        let info = format!("{}x{} fmt={} alpha={}", bitmap.w, bitmap.h, bitmap.fmt as i32, bitmap.alpha_meaningful as i32);
+        let contents_slice = ::std::slice::from_raw_parts(bitmap.pixels, bitmap.stride as usize * bitmap.h as usize);
+        return format!("{:02$X}_{:02$X}",djb2(contents_slice) as u32, djb2(info.as_bytes()) as u32,16)
+        /*
+        let mut buf = [0u8; 40];
+        let count = ::imageflow_core::ffi::flow_uniquely_hexed_printf(&mut buf[0] as *mut u8, buf.len() - 1, djb2(contents_slice), djb2(info.as_bytes()));
+        if count < 30 {
+            panic!("printf failed");
+        }
+        let count = count as usize;
+        println!("{} {} {} {}",count, buf[count -1], buf[count], buf[count+1]);
+        std::ffi::CStr::from_bytes_with_nul(&buf[0..count + 1]).unwrap().to_string_lossy().into_owned()
+
+        */
+    }
+}
+//HashMap<String,i64>
+
+struct ChecksumCtx<'a>{
+    c: &'a Context,
+    checksum_file: PathBuf,
+    visuals_dir: PathBuf,
+    #[allow(dead_code)]
+    cache_dir: PathBuf,
+    create_if_missing: bool,
+    max_off_by_one_ratio: f32
+}
+
+fn load_list(c: &ChecksumCtx) -> Result<HashMap<String,String>,()>{
+    if c.checksum_file.exists() {
+        let map: HashMap<String, String> = ::serde_json::from_reader(::std::fs::File::open(&c.checksum_file).unwrap()).unwrap();
+        Ok(map)
+    }else{
+        Ok(HashMap::new())
+    }
+}
+fn save_list(c: &ChecksumCtx, map: &HashMap<String,String>) -> Result<(),()>{
+    ::serde_json::to_writer_pretty(&mut ::std::fs::File::create(&c.checksum_file).unwrap(), map).unwrap();
+    Ok(())
+}
+
+
+fn load_checksum(c: &ChecksumCtx, name: &str) -> Option<String>{
+    load_list(c).unwrap().get(name).and_then(|v|Some(v.to_owned()))
+}
+fn save_checksum(c: &ChecksumCtx, name: String, checksum: String) -> Result<(),()>{
+    let mut map = load_list(c).unwrap();
+    map.insert(name,checksum);
+    save_list(c,&map).unwrap();
+    Ok(())
+}
+
+fn fetch_bytes(url: &str) -> Vec<u8> {
+    let client = Client::new();
+    let mut res = client.get(url).send().unwrap();
+    if res.status != hyper::Ok {
+        panic!("Did you forget to upload {} to s3?", url);
+    }
+    let mut source_bytes = Vec::new();
+    let _ = res.read_to_end(&mut source_bytes).unwrap();
+    source_bytes
+}
+
+fn download(c: &ChecksumCtx, checksum: &str){
+    let dest_path = c.visuals_dir.as_path().join(Path::new(&format!("{}.png", checksum)));
+    let source_url = format!("http://s3-us-west-2.amazonaws.com/imageflow-resources/visual_test_checksums/{}.png",checksum);
+    if dest_path.exists() {
+        println!("{} (trusted) exists", checksum);
+    }else{
+        println!("Fetching {} to {:?}", &source_url, &dest_path);
+        File::create(&dest_path).unwrap().write_all(&fetch_bytes(&source_url)).unwrap();
+    }
+}
+fn save_visual(c: &ChecksumCtx, bit: &BitmapBgra){
+    let checksum =checksum_bitmap(bit);
+    let dest_path = c.visuals_dir.as_path().join(Path::new(&format!("{}.png", &checksum)));
+    if !dest_path.exists(){
+        println!("Writing {:?}", &dest_path);
+        let dest_cpath = CString::new(dest_path.into_os_string().into_string().unwrap()).unwrap();
+        unsafe {
+            if !::imageflow_core::ffi::flow_bitmap_bgra_save_png(c.c.flow_c(), bit as *const BitmapBgra, dest_cpath.as_ptr()){
+                c.c.error().assert_ok();
+            }
+        }
+
+    }
+}
+
+fn load_visual(c: &ChecksumCtx, checksum: &str) -> *const BitmapBgra{
+    unsafe {
+        let path = c.visuals_dir.as_path().join(Path::new(&format!("{}.png", &checksum)));
+        let cpath = CString::new(path.into_os_string().into_string().unwrap()).unwrap();
+        let mut b: *const BitmapBgra = std::ptr::null();
+        if !::imageflow_core::ffi::flow_bitmap_bgra_load_png(c.c.flow_c(), &mut b as *mut *const BitmapBgra, cpath.as_ptr()) {
+            c.c.error().assert_ok();
+        }
+        b
+    }
+}
+/// Returns the number of bytes that differ, followed by the total value of all differences
+/// If these are equal, then only off-by-one errors are occurring
+fn diff_bytes(a: &[u8], b: &[u8]) ->(i64,i64){
+    a.iter().zip(b.iter()).fold((0,0), |(count, delta), (a,b)| if a != b { (count + 1, delta + (*a as i64 - *b as i64).abs()) } else { (count,delta)})
+}
+
+
+fn diff_bitmap_bytes(a: &BitmapBgra, b: &BitmapBgra) -> (i64,i64){
+    if a.w != b.w || a.h != b.h || a.fmt != b.fmt { panic!("Bitmap dimensions differ"); }
+    let a_contents_slice = unsafe{::std::slice::from_raw_parts(a.pixels, a.stride as usize * a.h as usize)};
+    let b_contents_slice = unsafe{::std::slice::from_raw_parts(b.pixels, b.stride as usize * b.h as usize)};
+    diff_bytes(a_contents_slice,b_contents_slice)
+}
+
+fn regression_check(c: &ChecksumCtx, bitmap: *const BitmapBgra, name: &str) -> bool{
+    let bitmap_ref =unsafe{&*bitmap};
+
+    // Always write a copy if it doesn't exist
+    save_visual(c, bitmap_ref);
+
+    if bitmap.is_null(){panic!("");}
+    let trusted = load_checksum(c, name);
+    let current = checksum_bitmap(bitmap_ref);
+    if trusted == None {
+        if c.create_if_missing {
+            println!("====================\n{}\nStoring checksum {}", name, &current);
+            save_checksum(c, name.to_owned(), current.clone()).unwrap();
+        } else {
+            panic!("There is no stored checksum for {}; rerun with create_if_missing=true", name);
+        }
+        true
+    }else if Some(&current) != trusted.as_ref() {
+        download(c, trusted.as_ref().unwrap());
+        println!("====================\n{}\nThe stored checksum {} differs from the current one {}", name, trusted.as_ref().unwrap(), &current);
+
+        let trusted_bit = load_visual(c,trusted.as_ref().unwrap());
+        let (count, delta) = diff_bitmap_bytes(bitmap_ref, unsafe{ &*trusted_bit});
+        unsafe{
+            ::imageflow_core::ffi::flow_destroy(c.c.flow_c(), trusted_bit as *const libc::c_void, std::ptr::null(), 0);
+        }
+        if count != delta{
+            panic!("Not just off-by-one errors!")
+        }
+        let allowed_errors = ((bitmap_ref.w * bitmap_ref.stride) as f32 * c.max_off_by_one_ratio) as i64;
+        if delta  > allowed_errors{
+            panic!("There were {} off-by-one errors, more than the {} ({}%) allowed.", delta, allowed_errors, c.max_off_by_one_ratio * 100f32);
+        }
+        true
+        //Optionally run dssim/imagemagick
+    }else{
+        true //matched! yay!
+    }
+}
+

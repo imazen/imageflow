@@ -173,6 +173,9 @@ static bool checksum_bitmap(flow_c * c, struct flow_bitmap_bgra * bitmap, char *
     return printed_chars != -1;
 }
 
+
+
+
 static char * get_checksum_for(flow_c * c, const char * name, const char * storage_relative_to)
 {
     struct named_checksum * checksums = NULL;

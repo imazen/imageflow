@@ -20,12 +20,17 @@ serde = "*"
 serde_json = "*"
 serde_derive = "*"
 lazy_static = "0.1.*"
-curl = "~0.3.11"
 json = "*"
 imageflow_types = { path = "../imageflow_types", version = "*" }
 petgraph = "^0.2.8"
 daggy = "^0.4.1"
 clippy = "0.0.97"
+
+
+curl = "~0.3.11"
+
+[dev-dependencies]
+hyper = "*"
 
 
 [build-dependencies]
