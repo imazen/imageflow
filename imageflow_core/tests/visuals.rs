@@ -252,7 +252,7 @@ fn test_jpeg_rotation() {
         for flag in 1..9 {
             let url = format!("http://s3-us-west-2.amazonaws.com/imageflow-resources/test_inputs/orientation/{}_{}.jpg", orientation, flag);
             let title = format!("Test_Apply_Orientation_{}_{}.jpg", orientation, flag);
-            let matched = compare(Some(s::IoEnum::Url(url)), 500, title, false, false, vec![s::Node::Decode {io_id: 0, commands: None}]);
+            let matched = compare(Some(s::IoEnum::Url(url)), 500, title, false, false, vec![s::Node::Decode {io_id: 0, commands: None}, s::Node::Constrain(s::Constraint::Within{w: Some(70), h: Some(70), hints: None})]);
             assert!(matched);
         }
     }
@@ -367,20 +367,6 @@ fn test_idct_callback(_: s::ImageInfo) -> (Option<s::DecoderCommand>, Vec<s::Nod
     (Some(s::DecoderCommand::JpegDownscaleHints(hints)), vec![s::Node::Decode{io_id:0, commands: None}], false)
 
 }
-//fn test_idct_callback_no_gamma(_: s::ImageInfo) -> (Option<s::TellDecoderWhat>, Vec<s::Node>, bool)
-//{
-//    let new_w = (800 * 4 + 8 - 1) / 8;
-//    let new_h = (600 * 4 + 8 - 1) / 8;
-//    let hints = s::JpegIDCTDownscaleHints{
-//        gamma_correct_for_srgb_during_spatial_luma_scaling: Some(false),
-//        scale_luma_spatially: Some(true),
-//        width: new_w,
-//        height: new_h
-//    };
-//    (Some(s::TellDecoderWhat::JpegDownscaleHints(hints)), vec![s::Node::Decode{io_id:0}], false)
-//
-//}
-//
 
 fn test_idct_no_gamma_callback(info: s::ImageInfo) -> (Option<s::DecoderCommand>, Vec<s::Node>, bool)
 {
@@ -393,7 +379,7 @@ fn test_idct_no_gamma_callback(info: s::ImageInfo) -> (Option<s::DecoderCommand>
         height: new_h as i64
     };
     //Here we send the hints via the Decode node instead.
-    (None, vec![s::Node::Decode{io_id:0, commands: Some(vec![s::DecoderCommand::JpegDownscaleHints(hints)])}], false)
+    (Some(s::DecoderCommand::JpegDownscaleHints(hints.clone())), vec![s::Node::Decode{io_id:0, commands: Some(vec![s::DecoderCommand::JpegDownscaleHints(hints)])}], false)
 
 }
 
@@ -406,7 +392,7 @@ fn test_idct_linear(){
 
 #[test]
 fn test_idct_spatial_no_gamma(){
-    let matched = test_with_callback("ScaleIDCT_approx_gamma".to_owned(), s::IoEnum::Url("http://s3.amazonaws.com/resizer-images/u1.jpg".to_owned()),
+    let matched = test_with_callback("ScaleIDCT_approx_gamma".to_owned(), s::IoEnum::Url("http://s3-us-west-2.amazonaws.com/imageflow-resources/test_inputs/roof_test_800x600.jpg".to_owned()),
                                      test_idct_no_gamma_callback);
     assert!(matched);
 }
@@ -492,21 +478,9 @@ fn checksum_bitmap(bitmap: &BitmapBgra) -> String {
     unsafe {
         let info = format!("{}x{} fmt={} alpha={}", bitmap.w, bitmap.h, bitmap.fmt as i32, bitmap.alpha_meaningful as i32);
         let contents_slice = ::std::slice::from_raw_parts(bitmap.pixels, bitmap.stride as usize * bitmap.h as usize);
-        return format!("{:02$X}_{:02$X}",djb2(contents_slice) as u32, djb2(info.as_bytes()) as u32,16)
-        /*
-        let mut buf = [0u8; 40];
-        let count = ::imageflow_core::ffi::flow_uniquely_hexed_printf(&mut buf[0] as *mut u8, buf.len() - 1, djb2(contents_slice), djb2(info.as_bytes()));
-        if count < 30 {
-            panic!("printf failed");
-        }
-        let count = count as usize;
-        println!("{} {} {} {}",count, buf[count -1], buf[count], buf[count+1]);
-        std::ffi::CStr::from_bytes_with_nul(&buf[0..count + 1]).unwrap().to_string_lossy().into_owned()
-
-        */
+        return format!("{:02$X}_{:02$X}",djb2(contents_slice), djb2(info.as_bytes()),17)
     }
 }
-//HashMap<String,i64>
 
 struct ChecksumCtx<'a>{
     c: &'a Context,
@@ -516,6 +490,14 @@ struct ChecksumCtx<'a>{
     cache_dir: PathBuf,
     create_if_missing: bool,
     max_off_by_one_ratio: f32
+}
+#[macro_use]
+extern crate lazy_static;
+
+use std::sync::RwLock;
+
+lazy_static! {
+    static ref CHECKSUM_FILE: RwLock<()> = RwLock::new(());
 }
 
 fn load_list(c: &ChecksumCtx) -> Result<HashMap<String,String>,()>{
@@ -527,15 +509,22 @@ fn load_list(c: &ChecksumCtx) -> Result<HashMap<String,String>,()>{
     }
 }
 fn save_list(c: &ChecksumCtx, map: &HashMap<String,String>) -> Result<(),()>{
-    ::serde_json::to_writer_pretty(&mut ::std::fs::File::create(&c.checksum_file).unwrap(), map).unwrap();
+    let mut f = ::std::fs::File::create(&c.checksum_file).unwrap();
+    ::serde_json::to_writer_pretty(&mut f, map).unwrap();
+
+    f.sync_all().unwrap();
     Ok(())
 }
 
 
 fn load_checksum(c: &ChecksumCtx, name: &str) -> Option<String>{
+    #[allow(unused_variables)]
+    let lock = CHECKSUM_FILE.read().unwrap();
     load_list(c).unwrap().get(name).and_then(|v|Some(v.to_owned()))
 }
 fn save_checksum(c: &ChecksumCtx, name: String, checksum: String) -> Result<(),()>{
+    #[allow(unused_variables)]
+    let lock = CHECKSUM_FILE.write().unwrap();
     let mut map = load_list(c).unwrap();
     map.insert(name,checksum);
     save_list(c,&map).unwrap();

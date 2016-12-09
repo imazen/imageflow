@@ -131,8 +131,8 @@ extern crate imageflow_core as c;
 extern crate alloc_system;
 extern crate libc;
 use c::ffi;
-use c::{Context, Job};
 
+pub use c::{Context, Job};
 pub use c::ffi::ImageflowJobIo as JobIo;
 pub use c::ffi::ImageflowJsonResponse as JsonResponse;
 use std::ptr;

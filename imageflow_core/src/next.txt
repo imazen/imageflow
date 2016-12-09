@@ -1,16 +1,47 @@
-Also upload artifacts by full commit ID. This means we can retrieve them easily for x-plat troubleshooting.
+
+Port test helpers to fix determinism and reduce C dependencies. Maybe even add upload?
+
+Add server JSON endpoint
+
+Add security policies
+
+Add riapi converter (basic)
+
+Add server configuration via TOML (or JSON API?) We need a form of persistence that is lightweight and not always tied to the filesystem.
 
 
---export-job-dump
-Add a mode that translates the current job, and all resources it depends on, into a serializable data structure.
+Multi-tenanting by subdomain (host mapping), port, or folder.
 
-Add a 'troubleshooting' module which can load (or use) one of these data structures, then perform various transformations on it.
-We'll call these experiments. The experiments will help narrow down the problem area, or shrink the repro case.
+Mapping folders (or even the root!) to data sources, like another HTTP server.
+Reserved endpoints for fully encoded arbitrary requests, though, where we can pass through auth info to the upstream gateway
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 ### For troubleshooting and reporting panics.
 
---troubleshoot-package [optional file name - otherwise use current params set to create it].
+--troubleshoot-package [optional file name - otherwise use current params set to create it]
+
+Add a 'troubleshooting' module which can load (or use) one of these data structures, then perform various transformations on it.
+We'll call these experiments. The experiments will help narrow down the problem area, or shrink the repro case.
 
 If the unmodified job fails, but the translated/portable job has a different error (or none), then it may be I/O related.
 If the translated job fails, but we can read dimensions of all input images and decode them, then it is related to the job.

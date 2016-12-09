@@ -218,7 +218,7 @@ if [[ "$TEST_RUST" == 'True' ]]; then
 	(
 		cd imageflow_core
 		date "$STAMP"
-		cargo test
+		RUST_TEST_TASKS=1 cargo test
 	)
 	(
 		cd imageflow_abi
@@ -233,7 +233,7 @@ if [[ "$TEST_RUST" == 'True' ]]; then
 	(
 		cd imageflow_tool
 		date "$STAMP"
-		cargo test
+		RUST_TEST_TASKS=1 cargo test
 		date "$STAMP"
 	)
 	if [[ "$IMAGEFLOW_SERVER" == 'True' ]]; then
