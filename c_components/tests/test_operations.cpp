@@ -1,6 +1,5 @@
 #include <lib/trim_whitespace.h>
 #include "catch.hpp"
-#include "helpers_visual.h"
 
 // TODO: Test with opaque and transparent images
 // TODO: Test using random dots instead of rectangles to see if overlaps are correct.

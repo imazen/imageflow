@@ -31,9 +31,7 @@ list(APPEND LIB_HDRS imageflow.h)
 list(APPEND LIB_HDRS imageflow_advanced.h)
 
 list(APPEND LIB_SRCS tests/helpers.c)
-list(APPEND LIB_SRCS tests/helpers_visual.c)
 list(APPEND LIB_HDRS tests/helpers.h)
-list(APPEND LIB_HDRS tests/helpers_visual.h)
 
 
 SET_SOURCE_FILES_PROPERTIES(LIB_SRCS PROPERTIES LANGUAGE CXX )
@@ -92,7 +90,7 @@ if (ENABLE_PROFILING)
 	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -pg ")
 	set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -pg ")
 
-	add_executable(profile_imageflow tests/profile_imageflow.c tests/helpers_visual.c tests/helpers.c ${LIB_SRCS} ${LIB_HDRS})
+	add_executable(profile_imageflow tests/profile_imageflow.c tests/helpers.c ${LIB_SRCS} ${LIB_HDRS})
 	target_link_libraries(profile_imageflow ${CONAN_LIBS})
 	target_include_directories(profile_imageflow PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 	target_include_directories(profile_imageflow PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/lib)
@@ -104,7 +102,7 @@ if(ENABLE_TEST)
     include(CTest)
     enable_testing()
 
-	add_library(imageflow_test_helpers_OBJECTS OBJECT tests/helpers.c tests/helpers_visual.c tests/runner.cpp)
+	add_library(imageflow_test_helpers_OBJECTS OBJECT tests/helpers.c tests/runner.cpp)
 	target_include_directories(imageflow_test_helpers_OBJECTS PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 	target_include_directories(imageflow_test_helpers_OBJECTS PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/lib)
 

@@ -1,5 +1,5 @@
 #include "catch.hpp"
-#include "helpers_visual.h"
+
 
 #define GENERATE_CODE_LITERALS
 //#define GENERATE_INTEGER_WEIGHTS

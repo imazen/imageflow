@@ -394,12 +394,6 @@ PUB bool flow_bitmap_bgra_populate_histogram(flow_c * c, struct flow_bitmap_bgra
 
 // This is exposed as test helper in Rust. We should just port this functionality to Rust instead.
 
-PUB bool flow_bitmap_bgra_test_compare_to_record(flow_c * c, struct flow_bitmap_bgra * bitmap,
-                                                 const char * storage_name, bool store_if_missing,
-                                                 size_t off_by_one_byte_differences_permitted,
-                                                 const char * caller_filename, int caller_linenumber,
-                                                 const char * storage_relative_to);
-
 #undef PUB
 #ifdef __cplusplus
 }

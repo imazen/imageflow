@@ -6,8 +6,6 @@
 #include <stdio.h>
 #include "string.h"
 #include <stdbool.h>
-#include "curl/curl.h"
-#include "curl/easy.h"
 #include <stdlib.h>
 #include "imageflow.h"
 #include "lib/imageflow_private.h"

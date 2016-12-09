@@ -1,4 +1,3 @@
-#include "helpers_visual.h"
 
 #define ERR2(c)                                                                                                        \
     if (has_err(c, __FILE__, __LINE__, __func__)) {                                                                    \

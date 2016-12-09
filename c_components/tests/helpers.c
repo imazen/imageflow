@@ -102,103 +102,6 @@ uint8_t * read_all_bytes(flow_c * c, size_t * buffer_size, const char * path)
     }
     return 0;
 }
-bool fetch_image(const char * url, char * dest_path)
-{ /*null-terminated string*/
-    static bool curl_initialized = false;
-    if (!curl_initialized) {
-        curl_initialized = true;
-        curl_global_init(CURL_GLOBAL_ALL);
-    }
-    fprintf(stdout, "Fetching %s...", url);
-
-    CURL * curl;
-    FILE * fp;
-    FILE * real_fp;
-    CURLcode res;
-    curl = curl_easy_init();
-    if (curl) {
-#ifdef _MSC_VER
-        tmpfile_s(&fp);
-#else
-        fp = tmpfile();
-#endif
-        if (fp) {
-            curl_easy_setopt(curl, CURLOPT_URL, url);
-            curl_easy_setopt(curl, CURLOPT_WRITEDATA, fp);
-            res = curl_easy_perform(curl);
-            long http_code = 0;
-            curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &http_code);
-            if (res != CURLE_OK || http_code != 200) {
-                fprintf(stderr, "CURL HTTP operation failed (error %d, status code %li) - GET %s, write to  %s\n", res,
-                        http_code, url, dest_path);
-                exit(4);
-            }
-        } else {
-            fprintf(stderr, "Failed to open temp file\n");
-            exit(3);
-        }
-        /* always cleanup */
-        curl_easy_cleanup(curl);
-        rewind(fp);
-        real_fp = fopen(dest_path, "wb");
-        if (real_fp) {
-            copy_file(fp, real_fp);
-        } else {
-            fprintf(stderr, "Failed to open file for writing %s\n", dest_path);
-            exit(3);
-        }
-        fclose(real_fp);
-        fclose(fp);
-        fprintf(stdout, "...done! Written to %s\n", dest_path);
-    } else {
-        fprintf(stderr, "Failed to start CURL\n");
-        exit(2);
-    }
-    return true;
-}
-
-uint8_t * get_bytes_cached(flow_c * c, size_t * bytes_count_out, const char * url, const char * storage_relative_to)
-{
-
-#define FLOW_MAX_PATH 255
-    char cache_folder[FLOW_MAX_PATH];
-    char cache_path[FLOW_MAX_PATH];
-    uint64_t url_hash = djb2((unsigned const char *)url);
-
-    if (!create_path_from_relative(c, storage_relative_to, false, &cache_folder[0], sizeof(cache_folder), "")) {
-        FLOW_add_to_callstack(c);
-        return NULL;
-    }
-    const char * ext = url + strlen(url) - 6;
-    while (*ext != 0 && *ext != '.')
-        ext++;
-
-    if (flow_dir_exists_eh(&cache_folder[0])) {
-        // The tests folder is still around; we can use it
-        if (!create_path_from_relative(c, storage_relative_to, false, &cache_path[0], sizeof(cache_path),
-                                       "/visuals/cache/%llu%s", url_hash, ext)) {
-            FLOW_add_to_callstack(c);
-            return NULL;
-        }
-    } else {
-        char * cache_dir = getenv("HOME");
-        if (cache_dir == NULL)
-            cache_dir = getenv("TEMP");
-        flow_snprintf(cache_path, FLOW_MAX_PATH, "%s/imageflow_cache/%llu%s", cache_dir, url_hash, ext);
-    }
-
-    flow_recursive_mkdir(&cache_path[0], false);
-
-    if (access(cache_path, F_OK) == -1) {
-        // file doesn't exist
-        fetch_image(url, cache_path);
-    } else {
-
-        // fprintf(stdout, "Using cached image at %s", cache_path);
-    }
-
-    return read_all_bytes(c, bytes_count_out, cache_path);
-}
 
 bool flow_dir_exists_eh(const char * dir_path)
 {
@@ -378,22 +281,6 @@ double flow_bitmap_float_compare(flow_c * c, struct flow_bitmap_float * a, struc
     return difference_total / a->h;
 }
 
-struct flow_io * get_io_for_cached_url(flow_c * c, const char * url, void * owner, const char * storage_relative_to)
-{
-    size_t bytes_count = 0;
-    uint8_t * bytes = get_bytes_cached(c, &bytes_count, url, storage_relative_to);
-    if (bytes == NULL) {
-        FLOW_error(c, flow_status_IO_error);
-        return NULL;
-    }
-
-    struct flow_io * input = flow_io_create_from_memory(c, flow_io_mode_read_seekable, bytes, bytes_count, owner, NULL);
-    if (input == NULL) {
-        FLOW_add_to_callstack(c);
-        return NULL;
-    }
-    return input;
-}
 
 bool flow_compare_file_contents(flow_c * c, const char * filename1, const char * filename2,
                                 char * difference_message_buffer, size_t buffer_size, bool * are_equal)

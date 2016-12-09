@@ -117,129 +117,129 @@ TEST_CASE("Load png", "[fastscaling]")
 
     REQUIRE(success);
 }
-
-TEST_CASE("Load png from URL", "[fastscaling]")
-{
-
-    bool success = false;
-
-    size_t bytes_count = 0;
-    flow_c * c = flow_context_create();
-
-    uint8_t * bytes = get_bytes_cached(c, &bytes_count, "http://s3.amazonaws.com/resizer-images/sun_256.png", __FILE__);
-    REQUIRE_FALSE(bytes == NULL);
-    png_size_t image_bytes_count = bytes_count;
-    png_const_voidp image_bytes = bytes;
-
-    png_image image;
-
-    /* Only the image structure version number needs to be set. */
-    memset(&image, 0, sizeof image);
-    image.version = PNG_IMAGE_VERSION;
-    image.opaque = NULL;
-
-    if (png_image_begin_read_from_memory(&image, image_bytes, image_bytes_count)) {
-        png_bytep buffer;
-
-        /* Change this to try different formats!  If you set a colormap format
-         * then you must also supply a colormap below.
-         */
-        image.format = PNG_FORMAT_BGRA;
-
-        buffer = FLOW_calloc_array(c, PNG_IMAGE_SIZE(image), png_byte);
-
-        if (buffer != NULL) {
-            if (png_image_finish_read(&image, NULL /*background*/, buffer, 0 /*row_stride*/,
-                                      NULL /*colormap for PNG_FORMAT_FLAG_COLORMAP */)) {
-
-                int nonzero = (int)nonzero_count((uint8_t *)buffer, PNG_IMAGE_SIZE(image));
-                if (nonzero > 0) {
-                    printf("nonzero buffer: %d of %d", nonzero, PNG_IMAGE_SIZE(image));
-                }
-
-                struct flow_bitmap_bgra * source
-                    = flow_bitmap_bgra_create_header(c, (unsigned int)(image.width), (unsigned int)(image.height));
-                REQUIRE_FALSE(source == NULL);
-                source->fmt = flow_pixel_format::flow_bgra32;
-                source->stride = PNG_IMAGE_ROW_STRIDE(image);
-                printf("png stride (%d), calculated (%d)\n", source->stride,
-                       source->w * flow_pixel_format_bytes_per_pixel(source->fmt));
-                source->alpha_meaningful = true;
-                source->pixels = buffer;
-
-                int target_width = 300;
-                int target_height = 200;
-
-                struct flow_bitmap_bgra * canvas
-                    = flow_bitmap_bgra_create(c, target_width, target_height, true, flow_bgra32);
-
-                REQUIRE_FALSE(canvas == NULL);
-                struct flow_RenderDetails * details
-                    = flow_RenderDetails_create_with(c, flow_interpolation_filter::flow_interpolation_filter_Robidoux);
-                details->interpolate_last_percent = 2.1f;
-                details->minimum_sample_window_to_interposharpen = 1.5;
-                details->havling_acceptable_pixel_loss = 0.26f;
-
-                REQUIRE_FALSE(details == NULL);
-                //                details->sharpen_percent_goal = 50;
-                //                details->post_flip_x = flipx;
-                //                details->post_flip_y = flipy;
-                //                details->post_transpose = transpose;
-                // details->enable_profiling = profile;
-
-                // Should we even have Renderer_* functions, or just 1 call that does it all?
-                // If we add memory use estimation, we should keep flow_Renderer
-
-                if (!flow_RenderDetails_render(c, details, source, canvas)) {
-
-                    char error[255];
-                    flow_context_error_message(c, error, 255);
-                    printf("%s", error);
-                    exit(77);
-                }
-                printf("Rendered!");
-                flow_RenderDetails_destroy(c, details);
-
-                flow_bitmap_bgra_destroy(c, source);
-
-                // TODO, write out PNG here
-
-                struct flow_io * buf = flow_io_create_for_output_buffer(c, c);
-                // memset(canvas->pixels, 0, canvas->stride * canvas->h);
-                if (!flow_bitmap_bgra_write_png(c, canvas, buf)) {
-                    // FLOW_error_return(context);
-                    FAIL("Failed to write png");
-                } else {
-                    if (!flow_io_write_output_buffer_to_file(c, buf, "outpng.png")) {
-                        FAIL("Failed to copy to disk");
-                    }
-                    success = true;
-                }
-
-                flow_bitmap_bgra_destroy(c, canvas);
-
-            } else {
-                fprintf(stderr, "png_image_finish_read: %s\n", image.message);
-
-                /* This is the only place where a 'free' is required; libpng does
-                 * the cleanup on error and success, but in this case we couldn't
-                 * complete the read because of running out of memory.
-                 */
-                png_image_free(&image);
-            }
-        }
-
-        else
-            fprintf(stderr, "pngtopng: out of memory: %lu bytes\n", (unsigned long)PNG_IMAGE_SIZE(image));
-    }
-
-    else
-        /* Failed to read the first argument: */
-        fprintf(stderr, "png_image_begin_read_from_memory: %s\n", image.message);
-
-    flow_context_destroy(c);
-    REQUIRE(success);
-}
+//
+//TEST_CASE("Load png from URL", "[fastscaling]")
+//{
+//
+//    bool success = false;
+//
+//    size_t bytes_count = 0;
+//    flow_c * c = flow_context_create();
+//
+//    uint8_t * bytes = get_bytes_cached(c, &bytes_count, "http://s3.amazonaws.com/resizer-images/sun_256.png", __FILE__);
+//    REQUIRE_FALSE(bytes == NULL);
+//    png_size_t image_bytes_count = bytes_count;
+//    png_const_voidp image_bytes = bytes;
+//
+//    png_image image;
+//
+//    /* Only the image structure version number needs to be set. */
+//    memset(&image, 0, sizeof image);
+//    image.version = PNG_IMAGE_VERSION;
+//    image.opaque = NULL;
+//
+//    if (png_image_begin_read_from_memory(&image, image_bytes, image_bytes_count)) {
+//        png_bytep buffer;
+//
+//        /* Change this to try different formats!  If you set a colormap format
+//         * then you must also supply a colormap below.
+//         */
+//        image.format = PNG_FORMAT_BGRA;
+//
+//        buffer = FLOW_calloc_array(c, PNG_IMAGE_SIZE(image), png_byte);
+//
+//        if (buffer != NULL) {
+//            if (png_image_finish_read(&image, NULL /*background*/, buffer, 0 /*row_stride*/,
+//                                      NULL /*colormap for PNG_FORMAT_FLAG_COLORMAP */)) {
+//
+//                int nonzero = (int)nonzero_count((uint8_t *)buffer, PNG_IMAGE_SIZE(image));
+//                if (nonzero > 0) {
+//                    printf("nonzero buffer: %d of %d", nonzero, PNG_IMAGE_SIZE(image));
+//                }
+//
+//                struct flow_bitmap_bgra * source
+//                    = flow_bitmap_bgra_create_header(c, (unsigned int)(image.width), (unsigned int)(image.height));
+//                REQUIRE_FALSE(source == NULL);
+//                source->fmt = flow_pixel_format::flow_bgra32;
+//                source->stride = PNG_IMAGE_ROW_STRIDE(image);
+//                printf("png stride (%d), calculated (%d)\n", source->stride,
+//                       source->w * flow_pixel_format_bytes_per_pixel(source->fmt));
+//                source->alpha_meaningful = true;
+//                source->pixels = buffer;
+//
+//                int target_width = 300;
+//                int target_height = 200;
+//
+//                struct flow_bitmap_bgra * canvas
+//                    = flow_bitmap_bgra_create(c, target_width, target_height, true, flow_bgra32);
+//
+//                REQUIRE_FALSE(canvas == NULL);
+//                struct flow_RenderDetails * details
+//                    = flow_RenderDetails_create_with(c, flow_interpolation_filter::flow_interpolation_filter_Robidoux);
+//                details->interpolate_last_percent = 2.1f;
+//                details->minimum_sample_window_to_interposharpen = 1.5;
+//                details->havling_acceptable_pixel_loss = 0.26f;
+//
+//                REQUIRE_FALSE(details == NULL);
+//                //                details->sharpen_percent_goal = 50;
+//                //                details->post_flip_x = flipx;
+//                //                details->post_flip_y = flipy;
+//                //                details->post_transpose = transpose;
+//                // details->enable_profiling = profile;
+//
+//                // Should we even have Renderer_* functions, or just 1 call that does it all?
+//                // If we add memory use estimation, we should keep flow_Renderer
+//
+//                if (!flow_RenderDetails_render(c, details, source, canvas)) {
+//
+//                    char error[255];
+//                    flow_context_error_message(c, error, 255);
+//                    printf("%s", error);
+//                    exit(77);
+//                }
+//                printf("Rendered!");
+//                flow_RenderDetails_destroy(c, details);
+//
+//                flow_bitmap_bgra_destroy(c, source);
+//
+//                // TODO, write out PNG here
+//
+//                struct flow_io * buf = flow_io_create_for_output_buffer(c, c);
+//                // memset(canvas->pixels, 0, canvas->stride * canvas->h);
+//                if (!flow_bitmap_bgra_write_png(c, canvas, buf)) {
+//                    // FLOW_error_return(context);
+//                    FAIL("Failed to write png");
+//                } else {
+//                    if (!flow_io_write_output_buffer_to_file(c, buf, "outpng.png")) {
+//                        FAIL("Failed to copy to disk");
+//                    }
+//                    success = true;
+//                }
+//
+//                flow_bitmap_bgra_destroy(c, canvas);
+//
+//            } else {
+//                fprintf(stderr, "png_image_finish_read: %s\n", image.message);
+//
+//                /* This is the only place where a 'free' is required; libpng does
+//                 * the cleanup on error and success, but in this case we couldn't
+//                 * complete the read because of running out of memory.
+//                 */
+//                png_image_free(&image);
+//            }
+//        }
+//
+//        else
+//            fprintf(stderr, "pngtopng: out of memory: %lu bytes\n", (unsigned long)PNG_IMAGE_SIZE(image));
+//    }
+//
+//    else
+//        /* Failed to read the first argument: */
+//        fprintf(stderr, "png_image_begin_read_from_memory: %s\n", image.message);
+//
+//    flow_context_destroy(c);
+//    REQUIRE(success);
+//}
 
 #ifdef _MSC_VER
 // /dev/null doesn't work on windows. Don't try this test.

@@ -11,9 +11,7 @@ class ImageFlowConan(ConanFile):
     options = {"shared": [True, False]}
     generators = "cmake"
     default_options = "shared=False", "libjpeg-turbo:shared=False", "libpng:shared=False", \
-   					  "zlib:shared=False", "libcurl:shared=False", "OpenSSL:shared=False", \
-                        "OpenSSL:no_electric_fence=True", \
-   					  "imageflow_c:shared=True"
+   					  "zlib:shared=False", "imageflow_c:shared=True"
     exports = "lib/*", "tests/*", "CMakeLists.txt", "imageflow.h", "imageflow_advanced.h"
 
 #"libcurl:with_openssl=False"
@@ -21,14 +19,6 @@ class ImageFlowConan(ConanFile):
         if self.settings.os != "Windows":  # giflib/littlecms must be shared on windows?
             #self.options["giflib"].shared = False
             self.options["littlecms"].shared = False
-
-
-        #TODO: Drop libcurl dependency when we port visual test helpers to rust
-        self.requires("libcurl/7.50.3@lasote/stable")
-        if self.settings.os == "Macos":
-            self.options["libcurl"].darwin_ssl = False
-            self.options["libcurl"].custom_cacert = True
-
 
         if self.scope.build_tests:
             self.requires("catch/1.3.0@TyRoXx/stable", dev=True)
