@@ -252,6 +252,8 @@ if [[ "$BUILD_RELEASE" == 'True' ]]; then
 	echo "==================================================================== [build.sh]"
 	echo "Building release mode binaries and generating docs"
 	echo 
+	export RUSTFLAGS=-g
+	echo "Building with debugging symbols (adds 20+mb)"
 	date "$STAMP"
 	echo "Building imageflow_core docs"
 	(
@@ -298,7 +300,8 @@ if [[ "$BUILD_RELEASE" == 'True' ]]; then
 	mkdir -p artifacts/staging/doc || true
 	mkdir -p artifacts/staging/headers || true
 
-	cp -R target/release/{flow-,imageflow_,libimageflow}*  ./artifacts/staging/
+	cp -R target/release/{flow-proto1,imageflow_,libimageflow}*  ./artifacts/staging/
+	rm ./artifacts/staging/*.rlib || true
 	cp bindings/headers/*.h  ./artifacts/staging/headers/
 	cp -a target/doc ./artifacts/staging/
 	rm ./artifacts/staging/*.{o,d} || true
