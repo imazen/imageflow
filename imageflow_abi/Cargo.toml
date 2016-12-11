@@ -16,5 +16,6 @@ libc = "0.2.0"
 imageflow_core = { path = "../imageflow_core", version = "*" }
 
 [build-dependencies]
+imageflow_helpers = { path = "../imageflow_helpers", version = "*" }
 rusty-cheddar = "0.3.0"
 regex = "*"

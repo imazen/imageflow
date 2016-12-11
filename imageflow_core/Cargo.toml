@@ -25,7 +25,7 @@ imageflow_types = { path = "../imageflow_types", version = "*" }
 petgraph = "^0.2.8"
 daggy = "^0.4.1"
 clippy = "0.0.97"
-
+imageflow_helpers = { path = "../imageflow_helpers", version = "*" }
 
 curl = "~0.3.11"
 

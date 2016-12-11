@@ -1,0 +1,9 @@
+[package]
+name = "imageflow_helpers"
+version = "0.1.0"
+authors = ["Nathanael Jones <nathanael.jones@gmail.com>"]
+workspace = "../"
+
+[dependencies]
+regex = "*"
+

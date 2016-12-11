@@ -38,6 +38,8 @@ extern crate serde_derive;
 #[macro_use]
 extern crate lazy_static; //Used by build_env_info.rs
 
+extern crate imageflow_helpers;
+
 extern crate serde;
 extern crate serde_json;
 extern crate regex;
@@ -1139,7 +1141,6 @@ fn error_from_value() {
 }
 
 mod key_casing {
-    use regex::{Regex, Captures};
     use serde;
     use serde_json;
 
@@ -1224,78 +1225,7 @@ mod key_casing {
 
 
 
-    #[derive(Copy, Clone, PartialEq, Debug)]
-    enum Transform {
-        AddUnderscores,
-        Capitalize,
-        LowerFirst,
-        StripUnderscores,
-    }
-
-    #[derive(Copy, Clone, PartialEq, Debug)]
-    enum Style {
-        Snake,
-        #[allow(dead_code)]
-        ScreamingSnake,
-        #[allow(dead_code)]
-        PascalCase,
-        #[allow(dead_code)]
-        PascalSnake,
-        #[allow(dead_code)]
-        CamelSnake,
-        CamelCase,
-    }
-
-
-    fn transform(s: &str, transform: Transform) -> String {
-        match transform {
-            Transform::AddUnderscores => {
-                let temp = Regex::new("([^xy])([0-9]+)").unwrap().replace_all(s, "$1_$2");
-                let temp = Regex::new("[A-Z]").unwrap().replace_all(&temp, "_$0");
-                let temp = Regex::new(r"(\A|\s+)_+").unwrap().replace_all(&temp, "$1");
-                temp.replace("__", "_")
-            }
-            Transform::StripUnderscores => s.replace("_", ""),
-            Transform::Capitalize => {
-                Regex::new(r"(_|\b)([a-z])")
-                    .unwrap()
-                    .replace_all(&s, |c: &Captures| c[0].to_uppercase())
-            }
-            Transform::LowerFirst => {
-                Regex::new(r"(\A|\s+)([A-Z])")
-                    .unwrap()
-                    .replace_all(&s, |c: &Captures| c[0].to_lowercase())
-            }
-        }
-    }
-
-    ///
-    /// If the input has any underscores, they must all be in the right places - we'll ignore case
-    ///
-    fn style_id(s: &str, style: Style) -> String {
-        let mut temp = s.to_owned();
-        // Normalize to underscores (unless there are already some)
-        if !temp.contains("_") {
-            temp = transform(&temp, Transform::AddUnderscores);
-        }
-        // Normalize to lower (relying on underscores now)
-        let temp = temp.to_lowercase();
-
-        let temp: String = match style {
-            Style::PascalSnake | Style::PascalCase => transform(&temp, Transform::Capitalize),
-            Style::CamelCase | Style::CamelSnake => {
-                let t = transform(&temp, Transform::Capitalize);
-                transform(&t, Transform::LowerFirst)
-            }
-            Style::ScreamingSnake => temp.to_uppercase(),
-            _ => temp,
-        };
-
-        match style {
-            Style::PascalCase | Style::CamelCase => transform(&temp, Transform::StripUnderscores),
-            _ => temp,
-        }
-    }
+    use ::imageflow_helpers::identifier_styles::*;
 }
 
 

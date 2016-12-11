@@ -1,6 +1,8 @@
 
 extern crate cheddar;
 extern crate regex;
+extern crate imageflow_helpers;
+use imageflow_helpers::identifier_styles::*;
 
 use regex::{Regex, Captures};
 use std::io::Write;
@@ -66,89 +68,7 @@ typedef unsigned byte uint8_t;
 
 
 
-#[derive(Copy,Clone,PartialEq,Debug)]
-enum Transform{
-    AddUnderscores,
-    Capitalize,
-    LowerFirst,
-    StripUnderscores
-}
-#[derive(Copy,Clone,PartialEq,Debug)]
-enum Style{
-    Snake,
-    ScreamingSnake,
-    PascalCase,
-    PascalSnake,
-    CamelSnake,
-    CamelCase
-}
 
-
-fn transform(s: &str, transform: Transform) -> String {
-    match transform {
-        Transform::AddUnderscores => {
-            let temp = Regex::new("([^xy])([0-9]+)").unwrap().replace_all(s, "$1_$2");
-            let temp = Regex::new("[A-Z]").unwrap().replace_all(&temp, "_$0");
-            let temp = Regex::new(r"(\A|\s+)_+").unwrap().replace_all(&temp, "$1");
-            temp.replace("__","_")
-        },
-        Transform::StripUnderscores => {
-            s.replace("_","")
-        },
-        Transform::Capitalize => {
-            Regex::new(r"(_|\b)([a-z])").unwrap().replace_all(&s, |c: &Captures | c[0].to_uppercase())
-        }
-        Transform::LowerFirst => {
-            Regex::new(r"(\A|\s+)([A-Z])").unwrap().replace_all(&s, |c: &Captures | c[0].to_lowercase())
-        }
-    }
-}
-
-///
-/// If the input has any underscores, they must all be in the right places - we'll ignore case
-///
-fn style_id(s: &str, style: Style) -> String{
-    let mut temp = s.to_owned();
-    //Normalize to underscores (unless there are already some)
-    if !temp.contains("_") {
-        temp = transform(&temp, Transform::AddUnderscores);
-    }
-    //Normalize to lower (relying on underscores now)
-    let temp = temp.to_lowercase();
-
-    let temp: String = match style{
-        Style::PascalSnake | Style::PascalCase  => {
-            transform(&temp, Transform::Capitalize)
-        },
-        Style::CamelCase | Style::CamelSnake => {
-            let  t = transform(&temp, Transform::Capitalize);
-            transform(&t, Transform::LowerFirst)
-        }
-        Style::ScreamingSnake => {
-            temp.to_uppercase()
-        }
-        _ => temp
-    };
-
-    match style{
-        Style::PascalCase | Style::CamelCase => {
-            transform(&temp, Transform::StripUnderscores)
-        }
-        _ => temp
-    }
-}
-
-fn test_styling(){
-    assert_eq!("struct a_Imageflow_A_B_3so_10_A_2", transform("struct aImageflowAB3so10A2", Transform::AddUnderscores));
-
-    assert_eq!("imageflow_a_b_2d_40", style_id("ImageflowAB2d40", Style::Snake));
-    assert_eq!("ImageflowAB2d40", style_id("ImageflowAB2d40", Style::PascalCase));
-    assert_eq!("imageflowAB2d40", style_id("ImageflowAB2d40", Style::CamelCase));
-    assert_eq!("IMAGEFLOW_A_B_2D_40", style_id("ImageflowAB2d40", Style::ScreamingSnake));
-    assert_eq!("imageflow_A_B_2d_40", style_id("ImageflowAB2d40", Style::CamelSnake));
-    assert_eq!("Imageflow_A_B_2d_40", style_id("ImageflowAB2d40", Style::PascalSnake));
-
-}
 
 fn rename_word_excluding_enum_members(input: String, old_name: &str, new_name_before_casing: &str, change_case: Style) -> String{
     let find_str = r"\b".to_owned() + old_name + r"\b(\s*)(.)";
@@ -332,8 +252,6 @@ fn build(file: String, target: Target){
 }
 
 fn main() {
-    test_styling();
-
     //let base = "imageflow_"; //for debugging more easily
     let base = "../bindings/headers/imageflow_";
 
