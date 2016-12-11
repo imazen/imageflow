@@ -158,6 +158,25 @@ RUN RUSTVER="nightly-2016-11-03" && curl https://sh.rustup.rs -sSf | sh -s -- -y
     && rustup show \
     && rustc -V
 
+
+
+
+RUN sudo mkdir -p /var/cache/apt/archives/partial \
+  && sudo touch /var/cache/apt/archives/lock \
+  && sudo chmod 640 /var/cache/apt/archives/lock \
+  && sudo apt-get update \
+  && sudo apt-get install --no-install-recommends -y \
+  libc6-dbg \
+  && sudo apt-get clean -y \
+  && sudo apt-get autoremove -y \
+  && sudo rm -rf /var/lib/apt/lists/* \
+  && sudo bash -c 'rm -rf {/usr/share/doc,/usr/share/man,/var/cache,/usr/doc,/usr/local/share/doc,/usr/local/share/man}' \
+  && sudo bash -c 'rm -rf /tmp/*' \
+  && sudo bash -c 'rm -rf /var/tmp/*' \
+  && sudo mkdir -p /var/cache/apt/archives/partial \
+  && sudo touch /var/cache/apt/archives/lock \
+  && sudo chmod 640 /var/cache/apt/archives/lock
+
 # RUN sudo pip install conan --upgrade
 
 RUN conan user
