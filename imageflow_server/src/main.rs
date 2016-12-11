@@ -24,6 +24,8 @@ use std::io::Read;
 use std::str::FromStr;
 use time::precise_time_ns;
 
+
+
 // Todo: consider lru_cache crate
 
 #[derive(Debug)]
@@ -35,27 +37,21 @@ pub enum ServerError {
     UpstreamIoError(std::io::Error),
     BuildFailure(stateless::BuildFailure),
 }
-
 impl From<stateless::BuildFailure> for ServerError {
     fn from(e: stateless::BuildFailure) -> ServerError {
         ServerError::BuildFailure(e)
     }
 }
-
 impl From<hyper::Error> for ServerError {
     fn from(e: hyper::Error) -> ServerError {
         ServerError::HyperError(e)
     }
 }
-
-
-
 impl From<std::io::Error> for ServerError {
     fn from(e: std::io::Error) -> ServerError {
         ServerError::IoError(e)
     }
 }
-
 fn fetch_bytes(url: &str) -> std::result::Result<(Vec<u8>, u64), ServerError> {
     let start = precise_time_ns();
 

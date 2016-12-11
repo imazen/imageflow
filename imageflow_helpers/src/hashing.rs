@@ -92,7 +92,13 @@ pub fn normalize_slashes(s: String) -> String {
     }
 }
 
-pub struct HexableBytes<'a>(&'a [u8]);
+pub struct HexableBytes<'a>(pub &'a [u8]);
+
+//impl<'a> HexableBytes<'a>{
+//    pub fn wrap(bytes: &[u8]) -> HexableBytes {
+//        HexableBytes(bytes)
+//    }
+//}
 
 impl<'a> std::fmt::LowerHex for HexableBytes<'a> {
     fn fmt(&self, fmtr: &mut std::fmt::Formatter) -> Result<(), std::fmt::Error> {
