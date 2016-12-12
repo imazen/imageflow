@@ -20,6 +20,7 @@
 *.sass eol=lf
 *.less eol=lf
 *.js eol=lf
+*.json eol=lf
 *.lisp eol=lf
 *.clj eol=lf
 *.sql eol=lf
@@ -31,10 +32,18 @@
 *.fs eol=lf
 *.fsx eol=lf
 *.hs eol=lf
+*.yml eol=lf
+*.rs eol=lf
+
+
 
 *.csproj eol=crlf
+*.xproj eol=crlf
 *.vbproj eol=crlf
 *.fsproj eol=crlf
 *.dbproj eol=crlf
 *.sln eol=crlf
 *.txt eol=crlf
+
+.gitattributes eol=lf
+.gitignore eol=lf

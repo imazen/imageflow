@@ -19,8 +19,8 @@ tab_width = 8
 indent_style = space
 indent_size = 4
 
-# 2 space indentation for ruby, yaml
-[*.{rb,yml,yaml}]
+# 2 space indentation for ruby, yaml, json
+[*.{rb,yml,yaml, json}]
 indent_style = space
 indent_size = 2
 
