@@ -260,8 +260,6 @@ if [[ "$BUILD_RELEASE" == 'True' ]]; then
 	echo "==================================================================== [build.sh]"
 	echo "Building release mode binaries and generating docs"
 	echo 
-	export RUSTFLAGS=-g
-	echo "Building with debugging symbols (adds 20+mb)"
 	date "$STAMP"
 	echo "Building imageflow_core docs"
 	(

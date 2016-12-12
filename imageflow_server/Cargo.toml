@@ -25,3 +25,6 @@ imageflow_helpers = { path = "../imageflow_helpers", version = "*" }
 
 [build-dependencies]
 cmake = "0.1.17"
+
+[profile.release]
+debug = true
