@@ -88,6 +88,7 @@ gmon.out
 # VSCode
 /.vscode/
 
+.vs/
 
 ## Go .gitignore
 

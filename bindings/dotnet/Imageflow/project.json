@@ -1,0 +1,50 @@
+﻿{
+  "authors":
+  [
+    "Imazen"
+  ],
+  "copyright": "Copyright 2016 Imazen",
+  "dependencies":
+  {
+    "System.Diagnostics.Tools":
+    {
+      "version": "4.3.0",
+      "include": "compile"
+    },
+    "System.Runtime.InteropServices": "4.3.0",
+    "System.Threading": "4.3.0"
+  },
+  "description": "Imageflow brings world-class image quality and performance to all languages through a C-compatible API (libimageflow) and a separate RESTful turnkey HTTP server and command-line tool. Linux, Mac, and Windows are supported.",
+  "frameworks":
+  {
+    "netstandard1.1":
+    {
+    }
+  },
+  "packOptions":
+  {
+    "iconUrl": "https://www.imageflow.io/images/imageflow-icon.png",
+    "licenseUrl": "https://github.com/imazen/imageflow/blob/master/LICENSE",
+    "owners":
+    [
+      "Imazen"
+    ],
+    "repository":
+    {
+      "type": "git",
+      "url": "https://github.com/imazen/imageflow"
+    },
+    "summary": "libimageflow - High-performance image manipulation for web servers (also hosts imageflow-server)",
+    "tags":
+    [
+      "Imazen",
+      "Imageflow"
+    ]
+  },
+  "title": "Imageflow",
+  "version": "1.0.0-*",
+  "buildOptions":
+  {
+    "xmlDoc": true
+  }
+}
