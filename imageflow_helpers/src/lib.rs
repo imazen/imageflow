@@ -5,7 +5,7 @@ extern crate regex;
 extern crate hyper;
 extern crate blake2_rfc;
 extern crate bit_vec;
-
+extern crate twox_hash;
 
 pub mod identifier_styles;
 pub mod preludes;

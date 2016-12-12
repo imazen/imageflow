@@ -3,12 +3,29 @@ use ::std;
 use ::preludes::from_std::*;
 use ::std::path::MAIN_SEPARATOR;
 use ::regex::{Regex,Captures};
-//use bit_vec::BitVec;
+use twox_hash::XxHash;
+use ::std::hash::Hasher;
 
+// Guidance for selecting a hash function
+// Need cryptographic? Use black2b 256 or 512 and a secret seed.
+// Don't fold or truncate cryptographic results; they're no longer cryptographic, and you'll get collisions.
+// Need fast for short keys without nulls? FNV1a. Like djb2, it can zero out, so avoid null bytes or sequences which can cause a sticky state.
+// Need fast for huge arrays? metrohash or xxhash.
+//
+
+/// This is an extremely fast non-cryptographic hash
+pub fn hash_64(bytes: &[u8]) -> u64{
+    // But metrohash is 20% faster and can do 128bit
+    // https://github.com/arthurprs/metrohash-rs
+    // So maybe we should consider that...
+    let mut h = XxHash::with_seed(0x8ed12ad9483d28a0);
+    h.write(bytes);
+    h.finish()
+}
 
 ///
-/// Returns a 32-byte hash of the given data (via Blake2b)
-pub fn hash256(bytes: &[u8]) -> [u8;32]{
+/// Returns a 32-byte cryptographic hash of the given data (via Blake2b), with a null seed.
+pub fn hash_256(bytes: &[u8]) -> [u8;32]{
     let mut hash: [u8;32] = unsafe {::std::mem::uninitialized() };
     hash256_to(bytes, &mut hash);
     hash
@@ -16,6 +33,11 @@ pub fn hash256(bytes: &[u8]) -> [u8;32]{
 fn hash256_to(bytes: &[u8], to: &mut [u8;32]){
     to.copy_from_slice(blake2b(32, &[], &bytes).as_bytes());
 }
+
+pub fn legacy_djb2(bytes: &[u8]) -> u64{
+    bytes.iter().fold(5381u64, |hash, c| ((hash << 5).wrapping_add(hash)).wrapping_add(*c as u64))
+}
+
 
 ///
 /// Format string supports printing specific bit ranges in hexadecimal:
@@ -100,7 +122,7 @@ impl<'a> std::fmt::LowerHex for HexableBytes<'a> {
 
 #[test]
 fn test_bits_format(){
-    let hash = hash256(b"perplexities");
+    let hash = hash_256(b"perplexities");
     assert_eq!("dbf90c29d914a7e3b0756e3365e87cf05723a7df53c01dcebda066ce7a99488c", bytes_to_hex(&hash));
     assert_eq!("/c/8/8c/88/dbf90c29d914a7e3b0756e3365e87cf05723a7df53c01dcebda066ce7a99488c", bits_format(&hash, "/{252-256:x}/{248-252:x}/{248-256:x}/{244-252:x}/{0-256:064x}"));
     assert_eq!("/0c/22/4/dbf90c29d914a7e3b0756e3365e87cf05723a7df53c01dcebda066ce7a99488c", bits_format(&hash, "/{250-256:02x}/{244-250:02x}/{240-244:x}/{0-256:x}"));

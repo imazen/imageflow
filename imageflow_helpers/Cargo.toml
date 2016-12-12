@@ -10,6 +10,8 @@ hyper = "*"
 blake2-rfc = "*"
 lazy_static = "*"
 bit-vec = "*"
+twox-hash = "1.0.0"
+fnv = "*"
 
 [profile.release]
 debug = true
