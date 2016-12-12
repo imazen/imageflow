@@ -2,6 +2,7 @@
 
 
 extern crate clap;
+extern crate imageflow_helpers;
 extern crate imageflow_types as s;
 extern crate imageflow_core as fc;
 extern crate serde_json;

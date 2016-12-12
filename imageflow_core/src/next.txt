@@ -1,7 +1,11 @@
 
-Port test helpers to fix determinism and reduce C dependencies. Maybe even add upload?
+Try reqwest
 
 Add server JSON endpoint
+
+HTTP caching at build layer
+
+maybe move imageflow_abi header gen to a test? probably adds to build time.
 
 Add security policies
 
@@ -31,6 +35,7 @@ Reserved endpoints for fully encoded arbitrary requests, though, where we can pa
 
 
 
+///img hash https://github.com/abonander/img_hash is interesting
 
 
 

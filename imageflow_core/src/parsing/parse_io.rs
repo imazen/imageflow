@@ -2,11 +2,9 @@ use ffi::EdgeKind;
 use flow::definitions::{Graph, Node, NodeParams};
 use flow::nodes;
 use internal_prelude::works_everywhere::*;
-extern crate curl;
 use ::ffi;
 use ::rustc_serialize::hex::FromHex;
 use ::rustc_serialize::base64::FromBase64;
-use self::curl::easy::Easy;
 use ::{Context,Job};
 
 pub struct IoTranslator<'a> {
@@ -39,19 +37,7 @@ impl<'a> IoTranslator<'a> {
                 self.c.create_io_from_filename(&path, dir)
             }
             s::IoEnum::Url(url) => {
-                let mut bytes = Vec::new();
-                {
-                    let mut easy = Easy::new();
-                    easy.url(&url).unwrap();
-
-                    let mut transfer = easy.transfer();
-                    transfer.write_function(|data| {
-                            bytes.extend_from_slice(data);
-                            Ok(data.len())
-                        })
-                        .unwrap();
-                    transfer.perform().unwrap();
-                }
+                let bytes = ::imageflow_helpers::fetching::fetch_bytes(&url).unwrap();
                 self.c.create_io_from_copy_of_slice(&bytes)
             }
             s::IoEnum::OutputBuffer |

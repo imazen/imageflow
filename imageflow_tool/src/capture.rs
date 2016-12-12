@@ -2,7 +2,6 @@ extern crate std;
 use fc::for_other_imageflow_crates::preludes::default::*;
 extern crate imageflow_core as fc;
 extern crate chrono;
-extern crate curl;
 extern crate os_type;
 extern crate imageflow_types;
 extern crate zip;

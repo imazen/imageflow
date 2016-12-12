@@ -3,11 +3,7 @@ use fc::for_other_imageflow_crates::preludes::default::*;
 use std::slice::SliceConcatExt;
 extern crate imageflow_core as fc;
 extern crate chrono;
-extern crate curl;
 extern crate os_type;
-
-use self::curl::easy::Easy;
-
 
 use chrono::UTC;
 use fc::clients::stateless;
@@ -316,24 +312,7 @@ impl TestContext {
     }
 }
 
-fn fetch_url(url: &str) -> Vec<u8>{
 
-    let mut dst = Vec::new();
-    {
-        let mut easy = Easy::new();
-        easy.url(&url).unwrap();
-
-        let mut transfer = easy.transfer();
-        transfer.write_function(|data| {
-            dst.extend_from_slice(data);
-            Ok(data.len())
-        })
-            .unwrap();
-        transfer.perform().unwrap();
-    }
-    dst
-
-}
 #[derive(Clone,Debug,PartialEq)]
 enum ImageSource{
     Url(String),
@@ -382,7 +361,7 @@ impl ReplacementInput{
             &ReplacementInput::File{ref path, ref source} => {
                 let bytes = match source{
                     &ImageSource::Url(ref url) => {
-                        fetch_url(&url)
+                        ::imageflow_helpers::fetching::fetch_bytes(&url).unwrap()
                     },
                     &ImageSource::Blank(ref blank) => {
                         blank.generate().bytes

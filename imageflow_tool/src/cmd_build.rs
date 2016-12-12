@@ -3,7 +3,6 @@ use s;
 use serde_json;
 use std;
 extern crate core;
-extern crate curl;
 extern crate serde;
 // use self::core::slice::SliceExt;
 
@@ -11,7 +10,6 @@ use std::collections::HashMap;
 use std::fs::File;
 use std::path::{Path};
 use std::io::{Write, Read, BufWriter};
-use self::curl::easy::Easy;
 
 pub enum JobSource {
     JsonFile(String),
@@ -296,24 +294,6 @@ impl CmdBuild {
         }
     }
 
-    fn fetch_url(url: &str) -> Vec<u8>{
-
-        let mut dst = Vec::new();
-        {
-            let mut easy = Easy::new();
-            easy.url(&url).unwrap();
-
-            let mut transfer = easy.transfer();
-
-            transfer.write_function(|data| {
-                dst.extend_from_slice(data);
-                Ok(data.len())
-            })
-                .unwrap();
-            transfer.perform().unwrap();
-        }
-        dst
-    }
 
 
 
@@ -335,7 +315,7 @@ impl CmdBuild {
 
                         let fname = format!("input_{}", obj.io_id);
                         let new_path = directory.join(&fname).as_os_str().to_str().unwrap().to_owned();
-                        let bytes = CmdBuild::fetch_url(&url);
+                        let bytes = ::imageflow_helpers::fetching::fetch_bytes(&url).unwrap();
                         let mut file = BufWriter::new(File::create(&new_path).unwrap());
                         file.write(&bytes).unwrap();
                         log.push(format!("Downloaded {} to {} (referenced as {})", &url, &new_path, &fname));
