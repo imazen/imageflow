@@ -29,6 +29,14 @@ echo "============================= [build.sh] =================================
 # valgrind (if valgrind is used)
 
 
+if [[ "$1" == 'rusttest' ]]; then
+	export TEST_C=False
+	export REBUILD_C=False
+	export CLEAN_RUST_TARGETS=False
+	export BUILD_RELEASE=False
+	export TEST_RUST=True
+fi 
+
 
 ######################################################
 #### Parameters used by build.sh 
