@@ -1,0 +1,79 @@
+#!/bin/bash
+
+echo "INFO: Starting nginx"
+
+NGINX_ID=$(docker run  \
+	-P  \
+	-d  \
+	--entrypoint /usr/sbin/nginx  \
+	stripped-nginx   \
+	-g "daemon off;")
+
+sleep 1;
+
+echo "INFO: generating haproxy.cfg"
+CFG=$(PWD)/.haproxy.cfg
+
+(
+cat <<!
+global
+    daemon
+    maxconn 256
+    pidfile /var/run/haproxy-private.pid
+
+defaults
+    mode http
+    timeout connect 5000ms
+    timeout client 50000ms
+    timeout server 50000ms
+
+    stats enable
+    stats uri /?stats
+
+listen http-in
+    bind *:80
+    server nginx $(docker inspect -f {{.NetworkSettings.IPAddress}} $NGINX_ID):80
+
+!
+) > $CFG
+
+docker run  \
+	-v $CFG:/usr/local/etc/haproxy/haproxy.cfg:ro \
+	stripped-haproxy  \
+	/bin/cat /usr/local/etc/haproxy/haproxy.cfg 
+
+echo "INFO: starting HAProxy"
+HAPROXY_ID=$(docker run  \
+	-P  \
+	-d  \
+	-v $CFG:/usr/local/etc/haproxy/haproxy.cfg \
+	--entrypoint /usr/local/sbin/haproxy  \
+	stripped-haproxy  \
+	-db -V \
+	-f /usr/local/etc/haproxy/haproxy.cfg )
+
+
+OK=1
+
+sleep 1 ;
+echo "INFO: testing NGINX and HAProxy"
+if docker run --link $NGINX_ID:stripped-nginx cargonauts/toolbox-networking curl -s -D - http://stripped-nginx ; then
+	if docker run --link $HAPROXY_ID:stripped-haproxy cargonauts/toolbox-networking curl -s -D - http://stripped-haproxy ; then
+		echo "INFO: success getting to NGiNX via HAProxy"
+	else
+		echo "ERROR: Failed to get to NGiNX via HAProxy"
+		docker logs $HAPROXY_ID
+		OK=0
+	fi
+else
+	echo "ERROR: Failed to get to NGiNX "
+	docker logs $NGINX_ID
+	OK=0
+fi
+
+if [ $OK -eq 1 ] ; then
+	echo "INFO: removing containers"
+	docker rm -f $NGINX_ID $HAPROXY_ID
+else
+	echo "WARN: errors occurred, containers $NGINX_ID (NGiNX) and $HAPROXY_ID (HAProxy) are still running."
+fi

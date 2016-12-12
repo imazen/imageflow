@@ -1,0 +1,11 @@
+#!/bin/bash
+DOCKER_ID=$(docker run -P -d --entrypoint /usr/sbin/nginx stripped-nginx  -g "daemon off;")
+
+sleep 1 ;
+if docker run --link $DOCKER_ID:stripped cargonauts/toolbox-networking curl -s -D - http://stripped ; then
+	docker stop $DOCKER_ID
+else
+	echo "ERROR: Failed to get page from NGiNX, NGiNX is still running with id $DOCKER_ID."
+fi
+
+
