@@ -1,0 +1,9 @@
+[package]
+name = "imageflow_riapi"
+version = "0.1.0"
+authors = ["Nathanael Jones <nathanael.jones@gmail.com>"]
+workspace = "../"
+
+[dependencies]
+imageflow_types = { path = "../imageflow_types", version = "*" }
+imageflow_helpers = { path = "../imageflow_helpers", version = "*" }

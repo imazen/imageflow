@@ -20,6 +20,7 @@ serde_json = "*"
 imageflow_core = { path = "../imageflow_core", version = "*" }
 imageflow_types = { path = "../imageflow_types", version = "*" }
 imageflow_helpers = { path = "../imageflow_helpers", version = "*" }
+imageflow_riapi = { path = "../imageflow_riapi", version = "*" }
 # imageflow_tool = { path = "../imageflow_tool", version = "*" }
 blake2-rfc = "0.2.17"
 rand = "*"
