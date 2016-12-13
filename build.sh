@@ -36,7 +36,18 @@ if [[ "$1" == 'rusttest' ]]; then
 	export BUILD_RELEASE=False
 	export TEST_RUST=True
 fi 
-
+if [[ "$1" == 'test' ]]; then
+	export TEST_C=True
+	export REBUILD_C=False
+	export CLEAN_RUST_TARGETS=False
+	export BUILD_RELEASE=False
+	export TEST_RUST=True
+fi 
+if [[ "$1" == 'valgrind' ]]; then
+	export VALGRIND=True
+	export COVERAGE=True
+	export BUILD_RELEASE=False
+fi 
 
 ######################################################
 #### Parameters used by build.sh 
