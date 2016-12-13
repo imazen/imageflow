@@ -24,7 +24,7 @@ imageflow_helpers = { path = "../imageflow_helpers", version = "*" }
 blake2-rfc = "0.2.17"
 rand = "*"
 lru-cache = "*"
-
+persistent = "*"
 
 [build-dependencies]
 cmake = "0.1.17"

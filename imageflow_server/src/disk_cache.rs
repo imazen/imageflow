@@ -12,11 +12,29 @@ use ::std::io::prelude::*;
 use ::std::fs::{create_dir_all, File};
 use std::sync::atomic::{AtomicU64, AtomicBool, Ordering, ATOMIC_U64_INIT};
 
+// TODO:
+// Cleanup staging folders automatically (failed renames)
+// Implement write-only log
+// Implement transactional filesystem 'counters' to track total count/size
+// Implement write failure when limits are reached
+
+// It *is* possible to implement FIFO cache eviction, but is FIFO worth it? (random sampling of the write log, staging folders to drop handles, etc)
 
 extern crate rand;
 extern crate imageflow_helpers;
 use self::rand::Rng;
 use self::imageflow_helpers as hlp;
+
+
+fn create_dir_all_helpful<P: AsRef<Path>>(path: P) -> io::Result<()> {
+    match create_dir_all(&path) {
+        Ok(v) => Ok(v),
+        Err(e) => {
+            //panic!("Failed to create dir {:?} {:?}", path.as_ref(), e);
+            Err(e)
+        }
+    }
+}
 
 
 //
@@ -29,7 +47,8 @@ use self::imageflow_helpers as hlp;
 //and use a bitset or something.
 //We can use RwLock on a BitVec or a Vec of AtomicBools (64kb vs 8kb, but maybe we just collapse for storage?)
 
-struct CacheFolder{
+#[derive(Debug)]
+pub struct CacheFolder{
     root: PathBuf,
     root_confirmed: AtomicBool,
     meta_dir: PathBuf,
@@ -44,6 +63,7 @@ struct CacheFolder{
     write_layout: FolderLayout
 }
 
+#[derive(Debug, Copy, Clone)]
 pub enum FolderLayout {
     /// 64 tier 1 folders, each with a 'files' subdirectory. Optimal range 0 to 8,000 entries or so. Suggested max 51k.
     Tiny,
@@ -83,7 +103,7 @@ impl CacheFolder{
         }
     }
 
-    fn entry(&self, hash: &[u8;32]) -> CacheEntry {
+    pub fn entry(&self, hash: &[u8;32]) -> CacheEntry {
         CacheEntry {
             path: self.root.join(hlp::hashing::normalize_slashes(hlp::hashing::bits_format(hash, self.bits_format))),
             hash: *hash,
@@ -96,7 +116,7 @@ impl CacheFolder{
     fn ensure_root(&self) -> io::Result<()>{
         if !self.root_confirmed.load(Ordering::Relaxed) &&
             !self.root.as_path().is_dir(){
-            create_dir_all(&self.root)?;
+            create_dir_all_helpful(&self.root)?;
             self.root_confirmed.store(true, Ordering::Relaxed);
         }
         Ok(())
@@ -110,7 +130,7 @@ impl CacheFolder{
                 FolderLayout::Normal => "normal"
             }));
             if !self.meta_layout_confirmed.load(Ordering::Relaxed) && !path.exists() {
-                create_dir_all(&self.meta_dir)?;
+                create_dir_all_helpful(&self.meta_dir)?;
                 File::create(path)?;
                 self.meta_layout_confirmed.store(true, Ordering::Relaxed);
             }
@@ -125,14 +145,14 @@ impl CacheFolder{
         self.ensure_meta_layout_confirmed();
         let dir = entry.path.as_path().parent().expect("Every cache path should have a parent dir; this did not!");
         if !dir.exists(){
-            create_dir_all(dir)?;
+            create_dir_all_helpful(dir)?;
         }
         Ok(())
     }
 
     fn acquire_staging_location(&self, hash: &[u8;32]) -> io::Result<PathBuf>{
         if !self.staging_dir.as_path().exists(){
-            create_dir_all(self.staging_dir.as_path())?;
+            create_dir_all_helpful(self.staging_dir.as_path())?;
         }
 
         let slot_id = hlp::timeywimey::time_bucket(60 * 60 * 2, 6);
@@ -140,15 +160,15 @@ impl CacheFolder{
         //six slots, each used for 2 hours.
         let subdir = self.staging_dir.join(Path::new(&format!("{}", slot_id)));
         if !subdir.exists() {
-            create_dir_all(subdir.as_path())?;
+            create_dir_all_helpful(subdir.as_path())?;
         }
 
-        let staging_path = format!("{:x}_{:x}", hlp::hashing::HexableBytes(hash), rand::thread_rng().next_u64());
+        let staging_path = format!("{:064x}_{:016x}_incoming", hlp::hashing::HexableBytes(hash), rand::thread_rng().next_u64());
         Ok(subdir.join(Path::new(&staging_path)))
     }
 }
 
-struct CacheEntry<'a>{
+pub struct CacheEntry<'a>{
     //Path shall always have a valid parent.
     hash: [u8;32],
     path: PathBuf,
@@ -168,16 +188,22 @@ impl<'a> CacheEntry<'a>{
 
     // We have to write to a different file, first. Then we fs::rename() to overwrite
     //
-    pub fn write(&self, bytes: Vec<u8>) -> io::Result<()> {
+    pub fn write(&self, bytes: &[u8]) -> io::Result<()> {
+        self.prepare_dir()?;
         let temp_path = self.parent.acquire_staging_location(&self.hash)?;
         use ::std::fs::OpenOptions;
         {
             let mut f = OpenOptions::new().write(true).create_new(true).open(&temp_path)?;
-            f.write_all(&bytes)?;
+            f.write_all(bytes)?;
         }
         std::fs::rename(&temp_path, &self.path)?;
         Ok(())
     }
+
+    pub fn read(&self) -> io::Result<Vec<u8>>{
+        hlp::filesystem::read_file_bytes(&self.path)
+    }
+
 
 }
 

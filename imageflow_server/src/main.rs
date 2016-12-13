@@ -1,29 +1,44 @@
 extern crate iron;
+extern crate persistent;
 extern crate router;
 extern crate rustc_serialize;
 extern crate hyper;
 extern crate libc;
 extern crate time;
 extern crate clap;
-
+extern crate imageflow_server;
+extern crate imageflow_helpers;
 extern crate imageflow_core;
 extern crate imageflow_types as s;
+use ::imageflow_helpers as hlp;
+use ::imageflow_helpers::preludes::from_std::*;
 
 use clap::{App, Arg, SubCommand};
 
 use hyper::Client;
+
 use imageflow_core::boring::*;
 use imageflow_core::clients::stateless;
 use imageflow_core::ffi::*;
+use ::imageflow_server::disk_cache::{CacheFolder, CacheEntry, FolderLayout};
+
+
 
 use iron::mime::*;
 use iron::prelude::*;
 use iron::status;
 use router::Router;
-use std::io::Read;
-use std::str::FromStr;
+use iron::typemap::Key;
+
 use time::precise_time_ns;
 
+
+#[derive(Debug)]
+struct SharedData{
+    source_cache: CacheFolder
+}
+
+impl iron::typemap::Key for SharedData { type Value = SharedData; }
 
 
 // Todo: consider lru_cache crate
@@ -32,6 +47,8 @@ use time::precise_time_ns;
 pub enum ServerError {
     HyperError(hyper::Error),
     IoError(std::io::Error),
+    DiskCacheReadIoError(std::io::Error),
+    DiskCacheWriteIoError(std::io::Error),
     UpstreamResponseError(hyper::status::StatusCode),
     UpstreamHyperError(hyper::Error),
     UpstreamIoError(std::io::Error),
@@ -52,21 +69,20 @@ impl From<std::io::Error> for ServerError {
         ServerError::IoError(e)
     }
 }
-fn fetch_bytes(url: &str) -> std::result::Result<(Vec<u8>, u64), ServerError> {
+fn fetch_bytes(url: &str) -> std::result::Result<(Vec<u8>, AcquirePerf), ServerError> {
     let start = precise_time_ns();
-
     let client = Client::new();
     let mut res = client.get(url).send()?;
-
     if res.status != hyper::Ok {
         return Err(ServerError::UpstreamResponseError(res.status));
     }
-
     let mut source_bytes = Vec::new();
-    let _ = res.read_to_end(&mut source_bytes)?;
 
+    use std::io::Read;
+
+    let _ = res.read_to_end(&mut source_bytes)?;
     let downloaded = precise_time_ns();
-    Ok((source_bytes, downloaded - start))
+    Ok((source_bytes, AcquirePerf{ fetch_ns: downloaded - start, .. Default::default()}))
 }
 
 fn error_upstream(from: ServerError) -> ServerError {
@@ -77,31 +93,95 @@ fn error_upstream(from: ServerError) -> ServerError {
     }
 }
 
-struct RequestPerf {
+fn error_cache_read(from: ServerError) -> ServerError {
+    match from {
+        ServerError::IoError(e) => ServerError::UpstreamIoError(e),
+        e => e,
+    }
+}
+
+
+
+// Additional ways this can fail (compared to fetch_bytes)
+// Parent directories are deleted from cache between .exists() and cache writes
+// Permissions issues
+// Cached file is deleted between .exists(0 and .read()
+// Write fails due to out-of-space
+// rename fails (it should overwrite, for eventual consistency, but ... filesystems)
+fn fetch_bytes_using_cache_by_url(cache: &CacheFolder, url: &str) -> std::result::Result<(Vec<u8>, AcquirePerf), ServerError>{
+    let hash = hlp::hashing::hash_256(url.as_bytes());
+    let entry = cache.entry(&hash);
+    if entry.exists(){
+        let start = precise_time_ns();
+        match entry.read() {
+            Ok(vec) => {
+                let end = precise_time_ns();
+                Ok((vec, AcquirePerf { cache_read_ns: end - start, ..Default::default() }))
+            },
+            Err(e) => Err(ServerError::DiskCacheReadIoError(e))
+        }
+    }else{
+        let result = fetch_bytes(url);
+        if let Ok((bytes, perf)) = result {
+            let start = precise_time_ns();
+            match entry.write(&bytes) {
+                Ok(()) => {
+                    let end = precise_time_ns();
+                    Ok((bytes, AcquirePerf { cache_write_ns: end - start, ..perf }))
+                },
+                Err(e) => Err(ServerError::DiskCacheWriteIoError(e))
+            }
+        }else{
+            result.map_err(error_upstream)
+        }
+    }
+}
+
+#[derive(Default, Copy, Clone, Debug)]
+struct AcquirePerf{
     fetch_ns: u64,
+    cache_read_ns: u64,
+    cache_write_ns: u64
+}
+impl AcquirePerf{
+    pub fn new() -> AcquirePerf{
+        AcquirePerf{fetch_ns: 0, cache_write_ns: 0, cache_read_ns: 0}
+    }
+    fn debug(&self) -> String {
+        format!("HTTP fetch took: {} ms, cache read {} ms, cache write {} ms",
+                (self.fetch_ns as f64) / 1000000.0,
+                (self.cache_read_ns as f64) / 1000000.0,
+                (self.cache_write_ns as f64) / 1000000.0)
+    }
+}
+
+struct RequestPerf {
+    acquire: AcquirePerf,
     get_image_info_ns: u64,
     execute_ns: u64,
 }
 impl RequestPerf {
     fn debug(&self) -> String {
-        format!("HTTP fetch took: {} ms, get_image_info took {} ms, execute took {} ms",
-                (self.fetch_ns as f64) / 1000000.0,
+        format!("{}, get_image_info took {} ms, execute took {} ms",
+                self.acquire.debug(),
                 (self.get_image_info_ns as f64) / 1000000.0,
                 (self.execute_ns as f64) / 1000000.0)
     }
 }
 
+
+
+
 fn execute_one_to_one<F>
-    (source: &str,
+    (shared: &SharedData, source: &str,
      framewise_generator: F)
      -> std::result::Result<(stateless::BuildOutput, RequestPerf), ServerError>
     where F: Fn(s::ImageInfo) -> s::Framewise
 {
-    let (original_bytes, fetch_ns) = fetch_bytes(source).map_err(error_upstream)?;
+    let (original_bytes, acquire_perf) = fetch_bytes_using_cache_by_url(&shared.source_cache, source).map_err(error_upstream)?;
     let mut client = stateless::LibClient {};
     let start_get_info = precise_time_ns();
     let info = client.get_image_info(&original_bytes)?;
-
     let start_execute = precise_time_ns();
 
     let result: stateless::BuildSuccess = client.build(stateless::BuildRequest {
@@ -115,16 +195,16 @@ fn execute_one_to_one<F>
     let end_execute = precise_time_ns();
     Ok((result.outputs.into_iter().next().unwrap(),
         RequestPerf {
-        fetch_ns: fetch_ns,
+        acquire: acquire_perf,
         get_image_info_ns: start_execute - start_get_info,
         execute_ns: end_execute - start_execute,
     }))
 }
 
-fn respond_one_to_one<F>(source: &str, framewise_generator: F) -> IronResult<Response>
+fn respond_one_to_one<F>(shared: &SharedData, source: &str, framewise_generator: F) -> IronResult<Response>
     where F: Fn(s::ImageInfo) -> s::Framewise
 {
-    match execute_one_to_one(source, framewise_generator) {
+    match execute_one_to_one(shared, source, framewise_generator) {
         Ok((output, perf)) => {
             let mime = output.mime_type
                 .parse::<Mime>()
@@ -143,12 +223,19 @@ fn respond_one_to_one<F>(source: &str, framewise_generator: F) -> IronResult<Res
 }
 
 fn proto1(req: &mut Request) -> IronResult<Response> {
-    let router = req.extensions.get::<Router>().unwrap();
-    let w = router.find("w").and_then(|x| x.parse::<u32>().ok());
-    let h = router.find("h").and_then(|x| x.parse::<u32>().ok());
-    let url = "http://images.unsplash.com/".to_string() + router.find("url").unwrap();
 
-    respond_one_to_one(&url, |info: s::ImageInfo| {
+    let w;
+    let h;
+    let url;
+    {
+        let router = req.extensions.get::<Router>().unwrap();
+        w = router.find("w").and_then(|x| x.parse::<u32>().ok());
+        h = router.find("h").and_then(|x| x.parse::<u32>().ok());
+        url = "http://images.unsplash.com/".to_string() + router.find("url").unwrap();
+    }
+    let shared = req.get::<persistent::Read<SharedData>>().unwrap();
+
+    respond_one_to_one(shared.as_ref(), &url, |info: s::ImageInfo| {
         let commands = BoringCommands {
             fit: ConstraintMode::Max,
             w: w.and_then(|w| Some(w as i32)),
@@ -167,79 +254,16 @@ fn proto1(req: &mut Request) -> IronResult<Response> {
     })
 }
 
-// use serde_toml
-// Deserialize from TOML or from inline struct
-
-// pub struct Hostname
-//
-// pub struct PerRequestLimits{
-//    max_pixels_out: Option<i64>,
-//    max_pixels_in: Option<i64>,
-//    max_cpu_milliseconds: Option<i64>,
-//    max_bitmap_ram_bytes: Option<i64>
-// }
-//
-// pub struct ContentTypeRestrictions{
-//    allow: Option<Vec<Mime>>,
-//    deny: Option<Vec<Mime>>,
-//    allow_extensions: Option<Vec<String>>,
-//    deny_extensions: Option<Vec<String>>
-// }
-// pub struct SecurityPolicy{
-//    per_request_limits: Option<PerRequestLimits>,
-//    serve_content_types: Option<ContentTypeRestrictions>,
-//    proxy_content_types: Option<ContentTypeRestrictions>,
-//    force_image_recoding: Option<bool>
-// }
-//
-// pub enum BlobSource{
-//    Directory(String),
-//    HttpServer(String),
-//    //TODO: Azure and S3 blob backens
-// }
-//
-// pub enum InternalCachingStrategy{
-//    PubSubAndPermaPyramid,
-//    TrackStatsAndPermaPyramid,
-//    OpportunistPermaPyramid,
-//    PubSubToInvalidate,
-//    OpportunistPubSubEtagCheck,
-//
-// }
-// pub struct CacheControlPolicy{
-// //How do we set etag/last modified/expires/maxage?
-// }
-//
-// pub struct BaseConfig{
-//    //Security defaults
-//    pub security: Option<SecurityPolicy>,
-//    //May also want to filter by hostnames or ports for heavy multi-tenanting
-//    pub cache_control: Option<CacheControlPolicy>
-// }
-//
-// pub enum Frontend{
-//    ImageResizer4Compatible,
-//    Flow0
-// }
-// pub struct MountPath {
-//    //Where we get originals from
-//    pub source: BlobSource,
-//    //The virtual path for which we handle sub-requests.
-//    pub prefix: String,
-//    //Customize security
-//    pub security: Option<SecurityPolicy>,
-//    //May also want to filter by hostnames or ports for heavy multi-tenanting
-//    pub cache_control: Option<CacheControlPolicy>,
-//
-//    pub api: Frontend
-// }
 
 fn main() {
     let exit_code = main_with_exit_code();
     std::process::exit(exit_code);
 }
 
-fn serve(){
+fn serve(source_cache: &Path, source_cache_layout: FolderLayout) {
+    let shared_data = SharedData {
+        source_cache: CacheFolder::new(source_cache, source_cache_layout),
+    };
     let mut router = Router::new();
 
     // Mount prefix (external) (url|relative path)
@@ -247,14 +271,19 @@ fn serve(){
 
 
     router.get("/proto1/scale_unsplash_jpeg/:w/:h/:url",
-               move |r: &mut Request| proto1(r),
+               move |r: &mut Request| { proto1(r) },
                "proto1-unsplash");
 
     router.get("/",
-               move |r: &mut Request|
-                   Ok(Response::with((iron::status::Ok, "Hello World"))), "home-hello");
+               move |r: &mut Request| {
+                   Ok(Response::with((iron::status::Ok, "Hello World")))
+               }
+               , "home-hello");
 
-    Iron::new(router).http("0.0.0.0:3000").unwrap();
+    let mut chain = Chain::new(router);
+    chain.link(persistent::Read::<SharedData>::both(shared_data));
+
+    Iron::new(chain).http("0.0.0.0:3000").unwrap();
 }
 
 fn main_with_exit_code() -> i32 {
@@ -314,7 +343,9 @@ fn main_with_exit_code() -> i32 {
         }
     }
     if let Some(ref matches) = matches.subcommand_matches("start") {
-        serve();
+
+        let source_cache_dir = Path::new("source_cache");
+        serve(&source_cache_dir, FolderLayout::Tiny );
         return 0;
     }
     64
