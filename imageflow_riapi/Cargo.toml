@@ -7,3 +7,4 @@ workspace = "../"
 [dependencies]
 imageflow_types = { path = "../imageflow_types", version = "*" }
 imageflow_helpers = { path = "../imageflow_helpers", version = "*" }
+url = "*"

@@ -229,7 +229,13 @@ fn proto1(req: &mut Request) -> IronResult<Response> {
     let url;
     {
         let router = req.extensions.get::<Router>().unwrap();
-        w = router.find("w").and_then(|x| x.parse::<u32>().ok());
+
+        let generic_url = req.url.clone().into_generic_url();
+
+        let router_w = router.find("w").and_then(|v| Some(v.to_owned()));
+
+        w = generic_url.query_pairs().find(|&(ref k,ref v)| k == "w").map(|(k,v)| v.into_owned()).or(router_w).and_then(|x| x.parse::<u32>().ok());
+
         h = router.find("h").and_then(|x| x.parse::<u32>().ok());
         url = "http://images.unsplash.com/".to_string() + router.find("url").unwrap();
     }

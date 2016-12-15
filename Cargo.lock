@@ -295,6 +295,7 @@ version = "0.1.0"
 dependencies = [
  "imageflow_helpers 0.1.0",
  "imageflow_types 0.1.0",
+ "url 1.2.3 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
