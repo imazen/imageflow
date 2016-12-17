@@ -243,6 +243,11 @@ dependencies = [
 ]
 
 [[package]]
+name = "ieee754"
+version = "0.2.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+
+[[package]]
 name = "imageflow_abi"
 version = "0.1.0"
 dependencies = [
@@ -293,6 +298,7 @@ dependencies = [
 name = "imageflow_riapi"
 version = "0.1.0"
 dependencies = [
+ "ieee754 0.2.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "imageflow_helpers 0.1.0",
  "imageflow_types 0.1.0",
  "url 1.2.3 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -1032,6 +1038,7 @@ dependencies = [
 "checksum httparse 1.2.0 (registry+https://github.com/rust-lang/crates.io-index)" = "6a8abece705b1d32c478f49447b3a575cd07f6e362ff12518f2ee2c9b9ced64e"
 "checksum hyper 0.9.12 (registry+https://github.com/rust-lang/crates.io-index)" = "d7da01615e9402761faab442396821b57ecb5adb12ac51958561411a82cfdf66"
 "checksum idna 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)" = "1053236e00ce4f668aeca4a769a09b3bf5a682d802abd6f3cb39374f6b162c11"
+"checksum ieee754 0.2.1 (registry+https://github.com/rust-lang/crates.io-index)" = "4b09e329f1c87586e560c9de4f2c737a39033f8d9579f3b9949fa14532234c93"
 "checksum iron 0.4.0 (registry+https://github.com/rust-lang/crates.io-index)" = "9fb1b2d809f84bf347e472d5758762b5c804e0c622970235f156d82673e4d334"
 "checksum itoa 0.1.1 (registry+https://github.com/rust-lang/crates.io-index)" = "ae3088ea4baeceb0284ee9eea42f591226e6beaecf65373e41b38d95a1b8e7a1"
 "checksum json 0.11.0 (registry+https://github.com/rust-lang/crates.io-index)" = "e35b1c427167cf2aca74cff6152263c9fa6c72b2da5d7b0645f01e2d0adf9c72"

@@ -1,0 +1,836 @@
+use imageflow_helpers::preludes::from_std::*;
+use ::std;
+use ::sizing::{steps, BoxParam, BoxTarget, AspectRatio, StepCondition, Step, Layout, LayoutError, BoxKind};
+use ::sizing;
+
+
+use ::std::collections::hash_map::Entry;
+//use ieee754::Ieee754;
+//extern crate ieee754;
+
+
+// <meta http-equiv="Accept-CH" content="DPR, Viewport-Width, Width, Downlink">
+// <link rel=preload
+// lazySizes javascript
+// Cuzillion
+
+// https://jmperezperez.com/medium-image-progressive-loading-placeholder/
+// http://httpwg.org/http-extensions/client-hints.html#the-save-data-hint
+// https://developers.google.com/web/updates/tags/clienthints
+//
+// To verify
+// min-w/max-w/min-h/max-h + fit=crop a la imgix https://docs.imgix.com/apis/url/size/min-h
+
+
+// 1x and 2x are enough. Specifying size on HTML means we must, at least preserve the aspect ratio``
+// If crop or pad.
+// width/height/max
+// width/height/crop - when larger than original - should crop minimally to aspect ratio by default.
+// width/height/pad - when larger than original - should pad minimally to aspect ratio.
+// aspectforce=crop|pad?
+// scale=both|canvas
+
+
+
+// when width or height are specified alone, there is no expectation of aspect ratio.
+
+// toosmall=preserveaspect,upscale,expandcanvas
+
+
+// http://calendar.perfplanet.com/2015/why-arent-your-images-using-chroma-subsampling/
+
+
+
+
+/// When a constraint requires cropping, how should it be selected?
+enum CropSelection{
+    Center
+}
+/// When a constraint requires padding, where shall it be added?
+enum PaddingLocation{
+    Even
+}
+
+/// Strategies for single dimension constraints: I.e, Width OR Height, but not both
+enum OneConstraintStrategy{
+    /// The constraint is an upper bound; the image will never be upscaled,
+    /// and downscaling will preserve the original aspect ratio
+    Max,
+    /// (no use case) The constraint is a lower bound. If the image is smaller than this value, it will be upscaled, preserving the original aspect ratio.
+    Min,
+    /// (no use case)  If the original image is too small, the canvas will be extended in that one dimension, following the PaddingLocation rules.
+    ExactViaCanvas1D,
+    /// (no use case) If too small, the canvas will be extended in both directions as required to match both the original aspect ratio and the desired dimension.
+    ExactViaCanvas,
+    /// (no use case) If too small, the image will be upscaled so that the given dimension is an exact match.
+    ExactViaUpscaling,
+    /// (no use case) If too small, distort. Otherwise, preserve aspect ratio.
+    ExactViaDistortion,
+    /// (no use case) The image's aspect ratio will be ignored, and scaled in a single dimension to the given value.
+    ExactAlwaysDistort,
+    /// (no use case) Don't scale the image; rather, crop or pad it in a single dimension.
+    /// always.fit=crop(target).pad(target)
+    ExactAlwaysCropOrPad
+}
+
+
+// proportional_in, proportional_out,
+// within, envelop
+// inside, outside
+// within, surround
+
+//comparing canvas and SourceBox isn't really upscaling/downscaling.
+
+#[derive(Copy, Clone, PartialEq, Debug)]
+enum Strategy {
+    /// Downscale the image until it fits within the box (less than both and matching at least one dimension).
+/// Never upscale, even if the image is smaller in both dimensions.
+///
+/// `down.fitw=scale(w, auto) down.fith=scale(auto,h) up.fit=none`
+/// `down.fit=proportional(target), up.fit=none`
+/// `down.fit=proportional(ibox), up.fit=none`
+    Max,
+    /// Downscale minimally until the image fits one of the dimensions (it may exceed the other). Never uspcale.
+///
+/// `down.fitw=scale(max(w, obox.w), auto) down.fith=scale(auto,max(h, obox.h) up.fit=none`
+/// `down.fit=proportional(obox), up.fit=none`
+    MaxAny,
+    /// Upscale minimally until one dimension matches. Never downscale, if larger.
+/// `up.fit=scale(max(d, ibox.other), auto) down.fit=none`
+/// `up.fit=proportional(ibox), down.fit=none`
+    MinAny,
+    /// Upscale minimally until the image meets or exceeds both specified dimensions. Never downscale.
+/// `up.fit=scale(d, auto) up.fit=none`
+/// `up.fit=proportional(obox), down.fit=none`
+    Min,
+    /// Downscale the image and pad to meet aspect ratio. If smaller in both dimensions, give up and leave as-is.
+/// `down.fit=proportional(ibox), pad(target), up.fit=none` - won't work, second dimension will classify as upscale.
+/// `down.fit=proportional(ibox), pad2d(target), up.fit=none`
+    PadUnlessSmaller,
+    /// Downscale the image and crop to meet aspect ratio. If smaller in both dimensions, give up and leave as-is.
+/// `down.fit=proportional(obox),crop(target) up.fit=none`
+    CropUnlessSmaller,
+
+    /// Downscale & pad. If smaller, pad to achieve desired aspect ratio.
+    PadOrAspect,
+
+    /// Downscale & crop. If smaller, crop to achieve desired aspect ratio.
+/// `down.fit=proportional(obox),crop(target) up.fit=cropaspect(target)`
+    CropOrAspect,
+    /// Downscale & crop. If smaller, pad to achieve desired aspect ratio.
+/// `down.fit=proportional(obox),crop(target) up.fit=padaspect(target)`
+    CropOrAspectPad,
+
+    // perhaps a lint for pad (or distort) in down. but not up. ?
+
+    /// Minimally pad to match desired aspect ratio. Downscale or upscale to exact dimensions provided.
+/// `always.fit.xy=proportional(ibox),pad(target)`
+    ExactPadAllowUpscaling,
+    /// Minimally crop to match desired aspect ratio. Downscale or upscale to exact dimensions provided.
+/// `up.fit.xy=proportional(ibox),crop(target)`, `down.fit.xy=proportional(obox), crop(target)
+    ExactCropAllowUpscaling,
+
+    /// `always.fit.xy=distort(target)`
+    Distort,
+    /// `down.fit.xy=proportional(obox),cropcareful(target).scale(ibox)`
+    CropCarefulDownscale,
+    /// `down.fit.xy=proportional(obox),cropcareful(target),proportional(target),pad2d(target)` -doesn't work; second dimension never executes pad. (unless we run smaller dimension first)
+/// `down.fit.xy=proportional(obox),cropcareful(target),proportional(target),pad2d(target.aspect)` -doesn't work; second dimension never executes pad. (unless we run smaller dimension first)
+    CropCarefulPadDownscale,
+    /// `down.fit.xy=proportional(obox),cropcareful(target),proportional(target),pad(target) up.xy.fit=cropcareful(targetaspect),pad(targetaspect)`
+    CropCarefulDownscaleOrForceAspect,
+
+    // When cropping an image to achieve aspect ratio makes it smaller than the desired box, thereby changing the rules...
+    // Ie, box of 20x30, image of 60x20. Crop to 14x20 leaves 6x10 gap.
+    // Results should match downscaling rules, right?
+    //
+    // Alternate options: pad mismatched dimension: crop to 20x20, add 10px vertical padding.
+    // Alternate: crop to 14x20 and upscale to 20x30
+
+    // Aspect ratio comparison can be Wider, Taller, Same
+    // Size comparison can be Larger2D, LargerW, LargerH, Smaller2D, Same
+    // LargerW implies Wider, you can't have a LargerH and a Wider aspect ratio .
+    //
+
+    // What if we separate dimensions?
+    // If dimension constraints are ordered with clairvoyance
+    // Then we could crop width to 20 (as 'downscaling'), and pad height to 20 (as 'upscaling' solution"). If 'upscaling' is the default, then we have to crop more.
+    // This gets really hard to reason about, as each dimension's constraint also has to consider aspect ratio.
+    // TODO: ValueAndAspectStrategy
+    // Or we can specify '2-constraint' strategies separately?
+    // With separate strategies, any aspect ratio changes can turn a larger2d or smaller2d into a Mismatch.
+}
+
+enum TestInvariant {
+    NoScaling,
+    NoDownscaling,
+    NoUpscaling,
+    NoPadding,
+    NoCropping,
+    //aspect ratio
+    //canvas size
+    //image size
+}
+
+
+fn ratio(w: i32, h: i32) -> AspectRatio {
+    AspectRatio::create(w, h).unwrap()
+}
+
+fn strategy_to_steps(s: Strategy) -> Option<Vec<Step>> {
+    let vec = match s {
+        Strategy::Distort => { steps().distort(BoxParam::Exact(BoxTarget::Target)) },
+        /// Like imageresizer max
+        Strategy::Max => { steps().skip_unless(StepCondition::Larger1D).scale_to_inner()}
+        Strategy::MaxAny => { steps().skip_unless(StepCondition::Larger2D).scale_to_outer() }
+        Strategy::MinAny => { steps().skip_unless(StepCondition::Smaller2D).scale_to_inner()}
+        Strategy::Min => { steps().skip_unless(StepCondition::Smaller1D).scale_to_outer() }
+
+
+        //        Strategy::CropCarefulDownscale => StepSet::AnyLarger(vec![Step::ScaleToOuter,
+        //        Step::PartialCropAspect, Step::ScaleToInner]),
+        //        Strategy::ExactCropAllowUpscaling => StepSet::Always(vec![Step::ScaleToOuter,
+        //        Step::Crop]),
+        //        Strategy::ExactPadAllowUpscaling => StepSet::Always(vec![Step::ScaleToInner,
+        //        Step::Pad]),
+        _ => steps()
+    }.into_vec();
+    if vec.is_empty(){
+        None
+    }else{
+        Some(vec)
+    }
+
+}
+//
+//fn apply_strategy(to: Layout, strategy: Strategy) -> sizing::Result<Layout> {}
+//
+//
+//#[test]
+//fn test_strategies() {
+//    Layout::create(ratio(800, 600), ratio(200, 300)).execute_all()
+//}
+
+
+
+/*
+
+Aspect ratio differences
+invert
+0.001 +/-
+0 (same)
+4:3 3:2 1:1 16:9 8:10 5:7
+inspiration for others: https://www.bhphotovideo.com/FrameWork/charts/resolutionChartPopup.html
+
+Size differences: larger1dsmaller1d, smaller1d, larger1d, larger 2d. smaller2d, larger by 10,000x/smaller by 10,000x, in between
+Use lots of primes
+
+
+
+*/
+
+fn next_pow2(v: u32) -> u32{
+    let mut v = v;
+    v-=1;
+    v |= v >> 1;
+    v |= v >> 2;
+    v |= v >> 4;
+    v |= v >> 8;
+    v |= v >> 16;
+    v+1
+}
+
+
+#[derive(PartialEq,Debug,Copy,Clone)]
+enum NumberKind{
+    Larger,
+    Smaller
+}
+
+
+fn spot_in_primes(v: i32) -> usize{
+    match SMALL_PRIMES.binary_search(&v){
+        Ok(ix) => ix,
+        Err(ix) => ix
+    }
+}
+fn next_prime(v: i32, kind: NumberKind) -> Option<i32>{
+    let ix = spot_in_primes(v);
+    if ix >= SMALL_PRIMES.len() {
+        None
+    }else{
+        let cur = SMALL_PRIMES[ix];
+        if kind == NumberKind::Larger{
+            if cur == v{
+                next_prime(v + 1, kind) //TODO: Problem for 2->3. next_prime(2,Larger) will return 5, likely.
+            }else{
+                Some(cur)
+            }
+        }else{
+            if ix == 0{
+                if cur == v{
+                    None
+                }else{
+                    Some(cur)
+                }
+            }else{
+                Some(SMALL_PRIMES[ix -1])
+            }
+        }
+
+    }
+}
+/// Returns a variety of changes to the given number (as well as some fixed values)
+/// If given i32::MAX, returns the number of variations
+fn vary_number(v: i32, variation_kind: u8) -> Option<i32>{
+    if v < 1 { return None };
+    match variation_kind{
+        0 => Some(v),
+        1 => next_prime(v, NumberKind::Larger),
+        2 => next_prime(v, NumberKind::Smaller),
+        3 => Some(next_pow2(v as u32) as i32),
+        4 => v.checked_add(1),
+        5 => v.checked_sub(1),
+        6 => v.checked_mul(3),
+        7 => v.checked_mul(10),
+        8 => v.checked_mul(2),
+        9 => v.checked_div(2),
+        10 =>  v.checked_div(3),
+        11 =>  v.checked_div(10),
+        12 => Some(::std::i32::MAX),
+        13 => Some(1),
+        14 => Some(2),
+        15 => Some(3),
+        16 => Some(4),
+        17 => Some(5),
+        18 => Some(7),
+        19 => Some(16),
+        20 => Some(9),
+        21 => Some(10),
+        22 => Some((next_pow2(v as u32) / 2) as i32),
+        23 => v.checked_add(66),
+        ::std::u8::MAX => Some(24), /// Return the upper bound number of variations
+        _ => None
+    }.and_then(|v| if v > 0 { Some(v) } else { None })
+}
+
+//Not used or ever tested
+fn unshift_delete_with_swap(vec: &mut Vec<AspectRatio>, count: usize ){
+    //If we have fewer than count * 2 items, then some swap_removes will fail
+    let swappable = vec.len() - count;
+    for ix in 0..swappable{
+        let _ = vec.swap_remove(ix);
+    }
+    for _ in swappable..count{
+        let _ = vec.pop();
+    }
+}
+
+///Clears both vectors
+fn generate_aspects(into: &mut Vec<AspectRatio>, temp: &mut Vec<AspectRatio>, seed: AspectRatio) {
+    into.clear();
+    temp.clear();
+
+    fn r(w: i32, h: i32) -> AspectRatio {
+        AspectRatio::create(w, h).unwrap()
+    }
+    // We use into as the first temp vec
+    let mut n = into;
+    n.reserve(80);
+    n.push(seed);
+    n.push(r(1, ::std::i32::MAX));
+    n.push(r(1, 10));
+    n.push(r(1, 3));
+    n.push(r(5, 7));
+    n.push(r(1, 1));
+    n.push(r(4, 3));
+    n.push(r(3, 2));
+    n.push(r(16, 9));
+    n.push(r(4, 5));
+
+    // temp as the second
+    let mut n_boxes = temp;
+    n_boxes.reserve(n.len() * 4 + 2);
+    n_boxes.push(seed);
+    seed.transpose().map(|v| n_boxes.push(v));
+    for aspect in n.as_slice().iter() {
+        let transposed_aspect = aspect.transpose().unwrap();
+        transposed_aspect.box_of(&seed, BoxKind::Outer).map(|v| n_boxes.push(v));
+        transposed_aspect.box_of(&seed, BoxKind::Inner).map(|v| n_boxes.push(v));
+        aspect.box_of(&seed, BoxKind::Outer).map(|v| n_boxes.push(v));
+        aspect.box_of(&seed, BoxKind::Inner).map(|v| n_boxes.push(v));
+    }
+    n_boxes.sort();
+    n_boxes.dedup();
+
+
+    //Clear and reuse the first vector
+    n.clear();
+    let vary_count = vary_number(1,::std::u8::MAX).unwrap();
+    n.reserve(n_boxes.len() * vary_count as usize * vary_count as usize);
+    for base_ver in n_boxes {
+        let (w, h) = base_ver.size();
+        for vary_w in 0..30 {
+            for vary_h in 0..30 {
+                let new_w = vary_number(w, vary_w);
+                let new_h = vary_number(h, vary_h);
+                if new_w.is_some() && new_h.is_some() {
+                    n.push(r(new_w.unwrap(), new_h.unwrap()));
+                }
+            }
+        }
+    }
+    n.sort();
+    n.dedup();
+}
+
+
+
+fn target_sizes(fewer: bool) -> Vec<(i32,i32)>{
+    let all = [(1,1), (1,3), (3,1), (7,3),(90,45),(10,10),(1621,883),(971,967), (17,1871), (512,512)];
+    all.iter().cloned().collect()
+}
+
+
+macro_rules! w(
+    ($($arg:tt)*) => { {
+        let r = write!(&mut ::std::io::stderr(), $($arg)*);
+        r.expect("failed printing to stream");
+    } }
+);
+
+enum ResultKind{
+    Failed,
+    CanvasUnchanged,
+    TargetMatched,
+    Different,
+}
+struct Expectation{
+    when: StepCondition,
+
+}
+fn step_kits() -> Vec<Vec<Step>>{
+    let mut kits = Vec::new();
+    let from_strategies = [Strategy::Distort, Strategy::Max, Strategy::MaxAny, Strategy::Min, Strategy::MinAny];
+    for s in from_strategies.into_iter(){
+        kits.push( strategy_to_steps(*s).unwrap());
+    }
+
+    //kits.push(steps().into_vec());
+    kits
+}
+
+
+
+#[test]
+fn test_steps() {
+    let kits = step_kits();
+    let target_sizes = target_sizes(false);
+
+    //Reusable vectors for generating aspects
+    let mut temp = Vec::new();
+    let mut source_sizes = Vec::new();
+
+    //Holds resuable maps/vectors for collecting info
+    let mut current = GroupData::new((Ordering::Equal, Ordering::Equal), AspectRatio::create(1,1).unwrap());
+    current.invalidate();
+
+
+    for kit in kits{
+        for &(w,h) in target_sizes.iter() {
+            let target = AspectRatio::create(w, h).unwrap();
+            generate_aspects(&mut source_sizes, &mut temp, target);
+
+
+            w!("\n======================================================\n");
+            w!("  Targeting {}x{} using {:?}\n", w, h, kit);
+            w!("  Testing {} source sizes\n\n", source_sizes.len());
+
+            let group_of = move |a: &AspectRatio| -> (Ordering,Ordering) {
+                (a.size().0.cmp(&w), a.size().1.cmp(&h))
+            };
+
+            //We want to filter into 9 groups, lt,eq,gt x w,h.
+            source_sizes.sort_by_key(&group_of);
+
+            current.invalidate();
+
+            for source in source_sizes.iter() {
+                let group = group_of(&source);
+                if !current.valid_for(group){
+                    current.print();
+                    current = current.reset(group, target);
+                }
+
+                let cropper = sizing::IdentityCropProvider::new();
+
+                let result = Layout::create(*source, target).execute_all(&kit, &cropper);
+
+                match result {
+                    Err(LayoutError::ValueScalingFailed { .. }) if source.width() > 2147483646 || source.height() > 2147483646 => {},
+                    other => {
+                        current.report(result, *source);
+                    }
+                }
+
+            }
+            current.print();
+
+        }
+
+    }
+}
+
+
+type ResultKey = (AspectRatio,AspectRatio);
+
+struct GroupData<T> where T: fmt::Debug{
+    name: T,
+    padded_name: String,
+    count: usize,
+    target: AspectRatio,
+    identity_count: usize,
+    target_count: usize,
+    different_count: usize,
+    unique: HashMap<ResultKey, usize>,
+    failure_count: usize,
+    failures: Vec<(AspectRatio, LayoutError)>,
+    truncate_unique: usize,
+    truncate_failures: usize,
+    invalidated: bool
+}
+impl<T> GroupData<T>
+where T: std::fmt::Debug, T: std::cmp::PartialEq{
+    fn new(value: T, target: AspectRatio) -> GroupData<T>{
+        let mut s = format!("{:?}", value);
+        for _ in s.len()..20{
+            s.push_str(" ");
+        }
+        GroupData{
+            name: value,
+            padded_name: s,
+            target: target,
+            count: 0,
+            identity_count: 0,
+            target_count: 0,
+            different_count: 0,
+            failure_count: 0,
+            unique: HashMap::new(),
+            failures: Vec::new(),
+            truncate_unique: 50,
+            truncate_failures: 16,
+            invalidated: false,
+        }
+    }
+    fn reset(mut self, value: T, target: AspectRatio) -> GroupData<T>{
+        self.invalidate();
+        GroupData{
+            unique: self.unique,
+            failures: self.failures,
+            .. GroupData::new(value, target)
+        }
+    }
+    fn invalidate(&mut self){
+        self.unique.clear();
+        self.failures.clear();
+        self.invalidated = true;
+    }
+    fn valid_for(&self, group: T) -> bool{
+        !self.invalidated && self.name == group
+    }
+    fn print(&self){
+        if self.invalidated {
+            return; //Nothing to print
+        }
+        let (w,h) = self.target.size();
+        w!("{:04} {} against ({},{}) - ", self.count, self.padded_name, w, h, );
+
+        let unique_truncated = if self.unique.len() == self.truncate_unique { "+" } else { ""};
+        let failures_truncated = if self.failures.len() == self.truncate_failures { "+" } else { ""};
+
+        if self.target_count == self.count{
+            w!("met target, a {}x{} canvas - ({})\n", w, h, self.count);
+        }else if self.identity_count == self.count{
+            w!("kept size - ({})\n", self.count);
+        }else if self.different_count == self.count{
+            w!("{}{} unique of {}\n",  self.unique.len(), &unique_truncated, self.count);
+        }else if self.failures.len() > 0 {
+            w!("{}{} failures, {}{} unique of {} different, {} met target, {} maintained canvas size\n", self.failures.len(), failures_truncated, self.unique.len(), &unique_truncated, self.different_count, self.target_count, self.identity_count);
+        }else{
+            w!("{}{} unique of {} different, {} met target, {} maintained canvas size\n", self.unique.len(), &unique_truncated, self.different_count, self.target_count, self.identity_count);
+        }
+
+        //                w!("w={}, h={} using {:?}", w, h, kit);
+        //                w!("where source sizes are {:?}", last_group);
+        //                w!("{} source sizes resulted in {}x{}", target_results, w, h);
+        //                w!("{} resulted in their original size", identity_results);
+        if !self.failures.is_empty(){
+            let display_limit = 10;
+            w!("Displaying {} of {}{} failures\n", display_limit, self.failures.len(), &failures_truncated);
+            for &(k, v) in self.failures.iter().take(display_limit) {
+                w!("({},{}) produced {:?}\n", k.width(), k.height(), v);
+            }
+            w!("\n");
+        }
+        if !self.unique.is_empty() {
+            let display_limit = 10;
+            w!("Displaying {} of {}{} unique results\n", display_limit, self.unique.len(), &unique_truncated);
+            for (k, v) in self.unique.iter().take(display_limit) {
+                if k.0 == k.1{
+                    w!("({},{}) - from {} unique source sizes. aspect: {}\n", k.0.width(), k.0.height(), v, k.0.ratio_f64());
+                }else {
+                    w!("({},{}) canvas, ({},{}) image - from {} unique source sizes. {:?} {:?}\n", k.0.width(), k.0.height(), k.1.width(), k.1.height(),  v, k.0, k.1);
+                    //w!("{} source sizes produced canvas {:?} image {:?}\n", v, k.0, k.1);
+                }
+            }
+            w!("\n");
+        }
+    }
+    /// Expects the canvas to be the first in the ResultKey tuple
+    fn report(&mut self, result: sizing::Result<Layout>, source: AspectRatio){
+        if let Ok(layout) = result {
+            let canvas = layout.get_box(BoxTarget::CurrentCanvas);
+            let image = layout.get_box(BoxTarget::CurrentImage);
+
+            let unique_key = (canvas, image);
+
+            self.count += 1;
+            // NOTE WELL: We're skipping over any results with the right canvas size - they might have the wrong image or crop!.
+            if canvas == self.target {
+                self.target_count += 1;
+            } else if canvas == source {
+                self.identity_count += 1;
+            } else {
+                self.different_count += 1;
+                if self.unique.contains_key(&unique_key) || self.unique.len() < self.truncate_unique {
+                    *self.unique.entry(unique_key).or_insert(0) += 1;
+                }
+            }
+        }else if let Err(e) = result{
+            self.count += 1;
+            self.failure_count += 1;
+            if self.failures.len() < self.truncate_failures {
+                self.failures.push((source, e));
+            }
+        }
+    }
+}
+
+/*         [InlineData(1600, 1200, "w=90;h=45;mode=crop;scale=canvas", 90,45,  90,45, 0,200,1600,1000 )]
+        [InlineData(1600, 1200, "w=10;h=10;mode=crop",10,10,10,10, 200, 0, 1400, 1200)]
+[InlineData(1600, 1200, "w=10;h=10;mode=max", 10, 8, 10, 8, 0, 0, 1600, 1200)]
+*/
+
+
+
+static SMALL_PRIMES:[i32;1000] = [
+2, 3, 5, 7,11,13,17,19,23,29
+,31,37,41,43,47,53,59,61,67,71
+,73,79,83,89,97 ,101, 103, 107, 109, 113
+, 127, 131, 137, 139, 149, 151, 157, 163, 167, 173
+, 179, 181, 191, 193, 197, 199, 211, 223, 227, 229
+, 233, 239, 241, 251, 257, 263, 269, 271, 277, 281
+, 283, 293, 307, 311, 313, 317, 331, 337, 347, 349
+, 353, 359, 367, 373, 379, 383, 389, 397, 401, 409
+, 419, 421, 431, 433, 439, 443, 449, 457, 461, 463
+, 467, 479, 487, 491, 499, 503, 509, 521, 523, 541
+, 547, 557, 563, 569, 571, 577, 587, 593, 599, 601
+, 607, 613, 617, 619, 631, 641, 643, 647, 653, 659
+, 661, 673, 677, 683, 691, 701, 709, 719, 727, 733
+, 739, 743, 751, 757, 761, 769, 773, 787, 797, 809
+, 811, 821, 823, 827, 829, 839, 853, 857, 859, 863
+, 877, 881, 883, 887, 907, 911, 919, 929, 937, 941
+, 947, 953, 967, 971, 977, 983, 991, 997,1009,1013
+,1019,1021,1031,1033,1039,1049,1051,1061,1063,1069
+,1087,1091,1093,1097,1103,1109,1117,1123,1129,1151
+,1153,1163,1171,1181,1187,1193,1201,1213,1217,1223
+,1229,1231,1237,1249,1259,1277,1279,1283,1289,1291
+,1297,1301,1303,1307,1319,1321,1327,1361,1367,1373
+,1381,1399,1409,1423,1427,1429,1433,1439,1447,1451
+,1453,1459,1471,1481,1483,1487,1489,1493,1499,1511
+,1523,1531,1543,1549,1553,1559,1567,1571,1579,1583
+,1597,1601,1607,1609,1613,1619,1621,1627,1637,1657
+,1663,1667,1669,1693,1697,1699,1709,1721,1723,1733
+,1741,1747,1753,1759,1777,1783,1787,1789,1801,1811
+,1823,1831,1847,1861,1867,1871,1873,1877,1879,1889
+,1901,1907,1913,1931,1933,1949,1951,1973,1979,1987
+,1993,1997,1999,2003,2011,2017,2027,2029,2039,2053
+,2063,2069,2081,2083,2087,2089,2099,2111,2113,2129
+,2131,2137,2141,2143,2153,2161,2179,2203,2207,2213
+,2221,2237,2239,2243,2251,2267,2269,2273,2281,2287
+,2293,2297,2309,2311,2333,2339,2341,2347,2351,2357
+,2371,2377,2381,2383,2389,2393,2399,2411,2417,2423
+,2437,2441,2447,2459,2467,2473,2477,2503,2521,2531
+,2539,2543,2549,2551,2557,2579,2591,2593,2609,2617
+,2621,2633,2647,2657,2659,2663,2671,2677,2683,2687
+,2689,2693,2699,2707,2711,2713,2719,2729,2731,2741
+,2749,2753,2767,2777,2789,2791,2797,2801,2803,2819
+,2833,2837,2843,2851,2857,2861,2879,2887,2897,2903
+,2909,2917,2927,2939,2953,2957,2963,2969,2971,2999
+,3001,3011,3019,3023,3037,3041,3049,3061,3067,3079
+,3083,3089,3109,3119,3121,3137,3163,3167,3169,3181
+,3187,3191,3203,3209,3217,3221,3229,3251,3253,3257
+,3259,3271,3299,3301,3307,3313,3319,3323,3329,3331
+,3343,3347,3359,3361,3371,3373,3389,3391,3407,3413
+,3433,3449,3457,3461,3463,3467,3469,3491,3499,3511
+,3517,3527,3529,3533,3539,3541,3547,3557,3559,3571
+,3581,3583,3593,3607,3613,3617,3623,3631,3637,3643
+,3659,3671,3673,3677,3691,3697,3701,3709,3719,3727
+,3733,3739,3761,3767,3769,3779,3793,3797,3803,3821
+,3823,3833,3847,3851,3853,3863,3877,3881,3889,3907
+,3911,3917,3919,3923,3929,3931,3943,3947,3967,3989
+,4001,4003,4007,4013,4019,4021,4027,4049,4051,4057
+,4073,4079,4091,4093,4099,4111,4127,4129,4133,4139
+,4153,4157,4159,4177,4201,4211,4217,4219,4229,4231
+,4241,4243,4253,4259,4261,4271,4273,4283,4289,4297
+,4327,4337,4339,4349,4357,4363,4373,4391,4397,4409
+,4421,4423,4441,4447,4451,4457,4463,4481,4483,4493
+,4507,4513,4517,4519,4523,4547,4549,4561,4567,4583
+,4591,4597,4603,4621,4637,4639,4643,4649,4651,4657
+,4663,4673,4679,4691,4703,4721,4723,4729,4733,4751
+,4759,4783,4787,4789,4793,4799,4801,4813,4817,4831
+,4861,4871,4877,4889,4903,4909,4919,4931,4933,4937
+,4943,4951,4957,4967,4969,4973,4987,4993,4999,5003
+,5009,5011,5021,5023,5039,5051,5059,5077,5081,5087
+,5099,5101,5107,5113,5119,5147,5153,5167,5171,5179
+,5189,5197,5209,5227,5231,5233,5237,5261,5273,5279
+,5281,5297,5303,5309,5323,5333,5347,5351,5381,5387
+,5393,5399,5407,5413,5417,5419,5431,5437,5441,5443
+,5449,5471,5477,5479,5483,5501,5503,5507,5519,5521
+,5527,5531,5557,5563,5569,5573,5581,5591,5623,5639
+,5641,5647,5651,5653,5657,5659,5669,5683,5689,5693
+,5701,5711,5717,5737,5741,5743,5749,5779,5783,5791
+,5801,5807,5813,5821,5827,5839,5843,5849,5851,5857
+,5861,5867,5869,5879,5881,5897,5903,5923,5927,5939
+,5953,5981,5987,6007,6011,6029,6037,6043,6047,6053
+,6067,6073,6079,6089,6091,6101,6113,6121,6131,6133
+,6143,6151,6163,6173,6197,6199,6203,6211,6217,6221
+,6229,6247,6257,6263,6269,6271,6277,6287,6299,6301
+,6311,6317,6323,6329,6337,6343,6353,6359,6361,6367
+,6373,6379,6389,6397,6421,6427,6449,6451,6469,6473
+,6481,6491,6521,6529,6547,6551,6553,6563,6569,6571
+,6577,6581,6599,6607,6619,6637,6653,6659,6661,6673
+,6679,6689,6691,6701,6703,6709,6719,6733,6737,6761
+,6763,6779,6781,6791,6793,6803,6823,6827,6829,6833
+,6841,6857,6863,6869,6871,6883,6899,6907,6911,6917
+,6947,6949,6959,6961,6967,6971,6977,6983,6991,6997
+,7001,7013,7019,7027,7039,7043,7057,7069,7079,7103
+,7109,7121,7127,7129,7151,7159,7177,7187,7193,7207
+,7211,7213,7219,7229,7237,7243,7247,7253,7283,7297
+,7307,7309,7321,7331,7333,7349,7351,7369,7393,7411
+,7417,7433,7451,7457,7459,7477,7481,7487,7489,7499
+,7507,7517,7523,7529,7537,7541,7547,7549,7559,7561
+,7573,7577,7583,7589,7591,7603,7607,7621,7639,7643
+,7649,7669,7673,7681,7687,7691,7699,7703,7717,7723
+,7727,7741,7753,7757,7759,7789,7793,7817,7823,7829
+,7841,7853,7867,7873,7877,7879,7883,7901,7907,7919];
+enum StrategyIfLarger2D {
+    DownscaleWithin,
+    DownscaleCrop,
+    DownscaleCropCare,
+    DownscalePad,
+
+    Distort
+}
+
+enum StrategyIfMismatch {
+    DownscaleWithin,
+    Crop1D,
+    CropThenPad,
+    CropCareThenPad,
+    CropThenUpscale,
+    CropCareThenUpscale,
+    Distort
+}
+
+enum StrategyIfSmaller2D {
+    Pad,
+    // Upscaling can bring us into the mismatch zone.
+    UpscaleThenPad,
+    UpscaleThenCropCare,
+    UpscaleThenCrop,
+    Distort,
+    DistortAspect,
+    CropToAspect,
+    CropCareToAspect,
+    PadToAspect
+}
+
+enum ComparisonState {
+    Larger2D,
+    Smaller2D,
+    Mismatch
+}
+/////////////////////////////////////////////////////////
+// Given a ScaleAbove and ScaleBelow which can cause one dimension to match the provided box
+// And the other to be larger (or smaller), but with minimal loss of information.
+// This can be used to achieve a state where we can reason about aspect ratio changes from
+// an initial state of
+enum PostScaleState {
+    Larger1D,
+    Smaller1D,
+    Larger1DSmaller1D,
+    //The image is either larger2d or smaller2d, and we are not targeting scaling.
+    DontCare
+}
+// After exhausting our acceptable aspect ratio modification strategies,
+// We may have (a) success, or (b) partial (or no) progress towards the aspect ratio goal.
+// If successful, we should be able to scale the rest of the way IF desired. (say we added padding coming from Larger2D or cropped from Smaller2D). WithinBox and
+// When partially successful,
+//
+// We may 1. Downscale within bounds, Downscale to exact bounds,
+
+
+// AspectModifier trait
+// - provide pixel buffer or rect, desired aspect ratio, and a dimension constraint?
+// - get resultant crop and resultant canvas
+
+
+/// Here we combine a 1 dimensional constraint and a target aspect ratio.
+/// We assume that the biggest delta dimension is processed first. I.e, width if the source image has a wider aspect ratio, height if the source image has a higher aspect ratio.
+///
+enum TargetAndAspect {}
+
+/// Strategies for single dimension constraints: I.e, Width OR Height, but not both
+enum Constraint1DAndAspectStrategy {
+    /// The constraint is an upper bound; the image will never be upscaled,
+/// and downscaling will preserve the original aspect ratio
+    Max,
+    /// Ensures that at least one dimension is equal to or smaller than the provided box (alt. dimension estimated via aspect ratio). aka. MinimalSupersetNoUspcaling
+/// (fits outside box)
+    MaxAny,
+    /// (no use case) The constraint is a lower bound. If the image is smaller than this value, it will be upscaled, preserving the original aspect ratio.
+/// (like maxany (if done twice), fits outside)
+    Min,
+    /// (like max done twice, fits within box).
+    MinAny,
+    /// (no use case)  If the original image is too small, the canvas will be extended in that one dimension, following the PaddingLocation rules.
+    ExactViaCanvas1D,
+    /// (no use case) If too small, the canvas will be extended in both directions as required to match both the original aspect ratio and the desired dimension.
+    ExactViaCanvas,
+    /// (no use case) If too small, the image will be upscaled so that the given dimension is an exact match.
+    ExactViaUpscaling,
+    /// (no use case) If too small, distort. Otherwise, preserve aspect ratio.
+    ExactViaDistortion,
+    /// (no use case) The image's aspect ratio will be ignored, and scaled in a single dimension to the given value.
+    ExactAlwaysDistort,
+    /// (no use case) Don't scale the image; rather, crop or pad it in a single dimension.
+    ExactAlwaysCropOrPad
+}
+
+
+enum ConstraintStrategy {
+    Width {
+        w: u32,
+        strategy: OneConstraintStrategy
+    },
+    Height {
+        h: u32,
+        strategy: OneConstraintStrategy
+    },
+    /// Keep the original aspect ratio. If the image is smaller than both bounds, don't upscale or pad.
+    WithinBox {
+        w: u32,
+        h: u32
+    },
+}
