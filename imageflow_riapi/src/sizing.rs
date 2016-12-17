@@ -10,16 +10,13 @@ use ::std;
 // Serves as a size *and* an aspect ratio. There's benefit to keeping these together.
 // Rounding errors are problematic when they cause an off-by-one versus target width/height or original width/height.
 // So aspect ratios include the fraction they were derived from, and implementors should round to these if one of the 2 dimensions matches.
-#[derive(Copy, Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Copy, Clone,  PartialEq, Eq, PartialOrd, Ord)]
 pub struct AspectRatio {
     pub w: i32, //Make private! We loose validation
     pub h: i32,
 }
 
 impl AspectRatio {
-    pub fn from_size(size: (i32, i32)) -> Result<AspectRatio> {
-        AspectRatio::create(size.0, size.1)
-    }
     pub fn create(w: i32, h: i32) -> Result<AspectRatio> {
         if w < 1 || h < 1 {
             //panic!("");
@@ -141,30 +138,16 @@ impl AspectRatio {
     }
 }
 
-//impl Ord for AspectRatio {
-//    fn cmp(&self, other: &Self) -> Ordering {
-//        (self.w, &self.h).cmp(&(other.w, &other.h))
-//    }
-//}
-//
-//impl PartialOrd for AspectRatio {
-//    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-//        Some(self.cmp(other))
-//    }
-//}
 
-//impl Eq for AspectRatio {}
-//impl PartialEq for AspectRatio {
-//    fn eq(&self, other: &Self) -> bool {
-//        (self.w, &self.h) == (other.w, &other.h)
-//    }
-//}
-//
-//
 impl std::hash::Hash for AspectRatio {
     fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
         self.w.hash(state);
         self.h.hash(state);
+    }
+}
+impl fmt::Debug for AspectRatio {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{}x{}", self.w, self.h)
     }
 }
 
@@ -177,6 +160,9 @@ fn mult_fraction(value: i32, num: i32, denom: i32) -> Result<i32> {
 fn test_box_of_() {
     test_box_of();
 }
+
+
+#[cfg(test)]
 fn test_box_of() {
     fn ratio(w: i32, h: i32) -> AspectRatio {
         AspectRatio::create(w, h).unwrap()
@@ -194,7 +180,7 @@ pub enum BoxKind {
     Outer
 }
 
-#[derive(Copy, Clone, PartialEq, Debug)]
+#[derive(Copy, Clone, PartialEq, Debug, Hash)]
 pub struct Layout {
     source_max: AspectRatio,
     source: AspectRatio,
@@ -288,6 +274,10 @@ impl Layout {
             BoxTarget::CurrentImage => self.image
         }
     }
+    pub fn get_source_crop(&self) -> AspectRatio{
+        self.source
+    }
+
     pub fn resolve_box_param(&self, p: BoxParam) -> Result<AspectRatio> {
         match p {
             BoxParam::Exact(which) => Ok(self.get_box(which)),
@@ -340,7 +330,7 @@ impl Layout {
         }
     }
 
-    pub fn evaluate_condition(&self, c: StepCondition) -> bool {
+    pub fn evaluate_condition(&self, c: Cond) -> bool {
         c.matches(self.canvas.cmp_size(&self.target))
     }
     pub fn execute_all<T: PartialCropProvider>(self, steps: &[Step], cropper: &T) -> Result<Layout> {
@@ -419,36 +409,51 @@ pub enum BoxParam {
     }
 }
 
-#[derive(Copy, Clone, PartialEq, Debug)]
-pub enum StepCondition {
+#[derive(Copy, Clone, PartialEq, Eq, Debug, Hash)]
+pub enum Cond {
 
-    Cmp((Ordering, Ordering)),
-    /// The canvas is larger than the target in both dimensions
+    Is((Ordering, Ordering)),
+    Not((Ordering, Ordering)),
+    WidthIs(Ordering),
+    HeightIs(Ordering),
+    Both(Ordering),
+    WidthNot(Ordering),
+    HeightNot(Ordering),
+    Neither(Ordering),
+    Either(Ordering),
+    /// larger than the target in both dimensions
     Larger2D,
-    /// The canvas is smaller than the target in both dimensions
+    /// smaller than the target in both dimensions
     Smaller2D,
-    /// The canvas is larger than the target in one dimension and smaller in the other
+    /// larger than the target in one dimension and smaller in the other
     Larger1DSmaller1D,
-    /// The canvas is larger than the target in one or more dimensions
-    Larger1D,
-    /// The canvas is smaller than the target in one or more dimensions
-    Smaller1D,
-    /// Canvas and target are precisely the same size
-    Exact,
+    /// Exact match
+    Equal,
+    /// Neither dimension is a match
+    Differs2D,
     ///Always true
-    Always,
+    True,
 }
-impl StepCondition {
+impl Cond {
     pub fn matches(&self, cmp: (Ordering, Ordering)) -> bool{
         match *self{
-            StepCondition::Cmp(pair) => pair == cmp,
-            StepCondition::Larger2D => cmp == (Ordering::Greater, Ordering::Greater),
-            StepCondition::Smaller2D => cmp == (Ordering::Less, Ordering::Less),
-            StepCondition::Exact => cmp == (Ordering::Equal, Ordering::Equal),
-            StepCondition::Always => true,
-            StepCondition::Larger1DSmaller1D => cmp == (Ordering::Greater, Ordering::Less) || cmp == (Ordering::Less, Ordering::Greater),
-            StepCondition::Larger1D => cmp.0 == Ordering::Greater || cmp.1 == Ordering::Greater,
-            StepCondition::Smaller1D => cmp.0 == Ordering::Less || cmp.1 == Ordering::Less,
+            Cond::Is(pair) => pair == cmp,
+            Cond::Not(pair) => pair != cmp,
+            Cond::Larger2D => Cond::Both(Ordering::Greater).matches(cmp),
+            Cond::Smaller2D => Cond::Both(Ordering::Less).matches(cmp),
+            Cond::Equal => Cond::Both(Ordering::Equal).matches(cmp),
+            Cond::True => true,
+            Cond::Larger1DSmaller1D => cmp == (Ordering::Greater, Ordering::Less) || cmp == (Ordering::Less, Ordering::Greater),
+            //Cond::Larger1D => Cond::Either(Ordering::Greater).matches(cmp),
+            //Cond::Smaller1D => Cond::Either(Ordering::Less).matches(cmp),
+            Cond::Differs2D => Cond::Neither(Ordering::Equal).matches(cmp),
+            Cond::WidthIs(v) => cmp.0 == v,
+            Cond::WidthNot(v) => cmp.0 != v,
+            Cond::HeightIs(v) => cmp.1 == v,
+            Cond::HeightNot(v) => cmp.1 != v,
+            Cond::Both(v) => cmp.0 == v && cmp.1 == v,
+            Cond::Neither(v) => cmp.0 != v && cmp.1 != v,
+            Cond::Either(v) => cmp.0 == v || cmp.1 == v,
         }
     }
 }
@@ -469,8 +474,8 @@ pub enum Step {
     ///Indicates the start of a new sequence.
     BeginSequence,
     /// Fast-forwards to the next sequence if the condition fails
-    SkipIf(StepCondition),
-    SkipUnless(StepCondition),
+    SkipIf(Cond),
+    SkipUnless(Cond),
     /// Scales the canvas, using the canvas ratio. Use distort to use the target ratio (or another)
     ScaleToOuter,
     ScaleToInner,
@@ -527,11 +532,11 @@ impl StepsBuilder {
         self.steps.push(Step::BeginSequence);
         self
     }
-    pub fn skip_if(mut self, c: StepCondition) -> StepsBuilder {
+    pub fn skip_if(mut self, c: Cond) -> StepsBuilder {
         self.steps.push(Step::SkipIf(c));
         self
     }
-    pub fn skip_unless(mut self, c: StepCondition) -> StepsBuilder {
+    pub fn skip_unless(mut self, c: Cond) -> StepsBuilder {
         self.steps.push(Step::SkipUnless(c));
         self
     }
