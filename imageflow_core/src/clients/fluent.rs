@@ -1,5 +1,6 @@
 use ::internal_prelude::works_everywhere::*;
-use std::sync::atomic::{AtomicU64, Ordering, ATOMIC_U64_INIT};
+use std::sync::atomic::{AtomicU64, ATOMIC_U64_INIT};
+use std::sync::atomic;
 
 static NEXT_FLUENT_NODE_ID: AtomicU64 = ATOMIC_U64_INIT;
 
@@ -18,7 +19,7 @@ pub struct FluentNode {
 
 impl FluentNode {
     fn next_uid() -> u64 {
-        NEXT_FLUENT_NODE_ID.fetch_add(1, Ordering::SeqCst)
+        NEXT_FLUENT_NODE_ID.fetch_add(1, atomic::Ordering::SeqCst)
     }
     fn new(node: s::Node,
            input_node: Option<FluentNode>,
