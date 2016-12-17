@@ -235,6 +235,16 @@ if [[ "$TEST_RUST" == 'True' ]]; then
 
 	echo "Running all crate tests"
 	(
+		cd imageflow_helpers
+		date "$STAMP"
+		cargo test
+	)
+	(
+		cd imageflow_riapi
+		date "$STAMP"
+		cargo test
+	)
+	(
 		cd imageflow_core
 		date "$STAMP"
 		RUST_TEST_TASKS=1 cargo test

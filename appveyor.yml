@@ -107,6 +107,14 @@ test_script:
   - cargo test --target=%RUST_TARGET% 
   - cargo doc --no-deps
   - cd ..
+  - cd imageflow_helpers
+  - cargo test --target=%RUST_TARGET% 
+  - cargo doc --no-deps
+  - cd .
+  - cd imageflow_riapi
+  - cargo test --target=%RUST_TARGET% 
+  - cargo doc --no-deps
+  - cd .
   - echo. && echo. && echo. && echo Building optimized binaries && echo. && echo. && echo.
   - cd imageflow_tool
   - cargo build --target=%RUST_TARGET% --release
