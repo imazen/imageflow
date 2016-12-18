@@ -2,7 +2,7 @@ use imageflow_helpers::preludes::from_std::*;
 use ::std;
 use ::sizing::{steps, BoxParam, BoxTarget, AspectRatio, Cond, Step, Layout, LayoutError, BoxKind};
 use ::sizing;
-
+use ::time::precise_time_ns;
 
 
 #[derive(Copy, Clone, PartialEq, Debug)]
@@ -30,10 +30,10 @@ enum Strategy {
     /// Downscale the image and pad to meet aspect ratio. If smaller in both dimensions, give up and leave as-is.
 /// `down.fit=proportional(ibox), pad(target), up.fit=none` - won't work, second dimension will classify as upscale.
 /// `down.fit=proportional(ibox), pad2d(target), up.fit=none`
-    PadUnlessSmaller,
+    PadDownscaleOnly,
     /// Downscale the image and crop to meet aspect ratio. If smaller in both dimensions, give up and leave as-is.
 /// `down.fit=proportional(obox),crop(target) up.fit=none`
-    CropUnlessSmaller,
+    CropDownscaleOnly,
 
     /// Downscale & pad. If smaller, pad to achieve desired aspect ratio.
     PadOrAspect,
@@ -83,8 +83,15 @@ fn strategy_to_steps(s: Strategy) -> Option<Vec<Step>> {
         Strategy::MinAny => { steps().skip_unless(Cond::Smaller2D).scale_to_inner()}
         Strategy::Min => { steps().skip_unless(Cond::Either(Ordering::Less)).scale_to_outer() },
 
-        Strategy::PadOrAspect => { steps().skip_if(Cond::Neither(Ordering::Greater)).scale_to_inner().pad().new_seq().pad_aspect() },
+        Strategy::PadOrAspect => { steps().skip_if(Cond::Both(Ordering::Less)).scale_to_inner().pad().new_seq().pad_aspect() },
+        Strategy::PadDownscaleOnly => { steps().skip_if(Cond::Both(Ordering::Less)).scale_to_inner().pad() },
 
+        //How does this work?
+        Strategy::CropOrAspect => { steps().skip_if(Cond::Either(Ordering::Less)).scale_to_outer().crop().new_seq().crop_aspect() },
+
+
+        //I think we need multiple parts
+        Strategy::CropDownscaleOnly => { steps().skip_if(Cond::Either(Ordering::Less)).scale_to_outer().crop().new_seq().skip_unless(Cond::Larger1DSmaller1D).crop_intersection() },
         //        Strategy::CropCarefulDownscale => StepSet::AnyLarger(vec![Step::ScaleToOuter,
         //        Step::PartialCropAspect, Step::ScaleToInner]),
         //        Strategy::ExactCropAllowUpscaling => StepSet::Always(vec![Step::ScaleToOuter,
@@ -116,6 +123,7 @@ fn step_kits() -> Vec<Kit>{
     let mut kits = Vec::new();
 
     let no_crop = Expect::That{ a: ExpectVal::SourceCrop, is: Cond::Equal, b: ExpectVal::Source};
+    let no_4_side_cropping = Expect::That{ a: ExpectVal::SourceCrop, is: Cond::Either(Ordering::Equal), b: ExpectVal::Source};
     let no_padding = Expect::CanvasAgainstImage(Cond::Equal);
     let no_scaling = Expect::That{ a: ExpectVal::SourceCrop, is: Cond::Equal, b: ExpectVal::Image};
     let no_upscaling = Expect::That{ a: ExpectVal::SourceCrop, is: Cond::Neither(Ordering::Less), b: ExpectVal::Image};
@@ -141,11 +149,37 @@ fn step_kits() -> Vec<Kit>{
         .assert(no_4_side_padding)
         .when(When::SourceAgainstTarget(Cond::Either(Ordering::Equal))).expect(Expect::CanvasMatchesTarget)
         .when(When::CanvasAgainstTarget(Cond::Equal)).expect(Expect::Whatever)
-        .when(When::CanvasAgainstTarget(Cond::Smaller2D)).expect(Expect::Whatever)
+        .when(When::SourceAgainstTarget(Cond::Smaller2D)).expect(Expect::Whatever)
         );
 
+    kits.push(kit_for_strategy(Strategy::PadDownscaleOnly)
+        .assert(never_larger_than_target)
+        .assert(no_crop)
+        .assert(no_upscaling)
+        .assert(no_4_side_padding)
+        .when(When::SourceAgainstTarget(Cond::Either(Ordering::Equal))).expect(Expect::CanvasMatchesTarget)
+        .when(When::CanvasAgainstTarget(Cond::Equal)).expect(Expect::Whatever)
+        .when(When::SourceAgainstTarget(Cond::Smaller2D)).expect(Expect::CanvasMatchesSource)
+    );
 
+    //Off-by-one - one pixel cropping on sides it ?shouldn't?
+    kits.push(kit_for_strategy(Strategy::CropOrAspect)
+        .assert(never_larger_than_target)
+        .assert(no_4_side_cropping).or_warn()
+        .assert(no_upscaling).or_warn()
+        .assert(no_padding)
+        .when(When::SourceAgainstTarget(Cond::Neither(Ordering::Less))).expect(Expect::CanvasMatchesTarget)
+        .when(When::SourceAgainstTarget(Cond::Either(Ordering::Less))).expect(Expect::Whatever)
+    );
 
+    kits.push(kit_for_strategy(Strategy::CropDownscaleOnly)
+        .assert(never_larger_than_target)
+        .assert(no_4_side_cropping).or_warn()
+        .assert(no_upscaling).or_warn()
+        .assert(no_padding)
+        .when(When::SourceAgainstTarget(Cond::Neither(Ordering::Less))).expect(Expect::CanvasMatchesTarget)
+        .when(When::SourceAgainstTarget(Cond::Neither(Ordering::Greater))).expect(Expect::CanvasMatchesSource)
+    );
     //::sizing::steps().
     //kits.push(steps().skip_unless(Cond::Neither(Ordering::Greater)).
 
@@ -558,6 +592,7 @@ fn test_steps() {
     let mut failed_kits = Vec::new();
 
     for kit in kits{
+        let start_time = precise_time_ns();
         let mut test_failed = false;
         for target in target_sizes.iter() {
             generate_aspects(&mut source_sizes, &mut temp, *target);
@@ -594,6 +629,10 @@ fn test_steps() {
             current.end_report(&kit, &mut target_header_printed);
 
         }
+
+        let duration = precise_time_ns() - start_time;
+        w!("\nSpent {:.0}ms testing {:?}\n\n", (duration  as f64) / 1000000., &kit.steps);
+
         if test_failed{
             failed_kits.push(kit);
         }
@@ -654,8 +693,8 @@ where T: std::fmt::Debug, T: std::cmp::PartialEq {
             unique: HashMap::new(),
             applicable: HashMap::new(),
             failures: Vec::new(),
-            truncate_unique: 50,
-            truncate_failures: 16,
+            truncate_unique: 16,
+            truncate_failures: 64,
             invalidated: false,
             sources_for_all_groups: sources_for_all_groups
         }

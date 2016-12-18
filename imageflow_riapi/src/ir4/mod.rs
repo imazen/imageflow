@@ -1,24 +1,141 @@
+use imageflow_helpers::preludes::from_std::*;
+use ::std;
+use ::url::Url;
+use ::macro_attr;
+use ::enum_derive;
+use ::imageflow_types as s;
 
+pub mod parsing;
 
+use ::sizing;
+use self::parsing::*;
 
-static IR4_KEYS: [&'static str;58] = ["mode", "anchor", "flip", "sflip", "scale", "cache", "process", "frame", "page", "quality", "subsampling", "colors", "zoom",
-    "crop", "cropxunits", "cropyunits", "w", "h", "width", "height", "maxwidth", "maxheight", "format", "thumbnail",
-    "precise_scaling_ratio", "autorotate", "srotate", "rotate", "ignoreicc", "404", "bgcolor", "paddingcolor", "bordercolor", "preset", "floatspace", "jpeg_idct_downscale_linear", "watermark",
-    "s.invert", "s.sepia", "s.grayscale", "s.alpha", "s.brightness", "s.contrast", "s.saturation", "trim.threshold", "trim.percentpadding", "a.blur", "a.sharpen", "a.removenoise", "dither",
-    "encoder", "decoder", "builder", "s.roundcorners.", "paddingwidth", "paddingheight", "margin", "borderwidth"];
+pub struct Ir4Layout{
+    i: Instructions,
+    info: s::ImageInfo
+}
+impl Ir4Layout{
 
-static IF_KEYS: [&'static str;8] = ["w","h", "width", "height", "mode", "quality", "format", "autorotate"];
+    fn fit_mode(&self) -> FitMode{
+        self.i.mode.map(|m| if m == FitMode::Carve { FitMode::Stretch} else {m})
+            .and_then(|m| if m == FitMode::None { None } else {Some(m)})
+            .unwrap_or_else(|| {
+            if self.i.w.is_none() && self.i.h.is_none() {
+                FitMode::Max
+            } else {
+                // if stretch=fill -> Fill
+                // if crop=auto -> Crop
+                // Carve??
+                FitMode::Pad
+            }
+        })
+    }
+    pub fn produce_framewise(info: s::ImageInfo, i: Instructions) -> s::Framewise{
+        Ir4Layout{ i: i, info: info}.produce()
+    }
 
-//pub fn parse_url(url: Url) -> s::Framewise{
-//    url.query_pairs().filter(|(k,v)| IR4_keys.contains(k.to_lowercase()))
+    fn get_target_size(&self) -> (i32,i32){
+//        let w = if self.i.w.is_some() && self.i.legacy_max_width.is_some(){
+//            cmp::min(self.i.w.unwrap(),self.i.legacy_max_width.unwrap())
+//        }else
+//        w = i.width
+//        h = i.height
+//        mw = i.obsolete_maxwidth
+//        mh = i.obsolete_maxheight
 //
-//    // Let various strategies attempt to handle all the querypairs that intersect with IR4/IF
-//    // Leftovers cause a warning
 //
+//        #Eliminate cases where both a value and a max value are specified: use the smaller value for the width/height
+//        if !w.nil? && !mw.nil?
+//        w = [w, mw].min
+//        mw = nil
+//        end
+//        if !h.nil? && !mh.nil?
+//        h = [h, mh].min
+//        mh = nil
+//        end
 //
-//    //scale=up should cause a warning
-//}
+//        #Handle cases of width/maxheight and height/maxwidth as in legacy version
+//        mh = [mh, w / image_ratio].min if !w.nil? && !mh.nil?
+//        mw = [mw, h * image_ratio].min if !h.nil? && !mw.nil?
+//
+//        w = [w, mw].compact.max
+//        h = [h, mh].compact.max
+//
+//        # Calculate missing value (a missing value is handled the same everywhere)
+//        h = w / image_ratio if h.nil?
+//        w = h * image_ratio if w.nil?
+        let orig = sizing::AspectRatio::create(self.info.image_width, self.info.image_height).unwrap();
 
+        if self.i.w.is_none() && self.i.h.is_none(){
+            (self.info.image_width, self.info.image_height)
+        }else if self.i.w.is_none(){
+            (0,0)
+        }else if self.i.h.is_none(){
+            (0,0)
+        }else {
+            (self.i.w.unwrap(), self.i.h.unwrap())
+        }
+
+
+
+
+    }
+
+    fn produce(&self) -> s::Framewise{
+
+        let mut nodes = Vec::new();
+
+        //TODO: later consider decoder scaling
+
+        nodes.push(s::Node::Decode{io_id: 0, commands: None});
+
+        // add srotate
+        if  let Some((h,v)) = self.i.sflip{
+            if h { nodes.push(s::Node::FlipH); }
+            if v { nodes.push(s::Node::FlipV); }
+        }
+
+        let starting_size = sizing::AspectRatio::create(self.info.image_width, self.info.image_height).unwrap();
+        // TODO: apply manual crop first
+
+        //Maybe just panic if using UpscaleOnly??
+        match (self.fit_mode(),self.i.scale.unwrap_or(ScaleMode::DownscaleOnly)){
+            (FitMode::Max, ScaleMode::UpscaleOnly) => { panic!("")},
+            (FitMode::Max, _) => {
+
+            },
+            (FitMode::Pad, ScaleMode::Both) => {},
+            (FitMode::Pad, ScaleMode::DownscaleOnly) | (FitMode::Pad, ScaleMode::UpscaleCanvas) => {},
+            (FitMode::Crop, ScaleMode::DownscaleOnly) => {},
+            (FitMode::Stretch, ScaleMode::Both) => {},
+            (FitMode::Stretch, ScaleMode::DownscaleOnly) => {}
+            _ => {panic!("");}
+        }
+        //crop
+        //scale
+        //pad
+//        ::sizing::steps().skip_if
+
+
+
+        //add rotate
+        //add flip
+        if let Some((h,v)) = self.i.flip{
+            if h { nodes.push(s::Node::FlipH); }
+            if v { nodes.push(s::Node::FlipV); }
+        }
+
+
+        s::Framewise::Steps(nodes)
+    }
+}
+
+
+//discards warnings
+pub fn parse_to_framewise(info: s::ImageInfo, url: &Url) -> s::Framewise{
+    let (i, warn) = parsing::parse_url(url);
+    Ir4Layout::produce_framewise(info, i)
+}
 
 
 enum ConstraintMode{

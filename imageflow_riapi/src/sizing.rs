@@ -7,6 +7,7 @@
 //! The provider is only used to adjust the layout sizes, but users should also have the provider handle alignment of crops.
 use imageflow_helpers::preludes::from_std::*;
 use ::std;
+
 // Serves as a size *and* an aspect ratio. There's benefit to keeping these together.
 // Rounding errors are problematic when they cause an off-by-one versus target width/height or original width/height.
 // So aspect ratios include the fraction they were derived from, and implementors should round to these if one of the 2 dimensions matches.
@@ -321,6 +322,7 @@ impl Layout {
             Step::Pad => self.pad_canvas(self.target),
             Step::CropAspect => self.crop(self.target.box_of(&self.canvas, BoxKind::Inner)?),
             Step::Crop => self.crop(self.target),
+            Step::CropToIntersection => self.crop(self.image.intersection(&self.target)?),
             Step::VirtualCanvas(param) => self.virtual_canvas(self.resolve_box_param(param)?),
             Step::Distort(param) => self.distort_canvas(self.resolve_box_param(param)?),
             Step::PartialCropAspect => cropper.crop_size(self, self.target.box_of(&self.canvas, BoxKind::Inner)?),
@@ -482,7 +484,8 @@ pub enum Step {
     Distort(BoxParam),
     Pad,
     PadAspect,
-    Crop,
+    Crop, //What about intersect? Crop that doesn't fail out of bounds
+    CropToIntersection,
     CropAspect,
     /// We can use a variety of hints, and we're not required to fully change the aspect ratio or achieve the target box
     PartialCrop,
@@ -508,6 +511,11 @@ impl StepsBuilder {
         self.steps.push(Step::Crop);
         self
     }
+    pub fn crop_intersection(mut self) -> StepsBuilder {
+        self.steps.push(Step::CropToIntersection);
+        self
+    }
+
     pub fn crop_aspect(mut self) -> StepsBuilder {
         self.steps.push(Step::CropAspect);
         self
