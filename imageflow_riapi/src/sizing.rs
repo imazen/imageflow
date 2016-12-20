@@ -17,6 +17,10 @@ pub struct AspectRatio {
     pub h: i32,
 }
 
+pub mod prelude{
+    pub use super::{AspectRatio, steps, BoxKind, LayoutError, PartialCropProvider, IdentityCropProvider, Cond, BoxParam, BoxTarget, Step, Step1D};
+}
+
 impl AspectRatio {
     pub fn create(w: i32, h: i32) -> Result<AspectRatio> {
         if w < 1 || h < 1 {

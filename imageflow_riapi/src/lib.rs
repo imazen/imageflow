@@ -2,6 +2,9 @@
 
 #[macro_use] extern crate macro_attr;
 #[macro_use] extern crate enum_derive;
+#[macro_use] extern crate lazy_static;
+
+extern crate difference;
 
 extern crate imageflow_types;
 extern crate imageflow_helpers;

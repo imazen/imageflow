@@ -59,7 +59,7 @@ macro_attr! {
 #[derive(Debug, Copy, Clone, PartialEq, Eq,
 IterVariants!(FitModeVariants), IterVariantNames!(FitModeNames))]
 /// How to resolve aspect ratio differences between the requested size and the original image's size.
-pub enum FitMode {
+pub enum FitModeStrings {
     /// Fit mode will be determined by other settings, such as &amp;carve=true, &amp;stretch=fill, and &amp;crop=auto. If none are specified and width/height are specified , &amp;mode=pad will be used. If maxwidth/maxheight are used, &amp;mode=max will be used.
     None,
 
@@ -109,11 +109,11 @@ pub enum ProcessWhen {
 
 
 
-pub static IR4_KEYS: [&'static str;57] = ["mode", "anchor", "flip", "sflip", "scale", "cache", "process",
+pub static IR4_KEYS: [&'static str;58] = ["mode", "anchor", "flip", "sflip", "scale", "cache", "process",
     "quality", "zoom", "crop", "cropxunits", "cropyunits",
     "w", "h", "width", "height", "maxwidth", "maxheight", "format", "thumbnail",
      "autorotate", "srotate", "rotate", "ignoreicc", //really? : "precise_scaling_ratio",
-
+    "stretch",
     "frame", "page", "subsampling", "colors",
     "404", "bgcolor", "paddingcolor", "bordercolor", "preset", "floatspace", "jpeg_idct_downscale_linear", "watermark",
     "s.invert", "s.sepia", "s.grayscale", "s.alpha", "s.brightness", "s.contrast", "s.saturation", "trim.threshold",
@@ -121,7 +121,7 @@ pub static IR4_KEYS: [&'static str;57] = ["mode", "anchor", "flip", "sflip", "sc
     "encoder", "decoder", "builder", "s.roundcorners.", "paddingwidth", "paddingheight", "margin", "borderwidth"];
 
 
-
+#[derive(PartialEq,Debug, Clone)]
 pub enum ParseWarning{
     // We don't really support comma concatenation like ImageResizer (in theory) did
     DuplicateKey((String, String)),
@@ -162,17 +162,48 @@ enum KeyResult{
 
 impl Instructions{
     pub fn delete_from_map(map: &mut HashMap<String,String>, warnings: Option<&mut Vec<ParseWarning>>) -> Instructions {
-        let mut p = Parser { m: map, w: warnings, delete_used: true };
+        let mut p = Parser { m: map, w: warnings, delete_supported: true };
         let mut i = Instructions::new();
         i.w = p.parse_i32("width").or(p.parse_i32("w"));
         i.h = p.parse_i32("height").or(p.parse_i32("h"));
         i.legacy_max_height = p.parse_i32("maxheight");
         i.legacy_max_width = p.parse_i32("maxwidth");
         i.flip = p.parse_flip("flip").map(|v| v.clean());
-        i.sflip = p.parse_flip("sflip").map(|v| v.clean());
-        i.mode = p.parse_fit_mode("mode");
+        i.sflip = p.parse_flip("sflip").or(p.parse_flip("sourceFlip")).map(|v| v.clean());
+
+        let mode_string = p.parse_fit_mode("mode");
+        if mode_string == Some(FitModeStrings::Carve){
+           p.warn(ParseWarning::ValueInvalid(("mode", "carve".to_owned())).to_owned());
+        }
+
+        i.mode = mode_string.and_then(|v| v.clean())
+            .or(p.parse_test_pair("stretch", "fill").and_then(|b| if b { Some(FitMode::Stretch) } else { None }))
+            .or(p.parse_test_pair("crop", "auto").and_then(|b| if b { Some(FitMode::Crop) } else { None }));
+
         i.scale = p.parse_scale("scale").map(|v| v.clean());
+
+        //Actually supported!
+//        if i.scale == Some(ScaleMode::UpscaleOnly){
+//            warnings.push(ParseWarning::ValueInvalid("scale", "upscaleonly".to_owned()));
+//        }
+
         i.format = p.parse_format("format").or(p.parse_format("thumbnail")).map(|v| v.clean());
+        i.srotate = p.parse_rotate("srotate");
+        i.rotate = p.parse_rotate("rotate");
+        i.autorotate = p.parse_bool("autorotate");
+        i.ignoreicc = p.parse_bool("ignoreicc");
+        i.crop = p.parse_crop_strict("crop").or_else(|| p.parse_crop("crop"));
+        i.cropxunits = p.parse_f64("cropxunits");
+        i.cropyunits = p.parse_f64("cropyunits");
+        i.quality = p.parse_i32("quality");
+        i.zoom = p.parse_f64("zoom");
+        i.bgcolor_srgb = p.parse_color_srgb("bgcolor").or_else(||p.parse_color_srgb("bgcolor"));
+        i.jpeg_subsampling = p.parse_subsampling("subsampling");
+        i.f_sharpen = p.parse_f64("f.sharpen");
+        i.anchor = p.parse_anchor("anchor");
+
+        let _ = p.parse_test_pair("fastscale", "true");
+
 
         i
     }
@@ -185,50 +216,143 @@ impl Instructions{
     }
 }
 
+//
 struct Parser<'a>{
     m: &'a mut HashMap<String,String>,
     w: Option<&'a mut Vec<ParseWarning>>,
-    delete_used: bool
+    /// We leave pairs in the map if we do not support them (or we support them, but they are invalid)
+    delete_supported: bool
 }
 impl<'a> Parser<'a>{
 
-
-    fn parse<F,T,E>(&mut self, key: &'static str, f: F) -> Option<T>
-            where F: Fn(&str) -> std::result::Result<T,E>{
+    fn warn(&mut self, warning: ParseWarning){
+        if self.w.is_some() {
+            self.w.as_mut().unwrap().push(warning);
+        }
+    }
+    fn warning_parse<F,T,E>(&mut self, key: &'static str, f: F) -> Option<T>
+        where F: Fn(&str) -> std::result::Result<(T,Option<ParseWarning>, bool),E>{
         //Coalesce null and whitespace values to None
-        let r = {
-            let v = self.m.get(key).map(|v| v.trim()).filter(|v| !v.is_empty());
+        let (r, supported) = {
+            let v = self.m.get(key).map(|v| v.trim().to_owned()).filter(|v| !v.is_empty());
 
             if let Some(s) = v {
-                match f(s) {
+                match f(&s) {
                     Err(e) => {
-                        if self.w.is_some() {
-                            self.w.as_mut().unwrap().push(ParseWarning::ValueInvalid((key, s.to_owned())));
-                        }
-                        None
+                        self.warn(ParseWarning::ValueInvalid((key, s.to_owned())));
+                        (None, false) // We assume an error means the value wasn't supported
                     },
-                    Ok(v) =>
-                        Some(v)
+                    Ok((v,w,supported)) => {
+                        if w.is_some(){
+                           self.warn(w.unwrap());
+                        }
+                            (Some(v), supported)
+                    }
                 }
             } else {
-                None
+                (None, true) //We support (ignore) null and whitespace values in IR4
             }
         };
-        if self.m.contains_key(key) && self.delete_used{
+        if supported && self.delete_supported && self.m.contains_key(key) {
             self.m.remove(key);
         }
         r
-
+    }
+    fn parse<F,T,E>(&mut self, key: &'static str, f: F) -> Option<T>
+            where F: Fn(&str) -> std::result::Result<T,E>{
+        self.warning_parse(key, |s| f(s).map(|v| (v, None, true)) )
     }
 
+    fn parse_test_pair(&mut self, key: &'static str, value: &'static str) -> Option<bool> {
+        self.warning_parse(key, |s| -> std::result::Result<(bool, Option<ParseWarning>, bool), ()> {
+            if s.eq_ignore_ascii_case(value) {
+                Ok((true, None, true))
+            } else {
+                Ok((false, None, false))
+            }
+        })
+    }
+
+    fn parse_crop_strict(&mut self, key: &'static str) -> Option<[f64;4]> {
+        self.warning_parse(key, |s| {
+            let values = s.split(',').map(|v| v.trim().parse::<f64>()).collect::<Vec<std::result::Result<f64,::std::num::ParseFloatError>>>();
+            if let Some(&Err(ref e)) = values.iter().find(|v| v.is_err()) {
+                Err(ParseCropError::InvalidNumber(e.clone()))
+            } else if values.len() != 4 {
+                Err(ParseCropError::InvalidNumberOfValues("Crops must contain exactly 4 values, separated by commas"))
+            } else {
+                Ok(([*values[0].as_ref().unwrap(), *values[1].as_ref().unwrap(), *values[2].as_ref().unwrap(), *values[3].as_ref().unwrap()], None, true))
+            }
+        }
+        )
+    }
+
+
+    fn parse_crop(&mut self, key: &'static str) -> Option<[f64;4]> {
+        self.warning_parse(key, |s| {
+            // TODO: We're also supposed to trim leading/trailing commas along with whitespace
+            let str = s.replace("(", "").replace(")", "");
+            // .unwrap_or(0) is ugly, but it's what IR4 does. :(
+            let values = str.trim().split(',').map(|v| v.trim().parse::<f64>().unwrap_or(0f64)).collect::<Vec<f64>>();
+            if values.len() == 4 {
+                Ok(([values[0], values[1], values[2], values[3]], None, true))
+            } else {
+                Err(())
+            }
+        }
+        )
+    }
+
+    fn parse_bool(&mut self, key: &'static str) -> Option<bool>{
+        self.parse(key, |s|
+            match s.to_lowercase().as_str(){
+                "true" | "1" | "yes" | "on" => Ok(true),
+                "false" | "0" | "no" | "off" => Ok(false),
+                other => Err(())
+            }
+        )
+    }
 
     fn parse_i32(&mut self, key: &'static str) -> Option<i32>{
         self.parse(key, |s| s.parse::<i32>() )
     }
+    fn parse_f64(&mut self, key: &'static str) -> Option<f64>{
+        self.parse(key, |s| s.parse::<f64>() )
+    }
 
-    fn parse_fit_mode(&mut self, key: &'static str) -> Option<FitMode>{
+
+    fn parse_subsampling(&mut self, key: &'static str) -> Option<i32>{
+        self.parse(key, |s|
+            s.parse::<i32>().map_err(|e| ()).and_then(|v|
+                match v {
+                    411 | 420 | 444 | 422 => Ok(v),
+                    _ => Err(())
+                }
+            )
+        )
+    }
+
+    fn parse_rotate(&mut self, key: &'static str) -> Option<i32>{
+        self.warning_parse(key, |s|
+
+            match s.parse::<f32>(){
+                Ok(value) => {
+                    let result = ((((value / 90f32).round() % 4f32) as i32 + 4) % 4) * 90;
+                    if value % 90f32 > 0.1f32{
+                        Ok((result, Some(ParseWarning::ValueInvalid((key, s.to_owned()))), false))
+                    }else {
+                        Ok((result, None, true))
+                    }
+                }
+                Err(e) => Err(e)
+            }
+
+        )
+    }
+
+    fn parse_fit_mode(&mut self, key: &'static str) -> Option<FitModeStrings>{
         self.parse(key, |value| {
-            for (k, v) in FitMode::iter_variant_names().zip(FitMode::iter_variants()) {
+            for (k, v) in FitModeStrings::iter_variant_names().zip(FitModeStrings::iter_variants()) {
                 if k.eq_ignore_ascii_case(value) {
                     return Ok(v)
                 }
@@ -268,6 +392,83 @@ impl<'a> Parser<'a>{
             Err(())
         })
     }
+
+    fn parse_argb(a :&str, r: &str, g: &str, b: &str) -> Result<u32,std::num::ParseIntError>{
+        [a,r,g,b].iter().map(|s|{
+            match s.len() {
+                0 => Ok(255),
+                1 => u8::from_str_radix(s, 16).map(|v| (v << 4) | v),
+                2 => u8::from_str_radix(s, 16),
+                _ => { panic! {"segments may be zero to two characters, but no more"}; }
+            }.map(|v| v as u32)
+        }).fold(Ok(0u32), |acc, item| {
+            if let Ok(argb) = acc{
+                if let Ok(v) = item {
+                    Ok(argb.checked_shl(8).expect("4 8-bit shifts cannot overflow u32 when starting with zero") | v)
+                }else{
+                    item
+                }
+            }else{
+                acc
+            }
+        })
+    }
+
+
+    /// #AARRGGBB #RRGGBB #RGB #ARGB named - with and without leading #, case insensitive
+    fn parse_color_srgb(&mut self, key: &'static str) -> Option<u32>{
+        self.parse(key, |value| {
+            let value = match &value[0..1] { "#" => &value[1..], _ => &value};
+            let u32_result = u32::from_str_radix(value, 16);
+            if u32_result.is_ok(){
+                let why = "Any substring of a valid hexadecimal string should also be a valid hexadecimal string";
+                match value.len(){
+                    3 => Ok(Self::parse_argb("", &value[0..1], &value[1..2], &value[2..3]).expect(why)),
+                    4 => Ok(Self::parse_argb(&value[0..1], &value[1..2], &value[2..3], &value[3..4]).expect(why)),
+                    6 => Ok(Self::parse_argb("", &value[0..2], &value[2..4], &value[4..6]).expect(why)),
+                    8 => Ok(Self::parse_argb(&value[0..2], &value[2..4], &value[4..6], &value[6..8]).expect(why)),
+                    _ => Err(ParseColorError::FormatIncorrect("CSS Colors must be in the form [#]RGB, [#]ARGB, [#]AARRGGBB, or [#]RRGGBB, or be a named CSS color. "))
+                }
+            } else {
+                match COLORS.get(value.to_lowercase().as_str()){
+                    Some(v) => Ok(*v),
+                    None => Err(ParseColorError::ColorNotRecognized(u32_result.unwrap_err()))
+                }
+            }
+        })
+    }
+
+    fn parse_anchor(&mut self, key: &'static str) -> Option<(Anchor1D,Anchor1D)> {
+        self.parse(key, |value| {
+            match value.to_lowercase().as_str() {
+                "topleft" => Ok((Anchor1D::Near, Anchor1D::Near)),
+                "topcenter" => Ok((Anchor1D::Center, Anchor1D::Near)),
+                "topright" => Ok((Anchor1D::Far, Anchor1D::Near)),
+                "middleleft" => Ok((Anchor1D::Near, Anchor1D::Center)),
+                "middlecenter" => Ok((Anchor1D::Center, Anchor1D::Center)),
+                "middleright" => Ok((Anchor1D::Far, Anchor1D::Center)),
+                "bottomleft" => Ok((Anchor1D::Near, Anchor1D::Far)),
+                "bottomcenter" => Ok((Anchor1D::Center, Anchor1D::Far)),
+                "bottomright" => Ok((Anchor1D::Far, Anchor1D::Far)),
+                _ => Err(())
+            }
+        })
+    }
+
+}
+
+
+
+#[derive(Debug,Clone,PartialEq)]
+enum ParseColorError{
+    ColorNotRecognized(std::num::ParseIntError),
+    FormatIncorrect(&'static str)
+}
+
+#[derive(Debug,Clone,PartialEq)]
+enum ParseCropError{
+    InvalidNumber(std::num::ParseFloatError),
+    InvalidNumberOfValues(&'static str)
 }
 
 impl OutputFormatStrings{
@@ -290,6 +491,21 @@ impl FlipStrings{
          }
     }
 }
+impl FitModeStrings{
+    pub fn clean(&self) -> Option<FitMode>{
+        match *self{
+            FitModeStrings::None => None,
+            FitModeStrings::Max => Some(FitMode::Max),
+            FitModeStrings::Pad => Some(FitMode::Pad),
+            FitModeStrings::Crop => Some(FitMode::Crop),
+            FitModeStrings::Carve => Some(FitMode::Stretch),
+            FitModeStrings::Stretch => Some(FitMode::Stretch)
+        }
+    }
+}
+
+
+
 
 impl ScaleModeStrings{
     pub fn clean(&self) -> ScaleMode{
@@ -302,6 +518,20 @@ impl ScaleModeStrings{
     }
 }
 
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
+/// How to resolve aspect ratio differences between the requested size and the original image's size.
+pub enum FitMode {
+    /// Width and height are considered maximum values. The resulting image may be smaller to maintain its aspect ratio. The image may also be smaller if the source image is smaller
+    Max,
+    /// Width and height are considered exact values - padding is used if there is an aspect ratio difference. Use &amp;anchor to override the MiddleCenter default.
+    Pad,
+    /// Width and height are considered exact values - cropping is used if there is an aspect ratio difference. Use &amp;anchor to override the MiddleCenter default.
+    Crop,
+    /// Width and height are considered exact values - if there is an aspect ratio difference, the image is stretched.
+    Stretch,
+}
+
+
 #[derive(Default,Debug,Clone,Copy,PartialEq)]
 pub struct Instructions{
     pub w: Option<i32>,
@@ -313,6 +543,25 @@ pub struct Instructions{
     pub format: Option<OutputFormat>,
     pub flip: Option<(bool,bool)>,
     pub sflip: Option<(bool,bool)>,
+    pub srotate: Option<i32>,
+    pub rotate: Option<i32>,
+    pub autorotate: Option<bool>,
+    pub ignoreicc: Option<bool>,
+    pub crop: Option<[f64;4]>,
+    pub cropxunits: Option<f64>,
+    pub cropyunits: Option<f64>,
+    pub zoom: Option<f64>,
+    pub quality: Option<i32>,
+    pub f_sharpen: Option<f64>,
+    pub bgcolor_srgb: Option<u32>,
+    pub jpeg_subsampling: Option<i32>,
+    pub anchor: Option<(Anchor1D, Anchor1D)>
+}
+#[derive(Debug,Copy, Clone,PartialEq)]
+pub enum Anchor1D{
+    Near,
+    Center,
+    Far
 }
 
 #[derive(Debug,Copy, Clone,PartialEq)]
@@ -335,99 +584,276 @@ pub enum ScaleMode {
     UpscaleCanvas
 }
 
+fn debug_diff<T>(a : &T, b: &T) where T: std::fmt::Debug, T: PartialEq{
+    if a != b {
+        let text1 = format!("{:#?}", a);
+        let text2 = format!("{:#?}", b);
+        use ::difference::{diff, Difference};
+
+        // compare both texts, the third parameter defines the split level
+        let (_dist, changeset) = diff(&text1, &text2, "\n");
+
+        let mut t = ::std::io::stderr();
+
+        for i in 0..changeset.len() {
+            match changeset[i] {
+                Difference::Same(ref x) => {
+                    writeln!(t, " {}", x);
+                },
+                Difference::Add(ref x) => {
+                    writeln!(t, "+{}", x);
+                },
+                Difference::Rem(ref x) => {
+                    writeln!(t, "-{}", x);
+                }
+            }
+        }
+    }
+}
+#[test]
+fn test_url_parsing() {
+    fn t(rel_url: &str, expected: Instructions, expected_warnings: Vec<ParseWarning>){
+        let url = format!("http://localhost/image.jpg?{}", rel_url);
+        let a = Url::from_str(&url).unwrap();
+        let (i, warns) = parse_url(&a);
+        if i.bgcolor_srgb != expected.bgcolor_srgb && i.bgcolor_srgb.is_some() && expected.bgcolor_srgb.is_some(){
+            let _ = write!(::std::io::stderr(), "Expected bgcolor={:08X}, actual={:08X}\n", expected.bgcolor_srgb.unwrap(), i.bgcolor_srgb.unwrap());
+        }
+        debug_diff(&i, &expected);
+        assert_eq!(i, expected);
+        assert_eq!(warns, expected_warnings);
+    }
+    fn expect_warning(key: &'static str, value: &str, expected: Instructions){
+        let mut expect_warnings = Vec::new();
+        expect_warnings.push(ParseWarning::ValueInvalid((key, value.to_owned())));
+        let url = format!("{}={}", key, value);
+        t(&url, expected, expect_warnings)
+    }
+
+    t("w=200&h=300&mode=max", Instructions { w: Some(200), h: Some(300), mode: Some(FitMode::Max), ..Default::default() }, vec![]);
+    t("w=200&h=300&mode=crop", Instructions { w: Some(200), h: Some(300), mode: Some(FitMode::Crop), ..Default::default() }, vec![]);
+    t("format=jpeg", Instructions { format: Some(OutputFormat::Jpeg), ..Default::default() }, vec![]);
+    t("format=png", Instructions { format: Some(OutputFormat::Png), ..Default::default() }, vec![]);
+    t("maxwidth=1&maxheight=3", Instructions { legacy_max_height: Some(3), legacy_max_width: Some(1), ..Default::default() }, vec![]);
+    t("scale=down", Instructions {scale: Some(ScaleMode::DownscaleOnly), ..Default::default() }, vec![]);
+    t("width=20&Height=300&scale=Canvas", Instructions { w: Some(20), h: Some(300), scale: Some(ScaleMode::UpscaleCanvas), ..Default::default() }, vec![]);
+    t("sflip=XY&flip=h", Instructions { sflip: Some((true,true)), flip: Some((true,false)), ..Default::default() }, vec![]);
+    t("sflip=None&flip=V", Instructions { sflip: Some((false,false)), flip: Some((false,true)), ..Default::default() }, vec![]);
+    t("sflip=None&flip=V", Instructions { sflip: Some((false,false)), flip: Some((false,true)), ..Default::default() }, vec![]);
+    t("srotate=360&rotate=-90", Instructions { srotate: Some(0), rotate: Some(270), ..Default::default() }, vec![]);
+    t("srotate=-20.922222&rotate=-46.2", Instructions { srotate: Some(0), rotate: Some(270), ..Default::default() }, vec![]);
+    t("autorotate=false&ignoreicc=true", Instructions { autorotate: Some(false), ignoreicc: Some(true) , ..Default::default() }, vec![]);
+    t("mode=max&stretch=fill", Instructions { mode: Some(FitMode::Max), ..Default::default() }, vec![]);
+    t("stretch=fill", Instructions { mode: Some(FitMode::Stretch), ..Default::default() }, vec![]);
+    t("crop=auto", Instructions { mode: Some(FitMode::Crop), ..Default::default() }, vec![]);
+    t("thumbnail=exif", Instructions { format: Some(OutputFormat::Jpeg), ..Default::default() }, vec![]);
+    t("cropxunits=2.3&cropyunits=100", Instructions { cropxunits: Some(2.3f64), cropyunits: Some(100f64), ..Default::default() }, vec![]);
+    t("quality=85", Instructions { quality: Some(85), ..Default::default() }, vec![]);
+    t("zoom=0.02", Instructions { zoom: Some(0.02f64), ..Default::default() }, vec![]);
 
 
+    t("bgcolor=red", Instructions { bgcolor_srgb: Some(0xffff0000), ..Default::default() }, vec![]);
+    t("bgcolor=f00", Instructions { bgcolor_srgb: Some(0xffff0000), ..Default::default() }, vec![]);
+    t("bgcolor=ff00", Instructions { bgcolor_srgb: Some(0xffff0000), ..Default::default() }, vec![]);
+    t("bgcolor=ff0000", Instructions { bgcolor_srgb: Some(0xffff0000), ..Default::default() }, vec![]);
+    t("bgcolor=ffff0000", Instructions { bgcolor_srgb: Some(0xffff0000), ..Default::default() }, vec![]);
 
-///// Anchor location. Convertible to System.Drawing.ContentAlignment by casting.
-//[Flags]
-//pub enum AnchorLocation {
-///// Content is vertically aligned at the top, and horizontally aligned on the left.
-//TopLeft = 1,
-//
-///// Content is vertically aligned at the top, and horizontally aligned at the center.
-//TopCenter = 2,
-//
-///// Content is vertically aligned at the top, and horizontally aligned on the right.
-//TopRight = 4,
-//
-///// Content is vertically aligned in the middle, and horizontally aligned onthe left.
-//MiddleLeft = 16,
-//
-///// Content is vertically aligned in the middle, and horizontally aligned at the center.
-//MiddleCenter = 32,
-//
-///// Content is vertically aligned in the middle, and horizontally aligned on  the right.
-//MiddleRight = 64,
-//
-///// Content is vertically aligned at the bottom, and horizontally aligned on the left.
-//BottomLeft = 256,
-//
-///// Content is vertically aligned at the bottom, and horizontally aligned at  the center.
-//BottomCenter = 512,
-//
-///// Content is vertically aligned at the bottom, and horizontally aligned on the right.
-//BottomRight = 1024,
-//}
-//
+    t("bgcolor=darkseagreen", Instructions { bgcolor_srgb: Some(0xff8fbc8b), ..Default::default() }, vec![]);
+    t("bgcolor=8fbc8b", Instructions { bgcolor_srgb: Some(0xff8fbc8b), ..Default::default() }, vec![]);
+    t("bgcolor=ff8fbc8b", Instructions { bgcolor_srgb: Some(0xff8fbc8b), ..Default::default() }, vec![]);
 
-//
-//
-//
-//[Obsolete("Obsolete. Use Mode=Crop to specify automatic cropping. Set CropTopLeft and CropTopRight to specify custom coordinates. Will be removed in V3.5 or V4.")]
-//pub enum CropMode {
-///// Default. No cropping - uses letterboxing if strecth=proportionally and both width and height are specified.
-//None,
-///// [Deprecated] Use Mode=Crop. Minimally crops to preserve aspect ratio if stretch=proportionally.
-//[Obsolete("Use Mode=Crop instead.")]
-//Auto,
-///// Crops using the custom crop rectangle. Letterboxes if stretch=proportionally and both widht and height are specified.
-//Custom
-//}
-//
-//[Obsolete("Obsolete. Specify 0 for a crop unit to indicate source pixel coordinates.  Will be removed in V3.5 or V4.")]
-//pub enum CropUnits {
-///// Indicates the crop units are pixels on the original image.
-//SourcePixels,
-///// Indicates a custom range is being specified for the values. Base 0.
-//Custom
-//
-//
-//}
-//
-//
-///// Modes of converting the image to Grayscale. GrayscaleMode.Y usually produces the best resuts
-//pub enum GrayscaleMode {
-//[EnumString("false")]
-//None = 0,
-///// The reccomended value. Y and NTSC are identical.
-//[EnumString("true")]
-//Y = 1,
-//
-//NTSC = 1,
-//RY = 2,
-//BT709= 3,
-//
-///// Red, green, and blue are averaged to get the grayscale image. Usually produces poor results compared to other algorithms.
-//Flat = 4
-//}
-///// The Jpeg subsampling mode to use. Requires FreeImageEncoder, FreeImageBuilder, WicEncoder, or WicBuilder.
-//pub enum JpegSubsamplingMode {
-///// The encoder's default subsampling method will be used.
-//Default = 0,
-///// 411 Subsampling - Only supported by FreeImageBuilder and FreeImageEncoder. Poor quality.
-//[EnumString("411",true)]
-//Y4Cb1Cr1 = 4,
-///// 420 Subsampling - Commonly used in H262 and H264. Low quality compared to 422 and 444.
-//[EnumString("420",true)]
-//Y4Cb2Cr0 = 8,
-///// 422 Subsampling - Great balance of quality and file size, commonly used in high-end video formats.
-//[EnumString("422",true)]
-//Y4Cb2Cr2 = 16,
-///// 444 subsampling - Highest quality, largest file size.
-//[EnumString("444",true)]
-//HighestQuality =32,
-///// 444 subsampling - Highest quality, largest file size.
-//[EnumString("444",true)]
-//Y4Cb4Cr4 = 32
-//}
+    t("bgcolor=lightslategray", Instructions { bgcolor_srgb: Some(0xff778899), ..Default::default() }, vec![]);
+    t("bgcolor=789", Instructions { bgcolor_srgb: Some(0xff778899), ..Default::default() }, vec![]);
+    t("bgcolor=f789", Instructions { bgcolor_srgb: Some(0xff778899), ..Default::default() }, vec![]);
+    t("bgcolor=778899", Instructions { bgcolor_srgb: Some(0xff778899), ..Default::default() }, vec![]);
+    t("bgcolor=53778899", Instructions { bgcolor_srgb: Some(0x53778899), ..Default::default() }, vec![]);
 
+    t("bgcolor=white", Instructions { bgcolor_srgb: Some(0xffffffff), ..Default::default() }, vec![]);
+    t("bgcolor=fff", Instructions { bgcolor_srgb: Some(0xffffffff), ..Default::default() }, vec![]);
+    t("bgcolor=ffff", Instructions { bgcolor_srgb: Some(0xffffffff), ..Default::default() }, vec![]);
+    t("bgcolor=ffffff", Instructions { bgcolor_srgb: Some(0xffffffff), ..Default::default() }, vec![]);
+    t("bgcolor=ffffffff", Instructions { bgcolor_srgb: Some(0xffffffff), ..Default::default() }, vec![]);
+
+    t("crop=0,0,40,50", Instructions { crop: Some([0f64,0f64,40f64,50f64]), ..Default::default() }, vec![]);
+    t("crop= 0, 0,40 ,  50", Instructions { crop: Some([0f64,0f64,40f64,50f64]), ..Default::default() }, vec![]);
+
+
+    expect_warning("crop","(0,3,80, 90)",  Instructions { crop: Some([0f64,3f64,80f64,90f64]), ..Default::default() });
+
+    expect_warning("crop","(0,3,happy, 90)",  Instructions { crop: Some([0f64,3f64,0f64,90f64]), ..Default::default() });
+
+    expect_warning("crop","(  a0, 3, happy, 90)",  Instructions { crop: Some([0f64,3f64,0f64,90f64]), ..Default::default() });
+
+}
+
+macro_rules! map(
+    { $($key:expr => $value:expr),+ } => {
+        {
+            let mut m = ::std::collections::HashMap::new();
+            $(
+                m.insert($key, $value);
+            )+
+            m
+        }
+     };
+);
+
+lazy_static!{
+    static ref COLORS: HashMap<&'static str, u32> = create_css_color_map();
+}
+
+fn create_css_color_map() -> HashMap<&'static str, u32> {
+    map! {
+        "transparent" => 0x00ffffff,
+        "aliceblue" => 0xfff0f8ff,
+        "antiquewhite" => 0xfffaebd7,
+        "aqua" => 0xff00ffff,
+        "aquamarine" => 0xff7fffd4,
+        "azure" => 0xfff0ffff,
+        "beige" => 0xfff5f5dc,
+        "bisque" => 0xffffe4c4,
+        "black" => 0xff000000,
+        "blanchedalmond" => 0xffffebcd,
+        "blue" => 0xff0000ff,
+        "blueviolet" => 0xff8a2be2,
+        "brown" => 0xffa52a2a,
+        "burlywood" => 0xffdeb887,
+        "cadetblue" => 0xff5f9ea0,
+        "chartreuse" => 0xff7fff00,
+        "chocolate" => 0xffd2691e,
+        "coral" => 0xffff7f50,
+        "cornflowerblue" => 0xff6495ed,
+        "cornsilk" => 0xfffff8dc,
+        "crimson" => 0xffdc143c,
+        "cyan" => 0xff00ffff,
+        "darkblue" => 0xff00008b,
+        "darkcyan" => 0xff008b8b,
+        "darkgoldenrod" => 0xffb8860b,
+        "darkgray" => 0xffa9a9a9,
+        "darkgrey" => 0xffa9a9a9,
+        "darkgreen" => 0xff006400,
+        "darkkhaki" => 0xffbdb76b,
+        "darkmagenta" => 0xff8b008b,
+        "darkolivegreen" => 0xff556b2f,
+        "darkorange" => 0xffff8c00,
+        "darkorchid" => 0xff9932cc,
+        "darkred" => 0xff8b0000,
+        "darksalmon" => 0xffe9967a,
+        "darkseagreen" => 0xff8fbc8b,
+        "darkslateblue" => 0xff483d8b,
+        "darkslategray" => 0xff2f4f4f,
+        "darkslategrey" => 0xff2f4f4f,
+        "darkturquoise" => 0xff00ced1,
+        "darkviolet" => 0xff9400d3,
+        "deeppink" => 0xffff1493,
+        "deepskyblue" => 0xff00bfff,
+        "dimgray" => 0xff696969,
+        "dimgrey" => 0xff696969,
+        "dodgerblue" => 0xff1e90ff,
+        "firebrick" => 0xffb22222,
+        "floralwhite" => 0xfffffaf0,
+        "forestgreen" => 0xff228b22,
+        "fuchsia" => 0xffff00ff,
+        "gainsboro" => 0xffdcdcdc,
+        "ghostwhite" => 0xfff8f8ff,
+        "gold" => 0xffffd700,
+        "goldenrod" => 0xffdaa520,
+        "gray" => 0xff808080,
+        "grey" => 0xff808080,
+        "green" => 0xff008000,
+        "greenyellow" => 0xffadff2f,
+        "honeydew" => 0xfff0fff0,
+        "hotpink" => 0xffff69b4,
+        "indianred" => 0xffcd5c5c,
+        "indigo" => 0xff4b0082,
+        "ivory" => 0xfffffff0,
+        "khaki" => 0xfff0e68c,
+        "lavender" => 0xffe6e6fa,
+        "lavenderblush" => 0xfffff0f5,
+        "lawngreen" => 0xff7cfc00,
+        "lemonchiffon" => 0xfffffacd,
+        "lightblue" => 0xffadd8e6,
+        "lightcoral" => 0xfff08080,
+        "lightcyan" => 0xffe0ffff,
+        "lightgoldenrodyellow" => 0xfffafad2,
+        "lightgray" => 0xffd3d3d3,
+        "lightgrey" => 0xffd3d3d3,
+        "lightgreen" => 0xff90ee90,
+        "lightpink" => 0xffffb6c1,
+        "lightsalmon" => 0xffffa07a,
+        "lightseagreen" => 0xff20b2aa,
+        "lightskyblue" => 0xff87cefa,
+        "lightslategray" => 0xff778899,
+        "lightslategrey" => 0xff778899,
+        "lightslategrey" => 0xff778899,
+        "lightsteelblue" => 0xffb0c4de,
+        "lightyellow" => 0xffffffe0,
+        "lime" => 0xff00ff00,
+        "limegreen" => 0xff32cd32,
+        "linen" => 0xfffaf0e6,
+        "magenta" => 0xffff00ff,
+        "maroon" => 0xff800000,
+        "mediumaquamarine" => 0xff66cdaa,
+        "mediumblue" => 0xff0000cd,
+        "mediumorchid" => 0xffba55d3,
+        "mediumpurple" => 0xff9370db,
+        "mediumseagreen" => 0xff3cb371,
+        "mediumslateblue" => 0xff7b68ee,
+        "mediumspringgreen" => 0xff00fa9a,
+        "mediumturquoise" => 0xff48d1cc,
+        "mediumvioletred" => 0xffc71585,
+        "midnightblue" => 0xff191970,
+        "mintcream" => 0xfff5fffa,
+        "mistyrose" => 0xffffe4e1,
+        "moccasin" => 0xffffe4b5,
+        "navajowhite" => 0xffffdead,
+        "navy" => 0xff000080,
+        "oldlace" => 0xfffdf5e6,
+        "olive" => 0xff808000,
+        "olivedrab" => 0xff6b8e23,
+        "orange" => 0xffffa500,
+        "orangered" => 0xffff4500,
+        "orchid" => 0xffda70d6,
+        "palegoldenrod" => 0xffeee8aa,
+        "palegreen" => 0xff98fb98,
+        "paleturquoise" => 0xffafeeee,
+        "palevioletred" => 0xffdb7093,
+        "papayawhip" => 0xffffefd5,
+        "peachpuff" => 0xffffdab9,
+        "peru" => 0xffcd853f,
+        "pink" => 0xffffc0cb,
+        "plum" => 0xffdda0dd,
+        "powderblue" => 0xffb0e0e6,
+        "purple" => 0xff800080,
+        "red" => 0xffff0000,
+        "rosybrown" => 0xffbc8f8f,
+        "royalblue" => 0xff4169e1,
+        "saddlebrown" => 0xff8b4513,
+        "salmon" => 0xfffa8072,
+        "sandybrown" => 0xfff4a460,
+        "seagreen" => 0xff2e8b57,
+        "seashell" => 0xfffff5ee,
+        "sienna" => 0xffa0522d,
+        "silver" => 0xffc0c0c0,
+        "skyblue" => 0xff87ceeb,
+        "slateblue" => 0xff6a5acd,
+        "slategray" => 0xff708090,
+        "slategrey" => 0xff708090,
+        "slategrey" => 0xff708090,
+        "snow" => 0xfffffafa,
+        "springgreen" => 0xff00ff7f,
+        "steelblue" => 0xff4682b4,
+        "tan" => 0xffd2b48c,
+        "teal" => 0xff008080,
+        "thistle" => 0xffd8bfd8,
+        "tomato" => 0xffff6347,
+        "turquoise" => 0xff40e0d0,
+        "violet" => 0xffee82ee,
+        "wheat" => 0xfff5deb3,
+        "white" => 0xffffffff,
+        "whitesmoke" => 0xfff5f5f5,
+        "yellow" => 0xffffff00,
+        "yellowgreen" => 0xff9acd32,
+        "rebeccapurple"	=> 0xff663399
+       }
+}

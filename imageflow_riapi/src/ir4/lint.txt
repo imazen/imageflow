@@ -1,0 +1,9 @@
+cropxunits, cropyunits !=0, > 0,
+
+'stretch' key not used
+'crop=auto' not used
+scale=up not used.
+
+don't mix width + maxheight, or height + maxwidth
+don't have both width and maxwidth present
+don't have both height and maxheight present

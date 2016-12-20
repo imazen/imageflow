@@ -90,7 +90,7 @@ fn strategy_to_steps(s: Strategy) -> Option<Vec<Step>> {
         Strategy::CropOrAspect => { steps().skip_if(Cond::Either(Ordering::Less)).scale_to_outer().crop().new_seq().crop_aspect() },
 
 
-        //I think we need multiple parts
+        //I think we need multiple parts, as we don't offer a way to compare against the obox
         Strategy::CropDownscaleOnly => { steps().skip_if(Cond::Either(Ordering::Less)).scale_to_outer().crop().new_seq().skip_unless(Cond::Larger1DSmaller1D).crop_intersection() },
         //        Strategy::CropCarefulDownscale => StepSet::AnyLarger(vec![Step::ScaleToOuter,
         //        Step::PartialCropAspect, Step::ScaleToInner]),
