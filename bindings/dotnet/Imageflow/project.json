@@ -6,6 +6,16 @@
   "copyright": "Copyright 2016 Imazen",
   "dependencies":
   {
+    "EWSoftware.SHFB":
+    {
+      "version": "2016.9.17",
+      "type": "build"
+    },
+    "EWSoftware.SHFB.NETCore":
+    {
+      "version": "4.5.1",
+      "type": "build"
+    },
     "System.Diagnostics.Tools":
     {
       "version": "4.3.0",
@@ -46,5 +56,12 @@
   "buildOptions":
   {
     "xmlDoc": true
+  },
+  "scripts":
+  {
+    "precompile":
+    [
+      "dotnet restore --packages %project:Directory%\\obj\\packages"
+    ]
   }
 }
