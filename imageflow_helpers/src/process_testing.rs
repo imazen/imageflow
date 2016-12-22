@@ -1,6 +1,6 @@
 use ::std;
 use ::preludes::from_std::*;
-use std::process::{Command, Output, Stdio,ExitStatus};
+use std::process::{Command, Output, Stdio};
 use super::timeywimey::UTC;
 
 
@@ -170,20 +170,28 @@ impl ProcTestContext {
 
     pub fn copy_ancestral_file_here<P:AsRef<Path>>(&self, filename: P) -> std::result::Result<(), String>{
         let mut dir = self.working_dir.canonicalize().map_err(|e| format!("{:?}", e))?;
-        loop{
+        let to_path = self.working_dir.join(filename.as_ref());
+        let mut last_err = None;
+        while !to_path.exists() {
             let potential = dir.join(filename.as_ref());
-            if !potential.exists(){
-                dir = match dir.parent(){
-                    Some(v) => v.to_owned(),
-                    None => { break; }
-                };
-            }else{
-                let to_path = self.working_dir.join(filename.as_ref());
-                std::fs::copy(potential, to_path).unwrap();
-                return Ok(());
+            if potential.exists() {
+                match std::fs::copy(potential.as_path(), to_path.as_path()) {
+                    Ok(_) => {
+                        return Ok(());
+                    },
+                    Err(e) => {
+                        //Try another ancestor if the copy failed.
+                        last_err = Some(e);
+                    }
+                }
+            }
+
+            dir = match dir.parent() {
+                Some(v) => v.to_owned(),
+                None => { break; }
             }
         }
-        Err(format!("Failed to locate {:?} in ancestors of {:?}", filename.as_ref(), self.working_dir))
+        Err(format!("Failed to locate {:?} in ancestors of {:?}. err({:?})", filename.as_ref(), self.working_dir, last_err))
     }
 
     pub fn create_valgrind_suppressions(&self) -> std::result::Result<(), String>{

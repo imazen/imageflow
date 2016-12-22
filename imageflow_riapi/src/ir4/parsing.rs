@@ -316,7 +316,7 @@ impl<'a> Parser<'a>{
 
     fn parse_subsampling(&mut self, key: &'static str) -> Option<i32>{
         self.parse(key, |s|
-            s.parse::<i32>().map_err(|e| ()).and_then(|v|
+            s.parse::<i32>().map_err(|_| ()).and_then(|v|
                 match v {
                     411 | 420 | 444 | 422 => Ok(v),
                     _ => Err(())
