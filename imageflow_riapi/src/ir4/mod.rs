@@ -47,21 +47,15 @@ impl Ir4Layout{
     fn get_ideal_target_size(&self, source: AspectRatio) -> sizing::Result<AspectRatio>{
 
 
-        let (w_maybe,h_maybe) = self.get_wh_from_all(source)?;
+        let (w,h) = match self.get_wh_from_all(source)? {
+            (Some(w), Some(h)) => (w,h),
+            (None, None) => (source.w, source.h),
+            (Some(w), None) => (w, source.height_for(w, None)?),
+            (None, Some(h)) => (source.width_for(h, None)?,h)
+        };
 
         //if all dimensions are absent, support zoom=x + scale=canvas | scale=both
         // and exit
-        let (w, h) = if w_maybe.is_none() && h_maybe.is_none(){
-            (source.w, source.h)
-        }else if let Some(w) = w_maybe {
-            (w, source.height_for(w, None)?)
-        }else if let Some(h) = h_maybe {
-            (source.width_for(h, None)?,h)
-        }else{
-            panic!("");
-        };
-
-
         //No more than 1/80000 or 80000/1
         let zoom = Self::float_max(0.00008f64, Self::float_min(self.i.zoom.unwrap_or(1f64), 80000f64).unwrap()).unwrap();
 
@@ -227,6 +221,7 @@ impl Ir4Layout{
         // ======== This is where we do the sizing and constraint evaluation \/
         let layout = sizing::Layout::create(initial_size, target).execute_all(&constraints, &cropper)?;
 
+        //println!("executed constraints {:?} to get layout {:?} from target {:?}", &constraints, &layout, &target);
         let canvas = layout.get_box(BoxTarget::CurrentCanvas);
         let image = layout.get_box(BoxTarget::CurrentImage);
         let new_crop = layout.get_source_crop();
