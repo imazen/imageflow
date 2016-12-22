@@ -244,6 +244,12 @@ fn respond_using<F, F2>(bytes_provider: F2, framewise_generator: F)
 
             Ok(Response::with((mime, status::Ok, output.bytes)))
         }
+        Err(ServerError::UpstreamResponseError(hyper::status::StatusCode::NotFound)) => {
+            let bytes = format!("Remote file not found (upstream server responded with 404)").into_bytes();
+            Ok(Response::with((Mime::from_str("text/plain").unwrap(),
+                               status::NotFound,
+                               bytes)))
+        }
         Err(e) => {
             let bytes = format!("{:?}", e).into_bytes();
             Ok(Response::with((Mime::from_str("text/plain").unwrap(),
@@ -318,14 +324,18 @@ impl Ir4Local{
         let shared = req.get::<persistent::Read<SharedData>>().unwrap();
         //Ensure the combined path is canonical.
         let original = local_path.join(path);
-        let canonical = original.canonicalize().unwrap(); //TODO: FIX - 404 source - should not panic server
-        if original == canonical{
-            ir4_local_respond(&shared, canonical.as_path(), move | info: s::ImageInfo| {
-                ir4_framewise(info, &url)
-            })
-        }else{
-            panic!("");
+        if let Ok(canonical) = original.canonicalize(){
+            if canonical.exists() && original == canonical{
+                return ir4_local_respond(&shared, canonical.as_path(), move | info: s::ImageInfo| {
+                    ir4_framewise(info, &url)
+                });
+            }
         }
+        let bytes = format!("File not found").into_bytes();
+        Ok(Response::with((Mime::from_str("text/plain").unwrap(),
+                           status::NotFound,
+                           bytes)))
+
     }
 }
 struct Ir4Http{

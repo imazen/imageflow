@@ -32,19 +32,64 @@ fn get_next_port() -> u16{
     NEXT_PORT.compare_and_swap(0, 36203, Ordering::SeqCst);
     NEXT_PORT.fetch_add(1, Ordering::SeqCst)
 }
-fn localhost_port_speaks_http(port: u16) -> bool{
-    localhost_hello(port).is_ok()
+
+struct ServerInstance{
+    port: u16,
 }
 
-fn localhost_hello(port: u16) -> std::result::Result<hyper::status::StatusCode, FetchError> {
-    let url = format!("http://localhost:{}", port);
-    ::imageflow_helpers::fetching::get_status_code_for(&url)
+type CallbackResult = std::result::Result<(), ::imageflow_helpers::fetching::FetchError>;
+impl ServerInstance{
+
+    fn speaks_http(&self) -> bool{
+        self.hello().is_ok()
+    }
+
+    fn hello(&self) -> std::result::Result<hyper::status::StatusCode, FetchError> {
+        get_status_code_for(&self.url_for("/hello/are/you/running?"))
+    }
+
+    fn url_for(&self, rel_path: &str) -> String{
+        format!("http://localhost:{}{}", self.port,rel_path)
+    }
+
+    fn get_status(&self, rel_path: &str) -> std::result::Result<hyper::status::StatusCode, FetchError> {
+        get_status_code_for(&self.url_for(rel_path))
+    }
+
+
+    fn request_stop(&self) -> std::result::Result<hyper::status::StatusCode, FetchError> {
+        get_status_code_for(&self.url_for("/test/shutdown"))
+    }
+
+
+
+    fn run<F>(c: &ProcTestContext, args: Vec<&str>, callback: F) -> (ProcOutput, CallbackResult)
+    where F: Fn(&ServerInstance) -> CallbackResult {
+        let instance = ServerInstance {
+            port: get_next_port()
+        };
+        // NOTE --bind=localhost::{} (two colons) causes a generic "error:",exit code 1, and no other output. This is bad UX.
+        let test_arg = "--integration-test";
+        let port_arg = format!("--port={}", instance.port);
+        let bind_arg = format!("--bind=localhost:{}", instance.port);
+        let mut all_args = args.into_iter().map(|s| if s.starts_with("--bind") { &bind_arg } else { s }).collect::<Vec<&str>>();
+        all_args.insert(0, test_arg);
+        all_args.insert(0, &port_arg);
+
+        c.execute_callback(all_args, false,
+                           |child: &mut std::process::Child| -> std::result::Result<(), ::imageflow_helpers::fetching::FetchError> {
+                               // Server may not be running
+                               instance.hello()?;
+
+                               callback(&instance);
+
+                               let _ = instance.request_stop();
+                               Ok(())
+                           })
+        //po.expect_status_code(Some(0));
+    }
 }
 
-fn localhost_stop(port: u16) -> std::result::Result<hyper::status::StatusCode, FetchError> {
-    let url = format!("http://localhost:{}/test/shutdown", port);
-    ::imageflow_helpers::fetching::get_status_code_for(&url)
-}
 
 // ports 36,000 to 39,999 seem the safest.
 #[test]
@@ -66,25 +111,14 @@ fn run_server_test_i4(){
 
     }
 
-    let test_arg = "--integration-test";
-
-
     {
         let c = context.subfolder_context("demo"); //stuck on port 39876
-        let port = get_next_port();
-        let port_arg = format!("--port={}", port);
-        println!("Starting demo server");
-        let (po, callback_result) = c.execute_callback(vec![&port_arg, &test_arg, "demo", "--data-dir=."], false,
-           |child: &mut std::process::Child| -> std::result::Result<(),::imageflow_helpers::fetching::FetchError> {
-               // Server may not be running
-               localhost_hello(port)?;
-               let url = format!("http://localhost:{}/ir4/proxy_unsplash/photo-1422493757035-1e5e03968f95?width=100", port);
-               let response_bytes = ::imageflow_helpers::fetching::fetch_bytes(&url)?;
+        let (po, callback_result) = ServerInstance::run(&c, vec!["demo", "--data-dir=."], | server | {
+            fetch_bytes(&server.url_for("/ir4/proxy_unsplash/photo-1422493757035-1e5e03968f95?width=100"))?;
+            assert_eq!(server.get_status("/ir4/proxy_unsplash/notthere.jpg")?, hyper::status::StatusCode::NotFound);
+            Ok(())
+        });
 
-               let _ = localhost_stop(port);
-
-               Ok(())
-           });
         //po.expect_status_code(Some(0));
 
         callback_result.unwrap();
@@ -92,27 +126,16 @@ fn run_server_test_i4(){
     {
         let c = context.subfolder_context("mount_local"); //stuck on port 39876
         c.create_blank_image_here("eh", 100,100, s::EncoderPreset::libpng32());
-
-        let port = get_next_port();
-        // NOTE --bind=localhost::{} (two colons) causes a generic "error:",exit code 1, and no other output. This is bad UX.
-        let bind_arg = format!("--bind=localhost:{}", port);
-
-        let (po, callback_result) = c.execute_callback(vec![&test_arg, "start", "--data-dir=.", &bind_arg, "--mount=/local/:ir4_local:./"], false,
-                                                       |child: &mut std::process::Child| -> std::result::Result<(),::imageflow_helpers::fetching::FetchError> {
-                                                           // Server may not be running
-                                                           localhost_hello(port)?;
-                                                           let url = format!("http://localhost:{}/local/eh.png?width=100", port);
-                                                           let response_bytes = ::imageflow_helpers::fetching::fetch_bytes(&url)?;
-                                                           let _ = localhost_stop(port);
-                                                           Ok(())
-                                                       });
+        let (po, callback_result) = ServerInstance::run(&c, vec!["start", "--data-dir=.", "--bind=??", "--mount=/local/:ir4_local:./"], | server | {
+            fetch_bytes(&server.url_for("/local/eh.png?width=100"))?;
+            assert_eq!(server.get_status("/local/notthere.jpg")?, hyper::status::StatusCode::NotFound);
+            assert_eq!(server.get_status("/notrouted")?, hyper::status::StatusCode::NotFound);
+            Ok(())
+        });
         //po.expect_status_code(Some(0));
 
         callback_result.unwrap();
     }
-    //Add --stop-after-request=2 to avoid killing the child.
-    //http://unsplash.com/
-
 }
 
 
