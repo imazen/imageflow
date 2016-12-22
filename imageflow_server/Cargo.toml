@@ -14,10 +14,10 @@ iron = "*"
 
 
 time = "*"
-hyper = "*"
+hyper = { version = "*", default-features = false }
 rustc-serialize = "*"
 threadpool = "1.0"
-serde = "*"
+
 serde_json = "*"
 imageflow_core = { path = "../imageflow_core", version = "*" }
 imageflow_types = { path = "../imageflow_types", version = "*" }
@@ -35,7 +35,8 @@ env_logger="*"
 wait-timeout = "0.1"
 bincode="*"
 staticfile="*"
-serde_derive="*"
+serde = "=0.8.17"
+serde_derive="=0.8.17"
 
 [build-dependencies]
 cmake = "0.1.17"

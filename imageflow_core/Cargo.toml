@@ -28,7 +28,8 @@ clippy = "0.0.97"
 imageflow_helpers = { path = "../imageflow_helpers", version = "*" }
 
 [dev-dependencies]
-hyper = "*"
+hyper = { version = "*", default-features = false }
+
 
 
 [build-dependencies]
