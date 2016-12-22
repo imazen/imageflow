@@ -13,3 +13,4 @@ Currently we have 4 mount providers:
 * `imageflow_server start --port 80 --data-dir=./imageflow_data  --mount /js/:static:./js --mount /proxy_asis/:permacache_proxy:http:://remote.com/static/:360`
 * `imageflow_server diagnose --show-compilation-info`
 
+http://localhost:3004/ir4/proxy_unsplash/photo-1422493757035-1e5e03968f95?width=600

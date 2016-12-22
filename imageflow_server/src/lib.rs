@@ -311,7 +311,7 @@ fn execute_using<F, F2>(bytes_provider: F2, framewise_generator: F)
             execute_ns: end_execute - start_execute,
         }))
 }
-header! { (XImageflowPerf, "X-Imageflow_Perf") => [String] }
+header! { (XImageflowPerf, "X-Imageflow-Perf") => [String] }
 
 fn respond_using<F, F2, A>(debug_info: A, bytes_provider: F2, framewise_generator: F)
                         -> IronResult<Response>
@@ -644,6 +644,7 @@ impl MountedEngine {
             "ir4_local" => Some(MountedEngine::Ir4Local),
             "ir4_http" => Some(MountedEngine::Ir4Http),
             "permacache_proxy" => Some(MountedEngine::PermacacheProxy),
+            "permacache_proxy_guess_content_types" => Some(MountedEngine::PermacacheProxyGuessContentTypes),
             "static" => Some(MountedEngine::Static),
             //"ir4_https" => Some(MountedEngine::Ir4Https),
             _ => None
@@ -651,7 +652,7 @@ impl MountedEngine {
     }
 
     pub fn id_values() -> &'static [&'static str] {
-        static ID_VALUES: [&'static str; 4] = ["ir4_local", "ir4_http", "permacache_proxy", "static"/* "ir4_https"*/];
+        static ID_VALUES: [&'static str; 5] = ["ir4_local", "ir4_http", "permacache_proxy", "static", "permacache_proxy_guess_content_types"/* "ir4_https"*/];
 
         &ID_VALUES
     }
