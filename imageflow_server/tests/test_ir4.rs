@@ -78,6 +78,8 @@ impl ServerInstance{
 
         c.execute_callback(all_args, false,
                            |child: &mut std::process::Child| -> std::result::Result<(), ::imageflow_helpers::fetching::FetchError> {
+
+                               ::std::thread::sleep_ms(10);
                                // Server may not be running
                                instance.hello()?;
 
