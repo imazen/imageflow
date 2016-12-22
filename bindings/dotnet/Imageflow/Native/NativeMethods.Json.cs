@@ -1,6 +1,8 @@
 ﻿using System;
+using System.IO;
 using System.Runtime.InteropServices;
 using System.Text;
+using Newtonsoft.Json;
 
 namespace Imageflow.Native
 {
@@ -12,26 +14,25 @@ namespace Imageflow.Native
 		/// <param name="context"></param>
 		/// <param name="response_in"></param>
 		/// <param name="status_code_out"></param>
-		/// <param name="buffer_out"></param>
+		/// <param name="buffer"></param>
 		/// <returns></returns>
 		/// <exception cref="BufferOverflowException"></exception>
-		public static bool imageflow_json_response_read(ContextPointer context, JsonResponsePointer response_in, out long status_code_out, out string buffer_out)
+		public static bool imageflow_json_response_read(ContextPointer context, JsonResponsePointer response_in, out long status_code_out, out JsonReader buffer)
 		{
-			byte[] buffer;
+			IntPtr bufferPointer;
 			IntPtr bufferSize;
-			bool result = imageflow_json_response_read(context, response_in, out status_code_out, out buffer, out bufferSize);
+			bool result = imageflow_json_response_read(context, response_in, out status_code_out, out bufferPointer, out bufferSize);
 			if (!result)
 			{
-				buffer_out = null;
+				buffer = null;
 				return false;
 			}
-			if (bufferSize.ToInt64() > int.MaxValue)
+			unsafe
 			{
 #pragma warning disable HeapAnalyzerExplicitNewObjectRule // Explicit new reference type allocation
-				throw new BufferOverflowException(bufferSize.ToInt64());
+				buffer = new JsonTextReader(new StreamReader(new UnmanagedMemoryStream((byte*)bufferPointer, bufferSize.ToInt64()), Encoding.UTF8));
 #pragma warning restore HeapAnalyzerExplicitNewObjectRule // Explicit new reference type allocation
 			}
-			buffer_out = Encoding.UTF8.GetString(buffer, 0, bufferSize.ToInt32());
 			return true;
 		}
 
@@ -47,7 +48,7 @@ namespace Imageflow.Native
 		/// <seealso href="https://s3-us-west-1.amazonaws.com/imageflow-nightlies/master/doc/imageflow/fn.imageflow_json_response_read.html"/>
 		[DllImport(LibraryName, EntryPoint = nameof(imageflow_json_response_read))]
 		[return: MarshalAs(UnmanagedType.I1)]
-		private static extern bool imageflow_json_response_read(ContextPointer context, JsonResponsePointer response_in, out long status_code_out, [MarshalAs(UnmanagedType.LPArray, SizeParamIndex = 4)][Out]out byte[] buffer_utf8_no_nulls_out, [Out]out IntPtr buffer_size_out);
+		private static extern bool imageflow_json_response_read(ContextPointer context, JsonResponsePointer response_in, out long status_code_out, [Out]out IntPtr buffer_utf8_no_nulls_out, [Out]out IntPtr buffer_size_out);
 
 		/// <summary>
 		///		Frees memory associated with the given object (and owned objects) after running any owned or attached destructors.
