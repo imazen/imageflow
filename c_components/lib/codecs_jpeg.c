@@ -992,7 +992,7 @@ static bool flow_codecs_jpeg_write_frame(flow_c * c, void * codec_state, struct 
     jpeg_set_defaults(&state->cinfo);
 
     int32_t quality = hints == NULL ? 90 : hints->jpeg_encode_quality;
-    if (quality <= 0)
+    if (quality < 0)
         quality = 90;
     if (quality > 100)
         quality = 100;
