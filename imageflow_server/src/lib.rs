@@ -13,6 +13,9 @@ extern crate time;
 #[macro_use] extern crate lazy_static;
 extern crate regex;
 
+use std::sync::atomic::{AtomicU64, AtomicBool, ATOMIC_U64_INIT};
+use std::sync::atomic;
+
 use regex::Regex;
 
 extern crate imageflow_helpers;
@@ -39,7 +42,7 @@ pub mod preludes{
 }
 
 
-
+use iron::{AfterMiddleware, BeforeMiddleware};
 use iron::mime::*;
 use iron::prelude::*;
 use iron::status;
@@ -56,7 +59,8 @@ use log::LogLevel;
 #[derive(Debug)]
 struct SharedData{
     source_cache: CacheFolder,
-    output_cache: CacheFolder
+    output_cache: CacheFolder,
+    requests_received: AtomicU64
 }
 
 impl iron::typemap::Key for SharedData { type Value = SharedData; }
@@ -372,6 +376,7 @@ pub fn serve(c: StartServerConfig) {
     let shared_data = SharedData {
         source_cache: CacheFolder::new(c.data_dir.join(Path::new("source_cache")).as_path(), c.default_cache_layout.unwrap_or(FolderLayout::Normal)),
         output_cache: CacheFolder::new(c.data_dir.join(Path::new("output_cache")).as_path(), c.default_cache_layout.unwrap_or(FolderLayout::Normal)),
+        requests_received: ATOMIC_U64_INIT //NOT YET USED
     };
     let mut router = Router::new();
 
@@ -388,6 +393,17 @@ pub fn serve(c: StartServerConfig) {
 //        if let Err(s) = mount_result{
 //            panic!("Failed to mount {} using engine {}: {}", m.prefix.as_str(), m.engine.to_id(), &s);
 //        }
+    }
+
+    if c.integration_test {
+        router.get("/test/shutdown", move |r: &mut Request| -> IronResult<Response> {
+            println!("Stopping server due to GET /test/shutdown");
+            std::process::exit(0);
+
+//            Ok(Response::with((Mime::from_str("text/plain").unwrap(),
+//                               status::InternalServerError,
+//                               bytes)))
+        }, "test-shutdown");
     }
 
     let mut chain = Chain::new(router);
@@ -473,10 +489,12 @@ impl MountLocation{
     }
 }
 
+
 #[derive(Debug, Clone, PartialEq)]
 pub struct StartServerConfig{
- pub data_dir: PathBuf,
- pub bind_addr: String,
- pub mounts: Vec<MountLocation>,
- pub default_cache_layout: Option<FolderLayout>
+    pub data_dir: PathBuf,
+    pub bind_addr: String,
+    pub mounts: Vec<MountLocation>,
+    pub default_cache_layout: Option<FolderLayout>,
+    pub integration_test: bool
 }

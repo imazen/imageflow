@@ -19,7 +19,7 @@ use fc::test_helpers::*;
 use fc::test_helpers::process_testing::ProcTestContextExtras;
 use fc::test_helpers::process_testing::ProcOutputExtras;
 use ::imageflow_helpers::fetching::FetchError;
-
+use ::imageflow_helpers::fetching::{fetch_bytes,get_status_code_for};
 fn server_path() -> PathBuf{
     let self_path = std::env::current_exe().expect("For --self-test to work, we need to know the binary's location. env::current_exe failed");
     self_path.parent().unwrap().join("imageflow_server")
@@ -40,6 +40,12 @@ fn localhost_hello(port: u16) -> std::result::Result<hyper::status::StatusCode, 
     let url = format!("http://localhost:{}", port);
     ::imageflow_helpers::fetching::get_status_code_for(&url)
 }
+
+fn localhost_stop(port: u16) -> std::result::Result<hyper::status::StatusCode, FetchError> {
+    let url = format!("http://localhost:{}/test/shutdown", port);
+    ::imageflow_helpers::fetching::get_status_code_for(&url)
+}
+
 // ports 36,000 to 39,999 seem the safest.
 #[test]
 fn run_server_test_i4(){
@@ -60,18 +66,22 @@ fn run_server_test_i4(){
 
     }
 
+    let test_arg = "--integration-test";
+
 
     {
         let c = context.subfolder_context("demo"); //stuck on port 39876
         let port = get_next_port();
         let port_arg = format!("--port={}", port);
         println!("Starting demo server");
-        let (po, callback_result) = c.execute_callback(vec![&port_arg, "demo", "--data-dir=."], false,
+        let (po, callback_result) = c.execute_callback(vec![&port_arg, &test_arg, "demo", "--data-dir=."], false,
            |child: &mut std::process::Child| -> std::result::Result<(),::imageflow_helpers::fetching::FetchError> {
                // Server may not be running
                localhost_hello(port)?;
                let url = format!("http://localhost:{}/ir4/proxy_unsplash/photo-1422493757035-1e5e03968f95?width=100", port);
                let response_bytes = ::imageflow_helpers::fetching::fetch_bytes(&url)?;
+
+               let _ = localhost_stop(port);
 
                Ok(())
            });
@@ -87,13 +97,13 @@ fn run_server_test_i4(){
         // NOTE --bind=localhost::{} (two colons) causes a generic "error:",exit code 1, and no other output. This is bad UX.
         let bind_arg = format!("--bind=localhost:{}", port);
 
-        let (po, callback_result) = c.execute_callback(vec!["start", "--data-dir=.", &bind_arg, "--mount=/local/:ir4_local:./"], false,
+        let (po, callback_result) = c.execute_callback(vec![&test_arg, "start", "--data-dir=.", &bind_arg, "--mount=/local/:ir4_local:./"], false,
                                                        |child: &mut std::process::Child| -> std::result::Result<(),::imageflow_helpers::fetching::FetchError> {
                                                            // Server may not be running
                                                            localhost_hello(port)?;
                                                            let url = format!("http://localhost:{}/local/eh.png?width=100", port);
                                                            let response_bytes = ::imageflow_helpers::fetching::fetch_bytes(&url)?;
-
+                                                           let _ = localhost_stop(port);
                                                            Ok(())
                                                        });
         //po.expect_status_code(Some(0));

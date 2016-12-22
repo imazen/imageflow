@@ -44,6 +44,7 @@ fn main_with_exit_code() -> i32 {
     let version = s::version::one_line_version();
     let app = App::new("imageflow_server").version(version.as_ref())
         .arg(Arg::with_name("port").long("port").takes_value(true).required(false).help("Change the port that the server will listen on"))
+        .arg(Arg::with_name("integration-test").long("integration-test").help("Never use this outside of an integration test. Exposes an HTTP endpoint to kill the server."))
         .subcommand(
             SubCommand::with_name("diagnose")
                 .about("Diagnostic utilities")
@@ -81,6 +82,8 @@ fn main_with_exit_code() -> i32 {
     let matches = app.get_matches();
 
     let port = matches.value_of("port").map(|s| s.parse::<u16>().unwrap() );
+    let integration_test = matches.is_present("integration-test");
+
 
     if let Some(ref matches) = matches.subcommand_matches("diagnose") {
         let m: &&clap::ArgMatches = matches;
@@ -109,6 +112,7 @@ fn main_with_exit_code() -> i32 {
             data_dir: data_dir,
             mounts: mounts,
             default_cache_layout: Some(FolderLayout::Normal),
+            integration_test: integration_test
         });
         return 0;
     }
@@ -124,6 +128,7 @@ fn main_with_exit_code() -> i32 {
             bind_addr: bind,
             data_dir: data_dir,
             default_cache_layout: Some(FolderLayout::Tiny),
+            integration_test: integration_test,
             mounts: vec![
             MountLocation {
                 engine: MountedEngine::Ir4Http,
