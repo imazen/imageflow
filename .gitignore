@@ -136,6 +136,7 @@ x86/
 build/
 bld/
 [Oo]bj/
+[Dd]ocumentation/
 
 # Roslyn cache directories
 *.ide/
@@ -251,6 +252,7 @@ publish/
 
 # NuGet Packages
 *.nupkg
+project.lock.json
 # The packages folder can be ignored because of Package Restore
 **/packages/*
 # except build/, which is used as an MSBuild target.
