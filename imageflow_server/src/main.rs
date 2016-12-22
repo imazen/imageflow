@@ -125,41 +125,47 @@ fn main_with_exit_code() -> i32 {
 
             let alt_data_dir = Path::new(".").join("imageflow_data");
 
-            println!("Open your browser to http://{}/proxied_demo/index.html", &combined);
 
             let demo_commit = s::version::get_build_env_value("GIT_COMMIT").unwrap();
+
+            let mut mounts = vec![
+            MountLocation {
+                engine: MountedEngine::Ir4Http,
+                prefix: "/ir4/proxy_unsplash/".to_owned(),
+                engine_args: vec!["http://images.unsplash.com/".to_owned()]
+            },
+            MountLocation {
+                engine: MountedEngine::PermacacheProxy,
+                prefix: "/proxied_demo/".to_owned(),
+                engine_args: vec![format!("https://raw.githubusercontent.com/imazen/imageflow/blob/{}/imageflow_server_/demo/", demo_commit)]
+            },
+            MountLocation {
+                engine: MountedEngine::Ir4Http,
+                prefix: "/demo_images/".to_owned(),
+                engine_args: vec!["https://resizer-images.s3.amazonaws.com/".to_owned()]
+            }
+            ];
+            let local_demo_folder = Path::new(env!("CARGO_MANIFEST_DIR")).join("demo");
+            if local_demo_folder.exists() {
+                mounts.push(MountLocation {
+                                    engine: MountedEngine::Static,
+                                    prefix: "/src_demo/".to_owned(),
+                                    engine_args: vec![local_demo_folder.as_path().to_str().unwrap().to_owned()]
+                                });
+
+                println!("Open your browser to http://{}/src_demo/index.html", &combined);
+            }else{
+                println!("Open your browser to http://{}/proxied_demo/index.html", &combined);
+
+            }
+
 
             ::imageflow_server::serve(StartServerConfig {
                 bind_addr: combined,
                 data_dir: data_dir.unwrap_or_else(|| { if !alt_data_dir.exists() { std::fs::create_dir_all(&alt_data_dir).unwrap(); } alt_data_dir }),
                 default_cache_layout: Some(FolderLayout::Tiny),
                 integration_test: integration_test,
-                mounts: vec![
-                MountLocation {
-                    engine: MountedEngine::Ir4Http,
-                    prefix: "/ir4/proxy_unsplash/".to_owned(),
-                    engine_args: vec!["http://images.unsplash.com/".to_owned()]
-                },
-                MountLocation {
-                    engine: MountedEngine::PermacacheProxy,
-                    prefix: "/proxied_demo/".to_owned(),
-                    engine_args: vec![format!("https://raw.githubusercontent.com/imazen/imageflow/blob/{}/imageflow_server_/demo/", demo_commit)]
-                },
-//                MountLocation {
-//                    engine: MountedEngine::Static,
-//                    prefix: "/demo/".to_owned(),
-//                    engine_args: vec!["./demo/".to_owned()]
-//                },              MountLocation {
-//                    engine: MountedEngine::Static,
-//                    prefix: "/demo/".to_owned(),
-//                    engine_args: vec!["./demo/".to_owned()]
-//                },
-                MountLocation {
-                    engine: MountedEngine::Ir4Http,
-                    prefix: "/demo_images/".to_owned(),
-                    engine_args: vec!["https://resizer-images.s3.amazonaws.com/".to_owned()]
-                }
-                ]
+                mounts: mounts
             });
         }else {
             let mounts = m.values_of_lossy("mount").expect("at least one --mount required").into_iter().map(|s| parse_mount(&s).expect("validator not working - bug in clap?")).collect::<Vec<MountLocation>>();
