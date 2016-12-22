@@ -1,9 +1,15 @@
-# imageflow_server playground
+# imageflow_server
 
-So, first thing: THESE ARE THROW-AWAY PROTOTYPES. Don't use them in production, please.
- Test coverage sucks and we're validating theories & testing dependencies right now.
+If you're compiling, use `cargo run --bin imageflow_server` instead of `imageflow_server`.
 
-This is a learning experiment; a throwaway proxy for testing the HTTP libraries we plan to use.
-It's a saturday afternoon exercise, not a real product. It's not safe (nor really safer than a C equivalent),
-and we're not using Rust idomatically or correctly. Nothing is re-entrant, and errors panic the process.
-Run with `cargo run --bin imageflow_server`, then open in your browser: http://localhost:3000/proto1/scale_unsplash_jpeg/1200/1200/photo-1436891678271-9c672565d8f6
+Currently we have 4 mount providers:
+* ir4_http - ImageResizer4 compatible querystring API, pulling originals from a remote server
+* ir4_local - ImageResizer4 compatible querystring API, pulling from disk
+* static - static file server
+* permacache_proxy - static file proxy with permanent caching (no invalidation, ever)
+
+* `imageflow_server start --demo`
+* `imageflow_server start --port 80 --data-dir=./imageflow_data --mount /ir4/local/:ir4_local:./img/ --mount /ir4/remote/:ir4_http:http:://remote.com/img/ --mount`
+* `imageflow_server start --port 80 --data-dir=./imageflow_data  --mount /js/:static:./js --mount /proxy_asis/:permacache_proxy:http:://remote.com/static/:360`
+* `imageflow_server diagnose --show-compilation-info`
+

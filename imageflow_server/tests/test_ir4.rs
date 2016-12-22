@@ -71,10 +71,10 @@ impl ServerInstance{
         // NOTE --bind=localhost::{} (two colons) causes a generic "error:",exit code 1, and no other output. This is bad UX.
         let test_arg = "--integration-test";
         let port_arg = format!("--port={}", instance.port);
-        let bind_arg = format!("--bind=localhost:{}", instance.port);
-        let mut all_args = args.into_iter().map(|s| if s.starts_with("--bind") { &bind_arg } else { s }).collect::<Vec<&str>>();
+        let mut all_args = args.clone();
         all_args.insert(0, test_arg);
         all_args.insert(0, &port_arg);
+        all_args.insert(0, "start");
 
         c.execute_callback(all_args, false,
                            |child: &mut std::process::Child| -> std::result::Result<(), ::imageflow_helpers::fetching::FetchError> {
@@ -113,7 +113,8 @@ fn run_server_test_i4(){
 
     {
         let c = context.subfolder_context("demo"); //stuck on port 39876
-        let (po, callback_result) = ServerInstance::run(&c, vec!["demo", "--data-dir=."], | server | {
+        c.subfolder_context("demo");
+        let (po, callback_result) = ServerInstance::run(&c, vec!["--demo", "--data-dir=."], | server | {
             fetch_bytes(&server.url_for("/ir4/proxy_unsplash/photo-1422493757035-1e5e03968f95?width=100"))?;
             assert_eq!(server.get_status("/ir4/proxy_unsplash/notthere.jpg")?, hyper::status::StatusCode::NotFound);
             Ok(())
@@ -126,8 +127,12 @@ fn run_server_test_i4(){
     {
         let c = context.subfolder_context("mount_local"); //stuck on port 39876
         c.create_blank_image_here("eh", 100,100, s::EncoderPreset::libpng32());
-        let (po, callback_result) = ServerInstance::run(&c, vec!["start", "--data-dir=.", "--bind=??", "--mount=/local/:ir4_local:./"], | server | {
-            fetch_bytes(&server.url_for("/local/eh.png?width=100"))?;
+        let (po, callback_result) = ServerInstance::run(&c, vec!["--data-dir=.", "--mount=/local/:ir4_local:./"], | server | {
+            let bytes = fetch_bytes(&server.url_for("/local/eh.png?width=100"))?;
+
+            let info = fc::clients::stateless::LibClient {}.get_image_info(&bytes).expect("Image response should be parseable");
+
+
             assert_eq!(server.get_status("/local/notthere.jpg")?, hyper::status::StatusCode::NotFound);
             assert_eq!(server.get_status("/notrouted")?, hyper::status::StatusCode::NotFound);
             Ok(())

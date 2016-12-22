@@ -33,6 +33,9 @@ lazy_static ="*"
 log="*"
 env_logger="*"
 wait-timeout = "0.1"
+bincode="*"
+staticfile="*"
+serde_derive="*"
 
 [build-dependencies]
 cmake = "0.1.17"
@@ -46,6 +49,10 @@ debug = true
 name = "imageflow_server"
 path = "src/main.rs"
 doc = false
+
+[dependencies.mount]
+
+git = "https://github.com/iron/mount.git"
 
 [dependencies.logger]
 

@@ -15,7 +15,6 @@ rustc-serialize = "*"
 threadpool = "1.0"
 serde = "*"
 serde_json = "*"
-
 imageflow_helpers = { path = "../imageflow_helpers", version = "*" }
 
 [[bin]]

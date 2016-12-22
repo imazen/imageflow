@@ -1,3 +1,4 @@
+#![feature(proc_macro)]
 #![feature(integer_atomics)]
 #![feature(conservative_impl_trait)]
 
@@ -6,6 +7,16 @@ extern crate persistent;
 extern crate router;
 extern crate logger;
 
+extern crate bincode;
+extern crate mount;
+
+use staticfile::Static;
+
+use ::time::Duration;
+
+#[macro_use] extern crate serde_derive;
+
+extern crate staticfile;
 extern crate rustc_serialize;
 extern crate hyper;
 extern crate libc;
@@ -36,7 +47,7 @@ pub mod resizer;
 use disk_cache::{CacheFolder, CacheEntry, FolderLayout};
 use logger::Logger;
 
-pub mod preludes{
+pub mod preludes {
     pub use super::{MountedEngine, MountLocation, StartServerConfig, ServerError};
     pub use super::disk_cache::FolderLayout;
 }
@@ -48,6 +59,8 @@ use iron::prelude::*;
 use iron::status;
 use router::Router;
 use iron::typemap::Key;
+use iron::Handler;
+use hyper::header::Headers;
 
 use time::precise_time_ns;
 
@@ -57,10 +70,11 @@ extern crate env_logger;
 use log::LogLevel;
 
 #[derive(Debug)]
-struct SharedData{
+struct SharedData {
     source_cache: CacheFolder,
     output_cache: CacheFolder,
-    requests_received: AtomicU64
+    requests_received: AtomicU64,
+    //detailed_errors: bool
 }
 
 impl iron::typemap::Key for SharedData { type Value = SharedData; }
@@ -80,22 +94,32 @@ pub enum ServerError {
     BuildFailure(stateless::BuildFailure),
     LayoutSizingError(::imageflow_riapi::sizing::LayoutError)
 }
+
 impl From<stateless::BuildFailure> for ServerError {
     fn from(e: stateless::BuildFailure) -> ServerError {
         ServerError::BuildFailure(e)
     }
 }
+
 impl From<hyper::Error> for ServerError {
     fn from(e: hyper::Error) -> ServerError {
         ServerError::HyperError(e)
     }
 }
+
 impl From<std::io::Error> for ServerError {
     fn from(e: std::io::Error) -> ServerError {
         ServerError::IoError(e)
     }
 }
-fn fetch_bytes(url: &str) -> std::result::Result<(Vec<u8>, AcquirePerf), ServerError> {
+
+struct FetchedResponse {
+    bytes: Vec<u8>,
+    perf: AcquirePerf,
+    content_type: hyper::header::ContentType,
+}
+
+fn fetch_bytes(url: &str) -> std::result::Result<FetchedResponse, ServerError> {
     let start = precise_time_ns();
     let client = Client::new();
     let mut res = client.get(url).send()?;
@@ -108,7 +132,11 @@ fn fetch_bytes(url: &str) -> std::result::Result<(Vec<u8>, AcquirePerf), ServerE
 
     let _ = res.read_to_end(&mut source_bytes)?;
     let downloaded = precise_time_ns();
-    Ok((source_bytes, AcquirePerf{ fetch_ns: downloaded - start, .. Default::default()}))
+    Ok(FetchedResponse {
+        bytes: source_bytes,
+        perf: AcquirePerf { fetch_ns: downloaded - start, ..Default::default() },
+        content_type: res.headers.get::<hyper::header::ContentType>().expect("content type required").clone()
+    })
 }
 
 fn error_upstream(from: ServerError) -> ServerError {
@@ -127,16 +155,22 @@ fn error_cache_read(from: ServerError) -> ServerError {
 }
 
 
+#[derive(Debug, Serialize, Deserialize, PartialEq, Clone)]
+struct CachedResponse {
+    bytes: Vec<u8>,
+    content_type: String,
+}
+
 // Additional ways this can fail (compared to fetch_bytes)
 // Parent directories are deleted from cache between .exists() and cache writes
 // Permissions issues
 // Cached file is deleted between .exists(0 and .read()
 // Write fails due to out-of-space
 // rename fails (it should overwrite, for eventual consistency, but ... filesystems)
-fn fetch_bytes_using_cache_by_url(cache: &CacheFolder, url: &str) -> std::result::Result<(Vec<u8>, AcquirePerf), ServerError>{
+fn fetch_bytes_using_cache_by_url(cache: &CacheFolder, url: &str) -> std::result::Result<(Vec<u8>, AcquirePerf), ServerError> {
     let hash = hlp::hashing::hash_256(url.as_bytes());
     let entry = cache.entry(&hash);
-    if entry.exists(){
+    if entry.exists() {
         let start = precise_time_ns();
         match entry.read() {
             Ok(vec) => {
@@ -145,9 +179,9 @@ fn fetch_bytes_using_cache_by_url(cache: &CacheFolder, url: &str) -> std::result
             },
             Err(e) => Err(ServerError::DiskCacheReadIoError(e))
         }
-    }else{
+    } else {
         let result = fetch_bytes(url);
-        if let Ok((bytes, perf)) = result {
+        if let Ok(FetchedResponse { bytes, perf, .. }) = result {
             let start = precise_time_ns();
             match entry.write(&bytes) {
                 Ok(()) => {
@@ -156,8 +190,39 @@ fn fetch_bytes_using_cache_by_url(cache: &CacheFolder, url: &str) -> std::result
                 },
                 Err(e) => Err(ServerError::DiskCacheWriteIoError(e))
             }
-        }else{
-            result.map_err(error_upstream)
+        } else {
+            Err(result.map_err(error_upstream).err().unwrap())
+        }
+    }
+}
+
+fn fetch_response_using_cache_by_url(cache: &CacheFolder, url: &str) -> std::result::Result<(CachedResponse, AcquirePerf), ServerError> {
+    let hash = hlp::hashing::hash_256(url.as_bytes()); //TODO: version this
+    let entry = cache.entry(&hash);
+    if entry.exists() {
+        let start = precise_time_ns();
+        match entry.read() {
+            Ok(vec) => {
+                let end = precise_time_ns();
+                let cached: CachedResponse = bincode::serde::deserialize(&vec).unwrap();
+                Ok((cached, AcquirePerf { cache_read_ns: end - start, ..Default::default() }))
+            },
+            Err(e) => Err(ServerError::DiskCacheReadIoError(e))
+        }
+    } else {
+        let result = fetch_bytes(url);
+        if let Ok(fetched) = result {
+            let start = precise_time_ns();
+            let bytes = bincode::serde::serialize(&fetched.bytes, bincode::SizeLimit::Infinite).unwrap();
+            match entry.write(&bytes) {
+                Ok(()) => {
+                    let end = precise_time_ns();
+                    Ok((CachedResponse { bytes: fetched.bytes, content_type: format!("{}", fetched.content_type) }, AcquirePerf { cache_write_ns: end - start, ..fetched.perf }))
+                },
+                Err(e) => Err(ServerError::DiskCacheWriteIoError(e))
+            }
+        } else {
+            Err(result.map_err(error_upstream).err().unwrap())
         }
     }
 }
@@ -170,14 +235,15 @@ fn fetch_bytes_from_disk(url: &Path) -> std::result::Result<(Vec<u8>, AcquirePer
 }
 
 #[derive(Default, Copy, Clone, Debug)]
-struct AcquirePerf{
+struct AcquirePerf {
     fetch_ns: u64,
     cache_read_ns: u64,
     cache_write_ns: u64
 }
-impl AcquirePerf{
-    pub fn new() -> AcquirePerf{
-        AcquirePerf{fetch_ns: 0, cache_write_ns: 0, cache_read_ns: 0}
+
+impl AcquirePerf {
+    pub fn new() -> AcquirePerf {
+        AcquirePerf { fetch_ns: 0, cache_write_ns: 0, cache_read_ns: 0 }
     }
     fn debug(&self) -> String {
         format!("HTTP fetch took: {} ms, cache read {} ms, cache write {} ms",
@@ -192,6 +258,7 @@ struct RequestPerf {
     get_image_info_ns: u64,
     execute_ns: u64,
 }
+
 impl RequestPerf {
     fn debug(&self) -> String {
         format!("{}, get_image_info took {} ms, execute took {} ms",
@@ -202,9 +269,8 @@ impl RequestPerf {
 }
 
 
-
 fn execute_using<F, F2>(bytes_provider: F2, framewise_generator: F)
- -> std::result::Result<(stateless::BuildOutput, RequestPerf), ServerError>
+                        -> std::result::Result<(stateless::BuildOutput, RequestPerf), ServerError>
     where F: Fn(s::ImageInfo) -> std::result::Result<s::Framewise, ServerError>,
           F2: Fn() -> std::result::Result<(Vec<u8>, AcquirePerf), ServerError>,
 {
@@ -231,12 +297,14 @@ fn execute_using<F, F2>(bytes_provider: F2, framewise_generator: F)
         }))
 }
 
-fn respond_using<F, F2>(bytes_provider: F2, framewise_generator: F)
-                             -> IronResult<Response>
+fn respond_using<F, F2, A>(debug_info: A, bytes_provider: F2, framewise_generator: F)
+                        -> IronResult<Response>
     where F: Fn(s::ImageInfo) -> std::result::Result<s::Framewise, ServerError>,
           F2: Fn() -> std::result::Result<(Vec<u8>, AcquirePerf), ServerError>,
+    A: std::fmt::Debug
 {
-    match execute_using(bytes_provider, framewise_generator){
+    //TODO: support process=, cache=, etc? pass-through by default?
+    match execute_using(bytes_provider, framewise_generator) {
         Ok((output, perf)) => {
             let mime = output.mime_type
                 .parse::<Mime>()
@@ -244,14 +312,27 @@ fn respond_using<F, F2>(bytes_provider: F2, framewise_generator: F)
 
             Ok(Response::with((mime, status::Ok, output.bytes)))
         }
-        Err(ServerError::UpstreamResponseError(hyper::status::StatusCode::NotFound)) => {
-            let bytes = format!("Remote file not found (upstream server responded with 404)").into_bytes();
+        Err(e) => respond_with_server_error(debug_info, e, true)
+    }
+}
+
+fn respond_with_server_error<A>(debug_info: A, e: ServerError, detailed_errors: bool) -> IronResult<Response> where A: std::fmt::Debug {
+    match e {
+        ServerError::UpstreamResponseError(hyper::status::StatusCode::NotFound) => {
+            let bytes = match detailed_errors {
+                true => format!("Remote file not found (upstream server responded with 404)").into_bytes(),
+                false => format!("Remote file not found (upstream server responded with 404 to {:?})", debug_info).into_bytes(),
+            };
+
             Ok(Response::with((Mime::from_str("text/plain").unwrap(),
                                status::NotFound,
                                bytes)))
         }
-        Err(e) => {
-            let bytes = format!("{:?}", e).into_bytes();
+        e => {
+            let bytes = match detailed_errors {
+                true => format!("Internal Server Error\nInfo:{:?}\nError:{:?}", debug_info, e).into_bytes(),
+                false => format!("Internal Server Error").into_bytes()
+            };
             Ok(Response::with((Mime::from_str("text/plain").unwrap(),
                                status::InternalServerError,
                                bytes)))
@@ -301,35 +382,33 @@ fn respond_using<F, F2>(bytes_provider: F2, framewise_generator: F)
 fn ir4_http_respond<F>(shared: &SharedData, url: &str, framewise_generator: F) -> IronResult<Response>
     where F: Fn(s::ImageInfo) -> std::result::Result<s::Framewise, ServerError>
 {
-    respond_using(|| fetch_bytes_using_cache_by_url(&shared.source_cache, url).map_err(error_upstream), framewise_generator)
+    respond_using(url, || fetch_bytes_using_cache_by_url(&shared.source_cache, url).map_err(error_upstream), framewise_generator)
 }
 
 
-
-fn ir4_framewise(info: s::ImageInfo, url: &Url) -> std::result::Result<s::Framewise, ServerError>{
+fn ir4_framewise(info: s::ImageInfo, url: &Url) -> std::result::Result<s::Framewise, ServerError> {
     ::imageflow_riapi::ir4::parse_to_framewise(info, url).map_err(|e| ServerError::LayoutSizingError(e)).map(|(framewise, warnings)| framewise)
 }
 
 
-type EngineHandler<T> = fn(req: &mut Request, engine_data: &T, mount: &MountLocation) -> IronResult<Response> ;
-type EngineSetup<T> = fn(mount: &MountLocation, router: &mut Router) ->  Result<(T,EngineHandler<T>),String>  ;
-
+type EngineHandler<T> = fn(req: &mut Request, engine_data: &T, mount: &MountLocation) -> IronResult<Response>;
+type EngineSetup<T> = fn(mount: &MountLocation) -> Result<(T, EngineHandler<T>), String>;
 
 
 fn ir4_local_respond<F>(shared: &SharedData, source: &Path, framewise_generator: F) -> IronResult<Response>
     where F: Fn(s::ImageInfo) -> std::result::Result<s::Framewise, ServerError>
 {
-    respond_using(|| fetch_bytes_from_disk(source), framewise_generator)
+    respond_using(source, || fetch_bytes_from_disk(source), framewise_generator)
 }
-fn ir4_local_handler(req: &mut Request, local_path: &PathBuf, mount: &MountLocation) -> IronResult<Response>{
-    let path = req.extensions.get::<Router>().unwrap().find("path").unwrap().to_owned();
+
+fn ir4_local_handler(req: &mut Request, local_path: &PathBuf, mount: &MountLocation) -> IronResult<Response> {
     let url = req.url.clone().into_generic_url();
     let shared = req.get::<persistent::Read<SharedData>>().unwrap();
     //Ensure the combined path is canonical.
-    let original = local_path.join(path);
-    if let Ok(canonical) = original.canonicalize(){
-        if canonical.exists() && original == canonical{
-            return ir4_local_respond(&shared, canonical.as_path(), move | info: s::ImageInfo| {
+    let original = local_path.join(url.path());
+    if let Ok(canonical) = original.canonicalize() {
+        if canonical.exists() && original == canonical {
+            return ir4_local_respond(&shared, canonical.as_path(), move |info: s::ImageInfo| {
                 ir4_framewise(info, &url)
             });
         }
@@ -338,33 +417,69 @@ fn ir4_local_handler(req: &mut Request, local_path: &PathBuf, mount: &MountLocat
     Ok(Response::with((Mime::from_str("text/plain").unwrap(),
                        status::NotFound,
                        bytes)))
-
 }
-fn ir4_local_setup(mount: &MountLocation, router: &mut Router) ->  Result<(PathBuf,EngineHandler<PathBuf>),String>{
-    if mount.engine_args.len() < 1{
+
+fn static_handler(req: &mut Request, h: &Static, mount: &MountLocation) -> IronResult<Response> {
+    h.handle(req)
+}
+
+fn ir4_local_setup(mount: &MountLocation) -> Result<(PathBuf, EngineHandler<PathBuf>), String> {
+    if mount.engine_args.len() < 1 {
         Err("ir4_local requires at least one argument - the path to the physical folder it is serving".to_owned())
-    }else {
+    } else {
         //TODO: validate path
-        let local_dir = Path::new(&mount.engine_args[0]).canonicalize().map_err(|e| format!("{:?}",e))?;
+        let local_dir = Path::new(&mount.engine_args[0]).canonicalize().map_err(|e| format!("{:?}", e))?;
         Ok((local_dir, ir4_local_handler))
     }
 }
 
+fn static_setup(mount: &MountLocation) -> Result<(Static, EngineHandler<Static>), String> {
+    if mount.engine_args.len() < 1 {
+        Err("static requires at least one argument - the path to the physical folder it is serving".to_owned())
+    } else {
+        //TODO: validate path
+        let path = Path::new(&mount.engine_args[0]).canonicalize().map_err(|e| format!("{:?}", e))?;
+        let h = if mount.engine_args.len() > 1 {
+            let mins = mount.engine_args[1].parse::<i64>().expect("second argument to static must be the number of minutes to browser cache for");
+            Static::new(&path) // .cache(Duration::minutes(mins))
+        } else {
+            Static::new(&path)
+        };
+        Ok((h, static_handler))
+    }
+}
 
 
-fn ir4_http_handler(req: &mut Request, base_url: &String, mount: &MountLocation) -> IronResult<Response> {
-    let path = req.extensions.get::<Router>().unwrap().find("path").unwrap().to_owned();
+fn permacache_proxy_handler(req: &mut Request, base_url: &String, mount: &MountLocation) -> IronResult<Response> {
     let url = req.url.clone().into_generic_url();
     let shared = req.get::<persistent::Read<SharedData>>().unwrap();
     //TODO: Ensure the combined url is canonical (or, at least, lacks ..)
-    let remote_url = format!("{}{}", base_url, path);
+    let remote_url = format!("{}{}{}", base_url, &url.path()[1..], req.url.query().unwrap_or(""));
+
+    match fetch_response_using_cache_by_url(&shared.source_cache, &remote_url) {
+        Ok((output, perf)) => {
+            let mime = output.content_type
+                .parse::<Mime>()
+                .unwrap_or(Mime::from_str("application/octet-stream").unwrap());
+
+            Ok(Response::with((mime, status::Ok, output.bytes)))
+        }
+        Err(e) => respond_with_server_error(&remote_url, e, true)
+    }
+}
+
+fn ir4_http_handler(req: &mut Request, base_url: &String, mount: &MountLocation) -> IronResult<Response> {
+    let url = req.url.clone().into_generic_url();
+    let shared = req.get::<persistent::Read<SharedData>>().unwrap();
+    //TODO: Ensure the combined url is canonical (or, at least, lacks ..)
+    let remote_url = format!("{}{}", base_url, &url.path()[1..]);
 
     ir4_http_respond(&shared, &remote_url, move |info: s::ImageInfo| {
         ir4_framewise(info, &url)
     })
 }
 
-fn ir4_http_setup(mount: &MountLocation, router: &mut Router) -> Result<(String,EngineHandler<String>),String> {
+fn ir4_http_setup(mount: &MountLocation) -> Result<(String, EngineHandler<String>), String> {
     if mount.engine_args.len() < 1 {
         Err("ir4_http requires at least one argument - the base url to suffix paths to".to_owned())
     } else {
@@ -372,17 +487,24 @@ fn ir4_http_setup(mount: &MountLocation, router: &mut Router) -> Result<(String,
     }
 }
 
+fn permacache_proxy_setup(mount: &MountLocation) -> Result<(String, EngineHandler<String>), String> {
+    if mount.engine_args.len() < 1 {
+        Err("permacache_proxy requires at least one argument - the base url to suffix paths to".to_owned())
+    } else {
+        Ok((mount.engine_args[0].to_owned(), permacache_proxy_handler))
+    }
+}
 
 
-fn mount<T>(method: iron::method::Method, mount: MountLocation, router: &mut Router, setup: EngineSetup<T>) -> Result<(),String>
+fn mount<T>(mount: MountLocation, mou: &mut mount::Mount, setup: EngineSetup<T>) -> Result<(), String>
     where T: Send, T: Sync, T: 'static {
-    let (data, handler) = setup(&mount, router)?;
+    let (data, handler) = setup(&mount)?;
 
-    let glob = format!("{}:path", &mount.prefix);
-    let route_id = format!("{}_{:?}", &mount.prefix.replace("/", "_"), method);
-    router.route(method, &glob, move |r: &mut Request| { handler(r, &data, &mount) }, &route_id);
+    let prefix = mount.prefix.clone();
+    mou.mount(&prefix, move |r: &mut Request| { handler(r, &data, &mount) });
     Ok(())
 }
+
 
 pub fn serve(c: StartServerConfig) {
     env_logger::init().unwrap();
@@ -392,21 +514,26 @@ pub fn serve(c: StartServerConfig) {
         output_cache: CacheFolder::new(c.data_dir.join(Path::new("output_cache")).as_path(), c.default_cache_layout.unwrap_or(FolderLayout::Normal)),
         requests_received: ATOMIC_U64_INIT //NOT YET USED
     };
+
+    let mut mou = mount::Mount::new();
     let mut router = Router::new();
 
     // Mount prefix (external) (url|relative path)
     // pass through static files (whitelisted??)
 
-    for m in c.mounts.into_iter(){
+    for m in c.mounts.into_iter() {
+        let copy = m.clone();
         let mount_result = match m.engine {
             //MountedEngine::Ir4Https => "ir4_https",
-            MountedEngine::Ir4Http => mount(iron::method::Method::Get, m, &mut router, ir4_http_setup),
-            MountedEngine::Ir4Local => mount(iron::method::Method::Get, m, &mut router, ir4_local_setup),
+            MountedEngine::Ir4Http => mount(m, &mut mou, ir4_http_setup),
+            MountedEngine::Ir4Local => mount(m, &mut mou, ir4_local_setup),
+            MountedEngine::PermacacheProxy => mount(m, &mut mou, permacache_proxy_setup),
+            MountedEngine::Static => mount(m, &mut mou, static_setup),
         };
-        mount_result.unwrap();
-//        if let Err(s) = mount_result{
-//            panic!("Failed to mount {} using engine {}: {}", m.prefix.as_str(), m.engine.to_id(), &s);
-//        }
+        if let Err(e) = mount_result{
+
+            panic!("Failed to mount {} using engine {} ({:?})\n({:?})\nCurrent dir: {:?}", &copy.prefix, &copy.engine.to_id(), &copy, e, std::env::current_dir())
+        }
     }
 
     if c.integration_test {
@@ -414,13 +541,13 @@ pub fn serve(c: StartServerConfig) {
             println!("Stopping server due to GET /test/shutdown");
             std::process::exit(0);
 
-//            Ok(Response::with((Mime::from_str("text/plain").unwrap(),
-//                               status::InternalServerError,
-//                               bytes)))
+            //            Ok(Response::with((Mime::from_str("text/plain").unwrap(),
+            //                               status::InternalServerError,
+            //                               bytes)))
         }, "test-shutdown");
     }
 
-    let mut chain = Chain::new(router);
+    let mut chain = Chain::new(mou);
 
     chain.link(persistent::Read::<SharedData>::both(shared_data));
 
@@ -437,65 +564,70 @@ pub fn serve(c: StartServerConfig) {
 }
 
 
-
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
-pub enum MountedEngine{
+pub enum MountedEngine {
     Ir4Local,
     Ir4Http,
+    PermacacheProxy,
+    Static,
     //Ir4Https
 }
 
-impl MountedEngine{
-    pub fn to_id(&self) -> &'static str{
-        match *self{
+impl MountedEngine {
+    pub fn to_id(&self) -> &'static str {
+        match *self {
             //MountedEngine::Ir4Https => "ir4_https",
             MountedEngine::Ir4Http => "ir4_http",
-            MountedEngine::Ir4Local=> "ir4_local",
+            MountedEngine::Ir4Local => "ir4_local",
+            MountedEngine::PermacacheProxy => "permacache_proxy",
+            MountedEngine::Static => "static"
         }
     }
     pub fn from_id(s: &str) -> Option<MountedEngine> {
         match s {
             "ir4_local" => Some(MountedEngine::Ir4Local),
             "ir4_http" => Some(MountedEngine::Ir4Http),
+            "permacache_proxy" => Some(MountedEngine::PermacacheProxy),
+            "static" => Some(MountedEngine::Static),
             //"ir4_https" => Some(MountedEngine::Ir4Https),
             _ => None
         }
     }
 
     pub fn id_values() -> &'static [&'static str] {
-        static ID_VALUES: [&'static str;2] = ["ir4_local", "ir4_http",/* "ir4_https"*/];
+        static ID_VALUES: [&'static str; 4] = ["ir4_local", "ir4_http", "permacache_proxy", "static"/* "ir4_https"*/];
 
         &ID_VALUES
     }
 }
 
-trait Engine{
-    fn mount(self, mount: MountLocation, router: &mut Router) -> Result<(),String>;
+trait Engine {
+    fn mount(self, mount: MountLocation, router: &mut Router) -> Result<(), String>;
 }
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct MountLocation{
- pub prefix: String,
- pub engine: MountedEngine,
- pub engine_args: Vec<String>,
- //TODO: HTTPS
+pub struct MountLocation {
+    pub prefix: String,
+    pub engine: MountedEngine,
+    pub engine_args: Vec<String>,
+    //TODO: HTTPS
 }
 
-impl MountLocation{
-    pub fn parse(prefix: String, engine_name: String, args: Vec<String>) -> std::result::Result<MountLocation, String>{
-        lazy_static!{
+impl MountLocation {
+    pub fn parse(prefix: String, engine_name: String, args: Vec<String>) -> std::result::Result<MountLocation, String> {
+        lazy_static! {
             static ref RE: Regex = Regex::new(r"\A(/[a-zA-Z0-9-]+?)+?/\z").unwrap();
         }
-        if !RE.is_match(&prefix){
+        if !RE.is_match(&prefix) {
             return Err("mount points must be valid paths with leading and trailing slashes, like /img/logos/. Between slashes, [a-zA-Z0-9-] may be used".to_owned());
         }
         let engine = MountedEngine::from_id(engine_name.as_str());
 
-        if engine.is_none(){
+        if engine.is_none() {
             return Err(format!("Valid engine names include {:?}. Provided {}", MountedEngine::id_values(), engine_name.as_str()));
         }
 
-        Ok(MountLocation{
+        Ok(MountLocation {
             prefix: prefix,
             engine: engine.unwrap(),
             engine_args: args
@@ -505,7 +637,7 @@ impl MountLocation{
 
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct StartServerConfig{
+pub struct StartServerConfig {
     pub data_dir: PathBuf,
     pub bind_addr: String,
     pub mounts: Vec<MountLocation>,
