@@ -205,11 +205,15 @@ impl Ir4Layout{
         b.add_rotate(self.i.srotate);
         b.add_flip(self.i.sflip);
 
-
+        let (precrop_w, precrop_h) = if ((self.i.srotate.unwrap_or(0) / 90 + 4) % 2) == 0{
+            (self.info.image_width, self.info.image_height)
+        }else{
+            (self.info.image_height, self.info.image_width)
+        };
         // later consider adding f.sharpen, f.ignorealpha
         // (up/down).(filter,window,blur,preserve,colorspace,speed)
 
-        let initial_crop = self.get_initial_copy_window();
+        let initial_crop = self.get_initial_copy_window(precrop_w, precrop_h);
 
         let initial_size = sizing::AspectRatio::create(initial_crop[2] - initial_crop[0], initial_crop[3] - initial_crop[1])?;
 
@@ -233,7 +237,8 @@ impl Ir4Layout{
         //add manual crop offset
         let (crop_x1, crop_y1) = ((initial_crop[0] + inner_crop_x1) as u32, (initial_crop[1] + inner_crop_y1) as u32);
 
-        if crop_x1 > 0 || crop_y1 > 0 || initial_size.width() != new_crop.width() || initial_size.height() != new_crop.height() {
+        //println!("Crop initial={:?}, new: {:?}, x1: {}, y1: {}", &initial_crop, &new_crop, crop_x1, crop_y1);
+        if crop_x1 > 0 || crop_y1 > 0 || precrop_w != new_crop.width() || precrop_h != new_crop.height() {
             b.add(s::Node::Crop { x1: crop_x1, y1: crop_y1, x2: crop_x1 + new_crop.width() as u32, y2: crop_y1 + new_crop.height() as u32});
         }
 
@@ -314,28 +319,28 @@ impl Ir4Layout{
         Ok((Self::align1d(x,inner.width(), outer.width())?, Self::align1d(y, inner.height(), outer.height())?))
     }
 
-    fn get_initial_copy_window(&self) -> [i32;4]{
-        let floats = self.get_initial_copy_window_floats();
-        let maximums = [self.info.image_width, self.info.image_height];
+    fn get_initial_copy_window(&self, w: i32, h: i32) -> [i32;4]{
+        let floats = self.get_initial_copy_window_floats(w,h);
+        let maximums = [w, h];
         let ints = floats.iter().enumerate().map(|(ix, item)| {
             cmp::max(0i32, cmp::min(item.round() as i32, maximums[ix % 2]))
         }).collect::<Vec<i32>>();
         if ints[3] <= ints[1] || ints[2] <= ints[0]{
             //violation of X2 > X1 or Y2 > Y1
-            [0,0, self.info.image_width, self.info.image_height]
+            [0,0, w, h]
         }else {
             [ints[0], ints[1], ints[2], ints[3]]
         }
     }
 
-    fn get_initial_copy_window_floats(&self) -> [f64;4]{
-        let defaults = [0f64, 0f64, self.info.image_width as f64, self.info.image_height as f64];
+    fn get_initial_copy_window_floats(&self, original_width: i32, original_height: i32) -> [f64;4]{
+        let defaults = [0f64, 0f64, original_width as f64, original_height as f64];
         if let Some(values) = self.i.crop{
-            let xunits = self.i.cropxunits.map(|v| if v == 0f64 {self.info.image_width as f64} else { v }).unwrap_or(self.info.image_width as f64);
-            let yunits = self.i.cropyunits.map(|v| if v == 0f64 {self.info.image_height as f64} else { v }).unwrap_or(self.info.image_height as f64);
+            let xunits = self.i.cropxunits.map(|v| if v == 0f64 {original_width as f64} else { v }).unwrap_or(original_width as f64);
+            let yunits = self.i.cropyunits.map(|v| if v == 0f64 {original_height as f64} else { v }).unwrap_or(original_height as f64);
             let floats = values.iter().enumerate().map(|(ix, item)| {
                 let relative_to = if ix % 2 == 0 { xunits } else { yunits} as f64;
-                let max_dimension = if ix % 2 == 0 {self.info.image_width } else {self.info.image_height} as f64;
+                let max_dimension = if ix % 2 == 0 {original_width } else {original_height} as f64;
                 let mut v = *item * max_dimension / relative_to;
                 if ix < 2 && v < 0f64 || ix > 1 && v <= 0f64{
                     v += max_dimension; //Support negative offsets from bottom right.
