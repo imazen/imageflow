@@ -18,7 +18,8 @@ use ::time::Duration;
 
 extern crate staticfile;
 extern crate rustc_serialize;
-extern crate hyper;
+#[macro_use] extern crate hyper;
+
 extern crate libc;
 extern crate time;
 #[macro_use] extern crate lazy_static;
@@ -26,6 +27,8 @@ extern crate regex;
 
 use std::sync::atomic::{AtomicU64, AtomicBool, ATOMIC_U64_INIT};
 use std::sync::atomic;
+
+extern crate conduit_mime_types as mime_types;
 
 use regex::Regex;
 
@@ -241,6 +244,7 @@ struct AcquirePerf {
     cache_write_ns: u64
 }
 
+
 impl AcquirePerf {
     pub fn new() -> AcquirePerf {
         AcquirePerf { fetch_ns: 0, cache_write_ns: 0, cache_read_ns: 0 }
@@ -250,6 +254,10 @@ impl AcquirePerf {
                 (self.fetch_ns as f64) / 1000000.0,
                 (self.cache_read_ns as f64) / 1000000.0,
                 (self.cache_write_ns as f64) / 1000000.0)
+    }
+
+    fn total(&self) -> u64{
+        self.fetch_ns + self.cache_read_ns + self.cache_write_ns
     }
 }
 
@@ -265,6 +273,13 @@ impl RequestPerf {
                 self.acquire.debug(),
                 (self.get_image_info_ns as f64) / 1000000.0,
                 (self.execute_ns as f64) / 1000000.0)
+    }
+
+    fn short(&self) -> String{
+        format!("execute {:.2}ms getinfo {:.2}ms fetch-through: {:.2}ms",
+                (self.execute_ns as f64) / 1000000.0
+        ,(self.get_image_info_ns as f64) / 1000000.0,
+        (self.acquire.total() as f64) / 1000000.0)
     }
 }
 
@@ -296,6 +311,7 @@ fn execute_using<F, F2>(bytes_provider: F2, framewise_generator: F)
             execute_ns: end_execute - start_execute,
         }))
 }
+header! { (XImageflowPerf, "X-Imageflow_Perf") => [String] }
 
 fn respond_using<F, F2, A>(debug_info: A, bytes_provider: F2, framewise_generator: F)
                         -> IronResult<Response>
@@ -309,8 +325,10 @@ fn respond_using<F, F2, A>(debug_info: A, bytes_provider: F2, framewise_generato
             let mime = output.mime_type
                 .parse::<Mime>()
                 .unwrap_or(Mime::from_str("application/octet-stream").unwrap());
+            let mut res = Response::with((mime, status::Ok, output.bytes));
 
-            Ok(Response::with((mime, status::Ok, output.bytes)))
+            res.headers.set(XImageflowPerf(perf.short()));
+            Ok(res)
         }
         Err(e) => respond_with_server_error(debug_info, e, true)
     }
@@ -320,8 +338,8 @@ fn respond_with_server_error<A>(debug_info: A, e: ServerError, detailed_errors: 
     match e {
         ServerError::UpstreamResponseError(hyper::status::StatusCode::NotFound) => {
             let bytes = match detailed_errors {
-                true => format!("Remote file not found (upstream server responded with 404)").into_bytes(),
-                false => format!("Remote file not found (upstream server responded with 404 to {:?})", debug_info).into_bytes(),
+                false => format!("Remote file not found (upstream server responded with 404)").into_bytes(),
+                true => format!("Remote file not found (upstream server responded with 404 to {:?})", debug_info).into_bytes(),
             };
 
             Ok(Response::with((Mime::from_str("text/plain").unwrap(),
@@ -467,6 +485,35 @@ fn permacache_proxy_handler(req: &mut Request, base_url: &String, mount: &MountL
         Err(e) => respond_with_server_error(&remote_url, e, true)
     }
 }
+lazy_static! {
+    static ref MIME_TYPES: mime_types::Types = mime_types::Types::new().unwrap();
+}
+fn permacache_proxy_handler_guess_types(req: &mut Request, base_url: &String, mount: &MountLocation) -> IronResult<Response> {
+
+
+
+    let url = req.url.clone().into_generic_url();
+
+    let shared = req.get::<persistent::Read<SharedData>>().unwrap();
+    //TODO: Ensure the combined url is canonical (or, at least, lacks ..)
+    let remote_url = format!("{}{}{}", base_url, &url.path()[1..], req.url.query().unwrap_or(""));
+    match fetch_bytes_using_cache_by_url(&shared.source_cache, &remote_url) {
+        Ok((bytes, perf)) => {
+
+            let part_path = Path::new(&url.path()[1..]);
+            let mime_str = MIME_TYPES.mime_for_path(&part_path);
+            let mime:Mime  = mime_str.parse().unwrap();
+
+//            let mime = output.content_type
+//                .parse::<Mime>()
+//                .unwrap_or(Mime::from_str("application/octet-stream").unwrap());
+
+            Ok(Response::with((mime, status::Ok, bytes)))
+        }
+        Err(e) => respond_with_server_error(&remote_url, e, true)
+    }
+}
+
 
 fn ir4_http_handler(req: &mut Request, base_url: &String, mount: &MountLocation) -> IronResult<Response> {
     let url = req.url.clone().into_generic_url();
@@ -494,7 +541,13 @@ fn permacache_proxy_setup(mount: &MountLocation) -> Result<(String, EngineHandle
         Ok((mount.engine_args[0].to_owned(), permacache_proxy_handler))
     }
 }
-
+fn permacache_proxy_guess_content_types_setup(mount: &MountLocation) -> Result<(String, EngineHandler<String>), String> {
+    if mount.engine_args.len() < 1 {
+        Err("permacache_proxy_guess_content_types requires at least one argument - the base url to suffix paths to".to_owned())
+    } else {
+        Ok((mount.engine_args[0].to_owned(), permacache_proxy_handler_guess_types))
+    }
+}
 
 fn mount<T>(mount: MountLocation, mou: &mut mount::Mount, setup: EngineSetup<T>) -> Result<(), String>
     where T: Send, T: Sync, T: 'static {
@@ -528,6 +581,7 @@ pub fn serve(c: StartServerConfig) {
             MountedEngine::Ir4Http => mount(m, &mut mou, ir4_http_setup),
             MountedEngine::Ir4Local => mount(m, &mut mou, ir4_local_setup),
             MountedEngine::PermacacheProxy => mount(m, &mut mou, permacache_proxy_setup),
+            MountedEngine::PermacacheProxyGuessContentTypes => mount(m, &mut mou, permacache_proxy_guess_content_types_setup),
             MountedEngine::Static => mount(m, &mut mou, static_setup),
         };
         if let Err(e) = mount_result{
@@ -569,6 +623,7 @@ pub enum MountedEngine {
     Ir4Local,
     Ir4Http,
     PermacacheProxy,
+    PermacacheProxyGuessContentTypes,
     Static,
     //Ir4Https
 }
@@ -580,6 +635,7 @@ impl MountedEngine {
             MountedEngine::Ir4Http => "ir4_http",
             MountedEngine::Ir4Local => "ir4_local",
             MountedEngine::PermacacheProxy => "permacache_proxy",
+            MountedEngine::PermacacheProxyGuessContentTypes => "permacache_proxy_guess_content_types",
             MountedEngine::Static => "static"
         }
     }

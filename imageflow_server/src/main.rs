@@ -60,7 +60,7 @@ fn main_with_exit_code() -> i32 {
                 .arg(
                     Arg::with_name("mount").long("mount").takes_value(true).empty_values(false).multiple(true).required_unless("demo")
                         .validator(|f| parse_mount(&f).map(|r| ()))
-                        .help("Serve images from the given location using the provided API, e.g --mount \"/prefix/:ir4_local:./{}\" --mount \"/extern/:ir4_http:https:://domain.com/{}\"\n Escape colons by doubling, e.g. http:// -> http:://")
+                        .help("Serve images from the given location using the provided API, e.g --mount \"/prefix/:ir4_local:./{}\" --mount \"/extern/:ir4_http:http:://domain.com/{}\"\n Escape colons by doubling, e.g. http:// -> http:://")
                 ).arg(Arg::with_name("demo").long("demo").conflicts_with("mount")
                 .help("Start demo server (on localhost:39876 by default) with mounts /ir4/proxy/unsplash -> http://images.unsplash.com/"))
 
@@ -135,14 +135,14 @@ fn main_with_exit_code() -> i32 {
                 engine_args: vec!["http://images.unsplash.com/".to_owned()]
             },
             MountLocation {
-                engine: MountedEngine::PermacacheProxy,
+                engine: MountedEngine::PermacacheProxyGuessContentTypes,
                 prefix: "/proxied_demo/".to_owned(),
-                engine_args: vec![format!("https://raw.githubusercontent.com/imazen/imageflow/blob/{}/imageflow_server_/demo/", demo_commit)]
+                engine_args: vec![format!("http://raw.githubusercontent.com/imazen/imageflow/{}/imageflow_server/demo/", demo_commit)]
             },
             MountLocation {
                 engine: MountedEngine::Ir4Http,
                 prefix: "/demo_images/".to_owned(),
-                engine_args: vec!["https://resizer-images.s3.amazonaws.com/".to_owned()]
+                engine_args: vec!["http://resizer-images.s3.amazonaws.com/".to_owned()]
             }
             ];
             let local_demo_folder = Path::new(env!("CARGO_MANIFEST_DIR")).join("demo");
