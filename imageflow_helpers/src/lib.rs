@@ -21,7 +21,7 @@ pub mod caching;
 pub mod hashing;
 pub mod process_testing;
 pub mod process_capture;
-
+pub mod colors;
 
 pub mod timeywimey{
     pub fn time_bucket(seconds_per_bucket: u64, bucket_count: u64) -> u64{

@@ -248,8 +248,9 @@ impl Ir4Layout{
         }
 
         //get bgcolor - default to transparent white
-        let bgcolor = self.i.bgcolor_srgb.map(|v| format!("{:08X}", v)).unwrap_or("00FFFFFF".to_owned());
+        let bgcolor = self.i.bgcolor_srgb.map(|v| v.to_rrggbbaa_string()).map(|str| s::Color::Srgb(s::ColorSrgb::Hex(str)));
 
+        let default_bgcolor = s::Color::Srgb(s::ColorSrgb::Hex("FFFFFF00".to_owned()));
 
         let (left, top) = Self::align(align, image, canvas).expect("Outer box should never be smaller than inner box. All values must > 0");
 
@@ -257,7 +258,7 @@ impl Ir4Layout{
         //Add padding. This may need to be revisited - how do jpegs behave with transparent padding?
         if left > 0 || top > 0 || right > 0 || bottom > 0 {
             if left >= 0 && top >= 0 && right >= 0 && bottom >= 0 {
-                b.add(s::Node::ExpandCanvas { color: s::Color::Srgb(s::ColorSrgb::Hex(bgcolor)), left: left as u32, top: top as u32, right: right as u32, bottom: bottom as u32});
+                b.add(s::Node::ExpandCanvas { color: bgcolor.clone().unwrap_or(default_bgcolor), left: left as u32, top: top as u32, right: right as u32, bottom: bottom as u32});
             }else{
                 panic!("Negative padding showed up: {},{},{},{}", left, top, right, bottom);
             }
@@ -277,9 +278,9 @@ impl Ir4Layout{
 
             // TODO: introduce support for 24-bit png and self.i.bgcolor_srgb (matte)
             OutputFormat::Png | OutputFormat::Gif => s::EncoderPreset::Libpng{
-                depth: Some(s::PngBitDepth::Png32),
+                depth: Some(if self.i.bgcolor_srgb.is_some(){ s::PngBitDepth::Png24 } else { s::PngBitDepth::Png32}),
                 zlib_compression: None,
-                matte: None
+                matte: bgcolor
             }
         };
 

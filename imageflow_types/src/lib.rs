@@ -184,6 +184,7 @@ impl EncoderPreset {
 #[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
 pub enum ColorSrgb {
     // camelCased: #[serde(rename="hex")]
+    /// Hex in RRGGBBAA (css) form or variant thereof
     #[serde(rename="hex")]
     Hex(String),
 }
@@ -199,50 +200,58 @@ pub enum Color {
     #[serde(rename="srgb")]
     Srgb(ColorSrgb),
 }
-
+use ::imageflow_helpers::colors::*;
 impl Color {
-    pub fn to_u32_bgra(self) -> std::result::Result<u32, std::num::ParseIntError> {
-        self.to_u32_rgba().and_then(|u| Ok(u.swap_bytes().rotate_left(8)))
+
+
+    pub fn to_u32_bgra(self) -> std::result::Result<u32, ParseColorError> {
+        self.to_color_32().map(|c| c.to_bgra_le() )
     }
-    pub fn to_u32_rgba(self) -> std::result::Result<u32, std::num::ParseIntError> {
+
+    pub fn to_u32_rgba_big_endian(self) -> std::result::Result<u32, ParseColorError> {
+        self.to_color_32().map(|c| c.to_abgr_le() )
+    }
+    pub fn to_color_32(&self) -> std::result::Result<Color32, ParseColorError> {
+
         match self {
-            Color::Srgb(srgb) => {
+            &Color::Srgb(ref srgb) => {
                 match srgb {
-                    ColorSrgb::Hex(hex_srgb) => {
-                        u32::from_str_radix(hex_srgb.as_str(), 16)
-                            .and_then(|value| if hex_srgb.len() <= 6 {
-                                Ok(value.checked_shl(8).unwrap() | 0xFF)
-                            } else {
-                                Ok(value)
-                            })
+                    &ColorSrgb::Hex(ref hex_srgb) => {
+                        parse_color_hex(&hex_srgb)
                     }
                 }
             }
-            Color::Black => Ok(0x000000FF),
-            Color::Transparent => Ok(0),
+            &Color::Black => Ok(Color32::black()),
+            &Color::Transparent => Ok(Color32::transparent_black()),
         }
     }
+
 }
 
-
+fn assert_eq_hex(a: u32, b: u32){
+    if a != b{
+        println!("{:08X} != {:08X} (expected)", a, b);
+    }
+    assert_eq!(a,b);
+}
 #[test]
 fn test_color() {
 
-    assert_eq!(Color::Srgb(ColorSrgb::Hex("FFAAEEDD".to_owned())).to_u32_rgba().unwrap(),
+    assert_eq_hex(Color::Srgb(ColorSrgb::Hex("FFAAEEDD".to_owned())).to_u32_rgba_big_endian().unwrap(),
                0xFFAAEEDD);
-    assert_eq!(Color::Srgb(ColorSrgb::Hex("FFAAEE".to_owned())).to_u32_rgba().unwrap(),
+    assert_eq_hex(Color::Srgb(ColorSrgb::Hex("FFAAEE".to_owned())).to_u32_rgba_big_endian().unwrap(),
                0xFFAAEEFF);
 }
 
 #[test]
 fn test_bgra() {
 
-    assert_eq!(Color::Srgb(ColorSrgb::Hex("FFAAEEDD".to_owned())).to_u32_bgra().unwrap(),
-               0xEEAAFFDD);
-    assert_eq!(Color::Srgb(ColorSrgb::Hex("FFAAEE".to_owned())).to_u32_bgra().unwrap(),
-               0xEEAAFFFF);
-    assert_eq!(Color::Srgb(ColorSrgb::Hex("000000FF".to_owned())).to_u32_bgra().unwrap(),
-               0x000000FF);
+    assert_eq_hex(Color::Srgb(ColorSrgb::Hex("FFAAEEDD".to_owned())).to_color_32().unwrap().to_bgra_le(),
+               0xDDFFAAEE);
+    assert_eq_hex(Color::Srgb(ColorSrgb::Hex("FFAAEE".to_owned())).to_color_32().unwrap().to_bgra_le(),
+               0xFFFFAAEE);
+    assert_eq_hex(Color::Srgb(ColorSrgb::Hex("000000FF".to_owned())).to_color_32().unwrap().to_bgra_le(),
+               0xFF000000);
 
 
 }
