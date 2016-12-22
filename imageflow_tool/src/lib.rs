@@ -6,16 +6,21 @@ extern crate imageflow_helpers;
 extern crate imageflow_types as s;
 extern crate imageflow_core as fc;
 extern crate serde_json;
-extern crate chrono;
 extern crate serde;
+
+use imageflow_helpers as hlp;
 
 use std::path::{Path,PathBuf};
 mod cmd_build;
 pub mod self_test;
-mod capture;
 
 
 use clap::{App, Arg, SubCommand};
+
+
+fn artifact_source() -> hlp::process_capture::IncludeBinary{
+    hlp::process_capture::IncludeBinary::UrlOrCopy(s::version::get_build_env_value("ESTIMATED_ARTIFACT_URL").map(|v| v.to_owned()))
+}
 
 
 pub fn main_with_exit_code() -> i32 {
@@ -105,7 +110,7 @@ pub fn main_with_exit_code() -> i32 {
         filtered_args.remove(0); //Remove the tool executable itself
         //writeln!(err,"{:?}", filtered_args).unwrap();
 
-        let cap = capture::CaptureTo::create_default(matches.value_of("capture-to").unwrap(), filtered_args);
+        let cap = hlp::process_capture::CaptureTo::create(matches.value_of("capture-to").unwrap(), None, filtered_args, artifact_source());
         cap.run();
         return cap.exit_code();
     }
@@ -135,12 +140,12 @@ pub fn main_with_exit_code() -> i32 {
             builder.bundle_to(&dir);
             let curdir = std::env::current_dir().unwrap();
             std::env::set_current_dir(&dir).unwrap();
-            let cap = capture::CaptureTo::create_default("recipe", vec!["--json".to_owned(), "recipe.json".to_owned()]);
+            let cap = hlp::process_capture::CaptureTo::create("recipe", None, vec!["--json".to_owned(), "recipe.json".to_owned()], artifact_source());
             cap.run();
             //Restore current directory
             std::env::set_current_dir(&curdir).unwrap();
             let archive_name = PathBuf::from(format!("{}.zip", &dir_str));
-            capture::zip_directory_nonrecursive(&dir,&archive_name.as_path()).unwrap();
+            hlp::filesystem::zip_directory_nonrecursive(&dir,&archive_name.as_path()).unwrap();
             return cap.exit_code();
         }else {
             if let Some(dir) = m.value_of("bundle-to").and_then(|v| Some(v.to_owned())) {

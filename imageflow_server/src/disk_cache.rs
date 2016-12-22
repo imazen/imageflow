@@ -63,7 +63,7 @@ pub struct CacheFolder{
     write_layout: FolderLayout
 }
 
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub enum FolderLayout {
     /// 64 tier 1 folders, each with a 'files' subdirectory. Optimal range 0 to 8,000 entries or so. Suggested max 51k.
     Tiny,
@@ -141,7 +141,7 @@ impl CacheFolder{
     ///TODO: we could optimize directory existence checks with an 8, 512, or 8kb BitVec, easily persisted.
     /// We would need 'fast path' that falls back to 'careful path' when any of those caches get out of sync
     fn prepare_for(&self, entry: &CacheEntry) -> io::Result<()> {
-        self.ensure_root();
+        self.ensure_root().unwrap();
         self.ensure_meta_layout_confirmed();
         let dir = entry.path.as_path().parent().expect("Every cache path should have a parent dir; this did not!");
         if !dir.exists(){
@@ -209,16 +209,16 @@ impl<'a> CacheEntry<'a>{
 
 /// If one migrates from one FolderLayout to another, or is moving off of a old cache directory, then multiple queries make sense
 /// Check for meta/tiny, meta/normal, meta/huge presence to auto-populate
-struct CacheReader{
-    folders: Vec<CacheFolder>
-}
-
-impl CacheReader{
-
-}
-
-
-
+//struct CacheReader{
+//    folders: Vec<CacheFolder>
+//}
+//
+//impl CacheReader{
+//
+//}
+//
+//
+//
 
 
 

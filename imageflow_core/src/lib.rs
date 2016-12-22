@@ -52,7 +52,7 @@ pub mod clients;
 pub mod ffi;
 pub mod boring;
 pub mod parsing;
-
+pub mod test_helpers;
 
 use std::borrow::Cow;
 

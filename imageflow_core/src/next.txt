@@ -199,3 +199,7 @@ Examples of &mut self issues and resolutions
 Examples of 'static being the default for owned types, etc.
 
 https://github.com/servo/rust-smallvec
+
+Expired patents: https://vision.arc.nasa.gov/publications/MinimumPerceptualError.pdf
+https://vision.arc.nasa.gov/publications/patent97.pdf
+https://vision.arc.nasa.gov/publications/publications.html#compression

@@ -11,6 +11,8 @@ libc = "0.2.0"
 clap = "2"
 router = "*"
 iron = "*"
+
+
 time = "*"
 hyper = "*"
 rustc-serialize = "*"
@@ -26,6 +28,11 @@ blake2-rfc = "0.2.17"
 rand = "*"
 lru-cache = "*"
 persistent = "*"
+regex = "*"
+lazy_static ="*"
+log="*"
+env_logger="*"
+wait-timeout = "0.1"
 
 [build-dependencies]
 cmake = "0.1.17"
@@ -40,3 +47,6 @@ name = "imageflow_server"
 path = "src/main.rs"
 doc = false
 
+[dependencies.logger]
+
+git = "https://github.com/iron/logger.git"

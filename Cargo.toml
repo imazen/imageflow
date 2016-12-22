@@ -7,3 +7,6 @@ members = ["imageflow_helpers", "imageflow_types", "imageflow_riapi", "imageflow
 
 [profile.release]
 debug = true
+
+[dependencies.regex]
+features=["pattern"]

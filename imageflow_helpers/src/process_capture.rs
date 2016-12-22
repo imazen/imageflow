@@ -1,9 +1,5 @@
-extern crate std;
-use fc::for_other_imageflow_crates::preludes::default::*;
-extern crate imageflow_core as fc;
-extern crate imageflow_types;
-
-//
+use ::std;
+use ::preludes::from_std::*;
 
 use std::process::{Command, Output};
 
@@ -11,8 +7,18 @@ pub struct CaptureTo{
     args: Vec<String>,
     executable: PathBuf,
     basepath: String,
+    include_binary: IncludeBinary
 }
 
+/// How do we include the binary?
+#[derive(Debug, Clone, PartialEq)]
+pub enum IncludeBinary{
+    Copy,
+    // imageflow_types::version::get_build_env_value("ESTIMATED_ARTIFACT_URL")
+    UrlOrCopy(Option<String>),
+    UrlOnly(Option<String>),
+    No
+}
 // stay minimal
 // --capture-to basename
 // Runs itself, setting RUST_BACKTRACE=1, capturing stdout/stderr to basename_stdout/err.txt
@@ -21,17 +27,15 @@ pub struct CaptureTo{
 // Captures current operating system info
 
 impl CaptureTo{
-    pub fn create_default(capture_to: &str,  args: Vec<String>) -> CaptureTo{
-        CaptureTo::create(capture_to, None, args)
-    }
 
-    pub fn create(capture_to: &str, bin_location: Option<PathBuf>, args: Vec<String>) -> CaptureTo{
+    pub fn create(capture_to: &str, bin_location: Option<PathBuf>, args: Vec<String>, include_binary: IncludeBinary) -> CaptureTo{
         let executable= bin_location.unwrap_or_else(|| std::env::current_exe().expect("For CaptureTo to work, we need to know the binary's location. env::current_exe failed"));
 
         CaptureTo{
             args: args,
             executable: executable,
-            basepath: capture_to.to_owned()
+            basepath: capture_to.to_owned(),
+            include_binary: include_binary
         }
 
     }
@@ -69,13 +73,13 @@ impl CaptureTo{
         let output: Output = cmd.output().unwrap(); //Better, log the ioError
 
         //Shouldn't we verify it's not a command-line syntax error?
-//        match output.status.code(){
-//            Some(0) => {
-//                //Was this an incorrect result?
-//            }
-//            Some(128)
-//
-//        }
+        //        match output.status.code(){
+        //            Some(0) => {
+        //                //Was this an incorrect result?
+        //            }
+        //            Some(128)
+        //
+        //        }
 
         let status_file = format!("exitcode_{:?}.txt", &output.status.code());
         self.write_bytes(&status_file, &[]).unwrap();
@@ -88,9 +92,16 @@ impl CaptureTo{
         //self.run_and_save_output_to("self-test.txt",&["diagnose", "--self-test"]).unwrap();
 
         //If it is expected to be stored, we just save the URL
-        if let  &Some(url) = imageflow_types::version::get_build_env_value("ESTIMATED_ARTIFACT_URL"){
-            self.write_bytes("artifact_url.txt", url.as_bytes()).unwrap();
-        }else{
+        let (url, or_copy) = match self.include_binary.clone(){
+            IncludeBinary::Copy => (None, true),
+            IncludeBinary::No => (None, false),
+            IncludeBinary::UrlOnly(s) => (s, false),
+            IncludeBinary::UrlOrCopy(s) => (s, true)
+        };
+
+        if let  Some(s) = url{
+            self.write_bytes("artifact_url.txt", s.as_bytes()).unwrap();
+        }else if or_copy{
             //Otherwise copy the binary
             let target_path = format!("{}_{}", self.basepath, self.executable.as_path().file_name().unwrap().to_str().unwrap());
             std::fs::copy(&self.executable, &target_path).unwrap();
@@ -98,8 +109,8 @@ impl CaptureTo{
 
 
 
-        //TODO: get local operating system information
-        ()
+            //TODO: get local operating system information
+            ()
     }
     pub fn exit_code(&self) -> i32 {
         0

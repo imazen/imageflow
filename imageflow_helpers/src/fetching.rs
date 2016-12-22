@@ -21,6 +21,12 @@ pub fn fetch_bytes(url: &str) -> std::result::Result<Vec<u8>, FetchError> {
     Ok(source_bytes)
 }
 
+pub fn get_status_code_for(url: &str) -> std::result::Result<hyper::status::StatusCode, FetchError> {
+    let client = Client::new(); //default idle connections max of 5, follow all redirects.
+    let mut res = client.get(url).send()?;
+    Ok(res.status)
+}
+
 impl From<hyper::Error> for FetchError {
     fn from(e: hyper::Error) -> FetchError {
         FetchError::HyperError(e)

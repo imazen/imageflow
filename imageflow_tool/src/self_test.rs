@@ -2,371 +2,27 @@ extern crate std;
 use fc::for_other_imageflow_crates::preludes::default::*;
 use std::slice::SliceConcatExt;
 extern crate imageflow_core as fc;
-extern crate chrono;
-extern crate os_type;
 
-use chrono::UTC;
-use fc::clients::stateless;
-use std::process::{Command, Output};
-#[allow(unused_imports)]
-use std::time::{Duration, Instant};
+//extern crate imageflow_helpers;
 
-// create dir
-// export sample json files
-// export sample images
-// test a couple remote URLs that we trust to work for years
-// use a few embedded ones
-// run imageflow in a few different ways
+use imageflow_helpers::process_testing::*;
+use fc::test_helpers::*;
+use fc::test_helpers::process_testing::ProcTestContextExtras;
+use fc::test_helpers::process_testing::ProcOutputExtras;
 
 
-// #[derive(Clone, Debug, PartialEq)]
-// enum ToolProduct{
-//    CrashedUTF8{stderr: String, stdout: String},
-//    NoErrorUTF8{stdout: String},
-//    UserErrorUTF8{stdout: String, stderr: String, exit_code: i32},
-//    GracefulBugUTF8{stdout: String, stderr: String, exit_code: i32},
-//    Exited(Output),
-//    Other(Output)
-// }
-//
-//
-// fn into_product(r: Output) -> ToolProduct{
-//    let stdout_str = str::from_utf8(&r.stdout).map(|s| s.to_owned());
-//    let stderr_str = str::from_utf8(&r.stderr).map(|s| s.to_owned());
-//    if stderr_str.is_err() || stdout_str.is_err(){
-//        if r.status.code() == None {
-//            return ToolProduct::Other(r);
-//        }else{
-//            return ToolProduct::Exited(r);
-//        }
-//    }
-//
-//    let stderr_present = r.stderr.len() > 0;
-//
-//    match r.status.code(){
-//        Some(65) => ToolProduct::UserErrorUTF8{ stdout: stdout_str.unwrap(), stderr: stderr_str.unwrap(),exit_code: r.status.code().unwrap()},
-//        Some(70) => ToolProduct::GracefulBugUTF8{ stdout: stdout_str.unwrap(), stderr: stderr_str.unwrap(),exit_code: r.status.code().unwrap()},
-//        None => ToolProduct::CrashedUTF8{ stdout: stdout_str.unwrap(), stderr: stderr_str.unwrap()},
-//        Some(0) if !stderr_present => ToolProduct::NoErrorUTF8{ stdout: stdout_str.unwrap()},
-//        Some(_) => ToolProduct::Exited(r)
-//    }
-// }
-#[derive(Clone, Debug, PartialEq)]
-struct ToolProduct {
-    r: Output,
-}
-fn into_product(r: Output) -> ToolProduct {
-    ToolProduct { r: r }
-}
-
-impl ToolProduct {
-    //    fn status_code(&self) -> Option<i32> {
-    //        match *self {
-    //            ToolProduct::NoErrorUTF8 { .. } => Some(0),
-    //            ToolProduct::UserErrorUTF8 { exit_code, .. } =>
-    //                Some(exit_code),
-    //            ToolProduct::GracefulBugUTF8 { exit_code, .. } =>
-    //                Some(exit_code),
-    //            ToolProduct::Exited(ref out) =>
-    //                {out.status.code()}
-    //            ToolProduct::Other(ref out) => {out.status.code()}
-    //            ToolProduct::CrashedUTF8{ .. } => None
-    //        }
-    //    }
-
-    fn status_code(&self) -> Option<i32> {
-        self.r.status.code()
-    }
-    fn stdout_bytes(&self) -> usize {
-        self.r.stdout.len()
-    }
-    fn stderr_bytes(&self) -> usize {
-        self.r.stderr.len()
-    }
-
-    fn stderr_str(&self) -> &str {
-        std::str::from_utf8(&self.r.stderr)
-            .expect("Implement lossy UTF-8 decoding for test results")
-    }
-    #[allow(dead_code)]
-    fn stdout_str(&self) -> &str {
-        std::str::from_utf8(&self.r.stdout)
-            .expect("Implement lossy UTF-8 decoding for test results")
-    }
-    fn expect_exit_0_no_output(&self, m: &str) -> &ToolProduct {
-        if self.stderr_bytes() > 0 || self.stdout_bytes() > 0 || self.status_code() != Some(0) {
-
-            panic!("{}\nExpected exit code 0 and no output to stderr or stdout. Received\n {:?}\n{}",
-                   m,
-                   &self.r, std::str::from_utf8(&self.r.stderr).unwrap());
-        }
-        &self
-    }
-    fn expect_status_code(&self, code: Option<i32>) -> &ToolProduct {
-        if code != self.status_code(){
-            self.dump();
-            assert_eq!(code, self.status_code());
-        }
-        &self
-    }
-    fn expect_stderr_contains(&self, substring: &str) -> &ToolProduct {
-        if !self.stderr_str().contains(substring) {
-            panic!("Failed to locate substring {:?} within stderr output {}",
-                   substring,
-                   self.stderr_str());
-        }
-        self
-    }
-
-
-    fn parse_stdout_as<T>(&self) -> std::result::Result<T, serde_json::error::Error>
-        where T: serde::Deserialize
-    {
-        serde_json::from_slice(&self.r.stdout)
-    }
-
-
-
-    fn dump(&self) -> &ToolProduct {
-        let _ = writeln!(&mut std::io::stderr(),
-                         "{:?}\n{}",
-                         self.r,
-                         self.stderr_str());
-        self
-    }
-}
-
-
-struct TestContext {
-    imageflow_tool: PathBuf,
-    test_dir: PathBuf,
-}
-
-impl TestContext {
-    fn create_for_examples(parent_folder_str: &str, tool_location: Option<PathBuf>) -> TestContext {
-        let parent_folder = Path::new(parent_folder_str);
-        let self_path = match tool_location {
-            None => std::env::current_exe().expect("For --self-test to work, we need to know the binary's location. env::current_exe failed"),
-            Some(p) => p,
-        };
-        let dir = parent_folder;
-        if let Err(e) = create_dir_all(&dir) {
-            panic!("Failed to create directory {:?} due to {:?}", dir, e);
-        }
-
-        TestContext {
-            imageflow_tool: self_path,
-            test_dir: dir.to_owned(),
-        }
-    }
-
-    fn create(parent_folder: &Path, tool_location: Option<PathBuf>) -> TestContext {
-        let self_path = match tool_location {
-            None => std::env::current_exe().expect("For --self-test to work, we need to know the binary's location. env::current_exe failed"),
-            Some(p) => p,
-        };
-        let dir = parent_folder.join(format!("{:032}", UTC::now().timestamp()));
-
-        if let Err(e) = create_dir_all(&dir) {
-            panic!("Failed to create directory {:?} due to {:?}", dir, e);
-        }
-
-
-        TestContext {
-            imageflow_tool: self_path,
-            test_dir: dir,
-        }
-    }
-
-    fn copy_ancestral_file_here(&self, filename: &str) -> std::result::Result<(), String>{
-        let mut dir = self.test_dir.clone();
-        loop{
-            let potential = dir.join(filename);
-            if !potential.exists(){
-                dir = match dir.parent(){
-                    Some(v) => v.to_owned(),
-                    None => { break; }
-                };
-            }else{
-                let to_path = self.test_dir.join(filename);
-                std::fs::copy(potential, to_path).unwrap();
-                return Ok(());
-            }
-        }
-        Err(format!("Failed to locate {:?} in ancestors of {:?}", filename, self.test_dir))
-    }
-
-    fn create_valgrind_suppressions(&self) -> std::result::Result<(), String>{
-        self.copy_ancestral_file_here("valgrind_suppressions.txt")?;
-        self.copy_ancestral_file_here(".valgrindrc")
-    }
-    pub fn subfolder(&self, subfolder: &Path) -> TestContext{
-        let new_dir = self.test_dir.join(subfolder);
-        if let Err(e) = create_dir_all(&new_dir) {
-            panic!("Failed to create directory {:?} due to {:?}", &new_dir, e);
-
-        }
-
-        TestContext{
-            test_dir: new_dir,
-            imageflow_tool: self.imageflow_tool.clone()
-        }
-    }
-
-    fn exec(&self, args: &str) -> ToolProduct {
-        let full = format!("{} {}", &self.imageflow_tool.to_str().unwrap(), args);
-        self.exec_full(&full)
-    }
-    fn exec_full(&self, full_invocation: &str) -> ToolProduct {
-        let mut parts_vec = full_invocation.split_whitespace().collect::<Vec<&str>>();
-        let _ = parts_vec.remove(0);
-
-        let args_vec = parts_vec;
-        let dir = self.test_dir.as_path();
-        let exe = self.imageflow_tool.as_path();
-
-        let valgrind_copy_result = self.create_valgrind_suppressions();
-        let _ = writeln!(&mut std::io::stderr(),
-                 "Executing from folder {} with valgrind_suppressions {:?}\n{}",
-                 dir.to_str().unwrap(),
-            valgrind_copy_result,
-                 full_invocation);
-        // change working dir to dir
-        let mut cmd = Command::new(exe);
-        cmd.args(args_vec.as_slice()).current_dir(dir).env("RUST_BACKTRACE", "1");
-        let output: Output = cmd.output().expect("Failed to start?");
-        let _ = writeln!(&mut std::io::stderr(),
-                 "exit code {:?}", output.status.code());
-
-        // Try to debug segfaults
-        if output.status.code() == None {
-
-            std::io::stderr().write(&output.stderr).unwrap();
-            std::io::stdout().write(&output.stdout).unwrap();
-            let _ = writeln!(&mut std::io::stderr(),
-                             "exit code {:?}", output.status.code());
-            // Killed by signal.
-            // 11 Segmentation fault
-            // 4 illegal instruction 6 abort 8 floating point error
-
-            if std::env::var("VALGRIND_RUNNING").is_ok() {
-                let _ = writeln!(&mut std::io::stderr(),
-                                 "VALGRIND_RUNNING defined; skipping valgrind pass");
-            }else{
-                //ALLOW TO FAIL; valgrind may not be present
-                let _ = writeln!(&mut std::io::stderr(),
-                                 "Starting valgrind from within self-test:");
-                let mut cmd = Command::new("valgrind");
-                cmd.arg("-q").arg("--error-exitcode=9").arg(exe);
-                cmd.args(args_vec.as_slice()).current_dir(dir).env("RUST_BACKTRACE", "1").env("VALGRIND_RUNNING", "1");
-
-                let _ = writeln!(&mut std::io::stderr(),
-                                 "{:?}", cmd);
-
-                let _ = cmd.status(); //.expect("Failed to start valgrind?");
-            }
-        }
-
-        into_product(output)
-    }
-
-    fn write_json<T>(&self, filename: &str, info: &T)
-        where T: serde::Serialize
-    {
-        let path = self.test_dir.join(filename);
-        let mut file = BufWriter::new(File::create(&path).unwrap());
-        write!(file, "{}", serde_json::to_string_pretty(info).unwrap()).unwrap();
-    }
-
-    fn create_blank(&self,
-                    filename_without_ext: &str,
-                    w: u32,
-                    h: u32,
-                    encoder: s::EncoderPreset) {
-        let out = BlankImage{
-            w: w,
-            h: h,
-            encoding: encoder,
-            color: s::Color::Black
-        }.generate();
-
-
-        let mut path = self.test_dir.join(filename_without_ext);
-        path.set_extension(&out.file_ext);
-
-        self.write_file(path.file_name().unwrap().to_str().unwrap(), &out.bytes);
-    }
-
-    fn write_file(&self, filename: &str, bytes: &[u8]){
-        let path = self.test_dir.join(filename);
-        let mut file = BufWriter::new(File::create(&path).unwrap());
-        file.write(bytes).unwrap();
-    }
-
-    fn read_file_str(&self, filename: &str) -> String{
-        let path = self.test_dir.join(filename);
-        let mut file = File::open(&path).unwrap();
-        let mut contents = String::new();
-        file.read_to_string( &mut contents).unwrap();
-        contents
-    }
-}
-
-
-#[derive(Clone,Debug,PartialEq)]
-enum ImageSource{
-    Url(String),
-    Blank(BlankImage)
-}
-
-
-#[derive(Clone,Debug,PartialEq)]
-struct BlankImage{
- pub w: u32,
- pub h: u32,
- pub color: s::Color,
- pub encoding: s::EncoderPreset
-}
-
-impl BlankImage{
-    fn generate(&self) -> stateless::BuildOutput{
-        // Invalid read here; the result of create_canvas is not being accessed correctly.
-        let req = stateless::BuildRequest {
-            inputs: vec![],
-            framewise: s::Framewise::Steps(vec![s::Node::CreateCanvas {
-                w: self.w as usize,
-                h: self.h as usize,
-                format: s::PixelFormat::Bgr24,
-                color: self.color.clone(),
-            },
-            s::Node::Encode {
-                io_id: 0,
-                preset: self.encoding.clone(),
-            }]),
-            export_graphs_to: None, /* Some(std::path::PathBuf::from(format!("./{}/{}_debug", dir, filename_without_ext))) */
-        };
-        let result = stateless::LibClient::new().build(req).unwrap();
-        result.outputs.into_iter().next().unwrap()
-    }
-}
 
 #[derive(Clone,Debug,PartialEq)]
 enum ReplacementInput{
-    File{path: String, source: ImageSource},
+    File{path: String, source: TestImageSource
+    },
     Url(String),
 }
 impl ReplacementInput{
-    pub fn prepare(&self, c: &TestContext){
+    pub fn prepare(&self, c: &ProcTestContext){
         match self{
             &ReplacementInput::File{ref path, ref source} => {
-                let bytes = match source{
-                    &ImageSource::Url(ref url) => {
-                        ::imageflow_helpers::fetching::fetch_bytes(&url).unwrap()
-                    },
-                    &ImageSource::Blank(ref blank) => {
-                        blank.generate().bytes
-                    }
-                };
+                let bytes = source.get_bytes();
                 c.write_file(path, &bytes);
             }
             _ => {}
@@ -418,6 +74,16 @@ enum OutputDestination{
 //    ImageMatches{dest: &'a ReplacementOutput, w: Option<u32>, h: Option<u32>, content_type: Option<&'static str>},
 //
 //}
+trait TestScenario{
+    fn description() -> &'static str;
+    fn slug() -> &'static str;
+
+}
+
+trait TestExpectations{
+
+}
+
 struct BuildScenario{
     pub description: &'static str,
     pub slug: &'static str,
@@ -426,6 +92,58 @@ struct BuildScenario{
     pub new_outputs: Vec<ReplacementOutput>,
     pub json_out: Option<&'static str>,
     pub expectations: Option<ScenarioExpectations>
+}
+
+impl BuildScenario{
+
+    fn default_script_name() -> &'static str{
+        if cfg!(target_os="windows") {
+            "run_recipe.bat"
+        }else{
+            "run_recipe.sh"
+        }
+    }
+    fn prepare_scenario(&self, context: &ProcTestContext) -> ProcTestContext {
+        let c = context.subfolder_context(Path::new(self.slug));
+        println!("Preparing example {} in \n{:?}\n\n{}", self.slug, c.working_dir(), self.description);
+        for input in self.new_inputs.as_slice().iter(){
+            input.prepare(&c);
+        }
+        let json_fname = format!("{}.json", self.slug);
+        c.write_json(&json_fname, &self.recipe);
+
+        let mut command = format!("{} v0.1/build --json {}", c.bin_location().to_str().unwrap(), json_fname);
+        if self.new_inputs.len() > 0 {
+            let arg = format!(" --in {}", self.new_inputs.as_slice().iter().map(|i| i.parameter()).collect::<Vec<String>>().join(" "));
+            command.push_str(&arg);
+        }
+        if self.new_outputs.len() > 0 {
+            let arg = format!(" --out {}", self.new_outputs.as_slice().iter().map(|i| i.parameter()).collect::<Vec<String>>().join(" "));
+            command.push_str(&arg);
+        }
+        if let Some(ref outfile) = self.json_out{
+            let arg = format!(" --response {}", outfile);
+            command.push_str(&arg);
+        }
+
+        c.write_file(Self::default_script_name(), &command.as_bytes());
+        c
+    }
+
+    fn run_scenario(&self, context: &ProcTestContext) -> ProcOutput {
+        let c = context.subfolder_context(Path::new(self.slug));
+        println!("Running example {} in \n{:?}\n\n{}", self.slug, c.working_dir(), self.description);
+
+        let full_command = c.read_file_str(Self::default_script_name());
+
+        let product = c.exec_full(&full_command);
+
+        if let Some(ScenarioExpectations{ref status_code}) = self.expectations{
+            product.expect_status_code(status_code.clone());
+        }
+        product
+    }
+
 }
 //expect that output file exists
 //expect that output bytes parse
@@ -546,7 +264,7 @@ fn scenario_laundry_list() -> BuildScenario{
         description: "A rather nonsensical enumeration of operations",
         slug: "laundry_list",
         recipe: framewise.wrap_in_build_0_1(),
-        new_inputs: vec![ReplacementInput::File{path: "blank3200.jpg".to_owned(), source: ImageSource::Blank(BlankImage{w: 3200, h:3200, color: s::Color::Black, encoding: s::EncoderPreset::libjpegturbo_q(Some(5))})}
+        new_inputs: vec![ReplacementInput::File{path: "blank3200.jpg".to_owned(), source: TestImageSource::Blank(BlankImage{w: 3200, h:3200, color: s::Color::Black, encoding: s::EncoderPreset::libjpegturbo_q(Some(5))})}
 ],
         new_outputs: vec![ReplacementOutput::file(1,"wat.jpg")],
         json_out: None,
@@ -565,7 +283,7 @@ fn scenario_request_base64() -> BuildScenario{
         description: "base64: is a keyword: --out \"base64:\" causes the result to be base64 encoded into the response JSON",
         slug: "give_me_base64",
         recipe: framewise.wrap_in_build_0_1(),
-        new_inputs: vec![ReplacementInput::File{path: "rings2.png".to_owned(), source: ImageSource::Url("http://s3-us-west-2.amazonaws.com/imageflow-resources/test_inputs/rings2.png".to_owned())}],
+        new_inputs: vec![ReplacementInput::File{path: "rings2.png".to_owned(), source: TestImageSource::Url("http://s3-us-west-2.amazonaws.com/imageflow-resources/test_inputs/rings2.png".to_owned())}],
         new_outputs: vec![ReplacementOutput::b64(1)],
         json_out: Some("operation_result.json"),
         expectations: Some(ScenarioExpectations{status_code: Some(0)})
@@ -586,78 +304,27 @@ fn scenarios() -> Vec<BuildScenario>{
 }
 
 
-impl TestContext {
-
-    fn default_script_name() -> &'static str{
-        match os_type::current_platform() {
-            os_type::OSType::Windows => "run_recipe.bat",
-            _ => "run_recipe.sh"
-        }
-    }
-    fn prepare_scenario(&self, item: &BuildScenario) -> TestContext {
-        let c = self.subfolder(Path::new(item.slug));
-        println!("Preparing example {} in \n{:?}\n\n{}", item.slug,c.test_dir, item.description);
-        for input in item.new_inputs.as_slice().iter(){
-            input.prepare(&c);
-        }
-        let json_fname = format!("{}.json", item.slug);
-        c.write_json(&json_fname, &item.recipe);
-
-        let mut command = format!("{} v0.1/build --json {}", self.imageflow_tool.as_path().to_str().unwrap(), json_fname);
-        if item.new_inputs.len() > 0 {
-            let arg = format!(" --in {}", item.new_inputs.as_slice().iter().map(|i| i.parameter()).collect::<Vec<String>>().join(" "));
-            command.push_str(&arg);
-        }
-        if item.new_outputs.len() > 0 {
-            let arg = format!(" --out {}", item.new_outputs.as_slice().iter().map(|i| i.parameter()).collect::<Vec<String>>().join(" "));
-            command.push_str(&arg);
-        }
-        if let Some(ref outfile) = item.json_out{
-            let arg = format!(" --response {}", outfile);
-            command.push_str(&arg);
-        }
-
-        c.write_file(TestContext::default_script_name(), &command.as_bytes());
-        c
-    }
-
-    fn run_scenario(&self, item: &BuildScenario) -> ToolProduct {
-        let c = self.subfolder(Path::new(item.slug));
-        println!("Running example {} in \n{:?}\n\n{}", item.slug, c.test_dir, item.description);
-
-        let full_command = c.read_file_str(TestContext::default_script_name());
-
-        let product = c.exec_full(&full_command);
-
-        if let Some(ScenarioExpectations{ref status_code}) = item.expectations{
-            product.expect_status_code(status_code.clone());
-        }
-        product
-    }
-
-}
-
 pub fn export_examples(tool_location: Option<PathBuf>){
-    let c = TestContext::create_for_examples("examples", tool_location);
+    let c = ProcTestContext::create("examples", tool_location);
     for example in scenarios(){
-        c.prepare_scenario(&example);
+        example.prepare_scenario(&c);
     }
 }
 pub fn run_examples(tool_location: Option<PathBuf>){
-    let c = TestContext::create_for_examples("examples", tool_location);
+    let c = ProcTestContext::create("examples", tool_location);
     for example in scenarios(){
-        c.run_scenario(&example);
+        example.run_scenario(&c);
     }
 }
 
 
 pub fn run(tool_location: Option<PathBuf>) -> i32 {
 
-    let c = TestContext::create(Path::new("self_tests"), tool_location);
+    let c = ProcTestContext::create_timestamp_subdir_within("self_tests", tool_location);
     // encapsulate scenario/example for reuse
-    for example in scenarios(){
-        c.prepare_scenario(&example);
-        c.run_scenario(&example);
+    for example in scenarios() {
+        example.prepare_scenario(&c);
+        example.run_scenario(&c);
     }
     {
         c.exec("diagnose --show-compilation-info").expect_status_code(Some(0));
@@ -667,8 +334,8 @@ pub fn run(tool_location: Option<PathBuf>) -> i32 {
     {
         let recipe = s::Build001::example_with_steps();
         c.write_json("example1.json", &recipe);
-        c.create_blank("200x200", 200, 200, s::EncoderPreset::libjpegturbo());
-        c.create_blank("200x200", 200, 200, s::EncoderPreset::libpng32());
+        c.create_blank_image_here("200x200", 200, 200, s::EncoderPreset::libjpegturbo());
+        c.create_blank_image_here("200x200", 200, 200, s::EncoderPreset::libpng32());
 
         c.exec("v0.1/build --json example1.json --in 200x200.png 200x200.jpg --out out0.jpg --response out0.json").expect_exit_0_no_output("");
         // TODO: Verify out0.json exists and was created
@@ -679,8 +346,8 @@ pub fn run(tool_location: Option<PathBuf>) -> i32 {
     {
         let recipe =  s::Build001::example_with_steps();
         c.write_json("example2.json",&recipe);
-        c.create_blank("200x200", 200, 200, s::EncoderPreset::libjpegturbo());
-        c.create_blank("200x200", 200, 200, s::EncoderPreset::libpng32());
+        c.create_blank_image_here("200x200", 200, 200, s::EncoderPreset::libjpegturbo());
+        c.create_blank_image_here("200x200", 200, 200, s::EncoderPreset::libpng32());
 
         let result =
             c.exec("v0.1/build --json example2.json --in 200x200.png 200x200.jpg --out out0.jpg");
@@ -702,7 +369,7 @@ pub fn run(tool_location: Option<PathBuf>) -> i32 {
     {
         let recipe = fluent::fluently().decode(0).constrain_within(Some(60), Some(45), None).encode(1, s::EncoderPreset::libjpegturbo()).into_build_0_1();
         c.write_json("example2.json", &recipe);
-        c.create_blank("200x200", 200, 200, s::EncoderPreset::libjpegturbo());
+        c.create_blank_image_here("200x200", 200, 200, s::EncoderPreset::libjpegturbo());
 
         let result =
         c.exec("v0.1/build --json example2.json --in 200x200.jpg --out out3.jpg");
@@ -858,27 +525,27 @@ pub fn run(tool_location: Option<PathBuf>) -> i32 {
 }
 
 pub fn test_capture(tool_location: Option<PathBuf>) -> i32 {
-    let c = TestContext::create(Path::new("self_tests"), tool_location);
+    let c = ProcTestContext::create_timestamp_subdir_within("self_tests", tool_location);
     // encapsulate scenario/example for reuse
     {
         let recipe = s::Build001::example_with_steps();
         c.write_json("example1.json", &recipe);
-        c.create_blank("200x200", 200, 200, s::EncoderPreset::libjpegturbo());
-        c.create_blank("200x200", 200, 200, s::EncoderPreset::libpng32());
+        c.create_blank_image_here("200x200", 200, 200, s::EncoderPreset::libjpegturbo());
+        c.create_blank_image_here("200x200", 200, 200, s::EncoderPreset::libpng32());
 
         c.exec("v0.1/build --json example1.json --in 200x200.png 200x200.jpg --out out0.jpg --response out0.json").expect_exit_0_no_output("");
         // TODO: Verify out0.json exists and was created
         c.exec("v0.1/build --bundle-to bundle_example_1 --json example1.json --in 200x200.png 200x200.jpg --out out0.jpg --response out0.json").expect_status_code(Some(0));
         //TODO: verify bundle was created
         //TODO: test URL fetch
-        c.subfolder(Path::new("bundle_example_1")).exec("--capture-to recipe v0.1/build --json recipe.json --response response.json").dump().expect_status_code(Some(0));
+        c.subfolder_context(Path::new("bundle_example_1")).exec("--capture-to recipe v0.1/build --json recipe.json --response response.json").dump().expect_status_code(Some(0));
 
     }
     {
         let recipe = s::Build001::example_with_steps();
         c.write_json("example1.json", &recipe);
-        c.create_blank("200x200", 200, 200, s::EncoderPreset::libjpegturbo());
-        c.create_blank("200x200", 200, 200, s::EncoderPreset::libpng32());
+        c.create_blank_image_here("200x200", 200, 200, s::EncoderPreset::libjpegturbo());
+        c.create_blank_image_here("200x200", 200, 200, s::EncoderPreset::libpng32());
 
         c.exec("v0.1/build --debug-package debug_example --json example1.json --in 200x200.png 200x200.jpg --out out0.jpg --response out0.json").expect_status_code(Some(0));
     }

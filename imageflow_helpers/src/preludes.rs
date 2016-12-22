@@ -12,5 +12,4 @@ pub mod from_std {
     pub use std::path::{PathBuf, Path};
     pub use std::str::FromStr;
     pub use ::std::cmp::Ordering;
-
 }

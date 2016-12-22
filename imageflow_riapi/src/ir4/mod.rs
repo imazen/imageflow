@@ -1,8 +1,6 @@
 use imageflow_helpers::preludes::from_std::*;
 use ::std;
 use ::url::Url;
-use ::macro_attr;
-use ::enum_derive;
 use ::imageflow_types as s;
 
 pub mod parsing;

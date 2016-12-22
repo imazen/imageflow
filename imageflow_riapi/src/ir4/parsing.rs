@@ -1,8 +1,6 @@
 use imageflow_helpers::preludes::from_std::*;
 use ::std;
 use ::url::Url;
-use ::macro_attr;
-use ::enum_derive;
 use ::imageflow_types as s;
 use ::option_filter::OptionFilterExt;
 
@@ -154,11 +152,6 @@ pub fn parse_url(url: &Url) -> (Instructions, Vec<ParseWarning>) {
         (i, warnings)
 }
 
-enum KeyResult{
-    NotValid,
-    NotSupported,
-    Supported,
-}
 
 impl Instructions{
     pub fn delete_from_map(map: &mut HashMap<String,String>, warnings: Option<&mut Vec<ParseWarning>>) -> Instructions {
@@ -238,7 +231,7 @@ impl<'a> Parser<'a>{
 
             if let Some(s) = v {
                 match f(&s) {
-                    Err(e) => {
+                    Err(_) => {
                         self.warn(ParseWarning::ValueInvalid((key, s.to_owned())));
                         (None, false) // We assume an error means the value wasn't supported
                     },
@@ -308,7 +301,7 @@ impl<'a> Parser<'a>{
             match s.to_lowercase().as_str(){
                 "true" | "1" | "yes" | "on" => Ok(true),
                 "false" | "0" | "no" | "off" => Ok(false),
-                other => Err(())
+                _ => Err(())
             }
         )
     }
@@ -598,13 +591,13 @@ fn debug_diff<T>(a : &T, b: &T) where T: std::fmt::Debug, T: PartialEq{
         for i in 0..changeset.len() {
             match changeset[i] {
                 Difference::Same(ref x) => {
-                    writeln!(t, " {}", x);
+                    let _ = writeln!(t, " {}", x);
                 },
                 Difference::Add(ref x) => {
-                    writeln!(t, "+{}", x);
+                    let _ = writeln!(t, "+{}", x);
                 },
                 Difference::Rem(ref x) => {
-                    writeln!(t, "-{}", x);
+                    let _ = writeln!(t, "-{}", x);
                 }
             }
         }
