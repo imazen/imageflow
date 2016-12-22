@@ -304,82 +304,86 @@ fn ir4_http_respond<F>(shared: &SharedData, url: &str, framewise_generator: F) -
     respond_using(|| fetch_bytes_using_cache_by_url(&shared.source_cache, url).map_err(error_upstream), framewise_generator)
 }
 
-fn ir4_local_respond<F>(shared: &SharedData, source: &Path, framewise_generator: F) -> IronResult<Response>
-    where F: Fn(s::ImageInfo) -> std::result::Result<s::Framewise, ServerError>
-{
-    respond_using(|| fetch_bytes_from_disk(source), framewise_generator)
-}
+
 
 fn ir4_framewise(info: s::ImageInfo, url: &Url) -> std::result::Result<s::Framewise, ServerError>{
     ::imageflow_riapi::ir4::parse_to_framewise(info, url).map_err(|e| ServerError::LayoutSizingError(e)).map(|(framewise, warnings)| framewise)
 }
 
-struct Ir4Local{
-}
 
-impl Ir4Local{
-    fn handle(req: &mut Request, local_path: &Path, mount: &MountLocation) -> IronResult<Response>{
-        let path = req.extensions.get::<Router>().unwrap().find("path").unwrap().to_owned();
-        let url = req.url.clone().into_generic_url();
-        let shared = req.get::<persistent::Read<SharedData>>().unwrap();
-        //Ensure the combined path is canonical.
-        let original = local_path.join(path);
-        if let Ok(canonical) = original.canonicalize(){
-            if canonical.exists() && original == canonical{
-                return ir4_local_respond(&shared, canonical.as_path(), move | info: s::ImageInfo| {
-                    ir4_framewise(info, &url)
-                });
-            }
-        }
-        let bytes = format!("File not found").into_bytes();
-        Ok(Response::with((Mime::from_str("text/plain").unwrap(),
-                           status::NotFound,
-                           bytes)))
+type EngineHandler<T> = fn(req: &mut Request, engine_data: &T, mount: &MountLocation) -> IronResult<Response> ;
+type EngineSetup<T> = fn(mount: &MountLocation, router: &mut Router) ->  Result<(T,EngineHandler<T>),String>  ;
 
-    }
-}
-struct Ir4Http{
-}
-impl Ir4Http{
-    fn handle(req: &mut Request, base_url: &str, mount: &MountLocation) -> IronResult<Response> {
-        let path = req.extensions.get::<Router>().unwrap().find("path").unwrap().to_owned();
-        let url = req.url.clone().into_generic_url();
-        let shared = req.get::<persistent::Read<SharedData>>().unwrap();
-        //TODO: Ensure the combined url is canonical (or, at least, lacks ..)
-        let remote_url = format!("{}{}", base_url, path);
 
-        ir4_http_respond(&shared, &remote_url, move |info: s::ImageInfo| {
-            ir4_framewise(info, &url)
-        })
-    }
+
+fn ir4_local_respond<F>(shared: &SharedData, source: &Path, framewise_generator: F) -> IronResult<Response>
+    where F: Fn(s::ImageInfo) -> std::result::Result<s::Framewise, ServerError>
+{
+    respond_using(|| fetch_bytes_from_disk(source), framewise_generator)
 }
-impl Engine for Ir4Http{
-    fn mount(self, mount: MountLocation, router: &mut Router) -> Result<(),String>{
-        if mount.engine_args.len() < 1{
-            Err("ir4_http requires at least one argument - the base url to suffix paths to".to_owned())
-        }else {
-            let glob = format!("{}:path", &mount.prefix);
-            let route_id = mount.prefix.replace("/", "_");
-            router.get(&glob, move |r: &mut Request| { Ir4Http::handle(r, &mount.engine_args[0], &mount) }, &route_id);
-            Ok(()) //TODO: I don't think .get handles failure well
+fn ir4_local_handler(req: &mut Request, local_path: &PathBuf, mount: &MountLocation) -> IronResult<Response>{
+    let path = req.extensions.get::<Router>().unwrap().find("path").unwrap().to_owned();
+    let url = req.url.clone().into_generic_url();
+    let shared = req.get::<persistent::Read<SharedData>>().unwrap();
+    //Ensure the combined path is canonical.
+    let original = local_path.join(path);
+    if let Ok(canonical) = original.canonicalize(){
+        if canonical.exists() && original == canonical{
+            return ir4_local_respond(&shared, canonical.as_path(), move | info: s::ImageInfo| {
+                ir4_framewise(info, &url)
+            });
         }
     }
-}
-impl Engine for Ir4Local{
-    fn mount(self, mount: MountLocation, router: &mut Router) -> Result<(),String>{
-        if mount.engine_args.len() < 1{
-            Err("ir4_local requires at least one argument - the path to the physical folder it is serving".to_owned())
-        }else {
-            //TODO: validate path
-            let local_dir = Path::new(&mount.engine_args[0]).canonicalize().map_err(|e| format!("{:?}",e))?;
+    let bytes = format!("File not found").into_bytes();
+    Ok(Response::with((Mime::from_str("text/plain").unwrap(),
+                       status::NotFound,
+                       bytes)))
 
-            let glob = format!("{}:path", &mount.prefix);
-            let route_id = mount.prefix.replace("/", "_");
-            router.get(&glob, move |r: &mut Request| { Ir4Local::handle(r, local_dir.as_path(), &mount) }, &route_id);
-            Ok(()) //TODO: I don't think .get handles failure well
-        }
+}
+fn ir4_local_setup(mount: &MountLocation, router: &mut Router) ->  Result<(PathBuf,EngineHandler<PathBuf>),String>{
+    if mount.engine_args.len() < 1{
+        Err("ir4_local requires at least one argument - the path to the physical folder it is serving".to_owned())
+    }else {
+        //TODO: validate path
+        let local_dir = Path::new(&mount.engine_args[0]).canonicalize().map_err(|e| format!("{:?}",e))?;
+        Ok((local_dir, ir4_local_handler))
     }
 }
+
+
+
+fn ir4_http_handler(req: &mut Request, base_url: &String, mount: &MountLocation) -> IronResult<Response> {
+    let path = req.extensions.get::<Router>().unwrap().find("path").unwrap().to_owned();
+    let url = req.url.clone().into_generic_url();
+    let shared = req.get::<persistent::Read<SharedData>>().unwrap();
+    //TODO: Ensure the combined url is canonical (or, at least, lacks ..)
+    let remote_url = format!("{}{}", base_url, path);
+
+    ir4_http_respond(&shared, &remote_url, move |info: s::ImageInfo| {
+        ir4_framewise(info, &url)
+    })
+}
+
+fn ir4_http_setup(mount: &MountLocation, router: &mut Router) -> Result<(String,EngineHandler<String>),String> {
+    if mount.engine_args.len() < 1 {
+        Err("ir4_http requires at least one argument - the base url to suffix paths to".to_owned())
+    } else {
+        Ok((mount.engine_args[0].to_owned(), ir4_http_handler))
+    }
+}
+
+
+
+fn mount<T>(method: iron::method::Method, mount: MountLocation, router: &mut Router, setup: EngineSetup<T>) -> Result<(),String>
+    where T: Send, T: Sync, T: 'static {
+    let (data, handler) = setup(&mount, router)?;
+
+    let glob = format!("{}:path", &mount.prefix);
+    let route_id = format!("{}_{:?}", &mount.prefix.replace("/", "_"), method);
+    router.route(method, &glob, move |r: &mut Request| { handler(r, &data, &mount) }, &route_id);
+    Ok(())
+}
+
 pub fn serve(c: StartServerConfig) {
     env_logger::init().unwrap();
 
@@ -396,8 +400,8 @@ pub fn serve(c: StartServerConfig) {
     for m in c.mounts.into_iter(){
         let mount_result = match m.engine {
             //MountedEngine::Ir4Https => "ir4_https",
-            MountedEngine::Ir4Http => Ir4Http {}.mount(m, &mut router),
-            MountedEngine::Ir4Local => Ir4Local {}.mount(m, &mut router),
+            MountedEngine::Ir4Http => mount(iron::method::Method::Get, m, &mut router, ir4_http_setup),
+            MountedEngine::Ir4Local => mount(iron::method::Method::Get, m, &mut router, ir4_local_setup),
         };
         mount_result.unwrap();
 //        if let Err(s) = mount_result{
