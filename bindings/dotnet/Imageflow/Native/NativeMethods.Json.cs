@@ -27,12 +27,9 @@ namespace Imageflow.Native
 				buffer = null;
 				return false;
 			}
-			unsafe
-			{
 #pragma warning disable HeapAnalyzerExplicitNewObjectRule // Explicit new reference type allocation
-				buffer = new JsonTextReader(new StreamReader(new UnmanagedMemoryStream((byte*)bufferPointer, bufferSize.ToInt64()), Encoding.UTF8));
+			buffer = new UnmanagedJsonReader(bufferPointer, bufferSize.ToInt64());
 #pragma warning restore HeapAnalyzerExplicitNewObjectRule // Explicit new reference type allocation
-			}
 			return true;
 		}
 
