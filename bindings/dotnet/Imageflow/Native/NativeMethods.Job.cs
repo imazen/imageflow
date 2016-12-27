@@ -1,6 +1,8 @@
 ﻿using System;
+using System.IO;
 using System.Runtime.InteropServices;
 using System.Text;
+using Newtonsoft.Json;
 
 namespace Imageflow.Native
 {
@@ -39,26 +41,22 @@ namespace Imageflow.Native
 		/// <param name="context"></param>
 		/// <param name="job"></param>
 		/// <param name="io_id"></param>
-		/// <param name="result"></param>
+		/// <param name="resultBuffer"></param>
 		/// <returns></returns>
 		/// <exception cref="BufferOverflowException"></exception>
-		public static bool imageflow_job_get_output_buffer_by_id(ContextPointer context, JobPointer job, int io_id, out string result)
+		public static bool imageflow_job_get_output_buffer_by_id(ContextPointer context, JobPointer job, int io_id, out JsonReader resultBuffer)
 		{
-			byte[] buffer;
+			IntPtr resultBufferPointer;
 			long bufferSize;
-			bool @return = imageflow_job_get_output_buffer_by_id(context, job, io_id, out buffer, out bufferSize);
+			bool @return = imageflow_job_get_output_buffer_by_id(context, job, io_id, out resultBufferPointer, out bufferSize);
 			if (!@return)
 			{
-				result = null;
+				resultBuffer = null;
 				return false;
 			}
-			if (bufferSize > int.MaxValue)
-			{
 #pragma warning disable HeapAnalyzerExplicitNewObjectRule // Explicit new reference type allocation
-				throw new BufferOverflowException(bufferSize);
+			resultBuffer = new UnmanagedJsonReader(resultBufferPointer, bufferSize);
 #pragma warning restore HeapAnalyzerExplicitNewObjectRule // Explicit new reference type allocation
-			}
-			result = Encoding.UTF8.GetString(buffer, 0, (int)bufferSize);
 			return true;
 		}
 
@@ -74,7 +72,7 @@ namespace Imageflow.Native
 		/// <seealso href="https://s3-us-west-1.amazonaws.com/imageflow-nightlies/master/doc/imageflow/fn.imageflow_job_get_output_buffer_by_id.html"/>
 		[DllImport(LibraryName, EntryPoint = nameof(imageflow_job_get_output_buffer_by_id))]
 		[return: MarshalAs(UnmanagedType.I1)]
-		private static extern bool imageflow_job_get_output_buffer_by_id(ContextPointer context, JobPointer job, int io_id, [MarshalAs(UnmanagedType.LPArray, SizeParamIndex = 4)][Out]out byte[] result_buffer, [Out]out long result_buffer_length);
+		private static extern bool imageflow_job_get_output_buffer_by_id(ContextPointer context, JobPointer job, int io_id, [Out]out IntPtr result_buffer, [Out]out long result_buffer_length);
 
 		/// <summary>
 		///		Creates an imageflow_job, which permits the association of imageflow_io instances with numeric identifiers and provides a 'sub-context' for job execution.

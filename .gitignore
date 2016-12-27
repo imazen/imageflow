@@ -51,7 +51,7 @@ gmon.out
 *.s
 *.c.s
 
-/c_components/cmake-build-debug/
+
 
 #Valgrind suppression copes
 /imageflow_core/.valgrindrc
@@ -86,9 +86,8 @@ gmon.out
 
 
 # VSCode
-.vscode/
+/.vscode/
 
-.vs/
 
 ## Go .gitignore
 
@@ -137,6 +136,7 @@ x86/
 build/
 bld/
 [Oo]bj/
+[Dd]ocumentation/
 
 # Roslyn cache directories
 *.ide/
@@ -252,6 +252,7 @@ publish/
 
 # NuGet Packages
 *.nupkg
+project.lock.json
 # The packages folder can be ignored because of Package Restore
 **/packages/*
 # except build/, which is used as an MSBuild target.
@@ -278,6 +279,7 @@ ClientBin/
 *.pfx
 *.publishsettings
 node_modules/
+.vs/
 
 # RIA/Silverlight projects
 Generated_Code/
