@@ -138,6 +138,7 @@ test_script:
   - xcopy /Y target\%RUST_TARGET%\release\flow-proto1.exe  artifacts\staging\
   - xcopy /Y target\%RUST_TARGET%\release\imageflow_server.exe  artifacts\staging\
   - xcopy /Y target\%RUST_TARGET%\release\imageflow.dll  artifacts\staging\
+  - xcopy /Y target\%RUST_TARGET%\release\*.pdb  artifacts\staging\
   - xcopy /Y target\%RUST_TARGET%\release\imageflow_tool.exe  artifacts\staging\
   - xcopy /Y bindings\headers\*.h  artifacts\staging\headers
   - xcopy /Y /E target\doc  artifacts\staging\doc
