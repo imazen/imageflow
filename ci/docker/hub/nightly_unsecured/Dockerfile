@@ -10,7 +10,7 @@ RUN if [ -z "${SOURCE_COMMIT}" ]; then echo "SOURCE_COMMIT not set; exiting" && 
 RUN apt-get update \
   && apt-get upgrade -y \
   && apt-get install --no-install-recommends -y \
-  sudo wget libssl-dev ca-certificates \
+    sudo libcurl4-openssl-dev  curl libssl-dev ca-certificates libpng-dev \
   && apt-get clean -y \
   && apt-get autoremove -y \
   && rm -rf /var/lib/apt/lists/* \
