@@ -20,7 +20,7 @@ matrix:
     - docker
   - os: linux
     dist: trusty
-    env: PACKAGE_SUFFIX=x86_64-linux-gcc54-glibc223 DOCKER_IMAGE=imazen/build_if_gcc54 UPLOAD_BUILD=True UPLOAD_DOCS=True
+    env: PACKAGE_SUFFIX=x86_64-linux-gcc54-glibc223 DOCKER_IMAGE=imazen/build_if_gcc54 UPLOAD_BUILD=True UPLOAD_DOCS=True FETCH_COMMIT_SUFFIX=linux64_glibc223
     sudo: required
     services:
     - docker
@@ -77,3 +77,6 @@ deploy:
     on:
       tags: true
       condition: $UPLOAD_BUILD = True
+
+after_success:
+  - ci/travis_trigger_docker_cloud.sh
