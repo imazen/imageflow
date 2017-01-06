@@ -74,8 +74,8 @@ print_modified_ago(){
             docker-cloud stack update flow-tiny
         )
 	else
-        docker build -t "imazen/imageflow_server" "$(pwd)"
-        docker push  imazen/imageflow_server
+        docker build -t "imazen/imageflow_server_dev" "$(pwd)"
+        docker push  imazen/imageflow_server_dev
         #docker run --rm "imazen/${IMAGE_NAME}" sudo "/home/conan/imageflow/imageflow_tool" diagnose --self-test
 
         #export STACK_UID= $(docker-cloud stack up --name flow3 -f docker-solo.yaml)

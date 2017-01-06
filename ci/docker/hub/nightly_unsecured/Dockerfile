@@ -10,7 +10,7 @@ RUN if [ -z "${SOURCE_COMMIT}" ]; then echo "SOURCE_COMMIT not set; exiting" && 
 RUN apt-get update \
   && apt-get upgrade -y \
   && apt-get install --no-install-recommends -y \
-    sudo libcurl4-openssl-dev  curl libssl-dev ca-certificates libpng-dev \
+    sudo wget libcurl4-openssl-dev  curl libssl-dev ca-certificates libpng-dev \
   && apt-get clean -y \
   && apt-get autoremove -y \
   && rm -rf /var/lib/apt/lists/* \
@@ -20,6 +20,7 @@ RUN apt-get update \
   && sudo mkdir -p /var/cache/apt/archives/partial \
   && sudo touch /var/cache/apt/archives/lock \
   && sudo chmod 640 /var/cache/apt/archives/lock
+
 
 RUN groupadd 1001 -g 1001 &&\
     groupadd 1000 -g 1000 &&\
