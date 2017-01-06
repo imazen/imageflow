@@ -79,4 +79,4 @@ deploy:
       condition: $UPLOAD_BUILD = True
 
 after_success:
-  - ci/travis_trigger_docker_cloud.sh
+  - if [[ "$FETCH_COMMIT_SUFFIX" == "linux64_glibc223" ]]; then ./ci/travis_trigger_docker_cloud.sh; fi
