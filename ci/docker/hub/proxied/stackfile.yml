@@ -50,13 +50,13 @@ letsencrypt-nginx-proxy:
 imageflow-hidden:
   autoredeploy: true
   deployment_strategy: high_availability
-  entrypoint: '/bin/sh -c "sudo chown -R imageflow /home/imageflow/ && /home/imageflow/imageflow_server start --demo --bind-address 0.0.0.0 --port 3000 --data-dir /home/imageflow/data/"'
-  target_num_containers: 3
+  entrypoint: '/bin/bash -c "ulimit -c unlimited && sudo chown -R imageflow /home/imageflow/ && /home/imageflow/imageflow_server start --demo --bind-address 0.0.0.0 --port 3000 --data-dir /home/imageflow/data/"'
+  target_num_containers: 2
   environment:
     - RUST_BACKTRACE=1
-    - VIRTUAL_HOST=imageflow-demo.imazen.io,*.dockerapp.io
+    - VIRTUAL_HOST=imageflow-demo-a.imazen.io,*.dockerapp.io
     - VIRTUAL_PORT=3000
-    - LETSENCRYPT_HOST=imageflow-demo.imazen.io
+    - LETSENCRYPT_HOST=imageflow-demo-a.imazen.io
     - LETSENCRYPT_EMAIL=support@imazen.io
   image: 'imazen/imageflow_server_unsecured:latest'
   expose:
