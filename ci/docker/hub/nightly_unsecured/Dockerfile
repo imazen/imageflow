@@ -2,6 +2,9 @@ FROM ubuntu:xenial
 
 MAINTAINER Nathanael Jones 
 
+ARG SOURCE_COMMIT
+ARG DOCKER_TAG
+
 RUN if [ -z "${SOURCE_COMMIT}" ]; then echo "SOURCE_COMMIT not set; exiting" && exit 1; else echo "SOURCE_COMMIT=${SOURCE_COMMIT}"; fi
 
 RUN apt-get update \
