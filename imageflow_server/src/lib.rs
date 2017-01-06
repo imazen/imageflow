@@ -46,6 +46,7 @@ use hyper::Client;
 
 pub mod disk_cache;
 pub mod resizer;
+pub mod diagnose;
 
 use disk_cache::{CacheFolder, CacheEntry, FolderLayout};
 use logger::Logger;

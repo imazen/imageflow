@@ -52,7 +52,9 @@ fn main_with_exit_code() -> i32 {
                 ).arg(
                 Arg::with_name("call-panic").long("call-panic")
                     .help("Triggers a Rust panic (so you can observe failure/backtrace behavior)")
-            )
+            ).arg(
+                Arg::with_name("smoke-test-core").long("smoke-test-core")
+                    .help("Smoke test a few tiny image processing operations"))
         )
         .subcommand(
             SubCommand::with_name("start")
@@ -92,6 +94,10 @@ fn main_with_exit_code() -> i32 {
         }
         if m.is_present("call-panic") {
             panic!("Panicking on command");
+        }
+        if m.is_present("smoke-test-core") {
+            ::imageflow_server::diagnose::smoke_test_core();
+            return 0;
         }
     }
     if let Some(ref matches) = matches.subcommand_matches("start") {
