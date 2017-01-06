@@ -15,6 +15,8 @@
     {{ end }}
 {{ end }}
 
+server_names_hash_bucket_size 64;
+
 # If we receive X-Forwarded-Proto, pass it through; otherwise, pass along the
 # scheme used to connect to this server
 map $http_x_forwarded_proto $proxy_x_forwarded_proto {
@@ -52,7 +54,7 @@ include /etc/nginx/proxy.conf;
 {{ else }}
 # HTTP 1.1 support
 proxy_http_version 1.1;
-proxy_buffering off;
+proxy_buffering on;
 proxy_set_header Host $http_host;
 proxy_set_header Upgrade $http_upgrade;
 proxy_set_header Connection $proxy_connection;
@@ -181,6 +183,8 @@ server {
     {{ end }}
 
     location / {
+        proxy_buffering on;
+
         proxy_pass {{ trim $proto }}://{{ trim $host }};
         {{ if (exists (printf "/etc/nginx/htpasswd/%s" $host)) }}
         auth_basic  "Restricted {{ $host }}";
@@ -193,30 +197,6 @@ server {
                 {{ end }}
     }
 
-    # revisioned/fingerprinted images can be cached forever
-    location ~ "/assets/images/(.*)-([a-z0-9]{10})\.(?:png|jpe?g|tiff)(.*)$" {
-      expires           max;
-      add_header        Cache-Control public;
-      add_header        Vary Accept;
-      proxy_pass        {{ trim $proto }}://{{ trim $host }}/$uri$webp_suffix;
-      access_log        off;
-    }
-
-    # revisioned/fingerprinted images can be cached forever
-    location ~* \.(?:gif|png|jpe?g)$ {
-      expires           1w;
-      add_header        Cache-Control public;
-      proxy_pass        {{ trim $proto }}://{{ trim $host }}/$uri;
-      access_log        off;
-    }
-
-    # non revisioned/fingerprinted images only cache for 1 week
-    location ~* \.(?:css|js) {
-      expires           max;
-      add_header        Cache-Control public;
-      proxy_pass        {{ trim $proto }}://{{ trim $host }}/$uri;
-      access_log        off;
-    }
 }
 {{ else }}
 
@@ -232,6 +212,8 @@ server {
     {{ end }}
 
     location / {
+        proxy_buffering on;
+        
         proxy_pass {{ trim $proto }}://{{ trim $host }};
         {{ if (exists (printf "/etc/nginx/htpasswd/%s" $host)) }}
         auth_basic  "Restricted {{ $host }}";
@@ -244,30 +226,6 @@ server {
         {{ end }}
     }
 
-    # revisioned/fingerprinted images can be cached forever
-    location ~ "/assets/images/(.*)-([a-z0-9]{10})\.(?:png|jpe?g|tiff)(.*)$" {
-      expires           max;
-      add_header        Cache-Control public;
-      add_header        Vary Accept;
-      proxy_pass        {{ trim $proto }}://{{ trim $host }}/$uri$webp_suffix;
-      access_log        off;
-    }
-
-    # revisioned/fingerprinted images can be cached forever
-    location ~* \.(?:gif|png|jpe?g)$ {
-      expires           1w;
-      add_header        Cache-Control public;
-      proxy_pass        {{ trim $proto }}://{{ trim $host }}/$uri;
-      access_log        off;
-    }
-
-    # non revisioned/fingerprinted images only cache for 1 week
-    location ~* \.(?:css|js) {
-      expires           max;
-      add_header        Cache-Control public;
-      proxy_pass        {{ trim $proto }}://{{ trim $host }}/$uri;
-      access_log        off;
-    }
 }
 
 {{ if (and (exists "/etc/nginx/certs/default.crt") (exists "/etc/nginx/certs/default.key")) }}

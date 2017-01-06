@@ -21,7 +21,7 @@ nginx-proxy:
 
 
 nginx-gen:
-  image: donovanmuller/docker-gen-docker-cloud:0.7.3
+  image: imazen/docker-gen-cloud
   volumes:
     - "/var/run/docker.sock:/tmp/docker.sock:ro"
   volumes_from:
@@ -34,7 +34,7 @@ nginx-gen:
    - global
 
 letsencrypt-nginx-proxy:
-  image: donovanmuller/docker-letsencrypt-nginx-proxy-companion:latest
+  image: imazen/docker-letsencrypt-nginx-proxy-companion
   volumes_from:
     - volume-certs
     - volume-config
@@ -42,21 +42,23 @@ letsencrypt-nginx-proxy:
     - "/var/run/docker.sock:/var/run/docker.sock:ro"
   environment:
     - NGINX_DOCKER_GEN_CONTAINER=nginx-gen
-    - ACME_CA_URI=https://acme-staging.api.letsencrypt.org/directory
+    - ACME_CA_URI=https://acme-v01.api.letsencrypt.org/directory
   roles:
     - global
 
 
 imageflow-hidden:
   autoredeploy: true
+  deployment_strategy: high_availability
   entrypoint: '/bin/sh -c "sudo chown -R imageflow /home/imageflow/ && /home/imageflow/imageflow_server start --demo --bind-address 0.0.0.0 --port 3000 --data-dir /home/imageflow/data/"'
+  target_num_containers: 3
   environment:
     - RUST_BACKTRACE=1
-    - VIRTUAL_HOST=imageflow-nightly-demo.imazen.io
+    - VIRTUAL_HOST=imageflow-demo.imazen.io,*.dockerapp.io
     - VIRTUAL_PORT=3000
-    - LETSENCRYPT_HOST=imageflow-nightly-demo.imazen.io
+    - LETSENCRYPT_HOST=imageflow-demo.imazen.io
     - LETSENCRYPT_EMAIL=support@imazen.io
-  image: 'nathanaeljones/imageflow_server_unsecured:latest'
+  image: 'imazen/imageflow_server_unsecured:latest'
   expose:
     - '3000'
   restart: always

@@ -22,7 +22,7 @@ if [[ -n "$CLOUD_SOURCE_NAME" ]]; then
 
 	# This token has no security value and is rate limited to 10. 
 	# It only checks GitHub for the given tag/branch - it does not accept any data.
-	TRIGGER_ENDPOINT=https://registry.hub.docker.com/u/nathanaeljones/imageflow_server_unsecured/trigger/4cef52f0-76f6-4f2e-9a5e-e2b93b7d2f59/
+	TRIGGER_ENDPOINT=https://registry.hub.docker.com/u/imazen/imageflow_server_unsecured/trigger/3682f725-3a98-49dd-9e96-acd594721250/
 	echo "Triggering docker cloud build with $PAYLOAD"
 	curl -H "Content-Type: application/json" --data "${PAYLOAD}" -X POST "$TRIGGER_ENDPOINT"
 fi 
