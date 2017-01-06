@@ -49,13 +49,27 @@ pub fn get_build_env_value(key: &str) -> &Option<&'static str> {
      }
 }
 
+fn built_ago() -> (i64, &'static str){
+    let compiled_utc = ::chrono::datetime::DateTime::parse_from_rfc3339(benv::GENERATED_DATETIME_UTC).unwrap();
+    let duration = ::chrono::UTC::now() -compiled_utc;
+    if duration.num_hours() > 0{
+        (duration.num_hours(), "hours")
+    }else if duration.num_minutes() > 0{
+        (duration.num_minutes(), "minutes")
+    }else {
+        (duration.num_seconds(), "seconds")
+    }
+}
+
 pub fn one_line_version() -> String {
     let branch = benv::BUILD_ENV_INFO.get("GIT_OPTIONAL_BRANCH").unwrap();
     match benv::BUILT_ON_CI {
         false => {
-            format!("unofficial build of {} {}",
-                    describe_always_dirty(),
-                    one_line_suffix())
+            let (v, unit) = built_ago();
+            format!("built {} {} ago - UNOFFICIAL {} build of {}{} ({}) for {} ({})",
+                   v,unit, get_build_env_value("PROFILE").unwrap_or("[profile missing]"),
+                    benv::GIT_DESCRIBE_ALWAYS, dirty_star(), branch.as_ref().unwrap_or(&"unknown branch"), benv::TARGET, benv::GENERATED_DATE_UTC)
+
         }
         true => {
             match benv::BUILD_ENV_INFO.get("GIT_OPTIONAL_TAG").unwrap() {

@@ -39,7 +39,7 @@ extern crate serde_derive;
 extern crate lazy_static; //Used by build_env_info.rs
 
 extern crate imageflow_helpers;
-
+extern crate chrono;
 extern crate serde;
 extern crate serde_json;
 extern crate regex;
