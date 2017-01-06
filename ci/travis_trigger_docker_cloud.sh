@@ -1,6 +1,10 @@
 #!/bin/bash
 set -e #Exit on failure.
 
+# Test locally by running
+#  TRAVIS_BRANCH=master ./ci/travis_trigger_docker_cloud.sh
+#  TRAVIS_TAG=v0.0.10 ./ci/travis_trigger_docker_cloud.sh
+
 if [[ -z "$TRAVIS_PULL_REQUEST_SHA" ]]; then
 	if [[ -n "$TRAVIS_TAG" ]]; then
 		export CLOUD_SOURCE_NAME="${TRAVIS_TAG}"

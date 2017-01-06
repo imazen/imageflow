@@ -36,5 +36,7 @@ RUN mkdir nightly && cd nightly && wget -nv -O ifs.tar.gz https://s3-us-west-1.a
 
 EXPOSE 39876
 
+ENV RUST_BACKTRACE 1
+
 ENTRYPOINT ["/home/imageflow/imageflow_server"]
 CMD ["start", "--demo"]
