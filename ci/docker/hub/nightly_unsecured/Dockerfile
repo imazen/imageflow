@@ -2,6 +2,7 @@ FROM ubuntu:xenial
 
 MAINTAINER Nathanael Jones 
 
+RUN if [ -z "${SOURCE_COMMIT}" ]; then echo "SOURCE_COMMIT not set; exiting" && exit 1; else echo "SOURCE_COMMIT=${SOURCE_COMMIT}"; fi
 
 RUN apt-get update \
   && apt-get upgrade -y \
