@@ -34,6 +34,7 @@ pub struct BuildRequest<'a> {
                                                        * TODO: gamma correction
                                                        * TODO: Optimization sets */
 }
+
 #[derive(Clone, PartialEq, Debug)]
 pub struct BuildSuccess {
     pub outputs: Vec<BuildOutput>,
@@ -140,6 +141,7 @@ impl LibClient {
                 },
                 no_gamma_correction: None,
             };
+
 
             let send_execute_str = serde_json::to_string_pretty(&send_execute).unwrap();
             let result_blob: JsonResponse =

@@ -38,6 +38,7 @@ staticfile="*"
 serde = "=0.8.17"
 serde_derive="=0.8.17"
 conduit-mime-types = "*"
+chrono="*"
 
 [build-dependencies]
 cmake = "0.1.17"

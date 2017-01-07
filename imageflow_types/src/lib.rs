@@ -228,6 +228,7 @@ impl Color {
 
 }
 
+#[cfg(test)]
 fn assert_eq_hex(a: u32, b: u32){
     if a != b{
         println!("{:08X} != {:08X} (expected)", a, b);

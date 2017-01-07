@@ -44,6 +44,26 @@ impl Job{
         self.graph_recording = r;
     }
 
+    pub fn execute(&mut self, what: s::Execute001) -> Result<s::ResponsePayload>{
+            let mut g = ::parsing::GraphTranslator::new().translate_framewise(what.framewise)?;
+            if let Some(r) = what.graph_recording {
+                self.configure_graph_recording(r);
+            }
+
+            if let Some(b) = what.no_gamma_correction {
+                self.context().todo_remove_set_floatspace(if b {
+                    ::ffi::Floatspace::srgb
+                }else {
+                    ::ffi::Floatspace::linear
+                });
+            };
+            //Cheat on lifetimes so Job can remain mutable
+            let split_context = unsafe{ &*(self.context() as *const Context)};
+            ::flow::execution_engine::Engine::create(split_context, self, &mut g).execute()?;
+
+            Ok(s::ResponsePayload::JobResult(s::JobResult { encodes: Job::collect_encode_results(&g) }))
+    }
+
     pub fn message(&mut self, method: &str, json: &[u8]) -> Result<JsonResponse> {
         ::job_methods::JOB_ROUTER.invoke(self, method, json)
     }

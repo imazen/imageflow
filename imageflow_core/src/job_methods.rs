@@ -21,24 +21,9 @@ fn create_job_router() -> MethodRouter<'static, Job> {
                     }));
     r.add_responder("v0.1/execute",
                     Box::new(move |job: &mut Job, parsed: s::Execute001| {
-        let mut g = ::parsing::GraphTranslator::new().translate_framewise(parsed.framewise)?;
-        if let Some(r) = parsed.graph_recording {
-            job.configure_graph_recording(r);
-        }
+                        job.execute(parsed)
+                    }));
 
-        if let Some(b) = parsed.no_gamma_correction {
-            job.context().todo_remove_set_floatspace(if b {
-                ::ffi::Floatspace::srgb
-            }else {
-                ::ffi::Floatspace::linear
-            });
-        };
-        //Cheat on lifetimes so Job can remain mutable
-        let split_context = unsafe{ &*(job.context() as *const Context)};
-        ::flow::execution_engine::Engine::create(split_context, job, &mut g).execute()?;
-
-        Ok(s::ResponsePayload::JobResult(s::JobResult { encodes: Job::collect_encode_results(&g) }))
-    }));
     r.add("brew_coffee",
           Box::new(move |job: &mut Job, bytes: &[u8]| Ok(JsonResponse::teapot())));
     r

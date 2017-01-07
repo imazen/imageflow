@@ -533,6 +533,7 @@ pub enum ScaleMode {
     UpscaleCanvas
 }
 
+#[cfg(test)]
 fn debug_diff<T>(a : &T, b: &T) where T: std::fmt::Debug, T: PartialEq{
     if a != b {
         let text1 = format!("{:#?}", a);

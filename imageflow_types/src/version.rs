@@ -20,13 +20,6 @@ fn dirty_star() -> &'static str {
     if dirty() { "*" } else { "" }
 }
 
-fn describe_always_dirty() -> String {
-    if dirty() {
-        format!("{}*", benv::GIT_DESCRIBE_ALWAYS)
-    } else {
-        format!("{}", benv::GIT_DESCRIBE_ALWAYS)
-    }
-}
 fn commit9_and_date() -> String {
     format!("{}{} {}",
             &benv::GIT_COMMIT[0..9],
@@ -52,44 +45,64 @@ pub fn get_build_env_value(key: &str) -> &Option<&'static str> {
 fn built_ago() -> (i64, &'static str){
     let compiled_utc = ::chrono::datetime::DateTime::parse_from_rfc3339(benv::GENERATED_DATETIME_UTC).unwrap();
     let duration = ::chrono::UTC::now() -compiled_utc;
-    if duration.num_hours() > 0{
+    let (v,u) = if duration.num_days() > 0 {
+        (duration.num_days(), "days")
+    }else if duration.num_hours() > 0{
         (duration.num_hours(), "hours")
     }else if duration.num_minutes() > 0{
         (duration.num_minutes(), "minutes")
     }else {
         (duration.num_seconds(), "seconds")
+    };
+    if v < 1{
+        (v, &u[0..u.len()-1])
+    }else{
+        (v,u)
     }
+
 }
 
 pub fn one_line_version() -> String {
-    let branch = benv::BUILD_ENV_INFO.get("GIT_OPTIONAL_BRANCH").unwrap();
-    match benv::BUILT_ON_CI {
-        false => {
-            let (v, unit) = built_ago();
-            format!("built {} {} ago - UNOFFICIAL {} build of {}{} ({}) for {} ({})",
-                   v,unit, get_build_env_value("PROFILE").unwrap_or("[profile missing]"),
-                    benv::GIT_DESCRIBE_ALWAYS, dirty_star(), branch.as_ref().unwrap_or(&"unknown branch"), benv::TARGET, benv::GENERATED_DATE_UTC)
+    //Create options for branch and release_tag
+    let branch = benv::BUILD_ENV_INFO.get("GIT_OPTIONAL_BRANCH").unwrap(); //still needs to be unwrapped
+    let release_tag = if let &Some(ref tag) = benv::BUILD_ENV_INFO.get("GIT_OPTIONAL_TAG").unwrap() {
+        if tag.starts_with("v") {
+            Some(&tag[1..])
+        } else { None }
+    } else {None};
 
-        }
-        true => {
-            match benv::BUILD_ENV_INFO.get("GIT_OPTIONAL_TAG").unwrap() {
-                &Some(ref tag) if tag.starts_with("v") => {
-                    format!("release {} {}", &tag[1..], one_line_suffix())
-                }
-                _ => {
-                    if let Some(ref branch_name) = *branch {
-                        format!("nightly build {} from branch {} {}",
-                                describe_always_dirty(),
-                                branch_name,
-                                one_line_suffix())
-                    } else {
-                        format!("unknown build {} {} ",
-                                describe_always_dirty(),
-                                one_line_suffix())
-                    }
-                }
-            }
-        }
+
+    let profile_release = get_build_env_value("PROFILE") == &Some("release");
+    let ci_job_title = get_build_env_value("CI_JOB_TITLE").unwrap_or("Local ");
+    let profile = get_build_env_value("PROFILE").unwrap_or("[profile missing]");
+    let ci = benv::BUILT_ON_CI;
+
+    if ci && profile_release && release_tag.is_some(){
+        format!("release {} {}", release_tag.unwrap(), one_line_suffix())
+    }else if ci && profile_release && branch == &Some("master") && !dirty() {
+        format!("nightly {} from master {}",
+                benv::GIT_DESCRIBE_ALWAYS,
+                one_line_suffix())
+    }else{
+
+        let (v, unit) = built_ago();
+
+        let source = if ci_job_title.starts_with("Travis 88888"){
+            "simulation CI"
+        }else if ci_job_title.starts_with("Travis "){
+            "unofficial CI"
+        }else if ci_job_title.starts_with("AppVeyor ") {
+            "unofficial CI"
+        }else if ci_job_title.starts_with("Local ") {
+            "user-compiled"
+        }else  {
+            "SOURCE UNKNOWN"
+        };
+
+
+        format!("built {} {} ago - {} {} build of {}{} ({}) for {} ({})",
+                v, unit, source, profile,
+                benv::GIT_DESCRIBE_ALWAYS, dirty_star(), branch.as_ref().unwrap_or(&"unknown branch"), benv::TARGET, benv::GENERATED_DATE_UTC)
     }
 }
 
