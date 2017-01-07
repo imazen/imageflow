@@ -1,0 +1,6 @@
+/bin/
+/self_tests/
+/server_tests/
+/imageflow_data/
+/imageflow_server
+/Dockerfile

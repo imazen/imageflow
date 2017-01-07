@@ -25,15 +25,28 @@ shopt -s extglob
 # PACKAGE_SUFFIX like x86_64-linux-gcc48-eglibc219
 # FETCH_COMMIT_SUFFIX like mac64
 # TEST_C_DEBUG_BUILD
+export BUILD_QUIETER="$BUILD_QUIETER"
 
+echo_maybe(){
+	if [[ "$BUILD_QUIETER" -ne "True" ]]; then
+	    echo "$1"
+	fi
+}
+if [[ "$BUILD_QUIETER" == "True" ]]; then
+    export INFO_STDOUT="/dev/null"
+else
+	export INFO_STDOUT="&1"
+fi
 
-
-
-echo "Preparing to build Imageflow"
+echo_maybe "Preparing to build Imageflow"
 
 # We change this default (not like Travis), but for speed. 
 # Not relevant when DISABLE_COMPILATION_CACHES=True 
 export CLEAN_RUST_TARGETS="${CLEAN_RUST_TARGETS:-False}"
+
+export IMAGEFLOW_BUILD_OVERRIDE="${IMAGEFLOW_BUILD_OVERRIDE}"
+
+
 
 
 # First parameter to script must be the name of the docker image (excluding imazen/)
@@ -43,18 +56,18 @@ export DOCKER_IMAGE="${DOCKER_IMAGE:-imazen/$IMAGE_NAME}"
 
 ############## Paths for caching
 export SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )/$1"
-export TEST_SH_CACHE_DIR=~/.docker_imageflow_caches
+export TEST_SH_CACHE_DIR="${HOME}/.docker_imageflow_caches"
 #export TEST_SH_CACHE_DIR="${SCRIPT_DIR}/../.docker_imageflow_caches"
 
 export WORKING_DIR="${TEST_SH_CACHE_DIR}/.docker_${IMAGE_NAME}"
 export SHARED_CACHE="${TEST_SH_CACHE_DIR}/.shared_cache"
 
-echo "===================================================================== [test.sh]"
-echo "Rsync imageflow/* into dedicated work folder ${WORKING_DIR}"
-echo
+echo_maybe "===================================================================== [test.sh]"
+echo_maybe "Rsync imageflow/* into dedicated work folder ${WORKING_DIR}"
+echo_maybe
 
 [[ -d "$WORKING_DIR" ]] || mkdir -p "$WORKING_DIR"
-rsync -q -av --delete "${SCRIPT_DIR}/../../.." "$WORKING_DIR" --filter=':- .gitignore' # --exclude=".git/" #--exclude-from "${SCRIPT_DIR}/../exclude_paths.txt" 
+rsync -q -av --delete "${SCRIPT_DIR}/../../.." "$WORKING_DIR" --filter=':- .gitignore'  --exclude="target/" #--exclude-from "${SCRIPT_DIR}/../exclude_paths.txt" 
 (
 	cd "$WORKING_DIR"
 
@@ -69,11 +82,10 @@ rsync -q -av --delete "${SCRIPT_DIR}/../../.." "$WORKING_DIR" --filter=':- .giti
 	## REQUIRED FOR SIMULATION
 	export SIM_CI="True"
 	export SIM_OPEN_BASH="${OPEN_DOCKER_BASH_INSTEAD:-False}"
-	export SIM_DOCKER_CACHE_VARS=()
+	export SIM_DOCKER_CACHE_VAR
 
 
-	echo "DISABLE_COMPILATION_CACHES=${DISABLE_COMPILATION_CACHES:-False}"
-
+	
 	mkdir -p "${WORKING_DIR}_cache/target/debug" || true
 	mkdir -p "${WORKING_DIR}_cache/target/release" || true
 	mkdir -p "${WORKING_DIR}_cache/conan_data" || true
@@ -82,13 +94,15 @@ rsync -q -av --delete "${SCRIPT_DIR}/../../.." "$WORKING_DIR" --filter=':- .giti
 
 
 	# The first two are only needed in test.sh, since we're rsycning away the whole /target folder
-	SIM_DOCKER_CACHE_VARS=(
+	export SIM_DOCKER_CACHE_VARS=(
 		-v 
 		"${WORKING_DIR}_cache/target/debug:/home/conan/imageflow/target/debug"
 		-v 
 		"${WORKING_DIR}_cache/target/release:/home/conan/imageflow/target/release"
 		-v 
 		"${WORKING_DIR}_cache/conan_data:/home/conan/.conan/data" 
+		-v 
+		"${HOME}/.cargo:/home/conan/host_cargo" 
 		-v 
 		"${WORKING_DIR}_cache/ccache:/home/conan/.ccache"
 		-v 
@@ -98,8 +112,9 @@ rsync -q -av --delete "${SCRIPT_DIR}/../../.." "$WORKING_DIR" --filter=':- .giti
 	#Ensure that .cargo is NOT volume mapped; cargo will not work. Also, cargo fetches faster than rsync, it seems?
 
 
-	if [[ "$DISABLE_COMPILATION_CACHES" == 'True' ]]; then
-		SIM_DOCKER_CACHE_VARS=()
+	if [[ "$DISABLE_COMPILATION_CACHES" == 'True' ]]; then		
+		echo "DISABLE_COMPILATION_CACHES=${DISABLE_COMPILATION_CACHES:-False}"
+		export SIM_DOCKER_CACHE_VARS=()
 	fi
 
 
@@ -119,6 +134,7 @@ rsync -q -av --delete "${SCRIPT_DIR}/../../.." "$WORKING_DIR" --filter=':- .giti
 	fi
 
 	export TRAVIS_BUILD_NUMBER=99999
+	export TRAVIS_JOB_NUMBER=88888
 	export TRAVIS_BRANCH=
 
 	## For docs
@@ -147,7 +163,7 @@ rsync -q -av --delete "${SCRIPT_DIR}/../../.." "$WORKING_DIR" --filter=':- .giti
 	export COVERALLS_TOKEN=
 
 
-	conan user
+	conan user 1>$INFO_STDOUT
 	# For os x convenience
 	if [[ "$(uname -s)" == 'Darwin' ]]; then
 		eval "$(docker-machine env default)"
@@ -165,9 +181,13 @@ rsync -q -av --delete "${SCRIPT_DIR}/../../.." "$WORKING_DIR" --filter=':- .giti
 		"SIM_OPEN_BASH=${SIM_OPEN_BASH}"
 		"SIM_DOCKER_CACHE_VARS="
 		"${SIM_DOCKER_CACHE_VARS[@]}"
+		"BUILD_DEBUG=${BUILD_DEBUG}"
+		"BUILD_QUIETER=${BUILD_QUIETER}"
+		"IMAGEFLOW_BUILD_OVERRIDE=${IMAGEFLOW_BUILD_OVERRIDE}"
 		"BUILD_RELEASE=${BUILD_RELEASE}"
 		"CLEAN_RUST_TARGETS=${CLEAN_RUST_TARGETS}"
 		"TRAVIS_BUILD_NUMBER=${TRAVIS_BUILD_NUMBER}"
+		"TRAVIS_JOB_NUMBER=${TRAVIS_JOB_NUMBER}"
 		"TRAVIS_BRANCH=${TRAVIS_BRANCH}"
 		"TRAVIS_TAG=${TRAVIS_TAG}"
 		"FETCH_COMMIT_SUFFIX=${FETCH_COMMIT_SUFFIX}"
@@ -180,12 +200,16 @@ rsync -q -av --delete "${SCRIPT_DIR}/../../.." "$WORKING_DIR" --filter=':- .giti
 		"COVERALLS_TOKEN=${COVERALLS_TOKEN}"
 	)
 
-	echo "TRAVIS_RUN_VARS: "
-	printf "%s\n" "${TRAVIS_RUN_VARS[@]}"
-
+	if [[ "$BUILD_QUIETER" -ne "True" ]]; then
+		printf "TRAVIS_RUN_VARS: \n%s\n" "${TRAVIS_RUN_VARS[@]}"
+	fi 
 	
+	#echo "SIM_DOCKER_CACHE_VARS ${SIM_DOCKER_CACHE_VARS[*]}"
 
-	echo ""
-	echo "switching to ./ci/travis_run.sh ================================"
-	./ci/travis_run.sh
+	echo_maybe ""
+	echo_maybe "switching to ./ci/travis_run.sh ================================"
+
+	#echo "SIM_DOCKER_CACHE_VARS ${SIM_DOCKER_CACHE_VARS[*]}"
+	
+	SIM_DOCKER_CACHE_VARS="${SIM_DOCKER_CACHE_VARS[*]}" ./ci/travis_run.sh
 )

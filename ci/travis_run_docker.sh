@@ -1,13 +1,19 @@
 #!/bin/bash
 set -e #Exit on failure.
-echo "travis_run_docker.sh:"
+printf "travis_run_docker.sh:"
 
 # Take ownership of the home directory
 # Otherwise docker folder mapping can fuck things up
 sudo chown -R "$(id -u -n)": ~/
 sudo chmod -R a+rw .
 
-conan user
+conan user 1>/dev/null
+
+if [[ -d "${HOME}/host_cargo/git" && -d "${HOME}/host_cargo/registry" ]]; then
+	echo "copying ~/host_cargo"
+	cp -Rp "${HOME}/host_cargo/git" "${HOME}/.cargo/git" 
+	cp -Rp "${HOME}/host_cargo/registry" "${HOME}/.cargo/registry" 
+fi
 
 ./build.sh
 

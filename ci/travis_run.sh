@@ -1,7 +1,11 @@
 #!/bin/bash
 set -e
+#echo "SIM_DOCKER_CACHE_VARS ${SIM_DOCKER_CACHE_VARS[*]}"
+# shellcheck disable=SC2116
+# shellcheck disable=SC2086
+SIM_DOCKER_CACHE_VARS=($(echo $SIM_DOCKER_CACHE_VARS))
 
-echo "travis_run.sh:"
+printf "travis_run.sh:  "
 
 ## REQUIRED ALWAYS
 # TRAVIS_BUILD_DIR (root copy of repo, with .git folder present)
@@ -46,14 +50,21 @@ echo "travis_run.sh:"
 # COVERALLS
 # COVERALLS_TOKEN
 
-
+if [[ "$BUILD_QUIETER" == "True" ]]; then
+    export INFO_STDOUT=/dev/null
+else
+	export INFO_STDOUT="&1"
+fi
+echo_maybe(){
+	echo "$1" 1>$INFO_STDOUT
+}
 
 if [ -n "${TRAVIS_BUILD_DIR}" ]; then
   cd "${TRAVIS_BUILD_DIR}"
 fi
 
 STAMP="+[%H:%M:%S]"
-date "$STAMP"
+date "$STAMP" 1>$INFO_STDOUT
 
 #Export CI stuff
 export CI_SEQUENTIAL_BUILD_NUMBER="${TRAVIS_BUILD_NUMBER}"
@@ -71,7 +82,7 @@ export UPLOAD_URL="https://s3-us-west-1.amazonaws.com/imageflow-nightlies"
 
 ############ GIT VALUES ##################
 
-echo "Querying git for version and branch information"
+echo_maybe "Querying git for version and branch information"
 export GIT_COMMIT
 GIT_COMMIT="${GIT_COMMIT:-$(git rev-parse HEAD)}"
 GIT_COMMIT="${GIT_COMMIT:-unknown-commit}"
@@ -79,7 +90,7 @@ export GIT_COMMIT_SHORT
 GIT_COMMIT_SHORT="${GIT_COMMIT_SHORT:-$(git rev-parse --short HEAD)}"
 GIT_COMMIT_SHORT="${GIT_COMMIT_SHORT:-unknown-commit}"
 export GIT_OPTIONAL_TAG
-if git describe --exact-match --tags; then
+if git describe --exact-match --tags &>$INFO_STDOUT ; then
 	GIT_OPTIONAL_TAG="${GIT_OPTIONAL_TAG:-$(git describe --exact-match --tags)}"
 fi
 export GIT_DESCRIBE_ALWAYS
@@ -92,10 +103,10 @@ GIT_DESCRIBE_AAL="${GIT_DESCRIBE_AAL:-$(git describe --always --all --long)}"
 # But let others override GIT_OPTIONAL_BRANCH, as HEAD might not have a symbolic ref, and it could crash
 # I.e, provide GIT_OPTIONAL_BRANCH to this script in Travis - but NOT For 
 export GIT_OPTIONAL_BRANCH
-if git symbolic-ref --short HEAD; then 
+if git symbolic-ref --short HEAD &>$INFO_STDOUT ; then 
 	GIT_OPTIONAL_BRANCH="${GIT_OPTIONAL_BRANCH:-$(git symbolic-ref --short HEAD)}"
 fi 
-echo "Naming things... (using TRAVIS_TAG=${TRAVIS_TAG}, GIT_OPTIONAL_BRANCH=${GIT_OPTIONAL_BRANCH}, PACKAGE_SUFFIX=${PACKAGE_SUFFIX}, GIT_DESCRIBE_ALWAYS_LONG=${GIT_DESCRIBE_ALWAYS_LONG}, CI_SEQUENTIAL_BUILD_NUMBER=${CI_SEQUENTIAL_BUILD_NUMBER}, GIT_COMMIT_SHORT=$GIT_COMMIT_SHORT, GIT_COMMIT=$GIT_COMMIT, FETCH_COMMIT_SUFFIX=${FETCH_COMMIT_SUFFIX})"
+echo_maybe "Naming things... (using TRAVIS_TAG=${TRAVIS_TAG}, GIT_OPTIONAL_BRANCH=${GIT_OPTIONAL_BRANCH}, PACKAGE_SUFFIX=${PACKAGE_SUFFIX}, GIT_DESCRIBE_ALWAYS_LONG=${GIT_DESCRIBE_ALWAYS_LONG}, CI_SEQUENTIAL_BUILD_NUMBER=${CI_SEQUENTIAL_BUILD_NUMBER}, GIT_COMMIT_SHORT=$GIT_COMMIT_SHORT, GIT_COMMIT=$GIT_COMMIT, FETCH_COMMIT_SUFFIX=${FETCH_COMMIT_SUFFIX})"
 ################## NAMING THINGS ####################
 
 export DELETE_UPLOAD_FOLDER="${DELETE_UPLOAD_FOLDER:-True}"
@@ -126,6 +137,9 @@ if [ "${TRAVIS_PULL_REQUEST}" == "false" ]; then
 			export DOCS_UPLOAD_DIR_2="${GIT_OPTIONAL_BRANCH}/doc"
 			export ESTIMATED_DOCS_URL_2="${UPLOAD_URL}/${DOCS_UPLOAD_DIR_2}"
 			export ESTIMATED_DOCS_URL="${ESTIMATED_DOCS_URL:-${ESTIMATED_DOCS_URL_2}}"
+			if [[ "$ESTIMATED_DOCS_URL_2" == "$ESTIMATED_DOCS_URL" ]]; then
+				export ESTIMATED_DOCS_URL_2=
+			fi 
 		fi
 
 		if [ -n "${FETCH_COMMIT_SUFFIX}" ]; then
@@ -138,9 +152,9 @@ if [ "${TRAVIS_PULL_REQUEST}" == "false" ]; then
 
 		export RUNTIME_REQUIREMENTS_FILE="./ci/packaging_extras/requirements/${PACKAGE_SUFFIX}.txt"
 		if [ -f "$RUNTIME_REQUIREMENTS_FILE" ]; then
-			echo "Using runtime requirements file ${RUNTIME_REQUIREMENTS_FILE}"
+			echo_maybe "Using runtime requirements file ${RUNTIME_REQUIREMENTS_FILE}"
 		else
-			echo "Failed to locate a runtime requirements file for build variation ${PACKAGE_SUFFIX}"
+			echo "Failed to locate a runtime requirements file for build variation ${PACKAGE_SUFFIX}" >&2
 			exit 1
 		fi
 	fi
@@ -152,17 +166,19 @@ if [ "${TRAVIS_PULL_REQUEST}" == "false" ]; then
 
 fi
 if [ "${DELETE_UPLOAD_FOLDER}" == "True" ]; then
-	printf "\nSKIPPING UPLOAD\n"
+	printf "SKIPPING UPLOAD\n"
 else
-	printf "\nUPLOAD_BUILD=%s, UPLOAD_DOCS=%s" "${UPLOAD_BUILD}" "${UPLOAD_DOCS}"
+	printf "UPLOAD_BUILD=%s, UPLOAD_DOCS=%s\n" "${UPLOAD_BUILD}" "${UPLOAD_DOCS}"
+
+	export URL_LIST="$(printf "\n%s\n\n%s\n\n%s\n\n%s\n\n%s\n" "${ESTIMATED_ARTIFACT_URL}" "${ESTIMATED_ARTIFACT_URL_2}" "${ESTIMATED_ARTIFACT_URL_3}" "${ESTIMATED_DOCS_URL}" "${ESTIMATED_DOCS_URL_2}" | tr -s '\n')"
+	
 fi
 
-
-printf "\n=================================================\n"
-printf "\nEstimated upload URLs:\n\n%s\n\n%s\n\n" "${ESTIMATED_ARTIFACT_URL}" "${ESTIMATED_ARTIFACT_URL_2}" "${ESTIMATED_ARTIFACT_URL_3}"
-printf "\nEstimated docs URLs:\n\n%s\n\n%s\n\n" "${ESTIMATED_DOCS_URL}" "${DOCS_UPLOAD_DIR_2}"
-printf "\n=================================================\n"
-
+if [[ "$(echo "$URL_LIST" | tr -d '\r\n')" != "" ]]; then 
+	printf "\n=================================================\n\n" 1>$INFO_STDOUT
+	printf "Estimated upload URLs:\n%s\n" "${URL_LIST}"
+	printf "\n=================================================\n" 1>$INFO_STDOUT
+fi 
 
 
 
@@ -191,6 +207,10 @@ export COVERAGE="${COVERAGE:-False}"
 export COVERALLS="${COVERALLS}"
 export COVERALLS_TOKEN="${COVERALLS_TOKEN}"
 
+#Overrides everything
+export IMAGEFLOW_BUILD_OVERRIDE="${IMAGEFLOW_BUILD_OVERRIDE}"
+
+
 if [ -n "${TRAVIS_BUILD_DIR}" ]; then
   cd "${TRAVIS_BUILD_DIR}"
 fi
@@ -199,6 +219,10 @@ fi
 DOCKER_ENV_VARS=(
   "-e"
 	 "CI=${CI}"
+	 "-e"
+	 "IMAGEFLOW_BUILD_OVERRIDE=${IMAGEFLOW_BUILD_OVERRIDE}"
+	"-e"
+	 "BUILD_DEBUG=${BUILD_DEBUG}"
 	"-e"
 	 "BUILD_RELEASE=${BUILD_RELEASE}"
 	"-e"
@@ -265,28 +289,30 @@ DOCKER_ENV_VARS=(
 	 "CI_TAG=${CI_TAG}" 
 	"-e"
 	 "CI_RELATED_BRANCH=${CI_RELATED_BRANCH}" 
+	 "-e"
+	 "BUILD_QUIETER=${BUILD_QUIETER}"
 )
 
 
-echo 
-echo "========================================================="
-echo "Relevant dockered ENV VARS for build.sh: ${DOCKER_ENV_VARS[*]}"
-echo "========================================================="
-echo 
+echo_maybe 
+echo_maybe "========================================================="
+echo_maybe "Relevant dockered ENV VARS for build.sh: ${DOCKER_ENV_VARS[*]}"
+echo_maybe "========================================================="
+echo_maybe 
 ##############################
 
 
 if [[ "$(uname -s)" == 'Darwin' && -z "$SIM_CI" ]]; then
 	./ci/travis_run_osx.sh
 else
-	echo "===================================================================== [travis_run.sh]"
+	echo_maybe "===================================================================== [travis_run.sh]"
 	echo "Launching docker SIM_CI=${SIM_CI}"
 	echo
 
 	DOCKER_COMMAND=(
 			/bin/bash -c "./ci/travis_run_docker.sh"  
 			)
-	DOCKER_CACHE_VARS=(
+	export DOCKER_CACHE_VARS=(
 		-v 
 		"$HOME/.ccache:/home/conan/.ccache"
 		-v 
@@ -309,6 +335,7 @@ else
 
 		DOCKER_INVOCATION=(docker run "--interactive" "$DOCKER_TTY_FLAG" "--rm")
 	fi
+	#echo "SIM_DOCKER_CACHE_VARS ${SIM_DOCKER_CACHE_VARS[*]}"
 
 	set -x
 	"${DOCKER_INVOCATION[@]}" -v "${TRAVIS_BUILD_DIR}:/home/conan/imageflow" "${DOCKER_CACHE_VARS[@]}" "${DOCKER_ENV_VARS[@]}" "${DOCKER_IMAGE}" "${DOCKER_COMMAND[@]}" 
@@ -316,7 +343,7 @@ else
 fi
 
 if [[ "$DELETE_UPLOAD_FOLDER" == 'True' ]]; then
-	echo -e "\nRemvoing all files scheduled for upload to s3\n\n"
+	echo_maybe -e "\nRemvoing all files scheduled for upload to s3\n\n"
 	rm -rf ./artifacts/upload
 	mkdir -p ./artifacts/upload
 else
