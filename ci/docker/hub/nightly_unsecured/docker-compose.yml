@@ -1,0 +1,9 @@
+imageflow:
+  entrypoint: '/bin/sh -c "sudo chown -R imageflow /home/imageflow/ && /home/imageflow/imageflow_server start --demo --bind-address 0.0.0.0 --port 3000 --data-dir /home/imageflow/data/"'
+  environment:
+    - RUST_BACKTRACE=1
+  image: 'imazen/imageflow_server_unsecured:latest'
+  ports:
+    - '3000:3000'
+  volumes:
+    - 'imageflow_data:/home/imageflow/data'
