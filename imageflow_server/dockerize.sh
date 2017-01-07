@@ -19,11 +19,11 @@ else
 fi
 
 if [[ "$3" == 'tool' ]]; then
-	export CRATE_NAME=imageflow_tool
-	export TEST_ENTRYPOINT=(sudo "${DOCKER_DIR}/${CRATE_NAME}" diagnose --self-test)
+	export BINARY_NAME=imageflow_tool
+	export TEST_ENTRYPOINT=(sudo "${DOCKER_DIR}/${BINARY_NAME}" diagnose --self-test)
 else
-	export CRATE_NAME=imageflow_server
-	export TEST_ENTRYPOINT=(sudo "${DOCKER_DIR}/${CRATE_NAME}" diagnose --smoke-test-core)
+	export BINARY_NAME=imageflow_server
+	export TEST_ENTRYPOINT=(sudo "${DOCKER_DIR}/${BINARY_NAME}" diagnose --smoke-test-core)
 fi
 #/home/n/.docker_imageflow_caches/.docker_build_if_gcc54_cache/target/debug
 if [[ "$2" == 'docker' ]]; then
@@ -33,8 +33,6 @@ else
 fi
 
 
-# TODO: allow direct ./build.sh compilation, and passing of flags like CLEAN_RUST_TARGETS=True &&
-export BINARY_NAME="${CRATE_NAME}"
 if [[ -d "$BINARY_DIR" ]]; then
     export BINARY_DIR="$(readlink -f "$BINARY_DIR")"
 else
@@ -101,16 +99,19 @@ set -e
 
 
 
-if [[ "$SERVER_TEST_FAILED" == '1' ]]; then
+if [[ "$TEST_FAILED" == '1' ]]; then
     echo "Entering interactive"
     echo "This creates docker containers and doesn't clean them up. Use this to remove all containers (danger!)"
     echo 'docker rm `docker ps -aq`'
 
-    docker run -i -t  --name=imageflow_server_debugging "${IMAGE_NAME}" /bin/bash
+    docker run -i -t   "${IMAGE_NAME}" /bin/bash
 
     exit 1
 fi
 
+if [[ "$BINARY_NAME" == 'imageflow_server' ]]; then
+    docker run -i -t  -p 3000:3000 "${IMAGE_NAME}" sudo "${DOCKER_DIR}/${BINARY_NAME}" start --demo --port 3000 --bind-address 0.0.0.0
+fi
 
 
 #docker push  "${IMAGE_NAME}"
