@@ -77,12 +77,19 @@ pub fn one_line_version() -> String {
     let profile = get_build_env_value("PROFILE").unwrap_or("[profile missing]");
     let ci = benv::BUILT_ON_CI;
 
+    let target_cpu = match get_build_env_value("TARGET_CPU").unwrap_or(get_build_env_value("RUSTFLAGS").unwrap_or("?")){
+        "x86_64" | "x86"=> "",
+        "native" => "HOST NATIVE CPU (not portable)",
+        other => other
+    };
+
+
     if ci && profile_release && release_tag.is_some(){
-        format!("release {} {}", release_tag.unwrap(), one_line_suffix())
+        format!("release {} {} {}", release_tag.unwrap(), one_line_suffix(), target_cpu)
     }else if ci && profile_release && branch == &Some("master") && !dirty() {
-        format!("nightly {} from master {}",
+        format!("nightly {} from master {} {}",
                 benv::GIT_DESCRIBE_ALWAYS,
-                one_line_suffix())
+                one_line_suffix(), target_cpu)
     }else{
 
         let (v, unit) = built_ago();
@@ -100,9 +107,9 @@ pub fn one_line_version() -> String {
         };
 
 
-        format!("built {} {} ago - {} {} build of {}{} ({}) for {} ({})",
+        format!("built {} {} ago - {} {} build of {}{} ({}) for {} {} ({})",
                 v, unit, source, profile,
-                benv::GIT_DESCRIBE_ALWAYS, dirty_star(), branch.as_ref().unwrap_or(&"unknown branch"), benv::TARGET, benv::GENERATED_DATE_UTC)
+                benv::GIT_DESCRIBE_ALWAYS, dirty_star(), branch.as_ref().unwrap_or(&"unknown branch"), benv::TARGET, target_cpu, benv::GENERATED_DATE_UTC)
     }
 }
 

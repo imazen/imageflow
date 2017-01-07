@@ -6,7 +6,7 @@ class ImageFlowConan(ConanFile):
     name = "imageflow_c"
     version = "0.1.0"
     license = "AGPLv3"
-    settings = "os", "compiler", "build_type", "arch"
+    settings = "os", "compiler", "build_type", "arch", "target_cpu"
     requires = "littlecms/2.7@lasote/stable", "libpng/1.6.21@lasote/stable", "libjpeg-turbo/1.4.2@imazen/testing"  #, "giflib/5.1.3@lasote/stable"
     options = {"shared": [True, False]}
     generators = "cmake"
@@ -47,7 +47,7 @@ class ImageFlowConan(ConanFile):
 
 
     def build(self):
-        self.output.warn('build_tests=%s debug_build=%s coverage=%s profiling=%s shared=%s' % (self.scope.build_tests, self.scope.debug_build, self.scope.coverage, self.scope.profiling, self.options.shared))
+        self.output.warn('build_tests=%s debug_build=%s coverage=%s profiling=%s shared=%s target_cpu=%s' % (self.scope.build_tests, self.scope.debug_build, self.scope.coverage, self.scope.profiling, self.options.shared, self.settings.target_cpu))
         build_dir = os.path.join(self.conanfile_directory, "build")
         if not os.path.exists(build_dir):
             os.mkdir(build_dir)
@@ -66,7 +66,10 @@ class ImageFlowConan(ConanFile):
         if self.scope.dev and self.scope.profiling:
             cmake_settings += " -DSKIP_LIBRARY=ON -DENABLE_TEST=OFF -DENABLE_PROFILING=ON"
 
+
         cmake_settings += " -DBUILD_SHARED_LIBS=ON" if self.options.shared else " -DBUILD_SHARED_LIBS=OFF"
+        cmake_settings += " -DBUILD_SHARED_LIBS=ON" if self.options.shared else " -DBUILD_SHARED_LIBS=OFF"
+        cmake_settings += " -DTARGET_CPU=%s" % (self.settings.target_cpu)
 
         cmake_command = 'cmake "%s" %s %s' % (self.conanfile_directory, cmake.command_line, cmake_settings)
         cmake_build_command = 'cmake --build . %s' % cmake.build_config

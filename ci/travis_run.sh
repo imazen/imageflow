@@ -50,13 +50,14 @@ printf "travis_run.sh:  "
 # COVERALLS
 # COVERALLS_TOKEN
 
-if [[ "$BUILD_QUIETER" == "True" ]]; then
-    export INFO_STDOUT=/dev/null
+if [[ "$BUILD_QUIETER" != "True" ]]; then
+	exec 9>&1
 else
-	export INFO_STDOUT="&1"
+	exec 9>/dev/null
 fi
+
 echo_maybe(){
-	echo "$1" 1>$INFO_STDOUT
+	echo "$1" 1>&9
 }
 
 if [ -n "${TRAVIS_BUILD_DIR}" ]; then
@@ -64,7 +65,7 @@ if [ -n "${TRAVIS_BUILD_DIR}" ]; then
 fi
 
 STAMP="+[%H:%M:%S]"
-date "$STAMP" 1>$INFO_STDOUT
+date "$STAMP" 1>&9
 
 #Export CI stuff
 export CI_SEQUENTIAL_BUILD_NUMBER="${TRAVIS_BUILD_NUMBER}"
@@ -90,7 +91,7 @@ export GIT_COMMIT_SHORT
 GIT_COMMIT_SHORT="${GIT_COMMIT_SHORT:-$(git rev-parse --short HEAD)}"
 GIT_COMMIT_SHORT="${GIT_COMMIT_SHORT:-unknown-commit}"
 export GIT_OPTIONAL_TAG
-if git describe --exact-match --tags &>$INFO_STDOUT ; then
+if git describe --exact-match --tags &>&9 ; then
 	GIT_OPTIONAL_TAG="${GIT_OPTIONAL_TAG:-$(git describe --exact-match --tags)}"
 fi
 export GIT_DESCRIBE_ALWAYS
@@ -103,7 +104,7 @@ GIT_DESCRIBE_AAL="${GIT_DESCRIBE_AAL:-$(git describe --always --all --long)}"
 # But let others override GIT_OPTIONAL_BRANCH, as HEAD might not have a symbolic ref, and it could crash
 # I.e, provide GIT_OPTIONAL_BRANCH to this script in Travis - but NOT For 
 export GIT_OPTIONAL_BRANCH
-if git symbolic-ref --short HEAD &>$INFO_STDOUT ; then 
+if git symbolic-ref --short HEAD &>&9 ; then 
 	GIT_OPTIONAL_BRANCH="${GIT_OPTIONAL_BRANCH:-$(git symbolic-ref --short HEAD)}"
 fi 
 echo_maybe "Naming things... (using TRAVIS_TAG=${TRAVIS_TAG}, GIT_OPTIONAL_BRANCH=${GIT_OPTIONAL_BRANCH}, PACKAGE_SUFFIX=${PACKAGE_SUFFIX}, GIT_DESCRIBE_ALWAYS_LONG=${GIT_DESCRIBE_ALWAYS_LONG}, CI_SEQUENTIAL_BUILD_NUMBER=${CI_SEQUENTIAL_BUILD_NUMBER}, GIT_COMMIT_SHORT=$GIT_COMMIT_SHORT, GIT_COMMIT=$GIT_COMMIT, FETCH_COMMIT_SUFFIX=${FETCH_COMMIT_SUFFIX})"
@@ -175,9 +176,9 @@ else
 fi
 
 if [[ "$(echo "$URL_LIST" | tr -d '\r\n')" != "" ]]; then 
-	printf "\n=================================================\n\n" 1>$INFO_STDOUT
+	printf "\n=================================================\n\n" 1>&9
 	printf "Estimated upload URLs:\n%s\n" "${URL_LIST}"
-	printf "\n=================================================\n" 1>$INFO_STDOUT
+	printf "\n=================================================\n" 1>&9
 fi 
 
 
@@ -210,6 +211,8 @@ export COVERALLS_TOKEN="${COVERALLS_TOKEN}"
 #Overrides everything
 export IMAGEFLOW_BUILD_OVERRIDE="${IMAGEFLOW_BUILD_OVERRIDE}"
 
+export TARGET_CPU="${TARGET_CPU:-x86_64}"
+export TUNE_CPU="${TUNE_CPU}"
 
 if [ -n "${TRAVIS_BUILD_DIR}" ]; then
   cd "${TRAVIS_BUILD_DIR}"
@@ -219,6 +222,8 @@ fi
 DOCKER_ENV_VARS=(
   "-e"
 	 "CI=${CI}"
+	 "-e"
+	 "TARGET_CPU=${TARGET_CPU}"
 	 "-e"
 	 "IMAGEFLOW_BUILD_OVERRIDE=${IMAGEFLOW_BUILD_OVERRIDE}"
 	"-e"
@@ -237,6 +242,8 @@ DOCKER_ENV_VARS=(
 	 "CLEAN_RUST_TARGETS=${CLEAN_RUST_TARGETS}"
 	"-e"
 	 "IMAGEFLOW_SERVER=${IMAGEFLOW_SERVER}"
+	"-e"
+	 "TUNE_CPU=${TUNE_CPU}"
 	"-e"
 	 "COVERAGE=${COVERAGE}" 
 	"-e"

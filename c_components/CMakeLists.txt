@@ -14,6 +14,7 @@ conan_basic_setup()
 option(ENABLE_TEST OFF)
 option(ENABLE_PROFILING OFF)
 option(SKIP_LIBRARY OFF)
+#option(TARGET_CPU x86_^$)
 
 #Required to be able to run tests from CLion
 if (NOT SKIP_LIBRARY)
@@ -57,15 +58,94 @@ endif()
 # -ffast-math changes results
 # -no-parenthesis is unfortunate, but gcc 4.8.5 broke all unit test macros.
 
-if (UNIX)
-	set(FASTSCALING_FLAGS "-O3 -iquotelib -fPIC -ffast-math -mfpmath=sse  -msse2 -funroll-loops -mtune=native -march=native -Wpointer-arith -Wcast-qual -Wpedantic -Wall -Wextra -Wno-unused-parameter -Wuninitialized -Wredundant-decls -Wno-error=unused-function -Wno-parentheses -Werror")
-	set(CMAKE_C_FLAGS  "${CMAKE_C_FLAGS} ${FASTSCALING_FLAGS} -std=gnu11 -Wstrict-prototypes -Wmissing-prototypes -Wc++-compat -Wshadow" )
-	set(CMAKE_CXX_FLAGS  "${CMAKE_CXX_FLAGS} ${FASTSCALING_FLAGS} -std=gnu++11" )
+
+# target generic, sandybridge, and haswell
+
+# gcc 54: mtune=haswell march=sandybridge
+# gcc 48: mtune=native march=corei7-avx
+#MMX, SSE, SSE2, SSE3, SSSE3, SSE4.1, SSE4.2, POPCNT, AVX, AES and PCLMUL instruction set support.
+
+#generic64 MMX, SSE, SSE2,
+
+#nehalem -mmmx -msse -msse2 -msse3 -mssse3 -msse4.1 -msse4.2, -mpopcnt
+
+#sandybridge -mmmx -msse -msse2 -msse3 -mssse3 -msse4.1 -msse4.2, -mpopcnt -mavx -maes -mpclmul
+#haswell adds -mavx2 -mfsgsbase -mrdrnd -mfma -mbmi -mbmi2 -mf16c
+
+#skylake adds RDSEED, ADCX, PREFETCHW, CLFLUSHOPT, XSAVEC and XSAVES
+
+#FSGSBASE, RDRND, FMA, BMI, BMI2 and F16C
+
+# -mno-avx2 -no-avx512 -mno-fsgsbase -mno-rdrnd -mno-f16c -mno-fma -mno-fma4 -mno-xop -mno-lwp -mno-bmi -mno-bmi2 -mno-lzcnt
+
+#set(IMAGEFLOW_NEHALEM "-mmmx -msse -msse2 -msse3 -mssse3 -msse4.1 -msse4.2, -mpopcnt")
+#set(IMAGEFLOW_SANDYBRIDGE "-mmmx -msse -msse2 -msse3 -mssse3 -msse4.1 -msse4.2, -mpopcnt -mavx -maes -mpclmul")
+#set(IMAGEFLOW_HASWELL "-mmmx -msse -msse2 -msse3 -mssse3 -msse4.1 -msse4.2, -mpopcnt -mavx -maes -mpclmul -mavx2 -mfsgsbase -mrdrnd -mfma -mbmi -mbmi2 -mf16c")
+
+
+## let's assume
+## generic
+## avx (sandybridge)
+## avx2 (haswell)
+## native - match system
+# http://stackoverflow.com/a/25095818
+
+# x86_64
+# corei7-avx or sandybridge
+# core-avx2 or haswell
+# native
+# mtune inherits from march
+
+
+set(ARCH_SANDYBRIDGE "sandybridge")
+set(ARCH_HASWELL "haswell")
+
+if (CMAKE_COMPILER_IS_GNUCC)
+	execute_process(COMMAND ${CMAKE_C_COMPILER} -dumpversion
+					OUTPUT_VARIABLE GCC_VERSION)
+	if (GCC_VERSION VERSION_LESS 4.9)
+		message(STATUS "GCC < 4.9")
+		set(ARCH_SANDYBRIDGE "corei7-avx")
+		set(ARCH_HASWELL "core-avx2")
+	endif()
+endif()
+
+set(MSVC_OPTIMIZE "")
+
+if ("${TARGET_CPU}" STREQUAL "sandybridge")
+	SET(TARGET_CPU "${ARCH_SANDYBRIDGE}")
+	set(MSVC_OPTIMIZE " /arch:AVX")
+endif()
+
+if ("${TARGET_CPU}" STREQUAL "haswell")
+	SET(TARGET_CPU "${ARCH_HASWELL}")
+	set(MSVC_OPTIMIZE " /arch:AVX2")
+endif()
+
+if (MSVC)
+	#/arch:AVX which turns on Intel Advanced Vector Extensions
+	#/arch:AVX2 which turns on Intel Advanced Vector Extensions 2
+	set(IMAGEFLOW_C_OPTIMIZE "${MSVC_OPTIMIZE} /fp:fast")
 else()
 
-	set(FASTSCALING_FLAGS " /fp:fast")
-	set(CMAKE_C_FLAGS  "${CMAKE_C_FLAGS} ${FASTSCALING_FLAGS}" )
-	set(CMAKE_CXX_FLAGS  "${CMAKE_CXX_FLAGS} ${FASTSCALING_FLAGS}" )
+	SET(NON_MSVC_OPTIMIZE "-march=${TARGET_CPU}")
+	if ("${TARGET_CPU}" STREQUAL "OFF")
+		SET(NON_MSVC_OPTIMIZE "")
+	endif()
+
+	set(IMAGEFLOW_C_OPTIMIZE "-O3 ${NON_MSVC_OPTIMIZE} -funroll-loops -ffast-math -mfpmath=sse  -msse2")
+endif()
+
+
+if (NOT MSVC)
+	#mpfmath=sse is required for accuracy
+	set(SHARED_FLAGS "-iquotelib -fPIC -mfpmath=sse")
+	set(SHARED_WARNINGS, "-Wpointer-arith -Wcast-qual -Wpedantic -Wall -Wextra -Wno-unused-parameter -Wuninitialized -Wredundant-decls -Wno-error=unused-function -Wno-parentheses -Werror")
+	set(CMAKE_C_FLAGS  "${CMAKE_C_FLAGS} ${IMAGEFLOW_C_OPTIMIZE} ${SHARED_FLAGS} ${SHARED_WARNINGS} -std=gnu11 -Wstrict-prototypes -Wmissing-prototypes -Wc++-compat -Wshadow" )
+	set(CMAKE_CXX_FLAGS  "${CMAKE_CXX_FLAGS} ${IMAGEFLOW_C_OPTIMIZE} ${SHARED_FLAGS} ${SHARED_WARNINGS} -std=gnu++11" )
+else()
+	set(CMAKE_C_FLAGS  "${CMAKE_C_FLAGS} ${IMAGEFLOW_C_OPTIMIZE}" )
+	set(CMAKE_CXX_FLAGS  "${CMAKE_CXX_FLAGS} ${IMAGEFLOW_C_OPTIMIZE}" )
 endif()
 
 option(COVERAGE "Generate coverage data" OFF)
@@ -74,7 +154,7 @@ option(DEBUG_BUILD "Generate debug build data" OFF)
 
 if (COVERAGE)
 	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g -O0") # debug, no optimisation
-	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} --coverage")#--fprofile-arcs --ftest-coverage") # enabling coverage
+	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} --coverage") # --fprofile-arcs --ftest-coverage") # enabling coverage
 	set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -g -O0") # debug, no optimisation
 	set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} --coverage ") # enabling coverage
 else()

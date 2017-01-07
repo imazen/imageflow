@@ -32,11 +32,14 @@ echo_maybe(){
 	    echo "$1"
 	fi
 }
-if [[ "$BUILD_QUIETER" == "True" ]]; then
-    export INFO_STDOUT="/dev/null"
+
+if [[ "$BUILD_QUIETER" != "True" ]]; then
+	exec 9>&1
 else
-	export INFO_STDOUT="&1"
+	exec 9>/dev/null
 fi
+
+
 
 echo_maybe "Preparing to build Imageflow"
 
@@ -51,6 +54,10 @@ export IMAGEFLOW_BUILD_OVERRIDE="${IMAGEFLOW_BUILD_OVERRIDE}"
 
 # First parameter to script must be the name of the docker image (excluding imazen/)
 export IMAGE_NAME="$1"
+
+export TARGET_CPU="${TARGET_CPU:-x86_64}"
+
+
 # Set DOCKER_IMAGE to override entire name
 export DOCKER_IMAGE="${DOCKER_IMAGE:-imazen/$IMAGE_NAME}"
 
@@ -123,14 +130,23 @@ rsync -q -av --delete "${SCRIPT_DIR}/../../.." "$WORKING_DIR" --filter=':- .giti
 	export TRAVIS_PULL_REQUEST_SHA=
 	export UPLOAD_BUILD="${UPLOAD_BUILD:-True}"
 	export PACKAGE_SUFFIX
+
+	if [[ "${TARGET_CPU}" == "x86_64" || "${TARGET_CPU}" == "" ]]; then
+		ARCH_SUFFIX="x86_64"
+	else  
+		if [[ "${TARGET_CPU}" == "native" ]]; then
+			ARCH_SUFFIX="HOST-NATIVE"
+		fi 
+	fi 
+
 	if [[ "$DOCKER_IMAGE" == 'imazen/build_if_gcc48' ]]; then
-		export PACKAGE_SUFFIX="${PACKAGE_SUFFIX:-x86_64-linux-gcc48-eglibc219}"
+		export PACKAGE_SUFFIX="${PACKAGE_SUFFIX:-${ARCH_SUFFIX}-linux-gcc48-eglibc219}"
 	fi
 	if [[ "$DOCKER_IMAGE" == 'imazen/build_if_gcc54' ]]; then
-		export PACKAGE_SUFFIX="${PACKAGE_SUFFIX:-x86_64-linux-gcc54-glibc223}"
+		export PACKAGE_SUFFIX="${PACKAGE_SUFFIX:-${ARCH_SUFFIX}-linux-gcc54-glibc223}"
 	fi
 	if [[ "$DOCKER_IMAGE" == 'imazen/musl' ]]; then
-		export PACKAGE_SUFFIX="${PACKAGE_SUFFIX:-x86_64-linux-musl}"
+		export PACKAGE_SUFFIX="${PACKAGE_SUFFIX:-${ARCH_SUFFIX}-linux-musl}"
 	fi
 
 	export TRAVIS_BUILD_NUMBER=99999
@@ -163,7 +179,7 @@ rsync -q -av --delete "${SCRIPT_DIR}/../../.." "$WORKING_DIR" --filter=':- .giti
 	export COVERALLS_TOKEN=
 
 
-	conan user 1>$INFO_STDOUT
+	conan user 1>&9
 	# For os x convenience
 	if [[ "$(uname -s)" == 'Darwin' ]]; then
 		eval "$(docker-machine env default)"
@@ -172,6 +188,7 @@ rsync -q -av --delete "${SCRIPT_DIR}/../../.." "$WORKING_DIR" --filter=':- .giti
 	TRAVIS_RUN_VARS=(
 		"PACKAGE_SUFFIX=${PACKAGE_SUFFIX}"
 		"DOCKER_IMAGE=${DOCKER_IMAGE}"
+		"TARGET_CPU=${TARGET_CPU}"
 		"VALGRIND=${VALGRIND}"
 		"UPLOAD_BUILD=${UPLOAD_BUILD}"
 		"UPLOAD_DOCS=${UPLOAD_DOCS}"

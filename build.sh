@@ -19,7 +19,6 @@ if has_shellcheck; then
 	
 fi
 
-
 # You're going to need:
 # Conan
 # clang or gcc 4.8, 4.9, or 5.4
@@ -34,6 +33,7 @@ fi
 export IMAGEFLOW_BUILD_OVERRIDE="${IMAGEFLOW_BUILD_OVERRIDE:-$1}"
 
 if [[ -n "$IMAGEFLOW_BUILD_OVERRIDE" ]]; then
+	printf "Applying IMAGEFLOW_BUILD_OVERRIDE %s\n" "$IMAGEFLOW_BUILD_OVERRIDE"
 	#Change the defaults when we're invoking an override
 	export BUILD_QUIETER="${BUILD_QUIETER:-True}"
 	export REBUILD_C="False" 
@@ -86,24 +86,44 @@ if [[ "$IMAGEFLOW_BUILD_OVERRIDE" == *'quiet3'* ]]; then
 	export SILENCE_VALGRIND=True
 fi 
 
-######################################################
-#### Parameters used by build.sh 
+############# SILENCE STUFF #######################
 export SILENCE_CARGO="${SILENCE_CARGO:-False}"
 export SILENCE_VALGRIND="${SILENCE_VALGRIND:-False}"
 export BUILD_QUIETER="${BUILD_QUIETER:-False}"
-if [[ "$BUILD_QUIETER" -ne "True" ]]; then
-	export INFO_STDOUT="&1"
+if [[ "$BUILD_QUIETER" != "True" ]]; then
+	exec 9>&1
 else
-	export INFO_STDOUT=/dev/null
+	exec 9>/dev/null
 fi
+exec 8>&9
+if [[ "$SILENCE_CARGO" != "True" ]]; then
+	exec 7>&1
+else
+	exec 7>/dev/null
+fi
+if [[ "$SILENCE_VALGRIND" != "True" ]]; then
+	exec 6>&1
+else
+	exec 6>/dev/null
+fi
+
+
+
+######################################################
+#### Parameters used by build.sh 
+
+#echo "$BUILD_QUIETER $SILENCE_CARGO $SILENCE_VALGRIND"
+
 echo_maybe(){
-	if [[ "$BUILD_QUIETER" -ne "True" ]]; then
-	    echo "$1"
+	if [[ "$BUILD_QUIETER" != "True" ]]; then
+	    echo "$1" >&9
 	fi
 }
 echo_maybe "============================= [build.sh] ======================================"
 
 
+export TARGET_CPU="${TARGET_CPU:-native}"
+export TUNE_CPU="${TUNE_CPU:-}"
 
 export BUILD_DEBUG="${BUILD_DEBUG:-False}"
 # Build docs; build release mode binaries (separate pass from testing); populate ./artifacts folder
@@ -139,7 +159,7 @@ export GIT_COMMIT_SHORT
 GIT_COMMIT_SHORT="${GIT_COMMIT_SHORT:-$(git rev-parse --short HEAD)}"
 GIT_COMMIT_SHORT="${GIT_COMMIT_SHORT:-unknown-commit}"
 export GIT_OPTIONAL_TAG
-if git describe --exact-match --tags &>$INFO_STDOUT ; then
+if git describe --exact-match --tags 2>&9 1>&9 ; then
 	GIT_OPTIONAL_TAG="${GIT_OPTIONAL_TAG:-$(git describe --exact-match --tags)}"
 fi
 export GIT_DESCRIBE_ALWAYS
@@ -152,7 +172,7 @@ GIT_DESCRIBE_AAL="${GIT_DESCRIBE_AAL:-$(git describe --always --all --long)}"
 # But let others override GIT_OPTIONAL_BRANCH, as HEAD might not have a symbolic ref, and it could crash
 # I.e, provide GIT_OPTIONAL_BRANCH to this script in Travis - but NOT For 
 export GIT_OPTIONAL_BRANCH
-if git symbolic-ref --short HEAD &>$INFO_STDOUT ; then 
+if git symbolic-ref --short HEAD 2>&9 1>&9 ; then 
 	GIT_OPTIONAL_BRANCH="${GIT_OPTIONAL_BRANCH:-$(git symbolic-ref --short HEAD)}"
 fi 
 
@@ -183,7 +203,6 @@ date_stamp(){
 	fi
 }
 date_stamp
-
 
 
 #Turn off coverage if lcov is missing
@@ -221,19 +240,34 @@ sep_bar(){
 }
 
 
-export CONAN_STDOUT="$INFO_STDOUT"
-if [[ "$SILENCE_CARGO" != "True" ]]; then
-	export CARGO_STDOUT="&1"
-else
-	export CARGO_STDOUT=/dev/null
-fi
-if [[ "$SILENCE_VALGRIND" != "True" ]]; then
-	export VALGRIND_STDOUT="&1"
-else
-	export VALGRIND_STDOUT=/dev/null
+
+
+if [[ -n "$TARGET_CPU" ]]; then 
+	printf "TARGET_CPU %s\n" "$TARGET_CPU"
+	export RUST_FLAGS="-C target-cpu=$TARGET_CPU"
+
+	export FIXUP_CPU="$TARGET_CPU"
+	if [[ "$CC" == *"gcc"* ]]; then 
+		if [[ "$($CC --version)" == *"4.8."* ]]; then 
+			if [[ "$FIXUP_CPU" == "sandybridge" ]]; then
+				FIXUP_CPU="corei7-avx"
+			fi
+			if [[ "$FIXUP_CPU" == "haswell" ]]; then
+				FIXUP_CPU="core-avx2"
+			fi
+		fi 
+	fi 
+	export CFLAGS="${CFLAGS} -march=$FIXUP_CPU -O3"
+	export CXXFLAGS="${CXXFLAGS} -march=$FIXUP_CPU -O3"
+fi 
+
+if [[ -n "$TUNE_CPU" ]]; then
+	export CFLAGS="${CFLAGS} -mtune=$TUNE_CPU"
+	export CXXFLAGS="${CXXFLAGS} -mtune=$TUNE_CPU"
 fi
 
 echo_maybe "build.sh sees these relevant variables: ${BUILD_VARS[*]}"
+
 
 ( 
 	cd c_components
@@ -250,18 +284,18 @@ echo_maybe "build.sh sees these relevant variables: ${BUILD_VARS[*]}"
 		(
 			cd build
 			eval "$COPY_VALGRINDRC"
-			conan install --scope build_tests=True --scope "debug_build=${TEST_C_DEBUG_BUILD:-False}" --scope "coverage=${COVERAGE:-False}" --scope "skip_test_run=${VALGRIND:-False}" --build missing -u ../ 1>$CONAN_STDOUT
+			conan install --scope build_tests=True -s "target_cpu=$TARGET_CPU" --scope "debug_build=${TEST_C_DEBUG_BUILD:-False}" --scope "coverage=${COVERAGE:-False}" --scope "skip_test_run=${VALGRIND:-False}" --build missing -u ../ 1>&8
 			date_stamp
-			conan build ../ 1>$CONAN_STDOUT
+			conan build ../ 1>&8
 
 			#Sync to build/CTestTestfile.cmake
 			#Also update imageflow_core/build_c.sh
 			if [[ "$VALGRIND" == 'True' ]]; then
 				(
 					cd ../..
-					./valgrind_existing.sh ./c_components/build/bin/test_imageflow  1>$VALGRIND_STDOUT
-					./valgrind_existing.sh ./c_components/build/bin/test_variations  1>$VALGRIND_STDOUT
-					./valgrind_existing.sh ./c_components/build/bin/test_fastscaling  1>$VALGRIND_STDOUT
+					./valgrind_existing.sh ./c_components/build/bin/test_imageflow  1>&6
+					./valgrind_existing.sh ./c_components/build/bin/test_variations  1>&6
+					./valgrind_existing.sh ./c_components/build/bin/test_fastscaling  1>&6
 					#echo "This next test is slow; it's a quickcheck running under valgrind"
 					#./valgrind_existing.sh ./c_components/bin/test_theft_render
 				)
@@ -272,8 +306,8 @@ echo_maybe "build.sh sees these relevant variables: ${BUILD_VARS[*]}"
 
 			echo_maybe "==================================================================== [build.sh]"
 			echo_maybe "Process coverage information with lcov"
-			lcov -q --directory ./build --capture --output-file coverage.info 1>$INFO_STDOUT
-			lcov -q --remove coverage.info 'tests/*' '.conan/*' '/usr/*' --output-file coverage.info 1>$INFO_STDOUT
+			lcov -q --directory ./build --capture --output-file coverage.info 1>&9
+			lcov -q --remove coverage.info 'tests/*' '.conan/*' '/usr/*' --output-file coverage.info 1>&9
 		fi
 	fi
 
@@ -284,7 +318,7 @@ echo_maybe "build.sh sees these relevant variables: ${BUILD_VARS[*]}"
 	if [[ "$REBUILD_C" == 'True' ]]; then
 	  conan remove imageflow_c/* -f
 	fi 
-	conan export imazen/testing 1>$CONAN_STDOUT
+	conan export imazen/testing   1>&8
 	
 	(
 		cd ../imageflow_core
@@ -300,7 +334,7 @@ echo_maybe "build.sh sees these relevant variables: ${BUILD_VARS[*]}"
 		fi 
 
 		#Conan modifies it
-		conan install --build missing 1>$CONAN_STDOUT
+		conan install --build missing -s build_type=Release  -s "target_cpu=$TARGET_CPU" 1>&8
 
 		#We restore metadata if identical
 		if [[ -f "$BACKUP_FILE" ]]; then 
@@ -319,7 +353,7 @@ echo_maybe
 echo_maybe "================================== Rust ============================ [build.sh]"
 
 rustc --version 
-cargo --version 1>$INFO_STDOUT
+cargo --version 1>&9
 
 if [[ "$SILENCE_CARGO" != "True" ]]; then
 	export RUST_LOG=cargo::ops::cargo_rustc::fingerprint=info
@@ -341,43 +375,43 @@ if [[ "$TEST_RUST" == 'True' ]]; then
 	(
 		cd imageflow_helpers
 		date_stamp
-		cargo test 1>$CARGO_STDOUT
+		cargo test 1>&7
 	)
 	(
 		cd imageflow_riapi
 		date_stamp
-		cargo test 1>$CARGO_STDOUT
+		cargo test 1>&7
 	)
 	(
 		cd imageflow_core
 		date_stamp
-		RUST_TEST_TASKS=1 cargo test 1>$CARGO_STDOUT
+		RUST_TEST_TASKS=1 cargo test 1>&7
 	)
 	(
 		cd imageflow_abi
 		date_stamp
-		cargo test 1>$CARGO_STDOUT
+		cargo test 1>&7
 	)
 	(
 		cd imageflow_types
 		date_stamp
-		cargo test 1>$CARGO_STDOUT
+		cargo test 1>&7
 	)
 	(
 		cd imageflow_tool
 		date_stamp
-		RUST_TEST_TASKS=1 cargo test 1>$CARGO_STDOUT
+		RUST_TEST_TASKS=1 cargo test 1>&7
 		date_stamp
 	)
 	if [[ "$IMAGEFLOW_SERVER" == 'True' ]]; then
 		(
 			cd imageflow_server
 			date_stamp
-			cargo test 1>$CARGO_STDOUT
+			cargo test 1>&7
 		)
 	fi
 	if [[ "$VALGRIND" == 'True' ]]; then
-		./valgrind_existing.sh   1>$VALGRIND_STDOUT
+		./valgrind_existing.sh   1>&6
 	fi
 fi
 if [[ "$BUILD_DEBUG" == 'True' ]]; then
@@ -386,20 +420,20 @@ if [[ "$BUILD_DEBUG" == 'True' ]]; then
 	(
 		cd imageflow_abi
 		date_stamp
-		cargo build 1>$CARGO_STDOUT
+		cargo build 1>&7
 	)
 	(
 		cd imageflow_tool
 		date_stamp
-		cargo build 1>$CARGO_STDOUT
+		cargo build 1>&7
 		date_stamp
-		../target/debug/imageflow_tool diagnose --show-compilation-info 1>$INFO_STDOUT
+		../target/debug/imageflow_tool diagnose --show-compilation-info 1>&9
 	)
 	if [[ "$IMAGEFLOW_SERVER" == 'True' ]]; then
 		(
 			cd imageflow_server
 			date_stamp
-			cargo build 1>$INFO_STDOUT
+			cargo build 1>&9
 		)
 	fi
 fi 
@@ -413,28 +447,28 @@ if [[ "$BUILD_RELEASE" == 'True' ]]; then
 	echo_maybe "Building imageflow_core docs"
 	(
 		cd imageflow_core
-		cargo doc --no-deps 1>$CARGO_STDOUT
+		cargo doc --no-deps 1>&7
 	)
 	echo_maybe "Building imageflow_types docs"
 	(
 		cd imageflow_types
-		cargo doc --no-deps 1>$CARGO_STDOUT
+		cargo doc --no-deps 1>&7
 	)
 	echo_maybe "Building imageflow_tool (Release) and docs"
 	(
 		cd imageflow_tool
 		date_stamp
-		cargo build --release 1>$CARGO_STDOUT
-		cargo doc --no-deps 1>$CARGO_STDOUT
+		cargo build --release 1>&7
+		cargo doc --no-deps 1>&7
 		date_stamp
-		../target/release/imageflow_tool diagnose --show-compilation-info 1>$INFO_STDOUT
+		../target/release/imageflow_tool diagnose --show-compilation-info 1>&9
 	)
 	echo_maybe "Building libimageflow (Release) and docs"
 	(
 		cd imageflow_abi
 		date_stamp
-		cargo build --release 1>$CARGO_STDOUT
-		cargo doc --no-deps 1>$CARGO_STDOUT
+		cargo build --release 1>&7
+		cargo doc --no-deps 1>&7
 	)
 	if [[ "$IMAGEFLOW_SERVER" == 'True' ]]; then
 		echo_maybe "Building imageflow_server (Release) and docs"
@@ -442,8 +476,8 @@ if [[ "$BUILD_RELEASE" == 'True' ]]; then
 		(
 			cd imageflow_server
 			date_stamp
-			cargo build --release 1>$CARGO_STDOUT
-			cargo doc --no-deps 1>$CARGO_STDOUT
+			cargo build --release 1>&7
+			cargo doc --no-deps 1>&7
 		)
 	fi
 

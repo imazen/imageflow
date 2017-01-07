@@ -16,8 +16,11 @@ Add security policies
 Add server configuration via TOML (or JSON API?) We need a form of persistence that is lightweight and not always tied to the filesystem.
 
 
+Port https://github.com/Mysticial/FeatureDetector to Rust - OR - distribute as separate tool?
 
 
+
+Failure of 1ca8eb8ad74b https://hub.docker.com/r/imazen/imageflow_server_unsecured/builds/bz4lpc88h3lg98eqctrm295/
 
 
 
