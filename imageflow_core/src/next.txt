@@ -3,22 +3,17 @@ Try reqwest
 
 Add server JSON endpoint
 
+Reserved endpoints for fully encoded arbitrary requests, though, where we can pass through auth info to the upstream gateway
+
+
 HTTP caching at build layer
 
 maybe move imageflow_abi header gen to a test? probably adds to build time.
 
 Add security policies
 
-Add riapi converter (basic)
 
 Add server configuration via TOML (or JSON API?) We need a form of persistence that is lightweight and not always tied to the filesystem.
-
-
-Multi-tenanting by subdomain (host mapping), port, or folder.
-
-Mapping folders (or even the root!) to data sources, like another HTTP server.
-Reserved endpoints for fully encoded arbitrary requests, though, where we can pass through auth info to the upstream gateway
-
 
 
 
@@ -38,7 +33,7 @@ Reserved endpoints for fully encoded arbitrary requests, though, where we can pa
 ///img hash https://github.com/abonander/img_hash is interesting
 
 
-
+https://github.com/luser/integrating-rust-into-existing-projects
 
 
 ### For troubleshooting and reporting panics.

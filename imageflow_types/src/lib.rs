@@ -940,6 +940,12 @@ impl BuildResult {
     }
 }
 
+
+//pub struct JobDebugInfo{
+//    pub final_graph: String
+//
+//}
+
 #[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
 pub struct JobResult {
     pub encodes: Vec<EncodeResult>,
