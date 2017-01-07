@@ -1,0 +1,3 @@
+Hardware: Requires a Sandy Bridge (2011) or later compatible CPU with AVX support. (May exclude Celeron and Pentium-branded discount processors)
+
+Software: 64-bit macOS 10.11 or higher
