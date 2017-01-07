@@ -66,8 +66,9 @@ export SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )/$1"
 export TEST_SH_CACHE_DIR="${HOME}/.docker_imageflow_caches"
 #export TEST_SH_CACHE_DIR="${SCRIPT_DIR}/../.docker_imageflow_caches"
 
-export WORKING_DIR="${TEST_SH_CACHE_DIR}/.docker_${IMAGE_NAME}"
+export WORKING_DIR="${TEST_SH_CACHE_DIR}/.docker_${IMAGE_NAME}_${TARGET_CPU}"
 export SHARED_CACHE="${TEST_SH_CACHE_DIR}/.shared_cache"
+
 
 echo_maybe "===================================================================== [test.sh]"
 echo_maybe "Rsync imageflow/* into dedicated work folder ${WORKING_DIR}"

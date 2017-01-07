@@ -16,13 +16,10 @@ if [[ "$(uname -s)" == 'Darwin' ]]; then
     ./ci/nixtools/install_dssim.sh
     set +x
 else
-  cat /proc/cpuinfo
+    cat /proc/cpuinfo
   
 	set -x
     docker pull "${DOCKER_IMAGE}"
     set +x
 fi
-
-cp ./ci/updated_conan_settings.yml ~/.conan/settings.yml
-
 

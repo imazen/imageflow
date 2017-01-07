@@ -54,7 +54,7 @@ print_modified_ago(){
 sep_bar "Compiling"
 printf "BINARY_OUT=%s " "$BINARY_OUT" && print_modified_ago "$BINARY_OUT" && printf "\n"
 
-export BUILD_QUIETER=True
+export BUILD_QUIETER="${BUILD_QUIETER:-True}"
 export UPLOAD_BUILD=False
 export UPLOAD_DOCS=False
 export IMAGEFLOW_BUILD_OVERRIDE="$OVERRIDE"
