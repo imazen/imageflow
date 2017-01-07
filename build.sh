@@ -289,19 +289,27 @@ echo_maybe "build.sh sees these relevant variables: ${BUILD_VARS[*]}"
 	(
 		cd ../imageflow_core
 		date_stamp
-		#Conan regens every time. Let's avoid triggering rebuilds
-		BACKUP_FILE=./old_build_rs.bak 
+
+		# Conan regens every time. Let's avoid triggering rebuilds
+		mkdir -p ../target/debug || true 
+		BACKUP_FILE=../target/debug/conan_cargo_build.rs
 		CHANGING_FILE=./conan_cargo_build.rs
-		cp -p "$CHANGING_FILE" "$BACKUP_FILE"
+		if [[ -f "$CHANGING_FILE" ]]; then 
+			# Prefer in-tree copy
+			cp -p "$CHANGING_FILE" "$BACKUP_FILE"
+		fi 
+
 		#Conan modifies it
 		conan install --build missing 1>$CONAN_STDOUT
-		#We restore it if identical
-		if cmp -s "$CHANGING_FILE" "$BACKUP_FILE" ; then
-		   rm -f "$CHANGING_FILE"
-		   mv "$BACKUP_FILE" "$CHANGING_FILE"
+
+		#We restore metadata if identical
+		if [[ -f "$BACKUP_FILE" ]]; then 
+			if cmp -s "$CHANGING_FILE" "$BACKUP_FILE" ; then
+			   cp -p "$BACKUP_FILE" "$CHANGING_FILE"
+			fi
 		else
-		   rm -f "$BACKUP_FILE"
-		fi
+			cp -p "$CHANGING_FILE" "$BACKUP_FILE"
+		fi 
 
 		date_stamp
 	)
