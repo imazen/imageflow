@@ -1,6 +1,0 @@
-https://gist.github.com/micho/1712812
-
-
-$ ./strip-docker-image/bin/strip-docker-image -i imazen/imageflow_server -t imazen/imageflow_server_stripped -f /home/conan/imageflow/imageflow_server
-
- docker run imazen/imageflow_server_stripped /home/conan/imageflow/imageflow_server --version
