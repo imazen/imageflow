@@ -159,8 +159,8 @@ static int  copy_bitmap_bgra(flow_bitmap_bgra * src, flow_bitmap_bgra * dst)
 }
 */
 
-static bool BitmapFloat_blend_matte(flow_c * context, struct flow_bitmap_float * src, const uint32_t from_row,
-                                    const uint32_t row_count, const uint8_t * const matte)
+static bool flow_bitmap_float_blend_matte(flow_c * context, struct flow_bitmap_float * src, const uint32_t from_row,
+                                          const uint32_t row_count, const uint8_t * const matte)
 {
     // We assume that matte is BGRA, regardless.
 
@@ -335,7 +335,7 @@ bool flow_bitmap_float_pivoting_composite_linear_over_srgb(flow_c * context, str
 
     if (src->alpha_meaningful && src->channels == 4
         && dest->compositing_mode == flow_bitmap_compositing_blend_with_matte) {
-        if (!BitmapFloat_blend_matte(context, src, from_row, row_count, dest->matte_color)) {
+        if (!flow_bitmap_float_blend_matte(context, src, from_row, row_count, dest->matte_color)) {
             FLOW_add_to_callstack(context);
             return false;
         }
