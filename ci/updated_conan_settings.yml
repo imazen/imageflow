@@ -16,4 +16,4 @@ compiler:
         libcxx: [libstdc++, libc++]
 
 build_type: [None, Debug, Release]
-target_cpu: [x86, x86-64, sandybridge, haswell, native]
+target_cpu: [x86, x86-64, nehalem, sandybridge, haswell, native]
