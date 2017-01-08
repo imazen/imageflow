@@ -68,7 +68,7 @@ install:
 
 test_script:
   - echo %PATH%
-  - copy /Y ci\updated_conan_settings.yml $HOMEPATH/.conan/settings.yml
+  - copy /Y ci\updated_conan_settings.yml $HOMEPATH\.conan\settings.yml
   - conan --version
   - cmake --version
   - rustc -V
