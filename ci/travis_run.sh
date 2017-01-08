@@ -186,7 +186,13 @@ fi
 ########## Travis defaults ###################
 export COVERAGE="${COVERAGE:-False}"
 export VALGRIND="${VALGRIND:-False}"
-export CLEAN_RUST_TARGETS="${CLEAN_RUST_TARGETS:-True}"
+
+## Force rebuild of the final binaries (not even the shared libraries of imageflow) when TRAVIS_TAG=true
+if [[ -n "$TRAVIS_TAG" ]]; then 
+	export CLEAN_RUST_TARGETS="${CLEAN_RUST_TARGETS:-True}"
+else
+	export CLEAN_RUST_TARGETS="${CLEAN_RUST_TARGETS:-False}"
+fi
 
 ######################################################
 #### Parameters passed through docker to build.sh (or used by travis_*.sh) ####
