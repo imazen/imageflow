@@ -54,7 +54,7 @@ install:
   - if "%PLATFORM%"=="x64" SET BITS=64
   - if "%PLATFORM%"=="x86" set CONAN_ARCH=x86
   - if "%PLATFORM%"=="x64" set CONAN_ARCH=x86_64
-  - if NOT "%TARGET_CPU%|%PLATFORM%"=="|x86" set RUSTFLAGS="-C target-cpu=%TARGET_CPU%"
+  - if "%TARGET_CPU%|%PLATFORM%"=="sandybridge|x64" set RUSTFLAGS="-C target-feature=+sse3+ssse3+sse4"
   - echo "RUST_TARGET=%RUST_TARGET%, TARGET=%TARGET%, BITS=%BITS%, CPU_TARGET=%CPU_TARGET% CONAN_ARCH=%CONAN_ARCH% RUSTFLAGS=%RUSTFLAGS%"
   - curl -L -o openssl.exe "https://s3-us-west-2.amazonaws.com/imageflow-resources/tools/Win%BITS%OpenSSL-1_0_2j.exe"
   - openssl.exe /SILENT /VERYSILENT /SP- /DIR="C:\OpenSSL"
