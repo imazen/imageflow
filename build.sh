@@ -248,7 +248,6 @@ sep_bar(){
 
 
 if [[ -n "$TARGET_CPU" ]]; then 
-	printf "TARGET_CPU %s\n" "$TARGET_CPU"
 	export RUST_FLAGS="-C target-cpu=$TARGET_CPU"
 
 	export FIXUP_CPU="$TARGET_CPU"
@@ -271,6 +270,8 @@ if [[ -n "$TUNE_CPU" ]]; then
 	export CXXFLAGS="${CXXFLAGS} -mtune=$TUNE_CPU"
 fi
 
+printf "TARGET_CPU=%s  RUSTFLAGS=%s CFLAGS=%s\n" "$TARGET_CPU" "$RUST_FLAGS" "$CFLAGS" 
+	
 echo_maybe "build.sh sees these relevant variables: ${BUILD_VARS[*]}"
 
 
