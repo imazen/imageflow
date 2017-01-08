@@ -65,8 +65,10 @@ install:
   - pip.exe install conan
   - conan user # It creates the conan data directory
 
+
 test_script:
   - echo %PATH%
+  - copy /Y ci\updated_conan_settings.yml $HOMEPATH/.conan/settings.yml
   - conan --version
   - cmake --version
   - rustc -V

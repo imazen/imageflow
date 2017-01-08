@@ -55,7 +55,7 @@ export IMAGEFLOW_BUILD_OVERRIDE="${IMAGEFLOW_BUILD_OVERRIDE}"
 # First parameter to script must be the name of the docker image (excluding imazen/)
 export IMAGE_NAME="$1"
 
-export TARGET_CPU="${TARGET_CPU:-x86_64}"
+export TARGET_CPU="${TARGET_CPU:-x86-64}"
 
 
 # Set DOCKER_IMAGE to override entire name
@@ -132,7 +132,7 @@ rsync -q -av --delete "${SCRIPT_DIR}/../../.." "$WORKING_DIR" --filter=':- .giti
 	export UPLOAD_BUILD="${UPLOAD_BUILD:-True}"
 	export PACKAGE_SUFFIX
 
-	if [[ "${TARGET_CPU}" == "x86_64" || "${TARGET_CPU}" == "" ]]; then
+	if [[ "${TARGET_CPU}" == "x86-64" || "${TARGET_CPU}" == "" ]]; then
 		ARCH_SUFFIX="x86_64"
 	else  
 		if [[ "${TARGET_CPU}" == "native" ]]; then

@@ -78,7 +78,7 @@ pub fn one_line_version() -> String {
     let ci = benv::BUILT_ON_CI;
 
     let target_cpu = match get_build_env_value("TARGET_CPU").unwrap_or(get_build_env_value("RUSTFLAGS").unwrap_or("?")){
-        "x86_64" | "x86"=> "",
+        "x86-64" | "x86"=> "",
         "native" => "HOST NATIVE CPU (not portable)",
         other => other
     };

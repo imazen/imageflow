@@ -211,7 +211,7 @@ export COVERALLS_TOKEN="${COVERALLS_TOKEN}"
 #Overrides everything
 export IMAGEFLOW_BUILD_OVERRIDE="${IMAGEFLOW_BUILD_OVERRIDE}"
 
-export TARGET_CPU="${TARGET_CPU:-x86_64}"
+export TARGET_CPU="${TARGET_CPU:-x86-64}"
 export TUNE_CPU="${TUNE_CPU}"
 
 if [ -n "${TRAVIS_BUILD_DIR}" ]; then

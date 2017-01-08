@@ -14,7 +14,7 @@ matrix:
   include:
   - os: linux
     dist: trusty
-    env: TARGET_CPU=x86_64 PACKAGE_SUFFIX=x86_64-linux-gcc48-eglibc219 DOCKER_IMAGE=imazen/build_if_gcc48 UPLOAD_BUILD=True FETCH_COMMIT_SUFFIX=linux64
+    env: TARGET_CPU=x86-64 PACKAGE_SUFFIX=x86_64-linux-gcc48-eglibc219 DOCKER_IMAGE=imazen/build_if_gcc48 UPLOAD_BUILD=True FETCH_COMMIT_SUFFIX=linux64
     sudo: required
     services:
     - docker
