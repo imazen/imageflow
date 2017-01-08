@@ -171,7 +171,7 @@ fn main_with_exit_code() -> i32 {
 
             }
 
-
+            println!("{}",&version);
             ::imageflow_server::serve(StartServerConfig {
                 bind_addr: combined,
                 data_dir: data_dir.unwrap_or_else(|| { if !alt_data_dir.exists() { std::fs::create_dir_all(&alt_data_dir).unwrap(); } alt_data_dir }),
@@ -182,6 +182,7 @@ fn main_with_exit_code() -> i32 {
         }else {
             let mounts = m.values_of_lossy("mount").expect("at least one --mount required").into_iter().map(|s| parse_mount(&s).expect("validator not working - bug in clap?")).collect::<Vec<MountLocation>>();
 
+            println!("{}",&version);
             ::imageflow_server::serve(StartServerConfig {
                 bind_addr: combined,
                 data_dir: data_dir.expect("data-dir required"),

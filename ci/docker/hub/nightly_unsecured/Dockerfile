@@ -9,7 +9,7 @@ RUN if [ -z "${SOURCE_COMMIT}" ]; then echo "SOURCE_COMMIT not set; exiting" && 
     if [[ "${SOURCE_COMMIT}" -ne "${BASE_OS_SOURCE_COMMIT}"]]; then echo "Mismatched images! ${BASE_OS_SOURCE_COMMIT} vs ${SOURCE_COMMIT}; exiting - push imazen/imageflow_base_os first" && exit 1; fi
 
 
-RUN mkdir nightly && cd nightly && wget -nv -O ifs.tar.gz https://s3-us-west-1.amazonaws.com/imageflow-nightlies/commits/${SOURCE_COMMIT}/linux64_sandybridge_glibc223.tar.gz \
+RUN mkdir nightly && cd nightly && wget -nv -O ifs.tar.gz https://s3-us-west-1.amazonaws.com/imageflow-nightlies/commits/${SOURCE_COMMIT}/linux64.tar.gz \
     && tar xvzf ifs.tar.gz && mv ./imageflow_server ../ && cd .. && rm -rf nightly
 
 EXPOSE 39876
