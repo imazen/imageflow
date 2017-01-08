@@ -79,7 +79,7 @@ test_script:
   - cd build
   - if "%PLATFORM%"=="x86" set CONAN_ARCH=x86
   - if "%PLATFORM%"=="x64" set CONAN_ARCH=x86_64
-  - if NOT "%TARGET_CPU%"=="" set RUSTFLAGS="-C target-cpu=%TARGET_CPU%"
+  - if NOT "%TARGET_CPU%|%PLATFORM%"=="|x86" set RUSTFLAGS="-C target-cpu=%TARGET_CPU%"
   - echo "CONAN_ARCH=%CONAN_ARCH%"
   - SET PATH=%PATH%;C:\MinGW\bin
   - conan install --scope build_tests=True -o shared=True --build missing -s build_type=Release -s arch=%CONAN_ARCH% -s target_cpu=%TARGET_CPU% -u ../
