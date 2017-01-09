@@ -1,0 +1,4 @@
+droplet.id
+droplet.addr
+*.json
+/cores
