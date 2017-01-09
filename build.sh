@@ -66,6 +66,28 @@ if [[ "$IMAGEFLOW_BUILD_OVERRIDE" == *'test'* ]]; then
 	export TEST_RUST=True
 	IMAGEFLOW_BUILD_OVERRIDE="${IMAGEFLOW_BUILD_OVERRIDE/test/}"
 fi 
+
+if [[ "$IMAGEFLOW_BUILD_OVERRIDE" == *'kcov'* ]]; then
+	export TEST_C=True
+	export TEST_RUST=True
+	#export TEST_C_DEBUG_BUILD=True
+	export BUILD_RELEASE=False
+	export BUILD_DEBUG=False
+	export REBUILD_C=False
+	export CLEAN_RUST_TARGETS=False
+	export COVERAGE=True
+	IMAGEFLOW_BUILD_OVERRIDE="${IMAGEFLOW_BUILD_OVERRIDE/kcov/}"
+fi 
+
+if [[ "$IMAGEFLOW_BUILD_OVERRIDE" == *'codecov'* ]]; then
+	export BUILD_QUIETER=False
+	export SILENCE_CARGO=True
+	export CODECOV=True
+	export CODECOV_TOKEN="8dc28cae-eb29-4d85-b0be-d20c34ac2c30"
+	IMAGEFLOW_BUILD_OVERRIDE="${IMAGEFLOW_BUILD_OVERRIDE/codecov/}"
+fi 
+
+
 if [[ "$IMAGEFLOW_BUILD_OVERRIDE" == *'valgrind'* ]]; then
 	export TEST_C=True
 	export TEST_RUST=True
@@ -116,7 +138,7 @@ fi
 
 echo_maybe(){
 	if [[ "$BUILD_QUIETER" != "True" ]]; then
-	    echo "$1" >&9
+	    echo "$1" 
 	fi
 }
 echo_maybe "============================= [build.sh] ======================================"
@@ -145,6 +167,8 @@ export IMAGEFLOW_SERVER="${IMAGEFLOW_SERVER:-True}"
 # Enables generated coverage information for the C portion of the code. 
 # Also forces C tests to build in debug mode
 export COVERAGE="${COVERAGE:-False}"
+
+export LCOV="${LCOV:-False}"
 
 # Chooses values for ARTIFACT_UPLOAD_PATH and DOCS_UPLOAD_DIR if they are empty
 export UPLOAD_BY_DEFAULT="${UPLOAD_BY_DEFAULT:-False}"
@@ -206,7 +230,7 @@ date_stamp
 
 
 #Turn off coverage if lcov is missing
-command -v lcov >/dev/null 2>&1 || { export COVERAGE=False; }
+command -v lcov >/dev/null 2>&1 || { export LCOV=False; }
 
 # TODO: Add CI env vars?
 BUILD_VARS=(
@@ -227,6 +251,7 @@ BUILD_VARS=(
 	"IMAGEFLOW_SERVER=${IMAGEFLOW_SERVER}"
 	"COVERAGE=${COVERAGE}" 
 	"COVERALLS=${COVERALLS}" 
+	"CODECOV=${CODECOV}" 
 	"COVERALLS_TOKEN=${COVERALLS_TOKEN}"
 	"GIT_COMMIT=${GIT_COMMIT}" 
 	"ARTIFACT_UPLOAD_PATH=${ARTIFACT_UPLOAD_PATH}"  
@@ -308,7 +333,7 @@ echo_maybe "build.sh sees these relevant variables: ${BUILD_VARS[*]}"
 				./bin/test_theft_render
 			fi 
 		)
-		if [[ "$COVERAGE" == 'True' ]]; then
+		if [[ "$LCOV" == 'True' ]]; then
 
 			echo_maybe "==================================================================== [build.sh]"
 			echo_maybe "Process coverage information with lcov"
@@ -416,10 +441,17 @@ if [[ "$TEST_RUST" == 'True' ]]; then
 			cargo test 1>&7
 		)
 	fi
+
+
+
 	if [[ "$VALGRIND" == 'True' ]]; then
 		./valgrind_existing.sh   1>&6
 	fi
 fi
+if [[ "$COVERAGE" == 'True' ]]; then
+	./cov.sh   1>&9
+fi
+
 if [[ "$BUILD_DEBUG" == 'True' ]]; then
 
 	echo "Building debug binaries"
@@ -444,6 +476,8 @@ if [[ "$BUILD_DEBUG" == 'True' ]]; then
 	fi
 fi 
 
+# This folder's existence is relied upon regardless of flags
+mkdir -p ./artifacts/upload || true
 
 if [[ "$BUILD_RELEASE" == 'True' ]]; then
 	echo_maybe "==================================================================== [build.sh]"

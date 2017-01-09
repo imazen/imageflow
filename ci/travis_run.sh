@@ -213,6 +213,7 @@ export COVERAGE="${COVERAGE:-False}"
 # travis_run_docker.sh uploads Coverage information when true
 export COVERALLS="${COVERALLS}"
 export COVERALLS_TOKEN="${COVERALLS_TOKEN}"
+export CODECOV="${CODECOV}"
 
 #Overrides everything
 export IMAGEFLOW_BUILD_OVERRIDE="${IMAGEFLOW_BUILD_OVERRIDE}"
@@ -254,6 +255,8 @@ DOCKER_ENV_VARS=(
 	 "COVERAGE=${COVERAGE}" 
 	"-e"
 	 "COVERALLS=${COVERALLS}" 
+	 "-e"
+	 "CODECOV=${CODECOV}" 
 	"-e"
 	 "COVERALLS_TOKEN=${COVERALLS_TOKEN}"
 	"-e"
