@@ -8,6 +8,7 @@ Imageflow will bring world-class image quality and performance to all languages 
 [![AppVeyor build status](https://ci.appveyor.com/api/projects/status/0356x95fa312m3wy/branch/master?svg=true&passingText=master%3A%20win32%20win64%20-%20passing&failingText=master%3A%20win32%20win64%20-%20failed)](https://ci.appveyor.com/project/imazen/imageflow/branch/master)
 ](https://travis-ci.org/imazen/imageflow/builds) 
 [![Coverage Status (Excluding Rust test coverage of C)](https://coveralls.io/repos/github/imazen/imageflow/badge.svg?branch=HEAD)](https://coveralls.io/github/imazen/imageflow?branch=HEAD)
+[![Coverage via codecov (missing C code covered by Rust, and Rust function pointers)](https://codecov.io/gh/imazen/imageflow/branch/master/graph/badge.svg)](https://codecov.io/gh/imazen/imageflow)
 [![Coverity Scan Build Status](https://scan.coverity.com/projects/8403/badge.svg)](https://scan.coverity.com/projects/imazen-imageflow)
 
 ### How can I help?
