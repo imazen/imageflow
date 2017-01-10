@@ -33,7 +33,7 @@ namespace Imageflow.Native
 #pragma warning disable HeapAnalyzerExplicitNewObjectRule // Explicit new reference type allocation
 			unsafe
 			{
-				unmanagedMemoryStream = new UnmanagedMemoryStream((byte*)pointer.ToPointer(), length, length, FileAccess.ReadWrite);
+				unmanagedMemoryStream = new UnmanagedMemoryStream((byte*)pointer.ToPointer(), length, length, FileAccess.Read);
 			}
 			streamReader = new StreamReader(unmanagedMemoryStream, Encoding.UTF8, false, 1024, true);
 			jsonTextReader = new JsonTextReader(streamReader);
