@@ -1,4 +1,4 @@
-﻿{
+{
   "authors":
   [
     "Imazen"
@@ -22,6 +22,7 @@
       "version": "4.3.0",
       "include": "compile"
     },
+    "System.IO.FileSystem": "4.3.0",
     "System.IO.UnmanagedMemoryStream": "4.3.0",
     "System.Runtime.InteropServices": "4.3.0",
     "System.Threading": "4.3.0"
