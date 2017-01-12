@@ -4,7 +4,7 @@ using Newtonsoft.Json;
 
 namespace Imageflow.Native.JSON
 {
-	internal class IoEnum
+	internal class IoObject
 	{
 		public Stream Data
 		{
@@ -21,7 +21,7 @@ namespace Imageflow.Native.JSON
 			get;
 		}
 
-		internal IoEnum(JsonReader reader)
+		internal IoObject(JsonReader reader)
 		{
 			byte init = 0;
 			while (reader.Read() && reader.TokenType != JsonToken.EndObject)
