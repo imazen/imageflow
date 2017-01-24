@@ -83,10 +83,10 @@ impl ServerInstance{
                                // Server may not be running
                                instance.hello()?;
 
-                               callback(&instance);
+                               let r = callback(&instance);
 
                                let _ = instance.request_stop();
-                               Ok(())
+                               r
                            })
         //po.expect_status_code(Some(0));
     }
@@ -145,7 +145,7 @@ fn run_server_test_i4(){
         let last_mount = params.len() - 2;
 
         let (po, callback_result) = ServerInstance::run(&c, params , | server | {
-            let bytes = fetch_bytes(&server.url_for("/local/eh.png?width=100"))?;
+            let bytes = fetch_bytes(&server.url_for("/local/eh.png?width=100")).unwrap();
 
             let info = fc::clients::stateless::LibClient {}.get_image_info(&bytes).expect("Image response should be valid");
 
@@ -154,6 +154,10 @@ fn run_server_test_i4(){
 
                 let url = format!("/local_{ix}/eh2.png?w=1", ix=ix);
                 println!("Testing {}", &url);
+                let bytes = fetch_bytes(&server.url_for(&url)).unwrap();
+
+                let info = fc::clients::stateless::LibClient {}.get_image_info(&bytes).expect("Image response should be valid");
+
                 assert_eq!(server.get_status(&url)?, hyper::status::StatusCode::Ok);
             }
 

@@ -433,6 +433,9 @@ fn ir4_local_handler(req: &mut Request, local_path: &PathBuf, mount: &MountLocat
             });
         }
     }
+    writeln!(&mut std::io::stderr(), "404 {:?} using local path {:?} and base {:?}", &url.path(), original , local_path);
+    //writeln!(&mut std::io::stdout(), "404 {:?} using local path {:?}", &url.path(), original );
+
     let bytes = format!("File not found").into_bytes();
     Ok(Response::with((Mime::from_str("text/plain").unwrap(),
                        status::NotFound,
