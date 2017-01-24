@@ -96,7 +96,12 @@ impl LibClient {
                 job.message("v0.1/get_image_info", b"{\"io_id\": 0}")?;
             // TODO: add into error conversion
             let info_response: s::Response001 =
-                serde_json::from_slice(info_blob.response_json.as_ref()).unwrap();
+                match serde_json::from_slice(info_blob.response_json.as_ref()){
+                    Ok(v) => v,
+                    Err(e) =>{
+                        panic!("Failed to parse JSON response {:?} {:?}", e, str::from_utf8(info_blob.response_json.as_ref()));
+                    }
+                };
             if !info_response.success {
                 panic!("get_image_info failed: {:?}", info_response);
             }

@@ -165,15 +165,15 @@ impl JsonResponse {
     }
 
     pub fn fail_with_message(code: i64, message: &str) -> JsonResponse {
+        let r = s::Response001 {
+            success: false,
+            code: code,
+            message: Some(message.to_owned()),
+            data: s::ResponsePayload::None,
+        };
         JsonResponse {
-            status_code: 404,
-            response_json:
-                Cow::Owned(format!("{}\"success\": \"false\",\"code\": {},\"message\": {:?}{}",
-                                   "{",
-                                   code,
-                                   message,
-                                   "}")
-                .into_bytes()),
+            status_code: r.code,
+            response_json: Cow::Owned(serde_json::to_vec_pretty(&r).unwrap()),
         }
     }
 }
