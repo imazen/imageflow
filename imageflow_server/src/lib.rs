@@ -49,6 +49,9 @@ pub mod disk_cache;
 pub mod resizer;
 pub mod diagnose;
 
+mod requested_path;
+extern crate url;
+
 use disk_cache::{CacheFolder, CacheEntry, FolderLayout};
 use logger::Logger;
 
@@ -422,18 +425,18 @@ fn ir4_local_respond<F>(shared: &SharedData, source: &Path, framewise_generator:
 }
 
 fn ir4_local_handler(req: &mut Request, local_path: &PathBuf, mount: &MountLocation) -> IronResult<Response> {
+    let requested_path = requested_path::RequestedPath::new(local_path, &req);
+
     let url = req.url.clone().into_generic_url();
     let shared = req.get::<persistent::Read<SharedData>>().unwrap();
-    //Ensure the combined path is canonical.
-    let original = local_path.join(url.path());
-    if let Ok(canonical) = original.canonicalize() {
-        if canonical.exists() && original == canonical {
-            return ir4_local_respond(&shared, canonical.as_path(), move |info: s::ImageInfo| {
-                ir4_framewise(info, &url)
-            });
-        }
+
+    if requested_path.path.exists() {
+        return ir4_local_respond(&shared, requested_path.path.as_path(), move |info: s::ImageInfo| {
+            ir4_framewise(info, &url)
+        });
     }
-    writeln!(&mut std::io::stderr(), "404 {:?} using local path {:?} and base {:?}", &url.path(), original , local_path);
+
+    writeln!(&mut std::io::stderr(), "404 {:?} using local path {:?} and base {:?}", &url.path(), requested_path.path.as_path(), local_path);
     //writeln!(&mut std::io::stdout(), "404 {:?} using local path {:?}", &url.path(), original );
 
     let bytes = format!("File not found").into_bytes();
