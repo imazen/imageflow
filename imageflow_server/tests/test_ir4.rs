@@ -129,10 +129,30 @@ fn run_server_test_i4(){
     {
         let c = context.subfolder_context("mount_local"); //stuck on port 39876
         c.create_blank_image_here("eh", 100,100, s::EncoderPreset::libpng32());
-        let (po, callback_result) = ServerInstance::run(&c, vec!["--data-dir=.", "--mount=/local/:ir4_local:./"], | server | {
+        let a = c.subfolder_context("a"); //stuck on port 39876
+        a.create_blank_image_here("eh2", 100,100, s::EncoderPreset::libpng32());
+
+        let mut params = vec!["--data-dir=.", "--mount=/local/:ir4_local:./",
+                              "--mount=/local_1/:ir4_local:./a",
+                              "--mount=/local_2/:ir4_local:./a/",
+                              "--mount=/local_3/:ir4_local:a"];
+        if std::path::MAIN_SEPARATOR == '\\'{
+            params.push(r"--mount=/local_4/:ir4_local:.\a");
+            params.push(r"--mount=/local_5/:ir4_local:.\a/");
+            params.push(r"--mount=/local_5/:ir4_local:.\a\");
+        }
+
+        let last_mount = params.len() - 2;
+
+        let (po, callback_result) = ServerInstance::run(&c, params , | server | {
             let bytes = fetch_bytes(&server.url_for("/local/eh.png?width=100"))?;
 
             let info = fc::clients::stateless::LibClient {}.get_image_info(&bytes).expect("Image response should be parseable");
+
+            for ix in 1..last_mount + 1{
+                let url = format!("/local_{ix}/eh.png?w=1", ix=ix);
+                assert_eq!(server.get_status(&url)?, hyper::status::StatusCode::Ok);
+            }
 
 
             assert_eq!(server.get_status("/local/notthere.jpg")?, hyper::status::StatusCode::NotFound);
