@@ -147,10 +147,13 @@ fn run_server_test_i4(){
         let (po, callback_result) = ServerInstance::run(&c, params , | server | {
             let bytes = fetch_bytes(&server.url_for("/local/eh.png?width=100"))?;
 
-            let info = fc::clients::stateless::LibClient {}.get_image_info(&bytes).expect("Image response should be parseable");
+            let info = fc::clients::stateless::LibClient {}.get_image_info(&bytes).expect("Image response should be valid");
+
 
             for ix in 1..last_mount + 1{
-                let url = format!("/local_{ix}/eh.png?w=1", ix=ix);
+
+                let url = format!("/local_{ix}/eh2.png?w=1", ix=ix);
+                println!("Testing {}", &url);
                 assert_eq!(server.get_status(&url)?, hyper::status::StatusCode::Ok);
             }
 

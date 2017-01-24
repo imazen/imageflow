@@ -4,9 +4,6 @@ environment:
     PYTHON_VERSION: "2.7.8"
     PYTHON_ARCH: "32"
     RUST_BACKTRACE: 1
-    OPENSSL_INCLUDE_DIR: C:\OpenSSL\include
-    OPENSSL_LIB_DIR: C:\OpenSSL\lib
-    OPENSSL_LIBS: ssleay32:libeay32:gdi32:User32
     TARGET_CPU: sandybridge
 
 configuration: Release
