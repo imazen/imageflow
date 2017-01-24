@@ -20,13 +20,6 @@ Port https://github.com/Mysticial/FeatureDetector to Rust - OR - distribute as s
 
 
 
-Failure of 1ca8eb8ad74b https://hub.docker.com/r/imazen/imageflow_server_unsecured/builds/bz4lpc88h3lg98eqctrm295/
-
-
-
-
-
-
 
 
 
@@ -201,3 +194,4 @@ https://github.com/servo/rust-smallvec
 Expired patents: https://vision.arc.nasa.gov/publications/MinimumPerceptualError.pdf
 https://vision.arc.nasa.gov/publications/patent97.pdf
 https://vision.arc.nasa.gov/publications/publications.html#compression
+

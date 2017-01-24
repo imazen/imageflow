@@ -3,7 +3,7 @@ set -e
 
 rm -rf ./target/{c_cov,rust_cov,rust_coverage,c_coverage} || true
 
-for i in $(ls ./target/debug/imageflow*-[0-9a-f][0-9a-f]*)
+for i in ./target/debug/imageflow*-[0-9a-f][0-9a-f]*
 do
 	echo "Covering $i"
 	DIR="./target/rust_coverage/$(basename "$i")"
@@ -11,7 +11,7 @@ do
 	kcov --exclude-pattern=/.cargo,/.conan,/usr,/tests --include-path=./c_components/lib,./imageflow_core/src,./imageflow_server/src,./imageflow_tool/src,./imageflow_types/src,./imageflow_helpers/src "$DIR" "$i"
 done
 
-for i in $(ls ./c_components/build/bin/test_*)
+for i in ./c_components/build/bin/test_*
 do
 	echo "Covering $i"
 	DIR="./target/c_coverage/$(basename "$i")"
