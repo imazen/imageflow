@@ -171,7 +171,25 @@ fn run_server_test_i4(){
         callback_result.unwrap();
     }
 }
+#[test]
+fn run_server_test_ir4_heavy(){
+    let context = ProcTestContext::create_timestamp_subdir_within("server_tests_heavy", Some(server_path()));
+    {
+        let c = context.subfolder_context("mount_local_test"); //stuck on port 39876
+        c.exec("diagnose --show-compilation-info").expect_status_code(Some(0));
+        c.create_blank_image_here("eh", 100,100, s::EncoderPreset::libpng32());
 
+        let mut params = vec!["--data-dir=.", "--mount=/local/:ir4_local:./"];
+        let (po, callback_result) = ServerInstance::run(&c, params , | server | {
+            for ix in 1..20{
+                let bytes = fetch_bytes(&server.url_for("/local/eh.png?width=100")).unwrap();
+                let info = fc::clients::stateless::LibClient {}.get_image_info(&bytes).expect("Image response should be valid");
+            }
+            Ok(())
+        });
+        callback_result.unwrap();
+    }
+}
 
 trait ProcTestContextHttp{
  fn execute_callback<F,T>(&self, args_vec: Vec<&str>, valgrind_on_signal_death: bool, callback: F) -> (ProcOutput, T)
