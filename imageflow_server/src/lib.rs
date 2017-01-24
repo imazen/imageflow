@@ -448,7 +448,7 @@ fn ir4_local_setup(mount: &MountLocation) -> Result<(PathBuf, EngineHandler<Path
         Err("ir4_local requires at least one argument - the path to the physical folder it is serving".to_owned())
     } else {
         //TODO: validate path
-        let local_dir = Path::new(&mount.engine_args[0]).canonicalize().map_err(|e| format!("{:?}", e))?;
+        let local_dir = Path::new(&mount.engine_args[0]).canonicalize().map_err(|e| format!("{:?} for {:?}", e, &mount.engine_args[0]))?;
         Ok((local_dir, ir4_local_handler))
     }
 }
