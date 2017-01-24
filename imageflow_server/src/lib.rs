@@ -67,7 +67,7 @@ use iron::prelude::*;
 use iron::status;
 use router::Router;
 use iron::typemap::Key;
-use iron::Handler;
+use iron::middleware::Handler;
 use hyper::header::Headers;
 
 use time::precise_time_ns;
@@ -446,7 +446,11 @@ fn ir4_local_handler(req: &mut Request, local_path: &PathBuf, mount: &MountLocat
 }
 
 fn static_handler(req: &mut Request, h: &Static, mount: &MountLocation) -> IronResult<Response> {
-    h.handle(req)
+
+    let bytes = format!("Do not use").into_bytes();
+    Ok(Response::with((Mime::from_str("text/plain").unwrap(),
+                       status::InternalServerError,
+                       bytes)))
 }
 
 fn ir4_local_setup(mount: &MountLocation) -> Result<(PathBuf, EngineHandler<PathBuf>), String> {
@@ -467,9 +471,9 @@ fn static_setup(mount: &MountLocation) -> Result<(Static, EngineHandler<Static>)
         let path = Path::new(&mount.engine_args[0]).canonicalize().map_err(|e| format!("{:?}", e))?;
         let h = if mount.engine_args.len() > 1 {
             let mins = mount.engine_args[1].parse::<i64>().expect("second argument to static must be the number of minutes to browser cache for");
-            Static::new(&path) // .cache(Duration::minutes(mins))
+            Static::new(path) // .cache(Duration::minutes(mins))
         } else {
-            Static::new(&path)
+            Static::new(path)
         };
         Ok((h, static_handler))
     }
@@ -590,7 +594,10 @@ pub fn serve(c: StartServerConfig) {
             MountedEngine::Ir4Local => mount(m, &mut mou, ir4_local_setup),
             MountedEngine::PermacacheProxy => mount(m, &mut mou, permacache_proxy_setup),
             MountedEngine::PermacacheProxyGuessContentTypes => mount(m, &mut mou, permacache_proxy_guess_content_types_setup),
-            MountedEngine::Static => mount(m, &mut mou, static_setup),
+            MountedEngine::Static => {
+                mou.mount(&m.prefix, static_setup(&m).expect("Failed to mount static directory").0);
+                Ok(())
+            },
         };
         if let Err(e) = mount_result{
 

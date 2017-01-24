@@ -25,19 +25,20 @@ pub enum Style{
 pub fn transform(s: &str, transform: Transform) -> String {
     match transform {
         Transform::AddUnderscores => {
-            let temp = Regex::new("([^xy])([0-9]+)").unwrap().replace_all(s, "$1_$2");
+            let temp = Regex::new("(?P<lookbehind>[^xy])([0-9]+)").unwrap().replace_all(s, "${lookbehind}_$2");
             let temp = Regex::new("[A-Z]").unwrap().replace_all(&temp, "_$0");
             let temp = Regex::new(r"(\A|\s+)_+").unwrap().replace_all(&temp, "$1");
+            let temp = Regex::new(r"_+(\z|\s+)").unwrap().replace_all(&temp, "$1");
             temp.replace("__","_")
         },
         Transform::StripUnderscores => {
             s.replace("_","")
         },
         Transform::Capitalize => {
-            Regex::new(r"(_|\b)([a-z])").unwrap().replace_all(&s, |c: &Captures | c[0].to_uppercase())
+            Regex::new(r"(_|\b)([a-z])").unwrap().replace_all(&s, |c: &Captures | c[0].to_uppercase()).into_owned()
         }
         Transform::LowerFirst => {
-            Regex::new(r"(\A|\s+)([A-Z])").unwrap().replace_all(&s, |c: &Captures | c[0].to_lowercase())
+            Regex::new(r"(\A|\s+)([A-Z])").unwrap().replace_all(&s, |c: &Captures | c[0].to_lowercase()).into_owned()
         }
     }
 }
@@ -79,7 +80,18 @@ pub fn style_id(s: &str, style: Style) -> String{
 
 #[test]
 fn test_styling(){
-    assert_eq!("struct a_Imageflow_A_B_3so_10_A_2", transform("struct aImageflowAB3so10A2", Transform::AddUnderscores));
+
+    assert_eq!(Regex::new("(.)").unwrap().replace_all("a", "${1}_"), "a_" );
+    assert_eq!(Regex::new("(?P<char>.)").unwrap().replace_all("a", "${char}_"), "a_" ); //actual: ""
+
+    assert_eq!("Aok_B_C", transform("aok_b_c", Transform::Capitalize));
+    assert_eq!("aokbc", transform("aok_b_c", Transform::StripUnderscores));
+    assert_eq!("hI hELLO", transform("HI HELLO", Transform::LowerFirst));
+
+    assert_eq!("a_Imageflow_A_B", transform("aImageflowAB", Transform::AddUnderscores));
+    assert_eq!(" a_b c", transform("_ a__b __c__", Transform::AddUnderscores));
+    assert_eq!("a_102", transform("a102", Transform::AddUnderscores));
+
 
     assert_eq!("imageflow_a_b_2d_40", style_id("ImageflowAB2d40", Style::Snake));
     assert_eq!("ImageflowAB2d40", style_id("ImageflowAB2d40", Style::PascalCase));
@@ -87,6 +99,8 @@ fn test_styling(){
     assert_eq!("IMAGEFLOW_A_B_2D_40", style_id("ImageflowAB2d40", Style::ScreamingSnake));
     assert_eq!("imageflow_A_B_2d_40", style_id("ImageflowAB2d40", Style::CamelSnake));
     assert_eq!("Imageflow_A_B_2d_40", style_id("ImageflowAB2d40", Style::PascalSnake));
+
+    assert_eq!("struct a_Imageflow_A_B_3so_10_A_2", transform("struct aImageflowAB3so10A2", Transform::AddUnderscores));
 
 }
 
