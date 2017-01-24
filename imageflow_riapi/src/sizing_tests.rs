@@ -86,8 +86,10 @@ fn strategy_to_steps(s: Strategy) -> Option<Vec<Step>> {
         Strategy::PadOrAspect => { steps().skip_if(Cond::Both(Ordering::Less)).scale_to_inner().pad().new_seq().pad_aspect() },
         Strategy::PadDownscaleOnly => { steps().skip_if(Cond::Both(Ordering::Less)).scale_to_inner().pad() },
 
-        //How does this work?
-        Strategy::CropOrAspect => { steps().skip_if(Cond::Either(Ordering::Less)).scale_to_outer().crop().new_seq().crop_aspect() },
+        //Scale_to_outer can reduce the width, then crop the height, causing both coordinates to be smaller
+        //TODO: perhaps combine scale_to_outer and crop() into a single operation to prevent this?
+        Strategy::CropOrAspect => { steps().skip_if(Cond::Either(Ordering::Less)).scale_to_outer().crop()
+            .new_seq().crop_aspect() },
 
 
         //I think we need multiple parts, as we don't offer a way to compare against the obox
@@ -297,14 +299,16 @@ fn vary_number(v: i32, variation_kind: u8) -> Option<i32>{
 //    }
 //}
 
+fn r(w: i32, h: i32) -> AspectRatio {
+    AspectRatio::create(w, h).unwrap()
+}
+
 ///Clears both vectors
 fn generate_aspects(into: &mut Vec<AspectRatio>, temp: &mut Vec<AspectRatio>, seed: AspectRatio) {
     into.clear();
     temp.clear();
 
-    fn r(w: i32, h: i32) -> AspectRatio {
-        AspectRatio::create(w, h).unwrap()
-    }
+
     // We use into as the first temp vec
     let mut n = into;
     n.reserve(80);
@@ -576,6 +580,27 @@ impl Kit{
 }
 
 
+#[test]
+fn test_scale_to_outer(){
+    let cropper = sizing::IdentityCropProvider::new();
+    let result = Layout::create(r(2,4), r(1,3)).execute_all(&steps().scale_to_outer().into_vec(), &cropper).unwrap();
+    assert_eq!(result.get_box(BoxTarget::CurrentCanvas), r(2,3));
+    assert_eq!(result.get_source_crop(), r(2,4))
+}
+
+#[test]
+fn test_scale_to_outer_and_crop(){
+    let cropper = sizing::IdentityCropProvider::new();
+    let result = Layout::create(r(2,4), r(1,3)).execute_all(&steps().scale_to_outer().crop().into_vec(), &cropper).unwrap();
+    assert_eq!(result.get_source_crop(), r(1,4))
+}
+
+#[test]
+fn test_crop_aspect(){
+    let cropper = sizing::IdentityCropProvider::new();
+    let result = Layout::create(r(2,4), r(1,3)).execute_all(&steps().crop_aspect().into_vec(), &cropper).unwrap();
+    assert_eq!(result.get_source_crop(), r(1,4))
+}
 
 #[test]
 fn test_steps() {
