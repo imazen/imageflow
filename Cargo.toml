@@ -11,11 +11,3 @@ debug = true
 [dependencies.regex]
 features=["pattern"]
 
-[dependencies.hyper]
-default-features = false
-
-[dependencies.cookie]
-default-features = false
-
-[dependencies.iron]
-default-features = false
