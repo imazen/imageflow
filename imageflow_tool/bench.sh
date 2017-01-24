@@ -15,7 +15,7 @@ echo And run brew install parallel
 
 #-limit thread 1
 
-cargo build --release
+RUSTFLAGS="-C target-cpu=native" cargo build --release
 cp target/release/flow-proto1 .
 
 convert --version
