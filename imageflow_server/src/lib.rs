@@ -675,10 +675,10 @@ pub struct MountLocation {
 impl MountLocation {
     pub fn parse(prefix: String, engine_name: String, args: Vec<String>) -> std::result::Result<MountLocation, String> {
         lazy_static! {
-            static ref RE: Regex = Regex::new(r"\A(/[a-zA-Z0-9-]+?)+?/\z").unwrap();
+            static ref RE: Regex = Regex::new(r"\A(/[a-zA-Z0-9-_]+?)+?/\z").unwrap();
         }
         if !RE.is_match(&prefix) {
-            return Err("mount points must be valid paths with leading and trailing slashes, like /img/logos/. Between slashes, [a-zA-Z0-9-] may be used".to_owned());
+            return Err("mount points must be valid paths with leading and trailing slashes, like /img/logos/. Between slashes, [a-zA-Z0-9-_] may be used".to_owned());
         }
         let engine = MountedEngine::from_id(engine_name.as_str());
 
