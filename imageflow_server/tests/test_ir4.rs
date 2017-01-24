@@ -139,7 +139,7 @@ fn run_server_test_i4(){
         if std::path::MAIN_SEPARATOR == '\\'{
             params.push(r"--mount=/local_4/:ir4_local:.\a");
             params.push(r"--mount=/local_5/:ir4_local:.\a/");
-            params.push(r"--mount=/local_5/:ir4_local:.\a\");
+            params.push(r"--mount=/local_6/:ir4_local:.\a\");
         }
 
         let last_mount = params.len() - 2;
