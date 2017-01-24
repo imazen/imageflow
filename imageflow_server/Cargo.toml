@@ -40,6 +40,7 @@ serde_derive="=0.8.17"
 conduit-mime-types = "*"
 chrono="*"
 url="*"
+hyper-native-tls="*"
 
 [build-dependencies]
 cmake = "0.1.17"

@@ -1,9 +1,6 @@
 [workspace]
 members = ["imageflow_helpers", "imageflow_types", "imageflow_riapi", "imageflow_core", "imageflow_abi", "imageflow_tool", "imageflow_server"]
 
-[replace]
-"pkg-config:0.3.8" = { git = "https://github.com/imazen/pkg-config-rs", branch="master"}
-
 
 [profile.release]
 debug = true
@@ -11,3 +8,9 @@ debug = true
 [dependencies.regex]
 features=["pattern"]
 
+[dependencies.openssl]
+features=["v102"]
+
+
+[dependencies.openssl-sys]
+features=["ossl102"]

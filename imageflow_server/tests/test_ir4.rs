@@ -29,15 +29,22 @@ fn get_next_port() -> u16{
     use std::sync::atomic::{AtomicU16, Ordering, ATOMIC_U16_INIT};
     static NEXT_PORT: AtomicU16 = ATOMIC_U16_INIT;
 
-    NEXT_PORT.compare_and_swap(0, 36203, Ordering::SeqCst);
+    NEXT_PORT.compare_and_swap(0, 36703, Ordering::SeqCst);
     NEXT_PORT.fetch_add(1, Ordering::SeqCst)
 }
 
 struct ServerInstance{
     port: u16,
+    protocol: Proto
 }
 
 type CallbackResult = std::result::Result<(), ::imageflow_helpers::fetching::FetchError>;
+
+#[derive(Debug,PartialEq,Eq,Copy,Clone)]
+enum Proto{
+    Http,
+    Https
+}
 impl ServerInstance{
 
     fn speaks_http(&self) -> bool{
@@ -49,7 +56,12 @@ impl ServerInstance{
     }
 
     fn url_for(&self, rel_path: &str) -> String{
-        format!("http://localhost:{}{}", self.port,rel_path)
+        if self.protocol == Proto::Https{
+            format!("https://localhost:{}{}", self.port,rel_path)
+        }else{
+            format!("http://localhost:{}{}", self.port,rel_path)
+        }
+
     }
 
     fn get_status(&self, rel_path: &str) -> std::result::Result<hyper::status::StatusCode, FetchError> {
@@ -63,15 +75,24 @@ impl ServerInstance{
 
 
 
-    fn run<F>(c: &ProcTestContext, args: Vec<&str>, callback: F) -> (ProcOutput, CallbackResult)
+    fn run<F>(c: &ProcTestContext, protocol: Proto, args: Vec<&str>, callback: F) -> (ProcOutput, CallbackResult)
     where F: Fn(&ServerInstance) -> CallbackResult {
         let instance = ServerInstance {
-            port: get_next_port()
+            port: get_next_port(),
+            protocol: protocol
         };
         // NOTE --bind=localhost::{} (two colons) causes a generic "error:",exit code 1, and no other output. This is bad UX.
         let test_arg = "--integration-test";
         let port_arg = format!("--port={}", instance.port);
+        let cert_path = Path::new(env!("CARGO_MANIFEST_DIR")).join(Path::new("src")).join(Path::new("assets")).join(Path::new("identity.p12"));
+
         let mut all_args = args.clone();
+        if protocol == Proto::Https{
+            all_args.insert(0, "mypass");
+            all_args.insert(0, "--certificate-password");
+            all_args.insert(0, cert_path.to_str().unwrap());
+            all_args.insert(0, "--certificate");
+        }
         all_args.insert(0, test_arg);
         all_args.insert(0, &port_arg);
         all_args.insert(0, "start");
@@ -116,7 +137,7 @@ fn run_server_test_i4(){
     {
         let c = context.subfolder_context("demo"); //stuck on port 39876
         c.subfolder_context("demo");
-        let (po, callback_result) = ServerInstance::run(&c, vec!["--demo", "--data-dir=."], | server | {
+        let (po, callback_result) = ServerInstance::run(&c, Proto::Http, vec!["--demo", "--data-dir=."], | server | {
             fetch_bytes(&server.url_for("/ir4/proxy_unsplash/photo-1422493757035-1e5e03968f95?width=100"))?;
             assert_eq!(server.get_status("/ir4/proxy_unsplash/notthere.jpg")?, hyper::status::StatusCode::NotFound);
             Ok(())
@@ -144,7 +165,7 @@ fn run_server_test_i4(){
 
         let last_mount = params.len() - 2;
 
-        let (po, callback_result) = ServerInstance::run(&c, params , | server | {
+        let (po, callback_result) = ServerInstance::run(&c, Proto::Http, params , | server | {
             let bytes = fetch_bytes(&server.url_for("/local/eh.png?width=100")).unwrap();
 
             let info = fc::clients::stateless::LibClient {}.get_image_info(&bytes).expect("Image response should be valid");
@@ -170,6 +191,19 @@ fn run_server_test_i4(){
 
         callback_result.unwrap();
     }
+    {
+        let c = context.subfolder_context("https_demo"); //stuck on port 39876
+        c.subfolder_context("demo");
+        let (po, callback_result) = ServerInstance::run(&c, Proto::Https, vec!["--demo", "--data-dir=."], | server | {
+            fetch_bytes(&server.url_for("/ir4/proxy_unsplash/photo-1422493757035-1e5e03968f95?width=100"))?;
+            assert_eq!(server.get_status("/ir4/proxy_unsplash/notthere.jpg")?, hyper::status::StatusCode::NotFound);
+            Ok(())
+        });
+
+        //po.expect_status_code(Some(0));
+
+        callback_result.unwrap();
+    }
 }
 #[test]
 fn run_server_test_ir4_heavy(){
@@ -180,7 +214,7 @@ fn run_server_test_ir4_heavy(){
         c.create_blank_image_here("eh", 100,100, s::EncoderPreset::libpng32());
 
         let mut params = vec!["--data-dir=.", "--mount=/local/:ir4_local:./"];
-        let (po, callback_result) = ServerInstance::run(&c, params , | server | {
+        let (po, callback_result) = ServerInstance::run(&c, Proto::Http, params , | server | {
             for ix in 1..20{
                 let bytes = fetch_bytes(&server.url_for("/local/eh.png?width=100")).unwrap();
                 let info = fc::clients::stateless::LibClient {}.get_image_info(&bytes).expect("Image response should be valid");

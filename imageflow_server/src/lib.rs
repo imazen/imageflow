@@ -25,6 +25,9 @@ extern crate time;
 #[macro_use] extern crate lazy_static;
 extern crate regex;
 
+extern crate hyper_native_tls;
+
+use hyper_native_tls::NativeTlsServer;
 
 use std::sync::atomic::{AtomicU64, AtomicBool, ATOMIC_U64_INIT};
 use std::sync::atomic;
@@ -628,8 +631,18 @@ pub fn serve(c: StartServerConfig) {
     // Link logger_after as your *last* after middleware.
     chain.link_after(logger_after);
 
+    //let ssl = NativeTlsServer::new("identity.p12", "mypass").unwrap();
+
+
     println!("Listening on {}", c.bind_addr.as_str());
-    Iron::new(chain).http(c.bind_addr.as_str()).unwrap();
+    if c.cert.is_some() {
+        let pwd = c.cert_pwd.unwrap_or("".into());
+        let ssl = NativeTlsServer::new(c.cert.unwrap(), &pwd).unwrap();
+
+        Iron::new(chain).https(c.bind_addr.as_str(), ssl).unwrap();
+    }else{
+        Iron::new(chain).http(c.bind_addr.as_str()).unwrap();
+    }
 }
 
 
@@ -714,5 +727,7 @@ pub struct StartServerConfig {
     pub bind_addr: String,
     pub mounts: Vec<MountLocation>,
     pub default_cache_layout: Option<FolderLayout>,
-    pub integration_test: bool
+    pub integration_test: bool,
+    pub cert: Option<PathBuf>,
+    pub cert_pwd: Option<String>
 }

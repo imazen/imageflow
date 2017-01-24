@@ -70,6 +70,9 @@ fn main_with_exit_code() -> i32 {
                     .help("The IPv4 or IPv6 address to bind to (or the hostname, like localhost). 0.0.0.0 binds to all addresses."
                 ))
                 .arg(Arg::with_name("port").long("port").short("-p").takes_value(true).default_value("39876").required(false).help("Set the port that the server will listen on"))
+                .arg(Arg::with_name("cert").long("certificate").takes_value(true).required(false).help("Path to a valid PKCS12 certificate (enables https)"))
+                .arg(Arg::with_name("cert-pwd").long("certificate-password").takes_value(true).required(false).help("Password to the PKCS12 certificate"))
+
 
                 .arg(Arg::with_name("data-dir").long("data-dir").takes_value(true).required_unless("demo")
                     .validator(|f| if Path::new(&f).is_dir() { Ok(()) } else { Err(format!("The specified data-dir {} must be an existing directory. ", f)) })
@@ -107,6 +110,13 @@ fn main_with_exit_code() -> i32 {
         let port = matches.value_of("port").map(|s| s.parse::<u16>().expect("Port must be a valid 16-bit positive integer") ).unwrap_or(39876);
         let integration_test = matches.is_present("integration-test");
         let data_dir = m.value_of("data-dir").map(|s| PathBuf::from(s));
+        let cert = m.value_of("cert").map(|s| PathBuf::from(s));
+        if let Some(ref p) = cert{
+            if !p.is_file(){
+                println!("The provided certificate file does not exist: {:?}", &cert);
+                std::process::exit(64);
+            }
+        }
         let bind = m.value_of("bind-address").map(|s| s.to_owned()).expect("bind address required");
 
         let is_release = option_env!("GIT_OPTIONAL_TAG").is_some() && !option_env!("GIT_OPTIONAL_TAG").unwrap().is_empty();
@@ -177,7 +187,9 @@ fn main_with_exit_code() -> i32 {
                 data_dir: data_dir.unwrap_or_else(|| { if !alt_data_dir.exists() { std::fs::create_dir_all(&alt_data_dir).unwrap(); } alt_data_dir }),
                 default_cache_layout: Some(FolderLayout::Tiny),
                 integration_test: integration_test,
-                mounts: mounts
+                mounts: mounts,
+                cert: cert,
+                cert_pwd: m.value_of("cert-pwd").map(|s| s.into()),
             });
         }else {
             let mounts = m.values_of_lossy("mount").expect("at least one --mount required").into_iter().map(|s| parse_mount(&s).expect("validator not working - bug in clap?")).collect::<Vec<MountLocation>>();
@@ -188,7 +200,9 @@ fn main_with_exit_code() -> i32 {
                 data_dir: data_dir.expect("data-dir required"),
                 mounts: mounts,
                 default_cache_layout: Some(FolderLayout::Normal),
-                integration_test: integration_test
+                integration_test: integration_test,
+                cert: cert,
+                cert_pwd: m.value_of("cert-pwd").map(|s| s.into()),
             });
         }
         return 0;
