@@ -180,7 +180,7 @@ fn test_crop(){
 //  Replaces TEST_CASE("Test scale rings", "")
 #[test]
 fn test_scale_rings(){
-    let matched = compare(Some(s::IoEnum::Url("http://s3-us-west-2.amazonaws.com/imageflow-resources/test_inputs/rings2.png".to_owned())), 500,
+    let matched = compare(Some(s::IoEnum::Url("https://s3-us-west-2.amazonaws.com/imageflow-resources/test_inputs/rings2.png".to_owned())), 500,
         "RingsDownscaling".to_owned(), false, false, vec![
         s::Node::Decode {io_id: 0, commands: None},
         s::Node::Resample2D{ w: 400, h: 400, down_filter: Some(s::Filter::Hermite), up_filter: Some(s::Filter::Hermite), hints: None }
@@ -211,7 +211,7 @@ fn request_1d_twice_mode() -> s::ResampleHints {
 
 #[test]
 fn test_scale_image() {
-    let matched = compare(Some(s::IoEnum::Url("http://s3-us-west-2.amazonaws.com/imageflow-resources/test_inputs/waterhouse.jpg".to_owned())), 500,
+    let matched = compare(Some(s::IoEnum::Url("https://s3-us-west-2.amazonaws.com/imageflow-resources/test_inputs/waterhouse.jpg".to_owned())), 500,
                           "ScaleTheHouse".to_owned(), false, false, vec![
         s::Node::Decode {io_id: 0, commands: None},
         s::Node::Resample2D{ w: 400, h: 300, down_filter: Some(s::Filter::Robidoux), up_filter: Some(s::Filter::Robidoux), hints: Some(request_1d_twice_mode()) }
@@ -224,7 +224,7 @@ fn test_scale_image() {
 
 #[test]
 fn test_jpeg_icc2_color_profile() {
-    let matched = compare(Some(s::IoEnum::Url("http://s3-us-west-2.amazonaws.com/imageflow-resources/test_inputs/MarsRGB_tagged.jpg".to_owned())), 500,
+    let matched = compare(Some(s::IoEnum::Url("https://s3-us-west-2.amazonaws.com/imageflow-resources/test_inputs/MarsRGB_tagged.jpg".to_owned())), 500,
                           "MarsRGB_ICC_Scaled400300".to_owned(), false, false, vec![
 s::Node::Decode {io_id: 0, commands: None},
 s::Node::Resample2D{ w: 400, h: 300, down_filter: Some(s::Filter::Robidoux), up_filter: Some(s::Filter::Robidoux), hints: Some(request_1d_twice_mode()) }
@@ -235,7 +235,7 @@ s::Node::Resample2D{ w: 400, h: 300, down_filter: Some(s::Filter::Robidoux), up_
 
 #[test]
 fn test_jpeg_icc4_color_profile() {
-    let matched = compare(Some(s::IoEnum::Url("http://s3-us-west-2.amazonaws.com/imageflow-resources/test_inputs/MarsRGB_v4_sYCC_8bit.jpg".to_owned())), 500,
+    let matched = compare(Some(s::IoEnum::Url("https://s3-us-west-2.amazonaws.com/imageflow-resources/test_inputs/MarsRGB_v4_sYCC_8bit.jpg".to_owned())), 500,
                           "MarsRGB_ICCv4_Scaled400300".to_owned(), false, false, vec![
 s::Node::Decode {io_id: 0, commands: None},
 s::Node::Resample2D{ w: 400, h: 300, down_filter: Some(s::Filter::Robidoux), up_filter: Some(s::Filter::Robidoux), hints: Some(request_1d_twice_mode()) }
@@ -250,7 +250,7 @@ fn test_jpeg_rotation() {
 
     for orientation in orientations {
         for flag in 1..9 {
-            let url = format!("http://s3-us-west-2.amazonaws.com/imageflow-resources/test_inputs/orientation/{}_{}.jpg", orientation, flag);
+            let url = format!("https://s3-us-west-2.amazonaws.com/imageflow-resources/test_inputs/orientation/{}_{}.jpg", orientation, flag);
             let title = format!("Test_Apply_Orientation_{}_{}.jpg", orientation, flag);
             let matched = compare(Some(s::IoEnum::Url(url)), 500, title, false, false, vec![s::Node::Decode {io_id: 0, commands: None}, s::Node::Constrain(s::Constraint::Within{w: Some(70), h: Some(70), hints: None})]);
             assert!(matched);
@@ -268,7 +268,7 @@ fn test_encode_jpeg_smoke() {
     s::Node::Encode{ io_id: 1, preset: s::EncoderPreset::LibjpegTurbo {quality: Some(100)}}
     ];
 
-    smoke_test(Some(s::IoEnum::Url("http://s3-us-west-2.amazonaws.com/imageflow-resources/test_inputs/MarsRGB_v4_sYCC_8bit.jpg".to_owned())),
+    smoke_test(Some(s::IoEnum::Url("https://s3-us-west-2.amazonaws.com/imageflow-resources/test_inputs/MarsRGB_v4_sYCC_8bit.jpg".to_owned())),
                Some(s::IoEnum::OutputBuffer),
                false,
                steps,
@@ -285,7 +285,7 @@ fn test_encode_png32_smoke() {
     s::Node::Encode{ io_id: 1, preset: s::EncoderPreset::Libpng {depth: Some(s::PngBitDepth::Png32), matte: None,  zlib_compression: None}}
     ];
 
-    smoke_test(Some(s::IoEnum::Url("http://s3-us-west-2.amazonaws.com/imageflow-resources/test_inputs/MarsRGB_v4_sYCC_8bit.jpg".to_owned())),
+    smoke_test(Some(s::IoEnum::Url("https://s3-us-west-2.amazonaws.com/imageflow-resources/test_inputs/MarsRGB_v4_sYCC_8bit.jpg".to_owned())),
                Some(s::IoEnum::OutputBuffer),
                false,
                steps,
@@ -404,21 +404,21 @@ fn test_idct_no_gamma_callback(info: s::ImageInfo) -> (Option<s::DecoderCommand>
 
 #[test]
 fn test_idct_linear(){
-    let matched = test_with_callback("ScaleIDCTFastvsSlow".to_owned(), s::IoEnum::Url("http://s3-us-west-2.amazonaws.com/imageflow-resources/test_inputs/roof_test_800x600.jpg".to_owned()),
+    let matched = test_with_callback("ScaleIDCTFastvsSlow".to_owned(), s::IoEnum::Url("https://s3-us-west-2.amazonaws.com/imageflow-resources/test_inputs/roof_test_800x600.jpg".to_owned()),
     test_idct_callback);
     assert!(matched);
 }
 
 #[test]
 fn test_idct_spatial_no_gamma(){
-    let matched = test_with_callback("ScaleIDCT_approx_gamma".to_owned(), s::IoEnum::Url("http://s3-us-west-2.amazonaws.com/imageflow-resources/test_inputs/roof_test_800x600.jpg".to_owned()),
+    let matched = test_with_callback("ScaleIDCT_approx_gamma".to_owned(), s::IoEnum::Url("https://s3-us-west-2.amazonaws.com/imageflow-resources/test_inputs/roof_test_800x600.jpg".to_owned()),
                                      test_idct_no_gamma_callback);
     assert!(matched);
 }
 //
 //#[test]
 //fn test_fail(){
-//    let matched = test_with_callback("ScaleIDCTFastvsSlow".to_owned(), s::IoEnum::Url("http://s3-us-west-2.amazonaws.com/imageflow-resources/test_inputs/roof_test_800x600.jpg".to_owned()),
+//    let matched = test_with_callback("ScaleIDCTFastvsSlow".to_owned(), s::IoEnum::Url("https://s3-us-west-2.amazonaws.com/imageflow-resources/test_inputs/roof_test_800x600.jpg".to_owned()),
 //                                     test_idct_callback_no_gamma);
 //    assert!(matched);
 //}
@@ -563,7 +563,7 @@ fn fetch_bytes(url: &str) -> Vec<u8> {
 
 fn download(c: &ChecksumCtx, checksum: &str){
     let dest_path = c.visuals_dir.as_path().join(Path::new(&format!("{}.png", checksum)));
-    let source_url = format!("http://s3-us-west-2.amazonaws.com/imageflow-resources/visual_test_checksums/{}.png",checksum);
+    let source_url = format!("https://s3-us-west-2.amazonaws.com/imageflow-resources/visual_test_checksums/{}.png",checksum);
     if dest_path.exists() {
         println!("{} (trusted) exists", checksum);
     }else{

@@ -159,7 +159,7 @@ fn main_with_exit_code() -> i32 {
             MountLocation {
                 engine: MountedEngine::PermacacheProxyGuessContentTypes,
                 prefix: "/proxied_demo/".to_owned(),
-                engine_args: vec![format!("http://raw.githubusercontent.com/imazen/imageflow/{}/imageflow_server/demo/", demo_commit)]
+                engine_args: vec![format!("https://raw.githubusercontent.com/imazen/imageflow/{}/imageflow_server/demo/", demo_commit)]
             },
             MountLocation {
                 engine: MountedEngine::Ir4Http,

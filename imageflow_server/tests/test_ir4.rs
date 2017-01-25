@@ -148,6 +148,9 @@ fn run_server_test_i4(){
         let (po, callback_result) = ServerInstance::run(&c, Proto::Http, vec!["--demo", "--data-dir=."], | server | {
             fetch_bytes(&server.url_for("/ir4/proxy_unsplash/photo-1422493757035-1e5e03968f95?width=100"))?;
             assert_eq!(server.get_status("/ir4/proxy_unsplash/notthere.jpg")?, hyper::status::StatusCode::NotFound);
+
+            assert_eq!(server.get_status("/proxied_demo/index.html")?, hyper::status::StatusCode::Ok);
+
             Ok(())
         });
 
@@ -189,7 +192,6 @@ fn run_server_test_i4(){
 
                 assert_eq!(server.get_status(&url)?, hyper::status::StatusCode::Ok);
             }
-
 
             assert_eq!(server.get_status("/local/notthere.jpg")?, hyper::status::StatusCode::NotFound);
             assert_eq!(server.get_status("/notrouted")?, hyper::status::StatusCode::NotFound);
