@@ -1,6 +1,8 @@
 #[macro_use]
 extern crate lazy_static;
 
+extern crate reqwest;
+extern crate hyper_native_tls;
 extern crate regex;
 extern crate hyper;
 extern crate blake2_rfc;
@@ -12,6 +14,11 @@ extern crate zip;
 extern crate serde;
 extern crate serde_json;
 extern crate libc;
+
+#[cfg(not(any(target_os = "windows", target_os = "macos")))]
+extern crate openssl;
+#[cfg(not(any(target_os = "windows", target_os = "macos")))]
+extern crate hyper_openssl;
 
 pub mod identifier_styles;
 pub mod preludes;

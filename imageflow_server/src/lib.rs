@@ -40,13 +40,14 @@ extern crate imageflow_helpers;
 extern crate imageflow_core;
 extern crate imageflow_types as s;
 extern crate imageflow_riapi;
+extern crate reqwest;
 
 use ::imageflow_helpers as hlp;
+use ::imageflow_helpers::fetching::FetchConfig;
 use ::imageflow_helpers::preludes::from_std::*;
 use imageflow_core::clients::stateless;
 
 use hyper::Url;
-use hyper::Client;
 
 pub mod disk_cache;
 pub mod resizer;
@@ -96,11 +97,13 @@ impl iron::typemap::Key for SharedData { type Value = SharedData; }
 #[derive(Debug)]
 pub enum ServerError {
     HyperError(hyper::Error),
+    ReqwestError(reqwest::Error),
     IoError(std::io::Error),
     DiskCacheReadIoError(std::io::Error),
     DiskCacheWriteIoError(std::io::Error),
     UpstreamResponseError(hyper::status::StatusCode),
     UpstreamHyperError(hyper::Error),
+    UpstreamReqwestError(reqwest::Error),
     UpstreamIoError(std::io::Error),
     BuildFailure(stateless::BuildFailure),
     LayoutSizingError(::imageflow_riapi::sizing::LayoutError)
@@ -112,9 +115,25 @@ impl From<stateless::BuildFailure> for ServerError {
     }
 }
 
+impl From<reqwest::Error> for ServerError {
+    fn from(e: reqwest::Error) -> ServerError {
+        ServerError::ReqwestError(e)
+    }
+}
 impl From<hyper::Error> for ServerError {
     fn from(e: hyper::Error) -> ServerError {
         ServerError::HyperError(e)
+    }
+}
+impl From<hlp::fetching::FetchError> for ServerError {
+    fn from(e: hlp::fetching::FetchError) -> ServerError {
+        match e{
+            hlp::fetching::FetchError::HyperError(e) => ServerError::HyperError(e),
+            hlp::fetching::FetchError::IoError(e) => ServerError::IoError(e),
+            hlp::fetching::FetchError::UpstreamResponseError(e) => ServerError::UpstreamResponseError(e),
+            hlp::fetching::FetchError::ReqwestError(e) => ServerError::ReqwestError(e)
+        }
+
     }
 }
 
@@ -130,29 +149,25 @@ struct FetchedResponse {
     content_type: hyper::header::ContentType,
 }
 
-fn fetch_bytes(url: &str) -> std::result::Result<FetchedResponse, ServerError> {
+fn fetch_bytes(url: &str, config: Option<FetchConfig>) -> std::result::Result<FetchedResponse, ServerError> {
     let start = precise_time_ns();
-    let client = Client::new();
-    let mut res = client.get(url).send()?;
-    if res.status != hyper::Ok {
-        return Err(ServerError::UpstreamResponseError(res.status));
-    }
-    let mut source_bytes = Vec::new();
-
-    use std::io::Read;
-
-    let _ = res.read_to_end(&mut source_bytes)?;
+    let result = hlp::fetching::fetch(url, config);
     let downloaded = precise_time_ns();
-    Ok(FetchedResponse {
-        bytes: source_bytes,
-        perf: AcquirePerf { fetch_ns: downloaded - start, ..Default::default() },
-        content_type: res.headers.get::<hyper::header::ContentType>().expect("content type required").clone()
-    })
+
+    match result{
+        Ok(r) => Ok(FetchedResponse{
+            bytes: r.bytes,
+            content_type: r.content_type,
+            perf: AcquirePerf { fetch_ns: downloaded - start, ..Default::default() }
+        }),
+        Err(e) => Err(error_upstream(e.into()))
+    }
 }
 
 fn error_upstream(from: ServerError) -> ServerError {
     match from {
         ServerError::HyperError(e) => ServerError::UpstreamHyperError(e),
+        ServerError::ReqwestError(e) => ServerError::UpstreamReqwestError(e),
         ServerError::IoError(e) => ServerError::UpstreamIoError(e),
         e => e,
     }
@@ -191,7 +206,7 @@ fn fetch_bytes_using_cache_by_url(cache: &CacheFolder, url: &str) -> std::result
             Err(e) => Err(ServerError::DiskCacheReadIoError(e))
         }
     } else {
-        let result = fetch_bytes(url);
+        let result = fetch_bytes(url, None);
         if let Ok(FetchedResponse { bytes, perf, .. }) = result {
             let start = precise_time_ns();
             match entry.write(&bytes) {
@@ -221,7 +236,7 @@ fn fetch_response_using_cache_by_url(cache: &CacheFolder, url: &str) -> std::res
             Err(e) => Err(ServerError::DiskCacheReadIoError(e))
         }
     } else {
-        let result = fetch_bytes(url);
+        let result = fetch_bytes(url, None);
         if let Ok(fetched) = result {
             let start = precise_time_ns();
             let bytes = bincode::serde::serialize(&fetched.bytes, bincode::SizeLimit::Infinite).unwrap();

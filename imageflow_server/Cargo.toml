@@ -41,6 +41,7 @@ conduit-mime-types = "*"
 chrono="*"
 url="*"
 hyper-native-tls="*"
+reqwest="*"
 
 [build-dependencies]
 cmake = "0.1.17"
