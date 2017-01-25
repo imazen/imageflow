@@ -12,7 +12,6 @@ extern crate mount;
 
 use staticfile::Static;
 
-use ::time::Duration;
 
 #[macro_use] extern crate serde_derive;
 
@@ -29,8 +28,8 @@ extern crate hyper_native_tls;
 
 use hyper_native_tls::NativeTlsServer;
 
-use std::sync::atomic::{AtomicU64, AtomicBool, ATOMIC_U64_INIT};
-use std::sync::atomic;
+use std::sync::atomic::{AtomicU64, ATOMIC_U64_INIT};
+
 
 extern crate conduit_mime_types as mime_types;
 
@@ -56,7 +55,7 @@ pub mod diagnose;
 mod requested_path;
 extern crate url;
 
-use disk_cache::{CacheFolder, CacheEntry, FolderLayout};
+use disk_cache::{CacheFolder,  FolderLayout};
 use logger::Logger;
 
 pub mod preludes {
@@ -65,21 +64,19 @@ pub mod preludes {
 }
 
 
-use iron::{AfterMiddleware, BeforeMiddleware};
 use iron::mime::*;
 use iron::prelude::*;
 use iron::status;
 use router::Router;
-use iron::typemap::Key;
-use iron::middleware::Handler;
-use hyper::header::Headers;
+
+
+
 
 use time::precise_time_ns;
 
 #[macro_use] extern crate log;
 extern crate env_logger;
 
-use log::LogLevel;
 
 #[derive(Debug)]
 struct SharedData {
@@ -173,12 +170,7 @@ fn error_upstream(from: ServerError) -> ServerError {
     }
 }
 
-fn error_cache_read(from: ServerError) -> ServerError {
-    match from {
-        ServerError::IoError(e) => ServerError::UpstreamIoError(e),
-        e => e,
-    }
-}
+
 
 
 #[derive(Debug, Serialize, Deserialize, PartialEq, Clone)]
@@ -269,16 +261,6 @@ struct AcquirePerf {
 
 
 impl AcquirePerf {
-    pub fn new() -> AcquirePerf {
-        AcquirePerf { fetch_ns: 0, cache_write_ns: 0, cache_read_ns: 0 }
-    }
-    fn debug(&self) -> String {
-        format!("HTTP fetch took: {} ms, cache read {} ms, cache write {} ms",
-                (self.fetch_ns as f64) / 1000000.0,
-                (self.cache_read_ns as f64) / 1000000.0,
-                (self.cache_write_ns as f64) / 1000000.0)
-    }
-
     fn total(&self) -> u64{
         self.fetch_ns + self.cache_read_ns + self.cache_write_ns
     }
@@ -291,13 +273,6 @@ struct RequestPerf {
 }
 
 impl RequestPerf {
-    fn debug(&self) -> String {
-        format!("{}, get_image_info took {} ms, execute took {} ms",
-                self.acquire.debug(),
-                (self.get_image_info_ns as f64) / 1000000.0,
-                (self.execute_ns as f64) / 1000000.0)
-    }
-
     fn short(&self) -> String{
         format!("execute {:.2}ms getinfo {:.2}ms fetch-through: {:.2}ms",
                 (self.execute_ns as f64) / 1000000.0
@@ -381,44 +356,7 @@ fn respond_with_server_error<A>(debug_info: A, e: ServerError, detailed_errors: 
         }
     }
 }
-//
-//fn proto1(req: &mut Request) -> IronResult<Response> {
-//
-//    let w;
-//    let h;
-//    let url;
-//    {
-//        let router = req.extensions.get::<Router>().unwrap();
-//
-//        let generic_url = req.url.clone().into_generic_url();
-//
-//        let router_w = router.find("w").and_then(|v| Some(v.to_owned()));
-//
-//        w = generic_url.query_pairs().find(|&(ref k,ref v)| k == "w").map(|(k,v)| v.into_owned()).or(router_w).and_then(|x| x.parse::<u32>().ok());
-//
-//        h = router.find("h").and_then(|x| x.parse::<u32>().ok());
-//        url = "http://images.unsplash.com/".to_string() + router.find("url").unwrap();
-//    }
-//    let shared = req.get::<persistent::Read<SharedData>>().unwrap();
-//
-//    respond_one_to_one(shared.as_ref(), &url, |info: s::ImageInfo| {
-//        let commands = BoringCommands {
-//            fit: ConstraintMode::Max,
-//            w: w.and_then(|w| Some(w as i32)),
-//            h: h.and_then(|h| Some(h as i32)),
-//            jpeg_quality: 90,
-//            precise_scaling_ratio: 2.1f32,
-//            luma_correct: true,
-//            sharpen: 0f32,
-//            format: ImageFormat::Jpeg,
-//            down_filter: Filter::Robidoux,
-//            up_filter: Filter::Ginseng,
-//        };
-//        let (framewise, (pre_w, pre_h)) =
-//        create_framewise(info.image_width, info.image_height, commands).unwrap();
-//        framewise
-//    })
-//}
+
 
 fn ir4_http_respond<F>(shared: &SharedData, url: &str, framewise_generator: F) -> IronResult<Response>
     where F: Fn(s::ImageInfo) -> std::result::Result<s::Framewise, ServerError>
@@ -428,7 +366,7 @@ fn ir4_http_respond<F>(shared: &SharedData, url: &str, framewise_generator: F) -
 
 
 fn ir4_framewise(info: s::ImageInfo, url: &Url) -> std::result::Result<s::Framewise, ServerError> {
-    ::imageflow_riapi::ir4::parse_to_framewise(info, url).map_err(|e| ServerError::LayoutSizingError(e)).map(|(framewise, warnings)| framewise)
+    ::imageflow_riapi::ir4::parse_to_framewise(info, url).map_err(|e| ServerError::LayoutSizingError(e)).map(|(framewise, _)| framewise)
 }
 
 
@@ -436,16 +374,16 @@ type EngineHandler<T> = fn(req: &mut Request, engine_data: &T, mount: &MountLoca
 type EngineSetup<T> = fn(mount: &MountLocation) -> Result<(T, EngineHandler<T>), String>;
 
 
-fn ir4_local_respond<F>(shared: &SharedData, source: &Path, framewise_generator: F) -> IronResult<Response>
+fn ir4_local_respond<F>(_: &SharedData, source: &Path, framewise_generator: F) -> IronResult<Response>
     where F: Fn(s::ImageInfo) -> std::result::Result<s::Framewise, ServerError>
 {
     respond_using(source, || fetch_bytes_from_disk(source), framewise_generator)
 }
 
-fn ir4_local_handler(req: &mut Request, local_path: &PathBuf, mount: &MountLocation) -> IronResult<Response> {
+fn ir4_local_handler(req: &mut Request, local_path: &PathBuf, _: &MountLocation) -> IronResult<Response> {
     let requested_path = requested_path::RequestedPath::new(local_path, &req);
 
-    let url = req.url.clone().into_generic_url();
+    let url: url::Url = req.url.clone().into();
     let shared = req.get::<persistent::Read<SharedData>>().unwrap();
 
     if requested_path.path.exists() {
@@ -454,7 +392,7 @@ fn ir4_local_handler(req: &mut Request, local_path: &PathBuf, mount: &MountLocat
         });
     }
 
-    writeln!(&mut std::io::stderr(), "404 {:?} using local path {:?} and base {:?}", &url.path(), requested_path.path.as_path(), local_path);
+    let _ = writeln!(&mut std::io::stderr(), "404 {:?} using local path {:?} and base {:?}", &url.path(), requested_path.path.as_path(), local_path);
     //writeln!(&mut std::io::stdout(), "404 {:?} using local path {:?}", &url.path(), original );
 
     let bytes = format!("File not found").into_bytes();
@@ -463,7 +401,7 @@ fn ir4_local_handler(req: &mut Request, local_path: &PathBuf, mount: &MountLocat
                        bytes)))
 }
 
-fn static_handler(req: &mut Request, h: &Static, mount: &MountLocation) -> IronResult<Response> {
+fn static_handler(_: &mut Request, _: &Static, _: &MountLocation) -> IronResult<Response> {
 
     let bytes = format!("Do not use").into_bytes();
     Ok(Response::with((Mime::from_str("text/plain").unwrap(),
@@ -488,8 +426,9 @@ fn static_setup(mount: &MountLocation) -> Result<(Static, EngineHandler<Static>)
         //TODO: validate path
         let path = Path::new(&mount.engine_args[0]).canonicalize().map_err(|e| format!("{:?}", e))?;
         let h = if mount.engine_args.len() > 1 {
-            let mins = mount.engine_args[1].parse::<i64>().expect("second argument to static must be the number of minutes to browser cache for");
-            Static::new(path) // .cache(Duration::minutes(mins)) (we must compile staticfile with the 'cache' feature enabled)
+            panic!("Static file cache headers not yet supported"); //(we must compile staticfile with the 'cache' feature enabled)
+//            let mins = mount.engine_args[1].parse::<i64>().expect("second argument to static must be the number of minutes to browser cache for");
+//            Static::new(path).cache(Duration::minutes(mins))
         } else {
             Static::new(path)
         };
@@ -498,8 +437,8 @@ fn static_setup(mount: &MountLocation) -> Result<(Static, EngineHandler<Static>)
 }
 
 
-fn permacache_proxy_handler(req: &mut Request, base_url: &String, mount: &MountLocation) -> IronResult<Response> {
-    let url = req.url.clone().into_generic_url();
+fn permacache_proxy_handler(req: &mut Request, base_url: &String, _: &MountLocation) -> IronResult<Response> {
+    let url: url::Url = req.url.clone().into();
     let shared = req.get::<persistent::Read<SharedData>>().unwrap();
     //TODO: Ensure the combined url is canonical (or, at least, lacks ..)
     let remote_url = format!("{}{}{}", base_url, &url.path()[1..], req.url.query().unwrap_or(""));
@@ -518,17 +457,17 @@ fn permacache_proxy_handler(req: &mut Request, base_url: &String, mount: &MountL
 lazy_static! {
     static ref MIME_TYPES: mime_types::Types = mime_types::Types::new().unwrap();
 }
-fn permacache_proxy_handler_guess_types(req: &mut Request, base_url: &String, mount: &MountLocation) -> IronResult<Response> {
+fn permacache_proxy_handler_guess_types(req: &mut Request, base_url: &String, _: &MountLocation) -> IronResult<Response> {
 
 
 
-    let url = req.url.clone().into_generic_url();
+    let url: url::Url = req.url.clone().into();
 
     let shared = req.get::<persistent::Read<SharedData>>().unwrap();
     //TODO: Ensure the combined url is canonical (or, at least, lacks ..)
     let remote_url = format!("{}{}{}", base_url, &url.path()[1..], req.url.query().unwrap_or(""));
     match fetch_bytes_using_cache_by_url(&shared.source_cache, &remote_url) {
-        Ok((bytes, perf)) => {
+        Ok((bytes, _)) => {
 
             let part_path = Path::new(&url.path()[1..]);
             let mime_str = MIME_TYPES.mime_for_path(&part_path);
@@ -545,8 +484,8 @@ fn permacache_proxy_handler_guess_types(req: &mut Request, base_url: &String, mo
 }
 
 
-fn ir4_http_handler(req: &mut Request, base_url: &String, mount: &MountLocation) -> IronResult<Response> {
-    let url = req.url.clone().into_generic_url();
+fn ir4_http_handler(req: &mut Request, base_url: &String, _: &MountLocation) -> IronResult<Response> {
+    let url: url::Url = req.url.clone().into();
     let shared = req.get::<persistent::Read<SharedData>>().unwrap();
     //TODO: Ensure the combined url is canonical (or, at least, lacks ..)
     let remote_url = format!("{}{}", base_url, &url.path()[1..]);
@@ -624,7 +563,7 @@ pub fn serve(c: StartServerConfig) {
     }
 
     if c.integration_test {
-        router.get("/test/shutdown", move |r: &mut Request| -> IronResult<Response> {
+        router.get("/test/shutdown", move |_: &mut Request| -> IronResult<Response> {
             println!("Stopping server due to GET /test/shutdown");
             std::process::exit(0);
 

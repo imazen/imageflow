@@ -9,7 +9,6 @@ extern crate serde_json;
 
 use std::ffi::CString;
 use std::path::Path;
-use std::io::Read;
 
 use imageflow_core::{Context, JsonResponse};
 

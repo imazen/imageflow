@@ -10,7 +10,7 @@ use ::std::io;
 use ::std;
 use ::std::io::prelude::*;
 use ::std::fs::{create_dir_all, File};
-use std::sync::atomic::{AtomicU64, AtomicBool, Ordering, ATOMIC_U64_INIT};
+use std::sync::atomic::{AtomicBool, Ordering};
 
 // TODO:
 // Cleanup staging folders automatically (failed renames)
@@ -123,16 +123,16 @@ impl CacheFolder{
     }
 
     fn ensure_meta_layout_confirmed(&self) -> io::Result<()>{
-        if !self.meta_layout_confirmed.load(Ordering::Relaxed){
+        if !self.meta_layout_confirmed.load(Ordering::SeqCst){
             let path = self.meta_dir.join(Path::new(match self.write_layout{
                 FolderLayout::Huge => "huge",
                 FolderLayout::Tiny => "tiny",
                 FolderLayout::Normal => "normal"
             }));
-            if !self.meta_layout_confirmed.load(Ordering::Relaxed) && !path.exists() {
+            if !self.meta_layout_confirmed.load(Ordering::SeqCst) && !path.exists() {
                 create_dir_all_helpful(&self.meta_dir)?;
                 File::create(path)?;
-                self.meta_layout_confirmed.store(true, Ordering::Relaxed);
+                self.meta_layout_confirmed.store(true, Ordering::SeqCst);
             }
         }
         Ok(())
@@ -142,7 +142,7 @@ impl CacheFolder{
     /// We would need 'fast path' that falls back to 'careful path' when any of those caches get out of sync
     fn prepare_for(&self, entry: &CacheEntry) -> io::Result<()> {
         self.ensure_root().unwrap();
-        self.ensure_meta_layout_confirmed();
+        self.ensure_meta_layout_confirmed().unwrap();
         let dir = entry.path.as_path().parent().expect("Every cache path should have a parent dir; this did not!");
         if !dir.exists(){
             create_dir_all_helpful(dir)?;
