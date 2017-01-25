@@ -489,7 +489,7 @@ fn static_setup(mount: &MountLocation) -> Result<(Static, EngineHandler<Static>)
         let path = Path::new(&mount.engine_args[0]).canonicalize().map_err(|e| format!("{:?}", e))?;
         let h = if mount.engine_args.len() > 1 {
             let mins = mount.engine_args[1].parse::<i64>().expect("second argument to static must be the number of minutes to browser cache for");
-            Static::new(path) // .cache(Duration::minutes(mins))
+            Static::new(path) // .cache(Duration::minutes(mins)) (we must compile staticfile with the 'cache' feature enabled)
         } else {
             Static::new(path)
         };
@@ -505,7 +505,7 @@ fn permacache_proxy_handler(req: &mut Request, base_url: &String, mount: &MountL
     let remote_url = format!("{}{}{}", base_url, &url.path()[1..], req.url.query().unwrap_or(""));
 
     match fetch_response_using_cache_by_url(&shared.source_cache, &remote_url) {
-        Ok((output, perf)) => {
+        Ok((output, _)) => {
             let mime = output.content_type
                 .parse::<Mime>()
                 .unwrap_or(Mime::from_str("application/octet-stream").unwrap());

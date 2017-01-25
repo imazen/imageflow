@@ -7,7 +7,7 @@ use ::hyper::net::HttpsConnector;
 use ::hyper_native_tls::NativeTlsClient;
 
 #[cfg(not(any(target_os = "windows", target_os = "macos")))]
-use openssl::ssl::{self, SslMethod, SslConnectorBuilder};
+use openssl::ssl::{SslMethod, SslConnectorBuilder};
 #[cfg(not(any(target_os = "windows", target_os = "macos")))]
 use hyper_openssl::OpensslClient;
 
