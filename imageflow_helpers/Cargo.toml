@@ -24,6 +24,3 @@ hyper-native-tls = "*"
 [target.'cfg(not(any(target_os = "windows", target_os = "macos")))'.dependencies]
 openssl = "*"
 hyper-openssl = "*"
-
-[profile.release]
-debug = true

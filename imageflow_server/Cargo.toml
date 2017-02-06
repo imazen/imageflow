@@ -46,11 +46,6 @@ reqwest="*"
 [build-dependencies]
 cmake = "0.1.17"
 
-
-[profile.release]
-debug = true
-
-
 [[bin]]
 name = "imageflow_server"
 path = "src/main.rs"
