@@ -14,8 +14,8 @@ for i in $(rustc --print target-list)
 do 
 	{ printf '[target.%s.openssl]\n' "$i";
 	  printf 'rustc-link-search = ["%s"]\n' "$OPENSSL_LIB_DIR" ;
-	  printf 'include = "%s"\n' "$OPENSSL_LIB_DIR/include" ;
+	  printf 'include = "%s"\n' "$OPENSSL_DIR/include" ;
 	  printf 'rustc-link-lib = ["ssl", "crypto"]\n'; #rustc-cfg = "ossl102"\nrustc-cfg = "ossl10x"
-	  printf 'rustc-cfg=["ossl102"]\nversion = "102"\nconf = ""\n\n\n';
+	  printf 'rustc-cfg=["ossl102"]\nversion = "102"\n\n\n';
 	 } >> ../.cargo/config 
 done
