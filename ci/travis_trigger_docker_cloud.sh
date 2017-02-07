@@ -7,8 +7,10 @@ set -e #Exit on failure.
 
 if [[ -z "$TRAVIS_PULL_REQUEST_SHA" ]]; then
 	if [[ -n "$TRAVIS_TAG" ]]; then
-		export CLOUD_SOURCE_NAME="${TRAVIS_TAG}"
-		export CLOUD_SOURCE_TYPE="Tag"
+		# We can re-enable when tagged releases allow non-localhost connections
+		#export CLOUD_SOURCE_NAME="${TRAVIS_TAG}"
+		#export CLOUD_SOURCE_TYPE="Tag"
+		echo "Skipping docker cloud build for tags (update when we permit non-localhost connections)"
 	else
 		if [[ -n "$TRAVIS_BRANCH" ]]; then
 			export CLOUD_SOURCE_NAME="${TRAVIS_BRANCH}"

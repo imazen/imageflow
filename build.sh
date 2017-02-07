@@ -173,6 +173,12 @@ export LCOV="${LCOV:-False}"
 # Chooses values for ARTIFACT_UPLOAD_PATH and DOCS_UPLOAD_DIR if they are empty
 export UPLOAD_BY_DEFAULT="${UPLOAD_BY_DEFAULT:-False}"
 
+if [[ "$CLEAN_RUST_TARGETS" == "False" ]]; then 
+	export CARGO_INCREMENTAL="${CARGO_INCREMENTAL:-1}"
+else
+	export CARGO_INCREMENTAL="${CARGO_INCREMENTAL:-1}"
+fi 
+
 
 ############ GIT VALUES ##################
 
@@ -407,7 +413,6 @@ cargo --version 1>&9
 if [[ "$SILENCE_CARGO" != "True" ]]; then
 	export RUST_LOG=cargo::ops::cargo_rustc::fingerprint=info
 fi
-CARGO_INCREMENTAL=1
 
 if [[ "$CLEAN_RUST_TARGETS" == 'True' ]]; then
 	echo "Removing output imageflow binaries (but not dependencies)"
