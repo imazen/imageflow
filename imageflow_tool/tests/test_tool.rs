@@ -1,4 +1,4 @@
-extern crate imageflow_tool;
+extern crate imageflow_tool_lib;
 use std::io::Write;
 
 #[test]
@@ -7,6 +7,6 @@ fn run_imageflow_tool_self_test(){
     // back out of the 'deps' directory as well
     let tool = self_path.parent().unwrap().parent().unwrap().join("imageflow_tool");
     let _  = writeln!(std::io::stdout(), "Testing binary {:?}", &tool);
-    imageflow_tool::self_test::run(Some(tool.clone()));
-    imageflow_tool::self_test::test_capture(Some(tool));
+    imageflow_tool_lib::self_test::run(Some(tool.clone()));
+    imageflow_tool_lib::self_test::test_capture(Some(tool));
 }
