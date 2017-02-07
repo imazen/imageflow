@@ -21,7 +21,7 @@ use fc::test_helpers::process_testing::ProcOutputExtras;
 use ::imageflow_helpers::fetching::{fetch, fetch_bytes,get_status_code_for, FetchError, FetchConfig};
 fn server_path() -> PathBuf{
     let self_path = std::env::current_exe().expect("For --self-test to work, we need to know the binary's location. env::current_exe failed");
-    self_path.parent().unwrap().join("imageflow_server")
+    self_path.parent().unwrap().parent().unwrap().join("imageflow_server")
 }
 
 fn get_next_port() -> u16{

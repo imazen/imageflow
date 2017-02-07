@@ -6,9 +6,7 @@ extern crate hyper_native_tls;
 extern crate regex;
 extern crate hyper;
 extern crate blake2_rfc;
-extern crate bit_vec;
 extern crate twox_hash;
-extern crate os_type;
 extern crate chrono;
 extern crate zip;
 extern crate serde;
@@ -36,12 +34,6 @@ pub mod timeywimey{
     }
     pub use chrono::UTC;
 }
-
-pub mod detect_os{
-    // NOT USED, cfg!(os_type="windows") was enough
-    pub use os_type::{current_platform, OSType};
-}
-
 
 #[cfg(test)]
 mod tests {

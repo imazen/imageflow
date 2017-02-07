@@ -54,7 +54,7 @@ install:
   - echo "RUST_TARGET=%RUST_TARGET%, TARGET=%TARGET%, BITS=%BITS%, CPU_TARGET=%CPU_TARGET% CONAN_ARCH=%CONAN_ARCH% RUSTFLAGS=%RUSTFLAGS%"
   - curl -L -o openssl.exe "https://s3-us-west-2.amazonaws.com/imageflow-resources/tools/Win%BITS%OpenSSL-1_0_2j.exe"
   - openssl.exe /SILENT /VERYSILENT /SP- /DIR="C:\OpenSSL"
-  - SET RUST_ARTIFACT=2016-11-03/rust-nightly-%RUST_TARGET%.exe
+  - SET RUST_ARTIFACT=2017-02-05/rust-nightly-%RUST_TARGET%.exe
   - curl -L -o nasminst.exe http://libgd.blob.core.windows.net/nasm/nasm-2.07-installer.exe
   - start /wait nasminst.exe /S
   - echo Fetching https://static.rust-lang.org/dist/%RUST_ARTIFACT%

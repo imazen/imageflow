@@ -407,6 +407,7 @@ cargo --version 1>&9
 if [[ "$SILENCE_CARGO" != "True" ]]; then
 	export RUST_LOG=cargo::ops::cargo_rustc::fingerprint=info
 fi
+CARGO_INCREMENTAL=1
 
 if [[ "$CLEAN_RUST_TARGETS" == 'True' ]]; then
 	echo "Removing output imageflow binaries (but not dependencies)"

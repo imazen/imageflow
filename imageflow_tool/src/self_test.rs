@@ -399,7 +399,7 @@ pub fn run(tool_location: Option<PathBuf>) -> i32 {
 
     c.exec("v0.1/build --json random_object.json")
         .expect_status_code(Some(65))
-        .expect_stderr_contains("InvalidType(Str)");
+        .expect_stderr_contains("expected struct Build001");
     // .expect_stdout_contains("")   ; //todo: should respond with JSON version of error message
 
     {

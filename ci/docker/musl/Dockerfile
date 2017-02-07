@@ -61,7 +61,7 @@ ENV SSL_VER=1.0.2j \
 
 
 # #Install nightly Rust and make default
-# RUN RUSTVER="nightly-2016-11-03" && curl https://sh.rustup.rs -sSf | sh -s -- -y --default-toolchain $RUSTVER -v \
+# RUN RUSTVER="nightly-2017-02-05" && curl https://sh.rustup.rs -sSf | sh -s -- -y --default-toolchain $RUSTVER -v \
 #     && rustup default $RUSTVER \
 #     && HI=$(rustup which rustc) && HI=${HI%/bin/rustc} && export TOOLCHAIN_DIR=$HI && echo TOOLCHAIN_DIR=$TOOLCHAIN_DIR \
 #     && sudo rm -rf $TOOLCHAIN_DIR/share/doc \

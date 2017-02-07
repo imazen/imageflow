@@ -10,9 +10,9 @@ name="imageflow_types"
 doctest = false
 
 [dependencies]
-serde = "0.8"
-serde_json = "0.8"
-serde_derive = "0.8"
+serde = "*"
+serde_json = "*"
+serde_derive = "*"
 lazy_static = "*"
 regex = "*"
 imageflow_helpers = { path = "../imageflow_helpers", version = "*" }

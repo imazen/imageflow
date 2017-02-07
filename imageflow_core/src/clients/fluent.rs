@@ -138,7 +138,7 @@ impl FluentNode {
     pub fn transpose(self) -> FluentNode {
         self.to(s::Node::Transpose)
     }
-    #[allow(too_many_arguments)]
+    //#[allow(too_many_arguments)]
     pub fn copy_rect_from(self,
                           from: FluentNode,
                           from_x: u32,

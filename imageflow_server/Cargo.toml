@@ -7,38 +7,54 @@ workspace = "../"
 
 
 [dependencies]
-libc = "0.2.0"
+libc = "0.2"
+
+# time
+time = "*"
+chrono =  "0.2"
+
+# serialization
+serde = "*"
+serde_json = "*"
+serde_derive = "*"
+rustc-serialize = "*"
+
+#lazy static
+lazy_static = "0.1.*"
+
+# fast hashes, crypto hashs
+twox-hash = "1.0"
+fnv = "*"
+blake2-rfc = "*"
+
+## Crate-specific dependencies
+
+
 clap = "2"
+
 router = "*"
 iron = "*"
 
 
-time = "*"
 hyper = { version = "*", default-features = false }
-rustc-serialize = "*"
 threadpool = "1.0"
 
-serde_json = "*"
 imageflow_core = { path = "../imageflow_core", version = "*" }
 imageflow_types = { path = "../imageflow_types", version = "*" }
 imageflow_helpers = { path = "../imageflow_helpers", version = "*" }
 imageflow_riapi = { path = "../imageflow_riapi", version = "*" }
-# imageflow_tool = { path = "../imageflow_tool", version = "*" }
-blake2-rfc = "0.2.17"
+
+
 rand = "*"
 lru-cache = "*"
 persistent = "*"
 regex = "0.2"
-lazy_static ="*"
 log="*"
 env_logger="*"
 wait-timeout = "0.1"
-bincode="*"
+bincode= {git= "https://github.com/TyOverby/bincode" }
 staticfile = { git= "https://github.com/onur/staticfile", rev= "9f2ff7201eda648128c92e3f5597c587f0629f51" }
-serde = "=0.8.17"
-serde_derive="=0.8.17"
 conduit-mime-types = "*"
-chrono="*"
 url="*"
 hyper-native-tls="*"
 reqwest="*"

@@ -115,7 +115,7 @@ impl BenchmarkResults {
 
             let mut map = serde_json::Map::new();
             map.insert(String::from("ns"),
-                       serde_json::Value::I64(i.wall_nanoseconds));
+                       serde_json::Value::Number(serde_json::Number::from(i.wall_nanoseconds)));
             let ms_str = format!("{:?}ms",
                                  time::Duration::nanoseconds(i.wall_nanoseconds)
                                      .num_milliseconds());
@@ -126,8 +126,8 @@ impl BenchmarkResults {
         }
 
         let mut root = serde_json::Map::new();
-        root.insert("runs", serde_json::Value::Array(list));
-        root.insert("wall_ns", serde_json::Value::I64(self.wall_nanoseconds));
+        root.insert("runs".to_owned(), serde_json::Value::Array(list));
+        root.insert("wall_ns".to_owned(), serde_json::Value::Number(serde_json::Number::from(self.wall_nanoseconds)));
 
         let ms_str = format!("{:?}ms",
                              time::Duration::nanoseconds(self.wall_nanoseconds).num_milliseconds());
@@ -137,9 +137,9 @@ impl BenchmarkResults {
                                                           (self.count as i64))
                                   .num_milliseconds());
 
-        root.insert("wall_ms", serde_json::Value::String(ms_str));
+        root.insert("wall_ms".to_owned(), serde_json::Value::String(ms_str));
 
-        root.insert("avg_ms", serde_json::Value::String(avg_str));
+        root.insert("avg_ms".to_owned(), serde_json::Value::String(avg_str));
         serde_json::to_string(&root).unwrap()
 
     }

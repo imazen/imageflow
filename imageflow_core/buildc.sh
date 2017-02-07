@@ -15,4 +15,4 @@ conan install --build missing # Will build imageflow package with your current s
 
 ./override_openssl.sh
 
-cargo test
+CARGO_INCREMENTAL=1 cargo test

@@ -222,7 +222,7 @@ fn fetch_response_using_cache_by_url(cache: &CacheFolder, url: &str) -> std::res
         match entry.read() {
             Ok(vec) => {
                 let end = precise_time_ns();
-                let cached: CachedResponse = bincode::serde::deserialize(&vec).unwrap();
+                let cached: CachedResponse =  bincode::deserialize(&vec).unwrap();
                 Ok((cached, AcquirePerf { cache_read_ns: end - start, ..Default::default() }))
             },
             Err(e) => Err(ServerError::DiskCacheReadIoError(e))
@@ -231,7 +231,7 @@ fn fetch_response_using_cache_by_url(cache: &CacheFolder, url: &str) -> std::res
         let result = fetch_bytes(url, None);
         if let Ok(fetched) = result {
             let start = precise_time_ns();
-            let bytes = bincode::serde::serialize(&fetched.bytes, bincode::SizeLimit::Infinite).unwrap();
+            let bytes = bincode::serialize(&fetched.bytes, bincode::SizeLimit::Infinite).unwrap();
             match entry.write(&bytes) {
                 Ok(()) => {
                     let end = precise_time_ns();

@@ -12,7 +12,7 @@ crate-type = ["cdylib"]
 doctest = false
 
 [dependencies]
-libc = "0.2.0"
+libc = "0.2"
 imageflow_core = { path = "../imageflow_core", version = "*" }
 
 [build-dependencies]

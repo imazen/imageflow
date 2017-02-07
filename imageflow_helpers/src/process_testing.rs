@@ -246,7 +246,12 @@ impl ProcTestContext {
 
         cmd.stderr(Stdio::piped()).stdout(Stdio::piped());
 
-        let mut child_process = cmd.spawn().expect("Failed to start?");
+        let mut child_process = match cmd.spawn(){
+            Ok(v) => v,
+            Err(e) => {
+                panic!("Failed to start {:?} {:?} error: {:?}", &exe, &cmd, e);
+            }
+        };
 
 
         callback(&mut child_process);
