@@ -41,6 +41,7 @@ fi
 export BINARY_OUT="$BINARY_DIR/$BINARY_NAME"
 export BINARY_COPY="${SCRIPT_DIR}/bin/$BINARY_NAME"
 mkdir -p "${SCRIPT_DIR}/bin/" || true
+mkdir -p "${BINARY_DIR}" || true &>/dev/null
 
 sep_bar(){
     printf "\n=================== %s ======================\n" "$1"
