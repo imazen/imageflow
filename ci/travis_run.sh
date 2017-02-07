@@ -344,12 +344,15 @@ else
 		fi
 		DOCKER_CACHE_VARS=("${SIM_DOCKER_CACHE_VARS[@]}")
 
+		DOCKER_INVOCATION=(docker run "--interactive" "--rm")
+
 		export DOCKER_TTY_FLAG=
 		if [[ -t 1 ]]; then
 		  export DOCKER_TTY_FLAG="--tty"
+		  DOCKER_INVOCATION=(docker run "--interactive" "$DOCKER_TTY_FLAG" "--rm")
 		fi
 
-		DOCKER_INVOCATION=(docker run "--interactive" "$DOCKER_TTY_FLAG" "--rm")
+		
 	fi
 	#echo "SIM_DOCKER_CACHE_VARS ${SIM_DOCKER_CACHE_VARS[*]}"
 
