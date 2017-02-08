@@ -107,6 +107,9 @@ if [[ "$IMAGEFLOW_BUILD_OVERRIDE" == *'quiet3'* ]]; then
 	export SILENCE_CARGO=True
 	export SILENCE_VALGRIND=True
 fi 
+if [[ "$IMAGEFLOW_BUILD_OVERRIDE" == *'target64linux'* ]]; then
+	export CARGO_TARGET="x86_64-unknown-linux-gnu"
+fi 
 
 ############# SILENCE STUFF #######################
 export SILENCE_CARGO="${SILENCE_CARGO:-False}"
@@ -146,6 +149,7 @@ echo_maybe "============================= [build.sh] ===========================
 
 export TARGET_CPU="${TARGET_CPU:-native}"
 export TUNE_CPU="${TUNE_CPU:-}"
+export CARGO_TARGET="${CARGO_TARGET:-}"
 
 export BUILD_DEBUG="${BUILD_DEBUG:-False}"
 # Build docs; build release mode binaries (separate pass from testing); populate ./artifacts folder
@@ -176,7 +180,7 @@ export UPLOAD_BY_DEFAULT="${UPLOAD_BY_DEFAULT:-False}"
 if [[ "$CLEAN_RUST_TARGETS" == "False" ]]; then 
 	export CARGO_INCREMENTAL="${CARGO_INCREMENTAL:-1}"
 else
-	export CARGO_INCREMENTAL="${CARGO_INCREMENTAL:-1}"
+	export CARGO_INCREMENTAL="${CARGO_INCREMENTAL:-0}"
 fi 
 
 
@@ -245,6 +249,7 @@ BUILD_VARS=(
 	"TARGET_CPU=${TARGET_CPU}"
 	"TUNE_CPU=${TUNE_CPU}"
 	"BUILD_QUIETER=${BUILD_QUIETER}"
+	"CARGO_TARGET=${CARGO_TARGET}"
 	"SILENCE_CARGO=${SILENCE_CARGO}"
 	"SILENCE_VALGRIND=${SILENCE_VALGRIND}"
 	"IMAGEFLOW_BUILD_OVERRIDE=${IMAGEFLOW_BUILD_OVERRIDE}"
@@ -306,7 +311,16 @@ if [[ "$COVERAGE" == 'True' ]]; then
 fi
 
 export RUST_FLAGS="$TEST_RUST_FLAGS"
-printf "TARGET_CPU=%s  RUST_FLAGS=%s CFLAGS=%s\n" "$TARGET_CPU" "$RUST_FLAGS" "$CFLAGS" 
+
+if [[ -n "$CARGO_TARGET" ]]; then
+	export CARGO_ARGS=("--target" "$CARGO_TARGET")
+	export TARGET_DIR="target/$CARGO_TARGET/"
+else 
+	export CARGO_ARGS=()
+	export TARGET_DIR="target/"
+fi
+
+printf "TARGET_CPU=%s  RUST_FLAGS=%s CFLAGS=%s TARGET_DIR=%s\n" "$TARGET_CPU" "$RUST_FLAGS" "$CFLAGS" "$TARGET_DIR"
 	
 
 echo_maybe "build.sh sees these relevant variables: ${BUILD_VARS[*]}"
@@ -368,8 +382,8 @@ echo_maybe "build.sh sees these relevant variables: ${BUILD_VARS[*]}"
 		date_stamp
 
 		# Conan regens every time. Let's avoid triggering rebuilds
-		mkdir -p ../target/debug || true 
-		BACKUP_FILE=../target/debug/conan_cargo_build.rs
+		mkdir -p ../${TARGET_DIR}debug || true 
+		BACKUP_FILE=../${TARGET_DIR}debug/conan_cargo_build.rs
 		CHANGING_FILE=./conan_cargo_build.rs
 		if [[ -f "$CHANGING_FILE" ]]; then 
 			# Prefer in-tree copy
@@ -416,11 +430,11 @@ fi
 
 if [[ "$CLEAN_RUST_TARGETS" == 'True' ]]; then
 	echo "Removing output imageflow binaries (but not dependencies)"
-	if [ -d "./target/debug" ]; then
-		find  ./target/debug  -maxdepth 1 -type f  -delete
+	if [ -d "./${TARGET_DIR}debug" ]; then
+		find  ./${TARGET_DIR}debug  -maxdepth 1 -type f  -delete
 	fi
-	if [ -d "./target/release" ]; then
-		find  ./target/release  -maxdepth 1 -type f  -delete
+	if [ -d "./${TARGET_DIR}release" ]; then
+		find  ./${TARGET_DIR}release  -maxdepth 1 -type f  -delete
 	fi
 fi
 
@@ -430,39 +444,39 @@ if [[ "$TEST_RUST" == 'True' ]]; then
 	(
 		cd imageflow_helpers
 		date_stamp
-		cargo test 1>&7
+		cargo test "${CARGO_ARGS[@]}"1>&7
 	)
 	(
 		cd imageflow_riapi
 		date_stamp
-		cargo test 1>&7
+		cargo test "${CARGO_ARGS[@]}" 1>&7
 	)
 	(
 		cd imageflow_core
 		date_stamp
-		RUST_TEST_TASKS=1 cargo test 1>&7
+		RUST_TEST_TASKS=1 cargo test "${CARGO_ARGS[@]}" 1>&7
 	)
 	(
 		cd imageflow_abi
 		date_stamp
-		cargo test 1>&7
+		cargo test "${CARGO_ARGS[@]}" 1>&7
 	)
 	(
 		cd imageflow_types
 		date_stamp
-		cargo test 1>&7
+		cargo test "${CARGO_ARGS[@]}" 1>&7
 	)
 	(
 		cd imageflow_tool
 		date_stamp
-		RUST_TEST_TASKS=1 cargo test 1>&7
+		RUST_TEST_TASKS=1 cargo test "${CARGO_ARGS[@]}" 1>&7
 		date_stamp
 	)
 	if [[ "$IMAGEFLOW_SERVER" == 'True' ]]; then
 		(
 			cd imageflow_server
 			date_stamp
-			cargo test 1>&7
+			cargo test "${CARGO_ARGS[@]}" 1>&7
 		)
 	fi
 
@@ -486,20 +500,20 @@ if [[ "$BUILD_DEBUG" == 'True' ]]; then
 	(
 		cd imageflow_abi
 		date_stamp
-		cargo build 1>&7
+		cargo build "${CARGO_ARGS[@]}" 1>&7
 	)
 	(
 		cd imageflow_tool
 		date_stamp
-		cargo build 1>&7
+		cargo build "${CARGO_ARGS[@]}" 1>&7
 		date_stamp
-		../target/debug/imageflow_tool diagnose --show-compilation-info 1>&9
+		../${TARGET_DIR}debug/imageflow_tool diagnose --show-compilation-info 1>&9
 	)
 	if [[ "$IMAGEFLOW_SERVER" == 'True' ]]; then
 		(
 			cd imageflow_server
 			date_stamp
-			cargo build 1>&9
+			cargo build "${CARGO_ARGS[@]}" 1>&9
 		)
 	fi
 fi 
@@ -515,28 +529,28 @@ if [[ "$BUILD_RELEASE" == 'True' ]]; then
 	echo_maybe "Building imageflow_core docs"
 	(
 		cd imageflow_core
-		cargo doc --no-deps 1>&7
+		cargo doc "${CARGO_ARGS[@]}" --no-deps 1>&7
 	)
 	echo_maybe "Building imageflow_types docs"
 	(
 		cd imageflow_types
-		cargo doc --no-deps 1>&7
+		cargo doc "${CARGO_ARGS[@]}" --no-deps 1>&7
 	)
 	echo_maybe "Building imageflow_tool (Release) and docs"
 	(
 		cd imageflow_tool
 		date_stamp
-		cargo build --release 1>&7
-		cargo doc --no-deps 1>&7
+		cargo build --release "${CARGO_ARGS[@]}" 1>&7
+		cargo doc "${CARGO_ARGS[@]}" --no-deps 1>&7
 		date_stamp
-		../target/release/imageflow_tool diagnose --show-compilation-info 1>&9
+		../${TARGET_DIR}release/imageflow_tool diagnose --show-compilation-info 1>&9
 	)
 	echo_maybe "Building libimageflow (Release) and docs"
 	(
 		cd imageflow_abi
 		date_stamp
-		cargo build --release 1>&7
-		cargo doc --no-deps 1>&7
+		cargo build --release "${CARGO_ARGS[@]}" 1>&7
+		cargo doc "${CARGO_ARGS[@]}" --no-deps 1>&7
 	)
 	if [[ "$IMAGEFLOW_SERVER" == 'True' ]]; then
 		echo_maybe "Building imageflow_server (Release) and docs"
@@ -544,8 +558,8 @@ if [[ "$BUILD_RELEASE" == 'True' ]]; then
 		(
 			cd imageflow_server
 			date_stamp
-			cargo build --release 1>&7
-			cargo doc --no-deps 1>&7
+			cargo build --release "${CARGO_ARGS[@]}" 1>&7
+			cargo doc "${CARGO_ARGS[@]}" --no-deps 1>&7
 		)
 	fi
 
@@ -557,10 +571,10 @@ if [[ "$BUILD_RELEASE" == 'True' ]]; then
 	mkdir -p artifacts/staging/doc || true
 	mkdir -p artifacts/staging/headers || true
 
-	cp -R target/release/{flow-proto1,imageflow_,libimageflow}*  ./artifacts/staging/
+	cp -R ${TARGET_DIR}release/{flow-proto1,imageflow_,libimageflow}*  ./artifacts/staging/
 	rm ./artifacts/staging/*.rlib || true
 	cp bindings/headers/*.h  ./artifacts/staging/headers/
-	cp -a target/doc ./artifacts/staging/
+	cp -a ${TARGET_DIR}doc ./artifacts/staging/
 	rm ./artifacts/staging/*.{o,d} || true
 
 	if [[ -n "$RUNTIME_REQUIREMENTS_FILE" ]]; then
@@ -588,11 +602,11 @@ if [[ "$BUILD_RELEASE" == 'True' ]]; then
 
 	if [[ -n "$DOCS_UPLOAD_DIR" ]]; then
 		mkdir -p "./artifacts/upload/${DOCS_UPLOAD_DIR}" || true
-		cp -a target/doc/* "./artifacts/upload/${DOCS_UPLOAD_DIR}/"
+		cp -a ${TARGET_DIR}doc/* "./artifacts/upload/${DOCS_UPLOAD_DIR}/"
 	fi
 	if [[ -n "$DOCS_UPLOAD_DIR_2" ]]; then
 		mkdir -p "./artifacts/upload/${DOCS_UPLOAD_DIR_2}" || true
-		cp -a target/doc/* "./artifacts/upload/${DOCS_UPLOAD_DIR_2}/"
+		cp -a ${TARGET_DIR}doc/* "./artifacts/upload/${DOCS_UPLOAD_DIR_2}/"
 	fi
 
 
