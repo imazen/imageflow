@@ -1,9 +1,13 @@
 #!/bin/bash
 set -e
 
+# The purpose of this script is to compile Imageflow locally (or in a CI simulation docker container), then copy it to *another* docker container, and run a basic smoke test. 
+# This can help detect incompatibilites and missing basics, lige glibc. 
+
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 export FROM_IMAGE="imazen/imageflow_base_os"
-export IMAGE_NAME="local/if_testing"
+export BUILD_IMAGE_NAME="build_if_gcc54"
+export OUTPUT_IMAGE_NAME="local/if_testing"
 export DOCKER_DIR="/home/imageflow"
 
 
@@ -18,6 +22,15 @@ else
     export PROFILE=release
 fi
 
+export CARGO_TARGET="${CARGO_TARGET:-}"
+
+if [[ -n "$CARGO_TARGET" ]]; then
+    export TARGET_DIR="target/${CARGO_TARGET}/"
+else 
+    export TARGET_DIR="target/"
+fi
+
+
 if [[ "$3" == 'tool' ]]; then
 	export BINARY_NAME=imageflow_tool
 	export TEST_ENTRYPOINT=(sudo "${DOCKER_DIR}/${BINARY_NAME}" diagnose --self-test)
@@ -25,11 +38,14 @@ else
 	export BINARY_NAME=imageflow_server
 	export TEST_ENTRYPOINT=(sudo "${DOCKER_DIR}/${BINARY_NAME}" diagnose --smoke-test-core)
 fi
-#/home/n/.docker_imageflow_caches/.docker_build_if_gcc54_cache/target/debug
+
 if [[ "$2" == 'docker' ]]; then
-	export BINARY_DIR="${HOME}/.docker_imageflow_caches/.docker_build_if_gcc54_cache/target/${PROFILE}"
+
+    TARGET_CPU="${TARGET_CPU:-x86-64}"
+    WORKING_DIR="${HOME}/.docker_imageflow_caches/.docker_${BUILD_IMAGE_NAME}_${TARGET_CPU}"
+	export BINARY_DIR="${WORKING_DIR}_cache/${TARGET_DIR}${PROFILE}"
 else
-	export BINARY_DIR="${SCRIPT_DIR}/../target/${PROFILE}"
+	export BINARY_DIR="${SCRIPT_DIR}/../${TARGET_DIR}${PROFILE}"
 fi
 
 
@@ -61,7 +77,7 @@ export UPLOAD_DOCS=False
 export IMAGEFLOW_BUILD_OVERRIDE="$OVERRIDE"
 
 if [[ "$2" == 'docker' ]]; then
-	( cd "${SCRIPT_DIR}/../ci/docker" && ./test.sh build_if_gcc54 )
+	( cd "${SCRIPT_DIR}/../ci/docker" && ./test.sh "${BUILD_IMAGE_NAME}" )
 else
     ( "${SCRIPT_DIR}/../build.sh" "${OVERRIDE}" )
 
@@ -82,13 +98,13 @@ sep_bar "Dockerizing"
     cp -p "${BINARY_OUT}" .
     printf "\nCreating Dockerfile\n\n"
     printf "FROM %s\n\nEXPOSE 39876\n\nADD %s %s/" "$FROM_IMAGE" "$BINARY_NAME" "$DOCKER_DIR" > Dockerfile
-    docker build -t "$IMAGE_NAME" .
+    docker build -t "$OUTPUT_IMAGE_NAME" .
 )
 sep_bar "Smoke testing in Docker"
-docker run --rm "${IMAGE_NAME}"  "${DOCKER_DIR}/${BINARY_NAME}" --version || printf "Failed to run %s --version!\n" "${BINARY_NAME}"
+docker run --rm "${OUTPUT_IMAGE_NAME}"  "${DOCKER_DIR}/${BINARY_NAME}" --version || printf "Failed to run %s --version!\n" "${BINARY_NAME}"
 
 set +e
-docker run --rm "${IMAGE_NAME}"  "${TEST_ENTRYPOINT[@]}"
+docker run --rm "${OUTPUT_IMAGE_NAME}"  "${TEST_ENTRYPOINT[@]}"
 
 if [[ "$?" == "0" ]]; then
     sep_bar "PASSED"
@@ -105,13 +121,13 @@ if [[ "$TEST_FAILED" == '1' ]]; then
     echo "This creates docker containers and doesn't clean them up. Use this to remove all containers (danger!)"
     echo 'docker rm `docker ps -aq`'
 
-    docker run -i -t   "${IMAGE_NAME}" /bin/bash
+    docker run -i -t   "${OUTPUT_IMAGE_NAME}" /bin/bash
 
     exit 1
 fi
 
 if [[ "$BINARY_NAME" == 'imageflow_server' ]]; then
-    docker run -i -t  -p 3000:3000 "${IMAGE_NAME}" sudo "${DOCKER_DIR}/${BINARY_NAME}" start --demo --port 3000 --bind-address 0.0.0.0
+    docker run -i -t  -p 3000:3000 "${OUTPUT_IMAGE_NAME}" sudo "${DOCKER_DIR}/${BINARY_NAME}" start --demo --port 3000 --bind-address 0.0.0.0
 fi
 
 

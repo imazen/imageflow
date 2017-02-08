@@ -444,7 +444,7 @@ if [[ "$TEST_RUST" == 'True' ]]; then
 	(
 		cd imageflow_helpers
 		date_stamp
-		cargo test "${CARGO_ARGS[@]}"1>&7
+		cargo test "${CARGO_ARGS[@]}" 1>&7
 	)
 	(
 		cd imageflow_riapi
@@ -491,8 +491,9 @@ if [[ "$COVERAGE" == 'True' ]]; then
 fi
 
 export RUST_FLAGS="$REL_RUST_FLAGS"
-printf "TARGET_CPU=%s  RUST_FLAGS=%s CFLAGS=%s\n" "$TARGET_CPU" "$RUST_FLAGS" "$CFLAGS" 
-	
+printf "TARGET_CPU=%s  RUST_FLAGS=%s CFLAGS=%s TARGET_DIR=%s CARGO_ARGS=" "$TARGET_CPU" "$RUST_FLAGS" "$CFLAGS" "$TARGET_DIR"
+printf "%s " "${CARGO_ARGS[@]}"
+printf "\n"
 
 if [[ "$BUILD_DEBUG" == 'True' ]]; then
 

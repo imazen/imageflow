@@ -254,6 +254,8 @@ DOCKER_ENV_VARS=(
 	"-e"
 	 "COVERAGE=${COVERAGE}" 
 	"-e"
+	"CARGO_TARGET=${CARGO_TARGET}" 
+	"-e"
 	 "COVERALLS=${COVERALLS}" 
 	 "-e"
 	 "CODECOV=${CODECOV}" 

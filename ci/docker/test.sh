@@ -2,8 +2,11 @@
 set -e
 shopt -s extglob
 
-#FOR THE CLEANEST TEST
+#FOR THE CLEANEST TEST - 100% ephemeral. 
 # DISABLE_COMPILATION_CACHES=True
+
+#Or, to prevent copying of the host's ~/.cargo directory into the instance
+# COPY_HOST_CARGO_DIR=False
 
 #REQUIRES
 # 1 param of build_if_gcc54
@@ -49,7 +52,7 @@ export CLEAN_RUST_TARGETS="${CLEAN_RUST_TARGETS:-False}"
 
 export IMAGEFLOW_BUILD_OVERRIDE="${IMAGEFLOW_BUILD_OVERRIDE}"
 
-
+export COPY_HOST_CARGO_DIR="${COPY_HOST_CARGO_DIR:-True}"
 
 
 # First parameter to script must be the name of the docker image (excluding imazen/)
@@ -57,6 +60,13 @@ export IMAGE_NAME="$1"
 
 export TARGET_CPU="${TARGET_CPU:-x86-64}"
 
+export CARGO_TARGET="${CARGO_TARGET:-}"
+
+if [[ -n "$CARGO_TARGET" ]]; then
+    export TARGET_DIR="target/${CARGO_TARGET}/"
+else 
+    export TARGET_DIR="target/"
+fi
 
 # Set DOCKER_IMAGE to override entire name
 export DOCKER_IMAGE="${DOCKER_IMAGE:-imazen/$IMAGE_NAME}"
@@ -94,8 +104,8 @@ rsync -q -av --delete "${SCRIPT_DIR}/../../.." "$WORKING_DIR" --filter=':- .giti
 
 
 	
-	mkdir -p "${WORKING_DIR}_cache/target/debug" || true
-	mkdir -p "${WORKING_DIR}_cache/target/release" || true
+	mkdir -p "${WORKING_DIR}_cache/${TARGET_DIR}debug" || true
+	mkdir -p "${WORKING_DIR}_cache/${TARGET_DIR}release" || true
 	mkdir -p "${WORKING_DIR}_cache/conan_data" || true
 	mkdir -p "${WORKING_DIR}_cache/ccache" || true
 	mkdir -p "${WORKING_DIR}_cache/c_components/build" || true
@@ -104,18 +114,28 @@ rsync -q -av --delete "${SCRIPT_DIR}/../../.." "$WORKING_DIR" --filter=':- .giti
 	# The first two are only needed in test.sh, since we're rsycning away the whole /target folder
 	export SIM_DOCKER_CACHE_VARS=(
 		-v 
-		"${WORKING_DIR}_cache/target/debug:/home/conan/imageflow/target/debug"
+		"${WORKING_DIR}_cache/${TARGET_DIR}debug:/home/conan/imageflow/${TARGET_DIR}debug"
 		-v 
-		"${WORKING_DIR}_cache/target/release:/home/conan/imageflow/target/release"
+		"${WORKING_DIR}_cache/${TARGET_DIR}release:/home/conan/imageflow/${TARGET_DIR}release"
 		-v 
 		"${WORKING_DIR}_cache/conan_data:/home/conan/.conan/data" 
-		-v 
-		"${HOME}/.cargo:/home/conan/host_cargo" 
 		-v 
 		"${WORKING_DIR}_cache/ccache:/home/conan/.ccache"
 		-v 
 		"${WORKING_DIR}_cache/c_components/build:/home/conan/imageflow/c_components/build"  
 	)
+	if [[ "$COPY_HOST_CARGO_DIR" == "True" ]]; then
+		SIM_DOCKER_CACHE_VARS+=(		
+			-v 
+			"${HOME}/.cargo:/home/conan/host_cargo" 
+		)
+	fi 
+	if [[ -n "$IMAGEFLOW_DOCKER_TEST_MAP_EXTRA_DIR" ]]; then
+		SIM_DOCKER_CACHE_VARS+=(
+		    -v 
+		    "${WORKING_DIR}_cache/${IMAGEFLOW_DOCKER_TEST_MAP_EXTRA_DIR}:/home/conan/imageflow/${IMAGEFLOW_DOCKER_TEST_MAP_EXTRA_DIR}"		
+		)
+	fi 
 	# The very last is unique to test.sh (for speed?)
 	#Ensure that .cargo is NOT volume mapped; cargo will not work. Also, cargo fetches faster than rsync, it seems?
 
@@ -179,8 +199,9 @@ rsync -q -av --delete "${SCRIPT_DIR}/../../.." "$WORKING_DIR" --filter=':- .giti
 	export COVERALLS=
 	export COVERALLS_TOKEN=
 
+	#Uncommenting may resolve some permissions issues
+	#conan user 1>&9
 
-	conan user 1>&9
 	# For os x convenience
 	if [[ "$(uname -s)" == 'Darwin' ]]; then
 		eval "$(docker-machine env default)"
@@ -194,6 +215,7 @@ rsync -q -av --delete "${SCRIPT_DIR}/../../.." "$WORKING_DIR" --filter=':- .giti
 		"UPLOAD_BUILD=${UPLOAD_BUILD}"
 		"UPLOAD_DOCS=${UPLOAD_DOCS}"
 		"TRAVIS_BUILD_DIR=${TRAVIS_BUILD_DIR}"
+		"CARGO_TARGET=${CARGO_TARGET}"
 		"CI=${CI}"
 		"SIM_CI=${SIM_CI}"
 		"SIM_OPEN_BASH=${SIM_OPEN_BASH}"
