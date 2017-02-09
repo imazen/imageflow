@@ -1135,7 +1135,6 @@ fn error_from_value() {
     // When parsing from a value, we cannot tell which line or character caused it. I suppose we
     // must serialize/deserialize again, in order to inject an indicator into the text?
     // We cannot recreate the original location AFAICT
-
 }
 
 mod key_casing {

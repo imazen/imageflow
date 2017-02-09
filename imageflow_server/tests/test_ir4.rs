@@ -13,24 +13,59 @@ extern crate wait_timeout;
 use wait_timeout::ChildExt;
 use std::time::Duration;
 use std::process::{Command, Stdio, Child,Output};
+use std::net::{TcpListener, TcpStream};
+
+#[macro_use]
+extern crate lazy_static;
+
+use std::sync::Mutex;
 
 use ::imageflow_helpers::process_testing::*;
 use fc::test_helpers::*;
 use fc::test_helpers::process_testing::ProcTestContextExtras;
 use fc::test_helpers::process_testing::ProcOutputExtras;
 use ::imageflow_helpers::fetching::{fetch, fetch_bytes,get_status_code_for, FetchError, FetchConfig};
+
+use std::collections::vec_deque::VecDeque;
+
+lazy_static! {
+    static ref RECENT_PORTS: Mutex<VecDeque<u16>> = Mutex::new(VecDeque::new());
+}
+
+
+
 fn server_path() -> PathBuf{
     let self_path = std::env::current_exe().expect("For --self-test to work, we need to know the binary's location. env::current_exe failed");
     self_path.parent().unwrap().parent().unwrap().join("imageflow_server")
 }
 
-fn get_next_port() -> u16{
-    use std::sync::atomic::{AtomicU16, Ordering, ATOMIC_U16_INIT};
-    static NEXT_PORT: AtomicU16 = ATOMIC_U16_INIT;
-
-    NEXT_PORT.compare_and_swap(0, 36703, Ordering::SeqCst);
-    NEXT_PORT.fetch_add(1, Ordering::SeqCst)
+fn enqueue_unique_port(q: &mut VecDeque<u16>, count: usize) -> u16{
+    let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+    let port = listener.local_addr().unwrap().port();
+    if !q.contains(&port) {
+        q.push_back(port);
+        if count <= 1{
+             port
+        }else {
+            enqueue_unique_port(q, count - 1)
+        }
+    } else {
+        enqueue_unique_port(q, count)
+    }
 }
+
+fn fetch_next_port(q: &mut VecDeque<u16>) -> u16 {
+    if q.len() < 1 {
+        let _ = enqueue_unique_port(q, 25); // pre-check ports 25 at a time.
+    }
+    q.pop_front().unwrap()
+}
+
+fn get_next_port() -> u16 {
+    let mut q = RECENT_PORTS.lock().unwrap();
+    fetch_next_port(&mut q)
+}
+
 
 struct ServerInstance{
     port: u16,
