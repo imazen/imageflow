@@ -78,6 +78,7 @@ do
 
 	  export VALGRIND_RUNNING=1
 	  export RUST_BACKTRACE=1
+	  export RUST_TEST_TASKS=1 
 	  eval "$FULL_COMMAND"
 
 	  echo "Removing ${DIR}"

@@ -82,6 +82,7 @@ test_script:
   - cd ..
   - conan export imazen/testing
   - cd ..
+  - SET RUST_TEST_THREADS=1
   - cd imageflow_core
   - conan install --build missing -s build_type=Release -s arch=%CONAN_ARCH% -s target_cpu=%TARGET_CPU% 
   - cargo test --target=%RUST_TARGET% 
@@ -98,6 +99,7 @@ test_script:
   - echo. && echo Displaying embedded info (debug build imageflow_tool)
   - ..\target\%RUST_TARGET%\debug\imageflow_tool.exe diagnose --show-compilation-info
   - ..\target\%RUST_TARGET%\debug\imageflow_tool.exe diagnose --self-test
+  - SET RUST_TEST_THREADS=4
   - cd ..
   - cd imageflow_abi
   - cargo test --target=%RUST_TARGET% 

@@ -454,7 +454,7 @@ if [[ "$TEST_RUST" == 'True' ]]; then
 	(
 		cd imageflow_core
 		date_stamp
-		RUST_TEST_TASKS=1 cargo test "${CARGO_ARGS[@]}" 1>&7
+		RUST_TEST_THREADS=1 cargo test "${CARGO_ARGS[@]}" 1>&7
 	)
 	(
 		cd imageflow_abi
@@ -469,14 +469,14 @@ if [[ "$TEST_RUST" == 'True' ]]; then
 	(
 		cd imageflow_tool
 		date_stamp
-		RUST_TEST_TASKS=1 cargo test "${CARGO_ARGS[@]}" 1>&7
+		RUST_TEST_THREADS=1 cargo test "${CARGO_ARGS[@]}" 1>&7
 		date_stamp
 	)
 	if [[ "$IMAGEFLOW_SERVER" == 'True' ]]; then
 		(
 			cd imageflow_server
 			date_stamp
-			cargo test "${CARGO_ARGS[@]}" 1>&7
+			RUST_TEST_THREADS=1 cargo test "${CARGO_ARGS[@]}" 1>&7
 		)
 	fi
 
