@@ -33,6 +33,13 @@ lazy_static! {
 }
 
 
+fn write_env_vars(path: &Path){
+    let mut f = File::create(&path).unwrap();
+    for (k,v) in std::env::vars(){
+        write!(f, "{}={}\n", k, v).unwrap();
+    }
+}
+
 
 fn server_path() -> PathBuf{
     let self_path = std::env::current_exe().expect("For --self-test to work, we need to know the binary's location. env::current_exe failed");
@@ -160,6 +167,8 @@ impl ServerInstance{
 // ports 36,000 to 39,999 seem the safest.
 #[test]
 fn run_server_test_i4(){
+
+    //write_env_vars(&Path::new("env.txt"));
 
     let context = ProcTestContext::create_timestamp_subdir_within("server_tests", Some(server_path()));
 

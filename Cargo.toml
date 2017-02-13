@@ -4,13 +4,6 @@ members = ["imageflow_helpers", "imageflow_types", "imageflow_riapi", "imageflow
 [dependencies.regex]
 features=["pattern"]
 
-[dependencies.openssl]
-features=["v102"]
-
-[dependencies.openssl-sys]
-features=["ossl102"]
-
-
 [profile.release]
 debug = true
 
