@@ -17,12 +17,25 @@ pub enum FetchError {
     HyperError(hyper::Error),
     IoError(std::io::Error),
     UpstreamResponseError(hyper::status::StatusCode),
+
+    UpstreamResponseErrorWithResponse{ status: hyper::status::StatusCode, response: FetchedResponse},
 }
 
-#[derive(Debug)]
+
 pub struct FetchedResponse {
     pub bytes: Vec<u8>,
     pub content_type: hyper::header::ContentType,
+}
+
+impl fmt::Debug for FetchedResponse {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        // If there is a second key/value, we're assuming it is 'charset'
+        if self.content_type.2.len() > 0 || (self.content_type.0).0 == hyper::mime::TopLevel::Text{
+            write!(f, "FetchedResponse {{ content_type: {:?}, length: {}, as_string: {:?} }}", self.content_type, self.bytes.len(), std::str::from_utf8(&self.bytes))
+        }else{
+            write!(f, "FetchedResponse {{ content_type: {:?}, length: {} }}", self.content_type, self.bytes.len())
+        }
+    }
 }
 
 pub fn fetch_bytes(url: &str) -> std::result::Result<Vec<u8>, FetchError> {
@@ -33,6 +46,7 @@ pub fn fetch_bytes(url: &str) -> std::result::Result<Vec<u8>, FetchError> {
 pub struct FetchConfig{
     /// Only honored on linux
     pub custom_ca_trust_file: Option<PathBuf>,
+    pub read_error_body: Option<bool>
 }
 
 impl FetchConfig {
@@ -66,23 +80,29 @@ impl FetchConfig {
 
 
 pub fn fetch(url: &str, config: Option<FetchConfig>) -> std::result::Result<FetchedResponse, FetchError> {
-    let client = config.unwrap_or_default().create_hyper_client();
+    let conf = config.unwrap_or_default();
+    let client = conf.create_hyper_client();
 
     let mut res = client.get(url).send()?;
-    if res.status != hyper::Ok {
-        return Err(FetchError::UpstreamResponseError(res.status));
-    }
-//    let mut res = reqwest::get(url)?;
-//    if !res.status().is_success() {
-//        return Err(FetchError::UpstreamResponseError(*res.status()));
-//    }
-    let mut source_bytes = Vec::new();
-    let _ = res.read_to_end(&mut source_bytes)?;
 
-    Ok(FetchedResponse {
-        bytes: source_bytes,
-        content_type: res.headers.get::<hyper::header::ContentType>().expect("content type required").clone()
-    })
+    let response = if res.status == hyper::Ok || conf.read_error_body.unwrap_or(false) {
+        let mut source_bytes = Vec::new();
+        let _ = res.read_to_end(&mut source_bytes)?;
+        Some(FetchedResponse {
+            bytes: source_bytes,
+            content_type: res.headers.get::<hyper::header::ContentType>().expect("content type required").clone()
+        })
+    } else {
+        None
+    };
+
+    match (response, res.status) {
+        (Some(r), hyper::Ok) => Ok(r),
+        (Some(r),
+            _) =>
+            Err(FetchError::UpstreamResponseErrorWithResponse { status: res.status, response: r }),
+        (None, _) => Err(FetchError::UpstreamResponseError(res.status))
+    }
 }
 
 

@@ -128,6 +128,7 @@ impl From<hlp::fetching::FetchError> for ServerError {
             hlp::fetching::FetchError::HyperError(e) => ServerError::HyperError(e),
             hlp::fetching::FetchError::IoError(e) => ServerError::IoError(e),
             hlp::fetching::FetchError::UpstreamResponseError(e) => ServerError::UpstreamResponseError(e),
+            hlp::fetching::FetchError::UpstreamResponseErrorWithResponse{status,response}=> ServerError::UpstreamResponseError(status),
             hlp::fetching::FetchError::ReqwestError(e) => ServerError::ReqwestError(e)
         }
 

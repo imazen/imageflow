@@ -184,7 +184,11 @@ fn run_server_test_i4(){
             fetch_bytes(&server.url_for("/ir4/proxy_unsplash/photo-1422493757035-1e5e03968f95?width=100"))?;
             assert_eq!(server.get_status("/ir4/proxy_unsplash/notthere.jpg")?, hyper::status::StatusCode::NotFound);
 
-            assert_eq!(server.get_status("/proxied_demo/index.html")?, hyper::status::StatusCode::Ok);
+            let url = server.url_for("/proxied_demo/index.html");
+            match fetch(&url, Some(FetchConfig{ custom_ca_trust_file: None, read_error_body: Some(true)})){
+                Ok(v) => {},
+                Err(e) => { panic!("{:?} for {}", &e, &url); }
+            }
 
             Ok(())
         });
@@ -248,7 +252,7 @@ fn test_https(context: ProcTestContext){
         c.subfolder_context("demo");
         let (po, callback_result) = ServerInstance::run(&c, Proto::Https, vec!["--demo", "--data-dir=."], | server | {
             let url = server.url_for("/ir4/proxy_unsplash/photo-1422493757035-1e5e03968f95?width=100");
-            let bytes = fetch(&url, Some(FetchConfig{custom_ca_trust_file: server.trust_ca_file.clone() })).expect(&url).bytes;
+            let bytes = fetch(&url, Some(FetchConfig{custom_ca_trust_file: server.trust_ca_file.clone(), read_error_body: Some(true) })).expect(&url).bytes;
             let info = fc::clients::stateless::LibClient {}.get_image_info(&bytes).expect("Image response should be valid");
 
             //assert_eq!(server.get_status("/ir4/proxy_unsplash/notthere.jpg")?, hyper::status::StatusCode::NotFound);
