@@ -62,7 +62,12 @@ fn locate_binary(name: &str) -> Option<PathBuf> {
     None
 }
 fn server_path() -> PathBuf {
-    locate_binary("imageflow_server").expect("Failed to locate imageflow_server binary")
+   match locate_binary("imageflow_server"){
+       Some(v) => v,
+       None => {
+           panic!("Failed to locate imageflow_server binary in {:?}", build_dirs());
+       }
+   }
 }
 
 fn enqueue_unique_port(q: &mut VecDeque<u16>, count: usize) -> u16{
@@ -189,7 +194,7 @@ fn run_server_test_i4(){
 
     //write_env_vars(&Path::new("env.txt"));
 
-    let context = ProcTestContext::create_timestamp_subdir_within("server_tests", Some(server_path()));
+    let context = ProcTestContext::create_timestamp_subdir_within(std::env::current_dir().unwrap().join("server_tests"), Some(server_path()));
 
     {
         let c = context.subfolder_context("basics");
