@@ -51,16 +51,27 @@ fn build_dirs() -> Vec<PathBuf>{
     let b = target_dir.join(profile);
     vec![a,b]
 }
+#[cfg(windows)]
+fn binary_ext() -> &'static str{
+    "exe"
+}
+#[cfg(not(windows))]
+fn binary_ext() -> &'static str{
+    ""
+}
 
 fn locate_binary(name: &str) -> Option<PathBuf> {
     for dir in build_dirs() {
-        let file_path = dir.join(name);
+        let file_path = dir.join(name).with_extension(binary_ext());
+
         if file_path.exists() {
             return Some(dir.join(name))
         }
     }
     None
 }
+
+
 fn server_path() -> PathBuf {
    match locate_binary("imageflow_server"){
        Some(v) => v,
