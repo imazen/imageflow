@@ -40,10 +40,29 @@ fn write_env_vars(path: &Path){
     }
 }
 
+fn build_dirs() -> Vec<PathBuf>{
+    let target_triple = ::s::version::get_build_env_value("TARGET").expect("TARGET triple required");
+    let profile = ::s::version::get_build_env_value("PROFILE").expect("PROFILE (debug/release) required");
 
-fn server_path() -> PathBuf{
-    let self_path = std::env::current_exe().expect("For --self-test to work, we need to know the binary's location. env::current_exe failed");
-    self_path.parent().unwrap().parent().unwrap().join("imageflow_server")
+
+    let target_dir = Path::new(env!("CARGO_MANIFEST_DIR")).parent().unwrap().join("target");
+
+    let a = target_dir.join(target_triple).join(profile);
+    let b = target_dir.join(profile);
+    vec![a,b]
+}
+
+fn locate_binary(name: &str) -> Option<PathBuf> {
+    for dir in build_dirs() {
+        let file_path = dir.join(name);
+        if file_path.exists() {
+            return Some(dir.join(name))
+        }
+    }
+    None
+}
+fn server_path() -> PathBuf {
+    locate_binary("imageflow_server").expect("Failed to locate imageflow_server binary")
 }
 
 fn enqueue_unique_port(q: &mut VecDeque<u16>, count: usize) -> u16{

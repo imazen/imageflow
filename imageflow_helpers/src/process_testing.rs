@@ -195,7 +195,7 @@ impl ProcTestContext {
                     None => { break; }
                 }
             }
-            Err(format!("Failed to locate {:?} in ancestors of {:?}. err({:?})", filename.as_ref(), self.working_dir, last_err))
+            Err(format!("Failed to locate {:?} in ancestors of {:?}. err({:?})", filename.as_ref(), &dir, last_err))
         }
     }
 
