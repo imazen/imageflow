@@ -1,1 +1,1 @@
---suppressions=./valgrind_suppressions.txt --trace-children=no --leak-check=full --trace-children-skip=*/rustc,*/ld,*/dssim 
+--suppressions=./valgrind_suppressions.txt --trace-children=yes --leak-check=full --trace-children-skip=*/rustc,*/ld,*/dssim 

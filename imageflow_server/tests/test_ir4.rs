@@ -313,7 +313,7 @@ fn test_https(context: ProcTestContext){}
 
 #[test]
 fn run_server_test_ir4_heavy(){
-    let context = ProcTestContext::create_timestamp_subdir_within("server_tests_heavy", Some(server_path()));
+    let context = ProcTestContext::create_timestamp_subdir_within(std::env::current_dir().unwrap().join("server_tests_heavy"), Some(server_path()));
     {
         let c = context.subfolder_context("mount_local_test"); //stuck on port 39876
         c.exec("diagnose --show-compilation-info").expect_status_code(Some(0));

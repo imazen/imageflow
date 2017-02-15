@@ -320,7 +320,7 @@ pub fn run_examples(tool_location: Option<PathBuf>){
 
 pub fn run(tool_location: Option<PathBuf>) -> i32 {
 
-    let c = ProcTestContext::create_timestamp_subdir_within("self_tests", tool_location);
+    let c = ProcTestContext::create_timestamp_subdir_within(std::env::current_dir().unwrap().join("self_tests"), tool_location);
     // encapsulate scenario/example for reuse
     for example in scenarios() {
         example.prepare_scenario(&c);
@@ -525,7 +525,7 @@ pub fn run(tool_location: Option<PathBuf>) -> i32 {
 }
 
 pub fn test_capture(tool_location: Option<PathBuf>) -> i32 {
-    let c = ProcTestContext::create_timestamp_subdir_within("self_tests", tool_location);
+    let c = ProcTestContext::create_timestamp_subdir_within(std::env::current_dir().unwrap().join("self_tests"), tool_location);
     // encapsulate scenario/example for reuse
     {
         let recipe = s::Build001::example_with_steps();
