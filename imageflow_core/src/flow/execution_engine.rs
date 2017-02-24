@@ -80,7 +80,7 @@ impl<'a, 'b> Engine<'a, 'b> {
         self.validate_graph()?;
         self.notify_graph_changed()?;
 
-        self.link_codecs()?;
+        self.link_codecs(false)?;
 
         // States for a node
         // New
@@ -103,6 +103,8 @@ impl<'a, 'b> Engine<'a, 'b> {
                 //            error_msg!(c, FlowStatusCode::MaximumGraphPassesExceeded);
                 //            return false;
             }
+            self.link_codecs(true)?;
+
             self.populate_dimensions_where_certain()?;
             self.notify_graph_changed()?;
 
@@ -137,7 +139,7 @@ impl<'a, 'b> Engine<'a, 'b> {
         Ok(())
     }
 
-    pub fn link_codecs(&mut self) -> Result<()> {
+    pub fn link_codecs(&mut self, link_only_null_custom_state_nodes: bool) -> Result<()> {
         self.notify_graph_changed()?;
 
         for index in 0..self.g.node_count() {
@@ -146,6 +148,11 @@ impl<'a, 'b> Engine<'a, 'b> {
                 .unwrap()
                 .def
                 .fn_link_state_to_this_io_id {
+
+                let old_custom_state = self.g.node_weight(NodeIndex::new(index)).unwrap().custom_state;
+                if !old_custom_state.is_null() && link_only_null_custom_state_nodes{
+                    continue;
+                }
                 let io_id;
                 {
                     let mut ctx = self.op_ctx_mut();

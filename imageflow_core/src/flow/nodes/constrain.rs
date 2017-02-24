@@ -214,14 +214,21 @@ fn command_string_def() -> NodeDefinition {
                     match kind {
                         &s::CommandStringKind::ImageResizer4 => {
 
-                            let input = ctx.first_parent_frame_info_some(ix).unwrap();
+                            let input = ctx.first_parent_frame_info_some(ix);
 
                             if let &Some(d_id) = decode{
+                                if input.is_some(){
+                                    panic!("CommandString must either have decode: null or have no parent nodes. Specifying a value for decode creates a new decoder node.");
+                                }
+                                // TODO: decoder commands should be sourced from Instructions
                                 ctx.replace_node(ix, vec![
                                     Node::from(s::Node::Decode {io_id: d_id, commands: None}),
                                     Node::new(&EXPANDING_COMMAND_STRING, NodeParams::Json(n))
                                 ]);
                             }else{
+                                if input.is_some(){
+                                    panic!("CommandString must have a parent node unless 'decode' has a numeric value. Otherwise it has no image source. ");
+                                }
                                 ctx.replace_node(ix, vec![
                                     Node::new(&EXPANDING_COMMAND_STRING, NodeParams::Json(n))
                                 ]);
@@ -241,7 +248,5 @@ fn command_string_def() -> NodeDefinition {
 lazy_static! {
     pub static ref CONSTRAIN: NodeDefinition = constrain_def();
     pub static ref COMMAND_STRING: NodeDefinition = command_string_def();
-pub static ref EXPANDING_COMMAND_STRING: NodeDefinition = command_string_partially_expanded_def();
-
-
+    pub static ref EXPANDING_COMMAND_STRING: NodeDefinition = command_string_partially_expanded_def();
 }

@@ -86,9 +86,6 @@ fn decoder_encoder_io_id(ctx: &mut OpCtxMut, ix: NodeIndex<u32>) -> Option<i32> 
 }
 
 fn decoder_estimate(ctx: &mut OpCtxMut, ix: NodeIndex<u32>) {
-
-    let codec = ctx.weight(ix).custom_state as *mut ffi::CodecInstance;
-
     let io_id = decoder_encoder_io_id(ctx, ix).unwrap();
     let frame_info: s::ImageInfo = ctx.job.get_image_info(io_id).unwrap();
 
@@ -114,6 +111,10 @@ fn decoder_def() -> NodeDefinition {
         fn_link_state_to_this_io_id: Some(decoder_encoder_io_id),
         fn_flatten_pre_optimize: {
             fn f(ctx: &mut OpCtxMut, ix: NodeIndex<u32>) {
+
+//                if ctx.weight(ix).frame_est == FrameEstimate::None{
+//                    decoder_estimate(ctx,ix);
+//                }
 
                 // Mutate instead of replace (custom_state is populated)
                 ctx.weight_mut(ix).def = &PRIMITIVE_DECODER;
@@ -145,9 +146,12 @@ fn primitive_decoder_def() -> NodeDefinition {
         fn_estimate: Some(decoder_estimate),
         fn_execute: Some({
             fn f(ctx: &mut OpCtxMut, ix: NodeIndex<u32>) {
+
                 // TODO______
                 let codec = ctx.weight(ix).custom_state as *mut ffi::CodecInstance;
-
+                if codec.is_null(){
+                    panic!("custom_state: CodecInstance is null")
+                }
                 unsafe {
                     let result = ffi::flow_codec_execute_read_frame(ctx.flow_c(), codec);
                     if result.is_null() {
@@ -183,8 +187,8 @@ fn encoder_def() -> NodeDefinition {
                                weight.params {
                             let codec = weight.custom_state as *mut ffi::CodecInstance;
 
-                            if codec.is_null() {
-                                panic!("")
+                            if codec.is_null(){
+                                panic!("custom_state: CodecInstance is null")
                             }
 
                             let (wanted_id, hints) = match *preset {

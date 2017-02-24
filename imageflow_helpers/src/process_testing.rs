@@ -130,8 +130,9 @@ impl ProcOutput {
 
     pub fn dump(&self) -> &ProcOutput {
         let _ = writeln!(&mut std::io::stderr(),
-                         "{:?}\n{}",
+                         "Process output:\n{:?}\n{}\n{}\n",
                          self.r,
+                            self.stdout_str(),
                          self.stderr_str());
         self
     }
