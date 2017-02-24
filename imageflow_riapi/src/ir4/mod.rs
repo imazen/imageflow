@@ -15,8 +15,12 @@ pub struct Ir4Layout{
 }
 impl Ir4Layout{
 
-    pub fn produce_framewise(info: s::ImageInfo, i: Instructions) -> sizing::Result<s::Framewise>{
-        Ir4Layout{ i: i, info: info}.produce()
+    pub fn new(info: s::ImageInfo, i: Instructions) -> Ir4Layout{
+        Ir4Layout{ i: i, info: info}
+    }
+
+    pub fn produce_framewise(info: s::ImageInfo, i: Instructions, decode: Option<i32>, encode: Option<i32>) -> sizing::Result<s::Framewise>{
+        Ir4Layout{ i: i, info: info}.produce(decode, encode)
     }
 
     fn get_wh_from_all(&self, source: AspectRatio) -> sizing::Result<(Option<i32>, Option<i32>)>{
@@ -187,21 +191,25 @@ impl Ir4Layout{
     }
 
 
-    fn produce(&self) -> sizing::Result<s::Framewise>{
-
-        let mut b = FramewiseBuilder{
+    pub fn produce(&self, decode: Option<i32>, encode: Option<i32>) -> sizing::Result<s::Framewise> {
+        self.produce_steps(decode, encode).and_then(|v| Ok(s::Framewise::Steps(v)))
+    }
+    pub fn produce_steps(&self, decode: Option<i32>, encode: Option<i32>) -> sizing::Result<Vec<s::Node>> {
+        let mut b = FramewiseBuilder {
             steps: Vec::new()
         };
 
         //TODO: later consider decoder scaling, ignoreicc, autorotate support
-        b.add(s::Node::Decode{io_id: 0, commands: None});
+        if let Some(id) = decode {
+            b.add(s::Node::Decode { io_id: id, commands: None });
+        }
 
         b.add_rotate(self.i.srotate);
         b.add_flip(self.i.sflip);
 
-        let (precrop_w, precrop_h) = if ((self.i.srotate.unwrap_or(0) / 90 + 4) % 2) == 0{
+        let (precrop_w, precrop_h) = if ((self.i.srotate.unwrap_or(0) / 90 + 4) % 2) == 0 {
             (self.info.image_width, self.info.image_height)
-        }else{
+        } else {
             (self.info.image_height, self.info.image_width)
         };
         // later consider adding f.sharpen, f.ignorealpha
@@ -234,17 +242,18 @@ impl Ir4Layout{
 
         //println!("Crop initial={:?}, new: {:?}, x1: {}, y1: {}", &initial_crop, &new_crop, crop_x1, crop_y1);
         if crop_x1 > 0 || crop_y1 > 0 || precrop_w != new_crop.width() || precrop_h != new_crop.height() {
-            b.add(s::Node::Crop { x1: crop_x1, y1: crop_y1, x2: crop_x1 + new_crop.width() as u32, y2: crop_y1 + new_crop.height() as u32});
+            b.add(s::Node::Crop { x1: crop_x1, y1: crop_y1, x2: crop_x1 + new_crop.width() as u32, y2: crop_y1 + new_crop.height() as u32 });
         }
 
         //Scale
-        if image.width() != new_crop.width() || image.height() != new_crop.height() || self.i.f_sharpen.unwrap_or(0f64) > 0f64{
+        if image.width() != new_crop.width() || image.height() != new_crop.height() || self.i.f_sharpen.unwrap_or(0f64) > 0f64 {
             b.add(s::Node::Resample2D {
                 w: image.width() as usize,
                 h: image.height() as usize,
                 down_filter: None,
                 up_filter: None,
-                hints: Some(s::ResampleHints{prefer_1d_twice: None, sharpen_percent: self.i.f_sharpen.map(|v| v as f32)}) });
+                hints: Some(s::ResampleHints { prefer_1d_twice: None, sharpen_percent: self.i.f_sharpen.map(|v| v as f32) })
+            });
         }
 
         //get bgcolor - default to transparent white
@@ -258,8 +267,8 @@ impl Ir4Layout{
         //Add padding. This may need to be revisited - how do jpegs behave with transparent padding?
         if left > 0 || top > 0 || right > 0 || bottom > 0 {
             if left >= 0 && top >= 0 && right >= 0 && bottom >= 0 {
-                b.add(s::Node::ExpandCanvas { color: bgcolor.clone().unwrap_or(default_bgcolor), left: left as u32, top: top as u32, right: right as u32, bottom: bottom as u32});
-            }else{
+                b.add(s::Node::ExpandCanvas { color: bgcolor.clone().unwrap_or(default_bgcolor), left: left as u32, top: top as u32, right: right as u32, bottom: bottom as u32 });
+            } else {
                 panic!("Negative padding showed up: {},{},{},{}", left, top, right, bottom);
             }
         }
@@ -269,24 +278,25 @@ impl Ir4Layout{
         b.add_flip(self.i.flip);
 
 
+        if let Some(id) = encode {
+            let encoder = match self.get_output_format() {
+                OutputFormat::Jpeg => s::EncoderPreset::LibjpegTurbo {
+                    quality: Some(self.i.quality.unwrap_or(90)),
+                    //TODO: support self.i.jpeg_subsampling
+                },
 
-        let encoder = match self.get_output_format(){
-            OutputFormat::Jpeg => s::EncoderPreset::LibjpegTurbo{
-                quality: Some(self.i.quality.unwrap_or(90)),
-                //TODO: support self.i.jpeg_subsampling
-            },
+                // TODO: introduce support for 24-bit png and self.i.bgcolor_srgb (matte)
+                OutputFormat::Png | OutputFormat::Gif => s::EncoderPreset::Libpng {
+                    depth: Some(if self.i.bgcolor_srgb.is_some() { s::PngBitDepth::Png24 } else { s::PngBitDepth::Png32 }),
+                    zlib_compression: None,
+                    matte: bgcolor
+                }
+            };
 
-            // TODO: introduce support for 24-bit png and self.i.bgcolor_srgb (matte)
-            OutputFormat::Png | OutputFormat::Gif => s::EncoderPreset::Libpng{
-                depth: Some(if self.i.bgcolor_srgb.is_some(){ s::PngBitDepth::Png24 } else { s::PngBitDepth::Png32}),
-                zlib_compression: None,
-                matte: bgcolor
-            }
-        };
+            b.add(s::Node::Encode { io_id: id, preset: encoder });
+        }
 
-        b.add(s::Node::Encode{io_id: 1, preset: encoder});
-
-        Ok(b.to_framewise())
+        Ok(b.into_steps())
     }
 
     fn get_output_format(&self) -> OutputFormat{
@@ -387,11 +397,14 @@ impl FramewiseBuilder {
     fn to_framewise(self) -> s::Framewise{
         s::Framewise::Steps(self.steps)
     }
+    fn into_steps(self) -> Vec<s::Node>{
+        self.steps
+    }
 }
 
 //discards warnings
-pub fn parse_to_framewise(info: s::ImageInfo, url: &Url) -> sizing::Result<(s::Framewise, Vec<parsing::ParseWarning>)>{
+pub fn parse_to_framewise(info: s::ImageInfo, url: &Url, decode: Option<i32>, encode: Option<i32>) -> sizing::Result<(s::Framewise, Vec<parsing::ParseWarning>)>{
     let (i, warn) = parsing::parse_url(url);
-    Ir4Layout::produce_framewise(info, i).map(|v| (v, warn))
+    Ir4Layout::produce_framewise(info, i, decode, encode).map(|v| (v, warn))
 }
 

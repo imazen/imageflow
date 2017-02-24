@@ -158,6 +158,7 @@ impl From<s::Node> for Node {
             s::Node::FlowBitmapBgraPtr { .. } => {
                 Node::new(&nodes::BITMAP_BGRA_POINTER, NodeParams::Json(node))
             }
+            s::Node::CommandString{ .. } => Node::new(&nodes::COMMAND_STRING, NodeParams::Json(node)),
             s::Node::FlipV => Node::new(&nodes::FLIP_V, NodeParams::Json(node)),
             s::Node::FlipH => Node::new(&nodes::FLIP_H, NodeParams::Json(node)),
             s::Node::Rotate90 => Node::new(&nodes::ROTATE_90, NodeParams::Json(node)),

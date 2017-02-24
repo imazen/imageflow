@@ -46,6 +46,7 @@ pub use self::scale_render::SCALE;
 pub use self::scale_render::SCALE_1D;
 pub use self::scale_render::SCALE_1D_TO_CANVAS_1D;
 pub use self::constrain::CONSTRAIN;
+pub use self::constrain::COMMAND_STRING;
 use super::definitions::*;
 
 pub struct NodeDefHelpers {}

@@ -299,6 +299,11 @@ impl ConstraintResamplingHints{
     }
 }
 
+#[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
+pub enum CommandStringKind{
+    #[serde(rename="ir4")]
+    ImageResizer4
+}
 
 #[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
 pub enum Constraint {
@@ -325,6 +330,13 @@ pub enum Node {
         w: usize,
         h: usize,
         color: Color,
+    },
+    #[serde(rename="commandString")]
+    CommandString{
+        kind: CommandStringKind,
+        value: String,
+        decode: Option<i32>,
+        encode: Option<i32>
     },
     #[serde(rename="constrain")]
     Constrain(Constraint),

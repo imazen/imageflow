@@ -228,10 +228,17 @@ impl<'a, 'b> Engine<'a, 'b> {
             job: self.job,
         };
         // Invoke estimation
-        ctx.weight(node_id).def.fn_estimate.unwrap()(&mut ctx, node_id);
-        ctx.weight_mut(node_id).cost.wall_ns += (time::precise_time_ns() - now) as u32;
-
+        match ctx.weight(node_id).def.fn_estimate {
+            Some(f) => {
+                f(&mut ctx, node_id);
+                ctx.weight_mut(node_id).cost.wall_ns += (time::precise_time_ns() - now) as u32;
+            }
+            None => {
+                ctx.weight_mut(node_id).frame_est = FrameEstimate::Impossible;
+            }
+        }
         ctx.weight(node_id).frame_est
+
     }
 
     pub fn estimate_node_recursive(&mut self, node_id: NodeIndex<u32>) -> FrameEstimate {
@@ -294,7 +301,7 @@ impl<'a, 'b> Engine<'a, 'b> {
 
 
     pub fn graph_pre_optimize_flatten(&mut self) -> Result<()> {
-        // Just find all nodes that offer fn_flatten_pre_optimize and have been estimated.
+        // Just find all nodes that offer fn_flatten_pre_optimize and have been estimated (even if as impossible)
         // Oops, we also need to insure inputs have been estimated
         // TODO: Compare Node value; should differ afterwards
         loop {
@@ -306,7 +313,17 @@ impl<'a, 'b> Engine<'a, 'b> {
                     .unwrap()
                     .def
                     .fn_flatten_pre_optimize {
-                    if let FrameEstimate::Some(_) = self.g
+
+                    if self.g
+                        .node_weight(nix)
+                        .unwrap()
+                        .def
+                        .fn_estimate.is_none() {
+                        if self.parents_complete(nix) {
+                            next = Some((nix, func));
+                            break;
+                        }
+                    }else if let FrameEstimate::Some(_) = self.g
                         .node_weight(nix)
                         .unwrap()
                         .frame_est {

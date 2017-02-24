@@ -91,6 +91,21 @@ pub fn main_with_exit_code() -> i32 {
             .arg(Arg::with_name("bundle-to").long("bundle-to").takes_value(true).help("Copies the recipe and all dependencies into the given folder, simplifying it."))
             .arg(Arg::with_name("debug-package").long("debug-package").takes_value(true).help("Creates a debug package in the given folder so others can reproduce the behavior you are seeing"))
 
+        )
+        .subcommand(SubCommand::with_name("v0.1/ir4")
+            .about("Run an ImageResizer 4 command string")
+            .arg(
+                Arg::with_name("in").long("in").min_values(1)
+                    .multiple(true)
+                    .help("Input image")
+            )
+            .arg(Arg::with_name("out").long("out").multiple(true).min_values(1)
+                .help("Output image"))
+            .arg(Arg::with_name("response").long("response").takes_value(true))
+            .arg(Arg::with_name("query").long("query").takes_value(true).required(true))
+            .arg(Arg::with_name("bundle-to").long("bundle-to").takes_value(true).help("Copies the recipe and all dependencies into the given folder, simplifying it."))
+            .arg(Arg::with_name("debug-package").long("debug-package").takes_value(true).help("Creates a debug package in the given folder so others can reproduce the behavior you are seeing"))
+
         );
     let matches = app.get_matches();
     if matches.is_present("capture-to"){
@@ -121,15 +136,19 @@ pub fn main_with_exit_code() -> i32 {
     //
 
 
-    if let Some(ref matches) = matches.subcommand_matches("v0.1/build") {
-        let m: &&clap::ArgMatches = matches;
 
-
+    let build_pair = if let Some(m) = matches.subcommand_matches("v0.1/build") {
         let source = if m.is_present("demo") {
             cmd_build::JobSource::NamedDemo(m.value_of("demo").unwrap().to_owned())
         } else {
             cmd_build::JobSource::JsonFile(m.value_of("json").unwrap().to_owned())
         };
+        Some((m, source))
+    }else if let Some(m) = matches.subcommand_matches("v0.1/ir4"){
+        Some((m,cmd_build::JobSource::Ir4QueryString(m.value_of("query").unwrap().to_owned())))
+    }else{ None };
+
+    if let Some((m, source)) = build_pair{
 
         let builder =
             cmd_build::CmdBuild::parse(source, m.values_of_lossy("in"), m.values_of_lossy("out"))

@@ -136,6 +136,112 @@ fn constrain_def() -> NodeDefinition {
 }
 
 
+
+
+
+
+fn command_string_partially_expanded_def() -> NodeDefinition {
+    NodeDefinition {
+        fqn: "imazen.expanding_command_string",
+        name: "expanding_command_string",
+        inbound_edges: EdgesIn::OneInput,
+        description: "expanding command string",
+        fn_estimate: None,
+        fn_flatten_pre_optimize: Some({
+            fn f(ctx: &mut OpCtxMut, ix: NodeIndex<u32>) {
+                let input = ctx.first_parent_frame_info_some(ix).unwrap();
+
+
+                if let s::Node::CommandString{ref kind, ref value, ref decode, ref encode} =
+                ctx.get_json_params(ix).unwrap() {
+
+                    match kind {
+                        &s::CommandStringKind::ImageResizer4 => {
+                            let url = ::url::Url::from_str(&format!("https://fakeurl/img.jpg?{}", value)).expect("Must be a valid querystring, excluding ?");
+
+                            let (ext, mime) = match (input.fmt, input.alpha_meaningful){
+                                (PixelFormat::Bgr24, false) => ("jpg", "image/jpeg"),
+                                _ => ("png", "image/png")
+                            };
+
+                            let (instructions, warnings) = ::imageflow_riapi::ir4::parsing::parse_url(&url);
+                            let layout = ::imageflow_riapi::ir4::Ir4Layout::new(
+                                s::ImageInfo{
+                                    current_frame_index: 0,
+                                    frame_count: 1,
+                                    frame_decodes_into: input.fmt,
+                                    image_height: input.h,
+                                    image_width: input.w,
+                                    preferred_extension: ext.to_owned(),
+                                    preferred_mime_type: mime.to_owned(),
+                                },
+                                instructions
+                            );
+                            match layout.produce_steps(None, *encode) {
+                                Ok(steps) => {
+                                    ctx.replace_node(ix, steps.into_iter().map(|n| Node::from(n)).collect::<>());
+                                }
+                                Err(e) => {
+                                    panic!("{:?} {:?}", e, warnings);
+                                }
+                            }
+                        }
+                    }
+                }
+
+            }
+            f
+        }),
+        ..Default::default()
+    }
+}
+
+
+fn command_string_def() -> NodeDefinition {
+    NodeDefinition {
+        fqn: "imazen.command_string",
+        name: "command_string",
+        inbound_edges: EdgesIn::OneOptionalInput,
+        description: "command string",
+        fn_estimate: None,
+        fn_flatten_pre_optimize: Some({
+            fn f(ctx: &mut OpCtxMut, ix: NodeIndex<u32>) {
+
+                let n = ctx.get_json_params(ix).unwrap();
+
+                if let s::Node::CommandString{ref kind, ref value, ref decode, ref encode} = n.clone() {
+
+                    match kind {
+                        &s::CommandStringKind::ImageResizer4 => {
+
+                            let input = ctx.first_parent_frame_info_some(ix).unwrap();
+
+                            if let &Some(d_id) = decode{
+                                ctx.replace_node(ix, vec![
+                                    Node::from(s::Node::Decode {io_id: d_id, commands: None}),
+                                    Node::new(&EXPANDING_COMMAND_STRING, NodeParams::Json(n))
+                                ]);
+                            }else{
+                                ctx.replace_node(ix, vec![
+                                    Node::new(&EXPANDING_COMMAND_STRING, NodeParams::Json(n))
+                                ]);
+                            }
+                        }
+                    }
+                }
+
+            }
+            f
+        }),
+        ..Default::default()
+    }
+}
+
+
 lazy_static! {
     pub static ref CONSTRAIN: NodeDefinition = constrain_def();
+    pub static ref COMMAND_STRING: NodeDefinition = command_string_def();
+pub static ref EXPANDING_COMMAND_STRING: NodeDefinition = command_string_partially_expanded_def();
+
+
 }

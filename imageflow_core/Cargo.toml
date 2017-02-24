@@ -38,8 +38,12 @@ threadpool = "1.0"
 petgraph = "^0.2.8"
 daggy = "^0.4.1"
 
+url = "*"
+
 imageflow_types = { path = "../imageflow_types", version = "*" }
 imageflow_helpers = { path = "../imageflow_helpers", version = "*" }
+imageflow_riapi = { path = "../imageflow_riapi", version = "*" }
+
 
 [dev-dependencies]
 hyper = { version = "*" }
