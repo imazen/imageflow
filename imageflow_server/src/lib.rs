@@ -367,7 +367,7 @@ fn ir4_http_respond<F>(shared: &SharedData, url: &str, framewise_generator: F) -
 
 
 fn ir4_framewise(info: s::ImageInfo, url: &Url) -> std::result::Result<s::Framewise, ServerError> {
-    ::imageflow_riapi::ir4::parse_to_framewise(info, url).map_err(|e| ServerError::LayoutSizingError(e)).map(|(framewise, _)| framewise)
+    ::imageflow_riapi::ir4::parse_to_framewise(info, url, Some(0), Some(1)).map_err(|e| ServerError::LayoutSizingError(e)).map(|(framewise, _)| framewise)
 }
 
 
