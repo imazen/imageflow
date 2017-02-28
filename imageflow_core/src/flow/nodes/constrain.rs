@@ -161,6 +161,7 @@ fn command_string_partially_expanded_def() -> NodeDefinition {
 
                             let (ext, mime) = match (input.fmt, input.alpha_meaningful){
                                 (PixelFormat::Bgr24, false) => ("jpg", "image/jpeg"),
+                                (PixelFormat::Bgra32, false) => ("jpg", "image/jpeg"),
                                 _ => ("png", "image/png")
                             };
 
