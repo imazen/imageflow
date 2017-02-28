@@ -1,4 +1,4 @@
-use daggy::{Dag, EdgeIndex, NodeIndex};
+use daggy::{Dag, EdgeIndex, NodeIndex, Walker};
 use ffi::{ImageflowContext, BitmapBgra};
 use libc::{int32_t, size_t};
 use petgraph::EdgeDirection;
@@ -294,4 +294,18 @@ impl<'c> OpCtxMut<'c> {
         self.copy_edges_to(index, with_index, EdgeDirection::Outgoing);
         self.graph.remove_node(index).unwrap();
     }
+
+    pub fn get_decoder_io_ids(&self,
+                              ancestors_of_node: NodeIndex<u32>)
+                              -> Vec<i32> {
+        self.graph.parents(ancestors_of_node).iter(self.graph).map(|(_, ix)| match self.weight(ix).params{
+            NodeParams::Json(s::Node::Decode { io_id, ..}) => Some(io_id), _ => None
+        } ).filter(|v| v.is_some()).map(|v| v.unwrap()).collect::<>()
+    }
+
+    pub fn get_image_info_list(&mut self,
+                            ancestors_of_node: NodeIndex<u32>) -> Vec<::std::result::Result<s::ImageInfo, ::FlowError>>{
+        self.get_decoder_io_ids(ancestors_of_node).into_iter().map(|io_id| self.job.get_image_info(io_id)).collect::<>()
+    }
+
 }
