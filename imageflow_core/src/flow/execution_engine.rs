@@ -111,6 +111,14 @@ impl<'a, 'b> Engine<'a, 'b> {
             self.graph_pre_optimize_flatten()?;
             self.notify_graph_changed()?;
 
+            self.link_codecs(true)?;
+
+            self.graph_pre_optimize_flatten()?;
+            self.notify_graph_changed()?;
+
+            self.link_codecs(true)?;
+
+
             self.populate_dimensions_where_certain()?;
             self.notify_graph_changed()?;
 

@@ -144,13 +144,14 @@ fn primitive_decoder_def() -> NodeDefinition {
         outbound_edges: true,
         inbound_edges: EdgesIn::NoInput,
         fn_estimate: Some(decoder_estimate),
+        fn_link_state_to_this_io_id: Some(decoder_encoder_io_id),
         fn_execute: Some({
             fn f(ctx: &mut OpCtxMut, ix: NodeIndex<u32>) {
 
                 // TODO______
                 let codec = ctx.weight(ix).custom_state as *mut ffi::CodecInstance;
                 if codec.is_null(){
-                    panic!("custom_state: CodecInstance is null")
+                    panic!("custom_state: CodecInstance is null. Codec failed to link?")
                 }
                 unsafe {
                     let result = ffi::flow_codec_execute_read_frame(ctx.flow_c(), codec);

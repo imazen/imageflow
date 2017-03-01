@@ -152,38 +152,35 @@ fn command_string_partially_expanded_def() -> NodeDefinition {
                 let input = ctx.first_parent_frame_info_some(ix).unwrap();
 
 
+
                 if let s::Node::CommandString{ref kind, ref value, ref decode, ref encode} =
                 ctx.get_json_params(ix).unwrap() {
 
                     match kind {
                         &s::CommandStringKind::ImageResizer4 => {
-                            let url = ::url::Url::from_str(&format!("https://fakeurl/img.jpg?{}", value)).expect("Must be a valid querystring, excluding ?");
 
-                            let (ext, mime) = match (input.fmt, input.alpha_meaningful){
-                                (PixelFormat::Bgr24, false) => ("jpg", "image/jpeg"),
-                                (PixelFormat::Bgra32, false) => ("jpg", "image/jpeg"),
-                                _ => ("png", "image/png")
+                            let e = ::imageflow_riapi::ir4::Ir4Expand{
+                                i: ::imageflow_riapi::ir4::Ir4Command::QueryString(value.to_owned()),
+                                encode_id: *encode,
+                                source: ::imageflow_riapi::ir4::Ir4SourceFrameInfo{
+                                    w: input.w,
+                                    h: input.h,
+                                    fmt: input.fmt,
+                                    alpha_meaningful: input.alpha_meaningful,
+                                    original_mime: None
+                                }
+
                             };
 
-                            let (instructions, warnings) = ::imageflow_riapi::ir4::parsing::parse_url(&url);
-                            let layout = ::imageflow_riapi::ir4::Ir4Layout::new(
-                                s::ImageInfo{
-                                    current_frame_index: 0,
-                                    frame_count: 1,
-                                    frame_decodes_into: input.fmt,
-                                    image_height: input.h,
-                                    image_width: input.w,
-                                    preferred_extension: ext.to_owned(),
-                                    preferred_mime_type: mime.to_owned(),
-                                },
-                                instructions
-                            );
-                            match layout.produce_steps(None, *encode) {
-                                Ok(steps) => {
-                                    ctx.replace_node(ix, steps.into_iter().map(|n| Node::from(n)).collect::<>());
+
+                            match e.expand_steps() {
+                                Ok(r) => {
+                                    //TODO: Find a way to expose warnings
+                                    ctx.replace_node(ix, r.steps.unwrap().into_iter().map(|n| Node::from(n)).collect::<>());
                                 }
                                 Err(e) => {
-                                    panic!("{:?} {:?}", e, warnings);
+                                    //TODO: reparse to get warnings
+                                    panic!("{:?}", e);
                                 }
                             }
                         }
@@ -221,9 +218,13 @@ fn command_string_def() -> NodeDefinition {
                                 if input.is_some(){
                                     panic!("CommandString must either have decode: null or have no parent nodes. Specifying a value for decode creates a new decoder node.");
                                 }
-                                // TODO: decoder commands should be sourced from Instructions
+                                let decode_node = ::imageflow_riapi::ir4::Ir4Translate{
+                                    i: ::imageflow_riapi::ir4::Ir4Command::QueryString(value.to_owned()),
+                                    decode_id: Some(d_id),
+                                    encode_id: None,
+                                }.get_decode_node().unwrap();
                                 ctx.replace_node(ix, vec![
-                                    Node::from(s::Node::Decode {io_id: d_id, commands: None}),
+                                    Node::from(decode_node),
                                     Node::new(&EXPANDING_COMMAND_STRING, NodeParams::Json(n))
                                 ]);
                             }else{

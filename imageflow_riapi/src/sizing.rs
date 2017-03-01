@@ -213,7 +213,9 @@ pub enum LayoutError {
         ratio: f64,
         basis: i32,
         invalid_result: f64
-    }
+    },
+    /// The result depends on the bitmap contents, and can't be calculated based on input size alone
+    ContentDependent
 }
 
 pub type Result<T> = ::std::result::Result<T, LayoutError>;
