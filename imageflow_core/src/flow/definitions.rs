@@ -154,6 +154,7 @@ impl From<s::Node> for Node {
     fn from(node: s::Node) -> Node {
         match node {
             s::Node::Crop { .. } => Node::new(&nodes::CROP, NodeParams::Json(node)),
+            s::Node::CropWhitespace { .. } => Node::new(&nodes::CROP_WHITESPACE, NodeParams::Json(node)),
             s::Node::Decode { .. } => Node::new(&nodes::DECODER, NodeParams::Json(node)),
             s::Node::FlowBitmapBgraPtr { .. } => {
                 Node::new(&nodes::BITMAP_BGRA_POINTER, NodeParams::Json(node))

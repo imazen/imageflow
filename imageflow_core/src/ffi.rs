@@ -546,6 +546,17 @@ pub struct RenderToCanvas1d {
     pub transpose_on_write: bool, // Other fields skipped, not acessed.
 }
 
+#[repr(C)]
+#[derive(Clone,Debug,Copy)]
+pub struct Rect {
+    pub x1: i32,
+    pub y1: i32,
+    pub x2: i32,
+    pub y2: i32
+}
+
+
+
 // struct flow_nodeinfo_render_to_canvas_1d {
 //    // There will need to be consistency checks against the createcanvas node
 //
@@ -741,6 +752,9 @@ mod mid_term {
 
         pub fn flow_codec_decoder_set_downscale_hints(c: *mut ImageflowContext,
                                                       instance: *mut CodecInstance, hints: *const DecoderDownscaleHints, crash_if_not_implemented: bool) -> bool;
+
+
+        pub fn detect_content(c: *mut ImageflowContext, input: *mut BitmapBgra, threshold: u8 ) -> Rect;
     }
 }
 

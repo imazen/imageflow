@@ -363,6 +363,21 @@ fn test_get_info_png() {
     let _ = imageflow_core::clients::stateless::LibClient {}.get_image_info(&tinypng).expect("Image response should be valid");
 }
 
+#[test]
+fn test_detect_whitespace(){
+    //let white = s::Color::Srgb(s::ColorSrgb::Hex("FFFFFFFF".to_owned()));
+    let blue = s::Color::Srgb(s::ColorSrgb::Hex("0000FFFF".to_owned()));
+    let matched = compare(None, 1,
+                          "DetectWhitespace".to_owned(), true, false, vec![
+            s::Node::CreateCanvas {w: 400, h: 300, format: s::PixelFormat::Bgra32, color: s::Color::Transparent},
+            s::Node::FillRect{x1:0, y1:0, x2:50, y2:100, color: blue},
+            s::Node::CropWhitespace {threshold: 80, percent_padding: 0f32}
+        ]
+    );
+    assert!(matched);
+}
+
+
 //#[test]
 //fn test_get_info_png_invalid() {
 //    let tinypng = vec![0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, 0x00, 0x00, 0x00, 0x0D, 0x49, 0x48, 0x44, 0x52, 0x00,

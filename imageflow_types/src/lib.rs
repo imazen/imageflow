@@ -323,6 +323,8 @@ pub enum Node {
     // camelCased: #[serde(rename="crop")]
     #[serde(rename="crop")]
     Crop { x1: u32, y1: u32, x2: u32, y2: u32 },
+    #[serde(rename="crop_whitespace")]
+    CropWhitespace { threshold: u8, percent_padding: f32 },
     // camelCased: #[serde(rename="createCanvas")]
     #[serde(rename="create_canvas")]
     CreateCanvas {

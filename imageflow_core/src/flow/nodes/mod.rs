@@ -24,6 +24,7 @@ extern crate imageflow_types as s;
 pub use self::clone_crop_fill_expand::CLONE;
 pub use self::clone_crop_fill_expand::COPY_RECT;
 pub use self::clone_crop_fill_expand::CROP;
+pub use self::clone_crop_fill_expand::CROP_WHITESPACE;
 pub use self::clone_crop_fill_expand::CROP_MUTATE;
 pub use self::clone_crop_fill_expand::EXPAND_CANVAS;
 pub use self::clone_crop_fill_expand::FILL_RECT;

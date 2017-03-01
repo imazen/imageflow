@@ -305,40 +305,35 @@ impl<'a, 'b> Engine<'a, 'b> {
 
         Ok(())
     }
+    fn invoke_estimated_or_non_estimable_nodes<F>(&mut self, f: F) -> Result<()>
+    where F: Fn(&NodeDefinition) -> Option<fn(&mut OpCtxMut, NodeIndex<u32>)> {
 
 
-    pub fn graph_pre_optimize_flatten(&mut self) -> Result<()> {
-        // Just find all nodes that offer fn_flatten_pre_optimize and have been estimated (even if as impossible)
-        // Oops, we also need to insure inputs have been estimated
+        // Just find all nodes that offer the given function and whose parents are completed
+        // Try to estimate if not already complete
+        // TODO: support other values for FrameEstimate
         // TODO: Compare Node value; should differ afterwards
         loop {
             let mut next = None;
             for ix in 0..(self.g.node_count()) {
                 let nix = NodeIndex::new(ix);
-                if let Some(func) = self.g
+                if let Some(func) = f(self.g
                     .node_weight(nix)
                     .unwrap()
-                    .def
-                    .fn_flatten_pre_optimize {
+                    .def){
 
-                    if self.g
-                        .node_weight(nix)
-                        .unwrap()
-                        .def
-                        .fn_estimate.is_none() {
-                        if self.parents_complete(nix) {
-                            next = Some((nix, func));
-                            break;
+                    if self.parents_complete(nix) {
+                        if let FrameEstimate::Some(_) = self.g
+                            .node_weight(nix)
+                            .unwrap()
+                            .frame_est {} else {
+                            //Try estimation one last time if it didn't happen yet
+                            let _ = self.estimate_node(nix);
                         }
-                    }else if let FrameEstimate::Some(_) = self.g
-                        .node_weight(nix)
-                        .unwrap()
-                        .frame_est {
-                        if self.parents_complete(nix) {
-                            next = Some((nix, func));
-                            break;
-                        }
+                        next = Some((nix, func));
+                        break;
                     }
+
                 }
             }
             match next {
@@ -354,40 +349,12 @@ impl<'a, 'b> Engine<'a, 'b> {
     }
 
 
-
+    pub fn graph_pre_optimize_flatten(&mut self) -> Result<()> {
+        self.invoke_estimated_or_non_estimable_nodes(|d| d.fn_flatten_pre_optimize )
+    }
 
     pub fn graph_post_optimize_flatten(&mut self) -> Result<()> {
-        // Just find all nodes that offer fn_flatten_pre_optimize and have been estimated.
-        // TODO: Compare Node value; should differ afterwards
-        loop {
-            let mut next = None;
-            for ix in 0..(self.g.node_count()) {
-                if let Some(func) = self.g
-                    .node_weight(NodeIndex::new(ix))
-                    .unwrap()
-                    .def
-                    .fn_flatten_post_optimize {
-                    if let FrameEstimate::Some(_) = self.g
-                        .node_weight(NodeIndex::new(ix))
-                        .unwrap()
-                        .frame_est {
-                        if self.parents_complete(NodeIndex::new(ix)) {
-                            next = Some((NodeIndex::new(ix), func));
-                            break;
-                        }
-                    }
-                }
-            }
-            match next {
-                None => return Ok(()),
-                Some((next_ix, next_func)) => {
-                    let mut ctx = self.op_ctx_mut();
-                    next_func(&mut ctx, next_ix);
-
-                }
-            }
-
-        }
+        self.invoke_estimated_or_non_estimable_nodes(|d| d.fn_flatten_post_optimize )
     }
 
     fn parents_complete(&self, ix: NodeIndex) -> bool{
@@ -398,6 +365,17 @@ impl<'a, 'b> Engine<'a, 'b> {
                 self.g.node_weight(parent_ix).unwrap().result != NodeResult::None
             })
     }
+    fn parents_estimated(&self, ix: NodeIndex) -> bool{
+        self.g
+            .parents(ix)
+            .iter(self.g)
+            .all(|(ex, parent_ix)| {
+                if let FrameEstimate::Some(_) = self.g.node_weight(parent_ix).unwrap().frame_est
+                    { true } else { false }
+            })
+    }
+
+
 
 
     pub fn graph_execute(&mut self) -> Result<()> {
@@ -407,16 +385,20 @@ impl<'a, 'b> Engine<'a, 'b> {
             let mut next = None;
             for ix in 0..(self.g.node_count()) {
                 if let Some(func) = self.g.node_weight(NodeIndex::new(ix)).unwrap().def.fn_execute {
-                    if let FrameEstimate::Some(_) = self.g
-                        .node_weight(NodeIndex::new(ix))
-                        .unwrap()
-                        .frame_est {
-                        if self.g.node_weight(NodeIndex::new(ix)).unwrap().result ==
-                            NodeResult::None && self.parents_complete(NodeIndex::new(ix)) {
-                            next = Some((NodeIndex::new(ix), func));
-                            break;
+                    if self.g.node_weight(NodeIndex::new(ix)).unwrap().result ==
+                        NodeResult::None && self.parents_complete(NodeIndex::new(ix)) {
+                        if let FrameEstimate::Some(_) = self.g
+                            .node_weight(NodeIndex::new(ix))
+                            .unwrap()
+                            .frame_est {
+                        }else{
+                            //Try estimation one last time if it didn't happen yet
+                            let _ = self.estimate_node(NodeIndex::new(ix));
                         }
+                        next = Some((NodeIndex::new(ix), func));
+                        break;
                     }
+
                 }
             }
             match next {
