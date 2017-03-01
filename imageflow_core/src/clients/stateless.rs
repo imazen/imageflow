@@ -136,6 +136,11 @@ impl LibClient {
                 if let s::Node::Encode { ref io_id, .. } = *node {
                     job.add_output_buffer(*io_id)?;
                 }
+                if let s::Node::CommandString { ref encode, ..} = *node{
+                    if let &Some(io_id) = encode{
+                        job.add_output_buffer(io_id)?;
+                    }
+                }
             }
 
             let send_execute = s::Execute001 {

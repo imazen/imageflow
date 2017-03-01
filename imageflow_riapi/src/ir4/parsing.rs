@@ -158,7 +158,12 @@ impl Instructions{
 
     pub fn to_string(&self) -> String{
         let mut s = String::with_capacity(100);
-        for (k,v) in self.to_map(){
+        let mut vec = Vec::new();
+        for (k,v) in self.to_map() {
+            vec.push((k, v));
+        }
+        vec.sort_by_key(|&(a,_)| a);
+        for (k,v) in vec{
             s.push_str(k);
             s.push_str("=");
             s.push_str(&v);
@@ -204,7 +209,7 @@ impl Instructions{
         add(&mut m, "quality", self.quality);
         add(&mut m, "zoom", self.zoom);
         add(&mut m, "subsampling", self.jpeg_subsampling);
-        add(&mut m, "bgcolor", self.bgcolor_srgb.and_then(|v| Some(v.to_rrggbbaa_string())));
+        add(&mut m, "bgcolor", self.bgcolor_srgb.and_then(|v| Some(v.to_rrggbbaa_string().to_lowercase())));
         add(&mut m, "f.sharpen", self.f_sharpen);
         add(&mut m, "trim.percentpadding", self.trim_whitespace_padding_percent);
         add(&mut m, "trim.threshold", self.trim_whitespace_threshold);
@@ -682,7 +687,7 @@ fn test_url_parsing() {
     t("cropxunits=2.3&cropyunits=100", Instructions { cropxunits: Some(2.3f64), cropyunits: Some(100f64), ..Default::default() }, vec![]);
     t("quality=85", Instructions { quality: Some(85), ..Default::default() }, vec![]);
     t("zoom=0.02", Instructions { zoom: Some(0.02f64), ..Default::default() }, vec![]);
-    t("trim.threshold=80&trim.percentpadding=0.02", Instructions { trim_whitespace_threshold: 80,  trim_whitespace_padding_percent: Some(0.02f64), ..Default::default() }, vec![]);
+    t("trim.threshold=80&trim.percentpadding=0.02", Instructions { trim_whitespace_threshold: Some(80),  trim_whitespace_padding_percent: Some(0.02f64), ..Default::default() }, vec![]);
 
 
     t("bgcolor=red", Instructions { bgcolor_srgb: Some(Color32(0xffff0000)), ..Default::default() }, vec![]);
@@ -723,35 +728,27 @@ fn test_url_parsing() {
 fn test_tostr(){
     fn t(expected_query: &str, from: Instructions){
         let b = from.to_string();
-        debug_diff(&expected_query, &b);
-        assert_eq!(&expected_query, &b);
+        debug_diff(&expected_query, &b.as_str());
+        assert_eq!(&expected_query, &b.as_str());
     }
-    t("w=200&h=300&mode=max", Instructions { w: Some(200), h: Some(300), mode: Some(FitMode::Max), ..Default::default() }, vec![]);
-    t("w=200&h=300&mode=crop", Instructions { w: Some(200), h: Some(300), mode: Some(FitMode::Crop), ..Default::default() }, vec![]);
-    t("format=jpeg", Instructions { format: Some(OutputFormat::Jpeg), ..Default::default() }, vec![]);
-    t("format=png", Instructions { format: Some(OutputFormat::Png), ..Default::default() }, vec![]);
-    t("scale=down", Instructions {scale: Some(ScaleMode::DownscaleOnly), ..Default::default() }, vec![]);
-    t("width=20&height=300&scale=Canvas", Instructions { w: Some(20), h: Some(300), scale: Some(ScaleMode::UpscaleCanvas), ..Default::default() }, vec![]);
-    t("sflip=XY&flip=h", Instructions { sflip: Some((true,true)), flip: Some((true,false)), ..Default::default() }, vec![]);
-    t("sflip=None&flip=V", Instructions { sflip: Some((false,false)), flip: Some((false,true)), ..Default::default() }, vec![]);
-    t("sflip=None&flip=V", Instructions { sflip: Some((false,false)), flip: Some((false,true)), ..Default::default() }, vec![]);
-    t("srotate=360&rotate=-90", Instructions { srotate: Some(0), rotate: Some(270), ..Default::default() }, vec![]);
-    t("srotate=-20.922222&rotate=-46.2", Instructions { srotate: Some(0), rotate: Some(270), ..Default::default() }, vec![]);
-    t("autorotate=false&ignoreicc=true", Instructions { autorotate: Some(false), ignoreicc: Some(true) , ..Default::default() }, vec![]);
-    t("mode=max&stretch=fill", Instructions { mode: Some(FitMode::Max), ..Default::default() }, vec![]);
-    t("stretch=fill", Instructions { mode: Some(FitMode::Stretch), ..Default::default() }, vec![]);
-    t("crop=auto", Instructions { mode: Some(FitMode::Crop), ..Default::default() }, vec![]);
-    t("cropxunits=2.3&cropyunits=100", Instructions { cropxunits: Some(2.3f64), cropyunits: Some(100f64), ..Default::default() }, vec![]);
-    t("quality=85", Instructions { quality: Some(85), ..Default::default() }, vec![]);
-    t("zoom=0.02", Instructions { zoom: Some(0.02f64), ..Default::default() }, vec![]);
-    t("trim.threshold=80&trim.percentpadding=0.02", Instructions { trim_whitespace_threshold: 80,  trim_whitespace_padding_percent: Some(0.02f64), ..Default::default() }, vec![]);
-    t("bgcolor=ff0000", Instructions { bgcolor_srgb: Some(Color32(0xffff0000)), ..Default::default() }, vec![]);
-    t("bgcolor=ff0000ff", Instructions { bgcolor_srgb: Some(Color32(0xffff0000)), ..Default::default() }, vec![]);
-    t("bgcolor=8fbc8b", Instructions { bgcolor_srgb: Some(Color32(0xff8fbc8b)), ..Default::default() }, vec![]);
-    t("bgcolor=8fbc8bff", Instructions { bgcolor_srgb: Some(Color32(0xff8fbc8b)), ..Default::default() }, vec![]);
-    t("bgcolor=778899", Instructions { bgcolor_srgb: Some(Color32(0xff778899)), ..Default::default() }, vec![]);
-    t("bgcolor=77889953", Instructions { bgcolor_srgb: Some(Color32(0x53778899)), ..Default::default() }, vec![]);
-    t("bgcolor=ffffff", Instructions { bgcolor_srgb: Some(Color32(0xffffffff)), ..Default::default() }, vec![]);
-    t("bgcolor=ffffffff", Instructions { bgcolor_srgb: Some(Color32(0xffffffff)), ..Default::default() }, vec![]);
-    t("crop=0,0,40,50", Instructions { crop: Some([0f64,0f64,40f64,50f64]), ..Default::default() }, vec![]);
+    t("h=300&mode=max&w=200", Instructions { w: Some(200), h: Some(300), mode: Some(FitMode::Max), ..Default::default() });
+    t("h=300&mode=crop&w=200", Instructions { w: Some(200), h: Some(300), mode: Some(FitMode::Crop), ..Default::default() });
+    t("format=jpeg", Instructions { format: Some(OutputFormat::Jpeg), ..Default::default() });
+    t("format=png", Instructions { format: Some(OutputFormat::Png), ..Default::default() });
+    t("scale=downscaleonly", Instructions {scale: Some(ScaleMode::DownscaleOnly), ..Default::default() });
+    t("h=300&scale=upscalecanvas&w=20", Instructions { w: Some(20), h: Some(300), scale: Some(ScaleMode::UpscaleCanvas), ..Default::default() });
+    t("flip=x&sflip=xy", Instructions { sflip: Some((true,true)), flip: Some((true,false)), ..Default::default() });
+    t("flip=y", Instructions { sflip: Some((false,false)), flip: Some((false,true)), ..Default::default() });
+    t("rotate=270&srotate=0", Instructions { srotate: Some(0), rotate: Some(270), ..Default::default() });
+    t("autorotate=false&ignoreicc=true", Instructions { autorotate: Some(false), ignoreicc: Some(true) , ..Default::default() });
+    t("mode=max", Instructions { mode: Some(FitMode::Max), ..Default::default() });
+    t("cropxunits=2.3&cropyunits=100", Instructions { cropxunits: Some(2.3f64), cropyunits: Some(100f64), ..Default::default() });
+    t("quality=85", Instructions { quality: Some(85), ..Default::default() });
+    t("zoom=0.02", Instructions { zoom: Some(0.02f64), ..Default::default() });
+    t("trim.percentpadding=0.02&trim.threshold=80", Instructions { trim_whitespace_threshold: Some(80),  trim_whitespace_padding_percent: Some(0.02f64), ..Default::default() });
+    t("bgcolor=ff0000ff", Instructions { bgcolor_srgb: Some(Color32(0xffff0000)), ..Default::default() });
+    t("bgcolor=8fbc8bff", Instructions { bgcolor_srgb: Some(Color32(0xff8fbc8b)), ..Default::default() });
+    t("bgcolor=77889953", Instructions { bgcolor_srgb: Some(Color32(0x53778899)), ..Default::default() });
+    t("bgcolor=ffffffff", Instructions { bgcolor_srgb: Some(Color32(0xffffffff)), ..Default::default() });
+    t("crop=0,0,40,50", Instructions { crop: Some([0f64,0f64,40f64,50f64]), ..Default::default() });
 }

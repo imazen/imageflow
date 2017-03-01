@@ -167,7 +167,13 @@ impl<'a, 'b> Engine<'a, 'b> {
                     io_id = func(&mut ctx, NodeIndex::new(index));
                 }
                 if let Some(io_id) = io_id {
-                    let codec_instance_ptr = self.job.codec_instance_by_io_id(io_id).unwrap() as *const CodecInstance;
+                    let codec_instance_ptr = match self.job.codec_instance_by_io_id(io_id).map(|v| v as *const CodecInstance){
+                        Some(v) => v,
+                        None => {
+                            panic!("Failed to locate codec with io_id {}. There are {} codecs in the job.", io_id, self.job.codecs.iter().count());
+                        }
+                    };
+
 
                     {
                         self.g.node_weight_mut(NodeIndex::new(index)).unwrap().custom_state =
