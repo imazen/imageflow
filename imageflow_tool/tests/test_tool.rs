@@ -1,4 +1,4 @@
-extern crate imageflow_tool_lib;
+extern crate imageflow_tool;
 extern crate imageflow_types as s;
 use std::io::Write;
 use std::path::{Path,PathBuf};
@@ -51,6 +51,6 @@ fn run_imageflow_tool_self_test(){
 
     let tool = tool_path();
     let _  = writeln!(std::io::stdout(), "Testing binary {:?}", &tool);
-    imageflow_tool_lib::self_test::run(Some(tool.clone()));
-    imageflow_tool_lib::self_test::test_capture(Some(tool));
+    imageflow_tool::self_test::run(Some(tool.clone()));
+    imageflow_tool::self_test::test_capture(Some(tool));
 }

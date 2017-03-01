@@ -1,5 +1,5 @@
 [package]
-name = "imageflow_tool_lib"
+name = "imageflow_tool"
 version = "0.1.0"
 authors = ["Nathanael Jones <nathanael.jones@gmail.com>"]
 workspace = "../"
