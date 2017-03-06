@@ -78,7 +78,7 @@ impl Ir4Translate{
         // Add CropWhitespace
         if r.parsed.trim_whitespace_threshold.is_some(){
             b.add(s::Node::CropWhitespace {
-                threshold: cmp::min(255,cmp::max(0,r.parsed.trim_whitespace_threshold.unwrap())) as u8,
+                threshold: cmp::max(0,r.parsed.trim_whitespace_threshold.unwrap()) as u32,
                 percent_padding: r.parsed.trim_whitespace_padding_percent.unwrap_or(0f64) as f32
             });
         }

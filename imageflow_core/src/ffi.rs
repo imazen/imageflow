@@ -754,7 +754,7 @@ mod mid_term {
                                                       instance: *mut CodecInstance, hints: *const DecoderDownscaleHints, crash_if_not_implemented: bool) -> bool;
 
 
-        pub fn detect_content(c: *mut ImageflowContext, input: *mut BitmapBgra, threshold: u8 ) -> Rect;
+        pub fn detect_content(c: *mut ImageflowContext, input: *mut BitmapBgra, threshold: u32 ) -> Rect;
     }
 }
 
