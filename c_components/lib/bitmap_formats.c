@@ -241,7 +241,7 @@ bool flow_bitmap_bgra_fill_rect(flow_c * c, struct flow_bitmap_bgra * b, uint32_
         FLOW_error(c, flow_status_Not_implemented);
         return false;
     } else if (step == 3) {
-        color = color >> 8; // Drop the alpha bits
+        // we just ignore the alpha bits
     }
     for (uint32_t byte_offset = 0; byte_offset < rect_width_bytes; byte_offset += step) {
         memcpy(topleft + byte_offset, &color, step);
