@@ -32,7 +32,15 @@ lazy_static! {
     static ref RECENT_PORTS: Mutex<VecDeque<u16>> = Mutex::new(VecDeque::new());
 }
 
+fn assert_valid_image(url: &str) {
+    match fetch(&url, Some(FetchConfig{ custom_ca_trust_file: None, read_error_body: Some(true)})){
+        Ok(v) => {
+            fc::clients::stateless::LibClient {}.get_image_info(&v.bytes).expect("Image response should be valid");
+        },
+        Err(e) => { panic!("{:?} for {}", &e, &url); }
+    }
 
+}
 fn write_env_vars(path: &Path){
     let mut f = File::create(&path).unwrap();
     for (k,v) in std::env::vars(){
@@ -234,6 +242,9 @@ fn run_server_test_i4(){
                 Err(e) => { panic!("{:?} for {}", &e, &url); }
             }
 
+            assert_valid_image(&server.url_for("/demo_images/example-028-whitespace.jpg?width=600&trim.threshold=80&trim.percentpadding=0.5"));
+
+
             Ok(())
         });
 
@@ -260,21 +271,14 @@ fn run_server_test_i4(){
         let last_mount = params.len() - 2;
 
         let (po, callback_result) = ServerInstance::run(&c, Proto::Http, params , | server | {
-            let bytes = fetch_bytes(&server.url_for("/local/eh.png?width=100")).unwrap();
-
-            let info = fc::clients::stateless::LibClient {}.get_image_info(&bytes).expect("Image response should be valid");
-
+            assert_valid_image(&server.url_for("/local/eh.png?width=100"));
 
             for ix in 1..last_mount + 1{
-
                 let url = format!("/local_{ix}/eh2.png?w=1", ix=ix);
                 println!("Testing {}", &url);
-                let bytes = fetch_bytes(&server.url_for(&url)).unwrap();
-
-                let info = fc::clients::stateless::LibClient {}.get_image_info(&bytes).expect("Image response should be valid");
-
-                assert_eq!(server.get_status(&url)?, hyper::status::StatusCode::Ok);
+                assert_valid_image(&server.url_for(&url));
             }
+
 
             assert_eq!(server.get_status("/local/notthere.jpg")?, hyper::status::StatusCode::NotFound);
             assert_eq!(server.get_status("/notrouted")?, hyper::status::StatusCode::NotFound);
@@ -322,8 +326,7 @@ fn run_server_test_ir4_heavy(){
         let mut params = vec!["--data-dir=.", "--mount=/local/:ir4_local:./"];
         let (po, callback_result) = ServerInstance::run(&c, Proto::Http, params , | server | {
             for ix in 1..20{
-                let bytes = fetch_bytes(&server.url_for("/local/eh.png?width=100")).unwrap();
-                let info = fc::clients::stateless::LibClient {}.get_image_info(&bytes).expect("Image response should be valid");
+                assert_valid_image(&server.url_for("/local/eh.png?width=100"));
             }
             Ok(())
         });
