@@ -228,7 +228,7 @@ fn command_string_def() -> NodeDefinition {
                                     Node::new(&EXPANDING_COMMAND_STRING, NodeParams::Json(n))
                                 ]);
                             }else{
-                                if input.is_some(){
+                                if input.is_none(){
                                     panic!("CommandString must have a parent node unless 'decode' has a numeric value. Otherwise it has no image source. ");
                                 }
                                 ctx.replace_node(ix, vec![
