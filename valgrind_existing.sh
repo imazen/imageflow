@@ -14,7 +14,7 @@ printf "%s valgrind_existing.sh " "$(date '+[%H:%M:%S]')"
 if [ "$#" -lt 1 ]; then
 	# Remove old grind folders; they're going to be a problem with discovery
 	(
-		cd ./${TEST_BINARIES_TARGET}debug
+		cd "./${TEST_BINARIES_TARGET}debug"
 		find . -type d -name 'grind_*' -exec rm -rf {} +
 	)
 	shopt -s nullglob
@@ -31,7 +31,7 @@ printf "%s\n" "${TEST_BINARIES[@]}"
 #SKIP_BINARIES=()
 
 # valgrind breaks OpenSSL, so we can't test the server right now
-SKIP_BINARIES+=("$(ls ./${TEST_BINARIES_TARGET}debug/test_ir4* || true )")
+SKIP_BINARIES+=("$(ls ./"${TEST_BINARIES_TARGET}"debug/test_ir4* || true )")
 echo "Should skip: ${SKIP_BINARIES[@]}"
 
 
