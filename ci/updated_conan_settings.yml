@@ -7,7 +7,7 @@ compiler:
         libcxx: [libstdc++, libstdc++11]
     Visual Studio:
         runtime: [MD, MT, MTd, MDd]
-        version: ["8", "9", "10", "11", "12", "14"]
+        version: ["8", "9", "10", "11", "12", "14", "15"]
     clang:
         version: ["3.3", "3.4", "3.5", "3.6", "3.7", "3.8"]
         libcxx: [libstdc++, libstdc++11, libc++]
