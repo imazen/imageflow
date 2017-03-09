@@ -395,7 +395,7 @@ pub fn run(tool_location: Option<PathBuf>) -> i32 {
         c.create_blank_image_here("100x100", 100, 100, s::EncoderPreset::libjpegturbo());
 
         let result =
-            c.exec("v0.1/ir4 --query \"width=60&height=40&mode=max&format=jpg\" --in 100x100.jpg --out out4.jpg");
+            c.exec("v0.1/ir4 --command \"width=60&height=40&mode=max&format=jpg\" --in 100x100.jpg --out out4.jpg");
 
         result.expect_status_code(Some(0));
 
