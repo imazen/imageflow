@@ -5,18 +5,22 @@
 ](https://travis-ci.org/imazen/imageflow/builds) 
 [![Coverity Scan Build Status](https://scan.coverity.com/projects/8403/badge.svg)](https://scan.coverity.com/projects/imazen-imageflow) ![state: technical preview](https://img.shields.io/badge/state-technical%E2%80%93preview-yellow.svg)
 
-* **imageflow_server** can manipulate images in-flight (e.g.`/bucket/img.jpg?w=200`) for direct use from HTML.  A single instance can source images from multiple locations. 
-* **libimageflow** is for direct (in-process) use from *your* programming language.  It has a simple C-compatible ABI and [bindings](https://github.com/imazen/imageflow/tree/master/bindings).
+* **imageflow_server** can run jobs or manipulate images in-flight (e.g.`/bucket/img.jpg?w=200`) for direct use from HTML. Source images can reside in blob storage, on another server, or on the filesystem. 
+* **libimageflow** is for direct (in-process) use from *your* programming language.  It has a simple [C-compatible ABI](https://s3-us-west-1.amazonaws.com/imageflow-nightlies/master/doc/imageflow/index.html) and [bindings](https://github.com/imazen/imageflow/tree/master/bindings). 
 * **imageflow_tool** is a command-line tool for experimenting, running batch jobs, or when you want process isolation. Up to 17x faster than ImageMagick.
 
-These offer JSON APIs as well as the traditional `width=300&height=200&mode=crop&format=jpg` command string form. Each is available as a self-contained binary for Windows, Mac, and Linux*. *Linux build requires system OpenSSL and glibc.  
+These all offer the JSON [`/build` API](https://s3-us-west-1.amazonaws.com/imageflow-nightlies/master/doc/context_json_api.txt) as well as the traditional `width=300&height=200&mode=crop&format=jpg` command string form. Each is available as a self-contained binary for Windows and Mac. We offer Docker images for Linux (where glibc and OpenSSL are required). 
+
+libimageflow offers interactive job manipulation as well [like `/tell_decoder`, `/get_image_info`, and `/execute`](https://s3-us-west-1.amazonaws.com/imageflow-nightlies/master/doc/job_json_api.txt). Unless you are using memory buffers for I/O, it's better to use `/build`.  
 
 [![view releases](https://img.shields.io/badge/-view%20downloads%20and%20releases-green.svg)](https://github.com/imazen/imageflow/releases) or `docker run --rm imazen/imageflow_tool`
 
 [We thank our backers on Kickstarter](https://www.kickstarter.com/projects/njones/imageflow-respect-the-pixels-a-secure-alt-to-image/posts/1616122) and [the many supporters of ImageResizer](https://imageresizing.net) for making this project a reality.
 Email support@imageflow.io if you need an AGPLv3 exception for commercial use. 
 
-Also, please [send us 'challenging' images and tasks](https://github.com/imazen/imageflow/issues/98). We'd also appreciate it if you'd explore the JSON APIs and [review them and other topics where we are requesting feedback](https://github.com/imazen/imageflow/issues?q=is%3Aopen+is%3Aissue+label%3Arequesting-feedback). And - we need help with benchmarking on Windows. 
+Also, please [send us 'challenging' images and tasks](https://github.com/imazen/imageflow/issues/98). We'd also appreciate it if you'd explore the JSON APIs and [review them and other topics where we are requesting feedback](https://github.com/imazen/imageflow/issues?q=is%3Aopen+is%3Aissue+label%3Arequesting-feedback). And – we need help with benchmarking on Windows.  
+
+If we enough people beta-test Imageflow and provide feedback, we aim to publish a stable 1.0 release in August 2017 (along with Ruby and Node bindings). **See [flaws and missing features](#flaws) for project status.**
 
 ## Using imageflow_tool 
 
@@ -24,11 +28,11 @@ Also, please [send us 'challenging' images and tasks](https://github.com/imazen/
 
 You can use command strings that are compatible with [ImageResizer 4 querystrings](https://imageresizing.net/docs/basics):
 
-`imageflow_tool v0.1/ir4 --command "width=50" --in source.jpg  --out thumb.jpg`
+`imageflow_tool v0.1/ir4 --in source.jpg  --out thumb.jpg --command "width=50&height=50&mode=crop&format=jpg" `
 
 Or submit a JSON job file. JSON jobs can have multiple inputs and outputs, and can represent any kind of operation graph. 
 
-The following generates mutiple sizes of an image: 
+The following generates mutiple sizes of an image from an example job file: 
 
 ```
 imageflow_tool v0.1/build --json examples/export_4_sizes/export_4_sizes.json 
@@ -76,8 +80,6 @@ You'll want to mount varous image source locations to prefixes. The `--mount` co
 
 ![](https://www.imageflow.io/images/imageflow-server-advanced.svg)
 
-### TODO: document other imageflow_server abilities
-
 ## Using libimageflow
 
 ![](https://www.imageflow.io/images/libimageflow-direct.svg)
@@ -85,8 +87,8 @@ You'll want to mount varous image source locations to prefixes. The `--mount` co
 * C# - @samuelenglard has volunteered to create C# bindings for Imageflow. We're tracking [design here](https://github.com/imazen/imageflow/issues/67).
 * Ruby - Basic bindings can be found in [bindings/ruby/](https://github.com/imazen/imageflow/tree/master/bindings/ruby)
 * Node - Not yet started. Want to help? [generate bindings from the header files](https://github.com/tjfontaine/node-ffi-generate)
-* C and C++ - see [bindings/headers/*.h](https://github.com/imazen/imageflow/tree/master/bindings/headers). 
-* Rust - Imageflow is written in Rust. Use the `imageflow_core` crate, and be warned that this interface will evolve more rapidly than the FFI.  
+* C and C++ - use [bindings/headers/imageflow_default.h](https://github.com/imazen/imageflow/blob/master/bindings/headers/imageflow_default.h) or one of the many alternate conventions provided with each release.
+* Rust - Imageflow is written in Rust. Use the `imageflow_core` crate, but be warned that this interface will evolve more rapidly than the FFI `imageflow` crate.  
 * other languages - Use an [FFI](https://en.wikipedia.org/wiki/Foreign_function_interface) binding-generation tool for your language, and feed it whichever [header file it likes best](https://github.com/imazen/imageflow/tree/master/bindings/headers). 
 
 Official Ruby and Node bindings will be released by August 2017. 
@@ -103,7 +105,7 @@ We're assuming you've cloned already.
 
 All build scripts support `VALGRIND=True` to enable valgrind instrumentation of automated tests.
 
-## Docker (linux/macOS)
+## Docker (linux/macOS/WinUbuntu)
 
 ```bash
 docker pull imazen/build_if_gcc54
@@ -141,11 +143,11 @@ sudo apt-get install --no-install-recommends \
 
 If you don't have Xenial or Trusty, adapt the above to work with your distro.
 
-After running apt-get (or your package manager), you'll need conan, cmake, dssim, and Rust Nightly 2016-09-01.
+After running apt-get (or your package manager), you'll need conan, cmake, dssim, and Rust Nightly 2017-02-05.
 
 
 ```bash
-curl https://sh.rustup.rs -sSf | sh -s -- -y --default-toolchain nightly-2016-09-01
+curl https://sh.rustup.rs -sSf | sh -s -- -y --default-toolchain nightly-2017-02-05
 sudo pip3 install conan
 ./ci/nixtools/install_cmake.sh
 ./ci/nixtools/install_dssim.sh
@@ -188,12 +190,15 @@ Windows: `build/Imageflow.sln` will be created during 'win_build_c.bat', but is 
     conan install -u --file ../conanfile.py --scope build_tests=True --build missing  -s build_type=Release -s arch=x86_64
     cd ..
     conan build
+
     
-## How does one learn image processing?
+## How does one learn image processing for the web?
+
+First, [read High Performance Images](http://shop.oreilly.com/product/0636920039730.do) for context.
 
 There are not many great textbooks on the subject. Here are some from my personal bookshelf. Between them (and Wikipedia) I was able to put together about 60% of the knowledge I needed; the rest I found by reading the source code to [many popular image processing libraries](https://github.com/nathanaeljones/imaging-wiki?files=1).
 
-I would start by reading [Principles of Digital Image Processing: Core Algorithms](http://www.amazon.com/gp/product/1848001940?psc=1&redirect=true&ref_=oh_aui_search_detailpage) front-to-back, then [Digital Image Warping](http://www.amazon.com/gp/product/0818689447?psc=1&redirect=true&ref_=oh_aui_search_detailpage).  Wikipedia is also good, although the relevant pages are not linked or categorized together - use specific search terms, like ["bilinear interpolation"](https://en.wikipedia.org/wiki/Bilinear_interpolation) and ["Lab color space"](https://en.wikipedia.org/wiki/Lab_color_space).
+I would start by reading [Principles of Digital Image Processing: Core Algorithms](http://www.amazon.com/gp/product/1848001940?psc=1&redirect=true&ref_=oh_aui_search_detailpage) front-to-back, then [Digital Image Warping](http://www.amazon.com/gp/product/0818689447?psc=1&redirect=true&ref_=oh_aui_search_detailpage).  Wikipedia is also a useful reference, although the relevant pages are not linked or categorized together - use specific search terms, like ["bilinear interpolation"](https://en.wikipedia.org/wiki/Bilinear_interpolation) and ["Lab color space"](https://en.wikipedia.org/wiki/Lab_color_space).
 
 * [Digital Image Warping](http://www.amazon.com/gp/product/0818689447?psc=1&redirect=true&ref_=oh_aui_search_detailpage)
 * [Computer Graphics: Principles and Practice in C (2nd Edition)](http://www.amazon.com/gp/product/0201848406?psc=1&redirect=true&ref_=oh_aui_search_detailpage)
@@ -201,18 +206,24 @@ I would start by reading [Principles of Digital Image Processing: Core Algorithm
 * [Principles of Digital Image Processing: Core Algorithms](http://www.amazon.com/gp/product/1848001940?psc=1&redirect=true&ref_=oh_aui_search_detailpage)
 * [Principles of Digital Image Processing: Advanced Methods](http://www.amazon.com/gp/product/1848829183?psc=1&redirect=true&ref_=oh_aui_search_detailpage)
 
-The Graphics Gems series is great for optimization inspiration:
-* [Graphics Gems](http://www.amazon.com/gp/product/0122861663?psc=1&redirect=true&ref_=oh_aui_search_detailpage)
-* [Graphics Gems II](http://www.amazon.com/gp/product/0120644819?psc=1&redirect=true&ref_=oh_aui_search_detailpage)
-* [Graphics Gems IV](http://www.amazon.com/gp/product/0125434553?psc=1&redirect=true&ref_=oh_aui_search_detailpage)
-* [Graphics Gems V](http://www.amazon.com/gp/product/0125434553?psc=1&redirect=true&ref_=oh_aui_search_detailpage)
-
-Also, [I made some notes regarding issues to be aware of when creating an imaging library](https://github.com/imazen/Graphics-vNext/blob/master/aware.md).
-
-I'm not aware of any implementations of (say, resampling) that are completely correct. Very recent editions of ImageMagick are very close, though. Most offer a wide selection of 'filters', but fail to scale/truncate the input or output offsets appropriately, and the resulting error is usually greater than the difference between the filters.
-
-### Source code to read
-
-I have found the source code for OpenCV, LibGD, FreeImage, Libvips, Pixman, Cairo, ImageMagick, stb_image, Skia, and FrameWave is very useful for understanding real-world implementations and considerations. Most textbooks assume an infinite plane, ignore off-by-one errors, floating-point limitations, color space accuracy, and operational symmetry within a bounded region. I cannot recommend any textbook  as an accurate reference, only as a conceptual starting point.
+I have found the source code for OpenCV, LibGD, FreeImage, Libvips, Pixman, Cairo, ImageMagick, stb_image, Skia, and FrameWave is very useful for understanding real-world implementations and considerations. Most textbooks assume an infinite plane, ignore off-by-one errors, floating-point limitations, color space accuracy, and operational symmetry within a bounded region. I cannot recommend any textbook  as an accurate reference, only as a conceptual starting point. [I made some notes regarding issues to be aware of when creating an imaging library](https://github.com/imazen/Graphics-vNext/blob/master/aware.md).
 
 Also, keep in mind that computer vision is very different from image creation. In computer vision, resampling accuracy matters very little, for example. But in image creation, you are serving images to photographers, people with far keener visual perception than the average developer. The images produced will be rendered side-by-side with other CSS and images, and the least significant bit of inaccuracy is quite visible. You are competing with Lightroom; with offline tools that produce visually perfect results. End-user software will be discarded if photographers feel it is corrupting their work.
+
+### Known flaws and missing features (as of March 2017)
+
+#### Flaws
+
+- [ ] JSON operations aren't yet validating their parameters. Invalid values kill the process.
+- [ ] imageflow_server doesn't expose the JSON API yet (due to above)
+- [ ] Out Of Memory conditions and certain other errors will kill the process instead of reporting an error message. Not relevant for imageflow_tool.
+- [ ] No fuzz testing completed.
+
+#### Missing features
+
+- [ ] GIF and Animated GIF support (giflib was too unsafe; using Rust) Requires the Codec and I/O system be ported to Rust. 
+- [ ] Job cost prediction
+- [ ] Automatic encoder selection and tuning.
+- [ ] Node bindings
+- [ ] Advanced rendering features: Whitespace detection/cropping, watermarking, contrast/saturation/luma, white balance, blurring. 
+
