@@ -38,7 +38,7 @@ matrix:
     rust: nightly-2017-02-05
   - os: linux
     dist: trusty
-    env: UPLOAD_BUILD=False COVERAGE=True CODECOV=True VALGRIND=True TARGET_CPU=sandybridge P PACKAGE_SUFFIX=x86_64-sandy_valgrind_linux-gcc54 DOCKER_IMAGE=imazen/build_if_gcc54
+    env: UPLOAD_BUILD=False COVERAGE=True CODECOV=True VALGRIND=True BUILD_RELEASE=False CLEAN_RUST_TARGETS=True TARGET_CPU=sandybridge P PACKAGE_SUFFIX=x86_64-sandy_valgrind_linux-gcc54 DOCKER_IMAGE=imazen/build_if_gcc54
     sudo: required
     services:
     - docker
