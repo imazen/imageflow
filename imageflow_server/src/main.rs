@@ -5,7 +5,7 @@ extern crate regex;
 
 use regex::Regex;
 
-use clap::{App, Arg, SubCommand};
+use clap::{App, Arg, SubCommand, AppSettings};
 use ::imageflow_server::preludes::*;
 use ::std::path::{Path, PathBuf};
 
@@ -43,8 +43,9 @@ fn parse_mount(s: &str) -> std::result::Result<MountLocation, String>{
 fn main_with_exit_code() -> i32 {
     let version = s::version::one_line_version();
     let app = App::new("imageflow_server").version(version.as_ref())
+        .setting(AppSettings::VersionlessSubcommands).setting(AppSettings::SubcommandRequiredElseHelp)
         .subcommand(
-            SubCommand::with_name("diagnose")
+            SubCommand::with_name("diagnose").setting(AppSettings::ArgRequiredElseHelp)
                 .about("Diagnostic utilities")
                 .arg(
                     Arg::with_name("show-compilation-info").long("show-compilation-info")
@@ -58,14 +59,14 @@ fn main_with_exit_code() -> i32 {
         )
         .subcommand(
             SubCommand::with_name("start")
-                .about("Start HTTP server")
+                .about("Start HTTP server").setting(AppSettings::ArgRequiredElseHelp)
+                .arg(Arg::with_name("demo").long("demo").conflicts_with("mount").required_unless("mount")
+                .help("Start demo server (on localhost:39876 by default) with mounts /ir4/proxy/unsplash -> http://images.unsplash.com/"))
                 .arg(
                     Arg::with_name("mount").long("mount").takes_value(true).empty_values(false).multiple(true).required_unless("demo")
                         .validator(|f| parse_mount(&f).map(|r| ()))
                         .help("Serve images from the given location using the provided API, e.g --mount \"/prefix/:ir4_local:./{}\" --mount \"/extern/:ir4_http:http:://domain.com/{}\"\n Escape colons by doubling, e.g. http:// -> http:://")
-                ).arg(Arg::with_name("demo").long("demo").conflicts_with("mount")
-                .help("Start demo server (on localhost:39876 by default) with mounts /ir4/proxy/unsplash -> http://images.unsplash.com/"))
-
+                )
                 .arg(Arg::with_name("bind-address").long("bind-address").takes_value(true).required(false).default_value("localhost")
                     .help("The IPv4 or IPv6 address to bind to (or the hostname, like localhost). 0.0.0.0 binds to all addresses."
                 ))
