@@ -1,13 +1,54 @@
-# ![imageflow](https://www.imageflow.io/images/imageflow.svg) = libimageflow + imageflow-server
+## ![imageflow](https://www.imageflow.io/images/imageflow.svg) optimal images at incredible speeds
 
-Imageflow will bring world-class image quality and performance to all languages through a C-compatible API (libimageflow) and a separate RESTful turnkey HTTP server and command-line tool. Linux, Mac, and Windows are supported. [The Imageflow Kickstarter ended successfully!](https://www.kickstarter.com/projects/njones/imageflow-respect-the-pixels-a-secure-alt-to-image/posts/1616122)
-
-----
-
-[![travis-master](https://img.shields.io/travis/imazen/imageflow/master.svg?label=master%3A%20mac64%20ubuntu64%2014.04%2015.04%2016.04)
+[![travis-master](https://img.shields.io/travis/imazen/imageflow/master.svg?label=master%3A%20mac64%20ubuntu64%2014.04%2016.04)
 [![AppVeyor build status](https://ci.appveyor.com/api/projects/status/0356x95fa312m3wy/branch/master?svg=true&passingText=master%3A%20win32%20win64%20-%20passing&failingText=master%3A%20win32%20win64%20-%20failed)](https://ci.appveyor.com/project/imazen/imageflow/branch/master)
 ](https://travis-ci.org/imazen/imageflow/builds) 
 [![Coverity Scan Build Status](https://scan.coverity.com/projects/8403/badge.svg)](https://scan.coverity.com/projects/imazen-imageflow)
+
+These work on Windows, Mac, and Linux.  All offer the same JSON APIs as well as the traditional `width=300&height=200&mode=crop&format=jpg` command string form. Each is available as a self-contained binary. 
+
+* **imageflow_server** can manipulate images in-flight (e.g.`/bucket/img.jpg?w=200`) for direct use from HTML.  A single instance can source images from multiple locations. 
+* **libimageflow** is for direct use from *your* programming language, in-process.  It has a simple C-compatible ABI. 
+* **imageflow_tool** is a command-line tool for experimenting, running batch jobs, or when you want process isolation.  
+
+[![view releases](https://img.shields.io/badge/-view%20downloads%20and%20releases-green.svg)](https://github.com/imazen/imageflow/releases) or `docker run -rm imazen/imageflow_tool`
+
+[We thank our backers on Kickstarter](https://www.kickstarter.com/projects/njones/imageflow-respect-the-pixels-a-secure-alt-to-image/posts/1616122) and [the many commercial users of ImageResizer](https://imageresizing.net) for making this project a reality.
+We intend to support full-time Imageflow development by offering commercial licenses (AGPLv3 exceptions) once we reach 1.0. Imageflow will remain OSS.
+
+
+
+## Using imageflow_tool 
+
+`imageflow_tool examples --generate`
+
+ Command-string form:
+
+`imageflow_tool v0.1/ir4 --query "width=50" --in 2000x1324.jpg  --out thumb.jpg`
+
+
+
+```
+$ time imageflow_tool v0.1/ir4 --query "width=50" --in 2000x1324.jpg  --out thumb.jpg
+
+real    0m0.085s
+user    0m0.061s
+sys 0m0.010s
+
+$ time convert 2000x1324.jpg  -set colorspace sRGB -colorspace RGB -filter Robidoux -resize 200x200  -colorspace sRGB thumb_magick.jpg
+
+real    0m0.406s
+user    0m0.320s
+sys 0m0.032s
+```
+
+## Using libimageflow
+
+## Using imageflow_server
+
+----
+
+
 
 ### How can I help?
 
