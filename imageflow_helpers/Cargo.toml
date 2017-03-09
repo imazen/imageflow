@@ -38,6 +38,9 @@ hyper = "*"
 reqwest = "*"
 hyper-native-tls = "*"
 
+backtrace = "0.3"
+
+
 [target.'cfg(not(any(target_os = "windows", target_os = "macos")))'.dependencies]
 openssl = "*"
 hyper-openssl = "*"

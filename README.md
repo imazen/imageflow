@@ -3,7 +3,7 @@
 [![travis-master](https://img.shields.io/travis/imazen/imageflow/master.svg?label=master%3A%20mac64%20ubuntu64%2014.04%2016.04)
 [![AppVeyor build status](https://ci.appveyor.com/api/projects/status/0356x95fa312m3wy/branch/master?svg=true&passingText=master%3A%20win32%20win64%20-%20passing&failingText=master%3A%20win32%20win64%20-%20failed)](https://ci.appveyor.com/project/imazen/imageflow/branch/master)
 ](https://travis-ci.org/imazen/imageflow/builds) 
-[![Coverity Scan Build Status](https://scan.coverity.com/projects/8403/badge.svg)](https://scan.coverity.com/projects/imazen-imageflow) ![state: technical preview](https://img.shields.io/badge/state-technical%E2%80%93preview-yellow.svg)
+[![Coverity Scan Build Status](https://scan.coverity.com/projects/8403/badge.svg)](https://scan.coverity.com/projects/imazen-imageflow) [![state: technical preview](https://img.shields.io/badge/state-technical%E2%80%93preview-yellow.svg)](#flaws)
 
 * **imageflow_server** can run jobs or manipulate images in-flight (e.g.`/bucket/img.jpg?w=200`) for direct use from HTML. Source images can reside in blob storage, on another server, or on the filesystem. 
 * **libimageflow** is for direct (in-process) use from *your* programming language.  It has a simple [C-compatible ABI](https://s3-us-west-1.amazonaws.com/imageflow-nightlies/master/doc/imageflow/index.html) and [bindings](https://github.com/imazen/imageflow/tree/master/bindings). 

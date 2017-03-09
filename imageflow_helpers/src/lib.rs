@@ -12,6 +12,8 @@ extern crate zip;
 extern crate serde;
 extern crate serde_json;
 extern crate libc;
+extern crate backtrace;
+
 
 #[cfg(not(any(target_os = "windows", target_os = "macos")))]
 extern crate openssl;
@@ -27,6 +29,7 @@ pub mod hashing;
 pub mod process_testing;
 pub mod process_capture;
 pub mod colors;
+pub mod debug;
 
 pub mod timeywimey{
     pub fn time_bucket(seconds_per_bucket: u64, bucket_count: u64) -> u64{

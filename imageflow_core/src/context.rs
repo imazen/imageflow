@@ -26,6 +26,9 @@ impl Context {
     /// Used by abi; should not panic
     pub fn abi_create_boxed() -> Result<Box<Context>> {
         std::panic::catch_unwind(|| {
+            // Upgrade backtraces
+            imageflow_helpers::debug::upgrade_panic_hook_once_if_backtraces_wanted();
+
             let inner = unsafe { ffi::flow_context_create() };
             if inner.is_null() {
                 Err(FlowError::Oom)

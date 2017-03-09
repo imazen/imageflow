@@ -24,6 +24,8 @@ fn artifact_source() -> hlp::process_capture::IncludeBinary{
 
 
 pub fn main_with_exit_code() -> i32 {
+    imageflow_helpers::debug::set_panic_hook_once();
+
     let version = s::version::one_line_version();
     let app = App::new("imageflow_tool").version(version.as_ref())
         .arg(  Arg::with_name("capture-to").long("capture-to").takes_value(true)
