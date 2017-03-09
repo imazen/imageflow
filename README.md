@@ -3,148 +3,96 @@
 [![travis-master](https://img.shields.io/travis/imazen/imageflow/master.svg?label=master%3A%20mac64%20ubuntu64%2014.04%2016.04)
 [![AppVeyor build status](https://ci.appveyor.com/api/projects/status/0356x95fa312m3wy/branch/master?svg=true&passingText=master%3A%20win32%20win64%20-%20passing&failingText=master%3A%20win32%20win64%20-%20failed)](https://ci.appveyor.com/project/imazen/imageflow/branch/master)
 ](https://travis-ci.org/imazen/imageflow/builds) 
-[![Coverity Scan Build Status](https://scan.coverity.com/projects/8403/badge.svg)](https://scan.coverity.com/projects/imazen-imageflow)
-
-These work on Windows, Mac, and Linux.  All offer the same JSON APIs as well as the traditional `width=300&height=200&mode=crop&format=jpg` command string form. Each is available as a self-contained binary. 
+[![Coverity Scan Build Status](https://scan.coverity.com/projects/8403/badge.svg)](https://scan.coverity.com/projects/imazen-imageflow) ![state: technical preview](https://img.shields.io/badge/state-techncial%E2%80%93preview-yellow.svg)
 
 * **imageflow_server** can manipulate images in-flight (e.g.`/bucket/img.jpg?w=200`) for direct use from HTML.  A single instance can source images from multiple locations. 
-* **libimageflow** is for direct use from *your* programming language, in-process.  It has a simple C-compatible ABI. 
-* **imageflow_tool** is a command-line tool for experimenting, running batch jobs, or when you want process isolation.  
+* **libimageflow** is for direct (in-process) use from *your* programming language.  It has a simple C-compatible ABI and [bindings](https://github.com/imazen/imageflow/tree/master/bindings).
+* **imageflow_tool** is a command-line tool for experimenting, running batch jobs, or when you want process isolation. Up to 17x faster than ImageMagick.
 
-[![view releases](https://img.shields.io/badge/-view%20downloads%20and%20releases-green.svg)](https://github.com/imazen/imageflow/releases) or `docker run -rm imazen/imageflow_tool`
+These offer JSON APIs as well as the traditional `width=300&height=200&mode=crop&format=jpg` command string form. Each is available as a self-contained binary for Windows, Mac, and Linux*. *Linux build requires system OpenSSL and glibc.  
 
-[We thank our backers on Kickstarter](https://www.kickstarter.com/projects/njones/imageflow-respect-the-pixels-a-secure-alt-to-image/posts/1616122) and [the many commercial users of ImageResizer](https://imageresizing.net) for making this project a reality.
-We intend to support full-time Imageflow development by offering commercial licenses (AGPLv3 exceptions) once we reach 1.0. Imageflow will remain OSS.
+[![view releases](https://img.shields.io/badge/-view%20downloads%20and%20releases-green.svg)](https://github.com/imazen/imageflow/releases) or `docker run --rm imazen/imageflow_tool`
 
+[We thank our backers on Kickstarter](https://www.kickstarter.com/projects/njones/imageflow-respect-the-pixels-a-secure-alt-to-image/posts/1616122) and [the many supporters of ImageResizer](https://imageresizing.net) for making this project a reality.
+Email support@imageflow.io if you need an AGPLv3 exception for commercial use. 
 
+Also, please [send us 'challenging' images and tasks](https://github.com/imazen/imageflow/issues/98). We'd also appreciate it if you'd explore the JSON APIs and [review them and other topics where we are requesting feedback](https://github.com/imazen/imageflow/issues?q=is%3Aopen+is%3Aissue+label%3Arequesting-feedback). And - we need help with benchmarking on Windows. 
 
 ## Using imageflow_tool 
 
-`imageflow_tool examples --generate`
+`imageflow_tool examples --generate` - creates an *examples* directory with JSON jobs and invocation scripts. 
 
- Command-string form:
+You can use command strings that are compatible with [ImageResizer 4 querystrings](https://imageresizing.net/docs/basics):
 
-`imageflow_tool v0.1/ir4 --query "width=50" --in 2000x1324.jpg  --out thumb.jpg`
+`imageflow_tool v0.1/ir4 --command "width=50" --in source.jpg  --out thumb.jpg`
 
+Or submit a JSON job file. JSON jobs can have multiple inputs and outputs, and can represent any kind of operation graph. 
 
+The following generates mutiple sizes of an image: 
 
 ```
-$ time imageflow_tool v0.1/ir4 --query "width=50" --in 2000x1324.jpg  --out thumb.jpg
-
-real    0m0.085s
-user    0m0.061s
-sys 0m0.010s
-
-$ time convert 2000x1324.jpg  -set colorspace sRGB -colorspace RGB -filter Robidoux -resize 200x200  -colorspace sRGB thumb_magick.jpg
-
-real    0m0.406s
-user    0m0.320s
-sys 0m0.032s
+imageflow_tool v0.1/build --json examples/export_4_sizes/export_4_sizes.json 
+        --in http://s3-us-west-2.amazonaws.com/imageflow-resources/test_inputs/waterhouse.jpg
+        --out 1 waterhouse_w1600.jpg 
+              2 waterhouse_w1200.jpg 
+              3 waterhouse_w800.jpg 
+              4 waterhouse_w400.jpg 
+        --response operation_result.json
 ```
+
+By default, imageflow_tool prints a JSON response to stdout. You write this to disk with `--response`.
+
+`--debug-package` will create a .zip file to reproduce problematic behavior with both `v0.1/build` and `v0.1/ir4`. Please sumbit bug reports; we try to make it easy. 
+
+## Using imageflow_server for dynamic imaging
+
+`imageflow_server start --demo`
+
+Now you can edit images from HTML... and use srcset without headache. 
+
+```
+<img src="http://localhost:39876/demo_images/u3.jpg?w=300" />
+
+<img src="" srcset="    http://localhost:39876/demo_images/u3.jpg?w=300 300w
+                        http://localhost:39876/demo_images/u3.jpg?w=800 800w
+                        http://localhost:39876/demo_images/u3.jpg?w=1600 1600w" />
+
+```
+
+![](https://www.imageflow.io/images/imageflow-responsive.svg) ![](https://www.imageflow.io/images/edit-url.gif)
+
+### Beyond the demo 
+
+You'll want to mount varous image source locations to prefixes. The `--mount` command parses a colon (`:`) delimited list of arguments. The first is the prefix you'll use in the URL (like `http://localhost:39876/prefix/`. The second is the engine name. Remaining arguments are sent to the engine.  
+
+#### Examples
+
+* `--mount "/img/:ir4_local:C:\inetpub\wwwroot\images"`
+* `--mount "/proxyimg/:ir4_http:https:://myotherserver.com/imagefolder/"` (note the double escaping of the colon)
+* `--mount "/cachedstaticproxy/:permacache_proxy:https:://othersite.com"`
+* `--mount "/githubproxy/:permacache_proxy_guess_content_types:https:://raw.github.com/because/it/doesnt/support/content/types"`
+* `--mount "/static/":static:./assets"`
+
+
+![](https://www.imageflow.io/images/imageflow-server-advanced.svg)
+
+### TODO: document other imageflow_server abilities
 
 ## Using libimageflow
 
-## Using imageflow_server
+![](https://www.imageflow.io/images/libimageflow-direct.svg)
 
-----
+* C# - @samuelenglard has volunteered to create C# bindings for Imageflow. We're tracking [design here](https://github.com/imazen/imageflow/issues/67).
+* Ruby - Basic bindings can be found in [bindings/ruby/](https://github.com/imazen/imageflow/tree/master/bindings/ruby)
+* Node - Not yet started. Want to help? [generate bindings from the header files](https://github.com/tjfontaine/node-ffi-generate)
+* C and C++ - see [bindings/headers/*.h](https://github.com/imazen/imageflow/tree/master/bindings/headers). 
+* Rust - Imageflow is written in Rust. Use the `imageflow_core` crate, and be warned that this interface will evolve more rapidly than the FFI.  
+* other languages - Use an [FFI](https://en.wikipedia.org/wiki/Foreign_function_interface) binding-generation tool for your language, and feed it whichever [header file it likes best](https://github.com/imazen/imageflow/tree/master/bindings/headers). 
 
-
-
-### How can I help?
-
-## [Send us 'challenging' images and tasks.](https://github.com/imazen/imageflow/issues/98)
-
-1. Verifiably valid images that tend to fail with other tools,
-2. Tasks that are complex and unexpected
-3. Sets of (input/task/expected output) triples that meet the above criteria, or fail with other tools. 
-
-## Explore the new JSON API and give us feedback. 
-
-I frequently [request public comment](https://github.com/imazen/imageflow/issues?q=is%3Aopen+is%3Aissue+label%3Arequesting-feedback) on potentially controversial API changes. Please discuss; additional perspectives are very helpful for understanding the full scope of tradeoffs and effects a change may have.
-
-We're currently discussing the JSON API.
-
-## Help us set up post-CI test suites and benchmark runners. 
-
-* We have [compare.rb](https://github.com/imazen/imageflow/tree/master/imageflow_tool/result_testing) to compare results with ImageWorsener and ImageMagick
-* We have `scope.sh` (same folder) to analyze Imageflow output with ResampleScope.
-* We have integration tests, with checksummed and expected image results stored on S3.
-* We use DSSIM from @pornel for checking expected/actual similarity when it's expected to differ by more than rounding errors.
-* We use off-by-one checking for everything else, to avoid floating-point differences becoming PITA.
-* Off-by-one checking mean we have to store the 'expected' somewhere, and can't rely exclusively on hashes. We currently put them on S3 manually and pull them down automatically. See imageflow_core/tests/visuals.rs
-
-The above is not nearly enough. Now that we have a JSON API, we can store and run integration tests on a larger scale. 
-
-It would be ideal to have a set of scripts capable of updating, uploading, and launching linux docker containers in the cloud (almost any cloud, although I prefer DO and AWS), running tests, and having them upload their results to S3 and shut themselves down when they're done. AWS Lambda's 5-minute limit is not enough, unfortuantely. We use AppVeyor and Travis for our core tests, but I expect our suite to hit 1-2 hours for exericising all edge cases for all the images involved (also, basic fuzz testing is slow). This is particularly valuable for benchmarks, where running a psuedo-baremetal machine for long periods is cost-prohibitive - but lanuching a docker container on a maximum-size AWS instance gets us pretty close to baremetal performance, and might even work for logging and evaluating performance results/regressions over time.
+Official Ruby and Node bindings will be released by August 2017. 
 
 
-#### Do you have a physical Windows box?
-
-Virtual machines aren't great for benchmarks. Imageflow (flow-proto1, for now) could benefit from independent benchmarking on physical machines. 
-Or, if you know how to script borrowing a consistent-performing Windows box in the cloud, and setting it up/tearing it down, that would be ideal. 
-We have build scripts that work on AppVeyor, but that's not very useful for benchmarking. 
-
-### Algorithm implementation work
-
-- [x] Fast image resampling (scaling) with superb quality & speed
-- [x] Basic operations (crop, rotate, flip, expand canvas, fill rectangle)
-- [x] Support color profile, convert to sRGB
-- [x] Image blending and composition (no external API yet)
-- [x] Whitespace detection/cropping (no external API yet)
-- [x] Ideal scaling-integrated sharpening for subpixel accuracy.
-- [x] Automatic white balance correction.  (no external API yet)
-- [ ] Time-constant guassian approximation (%97) blur (1 bug remaining)
-- [ ] Improve contrast/saturation/luma adjustment ergonomics
-- [x] Integrate libjpeg-turbo (read/write)
-- [x] Create correct and ooptimized IDCT downscaling for libjpeg-turbo (linear light, robidoux filter)
-- [x] Integrate libpng (read/write) (32-bit only)
-- [ ] Integrate Rust gif codec
-- [ ] Support animated gifs
-- [ ] Support metadata reading and writing (exif orientation and color profile support done)
-- [ ] Histogram support
-- [ ] Document type detection
-- [ ] Generic convolution support
-- [ ] Add 128-bit color depth support for all operations (most already use 128-bit internally)
-- [ ] Integrate libimagequant for optimal 8-bit png and gif file sizes.
-- [x] Build command-line tool for users to experiment with during Kickstarter. 
-- [ ] Implement cost estimation for all operations
-- [ ] Add subpixel cropping during scale to compensate for IDCT block scaling where subpixel accuracy can be reduced.
-- [x] Auto-generate animated gifs of the operation graph evolution during execution.  
-- [ ] Create face and object detection plugin for smart cropping. Not in main binary, though. 
-- [ ] Reason about signal-to-noise ratio changes, decoder hints, and determine best codec tuning for optimal quality. Let's make a better photocopier (jpeg). 
-
-
-### API Work
-- [x] Expose an xplat API (using direct operation graph construction) and test via Ruby FFI bindings.
-- [x] Validate basic functionality via simple ruby REST [RIAPI](http://riapi.org) server to wrap libimageflow
-- [x] Design correct error handling protocol so all APIs report detailed stacktrace w/ line numbers and useful error messages for all API surfaces. 
-- [x] Expose flexible I/O interface so a variety if I/O types can be cleanly supported from host languages (I.e, .NET Stream, FILE *, membuffer, circular buffer, etc)
-- [x] Replace direct graph maniupulation with JSON API
-- [ ] Finish API design and test coverage for image composition, whitespace detection/cropping, sharpening, blurring, contrast/saturation, and white balance (algorithms already complete or well defined). 
-- [ ] Create plugin interface for codecs 
-- [ ] Create documentation
-- [ ] Create .NET Full/Core bindings
-- [ ] Create Node bindings 
-
-### Refactorings
-
-
-- [x] Begin porting to Rust. 
-- [x] Explicit control flow in all C code.
-- [x] Full debugging information by recording errors at failure point, then appending the stacktrace (C only)
-- [x] Give user complete control over allocation method and timing.
-- [x] Use [Conan.io](http://conan.io) for package management and builds to eliminate dependency hell.
-- [x] Make codecs and node definitions uniform
-- [x] Establish automated code formatting rules in .clang-format
-- [ ] Replace giflib
-- [ ] replace zlib with zlib-ng
-- [ ] Replace ruby prototype of libimageflow-server with a Rust version
-- [ ] Look into replacing parts of the jpeg codec with concurrent alternatives. 
-- [ ] Add fuzz testing for JSON and I/O 
-- [ ] Find cleaner way to use SSE2 constructs with scalar fallbacks, it is messy in a few areas.
-
-
-# How to build
+# How to build Imageflow from source
 
 We're assuming you've cloned already. 
 
@@ -241,96 +189,6 @@ Windows: `build/Imageflow.sln` will be created during 'win_build_c.bat', but is 
     cd ..
     conan build
     
-
-
-**libimageflow is still in the prototype phase. It is neither API-stable nor secure.**
-
-![](https://www.imageflow.io/images/imageflow-features.svg)
-
-
-## The Problem - Why we need imageflow
-
-Image processing is a ubiquitous requirement. All popular CMSes, many CDNs, and most asset pipelines implement at least image cropping, scaling, and recoding. The need for mobile-friendly websites (and consequently responsive images) makes manual asset creation methods time-prohibitive. Batch asset generation is error-prone, highly latent (affecting UX), and severely restricts web development agility.
-
-![](https://www.imageflow.io/images/imageflow-responsive.svg) ![](https://www.imageflow.io/images/edit-url.gif)
-
-Existing [implementations](https://github.com/nathanaeljones/imaging-wiki) lack tests and are either (a) incorrect, and cause visual artifacts or (b) so slow that they've created industry cargo-cult assumptions about "architectural needs"; I.e, *always* use a queue and workers, because we can gzip large files on the fly but not jpeg encode them (which makes no sense from big O standpoint). This creates artificial infrastructure needs for many small/medium websites, and makes it expensive to offer image processing as part of a CDN or optimization layer. **We can eliminate this problem, and make the web faster for all users.** 
-
-Image resampling is difficult to do correctly, and hard to do efficiently. Few attempts have been made at both. Our algorithm can [resample a 16MP image in 84ms using just one core](http://imageresizing.net/docs/v4/plugins/fastscaling). On a 16-core server, we can resample *15* such images in 262ms. Modern performance on huge matrices is all about cache-friendliness and memory latency. Compare this to 2+ seconds for FreeImage to do the same operation on 1 image with inferior accuracy. ImageMagick must be compiled in (much slower) HDRI to prevent artifacts, and even with OpenMP enabled, using all cores, is still more than an order of magnitude slower (two orders of magnitude without perf tuning).
-
-In addition, it rarely took me more than 45 minutes to discover a vulnerability in the imaging libraries I worked with. Nearly all imaging libraries were designed as offline toolkits for processing trusted image data, accumulating years of features and attack surface area before being moved to the server. Image codecs have an even worse security record than image processing libraries, yet released toolkit binaries often include outdated and vulnerable versions.   
-
-@jcupitt, author of the excellent [libvips](https://github.com/jcupitt/libvips) has this advice for using any imaging library:
-
-> I would say the solution is layered security. 
-
-> * Only enable the load libraries you really need. For example, libvips will open microscope slide images, which most websites will not require.
-* Keep all the image load libraries patched and updated daily.
-* Keep the image handling part of a site in a sandbox: a separate process, or even a separate machine, running as a low-privilege user.
-* Kill and reset the image handling system regularly, perhaps every few images. 
-
-**This accurate advice should be applied to any use of ImageMagick, GraphicsMagick, LibGD, FreeImage, or OpenCV.**
-
-Also, make sure that whichever library you choose has good test coverage and automatic Valgrind and Coverity scanning set up. Also, *read* the Coverity and valgrind reports. 
-
-Unfortunately, in-process or priviledged exeuction is the default in every CMS or image server whose code I've reviewed. 
-
-Given the unlikelyhood of software developers learning correct sandboxing in masse (which isn't even possible to do securely on windows), it seems imperative that we create an imaging library that is safe for in-process use. 
-
-**The proposed solution**: Create a test-covered library that is safe for use with malicious data, and says NO to any of the following
-
-* Operations that do not have predictable resource (RAM/CPU) consumption.
-* Operations that cannot be performed in under 100ms on a 16MP jpeg, on a single i7 core.
-* Operations that undermine security in any way.
-* Dependencies that have a questionable security track-record. LibTiff, etc.
-* Optimizations that cause incorrect results (such as failing to perform color-correction, or scaling in the sRGB space instead of linear). (Or using 8-bit instead of 14-bit per channel when working in linear - this causes egregious truncation/color banding).
-* Abstractions that prevent major optimizations (over 30%). Some of the most common (enforced codec agnosticism) can prevent ~3000% reductions in cost.
-
-
-### Simplifying assumptions
-
-* 32-bit sRGB is our 'common memory format'. To interoperate with other libraries (like Cairo, if users want to do text/vector/svg), we must support endian-specific layout. (BGRA on little-endian, ARGB on big-endian). Endian-agnostic layout may also be required by some libraries; this needs to be confirmed or disproven.
-* We use 128-bit floating point (BGRA, linear, premultiplied) for operations that blend pixels. (Linear RGB in 32-bits causes severe truncation).
-* The uncompressed 32-bit image can fit in RAM. If it can't, we don't do it. This is for web output use, not scientific or mapping applications. Also; at least 1 matrix transposition is required for downsampling an image, and this essentially requires it all to be in memory. No paging to disk, ever!
-* We support jpeg, gif, and png natively. All other codecs are plugins. We only write sRGB output.
-
-## Integration options
-
-![](https://www.imageflow.io/images/imageflow-server-advanced.svg)
-![](https://www.imageflow.io/images/libimageflow-direct.svg)
-
-## The components
-
-* [libjpeg-turbo](https://github.com/imazen/libjpeg-turbo) or [mozjpeg](https://github.com/mozilla/mozjpeg)
-* [libpng](http://www.libpng.org/pub/png/libpng.html)
-* [giflib](http://giflib.sourceforge.net/)
-* [LittleCMS](https://github.com/mm2/Little-CMS)
-* [ImageResizer - FastScaling](https://github.com/imazen/resizer/tree/develop/Plugins/FastScaling) for optimized, single-pass rendering.
-* [ImageResizer](https://github.com/imazen/resizer) (From which we will port most of the domain logic, if not the image decoding/encoding portions)
-* OpenCV or CCV for separate plugin to address face-aware auto-cropping.
-
-All of the "hard" problems have been solved individually; we have proven performant implementations to all the expensive parts of image processing.
-
-We also have room for more optimizations - by integrating with the codecs at the block and scan-line level, we can greatly reduce RAM and resource needs when downsampling large images. Libvips has proven that this approach can be incredibly fast.
-
-A generic graph-based representation of an image processing workflow enables advanced optimizations and potentially lets us pick the fastest or best backend depending upon image format/resolution and desired workflow. Given how easily most operations compose, this could easily make the average workflow 3-8x faster, particularly when we can compose decoding and scaling for certain codecs. 
-
-## API needs.
-
-We should separate our high-level API needs from our low-level primitive needs.
-
-At a high level, users will want (or end up creating) both declarative (result-descriptive) and imperative (ordered operation) APIs. People reason about images in a lot of different ways, and if the tool doesn't match their existing mental pattern, they'll create one that does.
-
-A descriptive API is the most frequently used, and [we drafted RIAPI](https://github.com/riapi/riapi) to standardize the basics.
-
-Among the many shiny advanced features that I've published over the years, a couple have stood out as particularly useful and popular with end-users.
-
-* Whitespace cropping - Apply an energy filter (factoring in all 4 channels!) and then crop off most of the non-energy bounds below a threshold. This saves tremendous time for all e-commerce users.
-* Face-aware cropping - Any user profile photo will need to be cropped to multiple aspect ratios, in order to meet native app and constrained space needs. Face detection can be extremely fast (particularly if your scaling algorithm is fast), and this permits the server to make smart choices about where to center the crop (or if padding is required!).
-
-The former (whitespace cropping) doesn't require any dependencies. The latter, face rectangle detection may or may not be easily extracted from OpenCV/ccv; this might involve a dependency. The data set is also several megabytes, so it justifies a separate assembly anyway.
-
-
 ## How does one learn image processing?
 
 There are not many great textbooks on the subject. Here are some from my personal bookshelf. Between them (and Wikipedia) I was able to put together about 60% of the knowledge I needed; the rest I found by reading the source code to [many popular image processing libraries](https://github.com/nathanaeljones/imaging-wiki?files=1).
