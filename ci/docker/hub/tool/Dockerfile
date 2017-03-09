@@ -13,5 +13,5 @@ RUN mkdir nightly && cd nightly && wget -nv -O ifs.tar.gz https://s3-us-west-1.a
     && tar xvzf ifs.tar.gz && mv ./imageflow_tool ../ && cd .. && rm -rf nightly
 
 
-ENTRYPOINT ["/home/imageflow/imageflow_tpol"]
+ENTRYPOINT ["/home/imageflow/imageflow_tool"]
 CMD ["help"]
