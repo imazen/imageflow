@@ -519,7 +519,10 @@ if [[ "$BUILD_DEBUG" == 'True' ]]; then
 	fi
 fi 
 
-# This folder's existence is relied upon regardless of flags
+## Artifacts folder should exist - and be empty - at the beginning
+if [[ -d "./artifacts/upload" ]]; then 
+  rm -rf ./artifacts/upload
+fi 
 mkdir -p ./artifacts/upload || true
 
 if [[ "$BUILD_RELEASE" == 'True' ]]; then
