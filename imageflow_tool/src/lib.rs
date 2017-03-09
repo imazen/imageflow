@@ -15,7 +15,7 @@ mod cmd_build;
 pub mod self_test;
 
 
-use clap::{App, Arg, SubCommand};
+use clap::{App, Arg, SubCommand, AppSettings};
 
 
 fn artifact_source() -> hlp::process_capture::IncludeBinary{
@@ -28,9 +28,9 @@ pub fn main_with_exit_code() -> i32 {
     let app = App::new("imageflow_tool").version(version.as_ref())
         .arg(  Arg::with_name("capture-to").long("capture-to").takes_value(true)
             .help("Run whatever you're doing in a sub-process, capturing output, input, and version detail")
-        )
+        ).setting(AppSettings::SubcommandRequiredElseHelp).setting(AppSettings::VersionlessSubcommands)
         .subcommand(
-            SubCommand::with_name("diagnose")
+            SubCommand::with_name("diagnose").setting(AppSettings::ArgRequiredElseHelp)
                 .about("Diagnostic utilities")
                 .arg(
                     Arg::with_name("show-compilation-info").long("show-compilation-info")
@@ -51,7 +51,7 @@ pub fn main_with_exit_code() -> i32 {
             SubCommand::with_name("examples")
                 .about("Generate usage examples")
                 .arg(
-                    Arg::with_name("generate").long("generate")
+                    Arg::with_name("generate").long("generate").required(true)
                         .help("Create an 'examples' directory")
                 )
         )
@@ -86,8 +86,8 @@ pub fn main_with_exit_code() -> i32 {
             .arg(Arg::with_name("out").long("out").multiple(true).min_values(1)
                 .help("Replace/add outputs for the operation file"))
             //.arg(Arg::with_name("demo").long("demo").takes_value(true).possible_values(&["example:200x200_png"]))
-            .arg(Arg::with_name("json").long("json").takes_value(true).required(true))
-            .arg(Arg::with_name("response").long("response").takes_value(true))
+            .arg(Arg::with_name("json").long("json").takes_value(true).required(true).help("The JSON operation file."))
+            .arg(Arg::with_name("response").long("response").takes_value(true).help("Write the JSON job result to file instead of stdout"))
             .arg(Arg::with_name("bundle-to").long("bundle-to").takes_value(true).help("Copies the recipe and all dependencies into the given folder, simplifying it."))
             .arg(Arg::with_name("debug-package").long("debug-package").takes_value(true).help("Creates a debug package in the given folder so others can reproduce the behavior you are seeing"))
 
@@ -96,13 +96,13 @@ pub fn main_with_exit_code() -> i32 {
             .about("Run an ImageResizer 4 command string")
             .arg(
                 Arg::with_name("in").long("in").min_values(1)
-                    .multiple(true)
+                    .multiple(true).required(true)
                     .help("Input image")
             )
-            .arg(Arg::with_name("out").long("out").multiple(true).min_values(1)
+            .arg(Arg::with_name("out").long("out").multiple(true).min_values(1).required(true)
                 .help("Output image"))
-            .arg(Arg::with_name("response").long("response").takes_value(true))
-            .arg(Arg::with_name("query").long("query").takes_value(true).required(true))
+            .arg(Arg::with_name("response").long("response").takes_value(true).help("Write the JSON job result to file instead of stdout"))
+            .arg(Arg::with_name("command").long("command").takes_value(true).required(true).help("w=200&h=200&mode=crop&format=png&rotate=90&flip=v - ImageResizer4 style command"))
             .arg(Arg::with_name("bundle-to").long("bundle-to").takes_value(true).help("Copies the recipe and all dependencies into the given folder, simplifying it."))
             .arg(Arg::with_name("debug-package").long("debug-package").takes_value(true).help("Creates a debug package in the given folder so others can reproduce the behavior you are seeing"))
 
@@ -137,18 +137,18 @@ pub fn main_with_exit_code() -> i32 {
 
 
 
-    let build_pair = if let Some(m) = matches.subcommand_matches("v0.1/build") {
+    let build_triple = if let Some(m) = matches.subcommand_matches("v0.1/build") {
         let source = if m.is_present("demo") {
             cmd_build::JobSource::NamedDemo(m.value_of("demo").unwrap().to_owned())
         } else {
             cmd_build::JobSource::JsonFile(m.value_of("json").unwrap().to_owned())
         };
-        Some((m, source))
+        Some((m, source, "v0.1/build"))
     }else if let Some(m) = matches.subcommand_matches("v0.1/ir4"){
-        Some((m,cmd_build::JobSource::Ir4QueryString(m.value_of("query").unwrap().to_owned())))
+        Some((m,cmd_build::JobSource::Ir4QueryString(m.value_of("command").unwrap().to_owned()), "v0.1/ir4"))
     }else{ None };
 
-    if let Some((m, source)) = build_pair{
+    if let Some((m, source, subcommand_name)) = build_triple{
 
         let builder =
             cmd_build::CmdBuild::parse(source, m.values_of_lossy("in"), m.values_of_lossy("out"))
@@ -159,7 +159,7 @@ pub fn main_with_exit_code() -> i32 {
             builder.bundle_to(&dir);
             let curdir = std::env::current_dir().unwrap();
             std::env::set_current_dir(&dir).unwrap();
-            let cap = hlp::process_capture::CaptureTo::create("recipe", None, vec!["--json".to_owned(), "recipe.json".to_owned()], artifact_source());
+            let cap = hlp::process_capture::CaptureTo::create("recipe", None, vec![subcommand_name.to_owned(), "--json".to_owned(), "recipe.json".to_owned()], artifact_source());
             cap.run();
             //Restore current directory
             std::env::set_current_dir(&curdir).unwrap();
