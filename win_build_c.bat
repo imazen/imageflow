@@ -1,4 +1,4 @@
-cmd.exe /c "win_verify_tools.bat"
+cmd.exe /c "ci\wintools\win_verify_tools.bat"
 
 cd c_components
 mkdir build

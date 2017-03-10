@@ -1,4 +1,4 @@
-cmd.exe /c "win_verify_tools.bat"
+cmd.exe /c "ci\wintools\win_verify_tools.bat"
 
 REM set CONAN_ARCH=x86
 set CONAN_ARCH=x86_64
@@ -23,6 +23,11 @@ cargo test
 cargo build --target=%RUST_TARGET% --release
 cargo doc --no-deps
 cd ..
+cd imageflow_server
+cargo test
+cargo build --target=%RUST_TARGET% --release
+cargo doc --no-deps
+cd ..
 
 echo Copying to artifacts\staging
 
@@ -30,8 +35,8 @@ mkdir artifacts
 mkdir artifacts\staging
 mkdir artifacts\staging\doc
 dir target\%RUST_TARGET%\release\
-xcopy /Y target\%RUST_TARGET%\release\flow-proto1.exe  artifacts\staging\
 xcopy /Y target\%RUST_TARGET%\release\imageflow.dll  artifacts\staging\
 xcopy /Y target\%RUST_TARGET%\release\imageflow_tool.exe  artifacts\staging\
+xcopy /Y target\%RUST_TARGET%\release\imageflow_server.exe  artifacts\staging\
 xcopy /Y /d target\doc  artifacts\staging\doc
 
