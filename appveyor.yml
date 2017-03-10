@@ -84,17 +84,17 @@ test_script:
   - cd ..
   - SET RUST_TEST_THREADS=1
   - cd imageflow_core
-  - conan install --build missing -s build_type=Release -s arch=%CONAN_ARCH% -s target_cpu=%TARGET_CPU% 
-  - cargo test --target=%RUST_TARGET% 
-  - cargo doc --no-deps --target=%RUST_TARGET% 
+  - conan install --build missing -s build_type=Release -s arch=%CONAN_ARCH% -s target_cpu=%TARGET_CPU%
+  - cargo test --target=%RUST_TARGET%
+  - cargo doc --no-deps --target=%RUST_TARGET%
   - cd ..
   - cd imageflow_server
-  - cargo test --target=%RUST_TARGET% 
-  - cargo doc --no-deps --target=%RUST_TARGET% 
+  - cargo test --target=%RUST_TARGET%
+  - cargo doc --no-deps --target=%RUST_TARGET%
   - cd ..
   - cd imageflow_tool
-  - cargo test --target=%RUST_TARGET% 
-  - cargo doc --no-deps --target=%RUST_TARGET% 
+  - cargo test --target=%RUST_TARGET%
+  - cargo doc --no-deps --target=%RUST_TARGET%
   - cargo build --target=%RUST_TARGET% --bin imageflow_tool
   - echo. && echo Displaying embedded info (debug build imageflow_tool)
   - ..\target\%RUST_TARGET%\debug\imageflow_tool.exe diagnose --show-compilation-info
@@ -102,20 +102,20 @@ test_script:
   - SET RUST_TEST_THREADS=4
   - cd ..
   - cd imageflow_abi
-  - cargo test --target=%RUST_TARGET% 
-  - cargo doc --no-deps --target=%RUST_TARGET% 
+  - cargo test --target=%RUST_TARGET%
+  - cargo doc --no-deps --target=%RUST_TARGET%
   - cd ..
   - cd imageflow_types
-  - cargo test --target=%RUST_TARGET% 
-  - cargo doc --no-deps --target=%RUST_TARGET% 
+  - cargo test --target=%RUST_TARGET%
+  - cargo doc --no-deps --target=%RUST_TARGET%
   - cd ..
   - cd imageflow_helpers
-  - cargo test --target=%RUST_TARGET% 
-  - cargo doc --no-deps --target=%RUST_TARGET% 
+  - cargo test --target=%RUST_TARGET%
+  - cargo doc --no-deps --target=%RUST_TARGET%
   - cd ..
   - cd imageflow_riapi
-  - cargo test --target=%RUST_TARGET% 
-  - cargo doc --no-deps --target=%RUST_TARGET% 
+  - cargo test --target=%RUST_TARGET%
+  - cargo doc --no-deps --target=%RUST_TARGET%
   - cd ..
   - echo. && echo. && echo. && echo Building optimized binaries && echo. && echo. && echo.
   - cd imageflow_tool
