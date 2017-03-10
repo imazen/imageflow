@@ -14,19 +14,19 @@ matrix:
   include:
   - os: linux
     dist: trusty
-    env: TARGET_CPU=x86-64 PACKAGE_SUFFIX=x86_64-linux-gcc48-eglibc219 DOCKER_IMAGE=imazen/build_if_gcc48 UPLOAD_BUILD=True FETCH_COMMIT_SUFFIX=linux64
+    env: TARGET_CPU=x86-64 PACKAGE_SUFFIX=x86_64-linux-gcc48-eglibc219 DOCKER_IMAGE=imazen/imageflow_build_ubuntu14:latest UPLOAD_BUILD=True FETCH_COMMIT_SUFFIX=linux64
     sudo: required
     services:
     - docker
   - os: linux
     dist: trusty
-    env: TARGET_CPU=sandybridge PACKAGE_SUFFIX=x86_64-sandybridge-linux-gcc54-glibc223 DOCKER_IMAGE=imazen/build_if_gcc54 UPLOAD_BUILD=True UPLOAD_DOCS=True FETCH_COMMIT_SUFFIX=linux64_sandybridge_glibc223
+    env: TARGET_CPU=sandybridge PACKAGE_SUFFIX=x86_64-sandybridge-linux-gcc54-glibc223 DOCKER_IMAGE=imazen/imageflow_build_ubuntu16:latest UPLOAD_BUILD=True UPLOAD_DOCS=True FETCH_COMMIT_SUFFIX=linux64_sandybridge_glibc223
     sudo: required
     services:
     - docker
   - os: linux
     dist: trusty
-    env: TARGET_CPU=haswell PACKAGE_SUFFIX=x86_64-haswell-linux-gcc54-glibc223 DOCKER_IMAGE=imazen/build_if_gcc54 UPLOAD_BUILD=True UPLOAD_DOCS=True FETCH_COMMIT_SUFFIX=linux64_haswell_glibc223
+    env: TARGET_CPU=haswell PACKAGE_SUFFIX=x86_64-haswell-linux-gcc54-glibc223 DOCKER_IMAGE=imazen/imageflow_build_ubuntu16:latest UPLOAD_BUILD=True UPLOAD_DOCS=True FETCH_COMMIT_SUFFIX=linux64_haswell_glibc223
     sudo: required
     services:
     - docker
@@ -38,7 +38,7 @@ matrix:
     rust: nightly-2017-02-05
   - os: linux
     dist: trusty
-    env: UPLOAD_BUILD=False COVERAGE=True CODECOV=True VALGRIND=True BUILD_RELEASE=False CLEAN_RUST_TARGETS=True TARGET_CPU=sandybridge P PACKAGE_SUFFIX=x86_64-sandy_valgrind_linux-gcc54 DOCKER_IMAGE=imazen/build_if_gcc54
+    env: UPLOAD_BUILD=False COVERAGE=True CODECOV=True VALGRIND=True BUILD_RELEASE=False CLEAN_RUST_TARGETS=True TARGET_CPU=sandybridge P PACKAGE_SUFFIX=x86_64-sandy_valgrind_linux-gcc54 DOCKER_IMAGE=imazen/imageflow_build_ubuntu16:latest
     sudo: required
     services:
     - docker
