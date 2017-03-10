@@ -123,7 +123,7 @@ test_script:
   - echo. && echo Displaying embedded info (release build of imageflow_tool) && echo .
   - ..\target\%RUST_TARGET%\release\imageflow_tool.exe diagnose --show-compilation-info
   - ..\target\%RUST_TARGET%\release\imageflow_tool.exe diagnose --self-test
-  - ..\target\%RUST_TARGET%\release\imageflow_tool.exe diagnose --call-panic && exit 0
+  - ..\target\%RUST_TARGET%\release\imageflow_tool.exe diagnose --call-panic || exit 0
   - cd ..
   - cd imageflow_server
   - cargo build --target=%RUST_TARGET% --release
