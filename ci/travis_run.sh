@@ -173,7 +173,8 @@ if [ "${DELETE_UPLOAD_FOLDER}" == "True" ]; then
 else
 	printf "UPLOAD_BUILD=%s, UPLOAD_DOCS=%s\n" "${UPLOAD_BUILD}" "${UPLOAD_DOCS}"
 
-	export URL_LIST="$(printf "\n%s\n\n%s\n\n%s\n\n%s\n\n%s\n" "${ESTIMATED_ARTIFACT_URL}" "${ESTIMATED_ARTIFACT_URL_2}" "${ESTIMATED_ARTIFACT_URL_3}" "${ESTIMATED_DOCS_URL}" "${ESTIMATED_DOCS_URL_2}" | tr -s '\n')"
+	export URL_LIST
+	URL_LIST="$(printf "\n%s\n\n%s\n\n%s\n\n%s\n\n%s\n" "${ESTIMATED_ARTIFACT_URL}" "${ESTIMATED_ARTIFACT_URL_2}" "${ESTIMATED_ARTIFACT_URL_3}" "${ESTIMATED_DOCS_URL}" "${ESTIMATED_DOCS_URL_2}" | tr -s '\n')"
 	
 fi
 

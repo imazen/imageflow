@@ -32,7 +32,7 @@ printf "%s\n" "${TEST_BINARIES[@]}"
 
 # valgrind breaks OpenSSL, so we can't test the server right now
 SKIP_BINARIES+=("$(ls ./"${TEST_BINARIES_TARGET}"debug/test_ir4* || true )")
-echo "Should skip: ${SKIP_BINARIES[@]}"
+echo "Should skip: ${SKIP_BINARIES[*]}"
 
 
 # If we're running as 'conan' (we assume this indicates we are in a docker container)

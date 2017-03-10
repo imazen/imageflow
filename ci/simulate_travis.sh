@@ -35,7 +35,7 @@ shopt -s extglob
 export BUILD_QUIETER="$BUILD_QUIETER"
 
 echo_maybe(){
-	if [[ "$BUILD_QUIETER" -ne "True" ]]; then
+	if [[ "$BUILD_QUIETER" != "True" ]]; then
 	    echo "$1"
 	fi
 }
@@ -82,7 +82,8 @@ fi
 export DOCKER_IMAGE="${DOCKER_IMAGE:-$1}"
 
 ############## Paths for caching
-export SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+export SCRIPT_DIR
+SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd)"
 export TEST_SH_CACHE_DIR="${HOME}/.docker_imageflow_caches"
 #export TEST_SH_CACHE_DIR="${SCRIPT_DIR}/../.docker_imageflow_caches"
 

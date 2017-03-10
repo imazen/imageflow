@@ -2,7 +2,7 @@
 
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 
-cd "$1"
+cd "$1" || exit
 
 "$SCRIPT_DIR/mods/validate_droplet.sh"
 

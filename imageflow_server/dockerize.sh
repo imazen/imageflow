@@ -54,7 +54,8 @@ fi
 
 
 if [[ -d "$BINARY_DIR" ]]; then
-    export BINARY_DIR="$(readlink -f "$BINARY_DIR")"
+    export BINARY_DIR
+    BINARY_DIR="$(readlink -f "$BINARY_DIR")"
 else
     echo "Cannot find $BINARY_DIR"
 fi
@@ -108,9 +109,8 @@ sep_bar "Smoke testing in Docker"
 docker run --rm "${OUTPUT_IMAGE_NAME}"  "${DOCKER_DIR}/${BINARY_NAME}" --version || printf "Failed to run %s --version!\n" "${BINARY_NAME}"
 
 set +e
-docker run --rm "${OUTPUT_IMAGE_NAME}"  "${TEST_ENTRYPOINT[@]}"
 
-if [[ "$?" == "0" ]]; then
+if docker run --rm "${OUTPUT_IMAGE_NAME}"  "${TEST_ENTRYPOINT[@]}"; then
     sep_bar "PASSED"
 else
     sep_bar "FAILED"
@@ -123,6 +123,7 @@ set -e
 if [[ "$TEST_FAILED" == '1' ]]; then
     echo "Entering interactive"
     echo "This creates docker containers and doesn't clean them up. Use this to remove all containers (danger!)"
+    # shellcheck disable=SC2016
     echo 'docker rm `docker ps -aq`'
 
     docker run -i -t   "${OUTPUT_IMAGE_NAME}" /bin/bash
