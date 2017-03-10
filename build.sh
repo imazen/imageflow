@@ -12,8 +12,8 @@ if has_shellcheck; then
 	shellcheck ./ci/*.sh
 	shellcheck ./imageflow_*/*.sh
 	shellcheck ./c_components/*.sh
-	shellcheck ./ci/docker/*.sh
-	shellcheck ./ci/docker/build_*/*.sh
+	shellcheck ./ci/cloud/*.sh
+	shellcheck ./ci/cloud/*/*.sh
 	shellcheck ./ci/nixtools/*.sh
 	# wait until v0.44 for this; global ignores are needed shellcheck ./imageflow_tool/result_testing/*.sh
 	
@@ -88,21 +88,23 @@ fi
 
 if [[ "$IMAGEFLOW_BUILD_OVERRIDE" == 'codestats' ]]; then
   echo "Check on unsafe code statitistics"
-  cd imageflow_core
-  cargo count --unsafe-statistics
-  cd ../imageflow_abi
-  cargo count --unsafe-statistics
-  cd ../imageflow_tool
-  cargo count --unsafe-statistics
-  cd ../imageflow_server
-  cargo count --unsafe-statistics
-  cd ../imageflow_helpers
-  cargo count --unsafe-statistics
-  cd ../imageflow_types
-  cargo count --unsafe-statistics
-  cd ../c_components/lib
-  cargo count --unsafe-statistics
-  cd ..
+  (	  
+  	  cd imageflow_core
+	  cargo count --unsafe-statistics
+	  cd ../imageflow_abi
+	  cargo count --unsafe-statistics
+	  cd ../imageflow_tool
+	  cargo count --unsafe-statistics
+	  cd ../imageflow_server
+	  cargo count --unsafe-statistics
+	  cd ../imageflow_helpers
+	  cargo count --unsafe-statistics
+	  cd ../imageflow_types
+	  cargo count --unsafe-statistics
+	  cd ../c_components/lib
+	  cargo count --unsafe-statistics
+	  
+  )
   exit 0
 fi 
 
