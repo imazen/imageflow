@@ -171,6 +171,11 @@ if [[ "$IMAGEFLOW_BUILD_OVERRIDE" == *'quiet3'* ]]; then
 	export SILENCE_CARGO=True
 	export SILENCE_VALGRIND=True
 fi 
+if [[ "$IMAGEFLOW_BUILD_OVERRIDE" == *'quiet0'* ]]; then
+	export BUILD_QUIETER=False
+	export SILENCE_CARGO=False
+	export SILENCE_VALGRIND=False
+fi 
 if [[ "$IMAGEFLOW_BUILD_OVERRIDE" == *'target64linux'* ]]; then
 	export CARGO_TARGET="x86_64-unknown-linux-gnu"
 fi 
@@ -296,7 +301,7 @@ fi
 export RUST_BACKTRACE=1
 STAMP="+[%H:%M:%S]"
 date_stamp(){
-	if [[ "$BUILD_QUIETER" -ne "True" ]]; then
+	if [[ "$BUILD_QUIETER" != "True" ]]; then
 	    date "$STAMP"
 	fi
 }
