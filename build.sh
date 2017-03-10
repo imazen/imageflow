@@ -44,6 +44,68 @@ if [[ -n "$IMAGEFLOW_BUILD_OVERRIDE" ]]; then
 	export TEST_RUST="False"
 fi 
 
+if [[ "$IMAGEFLOW_BUILD_OVERRIDE" == 'cleanup' ]]; then
+  echo "Cleaning up temporary files created by running tests"
+  ## Remove dotfiles
+  find . -type f -name '*.dot' -exec rm {} +
+  find . -type f -name '*.dot.png' -exec rm {} +
+  ## Remove frames
+  find -type d -name node_frames -exec rm -rf {} \;
+
+  ## Remove frames
+  find -type d -name self_tests -exec rm -rf {} \;
+
+  # Remove cargo fmt tempfiles
+  find . -type f -name '*.rs.bk' -exec rm {} +
+
+  # Remove disassembly files in c_components
+  find . -type f -name '*.c.s' -exec rm {} +
+  exit 0
+fi 
+
+if [[ "$IMAGEFLOW_BUILD_OVERRIDE" == 'purge' ]]; then
+  echo "Purging artifacts and temporary files"
+  rm -rf artifacts
+  rm -rf build
+  rm -rf c_components/build
+  rm -rf target
+  rm libimageflow.so
+  rm c_components/conaninfo.txt
+  rm c_components/conanbuildinfo.cmake
+  rm c_components/conanfile.pyc
+  rm -rf node_frames
+  rm c_components/tests/visuals/compare*.png
+  rm c_components/tests/visuals/*.html
+  rm c_components/tests/visuals/*~
+  rm c_components/cacert.pem
+  rm -rf bin
+  rm ./*.{png,jpg,jpeg,gif,user}
+  rm ./*~
+  conan remove imageflow_c/* -f
+
+  exit 0
+fi 
+
+if [[ "$IMAGEFLOW_BUILD_OVERRIDE" == 'codestats' ]]; then
+  echo "Check on unsafe code statitistics"
+  cd imageflow_core
+  cargo count --unsafe-statistics
+  cd ../imageflow_abi
+  cargo count --unsafe-statistics
+  cd ../imageflow_tool
+  cargo count --unsafe-statistics
+  cd ../imageflow_server
+  cargo count --unsafe-statistics
+  cd ../imageflow_helpers
+  cargo count --unsafe-statistics
+  cd ../imageflow_types
+  cargo count --unsafe-statistics
+  cd ../c_components/lib
+  cargo count --unsafe-statistics
+  cd ..
+  exit 0
+fi 
+
 if [[ "$IMAGEFLOW_BUILD_OVERRIDE" == *'clean'* ]]; then
 	export CLEAN_RUST_TARGETS=True
 	export REBUILD_C=True
