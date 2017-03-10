@@ -55,7 +55,7 @@ install:
   - curl -L -o openssl.exe "https://s3-us-west-2.amazonaws.com/imageflow-resources/tools/Win%BITS%OpenSSL-1_0_2j.exe"
   - openssl.exe /SILENT /VERYSILENT /SP- /DIR="C:\OpenSSL"
   - SET RUST_ARTIFACT=2017-02-05/rust-nightly-%RUST_TARGET%.exe
-  - curl -L -o nasminst.exe http://libgd.blob.core.windows.net/nasm/nasm-2.07-installer.exe
+  - curl -L -o nasminst.exe http://www.nasm.us/pub/nasm/releasebuilds/2.12.02/win64/nasm-2.12.02-installer-x64.exe
   - start /wait nasminst.exe /S
   - echo Fetching https://static.rust-lang.org/dist/%RUST_ARTIFACT%
   - curl -L -o  install_rust.exe https://static.rust-lang.org/dist/%RUST_ARTIFACT%
