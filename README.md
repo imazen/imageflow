@@ -107,11 +107,12 @@ All build scripts support `VALGRIND=True` to enable valgrind instrumentation of 
 
 ## Docker (linux/macOS/WinUbuntu)
 
+This will create caches within `~/.docker_imageflow_caches` specific to the docker image used. Instances will be ephemeral; the only state will be in the caches.
+
 ```bash
-docker pull imazen/imageflow_build_ubuntu16
-cd ci
-./simulate_travis.sh imazen/imageflow_build_ubuntu16
+./build_via_docker.sh debug
 ```
+
 
 ## Linux
 
