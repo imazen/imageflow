@@ -108,9 +108,9 @@ All build scripts support `VALGRIND=True` to enable valgrind instrumentation of 
 ## Docker (linux/macOS/WinUbuntu)
 
 ```bash
-docker pull imazen/build_if_gcc54
-cd ci/docker
-./test.sh build_if_gcc54
+docker pull imazen/imageflow_build_ubuntu16
+cd ci
+./simulate_travis.sh imazen/imageflow_build_ubuntu16
 ```
 
 ## Linux
@@ -118,7 +118,6 @@ cd ci/docker
 We need quite a few packages in order to build all dependencies. You probably have most of these already.
 
 You'll need both Python 3 and Python 2.7. Ruby is optional, but useful for extras.
-
 
 
 ## apt-get for Ubuntu Trusty 
@@ -209,6 +208,22 @@ I would start by reading [Principles of Digital Image Processing: Core Algorithm
 I have found the source code for OpenCV, LibGD, FreeImage, Libvips, Pixman, Cairo, ImageMagick, stb_image, Skia, and FrameWave is very useful for understanding real-world implementations and considerations. Most textbooks assume an infinite plane, ignore off-by-one errors, floating-point limitations, color space accuracy, and operational symmetry within a bounded region. I cannot recommend any textbook  as an accurate reference, only as a conceptual starting point. [I made some notes regarding issues to be aware of when creating an imaging library](https://github.com/imazen/Graphics-vNext/blob/master/aware.md).
 
 Also, keep in mind that computer vision is very different from image creation. In computer vision, resampling accuracy matters very little, for example. But in image creation, you are serving images to photographers, people with far keener visual perception than the average developer. The images produced will be rendered side-by-side with other CSS and images, and the least significant bit of inaccuracy is quite visible. You are competing with Lightroom; with offline tools that produce visually perfect results. End-user software will be discarded if photographers feel it is corrupting their work.
+
+### Source organization
+
+Rust crates
+
+* imageflow_types - Shared types, with JSON serialization
+* imageflow_helpers - Common helper functions and utilities
+* imageflow_riapi - RIAPI and ImageResizer4 compatibility parsing/layout
+* imageflow_core - The main library
+* imageflow_abi - The C-Compatible API - exposes functionality from imageflow_core
+* imageflow_tool
+* imageflow_server
+
+C source is located in ./c_componenets/lib, and ./c_components/tests
+
+Headers for libimageflow.dll are located in `bindings/headers`
 
 ### Known flaws and missing features (as of March 2017)
 
