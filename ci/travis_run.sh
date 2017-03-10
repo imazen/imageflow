@@ -161,6 +161,8 @@ if [ "${TRAVIS_PULL_REQUEST}" == "false" ]; then
 	fi
 	if [ "${UPLOAD_DOCS}" != "True" ]; then
 		export ESTIMATED_DOCS_URL_2=
+		export DOCS_UPLOAD_DIR_2=
+		export DOCS_UPLOAD_DIR=
 		export ESTIMATED_DOCS_URL=
 	fi
 
