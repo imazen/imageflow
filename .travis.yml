@@ -7,6 +7,7 @@ cache:
   directories:
   - "$HOME/.conan/data"
   - "$HOME/.cargo"
+  - "$TRAVIS_BUILD_DIR/c_components/build"
   - "$TRAVIS_BUILD_DIR/target/release"
   - "$TRAVIS_BUILD_DIR/target/debug"
 matrix:
