@@ -143,11 +143,11 @@ sudo apt-get install --no-install-recommends \
 
 If you don't have Xenial or Trusty, adapt the above to work with your distro.
 
-After running apt-get (or your package manager), you'll need conan, cmake, dssim, and Rust Nightly 2017-02-05.
+After running apt-get (or your package manager), you'll need conan, cmake, dssim, and Rust Nightly.
 
 
 ```bash
-curl https://sh.rustup.rs -sSf | sh -s -- -y --default-toolchain nightly-2017-02-05
+curl https://sh.rustup.rs -sSf | sh -s -- -y --default-toolchain nightly-2017-03-04
 sudo pip3 install conan
 ./ci/nixtools/install_cmake.sh
 ./ci/nixtools/install_dssim.sh
