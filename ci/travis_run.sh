@@ -9,7 +9,7 @@ printf "travis_run.sh:  "
 
 ## REQUIRED ALWAYS
 # TRAVIS_BUILD_DIR (root copy of repo, with .git folder present)
-# DOCKER_IMAGE Ex. imazen/build_if_gcc48 imazen/build_if_gcc54 
+# DOCKER_IMAGE Ex. imazen/imageflow_build_ubuntu14:1 imazen/imageflow_build_ubuntu16:latest
 # CI=true
 
 ## REQUIRED FOR SIMULATION

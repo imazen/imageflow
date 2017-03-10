@@ -2,13 +2,17 @@
 set -e
 
 # The purpose of this script is to compile Imageflow locally (or in a CI simulation docker container), then copy it to *another* docker container, and run a basic smoke test. 
-# This can help detect incompatibilites and missing basics, lige glibc. 
+# This can help detect incompatibilites and missing basics, like glibc. 
 
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 export FROM_IMAGE="imazen/imageflow_base_os"
-export BUILD_IMAGE_NAME="build_if_gcc54"
+export BUILD_IMAGE_NAME="imazen/imageflow_build_ubuntu16"
 export OUTPUT_IMAGE_NAME="local/if_testing"
 export DOCKER_DIR="/home/imageflow"
+
+export SAFE_IMAGE_NAME="$BUILD_IMAGE_NAME"
+SAFE_IMAGE_NAME="${SAFE_IMAGE_NAME//\//_}"
+SAFE_IMAGE_NAME="${SAFE_IMAGE_NAME//:/_}"
 
 
 echo "./dockerize.sh $1 $2 $3"
@@ -42,7 +46,7 @@ fi
 if [[ "$2" == 'docker' ]]; then
 
     TARGET_CPU="${TARGET_CPU:-x86-64}"
-    WORKING_DIR="${HOME}/.docker_imageflow_caches/.docker_${BUILD_IMAGE_NAME}_${TARGET_CPU}"
+    WORKING_DIR="${HOME}/.docker_imageflow_caches/.docker_${SAFE_IMAGE_NAME}_${TARGET_CPU}"
 	export BINARY_DIR="${WORKING_DIR}_cache/${TARGET_DIR}${PROFILE}"
 else
 	export BINARY_DIR="${SCRIPT_DIR}/../${TARGET_DIR}${PROFILE}"
@@ -77,7 +81,7 @@ export UPLOAD_DOCS=False
 export IMAGEFLOW_BUILD_OVERRIDE="$OVERRIDE"
 
 if [[ "$2" == 'docker' ]]; then
-	( cd "${SCRIPT_DIR}/../ci/docker" && ./test.sh "${BUILD_IMAGE_NAME}" )
+	( cd "${SCRIPT_DIR}/../ci" && ./simulate_travis.sh "${BUILD_IMAGE_NAME}" )
 else
     ( "${SCRIPT_DIR}/../build.sh" "${OVERRIDE}" )
 

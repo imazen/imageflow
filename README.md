@@ -169,17 +169,15 @@ brew install conan nasm
 
 ## Windows
 
-Don't try to open anything in any IDE until you've run `conan install`, as cmake won't be complete.
+Don't try to open anything in any IDE until you've run `conan install` (via win_build_c.bat), as cmake won't be complete.
 
 You'll need Git, NASM, curl, Rust, OpenSSL, Conan, CMake, and Chocolatey. 
 
 See `ci/wintools` for installation scripts for the above tools.
 
-1. Run `win_verify_tools.bat` to check on your tool status.
-2. Run `win_enter_env.bat` to start a sub-shell with VS tools loaded and a proper PATH
-3. Run `win_build_c.bat` to compile the C components
-4. Run `win_build_rust.bat` to compile everything except the web server.
-5. Run `win_build_rust_server.bat` to compile the HTTP server.
+1. Run `win_enter_env.bat` to start a sub-shell with VS tools loaded and a proper PATH
+2. Run `win_build_c.bat` to compile the C components
+3. Run `win_build_rust.bat` to compile the Rust components
 
 
 Windows: `build/Imageflow.sln` will be created during 'win_build_c.bat', but is only set up for Release mode compilation by default. Switch configuration to Release to get a build. You'll need to run conan install directly if you want to change architecture, since the solutions need to be regeneterated.

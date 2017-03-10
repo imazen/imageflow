@@ -5,11 +5,15 @@ shopt -s extglob
 #FOR THE CLEANEST TEST - 100% ephemeral. 
 # DISABLE_COMPILATION_CACHES=True
 
+# To remove (the LARGE) caches this writes to your home directory 
+# rm -rf ~/.docker_imageflow_caches
+
 #Or, to prevent copying of the host's ~/.cargo directory into the instance
 # COPY_HOST_CARGO_DIR=False
 
 #REQUIRES
-# 1 param of build_if_gcc54
+# 1 param of imazen/imageflow_build_ubuntu16:latest (or whichever image you expect)
+# Certain paths are expected within the image
 
 # COMMON OPTIONAL PARAMS
 # OPEN_DOCKER_BASH_INSTEAD=True
@@ -42,6 +46,10 @@ else
 	exec 9>/dev/null
 fi
 
+if [[ -z "$1" ]]; then
+  echo "You must provide a docker image name as the first argument"
+  exit 1
+fi 
 
 
 echo_maybe "Preparing to build Imageflow"
@@ -56,7 +64,9 @@ export COPY_HOST_CARGO_DIR="${COPY_HOST_CARGO_DIR:-True}"
 
 
 # First parameter to script must be the name of the docker image (excluding imazen/)
-export IMAGE_NAME="$1"
+export SAFE_IMAGE_NAME="$1"
+SAFE_IMAGE_NAME="${SAFE_IMAGE_NAME//\//_}"
+SAFE_IMAGE_NAME="${SAFE_IMAGE_NAME//:/_}"
 
 export TARGET_CPU="${TARGET_CPU:-x86-64}"
 
@@ -69,14 +79,14 @@ else
 fi
 
 # Set DOCKER_IMAGE to override entire name
-export DOCKER_IMAGE="${DOCKER_IMAGE:-imazen/$IMAGE_NAME}"
+export DOCKER_IMAGE="${DOCKER_IMAGE:-$1}"
 
 ############## Paths for caching
-export SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )/$1"
+export SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 export TEST_SH_CACHE_DIR="${HOME}/.docker_imageflow_caches"
 #export TEST_SH_CACHE_DIR="${SCRIPT_DIR}/../.docker_imageflow_caches"
 
-export WORKING_DIR="${TEST_SH_CACHE_DIR}/.docker_${IMAGE_NAME}_${TARGET_CPU}"
+export WORKING_DIR="${TEST_SH_CACHE_DIR}/.docker_${SAFE_IMAGE_NAME}_${TARGET_CPU}"
 export SHARED_CACHE="${TEST_SH_CACHE_DIR}/.shared_cache"
 
 
@@ -85,7 +95,7 @@ echo_maybe "Rsync imageflow/* into dedicated work folder ${WORKING_DIR}"
 echo_maybe
 
 [[ -d "$WORKING_DIR" ]] || mkdir -p "$WORKING_DIR"
-rsync -q -av --delete "${SCRIPT_DIR}/../../.." "$WORKING_DIR" --filter=':- .gitignore'  --exclude="target/" #--exclude-from "${SCRIPT_DIR}/../exclude_paths.txt" 
+rsync -q -av --delete "${SCRIPT_DIR}/.." "$WORKING_DIR" --filter=':- .gitignore'  --exclude="target/"
 (
 	cd "$WORKING_DIR"
 
@@ -160,15 +170,13 @@ rsync -q -av --delete "${SCRIPT_DIR}/../../.." "$WORKING_DIR" --filter=':- .giti
 		fi 
 	fi 
 
-	if [[ "$DOCKER_IMAGE" == 'imazen/build_if_gcc48' ]]; then
+	if [[ "$DOCKER_IMAGE" == 'imazen/imageflow_build_ubuntu14' ]]; then
 		export PACKAGE_SUFFIX="${PACKAGE_SUFFIX:-${ARCH_SUFFIX}-linux-gcc48-eglibc219}"
 	fi
-	if [[ "$DOCKER_IMAGE" == 'imazen/build_if_gcc54' ]]; then
+	if [[ "$DOCKER_IMAGE" == 'imazen/imageflow_build_ubuntu16' ]]; then
 		export PACKAGE_SUFFIX="${PACKAGE_SUFFIX:-${ARCH_SUFFIX}-linux-gcc54-glibc223}"
 	fi
-	if [[ "$DOCKER_IMAGE" == 'imazen/musl' ]]; then
-		export PACKAGE_SUFFIX="${PACKAGE_SUFFIX:-${ARCH_SUFFIX}-linux-musl}"
-	fi
+
 
 	export TRAVIS_BUILD_NUMBER=99999
 	export TRAVIS_JOB_NUMBER=88888
