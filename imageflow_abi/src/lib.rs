@@ -489,7 +489,7 @@ pub fn exercise_error_handling() {
 
         assert!(actual_string.starts_with("User defined error : Test message\n"));
         assert!(actual_string.contains(": in function test_error_handling"));
-        assert!(actual_string.contains("src/lib.rs"));
+        assert!(actual_string.contains("lib.rs"));
 
         // raising a second error should fail
         assert!(!imageflow_context_raise_error(c,
