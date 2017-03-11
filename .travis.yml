@@ -4,10 +4,11 @@ services:
 - docker
 cache:
   ccache: true
-  cargo: true
   directories:
   - "$HOME/.conan/data"
+  - "$HOME/.cargo"
   - "$TRAVIS_BUILD_DIR/c_components/build"
+  - "$TRAVIS_BUILD_DIR/target"
 matrix:
   fast_finish: true
   include:
@@ -30,8 +31,8 @@ matrix:
     services:
     - docker
   - os: osx
-    osx_image: xcode7.3
-    #Should be compatible with El Capitan forward. xcode7.3.1
+    osx_image: xcode8
+    #Should be compatible with El Capitan forward. xcode8
     env: TARGET_CPU=nehalem PACKAGE_SUFFIX=x86_64-mac-osx10_11 UPLOAD_BUILD=True TARGET=x86_64-apple-darwin FETCH_COMMIT_SUFFIX=mac64
     language: rust
     rust: nightly-2017-03-04
