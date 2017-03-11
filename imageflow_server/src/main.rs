@@ -123,12 +123,12 @@ fn main_with_exit_code() -> i32 {
         let is_release = option_env!("GIT_OPTIONAL_TAG").is_some() && !option_env!("GIT_OPTIONAL_TAG").unwrap().is_empty();
         let vars_present = option_env!("GIT_COMMIT").is_some();
 
-        if is_release || !vars_present {
-            if bind != "localhost" && bind != "127.0.0.1" && bind != "::1" {
-                println!("This build of imageflow_server only permits connections from localhost (address {} rejected). It is not secure.", &bind);
-                std::process::exit(64);
-            }
-        }
+//        if is_release || !vars_present {
+//            if bind != "localhost" && bind != "127.0.0.1" && bind != "::1" {
+//                println!("This build of imageflow_server only permits connections from localhost (address {} rejected). It is not secure.", &bind);
+//                std::process::exit(64);
+//            }
+//        }
 
         let combined = format!("{}:{}", bind, port);
 
