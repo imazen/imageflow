@@ -77,6 +77,9 @@ install:
   - copy /Y .\ci\updated_conan_settings.yml C:\Users\appveyor\.conan\settings.yml #Fixes settings.yml
 
 test_script:
+  - if NOT "%CI_TAG%"=="" rmdir /s /q target || exit 0
+  - if NOT "%CI_TAG%"=="" rmdir /s /q c_components/build || exit 0
+  - if NOT "%CI_TAG%"=="" conan remove imageflow_c/* -f || exit 0
   - echo %PATH%
   - conan --version
   - cmake --version
@@ -90,17 +93,15 @@ test_script:
   - conan install --scope build_tests=True -o shared=True --build missing -s build_type=Release -s arch=%CONAN_ARCH% -s target_cpu=%TARGET_CPU% -u ../
   - conan build ../
   - cd ..
+  - conan remove imageflow_c/* -f
   - conan export imazen/testing
   - cd ..
   - SET RUST_TEST_THREADS=1
   - cd imageflow_core
   - conan install --build missing -s build_type=Release -s arch=%CONAN_ARCH% -s target_cpu=%TARGET_CPU%
   - cd ..
-  - cargo check --all --release %TARGET_ARG%
-  - SET RUST_TEST_THREADS=1
   - cargo test --all --release %TARGET_ARG%
   - cargo build --all --release %TARGET_ARG%
-
   - echo. && echo Displaying embedded info (release build of imageflow_tool) && echo .
   - .\%TARGET_DIR%release\imageflow_tool.exe diagnose --show-compilation-info
   - .\%TARGET_DIR%release\imageflow_tool.exe diagnose --self-test
@@ -109,6 +110,7 @@ test_script:
   - .\%TARGET_DIR%release\imageflow_tool.exe diagnose --show-compilation-info
   - echo. && echo Generating docs && echo .
   - rmdir /q /s .\%TARGET_DIR%doc || exit 0
+  - rmdir /q /s .\%TARGET_DIR%debug || exit 0
   - cargo doc --all --no-deps --release %TARGET_ARG%
   - cd .\%TARGET_DIR%doc
   - 7z a -r "..\docs.zip" *
