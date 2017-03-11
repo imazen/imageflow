@@ -623,6 +623,8 @@ if [[ "$BUILD_RELEASE" == 'True' ]]; then
 	cp bindings/headers/*.h  ./artifacts/staging/headers/
 	rm ./artifacts/staging/*.{o,d,rlib} || true
 	rm ./artifacts/staging/*-* || true
+	rm -rf ./artifacts/staging/doc || true
+	rm -rf ./artifacts/staging/release || true
 	cp ${TARGET_DIR}release/flow-proto1 ./artifacts/staging/
 
 	if [[ -n "$RUNTIME_REQUIREMENTS_FILE" ]]; then
