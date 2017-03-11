@@ -875,7 +875,7 @@ pub unsafe extern "C" fn imageflow_job_create(context: *mut Context) -> *mut Job
 /// Looks up the imageflow_io pointer from the provided io_id
 ///
 #[no_mangle]
-pub unsafe extern "C" fn imageflow_job_get_io(_: *mut Context,
+pub unsafe extern "C" fn imageflow_job_get_io(context: *mut Context,
                                               job: *mut Job,
                                               io_id: i32)
                                               -> *mut JobIo {
