@@ -48,7 +48,6 @@ fn tool_path() -> PathBuf {
 
 #[test]
 fn run_imageflow_tool_self_test(){
-
     let tool = tool_path();
     let _  = writeln!(std::io::stdout(), "Testing binary {:?}", &tool);
     imageflow_tool_lib::self_test::run(Some(tool.clone()));

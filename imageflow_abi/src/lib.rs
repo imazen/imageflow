@@ -482,8 +482,14 @@ pub fn exercise_error_handling() {
         let actual_string = ::std::str::from_utf8(&buf[0..buf_used as usize] ).unwrap();
 
 
-        // let expected_string = "User defined error : Test message\nsrc/lib.rs:335: in function test_error_handling\nsrc/lib.rs:342: in function (unknown)\nsrc/lib.rs:20: in function (unknown)\n(unknown):0: in function (unknown)\n";
-        assert!(actual_string.starts_with("User defined error : Test message\nsrc"));
+        // let expected_string = imageflow_abi/src/lib.rs:335: in function test_error_handling
+        //imageflow_abi/src/lib.rs:342: in function (unknown)
+        //imageflow_abi/src/lib.rs:20: in function (unknown)
+         //   (unknown):0: in function (unknown)
+
+        assert!(actual_string.starts_with("User defined error : Test message\n"));
+        assert!(actual_string.contains(": in function test_error_handling"));
+        assert!(actual_string.contains("src/lib.rs"));
 
         // raising a second error should fail
         assert!(!imageflow_context_raise_error(c,
