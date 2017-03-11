@@ -582,7 +582,7 @@ if [[ "$TEST_RELEASE" == 'True' ]]; then
 	echo "Running release mode tests"
 	echo_maybe 
 	date_stamp
-	cargo test --all "${CARGO_ARGS[@]}" --no-deps 1>&7
+	cargo test --all "${CARGO_ARGS[@]}" 1>&7
 	date_stamp
 fi 
 
@@ -591,7 +591,7 @@ if [[ "$BUILD_RELEASE" == 'True' ]]; then
 	echo "Building release mode binaries"
 	echo_maybe 
 	date_stamp
-	cargo build --all "${CARGO_ARGS[@]}" --no-deps 1>&7
+	cargo build --all "${CARGO_ARGS[@]}"  1>&7
 	echo_maybe "Generating docs"
 	date_stamp
 	cargo doc --all "${CARGO_ARGS[@]}" --no-deps 1>&7
