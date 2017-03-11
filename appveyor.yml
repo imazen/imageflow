@@ -116,7 +116,7 @@ test_script:
   - cd .\%TARGET_DIR%doc
   - 7z a -r "..\docs.zip" *
   - cd %APPVEYOR_BUILD_FOLDER%
-  - rmdir /q /s .\artifacts
+  - rmdir /q /s .\artifacts || exit 0
   - mkdir .\artifacts\staging\headers
   - dir %TARGET_DIR%release\
   - xcopy /Y %TARGET_DIR%release\flow-proto1.exe  artifacts\staging\
