@@ -4,7 +4,9 @@ environment:
     PYTHON_VERSION: "2.7.8"
     PYTHON_ARCH: "32"
     RUST_BACKTRACE: 1
+    CARGO_INCREMENTAL: 1
     TARGET_CPU: sandybridge
+    RUST_TOOLCHAIN: nightly-2017-03-04
 
 configuration: Release
 
@@ -12,6 +14,11 @@ platform:
 - x64
 - x86
 
+cache:
+  - '%USERPROFILE%\.cargo'
+  - '%USERPROFILE%\.conan'
+  - 'c_components\build'
+  - 'target'
 matrix:
   fast_finish: true
 
@@ -44,25 +51,29 @@ install:
   - SET "ESTIMATED_ARTIFACT_URL=https://ci.appveyor.com/api/buildjobs/%APPVEYOR_JOB_ID%/artifacts/%ARTIFACT_NAME%.zip"
   - echo. && echo. && echo Estimated upload URL && echo. && echo %ESTIMATED_ARTIFACT_URL% && echo. && echo.
   - echo "GIT_COMMIT=%GIT_COMMIT%" && echo "CI_STRING=%CI_STRING%" && echo "CI_TAG=%CI_TAG%" && echo "CI_RELATED_BRANCH=%CI_RELATED_BRANCH%" && echo "CI_PULL_REQUEST_INFO=%CI_PULL_REQUEST_INFO%" && echo "ARTIFACT_SERIES_NAME=%ARTIFACT_SERIES_NAME%"
-  - echo. && echo. echo Installing
+  - echo.
+  - echo. && echo. echo Installing tools
   - if "%PLATFORM%"=="x86" SET RUST_TARGET=i686-pc-windows-msvc
   - if "%PLATFORM%"=="x64" SET RUST_TARGET=x86_64-pc-windows-msvc
+  - if "%PLATFORM%"=="x86" SET TARGET_DIR=target\ #i686-pc-windows-msvc\
+  - if "%PLATFORM%"=="x64" SET TARGET_DIR=target\ #x86_64-pc-windows-msvc\
+  - SET TARGET_ARG= #--target=%RUST_TARGET%
   - if "%PLATFORM%"=="x86" SET BITS=32
   - if "%PLATFORM%"=="x64" SET BITS=64
   - if "%PLATFORM%"=="x86" set CONAN_ARCH=x86
   - if "%PLATFORM%"=="x64" set CONAN_ARCH=x86_64
   - echo "RUST_TARGET=%RUST_TARGET%, TARGET=%TARGET%, BITS=%BITS%, CPU_TARGET=%CPU_TARGET% CONAN_ARCH=%CONAN_ARCH% RUSTFLAGS=%RUSTFLAGS%"
-  - curl -L -o openssl.exe "https://s3-us-west-2.amazonaws.com/imageflow-resources/tools/Win%BITS%OpenSSL-1_0_2j.exe"
-  - openssl.exe /SILENT /VERYSILENT /SP- /DIR="C:\OpenSSL"
-  - SET RUST_ARTIFACT=2017-02-05/rust-nightly-%RUST_TARGET%.exe
+  - SET RUSTUP_INIT=https://static.rust-lang.org/rustup/dist/%RUST_TARGET%/rustup-init.exe
+  - echo Fetching %RUSTUP_INIT%
+  - curl -L -o  rustup-init.exe %RUSTUP_INIT%
+  - rustup-init.exe -y --default-toolchain %RUST_TOOLCHAIN% --default-host %RUST_TARGET%
+  - set PATH=%PATH%;%PYTHON%/Scripts/;C:\Program Files (x86)\nasm;%HOMEPATH%\.cargo\bin
+  - echo. && echo. && echo Installing NASM
   - curl -L -o nasminst.exe http://www.nasm.us/pub/nasm/releasebuilds/2.12.02/win64/nasm-2.12.02-installer-x64.exe
   - start /wait nasminst.exe /S
-  - echo Fetching https://static.rust-lang.org/dist/%RUST_ARTIFACT%
-  - curl -L -o  install_rust.exe https://static.rust-lang.org/dist/%RUST_ARTIFACT%
-  - install_rust.exe /VERYSILENT /NORESTART /DIR="C:\Program Files (x86)\Rust"
-  - set PATH=%PATH%;%PYTHON%/Scripts/;C:\Program Files (x86)\nasm;C:\Program Files (x86)\Rust\bin
+  - echo. && echo. && echo Installing Conan
   - pip.exe install conan
-  - conan user # It creates the conan data directory
+  - conan user # Creates the conan data directory
 
 
 test_script:
@@ -85,66 +96,31 @@ test_script:
   - SET RUST_TEST_THREADS=1
   - cd imageflow_core
   - conan install --build missing -s build_type=Release -s arch=%CONAN_ARCH% -s target_cpu=%TARGET_CPU%
-  - cargo test --target=%RUST_TARGET%
-  - cargo doc --no-deps --target=%RUST_TARGET%
   - cd ..
-  - cd imageflow_server
-  - cargo test --target=%RUST_TARGET%
-  - cargo doc --no-deps --target=%RUST_TARGET%
-  - cd ..
-  - cd imageflow_tool
-  - cargo test --target=%RUST_TARGET%
-  - cargo doc --no-deps --target=%RUST_TARGET%
-  - cargo build --target=%RUST_TARGET% --bin imageflow_tool
-  - echo. && echo Displaying embedded info (debug build imageflow_tool)
-  - ..\target\%RUST_TARGET%\debug\imageflow_tool.exe diagnose --show-compilation-info
-  - ..\target\%RUST_TARGET%\debug\imageflow_tool.exe diagnose --self-test
-  - SET RUST_TEST_THREADS=4
-  - cd ..
-  - cd imageflow_abi
-  - cargo test --target=%RUST_TARGET%
-  - cargo doc --no-deps --target=%RUST_TARGET%
-  - cd ..
-  - cd imageflow_types
-  - cargo test --target=%RUST_TARGET%
-  - cargo doc --no-deps --target=%RUST_TARGET%
-  - cd ..
-  - cd imageflow_helpers
-  - cargo test --target=%RUST_TARGET%
-  - cargo doc --no-deps --target=%RUST_TARGET%
-  - cd ..
-  - cd imageflow_riapi
-  - cargo test --target=%RUST_TARGET%
-  - cargo doc --no-deps --target=%RUST_TARGET%
-  - cd ..
-  - echo. && echo. && echo. && echo Building optimized binaries && echo. && echo. && echo.
-  - cd imageflow_tool
-  - cargo build --target=%RUST_TARGET% --release
+  - cargo check --all --release %TARGET_ARG%
+  - SET RUST_TEST_THREADS=1
+  - cargo test --all --release %TARGET_ARG%
+  - cargo build --all --release %TARGET_ARG%
+
   - echo. && echo Displaying embedded info (release build of imageflow_tool) && echo .
-  - ..\target\%RUST_TARGET%\release\imageflow_tool.exe diagnose --show-compilation-info
-  - ..\target\%RUST_TARGET%\release\imageflow_tool.exe diagnose --self-test
-  - ..\target\%RUST_TARGET%\release\imageflow_tool.exe diagnose --call-panic || exit 0
-  - cd ..
-  - cd imageflow_server
-  - cargo build --target=%RUST_TARGET% --release
+  - ..\%TARGET_DIR%release\imageflow_tool.exe diagnose --show-compilation-info
+  - ..\%TARGET_DIR%release\imageflow_tool.exe diagnose --self-test
+  - ..\%TARGET_DIR%release\imageflow_tool.exe diagnose --call-panic || exit 0
   - echo. && echo Displaying embedded info (release build of imageflow_server) && echo .
-  - ..\target\%RUST_TARGET%\release\imageflow_tool.exe diagnose --show-compilation-info
-  - cd ..
-  - cd imageflow_abi
-  - cargo build --target=%RUST_TARGET% --release
-  - cd ..
+  - ..\%TARGET_DIR%release\imageflow_tool.exe diagnose --show-compilation-info
+
   - mkdir artifacts
   - mkdir artifacts\staging
   - mkdir artifacts\staging\doc
   - mkdir artifacts\staging\headers
-  - dir target\%RUST_TARGET%\release\
-  - xcopy /Y target\%RUST_TARGET%\release\flow-proto1.exe  artifacts\staging\
-  - xcopy /Y target\%RUST_TARGET%\release\imageflow_server.exe  artifacts\staging\
-  - xcopy /Y target\%RUST_TARGET%\release\imageflow.dll  artifacts\staging\
-  - xcopy /Y target\%RUST_TARGET%\release\*.pdb  artifacts\staging\
-  - xcopy /Y target\%RUST_TARGET%\release\imageflow_tool.exe  artifacts\staging\
+  - dir %TARGET_DIR%release\
+  - xcopy /Y %TARGET_DIR%release\flow-proto1.exe  artifacts\staging\
+  - xcopy /Y %TARGET_DIR%release\imageflow_server.exe  artifacts\staging\
+  - xcopy /Y %TARGET_DIR%release\imageflow.dll  artifacts\staging\
+  - xcopy /Y %TARGET_DIR%release\*.pdb  artifacts\staging\
+  - xcopy /Y %TARGET_DIR%release\imageflow_tool.exe  artifacts\staging\
   - xcopy /Y bindings\headers\*.h  artifacts\staging\headers
-  - xcopy /Y /E target\%RUST_TARGET%\doc  artifacts\staging\doc
+  - xcopy /Y /E %TARGET_DIR%doc  artifacts\staging\doc
   - cd artifacts\staging
   - 7z a -r "..\..\%ARTIFACT_NAME%.zip" *
   - cd ..\..
