@@ -61,7 +61,7 @@ echo_maybe(){
 }
 
 if [ -n "${TRAVIS_BUILD_DIR}" ]; then
-  cd "${TRAVIS_BUILD_DIR}"
+	cd "${TRAVIS_BUILD_DIR}"
 fi
 
 STAMP="+[%H:%M:%S]"
@@ -193,6 +193,8 @@ export VALGRIND="${VALGRIND:-False}"
 ## Force rebuild of the final binaries (not even the shared libraries of imageflow) when TRAVIS_TAG=true
 if [[ -n "$TRAVIS_TAG" ]]; then 
 	export CLEAN_RUST_TARGETS="${CLEAN_RUST_TARGETS:-True}"
+	export CLEAN_RELEASE=True
+	export CLEAN_DEBUG=True
 else
 	export CLEAN_RUST_TARGETS="${CLEAN_RUST_TARGETS:-False}"
 fi
@@ -201,15 +203,28 @@ fi
 #### Parameters passed through docker to build.sh (or used by travis_*.sh) ####
 
 # Build docs; build release mode binaries (separate pass from testing); populate ./artifacts folder
-export BUILD_RELEASE="${BUILD_RELEASE:-True}"
+
 # Run all tests (both C and Rust) under Valgrind
 export VALGRIND="${VALGRIND:-False}"
+
+export CHECK_DEBUG="${CHECK_DEBUG:-False}"
+export CLEAN_DEBUG="${CLEAN_DEBUG:-False}"
+export BUILD_DEBUG="${BUILD_DEBUG:-False}"
+export TEST_DEBUG="${TEST_DEBUG:-False}"
+
+if [[ "$VALGRIND" == "True" ]]; then
+	export BUILD_RELEASE="${BUILD_RELEASE:-False}"
+	export TEST_RELEASE="${TEST_RELEASE:-False}"
+
+	export TEST_DEBUG=True
+	export TEST_C=True
+else
+	export BUILD_RELEASE="${BUILD_RELEASE:-True}"
+	export TEST_RELEASE="${TEST_RELEASE:-True}"
+fi 
+
 # Compile and run C tests
 export TEST_C="${TEST_C:-True}"
-# Build C Tests in debug mode for clearer valgrind output
-export TEST_C_DEBUG_BUILD="${TEST_C_DEBUG_BUILD:${VALGRIND}}"
-# Run Rust tests
-export TEST_RUST="${TEST_RUST:-True}"
 # Enables generated coverage information for the C portion of the code. 
 # Also forces C tests to build in debug mode
 export COVERAGE="${COVERAGE:-False}"
@@ -225,19 +240,29 @@ export TARGET_CPU="${TARGET_CPU:-x86-64}"
 export TUNE_CPU="${TUNE_CPU}"
 
 if [ -n "${TRAVIS_BUILD_DIR}" ]; then
-  cd "${TRAVIS_BUILD_DIR}"
+	cd "${TRAVIS_BUILD_DIR}"
 fi
 
 
 DOCKER_ENV_VARS=(
-  "-e"
+	"-e"
 	 "CI=${CI}"
 	 "-e"
 	 "TARGET_CPU=${TARGET_CPU}"
 	 "-e"
 	 "IMAGEFLOW_BUILD_OVERRIDE=${IMAGEFLOW_BUILD_OVERRIDE}"
+		"-e"
+	 "CLEAN_DEBUG=${CLEAN_DEBUG}"
+	"-e"
+	 "CHECK_DEBUG=${CHECK_DEBUG}"
+		"-e"
+	 "TEST_DEBUG=${TEST_DEBUG}"
 	"-e"
 	 "BUILD_DEBUG=${BUILD_DEBUG}"
+	"-e"
+	 "CLEAN_RELEASE=${CLEAN_RELEASE}"
+	"-e"
+	 "TEST_RELEASE=${TEST_RELEASE}"
 	"-e"
 	 "BUILD_RELEASE=${BUILD_RELEASE}"
 	"-e"
@@ -245,13 +270,7 @@ DOCKER_ENV_VARS=(
 	"-e"
 	 "TEST_C=${TEST_C}"
 	"-e"
-	 "TEST_C_DEBUG_BUILD=${TEST_C_DEBUG_BUILD}"
-	"-e"
-	 "TEST_RUST=${TEST_RUST}"
-	"-e"
 	 "CLEAN_RUST_TARGETS=${CLEAN_RUST_TARGETS}"
-	"-e"
-	 "IMAGEFLOW_SERVER=${IMAGEFLOW_SERVER}"
 	"-e"
 	 "TUNE_CPU=${TUNE_CPU}"
 	"-e"
@@ -274,7 +293,7 @@ DOCKER_ENV_VARS=(
 	 "ARTIFACT_UPLOAD_PATH_2=${ARTIFACT_UPLOAD_PATH_2}" 
 	"-e"
 	 "ARTIFACT_UPLOAD_PATH_3=${ARTIFACT_UPLOAD_PATH_3}" 
-    "-e"
+		"-e"
 	 "GIT_COMMIT=${GIT_COMMIT}" 
 	"-e"
 	 "GIT_COMMIT_SHORT=${GIT_COMMIT_SHORT}" 
@@ -353,8 +372,8 @@ else
 
 		export DOCKER_TTY_FLAG=
 		if [[ -t 1 ]]; then
-		  export DOCKER_TTY_FLAG="--tty"
-		  DOCKER_INVOCATION=(docker run "--interactive" "$DOCKER_TTY_FLAG" "--rm")
+			export DOCKER_TTY_FLAG="--tty"
+			DOCKER_INVOCATION=(docker run "--interactive" "$DOCKER_TTY_FLAG" "--rm")
 		fi
 
 		
@@ -364,6 +383,15 @@ else
 	set -x
 	"${DOCKER_INVOCATION[@]}" -v "${TRAVIS_BUILD_DIR}:/home/conan/imageflow" "${DOCKER_CACHE_VARS[@]}" "${DOCKER_ENV_VARS[@]}" "${DOCKER_IMAGE}" "${DOCKER_COMMAND[@]}" 
 	set +x
+fi
+if [[ "$SIM_CI" != 'True' ]]; then
+	if [[ -n "$CI_TAG" ]]; then
+		# We always cleanup after a tagged release; no point in wasting cache space
+		rm -rf ./target
+		rm -rf ./c_components/build
+		rm -rf ~/.conan
+		rm -rf ~/.cargo
+	fi 
 fi
 
 if [[ "$DELETE_UPLOAD_FOLDER" == 'True' ]]; then

@@ -20,8 +20,12 @@ shopt -s extglob
 # VALGRIND=True
 # SIM_COVERAGE=True
 # TEST_C
+# CLEAN_RELEASE
+# TEST_RELEASE
 # BUILD_RELEASE
-# TEST_RUST
+# CHECK_DEBUG
+# TEST_DEBUG
+# BUILD_DEBUG
 # CLEAN_RUST_TARGETS
 # UPLOAD_BUILD, UPLOAD_DOCS
 # DISABLE_COMPILATION_CACHES=True
@@ -31,12 +35,11 @@ shopt -s extglob
 # DOCKER_IMAGE override
 # PACKAGE_SUFFIX like x86_64-linux-gcc48-eglibc219
 # FETCH_COMMIT_SUFFIX like mac64
-# TEST_C_DEBUG_BUILD
 export BUILD_QUIETER="$BUILD_QUIETER"
 
 echo_maybe(){
 	if [[ "$BUILD_QUIETER" != "True" ]]; then
-	    echo "$1"
+			echo "$1"
 	fi
 }
 
@@ -47,8 +50,8 @@ else
 fi
 
 if [[ -z "$1" ]]; then
-  echo "You must provide a docker image name as the first argument"
-  exit 1
+	echo "You must provide a docker image name as the first argument"
+	exit 1
 fi 
 
 
@@ -73,9 +76,9 @@ export TARGET_CPU="${TARGET_CPU:-x86-64}"
 export CARGO_TARGET="${CARGO_TARGET:-}"
 
 if [[ -n "$CARGO_TARGET" ]]; then
-    export TARGET_DIR="target/${CARGO_TARGET}/"
+		export TARGET_DIR="target/${CARGO_TARGET}/"
 else 
-    export TARGET_DIR="target/"
+		export TARGET_DIR="target/"
 fi
 
 # Set DOCKER_IMAGE to override entire name
@@ -143,8 +146,8 @@ rsync -q -av --delete "${SCRIPT_DIR}/.." "$WORKING_DIR" --filter=':- .gitignore'
 	fi 
 	if [[ -n "$IMAGEFLOW_DOCKER_TEST_MAP_EXTRA_DIR" ]]; then
 		SIM_DOCKER_CACHE_VARS+=(
-		    -v 
-		    "${WORKING_DIR}_cache/${IMAGEFLOW_DOCKER_TEST_MAP_EXTRA_DIR}:/home/conan/imageflow/${IMAGEFLOW_DOCKER_TEST_MAP_EXTRA_DIR}"		
+				-v 
+				"${WORKING_DIR}_cache/${IMAGEFLOW_DOCKER_TEST_MAP_EXTRA_DIR}:/home/conan/imageflow/${IMAGEFLOW_DOCKER_TEST_MAP_EXTRA_DIR}"		
 		)
 	fi 
 	# The very last is unique to test.sh (for speed?)
@@ -197,11 +200,10 @@ rsync -q -av --delete "${SCRIPT_DIR}/.." "$WORKING_DIR" --filter=':- .gitignore'
 	## MOST LIKELY TO GET POLLUTED
 	# GIT_* vars
 	# BUILD_RELEASE
+	# TEST_RELEASE
+	# CLEAN_RELEASE
 	# TEST_C
-	# TEST_C_DEBUG_BUILD
-	# TEST_RUST
 	# CLEAN_RUST_TARGETS
-	# IMAGEFLOW_SERVER
 
 	#In some configurations, true
 	export COVERAGE=${SIM_COVERAGE:-False}
@@ -230,20 +232,21 @@ rsync -q -av --delete "${SCRIPT_DIR}/.." "$WORKING_DIR" --filter=':- .gitignore'
 		"SIM_OPEN_BASH=${SIM_OPEN_BASH}"
 		"SIM_DOCKER_CACHE_VARS="
 		"${SIM_DOCKER_CACHE_VARS[@]}"
+		"CHECK_DEBUG=${CHECK_DEBUG}"
+		"TEST_DEBUG=${TEST_DEBUG}"
 		"BUILD_DEBUG=${BUILD_DEBUG}"
+		"CLEAN_RELEASE=${CLEAN_RELEASE}"
+		"TEST_RELEASE=${TEST_RELEASE}"
+		"BUILD_RELEASE=${BUILD_RELEASE}"
 		"BUILD_QUIETER=${BUILD_QUIETER}"
 		"IMAGEFLOW_BUILD_OVERRIDE=${IMAGEFLOW_BUILD_OVERRIDE}"
-		"BUILD_RELEASE=${BUILD_RELEASE}"
 		"CLEAN_RUST_TARGETS=${CLEAN_RUST_TARGETS}"
 		"TRAVIS_BUILD_NUMBER=${TRAVIS_BUILD_NUMBER}"
 		"TRAVIS_JOB_NUMBER=${TRAVIS_JOB_NUMBER}"
 		"TRAVIS_BRANCH=${TRAVIS_BRANCH}"
 		"TRAVIS_TAG=${TRAVIS_TAG}"
 		"FETCH_COMMIT_SUFFIX=${FETCH_COMMIT_SUFFIX}"
-		"TEST_C_DEBUG_BUILD=${TEST_C_DEBUG_BUILD}"
-		"TEST_RUST=${TEST_RUST}"
 		"TEST_C=${TEST_C}"
-		"IMAGEFLOW_SERVER=${IMAGEFLOW_SERVER}"
 		"COVERAGE=${COVERAGE}"
 		"COVERALLS=${COVERALLS}"
 		"COVERALLS_TOKEN=${COVERALLS_TOKEN}"
