@@ -144,7 +144,6 @@ if [[ "$IMAGEFLOW_BUILD_OVERRIDE" == *'codecov'* ]]; then
 	export BUILD_QUIETER=False
 	export SILENCE_CARGO=True
 	export CODECOV=True
-	export CODECOV_TOKEN="8dc28cae-eb29-4d85-b0be-d20c34ac2c30"
 	IMAGEFLOW_BUILD_OVERRIDE="${IMAGEFLOW_BUILD_OVERRIDE/codecov/}"
 fi 
 
@@ -239,6 +238,7 @@ export LCOV="${LCOV:-False}"
 # Rebuild C part of libimageflow (release mode only)
 export REBUILD_C="${REBUILD_C:-True}"
 # TODO: CLEAN_C
+export CODECOV_TOKEN="${CODECOV_TOKEN:-8dc28cae-eb29-4d85-b0be-d20c34ac2c30}"
 
 export CLEAN_DEBUG="${CLEAN_DEBUG:-False}"
 export BUILD_DEBUG="${BUILD_DEBUG:-False}"
