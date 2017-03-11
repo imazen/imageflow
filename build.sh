@@ -641,14 +641,17 @@ if [[ "$BUILD_RELEASE" == 'True' ]]; then
 	echo "Copying stuff to artifacts folder"
 	date_stamp 
 	date_stamp 
-	mkdir -p artifacts/staging/doc || true
 	mkdir -p artifacts/staging/headers || true
+  (
+    cd ./${TARGET_DIR}doc
+    tar czf "../docs.tar.gz" ./*
+  )
+  mv ./${TARGET_DIR}docs.tar.gz ./artifacts/staging/
+
 
 	cp -R ${TARGET_DIR}release/{flow-proto1,imageflow_,libimageflow}*  ./artifacts/staging/
-	rm ./artifacts/staging/*.rlib || true
 	cp bindings/headers/*.h  ./artifacts/staging/headers/
-	cp -a ${TARGET_DIR}doc ./artifacts/staging/
-	rm ./artifacts/staging/*.{o,d} || true
+	rm ./artifacts/staging/*.{o,d,rlib} || true
 
 	if [[ -n "$RUNTIME_REQUIREMENTS_FILE" ]]; then
 		cp "${RUNTIME_REQUIREMENTS_FILE}" ./artifacts/staging/runtime_requirements.txt 
@@ -681,8 +684,6 @@ if [[ "$BUILD_RELEASE" == 'True' ]]; then
 		mkdir -p "./artifacts/upload/${DOCS_UPLOAD_DIR_2}" || true
 		cp -a ${TARGET_DIR}doc/* "./artifacts/upload/${DOCS_UPLOAD_DIR_2}/"
 	fi
-
-
 
 fi
 echo_maybe
