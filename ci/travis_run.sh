@@ -392,6 +392,14 @@ if [[ "$SIM_CI" != 'True' ]]; then
 		rm -rf ~/.conan
 		rm -rf ~/.cargo
 	fi 
+
+	# Don't let the cache become polluted by a build profile we aren't doing
+	if [[ "$BUILD_RELEASE" == "False" ]]; then
+		rm -rf ./target/release
+	fi
+	if [[ "$BUILD_DEBUG" == "False" ]]; then
+		rm -rf ./target/debug
+	fi
 fi
 
 if [[ "$DELETE_UPLOAD_FOLDER" == 'True' ]]; then
