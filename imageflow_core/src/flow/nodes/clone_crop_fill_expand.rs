@@ -22,6 +22,9 @@ fn copy_rect_def() -> NodeDefinition {
                         if (*input).fmt != (*canvas).fmt {
                             panic!("Can't copy between bitmaps with different pixel formats")
                         }
+                        if input == canvas{
+                            panic!("Canvas and input must be different bitmaps for CopyRect to work!")
+                        }
 
                         // TODO: Implement faster path for common (full clone) path
                         //    if (info->x == 0 && info->from_x == 0 && info->from_y == 0 && info->y == 0 && info->width == input->w

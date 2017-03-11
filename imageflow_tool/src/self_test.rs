@@ -428,6 +428,7 @@ pub fn run(tool_location: Option<PathBuf>) -> i32 {
     {
         // Test having both input and canvas point to the same bitmap
         // This should fail
+        // TODO: THis should fail in a consistent way, as a bad parameter situation
         let a = fluent::fluently().canvas_bgra32(10, 10, s::Color::Black);
         let b = a.branch().copy_rect_from(a.branch(), 0, 0, 5, 5, 0, 0);
         let recipe = s::Build001 {
