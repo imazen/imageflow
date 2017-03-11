@@ -67,18 +67,17 @@ install:
   - echo Fetching %RUSTUP_INIT%
   - curl -L -o  rustup-init.exe %RUSTUP_INIT%
   - rustup-init.exe -y --default-toolchain %RUST_TOOLCHAIN% --default-host %RUST_TARGET%
-  - set PATH=%PATH%;%PYTHON%/Scripts/;C:\Program Files (x86)\nasm;%HOMEPATH%\.cargo\bin
+  - set PATH=%PATH%;%PYTHON%/Scripts/;C:\Program Files (x86)\nasm;%USERPROFILE%\.cargo\bin
   - echo. && echo. && echo Installing NASM
   - curl -L -o nasminst.exe http://www.nasm.us/pub/nasm/releasebuilds/2.12.02/win64/nasm-2.12.02-installer-x64.exe
   - start /wait nasminst.exe /S
   - echo. && echo. && echo Installing Conan
   - pip.exe install conan
   - conan user # Creates the conan data directory
-
+  - copy /Y .\ci\updated_conan_settings.yml C:\Users\appveyor\.conan\settings.yml #Fixes settings.yml
 
 test_script:
   - echo %PATH%
-  - copy /Y .\ci\updated_conan_settings.yml C:\Users\appveyor\.conan\settings.yml
   - conan --version
   - cmake --version
   - rustc -V
@@ -103,15 +102,16 @@ test_script:
   - cargo build --all --release %TARGET_ARG%
 
   - echo. && echo Displaying embedded info (release build of imageflow_tool) && echo .
-  - ..\%TARGET_DIR%release\imageflow_tool.exe diagnose --show-compilation-info
-  - ..\%TARGET_DIR%release\imageflow_tool.exe diagnose --self-test
-  - ..\%TARGET_DIR%release\imageflow_tool.exe diagnose --call-panic || exit 0
+  - .\%TARGET_DIR%release\imageflow_tool.exe diagnose --show-compilation-info
+  - .\%TARGET_DIR%release\imageflow_tool.exe diagnose --self-test
+  - .\%TARGET_DIR%release\imageflow_tool.exe diagnose --call-panic || exit 0
   - echo. && echo Displaying embedded info (release build of imageflow_server) && echo .
-  - ..\%TARGET_DIR%release\imageflow_tool.exe diagnose --show-compilation-info
-
-  - mkdir artifacts
-  - mkdir artifacts\staging
-  - mkdir artifacts\staging\doc
+  - .\%TARGET_DIR%release\imageflow_tool.exe diagnose --show-compilation-info
+  - echo. && echo Generating docs && echo .
+  - rmdir /q /s .\%TARGET_DIR%doc || exit 0
+  - cargo doc --all --no-deps --release %TARGET_ARG%
+  - cd .\%TARGET_DIR%doc
+  - 7z a -r "..\docs.zip" *
   - mkdir artifacts\staging\headers
   - dir %TARGET_DIR%release\
   - xcopy /Y %TARGET_DIR%release\flow-proto1.exe  artifacts\staging\
@@ -120,7 +120,7 @@ test_script:
   - xcopy /Y %TARGET_DIR%release\*.pdb  artifacts\staging\
   - xcopy /Y %TARGET_DIR%release\imageflow_tool.exe  artifacts\staging\
   - xcopy /Y bindings\headers\*.h  artifacts\staging\headers
-  - xcopy /Y /E %TARGET_DIR%doc  artifacts\staging\doc
+  - xcopy /Y /E %TARGET_DIR%docs.zip  artifacts\staging\
   - cd artifacts\staging
   - 7z a -r "..\..\%ARTIFACT_NAME%.zip" *
   - cd ..\..
