@@ -582,7 +582,7 @@ if [[ "$TEST_RELEASE" == 'True' ]]; then
 	echo "Running release mode tests"
 	echo_maybe 
 	date_stamp
-	cargo test --all "${CARGO_ARGS[@]}" 1>&7
+	cargo test --all --release "${CARGO_ARGS[@]}" 1>&7
 	date_stamp
 fi 
 
@@ -591,10 +591,10 @@ if [[ "$BUILD_RELEASE" == 'True' ]]; then
 	echo "Building release mode binaries"
 	echo_maybe 
 	date_stamp
-	cargo build --all "${CARGO_ARGS[@]}"  1>&7
+	cargo build --all --release "${CARGO_ARGS[@]}"  1>&7
 	echo_maybe "Generating docs"
 	date_stamp
-	cargo doc --all "${CARGO_ARGS[@]}" --no-deps 1>&7
+	cargo doc --all --release "${CARGO_ARGS[@]}" --no-deps 1>&7
 	date_stamp
 	./${TARGET_DIR}release/imageflow_tool diagnose --show-compilation-info 1>&9
 	date_stamp
@@ -605,6 +605,9 @@ if [[ "$BUILD_RELEASE" == 'True' ]]; then
 	## Artifacts folder should exist - and be empty - at the beginning
 	if [[ -d "./artifacts/upload" ]]; then 
 		rm -rf ./artifacts/upload
+	fi 
+	if [[ -d "./artifacts/staging" ]]; then 
+		rm -rf ./artifacts/staging
 	fi 
 	mkdir -p ./artifacts/upload || true
 	mkdir -p ./artifacts/staging/headers || true
@@ -619,6 +622,8 @@ if [[ "$BUILD_RELEASE" == 'True' ]]; then
 	cp -R ${TARGET_DIR}release/{flow-proto1,imageflow_,libimageflow}*  ./artifacts/staging/
 	cp bindings/headers/*.h  ./artifacts/staging/headers/
 	rm ./artifacts/staging/*.{o,d,rlib} || true
+	rm ./artifacts/staging/*-* || true
+	cp ${TARGET_DIR}release/flow-proto1 ./artifacts/staging/
 
 	if [[ -n "$RUNTIME_REQUIREMENTS_FILE" ]]; then
 		cp "${RUNTIME_REQUIREMENTS_FILE}" ./artifacts/staging/runtime_requirements.txt 
@@ -626,7 +631,7 @@ if [[ "$BUILD_RELEASE" == 'True' ]]; then
 
 	(
 		cd ./artifacts/staging
-		tar czf "archive.tar.gz" ./*
+		tar czf "./archive.tar.gz" ./*
 	)
 	ARTIFACT_ARCHIVE_NAME="./artifacts/staging/archive.tar.gz"
 
