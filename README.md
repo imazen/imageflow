@@ -1,9 +1,6 @@
 ## ![imageflow](https://www.imageflow.io/images/imageflow.svg) optimal images at incredible speeds
 
-[![travis-master](https://img.shields.io/travis/imazen/imageflow/master.svg?label=master%3A%20mac64%20ubuntu64%2014.04%2016.04)
-[![AppVeyor build status](https://ci.appveyor.com/api/projects/status/0356x95fa312m3wy/branch/master?svg=true&passingText=master%3A%20win32%20win64%20-%20passing&failingText=master%3A%20win32%20win64%20-%20failed)](https://ci.appveyor.com/project/imazen/imageflow/branch/master)
-](https://travis-ci.org/imazen/imageflow/builds) 
-[![Coverity Scan Build Status](https://scan.coverity.com/projects/8403/badge.svg)](https://scan.coverity.com/projects/imazen-imageflow) [![state: technical preview](https://img.shields.io/badge/state-technical%E2%80%93preview-yellow.svg)](#flaws)
+[![travis-master](https://img.shields.io/travis/imazen/imageflow/master.svg?label=master%3A%20mac64%20ubuntu64%2014.04%2016.04)](https://travis-ci.org/imazen/imageflow/builds) [![AppVeyor build status](https://ci.appveyor.com/api/projects/status/0356x95fa312m3wy/branch/master?svg=true&passingText=master%3A%20win32%20win64%20-%20passing&failingText=master%3A%20win32%20win64%20-%20failed)](https://ci.appveyor.com/project/imazen/imageflow/branch/master) [![Coverity Scan Build Status](https://scan.coverity.com/projects/8403/badge.svg)](https://scan.coverity.com/projects/imazen-imageflow) [![state: technical preview](https://img.shields.io/badge/state-technical%E2%80%93preview-yellow.svg)](#flaws)
 
 * **imageflow_server** can run jobs or manipulate images in-flight (e.g.`/bucket/img.jpg?w=200`) for direct use from HTML. Source images can reside in blob storage, on another server, or on the filesystem. 
 * **libimageflow** is for direct (in-process) use from *your* programming language.  It has a simple [C-compatible ABI](https://s3-us-west-1.amazonaws.com/imageflow-nightlies/master/doc/imageflow/index.html) and [bindings](https://github.com/imazen/imageflow/tree/master/bindings). 
@@ -103,8 +100,6 @@ We're assuming you've cloned already.
      cd imageflow
 ```
 
-All build scripts support `VALGRIND=True` to enable valgrind instrumentation of automated tests.
-
 ## Docker (linux/macOS/WinUbuntu)
 
 This will create caches within `~/.docker_imageflow_caches` specific to the docker image used. Instances will be ephemeral; the only state will be in the caches.
@@ -114,56 +109,48 @@ This will create caches within `~/.docker_imageflow_caches` specific to the dock
 ```
 
 
-## Linux
+## Linux (native)
 
-We need quite a few packages in order to build all dependencies. You probably have most of these already.
+We need a few packages in order to build the C dependencies. You probably have most of these already.
 
-You'll need both Python 3 and Python 2.7. Ruby is optional, but useful for extras.
+* build-essential, nasm, dh-autoreconf, pkg-config 
+* wget, curl, git
+* libpng, libssl, ca-certificates
+* python, pip, and setuptools
 
-
-## apt-get for Ubuntu Trusty 
-
-```bash
-sudo apt-get install --no-install-recommends \
-  apt-utils sudo build-essential wget git nasm dh-autoreconf pkg-config curl \
-  libpng-dev libssl-dev ca-certificates \
-  libcurl4-openssl-dev libelf-dev libdw-dev python2.7-minimal \
-  python3-minimal python3-pip python3-setuptools valgrind
-```
-
-## apt-get Ubuntu Xenial
+## For Ubuntu 14.04 and 16.04:
 
 ```bash
 sudo apt-get install --no-install-recommends \
-    apt-utils sudo build-essential wget git nasm dh-autoreconf pkg-config curl \
-    libpng-dev libssl-dev ca-certificates \
-    rubygems-integration ruby libcurl4-openssl-dev libelf-dev libdw-dev python2.7-minimal \
-    python3-minimal python3-pip python3-setuptools valgrind 
+  build-essential nasm dh-autoreconf pkg-config \
+  wget curl git ca-certificates \
+  libpng-dev libssl-dev \
+  python-minimal python-pip python-setuptools
 ```
 
-If you don't have Xenial or Trusty, adapt the above to work with your distro.
-
-After running apt-get (or your package manager), you'll need conan, cmake, dssim, and Rust Nightly.
-
+After installing the above, you'll need conan, cmake 3.4.1+, dssim, and Rust Nightly.
 
 ```bash
 curl https://sh.rustup.rs -sSf | sh -s -- -y --default-toolchain nightly-2017-03-04
-sudo pip3 install conan
+sudo pip install conan
 ./ci/nixtools/install_cmake.sh
 ./ci/nixtools/install_dssim.sh
 ./build.sh
 ```
+We aren't listing dependencies needed for 
 
-## OS X
+* Valgrind (common versions break openssl; you may need to build from source)
+* Code coverage
+* Bindings. 
+
+Please consult the [official Dockerfiles](https://github.com/imazen/dockerfiles_imageflow) for these.
+
+## OS X (native)
 
 You'll need a bit less on OS X, although this may not be comprehensive:
 
 ```bash
-brew update || brew update
-brew install cmake || true
-brew install --force openssl || true
-brew link openssl --force || true
-brew install conan nasm
+brew install conan nasm cmake
 ./ci/nixtools/install_dssim.sh
 ./build.sh
 ```
@@ -174,12 +161,13 @@ Don't use a C++ IDE until you've run `win_build_c.bat`, as CMake needs to genera
 
 ### Pre-requisites
 
-1. Install [Git 64-bit](https://git-scm.com/download/win).
-2. Install [NASM 64-bit](http://www.nasm.us/pub/nasm/releasebuilds/2.12.02/win64/nasm-2.12.02-installer-x64.exe).
-3. Install [Rust 64-bit](https://static.rust-lang.org/rustup/dist/x86_64-pc-windows-msvc/rustup-init.exe). Install toolchain `nightly-2017-03-04` and set it as default. For the moment, 32-bit builds also require [a 32-bit Rust](https://static.rust-lang.org/rustup/dist/i686-pc-windows-msvc/rustup-init.exe).
-4. Install [CMake](https://cmake.org/download/)
-5. Install [Conan](https://www.conan.io/downloads). 
-6. Edit `$HOME\.conan\settings.yml`. Add the line `target_cpu: [x86, x86-64, nehalem, sandybridge, haswell, native]`
+1. Visual Studio 2015 (for the C++ build tools)
+2. Install [Git 64-bit](https://git-scm.com/download/win).
+3. Install [NASM 64-bit](http://www.nasm.us/pub/nasm/releasebuilds/2.12.02/win64/nasm-2.12.02-installer-x64.exe) Installer must be `Run as Administrator` - it will not prompt. 
+4. Install [Rust 64-bit](https://static.rust-lang.org/rustup/dist/x86_64-pc-windows-msvc/rustup-init.exe). Install toolchain `nightly-2017-03-04` and set it as default. For the moment, 32-bit builds also require [a 32-bit Rust](https://static.rust-lang.org/rustup/dist/i686-pc-windows-msvc/rustup-init.exe).
+5. Install [CMake 64-bit](https://cmake.org/download/)
+6. Install [Conan](https://www.conan.io/downloads). 
+7. Edit `$HOME\.conan\settings.yml`. Add the line `target_cpu: [x86, x86-64, nehalem, sandybridge, haswell, native]`
 
 You need all of these to be in %PATH%. Edit `ci/wintools/SETUP_PATH.bat` as appropriate to ensure that cmake, conan, rust/cargo, nasm, git, and Git/mingw64/bin are all available. 
 
