@@ -165,15 +165,16 @@ Don't use a C++ IDE until you've run `win_build_c.bat`, as CMake needs to genera
 2. Install [Git 64-bit](https://git-scm.com/download/win).
 3. Install [NASM 64-bit](http://www.nasm.us/pub/nasm/releasebuilds/2.12.02/win64/nasm-2.12.02-installer-x64.exe) Installer must be `Run as Administrator` - it will not prompt. 
 4. Install [Rust 64-bit](https://static.rust-lang.org/rustup/dist/x86_64-pc-windows-msvc/rustup-init.exe). Install toolchain `nightly-2017-03-04` and set it as default. For the moment, 32-bit builds also require [a 32-bit Rust](https://static.rust-lang.org/rustup/dist/i686-pc-windows-msvc/rustup-init.exe).
-5. Install [CMake 64-bit](https://cmake.org/download/)
+5. Install [CMake 3.7 64-bit](https://cmake.org/download/) (3.8.0-rc3 makes paths too long)
 6. Install [Conan](https://www.conan.io/downloads). 
-7. Edit `$HOME\.conan\settings.yml`. Add the line `target_cpu: [x86, x86-64, nehalem, sandybridge, haswell, native]`
 
 You need all of these to be in %PATH%. Edit `ci/wintools/SETUP_PATH.bat` as appropriate to ensure that cmake, conan, rust/cargo, nasm, git, and Git/mingw64/bin are all available. 
 
 1. Run `win_enter_env.bat` to start a sub-shell with VS tools loaded and a proper PATH. Edit the file per its comments to target a 32-bit build (you may want a separate imageflow folder for each target).
 2. Run `win_build_c.bat` from the shell to compile the C components
-3. Run `win_build_rust.bat` to compile the Rust components
+3. It will fail with `settings.target_cpu`. Edit `$HOME\.conan\settings.yml`. Append the line `target_cpu: [x86, x86-64, nehalem, sandybridge, haswell, native]`
+4. `cd ..\..` back to the root and run `win_build_c.bat` again.
+5. Run `win_build_rust.bat` to compile the Rust components
 
  `c_components/build/Imageflow.sln` will be created during 'win_build_c.bat', but is only set up for Release mode compilation by default. Switch configuration to Release to get a build. You'll need to run conan install directly if you want to change architecture to `x86`, target_cpu to `haswell`, or build_type to `Debug`, since the solutions need to be regenerated.
  
