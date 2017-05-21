@@ -21,7 +21,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="EWSoftware.SHFB" Version="2016.9.17">
+    <PackageReference Include="EWSoftware.SHFB" Version="2017.5.15">
       <PrivateAssets>All</PrivateAssets>
     </PackageReference>
     <PackageReference Include="EWSoftware.SHFB.NETCore" Version="4.5.1">
