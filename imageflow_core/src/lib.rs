@@ -4,9 +4,8 @@
 #![feature(conservative_impl_trait)]
 #![feature(proc_macro)]
 #![feature(integer_atomics)]
-#![feature(plugin)]
 
-#![plugin(clippy)]
+
 // intellij-rust flags this anyway
 // #![feature(field_init_shorthand)]
 
@@ -22,6 +21,7 @@ extern crate daggy;
 extern crate time;
 extern crate imageflow_types;
 extern crate imageflow_helpers;
+extern crate imageflow_riapi;
 
 #[macro_use]
 extern crate lazy_static;
@@ -33,6 +33,7 @@ extern crate serde;
 extern crate libc;
 extern crate alloc;
 extern crate rustc_serialize;
+extern crate url;
 
 mod json;
 pub mod flow;

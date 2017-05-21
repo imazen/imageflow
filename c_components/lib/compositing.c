@@ -25,11 +25,19 @@ bool flow_bitmap_float_convert_srgb_to_linear(flow_c * context, struct flow_bitm
                                               struct flow_bitmap_float * dest, uint32_t dest_row, uint32_t row_count)
 {
     if
-        unlikely(src->w != dest->w || flow_pixel_format_bytes_per_pixel(src->fmt) < dest->channels)
+        unlikely(src->w != dest->w )
         {
             FLOW_error(context, flow_status_Invalid_internal_state);
             return false;
         }
+
+//    if
+//        unlikely(flow_pixel_format_bytes_per_pixel(src->fmt) < dest->channels)
+//    {
+//        FLOW_error(context, flow_status_Invalid_internal_state);
+//        return false;
+//    }
+
     if
         unlikely(!(from_row + row_count <= src->h && dest_row + row_count <= dest->h))
         {

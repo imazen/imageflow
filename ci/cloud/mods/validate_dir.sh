@@ -1,11 +1,11 @@
-#/bin/bash
+#!/bin/bash
 set -e
 
 has_shellcheck() {
 	command -v shellcheck >/dev/null 2>&1 
 }
 if has_shellcheck; then
-	shellcheck *.sh
+	shellcheck ./*.sh
 	shellcheck ../*.sh
 fi 
 

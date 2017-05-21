@@ -316,6 +316,15 @@ static bool flow_codecs_png_decoder_FinishRead(flow_c * c, struct flow_codecs_pn
     return true;
 }
 
+static bool flow_png_cleanup_decoder(flow_c * c, void * state)
+{
+    if (!flow_codecs_png_decoder_reset(c, (struct flow_codecs_png_decoder_state *)state)) {
+        FLOW_add_to_callstack(c);
+        return false;
+    }
+    return true;
+}
+
 static bool flow_codecs_initialize_decode_png(flow_c * c, struct flow_codec_instance * item)
 {
     // flow_codecs_png_decoder_state
@@ -326,6 +335,9 @@ static bool flow_codecs_initialize_decode_png(flow_c * c, struct flow_codec_inst
             FLOW_error(c, flow_status_Out_of_memory);
             return false;
         }
+        flow_set_destructor(c, state, flow_png_cleanup_decoder);
+
+
         state->stage = flow_codecs_png_decoder_stage_Null;
 
         if (!flow_codecs_png_decoder_reset(c, state)) {

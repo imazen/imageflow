@@ -45,7 +45,7 @@ fi
 
 export IMAGE_PATH=c1.jpg
 
-cd bench_in
+cd bench_in || exit
 
 echo Using imageflow to thumbnail
 $TIME_COMMAND ../flow-proto1 -i $IMAGE_PATH -o ../bench_out/1_200x200.jpg -w 200 -h 200

@@ -155,6 +155,69 @@ pub fn parse_url(url: &Url) -> (Instructions, Vec<ParseWarning>) {
 
 
 impl Instructions{
+
+    pub fn to_string(&self) -> String{
+        let mut s = String::with_capacity(100);
+        let mut vec = Vec::new();
+        for (k,v) in self.to_map() {
+            vec.push((k, v));
+        }
+        vec.sort_by_key(|&(a,_)| a);
+        for (k,v) in vec{
+            s.push_str(k);
+            s.push_str("=");
+            s.push_str(&v);
+            s.push_str("&");
+        }
+        let len = s.len();
+        if len > 0{
+            s.remove(len - 1);
+        }
+        s
+    }
+
+    pub fn to_map(&self) -> HashMap<&'static str,String>{
+        let mut m = HashMap::new();
+        fn add<T>(m: &mut HashMap<&'static str,String>, key: &'static str, value: Option<T>) where T: std::fmt::Display{
+            if value.is_some(){
+                m.insert(key, format!("{}", value.unwrap()));
+            }
+        }
+        fn flip_str(f: Option<(bool, bool)>) -> Option<String>{
+            match f{
+                Some((true, true)) => Some("xy".to_owned()),
+                Some((true, false)) => Some("x".to_owned()),
+                Some((false, true)) => Some("y".to_owned()),
+                _ => None
+            }
+        }
+        add(&mut m, "w", self.w);
+        add(&mut m, "h", self.h);
+        add(&mut m, "maxwidth", self.legacy_max_width);
+        add(&mut m, "maxheight", self.legacy_max_height);
+        add(&mut m, "flip", flip_str(self.flip));
+        add(&mut m, "sflip", flip_str(self.sflip));
+        add(&mut m, "mode", self.mode.map(|v| format!("{:?}", v).to_lowercase()));
+        add(&mut m, "scale", self.scale.map(|v| format!("{:?}", v).to_lowercase()));
+        add(&mut m, "format", self.format.map(|v| format!("{:?}", v).to_lowercase()));
+        add(&mut m, "srotate", self.srotate);
+        add(&mut m, "rotate", self.rotate);
+        add(&mut m, "autorotate", self.autorotate);
+        add(&mut m, "ignoreicc", self.ignoreicc);
+        add(&mut m, "cropxunits", self.cropxunits);
+        add(&mut m, "cropyunits", self.cropyunits);
+        add(&mut m, "quality", self.quality);
+        add(&mut m, "zoom", self.zoom);
+        add(&mut m, "subsampling", self.jpeg_subsampling);
+        add(&mut m, "bgcolor", self.bgcolor_srgb.and_then(|v| Some(v.to_rrggbbaa_string().to_lowercase())));
+        add(&mut m, "f.sharpen", self.f_sharpen);
+        add(&mut m, "trim.percentpadding", self.trim_whitespace_padding_percent);
+        add(&mut m, "trim.threshold", self.trim_whitespace_threshold);
+
+        add(&mut m, "crop", self.crop.map(|a| format!("{},{},{},{}", a[0],a[1],a[2],a[3])));
+        add(&mut m, "anchor", self.anchor_string());
+        m
+    }
     pub fn delete_from_map(map: &mut HashMap<String,String>, warnings: Option<&mut Vec<ParseWarning>>) -> Instructions {
         let mut p = Parser { m: map, w: warnings, delete_supported: true };
         let mut i = Instructions::new();
@@ -176,10 +239,6 @@ impl Instructions{
 
         i.scale = p.parse_scale("scale").map(|v| v.clean());
 
-        //Actually supported!
-//        if i.scale == Some(ScaleMode::UpscaleOnly){
-//            warnings.push(ParseWarning::ValueInvalid("scale", "upscaleonly".to_owned()));
-//        }
 
         i.format = p.parse_format("format").or(p.parse_format("thumbnail")).map(|v| v.clean());
         i.srotate = p.parse_rotate("srotate");
@@ -195,11 +254,33 @@ impl Instructions{
         i.jpeg_subsampling = p.parse_subsampling("subsampling");
         i.f_sharpen = p.parse_f64("f.sharpen");
         i.anchor = p.parse_anchor("anchor");
+        //TODO: warn bounds (-1..1, 0..255)
+        i.trim_whitespace_padding_percent = p.parse_f64("trim.percentpadding");
+        i.trim_whitespace_threshold = p.parse_i32("trim.threshold");
+
 
         let _ = p.parse_test_pair("fastscale", "true");
 
 
         i
+    }
+
+    fn anchor_string(&self) -> Option<String>{
+        if let Some((v,h)) = self.anchor{
+            let first = match v{
+                Anchor1D::Near => "top",
+                Anchor1D::Center => "middle",
+                Anchor1D::Far => "bottom"
+            };
+            let last = match h{
+                Anchor1D::Near => "left",
+                Anchor1D::Center => "center",
+                Anchor1D::Far => "right"
+            };
+            Some(format!("{}{}", first, last))
+        }else{
+            None
+        }
     }
 
     pub fn to_framewise(&self) -> s::Framewise{
@@ -296,6 +377,7 @@ impl<'a> Parser<'a>{
         }
         )
     }
+
 
     fn parse_bool(&mut self, key: &'static str) -> Option<bool>{
         self.parse(key, |s|
@@ -411,6 +493,8 @@ impl<'a> Parser<'a>{
         })
     }
 
+
+
 }
 
 
@@ -504,7 +588,10 @@ pub struct Instructions{
     pub f_sharpen: Option<f64>,
     pub bgcolor_srgb: Option<Color32>,
     pub jpeg_subsampling: Option<i32>,
-    pub anchor: Option<(Anchor1D, Anchor1D)>
+    pub anchor: Option<(Anchor1D, Anchor1D)>,
+    pub trim_whitespace_threshold: Option<i32>,
+    pub trim_whitespace_padding_percent: Option<f64>
+
 }
 #[derive(Debug,Copy, Clone,PartialEq)]
 pub enum Anchor1D{
@@ -600,6 +687,7 @@ fn test_url_parsing() {
     t("cropxunits=2.3&cropyunits=100", Instructions { cropxunits: Some(2.3f64), cropyunits: Some(100f64), ..Default::default() }, vec![]);
     t("quality=85", Instructions { quality: Some(85), ..Default::default() }, vec![]);
     t("zoom=0.02", Instructions { zoom: Some(0.02f64), ..Default::default() }, vec![]);
+    t("trim.threshold=80&trim.percentpadding=0.02", Instructions { trim_whitespace_threshold: Some(80),  trim_whitespace_padding_percent: Some(0.02f64), ..Default::default() }, vec![]);
 
 
     t("bgcolor=red", Instructions { bgcolor_srgb: Some(Color32(0xffff0000)), ..Default::default() }, vec![]);
@@ -636,3 +724,31 @@ fn test_url_parsing() {
 
 }
 
+#[test]
+fn test_tostr(){
+    fn t(expected_query: &str, from: Instructions){
+        let b = from.to_string();
+        debug_diff(&expected_query, &b.as_str());
+        assert_eq!(&expected_query, &b.as_str());
+    }
+    t("h=300&mode=max&w=200", Instructions { w: Some(200), h: Some(300), mode: Some(FitMode::Max), ..Default::default() });
+    t("h=300&mode=crop&w=200", Instructions { w: Some(200), h: Some(300), mode: Some(FitMode::Crop), ..Default::default() });
+    t("format=jpeg", Instructions { format: Some(OutputFormat::Jpeg), ..Default::default() });
+    t("format=png", Instructions { format: Some(OutputFormat::Png), ..Default::default() });
+    t("scale=downscaleonly", Instructions {scale: Some(ScaleMode::DownscaleOnly), ..Default::default() });
+    t("h=300&scale=upscalecanvas&w=20", Instructions { w: Some(20), h: Some(300), scale: Some(ScaleMode::UpscaleCanvas), ..Default::default() });
+    t("flip=x&sflip=xy", Instructions { sflip: Some((true,true)), flip: Some((true,false)), ..Default::default() });
+    t("flip=y", Instructions { sflip: Some((false,false)), flip: Some((false,true)), ..Default::default() });
+    t("rotate=270&srotate=0", Instructions { srotate: Some(0), rotate: Some(270), ..Default::default() });
+    t("autorotate=false&ignoreicc=true", Instructions { autorotate: Some(false), ignoreicc: Some(true) , ..Default::default() });
+    t("mode=max", Instructions { mode: Some(FitMode::Max), ..Default::default() });
+    t("cropxunits=2.3&cropyunits=100", Instructions { cropxunits: Some(2.3f64), cropyunits: Some(100f64), ..Default::default() });
+    t("quality=85", Instructions { quality: Some(85), ..Default::default() });
+    t("zoom=0.02", Instructions { zoom: Some(0.02f64), ..Default::default() });
+    t("trim.percentpadding=0.02&trim.threshold=80", Instructions { trim_whitespace_threshold: Some(80),  trim_whitespace_padding_percent: Some(0.02f64), ..Default::default() });
+    t("bgcolor=ff0000ff", Instructions { bgcolor_srgb: Some(Color32(0xffff0000)), ..Default::default() });
+    t("bgcolor=8fbc8bff", Instructions { bgcolor_srgb: Some(Color32(0xff8fbc8b)), ..Default::default() });
+    t("bgcolor=77889953", Instructions { bgcolor_srgb: Some(Color32(0x53778899)), ..Default::default() });
+    t("bgcolor=ffffffff", Instructions { bgcolor_srgb: Some(Color32(0xffffffff)), ..Default::default() });
+    t("crop=0,0,40,50", Instructions { crop: Some([0f64,0f64,40f64,50f64]), ..Default::default() });
+}

@@ -3,6 +3,9 @@ set -e #Exit on failure.
 
 VALGRIND_ARGS="-q --error-exitcode=9 --gen-suppressions=all"
 
+
+TEST_BINARIES_TARGET="${TARGET_DIR:-target/}"
+
 # Valgrind script args, or fallback to discovering them in ./target/debug
 TEST_BINARIES=("$@")
 
@@ -11,11 +14,11 @@ printf "%s valgrind_existing.sh " "$(date '+[%H:%M:%S]')"
 if [ "$#" -lt 1 ]; then
 	# Remove old grind folders; they're going to be a problem with discovery
 	(
-		cd ./target/debug
+		cd "./${TEST_BINARIES_TARGET}debug"
 		find . -type d -name 'grind_*' -exec rm -rf {} +
 	)
 	shopt -s nullglob
-	TEST_BINARIES=(./target/debug/*-[a-f0-9][a-f0-9][a-f0-9][a-f0-9][a-f0-9][a-f0-9][a-f0-9][a-f0-9][a-f0-9][a-f0-9][a-f0-9][a-f0-9][a-f0-9][a-f0-9][a-f0-9][a-f0-9])
+	TEST_BINARIES=(./${TEST_BINARIES_TARGET}debug/*-[a-f0-9][a-f0-9][a-f0-9][a-f0-9][a-f0-9][a-f0-9][a-f0-9][a-f0-9][a-f0-9][a-f0-9][a-f0-9][a-f0-9][a-f0-9][a-f0-9][a-f0-9][a-f0-9])
 	shopt -u nullglob
 	printf "discovered binaries:\n"
 else
@@ -25,9 +28,11 @@ printf "%s\n" "${TEST_BINARIES[@]}"
 #echo "${TEST_BINARIES[@]}"
 
 # Sometimes we may need to exclude binaries
-SKIP_BINARIES=()
-#SKIP_BINARIES+=("$(ls ./target/debug/flow_proto1* || true )")
-echo "Should skip: ${SKIP_BINARIES[@]}"
+#SKIP_BINARIES=()
+
+# valgrind breaks OpenSSL, so we can't test the server right now
+SKIP_BINARIES+=("$(ls ./"${TEST_BINARIES_TARGET}"debug/test_ir4* || true )")
+echo "Should skip: ${SKIP_BINARIES[*]}"
 
 
 # If we're running as 'conan' (we assume this indicates we are in a docker container)
@@ -78,6 +83,7 @@ do
 
 	  export VALGRIND_RUNNING=1
 	  export RUST_BACKTRACE=1
+	  export RUST_TEST_TASKS=1 
 	  eval "$FULL_COMMAND"
 
 	  echo "Removing ${DIR}"

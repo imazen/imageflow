@@ -5,19 +5,42 @@ authors = ["Nathanael Jones <nathanael.jones@gmail.com>"]
 workspace = "../"
 
 [dependencies]
-regex = "*"
-hyper = "*"
-blake2-rfc = "*"
-lazy_static = "*"
-bit-vec = "*"
-twox-hash = "1.0.0"
-fnv = "*"
+libc = "0.2"
+
+# time
+time = "*"
 chrono =  "0.2"
-os_type = "0.5.0"
-zip = { version = "0.2", default-features = false }
+
+# serialization
 serde = "*"
 serde_json = "*"
-libc = "*"
+serde_derive = "*"
+rustc-serialize = "*"
 
-[profile.release]
-debug = true
+#lazy static
+lazy_static = "0.1.*"
+
+# fast hashes, crypto hashs
+twox-hash = "1.0"
+fnv = "*"
+blake2-rfc = "*"
+
+# regex
+regex = "*"
+
+
+zip = { version = "0.2", default-features = false }
+
+
+# HTTPS is a little bit of a nightmare
+
+hyper = "*"
+reqwest = "*"
+hyper-native-tls = "*"
+
+backtrace = "0.3"
+
+
+[target.'cfg(not(any(target_os = "windows", target_os = "macos")))'.dependencies]
+openssl = "*"
+hyper-openssl = "*"

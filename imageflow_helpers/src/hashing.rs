@@ -53,13 +53,13 @@ pub fn bits_format(bits: &[u8], format: &'static str) -> String{
     RE.replace_all(&format, |c: &Captures | {
         let from = c[1].parse::<usize>().unwrap();
         let until = c[2].parse::<usize>().unwrap();
-        let padding = c.at(4).and_then(|f| Some(f.parse::<usize>().unwrap_or(0))).unwrap_or(0);
+        let padding = c.get(4).and_then(|f| Some(f.as_str().parse::<usize>().unwrap_or(0))).unwrap_or(0);
         if from == 0 && until == bits.len() * 8{
             format!("{:01$x}", HexableBytes(bits), padding)
         }else{
             format!("{:01$x}", bits_select(bits, from, until).expect("Formats may specify up to 57 bits or the entire range, but no range greater than 58 and less than the the whole"), padding)
         }
-    })
+    }).into_owned()
 }
 ///
 /// Returns up to 57 bits from the provided byte slice, using big-endian interpretation.

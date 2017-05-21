@@ -320,7 +320,7 @@ pub fn run_examples(tool_location: Option<PathBuf>){
 
 pub fn run(tool_location: Option<PathBuf>) -> i32 {
 
-    let c = ProcTestContext::create_timestamp_subdir_within("self_tests", tool_location);
+    let c = ProcTestContext::create_timestamp_subdir_within(std::env::current_dir().unwrap().join("self_tests"), tool_location);
     // encapsulate scenario/example for reuse
     for example in scenarios() {
         example.prepare_scenario(&c);
@@ -390,6 +390,29 @@ pub fn run(tool_location: Option<PathBuf>) -> i32 {
 
     }
 
+    {
+        let c = c.subfolder_context("query");
+        c.create_blank_image_here("100x100", 100, 100, s::EncoderPreset::libjpegturbo());
+
+        let result =
+            c.exec("v0.1/ir4 --command \"width=60&height=40&mode=max&format=jpg\" --in 100x100.jpg --out out4.jpg");
+
+        result.expect_status_code(Some(0));
+
+        let resp: s::Response001 = result.parse_stdout_as::<s::Response001>().unwrap();
+        match resp.data {
+            s::ResponsePayload::BuildResult(info) => {
+
+                assert!(info.encodes.len() == 1);
+                let encode: &s::EncodeResult = &info.encodes[0];
+                assert_eq!(encode.w, 40);
+                assert_eq!(encode.h, 40);
+            }
+            _ => panic!("Build result not sent"),
+        }
+
+    }
+
 
     // It seems that Clap always uses status code 1 to indicate a parsing failure
     c.exec("bad command").expect_status_code(Some(1));
@@ -399,12 +422,13 @@ pub fn run(tool_location: Option<PathBuf>) -> i32 {
 
     c.exec("v0.1/build --json random_object.json")
         .expect_status_code(Some(65))
-        .expect_stderr_contains("InvalidType(Str)");
+        .expect_stderr_contains("expected struct Build001");
     // .expect_stdout_contains("")   ; //todo: should respond with JSON version of error message
 
     {
         // Test having both input and canvas point to the same bitmap
         // This should fail
+        // TODO: THis should fail in a consistent way, as a bad parameter situation
         let a = fluent::fluently().canvas_bgra32(10, 10, s::Color::Black);
         let b = a.branch().copy_rect_from(a.branch(), 0, 0, 5, 5, 0, 0);
         let recipe = s::Build001 {
@@ -525,7 +549,7 @@ pub fn run(tool_location: Option<PathBuf>) -> i32 {
 }
 
 pub fn test_capture(tool_location: Option<PathBuf>) -> i32 {
-    let c = ProcTestContext::create_timestamp_subdir_within("self_tests", tool_location);
+    let c = ProcTestContext::create_timestamp_subdir_within(std::env::current_dir().unwrap().join("self_tests"), tool_location);
     // encapsulate scenario/example for reuse
     {
         let recipe = s::Build001::example_with_steps();

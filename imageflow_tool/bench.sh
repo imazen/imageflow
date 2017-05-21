@@ -15,7 +15,7 @@ echo And run brew install parallel
 
 #-limit thread 1
 
-cargo build --release
+RUSTFLAGS="-C target-cpu=native" cargo build --release
 cp target/release/flow-proto1 .
 
 convert --version
@@ -49,7 +49,8 @@ else
   export TIME_COMMAND=time
 fi
 
-cd bench_in
+(
+cd bench_in || exit
 
 echo Using imageflow to thumbnail $COUNT images in parallel
 $TIME_COMMAND parallel '../flow-proto1 -i {} -o ../bench_out/{.}_200x200.jpg -w 200 -h 200' ::: *.jpg
@@ -103,4 +104,4 @@ echo
 echo Using ImageMagick wrong on $COUNT images in parallel. 200x200
 $TIME_COMMAND parallel 'convert {} -filter Robidoux -resize 200x200 ../bench_out/{.}_magick_200x200_wrong.jpg' ::: *.jpg
 
-cd ..
+)

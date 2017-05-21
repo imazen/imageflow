@@ -1,4 +1,4 @@
-use daggy::{Dag, EdgeIndex, NodeIndex};
+use daggy::{Dag, EdgeIndex, NodeIndex, Walker};
 use ffi::{ImageflowContext, BitmapBgra};
 use libc::{int32_t, size_t};
 use petgraph::EdgeDirection;
@@ -24,6 +24,7 @@ extern crate imageflow_types as s;
 pub use self::clone_crop_fill_expand::CLONE;
 pub use self::clone_crop_fill_expand::COPY_RECT;
 pub use self::clone_crop_fill_expand::CROP;
+pub use self::clone_crop_fill_expand::CROP_WHITESPACE;
 pub use self::clone_crop_fill_expand::CROP_MUTATE;
 pub use self::clone_crop_fill_expand::EXPAND_CANVAS;
 pub use self::clone_crop_fill_expand::FILL_RECT;
@@ -46,6 +47,7 @@ pub use self::scale_render::SCALE;
 pub use self::scale_render::SCALE_1D;
 pub use self::scale_render::SCALE_1D_TO_CANVAS_1D;
 pub use self::constrain::CONSTRAIN;
+pub use self::constrain::COMMAND_STRING;
 use super::definitions::*;
 
 pub struct NodeDefHelpers {}
@@ -293,4 +295,18 @@ impl<'c> OpCtxMut<'c> {
         self.copy_edges_to(index, with_index, EdgeDirection::Outgoing);
         self.graph.remove_node(index).unwrap();
     }
+
+    pub fn get_decoder_io_ids(&self,
+                              ancestors_of_node: NodeIndex<u32>)
+                              -> Vec<i32> {
+        self.graph.parents(ancestors_of_node).iter(self.graph).map(|(_, ix)| match self.weight(ix).params{
+            NodeParams::Json(s::Node::Decode { io_id, ..}) => Some(io_id), _ => None
+        } ).filter(|v| v.is_some()).map(|v| v.unwrap()).collect::<>()
+    }
+
+    pub fn get_image_info_list(&mut self,
+                            ancestors_of_node: NodeIndex<u32>) -> Vec<::std::result::Result<s::ImageInfo, ::FlowError>>{
+        self.get_decoder_io_ids(ancestors_of_node).into_iter().map(|io_id| self.job.get_image_info(io_id)).collect::<>()
+    }
+
 }

@@ -299,6 +299,11 @@ impl ConstraintResamplingHints{
     }
 }
 
+#[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
+pub enum CommandStringKind{
+    #[serde(rename="ir4")]
+    ImageResizer4
+}
 
 #[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
 pub enum Constraint {
@@ -318,6 +323,8 @@ pub enum Node {
     // camelCased: #[serde(rename="crop")]
     #[serde(rename="crop")]
     Crop { x1: u32, y1: u32, x2: u32, y2: u32 },
+    #[serde(rename="crop_whitespace")]
+    CropWhitespace { threshold: u32, percent_padding: f32 },
     // camelCased: #[serde(rename="createCanvas")]
     #[serde(rename="create_canvas")]
     CreateCanvas {
@@ -325,6 +332,13 @@ pub enum Node {
         w: usize,
         h: usize,
         color: Color,
+    },
+    #[serde(rename="commandString")]
+    CommandString{
+        kind: CommandStringKind,
+        value: String,
+        decode: Option<i32>,
+        encode: Option<i32>
     },
     #[serde(rename="constrain")]
     Constrain(Constraint),
@@ -1099,15 +1113,9 @@ fn error_from_string() {
 
     let val: Result<TestEnum, serde_json::Error> = serde_json::from_str(text);
 
-    let (code, line, chr) = match val {
+    let msg = match val {
         Err(e) => {
-            match e {
-                serde_json::Error::Syntax(code, line, char) => (code, line, char),
-                _ => {
-                    assert!(false);
-                    unreachable!()
-                }
-            }
+            format!("{:?}", e)
         }
         _ => {
             assert!(false);
@@ -1115,10 +1123,7 @@ fn error_from_string() {
         }
     };
 
-    assert_eq!(code,
-               serde_json::ErrorCode::InvalidType(serde::de::Type::Str));
-    assert_eq!(line, 1);
-    assert_eq!(chr, 18);
+    assert_eq!(msg, "Syntax(Message(\"invalid type: string \\\"hi\\\", expected i32\"), 1, 18)");
 }
 
 #[test]
@@ -1130,15 +1135,9 @@ fn error_from_value() {
 
     let x: Result<TestEnum, serde_json::Error> = serde_json::from_value(val);
 
-    let (code, line, chr) = match x {
+    let msg = match x {
         Err(e) => {
-            match e {
-                serde_json::Error::Syntax(code, line, char) => (code, line, char),
-                _ => {
-                    assert!(false);
-                    unreachable!()
-                }
-            }
+            format!("{:?}", e)
         }
         _ => {
             assert!(false);
@@ -1146,14 +1145,10 @@ fn error_from_value() {
         }
     };
 
-    assert_eq!(code,
-               serde_json::ErrorCode::InvalidType(serde::de::Type::Str));
-    assert_eq!(line, 0);
-    assert_eq!(chr, 0);
+    assert_eq!(msg, "Syntax(Message(\"invalid type: string \\\"hi\\\", expected i32\"), 0, 0)");
     // When parsing from a value, we cannot tell which line or character caused it. I suppose we
     // must serialize/deserialize again, in order to inject an indicator into the text?
     // We cannot recreate the original location AFAICT
-
 }
 
 mod key_casing {

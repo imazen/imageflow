@@ -1,4 +1,4 @@
-#/bin/bash
+#!/bin/bash
 set -e
 
 "$( dirname "${BASH_SOURCE[0]}" )/validate_dir.sh" "$@"

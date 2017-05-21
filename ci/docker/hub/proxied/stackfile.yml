@@ -54,9 +54,9 @@ imageflow-hidden:
   target_num_containers: 2
   environment:
     - RUST_BACKTRACE=1
-    - VIRTUAL_HOST=imageflow-demo-a.imazen.io,*.dockerapp.io
+    - VIRTUAL_HOST=imageflow-demo-a.imazen.io,*.dockerapp.io, demo.imazen.io
     - VIRTUAL_PORT=3000
-    - LETSENCRYPT_HOST=imageflow-demo-a.imazen.io
+    - LETSENCRYPT_HOST=demo.imazen.io
     - LETSENCRYPT_EMAIL=support@imazen.io
   image: 'imazen/imageflow_server_unsecured:latest'
   expose:

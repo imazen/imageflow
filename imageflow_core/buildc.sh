@@ -12,4 +12,7 @@ conan export imazen/testing
 cd ../imageflow_core
 
 conan install --build missing # Will build imageflow package with your current settings
-cargo test
+
+./override_openssl.sh
+
+CARGO_INCREMENTAL=1 cargo test

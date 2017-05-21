@@ -22,6 +22,9 @@ fn copy_rect_def() -> NodeDefinition {
                         if (*input).fmt != (*canvas).fmt {
                             panic!("Can't copy between bitmaps with different pixel formats")
                         }
+                        if input == canvas{
+                            panic!("Canvas and input must be different bitmaps for CopyRect to work!")
+                        }
 
                         // TODO: Implement faster path for common (full clone) path
                         //    if (info->x == 0 && info->from_x == 0 && info->from_y == 0 && info->y == 0 && info->width == input->w
@@ -313,10 +316,53 @@ fn crop_def() -> NodeDefinition {
         ..Default::default()
     }
 }
+
+
+
+fn crop_whitespace_def() -> NodeDefinition {
+    NodeDefinition {
+        fqn: "imazen.crop_whitespace",
+        name: "crop_whitespace",
+        inbound_edges: EdgesIn::OneInput,
+        fn_estimate: Some({
+            fn f(ctx: &mut OpCtxMut, ix: NodeIndex<u32>) {
+                ctx.weight_mut(ix).frame_est = FrameEstimate::Impossible;
+            }
+            f
+        }),
+        fn_flatten_pre_optimize: Some({
+            fn f(ctx: &mut OpCtxMut, ix: NodeIndex<u32>) {
+
+                // detect bounds, increase, and replace with crop
+                if let s::Node::CropWhitespace {threshold, percent_padding} = ctx.get_json_params(ix).unwrap() {
+                    let (x1, y1, x2, y2) = match ctx.first_parent_input_weight(ix).unwrap().result {
+                        NodeResult::Frame(b) => {
+                            unsafe {
+                                let rect = ::ffi::detect_content(ctx.c.flow_c(), b, threshold);
+                                let padding = (percent_padding * (rect.x2 - rect.x1 + rect.y2 - rect.y1) as f32 / 2f32).ceil() as i32;
+                                (cmp::max(0, rect.x1 - padding) as u32, cmp::max(0, rect.y1 - padding) as u32,
+                                 cmp::min((*b).w as i32, rect.x2 + padding) as u32, cmp::min((*b).h as i32, rect.y2 + padding) as u32)
+                            }
+                        },
+                        _ => { panic!("") }
+                    };
+
+                    ctx.replace_node(ix, vec![
+                        Node::new(&CROP,
+                                  NodeParams::Json(s::Node::Crop{ x1: x1, y1: y1, x2: x2, y2: y2 }))
+                    ]);
+                }
+            }
+            f
+        }),
+        ..Default::default()
+    }
+}
 lazy_static! {
     pub static ref CLONE: NodeDefinition = clone_def();
     pub static ref CROP_MUTATE: NodeDefinition = crop_mutate_def();
     pub static ref CROP: NodeDefinition = crop_def();
+    pub static ref CROP_WHITESPACE: NodeDefinition = crop_whitespace_def();
     pub static ref EXPAND_CANVAS: NodeDefinition = expand_canvas_def();
 
     pub static ref COPY_RECT: NodeDefinition = copy_rect_def();

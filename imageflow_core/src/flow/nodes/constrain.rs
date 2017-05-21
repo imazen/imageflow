@@ -136,6 +136,119 @@ fn constrain_def() -> NodeDefinition {
 }
 
 
+
+
+
+
+fn command_string_partially_expanded_def() -> NodeDefinition {
+    NodeDefinition {
+        fqn: "imazen.expanding_command_string",
+        name: "expanding_command_string",
+        inbound_edges: EdgesIn::OneInput,
+        description: "expanding command string",
+        fn_estimate: None,
+        fn_flatten_pre_optimize: Some({
+            fn f(ctx: &mut OpCtxMut, ix: NodeIndex<u32>) {
+                let input = ctx.first_parent_frame_info_some(ix).unwrap();
+
+
+
+                if let s::Node::CommandString{ref kind, ref value, ref decode, ref encode} =
+                ctx.get_json_params(ix).unwrap() {
+
+                    match kind {
+                        &s::CommandStringKind::ImageResizer4 => {
+
+                            let e = ::imageflow_riapi::ir4::Ir4Expand{
+                                i: ::imageflow_riapi::ir4::Ir4Command::QueryString(value.to_owned()),
+                                encode_id: *encode,
+                                source: ::imageflow_riapi::ir4::Ir4SourceFrameInfo{
+                                    w: input.w,
+                                    h: input.h,
+                                    fmt: input.fmt,
+                                    alpha_meaningful: input.alpha_meaningful,
+                                    original_mime: None
+                                }
+
+                            };
+
+
+                            match e.expand_steps() {
+                                Ok(r) => {
+                                    //TODO: Find a way to expose warnings
+                                    ctx.replace_node(ix, r.steps.unwrap().into_iter().map(|n| Node::from(n)).collect::<>());
+                                }
+                                Err(e) => {
+                                    //TODO: reparse to get warnings
+                                    panic!("{:?}", e);
+                                }
+                            }
+                        }
+                    }
+                }
+
+            }
+            f
+        }),
+        ..Default::default()
+    }
+}
+
+
+fn command_string_def() -> NodeDefinition {
+    NodeDefinition {
+        fqn: "imazen.command_string",
+        name: "command_string",
+        inbound_edges: EdgesIn::OneOptionalInput,
+        description: "command string",
+        fn_estimate: None,
+        fn_flatten_pre_optimize: Some({
+            fn f(ctx: &mut OpCtxMut, ix: NodeIndex<u32>) {
+
+                let n = ctx.get_json_params(ix).unwrap();
+
+                if let s::Node::CommandString{ref kind, ref value, ref decode, ref encode} = n.clone() {
+
+                    match kind {
+                        &s::CommandStringKind::ImageResizer4 => {
+
+                            let input = ctx.first_parent_frame_info_some(ix);
+
+                            if let &Some(d_id) = decode{
+                                if input.is_some(){
+                                    panic!("CommandString must either have decode: null or have no parent nodes. Specifying a value for decode creates a new decoder node.");
+                                }
+                                let decode_node = ::imageflow_riapi::ir4::Ir4Translate{
+                                    i: ::imageflow_riapi::ir4::Ir4Command::QueryString(value.to_owned()),
+                                    decode_id: Some(d_id),
+                                    encode_id: None,
+                                }.get_decode_node().unwrap();
+                                ctx.replace_node(ix, vec![
+                                    Node::from(decode_node),
+                                    Node::new(&EXPANDING_COMMAND_STRING, NodeParams::Json(n))
+                                ]);
+                            }else{
+                                if input.is_none(){
+                                    panic!("CommandString must have a parent node unless 'decode' has a numeric value. Otherwise it has no image source. ");
+                                }
+                                ctx.replace_node(ix, vec![
+                                    Node::new(&EXPANDING_COMMAND_STRING, NodeParams::Json(n))
+                                ]);
+                            }
+                        }
+                    }
+                }
+
+            }
+            f
+        }),
+        ..Default::default()
+    }
+}
+
+
 lazy_static! {
     pub static ref CONSTRAIN: NodeDefinition = constrain_def();
+    pub static ref COMMAND_STRING: NodeDefinition = command_string_def();
+    pub static ref EXPANDING_COMMAND_STRING: NodeDefinition = command_string_partially_expanded_def();
 }

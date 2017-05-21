@@ -1,4 +1,4 @@
-curl -L -o conan-win.exe https://s3-eu-west-1.amazonaws.com/conanio-production/downloads/conan-win_0_11_1.exe
+curl -L -o conan-win.exe https://github.com/conan-io/conan/releases/download/0.20.3/conan-win_0_20_3.exe
 
 start /wait conan-win.exe /S
 

@@ -61,7 +61,7 @@ struct scan_region everything_inward[] = {
 
 bool check_regions(flow_c * context, struct flow_SearchInfo * info, struct scan_region * regions, size_t region_count);
 
-struct flow_rect detect_content(flow_c * context, struct flow_bitmap_bgra * b, uint8_t threshold)
+struct flow_rect detect_content(flow_c * context, struct flow_bitmap_bgra * b, uint32_t threshold)
 {
     // If the image is too small to apply a 3x3 filter, don't do it
     if (b->w < 3 || b->h < 3) {

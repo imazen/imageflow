@@ -14,6 +14,7 @@ use std::io::{Write, Read, BufWriter};
 pub enum JobSource {
     JsonFile(String),
     NamedDemo(String),
+    Ir4QueryString(String)
 }
 
 
@@ -161,6 +162,31 @@ impl CmdBuild {
 
                 let parsed: s::Build001 = serde_json::from_slice(&data)?;
                 Ok(parsed)
+            }
+            JobSource::Ir4QueryString(query) => {
+                let build = s::Build001{
+                    builder_config: None,
+                    io: vec![
+                        s::IoObject{
+                            io_id: 0,
+                            direction: s::IoDirection::In,
+                            io: s::IoEnum::Placeholder
+                        },
+                        s::IoObject{
+                            io_id: 1,
+                            direction: s::IoDirection::Out,
+                            io: s::IoEnum::Placeholder
+                        }
+                    ],
+                    framewise: s::Framewise::Steps(vec![
+                        s::Node::CommandString {
+                        decode: Some(0),
+                        encode: Some(1),
+                        kind: s::CommandStringKind::ImageResizer4,
+                        value: query
+                    }])
+                };
+                Ok(build)
             }
             JobSource::NamedDemo(name) => Err(CmdError::DemoNotFound(name)),
         }

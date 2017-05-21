@@ -1,17 +1,24 @@
 #[macro_use]
 extern crate lazy_static;
 
+extern crate reqwest;
+extern crate hyper_native_tls;
 extern crate regex;
 extern crate hyper;
 extern crate blake2_rfc;
-extern crate bit_vec;
 extern crate twox_hash;
-extern crate os_type;
 extern crate chrono;
 extern crate zip;
 extern crate serde;
 extern crate serde_json;
 extern crate libc;
+extern crate backtrace;
+
+
+#[cfg(not(any(target_os = "windows", target_os = "macos")))]
+extern crate openssl;
+#[cfg(not(any(target_os = "windows", target_os = "macos")))]
+extern crate hyper_openssl;
 
 pub mod identifier_styles;
 pub mod preludes;
@@ -22,6 +29,7 @@ pub mod hashing;
 pub mod process_testing;
 pub mod process_capture;
 pub mod colors;
+pub mod debug;
 
 pub mod timeywimey{
     pub fn time_bucket(seconds_per_bucket: u64, bucket_count: u64) -> u64{
@@ -29,12 +37,6 @@ pub mod timeywimey{
     }
     pub use chrono::UTC;
 }
-
-pub mod detect_os{
-    // NOT USED, cfg!(os_type="windows") was enough
-    pub use os_type::{current_platform, OSType};
-}
-
 
 #[cfg(test)]
 mod tests {

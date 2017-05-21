@@ -80,7 +80,7 @@ fn rename_word_excluding_enum_members(input: String, old_name: &str, new_name_be
             format!("{}{}{}", new_name, &caps[1], &caps[2])
         }
     });
-    s
+    s.into_owned()
 }
 
 fn rename_enum_snake_case_and_prefix_members(input: String, old_name: &str, new_name: String, change_case: Style, member_prefix: &str, member_casing: Style) -> String {
@@ -110,7 +110,7 @@ fn rename_enum_snake_case_and_prefix_members(input: String, old_name: &str, new_
         });
         format!("typedef enum {} {}", new_ref, contents)
     });
-    s
+    s.into()
 }
 
 #[derive(Copy,Clone,PartialEq,Debug)]
@@ -144,9 +144,9 @@ fn filter_structs(s: String, names: &[&str], how: StructModification) -> String{
     };
 
     //De-duplicate and lowercase struct
-    temp = Regex::new(r"(?i)\bstruct\b(\s+struct)*").unwrap().replace_all(&temp, "struct");
+    temp = Regex::new(r"(?i)\bstruct\b(\s+struct)*").unwrap().replace_all(&temp, "struct").into();
     //Drop our opaque structs decl.
-    temp = Regex::new(r"\bstruct void;").unwrap().replace_all(&temp, "");
+    temp = Regex::new(r"\bstruct void;").unwrap().replace_all(&temp, "").into();
     temp
 }
 
@@ -194,7 +194,7 @@ fn strip_preprocessor_directives(contents: &str) -> String{
     //Strip all ifndef/ifdef statements
     //let temp2 = Regex::new(r"(?im)^\s*\#\s*(ifdef|ifndef|endif).*").unwrap().replace_all(&temp, "");
     //Strip ALL # preprocessor directives
-    let temp2 = Regex::new(r"(?im)^\s*\#\s*.*").unwrap().replace_all(&temp, "");
+    let temp2 = Regex::new(r"(?im)^\s*\#\s*.*").unwrap().replace_all(&temp, "").into();
 
     temp2
 }

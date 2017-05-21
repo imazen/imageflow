@@ -13,19 +13,16 @@ if [[ "$(uname -s)" == 'Darwin' ]]; then
     sysctl -n machdep.cpu.leaf7_features
     sysctl -n machdep.cpu.extfeatures
 
-
-	set -x
+    set -x
     brew update || brew update
-    brew install cmake || true
-    brew install --force openssl || true
-    brew link openssl --force || true
+    date "$STAMP"
     brew install conan nasm
     ./ci/nixtools/install_dssim.sh
     set +x
 else
     cat /proc/cpuinfo
-  
-	set -x
+    date "$STAMP"
+    set -x
     docker pull "${DOCKER_IMAGE}"
     set +x
 fi

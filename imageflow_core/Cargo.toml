@@ -11,29 +11,46 @@ name = "imageflow_core"
 doctest = false
 
 [dependencies]
-libc = "0.2.0"
-clap = "2"
+libc = "0.2"
+
+# time
 time = "*"
-rustc-serialize = "*"
-threadpool = "1.0"
+chrono =  "0.2"
+
+# serialization
 serde = "*"
 serde_json = "*"
 serde_derive = "*"
+rustc-serialize = "*"
+
+#lazy static
 lazy_static = "0.1.*"
-json = "*"
-imageflow_types = { path = "../imageflow_types", version = "*" }
+
+# fast hashes, crypto hashs
+twox-hash = "1.0"
+fnv = "*"
+blake2-rfc = "*"
+
+## Crate-specific dependencies
+
+clap = "2"
+threadpool = "1.0"
 petgraph = "^0.2.8"
 daggy = "^0.4.1"
-clippy = "0.0.97"
+
+url = "*"
+
+imageflow_types = { path = "../imageflow_types", version = "*" }
 imageflow_helpers = { path = "../imageflow_helpers", version = "*" }
+imageflow_riapi = { path = "../imageflow_riapi", version = "*" }
+
 
 [dev-dependencies]
-hyper = { version = "*", default-features = false }
-
+hyper = { version = "*" }
 
 
 [build-dependencies]
 cmake = "0.1.17"
 
-[profile.release]
-debug = true
+
+#cp ../../../cargo/target/x86_64-unknown-linux-gnu/release/cargo /home/n/.cargo/bin/
