@@ -95,39 +95,37 @@ impl<'a> BuildHandler<'a> {
 
 
     fn build_inner(&self, ctx: &Context, parsed: s::Build001) -> Result<s::ResponsePayload> {
-
         let mut g = ::parsing::GraphTranslator::new().translate_framewise(parsed.framewise)?;
 
-        unsafe {
-            let mut job = ctx.create_job();
 
-            if let Some(s::Build001Config { ref no_gamma_correction, .. }) = parsed.builder_config {
-                ctx.todo_remove_set_floatspace(
-                    if *no_gamma_correction {
-                        ::ffi::Floatspace::srgb
-                    } else {
-                        ::ffi::Floatspace::linear
-                    })
-            }
+        let mut job = ctx.create_job();
 
-            if let Some(s::Build001Config { graph_recording, .. }) = parsed.builder_config {
-                if let Some(r) = graph_recording {
-                    job.configure_graph_recording(r);
-                }
-            }
-
-
-            IoTranslator::new(ctx).add_to_job(&mut *job, parsed.io.clone());
-
-            ::flow::execution_engine::Engine::create(ctx, &mut job, &mut g).execute()?;
-
-            // TODO: flow_job_destroy
-
-            // TODO: Question, should JSON endpoints populate the Context error stacktrace when something goes wrong? Or populate both (except for OOM).
-
-
-            Ok(s::ResponsePayload::BuildResult(s::JobResult { encodes: job.collect_augmented_encode_results(&g, &parsed.io) }))
+        if let Some(s::Build001Config { ref no_gamma_correction, .. }) = parsed.builder_config {
+            ctx.todo_remove_set_floatspace(
+                if *no_gamma_correction {
+                    ::ffi::Floatspace::srgb
+                } else {
+                    ::ffi::Floatspace::linear
+                })
         }
+
+        if let Some(s::Build001Config { graph_recording, .. }) = parsed.builder_config {
+            if let Some(r) = graph_recording {
+                job.configure_graph_recording(r);
+            }
+        }
+
+
+        IoTranslator::new(ctx).add_to_job(&mut *job, parsed.io.clone());
+
+        ::flow::execution_engine::Engine::create(ctx, &mut job, &mut g).execute()?;
+
+        // TODO: flow_job_destroy
+
+        // TODO: Question, should JSON endpoints populate the Context error stacktrace when something goes wrong? Or populate both (except for OOM).
+
+
+        Ok(s::ResponsePayload::BuildResult(s::JobResult { encodes: job.collect_augmented_encode_results(&g, &parsed.io) }))
     }
 }
 

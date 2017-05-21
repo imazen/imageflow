@@ -5,7 +5,7 @@ use internal_prelude::works_everywhere::*;
 use ::ffi;
 use ::rustc_serialize::hex::FromHex;
 use ::rustc_serialize::base64::FromBase64;
-use ::{Context,Job};
+use ::{Context,Job,IoProxy};
 
 pub struct IoTranslator<'a> {
     ctx: *mut ::ffi::ImageflowContext,
@@ -16,10 +16,10 @@ impl<'a> IoTranslator<'a> {
         IoTranslator { ctx: c.flow_c(), c: c }
     }
 
-    unsafe fn create_jobio_ptr_from_enum(&self,
+    fn create_io_proxy_from_enum(&self,
                                          io_enum: s::IoEnum,
                                          dir: s::IoDirection)
-                                         -> Result<*mut ::ffi::ImageflowJobIo> {
+                                         -> Result<RefMut<IoProxy>> {
         match io_enum {
             s::IoEnum::ByteArray(vec) => {
                 let bytes = vec;
@@ -50,17 +50,17 @@ impl<'a> IoTranslator<'a> {
         }
     }
 
-    pub unsafe fn add_to_job(&self, job: &mut Job, io_vec: Vec<s::IoObject>) {
+    pub fn add_to_job(&self, job: &mut Job, io_vec: Vec<s::IoObject>) {
         let mut io_list = Vec::new();
         for io_obj in io_vec {
             //TODO: add format!("Failed to create IO for {:?}", &io_obj)
-            let io_ptr = self.create_jobio_ptr_from_enum(io_obj.io, io_obj.direction).unwrap();
+            let proxy = self.create_io_proxy_from_enum(io_obj.io, io_obj.direction).unwrap();
 
-            io_list.push((io_ptr, io_obj.io_id, io_obj.direction));
+            io_list.push((proxy, io_obj.io_id, io_obj.direction));
         }
 
         for io_list in io_list {
-            job.add_io(io_list.0, io_list.1, io_list.2).unwrap();
+            job.add_io(&io_list.0, io_list.1, io_list.2).unwrap();
         }
 
     }

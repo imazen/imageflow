@@ -5,6 +5,8 @@ use ::internal_prelude::works_everywhere::*;
 use ::rustc_serialize::base64;
 use ::rustc_serialize::base64::ToBase64;
 use ::imageflow_types::collections::*;
+use io::IoProxy;
+use codecs::CodecInstanceContainer;
 
 pub struct Job{
     c: &'static Context,
@@ -13,7 +15,7 @@ pub struct Job{
     pub next_graph_version: i32,
     pub max_calc_flatten_execute_passes: i32,
     pub graph_recording: s::Build001GraphRecording,
-    pub codecs: AppendOnlySet<CodecInstance>,
+    pub codecs: AddRemoveSet<CodecInstanceContainer>,
 
 }
 impl Job{
@@ -28,7 +30,7 @@ impl Job{
             next_stable_node_id: 0,
             max_calc_flatten_execute_passes: 40,
             graph_recording: s::Build001GraphRecording::off(),
-            codecs: AppendOnlySet::with_capacity(4)
+            codecs: AddRemoveSet::with_capacity(4)
         }
     }
     pub fn context(&self) -> &Context{
@@ -68,51 +70,27 @@ impl Job{
         ::job_methods::JOB_ROUTER.invoke(self, method, json)
     }
 
-    pub fn codec_instance_by_io_id(&self,io_id: i32) -> Option<&CodecInstance>{
-        self.codecs.iter().find(|r| r.io_id == io_id)
-    }
-
-    pub unsafe fn add_io(&mut self, io: *mut ::ffi::ImageflowJobIo, io_id: i32, direction: IoDirection) -> Result<()>{
-
-
-        if direction == IoDirection::Out{
-            let inst = self.codecs.add(CodecInstance{
-                codec_id: 0,
-                codec_state: ptr::null_mut(),
-                direction: direction,
-                io_id: io_id,
-                io: io
-            });
-            Ok(())
-        }else {
-            let codec_id = ::ffi::flow_codec_select_from_seekable_io(self.flow_c(), io);
-            if codec_id == 0 {
-                Err(self.c.error().get_error_copy().unwrap())
-            } else {
-                let inst = self.codecs.add(CodecInstance {
-                    codec_id: codec_id,
-                    codec_state: ptr::null_mut(),
-                    direction: direction,
-                    io_id: io_id,
-                    io: io
-                });
-
-
-                let force_mutable_pointer: *mut CodecInstance = mem::transmute(&*inst as *const CodecInstance);
-                if !::ffi::flow_codec_initialize(self.flow_c(), force_mutable_pointer) {
-                    return Err(self.c.error().get_error_copy().unwrap());
-                }
-
-                Ok(())
-            }
-        }
-    }
-
-    pub fn get_io(&self, io_id: i32) -> Result<*mut ::ffi::ImageflowJobIo>{
+    pub fn get_codec(&self, io_id: i32) -> Result<RefMut<CodecInstanceContainer>>{
         //TODO
         //We're treating failed borrows the same as everything else right now... :(
-        self.codecs.iter().find(|c| c.io_id == io_id).map(|res| res.io).ok_or(FlowError::NullArgument)
+        self.codecs.iter_mut().filter(|r| r.is_ok()).map(|r| r.unwrap()).find(|c| c.io_id == io_id).ok_or(FlowError::ErrNotImpl)
     }
+
+    pub fn get_io(&self, io_id: i32) -> Result<RefMut<IoProxy>>{
+        //TODO
+        //We're treating failed borrows the same as everything else right now... :(
+        let uuid = self.get_codec(io_id)?.proxy_uuid;
+
+        self.c.get_proxy_mut(uuid)
+    }
+
+    pub fn add_io(&mut self, io: &IoProxy, io_id: i32, direction: IoDirection) -> Result<()>{
+
+        let mut codec = self.codecs.add_mut(CodecInstanceContainer::create(self.c, io, io_id, direction)?);
+        codec.initialize(self.c, self).unwrap();
+        Ok(())
+    }
+
 
     fn c_error(&self) -> Option<FlowError>{
         self.c.error().get_error_copy()
@@ -122,29 +100,12 @@ impl Job{
     }
     // This could actually live as long as the context, but this isn't on the context....
     // but if a constraint, we could add context as an input parameter
-    pub fn io_get_output_buffer_slice(&self, io_id: i32) -> Result<&[u8]> {
-        unsafe {
-            let io_p = self.get_io(io_id)?;
-
-            let mut buf_start: *const u8 = ptr::null();
-            let mut buf_len: usize = 0;
-            let worked = ::ffi::flow_io_get_output_buffer(self.flow_c(),
-                                                          io_p,
-                                                          &mut buf_start as *mut *const u8,
-                                                          &mut buf_len as *mut usize);
-            if !worked {
-                Err(self.c_error().unwrap())
-            } else if buf_start.is_null() {
-                // Not sure how output buffer is null... no writes yet?
-                Err(FlowError::ErrNotImpl)
-            } else {
-                Ok((std::slice::from_raw_parts(buf_start, buf_len)))
-            }
-        }
-    }
+//    pub fn io_get_output_buffer_slice(&self, io_id: i32) -> Result<&[u8]> {
+//        self.get_io(io_id)?.get_output_buffer_bytes()
+//    }
 
     pub fn io_get_output_buffer_copy(&self, io_id: i32) -> Result<Vec<u8>> {
-        self.io_get_output_buffer_slice(io_id).map(|s| s.to_vec())
+        self.get_io(io_id)?.get_output_buffer_bytes().map(|s| s.to_vec())
     }
 
 
@@ -183,81 +144,25 @@ impl Job{
 
 
     pub fn add_input_bytes<'b>(&'b mut self, io_id: i32, bytes: &'b [u8]) -> Result<()> {
-        unsafe {
-            self.add_io(self.c.create_io_from_slice(bytes)?, io_id, IoDirection::In)
-        }
+        self.add_io(&*self.c.create_io_from_slice(bytes)?, io_id, IoDirection::In)
     }
 
     pub fn add_output_buffer(&mut self, io_id: i32) -> Result<()> {
-        unsafe {
-            self.add_io(self.c.create_io_output_buffer()?, io_id, IoDirection::Out)
-        }
+       self.add_io(&*self.c.create_io_output_buffer()?, io_id, IoDirection::Out)
     }
-
-
 
 
     pub fn get_image_info(&mut self, io_id: i32) -> Result<s::ImageInfo> {
-
-        let instance = self.codec_instance_by_io_id(io_id).ok_or(FlowError::NullArgument)?;
-
-        if instance.direction != IoDirection::In{
-            return Err(FlowError::NullArgument)
-        }
-        unsafe {
-            let mut info: ::ffi::DecoderInfo = ::ffi::DecoderInfo { ..Default::default() };
-
-            if !::ffi::flow_codec_decoder_get_info(self.flow_c(), instance.codec_state, instance.codec_id, &mut info ){
-                Err(self.c_error().unwrap())
-            }else {
-                Ok(s::ImageInfo {
-                    frame_decodes_into: s::PixelFormat::from(info.frame_decodes_into),
-                    image_height: info.image_height,
-                    image_width: info.image_width,
-                    frame_count: info.frame_count,
-                    current_frame_index: info.current_frame_index,
-                    preferred_extension: std::ffi::CStr::from_ptr(info.preferred_extension)
-                        .to_owned()
-                        .into_string()
-                        .unwrap(),
-                    preferred_mime_type: std::ffi::CStr::from_ptr(info.preferred_mime_type)
-                        .to_owned()
-                        .into_string()
-                        .unwrap(),
-                })
-            }
-        }
-
+        self.get_codec(io_id)?.get_image_info(self.c, self)
     }
 
     pub fn tell_decoder(&mut self, io_id: i32, tell: s::DecoderCommand) -> Result<()> {
-        let instance = self.codec_instance_by_io_id(io_id).ok_or(FlowError::NullArgument)?;
+        self.get_codec(io_id)?.tell_decoder(self.c, self, tell)
+    }
 
-        if instance.direction != IoDirection::In {
-            return Err(FlowError::NullArgument)
-        }
+    pub fn get_exif_rotation_flag(&mut self, io_id: i32) -> Result<i32>{
+        self.get_codec(io_id)?.get_exif_rotation_flag(self.c, self)
 
-        match tell {
-            s::DecoderCommand::JpegDownscaleHints(hints) => {
-                let h = ::ffi::DecoderDownscaleHints {
-                    downscale_if_wider_than: hints.width,
-                    downscaled_min_width: hints.width,
-                    or_if_taller_than: hints.height,
-                    downscaled_min_height: hints.height,
-                    scale_luma_spatially: hints.scale_luma_spatially.unwrap_or(false),
-                    gamma_correct_for_srgb_during_spatial_luma_scaling: hints.gamma_correct_for_srgb_during_spatial_luma_scaling.unwrap_or(false)
-                };
-                unsafe {
-                    let force_mutable_pointer: *mut CodecInstance = mem::transmute(&*instance as *const CodecInstance);
-
-                    if !::ffi::flow_codec_decoder_set_downscale_hints(self.flow_c(), force_mutable_pointer, &h, false) {
-                        Err(self.c_error().unwrap())
-                    } else {
-                        Ok(())
-                    }
-                }
-            }
-        }
     }
 
 }

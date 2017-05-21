@@ -23,6 +23,7 @@ extern crate imageflow_types;
 extern crate imageflow_helpers;
 extern crate imageflow_riapi;
 
+
 #[macro_use]
 extern crate lazy_static;
 
@@ -34,6 +35,7 @@ extern crate libc;
 extern crate alloc;
 extern crate rustc_serialize;
 extern crate url;
+extern crate uuid;
 
 mod json;
 pub mod flow;
@@ -41,9 +43,12 @@ mod job;
 mod context_methods;
 mod job_methods;
 mod context;
+mod codecs;
+mod io;
 
 pub use context::{Context};
 pub use job::Job;
+pub use io::IoProxy;
 pub use ::ffi::{IoDirection, IoMode};
 pub use ::flow::definitions::Graph;
 pub use json::JsonResponse;

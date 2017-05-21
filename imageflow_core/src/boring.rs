@@ -5,6 +5,7 @@ extern crate threadpool;
 use Context;
 use Job;
 use JsonResponse;
+use IoProxy;
 use ::ffi::*;
 use std::sync::mpsc::channel;
 
@@ -225,8 +226,8 @@ pub fn benchmark(bench: BenchmarkOptions) -> std::result::Result<BenchmarkResult
 }
 
 
-pub struct IoResource {
-    pub io: *mut ImageflowJobIo,
+pub struct IoResource<'a> {
+    pub io: RefMut<'a, IoProxy>,
     pub direction: IoDirection,
 }
 
@@ -375,12 +376,7 @@ pub fn process_image<F, C, R>(commands: BoringCommands,
         // Add I/O
         let inputs: Vec<IoResource> = io_provider(&context);
         for (index, input) in inputs.iter().enumerate() {
-            let dir = input.direction;
-            let io = input.io;
-
-            unsafe {
-                job.add_io(io, index as i32, dir).unwrap();
-            }
+            job.add_io(&input.io, index as i32, input.direction).unwrap();
         }
 
 

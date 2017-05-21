@@ -3,13 +3,18 @@ use ::for_other_imageflow_crates::preludes::external_without_std::*;
 use ::ffi;
 use ::job::Job;
 use ::{FlowErr,FlowError, Result, JsonResponse};
+use io::IoProxy;
 
 use ::imageflow_types::collections::AddRemoveSet;
 use ::ffi::ImageflowJsonResponse;
 
-pub struct Context{
-    jobs: AddRemoveSet<Job>,
+
+
+pub struct Context {
+    //version: u64, (so different context types can be differentiated)
     c_ctx: *mut ffi::ImageflowContext,
+    jobs: AddRemoveSet<Job>,
+    io_proxies: AddRemoveSet<IoProxy>,
     error: RefCell<ErrorBuffer>,
 }
 
@@ -36,7 +41,8 @@ impl Context {
                 Ok(Box::new(Context {
                     c_ctx: inner,
                     error: RefCell::new(ErrorBuffer {c_ctx: inner}),
-                    jobs: AddRemoveSet::with_capacity(2)
+                    jobs: AddRemoveSet::with_capacity(2),
+                    io_proxies: AddRemoveSet::with_capacity(2)
                 }))
             }
         }).unwrap_or(Err(FlowError::Oom))
@@ -45,6 +51,7 @@ impl Context {
     /// Used by abi; should not panic
     pub fn abi_begin_terminate(&mut self) -> bool {
         self.jobs.mut_clear();
+        self.io_proxies.mut_clear();
         unsafe {
             ffi::flow_context_begin_terminate(self.c_ctx)
         }
@@ -56,6 +63,7 @@ impl Context {
     pub fn error(&self) -> Ref<ErrorBuffer>{
         self.error.try_borrow().expect("Another scope has mutably borrowed the ErrorBuffer; readonly access failed.")
     }
+
     pub unsafe fn unsafe_c_context_pointer(&self) -> *mut ffi::ImageflowContext{
         self.c_ctx
     }
@@ -68,9 +76,16 @@ impl Context {
         self.jobs.add_mut(Job::internal_use_only_create(self))
     }
 
+    pub fn create_io_proxy(&self) -> RefMut<IoProxy>{
+        self.io_proxies.add_mut(IoProxy::internal_use_only_create(self))
+    }
+
+
     pub fn abi_try_remove_job(&self, job: *const Job) -> bool{
         self.jobs.try_remove(job).unwrap_or(false)
     }
+
+
     pub fn flow_c(&self) -> *mut ffi::ImageflowContext{
         self.c_ctx
     }
@@ -80,91 +95,32 @@ impl Context {
     }
 
 
-
-    pub fn create_io_from_copy_of_slice<'a>(&'a self, bytes: &'a [u8]) -> Result<*mut ::ffi::ImageflowJobIo> {
-        unsafe {
-            let buf: *mut u8 =
-            ::ffi::flow_context_calloc(self.flow_c(),
-                                       1,
-                                       bytes.len(),
-                                       ptr::null(),
-                                       self.flow_c() as *const libc::c_void,
-                                       ptr::null(),
-                                       0) as *mut u8;
-
-            if buf.is_null() {
-                return Err(FlowError::Oom);
-            }
-            ptr::copy_nonoverlapping(bytes.as_ptr(), buf, bytes.len());
-
-            let io_ptr = ::ffi::flow_io_create_from_memory(self.flow_c(),
-                                                           ::ffi::IoMode::ReadSeekable,
-                                                           buf,
-                                                           bytes.len(),
-                                                           self.flow_c() as *const libc::c_void,
-                                                           ptr::null());
-
-            if io_ptr.is_null() {
-                Err(self.c_error().unwrap())
-            } else {
-                Ok(io_ptr)
-            }
-        }
-    }
-    pub fn create_io_from_slice<'a>(&'a self, bytes: &'a [u8]) -> Result<*mut ::ffi::ImageflowJobIo> {
-        unsafe {
-            let p = ::ffi::flow_io_create_from_memory(self.flow_c(),
-                                                      ::ffi::IoMode::ReadSeekable,
-                                                      bytes.as_ptr(),
-                                                      bytes.len(),
-                                                      self.flow_c() as *const libc::c_void,
-                                                      ptr::null());
-            if p.is_null() {
-                Err(self.c_error().unwrap())
-            } else {
-                Ok(p)
-            }
-        }
+    pub fn get_proxy_mut_by_pointer(&self, proxy: *const IoProxy) -> Result<RefMut<IoProxy>> {
+        // TODO: fix the many issues in this method. Runtime borrowing errors, etc.
+        self.io_proxies.try_get_reference_mut(proxy).map_err(|e| FlowError::ErrNotImpl).and_then(|v| v.ok_or(FlowError::ErrNotImpl))
     }
 
-    pub fn create_io_from_filename(&self, path: &str, dir: ::IoDirection) -> Result<*mut ::ffi::ImageflowJobIo> {
-        unsafe {
-            // TODO: character sets matter!
-            let mode = match dir {
-                s::IoDirection::In => ::ffi::IoMode::ReadSeekable,
-                s::IoDirection::Out => ::ffi::IoMode::WriteSequential,
-            };
-
-            let mut vec = Vec::new();
-            vec.extend_from_slice(path.as_bytes());
-            vec.push(0);
-
-            let c_path = std::ffi::CStr::from_bytes_with_nul(vec.as_slice()).unwrap();
-            //TODO: make filename lifetime last as long as context
-
-            let p = ::ffi::flow_io_create_for_file(self.flow_c(),
-                                                        mode,
-                                                        c_path.as_ptr(),
-                                                   self.flow_c() as *const libc::c_void);
-            if p.is_null() {
-                Err(self.c_error().unwrap())
-            } else {
-                Ok(p)
-            }
-        }
+    pub fn get_proxy_mut(&self, uuid: ::uuid::Uuid) -> Result<RefMut<IoProxy>> {
+        // TODO: fix the many issues in this method. Runtime borrowing errors, etc.
+        self.io_proxies.iter_mut().filter(|r| r.is_ok()).map(|r| r.unwrap()).find(|c| c.uuid == uuid).ok_or(FlowError::ErrNotImpl)
     }
 
-    pub fn create_io_output_buffer(&self) -> Result<(*mut ::ffi::ImageflowJobIo)> {
-        unsafe {
-            let p =
-            ::ffi::flow_io_create_for_output_buffer(self.flow_c(),
-                                                    self.flow_c() as *const libc::c_void);
-            if p.is_null() {
-                Err(self.c_error().unwrap())
-            } else {
-                Ok(p)
-            }
-        }
+    pub fn create_io_from_copy_of_slice<'a, 'b>(&'a self, bytes: &'b [u8]) -> Result<RefMut<'a, IoProxy>> {
+        IoProxy::copy_slice(self, bytes)
+    }
+    pub fn create_io_from_slice<'a>(&'a self, bytes: &'a [u8]) -> Result<RefMut<IoProxy>> {
+        IoProxy::read_slice(self, bytes)
+    }
+
+    pub fn create_io_from_filename(&self, path: &str, dir: ::IoDirection) -> Result<RefMut<IoProxy>> {
+        IoProxy::file(self, path, dir)
+    }
+    pub fn create_io_from_filename_with_mode(&self, path: &str, mode: ::IoMode) -> Result<RefMut<IoProxy>> {
+        IoProxy::file_with_mode(self, path, mode)
+    }
+
+    pub fn create_io_output_buffer(&self) -> Result<RefMut<IoProxy>> {
+        IoProxy::create_output_buffer(self)
     }
 
     pub fn todo_remove_set_floatspace(&self, b: ::ffi::Floatspace){

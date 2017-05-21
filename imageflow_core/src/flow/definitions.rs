@@ -139,7 +139,6 @@ pub enum NodeParams {
 #[derive(Clone,Debug,PartialEq)]
 pub struct Node {
     pub def: &'static NodeDefinition,
-    pub stage: NodeStage, // TODO: delete
     pub params: NodeParams,
     pub frame_est: FrameEstimate,
     pub cost_est: CostEstimate,
@@ -202,7 +201,6 @@ impl Node {
             },
             stable_id: -1,
             params: params,
-            stage: NodeStage::Blank,
             result: NodeResult::None,
         }
     }

@@ -8,13 +8,13 @@ use ::rustc_serialize::base64::ToBase64;
 use super::visualize::{notify_graph_changed, GraphRecordingUpdate, GraphRecordingInfo};
 use petgraph::EdgeDirection;
 
-pub struct Engine<'a, 'b> {
+pub struct Engine<'a, 'b> where 'a: 'b {
     c: &'a Context,
     job: &'a mut Job,
     g: &'b mut Graph,
 }
 
-impl<'a, 'b> Engine<'a, 'b> {
+impl<'a, 'b> Engine<'a, 'b> where 'a: 'b {
 
 
     pub fn create(context: &'a Context, job: &'a mut Job, g: &'b mut Graph) -> Engine<'a, 'b> {
@@ -157,41 +157,23 @@ impl<'a, 'b> Engine<'a, 'b> {
                 .def
                 .fn_link_state_to_this_io_id {
 
-                let old_custom_state = self.g.node_weight(NodeIndex::new(index)).unwrap().custom_state;
-                if !old_custom_state.is_null() && link_only_null_custom_state_nodes{
-                    continue;
-                }
+
                 let io_id;
                 {
                     let mut ctx = self.op_ctx_mut();
                     io_id = func(&mut ctx, NodeIndex::new(index));
                 }
                 if let Some(io_id) = io_id {
-                    let codec_instance_ptr = match self.job.codec_instance_by_io_id(io_id).map(|v| v as *const CodecInstance){
-                        Some(v) => v,
-                        None => {
-                            panic!("Failed to locate codec with io_id {}. There are {} codecs in the job.", io_id, self.job.codecs.iter().count());
-                        }
-                    };
+                    let weight = self.g.node_weight(NodeIndex::new(index)).unwrap();
+                    // Now, try to send decoder its commands
+                    // let ref mut weight = ctx.weight_mut(ix);
 
-
-                    {
-                        self.g.node_weight_mut(NodeIndex::new(index)).unwrap().custom_state =
-                            unsafe{ mem::transmute(codec_instance_ptr) };
-                    }
-                    {
-                        let weight = self.g.node_weight(NodeIndex::new(index)).unwrap();
-                        // Now, try to send decoder its commands
-                        // let ref mut weight = ctx.weight_mut(ix);
-
-                        if let NodeParams::Json(s::Node::Decode { io_id, ref commands }) = weight.params {
-                            if let Some(ref list) = *commands {
-                                for c in list.iter() {
-                                    self.job.tell_decoder(io_id, c.to_owned()).unwrap();
-                                }
+                    if let NodeParams::Json(s::Node::Decode { io_id, ref commands }) = weight.params {
+                        if let Some(ref list) = *commands {
+                            for c in list.iter() {
+                                self.job.tell_decoder(io_id, c.to_owned()).unwrap();
                             }
                         }
-
                     }
                 }
             }
@@ -243,7 +225,7 @@ impl<'a, 'b> Engine<'a, 'b> {
 
     pub fn estimate_node(&mut self, node_id: NodeIndex<u32>) -> FrameEstimate {
         let now = time::precise_time_ns();
-        let mut ctx = OpCtxMut {
+        let mut ctx = OpCtxMut{
             c: self.c,
             graph: self.g,
             job: self.job,
@@ -457,7 +439,7 @@ impl<'a, 'b> Engine<'a, 'b> {
 
         }
     }
-    fn op_ctx_mut(&mut self) -> OpCtxMut {
+    fn op_ctx_mut(&mut self) -> OpCtxMut{
         OpCtxMut {
             c: self.c,
             graph: self.g,

@@ -133,7 +133,7 @@ extern crate libc;
 use c::ffi;
 
 pub use c::{Context, Job};
-pub use c::ffi::ImageflowJobIo as JobIo;
+pub use c::IoProxy as JobIo;
 pub use c::ffi::ImageflowJsonResponse as JsonResponse;
 use std::ptr;
 use std::io::Write;
@@ -338,6 +338,7 @@ pub unsafe extern "C" fn imageflow_context_error_and_stacktrace(context: *mut Co
 /// Behavior is undefined if `context` is a null or invalid ptr; segfault likely.
 #[no_mangle]
 pub unsafe extern "C" fn imageflow_context_error_code(context: *mut Context) -> i32 {
+    //TODO: handle case of borrowed error - would panic, but needs to abort
     (&mut *context).error_mut().abi_error_code()
 }
 
@@ -767,9 +768,11 @@ pub unsafe extern "C" fn imageflow_io_create_for_file(context: *mut Context,
                                                       filename: *const libc::c_char,
                                                       cleanup: CleanupWith)
                                                       -> *mut JobIo {
-    // TODO: validate that 'owner' is capable of being an owner
-
-    ffi::flow_io_create_for_file(uw(context), std::mem::transmute(mode), filename, uw(context) as *const libc::c_void)
+    let s = CStr::from_ptr(filename).to_str().unwrap();
+    //TODO: handle invalid utf8
+    (&*context).create_io_from_filename_with_mode(s, std::mem::transmute(mode))
+        .map(|mut io| &mut *io as *mut JobIo)
+        .unwrap_or_else(|e| { e.write_to_context_ptr(context); ptr::null_mut() })
 }
 
 
@@ -787,19 +790,14 @@ pub unsafe extern "C" fn imageflow_io_create_from_buffer(context: *mut Context,
                                                             lifetime: Lifetime,
                                                             cleanup: CleanupWith)
                                                          -> *mut JobIo {
+    let bytes = std::slice::from_raw_parts(buffer, buffer_byte_count);
 
-    let mut final_buffer = buffer;
-    if lifetime == Lifetime::OutlivesFunctionCall {
-        let buf : *mut u8 = c::ffi::flow_context_calloc(uw(context), 1, buffer_byte_count, ptr::null(), uw(context) as *const libc::c_void, ptr::null(), 0) as *mut u8 ;
-        if buf.is_null() {
-            //TODO: raise OOM
-            return ptr::null_mut();
-        }
-        ptr::copy_nonoverlapping(buffer, buf, buffer_byte_count);
-
-        final_buffer = buf;
-    }
-    ffi::flow_io_create_from_memory(uw(context), std::mem::transmute(IoMode::ReadSeekable), final_buffer, buffer_byte_count, uw(context) as *mut libc::c_void, ptr::null())
+    let result = if lifetime == Lifetime::OutlivesFunctionCall {
+        (&*context).create_io_from_copy_of_slice(bytes)
+    }else {
+        (&*context).create_io_from_slice(bytes)
+    };
+    result.map(|mut io| &mut *io as *mut JobIo).unwrap_or_else(|e| { e.write_to_context_ptr(context); ptr::null_mut() })
 }
 
 
@@ -818,7 +816,7 @@ pub unsafe extern "C" fn imageflow_io_create_for_output_buffer(context: *mut Con
                                                                -> *mut JobIo {
     // The current implementation of output buffer only sheds its actual buffer with the context.
     // No need for the shell to have an earlier lifetime for mem reasons.
-    ffi::flow_io_create_for_output_buffer(uw(context), uw(context) as *mut libc::c_void)
+     &mut *(&*context).create_io_output_buffer().unwrap() as *mut JobIo
 }
 
 
@@ -837,10 +835,13 @@ pub unsafe extern "C" fn imageflow_io_get_output_buffer(context: *mut Context,
                                                         result_buffer_length: *mut libc::size_t)
                                                         -> bool {
 
-    let mut result_len: usize = 0;
-    let b = ffi::flow_io_get_output_buffer(uw(context), io, result_buffer, &mut result_len);
-        (* result_buffer_length) = result_len;
-    b
+    let io_proxy = (&*context).get_proxy_mut_by_pointer(io).unwrap();
+    //TODO: handle result, panics
+    let slice = io_proxy.get_output_buffer_bytes().unwrap(); // !!
+
+    (*result_buffer) = slice.as_ptr();
+    (* result_buffer_length) = slice.len();
+    true
 }
 
 ///
@@ -855,8 +856,8 @@ pub unsafe extern "C" fn imageflow_job_get_output_buffer_by_id(context: *mut Con
                                                                result_buffer: *mut *const u8,
                                                                result_buffer_length: *mut libc::size_t)
                                                                -> bool {
-    (&*job).get_io(io_id).map(|io|
-        imageflow_io_get_output_buffer(context, io, result_buffer, result_buffer_length)
+    (&*job).get_io(io_id).map(|mut io|
+        imageflow_io_get_output_buffer(context, &mut *io as *mut JobIo, result_buffer, result_buffer_length)
     ).unwrap_or_else(|e| { e.write_to_context_ptr(context); false })
 }
 
@@ -879,7 +880,9 @@ pub unsafe extern "C" fn imageflow_job_get_io(context: *mut Context,
                                               job: *mut Job,
                                               io_id: i32)
                                               -> *mut JobIo {
-    (&*job).get_io(io_id).unwrap_or(ptr::null_mut())
+    (&*job).get_io(io_id)
+            .map(|mut io| &mut *io as *mut JobIo)
+        .unwrap_or_else(|e| { e.write_to_context_ptr(context); ptr::null_mut() })
 }
 
 ///
@@ -895,7 +898,7 @@ pub unsafe extern "C" fn imageflow_job_add_io(context: *mut Context,
                                               io_id: i32,
                                               direction: Direction)
                                               -> bool {
-    (&mut *job).add_io(io, io_id, std::mem::transmute(direction))
+    (&mut *job).add_io(&*io, io_id, std::mem::transmute(direction))
         .map(|_| true)
         .unwrap_or_else(|e| { e.write_to_context_ptr(context); false })
 

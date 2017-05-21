@@ -40,23 +40,21 @@ pub struct ImageflowJsonResponse {
     pub buffer_size: libc::size_t,
 }
 
+
+
 #[repr(C)]
 pub struct ImageflowJobIo {
-    placeholder: i64,
-    // If you want to know what kind of I/O structure is inside user_data, compare the read_func/write_func function
-    // pointers. No need for another human-assigned set of custom structure identifiers.
-
-    /* flow_c * context;
-                      * flow_io_mode mode; // Call nothing, dereference nothing, if this is 0
-                      * flow_io_read_function read_func; // Optional for write modes
-                      * flow_io_write_function write_func; // Optional for read modes
-                      * flow_io_position_function position_func; // Optional for sequential modes
-                      * flow_io_seek_function seek_function; // Optional for sequential modes
-                      * flow_destructor_function dispose_func; // Optional.
-                      * void * user_data;
-                      * int64_t optional_file_length; // Whoever sets up this structure can populate this value - or set it to -1 - as they
-                      * wish. useful for resource estimation.
-                      * */
+    context: *mut ImageflowContext,
+    mode: IoMode,// Call nothing, dereference nothing, if this is 0
+    read_fn: Option<IoReadFn>,// Optional for write modes
+    write_fn: Option<IoWriteFn>,// Optional for read modes
+    position_fn: Option<IoPositionFn>, // Optional for sequential modes
+    seek_fn: Option<IoSeekFn>, // Optional for sequential modes
+    dispose_fn: Option<DestructorFn>,// Optional
+    user_data: *mut c_void,
+    /// Whoever sets up this structure can populate this value - or set it to -1 - as they
+    /// wish. useful for resource estimation.
+    optional_file_length: i64
 }
 
 
@@ -88,8 +86,8 @@ pub struct ImageflowContext {
 #[repr(C)]
 #[derive(Clone,Debug,PartialEq)]
 pub struct CodecInstance {
-    pub io_id: int32_t,
-    pub codec_id: int64_t,
+    pub io_id: i32,
+    pub codec_id: i64,
     pub codec_state: *mut c_void,
     pub io: *mut ImageflowJobIo,
     pub direction: IoDirection,
@@ -403,12 +401,65 @@ pub struct ObjTrackingInfo {
     pub bytes_allocations_net_peak: size_t,
 }
 
-type CodecInitializeFn = extern "C" fn(*mut ImageflowContext, *mut CodecInstance) -> bool;
-type CodecWriteFrameFn = extern "C" fn(*mut ImageflowContext,
-                                       *mut libc::c_void,
-                                       *mut BitmapBgra,
-                                       *const EncoderHints)
-                                       -> bool;
+
+#[repr(C)]
+#[derive(Clone,Debug,PartialEq)]
+pub struct DecoderFrameInfo{
+    pub w: i32,
+    pub h: i32,
+    pub format: PixelFormat
+}
+
+// TODO: find a way to distinguish between (rust/c) context and IO types here
+
+
+type DestructorFn = extern fn(*mut ImageflowContext, *mut c_void) -> bool;
+
+
+/// Returns the number of read into the buffer. Failure to read 'count' bytes could mean EOF or failure. Check context
+/// status. Pass NULL to buffer if you want to skip 'count' many bytes, seeking ahead.
+type IoReadFn = extern fn(*mut ImageflowContext, *mut ImageflowJobIo, *mut u8, size_t) -> i64;
+
+/// Returns the number of bytes written. If it doesn't equal 'count', there was an error. Check context status
+type IoWriteFn = extern fn(*mut ImageflowContext, *mut ImageflowJobIo, *const u8, size_t) -> i64;
+
+
+/// Returns negative on failure - check context for more detail. Returns the current position in the stream when
+/// successful
+type IoPositionFn = extern fn(*mut ImageflowContext, *mut ImageflowJobIo) -> i64;
+
+/// Returns true if seek was successful.
+type IoSeekFn = extern fn(*mut ImageflowContext, *mut ImageflowJobIo, i64) -> bool;
+
+
+
+
+type CodecInitializeFn = extern fn(*mut ImageflowContext, *mut CodecInstance) -> bool;
+
+type CodecGetInfoFn = extern fn(*mut ImageflowContext, codec_state: *mut c_void, info_out: *mut DecoderInfo) -> bool;
+
+type CodecSwitchFrameFn = extern fn(*mut ImageflowContext, codec_state: *mut c_void, frame_index: size_t) -> bool;
+
+type CodecGetFrameInfoFn = extern fn(*mut ImageflowContext, codec_state: *mut c_void, info_out: *mut DecoderFrameInfo) -> bool;
+
+type CodecSetDownscaleHintsFn = extern fn(*mut ImageflowContext, *mut CodecInstance, *const DecoderDownscaleHints ) -> bool;
+
+
+type CodecReadFrameFn = extern fn(*mut ImageflowContext,  codec_state: *mut c_void, *mut BitmapBgra) -> bool;
+
+
+type CodecWriteFrameFn = extern fn(*mut ImageflowContext,
+                                   codec_state: *mut libc::c_void,
+                                   *mut BitmapBgra,
+                                   *const EncoderHints)
+                                   -> bool;
+
+
+type CodecStringifyFn = extern fn(*mut ImageflowContext,
+                                   codec_state: *mut libc::c_void,
+                                   buffer: *mut libc::c_char, buffer_size: size_t)
+                                   -> bool;
+
 
 
 #[repr(C)]
@@ -416,22 +467,37 @@ type CodecWriteFrameFn = extern "C" fn(*mut ImageflowContext,
 pub struct CodecDefinition {
     pub codec_id: i64,
     pub initialize: Option<CodecInitializeFn>,
-    get_info: *const libc::c_void,
-    get_frame_info: *const libc::c_void,
-    set_downscale_hints: *const libc::c_void,
-    switch_frame: *const libc::c_void,
-    read_frame: *const libc::c_void,
+    pub get_info: Option<CodecGetInfoFn>,
+    pub get_frame_info: Option<CodecGetFrameInfoFn>,
+    pub set_downscale_hints: Option<CodecSetDownscaleHintsFn>,
+    pub switch_frame: Option<CodecSwitchFrameFn>,
+    pub read_frame: Option<CodecWriteFrameFn>,
     pub write_frame: Option<CodecWriteFrameFn>,
-    name: *const u8,
-    preferred_mime_type: *const u8,
-    preferred_extension: *const u8,
-    placeholder: u8, // FIXME: replace
+
+    pub stringify: Option<CodecStringifyFn>,
+    pub name: *const u8,
+    pub preferred_mime_type: *const u8,
+    pub preferred_extension: *const u8,
+    pub magic_byte_sets: *const CodecMagicBytes,
+    pub magic_bytes_sets_count: size_t,
+}
+
+#[repr(C)]
+#[derive(Clone,Debug,PartialEq)]
+pub struct CodecMagicBytes {
+    pub byte_count: size_t,
+    pub bytes: *const u8
+}
+#[repr(C)]
+#[derive(Clone,Debug,PartialEq)]
+struct CodecDefinitionSet {
+    pub codecs: *const CodecDefinition,
+    pub count: size_t,
 }
 
 #[repr(C)]
 #[derive(Clone,Debug,PartialEq)]
 pub struct ContextCodecSet {
-    // FIXME: replace with a Vec?
     codecs: *mut CodecDefinition,
     codecs_count: size_t,
 }
@@ -638,7 +704,7 @@ mod mid_term {
     use ::libc;
 
     extern "C" {
-        pub fn flow_context_set_floatspace(c: *mut ImageflowContext,
+        pub fn flow_context_set_floatspace(ctx: *mut ImageflowContext,
                                            space: Floatspace,
                                            a: f32,
                                            b: f32,
