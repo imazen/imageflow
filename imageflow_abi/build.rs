@@ -95,18 +95,21 @@ fn rename_enum_snake_case_and_prefix_members(input: String, old_name: &str, new_
 
     let find_def_str = r"\btypedef\s+enum\s+".to_owned() + &new_name + r"\s+(\{[^\}]+\})";
 
+    let moz_cheddar_prefix = format!("{}_", old_name);
 
     let s = Regex::new(&find_def_str).unwrap().replace(&s, |outer_caps: &Captures| {
 
-        let re_member = Regex::new(r"\b([A-Za-z0-9]+)\s+=").unwrap();
+        let re_member = Regex::new(r"\b([A-Za-z0-9_]+)\s+=").unwrap();
 
         let contents = re_member.replace_all(&outer_caps[1], | caps: &Captures| {
-            let snake_id = if member_prefix == "" {
-                style_id(&caps[1], Style::Snake)
+            let without_moz_cheddar_prefix = caps[1].replace(&moz_cheddar_prefix,"");
+            let snake_id = style_id(&without_moz_cheddar_prefix, Style::Snake);
+            let full_snake_id = if member_prefix == "" {
+                snake_id
             }else {
-               format!("{}_{}", style_id(member_prefix, Style::Snake), style_id(&caps[1], Style::Snake))
+               format!("{}_{}", style_id(member_prefix, Style::Snake), snake_id)
             };
-            format!("{} =", style_id(&snake_id, member_casing))
+            format!("{} =", style_id(&full_snake_id, member_casing))
         });
         format!("typedef enum {} {}", new_ref, contents)
     });

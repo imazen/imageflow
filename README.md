@@ -131,7 +131,7 @@ sudo apt-get install --no-install-recommends \
 After installing the above, you'll need conan, cmake 3.4.1+, dssim, and Rust Nightly.
 
 ```bash
-curl https://sh.rustup.rs -sSf | sh -s -- -y --default-toolchain nightly-2017-03-04
+curl https://sh.rustup.rs -sSf | sh -s -- -y --default-toolchain nightly-2017-06-08
 sudo pip install conan
 ./ci/nixtools/install_cmake.sh
 ./ci/nixtools/install_dssim.sh
@@ -164,7 +164,7 @@ Don't use a C++ IDE until you've run `win_build_c.bat`, as CMake needs to genera
 1. Visual Studio 2015 (for the C++ build tools)
 2. Install [Git 64-bit](https://git-scm.com/download/win).
 3. Install [NASM 64-bit](http://www.nasm.us/pub/nasm/releasebuilds/2.12.02/win64/nasm-2.12.02-installer-x64.exe) Installer must be `Run as Administrator` - it will not prompt. 
-4. Install [Rust 64-bit](https://static.rust-lang.org/rustup/dist/x86_64-pc-windows-msvc/rustup-init.exe). Install toolchain `nightly-2017-03-04` and set it as default. For the moment, 32-bit builds also require [a 32-bit Rust](https://static.rust-lang.org/rustup/dist/i686-pc-windows-msvc/rustup-init.exe).
+4. Install [Rust 64-bit](https://static.rust-lang.org/rustup/dist/x86_64-pc-windows-msvc/rustup-init.exe). Install toolchain `nightly-2017-06-08` and set it as default. For the moment, 32-bit builds also require [a 32-bit Rust](https://static.rust-lang.org/rustup/dist/i686-pc-windows-msvc/rustup-init.exe).
 5. Install [CMake 3.7 64-bit](https://cmake.org/download/) (3.8.0-rc3 makes paths too long)
 6. Install [Conan](https://www.conan.io/downloads). 
 

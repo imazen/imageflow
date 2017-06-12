@@ -21,13 +21,13 @@ pub mod process_testing {
     }
 
     pub trait ProcOutputExtras {
-        fn parse_stdout_as<T>(&self) -> std::result::Result<T, serde_json::error::Error>
-            where T: serde::Deserialize;
+        fn parse_stdout_as<'de, T>(&'de self) -> std::result::Result<T, serde_json::error::Error>
+            where T: serde::Deserialize<'de>;
     }
 
     impl ProcOutputExtras for ProcOutput {
-        fn parse_stdout_as<T>(&self) -> std::result::Result<T, serde_json::error::Error>
-            where T: serde::Deserialize
+        fn parse_stdout_as<'de, T>(&'de self) -> std::result::Result<T, serde_json::error::Error>
+            where T: serde::Deserialize<'de>
         {
             serde_json::from_slice(self.stdout_bytes())
         }

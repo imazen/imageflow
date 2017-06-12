@@ -6,8 +6,8 @@ environment:
     RUST_BACKTRACE: 1
     CARGO_INCREMENTAL: 1
     TARGET_CPU: sandybridge
-    RUST_TOOLCHAIN: nightly-2017-03-04
-
+    RUST_TOOLCHAIN: nightly-2017-06-08
+    
 configuration: Release
 
 platform:

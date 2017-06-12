@@ -29,7 +29,7 @@ impl<'a, T> MethodRouter<'a, T> {
                             method: &'static str,
                             responder: ResponderFn<'a, T, D>)
                             -> Option<MethodHandler<'a, T>>
-        where D: serde::Deserialize,
+        where D: serde::de::DeserializeOwned,
               D: 'a,
               T: 'a
     {
@@ -57,7 +57,7 @@ impl<'a, T> MethodRouter<'a, T> {
 }
 pub fn create_handler_over_responder<'a, T, D>(responder: ResponderFn<'a, T, D>)
                                                -> MethodHandler<'a, T>
-    where D: serde::Deserialize,
+    where D: serde::de::DeserializeOwned,
           D: 'a,
           T: 'a
 {

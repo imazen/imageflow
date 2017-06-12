@@ -1044,9 +1044,9 @@ impl Response001 {
         }
     }
 }
-pub fn rtf<T>(value: T) -> usize
+pub fn rtf<'de,T>(value: T) -> usize
     where T: serde::Serialize,
-          T: serde::Deserialize
+          T: serde::Deserialize<'de>
 {
     key_casing::print_keys_not_roundtrippable(&value)
 }
@@ -1122,8 +1122,7 @@ fn error_from_string() {
             unreachable!()
         }
     };
-
-    assert_eq!(msg, "Syntax(Message(\"invalid type: string \\\"hi\\\", expected i32\"), 1, 18)");
+    assert_eq!(msg, "ErrorImpl { code: Message(\"invalid type: string \\\"hi\\\", expected i32\"), line: 1, column: 18 }");
 }
 
 #[test]
@@ -1145,7 +1144,7 @@ fn error_from_value() {
         }
     };
 
-    assert_eq!(msg, "Syntax(Message(\"invalid type: string \\\"hi\\\", expected i32\"), 0, 0)");
+    assert_eq!(msg, "ErrorImpl { code: Message(\"invalid type: string \\\"hi\\\", expected i32\"), line: 0, column: 0 }");
     // When parsing from a value, we cannot tell which line or character caused it. I suppose we
     // must serialize/deserialize again, in order to inject an indicator into the text?
     // We cannot recreate the original location AFAICT
@@ -1172,9 +1171,9 @@ mod key_casing {
         }
     }
 
-    pub fn collect_active_json_keys<T>(value: &T) -> serde_json::error::Result<Vec<String>>
+    pub fn collect_active_json_keys<'de, T>(value: &T) -> serde_json::error::Result<Vec<String>>
         where T: serde::Serialize,
-              T: serde::Deserialize
+              T: serde::Deserialize<'de>
     {
         let bytes = serde_json::to_vec(value)?;
         let generic: serde_json::Value = serde_json::from_slice(&bytes)?;
@@ -1184,10 +1183,10 @@ mod key_casing {
     }
 
     #[allow(dead_code)]
-    pub fn which_json_keys_cannot_roundtrip_casing<T>(value: &T)
+    pub fn which_json_keys_cannot_roundtrip_casing<'de, T>(value: &T)
                                                       -> serde_json::error::Result<Vec<String>>
         where T: serde::Serialize,
-              T: serde::Deserialize
+              T: serde::Deserialize<'de>
     {
         let keys = collect_active_json_keys(value)?;
 
@@ -1201,9 +1200,9 @@ mod key_casing {
     }
 
     /// Returns the number of roundtrip failures we printed
-    pub fn print_keys_not_roundtrippable<T>(value: &T) -> usize
+    pub fn print_keys_not_roundtrippable<'de, T>(value: &T) -> usize
         where T: serde::Serialize,
-              T: serde::Deserialize
+              T: serde::Deserialize<'de>
     {
         let keys = collect_active_json_keys(value)
             .expect("Value must be marked Serialize and Deserialize");
@@ -1227,9 +1226,9 @@ mod key_casing {
     }
 
     #[allow(dead_code)]
-    pub fn print_keys_not_roundtrippable_consuming<T>(value: T) -> usize
+    pub fn print_keys_not_roundtrippable_consuming<'de, T>(value: T) -> usize
         where T: serde::Serialize,
-              T: serde::Deserialize
+              T: serde::Deserialize<'de>
     {
         print_keys_not_roundtrippable(&value)
     }
