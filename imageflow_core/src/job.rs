@@ -76,7 +76,7 @@ impl Job{
     pub fn get_codec(&self, io_id: i32) -> Result<RefMut<CodecInstanceContainer>>{
         //TODO
         //We're treating failed borrows the same as everything else right now... :(
-        self.codecs.iter_mut().filter(|r| r.is_ok()).map(|r| r.unwrap()).find(|c| c.io_id == io_id).ok_or(FlowError::ErrNotImpl)
+        Ok(self.codecs.iter_mut().filter(|r| r.is_ok()).map(|r| r.unwrap()).find(|c| c.io_id == io_id).ok_or(FlowError::ErrNotImpl).unwrap())
     }
 
     pub fn get_io(&self, io_id: i32) -> Result<RefMut<IoProxy>>{

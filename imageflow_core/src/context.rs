@@ -102,7 +102,7 @@ impl Context {
 
     pub fn get_proxy_mut(&self, uuid: ::uuid::Uuid) -> Result<RefMut<IoProxy>> {
         // TODO: fix the many issues in this method. Runtime borrowing errors, etc.
-        self.io_proxies.iter_mut().filter(|r| r.is_ok()).map(|r| r.unwrap()).find(|c| c.uuid == uuid).ok_or(FlowError::ErrNotImpl)
+        Ok(self.io_proxies.iter_mut().filter(|r| r.is_ok()).map(|r| r.unwrap()).find(|c| c.uuid == uuid).ok_or(FlowError::ErrNotImpl).unwrap())
     }
 
     pub fn create_io_from_copy_of_slice<'a, 'b>(&'a self, bytes: &'b [u8]) -> Result<RefMut<'a, IoProxy>> {

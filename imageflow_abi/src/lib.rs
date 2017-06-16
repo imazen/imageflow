@@ -898,7 +898,7 @@ pub unsafe extern "C" fn imageflow_job_add_io(context: *mut Context,
                                               io_id: i32,
                                               direction: Direction)
                                               -> bool {
-    (&mut *job).add_io(&*io, io_id, std::mem::transmute(direction))
+    (&mut *job).add_io(&mut *io, io_id, std::mem::transmute(direction))
         .map(|_| true)
         .unwrap_or_else(|e| { e.write_to_context_ptr(context); false })
 
