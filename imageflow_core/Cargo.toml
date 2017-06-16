@@ -38,6 +38,9 @@ threadpool = "1.0"
 petgraph = "^0.2.8"
 daggy = "^0.4.1"
 
+gif = "*"
+gif-dispose="*"
+
 url = "*"
 uuid = { version = "0.5", features = ["v4"] }
 

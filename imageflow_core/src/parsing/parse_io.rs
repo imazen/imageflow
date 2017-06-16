@@ -59,8 +59,8 @@ impl<'a> IoTranslator<'a> {
             io_list.push((proxy, io_obj.io_id, io_obj.direction));
         }
 
-        for io_list in io_list {
-            job.add_io(&io_list.0, io_list.1, io_list.2).unwrap();
+        for io_list in io_list.iter_mut() {
+            job.add_io(&mut io_list.0, io_list.1, io_list.2).unwrap();
         }
 
     }

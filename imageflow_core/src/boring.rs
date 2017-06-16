@@ -374,9 +374,9 @@ pub fn process_image<F, C, R>(commands: BoringCommands,
         let mut job = context.create_job();
 
         // Add I/O
-        let inputs: Vec<IoResource> = io_provider(&context);
-        for (index, input) in inputs.iter().enumerate() {
-            job.add_io(&input.io, index as i32, input.direction).unwrap();
+        let mut inputs: Vec<IoResource> = io_provider(&context);
+        for (index, input) in inputs.iter_mut().enumerate() {
+            job.add_io(&mut input.io, index as i32, input.direction).unwrap();
         }
 
 

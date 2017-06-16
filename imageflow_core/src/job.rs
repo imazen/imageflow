@@ -7,6 +7,7 @@ use ::rustc_serialize::base64::ToBase64;
 use ::imageflow_types::collections::*;
 use io::IoProxy;
 use codecs::CodecInstanceContainer;
+use ::uuid::Uuid;
 
 pub struct Job{
     c: &'static Context,
@@ -16,6 +17,7 @@ pub struct Job{
     pub max_calc_flatten_execute_passes: i32,
     pub graph_recording: s::Build001GraphRecording,
     pub codecs: AddRemoveSet<CodecInstanceContainer>,
+    pub io_to_proxy_uuids: Vec<(i32,Uuid)>
 
 }
 impl Job{
@@ -30,7 +32,8 @@ impl Job{
             next_stable_node_id: 0,
             max_calc_flatten_execute_passes: 40,
             graph_recording: s::Build001GraphRecording::off(),
-            codecs: AddRemoveSet::with_capacity(4)
+            codecs: AddRemoveSet::with_capacity(4),
+            io_to_proxy_uuids: Vec::with_capacity(4)
         }
     }
     pub fn context(&self) -> &Context{
@@ -77,17 +80,16 @@ impl Job{
     }
 
     pub fn get_io(&self, io_id: i32) -> Result<RefMut<IoProxy>>{
-        //TODO
-        //We're treating failed borrows the same as everything else right now... :(
-        let uuid = self.get_codec(io_id)?.proxy_uuid;
-
+        let uuid = self.io_to_proxy_uuids.iter().find(|&&(id, uuid)| id == io_id).map(|&(_,uuid)| uuid).unwrap();
         self.c.get_proxy_mut(uuid)
     }
 
-    pub fn add_io(&mut self, io: &IoProxy, io_id: i32, direction: IoDirection) -> Result<()>{
-
+    pub fn add_io(&mut self, io: &mut IoProxy, io_id: i32, direction: IoDirection) -> Result<()>{
+        self.io_to_proxy_uuids.push((io_id, io.uuid));
         let mut codec = self.codecs.add_mut(CodecInstanceContainer::create(self.c, io, io_id, direction)?);
-        codec.initialize(self.c, self).unwrap();
+        if let Ok(d) = codec.get_decoder(){
+            d.initialize(self.c, self)?;
+        }
         Ok(())
     }
 
@@ -144,24 +146,24 @@ impl Job{
 
 
     pub fn add_input_bytes<'b>(&'b mut self, io_id: i32, bytes: &'b [u8]) -> Result<()> {
-        self.add_io(&*self.c.create_io_from_slice(bytes)?, io_id, IoDirection::In)
+        self.add_io(&mut *self.c.create_io_from_slice(bytes)?, io_id, IoDirection::In)
     }
 
     pub fn add_output_buffer(&mut self, io_id: i32) -> Result<()> {
-       self.add_io(&*self.c.create_io_output_buffer()?, io_id, IoDirection::Out)
+       self.add_io(&mut *self.c.create_io_output_buffer()?, io_id, IoDirection::Out)
     }
 
 
     pub fn get_image_info(&mut self, io_id: i32) -> Result<s::ImageInfo> {
-        self.get_codec(io_id)?.get_image_info(self.c, self)
+        self.get_codec(io_id)?.get_decoder()?.get_image_info(self.c, self, &mut *self.get_io(io_id)?)
     }
 
     pub fn tell_decoder(&mut self, io_id: i32, tell: s::DecoderCommand) -> Result<()> {
-        self.get_codec(io_id)?.tell_decoder(self.c, self, tell)
+        self.get_codec(io_id)?.get_decoder()?.tell_decoder(self.c, self, tell)
     }
 
     pub fn get_exif_rotation_flag(&mut self, io_id: i32) -> Result<i32>{
-        self.get_codec(io_id)?.get_exif_rotation_flag(self.c, self)
+        self.get_codec(io_id)?.get_decoder()?.get_exif_rotation_flag(self.c, self)
 
     }
 

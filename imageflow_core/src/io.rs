@@ -19,6 +19,19 @@ pub struct IoProxy{
 }
 
 
+impl io::Read for IoProxy{
+
+    fn read(&mut self, buf: &mut [u8]) -> io::Result<usize>{
+        self.read_to_buffer(self.c, buf).map(|v|
+            if v < 0 || v as u64 > <usize>::max_value() as u64 {
+                panic!("");
+            }else{
+                v as usize
+            }).map_err(|e| std::io::Error::new(io::ErrorKind::Other, e))
+    }
+}
+
+
 
 //
 //context: *mut ImageflowContext,
@@ -62,6 +75,35 @@ impl IoProxy {
     pub fn get_io_ptr(&self) -> *mut ::ffi::ImageflowJobIo {
         self.classic
     }
+
+    fn classic_io(&self) -> Option<&ImageflowJobIo>{
+        if self.classic.is_null(){
+            None
+        }else{
+            Some(unsafe{ &*self.classic})
+        }
+
+    }
+
+    pub fn read_to_buffer(&self, context: &Context, buffer: &mut [u8]) -> Result<i64> {
+        //TODO: return result for read failure instead of panicking.
+        // Return result for missing function instead of panicking.
+        let read = self.classic_io().unwrap().read_fn.unwrap()(context.flow_c(), self.classic, buffer.as_mut_ptr(), buffer.len());
+        if read < buffer.len() as i64{
+            context.error().assert_ok();
+        }
+        Ok(read)
+
+    }
+
+
+    pub fn seek(&self, context: &Context, position: i64) -> Result<bool> {
+        //TODO: return result for read failure instead of panicking.
+        // Return result for missing function instead of panicking.
+        let success = self.classic_io().unwrap().seek_fn.unwrap()(context.flow_c(), self.classic, position);
+        Ok(success)
+    }
+
 
     pub fn read_slice<'a>(context: &'a Context, bytes: &'a [u8]) -> Result<RefMut<'a, IoProxy>> {
         unsafe {

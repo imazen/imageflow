@@ -220,6 +220,17 @@ fn test_scale_image() {
     assert!(matched);
 }
 
+#[test]
+fn test_read_gif() {
+    let matched = compare(Some(s::IoEnum::Url("https://s3-us-west-2.amazonaws.com/imageflow-resources/test_inputs/mountain_800.gif".to_owned())), 500,
+                          "mountain_gif_scaled400".to_owned(), false, false, vec![
+            s::Node::Decode {io_id: 0, commands: None},
+            s::Node::Resample2D{ w: 400, h: 300, down_filter: Some(s::Filter::Robidoux), up_filter: Some(s::Filter::Robidoux), hints: Some(request_1d_twice_mode()) }
+        ]
+    );
+    assert!(matched);
+}
+
 
 
 #[test]

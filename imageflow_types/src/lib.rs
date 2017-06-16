@@ -163,6 +163,8 @@ pub enum EncoderPreset {
         // camelCased: #[serde(rename="zlibCompression")]
         zlib_compression: Option<i32>,
     },
+    #[serde(rename="libpng")]
+    Gif
 }
 
 impl EncoderPreset {

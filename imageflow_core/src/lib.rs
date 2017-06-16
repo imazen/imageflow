@@ -36,6 +36,8 @@ extern crate alloc;
 extern crate rustc_serialize;
 extern crate url;
 extern crate uuid;
+extern crate gif;
+extern crate gif_dispose;
 
 mod json;
 pub mod flow;
@@ -78,6 +80,20 @@ pub enum FlowError {
     Oom,
     Err(FlowErr),
     ErrNotImpl,
+}
+
+
+impl std::fmt::Display for FlowError {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        write!(f, "{:?}", self)
+    }
+}
+
+
+impl std::error::Error for FlowError{
+    fn description(&self) -> &str{
+        "std::error::Error for FlowError not implemented"
+    }
 }
 
 impl FlowError{
