@@ -144,12 +144,13 @@ impl Ir4Expand{
             let format = i.format.or(self.source.get_format_from_mime()).unwrap_or(self.source.get_format_from_frame());
 
             let encoder = match format {
+                OutputFormat::Gif => s::EncoderPreset::Gif,
                 OutputFormat::Jpeg => s::EncoderPreset::LibjpegTurbo {
                     quality: Some(i.quality.unwrap_or(90)),
                     //TODO: support self.i.jpeg_subsampling
                 },
                 // TODO: introduce support for 24-bit png and self.i.bgcolor_srgb (matte)
-                OutputFormat::Png | OutputFormat::Gif => s::EncoderPreset::Libpng {
+                OutputFormat::Png  => s::EncoderPreset::Libpng {
                     depth: Some(if i.bgcolor_srgb.is_some() { s::PngBitDepth::Png24 } else { s::PngBitDepth::Png32 }),
                     zlib_compression: None,
                     matte: i.bgcolor_srgb.map(|sr| s::Color::Srgb(s::ColorSrgb::Hex(sr.to_rrggbbaa_string())))

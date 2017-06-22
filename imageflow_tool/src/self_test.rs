@@ -389,13 +389,12 @@ pub fn run(tool_location: Option<PathBuf>) -> i32 {
         }
 
     }
-
     {
         let c = c.subfolder_context("query");
         c.create_blank_image_here("100x100", 100, 100, s::EncoderPreset::libjpegturbo());
 
         let result =
-            c.exec("v0.1/ir4 --command \"width=60&height=40&mode=max&format=jpg\" --in 100x100.jpg --out out4.jpg");
+            c.exec("v0.1/ir4 --command width=60&height=40&mode=max&format=jpg --in 100x100.jpg --out out4.jpg");
 
         result.expect_status_code(Some(0));
 
@@ -412,7 +411,26 @@ pub fn run(tool_location: Option<PathBuf>) -> i32 {
         }
 
     }
+    {
+        let c = c.subfolder_context("gif");
+        let result =
+            c.exec("v0.1/ir4 --command width=200&height=200&format=gif --in https://s3-us-west-2.amazonaws.com/imageflow-resources/test_inputs/waterhouse.jpg --out out5.gif");
 
+        result.expect_status_code(Some(0));
+
+//        let resp: s::Response001 = result.parse_stdout_as::<s::Response001>().unwrap();
+//        match resp.data {
+//            s::ResponsePayload::BuildResult(info) => {
+//
+//                assert!(info.encodes.len() == 1);
+//                let encode: &s::EncodeResult = &info.encodes[0];
+//                assert_eq!(encode.preferred_extension, "gif".to_owned());
+//            }
+//            _ => panic!("Build result not sent"),
+//        }
+
+
+    }
 
     // It seems that Clap always uses status code 1 to indicate a parsing failure
     c.exec("bad command").expect_status_code(Some(1));
@@ -573,5 +591,9 @@ pub fn test_capture(tool_location: Option<PathBuf>) -> i32 {
 
         c.exec("v0.1/build --debug-package debug_example --json example1.json --in 200x200.png 200x200.jpg --out out0.jpg --response out0.json").expect_status_code(Some(0));
     }
+
+
+
+
     0
 }

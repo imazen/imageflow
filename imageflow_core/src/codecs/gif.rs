@@ -30,7 +30,7 @@ impl GifDecoder {
         // Important:
         decoder.set(::gif::ColorOutput::Indexed);
 
-        let mut reader = decoder.read_info().unwrap();
+        let reader = decoder.read_info().unwrap();
         Ok((reader.width() as i32, reader.height() as i32))
 
     }
@@ -96,7 +96,7 @@ impl Decoder for GifDecoder {
             }
         }else{
             panic!("");
-            Err(FlowError::ErrNotImpl)
+            //Err(FlowError::ErrNotImpl)
         }
 
     }
@@ -111,17 +111,51 @@ impl Decoder for GifDecoder {
     }
 
 pub struct GifEncoder{
-
+    io_id: i32
 }
 
 impl GifEncoder{
     pub(crate) fn create(c: &Context, job: &Job, io: &mut IoProxy, preset: &s::EncoderPreset, io_id: i32) -> GifEncoder{
-        unimplemented!()
+        GifEncoder{ io_id: io_id}
     }
 }
 
 impl Encoder for GifEncoder{
     fn write_frame(&mut self, c: &Context, job: &Job, io: &mut IoProxy, preset: &s::EncoderPreset, frame: &mut BitmapBgra) -> Result<s::EncodeResult> {
-        unimplemented!()
+        unsafe {
+            let mut pixels = Vec::new();
+            pixels.extend_from_slice(frame.pixels_slice_mut().unwrap());
+            let f;
+            if frame.fmt == ::ffi::PixelFormat::Bgr24 {
+                for pix in pixels.chunks_mut(3) {
+                    let a = pix[0];
+                    pix[0] = pix[2];
+                    pix[2] = a;
+                }
+                f = ::gif::Frame::from_rgb(frame.w as u16, frame.h as u16, &mut pixels);
+            }else {
+                for pix in pixels.chunks_mut(4) {
+                    let a = pix[0];
+                    pix[0] = pix[2];
+                    pix[2] = a;
+                }
+                f = ::gif::Frame::from_rgba(frame.w as u16, frame.h as u16, &mut pixels);
+            }
+
+            let mut encoder = ::gif::Encoder::new(io, frame.w as u16, frame.h as u16, &[]).unwrap();
+            encoder.write_frame(&f).unwrap();
+
+            Ok(
+                s::EncodeResult{
+                    w: frame.w as i32,
+                    h: frame.h as i32,
+                    io_id: self.io_id,
+                    bytes: ::imageflow_types::ResultBytes::Elsewhere,
+                    preferred_extension: "gif".to_owned(),
+                    preferred_mime_type: "image/gif".to_owned()
+                }
+            )
+        }
     }
 }
+

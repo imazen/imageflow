@@ -671,6 +671,8 @@ fn test_url_parsing() {
     t("w=200&h=300&mode=crop", Instructions { w: Some(200), h: Some(300), mode: Some(FitMode::Crop), ..Default::default() }, vec![]);
     t("format=jpeg", Instructions { format: Some(OutputFormat::Jpeg), ..Default::default() }, vec![]);
     t("format=png", Instructions { format: Some(OutputFormat::Png), ..Default::default() }, vec![]);
+    t("format=gif", Instructions { format: Some(OutputFormat::Gif), ..Default::default() }, vec![]);
+    t("height=200&format=gif", Instructions { format: Some(OutputFormat::Gif), h: Some(200), ..Default::default() }, vec![]);
     t("maxwidth=1&maxheight=3", Instructions { legacy_max_height: Some(3), legacy_max_width: Some(1), ..Default::default() }, vec![]);
     t("scale=down", Instructions {scale: Some(ScaleMode::DownscaleOnly), ..Default::default() }, vec![]);
     t("width=20&Height=300&scale=Canvas", Instructions { w: Some(20), h: Some(300), scale: Some(ScaleMode::UpscaleCanvas), ..Default::default() }, vec![]);
@@ -734,6 +736,7 @@ fn test_tostr(){
     t("h=300&mode=max&w=200", Instructions { w: Some(200), h: Some(300), mode: Some(FitMode::Max), ..Default::default() });
     t("h=300&mode=crop&w=200", Instructions { w: Some(200), h: Some(300), mode: Some(FitMode::Crop), ..Default::default() });
     t("format=jpeg", Instructions { format: Some(OutputFormat::Jpeg), ..Default::default() });
+    t("format=gif", Instructions { format: Some(OutputFormat::Gif), ..Default::default() });
     t("format=png", Instructions { format: Some(OutputFormat::Png), ..Default::default() });
     t("scale=downscaleonly", Instructions {scale: Some(ScaleMode::DownscaleOnly), ..Default::default() });
     t("h=300&scale=upscalecanvas&w=20", Instructions { w: Some(20), h: Some(300), scale: Some(ScaleMode::UpscaleCanvas), ..Default::default() });

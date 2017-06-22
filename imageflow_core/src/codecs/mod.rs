@@ -299,17 +299,22 @@ impl CodecInstanceContainer{
      pub fn write_frame(&mut self, c: &Context, job: &Job, preset: &s::EncoderPreset, frame: &mut BitmapBgra) -> Result<s::EncodeResult>{
          // Pick encoder
          if let CodecKind::EncoderPlaceholder = self.codec{
-
-             if let s::EncoderPreset::Gif = *preset{
-                 self.codec = CodecKind::Encoder(Box::new(gif::GifEncoder::create(c, job, c.get_proxy_mut(self.proxy_uuid)?.deref_mut(),  preset, self.io_id)));
-             }else {
-                 self.codec = CodecKind::Encoder(Box::new(
-                     ClassicEncoder::get_empty(self.io_id, c.get_proxy_mut(self.proxy_uuid)?.get_io_ptr())));
+             match *preset {
+                 s::EncoderPreset::Gif => {
+                     println!("Using gif encoder");
+                     self.codec = CodecKind::Encoder(Box::new(gif::GifEncoder::create(c, job, c.get_proxy_mut(self.proxy_uuid)?.deref_mut(), preset, self.io_id)));
+                 },
+                 _ => {
+                     //println!("Using classic encoder");
+                     self.codec = CodecKind::Encoder(Box::new(
+                         ClassicEncoder::get_empty(self.io_id, c.get_proxy_mut(self.proxy_uuid)?.get_io_ptr())));
+                 }
              }
          }
          if let CodecKind::Encoder(ref mut e) = self.codec {
              e.write_frame(c, job,  &mut c.get_proxy_mut(self.proxy_uuid)?.deref_mut(), preset, frame)
          }else{
+             panic!("");
              Err(FlowError::ErrNotImpl)
          }
     }

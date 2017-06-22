@@ -30,7 +30,21 @@ impl io::Read for IoProxy{
             }).map_err(|e| std::io::Error::new(io::ErrorKind::Other, e))
     }
 }
+impl io::Write for IoProxy{
 
+    fn write(&mut self, buf: &[u8]) -> io::Result<usize>{
+        self.write_from_buffer(self.c, buf).map(|v|
+            if v < 0 || v as u64 > <usize>::max_value() as u64 {
+                panic!("");
+            }else{
+                v as usize
+            }).map_err(|e| std::io::Error::new(io::ErrorKind::Other, e))
+    }
+    fn flush(&mut self) -> io::Result<()>{
+        Ok(())
+    }
+
+}
 
 
 //
@@ -95,7 +109,16 @@ impl IoProxy {
         Ok(read)
 
     }
+    pub fn write_from_buffer(&self, context: &Context, buffer: &[u8]) -> Result<i64> {
+        //TODO: return result for read failure instead of panicking.
+        // Return result for missing function instead of panicking.
+        let read = self.classic_io().unwrap().write_fn.unwrap()(context.flow_c(), self.classic, buffer.as_ptr(), buffer.len());
+        if read < buffer.len() as i64{
+            context.error().assert_ok();
+        }
+        Ok(read)
 
+    }
 
     pub fn seek(&self, context: &Context, position: i64) -> Result<bool> {
         //TODO: return result for read failure instead of panicking.

@@ -47,7 +47,7 @@ pub struct ImageflowJobIo {
     context: *mut ImageflowContext,
     mode: IoMode,// Call nothing, dereference nothing, if this is 0
     pub read_fn: Option<IoReadFn>,// Optional for write modes
-    write_fn: Option<IoWriteFn>,// Optional for read modes
+    pub write_fn: Option<IoWriteFn>,// Optional for read modes
     position_fn: Option<IoPositionFn>, // Optional for sequential modes
     pub seek_fn: Option<IoSeekFn>, // Optional for sequential modes
     dispose_fn: Option<DestructorFn>,// Optional
@@ -252,6 +252,17 @@ pub struct BitmapBgra {
     pub matte_color: [u8; 4],
 
     pub compositing_mode: BitmapCompositingMode,
+}
+
+
+impl BitmapBgra{
+    pub unsafe fn pixels_slice_mut(&mut self) -> Option<&mut [u8]>{
+        if self.pixels.is_null() {
+            None
+        }else{
+            Some(::std::slice::from_raw_parts_mut(self.pixels, (self.stride * self.h) as usize))
+        }
+    }
 }
 // imageflow_core::ffi::FlowBitmapBgra{
 // alpha_meaningful: false,

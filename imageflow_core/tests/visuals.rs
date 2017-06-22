@@ -287,6 +287,21 @@ fn test_encode_jpeg_smoke() {
 }
 
 #[test]
+fn test_encode_gif_smoke() {
+    let steps = vec![
+        s::Node::Decode {io_id: 0, commands: None},
+        s::Node::Resample2D{ w: 400, h: 300, down_filter: Some(s::Filter::Robidoux), up_filter: Some(s::Filter::Robidoux), hints: None },
+        s::Node::Encode{ io_id: 1, preset: s::EncoderPreset::Gif}
+    ];
+
+    smoke_test(Some(s::IoEnum::Url("https://s3-us-west-2.amazonaws.com/imageflow-resources/test_inputs/MarsRGB_v4_sYCC_8bit.jpg".to_owned())),
+               Some(s::IoEnum::OutputBuffer),
+               false,
+               steps,
+    );
+}
+
+#[test]
 fn test_encode_png32_smoke() {
     let steps = vec![
     s::Node::Decode {io_id: 0, commands: None},
