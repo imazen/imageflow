@@ -387,18 +387,18 @@ fi
 if [[ "$SIM_CI" != 'True' ]]; then
 	if [[ -n "$CI_TAG" ]]; then
 		# We always cleanup after a tagged release; no point in wasting cache space
-		rm -rf ./target
-		rm -rf ./c_components/build
-		rm -rf ~/.conan
-		rm -rf ~/.cargo
+		rm -rf ./target || true
+		rm -rf ./c_components/build || true
+		rm -rf ~/.conan || true
+		rm -rf ~/.cargo || true
 	fi 
 
 	# Don't let the cache become polluted by a build profile we aren't doing
 	if [[ "$BUILD_RELEASE" == "False" ]]; then
-		rm -rf ./target/release
+		rm -rf ./target/release || true
 	fi
 	if [[ "$BUILD_DEBUG" == "False" ]]; then
-		rm -rf ./target/debug
+		rm -rf ./target/debug || true
 	fi
 fi
 
