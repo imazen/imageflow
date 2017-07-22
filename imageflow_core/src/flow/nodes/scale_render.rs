@@ -249,7 +249,7 @@ fn scale2d_render_def() -> NodeDefinition {
                             scale_to_width: w as i32,
                             scale_to_height: h as i32,
                             sharpen_percent_goal: sharpen_percent.unwrap_or(0f32),
-                            scale_in_colorspace: ffi::Floatspace::linear,
+                            scale_in_colorspace: ffi::Floatspace::Linear,
                         };
 
 

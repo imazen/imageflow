@@ -57,9 +57,9 @@ impl Job{
 
             if let Some(b) = what.no_gamma_correction {
                 self.context().todo_remove_set_floatspace(if b {
-                    ::ffi::Floatspace::srgb
+                    ::ffi::Floatspace::Srgb
                 }else {
-                    ::ffi::Floatspace::linear
+                    ::ffi::Floatspace::Linear
                 });
             };
             //Cheat on lifetimes so Job can remain mutable

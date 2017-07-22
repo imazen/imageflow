@@ -103,9 +103,9 @@ impl<'a> BuildHandler<'a> {
         if let Some(s::Build001Config { ref no_gamma_correction, .. }) = parsed.builder_config {
             ctx.todo_remove_set_floatspace(
                 if *no_gamma_correction {
-                    ::ffi::Floatspace::srgb
+                    ::ffi::Floatspace::Srgb
                 } else {
-                    ::ffi::Floatspace::linear
+                    ::ffi::Floatspace::Linear
                 })
         }
 

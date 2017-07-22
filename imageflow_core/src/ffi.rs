@@ -101,8 +101,8 @@ pub struct CodecInstance {
 #[repr(C)]
 #[derive(Copy,Clone, Debug)]
 pub enum Floatspace {
-    srgb = 0,
-    linear = 1, // gamma = 2,
+    Srgb = 0,
+    Linear = 1, // gamma = 2,
 }
 
 // #[repr(C)]
