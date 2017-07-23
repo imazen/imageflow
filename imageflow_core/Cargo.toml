@@ -35,8 +35,8 @@ blake2-rfc = "*"
 
 clap = "2"
 threadpool = "1"
-petgraph = "^0.2.8"
-daggy = "^0.4.1"
+petgraph = "0.4"
+daggy = "0.5"
 
 gif = "*"
 gif-dispose="*"

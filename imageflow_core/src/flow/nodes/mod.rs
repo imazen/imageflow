@@ -2,6 +2,7 @@ use daggy::{Dag, EdgeIndex, NodeIndex, Walker};
 use ffi::{ImageflowContext, BitmapBgra};
 use libc::{int32_t, size_t};
 use petgraph::EdgeDirection;
+use petgraph::visit::EdgeRef;
 mod rotate_flip_transpose;
 mod clone_crop_fill_expand;
 mod scale_render;
@@ -78,8 +79,8 @@ impl<'c> OpCtxMut<'c> {
         self.graph
             .graph()
             .edges_directed(of_node, EdgeDirection::Incoming)
-            .filter(|&(node, &kind)| kind == filter_by_kind)
-            .map(|(node, kind)| node)
+            .filter(|&e| e.weight() == &filter_by_kind)
+            .map(|e| e.source())
             .nth(0)
     }
 
@@ -226,18 +227,20 @@ impl<'c> OpCtxMut<'c> {
         let edges = self.graph
             .graph()
             .edges_directed(from_node, direction)
-            .map(|(a, b)| (a, *b))
+            .map(|e| {
+                match direction {
+                    EdgeDirection::Incoming => {
+                        (e.source(), to_node, *e.weight())
+                    }
+                    EdgeDirection::Outgoing => {
+                        (to_node, e.target(), *e.weight())
+                    }
+                }
+            })
             .collect::<Vec<_>>();
 
-        for (other_node, weight) in edges {
-            match direction {
-                EdgeDirection::Incoming => {
-                    self.graph.add_edge(other_node, to_node, weight).unwrap()
-                }
-                EdgeDirection::Outgoing => {
-                    self.graph.add_edge(to_node, other_node, weight).unwrap()
-                }
-            };
+        for (a,b, weight) in edges {
+            let _ = self.graph.add_edge(a, b, weight).unwrap();
         }
     }
     pub fn delete_child_edges_for(&mut self, from_node: NodeIndex<u32>) {

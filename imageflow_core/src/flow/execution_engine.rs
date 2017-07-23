@@ -43,11 +43,11 @@ impl<'a, 'b> Engine<'a, 'b> where 'a: 'b {
 
             let input_count = self.g
                 .graph()
-                .edges_directed(node_index, EdgeDirection::Incoming).filter(|&(node, &kind)| kind == EdgeKind::Input).count();
+                .edges_directed(node_index, EdgeDirection::Incoming).filter(|&e| e.weight() == &EdgeKind::Input).count();
 
             let canvas_count = self.g
                 .graph()
-                .edges_directed(node_index, EdgeDirection::Incoming).filter(|&(node, &kind)| kind == EdgeKind::Canvas).count();
+                .edges_directed(node_index, EdgeDirection::Incoming).filter(|&e| e.weight() == &EdgeKind::Canvas).count();
 
 
             let inputs_failed = match node_def.inbound_edges {
