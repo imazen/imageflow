@@ -69,7 +69,7 @@ class ImageFlowConan(ConanFile):
 
         cmake_settings += " -DBUILD_SHARED_LIBS=ON" if self.options.shared else " -DBUILD_SHARED_LIBS=OFF"
         cmake_settings += " -DBUILD_SHARED_LIBS=ON" if self.options.shared else " -DBUILD_SHARED_LIBS=OFF"
-        cmake_settings += " -DTARGET_CPU=%s" % (self.settings.target_cpu)
+        cmake_settings += " -DTARGET_CPU=%s" % (self.settings.target_cpu) if self.settings.target_cpu else ""
 
         cmake_command = 'cmake "%s" %s %s' % (self.conanfile_directory, cmake.command_line, cmake_settings)
         cmake_build_command = 'cmake --build . %s' % cmake.build_config
