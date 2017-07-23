@@ -1,0 +1,27 @@
+<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="demo server" type="CargoCommandRunConfiguration" factoryName="Cargo Command" show_console_on_std_err="false" show_console_on_std_out="false">
+    <parameters>
+      <option name="additionalArguments">
+        <list>
+          <option value="--" />
+          <option value="start" />
+          <option value="--demo" />
+        </list>
+      </option>
+      <option name="backtraceMode" value="2" />
+      <option name="channel" value="0" />
+      <option name="command" value="run" />
+      <option name="environmentVariables">
+        <map>
+          <entry key="CARGO_INCREMENTAL" value="$CARGO_INCREMENTAL$" />
+          <entry key="RUST_TEST_THREADS" value="$CARGO_INCREMENTAL$" />
+        </map>
+      </option>
+      <option name="nocapture" value="true" />
+    </parameters>
+    <module name="imageflow_server">
+      <option name="moduleName" value="imageflow_server" />
+    </module>
+    <method />
+  </configuration>
+</component>

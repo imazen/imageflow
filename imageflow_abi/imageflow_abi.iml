@@ -11,9 +11,5 @@
     </content>
     <orderEntry type="inheritedJdk" />
     <orderEntry type="sourceFolder" forTests="false" />
-    <orderEntry type="library" name="Rust &lt;imageflow_abi&gt;" level="project" />
-    <orderEntry type="library" name="Cargo &lt;imageflow_abi&gt;" level="project" />
-    <orderEntry type="library" name="Cargo &lt;imageflow_abi&gt;" level="project" />
-    <orderEntry type="library" name="Cargo &lt;imageflow_abi&gt;" level="project" />
   </component>
 </module>

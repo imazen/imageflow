@@ -5,6 +5,8 @@
 #Artifacts to upload
 /artifacts/
 
+/imageflow_data/
+
 #Test images
 /c_components/test_images/
 /__cmake_systeminformation
@@ -309,7 +311,10 @@ FakesAssemblies/
 
 # Eclipse project
 .project
-# Clion
-.idea/
+
+# Intellij
+**/.idea/workspace.xml
+**/.idea/tasks.xml
+
 # Eclipse pydev
 .pydevproject

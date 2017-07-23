@@ -9,8 +9,7 @@
       <sourceFolder url="file://$MODULE_DIR$/benches" isTestSource="true" />
       <excludeFolder url="file://$MODULE_DIR$/target" />
     </content>
+    <orderEntry type="inheritedJdk" />
     <orderEntry type="sourceFolder" forTests="false" />
-    <orderEntry type="library" name="Rust &lt;imageflow_helpers&gt;" level="project" />
-    <orderEntry type="library" name="Cargo &lt;imageflow_helpers&gt;" level="project" />
   </component>
 </module>
