@@ -19,5 +19,5 @@ imageflow_helpers = { path = "../imageflow_helpers", version = "*" }
 chrono ="*"
 
 [build-dependencies]
-quick-error = "1.1.0"
+quick-error = "1"
 chrono =  "0.4"
