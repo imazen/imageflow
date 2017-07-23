@@ -40,7 +40,7 @@ pub mod timeywimey{
     pub fn time_bucket(seconds_per_bucket: u64, bucket_count: u64) -> u64{
         ::std::time::SystemTime::now().duration_since(::std::time::UNIX_EPOCH).unwrap().as_secs() / seconds_per_bucket % bucket_count
     }
-    pub use chrono::UTC;
+    pub use chrono::prelude::Utc;
 }
 
 #[cfg(test)]

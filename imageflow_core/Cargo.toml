@@ -15,7 +15,7 @@ libc = "0.2"
 
 # time
 time = "*"
-chrono =  "0.2"
+chrono =  "0.4"
 
 # serialization
 serde = "*"

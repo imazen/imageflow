@@ -43,8 +43,8 @@ pub fn get_build_env_value(key: &str) -> &Option<&'static str> {
 }
 
 fn built_ago() -> (i64, &'static str){
-    let compiled_utc = ::chrono::datetime::DateTime::parse_from_rfc3339(benv::GENERATED_DATETIME_UTC).unwrap();
-    let duration = ::chrono::UTC::now() -compiled_utc;
+    let compiled_utc = ::chrono::DateTime::parse_from_rfc3339(benv::GENERATED_DATETIME_UTC).unwrap();
+    let duration = ::chrono::Utc::now().signed_duration_since(compiled_utc);
     let (v,u) = if duration.num_days() > 0 {
         (duration.num_days(), "days")
     }else if duration.num_hours() > 0{

@@ -203,7 +203,7 @@ fn parse_conanfile(info: &mut  HashMap<String, Option<String>>) {
 
 fn main() {
     let todo = what_to_collect();
-    let utcnow_val =UTC::now();
+    let utcnow_val =Utc::now();
 
     let mut results = collect_info(todo);
     results.insert("GENERATED_DATETIME_UTC".to_owned(), Some(utcnow_val.to_rfc3339()));

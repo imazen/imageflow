@@ -1,7 +1,7 @@
 use ::std;
 use ::preludes::from_std::*;
 use std::process::{Command, Output, Stdio};
-use super::timeywimey::UTC;
+use super::timeywimey::Utc;
 
 
 // create dir
@@ -146,7 +146,7 @@ pub struct ProcTestContext {
 
 impl ProcTestContext {
     pub fn create_timestamp_subdir_within<P:AsRef<Path>>(parent_folder: P, exe_path: Option<PathBuf>) -> ProcTestContext {
-        let working_dir = parent_folder.as_ref().join(format!("{:032}", UTC::now().timestamp()));
+        let working_dir = parent_folder.as_ref().join(format!("{:032}", Utc::now().timestamp()));
         Self::create(working_dir, exe_path)
     }
     pub fn bin_location(&self) -> &Path{
