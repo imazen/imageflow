@@ -485,12 +485,9 @@ echo_maybe "build.sh sees these relevant variables: ${BUILD_VARS[*]}"
 		if [[ -f "$BACKUP_FILE" ]]; then 
 			if cmp -s "$CHANGING_FILE" "$BACKUP_FILE" ; then
 				 cp -p "$BACKUP_FILE" "$CHANGING_FILE"
-			else
-				./override_openssl.sh
 			fi
 		else
 			cp -p "$CHANGING_FILE" "$BACKUP_FILE"
-			./override_openssl.sh
 		fi 
 
 		date_stamp
@@ -500,14 +497,6 @@ echo_maybe "build.sh sees these relevant variables: ${BUILD_VARS[*]}"
 echo_maybe 
 echo_maybe "================================== Rust ============================ [build.sh]"
 
-if [[ ! -f "./.cargo/config" ]]; then 
-	(cd imageflow_core && ./override_openssl.sh)
-	
-	if [[ ! -f "./.cargo/config" ]]; then 
-		echo ".cargo/config not found. openssl may not be overridden. Cancelling build."
-		exit 2
-	fi 
-fi 
 
 rustc --version 
 cargo --version 1>&9
