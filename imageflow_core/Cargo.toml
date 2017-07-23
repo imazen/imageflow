@@ -24,17 +24,17 @@ serde_derive = "*"
 rustc-serialize = "*"
 
 #lazy static
-lazy_static = "0.1.*"
+lazy_static = "0.2"
 
 # fast hashes, crypto hashs
-twox-hash = "1.0"
+twox-hash = "1"
 fnv = "*"
 blake2-rfc = "*"
 
 ## Crate-specific dependencies
 
 clap = "2"
-threadpool = "1.0"
+threadpool = "1"
 petgraph = "^0.2.8"
 daggy = "^0.4.1"
 
