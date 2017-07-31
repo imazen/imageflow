@@ -132,7 +132,9 @@ else()
 	if ("${TARGET_CPU}" STREQUAL "OFF")
 		SET(NON_MSVC_OPTIMIZE "")
 	endif()
-
+	if ("${TARGET_CPU}" STREQUAL "")
+		SET(NON_MSVC_OPTIMIZE "")
+	endif()
 	set(IMAGEFLOW_C_OPTIMIZE "-O3 ${NON_MSVC_OPTIMIZE} -funroll-loops -ffast-math -mfpmath=sse  -msse2")
 endif()
 
