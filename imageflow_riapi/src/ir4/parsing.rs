@@ -106,9 +106,24 @@ pub enum ProcessWhen {
 
 }
 
+macro_attr! {
+
+#[derive(Debug, Copy, Clone, PartialEq, Eq,
+IterVariants!(HistogramThresholdAlgorithmVariants), IterVariantNames!(HistogramThresholdAlgorithmNames))]
+
+pub enum HistogramThresholdAlgorithm {
+    Simple,
+    Area,
+    True,
+    Gimp
+}
 
 
-pub static IR4_KEYS: [&'static str;58] = ["mode", "anchor", "flip", "sflip", "scale", "cache", "process",
+}
+
+
+
+pub static IR4_KEYS: [&'static str;59] = ["mode", "anchor", "flip", "sflip", "scale", "cache", "process",
     "quality", "zoom", "crop", "cropxunits", "cropyunits",
     "w", "h", "width", "height", "maxwidth", "maxheight", "format", "thumbnail",
      "autorotate", "srotate", "rotate", "ignoreicc", //really? : "precise_scaling_ratio",
@@ -116,7 +131,7 @@ pub static IR4_KEYS: [&'static str;58] = ["mode", "anchor", "flip", "sflip", "sc
     "frame", "page", "subsampling", "colors",
     "404", "bgcolor", "paddingcolor", "bordercolor", "preset", "floatspace", "jpeg_idct_downscale_linear", "watermark",
     "s.invert", "s.sepia", "s.grayscale", "s.alpha", "s.brightness", "s.contrast", "s.saturation", "trim.threshold",
-    "trim.percentpadding", "a.blur", "a.sharpen", "a.removenoise", "dither",
+    "trim.percentpadding", "a.blur", "a.sharpen", "a.removenoise", "a.balancewhite", "dither",
     "encoder", "decoder", "builder", "s.roundcorners.", "paddingwidth", "paddingheight", "margin", "borderwidth"];
 
 
@@ -208,6 +223,8 @@ impl Instructions{
         add(&mut m, "cropyunits", self.cropyunits);
         add(&mut m, "quality", self.quality);
         add(&mut m, "zoom", self.zoom);
+
+        add(&mut m, "a.balancewhite", self.a_balance_white.map(|v| format!("{:?}", v).to_lowercase()));
         add(&mut m, "subsampling", self.jpeg_subsampling);
         add(&mut m, "bgcolor", self.bgcolor_srgb.and_then(|v| Some(v.to_rrggbbaa_string().to_lowercase())));
         add(&mut m, "f.sharpen", self.f_sharpen);
@@ -258,6 +275,18 @@ impl Instructions{
         i.trim_whitespace_padding_percent = p.parse_f64("trim.percentpadding");
         i.trim_whitespace_threshold = p.parse_i32("trim.threshold");
 
+
+        i.a_balance_white = p.parse_white_balance("a.balancewhite");
+
+        i.a_balance_white = match i.a_balance_white{
+            Some(HistogramThresholdAlgorithm::True) => Some(HistogramThresholdAlgorithm::Area),
+            Some(HistogramThresholdAlgorithm::Area) => Some(HistogramThresholdAlgorithm::Area),
+            None => None,
+            Some(other) => {
+                p.warn(ParseWarning::ValueInvalid(("a.balancewhite", format!("{:?}", other).to_lowercase()))).to_owned();
+                Some(other)
+            }
+        };
 
         let _ = p.parse_test_pair("fastscale", "true");
 
@@ -437,6 +466,17 @@ impl<'a> Parser<'a>{
         })
     }
 
+    fn parse_white_balance(&mut self, key: &'static str) -> Option<HistogramThresholdAlgorithm>{
+        self.parse(key, |value| {
+            for (k, v) in HistogramThresholdAlgorithm::iter_variant_names().zip(HistogramThresholdAlgorithm::iter_variants()) {
+                if k.eq_ignore_ascii_case(value) {
+                    return Ok(v)
+                }
+            }
+            Err(())
+        })
+    }
+
     fn parse_scale(&mut self, key: &'static str) -> Option<ScaleModeStrings>{
         self.parse(key, |value| {
             for (k, v) in ScaleModeStrings::iter_variant_names().zip(ScaleModeStrings::iter_variants()) {
@@ -590,8 +630,8 @@ pub struct Instructions{
     pub jpeg_subsampling: Option<i32>,
     pub anchor: Option<(Anchor1D, Anchor1D)>,
     pub trim_whitespace_threshold: Option<i32>,
-    pub trim_whitespace_padding_percent: Option<f64>
-
+    pub trim_whitespace_padding_percent: Option<f64>,
+    pub a_balance_white: Option<HistogramThresholdAlgorithm>
 }
 #[derive(Debug,Copy, Clone,PartialEq)]
 pub enum Anchor1D{
@@ -716,6 +756,13 @@ fn test_url_parsing() {
 
     t("crop=0,0,40,50", Instructions { crop: Some([0f64,0f64,40f64,50f64]), ..Default::default() }, vec![]);
     t("crop= 0, 0,40 ,  50", Instructions { crop: Some([0f64,0f64,40f64,50f64]), ..Default::default() }, vec![]);
+
+    t("a.balancewhite=true",  Instructions{a_balance_white: Some(HistogramThresholdAlgorithm::Area), ..Default::default()}, vec![]);
+    t("a.balancewhite=area",  Instructions{a_balance_white: Some(HistogramThresholdAlgorithm::Area), ..Default::default()}, vec![]);
+
+
+    expect_warning("a.balancewhite","gimp",  Instructions{a_balance_white: Some(HistogramThresholdAlgorithm::Gimp), ..Default::default()});
+    expect_warning("a.balancewhite","simple",  Instructions{a_balance_white: Some(HistogramThresholdAlgorithm::Simple), ..Default::default()});
 
 
     expect_warning("crop","(0,3,80, 90)",  Instructions { crop: Some([0f64,3f64,80f64,90f64]), ..Default::default() });

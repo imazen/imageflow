@@ -22,7 +22,7 @@ extern crate time;
 extern crate imageflow_types;
 extern crate imageflow_helpers;
 extern crate imageflow_riapi;
-
+extern crate num;
 
 #[macro_use]
 extern crate lazy_static;

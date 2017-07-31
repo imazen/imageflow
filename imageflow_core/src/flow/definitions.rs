@@ -181,7 +181,11 @@ impl From<s::Node> for Node {
             s::Node::Constrain (_) => Node::new(&nodes::CONSTRAIN, NodeParams::Json(node)),
             s::Node::ExpandCanvas { .. } => {
                 Node::new(&nodes::EXPAND_CANVAS, NodeParams::Json(node))
-            }
+            },
+            s::Node::WhiteBalanceHistogramAreaThresholdSrgb { ..} => {
+                Node::new(&nodes::WHITE_BALANCE_SRGB, NodeParams::Json(node))
+            },
+
         }
     }
 }

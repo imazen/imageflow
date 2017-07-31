@@ -425,6 +425,11 @@ pub enum Node {
         // camelCased: #[serde(rename="interpolationFilter")]
         interpolation_filter: Option<Filter>,
     },
+    #[serde(rename="white_balance_histogram_area_threshold_srgb")]
+    WhiteBalanceHistogramAreaThresholdSrgb{
+        low_threshold: Option<f32>,
+        high_threshold: Option<f32>
+    },
     // TODO: Block use except from FFI/unit test use
     // camelCased: #[serde(rename="flowBitmapBgraPtr")]
     #[serde(rename="flow_bitmap_bgra_ptr")]
@@ -465,8 +470,6 @@ pub enum IoDirection {
     #[serde(rename="in")]
     In = 4,
 }
-
-
 
 
 #[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]

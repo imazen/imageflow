@@ -259,6 +259,15 @@ impl Ir4Layout{
             });
         }
 
+
+        // Perform white balance
+        if Some(HistogramThresholdAlgorithm::Area) == self.i.a_balance_white{
+            b.add( s::Node::WhiteBalanceHistogramAreaThresholdSrgb {
+                low_threshold: None,
+                high_threshold: None
+            });
+        }
+
         //get bgcolor - default to transparent white
         let bgcolor = self.i.bgcolor_srgb.map(|v| v.to_rrggbbaa_string()).map(|str| s::Color::Srgb(s::ColorSrgb::Hex(str)));
 

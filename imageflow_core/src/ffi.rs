@@ -832,7 +832,11 @@ mod mid_term {
 
 
         pub fn detect_content(c: *mut ImageflowContext, input: *mut BitmapBgra, threshold: u32 ) -> Rect;
-    }
+
+        pub fn flow_bitmap_bgra_populate_histogram(c: *mut ImageflowContext, input: *mut BitmapBgra, histograms: *mut u64, histogram_size_per_channel: u32, histogram_count: u32, pixels_sampled: *mut u64) -> bool;
+
+
+}
 }
 
 pub use self::must_replace::*;

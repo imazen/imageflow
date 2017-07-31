@@ -9,6 +9,7 @@ mod scale_render;
 mod create_canvas;
 mod codecs_and_pointer;
 mod constrain;
+mod white_balance;
 
 mod internal_prelude {
     pub use ::ffi;
@@ -49,7 +50,11 @@ pub use self::scale_render::SCALE_1D;
 pub use self::scale_render::SCALE_1D_TO_CANVAS_1D;
 pub use self::constrain::CONSTRAIN;
 pub use self::constrain::COMMAND_STRING;
+pub use self::white_balance::WHITE_BALANCE_SRGB_MUTATE;
+pub use self::white_balance::WHITE_BALANCE_SRGB;
 use super::definitions::*;
+
+
 
 pub struct NodeDefHelpers {}
 impl NodeDefHelpers {
