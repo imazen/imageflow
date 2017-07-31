@@ -169,7 +169,13 @@ bool flow_bitmap_bgra_populate_histogram(flow_c * context, struct flow_bitmap_bg
     const uint32_t w = bmp->w;
     const uint32_t h = umin(row + count, bmp->h);
 
-    const int shift = 8 - intlog2(histogram_size_per_channel);
+    if (histogram_size_per_channel != 256){
+        //We're restricting it to this for speed
+        FLOW_error(context, flow_status_Invalid_argument);
+        return false;
+    }
+
+    const int shift = 0; // 8 - intlog2(histogram_size_per_channel);
 
     if (ch == 4 || ch == 3) {
 
