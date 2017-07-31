@@ -13,6 +13,8 @@ doctest = false
 [dependencies]
 libc = "0.2"
 
+num = "0.1"
+
 # time
 time = "*"
 chrono =  "0.4"
