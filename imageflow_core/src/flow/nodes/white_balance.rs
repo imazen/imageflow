@@ -6,19 +6,19 @@ use super::internal_prelude::*;
 fn area_threshold(histogram: &[u64], total_pixels: u64, low_threshold: f64, high_threshold: f64) -> (usize, usize){
     let mut low = 0;
     let mut high = histogram.len() - 1;
-    let mut area = 0f64;
+    let mut area = 0u64;
     let pixel_count = total_pixels as f64;
     for (ix, value) in histogram.iter().enumerate(){
-        area += *value as f64;
-        if area / pixel_count > low_threshold {
+        area += *value as u64;
+        if area as f64 / pixel_count as f64 > low_threshold {
             low = ix;
             break;
         }
     }
-    area = 0f64;
+    area = 0u64;
     for (ix, value) in histogram.iter().enumerate().rev(){
-        area += *value as f64;
-        if area / pixel_count > low_threshold {
+        area += *value as u64;
+        if area as f64 / pixel_count as f64 > low_threshold {
             high = ix;
             break;
         }

@@ -224,10 +224,9 @@ fn test_scale_image() {
 
 #[test]
 fn test_white_balance_image() {
-    let matched = compare(Some(s::IoEnum::Url("https://s3-us-west-2.amazonaws.com/imageflow-resources/test_inputs/waterhouse.jpg".to_owned())), 500,
-                          "WhiteBalance".to_owned(), true, false, vec![
+    let matched = compare(Some(s::IoEnum::Url("https://s3-us-west-2.amazonaws.com/imageflow-resources/test_inputs/red-night.png".to_owned())), 500,
+                          "WhiteBalanceNight".to_owned(), true, false, vec![
             s::Node::Decode {io_id: 0, commands: None},
-            s::Node::Resample2D{ w: 400, h: 300, down_filter: Some(s::Filter::Robidoux), up_filter: Some(s::Filter::Robidoux), hints: None },
             s::Node::WhiteBalanceHistogramAreaThresholdSrgb { low_threshold: None, high_threshold: None}
         ]
     );
