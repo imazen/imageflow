@@ -60,6 +60,11 @@ bool flow_bitmap_bgra_apply_color_matrix(flow_c * context, struct flow_bitmap_bg
     const uint32_t ch = flow_pixel_format_bytes_per_pixel(bmp->fmt);
     const uint32_t w = bmp->w;
     const uint32_t h = umin(row + count, bmp->h);
+    const float m40 = m[4][0] * 255.0f;
+    const float m41 = m[4][1] * 255.0f;
+    const float m42 = m[4][2] * 255.0f;
+    const float m43 = m[4][3] * 255.0f;
+
     if (ch == 4) {
 
         for (uint32_t y = row; y < h; y++)
@@ -67,13 +72,13 @@ bool flow_bitmap_bgra_apply_color_matrix(flow_c * context, struct flow_bitmap_bg
                 uint8_t * const __restrict data = bmp->pixels + stride * y + x * ch;
 
                 const uint8_t r = uchar_clamp_ff(m[0][0] * data[2] + m[1][0] * data[1] + m[2][0] * data[0]
-                                                 + m[3][0] * data[3] + m[4][0]);
+                                                 + m[3][0] * data[3] + m40);
                 const uint8_t g = uchar_clamp_ff(m[0][1] * data[2] + m[1][1] * data[1] + m[2][1] * data[0]
-                                                 + m[3][1] * data[3] + m[4][1]);
+                                                 + m[3][1] * data[3] + m41);
                 const uint8_t b = uchar_clamp_ff(m[0][2] * data[2] + m[1][2] * data[1] + m[2][2] * data[0]
-                                                 + m[3][2] * data[3] + m[4][2]);
+                                                 + m[3][2] * data[3] + m42);
                 const uint8_t a = uchar_clamp_ff(m[0][3] * data[2] + m[1][3] * data[1] + m[2][3] * data[0]
-                                                 + m[3][3] * data[3] + m[4][3]);
+                                                 + m[3][3] * data[3] + m43);
 
                 uint8_t * newdata = bmp->pixels + stride * y + x * ch;
                 newdata[0] = b;
@@ -87,9 +92,9 @@ bool flow_bitmap_bgra_apply_color_matrix(flow_c * context, struct flow_bitmap_bg
             for (uint32_t x = 0; x < w; x++) {
                 unsigned char * const __restrict data = bmp->pixels + stride * y + x * ch;
 
-                const uint8_t r = uchar_clamp_ff(m[0][0] * data[2] + m[1][0] * data[1] + m[2][0] * data[0] + m[4][0]);
-                const uint8_t g = uchar_clamp_ff(m[0][1] * data[2] + m[1][1] * data[1] + m[2][1] * data[0] + m[4][1]);
-                const uint8_t b = uchar_clamp_ff(m[0][2] * data[2] + m[1][2] * data[1] + m[2][2] * data[0] + m[4][2]);
+                const uint8_t r = uchar_clamp_ff(m[0][0] * data[2] + m[1][0] * data[1] + m[2][0] * data[0] + m40);
+                const uint8_t g = uchar_clamp_ff(m[0][1] * data[2] + m[1][1] * data[1] + m[2][1] * data[0] + m41);
+                const uint8_t b = uchar_clamp_ff(m[0][2] * data[2] + m[1][2] * data[1] + m[2][2] * data[0] + m42);
 
                 uint8_t * newdata = bmp->pixels + stride * y + x * ch;
                 newdata[0] = b;
