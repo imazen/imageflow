@@ -217,20 +217,21 @@ C source is located in ./c_componenets/lib, and ./c_components/tests
 
 Headers for libimageflow.dll are located in `bindings/headers`
 
-### Known flaws and missing features (as of March 2017)
+### Known flaws and missing features (as of July 2017)
 
 #### Flaws
 
-- [ ] JSON operations aren't yet validating their parameters. Invalid values kill the process.
+- [ ] JSON operations aren't yet validating their parameters. Invalid values end the process.
 - [ ] imageflow_server doesn't expose the JSON API yet (due to above)
-- [ ] Out Of Memory conditions and certain other errors will kill the process instead of reporting an error message. Not relevant for imageflow_tool.
 - [ ] No fuzz testing completed.
 
 #### Missing features
 
-- [ ] GIF and Animated GIF support (giflib was too unsafe; using Rust) Requires the Codec and I/O system be ported to Rust. 
-- [ ] Job cost prediction
+- [ ] Animated GIF write support (reading individual frames is supported)
+- [ ] Some advanced rendering features: Whitespace detection/cropping, watermarking, blurring.
 - [ ] Automatic encoder selection and tuning.
-- [ ] Node bindings
-- [ ] Advanced rendering features: Whitespace detection/cropping, watermarking, contrast/saturation/luma, white balance, blurring. 
 
+#### Delayed features
+
+- [ ] Job cost prediction (delayed - no interest from community)
+- [ ] Node bindings (delayed - no interest from community)
