@@ -271,6 +271,28 @@ impl Ir4Layout{
         if let Some(c) = self.i.s_contrast {
             b.add(s::Node::ColorFilterSrgb(s::ColorFilterSrgb::Contrast(c as f32)));
         }
+        if let Some(c) = self.i.s_alpha {
+            b.add(s::Node::ColorFilterSrgb(s::ColorFilterSrgb::Alpha(c as f32)));
+        }
+        if let Some(c) = self.i.s_brightness {
+            b.add(s::Node::ColorFilterSrgb(s::ColorFilterSrgb::Brightness(c as f32)));
+        }
+        if let Some(c) = self.i.s_saturation {
+            b.add(s::Node::ColorFilterSrgb(s::ColorFilterSrgb::Saturation(c as f32)));
+        }
+        if self.i.s_sepia{
+            b.add(s::Node::ColorFilterSrgb(s::ColorFilterSrgb::Sepia));
+        }
+        if let Some(g) = self.i.s_grayscale {
+            b.add(s::Node::ColorFilterSrgb(match g{
+                GrayscaleAlgorithm::Flat => s::ColorFilterSrgb::GrayscaleFlat,
+                GrayscaleAlgorithm::True => s::ColorFilterSrgb::GrayscaleNtsc ,
+                GrayscaleAlgorithm::Ntsc => s::ColorFilterSrgb::GrayscaleNtsc,
+                GrayscaleAlgorithm::Y => s::ColorFilterSrgb::GrayscaleNtsc,
+                GrayscaleAlgorithm::Bt709 => s::ColorFilterSrgb::GrayscaleBt709,
+                GrayscaleAlgorithm::Ry => s::ColorFilterSrgb::GrayscaleRy
+            }));
+        }
 
         //get bgcolor - default to transparent white
         let bgcolor = self.i.bgcolor_srgb.map(|v| v.to_rrggbbaa_string()).map(|str| s::Color::Srgb(s::ColorSrgb::Hex(str)));

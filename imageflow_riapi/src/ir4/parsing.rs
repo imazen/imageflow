@@ -121,7 +121,22 @@ pub enum HistogramThresholdAlgorithm {
 
 }
 
+macro_attr! {
 
+#[derive(Debug, Copy, Clone, PartialEq, Eq,
+IterVariants!(GrayscaleAlgorithmVariants), IterVariantNames!(GrayscaleAlgorithmNames))]
+
+pub enum GrayscaleAlgorithm {
+    Ntsc,
+    True,
+    Y,
+    Ry,
+    Flat,
+    Bt709
+}
+
+
+}
 
 pub static IR4_KEYS: [&'static str;59] = ["mode", "anchor", "flip", "sflip", "scale", "cache", "process",
     "quality", "zoom", "crop", "cropxunits", "cropyunits",
@@ -226,6 +241,14 @@ impl Instructions{
 
         add(&mut m, "s.contrast", self.s_contrast);
 
+        add(&mut m, "s.alpha", self.s_alpha);
+        add(&mut m, "s.brightness", self.s_brightness);
+        add(&mut m, "s.saturation", self.s_saturation);
+        if self.s_sepia {
+            add(&mut m, "s.sepia", Some("true"));
+        }
+
+        add(&mut m, "s.grayscale", self.s_grayscale.map(|v| format!("{:?}", v).to_lowercase()));
         add(&mut m, "a.balancewhite", self.a_balance_white.map(|v| format!("{:?}", v).to_lowercase()));
         add(&mut m, "subsampling", self.jpeg_subsampling);
         add(&mut m, "bgcolor", self.bgcolor_srgb.and_then(|v| Some(v.to_rrggbbaa_string().to_lowercase())));
@@ -280,8 +303,16 @@ impl Instructions{
 
         i.a_balance_white = p.parse_white_balance("a.balancewhite");
 
+        i.s_grayscale = p.parse_grayscale("s.grayscale");
+
 
         i.s_contrast = p.parse_f64("s.contrast");
+
+        i.s_alpha = p.parse_f64("s.alpha");
+
+        i.s_saturation = p.parse_f64("s.saturation");
+
+        i.s_brightness = p.parse_f64("s.brightness");
 
         i.a_balance_white = match i.a_balance_white{
             Some(HistogramThresholdAlgorithm::True) => Some(HistogramThresholdAlgorithm::Area),
@@ -292,6 +323,7 @@ impl Instructions{
                 Some(other)
             }
         };
+
 
         let _ = p.parse_test_pair("fastscale", "true");
 
@@ -482,6 +514,18 @@ impl<'a> Parser<'a>{
         })
     }
 
+
+    fn parse_grayscale(&mut self, key: &'static str) -> Option<GrayscaleAlgorithm>{
+        self.parse(key, |value| {
+            for (k, v) in GrayscaleAlgorithm::iter_variant_names().zip(GrayscaleAlgorithm::iter_variants()) {
+                if k.eq_ignore_ascii_case(value) {
+                    return Ok(v)
+                }
+            }
+            Err(())
+        })
+    }
+
     fn parse_scale(&mut self, key: &'static str) -> Option<ScaleModeStrings>{
         self.parse(key, |value| {
             for (k, v) in ScaleModeStrings::iter_variant_names().zip(ScaleModeStrings::iter_variants()) {
@@ -637,7 +681,13 @@ pub struct Instructions{
     pub trim_whitespace_threshold: Option<i32>,
     pub trim_whitespace_padding_percent: Option<f64>,
     pub a_balance_white: Option<HistogramThresholdAlgorithm>,
-    pub s_contrast: Option<f64>
+    pub s_alpha: Option<f64>,
+    pub s_contrast: Option<f64>,
+    pub s_saturation: Option<f64>,
+    pub s_brightness: Option<f64>,
+    pub s_sepia: bool,
+    pub s_grayscale: Option<GrayscaleAlgorithm>
+
 }
 #[derive(Debug,Copy, Clone,PartialEq)]
 pub enum Anchor1D{
@@ -737,6 +787,7 @@ fn test_url_parsing() {
     t("zoom=0.02", Instructions { zoom: Some(0.02f64), ..Default::default() }, vec![]);
     t("trim.threshold=80&trim.percentpadding=0.02", Instructions { trim_whitespace_threshold: Some(80),  trim_whitespace_padding_percent: Some(0.02f64), ..Default::default() }, vec![]);
 
+    t("f.sharpen=80.5", Instructions { f_sharpen: Some(80.5f64), ..Default::default() }, vec![]);
 
     t("bgcolor=red", Instructions { bgcolor_srgb: Some(Color32(0xffff0000)), ..Default::default() }, vec![]);
     t("bgcolor=f00", Instructions { bgcolor_srgb: Some(Color32(0xffff0000)), ..Default::default() }, vec![]);
@@ -807,5 +858,6 @@ fn test_tostr(){
     t("bgcolor=77889953", Instructions { bgcolor_srgb: Some(Color32(0x53778899)), ..Default::default() });
     t("bgcolor=ffffffff", Instructions { bgcolor_srgb: Some(Color32(0xffffffff)), ..Default::default() });
     t("crop=0,0,40,50", Instructions { crop: Some([0f64,0f64,40f64,50f64]), ..Default::default() });
-    //TODO test a.balancewhite
+    t("a.balancewhite=area",  Instructions{a_balance_white: Some(HistogramThresholdAlgorithm::Area), ..Default::default()});
+
 }
