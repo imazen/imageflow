@@ -280,7 +280,7 @@ impl Ir4Layout{
         if let Some(c) = self.i.s_saturation {
             b.add(s::Node::ColorFilterSrgb(s::ColorFilterSrgb::Saturation(c as f32)));
         }
-        if self.i.s_sepia{
+        if let Some(true) = self.i.s_sepia{
             b.add(s::Node::ColorFilterSrgb(s::ColorFilterSrgb::Sepia));
         }
         if let Some(g) = self.i.s_grayscale {

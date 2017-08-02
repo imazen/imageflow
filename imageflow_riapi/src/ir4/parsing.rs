@@ -138,12 +138,12 @@ pub enum GrayscaleAlgorithm {
 
 }
 
-pub static IR4_KEYS: [&'static str;59] = ["mode", "anchor", "flip", "sflip", "scale", "cache", "process",
+pub static IR4_KEYS: [&'static str;60] = ["mode", "anchor", "flip", "sflip", "scale", "cache", "process",
     "quality", "zoom", "crop", "cropxunits", "cropyunits",
     "w", "h", "width", "height", "maxwidth", "maxheight", "format", "thumbnail",
      "autorotate", "srotate", "rotate", "ignoreicc", //really? : "precise_scaling_ratio",
     "stretch",
-    "frame", "page", "subsampling", "colors",
+    "frame", "page", "subsampling", "colors", "f.sharpen",
     "404", "bgcolor", "paddingcolor", "bordercolor", "preset", "floatspace", "jpeg_idct_downscale_linear", "watermark",
     "s.invert", "s.sepia", "s.grayscale", "s.alpha", "s.brightness", "s.contrast", "s.saturation", "trim.threshold",
     "trim.percentpadding", "a.blur", "a.sharpen", "a.removenoise", "a.balancewhite", "dither",
@@ -244,9 +244,8 @@ impl Instructions{
         add(&mut m, "s.alpha", self.s_alpha);
         add(&mut m, "s.brightness", self.s_brightness);
         add(&mut m, "s.saturation", self.s_saturation);
-        if self.s_sepia {
-            add(&mut m, "s.sepia", Some("true"));
-        }
+        add(&mut m, "s.sepia", self.s_sepia);
+
 
         add(&mut m, "s.grayscale", self.s_grayscale.map(|v| format!("{:?}", v).to_lowercase()));
         add(&mut m, "a.balancewhite", self.a_balance_white.map(|v| format!("{:?}", v).to_lowercase()));
@@ -263,6 +262,8 @@ impl Instructions{
     pub fn delete_from_map(map: &mut HashMap<String,String>, warnings: Option<&mut Vec<ParseWarning>>) -> Instructions {
         let mut p = Parser { m: map, w: warnings, delete_supported: true };
         let mut i = Instructions::new();
+        i.f_sharpen = p.parse_f64("f.sharpen");
+
         i.w = p.parse_i32("width").or(p.parse_i32("w"));
         i.h = p.parse_i32("height").or(p.parse_i32("h"));
         i.legacy_max_height = p.parse_i32("maxheight");
@@ -294,7 +295,7 @@ impl Instructions{
         i.zoom = p.parse_f64("zoom");
         i.bgcolor_srgb = p.parse_color_srgb("bgcolor").or_else(||p.parse_color_srgb("bgcolor"));
         i.jpeg_subsampling = p.parse_subsampling("subsampling");
-        i.f_sharpen = p.parse_f64("f.sharpen");
+
         i.anchor = p.parse_anchor("anchor");
 
         //TODO: warn bounds (-1..1, 0..255)
@@ -306,7 +307,7 @@ impl Instructions{
         i.s_alpha = p.parse_f64("s.alpha");
         i.s_saturation = p.parse_f64("s.saturation");
         i.s_brightness = p.parse_f64("s.brightness");
-
+        i.s_sepia = p.parse_bool("s.sepia");
         i.a_balance_white = match p.parse_white_balance("a.balancewhite"){
             Some(HistogramThresholdAlgorithm::True) => Some(HistogramThresholdAlgorithm::Area),
             Some(HistogramThresholdAlgorithm::Area) => Some(HistogramThresholdAlgorithm::Area),
@@ -678,7 +679,7 @@ pub struct Instructions{
     pub s_contrast: Option<f64>,
     pub s_saturation: Option<f64>,
     pub s_brightness: Option<f64>,
-    pub s_sepia: bool,
+    pub s_sepia: Option<bool>,
     pub s_grayscale: Option<GrayscaleAlgorithm>
 
 }
@@ -736,12 +737,14 @@ fn debug_diff<T>(a : &T, b: &T) where T: std::fmt::Debug, T: PartialEq{
         }
     }
 }
+
 #[test]
 fn test_url_parsing() {
     fn t(rel_url: &str, expected: Instructions, expected_warnings: Vec<ParseWarning>){
         let url = format!("http://localhost/image.jpg?{}", rel_url);
         let a = Url::from_str(&url).unwrap();
         let (i, warns) = parse_url(&a);
+        // eprintln!("{} -> {}", &url, i.to_string());
         if i.bgcolor_srgb != expected.bgcolor_srgb && i.bgcolor_srgb.is_some() && expected.bgcolor_srgb.is_some(){
             let _ = write!(::std::io::stderr(), "Expected bgcolor={}, actual={}\n", expected.bgcolor_srgb.unwrap().to_aarrggbb_string(), i.bgcolor_srgb.unwrap().to_aarrggbb_string());
         }
@@ -780,11 +783,11 @@ fn test_url_parsing() {
     t("zoom=0.02", Instructions { zoom: Some(0.02f64), ..Default::default() }, vec![]);
     t("trim.threshold=80&trim.percentpadding=0.02", Instructions { trim_whitespace_threshold: Some(80),  trim_whitespace_padding_percent: Some(0.02f64), ..Default::default() }, vec![]);
 
-    t("w=10&f.sharpen=80.5", Instructions { w: Some(1), f_sharpen: Some(80.5f64), ..Default::default() }, vec![]);
+    t("w=10&f.sharpen=80.5", Instructions { w: Some(10), f_sharpen: Some(80.5f64), ..Default::default() }, vec![]);
 
     t("f.sharpen=80.5", Instructions { f_sharpen: Some(80.5f64), ..Default::default() }, vec![]);
 
-    t("s.sepia=true&s.brightness=0.1&s.saturation=-0.1&s.contrast=1&s.alpha=0", Instructions { s_alpha: Some(0f64), s_contrast: Some(1f64), s_sepia: true, s_brightness: Some(0.1f64), s_saturation: Some(-0.1f64), ..Default::default() }, vec![]);
+    t("s.sepia=true&s.brightness=0.1&s.saturation=-0.1&s.contrast=1&s.alpha=0", Instructions { s_alpha: Some(0f64), s_contrast: Some(1f64), s_sepia: Some(true), s_brightness: Some(0.1f64), s_saturation: Some(-0.1f64), ..Default::default() }, vec![]);
 
     t("s.grayscale=true",  Instructions{s_grayscale: Some(GrayscaleAlgorithm::True), ..Default::default()}, vec![]);
     t("s.grayscale=flat",  Instructions{s_grayscale: Some(GrayscaleAlgorithm::Flat), ..Default::default()}, vec![]);
@@ -860,6 +863,6 @@ fn test_tostr(){
     t("a.balancewhite=area",  Instructions{a_balance_white: Some(HistogramThresholdAlgorithm::Area), ..Default::default()});
 
     t("s.grayscale=bt709",  Instructions{s_grayscale: Some(GrayscaleAlgorithm::Bt709), ..Default::default()});
-    t("s.alpha=0&s.brightness=0.1&s.contrast=1&s.saturation=-0.1&s.sepia=true", Instructions { s_alpha: Some(0f64), s_contrast: Some(1f64), s_sepia: true, s_brightness: Some(0.1f64), s_saturation: Some(-0.1f64), ..Default::default() });
+    t("s.alpha=0&s.brightness=0.1&s.contrast=1&s.saturation=-0.1&s.sepia=true", Instructions { s_alpha: Some(0f64), s_contrast: Some(1f64), s_sepia: Some(true), s_brightness: Some(0.1f64), s_saturation: Some(-0.1f64), ..Default::default() });
 
 }
