@@ -185,6 +185,12 @@ impl From<s::Node> for Node {
             s::Node::WhiteBalanceHistogramAreaThresholdSrgb { ..} => {
                 Node::new(&nodes::WHITE_BALANCE_SRGB, NodeParams::Json(node))
             },
+            s::Node::ColorMatrixSrgb { ..} => {
+                Node::new(&nodes::COLOR_MATRIX_SRGB, NodeParams::Json(node))
+            },
+            s::Node::ColorFilterSrgb { ..} => {
+                Node::new(&nodes::COLOR_FILTER_SRGB, NodeParams::Json(node))
+            },
 
         }
     }

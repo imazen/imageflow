@@ -392,6 +392,9 @@ PUB bool flow_bitmap_bgra_populate_histogram(flow_c * c, struct flow_bitmap_bgra
                                              uint32_t histogram_size_per_channel, uint32_t histogram_count,
                                              uint64_t * pixels_sampled);
 
+PUB bool flow_bitmap_bgra_apply_color_matrix(flow_c * context, struct flow_bitmap_bgra * bmp, const uint32_t row,
+                                             const uint32_t count, float * const __restrict m[5]);
+
 // This is exposed as test helper in Rust. We should just port this functionality to Rust instead.
 
 #undef PUB

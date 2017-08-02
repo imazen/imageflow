@@ -430,6 +430,12 @@ pub enum Node {
         low_threshold: Option<f32>,
         high_threshold: Option<f32>
     },
+    #[serde(rename="color_matrix_srgb")]
+    ColorMatrixSrgb{
+        matrix: [[f32;5];5]
+    },
+    #[serde(rename="color_matrix_srgb")]
+    ColorFilterSrgb (ColorFilterSrgb),
     // TODO: Block use except from FFI/unit test use
     // camelCased: #[serde(rename="flowBitmapBgraPtr")]
     #[serde(rename="flow_bitmap_bgra_ptr")]
@@ -438,6 +444,34 @@ pub enum Node {
         ptr_to_flow_bitmap_bgra_ptr: usize,
     },
 }
+
+#[derive(Serialize, Deserialize, Copy, Clone, PartialEq, Debug)]
+pub enum ColorFilterSrgb {
+    #[serde(rename="grayscale_ntsc")]
+    GrayscaleNtsc,
+    #[serde(rename="grayscale_flat")]
+    GrayscaleFlat,
+    #[serde(rename="grayscale_bt709")]
+    GrayscaleBt709,
+    #[serde(rename="grayscale_ry")]
+    GrayscaleRy,
+    #[serde(rename="sepia")]
+    Sepia,
+    #[serde(rename="invert")]
+    Invert,
+//    #[serde(rename="color_shift")]
+//    ColorShift(Color),
+    #[serde(rename="alpha")]
+    Alpha(f32),
+    #[serde(rename="contrast")]
+    Contrast(f32),
+    #[serde(rename="brightness")]
+    Brightness(f32),
+    #[serde(rename="saturation")]
+    Saturation(f32),
+}
+
+
 #[derive(Serialize, Deserialize, Copy, Clone, PartialEq, Debug)]
 pub enum EdgeKind {
     // camelCased: #[serde(rename="input")]

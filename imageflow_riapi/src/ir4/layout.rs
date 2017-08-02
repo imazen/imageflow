@@ -268,6 +268,10 @@ impl Ir4Layout{
             });
         }
 
+        if let Some(c) = self.i.s_contrast {
+            b.add(s::Node::ColorFilterSrgb(s::ColorFilterSrgb::Contrast(c as f32)));
+        }
+
         //get bgcolor - default to transparent white
         let bgcolor = self.i.bgcolor_srgb.map(|v| v.to_rrggbbaa_string()).map(|str| s::Color::Srgb(s::ColorSrgb::Hex(str)));
 

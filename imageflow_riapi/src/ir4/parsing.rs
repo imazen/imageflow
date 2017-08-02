@@ -224,6 +224,8 @@ impl Instructions{
         add(&mut m, "quality", self.quality);
         add(&mut m, "zoom", self.zoom);
 
+        add(&mut m, "s.contrast", self.s_contrast);
+
         add(&mut m, "a.balancewhite", self.a_balance_white.map(|v| format!("{:?}", v).to_lowercase()));
         add(&mut m, "subsampling", self.jpeg_subsampling);
         add(&mut m, "bgcolor", self.bgcolor_srgb.and_then(|v| Some(v.to_rrggbbaa_string().to_lowercase())));
@@ -277,6 +279,9 @@ impl Instructions{
 
 
         i.a_balance_white = p.parse_white_balance("a.balancewhite");
+
+
+        i.s_contrast = p.parse_f64("s.contrast");
 
         i.a_balance_white = match i.a_balance_white{
             Some(HistogramThresholdAlgorithm::True) => Some(HistogramThresholdAlgorithm::Area),
@@ -631,7 +636,8 @@ pub struct Instructions{
     pub anchor: Option<(Anchor1D, Anchor1D)>,
     pub trim_whitespace_threshold: Option<i32>,
     pub trim_whitespace_padding_percent: Option<f64>,
-    pub a_balance_white: Option<HistogramThresholdAlgorithm>
+    pub a_balance_white: Option<HistogramThresholdAlgorithm>,
+    pub s_contrast: Option<f64>
 }
 #[derive(Debug,Copy, Clone,PartialEq)]
 pub enum Anchor1D{
@@ -801,4 +807,5 @@ fn test_tostr(){
     t("bgcolor=77889953", Instructions { bgcolor_srgb: Some(Color32(0x53778899)), ..Default::default() });
     t("bgcolor=ffffffff", Instructions { bgcolor_srgb: Some(Color32(0xffffffff)), ..Default::default() });
     t("crop=0,0,40,50", Instructions { crop: Some([0f64,0f64,40f64,50f64]), ..Default::default() });
+    //TODO test a.balancewhite
 }
