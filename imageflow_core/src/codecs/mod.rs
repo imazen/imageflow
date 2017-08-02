@@ -315,7 +315,7 @@ impl CodecInstanceContainer{
              e.write_frame(c, job,  &mut c.get_proxy_mut(self.proxy_uuid)?.deref_mut(), preset, frame)
          }else{
              panic!("");
-             Err(FlowError::ErrNotImpl)
+             //Err(FlowError::ErrNotImpl)
          }
     }
 }

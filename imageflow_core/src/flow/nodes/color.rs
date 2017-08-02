@@ -206,13 +206,13 @@ fn alpha(alpha: f32) -> [[f32;5];5] {
 fn contrast(c: f32) -> [[f32;5];5] {
     let c = c + 1f32; //Stop at -1
 
-    let factorT = 0.5f32 * (1.0f32 - c);
+    let factor_t = 0.5f32 * (1.0f32 - c);
     [
         [c, 0f32, 0f32, 0f32, 0f32],
         [0f32, c, 0f32, 0f32, 0f32],
         [0f32, 0f32, c, 0f32, 0f32],
         [0f32, 0f32, 0f32, 1f32, 0f32],
-        [factorT, factorT, factorT, 0f32, 1f32],
+        [factor_t, factor_t, factor_t, 0f32, 1f32],
     ]
 }
 

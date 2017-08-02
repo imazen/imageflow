@@ -3,7 +3,6 @@ extern crate imageflow_server;
 #[macro_use] extern crate lazy_static;
 extern crate regex;
 
-use regex::Regex;
 
 use clap::{App, Arg, SubCommand, AppSettings};
 use ::imageflow_server::preludes::*;
@@ -64,7 +63,7 @@ fn main_with_exit_code() -> i32 {
                 .help("Start demo server (on localhost:39876 by default) with mounts /ir4/proxy/unsplash -> http://images.unsplash.com/"))
                 .arg(
                     Arg::with_name("mount").long("mount").takes_value(true).empty_values(false).multiple(true).required_unless("demo")
-                        .validator(|f| parse_mount(&f).map(|r| ()))
+                        .validator(|f| parse_mount(&f).map(|_| ()))
                         .help("Serve images from the given location using the provided API, e.g --mount \"/prefix/:ir4_local:./{}\" --mount \"/extern/:ir4_http:http:://domain.com/{}\"\n Escape colons by doubling, e.g. http:// -> http:://")
                 )
                 .arg(Arg::with_name("bind-address").long("bind-address").takes_value(true).required(false).default_value("localhost")
@@ -120,9 +119,8 @@ fn main_with_exit_code() -> i32 {
         }
         let bind = m.value_of("bind-address").map(|s| s.to_owned()).expect("bind address required");
 
-        let is_release = option_env!("GIT_OPTIONAL_TAG").is_some() && !option_env!("GIT_OPTIONAL_TAG").unwrap().is_empty();
-        let vars_present = option_env!("GIT_COMMIT").is_some();
-
+//        let is_release = option_env!("GIT_OPTIONAL_TAG").is_some() && !option_env!("GIT_OPTIONAL_TAG").unwrap().is_empty();
+//        let vars_present = option_env!("GIT_COMMIT").is_some();
 //        if is_release || !vars_present {
 //            if bind != "localhost" && bind != "127.0.0.1" && bind != "::1" {
 //                println!("This build of imageflow_server only permits connections from localhost (address {} rejected). It is not secure.", &bind);
