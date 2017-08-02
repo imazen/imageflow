@@ -296,25 +296,18 @@ impl Instructions{
         i.jpeg_subsampling = p.parse_subsampling("subsampling");
         i.f_sharpen = p.parse_f64("f.sharpen");
         i.anchor = p.parse_anchor("anchor");
+
         //TODO: warn bounds (-1..1, 0..255)
         i.trim_whitespace_padding_percent = p.parse_f64("trim.percentpadding");
         i.trim_whitespace_threshold = p.parse_i32("trim.threshold");
 
-
-        i.a_balance_white = p.parse_white_balance("a.balancewhite");
-
         i.s_grayscale = p.parse_grayscale("s.grayscale");
-
-
         i.s_contrast = p.parse_f64("s.contrast");
-
         i.s_alpha = p.parse_f64("s.alpha");
-
         i.s_saturation = p.parse_f64("s.saturation");
-
         i.s_brightness = p.parse_f64("s.brightness");
 
-        i.a_balance_white = match i.a_balance_white{
+        i.a_balance_white = match p.parse_white_balance("a.balancewhite"){
             Some(HistogramThresholdAlgorithm::True) => Some(HistogramThresholdAlgorithm::Area),
             Some(HistogramThresholdAlgorithm::Area) => Some(HistogramThresholdAlgorithm::Area),
             None => None,
@@ -787,7 +780,18 @@ fn test_url_parsing() {
     t("zoom=0.02", Instructions { zoom: Some(0.02f64), ..Default::default() }, vec![]);
     t("trim.threshold=80&trim.percentpadding=0.02", Instructions { trim_whitespace_threshold: Some(80),  trim_whitespace_padding_percent: Some(0.02f64), ..Default::default() }, vec![]);
 
+    t("w=10&f.sharpen=80.5", Instructions { w: Some(1), f_sharpen: Some(80.5f64), ..Default::default() }, vec![]);
+
     t("f.sharpen=80.5", Instructions { f_sharpen: Some(80.5f64), ..Default::default() }, vec![]);
+
+    t("s.sepia=true&s.brightness=0.1&s.saturation=-0.1&s.contrast=1&s.alpha=0", Instructions { s_alpha: Some(0f64), s_contrast: Some(1f64), s_sepia: true, s_brightness: Some(0.1f64), s_saturation: Some(-0.1f64), ..Default::default() }, vec![]);
+
+    t("s.grayscale=true",  Instructions{s_grayscale: Some(GrayscaleAlgorithm::True), ..Default::default()}, vec![]);
+    t("s.grayscale=flat",  Instructions{s_grayscale: Some(GrayscaleAlgorithm::Flat), ..Default::default()}, vec![]);
+    t("s.grayscale=ntsc",  Instructions{s_grayscale: Some(GrayscaleAlgorithm::Ntsc), ..Default::default()}, vec![]);
+    t("s.grayscale=ry",  Instructions{s_grayscale: Some(GrayscaleAlgorithm::Ry), ..Default::default()}, vec![]);
+    t("s.grayscale=Y",  Instructions{s_grayscale: Some(GrayscaleAlgorithm::Y), ..Default::default()}, vec![]);
+    t("s.grayscale=Bt709",  Instructions{s_grayscale: Some(GrayscaleAlgorithm::Bt709), ..Default::default()}, vec![]);
 
     t("bgcolor=red", Instructions { bgcolor_srgb: Some(Color32(0xffff0000)), ..Default::default() }, vec![]);
     t("bgcolor=f00", Instructions { bgcolor_srgb: Some(Color32(0xffff0000)), ..Default::default() }, vec![]);
@@ -817,15 +821,10 @@ fn test_url_parsing() {
     t("a.balancewhite=true",  Instructions{a_balance_white: Some(HistogramThresholdAlgorithm::Area), ..Default::default()}, vec![]);
     t("a.balancewhite=area",  Instructions{a_balance_white: Some(HistogramThresholdAlgorithm::Area), ..Default::default()}, vec![]);
 
-
     expect_warning("a.balancewhite","gimp",  Instructions{a_balance_white: Some(HistogramThresholdAlgorithm::Gimp), ..Default::default()});
     expect_warning("a.balancewhite","simple",  Instructions{a_balance_white: Some(HistogramThresholdAlgorithm::Simple), ..Default::default()});
-
-
     expect_warning("crop","(0,3,80, 90)",  Instructions { crop: Some([0f64,3f64,80f64,90f64]), ..Default::default() });
-
     expect_warning("crop","(0,3,happy, 90)",  Instructions { crop: Some([0f64,3f64,0f64,90f64]), ..Default::default() });
-
     expect_warning("crop","(  a0, 3, happy, 90)",  Instructions { crop: Some([0f64,3f64,0f64,90f64]), ..Default::default() });
 
 }
@@ -859,5 +858,8 @@ fn test_tostr(){
     t("bgcolor=ffffffff", Instructions { bgcolor_srgb: Some(Color32(0xffffffff)), ..Default::default() });
     t("crop=0,0,40,50", Instructions { crop: Some([0f64,0f64,40f64,50f64]), ..Default::default() });
     t("a.balancewhite=area",  Instructions{a_balance_white: Some(HistogramThresholdAlgorithm::Area), ..Default::default()});
+
+    t("s.grayscale=bt709",  Instructions{s_grayscale: Some(GrayscaleAlgorithm::Bt709), ..Default::default()});
+    t("s.alpha=0&s.brightness=0.1&s.contrast=1&s.saturation=-0.1&s.sepia=true", Instructions { s_alpha: Some(0f64), s_contrast: Some(1f64), s_sepia: true, s_brightness: Some(0.1f64), s_saturation: Some(-0.1f64), ..Default::default() });
 
 }
