@@ -229,6 +229,16 @@ impl Layout {
             ..self
         })
     }
+    pub fn fill_crop(self, target: AspectRatio) -> Result<Layout> {
+        let new_source = target.box_of(&self.source, BoxKind::Inner)?;
+        Ok(Layout {
+            source: new_source,
+            image: target,
+            canvas: target,
+            ..self
+        })
+
+    }
 
     //Also distorts 'image' in a corresponding fashion.
     pub fn distort_canvas(self, target: AspectRatio) -> Result<Layout> {
@@ -323,6 +333,7 @@ impl Layout {
         match step {
             Step::None | Step::BeginSequence | Step::SkipIf(_) | Step::SkipUnless(_) => Ok(self),
             Step::ScaleToOuter => self.scale_canvas(self.target, BoxKind::Outer),
+            Step::FillCrop => self.fill_crop(self.target),
             Step::ScaleToInner => self.scale_canvas(self.target, BoxKind::Inner),
             Step::PadAspect => self.pad_canvas(self.target.box_of(&self.canvas, BoxKind::Outer)?),
             Step::Pad => self.pad_canvas(self.target),
@@ -493,6 +504,8 @@ pub enum Step {
     Crop, //What about intersect? Crop that doesn't fail out of bounds
     CropToIntersection,
     CropAspect,
+    /// Use ScaleToOuterAndCrop instead of ScaleToOuter, then Crop, because the combination can reduce the dimensions below the outer box
+    FillCrop,
     /// We can use a variety of hints, and we're not required to fully change the aspect ratio or achieve the target box
     PartialCrop,
     PartialCropAspect,
@@ -560,6 +573,10 @@ impl StepsBuilder {
     }
     pub fn scale_to_outer(mut self) -> StepsBuilder {
         self.steps.push(Step::ScaleToOuter);
+        self
+    }
+    pub fn fill_crop(mut self) -> StepsBuilder {
+        self.steps.push(Step::FillCrop);
         self
     }
     pub fn distort(mut self, t: BoxParam) -> StepsBuilder {

@@ -88,12 +88,12 @@ fn strategy_to_steps(s: Strategy) -> Option<Vec<Step>> {
 
         //Scale_to_outer can reduce the width, then crop the height, causing both coordinates to be smaller
         //TODO: perhaps combine scale_to_outer and crop() into a single operation to prevent this?
-        Strategy::CropOrAspect => { steps().skip_if(Cond::Either(Ordering::Less)).scale_to_outer().crop()
+        Strategy::CropOrAspect => { steps().skip_if(Cond::Either(Ordering::Less)).fill_crop()
             .new_seq().skip_unless(Cond::Either(Ordering::Less)).crop_aspect() },
 
 
         //I think we need multiple parts, as we don't offer a way to compare against the obox
-        Strategy::CropDownscaleOnly => { steps().skip_if(Cond::Either(Ordering::Less)).scale_to_outer().crop().new_seq().skip_unless(Cond::Larger1DSmaller1D).crop_intersection() },
+        Strategy::CropDownscaleOnly => { steps().skip_if(Cond::Either(Ordering::Less)).fill_crop().new_seq().skip_unless(Cond::Larger1DSmaller1D).crop_intersection() },
         //        Strategy::CropCarefulDownscale => StepSet::AnyLarger(vec![Step::ScaleToOuter,
         //        Step::PartialCropAspect, Step::ScaleToInner]),
         //        Strategy::ExactCropAllowUpscaling => StepSet::Always(vec![Step::ScaleToOuter,
@@ -591,7 +591,7 @@ fn test_scale_to_outer(){
 #[test]
 fn test_scale_to_outer_and_crop(){
     let cropper = sizing::IdentityCropProvider::new();
-    let result = Layout::create(r(2,4), r(1,3)).execute_all(&steps().scale_to_outer().crop().into_vec(), &cropper).unwrap();
+    let result = Layout::create(r(2,4), r(1,3)).execute_all(&steps().fill_crop().into_vec(), &cropper).unwrap();
     assert_eq!(result.get_source_crop(), r(1,4))
 }
 
