@@ -89,7 +89,7 @@ fn strategy_to_steps(s: Strategy) -> Option<Vec<Step>> {
         //Scale_to_outer can reduce the width, then crop the height, causing both coordinates to be smaller
         //TODO: perhaps combine scale_to_outer and crop() into a single operation to prevent this?
         Strategy::CropOrAspect => { steps().skip_if(Cond::Either(Ordering::Less)).scale_to_outer().crop()
-            .new_seq().crop_aspect() },
+            .new_seq().skip_unless(Cond::Either(Ordering::Less)).crop_aspect() },
 
 
         //I think we need multiple parts, as we don't offer a way to compare against the obox
