@@ -19,19 +19,8 @@ fn main() {
 
 
 fn parse_mount(s: &str) -> std::result::Result<MountLocation, String>{
-    //.split permits empty elements. We just join consecutive empty elements to allow escaping of : via ::
-    let mut parts = s.split(":").fold((Vec::new(),false), | (mut list, previous_empty), item| {
-        if previous_empty && item.is_empty(){
-            (list, false)
-        }else if item.is_empty(){
-            list.push(item.to_owned());
-            (list, true)
-        }else{
-            list.push(item.to_owned());
-            (list, false)
-        }
-    }).0;
-
+    //Escape ::
+    let mut parts = s.replace("::","||||||").split(":").map(|s| s.replace("||||||",":")).collect::<Vec<String>>();
     if parts.len() < 2 {
         Err(format!("--mount prefix:engine:args  Mount value must contain at least prefix:engine - received {:?} ({:?})", s, &parts))
     }else{

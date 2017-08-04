@@ -253,6 +253,18 @@ fn run_server_test_i4(){
         callback_result.unwrap();
     }
     {
+        let c = context.subfolder_context("proxy");
+        c.subfolder_context("proxy");
+        let (po, callback_result) = ServerInstance::run(&c, Proto::Http, vec!["--data-dir=.", "--mount","/extern/:ir4_http:http:://images.unsplash.com/"], | server | {
+            fetch_bytes(&server.url_for("/extern/photo-1422493757035-1e5e03968f95?width=100"))?;
+            Ok(())
+        });
+
+        //po.expect_status_code(Some(0));
+
+        callback_result.unwrap();
+    }
+    {
         let c = context.subfolder_context("mount_local"); //stuck on port 39876
         c.create_blank_image_here("eh", 100,100, s::EncoderPreset::libpng32());
         let a = c.subfolder_context("a"); //stuck on port 39876
