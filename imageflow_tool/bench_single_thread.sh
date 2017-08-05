@@ -12,11 +12,9 @@ echo and sudo apt-get install linux-tools-common linux-tools-generic
 echo
 echo on OS X, you will need to edit this script to use time instead of perf stat
 
-cargo build --release
-cp target/release/flow-proto1 .
+./build_release_tool.sh
 
 convert --version
-./flow-proto1 --version
 vipsthumbnail --vips-version
 
 
@@ -48,16 +46,16 @@ export IMAGE_PATH=c1.jpg
 cd bench_in || exit
 
 echo Using imageflow to thumbnail
-$TIME_COMMAND ../flow-proto1 -i $IMAGE_PATH -o ../bench_out/1_200x200.jpg -w 200 -h 200
-$MEM_COMMAND ../flow-proto1 -i $IMAGE_PATH -o ../bench_out/1_200x200.jpg -w 200 -h 200
+$TIME_COMMAND ../flow-proto1 -i $IMAGE_PATH -o ../bench_out/1_200x200.jpg -w 200 -h 200 --jpeg-quality 90
+$MEM_COMMAND ../flow-proto1 -i $IMAGE_PATH -o ../bench_out/1_200x200.jpg -w 200 -h 200 --jpeg-quality 90
 echo
 echo
 echo Using libvips to thumbnail
-$TIME_COMMAND vipsthumbnail --linear --size=200x200  --output=../bench_out/1_vips_200x200.jpg $IMAGE_PATH
-$MEM_COMMAND vipsthumbnail --linear --size=200x200  --output=../bench_out/1_vips_200x200.jpg  $IMAGE_PATH
+$TIME_COMMAND vipsthumbnail --linear --size=200x200  --output=../bench_out/1_vips_200x200.jpg[Q=90] $IMAGE_PATH
+$MEM_COMMAND vipsthumbnail --linear --size=200x200  --output=../bench_out/1_vips_200x200.jpg[Q=90]  $IMAGE_PATH
 
 echo
 echo
 echo Using ImageMagick to thumbnail
-$TIME_COMMAND convert $IMAGE_PATH -limit thread 1 -set colorspace sRGB -colorspace RGB -filter Robidoux -resize 200x200  -colorspace sRGB ../bench_out/1_magick_200x200.jpg
-$MEM_COMMAND convert $IMAGE_PATH -limit thread 1 -set colorspace sRGB -colorspace RGB -filter Robidoux -resize 200x200  -colorspace sRGB ../bench_out/1_magick_200x200.jpg
+$TIME_COMMAND convert $IMAGE_PATH -limit thread 1 -set colorspace sRGB -colorspace RGB -filter Robidoux -resize 200x200  -colorspace sRGB -quality 90 ../bench_out/1_magick_200x200.jpg
+$MEM_COMMAND convert $IMAGE_PATH -limit thread 1 -set colorspace sRGB -colorspace RGB -filter Robidoux -resize 200x200  -colorspace sRGB -quality 90 ../bench_out/1_magick_200x200.jpg

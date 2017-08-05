@@ -1,9 +1,6 @@
 #!/bin/bash
 
-cargo build --release
-cp ../target/release/flow-proto1 .
-
-./flow-proto1 --version
+./build_release_tool.sh
 
 wget -nc  https://s3-us-west-2.amazonaws.com/imageflow-resources/test_inputs/u1.jpg
 
