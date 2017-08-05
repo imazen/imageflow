@@ -205,14 +205,17 @@ impl Ir4Layout{
     }
 
 
+    pub fn get_downscaling(&self) ->  sizing::Result<(AspectRatio, AspectRatio)> {
+        let (crop, layout) = self.get_crop_and_layout()?;
+
+        let new_crop = layout.get_source_crop();
+        let image = layout.get_box(BoxTarget::CurrentImage);
+        Ok((new_crop, image))
+    }
 
 
 
-    /// Does not add trimwhitespace or decode/encode
-    pub fn add_steps(&self, b: &mut FramewiseBuilder) -> sizing::Result<Ir4LayoutInfo> {
-        b.add_rotate(self.i.srotate);
-        b.add_flip(self.i.sflip);
-
+    pub fn get_crop_and_layout(&self) -> sizing::Result<(Option<[u32;4]>,sizing::Layout)> {
         let (precrop_w, precrop_h) = self.get_precrop();
 
         // later consider adding f.sharpen, f.ignorealpha
@@ -244,8 +247,31 @@ impl Ir4Layout{
         let (crop_x1, crop_y1) = ((initial_crop[0] + inner_crop_x1) as u32, (initial_crop[1] + inner_crop_y1) as u32);
 
         //println!("Crop initial={:?}, new: {:?}, x1: {}, y1: {}", &initial_crop, &new_crop, crop_x1, crop_y1);
-        if crop_x1 > 0 || crop_y1 > 0 || precrop_w != new_crop.width() || precrop_h != new_crop.height() {
-            b.add(s::Node::Crop { x1: crop_x1, y1: crop_y1, x2: crop_x1 + new_crop.width() as u32, y2: crop_y1 + new_crop.height() as u32 });
+        let final_crop = if crop_x1 > 0 || crop_y1 > 0 || precrop_w != new_crop.width() || precrop_h != new_crop.height() {
+            Some([crop_x1, crop_y1, crop_x1 + new_crop.width() as u32, crop_y1 + new_crop.height() as u32])
+        }else{
+            None
+        };
+        Ok((final_crop,layout))
+
+    }
+
+
+    /// Does not add trimwhitespace or decode/encode
+    pub fn add_steps(&self, b: &mut FramewiseBuilder) -> sizing::Result<Ir4LayoutInfo> {
+        b.add_rotate(self.i.srotate);
+        b.add_flip(self.i.sflip);
+
+
+        let (crop, layout) = self.get_crop_and_layout()?;
+
+        let new_crop = layout.get_source_crop();
+        let canvas = layout.get_box(BoxTarget::CurrentCanvas);
+        let image = layout.get_box(BoxTarget::CurrentImage);
+        let align = self.i.anchor.unwrap_or((Anchor1D::Center, Anchor1D::Center));
+
+        if let Some(c) = crop{
+            b.add(s::Node::Crop { x1: c[0], y1: c[1], x2: c[2], y2: c[3] });
         }
 
         //Scale

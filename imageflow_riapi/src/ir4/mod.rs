@@ -55,6 +55,8 @@ pub struct Ir4Result{
 
 impl Ir4Translate{
 
+
+
     pub fn get_decode_node(&self) -> Option<s::Node>{
         if let Some(id) = self.decode_id {
             Some(s::Node::Decode { io_id: id, commands: None })
@@ -137,6 +139,59 @@ pub struct Ir4Expand{
 
 impl Ir4Expand{
 
+
+
+    pub fn get_decode_commands(&self) -> sizing::Result<Option<s::DecoderCommand>> {
+        let i = self.i.parse()?.parsed;
+
+        let layout = self.get_layout(&i)?;
+        let (from, to): (AspectRatio, AspectRatio) = layout.get_downscaling()?;
+
+        let downscale_ratio = (from.w as f64 / to.w as f64).min(from.h as f64 / to.w as f64);
+
+        let preshrink_ratio = i.min_precise_scaling_ratio.unwrap_or(2.1f64) / downscale_ratio;
+
+        if preshrink_ratio < 1f64 {
+            Ok(Some(s::DecoderCommand::JpegDownscaleHints(s::JpegIDCTDownscaleHints {
+                scale_luma_spatially: Some(true),
+                gamma_correct_for_srgb_during_spatial_luma_scaling: Some(true),
+                width: (self.source.w as f64 * preshrink_ratio).floor() as i64,
+                height: (self.source.h as f64 * preshrink_ratio).floor() as i64
+            })))
+        } else {
+            Ok(None)
+        }
+    }
+
+    pub fn get_canvas_size(&self) -> sizing::Result<AspectRatio>{
+        let i = self.i.parse()?.parsed;
+        let (_, layout) = self.get_layout(&i).unwrap().get_crop_and_layout().unwrap();
+        Ok(layout.get_box(BoxTarget::CurrentCanvas))
+    }
+
+    pub fn get_layout(&self, i: &Instructions) -> sizing::Result<Ir4Layout> {
+        if i.trim_whitespace_threshold.is_some() {
+            return Err(sizing::LayoutError::ContentDependent);
+        }
+        Ok(layout::Ir4Layout::new(*i, self.source.w, self.source.h))
+    }
+
+    pub fn expand_steps(&self) -> sizing::Result<Ir4Result> {
+        let mut r = self.i.parse()?;
+
+        let layout = self.get_layout(&r.parsed)?;
+
+        let mut b = FramewiseBuilder::new();
+        r.canvas = Some(layout.add_steps(&mut b)?.canvas);
+
+        if let Some(n) = self.get_encoder_node(&r.parsed) {
+            b.add(n);
+        }
+        r.steps = Some(b.into_steps());
+        Ok(r)
+
+    }
+
     pub fn get_encoder_node(&self, i: &Instructions) -> Option<s::Node>{
 
         if let Some(id) = self.encode_id {
@@ -160,24 +215,6 @@ impl Ir4Expand{
         }else{
             None
         }
-    }
-    pub fn expand_steps(&self) -> sizing::Result<Ir4Result> {
-        let mut r = self.i.parse()?;
-        let mut b = FramewiseBuilder::new();
-
-        if r.parsed.trim_whitespace_threshold.is_some(){
-            return Err(sizing::LayoutError::ContentDependent);
-        }
-
-        let layout = layout::Ir4Layout::new(r.parsed, self.source.w, self.source.h);
-        r.canvas = Some(layout.add_steps(&mut b)?.canvas);
-
-        if let Some(n) = self.get_encoder_node(&r.parsed) {
-            b.add(n);
-        }
-        r.steps = Some(b.into_steps());
-        Ok(r)
-
     }
 }
 

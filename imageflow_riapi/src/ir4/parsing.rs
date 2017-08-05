@@ -138,7 +138,7 @@ pub enum GrayscaleAlgorithm {
 
 }
 
-pub static IR4_KEYS: [&'static str;60] = ["mode", "anchor", "flip", "sflip", "scale", "cache", "process",
+pub static IR4_KEYS: [&'static str;61] = ["mode", "anchor", "flip", "sflip", "scale", "cache", "process",
     "quality", "zoom", "crop", "cropxunits", "cropyunits",
     "w", "h", "width", "height", "maxwidth", "maxheight", "format", "thumbnail",
      "autorotate", "srotate", "rotate", "ignoreicc", //really? : "precise_scaling_ratio",
@@ -147,7 +147,7 @@ pub static IR4_KEYS: [&'static str;60] = ["mode", "anchor", "flip", "sflip", "sc
     "404", "bgcolor", "paddingcolor", "bordercolor", "preset", "floatspace", "jpeg_idct_downscale_linear", "watermark",
     "s.invert", "s.sepia", "s.grayscale", "s.alpha", "s.brightness", "s.contrast", "s.saturation", "trim.threshold",
     "trim.percentpadding", "a.blur", "a.sharpen", "a.removenoise", "a.balancewhite", "dither",
-    "encoder", "decoder", "builder", "s.roundcorners.", "paddingwidth", "paddingheight", "margin", "borderwidth"];
+    "encoder", "decoder", "builder", "s.roundcorners.", "paddingwidth", "paddingheight", "margin", "borderwidth", "decoder.min_precise_scaling_ratio"];
 
 
 #[derive(PartialEq,Debug, Clone)]
@@ -257,6 +257,8 @@ impl Instructions{
 
         add(&mut m, "crop", self.crop.map(|a| format!("{},{},{},{}", a[0],a[1],a[2],a[3])));
         add(&mut m, "anchor", self.anchor_string());
+
+        add(&mut m, "decoder.min_precise_scaling_ratio", self.min_precise_scaling_ratio);
         m
     }
     pub fn delete_from_map(map: &mut HashMap<String,String>, warnings: Option<&mut Vec<ParseWarning>>) -> Instructions {
@@ -297,6 +299,9 @@ impl Instructions{
         i.jpeg_subsampling = p.parse_subsampling("subsampling");
 
         i.anchor = p.parse_anchor("anchor");
+
+
+        i.min_precise_scaling_ratio = p.parse_f64("decoder.min_precise_scaling_ratio");
 
         //TODO: warn bounds (-1..1, 0..255)
         i.trim_whitespace_padding_percent = p.parse_f64("trim.percentpadding");
@@ -680,7 +685,8 @@ pub struct Instructions{
     pub s_saturation: Option<f64>,
     pub s_brightness: Option<f64>,
     pub s_sepia: Option<bool>,
-    pub s_grayscale: Option<GrayscaleAlgorithm>
+    pub s_grayscale: Option<GrayscaleAlgorithm>,
+    pub min_precise_scaling_ratio: Option<f64>,
 
 }
 #[derive(Debug,Copy, Clone,PartialEq)]

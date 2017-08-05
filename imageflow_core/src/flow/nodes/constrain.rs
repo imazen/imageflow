@@ -138,7 +138,29 @@ fn constrain_def() -> NodeDefinition {
 
 
 
-
+fn get_expand(ctx: &mut OpCtxMut, ix: NodeIndex<u32>) -> ::imageflow_riapi::ir4::Ir4Expand{
+    let input = ctx.first_parent_frame_info_some(ix).unwrap();
+    if let s::Node::CommandString{ref kind, ref value, ref decode, ref encode} =
+        ctx.get_json_params(ix).unwrap() {
+        match kind {
+            &s::CommandStringKind::ImageResizer4 => {
+                ::imageflow_riapi::ir4::Ir4Expand {
+                    i: ::imageflow_riapi::ir4::Ir4Command::QueryString(value.to_owned()),
+                    encode_id: *encode,
+                    source: ::imageflow_riapi::ir4::Ir4SourceFrameInfo {
+                        w: input.w,
+                        h: input.h,
+                        fmt: input.fmt,
+                        alpha_meaningful: input.alpha_meaningful,
+                        original_mime: None
+                    }
+                }
+            }
+        }
+    }else{
+        panic!("");
+    }
+}
 
 fn command_string_partially_expanded_def() -> NodeDefinition {
     NodeDefinition {
@@ -146,47 +168,47 @@ fn command_string_partially_expanded_def() -> NodeDefinition {
         name: "expanding_command_string",
         inbound_edges: EdgesIn::OneInput,
         description: "expanding command string",
-        fn_estimate: None,
-        fn_flatten_pre_optimize: Some({
+        fn_estimate: Some({
             fn f(ctx: &mut OpCtxMut, ix: NodeIndex<u32>) {
-                let input = ctx.first_parent_frame_info_some(ix).unwrap();
+                let e = get_expand(ctx, ix);
 
 
-
-                if let s::Node::CommandString{ref kind, ref value, ref decode, ref encode} =
-                ctx.get_json_params(ix).unwrap() {
-
-                    match kind {
-                        &s::CommandStringKind::ImageResizer4 => {
-
-                            let e = ::imageflow_riapi::ir4::Ir4Expand{
-                                i: ::imageflow_riapi::ir4::Ir4Command::QueryString(value.to_owned()),
-                                encode_id: *encode,
-                                source: ::imageflow_riapi::ir4::Ir4SourceFrameInfo{
-                                    w: input.w,
-                                    h: input.h,
-                                    fmt: input.fmt,
-                                    alpha_meaningful: input.alpha_meaningful,
-                                    original_mime: None
-                                }
-
-                            };
-
-
-                            match e.expand_steps() {
-                                Ok(r) => {
-                                    //TODO: Find a way to expose warnings
-                                    ctx.replace_node(ix, r.steps.unwrap().into_iter().map(|n| Node::from(n)).collect::<>());
-                                }
-                                Err(e) => {
-                                    //TODO: reparse to get warnings
-                                    panic!("{:?}", e);
-                                }
-                            }
-                        }
+                if let Some(command) = e.get_decode_commands().unwrap() {
+                    //Send command to codec
+                    for io_id in ctx.get_decoder_io_ids(ix) {
+                        ctx.job.tell_decoder(io_id, command.clone()).unwrap();
                     }
                 }
 
+                let weight = &mut ctx.weight_mut(ix);
+//                let canvas = e.get_canvas_size().unwrap();
+                weight.frame_est = FrameEstimate::Impossible;
+                
+
+//                FrameEstimate::UpperBound(FrameInfo {
+//                    w: canvas.width(),
+//                    h: canvas.height(),
+//                    fmt: PixelFormat::Bgra32,
+//                    alpha_meaningful: true
+//                });
+            }
+            f
+        }),
+        fn_flatten_pre_optimize: Some({
+            fn f(ctx: &mut OpCtxMut, ix: NodeIndex<u32>) {
+                let e = get_expand(ctx, ix);
+
+
+                match e.expand_steps() {
+                    Ok(r) => {
+                        //TODO: Find a way to expose warnings
+                        ctx.replace_node(ix, r.steps.unwrap().into_iter().map(|n| Node::from(n)).collect::<>());
+                    }
+                    Err(e) => {
+                        //TODO: reparse to get warnings
+                        panic!("{:?}", e);
+                    }
+                }
             }
             f
         }),
