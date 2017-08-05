@@ -206,7 +206,7 @@ impl Ir4Layout{
 
 
     pub fn get_downscaling(&self) ->  sizing::Result<(AspectRatio, AspectRatio)> {
-        let (crop, layout) = self.get_crop_and_layout()?;
+        let (_, layout) = self.get_crop_and_layout()?;
 
         let new_crop = layout.get_source_crop();
         let image = layout.get_box(BoxTarget::CurrentImage);
@@ -236,8 +236,6 @@ impl Ir4Layout{
         let layout = sizing::Layout::create(initial_size, target).execute_all(&constraints, &cropper)?;
 
         //println!("executed constraints {:?} to get layout {:?} from target {:?}", &constraints, &layout, &target);
-        let canvas = layout.get_box(BoxTarget::CurrentCanvas);
-        let image = layout.get_box(BoxTarget::CurrentImage);
         let new_crop = layout.get_source_crop();
 
         let align = self.i.anchor.unwrap_or((Anchor1D::Center, Anchor1D::Center));
