@@ -256,6 +256,7 @@ struct flow_bitmap_bgra {
 PUB float flow_context_byte_to_floatspace(flow_c * c, uint8_t srgb_value);
 PUB uint8_t flow_context_floatspace_to_byte(flow_c * c, float space_value);
 
+PUB flow_working_floatspace flow_context_get_floatspace(flow_c * context);
 PUB void flow_context_set_floatspace(flow_c * ctx, flow_working_floatspace space, float a, float b, float c);
 
 typedef double (*flow_detailed_interpolation_method)(const struct flow_interpolation_details *, double);

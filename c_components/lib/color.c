@@ -250,6 +250,10 @@ static float derive_constant(float x, float slope, float sign)
 
 #endif
 
+flow_working_floatspace flow_context_get_floatspace(flow_c * context){
+    return context->colorspace.floatspace;
+}
+
 void flow_context_set_floatspace(flow_c * context, flow_working_floatspace space, float a, float b, float c)
 {
     context->colorspace.floatspace = space;

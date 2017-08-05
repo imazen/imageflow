@@ -173,7 +173,7 @@ fn command_string_partially_expanded_def() -> NodeDefinition {
                 let e = get_expand(ctx, ix);
 
 
-                if let Some(command) = e.get_decode_commands().unwrap() {
+                if let Some(command) = e.get_decode_commands(Some(ctx.c.todo_remove_get_floatspace() != ::ffi::Floatspace::Srgb)).unwrap() {
                     //Send command to codec
                     for io_id in ctx.get_decoder_io_ids(ix) {
                         ctx.job.tell_decoder(io_id, command.clone()).unwrap();
@@ -183,7 +183,7 @@ fn command_string_partially_expanded_def() -> NodeDefinition {
                 let weight = &mut ctx.weight_mut(ix);
 //                let canvas = e.get_canvas_size().unwrap();
                 weight.frame_est = FrameEstimate::Impossible;
-                
+
 
 //                FrameEstimate::UpperBound(FrameInfo {
 //                    w: canvas.width(),

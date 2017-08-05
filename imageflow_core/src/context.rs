@@ -123,6 +123,13 @@ impl Context {
         IoProxy::create_output_buffer(self)
     }
 
+
+    pub fn todo_remove_get_floatspace(&self) -> ::ffi::Floatspace{
+        unsafe {
+            ::ffi::flow_context_get_floatspace(self.flow_c())
+        }
+    }
+
     pub fn todo_remove_set_floatspace(&self, b: ::ffi::Floatspace){
         unsafe {
             ::ffi::flow_context_set_floatspace(self.flow_c(),

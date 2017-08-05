@@ -141,7 +141,7 @@ impl Ir4Expand{
 
 
 
-    pub fn get_decode_commands(&self) -> sizing::Result<Option<s::DecoderCommand>> {
+    pub fn get_decode_commands(&self, gamma_correct: Option<bool>) -> sizing::Result<Option<s::DecoderCommand>> {
         let i = self.i.parse()?.parsed;
 
         let layout = self.get_layout(&i)?;
@@ -153,8 +153,8 @@ impl Ir4Expand{
 
         if preshrink_ratio < 1f64 {
             Ok(Some(s::DecoderCommand::JpegDownscaleHints(s::JpegIDCTDownscaleHints {
-                scale_luma_spatially: Some(true),
-                gamma_correct_for_srgb_during_spatial_luma_scaling: Some(true),
+                scale_luma_spatially: Some(gamma_correct.unwrap_or(true)),
+                gamma_correct_for_srgb_during_spatial_luma_scaling: Some(gamma_correct.unwrap_or(true)),
                 width: (self.source.w as f64 * preshrink_ratio).floor() as i64,
                 height: (self.source.h as f64 * preshrink_ratio).floor() as i64
             })))

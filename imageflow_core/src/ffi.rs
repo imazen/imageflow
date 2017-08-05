@@ -99,7 +99,7 @@ pub struct CodecInstance {
 
 
 #[repr(C)]
-#[derive(Copy,Clone, Debug)]
+#[derive(Copy,Clone, Debug,  PartialEq)]
 pub enum Floatspace {
     Srgb = 0,
     Linear = 1, // gamma = 2,
@@ -715,6 +715,8 @@ mod mid_term {
     use ::libc;
 
     extern "C" {
+        pub fn flow_context_get_floatspace(ctx: *mut ImageflowContext) -> Floatspace;
+
         pub fn flow_context_set_floatspace(ctx: *mut ImageflowContext,
                                            space: Floatspace,
                                            a: f32,
