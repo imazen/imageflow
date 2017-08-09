@@ -1,7 +1,11 @@
 #![feature(alloc_system)]
+// `error_chain!` can recurse deeply
+#![recursion_limit = "1024"]
 
 extern crate alloc_system;
 
+#[macro_use]
+extern crate error_chain;
 
 #[macro_use]
 extern crate lazy_static;
@@ -18,7 +22,10 @@ extern crate serde;
 extern crate serde_json;
 extern crate libc;
 extern crate backtrace;
-
+extern crate num;
+extern crate base64;
+extern crate sha2;
+extern crate unicase;
 
 #[cfg(not(any(target_os = "windows", target_os = "macos")))]
 extern crate openssl;
@@ -35,6 +42,7 @@ pub mod process_testing;
 pub mod process_capture;
 pub mod colors;
 pub mod debug;
+pub mod licensing;
 
 pub mod timeywimey{
     pub fn time_bucket(seconds_per_bucket: u64, bucket_count: u64) -> u64{
@@ -49,3 +57,25 @@ mod tests {
     fn it_works() {
     }
 }
+
+
+
+// We'll put our errors in an `errors` module, and other modules in
+// this crate will `use errors::*;` to get access to everything
+// `error_chain!` creates.
+mod errors {
+    // Create the Error, ErrorKind, ResultExt, and Result types
+    error_chain! {
+
+        errors{
+           LicenseCorrupted(msg: String) {
+                description("Please verify/reinstall license; license corrupt.")
+                display("Please verify/reinstall license; license corrupt: {}", msg)
+           }
+           RsaDecryptInputLargerThanModulus
+        }
+
+    }
+}
+
+

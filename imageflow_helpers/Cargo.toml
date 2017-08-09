@@ -24,15 +24,21 @@ lazy_static = "0.2"
 twox-hash = "1"
 fnv = "*"
 blake2-rfc = "*"
+sha2 = "*"
 
 # regex
 regex = "*"
 
+num = "*"
+
+base64 = "*"
 
 zip = { version = "0.2", default-features = false }
 
-
+unicase = "2"
 # HTTPS is a little bit of a nightmare
+
+error-chain = "*"
 
 hyper = "*"
 reqwest = "*"
