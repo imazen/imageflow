@@ -54,14 +54,6 @@ impl Job{
             if let Some(r) = what.graph_recording {
                 self.configure_graph_recording(r);
             }
-
-            if let Some(b) = what.no_gamma_correction {
-                self.context().todo_remove_set_floatspace(if b {
-                    ::ffi::Floatspace::Srgb
-                }else {
-                    ::ffi::Floatspace::Linear
-                });
-            };
             //Cheat on lifetimes so Job can remain mutable
             let split_context = unsafe{ &*(self.context() as *const Context)};
             ::flow::execution_engine::Engine::create(split_context, self, &mut g).execute()?;

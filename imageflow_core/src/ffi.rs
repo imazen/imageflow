@@ -76,7 +76,6 @@ pub struct ImageflowContext {
     pub error: ErrorInfo,
     pub underlying_heap: Heap,
     pub log: ProfilingLog,
-    pub colorspace: ColorspaceInfo,
     pub object_tracking: ObjTrackingInfo,
     pub codec_set: *mut ContextCodecSet,
 }
@@ -620,7 +619,8 @@ pub struct RenderToCanvas1d {
     // There will need to be consistency checks against the createcanvas node
     pub interpolation_filter: Filter,
     pub scale_to_width: i32,
-    pub transpose_on_write: bool, // Other fields skipped, not acessed.
+    pub transpose_on_write: bool,
+    pub scale_in_colorspace: Floatspace,
 }
 
 #[repr(C)]
@@ -631,27 +631,6 @@ pub struct Rect {
     pub x2: i32,
     pub y2: i32
 }
-
-
-
-// struct flow_nodeinfo_render_to_canvas_1d {
-//    // There will need to be consistency checks against the createcanvas node
-//
-//    flow_interpolation_filter interpolation_filter;
-//    // struct flow_interpolation_details * interpolationDetails;
-//    int32_t scale_to_width;
-//    bool transpose_on_write;
-//    flow_working_floatspace scale_in_colorspace;
-//
-//    float sharpen_percent_goal;
-//
-//    flow_compositing_mode compositing_mode;
-//    // When using compositing mode blend_with_matte, this color will be used. We should probably define this as always
-//    // being sRGBA, 4 bytes.
-//    uint8_t matte_color[4];
-//
-//    struct flow_scanlines_filter * filter_list;
-// };
 
 mod must_replace{
     use super::*;
@@ -715,15 +694,6 @@ mod mid_term {
     use ::libc;
 
     extern "C" {
-        pub fn flow_context_get_floatspace(ctx: *mut ImageflowContext) -> Floatspace;
-
-        pub fn flow_context_set_floatspace(ctx: *mut ImageflowContext,
-                                           space: Floatspace,
-                                           a: f32,
-                                           b: f32,
-                                           c: f32);
-
-
 
     pub fn flow_bitmap_bgra_load_png(c: *mut ImageflowContext,
     b_ref: *mut *const BitmapBgra,

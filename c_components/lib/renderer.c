@@ -37,6 +37,17 @@ struct flow_RenderDetails * flow_RenderDetails_create(flow_c * context)
         FLOW_error(context, flow_status_Out_of_memory);
         return NULL;
     }
+    // TODO: this should be cleaned up with RenderDetails, but doing so triggers a bug.
+    // Since Renderer et. al. will shortly be deleted, not investigating
+    struct flow_colorcontext_info * colorcontext
+        = FLOW_calloc_array_owned(context, 1, struct flow_colorcontext_info, context);
+    if (colorcontext == NULL) {
+        flow_RenderDetails_destroy(context, d);
+        FLOW_error(context, flow_status_Out_of_memory);
+        return NULL;
+    }
+    flow_colorcontext_init(context, colorcontext, flow_working_floatspace_linear, 0, 0, 0);
+
     for (int i = 0; i < 5; i++) {
         d->color_matrix[i] = &(d->color_matrix_data[i * 5]);
     }
@@ -46,6 +57,8 @@ struct flow_RenderDetails * flow_RenderDetails_create(flow_c * context)
     d->havling_acceptable_pixel_loss = 0;
     d->minimum_sample_window_to_interposharpen = 1.5;
     d->apply_color_matrix = false;
+
+    d->colorcontext = colorcontext;
     return d;
 }
 
@@ -234,7 +247,8 @@ static void SimpleRenderInPlace(void)
 */
 
 // TODO: find better name
-static bool HalveInTempImage(flow_c * context, struct flow_Renderer * r, int divisor)
+static bool HalveInTempImage(flow_c * context, struct flow_colorcontext_info * colorcontext, struct flow_Renderer * r,
+                             int divisor)
 {
     bool result = true;
     flow_prof_start(context, "create temp image for halving", false);
@@ -249,7 +263,7 @@ static bool HalveInTempImage(flow_c * context, struct flow_Renderer * r, int div
     // from here we have a temp image
     flow_prof_stop(context, "create temp image for halving", true, false);
 
-    if (!flow_halve(context, r->source, tmp_im, divisor)) {
+    if (!flow_halve(context, colorcontext, r->source, tmp_im, divisor)) {
         // we cannot return here, or tmp_im will leak
         FLOW_add_to_callstack(context);
         result = false;
@@ -274,8 +288,8 @@ static bool Renderer_complete_halving(flow_c * context, struct flow_Renderer * r
     flow_prof_start(context, "CompleteHalving", false);
     r->details->halving_divisor = 0; // Don't halve twice
 
-    result = r->source->can_reuse_space ? flow_halve_in_place(context, r->source, divisor)
-                                        : HalveInTempImage(context, r, divisor);
+    result = r->source->can_reuse_space ? flow_halve_in_place(context, r->details->colorcontext, r->source, divisor)
+                                        : HalveInTempImage(context, r->details->colorcontext, r, divisor);
     if (!result) {
         FLOW_add_to_callstack(context);
     }
@@ -324,7 +338,8 @@ static bool ApplyColorMatrix(flow_c * context, const struct flow_Renderer * r, s
     return b;
 }
 
-static bool ScaleAndRender1D(flow_c * context, const struct flow_Renderer * r, struct flow_bitmap_bgra * pSrc,
+static bool ScaleAndRender1D(flow_c * context, struct flow_colorcontext_info * colorcontext,
+                             const struct flow_Renderer * r, struct flow_bitmap_bgra * pSrc,
                              struct flow_bitmap_bgra * pDst, const struct flow_RenderDetails * details, bool transpose,
                              int call_number)
 {
@@ -385,7 +400,8 @@ static bool ScaleAndRender1D(flow_c * context, const struct flow_Renderer * r, s
         const uint32_t row_count = umin(pSrc->h - source_start_row, buffer_row_count);
 
         flow_prof_start(context, "convert_srgb_to_linear", false);
-        if (!flow_bitmap_float_convert_srgb_to_linear(context, pSrc, source_start_row, source_buf, 0, row_count)) {
+        if (!flow_bitmap_float_convert_srgb_to_linear(context, colorcontext, pSrc, source_start_row, source_buf, 0,
+                                                      row_count)) {
             FLOW_add_to_callstack(context);
             success = false;
             goto cleanup;
@@ -414,8 +430,8 @@ static bool ScaleAndRender1D(flow_c * context, const struct flow_Renderer * r, s
         }
 
         flow_prof_start(context, "pivoting_composite_linear_over_srgb", false);
-        if (!flow_bitmap_float_pivoting_composite_linear_over_srgb(context, dest_buf, 0, pDst, source_start_row,
-                                                                   row_count, transpose)) {
+        if (!flow_bitmap_float_composite_linear_over_srgb(context, colorcontext, dest_buf, 0, pDst, source_start_row,
+                                                          row_count, transpose)) {
             FLOW_add_to_callstack(context);
             success = false;
             goto cleanup;
@@ -440,9 +456,9 @@ cleanup:
     return success;
 }
 
-static bool Render1D(flow_c * context, const struct flow_Renderer * r, struct flow_bitmap_bgra * pSrc,
-                     struct flow_bitmap_bgra * pDst, const struct flow_RenderDetails * details, bool transpose,
-                     int call_number)
+static bool Render1D(flow_c * context, struct flow_colorcontext_info * colorcontext, const struct flow_Renderer * r,
+                     struct flow_bitmap_bgra * pSrc, struct flow_bitmap_bgra * pDst,
+                     const struct flow_RenderDetails * details, bool transpose, int call_number)
 {
 
     bool success = true;
@@ -464,7 +480,8 @@ static bool Render1D(flow_c * context, const struct flow_Renderer * r, struct fl
     for (uint32_t source_start_row = 0; source_start_row < pSrc->h; source_start_row += buffer_row_count) {
         const uint32_t row_count = umin(pSrc->h - source_start_row, buffer_row_count);
 
-        if (!flow_bitmap_float_convert_srgb_to_linear(context, pSrc, source_start_row, buf, 0, row_count)) {
+        if (!flow_bitmap_float_convert_srgb_to_linear(context, colorcontext, pSrc, source_start_row, buf, 0,
+                                                      row_count)) {
             FLOW_add_to_callstack(context);
             success = false;
             goto cleanup;
@@ -482,8 +499,8 @@ static bool Render1D(flow_c * context, const struct flow_Renderer * r, struct fl
             }
         }
 
-        if (!flow_bitmap_float_pivoting_composite_linear_over_srgb(context, buf, 0, pDst, source_start_row, row_count,
-                                                                   transpose)) {
+        if (!flow_bitmap_float_composite_linear_over_srgb(context, colorcontext, buf, 0, pDst, source_start_row,
+                                                          row_count, transpose)) {
             FLOW_add_to_callstack(context);
             success = false;
             goto cleanup;
@@ -497,7 +514,8 @@ cleanup:
     return success;
 }
 
-static bool RenderWrapper1D(flow_c * context, const struct flow_Renderer * r, struct flow_bitmap_bgra * pSrc,
+static bool RenderWrapper1D(flow_c * context, struct flow_colorcontext_info * colorcontext,
+                            const struct flow_Renderer * r, struct flow_bitmap_bgra * pSrc,
                             struct flow_bitmap_bgra * pDst, const struct flow_RenderDetails * details, bool transpose,
                             int call_number)
 {
@@ -508,9 +526,9 @@ static bool RenderWrapper1D(flow_c * context, const struct flow_Renderer * r, st
     // try{
     // p->Start(name, false);
     if (perfect_size) {
-        return Render1D(context, r, pSrc, pDst, details, transpose, call_number);
+        return Render1D(context, colorcontext, r, pSrc, pDst, details, transpose, call_number);
     } else {
-        return ScaleAndRender1D(context, r, pSrc, pDst, details, transpose, call_number);
+        return ScaleAndRender1D(context, colorcontext, r, pSrc, pDst, details, transpose, call_number);
     }
     // }
     // finally{
@@ -590,7 +608,7 @@ bool Renderer_perform_render(flow_c * context, struct flow_Renderer * r)
     }
 
     // Apply kernels, scale, and transpose
-    if (!RenderWrapper1D(context, r, r->source, r->transposed, r->details, true, 1)) {
+    if (!RenderWrapper1D(context, r->details->colorcontext, r, r->source, r->transposed, r->details, true, 1)) {
         FLOW_add_to_callstack(context);
         return false;
     }
@@ -610,7 +628,8 @@ bool Renderer_perform_render(flow_c * context, struct flow_Renderer * r)
 
     // Apply kernels, color matrix, scale,  (transpose?) and (compose?)
 
-    if (!RenderWrapper1D(context, r, r->transposed, finalDest, r->details, !skip_last_transpose, 2)) {
+    if (!RenderWrapper1D(context, r->details->colorcontext, r, r->transposed, finalDest, r->details,
+                         !skip_last_transpose, 2)) {
         FLOW_add_to_callstack(context);
         return false;
     }

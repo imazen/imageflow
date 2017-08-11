@@ -3,7 +3,8 @@
 #include <string.h>
 #include "imageflow.h"
 
-static bool ScaleAndRender1D(flow_c * context, struct flow_bitmap_bgra * pSrc, struct flow_bitmap_bgra * pDst,
+static bool ScaleAndRender1D(flow_c * context, struct flow_colorcontext_info * colorcontext,
+                             struct flow_bitmap_bgra * pSrc, struct flow_bitmap_bgra * pDst,
                              const struct flow_interpolation_details * details, bool transpose)
 {
     struct flow_interpolation_line_contributions * contrib = NULL;
@@ -63,7 +64,8 @@ static bool ScaleAndRender1D(flow_c * context, struct flow_bitmap_bgra * pSrc, s
         const uint32_t row_count = umin(pSrc->h - source_start_row, buffer_row_count);
 
         flow_prof_start(context, "convert_srgb_to_linear", false);
-        if (!flow_bitmap_float_convert_srgb_to_linear(context, pSrc, source_start_row, source_buf, 0, row_count)) {
+        if (!flow_bitmap_float_convert_srgb_to_linear(context, colorcontext, pSrc, source_start_row, source_buf, 0,
+                                                      row_count)) {
             FLOW_add_to_callstack(context);
             success = false;
             goto cleanup;
@@ -92,8 +94,8 @@ static bool ScaleAndRender1D(flow_c * context, struct flow_bitmap_bgra * pSrc, s
         //        }
 
         flow_prof_start(context, "pivoting_composite_linear_over_srgb", false);
-        if (!flow_bitmap_float_pivoting_composite_linear_over_srgb(context, dest_buf, 0, pDst, source_start_row,
-                                                                   row_count, transpose)) {
+        if (!flow_bitmap_float_composite_linear_over_srgb(context, colorcontext, dest_buf, 0, pDst, source_start_row,
+                                                          row_count, transpose)) {
             FLOW_add_to_callstack(context);
             success = false;
             goto cleanup;
@@ -137,7 +139,10 @@ bool flow_node_execute_render_to_canvas_1d(flow_c * c, struct flow_bitmap_bgra *
         FLOW_error_return(c);
     }
 
-    if (!ScaleAndRender1D(c, input, canvas, d, info->transpose_on_write)) {
+    struct flow_colorcontext_info colorcontext;
+    flow_colorcontext_init(c, &colorcontext, info->scale_in_colorspace, 0, 0, 0);
+
+    if (!ScaleAndRender1D(c, &colorcontext, input, canvas, d, info->transpose_on_write)) {
         flow_interpolation_details_destroy(c, d);
         FLOW_error_return(c);
     }

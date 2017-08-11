@@ -174,8 +174,8 @@ bool flow_bitmap_bgra_populate_histogram(flow_c * context, struct flow_bitmap_bg
     const uint32_t w = bmp->w;
     const uint32_t h = umin(row + count, bmp->h);
 
-    if (histogram_size_per_channel != 256){
-        //We're restricting it to this for speed
+    if (histogram_size_per_channel != 256) {
+        // We're restricting it to this for speed
         FLOW_error(context, flow_status_Invalid_argument);
         return false;
     }
@@ -230,16 +230,17 @@ bool flow_bitmap_bgra_populate_histogram(flow_c * context, struct flow_bitmap_bg
 
 #ifdef EXPOSE_SIGMOID
 
-static void Context_sigmoid_internal(flow_context * c, float x_coefficent, float x_offset, float constant)
+flow_static void colorcontext_sigmoid_internal(flow_colorcontext_info * c, float x_coefficent, float x_offset,
+                                               float constant)
 {
-    c->colorspace.sigmoid.constant = constant; // 1
-    c->colorspace.sigmoid.x_coeff = x_coefficent; // 2
-    c->colorspace.sigmoid.x_offset = x_offset; //-1
-    c->colorspace.sigmoid.y_offset = 0;
-    c->colorspace.sigmoid.y_coeff = 1;
+    c->sigmoid.constant = constant; // 1
+    c->sigmoid.x_coeff = x_coefficent; // 2
+    c->sigmoid.x_offset = x_offset; //-1
+    c->sigmoid.y_offset = 0;
+    c->sigmoid.y_coeff = 1;
 
-    c->colorspace.sigmoid.y_coeff = 1 / (sigmoid(&c->colorspace.sigmoid, 1.0) - sigmoid(&c->colorspace.sigmoid, 0));
-    c->colorspace.sigmoid.y_offset = -1 * sigmoid(&c->colorspace.sigmoid, 0);
+    c->sigmoid.y_coeff = 1 / (sigmoid(&c->sigmoid, 1.0) - sigmoid(&c->sigmoid, 0));
+    c->sigmoid.y_offset = -1 * sigmoid(&c->sigmoid, 0);
 }
 
 static float derive_constant(float x, float slope, float sign)
@@ -250,43 +251,30 @@ static float derive_constant(float x, float slope, float sign)
 
 #endif
 
-flow_working_floatspace flow_context_get_floatspace(flow_c * context){
-    return context->colorspace.floatspace;
-}
-
-void flow_context_set_floatspace(flow_c * context, flow_working_floatspace space, float a, float b, float c)
+void flow_colorcontext_init(flow_c * context, struct flow_colorcontext_info * colorcontext,
+                            flow_working_floatspace space, float a, float b, float c)
 {
-    context->colorspace.floatspace = space;
+    colorcontext->floatspace = space;
 
-    context->colorspace.apply_srgb = (space & flow_working_floatspace_linear) > 0;
-    context->colorspace.apply_gamma = (space & flow_working_floatspace_gamma) > 0;
+    colorcontext->apply_srgb = (space & flow_working_floatspace_linear) > 0;
+    colorcontext->apply_gamma = (space & flow_working_floatspace_gamma) > 0;
 
 #ifdef EXPOSE_SIGMOID
-    context->colorspace.apply_sigmoid = (space & Floatspace_sigmoid) > 0;
+    colorcontext->apply_sigmoid = (space & Floatspace_sigmoid) > 0;
     if ((space & Floatspace_sigmoid_3) > 0) {
-        Context_sigmoid_internal(context, -2, a, derive_constant(a + b * -2, c, 1));
+        flow_colorcontext_sigmoid_internal(colorcontext, -2, a, derive_constant(a + b * -2, c, 1));
     } else if ((space & Floatspace_sigmoid_2) > 0) {
-        Context_sigmoid_internal(context, -b, (1 + c) * b, -1 * (b + a));
+        flow_colorcontext_sigmoid_internal(colorcontext, -b, (1 + c) * b, -1 * (b + a));
     } else if ((space & Floatspace_sigmoid) > 0) {
-        Context_sigmoid_internal(context, a, b, c);
+        flow_colorcontext_sigmoid_internal(colorcontext, a, b, c);
     }
 #endif
-    if (context->colorspace.apply_gamma) {
-        context->colorspace.gamma = a;
-        context->colorspace.gamma_inverse = (float)(1.0 / ((double)a));
+    if (colorcontext->apply_gamma) {
+        colorcontext->gamma = a;
+        colorcontext->gamma_inverse = (float)(1.0 / ((double)a));
     }
 
     for (uint32_t n = 0; n < 256; n++) {
-        context->colorspace.byte_to_float[n] = Context_srgb_to_floatspace_uncached(context, n);
+        colorcontext->byte_to_float[n] = flow_colorcontext_srgb_to_floatspace_uncached(colorcontext, n);
     }
-}
-
-float flow_context_byte_to_floatspace(flow_c * c, uint8_t srgb_value)
-{
-    return Context_srgb_to_floatspace(c, srgb_value);
-}
-
-uint8_t flow_context_floatspace_to_byte(flow_c * c, float space_value)
-{
-    return Context_floatspace_to_srgb(c, space_value);
 }

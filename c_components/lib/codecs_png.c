@@ -140,12 +140,12 @@ static bool png_decoder_load_color_profile(flow_c * c, struct flow_codecs_png_de
     if (png_get_iCCP(state->png_ptr, state->info_ptr, &(png_charp){ 0 }, &(int){ 0 }, &profile_buf, &profile_length)) {
         // Decode the ICC profile from the buffer
         profile = cmsOpenProfileFromMem(profile_buf, profile_length);
-        cmsColorSpaceSignature colorspace = cmsGetColorSpace(profile);
+        cmsColorSpaceSignature colorcontext = cmsGetColorSpace(profile);
 
-        if (colorspace == cmsSigRgbData && is_color_png) {
+        if (colorcontext == cmsSigRgbData && is_color_png) {
             state->color_profile_source = flow_codec_color_profile_source_ICCP;
         } else {
-            if (colorspace == cmsSigGrayData && !is_color_png) {
+            if (colorcontext == cmsSigGrayData && !is_color_png) {
                 // TODO: warn about this
                 state->color_profile_source = flow_codec_color_profile_source_ICCP_GRAY;
             }
@@ -336,7 +336,6 @@ static bool flow_codecs_initialize_decode_png(flow_c * c, struct flow_codec_inst
             return false;
         }
         flow_set_destructor(c, state, flow_png_cleanup_decoder);
-
 
         state->stage = flow_codecs_png_decoder_stage_Null;
 

@@ -113,6 +113,7 @@ fn constrain_def() -> NodeDefinition {
                             h: new_h as usize,
                             up_filter: hints.and_then(|h| h.up_filter),
                             down_filter: hints.and_then(|h| h.down_filter),
+                            scaling_colorspace: hints.and_then(|h| h.scaling_colorspace),
                             hints: hints.map(|h| s::ResampleHints {
                                 sharpen_percent: h.sharpen_percent,
                                 prefer_1d_twice: None
@@ -173,7 +174,7 @@ fn command_string_partially_expanded_def() -> NodeDefinition {
                 let e = get_expand(ctx, ix);
 
 
-                if let Some(command) = e.get_decode_commands(Some(ctx.c.todo_remove_get_floatspace() != ::ffi::Floatspace::Srgb)).unwrap() {
+                if let Some(command) = e.get_decode_commands().unwrap() {
                     //Send command to codec
                     for io_id in ctx.get_decoder_io_ids(ix) {
                         ctx.job.tell_decoder(io_id, command.clone()).unwrap();

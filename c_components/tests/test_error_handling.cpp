@@ -263,7 +263,9 @@ TEST_CASE("Argument checking for convert_sgrp_to_linear", "[error_handling]")
     CAPTURE(error_msg);
     REQUIRE(src != NULL);
     struct flow_bitmap_float * dest = flow_bitmap_float_create(&context, 1, 1, 4, false);
-    flow_bitmap_float_convert_srgb_to_linear(&context, src, 3, dest, 0, 0);
+    flow_colorcontext_info colorcontext;
+    flow_colorcontext_init(&context, &colorcontext, flow_working_floatspace_linear, 0, 0, 0);
+    flow_bitmap_float_convert_srgb_to_linear(&context, &colorcontext, src, 3, dest, 0, 0);
     flow_bitmap_bgra_destroy(&context, src);
     CAPTURE(*dest);
     REQUIRE(dest->float_count == 4); // 1x1x4 channels

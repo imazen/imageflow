@@ -28,6 +28,10 @@ FLOW_HINT_HOT FLOW_HINT_UNSAFE_MATH_OPTIMIZATIONS
         FLOW_error(c, flow_status_Not_implemented);
         return false;
     }
+
+    struct flow_colorcontext_info colorcontext;
+    flow_colorcontext_init(c, &colorcontext, info->scale_in_colorspace, 0, 0, 0);
+
     // Use details as a parent struture to ensure everything gets freed
     struct flow_interpolation_details * details = flow_interpolation_details_create_from(c, info->interpolation_filter);
     if (details == NULL) {
@@ -133,7 +137,7 @@ FLOW_HINT_HOT FLOW_HINT_UNSAFE_MATH_OPTIMIZATIONS
                 source_buf->pixels = rows[active_buf_ix];
 
                 flow_prof_start(c, "convert_srgb_to_linear", false);
-                if (!flow_bitmap_float_convert_srgb_to_linear(c, input, input_row, source_buf, 0, 1)) {
+                if (!flow_bitmap_float_convert_srgb_to_linear(c, &colorcontext, input, input_row, source_buf, 0, 1)) {
                     FLOW_destroy(c, details);
                     FLOW_error_return(c);
                 }
@@ -166,13 +170,7 @@ FLOW_HINT_HOT FLOW_HINT_UNSAFE_MATH_OPTIMIZATIONS
         }
         flow_prof_stop(c, "ScaleBgraFloatRows", true, false);
 
-        if (dest_buf->alpha_premultiplied) {
-            if (!flow_bitmap_float_demultiply_alpha(c, dest_buf, 0, 1)) {
-                FLOW_destroy(c, details);
-                FLOW_error_return(c);
-            }
-        }
-        if (!flow_bitmap_float_copy_linear_over_srgb(c, dest_buf, 0, canvas, out_row, 1, 0, dest_buf->w, false)) {
+        if (!flow_bitmap_float_composite_linear_over_srgb(c, &colorcontext, dest_buf, 0, canvas, out_row, 1, false)) {
             FLOW_destroy(c, details);
             FLOW_error_return(c);
         }

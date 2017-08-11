@@ -274,11 +274,18 @@ impl Ir4Layout{
 
         //Scale
         if image.width() != new_crop.width() || image.height() != new_crop.height() || self.i.f_sharpen.unwrap_or(0f64) > 0f64 {
+            let downscaling = image.width() < new_crop.width() || image.height() < new_crop.height();
             b.add(s::Node::Resample2D {
                 w: image.width() as usize,
                 h: image.height() as usize,
                 down_filter: None,
                 up_filter: None,
+                scaling_colorspace: match self.i.down_colorspace {
+                    Some(ScalingColorspace::Linear) if downscaling => Some(s::ScalingFloatspace::Linear),
+                    Some(ScalingColorspace::Srgb) if downscaling => Some(s::ScalingFloatspace::Srgb),
+                    _ => None
+
+                },
                 hints: Some(s::ResampleHints { prefer_1d_twice: None, sharpen_percent: self.i.f_sharpen.map(|v| v as f32) })
             });
         }

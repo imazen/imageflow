@@ -148,8 +148,7 @@ impl LibClient {
                 graph_recording: match task.export_graphs_to {
                     Some(_) => Some(s::Build001GraphRecording::debug_defaults()),
                     None => None,
-                },
-                no_gamma_correction: None,
+                }
             };
 
 

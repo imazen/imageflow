@@ -21,22 +21,23 @@
 #define unlikely(x) (__builtin_expect(!!(x), 0))
 #endif
 
-bool flow_bitmap_float_convert_srgb_to_linear(flow_c * context, struct flow_bitmap_bgra * src, uint32_t from_row,
+bool flow_bitmap_float_convert_srgb_to_linear(flow_c * context, struct flow_colorcontext_info * colorcontext,
+                                              struct flow_bitmap_bgra * src, uint32_t from_row,
                                               struct flow_bitmap_float * dest, uint32_t dest_row, uint32_t row_count)
 {
     if
-        unlikely(src->w != dest->w )
+        unlikely(src->w != dest->w)
         {
             FLOW_error(context, flow_status_Invalid_internal_state);
             return false;
         }
 
-//    if
-//        unlikely(flow_pixel_format_bytes_per_pixel(src->fmt) < dest->channels)
-//    {
-//        FLOW_error(context, flow_status_Invalid_internal_state);
-//        return false;
-//    }
+    //    if
+    //        unlikely(flow_pixel_format_bytes_per_pixel(src->fmt) < dest->channels)
+    //    {
+    //        FLOW_error(context, flow_status_Invalid_internal_state);
+    //        return false;
+    //    }
 
     if
         unlikely(!(from_row + row_count <= src->h && dest_row + row_count <= dest->h))
@@ -67,9 +68,9 @@ bool flow_bitmap_float_convert_srgb_to_linear(flow_c * context, struct flow_bitm
                 for (uint32_t to_x = 0, bix = 0; bix < units; to_x += to_step, bix += from_step) {
                     {
                         const float alpha = ((float)src_start[bix + 3]) / 255.0f;
-                        buf[to_x] = alpha * Context_srgb_to_floatspace(context, src_start[bix]);
-                        buf[to_x + 1] = alpha * Context_srgb_to_floatspace(context, src_start[bix + 1]);
-                        buf[to_x + 2] = alpha * Context_srgb_to_floatspace(context, src_start[bix + 2]);
+                        buf[to_x] = alpha * flow_colorcontext_srgb_to_floatspace(colorcontext, src_start[bix]);
+                        buf[to_x + 1] = alpha * flow_colorcontext_srgb_to_floatspace(colorcontext, src_start[bix + 1]);
+                        buf[to_x + 2] = alpha * flow_colorcontext_srgb_to_floatspace(colorcontext, src_start[bix + 2]);
                         buf[to_x + 3] = alpha;
                     }
                 }
@@ -83,9 +84,9 @@ bool flow_bitmap_float_convert_srgb_to_linear(flow_c * context, struct flow_bitm
             float * buf = dest->pixels + (dest->float_stride * (row + dest_row));
 
             for (uint32_t to_x = 0, bix = 0; bix < units; to_x += to_step, bix += from_step) {
-                buf[to_x] = Context_srgb_to_floatspace(context, src_start[bix]);
-                buf[to_x + 1] = Context_srgb_to_floatspace(context, src_start[bix + 1]);
-                buf[to_x + 2] = Context_srgb_to_floatspace(context, src_start[bix + 2]);
+                buf[to_x] = flow_colorcontext_srgb_to_floatspace(colorcontext, src_start[bix]);
+                buf[to_x + 1] = flow_colorcontext_srgb_to_floatspace(colorcontext, src_start[bix + 1]);
+                buf[to_x + 2] = flow_colorcontext_srgb_to_floatspace(colorcontext, src_start[bix + 2]);
             }
             // We're only working on a portion... dest->alpha_premultiplied = false;
         }
@@ -167,15 +168,16 @@ static int  copy_bitmap_bgra(flow_bitmap_bgra * src, flow_bitmap_bgra * dst)
 }
 */
 
-static bool flow_bitmap_float_blend_matte(flow_c * context, struct flow_bitmap_float * src, const uint32_t from_row,
+static bool flow_bitmap_float_blend_matte(flow_c * context, struct flow_colorcontext_info * colorcontext,
+                                          struct flow_bitmap_float * src, const uint32_t from_row,
                                           const uint32_t row_count, const uint8_t * const matte)
 {
     // We assume that matte is BGRA, regardless.
 
     const float matte_a = ((float)matte[3]) / 255.0f;
-    const float b = Context_srgb_to_floatspace(context, matte[0]);
-    const float g = Context_srgb_to_floatspace(context, matte[1]);
-    const float r = Context_srgb_to_floatspace(context, matte[2]);
+    const float b = flow_colorcontext_srgb_to_floatspace(colorcontext, matte[0]);
+    const float g = flow_colorcontext_srgb_to_floatspace(colorcontext, matte[1]);
+    const float r = flow_colorcontext_srgb_to_floatspace(colorcontext, matte[2]);
 
     for (uint32_t row = from_row; row < from_row + row_count; row++) {
         uint32_t start_ix = row * src->float_stride;
@@ -216,7 +218,8 @@ bool flow_bitmap_float_demultiply_alpha(flow_c * context, struct flow_bitmap_flo
     return true;
 }
 
-bool flow_bitmap_float_copy_linear_over_srgb(flow_c * context, struct flow_bitmap_float * src, const uint32_t from_row,
+bool flow_bitmap_float_copy_linear_over_srgb(flow_c * context, struct flow_colorcontext_info * colorcontext,
+                                             struct flow_bitmap_float * src, const uint32_t from_row,
                                              struct flow_bitmap_bgra * dest, const uint32_t dest_row,
                                              const uint32_t row_count, const uint32_t from_col,
                                              const uint32_t col_count, const bool transpose)
@@ -237,9 +240,9 @@ bool flow_bitmap_float_copy_linear_over_srgb(flow_c * context, struct flow_bitma
         float * src_row = src->pixels + (row + from_row) * src->float_stride;                                          \
         uint8_t * dest_row_bytes = dest->pixels + (dest_row + row) * dest_row_stride + (from_col * dest_pixel_stride); \
         for (uint32_t ix = from_col * ch; ix < srcitems; ix += ch) {                                                   \
-            dest_row_bytes[0] = Context_floatspace_to_srgb(context, src_row[ix]);                                      \
-            dest_row_bytes[1] = Context_floatspace_to_srgb(context, src_row[ix + 1]);                                  \
-            dest_row_bytes[2] = Context_floatspace_to_srgb(context, src_row[ix + 2]);                                  \
+            dest_row_bytes[0] = flow_colorcontext_floatspace_to_srgb(colorcontext, src_row[ix]);                       \
+            dest_row_bytes[1] = flow_colorcontext_floatspace_to_srgb(colorcontext, src_row[ix + 1]);                   \
+            dest_row_bytes[2] = flow_colorcontext_floatspace_to_srgb(colorcontext, src_row[ix + 2]);                   \
             if (copy_alpha) {                                                                                          \
                 dest_row_bytes[3] = uchar_clamp_ff(src_row[ix + 3] * 255.0f);                                          \
             }                                                                                                          \
@@ -276,11 +279,11 @@ bool flow_bitmap_float_copy_linear_over_srgb(flow_c * context, struct flow_bitma
 }
 FLOW_HINT_HOT
 
-static bool BitmapFloat_compose_linear_over_srgb(flow_c * context, struct flow_bitmap_float * src,
-                                                 const uint32_t from_row, struct flow_bitmap_bgra * dest,
-                                                 const uint32_t dest_row, const uint32_t row_count,
-                                                 const uint32_t from_col, const uint32_t col_count,
-                                                 const bool transpose)
+static bool BitmapFloat_compose_linear_over_srgb(flow_c * context, struct flow_colorcontext_info * colorcontext,
+                                                 struct flow_bitmap_float * src, const uint32_t from_row,
+                                                 struct flow_bitmap_bgra * dest, const uint32_t dest_row,
+                                                 const uint32_t row_count, const uint32_t from_col,
+                                                 const uint32_t col_count, const bool transpose)
 {
 
     const uint32_t dest_bytes_pp = flow_pixel_format_bytes_per_pixel(dest->fmt);
@@ -313,15 +316,15 @@ static bool BitmapFloat_compose_linear_over_srgb(flow_c * context, struct flow_b
             const float src_a = src_row[ix + 3];
             const float a = (1.0f - src_a) * (dest_alpha_to_float_coeff * dest_a + dest_alpha_to_float_offset);
 
-            const float b = Context_srgb_to_floatspace(context, dest_b) * a + src_b;
-            const float g = Context_srgb_to_floatspace(context, dest_g) * a + src_g;
-            const float r = Context_srgb_to_floatspace(context, dest_r) * a + src_r;
+            const float b = flow_colorcontext_srgb_to_floatspace(colorcontext, dest_b) * a + src_b;
+            const float g = flow_colorcontext_srgb_to_floatspace(colorcontext, dest_g) * a + src_g;
+            const float r = flow_colorcontext_srgb_to_floatspace(colorcontext, dest_r) * a + src_r;
 
             const float final_alpha = src_a + a;
 
-            dest_row_bytes[0] = Context_floatspace_to_srgb(context, b / final_alpha);
-            dest_row_bytes[1] = Context_floatspace_to_srgb(context, g / final_alpha);
-            dest_row_bytes[2] = Context_floatspace_to_srgb(context, r / final_alpha);
+            dest_row_bytes[0] = flow_colorcontext_floatspace_to_srgb(colorcontext, b / final_alpha);
+            dest_row_bytes[1] = flow_colorcontext_floatspace_to_srgb(colorcontext, g / final_alpha);
+            dest_row_bytes[2] = flow_colorcontext_floatspace_to_srgb(colorcontext, r / final_alpha);
             if (dest_alpha) {
                 dest_row_bytes[3] = uchar_clamp_ff(final_alpha * 255);
             }
@@ -331,83 +334,56 @@ static bool BitmapFloat_compose_linear_over_srgb(flow_c * context, struct flow_b
     return true;
 }
 
-bool flow_bitmap_float_pivoting_composite_linear_over_srgb(flow_c * context, struct flow_bitmap_float * src,
-                                                           uint32_t from_row, struct flow_bitmap_bgra * dest,
-                                                           uint32_t dest_row, uint32_t row_count, bool transpose)
+bool flow_bitmap_float_composite_linear_over_srgb(flow_c * context, struct flow_colorcontext_info * colorcontext,
+                                                  struct flow_bitmap_float * src_mut, uint32_t from_row,
+                                                  struct flow_bitmap_bgra * dest, uint32_t dest_row, uint32_t row_count,
+                                                  bool transpose)
 {
-    if (transpose ? src->w != dest->h : src->w != dest->w) {
+    if (transpose ? src_mut->w != dest->h : src_mut->w != dest->w) {
         // TODO: Add more bounds checks
         FLOW_error(context, flow_status_Invalid_internal_state);
         return false;
     }
-
-    if (src->alpha_meaningful && src->channels == 4
-        && dest->compositing_mode == flow_bitmap_compositing_blend_with_matte) {
-        if (!flow_bitmap_float_blend_matte(context, src, from_row, row_count, dest->matte_color)) {
-            FLOW_add_to_callstack(context);
+    if (dest->compositing_mode == flow_bitmap_compositing_blend_with_self && src_mut->alpha_meaningful
+        && src_mut->channels == 4) {
+        if (!src_mut->alpha_premultiplied) {
+            // Something went wrong. We should always have alpha premultiplied.
+            FLOW_error(context, flow_status_Invalid_internal_state);
             return false;
         }
-        src->alpha_premultiplied = false;
-    }
-    if (src->channels == 4 && src->alpha_premultiplied
-        && dest->compositing_mode != flow_bitmap_compositing_blend_with_self) {
-        // Demultiply
-        if (!flow_bitmap_float_demultiply_alpha(context, src, from_row, row_count)) {
+        // Compose
+        if (!BitmapFloat_compose_linear_over_srgb(context, colorcontext, src_mut, from_row, dest, dest_row, row_count,
+                                                  0, src_mut->w, transpose)) {
             FLOW_add_to_callstack(context);
             return false;
-        }
-    }
-
-    bool can_compose = dest->compositing_mode == flow_bitmap_compositing_blend_with_self && src->alpha_meaningful
-                       && src->channels == 4;
-
-    if (can_compose && !src->alpha_premultiplied) {
-        // Something went wrong. We should always have alpha premultiplied.
-        FLOW_error(context, flow_status_Invalid_internal_state);
-        return false;
-    }
-
-    // Tiling does not appear to show benefits when benchmarking - only breifly investigated
-    bool tile_when_transposing = false;
-
-    if (transpose && tile_when_transposing) {
-
-        // Let's try to tile within 2kb, get some cache coherency
-        const float dest_opt_rows = 2048.0f / (float)dest->stride;
-
-        const int tile_width = int_max(4, (int)dest_opt_rows);
-        const int tiles = src->w / tile_width;
-
-        if (can_compose) {
-            for (int i = 0; i < tiles; i++) {
-                if (!BitmapFloat_compose_linear_over_srgb(context, src, from_row, dest, dest_row, row_count,
-                                                          i * tile_width, tile_width, transpose)) {
-                    FLOW_add_to_callstack(context);
-                    return false;
-                }
-            }
-        } else {
-            for (int i = 0; i < tiles; i++) {
-                if (!flow_bitmap_float_copy_linear_over_srgb(context, src, from_row, dest, dest_row, row_count,
-                                                             i * tile_width, tile_width, transpose)) {
-                    FLOW_add_to_callstack(context);
-                    return false;
-                }
-            }
         }
     } else {
-        if (can_compose) {
-            if (!BitmapFloat_compose_linear_over_srgb(context, src, from_row, dest, dest_row, row_count, 0, src->w,
-                                                      transpose)) {
-                FLOW_add_to_callstack(context);
-                return false;
+        if (src_mut->channels == 4) {
+            bool demultiply = src_mut->alpha_premultiplied;
+
+            if (dest->compositing_mode == flow_bitmap_compositing_blend_with_matte) {
+                if (src_mut->alpha_meaningful && src_mut->channels == 4) {
+                    if (!flow_bitmap_float_blend_matte(context, colorcontext, src_mut, from_row, row_count,
+                                                       dest->matte_color)) {
+                        FLOW_add_to_callstack(context);
+                        return false;
+                    }
+                    demultiply = false;
+                }
             }
-        } else {
-            if (!flow_bitmap_float_copy_linear_over_srgb(context, src, from_row, dest, dest_row, row_count, 0, src->w,
-                                                         transpose)) {
-                FLOW_add_to_callstack(context);
-                return false;
+            if (demultiply) {
+                // Demultiply before copy
+                if (!flow_bitmap_float_demultiply_alpha(context, src_mut, from_row, row_count)) {
+                    FLOW_add_to_callstack(context);
+                    return false;
+                }
             }
+        }
+        // Copy/overwrite
+        if (!flow_bitmap_float_copy_linear_over_srgb(context, colorcontext, src_mut, from_row, dest, dest_row,
+                                                     row_count, 0, src_mut->w, transpose)) {
+            FLOW_add_to_callstack(context);
+            return false;
         }
     }
 

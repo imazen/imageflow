@@ -100,15 +100,6 @@ impl<'a> BuildHandler<'a> {
 
         let mut job = ctx.create_job();
 
-        if let Some(s::Build001Config { ref no_gamma_correction, .. }) = parsed.builder_config {
-            ctx.todo_remove_set_floatspace(
-                if *no_gamma_correction {
-                    ::ffi::Floatspace::Srgb
-                } else {
-                    ::ffi::Floatspace::Linear
-                })
-        }
-
         if let Some(s::Build001Config { graph_recording, .. }) = parsed.builder_config {
             if let Some(r) = graph_recording {
                 job.configure_graph_recording(r);
@@ -120,7 +111,6 @@ impl<'a> BuildHandler<'a> {
 
         ::flow::execution_engine::Engine::create(ctx, &mut job, &mut g).execute()?;
 
-        // TODO: flow_job_destroy
 
         // TODO: Question, should JSON endpoints populate the Context error stacktrace when something goes wrong? Or populate both (except for OOM).
 
@@ -156,6 +146,7 @@ fn test_handler() {
         h: 30,
         down_filter: None,
         up_filter: None,
+        scaling_colorspace: None,
         hints: None,
     });
     steps.push(s::Node::FlipV);
@@ -187,8 +178,7 @@ fn test_handler() {
         builder_config: Some(s::Build001Config {
             graph_recording: None,
             process_all_gif_frames: Some(false),
-            enable_jpeg_block_scaling: Some(false),
-            no_gamma_correction: false,
+            enable_jpeg_block_scaling: Some(false)
         }),
         io: vec![input_io, output_io],
         framewise: s::Framewise::Steps(steps),

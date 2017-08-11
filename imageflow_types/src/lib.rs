@@ -150,6 +150,14 @@ pub enum PngBitDepth {
     Png24,
 }
 
+#[derive(Serialize, Deserialize, Clone, Copy, PartialEq, Debug)]
+pub enum ScalingFloatspace {
+    #[serde(rename="srgb")]
+    Srgb,
+    #[serde(rename="linear")]
+    Linear, // gamma = 2,
+}
+
 #[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
 pub enum EncoderPreset {
     // camelCased: #[serde(rename="libjpegturbo")]
@@ -288,6 +296,8 @@ pub struct ConstraintResamplingHints {
     // camelCased: #[serde(rename="upFilter")]
     pub up_filter: Option<Filter>,
 
+    pub scaling_colorspace: Option<ScalingFloatspace>,
+
     pub resample_when: Option<ResampleWhen>
 }
 impl ConstraintResamplingHints{
@@ -296,7 +306,8 @@ impl ConstraintResamplingHints{
             sharpen_percent: sharpen_percent,
             down_filter: filter,
             up_filter: filter,
-            resample_when: None
+            resample_when: None,
+            scaling_colorspace: None
         }
     }
 }
@@ -412,6 +423,7 @@ pub enum Node {
         down_filter: Option<Filter>,
         // camelCased: #[serde(rename="upFilter")]
         up_filter: Option<Filter>,
+        scaling_colorspace: Option<ScalingFloatspace>,
         hints: Option<ResampleHints>,
     },
 
@@ -424,6 +436,7 @@ pub enum Node {
         transpose_on_write: bool,
         // camelCased: #[serde(rename="interpolationFilter")]
         interpolation_filter: Option<Filter>,
+        scaling_colorspace: Option<ScalingFloatspace>,
     },
     #[serde(rename="white_balance_histogram_area_threshold_srgb")]
     WhiteBalanceHistogramAreaThresholdSrgb{
@@ -627,8 +640,7 @@ pub struct Build001Config {
     pub process_all_gif_frames: Option<bool>,
     // camelCased: #[serde(rename="graphRecording")]
     pub graph_recording: Option<Build001GraphRecording>,
-    // camelCased: #[serde(rename="noGammaCorrection")]
-    pub no_gamma_correction: bool,
+
 }
 #[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
 pub struct Build001 {
@@ -732,8 +744,6 @@ impl Build001 {
 }
 #[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
 pub struct Execute001 {
-    // camelCased: #[serde(rename="noGammaCorrection")]
-    pub no_gamma_correction: Option<bool>,
     // camelCased: #[serde(rename="graphRecording")]
     pub graph_recording: Option<Build001GraphRecording>,
     pub framewise: Framewise,
@@ -781,6 +791,7 @@ impl Framewise {
                                   h: 75,
                                   down_filter: Some(Filter::Robidoux),
                                   up_filter: Some(Filter::Ginseng),
+                                  scaling_colorspace: Some(ScalingFloatspace::Linear),
                                   hints: Some(ResampleHints {
                                       sharpen_percent: Some(10f32),
                                       prefer_1d_twice: None,
@@ -791,6 +802,7 @@ impl Framewise {
                                   h: 150,
                                   up_filter: None,
                                   down_filter: None,
+                                  scaling_colorspace: Some(ScalingFloatspace::Srgb),
                                   hints: None,
                               },
                               Node::Encode {
@@ -827,6 +839,7 @@ impl Framewise {
                          scale_to_width: 100,
                          interpolation_filter: None,
                          transpose_on_write: false,
+                         scaling_colorspace: Some(ScalingFloatspace::Linear),
                      });
         nodes.insert("4".to_owned(),
                      Node::Encode {
@@ -876,14 +889,12 @@ impl Framewise {
 impl Execute001 {
     pub fn example_steps() -> Execute001 {
         Execute001 {
-            no_gamma_correction: None,
             graph_recording: None,
             framewise: Framewise::example_steps(),
         }
     }
     pub fn example_graph() -> Execute001 {
         Execute001 {
-            no_gamma_correction: None,
             graph_recording: None,
             framewise: Framewise::example_graph(),
         }

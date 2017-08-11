@@ -15,8 +15,7 @@ use imageflow_core::{Context, JsonResponse};
 fn default_build_config(debug: bool) -> s::Build001Config {
     s::Build001Config{graph_recording: match debug{ true => Some(s::Build001GraphRecording::debug_defaults()), false => None} ,
         process_all_gif_frames: Some(false),
-        enable_jpeg_block_scaling: Some(false),
-        no_gamma_correction: false
+        enable_jpeg_block_scaling: Some(false)
     }
 }
 
@@ -87,8 +86,7 @@ fn compare(input: Option<s::IoEnum>, allowed_off_by_one_bytes: usize, checksum_n
                 false => None
             },
             process_all_gif_frames: Some(false),
-            enable_jpeg_block_scaling: Some(false),
-            no_gamma_correction: false
+            enable_jpeg_block_scaling: Some(false)
         }),
         io: inputs,
         framewise: s::Framewise::Steps(steps)
@@ -134,7 +132,7 @@ fn test_fill_rect(){
                           "FillRectEECCFF".to_owned(), false, false, vec![
         s::Node::CreateCanvas {w: 200, h: 200, format: s::PixelFormat::Bgra32, color: s::Color::Transparent},
         s::Node::FillRect{x1:0, y1:0, x2:100, y2:100, color: s::Color::Srgb(s::ColorSrgb::Hex("EECCFFFF".to_owned()))},
-        s::Node::Resample2D{ w: 400, h: 400, down_filter: Some(s::Filter::Hermite), up_filter: Some(s::Filter::Hermite), hints: None }
+        s::Node::Resample2D{ w: 400, h: 400, down_filter: Some(s::Filter::Hermite), up_filter: Some(s::Filter::Hermite), hints: None, scaling_colorspace: None }
         ]
     );
     assert!(matched);
@@ -147,7 +145,7 @@ fn test_expand_rect(){
         s::Node::CreateCanvas {w: 200, h: 200, format: s::PixelFormat::Bgra32, color: s::Color::Transparent},
         s::Node::FillRect{x1:0, y1:0, x2:100, y2:100, color: s::Color::Srgb(s::ColorSrgb::Hex("EECCFFFF".to_owned()))},
         s::Node::ExpandCanvas{left: 10, top: 15, right: 20, bottom: 25, color: s::Color::Srgb(s::ColorSrgb::Hex("2233AAFF".to_owned()))},
-        s::Node::Resample2D{ w: 400, h: 400, down_filter: Some(s::Filter::Hermite), up_filter: Some(s::Filter::Hermite), hints: None }
+        s::Node::Resample2D{ w: 400, h: 400, down_filter: Some(s::Filter::Hermite), up_filter: Some(s::Filter::Hermite), hints: None, scaling_colorspace: Some(s::ScalingFloatspace::Linear) }
         ]
     );
     assert!(matched);
@@ -183,7 +181,7 @@ fn test_scale_rings(){
     let matched = compare(Some(s::IoEnum::Url("https://s3-us-west-2.amazonaws.com/imageflow-resources/test_inputs/rings2.png".to_owned())), 500,
         "RingsDownscaling".to_owned(), false, false, vec![
         s::Node::Decode {io_id: 0, commands: None},
-        s::Node::Resample2D{ w: 400, h: 400, down_filter: Some(s::Filter::Hermite), up_filter: Some(s::Filter::Hermite), hints: None }
+        s::Node::Resample2D{ w: 400, h: 400, down_filter: Some(s::Filter::Hermite), up_filter: Some(s::Filter::Hermite), hints: None, scaling_colorspace: None }
         ]
     );
     assert!(matched);
@@ -214,7 +212,7 @@ fn test_scale_image() {
     let matched = compare(Some(s::IoEnum::Url("https://s3-us-west-2.amazonaws.com/imageflow-resources/test_inputs/waterhouse.jpg".to_owned())), 500,
                           "ScaleTheHouse".to_owned(), false, false, vec![
         s::Node::Decode {io_id: 0, commands: None},
-        s::Node::Resample2D{ w: 400, h: 300, down_filter: Some(s::Filter::Robidoux), up_filter: Some(s::Filter::Robidoux), hints: Some(request_1d_twice_mode()) }
+        s::Node::Resample2D{ w: 400, h: 300, down_filter: Some(s::Filter::Robidoux), up_filter: Some(s::Filter::Robidoux), hints: Some(request_1d_twice_mode()), scaling_colorspace: None }
         ]
     );
     assert!(matched);
@@ -237,7 +235,7 @@ fn test_read_gif() {
     let matched = compare(Some(s::IoEnum::Url("https://s3-us-west-2.amazonaws.com/imageflow-resources/test_inputs/mountain_800.gif".to_owned())), 500,
                           "mountain_gif_scaled400".to_owned(), false, false, vec![
             s::Node::Decode {io_id: 0, commands: None},
-            s::Node::Resample2D{ w: 400, h: 300, down_filter: Some(s::Filter::Robidoux), up_filter: Some(s::Filter::Robidoux), hints: Some(request_1d_twice_mode()) }
+            s::Node::Resample2D{ w: 400, h: 300, down_filter: Some(s::Filter::Robidoux), up_filter: Some(s::Filter::Robidoux), hints: Some(request_1d_twice_mode()), scaling_colorspace: None }
         ]
     );
     assert!(matched);
@@ -250,7 +248,7 @@ fn test_jpeg_icc2_color_profile() {
     let matched = compare(Some(s::IoEnum::Url("https://s3-us-west-2.amazonaws.com/imageflow-resources/test_inputs/MarsRGB_tagged.jpg".to_owned())), 500,
                           "MarsRGB_ICC_Scaled400300".to_owned(), false, false, vec![
 s::Node::Decode {io_id: 0, commands: None},
-s::Node::Resample2D{ w: 400, h: 300, down_filter: Some(s::Filter::Robidoux), up_filter: Some(s::Filter::Robidoux), hints: Some(request_1d_twice_mode()) }
+s::Node::Resample2D{ w: 400, h: 300, down_filter: Some(s::Filter::Robidoux), up_filter: Some(s::Filter::Robidoux), hints: Some(request_1d_twice_mode()), scaling_colorspace: None }
 ]
     );
     assert!(matched);
@@ -261,7 +259,7 @@ fn test_jpeg_icc4_color_profile() {
     let matched = compare(Some(s::IoEnum::Url("https://s3-us-west-2.amazonaws.com/imageflow-resources/test_inputs/MarsRGB_v4_sYCC_8bit.jpg".to_owned())), 500,
                           "MarsRGB_ICCv4_Scaled400300".to_owned(), false, false, vec![
 s::Node::Decode {io_id: 0, commands: None},
-s::Node::Resample2D{ w: 400, h: 300, down_filter: Some(s::Filter::Robidoux), up_filter: Some(s::Filter::Robidoux), hints: Some(request_1d_twice_mode()) }
+s::Node::Resample2D{ w: 400, h: 300, down_filter: Some(s::Filter::Robidoux), up_filter: Some(s::Filter::Robidoux), hints: Some(request_1d_twice_mode()), scaling_colorspace: None }
 ]
     );
     assert!(matched);
@@ -287,7 +285,7 @@ fn test_jpeg_rotation() {
 fn test_encode_jpeg_smoke() {
     let steps = vec![
     s::Node::Decode {io_id: 0, commands: None},
-    s::Node::Resample2D{ w: 400, h: 300, down_filter: Some(s::Filter::Robidoux), up_filter: Some(s::Filter::Robidoux), hints: None },
+    s::Node::Resample2D{ w: 400, h: 300, down_filter: Some(s::Filter::Robidoux), up_filter: Some(s::Filter::Robidoux), hints: None, scaling_colorspace: None },
     s::Node::Encode{ io_id: 1, preset: s::EncoderPreset::LibjpegTurbo {quality: Some(100)}}
     ];
 
@@ -302,7 +300,7 @@ fn test_encode_jpeg_smoke() {
 fn test_encode_gif_smoke() {
     let steps = vec![
         s::Node::Decode {io_id: 0, commands: None},
-        s::Node::Resample2D{ w: 400, h: 300, down_filter: Some(s::Filter::Robidoux), up_filter: Some(s::Filter::Robidoux), hints: None },
+        s::Node::Resample2D{ w: 400, h: 300, down_filter: Some(s::Filter::Robidoux), up_filter: Some(s::Filter::Robidoux), hints: None, scaling_colorspace: None },
         s::Node::Encode{ io_id: 1, preset: s::EncoderPreset::Gif}
     ];
 
@@ -317,7 +315,7 @@ fn test_encode_gif_smoke() {
 fn test_encode_png32_smoke() {
     let steps = vec![
     s::Node::Decode {io_id: 0, commands: None},
-    s::Node::Resample2D{ w: 400, h: 300, down_filter: Some(s::Filter::Robidoux), up_filter: Some(s::Filter::Robidoux), hints: None },
+    s::Node::Resample2D{ w: 400, h: 300, down_filter: Some(s::Filter::Robidoux), up_filter: Some(s::Filter::Robidoux), hints: None, scaling_colorspace: None },
     s::Node::FlipV,
     s::Node::Crop{ x1: 20, y1: 20, x2: 380, y2: 280},
     s::Node::Encode{ io_id: 1, preset: s::EncoderPreset::Libpng {depth: Some(s::PngBitDepth::Png32), matte: None,  zlib_compression: None}}
@@ -354,7 +352,7 @@ fn test_dimensions(){
     let steps = vec![
     s::Node::CreateCanvas{w: 638, h: 423, format: s::PixelFormat::Bgra32, color: s::Color::Black},
     //s::Node::Crop { x1: 0, y1: 0, x2: 638, y2: 423},
-    s::Node::Resample2D{w:200,h:133, down_filter: None, up_filter: None, hints: None},
+    s::Node::Resample2D{w:200,h:133, down_filter: None, up_filter: None, hints: None, scaling_colorspace: None},
     s::Node::ExpandCanvas{left:1, top: 0, right:0, bottom: 0, color: s::Color::Transparent},
     ];
     let (w, h) = get_result_dimensions(steps, vec![], false);
@@ -383,7 +381,7 @@ fn test_decode_png_and_scale_dimensions(){
     let steps = vec![
     s::Node::Decode{io_id: 0, commands: None},
     //s::Node::Crop { x1: 0, y1: 0, x2: 638, y2: 423},
-    s::Node::Resample2D{w:300,h:200,  down_filter: None, up_filter: None, hints: None},
+    s::Node::Resample2D{w:300,h:200,  down_filter: None, up_filter: None, hints: None, scaling_colorspace: None},
     ];
     let (w, h) = get_result_dimensions(steps, vec![png], false);
     assert_eq!(w,300);
@@ -426,7 +424,7 @@ fn test_detect_whitespace(){
 //}
 
 
-fn test_idct_callback(_: s::ImageInfo) -> (Option<s::DecoderCommand>, Vec<s::Node>, bool)
+fn test_idct_callback(_: s::ImageInfo) -> (Option<s::DecoderCommand>, Vec<s::Node>)
 {
     let new_w = (800 * 4 + 8 - 1) / 8;
     let new_h = (600 * 4 + 8 - 1) / 8;
@@ -436,11 +434,10 @@ fn test_idct_callback(_: s::ImageInfo) -> (Option<s::DecoderCommand>, Vec<s::Nod
         width: new_w,
         height: new_h
     };
-    (Some(s::DecoderCommand::JpegDownscaleHints(hints)), vec![s::Node::Decode{io_id:0, commands: None}], false)
-
+    (Some(s::DecoderCommand::JpegDownscaleHints(hints)), vec![s::Node::Decode{io_id:0, commands: None}])
 }
 
-fn test_idct_no_gamma_callback(info: s::ImageInfo) -> (Option<s::DecoderCommand>, Vec<s::Node>, bool)
+fn test_idct_no_gamma_callback(info: s::ImageInfo) -> (Option<s::DecoderCommand>, Vec<s::Node>)
 {
     let new_w = (info.image_width * 6 + 8 - 1) / 8;
     let new_h = (info.image_height * 6 + 8 - 1) / 8;
@@ -451,7 +448,8 @@ fn test_idct_no_gamma_callback(info: s::ImageInfo) -> (Option<s::DecoderCommand>
         height: new_h as i64
     };
     //Here we send the hints via the Decode node instead.
-    (Some(s::DecoderCommand::JpegDownscaleHints(hints.clone())), vec![s::Node::Decode{io_id:0, commands: Some(vec![s::DecoderCommand::JpegDownscaleHints(hints)])}], false)
+    (Some(s::DecoderCommand::JpegDownscaleHints(hints.clone())),
+     vec![s::Node::Decode{io_id:0, commands: Some(vec![s::DecoderCommand::JpegDownscaleHints(hints)])}])
 
 }
 
@@ -476,7 +474,7 @@ fn test_idct_spatial_no_gamma(){
 //    assert!(matched);
 //}
 
-fn test_with_callback(checksum_name: String, input: s::IoEnum, callback: fn(s::ImageInfo) -> (Option<s::DecoderCommand>, Vec<s::Node>, bool) ) -> bool{
+fn test_with_callback(checksum_name: String, input: s::IoEnum, callback: fn(s::ImageInfo) -> (Option<s::DecoderCommand>, Vec<s::Node>) ) -> bool{
     let context = Context::create().unwrap();
     let matched:bool;
 
@@ -496,7 +494,7 @@ fn test_with_callback(checksum_name: String, input: s::IoEnum, callback: fn(s::I
             _ => panic!("")
         };
 
-        let (tell_decoder, mut steps, no_gamma_correction): (Option<s::DecoderCommand>, Vec<s::Node>,bool) = callback(image_info);
+        let (tell_decoder, mut steps): (Option<s::DecoderCommand>, Vec<s::Node>) = callback(image_info);
 
         if let Some(what) = tell_decoder {
             let send_hints = s::TellDecoder001 {
@@ -516,8 +514,7 @@ fn test_with_callback(checksum_name: String, input: s::IoEnum, callback: fn(s::I
 
         let send_execute = s::Execute001{
             framewise: s::Framewise::Steps(steps),
-            graph_recording: None,
-            no_gamma_correction: Some(no_gamma_correction)
+            graph_recording: None
         };
 
         let send_execute_str = serde_json::to_string_pretty(&send_execute).unwrap();

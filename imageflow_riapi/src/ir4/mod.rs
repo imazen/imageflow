@@ -139,10 +139,11 @@ pub struct Ir4Expand{
 
 impl Ir4Expand{
 
-
-
-    pub fn get_decode_commands(&self, gamma_correct: Option<bool>) -> sizing::Result<Option<s::DecoderCommand>> {
+    pub fn get_decode_commands(&self) -> sizing::Result<Option<s::DecoderCommand>> {
         let i = self.i.parse()?.parsed;
+
+        // Default to gamma correct
+        let gamma_correct = i.down_colorspace != Some(ScalingColorspace::Srgb);
 
         let layout = self.get_layout(&i)?;
         let (from, to): (AspectRatio, AspectRatio) = layout.get_downscaling()?;
@@ -153,8 +154,8 @@ impl Ir4Expand{
 
         if preshrink_ratio < 1f64 {
             Ok(Some(s::DecoderCommand::JpegDownscaleHints(s::JpegIDCTDownscaleHints {
-                scale_luma_spatially: Some(gamma_correct.unwrap_or(true)),
-                gamma_correct_for_srgb_during_spatial_luma_scaling: Some(gamma_correct.unwrap_or(true)),
+                scale_luma_spatially: Some(gamma_correct),
+                gamma_correct_for_srgb_during_spatial_luma_scaling: Some(gamma_correct),
                 width: (self.source.w as f64 * preshrink_ratio).floor() as i64,
                 height: (self.source.h as f64 * preshrink_ratio).floor() as i64
             })))

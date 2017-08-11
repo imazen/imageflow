@@ -108,7 +108,7 @@ struct flow_SigmoidInfo {
 
 #endif
 
-struct flow_colorspace_info {
+struct flow_colorcontext_info {
     float byte_to_float[256]; // Converts 0..255 -> 0..1, but knowing that 0.255 has sRGB gamma.
     flow_working_floatspace floatspace;
     bool apply_srgb;
@@ -151,7 +151,6 @@ struct flow_context {
     struct flow_error_info error;
     struct flow_heap underlying_heap;
     struct flow_profiling_log log;
-    struct flow_colorspace_info colorspace;
     struct flow_objtracking_info object_tracking;
     struct flow_context_codec_set * codec_set;
 };
@@ -160,8 +159,7 @@ typedef struct flow_context flow_c;
 #include "color.h"
 
 PUB bool write_frame_to_disk(flow_c * c, const char * path, struct flow_bitmap_bgra * b);
-PUB int64_t flow_codec_select_from_seekable_io(flow_c * c,struct flow_io * io);
-
+PUB int64_t flow_codec_select_from_seekable_io(flow_c * c, struct flow_io * io);
 
 struct flow_nodeinfo_render_to_canvas_1d;
 struct flow_nodeinfo_scale2d_render_to_canvas1d;
@@ -175,19 +173,7 @@ struct flow_nodeinfo_render_to_canvas_1d {
 
     bool transpose_on_write;
 
-    // Dont' use the rest
-    uint32_t canvas_x;
-    uint32_t canvas_y;
     flow_working_floatspace scale_in_colorspace;
-
-    float sharpen_percent_goal;
-
-    flow_compositing_mode compositing_mode;
-    // When using compositing mode blend_with_matte, this color will be used. We should probably define this as always
-    // being sRGBA, 4 bytes.
-    uint8_t matte_color[4];
-
-    struct flow_scanlines_filter * filter_list;
 };
 
 struct flow_nodeinfo_scale2d_render_to_canvas1d {
@@ -224,7 +210,8 @@ PUB bool flow_bitmap_float_convolve_rows(flow_c * c, struct flow_bitmap_float * 
 PUB bool flow_bitmap_float_sharpen_rows(flow_c * c, struct flow_bitmap_float * im, uint32_t start_row,
                                         uint32_t row_count, double pct);
 
-PUB bool flow_bitmap_float_convert_srgb_to_linear(flow_c * c, struct flow_bitmap_bgra * src, uint32_t from_row,
+PUB bool flow_bitmap_float_convert_srgb_to_linear(flow_c * c, struct flow_colorcontext_info * colorcontext,
+                                                  struct flow_bitmap_bgra * src, uint32_t from_row,
                                                   struct flow_bitmap_float * dest, uint32_t dest_row,
                                                   uint32_t row_count);
 
@@ -235,16 +222,18 @@ PUB uint32_t flow_bitmap_float_approx_gaussian_buffer_element_count_required(flo
 PUB bool flow_bitmap_float_approx_gaussian_blur_rows(flow_c * c, struct flow_bitmap_float * image, float sigma,
                                                      float * buffer, size_t buffer_element_count, uint32_t from_row,
                                                      int row_count);
-PUB bool flow_bitmap_float_pivoting_composite_linear_over_srgb(flow_c * c, struct flow_bitmap_float * src,
-                                                               uint32_t from_row, struct flow_bitmap_bgra * dest,
-                                                               uint32_t dest_row, uint32_t row_count, bool transpose);
+PUB bool flow_bitmap_float_composite_linear_over_srgb(flow_c * c, struct flow_colorcontext_info * colorcontext,
+                                                      struct flow_bitmap_float * src, uint32_t from_row,
+                                                      struct flow_bitmap_bgra * dest, uint32_t dest_row,
+                                                      uint32_t row_count, bool transpose);
 
 PUB bool flow_bitmap_bgra_flip_vertical(flow_c * c, struct flow_bitmap_bgra * b);
 
 PUB bool flow_bitmap_float_demultiply_alpha(flow_c * c, struct flow_bitmap_float * src, const uint32_t from_row,
                                             const uint32_t row_count);
 
-PUB bool flow_bitmap_float_copy_linear_over_srgb(flow_c * c, struct flow_bitmap_float * src, const uint32_t from_row,
+PUB bool flow_bitmap_float_copy_linear_over_srgb(flow_c * c, struct flow_colorcontext_info * colorcontext,
+                                                 struct flow_bitmap_float * src, const uint32_t from_row,
                                                  struct flow_bitmap_bgra * dest, const uint32_t dest_row,
                                                  const uint32_t row_count, const uint32_t from_col,
                                                  const uint32_t col_count, const bool transpose);
@@ -252,9 +241,11 @@ PUB bool flow_bitmap_float_copy_linear_over_srgb(flow_c * c, struct flow_bitmap_
 PUB bool flow_bitmap_bgra_fill_rect(flow_c * c, struct flow_bitmap_bgra * b, uint32_t x1, uint32_t y1, uint32_t x2,
                                     uint32_t y2, uint32_t color_srgb_argb);
 
-PUB bool flow_halve(flow_c * c, const struct flow_bitmap_bgra * from, struct flow_bitmap_bgra * to, int divisor);
+PUB bool flow_halve(flow_c * c, struct flow_colorcontext_info * colorcontext, const struct flow_bitmap_bgra * from,
+                    struct flow_bitmap_bgra * to, int divisor);
 
-PUB bool flow_halve_in_place(flow_c * c, struct flow_bitmap_bgra * from, int divisor);
+PUB bool flow_halve_in_place(flow_c * c, struct flow_colorcontext_info * colorcontext, struct flow_bitmap_bgra * from,
+                             int divisor);
 
 PUB const char * flow_pixel_format_get_name(flow_pixel_format f, bool alpha_meaningful);
 
@@ -329,7 +320,6 @@ struct flow_codec_instance {
     struct flow_io * io;
     FLOW_DIRECTION direction;
 };
-
 
 PUB int32_t flow_codecs_jpg_decoder_get_exif(flow_c * c, struct flow_codec_instance * codec_instance);
 

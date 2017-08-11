@@ -39,9 +39,15 @@ static inline float srgb_to_linear(float s)
         return pow((s + 0.055f) / (1 + 0.055f), 2.4f);
 }
 
-static inline float remove_gamma(flow_c * context, float value) { return pow(value, context->colorspace.gamma); }
+static inline float flow_colorcontext_remove_gamma(struct flow_colorcontext_info * colorcontext, float value)
+{
+    return pow(value, colorcontext->gamma);
+}
 
-static inline float apply_gamma(flow_c * context, float value) { return pow(value, context->colorspace.gamma_inverse); }
+static inline float flow_colorcontext_apply_gamma(struct flow_colorcontext_info * colorcontext, float value)
+{
+    return pow(value, colorcontext->gamma_inverse);
+}
 
 #ifdef EXPOSE_SIGMOID
 
@@ -71,40 +77,41 @@ static inline float sigmoid_inverse(const struct flow_SigmoidInfo * info, float 
 
 #endif
 
-static inline float Context_srgb_to_floatspace_uncached(flow_c * context, uint8_t value)
+static inline float flow_colorcontext_srgb_to_floatspace_uncached(struct flow_colorcontext_info * colorcontext,
+                                                                  uint8_t value)
 {
     float v = ((float)value) * (float)(1.0f / 255.0f);
-    if (context->colorspace.apply_srgb)
+    if (colorcontext->apply_srgb)
         v = srgb_to_linear(v);
-    else if (context->colorspace.apply_gamma)
-        v = remove_gamma(context, v);
+    else if (colorcontext->apply_gamma)
+        v = flow_colorcontext_remove_gamma(colorcontext, v);
 #ifdef EXPOSE_SIGMOID
-    if (context->colorspace.apply_sigmoid)
-        v = sigmoid(&context->colorspace.sigmoid, v);
+    if (colorcontext->apply_sigmoid)
+        v = sigmoid(&colorcontext->sigmoid, v);
 #endif
     return v;
 }
 
-static inline float Context_srgb_to_floatspace(flow_c * context, uint8_t value)
+static inline float flow_colorcontext_srgb_to_floatspace(struct flow_colorcontext_info * colorcontext, uint8_t value)
 {
-    // if (!context->colorspace.apply_srgb) return Context_srgb_to_floatspace_uncached (context,value);
-    // return context->colorspace.floatspace == flow_working_floatspace_as_is ? (value * (1.f/255.f)) :
-    // context->colorspace.byte_to_float[value];
-    return context->colorspace
-        .byte_to_float[value]; // 2x faster, even if just multiplying by 1/255. 3x faster than the entire calculation.
+    // if (!context->colorcontext.apply_srgb) return Context_srgb_to_floatspace_uncached (context,value);
+    // return context->colorcontext.floatspace == flow_working_floatspace_as_is ? (value * (1.f/255.f)) :
+    // context->colorcontext.byte_to_float[value];
+    return colorcontext
+        ->byte_to_float[value]; // 2x faster, even if just multiplying by 1/255. 3x faster than the entire calculation.
 }
 FLOW_HINT_PURE
 
-static inline uint8_t Context_floatspace_to_srgb(flow_c * context, float space_value)
+static inline uint8_t flow_colorcontext_floatspace_to_srgb(struct flow_colorcontext_info * color, float space_value)
 {
     float v = space_value;
 #ifdef EXPOSE_SIGMOID
-    v = context->colorspace.apply_sigmoid ? sigmoid_inverse(&context->colorspace.sigmoid, v) : v;
+    v = color->apply_sigmoid ? sigmoid_inverse(&color->sigmoid, v) : v;
 #endif
 
-    if (context->colorspace.apply_gamma)
-        return uchar_clamp_ff(apply_gamma(context, v) * 255.0f);
-    if (context->colorspace.apply_srgb)
+    if (color->apply_gamma)
+        return uchar_clamp_ff(flow_colorcontext_apply_gamma(color, v) * 255.0f);
+    if (color->apply_srgb)
         return uchar_clamp_ff(linear_to_srgb(v));
     return uchar_clamp_ff(255.0f * v);
 }

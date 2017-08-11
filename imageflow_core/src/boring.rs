@@ -347,6 +347,7 @@ pub fn create_framewise(original_width: i32,
                  h: final_h,
                  down_filter: Some(commands.down_filter),
                  up_filter: Some(commands.up_filter),
+                 scaling_colorspace:  Some(if commands.luma_correct { s::ScalingFloatspace::Linear } else {s::ScalingFloatspace::Srgb}),
                  hints: Some(s::ResampleHints {
                      sharpen_percent: Some(commands.sharpen),
                      prefer_1d_twice: None,
@@ -415,8 +416,7 @@ pub fn process_image<F, C, R>(commands: BoringCommands,
 
         let send_execute = s::Execute001 {
             framewise: framewise,
-            graph_recording: None,
-            no_gamma_correction: Some(!commands.luma_correct),
+            graph_recording: None
         };
 
         let send_execute_str = serde_json::to_string_pretty(&send_execute).unwrap();

@@ -156,14 +156,14 @@ This halves in sRGB space instead of linear. Not significantly faster on modern 
 */
 
 #define HALVING_TYPE float
-#define TO_HALVING_TYPE(x) Context_srgb_to_floatspace(context, x)
-#define FROM_HALVING_TYPE(x) Context_floatspace_to_srgb(context, x)
+#define TO_HALVING_TYPE(x) flow_colorcontext_srgb_to_floatspace(colorcontext, x)
+#define FROM_HALVING_TYPE(x) flow_colorcontext_floatspace_to_srgb(colorcontext, x)
 #define HALVE_ROW_NAME HalveRowByDivisorColorSpaceAware
 #define HALVE_INTERNAL_NAME HalveInternalColorSpaceAware
 
     static inline void
-    HALVE_ROW_NAME(flow_c * context, const unsigned char * from, HALVING_TYPE * to, const unsigned int to_count,
-                   const int divisor, const int step)
+    HALVE_ROW_NAME(flow_c * context, struct flow_colorcontext_info * colorcontext, const unsigned char * from,
+                   HALVING_TYPE * to, const unsigned int to_count, const int divisor, const int step)
 {
     int to_b, from_b;
     const int to_bytes = to_count * step;
@@ -227,8 +227,9 @@ This halves in sRGB space instead of linear. Not significantly faster on modern 
     }
 }
 
-static bool HALVE_INTERNAL_NAME(flow_c * context, const struct flow_bitmap_bgra * from, struct flow_bitmap_bgra * to,
-                                const int to_w, const int to_h, const int to_stride, const int divisor)
+static bool HALVE_INTERNAL_NAME(flow_c * context, struct flow_colorcontext_info * colorcontext,
+                                const struct flow_bitmap_bgra * from, struct flow_bitmap_bgra * to, const int to_w,
+                                const int to_h, const int to_stride, const int divisor)
 {
 
     const int to_w_bytes = to_w * flow_pixel_format_bytes_per_pixel(to->fmt);
@@ -257,7 +258,8 @@ static bool HALVE_INTERNAL_NAME(flow_c * context, const struct flow_bitmap_bgra 
     for (y = 0; y < to_h; y++) {
         memset(buffer, 0, sizeof(HALVING_TYPE) * to_w_bytes);
         for (d = 0; d < divisor; d++) {
-            HALVE_ROW_NAME(context, from->pixels + (y * divisor + d) * from->stride, buffer, to_w, divisor, bytes_pp);
+            HALVE_ROW_NAME(context, colorcontext, from->pixels + (y * divisor + d) * from->stride, buffer, to_w,
+                           divisor, bytes_pp);
         }
         unsigned char * dest_line = to->pixels + y * to_stride;
 #ifdef ALLOW_SHIFTING_HALVING_TYPE
@@ -436,14 +438,15 @@ static bool HALVE_INTERNAL_NAME(flow_c * context, const struct flow_bitmap_bgra 
 
 //** Do not edit the above two functions; they are copy/pasted. **//
 
-bool flow_halve(flow_c * context, const struct flow_bitmap_bgra * from, struct flow_bitmap_bgra * to, int divisor)
+bool flow_halve(flow_c * context, struct flow_colorcontext_info * colorcontext, const struct flow_bitmap_bgra * from,
+                struct flow_bitmap_bgra * to, int divisor)
 {
 
     bool r = false;
-    if (context->colorspace.floatspace == flow_working_floatspace_as_is) {
+    if (colorcontext->floatspace == flow_working_floatspace_as_is) {
         r = HalveInternal(context, from, to, to->w, to->h, to->stride, divisor);
     } else {
-        r = HalveInternalColorSpaceAware(context, from, to, to->w, to->h, to->stride, divisor);
+        r = HalveInternalColorSpaceAware(context, colorcontext, from, to, to->w, to->h, to->stride, divisor);
     }
     if (!r) {
         FLOW_add_to_callstack(context);
@@ -451,16 +454,17 @@ bool flow_halve(flow_c * context, const struct flow_bitmap_bgra * from, struct f
     return r;
 }
 
-bool flow_halve_in_place(flow_c * context, struct flow_bitmap_bgra * from, int divisor)
+bool flow_halve_in_place(flow_c * context, struct flow_colorcontext_info * colorcontext, struct flow_bitmap_bgra * from,
+                         int divisor)
 {
     int to_w = from->w / divisor;
     int to_h = from->h / divisor;
     int to_stride = to_w * flow_pixel_format_bytes_per_pixel(from->fmt);
     bool r = false;
-    if (context->colorspace.floatspace == flow_working_floatspace_as_is) {
+    if (colorcontext->floatspace == flow_working_floatspace_as_is) {
         r = HalveInternal(context, from, from, to_w, to_h, to_stride, divisor);
     } else {
-        r = HalveInternalColorSpaceAware(context, from, from, to_w, to_h, to_stride, divisor);
+        r = HalveInternalColorSpaceAware(context, colorcontext, from, from, to_w, to_h, to_stride, divisor);
     }
     if (!r) {
         FLOW_add_to_callstack(context);

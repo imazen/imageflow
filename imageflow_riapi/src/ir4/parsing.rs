@@ -21,6 +21,7 @@ pub enum FlipStrings{
 
 }
 
+
 macro_attr! {
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq,
@@ -138,12 +139,26 @@ pub enum GrayscaleAlgorithm {
 
 }
 
-pub static IR4_KEYS: [&'static str;61] = ["mode", "anchor", "flip", "sflip", "scale", "cache", "process",
+macro_attr! {
+
+#[derive(Debug, Copy, Clone, PartialEq, Eq,
+IterVariants!(ScalingColorspaceVariants), IterVariantNames!(ScalingColorspaceNames))]
+
+pub enum ScalingColorspace {
+    Srgb,
+    Linear,
+    Gamma
+}
+
+
+}
+
+pub static IR4_KEYS: [&'static str;62] = ["mode", "anchor", "flip", "sflip", "scale", "cache", "process",
     "quality", "zoom", "crop", "cropxunits", "cropyunits",
     "w", "h", "width", "height", "maxwidth", "maxheight", "format", "thumbnail",
      "autorotate", "srotate", "rotate", "ignoreicc", //really? : "precise_scaling_ratio",
     "stretch",
-    "frame", "page", "subsampling", "colors", "f.sharpen",
+    "frame", "page", "subsampling", "colors", "f.sharpen", "down.colorspace",
     "404", "bgcolor", "paddingcolor", "bordercolor", "preset", "floatspace", "jpeg_idct_downscale_linear", "watermark",
     "s.invert", "s.sepia", "s.grayscale", "s.alpha", "s.brightness", "s.contrast", "s.saturation", "trim.threshold",
     "trim.percentpadding", "a.blur", "a.sharpen", "a.removenoise", "a.balancewhite", "dither",
@@ -258,6 +273,9 @@ impl Instructions{
         add(&mut m, "crop", self.crop.map(|a| format!("{},{},{},{}", a[0],a[1],a[2],a[3])));
         add(&mut m, "anchor", self.anchor_string());
 
+
+        add(&mut m, "down.colorspace", self.down_colorspace.map(|v| format!("{:?}", v).to_lowercase()));
+
         add(&mut m, "decoder.min_precise_scaling_ratio", self.min_precise_scaling_ratio);
         m
     }
@@ -322,6 +340,8 @@ impl Instructions{
                 Some(other)
             }
         };
+
+        i.down_colorspace = p.parse_colorspace("down.colorspace");
 
 
         let _ = p.parse_test_pair("fastscale", "true");
@@ -490,6 +510,18 @@ impl<'a> Parser<'a>{
 
         )
     }
+
+fn parse_colorspace(&mut self, key: &'static str) -> Option<ScalingColorspace> {
+    self.parse(key, |value| {
+        for (k, v) in ScalingColorspace::iter_variant_names().zip(ScalingColorspace::iter_variants()) {
+            if k.eq_ignore_ascii_case(value) {
+                return Ok(v)
+            }
+        }
+        Err(())
+    })
+}
+
 
     fn parse_fit_mode(&mut self, key: &'static str) -> Option<FitModeStrings>{
         self.parse(key, |value| {
@@ -687,7 +719,7 @@ pub struct Instructions{
     pub s_sepia: Option<bool>,
     pub s_grayscale: Option<GrayscaleAlgorithm>,
     pub min_precise_scaling_ratio: Option<f64>,
-
+    pub down_colorspace: Option<ScalingColorspace>
 }
 #[derive(Debug,Copy, Clone,PartialEq)]
 pub enum Anchor1D{
@@ -829,6 +861,8 @@ fn test_url_parsing() {
 
     t("a.balancewhite=true",  Instructions{a_balance_white: Some(HistogramThresholdAlgorithm::Area), ..Default::default()}, vec![]);
     t("a.balancewhite=area",  Instructions{a_balance_white: Some(HistogramThresholdAlgorithm::Area), ..Default::default()}, vec![]);
+    t("down.colorspace=linear",  Instructions{down_colorspace: Some(ScalingColorspace::Linear), ..Default::default()}, vec![]);
+    t("down.colorspace=srgb",  Instructions{down_colorspace: Some(ScalingColorspace::Srgb), ..Default::default()}, vec![]);
 
     expect_warning("a.balancewhite","gimp",  Instructions{a_balance_white: Some(HistogramThresholdAlgorithm::Gimp), ..Default::default()});
     expect_warning("a.balancewhite","simple",  Instructions{a_balance_white: Some(HistogramThresholdAlgorithm::Simple), ..Default::default()});
@@ -867,6 +901,9 @@ fn test_tostr(){
     t("bgcolor=ffffffff", Instructions { bgcolor_srgb: Some(Color32(0xffffffff)), ..Default::default() });
     t("crop=0,0,40,50", Instructions { crop: Some([0f64,0f64,40f64,50f64]), ..Default::default() });
     t("a.balancewhite=area",  Instructions{a_balance_white: Some(HistogramThresholdAlgorithm::Area), ..Default::default()});
+
+    t("down.colorspace=srgb",  Instructions{down_colorspace: Some(ScalingColorspace::Srgb), ..Default::default()});
+    t("down.colorspace=linear",  Instructions{down_colorspace: Some(ScalingColorspace::Linear), ..Default::default()});
 
     t("s.grayscale=bt709",  Instructions{s_grayscale: Some(GrayscaleAlgorithm::Bt709), ..Default::default()});
     t("s.alpha=0&s.brightness=0.1&s.contrast=1&s.saturation=-0.1&s.sepia=true", Instructions { s_alpha: Some(0f64), s_contrast: Some(1f64), s_sepia: Some(true), s_brightness: Some(0.1f64), s_saturation: Some(-0.1f64), ..Default::default() });

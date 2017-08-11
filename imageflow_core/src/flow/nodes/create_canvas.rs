@@ -39,19 +39,23 @@ fn create_canvas_def() -> NodeDefinition {
                         let ptr =
                             ::ffi::flow_bitmap_bgra_create(flow_pointer, *w as i32, *h as i32, true, *format);
                         let color_val = color.clone();
+                        let color_srgb_argb = color_val.clone().to_u32_bgra().unwrap();
+                        (*ptr).compositing_mode = ::ffi::BitmapCompositingMode::ReplaceSelf;
                         if color_val != s::Color::Transparent {
-                            {
-                                if !ffi::flow_bitmap_bgra_fill_rect(flow_pointer,
-                                                                    ptr,
-                                                                    0,
-                                                                    0,
-                                                                    *w as u32,
-                                                                    *h as u32,
-                                                                    color_val.to_u32_bgra().unwrap()) {
-                                    panic!("failed to fill rect. epic.");
-                                }
+                            if !ffi::flow_bitmap_bgra_fill_rect(flow_pointer,
+                                                                ptr,
+                                                                0,
+                                                                0,
+                                                                *w as u32,
+                                                                *h as u32,
+                                                                color_srgb_argb) {
+                                panic!("failed to fill rect. epic.");
                             }
+
+                            (*ptr).compositing_mode = ::ffi::BitmapCompositingMode::BlendWithMatte;
                         }
+                        (*ptr).matte_color  = mem::transmute(color_srgb_argb);
+
                         weight.result = NodeResult::Frame(ptr);
                     },
                     _ => {

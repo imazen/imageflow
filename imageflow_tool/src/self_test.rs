@@ -229,6 +229,7 @@ fn scenario_laundry_list() -> BuildScenario{
             h: 800,
             down_filter: Some(s::Filter::Robidoux),
             up_filter: Some(s::Filter::Ginseng),
+            scaling_colorspace: Some(s::ScalingFloatspace::Linear),
             hints: Some(s::ResampleHints {
                 sharpen_percent: Some(10f32),
                 prefer_1d_twice: None,

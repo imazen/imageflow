@@ -118,7 +118,7 @@ TEST_CASE("Load png", "[fastscaling]")
     REQUIRE(success);
 }
 //
-//TEST_CASE("Load png from URL", "[fastscaling]")
+// TEST_CASE("Load png from URL", "[fastscaling]")
 //{
 //
 //    bool success = false;
@@ -126,7 +126,8 @@ TEST_CASE("Load png", "[fastscaling]")
 //    size_t bytes_count = 0;
 //    flow_c * c = flow_context_create();
 //
-//    uint8_t * bytes = get_bytes_cached(c, &bytes_count, "http://s3.amazonaws.com/resizer-images/sun_256.png", __FILE__);
+//    uint8_t * bytes = get_bytes_cached(c, &bytes_count, "http://s3.amazonaws.com/resizer-images/sun_256.png",
+//    __FILE__);
 //    REQUIRE_FALSE(bytes == NULL);
 //    png_size_t image_bytes_count = bytes_count;
 //    png_const_voidp image_bytes = bytes;
@@ -175,7 +176,8 @@ TEST_CASE("Load png", "[fastscaling]")
 //
 //                REQUIRE_FALSE(canvas == NULL);
 //                struct flow_RenderDetails * details
-//                    = flow_RenderDetails_create_with(c, flow_interpolation_filter::flow_interpolation_filter_Robidoux);
+//                    = flow_RenderDetails_create_with(c,
+//                    flow_interpolation_filter::flow_interpolation_filter_Robidoux);
 //                details->interpolate_last_percent = 2.1f;
 //                details->minimum_sample_window_to_interposharpen = 1.5;
 //                details->havling_acceptable_pixel_loss = 0.26f;

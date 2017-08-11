@@ -107,9 +107,7 @@ bool flow_codec_decoder_set_downscale_hints(flow_c * c, struct flow_codec_instan
     return true;
 }
 
-
-bool flow_codec_decoder_get_info(flow_c * c, void * codec_state, int64_t codec_id,
-                                        struct flow_decoder_info * info)
+bool flow_codec_decoder_get_info(flow_c * c, void * codec_state, int64_t codec_id, struct flow_decoder_info * info)
 {
     if (codec_state == NULL) {
 
@@ -125,7 +123,7 @@ bool flow_codec_decoder_get_info(flow_c * c, void * codec_state, int64_t codec_i
         FLOW_error_msg(c, flow_status_Not_implemented, ".get_info is not implemented for codec %s", def->name);
         return false;
     }
-    //Reset everything to defaults
+    // Reset everything to defaults
 
     info->frame_decodes_into = flow_bgra32;
     info->image_height = 0;
@@ -135,8 +133,6 @@ bool flow_codec_decoder_get_info(flow_c * c, void * codec_state, int64_t codec_i
     info->frame_count = 0;
     info->preferred_extension = NULL;
     info->preferred_mime_type = NULL;
-
-
 
     if (!def->get_info(c, codec_state, info)) {
         FLOW_error_return(c);
@@ -149,8 +145,6 @@ bool flow_codec_decoder_get_info(flow_c * c, void * codec_state, int64_t codec_i
 
     return true;
 }
-
-
 
 struct flow_codec_definition * flow_codec_get_definition(flow_c * c, int64_t codec_id)
 {
@@ -189,7 +183,8 @@ int64_t flow_codec_select(flow_c * c, uint8_t * data, size_t data_bytes)
     return flow_codec_type_null;
 }
 
-int64_t flow_codec_select_from_seekable_io(flow_c * c,struct flow_io * io){
+int64_t flow_codec_select_from_seekable_io(flow_c * c, struct flow_io * io)
+{
 
     uint8_t buffer[8];
     int64_t bytes_read = io->read_func(c, io, &buffer[0], 8);

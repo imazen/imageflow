@@ -319,6 +319,7 @@ fn smoke_test_many_operations(){
             h: 800,
             down_filter: Some(s::Filter::Robidoux),
             up_filter: Some(s::Filter::Ginseng),
+            scaling_colorspace: None,
             hints: Some(s::ResampleHints {
                 sharpen_percent: Some(10f32),
                 prefer_1d_twice: None,
@@ -373,6 +374,7 @@ fn smoke_test_graph_builder() {
             h: 100,
             down_filter: None,
             up_filter: None,
+            scaling_colorspace: None,
             hints: None,
         })
         .to(s::Node::Encode {

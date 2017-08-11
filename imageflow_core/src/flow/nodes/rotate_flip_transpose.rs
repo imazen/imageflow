@@ -70,6 +70,7 @@ fn transpose_def() -> NodeDefinition {
                         scale_to_width: h as usize,
                         interpolation_filter: Some(s::Filter::Robidoux),
                         transpose_on_write: true,
+                        scaling_colorspace: None
                     };
                     ctx.replace_node(ix,
                                      vec![

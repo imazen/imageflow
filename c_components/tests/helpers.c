@@ -281,7 +281,6 @@ double flow_bitmap_float_compare(flow_c * c, struct flow_bitmap_float * a, struc
     return difference_total / a->h;
 }
 
-
 bool flow_compare_file_contents(flow_c * c, const char * filename1, const char * filename2,
                                 char * difference_message_buffer, size_t buffer_size, bool * are_equal)
 {

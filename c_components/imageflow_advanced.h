@@ -19,6 +19,7 @@ struct flow_profiling_entry;
 struct flow_convolution_kernel;
 struct flow_Renderer;
 struct flow_encoder_hints;
+struct flow_colorcontext_info;
 
 ////////////////////////////////////////////
 //  Portable snprintf
@@ -253,11 +254,8 @@ struct flow_bitmap_bgra {
     flow_bitmap_compositing_mode compositing_mode;
 };
 
-PUB float flow_context_byte_to_floatspace(flow_c * c, uint8_t srgb_value);
-PUB uint8_t flow_context_floatspace_to_byte(flow_c * c, float space_value);
-
-PUB flow_working_floatspace flow_context_get_floatspace(flow_c * context);
-PUB void flow_context_set_floatspace(flow_c * ctx, flow_working_floatspace space, float a, float b, float c);
+PUB void flow_colorcontext_init(flow_c * context, struct flow_colorcontext_info * colorcontext,
+                                flow_working_floatspace space, float a, float b, float c);
 
 typedef double (*flow_detailed_interpolation_method)(const struct flow_interpolation_details *, double);
 
@@ -326,6 +324,8 @@ struct flow_RenderDetails {
 
     // Enables profiling
     bool enable_profiling;
+
+    struct flow_colorcontext_info * colorcontext;
 };
 
 PUB struct flow_bitmap_bgra * flow_bitmap_bgra_create(flow_c * c, int sx, int sy, bool zeroed,
