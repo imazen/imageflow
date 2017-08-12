@@ -103,6 +103,8 @@ static const char * status_code_to_string(flow_status_code code)
             return "I/O Error";
         case 30:
             return "Internal state invalid";
+        case 31:
+            return "Internal panic (please file a bug report)";
         case 40:
             return "Not implemented";
         case 50:

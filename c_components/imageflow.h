@@ -73,6 +73,7 @@ typedef enum flow_status_code {
     flow_status_Out_of_memory = 10,
     flow_status_IO_error = 20,
     flow_status_Invalid_internal_state = 30,
+    flow_status_Panic = 31,
     flow_status_Not_implemented = 40,
     flow_status_Invalid_argument = 50,
     flow_status_Null_argument = 51,
