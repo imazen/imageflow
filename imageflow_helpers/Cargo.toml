@@ -44,7 +44,7 @@ hyper = "*"
 reqwest = "*"
 hyper-native-tls = "*"
 
-backtrace = "0.3"
+backtrace = "0.3.2"
 
 
 [target.'cfg(not(any(target_os = "windows", target_os = "macos")))'.dependencies]

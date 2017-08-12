@@ -138,7 +138,7 @@ pub use c::ffi::ImageflowJsonResponse as JsonResponse;
 use std::ptr;
 use std::io::Write;
 use std::ffi::CStr;
-
+use std::panic::{catch_unwind, AssertUnwindSafe};
 #[cfg(test)]
 use std::str;
 
@@ -834,14 +834,23 @@ pub unsafe extern "C" fn imageflow_io_get_output_buffer(context: *mut Context,
                                                         result_buffer: *mut *const u8,
                                                         result_buffer_length: *mut libc::size_t)
                                                         -> bool {
+    let result = catch_unwind(AssertUnwindSafe(|| {
+        let io_proxy = (&*context).get_proxy_mut_by_pointer(io).expect("");
 
-    let io_proxy = (&*context).get_proxy_mut_by_pointer(io).unwrap();
-    //TODO: handle result, panics
-    let slice = io_proxy.get_output_buffer_bytes().unwrap(); // !!
-
-    (*result_buffer) = slice.as_ptr();
-    (* result_buffer_length) = slice.len();
-    true
+        let slice = io_proxy.get_output_buffer_bytes().expect("Failed to get output buffer bytes"); // !!
+        (slice.as_ptr(), slice.len())
+    }));
+    match result {
+        Ok((b, l)) => {
+            (*result_buffer) =b;
+            (* result_buffer_length) = l;
+            true
+        },
+        Err(e) => {
+            (&mut *context).error_mut().abi_raise_panic(&e);
+            false
+        }
+    }
 }
 
 ///
@@ -856,9 +865,22 @@ pub unsafe extern "C" fn imageflow_job_get_output_buffer_by_id(context: *mut Con
                                                                result_buffer: *mut *const u8,
                                                                result_buffer_length: *mut libc::size_t)
                                                                -> bool {
-    (&*job).get_io(io_id).map(|mut io|
-        imageflow_io_get_output_buffer(context, &mut *io as *mut JobIo, result_buffer, result_buffer_length)
-    ).unwrap_or_else(|e| { e.write_to_context_ptr(context); false })
+    let io_proxy = match (&*job).get_io(io_id) {
+        Ok(io_proxy) => Some(io_proxy),
+        Err(e) => {
+            e.write_to_context_ptr(context);
+            None
+        }
+    };
+    match io_proxy {
+        Some(io) => {
+            let s= io.get_output_buffer_bytes().expect("Failed to get output buffer bytes");
+            (*result_buffer) = s.as_ptr();
+            (*result_buffer_length) = s.len();
+            true
+        },
+        None => false
+    }
 }
 
 

@@ -4,7 +4,7 @@ use ::ffi;
 use ::job::Job;
 use ::{FlowErr,FlowError, Result, JsonResponse};
 use io::IoProxy;
-
+use std::any::Any;
 use ::imageflow_types::collections::AddRemoveSet;
 use ::ffi::ImageflowJsonResponse;
 
@@ -32,7 +32,8 @@ impl Context {
     pub fn abi_create_boxed() -> Result<Box<Context>> {
         std::panic::catch_unwind(|| {
             // Upgrade backtraces
-            imageflow_helpers::debug::upgrade_panic_hook_once_if_backtraces_wanted();
+            // Disable backtraces for debugging across the FFI boundary
+            //imageflow_helpers::debug::upgrade_panic_hook_once_if_backtraces_wanted();
 
             let inner = unsafe { ffi::flow_context_create() };
             if inner.is_null() {
@@ -245,6 +246,27 @@ impl ErrorBuffer{
                                           function_name.map(|cstr| cstr.as_ptr()).unwrap_or(ptr::null()))
         }
     }
+
+    pub fn abi_raise_panic(&mut self,
+                                   e: &Any)-> bool{
+        //TODO: this does not handle if CString fails to allocate
+
+        let mut message = None;
+        let null_byte_message = || {CString::new("panic string contained a null byte").ok()};
+        if let Some(str) = e.downcast_ref::<String>(){
+            message = Some(CString::new(str.as_bytes()))
+        }
+        if let Some(str) = e.downcast_ref::<&str>(){
+            message = Some(CString::new(str.as_bytes()))
+        }
+
+        let unwrapped_message = message.and_then(|r| r.or_else(|_| CString::new("panic string contained a null byte")).ok());
+
+        eprintln!("{:?}", unwrapped_message);
+
+        self.abi_raise_error_c_style(31, unwrapped_message.as_ref().map(CString::as_c_str), None, None, None )
+    }
+
 
 
     ///

@@ -4,6 +4,7 @@
 #![feature(conservative_impl_trait)]
 #![feature(proc_macro)]
 #![feature(integer_atomics)]
+#![feature(as_c_str)]
 
 
 // intellij-rust flags this anyway
@@ -80,6 +81,7 @@ pub enum FlowError {
     Oom,
     Err(FlowErr),
     ErrNotImpl,
+    FailedBorrow,
 }
 
 
@@ -113,6 +115,9 @@ impl FlowError{
             }
             FlowError::NullArgument => {
                 Cow::from("Null argument")
+            }
+            FlowError::FailedBorrow => {
+                Cow::from("Failed borrow")
             }
             ref other => {
                 Cow::from(format!("{:?}", other))
