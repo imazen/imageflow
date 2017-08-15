@@ -2,7 +2,10 @@
   <configuration default="false" name="test core" type="CargoCommandRunConfiguration" factoryName="Cargo Command" show_console_on_std_err="false" show_console_on_std_out="false">
     <parameters>
       <option name="additionalArguments">
-        <list />
+        <list>
+          <option value="--package" />
+          <option value="imageflow_core" />
+        </list>
       </option>
       <option name="backtraceMode" value="2" />
       <option name="channel" value="0" />
@@ -15,8 +18,8 @@
       </option>
       <option name="nocapture" value="true" />
     </parameters>
-    <module name="imageflow_core">
-      <option name="moduleName" value="imageflow_core" />
+    <module name="imageflow">
+      <option name="moduleName" value="imageflow" />
     </module>
     <method />
   </configuration>

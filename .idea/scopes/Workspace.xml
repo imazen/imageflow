@@ -1,3 +1,0 @@
-<component name="DependencyValidationManager">
-  <scope name="Workspace" pattern="file[imageflow_abi]:*/||file[imageflow_core]:*/||file[imageflow_helpers]:*/||file[imageflow_riapi]:*/||file[imageflow_server]:*/||file[imageflow_tool]:*/||file[imageflow_types]:*/" />
-</component>
