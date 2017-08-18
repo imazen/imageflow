@@ -404,8 +404,8 @@ fi
 
 if [[ "$DELETE_UPLOAD_FOLDER" == 'True' ]]; then
 	echo_maybe -e "\nRemvoing all files scheduled for upload to s3\n\n"
-	rm -rf ./artifacts/upload
-	mkdir -p ./artifacts/upload
+	rm -rf ./artifacts/upload || true
+	mkdir -p ./artifacts/upload || true
 else
 	echo -e "\nListing files scheduled for upload to s3\n\n"
 	ls -R ./artifacts/upload/*
