@@ -1,10 +1,10 @@
 <component name="ProjectRunConfigurationManager">
-  <configuration default="false" name="test riapi" type="CargoCommandRunConfiguration" factoryName="Cargo Command" show_console_on_std_err="false" show_console_on_std_out="false">
+  <configuration default="false" name="test helpers" type="CargoCommandRunConfiguration" factoryName="Cargo Command" show_console_on_std_err="false" show_console_on_std_out="false">
     <parameters>
       <option name="additionalArguments">
         <list>
           <option value="--package" />
-          <option value="imageflow_riapi" />
+          <option value="imageflow_helpers" />
         </list>
       </option>
       <option name="backtraceMode" value="2" />
