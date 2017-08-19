@@ -50,13 +50,10 @@ pub mod collections;
 #[repr(C)]
 #[derive(Serialize, Deserialize, Copy, Clone, PartialEq, Debug)]
 pub enum PixelFormat {
-    // camelCased: #[serde(rename="bgra32")]
     #[serde(rename="bgra_32")]
     Bgra32 = 4,
-    // camelCased: #[serde(rename="bgr24")]
     #[serde(rename="bgr_24")]
     Bgr24 = 3,
-    // camelCased: #[serde(rename="gray8")]
     #[serde(rename="gray_8")]
     Gray8 = 1,
 }
@@ -142,10 +139,8 @@ impl FromStr for Filter {
 
 #[derive(Serialize, Deserialize, Clone, Copy, PartialEq, Debug)]
 pub enum PngBitDepth {
-    // camelCased: #[serde(rename="png32")]
     #[serde(rename="png_32")]
     Png32,
-    // camelCased: #[serde(rename="png24")]
     #[serde(rename="png_24")]
     Png24,
 }
@@ -160,15 +155,12 @@ pub enum ScalingFloatspace {
 
 #[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
 pub enum EncoderPreset {
-    // camelCased: #[serde(rename="libjpegturbo")]
     #[serde(rename="libjpegturbo")]
     LibjpegTurbo { quality: Option<i32> },
-    // camelCased: #[serde(rename="libpng")]
     #[serde(rename="libpng")]
     Libpng {
         depth: Option<PngBitDepth>,
         matte: Option<Color>,
-        // camelCased: #[serde(rename="zlibCompression")]
         zlib_compression: Option<i32>,
     },
     #[serde(rename="libpng")]
@@ -193,20 +185,16 @@ impl EncoderPreset {
 
 #[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
 pub enum ColorSrgb {
-    // camelCased: #[serde(rename="hex")]
     /// Hex in RRGGBBAA (css) form or variant thereof
     #[serde(rename="hex")]
     Hex(String),
 }
 #[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
 pub enum Color {
-    // camelCased: #[serde(rename="transparent")]
     #[serde(rename="transparent")]
     Transparent,
-    // camelCased: #[serde(rename="black")]
     #[serde(rename="black")]
     Black,
-    // camelCased: #[serde(rename="srgb")]
     #[serde(rename="srgb")]
     Srgb(ColorSrgb),
 }
@@ -269,10 +257,8 @@ fn test_bgra() {
 
 #[derive(Serialize, Deserialize, Copy, Clone, PartialEq, Debug)]
 pub struct ResampleHints {
-    // camelCased: #[serde(rename="sharpenPercent")]
     pub sharpen_percent: Option<f32>,
 
-    // camelCased: #[serde(rename="prefer1dTwice")]
     pub prefer_1d_twice: Option<bool>,
 }
 
@@ -288,16 +274,10 @@ pub enum ResampleWhen{
 
 #[derive(Serialize, Deserialize, Copy, Clone, PartialEq, Debug)]
 pub struct ConstraintResamplingHints {
-    // camelCased: #[serde(rename="sharpenPercent")]
     pub sharpen_percent: Option<f32>,
-
-    // camelCased: #[serde(rename="downFilter")]
     pub down_filter: Option<Filter>,
-    // camelCased: #[serde(rename="upFilter")]
     pub up_filter: Option<Filter>,
-
     pub scaling_colorspace: Option<ScalingFloatspace>,
-
     pub resample_when: Option<ResampleWhen>
 }
 impl ConstraintResamplingHints{
@@ -327,18 +307,14 @@ pub enum Constraint {
 
 #[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
 pub enum Node {
-    // camelCased: #[serde(rename="flipV")]
     #[serde(rename="flip_v")]
     FlipV,
-    // camelCased: #[serde(rename="flipH")]
     #[serde(rename="flip_h")]
     FlipH,
-    // camelCased: #[serde(rename="crop")]
     #[serde(rename="crop")]
     Crop { x1: u32, y1: u32, x2: u32, y2: u32 },
     #[serde(rename="crop_whitespace")]
     CropWhitespace { threshold: u32, percent_padding: f32 },
-    // camelCased: #[serde(rename="createCanvas")]
     #[serde(rename="create_canvas")]
     CreateCanvas {
         format: PixelFormat,
@@ -355,33 +331,25 @@ pub enum Node {
     },
     #[serde(rename="constrain")]
     Constrain(Constraint),
-    // camelCased: #[serde(rename="copyRectToCanvas")]
     #[serde(rename="copy_rect_to_canvas")]
     CopyRectToCanvas {
-        // camelCased: #[serde(rename="fromX")]
         from_x: u32,
-        // camelCased: #[serde(rename="fromY")]
         from_y: u32,
         width: u32,
         height: u32,
         x: u32,
         y: u32,
     },
-    // camelCased: #[serde(rename="decode")]
     #[serde(rename="decode")]
     Decode {
-        // camelCased: #[serde(rename="ioId")]
         io_id: i32,
         commands: Option<Vec<DecoderCommand>>,
     },
-    // camelCased: #[serde(rename="encode")]
     #[serde(rename="encode")]
     Encode {
-        // camelCased: #[serde(rename="ioId")]
         io_id: i32,
         preset: EncoderPreset,
     },
-    // camelCased: #[serde(rename="fillRect")]
     #[serde(rename="fill_rect")]
     FillRect {
         x1: u32,
@@ -390,7 +358,6 @@ pub enum Node {
         y2: u32,
         color: Color,
     },
-    // camelCased: #[serde(rename="expandCanvas")]
     #[serde(rename="expand_canvas")]
     ExpandCanvas {
         left: u32,
@@ -399,42 +366,30 @@ pub enum Node {
         bottom: u32,
         color: Color,
     },
-    // camelCased: #[serde(rename="transpose")]
     #[serde(rename="transpose")]
     Transpose,
-    // camelCased: #[serde(rename="rotate90")]
     #[serde(rename="rotate_90")]
     Rotate90,
-    // camelCased: #[serde(rename="rotate180")]
     #[serde(rename="rotate_180")]
     Rotate180,
-    // camelCased: #[serde(rename="rotate270")]
     #[serde(rename="rotate_270")]
     Rotate270,
-    // camelCased: #[serde(rename="applyOrientation")]
     #[serde(rename="apply_orientation")]
     ApplyOrientation { flag: i32 },
-    // camelCased: #[serde(rename="resample2d")]
     #[serde(rename="resample_2d")]
     Resample2D {
         w: usize,
         h: usize,
-        // camelCased: #[serde(rename="downFilter")]
         down_filter: Option<Filter>,
-        // camelCased: #[serde(rename="upFilter")]
         up_filter: Option<Filter>,
         scaling_colorspace: Option<ScalingFloatspace>,
         hints: Option<ResampleHints>,
     },
 
-    // camelCased: #[serde(rename="resample1d")]
     #[serde(rename="resample_1d")]
     Resample1D {
-        // camelCased: #[serde(rename="scaleToWidth")]
         scale_to_width: usize,
-        // camelCased: #[serde(rename="transposeOnWrite")]
         transpose_on_write: bool,
-        // camelCased: #[serde(rename="interpolationFilter")]
         interpolation_filter: Option<Filter>,
         scaling_colorspace: Option<ScalingFloatspace>,
     },
@@ -450,10 +405,8 @@ pub enum Node {
     #[serde(rename="color_matrix_srgb")]
     ColorFilterSrgb (ColorFilterSrgb),
     // TODO: Block use except from FFI/unit test use
-    // camelCased: #[serde(rename="flowBitmapBgraPtr")]
     #[serde(rename="flow_bitmap_bgra_ptr")]
     FlowBitmapBgraPtr {
-        // camelCased: #[serde(rename="ptrToFlowBitmapBgraPtr")]
         ptr_to_flow_bitmap_bgra_ptr: usize,
     },
 }
@@ -487,10 +440,8 @@ pub enum ColorFilterSrgb {
 
 #[derive(Serialize, Deserialize, Copy, Clone, PartialEq, Debug)]
 pub enum EdgeKind {
-    // camelCased: #[serde(rename="input")]
     #[serde(rename="input")]
     Input,
-    // camelCased: #[serde(rename="canvas")]
     #[serde(rename="canvas")]
     Canvas,
 }
@@ -510,10 +461,8 @@ pub struct Graph {
 #[derive(Serialize, Deserialize, Clone, Copy, PartialEq, Debug)]
 #[repr(C)]
 pub enum IoDirection {
-    // camelCased: #[serde(rename="out")]
     #[serde(rename="out")]
     Out = 8,
-    // camelCased: #[serde(rename="in")]
     #[serde(rename="in")]
     In = 4,
 }
@@ -521,24 +470,18 @@ pub enum IoDirection {
 
 #[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
 pub enum IoEnum {
-    // camelCased: #[serde(rename="bytesHex")]
     #[serde(rename="bytes_hex")]
     BytesHex(String),
     #[serde(rename="base_64")]
     Base64(String),
-    // camelCased: #[serde(rename="byteArray")]
     #[serde(rename="byte_array")]
     ByteArray(Vec<u8>),
-    // camelCased: #[serde(rename="file")]
     #[serde(rename="file")]
     Filename(String),
-    // camelCased: #[serde(rename="url")]
     #[serde(rename="url")]
     Url(String),
-    // camelCased: #[serde(rename="outputBuffer")]
     #[serde(rename="output_buffer")]
     OutputBuffer,
-    // camelCased: #[serde(rename="outputBase64")]
     #[serde(rename="output_base_64")]
     OutputBase64,
     /// To be replaced before execution
@@ -549,7 +492,6 @@ pub enum IoEnum {
 
 #[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
 pub struct IoObject {
-    // camelCased: #[serde(rename="ioId")]
     pub io_id: i32,
     pub direction: IoDirection,
     pub io: IoEnum,
@@ -557,10 +499,8 @@ pub struct IoObject {
 
 #[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
 pub enum Framewise {
-    // camelCased: #[serde(rename="graph")]
     #[serde(rename="graph")]
     Graph(Graph),
-    // camelCased: #[serde(rename="steps")]
     #[serde(rename="steps")]
     Steps(Vec<Node>),
 }
@@ -634,17 +574,13 @@ impl Build001GraphRecording {
 
 #[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
 pub struct Build001Config {
-    // camelCased: #[serde(rename="enableJpegBlockScaling")]
     pub enable_jpeg_block_scaling: Option<bool>,
-    // camelCased: #[serde(rename="processAllGifFrames")]
     pub process_all_gif_frames: Option<bool>,
-    // camelCased: #[serde(rename="graphRecording")]
     pub graph_recording: Option<Build001GraphRecording>,
 
 }
 #[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
 pub struct Build001 {
-    // camelCased: #[serde(rename="builderConfig")]
     pub builder_config: Option<Build001Config>,
     pub io: Vec<IoObject>,
     pub framewise: Framewise,
@@ -744,7 +680,6 @@ impl Build001 {
 }
 #[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
 pub struct Execute001 {
-    // camelCased: #[serde(rename="graphRecording")]
     pub graph_recording: Option<Build001GraphRecording>,
     pub framewise: Framewise,
 }
@@ -903,7 +838,6 @@ impl Execute001 {
 
 #[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
 pub struct GetImageInfo001 {
-    // camelCased: #[serde(rename="ioId")]
     pub io_id: i32,
 }
 
@@ -916,20 +850,16 @@ impl GetImageInfo001 {
 pub struct JpegIDCTDownscaleHints {
     pub width: i64,
     pub height: i64,
-    // camelCased: #[serde(rename="scaleLumaSpatially")]
     pub scale_luma_spatially: Option<bool>,
-    // camelCased: #[serde(rename="gammaCorrectForSrgbDuringSpatialLumaScaling")]
     pub gamma_correct_for_srgb_during_spatial_luma_scaling: Option<bool>,
 }
 #[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
 pub enum DecoderCommand {
-    // camelCased: #[serde(rename="jpegDownscaleHints")]
     #[serde(rename="jpeg_downscale_hints")]
     JpegDownscaleHints(JpegIDCTDownscaleHints),
 }
 #[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
 pub struct TellDecoder001 {
-    // camelCased: #[serde(rename="ioId")]
     pub io_id: i32,
     pub command: DecoderCommand,
 }
@@ -950,20 +880,13 @@ impl TellDecoder001 {
 
 #[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
 pub struct ImageInfo {
-    // camelCased: #[serde(rename="preferredMimeType")]
     pub preferred_mime_type: String,
-    // camelCased: #[serde(rename="preferredExtension")]
     pub preferred_extension: String,
     // Warning, one cannot count frames in a GIF without scanning the whole thing.
-    // camelCased: #[serde(rename="frameCount")]
     pub frame_count: usize,
-    // camelCased: #[serde(rename="currentFrameIndex")]
     pub current_frame_index: i64,
-    // camelCased: #[serde(rename="frame0Width")]
     pub image_width: i32,
-    // camelCased: #[serde(rename="frame0Height")]
     pub image_height: i32,
-    // camelCased: #[serde(rename="frame0PostDecodeFormat")]
     pub frame_decodes_into: PixelFormat,
 }
 #[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
@@ -979,16 +902,11 @@ pub enum ResultBytes {
 }
 #[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
 pub struct EncodeResult {
-    // camelCased: #[serde(rename="preferredMimeType")]
     pub preferred_mime_type: String,
-    // camelCased: #[serde(rename="preferredExtension")]
     pub preferred_extension: String,
 
-    // camelCased: #[serde(rename="ioId")]
     pub io_id: i32,
-    // camelCased: #[serde(rename="w")]
     pub w: i32,
-    // camelCased: #[serde(rename="h")]
     pub h: i32,
 
     pub bytes: ResultBytes,
@@ -1016,10 +934,8 @@ pub struct JobResult {
 }
 #[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
 pub enum ResponsePayload {
-    // camelCased: #[serde(rename="imageInfo")]
     #[serde(rename="image_info")]
     ImageInfo(ImageInfo),
-    // camelCased: #[serde(rename="jobResult")]
     #[serde(rename="job_result")]
     JobResult(JobResult),
     #[serde(rename="build_result")]
