@@ -10,7 +10,7 @@
 #endif
 
 #include "imageflow_private.h"
-
+#include <xmmintrin.h>
 #include <string.h>
 
 #ifndef _MSC_VER
