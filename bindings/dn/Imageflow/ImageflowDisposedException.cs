@@ -2,6 +2,7 @@
 
 namespace imageflow
 {
+    // For bugs in user code, where they're trying to use something after disposing it
     public class ImageflowDisposedException : Exception
     {
         public ImageflowDisposedException(string disposedObject)

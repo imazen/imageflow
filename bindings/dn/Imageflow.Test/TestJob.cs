@@ -118,35 +118,12 @@ namespace Imageflow.Test
             using (var c = new Context())
             {
                 var j = new Job(c);
-                var inBuf = JobIo.PinManagedBytes(c,
+                j.AddInputBytesPinned(0,
                     Convert.FromBase64String(
                         "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAACklEQVR4nGMAAQAABQABDQottAAAAABJRU5ErkJggg=="));
-                j.AddIo(inBuf, 0, Native.Direction.In);
+                j.AddOutputBuffer(1);
 
-                var outBuf = JobIo.OutputBuffer(c);
-                j.AddIo(outBuf, 1, Native.Direction.Out);
-
-                var message = new
-                {
-                    framewise = new
-                    {
-                        steps = new object[]
-                        {
-                            new
-                            {
-                                command_string = new
-                                {
-                                    kind = "ir4",
-                                    value = "w=200&h=200&scale=both&format=jpg",
-                                    decode = 0,
-                                    encode = 1
-                                }
-                            }
-                        }
-                    }
-                };
-                
-                var response = j.SendMessage("v0.1/execute", message);
+                var response = j.ExecuteImageResizer4CommandString(0, 1, "w=200&h=200&scale=both&format=jpg");
 
                 var data = response.DeserializeDynamic();
 

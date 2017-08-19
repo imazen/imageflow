@@ -15,7 +15,7 @@ namespace Imageflow
     public class Context: CriticalFinalizerObject, IDisposable
     {
         private IntPtr _ptr;
-        private List<GCHandle> pinned;
+        private List<GCHandle> _pinned;
         internal IntPtr Pointer
         {
             get
@@ -33,8 +33,8 @@ namespace Imageflow
 
         internal void AddPinnedData(GCHandle handle)
         {
-            if (pinned == null) pinned = new List<GCHandle>();
-            pinned.Add(handle);
+            if (_pinned == null) _pinned = new List<GCHandle>();
+            _pinned.Add(handle);
         }
 
         public bool HasError => NativeMethods.imageflow_context_has_error(Pointer);
@@ -102,9 +102,9 @@ namespace Imageflow
             _ptr = IntPtr.Zero;
             
             //Unpin all managed data held for context lifetime
-            if (pinned != null)
+            if (_pinned != null)
             {
-                foreach (var active in pinned)
+                foreach (var active in _pinned)
                     active.Free();
             }
             
@@ -116,5 +116,6 @@ namespace Imageflow
         {
             Dispose (false);
         }
+        
     }
 }

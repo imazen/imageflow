@@ -1,6 +1,7 @@
 ﻿using System;
 using System.IO;
 using System.Runtime.InteropServices;
+using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using imageflow;
 using Imageflow.Native;
@@ -73,6 +74,51 @@ namespace Imageflow
                 pinned.Free();
                 methodPinned.Free();
             }
+        }
+
+        public JsonResponse ExecuteImageResizer4CommandString( int inputId, int outputId, string commands)
+        {
+            var message = new
+            {
+                framewise = new
+                {
+                    steps = new object[]
+                    {
+                        new
+                        {
+                            command_string = new
+                            {
+                                kind = "ir4",
+                                value = "w=200&h=200&scale=both&format=jpg",
+                                decode = inputId,
+                                encode = outputId
+                            }
+                        }
+                    }
+                }
+            };
+                
+            return SendMessage("v0.1/execute", message);
+        }
+
+        public void AddOutputBuffer(int ioId)
+        {
+            AddIo(JobIo.OutputBuffer(_parent), ioId, Direction.Out);
+        }
+        
+        public Stream GetOutputBuffer(int ioId)
+        {
+            return GetIo(ioId).OpenAsOutputBuffer();
+        }
+
+        public void AddInputBytesPinned(int ioId, byte[] buffer)
+        {
+            AddInputBytesPinned(ioId, buffer, 0, buffer.LongLength);
+        }
+
+        public void AddInputBytesPinned(int ioId, byte[] buffer, long offset, long count)
+        {
+            AddIo(JobIo.PinManagedBytes(_parent, buffer, offset, count), ioId, Direction.In);
         }
         
         public bool IsDisposed => _ptr == IntPtr.Zero; 
