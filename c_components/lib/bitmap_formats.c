@@ -102,7 +102,14 @@ struct flow_bitmap_bgra * flow_bitmap_bgra_create(flow_c * context, int sx, int 
         return NULL;
     }
     im->fmt = format;
-    im->stride = im->w * flow_pixel_format_bytes_per_pixel(im->fmt);
+
+    int unpadded_stride = im->w * flow_pixel_format_bytes_per_pixel(im->fmt);
+    // Pad rows to 64 bytes (this does not guarantee memory alignment, just stride alignment)
+    const int alignment = 64;
+    int padding = unpadded_stride % alignment == 0 ? 0 : (alignment - unpadded_stride % alignment);
+
+    im->stride = unpadded_stride + padding;
+
     im->pixels_readonly = false;
     im->stride_readonly = false;
     im->borrowed_pixels = false;
@@ -149,7 +156,13 @@ struct flow_bitmap_float * flow_bitmap_float_create_header(flow_c * context, int
     im->pixels = NULL;
     im->pixels_borrowed = true;
     im->channels = channels;
-    im->float_stride = sx * channels;
+
+    int unpadded_stride = sx * channels;
+    // Pad rows to 64 bytes (this does not guarantee memory alignment, just stride alignment)
+    const int alignment = 16;
+    int padding = unpadded_stride % alignment == 0 ? 0 : (alignment - (unpadded_stride % alignment));
+
+    im->float_stride = unpadded_stride + padding;
     im->float_count = im->float_stride * sy;
     im->alpha_meaningful = channels == 4;
     im->alpha_premultiplied = true;
@@ -164,6 +177,7 @@ struct flow_bitmap_float * flow_bitmap_float_create(flow_c * context, int sx, in
         return NULL;
     }
     im->pixels_borrowed = false;
+
     size_t byte_count = im->float_count * sizeof(float);
     if (zeroed) {
         im->pixels = (float *)FLOW_calloc_owned(context, 1, byte_count, im);

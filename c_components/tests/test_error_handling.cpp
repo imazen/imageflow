@@ -184,7 +184,7 @@ TEST_CASE("Argument checking for convert_sgrp_to_linear", "[error_handling]")
     flow_bitmap_float_convert_srgb_to_linear(&context, &colorcontext, src, 3, dest, 0, 0);
     flow_bitmap_bgra_destroy(&context, src);
     CAPTURE(*dest);
-    REQUIRE(dest->float_count == 4); // 1x1x4 channels
+    REQUIRE(dest->float_count == 16); // 1x1x4 channels
     flow_bitmap_float_destroy(&context, dest);
     REQUIRE(flow_context_begin_terminate(&context) == true);
     flow_context_end_terminate(&context);
