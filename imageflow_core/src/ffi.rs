@@ -756,6 +756,9 @@ mod mid_term {
         pub fn flow_bitmap_bgra_populate_histogram(c: *mut ImageflowContext, input: *mut BitmapBgra, histograms: *mut u64, histogram_size_per_channel: u32, histogram_count: u32, pixels_sampled: *mut u64) -> bool;
         pub fn flow_bitmap_bgra_apply_color_matrix(c: *mut ImageflowContext, input: *mut BitmapBgra, row: u32, count: u32, matrix: *const *const f32) -> bool;
 
+        pub fn flow_bitmap_bgra_transpose(c: *mut ImageflowContext, input: *mut BitmapBgra, output: *mut BitmapBgra) -> bool;
+
+
 }
 }
 

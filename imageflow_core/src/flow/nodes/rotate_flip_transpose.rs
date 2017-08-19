@@ -64,20 +64,60 @@ fn transpose_def() -> NodeDefinition {
         fn_estimate: Some(NodeDefHelpers::rotate_frame_info),
         fn_flatten_pre_optimize: Some({
             fn f(ctx: &mut OpCtxMut, ix: NodeIndex<u32>) {
-                if let FrameEstimate::Some(FrameInfo { h, .. }) = ctx.weight(ix).frame_est {
-                    // TODO: Shouldn't the filter be triangle, or (better) not be a filter at all?
-                    let scale_params = s::Node::Resample1D {
-                        scale_to_width: h as usize,
-                        interpolation_filter: Some(s::Filter::Robidoux),
-                        transpose_on_write: true,
-                        scaling_colorspace: None
-                    };
-                    ctx.replace_node(ix,
-                                     vec![
-                        Node::new(&SCALE_1D, NodeParams::Json(scale_params)),
-                    ]);
-                } else {
-                    panic!("");
+                match ctx.first_parent_input_weight(ix).unwrap().frame_est {
+                    FrameEstimate::Some(FrameInfo { w, h, fmt, alpha_meaningful }) => {
+                            let canvas_params = s::Node::CreateCanvas {
+                                w: h as usize,
+                                h: w as usize,
+                                format: s::PixelFormat::from(fmt),
+                                color: s::Color::Transparent,
+                            };
+                            let canvas = ctx.graph
+                                .add_node(Node::new(&CREATE_CANVAS,
+                                                    NodeParams::Json(canvas_params)));
+                            let copy = ctx.graph
+                                .add_node(Node::new(&TRANSPOSE_MUT, NodeParams::None));
+                            ctx.graph.add_edge(canvas, copy, EdgeKind::Canvas).unwrap();
+                            ctx.replace_node_with_existing(ix, copy);
+
+                    }
+                    _ => panic!(""),
+                }
+            }
+            f
+        }),
+
+        ..Default::default()
+    }
+}
+
+fn transpose_mut_def() -> NodeDefinition {
+    NodeDefinition {
+        fqn: "imazen.transpose_to_canvas",
+        name: "transpose_to_canvas",
+        inbound_edges: EdgesIn::OneInputOneCanvas,
+        description: "Transpose To",
+        fn_estimate: Some(NodeDefHelpers::copy_frame_est_from_first_canvas),
+        fn_execute: Some({
+            fn f(ctx: &mut OpCtxMut, ix: NodeIndex<u32>) {
+                let input: *mut ::ffi::BitmapBgra =
+                    ctx.first_parent_result_frame(ix, EdgeKind::Input).unwrap();
+                let canvas: *mut ::ffi::BitmapBgra =
+                    ctx.first_parent_result_frame(ix, EdgeKind::Canvas).unwrap();
+
+                unsafe {
+                    if (*input).fmt != (*canvas).fmt {
+                        panic!("Can't copy between bitmaps with different pixel formats")
+                    }
+                    if input == canvas {
+                        panic!("Canvas and input must be different bitmaps for transpose to work!")
+                    }
+
+                    if !::ffi::flow_bitmap_bgra_transpose(ctx.flow_c(), input, canvas) {
+                        panic!("Failed to transpose bitmap")
+                    }
+
+                    ctx.weight_mut(ix).result = NodeResult::Frame(canvas);
                 }
             }
             f
@@ -85,7 +125,6 @@ fn transpose_def() -> NodeDefinition {
         ..Default::default()
     }
 }
-
 fn no_op_def() -> NodeDefinition {
     NodeDefinition {
         fqn: "imazen.noop",
@@ -261,4 +300,6 @@ lazy_static! {
     pub static ref APPLY_ORIENTATION: NodeDefinition = apply_orientation_def();
 
     pub static ref TRANSPOSE: NodeDefinition = transpose_def();
+
+    pub static ref TRANSPOSE_MUT: NodeDefinition = transpose_mut_def();
 }
