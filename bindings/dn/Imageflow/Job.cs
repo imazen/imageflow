@@ -1,8 +1,10 @@
 ﻿using System;
+using System.IO;
 using System.Runtime.InteropServices;
 using System.Text;
 using imageflow;
 using Imageflow.Native;
+using Newtonsoft.Json;
 
 namespace Imageflow
 {
@@ -25,9 +27,9 @@ namespace Imageflow
             _parent = c;
             
             c.AssertReady();
-            var jobPtr = NativeMethods.imageflow_job_create(c.Pointer);
+            this._ptr = NativeMethods.imageflow_job_create(c.Pointer);
             c.AssertReady();
-            if (jobPtr == IntPtr.Zero) throw new ImageflowAssertionFailed("job pointer must be non-zero");
+            if (this._ptr == IntPtr.Zero) throw new ImageflowAssertionFailed("job pointer must be non-zero");
         }
 
 
@@ -48,7 +50,12 @@ namespace Imageflow
         }
 
 
-        public JsonResponse SendMessage(string method, byte[] utf8Json)
+
+        public JsonResponse SendMessage<T>(string method, T message){
+           return SendJsonBytes(method, Context.SerializeToJson(message));
+        }
+
+        public JsonResponse SendJsonBytes(string method, byte[] utf8Json)
         {
             
             var pinned = GCHandle.Alloc(utf8Json, GCHandleType.Pinned);

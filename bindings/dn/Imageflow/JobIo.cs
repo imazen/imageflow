@@ -68,8 +68,8 @@ namespace Imageflow
             IntPtr buffer;
             UIntPtr bufferSize;
             _parent.AssertReady();
-            if (!NativeMethods.imageflow_io_get_output_buffer(_parent.Pointer, Pointer, ref buffer,
-                ref bufferSize))
+            if (!NativeMethods.imageflow_io_get_output_buffer(_parent.Pointer, Pointer, out buffer,
+                out bufferSize))
             {
                 _parent.AssertReady();
                 throw new ImageflowAssertionFailed("AssertReady should raise an exception if method fails");

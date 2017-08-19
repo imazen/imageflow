@@ -1,12 +1,14 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.ComponentModel;
+using System.IO;
 using System.Reflection;
 using System.Runtime.ConstrainedExecution;
 using System.Runtime.InteropServices;
 using System.Text;
 using imageflow;
 using Imageflow.Native;
+using Newtonsoft.Json;
 
 namespace Imageflow
 {
@@ -31,8 +33,20 @@ namespace Imageflow
 
         public bool HasError => NativeMethods.imageflow_context_has_error(Pointer);
         
+        public static byte[] SerializeToJson<T>(T obj){
+            using (var stream = new MemoryStream())
+            using (var writer = new StreamWriter(stream, new UTF8Encoding(false))){
+                JsonSerializer.Create().Serialize(writer, obj);
+                writer.Flush(); //Required or no bytes appear
+                return stream.ToArray();
+            }
+        }
         
-        public JsonResponse SendMessage(string method, byte[] utf8Json)
+        public JsonResponse SendMessage<T>(string method, T message){
+            return SendJsonBytes(method, Context.SerializeToJson(message));
+        }
+
+        public JsonResponse SendJsonBytes(string method, byte[] utf8Json)
         {
             
             var pinned = GCHandle.Alloc(utf8Json, GCHandleType.Pinned);
@@ -73,7 +87,7 @@ namespace Imageflow
                 // Free managed objects
             }
 
-            ImageflowException e = null;
+            Exception e = null;
             if (!NativeMethods.imageflow_context_begin_terminate(_ptr))
             {
                 e = ImageflowException.FromContext(this);

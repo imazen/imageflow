@@ -114,7 +114,7 @@ namespace Imageflow.Native
         [DllImport("imageflow")] 
         [return: MarshalAs(UnmanagedType.I1)]
         public static extern bool imageflow_json_response_read(IntPtr context, IntPtr response_in,
-            ref int status_code_out, ref IntPtr buffer_utf8_no_nulls_out, ref UIntPtr buffer_size_out);
+            out int status_code_out, out IntPtr buffer_utf8_no_nulls_out, out UIntPtr buffer_size_out);
 
 
      
@@ -148,7 +148,7 @@ namespace Imageflow.Native
         [DllImport("imageflow")] 
         [return: MarshalAs(UnmanagedType.I1)]
         public static extern bool imageflow_io_get_output_buffer(IntPtr context, IntPtr io,
-            ref IntPtr result_buffer, ref UIntPtr result_buffer_length);
+            out IntPtr result_buffer, out UIntPtr result_buffer_length);
 
 
         
@@ -159,7 +159,7 @@ namespace Imageflow.Native
         [DllImport("imageflow")] 
         [return: MarshalAs(UnmanagedType.I1)]
         public static extern bool imageflow_job_get_output_buffer_by_id(IntPtr context, IntPtr job,
-            int io_id, ref IntPtr result_buffer, ref UIntPtr result_buffer_length);
+            int io_id, out IntPtr result_buffer, out UIntPtr result_buffer_length);
 
 
         /// Return Type: void*

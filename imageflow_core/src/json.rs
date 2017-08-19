@@ -95,9 +95,10 @@ pub struct JsonResponse {
 impl JsonResponse {
     pub fn from_parse_error(err: serde_json::error::Error, json: &[u8]) -> JsonResponse {
 
-        let message = format!("Parse error: {}\n Received {}",
+        let message = format!("Parse error: {}\n Received: \n{}\n{:?}",
                               err,
-                              std::str::from_utf8(json).unwrap_or("[INVALID UTF-8]"));
+                              std::str::from_utf8(json).unwrap_or("[INVALID UTF-8]"),
+                                json);
 
         let r = s::Response001 {
             success: false,
