@@ -104,7 +104,7 @@ namespace Imageflow
             //Unpin all managed data held for context lifetime
             if (pinned != null)
             {
-                foreach (GCHandle active in pinned)
+                foreach (var active in pinned)
                     active.Free();
             }
             

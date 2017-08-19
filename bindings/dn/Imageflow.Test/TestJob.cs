@@ -111,5 +111,50 @@ namespace Imageflow.Test
             }
         }
         
+        
+        [Fact]
+        public void TestIr4()
+        {
+            using (var c = new Context())
+            {
+                var j = new Job(c);
+                var inBuf = JobIo.PinManagedBytes(c,
+                    Convert.FromBase64String(
+                        "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAACklEQVR4nGMAAQAABQABDQottAAAAABJRU5ErkJggg=="));
+                j.AddIo(inBuf, 0, Native.Direction.In);
+
+                var outBuf = JobIo.OutputBuffer(c);
+                j.AddIo(outBuf, 1, Native.Direction.Out);
+
+                var message = new
+                {
+                    framewise = new
+                    {
+                        steps = new object[]
+                        {
+                            new
+                            {
+                                command_string = new
+                                {
+                                    kind = "ir4",
+                                    value = "w=200&h=200&scale=both&format=jpg",
+                                    decode = 0,
+                                    encode = 1
+                                }
+                            }
+                        }
+                    }
+                };
+                
+                var response = j.SendMessage("v0.1/execute", message);
+
+                var data = response.DeserializeDynamic();
+
+                output.WriteLine(response.GetString());
+
+                Assert.Equal(200, (int)data.code);
+                Assert.Equal(true, (bool)data.success);
+            }
+        }
     }
 }
