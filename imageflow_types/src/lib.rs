@@ -346,7 +346,7 @@ pub enum Node {
         h: usize,
         color: Color,
     },
-    #[serde(rename="commandString")]
+    #[serde(rename="command_string")]
     CommandString{
         kind: CommandStringKind,
         value: String,
