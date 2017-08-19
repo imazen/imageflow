@@ -111,15 +111,17 @@ if (CMAKE_COMPILER_IS_GNUCC)
 endif()
 
 set(MSVC_OPTIMIZE "")
-
+set(ENABLE_INSTRUCTIONS "")
 if ("${TARGET_CPU}" STREQUAL "sandybridge")
 	SET(TARGET_CPU "${ARCH_SANDYBRIDGE}")
 	set(MSVC_OPTIMIZE " /arch:AVX")
+	set(ENABLE_INSTRUCTIONS "-mavx")
 endif()
 
 if ("${TARGET_CPU}" STREQUAL "haswell")
 	SET(TARGET_CPU "${ARCH_HASWELL}")
 	set(MSVC_OPTIMIZE " /arch:AVX2")
+	set(ENABLE_INSTRUCTIONS "-mavx2")
 endif()
 
 if (MSVC)
@@ -135,14 +137,15 @@ else()
 	if ("${TARGET_CPU}" STREQUAL "")
 		SET(NON_MSVC_OPTIMIZE "")
 	endif()
-	set(IMAGEFLOW_C_OPTIMIZE "-O3 ${NON_MSVC_OPTIMIZE} -funroll-loops -ffast-math -mfpmath=sse  -msse2")
+	set(IMAGEFLOW_C_OPTIMIZE "-O3 ${NON_MSVC_OPTIMIZE} -funroll-loops -ffast-math -mfpmath=sse  -msse2 ${ENABLE_INSTRUCTIONS}")
 endif()
 
 
 if (NOT MSVC)
+	#message(FATAL_ERROR "Using optimzation flags ${IMAGEFLOW_C_OPTIMIZE}")
 	#mpfmath=sse is required for accuracy
-	set(SHARED_FLAGS "-iquotelib -fPIC -mfpmath=sse")
-	set(SHARED_WARNINGS, "-Wpointer-arith -Wcast-qual -Wpedantic -Wall -Wextra -Wno-unused-parameter -Wuninitialized -Wredundant-decls -Wno-error=unused-function -Wno-parentheses -Werror")
+	set(SHARED_FLAGS "-pipe -iquotelib -fPIC -mfpmath=sse")
+	set(SHARED_WARNINGS "-Wpointer-arith -Wcast-qual -Wpedantic -Wall -Wextra -Wno-unused-parameter -Wuninitialized -Wredundant-decls -Wno-error=unused-function -Wno-parentheses -Werror")
 	set(CMAKE_C_FLAGS  "${CMAKE_C_FLAGS} ${IMAGEFLOW_C_OPTIMIZE} ${SHARED_FLAGS} ${SHARED_WARNINGS} -std=gnu11 -Wstrict-prototypes -Wmissing-prototypes -Wc++-compat -Wshadow" )
 	set(CMAKE_CXX_FLAGS  "${CMAKE_CXX_FLAGS} ${IMAGEFLOW_C_OPTIMIZE} ${SHARED_FLAGS} ${SHARED_WARNINGS} -std=gnu++11" )
 else()
@@ -179,6 +182,9 @@ if (ENABLE_PROFILING)
 	target_compile_options(profile_imageflow PRIVATE "-flto")
 endif()
 
+
+#message(FATAL_ERROR "Using CXX_FLAGS ${CMAKE_CXX_FLAGS}")
+#message(FATAL_ERROR "Using C_FLAGS ${CMAKE_C_FLAGS}")
 
 if(ENABLE_TEST)
     include(CTest)
