@@ -154,7 +154,7 @@ TEST_CASE("Benchmark block downscaling", "")
     }
 }
 
-int64_t transpose(int w, int h, flow_pixel_format fmt){
+int64_t transpose(int w, int h, flow_pixel_format fmt, int runs){
 
     flow_c * c = flow_context_create();
 
@@ -164,32 +164,40 @@ int64_t transpose(int w, int h, flow_pixel_format fmt){
 
     flow_bitmap_bgra * b = flow_bitmap_bgra_create(c, h, w, true, fmt);
     int64_t start = flow_get_high_precision_ticks();
-    bool result = flow_bitmap_bgra_transpose(c, a, b);
+    bool result;
+    for (int i = 0; i < runs; i++) {
+        result = flow_bitmap_bgra_transpose(c, a, b);
+    }
     int64_t end = flow_get_high_precision_ticks();
 
     REQUIRE(result == true);
 
-    flow_bitmap_bgra * reference = flow_bitmap_bgra_create(c, h, w, true, fmt);
-    REQUIRE(flow_bitmap_bgra_transpose_slow(c, a, reference));
+    //Comparison only makes sense for fast-path
+    if (fmt == flow_bgra32) {
+        flow_bitmap_bgra * reference = flow_bitmap_bgra_create(c, h, w, true, fmt);
+        REQUIRE(flow_bitmap_bgra_transpose_slow(c, a, reference));
 
-    REQUIRE(flow_bitmap_bgra_compare(c, b, reference,  &result));
+        REQUIRE(flow_bitmap_bgra_compare(c, b, reference, &result));
 
-    REQUIRE(result == true);
+        REQUIRE(result == true);
+
+        flow_bitmap_bgra_destroy(c, reference);
+    }
 
     flow_bitmap_bgra_destroy(c, a);
     flow_bitmap_bgra_destroy(c, b);
 
-    flow_bitmap_bgra_destroy(c, reference);
     return end - start;
 
 }
 TEST_CASE("Benchmark transpose", "")
 {
-    for (int fmt = 3; fmt < 5; fmt++) //TODO test with 3
+    for (int fmt = 4; fmt >= 4; fmt--)
         for (int w = 1; w < 5000; w += 631)
             for (int h = 1; h < 5000; h += 631) {
-                int ticks = transpose(w, h, (flow_pixel_format)fmt);
-                double ms = ticks * 1000.0 / (float)flow_get_profiler_ticks_per_second();
+                int runs = 50;
+                int ticks = transpose(w, h, (flow_pixel_format)fmt,runs);
+                double ms = ticks / runs * 1000.0 / (float)flow_get_profiler_ticks_per_second();
                 fprintf(stdout, "Transposing %dx%d to %dx%d (fmt %d) took %.05fms\n", w, h, h, w, fmt, ms);
             }
 }

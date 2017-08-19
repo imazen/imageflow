@@ -10,8 +10,8 @@
 #endif
 
 #include "imageflow_private.h"
-#include <xmmintrin.h>
 #include <string.h>
+#include <immintrin.h>
 
 #ifndef _MSC_VER
 #include <alloca.h>
@@ -502,7 +502,7 @@ static void flow_bitmap_bgra32_sharpen_block_edges_x(struct flow_bitmap_bgra * i
     }
 }
 
-FLOW_HINT_HOT
+FLOW_HINT_HOT FLOW_HINT_UNSAFE_MATH_OPTIMIZATIONS
 static inline void transpose4x4_SSE(float *A, float *B, const int lda, const int ldb) {
     __m128 row1 = _mm_loadu_ps(&A[0*lda]);
     __m128 row2 = _mm_loadu_ps(&A[1*lda]);
@@ -517,7 +517,7 @@ static inline void transpose4x4_SSE(float *A, float *B, const int lda, const int
 
 FLOW_HINT_HOT
 static inline void transpose_block_SSE4x4(float *A, float *B, const int n, const int m, const int lda, const int ldb ,const int block_size) {
-//#pragma omp parallel for
+//#pragma omp parallel for collapse(2)
     for(int i=0; i<n; i+=block_size) {
         for(int j=0; j<m; j+=block_size) {
             int max_i2 = i+block_size < n ? i + block_size : n;
@@ -530,6 +530,83 @@ static inline void transpose_block_SSE4x4(float *A, float *B, const int n, const
         }
     }
 }
+
+//
+//FLOW_HINT_HOT FLOW_HINT_UNSAFE_MATH_OPTIMIZATIONS
+//static inline void transpose8x8_AVX(float* mat,  float* matT, const int stride, const int matT_stride) {
+//    __m256  r0, r1, r2, r3, r4, r5, r6, r7;
+//    __m256  t0, t1, t2, t3, t4, t5, t6, t7;
+//
+//    r0 = _mm256_insertf128_ps(_mm256_castps128_ps256(_mm_loadu_ps(&mat[0*stride+0])), _mm_loadu_ps(&mat[4*stride+0]), 1);
+//    r1 = _mm256_insertf128_ps(_mm256_castps128_ps256(_mm_loadu_ps(&mat[1*stride+0])), _mm_loadu_ps(&mat[5*stride+0]), 1);
+//    r2 = _mm256_insertf128_ps(_mm256_castps128_ps256(_mm_loadu_ps(&mat[2*stride+0])), _mm_loadu_ps(&mat[6*stride+0]), 1);
+//    r3 = _mm256_insertf128_ps(_mm256_castps128_ps256(_mm_loadu_ps(&mat[3*stride+0])), _mm_loadu_ps(&mat[7*stride+0]), 1);
+//    r4 = _mm256_insertf128_ps(_mm256_castps128_ps256(_mm_loadu_ps(&mat[0*stride+4])), _mm_loadu_ps(&mat[4*stride+4]), 1);
+//    r5 = _mm256_insertf128_ps(_mm256_castps128_ps256(_mm_loadu_ps(&mat[1*stride+4])), _mm_loadu_ps(&mat[5*stride+4]), 1);
+//    r6 = _mm256_insertf128_ps(_mm256_castps128_ps256(_mm_loadu_ps(&mat[2*stride+4])), _mm_loadu_ps(&mat[6*stride+4]), 1);
+//    r7 = _mm256_insertf128_ps(_mm256_castps128_ps256(_mm_loadu_ps(&mat[3*stride+4])), _mm_loadu_ps(&mat[7*stride+4]), 1);
+//
+//    t0 = _mm256_unpacklo_ps(r0,r1);
+//    t1 = _mm256_unpackhi_ps(r0,r1);
+//    t2 = _mm256_unpacklo_ps(r2,r3);
+//    t3 = _mm256_unpackhi_ps(r2,r3);
+//    t4 = _mm256_unpacklo_ps(r4,r5);
+//    t5 = _mm256_unpackhi_ps(r4,r5);
+//    t6 = _mm256_unpacklo_ps(r6,r7);
+//    t7 = _mm256_unpackhi_ps(r6,r7);
+//
+//    //__m256 v;
+//
+//    r0 = _mm256_shuffle_ps(t0,t2, 0x44);
+//    r1 = _mm256_shuffle_ps(t0,t2, 0xEE);
+////    v = _mm256_shuffle_ps(t0,t2, 0x4E);
+////    r0 = _mm256_blend_ps(t0, v, 0xCC);
+////    r1 = _mm256_blend_ps(t2, v, 0x33);
+//
+//    r2 = _mm256_shuffle_ps(t1,t3, 0x44);
+//    r3 = _mm256_shuffle_ps(t1,t3, 0xEE);
+////    v = _mm256_shuffle_ps(t1,t3, 0x4E);
+////    r2 = _mm256_blend_ps(t1, v, 0xCC);
+////    r3 = _mm256_blend_ps(t3, v, 0x33);
+//
+//    r4 = _mm256_shuffle_ps(t4,t6, 0x44);
+//    r5 = _mm256_shuffle_ps(t4,t6, 0xEE);
+////    v = _mm256_shuffle_ps(t4,t6, 0x4E);
+////    r4 = _mm256_blend_ps(t4, v, 0xCC);
+////    r5 = _mm256_blend_ps(t6, v, 0x33);
+//
+//    r6 = _mm256_shuffle_ps(t5,t7, 0x44);
+//    r7 = _mm256_shuffle_ps(t5,t7, 0xEE);
+////    v = _mm256_shuffle_ps(t5,t7, 0x4E);
+////    r6 = _mm256_blend_ps(t5, v, 0xCC);
+////    r7 = _mm256_blend_ps(t7, v, 0x33);
+//
+//    _mm256_storeu_ps(&matT[0*matT_stride], r0);
+//    _mm256_storeu_ps(&matT[1*matT_stride], r1);
+//    _mm256_storeu_ps(&matT[2*matT_stride], r2);
+//    _mm256_storeu_ps(&matT[3*matT_stride], r3);
+//    _mm256_storeu_ps(&matT[4*matT_stride], r4);
+//    _mm256_storeu_ps(&matT[5*matT_stride], r5);
+//    _mm256_storeu_ps(&matT[6*matT_stride], r6);
+//    _mm256_storeu_ps(&matT[7*matT_stride], r7);
+//}
+//
+//
+//FLOW_HINT_HOT
+//static inline void transpose_block_AVX8x8(float *A, float *B, const int n, const int m, const int lda, const int ldb ,const int block_size) {
+////#pragma omp parallel for
+//    for(int i=0; i<n; i+=block_size) {
+//        for(int j=0; j<m; j+=block_size) {
+//            int max_i2 = i+block_size < n ? i + block_size : n;
+//            int max_j2 = j+block_size < m ? j + block_size : m;
+//            for(int i2=i; i2<max_i2; i2+=8) {
+//                for(int j2=j; j2<max_j2; j2+=8) {
+//                    transpose8x8_AVX(&A[i2*lda +j2], &B[j2*ldb + i2], lda, ldb);
+//                }
+//            }
+//        }
+//    }
+//}
 
 FLOW_HINT_HOT FLOW_HINT_UNSAFE_MATH_OPTIMIZATIONS
 
@@ -549,18 +626,19 @@ flow_bitmap_bgra_transpose(flow_c * c, struct flow_bitmap_bgra * from, struct fl
         return true;
     }
 
-    const int required_alignment = 4;
+    //We require 8 when we only need 4 - in case we ever want to enable avx (like if we make it faster)
+    const int min_block_size = 8;
 
-    //Strides must be multiples of 4 bytes
-    if (from->stride % required_alignment != 0 || to->stride % required_alignment != 0) {
+    //Strides must be multiple of required alignments
+    if (from->stride % min_block_size != 0 || to->stride % min_block_size != 0) {
         FLOW_error(c, flow_status_Invalid_argument);
         return false;
     }
-
+    //256 (1024x1024 bytes) at 18.18ms, 128 at 18.6ms,  64 at 20.4ms, 16 at 25.71ms
     int block_size = 128;
 
-    int cropped_h = from->h - from->h % 4;
-    int cropped_w = from->w - from->w % 4;
+    int cropped_h = from->h - from->h % min_block_size;
+    int cropped_w = from->w - from->w % min_block_size;
 
     transpose_block_SSE4x4((float *)from->pixels, (float *)to->pixels,cropped_h,cropped_w, from->stride / 4, to->stride / 4, block_size);
 
@@ -572,7 +650,7 @@ flow_bitmap_bgra_transpose(flow_c * c, struct flow_bitmap_bgra * from, struct fl
         }
     }
 
-    for (uint32_t x = 0; x < to->w; x++) {
+    for (uint32_t x = 0; x < (uint32_t)cropped_h; x++) {
         for (uint32_t y = cropped_w; y < to->h; y++) {
             *((uint32_t *)&to->pixels[x * 4 + y * to->stride])
                 = *((uint32_t *)&from->pixels[x * from->stride + y * 4]);
