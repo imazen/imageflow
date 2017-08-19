@@ -17,7 +17,6 @@ struct flow_interpolation_line_contributions;
 struct flow_profiling_log;
 struct flow_profiling_entry;
 struct flow_convolution_kernel;
-struct flow_Renderer;
 struct flow_encoder_hints;
 struct flow_colorcontext_info;
 
@@ -285,49 +284,6 @@ struct flow_convolution_kernel {
 PUB bool flow_bitmap_bgra_transpose(flow_c * c, struct flow_bitmap_bgra * from, struct flow_bitmap_bgra * to);
 PUB bool flow_bitmap_bgra_sharpen_block_edges(flow_c * c, struct flow_bitmap_bgra * im, int block_size, float pct);
 
-struct flow_RenderDetails {
-    // Interpolation and scaling details
-    struct flow_interpolation_details * interpolation;
-    // How large the interoplation window needs to be before we even attempt to apply a sharpening
-    // percentage to the given filter
-    float minimum_sample_window_to_interposharpen;
-
-    // If possible to do correctly, halve the image until it is [interpolate_last_percent] times larger than needed. 3
-    // or greater reccomended. Specify -1 to disable halving.
-    float interpolate_last_percent;
-
-    // The number of pixels (in target canvas coordinates) that it is acceptable to discard for better halving
-    // performance
-    float havling_acceptable_pixel_loss;
-
-    // The actual halving factor to use.
-    uint32_t halving_divisor;
-
-    // The first convolution to apply
-    struct flow_convolution_kernel * kernel_a;
-    // A second convolution to apply
-    struct flow_convolution_kernel * kernel_b;
-
-    // If greater than 0, a percentage to sharpen the result along each axis;
-    float sharpen_percent_goal;
-
-    // If true, we should apply the color matrix
-    bool apply_color_matrix;
-
-    float color_matrix_data[25];
-    float * color_matrix[5];
-
-    // Transpose, flipx, flipy - combined, these give you all 90 interval rotations
-    bool post_transpose;
-    bool post_flip_x;
-    bool post_flip_y;
-
-    // Enables profiling
-    bool enable_profiling;
-
-    struct flow_colorcontext_info * colorcontext;
-};
-
 PUB struct flow_bitmap_bgra * flow_bitmap_bgra_create(flow_c * c, int sx, int sy, bool zeroed,
                                                       flow_pixel_format format);
 PUB struct flow_bitmap_bgra * flow_bitmap_bgra_create_header(flow_c * c, int sx, int sy);
@@ -335,15 +291,6 @@ PUB void flow_bitmap_bgra_destroy(flow_c * c, struct flow_bitmap_bgra * im);
 PUB bool flow_bitmap_bgra_flip_horizontal(flow_c * c, struct flow_bitmap_bgra * b);
 PUB bool flow_bitmap_bgra_compare(flow_c * c, struct flow_bitmap_bgra * a, struct flow_bitmap_bgra * b,
                                   bool * equal_out);
-
-PUB struct flow_RenderDetails * flow_RenderDetails_create(flow_c * c);
-PUB struct flow_RenderDetails * flow_RenderDetails_create_with(flow_c * c, flow_interpolation_filter filter);
-
-PUB bool flow_RenderDetails_render(flow_c * c, struct flow_RenderDetails * details, struct flow_bitmap_bgra * source,
-                                   struct flow_bitmap_bgra * canvas);
-PUB bool flow_RenderDetails_render_in_place(flow_c * c, struct flow_RenderDetails * details,
-                                            struct flow_bitmap_bgra * edit_in_place);
-PUB void flow_RenderDetails_destroy(flow_c * c, struct flow_RenderDetails * d);
 
 PUB bool flow_interpolation_filter_exists(flow_interpolation_filter filter);
 PUB struct flow_interpolation_details * flow_interpolation_details_create(flow_c * c);
