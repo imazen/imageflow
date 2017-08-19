@@ -501,24 +501,123 @@ static void flow_bitmap_bgra32_sharpen_block_edges_x(struct flow_bitmap_bgra * i
         }
     }
 }
+
+FLOW_HINT_HOT
+static inline void transpose4x4_SSE(float *A, float *B, const int lda, const int ldb) {
+    __m128 row1 = _mm_loadu_ps(&A[0*lda]);
+    __m128 row2 = _mm_loadu_ps(&A[1*lda]);
+    __m128 row3 = _mm_loadu_ps(&A[2*lda]);
+    __m128 row4 = _mm_loadu_ps(&A[3*lda]);
+    _MM_TRANSPOSE4_PS(row1, row2, row3, row4);
+    _mm_storeu_ps(&B[0*ldb], row1);
+    _mm_storeu_ps(&B[1*ldb], row2);
+    _mm_storeu_ps(&B[2*ldb], row3);
+    _mm_storeu_ps(&B[3*ldb], row4);
+}
+
+FLOW_HINT_HOT
+static inline void transpose_block_SSE4x4(float *A, float *B, const int n, const int m, const int lda, const int ldb ,const int block_size) {
+//#pragma omp parallel for
+    for(int i=0; i<n; i+=block_size) {
+        for(int j=0; j<m; j+=block_size) {
+            int max_i2 = i+block_size < n ? i + block_size : n;
+            int max_j2 = j+block_size < m ? j + block_size : m;
+            for(int i2=i; i2<max_i2; i2+=4) {
+                for(int j2=j; j2<max_j2; j2+=4) {
+                    transpose4x4_SSE(&A[i2*lda +j2], &B[j2*ldb + i2], lda, ldb);
+                }
+            }
+        }
+    }
+}
+
 FLOW_HINT_HOT FLOW_HINT_UNSAFE_MATH_OPTIMIZATIONS
 
-    bool
-    flow_bitmap_bgra_transpose(flow_c * c, struct flow_bitmap_bgra * from, struct flow_bitmap_bgra * to)
+bool
+flow_bitmap_bgra_transpose(flow_c * c, struct flow_bitmap_bgra * from, struct flow_bitmap_bgra * to)
 {
-    if (from->w != to->h || from->h != to->w || from->fmt != to->fmt || from->fmt != flow_bgra32) {
+    if (from->w != to->h || from->h != to->w || from->fmt != to->fmt) {
         FLOW_error(c, flow_status_Invalid_argument);
         return false;
     }
-    int step = flow_pixel_format_bytes_per_pixel(to->fmt);
-    for (uint32_t x = 0; x < to->w; x++) {
+
+    if (from->fmt != flow_bgra32){
+        if (!flow_bitmap_bgra_transpose_slow(c, from, to)) {
+            FLOW_add_to_callstack(c);
+            return false;
+        }
+        return true;
+    }
+
+    const int required_alignment = 4;
+
+    //Strides must be multiples of 4 bytes
+    if (from->stride % required_alignment != 0 || to->stride % required_alignment != 0) {
+        FLOW_error(c, flow_status_Invalid_argument);
+        return false;
+    }
+
+    int block_size = 128;
+
+    int cropped_h = from->h - from->h % 4;
+    int cropped_w = from->w - from->w % 4;
+
+    transpose_block_SSE4x4((float *)from->pixels, (float *)to->pixels,cropped_h,cropped_w, from->stride / 4, to->stride / 4, block_size);
+
+    // Copy missing bits
+    for (uint32_t x = cropped_h; x < to->w; x++) {
         for (uint32_t y = 0; y < to->h; y++) {
-            *((uint32_t *)&to->pixels[x * step + y * to->stride])
-                = *((uint32_t *)&from->pixels[x * from->stride + y * step]);
+            *((uint32_t *)&to->pixels[x * 4 + y * to->stride])
+                = *((uint32_t *)&from->pixels[x * from->stride + y * 4]);
         }
     }
+
+    for (uint32_t x = 0; x < to->w; x++) {
+        for (uint32_t y = cropped_w; y < to->h; y++) {
+            *((uint32_t *)&to->pixels[x * 4 + y * to->stride])
+                = *((uint32_t *)&from->pixels[x * from->stride + y * 4]);
+        }
+    }
+
     return true;
 }
+
+
+
+bool
+flow_bitmap_bgra_transpose_slow(flow_c * c, struct flow_bitmap_bgra * from, struct flow_bitmap_bgra * to)
+{
+    if (from->w != to->h || from->h != to->w || from->fmt != to->fmt) {
+        FLOW_error(c, flow_status_Invalid_argument);
+        return false;
+    }
+
+    if (from->fmt == flow_bgra32) {
+        for (uint32_t x = 0; x < to->w; x++) {
+            for (uint32_t y = 0; y < to->h; y++) {
+                *((uint32_t *)&to->pixels[x * 4 + y * to->stride])
+                    = *((uint32_t *)&from->pixels[x * from->stride + y * 4]);
+            }
+        }
+        return true;
+    }else if (from->fmt == flow_bgr24){
+        int from_stride = from->stride;
+        int to_stride = to->stride;
+        for (uint32_t x = 0, x_stride=0, x_3=0; x < to->w; x++, x_stride += from_stride, x_3 +=3) {
+            for (uint32_t y = 0, y_stride=0, y_3=0; y < to->h; y++, y_stride += to_stride, y_3 +=3) {
+
+                to->pixels[x_3 + y_stride] = from->pixels[x_stride + y_3];
+                to->pixels[x_3 + y_stride + 1] = from->pixels[x_stride + y_3 + 1];
+                to->pixels[x_3 + y_stride + 2] = from->pixels[x_stride + y_3 + 2];
+            }
+        }
+        return true;
+    } else {
+        FLOW_error(c, flow_status_Invalid_argument);
+        return false;
+    }
+}
+
 FLOW_HINT_HOT FLOW_HINT_UNSAFE_MATH_OPTIMIZATIONS
 
     bool
