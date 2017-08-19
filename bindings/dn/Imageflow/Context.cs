@@ -14,8 +14,8 @@ namespace Imageflow
 {
     public class Context: CriticalFinalizerObject, IDisposable
     {
-        private IntPtr _ptr; 
-        
+        private IntPtr _ptr;
+        private List<GCHandle> pinned;
         internal IntPtr Pointer
         {
             get
@@ -29,6 +29,12 @@ namespace Imageflow
         {
             _ptr = NativeMethods.imageflow_context_create();
             if (_ptr == IntPtr.Zero) throw new OutOfMemoryException("Failed to create Imageflow Context");
+        }
+
+        internal void AddPinnedData(GCHandle handle)
+        {
+            if (pinned == null) pinned = new List<GCHandle>();
+            pinned.Add(handle);
         }
 
         public bool HasError => NativeMethods.imageflow_context_has_error(Pointer);
@@ -49,19 +55,19 @@ namespace Imageflow
         public JsonResponse SendJsonBytes(string method, byte[] utf8Json)
         {
             
-            var pinned = GCHandle.Alloc(utf8Json, GCHandleType.Pinned);
+            var pinnedJson = GCHandle.Alloc(utf8Json, GCHandleType.Pinned);
             var methodPinned = GCHandle.Alloc(Encoding.ASCII.GetBytes(method + char.MinValue), GCHandleType.Pinned);
             try
             {
                 AssertReady();
-                var ptr = NativeMethods.imageflow_context_send_json(Pointer, methodPinned.AddrOfPinnedObject(), pinned.AddrOfPinnedObject(),
+                var ptr = NativeMethods.imageflow_context_send_json(Pointer, methodPinned.AddrOfPinnedObject(), pinnedJson.AddrOfPinnedObject(),
                     new UIntPtr((ulong) utf8Json.LongLength));
                 AssertReady();
                 return new JsonResponse(this, ptr);
             }
             finally
             {
-                pinned.Free();
+                pinnedJson.Free();
                 methodPinned.Free();
             }
         }
@@ -94,6 +100,14 @@ namespace Imageflow
             }
             NativeMethods.imageflow_context_destroy(_ptr);
             _ptr = IntPtr.Zero;
+            
+            //Unpin all managed data held for context lifetime
+            if (pinned != null)
+            {
+                foreach (GCHandle active in pinned)
+                    active.Free();
+            }
+            
             if (e != null) throw e;
 
         }
