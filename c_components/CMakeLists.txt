@@ -199,12 +199,12 @@ if(ENABLE_TEST)
 	create_test(test_imageflow tests/test_operations.cpp tests/test_context.cpp tests/test_io.cpp tests/test_error_handling.cpp)
 
 	create_test(test_variations tests/test_variations.cpp)
-	create_test(test_fastscaling tests/test_simple_fastscaling.cpp  tests/test_integration.cpp tests/test.cpp tests/test_weighting.cpp tests/test_weighting_helpers.cpp  )
+	create_test(test_fastscaling tests/test_integration.cpp tests/test.cpp tests/test_weighting.cpp tests/test_weighting_helpers.cpp  )
 
 	add_custom_target(do_nothing)
 	# Theft library doesn't compile in windows
 	if(UNIX)
-		create_test(test_theft_render tests/test_theft_render.cpp)
+		#create_test(test_theft_render tests/test_theft_render.cpp)
 	endif()
 
 endif()

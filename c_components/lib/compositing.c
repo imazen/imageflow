@@ -143,31 +143,6 @@ bool flow_bitmap_bgra_flip_horizontal(flow_c * context, struct flow_bitmap_bgra 
     return true;
 }
 
-/*
-static int  copy_bitmap_bgra(flow_bitmap_bgra * src, flow_bitmap_bgra * dst)
-{
-    // TODO: check sizes / overflows
-    if (dst->w != src->w || dst->h != src->h) return -1;
-
-    if (src->fmt == dst->fmt)
-    {
-        const uint32_t bytes_pp = flow_pixel_format_bytes_per_pixel (src->fmt);
-        // recalculate line width as it can be different from the stride
-        for (uint32_t y = 0; y < src->h; y++)
-            memcpy(dst->pixels + y*dst->stride, src->pixels + y*src->stride, src->w*bytes_pp);
-    }
-    else if (src->fmt == flow_bgr24 && dst->fmt == flow_bgra32)
-    {
-        for (uint32_t y = 0; y < src->h; y++)
-            unpack24bitRow(src->w, src->pixels + y*src->stride, dst->pixels + y*dst->stride);
-    }
-    else{
-        return -2;
-    }
-    return 0;
-}
-*/
-
 static bool flow_bitmap_float_blend_matte(flow_c * context, struct flow_colorcontext_info * colorcontext,
                                           struct flow_bitmap_float * src, const uint32_t from_row,
                                           const uint32_t row_count, const uint8_t * const matte)

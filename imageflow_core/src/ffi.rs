@@ -104,15 +104,6 @@ pub enum Floatspace {
     Linear = 1, // gamma = 2,
 }
 
-// #[repr(C)]
-// #[derive(Copy,Clone, Debug)]
-// pub enum BitmapCompositingMode {
-// replace_with_self = 0,
-// blend_with_self = 1,
-// blend_with_matte = 2,
-// }
-//
-
 
 #[repr(C)]
 #[derive(Copy,Clone,Debug, PartialEq)]
@@ -263,21 +254,6 @@ impl BitmapBgra{
         }
     }
 }
-// imageflow_core::ffi::FlowBitmapBgra{
-// alpha_meaningful: false,
-// can_reuse_space: false,
-// compositing_mode: ffi::BitmapCompositingMode::blend_with_self,
-// matte_color: [0,0,0,0],
-// pixels_readonly: false,
-// stride_readonly: false,
-// pixels: ptr::null_mut(),
-// stride: 0,
-// w: 0,
-// h: 0,
-// borrowed_pixels: false,
-// fmt: ffi::PixelFormat::bgra32
-// };
-
 
 
 #[repr(C)]
@@ -352,34 +328,6 @@ pub struct ErrorInfo {
                       * */
 }
 
-// #ifdef EXPOSE_SIGMOID
-// flow context: Colorspace
-// struct flow_SigmoidInfo {
-// float constant;
-// float x_coeff;
-// float x_offset;
-// float y_offset;
-// float y_coeff;
-// };
-// #endif
-//
-
-#[repr(C)]
-#[derive(Clone,Debug,PartialEq)]
-pub struct ColorspaceInfo {
-    placeholder: u8, /* FIXME: replace
-                      * float byte_to_float[256]; // Converts 0..255 -> 0..1, but knowing that 0.255 has sRGB gamma.
-                      * flow_working_floatspace floatspace;
-                      * bool apply_srgb;
-                      * bool apply_gamma;
-                      * float gamma;
-                      * float gamma_inverse;
-                      * #ifdef EXPOSE_SIGMOID
-                      * struct flow_SigmoidInfo sigmoid;
-                      * bool apply_sigmoid;
-                      * #endif
-                      * */
-}
 
 #[repr(C)]
 #[derive(Clone,Debug,PartialEq)]
