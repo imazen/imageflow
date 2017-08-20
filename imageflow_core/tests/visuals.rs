@@ -7,6 +7,8 @@ extern crate imageflow_helpers as hlp;
 extern crate serde;
 extern crate serde_json;
 
+extern crate twox_hash;
+
 use std::ffi::CString;
 use std::path::Path;
 
@@ -18,6 +20,9 @@ fn default_build_config(debug: bool) -> s::Build001Config {
         enable_jpeg_block_scaling: Some(false)
     }
 }
+
+const DEBUG_GRAPH: bool = false;
+const POPULATE_CHECKSUMS: bool = false;
 
 
 /// Creates a static, null-terminated Rust string, and
@@ -129,7 +134,7 @@ fn checkums_ctx_for<'a>(c: &'a Context) -> ChecksumCtx<'a>{
 #[test]
 fn test_fill_rect(){
     let matched = compare(None, 500,
-                          "FillRectEECCFF".to_owned(), false, false, vec![
+                          "FillRectEECCFF".to_owned(), POPULATE_CHECKSUMS, DEBUG_GRAPH, vec![
         s::Node::CreateCanvas {w: 200, h: 200, format: s::PixelFormat::Bgra32, color: s::Color::Transparent},
         s::Node::FillRect{x1:0, y1:0, x2:100, y2:100, color: s::Color::Srgb(s::ColorSrgb::Hex("EECCFFFF".to_owned()))},
         s::Node::Resample2D{ w: 400, h: 400, down_filter: Some(s::Filter::Hermite), up_filter: Some(s::Filter::Hermite), hints: None, scaling_colorspace: None }
@@ -141,7 +146,7 @@ fn test_fill_rect(){
 #[test]
 fn test_expand_rect(){
     let matched = compare(None, 500,
-                          "FillRectEECCFFExpand2233AAFF".to_owned(), false, false, vec![
+                          "FillRectEECCFFExpand2233AAFF".to_owned(), POPULATE_CHECKSUMS, DEBUG_GRAPH, vec![
         s::Node::CreateCanvas {w: 200, h: 200, format: s::PixelFormat::Bgra32, color: s::Color::Transparent},
         s::Node::FillRect{x1:0, y1:0, x2:100, y2:100, color: s::Color::Srgb(s::ColorSrgb::Hex("EECCFFFF".to_owned()))},
         s::Node::ExpandCanvas{left: 10, top: 15, right: 20, bottom: 25, color: s::Color::Srgb(s::ColorSrgb::Hex("2233AAFF".to_owned()))},
@@ -163,7 +168,7 @@ fn test_crop(){
     }
     for _ in 1..100 {
         let matched = compare(None, 500,
-                              "FillRectAndCrop".to_owned(), false, false, vec![
+                              "FillRectAndCrop".to_owned(), POPULATE_CHECKSUMS, DEBUG_GRAPH, vec![
             s::Node::CreateCanvas { w: 200, h: 200, format: s::PixelFormat::Bgra32, color: s::Color::Srgb(s::ColorSrgb::Hex("FF5555FF".to_owned())) },
             s::Node::FillRect { x1: 0, y1: 0, x2: 10, y2: 100, color: s::Color::Srgb(s::ColorSrgb::Hex("0000FFFF".to_owned())) },
             s::Node::Crop { x1: 0, y1: 50, x2: 100, y2: 100 }
@@ -179,7 +184,7 @@ fn test_crop(){
 #[test]
 fn test_scale_rings(){
     let matched = compare(Some(s::IoEnum::Url("https://s3-us-west-2.amazonaws.com/imageflow-resources/test_inputs/rings2.png".to_owned())), 500,
-        "RingsDownscaling".to_owned(), false, false, vec![
+        "RingsDownscaling".to_owned(), POPULATE_CHECKSUMS, DEBUG_GRAPH, vec![
         s::Node::Decode {io_id: 0, commands: None},
         s::Node::Resample2D{ w: 400, h: 400, down_filter: Some(s::Filter::Hermite), up_filter: Some(s::Filter::Hermite), hints: None, scaling_colorspace: None }
         ]
@@ -187,12 +192,13 @@ fn test_scale_rings(){
     assert!(matched);
 }
 
+
 #[test]
 fn test_fill_rect_original(){
     //let white = s::Color::Srgb(s::ColorSrgb::Hex("FFFFFFFF".to_owned()));
     let blue = s::Color::Srgb(s::ColorSrgb::Hex("0000FFFF".to_owned()));
     let matched = compare(None, 1,
-                          "FillRect".to_owned(), false, false, vec![
+                          "FillRect".to_owned(), POPULATE_CHECKSUMS, DEBUG_GRAPH, vec![
         s::Node::CreateCanvas {w: 400, h: 300, format: s::PixelFormat::Bgra32, color: s::Color::Transparent},
         s::Node::FillRect{x1:0, y1:0, x2:50, y2:100, color: blue},
         ]
@@ -210,7 +216,7 @@ fn request_1d_twice_mode() -> s::ResampleHints {
 #[test]
 fn test_scale_image() {
     let matched = compare(Some(s::IoEnum::Url("https://s3-us-west-2.amazonaws.com/imageflow-resources/test_inputs/waterhouse.jpg".to_owned())), 500,
-                          "ScaleTheHouse".to_owned(), false, false, vec![
+                          "ScaleTheHouse".to_owned(), POPULATE_CHECKSUMS, DEBUG_GRAPH, vec![
         s::Node::Decode {io_id: 0, commands: None},
         s::Node::Resample2D{ w: 400, h: 300, down_filter: Some(s::Filter::Robidoux), up_filter: Some(s::Filter::Robidoux), hints: Some(request_1d_twice_mode()), scaling_colorspace: None }
         ]
@@ -223,7 +229,7 @@ fn test_scale_image() {
 #[test]
 fn test_white_balance_image() {
     let matched = compare(Some(s::IoEnum::Url("https://s3-us-west-2.amazonaws.com/imageflow-resources/test_inputs/red-night.png".to_owned())), 500,
-                          "WhiteBalanceNight".to_owned(), false, false, vec![
+                          "WhiteBalanceNight".to_owned(), POPULATE_CHECKSUMS, DEBUG_GRAPH, vec![
             s::Node::Decode {io_id: 0, commands: None},
             s::Node::WhiteBalanceHistogramAreaThresholdSrgb { low_threshold: None, high_threshold: None}
         ]
@@ -233,7 +239,7 @@ fn test_white_balance_image() {
 #[test]
 fn test_read_gif() {
     let matched = compare(Some(s::IoEnum::Url("https://s3-us-west-2.amazonaws.com/imageflow-resources/test_inputs/mountain_800.gif".to_owned())), 500,
-                          "mountain_gif_scaled400".to_owned(), false, false, vec![
+                          "mountain_gif_scaled400".to_owned(), POPULATE_CHECKSUMS, DEBUG_GRAPH, vec![
             s::Node::Decode {io_id: 0, commands: None},
             s::Node::Resample2D{ w: 400, h: 300, down_filter: Some(s::Filter::Robidoux), up_filter: Some(s::Filter::Robidoux), hints: Some(request_1d_twice_mode()), scaling_colorspace: None }
         ]
@@ -246,7 +252,7 @@ fn test_read_gif() {
 #[test]
 fn test_jpeg_icc2_color_profile() {
     let matched = compare(Some(s::IoEnum::Url("https://s3-us-west-2.amazonaws.com/imageflow-resources/test_inputs/MarsRGB_tagged.jpg".to_owned())), 500,
-                          "MarsRGB_ICC_Scaled400300".to_owned(), false, false, vec![
+                          "MarsRGB_ICC_Scaled400300".to_owned(), POPULATE_CHECKSUMS, DEBUG_GRAPH, vec![
 s::Node::Decode {io_id: 0, commands: None},
 s::Node::Resample2D{ w: 400, h: 300, down_filter: Some(s::Filter::Robidoux), up_filter: Some(s::Filter::Robidoux), hints: Some(request_1d_twice_mode()), scaling_colorspace: None }
 ]
@@ -257,7 +263,7 @@ s::Node::Resample2D{ w: 400, h: 300, down_filter: Some(s::Filter::Robidoux), up_
 #[test]
 fn test_jpeg_icc4_color_profile() {
     let matched = compare(Some(s::IoEnum::Url("https://s3-us-west-2.amazonaws.com/imageflow-resources/test_inputs/MarsRGB_v4_sYCC_8bit.jpg".to_owned())), 500,
-                          "MarsRGB_ICCv4_Scaled400300".to_owned(), false, false, vec![
+                          "MarsRGB_ICCv4_Scaled400300".to_owned(), POPULATE_CHECKSUMS, DEBUG_GRAPH, vec![
 s::Node::Decode {io_id: 0, commands: None},
 s::Node::Resample2D{ w: 400, h: 300, down_filter: Some(s::Filter::Robidoux), up_filter: Some(s::Filter::Robidoux), hints: Some(request_1d_twice_mode()), scaling_colorspace: None }
 ]
@@ -273,7 +279,7 @@ fn test_jpeg_rotation() {
         for flag in 1..9 {
             let url = format!("https://s3-us-west-2.amazonaws.com/imageflow-resources/test_inputs/orientation/{}_{}.jpg", orientation, flag);
             let title = format!("Test_Apply_Orientation_{}_{}.jpg", orientation, flag);
-            let matched = compare(Some(s::IoEnum::Url(url)), 500, title, false, false, vec![s::Node::Decode {io_id: 0, commands: None}, s::Node::Constrain(s::Constraint::Within{w: Some(70), h: Some(70), hints: None})]);
+            let matched = compare(Some(s::IoEnum::Url(url)), 500, title, POPULATE_CHECKSUMS, DEBUG_GRAPH, vec![s::Node::Decode {io_id: 0, commands: None}, s::Node::Constrain(s::Constraint::Within{w: Some(70), h: Some(70), hints: None})]);
             assert!(matched);
         }
     }
@@ -291,7 +297,7 @@ fn test_encode_jpeg_smoke() {
 
     smoke_test(Some(s::IoEnum::Url("https://s3-us-west-2.amazonaws.com/imageflow-resources/test_inputs/MarsRGB_v4_sYCC_8bit.jpg".to_owned())),
                Some(s::IoEnum::OutputBuffer),
-               false,
+               DEBUG_GRAPH,
                steps,
     );
 }
@@ -306,7 +312,7 @@ fn test_encode_gif_smoke() {
 
     smoke_test(Some(s::IoEnum::Url("https://s3-us-west-2.amazonaws.com/imageflow-resources/test_inputs/MarsRGB_v4_sYCC_8bit.jpg".to_owned())),
                Some(s::IoEnum::OutputBuffer),
-               false,
+               DEBUG_GRAPH,
                steps,
     );
 }
@@ -323,7 +329,7 @@ fn test_encode_png32_smoke() {
 
     smoke_test(Some(s::IoEnum::Url("https://s3-us-west-2.amazonaws.com/imageflow-resources/test_inputs/MarsRGB_v4_sYCC_8bit.jpg".to_owned())),
                Some(s::IoEnum::OutputBuffer),
-               false,
+               DEBUG_GRAPH,
                steps,
     );
 }
@@ -355,7 +361,7 @@ fn test_dimensions(){
     s::Node::Resample2D{w:200,h:133, down_filter: None, up_filter: None, hints: None, scaling_colorspace: None},
     s::Node::ExpandCanvas{left:1, top: 0, right:0, bottom: 0, color: s::Color::Transparent},
     ];
-    let (w, h) = get_result_dimensions(steps, vec![], false);
+    let (w, h) = get_result_dimensions(steps, vec![], DEBUG_GRAPH);
     assert_eq!(w,201);
     assert_eq!(h,133);
 
@@ -404,7 +410,7 @@ fn test_detect_whitespace(){
     //let white = s::Color::Srgb(s::ColorSrgb::Hex("FFFFFFFF".to_owned()));
     let blue = s::Color::Srgb(s::ColorSrgb::Hex("0000FFFF".to_owned()));
     let matched = compare(None, 1,
-                          "DetectWhitespace".to_owned(), true, false, vec![
+                          "DetectWhitespace".to_owned(), POPULATE_CHECKSUMS, DEBUG_GRAPH, vec![
             s::Node::CreateCanvas {w: 400, h: 300, format: s::PixelFormat::Bgra32, color: s::Color::Transparent},
             s::Node::FillRect{x1:0, y1:0, x2:50, y2:100, color: blue},
             s::Node::CropWhitespace {threshold: 80, percent_padding: 0f32}
@@ -540,13 +546,19 @@ use std::collections::HashMap;
 use ::std::fs::File;
 use ::std::path::{PathBuf};
 use ::std::io::Write;
-
+use twox_hash::XxHash;
+use std::hash::Hasher;
 
 fn checksum_bitmap(bitmap: &BitmapBgra) -> String {
     unsafe {
         let info = format!("{}x{} fmt={} alpha={}", bitmap.w, bitmap.h, bitmap.fmt as i32, bitmap.alpha_meaningful as i32);
-        let contents_slice = ::std::slice::from_raw_parts(bitmap.pixels, bitmap.stride as usize * bitmap.h as usize);
-        return format!("{:02$X}_{:02$X}",djb2(contents_slice), djb2(info.as_bytes()),17)
+        let width_bytes = bitmap.w as usize * if bitmap.fmt == ::imageflow_core::ffi::PixelFormat::Bgra32 { 4} else { 3 };
+        let mut hash = XxHash::with_seed(0x8ed12ad9483d28a0);
+        for h in 0isize..(bitmap.h as isize){
+            let row_slice = ::std::slice::from_raw_parts(bitmap.pixels.offset(h * bitmap.stride as isize), width_bytes);
+            hash.write(row_slice)
+        }
+        return format!("{:02$X}_{:02$X}",hash.finish(), djb2(info.as_bytes()),17)
     }
 }
 
