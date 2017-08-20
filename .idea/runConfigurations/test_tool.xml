@@ -4,7 +4,7 @@
       <option name="additionalArguments">
         <list>
           <option value="--package" />
-          <option value="imageflow_tool" />
+          <option value="imageflow_tool_lib" />
         </list>
       </option>
       <option name="backtraceMode" value="2" />
