@@ -186,7 +186,7 @@ int64_t transpose(int w, int h, flow_pixel_format fmt, int runs){
 
     flow_bitmap_bgra_destroy(c, a);
     flow_bitmap_bgra_destroy(c, b);
-
+    flow_context_destroy(c);
     return end - start;
 
 }
