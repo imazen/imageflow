@@ -649,9 +649,14 @@ fn diff_bytes(a: &[u8], b: &[u8]) ->(i64,i64){
 
 fn diff_bitmap_bytes(a: &BitmapBgra, b: &BitmapBgra) -> (i64,i64){
     if a.w != b.w || a.h != b.h || a.fmt != b.fmt { panic!("Bitmap dimensions differ"); }
-    let a_contents_slice = unsafe{::std::slice::from_raw_parts(a.pixels, a.stride as usize * a.h as usize)};
-    let b_contents_slice = unsafe{::std::slice::from_raw_parts(b.pixels, b.stride as usize * b.h as usize)};
-    diff_bytes(a_contents_slice,b_contents_slice)
+
+    let width_bytes = a.w as usize * if a.fmt == ::imageflow_core::ffi::PixelFormat::Bgra32 { 4} else { 3 };
+
+    (0isize..a.h as isize).map(|h| {
+        let a_contents_slice = unsafe { ::std::slice::from_raw_parts(a.pixels.offset(h * a.stride as isize), width_bytes) };
+        let b_contents_slice = unsafe { ::std::slice::from_raw_parts(b.pixels.offset(h * b.stride as isize), width_bytes) };
+        diff_bytes(a_contents_slice, b_contents_slice)
+    }).fold((0,0), |(a,b),(c,d)| (a + c,b + d))
 }
 
 fn regression_check(c: &ChecksumCtx, bitmap: *const BitmapBgra, name: &str) -> bool{
@@ -681,7 +686,7 @@ fn regression_check(c: &ChecksumCtx, bitmap: *const BitmapBgra, name: &str) -> b
             ::imageflow_core::ffi::flow_destroy(c.c.flow_c(), trusted_bit as *const libc::c_void, std::ptr::null(), 0);
         }
         if count != delta{
-            panic!("Not just off-by-one errors!")
+            panic!("Not just off-by-one errors! count={} delta={}", count, delta);
         }
         let allowed_errors = ((bitmap_ref.w * bitmap_ref.stride) as f32 * c.max_off_by_one_ratio) as i64;
         if delta  > allowed_errors{
