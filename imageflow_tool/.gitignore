@@ -20,3 +20,4 @@ Cargo.lock
 *.bk
 
 flow-proto1
+imageflow_tool

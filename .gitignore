@@ -320,4 +320,5 @@ FakesAssemblies/
 # Eclipse pydev
 .pydevproject
 
-
+#Xamarin
+*.userprefs
