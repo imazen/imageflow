@@ -132,14 +132,14 @@ impl Encoder for GifEncoder{
                     pix[0] = pix[2];
                     pix[2] = a;
                 }
-                f = ::gif::Frame::from_rgb(frame.w as u16, frame.h as u16, &mut pixels);
+                f = from_rgb_with_stride(frame.w as u16, frame.h as u16, &mut pixels, frame.stride as usize);
             }else {
                 for pix in pixels.chunks_mut(4) {
                     let a = pix[0];
                     pix[0] = pix[2];
                     pix[2] = a;
                 }
-                f = ::gif::Frame::from_rgba(frame.w as u16, frame.h as u16, &mut pixels);
+                f = from_rgba_with_stride(frame.w as u16, frame.h as u16, &mut pixels, frame.stride as usize);
             }
 
             let mut encoder = ::gif::Encoder::new(io, frame.w as u16, frame.h as u16, &[]).unwrap();
@@ -159,3 +159,22 @@ impl Encoder for GifEncoder{
     }
 }
 
+
+fn remove_padding(width: u16, pixels: &[u8], stride: usize) -> Vec<u8>{
+    pixels.chunks(stride).flat_map(|s| s[0..width as usize * 4].iter().map(|v| *v)).collect()
+}
+    /// Creates a frame from pixels in RGBA format.
+    ///
+    /// *Note: This method is not optimized for speed.*
+    pub fn from_rgba_with_stride(width: u16, height: u16, pixels: &mut [u8], stride: usize) -> ::gif::Frame<'static> {
+        let mut without_padding = remove_padding(width, pixels, stride);
+        ::gif::Frame::from_rgba(width, height, &mut without_padding)
+    }
+
+/// Creates a frame from pixels in RGB format.
+///
+/// *Note: This method is not optimized for speed.*
+pub fn from_rgb_with_stride(width: u16, height: u16, pixels: &[u8], stride: usize) -> ::gif::Frame<'static> {
+    let mut without_padding = remove_padding(width, pixels, stride);
+    ::gif::Frame::from_rgb(width, height, &mut without_padding)
+}

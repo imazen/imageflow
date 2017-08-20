@@ -285,6 +285,41 @@ fn test_jpeg_rotation() {
     }
 
 }
+//
+//#[test]
+//fn test_gif_ir4(){
+//        let matched = compare(Some(s::IoEnum::Url("https://s3-us-west-2.amazonaws.com/imageflow-resources/test_inputs/waterhouse.jpg".to_owned())), 500,
+//                              "Read".to_owned(), true, DEBUG_GRAPH, vec![
+//                s::Node::CommandString{
+//                    kind: s::CommandStringKind::ImageResizer4,
+//                    value: "width=200&height=200&format=gif".to_owned(),
+//                    decode: Some(0),
+//                    encode: None //Some(1)
+//                }
+//            ]
+//        );
+//        assert!(matched);
+//
+//}
+
+#[test]
+fn smoke_test_gif_ir4(){
+
+    let steps = vec![
+        s::Node::CommandString{
+            kind: s::CommandStringKind::ImageResizer4,
+            value: "width=200&height=200&format=gif".to_owned(),
+            decode: Some(0),
+            encode: Some(1)
+        }
+    ];
+
+    smoke_test(Some(s::IoEnum::Url("https://s3-us-west-2.amazonaws.com/imageflow-resources/test_inputs/waterhouse.jpg".to_owned())),
+               Some(s::IoEnum::OutputBuffer),
+               DEBUG_GRAPH,
+               steps,
+    );
+}
 
 
 #[test]
