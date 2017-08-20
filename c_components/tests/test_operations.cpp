@@ -222,23 +222,39 @@ int64_t flip_v(int w, int h, flow_pixel_format fmt, int runs){
     return end - start;
 }
 
-TEST_CASE("Benchmark vertical flip", "")
-{
-    for (int fmt = 4; fmt >= 3; fmt--)
-        for (int w = 1; w < 5000; w += 631)
-            for (int h = 1; h < 5000; h += 631) {
-                int runs = 50;
+int64_t fill_rect(int w, int h, flow_pixel_format fmt, int runs){
+    flow_c * c = flow_context_create();
+    flow_bitmap_bgra * a = flow_bitmap_bgra_create(c, w, h, true, fmt);
+    int64_t start = flow_get_high_precision_ticks();
+    bool result;
+    for (int i = 0; i < runs; i++) {
+        result = flow_bitmap_bgra_fill_rect(c, a, 0,0,a->w, a->h, 0xff00ffff);
+    }
+    int64_t end = flow_get_high_precision_ticks();
 
-                int ticks = flip_v(w, h, (flow_pixel_format)fmt,runs);
-                double ms = ticks / runs * 1000.0 / (float)flow_get_profiler_ticks_per_second();
-                fprintf(stdout, "Vertical flipping %dx%d (fmt %d) took %.05fms\n", w, h, fmt, ms);
-            }
+    REQUIRE(result == true);
+    flow_context_destroy(c);
+    return end - start;
 }
+
+//TEST_CASE("Benchmark fill rect", "")
+//{
+//    for (int fmt = 4; fmt >= 3; fmt--)
+//        for (int w = 1; w < 3000; w += 1373)
+//            for (int h = 1; h < 3000; h += 1373) {
+//                int runs = 50;
+//
+//                int ticks = fill_rect(w, h, (flow_pixel_format)fmt,runs);
+//                double ms = ticks / runs * 1000.0 / (float)flow_get_profiler_ticks_per_second();
+//                fprintf(stdout, "Fill rect %dx%d (fmt %d) took %.05fms\n", w, h, fmt, ms);
+//            }
+//}
+
 TEST_CASE("Benchmark horizontal flip", "")
 {
     for (int fmt = 4; fmt >= 3; fmt--)
-        for (int w = 1; w < 5000; w += 631)
-            for (int h = 1; h < 5000; h += 631) {
+        for (int w = 1; w < 3000; w += 1373)
+            for (int h = 1; h < 3000; h += 1373) {
                 int runs = 50;
 
                 int ticks = flip_h(w, h, (flow_pixel_format)fmt,runs);
@@ -246,11 +262,24 @@ TEST_CASE("Benchmark horizontal flip", "")
                 fprintf(stdout, "Horizontal flipping %dx%d (fmt %d) took %.05fms\n", w, h, fmt, ms);
             }
 }
+
+TEST_CASE("Benchmark vertical flip", "")
+{
+    for (int fmt = 4; fmt >= 3; fmt--)
+        for (int w = 1; w < 3000; w += 1373)
+            for (int h = 1; h < 3000; h += 1373) {
+                int runs = 50;
+
+                int ticks = flip_v(w, h, (flow_pixel_format)fmt,runs);
+                double ms = ticks / runs * 1000.0 / (float)flow_get_profiler_ticks_per_second();
+                fprintf(stdout, "Vertical flipping %dx%d (fmt %d) took %.05fms\n", w, h, fmt, ms);
+            }
+}
 TEST_CASE("Benchmark transpose", "")
 {
     for (int fmt = 4; fmt >= 4; fmt--)
-        for (int w = 1; w < 5000; w += 631)
-            for (int h = 1; h < 5000; h += 631) {
+        for (int w = 1; w < 3000; w += 1373)
+            for (int h = 1; h < 3000; h += 1373) {
                 int runs = 50;
                 int ticks = transpose(w, h, (flow_pixel_format)fmt,runs);
                 double ms = ticks / runs * 1000.0 / (float)flow_get_profiler_ticks_per_second();
