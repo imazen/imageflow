@@ -527,7 +527,7 @@ static bool flow_codecs_jpg_decoder_FinishRead(flow_c * c, struct flow_codecs_jp
  */
     /* JSAMPLEs per row in output buffer */
 
-    state->row_stride = state->cinfo->output_width * state->cinfo->output_components;
+    //state->row_stride = state->cinfo->output_width * state->cinfo->output_components;
     state->channels = state->cinfo->output_components;
     state->gamma = state->cinfo->output_gamma;
 
@@ -917,6 +917,7 @@ static bool flow_codecs_jpeg_read_frame(flow_c * c, void * codec_state, struct f
     if (state->stage == flow_codecs_jpg_decoder_stage_BeginRead) {
         state->pixel_buffer = canvas->pixels;
         state->canvas = canvas;
+        state->row_stride = canvas->stride;
         state->pixel_buffer_size = canvas->stride * canvas->h;
         if (!jpeg_apply_downscaling(c, state, &state->w, &state->h)) {
             FLOW_error_return(c);

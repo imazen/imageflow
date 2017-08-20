@@ -264,14 +264,14 @@ static bool flow_codecs_png_decoder_BeginRead(flow_c * c, struct flow_codecs_png
     png_read_update_info(state->png_ptr, state->info_ptr);
 
     // Now we can access a stride that represents the post-transform data.
-    state->rowbytes = png_get_rowbytes(state->png_ptr, state->info_ptr);
+    //state->rowbytes = png_get_rowbytes(state->png_ptr, state->info_ptr);
 
     if (png_get_channels(state->png_ptr, state->info_ptr) != 4) {
         FLOW_error(c, flow_status_Invalid_internal_state);
         return false; // Should always be 4
     }
     // We set this, but it's ignored and overwritten by existing callers
-    state->pixel_buffer_size = state->rowbytes * state->h;
+    //state->pixel_buffer_size = state->rowbytes * state->h;
 
     return true;
 }
@@ -383,6 +383,7 @@ static bool flow_codecs_png_read_frame(flow_c * c, void * codec_state, struct fl
 {
     struct flow_codecs_png_decoder_state * state = (struct flow_codecs_png_decoder_state *)codec_state;
     if (state->stage == flow_codecs_png_decoder_stage_BeginRead) {
+        state->rowbytes = canvas->stride;
         state->pixel_buffer = canvas->pixels;
         state->pixel_buffer_size = canvas->stride * canvas->h;
         if (!flow_codecs_png_decoder_FinishRead(c, state)) {
