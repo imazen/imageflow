@@ -20,14 +20,16 @@ pub struct Job{
     pub io_to_proxy_uuids: Vec<(i32,Uuid)>
 
 }
+static mut JOB_ID: i32 = 0;
 impl Job{
     pub fn internal_use_only_create(context: &Context) -> Job {
+        unsafe { JOB_ID+=1;}
         Job {
             //This ugly breaking of lifetimes means that
             //NOTHING is preventing use-after-free
             //if someone finds a way to access an owned Job that isn't borrowed from the Context
             c: unsafe{ &*(context as *const Context) },
-            debug_job_id: 0,
+            debug_job_id: unsafe{ JOB_ID },
             next_graph_version: 0,
             next_stable_node_id: 0,
             max_calc_flatten_execute_passes: 40,

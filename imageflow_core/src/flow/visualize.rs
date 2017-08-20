@@ -56,7 +56,7 @@ pub fn notify_graph_changed(graph_ref: &mut Graph,
             Ok(Some(GraphRecordingUpdate { next_graph_version: r.current_graph_version + 1 }))
         }
     } else {
-        Ok(None)
+        Ok(Some(GraphRecordingUpdate { next_graph_version: r.current_graph_version + 1 }))
     }
 }
 
