@@ -159,13 +159,6 @@ fn test_expand_rect(){
 
 #[test]
 fn test_crop(){
-    let is_32bit = std::env::var("PLATFORM").and_then(|s| Ok(s.to_uppercase())) == Ok("X86".to_owned());
-    let is_appveyor = std::env::var("APPVEYOR").and_then(|s| Ok(s.to_uppercase())) == Ok("TRUE".to_owned());
-
-    if is_32bit && is_appveyor{
-        println!("Skipping test_crop on Appveyor win32. Fails and I don't know why yet");
-        return;
-    }
     for _ in 1..100 {
         let matched = compare(None, 500,
                               "FillRectAndCrop".to_owned(), POPULATE_CHECKSUMS, DEBUG_GRAPH, vec![
