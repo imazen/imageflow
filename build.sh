@@ -444,7 +444,7 @@ echo_maybe "build.sh sees these relevant variables: ${BUILD_VARS[*]}"
 					#echo "This next test is slow; it's a quickcheck running under valgrind"
 					#./valgrind_existing.sh ./c_components/bin/test_theft_render
 				)
-				./bin/test_theft_render
+				#./bin/test_theft_render
 			fi 
 		)
 		if [[ "$LCOV" == 'True' ]]; then
