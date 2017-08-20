@@ -46,10 +46,10 @@ module Imageflow
 
       def add_crop(crop:)
         @steps << {"crop": {
-            "x1": crop[0],
-            "y1": crop[1],
-            "x2": crop[2],
-            "y2": crop[3]
+            "x1": crop[0].round,
+            "y1": crop[1].round,
+            "x2": crop[2].round,
+            "y2": crop[3].round
         }}
       end
 

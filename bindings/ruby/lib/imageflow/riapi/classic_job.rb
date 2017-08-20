@@ -80,7 +80,6 @@ module Imageflow
 
         @result_info[:mime_type] = gb.result_mime_type
 
-
         job.execute framewise: framewise
 
         @result_bytes = job.get_buffer_bytes(placeholder_id: 1)
