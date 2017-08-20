@@ -52,12 +52,23 @@ fn copy_rect_def() -> NodeDefinition {
                             PixelFormat::Bgra32 => 4,
                             PixelFormat::Bgr24 => 3,
                         };
-                        for row in 0..height {
-                            let from_offset = (*input).stride * (from_y + row) + bytes_pp * from_x;
+                        if from_x == 0 && x == 0 && width == (*input).w && width == (*canvas).w  &&
+                            (*input).stride == (*canvas).stride && !(*canvas).borrowed_pixels {
+                            //This optimization has the side effect of copying irrelevant data, so we don't want to do it if windowed, only
+                            // if padded or permanently cropped.
+                            let from_offset = (*input).stride * from_y;
                             let from_ptr = (*input).pixels.offset(from_offset as isize);
-                            let to_offset = (*canvas).stride * (y + row) + bytes_pp * x;
+                            let to_offset = (*canvas).stride * y;
                             let to_ptr = (*canvas).pixels.offset(to_offset as isize);
-                            ptr::copy_nonoverlapping(from_ptr, to_ptr, (width * bytes_pp) as usize);
+                            ptr::copy_nonoverlapping(from_ptr, to_ptr, ((*input).stride * height) as usize);
+                        }else {
+                            for row in 0..height {
+                                let from_offset = (*input).stride * (from_y + row) + bytes_pp * from_x;
+                                let from_ptr = (*input).pixels.offset(from_offset as isize);
+                                let to_offset = (*canvas).stride * (y + row) + bytes_pp * x;
+                                let to_ptr = (*canvas).pixels.offset(to_offset as isize);
+                                ptr::copy_nonoverlapping(from_ptr, to_ptr, (width * bytes_pp) as usize);
+                            }
                         }
 
 
