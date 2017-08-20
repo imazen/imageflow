@@ -104,7 +104,7 @@ static void unpack24bitRow(uint32_t width, unsigned char* sourceLine, unsigned c
     }
 }
 */
-
+FLOW_HINT_HOT
 bool flow_bitmap_bgra_flip_vertical(flow_c * context, struct flow_bitmap_bgra * b)
 {
     void * swap = FLOW_malloc(context, b->stride);
@@ -113,6 +113,7 @@ bool flow_bitmap_bgra_flip_vertical(flow_c * context, struct flow_bitmap_bgra * 
         return false;
     }
     // Dont' copy the full stride (padding), it could be windowed!
+    // Todo: try multiple swap rows? 5ms isn't bad, but could be better
     uint32_t row_length = umin(b->stride, b->w * flow_pixel_format_bytes_per_pixel(b->fmt));
     for (uint32_t i = 0; i < b->h / 2; i++) {
         void * top = b->pixels + (i * b->stride);
@@ -124,20 +125,48 @@ bool flow_bitmap_bgra_flip_vertical(flow_c * context, struct flow_bitmap_bgra * 
     FLOW_free(context, swap);
     return true;
 }
-
+FLOW_HINT_HOT
 bool flow_bitmap_bgra_flip_horizontal(flow_c * context, struct flow_bitmap_bgra * b)
 {
-    uint32_t swap[4];
-    // Dont' copy the full stride (padding), it could be windowed!
-    for (uint32_t y = 0; y < b->h; y++) {
-        uint8_t * left = b->pixels + (y * b->stride);
-        uint8_t * right = b->pixels + (y * b->stride) + (flow_pixel_format_bytes_per_pixel(b->fmt) * (b->w - 1));
-        while (left < right) {
-            memcpy(&swap, left, flow_pixel_format_bytes_per_pixel(b->fmt));
-            memcpy(left, right, flow_pixel_format_bytes_per_pixel(b->fmt));
-            memcpy(right, &swap, flow_pixel_format_bytes_per_pixel(b->fmt));
-            left += flow_pixel_format_bytes_per_pixel(b->fmt);
-            right -= flow_pixel_format_bytes_per_pixel(b->fmt);
+    if (b->fmt == flow_bgra32){
+        for (uint32_t y = 0; y < b->h; y++) {
+            uint32_t * left = (uint32_t * )(b->pixels + (y * b->stride));
+            uint32_t * right = (uint32_t * )(b->pixels + (y * b->stride) + 4 * (b->w - 1));
+            while (left < right) {
+                uint32_t swap = *left;
+                *left = *right;
+                *right = swap;
+                left++;
+                right--;
+            }
+        }
+    }else if (b->fmt == flow_bgr24) {
+        uint32_t swap[4];
+        // Dont' copy the full stride (padding), it could be windowed!
+        for (uint32_t y = 0; y < b->h; y++) {
+            uint8_t * left = b->pixels + (y * b->stride);
+            uint8_t * right = b->pixels + (y * b->stride) + (3 * (b->w - 1));
+            while (left < right) {
+                memcpy(&swap, left, 3);
+                memcpy(left, right, 3);
+                memcpy(right, &swap, 3);
+                left += 3;
+                right -= 3;
+            }
+        }
+    }else {
+        uint32_t swap[4];
+        // Dont' copy the full stride (padding), it could be windowed!
+        for (uint32_t y = 0; y < b->h; y++) {
+            uint8_t * left = b->pixels + (y * b->stride);
+            uint8_t * right = b->pixels + (y * b->stride) + (flow_pixel_format_bytes_per_pixel(b->fmt) * (b->w - 1));
+            while (left < right) {
+                memcpy(&swap, left, flow_pixel_format_bytes_per_pixel(b->fmt));
+                memcpy(left, right, flow_pixel_format_bytes_per_pixel(b->fmt));
+                memcpy(right, &swap, flow_pixel_format_bytes_per_pixel(b->fmt));
+                left += flow_pixel_format_bytes_per_pixel(b->fmt);
+                right -= flow_pixel_format_bytes_per_pixel(b->fmt);
+            }
         }
     }
     return true;
