@@ -278,6 +278,11 @@ fn crop_mutate_def() -> NodeDefinition {
                     unsafe {
                         // println!("Cropping {}x{} to ({},{}) ({},{})", (*input).w, (*input).h, x1, y1, x2, y2);
 
+                        let (w,h) = ((*input).w, (*input).h);
+                        if x2 <= x1 || y2 <= y1 || x2 > w || y2 > h{
+                            panic!("Invalid crop bounds {:?} (image {}x{})", ((x1,y1),(x2,y2)), w,h);
+                        }
+
                         let bytes_pp = match (*input).fmt {
                             PixelFormat::Gray8 => 1,
                             PixelFormat::Bgra32 => 4,
