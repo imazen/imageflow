@@ -91,7 +91,8 @@ static inline float flow_colorcontext_srgb_to_floatspace_uncached(struct flow_co
 #endif
     return v;
 }
-
+FLOW_HINT_PURE
+FLOW_HINT_HOT
 static inline float flow_colorcontext_srgb_to_floatspace(struct flow_colorcontext_info * colorcontext, uint8_t value)
 {
     // if (!context->colorcontext.apply_srgb) return Context_srgb_to_floatspace_uncached (context,value);
@@ -101,7 +102,7 @@ static inline float flow_colorcontext_srgb_to_floatspace(struct flow_colorcontex
         ->byte_to_float[value]; // 2x faster, even if just multiplying by 1/255. 3x faster than the entire calculation.
 }
 FLOW_HINT_PURE
-
+FLOW_HINT_HOT
 static inline uint8_t flow_colorcontext_floatspace_to_srgb(struct flow_colorcontext_info * color, float space_value)
 {
     float v = space_value;
