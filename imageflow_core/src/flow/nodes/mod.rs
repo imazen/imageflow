@@ -308,14 +308,18 @@ impl<'c> OpCtxMut<'c> {
         self.graph.remove_node(index).unwrap();
     }
 
-    pub fn get_decoder_io_ids(&self,
+    pub fn get_decoder_io_ids_and_indexes(&self,
                               ancestors_of_node: NodeIndex<u32>)
-                              -> Vec<i32> {
+                              -> Vec<(i32,NodeIndex<u32>)> {
         self.graph.parents(ancestors_of_node).iter(self.graph).map(|(_, ix)| match self.weight(ix).params{
-            NodeParams::Json(s::Node::Decode { io_id, ..}) => Some(io_id), _ => None
+            NodeParams::Json(s::Node::Decode { io_id, ..}) => Some((io_id,ix)), _ => None
         } ).filter(|v| v.is_some()).map(|v| v.unwrap()).collect::<>()
     }
-
+    pub fn get_decoder_io_ids(&self,
+                                          ancestors_of_node: NodeIndex<u32>)
+                                          -> Vec<i32> {
+        self.get_decoder_io_ids_and_indexes(ancestors_of_node).into_iter().map(|(a,b)| a).collect::<>()
+    }
     pub fn get_image_info_list(&mut self,
                             ancestors_of_node: NodeIndex<u32>) -> Vec<::std::result::Result<s::ImageInfo, ::FlowError>>{
         self.get_decoder_io_ids(ancestors_of_node).into_iter().map(|io_id| self.job.get_image_info(io_id)).collect::<>()

@@ -580,6 +580,7 @@ impl Kit{
 }
 
 
+
 #[test]
 fn test_scale_to_outer(){
     let cropper = sizing::IdentityCropProvider::new();
