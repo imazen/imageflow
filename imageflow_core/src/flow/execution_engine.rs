@@ -244,7 +244,11 @@ impl<'a, 'b> Engine<'a, 'b> where 'a: 'b {
 
     }
 
-    pub fn estimate_node_recursive(&mut self, node_id: NodeIndex<u32>) -> FrameEstimate {
+    pub fn estimate_node_recursive(&mut self, node_id: NodeIndex<u32>, recurse_limit: i32) -> FrameEstimate {
+        if recurse_limit < 0 {
+            panic!("Hit node estimation recursion limit");
+        }
+
         // If we're already done, no need
         if let FrameEstimate::Some(info) = self.g.node_weight(node_id).unwrap().frame_est {
             return FrameEstimate::Some(info);
@@ -275,7 +279,7 @@ impl<'a, 'b> Engine<'a, 'b> where 'a: 'b {
                 // println!("Estimating recursively {:?}", input_indexes);
                 for ix in input_indexes {
 
-                    self.estimate_node_recursive(ix);
+                    self.estimate_node_recursive(ix, recurse_limit -1);
                 }
             }
 
@@ -285,9 +289,15 @@ impl<'a, 'b> Engine<'a, 'b> where 'a: 'b {
             }
         }
         // Should be good on inputs here
-        if self.estimate_node(node_id) == FrameEstimate::None {
-            panic!("Node estimation misbehaved on {}. Cannot leave FrameEstimate::None, must chose an alternative",
-                   self.g.node_weight(node_id).unwrap().def.name);
+        match self.estimate_node(node_id)  {
+            FrameEstimate::None => {
+                panic!("Node estimation misbehaved on {}. Cannot leave FrameEstimate::None, must chose an alternative",
+                       self.g.node_weight(node_id).unwrap().def.name);
+            },
+            FrameEstimate::Invalidated => {
+                return self.estimate_node_recursive(node_id, recurse_limit -1)
+            },
+            _ => {}
         }
         self.g.node_weight(node_id).unwrap().frame_est
     }
@@ -296,7 +306,7 @@ impl<'a, 'b> Engine<'a, 'b> where 'a: 'b {
 
         for ix in 0..self.g.node_count() {
             // If any node returns FrameEstimate::Impossible, we might as well move on to execution pass.
-            self.estimate_node_recursive(NodeIndex::new(ix));
+            self.estimate_node_recursive(NodeIndex::new(ix), 100);
         }
 
         Ok(())
@@ -324,7 +334,7 @@ impl<'a, 'b> Engine<'a, 'b> where 'a: 'b {
                             .unwrap()
                             .frame_est {} else {
                             //Try estimation one last time if it didn't happen yet
-                            let _ = self.estimate_node(nix);
+                            let _ = self.estimate_node_recursive(nix,100);
                         }
                         next = Some((nix, func));
                         break;

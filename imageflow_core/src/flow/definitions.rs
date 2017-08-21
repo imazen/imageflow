@@ -89,6 +89,7 @@ pub struct FrameInfo {
 pub enum FrameEstimate {
     None,
     Impossible,
+    Invalidated,
     UpperBound(FrameInfo),
     Some(FrameInfo),
 }
