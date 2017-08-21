@@ -66,5 +66,13 @@ imageflow-hidden:
     - global
   volumes:
     - '/volumes/imageflow/server_data:/home/imageflow/data'
-
+papertrail:
+  autoredeploy: true
+  entrypoint: '/bin/logspout syslog+tls://[logs2].papertrailapp.com:[your papertrail port here]'
+  image: 'gliderlabs/logspout:latest'
+  restart: always
+  roles:
+    - global
+  volumes:
+    - '/var/run/docker.sock:/var/run/docker.sock'
 
