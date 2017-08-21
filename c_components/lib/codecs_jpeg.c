@@ -849,7 +849,14 @@ static void flow_jpeg_idct_method_selector(j_decompress_ptr cinfo, jpeg_componen
 static bool jpeg_apply_downscaling(flow_c * c, struct flow_codecs_jpeg_decoder_state * state, int32_t * out_w,
                                    int32_t * out_h)
 {
-
+    if (state == NULL) {
+        FLOW_error(c, flow_status_Null_argument);
+        return false;
+    }
+    if (state->cinfo == NULL) {
+        FLOW_error(c, flow_status_Null_argument);
+        return false;
+    }
     jpeg_set_idct_method_selector(state->cinfo, flow_jpeg_idct_method_selector);
     if (state->hints.downscaled_min_width != -1 && state->hints.downscaled_min_height != 1) {
         if (state->cinfo->image_width > state->hints.downscale_if_wider_than
@@ -874,15 +881,20 @@ static bool jpeg_apply_downscaling(flow_c * c, struct flow_codecs_jpeg_decoder_s
 }
 static bool flow_codecs_jpeg_get_info(flow_c * c, void * codec_state, struct flow_decoder_info * info)
 {
+    if (codec_state == NULL) {
+        FLOW_error(c, flow_status_Null_argument);
+        return false;
+    }
     struct flow_codecs_jpeg_decoder_state * state = (struct flow_codecs_jpeg_decoder_state *)codec_state;
     if (state->stage < flow_codecs_jpg_decoder_stage_BeginRead) {
         if (!flow_codecs_jpg_decoder_BeginRead(c, state)) {
             FLOW_error_return(c);
         }
     }
-
-    if (!jpeg_apply_downscaling(c, state, &state->w, &state->h)) {
-        FLOW_error_return(c);
+    if (state->stage != flow_codecs_jpg_decoder_stage_FinishRead) {
+        if (!jpeg_apply_downscaling(c, state, &state->w, &state->h)) {
+            FLOW_error_return(c);
+        }
     }
 
     info->current_frame_index = 0;
@@ -896,6 +908,10 @@ static bool flow_codecs_jpeg_get_info(flow_c * c, void * codec_state, struct flo
 static bool flow_codecs_jpeg_get_frame_info(flow_c * c, void * codec_state,
                                             struct flow_decoder_frame_info * decoder_frame_info_ref)
 {
+    if (codec_state == NULL) {
+        FLOW_error(c, flow_status_Null_argument);
+        return false;
+    }
     struct flow_codecs_jpeg_decoder_state * state = (struct flow_codecs_jpeg_decoder_state *)codec_state;
     if (state->stage < flow_codecs_jpg_decoder_stage_BeginRead) {
         if (!flow_codecs_jpg_decoder_BeginRead(c, state)) {
@@ -903,8 +919,10 @@ static bool flow_codecs_jpeg_get_frame_info(flow_c * c, void * codec_state,
         }
     }
 
-    if (!jpeg_apply_downscaling(c, state, &state->w, &state->h)) {
-        FLOW_error_return(c);
+    if (state->stage != flow_codecs_jpg_decoder_stage_FinishRead) {
+        if (!jpeg_apply_downscaling(c, state, &state->w, &state->h)) {
+            FLOW_error_return(c);
+        }
     }
     decoder_frame_info_ref->w = state->w;
     decoder_frame_info_ref->h = state->h;
@@ -914,6 +932,10 @@ static bool flow_codecs_jpeg_get_frame_info(flow_c * c, void * codec_state,
 
 static bool flow_codecs_jpeg_read_frame(flow_c * c, void * codec_state, struct flow_bitmap_bgra * canvas)
 {
+    if (codec_state == NULL) {
+        FLOW_error(c, flow_status_Null_argument);
+        return false;
+    }
     struct flow_codecs_jpeg_decoder_state * state = (struct flow_codecs_jpeg_decoder_state *)codec_state;
     if (state->stage == flow_codecs_jpg_decoder_stage_BeginRead) {
         state->pixel_buffer = canvas->pixels;
