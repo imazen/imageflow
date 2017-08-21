@@ -573,6 +573,7 @@ static bool flow_codecs_jpg_decoder_FinishRead(flow_c * c, struct flow_codecs_jp
         FLOW_error_return(c);
     }
 
+
     /* Step 7: Finish decompression */
 
     (void)jpeg_finish_decompress(state->cinfo);
@@ -647,7 +648,7 @@ static bool flow_codecs_jpg_decoder_reset(flow_c * c, struct flow_codecs_jpeg_de
 {
     if (state->stage == flow_codecs_jpg_decoder_stage_FinishRead) {
         // TODO: This may be a double-free.... I don't think we own this.
-        FLOW_free(c, state->pixel_buffer);
+        //FLOW_free(c, state->pixel_buffer);
     }
     if (state->stage == flow_codecs_jpg_decoder_stage_Null) {
         state->pixel_buffer_row_pointers = NULL;
