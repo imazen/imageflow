@@ -129,6 +129,8 @@ static const char * status_code_to_string(flow_status_code code)
             return "Invalid inputs to node";
         case 73:
             return "Maximum graph passes exceeded";
+        case 90:
+            return "C Error Reporting Inconsistency";
         case 1024:
             return "Other error";
         default:
