@@ -312,6 +312,19 @@ impl ErrorBuffer{
             None
         }
     }
+
+    // Returns error code 90 if there is no error or there is an inconsistency between error APIs
+    pub fn c_error(&self) -> FlowErr {
+        if self.abi_has_error(){
+            match self.abi_error_code(){
+                0 => FlowErr{ message_and_stack: String::new(), code: 90 },
+                10 => FlowErr{ message_and_stack: String::new(), code: 10 },
+                _ => unsafe { ErrorBuffer::get_flow_err(self.c_ctx) },
+            }
+        }else{
+            FlowErr{ message_and_stack: String::new(), code: 90 }
+        }
+    }
     unsafe fn get_flow_err(c: *mut ::ffi::ImageflowContext) -> FlowErr {
 
 
@@ -323,6 +336,7 @@ impl ErrorBuffer{
         ::ffi::flow_context_error_and_stacktrace(c, buf.as_mut_ptr(), buf.len(), false);
 
         if chars_written < 0 {
+            //TODO: Retry until it fits
             panic!("Error msg doesn't fit in 2kb");
         } else {
             buf.resize(chars_written as usize, 0u8);
@@ -334,6 +348,7 @@ impl ErrorBuffer{
         }
 
     }
+
 
 
 }
