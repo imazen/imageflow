@@ -100,7 +100,7 @@ fn scale_def() -> NodeDefinition {
                             hints: hints,
                         };
                         let canvas = ctx.graph
-                            .add_node(Node::new(&CREATE_CANVAS,
+                            .add_node(Node::n(&CREATE_CANVAS,
                                                 NodeParams::Json(canvas_params)));
                         let scale2d = ctx.graph
                             .add_node(Node::new(&SCALE_2D_RENDER_TO_CANVAS_1D,
@@ -152,7 +152,7 @@ fn render1d_def() -> NodeDefinition {
                     };
                     let render1d_params = ctx.get_json_params(ix).unwrap();
                     let canvas = ctx.graph
-                        .add_node(Node::new(&CREATE_CANVAS, NodeParams::Json(canvas_params)));
+                        .add_node(Node::n(&CREATE_CANVAS, NodeParams::Json(canvas_params)));
                     let scale1d = ctx.graph.add_node(Node::new(&SCALE_1D_TO_CANVAS_1D,
                                                                NodeParams::Json(render1d_params)));
                     ctx.graph.add_edge(canvas, scale1d, EdgeKind::Canvas).unwrap();

@@ -25,11 +25,19 @@ impl<'a, 'b> Engine<'a, 'b> where 'a: 'b {
         }
     }
 
+    pub fn ctx(&self) -> OpCtx{
+        OpCtx{
+            c: self.c,
+            graph: self.g,
+            job: self.job,
+        }
+    }
+
     fn flow_c(&self) -> *mut ::ffi::ImageflowContext{
         self.c.flow_c()
     }
 
-    pub fn validate_graph(&self) -> Result<()> {
+    pub fn validate_graph(&self) -> NResult<()> {
         for node_index in (0..self.g.node_count()).map(|i| NodeIndex::new(i)) {
             let n = self.g.node_weight(node_index).unwrap();
 
@@ -56,19 +64,18 @@ impl<'a, 'b> Engine<'a, 'b> where 'a: 'b {
                 EdgesIn::OneOptionalInput if canvas_count != 0 && (input_count != 0 && input_count != 1) => true,
                 _ =>                false
             };
-            if inputs_failed {
-                let message = format!("Node type {} requires {:?}, but had {} inputs, {} canvases.", n.def.name(), req_edges_in, input_count, canvas_count);
-                return Err(FlowError::InvalidConnectionsToNode {
-                    value: self.g.node_weight(node_index).unwrap().params.clone(),
-                    index: node_index.index(), message: message
-                });
-            }
-            if req_edges_out != EdgesOut::Any && outbound_count > 0 {
-                let message = format!("Node type {} prohibits child nodes, but had {} outbound edges.", n.def.name(), outbound_count);
-                return Err(FlowError::InvalidConnectionsToNode {
-                    value: self.g.node_weight(node_index).unwrap().params.clone(),
-                    index: node_index.index(), message: message
-                });
+
+            let result = if let Err(e) = n.def.validate_params(&n.params) {
+                Err(e)
+            } else if inputs_failed {
+                Err(nerror!(ErrorKind::InvalidNodeConnections, "Node type {} requires {:?}, but had {} inputs, {} canvases.", n.def.name(), req_edges_in, input_count, canvas_count))
+            } else if req_edges_out != EdgesOut::Any && outbound_count > 0 {
+                Err(nerror!(ErrorKind::InvalidNodeConnections, "Node type {} prohibits child nodes, but had {} outbound edges.", n.def.name(), outbound_count))
+            } else{
+                Ok(())
+            };
+            if let Err(e) = result{
+                return Err(e.with_ctx(&self.ctx(),node_index))
             }
         }
         Ok(())
@@ -130,9 +137,8 @@ impl<'a, 'b> Engine<'a, 'b> where 'a: 'b {
             self.notify_graph_changed()?;
         }
 
-        if self.job.next_graph_version > 0 && self.job.graph_recording.render_last_graph.unwrap_or(false) {
-            self.notify_graph_complete()?;
-        }
+        self.notify_graph_complete()?;
+
 
         Ok(())
     }
@@ -187,47 +193,51 @@ impl<'a, 'b> Engine<'a, 'b> where 'a: 'b {
     }
 
     fn notify_graph_complete(&mut self) -> Result<()> {
-        let prev_filename =
-            format!("job_{}_graph_version_{}.dot",
-                    self.job.debug_job_id,
-                    self.job.next_graph_version - 1);
+        if self.job.next_graph_version > 0 && self.job.graph_recording.record_graph_versions.unwrap_or(false) {
+            let prev_filename =
+                format!("job_{}_graph_version_{}.dot",
+                        self.job.debug_job_id,
+                        self.job.next_graph_version - 1);
 
-        super::visualize::render_dotfile_to_png(&prev_filename);
+            super::visualize::render_dotfile_to_png(&prev_filename);
+        }
         Ok(())
     }
 
 
-    pub fn estimate_node(&mut self, node_id: NodeIndex<u32>) -> FrameEstimate {
+    pub fn estimate_node(&mut self, node_id: NodeIndex<u32>) -> NResult<FrameEstimate> {
         let now = time::precise_time_ns();
         let mut ctx = OpCtxMut{
             c: self.c,
             graph: self.g,
             job: self.job,
         };
-        // Invoke estimation
-        match ctx.weight(node_id).def.estimate(&mut ctx, node_id){
-            Ok(f) => {},
-            Err(NodeError{kind: ErrorKind::MethodNotImplemented, ..}) => {
-                ctx.weight_mut(node_id).frame_est = FrameEstimate::Impossible;
-            }
-            other => {
-                other.unwrap();
-                panic!("")
-            }
-        }
-        ctx.weight_mut(node_id).cost.wall_ns += (time::precise_time_ns() - now) as u32;
-        ctx.weight(node_id).frame_est
 
+        // Invoke estimation
+        // If not implemented, estimation is impossible
+        let result = match ctx.weight(node_id).def.estimate(&mut ctx, node_id){
+            Err(NodeError{kind: ErrorKind::MethodNotImplemented, ..}) => {
+                Ok(FrameEstimate::Impossible)
+            }
+            other => other
+        }.map_err( |e| e.with_ctx_mut(&ctx,node_id));
+
+        if let Ok(v) = result {
+            ctx.weight_mut(node_id).frame_est = v;
+        }
+
+        ctx.weight_mut(node_id).cost.wall_ns += (time::precise_time_ns() - now) as u32;
+        result
     }
 
-    pub fn estimate_node_recursive(&mut self, node_id: NodeIndex<u32>, recurse_limit: i32) -> FrameEstimate {
+    pub fn estimate_node_recursive(&mut self, node_id: NodeIndex<u32>, recurse_limit: i32) -> NResult<FrameEstimate> {
         if recurse_limit < 0 {
             panic!("Hit node estimation recursion limit");
         }
 
         // If we're already done, no need
         if let FrameEstimate::Some(info) = self.g.node_weight(node_id).unwrap().frame_est {
-            return FrameEstimate::Some(info);
+            return Ok(FrameEstimate::Some(info));
         }
 
         // Otherwise let's try again
@@ -255,39 +265,40 @@ impl<'a, 'b> Engine<'a, 'b> where 'a: 'b {
                 // println!("Estimating recursively {:?}", input_indexes);
                 for ix in input_indexes {
 
-                    self.estimate_node_recursive(ix, recurse_limit -1);
+                    let _ = self.estimate_node_recursive(ix, recurse_limit -1)?;
                 }
             }
 
             if give_up || !inputs_estimated(self.g, node_id) {
                 self.g.node_weight_mut(node_id).unwrap().frame_est = FrameEstimate::Impossible;
-                return FrameEstimate::Impossible;
+                return Ok(FrameEstimate::Impossible);
             }
         }
         // Should be good on inputs here
         match self.estimate_node(node_id)  {
-            FrameEstimate::None => {
+            Ok(FrameEstimate::None) => {
                 panic!("Node estimation misbehaved on {}. Cannot leave FrameEstimate::None, must chose an alternative",
                        self.g.node_weight(node_id).unwrap().def.name());
             },
-            FrameEstimate::Invalidated => {
+            Ok(FrameEstimate::Invalidated) => {
                 return self.estimate_node_recursive(node_id, recurse_limit -1)
             },
-            _ => {}
+            other => other
         }
-        self.g.node_weight(node_id).unwrap().frame_est
     }
 
-    pub fn populate_dimensions_where_certain(&mut self) -> Result<()> {
+    pub fn populate_dimensions_where_certain(&mut self) -> NResult<()> {
 
         for ix in 0..self.g.node_count() {
             // If any node returns FrameEstimate::Impossible, we might as well move on to execution pass.
-            self.estimate_node_recursive(NodeIndex::new(ix), 100);
+            let _ = self.estimate_node_recursive(NodeIndex::new(ix), 100)?;
         }
 
         Ok(())
     }
-    fn invoke_estimated_or_non_estimable_nodes(&mut self) -> Result<()> {
+
+    // invoke_estimated_or_non_estimable_nodes
+    fn graph_pre_optimize_flatten(&mut self) -> Result<()> {
 
 
         // Just find all nodes that offer the given function and whose parents are completed
@@ -322,7 +333,7 @@ impl<'a, 'b> Engine<'a, 'b> where 'a: 'b {
                 None => return Ok(()),
                 Some((next_ix, def)) => {
                     let mut ctx = self.op_ctx_mut();
-                    def.expand(&mut ctx, next_ix);
+                    let _ = def.expand(&mut ctx, next_ix)?;
 
                 }
             }
@@ -331,9 +342,6 @@ impl<'a, 'b> Engine<'a, 'b> where 'a: 'b {
     }
 
 
-    pub fn graph_pre_optimize_flatten(&mut self) -> Result<()> {
-        self.invoke_estimated_or_non_estimable_nodes()
-    }
 
     fn parents_complete(&self, ix: NodeIndex) -> bool{
         self.g
@@ -373,7 +381,7 @@ impl<'a, 'b> Engine<'a, 'b> where 'a: 'b {
                             .unwrap()
                             .frame_est.is_none(){
                             //Try estimation one last time if it didn't happen yet
-                            let _ = self.estimate_node(index);
+                            let _ = self.estimate_node(index)?;
                         }
                         next = Some((index, def));
                         break;
@@ -386,7 +394,7 @@ impl<'a, 'b> Engine<'a, 'b> where 'a: 'b {
                 Some((next_ix, def)) => {
                     {
                         let mut ctx = self.op_ctx_mut();
-                        def.execute(&mut ctx, next_ix);
+                        let _ = def.execute(&mut ctx, next_ix)?;
                     }
                     if self.g.node_weight(next_ix).unwrap().result == NodeResult::None {
                         panic!("fn_execute of {} failed to save a result",

@@ -73,7 +73,7 @@ fn transpose_def() -> NodeDefinition {
                                 color: s::Color::Transparent,
                             };
                             let canvas = ctx.graph
-                                .add_node(Node::new(&CREATE_CANVAS,
+                                .add_node(Node::n(&CREATE_CANVAS,
                                                     NodeParams::Json(canvas_params)));
                             let copy = ctx.graph
                                 .add_node(Node::new(&TRANSPOSE_MUT, NodeParams::None));

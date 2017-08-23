@@ -58,6 +58,16 @@ pub enum PixelFormat {
     Gray8 = 1,
 }
 
+impl PixelFormat{
+    pub fn bytes(&self) -> usize{
+        match *self{
+            PixelFormat::Gray8 => 1,
+            PixelFormat::Bgr24 => 3,
+            PixelFormat::Bgra32 => 4
+        }
+    }
+}
+
 #[repr(C)]
 #[derive(Copy, Serialize, Deserialize, Clone, PartialEq, PartialOrd, Debug)]
 pub enum Filter {

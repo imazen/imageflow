@@ -119,14 +119,16 @@ macro_rules! unimpl {
     );
 }
 
-#[derive(Debug, Copy, Clone, PartialEq)]
+#[derive(Debug,  Clone, PartialEq)]
 pub enum ErrorKind{
     NodeParamsMismatch,
     BitmapPointerNull,
     InvalidCoordinates,
     InvalidNodeParams,
     MethodNotImplemented,
-    ValidationNotImplemented
+    ValidationNotImplemented,
+    InvalidNodeConnections,
+    CError(FlowErr)
 
 }
 #[derive(Debug, Copy, Clone, PartialEq)]
@@ -137,15 +139,28 @@ pub struct CodeLocation{
     pub module: &'static str
 }
 
-#[derive(Debug, Copy, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct NodeDebugInfo{
     pub stable_id: i32,
+    pub params: NodeParams,
+    pub index: NodeIndex
 }
 impl NodeDebugInfo {
     fn from_ctx(ctx: &OpCtx, ix: NodeIndex) -> Option<NodeDebugInfo> {
         ctx.graph.node_weight(ix).map(|w|
             NodeDebugInfo{
-                stable_id: w.stable_id
+                stable_id: w.stable_id,
+                params: w.params.clone(),
+                index: ix
+            }
+        )
+    }
+    fn from_ctx_mut(ctx: &OpCtxMut, ix: NodeIndex) -> Option<NodeDebugInfo> {
+        ctx.graph.node_weight(ix).map(|w|
+            NodeDebugInfo{
+                stable_id: w.stable_id,
+                params: w.params.clone(),
+                index: ix
             }
         )
     }
@@ -191,6 +206,15 @@ impl fmt::Display for NodeError {
 
 pub type NResult<T> = ::std::result::Result<T, NodeError>;
 
+
+impl NodeError {
+    pub fn with_ctx(self, ctx: &OpCtx, ix: NodeIndex ) -> NodeError {
+        self.add_node_info(NodeDebugInfo::from_ctx(ctx, ix))
+    }
+    pub fn with_ctx_mut(self, ctx: &OpCtxMut, ix: NodeIndex ) -> NodeError {
+        self.add_node_info(NodeDebugInfo::from_ctx_mut(ctx, ix))
+    }
+}
 
 // alternate traits for common classes of nodes
 pub trait NodeDefOneInput{
@@ -301,7 +325,7 @@ impl NodeDef for NodeDefinition{
     fn estimate(&self, ctx: &mut OpCtxMut, ix: NodeIndex) -> NResult<FrameEstimate>{
         if let Some(f) = self.fn_estimate{
             f(ctx, ix);
-            Ok(FrameEstimate::None)
+            Ok(ctx.weight(ix).frame_est)
         }else{
             Err(unimpl!())
         }
@@ -481,7 +505,7 @@ impl From<s::Node> for Node {
             s::Node::Resample1D { .. } => Node::new(&nodes::SCALE_1D, NodeParams::Json(node)),
             s::Node::Encode { .. } => Node::new(&nodes::ENCODE, NodeParams::Json(node)),
             s::Node::CreateCanvas { .. } => {
-                Node::new(&nodes::CREATE_CANVAS, NodeParams::Json(node))
+                Node::n(&nodes::CREATE_CANVAS, NodeParams::Json(node))
             }
             s::Node::CopyRectToCanvas { .. } => {
                 Node::new(&nodes::COPY_RECT, NodeParams::Json(node))
@@ -506,6 +530,7 @@ impl From<s::Node> for Node {
     }
 }
 
+
 impl Node {
     pub fn new(def: &'static NodeDefinition, params: NodeParams) -> Node {
         Node {
@@ -524,7 +549,22 @@ impl Node {
         }
     }
 
-
+    pub fn n(def: &'static NodeDef, params: NodeParams) -> Node {
+        Node {
+            def: def,
+            frame_est: FrameEstimate::None,
+            cost_est: CostEstimate::None,
+            cost: CostInfo {
+                cpu_ticks: None,
+                wall_ns: 0,
+                heap_bytes: 0,
+                peak_temp_bytes: 0,
+            },
+            stable_id: -1,
+            params: params,
+            result: NodeResult::None,
+        }
+    }
 
 
     pub fn graphviz_node_label(&self, f: &mut std::io::Write) -> std::io::Result<()> {

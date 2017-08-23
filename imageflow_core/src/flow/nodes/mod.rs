@@ -66,11 +66,12 @@ use super::definitions::*;
 fn test_err() {
 
     let e = nerror!(ErrorKind::BitmapPointerNull);
-    eprintln!("{}", e);
+    assert_eq!(e.kind, ErrorKind::BitmapPointerNull);
+    assert!(format!("{}",&e).starts_with("Error BitmapPointerNull at"));
     let e = nerror!(ErrorKind::BitmapPointerNull, "hi");
-    eprintln!("{}", e);
+    assert!(format!("{}",&e).starts_with("Error BitmapPointerNull: hi at"));
     let e = nerror!(ErrorKind::BitmapPointerNull, "hi {}", 1);
-    eprintln!("{}", e);
+    assert!(format!("{}",&e).starts_with("Error BitmapPointerNull: hi 1 at"));
 }
 
 pub struct NodeDefHelpers {}

@@ -62,10 +62,11 @@ pub mod ffi;
 pub mod boring;
 pub mod parsing;
 pub mod test_helpers;
+use ::flow::definitions::NodeError;
 
 use std::borrow::Cow;
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct FlowErr {
     pub code: i32,
     pub message_and_stack: String,
@@ -76,14 +77,20 @@ pub struct FlowErr {
 pub enum FlowError {
     NullArgument,
     GraphCyclic,
-    InvalidConnectionsToNode{index: usize, value: ::flow::definitions::NodeParams, message: String},
     ContextInvalid,
     Oom,
     Err(FlowErr),
     ErrNotImpl,
     FailedBorrow,
+    NodeError(NodeError)
 }
 
+impl From<NodeError> for FlowError{
+    fn from(e: NodeError) -> Self{
+        FlowError::NodeError(e)
+    }
+
+}
 
 impl std::fmt::Display for FlowError {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {

@@ -152,7 +152,7 @@ fn clone_def() -> NodeDefinition {
                             height: h as u32,
                         };
                         let canvas = ctx.graph
-                            .add_node(Node::new(&CREATE_CANVAS, NodeParams::Json(canvas_params)));
+                            .add_node(Node::n(&CREATE_CANVAS, NodeParams::Json(canvas_params)));
                         let copy = ctx.graph
                             .add_node(Node::new(&COPY_RECT, NodeParams::Json(copy_params)));
                         ctx.graph.add_edge(canvas, copy, EdgeKind::Canvas).unwrap();
@@ -221,7 +221,7 @@ fn expand_canvas_def() -> NodeDefinition {
                                 height: h as u32,
                             };
                             let canvas = ctx.graph
-                                .add_node(Node::new(&CREATE_CANVAS,
+                                .add_node(Node::n(&CREATE_CANVAS,
                                                     NodeParams::Json(canvas_params)));
                             let copy = ctx.graph
                                 .add_node(Node::new(&COPY_RECT, NodeParams::Json(copy_params)));
