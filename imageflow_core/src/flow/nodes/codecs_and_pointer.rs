@@ -113,7 +113,7 @@ fn decoder_def() -> NodeDefinition {
             fn f(ctx: &mut OpCtxMut, ix: NodeIndex<u32>) {
 
                 // Mutate instead of replace
-                ctx.weight_mut(ix).def = &PRIMITIVE_DECODER;
+                ctx.weight_mut(ix).def = PRIMITIVE_DECODER.as_node_def();
 
                 let io_id = decoder_encoder_io_id(ctx, ix).unwrap();
 

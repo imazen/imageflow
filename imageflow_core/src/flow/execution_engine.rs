@@ -30,12 +30,10 @@ impl<'a, 'b> Engine<'a, 'b> where 'a: 'b {
     }
 
     pub fn validate_graph(&self) -> Result<()> {
-        for index in 0..self.g.node_count() {
-            let node_index = NodeIndex::new(index);
-            let node_def: &NodeDefinition = self.g
-                .node_weight(node_index)
-                .unwrap()
-                .def;
+        for node_index in (0..self.g.node_count()).map(|i| NodeIndex::new(i)) {
+            let n = self.g.node_weight(node_index).unwrap();
+
+            let (req_edges_in, req_edges_out) = n.def.edges_required(&n.params).unwrap();
 
             let outbound_count = self.g
                 .graph()
@@ -50,26 +48,26 @@ impl<'a, 'b> Engine<'a, 'b> where 'a: 'b {
                 .edges_directed(node_index, EdgeDirection::Incoming).filter(|&e| e.weight() == &EdgeKind::Canvas).count();
 
 
-            let inputs_failed = match node_def.inbound_edges {
+            let inputs_failed = match req_edges_in {
                 EdgesIn::NoInput if input_count > 0 || canvas_count > 0 => true,
-                EdgesIn::Aribtary { canvases, inputs, .. } if input_count != inputs as usize || canvas_count != canvases as usize => true,
+                EdgesIn::Arbitrary { canvases, inputs, .. } if input_count != inputs as usize || canvas_count != canvases as usize => true,
                 EdgesIn::OneInput if input_count != 1 && canvas_count != 0 => true,
                 EdgesIn::OneInputOneCanvas if input_count != 1 && canvas_count != 1 => true,
                 EdgesIn::OneOptionalInput if canvas_count != 0 && (input_count != 0 && input_count != 1) => true,
                 _ =>                false
             };
             if inputs_failed {
-                let message = format!("Node type {} requires {:?}, but had {} inputs, {} canvases.", node_def.name, node_def.inbound_edges, input_count, canvas_count);
+                let message = format!("Node type {} requires {:?}, but had {} inputs, {} canvases.", n.def.name(), req_edges_in, input_count, canvas_count);
                 return Err(FlowError::InvalidConnectionsToNode {
                     value: self.g.node_weight(node_index).unwrap().params.clone(),
-                    index: index, message: message
+                    index: node_index.index(), message: message
                 });
             }
-            if !node_def.outbound_edges && outbound_count > 0 {
-                let message = format!("Node type {} prohibits child nodes, but had {} outbound edges.", node_def.name, outbound_count);
+            if req_edges_out != EdgesOut::Any && outbound_count > 0 {
+                let message = format!("Node type {} prohibits child nodes, but had {} outbound edges.", n.def.name(), outbound_count);
                 return Err(FlowError::InvalidConnectionsToNode {
                     value: self.g.node_weight(node_index).unwrap().params.clone(),
-                    index: index, message: message
+                    index: node_index.index(), message: message
                 });
             }
         }
@@ -80,15 +78,8 @@ impl<'a, 'b> Engine<'a, 'b> where 'a: 'b {
         self.validate_graph()?;
         self.notify_graph_changed()?;
 
-        self.link_codecs(false)?;
+        self.link_codecs()?;
 
-        // States for a node
-        // New
-        // OutboundDimensionsKnown
-        // Flattened
-        // Optimized
-        // LockedForExecution
-        // Executed
         let mut passes = 0;
         loop {
             if self.graph_fully_executed() {
@@ -103,7 +94,7 @@ impl<'a, 'b> Engine<'a, 'b> where 'a: 'b {
                 //            error_msg!(c, FlowStatusCode::MaximumGraphPassesExceeded);
                 //            return false;
             }
-            self.link_codecs(true)?;
+            self.link_codecs()?;
 
             self.populate_dimensions_where_certain()?;
             self.notify_graph_changed()?;
@@ -111,12 +102,12 @@ impl<'a, 'b> Engine<'a, 'b> where 'a: 'b {
             self.graph_pre_optimize_flatten()?;
             self.notify_graph_changed()?;
 
-            self.link_codecs(true)?;
+            self.link_codecs()?;
 
             self.graph_pre_optimize_flatten()?;
             self.notify_graph_changed()?;
 
-            self.link_codecs(true)?;
+            self.link_codecs()?;
 
 
             self.populate_dimensions_where_certain()?;
@@ -128,11 +119,10 @@ impl<'a, 'b> Engine<'a, 'b> where 'a: 'b {
             self.populate_dimensions_where_certain()?;
             self.notify_graph_changed()?;
 
-            self.graph_post_optimize_flatten()?;
-            self.notify_graph_changed()?;
-
             self.populate_dimensions_where_certain()?;
             self.notify_graph_changed()?;
+
+            self.validate_graph()?;
 
             self.graph_execute()?;
             passes += 1;
@@ -147,37 +137,21 @@ impl<'a, 'b> Engine<'a, 'b> where 'a: 'b {
         Ok(())
     }
 
-    pub fn link_codecs(&mut self, link_only_null_custom_state_nodes: bool) -> Result<()> {
+    pub fn link_codecs(&mut self) -> Result<()> {
         self.notify_graph_changed()?;
 
         for index in 0..self.g.node_count() {
-            if let Some(func) = self.g
+            let n = self.g
                 .node_weight(NodeIndex::new(index))
-                .unwrap()
-                .def
-                .fn_link_state_to_this_io_id {
+                .unwrap();
 
-
-                let io_id;
-                {
-                    let mut ctx = self.op_ctx_mut();
-                    io_id = func(&mut ctx, NodeIndex::new(index));
-                }
-                if let Some(io_id) = io_id {
-                    let weight = self.g.node_weight(NodeIndex::new(index)).unwrap();
-                    // Now, try to send decoder its commands
-                    // let ref mut weight = ctx.weight_mut(ix);
-
-                    if let NodeParams::Json(s::Node::Decode { io_id, ref commands }) = weight.params {
-                        if let Some(ref list) = *commands {
-                            for c in list.iter() {
-                                self.job.tell_decoder(io_id, c.to_owned()).unwrap();
-                            }
-                        }
-                    }
+            if let Some((io_id, commands)) = n.def.tell_decoder(&n.params) {
+                for c in commands.iter() {
+                    self.job.tell_decoder(io_id, c.to_owned()).unwrap();
                 }
             }
         }
+
         Ok(())
     }
 
@@ -231,15 +205,17 @@ impl<'a, 'b> Engine<'a, 'b> where 'a: 'b {
             job: self.job,
         };
         // Invoke estimation
-        match ctx.weight(node_id).def.fn_estimate {
-            Some(f) => {
-                f(&mut ctx, node_id);
-                ctx.weight_mut(node_id).cost.wall_ns += (time::precise_time_ns() - now) as u32;
-            }
-            None => {
+        match ctx.weight(node_id).def.estimate(&mut ctx, node_id){
+            Ok(f) => {},
+            Err(NodeError{kind: ErrorKind::MethodNotImplemented, ..}) => {
                 ctx.weight_mut(node_id).frame_est = FrameEstimate::Impossible;
             }
+            other => {
+                other.unwrap();
+                panic!("")
+            }
         }
+        ctx.weight_mut(node_id).cost.wall_ns += (time::precise_time_ns() - now) as u32;
         ctx.weight(node_id).frame_est
 
     }
@@ -292,7 +268,7 @@ impl<'a, 'b> Engine<'a, 'b> where 'a: 'b {
         match self.estimate_node(node_id)  {
             FrameEstimate::None => {
                 panic!("Node estimation misbehaved on {}. Cannot leave FrameEstimate::None, must chose an alternative",
-                       self.g.node_weight(node_id).unwrap().def.name);
+                       self.g.node_weight(node_id).unwrap().def.name());
             },
             FrameEstimate::Invalidated => {
                 return self.estimate_node_recursive(node_id, recurse_limit -1)
@@ -311,8 +287,7 @@ impl<'a, 'b> Engine<'a, 'b> where 'a: 'b {
 
         Ok(())
     }
-    fn invoke_estimated_or_non_estimable_nodes<F>(&mut self, f: F) -> Result<()>
-    where F: Fn(&NodeDefinition) -> Option<fn(&mut OpCtxMut, NodeIndex<u32>)> {
+    fn invoke_estimated_or_non_estimable_nodes(&mut self) -> Result<()> {
 
 
         // Just find all nodes that offer the given function and whose parents are completed
@@ -323,10 +298,11 @@ impl<'a, 'b> Engine<'a, 'b> where 'a: 'b {
             let mut next = None;
             for ix in 0..(self.g.node_count()) {
                 let nix = NodeIndex::new(ix);
-                if let Some(func) = f(self.g
+                let def = self.g
                     .node_weight(nix)
                     .unwrap()
-                    .def){
+                    .def;
+                if def.can_expand(){
 
                     if self.parents_complete(nix) {
                         if let FrameEstimate::Some(_) = self.g
@@ -336,7 +312,7 @@ impl<'a, 'b> Engine<'a, 'b> where 'a: 'b {
                             //Try estimation one last time if it didn't happen yet
                             let _ = self.estimate_node_recursive(nix,100);
                         }
-                        next = Some((nix, func));
+                        next = Some((nix, def));
                         break;
                     }
 
@@ -344,9 +320,9 @@ impl<'a, 'b> Engine<'a, 'b> where 'a: 'b {
             }
             match next {
                 None => return Ok(()),
-                Some((next_ix, next_func)) => {
+                Some((next_ix, def)) => {
                     let mut ctx = self.op_ctx_mut();
-                    next_func(&mut ctx, next_ix);
+                    def.expand(&mut ctx, next_ix);
 
                 }
             }
@@ -356,11 +332,7 @@ impl<'a, 'b> Engine<'a, 'b> where 'a: 'b {
 
 
     pub fn graph_pre_optimize_flatten(&mut self) -> Result<()> {
-        self.invoke_estimated_or_non_estimable_nodes(|d| d.fn_flatten_pre_optimize )
-    }
-
-    pub fn graph_post_optimize_flatten(&mut self) -> Result<()> {
-        self.invoke_estimated_or_non_estimable_nodes(|d| d.fn_flatten_post_optimize )
+        self.invoke_estimated_or_non_estimable_nodes()
     }
 
     fn parents_complete(&self, ix: NodeIndex) -> bool{
@@ -390,18 +362,20 @@ impl<'a, 'b> Engine<'a, 'b> where 'a: 'b {
         loop {
             let mut next = None;
             for ix in 0..(self.g.node_count()) {
-                if let Some(func) = self.g.node_weight(NodeIndex::new(ix)).unwrap().def.fn_execute {
-                    if self.g.node_weight(NodeIndex::new(ix)).unwrap().result ==
-                        NodeResult::None && self.parents_complete(NodeIndex::new(ix)) {
-                        if let FrameEstimate::Some(_) = self.g
-                            .node_weight(NodeIndex::new(ix))
+                let index = NodeIndex::new(ix);
+                let def = self.g.node_weight(index).unwrap().def;
+                if def.can_execute() {
+                    if self.g.node_weight(index).unwrap().result ==
+                        NodeResult::None && self.parents_complete(index) {
+
+                        if  self.g
+                            .node_weight(index)
                             .unwrap()
-                            .frame_est {
-                        }else{
+                            .frame_est.is_none(){
                             //Try estimation one last time if it didn't happen yet
-                            let _ = self.estimate_node(NodeIndex::new(ix));
+                            let _ = self.estimate_node(index);
                         }
-                        next = Some((NodeIndex::new(ix), func));
+                        next = Some((index, def));
                         break;
                     }
 
@@ -409,14 +383,14 @@ impl<'a, 'b> Engine<'a, 'b> where 'a: 'b {
             }
             match next {
                 None => return Ok(()),
-                Some((next_ix, next_func)) => {
+                Some((next_ix, def)) => {
                     {
                         let mut ctx = self.op_ctx_mut();
-                        next_func(&mut ctx, next_ix);
+                        def.execute(&mut ctx, next_ix);
                     }
                     if self.g.node_weight(next_ix).unwrap().result == NodeResult::None {
                         panic!("fn_execute of {} failed to save a result",
-                               self.g.node_weight(next_ix).unwrap().def.name);
+                               self.g.node_weight(next_ix).unwrap().def.name());
                     } else {
                         unsafe {
                             if self.job.graph_recording.record_frame_images.unwrap_or(false) {
@@ -467,7 +441,6 @@ impl<'a, 'b> Engine<'a, 'b> where 'a: 'b {
     }
 }
 impl<'a> OpCtxMut<'a> {
-    // TODO: Should return Result<String,??>
     pub fn graph_to_str(&mut self) -> Result<String> {
         let mut vec = Vec::new();
         super::visualize::print_graph(&mut vec, self.graph, None).unwrap();

@@ -4,41 +4,31 @@ pub use ::ffi::PixelFormat;
 use ::{Context,Job};
 use flow::nodes;
 use ::internal_prelude::works_everywhere::*;
+use std::any::Any;
+use flow::nodes::*;
+
 
 pub type Graph = Dag<Node, EdgeKind>;
 
 
-#[repr(C)]
-#[derive(Copy,Clone,Debug,PartialEq)]
-pub enum NodeStage {
-    Blank = 0,
-    InputDimensionsKnown = 1,
-    // FIXME: we shouldn't reuse the value
-    // ReadyForPreOptimizeFlatten = 1,
-    PreOptimizeFlattened = 2,
-    ReadyForOptimize = 3,
-    Optimized = 4,
-    ReadyForPostOptimizeFlatten = 7,
-    PostOptimizeFlattened = 8,
-    InputsExecuted = 16,
-    ReadyForExecution = 31,
-    Executed = 32,
-    Done = 63,
-}
-
-#[derive(Clone,Debug,PartialEq)]
+#[derive(Copy, Clone,Debug,PartialEq)]
 pub enum EdgesIn {
     NoInput,
     OneInput,
     OneOptionalInput,
     OneInputOneCanvas,
-    Aribtary {
+    Arbitrary {
         inputs: i32,
         canvases: i32,
         infos: i32,
     },
 }
 
+#[derive(Copy, Clone,Debug,PartialEq)]
+pub enum EdgesOut {
+    None,
+    Any
+}
 
 pub struct OpCtx<'a> {
     pub c: &'a Context,
@@ -55,9 +45,6 @@ pub struct OpCtxMut<'a> {
 pub type OptionalNodeFnMut = Option<fn(&mut OpCtxMut, NodeIndex<u32>)>;
 
 pub type OptionalNodeFnMutReturnOptI32 = Option<fn(&mut OpCtxMut, NodeIndex<u32>) -> Option<i32>>;
-pub type OptionalNodeGraphviz = Option<fn(&mut OpCtxMut, NodeIndex<u32>, &Node, &mut fmt::Formatter)
--> fmt::Result>;
-
 
 // #[derive(Clone,Debug,PartialEq, Default)]
 pub struct NodeDefinition {
@@ -68,13 +55,306 @@ pub struct NodeDefinition {
     pub name: &'static str,
     pub description: &'static str,
 
-    pub fn_link_state_to_this_io_id: OptionalNodeFnMutReturnOptI32,
-    pub fn_graphviz_text: OptionalNodeGraphviz,
+    pub fn_link_state_to_this_io_id: OptionalNodeFnMutReturnOptI32, //default impl
     pub fn_estimate: OptionalNodeFnMut,
     pub fn_flatten_pre_optimize: OptionalNodeFnMut,
-    pub fn_flatten_post_optimize: OptionalNodeFnMut,
+    pub fn_flatten_post_optimize: OptionalNodeFnMut, // not used
     pub fn_execute: OptionalNodeFnMut,
-    pub fn_cleanup: OptionalNodeFnMut,
+}
+
+
+
+macro_rules! code_location {
+    () => (
+        CodeLocation{ line: line!(), column: column!(), file: file!(), module: module_path!()}
+    );
+}
+
+macro_rules! nerror {
+    ($kind:expr) => (
+        NodeError{
+            kind: $kind,
+            message: format!("Error {:?} at\n{}:{}:{} in {}", $kind, file!(), line!(), column!(), module_path!()),
+            at: code_location!(),
+            node: None
+        }
+    );
+    ($kind:expr, $fmt:expr) => (
+        NodeError{
+            kind: $kind,
+            message:  format!(concat!("Error {:?}: ",$fmt , " at\n{}:{}:{} in {}"), $kind, file!(), line!(), column!(), module_path!()),
+            at: code_location!(),
+            node: None
+        }
+    );
+    ($kind:expr, $fmt:expr, $($arg:tt)*) => (
+        NodeError{
+            kind: $kind,
+            message:  format!(concat!("Error {:?}: ", $fmt , " at\n{}:{}:{} in {}"), $kind, $($arg)*, file!(), line!(), column!(), module_path!()),
+            at: code_location!(),
+            node: None
+        }
+    );
+}
+
+macro_rules! unimpl {
+    () => (
+        NodeError{
+            kind: ErrorKind::MethodNotImplemented,
+            message: String::new(),
+            at: code_location!(),
+            node: None
+        }
+    );
+}
+
+#[derive(Debug, Copy, Clone, PartialEq)]
+pub enum ErrorKind{
+    NodeParamsMismatch,
+    BitmapPointerNull,
+    InvalidCoordinates,
+    InvalidNodeParams,
+    MethodNotImplemented,
+    ValidationNotImplemented
+
+}
+#[derive(Debug, Copy, Clone, PartialEq)]
+pub struct CodeLocation{
+    pub line: u32,
+    pub column: u32,
+    pub file: &'static str,
+    pub module: &'static str
+}
+
+#[derive(Debug, Copy, Clone, PartialEq)]
+pub struct NodeDebugInfo{
+    pub stable_id: i32,
+}
+impl NodeDebugInfo {
+    fn from_ctx(ctx: &OpCtx, ix: NodeIndex) -> Option<NodeDebugInfo> {
+        ctx.graph.node_weight(ix).map(|w|
+            NodeDebugInfo{
+                stable_id: w.stable_id
+            }
+        )
+    }
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct NodeError{
+    pub kind: ErrorKind,
+    pub message: String,
+    pub at: CodeLocation,
+    pub node: Option<NodeDebugInfo>
+}
+
+
+impl ::std::error::Error for NodeError {
+    fn description(&self) -> &str {
+        if self.message.is_empty() {
+            "Node Error (no message)"
+        }else{
+            &self.message
+        }
+    }
+
+}
+impl NodeError{
+    fn add_node_info(self, info: Option<NodeDebugInfo>) -> NodeError{
+        NodeError{
+            node: info,
+            .. self
+        }
+    }
+}
+
+impl fmt::Display for NodeError {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        if self.message.is_empty() {
+            write!(f, "Error {:?}: at\n{}:{}:{} in {}", self.kind, self.at.file, self.at.line, self.at.column, self.at.module)
+        }else{
+            write!(f, "{}", self.message)
+        }
+    }
+}
+
+pub type NResult<T> = ::std::result::Result<T, NodeError>;
+
+
+// alternate traits for common classes of nodes
+pub trait NodeDefOneInput{
+
+}
+pub trait NodeDefOneInputOneCanvas{
+
+}
+
+pub trait NodeDef: ::std::fmt::Debug{
+
+    fn as_one_input(&self) -> Option<&NodeDefOneInput>{
+        None
+    }
+    fn as_one_input_one_canvas(&self) -> Option<&NodeDefOneInputOneCanvas>{
+        None
+    }
+
+    fn fqn(&self) -> &'static str;
+    fn name(&self) -> &'static str{
+        self.fqn().split_terminator('.').next_back().expect("Node fn fqn() was empty. Value is required.")
+    }
+    // There is "immediate" tell decoder and "during estimate" tell decoder. This is the former.
+    fn tell_decoder(&self, p: &NodeParams) -> Option<(i32, Vec<s::DecoderCommand>)> {
+        None
+    }
+    /// Edges will be validated before calling estimation or execution or flattening
+    fn edges_required(&self, p: &NodeParams) -> NResult<(EdgesIn, EdgesOut)>{
+        if self.as_one_input().is_some(){
+            Ok((EdgesIn::OneInput, EdgesOut::Any))
+        } else if self.as_one_input_one_canvas().is_some(){
+            Ok((EdgesIn::OneInputOneCanvas, EdgesOut::Any))
+        } else{
+            Err(unimpl!())
+        }
+    }
+    fn validate_params(&self, p: &NodeParams) -> NResult<()>{
+        if let NodeParams::Json(ref n) = *p{
+            self.validate_json(n) //Caller should: .map_err(|e| e.add_node_info(NodeDebugInfo::from_ctx(ctx, ix)))
+        }else {
+            Err(nerror!(ErrorKind::NodeParamsMismatch))
+        }
+    }
+
+    fn validate_json(&self, n: &s::Node) -> NResult<()>{
+        Err(unimpl!())
+    }
+
+    fn estimate(&self, ctx: &mut OpCtxMut, ix: NodeIndex) -> NResult<FrameEstimate>{
+        Err(unimpl!())
+    }
+
+    fn can_expand(&self) -> bool{
+        false
+    }
+
+    fn expand(&self, ctx: &mut OpCtxMut, ix: NodeIndex) -> NResult<()>{
+
+        Err(unimpl!())
+    }
+
+    fn can_execute(&self) -> bool{
+        false
+    }
+
+
+    fn execute(&self, ctx: &mut OpCtxMut, ix: NodeIndex) -> NResult<NodeResult>{
+
+        Err(unimpl!())
+    }
+
+    fn estimate_from_json(&self, n: &s::Node) -> NResult<FrameEstimate>{
+        Err(unimpl!())
+    }
+
+    fn execute_from_json(&self, n: &s::Node) -> NResult<NodeResult>{
+        Err(unimpl!())
+    }
+
+
+    fn graphviz_node_label(&self, n: &Node, f: &mut std::io::Write) -> std::io::Result<()>{
+        write!(f, "{}", self.name())
+    }
+}
+
+impl NodeDefinition{
+    pub fn as_node_def(&self) -> &NodeDef{
+        self
+    }
+}
+
+impl NodeDef for NodeDefinition{
+
+    fn fqn(&self) -> &'static str{
+        self.fqn
+    }
+    fn name(&self) -> &'static str{
+        self.name
+    }
+    fn edges_required(&self, p: &NodeParams) -> NResult<(EdgesIn, EdgesOut)>{
+        Ok((self.inbound_edges, if self.outbound_edges { EdgesOut::Any } else { EdgesOut::None }))
+    }
+
+    fn validate_params(&self, p: &NodeParams) -> NResult<()>{
+        Ok(())
+    }
+
+    fn estimate(&self, ctx: &mut OpCtxMut, ix: NodeIndex) -> NResult<FrameEstimate>{
+        if let Some(f) = self.fn_estimate{
+            f(ctx, ix);
+            Ok(FrameEstimate::None)
+        }else{
+            Err(unimpl!())
+        }
+    }
+
+    fn expand(&self, ctx: &mut OpCtxMut, ix: NodeIndex) -> NResult<()>{
+        if let Some(f) = self.fn_flatten_pre_optimize{
+            f(ctx, ix);
+            Ok(())
+        }else{
+            Err(unimpl!())
+        }
+    }
+
+    fn can_expand(&self) ->bool{
+        self.fn_flatten_pre_optimize.is_some()
+    }
+
+    fn can_execute(&self) ->bool{
+        self.fn_execute.is_some()
+    }
+
+    fn execute(&self, ctx: &mut OpCtxMut, ix: NodeIndex) -> NResult<NodeResult>{
+        if let Some(f) = self.fn_execute{
+            f(ctx, ix);
+            Ok(NodeResult::None)
+        }else{
+            Err(unimpl!())
+        }
+    }
+
+    fn graphviz_node_label(&self, n: &Node, f: &mut std::io::Write) -> std::io::Result<()>{
+
+        // name { est f1, f2, ex } none
+        let a = if self.fn_estimate.is_some() {
+            "est "
+        } else {
+            ""
+        };
+        let b = if self.fn_flatten_pre_optimize.is_some() {
+            "f1 "
+        } else {
+            ""
+        };
+        let c = if self.fn_flatten_post_optimize.is_some() {
+            "f2 "
+        } else {
+            ""
+        };
+        let d = if self.fn_execute.is_some() {
+            "exec "
+        } else {
+            ""
+        };
+
+        let e = match n.result {
+            NodeResult::None => "none",
+            NodeResult::Consumed => "reused",
+            NodeResult::Frame(_) => "done",
+            NodeResult::Encoded(_) => "encoded",
+        };
+        write!(f, "{}{{{}{}{}{}}} {}", self.name(), a, b, c, d, e)?;
+        Ok(())
+    }
 }
 
 #[derive(Copy, Clone,Debug,PartialEq)]
@@ -92,6 +372,19 @@ pub enum FrameEstimate {
     Invalidated,
     UpperBound(FrameInfo),
     Some(FrameInfo),
+}
+
+impl FrameEstimate{
+    pub fn is_none(&self) -> bool{
+        self == &FrameEstimate::None
+    }
+    pub fn is_some(&self) -> bool{
+        if let &FrameEstimate::Some(_) = self {
+            true
+        }else{
+            false
+        }
+    }
 }
 
 #[derive(Clone,Debug,PartialEq)]
@@ -137,18 +430,23 @@ pub enum NodeParams {
     Internal(NodeParamsInternal),
 }
 
-#[derive(Clone,Debug,PartialEq)]
+#[derive(Clone,Debug)]
 pub struct Node {
-    pub def: &'static NodeDefinition,
+    pub def: &'static NodeDef,
     pub params: NodeParams,
     pub frame_est: FrameEstimate,
     pub cost_est: CostEstimate,
     pub cost: CostInfo,
     pub result: NodeResult,
     pub stable_id: i32,
-    pub custom_state: *mut u8, // For simple metadata, we might just use JSON?
 }
 
+#[test]
+fn limit_node_bytes(){
+    let size = mem::size_of::<Node>();
+    eprintln!("{} bytes.", size);
+    assert!(size < 1024);
+}
 
 impl From<s::Node> for Node {
     fn from(node: s::Node) -> Node {
@@ -201,7 +499,6 @@ impl Node {
     pub fn new(def: &'static NodeDefinition, params: NodeParams) -> Node {
         Node {
             def: def,
-            custom_state: ::std::ptr::null_mut(),
             frame_est: FrameEstimate::None,
             cost_est: CostEstimate::None,
             cost: CostInfo {
@@ -220,36 +517,7 @@ impl Node {
 
 
     pub fn graphviz_node_label(&self, f: &mut std::io::Write) -> std::io::Result<()> {
-        // name { est f1, f2, ex } none
-        let a = if self.def.fn_estimate.is_some() {
-            "est "
-        } else {
-            ""
-        };
-        let b = if self.def.fn_flatten_pre_optimize.is_some() {
-            "f1 "
-        } else {
-            ""
-        };
-        let c = if self.def.fn_flatten_post_optimize.is_some() {
-            "f2 "
-        } else {
-            ""
-        };
-        let d = if self.def.fn_execute.is_some() {
-            "exec "
-        } else {
-            ""
-        };
-
-        let e = match self.result {
-            NodeResult::None => "none",
-            NodeResult::Consumed => "reused",
-            NodeResult::Frame(_) => "done",
-            NodeResult::Encoded(_) => "encoded",
-        };
-        try!(write!(f, "{}{{{}{}{}{}}} {}", self.def.name, a, b, c, d, e));
-        Ok(())
+        self.def.graphviz_node_label(self, f)
     }
 }
 
@@ -274,10 +542,8 @@ impl Default for NodeDefinition {
             outbound_edges: true,
             name: "(null)",
             description: "",
-            fn_graphviz_text: None,
             fn_flatten_post_optimize: None,
             fn_execute: None,
-            fn_cleanup: None,
             fn_estimate: None,
             fn_flatten_pre_optimize: None,
             fn_link_state_to_this_io_id: None,

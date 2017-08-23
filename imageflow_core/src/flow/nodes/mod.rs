@@ -3,6 +3,8 @@ use ffi::{ImageflowContext, BitmapBgra};
 use libc::{int32_t, size_t};
 use petgraph::EdgeDirection;
 use petgraph::visit::EdgeRef;
+use std::error::Error;
+use std::fmt;
 mod rotate_flip_transpose;
 mod clone_crop_fill_expand;
 mod scale_render;
@@ -56,35 +58,46 @@ pub use self::white_balance::WHITE_BALANCE_SRGB;
 pub use self::color::COLOR_MATRIX_SRGB_MUTATE;
 pub use self::color::COLOR_MATRIX_SRGB;
 pub use self::color::COLOR_FILTER_SRGB;
+
+#[macro_use]
 use super::definitions::*;
 
+#[test]
+fn test_err() {
 
+    let e = nerror!(ErrorKind::BitmapPointerNull);
+    eprintln!("{}", e);
+    let e = nerror!(ErrorKind::BitmapPointerNull, "hi");
+    eprintln!("{}", e);
+    let e = nerror!(ErrorKind::BitmapPointerNull, "hi {}", 1);
+    eprintln!("{}", e);
+}
 
 pub struct NodeDefHelpers {}
 impl NodeDefHelpers {
-    fn copy_frame_est_from_first_input(ctx: &mut OpCtxMut, ix: NodeIndex<u32>) {
+    fn copy_frame_est_from_first_input(ctx: &mut OpCtxMut, ix: NodeIndex) {
         ctx.copy_frame_est_from_first_input(ix);
     }
-    fn copy_frame_est_from_first_canvas(ctx: &mut OpCtxMut, ix: NodeIndex<u32>) {
+    fn copy_frame_est_from_first_canvas(ctx: &mut OpCtxMut, ix: NodeIndex) {
         ctx.copy_frame_est_from_first_canvas(ix);
     }
-    fn rotate_frame_info(ctx: &mut OpCtxMut, ix: NodeIndex<u32>) {
+    fn rotate_frame_info(ctx: &mut OpCtxMut, ix: NodeIndex) {
         ctx.rotate_frame_est_from_first_input(ix);
     }
-    fn flatten_flip_v(ctx: &mut OpCtxMut, ix: NodeIndex<u32>) {
+    fn flatten_flip_v(ctx: &mut OpCtxMut, ix: NodeIndex) {
         // ctx.graph.node_weight_mut(ix).unwrap()
     }
 
-    fn delete_node_and_snap_together(ctx: &mut OpCtxMut, ix: NodeIndex<u32>) {
+    fn delete_node_and_snap_together(ctx: &mut OpCtxMut, ix: NodeIndex) {
         ctx.delete_node_and_snap_together(ix);
     }
 }
 
 impl<'c> OpCtxMut<'c> {
     pub fn first_parent_of_kind(&self,
-                                    of_node: NodeIndex<u32>,
+                                    of_node: NodeIndex,
                                     filter_by_kind: EdgeKind)
-                                    -> Option<NodeIndex<u32>> {
+                                    -> Option<NodeIndex> {
         self.graph
             .graph()
             .edges_directed(of_node, EdgeDirection::Incoming)
@@ -97,20 +110,20 @@ impl<'c> OpCtxMut<'c> {
         self.c.flow_c()
     }
 
-    pub fn first_parent_input(&self, of_node: NodeIndex<u32>) -> Option<NodeIndex<u32>> {
+    pub fn first_parent_input(&self, of_node: NodeIndex) -> Option<NodeIndex> {
         self.first_parent_of_kind(of_node, EdgeKind::Input)
     }
-    pub fn first_parent_canvas(&self, of_node: NodeIndex<u32>) -> Option<NodeIndex<u32>> {
+    pub fn first_parent_canvas(&self, of_node: NodeIndex) -> Option<NodeIndex> {
         self.first_parent_of_kind(of_node, EdgeKind::Canvas)
     }
 
-    pub fn first_parent_input_weight(&self, of_node: NodeIndex<u32>) -> Option<Node> {
+    pub fn first_parent_input_weight(&self, of_node: NodeIndex) -> Option<Node> {
         self.first_parent_input(of_node).map(|ix| self.graph.node_weight(ix).unwrap().clone())
     }
 
 
     pub fn first_parent_frame_info_some(&self,
-                                            of_node: NodeIndex<u32>)
+                                            of_node: NodeIndex)
                                             -> Option<FrameInfo> {
         self.first_parent_input(of_node).and_then(|ix| {
             self.graph.node_weight(ix).and_then(|w| {
@@ -122,7 +135,7 @@ impl<'c> OpCtxMut<'c> {
         })
     }
 
-    pub fn get_json_params(&self, ix: NodeIndex<u32>) -> Option<s::Node> {
+    pub fn get_json_params(&self, ix: NodeIndex) -> Option<s::Node> {
         self.graph.node_weight(ix).and_then(|w| {
             match w.params {
                 NodeParams::Json(ref node) => Some(node.clone()),
@@ -131,12 +144,12 @@ impl<'c> OpCtxMut<'c> {
         })
     }
 
-    pub fn first_parent_canvas_weight(&self, of_node: NodeIndex<u32>) -> Option<&Node> {
+    pub fn first_parent_canvas_weight(&self, of_node: NodeIndex) -> Option<&Node> {
         self.first_parent_canvas(of_node).map(|ix| self.graph.node_weight(ix).unwrap())
     }
 
     pub fn first_parent_result_frame(&self,
-                                             of_node: NodeIndex<u32>,
+                                             of_node: NodeIndex,
                                              kind: EdgeKind)
                                              -> Option<*mut BitmapBgra> {
         self.first_parent_of_kind(of_node, kind)
@@ -150,14 +163,14 @@ impl<'c> OpCtxMut<'c> {
 
 
     pub fn first_parent_input_weight_mut(&mut self,
-                                             of_node: NodeIndex<u32>)
+                                             of_node: NodeIndex)
                                              -> Option<&mut Node> {
         self.first_parent_input(of_node).map(move |ix| self.graph.node_weight_mut(ix).unwrap())
     }
 
     pub fn has_other_children(&self,
-                                  of_node: NodeIndex<u32>,
-                                  except_child: NodeIndex<u32>)
+                                  of_node: NodeIndex,
+                                  except_child: NodeIndex)
                                   -> bool {
         self.graph
             .graph()
@@ -165,14 +178,14 @@ impl<'c> OpCtxMut<'c> {
             .any(|n| n != except_child)
     }
 
-    pub fn weight(&self, ix: NodeIndex<u32>) -> &Node {
+    pub fn weight(&self, ix: NodeIndex) -> &Node {
         self.graph.node_weight(ix).unwrap()
     }
 
-    pub fn weight_mut(&mut self, node_to_update: NodeIndex<u32>) -> &mut Node {
+    pub fn weight_mut(&mut self, node_to_update: NodeIndex) -> &mut Node {
         self.graph.node_weight_mut(node_to_update).unwrap()
     }
-    pub fn copy_frame_est_from_first_input(&mut self, node_to_update: NodeIndex<u32>) {
+    pub fn copy_frame_est_from_first_input(&mut self, node_to_update: NodeIndex) {
         if let Some(input_ix) = self.first_parent_input(node_to_update)
         {
             if self.graph.node_weight(input_ix).unwrap().frame_est == FrameEstimate::None {
@@ -182,7 +195,7 @@ impl<'c> OpCtxMut<'c> {
                 self.graph.node_weight(input_ix).unwrap().frame_est;
         }
     }
-    pub fn copy_frame_est_from_first_canvas(&mut self, node_to_update: NodeIndex<u32>) {
+    pub fn copy_frame_est_from_first_canvas(&mut self, node_to_update: NodeIndex) {
         if let  Some(input_ix) = self.first_parent_canvas(node_to_update) {
             self.graph.node_weight_mut(node_to_update).unwrap().frame_est =
                 self.graph.node_weight(input_ix).unwrap().frame_est;
@@ -200,7 +213,7 @@ impl<'c> OpCtxMut<'c> {
     }
 
     pub fn rotate_frame_est_from_first_input(&mut self,
-                                                     node_to_update: NodeIndex<u32>) {
+                                                     node_to_update: NodeIndex) {
         // TODO: select by EdgeKind=Input
         let input = self.graph
             .graph()
@@ -230,8 +243,8 @@ impl<'c> OpCtxMut<'c> {
     }
 
     pub fn copy_edges_to(&mut self,
-                             from_node: NodeIndex<u32>,
-                             to_node: NodeIndex<u32>,
+                             from_node: NodeIndex,
+                             to_node: NodeIndex,
                              direction: EdgeDirection) {
         let edges = self.graph
             .graph()
@@ -252,7 +265,7 @@ impl<'c> OpCtxMut<'c> {
             let _ = self.graph.add_edge(a, b, weight).unwrap();
         }
     }
-    pub fn delete_child_edges_for(&mut self, from_node: NodeIndex<u32>) {
+    pub fn delete_child_edges_for(&mut self, from_node: NodeIndex) {
         loop {
             if self.graph
                 .raw_edges()
@@ -265,7 +278,7 @@ impl<'c> OpCtxMut<'c> {
         }
     }
 
-    pub fn delete_node_and_snap_together(&mut self, node_to_delete: NodeIndex<u32>) {
+    pub fn delete_node_and_snap_together(&mut self, node_to_delete: NodeIndex) {
         // Prefer EdgeKind=Input
         let input = self.graph
             .graph()
@@ -281,7 +294,7 @@ impl<'c> OpCtxMut<'c> {
     }
 
     // Links nodes with Input edges
-    pub fn replace_node(&mut self, index: NodeIndex<u32>, with_list: Vec<Node>) {
+    pub fn replace_node(&mut self, index: NodeIndex, with_list: Vec<Node>) {
         let mut with = with_list.clone();
         match with.len() {
             0 => self.delete_node_and_snap_together(index),
@@ -301,27 +314,27 @@ impl<'c> OpCtxMut<'c> {
     }
 
     pub fn replace_node_with_existing(&mut self,
-                                          index: NodeIndex<u32>,
-                                          with_index: NodeIndex<u32>) {
+                                          index: NodeIndex,
+                                          with_index: NodeIndex) {
         self.copy_edges_to(index, with_index, EdgeDirection::Incoming);
         self.copy_edges_to(index, with_index, EdgeDirection::Outgoing);
         self.graph.remove_node(index).unwrap();
     }
 
     pub fn get_decoder_io_ids_and_indexes(&self,
-                              ancestors_of_node: NodeIndex<u32>)
-                              -> Vec<(i32,NodeIndex<u32>)> {
+                              ancestors_of_node: NodeIndex)
+                              -> Vec<(i32,NodeIndex)> {
         self.graph.parents(ancestors_of_node).iter(self.graph).map(|(_, ix)| match self.weight(ix).params{
             NodeParams::Json(s::Node::Decode { io_id, ..}) => Some((io_id,ix)), _ => None
         } ).filter(|v| v.is_some()).map(|v| v.unwrap()).collect::<>()
     }
     pub fn get_decoder_io_ids(&self,
-                                          ancestors_of_node: NodeIndex<u32>)
+                                          ancestors_of_node: NodeIndex)
                                           -> Vec<i32> {
         self.get_decoder_io_ids_and_indexes(ancestors_of_node).into_iter().map(|(a,b)| a).collect::<>()
     }
     pub fn get_image_info_list(&mut self,
-                            ancestors_of_node: NodeIndex<u32>) -> Vec<::std::result::Result<s::ImageInfo, ::FlowError>>{
+                            ancestors_of_node: NodeIndex) -> Vec<::std::result::Result<s::ImageInfo, ::FlowError>>{
         self.get_decoder_io_ids(ancestors_of_node).into_iter().map(|io_id| self.job.get_image_info(io_id)).collect::<>()
     }
 
