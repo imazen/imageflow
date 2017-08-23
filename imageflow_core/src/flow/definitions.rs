@@ -42,6 +42,17 @@ pub struct OpCtxMut<'a> {
     pub graph: &'a mut Graph,
 }
 
+impl<'a> From<&'a OpCtxMut<'a>> for OpCtx<'a> {
+    fn from(ctx: &'a OpCtxMut<'a>) -> Self {
+        OpCtx{
+            c: ctx.c,
+            job: ctx.job,
+            graph: ctx.graph
+        }
+    }
+}
+
+
 pub type OptionalNodeFnMut = Option<fn(&mut OpCtxMut, NodeIndex<u32>)>;
 
 pub type OptionalNodeFnMutReturnOptI32 = Option<fn(&mut OpCtxMut, NodeIndex<u32>) -> Option<i32>>;
