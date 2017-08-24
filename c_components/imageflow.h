@@ -87,6 +87,7 @@ typedef enum flow_status_code {
     flow_status_Graph_is_cyclic = 71,
     flow_status_Invalid_inputs_to_node = 72,
     flow_status_Maximum_graph_passes_exceeded = 73,
+    flow_status_ErrorReportingInconsistency = 90,
     flow_status_Other_error = 1024,
     flow_status____Last_library_error,
     flow_status_First_user_defined_error = 1025,
