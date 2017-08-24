@@ -290,6 +290,8 @@ PUB struct flow_bitmap_bgra * flow_bitmap_bgra_create(flow_c * c, int sx, int sy
 PUB struct flow_bitmap_bgra * flow_bitmap_bgra_create_header(flow_c * c, int sx, int sy);
 PUB void flow_bitmap_bgra_destroy(flow_c * c, struct flow_bitmap_bgra * im);
 PUB bool flow_bitmap_bgra_flip_horizontal(flow_c * c, struct flow_bitmap_bgra * b);
+PUB bool flow_bitmap_bgra_flip_vertical(flow_c * c, struct flow_bitmap_bgra * b);
+
 PUB bool flow_bitmap_bgra_compare(flow_c * c, struct flow_bitmap_bgra * a, struct flow_bitmap_bgra * b,
                                   bool * equal_out);
 

@@ -604,8 +604,8 @@ mod long_term{
 
 
 
-        pub fn flow_bitmap_bgra_flip_vertical(c: *mut ImageflowContext, bitmap: *mut BitmapBgra);
-        pub fn flow_bitmap_bgra_flip_horizontal(c: *mut ImageflowContext, bitmap: *mut BitmapBgra);
+        pub fn flow_bitmap_bgra_flip_vertical(c: *mut ImageflowContext, bitmap: *mut BitmapBgra) -> bool;
+        pub fn flow_bitmap_bgra_flip_horizontal(c: *mut ImageflowContext, bitmap: *mut BitmapBgra) -> bool;
 
         pub fn flow_bitmap_bgra_create(c: *mut ImageflowContext,
                                        sx: i32,
