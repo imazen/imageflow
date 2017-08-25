@@ -40,6 +40,8 @@ threadpool = "1"
 petgraph = "0.4"
 daggy = "0.5"
 
+smallvec = "*"
+
 gif = "*"
 gif-dispose="*"
 

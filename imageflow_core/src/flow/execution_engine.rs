@@ -97,6 +97,7 @@ impl<'a, 'b> Engine<'a, 'b> where 'a: 'b {
                 {
                     self.notify_graph_complete()?;
                 }
+                eprintln!("{:#?}", self.g);
                 panic!("Maximum graph passes exceeded");
                 //            error_msg!(c, FlowStatusCode::MaximumGraphPassesExceeded);
                 //            return false;
@@ -205,7 +206,7 @@ impl<'a, 'b> Engine<'a, 'b> where 'a: 'b {
     }
 
 
-    pub fn estimate_node(&mut self, node_id: NodeIndex<u32>) -> NResult<FrameEstimate> {
+    pub fn estimate_node(&mut self, node_id: NodeIndex) -> NResult<FrameEstimate> {
         let now = time::precise_time_ns();
         let mut ctx = OpCtxMut{
             c: self.c,
@@ -220,7 +221,7 @@ impl<'a, 'b> Engine<'a, 'b> where 'a: 'b {
                 Ok(FrameEstimate::Impossible)
             }
             other => other
-        }.map_err( |e| e.with_ctx_mut(&ctx,node_id));
+        }.map_err( |e| e.at(here!()).with_ctx_mut(&ctx,node_id));
 
         if let Ok(v) = result {
             ctx.weight_mut(node_id).frame_est = v;
@@ -230,7 +231,7 @@ impl<'a, 'b> Engine<'a, 'b> where 'a: 'b {
         result
     }
 
-    pub fn estimate_node_recursive(&mut self, node_id: NodeIndex<u32>, recurse_limit: i32) -> NResult<FrameEstimate> {
+    pub fn estimate_node_recursive(&mut self, node_id: NodeIndex, recurse_limit: i32) -> NResult<FrameEstimate> {
         if recurse_limit < 0 {
             panic!("Hit node estimation recursion limit");
         }
@@ -260,7 +261,7 @@ impl<'a, 'b> Engine<'a, 'b> where 'a: 'b {
                     .parents(node_id)
                     .iter(self.g)
                     .map(|(edge_ix, ix)| ix)
-                    .collect::<Vec<NodeIndex<u32>>>();
+                    .collect::<Vec<NodeIndex>>();
 
                 // println!("Estimating recursively {:?}", input_indexes);
                 for ix in input_indexes {
@@ -381,7 +382,7 @@ impl<'a, 'b> Engine<'a, 'b> where 'a: 'b {
                             .unwrap()
                             .frame_est.is_none(){
                             //Try estimation one last time if it didn't happen yet
-                            let _ = self.estimate_node(index)?;
+                            let _ = self.estimate_node(index).map_err(|e| e.at(here!()))?;
                         }
                         next = Some((index, def));
                         break;
@@ -394,34 +395,33 @@ impl<'a, 'b> Engine<'a, 'b> where 'a: 'b {
                 Some((next_ix, def)) => {
                     {
                         let mut ctx = self.op_ctx_mut();
-                        let _ = def.execute(&mut ctx, next_ix)?;
+                        let result = def.execute(&mut ctx, next_ix).map_err(|e| e.with_ctx_mut(&ctx, next_ix).at(here!()))?;
+                        if result == NodeResult::None {
+                            return Err(nerror!(ErrorKind::InvalidOperation, "Node {} execution returned {:?}", def.name(), result).into());
+                        }else{
+                            ctx.weight_mut(next_ix).result = result;
+                        }
                     }
-                    if self.g.node_weight(next_ix).unwrap().result == NodeResult::None {
-                        panic!("fn_execute of {} failed to save a result",
-                               self.g.node_weight(next_ix).unwrap().def.name());
-                    } else {
-                        unsafe {
-                            if self.job.graph_recording.record_frame_images.unwrap_or(false) {
-                                if let NodeResult::Frame(ptr) = self.g
-                                    .node_weight(next_ix)
-                                    .unwrap()
-                                    .result {
-                                    let path = format!("node_frames/job_{}_node_{}.png",
-                                                self.job.debug_job_id,
-                                                self.g.node_weight(next_ix).unwrap().stable_id);
-                                    let path_copy = path.clone();
-                                    let path_cstr = std::ffi::CString::new(path).unwrap();
-                                    let _ = std::fs::create_dir("node_frames");
-                                    if !::ffi::flow_bitmap_bgra_save_png(self.c.flow_c(),
-                                                                         ptr,
-                                                                         path_cstr.as_ptr()) {
 
-                                        println!("Failed to save frame {} (from node {})",
-                                                 path_copy,
-                                                 next_ix.index());
-                                        self.c.c_error().unwrap().panic_time();
-
-                                    }
+                    unsafe {
+                        if self.job.graph_recording.record_frame_images.unwrap_or(false) {
+                            if let NodeResult::Frame(ptr) = self.g
+                                .node_weight(next_ix)
+                                .unwrap()
+                                .result {
+                                let path = format!("node_frames/job_{}_node_{}.png",
+                                                   self.job.debug_job_id,
+                                                   self.g.node_weight(next_ix).unwrap().stable_id);
+                                let path_copy = path.clone();
+                                let path_cstr = std::ffi::CString::new(path).unwrap();
+                                let _ = std::fs::create_dir("node_frames");
+                                if !::ffi::flow_bitmap_bgra_save_png(self.c.flow_c(),
+                                                                     ptr,
+                                                                     path_cstr.as_ptr()) {
+                                    println!("Failed to save frame {} (from node {})",
+                                             path_copy,
+                                             next_ix.index());
+                                    self.c.c_error().unwrap().panic_time();
                                 }
                             }
                         }
@@ -462,7 +462,7 @@ use daggy::walker::Walker;
 
 
 
-pub fn flow_node_has_dimensions(g: &Graph, node_id: NodeIndex<u32>) -> bool {
+pub fn flow_node_has_dimensions(g: &Graph, node_id: NodeIndex) -> bool {
     g.node_weight(node_id)
         .map(|node| match node.frame_est {
             FrameEstimate::Some(_) => true,
@@ -471,7 +471,7 @@ pub fn flow_node_has_dimensions(g: &Graph, node_id: NodeIndex<u32>) -> bool {
         .unwrap_or(false)
 }
 
-pub fn inputs_estimated(g: &Graph, node_id: NodeIndex<u32>) -> bool {
+pub fn inputs_estimated(g: &Graph, node_id: NodeIndex) -> bool {
     inputs_estimates(g, node_id).iter().all(|est| match *est {
         FrameEstimate::Some(_) => true,
         _ => false,
@@ -480,7 +480,7 @@ pub fn inputs_estimated(g: &Graph, node_id: NodeIndex<u32>) -> bool {
 
 // -> impl Iterator<Item = FrameEstimate> caused compiler panic
 
-pub fn inputs_estimates(g: &Graph, node_id: NodeIndex<u32>) -> Vec<FrameEstimate> {
+pub fn inputs_estimates(g: &Graph, node_id: NodeIndex) -> Vec<FrameEstimate> {
     g.parents(node_id)
         .iter(g)
         .filter_map(|(_, node_index)| g.node_weight(node_index).map(|w| w.frame_est))

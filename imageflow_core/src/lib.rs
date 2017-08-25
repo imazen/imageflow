@@ -5,6 +5,8 @@
 #![feature(proc_macro)]
 #![feature(integer_atomics)]
 #![feature(as_c_str)]
+#![feature(core_intrinsics)]
+
 
 
 // intellij-rust flags this anyway
@@ -39,6 +41,8 @@ extern crate url;
 extern crate uuid;
 extern crate gif;
 extern crate gif_dispose;
+extern crate smallvec;
+extern crate core;
 
 mod json;
 pub mod flow;

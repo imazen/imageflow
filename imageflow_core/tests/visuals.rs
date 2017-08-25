@@ -107,6 +107,9 @@ fn compare(input: Option<s::IoEnum>, allowed_off_by_one_bytes: usize, checksum_n
 
     context.message("v0.1/build", &serde_json::to_vec(&build).unwrap()).unwrap();
 
+    if dest_bitmap.is_null(){
+        panic!("Failed to execute")
+    }
     unsafe {
         if debug {
             println!("{:?}", dest_bitmap);
@@ -393,7 +396,12 @@ fn get_result_dimensions(steps: Vec<s::Node>, io: Vec<s::IoObject>, debug: bool)
         framewise: s::Framewise::Steps(steps)
     };
     let mut context = Context::create().unwrap();
-    context.message("v0.1/build", &serde_json::to_vec(&build).unwrap()).unwrap();
+    let json = serde_json::to_vec(&build).unwrap();
+    let response = context.message("v0.1/build", &json).unwrap();
+    response.assert_ok();
+    if dest_bitmap.is_null(){
+        panic!("execution failed: {:?}", response);
+    }
     unsafe { ((*dest_bitmap).w, (*dest_bitmap).h) }
 }
 

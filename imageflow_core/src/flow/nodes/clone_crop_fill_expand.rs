@@ -1,87 +1,77 @@
 use super::internal_prelude::*;
 
-fn copy_rect_def() -> NodeDefinition {
-    NodeDefinition {
-        fqn: "imazen.copy_rect_to_canvas",
-        name: "copy_rect",
-        inbound_edges: EdgesIn::OneInputOneCanvas,
-        description: "Copy Rect",
-        fn_estimate: Some(NodeDefHelpers::copy_frame_est_from_first_canvas),
-        fn_execute: Some({
 
-            fn f(ctx: &mut OpCtxMut, ix: NodeIndex<u32>) {
+#[derive(Debug, Clone)]
+pub struct CopyRectNodeDef;
 
-                if let s::Node::CopyRectToCanvas { from_x, from_y, width, height, x, y } =
-                       ctx.get_json_params(ix).unwrap() {
-                    let input: *mut ::ffi::BitmapBgra =
-                        ctx.first_parent_result_frame(ix, EdgeKind::Input).unwrap();
-                    let canvas: *mut ::ffi::BitmapBgra =
-                        ctx.first_parent_result_frame(ix, EdgeKind::Canvas).unwrap();
+impl NodeDef for CopyRectNodeDef {
+    fn as_one_input_one_canvas(&self) -> Option<&NodeDefOneInputOneCanvas> {
+        Some(self)
+    }
+}
 
+impl NodeDefOneInputOneCanvas for CopyRectNodeDef{
+    fn fqn(&self) -> &'static str{
+        "imazen.copy_rect_to_canvas"
+    }
+    fn validate_params(&self, p: &NodeParams) -> NResult<()>{
+        Ok(())
+    }
+
+    fn render(&self, c: &Context, canvas: &mut BitmapBgra, input: &mut BitmapBgra,  p: &NodeParams) -> NResult<()> {
+        if let &NodeParams::Json(s::Node::CopyRectToCanvas { from_x, from_y, width, height, x, y }) = p {
+            if input.fmt != canvas.fmt {
+                return Err(nerror!(ErrorKind::InvalidNodeConnections, "Canvas pixel format {:?} differs from Input pixel format {:?}.", input.fmt, canvas.fmt));
+            }
+            if input == canvas {
+                return Err(nerror!(ErrorKind::InvalidNodeConnections, "Canvas and Input are the same bitmap!"));
+            }
+
+            if input.w <= from_x || input.h <= from_y ||
+                input.w < from_x + width ||
+                input.h < from_y + height ||
+                canvas.w < x + width ||
+                canvas.h < y + height {
+                return Err(nerror!(ErrorKind::InvalidNodeParams, "Invalid coordinates. Canvas is {}x{}, Input is {}x{}, Params provided: {:?}",
+                         canvas.w,
+                         canvas.h,
+                         input.w,
+                         input.h,
+                         p));
+            }
+
+            let bytes_pp = match input.fmt {
+                PixelFormat::Gray8 => 1,
+                PixelFormat::Bgra32 => 4,
+                PixelFormat::Bgr24 => 3,
+            };
+            if from_x == 0 && x == 0 && width == input.w && width == canvas.w &&
+                input.stride == canvas.stride && !canvas.borrowed_pixels {
+                //This optimization has the side effect of copying irrelevant data, so we don't want to do it if windowed, only
+                // if padded or permanently cropped.
+                unsafe {
+                    let from_offset = input.stride * from_y;
+                    let from_ptr = input.pixels.offset(from_offset as isize);
+                    let to_offset = canvas.stride * y;
+                    let to_ptr = canvas.pixels.offset(to_offset as isize);
+                    ptr::copy_nonoverlapping(from_ptr, to_ptr, (input.stride * height) as usize);
+                }
+            } else {
+                for row in 0..height {
                     unsafe {
-                        if (*input).fmt != (*canvas).fmt {
-                            panic!("Can't copy between bitmaps with different pixel formats")
-                        }
-                        if input == canvas{
-                            panic!("Canvas and input must be different bitmaps for CopyRect to work!")
-                        }
+                        let from_offset = input.stride * (from_y + row) + bytes_pp * from_x;
+                        let from_ptr = input.pixels.offset(from_offset as isize);
+                        let to_offset = canvas.stride * (y + row) + bytes_pp * x;
+                        let to_ptr = canvas.pixels.offset(to_offset as isize);
 
-                        // TODO: Implement faster path for common (full clone) path
-                        //    if (info->x == 0 && info->from_x == 0 && info->from_y == 0 && info->y == 0 && info->width == input->w
-                        //        && info->width == canvas->w && info->height == input->h && info->height == canvas->h
-                        //        && canvas->stride == input->stride) {
-                        //        memcpy(canvas->pixels, input->pixels, input->stride * input->h);
-                        //        canvas->alpha_meaningful = input->alpha_meaningful;
-
-                        if (*input).w <= from_x || (*input).h <= from_y ||
-                           (*input).w < from_x + width ||
-                           (*input).h < from_y + height ||
-                           (*canvas).w < x + width ||
-                           (*canvas).h < y + height {
-                            println!("canvas {}x{}, input {}x{}, command {:?}",
-                                     (*canvas).w,
-                                     (*canvas).h,
-                                     (*input).w,
-                                     (*input).h,
-                                     ctx.get_json_params(ix).unwrap());
-                            panic!("Out of bounds")
-                        }
-
-                        let bytes_pp = match (*input).fmt {
-                            PixelFormat::Gray8 => 1,
-                            PixelFormat::Bgra32 => 4,
-                            PixelFormat::Bgr24 => 3,
-                        };
-                        if from_x == 0 && x == 0 && width == (*input).w && width == (*canvas).w  &&
-                            (*input).stride == (*canvas).stride && !(*canvas).borrowed_pixels {
-                            //This optimization has the side effect of copying irrelevant data, so we don't want to do it if windowed, only
-                            // if padded or permanently cropped.
-                            let from_offset = (*input).stride * from_y;
-                            let from_ptr = (*input).pixels.offset(from_offset as isize);
-                            let to_offset = (*canvas).stride * y;
-                            let to_ptr = (*canvas).pixels.offset(to_offset as isize);
-                            ptr::copy_nonoverlapping(from_ptr, to_ptr, ((*input).stride * height) as usize);
-                        }else {
-                            for row in 0..height {
-                                let from_offset = (*input).stride * (from_y + row) + bytes_pp * from_x;
-                                let from_ptr = (*input).pixels.offset(from_offset as isize);
-                                let to_offset = (*canvas).stride * (y + row) + bytes_pp * x;
-                                let to_ptr = (*canvas).pixels.offset(to_offset as isize);
-                                ptr::copy_nonoverlapping(from_ptr, to_ptr, (width * bytes_pp) as usize);
-                            }
-                        }
-
-
-                        ctx.weight_mut(ix).result = NodeResult::Frame(canvas);
+                        ptr::copy_nonoverlapping(from_ptr, to_ptr, (width * bytes_pp) as usize);
                     }
-
-                } else {
-                    panic!("Missing params")
                 }
             }
-            f
-        }),
-        ..Default::default()
+            Ok(())
+        } else {
+            Err(nerror!(ErrorKind::NodeParamsMismatch, "Need CopyRectToCanvas, got {:?}", p))
+        }
     }
 }
 
@@ -154,7 +144,7 @@ fn clone_def() -> NodeDefinition {
                         let canvas = ctx.graph
                             .add_node(Node::n(&CREATE_CANVAS, NodeParams::Json(canvas_params)));
                         let copy = ctx.graph
-                            .add_node(Node::new(&COPY_RECT, NodeParams::Json(copy_params)));
+                            .add_node(Node::n(&COPY_RECT, NodeParams::Json(copy_params)));
                         ctx.graph.add_edge(canvas, copy, EdgeKind::Canvas).unwrap();
                         ctx.replace_node_with_existing(ix, copy);
                     }
@@ -224,7 +214,7 @@ fn expand_canvas_def() -> NodeDefinition {
                                 .add_node(Node::n(&CREATE_CANVAS,
                                                     NodeParams::Json(canvas_params)));
                             let copy = ctx.graph
-                                .add_node(Node::new(&COPY_RECT, NodeParams::Json(copy_params)));
+                                .add_node(Node::n(&COPY_RECT, NodeParams::Json(copy_params)));
                             ctx.graph.add_edge(canvas, copy, EdgeKind::Canvas).unwrap();
                             ctx.replace_node_with_existing(ix, copy);
                         }
@@ -374,6 +364,9 @@ fn crop_whitespace_def() -> NodeDefinition {
         ..Default::default()
     }
 }
+
+pub static COPY_RECT: CopyRectNodeDef = CopyRectNodeDef{};
+
 lazy_static! {
     pub static ref CLONE: NodeDefinition = clone_def();
     pub static ref CROP_MUTATE: NodeDefinition = crop_mutate_def();
@@ -381,6 +374,6 @@ lazy_static! {
     pub static ref CROP_WHITESPACE: NodeDefinition = crop_whitespace_def();
     pub static ref EXPAND_CANVAS: NodeDefinition = expand_canvas_def();
 
-    pub static ref COPY_RECT: NodeDefinition = copy_rect_def();
+
     pub static ref FILL_RECT: NodeDefinition = fill_rect_def();
 }

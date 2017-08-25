@@ -85,9 +85,6 @@ impl NodeDefHelpers {
     fn rotate_frame_info(ctx: &mut OpCtxMut, ix: NodeIndex) {
         ctx.rotate_frame_est_from_first_input(ix);
     }
-    fn flatten_flip_v(ctx: &mut OpCtxMut, ix: NodeIndex) {
-        // ctx.graph.node_weight_mut(ix).unwrap()
-    }
 
     fn delete_node_and_snap_together(ctx: &mut OpCtxMut, ix: NodeIndex) {
         ctx.delete_node_and_snap_together(ix);
@@ -105,6 +102,17 @@ impl<'c> OpCtxMut<'c> {
             .filter(|&e| e.weight() == &filter_by_kind)
             .map(|e| e.source())
             .nth(0)
+    }
+
+    pub fn first_parent_of_kind_required(&self,
+                                of_node: NodeIndex,
+                                filter_by_kind: EdgeKind)
+                                -> NResult<NodeIndex> {
+        if let Some(ix) = self.first_parent_of_kind(of_node, filter_by_kind){
+            Ok(ix)
+        }else {
+            Err(nerror!(ErrorKind::InvalidOperation, "Parent {:?} node not found", filter_by_kind).with_ctx_mut(self, of_node))
+        }
     }
 
     pub fn flow_c(&self) -> *mut ::ffi::ImageflowContext{
@@ -187,21 +195,64 @@ impl<'c> OpCtxMut<'c> {
         self.graph.node_weight_mut(node_to_update).unwrap()
     }
     pub fn copy_frame_est_from_first_input(&mut self, node_to_update: NodeIndex) {
-        if let Some(input_ix) = self.first_parent_input(node_to_update)
-        {
-            if self.graph.node_weight(input_ix).unwrap().frame_est == FrameEstimate::None {
-                panic!("Parent frame {} is not estimated", input_ix.index());
-            }
-            self.graph.node_weight_mut(node_to_update).unwrap().frame_est =
-                self.graph.node_weight(input_ix).unwrap().frame_est;
+        self.graph.node_weight_mut(node_to_update).unwrap().frame_est = self.frame_est_from(node_to_update, EdgeKind::Input).unwrap();
+    }
+
+
+
+    pub fn frame_est_from(&mut self, ix: NodeIndex, filter_by_kind: EdgeKind) -> NResult<FrameEstimate> {
+        let parent = self.first_parent_of_kind_required(ix, filter_by_kind)?;
+
+        let est = self.graph.node_weight(parent).expect(loc!("first_parent_of_kind_required provided invalid node index")).frame_est;
+        if est == FrameEstimate::None {
+            Err(nerror!(ErrorKind::InvalidOperation, "Parent {:?} node lacks FrameEstimate. Value is {:?}", filter_by_kind, est).with_ctx_mut(self, ix))
+        } else {
+            Ok(est)
         }
     }
+    pub fn bitmap_bgra_from(&mut self, ix: NodeIndex, filter_by_kind: EdgeKind) -> NResult<*mut BitmapBgra> {
+        let parent = self.first_parent_of_kind_required(ix, filter_by_kind)?;
+
+        let result = &self.graph.node_weight(parent).expect(loc!("first_parent_of_kind_required provided invalid node index")).result;
+        if let &NodeResult::Frame(bitmap) = result {
+            if bitmap.is_null() {
+                Err(nerror!(ErrorKind::BitmapPointerNull, "Parent {:?} node has NodeResult::Frame(null)", filter_by_kind).with_ctx_mut(self, ix))
+            } else {
+                Ok(bitmap)
+            }
+        }else{
+            Err(nerror!(ErrorKind::InvalidOperation, "Parent {:?} node lacks NodeResult::Frame(bitmap). Value is {:?}", filter_by_kind, result).with_ctx_mut(self, ix))
+        }
+    }
+    pub fn consume_parent_result(&mut self, ix: NodeIndex, filter_by_kind: EdgeKind) -> NResult<()> {
+        let parent = self.first_parent_of_kind_required(ix, filter_by_kind)?;
+
+        let result = {
+            let weight = self.graph.node_weight(parent).expect(loc!("first_parent_of_kind_required provided invalid node index"));
+            if let NodeResult::Frame(bitmap) = weight.result {
+                Ok(())
+            } else if let NodeResult::Consumed = weight.result {
+                Err(nerror!(ErrorKind::InvalidOperation, "Parent {:?} node's result has already been consumed", filter_by_kind).with_ctx_mut(self, ix))
+            } else {
+                Err(nerror!(ErrorKind::InvalidOperation, "Parent {:?} node's result cannot be consumed. Value is {:?}", filter_by_kind, weight.result).with_ctx_mut(self, ix))
+            }
+        };
+        if result.is_ok(){
+            self.graph.node_weight_mut(parent).expect(loc!()).result = NodeResult::Consumed;
+        }
+        result
+    }
+
     pub fn copy_frame_est_from_first_canvas(&mut self, node_to_update: NodeIndex) {
         if let  Some(input_ix) = self.first_parent_canvas(node_to_update) {
             self.graph.node_weight_mut(node_to_update).unwrap().frame_est =
                 self.graph.node_weight(input_ix).unwrap().frame_est;
         }
     }
+    pub fn frame_est_from_first_canvas(&mut self, node_to_update: NodeIndex) -> Option<FrameEstimate>{
+        self.first_parent_canvas(node_to_update).map(|ix| self.graph.node_weight(ix).unwrap().frame_est)
+    }
+
     pub fn assert_ok(&self) {
         self.panic_time()
     }

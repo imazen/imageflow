@@ -86,7 +86,7 @@ pub fn create_handler_over_responder<'a, T, D>(responder: ResponderFn<'a, T, D>)
 
 }
 
-
+#[derive(Debug, Clone)]
 pub struct JsonResponse {
     pub status_code: i64,
     pub response_json: Cow<'static, [u8]>,
@@ -132,7 +132,7 @@ impl JsonResponse {
     }
     pub fn assert_ok(&self) {
         if !self.status_2xx() {
-            panic!("status {} - {:?}",
+            panic!("status {}\n{}",
                    self.status_code,
                    std::str::from_utf8(self.response_json.as_ref()).unwrap());
         }

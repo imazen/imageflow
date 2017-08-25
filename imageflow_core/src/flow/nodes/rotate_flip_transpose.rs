@@ -135,62 +135,38 @@ fn no_op_def() -> NodeDefinition {
         ..Default::default()
     }
 }
-fn flip_v_p_def() -> NodeDefinition {
-    NodeDefinition {
-        fqn: "imazen.flip_vertical_mutate",
-        name: "FlipVPrimitive",
-        description: "Flip frame vertical",
-        fn_estimate: Some(NodeDefHelpers::copy_frame_est_from_first_input),
-        fn_execute: Some({
-            fn f(ctx: &mut OpCtxMut, ix: NodeIndex<u32>) {
-                let from_node = ctx.first_parent_input_weight(ix).unwrap().clone();
-                match from_node.result {
-                    NodeResult::Frame(bitmap) => {
-                        unsafe {
-                            ::ffi::flow_bitmap_bgra_flip_vertical(ctx.flow_c(), bitmap);
-                        }
-                        ctx.weight_mut(ix).result = NodeResult::Frame(bitmap);
-                        ctx.first_parent_input_weight_mut(ix).unwrap().result =
-                            NodeResult::Consumed;
-                    }
-                    _ => {
-                        panic!{"Previous node not ready"}
-                    }
-                }
+
+#[derive(Debug, Clone)]
+pub struct FlipVerticalMutNodeDef;
+impl NodeDefMutateBitmap for FlipVerticalMutNodeDef{
+    fn fqn(&self) -> &'static str{
+        "imazen.flip_vertical_mutate"
+    }
+    fn mutate(&self, c: &Context, bitmap: &mut BitmapBgra,  p: &NodeParams) -> NResult<()>{
+        unsafe {
+            if !::ffi::flow_bitmap_bgra_flip_vertical(c.flow_c(), bitmap as *mut BitmapBgra){
+                return Err(nerror!(ErrorKind::CError(c.error().c_error())))
             }
-            f
-        }),
-        ..Default::default()
+        }
+        Ok(())
     }
 }
-fn flip_h_p_def() -> NodeDefinition {
-    NodeDefinition {
-        fqn: "imazen.flip_horizontal_mutate",
-        name: "FlipHPrimitive",
-        description: "Flip frame horizontal",
-        fn_estimate: Some(NodeDefHelpers::copy_frame_est_from_first_input),
-        fn_execute: Some({
-            fn f(ctx: &mut OpCtxMut, ix: NodeIndex<u32>) {
-                let from_node = ctx.first_parent_input_weight(ix).unwrap().clone();
-                match from_node.result {
-                    NodeResult::Frame(bitmap) => {
-                        unsafe {
-                            ::ffi::flow_bitmap_bgra_flip_horizontal(ctx.flow_c(), bitmap);
-                        }
-                        ctx.weight_mut(ix).result = NodeResult::Frame(bitmap);
-                        ctx.first_parent_input_weight_mut(ix).unwrap().result =
-                            NodeResult::Consumed;
-                    }
-                    _ => {
-                        panic!{"Previous node not ready"}
-                    }
-                }
+#[derive(Debug, Clone)]
+pub struct FlipHorizontalMutNodeDef;
+impl NodeDefMutateBitmap for FlipHorizontalMutNodeDef{
+    fn fqn(&self) -> &'static str{
+        "imazen.flip_vertical_mutate"
+    }
+    fn mutate(&self, c: &Context, bitmap: &mut BitmapBgra,  p: &NodeParams) -> NResult<()>{
+        unsafe {
+            if !::ffi::flow_bitmap_bgra_flip_horizontal(c.flow_c(), bitmap as *mut BitmapBgra){
+                return Err(nerror!(ErrorKind::CError(c.error().c_error())))
             }
-            f
-        }),
-        ..Default::default()
+        }
+        Ok(())
     }
 }
+
 fn flip_v_def() -> NodeDefinition {
     NodeDefinition {
         fqn: "imazen.flipv",
@@ -203,7 +179,7 @@ fn flip_v_def() -> NodeDefinition {
                 if ctx.has_other_children(ctx.first_parent_input(ix).unwrap(), ix) {
                     new_nodes.push(Node::new(&CLONE, NodeParams::None));
                 }
-                new_nodes.push(Node::new(&FLIP_V_PRIMITIVE, NodeParams::None));
+                new_nodes.push(Node::n(&FLIP_V_PRIMITIVE, NodeParams::None));
                 ctx.replace_node(ix, new_nodes);
             }
             f
@@ -223,7 +199,7 @@ fn flip_h_def() -> NodeDefinition {
                 if ctx.has_other_children(ctx.first_parent_input(ix).unwrap(), ix) {
                     new_nodes.push(Node::new(&CLONE, NodeParams::None));
                 }
-                new_nodes.push(Node::new(&FLIP_H_PRIMITIVE, NodeParams::None));
+                new_nodes.push(Node::n(&FLIP_H_PRIMITIVE, NodeParams::None));
                 ctx.replace_node(ix, new_nodes);
             }
             f
@@ -287,12 +263,15 @@ fn rotate270_def() -> NodeDefinition {
         ..Default::default()
     }
 }
+
+pub static  FLIP_V_PRIMITIVE: FlipVerticalMutNodeDef = FlipVerticalMutNodeDef{} ;
+pub static  FLIP_H_PRIMITIVE: FlipHorizontalMutNodeDef = FlipHorizontalMutNodeDef{};
+
+
 lazy_static! {
     pub static ref NO_OP: NodeDefinition = no_op_def();
 
-   pub static ref FLIP_V_PRIMITIVE: NodeDefinition = flip_v_p_def() ;
     pub static ref FLIP_V: NodeDefinition = flip_v_def();
-     pub static ref FLIP_H_PRIMITIVE: NodeDefinition = flip_h_p_def();
     pub static ref FLIP_H: NodeDefinition = flip_h_def();
     pub static ref ROTATE_90: NodeDefinition = rotate90_def();
      pub static ref ROTATE_180: NodeDefinition = rotate180_def();

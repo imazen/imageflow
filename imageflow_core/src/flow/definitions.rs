@@ -7,6 +7,71 @@ use ::internal_prelude::works_everywhere::*;
 use std::any::Any;
 use flow::nodes::*;
 
+// full path
+//macro_rules! function {
+//    () => {{
+//        fn f() {}
+//        fn type_name_of<T>(_: T) -> &'static str {
+//            extern crate core;
+//            unsafe { core::intrinsics::type_name::<T>() }
+//        }
+//        let name = type_name_of(f);
+//        &name[6..name.len() - 4]
+//    }}
+//}
+
+macro_rules! here {
+    () => (
+        CodeLocation{ line: line!(), column: column!(), file: file!(), module: module_path!()}
+    );
+}
+
+macro_rules! loc {
+    () => (
+        concat!(file!(), ":", line!(), ":", column!(), " in ", module_path!())
+    );
+    ($msg:expr) => (
+        concat!($msg, " at\n", file!(), ":", line!(), ":", column!(), " in ", module_path!())
+    );
+}
+
+macro_rules! nerror {
+    ($kind:expr) => (
+        NodeError{
+            kind: $kind,
+            message: format!("Error {:?}", $kind),
+            at: ::smallvec::SmallVec::new(),
+            node: None
+        }.at(here!())
+    );
+    ($kind:expr, $fmt:expr) => (
+        NodeError{
+            kind: $kind,
+            message:  format!(concat!("Error {:?}: ",$fmt ), $kind,),
+            at: ::smallvec::SmallVec::new(),
+            node: None
+        }.at(here!())
+    );
+    ($kind:expr, $fmt:expr, $($arg:tt)*) => (
+        NodeError{
+            kind: $kind,
+            message:  format!(concat!("Error {:?}: ", $fmt), $kind, $($arg)*),
+            at: ::smallvec::SmallVec::new(),
+            node: None
+        }.at(here!())
+    );
+}
+
+macro_rules! unimpl {
+    () => (
+        NodeError{
+            kind: ErrorKind::MethodNotImplemented,
+            message: String::new(),
+            at: ::smallvec::SmallVec::new(),
+            node: None
+        }.at(here!())
+    );
+}
 
 pub type Graph = Dag<Node, EdgeKind>;
 
@@ -75,49 +140,6 @@ pub struct NodeDefinition {
 
 
 
-macro_rules! code_location {
-    () => (
-        CodeLocation{ line: line!(), column: column!(), file: file!(), module: module_path!()}
-    );
-}
-
-macro_rules! nerror {
-    ($kind:expr) => (
-        NodeError{
-            kind: $kind,
-            message: format!("Error {:?} at\n{}:{}:{} in {}", $kind, file!(), line!(), column!(), module_path!()),
-            at: code_location!(),
-            node: None
-        }
-    );
-    ($kind:expr, $fmt:expr) => (
-        NodeError{
-            kind: $kind,
-            message:  format!(concat!("Error {:?}: ",$fmt , " at\n{}:{}:{} in {}"), $kind, file!(), line!(), column!(), module_path!()),
-            at: code_location!(),
-            node: None
-        }
-    );
-    ($kind:expr, $fmt:expr, $($arg:tt)*) => (
-        NodeError{
-            kind: $kind,
-            message:  format!(concat!("Error {:?}: ", $fmt , " at\n{}:{}:{} in {}"), $kind, $($arg)*, file!(), line!(), column!(), module_path!()),
-            at: code_location!(),
-            node: None
-        }
-    );
-}
-
-macro_rules! unimpl {
-    () => (
-        NodeError{
-            kind: ErrorKind::MethodNotImplemented,
-            message: String::new(),
-            at: code_location!(),
-            node: None
-        }
-    );
-}
 
 #[derive(Debug,  Clone, PartialEq)]
 pub enum ErrorKind{
@@ -128,6 +150,7 @@ pub enum ErrorKind{
     MethodNotImplemented,
     ValidationNotImplemented,
     InvalidNodeConnections,
+    InvalidOperation,
     CError(FlowErr)
 
 }
@@ -170,7 +193,7 @@ impl NodeDebugInfo {
 pub struct NodeError{
     pub kind: ErrorKind,
     pub message: String,
-    pub at: CodeLocation,
+    pub at: ::smallvec::SmallVec<[CodeLocation;4]>,
     pub node: Option<NodeDebugInfo>
 }
 
@@ -192,37 +215,88 @@ impl NodeError{
             .. self
         }
     }
-}
-
-impl fmt::Display for NodeError {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        if self.message.is_empty() {
-            write!(f, "Error {:?}: at\n{}:{}:{} in {}", self.kind, self.at.file, self.at.line, self.at.column, self.at.module)
-        }else{
-            write!(f, "{}", self.message)
-        }
-    }
-}
-
-pub type NResult<T> = ::std::result::Result<T, NodeError>;
-
-
-impl NodeError {
     pub fn with_ctx(self, ctx: &OpCtx, ix: NodeIndex ) -> NodeError {
         self.add_node_info(NodeDebugInfo::from_ctx(ctx, ix))
     }
     pub fn with_ctx_mut(self, ctx: &OpCtxMut, ix: NodeIndex ) -> NodeError {
         self.add_node_info(NodeDebugInfo::from_ctx_mut(ctx, ix))
     }
+
+    pub fn at(mut self, c: CodeLocation ) -> NodeError {
+        self.at.push(c);
+        self
+    }
 }
+
+impl fmt::Display for NodeError {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        if self.message.is_empty() {
+            write!(f, "Error {:?}: at\n", self.kind)?;
+        }else{
+            write!(f, "{} at\n", self.message)?;
+        }
+        let url = if true {//} if::imageflow_types::build_env_info::BUILT_ON_CI{
+            let repo = ::imageflow_types::build_env_info::BUILD_ENV_INFO.get("CI_REPO").unwrap_or(&Some("imazen/imageflow")).unwrap_or("imazen/imageflow");
+            let commit =  ::imageflow_types::build_env_info::GIT_COMMIT;
+            Some(format!("https://github.com/{}/blob/{}/", repo, commit))
+        }else { None };
+
+        for recorded_frame in &self.at{
+            write!(f, "{}:{}:{} in {}\n", recorded_frame.file, recorded_frame.line, recorded_frame.column, recorded_frame.module)?;
+
+            if let Some(ref url) = url{
+                write!(f, "{}{}#L{}\n",url, recorded_frame.file, recorded_frame.line)?;
+            }
+        }
+        Ok(())
+    }
+}
+
+pub type NResult<T> = ::std::result::Result<T, NodeError>;
 
 // alternate traits for common classes of nodes
 pub trait NodeDefOneInput{
-
+    fn fqn(&self) -> &'static str;
+    fn validate_params(&self, p: &NodeParams) -> NResult<()>{
+        Ok(())
+    }
 }
 pub trait NodeDefOneInputOneCanvas{
+    fn fqn(&self) -> &'static str;
+    fn validate_params(&self, p: &NodeParams) -> NResult<()>;
+
+    fn render(&self, c: &Context, canvas: &mut BitmapBgra, input: &mut BitmapBgra,  p: &NodeParams) -> NResult<()>;
+}
+pub trait NodeDefMutateBitmap{
+    fn fqn(&self) -> &'static str;
+    fn validate_params(&self, p: &NodeParams) -> NResult<()>{
+        Ok(())
+    }
+    fn mutate(&self, c: &Context, bitmap: &mut BitmapBgra,  p: &NodeParams) -> NResult<()>;
+}
+pub trait NodeDefExpand{
 
 }
+
+
+impl<T> NodeDef for T where T: NodeDefMutateBitmap + ::std::fmt::Debug {
+    fn as_one_mutate_bitmap(&self) -> Option<&NodeDefMutateBitmap>{
+        Some(self)
+    }
+
+}
+//impl<T> NodeDef for T where T: NodeDefOneInputOneCanvas + ::std::fmt::Debug {
+//    fn as_one_input_one_canvas(&self) -> Option<&NodeDefOneInputOneCanvas>{
+//        Some(self)
+//    }
+//
+//}
+//impl<T> NodeDef for T where T: NodeDefOneInput + ::std::fmt::Debug {
+//    fn as_one_input(&self) -> Option<&NodeDefOneInput>{
+//        Some(self)
+//    }
+//
+//}
 
 pub trait NodeDef: ::std::fmt::Debug{
 
@@ -232,8 +306,17 @@ pub trait NodeDef: ::std::fmt::Debug{
     fn as_one_input_one_canvas(&self) -> Option<&NodeDefOneInputOneCanvas>{
         None
     }
+    fn as_one_mutate_bitmap(&self) -> Option<&NodeDefMutateBitmap>{
+        None
+    }
 
-    fn fqn(&self) -> &'static str;
+
+    fn fqn(&self) -> &'static str{
+        let convenience_fqn = self.as_one_input().map(|n| n.fqn())
+            .or(self.as_one_input_one_canvas().map(|n| n.fqn()))
+            .or(self.as_one_mutate_bitmap().map(|n| n.fqn()));
+        unimplemented!();
+    }
     fn name(&self) -> &'static str{
         self.fqn().split_terminator('.').next_back().expect("Node fn fqn() was empty. Value is required.")
     }
@@ -241,30 +324,42 @@ pub trait NodeDef: ::std::fmt::Debug{
     fn tell_decoder(&self, p: &NodeParams) -> Option<(i32, Vec<s::DecoderCommand>)> {
         None
     }
+
     /// Edges will be validated before calling estimation or execution or flattening
     fn edges_required(&self, p: &NodeParams) -> NResult<(EdgesIn, EdgesOut)>{
         if self.as_one_input().is_some(){
             Ok((EdgesIn::OneInput, EdgesOut::Any))
         } else if self.as_one_input_one_canvas().is_some(){
             Ok((EdgesIn::OneInputOneCanvas, EdgesOut::Any))
+        } else if self.as_one_mutate_bitmap().is_some(){
+            Ok((EdgesIn::OneInput, EdgesOut::Any))
         } else{
             Err(unimpl!())
         }
     }
+
     fn validate_params(&self, p: &NodeParams) -> NResult<()>{
-        if let NodeParams::Json(ref n) = *p{
-            self.validate_json(n) //Caller should: .map_err(|e| e.add_node_info(NodeDebugInfo::from_ctx(ctx, ix)))
-        }else {
-            Err(nerror!(ErrorKind::NodeParamsMismatch))
+        if let Some(n) = self.as_one_input_one_canvas(){
+            n.validate_params(p).map_err(|e| e.at(here!()))
+        } else if let Some(n) = self.as_one_mutate_bitmap(){
+            n.validate_params(p).map_err(|e| e.at(here!()))
+        } else if let Some(n) = self.as_one_input(){
+            n.validate_params(p).map_err(|e| e.at(here!()))
+        } else{
+            Err(unimpl!())
         }
     }
 
-    fn validate_json(&self, n: &s::Node) -> NResult<()>{
-        Err(unimpl!())
-    }
-
     fn estimate(&self, ctx: &mut OpCtxMut, ix: NodeIndex) -> NResult<FrameEstimate>{
-        Err(unimpl!())
+        if let Some(n) = self.as_one_input(){
+            Err(unimpl!())// n.estimate(ctx, ix).map_err(|e| e.at(here!()))
+        } else if self.as_one_input_one_canvas().is_some(){
+            ctx.frame_est_from(ix, EdgeKind::Canvas).map_err(|e| e.at(here!()))
+        } else if self.as_one_mutate_bitmap().is_some(){
+            ctx.frame_est_from(ix, EdgeKind::Input).map_err(|e| e.at(here!()))
+        } else{
+            Err(unimpl!())
+        }
     }
 
     fn can_expand(&self) -> bool{
@@ -276,22 +371,31 @@ pub trait NodeDef: ::std::fmt::Debug{
         Err(unimpl!())
     }
 
-    fn can_execute(&self) -> bool{
-        false
+    fn can_execute(&self) -> bool {
+        self.as_one_input_one_canvas().is_some() || self.as_one_mutate_bitmap().is_some()
     }
-
 
     fn execute(&self, ctx: &mut OpCtxMut, ix: NodeIndex) -> NResult<NodeResult>{
+        if let Some(n) = self.as_one_input_one_canvas(){
+            let input = ctx.bitmap_bgra_from(ix, EdgeKind::Input).map_err(|e| e.at(here!()))?;
+            let canvas = ctx.bitmap_bgra_from(ix, EdgeKind::Canvas).map_err(|e| e.at(here!()))?;
 
-        Err(unimpl!())
-    }
+            ctx.consume_parent_result(ix, EdgeKind::Canvas)?;
 
-    fn estimate_from_json(&self, n: &s::Node) -> NResult<FrameEstimate>{
-        Err(unimpl!())
-    }
+            n.render(ctx.c, unsafe { &mut *canvas }, unsafe { &mut *input }, &ctx.weight(ix).params)?;
 
-    fn execute_from_json(&self, n: &s::Node) -> NResult<NodeResult>{
-        Err(unimpl!())
+            Ok(NodeResult::Frame(canvas))
+
+        } else if let Some(n) = self.as_one_mutate_bitmap(){
+            let input = ctx.bitmap_bgra_from(ix, EdgeKind::Input).map_err(|e| e.at(here!()))?;
+            ctx.consume_parent_result(ix, EdgeKind::Input)?;
+
+            n.mutate(ctx.c, unsafe { &mut *input }, &ctx.weight(ix).params)?;
+
+            Ok(NodeResult::Frame(input))
+        }else {
+            Err(unimpl!())
+        }
     }
 
 
@@ -351,7 +455,7 @@ impl NodeDef for NodeDefinition{
     fn execute(&self, ctx: &mut OpCtxMut, ix: NodeIndex) -> NResult<NodeResult>{
         if let Some(f) = self.fn_execute{
             f(ctx, ix);
-            Ok(NodeResult::None)
+            Ok(ctx.weight(ix).result.clone())
         }else{
             Err(unimpl!())
         }
@@ -508,7 +612,7 @@ impl From<s::Node> for Node {
                 Node::n(&nodes::CREATE_CANVAS, NodeParams::Json(node))
             }
             s::Node::CopyRectToCanvas { .. } => {
-                Node::new(&nodes::COPY_RECT, NodeParams::Json(node))
+                Node::n(&nodes::COPY_RECT, NodeParams::Json(node))
             }
             s::Node::FillRect { .. } => Node::new(&nodes::FILL_RECT, NodeParams::Json(node)),
             s::Node::Resample2D { .. } => Node::new(&nodes::SCALE, NodeParams::Json(node)),
