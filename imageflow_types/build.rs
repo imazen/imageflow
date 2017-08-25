@@ -150,8 +150,8 @@ fn what_to_collect() -> Vec<EnvTidbit>{
     c.push(EnvTidbit::CmdOrEnv{key: "GIT_DESCRIBE_AAL", cmd: "git describe --always --all --long"});
     c.push(EnvTidbit::CmdOrEnv{key: "GIT_OPTIONAL_TAG", cmd: "git describe --exact-match --tags"});
     c.push(EnvTidbit::CmdOrEnv{key: "GIT_OPTIONAL_BRANCH", cmd: "git symbolic-ref --short HEAD"});
-    static ENV_VARS: [&'static str;20] = ["ESTIMATED_ARTIFACT_URL","ESTIMATED_DOCS_URL","CI_SEQUENTIAL_BUILD_NUMBER","CI_BUILD_URL","CI_JOB_URL","CI_JOB_TITLE","CI_STRING",
-        "CI_PULL_REQUEST_INFO", "CI_TAG", "CI_RELATED_BRANCH", "CI", "TARGET", "OUT_DIR", "HOST", "OPT_LEVEL", "DEBUG", "PROFILE", "RUSTC", "RUSTFLAGS","TARGET_CPU"
+    static ENV_VARS: [&'static str;21] = ["ESTIMATED_ARTIFACT_URL","ESTIMATED_DOCS_URL","CI_SEQUENTIAL_BUILD_NUMBER","CI_BUILD_URL","CI_JOB_URL","CI_JOB_TITLE","CI_STRING",
+        "CI_PULL_REQUEST_INFO", "CI_TAG", "CI_REPO", "CI_RELATED_BRANCH", "CI", "TARGET", "OUT_DIR", "HOST", "OPT_LEVEL", "DEBUG", "PROFILE", "RUSTC", "RUSTFLAGS","TARGET_CPU"
     ];
     for name in ENV_VARS.iter(){
         c.push(EnvTidbit::Env(name));
