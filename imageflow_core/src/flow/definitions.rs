@@ -118,9 +118,9 @@ impl<'a> From<&'a OpCtxMut<'a>> for OpCtx<'a> {
 }
 
 
-pub type OptionalNodeFnMut = Option<fn(&mut OpCtxMut, NodeIndex<u32>)>;
+pub type OptionalNodeFnMut = Option<fn(&mut OpCtxMut, NodeIndex)>;
 
-pub type OptionalNodeFnMutReturnOptI32 = Option<fn(&mut OpCtxMut, NodeIndex<u32>) -> Option<i32>>;
+pub type OptionalNodeFnMutReturnOptI32 = Option<fn(&mut OpCtxMut, NodeIndex) -> Option<i32>>;
 
 // #[derive(Clone,Debug,PartialEq, Default)]
 pub struct NodeDefinition {

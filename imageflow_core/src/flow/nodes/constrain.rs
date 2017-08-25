@@ -1,6 +1,6 @@
 use super::internal_prelude::*;
 
-    fn constrain_size_but_input_format(ctx: &mut OpCtxMut, ix: NodeIndex<u32>) {
+    fn constrain_size_but_input_format(ctx: &mut OpCtxMut, ix: NodeIndex) {
         let input = ctx.first_parent_frame_info_some(ix).unwrap();
 
         let weight = &mut ctx.weight_mut(ix);
@@ -85,7 +85,7 @@ fn constrain_def() -> NodeDefinition {
         description: "constrain",
         fn_estimate: Some(constrain_size_but_input_format),
         fn_flatten_pre_optimize: Some({
-            fn f(ctx: &mut OpCtxMut, ix: NodeIndex<u32>) {
+            fn f(ctx: &mut OpCtxMut, ix: NodeIndex) {
                 let input = ctx.first_parent_frame_info_some(ix).unwrap();
                 let input_w = input.w as u32;
                 let input_h = input.h as u32;
@@ -139,7 +139,7 @@ fn constrain_def() -> NodeDefinition {
 
 
 
-fn get_expand(ctx: &mut OpCtxMut, ix: NodeIndex<u32>) -> ::imageflow_riapi::ir4::Ir4Expand{
+fn get_expand(ctx: &mut OpCtxMut, ix: NodeIndex) -> ::imageflow_riapi::ir4::Ir4Expand{
     let input = ctx.first_parent_frame_info_some(ix).unwrap();
     if let s::Node::CommandString{ref kind, ref value, ref decode, ref encode} =
         ctx.get_json_params(ix).unwrap() {
@@ -170,7 +170,7 @@ fn command_string_partially_expanded_def() -> NodeDefinition {
         inbound_edges: EdgesIn::OneInput,
         description: "expanding command string",
         fn_estimate: Some({
-            fn f(ctx: &mut OpCtxMut, ix: NodeIndex<u32>) {
+            fn f(ctx: &mut OpCtxMut, ix: NodeIndex) {
 
                 let old_estimate = ctx.weight(ix).frame_est;
 
@@ -203,7 +203,7 @@ fn command_string_partially_expanded_def() -> NodeDefinition {
             f
         }),
         fn_flatten_pre_optimize: Some({
-            fn f(ctx: &mut OpCtxMut, ix: NodeIndex<u32>) {
+            fn f(ctx: &mut OpCtxMut, ix: NodeIndex) {
                 let e = get_expand(ctx, ix);
 
 
@@ -233,7 +233,7 @@ fn command_string_def() -> NodeDefinition {
         description: "command string",
         fn_estimate: None,
         fn_flatten_pre_optimize: Some({
-            fn f(ctx: &mut OpCtxMut, ix: NodeIndex<u32>) {
+            fn f(ctx: &mut OpCtxMut, ix: NodeIndex) {
 
                 let n = ctx.get_json_params(ix).unwrap();
 

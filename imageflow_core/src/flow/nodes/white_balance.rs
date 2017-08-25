@@ -99,7 +99,7 @@ fn white_balance_srgb_mutate_def() -> NodeDefinition {
         description: "Auto white balance",
         fn_estimate: Some(NodeDefHelpers::copy_frame_est_from_first_input),
         fn_execute: Some({
-            fn f(ctx: &mut OpCtxMut, ix: NodeIndex<u32>) {
+            fn f(ctx: &mut OpCtxMut, ix: NodeIndex) {
                 let from_node = ctx.first_parent_input_weight(ix).unwrap().clone();
                 match from_node.result {
                     NodeResult::Frame(bitmap) => {
@@ -143,7 +143,7 @@ fn white_balance_srgb_def() -> NodeDefinition {
         description: "Auto white balance",
         fn_estimate: Some(NodeDefHelpers::copy_frame_est_from_first_input),
         fn_flatten_pre_optimize: Some({
-            fn f(ctx: &mut OpCtxMut, ix: NodeIndex<u32>) {
+            fn f(ctx: &mut OpCtxMut, ix: NodeIndex) {
                 let mut new_nodes = Vec::with_capacity(2);
                 if ctx.has_other_children(ctx.first_parent_input(ix).unwrap(), ix) {
                     new_nodes.push(Node::new(&CLONE, NodeParams::None));

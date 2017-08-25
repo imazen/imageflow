@@ -5,7 +5,7 @@ fn apply_orientation_def() -> NodeDefinition {
         fqn: "imazen.apply_orientation",
         name: "Apply orientation",
         fn_estimate: Some({
-            fn f(ctx: &mut OpCtxMut, ix: NodeIndex<u32>) {
+            fn f(ctx: &mut OpCtxMut, ix: NodeIndex) {
                 NodeDefHelpers::copy_frame_est_from_first_input(ctx, ix);
                 let weight = &mut ctx.weight_mut(ix);
                 match weight.params {
@@ -31,7 +31,7 @@ fn apply_orientation_def() -> NodeDefinition {
             f
         }),
         fn_flatten_pre_optimize: Some({
-            fn f(ctx: &mut OpCtxMut, ix: NodeIndex<u32>) {
+            fn f(ctx: &mut OpCtxMut, ix: NodeIndex) {
                 if let NodeParams::Json(s::Node::ApplyOrientation { flag }) = ctx.weight(ix)
                     .params {
                     let replacement_nodes: Vec<&NodeDefinition> = match flag {
@@ -63,7 +63,7 @@ fn transpose_def() -> NodeDefinition {
         name: "Transpose",
         fn_estimate: Some(NodeDefHelpers::rotate_frame_info),
         fn_flatten_pre_optimize: Some({
-            fn f(ctx: &mut OpCtxMut, ix: NodeIndex<u32>) {
+            fn f(ctx: &mut OpCtxMut, ix: NodeIndex) {
                 match ctx.first_parent_input_weight(ix).unwrap().frame_est {
                     FrameEstimate::Some(FrameInfo { w, h, fmt, alpha_meaningful }) => {
                             let canvas_params = s::Node::CreateCanvas {
@@ -99,7 +99,7 @@ fn transpose_mut_def() -> NodeDefinition {
         description: "Transpose To",
         fn_estimate: Some(NodeDefHelpers::copy_frame_est_from_first_canvas),
         fn_execute: Some({
-            fn f(ctx: &mut OpCtxMut, ix: NodeIndex<u32>) {
+            fn f(ctx: &mut OpCtxMut, ix: NodeIndex) {
                 let input: *mut ::ffi::BitmapBgra =
                     ctx.first_parent_result_frame(ix, EdgeKind::Input).unwrap();
                 let canvas: *mut ::ffi::BitmapBgra =
@@ -174,7 +174,7 @@ fn flip_v_def() -> NodeDefinition {
         description: "Flip frame vertical",
         fn_estimate: Some(NodeDefHelpers::copy_frame_est_from_first_input),
         fn_flatten_pre_optimize: Some({
-            fn f(ctx: &mut OpCtxMut, ix: NodeIndex<u32>) {
+            fn f(ctx: &mut OpCtxMut, ix: NodeIndex) {
                 let mut new_nodes = Vec::with_capacity(2);
                 if ctx.has_other_children(ctx.first_parent_input(ix).unwrap(), ix) {
                     new_nodes.push(Node::new(&CLONE, NodeParams::None));
@@ -194,7 +194,7 @@ fn flip_h_def() -> NodeDefinition {
         description: "Flip frame horizontal",
         fn_estimate: Some(NodeDefHelpers::copy_frame_est_from_first_input),
         fn_flatten_pre_optimize: Some({
-            fn f(ctx: &mut OpCtxMut, ix: NodeIndex<u32>) {
+            fn f(ctx: &mut OpCtxMut, ix: NodeIndex) {
                 let mut new_nodes = Vec::with_capacity(2);
                 if ctx.has_other_children(ctx.first_parent_input(ix).unwrap(), ix) {
                     new_nodes.push(Node::new(&CLONE, NodeParams::None));
@@ -214,7 +214,7 @@ fn rotate90_def() -> NodeDefinition {
         name: "Rot90",
         fn_estimate: Some(NodeDefHelpers::rotate_frame_info),
         fn_flatten_pre_optimize: Some({
-            fn f(ctx: &mut OpCtxMut, ix: NodeIndex<u32>) {
+            fn f(ctx: &mut OpCtxMut, ix: NodeIndex) {
                 ctx.replace_node(ix,
                                  vec![
                 Node::new(&TRANSPOSE, NodeParams::None),
@@ -232,7 +232,7 @@ fn rotate180_def() -> NodeDefinition {
         name: "Rot180",
         fn_estimate: Some(NodeDefHelpers::copy_frame_est_from_first_input),
         fn_flatten_pre_optimize: Some({
-            fn f(ctx: &mut OpCtxMut, ix: NodeIndex<u32>) {
+            fn f(ctx: &mut OpCtxMut, ix: NodeIndex) {
                 ctx.replace_node(ix,
                                  vec![
                 Node::new(&FLIP_V, NodeParams::None),
@@ -251,7 +251,7 @@ fn rotate270_def() -> NodeDefinition {
         name: "Rot270",
         fn_estimate: Some(NodeDefHelpers::rotate_frame_info),
         fn_flatten_pre_optimize: Some({
-            fn f(ctx: &mut OpCtxMut, ix: NodeIndex<u32>) {
+            fn f(ctx: &mut OpCtxMut, ix: NodeIndex) {
                 ctx.replace_node(ix,
                                  vec![
                 Node::new(&FLIP_V, NodeParams::None),

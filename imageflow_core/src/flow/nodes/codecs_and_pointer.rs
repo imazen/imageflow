@@ -8,7 +8,7 @@ fn bitmap_bgra_def() -> NodeDefinition {
         inbound_edges: EdgesIn::OneOptionalInput,
 
         fn_estimate: Some({
-            fn f(ctx: &mut OpCtxMut, ix: NodeIndex<u32>) {
+            fn f(ctx: &mut OpCtxMut, ix: NodeIndex) {
                 match ctx.weight(ix).params {
                     NodeParams::Json(s::Node::FlowBitmapBgraPtr{ptr_to_flow_bitmap_bgra_ptr}) => {
                         let ptr: *mut *mut BitmapBgra = ptr_to_flow_bitmap_bgra_ptr as *mut *mut BitmapBgra;
@@ -40,7 +40,7 @@ fn bitmap_bgra_def() -> NodeDefinition {
             f
         }),
         fn_execute: Some({
-            fn f(ctx: &mut OpCtxMut, ix: NodeIndex<u32>) {
+            fn f(ctx: &mut OpCtxMut, ix: NodeIndex) {
                 // let weight = &mut ctx.weight_mut(ix);
                 match ctx.weight(ix).params {
                     NodeParams::Json(s::Node::FlowBitmapBgraPtr{ptr_to_flow_bitmap_bgra_ptr}) => {
@@ -77,7 +77,7 @@ fn bitmap_bgra_def() -> NodeDefinition {
     }
 }
 
-fn decoder_encoder_io_id(ctx: &mut OpCtxMut, ix: NodeIndex<u32>) -> Option<i32> {
+fn decoder_encoder_io_id(ctx: &mut OpCtxMut, ix: NodeIndex) -> Option<i32> {
     match ctx.weight(ix).params {
         NodeParams::Json(s::Node::Decode { io_id, .. }) |
         NodeParams::Json(s::Node::Encode { io_id, .. }) => Some(io_id),
@@ -85,7 +85,7 @@ fn decoder_encoder_io_id(ctx: &mut OpCtxMut, ix: NodeIndex<u32>) -> Option<i32> 
     }
 }
 
-fn decoder_estimate(ctx: &mut OpCtxMut, ix: NodeIndex<u32>) {
+fn decoder_estimate(ctx: &mut OpCtxMut, ix: NodeIndex) {
     let io_id = decoder_encoder_io_id(ctx, ix).unwrap();
     let frame_info: s::ImageInfo = ctx.job.get_image_info(io_id).unwrap();
 
@@ -110,7 +110,7 @@ fn decoder_def() -> NodeDefinition {
         // Allow link-up
         fn_link_state_to_this_io_id: Some(decoder_encoder_io_id),
         fn_flatten_pre_optimize: {
-            fn f(ctx: &mut OpCtxMut, ix: NodeIndex<u32>) {
+            fn f(ctx: &mut OpCtxMut, ix: NodeIndex) {
 
                 // Mutate instead of replace
                 ctx.weight_mut(ix).def = PRIMITIVE_DECODER.as_node_def();
@@ -145,7 +145,7 @@ fn primitive_decoder_def() -> NodeDefinition {
         fn_estimate: Some(decoder_estimate),
         fn_link_state_to_this_io_id: Some(decoder_encoder_io_id),
         fn_execute: Some({
-            fn f(ctx: &mut OpCtxMut, ix: NodeIndex<u32>) {
+            fn f(ctx: &mut OpCtxMut, ix: NodeIndex) {
                 let io_id = decoder_encoder_io_id(ctx, ix).unwrap();
 
                 let result = ctx.job.get_codec(io_id).unwrap().get_decoder().unwrap().read_frame(ctx.c, ctx.job, &mut *ctx.job.get_io(io_id).unwrap()).unwrap();
@@ -168,7 +168,7 @@ fn encoder_def() -> NodeDefinition {
         fn_estimate: Some(NodeDefHelpers::copy_frame_est_from_first_input),
 
         fn_execute: Some({
-            fn f(ctx: &mut OpCtxMut, ix: NodeIndex<u32>) {
+            fn f(ctx: &mut OpCtxMut, ix: NodeIndex) {
                 let io_id = decoder_encoder_io_id(ctx, ix).unwrap();
 
                 if let Some(input_bitmap) = ctx.first_parent_result_frame(ix, EdgeKind::Input) {

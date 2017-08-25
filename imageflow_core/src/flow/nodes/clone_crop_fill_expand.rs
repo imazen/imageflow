@@ -85,7 +85,7 @@ fn fill_rect_def() -> NodeDefinition {
         fn_estimate: Some(NodeDefHelpers::copy_frame_est_from_first_input),
         fn_execute: Some({
 
-            fn f(ctx: &mut OpCtxMut, ix: NodeIndex<u32>) {
+            fn f(ctx: &mut OpCtxMut, ix: NodeIndex) {
 
                 if let s::Node::FillRect { x1, x2, y1, y2, color } = ctx.get_json_params(ix)
                     .unwrap() {
@@ -124,7 +124,7 @@ fn clone_def() -> NodeDefinition {
         description: "Clone",
         fn_estimate: Some(NodeDefHelpers::copy_frame_est_from_first_input),
         fn_flatten_pre_optimize: Some({
-            fn f(ctx: &mut OpCtxMut, ix: NodeIndex<u32>) {
+            fn f(ctx: &mut OpCtxMut, ix: NodeIndex) {
                 match ctx.first_parent_input_weight(ix).unwrap().frame_est {
                     FrameEstimate::Some(FrameInfo { w, h, fmt, alpha_meaningful }) => {
                         let canvas_params = s::Node::CreateCanvas {
@@ -157,7 +157,7 @@ fn clone_def() -> NodeDefinition {
         ..Default::default()
     }
 }
-fn expand_canvas_size(ctx: &mut OpCtxMut, ix: NodeIndex<u32>) {
+fn expand_canvas_size(ctx: &mut OpCtxMut, ix: NodeIndex) {
 
     let input_info = ctx.first_parent_frame_info_some(ix).unwrap();
 
@@ -189,7 +189,7 @@ fn expand_canvas_def() -> NodeDefinition {
         description: "Expand Canvas",
         fn_estimate: Some(expand_canvas_size),
         fn_flatten_pre_optimize: Some({
-            fn f(ctx: &mut OpCtxMut, ix: NodeIndex<u32>) {
+            fn f(ctx: &mut OpCtxMut, ix: NodeIndex) {
                 match ctx.first_parent_input_weight(ix).unwrap().frame_est {
                     FrameEstimate::Some(FrameInfo { w, h, fmt, alpha_meaningful }) => {
                         if let s::Node::ExpandCanvas { left, top, right, bottom, color } =
@@ -229,7 +229,7 @@ fn expand_canvas_def() -> NodeDefinition {
 }
 
 
-fn crop_size(ctx: &mut OpCtxMut, ix: NodeIndex<u32>) {
+fn crop_size(ctx: &mut OpCtxMut, ix: NodeIndex) {
 
     let input_info = ctx.first_parent_frame_info_some(ix).unwrap_or_else(|| {
         println!("{:?}", ctx.graph_to_str());
@@ -260,7 +260,7 @@ fn crop_mutate_def() -> NodeDefinition {
         fn_estimate: Some(crop_size),
         fn_execute: Some({
 
-            fn f(ctx: &mut OpCtxMut, ix: NodeIndex<u32>) {
+            fn f(ctx: &mut OpCtxMut, ix: NodeIndex) {
 
                 if let s::Node::Crop { x1, x2, y1, y2 } = ctx.get_json_params(ix).unwrap() {
 
@@ -308,7 +308,7 @@ fn crop_def() -> NodeDefinition {
         inbound_edges: EdgesIn::OneInput,
         fn_estimate: Some(crop_size),
         fn_flatten_pre_optimize: Some({
-            fn f(ctx: &mut OpCtxMut, ix: NodeIndex<u32>) {
+            fn f(ctx: &mut OpCtxMut, ix: NodeIndex) {
                 let mut new_nodes = Vec::with_capacity(2);
                 if ctx.has_other_children(ctx.first_parent_input(ix).unwrap(), ix) {
                     new_nodes.push(Node::new(&CLONE, NodeParams::None));
@@ -331,13 +331,13 @@ fn crop_whitespace_def() -> NodeDefinition {
         name: "crop_whitespace",
         inbound_edges: EdgesIn::OneInput,
         fn_estimate: Some({
-            fn f(ctx: &mut OpCtxMut, ix: NodeIndex<u32>) {
+            fn f(ctx: &mut OpCtxMut, ix: NodeIndex) {
                 ctx.weight_mut(ix).frame_est = FrameEstimate::Impossible;
             }
             f
         }),
         fn_flatten_pre_optimize: Some({
-            fn f(ctx: &mut OpCtxMut, ix: NodeIndex<u32>) {
+            fn f(ctx: &mut OpCtxMut, ix: NodeIndex) {
 
                 // detect bounds, increase, and replace with crop
                 if let s::Node::CropWhitespace {threshold, percent_padding} = ctx.get_json_params(ix).unwrap() {

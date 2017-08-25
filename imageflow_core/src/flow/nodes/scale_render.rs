@@ -2,7 +2,7 @@ use super::internal_prelude::*;
 
 struct ScaleRenderHelpers {}
 impl ScaleRenderHelpers {
-    fn scale_size_but_input_format(ctx: &mut OpCtxMut, ix: NodeIndex<u32>) {
+    fn scale_size_but_input_format(ctx: &mut OpCtxMut, ix: NodeIndex) {
 
         let input_info = ctx.first_parent_frame_info_some(ix).unwrap();
 
@@ -22,7 +22,7 @@ impl ScaleRenderHelpers {
         }
     }
 
-    fn render1d_size(ctx: &mut OpCtxMut, ix: NodeIndex<u32>) {
+    fn render1d_size(ctx: &mut OpCtxMut, ix: NodeIndex) {
 
         let input_info = ctx.first_parent_frame_info_some(ix).unwrap();
 
@@ -64,7 +64,7 @@ fn scale_def() -> NodeDefinition {
         description: "scale",
         fn_estimate: Some(ScaleRenderHelpers::scale_size_but_input_format),
         fn_flatten_pre_optimize: Some({
-            fn f(ctx: &mut OpCtxMut, ix: NodeIndex<u32>) {
+            fn f(ctx: &mut OpCtxMut, ix: NodeIndex) {
                 let input = ctx.first_parent_frame_info_some(ix).unwrap();
 
                 if let s::Node::Resample2D { w, h, down_filter, up_filter, scaling_colorspace, hints } =
@@ -141,7 +141,7 @@ fn render1d_def() -> NodeDefinition {
         inbound_edges: EdgesIn::OneInput,
         fn_estimate: Some(ScaleRenderHelpers::render1d_size),
         fn_flatten_pre_optimize: Some({
-            fn f(ctx: &mut OpCtxMut, ix: NodeIndex<u32>) {
+            fn f(ctx: &mut OpCtxMut, ix: NodeIndex) {
 
                 if let FrameEstimate::Some(est) = ctx.weight(ix).frame_est {
                     let canvas_params = s::Node::CreateCanvas {
@@ -173,7 +173,7 @@ fn render1d_to_canvas_def() -> NodeDefinition {
         inbound_edges: EdgesIn::OneInputOneCanvas,
         fn_estimate: Some(ScaleRenderHelpers::render1d_size),
         fn_execute: Some({
-            fn f(ctx: &mut OpCtxMut, ix: NodeIndex<u32>) {
+            fn f(ctx: &mut OpCtxMut, ix: NodeIndex) {
                 if let s::Node::Resample1D { ref scale_to_width,
                                              ref transpose_on_write,
                                              ref interpolation_filter,
@@ -232,7 +232,7 @@ fn scale2d_render_def() -> NodeDefinition {
         inbound_edges: EdgesIn::OneInputOneCanvas,
         fn_estimate: Some(NodeDefHelpers::copy_frame_est_from_first_canvas),
         fn_execute: Some({
-            fn f(ctx: &mut OpCtxMut, ix: NodeIndex<u32>) {
+            fn f(ctx: &mut OpCtxMut, ix: NodeIndex) {
                 if let s::Node::Resample2D { w, h, down_filter, up_filter, hints, scaling_colorspace } =
                        ctx.get_json_params(ix).unwrap() {
                     let input = ctx.first_parent_result_frame(ix, EdgeKind::Input).unwrap();

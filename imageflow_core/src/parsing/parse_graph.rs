@@ -41,7 +41,7 @@ impl GraphTranslator {
     pub fn translate_graph(&self, from: s::Graph) -> Result<Graph> {
         let mut g = Graph::with_capacity(10, 10); //Estimate better than this
 
-        let mut node_id_map: HashMap<i32, NodeIndex<u32>> = HashMap::new();
+        let mut node_id_map: HashMap<i32, NodeIndex> = HashMap::new();
 
         for (old_id, node) in from.nodes {
             let new_id = g.add_node(Node::from(node));
