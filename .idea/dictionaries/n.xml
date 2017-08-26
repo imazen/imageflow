@@ -1,19 +1,49 @@
 <component name="ProjectDictionaryState">
   <dictionary name="n">
     <words>
+      <w>backtraces</w>
+      <w>bgcolor</w>
+      <w>bgra</w>
+      <w>calloc</w>
+      <w>callstack</w>
+      <w>cdylib</w>
+      <w>checksums</w>
       <w>chrono</w>
       <w>codec</w>
+      <w>colorspace</w>
+      <w>compositing</w>
       <w>cropxunits</w>
       <w>cropyunits</w>
+      <w>cstr</w>
+      <w>daggy</w>
+      <w>dotfile</w>
+      <w>dssim</w>
+      <w>eprint</w>
+      <w>eprintln</w>
+      <w>floatspace</w>
       <w>framewise</w>
+      <w>graphviz</w>
+      <w>grayscale</w>
+      <w>ignorealpha</w>
+      <w>imageflow</w>
+      <w>imagemagick</w>
       <w>imazen</w>
       <w>libc</w>
+      <w>megapixels</w>
+      <w>nonoverlapping</w>
       <w>perf</w>
+      <w>petgraph</w>
+      <w>precrop</w>
       <w>reqwest</w>
       <w>riapi</w>
+      <w>rustc</w>
+      <w>seekable</w>
       <w>serde</w>
       <w>srgb</w>
+      <w>subsampling</w>
       <w>twox</w>
+      <w>xunits</w>
+      <w>yunits</w>
     </words>
   </dictionary>
 </component>
