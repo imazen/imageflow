@@ -3,8 +3,8 @@
 use ::{Job, Context};
 use ::internal_prelude::works_everywhere::*;
 use ::json::*;
-use ::parsing::parse_graph::GraphTranslator;
-use ::parsing::parse_io::IoTranslator;
+use ::parsing::GraphTranslator;
+use ::parsing::IoTranslator;
 use std::error;
 
 
