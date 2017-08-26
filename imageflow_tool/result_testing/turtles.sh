@@ -1,7 +1,7 @@
 #!/bin/bash
 
 convert --version
-./flow-proto1 --version
+./imageflow_tool --version
 ./imagew --version
 
 mkdir turtles

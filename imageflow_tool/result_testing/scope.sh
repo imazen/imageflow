@@ -7,7 +7,7 @@ echo Run install_tools.sh first if you have any issues
 
 
 convert --version
-./flow-proto1 --version
+./imageflow_tool --version
 ./imagew --version
 
 mkdir scope

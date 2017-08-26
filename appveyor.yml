@@ -120,7 +120,6 @@ test_script:
   - rmdir /q /s .\artifacts || exit 0
   - mkdir .\artifacts\staging\headers
   - dir %TARGET_DIR%release\
-  - xcopy /Y %TARGET_DIR%release\flow-proto1.exe  artifacts\staging\
   - xcopy /Y %TARGET_DIR%release\imageflow_server.exe  artifacts\staging\
   - xcopy /Y %TARGET_DIR%release\imageflow_server.pdb  artifacts\staging\ || exit 0
   - xcopy /Y %TARGET_DIR%release\imageflow.dll  artifacts\staging\

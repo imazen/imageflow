@@ -9,14 +9,14 @@ echo or brew install libgd libpng libjpeg imagemagick
 
 #rm -rf resamplescope
 
-if [ -e "./flow-proto1" ]
+if [ -e "./imageflow_tool" ]
 then
-  echo "Skipping compilation of imageflow, ./flow-proto1 exists. Delete to rebuild"
+  echo "Skipping compilation of imageflow, ./imageflow_tool exists. Delete to rebuild"
 else
   cd ../..
   ./build_only.sh
   cd imageflow_tool/result_testing
-  cp ../../target/release/flow-proto1 .
+  cp ../../target/release/imageflow_tool .
 fi 
 
 if [ -e "./rscope" ]

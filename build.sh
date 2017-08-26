@@ -602,13 +602,12 @@ if [[ "$BUILD_RELEASE" == 'True' ]]; then
 	mv ./${TARGET_DIR}docs.tar.gz ./artifacts/staging/
 
 
-	cp -R ${TARGET_DIR}release/{flow-proto1,imageflow_,libimageflow}*  ./artifacts/staging/
+	cp -R ${TARGET_DIR}release/{imageflow_,libimageflow}*  ./artifacts/staging/
 	cp bindings/headers/*.h  ./artifacts/staging/headers/
 	rm ./artifacts/staging/*.{o,d,rlib} || true
 	rm ./artifacts/staging/*-* || true
 	rm -rf ./artifacts/staging/doc || true
 	rm -rf ./artifacts/staging/release || true
-	cp ${TARGET_DIR}release/flow-proto1 ./artifacts/staging/
 
 	if [[ -n "$RUNTIME_REQUIREMENTS_FILE" ]]; then
 		cp "${RUNTIME_REQUIREMENTS_FILE}" ./artifacts/staging/runtime_requirements.txt 
