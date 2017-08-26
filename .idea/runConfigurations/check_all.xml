@@ -4,6 +4,9 @@
       <option name="additionalArguments">
         <list>
           <option value="--all" />
+          <option value="--tests" />
+          <option value="--examples" />
+          <option value="--bins" />
         </list>
       </option>
       <option name="backtraceMode" value="2" />

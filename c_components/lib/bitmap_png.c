@@ -56,6 +56,7 @@ static bool flow_bitmap_bgra_load_png_fileptr(flow_c * c, struct flow_bitmap_bgr
     uint32_t h;
     int color_type, bit_depth;
     png_bytepp pixel_buffer_row_pointers;
+    flow_pixel_format canvas_fmt = flow_bgra32;
 
     png_ptr = png_create_read_struct(PNG_LIBPNG_VER_STRING, NULL, NULL, NULL);
     if (png_ptr == NULL) {
@@ -86,6 +87,7 @@ static bool flow_bitmap_bgra_load_png_fileptr(flow_c * c, struct flow_bitmap_bgr
 
     // Fill in the alpha channel with FFFF if missing.
     if (!(color_type & PNG_COLOR_MASK_ALPHA)) {
+        canvas_fmt = flow_bgr32;
         png_set_expand(png_ptr);
         png_set_filler(png_ptr, 65535L, PNG_FILLER_AFTER);
     }
@@ -114,7 +116,7 @@ static bool flow_bitmap_bgra_load_png_fileptr(flow_c * c, struct flow_bitmap_bgr
         return false; // Should always be 4
     }
 
-    struct flow_bitmap_bgra * canvas = flow_bitmap_bgra_create(c, (int)w, (int)h, true, flow_bgra32);
+    struct flow_bitmap_bgra * canvas = flow_bitmap_bgra_create(c, (int)w, (int)h, true, canvas_fmt);
     // We set this, but it's ignored and overwritten by existing callers
 
     pixel_buffer_row_pointers

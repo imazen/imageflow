@@ -146,6 +146,7 @@ bool fill_buffer(flow_c * context, struct flow_SearchInfo * __restrict info)
     */
     const uint32_t w = info->buf_w;
     const uint32_t h = info->buf_h;
+    const flow_pixel_format effective_format = flow_effective_pixel_format(info->bitmap);
     const uint32_t bytes_per_pixel = flow_pixel_format_bytes_per_pixel(info->bitmap->fmt);
     const uint32_t remnant = info->bitmap->stride - (bytes_per_pixel * w);
     uint8_t const * __restrict bgra = info->bitmap->pixels + (info->bitmap->stride * (size_t)info->buf_y)
@@ -157,8 +158,8 @@ bool fill_buffer(flow_c * context, struct flow_SearchInfo * __restrict info)
         FLOW_error(context, flow_status_Invalid_argument);
         return false; // Invalid w,h, buf_x, or buf_y values
     }
-    const uint8_t channels = bytes_per_pixel;
-    if (channels == 4 && info->bitmap->alpha_meaningful) {
+
+    if (effective_format == flow_bgra32) {
         uint32_t buf_ix = 0;
         for (uint32_t y = 0; y < h; y++) {
             for (uint32_t x = 0; x < w; x++) {
@@ -171,17 +172,28 @@ bool fill_buffer(flow_c * context, struct flow_SearchInfo * __restrict info)
             }
             bgra += remnant;
         }
-    } else if (channels == 3 || (channels == 4 && !info->bitmap->alpha_meaningful)) {
+    } else if (effective_format == flow_bgr24) {
         uint32_t buf_ix = 0;
         for (uint32_t y = 0; y < h; y++) {
             for (uint32_t x = 0; x < w; x++) {
                 info->buf[buf_ix] = (233 * bgra[0] + 1197 * bgra[1] + 610 * bgra[2]) / 2048;
-                bgra += channels;
+                bgra += 3;
+                buf_ix++;
+            }
+            bgra += remnant;
+        }
+    } else if (effective_format == flow_bgr32) {
+        uint32_t buf_ix = 0;
+        for (uint32_t y = 0; y < h; y++) {
+            for (uint32_t x = 0; x < w; x++) {
+                info->buf[buf_ix] = (233 * bgra[0] + 1197 * bgra[1] + 610 * bgra[2]) / 2048;
+                bgra += 4;
                 buf_ix++;
             }
             bgra += remnant;
         }
     } else {
+        const uint8_t channels = bytes_per_pixel;
         uint32_t buf_ix = 0;
         for (uint32_t y = 0; y < h; y++) {
             for (uint32_t x = 0; x < w; x++) {

@@ -109,16 +109,16 @@ TEST_CASE_METHOD(Fixture, "Creating flow_bitmap_bgra", "[error_handling]")
 
     struct flow_bitmap_bgra * source = NULL;
     // Create something so object_tracking is initialized
-    source = flow_bitmap_bgra_create(&context, 1, 1, true, (flow_pixel_format)2);
+    source = flow_bitmap_bgra_create(&context, 1, 1, true, flow_bgra32);
     SECTION("Creating a 1x1 bitmap is valid")
     {
-        source = flow_bitmap_bgra_create(&context, 1, 1, true, (flow_pixel_format)2);
+        source = flow_bitmap_bgra_create(&context, 1, 1, true, flow_bgra32);
         REQUIRE_FALSE(source == NULL);
         REQUIRE_FALSE(flow_context_has_error(&context));
     }
     SECTION("A 0x0 bitmap is invalid")
     {
-        source = flow_bitmap_bgra_create(&context, 0, 0, true, (flow_pixel_format)2);
+        source = flow_bitmap_bgra_create(&context, 0, 0, true, flow_bgra32);
         REQUIRE(source == NULL);
         REQUIRE(flow_context_has_error(&context));
         REQUIRE(flow_context_error_reason(&context) == flow_status_Invalid_dimensions);
@@ -126,7 +126,7 @@ TEST_CASE_METHOD(Fixture, "Creating flow_bitmap_bgra", "[error_handling]")
     }
     SECTION("A gargantuan bitmap is also invalid")
     {
-        source = flow_bitmap_bgra_create(&context, 1, INT_MAX, true, (flow_pixel_format)2);
+        source = flow_bitmap_bgra_create(&context, 1, INT_MAX, true, flow_bgra32);
         REQUIRE(source == NULL);
         REQUIRE(flow_context_has_error(&context));
         REQUIRE(flow_context_error_reason(&context) == flow_status_Invalid_dimensions);
@@ -135,7 +135,7 @@ TEST_CASE_METHOD(Fixture, "Creating flow_bitmap_bgra", "[error_handling]")
     SECTION("A bitmap that exhausts memory is invalid too")
     {
         always_fail_allocation();
-        source = flow_bitmap_bgra_create(&context, 1, 1, true, (flow_pixel_format)2);
+        source = flow_bitmap_bgra_create(&context, 1, 1, true, flow_bgra32);
         REQUIRE(source == NULL);
         REQUIRE(flow_context_has_error(&context));
         REQUIRE(flow_context_error_reason(&context) == flow_status_Out_of_memory);
@@ -143,9 +143,9 @@ TEST_CASE_METHOD(Fixture, "Creating flow_bitmap_bgra", "[error_handling]")
     SECTION("Exhausting memory in the pixel allocation is also handled")
     {
         fail_allocation_if_size_larger_than(sizeof(struct flow_bitmap_bgra));
-        source = flow_bitmap_bgra_create(&context, 640, 480, true, (flow_pixel_format)2);
+        source = flow_bitmap_bgra_create(&context, 640, 480, true, flow_bgra32);
         REQUIRE(source == NULL);
-        REQUIRE(last_attempted_allocation_size == 640 * 480 * 2); // the failed allocation tried to allocate the pixels
+        REQUIRE(last_attempted_allocation_size == 640 * 480 * 4); // the failed allocation tried to allocate the pixels
         REQUIRE(flow_context_has_error(&context));
         REQUIRE(flow_context_error_reason(&context) == flow_status_Out_of_memory);
     }

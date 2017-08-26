@@ -106,7 +106,6 @@ pub struct Ir4SourceFrameInfo{
     pub w: i32,
     pub h: i32,
     pub fmt: s::PixelFormat,
-    pub alpha_meaningful: bool,
     pub original_mime: Option<String>,
 }
 
@@ -122,8 +121,8 @@ impl Ir4SourceFrameInfo{
                     })
     }
     fn get_format_from_frame(&self) -> OutputFormat{
-        match (self.fmt, self.alpha_meaningful){
-            (s::PixelFormat::Bgr24, false) | (s::PixelFormat::Bgra32, false) => OutputFormat::Jpeg,
+        match self.fmt{
+            s::PixelFormat::Bgr24 | s::PixelFormat::Bgr32 => OutputFormat::Jpeg,
             _ => OutputFormat::Png
         }
     }

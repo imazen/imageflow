@@ -23,8 +23,15 @@ FLOW_HINT_HOT FLOW_HINT_UNSAFE_MATH_OPTIMIZATIONS
         FLOW_error(c, flow_status_Not_implemented); // Requires cropping the target canvas
         return false;
     }
+    flow_pixel_format input_fmt = flow_effective_pixel_format(input);
+    flow_pixel_format canvas_fmt = flow_effective_pixel_format(input);
 
-    if (input->fmt != flow_bgra32 || canvas->fmt != flow_bgra32) {
+    //TODO: add support for bgr24
+    if (input_fmt != flow_bgra32 && input_fmt != flow_bgr32) {
+        FLOW_error(c, flow_status_Not_implemented);
+        return false;
+    }
+    if (canvas_fmt != flow_bgra32 && canvas_fmt != flow_bgr32) {
         FLOW_error(c, flow_status_Not_implemented);
         return false;
     }
@@ -68,7 +75,7 @@ FLOW_HINT_HOT FLOW_HINT_UNSAFE_MATH_OPTIMIZATIONS
         FLOW_destroy(c, details);
         FLOW_error_return(c);
     }
-    source_buf->alpha_meaningful = input->alpha_meaningful;
+    source_buf->alpha_meaningful = input_fmt == flow_bgra32;
     dest_buf->alpha_meaningful = source_buf->alpha_meaningful;
 
     source_buf->alpha_premultiplied = source_buf->channels == 4;

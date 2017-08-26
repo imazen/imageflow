@@ -21,8 +21,10 @@ impl CreateCanvasNodeDef{
                 Err(nerror!(ErrorKind::InvalidCoordinates, "canvas height ({}) must be greater than zero and less than {}.", w, max_dimension))
             } else if h * w > 100000000 {
                 Err(nerror!(ErrorKind::InvalidCoordinates, "canvas size ({}) cannot exceed 100 megapixels.", w))
-            } else if format == ffi::PixelFormat::Gray8{
+            } else if format == ffi::PixelFormat::Gray8 {
                 Err(nerror!(ErrorKind::InvalidNodeParams, "canvas format cannot be grayscale; single-channel grayscale bitmaps are not yet supported in Imageflow"))
+            }else if format != ffi::PixelFormat::Bgr24 && format != ffi::PixelFormat::Bgr32 && format != ffi::PixelFormat::Bgra32{
+                Err(nerror!(ErrorKind::InvalidNodeParams, "canvas format {:?} not recognized", format))
             } else {
                 Ok((w,h,format,color.clone()))
             }
@@ -50,7 +52,6 @@ impl NodeDef for CreateCanvasNodeDef {
                 w: w as i32,
                 h: h as i32,
                 fmt: format,
-                alpha_meaningful: true,
             })
         })
     }

@@ -133,7 +133,7 @@ typedef enum flow_interpolation_filter {
 } flow_interpolation_filter;
 
 // TODO: So many more - 8-bit, compressed data,
-typedef enum flow_pixel_format { flow_bgr24 = 3, flow_bgra32 = 4, flow_gray8 = 1 } flow_pixel_format;
+typedef enum flow_pixel_format { flow_bgr24 = 3, flow_bgra32 = 4, flow_bgr32 = 70, flow_gray8 = 1 } flow_pixel_format;
 
 typedef enum flow_bitmap_compositing_mode {
     flow_bitmap_compositing_replace_self = 0,
@@ -232,6 +232,8 @@ PUB bool flow_io_write_output_buffer_to_file(flow_c * c, struct flow_io * io, co
 
 
 PUB uint32_t flow_pixel_format_bytes_per_pixel(flow_pixel_format format);
+PUB flow_pixel_format flow_effective_pixel_format(struct flow_bitmap_bgra * b);
+PUB uint32_t flow_pixel_format_channels(flow_pixel_format format);
 
 struct flow_decoder_info {
     int64_t codec_id;

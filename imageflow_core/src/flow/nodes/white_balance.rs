@@ -53,7 +53,7 @@ fn apply_mappings(bitmap: *mut BitmapBgra, map_red: &[u8], map_green: &[u8], map
         PixelFormat::Gray8 =>
             Err(unimpl!())
         ,
-        PixelFormat::Bgra32 => {
+        PixelFormat::Bgra32 | PixelFormat::Bgr32=> {
             for row in bytes.chunks_mut(input.stride as usize){
                 for pixel in row.chunks_mut(4).take(input.w as usize){
                     //pixel[0] = map_blue[pixel[0]];

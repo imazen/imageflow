@@ -86,15 +86,15 @@ pub fn render_dotfile_to_png(dotfile_path: &str) {
 static INDENT: &'static str = "    ";
 
 fn get_pixel_format_name_for(bitmap: *const BitmapBgra) -> &'static str {
-    unsafe { get_pixel_format_name((*bitmap).fmt, (*bitmap).alpha_meaningful) }
+    unsafe { get_pixel_format_name((*bitmap).fmt) }
 }
 
-fn get_pixel_format_name(fmt: PixelFormat, alpha_meaningful: bool) -> &'static str {
+fn get_pixel_format_name(fmt: PixelFormat) -> &'static str {
     match fmt {
         PixelFormat::Bgr24 => "bgra24",
         PixelFormat::Gray8 => "gray8",
-        PixelFormat::Bgra32 if alpha_meaningful => "bgra32",
-        PixelFormat::Bgra32 => "bgr32",
+        PixelFormat::Bgra32 => "bgra32",
+        PixelFormat::Bgr32 => "bgr32",
         // _ => "?"
     }
 }
@@ -126,7 +126,7 @@ pub fn print_graph(f: &mut std::io::Write,
             _ => {
                 match weight.frame_est {
                     FrameEstimate::None => "?x?".to_owned(),
-                    FrameEstimate::Some(info) => format!("est {}x{} {}", info.w, info.h, get_pixel_format_name(info.fmt, info.alpha_meaningful)),
+                    FrameEstimate::Some(info) => format!("est {}x{} {}", info.w, info.h, get_pixel_format_name(info.fmt)),
                     _ => "!x!".to_owned(),
                 }
             }

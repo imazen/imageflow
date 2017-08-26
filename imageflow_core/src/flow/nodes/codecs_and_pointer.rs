@@ -1,91 +1,164 @@
 use super::internal_prelude::*;
 
+pub static BITMAP_BGRA_POINTER: BitmapBgraDef = BitmapBgraDef{};
+
 lazy_static! {
-    pub static ref BITMAP_BGRA_POINTER: NodeDefinition = bitmap_bgra_def();
     pub static ref DECODER: NodeDefinition = decoder_def();
     pub static ref ENCODE: NodeDefinition = encoder_def();
     pub static ref PRIMITIVE_DECODER: NodeDefinition = primitive_decoder_def();
 }
 
+#[derive(Debug,Clone)]
+pub struct BitmapBgraDef{}
 
-fn bitmap_bgra_def() -> NodeDefinition {
-    NodeDefinition {
-        fqn: "imazen.bitmap_bgra_pointer",
-        name: "bitmap_bgra_pointer",
-        outbound_edges: true,
-        inbound_edges: EdgesIn::OneOptionalInput,
-
-        fn_estimate: Some({
-            fn f(ctx: &mut OpCtxMut, ix: NodeIndex) {
-                match ctx.weight(ix).params {
-                    NodeParams::Json(s::Node::FlowBitmapBgraPtr{ptr_to_flow_bitmap_bgra_ptr}) => {
-                        let ptr: *mut *mut BitmapBgra = ptr_to_flow_bitmap_bgra_ptr as *mut *mut BitmapBgra;
-                        unsafe {
-                            if ptr.is_null() {
-                                panic!("Must be a valid pointer to a pointer to BitmapBgra");
-                            }
-
-                            if (*ptr).is_null() {
-                                NodeDefHelpers::copy_frame_est_from_first_input(ctx, ix);
-                            } else {
-                                let weight = &mut ctx.weight_mut(ix);
-                                let b = &(**ptr);
-                                weight.frame_est = FrameEstimate::Some(FrameInfo {
-                                    w: b.w as i32,
-                                    h: b.h as i32,
-                                    fmt: b.fmt,
-                                    alpha_meaningful: b.alpha_meaningful
-                                });
-                            }
-                        }
-
-                    }
-                    _ => {
-                        panic!("Node params missing");
-                    }
-                }
+impl BitmapBgraDef{
+    fn get(&self, p: &NodeParams) -> NResult<*mut *mut BitmapBgra> {
+        if let &NodeParams::Json(s::Node::FlowBitmapBgraPtr { ptr_to_flow_bitmap_bgra_ptr }) = p {
+            let ptr: *mut *mut BitmapBgra = ptr_to_flow_bitmap_bgra_ptr as *mut *mut BitmapBgra;
+            if ptr.is_null() {
+                return Err(nerror!(ErrorKind::InvalidNodeParams, "The pointer to the bitmap bgra pointer is null! Must be a valid reference to a pointer's location."));
+            } else {
+                Ok(ptr)
             }
-            f
-        }),
-        fn_execute: Some({
-            fn f(ctx: &mut OpCtxMut, ix: NodeIndex) {
-                // let weight = &mut ctx.weight_mut(ix);
-                match ctx.weight(ix).params {
-                    NodeParams::Json(s::Node::FlowBitmapBgraPtr{ptr_to_flow_bitmap_bgra_ptr}) => {
-                        let ptr: *mut *mut BitmapBgra = ptr_to_flow_bitmap_bgra_ptr as *mut *mut BitmapBgra;
-                        unsafe {
-                            if ptr.is_null() {
-                                panic!("Must be a valid pointer to a pointer to BitmapBgra");
-                            }
-
-                            let frame =     ctx.first_parent_result_frame(ix, EdgeKind::Input);
-                            let weight = &mut ctx.weight_mut(ix);
-                            match frame {
-                                Some(input_ptr) => {
-                                    *ptr = input_ptr;
-                                    weight.result = NodeResult::Frame(input_ptr);
-                                },
-                                None => {
-                                    if (*ptr).is_null() {
-                                        panic!("When serving as an input node, FlowBitmapBgraPtr must point to a valid BitmapBgra. Found null.");
-                                    }
-                                    weight.result = NodeResult::Frame(*ptr);
-                                }
-                            }
-                        }
-                    }
-                    _ => {
-                        panic!("Node params missing");
-                    }
-                }
-            }
-            f
-        }),
-        ..Default::default()
+        }else{
+            Err(nerror!(ErrorKind::NodeParamsMismatch, "Need FlowBitmapBgraPtr, got {:?}", p))
+        }
     }
 }
 
-fn decoder_encoder_io_id(ctx: &mut OpCtxMut, ix: NodeIndex) -> Option<i32> {
+impl NodeDef for BitmapBgraDef {
+    fn fqn(&self) -> &'static str {
+        "imazen.bitmap_bgra_pointer"
+    }
+    fn edges_required(&self, p: &NodeParams) -> NResult<(EdgesIn, EdgesOut)> {
+        Ok((EdgesIn::OneOptionalInput, EdgesOut::Any))
+    }
+
+    fn validate_params(&self, p: &NodeParams) -> NResult<()> {
+        self.get(p).map_err(|e| e.at(here!())).map(|_| ())
+    }
+
+    fn estimate(&self, ctx: &mut OpCtxMut, ix: NodeIndex) -> NResult<FrameEstimate> {
+        let params = &ctx.weight(ix).params;
+
+        let ptr = self.get(params).map_err(|e| e.at(here!()))?;
+
+        unsafe {
+            if (*ptr).is_null() {
+                let input = ctx.frame_est_from(ix, EdgeKind::Input).map_err(|e| e.at(here!()))?;
+                Ok((input))
+            } else {
+                let b = &(**ptr);
+                Ok(FrameEstimate::Some(FrameInfo {
+                    w: b.w as i32,
+                    h: b.h as i32,
+                    fmt: b.fmt,
+                }))
+            }
+        }
+    }
+
+    fn can_execute(&self) -> bool {
+        true
+    }
+
+    fn execute(&self, ctx: &mut OpCtxMut, ix: NodeIndex) -> NResult<NodeResult> {
+        let ptr = self.get(&ctx.weight(ix).params).map_err(|e| e.at(here!()))?;
+
+        let frame = ctx.first_parent_result_frame(ix, EdgeKind::Input);
+        if let Some(input_ptr) = frame {
+            unsafe { *ptr = input_ptr };
+            ctx.consume_parent_result(ix, EdgeKind::Input)?;
+            Ok(NodeResult::Frame(input_ptr))
+        } else {
+            unsafe {
+                if (*ptr).is_null() {
+                    return Err(nerror!(ErrorKind::InvalidNodeParams, "When serving as an input node (no parent), FlowBitmapBgraPtr must point to a pointer to a valid BitmapBgra struct."));
+                }
+                Ok(NodeResult::Frame(*ptr))
+            }
+        }
+    }
+}
+//
+//#[derive(Debug,Clone)]
+//pub struct DecoderDef{}
+//
+//impl DecoderDef{
+//    fn get(&self, p: &NodeParams) -> NResult<(i32, Vec<s::DecoderCommand>)> {
+//        match ctx.weight(ix).params {
+//            NodeParams::Json(s::Node::Decode { io_id, commands }) => Ok(io_id),
+//            _ => Err(nerror!(ErrorKind::NodeParamsMismatch, "Need Decode, got {:?}", p)),
+//        }
+//    }
+//}
+//
+//impl NodeDef for DecoderDef {
+//    fn fqn(&self) -> &'static str {
+//        "imazen.decoder"
+//    }
+//    fn edges_required(&self, p: &NodeParams) -> NResult<(EdgesIn, EdgesOut)> {
+//        Ok((EdgesIn::None, EdgesOut::Any))
+//    }
+//
+//    fn validate_params(&self, p: &NodeParams) -> NResult<()> {
+//        self.get(p).map_err(|e| e.at(here!())).map(|_| ())
+//    }
+//
+//    fn tell_decoder(&self, p: &NodeParams) -> Option<(i32, Vec<s::DecoderCommand>)> {
+//        None
+//    }
+//
+//
+//    fn estimate(&self, ctx: &mut OpCtxMut, ix: NodeIndex) -> NResult<FrameEstimate> {
+//        let params = &ctx.weight(ix).params;
+//
+//        let ptr = self.get(p).map_err(|e| e.at(here!()))?;
+//
+//        unsafe {
+//            if (*ptr).is_null() {
+//                let input = ctx.frame_est_from(ix, EdgeKind::Input).map_err(|e| e.at(here!()))?;
+//                Ok((input))
+//            } else {
+//                let b = &(**ptr);
+//                Ok(FrameEstimate::Some(FrameInfo {
+//                    w: b.w as i32,
+//                    h: b.h as i32,
+//                    fmt: b.fmt,
+//                    alpha_meaningful: b.alpha_meaningful
+//                }));
+//            }
+//        }
+//    }
+//    fn can_expand(&self) -> bool {
+//        true
+//    }
+//
+//    fn expand(&self, ctx: &mut OpCtxMut, ix: NodeIndex) -> NResult<()> {
+//        // Mutate instead of replace
+//        ctx.weight_mut(ix).def = PRIMITIVE_DECODER.as_node_def();
+//
+//        let io_id = decoder_encoder_io_id(ctx, ix).unwrap();
+//
+//        if let Ok(exif_flag) = ctx.job.get_exif_rotation_flag(io_id){
+//            if exif_flag > 0 {
+//                let new_node = ctx.graph
+//                    .add_node(Node::n(&APPLY_ORIENTATION,
+//                                      NodeParams::Json(s::Node::ApplyOrientation {
+//                                          flag: exif_flag,
+//                                      })));
+//                ctx.copy_edges_to(ix, new_node, EdgeDirection::Outgoing);
+//                ctx.delete_child_edges_for(ix);
+//                ctx.graph.add_edge(ix, new_node, EdgeKind::Input).unwrap();
+//            }
+//        }
+//    }
+//}
+
+
+
+
+    fn decoder_encoder_io_id(ctx: &mut OpCtxMut, ix: NodeIndex) -> Option<i32> {
     match ctx.weight(ix).params {
         NodeParams::Json(s::Node::Decode { io_id, .. }) |
         NodeParams::Json(s::Node::Encode { io_id, .. }) => Some(io_id),
@@ -100,8 +173,7 @@ fn decoder_estimate(ctx: &mut OpCtxMut, ix: NodeIndex) {
     ctx.weight_mut(ix).frame_est = FrameEstimate::Some(FrameInfo {
         fmt: frame_info.frame_decodes_into,
         w: frame_info.image_width,
-        h: frame_info.image_height,
-        alpha_meaningful: true, // WRONG
+        h: frame_info.image_height
     });
 }
 

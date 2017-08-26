@@ -594,8 +594,9 @@ use std::hash::Hasher;
 
 fn checksum_bitmap(bitmap: &BitmapBgra) -> String {
     unsafe {
-        let info = format!("{}x{} fmt={} alpha={}", bitmap.w, bitmap.h, bitmap.fmt as i32, bitmap.alpha_meaningful as i32);
-        let width_bytes = bitmap.w as usize * if bitmap.fmt == ::imageflow_core::ffi::PixelFormat::Bgra32 { 4} else { 3 };
+        let info = format!("{}x{} fmt={}", bitmap.w, bitmap.h, bitmap.fmt as i32);
+        let width_bytes = bitmap.w as usize *  bitmap.fmt.bytes();
+        //TODO: Support Bgr32 properly by skipping alpha channel
         let mut hash = XxHash::with_seed(0x8ed12ad9483d28a0);
         for h in 0isize..(bitmap.h as isize){
             let row_slice = ::std::slice::from_raw_parts(bitmap.pixels.offset(h * bitmap.stride as isize), width_bytes);
@@ -703,19 +704,23 @@ fn diff_bytes(a: &[u8], b: &[u8]) ->(i64,i64){
 
 
 fn diff_bitmap_bytes(a: &BitmapBgra, b: &BitmapBgra) -> (i64,i64){
-    if a.w != b.w || a.h != b.h || a.fmt != b.fmt { panic!("Bitmap dimensions differ"); }
+    if a.w != b.w || a.h != b.h || a.fmt.bytes() != b.fmt.bytes() { panic!("Bitmap dimensions differ. a:\n{:#?}\nb:\n{:#?}", a, b); }
 
-    let width_bytes = a.w as usize * if a.fmt == ::imageflow_core::ffi::PixelFormat::Bgra32 { 4} else { 3 };
+    let width_bytes = a.w as usize * a.fmt.bytes();
+        (0isize..a.h as isize).map(|h| {
 
-    (0isize..a.h as isize).map(|h| {
-        let a_contents_slice = unsafe { ::std::slice::from_raw_parts(a.pixels.offset(h * a.stride as isize), width_bytes) };
-        let b_contents_slice = unsafe { ::std::slice::from_raw_parts(b.pixels.offset(h * b.stride as isize), width_bytes) };
-        diff_bytes(a_contents_slice, b_contents_slice)
-    }).fold((0,0), |(a,b),(c,d)| (a + c,b + d))
+            let a_contents_slice = unsafe { ::std::slice::from_raw_parts(a.pixels.offset(h * a.stride as isize), width_bytes) };
+            let b_contents_slice = unsafe { ::std::slice::from_raw_parts(b.pixels.offset(h * b.stride as isize), width_bytes) };
+
+            diff_bytes(a_contents_slice, b_contents_slice)
+
+        }).fold((0, 0), |(a, b), (c, d)| (a + c, b + d))
+
 }
 
-fn regression_check(c: &ChecksumCtx, bitmap: *const BitmapBgra, name: &str) -> bool{
-    let bitmap_ref =unsafe{&*bitmap};
+fn regression_check(c: &ChecksumCtx, bitmap: *mut BitmapBgra, name: &str) -> bool{
+    let bitmap_ref =unsafe{&mut *bitmap};
+    bitmap_ref.normalize_alpha().unwrap();
 
     // Always write a copy if it doesn't exist
     save_visual(c, bitmap_ref);

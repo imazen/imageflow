@@ -25,6 +25,7 @@ struct flow_codecs_png_decoder_state {
     png_size_t rowbytes;
     png_size_t w;
     png_size_t h;
+    flow_pixel_format canvas_fmt;
     jmp_buf error_handler_jmp;
     int color_type, bit_depth;
     struct flow_io * io;
@@ -76,6 +77,7 @@ static bool flow_codecs_png_decoder_reset(flow_c * c, struct flow_codecs_png_dec
     state->gamma = 0.45455;
     state->pixel_buffer = NULL;
     state->pixel_buffer_size = -1;
+    state->canvas_fmt = flow_bgra32;
     state->stage = flow_codecs_png_decoder_stage_NotStarted;
     return true;
 }
@@ -246,6 +248,9 @@ static bool flow_codecs_png_decoder_BeginRead(flow_c * c, struct flow_codecs_png
     if (!(state->color_type & PNG_COLOR_MASK_ALPHA)) {
         png_set_expand(state->png_ptr);
         png_set_filler(state->png_ptr, 65535L, PNG_FILLER_AFTER);
+        state->canvas_fmt = flow_bgr32;
+    } else{
+        state->canvas_fmt = flow_bgra32;
     }
 
     // Drop to 8-bit per channel; we can't handle 16-bit yet.
@@ -360,7 +365,7 @@ static bool flow_codecs_png_get_frame_info(flow_c * c, void * codec_state,
     }
     decoder_frame_info_ref->w = (int32_t)state->w;
     decoder_frame_info_ref->h = (int32_t)state->h;
-    decoder_frame_info_ref->format = flow_bgra32;
+    decoder_frame_info_ref->format = state->canvas_fmt;
     return true;
 }
 static bool flow_codecs_png_get_info(flow_c * c, void * codec_state, struct flow_decoder_info * info_ref)
@@ -375,7 +380,7 @@ static bool flow_codecs_png_get_info(flow_c * c, void * codec_state, struct flow
     info_ref->image_height = (int32_t)state->h;
     info_ref->frame_count = 1;
     info_ref->current_frame_index = 0;
-    info_ref->frame_decodes_into = flow_bgra32;
+    info_ref->frame_decodes_into = state->canvas_fmt;
     return true;
 }
 
@@ -432,7 +437,7 @@ static void png_flush_nullop(png_structp png_ptr) {}
 static bool flow_codecs_png_write_frame(flow_c * c, void * codec_state, struct flow_bitmap_bgra * frame,
                                         struct flow_encoder_hints * hints)
 {
-    if (frame->fmt != flow_bgra32 && frame->fmt != flow_bgr24) {
+    if (frame->fmt != flow_bgra32 && frame->fmt != flow_bgr24 && frame->fmt != flow_bgr32) {
         FLOW_error(c, flow_status_Unsupported_pixel_format);
         return false;
     }
@@ -476,16 +481,18 @@ static bool flow_codecs_png_write_frame(flow_c * c, void * codec_state, struct f
 
         int color_type;
         int transform;
-        if (frame->fmt == flow_bgra32) {
-            color_type = PNG_COLOR_TYPE_RGB_ALPHA;
-            transform = PNG_TRANSFORM_BGR;
-            if (hints != NULL && hints->disable_png_alpha) {
-                color_type = PNG_COLOR_TYPE_RGB;
-                transform = transform | PNG_TRANSFORM_STRIP_FILLER_AFTER;
-            }
-        } else {
+        if ((frame->fmt == flow_bgra32 && hints != NULL && hints->disable_png_alpha) || frame->fmt == flow_bgr32) {
+            color_type = PNG_COLOR_TYPE_RGB;
+            transform = PNG_TRANSFORM_BGR | PNG_TRANSFORM_STRIP_FILLER_AFTER;
+        } else if (frame->fmt == flow_bgr24){
             color_type = PNG_COLOR_TYPE_RGB;
             transform = PNG_TRANSFORM_BGR;
+        } else if (frame->fmt == flow_bgra32){
+            color_type = PNG_COLOR_TYPE_RGB_ALPHA;
+            transform = PNG_TRANSFORM_BGR;
+        } else{
+            FLOW_error(c, flow_status_Invalid_argument);
+            return false;
         }
 
         png_set_IHDR(png_ptr, info_ptr, (png_uint_32)frame->w, (png_uint_32)frame->h, 8, color_type, PNG_INTERLACE_NONE,

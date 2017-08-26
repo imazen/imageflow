@@ -246,7 +246,6 @@ PUB bool flow_halve(flow_c * c, struct flow_colorcontext_info * colorcontext, co
 PUB bool flow_halve_in_place(flow_c * c, struct flow_colorcontext_info * colorcontext, struct flow_bitmap_bgra * from,
                              int divisor);
 
-PUB const char * flow_pixel_format_get_name(flow_pixel_format f, bool alpha_meaningful);
 
 PUB void flow_scale_spatial_srgb_7x7(uint8_t input[64], uint8_t ** output_rows, uint32_t output_col);
 

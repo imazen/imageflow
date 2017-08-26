@@ -49,13 +49,9 @@ impl NodeDefOneInputOneCanvas for CopyRectNodeDef{
                          p));
             }
 
-            let bytes_pp = match input.fmt {
-                PixelFormat::Gray8 => 1,
-                PixelFormat::Bgra32 => 4,
-                PixelFormat::Bgr24 => 3,
-            };
+            let bytes_pp = input.fmt.bytes() as u32;
             if from_x == 0 && x == 0 && width == input.w && width == canvas.w &&
-                input.stride == canvas.stride && !canvas.borrowed_pixels {
+                input.stride == canvas.stride {
                 //This optimization has the side effect of copying irrelevant data, so we don't want to do it if windowed, only
                 // if padded or permanently cropped.
                 unsafe {
@@ -184,8 +180,7 @@ impl NodeDefOneInputExpand for ExpandCanvasDef{
                 Ok(FrameInfo {
                     w: info.w + left as i32 + right as i32,
                     h: info.h + top as i32 + bottom as i32,
-                    fmt: ffi::PixelFormat::from(info.fmt),
-                    alpha_meaningful: info.alpha_meaningful,
+                    fmt: ffi::PixelFormat::from(info.fmt)
                 })
             })
         } else {
@@ -195,7 +190,7 @@ impl NodeDefOneInputExpand for ExpandCanvasDef{
 
     fn expand(&self, ctx: &mut OpCtxMut, ix: NodeIndex, p: NodeParams, parent: FrameInfo) -> NResult<()>{
         if let NodeParams::Json(s::Node::ExpandCanvas { left, top, bottom, right, color }) = p {
-            let FrameInfo { w, h, fmt, alpha_meaningful } = parent;
+            let FrameInfo { w, h, fmt } = parent;
 
             let new_w = w as usize + left as usize + right as usize;
             let new_h = h as usize + top as usize + bottom as usize;
@@ -244,7 +239,6 @@ impl CropMutNodeDef {
                         w: x2 as i32 - x1 as i32,
                         h: y2 as i32 - y1 as i32,
                         fmt: ffi::PixelFormat::from(input.fmt),
-                        alpha_meaningful: input.alpha_meaningful,
                     }))
                 }
                 //TODO: we can estimate with other FrameEstimate values
@@ -334,8 +328,8 @@ impl NodeDefOneInputExpand for CropWhitespaceDef {
                 NodeResult::Frame(b) => {
                     unsafe {
                         let rect = ::ffi::detect_content(ctx.c.flow_c(), b, threshold);
-                        if rect == Rect::failure(){
-                            return Err(nerror!(ErrorKind::CError(c.error().c_error()), "Failed to complete whitespace detection"));
+                        if rect == ::ffi::Rect::failure(){
+                            return Err(nerror!(ErrorKind::CError(ctx.c.error().c_error()), "Failed to complete whitespace detection"));
                         }
                         if rect.x2 <= rect.x1 || rect.y2 <= rect.y1{
                             return Err(nerror!(ErrorKind::InvalidState, "Whitespace detection returned invalid rectangle"));

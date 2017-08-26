@@ -226,16 +226,7 @@ pub struct BitmapBgra {
     // FIXME: replace with a vec or slice
     /// pointer to pixel 0,0; should be of length > h * stride
     pub pixels: *mut u8,
-    /// If true, we don't dispose of *pixels when we dispose the struct
-    pub borrowed_pixels: bool,
-    /// If false, we can even ignore the alpha channel on 4bpp
-    pub alpha_meaningful: bool,
-    /// If false, we can edit pixels without affecting the stride
-    pub pixels_readonly: bool,
-    /// If false, we can change the stride of the image
-    pub stride_readonly: bool,
-    /// If true, we can reuse the allocated memory for other purposes
-    pub can_reuse_space: bool,
+
     pub fmt: PixelFormat,
     /// When using compositing mode blend_with_matte, this color will be used. We should probably define this as
     /// always being sRGBA, 4 bytes.
@@ -257,9 +248,20 @@ impl BitmapBgra{
         flow::definitions::FrameInfo {
             w: self.w as i32,
             h: self.h as i32,
-            alpha_meaningful: self.alpha_meaningful,
             fmt: self.fmt
         }
+    }
+    pub fn normalize_alpha(&mut self) -> Result<()>{
+        if self.fmt == PixelFormat::Bgr32 {
+            let width_bytes = self.w as usize * self.fmt.bytes();
+            for h in 0isize..self.h as isize{
+                let s = unsafe { ::std::slice::from_raw_parts_mut(self.pixels.offset(h * self.stride as isize), width_bytes) };
+                for pix in s.chunks_mut(4) {
+                    pix[3] = 0xff;
+                }
+            }
+        }
+        Ok(())
     }
 
 }
@@ -589,7 +591,7 @@ pub struct Rect {
     pub y2: i32
 }
 impl Rect{
-    fn failure() -> Rect{
+    pub fn failure() -> Rect{
         Rect{ x1: -1, y1: -1, x2: -1, y2: -1}
     }
 }

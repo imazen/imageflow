@@ -25,7 +25,10 @@ static bool ScaleAndRender1D(flow_c * context, struct flow_colorcontext_info * c
     const uint32_t buffer_row_count = 4; // using buffer=5 seems about 6% better than most other non-zero values.
 
     // How many bytes per pixel are we scaling?
-    flow_pixel_format scaling_format = (pSrc->fmt == flow_bgra32 && !pSrc->alpha_meaningful) ? flow_bgr24 : pSrc->fmt;
+    flow_pixel_format scaling_format = flow_effective_pixel_format (pSrc);
+
+    // TODO: measure; it might be faster to round 3->4 and ignore the data
+    uint32_t float_channels = flow_pixel_format_channels(scaling_format);
 
     flow_prof_start(context, "contributions_calc", false);
 
@@ -39,19 +42,19 @@ static bool ScaleAndRender1D(flow_c * context, struct flow_colorcontext_info * c
 
     flow_prof_start(context, "create_bitmap_float (buffers)", false);
 
-    source_buf = flow_bitmap_float_create(context, from_count, buffer_row_count, scaling_format, false);
+    source_buf = flow_bitmap_float_create(context, from_count, buffer_row_count, float_channels, false);
     if (source_buf == NULL) {
         FLOW_add_to_callstack(context);
         success = false;
         goto cleanup;
     }
-    dest_buf = flow_bitmap_float_create(context, to_count, buffer_row_count, scaling_format, false);
+    dest_buf = flow_bitmap_float_create(context, to_count, buffer_row_count, float_channels, false);
     if (dest_buf == NULL) {
         FLOW_add_to_callstack(context);
         success = false;
         goto cleanup;
     }
-    source_buf->alpha_meaningful = pSrc->alpha_meaningful;
+    source_buf->alpha_meaningful = scaling_format == flow_bgra32;
     dest_buf->alpha_meaningful = source_buf->alpha_meaningful;
 
     source_buf->alpha_premultiplied = source_buf->channels == 4;

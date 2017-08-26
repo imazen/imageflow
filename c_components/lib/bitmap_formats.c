@@ -62,7 +62,31 @@ static bool bitmap_allocation_hook(flow_c * context, void * ptr, size_t byte_cou
     return true;
 }
 
-uint32_t flow_pixel_format_bytes_per_pixel(flow_pixel_format format) { return (uint32_t)format; }
+uint32_t flow_pixel_format_bytes_per_pixel(flow_pixel_format format) {
+    switch(format){
+        case flow_bgr24: return 3;
+        case flow_bgra32: return 4;
+        case flow_bgr32: return 4;
+        case flow_gray8: return 1;
+    }
+    fprintf( stderr, "Invalid flow_pixel_format %d", format);
+    exit(70);
+}
+flow_pixel_format flow_effective_pixel_format(struct flow_bitmap_bgra * b) {
+    return b->fmt;
+}
+uint32_t flow_pixel_format_channels(flow_pixel_format format) {
+    switch(format){
+        case flow_bgr24: return 3;
+        case flow_bgra32: return 4;
+        case flow_bgr32: return 3;
+        case flow_gray8: return 1;
+    }
+    fprintf( stderr, "Invalid flow_pixel_format %d", format);
+    exit(70);
+}
+
+
 FLOW_HINT_HOT FLOW_HINT_PURE
 
     struct flow_bitmap_bgra *
@@ -86,10 +110,6 @@ FLOW_HINT_HOT FLOW_HINT_PURE
     im->w = sx;
     im->h = sy;
     im->pixels = NULL;
-    im->pixels_readonly = true;
-    im->stride_readonly = true;
-    im->borrowed_pixels = true;
-    im->can_reuse_space = false;
     return im;
 }
 
@@ -110,10 +130,6 @@ struct flow_bitmap_bgra * flow_bitmap_bgra_create(flow_c * context, int sx, int 
 
     im->stride = unpadded_stride + padding;
 
-    im->pixels_readonly = false;
-    im->stride_readonly = false;
-    im->borrowed_pixels = false;
-    im->alpha_meaningful = im->fmt == flow_bgra32;
     size_t byte_count = im->h * im->stride;
     if (zeroed) {
         im->pixels = (unsigned char *)FLOW_calloc_owned(context, byte_count, sizeof(unsigned char), im);
@@ -220,18 +236,6 @@ bool flow_bitmap_bgra_compare(flow_c * c, struct flow_bitmap_bgra * a, struct fl
     }
     *equal_out = true;
     return true;
-}
-
-const char * flow_pixel_format_get_name(flow_pixel_format f, bool alpha_meaningful)
-{
-    switch (f) {
-        case flow_bgr24:
-            return "flow_bgr24";
-        case flow_bgra32:
-            return alpha_meaningful ? "flow_bgra32" : "Bgr32";
-        default:
-            return "?";
-    }
 }
 
 bool flow_bitmap_bgra_fill_rect(flow_c * c, struct flow_bitmap_bgra * b, uint32_t x1, uint32_t y1, uint32_t x2,

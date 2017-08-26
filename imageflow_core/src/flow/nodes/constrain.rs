@@ -23,7 +23,6 @@ fn get_expand(ctx: &mut OpCtxMut, ix: NodeIndex) -> ::imageflow_riapi::ir4::Ir4E
                         w: input.w,
                         h: input.h,
                         fmt: input.fmt,
-                        alpha_meaningful: input.alpha_meaningful,
                         original_mime: None
                     }
                 }
@@ -119,7 +118,6 @@ impl NodeDefOneInputExpand for ConstrainDef{
                     w: w as i32,
                     h: h as i32,
                     fmt: ffi::PixelFormat::from(input.fmt),
-                    alpha_meaningful: input.alpha_meaningful,
                 })
             })
         }else{

@@ -199,7 +199,7 @@ impl<'c> OpCtxMut<'c> {
     }
 
 
-    pub fn frame_info_from(&mut self, ix: NodeIndex, filter_by_kind: EdgeKind) -> NResult<FrameInfo> {
+    pub fn frame_info_from(&self, ix: NodeIndex, filter_by_kind: EdgeKind) -> NResult<FrameInfo> {
         let parent = self.first_parent_of_kind_required(ix, filter_by_kind)?;
         let est = self.graph.node_weight(parent).expect(loc!("first_parent_of_kind_required provided invalid node index")).frame_est;
         if let  FrameEstimate::Some(info) = est{
@@ -208,7 +208,7 @@ impl<'c> OpCtxMut<'c> {
             Err(nerror!(ErrorKind::InvalidOperation, "Parent {:?} node lacks FrameEstimate::Some (required for expand/execute). Value is {:?}", filter_by_kind, est).with_ctx_mut(self, ix))
         }
     }
-    pub fn frame_est_from(&mut self, ix: NodeIndex, filter_by_kind: EdgeKind) -> NResult<FrameEstimate> {
+    pub fn frame_est_from(&self, ix: NodeIndex, filter_by_kind: EdgeKind) -> NResult<FrameEstimate> {
         let parent = self.first_parent_of_kind_required(ix, filter_by_kind)?;
 
         let est = self.graph.node_weight(parent).expect(loc!("first_parent_of_kind_required provided invalid node index")).frame_est;

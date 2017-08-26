@@ -559,8 +559,7 @@ impl NodeDef for NodeDefinition{
 pub struct FrameInfo {
     pub w: i32,
     pub h: i32,
-    pub fmt: PixelFormat,
-    pub alpha_meaningful: bool,
+    pub fmt: PixelFormat
 }
 
 #[derive(Copy, Clone,Debug,PartialEq)]
@@ -600,8 +599,7 @@ impl FrameEstimate{
             Ok(FrameInfo{
                 w: info.h,
                 h: info.w,
-                fmt: info.fmt,
-                alpha_meaningful: info.alpha_meaningful
+                fmt: info.fmt
             })
         }).unwrap()
     }
@@ -675,7 +673,7 @@ impl From<s::Node> for Node {
             s::Node::CropWhitespace { .. } => Node::n(&nodes::CROP_WHITESPACE, NodeParams::Json(node)),
             s::Node::Decode { .. } => Node::new(&nodes::DECODER, NodeParams::Json(node)),
             s::Node::FlowBitmapBgraPtr { .. } => {
-                Node::new(&nodes::BITMAP_BGRA_POINTER, NodeParams::Json(node))
+                Node::n(&nodes::BITMAP_BGRA_POINTER, NodeParams::Json(node))
             }
             s::Node::CommandString{ .. } => Node::n(&nodes::COMMAND_STRING, NodeParams::Json(node)),
             s::Node::FlipV => Node::n(&nodes::FLIP_V, NodeParams::Json(node)),

@@ -232,17 +232,6 @@ struct flow_bitmap_bgra {
     uint32_t stride;
     // pointer to pixel 0,0; should be of length > h * stride
     unsigned char * pixels;
-    // If true, we don't dispose of *pixels when we dispose the struct
-    bool borrowed_pixels;
-    // If false, we can even ignore the alpha channel on 4bpp
-    bool alpha_meaningful;
-    // If false, we can edit pixels without affecting the stride
-    bool pixels_readonly;
-    // If false, we can change the stride of the image.
-    bool stride_readonly;
-
-    // If true, we can reuse the allocated memory for other purposes.
-    bool can_reuse_space;
 
     flow_pixel_format fmt;
 

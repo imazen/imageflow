@@ -22,7 +22,6 @@ impl ScaleRenderHelpers {
                     w: *w as i32,
                     h: *h as i32,
                     fmt: ffi::PixelFormat::from(input_info.fmt),
-                    alpha_meaningful: input_info.alpha_meaningful,
                 });
             }
             _ => {
@@ -55,7 +54,6 @@ impl ScaleRenderHelpers {
                     w: w as i32,
                     h: h as i32,
                     fmt: ffi::PixelFormat::from(input_info.fmt),
-                    alpha_meaningful: input_info.alpha_meaningful,
                 });
             }
             _ => {

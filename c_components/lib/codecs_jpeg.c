@@ -899,7 +899,7 @@ static bool flow_codecs_jpeg_get_info(flow_c * c, void * codec_state, struct flo
 
     info->current_frame_index = 0;
     info->frame_count = 1;
-    info->frame_decodes_into = flow_bgra32;
+    info->frame_decodes_into = flow_bgr32;
     info->image_width = state->w;
     info->image_height = state->h;
     return true;
@@ -926,7 +926,7 @@ static bool flow_codecs_jpeg_get_frame_info(flow_c * c, void * codec_state,
     }
     decoder_frame_info_ref->w = state->w;
     decoder_frame_info_ref->h = state->h;
-    decoder_frame_info_ref->format = flow_bgra32; // state->channels == 1 ? flow_gray8 : flow_bgr24;
+    decoder_frame_info_ref->format = flow_bgr32; // state->channels == 1 ? flow_gray8 : flow_bgr24;
     return true;
 }
 
@@ -984,9 +984,10 @@ static bool flow_codecs_initialize_encode_jpeg(flow_c * c, struct flow_codec_ins
 }
 
 static bool flow_codecs_jpeg_write_frame(flow_c * c, void * codec_state, struct flow_bitmap_bgra * frame,
-                                         struct flow_encoder_hints * hints)
-{
-    if (frame->fmt != flow_bgra32 && frame->fmt != flow_bgr24) {
+                                         struct flow_encoder_hints * hints){
+
+    flow_pixel_format effective_format = flow_effective_pixel_format(frame);
+    if (effective_format != flow_bgra32 && effective_format != flow_bgr24 && effective_format != flow_bgr32) {
         FLOW_error(c, flow_status_Unsupported_pixel_format);
         return false;
     }
@@ -1007,11 +1008,21 @@ static bool flow_codecs_jpeg_write_frame(flow_c * c, void * codec_state, struct 
     jpeg_create_compress(&state->cinfo);
     flow_codecs_jpeg_setup_dest_manager(&state->cinfo, state->io);
 
-    state->cinfo.in_color_space = frame->fmt == flow_bgra32 ? JCS_EXT_BGRA : JCS_EXT_BGR;
     state->cinfo.image_height = frame->h;
     state->cinfo.image_width = frame->w;
-    state->cinfo.input_components = frame->fmt == flow_bgra32 ? 4 : 3;
     state->cinfo.optimize_coding = true; // entropy coding
+
+    if (effective_format == flow_bgra32){
+        state->cinfo.in_color_space = JCS_EXT_BGRA;
+        state->cinfo.input_components = 4;
+
+    }else if (effective_format == flow_bgr32){
+        state->cinfo.in_color_space = JCS_EXT_BGRX;
+        state->cinfo.input_components = 4;
+    }else if (effective_format == flow_bgr24){
+        state->cinfo.in_color_space = JCS_EXT_BGR;
+        state->cinfo.input_components = 3;
+    }
 
     jpeg_set_defaults(&state->cinfo);
 

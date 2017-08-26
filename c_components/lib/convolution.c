@@ -618,7 +618,7 @@ flow_bitmap_bgra_transpose(flow_c * c, struct flow_bitmap_bgra * from, struct fl
         return false;
     }
 
-    if (from->fmt != flow_bgra32){
+    if (from->fmt != flow_bgra32 && from->fmt != flow_bgr32){
         if (!flow_bitmap_bgra_transpose_slow(c, from, to)) {
             FLOW_add_to_callstack(c);
             return false;
@@ -670,7 +670,7 @@ flow_bitmap_bgra_transpose_slow(flow_c * c, struct flow_bitmap_bgra * from, stru
         return false;
     }
 
-    if (from->fmt == flow_bgra32) {
+    if (from->fmt == flow_bgra32 || from->fmt == flow_bgr32) {
         for (uint32_t x = 0; x < to->w; x++) {
             for (uint32_t y = 0; y < to->h; y++) {
                 *((uint32_t *)&to->pixels[x * 4 + y * to->stride])
@@ -703,7 +703,7 @@ FLOW_HINT_HOT FLOW_HINT_UNSAFE_MATH_OPTIMIZATIONS
 {
     if (pct == 0.0f)
         return true;
-    if (im->fmt != flow_bgra32) {
+    if (im->fmt != flow_bgra32 || im->fmt != flow_bgr32) {
         FLOW_error(c, flow_status_Unsupported_pixel_format);
         return false;
     }

@@ -52,6 +52,8 @@ pub mod collections;
 pub enum PixelFormat {
     #[serde(rename="bgra_32")]
     Bgra32 = 4,
+    #[serde(rename="bgr_32")]
+    Bgr32 = 70,
     #[serde(rename="bgr_24")]
     Bgr24 = 3,
     #[serde(rename="gray_8")]
@@ -63,7 +65,8 @@ impl PixelFormat{
         match *self{
             PixelFormat::Gray8 => 1,
             PixelFormat::Bgr24 => 3,
-            PixelFormat::Bgra32 => 4
+            PixelFormat::Bgra32 => 4,
+            PixelFormat::Bgr32 => 4
         }
     }
 }
@@ -897,7 +900,7 @@ pub struct ImageInfo {
     pub current_frame_index: i64,
     pub image_width: i32,
     pub image_height: i32,
-    pub frame_decodes_into: PixelFormat,
+    pub frame_decodes_into: PixelFormat
 }
 #[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
 pub enum ResultBytes {
@@ -1016,6 +1019,7 @@ impl Response001 {
                 frame_decodes_into: PixelFormat::Bgr24,
                 preferred_mime_type: "image/png".to_owned(),
                 preferred_extension: "png".to_owned(),
+
             }),
         }
     }
@@ -1040,7 +1044,7 @@ fn roundtrip_example_responses() {
 }
 
 
-
+#[allow(unused_macros)]
 macro_rules! hashmap {
     ($( $key: expr => $val: expr ),*) => {{
          let mut map = ::std::collections::HashMap::new();
