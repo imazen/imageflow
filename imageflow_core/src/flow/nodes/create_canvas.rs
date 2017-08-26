@@ -1,5 +1,9 @@
 use super::internal_prelude::*;
 
+
+pub static CREATE_CANVAS: CreateCanvasNodeDef = CreateCanvasNodeDef{};
+
+
 #[derive(Debug,Clone)]
 pub struct CreateCanvasNodeDef{}
 
@@ -96,6 +100,4 @@ impl NodeDef for CreateCanvasNodeDef {
     }
 }
 
-
-pub static CREATE_CANVAS: CreateCanvasNodeDef = CreateCanvasNodeDef{};
 

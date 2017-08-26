@@ -1,34 +1,179 @@
 use super::internal_prelude::*;
 
 
+pub static CONSTRAIN: ConstrainDef = ConstrainDef{};
+pub static COMMAND_STRING: CommandStringDef = CommandStringDef{};
 
 lazy_static! {
-    pub static ref CONSTRAIN: NodeDefinition = constrain_def();
-    pub static ref COMMAND_STRING: NodeDefinition = command_string_def();
     pub static ref EXPANDING_COMMAND_STRING: NodeDefinition = command_string_partially_expanded_def();
 }
 
 
 
-    fn constrain_size_but_input_format(ctx: &mut OpCtxMut, ix: NodeIndex) {
-        let input = ctx.first_parent_frame_info_some(ix).unwrap();
+fn get_expand(ctx: &mut OpCtxMut, ix: NodeIndex) -> ::imageflow_riapi::ir4::Ir4Expand{
+    let input = ctx.first_parent_frame_info_some(ix).unwrap();
+    if let s::Node::CommandString{ref kind, ref value, ref decode, ref encode} =
+    ctx.get_json_params(ix).unwrap() {
+        match kind {
+            &s::CommandStringKind::ImageResizer4 => {
+                ::imageflow_riapi::ir4::Ir4Expand {
+                    i: ::imageflow_riapi::ir4::Ir4Command::QueryString(value.to_owned()),
+                    encode_id: *encode,
+                    source: ::imageflow_riapi::ir4::Ir4SourceFrameInfo {
+                        w: input.w,
+                        h: input.h,
+                        fmt: input.fmt,
+                        alpha_meaningful: input.alpha_meaningful,
+                        original_mime: None
+                    }
+                }
+            }
+        }
+    }else{
+        panic!("");
+    }
+}
 
-        let weight = &mut ctx.weight_mut(ix);
-        match weight.params {
-            NodeParams::Json(s::Node::Constrain(ref constraint)) => {
+
+
+
+fn command_string_partially_expanded_def() -> NodeDefinition {
+    NodeDefinition {
+        fqn: "imazen.expanding_command_string",
+        name: "expanding_command_string",
+        inbound_edges: EdgesIn::OneInput,
+        description: "expanding command string",
+        fn_estimate: Some({
+            fn f(ctx: &mut OpCtxMut, ix: NodeIndex) {
+
+                let old_estimate = ctx.weight(ix).frame_est;
+
+
+                if old_estimate == FrameEstimate::Invalidated{
+                    ctx.weight_mut(ix).frame_est = FrameEstimate::Impossible;
+                } else {
+                    let e = get_expand(ctx, ix);
+
+                    if let Some(command) = e.get_decode_commands().unwrap() {
+                        //Send command to codec
+                        for (io_id, decoder_ix) in ctx.get_decoder_io_ids_and_indexes(ix) {
+                            ctx.job.tell_decoder(io_id, command.clone()).unwrap();
+                            ctx.weight_mut(decoder_ix).frame_est = FrameEstimate::Invalidated;
+                        }
+                    }
+
+                    //                let canvas = e.get_canvas_size().unwrap();
+                    ctx.weight_mut(ix).frame_est = FrameEstimate::Invalidated;
+                }
+
+
+                //                FrameEstimate::UpperBound(FrameInfo {
+                //                    w: canvas.width(),
+                //                    h: canvas.height(),
+                //                    fmt: PixelFormat::Bgra32,
+                //                    alpha_meaningful: true
+                //                });
+            }
+            f
+        }),
+        fn_flatten_pre_optimize: Some({
+            fn f(ctx: &mut OpCtxMut, ix: NodeIndex) {
+                let e = get_expand(ctx, ix);
+
+
+                match e.expand_steps() {
+                    Ok(r) => {
+                        //TODO: Find a way to expose warnings
+                        ctx.replace_node(ix, r.steps.unwrap().into_iter().map(|n| Node::from(n)).collect::<>());
+                    }
+                    Err(e) => {
+                        //TODO: reparse to get warnings
+                        panic!("{:?}", e);
+                    }
+                }
+            }
+            f
+        }),
+        ..Default::default()
+    }
+}
+
+
+
+#[derive(Debug,Clone)]
+pub struct ConstrainDef;
+impl NodeDef for ConstrainDef{
+    fn as_one_input_expand(&self) -> Option<&NodeDefOneInputExpand>{
+        Some(self)
+    }
+}
+impl NodeDefOneInputExpand for ConstrainDef{
+    fn fqn(&self) -> &'static str{
+        "imazen.constrain"
+    }
+    fn estimate(&self, params: &NodeParams, input: FrameEstimate) -> NResult<FrameEstimate>{
+        if let &NodeParams::Json(s::Node::Constrain(ref constraint)) = params {
+            input.map_frame(|input| {
                 let (w, h, _) = constrain(input.w as u32, input.h as u32, constraint);
-                weight.frame_est = FrameEstimate::Some(FrameInfo {
+                Ok(FrameInfo {
                     w: w as i32,
                     h: h as i32,
                     fmt: ffi::PixelFormat::from(input.fmt),
                     alpha_meaningful: input.alpha_meaningful,
-                });
-            }
-            _ => {
-                panic!("Node params missing");
-            }
+                })
+            })
+        }else{
+            Err(nerror!(ErrorKind::NodeParamsMismatch, "Need Constrain, got {:?}", params))
         }
     }
+
+    fn expand(&self, ctx: &mut OpCtxMut, ix: NodeIndex, params: NodeParams, parent: FrameInfo) -> NResult<()> {
+        if let NodeParams::Json(s::Node::Constrain(constraint)) = params {
+            let input_w = parent.w as u32;
+            let input_h = parent.h as u32;
+
+            let (new_w, new_h, hints_val) = constrain(input_w, input_h, &constraint);
+
+            let hints = &hints_val;
+
+            let resample_when = hints.and_then(|ref h| h.resample_when).unwrap_or(s::ResampleWhen::SizeDiffers);
+            let size_differs = new_w != input_w || new_h != input_h;
+            let sharpen_requested = hints.and_then(|h| h.sharpen_percent).unwrap_or(0f32) > 0f32;
+
+            let resample = match resample_when {
+                s::ResampleWhen::Always => true,
+                s::ResampleWhen::SizeDiffers if size_differs => true,
+                s::ResampleWhen::SizeDiffersOrSharpeningRequested if size_differs || sharpen_requested => true,
+                _ => false
+            };
+
+            if resample {
+                let scale2d_params = s::Node::Resample2D {
+                    w: new_w as usize,
+                    h: new_h as usize,
+                    up_filter: hints.and_then(|h| h.up_filter),
+                    down_filter: hints.and_then(|h| h.down_filter),
+                    scaling_colorspace: hints.and_then(|h| h.scaling_colorspace),
+                    hints: hints.map(|h| s::ResampleHints {
+                        sharpen_percent: h.sharpen_percent,
+                        prefer_1d_twice: None
+                    }),
+                };
+
+                let scale2d = ctx.graph
+                    .add_node(Node::new(&super::SCALE,
+                                        NodeParams::Json(scale2d_params)));
+                ctx.replace_node_with_existing(ix, scale2d);
+            } else {
+                ctx.delete_node_and_snap_together(ix);
+            }
+            Ok(())
+        } else {
+            Err(nerror!(ErrorKind::NodeParamsMismatch, "Need Constrain, got {:?}", params))
+        }
+    }
+}
+
 
 
 fn scale_b_to(aspect_ratio_a_over_b: f32, a_from: u32, a_to: u32, b_from: u32) -> u32{
@@ -87,201 +232,55 @@ fn test_constrain(){
 
 }
 
-fn constrain_def() -> NodeDefinition {
-    NodeDefinition {
-        fqn: "imazen.constrain",
-        name: "constrain",
-        inbound_edges: EdgesIn::OneInput,
-        description: "constrain",
-        fn_estimate: Some(constrain_size_but_input_format),
-        fn_flatten_pre_optimize: Some({
-            fn f(ctx: &mut OpCtxMut, ix: NodeIndex) {
-                let input = ctx.first_parent_frame_info_some(ix).unwrap();
-                let input_w = input.w as u32;
-                let input_h = input.h as u32;
-                if let s::Node::Constrain(ref constraint) =
-                ctx.get_json_params(ix).unwrap() {
+#[derive(Debug,Clone)]
+pub struct CommandStringDef;
+impl NodeDef for CommandStringDef{
 
-                    let (new_w, new_h, hints_val) = constrain(input_w, input_h, constraint);
-
-                    let hints = &hints_val;
-
-                    let resample_when = hints.and_then(|ref h| h.resample_when).unwrap_or(s::ResampleWhen::SizeDiffers);
-                    let size_differs = new_w != input_w || new_h != input_h;
-                    let sharpen_requested = hints.and_then(|h| h.sharpen_percent).unwrap_or(0f32) > 0f32;
-
-                    let resample = match resample_when{
-                        s::ResampleWhen::Always => true,
-                        s::ResampleWhen::SizeDiffers if size_differs => true,
-                        s::ResampleWhen::SizeDiffersOrSharpeningRequested if size_differs || sharpen_requested => true,
-                        _ => false
-                    };
-
-                    if resample {
-                        let scale2d_params = s::Node::Resample2D {
-                            w: new_w as usize,
-                            h: new_h as usize,
-                            up_filter: hints.and_then(|h| h.up_filter),
-                            down_filter: hints.and_then(|h| h.down_filter),
-                            scaling_colorspace: hints.and_then(|h| h.scaling_colorspace),
-                            hints: hints.map(|h| s::ResampleHints {
-                                sharpen_percent: h.sharpen_percent,
-                                prefer_1d_twice: None
-                            }),
-                        };
-
-                        let scale2d = ctx.graph
-                            .add_node(Node::new(&super::SCALE,
-                                                NodeParams::Json(scale2d_params)));
-                        ctx.replace_node_with_existing(ix, scale2d);
-                    }else{
-                        ctx.delete_node_and_snap_together(ix);
-                    }
-                }
-
-            }
-            f
-        }),
-        ..Default::default()
+    fn fqn(&self) -> &'static str{
+        "imazen.command_string"
     }
-}
+    fn estimate(&self, ctx: &mut OpCtxMut, ix: NodeIndex) -> NResult<FrameEstimate>{
+        Ok((FrameEstimate::Impossible))
+    }
+    fn edges_required(&self, p: &NodeParams) -> NResult<(EdgesIn, EdgesOut)> {
+        Ok((EdgesIn::OneInput, EdgesOut::Any))
+    }
+    fn validate_params(&self, p: &NodeParams) -> NResult<()>{
+        Ok(())
+    }
+    fn can_expand(&self) -> bool{
+        true
+    }
+    fn expand(&self, ctx: &mut OpCtxMut, ix: NodeIndex) -> NResult<()> {
+        let has_parent = ctx.first_parent_of_kind(ix, EdgeKind::Input).is_some();
+        let params = ctx.weight(ix).params.clone();
+        let params_copy = ctx.weight(ix).params.clone();
 
-
-
-
-fn get_expand(ctx: &mut OpCtxMut, ix: NodeIndex) -> ::imageflow_riapi::ir4::Ir4Expand{
-    let input = ctx.first_parent_frame_info_some(ix).unwrap();
-    if let s::Node::CommandString{ref kind, ref value, ref decode, ref encode} =
-        ctx.get_json_params(ix).unwrap() {
-        match kind {
-            &s::CommandStringKind::ImageResizer4 => {
-                ::imageflow_riapi::ir4::Ir4Expand {
+        if let NodeParams::Json(s::Node::CommandString { kind, value, decode, encode }) = params_copy {
+            if let Some(d_id) = decode {
+                if has_parent {
+                    return Err(nerror!(ErrorKind::InvalidNodeParams, "CommandString must either have decode: null or have no parent nodes. Specifying a value for decode creates a new decoder node."));
+                }
+                let decode_node = ::imageflow_riapi::ir4::Ir4Translate {
                     i: ::imageflow_riapi::ir4::Ir4Command::QueryString(value.to_owned()),
-                    encode_id: *encode,
-                    source: ::imageflow_riapi::ir4::Ir4SourceFrameInfo {
-                        w: input.w,
-                        h: input.h,
-                        fmt: input.fmt,
-                        alpha_meaningful: input.alpha_meaningful,
-                        original_mime: None
-                    }
+                    decode_id: Some(d_id),
+                    encode_id: None,
+                }.get_decode_node().unwrap();
+                ctx.replace_node(ix, vec![
+                    Node::from(decode_node),
+                    Node::new(&EXPANDING_COMMAND_STRING, params)
+                ]);
+            } else {
+                if !has_parent {
+                    return Err(nerror!(ErrorKind::InvalidNodeParams,"CommandString must have a parent node unless 'decode' has a numeric value. Otherwise it has no image source. "));
                 }
+                ctx.replace_node(ix, vec![
+                    Node::new(&EXPANDING_COMMAND_STRING, params)
+                ]);
             }
+            Ok(())
+        } else {
+            Err(nerror!(ErrorKind::NodeParamsMismatch, "Need Constrain, got {:?}", params))
         }
-    }else{
-        panic!("");
-    }
-}
-
-fn command_string_partially_expanded_def() -> NodeDefinition {
-    NodeDefinition {
-        fqn: "imazen.expanding_command_string",
-        name: "expanding_command_string",
-        inbound_edges: EdgesIn::OneInput,
-        description: "expanding command string",
-        fn_estimate: Some({
-            fn f(ctx: &mut OpCtxMut, ix: NodeIndex) {
-
-                let old_estimate = ctx.weight(ix).frame_est;
-
-
-                if old_estimate == FrameEstimate::Invalidated{
-                    ctx.weight_mut(ix).frame_est = FrameEstimate::Impossible;
-                } else {
-                    let e = get_expand(ctx, ix);
-
-                    if let Some(command) = e.get_decode_commands().unwrap() {
-                        //Send command to codec
-                        for (io_id, decoder_ix) in ctx.get_decoder_io_ids_and_indexes(ix) {
-                            ctx.job.tell_decoder(io_id, command.clone()).unwrap();
-                            ctx.weight_mut(decoder_ix).frame_est = FrameEstimate::Invalidated;
-                        }
-                    }
-
-                    //                let canvas = e.get_canvas_size().unwrap();
-                    ctx.weight_mut(ix).frame_est = FrameEstimate::Invalidated;
-                }
-
-
-//                FrameEstimate::UpperBound(FrameInfo {
-//                    w: canvas.width(),
-//                    h: canvas.height(),
-//                    fmt: PixelFormat::Bgra32,
-//                    alpha_meaningful: true
-//                });
-            }
-            f
-        }),
-        fn_flatten_pre_optimize: Some({
-            fn f(ctx: &mut OpCtxMut, ix: NodeIndex) {
-                let e = get_expand(ctx, ix);
-
-
-                match e.expand_steps() {
-                    Ok(r) => {
-                        //TODO: Find a way to expose warnings
-                        ctx.replace_node(ix, r.steps.unwrap().into_iter().map(|n| Node::from(n)).collect::<>());
-                    }
-                    Err(e) => {
-                        //TODO: reparse to get warnings
-                        panic!("{:?}", e);
-                    }
-                }
-            }
-            f
-        }),
-        ..Default::default()
-    }
-}
-
-
-fn command_string_def() -> NodeDefinition {
-    NodeDefinition {
-        fqn: "imazen.command_string",
-        name: "command_string",
-        inbound_edges: EdgesIn::OneOptionalInput,
-        description: "command string",
-        fn_estimate: None,
-        fn_flatten_pre_optimize: Some({
-            fn f(ctx: &mut OpCtxMut, ix: NodeIndex) {
-
-                let n = ctx.get_json_params(ix).unwrap();
-
-                if let s::Node::CommandString{ref kind, ref value, ref decode, ref encode} = n.clone() {
-
-                    match kind {
-                        &s::CommandStringKind::ImageResizer4 => {
-
-                            let input = ctx.first_parent_frame_info_some(ix);
-
-                            if let &Some(d_id) = decode{
-                                if input.is_some(){
-                                    panic!("CommandString must either have decode: null or have no parent nodes. Specifying a value for decode creates a new decoder node.");
-                                }
-                                let decode_node = ::imageflow_riapi::ir4::Ir4Translate{
-                                    i: ::imageflow_riapi::ir4::Ir4Command::QueryString(value.to_owned()),
-                                    decode_id: Some(d_id),
-                                    encode_id: None,
-                                }.get_decode_node().unwrap();
-                                ctx.replace_node(ix, vec![
-                                    Node::from(decode_node),
-                                    Node::new(&EXPANDING_COMMAND_STRING, NodeParams::Json(n))
-                                ]);
-                            }else{
-                                if input.is_none(){
-                                    panic!("CommandString must have a parent node unless 'decode' has a numeric value. Otherwise it has no image source. ");
-                                }
-                                ctx.replace_node(ix, vec![
-                                    Node::new(&EXPANDING_COMMAND_STRING, NodeParams::Json(n))
-                                ]);
-                            }
-                        }
-                    }
-                }
-
-            }
-            f
-        }),
-        ..Default::default()
     }
 }

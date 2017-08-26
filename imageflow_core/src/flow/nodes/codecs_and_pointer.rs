@@ -1,5 +1,13 @@
 use super::internal_prelude::*;
 
+lazy_static! {
+    pub static ref BITMAP_BGRA_POINTER: NodeDefinition = bitmap_bgra_def();
+    pub static ref DECODER: NodeDefinition = decoder_def();
+    pub static ref ENCODE: NodeDefinition = encoder_def();
+    pub static ref PRIMITIVE_DECODER: NodeDefinition = primitive_decoder_def();
+}
+
+
 fn bitmap_bgra_def() -> NodeDefinition {
     NodeDefinition {
         fqn: "imazen.bitmap_bgra_pointer",
@@ -201,10 +209,3 @@ fn encoder_def() -> NodeDefinition {
     }
 }
 
-
-lazy_static! {
-    pub static ref BITMAP_BGRA_POINTER: NodeDefinition = bitmap_bgra_def();
-    pub static ref DECODER: NodeDefinition = decoder_def();
-    pub static ref ENCODE: NodeDefinition = encoder_def();
-    pub static ref PRIMITIVE_DECODER: NodeDefinition = primitive_decoder_def();
-}

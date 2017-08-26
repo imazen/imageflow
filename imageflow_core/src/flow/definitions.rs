@@ -262,7 +262,7 @@ pub trait NodeDefOneInputExpand {
     fn validate_params(&self, p: &NodeParams) -> NResult<()>{
         Ok(())
     }
-    fn estimate(&self, p: &NodeParams, input: FrameEstimate) -> NResult<FrameEstimate>{
+    fn estimate(&self, params: &NodeParams, input: FrameEstimate) -> NResult<FrameEstimate>{
         Ok(input)
     }
     fn expand(&self, ctx: &mut OpCtxMut, ix: NodeIndex, params: NodeParams, parent: FrameInfo) -> NResult<()>;
@@ -661,7 +661,7 @@ impl From<s::Node> for Node {
             s::Node::FlowBitmapBgraPtr { .. } => {
                 Node::new(&nodes::BITMAP_BGRA_POINTER, NodeParams::Json(node))
             }
-            s::Node::CommandString{ .. } => Node::new(&nodes::COMMAND_STRING, NodeParams::Json(node)),
+            s::Node::CommandString{ .. } => Node::n(&nodes::COMMAND_STRING, NodeParams::Json(node)),
             s::Node::FlipV => Node::n(&nodes::FLIP_V, NodeParams::Json(node)),
             s::Node::FlipH => Node::n(&nodes::FLIP_H, NodeParams::Json(node)),
             s::Node::Rotate90 => Node::new(&nodes::ROTATE_90, NodeParams::Json(node)),
@@ -681,7 +681,7 @@ impl From<s::Node> for Node {
             }
             s::Node::FillRect { .. } => Node::n(&nodes::FILL_RECT, NodeParams::Json(node)),
             s::Node::Resample2D { .. } => Node::new(&nodes::SCALE, NodeParams::Json(node)),
-            s::Node::Constrain (_) => Node::new(&nodes::CONSTRAIN, NodeParams::Json(node)),
+            s::Node::Constrain (_) => Node::n(&nodes::CONSTRAIN, NodeParams::Json(node)),
             s::Node::ExpandCanvas { .. } => {
                 Node::n(&nodes::EXPAND_CANVAS, NodeParams::Json(node))
             },

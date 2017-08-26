@@ -1,6 +1,17 @@
 use super::internal_prelude::*;
 
 
+pub static COPY_RECT: CopyRectNodeDef = CopyRectNodeDef{};
+pub static FILL_RECT: FillRectNodeDef = FillRectNodeDef{};
+pub static CROP: MutProtect<CropMutNodeDef> = MutProtect{node: &CROP_MUTATE, fqn: "imazen.crop"};
+pub static CROP_MUTATE: CropMutNodeDef = CropMutNodeDef{};
+pub static CLONE: CloneDef = CloneDef{};
+pub static EXPAND_CANVAS: ExpandCanvasDef = ExpandCanvasDef{};
+
+lazy_static! {
+    pub static ref CROP_WHITESPACE: NodeDefinition = crop_whitespace_def();
+}
+
 #[derive(Debug, Clone)]
 pub struct CopyRectNodeDef;
 
@@ -347,15 +358,3 @@ fn crop_whitespace_def() -> NodeDefinition {
     }
 }
 
-pub static COPY_RECT: CopyRectNodeDef = CopyRectNodeDef{};
-pub static FILL_RECT: FillRectNodeDef = FillRectNodeDef{};
-pub static CROP: MutProtect<CropMutNodeDef> = MutProtect{node: &CROP_MUTATE, fqn: "imazen.crop"};
-pub static CROP_MUTATE: CropMutNodeDef = CropMutNodeDef{};
-pub static CLONE: CloneDef = CloneDef{};
-pub static EXPAND_CANVAS: ExpandCanvasDef = ExpandCanvasDef{};
-
-lazy_static! {
-    pub static ref CROP_WHITESPACE: NodeDefinition = crop_whitespace_def();
-
-
-}

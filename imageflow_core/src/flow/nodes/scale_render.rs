@@ -1,5 +1,14 @@
 use super::internal_prelude::*;
 
+
+lazy_static! {
+    pub static ref SCALE: NodeDefinition = scale_def();
+    pub static ref SCALE_1D: NodeDefinition = render1d_def();
+    pub static ref SCALE_1D_TO_CANVAS_1D: NodeDefinition = render1d_to_canvas_def();
+    pub static ref SCALE_2D_RENDER_TO_CANVAS_1D: NodeDefinition = scale2d_render_def();
+}
+
+
 struct ScaleRenderHelpers {}
 impl ScaleRenderHelpers {
     fn scale_size_but_input_format(ctx: &mut OpCtxMut, ix: NodeIndex) {
@@ -289,11 +298,4 @@ fn scale2d_render_def() -> NodeDefinition {
         }),
         ..Default::default()
     }
-}
-
-lazy_static! {
-    pub static ref SCALE: NodeDefinition = scale_def();
-    pub static ref SCALE_1D: NodeDefinition = render1d_def();
-    pub static ref SCALE_1D_TO_CANVAS_1D: NodeDefinition = render1d_to_canvas_def();
-    pub static ref SCALE_2D_RENDER_TO_CANVAS_1D: NodeDefinition = scale2d_render_def();
 }
