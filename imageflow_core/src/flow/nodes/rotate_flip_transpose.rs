@@ -1,26 +1,16 @@
 use super::internal_prelude::*;
 
-pub static  FLIP_V_PRIMITIVE: FlipVerticalMutNodeDef = FlipVerticalMutNodeDef{} ;
-pub static  FLIP_H_PRIMITIVE: FlipHorizontalMutNodeDef = FlipHorizontalMutNodeDef{};
-
-pub static  FLIP_V: MutProtect<FlipVerticalMutNodeDef> = MutProtect{ node: &FLIP_V_PRIMITIVE, fqn: "imazen.flip_vertical"};
-pub static  FLIP_H: MutProtect<FlipHorizontalMutNodeDef> = MutProtect{ node: &FLIP_H_PRIMITIVE, fqn: "imazen.flip_horizontal"};
-
-pub static  APPLY_ORIENTATION: ApplyOrientationDef = ApplyOrientationDef{};
-
-
-lazy_static! {
-    pub static ref NO_OP: NodeDefinition = no_op_def();
-
-    pub static ref ROTATE_90: NodeDefinition = rotate90_def();
-     pub static ref ROTATE_180: NodeDefinition = rotate180_def();
-    pub static ref ROTATE_270: NodeDefinition = rotate270_def();
-
-
-    pub static ref TRANSPOSE: NodeDefinition = transpose_def();
-
-    pub static ref TRANSPOSE_MUT: NodeDefinition = transpose_mut_def();
-}
+pub static FLIP_V_PRIMITIVE: FlipVerticalMutNodeDef = FlipVerticalMutNodeDef{} ;
+pub static FLIP_H_PRIMITIVE: FlipHorizontalMutNodeDef = FlipHorizontalMutNodeDef{};
+pub static FLIP_V: MutProtect<FlipVerticalMutNodeDef> = MutProtect{ node: &FLIP_V_PRIMITIVE, fqn: "imazen.flip_vertical"};
+pub static FLIP_H: MutProtect<FlipHorizontalMutNodeDef> = MutProtect{ node: &FLIP_H_PRIMITIVE, fqn: "imazen.flip_horizontal"};
+pub static APPLY_ORIENTATION: ApplyOrientationDef = ApplyOrientationDef{};
+pub static NO_OP: NoOpDef = NoOpDef{};
+pub static ROTATE_90: Rotate90Def = Rotate90Def{};
+pub static ROTATE_180: Rotate180Def = Rotate180Def{};
+pub static ROTATE_270: Rotate270Def = Rotate270Def{};
+pub static TRANSPOSE: TransposeDef = TransposeDef{};
+pub static TRANSPOSE_MUT: TransposeMutDef = TransposeMutDef{};
 
 
 
@@ -57,12 +47,12 @@ impl NodeDefOneInputExpand for ApplyOrientationDef{
     fn expand(&self, ctx: &mut OpCtxMut, ix: NodeIndex, p: NodeParams, parent: FrameInfo) -> NResult<()>{
         if let NodeParams::Json(s::Node::ApplyOrientation { flag }) = p {
             let replacement_nodes: Vec<&'static NodeDef> = match flag {
-                7 => vec![&*ROTATE_180, &*TRANSPOSE],
-                8 => vec![&*ROTATE_90],
-                6 => vec![&*ROTATE_270],
-                5 => vec![&*TRANSPOSE],
+                7 => vec![&ROTATE_180, &TRANSPOSE],
+                8 => vec![&ROTATE_90],
+                6 => vec![&ROTATE_270],
+                5 => vec![&TRANSPOSE],
                 4 => vec![&FLIP_V],
-                3 => vec![&*ROTATE_180],
+                3 => vec![&ROTATE_180],
                 2 => vec![&FLIP_H],
                 _ => vec![],
             };
@@ -77,84 +67,95 @@ impl NodeDefOneInputExpand for ApplyOrientationDef{
     }
 }
 
-fn transpose_def() -> NodeDefinition {
-    NodeDefinition {
-        fqn: "imazen.transpose",
-        name: "Transpose",
-        fn_estimate: Some(NodeDefHelpers::rotate_frame_info),
-        fn_flatten_pre_optimize: Some({
-            fn f(ctx: &mut OpCtxMut, ix: NodeIndex) {
-                match ctx.first_parent_input_weight(ix).unwrap().frame_est {
-                    FrameEstimate::Some(FrameInfo { w, h, fmt, alpha_meaningful }) => {
-                            let canvas_params = s::Node::CreateCanvas {
-                                w: h as usize,
-                                h: w as usize,
-                                format: s::PixelFormat::from(fmt),
-                                color: s::Color::Transparent,
-                            };
-                            let canvas = ctx.graph
-                                .add_node(Node::n(&CREATE_CANVAS,
-                                                    NodeParams::Json(canvas_params)));
-                            let copy = ctx.graph
-                                .add_node(Node::new(&TRANSPOSE_MUT, NodeParams::None));
-                            ctx.graph.add_edge(canvas, copy, EdgeKind::Canvas).unwrap();
-                            ctx.replace_node_with_existing(ix, copy);
 
-                    }
-                    _ => panic!(""),
-                }
+#[derive(Debug,Clone)]
+pub struct TransposeDef;
+impl NodeDef for TransposeDef{
+    fn as_one_input_expand(&self) -> Option<&NodeDefOneInputExpand>{
+        Some(self)
+    }
+}
+impl NodeDefOneInputExpand for TransposeDef {
+    fn fqn(&self) -> &'static str {
+        "imazen.transpose"
+    }
+    fn estimate(&self, p: &NodeParams, input: FrameEstimate) -> NResult<FrameEstimate> {
+        Ok(input.transpose())
+    }
+
+    fn expand(&self, ctx: &mut OpCtxMut, ix: NodeIndex, p: NodeParams, parent: FrameInfo) -> NResult<()> {
+        let canvas_params = s::Node::CreateCanvas {
+            w: parent.h as usize,
+            h: parent.w as usize,
+            format: s::PixelFormat::from(parent.fmt),
+            color: s::Color::Transparent,
+        };
+        let canvas = ctx.graph
+            .add_node(Node::n(&CREATE_CANVAS,
+                              NodeParams::Json(canvas_params)));
+        let copy = ctx.graph
+            .add_node(Node::n(&TRANSPOSE_MUT, NodeParams::None));
+        ctx.graph.add_edge(canvas, copy, EdgeKind::Canvas).unwrap();
+        ctx.replace_node_with_existing(ix, copy);
+        Ok(())
+    }
+}
+
+#[derive(Debug,Clone)]
+pub struct NoOpDef;
+impl NodeDef for NoOpDef{
+    fn as_one_input_expand(&self) -> Option<&NodeDefOneInputExpand>{
+        Some(self)
+    }
+}
+impl NodeDefOneInputExpand for NoOpDef {
+    fn fqn(&self) -> &'static str {
+        "imazen.noop"
+    }
+    fn estimate(&self, p: &NodeParams, input: FrameEstimate) -> NResult<FrameEstimate> {
+        Ok(input)
+    }
+    fn expand(&self, ctx: &mut OpCtxMut, ix: NodeIndex, p: NodeParams, parent: FrameInfo) -> NResult<()> {
+        ctx.replace_node(ix, vec![]);
+        Ok(())
+    }
+}
+
+
+#[derive(Debug, Clone)]
+pub struct TransposeMutDef;
+
+impl NodeDef for TransposeMutDef {
+    fn as_one_input_one_canvas(&self) -> Option<&NodeDefOneInputOneCanvas> {
+        Some(self)
+    }
+}
+
+impl NodeDefOneInputOneCanvas for TransposeMutDef {
+    fn fqn(&self) -> &'static str {
+        "imazen.transpose_mut"
+    }
+    fn validate_params(&self, p: &NodeParams) -> NResult<()> {
+        Ok(())
+    }
+
+    fn render(&self, c: &Context, canvas: &mut BitmapBgra, input: &mut BitmapBgra, p: &NodeParams) -> NResult<()> {
+        unsafe {
+            if input.fmt != canvas.fmt {
+                panic!("Can't copy between bitmaps with different pixel formats")
             }
-            f
-        }),
-
-        ..Default::default()
-    }
-}
-
-fn transpose_mut_def() -> NodeDefinition {
-    NodeDefinition {
-        fqn: "imazen.transpose_to_canvas",
-        name: "transpose_to_canvas",
-        inbound_edges: EdgesIn::OneInputOneCanvas,
-        description: "Transpose To",
-        fn_estimate: Some(NodeDefHelpers::copy_frame_est_from_first_canvas),
-        fn_execute: Some({
-            fn f(ctx: &mut OpCtxMut, ix: NodeIndex) {
-                let input: *mut ::ffi::BitmapBgra =
-                    ctx.first_parent_result_frame(ix, EdgeKind::Input).unwrap();
-                let canvas: *mut ::ffi::BitmapBgra =
-                    ctx.first_parent_result_frame(ix, EdgeKind::Canvas).unwrap();
-
-                unsafe {
-                    if (*input).fmt != (*canvas).fmt {
-                        panic!("Can't copy between bitmaps with different pixel formats")
-                    }
-                    if input == canvas {
-                        panic!("Canvas and input must be different bitmaps for transpose to work!")
-                    }
-
-                    if !::ffi::flow_bitmap_bgra_transpose(ctx.flow_c(), input, canvas) {
-                        panic!("Failed to transpose bitmap")
-                    }
-
-                    ctx.weight_mut(ix).result = NodeResult::Frame(canvas);
-                }
+            if input == canvas {
+                panic!("Canvas and input must be different bitmaps for transpose to work!")
             }
-            f
-        }),
-        ..Default::default()
+
+            if !::ffi::flow_bitmap_bgra_transpose(c.flow_c(), input as *mut BitmapBgra, canvas as *mut BitmapBgra) {
+                panic!("Failed to transpose bitmap")
+            }
+        }
+        Ok(())
     }
 }
-fn no_op_def() -> NodeDefinition {
-    NodeDefinition {
-        fqn: "imazen.noop",
-        name: "NoOp",
-        description: "Does nothing; pass-through node",
-        fn_estimate: Some(NodeDefHelpers::copy_frame_est_from_first_input),
-        fn_flatten_pre_optimize: Some(NodeDefHelpers::delete_node_and_snap_together),
-        ..Default::default()
-    }
-}
+
 
 #[derive(Debug, Clone)]
 pub struct FlipVerticalMutNodeDef;
@@ -197,59 +198,78 @@ impl NodeDefMutateBitmap for FlipHorizontalMutNodeDef{
     }
 }
 
-fn rotate90_def() -> NodeDefinition {
-    NodeDefinition {
-        fqn: "imazen.rot90",
-        name: "Rot90",
-        fn_estimate: Some(NodeDefHelpers::rotate_frame_info),
-        fn_flatten_pre_optimize: Some({
-            fn f(ctx: &mut OpCtxMut, ix: NodeIndex) {
-                ctx.replace_node(ix,
-                                 vec![
-                Node::new(&TRANSPOSE, NodeParams::None),
-                Node::n(&FLIP_V, NodeParams::None),
-                ]);
-            }
-            f
-        }),
-        ..Default::default()
+#[derive(Debug,Clone)]
+pub struct Rotate90Def;
+impl NodeDef for Rotate90Def{
+    fn as_one_input_expand(&self) -> Option<&NodeDefOneInputExpand>{
+        Some(self)
     }
 }
-fn rotate180_def() -> NodeDefinition {
-    NodeDefinition {
-        fqn: "imazen.rot180",
-        name: "Rot180",
-        fn_estimate: Some(NodeDefHelpers::copy_frame_est_from_first_input),
-        fn_flatten_pre_optimize: Some({
-            fn f(ctx: &mut OpCtxMut, ix: NodeIndex) {
-                ctx.replace_node(ix,
-                                 vec![
-                Node::n(&FLIP_V as &NodeDef, NodeParams::None),
-                Node::n(&FLIP_H, NodeParams::None),
-                ]);
-            }
-            f
-        }),
-        ..Default::default()
+impl NodeDefOneInputExpand for Rotate90Def {
+    fn fqn(&self) -> &'static str {
+        "imazen.rotate_90"
+    }
+    fn estimate(&self, p: &NodeParams, input: FrameEstimate) -> NResult<FrameEstimate> {
+        Ok(input.transpose())
+    }
+
+    fn expand(&self, ctx: &mut OpCtxMut, ix: NodeIndex, p: NodeParams, parent: FrameInfo) -> NResult<()> {
+        ctx.replace_node(ix,
+                         vec![
+                             Node::n(&TRANSPOSE, NodeParams::None),
+                             Node::n(&FLIP_V, NodeParams::None),
+                         ]);
+        Ok(())
     }
 }
 
-fn rotate270_def() -> NodeDefinition {
-    NodeDefinition {
-        fqn: "imazen.rot270",
-        name: "Rot270",
-        fn_estimate: Some(NodeDefHelpers::rotate_frame_info),
-        fn_flatten_pre_optimize: Some({
-            fn f(ctx: &mut OpCtxMut, ix: NodeIndex) {
-                ctx.replace_node(ix,
-                                 vec![
-                Node::n(&FLIP_V, NodeParams::None),
-                Node::new(&TRANSPOSE, NodeParams::None),
-                ]);
-            }
-            f
-        }),
-        ..Default::default()
+
+#[derive(Debug,Clone)]
+pub struct Rotate270Def;
+impl NodeDef for Rotate270Def{
+    fn as_one_input_expand(&self) -> Option<&NodeDefOneInputExpand>{
+        Some(self)
+    }
+}
+impl NodeDefOneInputExpand for Rotate270Def {
+    fn fqn(&self) -> &'static str {
+        "imazen.rotate_270"
+    }
+    fn estimate(&self, p: &NodeParams, input: FrameEstimate) -> NResult<FrameEstimate> {
+        Ok(input.transpose())
+    }
+
+    fn expand(&self, ctx: &mut OpCtxMut, ix: NodeIndex, p: NodeParams, parent: FrameInfo) -> NResult<()> {
+        ctx.replace_node(ix,
+                         vec![
+                             Node::n(&FLIP_V, NodeParams::None),
+                             Node::n(&TRANSPOSE, NodeParams::None),
+                         ]);
+        Ok(())
     }
 }
 
+#[derive(Debug,Clone)]
+pub struct Rotate180Def;
+impl NodeDef for Rotate180Def{
+    fn as_one_input_expand(&self) -> Option<&NodeDefOneInputExpand>{
+        Some(self)
+    }
+}
+impl NodeDefOneInputExpand for Rotate180Def {
+    fn fqn(&self) -> &'static str {
+        "imazen.rotate_180"
+    }
+    fn estimate(&self, p: &NodeParams, input: FrameEstimate) -> NResult<FrameEstimate> {
+        Ok(input)
+    }
+
+    fn expand(&self, ctx: &mut OpCtxMut, ix: NodeIndex, p: NodeParams, parent: FrameInfo) -> NResult<()> {
+        ctx.replace_node(ix,
+                         vec![
+                             Node::n(&FLIP_V as &NodeDef, NodeParams::None),
+                             Node::n(&FLIP_H, NodeParams::None),
+                         ]);
+        Ok(())
+    }
+}

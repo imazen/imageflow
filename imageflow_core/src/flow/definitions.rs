@@ -589,6 +589,17 @@ impl FrameEstimate{
             other => Ok(other)
         }
     }
+
+    pub fn transpose(&self) -> FrameEstimate{
+        self.map_frame(|info|{
+            Ok(FrameInfo{
+                w: info.h,
+                h: info.w,
+                fmt: info.fmt,
+                alpha_meaningful: info.alpha_meaningful
+            })
+        }).unwrap()
+    }
 }
 
 #[derive(Clone,Debug,PartialEq)]
@@ -656,7 +667,7 @@ impl From<s::Node> for Node {
     fn from(node: s::Node) -> Node {
         match node {
             s::Node::Crop { .. } => Node::n(&nodes::CROP, NodeParams::Json(node)),
-            s::Node::CropWhitespace { .. } => Node::new(&nodes::CROP_WHITESPACE, NodeParams::Json(node)),
+            s::Node::CropWhitespace { .. } => Node::n(&nodes::CROP_WHITESPACE, NodeParams::Json(node)),
             s::Node::Decode { .. } => Node::new(&nodes::DECODER, NodeParams::Json(node)),
             s::Node::FlowBitmapBgraPtr { .. } => {
                 Node::new(&nodes::BITMAP_BGRA_POINTER, NodeParams::Json(node))
@@ -664,13 +675,13 @@ impl From<s::Node> for Node {
             s::Node::CommandString{ .. } => Node::n(&nodes::COMMAND_STRING, NodeParams::Json(node)),
             s::Node::FlipV => Node::n(&nodes::FLIP_V, NodeParams::Json(node)),
             s::Node::FlipH => Node::n(&nodes::FLIP_H, NodeParams::Json(node)),
-            s::Node::Rotate90 => Node::new(&nodes::ROTATE_90, NodeParams::Json(node)),
-            s::Node::Rotate180 => Node::new(&nodes::ROTATE_180, NodeParams::Json(node)),
-            s::Node::Rotate270 => Node::new(&nodes::ROTATE_270, NodeParams::Json(node)),
+            s::Node::Rotate90 => Node::n(&nodes::ROTATE_90, NodeParams::Json(node)),
+            s::Node::Rotate180 => Node::n(&nodes::ROTATE_180, NodeParams::Json(node)),
+            s::Node::Rotate270 => Node::n(&nodes::ROTATE_270, NodeParams::Json(node)),
             s::Node::ApplyOrientation { .. } => {
                 Node::n(&nodes::APPLY_ORIENTATION, NodeParams::Json(node))
             }
-            s::Node::Transpose => Node::new(&nodes::TRANSPOSE, NodeParams::Json(node)),
+            s::Node::Transpose => Node::n(&nodes::TRANSPOSE, NodeParams::Json(node)),
             s::Node::Resample1D { .. } => Node::new(&nodes::SCALE_1D, NodeParams::Json(node)),
             s::Node::Encode { .. } => Node::new(&nodes::ENCODE, NodeParams::Json(node)),
             s::Node::CreateCanvas { .. } => {

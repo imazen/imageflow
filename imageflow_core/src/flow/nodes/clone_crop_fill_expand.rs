@@ -7,10 +7,8 @@ pub static CROP: MutProtect<CropMutNodeDef> = MutProtect{node: &CROP_MUTATE, fqn
 pub static CROP_MUTATE: CropMutNodeDef = CropMutNodeDef{};
 pub static CLONE: CloneDef = CloneDef{};
 pub static EXPAND_CANVAS: ExpandCanvasDef = ExpandCanvasDef{};
+pub static CROP_WHITESPACE: CropWhitespaceDef = CropWhitespaceDef{};
 
-lazy_static! {
-    pub static ref CROP_WHITESPACE: NodeDefinition = crop_whitespace_def();
-}
 
 #[derive(Debug, Clone)]
 pub struct CopyRectNodeDef;
@@ -313,48 +311,46 @@ impl NodeDef for CropMutNodeDef{
     }
 }
 
-//#[derive(Debug,Clone)]
-//pub struct CropWhitespaceDef;
-//
+#[derive(Debug,Clone)]
+pub struct CropWhitespaceDef;
+impl NodeDef for CropWhitespaceDef{
+    fn as_one_input_expand(&self) -> Option<&NodeDefOneInputExpand>{
+        Some(self)
+    }
+}
+impl NodeDefOneInputExpand for CropWhitespaceDef {
+    fn fqn(&self) -> &'static str {
+        "imazen.crop_whitespace"
+    }
+    fn estimate(&self, p: &NodeParams, input: FrameEstimate) -> NResult<FrameEstimate> {
+        Ok((FrameEstimate::Impossible))
+    }
+//TODO: audit, and/or mark as risky
+    fn expand(&self, ctx: &mut OpCtxMut, ix: NodeIndex, p: NodeParams, b: FrameInfo) -> NResult<()> {
+        // detect bounds, increase, and replace with crop
+        if let NodeParams::Json(s::Node::CropWhitespace { threshold, percent_padding }) = p {
+            // detect bounds, increase, and replace with crop
+            let (x1, y1, x2, y2) = match ctx.first_parent_input_weight(ix).unwrap().result {
+                NodeResult::Frame(b) => {
+                    unsafe {
+                        let rect = ::ffi::detect_content(ctx.c.flow_c(), b, threshold);
+                        let padding = (percent_padding * (rect.x2 - rect.x1 + rect.y2 - rect.y1) as f32 / 2f32).ceil() as i32;
+                        Ok((cmp::max(0, rect.x1 - padding) as u32, cmp::max(0, rect.y1 - padding) as u32,
+                            cmp::min((*b).w as i32, rect.x2 + padding) as u32, cmp::min((*b).h as i32, rect.y2 + padding) as u32))
+                    }
+                },
+                other => { Err(nerror!(ErrorKind::InvalidOperation, "Cannot CropWhitespace without a parent bitmap; got {:?}", other)) }
+            }?;
+            ctx.replace_node(ix, vec![
+                Node::n(&CROP,
+                        NodeParams::Json(s::Node::Crop { x1: x1, y1: y1, x2: x2, y2: y2 }))
+            ]);
 
 
-fn crop_whitespace_def() -> NodeDefinition {
-    NodeDefinition {
-        fqn: "imazen.crop_whitespace",
-        name: "crop_whitespace",
-        inbound_edges: EdgesIn::OneInput,
-        fn_estimate: Some({
-            fn f(ctx: &mut OpCtxMut, ix: NodeIndex) {
-                ctx.weight_mut(ix).frame_est = FrameEstimate::Impossible;
-            }
-            f
-        }),
-        fn_flatten_pre_optimize: Some({
-            fn f(ctx: &mut OpCtxMut, ix: NodeIndex) {
-
-                // detect bounds, increase, and replace with crop
-                if let s::Node::CropWhitespace {threshold, percent_padding} = ctx.get_json_params(ix).unwrap() {
-                    let (x1, y1, x2, y2) = match ctx.first_parent_input_weight(ix).unwrap().result {
-                        NodeResult::Frame(b) => {
-                            unsafe {
-                                let rect = ::ffi::detect_content(ctx.c.flow_c(), b, threshold);
-                                let padding = (percent_padding * (rect.x2 - rect.x1 + rect.y2 - rect.y1) as f32 / 2f32).ceil() as i32;
-                                (cmp::max(0, rect.x1 - padding) as u32, cmp::max(0, rect.y1 - padding) as u32,
-                                 cmp::min((*b).w as i32, rect.x2 + padding) as u32, cmp::min((*b).h as i32, rect.y2 + padding) as u32)
-                            }
-                        },
-                        _ => { panic!("") }
-                    };
-
-                    ctx.replace_node(ix, vec![
-                        Node::n(&CROP,
-                                  NodeParams::Json(s::Node::Crop{ x1: x1, y1: y1, x2: x2, y2: y2 }))
-                    ]);
-                }
-            }
-            f
-        }),
-        ..Default::default()
+            Ok(())
+        } else {
+            Err(nerror!(ErrorKind::NodeParamsMismatch, "Need CropWhitespace, got {:?}", p))
+        }
     }
 }
 
