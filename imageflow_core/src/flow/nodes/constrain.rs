@@ -1,5 +1,15 @@
 use super::internal_prelude::*;
 
+
+
+lazy_static! {
+    pub static ref CONSTRAIN: NodeDefinition = constrain_def();
+    pub static ref COMMAND_STRING: NodeDefinition = command_string_def();
+    pub static ref EXPANDING_COMMAND_STRING: NodeDefinition = command_string_partially_expanded_def();
+}
+
+
+
     fn constrain_size_but_input_format(ctx: &mut OpCtxMut, ix: NodeIndex) {
         let input = ctx.first_parent_frame_info_some(ix).unwrap();
 
@@ -274,11 +284,4 @@ fn command_string_def() -> NodeDefinition {
         }),
         ..Default::default()
     }
-}
-
-
-lazy_static! {
-    pub static ref CONSTRAIN: NodeDefinition = constrain_def();
-    pub static ref COMMAND_STRING: NodeDefinition = command_string_def();
-    pub static ref EXPANDING_COMMAND_STRING: NodeDefinition = command_string_partially_expanded_def();
 }

@@ -1,113 +1,78 @@
-
 use super::internal_prelude::*;
 
-fn color_matrix_srgb_mutate_def() -> NodeDefinition {
-    NodeDefinition {
-        fqn: "imazen.color_matrix_srgb_mutate",
-        name: "Color matrix",
-        description: "Color matrix",
-        fn_estimate: Some(NodeDefHelpers::copy_frame_est_from_first_input),
-        fn_execute: Some({
-            fn f(ctx: &mut OpCtxMut, ix: NodeIndex) {
-                let from_node = ctx.first_parent_input_weight(ix).unwrap().clone();
-                match from_node.result {
-                    NodeResult::Frame(bitmap) => {
-                        unsafe {
-                            match ctx.weight(ix).params {
-                                NodeParams::Json(s::Node::ColorMatrixSrgb { ref matrix }) => {
 
-                                    let color_matrix_ptrs = matrix.iter().map(|row| row as *const f32).collect::<Vec<*const f32>>();
+pub static COLOR_MATRIX_SRGB: MutProtect<ColorMatrixSrgbMutDef> = MutProtect{ node: &COLOR_MATRIX_SRGB_MUTATE, fqn: "imazen.color_matrix_srgb"};
+pub static COLOR_FILTER_SRGB: ColorFilterSrgb = ColorFilterSrgb{};
+pub static COLOR_MATRIX_SRGB_MUTATE: ColorMatrixSrgbMutDef = ColorMatrixSrgbMutDef{};
 
-                                    if !::ffi::flow_bitmap_bgra_apply_color_matrix(ctx.flow_c(), bitmap, 0, (*bitmap).h, color_matrix_ptrs.as_ptr() ){
-                                        ctx.panic_time();
-                                    }
-                                    eprintln!("{:?}", matrix);
-                                    eprintln!("{:?}", color_matrix_ptrs);
-                                    let _ = color_matrix_ptrs;
-                                },
-                                _ => {
-                                    panic!("Node params missing");
-                                }
-                            }
-                        }
-                        ctx.weight_mut(ix).result = NodeResult::Frame(bitmap);
-                        ctx.first_parent_input_weight_mut(ix).unwrap().result =
-                            NodeResult::Consumed;
-                    }
-                    _ => {
-                        panic!{"Previous node not ready"}
-                    }
+
+
+#[derive(Debug, Clone)]
+pub struct ColorMatrixSrgbMutDef;
+impl NodeDef for ColorMatrixSrgbMutDef{
+    fn as_one_mutate_bitmap(&self) -> Option<&NodeDefMutateBitmap>{
+        Some(self)
+    }
+}
+impl NodeDefMutateBitmap for ColorMatrixSrgbMutDef{
+    fn fqn(&self) -> &'static str{
+        "imazen.color_matrix_srgb_mut"
+    }
+    fn mutate(&self, c: &Context, bitmap: &mut BitmapBgra,  p: &NodeParams) -> NResult<()> {
+        if let &NodeParams::Json(s::Node::ColorMatrixSrgb { ref matrix }) = p {
+            unsafe {
+                let color_matrix_ptrs = matrix.iter().map(|row| row as *const f32).collect::<Vec<*const f32>>();
+
+                if !::ffi::flow_bitmap_bgra_apply_color_matrix(c.flow_c(), bitmap, 0, (*bitmap).h, color_matrix_ptrs.as_ptr()) {
+                    return Err(nerror!(ErrorKind::CError(c.error().c_error()), "Failed to apply color matrix"))
                 }
+                //TODO: is there a better way to ensure a pointer is valid for a duration even if lexical scopes arrive?
+                let _ = color_matrix_ptrs;
+
             }
-            f
-        }),
-        ..Default::default()
+            Ok(())
+        } else {
+            Err(nerror!(ErrorKind::NodeParamsMismatch, "Need ColorMatrixSrgb, got {:?}", p))
+        }
     }
 }
 
-fn color_matrix_srgb_def() -> NodeDefinition {
-    NodeDefinition {
-        fqn: "imazen.color_matrix_srgb",
-        name: "Color matrix",
-        description: "Color matrix",
-        fn_estimate: Some(NodeDefHelpers::copy_frame_est_from_first_input),
-        fn_flatten_pre_optimize: Some({
-            fn f(ctx: &mut OpCtxMut, ix: NodeIndex) {
-                let mut new_nodes = Vec::with_capacity(2);
-                if ctx.has_other_children(ctx.first_parent_input(ix).unwrap(), ix) {
-                    new_nodes.push(Node::new(&CLONE, NodeParams::None));
-                }
-                new_nodes.push(Node::new(&COLOR_MATRIX_SRGB_MUTATE,
-                                         NodeParams::Json(ctx.get_json_params(ix).unwrap())));
-                ctx.replace_node(ix, new_nodes);
-            }
-            f
-        }),
-        ..Default::default()
+
+#[derive(Debug,Clone)]
+pub struct ColorFilterSrgb;
+impl NodeDef for ColorFilterSrgb{
+    fn as_one_input_expand(&self) -> Option<&NodeDefOneInputExpand>{
+        Some(self)
     }
 }
-fn color_filter_srgb_def() -> NodeDefinition {
-    NodeDefinition {
-        fqn: "imazen.color_filter_srgb",
-        name: "Color filter",
-        description: "Color filter",
-        fn_estimate: Some(NodeDefHelpers::copy_frame_est_from_first_input),
-        fn_flatten_pre_optimize: Some({
-            fn f(ctx: &mut OpCtxMut, ix: NodeIndex) {
-                let mut new_nodes = Vec::with_capacity(2);
-                if ctx.has_other_children(ctx.first_parent_input(ix).unwrap(), ix) {
-                    new_nodes.push(Node::new(&CLONE, NodeParams::None));
-                }
-
-                let matrix = match ctx.get_json_params(ix).unwrap(){
-                    s::Node::ColorFilterSrgb(filter) => {
-                        match filter as s::ColorFilterSrgb{
-                            s::ColorFilterSrgb::Sepia => sepia(),
-                            s::ColorFilterSrgb::GrayscaleNtsc => grayscale_ntsc(),
-                            s::ColorFilterSrgb::GrayscaleRy => grayscale_ry(),
-                            s::ColorFilterSrgb::GrayscaleFlat => grayscale_flat(),
-                            s::ColorFilterSrgb::GrayscaleBt709 => grayscale_bt709(),
-                            s::ColorFilterSrgb::Invert => invert(),
-                            s::ColorFilterSrgb::Alpha(a) => alpha(a),
-                            s::ColorFilterSrgb::Contrast(a) => contrast(a),
-                            s::ColorFilterSrgb::Saturation(a) => saturation(a),
-                            s::ColorFilterSrgb::Brightness(a) => brightness(a),
-
-                        }
-                    },
-                    _ => { panic!("");}
-                };
-
-
-                new_nodes.push(Node::new(&COLOR_MATRIX_SRGB_MUTATE,
-                                         NodeParams::Json(s::Node::ColorMatrixSrgb{matrix: matrix})));
-                ctx.replace_node(ix, new_nodes);
-            }
-            f
-        }),
-        ..Default::default()
+impl NodeDefOneInputExpand for ColorFilterSrgb{
+    fn fqn(&self) -> &'static str{
+        "imazen.color_filter_srgb"
+    }
+    fn expand(&self, ctx: &mut OpCtxMut, ix: NodeIndex, p: NodeParams, parent: FrameInfo) -> NResult<()> {
+        if let NodeParams::Json(s::Node::ColorFilterSrgb(filter))= p {
+            let matrix = match filter as s::ColorFilterSrgb {
+                s::ColorFilterSrgb::Sepia => sepia(),
+                s::ColorFilterSrgb::GrayscaleNtsc => grayscale_ntsc(),
+                s::ColorFilterSrgb::GrayscaleRy => grayscale_ry(),
+                s::ColorFilterSrgb::GrayscaleFlat => grayscale_flat(),
+                s::ColorFilterSrgb::GrayscaleBt709 => grayscale_bt709(),
+                s::ColorFilterSrgb::Invert => invert(),
+                s::ColorFilterSrgb::Alpha(a) => alpha(a),
+                s::ColorFilterSrgb::Contrast(a) => contrast(a),
+                s::ColorFilterSrgb::Saturation(a) => saturation(a),
+                s::ColorFilterSrgb::Brightness(a) => brightness(a),
+            };
+            ctx.replace_node(ix, vec![Node::n(&COLOR_MATRIX_SRGB_MUTATE,
+                                                NodeParams::Json(s::Node::ColorMatrixSrgb { matrix: matrix }))]);
+            Ok(())
+        }else{
+            Err(nerror!(ErrorKind::NodeParamsMismatch, "Need ColorFilterSrgb, got {:?}", p))
+        }
     }
 }
+
+
 fn sepia() -> [[f32;5];5] {
     [
         [0.393f32, 0.349f32, 0.272f32, 0f32, 0f32],
@@ -244,13 +209,4 @@ fn saturation(saturation: f32) -> [[f32;5];5] {
         [0.0f32, 0.0f32, 0.0f32, 1.0f32, 0.0f32],
         [0.0f32, 0.0f32, 0.0f32, 0.0f32, 1.0f32],
     ]
-}
-
-
-
-
-lazy_static! {
-    pub static ref COLOR_MATRIX_SRGB: NodeDefinition = color_matrix_srgb_def();
-    pub static ref COLOR_FILTER_SRGB: NodeDefinition = color_filter_srgb_def();
-    pub static ref COLOR_MATRIX_SRGB_MUTATE: NodeDefinition = color_matrix_srgb_mutate_def();
 }

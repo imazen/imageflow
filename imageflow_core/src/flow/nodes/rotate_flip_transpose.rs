@@ -1,62 +1,82 @@
 use super::internal_prelude::*;
 
-fn apply_orientation_def() -> NodeDefinition {
-    NodeDefinition {
-        fqn: "imazen.apply_orientation",
-        name: "Apply orientation",
-        fn_estimate: Some({
-            fn f(ctx: &mut OpCtxMut, ix: NodeIndex) {
-                NodeDefHelpers::copy_frame_est_from_first_input(ctx, ix);
-                let weight = &mut ctx.weight_mut(ix);
-                match weight.params {
-                    NodeParams::Json(s::Node::ApplyOrientation { ref flag }) => {
-                        let swap = *flag >= 5 && *flag <= 8;
-                        if let FrameEstimate::Some(frame_info) = weight.frame_est {
-                            weight.frame_est = FrameEstimate::Some(FrameInfo {
-                                w: if swap {
-                                    frame_info.h
-                                } else { frame_info.w },
-                                h: if swap {
-                                    frame_info.w
-                                } else { frame_info.h },
-                                ..frame_info
-                            });
-                        }
-                    }
-                    _ => {
-                        panic!("Node params missing");
-                    }
-                }
-            }
-            f
-        }),
-        fn_flatten_pre_optimize: Some({
-            fn f(ctx: &mut OpCtxMut, ix: NodeIndex) {
-                if let NodeParams::Json(s::Node::ApplyOrientation { flag }) = ctx.weight(ix)
-                    .params {
-                    let replacement_nodes: Vec<&NodeDefinition> = match flag {
-                        7 => vec![&ROTATE_180, &TRANSPOSE],
-                        8 => vec![&ROTATE_90],
-                        6 => vec![&ROTATE_270],
-                        5 => vec![&TRANSPOSE],
-                        4 => vec![&FLIP_V],
-                        3 => vec![&ROTATE_180],
-                        2 => vec![&FLIP_H],
-                        _ => vec![],
-                    };
-                    ctx.replace_node(ix,
-                                     replacement_nodes.iter()
-                                         .map(|v| Node::new(v, NodeParams::None))
-                                         .collect());
-                } else {
-                    panic!("");
-                }
-            }
-            f
-        }),
-        ..Default::default()
+pub static  FLIP_V_PRIMITIVE: FlipVerticalMutNodeDef = FlipVerticalMutNodeDef{} ;
+pub static  FLIP_H_PRIMITIVE: FlipHorizontalMutNodeDef = FlipHorizontalMutNodeDef{};
+
+pub static  FLIP_V: MutProtect<FlipVerticalMutNodeDef> = MutProtect{ node: &FLIP_V_PRIMITIVE, fqn: "imazen.flip_vertical"};
+pub static  FLIP_H: MutProtect<FlipHorizontalMutNodeDef> = MutProtect{ node: &FLIP_H_PRIMITIVE, fqn: "imazen.flip_horizontal"};
+
+pub static  APPLY_ORIENTATION: ApplyOrientationDef = ApplyOrientationDef{};
+
+
+lazy_static! {
+    pub static ref NO_OP: NodeDefinition = no_op_def();
+
+    pub static ref ROTATE_90: NodeDefinition = rotate90_def();
+     pub static ref ROTATE_180: NodeDefinition = rotate180_def();
+    pub static ref ROTATE_270: NodeDefinition = rotate270_def();
+
+
+    pub static ref TRANSPOSE: NodeDefinition = transpose_def();
+
+    pub static ref TRANSPOSE_MUT: NodeDefinition = transpose_mut_def();
+}
+
+
+
+#[derive(Debug,Clone)]
+pub struct ApplyOrientationDef;
+impl NodeDef for ApplyOrientationDef{
+    fn as_one_input_expand(&self) -> Option<&NodeDefOneInputExpand>{
+        Some(self)
     }
 }
+impl NodeDefOneInputExpand for ApplyOrientationDef{
+    fn fqn(&self) -> &'static str{
+        "imazen.apply_orientation"
+    }
+    fn estimate(&self, p: &NodeParams, input: FrameEstimate) -> NResult<FrameEstimate> {
+        if let &NodeParams::Json(s::Node::ApplyOrientation { flag }) = p {
+            input.map_frame(|info| {
+                let swap = flag >= 5 && flag <= 8;
+                Ok(FrameInfo {
+                    w: if swap {
+                        info.h
+                    } else { info.w },
+                    h: if swap {
+                        info.w
+                    } else { info.h },
+                    ..info
+                })
+            })
+        } else {
+            Err(nerror!(ErrorKind::NodeParamsMismatch, "Need ApplyOrientation, got {:?}", p))
+        }
+    }
+
+    fn expand(&self, ctx: &mut OpCtxMut, ix: NodeIndex, p: NodeParams, parent: FrameInfo) -> NResult<()>{
+        if let NodeParams::Json(s::Node::ApplyOrientation { flag }) = p {
+            let replacement_nodes: Vec<&'static NodeDef> = match flag {
+                7 => vec![&*ROTATE_180, &*TRANSPOSE],
+                8 => vec![&*ROTATE_90],
+                6 => vec![&*ROTATE_270],
+                5 => vec![&*TRANSPOSE],
+                4 => vec![&FLIP_V],
+                3 => vec![&*ROTATE_180],
+                2 => vec![&FLIP_H],
+                _ => vec![],
+            };
+            ctx.replace_node(ix,
+                             replacement_nodes.iter()
+                                 .map(|v| Node::n(*v, NodeParams::None))
+                                 .collect());
+            Ok(())
+        } else {
+            Err(nerror!(ErrorKind::NodeParamsMismatch, "Need ApplyOrientation, got {:?}", p))
+        }
+    }
+}
+
 fn transpose_def() -> NodeDefinition {
     NodeDefinition {
         fqn: "imazen.transpose",
@@ -138,6 +158,11 @@ fn no_op_def() -> NodeDefinition {
 
 #[derive(Debug, Clone)]
 pub struct FlipVerticalMutNodeDef;
+impl NodeDef for FlipVerticalMutNodeDef{
+    fn as_one_mutate_bitmap(&self) -> Option<&NodeDefMutateBitmap>{
+        Some(self)
+    }
+}
 impl NodeDefMutateBitmap for FlipVerticalMutNodeDef{
     fn fqn(&self) -> &'static str{
         "imazen.flip_vertical_mutate"
@@ -153,6 +178,11 @@ impl NodeDefMutateBitmap for FlipVerticalMutNodeDef{
 }
 #[derive(Debug, Clone)]
 pub struct FlipHorizontalMutNodeDef;
+impl NodeDef for FlipHorizontalMutNodeDef{
+    fn as_one_mutate_bitmap(&self) -> Option<&NodeDefMutateBitmap>{
+        Some(self)
+    }
+}
 impl NodeDefMutateBitmap for FlipHorizontalMutNodeDef{
     fn fqn(&self) -> &'static str{
         "imazen.flip_vertical_mutate"
@@ -167,47 +197,6 @@ impl NodeDefMutateBitmap for FlipHorizontalMutNodeDef{
     }
 }
 
-fn flip_v_def() -> NodeDefinition {
-    NodeDefinition {
-        fqn: "imazen.flipv",
-        name: "FlipV",
-        description: "Flip frame vertical",
-        fn_estimate: Some(NodeDefHelpers::copy_frame_est_from_first_input),
-        fn_flatten_pre_optimize: Some({
-            fn f(ctx: &mut OpCtxMut, ix: NodeIndex) {
-                let mut new_nodes = Vec::with_capacity(2);
-                if ctx.has_other_children(ctx.first_parent_input(ix).unwrap(), ix) {
-                    new_nodes.push(Node::new(&CLONE, NodeParams::None));
-                }
-                new_nodes.push(Node::n(&FLIP_V_PRIMITIVE, NodeParams::None));
-                ctx.replace_node(ix, new_nodes);
-            }
-            f
-        }),
-        ..Default::default()
-    }
-}
-fn flip_h_def() -> NodeDefinition {
-    NodeDefinition {
-        fqn: "imazen.fliph",
-        name: "FlipH",
-        description: "Flip frame horizontal",
-        fn_estimate: Some(NodeDefHelpers::copy_frame_est_from_first_input),
-        fn_flatten_pre_optimize: Some({
-            fn f(ctx: &mut OpCtxMut, ix: NodeIndex) {
-                let mut new_nodes = Vec::with_capacity(2);
-                if ctx.has_other_children(ctx.first_parent_input(ix).unwrap(), ix) {
-                    new_nodes.push(Node::new(&CLONE, NodeParams::None));
-                }
-                new_nodes.push(Node::n(&FLIP_H_PRIMITIVE, NodeParams::None));
-                ctx.replace_node(ix, new_nodes);
-            }
-            f
-        }),
-
-        ..Default::default()
-    }
-}
 fn rotate90_def() -> NodeDefinition {
     NodeDefinition {
         fqn: "imazen.rot90",
@@ -218,7 +207,7 @@ fn rotate90_def() -> NodeDefinition {
                 ctx.replace_node(ix,
                                  vec![
                 Node::new(&TRANSPOSE, NodeParams::None),
-                Node::new(&FLIP_V, NodeParams::None),
+                Node::n(&FLIP_V, NodeParams::None),
                 ]);
             }
             f
@@ -235,8 +224,8 @@ fn rotate180_def() -> NodeDefinition {
             fn f(ctx: &mut OpCtxMut, ix: NodeIndex) {
                 ctx.replace_node(ix,
                                  vec![
-                Node::new(&FLIP_V, NodeParams::None),
-                Node::new(&FLIP_H, NodeParams::None),
+                Node::n(&FLIP_V as &NodeDef, NodeParams::None),
+                Node::n(&FLIP_H, NodeParams::None),
                 ]);
             }
             f
@@ -254,7 +243,7 @@ fn rotate270_def() -> NodeDefinition {
             fn f(ctx: &mut OpCtxMut, ix: NodeIndex) {
                 ctx.replace_node(ix,
                                  vec![
-                Node::new(&FLIP_V, NodeParams::None),
+                Node::n(&FLIP_V, NodeParams::None),
                 Node::new(&TRANSPOSE, NodeParams::None),
                 ]);
             }
@@ -264,21 +253,3 @@ fn rotate270_def() -> NodeDefinition {
     }
 }
 
-pub static  FLIP_V_PRIMITIVE: FlipVerticalMutNodeDef = FlipVerticalMutNodeDef{} ;
-pub static  FLIP_H_PRIMITIVE: FlipHorizontalMutNodeDef = FlipHorizontalMutNodeDef{};
-
-
-lazy_static! {
-    pub static ref NO_OP: NodeDefinition = no_op_def();
-
-    pub static ref FLIP_V: NodeDefinition = flip_v_def();
-    pub static ref FLIP_H: NodeDefinition = flip_h_def();
-    pub static ref ROTATE_90: NodeDefinition = rotate90_def();
-     pub static ref ROTATE_180: NodeDefinition = rotate180_def();
-    pub static ref ROTATE_270: NodeDefinition = rotate270_def();
-    pub static ref APPLY_ORIENTATION: NodeDefinition = apply_orientation_def();
-
-    pub static ref TRANSPOSE: NodeDefinition = transpose_def();
-
-    pub static ref TRANSPOSE_MUT: NodeDefinition = transpose_mut_def();
-}

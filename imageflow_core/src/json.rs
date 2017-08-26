@@ -73,7 +73,7 @@ pub fn create_handler_over_responder<'a, T, D>(responder: ResponderFn<'a, T, D>)
                         Ok(JsonResponse::success_with_payload(payload)) //How about failures with payloads!?
                     }
                     Err(error) => {
-                        let message = format!("{:?}", error);
+                        let message = format!("{}", error);
                         Ok(JsonResponse::fail_with_message(500,
                                                            &message))
                     }
@@ -132,9 +132,17 @@ impl JsonResponse {
     }
     pub fn assert_ok(&self) {
         if !self.status_2xx() {
-            panic!("status {}\n{}",
-                   self.status_code,
-                   std::str::from_utf8(self.response_json.as_ref()).unwrap());
+            if let Ok(s) = std::str::from_utf8(self.response_json.as_ref()){
+                if let Ok(s::Response001{ message, ..}) = serde_json::from_slice(self.response_json.as_ref()) {
+                    if let Some(message) = message {
+                        panic!("Json Status {}\n{}\n{}", self.status_code, &s, message);
+                    }
+                }
+                panic!("Json Status {}\n{}", self.status_code, &s);
+
+            }else{
+                panic!("Json Status {} - payload invalid utf8", self.status_code);
+            }
         }
     }
     pub fn unwrap_status200(&self) -> &JsonResponse {

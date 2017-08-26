@@ -76,253 +76,235 @@ impl NodeDefOneInputOneCanvas for CopyRectNodeDef{
 }
 
 
+#[derive(Debug, Clone)]
+pub struct FillRectNodeDef;
+impl NodeDef for FillRectNodeDef{
+    fn as_one_mutate_bitmap(&self) -> Option<&NodeDefMutateBitmap>{
+        Some(self)
+    }
+}
+impl NodeDefMutateBitmap for FillRectNodeDef {
+    fn fqn(&self) -> &'static str {
+        "imazen.fill_rect_mutate"
+    }
+    fn validate_params(&self, p: &NodeParams) -> NResult<()> {
+        Ok(())
+    }
+    fn mutate(&self, c: &Context, bitmap: &mut BitmapBgra,  p: &NodeParams) -> NResult<()>{
+        if let &NodeParams::Json(s::Node::FillRect { x1, x2, y1, y2, ref color }) = p{
 
-fn fill_rect_def() -> NodeDefinition {
-    NodeDefinition {
-        fqn: "imazen.fill_rect_mutate",
-        name: "fill_rect",
-        inbound_edges: EdgesIn::OneInput,
-        fn_estimate: Some(NodeDefHelpers::copy_frame_est_from_first_input),
-        fn_execute: Some({
+            if x2 <= x1 || y2 <= y1 || (x1 as i32) < 0 || (y1 as i32) < 0 || x2 > bitmap.w || y2 > bitmap.h{
+               return Err(nerror!(ErrorKind::InvalidCoordinates, "Invalid coordinates for {}x{} bitmap: {:?}", bitmap.w, bitmap.h, p));
+            }
+            unsafe {
 
-            fn f(ctx: &mut OpCtxMut, ix: NodeIndex) {
+                if !ffi::flow_bitmap_bgra_fill_rect(c.flow_c(),
+                                                    bitmap as *mut BitmapBgra,
+                                                    x1,
+                                                    y1,
+                                                    x2,
+                                                    y2,
+                                                    color.clone().to_u32_bgra().unwrap()) {
+                    return Err(nerror!(ErrorKind::CError(c.error().c_error()), "Failed to fill rectangle"))
+                }else{
+                    Ok(())
+                }
 
-                if let s::Node::FillRect { x1, x2, y1, y2, color } = ctx.get_json_params(ix)
-                    .unwrap() {
+            }
+
+        } else {
+            Err(nerror!(ErrorKind::NodeParamsMismatch, "Need FillRect, got {:?}", p))
+        }
+    }
+}
 
 
-                    let input = ctx.first_parent_result_frame(ix, EdgeKind::Input).unwrap();
-                    unsafe {
+#[derive(Debug,Clone)]
+pub struct CloneDef;
+impl NodeDef for CloneDef{
+    fn as_one_input_expand(&self) -> Option<&NodeDefOneInputExpand>{
+        Some(self)
+    }
+}
+impl NodeDefOneInputExpand for CloneDef{
+    fn fqn(&self) -> &'static str{
+        "imazen.clone"
+    }
+    fn expand(&self, ctx: &mut OpCtxMut, ix: NodeIndex, params: NodeParams, parent: FrameInfo) -> NResult<()> {
+        let parent = ctx.frame_info_from(ix, EdgeKind::Input).map_err(|e| e.at(here!()))?;
 
-                        if !ffi::flow_bitmap_bgra_fill_rect(ctx.c.flow_c(),
-                                                            input,
-                                                            x1,
-                                                            y1,
-                                                            x2,
-                                                            y2,
-                                                            color.to_u32_bgra().unwrap()) {
-                            panic!("failed to fill rect. epic.");
-                        }
+        let canvas_params = s::Node::CreateCanvas {
+            w: parent.w as usize,
+            h: parent.h as usize,
+            format: s::PixelFormat::from(parent.fmt),
+            color: s::Color::Transparent,
+        };
+        let copy_params = s::Node::CopyRectToCanvas {
+            from_x: 0,
+            from_y: 0,
+            x: 0,
+            y: 0,
+            width: parent.w as u32,
+            height: parent.h as u32,
+        };
+        let canvas = ctx.graph
+            .add_node(Node::n(&CREATE_CANVAS, NodeParams::Json(canvas_params)));
+        let copy = ctx.graph
+            .add_node(Node::n(&COPY_RECT, NodeParams::Json(copy_params)));
+        ctx.graph.add_edge(canvas, copy, EdgeKind::Canvas).unwrap();
+        ctx.replace_node_with_existing(ix, copy);
+        Ok(())
+    }
+}
 
-                        ctx.weight_mut(ix).result = NodeResult::Frame(input);
-                    }
 
+#[derive(Debug,Clone)]
+pub struct ExpandCanvasDef;
+impl NodeDef for ExpandCanvasDef{
+    fn as_one_input_expand(&self) -> Option<&NodeDefOneInputExpand>{
+        Some(self)
+    }
+}
+impl NodeDefOneInputExpand for ExpandCanvasDef{
+    fn fqn(&self) -> &'static str{
+        "imazen.expand_canvas"
+    }
+    fn estimate(&self, p: &NodeParams, input: FrameEstimate) -> NResult<FrameEstimate> {
+        if let &NodeParams::Json(s::Node::ExpandCanvas { left, top, bottom, right, ref color }) = p {
+            input.map_frame( |info| {
+                Ok(FrameInfo {
+                    w: info.w + left as i32 + right as i32,
+                    h: info.h + top as i32 + bottom as i32,
+                    fmt: ffi::PixelFormat::from(info.fmt),
+                    alpha_meaningful: info.alpha_meaningful,
+                })
+            })
+        } else {
+            Err(nerror!(ErrorKind::NodeParamsMismatch, "Need ExpandCanvas, got {:?}", p))
+        }
+    }
+
+    fn expand(&self, ctx: &mut OpCtxMut, ix: NodeIndex, p: NodeParams, parent: FrameInfo) -> NResult<()>{
+        if let NodeParams::Json(s::Node::ExpandCanvas { left, top, bottom, right, color }) = p {
+            let FrameInfo { w, h, fmt, alpha_meaningful } = parent;
+
+            let new_w = w as usize + left as usize + right as usize;
+            let new_h = h as usize + top as usize + bottom as usize;
+            let canvas_params = s::Node::CreateCanvas {
+                w: new_w as usize,
+                h: new_h as usize,
+                format: s::PixelFormat::from(fmt),
+                color: color.clone(),
+            };
+            let copy_params = s::Node::CopyRectToCanvas {
+                from_x: 0,
+                from_y: 0,
+                x: left,
+                y: top,
+                width: w as u32,
+                height: h as u32,
+            };
+            let canvas = ctx.graph
+                .add_node(Node::n(&CREATE_CANVAS,
+                                  NodeParams::Json(canvas_params)));
+            let copy = ctx.graph
+                .add_node(Node::n(&COPY_RECT, NodeParams::Json(copy_params)));
+            ctx.graph.add_edge(canvas, copy, EdgeKind::Canvas).unwrap();
+            ctx.replace_node_with_existing(ix, copy);
+            Ok(())
+        } else {
+            Err(nerror!(ErrorKind::NodeParamsMismatch, "Need ExpandCanvas, got {:?}", p))
+        }
+    }
+}
+
+
+#[derive(Debug, Clone)]
+pub struct CropMutNodeDef;
+
+impl CropMutNodeDef {
+    fn est_validate(&self, p: &NodeParams, input_est: FrameEstimate) -> NResult<FrameEstimate> {
+        if let &NodeParams::Json(s::Node::Crop {  x1,  y1,  x2,  y2 }) = p {
+            if (x1 as i32) < 0 || (y1 as i32) < 0 || x2 <= x1 || y2 <= y1 {
+                Err(nerror!(ErrorKind::InvalidNodeParams, "Invalid coordinates: {},{} {},{} should describe the top-left and bottom-right corners of a rectangle", x1,y1,x2,y2))
+            } else if let FrameEstimate::Some(input) = input_est {
+                if x2 > input.w as u32 || y2 > input.h as u32 {
+                    Err(nerror!(ErrorKind::InvalidNodeParams, "Crop coordinates {},{} {},{} invalid for {}x{} bitmap", x1,y1,x2,y2, input.w, input.h))
                 } else {
-                    panic!("Missing params")
+                    Ok(FrameEstimate::Some(FrameInfo {
+                        w: x2 as i32 - x1 as i32,
+                        h: y2 as i32 - y1 as i32,
+                        fmt: ffi::PixelFormat::from(input.fmt),
+                        alpha_meaningful: input.alpha_meaningful,
+                    }))
                 }
+                //TODO: we can estimate with other FrameEstimate values
+            } else {
+                Ok(FrameEstimate::None)
             }
-            f
-        }),
-        ..Default::default()
-    }
-}
-
-fn clone_def() -> NodeDefinition {
-    NodeDefinition {
-        fqn: "imazen.clone",
-        name: "Clone",
-        description: "Clone",
-        fn_estimate: Some(NodeDefHelpers::copy_frame_est_from_first_input),
-        fn_flatten_pre_optimize: Some({
-            fn f(ctx: &mut OpCtxMut, ix: NodeIndex) {
-                match ctx.first_parent_input_weight(ix).unwrap().frame_est {
-                    FrameEstimate::Some(FrameInfo { w, h, fmt, alpha_meaningful }) => {
-                        let canvas_params = s::Node::CreateCanvas {
-                            w: w as usize,
-                            h: h as usize,
-                            format: s::PixelFormat::from(fmt),
-                            color: s::Color::Transparent,
-                        };
-                        let copy_params = s::Node::CopyRectToCanvas {
-                            from_x: 0,
-                            from_y: 0,
-                            x: 0,
-                            y: 0,
-                            width: w as u32,
-                            height: h as u32,
-                        };
-                        let canvas = ctx.graph
-                            .add_node(Node::n(&CREATE_CANVAS, NodeParams::Json(canvas_params)));
-                        let copy = ctx.graph
-                            .add_node(Node::n(&COPY_RECT, NodeParams::Json(copy_params)));
-                        ctx.graph.add_edge(canvas, copy, EdgeKind::Canvas).unwrap();
-                        ctx.replace_node_with_existing(ix, copy);
-                    }
-                    _ => panic!(""),
-                }
-
-            }
-            f
-        }),
-        ..Default::default()
-    }
-}
-fn expand_canvas_size(ctx: &mut OpCtxMut, ix: NodeIndex) {
-
-    let input_info = ctx.first_parent_frame_info_some(ix).unwrap();
-
-    let weight = &mut ctx.weight_mut(ix);
-    match weight.params {
-        NodeParams::Json(s::Node::ExpandCanvas { ref left,
-                                                 ref top,
-                                                 ref bottom,
-                                                 ref right,
-                                                 ref color }) => {
-            weight.frame_est = FrameEstimate::Some(FrameInfo {
-                w: input_info.w + *left as i32 + *right as i32,
-                h: input_info.h + *top as i32 + *bottom as i32,
-                fmt: ffi::PixelFormat::from(input_info.fmt),
-                alpha_meaningful: input_info.alpha_meaningful,
-            }); //TODO: May change if color has alpha
-        }
-        _ => {
-            panic!("Node params missing");
+        } else {
+            Err(nerror!(ErrorKind::NodeParamsMismatch, "Need Crop, got {:?}", p))
         }
     }
 }
 
-fn expand_canvas_def() -> NodeDefinition {
-    NodeDefinition {
-        fqn: "imazen.expand_canvas",
-        name: "expand canvas",
-        inbound_edges: EdgesIn::OneInput,
-        description: "Expand Canvas",
-        fn_estimate: Some(expand_canvas_size),
-        fn_flatten_pre_optimize: Some({
-            fn f(ctx: &mut OpCtxMut, ix: NodeIndex) {
-                match ctx.first_parent_input_weight(ix).unwrap().frame_est {
-                    FrameEstimate::Some(FrameInfo { w, h, fmt, alpha_meaningful }) => {
-                        if let s::Node::ExpandCanvas { left, top, right, bottom, color } =
-                               ctx.get_json_params(ix).unwrap() {
-                            let new_w = w as usize + left as usize + right as usize;
-                            let new_h = h as usize + top as usize + bottom as usize;
-                            let canvas_params = s::Node::CreateCanvas {
-                                w: new_w as usize,
-                                h: new_h as usize,
-                                format: s::PixelFormat::from(fmt),
-                                color: color,
-                            };
-                            let copy_params = s::Node::CopyRectToCanvas {
-                                from_x: 0,
-                                from_y: 0,
-                                x: left,
-                                y: top,
-                                width: w as u32,
-                                height: h as u32,
-                            };
-                            let canvas = ctx.graph
-                                .add_node(Node::n(&CREATE_CANVAS,
-                                                    NodeParams::Json(canvas_params)));
-                            let copy = ctx.graph
-                                .add_node(Node::n(&COPY_RECT, NodeParams::Json(copy_params)));
-                            ctx.graph.add_edge(canvas, copy, EdgeKind::Canvas).unwrap();
-                            ctx.replace_node_with_existing(ix, copy);
-                        }
-                    }
-                    _ => panic!(""),
-                }
-            }
-            f
-        }),
-        ..Default::default()
+impl NodeDef for CropMutNodeDef{
+    fn fqn(&self) -> &'static str{
+        "imazen.crop_mutate"
     }
-}
+    fn edges_required(&self, p: &NodeParams) -> NResult<(EdgesIn, EdgesOut)>{
+        Ok((EdgesIn::OneInput, EdgesOut::Any))
+    }
+
+    fn validate_params(&self, p: &NodeParams) -> NResult<()> {
+        self.est_validate(p, FrameEstimate::None).map(|_| ()).map_err(|e| e.at(here!()))
+    }
+
+    fn estimate(&self, ctx: &mut OpCtxMut, ix: NodeIndex) -> NResult<FrameEstimate> {
+        let input_est = ctx.frame_est_from(ix, EdgeKind::Input).map_err(|e| e.at(here!()))?;
+        let p = &ctx.weight(ix).params;
+        self.est_validate(p, input_est).map_err(|e| e.at(here!()))
+    }
+
+    fn can_execute(&self) -> bool { true }
+
+    fn execute(&self, ctx: &mut OpCtxMut, ix: NodeIndex) -> NResult<NodeResult> {
+        let mut input = unsafe {
+            &mut *ctx.bitmap_bgra_from(ix, EdgeKind::Input).map_err(|e| e.at(here!()).with_ctx_mut(ctx, ix))?
+        };
+        ctx.consume_parent_result(ix, EdgeKind::Input)?;
+
+        // Validate against actual bitmap
+        let _ = self.est_validate(&ctx.weight(ix).params, FrameEstimate::Some(input.frame_info())).map_err(|e| e.at(here!()))?;
+
+        if let s::Node::Crop { x1, x2, y1, y2 } = ctx.get_json_params(ix).unwrap() {
+            // println!("Cropping {}x{} to ({},{}) ({},{})", (*input).w, (*input).h, x1, y1, x2, y2);
+
+            let (w, h) = (input.w, input.h);
+            if x2 <= x1 || y2 <= y1 || x2 > w || y2 > h {
+                panic!("Invalid crop bounds {:?} (image {}x{})", ((x1, y1), (x2, y2)), w, h);
+            }
 
 
-fn crop_size(ctx: &mut OpCtxMut, ix: NodeIndex) {
+            unsafe {
+                let offset = input.stride as isize * y1 as isize +
+                    input.fmt.bytes() as isize * x1 as isize;
+                input.pixels = input.pixels.offset(offset);
+            }
+            input.w = x2 - x1;
+            input.h = y2 - y1;
 
-    let input_info = ctx.first_parent_frame_info_some(ix).unwrap_or_else(|| {
-        println!("{:?}", ctx.graph_to_str());
-        panic!("");
-    });
 
-    let weight = &mut ctx.weight_mut(ix);
-    match weight.params {
-        NodeParams::Json(s::Node::Crop { ref x1, ref y1, ref x2, ref y2 }) => {
-            weight.frame_est = FrameEstimate::Some(FrameInfo {
-                w: *x2 as i32 - *x1 as i32,
-                h: *y2 as i32 - *y1 as i32,
-                fmt: ffi::PixelFormat::from(input_info.fmt),
-                alpha_meaningful: input_info.alpha_meaningful,
-            });
-        }
-        _ => {
-            panic!("Node params missing");
+            Ok(NodeResult::Frame(input))
+        } else {
+            unreachable!(loc!());
         }
     }
 }
-fn crop_mutate_def() -> NodeDefinition {
-    NodeDefinition {
-        // TODO: As a mutating node, shouldn't this verify no siblings exist? 'Consumed' might be non-deterministic
-        fqn: "imazen.crop_mutate",
-        name: "crop_mutate",
-        inbound_edges: EdgesIn::OneInput,
-        fn_estimate: Some(crop_size),
-        fn_execute: Some({
 
-            fn f(ctx: &mut OpCtxMut, ix: NodeIndex) {
-
-                if let s::Node::Crop { x1, x2, y1, y2 } = ctx.get_json_params(ix).unwrap() {
-
-                    let input = ctx.first_parent_result_frame(ix, EdgeKind::Input).unwrap();
-                    unsafe {
-                        // println!("Cropping {}x{} to ({},{}) ({},{})", (*input).w, (*input).h, x1, y1, x2, y2);
-
-                        let (w,h) = ((*input).w, (*input).h);
-                        if x2 <= x1 || y2 <= y1 || x2 > w || y2 > h{
-                            panic!("Invalid crop bounds {:?} (image {}x{})", ((x1,y1),(x2,y2)), w,h);
-                        }
-
-                        let bytes_pp = match (*input).fmt {
-                            PixelFormat::Gray8 => 1,
-                            PixelFormat::Bgra32 => 4,
-                            PixelFormat::Bgr24 => 3,
-                        };
-                        let offset = (*input).stride as isize * y1 as isize +
-                                     bytes_pp * x1 as isize;
-                        (*input).pixels = (*input).pixels.offset(offset);
-                        (*input).w = x2 - x1;
-                        (*input).h = y2 - y1;
-                        // println!("Changing pointer by {}, w{}, h{}", offset, (*input).w, (*input).h);
-
-
-                        ctx.weight_mut(ix).result = NodeResult::Frame(input);
-                        ctx.first_parent_input_weight_mut(ix).unwrap().result =
-                            NodeResult::Consumed;
-                    }
-
-                } else {
-                    panic!("Missing params")
-                }
-            }
-            f
-        }),
-        ..Default::default()
-    }
-}
-
-fn crop_def() -> NodeDefinition {
-    NodeDefinition {
-        fqn: "imazen.crop",
-        name: "crop",
-        inbound_edges: EdgesIn::OneInput,
-        fn_estimate: Some(crop_size),
-        fn_flatten_pre_optimize: Some({
-            fn f(ctx: &mut OpCtxMut, ix: NodeIndex) {
-                let mut new_nodes = Vec::with_capacity(2);
-                if ctx.has_other_children(ctx.first_parent_input(ix).unwrap(), ix) {
-                    new_nodes.push(Node::new(&CLONE, NodeParams::None));
-                }
-                new_nodes.push(Node::new(&CROP_MUTATE,
-                                         NodeParams::Json(ctx.get_json_params(ix).unwrap())));
-                ctx.replace_node(ix, new_nodes);
-            }
-            f
-        }),
-        ..Default::default()
-    }
-}
-
+//#[derive(Debug,Clone)]
+//pub struct CropWhitespaceDef;
+//
 
 
 fn crop_whitespace_def() -> NodeDefinition {
@@ -354,7 +336,7 @@ fn crop_whitespace_def() -> NodeDefinition {
                     };
 
                     ctx.replace_node(ix, vec![
-                        Node::new(&CROP,
+                        Node::n(&CROP,
                                   NodeParams::Json(s::Node::Crop{ x1: x1, y1: y1, x2: x2, y2: y2 }))
                     ]);
                 }
@@ -366,14 +348,14 @@ fn crop_whitespace_def() -> NodeDefinition {
 }
 
 pub static COPY_RECT: CopyRectNodeDef = CopyRectNodeDef{};
+pub static FILL_RECT: FillRectNodeDef = FillRectNodeDef{};
+pub static CROP: MutProtect<CropMutNodeDef> = MutProtect{node: &CROP_MUTATE, fqn: "imazen.crop"};
+pub static CROP_MUTATE: CropMutNodeDef = CropMutNodeDef{};
+pub static CLONE: CloneDef = CloneDef{};
+pub static EXPAND_CANVAS: ExpandCanvasDef = ExpandCanvasDef{};
 
 lazy_static! {
-    pub static ref CLONE: NodeDefinition = clone_def();
-    pub static ref CROP_MUTATE: NodeDefinition = crop_mutate_def();
-    pub static ref CROP: NodeDefinition = crop_def();
     pub static ref CROP_WHITESPACE: NodeDefinition = crop_whitespace_def();
-    pub static ref EXPAND_CANVAS: NodeDefinition = expand_canvas_def();
 
 
-    pub static ref FILL_RECT: NodeDefinition = fill_rect_def();
 }

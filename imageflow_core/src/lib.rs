@@ -23,6 +23,7 @@ extern crate petgraph;
 extern crate daggy;
 extern crate time;
 extern crate imageflow_types;
+
 extern crate imageflow_helpers;
 extern crate imageflow_riapi;
 extern crate num;
@@ -98,7 +99,12 @@ impl From<NodeError> for FlowError{
 
 impl std::fmt::Display for FlowError {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        write!(f, "{:?}", self)
+        if let &FlowError::NodeError(ref e) = self {
+            write!(f, "{}", e)
+        } else {
+            write!(f, "blah{:#?}", self)
+        }
+
     }
 }
 
@@ -170,6 +176,7 @@ mod internal_prelude {
         pub extern crate time;
         pub extern crate libc;
         pub extern crate imageflow_types as s;
+
     }
     #[doc(hidden)]
     pub mod imageflow_core_all {

@@ -3,6 +3,12 @@ use super::internal_prelude::*;
 // http://localhost:39876/ir4/proxy_unsplash/photo-1496264057429-6a331647b69e?a.balancewhite=true&w=800
 // http://localhost:39876/ir4/proxy_unsplash/photo-1496264057429-6a331647b69e?w=800
 
+
+    pub static  WHITE_BALANCE_SRGB: WhiteBalanceSrgbMutDef = WhiteBalanceSrgbMutDef{};
+    pub static  WHITE_BALANCE_SRGB_MUTATE: MutProtect<WhiteBalanceSrgbMutDef> = MutProtect{node: &WHITE_BALANCE_SRGB, fqn: "imazen.white_balance_srgb"};
+
+
+
 fn area_threshold(histogram: &[u64], total_pixels: u64, low_threshold: f64, high_threshold: f64) -> (usize, usize){
     let mut low = 0;
     let mut high = histogram.len() - 1;
@@ -34,17 +40,19 @@ fn create_byte_mapping(low: usize, high: usize) -> Vec<u8>{
 }
 
 
-fn apply_mappings(bitmap: *mut BitmapBgra, map_red: &[u8], map_green: &[u8], map_blue: &[u8]){
+fn apply_mappings(bitmap: *mut BitmapBgra, map_red: &[u8], map_green: &[u8], map_blue: &[u8]) -> NResult<()>{
 
     let input: &BitmapBgra = unsafe{ &*bitmap };
     let bytes: &mut [u8] = unsafe { slice::from_raw_parts_mut::<u8>(input.pixels, (input.stride * input.h) as usize) };
 
     if map_red.len() < 256 || map_green.len() < 256 || map_blue.len() < 256{
-        panic!("");
+        return Err(nerror!(ErrorKind::InvalidState));
     }
 
     match input.fmt {
-        PixelFormat::Gray8 => {panic!("")},
+        PixelFormat::Gray8 =>
+            Err(unimpl!())
+        ,
         PixelFormat::Bgra32 => {
             for row in bytes.chunks_mut(input.stride as usize){
                 for pixel in row.chunks_mut(4).take(input.w as usize){
@@ -58,6 +66,7 @@ fn apply_mappings(bitmap: *mut BitmapBgra, map_red: &[u8], map_green: &[u8], map
                     }
                 }
             }
+            Ok(())
         },
         PixelFormat::Bgr24 => {
             for row in bytes.chunks_mut(input.stride as usize){
@@ -72,11 +81,12 @@ fn apply_mappings(bitmap: *mut BitmapBgra, map_red: &[u8], map_green: &[u8], map
                     }
                 }
             }
+            Ok(())
         },
-    };
+    }
 }
 
-fn white_balance_srgb_mut(bitmap: *mut BitmapBgra, histograms: &[u64;768], pixels_sampled: u64, low_threshold: Option<f32>, high_threshold: Option<f32>){
+fn white_balance_srgb_mut(bitmap: *mut BitmapBgra, histograms: &[u64;768], pixels_sampled: u64, low_threshold: Option<f32>, high_threshold: Option<f32>) -> NResult<()>{
     let low_threshold = low_threshold.unwrap_or(0.006) as f64;
     let high_threshold = high_threshold.unwrap_or(0.006) as f64;
 
@@ -88,77 +98,34 @@ fn white_balance_srgb_mut(bitmap: *mut BitmapBgra, histograms: &[u64;768], pixel
     let green_map = create_byte_mapping(green_low, green_high);
     let blue_map = create_byte_mapping(blue_low, blue_high);
 
-    apply_mappings(bitmap, &red_map, &green_map, &blue_map);
+    apply_mappings(bitmap, &red_map, &green_map, &blue_map)
 }
 
-
-fn white_balance_srgb_mutate_def() -> NodeDefinition {
-    NodeDefinition {
-        fqn: "imazen.whitebal_srgb_area_mutate",
-        name: "Auto white balance",
-        description: "Auto white balance",
-        fn_estimate: Some(NodeDefHelpers::copy_frame_est_from_first_input),
-        fn_execute: Some({
-            fn f(ctx: &mut OpCtxMut, ix: NodeIndex) {
-                let from_node = ctx.first_parent_input_weight(ix).unwrap().clone();
-                match from_node.result {
-                    NodeResult::Frame(bitmap) => {
-                        unsafe {
-                            let mut histograms: [u64; 768] = [0; 768];
-                            let mut pixels_sampled: u64 = 0;
-                            if !::ffi::flow_bitmap_bgra_populate_histogram(ctx.flow_c(), bitmap, histograms.as_mut_ptr(), 256, 3,  &mut pixels_sampled as *mut u64){
-                                ctx.panic_time();
-                            }
-
-                            match ctx.weight_mut(ix).params {
-                                NodeParams::Json(s::Node::WhiteBalanceHistogramAreaThresholdSrgb { ref low_threshold, ref high_threshold}) => {
-                                    white_balance_srgb_mut(bitmap, &histograms, pixels_sampled, *low_threshold, *high_threshold);
-                                },
-                                _ => {
-                                    panic!("Node params missing");
-                                }
-                            }
-
-
-                        }
-                        ctx.weight_mut(ix).result = NodeResult::Frame(bitmap);
-                        ctx.first_parent_input_weight_mut(ix).unwrap().result =
-                            NodeResult::Consumed;
-                    }
-                    _ => {
-                        panic!{"Previous node not ready"}
-                    }
-                }
-            }
-            f
-        }),
-        ..Default::default()
+#[derive(Debug, Clone)]
+pub struct WhiteBalanceSrgbMutDef;
+impl NodeDef for WhiteBalanceSrgbMutDef{
+    fn as_one_mutate_bitmap(&self) -> Option<&NodeDefMutateBitmap>{
+        Some(self)
     }
 }
-
-fn white_balance_srgb_def() -> NodeDefinition {
-    NodeDefinition {
-        fqn: "imazen.whitebal_srgb_area",
-        name: "Auto white balance",
-        description: "Auto white balance",
-        fn_estimate: Some(NodeDefHelpers::copy_frame_est_from_first_input),
-        fn_flatten_pre_optimize: Some({
-            fn f(ctx: &mut OpCtxMut, ix: NodeIndex) {
-                let mut new_nodes = Vec::with_capacity(2);
-                if ctx.has_other_children(ctx.first_parent_input(ix).unwrap(), ix) {
-                    new_nodes.push(Node::new(&CLONE, NodeParams::None));
-                }
-                new_nodes.push(Node::new(&WHITE_BALANCE_SRGB_MUTATE,
-                                         NodeParams::Json(ctx.get_json_params(ix).unwrap())));
-                ctx.replace_node(ix, new_nodes);
-            }
-            f
-        }),
-        ..Default::default()
+impl NodeDefMutateBitmap for WhiteBalanceSrgbMutDef{
+    fn fqn(&self) -> &'static str{
+        "imazen.white_balance_srgb_mut"
     }
-}
+    fn mutate(&self, c: &Context, bitmap: &mut BitmapBgra,  p: &NodeParams) -> NResult<()> {
 
-lazy_static! {
-    pub static ref WHITE_BALANCE_SRGB: NodeDefinition = white_balance_srgb_def();
-    pub static ref WHITE_BALANCE_SRGB_MUTATE: NodeDefinition = white_balance_srgb_mutate_def();
+        unsafe {
+            let mut histograms: [u64; 768] = [0; 768];
+            let mut pixels_sampled: u64 = 0;
+            if !::ffi::flow_bitmap_bgra_populate_histogram(c.flow_c(), bitmap as *mut BitmapBgra, histograms.as_mut_ptr(), 256, 3, &mut pixels_sampled as *mut u64) {
+                return Err(nerror!(ErrorKind::CError(c.error().c_error()), "Failed to populate histogram"))
+            }
+            if let &NodeParams::Json(s::Node::WhiteBalanceHistogramAreaThresholdSrgb { low_threshold, high_threshold }) = p {
+                white_balance_srgb_mut(bitmap, &histograms, pixels_sampled, low_threshold, high_threshold)
+            } else {
+                Err(nerror!(ErrorKind::NodeParamsMismatch, "Need ColorMatrixSrgb, got {:?}", p))
+            }
+        }
+
+    }
 }

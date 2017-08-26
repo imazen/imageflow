@@ -120,7 +120,7 @@ fn decoder_def() -> NodeDefinition {
                 if let Ok(exif_flag) = ctx.job.get_exif_rotation_flag(io_id){
                     if exif_flag > 0 {
                         let new_node = ctx.graph
-                            .add_node(Node::new(&APPLY_ORIENTATION,
+                            .add_node(Node::n(&APPLY_ORIENTATION,
                                                 NodeParams::Json(s::Node::ApplyOrientation {
                                                     flag: exif_flag,
                                                 })));

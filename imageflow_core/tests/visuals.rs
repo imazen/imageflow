@@ -105,7 +105,9 @@ fn compare(input: Option<s::IoEnum>, allowed_off_by_one_bytes: usize, checksum_n
 
     let mut context = Context::create().unwrap();
 
-    context.message("v0.1/build", &serde_json::to_vec(&build).unwrap()).unwrap();
+    let response= context.message("v0.1/build", &serde_json::to_vec(&build).unwrap()).unwrap();
+
+    response.assert_ok();
 
     if dest_bitmap.is_null(){
         panic!("Failed to execute")

@@ -388,6 +388,8 @@ impl<'a, 'b> Engine<'a, 'b> where 'a: 'b {
                         break;
                     }
 
+                } else if !def.can_expand(){
+                    return Err(nerror!(ErrorKind::MethodNotImplemented, "Nodes must can_execute() or can_expand(). {:?} does neither", def).into());
                 }
             }
             match next {
@@ -399,6 +401,14 @@ impl<'a, 'b> Engine<'a, 'b> where 'a: 'b {
                         if result == NodeResult::None {
                             return Err(nerror!(ErrorKind::InvalidOperation, "Node {} execution returned {:?}", def.name(), result).into());
                         }else{
+                            // Force update the estimate to match reality
+                            if let &NodeResult::Frame(bit) = &result{
+                                if !bit.is_null() {
+                                    unsafe {
+                                        ctx.weight_mut(next_ix).frame_est = FrameEstimate::Some((*bit).frame_info());
+                                    }
+                                }
+                            }
                             ctx.weight_mut(next_ix).result = result;
                         }
                     }

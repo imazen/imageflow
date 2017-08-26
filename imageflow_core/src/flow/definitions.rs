@@ -39,7 +39,7 @@ macro_rules! nerror {
     ($kind:expr) => (
         NodeError{
             kind: $kind,
-            message: format!("Error {:?}", $kind),
+            message: format!("NodeError {:?}", $kind),
             at: ::smallvec::SmallVec::new(),
             node: None
         }.at(here!())
@@ -47,7 +47,7 @@ macro_rules! nerror {
     ($kind:expr, $fmt:expr) => (
         NodeError{
             kind: $kind,
-            message:  format!(concat!("Error {:?}: ",$fmt ), $kind,),
+            message:  format!(concat!("NodeError {:?}: ",$fmt ), $kind,),
             at: ::smallvec::SmallVec::new(),
             node: None
         }.at(here!())
@@ -55,7 +55,7 @@ macro_rules! nerror {
     ($kind:expr, $fmt:expr, $($arg:tt)*) => (
         NodeError{
             kind: $kind,
-            message:  format!(concat!("Error {:?}: ", $fmt), $kind, $($arg)*),
+            message:  format!(concat!("NodeError {:?}: ", $fmt), $kind, $($arg)*),
             at: ::smallvec::SmallVec::new(),
             node: None
         }.at(here!())
@@ -151,6 +151,7 @@ pub enum ErrorKind{
     ValidationNotImplemented,
     InvalidNodeConnections,
     InvalidOperation,
+    InvalidState,
     CError(FlowErr)
 
 }
@@ -209,11 +210,9 @@ impl ::std::error::Error for NodeError {
 
 }
 impl NodeError{
-    fn add_node_info(self, info: Option<NodeDebugInfo>) -> NodeError{
-        NodeError{
-            node: info,
-            .. self
-        }
+    fn add_node_info(mut self, info: Option<NodeDebugInfo>) -> NodeError{
+        self.node = info;
+        self
     }
     pub fn with_ctx(self, ctx: &OpCtx, ix: NodeIndex ) -> NodeError {
         self.add_node_info(NodeDebugInfo::from_ctx(ctx, ix))
@@ -235,7 +234,7 @@ impl fmt::Display for NodeError {
         }else{
             write!(f, "{} at\n", self.message)?;
         }
-        let url = if true {//} if::imageflow_types::build_env_info::BUILT_ON_CI{
+        let url = if::imageflow_types::build_env_info::BUILT_ON_CI{
             let repo = ::imageflow_types::build_env_info::BUILD_ENV_INFO.get("CI_REPO").unwrap_or(&Some("imazen/imageflow")).unwrap_or("imazen/imageflow");
             let commit =  ::imageflow_types::build_env_info::GIT_COMMIT;
             Some(format!("https://github.com/{}/blob/{}/", repo, commit))
@@ -248,6 +247,9 @@ impl fmt::Display for NodeError {
                 write!(f, "{}{}#L{}\n",url, recorded_frame.file, recorded_frame.line)?;
             }
         }
+        if let Some(ref n) = self.node{
+            write!(f, "Active node:\n{:#?}\n", n)?;
+        }
         Ok(())
     }
 }
@@ -255,16 +257,19 @@ impl fmt::Display for NodeError {
 pub type NResult<T> = ::std::result::Result<T, NodeError>;
 
 // alternate traits for common classes of nodes
-pub trait NodeDefOneInput{
+pub trait NodeDefOneInputExpand {
     fn fqn(&self) -> &'static str;
     fn validate_params(&self, p: &NodeParams) -> NResult<()>{
         Ok(())
     }
+    fn estimate(&self, p: &NodeParams, input: FrameEstimate) -> NResult<FrameEstimate>{
+        Ok(input)
+    }
+    fn expand(&self, ctx: &mut OpCtxMut, ix: NodeIndex, params: NodeParams, parent: FrameInfo) -> NResult<()>;
 }
 pub trait NodeDefOneInputOneCanvas{
     fn fqn(&self) -> &'static str;
     fn validate_params(&self, p: &NodeParams) -> NResult<()>;
-
     fn render(&self, c: &Context, canvas: &mut BitmapBgra, input: &mut BitmapBgra,  p: &NodeParams) -> NResult<()>;
 }
 pub trait NodeDefMutateBitmap{
@@ -274,17 +279,15 @@ pub trait NodeDefMutateBitmap{
     }
     fn mutate(&self, c: &Context, bitmap: &mut BitmapBgra,  p: &NodeParams) -> NResult<()>;
 }
-pub trait NodeDefExpand{
-
-}
 
 
-impl<T> NodeDef for T where T: NodeDefMutateBitmap + ::std::fmt::Debug {
-    fn as_one_mutate_bitmap(&self) -> Option<&NodeDefMutateBitmap>{
-        Some(self)
-    }
-
-}
+// Rust prevents us from autoimplementing these conversion because it fears trait conflicts between the three.... gah
+//
+//impl<T> NodeDef for T where T: NodeDefMutateBitmap + ::std::fmt::Debug {
+//    fn as_one_mutate_bitmap(&self) -> Option<&NodeDefMutateBitmap>{
+//        Some(self)
+//    }
+//}
 //impl<T> NodeDef for T where T: NodeDefOneInputOneCanvas + ::std::fmt::Debug {
 //    fn as_one_input_one_canvas(&self) -> Option<&NodeDefOneInputOneCanvas>{
 //        Some(self)
@@ -300,7 +303,7 @@ impl<T> NodeDef for T where T: NodeDefMutateBitmap + ::std::fmt::Debug {
 
 pub trait NodeDef: ::std::fmt::Debug{
 
-    fn as_one_input(&self) -> Option<&NodeDefOneInput>{
+    fn as_one_input_expand(&self) -> Option<&NodeDefOneInputExpand>{
         None
     }
     fn as_one_input_one_canvas(&self) -> Option<&NodeDefOneInputOneCanvas>{
@@ -312,7 +315,7 @@ pub trait NodeDef: ::std::fmt::Debug{
 
 
     fn fqn(&self) -> &'static str{
-        let convenience_fqn = self.as_one_input().map(|n| n.fqn())
+        let convenience_fqn = self.as_one_input_expand().map(|n| n.fqn())
             .or(self.as_one_input_one_canvas().map(|n| n.fqn()))
             .or(self.as_one_mutate_bitmap().map(|n| n.fqn()));
         unimplemented!();
@@ -327,7 +330,7 @@ pub trait NodeDef: ::std::fmt::Debug{
 
     /// Edges will be validated before calling estimation or execution or flattening
     fn edges_required(&self, p: &NodeParams) -> NResult<(EdgesIn, EdgesOut)>{
-        if self.as_one_input().is_some(){
+        if self.as_one_input_expand().is_some(){
             Ok((EdgesIn::OneInput, EdgesOut::Any))
         } else if self.as_one_input_one_canvas().is_some(){
             Ok((EdgesIn::OneInputOneCanvas, EdgesOut::Any))
@@ -343,7 +346,7 @@ pub trait NodeDef: ::std::fmt::Debug{
             n.validate_params(p).map_err(|e| e.at(here!()))
         } else if let Some(n) = self.as_one_mutate_bitmap(){
             n.validate_params(p).map_err(|e| e.at(here!()))
-        } else if let Some(n) = self.as_one_input(){
+        } else if let Some(n) = self.as_one_input_expand(){
             n.validate_params(p).map_err(|e| e.at(here!()))
         } else{
             Err(unimpl!())
@@ -351,8 +354,10 @@ pub trait NodeDef: ::std::fmt::Debug{
     }
 
     fn estimate(&self, ctx: &mut OpCtxMut, ix: NodeIndex) -> NResult<FrameEstimate>{
-        if let Some(n) = self.as_one_input(){
-            Err(unimpl!())// n.estimate(ctx, ix).map_err(|e| e.at(here!()))
+        if let Some(n) = self.as_one_input_expand(){
+            let input = ctx.frame_est_from(ix, EdgeKind::Input).map_err(|e| e.at(here!()))?;
+            let params = &ctx.weight(ix).params;
+            n.estimate(params, input).map_err(|e| e.at(here!()))
         } else if self.as_one_input_one_canvas().is_some(){
             ctx.frame_est_from(ix, EdgeKind::Canvas).map_err(|e| e.at(here!()))
         } else if self.as_one_mutate_bitmap().is_some(){
@@ -363,12 +368,18 @@ pub trait NodeDef: ::std::fmt::Debug{
     }
 
     fn can_expand(&self) -> bool{
-        false
+        self.as_one_input_expand().is_some()
     }
 
     fn expand(&self, ctx: &mut OpCtxMut, ix: NodeIndex) -> NResult<()>{
-
-        Err(unimpl!())
+        if let Some(n) = self.as_one_input_expand(){
+            let parent = ctx.frame_info_from(ix, EdgeKind::Input)?;
+            let params = ctx.weight(ix).params.clone();
+            n.expand(ctx, ix, params, parent)
+                .map_err(|e| e.at(here!()))
+        }else {
+            Err(unimpl!())
+        }
     }
 
     fn can_execute(&self) -> bool {
@@ -382,15 +393,15 @@ pub trait NodeDef: ::std::fmt::Debug{
 
             ctx.consume_parent_result(ix, EdgeKind::Canvas)?;
 
-            n.render(ctx.c, unsafe { &mut *canvas }, unsafe { &mut *input }, &ctx.weight(ix).params)?;
+            n.render(ctx.c, unsafe { &mut *canvas }, unsafe { &mut *input }, &ctx.weight(ix).params).map_err(|e| e.at(here!()).with_ctx_mut(ctx,ix))?;
 
             Ok(NodeResult::Frame(canvas))
 
         } else if let Some(n) = self.as_one_mutate_bitmap(){
-            let input = ctx.bitmap_bgra_from(ix, EdgeKind::Input).map_err(|e| e.at(here!()))?;
+            let input = ctx.bitmap_bgra_from(ix, EdgeKind::Input).map_err(|e| e.at(here!()).with_ctx_mut(ctx,ix))?;
             ctx.consume_parent_result(ix, EdgeKind::Input)?;
 
-            n.mutate(ctx.c, unsafe { &mut *input }, &ctx.weight(ix).params)?;
+            n.mutate(ctx.c, unsafe { &mut *input }, &ctx.weight(ix).params).map_err(|e| e.at(here!()))?;
 
             Ok(NodeResult::Frame(input))
         }else {
@@ -403,6 +414,49 @@ pub trait NodeDef: ::std::fmt::Debug{
         write!(f, "{}", self.name())
     }
 }
+
+
+#[derive(Debug,Clone)]
+pub struct MutProtect<T> where T: NodeDef + 'static{
+    pub node: &'static T,
+    pub fqn: &'static str
+}
+impl<T> MutProtect<T> where T: NodeDef {
+    pub fn new(with: &'static T, fqn: & 'static str) -> MutProtect<T>{
+        MutProtect {
+            node: with,
+            fqn: fqn
+        }
+    }
+}
+impl<T> NodeDef for MutProtect<T> where T: NodeDef{
+    fn as_one_input_expand(&self) -> Option<&NodeDefOneInputExpand>{
+        Some(self)
+    }
+    fn validate_params(&self, p: &NodeParams) -> NResult<()>{
+        self.node.validate_params(p).map_err(|e| e.at(here!()))
+    }
+
+    fn estimate(&self, ctx: &mut OpCtxMut, ix: NodeIndex) -> NResult<FrameEstimate>{
+        self.node.estimate(ctx, ix).map_err(|e| e.at(here!()))
+    }
+}
+
+impl<T> NodeDefOneInputExpand for MutProtect<T> where T: NodeDef{
+    fn fqn(&self) -> &'static str{
+        self.fqn
+    }
+    fn expand(&self, ctx: &mut OpCtxMut, ix: NodeIndex, params: NodeParams, parent: FrameInfo) -> NResult<()>{
+        let mut new_nodes = Vec::with_capacity(2);
+        if ctx.has_other_children(ctx.first_parent_input(ix).unwrap(), ix) {
+            new_nodes.push(Node::n(self.node, NodeParams::None));
+        }
+        new_nodes.push(Node::n(&*self.node, ctx.weight(ix).params.clone()));
+        ctx.replace_node(ix, new_nodes);
+        Ok(())
+    }
+}
+
 
 impl NodeDefinition{
     pub fn as_node_def(&self) -> &NodeDef{
@@ -524,6 +578,17 @@ impl FrameEstimate{
             false
         }
     }
+
+    /// Maps both UpperBound and Some
+    pub fn map_frame<F>(self, f: F) -> NResult<FrameEstimate> where F: Fn(FrameInfo) -> NResult<FrameInfo> {
+        match self {
+            FrameEstimate::Some(info) =>
+                Ok(FrameEstimate::Some(f(info)?)),
+            FrameEstimate::UpperBound(info) =>
+                Ok(FrameEstimate::UpperBound(f(info)?)),
+            other => Ok(other)
+        }
+    }
 }
 
 #[derive(Clone,Debug,PartialEq)]
@@ -590,20 +655,20 @@ fn limit_node_bytes(){
 impl From<s::Node> for Node {
     fn from(node: s::Node) -> Node {
         match node {
-            s::Node::Crop { .. } => Node::new(&nodes::CROP, NodeParams::Json(node)),
+            s::Node::Crop { .. } => Node::n(&nodes::CROP, NodeParams::Json(node)),
             s::Node::CropWhitespace { .. } => Node::new(&nodes::CROP_WHITESPACE, NodeParams::Json(node)),
             s::Node::Decode { .. } => Node::new(&nodes::DECODER, NodeParams::Json(node)),
             s::Node::FlowBitmapBgraPtr { .. } => {
                 Node::new(&nodes::BITMAP_BGRA_POINTER, NodeParams::Json(node))
             }
             s::Node::CommandString{ .. } => Node::new(&nodes::COMMAND_STRING, NodeParams::Json(node)),
-            s::Node::FlipV => Node::new(&nodes::FLIP_V, NodeParams::Json(node)),
-            s::Node::FlipH => Node::new(&nodes::FLIP_H, NodeParams::Json(node)),
+            s::Node::FlipV => Node::n(&nodes::FLIP_V, NodeParams::Json(node)),
+            s::Node::FlipH => Node::n(&nodes::FLIP_H, NodeParams::Json(node)),
             s::Node::Rotate90 => Node::new(&nodes::ROTATE_90, NodeParams::Json(node)),
             s::Node::Rotate180 => Node::new(&nodes::ROTATE_180, NodeParams::Json(node)),
             s::Node::Rotate270 => Node::new(&nodes::ROTATE_270, NodeParams::Json(node)),
             s::Node::ApplyOrientation { .. } => {
-                Node::new(&nodes::APPLY_ORIENTATION, NodeParams::Json(node))
+                Node::n(&nodes::APPLY_ORIENTATION, NodeParams::Json(node))
             }
             s::Node::Transpose => Node::new(&nodes::TRANSPOSE, NodeParams::Json(node)),
             s::Node::Resample1D { .. } => Node::new(&nodes::SCALE_1D, NodeParams::Json(node)),
@@ -614,20 +679,20 @@ impl From<s::Node> for Node {
             s::Node::CopyRectToCanvas { .. } => {
                 Node::n(&nodes::COPY_RECT, NodeParams::Json(node))
             }
-            s::Node::FillRect { .. } => Node::new(&nodes::FILL_RECT, NodeParams::Json(node)),
+            s::Node::FillRect { .. } => Node::n(&nodes::FILL_RECT, NodeParams::Json(node)),
             s::Node::Resample2D { .. } => Node::new(&nodes::SCALE, NodeParams::Json(node)),
             s::Node::Constrain (_) => Node::new(&nodes::CONSTRAIN, NodeParams::Json(node)),
             s::Node::ExpandCanvas { .. } => {
-                Node::new(&nodes::EXPAND_CANVAS, NodeParams::Json(node))
+                Node::n(&nodes::EXPAND_CANVAS, NodeParams::Json(node))
             },
             s::Node::WhiteBalanceHistogramAreaThresholdSrgb { ..} => {
-                Node::new(&nodes::WHITE_BALANCE_SRGB, NodeParams::Json(node))
+                Node::n(&nodes::WHITE_BALANCE_SRGB, NodeParams::Json(node))
             },
             s::Node::ColorMatrixSrgb { ..} => {
-                Node::new(&nodes::COLOR_MATRIX_SRGB, NodeParams::Json(node))
+                Node::n(&nodes::COLOR_MATRIX_SRGB, NodeParams::Json(node))
             },
             s::Node::ColorFilterSrgb { ..} => {
-                Node::new(&nodes::COLOR_FILTER_SRGB, NodeParams::Json(node))
+                Node::n(&nodes::COLOR_FILTER_SRGB, NodeParams::Json(node))
             },
 
         }
