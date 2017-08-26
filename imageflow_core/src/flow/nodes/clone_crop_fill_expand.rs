@@ -325,7 +325,7 @@ impl NodeDefOneInputExpand for CropWhitespaceDef {
     fn estimate(&self, p: &NodeParams, input: FrameEstimate) -> NResult<FrameEstimate> {
         Ok((FrameEstimate::Impossible))
     }
-//TODO: audit, and/or mark as risky
+//TODO: mark as risky
     fn expand(&self, ctx: &mut OpCtxMut, ix: NodeIndex, p: NodeParams, b: FrameInfo) -> NResult<()> {
         // detect bounds, increase, and replace with crop
         if let NodeParams::Json(s::Node::CropWhitespace { threshold, percent_padding }) = p {
@@ -334,6 +334,12 @@ impl NodeDefOneInputExpand for CropWhitespaceDef {
                 NodeResult::Frame(b) => {
                     unsafe {
                         let rect = ::ffi::detect_content(ctx.c.flow_c(), b, threshold);
+                        if rect == Rect::failure(){
+                            return Err(nerror!(ErrorKind::CError(c.error().c_error()), "Failed to complete whitespace detection"));
+                        }
+                        if rect.x2 <= rect.x1 || rect.y2 <= rect.y1{
+                            return Err(nerror!(ErrorKind::InvalidState, "Whitespace detection returned invalid rectangle"));
+                        }
                         let padding = (percent_padding * (rect.x2 - rect.x1 + rect.y2 - rect.y1) as f32 / 2f32).ceil() as i32;
                         Ok((cmp::max(0, rect.x1 - padding) as u32, cmp::max(0, rect.y1 - padding) as u32,
                             cmp::min((*b).w as i32, rect.x2 + padding) as u32, cmp::min((*b).h as i32, rect.y2 + padding) as u32))

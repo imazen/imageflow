@@ -301,6 +301,11 @@ pub trait NodeDefMutateBitmap{
 //
 //}
 
+// estimates pass through
+// estimates that invalidate graph by telling the decoder
+// free expansions
+// expansions that execute code
+
 pub trait NodeDef: ::std::fmt::Debug{
 
     fn as_one_input_expand(&self) -> Option<&NodeDefOneInputExpand>{
@@ -318,7 +323,7 @@ pub trait NodeDef: ::std::fmt::Debug{
         let convenience_fqn = self.as_one_input_expand().map(|n| n.fqn())
             .or(self.as_one_input_one_canvas().map(|n| n.fqn()))
             .or(self.as_one_mutate_bitmap().map(|n| n.fqn()));
-        unimplemented!();
+        convenience_fqn.unwrap_or_else(|| unimplemented!())
     }
     fn name(&self) -> &'static str{
         self.fqn().split_terminator('.').next_back().expect("Node fn fqn() was empty. Value is required.")

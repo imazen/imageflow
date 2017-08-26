@@ -24,18 +24,6 @@ fn default_build_config(debug: bool) -> s::Build001Config {
 const DEBUG_GRAPH: bool = false;
 const POPULATE_CHECKSUMS: bool = false;
 
-
-/// Creates a static, null-terminated Rust string, and
-/// returns a ` *const libc::c_char` pointer to it.
-///
-/// Useful for API invocations that require a static C string
-
-macro_rules! static_char {
-    ($lit:expr) => {
-        concat!($lit, "\0").as_ptr() as *const libc::c_char
-    }
-}
-
 fn smoke_test(input: Option<s::IoEnum>, output: Option<s::IoEnum>,  debug: bool, steps: Vec<s::Node>){
     let mut io_list = Vec::new();
     if input.is_some() {

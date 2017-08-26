@@ -139,7 +139,14 @@ impl<'a, 'b> Engine<'a, 'b> where 'a: 'b {
         }
 
         self.notify_graph_complete()?;
-
+//
+//        // For debugging test performance
+//        for w in self.g.node_weights_mut(){
+//            let ms = w.cost.wall_ns / 1000;
+//            //eprint!("{:?}:", w.def);
+//            eprint!("{}:{}ms ", w.def.name(), ms);
+//        }
+//        eprintln!();
 
         Ok(())
     }
