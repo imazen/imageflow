@@ -193,7 +193,7 @@ impl ServerInstance{
         c.execute_callback(all_args, false,
                            |child: &mut std::process::Child| -> std::result::Result<(), ::imageflow_helpers::fetching::FetchError> {
 
-                               ::std::thread::sleep_ms(500);
+                               ::std::thread::sleep(::std::time::Duration::from_millis(500));
                                // Server may not be running
                                instance.hello()?;
 
@@ -310,10 +310,10 @@ fn test_https(context: ProcTestContext){
     {
         let c = context.subfolder_context("https_demo"); //stuck on port 39876
         c.subfolder_context("demo");
-        let (po, callback_result) = ServerInstance::run(&c, Proto::Https, vec!["--demo", "--data-dir=."], | server | {
+        let (_, callback_result) = ServerInstance::run(&c, Proto::Https, vec!["--demo", "--data-dir=."], | server | {
             let url = server.url_for("/ir4/proxy_unsplash/photo-1422493757035-1e5e03968f95?width=100");
             let bytes = fetch(&url, Some(FetchConfig{custom_ca_trust_file: server.trust_ca_file.clone(), read_error_body: Some(true) })).expect(&url).bytes;
-            let info = fc::clients::stateless::LibClient {}.get_image_info(&bytes).expect("Image response should be valid");
+            let _ = fc::clients::stateless::LibClient {}.get_image_info(&bytes).expect("Image response should be valid");
 
             //assert_eq!(server.get_status("/ir4/proxy_unsplash/notthere.jpg")?, hyper::status::StatusCode::NotFound);
             Ok(())
@@ -335,9 +335,9 @@ fn run_server_test_ir4_heavy(){
         c.exec("diagnose --show-compilation-info").expect_status_code(Some(0));
         c.create_blank_image_here("eh", 100,100, s::EncoderPreset::libpng32());
 
-        let mut params = vec!["--data-dir=.", "--mount=/local/:ir4_local:./"];
+        let params = vec!["--data-dir=.", "--mount=/local/:ir4_local:./"];
         let (po, callback_result) = ServerInstance::run(&c, Proto::Http, params , | server | {
-            for ix in 1..20{
+            for _ in 1..20{
                 assert_valid_image(&server.url_for("/local/eh.png?width=100"));
             }
             Ok(())
