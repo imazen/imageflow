@@ -770,7 +770,7 @@ impl Framewise {
                      Node::CreateCanvas {
                          w: 200,
                          h: 200,
-                         format: PixelFormat::Bgra32,
+                         format: PixelFormat::Bgr32,
                          color: Color::Transparent,
                      });
         nodes.insert("2".to_owned(),
