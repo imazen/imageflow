@@ -121,7 +121,7 @@ impl NodeDefOneInputExpand for ConstrainDef{
                 })
             })
         }else{
-            Err(nerror!(ErrorKind::NodeParamsMismatch, "Need Constrain, got {:?}", params))
+            Err(nerror!(::ErrorKind::NodeParamsMismatch, "Need Constrain, got {:?}", params))
         }
     }
 
@@ -167,7 +167,7 @@ impl NodeDefOneInputExpand for ConstrainDef{
             }
             Ok(())
         } else {
-            Err(nerror!(ErrorKind::NodeParamsMismatch, "Need Constrain, got {:?}", params))
+            Err(nerror!(::ErrorKind::NodeParamsMismatch, "Need Constrain, got {:?}", params))
         }
     }
 }
@@ -257,7 +257,7 @@ impl NodeDef for CommandStringDef{
         if let NodeParams::Json(s::Node::CommandString { kind, value, decode, encode }) = params_copy {
             if let Some(d_id) = decode {
                 if has_parent {
-                    return Err(nerror!(ErrorKind::InvalidNodeParams, "CommandString must either have decode: null or have no parent nodes. Specifying a value for decode creates a new decoder node."));
+                    return Err(nerror!(::ErrorKind::InvalidNodeParams, "CommandString must either have decode: null or have no parent nodes. Specifying a value for decode creates a new decoder node."));
                 }
                 let decode_node = ::imageflow_riapi::ir4::Ir4Translate {
                     i: ::imageflow_riapi::ir4::Ir4Command::QueryString(value.to_owned()),
@@ -270,7 +270,7 @@ impl NodeDef for CommandStringDef{
                 ]);
             } else {
                 if !has_parent {
-                    return Err(nerror!(ErrorKind::InvalidNodeParams,"CommandString must have a parent node unless 'decode' has a numeric value. Otherwise it has no image source. "));
+                    return Err(nerror!(::ErrorKind::InvalidNodeParams,"CommandString must have a parent node unless 'decode' has a numeric value. Otherwise it has no image source. "));
                 }
                 ctx.replace_node(ix, vec![
                     Node::new(&EXPANDING_COMMAND_STRING, params)
@@ -278,7 +278,7 @@ impl NodeDef for CommandStringDef{
             }
             Ok(())
         } else {
-            Err(nerror!(ErrorKind::NodeParamsMismatch, "Need Constrain, got {:?}", params))
+            Err(nerror!(::ErrorKind::NodeParamsMismatch, "Need Constrain, got {:?}", params))
         }
     }
 }

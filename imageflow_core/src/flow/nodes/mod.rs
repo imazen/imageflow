@@ -5,6 +5,7 @@ use petgraph::EdgeDirection;
 use petgraph::visit::EdgeRef;
 use std::error::Error;
 use std::fmt;
+
 mod rotate_flip_transpose;
 mod clone_crop_fill_expand;
 mod scale_render;
@@ -22,9 +23,11 @@ mod internal_prelude {
     pub use ::internal_prelude::works_everywhere::*;
     pub use petgraph::EdgeDirection;
     pub use super::*;
-    pub use ::{Context, Job};
+    #[macro_use]
+    pub use super::super::*;
+    pub use ::{Context, Job, NResult, NodeError};
 }
-
+use ::{Context, Job, NResult, NodeError};
 extern crate imageflow_types as s;
 pub use self::clone_crop_fill_expand::CLONE;
 pub use self::clone_crop_fill_expand::COPY_RECT;
@@ -65,12 +68,12 @@ use super::definitions::*;
 #[test]
 fn test_err() {
 
-    let e = nerror!(ErrorKind::BitmapPointerNull);
+    let e = nerror!(::ErrorKind::BitmapPointerNull);
     assert_eq!(e.kind, ErrorKind::BitmapPointerNull);
     assert!(format!("{}",&e).starts_with("NodeError BitmapPointerNull at"));
-    let e = nerror!(ErrorKind::BitmapPointerNull, "hi");
+    let e = nerror!(::ErrorKind::BitmapPointerNull, "hi");
     assert!(format!("{}",&e).starts_with("NodeError BitmapPointerNull: hi at"));
-    let e = nerror!(ErrorKind::BitmapPointerNull, "hi {}", 1);
+    let e = nerror!(::ErrorKind::BitmapPointerNull, "hi {}", 1);
     assert!(format!("{}",&e).starts_with("NodeError BitmapPointerNull: hi 1 at"));
 }
 
@@ -111,7 +114,7 @@ impl<'c> OpCtxMut<'c> {
         if let Some(ix) = self.first_parent_of_kind(of_node, filter_by_kind){
             Ok(ix)
         }else {
-            Err(nerror!(ErrorKind::InvalidOperation, "Parent {:?} node not found", filter_by_kind).with_ctx_mut(self, of_node))
+            Err(nerror!(::ErrorKind::InvalidOperation, "Parent {:?} node not found", filter_by_kind).with_ctx_mut(self, of_node))
         }
     }
 
@@ -205,7 +208,7 @@ impl<'c> OpCtxMut<'c> {
         if let  FrameEstimate::Some(info) = est{
             Ok(info)
         } else {
-            Err(nerror!(ErrorKind::InvalidOperation, "Parent {:?} node lacks FrameEstimate::Some (required for expand/execute). Value is {:?}", filter_by_kind, est).with_ctx_mut(self, ix))
+            Err(nerror!(::ErrorKind::InvalidOperation, "Parent {:?} node lacks FrameEstimate::Some (required for expand/execute). Value is {:?}", filter_by_kind, est).with_ctx_mut(self, ix))
         }
     }
     pub fn frame_est_from(&self, ix: NodeIndex, filter_by_kind: EdgeKind) -> NResult<FrameEstimate> {
@@ -213,7 +216,7 @@ impl<'c> OpCtxMut<'c> {
 
         let est = self.graph.node_weight(parent).expect(loc!("first_parent_of_kind_required provided invalid node index")).frame_est;
         if est == FrameEstimate::None {
-            Err(nerror!(ErrorKind::InvalidOperation, "Parent {:?} node lacks FrameEstimate. Value is {:?}", filter_by_kind, est).with_ctx_mut(self, ix))
+            Err(nerror!(::ErrorKind::InvalidOperation, "Parent {:?} node lacks FrameEstimate. Value is {:?}", filter_by_kind, est).with_ctx_mut(self, ix))
         } else {
             Ok(est)
         }
@@ -226,12 +229,12 @@ impl<'c> OpCtxMut<'c> {
         let result = &self.graph.node_weight(parent).expect(loc!("first_parent_of_kind_required provided invalid node index")).result;
         if let &NodeResult::Frame(bitmap) = result {
             if bitmap.is_null() {
-                Err(nerror!(ErrorKind::BitmapPointerNull, "Parent {:?} node has NodeResult::Frame(null)", filter_by_kind).with_ctx_mut(self, ix))
+                Err(nerror!(::ErrorKind::BitmapPointerNull, "Parent {:?} node has NodeResult::Frame(null)", filter_by_kind).with_ctx_mut(self, ix))
             } else {
                 Ok(bitmap)
             }
         }else{
-            Err(nerror!(ErrorKind::InvalidOperation, "Parent {:?} node lacks NodeResult::Frame(bitmap). Value is {:?}", filter_by_kind, result).with_ctx_mut(self, ix))
+            Err(nerror!(::ErrorKind::InvalidOperation, "Parent {:?} node lacks NodeResult::Frame(bitmap). Value is {:?}", filter_by_kind, result).with_ctx_mut(self, ix))
         }
     }
     pub fn consume_parent_result(&mut self, ix: NodeIndex, filter_by_kind: EdgeKind) -> NResult<()> {
@@ -242,9 +245,9 @@ impl<'c> OpCtxMut<'c> {
             if let NodeResult::Frame(bitmap) = weight.result {
                 Ok(())
             } else if let NodeResult::Consumed = weight.result {
-                Err(nerror!(ErrorKind::InvalidOperation, "Parent {:?} node's result has already been consumed", filter_by_kind).with_ctx_mut(self, ix))
+                Err(nerror!(::ErrorKind::InvalidOperation, "Parent {:?} node's result has already been consumed", filter_by_kind).with_ctx_mut(self, ix))
             } else {
-                Err(nerror!(ErrorKind::InvalidOperation, "Parent {:?} node's result cannot be consumed. Value is {:?}", filter_by_kind, weight.result).with_ctx_mut(self, ix))
+                Err(nerror!(::ErrorKind::InvalidOperation, "Parent {:?} node's result cannot be consumed. Value is {:?}", filter_by_kind, weight.result).with_ctx_mut(self, ix))
             }
         };
         if result.is_ok(){

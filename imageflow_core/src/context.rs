@@ -69,6 +69,9 @@ impl Context {
         self.c_ctx
     }
 
+    pub fn build_handler(&mut self) -> BuildHandler{
+        BuildHandler::from_context(self)
+    }
     pub fn message(&mut self, method: &str, json: &[u8]) -> Result<JsonResponse> {
         ::context_methods::CONTEXT_ROUTER.invoke(self, method, json)
     }
@@ -351,6 +354,10 @@ impl ErrorBuffer{
 
 
 
+
+
+
+
 }
 impl Drop for Context {
     /// Used by abi; should not panic
@@ -362,5 +369,54 @@ impl Drop for Context {
         }
         self.c_ctx = ptr::null_mut();
         self.error.borrow_mut().c_ctx = ptr::null_mut();
+    }
+}
+
+pub struct BuildHandler<'a> {
+    use_context: Option<&'a Context>,
+}
+
+
+impl<'a> BuildHandler<'a> {
+    pub fn new() -> BuildHandler < 'static > {
+        BuildHandler { use_context: None }
+    }
+
+    pub fn from_context(context: & 'a mut Context) -> BuildHandler < 'a > {
+        BuildHandler { use_context: Some(context) }
+    }
+
+    pub fn build_1( & self, task: s::Build001) -> Result < s::ResponsePayload > {
+        if self.use_context.is_none() {
+            let ctx =::Context::create().unwrap();
+            self.build_inner( & ctx, task)
+        } else {
+            self.build_inner( self.use_context.unwrap(), task)
+        }
+    }
+
+
+    fn build_inner( & self, ctx: & Context, parsed: s::Build001) -> Result <s::ResponsePayload > {
+        let mut g =::parsing::GraphTranslator::new().translate_framewise(parsed.framewise) ?;
+
+
+        let mut job = ctx.create_job();
+
+        if let Some(s::Build001Config { graph_recording, .. }) = parsed.builder_config {
+            if let Some(r) = graph_recording {
+                job.configure_graph_recording(r);
+            }
+        }
+
+
+        ::parsing::IoTranslator::new(ctx).add_to_job( &mut * job, parsed.io.clone());
+
+        ::flow::execution_engine::Engine::create(ctx, & mut job, & mut g).execute() ?;
+
+
+        // TODO: Question, should JSON endpoints populate the Context error stacktrace when something goes wrong? Or populate both (except for OOM).
+
+
+        Ok(s::ResponsePayload::BuildResult(s::JobResult { encodes: job.collect_augmented_encode_results( & g, &parsed.io) }))
     }
 }

@@ -40,7 +40,7 @@ impl NodeDefOneInputExpand for ApplyOrientationDef{
                 })
             })
         } else {
-            Err(nerror!(ErrorKind::NodeParamsMismatch, "Need ApplyOrientation, got {:?}", p))
+            Err(nerror!(::ErrorKind::NodeParamsMismatch, "Need ApplyOrientation, got {:?}", p))
         }
     }
 
@@ -62,7 +62,7 @@ impl NodeDefOneInputExpand for ApplyOrientationDef{
                                  .collect());
             Ok(())
         } else {
-            Err(nerror!(ErrorKind::NodeParamsMismatch, "Need ApplyOrientation, got {:?}", p))
+            Err(nerror!(::ErrorKind::NodeParamsMismatch, "Need ApplyOrientation, got {:?}", p))
         }
     }
 }
@@ -171,7 +171,7 @@ impl NodeDefMutateBitmap for FlipVerticalMutNodeDef{
     fn mutate(&self, c: &Context, bitmap: &mut BitmapBgra,  p: &NodeParams) -> NResult<()>{
         unsafe {
             if !::ffi::flow_bitmap_bgra_flip_vertical(c.flow_c(), bitmap as *mut BitmapBgra){
-                return Err(nerror!(ErrorKind::CError(c.error().c_error())))
+                return Err(nerror!(::ErrorKind::CError(c.error().c_error())))
             }
         }
         Ok(())
@@ -191,7 +191,7 @@ impl NodeDefMutateBitmap for FlipHorizontalMutNodeDef{
     fn mutate(&self, c: &Context, bitmap: &mut BitmapBgra,  p: &NodeParams) -> NResult<()>{
         unsafe {
             if !::ffi::flow_bitmap_bgra_flip_horizontal(c.flow_c(), bitmap as *mut BitmapBgra){
-                return Err(nerror!(ErrorKind::CError(c.error().c_error())))
+                return Err(nerror!(::ErrorKind::CError(c.error().c_error())))
             }
         }
         Ok(())

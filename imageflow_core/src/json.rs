@@ -127,6 +127,19 @@ impl JsonResponse {
         }
     }
 
+    pub fn from_result(r: Result<s::ResponsePayload>) -> JsonResponse{
+        match r {
+            Ok(payload) => {
+                JsonResponse::success_with_payload(payload) //How about failures with payloads!?
+            }
+            Err(error) => {
+                let message = format!("{}", error);
+                JsonResponse::fail_with_message(500,
+                                                   &message)
+            }
+        }
+    }
+
     pub fn status_2xx(&self) -> bool {
         self.status_code >= 200 && self.status_code < 300
     }

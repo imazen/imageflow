@@ -18,7 +18,7 @@ fn create_context_router() -> MethodRouter<'static, Context> {
     //    ));
     r.add_responder("v0.1/build",
                     Box::new(move |context: &mut Context, parsed: s::Build001| {
-                        BuildHandler::from_context(context).build_1(parsed)
+                        ::context::BuildHandler::from_context(context).build_1(parsed)
                     }));
     r.add("brew_coffee",
           Box::new(move |context: &mut Context, bytes: &[u8]| Ok(JsonResponse::teapot())));
@@ -66,57 +66,6 @@ fn document_message() -> String {
     s += "\n\n";
 
     s
-}
-
-
-
-pub struct BuildHandler<'a> {
-    use_context: Option<&'a Context>,
-}
-
-
-impl<'a> BuildHandler<'a> {
-    pub fn new() -> BuildHandler<'static> {
-        BuildHandler { use_context: None }
-    }
-
-    pub fn from_context(context: &'a mut Context) -> BuildHandler<'a> {
-        BuildHandler { use_context: Some(context) }
-    }
-
-    pub fn build_1(&self, task: s::Build001) -> Result<s::ResponsePayload> {
-        if self.use_context.is_none() {
-            let ctx = ::Context::create().unwrap();
-            self.build_inner(&ctx, task)
-        } else {
-            self.build_inner(self.use_context.unwrap(), task)
-        }
-    }
-
-
-    fn build_inner(&self, ctx: &Context, parsed: s::Build001) -> Result<s::ResponsePayload> {
-        let mut g = ::parsing::GraphTranslator::new().translate_framewise(parsed.framewise)?;
-
-
-        let mut job = ctx.create_job();
-
-        if let Some(s::Build001Config { graph_recording, .. }) = parsed.builder_config {
-            if let Some(r) = graph_recording {
-                job.configure_graph_recording(r);
-            }
-        }
-
-
-        IoTranslator::new(ctx).add_to_job(&mut *job, parsed.io.clone());
-
-        ::flow::execution_engine::Engine::create(ctx, &mut job, &mut g).execute()?;
-
-
-        // TODO: Question, should JSON endpoints populate the Context error stacktrace when something goes wrong? Or populate both (except for OOM).
-
-
-        Ok(s::ResponsePayload::BuildResult(s::JobResult { encodes: job.collect_augmented_encode_results(&g, &parsed.io) }))
-    }
 }
 
 // #[test]
@@ -184,6 +133,6 @@ fn test_handler() {
         framewise: s::Framewise::Steps(steps),
     };
 
-    let handler = BuildHandler::new();
+    let handler = ::context::BuildHandler::new();
     let response = handler.build_1(build);
 }

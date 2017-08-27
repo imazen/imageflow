@@ -16,20 +16,20 @@ impl CreateCanvasNodeDef{
             let max_dimension = 2000000; // 2million
 
             if w < 1 || w > max_dimension {
-                Err(nerror!(ErrorKind::InvalidCoordinates, "canvas width ({}) must be greater than zero and less than {}.", w, max_dimension))
+                Err(nerror!(::ErrorKind::InvalidCoordinates, "canvas width ({}) must be greater than zero and less than {}.", w, max_dimension))
             } else if h < 1 || h > max_dimension {
-                Err(nerror!(ErrorKind::InvalidCoordinates, "canvas height ({}) must be greater than zero and less than {}.", w, max_dimension))
+                Err(nerror!(::ErrorKind::InvalidCoordinates, "canvas height ({}) must be greater than zero and less than {}.", w, max_dimension))
             } else if h * w > 100000000 {
-                Err(nerror!(ErrorKind::InvalidCoordinates, "canvas size ({}) cannot exceed 100 megapixels.", w))
+                Err(nerror!(::ErrorKind::InvalidCoordinates, "canvas size ({}) cannot exceed 100 megapixels.", w))
             } else if format == ffi::PixelFormat::Gray8 {
-                Err(nerror!(ErrorKind::InvalidNodeParams, "canvas format cannot be grayscale; single-channel grayscale bitmaps are not yet supported in Imageflow"))
+                Err(nerror!(::ErrorKind::InvalidNodeParams, "canvas format cannot be grayscale; single-channel grayscale bitmaps are not yet supported in Imageflow"))
             }else if format != ffi::PixelFormat::Bgr24 && format != ffi::PixelFormat::Bgr32 && format != ffi::PixelFormat::Bgra32{
-                Err(nerror!(ErrorKind::InvalidNodeParams, "canvas format {:?} not recognized", format))
+                Err(nerror!(::ErrorKind::InvalidNodeParams, "canvas format {:?} not recognized", format))
             } else {
                 Ok((w,h,format,color.clone()))
             }
         }else {
-            Err(nerror!(ErrorKind::NodeParamsMismatch))
+            Err(nerror!(::ErrorKind::NodeParamsMismatch))
         }
     }
 }
@@ -69,7 +69,7 @@ impl NodeDef for CreateCanvasNodeDef {
                     let ptr =
                         ::ffi::flow_bitmap_bgra_create(flow_pointer, w as i32, h as i32, true, format);
                     if ptr.is_null() {
-                        return Err(nerror!(ErrorKind::CError(ctx.c.error().c_error()), "Failed to allocate {}x{}x{} bitmap ({} bytes). Reduce dimensions or increase RAM.", w, h, format.bytes(), w * h * format.bytes()))
+                        return Err(nerror!(::ErrorKind::CError(ctx.c.error().c_error()), "Failed to allocate {}x{}x{} bitmap ({} bytes). Reduce dimensions or increase RAM.", w, h, format.bytes(), w * h * format.bytes()))
                     }
                     let color_val = color.clone();
                     let color_srgb_argb = color_val.clone().to_u32_bgra().unwrap();
@@ -82,7 +82,7 @@ impl NodeDef for CreateCanvasNodeDef {
                                                             w as u32,
                                                             h as u32,
                                                             color_srgb_argb) {
-                            return Err(nerror!(ErrorKind::CError(ctx.c.error().c_error()), "Failed to fill rectangle"))
+                            return Err(nerror!(::ErrorKind::CError(ctx.c.error().c_error()), "Failed to fill rectangle"))
 
                         }
                         (*ptr).compositing_mode = ::ffi::BitmapCompositingMode::BlendWithMatte;

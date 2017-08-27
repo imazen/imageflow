@@ -7,75 +7,51 @@ use ::internal_prelude::works_everywhere::*;
 use std::any::Any;
 use flow::nodes::*;
 
-// full path
-//macro_rules! function {
-//    () => {{
-//        fn f() {}
-//        fn type_name_of<T>(_: T) -> &'static str {
-//            extern crate core;
-//            unsafe { core::intrinsics::type_name::<T>() }
-//        }
-//        let name = type_name_of(f);
-//        &name[6..name.len() - 4]
-//    }}
-//}
-
-macro_rules! here {
-    () => (
-        CodeLocation{ line: line!(), column: column!(), file: file!(), module: module_path!()}
-    );
-}
-
-macro_rules! loc {
-    () => (
-        concat!(file!(), ":", line!(), ":", column!(), " in ", module_path!())
-    );
-    ($msg:expr) => (
-        concat!($msg, " at\n", file!(), ":", line!(), ":", column!(), " in ", module_path!())
-    );
-}
-
-macro_rules! nerror {
-    ($kind:expr) => (
-        NodeError{
-            kind: $kind,
-            message: format!("NodeError {:?}", $kind),
-            at: ::smallvec::SmallVec::new(),
-            node: None
-        }.at(here!())
-    );
-    ($kind:expr, $fmt:expr) => (
-        NodeError{
-            kind: $kind,
-            message:  format!(concat!("NodeError {:?}: ",$fmt ), $kind,),
-            at: ::smallvec::SmallVec::new(),
-            node: None
-        }.at(here!())
-    );
-    ($kind:expr, $fmt:expr, $($arg:tt)*) => (
-        NodeError{
-            kind: $kind,
-            message:  format!(concat!("NodeError {:?}: ", $fmt), $kind, $($arg)*),
-            at: ::smallvec::SmallVec::new(),
-            node: None
-        }.at(here!())
-    );
-}
-
-macro_rules! unimpl {
-    () => (
-        NodeError{
-            kind: ErrorKind::MethodNotImplemented,
-            message: String::new(),
-            at: ::smallvec::SmallVec::new(),
-            node: None
-        }.at(here!())
-    );
-}
-
 pub type Graph = Dag<Node, EdgeKind>;
 
 
+#[derive(Debug, Clone, PartialEq)]
+pub struct NodeDebugInfo{
+    pub stable_id: i32,
+    pub params: NodeParams,
+    pub index: NodeIndex
+}
+
+
+impl NodeDebugInfo {
+    fn from_ctx(ctx: &OpCtx, ix: NodeIndex) -> Option<NodeDebugInfo> {
+        ctx.graph.node_weight(ix).map(|w|
+            NodeDebugInfo{
+                stable_id: w.stable_id,
+                params: w.params.clone(),
+                index: ix
+            }
+        )
+    }
+    fn from_ctx_mut(ctx: &OpCtxMut, ix: NodeIndex) -> Option<NodeDebugInfo> {
+        ctx.graph.node_weight(ix).map(|w|
+            NodeDebugInfo{
+                stable_id: w.stable_id,
+                params: w.params.clone(),
+                index: ix
+            }
+        )
+    }
+}
+
+impl NodeError{
+    fn add_node_info(mut self, info: Option<NodeDebugInfo>) -> NodeError{
+        self.node = info;
+        self
+    }
+
+    pub fn with_ctx(self, ctx: &OpCtx, ix: NodeIndex ) -> NodeError {
+        self.add_node_info(NodeDebugInfo::from_ctx(ctx, ix))
+    }
+    pub fn with_ctx_mut(self, ctx: &OpCtxMut, ix: NodeIndex ) -> NodeError {
+        self.add_node_info(NodeDebugInfo::from_ctx_mut(ctx, ix))
+    }
+}
 #[derive(Copy, Clone,Debug,PartialEq)]
 pub enum EdgesIn {
     NoInput,
@@ -139,122 +115,6 @@ pub struct NodeDefinition {
 }
 
 
-
-
-#[derive(Debug,  Clone, PartialEq)]
-pub enum ErrorKind{
-    NodeParamsMismatch,
-    BitmapPointerNull,
-    InvalidCoordinates,
-    InvalidNodeParams,
-    MethodNotImplemented,
-    ValidationNotImplemented,
-    InvalidNodeConnections,
-    InvalidOperation,
-    InvalidState,
-    CError(FlowErr)
-
-}
-#[derive(Debug, Copy, Clone, PartialEq)]
-pub struct CodeLocation{
-    pub line: u32,
-    pub column: u32,
-    pub file: &'static str,
-    pub module: &'static str
-}
-
-#[derive(Debug, Clone, PartialEq)]
-pub struct NodeDebugInfo{
-    pub stable_id: i32,
-    pub params: NodeParams,
-    pub index: NodeIndex
-}
-impl NodeDebugInfo {
-    fn from_ctx(ctx: &OpCtx, ix: NodeIndex) -> Option<NodeDebugInfo> {
-        ctx.graph.node_weight(ix).map(|w|
-            NodeDebugInfo{
-                stable_id: w.stable_id,
-                params: w.params.clone(),
-                index: ix
-            }
-        )
-    }
-    fn from_ctx_mut(ctx: &OpCtxMut, ix: NodeIndex) -> Option<NodeDebugInfo> {
-        ctx.graph.node_weight(ix).map(|w|
-            NodeDebugInfo{
-                stable_id: w.stable_id,
-                params: w.params.clone(),
-                index: ix
-            }
-        )
-    }
-}
-
-#[derive(Debug, Clone, PartialEq)]
-pub struct NodeError{
-    pub kind: ErrorKind,
-    pub message: String,
-    pub at: ::smallvec::SmallVec<[CodeLocation;4]>,
-    pub node: Option<NodeDebugInfo>
-}
-
-
-impl ::std::error::Error for NodeError {
-    fn description(&self) -> &str {
-        if self.message.is_empty() {
-            "Node Error (no message)"
-        }else{
-            &self.message
-        }
-    }
-
-}
-impl NodeError{
-    fn add_node_info(mut self, info: Option<NodeDebugInfo>) -> NodeError{
-        self.node = info;
-        self
-    }
-    pub fn with_ctx(self, ctx: &OpCtx, ix: NodeIndex ) -> NodeError {
-        self.add_node_info(NodeDebugInfo::from_ctx(ctx, ix))
-    }
-    pub fn with_ctx_mut(self, ctx: &OpCtxMut, ix: NodeIndex ) -> NodeError {
-        self.add_node_info(NodeDebugInfo::from_ctx_mut(ctx, ix))
-    }
-
-    pub fn at(mut self, c: CodeLocation ) -> NodeError {
-        self.at.push(c);
-        self
-    }
-}
-
-impl fmt::Display for NodeError {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        if self.message.is_empty() {
-            write!(f, "Error {:?}: at\n", self.kind)?;
-        }else{
-            write!(f, "{} at\n", self.message)?;
-        }
-        let url = if::imageflow_types::build_env_info::BUILT_ON_CI{
-            let repo = ::imageflow_types::build_env_info::BUILD_ENV_INFO.get("CI_REPO").unwrap_or(&Some("imazen/imageflow")).unwrap_or("imazen/imageflow");
-            let commit =  ::imageflow_types::build_env_info::GIT_COMMIT;
-            Some(format!("https://github.com/{}/blob/{}/", repo, commit))
-        }else { None };
-
-        for recorded_frame in &self.at{
-            write!(f, "{}:{}:{} in {}\n", recorded_frame.file, recorded_frame.line, recorded_frame.column, recorded_frame.module)?;
-
-            if let Some(ref url) = url{
-                write!(f, "{}{}#L{}\n",url, recorded_frame.file, recorded_frame.line)?;
-            }
-        }
-        if let Some(ref n) = self.node{
-            write!(f, "Active node:\n{:#?}\n", n)?;
-        }
-        Ok(())
-    }
-}
-
-pub type NResult<T> = ::std::result::Result<T, NodeError>;
 
 // alternate traits for common classes of nodes
 pub trait NodeDefOneInputExpand {

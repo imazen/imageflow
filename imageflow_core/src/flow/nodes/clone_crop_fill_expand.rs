@@ -29,11 +29,13 @@ impl NodeDefOneInputOneCanvas for CopyRectNodeDef{
 
     fn render(&self, c: &Context, canvas: &mut BitmapBgra, input: &mut BitmapBgra,  p: &NodeParams) -> NResult<()> {
         if let &NodeParams::Json(s::Node::CopyRectToCanvas { from_x, from_y, width, height, x, y }) = p {
+
+
             if input.fmt != canvas.fmt {
-                return Err(nerror!(ErrorKind::InvalidNodeConnections, "Canvas pixel format {:?} differs from Input pixel format {:?}.", input.fmt, canvas.fmt));
+                return Err(nerror!(::ErrorKind::InvalidNodeConnections, "Canvas pixel format {:?} differs from Input pixel format {:?}.", input.fmt, canvas.fmt));
             }
             if input == canvas {
-                return Err(nerror!(ErrorKind::InvalidNodeConnections, "Canvas and Input are the same bitmap!"));
+                return Err(nerror!(::ErrorKind::InvalidNodeConnections, "Canvas and Input are the same bitmap!"));
             }
 
             if input.w <= from_x || input.h <= from_y ||
@@ -41,7 +43,7 @@ impl NodeDefOneInputOneCanvas for CopyRectNodeDef{
                 input.h < from_y + height ||
                 canvas.w < x + width ||
                 canvas.h < y + height {
-                return Err(nerror!(ErrorKind::InvalidNodeParams, "Invalid coordinates. Canvas is {}x{}, Input is {}x{}, Params provided: {:?}",
+                return Err(nerror!(::ErrorKind::InvalidNodeParams, "Invalid coordinates. Canvas is {}x{}, Input is {}x{}, Params provided: {:?}",
                          canvas.w,
                          canvas.h,
                          input.w,
@@ -75,7 +77,7 @@ impl NodeDefOneInputOneCanvas for CopyRectNodeDef{
             }
             Ok(())
         } else {
-            Err(nerror!(ErrorKind::NodeParamsMismatch, "Need CopyRectToCanvas, got {:?}", p))
+            Err(nerror!(::ErrorKind::NodeParamsMismatch, "Need CopyRectToCanvas, got {:?}", p))
         }
     }
 }
@@ -99,7 +101,7 @@ impl NodeDefMutateBitmap for FillRectNodeDef {
         if let &NodeParams::Json(s::Node::FillRect { x1, x2, y1, y2, ref color }) = p{
 
             if x2 <= x1 || y2 <= y1 || (x1 as i32) < 0 || (y1 as i32) < 0 || x2 > bitmap.w || y2 > bitmap.h{
-               return Err(nerror!(ErrorKind::InvalidCoordinates, "Invalid coordinates for {}x{} bitmap: {:?}", bitmap.w, bitmap.h, p));
+               return Err(nerror!(::ErrorKind::InvalidCoordinates, "Invalid coordinates for {}x{} bitmap: {:?}", bitmap.w, bitmap.h, p));
             }
             unsafe {
 
@@ -110,7 +112,7 @@ impl NodeDefMutateBitmap for FillRectNodeDef {
                                                     x2,
                                                     y2,
                                                     color.clone().to_u32_bgra().unwrap()) {
-                    return Err(nerror!(ErrorKind::CError(c.error().c_error()), "Failed to fill rectangle"))
+                    return Err(nerror!(::ErrorKind::CError(c.error().c_error()), "Failed to fill rectangle"))
                 }else{
                     Ok(())
                 }
@@ -118,7 +120,7 @@ impl NodeDefMutateBitmap for FillRectNodeDef {
             }
 
         } else {
-            Err(nerror!(ErrorKind::NodeParamsMismatch, "Need FillRect, got {:?}", p))
+            Err(nerror!(::ErrorKind::NodeParamsMismatch, "Need FillRect, got {:?}", p))
         }
     }
 }
@@ -184,7 +186,7 @@ impl NodeDefOneInputExpand for ExpandCanvasDef{
                 })
             })
         } else {
-            Err(nerror!(ErrorKind::NodeParamsMismatch, "Need ExpandCanvas, got {:?}", p))
+            Err(nerror!(::ErrorKind::NodeParamsMismatch, "Need ExpandCanvas, got {:?}", p))
         }
     }
 
@@ -217,7 +219,7 @@ impl NodeDefOneInputExpand for ExpandCanvasDef{
             ctx.replace_node_with_existing(ix, copy);
             Ok(())
         } else {
-            Err(nerror!(ErrorKind::NodeParamsMismatch, "Need ExpandCanvas, got {:?}", p))
+            Err(nerror!(::ErrorKind::NodeParamsMismatch, "Need ExpandCanvas, got {:?}", p))
         }
     }
 }
@@ -230,10 +232,10 @@ impl CropMutNodeDef {
     fn est_validate(&self, p: &NodeParams, input_est: FrameEstimate) -> NResult<FrameEstimate> {
         if let &NodeParams::Json(s::Node::Crop {  x1,  y1,  x2,  y2 }) = p {
             if (x1 as i32) < 0 || (y1 as i32) < 0 || x2 <= x1 || y2 <= y1 {
-                Err(nerror!(ErrorKind::InvalidNodeParams, "Invalid coordinates: {},{} {},{} should describe the top-left and bottom-right corners of a rectangle", x1,y1,x2,y2))
+                Err(nerror!(::ErrorKind::InvalidNodeParams, "Invalid coordinates: {},{} {},{} should describe the top-left and bottom-right corners of a rectangle", x1,y1,x2,y2))
             } else if let FrameEstimate::Some(input) = input_est {
                 if x2 > input.w as u32 || y2 > input.h as u32 {
-                    Err(nerror!(ErrorKind::InvalidNodeParams, "Crop coordinates {},{} {},{} invalid for {}x{} bitmap", x1,y1,x2,y2, input.w, input.h))
+                    Err(nerror!(::ErrorKind::InvalidNodeParams, "Crop coordinates {},{} {},{} invalid for {}x{} bitmap", x1,y1,x2,y2, input.w, input.h))
                 } else {
                     Ok(FrameEstimate::Some(FrameInfo {
                         w: x2 as i32 - x1 as i32,
@@ -246,7 +248,7 @@ impl CropMutNodeDef {
                 Ok(FrameEstimate::None)
             }
         } else {
-            Err(nerror!(ErrorKind::NodeParamsMismatch, "Need Crop, got {:?}", p))
+            Err(nerror!(::ErrorKind::NodeParamsMismatch, "Need Crop, got {:?}", p))
         }
     }
 }
@@ -329,17 +331,17 @@ impl NodeDefOneInputExpand for CropWhitespaceDef {
                     unsafe {
                         let rect = ::ffi::detect_content(ctx.c.flow_c(), b, threshold);
                         if rect == ::ffi::Rect::failure(){
-                            return Err(nerror!(ErrorKind::CError(ctx.c.error().c_error()), "Failed to complete whitespace detection"));
+                            return Err(nerror!(::ErrorKind::CError(ctx.c.error().c_error()), "Failed to complete whitespace detection"));
                         }
                         if rect.x2 <= rect.x1 || rect.y2 <= rect.y1{
-                            return Err(nerror!(ErrorKind::InvalidState, "Whitespace detection returned invalid rectangle"));
+                            return Err(nerror!(::ErrorKind::InvalidState, "Whitespace detection returned invalid rectangle"));
                         }
                         let padding = (percent_padding * (rect.x2 - rect.x1 + rect.y2 - rect.y1) as f32 / 2f32).ceil() as i32;
                         Ok((cmp::max(0, rect.x1 - padding) as u32, cmp::max(0, rect.y1 - padding) as u32,
                             cmp::min((*b).w as i32, rect.x2 + padding) as u32, cmp::min((*b).h as i32, rect.y2 + padding) as u32))
                     }
                 },
-                other => { Err(nerror!(ErrorKind::InvalidOperation, "Cannot CropWhitespace without a parent bitmap; got {:?}", other)) }
+                other => { Err(nerror!(::ErrorKind::InvalidOperation, "Cannot CropWhitespace without a parent bitmap; got {:?}", other)) }
             }?;
             ctx.replace_node(ix, vec![
                 Node::n(&CROP,
@@ -349,7 +351,7 @@ impl NodeDefOneInputExpand for CropWhitespaceDef {
 
             Ok(())
         } else {
-            Err(nerror!(ErrorKind::NodeParamsMismatch, "Need CropWhitespace, got {:?}", p))
+            Err(nerror!(::ErrorKind::NodeParamsMismatch, "Need CropWhitespace, got {:?}", p))
         }
     }
 }

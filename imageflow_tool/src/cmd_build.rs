@@ -10,6 +10,7 @@ use std::collections::HashMap;
 use std::fs::File;
 use std::path::{Path};
 use std::io::{Write, Read, BufWriter};
+use fc::JsonResponse;
 
 pub enum JobSource {
     JsonFile(String),
@@ -57,7 +58,7 @@ pub enum JobSource {
 pub struct CmdBuild {
 
     job: Result<s::Build001>,
-    response: Option<Result<fc::JsonResponse>>,
+    response: Option<Result<s::ResponsePayload>>,
 }
 
 #[derive(Debug)]
@@ -137,6 +138,19 @@ impl From<fc::FlowError> for CmdError {
         CmdError::FlowError(e)
     }
 }
+
+
+impl std::fmt::Display for CmdError {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        if let &CmdError::FlowError(fc::FlowError::NodeError(ref e)) = self {
+            write!(f, "{}", e)
+        } else {
+            write!(f, "{:#?}", self)
+        }
+
+    }
+}
+
 
 
 fn parse_io_enum(s: &str) -> s::IoEnum {
@@ -396,37 +410,44 @@ impl CmdBuild {
     }
 
     pub fn build_maybe(self) -> CmdBuild {
-
-        if self.job.is_ok() {
-
-            let mut result = Err(CmdError::Incomplete);
-            {
-                if let Ok(ref b) = self.job {
-                    result = CmdBuild::build(&b);
-                }
-            }
-            CmdBuild { response: Some(result), ..self }
+        let response = if let Ok(ref b) = self.job {
+            CmdBuild::build(b.clone())
         } else {
-            self
-        }
+            Err(CmdError::Incomplete)
+        };
+
+
+        CmdBuild { response: Some(response), ..self }
     }
 
 //    pub fn get_modified_recipe<'a>(&'a self) -> &'a Result<s::Build001>{
 //        &self.job
 //    }
 
+    pub fn get_json_response(&self) -> JsonResponse{
+        match &self.response{
+            &Some(Err(CmdError::FlowError(ref e))) => JsonResponse::from_result(Err(e.clone())),
+            &Some(Ok(ref r)) => JsonResponse::from_result(Ok(r.clone())),
+            //Err(CmdError::InvalidJson(e)) => JsonResponse::from_result(fc::Result::Err(fc::FlowError::e))
+            _ => {
+                //TODO: implement serialization for JsonResult
+                unimplemented!();
+            }
+        }
+
+    }
     ///
     /// Write the JSON response (if present) to the given file or STDOUT
     pub fn write_response_maybe(&self, response_file: Option<&str>) -> std::io::Result<()> {
-        if let Some(ref rr) = self.response {
-            if let &Ok(ref r) = rr {
-                if let Some(ref filename) = response_file {
-                    let mut file = BufWriter::new(File::create(filename).unwrap());
-                    file.write(&r.response_json)?;
-                } else {
-                    std::io::stdout().write(&r.response_json)?;
-                }
+        if  self.response.is_some() {
+
+            if let Some(ref filename) = response_file {
+                let mut file = BufWriter::new(File::create(filename).unwrap());
+                file.write(&self.get_json_response().response_json)?;
+            } else {
+                std::io::stdout().write(&self.get_json_response().response_json)?;
             }
+
         }
         Ok(())
     }
@@ -441,17 +462,9 @@ impl CmdBuild {
         if let Some(ref rr) = self.response {
             match *rr {
                 Err(ref e) => {
-                    writeln!(err, "{:?}", e)?;
+                    writeln!(err, "{}", e)?;
                 }
-                Ok(ref response) => {
-                    let happy_json = response.status_code >= 200 && response.status_code < 300;
-                    if !happy_json {
-                        writeln!(err,
-                                 "Job failed with status code {}. Response:\n",
-                                 response.status_code)?;
-                        std::io::stderr().write(&response.response_json)?;
-                    }
-                }
+                Ok(_) => {}
             }
         }
         Ok(())
@@ -464,21 +477,15 @@ impl CmdBuild {
         if let Some(ref rr) = self.response {
             match *rr {
                 Err(ref err) => Some(err.exit_code()),
-                Ok(ref response) => {
-                    match response.status_code {
-                        s if s >= 200 && s < 300 => Some(0),
-                        s if s >= 400 && s < 500 => Some(65), //user error, bad data
-                        _ => Some(70), //internal error
-                    }
-                }
+                Ok(_) => Some(0)
             }
         } else {
             None
         }
     }
 
-    fn build<'a, 'b>(data: &'a s::Build001) -> Result<fc::JsonResponse> {
+    fn build(data: s::Build001) -> Result<s::ResponsePayload> {
         let mut context = fc::Context::create()?;
-        Ok(context.message("v0.1/build", &serde_json::to_vec(data).unwrap())?)
+        Ok(context.build_handler().build_1(data)?)
     }
 }

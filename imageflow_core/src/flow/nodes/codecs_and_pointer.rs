@@ -16,12 +16,12 @@ impl BitmapBgraDef{
         if let &NodeParams::Json(s::Node::FlowBitmapBgraPtr { ptr_to_flow_bitmap_bgra_ptr }) = p {
             let ptr: *mut *mut BitmapBgra = ptr_to_flow_bitmap_bgra_ptr as *mut *mut BitmapBgra;
             if ptr.is_null() {
-                return Err(nerror!(ErrorKind::InvalidNodeParams, "The pointer to the bitmap bgra pointer is null! Must be a valid reference to a pointer's location."));
+                return Err(nerror!(::ErrorKind::InvalidNodeParams, "The pointer to the bitmap bgra pointer is null! Must be a valid reference to a pointer's location."));
             } else {
                 Ok(ptr)
             }
         }else{
-            Err(nerror!(ErrorKind::NodeParamsMismatch, "Need FlowBitmapBgraPtr, got {:?}", p))
+            Err(nerror!(::ErrorKind::NodeParamsMismatch, "Need FlowBitmapBgraPtr, got {:?}", p))
         }
     }
 }
@@ -73,7 +73,7 @@ impl NodeDef for BitmapBgraDef {
         } else {
             unsafe {
                 if (*ptr).is_null() {
-                    return Err(nerror!(ErrorKind::InvalidNodeParams, "When serving as an input node (no parent), FlowBitmapBgraPtr must point to a pointer to a valid BitmapBgra struct."));
+                    return Err(nerror!(::ErrorKind::InvalidNodeParams, "When serving as an input node (no parent), FlowBitmapBgraPtr must point to a pointer to a valid BitmapBgra struct."));
                 }
                 Ok(NodeResult::Frame(*ptr))
             }
@@ -88,7 +88,7 @@ impl NodeDef for BitmapBgraDef {
 //    fn get(&self, p: &NodeParams) -> NResult<(i32, Vec<s::DecoderCommand>)> {
 //        match ctx.weight(ix).params {
 //            NodeParams::Json(s::Node::Decode { io_id, commands }) => Ok(io_id),
-//            _ => Err(nerror!(ErrorKind::NodeParamsMismatch, "Need Decode, got {:?}", p)),
+//            _ => Err(nerror!(::ErrorKind::NodeParamsMismatch, "Need Decode, got {:?}", p)),
 //        }
 //    }
 //}

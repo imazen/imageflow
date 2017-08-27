@@ -1,3 +1,4 @@
+#![feature(concat_idents)]
 #![feature(alloc)]
 #![feature(oom)]
 #![feature(alloc_system)]
@@ -45,6 +46,61 @@ extern crate gif_dispose;
 extern crate smallvec;
 extern crate core;
 
+#[macro_export]
+macro_rules! here {
+    () => (
+        ::CodeLocation{ line: line!(), column: column!(), file: file!(), module: module_path!()}
+    );
+}
+#[macro_export]
+macro_rules! loc {
+    () => (
+        concat!(file!(), ":", line!(), ":", column!(), " in ", module_path!())
+    );
+    ($msg:expr) => (
+        concat!($msg, " at\n", file!(), ":", line!(), ":", column!(), " in ", module_path!())
+    );
+}
+#[macro_export]
+macro_rules! nerror {
+    ($kind:expr) => (
+        NodeError{
+            kind: $kind,
+            message: format!("NodeError {:?}", $kind),
+            at: ::smallvec::SmallVec::new(),
+            node: None
+        }.at(here!())
+    );
+    ($kind:expr, $fmt:expr) => (
+        NodeError{
+            kind: $kind,
+            message:  format!(concat!("NodeError {:?}: ",$fmt ), $kind,),
+            at: ::smallvec::SmallVec::new(),
+            node: None
+        }.at(here!())
+    );
+    ($kind:expr, $fmt:expr, $($arg:tt)*) => (
+        NodeError{
+            kind: $kind,
+            message:  format!(concat!("NodeError {:?}: ", $fmt), $kind, $($arg)*),
+            at: ::smallvec::SmallVec::new(),
+            node: None
+        }.at(here!())
+    );
+}
+#[macro_export]
+macro_rules! unimpl {
+    () => (
+        NodeError{
+            kind: ::ErrorKind::MethodNotImplemented,
+            message: String::new(),
+            at: ::smallvec::SmallVec::new(),
+            node: None
+        }.at(here!())
+    );
+}
+
+
 mod json;
 pub mod flow;
 mod job;
@@ -66,9 +122,9 @@ pub mod clients;
 pub mod ffi;
 pub mod parsing;
 pub mod test_helpers;
-use ::flow::definitions::NodeError;
-
+use std::fmt;
 use std::borrow::Cow;
+use ::petgraph::graph::NodeIndex;
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct FlowErr {
@@ -77,7 +133,7 @@ pub struct FlowErr {
 }
 
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub enum FlowError {
     NullArgument,
     GraphCyclic,
@@ -101,7 +157,7 @@ impl std::fmt::Display for FlowError {
         if let &FlowError::NodeError(ref e) = self {
             write!(f, "{}", e)
         } else {
-            write!(f, "blah{:#?}", self)
+            write!(f, "{:#?}", self)
         }
 
     }
@@ -159,6 +215,100 @@ impl FlowError{
 
 pub type Result<T> = std::result::Result<T, FlowError>;
 
+
+// full path
+//macro_rules! function {
+//    () => {{
+//        fn f() {}
+//        fn type_name_of<T>(_: T) -> &'static str {
+//            extern crate core;
+//            unsafe { core::intrinsics::type_name::<T>() }
+//        }
+//        let name = type_name_of(f);
+//        &name[6..name.len() - 4]
+//    }}
+//}
+
+
+#[derive(Debug,  Clone, PartialEq)]
+pub enum ErrorKind{
+    NodeParamsMismatch,
+    BitmapPointerNull,
+    InvalidCoordinates,
+    InvalidNodeParams,
+    MethodNotImplemented,
+    ValidationNotImplemented,
+    InvalidNodeConnections,
+    InvalidOperation,
+    InvalidState,
+    CError(FlowErr)
+
+}
+#[derive(Debug, Copy, Clone, PartialEq)]
+pub struct CodeLocation{
+    pub line: u32,
+    pub column: u32,
+    pub file: &'static str,
+    pub module: &'static str
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct NodeError{
+    pub kind: ErrorKind,
+    pub message: String,
+    pub at: ::smallvec::SmallVec<[CodeLocation;4]>,
+    pub node: Option<::flow::definitions::NodeDebugInfo>
+}
+
+
+impl ::std::error::Error for NodeError {
+    fn description(&self) -> &str {
+        if self.message.is_empty() {
+            "Node Error (no message)"
+        }else{
+            &self.message
+        }
+    }
+
+}
+impl NodeError{
+
+    pub fn at(mut self, c: CodeLocation ) -> NodeError {
+        self.at.push(c);
+        self
+    }
+}
+
+impl fmt::Display for NodeError {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        if self.message.is_empty() {
+            write!(f, "Error {:?}: at\n", self.kind)?;
+        }else{
+            write!(f, "{} at\n", self.message)?;
+        }
+        let url = if::imageflow_types::build_env_info::BUILT_ON_CI{
+            let repo = ::imageflow_types::build_env_info::BUILD_ENV_INFO.get("CI_REPO").unwrap_or(&Some("imazen/imageflow")).unwrap_or("imazen/imageflow");
+            let commit =  ::imageflow_types::build_env_info::GIT_COMMIT;
+            Some(format!("https://github.com/{}/blob/{}/", repo, commit))
+        }else { None };
+
+        for recorded_frame in &self.at{
+            write!(f, "{}:{}:{} in {}\n", recorded_frame.file, recorded_frame.line, recorded_frame.column, recorded_frame.module)?;
+
+            if let Some(ref url) = url{
+                write!(f, "{}{}#L{}\n",url, recorded_frame.file, recorded_frame.line)?;
+            }
+        }
+        if let Some(ref n) = self.node{
+            write!(f, "Active node:\n{:#?}\n", n)?;
+        }
+        Ok(())
+    }
+}
+
+pub type NResult<T> = ::std::result::Result<T, NodeError>;
+
+
 #[doc(hidden)]
 mod internal_prelude {
     #[doc(hidden)]
@@ -183,7 +333,7 @@ mod internal_prelude {
         pub use ::{Graph, Context, Job, JsonResponse,
                    MethodRouter};
         #[doc(no_inline)]
-        pub use ::{FlowError, FlowErr, Result, flow, clients};
+        pub use ::{FlowError, FlowErr, Result, flow, clients,  NodeError, NResult, ErrorKind};
         #[doc(no_inline)]
         pub use ::clients::fluent;
     }
@@ -196,7 +346,7 @@ mod internal_prelude {
     #[doc(hidden)]
     pub mod works_everywhere {
         #[doc(no_inline)]
-        pub use ::{FlowError, FlowErr, Result, flow, clients};
+        pub use ::{FlowError, FlowErr, Result, flow, clients,  NodeError, NResult, ErrorKind};
         #[doc(no_inline)]
         pub use ::internal_prelude::external::*;
     }

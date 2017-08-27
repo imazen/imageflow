@@ -1,3 +1,5 @@
+
+
 use super::internal_prelude::*;
 
 
@@ -24,7 +26,7 @@ impl NodeDefMutateBitmap for ColorMatrixSrgbMutDef{
                 let color_matrix_ptrs = matrix.iter().map(|row| row as *const f32).collect::<Vec<*const f32>>();
 
                 if !::ffi::flow_bitmap_bgra_apply_color_matrix(c.flow_c(), bitmap, 0, (*bitmap).h, color_matrix_ptrs.as_ptr()) {
-                    return Err(nerror!(ErrorKind::CError(c.error().c_error()), "Failed to apply color matrix"))
+                    return Err(nerror!(::ErrorKind::CError(c.error().c_error()), "Failed to apply color matrix"))
                 }
                 //TODO: is there a better way to ensure a pointer is valid for a duration even if lexical scopes arrive?
                 let _ = color_matrix_ptrs;
@@ -32,7 +34,7 @@ impl NodeDefMutateBitmap for ColorMatrixSrgbMutDef{
             }
             Ok(())
         } else {
-            Err(nerror!(ErrorKind::NodeParamsMismatch, "Need ColorMatrixSrgb, got {:?}", p))
+            Err(nerror!(::ErrorKind::NodeParamsMismatch, "Need ColorMatrixSrgb, got {:?}", p))
         }
     }
 }
@@ -67,7 +69,7 @@ impl NodeDefOneInputExpand for ColorFilterSrgb{
                                                 NodeParams::Json(s::Node::ColorMatrixSrgb { matrix: matrix }))]);
             Ok(())
         }else{
-            Err(nerror!(ErrorKind::NodeParamsMismatch, "Need ColorFilterSrgb, got {:?}", p))
+            Err(nerror!(::ErrorKind::NodeParamsMismatch, "Need ColorFilterSrgb, got {:?}", p))
         }
     }
 }

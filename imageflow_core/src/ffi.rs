@@ -14,7 +14,6 @@ pub use imageflow_types::IoDirection;
 pub use imageflow_types::PixelFormat;
 use ::internal_prelude::works_everywhere::*;
 
-
 // These are reused in the external ABI, but only as opaque pointers
 ///
 /// `ImaeflowJsonResponse` contains a buffer and buffer length (in bytes), as well as a status code
@@ -263,6 +262,68 @@ impl BitmapBgra{
         }
         Ok(())
     }
+
+    //bgr24_to_bgra32 -> Set alpha as 0xff
+    //bgr24_to_bgrx32 -> skip alpha
+    //bgrx32_to_bgr24
+    //bgrx32_to_bgra32 -> set alpha as 0xff
+
+
+    //bgra32_to_bgr24 -> prevent
+    //bgra32_to_bgrx32 -> prevent - lossy
+//
+//    pub fn copy_rect_to(&self, from_x1: u32, from_y1: u32, width: u32, height: u32, canvas: &mut BitmapBgra, x1: u32, y1: u32) -> NResult<()>{
+//
+//        if canvas.fmt == PixelFormat::Bgr32 && input.fmt == PixelFormat::Bgra32{
+//
+//        } else if canvas.fmt = PixelFormat.Bgra32 && input.fmt == PixelFormat::Bgr32{
+//
+//        }
+//        if input.fmt != canvas.fmt {
+//            return Err(nerror!(::ErrorKind::InvalidNodeConnections, "Canvas pixel format {:?} differs from Input pixel format {:?}.", input.fmt, canvas.fmt));
+//        }
+//        if input == canvas {
+//            return Err(nerror!(::ErrorKind::InvalidNodeConnections, "Canvas and Input are the same bitmap!"));
+//        }
+//
+//        if input.w <= from_x || input.h <= from_y ||
+//            input.w < from_x + width ||
+//            input.h < from_y + height ||
+//            canvas.w < x + width ||
+//            canvas.h < y + height {
+//            return Err(nerror!(::ErrorKind::InvalidNodeParams, "Invalid coordinates. Canvas is {}x{}, Input is {}x{}, Params provided: {:?}",
+//                         canvas.w,
+//                         canvas.h,
+//                         input.w,
+//                         input.h,
+//                         p));
+//        }
+//
+//        let bytes_pp = input.fmt.bytes() as u32;
+//        if from_x == 0 && x == 0 && width == input.w && width == canvas.w &&
+//            input.stride == canvas.stride {
+//            //This optimization has the side effect of copying irrelevant data, so we don't want to do it if windowed, only
+//            // if padded or permanently cropped.
+//            unsafe {
+//                let from_offset = input.stride * from_y;
+//                let from_ptr = input.pixels.offset(from_offset as isize);
+//                let to_offset = canvas.stride * y;
+//                let to_ptr = canvas.pixels.offset(to_offset as isize);
+//                ptr::copy_nonoverlapping(from_ptr, to_ptr, (input.stride * height) as usize);
+//            }
+//        } else {
+//            for row in 0..height {
+//                unsafe {
+//                    let from_offset = input.stride * (from_y + row) + bytes_pp * from_x;
+//                    let from_ptr = input.pixels.offset(from_offset as isize);
+//                    let to_offset = canvas.stride * (y + row) + bytes_pp * x;
+//                    let to_ptr = canvas.pixels.offset(to_offset as isize);
+//
+//                    ptr::copy_nonoverlapping(from_ptr, to_ptr, (width * bytes_pp) as usize);
+//                }
+//            }
+//        }
+//    }
 
 }
 

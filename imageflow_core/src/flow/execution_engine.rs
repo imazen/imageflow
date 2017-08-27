@@ -68,9 +68,9 @@ impl<'a, 'b> Engine<'a, 'b> where 'a: 'b {
             let result = if let Err(e) = n.def.validate_params(&n.params) {
                 Err(e)
             } else if inputs_failed {
-                Err(nerror!(ErrorKind::InvalidNodeConnections, "Node type {} requires {:?}, but had {} inputs, {} canvases.", n.def.name(), req_edges_in, input_count, canvas_count))
+                Err(nerror!(::ErrorKind::InvalidNodeConnections, "Node type {} requires {:?}, but had {} inputs, {} canvases.", n.def.name(), req_edges_in, input_count, canvas_count))
             } else if req_edges_out != EdgesOut::Any && outbound_count > 0 {
-                Err(nerror!(ErrorKind::InvalidNodeConnections, "Node type {} prohibits child nodes, but had {} outbound edges.", n.def.name(), outbound_count))
+                Err(nerror!(::ErrorKind::InvalidNodeConnections, "Node type {} prohibits child nodes, but had {} outbound edges.", n.def.name(), outbound_count))
             } else{
                 Ok(())
             };
@@ -396,7 +396,7 @@ impl<'a, 'b> Engine<'a, 'b> where 'a: 'b {
                     }
 
                 } else if !def.can_expand(){
-                    return Err(nerror!(ErrorKind::MethodNotImplemented, "Nodes must can_execute() or can_expand(). {:?} does neither", def).into());
+                    return Err(nerror!(::ErrorKind::MethodNotImplemented, "Nodes must can_execute() or can_expand(). {:?} does neither", def).into());
                 }
             }
             match next {
@@ -406,7 +406,7 @@ impl<'a, 'b> Engine<'a, 'b> where 'a: 'b {
                         let mut ctx = self.op_ctx_mut();
                         let result = def.execute(&mut ctx, next_ix).map_err(|e| e.with_ctx_mut(&ctx, next_ix).at(here!()))?;
                         if result == NodeResult::None {
-                            return Err(nerror!(ErrorKind::InvalidOperation, "Node {} execution returned {:?}", def.name(), result).into());
+                            return Err(nerror!(::ErrorKind::InvalidOperation, "Node {} execution returned {:?}", def.name(), result).into());
                         }else{
                             // Force update the estimate to match reality
                             if let &NodeResult::Frame(bit) = &result{
