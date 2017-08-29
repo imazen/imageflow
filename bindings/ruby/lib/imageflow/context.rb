@@ -40,10 +40,14 @@ module Imageflow
     end
 
 
-    def error_message(full_file_paths: true)
+    def error_message
       raise_if_destroyed
       buffer = FFI::MemoryPointer.new(:char, 4096, true)
-      Native.context_error_and_stacktrace(@c, buffer, 4096, full_file_paths)
+      bytes_written = FFI::MemoryPointer.new(:size_t, 1)
+
+      Native.context_error_write_to_buffer(@c, buffer, 4096, bytes_written)
+      # The return value (bool) tells us whether the write was completely successful.
+      # We don't care if it's over 4kb
       "\n" + buffer.read_string
     end
 

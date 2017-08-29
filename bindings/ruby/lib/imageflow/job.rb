@@ -29,12 +29,12 @@ module Imageflow
 
 
     def add_input_file(placeholder_id:, filename:)
-      io_in = @c.call_method(:io_create_for_file, :mode_read_seekable, filename,  :cleanup_with_context)
+      io_in = @c.call_method(:io_create_for_file, :mode_read_seekable, filename)
       @c.call_method(:job_add_io, @ptr, io_in, placeholder_id,  :flow_input)
     end
 
     def add_output_file(placeholder_id:, filename:)
-      io_out = @c.call_method(:io_create_for_file, :mode_write_seekable, filename,  :cleanup_with_context)
+      io_out = @c.call_method(:io_create_for_file, :mode_write_seekable, filename)
       @c.call_method(:job_add_io, @ptr, io_out, placeholder_id,  :flow_output)
     end
 
@@ -43,7 +43,7 @@ module Imageflow
       buffer.put_bytes(0, bytes)
       @keepalive << buffer
 
-      io_in = @c.call_method(:io_create_from_buffer,buffer, bytes.bytesize, :outlives_context, :cleanup_with_context)
+      io_in = @c.call_method(:io_create_from_buffer,buffer, bytes.bytesize, :outlives_context)
 
       @c.call_method(:job_add_io, @ptr, io_in, placeholder_id,  :flow_input)
     end

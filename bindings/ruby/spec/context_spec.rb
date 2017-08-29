@@ -37,7 +37,7 @@ module Imageflow
 
         flow.context_error_and_stacktrace(@c, buffer, 2048, true)
 
-        expect(buffer.read_string).to match /Null argument/
+        expect(buffer.read_string).to match /NullArgument/
       end
     end
 
@@ -53,7 +53,7 @@ module Imageflow
       it 'can raise an error' do
         expect {
           @c.call_method(:json_response_read, FFI::Pointer.new(0),FFI::Pointer.new(0),FFI::Pointer.new(0),FFI::Pointer.new(0))
-        }.to raise_error /Null argument/
+        }.to raise_error /NullArgument/
       end
     end
   end

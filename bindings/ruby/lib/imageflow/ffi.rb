@@ -62,9 +62,18 @@ module Imageflow
     attach_function :imageflow_context_destroy, [:pointer], :void
 
     attach_function :imageflow_context_has_error, [:pointer], :bool
-    attach_function :imageflow_context_clear_error, [:pointer], :void
-    attach_function :imageflow_context_error_and_stacktrace, [:pointer, :pointer, :size_t, :bool], :int64
+    attach_function :imageflow_context_error_recoverable, [:pointer], :bool
+
+    attach_function :imageflow_context_error_try_clear, [:pointer], :bool
+
     attach_function :imageflow_context_error_code, [:pointer], :int32
+    attach_function :imageflow_context_error_as_exit_code, [:pointer], :int32
+    attach_function :imageflow_context_error_as_http_code, [:pointer], :int32
+
+    attach_function :imageflow_context_error_write_to_buffer, [:pointer, :pointer, :size_t, :pointer], :bool
+
+    attach_function :imageflow_context_error_and_stacktrace, [:pointer, :pointer, :size_t, :bool], :int64
+
 
 
     attach_function :imageflow_job_send_json, [:pointer, :pointer, :string, :pointer, :size_t], :pointer, blocking: true
@@ -76,8 +85,8 @@ module Imageflow
     attach_function :imageflow_job_create, [:pointer], :pointer
     attach_function :imageflow_job_destroy, [:pointer,  :pointer], :bool
 
-    attach_function :imageflow_io_create_for_file, [:pointer, :flow_io_mode, :string, :flow_cleanup_with], :pointer, blocking: true
-    attach_function :imageflow_io_create_from_buffer, [:pointer, :pointer, :size_t, :flow_pointer_lifetime, :flow_cleanup_with], :pointer, blocking: true
+    attach_function :imageflow_io_create_for_file, [:pointer, :flow_io_mode, :string], :pointer, blocking: true
+    attach_function :imageflow_io_create_from_buffer, [:pointer, :pointer, :size_t, :flow_pointer_lifetime], :pointer, blocking: true
     attach_function :imageflow_io_create_for_output_buffer, [:pointer ], :pointer, blocking: true
     attach_function :imageflow_job_get_output_buffer_by_id, [:pointer, :pointer, :int32, :pointer, :pointer], :bool, blocking: true
     attach_function :imageflow_job_get_io, [:pointer, :pointer, :int32], :pointer, blocking: true
