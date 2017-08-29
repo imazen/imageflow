@@ -11,12 +11,46 @@ use ::ffi;
 use std::ffi::CStr;
 use std::ptr;
 
+
+#[test]
+fn test_file_macro_for_this_build(){
+    assert!(file!().starts_with(env!("CARGO_PKG_NAME")))
+}
+// Uncomment these macros if you can't get file!() to include the crate folder
+//#[cfg(not(target_os = "windows"))]
+//#[macro_export]
+//macro_rules! os_path_separator {
+//    () => ("/");
+//}
+//#[cfg(target_os = "windows")]
+//#[macro_export]
+//macro_rules! os_path_separator {
+//    () => ("\\");
+//}
+
+//#[macro_export]
+//macro_rules! here {
+//    () => (
+//        ::CodeLocation{ line: line!(), column: column!(), file: file!(), crate_name: env!("CARGO_PKG_NAME")}
+//    );
+//}
+//
+//#[macro_export]
+//macro_rules! loc {
+//    () => (
+//        concat!(env!("CARGO_PKG_NAME"), os_path_separator!(), file!(), ":", line!(), ":", column!())
+//    );
+//    ($msg:expr) => (
+//        concat!($msg, " at\n", env!("CARGO_PKG_NAME"), os_path_separator!(), file!(), ":", line!(), ":", column!())
+//    );
+//}
 #[macro_export]
 macro_rules! here {
     () => (
         ::CodeLocation{ line: line!(), column: column!(), file: file!()}
     );
 }
+
 #[macro_export]
 macro_rules! loc {
     () => (
@@ -188,6 +222,7 @@ pub struct CodeLocation{
     pub line: u32,
     pub column: u32,
     pub file: &'static str,
+    //pub crate_name: &'static str,
 }
 
 #[derive(Clone, PartialEq)]
@@ -264,6 +299,11 @@ impl fmt::Debug for FlowError {
             if let Some(ref url) = url{
                 write!(f, "{}{}#L{}\n",url, recorded_frame.file, recorded_frame.line)?;
             }
+//            write!(f, "{}{}{}:{}:{}\n", recorded_frame.crate_name, os_path_separator!(), recorded_frame.file, recorded_frame.line, recorded_frame.column)?;
+//
+//            if let Some(ref url) = url{
+//                write!(f, "{}{}{}{}#L{}\n",url, recorded_frame.crate_name, os_path_separator!(), recorded_frame.file, recorded_frame.line)?;
+//            }
         }
         if let Some(ref n) = self.node{
             write!(f, "Active node:\n{:#?}\n", n)?;
