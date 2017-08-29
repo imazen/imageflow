@@ -41,7 +41,7 @@ fn create_byte_mapping(low: usize, high: usize) -> Vec<u8>{
 }
 
 
-fn apply_mappings(bitmap: *mut BitmapBgra, map_red: &[u8], map_green: &[u8], map_blue: &[u8]) -> NResult<()>{
+fn apply_mappings(bitmap: *mut BitmapBgra, map_red: &[u8], map_green: &[u8], map_blue: &[u8]) -> Result<()>{
 
     let input: &BitmapBgra = unsafe{ &*bitmap };
     let bytes: &mut [u8] = unsafe { slice::from_raw_parts_mut::<u8>(input.pixels, (input.stride * input.h) as usize) };
@@ -87,7 +87,7 @@ fn apply_mappings(bitmap: *mut BitmapBgra, map_red: &[u8], map_green: &[u8], map
     }
 }
 
-fn white_balance_srgb_mut(bitmap: *mut BitmapBgra, histograms: &[u64;768], pixels_sampled: u64, low_threshold: Option<f32>, high_threshold: Option<f32>) -> NResult<()>{
+fn white_balance_srgb_mut(bitmap: *mut BitmapBgra, histograms: &[u64;768], pixels_sampled: u64, low_threshold: Option<f32>, high_threshold: Option<f32>) -> Result<()>{
     let low_threshold = low_threshold.unwrap_or(0.006) as f64;
     let high_threshold = high_threshold.unwrap_or(0.006) as f64;
 
@@ -113,13 +113,13 @@ impl NodeDefMutateBitmap for WhiteBalanceSrgbMutDef{
     fn fqn(&self) -> &'static str{
         "imazen.white_balance_srgb_mut"
     }
-    fn mutate(&self, c: &Context, bitmap: &mut BitmapBgra,  p: &NodeParams) -> NResult<()> {
+    fn mutate(&self, c: &Context, bitmap: &mut BitmapBgra,  p: &NodeParams) -> Result<()> {
 
         unsafe {
             let mut histograms: [u64; 768] = [0; 768];
             let mut pixels_sampled: u64 = 0;
             if !::ffi::flow_bitmap_bgra_populate_histogram(c.flow_c(), bitmap as *mut BitmapBgra, histograms.as_mut_ptr(), 256, 3, &mut pixels_sampled as *mut u64) {
-                return Err(nerror!(::ErrorKind::CError(c.error().c_error()), "Failed to populate histogram"))
+                return Err(cerror!(c, "Failed to populate histogram"))
             }
             if let &NodeParams::Json(s::Node::WhiteBalanceHistogramAreaThresholdSrgb { low_threshold, high_threshold }) = p {
                 white_balance_srgb_mut(bitmap, &histograms, pixels_sampled, low_threshold, high_threshold)

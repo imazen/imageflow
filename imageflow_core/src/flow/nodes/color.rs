@@ -20,13 +20,13 @@ impl NodeDefMutateBitmap for ColorMatrixSrgbMutDef{
     fn fqn(&self) -> &'static str{
         "imazen.color_matrix_srgb_mut"
     }
-    fn mutate(&self, c: &Context, bitmap: &mut BitmapBgra,  p: &NodeParams) -> NResult<()> {
+    fn mutate(&self, c: &Context, bitmap: &mut BitmapBgra,  p: &NodeParams) -> Result<()> {
         if let &NodeParams::Json(s::Node::ColorMatrixSrgb { ref matrix }) = p {
             unsafe {
                 let color_matrix_ptrs = matrix.iter().map(|row| row as *const f32).collect::<Vec<*const f32>>();
 
                 if !::ffi::flow_bitmap_bgra_apply_color_matrix(c.flow_c(), bitmap, 0, (*bitmap).h, color_matrix_ptrs.as_ptr()) {
-                    return Err(nerror!(::ErrorKind::CError(c.error().c_error()), "Failed to apply color matrix"))
+                    return Err(cerror!(c, "Failed to apply color matrix"))
                 }
                 //TODO: is there a better way to ensure a pointer is valid for a duration even if lexical scopes arrive?
                 let _ = color_matrix_ptrs;
@@ -51,7 +51,7 @@ impl NodeDefOneInputExpand for ColorFilterSrgb{
     fn fqn(&self) -> &'static str{
         "imazen.color_filter_srgb"
     }
-    fn expand(&self, ctx: &mut OpCtxMut, ix: NodeIndex, p: NodeParams, parent: FrameInfo) -> NResult<()> {
+    fn expand(&self, ctx: &mut OpCtxMut, ix: NodeIndex, p: NodeParams, parent: FrameInfo) -> Result<()> {
         if let NodeParams::Json(s::Node::ColorFilterSrgb(filter))= p {
             let matrix = match filter as s::ColorFilterSrgb {
                 s::ColorFilterSrgb::Sepia => sepia(),

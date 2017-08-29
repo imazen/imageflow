@@ -25,7 +25,7 @@ impl NodeDefOneInputExpand for ApplyOrientationDef{
     fn fqn(&self) -> &'static str{
         "imazen.apply_orientation"
     }
-    fn estimate(&self, p: &NodeParams, input: FrameEstimate) -> NResult<FrameEstimate> {
+    fn estimate(&self, p: &NodeParams, input: FrameEstimate) -> Result<FrameEstimate> {
         if let &NodeParams::Json(s::Node::ApplyOrientation { flag }) = p {
             input.map_frame(|info| {
                 let swap = flag >= 5 && flag <= 8;
@@ -44,7 +44,7 @@ impl NodeDefOneInputExpand for ApplyOrientationDef{
         }
     }
 
-    fn expand(&self, ctx: &mut OpCtxMut, ix: NodeIndex, p: NodeParams, parent: FrameInfo) -> NResult<()>{
+    fn expand(&self, ctx: &mut OpCtxMut, ix: NodeIndex, p: NodeParams, parent: FrameInfo) -> Result<()>{
         if let NodeParams::Json(s::Node::ApplyOrientation { flag }) = p {
             let replacement_nodes: Vec<&'static NodeDef> = match flag {
                 7 => vec![&ROTATE_180, &TRANSPOSE],
@@ -79,11 +79,11 @@ impl NodeDefOneInputExpand for TransposeDef {
     fn fqn(&self) -> &'static str {
         "imazen.transpose"
     }
-    fn estimate(&self, p: &NodeParams, input: FrameEstimate) -> NResult<FrameEstimate> {
+    fn estimate(&self, p: &NodeParams, input: FrameEstimate) -> Result<FrameEstimate> {
         Ok(input.transpose())
     }
 
-    fn expand(&self, ctx: &mut OpCtxMut, ix: NodeIndex, p: NodeParams, parent: FrameInfo) -> NResult<()> {
+    fn expand(&self, ctx: &mut OpCtxMut, ix: NodeIndex, p: NodeParams, parent: FrameInfo) -> Result<()> {
         let canvas_params = s::Node::CreateCanvas {
             w: parent.h as usize,
             h: parent.w as usize,
@@ -112,10 +112,10 @@ impl NodeDefOneInputExpand for NoOpDef {
     fn fqn(&self) -> &'static str {
         "imazen.noop"
     }
-    fn estimate(&self, p: &NodeParams, input: FrameEstimate) -> NResult<FrameEstimate> {
+    fn estimate(&self, p: &NodeParams, input: FrameEstimate) -> Result<FrameEstimate> {
         Ok(input)
     }
-    fn expand(&self, ctx: &mut OpCtxMut, ix: NodeIndex, p: NodeParams, parent: FrameInfo) -> NResult<()> {
+    fn expand(&self, ctx: &mut OpCtxMut, ix: NodeIndex, p: NodeParams, parent: FrameInfo) -> Result<()> {
         ctx.replace_node(ix, vec![]);
         Ok(())
     }
@@ -135,11 +135,11 @@ impl NodeDefOneInputOneCanvas for TransposeMutDef {
     fn fqn(&self) -> &'static str {
         "imazen.transpose_mut"
     }
-    fn validate_params(&self, p: &NodeParams) -> NResult<()> {
+    fn validate_params(&self, p: &NodeParams) -> Result<()> {
         Ok(())
     }
 
-    fn render(&self, c: &Context, canvas: &mut BitmapBgra, input: &mut BitmapBgra, p: &NodeParams) -> NResult<()> {
+    fn render(&self, c: &Context, canvas: &mut BitmapBgra, input: &mut BitmapBgra, p: &NodeParams) -> Result<()> {
         unsafe {
             if input.fmt != canvas.fmt {
                 panic!("Can't copy between bitmaps with different pixel formats")
@@ -168,10 +168,10 @@ impl NodeDefMutateBitmap for FlipVerticalMutNodeDef{
     fn fqn(&self) -> &'static str{
         "imazen.flip_vertical_mutate"
     }
-    fn mutate(&self, c: &Context, bitmap: &mut BitmapBgra,  p: &NodeParams) -> NResult<()>{
+    fn mutate(&self, c: &Context, bitmap: &mut BitmapBgra,  p: &NodeParams) -> Result<()>{
         unsafe {
             if !::ffi::flow_bitmap_bgra_flip_vertical(c.flow_c(), bitmap as *mut BitmapBgra){
-                return Err(nerror!(::ErrorKind::CError(c.error().c_error())))
+                return Err(cerror!(c))
             }
         }
         Ok(())
@@ -188,10 +188,10 @@ impl NodeDefMutateBitmap for FlipHorizontalMutNodeDef{
     fn fqn(&self) -> &'static str{
         "imazen.flip_vertical_mutate"
     }
-    fn mutate(&self, c: &Context, bitmap: &mut BitmapBgra,  p: &NodeParams) -> NResult<()>{
+    fn mutate(&self, c: &Context, bitmap: &mut BitmapBgra,  p: &NodeParams) -> Result<()>{
         unsafe {
             if !::ffi::flow_bitmap_bgra_flip_horizontal(c.flow_c(), bitmap as *mut BitmapBgra){
-                return Err(nerror!(::ErrorKind::CError(c.error().c_error())))
+                return Err(cerror!(c))
             }
         }
         Ok(())
@@ -209,11 +209,11 @@ impl NodeDefOneInputExpand for Rotate90Def {
     fn fqn(&self) -> &'static str {
         "imazen.rotate_90"
     }
-    fn estimate(&self, p: &NodeParams, input: FrameEstimate) -> NResult<FrameEstimate> {
+    fn estimate(&self, p: &NodeParams, input: FrameEstimate) -> Result<FrameEstimate> {
         Ok(input.transpose())
     }
 
-    fn expand(&self, ctx: &mut OpCtxMut, ix: NodeIndex, p: NodeParams, parent: FrameInfo) -> NResult<()> {
+    fn expand(&self, ctx: &mut OpCtxMut, ix: NodeIndex, p: NodeParams, parent: FrameInfo) -> Result<()> {
         ctx.replace_node(ix,
                          vec![
                              Node::n(&TRANSPOSE, NodeParams::None),
@@ -235,11 +235,11 @@ impl NodeDefOneInputExpand for Rotate270Def {
     fn fqn(&self) -> &'static str {
         "imazen.rotate_270"
     }
-    fn estimate(&self, p: &NodeParams, input: FrameEstimate) -> NResult<FrameEstimate> {
+    fn estimate(&self, p: &NodeParams, input: FrameEstimate) -> Result<FrameEstimate> {
         Ok(input.transpose())
     }
 
-    fn expand(&self, ctx: &mut OpCtxMut, ix: NodeIndex, p: NodeParams, parent: FrameInfo) -> NResult<()> {
+    fn expand(&self, ctx: &mut OpCtxMut, ix: NodeIndex, p: NodeParams, parent: FrameInfo) -> Result<()> {
         ctx.replace_node(ix,
                          vec![
                              Node::n(&FLIP_V, NodeParams::None),
@@ -260,11 +260,11 @@ impl NodeDefOneInputExpand for Rotate180Def {
     fn fqn(&self) -> &'static str {
         "imazen.rotate_180"
     }
-    fn estimate(&self, p: &NodeParams, input: FrameEstimate) -> NResult<FrameEstimate> {
+    fn estimate(&self, p: &NodeParams, input: FrameEstimate) -> Result<FrameEstimate> {
         Ok(input)
     }
 
-    fn expand(&self, ctx: &mut OpCtxMut, ix: NodeIndex, p: NodeParams, parent: FrameInfo) -> NResult<()> {
+    fn expand(&self, ctx: &mut OpCtxMut, ix: NodeIndex, p: NodeParams, parent: FrameInfo) -> Result<()> {
         ctx.replace_node(ix,
                          vec![
                              Node::n(&FLIP_V as &NodeDef, NodeParams::None),

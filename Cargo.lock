@@ -414,11 +414,13 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 name = "imageflow_abi"
 version = "0.1.0"
 dependencies = [
+ "backtrace 0.3.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "imageflow_core 0.1.0",
  "imageflow_helpers 0.1.0",
  "libc 0.2.23 (registry+https://github.com/rust-lang/crates.io-index)",
  "moz-cheddar 0.4.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "regex 0.2.2 (registry+https://github.com/rust-lang/crates.io-index)",
+ "smallvec 0.4.3 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]

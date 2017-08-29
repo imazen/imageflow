@@ -23,11 +23,11 @@ impl NodeDefOneInputOneCanvas for CopyRectNodeDef{
     fn fqn(&self) -> &'static str{
         "imazen.copy_rect_to_canvas"
     }
-    fn validate_params(&self, p: &NodeParams) -> NResult<()>{
+    fn validate_params(&self, p: &NodeParams) -> Result<()>{
         Ok(())
     }
 
-    fn render(&self, c: &Context, canvas: &mut BitmapBgra, input: &mut BitmapBgra,  p: &NodeParams) -> NResult<()> {
+    fn render(&self, c: &Context, canvas: &mut BitmapBgra, input: &mut BitmapBgra,  p: &NodeParams) -> Result<()> {
         if let &NodeParams::Json(s::Node::CopyRectToCanvas { from_x, from_y, width, height, x, y }) = p {
 
 
@@ -94,10 +94,10 @@ impl NodeDefMutateBitmap for FillRectNodeDef {
     fn fqn(&self) -> &'static str {
         "imazen.fill_rect_mutate"
     }
-    fn validate_params(&self, p: &NodeParams) -> NResult<()> {
+    fn validate_params(&self, p: &NodeParams) -> Result<()> {
         Ok(())
     }
-    fn mutate(&self, c: &Context, bitmap: &mut BitmapBgra,  p: &NodeParams) -> NResult<()>{
+    fn mutate(&self, c: &Context, bitmap: &mut BitmapBgra,  p: &NodeParams) -> Result<()>{
         if let &NodeParams::Json(s::Node::FillRect { x1, x2, y1, y2, ref color }) = p{
 
             if x2 <= x1 || y2 <= y1 || (x1 as i32) < 0 || (y1 as i32) < 0 || x2 > bitmap.w || y2 > bitmap.h{
@@ -112,7 +112,7 @@ impl NodeDefMutateBitmap for FillRectNodeDef {
                                                     x2,
                                                     y2,
                                                     color.clone().to_u32_bgra().unwrap()) {
-                    return Err(nerror!(::ErrorKind::CError(c.error().c_error()), "Failed to fill rectangle"))
+                    return Err(cerror!(c, "Failed to fill rectangle"))
                 }else{
                     Ok(())
                 }
@@ -137,7 +137,7 @@ impl NodeDefOneInputExpand for CloneDef{
     fn fqn(&self) -> &'static str{
         "imazen.clone"
     }
-    fn expand(&self, ctx: &mut OpCtxMut, ix: NodeIndex, params: NodeParams, parent: FrameInfo) -> NResult<()> {
+    fn expand(&self, ctx: &mut OpCtxMut, ix: NodeIndex, params: NodeParams, parent: FrameInfo) -> Result<()> {
         let parent = ctx.frame_info_from(ix, EdgeKind::Input).map_err(|e| e.at(here!()))?;
 
         let canvas_params = s::Node::CreateCanvas {
@@ -176,7 +176,7 @@ impl NodeDefOneInputExpand for ExpandCanvasDef{
     fn fqn(&self) -> &'static str{
         "imazen.expand_canvas"
     }
-    fn estimate(&self, p: &NodeParams, input: FrameEstimate) -> NResult<FrameEstimate> {
+    fn estimate(&self, p: &NodeParams, input: FrameEstimate) -> Result<FrameEstimate> {
         if let &NodeParams::Json(s::Node::ExpandCanvas { left, top, bottom, right, ref color }) = p {
             input.map_frame( |info| {
                 Ok(FrameInfo {
@@ -190,7 +190,7 @@ impl NodeDefOneInputExpand for ExpandCanvasDef{
         }
     }
 
-    fn expand(&self, ctx: &mut OpCtxMut, ix: NodeIndex, p: NodeParams, parent: FrameInfo) -> NResult<()>{
+    fn expand(&self, ctx: &mut OpCtxMut, ix: NodeIndex, p: NodeParams, parent: FrameInfo) -> Result<()>{
         if let NodeParams::Json(s::Node::ExpandCanvas { left, top, bottom, right, color }) = p {
             let FrameInfo { w, h, fmt } = parent;
 
@@ -229,7 +229,7 @@ impl NodeDefOneInputExpand for ExpandCanvasDef{
 pub struct CropMutNodeDef;
 
 impl CropMutNodeDef {
-    fn est_validate(&self, p: &NodeParams, input_est: FrameEstimate) -> NResult<FrameEstimate> {
+    fn est_validate(&self, p: &NodeParams, input_est: FrameEstimate) -> Result<FrameEstimate> {
         if let &NodeParams::Json(s::Node::Crop {  x1,  y1,  x2,  y2 }) = p {
             if (x1 as i32) < 0 || (y1 as i32) < 0 || x2 <= x1 || y2 <= y1 {
                 Err(nerror!(::ErrorKind::InvalidNodeParams, "Invalid coordinates: {},{} {},{} should describe the top-left and bottom-right corners of a rectangle", x1,y1,x2,y2))
@@ -257,15 +257,15 @@ impl NodeDef for CropMutNodeDef{
     fn fqn(&self) -> &'static str{
         "imazen.crop_mutate"
     }
-    fn edges_required(&self, p: &NodeParams) -> NResult<(EdgesIn, EdgesOut)>{
+    fn edges_required(&self, p: &NodeParams) -> Result<(EdgesIn, EdgesOut)>{
         Ok((EdgesIn::OneInput, EdgesOut::Any))
     }
 
-    fn validate_params(&self, p: &NodeParams) -> NResult<()> {
+    fn validate_params(&self, p: &NodeParams) -> Result<()> {
         self.est_validate(p, FrameEstimate::None).map(|_| ()).map_err(|e| e.at(here!()))
     }
 
-    fn estimate(&self, ctx: &mut OpCtxMut, ix: NodeIndex) -> NResult<FrameEstimate> {
+    fn estimate(&self, ctx: &mut OpCtxMut, ix: NodeIndex) -> Result<FrameEstimate> {
         let input_est = ctx.frame_est_from(ix, EdgeKind::Input).map_err(|e| e.at(here!()))?;
         let p = &ctx.weight(ix).params;
         self.est_validate(p, input_est).map_err(|e| e.at(here!()))
@@ -273,7 +273,7 @@ impl NodeDef for CropMutNodeDef{
 
     fn can_execute(&self) -> bool { true }
 
-    fn execute(&self, ctx: &mut OpCtxMut, ix: NodeIndex) -> NResult<NodeResult> {
+    fn execute(&self, ctx: &mut OpCtxMut, ix: NodeIndex) -> Result<NodeResult> {
         let mut input = unsafe {
             &mut *ctx.bitmap_bgra_from(ix, EdgeKind::Input).map_err(|e| e.at(here!()).with_ctx_mut(ctx, ix))?
         };
@@ -318,11 +318,11 @@ impl NodeDefOneInputExpand for CropWhitespaceDef {
     fn fqn(&self) -> &'static str {
         "imazen.crop_whitespace"
     }
-    fn estimate(&self, p: &NodeParams, input: FrameEstimate) -> NResult<FrameEstimate> {
+    fn estimate(&self, p: &NodeParams, input: FrameEstimate) -> Result<FrameEstimate> {
         Ok((FrameEstimate::Impossible))
     }
 //TODO: mark as risky
-    fn expand(&self, ctx: &mut OpCtxMut, ix: NodeIndex, p: NodeParams, b: FrameInfo) -> NResult<()> {
+    fn expand(&self, ctx: &mut OpCtxMut, ix: NodeIndex, p: NodeParams, b: FrameInfo) -> Result<()> {
         // detect bounds, increase, and replace with crop
         if let NodeParams::Json(s::Node::CropWhitespace { threshold, percent_padding }) = p {
             // detect bounds, increase, and replace with crop
@@ -331,7 +331,7 @@ impl NodeDefOneInputExpand for CropWhitespaceDef {
                     unsafe {
                         let rect = ::ffi::detect_content(ctx.c.flow_c(), b, threshold);
                         if rect == ::ffi::Rect::failure(){
-                            return Err(nerror!(::ErrorKind::CError(ctx.c.error().c_error()), "Failed to complete whitespace detection"));
+                            return Err(cerror!(ctx.c, "Failed to complete whitespace detection"));
                         }
                         if rect.x2 <= rect.x1 || rect.y2 <= rect.y1{
                             return Err(nerror!(::ErrorKind::InvalidState, "Whitespace detection returned invalid rectangle"));

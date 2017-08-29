@@ -10,6 +10,13 @@ TEST_CASE("Verify .cpp and .c files are being compiled with compatible type size
     REQUIRE(info.sizeof_size_t == sizeof(size_t));
     REQUIRE(info.sizeof_int == sizeof(int));
 }
+
+TEST_CASE("Test size of flow_context")
+{
+    printf("sizeof(flow_c) = %lu", sizeof(flow_c));
+    REQUIRE(sizeof(flow_c) < 1500);
+}
+
 TEST_CASE("Test flow_snprintf with single-character buffer", "")
 {
     char buf[] = { 3, 25 };
@@ -62,7 +69,7 @@ TEST_CASE("Test error message printing", "")
     char buf[4096];
     int64_t chars_written = flow_context_error_and_stacktrace(c, buf, 4096, false);
     REQUIRE(chars_written > 0);
-    REQUIRE_THAT(buf, StartsWith("Invalid argument : You passed a value outside [0,1]: 3\ntest_context.cpp:"));
+    REQUIRE_THAT(buf, StartsWith("CError 50: Invalid argument : You passed a value outside [0,1]: 3\ntest_context.cpp:"));
 
     flow_context_destroy(c);
 }
@@ -77,7 +84,7 @@ TEST_CASE("Test error message printing with null files or functions in the stack
     char buf[4096];
     int64_t chars_written = flow_context_error_and_stacktrace(c, buf, 4096, false);
     REQUIRE(chars_written > 0);
-    REQUIRE(buf == std::string("Invalid argument\n(unknown):25: in function (unknown)\n"));
+    REQUIRE(buf == std::string("CError 50: Invalid argument\n(unknown):25: in function (unknown)\n"));
 
     flow_context_destroy(c);
 }
@@ -98,7 +105,7 @@ TEST_CASE("Test reporting of a failing destructor", "")
     char buf[4096];
     int64_t chars_written = flow_context_error_and_stacktrace(c, buf, 4096, false);
     REQUIRE(chars_written > 0);
-    REQUIRE_THAT(buf, StartsWith("Other error : Destructor returned false, indicating failure"));
+    REQUIRE_THAT(buf, StartsWith("CError 1024: Other error : Destructor returned false, indicating failure"));
 
     flow_context_destroy(c);
 }

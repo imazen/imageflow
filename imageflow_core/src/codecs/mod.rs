@@ -2,7 +2,7 @@ use ::std;
 use ::for_other_imageflow_crates::preludes::external_without_std::*;
 use ::ffi;
 use ::job::Job;
-use ::{Context, FlowErr,FlowError, Result, JsonResponse};
+use ::{Context, CError, Result, JsonResponse, ErrorKind, FlowError};
 use ::ffi::CodecInstance;
 use ::ffi::BitmapBgra;
 use ::imageflow_types::collections::AddRemoveSet;
@@ -49,7 +49,7 @@ impl CodecInstanceContainer {
         if let CodecKind::Decoder(ref mut d) = self.codec{
             Ok(d)
         }else{
-            Err(FlowError::NullArgument)
+            Err(nerror!(ErrorKind::InvalidArgument))
         }
 
     }
@@ -100,7 +100,7 @@ impl ClassicDecoder {
             ::ffi::flow_codec_select_from_seekable_io(c.flow_c(), io.get_io_ptr())
         };
         if codec_id == 0 {
-            Err(c.error().get_error_copy().unwrap())
+            Err(cerror!(c))
         } else {
             Ok(Box::new(ClassicDecoder {
                 classic: CodecInstance {
@@ -119,7 +119,7 @@ impl Decoder for ClassicDecoder{
     fn initialize(&mut self, c: &Context, job: &Job) -> Result<()>{
         unsafe {
             if !::ffi::flow_codec_initialize(c.flow_c(), &mut self.classic as *mut CodecInstance) {
-                    return Err(c.error().get_error_copy().unwrap());
+                return Err(cerror!(c));
             }
 
             Ok(())
@@ -134,7 +134,7 @@ impl Decoder for ClassicDecoder{
             let mut info: ::ffi::DecoderInfo = ::ffi::DecoderInfo { ..Default::default() };
 
             if !::ffi::flow_codec_decoder_get_info(c.flow_c(), classic.codec_state, classic.codec_id, &mut info ){
-                Err(c.c_error().unwrap())
+                Err(cerror!(c))
             }else {
                 Ok(s::ImageInfo {
                     frame_decodes_into: s::PixelFormat::from(info.frame_decodes_into),
@@ -167,7 +167,7 @@ impl Decoder for ClassicDecoder{
             ffi::flow_codec_execute_read_frame(c.flow_c(),
                                                &mut  self.classic as *mut ffi::CodecInstance) };
         if result.is_null() {
-            Err(c.error().get_error_copy().unwrap())
+            Err(cerror!(c))
         }else {
             Ok(result)
         }
@@ -190,7 +190,7 @@ impl Decoder for ClassicDecoder{
                 unsafe {
 
                     if !::ffi::flow_codec_decoder_set_downscale_hints(c.flow_c(), classic as *mut CodecInstance, &h, false) {
-                        Err(c.c_error().unwrap())
+                        Err(cerror!(c))
                     } else {
                         Ok(())
                     }
@@ -264,11 +264,11 @@ impl Encoder for ClassicEncoder{
 
             classic.codec_id = wanted_id;
             if !ffi::flow_codec_initialize(c.flow_c(), classic as *mut ffi::CodecInstance) {
-                c.error().assert_ok();
+                cerror!(c).panic();
             }
             let codec_def = ffi::flow_codec_get_definition(c.flow_c(), wanted_id);
             if codec_def.is_null() {
-                c.error().assert_ok();
+                cerror!(c).panic();
             }
             let write_fn = (*codec_def).write_frame;
             if write_fn == None {
@@ -279,7 +279,7 @@ impl Encoder for ClassicEncoder{
                                   classic.codec_state,
                                   frame as *mut BitmapBgra,
                                   &hints as *const ffi::EncoderHints) {
-                c.error().assert_ok();
+                cerror!(c).panic();
             }
 
             Ok(s::EncodeResult {

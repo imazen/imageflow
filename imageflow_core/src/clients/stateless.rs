@@ -1,6 +1,8 @@
 use ::Context;
 use ::Job;
 use ::JsonResponse;
+use ::ErrorCategory;
+use ::errors::PanicFormatter;
 
 pub use imageflow_types::Framewise;
 use ::internal_prelude::works_everywhere::*;
@@ -40,7 +42,6 @@ pub struct BuildSuccess {
     pub outputs: Vec<BuildOutput>,
 }
 
-
 #[derive(Debug, PartialEq)]
 pub enum BuildFailure {
     OutOfMemory,
@@ -50,153 +51,119 @@ pub enum BuildFailure {
 
 impl From<::FlowError> for BuildFailure {
     fn from(e: ::FlowError) -> BuildFailure {
-        match e {
-            FlowError::Oom => BuildFailure::OutOfMemory,
+        match e.category() {
+            ErrorCategory::OutOfMemory => BuildFailure::OutOfMemory,
             other => {
                 BuildFailure::Error {
-                    httpish_code: 500,
-                    message: format!("{:?}", other),
+                    httpish_code: e.category().http_status_code(),
+                    message: format!("{}", e),
                 }
             }
         }
     }
 }
-impl BuildFailure {
-    fn from_parse_error(http_code: i32,
-                        prefix: String,
-                        error: serde_json::error::Error,
-                        json: &[u8])
-                        -> BuildFailure {
-        let message = format!("{}: {}\n Parsing {}",
-                              prefix,
-                              error,
-                              std::str::from_utf8(json).unwrap_or("[INVALID UTF-8]"));
-        BuildFailure::Error {
-            httpish_code: http_code,
-            message: message,
-        }
-    }
-}
 
+
+use std::panic::{catch_unwind, AssertUnwindSafe};
 
 impl LibClient {
+
     pub fn new() -> LibClient {
         LibClient {}
     }
 
-    pub fn get_image_info(&mut self,
-                              bytes: &[u8])
-                              -> std::result::Result<s::ImageInfo, BuildFailure> {
-        let context = Context::create()?;
 
-        let result = {
-            let mut job = context.create_job();
-            job.add_input_bytes(0, bytes)?;
-            let info_blob: JsonResponse =
-                job.message("v0.1/get_image_info", b"{\"io_id\": 0}")?;
-            // TODO: add into error conversion
-            let info_response: s::Response001 =
-                match serde_json::from_slice(info_blob.response_json.as_ref()){
-                    Ok(v) => v,
-                    Err(e) =>{
-                        panic!("Failed to parse JSON response {:?} {:?}", e, str::from_utf8(info_blob.response_json.as_ref()));
-                    }
-                };
-            if !info_response.success {
-                panic!("get_image_info failed: {:?}", info_response);
-            }
-            match info_response.data {
-                s::ResponsePayload::ImageInfo(info) => Ok(info),
-                _ => {
-                    Err(BuildFailure::Error {
-                        httpish_code: 500,
-                        message: "Endpoint failed to return imageinfo".to_owned(),
-                    })
-                }
-            }
+     fn get_image_info_inner(context: &mut Context, bytes: &[u8])
+                          -> std::result::Result<s::ImageInfo, FlowError> {
+        let mut job = context.create_job();
+        job.add_input_bytes(0, bytes).map_err(|e| e.at(here!()))?;
+        Ok(job.get_image_info(0).map_err(|e| e.at(here!()))?)
+
+    }
+    pub fn get_image_info(&mut self, bytes: &[u8])
+                              -> std::result::Result<s::ImageInfo, BuildFailure> {
+        let mut context = Context::create().map_err(|e| e.at(here!()))?;
+
+        let result = catch_unwind(AssertUnwindSafe(||{
+            LibClient::get_image_info_inner(&mut context, bytes).map_err(|e| BuildFailure::from(e.at(here!())))
+        }));
+
+        let result = match result{
+            Err(panic) => Err(BuildFailure::Error{ httpish_code: 500, message: format!("{}", PanicFormatter(&panic))}),
+            Ok(Err(e)) => Err(BuildFailure::from(e)),
+            Ok(Ok(v)) => Ok(v)
         };
-        // TODO: Catch and report instead of panicing
-        context.destroy_allowing_panics();
+
+        context.destroy()?; // Termination errors trump exectuion errors/panics
         result
+
     }
 
+    fn build_inner(context: &mut Context, task: BuildRequest) -> std::result::Result<BuildSuccess, FlowError> {
+        let mut job = context.create_job();
 
-    pub fn build(&mut self, task: BuildRequest) -> std::result::Result<BuildSuccess, BuildFailure> {
-        let context = Context::create()?;
+        for input in task.inputs {
+            job.add_input_bytes(input.io_id, input.bytes).map_err(|e| e.at(here!()))?;
+        }
 
-        let result = {
-            let mut job = context.create_job();
-
-            for input in task.inputs {
-                job.add_input_bytes(input.io_id, input.bytes)?;
+        // Assume output ids only come from nodes
+        for node in task.framewise.clone_nodes() {
+            if let s::Node::Encode { ref io_id, .. } = *node {
+                job.add_output_buffer(*io_id).map_err(|e| e.at(here!()))?;
             }
-
-            // Assume output ids only come from nodes
-            for node in task.framewise.clone_nodes() {
-                if let s::Node::Encode { ref io_id, .. } = *node {
-                    job.add_output_buffer(*io_id)?;
-                }
-                if let s::Node::CommandString { ref encode, ..} = *node{
-                    if let &Some(io_id) = encode{
-                        job.add_output_buffer(io_id)?;
-                    }
+            if let s::Node::CommandString { ref encode, ..} = *node{
+                if let &Some(io_id) = encode{
+                    job.add_output_buffer(io_id).map_err(|e| e.at(here!()))?;
                 }
             }
+        }
 
-            let send_execute = s::Execute001 {
-                framewise: task.framewise,
-                graph_recording: match task.export_graphs_to {
-                    Some(_) => Some(s::Build001GraphRecording::debug_defaults()),
-                    None => None,
-                }
-            };
-
-
-            let send_execute_str = serde_json::to_string_pretty(&send_execute).unwrap();
-            let result_blob: JsonResponse =
-                job.message("v0.1/execute", send_execute_str.as_bytes())?;
-
-            let result: s::Response001 =
-                match serde_json::from_slice(result_blob.response_json.as_ref()) {
-                    Ok(r) => r,
-                    Err(e) => {
-                        return Err(BuildFailure::from_parse_error(500, "Error parsing libimageflow response".to_owned(), e, result_blob.response_json.as_ref()));
-                    }
-                };
-
-            if !result.success {
-                return Err(BuildFailure::Error {
-                    httpish_code: 500,
-                    message: format!("v0.1/execute failed: {:?}", result),
-                });
+        let send_execute = s::Execute001 {
+            framewise: task.framewise,
+            graph_recording: match task.export_graphs_to {
+                Some(_) => Some(s::Build001GraphRecording::debug_defaults()),
+                None => None,
             }
-
-            let encodes: Vec<s::EncodeResult> = match result.data {
-                s::ResponsePayload::JobResult(s::JobResult { encodes }) => encodes,
-                _ => {
-                    return Err(BuildFailure::Error {
-                        httpish_code: 500,
-                        message: "Endpoint failed to return JobResult".to_owned(),
-                    })
-                }
-            };
-
-            let mut outputs = Vec::new();
-            for encode in encodes {
-                outputs.push(BuildOutput {
-                    bytes: job.io_get_output_buffer_copy(encode.io_id)?,
-                    io_id: encode.io_id,
-                    mime_type: encode.preferred_mime_type,
-                    file_ext: encode.preferred_extension,
-                    w: Some(encode.w as u32),
-                    h: Some(encode.h as u32),
-                });
-            }
-
-            Ok(BuildSuccess { outputs: outputs })
         };
-        // TODO: Catch and report instead of panicing
-        context.destroy_allowing_panics();
+
+        let payload = job.execute_1(send_execute).map_err(|e| e.at(here!()))?;
+
+
+        let encodes: Vec<s::EncodeResult> = match payload {
+            s::ResponsePayload::JobResult(s::JobResult { encodes }) => encodes,
+            _ => {
+                unreachable!();
+            }
+        };
+
+        let mut outputs = Vec::new();
+        for encode in encodes {
+            outputs.push(BuildOutput {
+                bytes: job.io_get_output_buffer_copy(encode.io_id).map_err(|e| e.at(here!()))?,
+                io_id: encode.io_id,
+                mime_type: encode.preferred_mime_type,
+                file_ext: encode.preferred_extension,
+                w: Some(encode.w as u32),
+                h: Some(encode.h as u32),
+            });
+        }
+
+        Ok(BuildSuccess { outputs: outputs })
+    }
+    pub fn build(&mut self, task: BuildRequest) -> std::result::Result<BuildSuccess, BuildFailure> {
+        let mut context = Context::create().map_err(|e| e.at(here!()))?;
+
+        let result = catch_unwind(AssertUnwindSafe(||{
+            LibClient::build_inner(&mut context, task).map_err(|e| BuildFailure::from(e.at(here!())))
+        }));
+
+        let result = match result{
+            Err(panic) => Err(BuildFailure::Error{ httpish_code: 500, message: format!("{}", PanicFormatter(&panic))}),
+            Ok(Err(e)) => Err(BuildFailure::from(e)),
+            Ok(Ok(v)) => Ok(v)
+        };
+
+        context.destroy()?; //Termination errors trump execution errors
         result
     }
 }

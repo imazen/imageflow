@@ -39,16 +39,16 @@ impl NodeDebugInfo {
     }
 }
 
-impl NodeError{
-    fn add_node_info(mut self, info: Option<NodeDebugInfo>) -> NodeError{
+impl FlowError {
+    fn add_node_info(mut self, info: Option<NodeDebugInfo>) -> FlowError {
         self.node = info;
         self
     }
 
-    pub fn with_ctx(self, ctx: &OpCtx, ix: NodeIndex ) -> NodeError {
+    pub fn with_ctx(self, ctx: &OpCtx, ix: NodeIndex ) -> FlowError {
         self.add_node_info(NodeDebugInfo::from_ctx(ctx, ix))
     }
-    pub fn with_ctx_mut(self, ctx: &OpCtxMut, ix: NodeIndex ) -> NodeError {
+    pub fn with_ctx_mut(self, ctx: &OpCtxMut, ix: NodeIndex ) -> FlowError {
         self.add_node_info(NodeDebugInfo::from_ctx_mut(ctx, ix))
     }
 }
@@ -119,25 +119,25 @@ pub struct NodeDefinition {
 // alternate traits for common classes of nodes
 pub trait NodeDefOneInputExpand {
     fn fqn(&self) -> &'static str;
-    fn validate_params(&self, p: &NodeParams) -> NResult<()>{
+    fn validate_params(&self, p: &NodeParams) -> Result<()>{
         Ok(())
     }
-    fn estimate(&self, params: &NodeParams, input: FrameEstimate) -> NResult<FrameEstimate>{
+    fn estimate(&self, params: &NodeParams, input: FrameEstimate) -> Result<FrameEstimate>{
         Ok(input)
     }
-    fn expand(&self, ctx: &mut OpCtxMut, ix: NodeIndex, params: NodeParams, parent: FrameInfo) -> NResult<()>;
+    fn expand(&self, ctx: &mut OpCtxMut, ix: NodeIndex, params: NodeParams, parent: FrameInfo) -> Result<()>;
 }
 pub trait NodeDefOneInputOneCanvas{
     fn fqn(&self) -> &'static str;
-    fn validate_params(&self, p: &NodeParams) -> NResult<()>;
-    fn render(&self, c: &Context, canvas: &mut BitmapBgra, input: &mut BitmapBgra,  p: &NodeParams) -> NResult<()>;
+    fn validate_params(&self, p: &NodeParams) -> Result<()>;
+    fn render(&self, c: &Context, canvas: &mut BitmapBgra, input: &mut BitmapBgra,  p: &NodeParams) -> Result<()>;
 }
 pub trait NodeDefMutateBitmap{
     fn fqn(&self) -> &'static str;
-    fn validate_params(&self, p: &NodeParams) -> NResult<()>{
+    fn validate_params(&self, p: &NodeParams) -> Result<()>{
         Ok(())
     }
-    fn mutate(&self, c: &Context, bitmap: &mut BitmapBgra,  p: &NodeParams) -> NResult<()>;
+    fn mutate(&self, c: &Context, bitmap: &mut BitmapBgra,  p: &NodeParams) -> Result<()>;
 }
 
 
@@ -194,7 +194,7 @@ pub trait NodeDef: ::std::fmt::Debug{
     }
 
     /// Edges will be validated before calling estimation or execution or flattening
-    fn edges_required(&self, p: &NodeParams) -> NResult<(EdgesIn, EdgesOut)>{
+    fn edges_required(&self, p: &NodeParams) -> Result<(EdgesIn, EdgesOut)>{
         if self.as_one_input_expand().is_some(){
             Ok((EdgesIn::OneInput, EdgesOut::Any))
         } else if self.as_one_input_one_canvas().is_some(){
@@ -206,7 +206,7 @@ pub trait NodeDef: ::std::fmt::Debug{
         }
     }
 
-    fn validate_params(&self, p: &NodeParams) -> NResult<()>{
+    fn validate_params(&self, p: &NodeParams) -> Result<()>{
         if let Some(n) = self.as_one_input_one_canvas(){
             n.validate_params(p).map_err(|e| e.at(here!()))
         } else if let Some(n) = self.as_one_mutate_bitmap(){
@@ -218,7 +218,7 @@ pub trait NodeDef: ::std::fmt::Debug{
         }
     }
 
-    fn estimate(&self, ctx: &mut OpCtxMut, ix: NodeIndex) -> NResult<FrameEstimate>{
+    fn estimate(&self, ctx: &mut OpCtxMut, ix: NodeIndex) -> Result<FrameEstimate>{
         if let Some(n) = self.as_one_input_expand(){
             let input = ctx.frame_est_from(ix, EdgeKind::Input).map_err(|e| e.at(here!()))?;
             let params = &ctx.weight(ix).params;
@@ -236,7 +236,7 @@ pub trait NodeDef: ::std::fmt::Debug{
         self.as_one_input_expand().is_some()
     }
 
-    fn expand(&self, ctx: &mut OpCtxMut, ix: NodeIndex) -> NResult<()>{
+    fn expand(&self, ctx: &mut OpCtxMut, ix: NodeIndex) -> Result<()>{
         if let Some(n) = self.as_one_input_expand(){
             let parent = ctx.frame_info_from(ix, EdgeKind::Input)?;
             let params = ctx.weight(ix).params.clone();
@@ -251,7 +251,7 @@ pub trait NodeDef: ::std::fmt::Debug{
         self.as_one_input_one_canvas().is_some() || self.as_one_mutate_bitmap().is_some()
     }
 
-    fn execute(&self, ctx: &mut OpCtxMut, ix: NodeIndex) -> NResult<NodeResult>{
+    fn execute(&self, ctx: &mut OpCtxMut, ix: NodeIndex) -> Result<NodeResult>{
         if let Some(n) = self.as_one_input_one_canvas(){
             let input = ctx.bitmap_bgra_from(ix, EdgeKind::Input).map_err(|e| e.at(here!()))?;
             let canvas = ctx.bitmap_bgra_from(ix, EdgeKind::Canvas).map_err(|e| e.at(here!()))?;
@@ -298,11 +298,11 @@ impl<T> NodeDef for MutProtect<T> where T: NodeDef{
     fn as_one_input_expand(&self) -> Option<&NodeDefOneInputExpand>{
         Some(self)
     }
-    fn validate_params(&self, p: &NodeParams) -> NResult<()>{
+    fn validate_params(&self, p: &NodeParams) -> Result<()>{
         self.node.validate_params(p).map_err(|e| e.at(here!()))
     }
 
-    fn estimate(&self, ctx: &mut OpCtxMut, ix: NodeIndex) -> NResult<FrameEstimate>{
+    fn estimate(&self, ctx: &mut OpCtxMut, ix: NodeIndex) -> Result<FrameEstimate>{
         self.node.estimate(ctx, ix).map_err(|e| e.at(here!()))
     }
 }
@@ -311,7 +311,7 @@ impl<T> NodeDefOneInputExpand for MutProtect<T> where T: NodeDef{
     fn fqn(&self) -> &'static str{
         self.fqn
     }
-    fn expand(&self, ctx: &mut OpCtxMut, ix: NodeIndex, params: NodeParams, parent: FrameInfo) -> NResult<()>{
+    fn expand(&self, ctx: &mut OpCtxMut, ix: NodeIndex, params: NodeParams, parent: FrameInfo) -> Result<()>{
         let mut new_nodes = Vec::with_capacity(2);
         if ctx.has_other_children(ctx.first_parent_input(ix).unwrap(), ix) {
             new_nodes.push(Node::n(self.node, NodeParams::None));
@@ -337,15 +337,15 @@ impl NodeDef for NodeDefinition{
     fn name(&self) -> &'static str{
         self.name
     }
-    fn edges_required(&self, p: &NodeParams) -> NResult<(EdgesIn, EdgesOut)>{
+    fn edges_required(&self, p: &NodeParams) -> Result<(EdgesIn, EdgesOut)>{
         Ok((self.inbound_edges, if self.outbound_edges { EdgesOut::Any } else { EdgesOut::None }))
     }
 
-    fn validate_params(&self, p: &NodeParams) -> NResult<()>{
+    fn validate_params(&self, p: &NodeParams) -> Result<()>{
         Ok(())
     }
 
-    fn estimate(&self, ctx: &mut OpCtxMut, ix: NodeIndex) -> NResult<FrameEstimate>{
+    fn estimate(&self, ctx: &mut OpCtxMut, ix: NodeIndex) -> Result<FrameEstimate>{
         if let Some(f) = self.fn_estimate{
             f(ctx, ix);
             Ok(ctx.weight(ix).frame_est)
@@ -354,7 +354,7 @@ impl NodeDef for NodeDefinition{
         }
     }
 
-    fn expand(&self, ctx: &mut OpCtxMut, ix: NodeIndex) -> NResult<()>{
+    fn expand(&self, ctx: &mut OpCtxMut, ix: NodeIndex) -> Result<()>{
         if let Some(f) = self.fn_flatten_pre_optimize{
             f(ctx, ix);
             Ok(())
@@ -371,7 +371,7 @@ impl NodeDef for NodeDefinition{
         self.fn_execute.is_some()
     }
 
-    fn execute(&self, ctx: &mut OpCtxMut, ix: NodeIndex) -> NResult<NodeResult>{
+    fn execute(&self, ctx: &mut OpCtxMut, ix: NodeIndex) -> Result<NodeResult>{
         if let Some(f) = self.fn_execute{
             f(ctx, ix);
             Ok(ctx.weight(ix).result.clone())
@@ -444,7 +444,7 @@ impl FrameEstimate{
     }
 
     /// Maps both UpperBound and Some
-    pub fn map_frame<F>(self, f: F) -> NResult<FrameEstimate> where F: Fn(FrameInfo) -> NResult<FrameInfo> {
+    pub fn map_frame<F>(self, f: F) -> Result<FrameEstimate> where F: Fn(FrameInfo) -> Result<FrameInfo> {
         match self {
             FrameEstimate::Some(info) =>
                 Ok(FrameEstimate::Some(f(info)?)),

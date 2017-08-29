@@ -256,7 +256,7 @@ bool flow_bitmap_bgra_fill_rect(flow_c * c, struct flow_bitmap_bgra * b, uint32_
     uint32_t color = color_srgb_argb;
     if (step == 1) {
         // TODO: use gamma-correct grayscale conversion
-        FLOW_error(c, flow_status_Not_implemented);
+        FLOW_error(c, flow_status_Unsupported_pixel_format);
         return false;
     } else if (step == 3) {
         // we just ignore the alpha bits

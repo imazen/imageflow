@@ -62,7 +62,7 @@ impl GraphTranslator {
             };
 
             if let  Err(daggy::WouldCycle(_)) = g.add_edge(from_id, to_id, new_edge_kind) {
-                return Err(FlowError::GraphCyclic);
+                return Err(nerror!(ErrorKind::GraphCyclic));
             }
         }
         Ok(g)

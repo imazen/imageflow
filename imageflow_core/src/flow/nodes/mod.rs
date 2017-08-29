@@ -25,9 +25,9 @@ mod internal_prelude {
     pub use super::*;
     #[macro_use]
     pub use super::super::*;
-    pub use ::{Context, Job, NResult, NodeError};
+    pub use ::{Context, Job, Result, FlowError};
 }
-use ::{Context, Job, NResult, NodeError};
+use ::{Context, Job, Result, FlowError};
 extern crate imageflow_types as s;
 pub use self::clone_crop_fill_expand::CLONE;
 pub use self::clone_crop_fill_expand::COPY_RECT;
@@ -69,12 +69,12 @@ use super::definitions::*;
 fn test_err() {
 
     let e = nerror!(::ErrorKind::BitmapPointerNull);
-    assert_eq!(e.kind, ErrorKind::BitmapPointerNull);
-    assert!(format!("{}",&e).starts_with("NodeError BitmapPointerNull at"));
+    assert_eq!(e.kind, ::ErrorKind::BitmapPointerNull);
+    assert!(format!("{}",&e).starts_with("InternalError: BitmapPointerNull at"));
     let e = nerror!(::ErrorKind::BitmapPointerNull, "hi");
-    assert!(format!("{}",&e).starts_with("NodeError BitmapPointerNull: hi at"));
+    assert!(format!("{}",&e).starts_with("InternalError: BitmapPointerNull: hi at"));
     let e = nerror!(::ErrorKind::BitmapPointerNull, "hi {}", 1);
-    assert!(format!("{}",&e).starts_with("NodeError BitmapPointerNull: hi 1 at"));
+    assert!(format!("{}",&e).starts_with("InternalError: BitmapPointerNull: hi 1 at"));
 }
 
 pub struct NodeDefHelpers {}
@@ -110,7 +110,7 @@ impl<'c> OpCtxMut<'c> {
     pub fn first_parent_of_kind_required(&self,
                                 of_node: NodeIndex,
                                 filter_by_kind: EdgeKind)
-                                -> NResult<NodeIndex> {
+                                -> Result<NodeIndex> {
         if let Some(ix) = self.first_parent_of_kind(of_node, filter_by_kind){
             Ok(ix)
         }else {
@@ -202,7 +202,7 @@ impl<'c> OpCtxMut<'c> {
     }
 
 
-    pub fn frame_info_from(&self, ix: NodeIndex, filter_by_kind: EdgeKind) -> NResult<FrameInfo> {
+    pub fn frame_info_from(&self, ix: NodeIndex, filter_by_kind: EdgeKind) -> Result<FrameInfo> {
         let parent = self.first_parent_of_kind_required(ix, filter_by_kind)?;
         let est = self.graph.node_weight(parent).expect(loc!("first_parent_of_kind_required provided invalid node index")).frame_est;
         if let  FrameEstimate::Some(info) = est{
@@ -211,7 +211,7 @@ impl<'c> OpCtxMut<'c> {
             Err(nerror!(::ErrorKind::InvalidOperation, "Parent {:?} node lacks FrameEstimate::Some (required for expand/execute). Value is {:?}", filter_by_kind, est).with_ctx_mut(self, ix))
         }
     }
-    pub fn frame_est_from(&self, ix: NodeIndex, filter_by_kind: EdgeKind) -> NResult<FrameEstimate> {
+    pub fn frame_est_from(&self, ix: NodeIndex, filter_by_kind: EdgeKind) -> Result<FrameEstimate> {
         let parent = self.first_parent_of_kind_required(ix, filter_by_kind)?;
 
         let est = self.graph.node_weight(parent).expect(loc!("first_parent_of_kind_required provided invalid node index")).frame_est;
@@ -223,7 +223,7 @@ impl<'c> OpCtxMut<'c> {
     }
 
 
-    pub fn bitmap_bgra_from(&mut self, ix: NodeIndex, filter_by_kind: EdgeKind) -> NResult<*mut BitmapBgra> {
+    pub fn bitmap_bgra_from(&mut self, ix: NodeIndex, filter_by_kind: EdgeKind) -> Result<*mut BitmapBgra> {
         let parent = self.first_parent_of_kind_required(ix, filter_by_kind)?;
 
         let result = &self.graph.node_weight(parent).expect(loc!("first_parent_of_kind_required provided invalid node index")).result;
@@ -237,7 +237,7 @@ impl<'c> OpCtxMut<'c> {
             Err(nerror!(::ErrorKind::InvalidOperation, "Parent {:?} node lacks NodeResult::Frame(bitmap). Value is {:?}", filter_by_kind, result).with_ctx_mut(self, ix))
         }
     }
-    pub fn consume_parent_result(&mut self, ix: NodeIndex, filter_by_kind: EdgeKind) -> NResult<()> {
+    pub fn consume_parent_result(&mut self, ix: NodeIndex, filter_by_kind: EdgeKind) -> Result<()> {
         let parent = self.first_parent_of_kind_required(ix, filter_by_kind)?;
 
         let result = {
@@ -267,15 +267,12 @@ impl<'c> OpCtxMut<'c> {
     }
 
     pub fn assert_ok(&self) {
-        self.panic_time()
-    }
-
-
-    pub fn panic_time(&self) {
-        if let Some(e) = self.c.c_error(){
-            e.panic_time();
+        if self.c.c_error().has_error(){
+            cerror!(self.c).panic();
         }
     }
+
+
 
     pub fn rotate_frame_est_from_first_input(&mut self,
                                                      node_to_update: NodeIndex) {
@@ -399,7 +396,7 @@ impl<'c> OpCtxMut<'c> {
         self.get_decoder_io_ids_and_indexes(ancestors_of_node).into_iter().map(|(a,b)| a).collect::<>()
     }
     pub fn get_image_info_list(&mut self,
-                            ancestors_of_node: NodeIndex) -> Vec<::std::result::Result<s::ImageInfo, ::FlowError>>{
+                            ancestors_of_node: NodeIndex) -> Vec<Result<s::ImageInfo>>{
         self.get_decoder_io_ids(ancestors_of_node).into_iter().map(|io_id| self.job.get_image_info(io_id)).collect::<>()
     }
 

@@ -2,7 +2,7 @@ use ::std;
 use ::for_other_imageflow_crates::preludes::external_without_std::*;
 use ::ffi;
 use ::job::Job;
-use ::{Context, FlowErr,FlowError, Result, JsonResponse};
+use ::{Context, CError, Result, JsonResponse, ErrorKind};
 use ::ffi::ImageflowJobIo;
 use ::imageflow_types::collections::AddRemoveSet;
 use std::ascii::AsciiExt;
@@ -78,7 +78,7 @@ impl IoProxy {
     }
     pub fn wrap_classic(context: &Context, classic_io: *mut ::ffi::ImageflowJobIo) -> Result<RefMut<IoProxy>> {
         if classic_io.is_null() {
-            Err(context.c_error().unwrap())
+            Err(cerror!(context))
         } else {
             let mut proxy = context.create_io_proxy();
             proxy.classic = classic_io;
@@ -100,28 +100,37 @@ impl IoProxy {
     }
 
     pub fn read_to_buffer(&self, context: &Context, buffer: &mut [u8]) -> Result<i64> {
-        //TODO: return result for read failure instead of panicking.
         // Return result for missing function instead of panicking.
         let read = self.classic_io().unwrap().read_fn.unwrap()(context.flow_c(), self.classic, buffer.as_mut_ptr(), buffer.len());
         if read < buffer.len() as i64{
-            context.error().assert_ok();
+            if context.c_error().has_error() {
+                Err(cerror!(context))
+            }else{
+                Ok(read)
+            }
+
+        } else {
+            Ok(read)
         }
-        Ok(read)
 
     }
     pub fn write_from_buffer(&self, context: &Context, buffer: &[u8]) -> Result<i64> {
-        //TODO: return result for read failure instead of panicking.
         // Return result for missing function instead of panicking.
         let read = self.classic_io().unwrap().write_fn.unwrap()(context.flow_c(), self.classic, buffer.as_ptr(), buffer.len());
         if read < buffer.len() as i64{
-            context.error().assert_ok();
+            if context.c_error().has_error() {
+                Err(cerror!(context))
+            }else{
+                Ok(read)
+            }
+
+        } else {
+            Ok(read)
         }
-        Ok(read)
 
     }
 
     pub fn seek(&self, context: &Context, position: i64) -> Result<bool> {
-        //TODO: return result for read failure instead of panicking.
         // Return result for missing function instead of panicking.
         let success = self.classic_io().unwrap().seek_fn.unwrap()(context.flow_c(), self.classic, position);
         Ok(success)
@@ -151,10 +160,10 @@ impl IoProxy {
                                                           &mut buf_start as *mut *const u8,
                                                           &mut buf_len as *mut usize);
             if !worked {
-                Err(self.c.c_error().unwrap())
+                Err(cerror!(self.c))
             } else if buf_start.is_null() {
                 // Not sure how output buffer is null... no writes yet?
-                Err(FlowError::ErrNotImpl)
+                Err(unimpl!())
             } else {
                 Ok((std::slice::from_raw_parts(buf_start, buf_len)))
             }
@@ -183,7 +192,7 @@ impl IoProxy {
                                            0) as *mut u8;
 
             if buf.is_null() {
-                return Err(FlowError::Oom);
+                return Err(err_oom!());
             }
             ptr::copy_nonoverlapping(bytes.as_ptr(), buf, bytes.len());
 
@@ -204,7 +213,7 @@ impl IoProxy {
             // Winows fopen needs ansii
             let path_buf = path.as_ref().to_path_buf();
             let c_path = CString::new(path_buf.to_str().expect("Paths should be valid UTF-8 wihtout null characters"))
-                .map_err(|e| FlowError::NullArgument)?; //TODO: invalid argument, not null
+                .map_err(|e| nerror!( ErrorKind::InvalidArgument))?;
             let p = ::ffi::flow_io_create_for_file(context.flow_c(),
                                                    mode,
                                                    c_path.as_ptr(),

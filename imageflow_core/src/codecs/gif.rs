@@ -2,7 +2,7 @@ use ::std;
 use ::for_other_imageflow_crates::preludes::external_without_std::*;
 use ::ffi;
 use ::job::Job;
-use ::{Context, FlowErr,FlowError, Result, JsonResponse};
+use ::{Context, CError,  Result, JsonResponse};
 use ::ffi::CodecInstance;
 use ::ffi::BitmapBgra;
 use ::imageflow_types::collections::AddRemoveSet;
@@ -80,7 +80,7 @@ impl Decoder for GifDecoder {
             unsafe {
                 let copy = ffi::flow_bitmap_bgra_create(c.flow_c(), screen.width as i32, screen.height as i32, false, ffi::PixelFormat::Bgra32);
                 if copy == ptr::null_mut() {
-                    c.error().assert_ok();
+                    cerror!(c).panic();
                 }
                 let pixel_count = (*copy).stride * (*copy).h / 4;
                 let copy_buffer: &mut [Bgra32] = std::slice::from_raw_parts_mut((*copy).pixels as *mut Bgra32, pixel_count as usize);
@@ -130,7 +130,7 @@ impl Encoder for GifEncoder{
                 ::ffi::PixelFormat::Bgr24 => Ok(from_bgr_with_stride(frame.w as u16, frame.h as u16, &mut pixels, frame.stride as usize)),
                 ::ffi::PixelFormat::Bgra32 => Ok(from_bgra_with_stride(frame.w as u16, frame.h as u16, &mut pixels, frame.stride as usize)),
                 ::ffi::PixelFormat::Bgr32 => Ok(from_bgrx_with_stride(frame.w as u16, frame.h as u16, &mut pixels, frame.stride as usize)),
-                other =>  Err(FlowError::NullArgument) //TODO: improve this error
+                other =>  Err(nerror!(ErrorKind::InvalidArgument)) //TODO: improve this error
             }?;
 
             let mut encoder = ::gif::Encoder::new(io, frame.w as u16, frame.h as u16, &[]).unwrap();

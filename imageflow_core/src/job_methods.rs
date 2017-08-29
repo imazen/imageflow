@@ -21,11 +21,11 @@ fn create_job_router() -> MethodRouter<'static, Job> {
                     }));
     r.add_responder("v0.1/execute",
                     Box::new(move |job: &mut Job, parsed: s::Execute001| {
-                        job.execute(parsed)
+                        job.execute_1(parsed)
                     }));
 
     r.add("brew_coffee",
-          Box::new(move |job: &mut Job, bytes: &[u8]| Ok(JsonResponse::teapot())));
+          Box::new(move |job: &mut Job, bytes: &[u8]| (JsonResponse::teapot(), Ok(()))));
     r
 }
 

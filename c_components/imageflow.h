@@ -83,11 +83,9 @@ typedef enum flow_status_code {
 
     flow_status_Image_decoding_failed = 60,
     flow_status_Image_encoding_failed = 61,
-    flow_status_Graph_invalid = 70,
-    flow_status_Graph_is_cyclic = 71,
-    flow_status_Invalid_inputs_to_node = 72,
-    flow_status_Maximum_graph_passes_exceeded = 73,
     flow_status_ErrorReportingInconsistency = 90,
+    flow_status_First_rust_error = 200,
+
     flow_status_Other_error = 1024,
     flow_status____Last_library_error,
     flow_status_First_user_defined_error = 1025,
@@ -194,6 +192,8 @@ PUB void flow_context_terminate(flow_c * context);
 
 PUB void flow_context_destroy(flow_c * c); // Don't pass this a pointer on the stack! use begin/end terminate
 
+PUB bool flow_context_error_status_included_in_message(flow_c * context); //Useful for roundtripping
+PUB bool flow_context_set_error_get_message_buffer_info(flow_c * context, flow_status_code code, bool status_included_in_buffer, char * * buffer,  size_t * buffer_size);
 PUB int64_t flow_context_error_and_stacktrace(flow_c * c, char * buffer, size_t buffer_size, bool full_file_path);
 PUB int64_t flow_context_error_message(flow_c * c, char * buffer, size_t buffer_size);
 PUB int64_t flow_context_stacktrace(flow_c * c, char * buffer, size_t buffer_size, bool full_file_path);

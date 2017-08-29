@@ -1,7 +1,7 @@
 use ::internal_prelude::works_everywhere::*;
 
 type ResponderFn<'a, T, D> = Box<Fn(&mut T, D) -> Result<s::ResponsePayload> + 'a + Sync>;
-type MethodHandler<'a, T> = Box<Fn(&mut T, &[u8]) -> Result<JsonResponse> + 'a + Sync>;
+type MethodHandler<'a, T> = Box<Fn(&mut T, &[u8]) -> (JsonResponse, std::result::Result<(), FlowError>) + 'a + Sync>;
 
 
 pub struct MethodRouter<'a, T> {
@@ -48,10 +48,10 @@ impl<'a, T> MethodRouter<'a, T> {
                   upon: &mut T,
                   method: &str,
                   json_request_body: &[u8])
-                  -> Result<JsonResponse> {
+                  -> (JsonResponse, Result<()>) {
         match self.handlers.get(method) {
             Some(handler) => handler(upon as &mut T, json_request_body),
-            None => Ok(JsonResponse::method_not_understood()),
+            None => (JsonResponse::method_not_understood(), Err(nerror!(ErrorKind::InvalidMessageEndpoint)))
         }
     }
 }
@@ -61,6 +61,7 @@ pub fn create_handler_over_responder<'a, T, D>(responder: ResponderFn<'a, T, D>)
           D: 'a,
           T: 'a
 {
+
     Box::new(move |upon: &mut T, json_request_bytes: &[u8]| {
 
         let parsed_maybe: std::result::Result<D, serde_json::Error> =
@@ -70,16 +71,14 @@ pub fn create_handler_over_responder<'a, T, D>(responder: ResponderFn<'a, T, D>)
                 let payload_maybe = responder(upon, parsed);
                 match payload_maybe {
                     Ok(payload) => {
-                        Ok(JsonResponse::success_with_payload(payload)) //How about failures with payloads!?
+                        (JsonResponse::success_with_payload(payload), Ok(())) //How about failures with payloads!?
                     }
                     Err(error) => {
-                        let message = format!("{}", error);
-                        Ok(JsonResponse::fail_with_message(500,
-                                                           &message))
+                        (JsonResponse::from_flow_error(&error), Err(error))
                     }
                 }
             }
-            Err(e) => Ok(JsonResponse::from_parse_error(e, json_request_bytes)),
+            Err(e) => (JsonResponse::from_parse_error(&e, json_request_bytes), Err(FlowError::from_serde(e, json_request_bytes))),
         }
 
     })
@@ -93,17 +92,22 @@ pub struct JsonResponse {
 }
 
 impl JsonResponse {
-    pub fn from_parse_error(err: serde_json::error::Error, json: &[u8]) -> JsonResponse {
+    pub fn from_flow_error(err: &FlowError) -> JsonResponse{
+        let message = format!("{}", err);
+        JsonResponse::fail_with_message(500,
+                                        &message)
+    }
+    pub fn from_parse_error(err: &serde_json::error::Error, json: &[u8]) -> JsonResponse {
 
         let message = format!("Parse error: {}\n Received: \n{}\n{:?}",
-                              err,
+                              &err,
                               std::str::from_utf8(json).unwrap_or("[INVALID UTF-8]"),
                                 json);
 
         let r = s::Response001 {
             success: false,
             code: 400,
-            message: Some(message.to_owned()),
+            message: Some(message),
             data: s::ResponsePayload::None,
         };
         JsonResponse::from_response001(r)
@@ -133,9 +137,7 @@ impl JsonResponse {
                 JsonResponse::success_with_payload(payload) //How about failures with payloads!?
             }
             Err(error) => {
-                let message = format!("{}", error);
-                JsonResponse::fail_with_message(500,
-                                                   &message)
+                JsonResponse::from_flow_error(&error)
             }
         }
     }

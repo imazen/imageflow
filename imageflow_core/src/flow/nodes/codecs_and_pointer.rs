@@ -12,7 +12,7 @@ lazy_static! {
 pub struct BitmapBgraDef{}
 
 impl BitmapBgraDef{
-    fn get(&self, p: &NodeParams) -> NResult<*mut *mut BitmapBgra> {
+    fn get(&self, p: &NodeParams) -> Result<*mut *mut BitmapBgra> {
         if let &NodeParams::Json(s::Node::FlowBitmapBgraPtr { ptr_to_flow_bitmap_bgra_ptr }) = p {
             let ptr: *mut *mut BitmapBgra = ptr_to_flow_bitmap_bgra_ptr as *mut *mut BitmapBgra;
             if ptr.is_null() {
@@ -30,15 +30,15 @@ impl NodeDef for BitmapBgraDef {
     fn fqn(&self) -> &'static str {
         "imazen.bitmap_bgra_pointer"
     }
-    fn edges_required(&self, p: &NodeParams) -> NResult<(EdgesIn, EdgesOut)> {
+    fn edges_required(&self, p: &NodeParams) -> Result<(EdgesIn, EdgesOut)> {
         Ok((EdgesIn::OneOptionalInput, EdgesOut::Any))
     }
 
-    fn validate_params(&self, p: &NodeParams) -> NResult<()> {
+    fn validate_params(&self, p: &NodeParams) -> Result<()> {
         self.get(p).map_err(|e| e.at(here!())).map(|_| ())
     }
 
-    fn estimate(&self, ctx: &mut OpCtxMut, ix: NodeIndex) -> NResult<FrameEstimate> {
+    fn estimate(&self, ctx: &mut OpCtxMut, ix: NodeIndex) -> Result<FrameEstimate> {
         let params = &ctx.weight(ix).params;
 
         let ptr = self.get(params).map_err(|e| e.at(here!()))?;
@@ -62,7 +62,7 @@ impl NodeDef for BitmapBgraDef {
         true
     }
 
-    fn execute(&self, ctx: &mut OpCtxMut, ix: NodeIndex) -> NResult<NodeResult> {
+    fn execute(&self, ctx: &mut OpCtxMut, ix: NodeIndex) -> Result<NodeResult> {
         let ptr = self.get(&ctx.weight(ix).params).map_err(|e| e.at(here!()))?;
 
         let frame = ctx.first_parent_result_frame(ix, EdgeKind::Input);

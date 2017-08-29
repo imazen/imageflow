@@ -110,7 +110,7 @@ impl NodeDefOneInputExpand for ConstrainDef{
     fn fqn(&self) -> &'static str{
         "imazen.constrain"
     }
-    fn estimate(&self, params: &NodeParams, input: FrameEstimate) -> NResult<FrameEstimate>{
+    fn estimate(&self, params: &NodeParams, input: FrameEstimate) -> Result<FrameEstimate>{
         if let &NodeParams::Json(s::Node::Constrain(ref constraint)) = params {
             input.map_frame(|input| {
                 let (w, h, _) = constrain(input.w as u32, input.h as u32, constraint);
@@ -125,7 +125,7 @@ impl NodeDefOneInputExpand for ConstrainDef{
         }
     }
 
-    fn expand(&self, ctx: &mut OpCtxMut, ix: NodeIndex, params: NodeParams, parent: FrameInfo) -> NResult<()> {
+    fn expand(&self, ctx: &mut OpCtxMut, ix: NodeIndex, params: NodeParams, parent: FrameInfo) -> Result<()> {
         if let NodeParams::Json(s::Node::Constrain(constraint)) = params {
             let input_w = parent.w as u32;
             let input_h = parent.h as u32;
@@ -237,19 +237,19 @@ impl NodeDef for CommandStringDef{
     fn fqn(&self) -> &'static str{
         "imazen.command_string"
     }
-    fn estimate(&self, ctx: &mut OpCtxMut, ix: NodeIndex) -> NResult<FrameEstimate>{
+    fn estimate(&self, ctx: &mut OpCtxMut, ix: NodeIndex) -> Result<FrameEstimate>{
         Ok((FrameEstimate::Impossible))
     }
-    fn edges_required(&self, p: &NodeParams) -> NResult<(EdgesIn, EdgesOut)> {
+    fn edges_required(&self, p: &NodeParams) -> Result<(EdgesIn, EdgesOut)> {
         Ok((EdgesIn::OneInput, EdgesOut::Any))
     }
-    fn validate_params(&self, p: &NodeParams) -> NResult<()>{
+    fn validate_params(&self, p: &NodeParams) -> Result<()>{
         Ok(())
     }
     fn can_expand(&self) -> bool{
         true
     }
-    fn expand(&self, ctx: &mut OpCtxMut, ix: NodeIndex) -> NResult<()> {
+    fn expand(&self, ctx: &mut OpCtxMut, ix: NodeIndex) -> Result<()> {
         let has_parent = ctx.first_parent_of_kind(ix, EdgeKind::Input).is_some();
         let params = ctx.weight(ix).params.clone();
         let params_copy = ctx.weight(ix).params.clone();

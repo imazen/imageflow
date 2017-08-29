@@ -2,15 +2,17 @@
 set -e
 
 # Delete the profiling dir to re-install
+rm -rf profiling
 (
 if [ -d "profiling" ]; then
     cd profiling || exit
 else
     mkdir profiling
     cd profiling || exit
-    conan install --file ../conanfile.py --scope profiling=True --scope build_tests=False --build missing
+    conan install --scope profiling=True --scope build_tests=False -s target_cpu=haswell --build missing -u ../
 fi
-conan build --file ../conanfile.py
+conan build ../
+
 time build/bin/profile_imageflow
 gprof build/bin/profile_imageflow gmon.out > ../profile.txt
 )

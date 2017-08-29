@@ -37,7 +37,7 @@ impl<'a, 'b> Engine<'a, 'b> where 'a: 'b {
         self.c.flow_c()
     }
 
-    pub fn validate_graph(&self) -> NResult<()> {
+    pub fn validate_graph(&self) -> Result<()> {
         for node_index in (0..self.g.node_count()).map(|i| NodeIndex::new(i)) {
             let n = self.g.node_weight(node_index).unwrap();
 
@@ -213,7 +213,7 @@ impl<'a, 'b> Engine<'a, 'b> where 'a: 'b {
     }
 
 
-    pub fn estimate_node(&mut self, node_id: NodeIndex) -> NResult<FrameEstimate> {
+    pub fn estimate_node(&mut self, node_id: NodeIndex) -> Result<FrameEstimate> {
         let now = time::precise_time_ns();
         let mut ctx = OpCtxMut{
             c: self.c,
@@ -224,7 +224,7 @@ impl<'a, 'b> Engine<'a, 'b> where 'a: 'b {
         // Invoke estimation
         // If not implemented, estimation is impossible
         let result = match ctx.weight(node_id).def.estimate(&mut ctx, node_id){
-            Err(NodeError{kind: ErrorKind::MethodNotImplemented, ..}) => {
+            Err(FlowError {kind: ErrorKind::MethodNotImplemented, ..}) => {
                 Ok(FrameEstimate::Impossible)
             }
             other => other
@@ -238,7 +238,7 @@ impl<'a, 'b> Engine<'a, 'b> where 'a: 'b {
         result
     }
 
-    pub fn estimate_node_recursive(&mut self, node_id: NodeIndex, recurse_limit: i32) -> NResult<FrameEstimate> {
+    pub fn estimate_node_recursive(&mut self, node_id: NodeIndex, recurse_limit: i32) -> Result<FrameEstimate> {
         if recurse_limit < 0 {
             panic!("Hit node estimation recursion limit");
         }
@@ -295,7 +295,7 @@ impl<'a, 'b> Engine<'a, 'b> where 'a: 'b {
         }
     }
 
-    pub fn populate_dimensions_where_certain(&mut self) -> NResult<()> {
+    pub fn populate_dimensions_where_certain(&mut self) -> Result<()> {
 
         for ix in 0..self.g.node_count() {
             // If any node returns FrameEstimate::Impossible, we might as well move on to execution pass.
@@ -438,7 +438,7 @@ impl<'a, 'b> Engine<'a, 'b> where 'a: 'b {
                                     println!("Failed to save frame {} (from node {})",
                                              path_copy,
                                              next_ix.index());
-                                    self.c.c_error().unwrap().panic_time();
+                                    cerror!(self.c).panic();
                                 }
                             }
                         }

@@ -8,7 +8,7 @@ pub static CREATE_CANVAS: CreateCanvasNodeDef = CreateCanvasNodeDef{};
 pub struct CreateCanvasNodeDef{}
 
 impl CreateCanvasNodeDef{
-    fn get(&self, n: &NodeParams) -> NResult<(usize,usize,PixelFormat,s::Color)>{
+    fn get(&self, n: &NodeParams) -> Result<(usize, usize, PixelFormat, s::Color)>{
         if let &NodeParams::Json(s::Node::CreateCanvas { format,
                                     w,
                                     h,
@@ -38,15 +38,15 @@ impl NodeDef for CreateCanvasNodeDef {
         "imazen.create_canvas"
     }
 
-    fn edges_required(&self, p: &NodeParams) -> NResult<(EdgesIn, EdgesOut)> {
+    fn edges_required(&self, p: &NodeParams) -> Result<(EdgesIn, EdgesOut)> {
         Ok((EdgesIn::NoInput, EdgesOut::Any))
     }
 
-    fn validate_params(&self, n: &NodeParams) -> NResult<()> {
+    fn validate_params(&self, n: &NodeParams) -> Result<()> {
         self.get(n).map(|_| ())
     }
 
-    fn estimate(&self, ctx: &mut OpCtxMut, ix: NodeIndex) -> NResult<FrameEstimate> {
+    fn estimate(&self, ctx: &mut OpCtxMut, ix: NodeIndex) -> Result<FrameEstimate> {
         self.get(&ctx.weight(ix).params).map(|(w, h, format, _)| {
             FrameEstimate::Some(FrameInfo {
                 w: w as i32,
@@ -58,7 +58,7 @@ impl NodeDef for CreateCanvasNodeDef {
     fn can_execute(&self) -> bool{
         true
     }
-    fn execute(&self, ctx: &mut OpCtxMut, ix: NodeIndex) -> NResult<NodeResult> {
+    fn execute(&self, ctx: &mut OpCtxMut, ix: NodeIndex) -> Result<NodeResult> {
         match self.get(&ctx.weight(ix).params) {
             Ok((w, h, format, color)) => {
                 let flow_pointer = ctx.flow_c();
@@ -69,7 +69,7 @@ impl NodeDef for CreateCanvasNodeDef {
                     let ptr =
                         ::ffi::flow_bitmap_bgra_create(flow_pointer, w as i32, h as i32, true, format);
                     if ptr.is_null() {
-                        return Err(nerror!(::ErrorKind::CError(ctx.c.error().c_error()), "Failed to allocate {}x{}x{} bitmap ({} bytes). Reduce dimensions or increase RAM.", w, h, format.bytes(), w * h * format.bytes()))
+                        return Err(cerror!(ctx.c, "Failed to allocate {}x{}x{} bitmap ({} bytes). Reduce dimensions or increase RAM.", w, h, format.bytes(), w * h * format.bytes()))
                     }
                     let color_val = color.clone();
                     let color_srgb_argb = color_val.clone().to_u32_bgra().unwrap();
@@ -82,7 +82,7 @@ impl NodeDef for CreateCanvasNodeDef {
                                                             w as u32,
                                                             h as u32,
                                                             color_srgb_argb) {
-                            return Err(nerror!(::ErrorKind::CError(ctx.c.error().c_error()), "Failed to fill rectangle"))
+                            return Err(cerror!(ctx.c, "Failed to fill rectangle"))
 
                         }
                         (*ptr).compositing_mode = ::ffi::BitmapCompositingMode::BlendWithMatte;

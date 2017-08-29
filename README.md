@@ -137,6 +137,10 @@ sudo pip install conan
 ./ci/nixtools/install_dssim.sh
 ./build.sh
 ```
+
+The build will fail with `settings.target_cpu`. Edit `$HOME\.conan\settings.yml`. Append the line `target_cpu: [x86, x86-64, nehalem, sandybridge, haswell, native]`
+
+
 We aren't listing dependencies needed for 
 
 * Valgrind (common versions break openssl; you may need to build from source)
@@ -154,6 +158,9 @@ brew install conan nasm cmake
 ./ci/nixtools/install_dssim.sh
 ./build.sh
 ```
+
+The build will fail with `settings.target_cpu`. Edit `$HOME\.conan\settings.yml`. Append the line `target_cpu: [x86, x86-64, nehalem, sandybridge, haswell, native]`
+
 
 ## Windows
 

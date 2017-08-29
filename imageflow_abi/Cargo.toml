@@ -14,6 +14,8 @@ doctest = false
 [dependencies]
 libc = "0.2"
 imageflow_core = { path = "../imageflow_core", version = "*" }
+backtrace = "*"
+smallvec="*"
 
 [build-dependencies]
 imageflow_helpers = { path = "../imageflow_helpers", version = "*" }

@@ -89,10 +89,11 @@ struct flow_error_callstack_line {
 
 struct flow_error_info {
     flow_status_code reason;
-    struct flow_error_callstack_line callstack[14];
+    struct flow_error_callstack_line callstack[8];
     int callstack_count;
     int callstack_capacity;
     bool locked;
+    bool status_included_in_message;
     char message[FLOW_ERROR_MESSAGE_SIZE + 1];
 };
 
@@ -148,11 +149,11 @@ struct flow_objtracking_info {
 /** flow_context: main structure **/
 
 struct flow_context {
-    struct flow_error_info error;
-    struct flow_heap underlying_heap;
-    struct flow_profiling_log log;
-    struct flow_objtracking_info object_tracking;
     struct flow_context_codec_set * codec_set;
+    struct flow_heap underlying_heap;
+    struct flow_objtracking_info object_tracking;
+    struct flow_profiling_log log;
+    struct flow_error_info error;
 };
 
 typedef struct flow_context flow_c;

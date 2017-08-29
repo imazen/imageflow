@@ -10,7 +10,8 @@ use std::collections::HashMap;
 use std::fs::File;
 use std::path::{Path};
 use std::io::{Write, Read, BufWriter};
-use fc::JsonResponse;
+use fc::{JsonResponse, FlowError, ErrorCategory};
+use fc::errors::CategorizedError;
 
 pub enum JobSource {
     JsonFile(String),
@@ -74,49 +75,28 @@ pub enum CmdError {
     FlowError(fc::FlowError),
     Incomplete,
 }
-
-impl CmdError {
-    pub fn exit_code(&self) -> i32 {
-        //        #define EX_USAGE	64	/* command line usage error */
-        //        #define EX_DATAERR	65	/* data format error */
-        //        #define EX_NOINPUT	66	/* cannot open input */
-        //        #define EX_NOUSER	67	/* addressee unknown */
-        //        #define EX_NOHOST	68	/* host name unknown */
-        //        #define EX_UNAVAILABLE	69	/* service unavailable */
-        //        #define EX_SOFTWARE	70	/* internal software error */
-        //        #define EX_OSERR	71	/* system error (e.g., can't fork) */
-        //        #define EX_OSFILE	72	/* critical OS file missing */
-        //        #define EX_CANTCREAT	73	/* can't create (user) output file */
-        //        #define EX_IOERR	74	/* input/output error */
-        //        #define EX_TEMPFAIL	75	/* temp failure; user is invited to retry */
-        //        #define EX_PROTOCOL	76	/* remote error in protocol */
-        //        #define EX_NOPERM	77	/* permission denied */
-        //        #define EX_CONFIG	78	/* configuration error */
-
-        match *self {
+impl CategorizedError for CmdError{
+    fn category(&self) -> ErrorCategory{
+        match *self{
             CmdError::JsonRecipeNotFound(_) |
-            CmdError::DemoNotFound(_) => 66,
-            CmdError::IoError(_) => 74,
-            CmdError::BadArguments(_) => 64,
-            CmdError::InconsistentUseOfIoId(_) => 64,
-            CmdError::IoIdNotInRecipe(_) => 64,
-            CmdError::InvalidJson(_) => 65,
-            CmdError::Incomplete => 70, //also CmdError::NotImplemented if we bring it back
-            CmdError::FlowError(ref fe) => {
-                match *fe {
-                    fc::FlowError::Oom => 71,
-                    fc::FlowError::Err(ref flow_err) => {
-                        match flow_err.code {
-                            10 => 71,
-                            20 => 74,
-                            // 60 => 65, //image decoding failed
-                            _ => 70,
-                        }
-                    }
-                    _ => 70,
-                }
-            }
+            CmdError::DemoNotFound(_) => ErrorCategory::PrimaryResourceNotFound,
+            CmdError::IoError(_) => ErrorCategory::IoError,
+            CmdError::BadArguments(_)|
+            CmdError::InconsistentUseOfIoId(_) |
+            CmdError::IoIdNotInRecipe(_) => ErrorCategory::ArgumentInvalid,
+            CmdError::InvalidJson(_) => ErrorCategory::InvalidJson,
+            CmdError::Incomplete => ErrorCategory::InternalError,
+            CmdError::FlowError(ref fe) => fe.category()
         }
+    }
+}
+impl CmdError {
+    pub fn to_json(&self) -> JsonResponse{
+        let message = format!("{:#?}", self);
+        JsonResponse::fail_with_message(self.category().http_status_code() as i64, &message)
+    }
+    pub fn exit_code(&self) -> i32 {
+        self.category().process_exit_code()
     }
 }
 
@@ -142,12 +122,11 @@ impl From<fc::FlowError> for CmdError {
 
 impl std::fmt::Display for CmdError {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        if let &CmdError::FlowError(fc::FlowError::NodeError(ref e)) = self {
+        if let &CmdError::FlowError(ref e) = self {
             write!(f, "{}", e)
         } else {
             write!(f, "{:#?}", self)
         }
-
     }
 }
 
@@ -416,25 +395,19 @@ impl CmdBuild {
             Err(CmdError::Incomplete)
         };
 
-
         CmdBuild { response: Some(response), ..self }
     }
 
-//    pub fn get_modified_recipe<'a>(&'a self) -> &'a Result<s::Build001>{
-//        &self.job
-//    }
 
     pub fn get_json_response(&self) -> JsonResponse{
-        match &self.response{
-            &Some(Err(CmdError::FlowError(ref e))) => JsonResponse::from_result(Err(e.clone())),
-            &Some(Ok(ref r)) => JsonResponse::from_result(Ok(r.clone())),
-            //Err(CmdError::InvalidJson(e)) => JsonResponse::from_result(fc::Result::Err(fc::FlowError::e))
-            _ => {
-                //TODO: implement serialization for JsonResult
-                unimplemented!();
-            }
+        if let Some(e) = self.get_first_error(){
+            e.to_json()
+        } else if let Some(Ok(ref r)) = self.response{
+            JsonResponse::from_result(Ok(r.clone()))
+        } else {
+            // Should not be called before maybe_build
+            unreachable!();
         }
-
     }
     ///
     /// Write the JSON response (if present) to the given file or STDOUT
@@ -453,39 +426,30 @@ impl CmdBuild {
     }
 
     pub fn write_errors_maybe(&self) -> std::io::Result<()> {
-        let err = &mut std::io::stderr();
-
-        if let Err(ref e) = self.job {
-            writeln!(err, "{:?}", e)?;
-        }
-
-        if let Some(ref rr) = self.response {
-            match *rr {
-                Err(ref e) => {
-                    writeln!(err, "{}", e)?;
-                }
-                Ok(_) => {}
-            }
+        if let Some(e) = self.get_first_error() {
+            writeln!(&mut std::io::stderr(), "{}", e)?;
         }
         Ok(())
     }
 
-    pub fn get_exit_code(&self) -> Option<i32> {
+    pub fn get_first_error(&self) -> Option<&CmdError>{
         if let Err(ref e) = self.job {
-            return Some(e.exit_code());
+            return Some(e);
         }
-        if let Some(ref rr) = self.response {
-            match *rr {
-                Err(ref err) => Some(err.exit_code()),
-                Ok(_) => Some(0)
-            }
-        } else {
-            None
+        match self.response{
+            Some(Err(ref e)) => Some(e),
+            _ => None
         }
+    }
+
+    pub fn get_exit_code(&self) -> Option<i32> {
+        self.get_first_error()
+            .map(|e| e.exit_code())
+            .or( if self.response.is_some() { Some(0) } else { None })
     }
 
     fn build(data: s::Build001) -> Result<s::ResponsePayload> {
         let mut context = fc::Context::create()?;
-        Ok(context.build_handler().build_1(data)?)
+        Ok(context.build_1(data)?)
     }
 }

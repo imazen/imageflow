@@ -2,16 +2,16 @@
 //!
 //! This module contains the functions exported for use by other languages.
 //!
-//! If you're writing bindings, you're in the right place. Don't use imageflow_core::ffi, that's
-//! *not* correct - those are unstable and will disappear as C is replaced with Rust.
+//!
+//! If you're writing bindings, you're in the right place. Don't use imageflow_core::ffi
 //!
 //! Don't call functions against the same context from multiple threads. You can create contexts
 //! from as many threads as you like, but you are responsible for synchronizing API calls
 //! on a per-context basis if you want to use one context from multiple threads. No use
-//! case for multithreaded Context access has been presented, so it  is out of scope for API design.
+//! case for multithreaded Context access has been presented, so it is out of scope for API design.
 //!
-//!
-//!
+//! Don't worry about the performance of creating/destroying contexts.
+//! A context weighs less than 2kb: (384 + 1400) as of 2017-8-29.
 //!
 //! # Memory Lifetimes
 //!
@@ -48,19 +48,10 @@
 //! just borrowing it for a bit; not taking ownership of the thing.
 //!
 //! This may seem obvious, but it is not, in fact, guaranteed by garbage-collected languages. They
-//! are often oblivious to pointers, and cannot track what data is and is not referenced.
+//! are oblivious to pointers, and cannot track what data is and is not referenced.
 //! Therefore, we suggest that you ensure every allocation made (and handed to Imageflow) is
 //! referenced *after* the imageflow API call, preferably in a way that will not be optimized away
 //! at runtime. Many languages and FFI libraries offer a utility method just for this purpose.
-//!
-//! ## ... although Imageflow may borrow some strings for the life of the context, yet not own them.
-//!
-//! This happens for strings that are usually static constants, and unlikely to be allocated on
-//! the heap anyway.
-//!
-//! * When an Imageflow API asks for a filename, function name, or error message, it will
-//!   assume that those strings are pointers that (a) Imageflow is not
-//!   responsible for freeing, and (b) will (at least) outlive the `context`.
 //!
 //! ## ... and it should be very clear when Imageflow is taking ownership of something you created!
 //!
@@ -73,8 +64,6 @@
 //! ## What if I need something to outlive the `context`?
 //!
 //! Copy it before the context is destroyed.
-//!
-//!
 //!
 //! # Data types
 //!
@@ -119,28 +108,35 @@
 //!
 //! ## Failure behavior
 //!
-//! If you provide a null pointer for `imageflow_context`, then the process *should* terminate.
+//! If you provide a null pointer for `imageflow_context`, then the process will terminate.
 //! This "fail fast" behavior offers the best opportunity for a useful stacktrace, and it's not a
 //! recoverable error.
 //!
+//! If you try to continue using an errored imageflow_context, the process will terminate.
+//! Some errors can be recovered from, but you *must* do that before trying to use the context again.
 //!
+//! For all APIS: You'll likely segfault the process if you provide a `context` pointer that is dangling or invalid.
 //!
 #![crate_type = "cdylib"]
 #![feature(alloc_system)]
+#![feature(core_intrinsics)]
+#[macro_use]
 extern crate imageflow_core as c;
 extern crate alloc_system;
 extern crate libc;
+extern crate smallvec;
+extern crate backtrace;
 use c::ffi;
 
-pub use c::{Context, Job};
+pub use c::{Context, Job, FlowError, ErrorCategory, ErrorKind, CodeLocation};
 pub use c::IoProxy as JobIo;
 pub use c::ffi::ImageflowJsonResponse as JsonResponse;
 use std::ptr;
-use std::io::Write;
 use std::ffi::CStr;
 use std::panic::{catch_unwind, AssertUnwindSafe};
 #[cfg(test)]
 use std::str;
+
 
 ///
 /// What is possible with the IO object
@@ -154,25 +150,12 @@ pub enum IoMode {
     ReadWriteSeekable = 15, // 1 | 2 | 4 | 8
 }
 
-///
 /// Input or output?
 #[repr(C)]
 #[derive(Copy,Clone)]
 pub enum Direction {
     Out = 8,
     In = 4,
-}
-
-///
-/// When a resource should be closed/freed/cleaned up
-///
-#[repr(C)]
-#[derive(Clone, Copy, PartialEq, Debug)]
-pub enum CleanupWith{
-    /// When the context is destroyed
-    Context = 0,
-    /// When the first job that the item is associated with is destroyed. (Not yet implemented)
-    FirstJob = 1
 }
 
 ///
@@ -188,27 +171,73 @@ pub enum Lifetime{
     OutlivesContext = 1,
 }
 
-
-
 /// Creates a static, null-terminated Rust string, and
 /// returns a ` *const libc::c_char` pointer to it.
 ///
 /// Useful for API invocations that require a static C string
-#[macro_export]
 macro_rules! static_char {
     ($lit:expr) => {
         concat!($lit, "\0").as_ptr() as *const libc::c_char
     }
 }
-unsafe fn uw(outer: *mut Context) -> *mut c::ffi::ImageflowContext{
-    if outer.is_null(){
-        ptr::null_mut()
-    }else {
-        (&mut *outer).flow_c()
-    }
+
+fn type_name_of<T>(_: T) -> &'static str {
+    extern crate core;
+    unsafe { core::intrinsics::type_name::<T>() }
 }
 
+macro_rules! context {
+    ($ptr:ident) => {{
+        if $ptr.is_null() {
+            fn f() {}
+            let name = type_name_of(f);
+            let shortname = &name[..name.len() - 4].rsplit_terminator(":").next().unwrap_or("[function name not found]");
+            eprintln!("Null context pointer provided to {}. Terminating process.", shortname);
+            let bt = ::backtrace::Backtrace::new();
+            eprintln!("{:?}", bt);
+            ::std::process::abort();
+        }
+        (&mut *$ptr)
+    }}
+}
 
+macro_rules! context_ready {
+    ($ptr:ident) => {{
+        if $ptr.is_null() {
+            fn f() {}
+            let name = type_name_of(f);
+            let shortname = &name[..name.len() - 4].rsplit_terminator(":").next().unwrap_or("[function name not found]");
+            eprintln!("Null context pointer provided to {}. Terminating process.", shortname);
+            let bt = ::backtrace::Backtrace::new();
+            eprintln!("{:?}", bt);
+            ::std::process::abort();
+        }else if (&*$ptr).outward_error().has_error(){
+            fn f() {}
+            let name = type_name_of(f);
+            let shortname = &name[..name.len() - 4].rsplit_terminator(":").next().unwrap_or("[function name not found]");
+            eprintln!("The Context passed to {} is in an error state and cannot be used. Terminating process.", shortname);
+            eprintln!("{}",(&*$ptr).outward_error());
+
+            let bt = ::backtrace::Backtrace::new();
+            eprintln!("{} was invoked by: \n{:?}", shortname, bt);
+            ::std::process::abort();
+        }
+        (&mut *$ptr)
+    }}
+}
+macro_rules! handle_result {
+    ($context:ident, $result:expr, $failure_value:expr) => {{
+        match $result{
+            Ok(Ok(v)) => v,
+            Err(p) => {
+                $context.outward_error_mut().try_set_panic_error(p); $failure_value
+            },
+            Ok(Err(error)) => {
+                $context.outward_error_mut().try_set_error(error); $failure_value
+            }
+        }
+        }}
+}
 
 /// Creates and returns an imageflow context.
 /// An imageflow context is required for all other imageflow API calls.
@@ -225,36 +254,27 @@ unsafe fn uw(outer: *mut Context) -> *mut c::ffi::ImageflowContext{
 /// Returns a null pointer if allocation fails.
 #[no_mangle]
 pub unsafe extern "C" fn imageflow_context_create() -> *mut Context {
-    Context::abi_create_boxed().map(|b| Box::into_raw(b)).unwrap_or(std::ptr::null_mut())
+    Context::create_cant_panic().map(|b| Box::into_raw(b)).unwrap_or(std::ptr::null_mut())
 }
 
 /// Begins the process of destroying the context, yet leaves error information intact
 /// so that any errors in the tear-down process can be
-/// debugged with imageflow_context_error_and_stacktrace.
+/// debugged with imageflow_context_error_write_to_buffer.
 ///
 /// Returns true if no errors occurred. Returns false if there were tear-down issues.
-///
-/// *Behavior is undefined if context is a null or invalid ptr.*
 #[no_mangle]
 pub unsafe extern "C" fn imageflow_context_begin_terminate(context: *mut Context) -> bool {
-    if context.is_null() {
-        //Is this the best solution? Failing early is best for detecting bugs... Or we could just let null access do its thing.
-        //but it may wait until farther up the call stack to actually try to dereference data... :(
-        let _ = std::io::stderr().write_all(b"A null pointer was provided to imageflow_context_begin_terminate. Terminating process.\n");
-        std::process::exit(70);
-    }else{
-        (&mut *context).abi_begin_terminate()
-    }
+    let c: &mut Context = context!(context);
+    c.abi_begin_terminate()
 }
 
 /// Destroys the imageflow context and frees the context object.
 /// Only use this with contexts created using imageflow_context_create
-///
-/// Behavior is undefined if context is a null or invalid ptr; may segfault on free(NULL);
 #[no_mangle]
 pub unsafe extern "C" fn imageflow_context_destroy(context: *mut Context) {
-    let _ = Box::from_raw(context);
-
+    if !context.is_null() {
+        let _ = Box::from_raw(context);
+    }
 }
 
 
@@ -274,23 +294,80 @@ pub fn exercise_create_destroy() {
 
 /// Returns true if the context is in an error state. You must immediately deal with the error,
 /// as subsequent API calls will fail or cause undefined behavior until the error state is cleared
-///
-/// Behavior is undefined if `context` is a null or invalid ptr; segfault likely.
 #[no_mangle]
 pub unsafe extern "C" fn imageflow_context_has_error(context: *mut Context) -> bool {
-    (&*context).error().abi_has_error()
+    context!(context).outward_error_mut().has_error()
 }
 
-/// Clear the error state. This assumes that you know which API call failed and the problem has
-/// been resolved. Don't use this unless you're sure you've accounted for all possible
-/// inconsistent state (and fully understand the code paths that led to the error).
-///
-/// Behavior is undefined if `context` is a null or invalid ptr; segfault likely.
+/// Returns true if the context is "ok" or in an error state that is recoverable.
+/// You must immediately deal with the error,
+/// as subsequent API calls will fail or cause undefined behavior until the error state is cleared
 #[no_mangle]
-pub unsafe extern "C" fn imageflow_context_clear_error(context: *mut Context) {
-    (&mut *context).error_mut().abi_clear_error()
+pub unsafe extern "C" fn imageflow_context_error_recoverable(context: *mut Context) -> bool {
+    context!(context).outward_error_mut().recoverable()
 }
 
+/// Returns true if the context is "ok" or in an error state that is recoverable.
+/// You must immediately deal with the error,
+/// as subsequent API calls will fail or cause undefined behavior until the error state is cleared
+#[no_mangle]
+pub unsafe extern "C" fn imageflow_context_error_try_clear(context: *mut Context) -> bool {
+    context!(context).outward_error_mut().try_clear()
+}
+
+
+/// Returns the numeric code associated with the error category. 0 means no error.
+///
+/// These will be stabilized after 1.0, once error categories have passed rigorous real-world testing
+/// `imageflow_context_error_as_exit_code` and `imageflow_context_error_as_http_status` are suggested in the meantime.
+///
+#[no_mangle]
+pub unsafe extern "C" fn imageflow_context_error_code(context: *mut Context) -> i32 {
+    context!(context).outward_error_mut().category().to_outward_error_code()
+}
+
+/// Converts the error (or lack thereof) into an unix process exit code
+///
+/// ## Values
+///
+/// * 0 - No error
+/// * 64 - Invalid usage (graph invalid, node argument invalid, action not supported)
+/// * 65 - Invalid Json, Image malformed, Image type not supported
+/// * 66 - Primary or secondary file or resource not found.
+/// * 69 - Upstream server errored or timed out
+/// * 70 - Possible bug: internal error, custom error, unknown error, or no graph solution found
+/// * 71 - Out Of Memory condition (malloc/calloc/realloc failed).
+/// * 74 - I/O Error
+/// * 77 - Action forbidden under imageflow security policy
+/// * 402 - License error
+/// * 401 - Imageflow server authorization required
+///
+#[no_mangle]
+pub unsafe extern "C" fn imageflow_context_error_as_exit_code(context: *mut Context) -> i32 {
+    context!(context).outward_error_mut().category().process_exit_code()
+}
+
+/// Converts the error (or lack thereof) into an equivalent http status code
+///
+/// ## Values
+///
+/// * 200 - No error
+/// * 400 - Bad argument/node parameters/graph/json/image/image type
+/// * 401 - Authorization to imageflow server required
+/// * 402 - License error
+/// * 403 - Action forbidden under imageflow security policy
+/// * 404 - Primary resource/file not found
+/// * 500 - Secondary resource/file not found, IO error, no solution error, unknown error, custom error, internal error
+/// * 502 - Upstream server error
+/// * 503 - Out Of Memory condition (malloc/calloc/realloc failed).
+/// * 504 - Upstream timeout
+#[no_mangle]
+pub unsafe extern "C" fn imageflow_context_error_as_http_code(context: *mut Context) -> i32 {
+    context!(context).outward_error_mut().category().http_status_code()
+}
+///
+/// Deprecated. Use imageflow_context_error_write_to_buffer instead.
+///
 /// Prints the error messages and stacktrace to the given buffer in UTF-8 form; writes a null
 /// character to terminate the string, and *ALSO* returns the number of bytes written.
 ///
@@ -300,225 +377,82 @@ pub unsafe extern "C" fn imageflow_context_clear_error(context: *mut Context) {
 /// full_file_path, if true, will display the directory associated with the files in each stack frame.
 ///
 /// Please be accurate with the buffer length, or a buffer overflow will occur.
-///
-/// Behavior is undefined if `context` is a null or invalid ptr; segfault likely.
 #[no_mangle]
 pub unsafe extern "C" fn imageflow_context_error_and_stacktrace(context: *mut Context,
                                                                 buffer: *mut libc::c_char,
                                                                 buffer_length: libc::size_t,
                                                                 full_file_path: bool)
                                                                 -> i64 {
-    ffi::flow_context_error_and_stacktrace(uw(context), buffer as *mut u8, buffer_length, full_file_path)
+    if buffer.is_null(){
+        -1
+    }else {
+        use c::errors::writing_to_slices::WriteResult;
+        let c = context!(context);
+
+        if buffer_length.leading_zeros() == 0{
+            c.outward_error_mut().try_set_error(nerror!(ErrorKind::InvalidArgument, "Argument `buffer_length` likely came from a negative integer. Imageflow prohibits having the leading bit set on unsigned integers (this reduces the maximum value to 2^31 or 2^63)."));
+            return -1;
+        }
+
+
+        let result = c.outward_error_mut().get_buffer_writer().write_and_write_errors_to_cstring(buffer as *mut u8, buffer_length, Some("\n[truncated]\n"));
+        match result {
+            WriteResult::AllWritten(v) => v as i64,
+            _ => -1
+        }
+    }
+}
+/// Prints the error messages (and optional stack frames) to the given buffer in UTF-8 form; writes a null
+/// character to terminate the string, and *ALSO* provides the number of bytes written (excluding the null terminator)
+///
+/// Returns false if the buffer was too small (or null) and the output was truncated.
+/// Returns true if all data was written OR if there was a bug in error serialization (that gets written, too).
+///
+/// If the data is truncated, "\n[truncated]\n" is written to the buffer
+///
+/// Please be accurate with the buffer length, or a buffer overflow will occur.
+#[no_mangle]
+pub unsafe extern "C" fn imageflow_context_error_write_to_buffer(context: *mut Context,
+                                                                buffer: *mut libc::c_char,
+                                                                buffer_length: libc::size_t,
+                                                                bytes_written: *mut libc::size_t) -> bool {
+    if buffer.is_null(){
+        false
+    }else {
+        use c::errors::writing_to_slices::WriteResult;
+        let c = context!(context);
+
+        if buffer_length.leading_zeros() == 0{
+            c.outward_error_mut().try_set_error(nerror!(ErrorKind::InvalidArgument, "Argument `buffer_length` likely came from a negative integer. Imageflow prohibits having the leading bit set on unsigned integers (this reduces the maximum value to 2^31 or 2^63)."));
+            return false;
+        }
+
+        let result = c.outward_error_mut().get_buffer_writer().write_and_write_errors_to_cstring(buffer as *mut u8, buffer_length, Some("\n[truncated]\n"));
+        *bytes_written = result.bytes_written();
+        match result {
+            WriteResult::AllWritten(_) |
+            WriteResult::Error { .. } => true,
+            WriteResult::TruncatedAt(_) => false,
+        }
+    }
 }
 
-/// Returns the numeric code associated with the error.
-///
-/// ## Error codes
-///
-/// * 0 - No error condition.
-/// * 10 - Out Of Memory condition (malloc/calloc/realloc failed).
-/// * 20 - I/O error
-/// * 30 - Invalid internal state (assertion failed; you found a bug).
-/// * 40 - Error: Not implemented. (Feature not implemented).
-/// * 50 - Invalid argument provided
-/// * 51 - Null argument provided
-/// * 52 - Invalid dimensions
-/// * 53 - Unsupported pixel format
-/// * 54 - Item does not exist
-/// * 60 - Image decoding failed
-/// * 61 - Image encoding failed
-/// * 70 - Graph invalid
-/// * 71 - Graph is cyclic
-/// * 72 - Invalid inputs to node
-/// * 73 - Maximum graph passes exceeded
-/// * 1024 - Other error; something else happened
-/// * 1025 through 2147483647 are reserved for user-defined errors
-///
-///
-/// Behavior is undefined if `context` is a null or invalid ptr; segfault likely.
-#[no_mangle]
-pub unsafe extern "C" fn imageflow_context_error_code(context: *mut Context) -> i32 {
-    //TODO: handle case of borrowed error - would panic, but needs to abort
-    (&mut *context).error_mut().abi_error_code()
-}
 
 /// Prints the error to stderr and exits the process if an error has been raised on the context.
 /// If no error is present, the function returns false.
 ///
-/// Behavior is undefined if `context` is a null or invalid ptr; segfault likely.
-///
 /// THIS PRINTS DIRECTLY TO STDERR! Do not use in any kind of service! Command-line usage only!
 #[no_mangle]
 pub unsafe extern "C" fn imageflow_context_print_and_exit_if_error(context: *mut Context) -> bool {
-    (&mut *context).error_mut().abi_abort_and_print_on_error()
-}
-
-///
-/// Raises an error on the context.
-///
-/// Returns `true` on success, `false`  if an error was already present.
-///
-/// Designed to be safe(ish) for use in out-of-memory scenarios; no additional allocations are made.
-///
-/// See `imageflow_context_error_code` for a list of error codes.
-///
-///
-/// # Expectations
-///
-/// * Strings `message` and `function_name`, and `filename` should be null-terminated UTF-8 strings.
-/// * The lifetime of `message` is expected to exceed the duration of this function call.
-/// * The lifetime of `filename` and `function_name` (if provided), is expected to match or exceed the lifetime of `context`.
-/// * You may provide a null value for `filename` or `function_name`, but for the love of puppies,
-/// don't provide a dangling or invalid pointer, that will segfault... a long time later.
-///
-/// # Caveats
-///
-/// * You cannot raise a second error until the first has been cleared with
-///  `imageflow_context_clear_error`. You'll be ignored, as will future
-///   `imageflow_add_to_callstack` invocations.
-/// * Behavior is undefined if `context` is a null or invalid ptr; segfault likely.
-/// * Behavior is undefined if `message` is an invalid ptr; immediate segfault likely.
-/// * If you provide an error code of zero (why?!), a different error code will be provided.
-#[no_mangle]
-pub unsafe extern "C" fn imageflow_context_raise_error(context: *mut Context,
-                                                       error_code: i32,
-                                                       message: *const libc::c_char,
-                                                       filename: *const libc::c_char,
-                                                       line: i32,
-                                                       function_name: *const libc::c_char)
-                                                       -> bool {
-
-    let message_cstr = if message.is_null() { None } else { Some(CStr::from_ptr(message))};
-    let filename_cstr = if filename.is_null() { None } else { Some(CStr::from_ptr(filename))};
-    let function_name_cstr = if function_name.is_null() { None } else { Some(CStr::from_ptr(function_name))};
-    let line_optional = if line >= 0 { Some(line)} else { None };
-
-    (&mut *context).error_mut().abi_raise_error_c_style(error_code, message_cstr, filename_cstr, line_optional, function_name_cstr)
-
-}
-
-///
-/// Adds the given filename, line number, and function name to the call stack.
-/// Strings `function_name`, and `filename` should be null-terminated UTF-8 strings who will outlive `context`
-///
-/// Returns `true` if add was successful.
-///
-/// # Will fail and return false if...
-///
-/// * You haven't previously called `imageflow_context_raise_error`
-/// * You tried to raise a second error without clearing the first one. Call will be ignored.
-/// * You've exceeded the capacity of the call stack (which, at one point, was 14). But this
-///   category of failure is acceptable.
-///
-///
-/// # Expectations
-///
-/// * An error has been raised.
-/// * You may provide a null value for `filename` or `function_name`, but for the love of puppies,
-/// don't provide a dangling or invalid pointer, that will segfault... a long time later.
-/// * The lifetime of `file` and `function_name` (if provided), is expected to match
-///   or exceed the lifetime of `context`.
-/// * All strings must be null-terminated, C-style, valid UTF-8.
-///
-/// # Caveats
-///
-/// * Behavior is undefined if `context` is a null or invalid ptr; segfault likely.
-///
-#[no_mangle]
-pub unsafe extern "C" fn imageflow_context_add_to_callstack(context: *mut Context,
-                                                            filename: *const libc::c_char,
-                                                            line: i32,
-                                                            function_name: *const libc::c_char)
-                                                            -> bool {
-
-    let filename_cstr = if filename.is_null() { None } else { Some(CStr::from_ptr(filename))};
-    let function_name_cstr = if function_name.is_null() { None } else { Some(CStr::from_ptr(function_name))};
-    let line_optional = if line >= 0 { Some(line)} else { None };
-
-    (&mut *context).error_mut().abi_add_to_callstack_c_style(filename_cstr, line_optional, function_name_cstr)
-}
-
-
-#[test]
-pub fn test_error_handling() {
-    exercise_error_handling();
-}
-pub fn exercise_error_handling() {
-    unsafe {
-        let c = imageflow_context_create();
-        assert!(!c.is_null());
-
-        assert!(!imageflow_context_has_error(c));
-        assert_eq!(imageflow_context_error_code(c), 0);
-
-        // While the strings are static, the CStrings are not.
-        // But they will persist until the end of the block, which is all we need
-        let message = static_char!("Test message");
-        let filename = static_char!(file!());
-        let function_name = static_char!("test_error_handling");
-
-        // Let's raise a nice error
-        assert!(imageflow_context_raise_error(c, 1025, message, filename, 335, function_name));
-
-        // Check it registered
-        assert!(imageflow_context_has_error(c));
-        assert_eq!(imageflow_context_error_code(c), 1025);
-
-        // Add a backtrace
-        assert!(imageflow_context_add_to_callstack(c, filename, 342, ptr::null()));
-        assert!(imageflow_context_add_to_callstack(c, filename, 20, ptr::null()));
-        assert!(imageflow_context_add_to_callstack(c, ptr::null(), 0, ptr::null()));
-
-        // Let's see how it handles a insufficient buffer
-        let mut tiny_buf: [i8; 30] = [0; 30];
-        assert_eq!(-1,
-        imageflow_context_error_and_stacktrace(c, &mut tiny_buf[0], 30, true));
-
-
-        // And check the output looks right
-        let mut buf: [u8; 2048] = [0; 2048];
-        let buf_used = imageflow_context_error_and_stacktrace(c, std::mem::transmute(&mut buf[0]), 2048, true);
-
-        assert!(buf_used >= 0);
-        let actual_string = ::std::str::from_utf8(&buf[0..buf_used as usize] ).unwrap();
-
-
-        // let expected_string = imageflow_abi/src/lib.rs:335: in function test_error_handling
-        //imageflow_abi/src/lib.rs:342: in function (unknown)
-        //imageflow_abi/src/lib.rs:20: in function (unknown)
-         //   (unknown):0: in function (unknown)
-
-        assert!(actual_string.starts_with("User defined error : Test message\n"));
-        assert!(actual_string.contains(": in function test_error_handling"));
-        assert!(actual_string.contains("lib.rs"));
-
-        // raising a second error should fail
-        assert!(!imageflow_context_raise_error(c,
-                                               1025,
-                                               message,
-                                               filename,
-                                               line!() as i32,
-                                               ptr::null()));
-        // as should trying to add to the call stack
-        assert!(!imageflow_context_add_to_callstack(c, filename, line!() as i32, ptr::null()));
-        assert!(!imageflow_context_add_to_callstack(c, filename, line!() as i32, ptr::null()));
-
-        // Clearing the error should work
-        imageflow_context_clear_error(c);
-        assert!(!imageflow_context_has_error(c));
-        assert_eq!(imageflow_context_error_code(c), 0);
-
-
-        // And it should be possible to report another error
-        assert!(imageflow_context_raise_error(c, 1025, message, ptr::null(), 1, ptr::null()));
-        imageflow_context_clear_error(c);
-
-        // And cleanup should go smoothly
-        assert!(imageflow_context_begin_terminate(c));
-        imageflow_context_destroy(c);
+    let e = context!(context).outward_error();
+    if e.has_error(){
+        eprintln!("{}",e);
+        true
+    }else{
+        false
     }
-}
 
+}
 
 
 
@@ -527,27 +461,24 @@ pub fn exercise_error_handling() {
 /// The buffer pointer sent out will be a UTF-8 byte array of the given length (not null-terminated). It will
 /// also become invalid if the JsonResponse associated is freed, or if the context is destroyed.
 ///
+/// See `imageflow_context_error_as_http_code` for just the http status code equivalent.
+///
+/// Most errors are not recoverable; you must destroy the context and retry.
+///
 #[no_mangle]
 pub unsafe extern fn imageflow_json_response_read(context: *mut Context,
                                                   response_in: *const JsonResponse,
-                                                  status_code_out: *mut i64,
+                                                  status_as_http_code_out: *mut i64,
                                                   buffer_utf8_no_nulls_out: *mut *const u8,
                                                   buffer_size_out: *mut libc::size_t) -> bool {
-    if context.is_null() {
-        return false;
-    }
-    if response_in.is_null() {
-        imageflow_context_raise_error(context,
-                                      51,
-                                      static_char!("response_in is null"),
-                                      static_char!(file!()),
-                                      line!() as i32,
-                                      ptr::null());
-        return false;
-    }
+    let mut c = context!(context); // Must be readable in error state
 
-    if !status_code_out.is_null() {
-        *status_code_out = (*response_in).status_code;
+    if response_in.is_null() {
+        c.outward_error_mut().try_set_error(nerror!(ErrorKind::NullArgument, "The argument response_in (* JsonResponse) is null."));
+        return false;
+    }
+    if !status_as_http_code_out.is_null() {
+        *status_as_http_code_out = (*response_in).status_code;
     }
     if !buffer_utf8_no_nulls_out.is_null() {
         *buffer_utf8_no_nulls_out = (*response_in).buffer_utf8_no_nulls;
@@ -571,20 +502,24 @@ pub unsafe extern fn imageflow_json_response_read(context: *mut Context,
 /// Behavior is undefined if the context provided does not match the context with which the
 /// object was created.
 ///
-/// Behavior is undefined if `context` is a null or invalid ptr; segfault likely.
-///
 #[no_mangle]
 pub unsafe extern "C" fn imageflow_json_response_destroy(context: *mut Context,
                                                          response: *mut JsonResponse)
                                                          -> bool {
-    ffi::flow_destroy(uw(context), response as *mut libc::c_void, ptr::null(), 0)
+    imageflow_context_memory_free(context, response as *mut libc::c_void, ptr::null(), 0)
 }
 
 ///
-/// Sends a JSON message to the imageflow_context
+/// Sends a JSON message to the imageflow_context using endpoint `method`.
 ///
-/// The context is provided `method`, which determines which code path will be used to
-/// process the provided JSON data and compose a response.
+/// ## Endpoints
+///
+/// * 'v0.1/build`
+///
+/// For endpoints supported by the latest nightly build, see
+/// https://s3-us-west-1.amazonaws.com/imageflow-nightlies/master/doc/context_json_api.txt
+///
+/// ## Notes
 ///
 /// * `method` and `json_buffer` are only borrowed for the duration of the function call. You are
 ///    responsible for their cleanup (if necessary - static strings are handy for things like
@@ -592,14 +527,10 @@ pub unsafe extern "C" fn imageflow_json_response_destroy(context: *mut Context,
 /// * `method` should be a UTF-8 null-terminated string.
 ///   `json_buffer` should be a UTF-8 encoded buffer (not null terminated) of length json_buffer_size.
 ///
-/// The function will return NULL if a JSON response could not be allocated (or if some other
-/// bug occurred). If a null pointer is returned, consult the standard error methods of `context`
-/// for more detail.
+/// You should call `imageflow_context_has_error()` to see if this succeeded.
 ///
-/// The response can be cleaned up with `imageflow_json_response_destroy`
-///
-///
-/// Behavior is undefined if `context` is a null or invalid ptr; segfault likely.
+/// A JsonResponse is returned for success and most error conditions.
+/// Call `imageflow_json_response_destroy` when you're done with it (or dispose the context).
 #[no_mangle]
 #[allow(unused_variables)]
 pub unsafe extern "C" fn imageflow_context_send_json(context: *mut Context,
@@ -607,14 +538,21 @@ pub unsafe extern "C" fn imageflow_context_send_json(context: *mut Context,
                                                      json_buffer: *const u8,
                                                      json_buffer_size: libc::size_t)
                                                      -> *const JsonResponse {
-    imageflow_send_json(context, ptr::null_mut(), ptr::null_mut(), method, json_buffer, json_buffer_size)
+    imageflow_send_json(context, None, method, json_buffer, json_buffer_size)
 }
 
 ///
-/// Sends a JSON message to the imageflow_job
+/// Sends a JSON message to the imageflow_job using endpoint `method`
 ///
-/// The recipient is provided `method`, which determines which code path will be used to
-/// process the provided JSON data and compose a response.
+/// ## Endpoints
+///
+/// * 'v0.1/execute`
+/// * 'v0.1/get_image_info
+///
+/// For endpoints supported by the latest nightly build, see
+/// https://s3-us-west-1.amazonaws.com/imageflow-nightlies/master/doc/job_json_api.txt
+///
+/// ## Notes
 ///
 /// * `method` and `json_buffer` are only borrowed for the duration of the function call. You are
 ///    responsible for their cleanup (if necessary - static strings are handy for things like
@@ -622,13 +560,10 @@ pub unsafe extern "C" fn imageflow_context_send_json(context: *mut Context,
 /// * `method` should be a UTF-8 null-terminated string.
 ///   `json_buffer` should be a UTF-8 encoded buffer (not null terminated) of length json_buffer_size.
 ///
-/// The function will return NULL if a JSON response could not be allocated (or if some other
-/// bug occurred). If a null pointer is returned, consult the standard error methods of `context`
-/// for more detail.
+/// You should call `imageflow_context_has_error()` to see if this succeeded.
 ///
-/// The response can be cleaned up with `imageflow_json_response_destroy`
-///
-/// Behavior is undefined if `context` is a null or invalid ptr; segfault likely.
+/// A JsonResponse is returned for success and most error conditions.
+/// Call `imageflow_json_response_destroy` when you're done with it (or dispose the context).
 #[no_mangle]
 #[allow(unused_variables)]
 pub unsafe extern "C" fn imageflow_job_send_json(context: *mut Context,
@@ -637,15 +572,14 @@ pub unsafe extern "C" fn imageflow_job_send_json(context: *mut Context,
                                                  json_buffer: *const libc::uint8_t,
                                                  json_buffer_size: libc::size_t)
                                                  -> *const JsonResponse {
-    imageflow_send_json(context, job, ptr::null_mut(), method, json_buffer, json_buffer_size)
+    imageflow_send_json(context, Some(job), method, json_buffer, json_buffer_size)
 }
 
 ///
-/// Sends a JSON message to one of 3 recipients.
+/// Sends a JSON message to one of 2 recipients.
 ///
 /// 1. `imageflow_context`, If both `job` and `io` are both null. Required.
 /// 2. `imageflow_job`, if only `io` is null.
-/// 3. `imageflow_io`, if `io` is not null. `job` is ignored.
 ///
 /// The recipient is then provided `method`, which determines which code path will be used to
 /// process the provided JSON data and compose a response.
@@ -654,54 +588,115 @@ pub unsafe extern "C" fn imageflow_job_send_json(context: *mut Context,
 ///    responsible for their cleanup (if necessary - static strings are handy for things like
 ///    `method`).
 ///
-/// The function will return NULL if a JSON response could not be allocated (or if some other
-/// bug occurred). If a null pointer is returned, consult the standard error methods of `context`
-/// for more detail.
 ///
-/// The response can be cleaned up with `imageflow_json_response_destroy`
+/// You should call `imageflow_context_has_error()` to see if this succeeded.
 ///
-/// Behavior is undefined if `context` is a null or invalid ptr; segfault likely.
+/// A JsonResponse is returned for success and most error conditions.
+/// Call `imageflow_json_response_destroy` when you're done with it (or dispose the context).
 #[allow(unused_variables)]
 unsafe fn imageflow_send_json(context: *mut Context,
-                              job: *mut Job,
-                              io: *mut JobIo,
+                              job: Option<*mut Job>,
                               method: *const i8,
                               json_buffer: *const libc::uint8_t,
                               json_buffer_size: libc::size_t)
                               -> *const JsonResponse {
-    //TODO: check for nulls in json_BUFFER AND METHOD
 
-    // It doesn't appear that this allocates anything
-    // But I'm curious how that Rust knows not to deallocate the string itself
-    // Oh. It's borrowed. CStr is borrowed from the pointer. Pointers don't have lifetimes. &str is borrowed from CStr
-    let method_str = ::std::ffi::CStr::from_ptr(method as *const i8).to_str().unwrap(); //TODO, throw exception if not UTF-8, argument error
+    let c: &mut Context = context_ready!(context);
 
-    let json_bytes = std::slice::from_raw_parts(json_buffer, json_buffer_size);
-
-    // TODO: possibly iterate access to force segfaults earlier?
-
-
-    let mut ctx = &mut *context;
-
-
-    let response;
-
-    if job == ptr::null_mut() && io == ptr::null_mut() {
-        response = ctx.message(method_str, json_bytes).unwrap(); //Unwrap for invalid context
-    } else if io == ptr::null_mut() {
-        //TODO: perform lookup instead of dereferencing!
-        response =(&mut *job).message(method_str, json_bytes).unwrap();
-    } else{
-        panic!("Messaging JobIo not implemented");
+    if let Some(j) = job {
+        if j.is_null() {
+            c.outward_error_mut().try_set_error(nerror!(ErrorKind::NullArgument, "The argument 'job' is null."));
+            return ptr::null();
+        }
+    }
+    if method.is_null() {
+        c.outward_error_mut().try_set_error(nerror!(ErrorKind::NullArgument, "The argument 'method' is null."));
+        return ptr::null();
+    }
+    if json_buffer.is_null() {
+        c.outward_error_mut().try_set_error(nerror!(ErrorKind::NullArgument, "The argument 'json_buffer' is null."));
+        return ptr::null();
+    }
+    if json_buffer_size.leading_zeros() == 0{
+        c.outward_error_mut().try_set_error(nerror!(ErrorKind::InvalidArgument, "Argument `json_buffer_size` likely came from a negative integer. Imageflow prohibits having the leading bit set on unsigned integers (this reduces the maximum value to 2^31 or 2^63)."));
+        return ptr::null();
     }
 
+    let panic_result = catch_unwind(AssertUnwindSafe(|| {
+        let method_str = if let Ok(str) = ::std::ffi::CStr::from_ptr(method as *const i8).to_str() {
+            str
+        } else {
+            return (ptr::null(), Err(nerror!(ErrorKind::InvalidArgument, "The argument 'method' is invalid UTF-8.")));
+        };
 
-    let ptr = ctx.create_abi_json_response(response.response_json, response.status_code);
-    //TODO: if ptr == null,
-    //Handle alloc failure
-    ptr
+        let json_bytes = std::slice::from_raw_parts(json_buffer, json_buffer_size);
+
+        // Segfault early
+        let _ = (json_bytes.first(), json_bytes.last());
+
+
+        let (json, result) = if let Some(j) = job {
+                (&mut *j).message(method_str, json_bytes)
+            } else {
+                c.message(method_str, json_bytes)
+            };
+
+        // An unfortunate copy occurs here
+        (create_abi_json_response(c, &json.response_json, json.status_code), result)
+    }));
+
+    match panic_result{
+        Ok((json, Ok(result))) => json,
+        Ok((json, Err(e))) => {
+            c.outward_error_mut().try_set_error(e);
+            json
+        }
+        Err(p) => {
+         c.outward_error_mut().try_set_panic_error(p); ptr::null_mut()
+        },
+    }
 }
 
+
+pub fn create_abi_json_response(c: &mut Context,
+                                json_bytes: &[u8],
+                                status_code: i64)
+                                -> *const JsonResponse {
+    unsafe {
+        let sizeof_struct = std::mem::size_of::<JsonResponse>();
+        let alloc_size = sizeof_struct + json_bytes.len();
+
+        let pointer = ::ffi::flow_context_calloc(c.flow_c(),
+                                                 1,
+                                                 alloc_size,
+                                                 ptr::null(),
+                                                 c.flow_c() as *mut libc::c_void,
+                                                 ptr::null(),
+                                                 line!() as i32) as *mut u8;
+        if pointer.is_null() {
+            c.outward_error_mut().try_set_error(nerror!(ErrorKind::AllocationFailed, "Failed to allocate JsonResponse ({} bytes)", alloc_size));
+            return ptr::null();
+        }
+        if json_bytes.len().leading_zeros() == 0{
+            c.outward_error_mut().try_set_error(nerror!(ErrorKind::Category(ErrorCategory::InternalError), "Error in creating JSON structure; length overflow prevented (most significant bit set)."));
+            return ptr::null();
+        }
+
+        let pointer_to_final_buffer =
+            pointer.offset(sizeof_struct as isize) as *mut libc::uint8_t;
+        let imageflow_response = &mut (*(pointer as *mut JsonResponse));
+        imageflow_response.buffer_utf8_no_nulls = pointer_to_final_buffer;
+        imageflow_response.buffer_size = json_bytes.len();
+        imageflow_response.status_code = status_code;
+
+        let mut out_json_bytes = std::slice::from_raw_parts_mut(pointer_to_final_buffer,
+                                                                json_bytes.len());
+
+        out_json_bytes.clone_from_slice(&json_bytes);
+
+        imageflow_response as *const JsonResponse
+    }
+}
 
 
 #[test]
@@ -722,8 +717,7 @@ pub fn exercise_json_message() {
         let expected_reponse_status = expected_response.status_code;
 
         let response = imageflow_send_json(c,
-                                           ptr::null_mut(),
-                                           ptr::null_mut(),
+                                           None,
                                            method_in,
                                            json_in.as_ptr(),
                                            json_in.len());
@@ -765,20 +759,27 @@ pub fn exercise_json_message() {
 #[allow(unused_variables)]
 pub unsafe extern "C" fn imageflow_io_create_for_file(context: *mut Context,
                                                       mode: IoMode,
-                                                      filename: *const libc::c_char,
-                                                      cleanup: CleanupWith)
+                                                      filename: *const libc::c_char)
                                                       -> *mut JobIo {
-    let s = CStr::from_ptr(filename).to_str().unwrap();
-    //TODO: handle invalid utf8
-    (&*context).create_io_from_filename_with_mode(s, std::mem::transmute(mode))
-        .map(|mut io| &mut *io as *mut JobIo)
-        .unwrap_or_else(|e| { e.write_to_context_ptr(context); ptr::null_mut() })
+    let mut c = context_ready!(context);
+    if filename.is_null() {
+        c.outward_error_mut().try_set_error(nerror!(ErrorKind::NullArgument, "The argument 'filename' is null."));
+        return ptr::null_mut();
+    }
+    let result = catch_unwind(AssertUnwindSafe(|| {
+        let s = CStr::from_ptr(filename).to_str().unwrap();
+        let result = c.create_io_from_filename_with_mode(s, std::mem::transmute(mode)).map_err(|e| e.at(here!()));
+
+        result.map(|mut io| &mut *io as *mut JobIo)
+    }));
+
+    handle_result!(c, result, ptr::null_mut())
 }
 
 
 ///
 /// Creates an imageflow_io structure for reading from the provided buffer.
-/// You are ALWAYS responsible for freeing the memory provided in accordance with the Lifetime value.
+/// You are ALWAYS responsible for freeing the memory provided (at the time specified by Lifetime).
 /// If you specify OutlivesFunctionCall, then the buffer will be copied.
 ///
 ///
@@ -787,17 +788,29 @@ pub unsafe extern "C" fn imageflow_io_create_for_file(context: *mut Context,
 pub unsafe extern "C" fn imageflow_io_create_from_buffer(context: *mut Context,
                                                          buffer: *const u8,
                                                          buffer_byte_count: libc::size_t,
-                                                            lifetime: Lifetime,
-                                                            cleanup: CleanupWith)
+                                                            lifetime: Lifetime)
                                                          -> *mut JobIo {
-    let bytes = std::slice::from_raw_parts(buffer, buffer_byte_count);
 
-    let result = if lifetime == Lifetime::OutlivesFunctionCall {
-        (&*context).create_io_from_copy_of_slice(bytes)
-    }else {
-        (&*context).create_io_from_slice(bytes)
-    };
-    result.map(|mut io| &mut *io as *mut JobIo).unwrap_or_else(|e| { e.write_to_context_ptr(context); ptr::null_mut() })
+    let mut c = context_ready!(context);
+    if buffer.is_null() {
+        c.outward_error_mut().try_set_error(nerror!(ErrorKind::NullArgument, "The argument 'buffer' is null."));
+        return ptr::null_mut();
+    }
+    if buffer_byte_count.leading_zeros() == 0{
+        c.outward_error_mut().try_set_error(nerror!(ErrorKind::InvalidArgument, "Argument `buffer_byte_count` likely came from a negative integer. Imageflow prohibits having the leading bit set on unsigned integers (this reduces the maximum value to 2^31 or 2^63)."));
+        return ptr::null_mut();
+    }
+    let result = catch_unwind(AssertUnwindSafe(|| {
+        let bytes = std::slice::from_raw_parts(buffer, buffer_byte_count);
+
+        let result = if lifetime == Lifetime::OutlivesFunctionCall {
+            c.create_io_from_copy_of_slice(bytes).map_err(|e| e.at(here!()))
+        }else {
+            c.create_io_from_slice(bytes).map_err(|e| e.at(here!()))
+        };
+        result.map(|mut io| &mut *io as *mut JobIo)
+    }));
+    handle_result!(c, result, ptr::null_mut())
 }
 
 
@@ -814,9 +827,12 @@ pub unsafe extern "C" fn imageflow_io_create_from_buffer(context: *mut Context,
 #[allow(unused_variables)]
 pub unsafe extern "C" fn imageflow_io_create_for_output_buffer(context: *mut Context)
                                                                -> *mut JobIo {
-    // The current implementation of output buffer only sheds its actual buffer with the context.
-    // No need for the shell to have an earlier lifetime for mem reasons.
-     &mut *(&*context).create_io_output_buffer().unwrap() as *mut JobIo
+    let mut c = context_ready!(context);
+    let result = catch_unwind(AssertUnwindSafe(|| {
+        c.create_io_output_buffer().map(|mut v| &mut *v as *mut JobIo).map_err(|e| e.at(here!()))
+    }));
+    handle_result!(c, result, ptr::null_mut())
+
 }
 
 
@@ -826,37 +842,45 @@ pub unsafe extern "C" fn imageflow_io_create_for_output_buffer(context: *mut Con
 ///
 /// Provides access to the underlying buffer for the given imageflow_io object.
 ///
-/// Ensure your length variable always holds 64-bits.
-///
 #[no_mangle]
 pub unsafe extern "C" fn imageflow_io_get_output_buffer(context: *mut Context,
                                                         io: *mut JobIo,
                                                         result_buffer: *mut *const u8,
                                                         result_buffer_length: *mut libc::size_t)
                                                         -> bool {
-    let result = catch_unwind(AssertUnwindSafe(|| {
-        let io_proxy = (&*context).get_proxy_mut_by_pointer(io).expect("");
-
-        let slice = io_proxy.get_output_buffer_bytes().expect("Failed to get output buffer bytes"); // !!
-        (slice.as_ptr(), slice.len())
-    }));
-    match result {
-        Ok((b, l)) => {
-            (*result_buffer) =b;
-            (* result_buffer_length) = l;
-            true
-        },
-        Err(e) => {
-            (&mut *context).error_mut().abi_raise_panic(&e);
-            false
-        }
+    let mut c = context_ready!(context);
+    if io.is_null() {
+        c.outward_error_mut().try_set_error(nerror!(ErrorKind::NullArgument, "The argument 'io' is null."));
+        return false;
     }
+    if result_buffer.is_null() {
+        c.outward_error_mut().try_set_error(nerror!(ErrorKind::NullArgument, "The argument 'result_buffer' is null."));
+        return false;
+    }
+
+    if result_buffer_length.is_null() {
+        c.outward_error_mut().try_set_error(nerror!(ErrorKind::NullArgument, "The argument 'result_buffer_length' is null."));
+        return false;
+    }
+    let result = catch_unwind(AssertUnwindSafe(|| {
+        // This get_proxy_mut_by_pointer is only used to validate the pointer; we just dereference it for use
+        c.get_proxy_mut_by_pointer(io).map_err(|e| e.at(here!())).and_then(|_| {
+            let s= (&mut *io).get_output_buffer_bytes().map_err(|e| e.at(here!()))?;
+
+            if s.len().leading_zeros() == 0{
+                Err(nerror!(ErrorKind::Category(ErrorCategory::InternalError), "Error retriving output buffer; length overflow prevented (most significant bit set)."))
+            }else {
+                (*result_buffer) = s.as_ptr();
+                (*result_buffer_length) = s.len();
+                Ok(true)
+            }
+        })
+    }));
+    handle_result!(c, result, false)
 }
 
 ///
 /// Provides access to the underlying buffer for the given imageflow_io object.
-///
-/// Ensure your length variable always holds 64-bits
 ///
 #[no_mangle]
 pub unsafe extern "C" fn imageflow_job_get_output_buffer_by_id(context: *mut Context,
@@ -865,22 +889,34 @@ pub unsafe extern "C" fn imageflow_job_get_output_buffer_by_id(context: *mut Con
                                                                result_buffer: *mut *const u8,
                                                                result_buffer_length: *mut libc::size_t)
                                                                -> bool {
-    let io_proxy = match (&*job).get_io(io_id) {
-        Ok(io_proxy) => Some(io_proxy),
-        Err(e) => {
-            e.write_to_context_ptr(context);
-            None
-        }
-    };
-    match io_proxy {
-        Some(io) => {
-            let s= io.get_output_buffer_bytes().expect("Failed to get output buffer bytes");
-            (*result_buffer) = s.as_ptr();
-            (*result_buffer_length) = s.len();
-            true
-        },
-        None => false
+    let mut c = context_ready!(context);
+    if job.is_null() {
+        c.outward_error_mut().try_set_error(nerror!(ErrorKind::NullArgument, "The argument 'job' is null."));
+        return false;
     }
+    if result_buffer.is_null() {
+        c.outward_error_mut().try_set_error(nerror!(ErrorKind::NullArgument, "The argument 'result_buffer' is null."));
+        return false;
+    }
+
+    if result_buffer_length.is_null() {
+        c.outward_error_mut().try_set_error(nerror!(ErrorKind::NullArgument, "The argument 'result_buffer_length' is null."));
+        return false;
+    }
+    let result = catch_unwind(AssertUnwindSafe(|| {
+        (&*job).get_io(io_id).map_err(|e| e.at(here!())).and_then(|io_proxy| {
+            let s = io_proxy.get_output_buffer_bytes().map_err(|e| e.at(here!()))?;
+
+            if s.len().leading_zeros() == 0{
+                Err(nerror!(ErrorKind::Category(ErrorCategory::InternalError), "Error retriving output buffer; length overflow prevented (most significant bit set)."))
+            }else {
+                (*result_buffer) = s.as_ptr();
+                (*result_buffer_length) = s.len();
+                Ok(true)
+            }
+        })
+    }));
+    handle_result!(c, result, false)
 }
 
 
@@ -890,7 +926,11 @@ pub unsafe extern "C" fn imageflow_job_get_output_buffer_by_id(context: *mut Con
 ///
 #[no_mangle]
 pub unsafe extern "C" fn imageflow_job_create(context: *mut Context) -> *mut Job {
-    &mut *(&*context).create_job()
+    let mut c = context_ready!(context);
+    let result = catch_unwind(AssertUnwindSafe(|| {
+        Ok(&mut *c.create_job() as *mut Job)
+    }));
+    handle_result!(c, result, ptr::null_mut())
 }
 
 
@@ -902,9 +942,17 @@ pub unsafe extern "C" fn imageflow_job_get_io(context: *mut Context,
                                               job: *mut Job,
                                               io_id: i32)
                                               -> *mut JobIo {
-    (&*job).get_io(io_id)
-            .map(|mut io| &mut *io as *mut JobIo)
-        .unwrap_or_else(|e| { e.write_to_context_ptr(context); ptr::null_mut() })
+    let mut c = context_ready!(context);
+    if job.is_null() {
+        c.outward_error_mut().try_set_error(nerror!(ErrorKind::NullArgument, "The argument 'job' is null."));
+        return ptr::null_mut();
+    }
+    let result = catch_unwind(AssertUnwindSafe(|| {
+        (&*job).get_io(io_id)
+            .map(|mut io| &mut *io as *mut JobIo).map_err(|e| e.at(here!()))
+
+    }));
+    handle_result!(c, result, ptr::null_mut())
 }
 
 ///
@@ -920,10 +968,22 @@ pub unsafe extern "C" fn imageflow_job_add_io(context: *mut Context,
                                               io_id: i32,
                                               direction: Direction)
                                               -> bool {
-    (&mut *job).add_io(&mut *io, io_id, std::mem::transmute(direction))
-        .map(|_| true)
-        .unwrap_or_else(|e| { e.write_to_context_ptr(context); false })
+    let mut c = context_ready!(context);
+    if job.is_null() {
+        c.outward_error_mut().try_set_error(nerror!(ErrorKind::NullArgument, "The argument 'job' is null."));
+        return false;
+    }
+    if io.is_null() {
+        c.outward_error_mut().try_set_error(nerror!(ErrorKind::NullArgument, "The argument 'io' is null."));
+        return false;
+    }
+    let result = catch_unwind(AssertUnwindSafe(|| {
 
+        (&mut *job).add_io(&mut *io, io_id, std::mem::transmute(direction))
+            .map(|_| true).map_err(|e| e.at(here!()))
+
+    }));
+    handle_result!(c, result, false)
 }
 
 ///
@@ -931,7 +991,9 @@ pub unsafe extern "C" fn imageflow_job_add_io(context: *mut Context,
 ///
 #[no_mangle]
 pub unsafe extern "C" fn imageflow_job_destroy(context: *mut Context, job: *mut Job) -> bool {
-    (&*context).abi_try_remove_job(job)
+    let mut c = context_ready!(context);
+    let result = catch_unwind(AssertUnwindSafe(|| Ok(c.abi_try_remove_job(job))));
+    handle_result!(c, result, false)
 }
 
 
@@ -939,7 +1001,7 @@ pub unsafe extern "C" fn imageflow_job_destroy(context: *mut Context, job: *mut 
 /// Allocates zeroed memory that will be freed with the context.
 ///
 /// * filename/line may be used for debugging purposes. They are optional. Provide null/-1 to skip.
-/// * `filename` should be an null-terminated UTF-8 or ASCII string which will outlive the context.
+/// * If provided, `filename` should be an null-terminated UTF-8 or ASCII string which will outlive the context.
 ///
 /// Returns null(0) on failure.
 ///
@@ -949,23 +1011,35 @@ pub unsafe extern "C" fn imageflow_context_memory_allocate(context: *mut Context
                                                     filename: *const libc::c_char,
                                                     line: i32) -> *mut libc::c_void {
 
-    ffi::flow_context_calloc(uw(context), 1, bytes, ptr::null(), uw(context) as *const libc::c_void, filename, line)
+    let c = context_ready!(context);
+
+    if bytes.leading_zeros() == 0{
+        c.outward_error_mut().try_set_error(nerror!(ErrorKind::InvalidArgument, "Argument `bytes` likely came from a negative integer. Imageflow prohibits having the leading bit set on unsigned integers (this reduces the maximum value to 2^31 or 2^63)."));
+        return ptr::null_mut();
+    }
+
+    ffi::flow_context_calloc(c.flow_c(), 1, bytes, ptr::null(), c.flow_c() as *const libc::c_void, filename, line)
 }
 
 ///
 /// Frees memory allocated with imageflow_context_memory_allocate early.
 ///
 /// * filename/line may be used for debugging purposes. They are optional. Provide null/-1 to skip.
-/// * `filename` should be an null-terminated UTF-8 or ASCII string which will outlive the context.
+/// * If provided, `filename` should be an null-terminated UTF-8 or ASCII string which will outlive the context.
 ///
-/// Returns false on failure.
+/// Returns false on failure. Returns true on success, or if `pointer` is null.
 ///
 #[no_mangle]
 pub unsafe extern "C" fn imageflow_context_memory_free(context: *mut Context,
                                                        pointer: *mut libc::c_void,
                                                        filename: *const libc::c_char,
                                                        line: i32) -> bool {
-    ffi::flow_destroy(uw(context), pointer, filename, line)
+    let c = context!(context); // We must be able to free in an errored state
+    if !pointer.is_null() {
+        ffi::flow_destroy(c.flow_c(), pointer, filename, line)
+    }else {
+        true
+    }
 }
 
 #[test]
