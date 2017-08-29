@@ -428,7 +428,9 @@ pub unsafe extern "C" fn imageflow_context_error_write_to_buffer(context: *mut C
         }
 
         let result = c.outward_error_mut().get_buffer_writer().write_and_write_errors_to_cstring(buffer as *mut u8, buffer_length, Some("\n[truncated]\n"));
-        *bytes_written = result.bytes_written();
+        if !bytes_written.is_null(){
+            *bytes_written = result.bytes_written();
+        }
         match result {
             WriteResult::AllWritten(_) |
             WriteResult::Error { .. } => true,
