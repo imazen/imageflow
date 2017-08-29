@@ -1,6 +1,5 @@
 extern crate clap;
 extern crate imageflow_server;
-#[macro_use] extern crate lazy_static;
 extern crate regex;
 
 

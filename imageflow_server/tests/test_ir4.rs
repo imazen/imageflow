@@ -41,12 +41,12 @@ fn assert_valid_image(url: &str) {
     }
 
 }
-fn write_env_vars(path: &Path){
-    let mut f = File::create(&path).unwrap();
-    for (k,v) in std::env::vars(){
-        write!(f, "{}={}\n", k, v).unwrap();
-    }
-}
+//fn write_env_vars(path: &Path){
+//    let mut f = File::create(&path).unwrap();
+//    for (k,v) in std::env::vars(){
+//        write!(f, "{}={}\n", k, v).unwrap();
+//    }
+//}
 
 fn build_dirs() -> Vec<PathBuf>{
     let target_triple = ::s::version::get_build_env_value("TARGET").expect("TARGET triple required");
@@ -282,7 +282,7 @@ fn run_server_test_i4(){
 
         let last_mount = params.len() - 2;
 
-        let (po, callback_result) = ServerInstance::run(&c, Proto::Http, params , | server | {
+        let (_, callback_result) = ServerInstance::run(&c, Proto::Http, params , | server | {
             assert_valid_image(&server.url_for("/local/eh.png?width=100"));
 
             for ix in 1..last_mount + 1{
@@ -336,7 +336,7 @@ fn run_server_test_ir4_heavy(){
         c.create_blank_image_here("eh", 100,100, s::EncoderPreset::libpng32());
 
         let params = vec!["--data-dir=.", "--mount=/local/:ir4_local:./"];
-        let (po, callback_result) = ServerInstance::run(&c, Proto::Http, params , | server | {
+        let (_, callback_result) = ServerInstance::run(&c, Proto::Http, params , | server | {
             for _ in 1..20{
                 assert_valid_image(&server.url_for("/local/eh.png?width=100"));
             }
