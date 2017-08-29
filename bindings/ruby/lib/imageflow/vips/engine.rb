@@ -24,37 +24,20 @@ module Imageflow
         job.add_input_file(placeholder_id: 0, filename: input_path)
         job.add_output_file(placeholder_id: 1, filename: output_path)
 
-        input_info = job.get_image_info placeholder_id: 0
+        format = :jpeg if output_path =~ /\.jpe?g$/i
+        format = :png if output_path =~ /\.png$/i
 
-        w = input_info[:image_width]
-        h = input_info[:image_height]
-
-        instructions = Imageflow::Riapi::Instructions.new
-        instructions.width = opts.width
-        instructions.height = opts.height
-        #todo - autorotate!
-        instructions.mode = opts.crop_image ? :crop : :max
-
-        instructions.precise_scaling_ratio = opts.stop_block_scaling_at || 2.1
-
-        instructions.format = :jpeg if output_path =~ /\.jpe?g$/i
-        instructions.format = :png if output_path =~ /\.png$/i
+        command_string = "?w=#{opts.width}&h=#{opts.height}&mod=#{opts.crop_image ? 'crop': 'max'}&format=#{format}&decoder.min_precise_scaling_ratio=#{opts.stop_block_scaling_at || 2.1}&down.colorspace=#{opts.linear ? :linear : :srgb}"
 
 
-        instructions.floatspace = opts.linear ? :linear : :srgb
-
-        #TODO: restore switiching
-        #c.set_floatspace_linear! if instructions.floatspace == :linear
-        #c.set_floatspace_srgb! if instructions.floatspace == :srgb
-
-
-
-        # instructions.
-
-        #cpu_time = ::Benchmark.realtime do
-        gb = Imageflow::Riapi::GraphBuilder.new context: c
-        framewise = gb.build_framewise(job: job, input_placeholder_id: 0, output_placeholder_id: 1, source_info: input_info, instructions: instructions)
-        job.execute framewise: framewise
+        job.execute framewise: {steps: [
+            {command_string: {
+                kind: "ir4",
+                decode: 0,
+                encode: 1,
+                value: command_string
+            }}
+        ]}
         c.destroy!
         c = nil
         #end

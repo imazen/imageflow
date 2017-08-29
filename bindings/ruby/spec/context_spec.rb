@@ -38,6 +38,7 @@ module Imageflow
         flow.context_error_and_stacktrace(@c, buffer, 2048, true)
 
         expect(buffer.read_string).to match /NullArgument/
+        expect(buffer.read_string).to match /imageflow_abi/
       end
     end
 

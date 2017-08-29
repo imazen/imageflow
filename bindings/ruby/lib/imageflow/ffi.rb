@@ -14,7 +14,7 @@ module Imageflow
       #How old before we skip
       seconds = 15
       unless File.exist?(self.dylib_path) && (Time.now - File.stat(self.dylib_path).mtime) < seconds
-        %x[cd #{self.dylib_build_dir} && cargo build]
+        %x[cd #{self.dylib_build_dir}/../ && cargo build --package imageflow_abi]
       end
       self.dylib_path
     end

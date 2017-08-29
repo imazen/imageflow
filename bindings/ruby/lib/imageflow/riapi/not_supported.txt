@@ -1,4 +1,0 @@
-DropShadow, Gradient, FolderResizeSyntax not supported
-IEPNGFix not supported
-Image404 not supported
-ImageHandlerSyntax not supported
