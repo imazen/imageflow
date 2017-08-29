@@ -40,16 +40,20 @@ impl NodeDebugInfo {
 }
 
 impl FlowError {
-    fn add_node_info(mut self, info: Option<NodeDebugInfo>) -> FlowError {
-        self.node = info;
+    fn try_add_node_info(mut self, info: Option<NodeDebugInfo>) -> FlowError {
+        if self.node.is_none() {
+            if let Some(n) = info {
+                self.node = Some(Box::new(n));
+            }
+        }
         self
     }
 
-    pub fn with_ctx(self, ctx: &OpCtx, ix: NodeIndex ) -> FlowError {
-        self.add_node_info(NodeDebugInfo::from_ctx(ctx, ix))
+    pub fn with_ctx(self, ctx: &OpCtx, ix: NodeIndex) -> FlowError {
+        self.try_add_node_info(NodeDebugInfo::from_ctx(ctx, ix))
     }
-    pub fn with_ctx_mut(self, ctx: &OpCtxMut, ix: NodeIndex ) -> FlowError {
-        self.add_node_info(NodeDebugInfo::from_ctx_mut(ctx, ix))
+    pub fn with_ctx_mut(self, ctx: &OpCtxMut, ix: NodeIndex) -> FlowError {
+        self.try_add_node_info(NodeDebugInfo::from_ctx_mut(ctx, ix))
     }
 }
 #[derive(Copy, Clone,Debug,PartialEq)]

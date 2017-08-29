@@ -47,7 +47,7 @@ fn test_file_macro_for_this_build(){
 #[macro_export]
 macro_rules! here {
     () => (
-        ::CodeLocation{ line: line!(), column: column!(), file: file!()}
+        ::CodeLocation::new(file!(), line!(), column!())
     );
 }
 
@@ -219,18 +219,57 @@ impl ErrorKind{
 
 #[derive(Debug, Copy, Clone, PartialEq)]
 pub struct CodeLocation{
-    pub line: u32,
-    pub column: u32,
-    pub file: &'static str,
+    file: &'static str,
+    line: u32,
+    column: u32
     //pub crate_name: &'static str,
+}
+impl CodeLocation{
+    pub fn new(file: &'static str, line: u32, column: u32) -> CodeLocation{
+        CodeLocation{ file: file, line: line, column: column}
+    }
+    pub fn col(&self) -> u32{
+        self.column
+    }
+    pub fn line(&self) -> u32{
+        self.line
+    }
+    pub fn file(&self) -> &'static str{
+        self.file
+    }
 }
 
 #[derive(Clone, PartialEq)]
 pub struct FlowError {
     pub kind: ErrorKind,
     pub message: String,
-    pub at: ::smallvec::SmallVec<[CodeLocation;4]>,
-    pub node: Option<::flow::definitions::NodeDebugInfo>
+    pub at: ::smallvec::SmallVec<[CodeLocation;1]>,
+    pub node: Option<Box<::flow::definitions::NodeDebugInfo>>
+}
+
+#[test]
+fn test_flow_error_size(){
+    // 88 bytes. Interning &'string str and bringing CodeLocation down to 8 bytes would -16
+    // Replacing smallvec with a enum::one/enum::many(Box<Vec>) would reduce another 12
+    // Down to 60 bytes
+
+    // Would require implementation of array-backed lockless string interning
+
+    // ErrorKind takes 12 bytes right now. Could be reduced to 8 by flattening CError
+    // &'static str takes 16 bytes. (length)
+    // CodeLocation takes 24 bytes. If we interned strings we could get this down to 8 bytes.
+
+    // Vec<> and String take 24 bytes each.
+    // Sizeof Option<Box> is 8 bytes
+
+    //print!("size_of(ErrorKind) = {}; ", std::mem::size_of::<ErrorKind>());
+    //print!("size_of(String) = {}; ", std::mem::size_of::<String>());
+    print!("size_of(CodeLocation) = {}; ", std::mem::size_of::<CodeLocation>());
+    // SmallVec is 40 bytes.
+    // print!("size_of(::smallvec::SmallVec<[CodeLocation;1]>) = {}; ", std::mem::size_of::<::smallvec::SmallVec<[CodeLocation;1]>>());
+
+    print!("size_of(FlowError) = {} bytes;  ", std::mem::size_of::<FlowError>());
+    assert!(std::mem::size_of::<FlowError>() < 90);
 }
 
 impl ::std::error::Error for FlowError {
@@ -245,6 +284,10 @@ impl FlowError {
         if self.kind.is_oom() && self.at.len() == self.at.capacity(){
             self
         }else {
+            //Avoid repeated allocations
+            if self.at.capacity() < 16 {
+                self.at.grow(16);
+            }
             self.at.push(c);
             self
         }
@@ -294,10 +337,10 @@ impl fmt::Debug for FlowError {
         }else { None };
 
         for recorded_frame in &self.at{
-            write!(f, "{}:{}:{}\n", recorded_frame.file, recorded_frame.line, recorded_frame.column)?;
+            write!(f, "{}:{}:{}\n", recorded_frame.file(), recorded_frame.line(), recorded_frame.col())?;
 
             if let Some(ref url) = url{
-                write!(f, "{}{}#L{}\n",url, recorded_frame.file, recorded_frame.line)?;
+                write!(f, "{}{}#L{}\n",url, recorded_frame.file(), recorded_frame.line())?;
             }
 //            write!(f, "{}{}{}:{}:{}\n", recorded_frame.crate_name, os_path_separator!(), recorded_frame.file, recorded_frame.line, recorded_frame.column)?;
 //
@@ -313,7 +356,7 @@ impl fmt::Debug for FlowError {
 }
 
 
-#[repr(C)]
+#[repr(u32)]
 #[derive(Debug, PartialEq, Clone, Copy, Eq)]
 pub enum ErrorCategory{
     /// No error

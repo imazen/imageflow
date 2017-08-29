@@ -49,11 +49,9 @@ fn set_panic_hook(){
             }
         };
 
-        //TODO: add module?
-
         match info.location() {
             Some(location) => {
-                let _ = writeln!(&mut std::io::stderr(), "thread '{}' panicked at '{}': {}:{}",
+                let _ = writeln!(&mut std::io::stderr(), "thread '{}' panicked at '{}': \n{}:{}:",
                 thread,
                 msg,
                 location.file(),
