@@ -60,6 +60,7 @@ macro_rules! loc {
         concat!($msg, " at\n", file!(), ":", line!(), ":", column!())
     );
 }
+
 #[macro_export]
 macro_rules! nerror {
     ($kind:expr) => (

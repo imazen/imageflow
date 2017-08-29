@@ -516,7 +516,7 @@ pub enum Step {
     /// Work on heights
     Y(Step1D),
 
-    //TODO: Implement Uncrop (within source_max)?
+    // Uncrop (within source_max)?
 
     // PermitBlockAlignedEdges(4/8) - crop more, uncrop, scaleup, scaledown, unpad, distort?
 }

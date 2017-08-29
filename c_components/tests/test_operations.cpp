@@ -192,6 +192,40 @@ int64_t transpose(int w, int h, flow_pixel_format fmt, int runs){
 }
 
 
+int64_t scale2d(int w, int h, int to_w, int to_h, flow_pixel_format fmt, flow_working_floatspace floatspace, int runs){
+
+    flow_c * c = flow_context_create();
+
+    flow_bitmap_bgra * a = flow_bitmap_bgra_create(c, w, h, true, fmt);
+    flow_bitmap_bgra_fill_rect(c, a, 0, 0, a->w, a->h, 0xFF0000FF);
+
+
+    flow_bitmap_bgra * b = flow_bitmap_bgra_create(c, to_w, to_h, true, fmt);
+    b->compositing_mode = flow_bitmap_compositing_replace_self;
+
+    int64_t start = flow_get_high_precision_ticks();
+    bool result;
+    for (int i = 0; i < runs; i++) {
+
+        struct flow_nodeinfo_scale2d_render_to_canvas1d info;
+        info.interpolation_filter = flow_interpolation_filter_RobidouxFast;
+        info.scale_to_height = to_h;
+        info.scale_to_width = to_w;
+        info.scale_in_colorspace = floatspace;
+
+        result = flow_node_execute_scale2d_render1d(c, a, b, &info);
+    }
+    int64_t end = flow_get_high_precision_ticks();
+
+    flow_context_print_and_exit_if_err(c);
+    REQUIRE(result == true);
+
+    flow_bitmap_bgra_destroy(c, a);
+    flow_bitmap_bgra_destroy(c, b);
+    flow_context_destroy(c);
+    return end - start;
+
+}
 int64_t flip_h(int w, int h, flow_pixel_format fmt, int runs){
     flow_c * c = flow_context_create();
     flow_bitmap_bgra * a = flow_bitmap_bgra_create(c, w, h, true, fmt);
@@ -250,8 +284,45 @@ int64_t fill_rect(int w, int h, flow_pixel_format fmt, int runs){
 //            }
 //}
 
+
+//
+//TEST_CASE("Benchmark scale2d", "")
+//{
+//    flow_pixel_format formats[3] = {flow_bgra32,  flow_bgr32};//, flow_bgr24 };
+//    flow_working_floatspace spaces[2] = {flow_working_floatspace_srgb, flow_working_floatspace_linear};
+//    for (int format_ix = 0; format_ix < 2; format_ix++)
+//        for (int space_ix =0; space_ix < 2; space_ix++)
+//        for (int w = 2000; w < 4000; w += 1373)
+//            for (int h = 2000; h < 4000; h += 1373) {
+//                int runs = 10;
+//
+//                int ticks = scale2d(w, h, 800, 600, formats[format_ix],spaces[space_ix], runs);
+//                double ms = ticks / runs * 1000.0 / (float)flow_get_profiler_ticks_per_second();
+//                fprintf(stdout, "Downscaling %dx%d (fmt %d) to 800x600 in space %d took %.05fms\n", w, h, formats[format_ix], spaces[space_ix], ms);
+//            }
+//}
+
+//Downscaling 2000x2000 (fmt 4) to 800x600 in space 0 took 25.35200ms
+//Downscaling 2000x3373 (fmt 4) to 800x600 in space 0 took 40.26200ms
+//Downscaling 3373x2000 (fmt 4) to 800x600 in space 0 took 49.52200ms
+//Downscaling 3373x3373 (fmt 4) to 800x600 in space 0 took 89.35600ms
+//Downscaling 2000x2000 (fmt 4) to 800x600 in space 1 took 41.83400ms
+//Downscaling 2000x3373 (fmt 4) to 800x600 in space 1 took 48.20500ms
+//Downscaling 3373x2000 (fmt 4) to 800x600 in space 1 took 45.61100ms
+//Downscaling 3373x3373 (fmt 4) to 800x600 in space 1 took 68.49200ms
+//Downscaling 2000x2000 (fmt 70) to 800x600 in space 0 took 21.65100ms
+//Downscaling 2000x3373 (fmt 70) to 800x600 in space 0 took 33.15200ms
+//Downscaling 3373x2000 (fmt 70) to 800x600 in space 0 took 36.12300ms
+//Downscaling 3373x3373 (fmt 70) to 800x600 in space 0 took 56.46800ms
+//Downscaling 2000x2000 (fmt 70) to 800x600 in space 1 took 26.31800ms
+//Downscaling 2000x3373 (fmt 70) to 800x600 in space 1 took 38.19800ms
+//Downscaling 3373x2000 (fmt 70) to 800x600 in space 1 took 40.43600ms
+//Downscaling 3373x3373 (fmt 70) to 800x600 in space 1 took 61.35000ms
+//
+//
 TEST_CASE("Benchmark horizontal flip", "")
 {
+
     for (int fmt = 4; fmt >= 3; fmt--)
         for (int w = 1; w < 3000; w += 1373)
             for (int h = 1; h < 3000; h += 1373) {
@@ -262,6 +333,7 @@ TEST_CASE("Benchmark horizontal flip", "")
                 fprintf(stdout, "Horizontal flipping %dx%d (fmt %d) took %.05fms\n", w, h, fmt, ms);
             }
 }
+
 
 TEST_CASE("Benchmark vertical flip", "")
 {

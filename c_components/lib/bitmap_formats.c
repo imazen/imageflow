@@ -110,6 +110,7 @@ FLOW_HINT_HOT FLOW_HINT_PURE
     im->w = sx;
     im->h = sy;
     im->pixels = NULL;
+    im->compositing_mode = flow_bitmap_compositing_replace_self;
     return im;
 }
 
