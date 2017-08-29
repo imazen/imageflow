@@ -691,3 +691,9 @@ pub struct StartServerConfig {
     pub cert: Option<PathBuf>,
     pub cert_pwd: Option<String>
 }
+
+
+#[test]
+fn test_file_macro_for_this_build(){
+    assert!(file!().starts_with(env!("CARGO_PKG_NAME")))
+}

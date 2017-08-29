@@ -171,6 +171,7 @@ impl Drop for Context {
 }
 
 #[test]
-fn context_size(){
+fn test_context_size(){
     println!("std::mem::sizeof(Context) = {}", std::mem::size_of::<Context>());
+    assert!(std::mem::size_of::<Context>() < 500);
 }

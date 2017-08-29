@@ -216,3 +216,8 @@ pub fn main_with_exit_code() -> i32 {
 
     64
 }
+
+#[test]
+fn test_file_macro_for_this_build(){
+    assert!(file!().starts_with("imageflow_tool"))
+}

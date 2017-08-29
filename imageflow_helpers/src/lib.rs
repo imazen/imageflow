@@ -79,3 +79,8 @@ mod errors {
 }
 
 
+#[test]
+fn test_file_macro_for_this_build(){
+    assert!(file!().starts_with(env!("CARGO_PKG_NAME")))
+}
+
