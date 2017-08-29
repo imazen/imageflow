@@ -187,6 +187,7 @@ enum Target{
     PInvoke,
     Default,
     Lua,
+    SignaturesOnly,
     PrefixAll{ prefix: &'static str, struct_name: Style, enum_name: Style, enum_member: Style},
     Other{structs: StructModification, enums: EnumModification}
 }
@@ -202,6 +203,12 @@ fn strip_preprocessor_directives(contents: &str) -> String{
     temp2
 }
 
+
+fn strip_comments(contents: &str) -> String{
+    let temp = Regex::new(r"//[^\n\r]*").unwrap().replace_all(&contents, "");
+    let temp2 = Regex::new(r"[\n\r\s\t]+\n").unwrap().replace_all(&temp, "\n\n").into();
+    temp2
+}
 fn build(file: String, target: Target){
 
     let insert = match target{
@@ -213,7 +220,8 @@ fn build(file: String, target: Target){
         run_build(cheddar::Cheddar::new().expect("could not read manifest")
                       .insert_code(insert), file, |s| s);
     }else {
-        let should_strip_preprocessor_directives = target == Target::Lua;
+        let should_strip_preprocessor_directives = target == Target::Lua || target == Target::SignaturesOnly;
+        let should_strip_comments = target == Target::SignaturesOnly;
         let target = match target {
             Target::PrefixAll { prefix, struct_name, enum_name, enum_member } => Target::Other {
                 structs: StructModification::Prefix { prefix: prefix, style: struct_name },
@@ -236,15 +244,27 @@ fn build(file: String, target: Target){
                     member_prefix: "", member_style: Style::PascalCase
                 }
             },
+             Target::SignaturesOnly => Target::Other {
+                structs: StructModification::Erase,
+                enums: EnumModification {
+                    name_prefix: "Imageflow", name_style: Style::Snake,
+                    member_prefix: "Imageflow", member_style: Style::Snake
+                }
+            },
             t => t
         };
         if let Target::Other { structs, enums } = target {
             run_build(cheddar::Cheddar::new().expect("could not read manifest")
                           .insert_code(insert), file, |s: String| -> String {
                 let temp = filter_enums(filter_structs(s, &STRUCT_NAMES, structs), &ENUM_NAMES, enums);
-                if should_strip_preprocessor_directives{
+                let temp = if should_strip_preprocessor_directives{
                     strip_preprocessor_directives(&temp)
                 }else {
+                    temp
+                };
+                if should_strip_comments{
+                    strip_comments(&temp)
+                } else{
                     temp
                 }
             });
@@ -262,6 +282,8 @@ fn main() {
 
     build(format!("{}lua.h",base), Target::Lua);
     build(format!("{}raw.h",base), Target::Raw);
+
+    build(format!("{}short.h",base), Target::SignaturesOnly);
     build(format!("{}pinvoke.h",base), Target::PInvoke);
 
     build(format!("{}SCREAMING_SNAKE.h",base), Target::PrefixAll{
