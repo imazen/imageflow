@@ -147,8 +147,8 @@ impl NodeDefOneInputExpand for ConstrainDef{
 
             if resample {
                 let scale2d_params = s::Node::Resample2D {
-                    w: new_w as usize,
-                    h: new_h as usize,
+                    w: new_w,
+                    h: new_h,
                     up_filter: hints.and_then(|h| h.up_filter),
                     down_filter: hints.and_then(|h| h.down_filter),
                     scaling_colorspace: hints.and_then(|h| h.scaling_colorspace),

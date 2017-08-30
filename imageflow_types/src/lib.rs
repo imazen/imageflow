@@ -391,8 +391,8 @@ pub enum Node {
     ApplyOrientation { flag: i32 },
     #[serde(rename="resample_2d")]
     Resample2D {
-        w: usize,
-        h: usize,
+        w: u32,
+        h: u32,
         down_filter: Option<Filter>,
         up_filter: Option<Filter>,
         scaling_colorspace: Option<ScalingFloatspace>,
@@ -401,7 +401,7 @@ pub enum Node {
 
     #[serde(rename="resample_1d")]
     Resample1D {
-        scale_to_width: usize,
+        scale_to_width: u32,
         transpose_on_write: bool,
         interpolation_filter: Option<Filter>,
         scaling_colorspace: Option<ScalingFloatspace>,

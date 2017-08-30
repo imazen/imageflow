@@ -276,8 +276,8 @@ impl Ir4Layout{
         if image.width() != new_crop.width() || image.height() != new_crop.height() || self.i.f_sharpen.unwrap_or(0f64) > 0f64 {
             let downscaling = image.width() < new_crop.width() || image.height() < new_crop.height();
             b.add(s::Node::Resample2D {
-                w: image.width() as usize,
-                h: image.height() as usize,
+                w: image.width() as u32,
+                h: image.height() as u32,
                 down_filter: None,
                 up_filter: None,
                 scaling_colorspace: match self.i.down_colorspace {

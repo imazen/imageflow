@@ -39,7 +39,6 @@ fn assert_valid_image(url: &str) {
         },
         Err(e) => { panic!("{:?} for {}", &e, &url); }
     }
-
 }
 //fn write_env_vars(path: &Path){
 //    let mut f = File::create(&path).unwrap();
