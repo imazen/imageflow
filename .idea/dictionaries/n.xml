@@ -40,9 +40,11 @@
       <w>rustc</w>
       <w>seekable</w>
       <w>serde</w>
+      <w>smallvec</w>
       <w>srgb</w>
       <w>subsampling</w>
       <w>twox</w>
+      <w>uint</w>
       <w>uuids</w>
       <w>xunits</w>
       <w>yunits</w>
