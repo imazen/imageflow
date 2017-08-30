@@ -285,22 +285,40 @@ int64_t fill_rect(int w, int h, flow_pixel_format fmt, int runs){
 //}
 
 
-//
-//TEST_CASE("Benchmark scale2d", "")
-//{
-//    flow_pixel_format formats[3] = {flow_bgra32,  flow_bgr32};//, flow_bgr24 };
-//    flow_working_floatspace spaces[2] = {flow_working_floatspace_srgb, flow_working_floatspace_linear};
-//    for (int format_ix = 0; format_ix < 2; format_ix++)
-//        for (int space_ix =0; space_ix < 2; space_ix++)
-//        for (int w = 2000; w < 4000; w += 1373)
-//            for (int h = 2000; h < 4000; h += 1373) {
-//                int runs = 10;
-//
-//                int ticks = scale2d(w, h, 800, 600, formats[format_ix],spaces[space_ix], runs);
-//                double ms = ticks / runs * 1000.0 / (float)flow_get_profiler_ticks_per_second();
-//                fprintf(stdout, "Downscaling %dx%d (fmt %d) to 800x600 in space %d took %.05fms\n", w, h, formats[format_ix], spaces[space_ix], ms);
-//            }
-//}
+
+TEST_CASE("Benchmark scale2d", "")
+{
+    flow_pixel_format formats[3] = {flow_bgra32,  flow_bgr32};//, flow_bgr24 };
+    flow_working_floatspace spaces[2] = {flow_working_floatspace_srgb, flow_working_floatspace_linear};
+    for (int format_ix = 0; format_ix < 2; format_ix++)
+        for (int space_ix =0; space_ix < 2; space_ix++)
+        for (int w = 2000; w < 4000; w += 1373)
+            for (int h = 2000; h < 4000; h += 1373) {
+                int runs = 5;
+
+                int ticks = scale2d(w, h, 800, 600, formats[format_ix],spaces[space_ix], runs);
+                double ms = ticks / runs * 1000.0 / (float)flow_get_profiler_ticks_per_second();
+                fprintf(stdout, "Downscaling %dx%d (fmt %d) to 800x600 in space %d took %.05fms\n", w, h, formats[format_ix], spaces[space_ix], ms);
+            }
+}
+
+// with optimizations
+//Downscaling 2000x2000 (fmt 4) to 800x600 in space 0 took 28.27700ms
+//Downscaling 2000x3373 (fmt 4) to 800x600 in space 0 took 39.97800ms
+//Downscaling 3373x2000 (fmt 4) to 800x600 in space 0 took 55.82300ms
+//Downscaling 3373x3373 (fmt 4) to 800x600 in space 0 took 86.47900ms
+//Downscaling 2000x2000 (fmt 4) to 800x600 in space 1 took 35.90900ms
+//Downscaling 2000x3373 (fmt 4) to 800x600 in space 1 took 41.41400ms
+//Downscaling 3373x2000 (fmt 4) to 800x600 in space 1 took 46.17600ms
+//Downscaling 3373x3373 (fmt 4) to 800x600 in space 1 took 64.85400ms
+//Downscaling 2000x2000 (fmt 70) to 800x600 in space 0 took 23.66700ms
+//Downscaling 2000x3373 (fmt 70) to 800x600 in space 0 took 33.61500ms
+//Downscaling 3373x2000 (fmt 70) to 800x600 in space 0 took 38.35300ms
+//Downscaling 3373x3373 (fmt 70) to 800x600 in space 0 took 57.24900ms
+//Downscaling 2000x2000 (fmt 70) to 800x600 in space 1 took 27.36900ms
+//Downscaling 2000x3373 (fmt 70) to 800x600 in space 1 took 37.64700ms
+//Downscaling 3373x2000 (fmt 70) to 800x600 in space 1 took 42.05700ms
+//Downscaling 3373x3373 (fmt 70) to 800x600 in space 1 took 58.35600ms
 
 //Downscaling 2000x2000 (fmt 4) to 800x600 in space 0 took 25.35200ms
 //Downscaling 2000x3373 (fmt 4) to 800x600 in space 0 took 40.26200ms
