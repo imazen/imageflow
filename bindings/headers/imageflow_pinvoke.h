@@ -11,6 +11,15 @@ extern "C" {
 #include <stdbool.h>
 
 
+// Incremented for breaking changes
+#define IMAGEFLOW_ABI_VER_MAJOR 1
+
+// Incremented for non-breaking additions
+#define IMAGEFLOW_ABI_VER_MINOR 0
+
+
+
+
 typedef signed byte int8_t;
 typedef signed long int64_t;
 typedef signed int int32_t;
@@ -45,6 +54,20 @@ typedef enum Lifetime {
 	OutlivesContext = 1,
 } Lifetime;
 
+///
+/// Call this method before doing anything else to ensure that your header or FFI bindings are compatible
+/// with the libimageflow that is currently loaded.
+///
+/// Provide the values IMAGEFLOW_ABI_VER_MAJOR and IMAGEFLOW_ABI_VER_MINOR to this function.
+///
+/// False means that
+///
+bool imageflow_abi_compatible(uint32_t imageflow_abi_ver_major, uint32_t imageflow_abi_ver_minor);
+
+uint32_t imageflow_abi_version_major(void);
+
+uint32_t imageflow_abi_version_minor(void);
+
 /// Creates and returns an imageflow context.
 /// An imageflow context is required for all other imageflow API calls.
 ///
@@ -57,8 +80,8 @@ typedef enum Lifetime {
 ///
 /// **Contexts are not thread-safe!** Once you create a context, *you* are responsible for ensuring that it is never involved in two overlapping API calls.
 ///
-/// Returns a null pointer if allocation fails.
-void* imageflow_context_create(void);
+/// Returns a null pointer if allocation fails or the provided interface version is incompatible
+void* imageflow_context_create(uint32_t imageflow_abi_ver_major, uint32_t imageflow_abi_ver_minor);
 
 /// Begins the process of destroying the context, yet leaves error information intact
 /// so that any errors in the tear-down process can be

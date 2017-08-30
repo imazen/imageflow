@@ -67,6 +67,13 @@ typedef unsigned byte uint8_t;
 //        "#;
 
 
+include!("src/abi_version.rs");
+
+
+fn get_version_consts() -> String{
+
+    format!("\n// Incremented for breaking changes\n#define IMAGEFLOW_ABI_VER_MAJOR {}\n\n// Incremented for non-breaking additions\n#define IMAGEFLOW_ABI_VER_MINOR {}\n\n", IMAGEFLOW_ABI_VER_MAJOR, IMAGEFLOW_ABI_VER_MINOR)
+}
 
 
 
@@ -212,13 +219,13 @@ fn strip_comments(contents: &str) -> String{
 fn build(file: String, target: Target){
 
     let insert = match target{
-        Target::PInvoke => DEFINE_INTS,
-        _ => OPAQUE_STRUCTS
+        Target::PInvoke => format!("{}\n\n{}",get_version_consts(), DEFINE_INTS),
+        _ =>  format!("{}\n\n{}",get_version_consts(), OPAQUE_STRUCTS)
     };
 
     if target == Target::Raw {
         run_build(cheddar::Cheddar::new().expect("could not read manifest")
-                      .insert_code(insert), file, |s| s);
+                      .insert_code(&insert), file, |s| s);
     }else {
         let should_strip_preprocessor_directives = target == Target::Lua || target == Target::SignaturesOnly;
         let should_strip_comments = target == Target::SignaturesOnly;
@@ -255,7 +262,7 @@ fn build(file: String, target: Target){
         };
         if let Target::Other { structs, enums } = target {
             run_build(cheddar::Cheddar::new().expect("could not read manifest")
-                          .insert_code(insert), file, |s: String| -> String {
+                          .insert_code(&insert), file, |s: String| -> String {
                 let temp = filter_enums(filter_structs(s, &STRUCT_NAMES, structs), &ENUM_NAMES, enums);
                 let temp = if should_strip_preprocessor_directives{
                     strip_preprocessor_directives(&temp)

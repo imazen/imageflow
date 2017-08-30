@@ -239,6 +239,29 @@ macro_rules! handle_result {
         }}
 }
 
+include!("abi_version.rs");
+
+///
+/// Call this method before doing anything else to ensure that your header or FFI bindings are compatible
+/// with the libimageflow that is currently loaded.
+///
+/// Provide the values IMAGEFLOW_ABI_VER_MAJOR and IMAGEFLOW_ABI_VER_MINOR to this function.
+///
+/// False means that
+///
+#[no_mangle]
+pub unsafe extern "C" fn imageflow_abi_compatible(imageflow_abi_ver_major: u32, imageflow_abi_ver_minor: u32) -> bool {
+    imageflow_abi_ver_major == IMAGEFLOW_ABI_VER_MAJOR && imageflow_abi_ver_minor <= IMAGEFLOW_ABI_VER_MINOR
+}
+#[no_mangle]
+pub unsafe extern "C" fn imageflow_abi_version_major() -> u32 {
+    IMAGEFLOW_ABI_VER_MAJOR
+}
+#[no_mangle]
+pub unsafe extern "C" fn imageflow_abi_version_minor() -> u32 {
+    IMAGEFLOW_ABI_VER_MINOR
+}
+
 /// Creates and returns an imageflow context.
 /// An imageflow context is required for all other imageflow API calls.
 ///
@@ -251,10 +274,14 @@ macro_rules! handle_result {
 ///
 /// **Contexts are not thread-safe!** Once you create a context, *you* are responsible for ensuring that it is never involved in two overlapping API calls.
 ///
-/// Returns a null pointer if allocation fails.
+/// Returns a null pointer if allocation fails or the provided interface version is incompatible
 #[no_mangle]
-pub unsafe extern "C" fn imageflow_context_create() -> *mut Context {
-    Context::create_cant_panic().map(|b| Box::into_raw(b)).unwrap_or(std::ptr::null_mut())
+pub unsafe extern "C" fn imageflow_context_create(imageflow_abi_ver_major: u32, imageflow_abi_ver_minor: u32) -> *mut Context {
+    if imageflow_abi_compatible(imageflow_abi_ver_major, imageflow_abi_ver_minor) {
+        Context::create_cant_panic().map(|b| Box::into_raw(b)).unwrap_or(std::ptr::null_mut())
+    }else{
+        ptr::null_mut()
+    }
 }
 
 /// Begins the process of destroying the context, yet leaves error information intact
@@ -285,7 +312,7 @@ fn test_create_destroy() {
 
 pub fn exercise_create_destroy() {
     unsafe {
-        let c = imageflow_context_create();
+        let c = imageflow_context_create(IMAGEFLOW_ABI_VER_MAJOR, IMAGEFLOW_ABI_VER_MINOR);
         assert!(!c.is_null());
         assert!(imageflow_context_begin_terminate(c));
         imageflow_context_destroy(c);
@@ -708,7 +735,7 @@ fn test_message() {
 
 pub fn exercise_json_message() {
     unsafe {
-        let c = imageflow_context_create();
+        let c = imageflow_context_create(IMAGEFLOW_ABI_VER_MAJOR, IMAGEFLOW_ABI_VER_MINOR);
         assert!(!c.is_null());
 
         let method_in = static_char!("brew_coffee");

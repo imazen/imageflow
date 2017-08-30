@@ -57,7 +57,8 @@ module Imageflow
     ]
 
 
-    attach_function :imageflow_context_create, [], :pointer
+    attach_function :imageflow_abi_compatible, [:uint32, :uint32], :bool
+    attach_function :imageflow_context_create, [:uint32, :uint32], :pointer
     attach_function :imageflow_context_begin_terminate, [:pointer], :bool
     attach_function :imageflow_context_destroy, [:pointer], :void
 
@@ -71,10 +72,6 @@ module Imageflow
     attach_function :imageflow_context_error_as_http_code, [:pointer], :int32
 
     attach_function :imageflow_context_error_write_to_buffer, [:pointer, :pointer, :size_t, :pointer], :bool
-
-    attach_function :imageflow_context_error_and_stacktrace, [:pointer, :pointer, :size_t, :bool], :int64
-
-
 
     attach_function :imageflow_job_send_json, [:pointer, :pointer, :string, :pointer, :size_t], :pointer, blocking: true
     attach_function :imageflow_context_send_json, [:pointer, :string, :pointer, :size_t], :pointer, blocking: true

@@ -5,8 +5,14 @@ module Imageflow
     end
 
     def initialize
-      ptr = Native.context_create
-      raise "Out of memory" if ptr.nil? || ptr.null?
+      ptr = Native.context_create(1,0)
+      if ptr.nil? || ptr.null?
+        if Native.abi_compatible(1,0)
+          raise "Out of memory"
+        else
+          raise "ABI incompatible"
+        end
+      end
 
       @c = FFI::AutoPointer.new(ptr, Context.method(:release_auto_pointer))
     end
