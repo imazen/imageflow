@@ -10,6 +10,7 @@
       <w>checksums</w>
       <w>chrono</w>
       <w>codec</w>
+      <w>codecs</w>
       <w>colorspace</w>
       <w>compositing</w>
       <w>cropxunits</w>
@@ -42,6 +43,7 @@
       <w>srgb</w>
       <w>subsampling</w>
       <w>twox</w>
+      <w>uuids</w>
       <w>xunits</w>
       <w>yunits</w>
     </words>
