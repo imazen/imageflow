@@ -8,7 +8,6 @@ use ::imageflow_types::collections::AddRemoveSet;
 use std::ascii::AsciiExt;
 use uuid::Uuid;
 
-
 pub struct IoProxy{
     c: &'static Context,
     classic: *mut ImageflowJobIo,
@@ -18,26 +17,27 @@ pub struct IoProxy{
     drop_with_job: bool
 }
 
-
+// Not sure these are actually used?
 impl io::Read for IoProxy{
 
     fn read(&mut self, buf: &mut [u8]) -> io::Result<usize>{
-        self.read_to_buffer(self.c, buf).map(|v|
-            if v < 0 || v as u64 > <usize>::max_value() as u64 {
-                panic!("");
+        self.read_to_buffer(self.c, buf).and_then(|read_bytes|
+            if read_bytes.leading_zeros() < 1 {
+                Err(nerror!(ErrorKind::InvalidArgument, "read_bytes likely came from a negative integer. Imageflow prohibits having the leading bit set on unsigned integers (this reduces the maximum value to 2^31 or 2^63)."))
+
             }else{
-                v as usize
+                Ok(read_bytes as usize)
             }).map_err(|e| std::io::Error::new(io::ErrorKind::Other, e))
     }
 }
 impl io::Write for IoProxy{
 
     fn write(&mut self, buf: &[u8]) -> io::Result<usize>{
-        self.write_from_buffer(self.c, buf).map(|v|
-            if v < 0 || v as u64 > <usize>::max_value() as u64 {
-                panic!("");
+        self.write_from_buffer(self.c, buf).and_then(|written_bytes|
+            if written_bytes.leading_zeros() < 1 {
+                Err(nerror!(ErrorKind::InvalidArgument, "written_bytes likely came from a negative integer. Imageflow prohibits having the leading bit set on unsigned integers (this reduces the maximum value to 2^31 or 2^63)."))
             }else{
-                v as usize
+                Ok(written_bytes as usize)
             }).map_err(|e| std::io::Error::new(io::ErrorKind::Other, e))
     }
     fn flush(&mut self) -> io::Result<()>{
@@ -78,7 +78,7 @@ impl IoProxy {
     }
     pub fn wrap_classic(context: &Context, classic_io: *mut ::ffi::ImageflowJobIo) -> Result<RefMut<IoProxy>> {
         if classic_io.is_null() {
-            Err(cerror!(context))
+            Err(cerror!(context, "Failed to create ImageflowJobIo *"))
         } else {
             let mut proxy = context.create_io_proxy();
             proxy.classic = classic_io;
@@ -100,52 +100,70 @@ impl IoProxy {
     }
 
     pub fn read_to_buffer(&self, context: &Context, buffer: &mut [u8]) -> Result<i64> {
-        // Return result for missing function instead of panicking.
-        let read = self.classic_io().unwrap().read_fn.unwrap()(context.flow_c(), self.classic, buffer.as_mut_ptr(), buffer.len());
-        if read < buffer.len() as i64{
-            if context.c_error().has_error() {
-                Err(cerror!(context))
-            }else{
-                Ok(read)
+        if let Some(classic) = self.classic_io() {
+            if let Some(read_fn) = classic.read_fn {
+                let read = read_fn(context.flow_c(), self.classic, buffer.as_mut_ptr(), buffer.len());
+                if read < buffer.len() as i64 {
+                    if context.c_error().has_error() {
+                        Err(cerror!(context, "Read failed"))
+                    } else {
+                        Ok(read)
+                    }
+                } else {
+                    Ok(read)
+                }
+            }else {
+                Err(unimpl!())
             }
-
-        } else {
-            Ok(read)
+        }else{
+            Err(unimpl!())
         }
 
     }
     pub fn write_from_buffer(&self, context: &Context, buffer: &[u8]) -> Result<i64> {
-        // Return result for missing function instead of panicking.
-        let read = self.classic_io().unwrap().write_fn.unwrap()(context.flow_c(), self.classic, buffer.as_ptr(), buffer.len());
-        if read < buffer.len() as i64{
-            if context.c_error().has_error() {
-                Err(cerror!(context))
-            }else{
-                Ok(read)
+        if let Some(classic) = self.classic_io() {
+            if let Some(write_fn) = classic.write_fn {
+                let write =write_fn(context.flow_c(), self.classic, buffer.as_ptr(), buffer.len());
+                if write < buffer.len() as i64 {
+                    if context.c_error().has_error() {
+                        Err(cerror!(context, "Write failed"))
+                    } else {
+                        Ok(write)
+                    }
+                } else {
+                    Ok(write)
+                }
+            } else {
+                Err(unimpl!())
             }
-
         } else {
-            Ok(read)
+            Err(unimpl!())
         }
-
     }
 
     pub fn seek(&self, context: &Context, position: i64) -> Result<bool> {
-        // Return result for missing function instead of panicking.
-        let success = self.classic_io().unwrap().seek_fn.unwrap()(context.flow_c(), self.classic, position);
-        Ok(success)
+        if let Some(classic) = self.classic_io() {
+            if let Some(seek_fn) = classic.seek_fn {
+                Ok(seek_fn(context.flow_c(), self.classic, position))
+            } else {
+                Err(unimpl!())
+            }
+        } else {
+            Err(unimpl!())
+        }
     }
 
 
     pub fn read_slice<'a>(context: &'a Context, bytes: &'a [u8]) -> Result<RefMut<'a, IoProxy>> {
         unsafe {
+            // Owner parameter is only for io_struct, not buffer.
             let p = ::ffi::flow_io_create_from_memory(context.flow_c(),
                                                       ::ffi::IoMode::ReadSeekable,
                                                       bytes.as_ptr(),
                                                       bytes.len(),
                                                       context.flow_c() as *const libc::c_void,
                                                       ptr::null());
-            IoProxy::wrap_classic(context, p)
+            IoProxy::wrap_classic(context, p).map_err(|e| e.at(here!()))
         }
     }
 
@@ -175,7 +193,7 @@ impl IoProxy {
             let p =
                 ::ffi::flow_io_create_for_output_buffer(context.flow_c(),
                                                         context.flow_c() as *const libc::c_void);
-            IoProxy::wrap_classic(context, p)
+            IoProxy::wrap_classic(context, p).map_err(|e| e.at(here!()))
         }
     }
 
@@ -202,28 +220,33 @@ impl IoProxy {
                                                            bytes.len(),
                                                            context.flow_c() as *const libc::c_void,
                                                            ptr::null());
-
-            IoProxy::wrap_classic(context, io_ptr)
+            if io_ptr.is_null(){
+                let _ = ::ffi::flow_destroy(context.flow_c(), buf as *mut libc::c_void, ptr::null(), 0);
+            }
+            IoProxy::wrap_classic(context, io_ptr).map_err(|e| e.at(here!()))
         }
     }
 
     pub fn file_with_mode<T: AsRef<Path>>(context: &Context, path: T, mode: ::IoMode) -> Result<RefMut<IoProxy>> {
         unsafe {
-            // TODO: character sets matter!
+            // TODO: add support for a wider variety of character sets
             // Winows fopen needs ansii
             let path_buf = path.as_ref().to_path_buf();
-            let c_path = CString::new(path_buf.to_str().expect("Paths should be valid UTF-8 wihtout null characters"))
-                .map_err(|e| nerror!( ErrorKind::InvalidArgument))?;
+
+            let c_path = {
+                let path_str = path_buf.to_str().ok_or_else(||nerror!(ErrorKind::InvalidArgument, "The argument 'path' is invalid UTF-8."))?;
+                CString::new(path_str).map_err(|e| nerror!(ErrorKind::InvalidArgument, "The argument 'path' contains a null byte.") )?
+            };
+
             let p = ::ffi::flow_io_create_for_file(context.flow_c(),
                                                    mode,
                                                    c_path.as_ptr(),
                                                    context.flow_c() as *const libc::c_void);
-            let mut result = IoProxy::wrap_classic(context, p);
-            if let Ok(ref mut proxy) = result{
-                proxy.c_path = Some(c_path);
-                proxy.path = Some(path_buf);
-            }
-            result
+
+            let mut proxy = IoProxy::wrap_classic(context, p).map_err(|e| e.at(here!()))?;
+            proxy.c_path = Some(c_path);
+            proxy.path = Some(path_buf);
+            Ok(proxy)
         }
     }
     pub fn file<T: AsRef<Path>>(context: &Context, path: T, dir: ::IoDirection) -> Result<RefMut<IoProxy>> {
@@ -231,7 +254,7 @@ impl IoProxy {
             s::IoDirection::In => ::ffi::IoMode::ReadSeekable,
             s::IoDirection::Out => ::ffi::IoMode::WriteSequential,
         };
-        IoProxy::file_with_mode(context, path, mode)
+        IoProxy::file_with_mode(context, path, mode).map_err(|e| e.at(here!()))
     }
 
 

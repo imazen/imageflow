@@ -173,7 +173,8 @@ pub enum ErrorKind{
     InvalidCoordinates,
     InvalidNodeParams,
     InvalidMessageEndpoint,
-
+    IoIdNotFound,
+    ItemNotFound,
     FailedBorrow,
     NodeParamsMismatch,
     BitmapPointerNull,
@@ -195,7 +196,10 @@ impl CategorizedError for ErrorKind{
             &ErrorKind::InvalidArgument |
             &ErrorKind::InvalidCoordinates |
             &ErrorKind::InvalidMessageEndpoint |
+            &ErrorKind::IoIdNotFound |
+            &ErrorKind::ItemNotFound |
             &ErrorKind::InvalidNodeParams => ErrorCategory::ArgumentInvalid,
+
             &ErrorKind::FailedBorrow |
             &ErrorKind::NodeParamsMismatch |
             &ErrorKind::BitmapPointerNull |

@@ -12,16 +12,16 @@ fn create_job_router() -> MethodRouter<'static, Job> {
     let mut r = MethodRouter::new();
     r.add_responder("v0.1/get_image_info",
                     Box::new(move |job: &mut Job, data: s::GetImageInfo001| {
-                        Ok(s::ResponsePayload::ImageInfo(job.get_image_info(data.io_id)?))
+                        Ok(s::ResponsePayload::ImageInfo(job.get_image_info(data.io_id).map_err(|e| e.at(here!()))?))
                     }));
     r.add_responder("v0.1/tell_decoder",
                     Box::new(move |job: &mut Job, data: s::TellDecoder001| {
-                        job.tell_decoder(data.io_id, data.command)?;
+                        job.tell_decoder(data.io_id, data.command).map_err(|e| e.at(here!()))?;
                         Ok(s::ResponsePayload::None)
                     }));
     r.add_responder("v0.1/execute",
                     Box::new(move |job: &mut Job, parsed: s::Execute001| {
-                        job.execute_1(parsed)
+                        job.execute_1(parsed).map_err(|e| e.at(here!()))
                     }));
 
     r.add("brew_coffee",

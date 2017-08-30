@@ -10,7 +10,7 @@ use std::collections::HashMap;
 use std::fs::File;
 use std::path::{Path};
 use std::io::{Write, Read, BufWriter};
-use fc::{JsonResponse, FlowError, ErrorCategory};
+use fc::{JsonResponse,  ErrorCategory};
 use fc::errors::CategorizedError;
 
 pub enum JobSource {

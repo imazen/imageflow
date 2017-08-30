@@ -104,34 +104,54 @@ impl Context {
     }
 
 
-
-
-    pub fn get_proxy_mut_by_pointer(&self, proxy: *const IoProxy) -> Result<RefMut<IoProxy>> {
-        // TODO: fix the many issues in this method. Runtime borrowing errors, etc.
-        self.io_proxies.try_get_reference_mut(proxy).map_err(|e| unimpl!()).and_then(|v| v.ok_or(unimpl!()))
-    }
-
     pub fn get_proxy_mut(&self, uuid: ::uuid::Uuid) -> Result<RefMut<IoProxy>> {
-        // TODO: fix the many issues in this method. Runtime borrowing errors, etc.
-        Ok(self.io_proxies.iter_mut().filter(|r| r.is_ok()).map(|r| r.unwrap()).find(|c| c.uuid == uuid).ok_or(unimpl!()).unwrap())
+        let mut borrow_errors = 0;
+        for item_result in self.io_proxies.iter_mut() {
+            if let Ok(proxy) = item_result{
+                if proxy.uuid == uuid {
+                    return Ok(proxy);
+                }
+            }else{
+                borrow_errors+=1;
+            }
+        }
+        if borrow_errors > 0 {
+            Err(nerror!(ErrorKind::FailedBorrow, "Could not locate IoProxy by uuid {}; some IoProxies were exclusively borrowed by another scope.", uuid))
+        } else {
+            Err(nerror!(ErrorKind::ItemNotFound, "No IoProxy with uuid {}; all proxies searched.", uuid))
+        }
+
     }
+    pub fn get_proxy_mut_by_pointer(&self, proxy: *const IoProxy) -> Result<RefMut<IoProxy>> {
+        if let Ok(v) = self.io_proxies.try_get_reference_mut(proxy){
+            if let Some(p) = v {
+                Ok(p)
+            }else{
+                Err(nerror!(ErrorKind::FailedBorrow, "Could not locate IoProxy by pointer; some IoProxies were exclusively borrowed by another scope."))
+            }
+        }else{
+            Err(nerror!(ErrorKind::ItemNotFound, "No IoProxy with the given pointer; all proxies searched."))
+        }
+    }
+
+
 
     pub fn create_io_from_copy_of_slice<'a, 'b>(&'a self, bytes: &'b [u8]) -> Result<RefMut<'a, IoProxy>> {
-        IoProxy::copy_slice(self, bytes)
+        IoProxy::copy_slice(self, bytes).map_err(|e| e.at(here!()))
     }
     pub fn create_io_from_slice<'a>(&'a self, bytes: &'a [u8]) -> Result<RefMut<IoProxy>> {
-        IoProxy::read_slice(self, bytes)
+        IoProxy::read_slice(self, bytes).map_err(|e| e.at(here!()))
     }
 
     pub fn create_io_from_filename(&self, path: &str, dir: ::IoDirection) -> Result<RefMut<IoProxy>> {
-        IoProxy::file(self, path, dir)
+        IoProxy::file(self, path, dir).map_err(|e| e.at(here!()))
     }
     pub fn create_io_from_filename_with_mode(&self, path: &str, mode: ::IoMode) -> Result<RefMut<IoProxy>> {
-        IoProxy::file_with_mode(self, path, mode)
+        IoProxy::file_with_mode(self, path, mode).map_err(|e| e.at(here!()))
     }
 
     pub fn create_io_output_buffer(&self) -> Result<RefMut<IoProxy>> {
-        IoProxy::create_output_buffer(self)
+        IoProxy::create_output_buffer(self).map_err(|e| e.at(here!()))
     }
 
 
@@ -139,7 +159,7 @@ impl Context {
 
 
     pub fn build_1(&self, parsed: s::Build001) -> Result<s::ResponsePayload> {
-        let mut g =::parsing::GraphTranslator::new().translate_framewise(parsed.framewise) ?;
+        let mut g =::parsing::GraphTranslator::new().translate_framewise(parsed.framewise).map_err(|e| e.at(here!())) ?;
 
         let mut job = self.create_job();
 
@@ -151,7 +171,7 @@ impl Context {
 
         ::parsing::IoTranslator::new(self).add_to_job( &mut * job, parsed.io.clone());
 
-        ::flow::execution_engine::Engine::create(self, & mut job, & mut g).execute() ?;
+        ::flow::execution_engine::Engine::create(self, & mut job, & mut g).execute().map_err(|e| e.at(here!())) ?;
 
         Ok(s::ResponsePayload::BuildResult(s::JobResult { encodes: job.collect_augmented_encode_results( & g, &parsed.io) }))
     }
