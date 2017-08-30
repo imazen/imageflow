@@ -1,7 +1,6 @@
 use ::std;
 use ::for_other_imageflow_crates::preludes::external_without_std::*;
 use ::ffi;
-use ::job::Job;
 use ::{Context, CError, Result, JsonResponse, ErrorKind};
 use ::ffi::ImageflowJobIo;
 use ::imageflow_types::collections::AddRemoveSet;
@@ -11,7 +10,7 @@ use uuid::Uuid;
 pub struct IoProxy{
     c: &'static Context,
     classic: *mut ImageflowJobIo,
-    pub uuid: Uuid,
+    io_id: i32,
     path: Option<PathBuf>,
     c_path: Option<CString>,
     drop_with_job: bool
@@ -61,7 +60,11 @@ impl io::Write for IoProxy{
 //optional_file_length: i64
 
 impl IoProxy {
-    pub fn internal_use_only_create(context: &Context) -> IoProxy {
+    pub fn io_id(&self) -> i32{
+        self.io_id
+    }
+
+    pub fn internal_use_only_create(context: &Context, io_id: i32) -> IoProxy {
         IoProxy {
             //This ugly breaking of lifetimes means that
             //NOTHING is preventing use-after-free
@@ -73,14 +76,14 @@ impl IoProxy {
             path: None,
             c_path: None,
             drop_with_job: false,
-            uuid: Uuid::new_v4()
+            io_id: io_id
         }
     }
-    pub fn wrap_classic(context: &Context, classic_io: *mut ::ffi::ImageflowJobIo) -> Result<RefMut<IoProxy>> {
+    pub fn wrap_classic(context: &Context, classic_io: *mut ::ffi::ImageflowJobIo, io_id: i32) -> Result<RefMut<IoProxy>> {
         if classic_io.is_null() {
             Err(cerror!(context, "Failed to create ImageflowJobIo *"))
         } else {
-            let mut proxy = context.create_io_proxy();
+            let mut proxy = context.create_io_proxy(io_id);
             proxy.classic = classic_io;
             Ok(proxy)
         }
@@ -153,8 +156,16 @@ impl IoProxy {
         }
     }
 
+    fn check_io_id(context: &Context, io_id: i32) -> Result<()>{
+        if context.io_id_present(io_id){
+            return Err(nerror!(ErrorKind::DuplicateIoId, "io_id {} is already in use on this context", io_id));
+        }else{
+            Ok(())
+        }
+    }
 
-    pub fn read_slice<'a>(context: &'a Context, bytes: &'a [u8]) -> Result<RefMut<'a, IoProxy>> {
+    pub fn read_slice<'a>(context: &'a Context, io_id: i32,  bytes: &'a [u8]) -> Result<RefMut<'a, IoProxy>> {
+        IoProxy::check_io_id(context,io_id)?;
         unsafe {
             // Owner parameter is only for io_struct, not buffer.
             let p = ::ffi::flow_io_create_from_memory(context.flow_c(),
@@ -163,13 +174,13 @@ impl IoProxy {
                                                       bytes.len(),
                                                       context.flow_c() as *const libc::c_void,
                                                       ptr::null());
-            IoProxy::wrap_classic(context, p).map_err(|e| e.at(here!()))
+            IoProxy::wrap_classic(context, p, io_id).map_err(|e| e.at(here!()))
         }
     }
 
     // This could actually live as long as the context, but this isn't on the context....
     // but if a constraint, we could add context as an input parameter
-    pub fn get_output_buffer_bytes(&self) -> Result<&[u8]> {
+    pub fn get_output_buffer_bytes<'b>(&self, c: &'b Context) -> Result<&'b[u8]> {
         unsafe {
             let mut buf_start: *const u8 = ptr::null();
             let mut buf_len: usize = 0;
@@ -188,17 +199,19 @@ impl IoProxy {
         }
     }
 
-    pub fn create_output_buffer(context: &Context) -> Result<RefMut<IoProxy>> {
+    pub fn create_output_buffer(context: &Context, io_id: i32) -> Result<RefMut<IoProxy>> {
+        IoProxy::check_io_id(context,io_id)?;
         unsafe {
             let p =
                 ::ffi::flow_io_create_for_output_buffer(context.flow_c(),
                                                         context.flow_c() as *const libc::c_void);
-            IoProxy::wrap_classic(context, p).map_err(|e| e.at(here!()))
+            IoProxy::wrap_classic(context, p, io_id).map_err(|e| e.at(here!()))
         }
     }
 
 
-    pub fn copy_slice<'a, 'b>(context: &'a Context, bytes: &'b [u8]) -> Result<RefMut<'a,IoProxy>> {
+    pub fn copy_slice<'a, 'b>(context: &'a Context, io_id: i32, bytes: &'b [u8]) -> Result<RefMut<'a,IoProxy>> {
+        IoProxy::check_io_id(context,io_id)?;
         unsafe {
             let buf: *mut u8 =
                 ::ffi::flow_context_calloc(context.flow_c(),
@@ -223,11 +236,12 @@ impl IoProxy {
             if io_ptr.is_null(){
                 let _ = ::ffi::flow_destroy(context.flow_c(), buf as *mut libc::c_void, ptr::null(), 0);
             }
-            IoProxy::wrap_classic(context, io_ptr).map_err(|e| e.at(here!()))
+            IoProxy::wrap_classic(context, io_ptr, io_id).map_err(|e| e.at(here!()))
         }
     }
 
-    pub fn file_with_mode<T: AsRef<Path>>(context: &Context, path: T, mode: ::IoMode) -> Result<RefMut<IoProxy>> {
+    pub fn file_with_mode<T: AsRef<Path>>(context: &Context, io_id: i32, path: T, mode: ::IoMode) -> Result<RefMut<IoProxy>> {
+        IoProxy::check_io_id(context,io_id)?;
         unsafe {
             // TODO: add support for a wider variety of character sets
             // Winows fopen needs ansii
@@ -243,19 +257,13 @@ impl IoProxy {
                                                    c_path.as_ptr(),
                                                    context.flow_c() as *const libc::c_void);
 
-            let mut proxy = IoProxy::wrap_classic(context, p).map_err(|e| e.at(here!()))?;
+            let mut proxy = IoProxy::wrap_classic(context, p, io_id).map_err(|e| e.at(here!()))?;
             proxy.c_path = Some(c_path);
             proxy.path = Some(path_buf);
             Ok(proxy)
         }
     }
-    pub fn file<T: AsRef<Path>>(context: &Context, path: T, dir: ::IoDirection) -> Result<RefMut<IoProxy>> {
-        let mode = match dir {
-            s::IoDirection::In => ::ffi::IoMode::ReadSeekable,
-            s::IoDirection::Out => ::ffi::IoMode::WriteSequential,
-        };
-        IoProxy::file_with_mode(context, path, mode).map_err(|e| e.at(here!()))
-    }
+
 
 
 }

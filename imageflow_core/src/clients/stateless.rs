@@ -1,5 +1,4 @@
 use ::Context;
-use ::Job;
 use ::JsonResponse;
 use ::ErrorCategory;
 use ::errors::PanicFormatter;
@@ -75,9 +74,8 @@ impl LibClient {
 
      fn get_image_info_inner(context: &mut Context, bytes: &[u8])
                           -> std::result::Result<s::ImageInfo, FlowError> {
-        let mut job = context.create_job();
-        job.add_input_bytes(0, bytes).map_err(|e| e.at(here!()))?;
-        Ok(job.get_image_info(0).map_err(|e| e.at(here!()))?)
+        context.add_input_bytes(0, bytes).map_err(|e| e.at(here!()))?;
+        Ok(context.get_image_info(0).map_err(|e| e.at(here!()))?)
 
     }
     pub fn get_image_info(&mut self, bytes: &[u8])
@@ -100,20 +98,19 @@ impl LibClient {
     }
 
     fn build_inner(context: &mut Context, task: BuildRequest) -> std::result::Result<BuildSuccess, FlowError> {
-        let mut job = context.create_job();
 
         for input in task.inputs {
-            job.add_input_bytes(input.io_id, input.bytes).map_err(|e| e.at(here!()))?;
+            context.add_input_buffer(input.io_id, input.bytes).map_err(|e| e.at(here!()))?;
         }
 
         // Assume output ids only come from nodes
         for node in task.framewise.clone_nodes() {
             if let s::Node::Encode { ref io_id, .. } = *node {
-                job.add_output_buffer(*io_id).map_err(|e| e.at(here!()))?;
+                context.add_output_buffer(*io_id).map_err(|e| e.at(here!()))?;
             }
             if let s::Node::CommandString { ref encode, ..} = *node{
                 if let &Some(io_id) = encode{
-                    job.add_output_buffer(io_id).map_err(|e| e.at(here!()))?;
+                    context.add_output_buffer(io_id).map_err(|e| e.at(here!()))?;
                 }
             }
         }
@@ -126,7 +123,7 @@ impl LibClient {
             }
         };
 
-        let payload = job.execute_1(send_execute).map_err(|e| e.at(here!()))?;
+        let payload = context.execute_1(send_execute).map_err(|e| e.at(here!()))?;
 
 
         let encodes: Vec<s::EncodeResult> = match payload {
@@ -139,7 +136,7 @@ impl LibClient {
         let mut outputs = Vec::new();
         for encode in encodes {
             outputs.push(BuildOutput {
-                bytes: job.io_get_output_buffer_copy(encode.io_id).map_err(|e| e.at(here!()))?,
+                bytes: context.get_output_buffer_slice(encode.io_id).map(|s|  s.to_vec()).map_err(|e| e.at(here!()))?,
                 io_id: encode.io_id,
                 mime_type: encode.preferred_mime_type,
                 file_ext: encode.preferred_extension,

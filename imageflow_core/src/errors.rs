@@ -168,6 +168,8 @@ pub enum ErrorKind{
     GraphCyclic,
     InvalidNodeConnections,
 
+    DuplicateIoId,
+    GraphInvalid,
     NullArgument,
     InvalidArgument,
     InvalidCoordinates,
@@ -190,6 +192,7 @@ impl CategorizedError for ErrorKind{
         match self{
             &ErrorKind::AllocationFailed => ErrorCategory::OutOfMemory,
 
+            &ErrorKind::GraphInvalid |
             &ErrorKind::GraphCyclic |
             &ErrorKind::InvalidNodeConnections => ErrorCategory::GraphInvalid,
             &ErrorKind::NullArgument |
@@ -198,6 +201,7 @@ impl CategorizedError for ErrorKind{
             &ErrorKind::InvalidMessageEndpoint |
             &ErrorKind::IoIdNotFound |
             &ErrorKind::ItemNotFound |
+            &ErrorKind::DuplicateIoId |
             &ErrorKind::InvalidNodeParams => ErrorCategory::ArgumentInvalid,
 
             &ErrorKind::FailedBorrow |

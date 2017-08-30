@@ -1,6 +1,6 @@
 
 
-use ::{Context, Job};
+use ::{Context};
 use ::internal_prelude::works_everywhere::*;
 use ::json::*;
 use ::parsing::GraphTranslator;
@@ -19,6 +19,19 @@ fn create_context_router() -> MethodRouter<'static, Context> {
     r.add_responder("v0.1/build",
                     Box::new(move |context: &mut Context, parsed: s::Build001| {
                         context.build_1(parsed).map_err(|e| e.at(here!()))
+                    }));
+    r.add_responder("v0.1/get_image_info",
+                    Box::new(move |context: &mut Context, data: s::GetImageInfo001| {
+                        Ok(s::ResponsePayload::ImageInfo(context.get_image_info(data.io_id).map_err(|e| e.at(here!()))?))
+                    }));
+    r.add_responder("v0.1/tell_decoder",
+                    Box::new(move |context: &mut Context, data: s::TellDecoder001| {
+                        context.tell_decoder(data.io_id, data.command).map_err(|e| e.at(here!()))?;
+                        Ok(s::ResponsePayload::None)
+                    }));
+    r.add_responder("v0.1/execute",
+                    Box::new(move |context: &mut Context, parsed: s::Execute001| {
+                        context.execute_1(parsed).map_err(|e| e.at(here!()))
                     }));
     r.add("brew_coffee",
           Box::new(move |context: &mut Context, bytes: &[u8]| (JsonResponse::teapot(), Ok(()))));
@@ -61,7 +74,34 @@ fn document_message() -> String {
                                                                                    "image/png",
                                                                                    "png"))
         .unwrap();
-    s += "\n\nExample failure response:\n";
+    s += "## v0.1/get_image_info \n";
+    s += "Example message body:\n";
+    s += &serde_json::to_string_pretty(&s::GetImageInfo001::example_get_image_info()).unwrap();
+    s += "\nExample response:\n";
+    s += &serde_json::to_string_pretty(&s::Response001::example_image_info()).unwrap();
+    s += "\n\n";
+
+
+    s += "## v0.1/tell_decoder \n";
+    s += "Example message body:\n";
+    s += &serde_json::to_string_pretty(&s::TellDecoder001::example_hints()).unwrap();
+    s += "\nExample response:\n";
+    s += &serde_json::to_string_pretty(&s::Response001::example_ok()).unwrap();
+    s += "\n\n";
+
+    s += "## v0.1/execute \n";
+    s += "Example message body (with graph):\n";
+    s += &serde_json::to_string_pretty(&s::Execute001::example_graph()).unwrap();
+    s += "Example message body (with linear steps):\n";
+    s += &serde_json::to_string_pretty(&s::Execute001::example_steps()).unwrap();
+    s += "\nExample response:\n";
+    s += &serde_json::to_string_pretty(&s::Response001::example_job_result_encoded(2,
+                                                                                   200,
+                                                                                   200,
+                                                                                   "image/jpg",
+                                                                                   "jpg"))
+        .unwrap();
+    s += "\nExample failure response:\n";
     s += &serde_json::to_string_pretty(&s::Response001::example_error()).unwrap();
     s += "\n\n";
 

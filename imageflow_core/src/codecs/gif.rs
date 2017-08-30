@@ -1,7 +1,6 @@
 use ::std;
 use ::for_other_imageflow_crates::preludes::external_without_std::*;
 use ::ffi;
-use ::job::Job;
 use ::{Context, CError,  Result, JsonResponse};
 use ::ffi::CodecInstance;
 use ::ffi::BitmapBgra;
@@ -14,13 +13,12 @@ use ::gif_dispose::Screen;
 use ::gif::SetParameter;
 
 pub struct GifDecoder{
-    proxy_uuid: Uuid
 }
 
 impl GifDecoder {
     pub fn create(c: &Context, io: &IoProxy, io_id: i32) -> Result<GifDecoder> {
         Ok(GifDecoder{
-            proxy_uuid: io.uuid
+
         })
 
     }
@@ -36,12 +34,12 @@ impl GifDecoder {
     }
 }
 impl Decoder for GifDecoder {
-    fn initialize(&mut self, c: &Context, job: &Job) -> Result<()> {
+    fn initialize(&mut self, c: &Context) -> Result<()> {
         Ok(())
     }
 
 
-    fn get_image_info(&mut self, c: &Context, job: &Job, io: &mut IoProxy) -> Result<s::ImageInfo> {
+    fn get_image_info(&mut self, c: &Context, io: &mut IoProxy) -> Result<s::ImageInfo> {
 
         let (w,h) = GifDecoder::read_size(io)?;
         io.seek(c, 0).unwrap();
@@ -58,15 +56,15 @@ impl Decoder for GifDecoder {
         })
     }
 
-    fn get_exif_rotation_flag(&mut self, c: &Context, job: &Job) -> Result<i32> {
+    fn get_exif_rotation_flag(&mut self, c: &Context) -> Result<i32> {
         Ok(0)
     }
 
-    fn tell_decoder(&mut self, c: &Context, job: &Job, tell: s::DecoderCommand) -> Result<()> {
+    fn tell_decoder(&mut self, c: &Context, tell: s::DecoderCommand) -> Result<()> {
         Ok(())
     }
 
-    fn read_frame(&mut self, c: &Context, job: &Job, io: &mut IoProxy) -> Result<*mut BitmapBgra> {
+    fn read_frame(&mut self, c: &Context, io: &mut IoProxy) -> Result<*mut BitmapBgra> {
         let mut decoder = ::gif::Decoder::new(io);
 
         // Important:
@@ -115,13 +113,13 @@ pub struct GifEncoder{
 }
 
 impl GifEncoder{
-    pub(crate) fn create(c: &Context, job: &Job, io: &mut IoProxy, preset: &s::EncoderPreset, io_id: i32) -> GifEncoder{
+    pub(crate) fn create(c: &Context, io: &mut IoProxy, preset: &s::EncoderPreset, io_id: i32) -> GifEncoder{
         GifEncoder{ io_id: io_id}
     }
 }
 
 impl Encoder for GifEncoder{
-    fn write_frame(&mut self, c: &Context, job: &Job, io: &mut IoProxy, preset: &s::EncoderPreset, frame: &mut BitmapBgra) -> Result<s::EncodeResult> {
+    fn write_frame(&mut self, c: &Context, io: &mut IoProxy, preset: &s::EncoderPreset, frame: &mut BitmapBgra) -> Result<s::EncodeResult> {
         unsafe {
             let mut pixels = Vec::new();
             pixels.extend_from_slice(frame.pixels_slice_mut().unwrap());

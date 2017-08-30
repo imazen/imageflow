@@ -1,24 +1,34 @@
 use ::std;
 use ::for_other_imageflow_crates::preludes::external_without_std::*;
 use ::ffi;
-use ::job::Job;
 use ::{CError, JsonResponse, ErrorKind, FlowError, Result};
 use io::IoProxy;
+use flow::definitions::Graph;
 use std::any::Any;
 use ::imageflow_types::collections::AddRemoveSet;
 use ::ffi::ImageflowJsonResponse;
 use ::errors::{OutwardErrorBuffer, CErrorProxy};
-
+use ::rustc_serialize::base64;
+use ::rustc_serialize::base64::ToBase64;
+use codecs::CodecInstanceContainer;
+use ffi::IoDirection;
 
 pub struct Context {
     //version: u64, (so different context types can be differentiated)
     c_ctx: *mut ffi::ImageflowContext,
-    jobs: AddRemoveSet<Job>,
     io_proxies: AddRemoveSet<IoProxy>,
     error: CErrorProxy,
-    outward_error:  OutwardErrorBuffer
+    outward_error:  OutwardErrorBuffer,
+    pub debug_job_id: i32,
+    pub next_stable_node_id: i32,
+    pub next_graph_version: i32,
+    pub max_calc_flatten_execute_passes: i32,
+    pub graph_recording: s::Build001GraphRecording,
+    pub codecs: AddRemoveSet<CodecInstanceContainer>,
+    pub io_id_list: RefCell<Vec<i32>>
 }
 
+static mut JOB_ID: i32 = 0;
 impl Context {
 
     pub fn create() -> Result<Box<Context>>{
@@ -33,9 +43,15 @@ impl Context {
             Ok(Box::new(Context {
                 c_ctx: inner,
                 error: CErrorProxy::new(inner),
-                jobs: AddRemoveSet::with_capacity(2),
+                outward_error: OutwardErrorBuffer::new(),
+                debug_job_id: unsafe{ JOB_ID },
+                next_graph_version: 0,
+                next_stable_node_id: 0,
+                max_calc_flatten_execute_passes: 40,
+                graph_recording: s::Build001GraphRecording::off(),
                 io_proxies: AddRemoveSet::with_capacity(2),
-                outward_error: OutwardErrorBuffer::new()
+                codecs: AddRemoveSet::with_capacity(4),
+                io_id_list: RefCell::new(Vec::with_capacity(2))
             }))
         }
     }
@@ -53,7 +69,7 @@ impl Context {
 
     /// Used by abi; should not panic
     pub fn abi_begin_terminate(&mut self) -> bool {
-        self.jobs.mut_clear();
+        self.codecs.mut_clear();
         self.io_proxies.mut_clear();
         unsafe {
             ffi::flow_context_begin_terminate(self.c_ctx)
@@ -86,16 +102,14 @@ impl Context {
         ::context_methods::CONTEXT_ROUTER.invoke(self, method, json)
     }
 
-    pub fn create_job(&self) -> RefMut<Job>{
-        self.jobs.add_mut(Job::internal_use_only_create(self))
-    }
 
-    pub fn create_io_proxy(&self) -> RefMut<IoProxy>{
-        self.io_proxies.add_mut(IoProxy::internal_use_only_create(self))
-    }
-
-    pub fn abi_try_remove_job(&self, job: *const Job) -> bool{
-        self.jobs.try_remove(job).unwrap_or(false)
+    pub fn create_io_proxy(&self, io_id: i32) -> RefMut<IoProxy>{
+        if !self.io_id_present(io_id) {
+            self.io_id_list.borrow_mut().push(io_id);
+        }else{
+            panic!("");
+        }
+        self.io_proxies.add_mut(IoProxy::internal_use_only_create(self, io_id))
     }
 
 
@@ -103,12 +117,18 @@ impl Context {
         self.c_ctx
     }
 
+    pub fn io_id_present(&self, io_id: i32) -> bool{
+        self.io_id_list.borrow().iter().any(|v| *v == io_id)
+    }
 
-    pub fn get_proxy_mut(&self, uuid: ::uuid::Uuid) -> Result<RefMut<IoProxy>> {
+    pub fn get_io(&self, io_id:  i32) -> Result<RefMut<IoProxy>> {
+        self.get_proxy_mut(io_id)
+    }
+    pub fn get_proxy_mut(&self, io_id:  i32) -> Result<RefMut<IoProxy>> {
         let mut borrow_errors = 0;
         for item_result in self.io_proxies.iter_mut() {
             if let Ok(proxy) = item_result{
-                if proxy.uuid == uuid {
+                if proxy.io_id() == io_id {
                     return Ok(proxy);
                 }
             }else{
@@ -116,65 +136,170 @@ impl Context {
             }
         }
         if borrow_errors > 0 {
-            Err(nerror!(ErrorKind::FailedBorrow, "Could not locate IoProxy by uuid {}; some IoProxies were exclusively borrowed by another scope.", uuid))
+            Err(nerror!(ErrorKind::FailedBorrow, "Could not locate IoProxy by io_id {}; some IoProxies were exclusively borrowed by another scope.", io_id))
         } else {
-            Err(nerror!(ErrorKind::ItemNotFound, "No IoProxy with uuid {}; all proxies searched.", uuid))
+            Err(nerror!(ErrorKind::ItemNotFound, "No IoProxy with io_id {}; all proxies searched.", io_id))
         }
 
     }
-    pub fn get_proxy_mut_by_pointer(&self, proxy: *const IoProxy) -> Result<RefMut<IoProxy>> {
-        if let Ok(v) = self.io_proxies.try_get_reference_mut(proxy){
-            if let Some(p) = v {
-                Ok(p)
+
+
+    fn add_io(&self, io: &mut IoProxy, io_id: i32, direction: IoDirection) -> Result<()>{
+
+        let codec_value = CodecInstanceContainer::create(self, io, io_id, direction).map_err(|e| e.at(here!()))?;
+        let mut codec = self.codecs.add_mut(codec_value);
+        if let Ok(d) = codec.get_decoder(){
+            d.initialize( self).map_err(|e| e.at(here!()))?;
+        }
+        Ok(())
+    }
+
+    pub fn get_output_buffer_slice<'b>(&'b self, io_id: i32) -> Result<&'b [u8]> {
+        self.get_io(io_id).map_err(|e| e.at(here!()))?.get_output_buffer_bytes(self).map_err(|e| e.at(here!()))
+    }
+
+    pub fn add_file(&mut self, io_id: i32, direction: IoDirection, path: &str) -> Result<()> {
+        let mode = match direction {
+            s::IoDirection::In => ::ffi::IoMode::ReadSeekable,
+            s::IoDirection::Out => ::ffi::IoMode::WriteSeekable,
+        };
+        self.add_file_with_mode(io_id, direction, path, mode).map_err(|e| e.at(here!()))
+    }
+    pub fn add_file_with_mode(&mut self, io_id: i32, direction: IoDirection, path: &str, mode: ::IoMode) -> Result<()> {
+        if direction == IoDirection::In && !mode.can_read() {
+            return Err(nerror!(ErrorKind::InvalidArgument, "You cannot add an input file with an IoMode that can't read"));
+        }
+        if direction == IoDirection::Out && !mode.can_write() {
+            return Err(nerror!(ErrorKind::InvalidArgument, "You cannot add an output file with an IoMode that can't write"));
+        }
+        let mut io =  IoProxy::file_with_mode(self, io_id,  path, mode).map_err(|e| e.at(here!()))?;
+        self.add_io(&mut *io, io_id, direction).map_err(|e| e.at(here!()))
+    }
+
+
+    pub fn add_copied_input_buffer(&mut self, io_id: i32, bytes: &[u8]) -> Result<()> {
+        let mut io = IoProxy::copy_slice(self, io_id,  bytes).map_err(|e| e.at(here!()))?;
+
+        self.add_io(&mut *io, io_id, IoDirection::In).map_err(|e| e.at(here!()))
+    }
+    pub fn add_input_bytes<'b>(&'b mut self, io_id: i32, bytes: &'b [u8]) -> Result<()> {
+        self.add_input_buffer(io_id, bytes)
+    }
+    pub fn add_input_buffer<'b>(&'b mut self, io_id: i32, bytes: &'b [u8]) -> Result<()> {
+        let mut io = IoProxy::read_slice(self, io_id,  bytes).map_err(|e| e.at(here!()))?;
+
+        self.add_io(&mut *io, io_id, IoDirection::In).map_err(|e| e.at(here!()))
+    }
+
+    pub fn add_output_buffer(&mut self, io_id: i32) -> Result<()> {
+        let mut io = IoProxy::create_output_buffer(self, io_id).map_err(|e| e.at(here!()))?;
+
+        self.add_io(&mut *io, io_id, IoDirection::Out).map_err(|e| e.at(here!()))
+    }
+
+
+    pub fn get_image_info(&mut self, io_id: i32) -> Result<s::ImageInfo> {
+        self.get_codec(io_id).map_err(|e| e.at(here!()))?.get_decoder().map_err(|e| e.at(here!()))?.get_image_info(self,  &mut *self.get_io(io_id).map_err(|e| e.at(here!()))?).map_err(|e| e.at(here!()))
+    }
+
+    pub fn tell_decoder(&mut self, io_id: i32, tell: s::DecoderCommand) -> Result<()> {
+        self.get_codec(io_id).map_err(|e| e.at(here!()))?.get_decoder().map_err(|e| e.at(here!()))?.tell_decoder(self,  tell).map_err(|e| e.at(here!()))
+    }
+
+    pub fn get_exif_rotation_flag(&mut self, io_id: i32) -> Result<i32>{
+        self.get_codec(io_id).map_err(|e| e.at(here!()))?.get_decoder().map_err(|e| e.at(here!()))?.get_exif_rotation_flag( self).map_err(|e| e.at(here!()))
+
+    }
+    pub fn get_codec(&self, io_id: i32) -> Result<RefMut<CodecInstanceContainer>> {
+        let mut borrow_errors = 0;
+        for item_result in self.codecs.iter_mut() {
+            if let Ok(container) = item_result{
+                if container.io_id == io_id {
+                    return Ok(container);
+                }
             }else{
-                Err(nerror!(ErrorKind::FailedBorrow, "Could not locate IoProxy by pointer; some IoProxies were exclusively borrowed by another scope."))
+                borrow_errors+=1;
             }
-        }else{
-            Err(nerror!(ErrorKind::ItemNotFound, "No IoProxy with the given pointer; all proxies searched."))
+        }
+        if borrow_errors > 0 {
+            Err(nerror!(ErrorKind::FailedBorrow, "Could not locate codec by io_id {}; some codecs were exclusively borrowed by another scope.", io_id))
+        } else {
+            Err(nerror!(ErrorKind::IoIdNotFound, "No codec with io_id {}; all codecs searched.", io_id))
         }
     }
 
 
 
-    pub fn create_io_from_copy_of_slice<'a, 'b>(&'a self, bytes: &'b [u8]) -> Result<RefMut<'a, IoProxy>> {
-        IoProxy::copy_slice(self, bytes).map_err(|e| e.at(here!()))
-    }
-    pub fn create_io_from_slice<'a>(&'a self, bytes: &'a [u8]) -> Result<RefMut<IoProxy>> {
-        IoProxy::read_slice(self, bytes).map_err(|e| e.at(here!()))
-    }
 
-    pub fn create_io_from_filename(&self, path: &str, dir: ::IoDirection) -> Result<RefMut<IoProxy>> {
-        IoProxy::file(self, path, dir).map_err(|e| e.at(here!()))
-    }
-    pub fn create_io_from_filename_with_mode(&self, path: &str, mode: ::IoMode) -> Result<RefMut<IoProxy>> {
-        IoProxy::file_with_mode(self, path, mode).map_err(|e| e.at(here!()))
-    }
-
-    pub fn create_io_output_buffer(&self) -> Result<RefMut<IoProxy>> {
-        IoProxy::create_output_buffer(self).map_err(|e| e.at(here!()))
-    }
-
-
-
-
-
-    pub fn build_1(&self, parsed: s::Build001) -> Result<s::ResponsePayload> {
+    pub fn build_1(&mut self, parsed: s::Build001) -> Result<s::ResponsePayload> {
         let mut g =::parsing::GraphTranslator::new().translate_framewise(parsed.framewise).map_err(|e| e.at(here!())) ?;
 
-        let mut job = self.create_job();
 
         if let Some(s::Build001Config { graph_recording, .. }) = parsed.builder_config {
             if let Some(r) = graph_recording {
-                job.configure_graph_recording(r);
+                self.configure_graph_recording(r);
             }
         }
 
-        ::parsing::IoTranslator::new(self).add_to_job( &mut * job, parsed.io.clone());
+        ::parsing::IoTranslator{}.add_all( self, parsed.io.clone())?;
 
-        ::flow::execution_engine::Engine::create(self, & mut job, & mut g).execute().map_err(|e| e.at(here!())) ?;
+        ::flow::execution_engine::Engine::create(self, & mut g).execute().map_err(|e| e.at(here!())) ?;
 
-        Ok(s::ResponsePayload::BuildResult(s::JobResult { encodes: job.collect_augmented_encode_results( & g, &parsed.io) }))
+        Ok(s::ResponsePayload::BuildResult(s::JobResult { encodes: self.collect_augmented_encode_results( & g, &parsed.io) }))
     }
+    pub fn configure_graph_recording(&mut self, recording: s::Build001GraphRecording) {
+        let r = if std::env::var("CI").and_then(|s| Ok(s.to_uppercase())) ==
+            Ok("TRUE".to_owned()) {
+            s::Build001GraphRecording::off()
+        } else {
+            recording
+        };
+        self.graph_recording = r;
+    }
+
+    pub fn execute_1(&mut self, what: s::Execute001) -> Result<s::ResponsePayload>{
+        let mut g = ::parsing::GraphTranslator::new().translate_framewise(what.framewise).map_err(|e| e.at(here!()))?;
+        if let Some(r) = what.graph_recording {
+            self.configure_graph_recording(r);
+        }
+
+        ::flow::execution_engine::Engine::create(self, &mut g).execute().map_err(|e| e.at(here!()))?;
+
+        Ok(s::ResponsePayload::JobResult(s::JobResult { encodes: Context::collect_encode_results(&g) }))
+    }
+
+    pub fn collect_encode_results(g: &Graph) -> Vec<s::EncodeResult>{
+        let mut encodes = Vec::new();
+        for node in g.raw_nodes() {
+            if let ::flow::definitions::NodeResult::Encoded(ref r) = node.weight.result {
+                encodes.push((*r).clone());
+            }
+        }
+        encodes
+    }
+    pub fn collect_augmented_encode_results(&self, g: &Graph, io: &[s::IoObject]) -> Vec<s::EncodeResult>{
+        Context::collect_encode_results(g).into_iter().map(|r: s::EncodeResult|{
+            if r.bytes == s::ResultBytes::Elsewhere {
+                let obj: &s::IoObject = io.iter().find(|obj| obj.io_id == r.io_id).unwrap();//There's gotta be one
+                let bytes = match obj.io {
+                    s::IoEnum::Filename(ref str) => s::ResultBytes::PhysicalFile(str.to_owned()),
+                    s::IoEnum::OutputBase64 => {
+                        let slice = self.get_output_buffer_slice(r.io_id).map_err(|e| e.at(here!())).unwrap();
+                        s::ResultBytes::Base64(slice.to_base64(base64::Config{char_set: base64::CharacterSet::Standard, line_length: None, newline: base64::Newline::LF, pad: true}))
+                    },
+                    _ => s::ResultBytes::Elsewhere
+                };
+                s::EncodeResult{
+                    bytes: bytes,
+                    .. r
+                }
+            }else{
+                r
+            }
+
+        }).collect::<Vec<s::EncodeResult>>()
+    }
+
 }
 
 impl Drop for Context {

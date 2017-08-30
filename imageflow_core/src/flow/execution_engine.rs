@@ -1,4 +1,4 @@
-use ::{Job,Context};
+use ::{Context};
 use ::flow::definitions::*;
 use ::ffi::CodecInstance;
 use ::internal_prelude::works_everywhere::*;
@@ -10,17 +10,19 @@ use petgraph::EdgeDirection;
 
 pub struct Engine<'a, 'b> where 'a: 'b {
     c: &'a Context,
-    job: &'a mut Job,
+    job: &'a mut Context,
     g: &'b mut Graph,
 }
 
 impl<'a, 'b> Engine<'a, 'b> where 'a: 'b {
 
 
-    pub fn create(context: &'a Context, job: &'a mut Job, g: &'b mut Graph) -> Engine<'a, 'b> {
+    pub fn create(context: &'a mut Context, g: &'b mut Graph) -> Engine<'a, 'b> {
+        let split_context_2 = unsafe{ &mut *(context as *mut Context) };
+
         Engine {
             c: context,
-            job: job,
+            job: split_context_2,
             g: g,
         }
     }

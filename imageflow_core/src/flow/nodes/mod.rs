@@ -25,9 +25,9 @@ mod internal_prelude {
     pub use super::*;
     #[macro_use]
     pub use super::super::*;
-    pub use ::{Context, Job, Result, FlowError};
+    pub use ::{Context, Result, FlowError};
 }
-use ::{Context, Job, Result, FlowError};
+use ::{Context, Result, FlowError};
 extern crate imageflow_types as s;
 pub use self::clone_crop_fill_expand::CLONE;
 pub use self::clone_crop_fill_expand::COPY_RECT;

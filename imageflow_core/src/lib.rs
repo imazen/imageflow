@@ -54,15 +54,12 @@ pub use errors::*;
 
 mod json;
 pub mod flow;
-mod job;
 mod context_methods;
-mod job_methods;
 mod context;
 mod codecs;
 mod io;
 
 pub use context::{Context};
-pub use job::Job;
 pub use io::IoProxy;
 pub use ::ffi::{IoDirection, IoMode};
 pub use ::flow::definitions::Graph;
@@ -99,7 +96,7 @@ mod internal_prelude {
     #[doc(hidden)]
     pub mod imageflow_core_all {
         #[doc(no_inline)]
-        pub use ::{Graph, Context, Job, JsonResponse,
+        pub use ::{Graph, Context, JsonResponse,
                    MethodRouter};
         #[doc(no_inline)]
         pub use ::{CError, flow, clients, FlowError, Result, ErrorKind};
@@ -122,7 +119,7 @@ mod internal_prelude {
     #[doc(hidden)]
     pub mod default {
         #[doc(no_inline)]
-        pub use ::{Graph, Context, Job, JsonResponse,
+        pub use ::{Graph, Context, JsonResponse,
                    MethodRouter};
         #[doc(no_inline)]
         pub use ::internal_prelude::works_everywhere::*;

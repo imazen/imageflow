@@ -12,7 +12,7 @@ extern "C" {
 
 
 // Incremented for breaking changes
-#define IMAGEFLOW_ABI_VER_MAJOR 1
+#define IMAGEFLOW_ABI_VER_MAJOR 2
 
 // Incremented for non-breaking additions
 #define IMAGEFLOW_ABI_VER_MINOR 0
@@ -149,20 +149,6 @@ int32_t imageflow_context_error_as_exit_code(void* context);
 /// * 504 - Upstream timeout
 int32_t imageflow_context_error_as_http_code(void* context);
 
-///
-/// Deprecated. Use imageflow_context_error_write_to_buffer instead.
-///
-/// Prints the error messages and stacktrace to the given buffer in UTF-8 form; writes a null
-/// character to terminate the string, and *ALSO* returns the number of bytes written.
-///
-///
-/// Happy(ish) path: Returns the length of the error message written to the buffer.
-/// Sad path: Returns -1 if buffer_length was too small or buffer was nullptr.
-/// full_file_path, if true, will display the directory associated with the files in each stack frame.
-///
-/// Please be accurate with the buffer length, or a buffer overflow will occur.
-int64_t imageflow_context_error_and_stacktrace(void* context, char* buffer, size_t buffer_length, bool full_file_path);
-
 /// Prints the error messages (and optional stack frames) to the given buffer in UTF-8 form; writes a null
 /// character to terminate the string, and *ALSO* provides the number of bytes written (excluding the null terminator)
 ///
@@ -230,31 +216,6 @@ bool imageflow_json_response_destroy(void* context, void* response);
 void const* imageflow_context_send_json(void* context, char const* method, uint8_t const* json_buffer, size_t json_buffer_size);
 
 ///
-/// Sends a JSON message to the imageflow_job using endpoint `method`
-///
-/// ## Endpoints
-///
-/// * 'v0.1/execute`
-/// * 'v0.1/get_image_info
-///
-/// For endpoints supported by the latest nightly build, see
-/// https://s3-us-west-1.amazonaws.com/imageflow-nightlies/master/doc/job_json_api.txt
-///
-/// ## Notes
-///
-/// * `method` and `json_buffer` are only borrowed for the duration of the function call. You are
-///    responsible for their cleanup (if necessary - static strings are handy for things like
-///    `method`).
-/// * `method` should be a UTF-8 null-terminated string.
-///   `json_buffer` should be a UTF-8 encoded buffer (not null terminated) of length json_buffer_size.
-///
-/// You should call `imageflow_context_has_error()` to see if this succeeded.
-///
-/// A void is returned for success and most error conditions.
-/// Call `imageflow_json_response_destroy` when you're done with it (or dispose the context).
-void const* imageflow_job_send_json(void* context, void* job, char const* method, uint8_t const* json_buffer, size_t json_buffer_size);
-
-///
 /// Creates an imageflow_io object to wrap a filename.
 ///
 /// The filename should be a null-terminated string. It should be written in codepage used by your operating system for handling `fopen` calls.
@@ -264,7 +225,7 @@ void const* imageflow_job_send_json(void* context, void* job, char const* method
 ///
 /// As always, `mode` is not enforced except for the file open flags.
 ///
-void* imageflow_io_create_for_file(void* context, IoMode mode, char const* filename);
+bool imageflow_context_add_file(void* context, int32_t io_id, Direction direction, IoMode mode, char const* filename);
 
 ///
 /// Creates an imageflow_io structure for reading from the provided buffer.
@@ -272,7 +233,7 @@ void* imageflow_io_create_for_file(void* context, IoMode mode, char const* filen
 /// If you specify OutlivesFunctionCall, then the buffer will be copied.
 ///
 ///
-void* imageflow_io_create_from_buffer(void* context, uint8_t const* buffer, size_t buffer_byte_count, Lifetime lifetime);
+bool imageflow_context_add_input_buffer(void* context, int32_t io_id, uint8_t const* buffer, size_t buffer_byte_count, Lifetime lifetime);
 
 ///
 /// Creates an imageflow_io structure for writing to an expanding memory buffer.
@@ -283,41 +244,12 @@ void* imageflow_io_create_from_buffer(void* context, uint8_t const* buffer, size
 ///
 ///
 /// Returns null if allocation failed; check the context for error details.
-void* imageflow_io_create_for_output_buffer(void* context);
+bool imageflow_context_add_output_buffer(void* context, int32_t io_id);
 
 ///
 /// Provides access to the underlying buffer for the given imageflow_io object.
 ///
-bool imageflow_io_get_output_buffer(void* context, void* io, uint8_t const** result_buffer, size_t* result_buffer_length);
-
-///
-/// Provides access to the underlying buffer for the given imageflow_io object.
-///
-bool imageflow_job_get_output_buffer_by_id(void* context, void* job, int32_t io_id, uint8_t const** result_buffer, size_t* result_buffer_length);
-
-///
-/// Creates an imageflow_job, which permits the association of imageflow_io instances with
-/// numeric identifiers and provides a 'sub-context' for job execution
-///
-void* imageflow_job_create(void* context);
-
-///
-/// Looks up the imageflow_io pointer from the provided io_id
-///
-void* imageflow_job_get_io(void* context, void* job, int32_t io_id);
-
-///
-/// Associates the imageflow_io object with the job and the assigned io_id.
-///
-/// The io_id will correspond with io_id in the graph
-///
-/// direction is in or out.
-bool imageflow_job_add_io(void* context, void* job, void* io, int32_t io_id, Direction direction);
-
-///
-/// Destroys the provided imageflow_job
-///
-bool imageflow_job_destroy(void* context, void* job);
+bool imageflow_context_get_output_buffer_by_id(void* context, int32_t io_id, uint8_t const** result_buffer, size_t* result_buffer_length);
 
 ///
 /// Allocates zeroed memory that will be freed with the context.

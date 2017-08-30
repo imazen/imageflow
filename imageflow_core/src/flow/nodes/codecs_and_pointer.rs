@@ -228,7 +228,7 @@ fn primitive_decoder_def() -> NodeDefinition {
             fn f(ctx: &mut OpCtxMut, ix: NodeIndex) {
                 let io_id = decoder_encoder_io_id(ctx, ix).unwrap();
 
-                let result = ctx.job.get_codec(io_id).unwrap().get_decoder().unwrap().read_frame(ctx.c, ctx.job, &mut *ctx.job.get_io(io_id).unwrap()).unwrap();
+                let result = ctx.job.get_codec(io_id).unwrap().get_decoder().unwrap().read_frame(ctx.c, &mut *ctx.c.get_io(io_id).unwrap()).unwrap();
                 ctx.weight_mut(ix).result = NodeResult::Frame(result);
             }
             f
@@ -259,8 +259,7 @@ fn encoder_def() -> NodeDefinition {
                                weight.params {
 
                             result = NodeResult::Encoded(
-                                ctx.job.get_codec(*io_id).unwrap().write_frame(ctx.c, ctx.job, preset,
-                                                  unsafe{ &mut *input_bitmap } ).unwrap());
+                                ctx.job.get_codec(*io_id).unwrap().write_frame(ctx.c, preset,unsafe{ &mut *input_bitmap } ).unwrap());
 
                         } else {
                             panic!("");

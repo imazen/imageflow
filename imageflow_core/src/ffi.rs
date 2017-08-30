@@ -64,7 +64,14 @@ pub enum IoMode {
     WriteSeekable = 6, // 2 | 4,
     ReadWriteSeekable = 15, // 1 | 2 | 4 | 8
 }
-
+impl IoMode{
+    pub fn can_read(self) -> bool{
+        (self as i32 & IoMode::ReadSequential as i32) > 0
+    }
+    pub fn can_write(self) -> bool{
+        (self as i32 & IoMode::WriteSequential as i32) > 0
+    }
+}
 #[repr(C)]
 #[derive(Clone,Debug,PartialEq)]
 pub struct ImageflowContext {

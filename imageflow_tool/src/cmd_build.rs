@@ -449,7 +449,7 @@ impl CmdBuild {
     }
 
     fn build(data: s::Build001) -> Result<s::ResponsePayload> {
-        let context = fc::Context::create()?;
+        let mut context = fc::Context::create()?;
         Ok(context.build_1(data)?)
     }
 }

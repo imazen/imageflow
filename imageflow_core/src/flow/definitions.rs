@@ -1,7 +1,7 @@
 use ffi::{ImageflowContext, BitmapBgra};
 pub use ::ffi::EdgeKind;
 pub use ::ffi::PixelFormat;
-use ::{Context,Job};
+use ::{Context};
 use flow::nodes;
 use ::internal_prelude::works_everywhere::*;
 use std::any::Any;
@@ -77,13 +77,13 @@ pub enum EdgesOut {
 
 pub struct OpCtx<'a> {
     pub c: &'a Context,
-    pub job: &'a Job,
+    pub job: &'a Context,
     pub graph: &'a Graph,
 }
 
 pub struct OpCtxMut<'a> {
     pub c: &'a Context,
-    pub job: &'a mut Job,
+    pub job: &'a mut Context,
     pub graph: &'a mut Graph,
 }
 

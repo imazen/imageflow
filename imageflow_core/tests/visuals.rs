@@ -49,7 +49,7 @@ fn smoke_test(input: Option<s::IoEnum>, output: Option<s::IoEnum>,  debug: bool,
         io: io_list,
         framewise: s::Framewise::Steps(steps)
     };
-    let context = Context::create().unwrap();
+    let mut context = Context::create().unwrap();
     let _ = context.build_1(build).unwrap();
 
 }
@@ -94,7 +94,7 @@ fn compare(input: Option<s::IoEnum>, allowed_off_by_one_bytes: usize, checksum_n
     }
 
 
-    let context = Context::create().unwrap();
+    let mut context = Context::create().unwrap();
 
     let _ = context.build_1(build).unwrap();
 
@@ -387,7 +387,7 @@ fn get_result_dimensions(steps: Vec<s::Node>, io: Vec<s::IoObject>, debug: bool)
         io: io,
         framewise: s::Framewise::Steps(steps)
     };
-    let context = Context::create().unwrap();
+    let mut context = Context::create().unwrap();
     let result = context.build_1(build).unwrap();
 
     if dest_bitmap.is_null(){
@@ -525,16 +525,14 @@ fn test_idct_spatial_no_gamma(){
 //}
 
 fn test_with_callback(checksum_name: String, input: s::IoEnum, callback: fn(s::ImageInfo) -> (Option<s::DecoderCommand>, Vec<s::Node>) ) -> bool{
-    let context = Context::create().unwrap();
+    let mut context = Context::create().unwrap();
     let matched:bool;
 
     unsafe {
-        let mut job = context.create_job();
-        //Add input
-        ::imageflow_core::parsing::IoTranslator::new(&context).add_to_job(&mut *job, vec![s::IoObject{ io_id:0, direction: s::IoDirection::In, io: input}]);
+        ::imageflow_core::parsing::IoTranslator{}.add_all(&mut context, vec![s::IoObject{ io_id:0, direction: s::IoDirection::In, io: input}]);
 
 
-        let image_info = job.get_image_info(0).unwrap();
+        let image_info = context.get_image_info(0).unwrap();
 
         let (tell_decoder, mut steps): (Option<s::DecoderCommand>, Vec<s::Node>) = callback(image_info);
 
@@ -544,7 +542,7 @@ fn test_with_callback(checksum_name: String, input: s::IoEnum, callback: fn(s::I
                 command: what
             };
             let send_hints_str = serde_json::to_string_pretty(&send_hints).unwrap();
-            job.message("v0.1/tell_decoder", send_hints_str.as_bytes()).1.unwrap();
+            context.message("v0.1/tell_decoder", send_hints_str.as_bytes()).1.unwrap();
         }
 
         let mut dest_bitmap: *mut imageflow_core::ffi::BitmapBgra = std::ptr::null_mut();
@@ -559,7 +557,7 @@ fn test_with_callback(checksum_name: String, input: s::IoEnum, callback: fn(s::I
             graph_recording: None
         };
 
-        job.execute_1(send_execute).unwrap();
+        context.execute_1(send_execute).unwrap();
 
         let ctx = checkums_ctx_for(&context);
         matched = regression_check(&ctx, *ptr_to_ptr, &checksum_name)
