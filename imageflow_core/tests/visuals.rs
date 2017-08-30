@@ -278,7 +278,7 @@ fn test_jpeg_rotation() {
 #[test]
 fn test_jpeg_crop() {
     let matched = compare(Some(s::IoEnum::Url("https://s3-us-west-2.amazonaws.com/imageflow-resources/test_inputs/waterhouse.jpg".to_owned())), 500,
-                          "jpeg_crop".to_owned(), false, false, vec![
+                          "jpeg_crop".to_owned(), POPULATE_CHECKSUMS, DEBUG_GRAPH, vec![
             s::Node::CommandString{
                 kind: s::CommandStringKind::ImageResizer4,
                 value: "width=100&height=200&mode=crop".to_owned(),
