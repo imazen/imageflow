@@ -8,6 +8,7 @@ environment:
     CARGO_INCREMENTAL: 1
     TARGET_CPU: sandybridge
     RUST_TOOLCHAIN: nightly-2017-06-12
+    VSINSTALL:  "Microsoft Visual Studio\\2017\\Community\\VC\\Auxiliary\\Build"
 
 configuration: Release
 
@@ -55,9 +56,7 @@ install:
   - echo "GIT_COMMIT=%GIT_COMMIT%" && echo "CI_STRING=%CI_STRING%" && echo "CI_TAG=%CI_TAG%" && echo "CI_RELATED_BRANCH=%CI_RELATED_BRANCH%" && echo "CI_PULL_REQUEST_INFO=%CI_PULL_REQUEST_INFO%" && echo "ARTIFACT_SERIES_NAME=%ARTIFACT_SERIES_NAME%"
   - echo.
   - echo. && echo. echo Installing tools
-  - dir "C:\Program Files\Microsoft SDKs\Windows\"
-  - if "%PLATFORM%"=="x86" '"C:\Program Files\Microsoft SDKs\Windows\v7.1\Bin\SetEnv.cmd" /x86'
-  - if "%PLATFORM%"=="x64" '"C:\Program Files\Microsoft SDKs\Windows\v7.1\Bin\SetEnv.cmd" /x64'
+  - C:\"Program Files (x86)"\"%VSINSTALL%"\vcvarsall.bat %PLATFORM%
   - if "%PLATFORM%"=="x86" SET RUST_TARGET=i686-pc-windows-msvc
   - if "%PLATFORM%"=="x64" SET RUST_TARGET=x86_64-pc-windows-msvc
   - if "%PLATFORM%"=="x86" SET TARGET_DIR=target\ #i686-pc-windows-msvc\
