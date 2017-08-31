@@ -8,7 +8,7 @@ environment:
     CARGO_INCREMENTAL: 1
     TARGET_CPU: sandybridge
     RUST_TOOLCHAIN: nightly-2017-06-12
-    
+
 configuration: Release
 
 platform:
@@ -55,6 +55,9 @@ install:
   - echo "GIT_COMMIT=%GIT_COMMIT%" && echo "CI_STRING=%CI_STRING%" && echo "CI_TAG=%CI_TAG%" && echo "CI_RELATED_BRANCH=%CI_RELATED_BRANCH%" && echo "CI_PULL_REQUEST_INFO=%CI_PULL_REQUEST_INFO%" && echo "ARTIFACT_SERIES_NAME=%ARTIFACT_SERIES_NAME%"
   - echo.
   - echo. && echo. echo Installing tools
+  - dir "C:\Program Files\Microsoft SDKs\Windows\"
+  - if "%PLATFORM%"=="x86" '"C:\Program Files\Microsoft SDKs\Windows\v7.1\Bin\SetEnv.cmd" /x86'
+  - if "%PLATFORM%"=="x64" '"C:\Program Files\Microsoft SDKs\Windows\v7.1\Bin\SetEnv.cmd" /x64'
   - if "%PLATFORM%"=="x86" SET RUST_TARGET=i686-pc-windows-msvc
   - if "%PLATFORM%"=="x64" SET RUST_TARGET=x86_64-pc-windows-msvc
   - if "%PLATFORM%"=="x86" SET TARGET_DIR=target\ #i686-pc-windows-msvc\
@@ -75,8 +78,6 @@ install:
   - start /wait nasminst.exe /S
   - echo. && echo. && echo Installing Conan
   - pip.exe install conan
-  - if "%PLATFORM%"=="x86" "C:\Program Files (x86)\Microsoft Visual Studio\2017\Community\VC\Auxiliary\Build\vcvarsall.bat" x86
-  - if "%PLATFORM%"=="x64" "C:\Program Files (x86)\Microsoft Visual Studio\2017\Community\VC\Auxiliary\Build\vcvarsall.bat" x64
   - conan user # Creates the conan data directory
   - conan remote add imageflow https://api.bintray.com/conan/imazen/imageflow
   - copy /Y .\ci\updated_conan_settings.yml C:\Users\appveyor\.conan\settings.yml #Fixes settings.yml
