@@ -96,7 +96,7 @@ impl BlankImage{
             framewise: s::Framewise::Steps(vec![s::Node::CreateCanvas {
                 w: self.w as usize,
                 h: self.h as usize,
-                format: s::PixelFormat::Bgr24,
+                format: s::PixelFormat::Bgr32,
                 color: self.color.clone(),
             },
             s::Node::Encode {
