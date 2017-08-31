@@ -16,11 +16,11 @@ platform:
 
 cache:
   - '%USERPROFILE%\.cargo'
-  #- '%USERPROFILE%\.conan'
-  #- 'c_components\build'
+  - '%USERPROFILE%\.conan'
+  - 'c_components\build'
   - 'target'
 matrix:
-  fast_finish: true
+  fast_finish: false
 
 
 #We install nasm in case libjpeg-turbo has to be built from source
