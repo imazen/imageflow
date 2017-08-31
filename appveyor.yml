@@ -1,3 +1,4 @@
+os: Visual Studio 2017
 build: false
 environment:
     PYTHON: "C:\\Python27"
@@ -74,6 +75,8 @@ install:
   - start /wait nasminst.exe /S
   - echo. && echo. && echo Installing Conan
   - pip.exe install conan
+  - if "%PLATFORM%"=="x86" "C:\Program Files (x86)\Microsoft Visual Studio\2017\Community\VC\Auxiliary\Build\vcvarsall.bat" x86
+  - if "%PLATFORM%"=="x64" "C:\Program Files (x86)\Microsoft Visual Studio\2017\Community\VC\Auxiliary\Build\vcvarsall.bat" x64
   - conan user # Creates the conan data directory
   - conan remote add imageflow https://api.bintray.com/conan/imazen/imageflow
   - copy /Y .\ci\updated_conan_settings.yml C:\Users\appveyor\.conan\settings.yml #Fixes settings.yml
