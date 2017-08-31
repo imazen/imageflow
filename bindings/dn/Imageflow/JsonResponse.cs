@@ -1,8 +1,6 @@
 ﻿using System;
 using System.IO;
-using System.Runtime.InteropServices;
 using System.Text;
-using imageflow;
 using Imageflow.Native;
 using Newtonsoft.Json;
 
@@ -11,19 +9,19 @@ namespace Imageflow
     public class JsonResponse : IDisposable, IAssertReady
     {
         private IntPtr _ptr;
-        private readonly Context _parent;
+        private readonly JobContext _parent;
 
         internal IntPtr Pointer
         {
             get
             {
                 if (IsDisposed) throw new ImageflowDisposedException("JsonResponse");
-                if (_parent.IsDisposed) throw new ImageflowDisposedException("Context");
+                if (_parent.IsDisposed) throw new ImageflowDisposedException("JobContext");
                 return _ptr;
             }
         }
 
-        public JsonResponse(Context c, IntPtr ptr)
+        public JsonResponse(JobContext c, IntPtr ptr)
         {
             _parent = c;
             this._ptr = ptr;

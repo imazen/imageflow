@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace imageflow
+namespace Imageflow
 {
     // For bugs in user code, where they're trying to use something after disposing it
     public class ImageflowDisposedException : Exception

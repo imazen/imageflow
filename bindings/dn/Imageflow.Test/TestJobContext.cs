@@ -1,44 +1,42 @@
-﻿using System;
+using System;
 using System.Diagnostics;
 using Xunit;
 using Imageflow;
 using System.Dynamic;
+using System.IO;
 using System.Text;
 using Xunit.Abstractions;
 
 namespace Imageflow.Test
 {
-    public class TestJob
+    public class TestContext
     {
         private readonly ITestOutputHelper output;
 
-        public TestJob(ITestOutputHelper output)
+        public TestContext(ITestOutputHelper output)
         {
             this.output = output;
         }
-        
+
         [Fact]
-        public void TestCreateDestroyJob()
+        public void TestCreateDestroyContext()
         {
-            using (var c = new Context())
-            using (var j = new Job(c))
+            using (var c = new JobContext())
             {
                 c.AssertReady();
             }
         }
-
-        [Fact]
+        
+         [Fact]
         public void TestGetImageInfo()
         {
-            using (var c = new Context())
+            using (var c = new JobContext())
             {
-                var j = new Job(c);
-                var inBuf = JobIo.PinManagedBytes(c,
+                c.AddInputBytesPinned(0,
                     Convert.FromBase64String(
                         "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAACklEQVR4nGMAAQAABQABDQottAAAAABJRU5ErkJggg=="));
-                j.AddIo(inBuf, 0, Native.Direction.In);
-
-                var response = j.SendMessage("v0.1/get_image_info", new {io_id = 0});
+                
+                var response = c.SendMessage("v0.1/get_image_info", new {io_id = 0});
 
                 var data = response.DeserializeDynamic();
 
@@ -57,17 +55,14 @@ namespace Imageflow.Test
         [Fact]
         public void TestExecute()
         {
-            using (var c = new Context())
+            using (var c = new JobContext())
             {
-                var j = new Job(c);
-                var inBuf = JobIo.PinManagedBytes(c,
+                c.AddInputBytesPinned(0,
                     Convert.FromBase64String(
                         "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAACklEQVR4nGMAAQAABQABDQottAAAAABJRU5ErkJggg=="));
-                j.AddIo(inBuf, 0, Native.Direction.In);
-
-                var outBuf = JobIo.OutputBuffer(c);
-                j.AddIo(outBuf, 1, Native.Direction.Out);
-
+                
+                c.AddOutputBuffer(1);
+                
                 var message = new
                 {
                     framewise = new
@@ -100,7 +95,7 @@ namespace Imageflow.Test
                     }
                 };
                 
-                var response = j.SendMessage("v0.1/execute", message);
+                var response = c.SendMessage("v0.1/execute", message);
 
                 var data = response.DeserializeDynamic();
 
@@ -115,15 +110,13 @@ namespace Imageflow.Test
         [Fact]
         public void TestIr4()
         {
-            using (var c = new Context())
+            using (var c = new JobContext())
             {
-                var j = new Job(c);
-                j.AddInputBytesPinned(0,
+                c.AddInputBytesPinned(0,
                     Convert.FromBase64String(
                         "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAACklEQVR4nGMAAQAABQABDQottAAAAABJRU5ErkJggg=="));
-                j.AddOutputBuffer(1);
-
-                var response = j.ExecuteImageResizer4CommandString(0, 1, "w=200&h=200&scale=both&format=jpg");
+                
+                var response = c.ExecuteImageResizer4CommandString(0, 1, "w=200&h=200&scale=both&format=jpg");
 
                 var data = response.DeserializeDynamic();
 
@@ -132,6 +125,42 @@ namespace Imageflow.Test
                 Assert.Equal(200, (int)data.code);
                 Assert.Equal(true, (bool)data.success);
             }
+        }
+        
+        [Fact]
+        public void TestFileIo()
+        {
+            string from = null;
+            string to = null;
+            try
+            {
+                from = Path.GetTempFileName();
+                to = Path.GetTempFileName();
+                File.WriteAllBytes(from,  Convert.FromBase64String(
+                    "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAACklEQVR4nGMAAQAABQABDQottAAAAABJRU5ErkJggg=="));
+
+                using (var c = new JobContext())
+                {
+
+                    c.AddInputFile(0,from);
+                    c.AddOutputFile(1, to);
+                    var response = c.ExecuteImageResizer4CommandString(0, 1, "w=200&h=200&scale=both&format=jpg");
+
+                    var data = response.DeserializeDynamic();
+
+                    output.WriteLine(response.GetString());
+
+                    Assert.Equal(200, (int) data.code);
+                    Assert.Equal(true, (bool) data.success);
+                    Assert.True(File.ReadAllBytes(to).Length > 0);
+                }
+            }
+            finally
+            {
+                if (from != null) File.Delete(from);
+                if (to != null) File.Delete(to);
+            }
+            
         }
     }
 }

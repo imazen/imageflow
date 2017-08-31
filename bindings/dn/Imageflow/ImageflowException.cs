@@ -1,10 +1,11 @@
 ﻿using System;
+using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Text;
 using Imageflow;
 using Imageflow.Native;
 
-namespace imageflow
+namespace Imageflow
 {
     public class ImageflowException : Exception
     {
@@ -15,7 +16,7 @@ namespace imageflow
             
         }
 
-        public static Exception FromContext(Context c, bool fullPaths = true, int defaultBufferSize = 2048)
+        public static Exception FromContext(JobContext c, bool fullPaths = true, ulong defaultBufferSize = 2048)
         {
             if (!NativeMethods.imageflow_context_has_error(c.Pointer))
             {
@@ -24,16 +25,22 @@ namespace imageflow
             var buffer = new byte[defaultBufferSize];
             var pinned = GCHandle.Alloc(buffer, GCHandleType.Pinned);
 
-            int bytesWritten;
+            var bytesWritten = UIntPtr.Zero;
+            var everythingWritten = false;
+            
             string message = null;
             try
             {
-                bytesWritten = NativeMethods.imageflow_context_error_and_stacktrace(c.Pointer,
-                    pinned.AddrOfPinnedObject(), new UIntPtr((ulong) buffer.LongLength), fullPaths);
+                everythingWritten = NativeMethods.imageflow_context_error_write_to_buffer(c.Pointer,
+                    pinned.AddrOfPinnedObject(), new UIntPtr((ulong) buffer.LongLength), out bytesWritten);
 
-                if (bytesWritten > 0)
+                if (bytesWritten.ToUInt64() > 0)
                 {
-                    message = Encoding.UTF8.GetString(buffer, 0, Math.Min(bytesWritten, defaultBufferSize));
+                    
+                    message = Encoding.UTF8.GetString(buffer, 0, (int)Math.Min(bytesWritten.ToUInt64(), defaultBufferSize)).Replace("\n", "");
+                    message = message + message.Length;
+                    Debug.WriteLine(message);
+                    Console.WriteLine(message);
                 }
             }
             finally
@@ -41,7 +48,7 @@ namespace imageflow
                 pinned.Free();
             }
 
-            if (bytesWritten >= 0) return new ImageflowException(message ?? "Empty error and stacktrace");
+            if (everythingWritten) return new ImageflowException(message ?? "Empty error and stacktrace");
 
             if (defaultBufferSize < MaxBufferSize)
             {
