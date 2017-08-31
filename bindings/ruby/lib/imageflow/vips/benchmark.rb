@@ -70,7 +70,7 @@ module Imageflow
 
 
         if result != 0
-          raise "Failed with exit code #{result}: #{program} #{args}"
+          raise "Failed with exit code #{result}: #{exe_name} #{args}"
         end
 
         ""
@@ -313,7 +313,7 @@ module Imageflow
           IO.binwrite(input_file, Net::HTTP.get(URI(url)))
         end
 
-        @images << Imageflow::Job.get_image_info_by_filename(input_file)
+        @images << Imageflow::JobContext.get_image_info_by_filename(input_file)
       end
 
       def fetch_images!

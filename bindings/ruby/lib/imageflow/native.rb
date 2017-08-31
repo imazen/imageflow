@@ -23,16 +23,13 @@ module Imageflow
 
     ffi_lib self.ensure_compiled
 
+    #ffi_lib "imageflow"
+
     #We don't require users to prefix everything with 'imageflow'
     def self.attach_function (prefixed_name, *vars)
       super prefixed_name.to_s.gsub(/^imageflow_/, "").to_sym, prefixed_name, *vars
     end
 
-    enum :pixel_format, [
-        :bgr24, 3,
-        :bgra32, 4,
-        :gray8, 1
-    ]
     enum :flow_io_mode, [
         :mode_null,
         :flow_io_mode_read_sequential, 1,
@@ -51,43 +48,39 @@ module Imageflow
         :outlives_function_call, 0,
         :outlives_context, 1
     ]
-    enum :flow_cleanup_with, [
-        :cleanup_with_context, 0,
-        :cleanup_with_first_job, 1
-    ]
-
 
     attach_function :imageflow_abi_compatible, [:uint32, :uint32], :bool
+    attach_function :imageflow_abi_version_major, [], :uint32
+    attach_function :imageflow_abi_version_minor, [], :uint32
+
     attach_function :imageflow_context_create, [:uint32, :uint32], :pointer
     attach_function :imageflow_context_begin_terminate, [:pointer], :bool
     attach_function :imageflow_context_destroy, [:pointer], :void
 
     attach_function :imageflow_context_has_error, [:pointer], :bool
-    attach_function :imageflow_context_error_recoverable, [:pointer], :bool
-
-    attach_function :imageflow_context_error_try_clear, [:pointer], :bool
-
     attach_function :imageflow_context_error_code, [:pointer], :int32
     attach_function :imageflow_context_error_as_exit_code, [:pointer], :int32
     attach_function :imageflow_context_error_as_http_code, [:pointer], :int32
 
     attach_function :imageflow_context_error_write_to_buffer, [:pointer, :pointer, :size_t, :pointer], :bool
 
-    attach_function :imageflow_job_send_json, [:pointer, :pointer, :string, :pointer, :size_t], :pointer, blocking: true
+    attach_function :imageflow_context_error_recoverable, [:pointer], :bool
+    attach_function :imageflow_context_error_try_clear, [:pointer], :bool
+
+
     attach_function :imageflow_context_send_json, [:pointer, :string, :pointer, :size_t], :pointer, blocking: true
     attach_function :imageflow_json_response_read, [:pointer, :pointer, :pointer, :pointer, :pointer], :bool
     attach_function :imageflow_json_response_destroy, [:pointer, :pointer], :bool
 
 
-    attach_function :imageflow_job_create, [:pointer], :pointer
-    attach_function :imageflow_job_destroy, [:pointer,  :pointer], :bool
+    attach_function :imageflow_context_add_file, [:pointer, :int32, :flow_direction,  :flow_io_mode , :string], :bool, blocking: true
+    attach_function :imageflow_context_add_input_buffer, [:pointer, :int32, :pointer, :size_t, :flow_pointer_lifetime], :bool, blocking: true
+    attach_function :imageflow_context_add_output_buffer, [:pointer, :int32 ], :bool, blocking: true
+    attach_function :imageflow_context_get_output_buffer_by_id, [:pointer, :int32, :pointer, :pointer], :bool, blocking: true
 
-    attach_function :imageflow_io_create_for_file, [:pointer, :flow_io_mode, :string], :pointer, blocking: true
-    attach_function :imageflow_io_create_from_buffer, [:pointer, :pointer, :size_t, :flow_pointer_lifetime], :pointer, blocking: true
-    attach_function :imageflow_io_create_for_output_buffer, [:pointer ], :pointer, blocking: true
-    attach_function :imageflow_job_get_output_buffer_by_id, [:pointer, :pointer, :int32, :pointer, :pointer], :bool, blocking: true
-    attach_function :imageflow_job_get_io, [:pointer, :pointer, :int32], :pointer, blocking: true
-    attach_function :imageflow_job_add_io, [:pointer, :pointer, :pointer, :int32, :flow_direction], :bool, blocking: true
+
+    attach_function :imageflow_context_memory_allocate, [:pointer, :size_t, :pointer, :int32], :pointer, blocking: true
+    attach_function :imageflow_context_memory_free, [:pointer, :pointer, :pointer, :int32, ], :bool, blocking: true
 
   end
 end

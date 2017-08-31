@@ -6,23 +6,12 @@ module Imageflow
       end
       attr_reader :opts
 
-=begin
-        @delete_profile = false
-        @linear = false
-        @crop_image = false
-        @rotate_image = false
-        @width = 128
-        @height = 128
-        @import_profile = @export_profile = nil
-=end
-
       def generate!(input_path:, output_path:)
-        c = Imageflow::Context.new
-        job = c.create_job
-        #job.debug_record_gif
+        c = Imageflow::JobContext.new
 
-        job.add_input_file(placeholder_id: 0, filename: input_path)
-        job.add_output_file(placeholder_id: 1, filename: output_path)
+
+        c.add_input_file(io_id: 0, filename: input_path)
+        c.add_output_file(io_id: 1, filename: output_path)
 
         format = :jpeg if output_path =~ /\.jpe?g$/i
         format = :png if output_path =~ /\.png$/i
@@ -30,7 +19,7 @@ module Imageflow
         command_string = "?w=#{opts.width}&h=#{opts.height}&mod=#{opts.crop_image ? 'crop': 'max'}&format=#{format}&decoder.min_precise_scaling_ratio=#{opts.stop_block_scaling_at || 2.1}&down.colorspace=#{opts.linear ? :linear : :srgb}"
 
 
-        job.execute framewise: {steps: [
+        c.execute framewise: {steps: [
             {command_string: {
                 kind: "ir4",
                 decode: 0,
@@ -40,16 +29,12 @@ module Imageflow
         ]}
         c.destroy!
         c = nil
-        #end
-
-
 
         #puts "Real milliseconds (1 thread): %.4f \n" % (cpu_time * 1000.0)
 
-
-        #TODO rescue and return an appropriate exit code
-
         return 0
+      rescue
+          return c.error_as_exit_code
       ensure
         c.destroy! unless c.nil?
       end
