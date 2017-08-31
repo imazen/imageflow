@@ -418,7 +418,7 @@ echo_maybe "build.sh sees these relevant variables: ${BUILD_VARS[*]}"
 	[[ -d build ]] || mkdir build
 
 	echo_maybe "================================== C/C++ =========================== [build.sh]"
-
+    conan remote add imageflow https://api.bintray.com/conan/imazen/imageflow || true
 
 	if [[ "$TEST_C" == 'True' ]]; then
 		echo_maybe "Testing C/C++ components of Imageflow "
