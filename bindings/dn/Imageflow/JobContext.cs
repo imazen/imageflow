@@ -113,25 +113,25 @@ namespace Imageflow
 
         
         
-        internal void AddFile(int ioId, Direction direction,  IoMode mode, string path)
-        {
-            AssertReady();
-            var cpath = GCHandle.Alloc(Encoding.ASCII.GetBytes(path + char.MinValue), GCHandleType.Pinned);
-            try
-            {
-                if (!NativeMethods.imageflow_context_add_file(Pointer, ioId, direction, mode,
-                    cpath.AddrOfPinnedObject()))
-                {
-                    AssertReady();
-                    throw new ImageflowAssertionFailed("AssertReady should raise an exception if method fails");
-                }
-            } finally{
-                cpath.Free();
-            }
-        }
-
-        public void AddOutputFile(int ioId, string path) => AddFile(ioId,  Direction.Out, IoMode.WriteSeekable, path);
-        public void AddInputFile(int ioId, string path) => AddFile(ioId,  Direction.In, IoMode.ReadSeekable, path);
+//        internal void AddFile(int ioId, Direction direction,  IoMode mode, string path)
+//        {
+//            AssertReady();
+//            var cpath = GCHandle.Alloc(Encoding.ASCII.GetBytes(path + char.MinValue), GCHandleType.Pinned);
+//            try
+//            {
+//                if (!NativeMethods.imageflow_context_add_file(Pointer, ioId, direction, mode,
+//                    cpath.AddrOfPinnedObject()))
+//                {
+//                    AssertReady();
+//                    throw new ImageflowAssertionFailed("AssertReady should raise an exception if method fails");
+//                }
+//            } finally{
+//                cpath.Free();
+//            }
+//        }
+//
+//        public void AddOutputFile(int ioId, string path) => AddFile(ioId,  Direction.Out, IoMode.WriteSeekable, path);
+//        public void AddInputFile(int ioId, string path) => AddFile(ioId,  Direction.In, IoMode.ReadSeekable, path);
 
         public void AddInputBytes(int ioId, byte[] buffer)
         {

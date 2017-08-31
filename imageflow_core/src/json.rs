@@ -78,7 +78,10 @@ pub fn create_handler_over_responder<'a, T, D>(responder: ResponderFn<'a, T, D>)
                     }
                 }
             }
-            Err(e) => (JsonResponse::from_parse_error(&e, json_request_bytes), Err(FlowError::from_serde(e, json_request_bytes))),
+            Err(e) => {
+                let e = FlowError::from_serde(e, json_request_bytes);
+                (JsonResponse::from_flow_error(&e), Err(e))
+            }
         }
 
     })
@@ -94,24 +97,10 @@ pub struct JsonResponse {
 impl JsonResponse {
     pub fn from_flow_error(err: &FlowError) -> JsonResponse{
         let message = format!("{}", err);
-        JsonResponse::fail_with_message(500,
+        JsonResponse::fail_with_message(err.category().http_status_code() as i64,
                                         &message)
     }
-    pub fn from_parse_error(err: &serde_json::error::Error, json: &[u8]) -> JsonResponse {
 
-        let message = format!("Parse error: {}\n Received: \n{}\n{:?}",
-                              &err,
-                              std::str::from_utf8(json).unwrap_or("[INVALID UTF-8]"),
-                                json);
-
-        let r = s::Response001 {
-            success: false,
-            code: 400,
-            message: Some(message),
-            data: s::ResponsePayload::None,
-        };
-        JsonResponse::from_response001(r)
-    }
     pub fn from_response001(r: s::Response001) -> JsonResponse {
         JsonResponse {
             status_code: 400,

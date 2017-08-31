@@ -8,7 +8,7 @@ module Imageflow
       let(:flow) { Imageflow::Native }
 
       before(:each) do
-        @c = flow.context_create(2,0)
+        @c = flow.context_create(3,0)
       end
 
       after(:each) do
@@ -17,7 +17,7 @@ module Imageflow
       end
 
       it 'can create and destroy contexts' do
-        context = flow.context_create(2,0)
+        context = flow.context_create(3,0)
         expect(context).to_not be_nil
         expect(context.null?).to be_falsey
 
@@ -83,19 +83,22 @@ module Imageflow
 
         bytes = "\x89\x50\x4E\x47\x0D\x0A\x1A\x0A\x00\x00\x00\x0D\x49\x48\x44\x52\x00\x00\x00\x01\x00\x00\x00\x01\x08\x06\x00\x00\x00\x1F\x15\xC4\x89\x00\x00\x00\x0A\x49\x44\x41\x54\x78\x9C\x63\x00\x01\x00\x00\x05\x00\x01\x0D\x0A\x2D\xB4\x00\x00\x00\x00\x49\x45\x4E\x44\xAE\x42\x60\x82".b
         c.add_input_buffer(io_id: 0, bytes: bytes)
-        c.add_output_file(io_id: 1, filename: "hello.png")
-
+        #c.add_output_file(io_id: 1, filename: "hello.png")
+        c.add_output_buffer(io_id: 1)
 
         c.execute framewise: {steps: [
             {decode: {io_id: 0}},
             {resample_2d: {w: 300, h: 200}},
             {encode: {io_id: 1, preset: {"libpng": {}}}}
         ]}
+
+        c.write_output_buffer_to_file(io_id: 1, filename: "hello.png")
         #reset the context to ensure the file stream is closed
         @c.destroy!
         @c = Imageflow::JobContext.new
 
-        c.add_input_file(io_id: 0, filename: "hello.png")
+        c.add_input_buffer_from_file(io_id:0, filename: "hello.png")
+        #c.add_input_file(io_id: 0, filename: "hello.png")
         c.add_output_buffer(io_id: 1)
         c.execute framewise: {steps: [
             {decode: {io_id: 0}},

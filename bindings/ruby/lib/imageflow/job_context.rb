@@ -5,9 +5,9 @@ module Imageflow
     end
 
     def initialize
-      ptr = Native.context_create(2,0)
+      ptr = Native.context_create(3,0)
       if ptr.nil? || ptr.null?
-        if Native.abi_compatible(2,0)
+        if Native.abi_compatible(3,0)
           raise "Out of memory"
         else
           raise "ABI incompatible"
@@ -145,14 +145,23 @@ module Imageflow
     end
 
 
-    def add_input_file(io_id:, filename:)
-      call_method(:context_add_file, io_id, :flow_input, :mode_read_seekable, filename)
-    end
+    # def add_input_file(io_id:, filename:)
+    #   call_method(:context_add_file, io_id, :flow_input, :mode_read_seekable, filename)
+    # end
 
-    def add_output_file(io_id:, filename:)
-      call_method(:context_add_file, io_id, :flow_output, :mode_write_seekable, filename)
-    end
+    # def add_output_file(io_id:, filename:)
+    #   call_method(:context_add_file, io_id, :flow_output, :mode_write_seekable, filename)
+    # end
 
+    def add_input_buffer_from_file(io_id:,  filename: )
+      add_input_buffer(io_id: io_id, bytes: File.read(filename))
+    end
+    def write_output_buffer_to_file(io_id:,  filename: )
+      bytes = get_buffer_bytes(io_id: io_id)
+      File.open(filename, 'wb' ) do |output|
+        output.write bytes
+      end
+    end
     def add_input_buffer(io_id:, bytes:)
       buffer = FFI::MemoryPointer.new(:char, bytes.bytesize) # Allocate memory sized to the data
       buffer.put_bytes(0, bytes)
@@ -201,7 +210,8 @@ module Imageflow
 
     def self.get_image_info_by_filename(filename)
       c = JobContext.new
-      c.add_input_file io_id: 0, filename: filename
+      c.add_input_buffer_from_file(io_id: 0, filename: filename)
+      #c.add_input_file io_id: 0, filename: filename
       info = c.get_image_info io_id: 0
       c.destroy!
 

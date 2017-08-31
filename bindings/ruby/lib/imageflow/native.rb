@@ -73,7 +73,7 @@ module Imageflow
     attach_function :imageflow_json_response_destroy, [:pointer, :pointer], :bool
 
 
-    attach_function :imageflow_context_add_file, [:pointer, :int32, :flow_direction,  :flow_io_mode , :string], :bool, blocking: true
+    #attach_function :imageflow_context_add_file, [:pointer, :int32, :flow_direction,  :flow_io_mode , :string], :bool, blocking: true
     attach_function :imageflow_context_add_input_buffer, [:pointer, :int32, :pointer, :size_t, :flow_pointer_lifetime], :bool, blocking: true
     attach_function :imageflow_context_add_output_buffer, [:pointer, :int32 ], :bool, blocking: true
     attach_function :imageflow_context_get_output_buffer_by_id, [:pointer, :int32, :pointer, :pointer], :bool, blocking: true

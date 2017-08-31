@@ -314,12 +314,31 @@ impl FlowError {
         panic!(format!("{}", self));
     }
     pub fn from_serde(e: ::serde_json::Error, json_bytes: &[u8]) -> FlowError{
-        //TODO: improve, potentially?
-        FlowError{
-            kind: ErrorKind::Category(ErrorCategory::InvalidJson),
-            at: ::smallvec::SmallVec::new(),
-            node: None,
-            message: format!("Json Error: {}", &e)
+        let str_result = ::std::str::from_utf8(json_bytes);
+        let line_ix = e.line() - 1;
+        let col_ix = e.column() - 1;
+        if let Ok(s) = str_result{
+            let annotated_line = s.lines().nth(line_ix).map(|line| {
+                if col_ix < line.len(){
+                    format!("{}>{}", &line[..col_ix], &line[col_ix..])
+                }else{
+                    line.to_owned()
+                }
+            }).unwrap_or("[input line not found]".to_owned());
+            FlowError {
+                kind: ErrorKind::Category(ErrorCategory::InvalidJson),
+                at: ::smallvec::SmallVec::new(),
+                node: None,
+                message: format!("Json Error: {}: {}", &e, &annotated_line)
+            }
+        }else {
+
+            FlowError {
+                kind: ErrorKind::Category(ErrorCategory::InvalidJson),
+                at: ::smallvec::SmallVec::new(),
+                node: None,
+                message: format!("Json Error: {}", &e)
+            }
         }
     }
 }

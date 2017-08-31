@@ -5,6 +5,7 @@ using Imageflow;
 using System.Dynamic;
 using System.IO;
 using System.Text;
+using Imageflow.Native;
 using Xunit.Abstractions;
 
 namespace Imageflow.Test
@@ -108,14 +109,14 @@ namespace Imageflow.Test
         
         
         [Fact]
-        public void TestIr4()
+        public void TestIr4Execute()
         {
             using (var c = new JobContext())
             {
                 c.AddInputBytesPinned(0,
                     Convert.FromBase64String(
                         "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAACklEQVR4nGMAAQAABQABDQottAAAAABJRU5ErkJggg=="));
-                
+                c.AddOutputBuffer(1);
                 var response = c.ExecuteImageResizer4CommandString(0, 1, "w=200&h=200&scale=both&format=jpg");
 
                 var data = response.DeserializeDynamic();
@@ -128,39 +129,91 @@ namespace Imageflow.Test
         }
         
         [Fact]
-        public void TestFileIo()
+        public void TestIr4Build()
         {
-            string from = null;
-            string to = null;
-            try
+            using (var c = new JobContext())
             {
-                from = Path.GetTempFileName();
-                to = Path.GetTempFileName();
-                File.WriteAllBytes(from,  Convert.FromBase64String(
-                    "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAACklEQVR4nGMAAQAABQABDQottAAAAABJRU5ErkJggg=="));
-
-                using (var c = new JobContext())
+                var message = new
                 {
+                    io = new object[]
+                    {
+                        new {
+                            direction = "in",
+                            io_id = 0,
+                            io = new
+                            {
+                                base_64 = "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAACklEQVR4nGMAAQAABQABDQottAAAAABJRU5ErkJggg=="
+                            }
+                        },
+                        new {
+                            direction = "out",
+                            io_id = 1,
+                            io = "output_base_64"
+                        }
+                    },
+                    framewise = new
+                    {
+                        steps = new object[]
+                        {
+                            new
+                            {
+                                command_string = new
+                                {
+                                    kind = "ir4",
+                                    value = "w=200&h=200&scale=both&format=jpg",
+                                    decode = 0,
+                                    encode = 1
+                                }
+                            }
+                        }
+                    }
+                };
 
-                    c.AddInputFile(0,from);
-                    c.AddOutputFile(1, to);
-                    var response = c.ExecuteImageResizer4CommandString(0, 1, "w=200&h=200&scale=both&format=jpg");
+               var response =  c.SendMessage("v0.1/build", message);
 
-                    var data = response.DeserializeDynamic();
+                var data = response.DeserializeDynamic();
 
-                    output.WriteLine(response.GetString());
+                output.WriteLine(response.GetString());
 
-                    Assert.Equal(200, (int) data.code);
-                    Assert.Equal(true, (bool) data.success);
-                    Assert.True(File.ReadAllBytes(to).Length > 0);
-                }
+                Assert.Equal(200, (int)data.code);
+                Assert.Equal(true, (bool)data.success);
             }
-            finally
-            {
-                if (from != null) File.Delete(from);
-                if (to != null) File.Delete(to);
-            }
-            
         }
+        
+//        [Fact]
+//        public void TestFileIo()
+//        {
+//            string from = null;
+//            string to = null;
+//            try
+//            {
+//                from = Path.GetTempFileName();
+//                to = Path.GetTempFileName();
+//                File.WriteAllBytes(from,  Convert.FromBase64String(
+//                    "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAACklEQVR4nGMAAQAABQABDQottAAAAABJRU5ErkJggg=="));
+//
+//                using (var c = new JobContext())
+//                {
+//
+//                    c.AddInputFile(0,from);
+//                    c.AddOutputFile(1, to);
+//                    var response = c.ExecuteImageResizer4CommandString(0, 1, "w=200&h=200&scale=both&format=jpg");
+//
+//                    var data = response.DeserializeDynamic();
+//
+//                    output.WriteLine(response.GetString());
+//
+//                    Assert.Equal(200, (int) data.code);
+//                    Assert.Equal(true, (bool) data.success);
+//                    Assert.True(File.ReadAllBytes(to).Length > 0);
+//                }
+//            }
+//            finally
+//            {
+//                if (from != null) File.Delete(from);
+//                if (to != null) File.Delete(to);
+//            }
+//            
+//        }
     }
 }

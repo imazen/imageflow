@@ -4,37 +4,37 @@ using System.Runtime.InteropServices;
 namespace Imageflow.Native
 {
 
-    public enum IoMode
-    {
-
-        /// None -> 0
-        None = 0,
-
-        /// ReadSequential -> 1
-        ReadSequential = 1,
-
-        /// WriteSequential -> 2
-        WriteSequential = 2,
-
-        /// ReadSeekable -> 5
-        ReadSeekable = 5,
-
-        /// WriteSeekable -> 6
-        WriteSeekable = 6,
-
-        /// ReadWriteSeekable -> 15
-        ReadWriteSeekable = 15,
-    }
-
-    public enum Direction
-    {
-
-        /// Out -> 8
-        Out = 8,
-
-        /// In -> 4
-        In = 4,
-    }
+//    public enum IoMode
+//    {
+//
+//        /// None -> 0
+//        None = 0,
+//
+//        /// ReadSequential -> 1
+//        ReadSequential = 1,
+//
+//        /// WriteSequential -> 2
+//        WriteSequential = 2,
+//
+//        /// ReadSeekable -> 5
+//        ReadSeekable = 5,
+//
+//        /// WriteSeekable -> 6
+//        WriteSeekable = 6,
+//
+//        /// ReadWriteSeekable -> 15
+//        ReadWriteSeekable = 15,
+//    }
+//
+//    public enum Direction
+//    {
+//
+//        /// Out -> 8
+//        Out = 8,
+//
+//        /// In -> 4
+//        In = 4,
+//    }
 
     public enum Lifetime
     {
@@ -49,7 +49,7 @@ namespace Imageflow.Native
     public class NativeMethods
     {
         
-        public const int ABI_MAJOR = 2;
+        public const int ABI_MAJOR = 3;
         public const int ABI_MINOR = 0;
         
         [DllImport("imageflow")] 
@@ -155,10 +155,10 @@ namespace Imageflow.Native
         [return: MarshalAs(UnmanagedType.I1)]
         public static extern bool imageflow_context_add_output_buffer(IntPtr context, int io_id);
         
-        [DllImport("imageflow")] 
-        [return: MarshalAs(UnmanagedType.I1)]
-        public static extern bool  imageflow_context_add_file(IntPtr context, int io_id,Direction direction,  IoMode mode,
-            IntPtr filename);
+//        [DllImport("imageflow")] 
+//        [return: MarshalAs(UnmanagedType.I1)]
+//        public static extern bool  imageflow_context_add_file(IntPtr context, int io_id,Direction direction,  IoMode mode,
+//            IntPtr filename);
 
 
         

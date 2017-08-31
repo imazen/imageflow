@@ -12,7 +12,7 @@ extern "C" {
 
 
 // Incremented for breaking changes
-#define IMAGEFLOW_ABI_VER_MAJOR 2
+#define IMAGEFLOW_ABI_VER_MAJOR 3
 
 // Incremented for non-breaking additions
 #define IMAGEFLOW_ABI_VER_MINOR 0
@@ -28,21 +28,7 @@ typedef unsigned byte uint8_t;
 
 ///
 /// What is possible with the IO object
-typedef enum IoMode {
-	None = 0,
-	ReadSequential = 1,
-	WriteSequential = 2,
-	ReadSeekable = 5,
-	WriteSeekable = 6,
-	ReadWriteSeekable = 15,
-} IoMode;
-
 /// Input or output?
-typedef enum Direction {
-	Out = 8,
-	In = 4,
-} Direction;
-
 ///
 /// How long the provided pointer/buffer will remain valid.
 /// Callers must prevent the memory from being freed or moved until this contract expires.
@@ -216,19 +202,7 @@ bool imageflow_json_response_destroy(void* context, void* response);
 void const* imageflow_context_send_json(void* context, char const* method, uint8_t const* json_buffer, size_t json_buffer_size);
 
 ///
-/// Creates an imageflow_io object to wrap a filename.
-///
-/// The filename should be a null-terminated string. It should be written in codepage used by your operating system for handling `fopen` calls.
-/// https://msdn.microsoft.com/en-us/library/yeby3zcb.aspx
-///
-/// If the filename is fopen compatible, you're probably OK.
-///
-/// As always, `mode` is not enforced except for the file open flags.
-///
-bool imageflow_context_add_file(void* context, int32_t io_id, Direction direction, IoMode mode, char const* filename);
-
-///
-/// Creates an imageflow_io structure for reading from the provided buffer.
+/// Adds an input buffer to the job context.
 /// You are ALWAYS responsible for freeing the memory provided (at the time specified by Lifetime).
 /// If you specify OutlivesFunctionCall, then the buffer will be copied.
 ///
@@ -236,11 +210,8 @@ bool imageflow_context_add_file(void* context, int32_t io_id, Direction directio
 bool imageflow_context_add_input_buffer(void* context, int32_t io_id, uint8_t const* buffer, size_t buffer_byte_count, Lifetime lifetime);
 
 ///
-/// Creates an imageflow_io structure for writing to an expanding memory buffer.
-///
-/// Reads/seeks, are, in theory, supported, but unless you've written, there will be nothing to read.
-///
-/// The I/O structure and buffer will be freed with the context.
+/// Adds an output buffer to the job context.
+/// The  buffer will be freed with the context.
 ///
 ///
 /// Returns null if allocation failed; check the context for error details.

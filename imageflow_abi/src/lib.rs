@@ -131,23 +131,23 @@ use std::str;
 
 ///
 /// What is possible with the IO object
-#[repr(C)]
-pub enum IoMode {
-    None = 0,
-    ReadSequential = 1,
-    WriteSequential = 2,
-    ReadSeekable = 5, // 1 | 4,
-    WriteSeekable = 6, // 2 | 4,
-    ReadWriteSeekable = 15, // 1 | 2 | 4 | 8
-}
+//#[repr(C)]
+//pub enum IoMode {
+//    None = 0,
+//    ReadSequential = 1,
+//    WriteSequential = 2,
+//    ReadSeekable = 5, // 1 | 4,
+//    WriteSeekable = 6, // 2 | 4,
+//    ReadWriteSeekable = 15, // 1 | 2 | 4 | 8
+//}
 
 /// Input or output?
-#[repr(C)]
-#[derive(Copy,Clone)]
-pub enum Direction {
-    Out = 8,
-    In = 4,
-}
+//#[repr(C)]
+//#[derive(Copy,Clone)]
+//pub enum Direction {
+//    Out = 8,
+//    In = 4,
+//}
 
 ///
 /// How long the provided pointer/buffer will remain valid.
@@ -615,53 +615,53 @@ pub fn create_abi_json_response(c: &mut Context,
 }
 
 
+//
+/////
+///// Adds a file input or output to the job context
+/////
+///// The filename should be a null-terminated string that is valid utf-8. It should be written in codepage used by your operating system for handling `fopen` calls.
+///// https://msdn.microsoft.com/en-us/library/yeby3zcb.aspx
+/////
+///// If the filename is fopen compatible, you're probably OK.
+/////
+///// As always, `mode` is not enforced except for the file open flags.
+/////
+//#[no_mangle]
+//#[allow(unused_variables)]
+//pub extern "C" fn imageflow_context_add_file(context: *mut Context, io_id: i32, direction: Direction,
+//                                                      mode: IoMode,
+//                                                      filename: *const libc::c_char)
+//                                                      -> bool {
+//    let mut c = context_ready!(context);
+//    if filename.is_null() {
+//        c.outward_error_mut().try_set_error(nerror!(ErrorKind::NullArgument, "The argument 'filename' is null."));
+//        return false;
+//    }
+//    if c.io_id_present(io_id){
+//        c.outward_error_mut().try_set_error(nerror!(ErrorKind::DuplicateIoId, "The io_id provided is already in use."));
+//        return false;
+//    }
+//
+//    let result = catch_unwind(AssertUnwindSafe(|| {
+//        let filename_str = if let Ok(str) = unsafe{ ::std::ffi::CStr::from_ptr(filename)}.to_str() {
+//            str
+//        } else {
+//            return Err(nerror!(ErrorKind::InvalidArgument, "The argument 'filename' is invalid UTF-8."));
+//        };
+//        let dir = match direction{
+//            Direction::In => IoDirection::In,
+//            Direction::Out => IoDirection::Out
+//        };
+//        c.add_file_with_mode( io_id, dir, filename_str, unsafe {std::mem::transmute(mode)}).map_err(|e| e.at(here!()))?;
+//        Ok(true)
+//    }));
+//
+//    handle_result!(c, result, false)
+//}
+
 
 ///
-/// Creates an imageflow_io object to wrap a filename.
-///
-/// The filename should be a null-terminated string. It should be written in codepage used by your operating system for handling `fopen` calls.
-/// https://msdn.microsoft.com/en-us/library/yeby3zcb.aspx
-///
-/// If the filename is fopen compatible, you're probably OK.
-///
-/// As always, `mode` is not enforced except for the file open flags.
-///
-#[no_mangle]
-#[allow(unused_variables)]
-pub extern "C" fn imageflow_context_add_file(context: *mut Context, io_id: i32, direction: Direction,
-                                                      mode: IoMode,
-                                                      filename: *const libc::c_char)
-                                                      -> bool {
-    let mut c = context_ready!(context);
-    if filename.is_null() {
-        c.outward_error_mut().try_set_error(nerror!(ErrorKind::NullArgument, "The argument 'filename' is null."));
-        return false;
-    }
-    if c.io_id_present(io_id){
-        c.outward_error_mut().try_set_error(nerror!(ErrorKind::DuplicateIoId, "The io_id provided is already in use."));
-        return false;
-    }
-
-    let result = catch_unwind(AssertUnwindSafe(|| {
-        let filename_str = if let Ok(str) = unsafe{ ::std::ffi::CStr::from_ptr(filename)}.to_str() {
-            str
-        } else {
-            return Err(nerror!(ErrorKind::InvalidArgument, "The argument 'filename' is invalid UTF-8."));
-        };
-        let dir = match direction{
-            Direction::In => IoDirection::In,
-            Direction::Out => IoDirection::Out
-        };
-        c.add_file_with_mode( io_id, dir, filename_str, unsafe {std::mem::transmute(mode)}).map_err(|e| e.at(here!()))?;
-        Ok(true)
-    }));
-
-    handle_result!(c, result, false)
-}
-
-
-///
-/// Creates an imageflow_io structure for reading from the provided buffer.
+/// Adds an input buffer to the job context.
 /// You are ALWAYS responsible for freeing the memory provided (at the time specified by Lifetime).
 /// If you specify OutlivesFunctionCall, then the buffer will be copied.
 ///
@@ -705,11 +705,8 @@ pub extern "C" fn imageflow_context_add_input_buffer(context: *mut Context,
 
 
 ///
-/// Creates an imageflow_io structure for writing to an expanding memory buffer.
-///
-/// Reads/seeks, are, in theory, supported, but unless you've written, there will be nothing to read.
-///
-/// The I/O structure and buffer will be freed with the context.
+/// Adds an output buffer to the job context.
+/// The  buffer will be freed with the context.
 ///
 ///
 /// Returns null if allocation failed; check the context for error details.
