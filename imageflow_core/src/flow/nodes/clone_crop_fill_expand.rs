@@ -282,7 +282,7 @@ impl NodeDef for CropMutNodeDef{
         // Validate against actual bitmap
         let _ = self.est_validate(&ctx.weight(ix).params, FrameEstimate::Some(input.frame_info())).map_err(|e| e.at(here!()))?;
 
-        if let s::Node::Crop { x1, x2, y1, y2 } = ctx.get_json_params(ix).unwrap() {
+        if let &NodeParams::Json(s::Node::Crop { x1, x2, y1, y2 }) = &ctx.weight(ix).params {
             // println!("Cropping {}x{} to ({},{}) ({},{})", (*input).w, (*input).h, x1, y1, x2, y2);
 
             let (w, h) = (input.w, input.h);
@@ -302,7 +302,7 @@ impl NodeDef for CropMutNodeDef{
 
             Ok(NodeResult::Frame(input))
         } else {
-            unreachable!(loc!());
+            Err(nerror!(::ErrorKind::NodeParamsMismatch, "Need Crop, got {:?}", &ctx.weight(ix).params))
         }
     }
 }

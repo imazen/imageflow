@@ -53,7 +53,7 @@ pub use errors::*;
 
 
 mod json;
-pub mod flow;
+mod flow;
 mod context_methods;
 mod context;
 mod codecs;
@@ -99,7 +99,7 @@ mod internal_prelude {
         pub use ::{Graph, Context, JsonResponse,
                    MethodRouter};
         #[doc(no_inline)]
-        pub use ::{CError, flow, clients, FlowError, Result, ErrorKind};
+        pub use ::{CError, clients, FlowError, Result, ErrorKind};
         #[doc(no_inline)]
         pub use ::clients::fluent;
     }
@@ -112,7 +112,7 @@ mod internal_prelude {
     #[doc(hidden)]
     pub mod works_everywhere {
         #[doc(no_inline)]
-        pub use ::{CError, flow, clients, FlowError, Result, ErrorKind};
+        pub use ::{CError, clients, FlowError, Result, ErrorKind};
         #[doc(no_inline)]
         pub use ::internal_prelude::external::*;
     }

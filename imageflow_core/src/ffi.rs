@@ -220,8 +220,8 @@ impl BitmapBgra{
             Some(::std::slice::from_raw_parts_mut(self.pixels, (self.stride * self.h) as usize))
         }
     }
-    pub fn frame_info(&self) -> flow::definitions::FrameInfo {
-        flow::definitions::FrameInfo {
+    pub fn frame_info(&self) -> ::flow::definitions::FrameInfo {
+        ::flow::definitions::FrameInfo {
             w: self.w as i32,
             h: self.h as i32,
             fmt: self.fmt

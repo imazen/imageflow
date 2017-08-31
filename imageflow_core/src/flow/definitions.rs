@@ -97,29 +97,6 @@ impl<'a> From<&'a OpCtxMut<'a>> for OpCtx<'a> {
     }
 }
 
-
-pub type OptionalNodeFnMut = Option<fn(&mut OpCtxMut, NodeIndex)>;
-
-pub type OptionalNodeFnMutReturnOptI32 = Option<fn(&mut OpCtxMut, NodeIndex) -> Option<i32>>;
-
-// #[derive(Clone,Debug,PartialEq, Default)]
-pub struct NodeDefinition {
-    // When comparing equality, we just check 'id' (for now)
-    pub fqn: &'static str,
-    pub inbound_edges: EdgesIn,
-    pub outbound_edges: bool,
-    pub name: &'static str,
-    pub description: &'static str,
-
-    pub fn_link_state_to_this_io_id: OptionalNodeFnMutReturnOptI32, //default impl
-    pub fn_estimate: OptionalNodeFnMut,
-    pub fn_flatten_pre_optimize: OptionalNodeFnMut,
-    pub fn_flatten_post_optimize: OptionalNodeFnMut, // not used
-    pub fn_execute: OptionalNodeFnMut,
-}
-
-
-
 // alternate traits for common classes of nodes
 pub trait NodeDefOneInputExpand {
     fn fqn(&self) -> &'static str;

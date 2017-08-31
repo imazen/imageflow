@@ -76,24 +76,6 @@ fn test_err() {
     let e = nerror!(::ErrorKind::BitmapPointerNull, "hi {}", 1);
     assert!(format!("{}",&e).starts_with("InternalError: BitmapPointerNull: hi 1 at"));
 }
-
-pub struct NodeDefHelpers {}
-impl NodeDefHelpers {
-    fn copy_frame_est_from_first_input(ctx: &mut OpCtxMut, ix: NodeIndex) {
-        ctx.copy_frame_est_from_first_input(ix);
-    }
-    fn copy_frame_est_from_first_canvas(ctx: &mut OpCtxMut, ix: NodeIndex) {
-        ctx.copy_frame_est_from_first_canvas(ix);
-    }
-    fn rotate_frame_info(ctx: &mut OpCtxMut, ix: NodeIndex) {
-        ctx.rotate_frame_est_from_first_input(ix);
-    }
-
-    fn delete_node_and_snap_together(ctx: &mut OpCtxMut, ix: NodeIndex) {
-        ctx.delete_node_and_snap_together(ix);
-    }
-}
-
 impl<'c> OpCtxMut<'c> {
     pub fn first_parent_of_kind(&self,
                                     of_node: NodeIndex,
@@ -147,19 +129,6 @@ impl<'c> OpCtxMut<'c> {
         })
     }
 
-    pub fn get_json_params(&self, ix: NodeIndex) -> Option<s::Node> {
-        self.graph.node_weight(ix).and_then(|w| {
-            match w.params {
-                NodeParams::Json(ref node) => Some(node.clone()),
-                _ => None,
-            }
-        })
-    }
-
-    pub fn first_parent_canvas_weight(&self, of_node: NodeIndex) -> Option<&Node> {
-        self.first_parent_canvas(of_node).map(|ix| self.graph.node_weight(ix).unwrap())
-    }
-
     pub fn first_parent_result_frame(&self,
                                              of_node: NodeIndex,
                                              kind: EdgeKind)
@@ -171,14 +140,14 @@ impl<'c> OpCtxMut<'c> {
                 _ => None,
             })
     }
-
-
-
-    pub fn first_parent_input_weight_mut(&mut self,
-                                             of_node: NodeIndex)
-                                             -> Option<&mut Node> {
-        self.first_parent_input(of_node).map(move |ix| self.graph.node_weight_mut(ix).unwrap())
+    pub fn get_decoder_io_ids_and_indexes(&self,
+                                          ancestors_of_node: NodeIndex)
+                                          -> Vec<(i32,NodeIndex)> {
+        self.graph.parents(ancestors_of_node).iter(self.graph).map(|(_, ix)| match self.weight(ix).params{
+            NodeParams::Json(s::Node::Decode { io_id, ..}) => Some((io_id,ix)), _ => None
+        } ).filter(|v| v.is_some()).map(|v| v.unwrap()).collect::<>()
     }
+
 
     pub fn has_other_children(&self,
                                   of_node: NodeIndex,
@@ -197,10 +166,6 @@ impl<'c> OpCtxMut<'c> {
     pub fn weight_mut(&mut self, node_to_update: NodeIndex) -> &mut Node {
         self.graph.node_weight_mut(node_to_update).unwrap()
     }
-    pub fn copy_frame_est_from_first_input(&mut self, node_to_update: NodeIndex) {
-        self.graph.node_weight_mut(node_to_update).unwrap().frame_est = self.frame_est_from(node_to_update, EdgeKind::Input).unwrap();
-    }
-
 
     pub fn frame_info_from(&self, ix: NodeIndex, filter_by_kind: EdgeKind) -> Result<FrameInfo> {
         let parent = self.first_parent_of_kind_required(ix, filter_by_kind)?;
@@ -256,53 +221,9 @@ impl<'c> OpCtxMut<'c> {
         result
     }
 
-    pub fn copy_frame_est_from_first_canvas(&mut self, node_to_update: NodeIndex) {
-        if let  Some(input_ix) = self.first_parent_canvas(node_to_update) {
-            self.graph.node_weight_mut(node_to_update).unwrap().frame_est =
-                self.graph.node_weight(input_ix).unwrap().frame_est;
-        }
-    }
-    pub fn frame_est_from_first_canvas(&mut self, node_to_update: NodeIndex) -> Option<FrameEstimate>{
-        self.first_parent_canvas(node_to_update).map(|ix| self.graph.node_weight(ix).unwrap().frame_est)
-    }
-
-    pub fn assert_ok(&self) {
-        if self.c.c_error().has_error(){
-            cerror!(self.c).panic();
-        }
-    }
 
 
 
-    pub fn rotate_frame_est_from_first_input(&mut self,
-                                                     node_to_update: NodeIndex) {
-        // TODO: select by EdgeKind=Input
-        let input = self.graph
-            .graph()
-            .neighbors_directed(node_to_update, EdgeDirection::Incoming)
-            .nth(0);
-        if let Some(input_ix) = input {
-            let input_est = self.graph.node_weight(input_ix).unwrap().frame_est;
-            let mut w = self.graph.node_weight_mut(node_to_update).unwrap();
-            w.frame_est = match input_est {
-                FrameEstimate::Some(info) => {
-                    FrameEstimate::Some(FrameInfo {
-                        w: info.h,
-                        h: info.w,
-                        ..info
-                    })
-                }
-                FrameEstimate::UpperBound(info) => {
-                    FrameEstimate::UpperBound(FrameInfo {
-                        w: info.h,
-                        h: info.w,
-                        ..info
-                    })
-                }
-                other => other,
-            };
-        }
-    }
 
     pub fn copy_edges_to(&mut self,
                              from_node: NodeIndex,
@@ -383,21 +304,9 @@ impl<'c> OpCtxMut<'c> {
         self.graph.remove_node(index).unwrap();
     }
 
-    pub fn get_decoder_io_ids_and_indexes(&self,
-                              ancestors_of_node: NodeIndex)
-                              -> Vec<(i32,NodeIndex)> {
-        self.graph.parents(ancestors_of_node).iter(self.graph).map(|(_, ix)| match self.weight(ix).params{
-            NodeParams::Json(s::Node::Decode { io_id, ..}) => Some((io_id,ix)), _ => None
-        } ).filter(|v| v.is_some()).map(|v| v.unwrap()).collect::<>()
-    }
-    pub fn get_decoder_io_ids(&self,
-                                          ancestors_of_node: NodeIndex)
-                                          -> Vec<i32> {
-        self.get_decoder_io_ids_and_indexes(ancestors_of_node).into_iter().map(|(a,b)| a).collect::<>()
-    }
-    pub fn get_image_info_list(&mut self,
-                            ancestors_of_node: NodeIndex) -> Vec<Result<s::ImageInfo>>{
-        self.get_decoder_io_ids(ancestors_of_node).into_iter().map(|io_id| self.job.get_image_info(io_id)).collect::<>()
-    }
+
+
+
+
 
 }

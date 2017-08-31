@@ -28,7 +28,7 @@ impl NodeDefMutateBitmap for ColorMatrixSrgbMutDef{
                 if !::ffi::flow_bitmap_bgra_apply_color_matrix(c.flow_c(), bitmap, 0, (*bitmap).h, color_matrix_ptrs.as_ptr()) {
                     return Err(cerror!(c, "Failed to apply color matrix"))
                 }
-                //TODO: is there a better way to ensure a pointer is valid for a duration even if lexical scopes arrive?
+
                 let _ = color_matrix_ptrs;
 
             }
