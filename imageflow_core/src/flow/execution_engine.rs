@@ -157,17 +157,30 @@ impl<'a, 'b> Engine<'a, 'b> where 'a: 'b {
         self.notify_graph_changed()?;
 
         for index in 0..self.g.node_count() {
-            let n = self.g
-                .node_weight(NodeIndex::new(index))
-                .unwrap();
 
-            if let Some((io_id, commands)) = n.def.tell_decoder(&n.params) {
+            let result = {
+                let n = self.g
+                    .node_weight(NodeIndex::new(index))
+                    .unwrap();
+                n.def.tell_decoder(&n.params)
+            };
+            let result_value = result.map_err( |e| e.at(here!()).with_ctx_mut(&self.op_ctx_mut(),NodeIndex::new(index)))?;
+            if let Some((io_id, commands)) = result_value {
                 for c in commands.iter() {
                     self.job.tell_decoder(io_id, c.to_owned()).unwrap();
                 }
             }
         }
 
+        Ok(())
+    }
+
+    pub fn invalidate_all_graph_estimates(&mut self) -> Result<()>{
+
+        for index in 0..self.g.node_count() {
+            self.g.node_weight_mut(NodeIndex::new(index))
+                    .unwrap().frame_est = FrameEstimate::None;
+        }
         Ok(())
     }
 
@@ -290,7 +303,12 @@ impl<'a, 'b> Engine<'a, 'b> where 'a: 'b {
                 panic!("Node estimation misbehaved on {}. Cannot leave FrameEstimate::None, must chose an alternative",
                        self.g.node_weight(node_id).unwrap().def.name());
             },
-            Ok(FrameEstimate::Invalidated) => {
+            Ok(FrameEstimate::InvalidateGraph) => {
+                self.invalidate_all_graph_estimates()?;
+
+                // Restore this one nodes' estimate
+                self.g.node_weight_mut(node_id).unwrap().frame_est = FrameEstimate::InvalidateGraph;
+
                 return self.estimate_node_recursive(node_id, recurse_limit -1)
             },
             other => other
@@ -331,7 +349,7 @@ impl<'a, 'b> Engine<'a, 'b> where 'a: 'b {
                             .unwrap()
                             .frame_est {} else {
                             //Try estimation one last time if it didn't happen yet
-                            let _ = self.estimate_node_recursive(nix,100);
+                            let _ = self.estimate_node_recursive(nix,100).map_err(|e| e.at(here!()))?;
                         }
                         next = Some((nix, def));
                         break;
@@ -343,7 +361,7 @@ impl<'a, 'b> Engine<'a, 'b> where 'a: 'b {
                 None => return Ok(()),
                 Some((next_ix, def)) => {
                     let mut ctx = self.op_ctx_mut();
-                    let _ = def.expand(&mut ctx, next_ix)?;
+                    let _ = def.expand(&mut ctx, next_ix).map_err(|e| e.with_ctx_mut(&ctx, next_ix).at(here!()))?;
 
                 }
             }
@@ -390,8 +408,8 @@ impl<'a, 'b> Engine<'a, 'b> where 'a: 'b {
                             .node_weight(index)
                             .unwrap()
                             .frame_est.is_none(){
-                            //Try estimation one last time if it didn't happen yet
-                            let _ = self.estimate_node(index).map_err(|e| e.at(here!()))?;
+
+                            let _ = self.estimate_node_recursive(index,100).map_err(|e| e.at(here!()))?;
                         }
                         next = Some((index, def));
                         break;

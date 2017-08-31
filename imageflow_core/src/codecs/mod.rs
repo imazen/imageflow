@@ -19,7 +19,7 @@ pub trait DecoderFactory{
 pub trait Decoder{
     fn initialize(&mut self, c: &Context) -> Result<()>;
     fn get_image_info(&mut self, c: &Context, io: &mut IoProxy) -> Result<s::ImageInfo>;
-    fn get_exif_rotation_flag(&mut self, c: &Context) -> Result<i32>;
+    fn get_exif_rotation_flag(&mut self, c: &Context) -> Result<Option<i32>>;
     fn tell_decoder(&mut self, c: &Context, tell: s::DecoderCommand) -> Result<()>;
     fn read_frame(&mut self, c: &Context, io: &mut IoProxy) -> Result<*mut BitmapBgra>;
 }
@@ -151,12 +151,16 @@ impl Decoder for ClassicDecoder{
         }
     }
 
-    fn get_exif_rotation_flag(&mut self, c: &Context) -> Result<i32> {
-
+    fn get_exif_rotation_flag(&mut self, c: &Context) -> Result<Option<i32>> {
         let exif_flag = unsafe {
             ffi::flow_codecs_jpg_decoder_get_exif(c.flow_c(),
-                                                  &mut self.classic as*mut ffi::CodecInstance) };
-        Ok(exif_flag)
+                                                  &mut self.classic as *mut ffi::CodecInstance)
+        };
+        if exif_flag >= 0 {
+            Ok(Some(exif_flag))
+        } else {
+            Ok(None)
+        }
     }
     fn read_frame(&mut self, c: &Context, io: &mut IoProxy) -> Result<*mut BitmapBgra> {
         let result = unsafe {

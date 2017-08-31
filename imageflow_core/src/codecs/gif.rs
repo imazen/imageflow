@@ -56,8 +56,8 @@ impl Decoder for GifDecoder {
         })
     }
 
-    fn get_exif_rotation_flag(&mut self, c: &Context) -> Result<i32> {
-        Ok(0)
+    fn get_exif_rotation_flag(&mut self, c: &Context) -> Result<Option<i32>> {
+        Ok(None)
     }
 
     fn tell_decoder(&mut self, c: &Context, tell: s::DecoderCommand) -> Result<()> {

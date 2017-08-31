@@ -4,19 +4,19 @@ use super::internal_prelude::*;
 pub static CONSTRAIN: ConstrainDef = ConstrainDef{};
 pub static COMMAND_STRING: CommandStringDef = CommandStringDef{};
 
-lazy_static! {
-    pub static ref EXPANDING_COMMAND_STRING: NodeDefinition = command_string_partially_expanded_def();
-}
+pub static EXPANDING_COMMAND_STRING: CommandStringPartiallyExpandedDef = CommandStringPartiallyExpandedDef{};
 
 
 
-fn get_expand(ctx: &mut OpCtxMut, ix: NodeIndex) -> ::imageflow_riapi::ir4::Ir4Expand{
-    let input = ctx.first_parent_frame_info_some(ix).unwrap();
-    if let s::Node::CommandString{ref kind, ref value, ref decode, ref encode} =
-    ctx.get_json_params(ix).unwrap() {
+
+fn get_expand(ctx: &mut OpCtxMut, ix: NodeIndex) -> Result<::imageflow_riapi::ir4::Ir4Expand>{
+    let input = ctx.first_parent_frame_info_some(ix).ok_or_else(|| nerror!(::ErrorKind::InvalidNodeConnections, "CommandString node requires that its parent nodes be perfectly estimable"))?;
+    let params = &ctx.weight(ix).params;
+    if let &NodeParams::Json(s::Node::CommandString{ref kind, ref value, ref decode, ref encode}) =
+    params {
         match kind {
             &s::CommandStringKind::ImageResizer4 => {
-                ::imageflow_riapi::ir4::Ir4Expand {
+                Ok(::imageflow_riapi::ir4::Ir4Expand {
                     i: ::imageflow_riapi::ir4::Ir4Command::QueryString(value.to_owned()),
                     encode_id: *encode,
                     source: ::imageflow_riapi::ir4::Ir4SourceFrameInfo {
@@ -25,75 +25,69 @@ fn get_expand(ctx: &mut OpCtxMut, ix: NodeIndex) -> ::imageflow_riapi::ir4::Ir4E
                         fmt: input.fmt,
                         original_mime: None
                     }
-                }
+                })
             }
         }
     }else{
-        panic!("");
+        Err(nerror!(::ErrorKind::NodeParamsMismatch, "Need CommandString, got {:?}", params))
     }
 }
 
 
 
-
-fn command_string_partially_expanded_def() -> NodeDefinition {
-    NodeDefinition {
-        fqn: "imazen.expanding_command_string",
-        name: "expanding_command_string",
-        inbound_edges: EdgesIn::OneInput,
-        description: "expanding command string",
-        fn_estimate: Some({
-            fn f(ctx: &mut OpCtxMut, ix: NodeIndex) {
-
-                let old_estimate = ctx.weight(ix).frame_est;
+#[derive(Debug,Clone)]
+pub struct CommandStringPartiallyExpandedDef;
 
 
-                if old_estimate == FrameEstimate::Invalidated{
-                    ctx.weight_mut(ix).frame_est = FrameEstimate::Impossible;
-                } else {
-                    let e = get_expand(ctx, ix);
 
-                    if let Some(command) = e.get_decode_commands().unwrap() {
-                        //Send command to codec
-                        for (io_id, decoder_ix) in ctx.get_decoder_io_ids_and_indexes(ix) {
-                            ctx.job.tell_decoder(io_id, command.clone()).unwrap();
-                            ctx.weight_mut(decoder_ix).frame_est = FrameEstimate::Invalidated;
-                        }
-                    }
+impl NodeDef for CommandStringPartiallyExpandedDef{
+    fn fqn(&self) -> &'static str{
+        "imazen.expanding_command_string"
+    }
+    fn edges_required(&self, p: &NodeParams) -> Result<(EdgesIn, EdgesOut)>{
+        Ok((EdgesIn::OneInput, EdgesOut::Any))
+    }
+    fn validate_params(&self, p: &NodeParams) -> Result<()>{
+        Ok(()) //TODO: need way to provide warnings
+    }
+    fn estimate(&self, ctx: &mut OpCtxMut, ix: NodeIndex) -> Result<FrameEstimate>{
+        let old_estimate = ctx.weight(ix).frame_est;
 
-                    //                let canvas = e.get_canvas_size().unwrap();
-                    ctx.weight_mut(ix).frame_est = FrameEstimate::Invalidated;
-                }
+        if old_estimate == FrameEstimate::InvalidateGraph{
+            Ok(FrameEstimate::Impossible)
+        } else {
+            let e = get_expand(ctx, ix).map_err(|e| e.at(here!()))?;
 
-
-                //                FrameEstimate::UpperBound(FrameInfo {
-                //                    w: canvas.width(),
-                //                    h: canvas.height(),
-                //                    fmt: PixelFormat::Bgra32,
-                //                    alpha_meaningful: true
-                //                });
-            }
-            f
-        }),
-        fn_flatten_pre_optimize: Some({
-            fn f(ctx: &mut OpCtxMut, ix: NodeIndex) {
-                let e = get_expand(ctx, ix);
-
-
-                match e.expand_steps() {
-                    Ok(r) => {
-                        //TODO: Find a way to expose warnings
-                        ctx.replace_node(ix, r.steps.unwrap().into_iter().map(|n| Node::from(n)).collect::<>());
-                    }
-                    Err(e) => {
-                        //TODO: reparse to get warnings
-                        panic!("{:?}", e);
-                    }
+            if let Some(command) = e.get_decode_commands().map_err(|e|FlowError::from_layout(e).at(here!()))? {
+                //Send command to codec
+                for (io_id, decoder_ix) in ctx.get_decoder_io_ids_and_indexes(ix) {
+                    ctx.job.tell_decoder(io_id, command.clone()).map_err(|e| e.at(here!()))?;
                 }
             }
-            f
-        }),
-        ..Default::default()
+
+            Ok(FrameEstimate::InvalidateGraph)
+        }
+    }
+    fn can_expand(&self) -> bool{
+        true
+    }
+
+    fn expand(&self, ctx: &mut OpCtxMut, ix: NodeIndex) -> Result<()> {
+
+        let e = get_expand(ctx, ix).map_err(|e| e.at(here!()))?;
+
+
+        match e.expand_steps().map_err(|e| FlowError::from_layout(e).at(here!())) {
+            Ok(r) => {
+                //TODO: Find a way to expose warnings
+                ctx.replace_node(ix, r.steps.unwrap().into_iter().map(|n| Node::from(n)).collect::<>());
+                Ok(())
+            }
+            Err(e) => {
+                //TODO: reparse to get warnings
+                Err(e)
+            }
+        }
     }
 }
 
@@ -266,14 +260,14 @@ impl NodeDef for CommandStringDef{
                 }.get_decode_node().unwrap();
                 ctx.replace_node(ix, vec![
                     Node::from(decode_node),
-                    Node::new(&EXPANDING_COMMAND_STRING, params)
+                    Node::n(&EXPANDING_COMMAND_STRING, params)
                 ]);
             } else {
                 if !has_parent {
                     return Err(nerror!(::ErrorKind::InvalidNodeParams,"CommandString must have a parent node unless 'decode' has a numeric value. Otherwise it has no image source. "));
                 }
                 ctx.replace_node(ix, vec![
-                    Node::new(&EXPANDING_COMMAND_STRING, params)
+                    Node::n(&EXPANDING_COMMAND_STRING, params)
                 ]);
             }
             Ok(())

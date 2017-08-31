@@ -10,7 +10,7 @@ use num::FromPrimitive;
 use ::ffi;
 use std::ffi::CStr;
 use std::ptr;
-
+use ::imageflow_riapi::sizing::LayoutError;
 
 #[test]
 fn test_file_macro_for_this_build(){
@@ -167,7 +167,7 @@ pub enum ErrorKind{
 
     GraphCyclic,
     InvalidNodeConnections,
-
+    LayoutError,
     DuplicateIoId,
     GraphInvalid,
     NullArgument,
@@ -202,6 +202,7 @@ impl CategorizedError for ErrorKind{
             &ErrorKind::IoIdNotFound |
             &ErrorKind::ItemNotFound |
             &ErrorKind::DuplicateIoId |
+            &ErrorKind::LayoutError |
             &ErrorKind::InvalidNodeParams => ErrorCategory::ArgumentInvalid,
 
             &ErrorKind::FailedBorrow |
@@ -337,8 +338,16 @@ impl FlowError {
                 kind: ErrorKind::Category(ErrorCategory::InvalidJson),
                 at: ::smallvec::SmallVec::new(),
                 node: None,
-                message: format!("Json Error: {}", &e)
+                message: format!("InvalidJson: {}", &e)
             }
+        }
+    }
+    pub fn from_layout(e: LayoutError) -> FlowError{
+        FlowError{
+            kind: ErrorKind::LayoutError,
+            at: ::smallvec::SmallVec::new(),
+            node: None,
+            message: format!("LayoutError: {:?}", &e)
         }
     }
 }

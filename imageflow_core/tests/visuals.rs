@@ -552,7 +552,7 @@ fn test_with_callback(checksum_name: String, input: s::IoEnum, callback: fn(s::I
     let matched:bool;
 
     unsafe {
-        ::imageflow_core::parsing::IoTranslator{}.add_all(&mut context, vec![s::IoObject{ io_id:0, direction: s::IoDirection::In, io: input}]);
+        ::imageflow_core::parsing::IoTranslator{}.add_all(&mut context, vec![s::IoObject{ io_id:0, direction: s::IoDirection::In, io: input}]).unwrap();
 
 
         let image_info = context.get_image_info(0).unwrap();

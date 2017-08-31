@@ -2,11 +2,10 @@ use super::internal_prelude::*;
 
 pub static BITMAP_BGRA_POINTER: BitmapBgraDef = BitmapBgraDef{};
 
-lazy_static! {
-    pub static ref DECODER: NodeDefinition = decoder_def();
-    pub static ref ENCODE: NodeDefinition = encoder_def();
-    pub static ref PRIMITIVE_DECODER: NodeDefinition = primitive_decoder_def();
-}
+pub static DECODER: DecoderDef = DecoderDef{};
+pub static ENCODE: EncoderDef = EncoderDef{};
+pub static PRIMITIVE_DECODER: DecoderPrimitiveDef = DecoderPrimitiveDef{};
+
 
 #[derive(Debug,Clone)]
 pub struct BitmapBgraDef{}
@@ -80,203 +79,180 @@ impl NodeDef for BitmapBgraDef {
         }
     }
 }
-//
-//#[derive(Debug,Clone)]
-//pub struct DecoderDef{}
-//
-//impl DecoderDef{
-//    fn get(&self, p: &NodeParams) -> NResult<(i32, Vec<s::DecoderCommand>)> {
-//        match ctx.weight(ix).params {
-//            NodeParams::Json(s::Node::Decode { io_id, commands }) => Ok(io_id),
-//            _ => Err(nerror!(::ErrorKind::NodeParamsMismatch, "Need Decode, got {:?}", p)),
-//        }
-//    }
-//}
-//
-//impl NodeDef for DecoderDef {
-//    fn fqn(&self) -> &'static str {
-//        "imazen.decoder"
-//    }
-//    fn edges_required(&self, p: &NodeParams) -> NResult<(EdgesIn, EdgesOut)> {
-//        Ok((EdgesIn::None, EdgesOut::Any))
-//    }
-//
-//    fn validate_params(&self, p: &NodeParams) -> NResult<()> {
-//        self.get(p).map_err(|e| e.at(here!())).map(|_| ())
-//    }
-//
-//    fn tell_decoder(&self, p: &NodeParams) -> Option<(i32, Vec<s::DecoderCommand>)> {
-//        None
-//    }
-//
-//
-//    fn estimate(&self, ctx: &mut OpCtxMut, ix: NodeIndex) -> NResult<FrameEstimate> {
-//        let params = &ctx.weight(ix).params;
-//
-//        let ptr = self.get(p).map_err(|e| e.at(here!()))?;
-//
-//        unsafe {
-//            if (*ptr).is_null() {
-//                let input = ctx.frame_est_from(ix, EdgeKind::Input).map_err(|e| e.at(here!()))?;
-//                Ok((input))
-//            } else {
-//                let b = &(**ptr);
-//                Ok(FrameEstimate::Some(FrameInfo {
-//                    w: b.w as i32,
-//                    h: b.h as i32,
-//                    fmt: b.fmt,
-//                    alpha_meaningful: b.alpha_meaningful
-//                }));
-//            }
-//        }
-//    }
-//    fn can_expand(&self) -> bool {
-//        true
-//    }
-//
-//    fn expand(&self, ctx: &mut OpCtxMut, ix: NodeIndex) -> NResult<()> {
-//        // Mutate instead of replace
-//        ctx.weight_mut(ix).def = PRIMITIVE_DECODER.as_node_def();
-//
-//        let io_id = decoder_encoder_io_id(ctx, ix).unwrap();
-//
-//        if let Ok(exif_flag) = ctx.job.get_exif_rotation_flag(io_id){
-//            if exif_flag > 0 {
-//                let new_node = ctx.graph
-//                    .add_node(Node::n(&APPLY_ORIENTATION,
-//                                      NodeParams::Json(s::Node::ApplyOrientation {
-//                                          flag: exif_flag,
-//                                      })));
-//                ctx.copy_edges_to(ix, new_node, EdgeDirection::Outgoing);
-//                ctx.delete_child_edges_for(ix);
-//                ctx.graph.add_edge(ix, new_node, EdgeKind::Input).unwrap();
-//            }
-//        }
-//    }
-//}
 
+#[derive(Debug,Clone)]
+pub struct DecoderDef{}
 
-
-
-    fn decoder_encoder_io_id(ctx: &mut OpCtxMut, ix: NodeIndex) -> Option<i32> {
-    match ctx.weight(ix).params {
-        NodeParams::Json(s::Node::Decode { io_id, .. }) |
-        NodeParams::Json(s::Node::Encode { io_id, .. }) => Some(io_id),
-        _ => None,
+fn decoder_get_io_id(params: &NodeParams) -> Result<i32> {
+    if let &NodeParams::Json(s::Node::Decode { io_id, .. }) = params {
+        Ok(io_id)
+    }else{
+        Err(nerror!(::ErrorKind::NodeParamsMismatch, "Need Decode, got {:?}", params))
     }
 }
+fn decoder_estimate(ctx: &mut OpCtxMut, ix: NodeIndex) -> Result<FrameEstimate> {
+    let io_id = decoder_get_io_id(&ctx.weight(ix).params).map_err(|e| e.at(here!()))?;
+    let frame_info = ctx.job.get_image_info(io_id).map_err(|e| e.at(here!()))?;
 
-fn decoder_estimate(ctx: &mut OpCtxMut, ix: NodeIndex) {
-    let io_id = decoder_encoder_io_id(ctx, ix).unwrap();
-    let frame_info: s::ImageInfo = ctx.job.get_image_info(io_id).unwrap();
-
-    ctx.weight_mut(ix).frame_est = FrameEstimate::Some(FrameInfo {
+    Ok(FrameEstimate::Some(FrameInfo {
         fmt: frame_info.frame_decodes_into,
         w: frame_info.image_width,
         h: frame_info.image_height
-    });
+    }))
 }
 
-// Todo list codec name in stringify
-
-fn decoder_def() -> NodeDefinition {
-    NodeDefinition {
-        fqn: "imazen.decoder",
-        name: "decoder",
-        outbound_edges: true,
-        inbound_edges: EdgesIn::NoInput,
-        fn_estimate: Some(decoder_estimate),
-
-        // Allow link-up
-        fn_link_state_to_this_io_id: Some(decoder_encoder_io_id),
-        fn_flatten_pre_optimize: {
-            fn f(ctx: &mut OpCtxMut, ix: NodeIndex) {
-
-                // Mutate instead of replace
-                ctx.weight_mut(ix).def = PRIMITIVE_DECODER.as_node_def();
-
-                let io_id = decoder_encoder_io_id(ctx, ix).unwrap();
-
-                if let Ok(exif_flag) = ctx.job.get_exif_rotation_flag(io_id){
-                    if exif_flag > 0 {
-                        let new_node = ctx.graph
-                            .add_node(Node::n(&APPLY_ORIENTATION,
-                                                NodeParams::Json(s::Node::ApplyOrientation {
-                                                    flag: exif_flag,
-                                                })));
-                        ctx.copy_edges_to(ix, new_node, EdgeDirection::Outgoing);
-                        ctx.delete_child_edges_for(ix);
-                        ctx.graph.add_edge(ix, new_node, EdgeKind::Input).unwrap();
-                    }
-                }
-
-            }
-            Some(f)
-        },
-        ..Default::default()
+impl NodeDef for DecoderDef {
+    fn fqn(&self) -> &'static str {
+        "imazen.decoder"
     }
-}
-fn primitive_decoder_def() -> NodeDefinition {
-    NodeDefinition {
-        fqn: "imazen.primitive_decoder",
-        name: "primitive_decoder",
-        outbound_edges: true,
-        inbound_edges: EdgesIn::NoInput,
-        fn_estimate: Some(decoder_estimate),
-        fn_link_state_to_this_io_id: Some(decoder_encoder_io_id),
-        fn_execute: Some({
-            fn f(ctx: &mut OpCtxMut, ix: NodeIndex) {
-                let io_id = decoder_encoder_io_id(ctx, ix).unwrap();
+    fn edges_required(&self, p: &NodeParams) -> Result<(EdgesIn, EdgesOut)> {
+        Ok((EdgesIn::NoInput, EdgesOut::Any))
+    }
 
-                let result = ctx.job.get_codec(io_id).unwrap().get_decoder().unwrap().read_frame(ctx.c, &mut *ctx.c.get_io(io_id).unwrap()).unwrap();
-                ctx.weight_mut(ix).result = NodeResult::Frame(result);
+    fn validate_params(&self, p: &NodeParams) -> Result<()> {
+        decoder_get_io_id(p).map_err(|e| e.at(here!())).map(|_| ())
+    }
+
+    fn tell_decoder(&self, p: &NodeParams) -> Result<Option<(i32, Vec<s::DecoderCommand>)>> {
+        Ok(None)
+    }
+
+
+    fn estimate(&self, ctx: &mut OpCtxMut, ix: NodeIndex) -> Result<FrameEstimate> {
+        decoder_estimate(ctx, ix).map_err(|e| e.at(here!()))
+    }
+    fn can_expand(&self) -> bool {
+        true
+    }
+
+    fn expand(&self, ctx: &mut OpCtxMut, ix: NodeIndex) -> Result<()> {
+        let io_id = decoder_get_io_id(&ctx.weight(ix).params)?;
+
+        // Add the neccessary rotation step afterwards
+        if let Some(exif_flag) = ctx.job.get_exif_rotation_flag(io_id).map_err(|e| e.at(here!()))?{
+            if exif_flag > 0 {
+                let new_node = ctx.graph
+                    .add_node(Node::n(&APPLY_ORIENTATION,
+                                      NodeParams::Json(s::Node::ApplyOrientation {
+                                          flag: exif_flag,
+                                      })));
+                ctx.copy_edges_to(ix, new_node, EdgeDirection::Outgoing);
+                ctx.delete_child_edges_for(ix);
+                ctx.graph.add_edge(ix, new_node, EdgeKind::Input).unwrap();
             }
-            f
-        }),
-        ..Default::default()
+        }
+        // Mutate instead of replace
+        ctx.weight_mut(ix).def = &PRIMITIVE_DECODER;
+        Ok(())
+
     }
 }
 
-fn encoder_def() -> NodeDefinition {
-    NodeDefinition {
-        fqn: "imazen.primitive_encoder",
-        name: "primitive_encoder",
-        outbound_edges: false,
-        inbound_edges: EdgesIn::OneInput,
-        // Allow link-up
-        fn_link_state_to_this_io_id: Some(decoder_encoder_io_id),
-        fn_estimate: Some(NodeDefHelpers::copy_frame_est_from_first_input),
 
-        fn_execute: Some({
-            fn f(ctx: &mut OpCtxMut, ix: NodeIndex) {
-                let io_id = decoder_encoder_io_id(ctx, ix).unwrap();
 
-                if let Some(input_bitmap) = ctx.first_parent_result_frame(ix, EdgeKind::Input) {
-                    let result;
-                    {
-                        let weight = ctx.weight(ix);
-                        if let NodeParams::Json(s::Node::Encode { ref preset, ref io_id, .. }) =
-                               weight.params {
 
-                            result = NodeResult::Encoded(
-                                ctx.job.get_codec(*io_id).unwrap().write_frame(ctx.c, preset,unsafe{ &mut *input_bitmap } ).unwrap());
 
-                        } else {
-                            panic!("");
-                        }
-                    }
-                    {
-                        ctx.weight_mut(ix).result = result;
-                    }
-                } else {
-                    panic!("");
-                }
+#[derive(Debug,Clone)]
+pub struct DecoderPrimitiveDef{}
 
-            }
-            f
-        }),
-
-        ..Default::default()
+impl DecoderPrimitiveDef{
+    fn get(&self, params: &NodeParams) -> Result<(i32, Option<Vec<s::DecoderCommand>>)> {
+        if let &NodeParams::Json(s::Node::Decode { io_id, ref commands }) = params {
+            Ok((io_id, commands.clone()))
+        }else{
+            Err(nerror!(::ErrorKind::NodeParamsMismatch, "Need Decode, got {:?}", params))
+        }
     }
 }
+
+impl NodeDef for DecoderPrimitiveDef {
+    fn fqn(&self) -> &'static str {
+        "imazen.primitive_decoder"
+    }
+    fn edges_required(&self, p: &NodeParams) -> Result<(EdgesIn, EdgesOut)> {
+        Ok((EdgesIn::NoInput, EdgesOut::Any))
+    }
+
+    fn validate_params(&self, p: &NodeParams) -> Result<()> {
+        // TODO: validate DecoderCommands?
+        decoder_get_io_id(p).map_err(|e| e.at(here!())).map(|_| ())
+    }
+
+    fn tell_decoder(&self, p: &NodeParams) -> Result<Option<(i32, Vec<s::DecoderCommand>)>> {
+        let (io_id, commands) = self.get(p)?;
+        if let Some(v) = commands{
+            Ok(Some((io_id, v)))
+        }else{
+            Ok(None)
+        }
+
+    }
+
+    fn estimate(&self, ctx: &mut OpCtxMut, ix: NodeIndex) -> Result<FrameEstimate> {
+        decoder_estimate(ctx, ix).map_err(|e| e.at(here!()))
+    }
+    fn can_execute(&self) -> bool {
+        true
+    }
+
+    fn execute(&self, ctx: &mut OpCtxMut, ix: NodeIndex) -> Result<NodeResult> {
+        let io_id = decoder_get_io_id(&ctx.weight(ix).params)?;
+
+        let mut io = ctx.c.get_io(io_id).map_err(|e| e.at(here!()))?;
+
+        let result = ctx.c.get_codec(io_id).map_err(|e| e.at(here!()))?
+            .get_decoder().map_err(|e| e.at(here!()))?
+            .read_frame(ctx.c, &mut *io).map_err(|e| e.at(here!()))?;
+        Ok(NodeResult::Frame(result))
+    }
+}
+
+
+
+
+#[derive(Debug,Clone)]
+pub struct EncoderDef{}
+
+impl EncoderDef{
+    fn get(&self, params: &NodeParams) -> Result<(i32, s::EncoderPreset)> {
+        if let &NodeParams::Json(s::Node::Encode { io_id, ref preset }) = params {
+            Ok((io_id, preset.clone()))
+        }else{
+            Err(nerror!(::ErrorKind::NodeParamsMismatch, "Need Encode, got {:?}", params))
+        }
+    }
+}
+
+impl NodeDef for EncoderDef {
+    fn fqn(&self) -> &'static str {
+        "imazen.primitive_encoder"
+    }
+    fn edges_required(&self, p: &NodeParams) -> Result<(EdgesIn, EdgesOut)> {
+        Ok((EdgesIn::OneInput, EdgesOut::None))
+    }
+
+    fn validate_params(&self, p: &NodeParams) -> Result<()> {
+        // TODO: validate Presets?
+        self.get(p).map_err(|e| e.at(here!())).map(|_| ())
+    }
+
+    fn estimate(&self, ctx: &mut OpCtxMut, ix: NodeIndex) -> Result<FrameEstimate> {
+        ctx.frame_est_from(ix, EdgeKind::Input).map_err(|e| e.at(here!()))
+    }
+    fn can_execute(&self) -> bool {
+        true
+    }
+
+    fn execute(&self, ctx: &mut OpCtxMut, ix: NodeIndex) -> Result<NodeResult> {
+        let (io_id, preset) = self.get(&ctx.weight(ix).params)?;
+        let input_bitmap = ctx.bitmap_bgra_from(ix, EdgeKind::Input).map_err(|e| e.at(here!()))?;
+
+        let result = ctx.job.get_codec(io_id).map_err(|e| e.at(here!()))?
+                    .write_frame(ctx.c, &preset,unsafe{ &mut *input_bitmap } ).map_err(|e| e.at(here!()))?;
+
+        Ok(NodeResult::Encoded(result))
+    }
+}
+
+
 

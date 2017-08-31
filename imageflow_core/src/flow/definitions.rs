@@ -193,8 +193,8 @@ pub trait NodeDef: ::std::fmt::Debug{
         self.fqn().split_terminator('.').next_back().expect("Node fn fqn() was empty. Value is required.")
     }
     // There is "immediate" tell decoder and "during estimate" tell decoder. This is the former.
-    fn tell_decoder(&self, p: &NodeParams) -> Option<(i32, Vec<s::DecoderCommand>)> {
-        None
+    fn tell_decoder(&self, p: &NodeParams) -> Result<Option<(i32, Vec<s::DecoderCommand>)>> {
+        Ok(None)
     }
 
     /// Edges will be validated before calling estimation or execution or flattening
@@ -326,98 +326,40 @@ impl<T> NodeDefOneInputExpand for MutProtect<T> where T: NodeDef{
     }
 }
 
+//    fn graphviz_node_label(&self, n: &Node, f: &mut std::io::Write) -> std::io::Result<()>{
+//
+//        // name { est f1, f2, ex } none
+//        let a = if self.fn_estimate.is_some() {
+//            "est "
+//        } else {
+//            ""
+//        };
+//        let b = if self.fn_flatten_pre_optimize.is_some() {
+//            "f1 "
+//        } else {
+//            ""
+//        };
+//        let c = if self.fn_flatten_post_optimize.is_some() {
+//            "f2 "
+//        } else {
+//            ""
+//        };
+//        let d = if self.fn_execute.is_some() {
+//            "exec "
+//        } else {
+//            ""
+//        };
+//
+//        let e = match n.result {
+//            NodeResult::None => "none",
+//            NodeResult::Consumed => "reused",
+//            NodeResult::Frame(_) => "done",
+//            NodeResult::Encoded(_) => "encoded",
+//        };
+//        write!(f, "{}{{{}{}{}{}}} {}", self.name(), a, b, c, d, e)?;
+//        Ok(())
+//    }
 
-impl NodeDefinition{
-    pub fn as_node_def(&self) -> &NodeDef{
-        self
-    }
-}
-
-impl NodeDef for NodeDefinition{
-
-    fn fqn(&self) -> &'static str{
-        self.fqn
-    }
-    fn name(&self) -> &'static str{
-        self.name
-    }
-    fn edges_required(&self, p: &NodeParams) -> Result<(EdgesIn, EdgesOut)>{
-        Ok((self.inbound_edges, if self.outbound_edges { EdgesOut::Any } else { EdgesOut::None }))
-    }
-
-    fn validate_params(&self, p: &NodeParams) -> Result<()>{
-        Ok(())
-    }
-
-    fn estimate(&self, ctx: &mut OpCtxMut, ix: NodeIndex) -> Result<FrameEstimate>{
-        if let Some(f) = self.fn_estimate{
-            f(ctx, ix);
-            Ok(ctx.weight(ix).frame_est)
-        }else{
-            Err(unimpl!())
-        }
-    }
-
-    fn expand(&self, ctx: &mut OpCtxMut, ix: NodeIndex) -> Result<()>{
-        if let Some(f) = self.fn_flatten_pre_optimize{
-            f(ctx, ix);
-            Ok(())
-        }else{
-            Err(unimpl!())
-        }
-    }
-
-    fn can_expand(&self) ->bool{
-        self.fn_flatten_pre_optimize.is_some()
-    }
-
-    fn can_execute(&self) ->bool{
-        self.fn_execute.is_some()
-    }
-
-    fn execute(&self, ctx: &mut OpCtxMut, ix: NodeIndex) -> Result<NodeResult>{
-        if let Some(f) = self.fn_execute{
-            f(ctx, ix);
-            Ok(ctx.weight(ix).result.clone())
-        }else{
-            Err(unimpl!())
-        }
-    }
-
-    fn graphviz_node_label(&self, n: &Node, f: &mut std::io::Write) -> std::io::Result<()>{
-
-        // name { est f1, f2, ex } none
-        let a = if self.fn_estimate.is_some() {
-            "est "
-        } else {
-            ""
-        };
-        let b = if self.fn_flatten_pre_optimize.is_some() {
-            "f1 "
-        } else {
-            ""
-        };
-        let c = if self.fn_flatten_post_optimize.is_some() {
-            "f2 "
-        } else {
-            ""
-        };
-        let d = if self.fn_execute.is_some() {
-            "exec "
-        } else {
-            ""
-        };
-
-        let e = match n.result {
-            NodeResult::None => "none",
-            NodeResult::Consumed => "reused",
-            NodeResult::Frame(_) => "done",
-            NodeResult::Encoded(_) => "encoded",
-        };
-        write!(f, "{}{{{}{}{}{}}} {}", self.name(), a, b, c, d, e)?;
-        Ok(())
-    }
-}
 
 #[derive(Copy, Clone,Debug,PartialEq)]
 pub struct FrameInfo {
@@ -430,7 +372,7 @@ pub struct FrameInfo {
 pub enum FrameEstimate {
     None,
     Impossible,
-    Invalidated,
+    InvalidateGraph,
     UpperBound(FrameInfo),
     Some(FrameInfo),
 }
@@ -543,7 +485,7 @@ impl From<s::Node> for Node {
         match node {
             s::Node::Crop { .. } => Node::n(&nodes::CROP, NodeParams::Json(node)),
             s::Node::CropWhitespace { .. } => Node::n(&nodes::CROP_WHITESPACE, NodeParams::Json(node)),
-            s::Node::Decode { .. } => Node::new(&nodes::DECODER, NodeParams::Json(node)),
+            s::Node::Decode { .. } => Node::n(&nodes::DECODER, NodeParams::Json(node)),
             s::Node::FlowBitmapBgraPtr { .. } => {
                 Node::n(&nodes::BITMAP_BGRA_POINTER, NodeParams::Json(node))
             }
@@ -558,7 +500,7 @@ impl From<s::Node> for Node {
             }
             s::Node::Transpose => Node::n(&nodes::TRANSPOSE, NodeParams::Json(node)),
             s::Node::Resample1D { .. } => Node::n(&nodes::SCALE_1D, NodeParams::Json(node)),
-            s::Node::Encode { .. } => Node::new(&nodes::ENCODE, NodeParams::Json(node)),
+            s::Node::Encode { .. } => Node::n(&nodes::ENCODE, NodeParams::Json(node)),
             s::Node::CreateCanvas { .. } => {
                 Node::n(&nodes::CREATE_CANVAS, NodeParams::Json(node))
             }
@@ -587,21 +529,8 @@ impl From<s::Node> for Node {
 
 
 impl Node {
-    pub fn new(def: &'static NodeDefinition, params: NodeParams) -> Node {
-        Node {
-            def: def,
-            frame_est: FrameEstimate::None,
-            cost_est: CostEstimate::None,
-            cost: CostInfo {
-                cpu_ticks: None,
-                wall_ns: 0,
-                heap_bytes: 0,
-                peak_temp_bytes: 0,
-            },
-            stable_id: -1,
-            params: params,
-            result: NodeResult::None,
-        }
+    pub fn new(def: &'static NodeDef, params: NodeParams) -> Node {
+        Node::n(def, params)
     }
 
     pub fn n(def: &'static NodeDef, params: NodeParams) -> Node {
@@ -624,35 +553,5 @@ impl Node {
 
     pub fn graphviz_node_label(&self, f: &mut std::io::Write) -> std::io::Result<()> {
         self.def.graphviz_node_label(self, f)
-    }
-}
-
-
-impl PartialEq for NodeDefinition {
-    fn eq(&self, other: &NodeDefinition) -> bool {
-        self.fqn == other.fqn && self.fqn != ""
-    }
-}
-
-impl fmt::Debug for NodeDefinition {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "NodeDefinition {{ fqn: '{}' }}", self.fqn)
-    }
-}
-
-impl Default for NodeDefinition {
-    fn default() -> NodeDefinition {
-        NodeDefinition {
-            fqn: "",
-            inbound_edges: EdgesIn::OneInput,
-            outbound_edges: true,
-            name: "(null)",
-            description: "",
-            fn_flatten_post_optimize: None,
-            fn_execute: None,
-            fn_estimate: None,
-            fn_flatten_pre_optimize: None,
-            fn_link_state_to_this_io_id: None,
-        }
     }
 }
