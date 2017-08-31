@@ -446,6 +446,14 @@ impl FrameEstimate{
             false
         }
     }
+    pub fn unwrap_some(self) -> FrameInfo{
+        match self{
+            FrameEstimate::Some(v) => v,
+            _ => {
+                panic!("Unwrapped {:?} expecting FrameEstimate::Some()",&self);
+            }
+        }
+    }
 
     /// Maps both UpperBound and Some
     pub fn map_frame<F>(self, f: F) -> Result<FrameEstimate> where F: Fn(FrameInfo) -> Result<FrameInfo> {
@@ -549,7 +557,7 @@ impl From<s::Node> for Node {
                 Node::n(&nodes::APPLY_ORIENTATION, NodeParams::Json(node))
             }
             s::Node::Transpose => Node::n(&nodes::TRANSPOSE, NodeParams::Json(node)),
-            s::Node::Resample1D { .. } => Node::new(&nodes::SCALE_1D, NodeParams::Json(node)),
+            s::Node::Resample1D { .. } => Node::n(&nodes::SCALE_1D, NodeParams::Json(node)),
             s::Node::Encode { .. } => Node::new(&nodes::ENCODE, NodeParams::Json(node)),
             s::Node::CreateCanvas { .. } => {
                 Node::n(&nodes::CREATE_CANVAS, NodeParams::Json(node))
@@ -558,7 +566,7 @@ impl From<s::Node> for Node {
                 Node::n(&nodes::COPY_RECT, NodeParams::Json(node))
             }
             s::Node::FillRect { .. } => Node::n(&nodes::FILL_RECT, NodeParams::Json(node)),
-            s::Node::Resample2D { .. } => Node::new(&nodes::SCALE, NodeParams::Json(node)),
+            s::Node::Resample2D { .. } => Node::n(&nodes::SCALE, NodeParams::Json(node)),
             s::Node::Constrain (_) => Node::n(&nodes::CONSTRAIN, NodeParams::Json(node)),
             s::Node::ExpandCanvas { .. } => {
                 Node::n(&nodes::EXPAND_CANVAS, NodeParams::Json(node))

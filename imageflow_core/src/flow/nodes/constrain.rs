@@ -159,7 +159,7 @@ impl NodeDefOneInputExpand for ConstrainDef{
                 };
 
                 let scale2d = ctx.graph
-                    .add_node(Node::new(&super::SCALE,
+                    .add_node(Node::n(&super::SCALE,
                                         NodeParams::Json(scale2d_params)));
                 ctx.replace_node_with_existing(ix, scale2d);
             } else {
