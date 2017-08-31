@@ -204,14 +204,14 @@ struct ClassicEncoder{
 impl ClassicEncoder{
     fn get_codec_id_and_hints(preset: &s::EncoderPreset) -> (i64, ffi::EncoderHints){
         match *preset {
-            s::EncoderPreset::LibjpegTurbo { quality } => {
+            s::EncoderPreset::LibjpegTurbo { quality, progressive, optimize_huffman_coding } => {
                 (ffi::CodecType::EncodeJpeg as i64,
                  ffi::EncoderHints {
                      jpeg_encode_quality: quality.unwrap_or(90),
                      disable_png_alpha: false,
                      jpeg_allow_low_quality_non_baseline: false,
-                     jpeg_optimize_huffman_coding: true,
-                     jpeg_progressive: true,
+                     jpeg_optimize_huffman_coding: optimize_huffman_coding.unwrap_or(false), //2x slowdown
+                     jpeg_progressive: progressive.unwrap_or(false), //5x slowdown
                      jpeg_use_arithmetic_coding: false, // arithmetic coding is not widely supported
                  })
             }

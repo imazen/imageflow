@@ -160,7 +160,7 @@ fn test_handler() {
     });
     steps.push(s::Node::Encode {
         io_id: 1,
-        preset: s::EncoderPreset::LibjpegTurbo { quality: Some(90) },
+        preset: s::EncoderPreset::LibjpegTurbo { quality: Some(90), optimize_huffman_coding: None, progressive: None },
     });
 
     let build = s::Build001 {

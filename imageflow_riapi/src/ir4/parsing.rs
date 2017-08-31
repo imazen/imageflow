@@ -153,7 +153,7 @@ pub enum ScalingColorspace {
 
 }
 
-pub static IR4_KEYS: [&'static str;62] = ["mode", "anchor", "flip", "sflip", "scale", "cache", "process",
+pub static IR4_KEYS: [&'static str;63] = ["mode", "anchor", "flip", "sflip", "scale", "cache", "process",
     "quality", "zoom", "crop", "cropxunits", "cropyunits",
     "w", "h", "width", "height", "maxwidth", "maxheight", "format", "thumbnail",
      "autorotate", "srotate", "rotate", "ignoreicc", //really? : "precise_scaling_ratio",
@@ -161,7 +161,7 @@ pub static IR4_KEYS: [&'static str;62] = ["mode", "anchor", "flip", "sflip", "sc
     "frame", "page", "subsampling", "colors", "f.sharpen", "down.colorspace",
     "404", "bgcolor", "paddingcolor", "bordercolor", "preset", "floatspace", "jpeg_idct_downscale_linear", "watermark",
     "s.invert", "s.sepia", "s.grayscale", "s.alpha", "s.brightness", "s.contrast", "s.saturation", "trim.threshold",
-    "trim.percentpadding", "a.blur", "a.sharpen", "a.removenoise", "a.balancewhite", "dither",
+    "trim.percentpadding", "a.blur", "a.sharpen", "a.removenoise", "a.balancewhite", "dither","jpeg.progressive",
     "encoder", "decoder", "builder", "s.roundcorners.", "paddingwidth", "paddingheight", "margin", "borderwidth", "decoder.min_precise_scaling_ratio"];
 
 
@@ -260,6 +260,7 @@ impl Instructions{
         add(&mut m, "s.brightness", self.s_brightness);
         add(&mut m, "s.saturation", self.s_saturation);
         add(&mut m, "s.sepia", self.s_sepia);
+        add(&mut m, "jpeg.progressive", self.jpeg_progressive);
 
 
         add(&mut m, "s.grayscale", self.s_grayscale.map(|v| format!("{:?}", v).to_lowercase()));
@@ -345,7 +346,7 @@ impl Instructions{
 
 
         let _ = p.parse_test_pair("fastscale", "true");
-
+        i.jpeg_progressive = p.parse_bool("jpeg.progressive");
 
         i
     }
@@ -719,7 +720,8 @@ pub struct Instructions{
     pub s_sepia: Option<bool>,
     pub s_grayscale: Option<GrayscaleAlgorithm>,
     pub min_precise_scaling_ratio: Option<f64>,
-    pub down_colorspace: Option<ScalingColorspace>
+    pub down_colorspace: Option<ScalingColorspace>,
+    pub jpeg_progressive: Option<bool>,
 }
 #[derive(Debug,Copy, Clone,PartialEq)]
 pub enum Anchor1D{

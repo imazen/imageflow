@@ -306,6 +306,29 @@ fn test_jpeg_crop() {
 //        assert!(matched);
 //
 //}
+//
+
+// #[test]
+//fn smoke_test_ir4(){
+//
+//    // 5104x3380 "?w=2560&h=1696&mode=max&format=png&decoder.min_precise_scaling_ratio=2.1&down.colorspace=linear"
+//
+//
+//    let steps = vec![
+//        s::Node::CommandString{
+//            kind: s::CommandStringKind::ImageResizer4,
+//            value: "width=200&height=200&format=gif".to_owned(),
+//            decode: Some(0),
+//            encode: Some(1)
+//        }
+//    ];
+//
+//    smoke_test(Some(s::IoEnum::Url("https://s3-us-west-2.amazonaws.com/imageflow-resources/test_inputs/waterhouse.jpg".to_owned())),
+//               Some(s::IoEnum::OutputBuffer),
+//               DEBUG_GRAPH,
+//               steps,
+//    );
+//}
 
 #[test]
 fn smoke_test_gif_ir4(){
@@ -332,7 +355,7 @@ fn test_encode_jpeg_smoke() {
     let steps = vec![
     s::Node::Decode {io_id: 0, commands: None},
     s::Node::Resample2D{ w: 400, h: 300, down_filter: Some(s::Filter::Robidoux), up_filter: Some(s::Filter::Robidoux), hints: None, scaling_colorspace: None },
-    s::Node::Encode{ io_id: 1, preset: s::EncoderPreset::LibjpegTurbo {quality: Some(100)}}
+    s::Node::Encode{ io_id: 1, preset: s::EncoderPreset::LibjpegTurbo {quality: Some(100), progressive: None, optimize_huffman_coding: None}}
     ];
 
     smoke_test(Some(s::IoEnum::Url("https://s3-us-west-2.amazonaws.com/imageflow-resources/test_inputs/MarsRGB_v4_sYCC_8bit.jpg".to_owned())),

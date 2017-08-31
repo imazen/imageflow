@@ -169,7 +169,7 @@ pub enum ScalingFloatspace {
 #[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
 pub enum EncoderPreset {
     #[serde(rename="libjpegturbo")]
-    LibjpegTurbo { quality: Option<i32> },
+    LibjpegTurbo { quality: Option<i32>, progressive: Option<bool>, optimize_huffman_coding: Option<bool> },
     #[serde(rename="libpng")]
     Libpng {
         depth: Option<PngBitDepth>,
@@ -189,10 +189,10 @@ impl EncoderPreset {
         }
     }
     pub fn libjpegturbo() -> EncoderPreset {
-        EncoderPreset::LibjpegTurbo { quality: Some(100) }
+        EncoderPreset::LibjpegTurbo { quality: Some(100), optimize_huffman_coding: None, progressive: None }
     }
     pub fn libjpegturbo_q(quality: Option<i32>) -> EncoderPreset {
-        EncoderPreset::LibjpegTurbo { quality: quality }
+        EncoderPreset::LibjpegTurbo { quality: quality, optimize_huffman_coding: None, progressive: None }
     }
 }
 
@@ -755,7 +755,7 @@ impl Framewise {
                               },
                               Node::Encode {
                                   io_id: 1,
-                                  preset: EncoderPreset::LibjpegTurbo { quality: Some(90) },
+                                  preset: EncoderPreset::LibjpegTurbo { quality: Some(90), optimize_huffman_coding: Some(true), progressive: Some(true)},
                               }])
     }
     pub fn example_graph() -> Framewise {
@@ -801,7 +801,7 @@ impl Framewise {
         nodes.insert("5".to_owned(),
                      Node::Encode {
                          io_id: 2,
-                         preset: EncoderPreset::LibjpegTurbo { quality: Some(90) },
+                         preset: EncoderPreset::LibjpegTurbo { quality: Some(90), optimize_huffman_coding: Some(true), progressive: Some(true) },
                      });
 
         Framewise::Graph(Graph {
