@@ -344,7 +344,7 @@ fn respond_with_server_error<A>(debug_info: A, e: ServerError, detailed_errors: 
             Ok(Response::with((Mime::from_str("text/plain").unwrap(),
                                status::NotFound,
                                bytes)))
-        }
+        },
         e => {
             let bytes = match detailed_errors {
                 true => format!("Internal Server Error\nInfo:{:?}\nError:{:?}", debug_info, e).into_bytes(),

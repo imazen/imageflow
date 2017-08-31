@@ -228,9 +228,8 @@ Headers for libimageflow.dll are located in `bindings/headers`
 
 #### Flaws
 
-- [ ] JSON operations aren't yet validating their parameters. Invalid values end the process.
-- [ ] imageflow_server doesn't expose the JSON API yet (due to above)
-- [ ] No fuzz testing completed.
+- [ ] imageflow_server doesn't expose the JSON API yet.
+- [ ] No fuzz testing or third-party auditing yet.
 
 #### Missing features
 
