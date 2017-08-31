@@ -1010,7 +1010,8 @@ static bool flow_codecs_jpeg_write_frame(flow_c * c, void * codec_state, struct 
 
     state->cinfo.image_height = frame->h;
     state->cinfo.image_width = frame->w;
-    state->cinfo.optimize_coding = true; // entropy coding
+    state->cinfo.optimize_coding = hints->jpeg_optimize_huffman_coding; // entropy coding
+    state->cinfo.arith_code = hints->jpeg_use_arithmetic_coding;
 
     if (effective_format == flow_bgra32){
         state->cinfo.in_color_space = JCS_EXT_BGRA;
@@ -1032,9 +1033,11 @@ static bool flow_codecs_jpeg_write_frame(flow_c * c, void * codec_state, struct 
     if (quality > 100)
         quality = 100;
 
-    jpeg_set_quality(&state->cinfo, quality, TRUE /* limit to baseline-JPEG values */);
+    jpeg_set_quality(&state->cinfo, quality, hints->jpeg_allow_low_quality_non_baseline /* limit to baseline-JPEG values */);
 
-    jpeg_simple_progression(&state->cinfo);
+    if (hints->jpeg_progressive) {
+        jpeg_simple_progression(&state->cinfo);
+    }
 
     jpeg_start_compress(&state->cinfo, TRUE);
 

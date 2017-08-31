@@ -593,6 +593,10 @@ pub struct DecoderDownscaleHints {
 #[derive(Clone,Debug,PartialEq)]
 pub struct EncoderHints {
     pub jpeg_encode_quality: int32_t,
+    pub jpeg_allow_low_quality_non_baseline: bool,
+    pub jpeg_progressive: bool,
+    pub jpeg_optimize_huffman_coding: bool,
+    pub jpeg_use_arithmetic_coding: bool,
     pub disable_png_alpha: bool,
 }
 

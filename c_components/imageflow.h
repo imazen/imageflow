@@ -165,8 +165,14 @@ struct flow_bitmap_bgra;
 
 struct flow_encoder_hints {
     int32_t jpeg_encode_quality;
+    bool jpeg_allow_low_quality_non_baseline;
+    bool jpeg_progressive;
+    bool jpeg_optimize_huffman_coding;
+    bool jpeg_use_arithmetic_coding;
     bool disable_png_alpha;
 };
+
+
 
 PUB flow_c * flow_context_create(void);
 

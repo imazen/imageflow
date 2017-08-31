@@ -209,6 +209,10 @@ impl ClassicEncoder{
                  ffi::EncoderHints {
                      jpeg_encode_quality: quality.unwrap_or(90),
                      disable_png_alpha: false,
+                     jpeg_allow_low_quality_non_baseline: false,
+                     jpeg_optimize_huffman_coding: true,
+                     jpeg_progressive: true,
+                     jpeg_use_arithmetic_coding: false, // arithmetic coding is not widely supported
                  })
             }
             s::EncoderPreset::Libpng { ref matte,
@@ -217,6 +221,10 @@ impl ClassicEncoder{
                 (ffi::CodecType::EncodePng as i64,
                  ffi::EncoderHints {
                      jpeg_encode_quality: -1,
+                     jpeg_allow_low_quality_non_baseline: false,
+                     jpeg_optimize_huffman_coding: true,
+                     jpeg_progressive: true,
+                     jpeg_use_arithmetic_coding: false, // arithmetic coding is not widely supported
                      disable_png_alpha: match *depth {
                          Some(s::PngBitDepth::Png24) => true,
                          _ => false,
