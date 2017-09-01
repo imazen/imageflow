@@ -249,7 +249,7 @@ static bool flow_codecs_png_decoder_BeginRead(flow_c * c, struct flow_codecs_png
         png_set_expand(state->png_ptr);
         png_set_filler(state->png_ptr, 65535L, PNG_FILLER_AFTER);
         state->canvas_fmt = flow_bgr32;
-    } else{
+    } else {
         state->canvas_fmt = flow_bgra32;
     }
 
@@ -269,14 +269,14 @@ static bool flow_codecs_png_decoder_BeginRead(flow_c * c, struct flow_codecs_png
     png_read_update_info(state->png_ptr, state->info_ptr);
 
     // Now we can access a stride that represents the post-transform data.
-    //state->rowbytes = png_get_rowbytes(state->png_ptr, state->info_ptr);
+    // state->rowbytes = png_get_rowbytes(state->png_ptr, state->info_ptr);
 
     if (png_get_channels(state->png_ptr, state->info_ptr) != 4) {
         FLOW_error(c, flow_status_Invalid_internal_state);
         return false; // Should always be 4
     }
     // We set this, but it's ignored and overwritten by existing callers
-    //state->pixel_buffer_size = state->rowbytes * state->h;
+    // state->pixel_buffer_size = state->rowbytes * state->h;
 
     return true;
 }
@@ -484,13 +484,13 @@ static bool flow_codecs_png_write_frame(flow_c * c, void * codec_state, struct f
         if ((frame->fmt == flow_bgra32 && hints != NULL && hints->disable_png_alpha) || frame->fmt == flow_bgr32) {
             color_type = PNG_COLOR_TYPE_RGB;
             transform = PNG_TRANSFORM_BGR | PNG_TRANSFORM_STRIP_FILLER_AFTER;
-        } else if (frame->fmt == flow_bgr24){
+        } else if (frame->fmt == flow_bgr24) {
             color_type = PNG_COLOR_TYPE_RGB;
             transform = PNG_TRANSFORM_BGR;
-        } else if (frame->fmt == flow_bgra32){
+        } else if (frame->fmt == flow_bgra32) {
             color_type = PNG_COLOR_TYPE_RGB_ALPHA;
             transform = PNG_TRANSFORM_BGR;
-        } else{
+        } else {
             FLOW_error(c, flow_status_Invalid_argument);
             return false;
         }

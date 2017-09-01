@@ -1,7 +1,6 @@
 #include "catch.hpp"
 #include "helpers.h"
 
-
 struct flow_bitmap_bgra * crop_window(flow_c * context, struct flow_bitmap_bgra * source, uint32_t x, uint32_t y,
                                       uint32_t w, uint32_t h)
 {
@@ -153,4 +152,3 @@ for (int bits = 16; bits > 11; bits--){
 
     Assert::Equal (from, to);
 }*/
-

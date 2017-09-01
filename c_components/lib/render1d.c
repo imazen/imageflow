@@ -25,7 +25,7 @@ static bool ScaleAndRender1D(flow_c * context, struct flow_colorcontext_info * c
     const uint32_t buffer_row_count = 4; // using buffer=5 seems about 6% better than most other non-zero values.
 
     // How many bytes per pixel are we scaling?
-    flow_pixel_format scaling_format = flow_effective_pixel_format (pSrc);
+    flow_pixel_format scaling_format = flow_effective_pixel_format(pSrc);
 
     // TODO: measure; it might be faster to round 3->4 and ignore the data
     uint32_t float_channels = flow_pixel_format_channels(scaling_format);

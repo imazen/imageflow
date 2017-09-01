@@ -62,30 +62,37 @@ static bool bitmap_allocation_hook(flow_c * context, void * ptr, size_t byte_cou
     return true;
 }
 
-uint32_t flow_pixel_format_bytes_per_pixel(flow_pixel_format format) {
-    switch(format){
-        case flow_bgr24: return 3;
-        case flow_bgra32: return 4;
-        case flow_bgr32: return 4;
-        case flow_gray8: return 1;
+uint32_t flow_pixel_format_bytes_per_pixel(flow_pixel_format format)
+{
+    switch (format) {
+        case flow_bgr24:
+            return 3;
+        case flow_bgra32:
+            return 4;
+        case flow_bgr32:
+            return 4;
+        case flow_gray8:
+            return 1;
     }
-    fprintf( stderr, "Invalid flow_pixel_format %d", format);
+    fprintf(stderr, "Invalid flow_pixel_format %d", format);
     exit(70);
 }
-flow_pixel_format flow_effective_pixel_format(struct flow_bitmap_bgra * b) {
-    return b->fmt;
-}
-uint32_t flow_pixel_format_channels(flow_pixel_format format) {
-    switch(format){
-        case flow_bgr24: return 3;
-        case flow_bgra32: return 4;
-        case flow_bgr32: return 3;
-        case flow_gray8: return 1;
+flow_pixel_format flow_effective_pixel_format(struct flow_bitmap_bgra * b) { return b->fmt; }
+uint32_t flow_pixel_format_channels(flow_pixel_format format)
+{
+    switch (format) {
+        case flow_bgr24:
+            return 3;
+        case flow_bgra32:
+            return 4;
+        case flow_bgr32:
+            return 3;
+        case flow_gray8:
+            return 1;
     }
-    fprintf( stderr, "Invalid flow_pixel_format %d", format);
+    fprintf(stderr, "Invalid flow_pixel_format %d", format);
     exit(70);
 }
-
 
 FLOW_HINT_HOT FLOW_HINT_PURE
 

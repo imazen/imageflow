@@ -26,7 +26,7 @@ FLOW_HINT_HOT FLOW_HINT_UNSAFE_MATH_OPTIMIZATIONS
     flow_pixel_format input_fmt = flow_effective_pixel_format(input);
     flow_pixel_format canvas_fmt = flow_effective_pixel_format(input);
 
-    //TODO: add support for bgr24
+    // TODO: add support for bgr24
     if (input_fmt != flow_bgra32 && input_fmt != flow_bgr32) {
         FLOW_error(c, flow_status_Not_implemented);
         return false;

@@ -21,7 +21,6 @@
 #define unlikely(x) (__builtin_expect(!!(x), 0))
 #endif
 
-
 FLOW_HINT_HOT
 bool flow_bitmap_float_convert_srgb_to_linear(flow_c * context, struct flow_colorcontext_info * colorcontext,
                                               struct flow_bitmap_bgra * src, uint32_t from_row,
@@ -46,7 +45,6 @@ bool flow_bitmap_float_convert_srgb_to_linear(flow_c * context, struct flow_colo
     const uint32_t from_step = flow_pixel_format_bytes_per_pixel(src->fmt);
     const uint32_t from_copy = flow_pixel_format_channels(flow_effective_pixel_format(src));
 
-
     const uint32_t to_step = dest->channels;
     const uint32_t copy_step = umin(from_copy, to_step);
 
@@ -58,10 +56,11 @@ bool flow_bitmap_float_convert_srgb_to_linear(flow_c * context, struct flow_colo
         }
     if
         unlikely(copy_step == 4 && from_step != 4 && to_step != 4)
-    {
-        FLOW_error_msg(context, flow_status_Unsupported_pixel_format, "copy_step=%d, from_step=%d, to_step=%d", copy_step, from_step, to_step);
-        return false;
-    }
+        {
+            FLOW_error_msg(context, flow_status_Unsupported_pixel_format, "copy_step=%d, from_step=%d, to_step=%d",
+                           copy_step, from_step, to_step);
+            return false;
+        }
     if
         likely(copy_step == 4)
         {
@@ -81,16 +80,16 @@ bool flow_bitmap_float_convert_srgb_to_linear(flow_c * context, struct flow_colo
         }
     else {
 
-#define CONVERT_LINEAR(from_step, to_step) \
-        for (uint32_t row = 0; row < row_count; row++) { \
-            uint8_t * src_start = src->pixels + (from_row + row) * src->stride; \
-            float * buf = dest->pixels + (dest->float_stride * (row + dest_row)); \
-            for (uint32_t to_x = 0, bix = 0; bix < units; to_x += to_step, bix += from_step) { \
-                buf[to_x] = flow_colorcontext_srgb_to_floatspace(colorcontext, src_start[bix]); \
-                buf[to_x + 1] = flow_colorcontext_srgb_to_floatspace(colorcontext, src_start[bix + 1]); \
-                buf[to_x + 2] = flow_colorcontext_srgb_to_floatspace(colorcontext, src_start[bix + 2]);  \
-            }  \
-        }
+#define CONVERT_LINEAR(from_step, to_step)                                                                             \
+    for (uint32_t row = 0; row < row_count; row++) {                                                                   \
+        uint8_t * src_start = src->pixels + (from_row + row) * src->stride;                                            \
+        float * buf = dest->pixels + (dest->float_stride * (row + dest_row));                                          \
+        for (uint32_t to_x = 0, bix = 0; bix < units; to_x += to_step, bix += from_step) {                             \
+            buf[to_x] = flow_colorcontext_srgb_to_floatspace(colorcontext, src_start[bix]);                            \
+            buf[to_x + 1] = flow_colorcontext_srgb_to_floatspace(colorcontext, src_start[bix + 1]);                    \
+            buf[to_x + 2] = flow_colorcontext_srgb_to_floatspace(colorcontext, src_start[bix + 2]);                    \
+        }                                                                                                              \
+    }
 
         if (from_step == 3 && to_step == 3) {
             CONVERT_LINEAR(3, 3)
@@ -101,13 +100,13 @@ bool flow_bitmap_float_convert_srgb_to_linear(flow_c * context, struct flow_colo
         } else if (from_step == 4 && to_step == 4) {
             CONVERT_LINEAR(4, 4)
         } else {
-            FLOW_error_msg(context, flow_status_Unsupported_pixel_format, "copy_step=%d, from_step=%d, to_step=%d", copy_step, from_step, to_step);
+            FLOW_error_msg(context, flow_status_Unsupported_pixel_format, "copy_step=%d, from_step=%d, to_step=%d",
+                           copy_step, from_step, to_step);
             return false;
         }
     }
     return true;
 }
-
 
 /*
 static void unpack24bitRow(uint32_t width, unsigned char* sourceLine, unsigned char* destArray){
@@ -142,11 +141,11 @@ bool flow_bitmap_bgra_flip_vertical(flow_c * context, struct flow_bitmap_bgra * 
 FLOW_HINT_HOT
 bool flow_bitmap_bgra_flip_horizontal(flow_c * context, struct flow_bitmap_bgra * b)
 {
-    if (b->fmt == flow_bgra32 || b->fmt == flow_bgr32){
-        //12ms simple
+    if (b->fmt == flow_bgra32 || b->fmt == flow_bgr32) {
+        // 12ms simple
         for (uint32_t y = 0; y < b->h; y++) {
-            uint32_t * left = (uint32_t * )(b->pixels + (y * b->stride));
-            uint32_t * right = (uint32_t * )(b->pixels + (y * b->stride) + 4 * (b->w - 1));
+            uint32_t * left = (uint32_t *)(b->pixels + (y * b->stride));
+            uint32_t * right = (uint32_t *)(b->pixels + (y * b->stride) + 4 * (b->w - 1));
             while (left < right) {
                 uint32_t swap = *left;
                 *left = *right;
@@ -156,95 +155,97 @@ bool flow_bitmap_bgra_flip_horizontal(flow_c * context, struct flow_bitmap_bgra 
             }
         }
 
+        // 9.6ms with intrinsics
+        //        const uint32_t block_size = 16; // in pixels
+        //        const uint32_t vector_count = block_size / 4; // simd lanes
+        //        const uint32_t bpp = 4; //pixel size
+        //        const uint32_t block_bytes = block_size * bpp;
+        //
+        //        uint32_t block_swaps = b->w / 2 / block_size; //Number of blocks to swap
+        //        size_t rightmost_block_offset = (b->w - block_size) * bpp;
+        //        uint32_t cleanup_left_offset = block_bytes * block_swaps;
+        //        uint32_t cleanup_right_offset = (b->w * bpp) - cleanup_left_offset - 1;
+        //
+        //        __m128i swap_block[vector_count];
+        //        __m128i aligned_load_block[vector_count];
+        //        for (uint32_t y = 0, y_stride = 0; y < b->h; y++, y_stride += b->stride) {
+        //            for (uint32_t i = 0; i < block_swaps; i++){
+        //                void * left_block = b->pixels + y_stride + (i * block_bytes);
+        //                void * right_block = b->pixels + y_stride + rightmost_block_offset - (i * block_bytes);
+        //                memcpy(&aligned_load_block[0], right_block, block_bytes);
+        //                for (uint32_t j = 0; j < vector_count; j++){
+        //                    swap_block[vector_count - j - 1] =  _mm_shuffle_epi32(*((__m128i *)left_block + j),
+        //                    _MM_SHUFFLE(3, 2, 1, 0));
+        //                }
+        //
+        //                for (uint32_t j = 0; j < vector_count; j++){
+        //                    *((__m128i *)left_block + (vector_count- j - 1)) =
+        //                    _mm_shuffle_epi32(aligned_load_block[j], _MM_SHUFFLE(3, 2, 1, 0));
+        //                }
+        //                memcpy(right_block, &swap_block[0], block_bytes);
+        //            }
+        //
+        //            uint32_t * left = (uint32_t * )(b->pixels + y_stride + cleanup_left_offset);
+        //            uint32_t * right = (uint32_t * )(b->pixels + y_stride + cleanup_right_offset);
+        //            while (left < right) {
+        //                uint32_t swap = *left;
+        //                *left = *right;
+        //                *right = swap;
+        //                left++;
+        //                right--;
+        //            }
+        //        }
 
-         //9.6ms with intrinsics
-//        const uint32_t block_size = 16; // in pixels
-//        const uint32_t vector_count = block_size / 4; // simd lanes
-//        const uint32_t bpp = 4; //pixel size
-//        const uint32_t block_bytes = block_size * bpp;
-//
-//        uint32_t block_swaps = b->w / 2 / block_size; //Number of blocks to swap
-//        size_t rightmost_block_offset = (b->w - block_size) * bpp;
-//        uint32_t cleanup_left_offset = block_bytes * block_swaps;
-//        uint32_t cleanup_right_offset = (b->w * bpp) - cleanup_left_offset - 1;
-//
-//        __m128i swap_block[vector_count];
-//        __m128i aligned_load_block[vector_count];
-//        for (uint32_t y = 0, y_stride = 0; y < b->h; y++, y_stride += b->stride) {
-//            for (uint32_t i = 0; i < block_swaps; i++){
-//                void * left_block = b->pixels + y_stride + (i * block_bytes);
-//                void * right_block = b->pixels + y_stride + rightmost_block_offset - (i * block_bytes);
-//                memcpy(&aligned_load_block[0], right_block, block_bytes);
-//                for (uint32_t j = 0; j < vector_count; j++){
-//                    swap_block[vector_count - j - 1] =  _mm_shuffle_epi32(*((__m128i *)left_block + j), _MM_SHUFFLE(3, 2, 1, 0));
-//                }
-//
-//                for (uint32_t j = 0; j < vector_count; j++){
-//                    *((__m128i *)left_block + (vector_count- j - 1)) =  _mm_shuffle_epi32(aligned_load_block[j], _MM_SHUFFLE(3, 2, 1, 0));
-//                }
-//                memcpy(right_block, &swap_block[0], block_bytes);
-//            }
-//
-//            uint32_t * left = (uint32_t * )(b->pixels + y_stride + cleanup_left_offset);
-//            uint32_t * right = (uint32_t * )(b->pixels + y_stride + cleanup_right_offset);
-//            while (left < right) {
-//                uint32_t swap = *left;
-//                *left = *right;
-//                *right = swap;
-//                left++;
-//                right--;
-//            }
-//        }
-
-//        for (uint32_t y = 0; y < b->h; y++) {
-//
-//
-//            uint32_t * left = (uint32_t * )(b->pixels + (y * b->stride) + cleanup_left_offset);
-//            uint32_t * right = (uint32_t * )(b->pixels + (y * b->stride) + cleanup_right_offset);
-//            while (left < right) {
-//                uint32_t swap = *left;
-//                *left = *right;
-//                *right = swap;
-//                left++;
-//                right--;
-//            }
-//        }
+        //        for (uint32_t y = 0; y < b->h; y++) {
+        //
+        //
+        //            uint32_t * left = (uint32_t * )(b->pixels + (y * b->stride) + cleanup_left_offset);
+        //            uint32_t * right = (uint32_t * )(b->pixels + (y * b->stride) + cleanup_right_offset);
+        //            while (left < right) {
+        //                uint32_t swap = *left;
+        //                *left = *right;
+        //                *right = swap;
+        //                left++;
+        //                right--;
+        //            }
+        //        }
 
         // 11.9ms blocks, no intrinsics
-//        const uint32_t block_size = 128; // in pixels
-//        const uint32_t bpp = 4; //pixel size
-//        const uint32_t block_bytes = block_size * bpp;
-//
-//        uint32_t block_swaps = b->w / 2 / block_size; //Number of blocks to swap
-//        size_t rightmost_block_offset = (b->w - block_size) * bpp;
-//        uint32_t cleanup_left_offset = block_bytes * block_swaps;
-//        uint32_t cleanup_right_offset = (b->w * bpp) - cleanup_left_offset - 1;
-//
-//        uint32_t swap_block[block_size];
-//        for (uint32_t y = 0, y_stride = 0; y < b->h; y++, y_stride += b->stride) {
-//            for (uint32_t i = 0; i < block_swaps; i++){
-//                uint32_t * left_block = (uint32_t *)(b->pixels + y_stride + (i * block_bytes));
-//                uint32_t * right_block = (uint32_t *)(b->pixels + y_stride + rightmost_block_offset - (i * block_bytes));
-//                memcpy(&swap_block[0], right_block, block_bytes);
-//                for (uint32_t j = 0; j < block_size; j++){
-//                    right_block[block_size - j - 1] = left_block[j];
-//                }
-//                for (uint32_t j = 0; j < block_size; j++){
-//                    left_block[block_size - j - 1] = swap_block[j];
-//                }
-//            }
-//
-//            uint32_t * left = (uint32_t * )(b->pixels + y_stride + cleanup_left_offset);
-//            uint32_t * right = (uint32_t * )(b->pixels + y_stride + cleanup_right_offset);
-//            while (left < right) {
-//                uint32_t swap = *left;
-//                *left = *right;
-//                *right = swap;
-//                left++;
-//                right--;
-//            }
-//        }
-    }else if (b->fmt == flow_bgr24) {
+        //        const uint32_t block_size = 128; // in pixels
+        //        const uint32_t bpp = 4; //pixel size
+        //        const uint32_t block_bytes = block_size * bpp;
+        //
+        //        uint32_t block_swaps = b->w / 2 / block_size; //Number of blocks to swap
+        //        size_t rightmost_block_offset = (b->w - block_size) * bpp;
+        //        uint32_t cleanup_left_offset = block_bytes * block_swaps;
+        //        uint32_t cleanup_right_offset = (b->w * bpp) - cleanup_left_offset - 1;
+        //
+        //        uint32_t swap_block[block_size];
+        //        for (uint32_t y = 0, y_stride = 0; y < b->h; y++, y_stride += b->stride) {
+        //            for (uint32_t i = 0; i < block_swaps; i++){
+        //                uint32_t * left_block = (uint32_t *)(b->pixels + y_stride + (i * block_bytes));
+        //                uint32_t * right_block = (uint32_t *)(b->pixels + y_stride + rightmost_block_offset - (i *
+        //                block_bytes));
+        //                memcpy(&swap_block[0], right_block, block_bytes);
+        //                for (uint32_t j = 0; j < block_size; j++){
+        //                    right_block[block_size - j - 1] = left_block[j];
+        //                }
+        //                for (uint32_t j = 0; j < block_size; j++){
+        //                    left_block[block_size - j - 1] = swap_block[j];
+        //                }
+        //            }
+        //
+        //            uint32_t * left = (uint32_t * )(b->pixels + y_stride + cleanup_left_offset);
+        //            uint32_t * right = (uint32_t * )(b->pixels + y_stride + cleanup_right_offset);
+        //            while (left < right) {
+        //                uint32_t swap = *left;
+        //                *left = *right;
+        //                *right = swap;
+        //                left++;
+        //                right--;
+        //            }
+        //        }
+    } else if (b->fmt == flow_bgr24) {
         uint32_t swap[4];
         // Dont' copy the full stride (padding), it could be windowed!
         for (uint32_t y = 0; y < b->h; y++) {
@@ -258,7 +259,7 @@ bool flow_bitmap_bgra_flip_horizontal(flow_c * context, struct flow_bitmap_bgra 
                 right -= 3;
             }
         }
-    }else {
+    } else {
         uint32_t swap[4];
         // Dont' copy the full stride (padding), it could be windowed!
         for (uint32_t y = 0; y < b->h; y++) {
@@ -345,7 +346,7 @@ bool flow_bitmap_float_copy_linear_over_srgb(flow_c * context, struct flow_color
     const uint32_t dest_row_stride = transpose ? dest_bytes_pp : dest->stride;
     const uint32_t dest_pixel_stride = transpose ? dest->stride : dest_bytes_pp;
 
-#define FLOAT_COPY_LINEAR(ch, dest_pixel_stride, copy_alpha, clean_alpha)                                                                 \
+#define FLOAT_COPY_LINEAR(ch, dest_pixel_stride, copy_alpha, clean_alpha)                                              \
     for (uint32_t row = 0; row < row_count; row++) {                                                                   \
         float * src_row = src->pixels + (row + from_row) * src->float_stride;                                          \
         uint8_t * dest_row_bytes = dest->pixels + (dest_row + row) * dest_row_stride + (from_col * dest_pixel_stride); \
@@ -365,47 +366,47 @@ bool flow_bitmap_float_copy_linear_over_srgb(flow_c * context, struct flow_color
     if (dest_pixel_stride == 4) {
         if (ch == 3) {
             if (copy_alpha == true && clean_alpha == false) {
-                FLOAT_COPY_LINEAR(3,4, true, false)
+                FLOAT_COPY_LINEAR(3, 4, true, false)
             }
             if (copy_alpha == false && clean_alpha == false) {
-                FLOAT_COPY_LINEAR(3,4, false, false)
+                FLOAT_COPY_LINEAR(3, 4, false, false)
             }
             if (copy_alpha == false && clean_alpha == true) {
-                FLOAT_COPY_LINEAR(3,4, false, true)
+                FLOAT_COPY_LINEAR(3, 4, false, true)
             }
         }
         if (ch == 4) {
             if (copy_alpha == true && clean_alpha == false) {
-                FLOAT_COPY_LINEAR(4,4, true, false)
+                FLOAT_COPY_LINEAR(4, 4, true, false)
             }
             if (copy_alpha == false && clean_alpha == false) {
-                FLOAT_COPY_LINEAR(4,4, false, false)
+                FLOAT_COPY_LINEAR(4, 4, false, false)
             }
             if (copy_alpha == false && clean_alpha == true) {
-                FLOAT_COPY_LINEAR(4,4, false, true)
+                FLOAT_COPY_LINEAR(4, 4, false, true)
             }
         }
     } else {
         if (ch == 3) {
             if (copy_alpha == true && clean_alpha == false) {
-                FLOAT_COPY_LINEAR(3,dest_pixel_stride, true, false)
+                FLOAT_COPY_LINEAR(3, dest_pixel_stride, true, false)
             }
             if (copy_alpha == false && clean_alpha == false) {
-                FLOAT_COPY_LINEAR(3,dest_pixel_stride, false, false)
+                FLOAT_COPY_LINEAR(3, dest_pixel_stride, false, false)
             }
             if (copy_alpha == false && clean_alpha == true) {
-                FLOAT_COPY_LINEAR(3,dest_pixel_stride, false, true)
+                FLOAT_COPY_LINEAR(3, dest_pixel_stride, false, true)
             }
         }
         if (ch == 4) {
             if (copy_alpha == true && clean_alpha == false) {
-                FLOAT_COPY_LINEAR(4,dest_pixel_stride, true, false)
+                FLOAT_COPY_LINEAR(4, dest_pixel_stride, true, false)
             }
             if (copy_alpha == false && clean_alpha == false) {
-                FLOAT_COPY_LINEAR(4,dest_pixel_stride, false, false)
+                FLOAT_COPY_LINEAR(4, dest_pixel_stride, false, false)
             }
             if (copy_alpha == false && clean_alpha == true) {
-                FLOAT_COPY_LINEAR(4,dest_pixel_stride, false, true)
+                FLOAT_COPY_LINEAR(4, dest_pixel_stride, false, true)
             }
         }
     }
@@ -425,7 +426,6 @@ static bool BitmapFloat_compose_linear_over_srgb(flow_c * context, struct flow_c
     const uint32_t dest_pixel_stride = transpose ? dest->stride : dest_bytes_pp;
     const uint32_t srcitems = umin(from_col + col_count, src->w) * src->channels;
     const uint32_t ch = src->channels;
-
 
     const flow_pixel_format dest_effective_format = flow_effective_pixel_format(dest);
 

@@ -64,7 +64,9 @@ char * flow_context_set_error_get_message_buffer(flow_c * context, flow_status_c
 
 // Returns true if the operation succeeded
 // Does not add to call stack
-bool flow_context_set_error_get_message_buffer_info(flow_c * context, flow_status_code code, bool status_included_in_buffer, char * * buffer,  size_t * buffer_size)
+bool flow_context_set_error_get_message_buffer_info(flow_c * context, flow_status_code code,
+                                                    bool status_included_in_buffer, char ** buffer,
+                                                    size_t * buffer_size)
 {
     if (context->error.reason != flow_status_No_Error) {
         // The last error wasn't cleared, lock it down. We prefer the original error.
@@ -72,7 +74,7 @@ bool flow_context_set_error_get_message_buffer_info(flow_c * context, flow_statu
         *buffer = 0;
         *buffer_size = 0;
         return false;
-    }else {
+    } else {
         context->error.status_included_in_message = status_included_in_buffer;
         if (code == flow_status_No_Error) {
             context->error.reason = flow_status_Other_error;
@@ -153,7 +155,7 @@ static const char * status_code_to_string(flow_status_code code)
         default:
             if (code >= flow_status_First_rust_error && code < flow_status_Other_error) {
                 return "Rust status code";
-            }else {
+            } else {
                 return "Unknown status code";
             }
     }
@@ -209,7 +211,8 @@ int64_t flow_context_error_and_stacktrace(flow_c * context, char * buffer, size_
 
     return original_buffer_size - buffer_size;
 }
-bool flow_context_error_status_included_in_message(flow_c * context){
+bool flow_context_error_status_included_in_message(flow_c * context)
+{
     return context->error.status_included_in_message;
 }
 
@@ -217,9 +220,9 @@ int64_t flow_context_error_message(flow_c * context, char * buffer, size_t buffe
 {
     int chars_written = 0;
     const char * reason_str = status_code_to_string(context->error.reason);
-    if (context->error.reason == flow_status_No_Error){
+    if (context->error.reason == flow_status_No_Error) {
         chars_written = flow_snprintf(buffer, buffer_size, "%s", reason_str);
-    }else {
+    } else {
         if (context->error.status_included_in_message == true) {
             if (context->error.message[0] == 0) {
                 // This branch shouldn't happen
@@ -233,8 +236,7 @@ int64_t flow_context_error_message(flow_c * context, char * buffer, size_t buffe
                 chars_written = flow_snprintf(buffer, buffer_size, "CError %d: %s", context->error.reason, reason_str);
             } else {
                 chars_written = flow_snprintf(buffer, buffer_size, "CError %d: %s : %s", context->error.reason,
-                                              reason_str,
-                                              context->error.message);
+                                              reason_str, context->error.message);
             }
         }
     }

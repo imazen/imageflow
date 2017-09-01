@@ -69,7 +69,8 @@ TEST_CASE("Test error message printing", "")
     char buf[4096];
     int64_t chars_written = flow_context_error_and_stacktrace(c, buf, 4096, false);
     REQUIRE(chars_written > 0);
-    REQUIRE_THAT(buf, StartsWith("CError 50: Invalid argument : You passed a value outside [0,1]: 3\ntest_context.cpp:"));
+    REQUIRE_THAT(buf,
+                 StartsWith("CError 50: Invalid argument : You passed a value outside [0,1]: 3\ntest_context.cpp:"));
 
     flow_context_destroy(c);
 }

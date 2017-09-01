@@ -37,12 +37,20 @@ bool flow_bitmap_bgra_transform_to_srgb(flow_c * c, cmsHPROFILE current_profile,
         }
         cmsUInt32Number format;
 
-        switch (flow_effective_pixel_format(frame)){
-            case flow_bgra32: format = TYPE_BGRA_8; break;
+        switch (flow_effective_pixel_format(frame)) {
+            case flow_bgra32:
+                format = TYPE_BGRA_8;
+                break;
 
-            case flow_bgr32: format = TYPE_BGRA_8; break;
-            case flow_bgr24: format = TYPE_BGRA_8; break;
-            case flow_gray8: format = TYPE_GRAY_8; break;
+            case flow_bgr32:
+                format = TYPE_BGRA_8;
+                break;
+            case flow_bgr24:
+                format = TYPE_BGRA_8;
+                break;
+            case flow_gray8:
+                format = TYPE_GRAY_8;
+                break;
             default:
                 FLOW_error(c, flow_status_Invalid_argument);
                 return false;

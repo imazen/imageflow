@@ -100,7 +100,6 @@ public:
     }
 };
 
-
 TEST_CASE_METHOD(Fixture, "Creating flow_bitmap_bgra", "[error_handling]")
 {
     flow_c context;

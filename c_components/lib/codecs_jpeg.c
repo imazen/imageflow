@@ -527,7 +527,7 @@ static bool flow_codecs_jpg_decoder_FinishRead(flow_c * c, struct flow_codecs_jp
  */
     /* JSAMPLEs per row in output buffer */
 
-    //state->row_stride = state->cinfo->output_width * state->cinfo->output_components;
+    // state->row_stride = state->cinfo->output_width * state->cinfo->output_components;
     state->channels = state->cinfo->output_components;
     state->gamma = state->cinfo->output_gamma;
 
@@ -572,7 +572,6 @@ static bool flow_codecs_jpg_decoder_FinishRead(flow_c * c, struct flow_codecs_jp
         state->stage = flow_codecs_jpg_decoder_stage_Failed;
         FLOW_error_return(c);
     }
-
 
     /* Step 7: Finish decompression */
 
@@ -648,7 +647,7 @@ static bool flow_codecs_jpg_decoder_reset(flow_c * c, struct flow_codecs_jpeg_de
 {
     if (state->stage == flow_codecs_jpg_decoder_stage_FinishRead) {
         // TODO: This may be a double-free.... I don't think we own this.
-        //FLOW_free(c, state->pixel_buffer);
+        // FLOW_free(c, state->pixel_buffer);
     }
     if (state->stage == flow_codecs_jpg_decoder_stage_Null) {
         state->pixel_buffer_row_pointers = NULL;
@@ -984,7 +983,8 @@ static bool flow_codecs_initialize_encode_jpeg(flow_c * c, struct flow_codec_ins
 }
 
 static bool flow_codecs_jpeg_write_frame(flow_c * c, void * codec_state, struct flow_bitmap_bgra * frame,
-                                         struct flow_encoder_hints * hints){
+                                         struct flow_encoder_hints * hints)
+{
 
     flow_pixel_format effective_format = flow_effective_pixel_format(frame);
     if (effective_format != flow_bgra32 && effective_format != flow_bgr24 && effective_format != flow_bgr32) {
@@ -1013,14 +1013,14 @@ static bool flow_codecs_jpeg_write_frame(flow_c * c, void * codec_state, struct 
     state->cinfo.optimize_coding = hints->jpeg_optimize_huffman_coding; // entropy coding
     state->cinfo.arith_code = hints->jpeg_use_arithmetic_coding;
 
-    if (effective_format == flow_bgra32){
+    if (effective_format == flow_bgra32) {
         state->cinfo.in_color_space = JCS_EXT_BGRA;
         state->cinfo.input_components = 4;
 
-    }else if (effective_format == flow_bgr32){
+    } else if (effective_format == flow_bgr32) {
         state->cinfo.in_color_space = JCS_EXT_BGRX;
         state->cinfo.input_components = 4;
-    }else if (effective_format == flow_bgr24){
+    } else if (effective_format == flow_bgr24) {
         state->cinfo.in_color_space = JCS_EXT_BGR;
         state->cinfo.input_components = 3;
     }
@@ -1033,7 +1033,8 @@ static bool flow_codecs_jpeg_write_frame(flow_c * c, void * codec_state, struct 
     if (quality > 100)
         quality = 100;
 
-    jpeg_set_quality(&state->cinfo, quality, hints->jpeg_allow_low_quality_non_baseline /* limit to baseline-JPEG values */);
+    jpeg_set_quality(&state->cinfo, quality,
+                     hints->jpeg_allow_low_quality_non_baseline /* limit to baseline-JPEG values */);
 
     if (hints->jpeg_progressive) {
         jpeg_simple_progression(&state->cinfo);

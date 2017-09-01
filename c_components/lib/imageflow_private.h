@@ -228,7 +228,6 @@ PUB bool flow_bitmap_float_composite_linear_over_srgb(flow_c * c, struct flow_co
                                                       struct flow_bitmap_bgra * dest, uint32_t dest_row,
                                                       uint32_t row_count, bool transpose);
 
-
 PUB bool flow_bitmap_float_demultiply_alpha(flow_c * c, struct flow_bitmap_float * src, const uint32_t from_row,
                                             const uint32_t row_count);
 
@@ -246,7 +245,6 @@ PUB bool flow_halve(flow_c * c, struct flow_colorcontext_info * colorcontext, co
 
 PUB bool flow_halve_in_place(flow_c * c, struct flow_colorcontext_info * colorcontext, struct flow_bitmap_bgra * from,
                              int divisor);
-
 
 PUB void flow_scale_spatial_srgb_7x7(uint8_t input[64], uint8_t ** output_rows, uint32_t output_col);
 
