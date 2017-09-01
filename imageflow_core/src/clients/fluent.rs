@@ -322,7 +322,6 @@ fn smoke_test_many_operations(){
             scaling_colorspace: None,
             hints: Some(s::ResampleHints {
                 sharpen_percent: Some(10f32),
-                prefer_1d_twice: None,
             }),
         })
         .to(s::Node::ApplyOrientation{flag: 7}).flip_horizontal().flip_vertical().transpose().rotate_90().rotate_180().rotate_270()

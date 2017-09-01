@@ -18,8 +18,6 @@ use imageflow_core::{Context, ErrorKind, FlowError, CodeLocation};
 
 fn default_build_config(debug: bool) -> s::Build001Config {
     s::Build001Config{graph_recording: match debug{ true => Some(s::Build001GraphRecording::debug_defaults()), false => None} ,
-        process_all_gif_frames: Some(false),
-        enable_jpeg_block_scaling: Some(false)
     }
 }
 
@@ -81,8 +79,6 @@ fn compare(input: Option<s::IoEnum>, allowed_off_by_one_bytes: usize, checksum_n
                 true => Some(s::Build001GraphRecording::debug_defaults()),
                 false => None
             },
-            process_all_gif_frames: Some(false),
-            enable_jpeg_block_scaling: Some(false)
         }),
         io: inputs,
         framewise: s::Framewise::Steps(steps)
@@ -197,7 +193,6 @@ fn test_fill_rect_original(){
 fn request_1d_twice_mode() -> s::ResampleHints {
     s::ResampleHints {
         sharpen_percent: None,
-        prefer_1d_twice: Some(true)
     }
 }
 
@@ -206,7 +201,7 @@ fn test_scale_image() {
     let matched = compare(Some(s::IoEnum::Url("https://s3-us-west-2.amazonaws.com/imageflow-resources/test_inputs/waterhouse.jpg".to_owned())), 500,
                           "ScaleTheHouse".to_owned(), POPULATE_CHECKSUMS, DEBUG_GRAPH, vec![
         s::Node::Decode {io_id: 0, commands: None},
-        s::Node::Resample2D{ w: 400, h: 300, down_filter: Some(s::Filter::Robidoux), up_filter: Some(s::Filter::Robidoux), hints: Some(request_1d_twice_mode()), scaling_colorspace: None }
+        s::Node::Resample2D{ w: 400, h: 300, down_filter: Some(s::Filter::Robidoux), up_filter: Some(s::Filter::Robidoux), hints: None, scaling_colorspace: None }
         ]
     );
     assert!(matched);
@@ -219,7 +214,7 @@ fn test_white_balance_image() {
     let matched = compare(Some(s::IoEnum::Url("https://s3-us-west-2.amazonaws.com/imageflow-resources/test_inputs/red-night.png".to_owned())), 500,
                           "WhiteBalanceNight".to_owned(), POPULATE_CHECKSUMS, DEBUG_GRAPH, vec![
             s::Node::Decode {io_id: 0, commands: None},
-            s::Node::WhiteBalanceHistogramAreaThresholdSrgb { low_threshold: None, high_threshold: None}
+            s::Node::WhiteBalanceHistogramAreaThresholdSrgb { threshold: None}
         ]
     );
     assert!(matched);
@@ -229,7 +224,7 @@ fn test_read_gif() {
     let matched = compare(Some(s::IoEnum::Url("https://s3-us-west-2.amazonaws.com/imageflow-resources/test_inputs/mountain_800.gif".to_owned())), 500,
                           "mountain_gif_scaled400".to_owned(), POPULATE_CHECKSUMS, DEBUG_GRAPH, vec![
             s::Node::Decode {io_id: 0, commands: None},
-            s::Node::Resample2D{ w: 400, h: 300, down_filter: Some(s::Filter::Robidoux), up_filter: Some(s::Filter::Robidoux), hints: Some(request_1d_twice_mode()), scaling_colorspace: None }
+            s::Node::Resample2D{ w: 400, h: 300, down_filter: Some(s::Filter::Robidoux), up_filter: Some(s::Filter::Robidoux), hints: None, scaling_colorspace: None }
         ]
     );
     assert!(matched);
@@ -242,7 +237,7 @@ fn test_jpeg_icc2_color_profile() {
     let matched = compare(Some(s::IoEnum::Url("https://s3-us-west-2.amazonaws.com/imageflow-resources/test_inputs/MarsRGB_tagged.jpg".to_owned())), 500,
                           "MarsRGB_ICC_Scaled400300".to_owned(), POPULATE_CHECKSUMS, DEBUG_GRAPH, vec![
 s::Node::Decode {io_id: 0, commands: None},
-s::Node::Resample2D{ w: 400, h: 300, down_filter: Some(s::Filter::Robidoux), up_filter: Some(s::Filter::Robidoux), hints: Some(request_1d_twice_mode()), scaling_colorspace: None }
+s::Node::Resample2D{ w: 400, h: 300, down_filter: Some(s::Filter::Robidoux), up_filter: Some(s::Filter::Robidoux), hints: None, scaling_colorspace: None }
 ]
     );
     assert!(matched);
@@ -253,7 +248,7 @@ fn test_jpeg_icc4_color_profile() {
     let matched = compare(Some(s::IoEnum::Url("https://s3-us-west-2.amazonaws.com/imageflow-resources/test_inputs/MarsRGB_v4_sYCC_8bit.jpg".to_owned())), 500,
                           "MarsRGB_ICCv4_Scaled400300".to_owned(), POPULATE_CHECKSUMS, DEBUG_GRAPH, vec![
 s::Node::Decode {io_id: 0, commands: None},
-s::Node::Resample2D{ w: 400, h: 300, down_filter: Some(s::Filter::Robidoux), up_filter: Some(s::Filter::Robidoux), hints: Some(request_1d_twice_mode()), scaling_colorspace: None }
+s::Node::Resample2D{ w: 400, h: 300, down_filter: Some(s::Filter::Robidoux), up_filter: Some(s::Filter::Robidoux), hints: None, scaling_colorspace: None }
 ]
     );
     assert!(matched);
@@ -472,19 +467,19 @@ fn test_get_info_png() {
     let _ = imageflow_core::clients::stateless::LibClient {}.get_image_info(&tinypng).expect("Image response should be valid");
 }
 
-#[test]
-fn test_detect_whitespace(){
-    //let white = s::Color::Srgb(s::ColorSrgb::Hex("FFFFFFFF".to_owned()));
-    let blue = s::Color::Srgb(s::ColorSrgb::Hex("0000FFFF".to_owned()));
-    let matched = compare(None, 1,
-                          "DetectWhitespace".to_owned(), POPULATE_CHECKSUMS, DEBUG_GRAPH, vec![
-            s::Node::CreateCanvas {w: 400, h: 300, format: s::PixelFormat::Bgra32, color: s::Color::Transparent},
-            s::Node::FillRect{x1:0, y1:0, x2:50, y2:100, color: blue},
-            s::Node::CropWhitespace {threshold: 80, percent_padding: 0f32}
-        ]
-    );
-    assert!(matched);
-}
+//#[test]
+//fn test_detect_whitespace(){
+//    //let white = s::Color::Srgb(s::ColorSrgb::Hex("FFFFFFFF".to_owned()));
+//    let blue = s::Color::Srgb(s::ColorSrgb::Hex("0000FFFF".to_owned()));
+//    let matched = compare(None, 1,
+//                          "DetectWhitespace".to_owned(), POPULATE_CHECKSUMS, DEBUG_GRAPH, vec![
+//            s::Node::CreateCanvas {w: 400, h: 300, format: s::PixelFormat::Bgra32, color: s::Color::Transparent},
+//            s::Node::FillRect{x1:0, y1:0, x2:50, y2:100, color: blue},
+//            s::Node::CropWhitespace {threshold: 80, percent_padding: 0f32}
+//        ]
+//    );
+//    assert!(matched);
+//}
 
 
 //#[test]

@@ -78,12 +78,12 @@ impl Ir4Translate{
             self.decode_id
         };
         // Add CropWhitespace
-        if r.parsed.trim_whitespace_threshold.is_some(){
-            b.add(s::Node::CropWhitespace {
-                threshold: cmp::max(0,r.parsed.trim_whitespace_threshold.unwrap()) as u32,
-                percent_padding: r.parsed.trim_whitespace_padding_percent.unwrap_or(0f64) as f32
-            });
-        }
+//        if r.parsed.trim_whitespace_threshold.is_some(){
+//            b.add(s::Node::CropWhitespace {
+//                threshold: cmp::max(0,r.parsed.trim_whitespace_threshold.unwrap()) as u32,
+//                percent_padding: r.parsed.trim_whitespace_padding_percent.unwrap_or(0f64) as f32
+//            });
+//        }
 
         //delete whitespace from instructions
         let mut without_trimming: Instructions = r.parsed.clone();

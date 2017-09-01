@@ -4,7 +4,6 @@ use ::sizing::{steps, BoxParam, BoxTarget, AspectRatio, Cond, Step, Layout, Layo
 use ::sizing;
 use ::time::precise_time_ns;
 
-
 #[derive(Copy, Clone, PartialEq, Debug)]
 enum Strategy {
     /// Downscale the image until it fits within the box (less than both and matching at least one dimension).
@@ -77,7 +76,7 @@ enum Strategy {
 fn strategy_to_steps(s: Strategy) -> Option<Vec<Step>> {
     let vec = match s {
         Strategy::Distort => { steps().distort(BoxParam::Exact(BoxTarget::Target)) },
-        /// Like imageresizer max
+        // Like imageresizer max
         Strategy::Max => { steps().skip_unless(Cond::Either(Ordering::Greater)).scale_to_inner()}
         Strategy::MaxAny => { steps().skip_unless(Cond::Larger2D).scale_to_outer() }
         Strategy::MinAny => { steps().skip_unless(Cond::Smaller2D).scale_to_inner()}
@@ -282,7 +281,7 @@ fn vary_number(v: i32, variation_kind: u8) -> Option<i32>{
         21 => Some(10),
         22 => Some((next_pow2(v as u32) / 2) as i32),
         23 => v.checked_add(66),
-        ::std::u8::MAX => Some(24), /// Return the upper bound number of variations
+        ::std::u8::MAX => Some(24), // Return the upper bound number of variations
         _ => None
     }.and_then(|v| if v > 0 { Some(v) } else { None })
 }
@@ -310,7 +309,7 @@ fn generate_aspects(into: &mut Vec<AspectRatio>, temp: &mut Vec<AspectRatio>, se
 
 
     // We use into as the first temp vec
-    let mut n = into;
+    let n = into;
     n.reserve(80);
     n.push(seed);
     n.push(r(1, ::std::i32::MAX));
@@ -324,7 +323,7 @@ fn generate_aspects(into: &mut Vec<AspectRatio>, temp: &mut Vec<AspectRatio>, se
     n.push(r(4, 5));
 
     // temp as the second
-    let mut n_boxes = temp;
+    let n_boxes = temp;
     n_boxes.reserve(n.len() * 4 + 2);
     n_boxes.push(seed);
     let _ = seed.transpose().map(|v| n_boxes.push(v));
@@ -840,9 +839,9 @@ where T: std::fmt::Debug, T: std::cmp::PartialEq {
             }
         }
 
-        /// Unused rules for a group
+        // Unused rules for a group
 
-        ///Evaluate rules and panic right away as requested
+        //Evaluate rules and panic right away as requested
         let ctx = EvaluationContext {
             result: result,
             target: self.target,

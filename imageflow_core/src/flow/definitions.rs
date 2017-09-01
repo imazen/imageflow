@@ -461,7 +461,7 @@ impl From<s::Node> for Node {
     fn from(node: s::Node) -> Node {
         match node {
             s::Node::Crop { .. } => Node::n(&nodes::CROP, NodeParams::Json(node)),
-            s::Node::CropWhitespace { .. } => Node::n(&nodes::CROP_WHITESPACE, NodeParams::Json(node)),
+            //s::Node::CropWhitespace { .. } => Node::n(&nodes::CROP_WHITESPACE, NodeParams::Json(node)),
             s::Node::Decode { .. } => Node::n(&nodes::DECODER, NodeParams::Json(node)),
             s::Node::FlowBitmapBgraPtr { .. } => {
                 Node::n(&nodes::BITMAP_BGRA_POINTER, NodeParams::Json(node))
@@ -476,7 +476,7 @@ impl From<s::Node> for Node {
                 Node::n(&nodes::APPLY_ORIENTATION, NodeParams::Json(node))
             }
             s::Node::Transpose => Node::n(&nodes::TRANSPOSE, NodeParams::Json(node)),
-            s::Node::Resample1D { .. } => Node::n(&nodes::SCALE_1D, NodeParams::Json(node)),
+            //s::Node::Resample1D { .. } => Node::n(&nodes::SCALE_1D, NodeParams::Json(node)),
             s::Node::Encode { .. } => Node::n(&nodes::ENCODE, NodeParams::Json(node)),
             s::Node::CreateCanvas { .. } => {
                 Node::n(&nodes::CREATE_CANVAS, NodeParams::Json(node))

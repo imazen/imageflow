@@ -133,8 +133,8 @@ impl Decoder for ClassicDecoder{
                     frame_decodes_into: s::PixelFormat::from(info.frame_decodes_into),
                     image_height: info.image_height,
                     image_width: info.image_width,
-                    frame_count: info.frame_count,
-                    current_frame_index: info.current_frame_index,
+                    // frame_count: info.frame_count,
+                    // current_frame_index: info.current_frame_index,
                     preferred_extension: std::ffi::CStr::from_ptr(info.preferred_extension)
                         .to_owned()
                         .into_string()
@@ -203,10 +203,10 @@ struct ClassicEncoder{
 }
 
 impl ClassicEncoder{
-    fn get_codec_id_and_hints(preset: &s::EncoderPreset) -> (i64, ffi::EncoderHints){
+    fn get_codec_id_and_hints(preset: &s::EncoderPreset) -> Result<(i64, ffi::EncoderHints)>{
         match *preset {
             s::EncoderPreset::LibjpegTurbo { quality, progressive, optimize_huffman_coding } => {
-                (ffi::CodecType::EncodeJpeg as i64,
+                Ok((ffi::CodecType::EncodeJpeg as i64,
                  ffi::EncoderHints {
                      jpeg_encode_quality: quality.unwrap_or(90),
                      disable_png_alpha: false,
@@ -214,12 +214,12 @@ impl ClassicEncoder{
                      jpeg_optimize_huffman_coding: optimize_huffman_coding.unwrap_or(false), //2x slowdown
                      jpeg_progressive: progressive.unwrap_or(false), //5x slowdown
                      jpeg_use_arithmetic_coding: false, // arithmetic coding is not widely supported
-                 })
+                 }))
             }
             s::EncoderPreset::Libpng { ref matte,
                 zlib_compression,
                 ref depth } => {
-                (ffi::CodecType::EncodePng as i64,
+                Ok((ffi::CodecType::EncodePng as i64,
                  ffi::EncoderHints {
                      jpeg_encode_quality: -1,
                      jpeg_allow_low_quality_non_baseline: false,
@@ -230,10 +230,10 @@ impl ClassicEncoder{
                          Some(s::PngBitDepth::Png24) => true,
                          _ => false,
                      },
-                 })
+                 }))
             }
             s::EncoderPreset::Gif => {
-                unimpl!("Classic encoder only supports libjpeg and libpng");
+                Err(unimpl!("Classic encoder only supports libjpeg and libpng"))
             }
         }
     }
@@ -256,7 +256,7 @@ impl ClassicEncoder{
 impl Encoder for ClassicEncoder{
 
     fn write_frame(&mut self, c: &Context,  io: &mut IoProxy, preset: &s::EncoderPreset, frame: &mut BitmapBgra) -> Result<s::EncodeResult> {
-        let (wanted_id, hints) = ClassicEncoder::get_codec_id_and_hints(preset);
+        let (wanted_id, hints) = ClassicEncoder::get_codec_id_and_hints(preset)?;
         unsafe {
             let classic = &mut self.classic;
 

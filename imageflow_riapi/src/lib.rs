@@ -3,15 +3,14 @@
 #[macro_use] extern crate macro_attr;
 #[macro_use] extern crate enum_derive;
 
+#[cfg(test)]
 extern crate difference;
 
 extern crate imageflow_types;
 extern crate imageflow_helpers;
-//use imageflow_helpers as hlp;
-//use imageflow_types as s;
-//use imageflow_helpers::preludes::from_std::*;
 extern crate url;
-//use url::Url;
+
+#[cfg(test)]
 extern crate time;
 extern crate option_filter;
 

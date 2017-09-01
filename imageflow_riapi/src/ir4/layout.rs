@@ -286,7 +286,7 @@ impl Ir4Layout{
                     _ => None
 
                 },
-                hints: Some(s::ResampleHints { prefer_1d_twice: None, sharpen_percent: self.i.f_sharpen.map(|v| v as f32) })
+                hints: Some(s::ResampleHints { sharpen_percent: self.i.f_sharpen.map(|v| v as f32) })
             });
         }
 
@@ -294,8 +294,7 @@ impl Ir4Layout{
         // Perform white balance
         if Some(HistogramThresholdAlgorithm::Area) == self.i.a_balance_white{
             b.add( s::Node::WhiteBalanceHistogramAreaThresholdSrgb {
-                low_threshold: None,
-                high_threshold: None
+                threshold: None
             });
         }
 
@@ -454,7 +453,7 @@ fn test_crop_and_scale(){
     let l  = Ir4Layout::new(Instructions{w: Some(100), h: Some(200), mode: Some(FitMode::Crop), .. Default::default() }, 768, 433);
     l.add_steps(&mut b).unwrap();
 
-    assert_eq!(b.steps, vec![s::Node::Crop { x1: 275, y1: 0, x2: 492, y2: 433 }, s::Node::Resample2D { w: 100, h: 200, down_filter: None, up_filter: None, scaling_colorspace: None, hints: Some(s::ResampleHints { sharpen_percent: None, prefer_1d_twice: None }) }]);
+    assert_eq!(b.steps, vec![s::Node::Crop { x1: 275, y1: 0, x2: 492, y2: 433 }, s::Node::Resample2D { w: 100, h: 200, down_filter: None, up_filter: None, scaling_colorspace: None, hints: Some(s::ResampleHints { sharpen_percent: None }) }]);
 }
 
 
@@ -464,7 +463,7 @@ fn test_scale(){
 
     let l  = Ir4Layout::new(Instructions{w: Some(2560), h: Some(1696), mode: Some(FitMode::Max), .. Default::default() }, 5104, 3380);
     l.add_steps(&mut b).unwrap();
-    assert_eq!(b.steps, vec![s::Node::Resample2D { w: 2560, h: 1696, down_filter: None, up_filter: None, scaling_colorspace: None, hints: Some(s::ResampleHints { sharpen_percent: None, prefer_1d_twice: None }) }]);
+    assert_eq!(b.steps, vec![s::Node::Resample2D { w: 2560, h: 1696, down_filter: None, up_filter: None, scaling_colorspace: None, hints: Some(s::ResampleHints { sharpen_percent: None}) }]);
 
     // 5104x3380 "?w=2560&h=1696&mode=max&format=png&decoder.min_precise_scaling_ratio=2.1&down.colorspace=linear"
 

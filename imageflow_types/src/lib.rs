@@ -169,7 +169,11 @@ pub enum ScalingFloatspace {
 #[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
 pub enum EncoderPreset {
     #[serde(rename="libjpegturbo")]
-    LibjpegTurbo { quality: Option<i32>, progressive: Option<bool>, optimize_huffman_coding: Option<bool> },
+    LibjpegTurbo {
+        quality: Option<i32>,
+        progressive: Option<bool>,
+        optimize_huffman_coding: Option<bool>
+    },
     #[serde(rename="libpng")]
     Libpng {
         depth: Option<PngBitDepth>,
@@ -272,7 +276,7 @@ fn test_bgra() {
 pub struct ResampleHints {
     pub sharpen_percent: Option<f32>,
 
-    pub prefer_1d_twice: Option<bool>,
+    // pub prefer_1d_twice: Option<bool>,
 }
 
 #[derive(Serialize, Deserialize, Clone, Copy, PartialEq, Debug)]
@@ -326,8 +330,8 @@ pub enum Node {
     FlipH,
     #[serde(rename="crop")]
     Crop { x1: u32, y1: u32, x2: u32, y2: u32 },
-    #[serde(rename="crop_whitespace")]
-    CropWhitespace { threshold: u32, percent_padding: f32 },
+    // #[serde(rename="crop_whitespace")]
+    // CropWhitespace { threshold: u32, percent_padding: f32 },
     #[serde(rename="create_canvas")]
     CreateCanvas {
         format: PixelFormat,
@@ -399,17 +403,16 @@ pub enum Node {
         hints: Option<ResampleHints>,
     },
 
-    #[serde(rename="resample_1d")]
-    Resample1D {
-        scale_to_width: u32,
-        transpose_on_write: bool,
-        interpolation_filter: Option<Filter>,
-        scaling_colorspace: Option<ScalingFloatspace>,
-    },
+//    #[serde(rename="resample_1d")]
+//    Resample1D {
+//        scale_to_width: u32,
+//        transpose_on_write: bool,
+//        interpolation_filter: Option<Filter>,
+//        scaling_colorspace: Option<ScalingFloatspace>,
+//    },
     #[serde(rename="white_balance_histogram_area_threshold_srgb")]
     WhiteBalanceHistogramAreaThresholdSrgb{
-        low_threshold: Option<f32>,
-        high_threshold: Option<f32>
+        threshold: Option<f32>
     },
     #[serde(rename="color_matrix_srgb")]
     ColorMatrixSrgb{
@@ -587,8 +590,7 @@ impl Build001GraphRecording {
 
 #[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
 pub struct Build001Config {
-    pub enable_jpeg_block_scaling: Option<bool>,
-    pub process_all_gif_frames: Option<bool>,
+    // pub process_all_gif_frames: Option<bool>,
     pub graph_recording: Option<Build001GraphRecording>,
 
 }
@@ -742,7 +744,7 @@ impl Framewise {
                                   scaling_colorspace: Some(ScalingFloatspace::Linear),
                                   hints: Some(ResampleHints {
                                       sharpen_percent: Some(10f32),
-                                      prefer_1d_twice: None,
+                                      //prefer_1d_twice: None,
                                   }),
                               },
                               Node::Resample2D {
@@ -783,10 +785,14 @@ impl Framewise {
                          height: 100,
                      });
         nodes.insert("3".to_owned(),
-                     Node::Resample1D {
-                         scale_to_width: 100,
-                         interpolation_filter: None,
-                         transpose_on_write: false,
+                     Node::Resample2D {
+                         w: 100,
+                         h: 100,
+                         down_filter: Some(Filter::Robidoux),
+                         up_filter: None,
+                         hints: Some(ResampleHints{
+                             sharpen_percent: Some(20f32)
+                         }),
                          scaling_colorspace: Some(ScalingFloatspace::Linear),
                      });
         nodes.insert("4".to_owned(),
@@ -896,8 +902,8 @@ pub struct ImageInfo {
     pub preferred_mime_type: String,
     pub preferred_extension: String,
     // Warning, one cannot count frames in a GIF without scanning the whole thing.
-    pub frame_count: usize,
-    pub current_frame_index: i64,
+//    pub frame_count: usize,
+//    pub current_frame_index: i64,
     pub image_width: i32,
     pub image_height: i32,
     pub frame_decodes_into: PixelFormat
@@ -1012,8 +1018,8 @@ impl Response001 {
             success: true,
             message: None,
             data: ResponsePayload::ImageInfo(ImageInfo {
-                current_frame_index: 0,
-                frame_count: 1,
+//                current_frame_index: 0,
+//                frame_count: 1,
                 image_height: 480,
                 image_width: 640,
                 frame_decodes_into: PixelFormat::Bgr24,

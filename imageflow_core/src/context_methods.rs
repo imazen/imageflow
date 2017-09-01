@@ -166,8 +166,8 @@ fn test_handler() {
     let build = s::Build001 {
         builder_config: Some(s::Build001Config {
             graph_recording: None,
-            process_all_gif_frames: Some(false),
-            enable_jpeg_block_scaling: Some(false)
+//            process_all_gif_frames: Some(false),
+//            enable_jpeg_block_scaling: Some(false)
         }),
         io: vec![input_io, output_io],
         framewise: s::Framewise::Steps(steps),

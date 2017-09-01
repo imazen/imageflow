@@ -121,8 +121,8 @@ impl NodeDefMutateBitmap for WhiteBalanceSrgbMutDef{
             if !::ffi::flow_bitmap_bgra_populate_histogram(c.flow_c(), bitmap as *mut BitmapBgra, histograms.as_mut_ptr(), 256, 3, &mut pixels_sampled as *mut u64) {
                 return Err(cerror!(c, "Failed to populate histogram"))
             }
-            if let &NodeParams::Json(s::Node::WhiteBalanceHistogramAreaThresholdSrgb { low_threshold, high_threshold }) = p {
-                white_balance_srgb_mut(bitmap, &histograms, pixels_sampled, low_threshold, high_threshold)
+            if let &NodeParams::Json(s::Node::WhiteBalanceHistogramAreaThresholdSrgb { threshold }) = p {
+                white_balance_srgb_mut(bitmap, &histograms, pixels_sampled, threshold, threshold)
             } else {
                 Err(nerror!(::ErrorKind::NodeParamsMismatch, "Need ColorMatrixSrgb, got {:?}", p))
             }

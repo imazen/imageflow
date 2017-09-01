@@ -48,8 +48,8 @@ impl Decoder for GifDecoder {
             frame_decodes_into: s::PixelFormat::Bgra32,
             image_width: w,
             image_height: h,
-            current_frame_index: 0,
-            frame_count: 1,
+//            current_frame_index: 0,
+//            frame_count: 1,
             // We would have to read in the entire GIF to know!
             preferred_mime_type: "image/gif".to_owned(),
             preferred_extension: "gif".to_owned()

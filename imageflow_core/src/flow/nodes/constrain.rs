@@ -148,7 +148,6 @@ impl NodeDefOneInputExpand for ConstrainDef{
                     scaling_colorspace: hints.and_then(|h| h.scaling_colorspace),
                     hints: hints.map(|h| s::ResampleHints {
                         sharpen_percent: h.sharpen_percent,
-                        prefer_1d_twice: None
                     }),
                 };
 
