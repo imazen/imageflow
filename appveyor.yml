@@ -1,4 +1,4 @@
-image: Previous Visual Studio 2015
+image: Visual Studio 2017
 build: false
 environment:
     PYTHON: "C:\\Python27"
@@ -102,7 +102,7 @@ test_script:
   - mkdir build || exit 0
   - cd build
   #- SET PATH=%PATH%;C:\MinGW\bin
-  - conan install --scope build_tests=True -s compiler="Visual Studio" -o shared=True --build missing -s build_type=Release -s arch=%CONAN_ARCH% -s target_cpu=%TARGET_CPU% -u ../ 
+  - conan install --scope build_tests=True -s compiler="Visual Studio" -o shared=True --build missing -s build_type=Release -s arch=%CONAN_ARCH% -s target_cpu=%TARGET_CPU% -u ../
   - conan build ../
   - cd ..
   - conan remove imageflow_c/* -f
