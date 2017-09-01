@@ -56,6 +56,7 @@ install:
   - echo "GIT_COMMIT=%GIT_COMMIT%" && echo "CI_STRING=%CI_STRING%" && echo "CI_TAG=%CI_TAG%" && echo "CI_RELATED_BRANCH=%CI_RELATED_BRANCH%" && echo "CI_PULL_REQUEST_INFO=%CI_PULL_REQUEST_INFO%" && echo "ARTIFACT_SERIES_NAME=%ARTIFACT_SERIES_NAME%"
   - echo.
   - echo. && echo. echo Installing tools
+  - choco install cmake --installargs 'ADD_CMAKE_TO_PATH=""User""'
   #- vs_buildtools.exe --add Microsoft.VisualStudio.Workload.MSBuildTools --add Microsoft.VisualStudio.Workload.VCTools --includeRecommended
   #- C:\"Program Files (x86)"\"%VSINSTALL%"\vcvarsall.bat %PLATFORM%
   - if "%PLATFORM%"=="x86" SET RUST_TARGET=i686-pc-windows-msvc
