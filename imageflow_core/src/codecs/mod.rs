@@ -61,25 +61,22 @@ impl CodecInstanceContainer {
                     codec: CodecKind::EncoderPlaceholder
                 })
         }else {
-            let mut buffer =  [0u8; 8];
-            let result = io.read_to_buffer(c, &mut buffer);
-            if let Ok(count) = result {
-                io.seek(c, 0).unwrap();
-                if buffer.starts_with(b"GIF89a") || buffer.starts_with(b"GIF87a") {
-                    return Ok(CodecInstanceContainer
-                        {
-                            io_id: io_id,
-                            codec: CodecKind::Decoder(Box::new(gif::GifDecoder::create(c, io, io_id)?))
-                        });
-                } else {
-                    Ok(CodecInstanceContainer
-                        {
-                            io_id: io_id,
-                            codec: CodecKind::Decoder(ClassicDecoder::create(c, io, io_id)?)
-                        })
-                }
+            let mut buffer = [0u8; 8];
+            let result = io.read_to_buffer(c, &mut buffer).map_err(|e| e.at(here!()))?;
+
+            io.seek(c, 0).map_err(|e| e.at(here!()))?;
+            if buffer.starts_with(b"GIF89a") || buffer.starts_with(b"GIF87a") {
+                return Ok(CodecInstanceContainer
+                    {
+                        io_id: io_id,
+                        codec: CodecKind::Decoder(Box::new(gif::GifDecoder::create(c, io, io_id)?))
+                    });
             } else {
-                Err(result.unwrap_err()) //TODO: add detail
+                Ok(CodecInstanceContainer
+                    {
+                        io_id: io_id,
+                        codec: CodecKind::Decoder(ClassicDecoder::create(c, io, io_id)?)
+                    })
             }
         }
     }
@@ -236,7 +233,7 @@ impl ClassicEncoder{
                  })
             }
             s::EncoderPreset::Gif => {
-                panic!("Classic encoder only supports libjpeg and libpng");
+                unimpl!("Classic encoder only supports libjpeg and libpng");
             }
         }
     }
@@ -272,22 +269,22 @@ impl Encoder for ClassicEncoder{
 
             classic.codec_id = wanted_id;
             if !ffi::flow_codec_initialize(c.flow_c(), classic as *mut ffi::CodecInstance) {
-                cerror!(c).panic();
+                return Err(cerror!(c))?
             }
             let codec_def = ffi::flow_codec_get_definition(c.flow_c(), wanted_id);
             if codec_def.is_null() {
-                cerror!(c).panic();
+                return Err(cerror!(c))?
             }
             let write_fn = (*codec_def).write_frame;
             if write_fn == None {
-                panic!("Codec didn't implement write_frame");
+                unimpl!("Codec didn't implement write_frame");
             }
 
             if !write_fn.unwrap()(c.flow_c(),
                                   classic.codec_state,
                                   frame as *mut BitmapBgra,
                                   &hints as *const ffi::EncoderHints) {
-                cerror!(c).panic();
+                return Err(cerror!(c))?
             }
 
             Ok(s::EncodeResult {
@@ -309,7 +306,7 @@ impl CodecInstanceContainer{
          if let CodecKind::EncoderPlaceholder = self.codec{
              match *preset {
                  s::EncoderPreset::Gif => {
-                     println!("Using gif encoder");
+                     //println!("Using gif encoder");
                      self.codec = CodecKind::Encoder(Box::new(gif::GifEncoder::create(c, c.get_proxy_mut(self.io_id)?.deref_mut(), preset, self.io_id)));
                  },
                  _ => {
@@ -320,9 +317,9 @@ impl CodecInstanceContainer{
              }
          }
          if let CodecKind::Encoder(ref mut e) = self.codec {
-             e.write_frame(c,  &mut c.get_proxy_mut(self.io_id)?.deref_mut(), preset, frame)
+             e.write_frame(c,  &mut c.get_proxy_mut(self.io_id)?.deref_mut(), preset, frame).map_err(|e| e.at(here!()))
          }else{
-             panic!("");
+             Err(unimpl!())
              //Err(FlowError::ErrNotImpl)
          }
     }

@@ -99,6 +99,14 @@ macro_rules! unimpl {
             node: None
         }.at(here!())
     );
+    ($fmt:expr) => (
+        ::FlowError{
+            kind: ::ErrorKind::MethodNotImplemented,
+            message: format!(concat!("{:?}: ",$fmt ), ::ErrorKind::MethodNotImplemented),
+            at: ::smallvec::SmallVec::new(),
+            node: None
+        }.at(here!())
+    );
 }
 
 
