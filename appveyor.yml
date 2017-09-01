@@ -82,7 +82,7 @@ install:
   - echo. && echo. && echo Installing Conan
   - pip.exe install conan
   - conan user # Creates the conan data directory
-  - conan remote add imageflow https://api.bintray.com/conan/imazen/imageflow
+  - conan remote add imageflow https://api.bintray.com/conan/imazen/imageflow  || exit 0
   - copy /Y .\ci\updated_conan_settings.yml C:\Users\appveyor\.conan\settings.yml #Fixes settings.yml
 
 #https://cmake.org/files/v3.9/cmake-3.9.1-win64-x64.msi
