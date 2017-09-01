@@ -101,7 +101,7 @@ test_script:
   - cd c_components
   - mkdir build || exit 0
   - cd build
-  - SET PATH=%PATH%;C:\MinGW\bin
+  #- SET PATH=%PATH%;C:\MinGW\bin
   - conan install --scope build_tests=True -s compiler="Visual Studio" -o shared=True --build missing -s build_type=Release -s arch=%CONAN_ARCH% -s target_cpu=%TARGET_CPU% -u ../ 
   - conan build ../
   - cd ..
