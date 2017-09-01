@@ -1,3 +1,4 @@
+image: Previous Visual Studio 2015
 build: false
 environment:
     PYTHON: "C:\\Python27"
@@ -57,6 +58,7 @@ install:
   - echo.
   - echo. && echo. echo Installing tools
   - choco install cmake --installargs 'ADD_CMAKE_TO_PATH=""User""'
+  - refreshenv
   #- vs_buildtools.exe --add Microsoft.VisualStudio.Workload.MSBuildTools --add Microsoft.VisualStudio.Workload.VCTools --includeRecommended
   #- C:\"Program Files (x86)"\"%VSINSTALL%"\vcvarsall.bat %PLATFORM%
   - if "%PLATFORM%"=="x86" SET RUST_TARGET=i686-pc-windows-msvc
@@ -83,6 +85,7 @@ install:
   - conan remote add imageflow https://api.bintray.com/conan/imazen/imageflow
   - copy /Y .\ci\updated_conan_settings.yml C:\Users\appveyor\.conan\settings.yml #Fixes settings.yml
 
+#https://cmake.org/files/v3.9/cmake-3.9.1-win64-x64.msi
 test_script:
   - if NOT "%CI_TAG%"=="" echo Purging build files for %CI_TAG%
   - if NOT "%CI_TAG%"=="" rmdir /s /q target || exit 0
