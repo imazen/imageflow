@@ -35,7 +35,7 @@ matrix:
     #Should be compatible with El Capitan forward. xcode8
     env: TARGET_CPU=nehalem PACKAGE_SUFFIX=x86_64-mac-osx10_11 UPLOAD_BUILD=True TARGET=x86_64-apple-darwin FETCH_COMMIT_SUFFIX=mac64
     language: rust
-    rust: nightly-2017-08-31
+    rust: nightly-2017-08-01
   - os: linux
     dist: trusty
     env: UPLOAD_BUILD=False COVERAGE=True CODECOV=True VALGRIND=True BUILD_RELEASE=False CLEAN_RUST_TARGETS=True TARGET_CPU=sandybridge P PACKAGE_SUFFIX=x86_64-sandy_valgrind_linux-gcc54 DOCKER_IMAGE=imazen/imageflow_build_ubuntu16:latest

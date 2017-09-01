@@ -7,7 +7,7 @@ environment:
     RUST_BACKTRACE: 1
     CARGO_INCREMENTAL: 1
     TARGET_CPU: sandybridge
-    RUST_TOOLCHAIN: nightly-2017-08-31
+    RUST_TOOLCHAIN: nightly-2017-08-01
     VSINSTALL:  "Microsoft Visual Studio\\2017\\Community\\VC\\Auxiliary\\Build"
     CONAN_VISUAL_VERSIONS: 15
     VS150COMNTOOLS: "C:\\Program Files (x86)\\Microsoft Visual Studio\\2017\\Community\\Common7\\Tools\\"
