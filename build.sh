@@ -296,6 +296,12 @@ else
 	export SHORT_OS_NAME="${SHORT_OS_NAME:-linux}"
 fi
 
+if [[ "$(uname -s)" == 'Darwin' ]]; then
+	export NUGET_RUNTIME="${NUGET_RUNTIME:-osx-x64}"
+else
+	export NUGET_RUNTIME="${NUGET_RUNTIME:-linux-x64}"
+fi
+
 if [[ "${UPLOAD_BY_DEFAULT}" == "True" ]]; then
 	if [[ -n "${GIT_OPTIONAL_BRANCH}" ]]; then
 		export ARTIFACT_UPLOAD_PATH="${ARTIFACT_UPLOAD_PATH:-${GIT_OPTIONAL_BRANCH}/imageflow-localbuild-${GIT_COMMIT_SHORT}-${SHORT_OS_NAME}}"
@@ -640,6 +646,9 @@ if [[ "$BUILD_RELEASE" == 'True' ]]; then
 		mkdir -p "./artifacts/upload/${DOCS_UPLOAD_DIR_2}" || true
 		cp -a ${TARGET_DIR}doc/* "./artifacts/upload/${DOCS_UPLOAD_DIR_2}/"
 	fi
+
+	# Create the nuget artifact
+	./ci/pack_nuget/pack.sh
 
 fi
 echo_maybe

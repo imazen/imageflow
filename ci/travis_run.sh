@@ -296,6 +296,10 @@ DOCKER_ENV_VARS=(
 	 "ARTIFACT_UPLOAD_PATH_3=${ARTIFACT_UPLOAD_PATH_3}" 
 		"-e"
 	 "GIT_COMMIT=${GIT_COMMIT}" 
+	 	"-e"
+	 "PACKAGE_SUFFIX=${PACKAGE_SUFFIX}" 
+	"-e"
+	"NUGET_RUNTIME=${NUGET_RUNTIME}" 
 	"-e"
 	 "GIT_COMMIT_SHORT=${GIT_COMMIT_SHORT}" 
 	"-e"
@@ -410,6 +414,13 @@ if [[ "$DELETE_UPLOAD_FOLDER" == 'True' ]]; then
 	rm -rf ./artifacts/upload || true
 	mkdir -p ./artifacts/upload || true
 else
+	(cd ./artifacts/nuget
+		for i in *.nupkg; do
+    		[ -f "$i" ] || break
+    		# Upload each package
+    		curl --header "X-NuGet-ApiKey: ${NUGET_API_KEY}" --header  "X-NuGet-Client-Version: 4.1" -F "file=@$i" "https://nuget.org/api/v2/package"
+		done
+	)
 	echo -e "\nListing files scheduled for upload to s3\n\n"
 	ls -R ./artifacts/upload/*
 fi
