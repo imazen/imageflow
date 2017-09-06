@@ -131,7 +131,7 @@ sudo apt-get install --no-install-recommends \
 After installing the above, you'll need conan, cmake 3.4.1+, dssim, and Rust Nightly.
 
 ```bash
-curl https://sh.rustup.rs -sSf | sh -s -- -y --default-toolchain nightly-2017-06-12
+curl https://sh.rustup.rs -sSf | sh -s -- -y --default-toolchain nightly-2017-08-01
 sudo pip install conan
 ./ci/nixtools/install_cmake.sh
 ./ci/nixtools/install_dssim.sh
