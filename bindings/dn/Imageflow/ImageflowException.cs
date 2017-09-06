@@ -11,7 +11,7 @@ namespace Imageflow
     {
         const int MaxBufferSize = 8096;
 
-        internal ImageflowException(string message) : base(message)
+        private ImageflowException(string message) : base(message)
         {
             
         }
@@ -25,14 +25,15 @@ namespace Imageflow
             var buffer = new byte[defaultBufferSize];
             var pinned = GCHandle.Alloc(buffer, GCHandleType.Pinned);
 
-            var bytesWritten = UIntPtr.Zero;
-            var everythingWritten = false;
+            
+            bool everythingWritten;
             
             string message = null;
             try
             {
+               
                 everythingWritten = NativeMethods.imageflow_context_error_write_to_buffer(c.Pointer,
-                    pinned.AddrOfPinnedObject(), new UIntPtr((ulong) buffer.LongLength), out bytesWritten);
+                    pinned.AddrOfPinnedObject(), new UIntPtr((ulong) buffer.LongLength), out var bytesWritten);
 
                 if (bytesWritten.ToUInt64() > 0)
                 {

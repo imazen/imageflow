@@ -11,7 +11,7 @@ namespace Imageflow
         private IntPtr _ptr;
         private readonly JobContext _parent;
 
-        internal IntPtr Pointer
+        private IntPtr Pointer
         {
             get
             {
@@ -39,26 +39,20 @@ namespace Imageflow
 
         public int GetStatusCode()
         {
-            int statusCode;
-            IntPtr utf8Buffer;
-            UIntPtr bufferSize;
-            Read(out statusCode, out utf8Buffer, out bufferSize);
+            Read(out var statusCode, out var utf8Buffer, out var bufferSize);
             return statusCode;
         }
 
         public Stream GetStream()
         {
-            int statusCode;
-            IntPtr utf8Buffer;
-            UIntPtr bufferSize;
-            Read(out statusCode, out utf8Buffer, out bufferSize);
+            Read(out var statusCode, out var utf8Buffer, out var bufferSize);
             return new ImageflowUnmanagedReadStream(this, utf8Buffer, bufferSize);
         }
 
         public T Deserialize<T>() where T : class
         {
             using (var reader = new StreamReader(GetStream(), Encoding.UTF8))
-                return JsonSerializer.Create().Deserialize((JsonReader) new JsonTextReader(reader), typeof(T)) as T;
+                return JsonSerializer.Create().Deserialize(new JsonTextReader(reader), typeof(T)) as T;
         }
 
         public dynamic DeserializeDynamic()
@@ -108,7 +102,7 @@ namespace Imageflow
         public void AssertReady()
         {
             _parent.AssertReady();
-            if (this.Pointer == IntPtr.Zero) throw new ImageflowAssertionFailed("Pointer must never return zero");
+            if (this.Pointer == IntPtr.Zero) throw new ImageflowDisposedException("JsonResponse");
         }
 
     }

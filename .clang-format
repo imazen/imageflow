@@ -2,7 +2,6 @@
 Language:        Cpp
 # BasedOnStyle:  WebKit
 AccessModifierOffset: -4
-ConstructorInitializerIndentWidth: 4
 AlignEscapedNewlinesLeft: false
 AlignTrailingComments: false
 AllowAllParametersOfDeclarationOnNextLine: true

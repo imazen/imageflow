@@ -36,7 +36,7 @@ namespace Imageflow
             throw new Exception($".NET Imageflow bindings only support ABI {NativeMethods.ABI_MAJOR}.{NativeMethods.ABI_MINOR}. libimageflow ABI {major}.{minor} is loaded.");
         }
 
-        internal void AddPinnedData(GCHandle handle)
+        private void AddPinnedData(GCHandle handle)
         {
             if (_pinned == null) _pinned = new List<GCHandle>();
             _pinned.Add(handle);
@@ -44,7 +44,7 @@ namespace Imageflow
 
         public bool HasError => NativeMethods.imageflow_context_has_error(Pointer);
         
-        public static byte[] SerializeToJson<T>(T obj){
+        private static byte[] SerializeToJson<T>(T obj){
             using (var stream = new MemoryStream())
             using (var writer = new StreamWriter(stream, new UTF8Encoding(false))){
                 JsonSerializer.Create().Serialize(writer, obj);
@@ -82,7 +82,7 @@ namespace Imageflow
         {
             if (HasError) throw ImageflowException.FromContext(this);
         }
-
+        
         public JsonResponse ExecuteImageResizer4CommandString( int inputId, int outputId, string commands)
         {
             var message = new
@@ -96,7 +96,7 @@ namespace Imageflow
                             command_string = new
                             {
                                 kind = "ir4",
-                                value = "w=200&h=200&scale=both&format=jpg",
+                                value = commands,
                                 decode = inputId,
                                 encode = outputId
                             }
@@ -208,11 +208,8 @@ namespace Imageflow
         public Stream GetOutputBuffer(int ioId)
         {
             AssertReady();
-            IntPtr buffer;
-            UIntPtr bufferSize;
-            AssertReady();
-            if (!NativeMethods.imageflow_context_get_output_buffer_by_id(Pointer, ioId, out buffer,
-                out bufferSize))
+            if (!NativeMethods.imageflow_context_get_output_buffer_by_id(Pointer, ioId, out var buffer,
+                out var bufferSize))
             {
                 AssertReady();
                 throw new ImageflowAssertionFailed("AssertReady should raise an exception if method fails");
