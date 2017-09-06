@@ -1,3 +1,6 @@
+#![feature(alloc_system)]
+extern crate alloc_system;
+
 extern crate hyper;
 #[macro_use]
 extern crate imageflow_core;

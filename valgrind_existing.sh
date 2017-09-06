@@ -31,10 +31,17 @@ printf "%s\n" "${TEST_BINARIES[@]}"
 #SKIP_BINARIES=()
 
 # valgrind breaks OpenSSL, so we can't test the server right now
-# imageflow_helpers uses Regex, which valgrind causes to segfault
+# imageflow_helpers and imageflow_types uses Regex, which valgrind causes to segfault
+# imageflow_riapi takes years to run under valgrind
+# Neither uses unsafe code
 SKIP_BINARIES+=("$(ls ./"${TEST_BINARIES_TARGET}"debug/test_ir4* || true )")
-SKIP_BINARIES+=("$(ls ./"${TEST_BINARIES_TARGET}"debug/imageflow_helpers* || true )")
-echo "Should skip: ${SKIP_BINARIES[*]}"
+SKIP_BINARIES+=("$(ls ./"${TEST_BINARIES_TARGET}"debug/*imageflow_helpers* || true )")
+SKIP_BINARIES+=("$(ls ./"${TEST_BINARIES_TARGET}"debug/*imageflow_riapi* || true )")
+SKIP_BINARIES+=("$(ls ./"${TEST_BINARIES_TARGET}"debug/*imageflow_types* || true )")
+function join_by { local IFS="$1"; shift; echo "$*"; }
+SKIP_BINARIES_STR="$(join_by " " "${SKIP_BINARIES[@]}")"
+SKIP_BINARIES_STR=" $SKIP_BINARIES_STR "
+echo "Should skip: ${SKIP_BINARIES_STR}"
 
 
 # If we're running as 'conan' (we assume this indicates we are in a docker container)
@@ -67,7 +74,7 @@ print_modified_ago(){
 for f in "${TEST_BINARIES[@]}"
 do
 	printf "\n==============================================================\n%s %s\n" "$(date '+[%H:%M:%S]')" "$f"
-	if [[ " ${SKIP_BINARIES[@]} " == *" ${f} "* ]]; then
+	if [[ "$SKIP_BINARIES_STR" == *"${f}"* ]]; then
 		echo "SKIPPING"
 	else
 	  print_modified_ago "$f"

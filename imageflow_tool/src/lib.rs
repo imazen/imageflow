@@ -1,5 +1,6 @@
 #![feature(slice_concat_ext)]
-
+#![feature(alloc_system)]
+extern crate alloc_system;
 
 extern crate clap;
 extern crate imageflow_helpers;

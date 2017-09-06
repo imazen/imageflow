@@ -28,7 +28,8 @@
 
 #![feature(proc_macro)]
 #![feature(conservative_impl_trait)]
-
+#![feature(alloc_system)]
+extern crate alloc_system;
 pub mod build_env_info;
 pub mod version;
 

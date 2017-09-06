@@ -1,3 +1,5 @@
+#![feature(alloc_system)]
+extern crate alloc_system;
 extern crate imageflow_tool_lib;
 extern crate imageflow_types as s;
 use std::io::Write;

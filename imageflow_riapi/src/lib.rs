@@ -1,4 +1,6 @@
 #![feature(conservative_impl_trait)]
+#![feature(alloc_system)]
+extern crate alloc_system;
 
 #[macro_use] extern crate macro_attr;
 #[macro_use] extern crate enum_derive;

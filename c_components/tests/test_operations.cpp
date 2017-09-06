@@ -129,30 +129,6 @@ TEST_CASE("Test block downscaling", "")
     }
 }
 
-TEST_CASE("Benchmark block downscaling", "")
-{
-
-    uint8_t input[64];
-    memset(&input[0], 0, 64);
-    uint8_t output[64];
-    uint8_t * rows[8] = { &output[0],     &output[8],     &output[8 * 2], &output[8 * 3],
-                          &output[8 * 4], &output[8 * 5], &output[8 * 6], &output[8 * 7] };
-
-    for (size_t i = 0; i < sizeof(blockscale_funclist) / sizeof(blockscale_fn); i++) {
-#ifdef DEBUG
-        int reps = 90000;
-#else
-        int reps = 900;
-#endif
-        int64_t start = flow_get_high_precision_ticks();
-        for (int j = 0; j < reps; j++) {
-            blockscale_funclist[i](input, rows, 0);
-        }
-        double ms = (flow_get_high_precision_ticks() - start) * 1000.0 / (float)flow_get_profiler_ticks_per_second();
-        fprintf(stdout, "Block downscaling fn %d took %.05fms for %d reps (%0.2f megapixels)\n", (int)i, ms, reps,
-                (float)(reps * 64) / 1000000.0f);
-    }
-}
 
 int64_t transpose(int w, int h, flow_pixel_format fmt, int runs)
 {
@@ -271,35 +247,6 @@ int64_t fill_rect(int w, int h, flow_pixel_format fmt, int runs)
     return end - start;
 }
 
-// TEST_CASE("Benchmark fill rect", "")
-//{
-//    for (int fmt = 4; fmt >= 3; fmt--)
-//        for (int w = 1; w < 3000; w += 1373)
-//            for (int h = 1; h < 3000; h += 1373) {
-//                int runs = 50;
-//
-//                int ticks = fill_rect(w, h, (flow_pixel_format)fmt,runs);
-//                double ms = ticks / runs * 1000.0 / (float)flow_get_profiler_ticks_per_second();
-//                fprintf(stdout, "Fill rect %dx%d (fmt %d) took %.05fms\n", w, h, fmt, ms);
-//            }
-//}
-
-TEST_CASE("Benchmark scale2d", "")
-{
-    flow_pixel_format formats[3] = { flow_bgra32, flow_bgr32 }; //, flow_bgr24 };
-    flow_working_floatspace spaces[2] = { flow_working_floatspace_srgb, flow_working_floatspace_linear };
-    for (int format_ix = 0; format_ix < 2; format_ix++)
-        for (int space_ix = 0; space_ix < 2; space_ix++)
-            for (int w = 2000; w < 4000; w += 1373)
-                for (int h = 2000; h < 4000; h += 1373) {
-                    int runs = 5;
-
-                    int ticks = scale2d(w, h, 800, 600, formats[format_ix], spaces[space_ix], runs);
-                    double ms = ticks / runs * 1000.0 / (float)flow_get_profiler_ticks_per_second();
-                    fprintf(stdout, "Downscaling %dx%d (fmt %d) to 800x600 in space %d took %.05fms\n", w, h,
-                            formats[format_ix], spaces[space_ix], ms);
-                }
-}
 
 // with optimizations
 // Downscaling 2000x2000 (fmt 4) to 800x600 in space 0 took 28.27700ms
@@ -337,13 +284,74 @@ TEST_CASE("Benchmark scale2d", "")
 // Downscaling 3373x3373 (fmt 70) to 800x600 in space 1 took 61.35000ms
 //
 //
+
+
+// TEST_CASE("Benchmark fill rect", "")
+//{
+//    for (int fmt = 4; fmt >= 3; fmt--)
+//        for (int w = 1; w < 3000; w += 1373)
+//            for (int h = 1; h < 3000; h += 1373) {
+//                int runs = 50;
+//
+//                int ticks = fill_rect(w, h, (flow_pixel_format)fmt,runs);
+//                double ms = ticks / runs * 1000.0 / (float)flow_get_profiler_ticks_per_second();
+//                fprintf(stdout, "Fill rect %dx%d (fmt %d) took %.05fms\n", w, h, fmt, ms);
+//            }
+//}
+
+
+#ifndef NDEBUG
+const int MAX_RUNS=1;
+#else
+const int MAX_RUNS=1000;
+#endif
+
+
+TEST_CASE("Benchmark block downscaling", "")
+{
+
+    uint8_t input[64];
+    memset(&input[0], 0, 64);
+    uint8_t output[64];
+    uint8_t * rows[8] = { &output[0],     &output[8],     &output[8 * 2], &output[8 * 3],
+        &output[8 * 4], &output[8 * 5], &output[8 * 6], &output[8 * 7] };
+
+    for (size_t i = 0; i < sizeof(blockscale_funclist) / sizeof(blockscale_fn); i++) {
+        int reps = int_min(MAX_RUNS, 900);;
+        int64_t start = flow_get_high_precision_ticks();
+        for (int j = 0; j < reps; j++) {
+            blockscale_funclist[i](input, rows, 0);
+        }
+        double ms = (flow_get_high_precision_ticks() - start) * 1000.0 / (float)flow_get_profiler_ticks_per_second();
+        fprintf(stdout, "Block downscaling fn %d took %.05fms for %d reps (%0.2f megapixels)\n", (int)i, ms, reps,
+                (float)(reps * 64) / 1000000.0f);
+    }
+}
+
+TEST_CASE("Benchmark scale2d", "")
+{
+    flow_pixel_format formats[3] = { flow_bgra32, flow_bgr32 }; //, flow_bgr24 };
+    flow_working_floatspace spaces[2] = { flow_working_floatspace_srgb, flow_working_floatspace_linear };
+    for (int format_ix = 0; format_ix < 2; format_ix++)
+        for (int space_ix = 0; space_ix < 2; space_ix++)
+            for (int w = 2000; w < 4000; w += 1373)
+                for (int h = 2000; h < 4000; h += 1373) {
+                    int runs = int_min(MAX_RUNS, 5);
+
+                    int ticks = scale2d(w, h, 800, 600, formats[format_ix], spaces[space_ix], runs);
+                    double ms = ticks / runs * 1000.0 / (float)flow_get_profiler_ticks_per_second();
+                    fprintf(stdout, "Downscaling %dx%d (fmt %d) to 800x600 in space %d took %.05fms\n", w, h,
+                            formats[format_ix], spaces[space_ix], ms);
+                }
+}
+
 TEST_CASE("Benchmark horizontal flip", "")
 {
 
     for (int fmt = 4; fmt >= 3; fmt--)
         for (int w = 1; w < 3000; w += 1373)
             for (int h = 1; h < 3000; h += 1373) {
-                int runs = 50;
+                int runs = int_min(MAX_RUNS, 50);
 
                 int ticks = flip_h(w, h, (flow_pixel_format)fmt, runs);
                 double ms = ticks / runs * 1000.0 / (float)flow_get_profiler_ticks_per_second();
@@ -356,7 +364,7 @@ TEST_CASE("Benchmark vertical flip", "")
     for (int fmt = 4; fmt >= 3; fmt--)
         for (int w = 1; w < 3000; w += 1373)
             for (int h = 1; h < 3000; h += 1373) {
-                int runs = 50;
+                int runs = int_min(MAX_RUNS, 50);
 
                 int ticks = flip_v(w, h, (flow_pixel_format)fmt, runs);
                 double ms = ticks / runs * 1000.0 / (float)flow_get_profiler_ticks_per_second();
@@ -368,7 +376,7 @@ TEST_CASE("Benchmark transpose", "")
     for (int fmt = 4; fmt >= 4; fmt--)
         for (int w = 1; w < 3000; w += 1373)
             for (int h = 1; h < 3000; h += 1373) {
-                int runs = 50;
+                int runs = int_min(MAX_RUNS, 50);
                 int ticks = transpose(w, h, (flow_pixel_format)fmt, runs);
                 double ms = ticks / runs * 1000.0 / (float)flow_get_profiler_ticks_per_second();
                 fprintf(stdout, "Transposing %dx%d to %dx%d (fmt %d) took %.05fms\n", w, h, h, w, fmt, ms);
