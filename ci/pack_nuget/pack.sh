@@ -89,7 +89,6 @@ mkdir -p "$STAGING_DIR" || true
     cat "${NUGET_PACKAGE_NAME}.nuspec"
     echo
     
-    
     zip -r "${NUGET_OUTPUT_FILE}" "./*" || 7z a -tzip "${NUGET_OUTPUT_FILE}" "*"
     echo  "${NUGET_OUTPUT_FILE} packed"
    

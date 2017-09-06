@@ -19,8 +19,6 @@ if [[ -d "${HOME}/host_cargo/git" && -d "${HOME}/host_cargo/registry" ]]; then
 	cp -Rp "${HOME}/host_cargo/registry" "${HOME}/.cargo/registry" 
 fi
 
-sudo apt-get install zip || true 
-
 ./build.sh
 
 

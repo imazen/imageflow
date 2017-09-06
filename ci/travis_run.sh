@@ -394,24 +394,24 @@ fi
 if [[ "$SIM_CI" != 'True' ]]; then
 	if [[ -n "$CI_TAG" ]]; then
 		# We always cleanup after a tagged release; no point in wasting cache space
-		rm -rf ./target || true
-		rm -rf ./c_components/build || true
-		rm -rf ~/.conan || true
-		rm -rf ~/.cargo || true
+		sudo rm -rf ./target || sudo rm -rf ./target || true
+		sudo rm -rf ./c_components/build || sudo rm -rf ./c_components/build || true
+		sudo rm -rf ~/.conan || sudo rm -rf ~/.conan || true
+		sudo rm -rf ~/.cargo || sudo rm -rf ~/.cargo || true
 	fi 
 
 	# Don't let the cache become polluted by a build profile we aren't doing
 	if [[ "$BUILD_RELEASE" == "False" ]]; then
-		rm -rf ./target/release || true
+		sudo rm -rf ./target/release || sudo rm -rf ./target/release || true
 	fi
 	if [[ "$BUILD_DEBUG" == "False" ]]; then
-		rm -rf ./target/debug || true
+		sudo rm -rf ./target/debug || sudo rm -rf ./target/debug || true
 	fi
 fi
 
 if [[ "$DELETE_UPLOAD_FOLDER" == 'True' ]]; then
 	echo_maybe -e "\nRemvoing all files scheduled for upload to s3\n\n"
-	rm -rf ./artifacts/upload || true
+	sudo rm -rf ./artifacts/upload || sudo rm -rf ./artifacts/upload || true
 	mkdir -p ./artifacts/upload || true
 else
 
@@ -423,6 +423,6 @@ else
     		curl --header "X-NuGet-ApiKey: ${NUGET_API_KEY}" --header  "X-NuGet-Client-Version: 4.1" -F "file=@$i" -L "https://www.nuget.org/api/v2/package"
 		done
 	)
-	echo -e "\nListing files scheduled for upload to s3\n\n"
-	ls -R ./artifacts/upload/*
+	echo -e "\nListing (non-html/css/js) files scheduled for upload to s3\n\n"
+	ls -R -I "*.html" -I "*.js" -I "*.css" ./artifacts/upload/*
 fi

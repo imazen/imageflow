@@ -36,7 +36,7 @@ command -v cargo >/dev/null 2>&1  || { echo -e "'cargo' is required, but missing
 command -v conan >/dev/null 2>&1  || { echo -e "'conan' is required, but missing. Try: pip install conan\nAborting." >&2; exit 1; }
 command -v cmake >/dev/null 2>&1  || { echo -e "'cmake' is required, but missing. Try: ./ci/nixtools/install_cmake.sh\nAborting." >&2; exit 1; }
 command -v dssim >/dev/null 2>&1  || { echo -e "'dssim' is required, but missing. Try: ./ci/nixtools/install_dssim.sh\nAborting." >&2; exit 1; }
-command -v nasm >/dev/null 2>&1 || { echo -e "'zip' is required, but missing. Try: apt-get install nasm\nAborting." >&2; exit 1; }
+command -v nasm >/dev/null 2>&1 || { echo -e "'nasm' is required, but missing. Try: apt-get install nasm\nAborting." >&2; exit 1; }
 
 # We didn't automatically check for a c compiler, OpenSSL, valgrind, lcov
 
