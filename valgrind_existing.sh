@@ -31,7 +31,9 @@ printf "%s\n" "${TEST_BINARIES[@]}"
 #SKIP_BINARIES=()
 
 # valgrind breaks OpenSSL, so we can't test the server right now
+# imageflow_helpers uses Regex, which valgrind causes to segfault
 SKIP_BINARIES+=("$(ls ./"${TEST_BINARIES_TARGET}"debug/test_ir4* || true )")
+SKIP_BINARIES+=("$(ls ./"${TEST_BINARIES_TARGET}"debug/imageflow_helpers* || true )")
 echo "Should skip: ${SKIP_BINARIES[*]}"
 
 
