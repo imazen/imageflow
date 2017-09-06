@@ -1,8 +1,9 @@
 #!/bin/bash
 set -e #Exit on failure.
 
-export CI_TAG="v0.1-prerelease1"
-export PACKAGE_SUFFIX="ubuntu_14_04-x86_64"
-export NUGET_RUNTIME="ubuntu.14.04-x64"
+#Underscores are prohibited in prerelease tags
+export CI_TAG="v0.9-rc1-1"
+export PACKAGE_SUFFIX="win64"
+export NUGET_RUNTIME="win7-x64"
 
 ./pack.sh

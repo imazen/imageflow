@@ -14,7 +14,7 @@ else
 	exit 0
 fi 
 
-export NUGET_COMBINED_NAME="$NUGET_PACKAGE_NAME$NUGET_PACKAGE_VERSION"
+export NUGET_COMBINED_NAME="$NUGET_PACKAGE_NAME.$NUGET_PACKAGE_VERSION"
 
 SCRIPT_DIR="$(dirname "${BASH_SOURCE[0]}" )"
 SCRIPT_DIR="$(cd "$SCRIPT_DIR"; pwd)"
@@ -48,6 +48,12 @@ mkdir -p "$STAGING_DIR" || true
 	else
 		LIB_NAME=libimageflow.so
 	fi
+
+	#mkdir -p _rels 
+	#cat ../../.rels | sed -e "s/:nuspec_name:/${NUGET_PACKAGE_NAME}.nuspec/g"  > "_rels/.rels"
+	#cp "../../[Content_Types].xml" "[Content_Types].xml"
+
+
 	mkdir -p lib/netstandard1.0
 	echo "" > lib/netstandard1.0/_._
 
@@ -85,10 +91,12 @@ mkdir -p "$STAGING_DIR" || true
 		 | sed -e "s/:libfile:/${SED_NUGET_LIBFILE}/" \
 		 | sed -e "s/:props:/${SED_NUGET_PROPS}/" > "${NUGET_PACKAGE_NAME}.nuspec"
 
+
 	echo "${NUGET_PACKAGE_NAME}.nuspec:"
     cat "${NUGET_PACKAGE_NAME}.nuspec"
     echo
     
+    rm "${NUGET_OUTPUT_FILE}" || true 
     zip -r "${NUGET_OUTPUT_FILE}" . || 7z a -tzip "${NUGET_OUTPUT_FILE}" "*"
     echo  "${NUGET_OUTPUT_FILE} packed"
    
