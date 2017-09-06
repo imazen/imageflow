@@ -25,14 +25,20 @@ mkdir -p "$STAGING_DIR" || true
 
 ( cd "$STAGING_DIR"
 	
+
 	rm -rf "./$NUGET_COMBINED_NAME"
 	mkdir "$NUGET_COMBINED_NAME"
 	cd "$NUGET_COMBINED_NAME"
 
+
 	RELEASE_DIR="${SCRIPT_DIR}/../../target/release/"
 	RUNTIME_DIR="runtimes/${NUGET_RUNTIME}/native/"
 	PROPS_PATH="build/net45/${NUGET_PACKAGE_NAME}.props"
+	NUGET_OUTPUT_DIR="${SCRIPT_DIR}/../../artifacts/nuget"
+	NUGET_OUTPUT_FILE="${NUGET_OUTPUT_DIR}/${NUGET_COMBINED_NAME}.nupkg"
 	echo RELEASE_DIR=$RELEASE_DIR
+
+	mkdir -p "${NUGET_OUTPUT_DIR}" || true
 
 
 	if [[ "${NUGET_RUNTIME}" == *'win'* ]]; then
@@ -82,12 +88,9 @@ mkdir -p "$STAGING_DIR" || true
 	echo "${NUGET_PACKAGE_NAME}.nuspec:"
     cat "${NUGET_PACKAGE_NAME}.nuspec"
     echo
-   
-    cd ..
-    NUGET_OUTPUT_DIR="${SCRIPT_DIR}/../../artifacts/nuget"
-
-    mkdir -p "${NUGET_OUTPUT_DIR}" || true
-    zip -r "${NUGET_OUTPUT_DIR}/${NUGET_COMBINED_NAME}.nupkg" "${NUGET_COMBINED_NAME}" || 7z a -tzip "${NUGET_OUTPUT_DIR}/${NUGET_COMBINED_NAME}.nupkg" "${NUGET_COMBINED_NAME}/" 
-    echo  "${NUGET_OUTPUT_DIR}/${NUGET_COMBINED_NAME}.nupkg packed"
+    
+    
+    zip -r "${NUGET_OUTPUT_FILE}" "./*" || 7z a -tzip "${NUGET_OUTPUT_FILE}" "*"
+    echo  "${NUGET_OUTPUT_FILE} packed"
    
 )
