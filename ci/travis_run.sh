@@ -423,9 +423,12 @@ else
     		[ -f "$i" ] || break
     		echo -e "\nUploading $i to NuGet.org\n"Rn
     		# Upload each package
-    		dotnet nuget push "$i" --api-key "${NUGET_API_KEY}" -s "nuget.org"
+    		#dotnet nuget push "$i" --api-key "${NUGET_API_KEY}" -s "nuget.org"
+			#dotnet nuget push "$NUGET_TEST_PACKAGE" --api-key "${NUGET_API_KEY}" -s "nuget.org"
 
-    		#curl --header "X-NuGet-ApiKey: ${NUGET_API_KEY}" --header  "X-NuGet-Client-Version: 4.1" -F "file=@$i" -L "https://www.nuget.org/api/v2/package"
+			#curl -L "https://www.nuget.org/api/v2/package" -H "X-NuGet-ApiKey: ${NUGET_API_KEY}" -H "X-NuGet-Client-Version: 4.1.0" -A "NuGet Command Line/3.4.4.1321 (Unix 4.4.0.92)" --upload-file "$NUGET_TEST_PACKAGE"
+
+ 			curl -L "https://www.nuget.org/api/v2/package" -H "X-NuGet-ApiKey: ${NUGET_API_KEY}" -H "X-NuGet-Client-Version: 4.1.0" -A "NuGet Command Line/3.4.4.1321 (Unix 4.4.0.92)" --upload-file "$i"
 		done
 	)
 	echo -e "\nListing (non-html/css/js) files scheduled for upload to s3\n\n"
