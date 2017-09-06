@@ -87,7 +87,7 @@ mkdir -p "$STAGING_DIR" || true
     NUGET_OUTPUT_DIR="${SCRIPT_DIR}/../../artifacts/nuget"
 
     mkdir -p "${NUGET_OUTPUT_DIR}" || true
-    zip -r "${NUGET_OUTPUT_DIR}/${NUGET_COMBINED_NAME}.nupkg" "${NUGET_COMBINED_NAME}" || 7z a "${NUGET_OUTPUT_DIR}/${NUGET_COMBINED_NAME}.nupkg" "${NUGET_COMBINED_NAME}/" 
+    zip -r "${NUGET_OUTPUT_DIR}/${NUGET_COMBINED_NAME}.nupkg" "${NUGET_COMBINED_NAME}" || 7z a -tzip "${NUGET_OUTPUT_DIR}/${NUGET_COMBINED_NAME}.nupkg" "${NUGET_COMBINED_NAME}/" 
     echo  "${NUGET_OUTPUT_DIR}/${NUGET_COMBINED_NAME}.nupkg packed"
    
 )
