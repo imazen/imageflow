@@ -65,6 +65,10 @@ install:
   - if "%PLATFORM%"=="x64" SET RUST_TARGET=x86_64-pc-windows-msvc
   - if "%PLATFORM%"=="x86" SET TARGET_DIR=target\ #i686-pc-windows-msvc\
   - if "%PLATFORM%"=="x64" SET TARGET_DIR=target\ #x86_64-pc-windows-msvc\
+  - if "%PLATFORM%"=="x86" SET PACKAGE_SUFFIX=win-x86
+  - if "%PLATFORM%"=="x64" SET PACKAGE_SUFFIX=win-x86_64-sandybridge
+  - if "%PLATFORM%"=="x86" SET NUGET_RUNTIME=win7-x86
+  - if "%PLATFORM%"=="x64" SET NUGET_RUNTIME=win7-x64
   - SET TARGET_ARG= #--target=%RUST_TARGET%
   - if "%PLATFORM%"=="x86" SET BITS=32
   - if "%PLATFORM%"=="x64" SET BITS=64
@@ -143,6 +147,7 @@ test_script:
   - 7z a -r "..\..\%ARTIFACT_NAME%.zip" *
   - cd %APPVEYOR_BUILD_FOLDER%
   - appveyor PushArtifact "%ARTIFACT_NAME%.zip"
+  - sh ./ci/pack_nuget/pack.sh
   - echo. && echo. && echo Cleaning up
   - rmdir /q /s .\%TARGET_DIR%doc || exit 0
   - rmdir /q /s .\%TARGET_DIR%debug || exit 0
@@ -155,12 +160,17 @@ artifacts:
   - path: 'artifacts/*'
     name: Rust binaries
 deploy:
-  description: 'imageflow-win'
-  provider: GitHub
-  artifact: /.*\.zip/
-  draft: false
-  prerelease: true
-  auth_token:
-      secure: 3h3WYw5/HWY1FxuR89OHsoDenpQWkmGXEFzxTBxLdgID37mmThDEqFM3xyyXk+Tq
-  on:
-    appveyor_repo_tag: true
+  - provider: GitHub
+    description: 'imageflow-win'
+    artifact: /.*\.zip/
+    draft: false
+    prerelease: true
+    auth_token:
+        secure: 3h3WYw5/HWY1FxuR89OHsoDenpQWkmGXEFzxTBxLdgID37mmThDEqFM3xyyXk+Tq
+    on:
+      appveyor_repo_tag: true
+  - provider: NuGet
+    api_key:
+      secure: vQj0uASp+URSv7pV5idYAZsdZlTigr/2uPZbnsVFrct7QwvPsa5Ljv39j4m7VlTv
+    skip_symbols: true
+    artifact: /.*artifacts.nuget.Imageflow\.Native.*\.nupkg/
