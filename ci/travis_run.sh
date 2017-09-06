@@ -50,9 +50,6 @@ printf "travis_run.sh:  "
 # COVERALLS
 # COVERALLS_TOKEN
 
-command -v dotnet >/dev/null 2>&1 || { echo -e "'dotnet' is required, but missing. Try: screaming loudly.\nAborting." >&2; exit 1; }
-
-
 if [[ "$BUILD_QUIETER" != "True" ]]; then
 	exec 9>&1
 else

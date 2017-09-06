@@ -20,21 +20,18 @@ matrix:
     dist: trusty
     env: TARGET_CPU=x86-64 PACKAGE_SUFFIX=ubuntu_14_04-x86_64 NUGET_RUNTIME=ubuntu.14.04-x64 DOCKER_IMAGE=imazen/imageflow_build_ubuntu14:latest UPLOAD_BUILD=True FETCH_COMMIT_SUFFIX=linux64
     sudo: required
-    dotnet: 2.0.0
     services:
     - docker
   - os: linux
     dist: trusty
     env: TARGET_CPU=sandybridge PACKAGE_SUFFIX=ubuntu_16_04-x86_64-sandybridge NUGET_RUNTIME=ubuntu.16.04-x64 DOCKER_IMAGE=imazen/imageflow_build_ubuntu16:latest UPLOAD_BUILD=True UPLOAD_DOCS=True FETCH_COMMIT_SUFFIX=linux64_sandybridge_glibc223
     sudo: required
-    dotnet: 2.0.0
     services:
     - docker
   - os: linux
     dist: trusty
     env: TARGET_CPU=haswell PACKAGE_SUFFIX=ubuntu_16_04-x86_64-haswell NUGET_RUNTIME=ubuntu.16.04-x64 DOCKER_IMAGE=imazen/imageflow_build_ubuntu16:latest UPLOAD_BUILD=True UPLOAD_DOCS=True FETCH_COMMIT_SUFFIX=linux64_haswell_glibc223
     sudo: required
-    dotnet: 2.0.0
     services:
     - docker
   - os: osx
@@ -47,7 +44,6 @@ matrix:
   - os: linux
     dist: trusty
     env: UPLOAD_BUILD=False COVERAGE=True CODECOV=True VALGRIND=True BUILD_RELEASE=False CLEAN_RUST_TARGETS=True TARGET_CPU=sandybridge P PACKAGE_SUFFIX=x86_64-sandy_valgrind_linux-gcc54 DOCKER_IMAGE=imazen/imageflow_build_ubuntu16:latest
-    dotnet: 2.0.0
     sudo: required
     services:
     - docker
