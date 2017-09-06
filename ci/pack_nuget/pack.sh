@@ -16,7 +16,11 @@ fi
 
 export NUGET_COMBINED_NAME="$NUGET_PACKAGE_NAME$NUGET_PACKAGE_VERSION"
 
-(cd "$( dirname "${BASH_SOURCE[0]}" )/staging"
+STAGING_DIR="$( dirname "${BASH_SOURCE[0]}" )/staging"
+
+mkdir -p "$STAGING_DIR" || true
+
+( cd "$STAGING_DIR"
 	
 	rm -rf "./$NUGET_COMBINED_NAME"
 	mkdir "$NUGET_COMBINED_NAME"
@@ -85,4 +89,3 @@ export NUGET_COMBINED_NAME="$NUGET_PACKAGE_NAME$NUGET_PACKAGE_VERSION"
     echo  "${NUGET_OUTPUT_DIR}/${NUGET_COMBINED_NAME}.nupkg packed"
    
 )
-               
