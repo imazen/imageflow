@@ -82,9 +82,7 @@ mkdir -p "$STAGING_DIR" || true
 	echo "${NUGET_PACKAGE_NAME}.nuspec:"
     cat "${NUGET_PACKAGE_NAME}.nuspec"
     echo
-    echo "Files to be zipped:"
-    find . -type f
-
+   
     cd ..
     NUGET_OUTPUT_DIR="${SCRIPT_DIR}/../../artifacts/nuget"
 
