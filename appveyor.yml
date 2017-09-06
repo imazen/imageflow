@@ -157,8 +157,10 @@ test_script:
   - if NOT "%CI_TAG%"=="" rmdir /s /q c_components/build || exit 0
 
 artifacts:
-  - path: 'artifacts/*'
+  - path: 'artifacts\*'
     name: Rust binaries
+  - path: 'artifacts\nuget\*.nupkg'
+    name: NuGet Packages
 deploy:
   - provider: GitHub
     description: 'imageflow-win'
@@ -173,4 +175,4 @@ deploy:
     api_key:
       secure: vQj0uASp+URSv7pV5idYAZsdZlTigr/2uPZbnsVFrct7QwvPsa5Ljv39j4m7VlTv
     skip_symbols: true
-    artifact: /.*artifacts.nuget.Imageflow\.Native.*\.nupkg/
+    artifact: /.*\.nupkg/
