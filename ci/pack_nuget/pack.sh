@@ -16,7 +16,10 @@ fi
 
 export NUGET_COMBINED_NAME="$NUGET_PACKAGE_NAME$NUGET_PACKAGE_VERSION"
 
-STAGING_DIR="$( dirname "${BASH_SOURCE[0]}" )/staging"
+SCRIPT_DIR="$(dirname "${BASH_SOURCE[0]}" )"
+SCRIPT_DIR="$(cd "$SCRIPT_DIR"; pwd)"
+
+STAGING_DIR="${SCRIPT_DIR}/staging"
 
 mkdir -p "$STAGING_DIR" || true
 
@@ -26,9 +29,10 @@ mkdir -p "$STAGING_DIR" || true
 	mkdir "$NUGET_COMBINED_NAME"
 	cd "$NUGET_COMBINED_NAME"
 
-	RELEASE_DIR="$( dirname "${BASH_SOURCE[0]}" )/../../../../target/release/"
+	RELEASE_DIR="${SCRIPT_DIR}/../../target/release/"
 	RUNTIME_DIR="runtimes/${NUGET_RUNTIME}/native/"
 	PROPS_PATH="build/net45/${NUGET_PACKAGE_NAME}.props"
+	echo RELEASE_DIR=$RELEASE_DIR
 
 
 	if [[ "${NUGET_RUNTIME}" == *'win'* ]]; then
@@ -82,7 +86,7 @@ mkdir -p "$STAGING_DIR" || true
     find . -type f
 
     cd ..
-    NUGET_OUTPUT_DIR="$( dirname "${BASH_SOURCE[0]}" )/../../../artifacts/nuget"
+    NUGET_OUTPUT_DIR="${SCRIPT_DIR}/../../artifacts/nuget"
 
     mkdir -p "${NUGET_OUTPUT_DIR}" || true
     zip -r "${NUGET_OUTPUT_DIR}/${NUGET_COMBINED_NAME}.nupkg" "${NUGET_COMBINED_NAME}" 
