@@ -13,7 +13,4 @@
             <group targetFramework=".NETStandard1.0" />
         </dependencies>
     </metadata>
-    <files>
-        :props:
-    </files>
 </package>
