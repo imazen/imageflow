@@ -50,6 +50,9 @@ printf "travis_run.sh:  "
 # COVERALLS
 # COVERALLS_TOKEN
 
+command -v dotnet >/dev/null 2>&1 || { echo -e "'dotnet' is required, but missing. Try: screaming loudly.\nAborting." >&2; exit 1; }
+
+
 if [[ "$BUILD_QUIETER" != "True" ]]; then
 	exec 9>&1
 else
@@ -418,9 +421,11 @@ else
 	(cd ./artifacts/nuget
 		for i in *.nupkg; do
     		[ -f "$i" ] || break
-    		echo -e "\nUploading $i to NuGet.org\n"
+    		echo -e "\nUploading $i to NuGet.org\n"Rn
     		# Upload each package
-    		curl --header "X-NuGet-ApiKey: ${NUGET_API_KEY}" --header  "X-NuGet-Client-Version: 4.1" -F "file=@$i" -L "https://www.nuget.org/api/v2/package"
+    		dotnet nuget push "$i" --api-key "${NUGET_API_KEY}" -s "nuget.org"
+
+    		#curl --header "X-NuGet-ApiKey: ${NUGET_API_KEY}" --header  "X-NuGet-Client-Version: 4.1" -F "file=@$i" -L "https://www.nuget.org/api/v2/package"
 		done
 	)
 	echo -e "\nListing (non-html/css/js) files scheduled for upload to s3\n\n"
