@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Runtime.InteropServices;
 
-namespace Imageflow.Native
+namespace Imageflow.Bindings
 {
 
 //    public enum IoMode
@@ -36,18 +36,18 @@ namespace Imageflow.Native
 //        In = 4,
 //    }
 
-    public enum Lifetime
+
+    internal class NativeMethods
     {
+        public enum Lifetime
+        {
 
-        /// OutlivesFunctionCall -> 0
-        OutlivesFunctionCall = 0,
+            /// OutlivesFunctionCall -> 0
+            OutlivesFunctionCall = 0,
 
-        /// OutlivesContext -> 1
-        OutlivesContext = 1,
-    }
-
-    public class NativeMethods
-    {
+            /// OutlivesContext -> 1
+            OutlivesContext = 1,
+        }
         
         public const int ABI_MAJOR = 3;
         public const int ABI_MINOR = 0;
@@ -67,53 +67,54 @@ namespace Imageflow.Native
 
         [DllImport("imageflow")] 
         [return: MarshalAs(UnmanagedType.I1)]
-        public static extern bool imageflow_context_begin_terminate(IntPtr context);
+        public static extern bool imageflow_context_begin_terminate(JobContextHandle context);
 
         [DllImport("imageflow")] 
         public static extern void imageflow_context_destroy(IntPtr context);
 
         [DllImport("imageflow")] 
         [return: MarshalAs(UnmanagedType.I1)]
-        public static extern bool imageflow_context_has_error(IntPtr context);
+        public static extern bool imageflow_context_has_error(JobContextHandle context);
 
         [DllImport("imageflow")] 
         [return: MarshalAs(UnmanagedType.I1)]
-        public static extern bool imageflow_context_error_recoverable(IntPtr context);
+        public static extern bool imageflow_context_error_recoverable(JobContextHandle context);
 
         [DllImport("imageflow")] 
         [return: MarshalAs(UnmanagedType.I1)]
-        public static extern bool imageflow_context_error_try_clear(IntPtr context);
+        public static extern bool imageflow_context_error_try_clear(JobContextHandle context);
 
         /// Return Type: int32_t->int
         [DllImport("imageflow")] 
-        public static extern int imageflow_context_error_code(IntPtr context);
+        public static extern int imageflow_context_error_code(JobContextHandle context);
 
         [DllImport("imageflow")] 
-        public static extern int imageflow_context_error_as_exit_code(IntPtr context);
+        public static extern int imageflow_context_error_as_exit_code(JobContextHandle context);
 
         [DllImport("imageflow")] 
-        public static extern int imageflow_context_error_as_http_code(IntPtr context);
+        public static extern int imageflow_context_error_as_http_code(JobContextHandle context);
 
         [DllImport("imageflow")] 
         [return: MarshalAs(UnmanagedType.I1)]
-        public static extern bool imageflow_context_print_and_exit_if_error(IntPtr context);
+        public static extern bool imageflow_context_print_and_exit_if_error(JobContextHandle context);
 
+//        [DllImport("imageflow")] 
+//        public static extern int imageflow_context_get_largest_io_id(JobContextHandle context);
 
-        
         ///response_in: void*
         ///status_code_out: int64_t*
         ///buffer_utf8_no_nulls_out: uint8_t**
         ///buffer_size_out: size_t*
         [DllImport("imageflow")] 
         [return: MarshalAs(UnmanagedType.I1)]
-        public static extern bool imageflow_json_response_read(IntPtr context, IntPtr response_in,
+        public static extern bool imageflow_json_response_read(JobContextHandle context, JsonResponseHandle response_in,
             out int status_code_out, out IntPtr buffer_utf8_no_nulls_out, out UIntPtr buffer_size_out);
 
 
      
         [DllImport("imageflow")] 
         [return: MarshalAs(UnmanagedType.I1)]
-        public static extern bool imageflow_json_response_destroy(IntPtr context, IntPtr response);
+        public static extern bool imageflow_json_response_destroy(JobContextHandle context, IntPtr response);
 
 
 
@@ -123,48 +124,48 @@ namespace Imageflow.Native
         ///line: int32_t->int
         [DllImport("imageflow")] 
         [return: MarshalAs(UnmanagedType.I1)]
-        public static extern bool imageflow_context_memory_free(IntPtr context, IntPtr pointer,
+        public static extern bool imageflow_context_memory_free(JobContextHandle context, IntPtr pointer,
             IntPtr filename, int line);
 
         
         [DllImport("imageflow")] 
         [return: MarshalAs(UnmanagedType.I1)]
-        public static extern bool imageflow_context_error_write_to_buffer(IntPtr context, IntPtr buffer,
+        public static extern bool imageflow_context_error_write_to_buffer(JobContextHandle context, IntPtr buffer,
             UIntPtr buffer_length,
             out UIntPtr bytes_written);
 
 
         [DllImport("imageflow")] 
-        public static extern IntPtr imageflow_context_send_json(IntPtr context, IntPtr method,
+        public static extern IntPtr imageflow_context_send_json(JobContextHandle context, IntPtr method,
             IntPtr json_buffer, UIntPtr json_buffer_size);
 
 
         
 
         [DllImport("imageflow")] 
-        public static extern IntPtr imageflow_context_memory_allocate(IntPtr context, IntPtr bytes,
+        public static extern IntPtr imageflow_context_memory_allocate(JobContextHandle context, IntPtr bytes,
             IntPtr filename, int line);
         
         
         [DllImport("imageflow")] 
         [return: MarshalAs(UnmanagedType.I1)]
-        public static extern bool  imageflow_context_add_input_buffer(IntPtr context, int io_id, IntPtr buffer,
+        public static extern bool  imageflow_context_add_input_buffer(JobContextHandle context, int io_id, IntPtr buffer,
             UIntPtr buffer_byte_count, Lifetime lifetime);
 
         [DllImport("imageflow")] 
         [return: MarshalAs(UnmanagedType.I1)]
-        public static extern bool imageflow_context_add_output_buffer(IntPtr context, int io_id);
+        public static extern bool imageflow_context_add_output_buffer(JobContextHandle context, int io_id);
         
 //        [DllImport("imageflow")] 
 //        [return: MarshalAs(UnmanagedType.I1)]
-//        public static extern bool  imageflow_context_add_file(IntPtr context, int io_id,Direction direction,  IoMode mode,
+//        public static extern bool  imageflow_context_add_file(JobContextHandle context, int io_id,Direction direction,  IoMode mode,
 //            IntPtr filename);
 
 
         
         [DllImport("imageflow")] 
         [return: MarshalAs(UnmanagedType.I1)]
-        public static extern bool imageflow_context_get_output_buffer_by_id(IntPtr context,
+        public static extern bool imageflow_context_get_output_buffer_by_id(JobContextHandle context,
             int io_id, out IntPtr result_buffer, out UIntPtr result_buffer_length);
 
 

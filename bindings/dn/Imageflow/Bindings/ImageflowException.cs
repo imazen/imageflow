@@ -3,9 +3,8 @@ using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Text;
 using Imageflow;
-using Imageflow.Native;
 
-namespace Imageflow
+namespace Imageflow.Bindings
 {
     public class ImageflowException : Exception
     {
@@ -16,9 +15,9 @@ namespace Imageflow
             
         }
 
-        public static Exception FromContext(JobContext c, bool fullPaths = true, ulong defaultBufferSize = 2048)
+        internal static ImageflowException FromContext(JobContextHandle c, ulong defaultBufferSize = 2048)
         {
-            if (!NativeMethods.imageflow_context_has_error(c.Pointer))
+            if (c.IsClosed || c.IsInvalid || !NativeMethods.imageflow_context_has_error(c))
             {
                 return null;
             }
@@ -32,7 +31,7 @@ namespace Imageflow
             try
             {
                
-                everythingWritten = NativeMethods.imageflow_context_error_write_to_buffer(c.Pointer,
+                everythingWritten = NativeMethods.imageflow_context_error_write_to_buffer(c,
                     pinned.AddrOfPinnedObject(), new UIntPtr((ulong) buffer.LongLength), out var bytesWritten);
 
                 if (bytesWritten.ToUInt64() > 0)
@@ -53,7 +52,7 @@ namespace Imageflow
 
             if (defaultBufferSize < MaxBufferSize)
             {
-                return FromContext(c, fullPaths, MaxBufferSize);
+                return FromContext(c, MaxBufferSize);
             }
             throw new ImageflowAssertionFailed(
                 $"Imageflow error and stacktrace exceeded {MaxBufferSize} bytes");

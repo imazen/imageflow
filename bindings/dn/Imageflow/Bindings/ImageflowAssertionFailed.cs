@@ -1,7 +1,8 @@
 ﻿using System;
 
-namespace Imageflow
+namespace Imageflow.Bindings
 {
+    /// <inheritdoc />
     /// <summary>
     /// For bugs
     /// </summary>

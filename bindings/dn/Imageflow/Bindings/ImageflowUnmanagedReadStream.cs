@@ -3,14 +3,14 @@ using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace Imageflow
+namespace Imageflow.Bindings
 {
     
     /// <summary>
     /// An UnmanagedMemoryStream that checks that the underlying Imageflow context isn't in a disposed or errored state
     /// </summary>
     /// <inheritdoc cref="UnmanagedMemoryStream"/>
-    public class ImageflowUnmanagedReadStream : UnmanagedMemoryStream
+    public sealed class ImageflowUnmanagedReadStream : UnmanagedMemoryStream
     {
         private readonly IAssertReady _underlying;
         

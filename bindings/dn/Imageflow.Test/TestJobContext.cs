@@ -5,7 +5,7 @@ using Imageflow;
 using System.Dynamic;
 using System.IO;
 using System.Text;
-using Imageflow.Native;
+using Imageflow.Bindings;
 using Xunit.Abstractions;
 
 namespace Imageflow.Test

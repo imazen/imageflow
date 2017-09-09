@@ -1,39 +1,40 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Runtime.ConstrainedExecution;
 using System.Runtime.InteropServices;
 using System.Text;
-using Imageflow.Native;
+using Microsoft.Win32.SafeHandles;
 using Newtonsoft.Json;
 
-namespace Imageflow
+namespace Imageflow.Bindings
 {
-    public class JobContext: CriticalFinalizerObject, IDisposable, IAssertReady
+
+    public sealed class JobContext: CriticalFinalizerObject, IDisposable, IAssertReady
     {
-        private IntPtr _ptr;
+        private readonly JobContextHandle _handle;
         private List<GCHandle> _pinned;
-        internal IntPtr Pointer
+        private List<IDisposable> _toDispose;
+        internal JobContextHandle Handle
         {
             get
             {
-                if (_ptr == IntPtr.Zero) throw new ImageflowDisposedException("JobContext");
-                return _ptr;
+                if (!_handle.IsValid)  throw new ObjectDisposedException("Imageflow JobContext");
+                return _handle;
             }
         }
+        private enum IoKind { InputBuffer, OutputBuffer}
+
+        internal bool IsInput(int ioId) => ioSet.ContainsKey(ioId) && ioSet[ioId] == IoKind.InputBuffer;
+        internal bool IsOutput(int ioId) => ioSet.ContainsKey(ioId) && ioSet[ioId] == IoKind.OutputBuffer;
+        internal int LargestIoId => ioSet.Keys.DefaultIfEmpty().Max();
+        
+        private Dictionary<int, IoKind> ioSet = new Dictionary<int, IoKind>();
 
         public JobContext()
         {
-            _ptr = NativeMethods.imageflow_context_create(NativeMethods.ABI_MAJOR, NativeMethods.ABI_MINOR);
-            if (_ptr != IntPtr.Zero) return;
-            
-            if (NativeMethods.imageflow_abi_compatible(NativeMethods.ABI_MAJOR, NativeMethods.ABI_MINOR))
-            {
-                throw new OutOfMemoryException("Failed to create Imageflow JobContext");
-            }
-            var major = NativeMethods.imageflow_abi_version_major();
-            var minor = NativeMethods.imageflow_abi_version_minor();
-            throw new Exception($".NET Imageflow bindings only support ABI {NativeMethods.ABI_MAJOR}.{NativeMethods.ABI_MINOR}. libimageflow ABI {major}.{minor} is loaded.");
+            _handle = new JobContextHandle();
         }
 
         private void AddPinnedData(GCHandle handle)
@@ -42,7 +43,7 @@ namespace Imageflow
             _pinned.Add(handle);
         }
 
-        public bool HasError => NativeMethods.imageflow_context_has_error(Pointer);
+        public bool HasError => NativeMethods.imageflow_context_has_error(Handle);
         
         private static byte[] SerializeToJson<T>(T obj){
             using (var stream = new MemoryStream())
@@ -57,6 +58,11 @@ namespace Imageflow
             AssertReady();
             return SendJsonBytes(method, JobContext.SerializeToJson(message));
         }
+        
+        public JsonResponse Execute<T>(T message){
+            AssertReady();
+            return SendJsonBytes("v0.1/execute", JobContext.SerializeToJson(message));
+        }
 
         public JsonResponse SendJsonBytes(string method, byte[] utf8Json)
         {
@@ -66,10 +72,10 @@ namespace Imageflow
             try
             {
                 AssertReady();
-                var ptr = NativeMethods.imageflow_context_send_json(Pointer, methodPinned.AddrOfPinnedObject(), pinnedJson.AddrOfPinnedObject(),
+                var ptr = NativeMethods.imageflow_context_send_json(Handle, methodPinned.AddrOfPinnedObject(), pinnedJson.AddrOfPinnedObject(),
                     new UIntPtr((ulong) utf8Json.LongLength));
                 AssertReady();
-                return new JsonResponse(this, ptr);
+                return new JsonResponse(new JsonResponseHandle(_handle, ptr));
             }
             finally
             {
@@ -80,7 +86,8 @@ namespace Imageflow
         
         public void AssertReady()
         {
-            if (HasError) throw ImageflowException.FromContext(this);
+            if (!_handle.IsValid)  throw new ObjectDisposedException("Imageflow JobContext");
+            if (HasError) throw ImageflowException.FromContext(Handle);
         }
         
         public JsonResponse ExecuteImageResizer4CommandString( int inputId, int outputId, string commands)
@@ -105,12 +112,16 @@ namespace Imageflow
                 }
             };
                 
-            return SendMessage("v0.1/execute", message);
+            return Execute( message);
         }
 
-      
-      
 
+
+        internal void AddToDisposeQueue(IDisposable d)
+        {
+            if (this._toDispose == null) this._toDispose = new List<IDisposable>(1);
+            _toDispose.Add(d);
+        }
         
         
 //        internal void AddFile(int ioId, Direction direction,  IoMode mode, string path)
@@ -119,7 +130,7 @@ namespace Imageflow
 //            var cpath = GCHandle.Alloc(Encoding.ASCII.GetBytes(path + char.MinValue), GCHandleType.Pinned);
 //            try
 //            {
-//                if (!NativeMethods.imageflow_context_add_file(Pointer, ioId, direction, mode,
+//                if (!NativeMethods.imageflow_context_add_file(Handle, ioId, direction, mode,
 //                    cpath.AddrOfPinnedObject()))
 //                {
 //                    AssertReady();
@@ -137,24 +148,29 @@ namespace Imageflow
         {
             AddInputBytes(ioId, buffer, 0, buffer.LongLength);
         }
+        public void AddInputBytes(int ioId, ArraySegment<byte> buffer)
+        {
+            AddInputBytes(ioId, buffer.Array, buffer.Offset, buffer.Count);
+        }
         public void AddInputBytes(int ioId, byte[] buffer, long offset, long count)
         {
             AssertReady();
             if (offset < 0 || offset > buffer.LongLength - 1) throw new ArgumentOutOfRangeException("offset", offset, "Offset must be within array bounds");
             if (count < 0 || offset + count > buffer.LongLength) throw new ArgumentOutOfRangeException("count", count, "offset + count must be within array bounds. count cannot be negative");
-
+            if (ContainsIoId(ioId)) throw new ArgumentException($"ioId {ioId} already in use", "ioId");
             
             var fixedBytes = GCHandle.Alloc(buffer, GCHandleType.Pinned);
             try
             {
                 var addr = new IntPtr(fixedBytes.AddrOfPinnedObject().ToInt64() + offset);
 
-                if (!NativeMethods.imageflow_context_add_input_buffer(Pointer, ioId, addr, new UIntPtr((ulong) count),
-                    Lifetime.OutlivesFunctionCall))
+                if (!NativeMethods.imageflow_context_add_input_buffer(Handle, ioId, addr, new UIntPtr((ulong) count),
+                    NativeMethods.Lifetime.OutlivesFunctionCall))
                 {
                     AssertReady();
                     throw new ImageflowAssertionFailed("AssertReady should raise an exception if method fails");
                 }
+                ioSet.Add(ioId, IoKind.InputBuffer);
             } finally{
                 fixedBytes.Free();
             }
@@ -165,7 +181,10 @@ namespace Imageflow
         {
             AddInputBytesPinned(ioId, buffer, 0, buffer.LongLength);
         }
-        
+        public void AddInputBytesPinned(int ioId, ArraySegment<byte> buffer)
+        {
+            AddInputBytesPinned(ioId, buffer.Array, buffer.Offset, buffer.Count);
+        }
         public void AddInputBytesPinned(int ioId, byte[] buffer, long offset, long count)
         {
             AssertReady();
@@ -174,41 +193,48 @@ namespace Imageflow
             if (count < 0 || offset + count > buffer.LongLength)
                 throw new ArgumentOutOfRangeException("count", count,
                     "offset + count must be within array bounds. count cannot be negative");
-
+            if (ContainsIoId(ioId)) throw new ArgumentException($"ioId {ioId} already in use", "ioId");
 
             var fixedBytes = GCHandle.Alloc(buffer, GCHandleType.Pinned);
             AddPinnedData(fixedBytes);
 
-
             var addr = new IntPtr(fixedBytes.AddrOfPinnedObject().ToInt64() + offset);
-            if (!NativeMethods.imageflow_context_add_input_buffer(Pointer, ioId, addr, new UIntPtr((ulong) count),
-                Lifetime.OutlivesContext))
+            if (!NativeMethods.imageflow_context_add_input_buffer(Handle, ioId, addr, new UIntPtr((ulong) count),
+                NativeMethods.Lifetime.OutlivesContext))
             {
                 AssertReady();
                 throw new ImageflowAssertionFailed("AssertReady should raise an exception if method fails");
             }
-
+            ioSet.Add(ioId, IoKind.InputBuffer);
         }
 
 
         public void AddOutputBuffer(int ioId)
         {
             AssertReady();
-            if (!NativeMethods.imageflow_context_add_output_buffer(Pointer, ioId))
+            if (ContainsIoId(ioId)) throw new ArgumentException($"ioId {ioId} already in use", "ioId");
+            if (!NativeMethods.imageflow_context_add_output_buffer(Handle, ioId))
             {
                 AssertReady();
                 throw new ImageflowAssertionFailed("AssertReady should raise an exception if method fails");
             }
+            ioSet.Add(ioId, IoKind.OutputBuffer);
         }
 
+        public bool ContainsIoId(int ioId) => ioSet.ContainsKey(ioId);
+        
         /// <summary>
         /// Will raise an unrecoverable exception if this is not an output buffer
         /// </summary>
         /// <returns></returns>
         public Stream GetOutputBuffer(int ioId)
         {
+            if (!ioSet.ContainsKey(ioId) || ioSet[ioId] != IoKind.OutputBuffer)
+            {
+                throw new ArgumentException($"ioId {ioId} does not correspond to an output buffer", "ioId");
+            }
             AssertReady();
-            if (!NativeMethods.imageflow_context_get_output_buffer_by_id(Pointer, ioId, out var buffer,
+            if (!NativeMethods.imageflow_context_get_output_buffer_by_id(Handle, ioId, out var buffer,
                 out var bufferSize))
             {
                 AssertReady();
@@ -217,44 +243,51 @@ namespace Imageflow
             return new ImageflowUnmanagedReadStream(this, buffer, bufferSize);
             
         }
-        public bool IsDisposed => _ptr == IntPtr.Zero; 
+
+        public bool IsDisposed => !_handle.IsValid;
         public void Dispose()
         {
-            Dispose(true);
-            GC.SuppressFinalize(this);
+            if (IsDisposed) throw new ObjectDisposedException("Imageflow JobContext");
+            
+            // Do not allocate or throw exceptions unless (disposing)
+            Exception e = null;
+            try
+            {
+                e = _handle.DisposeAllowingException();
+            }
+            finally
+            {
+                UnpinAll();
+                
+                //Dispose all managed data held for context lifetime
+                if (_toDispose != null)
+                {
+                    foreach (var active in _toDispose)
+                        active.Dispose();
+                    _toDispose = null;
+                }
+                GC.SuppressFinalize(this);
+                if (e != null) throw e;
+            } 
         }
 
-        protected virtual void Dispose(bool disposing)
+        private void UnpinAll()
         {
-            if (_ptr == IntPtr.Zero) return;
-
-            if (disposing)
-            {
-                // Free managed objects
-            }
-
-            Exception e = null;
-            if (!NativeMethods.imageflow_context_begin_terminate(_ptr))
-            {
-                e = ImageflowException.FromContext(this);
-            }
-            NativeMethods.imageflow_context_destroy(_ptr);
-            _ptr = IntPtr.Zero;
-            
-            //Unpin all managed data held for context lifetime
+            //Unpin GCHandles
             if (_pinned != null)
             {
                 foreach (var active in _pinned)
-                    active.Free();
+                {
+                    if (active.IsAllocated) active.Free();
+                }
+                _pinned = null;
             }
-            
-            if (e != null) throw e;
-
         }
 
         ~JobContext()
         {
-            Dispose (false);
+            //Don't dispose managed objects; they have their own finalizers
+            UnpinAll();
         }
         
     }

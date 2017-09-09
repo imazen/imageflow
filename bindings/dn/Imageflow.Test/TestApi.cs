@@ -5,8 +5,9 @@ using Imageflow;
 using System.Dynamic;
 using System.IO;
 using System.Text;
-using Imageflow.Native;
-using Xunit.Abstractions;
+using System.Threading.Tasks;
+using Imageflow.Fluent;
+ using Xunit.Abstractions;
 
 namespace Imageflow.Test
 {
@@ -20,12 +21,18 @@ namespace Imageflow.Test
         }
 
         [Fact]
-        public void TestCreateDestroyContext()
+        public async Task TestBuildJob()
         {
-            using (var c = new JobContext())
+            var imageBytes = Convert.FromBase64String("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABAQMAAAAl21bKAAAAA1BMVEX/TQBcNTh/AAAAAXRSTlPM0jRW/QAAAApJREFUeJxjYgAAAAYAAzY3fKgAAAAASUVORK5CYII=");
+            BuildJobResult r;
+            using (var b = new FluentBuildJob())
             {
-                c.AssertReady();
+                r = await b.Decode(imageBytes).FlipHorizontal().Rotate90()
+                    .EncodeToBytes(new GifEncoder()).FinishAsync();
+
+                r.GetFirstOutputBytes();
             }
+            
         }
     }
 }
