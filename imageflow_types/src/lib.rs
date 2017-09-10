@@ -181,7 +181,7 @@ pub enum EncoderPreset {
         matte: Option<Color>,
         zlib_compression: Option<i32>,
     },
-    #[serde(rename="libpng")]
+    #[serde(rename="gif")]
     Gif
 }
 
