@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Drawing;
 using System.IO;
 
@@ -51,13 +51,13 @@ namespace Imageflow.Fluent
 
 
      
-        public BuildNode FlipVertical() => To(new {flip_v = new { }});
-        public BuildNode FlipHorizontal() => To(new {flip_h = new { }});
+        public BuildNode FlipVertical() => To(new {flip_v = (string)null});
+        public BuildNode FlipHorizontal() => To(new {flip_h = (string)null });
         
-        public BuildNode Rotate90() => To(new {rotate_90 = new { }});
-        public BuildNode Rotate180() => To(new {rotate_180 = new { }});
-        public BuildNode Rotate270() => To(new {rotate_270 = new { }});
-        public BuildNode Transpose() => To(new {transpose = new { }});
+        public BuildNode Rotate90() => To(new {rotate_90 = (string)null });
+        public BuildNode Rotate180() => To(new {rotate_180 = (string)null });
+        public BuildNode Rotate270() => To(new {rotate_270 = (string)null });
+        public BuildNode Transpose() => To(new {transpose = (string)null });
 
         public BuildNode Branch(Func<BuildNode, BuildEndpoint> f)
         {
