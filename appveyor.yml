@@ -28,6 +28,7 @@ matrix:
 
 #We install nasm in case libjpeg-turbo has to be built from source
 install:
+  - dotnet --info
   - SET "GIT_COMMIT=%APPVEYOR_REPO_COMMIT%"
   - SET "CI_SEQUENTIAL_BUILD_NUMBER=%APPVEYOR_BUILD_NUMBER%"
   - SET "CI_BUILD_URL=https://ci.appveyor.com/project/%APPVEYOR_ACCOUNT_NAME%/%APPVEYOR_PROJECT_SLUG%/build/%APPVEYOR_BUILD_VERSION%"

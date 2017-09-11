@@ -60,6 +60,16 @@ mkdir -p "$STAGING_DIR" || true
 	mkdir -p "$RUNTIME_DIR"
 	cp "${RELEASE_DIR}${LIB_NAME}" "${RUNTIME_DIR}${LIB_NAME}"
 
+
+	SED_NUGET_PACKAGE_NAME="$(echo $NUGET_PACKAGE_NAME | sed -e 's/[\/&]/\\&/g')"
+	SED_NUGET_PACKAGE_VERSION="$(echo $NUGET_PACKAGE_VERSION | sed -e 's/[\/&]/\\&/g')"
+	SED_NUGET_PACKAGE_NAME="$(echo $NUGET_PACKAGE_NAME | sed -e 's/[\/&]/\\&/g')"
+	SED_NUGET_LIBFILE="$(echo $RUNTIME_DIR$LIB_NAME | sed -e 's/[\/&]/\\&/g' | sed -e 's/\//\\/g')" # fix slashes too
+	PROPS_PATH="$(echo $PROPS_PATH | sed -e 's/\//\\/g')" #fix slashes
+	PROPS="<file src=\"$PROPS_PATH\" target=\"$PROPS_PATH\" />"
+	SED_NUGET_PROPS="$(echo $PROPS | sed -e 's/[\/&]/\\&/g')"
+	
+	
 	if [[ "${NUGET_RUNTIME}" == *'win'* ]]; then
 		
 		if [[ "${NUGET_RUNTIME}" == *'x64'* ]]; then
@@ -72,15 +82,6 @@ mkdir -p "$STAGING_DIR" || true
 			cat ../../imageflow_x86.props | sed -e "s/:rid:/$NUGET_RUNTIME/g" > "$PROPS_PATH"
 		fi
 	fi
-
-	SED_NUGET_PACKAGE_NAME="$(echo $NUGET_PACKAGE_NAME | sed -e 's/[\/&]/\\&/g')"
-	SED_NUGET_PACKAGE_VERSION="$(echo $NUGET_PACKAGE_VERSION | sed -e 's/[\/&]/\\&/g')"
-	SED_NUGET_PACKAGE_NAME="$(echo $NUGET_PACKAGE_NAME | sed -e 's/[\/&]/\\&/g')"
-	SED_NUGET_LIBFILE="$(echo $RUNTIME_DIR$LIB_NAME | sed -e 's/[\/&]/\\&/g' | sed -e 's/\//\\/g')" # fix slashes too
-	PROPS_PATH="$(echo $PROPS_PATH | sed -e 's/\//\\/g')" #fix slashes
-	PROPS="<file src=\"$PROPS_PATH\" target=\"$PROPS_PATH\" />"
-	SED_NUGET_PROPS="$(echo $PROPS | sed -e 's/[\/&]/\\&/g')"
-	
 	
 	# If these elements turn out to be needed, re-add them to native.nuspec
         #<file src="lib\netstandard1.0\_._" target="lib\netstandard1.0\_._" />
