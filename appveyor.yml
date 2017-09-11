@@ -151,7 +151,7 @@ test_script:
   - dotnet build -c Release
   - dotnet pack -c Release
   - mkdir .\artifacts\nuget
-  - xcopy /Y bin\x%BITS%\Release\*.nupkg artifcats\nuget\
+  - xcopy /Y bin\%PLATFORM%\Release\*.nupkg artifcats\nuget\
   - cd %APPVEYOR_BUILD_FOLDER%
   - appveyor PushArtifact "%ARTIFACT_NAME%.zip"
   - sh ./ci/pack_nuget/pack.sh
