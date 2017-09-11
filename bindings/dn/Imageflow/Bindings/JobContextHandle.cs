@@ -1,6 +1,7 @@
-﻿using System;
+using System;
 using System.Runtime.ConstrainedExecution;
 using Microsoft.Win32.SafeHandles;
+using System.Diagnostics;
 
 namespace Imageflow.Bindings
 {
@@ -13,7 +14,10 @@ namespace Imageflow.Bindings
         public JobContextHandle()
             : base(true)
         {
-            var ptr = NativeMethods.imageflow_context_create(NativeMethods.ABI_MAJOR, NativeMethods.ABI_MINOR);
+            //var timer = Stopwatch.StartNew();
+            IntPtr ptr = NativeLibraryLoader.FixDllNotFoundException<IntPtr>("imageflow", () => NativeMethods.imageflow_context_create(NativeMethods.ABI_MAJOR, NativeMethods.ABI_MINOR));
+            //timer.Stop();
+            //Debug.WriteLine($"{timer.ElapsedMilliseconds}ms"); //4ms (when pinvoke 'just' works) to 27ms (when we have to go looking for the binary)
             if (ptr == IntPtr.Zero)
             {
 

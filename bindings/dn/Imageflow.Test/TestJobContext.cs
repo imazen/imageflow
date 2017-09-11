@@ -7,7 +7,6 @@ using System.IO;
 using System.Text;
 using Imageflow.Bindings;
 using Xunit.Abstractions;
-
 namespace Imageflow.Test
 {
     public class TestContext

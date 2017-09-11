@@ -1,4 +1,6 @@
-﻿using System;
+using System;
+using System.IO;
+using System.Reflection;
 using System.Runtime.InteropServices;
 
 namespace Imageflow.Bindings
@@ -37,7 +39,7 @@ namespace Imageflow.Bindings
 //    }
 
 
-    internal class NativeMethods
+    internal static class NativeMethods
     {
         public enum Lifetime
         {
