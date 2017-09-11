@@ -146,6 +146,12 @@ test_script:
   - cd artifacts\staging
   - 7z a -r "..\..\%ARTIFACT_NAME%.zip" *
   - cd %APPVEYOR_BUILD_FOLDER%
+  - cd bindings\dn\Imageflow
+  - dotnet build -c Release
+  - dotnet pack -c Release
+  - mkdir .\artifacts\nuget
+  - xcopy /Y bin\Release\*.nupkg artifcats\nuget\
+  - cd %APPVEYOR_BUILD_FOLDER%
   - appveyor PushArtifact "%ARTIFACT_NAME%.zip"
   - sh ./ci/pack_nuget/pack.sh
   - echo. && echo. && echo Cleaning up
