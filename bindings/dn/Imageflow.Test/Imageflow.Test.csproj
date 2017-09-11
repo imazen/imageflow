@@ -13,6 +13,6 @@
     <PackageReference Include="xunit.runner.visualstudio" Version="2.2.0" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\Imageflow\Imageflow.Fluent.csproj" />
+    <ProjectReference Include="..\Imageflow\Imageflow.Net.csproj" />
   </ItemGroup>
 </Project>

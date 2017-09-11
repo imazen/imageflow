@@ -94,9 +94,9 @@
     <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\Imageflow\Imageflow.Fluent.csproj">
+    <ProjectReference Include="..\Imageflow\Imageflow.Net.csproj">
       <Project>{cdc4d36a-3276-45c7-a07d-96d04794f0a0}</Project>
-      <Name>Imageflow.Fluent</Name>
+      <Name>Imageflow.Net</Name>
     </ProjectReference>
   </ItemGroup>
   <Import Project="$(VSToolsPath)\TeamTest\Microsoft.TestTools.targets" Condition="Exists('$(VSToolsPath)\TeamTest\Microsoft.TestTools.targets')" />
