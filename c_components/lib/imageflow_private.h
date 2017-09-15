@@ -276,6 +276,7 @@ PUB void flow_scale_spatial_1x1(uint8_t input[64], uint8_t ** output_rows, uint3
 // https://github.com/imazen/freeimage/blob/master/Source/FreeImage/FreeImageIO.cpp
 // https://github.com/imazen/freeimage/blob/master/Source/FreeImage/PluginJPEG.cpp
 
+PUB bool flow_profile_is_srgb(unsigned char * profile, size_t profile_len);
 // shutdown
 // nature - memory, FILE *,
 

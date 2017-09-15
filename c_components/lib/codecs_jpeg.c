@@ -404,7 +404,7 @@ static bool flow_codecs_jpg_decoder_interpret_metadata(flow_c * c, struct flow_c
 
     if (state->color.source == flow_codec_color_profile_source_null) {
         if (read_icc_profile(c, state->cinfo, &icc_buffer, &icc_buffer_len)) {
-            if (!is_srgb(icc_buffer, icc_buffer_len)) {
+            if (!flow_profile_is_srgb(icc_buffer, icc_buffer_len)) {
                 state->color.profile_buf = icc_buffer;
                 state->color.buf_length = icc_buffer_len;
                 state->color.source = flow_codec_color_profile_source_ICCP;

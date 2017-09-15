@@ -28,7 +28,7 @@ bool flow_codec_decoder_get_frame_info(flow_c * c, void * codec_state, int64_t c
 
 bool flow_codec_decoder_read_frame(flow_c * c, void * codec_state, int64_t codec_id, struct flow_bitmap_bgra * canvas, struct flow_decoder_color_info * color_info);
 
-bool is_srgb(unsigned char * profile, size_t profile_len);
+
 
 typedef struct jpeg_compress_struct * j_compress_ptr;
 typedef struct jpeg_decompress_struct * j_decompress_ptr;

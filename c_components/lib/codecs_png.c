@@ -127,7 +127,7 @@ static bool png_decoder_load_color_profile(flow_c * c, struct flow_codecs_png_de
     int is_color_png = state->color_type & PNG_COLOR_MASK_COLOR;
 
     if (png_get_iCCP(state->png_ptr, state->info_ptr, &(png_charp){ 0 }, &(int){ 0 }, &profile_buf, &profile_length)) {
-        if (!is_srgb(profile_buf, profile_length)) {
+        if (!flow_profile_is_srgb(profile_buf, profile_length)) {
 
             state->color.profile_buf = (uint8_t *) FLOW_malloc(c, profile_length);
             if (state->color.profile_buf == NULL) {

@@ -252,7 +252,7 @@ struct flow_decoder_info {
     int32_t image_height;
     flow_pixel_format frame_decodes_into;
     // const char * format_subtype;
-    // bool is_srgb;
+    // bool flow_profile_is_srgb;
 };
 
 PUB bool flow_bitmap_bgra_write_png(flow_c * c, struct flow_bitmap_bgra * frame, struct flow_io * io);

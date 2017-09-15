@@ -32,7 +32,7 @@ TEST_CASE("Test isSrgb", "")
 {
     void * buf = malloc(5000);
 
-    REQUIRE(is_srgb((unsigned char *)buf, 5000) == false);
+    REQUIRE(flow_profile_is_srgb((unsigned char *)buf, 5000) == false);
 
 }
 

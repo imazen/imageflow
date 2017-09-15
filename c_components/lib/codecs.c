@@ -73,7 +73,7 @@ static unsigned long hash_profile_bytes(unsigned char * profile, size_t profile_
 
 // We save an allocation in png decoding by ignoring an sRGB profile (we assume sRGB anyway).
 // We don't save this allocation yet in jpeg decoding, as the profile is segmented.
-bool is_srgb(unsigned char * profile, size_t profile_len){
+bool flow_profile_is_srgb(unsigned char * profile, size_t profile_len){
 
 //unsigned long srgbHash = hash_close_profile(cmsCreate_sRGBProfile());
 //    fprintf(stdout,"sRGB hash is %lx\n", srgbHash);
