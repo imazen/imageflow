@@ -30,7 +30,7 @@ struct flow_context_codec_set * flow_context_get_default_codec_set()
 
 
 void flow_decoder_color_info_init(struct flow_decoder_color_info * color){
-    memset(&color, 0, sizeof(struct flow_decoder_color_info));
+    memset(color, 0, sizeof(struct flow_decoder_color_info));
     color->gamma = 0.45455;
 }
 
@@ -49,27 +49,27 @@ static unsigned long hash_profile_bytes(unsigned char * profile, size_t profile_
     return djb2_buffer(profile + sizeof(cmsICCHeader), profile_len - sizeof(cmsICCHeader));
 }
 
-static unsigned long hash_close_profile(cmsHPROFILE profile){
-    uint32_t outputsize;
-    if (!cmsSaveProfileToMem(profile, 0, &outputsize)) {
-        cmsCloseProfile(profile);
-        return 0;
-    }
-    unsigned char *buffer = ( unsigned char *) malloc(outputsize);
-    if (buffer == 0){
-        cmsCloseProfile(profile);
-        return 0;
-    }
-    if (!cmsSaveProfileToMem(profile, buffer, &outputsize)){
-        free(buffer);
-        cmsCloseProfile(profile);
-        return 0;
-    }
-    unsigned long hash = hash_profile_bytes(buffer, outputsize);
-    free(buffer);
-    cmsCloseProfile(profile);
-    return hash;
-}
+//static unsigned long hash_close_profile(cmsHPROFILE profile){
+//    uint32_t outputsize;
+//    if (!cmsSaveProfileToMem(profile, 0, &outputsize)) {
+//        cmsCloseProfile(profile);
+//        return 0;
+//    }
+//    unsigned char *buffer = ( unsigned char *) malloc(outputsize);
+//    if (buffer == 0){
+//        cmsCloseProfile(profile);
+//        return 0;
+//    }
+//    if (!cmsSaveProfileToMem(profile, buffer, &outputsize)){
+//        free(buffer);
+//        cmsCloseProfile(profile);
+//        return 0;
+//    }
+//    unsigned long hash = hash_profile_bytes(buffer, outputsize);
+//    free(buffer);
+//    cmsCloseProfile(profile);
+//    return hash;
+//}
 
 // We save an allocation in png decoding by ignoring an sRGB profile (we assume sRGB anyway).
 // We don't save this allocation yet in jpeg decoding, as the profile is segmented.

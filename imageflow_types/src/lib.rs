@@ -877,6 +877,8 @@ pub struct JpegIDCTDownscaleHints {
 pub enum DecoderCommand {
     #[serde(rename="jpeg_downscale_hints")]
     JpegDownscaleHints(JpegIDCTDownscaleHints),
+    #[serde(rename="discard_color_profile")]
+    DiscardColorProfile
 }
 #[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
 pub struct TellDecoder001 {
