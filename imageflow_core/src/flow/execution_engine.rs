@@ -83,7 +83,7 @@ impl<'a, 'b> Engine<'a, 'b> where 'a: 'b {
         Ok(())
     }
 
-    pub fn execute(&mut self) -> Result<()> {
+    pub fn execute(&mut self) -> Result<s::BuildPerformance> {
         self.validate_graph()?;
         self.notify_graph_changed()?;
 
@@ -141,16 +141,12 @@ impl<'a, 'b> Engine<'a, 'b> where 'a: 'b {
         }
 
         self.notify_graph_complete()?;
-//
-//        // For debugging test performance
-//        for w in self.g.node_weights_mut(){
-//            let ms = w.cost.wall_ns / 1000;
-//            //eprint!("{:?}:", w.def);
-//            eprint!("{}:{}ms ", w.def.name(), ms);
-//        }
-//        eprintln!();
 
-        Ok(())
+        let mut perf : Vec<s::NodePerf> = self.g.node_weights_mut().map(|w| s::NodePerf{ wall_microseconds: (w.cost.wall_ns as f64 / 1000f64).round() as u64, name: w.def.name().to_owned()}).collect();
+        perf.sort_by_key(|p| p.wall_microseconds);
+        perf.reverse();
+
+        Ok(s::BuildPerformance{nodes: perf})
     }
 
     pub fn link_codecs(&mut self) -> Result<()> {
@@ -249,7 +245,7 @@ impl<'a, 'b> Engine<'a, 'b> where 'a: 'b {
             ctx.weight_mut(node_id).frame_est = v;
         }
 
-        ctx.weight_mut(node_id).cost.wall_ns += (time::precise_time_ns() - now) as u32;
+        ctx.weight_mut(node_id).cost.wall_ns += time::precise_time_ns() - now;
         result
     }
 
@@ -360,9 +356,10 @@ impl<'a, 'b> Engine<'a, 'b> where 'a: 'b {
             match next {
                 None => return Ok(()),
                 Some((next_ix, def)) => {
+//                    let now = time::precise_time_ns();
                     let mut ctx = self.op_ctx_mut();
                     let _ = def.expand(&mut ctx, next_ix).map_err(|e| e.with_ctx_mut(&ctx, next_ix).at(here!()))?;
-
+//                    ctx.weight_mut(next_ix).cost.wall_ns += time::precise_time_ns() - now;
                 }
             }
 
@@ -423,6 +420,7 @@ impl<'a, 'b> Engine<'a, 'b> where 'a: 'b {
                 None => return Ok(()),
                 Some((next_ix, def)) => {
                     {
+                        let now = time::precise_time_ns();
                         let mut ctx = self.op_ctx_mut();
                         let result = def.execute(&mut ctx, next_ix).map_err(|e| e.with_ctx_mut(&ctx, next_ix).at(here!()))?;
                         if result == NodeResult::None {
@@ -438,6 +436,7 @@ impl<'a, 'b> Engine<'a, 'b> where 'a: 'b {
                             }
                             ctx.weight_mut(next_ix).result = result;
                         }
+                        ctx.weight_mut(next_ix).cost.wall_ns += time::precise_time_ns() - now;
                     }
 
                     unsafe {

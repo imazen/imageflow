@@ -398,8 +398,8 @@ impl FrameEstimate{
 
 #[derive(Clone,Debug,PartialEq)]
 pub struct CostInfo {
-    pub wall_ns: u32, // Estimated wall ticks to execute
-    pub cpu_ticks: Option<u32>, // Estimate overall CPU ticks (larger, if multi-threaded)
+    pub wall_ns: u64, // Estimated wall ticks to execute
+    pub cpu_ticks: Option<u64>, // Estimate overall CPU ticks (larger, if multi-threaded)
     pub heap_bytes: u32,
     pub peak_temp_bytes: u32,
 }

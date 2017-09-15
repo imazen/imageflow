@@ -933,13 +933,13 @@ pub struct EncodeResult {
 }
 
 #[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
-pub struct BuildResult {
-    pub encodes: Vec<EncodeResult>,
+pub struct NodePerf{
+    pub wall_microseconds: u64,
+    pub name: String
 }
-impl BuildResult {
-    pub fn into_job_result(self) -> JobResult {
-        JobResult { encodes: self.encodes }
-    }
+#[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
+pub struct BuildPerformance{
+    pub nodes: Vec<NodePerf>,
 }
 
 
@@ -951,6 +951,7 @@ impl BuildResult {
 #[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
 pub struct JobResult {
     pub encodes: Vec<EncodeResult>,
+    pub performance: Option<BuildPerformance>
 }
 #[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
 pub enum ResponsePayload {
@@ -1008,10 +1009,12 @@ impl Response001 {
                                   preferred_extension: ext.to_owned(),
                                   bytes: ResultBytes::Elsewhere,
                               }],
+             performance: Some(BuildPerformance{
+                 nodes: vec![NodePerf{wall_microseconds: 30000, name: "decode".to_owned()}]
+             }),
             }),
         }
     }
-
 
     pub fn example_image_info() -> Response001 {
         Response001 {

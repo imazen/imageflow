@@ -39,6 +39,7 @@ pub struct BuildRequest<'a> {
 #[derive(Clone, PartialEq, Debug)]
 pub struct BuildSuccess {
     pub outputs: Vec<BuildOutput>,
+    pub performance: Option<s::BuildPerformance>
 }
 
 #[derive(Debug, PartialEq)]
@@ -126,8 +127,8 @@ impl LibClient {
         let payload = context.execute_1(send_execute).map_err(|e| e.at(here!()))?;
 
 
-        let encodes: Vec<s::EncodeResult> = match payload {
-            s::ResponsePayload::JobResult(s::JobResult { encodes }) => encodes,
+        let (encodes, perf): (Vec<s::EncodeResult>, Option<s::BuildPerformance>) = match payload {
+            s::ResponsePayload::JobResult(s::JobResult { encodes, performance}) => (encodes, performance),
             _ => {
                 unreachable!();
             }
@@ -145,7 +146,7 @@ impl LibClient {
             });
         }
 
-        Ok(BuildSuccess { outputs: outputs })
+        Ok(BuildSuccess { outputs: outputs, performance: perf})
     }
     pub fn build(&mut self, task: BuildRequest) -> std::result::Result<BuildSuccess, BuildFailure> {
         let mut context = Context::create().map_err(|e| e.at(here!()))?;

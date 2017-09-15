@@ -243,9 +243,9 @@ impl Context {
 
         ::parsing::IoTranslator{}.add_all( self, parsed.io.clone())?;
 
-        ::flow::execution_engine::Engine::create(self, & mut g).execute().map_err(|e| e.at(here!())) ?;
+        let perf = ::flow::execution_engine::Engine::create(self, & mut g).execute().map_err(|e| e.at(here!())) ?;
 
-        Ok(s::ResponsePayload::BuildResult(s::JobResult { encodes: self.collect_augmented_encode_results( & g, &parsed.io) }))
+        Ok(s::ResponsePayload::BuildResult(s::JobResult { encodes: self.collect_augmented_encode_results( & g, &parsed.io), performance: Some(perf) }))
     }
     pub fn configure_graph_recording(&mut self, recording: s::Build001GraphRecording) {
         let r = if std::env::var("CI").and_then(|s| Ok(s.to_uppercase())) ==
@@ -263,9 +263,9 @@ impl Context {
             self.configure_graph_recording(r);
         }
 
-        ::flow::execution_engine::Engine::create(self, &mut g).execute().map_err(|e| e.at(here!()))?;
+        let perf = ::flow::execution_engine::Engine::create(self, &mut g).execute().map_err(|e| e.at(here!()))?;
 
-        Ok(s::ResponsePayload::JobResult(s::JobResult { encodes: Context::collect_encode_results(&g) }))
+        Ok(s::ResponsePayload::JobResult(s::JobResult { encodes: Context::collect_encode_results(&g), performance: Some(perf) }))
     }
 
     pub fn collect_encode_results(g: &Graph) -> Vec<s::EncodeResult>{
