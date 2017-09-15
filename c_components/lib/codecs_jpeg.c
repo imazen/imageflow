@@ -12,9 +12,8 @@
 #define MAX_BYTES_IN_MARKER 65533 /* maximum data len of a JPEG marker */
 #define MAX_DATA_BYTES_IN_MARKER (MAX_BYTES_IN_MARKER - ICC_OVERHEAD_LEN)
 
-static uint8_t jpeg_bytes_a[] = { 0xFF, 0xD8, 0xFF, 0xDB };
-static uint8_t jpeg_bytes_b[] = { 0xFF, 0xD8, 0xFF, 0xE0 };
-static uint8_t jpeg_bytes_c[] = { 0xFF, 0xD8, 0xFF, 0xE1 };
+static uint8_t jpeg_bytes_a[] = { 0xFF, 0xD8, 0xFF };
+
 
 static bool flow_codecs_jpg_decoder_reset(flow_c * c, struct flow_codecs_jpeg_decoder_state * state);
 
@@ -1049,17 +1048,10 @@ static bool flow_codecs_jpeg_write_frame(flow_c * c, void * codec_state, struct 
 }
 
 static struct flow_codec_magic_bytes jpeg_magic_bytes[] = { {
-                                                              .byte_count = 4, .bytes = (uint8_t *)&jpeg_bytes_a,
+                                                              .byte_count = 3, .bytes = (uint8_t *)&jpeg_bytes_a,
 
                                                             },
-                                                            {
-                                                              .byte_count = 4, .bytes = (uint8_t *)&jpeg_bytes_b,
-
-                                                            },
-                                                            {
-                                                              .byte_count = 4, .bytes = (uint8_t *)&jpeg_bytes_c,
-
-                                                            } };
+                                                             };
 
 const struct flow_codec_definition flow_codec_definition_decode_jpeg
     = { .codec_id = flow_codec_type_decode_jpeg,
