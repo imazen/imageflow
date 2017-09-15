@@ -35,6 +35,7 @@ extern crate lazy_static;
 #[macro_use]
 extern crate serde_derive;
 extern crate serde_json;
+extern crate lcms2;
 extern crate serde;
 extern crate libc;
 extern crate alloc;
@@ -45,6 +46,8 @@ extern crate gif;
 extern crate gif_dispose;
 extern crate smallvec;
 extern crate core;
+extern crate chashmap;
+extern crate lcms2_sys;
 
 #[macro_use]
 pub mod errors;

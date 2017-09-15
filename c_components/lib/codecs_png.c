@@ -33,9 +33,7 @@ struct flow_codecs_png_decoder_state {
     size_t pixel_buffer_size;
     png_bytepp pixel_buffer_row_pointers;
     flow_c * context;
-    cmsHPROFILE color_profile;
-    flow_codec_color_profile_source color_profile_source;
-    double gamma;
+    struct flow_decoder_color_info color;
 };
 
 struct flow_codecs_png_encoder_state {
@@ -46,35 +44,26 @@ struct flow_codecs_png_encoder_state {
 
 static bool flow_codecs_png_decoder_reset(flow_c * c, struct flow_codecs_png_decoder_state * state)
 {
-    if (state->stage == flow_codecs_png_decoder_stage_FinishRead) {
-        FLOW_free(c, state->pixel_buffer);
-    }
     if (state->stage == flow_codecs_png_decoder_stage_Null) {
         state->pixel_buffer_row_pointers = NULL;
-        state->color_profile = NULL;
         state->info_ptr = NULL;
         state->png_ptr = NULL;
     } else {
         if (state->png_ptr != NULL || state->info_ptr != NULL) {
             png_destroy_read_struct(&state->png_ptr, &state->info_ptr, NULL);
         }
-        if (state->color_profile != NULL) {
-            cmsCloseProfile(state->color_profile);
-            state->color_profile = NULL;
-        }
         if (state->pixel_buffer_row_pointers != NULL) {
             FLOW_free(c, state->pixel_buffer_row_pointers);
             state->pixel_buffer_row_pointers = NULL;
         }
     }
-    state->color_profile_source = flow_codec_color_profile_source_null;
+    flow_decoder_color_info_init(&state->color);
     state->rowbytes = 0;
     state->color_type = 0;
     state->bit_depth = 0;
     state->context = c;
     state->w = 0;
     state->h = 0;
-    state->gamma = 0.45455;
     state->pixel_buffer = NULL;
     state->pixel_buffer_size = -1;
     state->canvas_fmt = flow_bgra32;
@@ -125,7 +114,7 @@ static bool png_decoder_load_color_profile(flow_c * c, struct flow_codecs_png_de
 
     // Get gamma
     if (!png_get_valid(state->png_ptr, state->info_ptr, PNG_INFO_sRGB)) {
-        png_get_gAMA(state->png_ptr, state->info_ptr, &state->gamma);
+        png_get_gAMA(state->png_ptr, state->info_ptr, &state->color.gamma);
     }
 
     // We assume that the underlying buffer can be freed after opening the profile, per
@@ -134,52 +123,40 @@ static bool png_decoder_load_color_profile(flow_c * c, struct flow_codecs_png_de
     png_bytep profile_buf;
     uint32_t profile_length;
 
-    cmsHPROFILE profile = NULL;
-
     // Pre-transform color_type (prior to all pre-decode format transforms)
     int is_color_png = state->color_type & PNG_COLOR_MASK_COLOR;
 
     if (png_get_iCCP(state->png_ptr, state->info_ptr, &(png_charp){ 0 }, &(int){ 0 }, &profile_buf, &profile_length)) {
-        // Decode the ICC profile from the buffer
-        profile = cmsOpenProfileFromMem(profile_buf, profile_length);
-        cmsColorSpaceSignature colorcontext = cmsGetColorSpace(profile);
+        if (!is_srgb(profile_buf, profile_length)) {
 
-        if (colorcontext == cmsSigRgbData && is_color_png) {
-            state->color_profile_source = flow_codec_color_profile_source_ICCP;
-        } else {
-            if (colorcontext == cmsSigGrayData && !is_color_png) {
-                // TODO: warn about this
-                state->color_profile_source = flow_codec_color_profile_source_ICCP_GRAY;
+            state->color.profile_buf = (uint8_t *) FLOW_malloc(c, profile_length);
+            if (state->color.profile_buf == NULL) {
+                FLOW_error(c, flow_status_Out_of_memory);
+                return false;
             }
-            cmsCloseProfile(profile);
-            profile = NULL;
+            memcpy(state->color.profile_buf, profile_buf, profile_length);
+            if (is_color_png) {
+                state->color.source = flow_codec_color_profile_source_ICCP;
+            } else {
+                state->color.source = flow_codec_color_profile_source_ICCP_GRAY;
+            }
+        }else{
+            state->color.source = flow_codec_color_profile_source_sRGB;
         }
-    }
-
-    if (profile == NULL && is_color_png && !png_get_valid(state->png_ptr, state->info_ptr, PNG_INFO_sRGB)
+    }else if(is_color_png && !png_get_valid(state->png_ptr, state->info_ptr, PNG_INFO_sRGB)
         && png_get_valid(state->png_ptr, state->info_ptr, PNG_INFO_gAMA)
         && png_get_valid(state->png_ptr, state->info_ptr, PNG_INFO_cHRM)) {
 
-        // Use cHRM and gAMA to build profile
-        cmsCIExyY white_point;
-        cmsCIExyYTRIPLE primaries;
+        // Use cHRM and gAMA to build profile (later)
+            png_get_cHRM(state->png_ptr, state->info_ptr, &state->color.white_point.x, &state->color.white_point.y, &state->color.primaries.Red.x,
+                     &state->color.primaries.Red.y, &state->color.primaries.Green.x, &state->color.primaries.Green.y, &state->color.primaries.Blue.x, &state->color.primaries.Blue.y);
 
-        png_get_cHRM(state->png_ptr, state->info_ptr, &white_point.x, &white_point.y, &primaries.Red.x,
-                     &primaries.Red.y, &primaries.Green.x, &primaries.Green.y, &primaries.Blue.x, &primaries.Blue.y);
+        state->color.white_point.Y = state->color.primaries.Red.Y = state->color.primaries.Green.Y = state->color.primaries.Blue.Y = 1.0;
 
-        white_point.Y = primaries.Red.Y = primaries.Green.Y = primaries.Blue.Y = 1.0;
 
-        cmsToneCurve * gamma_table[3];
-        gamma_table[0] = gamma_table[1] = gamma_table[2] = cmsBuildGamma(NULL, 1 / state->gamma);
-
-        profile = cmsCreateRGBProfile(&white_point, &primaries, gamma_table);
-
-        cmsFreeToneCurve(gamma_table[0]);
-
-        state->color_profile_source = flow_codec_color_profile_source_GAMA_CHRM;
+        state->color.source = flow_codec_color_profile_source_GAMA_CHRM;
     }
 
-    state->color_profile = profile;
     return true;
 }
 
@@ -288,7 +265,6 @@ static bool flow_codecs_png_decoder_FinishRead(flow_c * c, struct flow_codecs_pn
         return false;
     }
     // We let the caller create the buffer
-    //    state->pixel_buffer =  (png_bytep)FLOW_calloc (c, state->pixel_buffer_size, sizeof(png_bytep));
     if (state->pixel_buffer == NULL) {
         flow_codecs_png_decoder_reset(c, state);
         state->stage = flow_codecs_png_decoder_stage_Failed;
@@ -384,7 +360,7 @@ static bool flow_codecs_png_get_info(flow_c * c, void * codec_state, struct flow
     return true;
 }
 
-static bool flow_codecs_png_read_frame(flow_c * c, void * codec_state, struct flow_bitmap_bgra * canvas)
+static bool flow_codecs_png_read_frame(flow_c * c, void * codec_state, struct flow_bitmap_bgra * canvas, struct flow_decoder_color_info * color)
 {
     struct flow_codecs_png_decoder_state * state = (struct flow_codecs_png_decoder_state *)codec_state;
     if (state->stage == flow_codecs_png_decoder_stage_BeginRead) {
@@ -394,9 +370,8 @@ static bool flow_codecs_png_read_frame(flow_c * c, void * codec_state, struct fl
         if (!flow_codecs_png_decoder_FinishRead(c, state)) {
             FLOW_error_return(c);
         }
-
-        if (!flow_bitmap_bgra_transform_to_srgb(c, state->color_profile, canvas)) {
-            FLOW_error_return(c);
+        if (color != NULL) {
+            *color = state->color;
         }
         return true;
     } else {

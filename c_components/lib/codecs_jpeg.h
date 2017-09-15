@@ -35,9 +35,7 @@ struct flow_codecs_jpeg_decoder_state {
     size_t pixel_buffer_size;
     uint8_t ** pixel_buffer_row_pointers;
 
-    cmsHPROFILE color_profile;
-    flow_codec_color_profile_source color_profile_source;
-    double gamma;
+    struct flow_decoder_color_info color;
 
     struct flow_decoder_downscale_hints hints;
     float lut_to_linear[256];

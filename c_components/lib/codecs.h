@@ -13,13 +13,8 @@ struct flow_decoder_frame_info {
     flow_pixel_format format;
 };
 
-typedef enum flow_codec_color_profile_source {
-    flow_codec_color_profile_source_null,
-    flow_codec_color_profile_source_ICCP,
-    flow_codec_color_profile_source_ICCP_GRAY,
-    flow_codec_color_profile_source_GAMA_CHRM,
 
-} flow_codec_color_profile_source;
+void flow_decoder_color_info_init(struct flow_decoder_color_info * color);
 
 struct flow_codec_definition * flow_codec_get_definition(flow_c * c, int64_t codec_id);
 bool flow_codec_decoder_get_info(flow_c * c, void * codec_state, int64_t codec_id, struct flow_decoder_info * info);
@@ -31,9 +26,9 @@ bool flow_codec_initialize(flow_c * c, struct flow_codec_instance * item);
 bool flow_codec_decoder_get_frame_info(flow_c * c, void * codec_state, int64_t codec_id,
                                        struct flow_decoder_frame_info * decoder_frame_info_ref);
 
-bool flow_codec_decoder_read_frame(flow_c * c, void * codec_state, int64_t codec_id, struct flow_bitmap_bgra * canvas);
+bool flow_codec_decoder_read_frame(flow_c * c, void * codec_state, int64_t codec_id, struct flow_bitmap_bgra * canvas, struct flow_decoder_color_info * color_info);
 
-bool flow_bitmap_bgra_transform_to_srgb(flow_c * c, cmsHPROFILE current_profile, struct flow_bitmap_bgra * frame);
+bool is_srgb(unsigned char * profile, size_t profile_len);
 
 typedef struct jpeg_compress_struct * j_compress_ptr;
 typedef struct jpeg_decompress_struct * j_decompress_ptr;

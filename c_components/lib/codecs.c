@@ -1,3 +1,4 @@
+#include <lcms2.h>
 #include "imageflow_private.h"
 
 #include "lcms2.h"
@@ -27,59 +28,63 @@ struct flow_context_codec_set * flow_context_get_default_codec_set()
     return &cached_default_codec_set;
 }
 
-bool flow_bitmap_bgra_transform_to_srgb(flow_c * c, cmsHPROFILE current_profile, struct flow_bitmap_bgra * frame)
+
+void flow_decoder_color_info_init(struct flow_decoder_color_info * color){
+    memset(&color, 0, sizeof(struct flow_decoder_color_info));
+    color->gamma = 0.45455;
+}
+
+static unsigned long djb2_buffer(unsigned char *bytes, size_t len)
 {
-    if (current_profile != NULL) {
-        cmsHPROFILE target_profile = cmsCreate_sRGBProfile();
-        if (target_profile == NULL) {
-            FLOW_error(c, flow_status_Out_of_memory);
-            return false;
-        }
-        cmsUInt32Number format;
-
-        switch (flow_effective_pixel_format(frame)) {
-            case flow_bgra32:
-                format = TYPE_BGRA_8;
-                break;
-
-            case flow_bgr32:
-                format = TYPE_BGRA_8;
-                break;
-            case flow_bgr24:
-                format = TYPE_BGRA_8;
-                break;
-            case flow_gray8:
-                format = TYPE_GRAY_8;
-                break;
-            default:
-                FLOW_error(c, flow_status_Invalid_argument);
-                return false;
-        }
-
-        //        char infobuf[2048];
-        //
-        //        int retval = cmsGetProfileInfoASCII(current_profile,  cmsInfoDescription, "en", "US", &infobuf[0],
-        //        sizeof(infobuf));
-        //        infobuf[retval] = '\0';
-        //        fprintf(stdout, "%s", &infobuf[0]);
-        //
-
-        cmsHTRANSFORM transform
-            = cmsCreateTransform(current_profile, format, target_profile, format, INTENT_PERCEPTUAL, 0);
-        if (transform == NULL) {
-            cmsCloseProfile(target_profile);
-            FLOW_error(c, flow_status_Out_of_memory);
-            return false;
-        }
-        for (unsigned int i = 0; i < frame->h; i++) {
-            cmsDoTransform(transform, frame->pixels + (frame->stride * i), frame->pixels + (frame->stride * i),
-                           frame->w);
-        }
-
-        cmsDeleteTransform(transform);
-        cmsCloseProfile(target_profile);
+    unsigned long hash = 5381;
+    for (size_t ix = 0; ix < len; ix++) {
+        hash = ((hash << 5) + hash) + bytes[ix]; /* hash * 33 + c */
     }
-    return true;
+    return hash;
+}
+
+static unsigned long hash_profile_bytes(unsigned char * profile, size_t profile_len){
+    if (profile_len <= sizeof(cmsICCHeader)) return 0;
+
+    return djb2_buffer(profile + sizeof(cmsICCHeader), profile_len - sizeof(cmsICCHeader));
+}
+
+static unsigned long hash_close_profile(cmsHPROFILE profile){
+    uint32_t outputsize;
+    if (!cmsSaveProfileToMem(profile, 0, &outputsize)) {
+        cmsCloseProfile(profile);
+        return 0;
+    }
+    unsigned char *buffer = ( unsigned char *) malloc(outputsize);
+    if (buffer == 0){
+        cmsCloseProfile(profile);
+        return 0;
+    }
+    if (!cmsSaveProfileToMem(profile, buffer, &outputsize)){
+        free(buffer);
+        cmsCloseProfile(profile);
+        return 0;
+    }
+    unsigned long hash = hash_profile_bytes(buffer, outputsize);
+    free(buffer);
+    cmsCloseProfile(profile);
+    return hash;
+}
+
+// We save an allocation in png decoding by ignoring an sRGB profile (we assume sRGB anyway).
+// We don't save this allocation yet in jpeg decoding, as the profile is segmented.
+bool is_srgb(unsigned char * profile, size_t profile_len){
+
+//unsigned long srgbHash = hash_close_profile(cmsCreate_sRGBProfile());
+//    fprintf(stdout,"sRGB hash is %lx\n", srgbHash);
+//
+    unsigned long srgbHash = 0x1b3b4e2f339c1255;
+    unsigned long profileHash = hash_profile_bytes(profile, profile_len);
+
+    bool match = (profileHash == srgbHash);
+//    fprintf(stdout,"Profile hash is %lx, sRGB hash is %lx\n", profileHash, srgbHash);
+    return match;
+
 }
 
 // typedef bool (*codec_dispose_fn)(flow_context *c, struct flow_job * job, void * codec_state);
@@ -226,7 +231,7 @@ int64_t flow_codec_select_from_seekable_io(flow_c * c, struct flow_io * io)
     return ctype;
 }
 
-struct flow_bitmap_bgra * flow_codec_execute_read_frame(flow_c * c, struct flow_codec_instance * codec)
+struct flow_bitmap_bgra * flow_codec_execute_read_frame(flow_c * c, struct flow_codec_instance * codec, struct flow_decoder_color_info * color_info)
 {
     struct flow_codec_definition * def = flow_codec_get_definition(c, codec->codec_id);
     if (def == NULL) {
@@ -246,7 +251,7 @@ struct flow_bitmap_bgra * flow_codec_execute_read_frame(flow_c * c, struct flow_
     if (result_bitmap == NULL) {
         FLOW_error_return_null(c);
     }
-    if (!def->read_frame(c, codec->codec_state, result_bitmap)) {
+    if (!def->read_frame(c, codec->codec_state, result_bitmap, color_info)) {
         FLOW_error_return_null(c);
     }
     return result_bitmap;

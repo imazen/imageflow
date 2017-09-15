@@ -81,13 +81,6 @@ static boolean marker_is_icc(jpeg_saved_marker_ptr marker)
  * If TRUE is returned, *icc_data_ptr is set to point to the
  * returned data, and *icc_data_len is set to its length.
  *
- * IMPORTANT: the data at **icc_data_ptr has been allocated with malloc()
- * and must be freed by the caller with free() when the caller no longer
- * needs it.  (Alternatively, we could write this routine to use the
- * IJG library's memory allocator, so that the data would be freed implicitly
- * at jpeg_finish_decompress() time.  But it seems likely that many apps
- * will prefer to have the data stick around after decompression finishes.)
- *
  * NOTE: if the file contains invalid ICC APP2 markers, we just silently
  * return FALSE.  You might want to issue an error message instead.
  */
@@ -410,14 +403,11 @@ static bool flow_codecs_jpg_decoder_interpret_metadata(flow_c * c, struct flow_c
     JOCTET * icc_buffer;
     unsigned int icc_buffer_len;
 
-    if (state->color_profile == NULL) {
+    if (state->color.source == flow_codec_color_profile_source_null) {
         if (read_icc_profile(c, state->cinfo, &icc_buffer, &icc_buffer_len)) {
-            // One may set, then unset the thread-local logger function to debug
-            // cmsSetLogErrorHandlerTHR(cmsContext ContextID, cmsLogErrorHandlerFunction Fn);
-            state->color_profile = cmsOpenProfileFromMem(icc_buffer, icc_buffer_len);
-            if (state->color_profile != NULL)
-                state->color_profile_source = flow_codec_color_profile_source_ICCP;
-            FLOW_destroy(c, icc_buffer);
+            state->color.profile_buf = icc_buffer;
+            state->color.buf_length = icc_buffer_len;
+            state->color.source = flow_codec_color_profile_source_ICCP;
         }
     }
 
@@ -529,7 +519,7 @@ static bool flow_codecs_jpg_decoder_FinishRead(flow_c * c, struct flow_codecs_jp
 
     // state->row_stride = state->cinfo->output_width * state->cinfo->output_components;
     state->channels = state->cinfo->output_components;
-    state->gamma = state->cinfo->output_gamma;
+    state->color.gamma = state->cinfo->output_gamma;
 
     state->stage = flow_codecs_jpg_decoder_stage_FinishRead;
     if (setjmp(state->error_handler_jmp)) {
@@ -645,13 +635,8 @@ int32_t flow_codecs_jpg_decoder_get_exif(flow_c * c, struct flow_codec_instance 
 
 static bool flow_codecs_jpg_decoder_reset(flow_c * c, struct flow_codecs_jpeg_decoder_state * state)
 {
-    if (state->stage == flow_codecs_jpg_decoder_stage_FinishRead) {
-        // TODO: This may be a double-free.... I don't think we own this.
-        // FLOW_free(c, state->pixel_buffer);
-    }
     if (state->stage == flow_codecs_jpg_decoder_stage_Null) {
         state->pixel_buffer_row_pointers = NULL;
-        state->color_profile = NULL;
         state->cinfo = NULL;
     } else {
 
@@ -661,23 +646,17 @@ static bool flow_codecs_jpg_decoder_reset(flow_c * c, struct flow_codecs_jpeg_de
             state->cinfo = NULL;
         }
         memset(&state->error_mgr, 0, sizeof(struct jpeg_error_mgr));
-
-        if (state->color_profile != NULL) {
-            cmsCloseProfile(state->color_profile);
-            state->color_profile = NULL;
-        }
         if (state->pixel_buffer_row_pointers != NULL) {
             FLOW_free(c, state->pixel_buffer_row_pointers);
             state->pixel_buffer_row_pointers = NULL;
         }
     }
-    state->color_profile_source = flow_codec_color_profile_source_null;
+    flow_decoder_color_info_init(&state->color);
     state->row_stride = 0;
     state->exif_orientation = 0;
     state->context = c;
     state->w = 0;
     state->h = 0;
-    state->gamma = 0.45455;
     state->pixel_buffer = NULL;
     state->canvas = NULL;
     state->pixel_buffer_size = -1;
@@ -929,7 +908,7 @@ static bool flow_codecs_jpeg_get_frame_info(flow_c * c, void * codec_state,
     return true;
 }
 
-static bool flow_codecs_jpeg_read_frame(flow_c * c, void * codec_state, struct flow_bitmap_bgra * canvas)
+static bool flow_codecs_jpeg_read_frame(flow_c * c, void * codec_state, struct flow_bitmap_bgra * canvas, struct flow_decoder_color_info * color)
 {
     if (codec_state == NULL) {
         FLOW_error(c, flow_status_Null_argument);
@@ -954,9 +933,10 @@ static bool flow_codecs_jpeg_read_frame(flow_c * c, void * codec_state, struct f
             FLOW_error_return(c);
         }
 
-        if (!flow_bitmap_bgra_transform_to_srgb(c, state->color_profile, canvas)) {
-            FLOW_error_return(c);
+        if (color != NULL) {
+            *color = state->color;
         }
+
         return true;
     } else {
         FLOW_error(c, flow_status_Invalid_internal_state);

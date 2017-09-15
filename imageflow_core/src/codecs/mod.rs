@@ -1,15 +1,20 @@
 use ::std;
+use std::sync::*;
 use ::for_other_imageflow_crates::preludes::external_without_std::*;
 use ::ffi;
 use ::{Context, CError, Result, JsonResponse, ErrorKind, FlowError};
 use ::ffi::CodecInstance;
 use ::ffi::BitmapBgra;
+use ffi::DecoderColorInfo;
+use ffi::ColorProfileSource;
 use ::imageflow_types::collections::AddRemoveSet;
 use io::IoProxy;
 use uuid::Uuid;
 use imageflow_types::IoDirection;
 use std::borrow::BorrowMut;
 use std::ops::DerefMut;
+use ::lcms2::*;
+use ::lcms2;
 mod gif;
 
 
@@ -160,12 +165,35 @@ impl Decoder for ClassicDecoder{
         }
     }
     fn read_frame(&mut self, c: &Context, io: &mut IoProxy) -> Result<*mut BitmapBgra> {
+
+        let blank_xyY = CIExyY{
+            x: 0f64,
+            y: 0f64,
+            Y: 0f64,
+        };
+        let mut color_info = ffi::DecoderColorInfo{
+            source: ffi::ColorProfileSource::Null,
+            profile_buffer: ptr::null_mut(),
+            buffer_length: 0,
+            primaries: CIExyYTRIPLE{
+                Red: blank_xyY,
+                Green: blank_xyY,
+                Blue: blank_xyY,
+            },
+            gamma: 0.0f64,
+            white_point: blank_xyY
+        };
         let result = unsafe {
             ffi::flow_codec_execute_read_frame(c.flow_c(),
-                                               &mut  self.classic as *mut ffi::CodecInstance) };
+                                               &mut  self.classic as *mut ffi::CodecInstance,
+                                        &mut color_info as *mut ffi::DecoderColorInfo) };
         if result.is_null() {
             Err(cerror!(c))
         }else {
+            ColorTransformCache::transform_to_srgb(unsafe{ &mut *result}, &color_info);
+            ColorTransformCache::dispose_color_info(&mut color_info);
+
+
             Ok(result)
         }
     }
@@ -332,3 +360,108 @@ impl CodecInstanceContainer{
 //    pub direction: IoDirection,
 //}
 //
+
+struct ColorTransformCache{
+
+}
+
+impl From<lcms2::Error> for FlowError{
+    fn from(_: lcms2::Error) -> Self {
+        unimplemented!(); //TODO Needs ErrorKind (maybe ErrorCategory) addition
+    }
+}
+lazy_static!{
+    static ref PROFILE_TRANSFORMS: ::chashmap::CHashMap<u64, Transform<u8,u8,ThreadContext, DisallowCache>> = ::chashmap::CHashMap::with_capacity(4);
+    static ref GAMA_TRANSFORMS: ::chashmap::CHashMap<u64, Transform<u8,u8, ThreadContext,DisallowCache>> = ::chashmap::CHashMap::with_capacity(4);
+
+}
+
+
+
+impl ColorTransformCache{
+
+    fn get_pixel_format(fmt: ffi::PixelFormat) -> PixelFormat{
+        match fmt {
+            ffi::PixelFormat::Bgr32 | ffi::PixelFormat::Bgra32 => PixelFormat::BGRA_8,
+            ffi::PixelFormat::Bgr24 => PixelFormat::BGR_8,
+            ffi::PixelFormat::Gray8 => PixelFormat::GRAY_8
+        }
+    }
+
+    fn create_gama_transform(color: &ffi::DecoderColorInfo, pixel_format: PixelFormat) -> Result<Transform<u8,u8, ThreadContext,DisallowCache>>{
+        let srgb = Profile::new_srgb_context(ThreadContext::new()); // Save 1ms by caching - but not sync
+
+        let gama = ToneCurve::new(1f64 / color.gamma);
+        let p = Profile::new_rgb_context(ThreadContext::new(),&color.white_point, &color.primaries, &[&gama, &gama, &gama] )?;
+
+        let transform = Transform::new_flags_context(ThreadContext::new(),&p, pixel_format, &srgb, pixel_format, Intent::Perceptual, flags)?;
+        Ok(transform)
+    }
+    pub fn transform_to_srgb(frame: &mut BitmapBgra, color: &ffi::DecoderColorInfo) -> Result<()>{
+
+        let pixel_format = ColorTransformCache::get_pixel_format(frame.fmt);
+
+        let flags: Flags<DisallowCache> = Flags::NO_CACHE;
+
+        let transform = match color.source {
+            ffi::ColorProfileSource::Null | ffi::ColorProfileSource::sRGB => None,
+            ffi::ColorProfileSource::GAMA_CHRM => {
+                let struct_bytes = unsafe {
+                    slice::from_raw_parts(color as *const DecoderColorInfo as *const u8, mem::size_of::<DecoderColorInfo>())
+                };
+                let hash = imageflow_helpers::hashing::hash_64(struct_bytes);
+                if !GAMA_TRANSFORMS.contains_key(&hash) {
+                    let transform = ColorTransformCache::create_gama_transform(color, pixel_format)?;
+
+                    GAMA_TRANSFORMS.insert_new(hash, transform);
+                }
+                Some(GAMA_TRANSFORMS.get(&hash).unwrap())
+
+            },
+            ffi::ColorProfileSource::ICCP | ffi::ColorProfileSource::ICCP_GRAY => {
+                if !color.profile_buffer.is_null() && color.buffer_length > 0 {
+
+                    //TODO: handle gray transform on rgb expanded images.
+                    //TODO: Add test coverage for grayscale png
+
+                    let bytes = unsafe { slice::from_raw_parts(color.profile_buffer, color.buffer_length) };
+
+                    // Skip first 80 bytes when hashing.
+                    let hash = imageflow_helpers::hashing::hash_64(&bytes[80..]);
+                    if !PROFILE_TRANSFORMS.contains_key(&hash) {
+                        let srgb = Profile::new_srgb_context(ThreadContext::new()); // Save 1ms by caching
+                        let pixel_format = match frame.fmt {
+                            ffi::PixelFormat::Bgr32 | ffi::PixelFormat::Bgra32 => PixelFormat::BGRA_8,
+                            ffi::PixelFormat::Bgr24 => PixelFormat::BGR_8,
+                            ffi::PixelFormat::Gray8 => PixelFormat::GRAY_8
+                        };
+                        let p = Profile::new_icc_context(ThreadContext::new(),bytes)?;
+
+                        let transform = Transform::new_flags_context(ThreadContext::new(),
+                            &p, pixel_format, &srgb, pixel_format, Intent::Perceptual, flags)?;
+                        PROFILE_TRANSFORMS.insert_new(hash, transform);
+                    }
+                    Some(PROFILE_TRANSFORMS.get(&hash).unwrap())
+                } else {
+                    unreachable!();
+                }
+            }
+        };
+
+
+
+
+        if let Some(p) = transform{
+            for row in 0..frame.h {
+                let mut bytes = unsafe{ slice::from_raw_parts_mut(frame.pixels.offset((row * frame.stride) as isize), frame.w as usize * frame.fmt.bytes()) };
+                (*p).transform_in_place(bytes)
+            }
+        }
+        Ok(())
+
+    }
+
+    pub fn dispose_color_info(color: &mut ffi::DecoderColorInfo){
+        // DecoderColor info is cleaned up by the context. For now this is the best option, so that dangling pointers don't happen
+    }
+}

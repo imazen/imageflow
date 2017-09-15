@@ -625,6 +625,31 @@ pub struct RenderToCanvas1d {
 }
 
 #[repr(C)]
+#[derive(Clone,Debug,Copy,  PartialEq)]
+pub enum ColorProfileSource {
+    Null,
+    ICCP,
+    ICCP_GRAY,
+    GAMA_CHRM,
+    sRGB,
+
+}
+
+#[repr(C)]
+#[derive(Clone,Debug,Copy, PartialEq)]
+pub struct DecoderColorInfo {
+    pub source: ColorProfileSource,
+    pub profile_buffer: *mut u8,
+    pub buffer_length: usize,
+    pub white_point: ::lcms2::CIExyY,
+    pub primaries: ::lcms2::CIExyYTRIPLE,
+    pub gamma: f64
+}
+
+
+
+
+#[repr(C)]
 #[derive(Clone,Debug,Copy, Eq, PartialEq)]
 pub struct Rect {
     pub x1: i32,
@@ -802,7 +827,7 @@ mod mid_term {
                                          -> *mut CodecDefinition;
 
         pub fn flow_codec_execute_read_frame(c: *mut ImageflowContext,
-                                             instance: *mut CodecInstance)
+                                             instance: *mut CodecInstance, color_info: *mut DecoderColorInfo)
                                              -> *mut BitmapBgra;
 
         pub fn flow_codec_select_from_seekable_io(context: *mut ImageflowContext, io: *mut ImageflowJobIo) -> i64;

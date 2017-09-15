@@ -328,7 +328,7 @@ PUB uint8_t ** flow_bitmap_create_row_pointers(flow_c * c, void * buffer, size_t
 PUB bool flow_codec_decoder_set_downscale_hints(flow_c * c, struct flow_codec_instance * codec,
                                                 struct flow_decoder_downscale_hints * hints,
                                                 bool crash_if_not_implemented);
-PUB struct flow_bitmap_bgra * flow_codec_execute_read_frame(flow_c * c, struct flow_codec_instance * codec);
+PUB struct flow_bitmap_bgra * flow_codec_execute_read_frame(flow_c * c, struct flow_codec_instance * codec, struct flow_decoder_color_info * info);
 
 struct flow_scanlines_filter {
     flow_scanlines_filter_type type;

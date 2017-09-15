@@ -1,4 +1,5 @@
 #include <lib/trim_whitespace.h>
+#include <lib/codecs.h>
 #include "catch.hpp"
 
 // TODO: Test with opaque and transparent images
@@ -25,6 +26,14 @@ flow_rect test_detect_content_for(uint32_t w, uint32_t h, uint32_t x1, uint32_t 
 
     flow_context_destroy(c);
     return r;
+}
+
+TEST_CASE("Test isSrgb", "")
+{
+    void * buf = malloc(5000);
+
+    REQUIRE(is_srgb((unsigned char *)buf, 5000) == false);
+
 }
 
 TEST_CASE("Exhaustive test of detect_content for small images", "")

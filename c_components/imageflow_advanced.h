@@ -1,5 +1,6 @@
 #pragma once
 
+#include <lcms2.h>
 #include "imageflow.h"
 
 #ifdef __cplusplus
@@ -150,6 +151,26 @@ PUB bool flow_context_enable_profiling(flow_c * c, uint32_t default_capacity);
 PUB void flow_context_profiler_start(flow_c * c, const char * name, bool allow_recursion);
 PUB void flow_context_profiler_stop(flow_c * c, const char * name, bool assert_started, bool stop_children);
 
+typedef enum flow_codec_color_profile_source {
+    flow_codec_color_profile_source_null,
+    flow_codec_color_profile_source_ICCP,
+    flow_codec_color_profile_source_ICCP_GRAY,
+    flow_codec_color_profile_source_GAMA_CHRM,
+    flow_codec_color_profile_source_sRGB,
+
+} flow_codec_color_profile_source;
+
+
+struct flow_decoder_color_info{
+    flow_codec_color_profile_source source;
+    uint8_t * profile_buf;
+    size_t buf_length;
+    cmsCIExyY white_point;
+    cmsCIExyYTRIPLE primaries;
+    double gamma;
+};
+
+
 ////////////////////////////////////////////
 // Make your own I/O systems
 struct flow_io;
@@ -182,7 +203,7 @@ typedef bool (*codec_get_frame_info_fn)(flow_c * c, void * codec_state,
 typedef bool (*codec_set_downscale_hints_fn)(flow_c * c, struct flow_codec_instance * codec,
                                              struct flow_decoder_downscale_hints * hints);
 
-typedef bool (*codec_read_frame_fn)(flow_c * c, void * codec_state, struct flow_bitmap_bgra * canvas);
+typedef bool (*codec_read_frame_fn)(flow_c * c, void * codec_state, struct flow_bitmap_bgra * canvas, struct flow_decoder_color_info * color_info);
 
 typedef bool (*codec_write_frame_fn)(flow_c * c, void * codec_state, struct flow_bitmap_bgra * frame,
                                      struct flow_encoder_hints * hints);
