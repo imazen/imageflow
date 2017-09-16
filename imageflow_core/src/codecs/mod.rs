@@ -389,24 +389,12 @@ impl CodecInstanceContainer{
         }
     }
 }
-//pub struct CodecInstance {
-//    pub io_id: i32,
-//    pub codec_id: i64,
-//    pub codec_state: *mut c_void,
-//    pub io: *mut ImageflowJobIo,
-//    pub direction: IoDirection,
-//}
-//
+
 
 struct ColorTransformCache{
 
 }
 
-impl From<lcms2::Error> for FlowError{
-    fn from(_: lcms2::Error) -> Self {
-        unimplemented!(); //TODO Needs ErrorKind (maybe ErrorCategory) addition
-    }
-}
 lazy_static!{
     static ref PROFILE_TRANSFORMS: ::chashmap::CHashMap<u64, Transform<u32,u32,ThreadContext, DisallowCache>> = ::chashmap::CHashMap::with_capacity(4);
     static ref GAMA_TRANSFORMS: ::chashmap::CHashMap<u64, Transform<u32,u32, ThreadContext,DisallowCache>> = ::chashmap::CHashMap::with_capacity(4);
@@ -429,9 +417,9 @@ impl ColorTransformCache{
         let srgb = Profile::new_srgb_context(ThreadContext::new()); // Save 1ms by caching - but not sync
 
         let gama = ToneCurve::new(1f64 / color.gamma);
-        let p = Profile::new_rgb_context(ThreadContext::new(),&color.white_point, &color.primaries, &[&gama, &gama, &gama] )?;
+        let p = Profile::new_rgb_context(ThreadContext::new(),&color.white_point, &color.primaries, &[&gama, &gama, &gama] ).map_err(|e| FlowError::from(e).at(here!()))?;
 
-        let transform = Transform::new_flags_context(ThreadContext::new(),&p, pixel_format, &srgb, pixel_format, Intent::Perceptual, Flags::NO_CACHE)?;
+        let transform = Transform::new_flags_context(ThreadContext::new(),&p, pixel_format, &srgb, pixel_format, Intent::Perceptual, Flags::NO_CACHE).map_err(|e| FlowError::from(e).at(here!()))?;
         Ok(transform)
     }
     fn create_profile_transform(color: &ffi::DecoderColorInfo, pixel_format: PixelFormat) -> Result<Transform<u32,u32, ThreadContext,DisallowCache>> {
@@ -443,12 +431,12 @@ impl ColorTransformCache{
 
         let bytes = unsafe { slice::from_raw_parts(color.profile_buffer, color.buffer_length) };
 
-        let p = Profile::new_icc_context(ThreadContext::new(), bytes)?;
+        let p = Profile::new_icc_context(ThreadContext::new(), bytes).map_err(|e| FlowError::from(e).at(here!()))?;
         //TODO: handle gray transform on rgb expanded images.
         //TODO: Add test coverage for grayscale png
 
         let transform = Transform::new_flags_context(ThreadContext::new(),
-                                                     &p, pixel_format, &srgb, pixel_format, Intent::Perceptual, Flags::NO_CACHE)?;
+                                                     &p, pixel_format, &srgb, pixel_format, Intent::Perceptual, Flags::NO_CACHE).map_err(|e| FlowError::from(e).at(here!()))?;
 
         Ok(transform)
     }
@@ -494,13 +482,13 @@ impl ColorTransformCache{
 
                 // Cache up to 4 GAMA x PixelFormat transforms
                 if GAMA_TRANSFORMS.len() > 3{
-                    let transform = ColorTransformCache::create_gama_transform(color, pixel_format)?;
+                    let transform = ColorTransformCache::create_gama_transform(color, pixel_format).map_err(|e| e.at(here!()))?;
                     ColorTransformCache::apply_transform(frame, &transform);
                     Ok(())
                 }else{
                     let hash = ColorTransformCache::hash(color, pixel_format).unwrap();
                     if !GAMA_TRANSFORMS.contains_key(&hash) {
-                        let transform = ColorTransformCache::create_gama_transform(color, pixel_format)?;
+                        let transform = ColorTransformCache::create_gama_transform(color, pixel_format).map_err(|e| e.at(here!()))?;
                         GAMA_TRANSFORMS.insert_new(hash, transform);
                     }
                     ColorTransformCache::apply_transform(frame, &*GAMA_TRANSFORMS.get(&hash).unwrap());
@@ -510,13 +498,13 @@ impl ColorTransformCache{
             ffi::ColorProfileSource::ICCP | ffi::ColorProfileSource::ICCP_GRAY => {
                 // Cache up to 9 ICC profile x PixelFormat transforms
                 if PROFILE_TRANSFORMS.len() > 8{
-                    let transform = ColorTransformCache::create_profile_transform(color, pixel_format)?;
+                    let transform = ColorTransformCache::create_profile_transform(color, pixel_format).map_err(|e| e.at(here!()))?;
                     ColorTransformCache::apply_transform(frame, &transform);
                     Ok(())
                 }else{
                     let hash = ColorTransformCache::hash(color, pixel_format).unwrap();
                     if !PROFILE_TRANSFORMS.contains_key(&hash) {
-                        let transform = ColorTransformCache::create_profile_transform(color, pixel_format)?;
+                        let transform = ColorTransformCache::create_profile_transform(color, pixel_format).map_err(|e| e.at(here!()))?;
                         PROFILE_TRANSFORMS.insert_new(hash, transform);
                     }
                     ColorTransformCache::apply_transform(frame, &*PROFILE_TRANSFORMS.get(&hash).unwrap());

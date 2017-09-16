@@ -176,6 +176,7 @@ pub enum ErrorKind{
     GifDecodingError,
     GifEncodingError,
     DecodingIoError,
+    ColorProfileError,
     EncodingIoError,
     GraphCyclic,
     InvalidNodeConnections,
@@ -225,7 +226,8 @@ impl CategorizedError for ErrorKind{
             &ErrorKind::InvalidOperation |
             &ErrorKind::InternalError |
             &ErrorKind::InvalidState => ErrorCategory::InternalError,
-            &ErrorKind::GifDecodingError => ErrorCategory::ImageMalformed,
+            &ErrorKind::GifDecodingError |
+            &ErrorKind::ColorProfileError => ErrorCategory::ImageMalformed,
             &ErrorKind::DecodingIoError => ErrorCategory::IoError,
             &ErrorKind::EncodingIoError => ErrorCategory::IoError,
             &ErrorKind::GifEncodingError => ErrorCategory::InternalError,
@@ -253,7 +255,7 @@ pub struct CodeLocation{
 }
 impl CodeLocation{
     pub fn new(file: &'static str, line: u32, column: u32) -> CodeLocation{
-        CodeLocation{ file: file, line: line, column: column}
+        CodeLocation{ file, line, column }
     }
     pub fn col(&self) -> u32{
         self.column
@@ -282,6 +284,12 @@ impl From<::gif::DecodingError> for FlowError{
             ::gif::DecodingError::Internal(msg) => FlowError::without_location(ErrorKind::InternalError,format!("Internal error in gif decoder: {:?}",msg)),
             ::gif::DecodingError::Format(msg) => FlowError::without_location(ErrorKind::GifDecodingError,format!("{:?}",msg))
         }
+    }
+}
+
+impl From<::lcms2::Error> for FlowError{
+    fn from(e: ::lcms2::Error) -> Self {
+        FlowError::without_location(ErrorKind::ColorProfileError, format!("{:?}", e))
     }
 }
 
