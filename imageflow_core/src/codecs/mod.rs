@@ -23,16 +23,18 @@ pub trait DecoderFactory{
 }
 pub trait Decoder{
     fn initialize(&mut self, c: &Context) -> Result<()>;
-    fn get_image_info(&mut self, c: &Context, io: &mut IoProxy) -> Result<s::ImageInfo>;
+    fn get_image_info(&mut self, c: &Context) -> Result<s::ImageInfo>;
     fn get_exif_rotation_flag(&mut self, c: &Context) -> Result<Option<i32>>;
     fn tell_decoder(&mut self, c: &Context, tell: s::DecoderCommand) -> Result<()>;
-    fn read_frame(&mut self, c: &Context, io: &mut IoProxy) -> Result<*mut BitmapBgra>;
+    fn read_frame(&mut self, c: &Context) -> Result<*mut BitmapBgra>;
 }
 pub trait Encoder{
     // GIF encoder will need to know if transparency is required (we could guess based on first input frame)
     // If not required, we can do frame shrinking and delta encoding. Otherwise we have to
     // encode entire frames and enable transparency (default)
-    fn write_frame(&mut self, c: &Context, io: &mut IoProxy, preset: &s::EncoderPreset, frame: &mut BitmapBgra) -> Result<s::EncodeResult>;
+    fn write_frame(&mut self, c: &Context, preset: &s::EncoderPreset, frame: &mut BitmapBgra) -> Result<s::EncodeResult>;
+
+    fn get_io(&self) -> Result<&IoProxy>;
 }
 
 enum CodecKind{
@@ -43,7 +45,8 @@ enum CodecKind{
 // We need a rust-friendly codec instance, codec definition, and a way to wrap C codecs
 pub struct CodecInstanceContainer{
     pub io_id: i32,
-    codec: CodecKind
+    codec: CodecKind,
+    encode_io: Option<IoProxy>
 }
 
 impl CodecInstanceContainer {
@@ -52,18 +55,18 @@ impl CodecInstanceContainer {
         if let CodecKind::Decoder(ref mut d) = self.codec{
             Ok(d)
         }else{
-            Err(nerror!(ErrorKind::InvalidArgument))
+            Err(nerror!(ErrorKind::InvalidArgument, "Not a decoder"))
         }
 
     }
 
-    pub fn create(c: &Context, io: &mut IoProxy, io_id: i32, direction: IoDirection) -> Result<CodecInstanceContainer>{
+    pub fn create(c: &Context, io: IoProxy, io_id: i32, direction: IoDirection) -> Result<CodecInstanceContainer>{
         if direction == IoDirection::Out {
             Ok(CodecInstanceContainer
                 {
-
-                    io_id: io_id,
-                    codec: CodecKind::EncoderPlaceholder
+                    io_id,
+                    codec: CodecKind::EncoderPlaceholder,
+                    encode_io: Some(io),
                 })
         }else {
             let mut buffer = [0u8; 8];
@@ -73,14 +76,16 @@ impl CodecInstanceContainer {
             if buffer.starts_with(b"GIF89a") || buffer.starts_with(b"GIF87a") {
                 return Ok(CodecInstanceContainer
                     {
-                        io_id: io_id,
-                        codec: CodecKind::Decoder(Box::new(gif::GifDecoder::create(c, io, io_id)?))
+                        io_id,
+                        codec: CodecKind::Decoder(Box::new(gif::GifDecoder::create(c, io, io_id)?)),
+                        encode_io: None
                     });
             } else {
                 Ok(CodecInstanceContainer
                     {
-                        io_id: io_id,
-                        codec: CodecKind::Decoder(ClassicDecoder::create(c, io, io_id)?)
+                        io_id,
+                        codec: CodecKind::Decoder(ClassicDecoder::create(c, io, io_id)?),
+                        encode_io: None
                     })
             }
         }
@@ -91,10 +96,11 @@ impl CodecInstanceContainer {
 struct ClassicDecoder{
     classic: CodecInstance,
     ignore_color_profile: bool,
+    io: IoProxy
 }
 
 impl ClassicDecoder {
-    fn create(c: &Context, io: &mut IoProxy, io_id: i32) -> Result<Box<impl Decoder>> {
+    fn create(c: &Context, io:  IoProxy, io_id: i32) -> Result<Box<impl Decoder>> {
         let codec_id = unsafe {
             ::ffi::flow_codec_select_from_seekable_io(c.flow_c(), io.get_io_ptr())
         };
@@ -103,12 +109,13 @@ impl ClassicDecoder {
         } else {
             Ok(Box::new(ClassicDecoder {
                 classic: CodecInstance {
-                    codec_id: codec_id,
+                    codec_id,
                     codec_state: ptr::null_mut(),
                     direction: IoDirection::In,
-                    io_id: io_id,
+                    io_id,
                     io: io.get_io_ptr()
                 },
+                io,
                 ignore_color_profile: false
             }))
         }
@@ -127,7 +134,7 @@ impl Decoder for ClassicDecoder{
 
     }
 
-    fn get_image_info(&mut self, c: &Context, io: &mut IoProxy) -> Result<s::ImageInfo> {
+    fn get_image_info(&mut self, c: &Context) -> Result<s::ImageInfo> {
         unsafe {
             let classic = &self.classic;
 
@@ -166,7 +173,7 @@ impl Decoder for ClassicDecoder{
             Ok(None)
         }
     }
-    fn read_frame(&mut self, c: &Context, io: &mut IoProxy) -> Result<*mut BitmapBgra> {
+    fn read_frame(&mut self, c: &Context) -> Result<*mut BitmapBgra> {
 
         let blank_xyY = CIExyY{
             x: 0f64,
@@ -235,7 +242,8 @@ impl Decoder for ClassicDecoder{
 
 struct ClassicEncoder{
     classic: CodecInstance,
-    io_id: i32
+    io_id: i32,
+    io: IoProxy
 }
 
 impl ClassicEncoder{
@@ -273,17 +281,19 @@ impl ClassicEncoder{
             }
         }
     }
-    fn get_empty(io_id: i32, io_ptr:  *mut ffi::ImageflowJobIo) -> ClassicEncoder {
-        ClassicEncoder {
-            io_id: io_id,
+    fn get_empty(io_id: i32, io: IoProxy) -> Result<ClassicEncoder> {
+        let ptr = io.get_io_ptr();
+        Ok(ClassicEncoder {
+            io_id,
+            io,
             classic: CodecInstance {
-                io_id: io_id,
+                io_id,
                 codec_id: 0,
                 codec_state: ptr::null_mut(),
                 direction: IoDirection::Out,
-                io: io_ptr
+                io: ptr
             }
-        }
+        })
     }
 
 
@@ -291,7 +301,8 @@ impl ClassicEncoder{
 
 impl Encoder for ClassicEncoder{
 
-    fn write_frame(&mut self, c: &Context,  io: &mut IoProxy, preset: &s::EncoderPreset, frame: &mut BitmapBgra) -> Result<s::EncodeResult> {
+    fn write_frame(&mut self, c: &Context, preset: &s::EncoderPreset, frame: &mut BitmapBgra) -> Result<s::EncodeResult> {
+
         let (wanted_id, hints) = ClassicEncoder::get_codec_id_and_hints(preset)?;
         unsafe {
             let classic = &mut self.classic;
@@ -333,31 +344,49 @@ impl Encoder for ClassicEncoder{
             })
         }
     }
+    fn get_io(&self) -> Result<&IoProxy> {
+        Ok(&self.io)
+    }
 }
 
 impl CodecInstanceContainer{
 
      pub fn write_frame(&mut self, c: &Context, preset: &s::EncoderPreset, frame: &mut BitmapBgra) -> Result<s::EncodeResult>{
+
          // Pick encoder
          if let CodecKind::EncoderPlaceholder = self.codec{
-             match *preset {
+
+             let io = self.encode_io.take().unwrap();
+
+             let codec = match *preset {
                  s::EncoderPreset::Gif => {
                      //println!("Using gif encoder");
-                     self.codec = CodecKind::Encoder(Box::new(gif::GifEncoder::create(c, c.get_proxy_mut(self.io_id)?.deref_mut(), preset, self.io_id)));
+                     CodecKind::Encoder(Box::new(gif::GifEncoder::create(c, preset, io, frame)?))
                  },
                  _ => {
                      //println!("Using classic encoder");
-                     self.codec = CodecKind::Encoder(Box::new(
-                         ClassicEncoder::get_empty(self.io_id, c.get_proxy_mut(self.io_id)?.get_io_ptr())));
+                     CodecKind::Encoder(Box::new(
+                         ClassicEncoder::get_empty(self.io_id, io)?))
                  }
-             }
-         }
+             };
+             self.codec = codec;
+         };
+
+
          if let CodecKind::Encoder(ref mut e) = self.codec {
-             e.write_frame(c,  &mut c.get_proxy_mut(self.io_id)?.deref_mut(), preset, frame).map_err(|e| e.at(here!()))
+             e.write_frame(c, preset, frame).map_err(|e| e.at(here!()))
          }else{
              Err(unimpl!())
              //Err(FlowError::ErrNotImpl)
          }
+    }
+
+    pub fn get_encode_io(&self) -> Result<Option<&IoProxy>>{
+        if let CodecKind::Encoder(ref e) = self.codec {
+            Ok(Some(e.get_io().map_err(|e| e.at(here!()))?))
+        }else{
+            Ok(self.encode_io.as_ref())
+        }
     }
 }
 //pub struct CodecInstance {

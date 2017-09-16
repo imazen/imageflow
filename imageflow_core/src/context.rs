@@ -14,9 +14,7 @@ use codecs::CodecInstanceContainer;
 use ffi::IoDirection;
 
 pub struct Context {
-    //version: u64, (so different context types can be differentiated)
     c_ctx: *mut ffi::ImageflowContext,
-    io_proxies: AddRemoveSet<IoProxy>,
     error: CErrorProxy,
     outward_error:  OutwardErrorBuffer,
     pub debug_job_id: i32,
@@ -24,7 +22,7 @@ pub struct Context {
     pub next_graph_version: i32,
     pub max_calc_flatten_execute_passes: i32,
     pub graph_recording: s::Build001GraphRecording,
-    pub codecs: AddRemoveSet<CodecInstanceContainer>,
+    pub codecs: AddRemoveSet<CodecInstanceContainer>, // This loans out exclusive mutable references to items, bounding the ownership lifetime to Context
     pub io_id_list: RefCell<Vec<i32>>
 }
 
@@ -49,7 +47,6 @@ impl Context {
                 next_stable_node_id: 0,
                 max_calc_flatten_execute_passes: 40,
                 graph_recording: s::Build001GraphRecording::off(),
-                io_proxies: AddRemoveSet::with_capacity(2),
                 codecs: AddRemoveSet::with_capacity(4),
                 io_id_list: RefCell::new(Vec::with_capacity(2))
             }))
@@ -70,7 +67,6 @@ impl Context {
     /// Used by abi; should not panic
     pub fn abi_begin_terminate(&mut self) -> bool {
         self.codecs.mut_clear();
-        self.io_proxies.mut_clear();
         unsafe {
             ffi::flow_context_begin_terminate(self.c_ctx)
         }
@@ -103,16 +99,6 @@ impl Context {
     }
 
 
-    pub fn create_io_proxy(&self, io_id: i32) -> RefMut<IoProxy>{
-        if !self.io_id_present(io_id) {
-            self.io_id_list.borrow_mut().push(io_id);
-        }else{
-            panic!("");
-        }
-        self.io_proxies.add_mut(IoProxy::internal_use_only_create(self, io_id))
-    }
-
-
     pub fn flow_c(&self) -> *mut ffi::ImageflowContext{
         self.c_ctx
     }
@@ -121,30 +107,7 @@ impl Context {
         self.io_id_list.borrow().iter().any(|v| *v == io_id)
     }
 
-    pub fn get_io(&self, io_id:  i32) -> Result<RefMut<IoProxy>> {
-        self.get_proxy_mut(io_id)
-    }
-    pub fn get_proxy_mut(&self, io_id:  i32) -> Result<RefMut<IoProxy>> {
-        let mut borrow_errors = 0;
-        for item_result in self.io_proxies.iter_mut() {
-            if let Ok(proxy) = item_result{
-                if proxy.io_id() == io_id {
-                    return Ok(proxy);
-                }
-            }else{
-                borrow_errors+=1;
-            }
-        }
-        if borrow_errors > 0 {
-            Err(nerror!(ErrorKind::FailedBorrow, "Could not locate IoProxy by io_id {}; some IoProxies were exclusively borrowed by another scope.", io_id))
-        } else {
-            Err(nerror!(ErrorKind::ItemNotFound, "No IoProxy with io_id {}; all proxies searched.", io_id))
-        }
-
-    }
-
-
-    fn add_io(&self, io: &mut IoProxy, io_id: i32, direction: IoDirection) -> Result<()>{
+    fn add_io(&self, io: IoProxy, io_id: i32, direction: IoDirection) -> Result<()>{
 
         let codec_value = CodecInstanceContainer::create(self, io, io_id, direction).map_err(|e| e.at(here!()))?;
         let mut codec = self.codecs.add_mut(codec_value);
@@ -155,7 +118,7 @@ impl Context {
     }
 
     pub fn get_output_buffer_slice<'b>(&'b self, io_id: i32) -> Result<&'b [u8]> {
-        self.get_io(io_id).map_err(|e| e.at(here!()))?.get_output_buffer_bytes(self).map_err(|e| e.at(here!()))
+        self.get_codec(io_id).map_err(|e| e.at(here!()))?.get_encode_io()?.expect("Not an output buffer").get_output_buffer_bytes(self).map_err(|e| e.at(here!()))
     }
 
     pub fn add_file(&mut self, io_id: i32, direction: IoDirection, path: &str) -> Result<()> {
@@ -173,14 +136,14 @@ impl Context {
             return Err(nerror!(ErrorKind::InvalidArgument, "You cannot add an output file with an IoMode that can't write"));
         }
         let mut io =  IoProxy::file_with_mode(self, io_id,  path, mode).map_err(|e| e.at(here!()))?;
-        self.add_io(&mut *io, io_id, direction).map_err(|e| e.at(here!()))
+        self.add_io(io, io_id, direction).map_err(|e| e.at(here!()))
     }
 
 
     pub fn add_copied_input_buffer(&mut self, io_id: i32, bytes: &[u8]) -> Result<()> {
         let mut io = IoProxy::copy_slice(self, io_id,  bytes).map_err(|e| e.at(here!()))?;
 
-        self.add_io(&mut *io, io_id, IoDirection::In).map_err(|e| e.at(here!()))
+        self.add_io(io, io_id, IoDirection::In).map_err(|e| e.at(here!()))
     }
     pub fn add_input_bytes<'b>(&'b mut self, io_id: i32, bytes: &'b [u8]) -> Result<()> {
         self.add_input_buffer(io_id, bytes)
@@ -188,18 +151,18 @@ impl Context {
     pub fn add_input_buffer<'b>(&'b mut self, io_id: i32, bytes: &'b [u8]) -> Result<()> {
         let mut io = IoProxy::read_slice(self, io_id,  bytes).map_err(|e| e.at(here!()))?;
 
-        self.add_io(&mut *io, io_id, IoDirection::In).map_err(|e| e.at(here!()))
+        self.add_io(io, io_id, IoDirection::In).map_err(|e| e.at(here!()))
     }
 
     pub fn add_output_buffer(&mut self, io_id: i32) -> Result<()> {
         let mut io = IoProxy::create_output_buffer(self, io_id).map_err(|e| e.at(here!()))?;
 
-        self.add_io(&mut *io, io_id, IoDirection::Out).map_err(|e| e.at(here!()))
+        self.add_io(io, io_id, IoDirection::Out).map_err(|e| e.at(here!()))
     }
 
 
     pub fn get_image_info(&mut self, io_id: i32) -> Result<s::ImageInfo> {
-        self.get_codec(io_id).map_err(|e| e.at(here!()))?.get_decoder().map_err(|e| e.at(here!()))?.get_image_info(self,  &mut *self.get_io(io_id).map_err(|e| e.at(here!()))?).map_err(|e| e.at(here!()))
+        self.get_codec(io_id).map_err(|e| e.at(here!()))?.get_decoder().map_err(|e| e.at(here!()))?.get_image_info(self).map_err(|e| e.at(here!()))
     }
 
     pub fn tell_decoder(&mut self, io_id: i32, tell: s::DecoderCommand) -> Result<()> {
@@ -210,6 +173,7 @@ impl Context {
         self.get_codec(io_id).map_err(|e| e.at(here!()))?.get_decoder().map_err(|e| e.at(here!()))?.get_exif_rotation_flag( self).map_err(|e| e.at(here!()))
 
     }
+
     pub fn get_codec(&self, io_id: i32) -> Result<RefMut<CodecInstanceContainer>> {
         let mut borrow_errors = 0;
         for item_result in self.codecs.iter_mut() {
@@ -247,6 +211,7 @@ impl Context {
 
         Ok(s::ResponsePayload::BuildResult(s::JobResult { encodes: self.collect_augmented_encode_results( & g, &parsed.io), performance: Some(perf) }))
     }
+
     pub fn configure_graph_recording(&mut self, recording: s::Build001GraphRecording) {
         let r = if std::env::var("CI").and_then(|s| Ok(s.to_uppercase())) ==
             Ok("TRUE".to_owned()) {

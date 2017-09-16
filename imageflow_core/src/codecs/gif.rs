@@ -13,24 +13,26 @@ use ::gif_dispose::Screen;
 use ::gif::SetParameter;
 
 pub struct GifDecoder{
+    reader: ::gif::Reader<IoProxy>,
+    screen: Screen,
 }
 
 impl GifDecoder {
-    pub fn create(c: &Context, io: &IoProxy, io_id: i32) -> Result<GifDecoder> {
-        Ok(GifDecoder{
+    pub fn create(c: &Context, io: IoProxy, io_id: i32) -> Result<GifDecoder> {
 
-        })
-
-    }
-    fn read_size(io: &mut IoProxy) -> Result<(i32,i32)>{
         let mut decoder = ::gif::Decoder::new(io);
 
         // Important:
         decoder.set(::gif::ColorOutput::Indexed);
 
-        let reader = decoder.read_info().unwrap();
-        Ok((reader.width() as i32, reader.height() as i32))
+        let reader = decoder.read_info().map_err(|e| FlowError::from(e).at(here!()))?;
 
+        let screen = ::gif_dispose::Screen::new(&reader);
+
+        Ok(GifDecoder{
+            reader,
+            screen
+        })
     }
 }
 impl Decoder for GifDecoder {
@@ -39,15 +41,11 @@ impl Decoder for GifDecoder {
     }
 
 
-    fn get_image_info(&mut self, c: &Context, io: &mut IoProxy) -> Result<s::ImageInfo> {
-
-        let (w,h) = GifDecoder::read_size(io)?;
-        io.seek(c, 0).unwrap();
-
+    fn get_image_info(&mut self, c: &Context) -> Result<s::ImageInfo> {
         Ok(s::ImageInfo {
             frame_decodes_into: s::PixelFormat::Bgra32,
-            image_width: w,
-            image_height: h,
+            image_width: self.reader.width() as i32,
+            image_height: self.reader.height() as i32,
 //            current_frame_index: 0,
 //            frame_count: 1,
             // We would have to read in the entire GIF to know!
@@ -64,26 +62,20 @@ impl Decoder for GifDecoder {
         Ok(())
     }
 
-    fn read_frame(&mut self, c: &Context, io: &mut IoProxy) -> Result<*mut BitmapBgra> {
-        let mut decoder = ::gif::Decoder::new(io);
+    fn read_frame(&mut self, c: &Context) -> Result<*mut BitmapBgra> {
 
-        // Important:
-        decoder.set(::gif::ColorOutput::Indexed);
-
-        let mut reader = decoder.read_info().unwrap();
-        let mut screen = ::gif_dispose::Screen::new(&reader);
-        if let Some(frame) = reader.read_next_frame().unwrap() {
-            screen.blit(&frame).unwrap();
+        if let Some(frame) = self.reader.read_next_frame().map_err(|e| FlowError::from(e).at(here!()))? {
+            self.screen.blit(&frame).map_err(|e| nerror!(ErrorKind::GifDecodingError, "{:?}", e) ); //Missing palette?
 
             unsafe {
-                let copy = ffi::flow_bitmap_bgra_create(c.flow_c(), screen.width as i32, screen.height as i32, false, ffi::PixelFormat::Bgra32);
+                let copy = ffi::flow_bitmap_bgra_create(c.flow_c(), self.screen.width as i32, self.screen.height as i32, false, ffi::PixelFormat::Bgra32);
                 if copy == ptr::null_mut() {
                     cerror!(c).panic();
                 }
                 let pixel_count = (*copy).stride * (*copy).h / 4;
                 let copy_buffer: &mut [Bgra32] = std::slice::from_raw_parts_mut((*copy).pixels as *mut Bgra32, pixel_count as usize);
 
-                for (dst, &src) in copy_buffer.iter_mut().zip(screen.pixels.iter()) {
+                for (dst, &src) in copy_buffer.iter_mut().zip(self.screen.pixels.iter()) {
                     dst.b = src.b;
                     dst.g = src.g;
                     dst.r = src.r;
@@ -100,39 +92,50 @@ impl Decoder for GifDecoder {
     }
 }
 
-    #[repr(C, packed)]
-    struct Bgra32 {
-        b: u8,
-        g: u8,
-        r: u8,
-        a: u8
-    }
+#[repr(C, packed)]
+struct Bgra32 {
+    b: u8,
+    g: u8,
+    r: u8,
+    a: u8
+}
+
 
 pub struct GifEncoder{
-    io_id: i32
+    io_id: i32,
+    encoder: ::gif::Encoder<IoProxy>,
+    io_ref: &'static IoProxy //unsafe self-referential
 }
 
 impl GifEncoder{
-    pub(crate) fn create(c: &Context, io: &mut IoProxy, preset: &s::EncoderPreset, io_id: i32) -> GifEncoder{
-        GifEncoder{ io_id: io_id}
+    pub(crate) fn create(c: &Context, preset: &s::EncoderPreset, io: IoProxy, first_frame: &BitmapBgra) -> Result<GifEncoder>{
+        Ok(GifEncoder{
+            io_id: io.io_id(),
+            io_ref: unsafe { &*(&io as *const IoProxy) },
+            // Global color table??
+            encoder: ::gif::Encoder::new(io, first_frame.w as u16, first_frame.h as u16, &[]).map_err(|e| FlowError::from_gif_encoder(e).at(here!()))?,
+        })
     }
 }
 
 impl Encoder for GifEncoder{
-    fn write_frame(&mut self, c: &Context, io: &mut IoProxy, preset: &s::EncoderPreset, frame: &mut BitmapBgra) -> Result<s::EncodeResult> {
+    fn write_frame(&mut self, c: &Context, preset: &s::EncoderPreset, frame: &mut BitmapBgra) -> Result<s::EncodeResult> {
         unsafe {
             let mut pixels = Vec::new();
-            pixels.extend_from_slice(frame.pixels_slice_mut().unwrap());
+            pixels.extend_from_slice(frame.pixels_slice_mut().expect("Frame must have pixel buffer"));
 
             let f = match frame.fmt {
                 ::ffi::PixelFormat::Bgr24 => Ok(from_bgr_with_stride(frame.w as u16, frame.h as u16, &mut pixels, frame.stride as usize)),
                 ::ffi::PixelFormat::Bgra32 => Ok(from_bgra_with_stride(frame.w as u16, frame.h as u16, &mut pixels, frame.stride as usize)),
                 ::ffi::PixelFormat::Bgr32 => Ok(from_bgrx_with_stride(frame.w as u16, frame.h as u16, &mut pixels, frame.stride as usize)),
-                other =>  Err(nerror!(ErrorKind::InvalidArgument)) //TODO: improve this error
+                other =>  Err(nerror!(ErrorKind::InvalidArgument, "PixelFormat {:?} not supported for gif encoding", frame.fmt))
             }?;
+            // delay
+            // dispose method
+            // rect
+            // transparency??
 
-            let mut encoder = ::gif::Encoder::new(io, frame.w as u16, frame.h as u16, &[]).unwrap();
-            encoder.write_frame(&f).unwrap();
+            self.encoder.write_frame(&f).map_err(|e| FlowError::from_gif_encoder(e).at(here!()))?;
 
             Ok(
                 s::EncodeResult{
@@ -145,6 +148,9 @@ impl Encoder for GifEncoder{
                 }
             )
         }
+    }
+    fn get_io(&self) -> Result<&IoProxy> {
+        Ok(self.io_ref)
     }
 }
 

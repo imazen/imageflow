@@ -64,11 +64,11 @@ impl IoProxy {
         self.io_id
     }
 
-    pub fn internal_use_only_create(context: &Context, io_id: i32) -> IoProxy {
+    pub fn create(context: &Context, io_id: i32) -> IoProxy {
         IoProxy {
             //This ugly breaking of lifetimes means that
             //NOTHING is preventing use-after-free
-            //if someone finds a way to access an owned Job that isn't borrowed from the Context
+            //if someone finds a way to access an owned Codec that isn't borrowed from the Context
             //TODO: Consider replacing with Weak<T>
             c: unsafe { &*(context as *const Context) },
             //io_id: io_id,
@@ -76,14 +76,14 @@ impl IoProxy {
             path: None,
             c_path: None,
             drop_with_job: false,
-            io_id: io_id
+            io_id
         }
     }
-    pub fn wrap_classic(context: &Context, classic_io: *mut ::ffi::ImageflowJobIo, io_id: i32) -> Result<RefMut<IoProxy>> {
+    pub fn wrap_classic(context: &Context, classic_io: *mut ::ffi::ImageflowJobIo, io_id: i32) -> Result<IoProxy> {
         if classic_io.is_null() {
             Err(cerror!(context, "Failed to create ImageflowJobIo *"))
         } else {
-            let mut proxy = context.create_io_proxy(io_id);
+            let mut proxy = IoProxy::create(context, io_id);
             proxy.classic = classic_io;
             Ok(proxy)
         }
@@ -164,7 +164,7 @@ impl IoProxy {
         }
     }
 
-    pub fn read_slice<'a>(context: &'a Context, io_id: i32,  bytes: &'a [u8]) -> Result<RefMut<'a, IoProxy>> {
+    pub fn read_slice<'a>(context: &'a Context, io_id: i32,  bytes: &'a [u8]) -> Result<IoProxy> {
         IoProxy::check_io_id(context,io_id)?;
         unsafe {
             // Owner parameter is only for io_struct, not buffer.
@@ -199,7 +199,7 @@ impl IoProxy {
         }
     }
 
-    pub fn create_output_buffer(context: &Context, io_id: i32) -> Result<RefMut<IoProxy>> {
+    pub fn create_output_buffer(context: &Context, io_id: i32) -> Result<IoProxy> {
         IoProxy::check_io_id(context,io_id)?;
         unsafe {
             let p =
@@ -210,7 +210,7 @@ impl IoProxy {
     }
 
 
-    pub fn copy_slice<'a, 'b>(context: &'a Context, io_id: i32, bytes: &'b [u8]) -> Result<RefMut<'a,IoProxy>> {
+    pub fn copy_slice<'a, 'b>(context: &'a Context, io_id: i32, bytes: &'b [u8]) -> Result<IoProxy> {
         IoProxy::check_io_id(context,io_id)?;
         unsafe {
             let buf: *mut u8 =
@@ -240,7 +240,7 @@ impl IoProxy {
         }
     }
 
-    pub fn file_with_mode<T: AsRef<Path>>(context: &Context, io_id: i32, path: T, mode: ::IoMode) -> Result<RefMut<IoProxy>> {
+    pub fn file_with_mode<T: AsRef<Path>>(context: &Context, io_id: i32, path: T, mode: ::IoMode) -> Result<IoProxy> {
         IoProxy::check_io_id(context,io_id)?;
         unsafe {
             // TODO: add support for a wider variety of character sets

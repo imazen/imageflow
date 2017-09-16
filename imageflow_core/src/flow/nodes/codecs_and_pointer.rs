@@ -198,11 +198,9 @@ impl NodeDef for DecoderPrimitiveDef {
     fn execute(&self, ctx: &mut OpCtxMut, ix: NodeIndex) -> Result<NodeResult> {
         let io_id = decoder_get_io_id(&ctx.weight(ix).params)?;
 
-        let mut io = ctx.c.get_io(io_id).map_err(|e| e.at(here!()))?;
-
         let result = ctx.c.get_codec(io_id).map_err(|e| e.at(here!()))?
             .get_decoder().map_err(|e| e.at(here!()))?
-            .read_frame(ctx.c, &mut *io).map_err(|e| e.at(here!()))?;
+            .read_frame(ctx.c).map_err(|e| e.at(here!()))?;
         Ok(NodeResult::Frame(result))
     }
 }

@@ -171,8 +171,12 @@ pub trait CategorizedError{
 
 #[derive(Debug,  Clone, PartialEq, Eq)]
 pub enum ErrorKind{
+    InternalError,
     AllocationFailed,
-
+    GifDecodingError,
+    GifEncodingError,
+    DecodingIoError,
+    EncodingIoError,
     GraphCyclic,
     InvalidNodeConnections,
     LayoutError,
@@ -219,7 +223,12 @@ impl CategorizedError for ErrorKind{
             &ErrorKind::MethodNotImplemented |
             &ErrorKind::ValidationNotImplemented |
             &ErrorKind::InvalidOperation |
+            &ErrorKind::InternalError |
             &ErrorKind::InvalidState => ErrorCategory::InternalError,
+            &ErrorKind::GifDecodingError => ErrorCategory::ImageMalformed,
+            &ErrorKind::DecodingIoError => ErrorCategory::IoError,
+            &ErrorKind::EncodingIoError => ErrorCategory::IoError,
+            &ErrorKind::GifEncodingError => ErrorCategory::InternalError,
             &ErrorKind::CError(ref e) => e.category(),
             &ErrorKind::Category(c) => c
         }
@@ -265,6 +274,29 @@ pub struct FlowError {
     pub node: Option<Box<::flow::definitions::NodeDebugInfo>>
 }
 
+
+impl From<::gif::DecodingError> for FlowError{
+    fn from(f: ::gif::DecodingError) -> Self {
+        match f {
+            ::gif::DecodingError::Io(e) => FlowError::without_location(ErrorKind::DecodingIoError, format!("{:?}", e)),
+            ::gif::DecodingError::Internal(msg) => FlowError::without_location(ErrorKind::InternalError,format!("Internal error in gif decoder: {:?}",msg)),
+            ::gif::DecodingError::Format(msg) => FlowError::without_location(ErrorKind::GifDecodingError,format!("{:?}",msg))
+        }
+    }
+}
+
+impl FlowError {
+    pub fn from_gif_encoder(e: ::std::io::Error) -> Self{
+        if e.kind() == ::std::io::ErrorKind::InvalidInput{
+            FlowError::without_location(ErrorKind::GifEncodingError, format!("{:?}", e))
+        }else{
+            FlowError::without_location(ErrorKind::EncodingIoError, format!("{:?}", e))
+        }
+
+    }
+}
+
+
 #[test]
 fn test_flow_error_size(){
     // 88 bytes. Interning &'string str and bringing CodeLocation down to 8 bytes would -16
@@ -297,6 +329,14 @@ impl ::std::error::Error for FlowError {
 }
 impl FlowError {
 
+    pub fn without_location(kind: ErrorKind, message: String) -> Self{
+        FlowError{
+            kind,
+            message,
+            at: ::smallvec::SmallVec::new(),
+            node:None
+        }
+    }
     pub fn at(mut self, c: CodeLocation ) -> FlowError {
         // Prevent allocations when the error is OOM
         if self.kind.is_oom() && self.at.len() == self.at.capacity(){
