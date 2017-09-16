@@ -74,6 +74,8 @@ if [[ "$IMAGEFLOW_BUILD_OVERRIDE" == 'cleanup' ]]; then
 	exit 0
 fi 
 
+
+
 if [[ "$IMAGEFLOW_BUILD_OVERRIDE" == 'purge' ]]; then
 	echo "Purging artifacts and temporary files"
 	rm -rf artifacts
@@ -96,6 +98,18 @@ if [[ "$IMAGEFLOW_BUILD_OVERRIDE" == 'purge' ]]; then
 
 	exit 0
 fi 
+
+if [[ "$IMAGEFLOW_BUILD_OVERRIDE" == 'c' ]]; then
+	echo "Rebuilding c_components"
+	(cd c_components
+        conan remove imageflow_c/* -f
+        conan export imazen/testing
+    )
+    (cd imageflow_core
+        conan install --build missing -s target_cpu=haswell # Will build imageflow package with your current settings
+    )
+	exit 0
+fi
 
 if [[ "$IMAGEFLOW_BUILD_OVERRIDE" == 'codestats' ]]; then
 	echo "Check on unsafe code statistics"
