@@ -30,9 +30,11 @@ flow_rect test_detect_content_for(uint32_t w, uint32_t h, uint32_t x1, uint32_t 
 
 TEST_CASE("Test isSrgb", "")
 {
-    void * buf = malloc(5000);
+    void * buf = malloc(90);
 
-    REQUIRE(flow_profile_is_srgb((unsigned char *)buf, 5000) == false);
+    REQUIRE(flow_profile_is_srgb((unsigned char *)buf, 90) == false);
+
+    free(buf);
 
 }
 
