@@ -270,6 +270,10 @@ impl Context {
 impl Drop for Context {
     /// Used by abi; should not panic
     fn drop(&mut self) {
+        if let Err(e) = self.codecs.clear(){
+            //TODO: log issue somewhere?
+        }
+        self.codecs.mut_clear(); // Dangerous, because there's no prohibiton on dangling references.
         if !self.c_ctx.is_null() {
             unsafe {
                 ffi::flow_context_destroy(self.c_ctx);
