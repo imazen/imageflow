@@ -63,9 +63,11 @@ impl Decoder for GifDecoder {
     }
 
     fn read_frame(&mut self, c: &Context) -> Result<*mut BitmapBgra> {
+        //self.reader.read_next_frame()
 
+        //self.reader.next_frame_info()
         if let Some(frame) = self.reader.read_next_frame().map_err(|e| FlowError::from(e).at(here!()))? {
-            self.screen.blit(&frame).map_err(|e| nerror!(ErrorKind::GifDecodingError, "{:?}", e) ); //Missing palette?
+            self.screen.blit(&frame).map_err(|e| nerror!(ErrorKind::GifDecodingError, "{:?}", e) )?; //Missing palette?
 
             unsafe {
                 let copy = ffi::flow_bitmap_bgra_create(c.flow_c(), self.screen.width as i32, self.screen.height as i32, false, ffi::PixelFormat::Bgra32);

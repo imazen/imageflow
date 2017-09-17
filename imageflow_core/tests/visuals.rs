@@ -193,12 +193,6 @@ fn test_fill_rect_original(){
     assert!(matched);
 }
 
-fn request_1d_twice_mode() -> s::ResampleHints {
-    s::ResampleHints {
-        sharpen_percent: None,
-    }
-}
-
 #[test]
 fn test_scale_image() {
     let matched = compare(Some(s::IoEnum::Url("https://s3-us-west-2.amazonaws.com/imageflow-resources/test_inputs/waterhouse.jpg".to_owned())), 500,

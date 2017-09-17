@@ -135,13 +135,13 @@ impl Context {
         if direction == IoDirection::Out && !mode.can_write() {
             return Err(nerror!(ErrorKind::InvalidArgument, "You cannot add an output file with an IoMode that can't write"));
         }
-        let mut io =  IoProxy::file_with_mode(self, io_id,  path, mode).map_err(|e| e.at(here!()))?;
+        let io =  IoProxy::file_with_mode(self, io_id,  path, mode).map_err(|e| e.at(here!()))?;
         self.add_io(io, io_id, direction).map_err(|e| e.at(here!()))
     }
 
 
     pub fn add_copied_input_buffer(&mut self, io_id: i32, bytes: &[u8]) -> Result<()> {
-        let mut io = IoProxy::copy_slice(self, io_id,  bytes).map_err(|e| e.at(here!()))?;
+        let io = IoProxy::copy_slice(self, io_id,  bytes).map_err(|e| e.at(here!()))?;
 
         self.add_io(io, io_id, IoDirection::In).map_err(|e| e.at(here!()))
     }
@@ -149,13 +149,13 @@ impl Context {
         self.add_input_buffer(io_id, bytes)
     }
     pub fn add_input_buffer<'b>(&'b mut self, io_id: i32, bytes: &'b [u8]) -> Result<()> {
-        let mut io = IoProxy::read_slice(self, io_id,  bytes).map_err(|e| e.at(here!()))?;
+        let io = IoProxy::read_slice(self, io_id,  bytes).map_err(|e| e.at(here!()))?;
 
         self.add_io(io, io_id, IoDirection::In).map_err(|e| e.at(here!()))
     }
 
     pub fn add_output_buffer(&mut self, io_id: i32) -> Result<()> {
-        let mut io = IoProxy::create_output_buffer(self, io_id).map_err(|e| e.at(here!()))?;
+        let io = IoProxy::create_output_buffer(self, io_id).map_err(|e| e.at(here!()))?;
 
         self.add_io(io, io_id, IoDirection::Out).map_err(|e| e.at(here!()))
     }
