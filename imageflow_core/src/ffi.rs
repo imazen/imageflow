@@ -106,7 +106,14 @@ pub enum Floatspace {
     Linear = 1, // gamma = 2,
 }
 
-
+impl From<::imageflow_types::ScalingFloatspace> for Floatspace{
+    fn from(s: ::imageflow_types::ScalingFloatspace) -> Self {
+        match s {
+            s::ScalingFloatspace::Srgb => Floatspace::Srgb,
+            s::ScalingFloatspace::Linear => Floatspace::Linear,
+        }
+    }
+}
 
 
 pub const TESTED_FILTER_OPTIONS: &'static [&'static str] = &["",
@@ -608,8 +615,10 @@ pub struct Scale2dRenderToCanvas1d {
     // There will need to be consistency checks against the createcanvas node
     //
     // struct flow_interpolation_details * interpolationDetails;
-    pub scale_to_width: i32,
-    pub scale_to_height: i32,
+    pub x: u32,
+    pub y: u32,
+    pub w: u32,
+    pub h: u32,
     pub sharpen_percent_goal: f32,
     pub interpolation_filter: Filter,
     pub scale_in_colorspace: Floatspace,

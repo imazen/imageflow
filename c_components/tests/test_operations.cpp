@@ -194,8 +194,10 @@ int64_t scale2d(int w, int h, int to_w, int to_h, flow_pixel_format fmt, flow_wo
 
         struct flow_nodeinfo_scale2d_render_to_canvas1d info;
         info.interpolation_filter = flow_interpolation_filter_RobidouxFast;
-        info.scale_to_height = to_h;
-        info.scale_to_width = to_w;
+        info.h = to_h;
+        info.w = to_w;
+        info.x = 0;
+        info.y = 0;
         info.scale_in_colorspace = floatspace;
 
         result = flow_node_execute_scale2d_render1d(c, a, b, &info);

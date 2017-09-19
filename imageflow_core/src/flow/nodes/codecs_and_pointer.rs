@@ -128,7 +128,7 @@ impl NodeDef for DecoderDef {
     fn expand(&self, ctx: &mut OpCtxMut, ix: NodeIndex) -> Result<()> {
         let io_id = decoder_get_io_id(&ctx.weight(ix).params)?;
 
-        // Add the neccessary rotation step afterwards
+        // Add the necessary rotation step afterwards
         if let Some(exif_flag) = ctx.job.get_exif_rotation_flag(io_id).map_err(|e| e.at(here!()))?{
             if exif_flag > 0 {
                 let new_node = ctx.graph

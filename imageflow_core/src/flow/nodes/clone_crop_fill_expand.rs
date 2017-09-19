@@ -50,6 +50,7 @@ impl NodeDefOneInputOneCanvas for CopyRectNodeDef{
                          input.h,
                          p));
             }
+            canvas.compositing_mode = ::ffi::BitmapCompositingMode::BlendWithSelf;
 
             let bytes_pp = input.fmt.bytes() as u32;
             if from_x == 0 && x == 0 && width == input.w && width == canvas.w &&
@@ -103,6 +104,8 @@ impl NodeDefMutateBitmap for FillRectNodeDef {
             if x2 <= x1 || y2 <= y1 || (x1 as i32) < 0 || (y1 as i32) < 0 || x2 > bitmap.w || y2 > bitmap.h{
                return Err(nerror!(::ErrorKind::InvalidCoordinates, "Invalid coordinates for {}x{} bitmap: {:?}", bitmap.w, bitmap.h, p));
             }
+
+            bitmap.compositing_mode = ::ffi::BitmapCompositingMode::BlendWithSelf;
             unsafe {
 
                 if !ffi::flow_bitmap_bgra_fill_rect(c.flow_c(),

@@ -4,6 +4,8 @@ use super::internal_prelude::*;
 //pub static SCALE_1D_TO_CANVAS_1D: Render1dToCanvas = Render1dToCanvas{};
 pub static SCALE_2D_RENDER_TO_CANVAS_1D: Scale2dDef = Scale2dDef{};
 pub static SCALE: ScaleDef = ScaleDef{};
+
+pub static DRAW_IMAGE_EXACT: DrawImageDef = DrawImageDef{};
 //pub static SCALE_1D: Render1DDef  =Render1DDef{};
 
 
@@ -219,6 +221,79 @@ impl NodeDefOneInputExpand for ScaleDef{
 
 
 #[derive(Debug, Clone)]
+pub struct DrawImageDef;
+
+impl NodeDef for DrawImageDef {
+    fn as_one_input_one_canvas(&self) -> Option<&NodeDefOneInputOneCanvas> {
+        Some(self)
+    }
+}
+
+impl NodeDefOneInputOneCanvas for DrawImageDef {
+    fn fqn(&self) -> &'static str {
+        "imazen.draw_image_to_canvas"
+    }
+    fn validate_params(&self, p: &NodeParams) -> Result<()> {
+        Ok(())
+    }
+
+    fn render(&self, c: &Context, canvas: &mut BitmapBgra, input: &mut BitmapBgra, p: &NodeParams) -> Result<()> {
+        if let &NodeParams::Json(s::Node::DrawImageExact { x, y, w, h, hints, blend }) = p {
+
+            if x + w > canvas.w || y + h > canvas.h {
+
+                return Err(nerror!(::ErrorKind::InvalidNodeParams, "DrawImageExact target rect x1={},y1={},w={},h={} does not fit canvas size {}x{}.", x,y,  w, h, canvas.w, canvas.h));
+            }
+            if input.fmt.bytes() != 4 || canvas.fmt.bytes() != 4 {
+                return Err(nerror!(::ErrorKind::InvalidNodeConnections, "DrawImageExact can only operate on Rgb32 and Rgba32 bitmaps. Input pixel format {:?}. Canvas pixel format {:?}.", input.fmt, canvas.fmt));
+            }
+
+            let upscaling = w > input.w || h > input.h;
+            let downscaling = w < input.w || h < input.h;
+
+            let picked_filter = if w > input.w || h > input.h {
+                hints.and_then(|h| h.up_filter).unwrap_or(s::Filter::Ginseng)
+            } else {
+                hints.and_then(|h| h.down_filter).unwrap_or(s::Filter::Robidoux)
+            };
+
+            let sharpen_percent = hints.and_then(|h| h.sharpen_percent).unwrap_or(0f32);
+
+            let floatspace = hints.and_then(|h| h.scaling_colorspace).unwrap_or(s::ScalingFloatspace::Linear); //  if downscaling { ffi::Floatspace::Linear} else {ffi::Floatspace::Srgb}
+
+            let compose = blend.unwrap_or(::imageflow_types::CompositingMode::Compose) == s::CompositingMode::Compose;
+
+            if canvas.compositing_mode == ::ffi::BitmapCompositingMode::ReplaceSelf && compose{
+                canvas.compositing_mode = ::ffi::BitmapCompositingMode::BlendWithSelf;
+            }
+
+            let ffi_struct = ffi::Scale2dRenderToCanvas1d {
+                interpolation_filter:                ffi::Filter::from(picked_filter),
+                x,
+                y,
+                w,
+                h,
+                sharpen_percent_goal: sharpen_percent,
+                scale_in_colorspace: ::ffi::Floatspace::from(floatspace)
+            };
+
+            unsafe {
+                if !::ffi::flow_node_execute_scale2d_render1d(c.flow_c(),
+                                                              input, canvas, &ffi_struct as *const ffi::Scale2dRenderToCanvas1d) {
+                    return Err(cerror!(c, "Failed to execute Scale2D:  "));
+                }
+            }
+
+            Ok(())
+        } else {
+            Err(nerror!(::ErrorKind::NodeParamsMismatch, "Need Resample2D, got {:?}",p))
+        }
+    }
+}
+
+
+
+#[derive(Debug, Clone)]
 pub struct Scale2dDef;
 
 impl NodeDef for Scale2dDef {
@@ -263,9 +338,11 @@ impl NodeDefOneInputOneCanvas for Scale2dDef {
             let ffi_struct = ffi::Scale2dRenderToCanvas1d {
                 interpolation_filter:
                 ffi::Filter::from(picked_filter.unwrap_or(s::Filter::Robidoux)),
+                x: 0,
+                y: 0,
+                w,
+                h,
                 //TODO: or Ginseng?
-                scale_to_width: w as i32,
-                scale_to_height: h as i32,
                 sharpen_percent_goal: sharpen_percent.unwrap_or(0f32),
                 scale_in_colorspace: match scaling_colorspace {
                     Some(s::ScalingFloatspace::Srgb) => ffi::Floatspace::Srgb,

@@ -52,6 +52,7 @@ pub use self::rotate_flip_transpose::ROTATE_270;
 pub use self::rotate_flip_transpose::ROTATE_90;
 pub use self::rotate_flip_transpose::TRANSPOSE;
 pub use self::scale_render::SCALE;
+pub use self::scale_render::DRAW_IMAGE_EXACT;
 //pub use self::scale_render::SCALE_1D;
 //pub use self::scale_render::SCALE_1D_TO_CANVAS_1D;
 pub use self::constrain::CONSTRAIN;

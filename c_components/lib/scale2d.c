@@ -13,20 +13,49 @@ FLOW_HINT_HOT FLOW_HINT_UNSAFE_MATH_OPTIMIZATIONS static void add_row(float * mu
         mutate_row[i] += input_row[i];
     }
 }
+
+
+static struct flow_bitmap_bgra * crop(flow_c * c, struct flow_bitmap_bgra * b, uint32_t x, uint32_t y, uint32_t w, uint32_t h){
+    if (h + y > b->h || w + x > b->w) {
+        FLOW_error(c, flow_status_Invalid_argument);
+        return NULL;
+    }
+
+    struct flow_bitmap_bgra * cropped_canvas = flow_bitmap_bgra_create_header(c, w, h);
+
+    uint32_t bpp = flow_pixel_format_bytes_per_pixel(b->fmt);
+    if (cropped_canvas == NULL) {
+        FLOW_error_return_null(c);
+    }
+    cropped_canvas->fmt = b->fmt;
+    memcpy(&cropped_canvas->matte_color[0],&b->matte_color[0], sizeof(uint8_t[4]));
+    cropped_canvas->compositing_mode = b->compositing_mode;
+
+
+    cropped_canvas->pixels = b->pixels +  y * b->stride + x * bpp;
+    cropped_canvas->stride = b->stride;
+    return cropped_canvas;
+}
+
 FLOW_HINT_HOT FLOW_HINT_UNSAFE_MATH_OPTIMIZATIONS
 
     bool
-    flow_node_execute_scale2d_render1d(flow_c * c, struct flow_bitmap_bgra * input, struct flow_bitmap_bgra * canvas,
+    flow_node_execute_scale2d_render1d(flow_c * c, struct flow_bitmap_bgra * input, struct flow_bitmap_bgra * uncropped_canvas,
                                        struct flow_nodeinfo_scale2d_render_to_canvas1d * info)
 {
-    if (info->scale_to_height != (int32_t)canvas->h || info->scale_to_width != (int32_t)canvas->w) {
-        FLOW_error(c, flow_status_Not_implemented); // Requires cropping the target canvas
+    if (info->h + info->y > uncropped_canvas->h|| info->w + info->x > uncropped_canvas->w) {
+        FLOW_error(c, flow_status_Invalid_argument);
         return false;
     }
-    flow_pixel_format input_fmt = flow_effective_pixel_format(input);
-    flow_pixel_format canvas_fmt = flow_effective_pixel_format(input);
 
-    // TODO: add support for bgr24
+    struct flow_bitmap_bgra * cropped_canvas = (info->x == 0 && info->y == 0 && info->w == uncropped_canvas->w && info->h == uncropped_canvas->h) ? uncropped_canvas : crop(c, uncropped_canvas, info->x, info-> y, info->w, info->h);
+    if (cropped_canvas == NULL) {
+        FLOW_error_return(c);
+    }
+
+    flow_pixel_format input_fmt = flow_effective_pixel_format(input);
+    flow_pixel_format canvas_fmt = flow_effective_pixel_format(cropped_canvas);
+
     if (input_fmt != flow_bgra32 && input_fmt != flow_bgr32) {
         FLOW_error(c, flow_status_Not_implemented);
         return false;
@@ -51,12 +80,12 @@ FLOW_HINT_HOT FLOW_HINT_UNSAFE_MATH_OPTIMIZATIONS
 
     flow_prof_start(c, "contributions_calc", false);
 
-    contrib_v = flow_interpolation_line_contributions_create(c, info->scale_to_height, input->h, details);
+    contrib_v = flow_interpolation_line_contributions_create(c, info->h, input->h, details);
     if (contrib_v == NULL || !flow_set_owner(c, contrib_v, details)) {
         FLOW_destroy(c, details);
         FLOW_error_return(c);
     }
-    contrib_h = flow_interpolation_line_contributions_create(c, info->scale_to_width, input->w, details);
+    contrib_h = flow_interpolation_line_contributions_create(c, info->w, input->w, details);
     if (contrib_h == NULL || !flow_set_owner(c, contrib_h, details)) {
         FLOW_destroy(c, details);
         FLOW_error_return(c);
@@ -70,7 +99,7 @@ FLOW_HINT_HOT FLOW_HINT_UNSAFE_MATH_OPTIMIZATIONS
         FLOW_destroy(c, details);
         FLOW_error_return(c);
     }
-    struct flow_bitmap_float * dest_buf = flow_bitmap_float_create(c, info->scale_to_width, 1, 4, true);
+    struct flow_bitmap_float * dest_buf = flow_bitmap_float_create(c, info->w, 1, 4, true);
     if (dest_buf == NULL || !flow_set_owner(c, dest_buf, details)) {
         FLOW_destroy(c, details);
         FLOW_error_return(c);
@@ -108,7 +137,7 @@ FLOW_HINT_HOT FLOW_HINT_UNSAFE_MATH_OPTIMIZATIONS
         row_indexes[i] = -1;
     }
 
-    for (uint32_t out_row = 0; out_row < canvas->h; out_row++) {
+    for (uint32_t out_row = 0; out_row < cropped_canvas->h; out_row++) {
         struct flow_interpolation_pixel_contributions contrib = contrib_v->ContribRow[out_row];
         // Clear output row
         memset(output_address, 0, sizeof(float) * row_floats);
@@ -177,12 +206,12 @@ FLOW_HINT_HOT FLOW_HINT_UNSAFE_MATH_OPTIMIZATIONS
         }
         flow_prof_stop(c, "ScaleBgraFloatRows", true, false);
 
-        if (!flow_bitmap_float_composite_linear_over_srgb(c, &colorcontext, dest_buf, 0, canvas, out_row, 1, false)) {
+        if (!flow_bitmap_float_composite_linear_over_srgb(c, &colorcontext, dest_buf, 0, cropped_canvas, out_row, 1, false)) {
             FLOW_destroy(c, details);
             FLOW_error_return(c);
         }
     }
-
+    FLOW_destroy(c, cropped_canvas == uncropped_canvas ? NULL : cropped_canvas);
     FLOW_destroy(c, details);
     return true;
 }

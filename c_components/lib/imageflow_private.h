@@ -181,8 +181,11 @@ struct flow_nodeinfo_scale2d_render_to_canvas1d {
     // There will need to be consistency checks against the createcanvas node
 
     // struct flow_interpolation_details * interpolationDetails;
-    int32_t scale_to_width;
-    int32_t scale_to_height;
+    uint32_t x;
+    uint32_t y;
+
+    uint32_t w;
+    uint32_t h;
     float sharpen_percent_goal;
     flow_interpolation_filter interpolation_filter;
 

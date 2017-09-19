@@ -486,6 +486,7 @@ impl From<s::Node> for Node {
             }
             s::Node::FillRect { .. } => Node::n(&nodes::FILL_RECT, NodeParams::Json(node)),
             s::Node::Resample2D { .. } => Node::n(&nodes::SCALE, NodeParams::Json(node)),
+            s::Node::DrawImageExact { ..} => Node::n(&nodes::DRAW_IMAGE_EXACT, NodeParams::Json(node)),
             s::Node::Constrain (_) => Node::n(&nodes::CONSTRAIN, NodeParams::Json(node)),
             s::Node::ExpandCanvas { .. } => {
                 Node::n(&nodes::EXPAND_CANVAS, NodeParams::Json(node))

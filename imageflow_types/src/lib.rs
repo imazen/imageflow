@@ -323,6 +323,14 @@ pub enum Constraint {
     //max * {down, up, both, canvas}
 }
 
+#[derive(Serialize, Deserialize, Clone, Copy, PartialEq, Debug)]
+pub enum CompositingMode {
+    #[serde(rename="compose")]
+    Compose,
+    #[serde(rename="overwrite")]
+    Overwrite
+}
+
 #[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
 pub enum Node {
     #[serde(rename="flip_v")]
@@ -353,7 +361,7 @@ pub enum Node {
     CopyRectToCanvas {
         from_x: u32,
         from_y: u32,
-        width: u32,
+        width: u32, //TODO: inconsistent with w/h elsewhere
         height: u32,
         x: u32,
         y: u32,
@@ -398,12 +406,20 @@ pub enum Node {
     Resample2D {
         w: u32,
         h: u32,
-        down_filter: Option<Filter>,
+        down_filter: Option<Filter>, //TODO: refactor to use ConstraintResamplingHints
         up_filter: Option<Filter>,
         scaling_colorspace: Option<ScalingFloatspace>,
         hints: Option<ResampleHints>,
     },
-
+    #[serde(rename="draw_image_exact")]
+    DrawImageExact {
+        x: u32,
+        y: u32,
+        w: u32,
+        h: u32,
+        blend: Option<CompositingMode>,
+        hints: Option<ConstraintResamplingHints>,
+    },
 //    #[serde(rename="resample_1d")]
 //    Resample1D {
 //        scale_to_width: u32,
