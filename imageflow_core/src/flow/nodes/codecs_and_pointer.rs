@@ -198,9 +198,15 @@ impl NodeDef for DecoderPrimitiveDef {
     fn execute(&self, ctx: &mut OpCtxMut, ix: NodeIndex) -> Result<NodeResult> {
         let io_id = decoder_get_io_id(&ctx.weight(ix).params)?;
 
-        let result = ctx.c.get_codec(io_id).map_err(|e| e.at(here!()))?
-            .get_decoder().map_err(|e| e.at(here!()))?
-            .read_frame(ctx.c).map_err(|e| e.at(here!()))?;
+        let mut codec = ctx.c.get_codec(io_id).map_err(|e| e.at(here!()))?;
+        let mut decoder = codec.get_decoder().map_err(|e| e.at(here!()))?;
+
+        let result = decoder.read_frame(ctx.c).map_err(|e| e.at(here!()))?;
+
+        if decoder.has_more_frames()?{
+            ctx.set_more_frames(true);
+        }
+
         Ok(NodeResult::Frame(result))
     }
 }
@@ -245,8 +251,11 @@ impl NodeDef for EncoderDef {
         let (io_id, preset) = self.get(&ctx.weight(ix).params)?;
         let input_bitmap = ctx.bitmap_bgra_from(ix, EdgeKind::Input).map_err(|e| e.at(here!()))?;
 
-        let result = ctx.job.get_codec(io_id).map_err(|e| e.at(here!()))?
-                    .write_frame(ctx.c, &preset,unsafe{ &mut *input_bitmap } ).map_err(|e| e.at(here!()))?;
+        let decoders = ctx.get_decoder_io_ids_and_indexes(ix).into_iter().map(|(io_id, ix)| io_id).collect::<Vec<i32>>();
+
+        let mut codec = ctx.job.get_codec(io_id).map_err(|e| e.at(here!()))?;
+        let result = codec.write_frame(ctx.c, &preset,unsafe{ &mut *input_bitmap }, &decoders ).map_err(|e| e.at(here!()))?;
+
 
         Ok(NodeResult::Encoded(result))
     }

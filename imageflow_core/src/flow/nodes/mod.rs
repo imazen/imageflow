@@ -78,6 +78,10 @@ fn test_err() {
     assert!(format!("{}",&e).starts_with("InternalError: BitmapPointerNull: hi 1 at"));
 }
 impl<'c> OpCtxMut<'c> {
+
+    pub fn set_more_frames(&self, value: bool){
+        self.more_frames.set(value);
+    }
     pub fn first_parent_of_kind(&self,
                                     of_node: NodeIndex,
                                     filter_by_kind: EdgeKind)
@@ -141,12 +145,28 @@ impl<'c> OpCtxMut<'c> {
                 _ => None,
             })
     }
+
+    pub fn visit_ancestors<F>(&self, ancestors_of_node: NodeIndex, f: &mut F) where F: FnMut(NodeIndex) -> (){
+        for (_,ix) in self.graph.parents(ancestors_of_node).iter(self.graph){
+            f(ix);
+            self.visit_ancestors(ix, f);
+        }
+    }
+
     pub fn get_decoder_io_ids_and_indexes(&self,
                                           ancestors_of_node: NodeIndex)
                                           -> Vec<(i32,NodeIndex)> {
-        self.graph.parents(ancestors_of_node).iter(self.graph).map(|(_, ix)| match self.weight(ix).params{
-            NodeParams::Json(s::Node::Decode { io_id, ..}) => Some((io_id,ix)), _ => None
-        } ).filter(|v| v.is_some()).map(|v| v.unwrap()).collect::<>()
+        let mut vec = Vec::new();
+//        eprintln!("Searching graph for ancestors of {:?}", ancestors_of_node);
+        self.visit_ancestors(ancestors_of_node, &mut |ix| {
+//            eprintln!("{:?}", ix);
+            if let  NodeParams::Json(s::Node::Decode { io_id, ..}) =  self.weight(ix).params{
+                vec.push((io_id, ix));
+            }
+        });
+
+        vec.sort_by_key(|&(io_id, _)| io_id);
+        vec
     }
 
 

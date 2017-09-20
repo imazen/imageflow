@@ -13,6 +13,7 @@ use uuid::Uuid;
 use imageflow_types::IoDirection;
 use std::borrow::BorrowMut;
 use std::ops::DerefMut;
+use ::std::any::Any;
 use ::lcms2::*;
 use ::lcms2;
 mod gif;
@@ -21,18 +22,20 @@ mod gif;
 pub trait DecoderFactory{
     fn create(c: &Context, io: &mut IoProxy, io_id: i32) -> Option<Result<Box<Decoder>>>;
 }
-pub trait Decoder{
+pub trait Decoder : Any{
     fn initialize(&mut self, c: &Context) -> Result<()>;
     fn get_image_info(&mut self, c: &Context) -> Result<s::ImageInfo>;
     fn get_exif_rotation_flag(&mut self, c: &Context) -> Result<Option<i32>>;
     fn tell_decoder(&mut self, c: &Context, tell: s::DecoderCommand) -> Result<()>;
     fn read_frame(&mut self, c: &Context) -> Result<*mut BitmapBgra>;
+    fn has_more_frames(&mut self) -> Result<bool>;
+    fn as_any(&self) -> &Any;
 }
 pub trait Encoder{
     // GIF encoder will need to know if transparency is required (we could guess based on first input frame)
     // If not required, we can do frame shrinking and delta encoding. Otherwise we have to
     // encode entire frames and enable transparency (default)
-    fn write_frame(&mut self, c: &Context, preset: &s::EncoderPreset, frame: &mut BitmapBgra) -> Result<s::EncodeResult>;
+    fn write_frame(&mut self, c: &Context, preset: &s::EncoderPreset, frame: &mut BitmapBgra, decoder_io_ids: &[i32]) -> Result<s::EncodeResult>;
 
     fn get_io(&self) -> Result<&IoProxy>;
 }
@@ -238,6 +241,12 @@ impl Decoder for ClassicDecoder{
             }
         }
     }
+    fn has_more_frames(&mut self) -> Result<bool> {
+        Ok(false)
+    }
+    fn as_any(& self) -> &Any {
+        self as &Any
+    }
 }
 
 struct ClassicEncoder{
@@ -301,7 +310,7 @@ impl ClassicEncoder{
 
 impl Encoder for ClassicEncoder{
 
-    fn write_frame(&mut self, c: &Context, preset: &s::EncoderPreset, frame: &mut BitmapBgra) -> Result<s::EncodeResult> {
+    fn write_frame(&mut self, c: &Context, preset: &s::EncoderPreset, frame: &mut BitmapBgra, decoder_io_ids: &[i32]) -> Result<s::EncodeResult> {
 
         let (wanted_id, hints) = ClassicEncoder::get_codec_id_and_hints(preset)?;
         unsafe {
@@ -351,7 +360,7 @@ impl Encoder for ClassicEncoder{
 
 impl CodecInstanceContainer{
 
-     pub fn write_frame(&mut self, c: &Context, preset: &s::EncoderPreset, frame: &mut BitmapBgra) -> Result<s::EncodeResult>{
+     pub fn write_frame(&mut self, c: &Context, preset: &s::EncoderPreset, frame: &mut BitmapBgra, decoder_io_ids: &[i32]) -> Result<s::EncodeResult>{
 
          // Pick encoder
          if let CodecKind::EncoderPlaceholder = self.codec{
@@ -374,7 +383,7 @@ impl CodecInstanceContainer{
 
 
          if let CodecKind::Encoder(ref mut e) = self.codec {
-             e.write_frame(c, preset, frame).map_err(|e| e.at(here!()))
+             e.write_frame(c, preset, frame, decoder_io_ids).map_err(|e| e.at(here!()))
          }else{
              Err(unimpl!())
              //Err(FlowError::ErrNotImpl)

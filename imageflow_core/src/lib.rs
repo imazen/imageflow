@@ -7,7 +7,7 @@
 #![feature(integer_atomics)]
 #![feature(as_c_str)]
 #![feature(core_intrinsics)]
-
+#![feature(fn_must_use)]
 
 
 // intellij-rust flags this anyway
@@ -43,11 +43,11 @@ extern crate rustc_serialize;
 extern crate url;
 extern crate uuid;
 extern crate gif;
-extern crate gif_dispose;
 extern crate smallvec;
 extern crate core;
 extern crate chashmap;
 extern crate lcms2_sys;
+extern crate rgb;
 
 #[macro_use]
 pub mod errors;

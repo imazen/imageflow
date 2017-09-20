@@ -8,8 +8,7 @@ use std::any::Any;
 use ::imageflow_types::collections::AddRemoveSet;
 use ::ffi::ImageflowJsonResponse;
 use ::errors::{OutwardErrorBuffer, CErrorProxy};
-use ::rustc_serialize::base64;
-use ::rustc_serialize::base64::ToBase64;
+
 use codecs::CodecInstanceContainer;
 use ffi::IoDirection;
 
@@ -207,9 +206,12 @@ impl Context {
 
         ::parsing::IoTranslator{}.add_all( self, parsed.io.clone())?;
 
-        let perf = ::flow::execution_engine::Engine::create(self, & mut g).execute().map_err(|e| e.at(here!())) ?;
+        let mut engine = ::flow::execution_engine::Engine::create(self, g);
 
-        Ok(s::ResponsePayload::BuildResult(s::JobResult { encodes: self.collect_augmented_encode_results( & g, &parsed.io), performance: Some(perf) }))
+        let perf = engine.execute_many().map_err(|e| e.at(here!())) ?;
+
+
+        Ok(s::ResponsePayload::BuildResult(s::JobResult { encodes: engine.collect_augmented_encode_results(&parsed.io), performance: Some(perf) }))
     }
 
     pub fn configure_graph_recording(&mut self, recording: s::Build001GraphRecording) {
@@ -227,43 +229,13 @@ impl Context {
         if let Some(r) = what.graph_recording {
             self.configure_graph_recording(r);
         }
+        let mut engine = ::flow::execution_engine::Engine::create(self, g);
 
-        let perf = ::flow::execution_engine::Engine::create(self, &mut g).execute().map_err(|e| e.at(here!()))?;
+        let perf = engine.execute_many().map_err(|e| e.at(here!()))?;
 
-        Ok(s::ResponsePayload::JobResult(s::JobResult { encodes: Context::collect_encode_results(&g), performance: Some(perf) }))
+        Ok(s::ResponsePayload::JobResult(s::JobResult { encodes: engine.collect_encode_results(), performance: Some(perf) }))
     }
 
-    pub fn collect_encode_results(g: &Graph) -> Vec<s::EncodeResult>{
-        let mut encodes = Vec::new();
-        for node in g.raw_nodes() {
-            if let ::flow::definitions::NodeResult::Encoded(ref r) = node.weight.result {
-                encodes.push((*r).clone());
-            }
-        }
-        encodes
-    }
-    pub fn collect_augmented_encode_results(&self, g: &Graph, io: &[s::IoObject]) -> Vec<s::EncodeResult>{
-        Context::collect_encode_results(g).into_iter().map(|r: s::EncodeResult|{
-            if r.bytes == s::ResultBytes::Elsewhere {
-                let obj: &s::IoObject = io.iter().find(|obj| obj.io_id == r.io_id).unwrap();//There's gotta be one
-                let bytes = match obj.io {
-                    s::IoEnum::Filename(ref str) => s::ResultBytes::PhysicalFile(str.to_owned()),
-                    s::IoEnum::OutputBase64 => {
-                        let slice = self.get_output_buffer_slice(r.io_id).map_err(|e| e.at(here!())).unwrap();
-                        s::ResultBytes::Base64(slice.to_base64(base64::Config{char_set: base64::CharacterSet::Standard, line_length: None, newline: base64::Newline::LF, pad: true}))
-                    },
-                    _ => s::ResultBytes::Elsewhere
-                };
-                s::EncodeResult{
-                    bytes: bytes,
-                    .. r
-                }
-            }else{
-                r
-            }
-
-        }).collect::<Vec<s::EncodeResult>>()
-    }
 
 }
 

@@ -361,7 +361,7 @@ pub enum Node {
     CopyRectToCanvas {
         from_x: u32,
         from_y: u32,
-        width: u32, //TODO: inconsistent with w/h elsewhere
+        width: u32, //TODO: inconsistent with w/h or x2/y2 elsewhere
         height: u32,
         x: u32,
         y: u32,
@@ -957,9 +957,14 @@ pub struct NodePerf{
 }
 #[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
 pub struct BuildPerformance{
-    pub nodes: Vec<NodePerf>,
+    pub frames: Vec<FramePerformance>,
 }
-
+#[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
+pub struct FramePerformance{
+    pub nodes: Vec<NodePerf>,
+    pub wall_microseconds: u64,
+    pub overhead_microseconds: i64
+}
 
 //pub struct JobDebugInfo{
 //    pub final_graph: String
@@ -1014,6 +1019,8 @@ impl Response001 {
                                       mime: &'static str,
                                       ext: &'static str)
                                       -> Response001 {
+
+        let frame_perf = FramePerformance{ nodes: vec![ NodePerf {wall_microseconds: 30000, name: "decode".to_owned()}], overhead_microseconds: 100, wall_microseconds: 30100};
         Response001 {
             code: 200,
             success: true,
@@ -1028,7 +1035,7 @@ impl Response001 {
                                   bytes: ResultBytes::Elsewhere,
                               }],
              performance: Some(BuildPerformance{
-                 nodes: vec![NodePerf{wall_microseconds: 30000, name: "decode".to_owned()}]
+                 frames: vec![frame_perf]
              }),
             }),
         }

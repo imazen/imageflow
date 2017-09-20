@@ -85,6 +85,7 @@ pub struct OpCtxMut<'a> {
     pub c: &'a Context,
     pub job: &'a mut Context,
     pub graph: &'a mut Graph,
+    pub more_frames: Cell<bool>,
 }
 
 impl<'a> From<&'a OpCtxMut<'a>> for OpCtx<'a> {

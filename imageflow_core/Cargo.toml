@@ -43,7 +43,7 @@ daggy = "0.5"
 smallvec = "*"
 
 gif = "*"
-gif-dispose="*"
+rgb = "0.7"
 
 lcms2 = { git = "https://github.com/pornel/rust-lcms2.git", rev = "e0bd98cdd1b1269848bfde92ec098d22fc0a8a32" }
 lcms2-sys = {version="*", default-features = false}

@@ -4,33 +4,35 @@ use ::ffi::CodecInstance;
 use ::internal_prelude::works_everywhere::*;
 use petgraph::dot::Dot;
 use std::process::Command;
-use ::rustc_serialize::base64::ToBase64;
 use super::visualize::{notify_graph_changed, GraphRecordingUpdate, GraphRecordingInfo};
 use petgraph::EdgeDirection;
+use ::rustc_serialize::base64;
+use ::rustc_serialize::base64::ToBase64;
 
-pub struct Engine<'a, 'b> where 'a: 'b {
+pub struct Engine<'a> {
     c: &'a Context,
     job: &'a mut Context,
-    g: &'b mut Graph,
+    g: Graph,
+    more_frames: bool,
 }
 
-impl<'a, 'b> Engine<'a, 'b> where 'a: 'b {
+impl<'a> Engine<'a> {
 
-
-    pub fn create(context: &'a mut Context, g: &'b mut Graph) -> Engine<'a, 'b> {
+    pub fn create(context: &'a mut Context, g: Graph) -> Engine<'a> {
         let split_context_2 = unsafe{ &mut *(context as *mut Context) };
 
         Engine {
             c: context,
             job: split_context_2,
-            g: g,
+            g,
+            more_frames: false,
         }
     }
 
     pub fn ctx(&self) -> OpCtx{
         OpCtx{
             c: self.c,
-            graph: self.g,
+            graph: &self.g,
             job: self.job,
         }
     }
@@ -83,7 +85,31 @@ impl<'a, 'b> Engine<'a, 'b> where 'a: 'b {
         Ok(())
     }
 
-    pub fn execute(&mut self) -> Result<s::BuildPerformance> {
+    pub fn execute_many(&mut self) -> Result<s::BuildPerformance> {
+        let graph_copy = self.g.clone();
+        let mut vec = Vec::with_capacity(1);
+        loop {
+            match self.execute(){
+                Err(e) => {
+                    return Err(e);
+                },
+                Ok((more, p)) => {
+                    vec.push(p);
+                    if !more{
+                        return Ok(s::BuildPerformance{ frames: vec });
+                    }else{
+                        //TODO: free unused bitmaps from self.g
+                        self.g = graph_copy.clone();
+                    }
+
+                }
+            }
+        }
+    }
+    fn execute(&mut self) -> Result<(bool, s::FramePerformance)> {
+
+        let start = time::precise_time_ns();
+        self.more_frames = false;
         self.validate_graph()?;
         self.notify_graph_changed()?;
 
@@ -142,12 +168,21 @@ impl<'a, 'b> Engine<'a, 'b> where 'a: 'b {
 
         self.notify_graph_complete()?;
 
-        let mut perf : Vec<s::NodePerf> = self.g.node_weights_mut().map(|w| s::NodePerf{ wall_microseconds: (w.cost.wall_ns as f64 / 1000f64).round() as u64, name: w.def.name().to_owned()}).collect();
+
+
+        let mut perf : Vec<s::NodePerf> = self.g.node_weights_mut().map(|n| s::NodePerf{ wall_microseconds: ( n.cost.wall_ns as f64 / 1000f64).round() as u64, name: n.def.name().to_owned()}).collect();
         perf.sort_by_key(|p| p.wall_microseconds);
         perf.reverse();
 
-        Ok(s::BuildPerformance{nodes: perf})
+
+        let total_node_ns = self.g.node_weights_mut().map(|n|  n.cost.wall_ns).sum::<u64>();
+        let total_ns = time::precise_time_ns() - start;
+        let wall_microseconds = (total_ns as f64 / 1000f64).round() as u64;
+        let overhead_microseconds = ((total_ns as i64 - total_node_ns as i64) as f64 / 1000f64).round() as i64;
+
+        Ok((self.more_frames, s::FramePerformance{nodes: perf, wall_microseconds, overhead_microseconds}))
     }
+
 
     pub fn link_codecs(&mut self) -> Result<()> {
         self.notify_graph_changed()?;
@@ -160,7 +195,13 @@ impl<'a, 'b> Engine<'a, 'b> where 'a: 'b {
                     .unwrap();
                 n.def.tell_decoder(&n.params)
             };
-            let result_value = result.map_err( |e| e.at(here!()).with_ctx_mut(&self.op_ctx_mut(),NodeIndex::new(index)))?;
+
+            let result_value = {
+                let ctx = self.op_ctx_mut();
+                let r = result.map_err( |e| e.at(here!()).with_ctx_mut(&ctx,NodeIndex::new(index)))?;
+                r
+            };
+
             if let Some((io_id, commands)) = result_value {
                 for c in commands.iter() {
                     self.job.tell_decoder(io_id, c.to_owned()).unwrap();
@@ -204,7 +245,7 @@ impl<'a, 'b> Engine<'a, 'b> where 'a: 'b {
             render_graph_versions: self.job.graph_recording.record_graph_versions.unwrap_or(false),
             maximum_graph_versions: 100,
         };
-        let update = notify_graph_changed(self.g, info)?;
+        let update = notify_graph_changed(&mut self.g, info)?;
         if let Some(GraphRecordingUpdate { next_graph_version }) = update {
             self.job.next_graph_version = next_graph_version;
         }
@@ -226,11 +267,7 @@ impl<'a, 'b> Engine<'a, 'b> where 'a: 'b {
 
     pub fn estimate_node(&mut self, node_id: NodeIndex) -> Result<FrameEstimate> {
         let now = time::precise_time_ns();
-        let mut ctx = OpCtxMut{
-            c: self.c,
-            graph: self.g,
-            job: self.job,
-        };
+        let mut ctx = self.op_ctx_mut();
 
         // Invoke estimation
         // If not implemented, estimation is impossible
@@ -260,10 +297,10 @@ impl<'a, 'b> Engine<'a, 'b> where 'a: 'b {
         }
 
         // Otherwise let's try again
-        let inputs_good = inputs_estimated(self.g, node_id);
+        let inputs_good = inputs_estimated(&self.g, node_id);
         if !inputs_good {
             // TODO: support UpperBound eventually; for now, use Impossible until all nodes implement
-            let give_up = inputs_estimates(self.g, node_id).iter().any(|est| match *est {
+            let give_up = inputs_estimates(&self.g, node_id).iter().any(|est| match *est {
                 FrameEstimate::Impossible |
                 FrameEstimate::UpperBound(_) => true,
                 _ => false,
@@ -277,7 +314,7 @@ impl<'a, 'b> Engine<'a, 'b> where 'a: 'b {
 
                 let input_indexes = self.g
                     .parents(node_id)
-                    .iter(self.g)
+                    .iter(&self.g)
                     .map(|(edge_ix, ix)| ix)
                     .collect::<Vec<NodeIndex>>();
 
@@ -288,7 +325,7 @@ impl<'a, 'b> Engine<'a, 'b> where 'a: 'b {
                 }
             }
 
-            if give_up || !inputs_estimated(self.g, node_id) {
+            if give_up || !inputs_estimated(&self.g, node_id) {
                 self.g.node_weight_mut(node_id).unwrap().frame_est = FrameEstimate::Impossible;
                 return Ok(FrameEstimate::Impossible);
             }
@@ -356,10 +393,12 @@ impl<'a, 'b> Engine<'a, 'b> where 'a: 'b {
             match next {
                 None => return Ok(()),
                 Some((next_ix, def)) => {
-//                    let now = time::precise_time_ns();
-                    let mut ctx = self.op_ctx_mut();
-                    let _ = def.expand(&mut ctx, next_ix).map_err(|e| e.with_ctx_mut(&ctx, next_ix).at(here!()))?;
-//                    ctx.weight_mut(next_ix).cost.wall_ns += time::precise_time_ns() - now;
+                    let more_frames = {
+                        let mut ctx = self.op_ctx_mut();
+                        let _ = def.expand(&mut ctx, next_ix).map_err(|e| e.with_ctx_mut(&ctx, next_ix).at(here!()))?;
+                        ctx.more_frames.get()
+                    };
+                    self.more_frames = self.more_frames || more_frames;
                 }
             }
 
@@ -371,7 +410,7 @@ impl<'a, 'b> Engine<'a, 'b> where 'a: 'b {
     fn parents_complete(&self, ix: NodeIndex) -> bool{
         self.g
             .parents(ix)
-            .iter(self.g)
+            .iter(&self.g)
             .all(|(ex, parent_ix)| {
                 self.g.node_weight(parent_ix).unwrap().result != NodeResult::None
             })
@@ -379,7 +418,7 @@ impl<'a, 'b> Engine<'a, 'b> where 'a: 'b {
     fn parents_estimated(&self, ix: NodeIndex) -> bool{
         self.g
             .parents(ix)
-            .iter(self.g)
+            .iter(&self.g)
             .all(|(ex, parent_ix)| {
                 if let FrameEstimate::Some(_) = self.g.node_weight(parent_ix).unwrap().frame_est
                     { true } else { false }
@@ -419,10 +458,11 @@ impl<'a, 'b> Engine<'a, 'b> where 'a: 'b {
             match next {
                 None => return Ok(()),
                 Some((next_ix, def)) => {
-                    {
+                    let more_frames = {
                         let now = time::precise_time_ns();
                         let mut ctx = self.op_ctx_mut();
                         let result = def.execute(&mut ctx, next_ix).map_err(|e| e.with_ctx_mut(&ctx, next_ix).at(here!()))?;
+
                         if result == NodeResult::None {
                             return Err(nerror!(::ErrorKind::InvalidOperation, "Node {} execution returned {:?}", def.name(), result).into());
                         }else{
@@ -437,7 +477,10 @@ impl<'a, 'b> Engine<'a, 'b> where 'a: 'b {
                             ctx.weight_mut(next_ix).result = result;
                         }
                         ctx.weight_mut(next_ix).cost.wall_ns += time::precise_time_ns() - now;
-                    }
+                        ctx.more_frames.get()
+                    };
+
+                    self.more_frames = self.more_frames || more_frames;
 
                     unsafe {
                         if self.job.graph_recording.record_frame_images.unwrap_or(false) {
@@ -470,8 +513,9 @@ impl<'a, 'b> Engine<'a, 'b> where 'a: 'b {
     fn op_ctx_mut(&mut self) -> OpCtxMut{
         OpCtxMut {
             c: self.c,
-            graph: self.g,
+            graph: &mut self.g,
             job: self.job,
+            more_frames: Cell::new(false),
         }
     }
 
@@ -482,6 +526,43 @@ impl<'a, 'b> Engine<'a, 'b> where 'a: 'b {
             }
         }
         true
+    }
+
+    pub fn last_graph(&self) -> &Graph{
+        &self.g
+    }
+
+
+    pub fn collect_encode_results(&self) -> Vec<s::EncodeResult>{
+        let mut encodes = Vec::new();
+        for node in self.g.raw_nodes() {
+            if let ::flow::definitions::NodeResult::Encoded(ref r) = node.weight.result {
+                encodes.push((*r).clone());
+            }
+        }
+        encodes
+    }
+    pub fn collect_augmented_encode_results(&self, io: &[s::IoObject]) -> Vec<s::EncodeResult>{
+        self.collect_encode_results().into_iter().map(|r: s::EncodeResult|{
+            if r.bytes == s::ResultBytes::Elsewhere {
+                let obj: &s::IoObject = io.iter().find(|obj| obj.io_id == r.io_id).unwrap();//There's gotta be one
+                let bytes = match obj.io {
+                    s::IoEnum::Filename(ref str) => s::ResultBytes::PhysicalFile(str.to_owned()),
+                    s::IoEnum::OutputBase64 => {
+                        let slice = self.c.get_output_buffer_slice(r.io_id).map_err(|e| e.at(here!())).unwrap();
+                        s::ResultBytes::Base64(slice.to_base64(base64::Config{char_set: base64::CharacterSet::Standard, line_length: None, newline: base64::Newline::LF, pad: true}))
+                    },
+                    _ => s::ResultBytes::Elsewhere
+                };
+                s::EncodeResult{
+                    bytes,
+                    .. r
+                }
+            }else{
+                r
+            }
+
+        }).collect::<Vec<s::EncodeResult>>()
     }
 }
 impl<'a> OpCtxMut<'a> {
