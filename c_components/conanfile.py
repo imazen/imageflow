@@ -21,9 +21,9 @@ class ImageFlowConan(ConanFile):
             self.options["littlecms"].shared = False
 
         if self.scope.build_tests:
-            self.requires("catch/1.3.0@TyRoXx/stable", dev=True)
+            self.requires("catch/1.3.0@TyRoXx/stable")
             if self.settings.os != "Windows":  # Not supported in windows
-                self.requires("theft/0.2.0@lasote/stable", dev=True)
+                self.requires("theft/0.2.0@lasote/stable")
 
     def imports(self):
         self.copy("*.so", dst="bin", src="bin")  # From bin to bin
