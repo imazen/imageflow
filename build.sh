@@ -623,7 +623,7 @@ if [[ "$BUILD_RELEASE" == 'True' ]]; then
 	cargo build --all --release "${CARGO_ARGS[@]}"  1>&7
 	echo_maybe "Generating docs"
 	date_stamp
-	cargo doc --all --release "${CARGO_ARGS[@]}" --no-deps 1>&7
+	cargo doc --all --release "${CARGO_ARGS[@]}" --no-deps 1>&7 || true
 	date_stamp
 	./${TARGET_DIR}release/imageflow_tool diagnose --show-compilation-info 1>&9
 	date_stamp
