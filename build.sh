@@ -124,7 +124,45 @@ if [[ "$IMAGEFLOW_BUILD_OVERRIDE" == 'codestats' ]]; then
 		(cd c_components/lib && cargo count --unsafe-statistics)
 	)
 	exit 0
-fi 
+fi
+
+
+if [[ "$(uname -s)" == 'Darwin' ]]; then
+	export DLL_EXT="dylib"
+else
+	export DLL_EXT="so"
+fi
+
+# Set INSTALL_BASE to customize install location
+export INSTALL_BASE="${INSTALL_BASE:-/usr/local}"
+
+export STAGING="./artifacts/staging"
+
+if [[ "$IMAGEFLOW_BUILD_OVERRIDE" == 'uninstall' ]]; then
+    echo Removing libimageflow, imageflow_tool, imageflow_server binaries
+	rm "${INSTALL_BASE}/lib/libimageflow.so" || true
+	rm "${INSTALL_BASE}/lib/libimageflow.dylib" || true
+	rm "${INSTALL_BASE}/include/imageflow.h" || true
+	rm "${INSTALL_BASE}/bin/imageflow_tool" || true
+	rm "${INSTALL_BASE}/bin/imageflow_server" || true
+	exit 0;
+fi
+
+if [[ "$IMAGEFLOW_BUILD_OVERRIDE" == 'install' ]]; then
+
+    if [[ ! -e "${STAGING}/libimageflow.${DLL_EXT}" || ! -e "${STAGING}/imageflow_tool"  || ! -e "${STAGING}/imageflow_server" ]]; then
+        echo Cannot install - no release artifacts ready.
+        echo Run this first: ./build.sh release
+        exit 1;
+    fi
+	cp "${STAGING}/libimageflow.${DLL_EXT}" "${INSTALL_BASE}/lib/"
+	cp "${STAGING}/imageflow_tool" "${INSTALL_BASE}/bin/"
+	cp "${STAGING}/imageflow_server" "${INSTALL_BASE}/bin/"
+	cp "${STAGING}/headers/imageflow_default.h" "${INSTALL_BASE}/include/imageflow.h"
+	echo "Installed libimageflow, imageflow_tool, and imageflow_server"
+	exit 0;
+fi
+
 
 if [[ "$IMAGEFLOW_BUILD_OVERRIDE" == *'clean'* ]]; then
 	export CLEAN_RUST_TARGETS=True
