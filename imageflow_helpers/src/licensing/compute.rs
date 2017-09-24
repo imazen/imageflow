@@ -15,9 +15,9 @@ impl License{
             &License::Pair(ref p) => p.id()
         }
     }
-    pub fn new(parsed: LicenseBlob, cache: &'static PersistentStringCache) -> Result<License>{
+    pub fn new(parsed: LicenseBlob) -> Result<License>{
         if parsed.fields().is_remote_placeholder(){
-            Ok(License::Pair(LicensePair::new(parsed, cache)?))
+            Ok(License::Pair(LicensePair::new(parsed)?))
         }else{
             Ok(License::Single(parsed))
         }
@@ -37,14 +37,14 @@ impl License{
         }
     }
 
-    pub fn cached_remote(&self) -> Option<::parking_lot::RwLockReadGuard<Option<LicenseBlob>>>{
+    pub fn fresh_remote(&self) -> Option<::parking_lot::RwLockReadGuard<Option<LicenseBlob>>>{
         match self {
             &License::Single(..) => None,
-            &License::Pair(ref p) => Some(p.cached_remote())
+            &License::Pair(ref p) => Some(p.fresh_remote())
         }
     }
 
-    pub fn dates(&self) -> SmallVec<[DateTime<FixedOffset>;4]>{
+    pub fn dates(&self, manager: &LicenseManagerSingleton) -> SmallVec<[DateTime<FixedOffset>;4]>{
         let mut vec = SmallVec::new();
 
         if let Some(d) = self.first().fields().issued(){
@@ -53,7 +53,7 @@ impl License{
         if let Some(d) = self.first().fields().expires(){
             vec.push(d);
         }
-        if let Some(read) = self.cached_remote(){
+        if let Some(read) = self.fresh_remote(){
             if let Some(ref license) = *read{
                 if let Some(d) = license.fields().issued(){
                     vec.push(d);
@@ -62,6 +62,13 @@ impl License{
                     vec.push(d);
                 }
             }
+        }else if let Some(license) = manager.cached_remote(self.id()){
+                if let Some(d) = license.fields().issued(){
+                    vec.push(d);
+                }
+                if let Some(d) = license.fields().expires(){
+                    vec.push(d);
+                }
         }
         vec
     }
@@ -69,10 +76,9 @@ impl License{
 
 
 
-pub struct LicenseComputation<'mgr>{
+pub struct LicenseComputation<'mgr> {
     sink: IssueSink,
     mgr: &'mgr LicenseManagerSingleton,
-    clock: &'static LicenseClock,
     expires: Option<DateTime<FixedOffset>>,
     enforced: bool,
     licensed: bool,
@@ -99,12 +105,12 @@ impl<'a> LicenseScope<'a>{
 
 impl<'mgr> LicenseComputation<'mgr>{
 
-    fn licensed(&self) -> bool{
+    pub fn licensed(&self) -> bool{
         self.licensed
     }
 
     fn build_date(&self) -> DateTime<FixedOffset>{
-        self.clock.get_build_date()
+        self.mgr.clock().get_build_date()
     }
 
     fn is_build_date_ok(&self, license: &LicenseBlob) -> bool{
@@ -116,14 +122,14 @@ impl<'mgr> LicenseComputation<'mgr>{
     }
     fn is_license_expired(&self, license: &LicenseBlob) -> bool{
         if let Some(when) = license.fields().expires(){
-            when < self.clock.get_utc_now().with_timezone(&when.timezone())
+            when < self.mgr.clock().get_utc_now().with_timezone(&when.timezone())
         }else {
             false
         }
     }
     fn has_license_begin(&self, license: &LicenseBlob) -> bool{
         if let Some(when) = license.fields().issued(){
-            when < self.clock.get_utc_now().with_timezone(&when.timezone())
+            when < self.mgr.clock().get_utc_now().with_timezone(&when.timezone())
         }else {
             false
         }
@@ -165,14 +171,14 @@ impl<'mgr> LicenseComputation<'mgr>{
         let grace_minutes = license.first().fields().network_grace_minutes().unwrap_or(6);
         let expires = self.mgr.created() + ::time::Duration::minutes(grace_minutes as i64);
 
-        if expires < self.clock.get_utc_now(){
+        if expires < self.mgr.clock().get_utc_now(){
             self.sink.error(format!("Grace period of {}m expired for license {}.", grace_minutes, license.id()),
             format!("License {} was not found in the disk cache and could not be retrieved from the remote server within {} minutes.", license.id(), grace_minutes));
             return None;
         }
 
         let thirty_seconds = self.mgr.created() + ::time::Duration::seconds(30);
-        if thirty_seconds > self.clock.get_utc_now() {
+        if thirty_seconds > self.mgr.clock().get_utc_now() {
             self.sink.warn(format!("Fetching license {} (not found in disk cache).", license.id()),
                            format!("Network grace period expires in {} minutes.", grace_minutes));
             return Some(thirty_seconds);
@@ -220,16 +226,14 @@ impl<'mgr> LicenseComputation<'mgr>{
     }
 
     pub fn new(mgr: &'mgr LicenseManagerSingleton,
-               clock: &'static LicenseClock,
                enforced: bool,
-               scope: LicenseScope, required_features: ::smallvec::SmallVec<[&str;1]>) -> Self{
+               scope: LicenseScope, required_features: &::smallvec::SmallVec<[&str;1]>) -> Self{
 
         let licenses = scope.collect_from(mgr);
 
 
 
         let mut c = LicenseComputation{
-            clock,
             mgr,
             enforced,
             expires: None,
@@ -246,7 +250,7 @@ impl<'mgr> LicenseComputation<'mgr>{
         );
 
         c.expires = licenses
-                .iter().flat_map(|license| license.dates())
+                .iter().flat_map(|license| license.dates(mgr))
                 .chain(grace_periods.iter().map(|r| r.with_timezone(&FixedOffset::east(0))))
                 .min();
 
@@ -256,14 +260,21 @@ impl<'mgr> LicenseComputation<'mgr>{
             for license in licenses.iter()
                     .filter(|license| !license.is_pending()){
 
-                if let Some(read) = license.cached_remote(){
+                if let Some(read) = license.fresh_remote(){
                     if let Some(ref remote) = *read{
                         if c.validate_usage(&remote, &required_features){
                             c.licensed = true;
                             break;
                         }
                     }
-                }else if c.validate_usage(license.first(), &required_features ){
+                }
+                if let Some(remote) = c.mgr.cached_remote(license.id()){
+                        if c.validate_usage(&remote, &required_features){
+                            c.licensed = true;
+                            break;
+                        }
+                }
+                if c.validate_usage(license.first(), &required_features ){
                     c.licensed = true;
                     break;
                 }

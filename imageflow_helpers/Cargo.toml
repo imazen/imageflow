@@ -26,7 +26,7 @@ fnv = "*"
 blake2-rfc = "*"
 sha2 = "*"
 
-uuid = "*"
+uuid = { version = "*", features= ["v4", "v5"]}
 
 lockless = "*"
 smallvec = "*"
@@ -36,7 +36,7 @@ regex = "*"
 num = "*"
 
 base64 = "*"
-
+mockito = "*"
 zip = { version = "0.2", default-features = false }
 
 

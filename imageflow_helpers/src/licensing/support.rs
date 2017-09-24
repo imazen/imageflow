@@ -1,6 +1,5 @@
-use chrono::Utc;
-use chrono::FixedOffset;
-use chrono::DateTime;
+use chrono::prelude::*;
+use time::Duration;
 use super::*;
 
 
@@ -70,7 +69,7 @@ impl IssueSync {
     }
 }
 
-
+#[derive(Debug,Clone,Copy)]
 struct DefaultClock{
     pub build_date: DateTime<FixedOffset>
 }
@@ -91,3 +90,4 @@ impl LicenseClock for DefaultClock{
         Utc::now()
     }
 }
+

@@ -15,10 +15,9 @@ pub struct LicensePair{
     placeholder: LicenseBlob,
     license_server_stack: Vec<Cow<'static,str>>,
     remote: Arc<::parking_lot::RwLock<Option<LicenseBlob>>>,
-    cache: &'static PersistentStringCache
 }
 impl LicensePair{
-    pub fn new(placeholder: LicenseBlob, cache: &'static PersistentStringCache) -> Result<Self>{
+    pub fn new(placeholder: LicenseBlob) -> Result<Self>{
         let id =  placeholder.fields().id().to_owned();
         let secret = placeholder.fields().secret().ok_or_else(|| "Remote placeholder license does not contain required field 'secret'.")?.to_owned();
         let cache_key = format!("{}_{:x}", &id, ::hashing::hash_64(secret.as_bytes()));
@@ -28,12 +27,14 @@ impl LicensePair{
             license_server_stack: Vec::new(),
             remote: Arc::new(::parking_lot::RwLock::new(None)),
             placeholder,
-            cache,
             cache_key
         })
     }
     pub fn id(&self) -> &str{
         &self.id
+    }
+    pub fn secret(&self) -> &str{
+        &self.secret
     }
     pub fn update_remote(&self, remote: LicenseBlob) -> Result<()>{
         if !self.id().eq_ignore_ascii_case(remote.fields().id()){
@@ -51,7 +52,7 @@ impl LicensePair{
         &self.placeholder
     }
 
-    pub fn cached_remote(&self) -> ::parking_lot::RwLockReadGuard<Option<LicenseBlob>>{
+    pub fn fresh_remote(&self) -> ::parking_lot::RwLockReadGuard<Option<LicenseBlob>>{
         self.remote.read()
     }
 
