@@ -210,10 +210,10 @@ impl Encoder for GifEncoder{
             if self.frame_ix == 0 {
                 // Only write before any frames
                 if let Some(r) = repeat {
-                    eprintln!("Writing repeat");
+//                    eprintln!("Writing repeat");
                     self.encoder.write_extension(::gif::ExtensionData::Repetitions(r)).map_err(|e| FlowError::from_gif_encoder(e).at(here!()))?;
                 }else{
-                    eprintln!("Skipping repeat");
+//                    eprintln!("Skipping repeat");
                 }
             }
 
