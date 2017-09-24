@@ -4,9 +4,11 @@
       <w>backtraces</w>
       <w>bgcolor</w>
       <w>bgra</w>
+      <w>byteorder</w>
       <w>calloc</w>
       <w>callstack</w>
       <w>cdylib</w>
+      <w>chashmap</w>
       <w>checksums</w>
       <w>chrono</w>
       <w>codec</w>
@@ -17,20 +19,30 @@
       <w>cropyunits</w>
       <w>cstr</w>
       <w>daggy</w>
+      <w>dequantize</w>
       <w>dotfile</w>
       <w>dssim</w>
       <w>eprint</w>
       <w>eprintln</w>
+      <w>ericsson</w>
       <w>floatspace</w>
       <w>framewise</w>
       <w>graphviz</w>
       <w>grayscale</w>
+      <w>idct</w>
       <w>ignorealpha</w>
       <w>imageflow</w>
       <w>imagemagick</w>
       <w>imazen</w>
+      <w>iter</w>
+      <w>jfif</w>
       <w>libc</w>
+      <w>libimageflow</w>
+      <w>libjpeg</w>
+      <w>lockless</w>
+      <w>lossless</w>
       <w>megapixels</w>
+      <w>mjpeg</w>
       <w>nonoverlapping</w>
       <w>perf</w>
       <w>petgraph</w>
@@ -42,11 +54,20 @@
       <w>serde</w>
       <w>smallvec</w>
       <w>srgb</w>
+      <w>stdbool</w>
+      <w>stdint</w>
+      <w>strlen</w>
+      <w>subimage</w>
       <w>subsampling</w>
+      <w>timeywimey</w>
       <w>twox</w>
       <w>uint</w>
+      <w>unicase</w>
+      <w>unzigzagged</w>
+      <w>upsampler</w>
       <w>uuids</w>
       <w>xunits</w>
+      <w>ycbcr</w>
       <w>yunits</w>
     </words>
   </dictionary>
