@@ -1,4 +1,6 @@
 #![feature(alloc_system)]
+#![feature(integer_atomics)]
+#![feature(ascii_ctype)]
 // `error_chain!` can recurse deeply
 #![recursion_limit = "1024"]
 
@@ -26,6 +28,13 @@ extern crate num;
 extern crate base64;
 extern crate sha2;
 extern crate unicase;
+extern crate app_dirs;
+extern crate chashmap;
+extern crate parking_lot;
+extern crate time;
+extern crate uuid;
+extern crate lockless;
+extern crate smallvec;
 
 #[cfg(not(any(target_os = "windows", target_os = "macos")))]
 extern crate openssl;

@@ -26,6 +26,10 @@ fnv = "*"
 blake2-rfc = "*"
 sha2 = "*"
 
+uuid = "*"
+
+lockless = "*"
+smallvec = "*"
 # regex
 regex = "*"
 
@@ -34,6 +38,12 @@ num = "*"
 base64 = "*"
 
 zip = { version = "0.2", default-features = false }
+
+
+app_dirs = "^1.1.1"
+chashmap = "*"
+parking_lot = {version = "0.4", features = ["nightly"]}
+
 
 unicase = "2"
 # HTTPS is a little bit of a nightmare
