@@ -154,7 +154,7 @@ Please consult the [official Dockerfiles](https://github.com/imazen/dockerfiles_
 You'll need a bit less on OS X, although this may not be comprehensive:
 
 ```bash
-brew install conan nasm cmake
+brew install conan nasm cmake python libpng automake libtool pkg-config wget
 ./ci/nixtools/install_dssim.sh
 ./build.sh
 ```
