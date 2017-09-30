@@ -269,8 +269,8 @@ impl ProcTestContext {
         // Try to debug segfaults
         if output.status.code() == None && valgrind_on_signal_death{
 
-            std::io::stderr().write(&output.stderr).unwrap();
-            std::io::stdout().write(&output.stdout).unwrap();
+            std::io::stderr().write_all(&output.stderr).unwrap();
+            std::io::stdout().write_all(&output.stdout).unwrap();
             let _ = writeln!(&mut std::io::stderr(),
                              "exit code {:?}", output.status.code());
             // Killed by signal.
@@ -304,7 +304,7 @@ impl ProcTestContext {
     pub fn write_file<P:AsRef<Path>>(&self, filename: P, bytes: &[u8]){
         let path = self.working_dir.join(filename);
         let mut file = BufWriter::new(File::create(&path).unwrap());
-        file.write(bytes).unwrap();
+        file.write_all(bytes).unwrap();
     }
 
     pub fn read_file_str<P:AsRef<Path>>(&self, filename: P) -> String{
