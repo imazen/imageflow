@@ -498,7 +498,7 @@ impl ColorTransformCache{
                     let hash = ColorTransformCache::hash(color, pixel_format).unwrap();
                     if !GAMA_TRANSFORMS.contains_key(&hash) {
                         let transform = ColorTransformCache::create_gama_transform(color, pixel_format).map_err(|e| e.at(here!()))?;
-                        GAMA_TRANSFORMS.insert_new(hash, transform);
+                        GAMA_TRANSFORMS.insert(hash, transform);
                     }
                     ColorTransformCache::apply_transform(frame, &*GAMA_TRANSFORMS.get(&hash).unwrap());
                     Ok(())
@@ -514,7 +514,7 @@ impl ColorTransformCache{
                     let hash = ColorTransformCache::hash(color, pixel_format).unwrap();
                     if !PROFILE_TRANSFORMS.contains_key(&hash) {
                         let transform = ColorTransformCache::create_profile_transform(color, pixel_format).map_err(|e| e.at(here!()))?;
-                        PROFILE_TRANSFORMS.insert_new(hash, transform);
+                        PROFILE_TRANSFORMS.insert(hash, transform);
                     }
                     ColorTransformCache::apply_transform(frame, &*PROFILE_TRANSFORMS.get(&hash).unwrap());
                     Ok(())
