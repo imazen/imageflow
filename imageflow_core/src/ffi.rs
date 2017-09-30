@@ -1,3 +1,4 @@
+#![allow(non_camel_case_types)]
 //! # Do not use
 //! Do not use functions from this module outside of `imageflow_core`
 //!

@@ -4,7 +4,6 @@ use serde_json;
 use std;
 extern crate core;
 extern crate serde;
-// use self::core::slice::SliceExt;
 
 use std::collections::HashMap;
 use std::fs::File;
@@ -256,21 +255,15 @@ impl CmdBuild {
 
         let mut hash = HashMap::new();
         for item in vec_of_io_results.into_iter() {
-            match item {
-                Ok((k, v)) => {
-                    match hash.insert(k, v) {
-                        Some(ref old_value) => {
-                            return Err(CmdError::BadArguments(format!("Duplicate values for io_id {}: {} and {}",
-                                                                      k,
-                                                                      old_value,
-                                                                      v)));
-                        }
-                        _ => {}
-                    }
+            let (k, v) = item?;
+            match hash.insert(k, v) {
+                Some(ref old_value) => {
+                    return Err(CmdError::BadArguments(format!("Duplicate values for io_id {}: {} and {}",
+                                                              k,
+                                                              old_value,
+                                                              v)));
                 }
-                Err(e) => {
-                    return Err(e);
-                }
+                _ => {}
             }
         }
 

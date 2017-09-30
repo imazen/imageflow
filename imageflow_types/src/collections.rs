@@ -124,27 +124,23 @@ impl<T> AddRemoveSet<T> {
 
     pub fn clear(&self) -> Result<(),BorrowMutError>{
         for refcell in self.inner.iter() {
-            match refcell.try_borrow_mut() {
-                Ok(mut ref_obj) => {
-                    *ref_obj = None
-                }
-                Err(e) => { return Err(e) }
-            }
+            let mut ref_obj = refcell.try_borrow_mut()?;
+            *ref_obj = None;
         }
         Ok(())
     }
 
     /// Ok(true) - removed. Ok(false) - certainly didn't exist. Err() - either borrowed or didn't exist (unknowable)
     pub fn try_remove(&self, v: *const T) -> Result<bool, BorrowMutError>{
-        match self.try_get_option_reference_mut(v){
-            Ok(Some(mut ref_obj)) => {
+        match self.try_get_option_reference_mut(v)? {
+            Some(mut ref_obj) => {
                 *ref_obj = None;
                 return Ok(true)
             },
-            Ok(None) => Ok(false),
-            Err(e) => Err(e)
+            None => Ok(false),
         }
     }
+
     pub fn try_contains(&self, v: *const T) -> Result<bool, BorrowError>{
         self.try_get_reference(v).map(|opt| opt.is_some())
     }
@@ -162,8 +158,8 @@ impl<T> AddRemoveSet<T> {
                 Err(e) => { last_error = Some(e); }
             }
         }
-        if last_error.is_some(){
-            Err(last_error.unwrap())
+        if let Some(last_error) = last_error {
+            Err(last_error)
         }else{
             Ok(None)
         }
@@ -185,8 +181,8 @@ impl<T> AddRemoveSet<T> {
                 Err(e) => { last_error = Some(e); }
             }
         }
-        if last_error.is_some(){
-            Err(last_error.unwrap())
+        if let Some(last_error) = last_error {
+            Err(last_error)
         }else{
             Ok(None)
         }

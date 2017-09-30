@@ -194,7 +194,7 @@ impl IoProxy {
                 // Not sure how output buffer is null... no writes yet?
                 Err(unimpl!())
             } else {
-                Ok((std::slice::from_raw_parts(buf_start, buf_len)))
+                Ok(std::slice::from_raw_parts(buf_start, buf_len))
             }
         }
     }

@@ -73,15 +73,13 @@ fn set_panic_hook(){
         let mut frames: Vec<BacktraceFrame> = Backtrace::new().into();
 
         loop{
-            if frames.len() < 1 || frames[0].symbols().len() == 0 || frames[0].symbols()[0].name().is_none(){
+            if frames.len() < 1 || frames[0].symbols().is_empty() || frames[0].symbols()[0].name().is_none(){
                 break;
             }
 
             let last_pointless_frame = if let Some(str) = frames[0].symbols()[0].name().unwrap().as_str(){
-                if str.starts_with("std::panicking::begin_panic"){
-                    true
-                }else {false}
-            }else {false};
+                str.starts_with("std::panicking::begin_panic")
+            } else {false};
 
             frames.remove(0);
 

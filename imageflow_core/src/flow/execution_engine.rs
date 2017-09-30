@@ -89,23 +89,17 @@ impl<'a> Engine<'a> {
         let graph_copy = self.g.clone();
         let mut vec = Vec::with_capacity(1);
         loop {
-            match self.execute(){
-                Err(e) => {
-                    return Err(e);
-                },
-                Ok((more, p)) => {
-                    vec.push(p);
-                    if !more{
-                        return Ok(s::BuildPerformance{ frames: vec });
-                    }else{
-                        //TODO: free unused bitmaps from self.g
-                        self.g = graph_copy.clone();
-                    }
-
-                }
+            let (more, p) = self.execute()?;
+            vec.push(p);
+            if !more {
+                return Ok(s::BuildPerformance{ frames: vec });
+            } else {
+                //TODO: free unused bitmaps from self.g
+                self.g = graph_copy.clone();
             }
         }
     }
+
     fn execute(&mut self) -> Result<(bool, s::FramePerformance)> {
 
         let start = time::precise_time_ns();
@@ -198,8 +192,7 @@ impl<'a> Engine<'a> {
 
             let result_value = {
                 let ctx = self.op_ctx_mut();
-                let r = result.map_err( |e| e.at(here!()).with_ctx_mut(&ctx,NodeIndex::new(index)))?;
-                r
+                result.map_err( |e| e.at(here!()).with_ctx_mut(&ctx,NodeIndex::new(index)))?
             };
 
             if let Some((io_id, commands)) = result_value {

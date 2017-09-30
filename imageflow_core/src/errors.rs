@@ -910,7 +910,7 @@ pub mod writing_to_slices {
     }
 
 
-    /// Unlike io::Cursor, this does not box (allocate) a WriteZero error result
+    /// Unlike `io::Cursor`, this does not box (allocate) a `WriteZero` error result
     #[derive(Debug)]
     struct NonAllocatingCursor<'a> {
         inner: &'a mut [u8],

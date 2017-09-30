@@ -190,7 +190,7 @@ impl ServerInstance{
         all_args.insert(0, "start");
 
         c.execute_callback(all_args, false,
-                           |child: &mut std::process::Child| -> std::result::Result<(), ::imageflow_helpers::fetching::FetchError> {
+                           |_child: &mut std::process::Child| -> std::result::Result<(), ::imageflow_helpers::fetching::FetchError> {
 
                                ::std::thread::sleep(::std::time::Duration::from_millis(500));
                                // Server may not be running

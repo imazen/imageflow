@@ -113,8 +113,6 @@ pub fn main_with_exit_code() -> i32 {
     let matches = app.get_matches();
     if matches.is_present("capture-to"){
         let mut filtered_args = std::env::args().collect::<Vec<String>>();
-        //let err = &mut std::io::stderr();
-        //writeln!(err,"{:?}", filtered_args).unwrap();
         for ix in 0..filtered_args.len() {
             if filtered_args[ix] == "--capture-to"{
                 //Remove this and the next arg
@@ -126,19 +124,11 @@ pub fn main_with_exit_code() -> i32 {
             }
         }
         filtered_args.remove(0); //Remove the tool executable itself
-        //writeln!(err,"{:?}", filtered_args).unwrap();
 
         let cap = hlp::process_capture::CaptureTo::create(matches.value_of("capture-to").unwrap(), None, filtered_args, artifact_source());
         cap.run();
         return cap.exit_code();
     }
-    //        get_matches_from_safe_borrow(std::env::args()).unwrap_or_else(|e| {
-    //        // Otherwise, write to stderr and exit
-    //        app.maybe_wait_for_exit(e);
-    //    });
-    //
-
-
 
     let build_triple = if let Some(m) = matches.subcommand_matches("v0.1/build") {
         let source = if m.is_present("demo") {

@@ -231,7 +231,7 @@ impl NodeDef for CommandStringDef{
         "imazen.command_string"
     }
     fn estimate(&self, ctx: &mut OpCtxMut, ix: NodeIndex) -> Result<FrameEstimate>{
-        Ok((FrameEstimate::Impossible))
+        Ok(FrameEstimate::Impossible)
     }
     fn edges_required(&self, p: &NodeParams) -> Result<(EdgesIn, EdgesOut)> {
         Ok((EdgesIn::OneInput, EdgesOut::Any))

@@ -7,7 +7,7 @@ fn parse_rgba_slices(r: &str, g: &str, b: &str, a :&str) -> Result<Color32,std::
             0 => Ok(255),
             1 => u8::from_str_radix(s, 16).map(|v| (v << 4) | v),
             2 => u8::from_str_radix(s, 16),
-            _ => { panic! {"segments may be zero to two characters, but no more"}; }
+            _ => panic!("segments may be zero to two characters, but no more"),
         }.map(|v| v as u32)
     }).fold(Ok(0u32), |acc, item| {
         if let Ok(argb) = acc{
@@ -19,7 +19,7 @@ fn parse_rgba_slices(r: &str, g: &str, b: &str, a :&str) -> Result<Color32,std::
         }else{
             acc
         }
-    }).map(|v|  Color32(v))
+    }).map(Color32)
 }
 
 
@@ -28,7 +28,7 @@ fn parse_rgba_slices(r: &str, g: &str, b: &str, a :&str) -> Result<Color32,std::
 pub fn parse_color_hex(value: &str) -> std::result::Result<Color32, ParseColorError> {
     let value = match &value[0..1] {
         "#" => &value[1..],
-        _ => &value
+        _ => value
     };
     let u32_result = u32::from_str_radix(value, 16);
     if u32_result.is_ok() {
