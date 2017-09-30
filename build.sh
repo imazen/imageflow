@@ -40,7 +40,8 @@ command -v nasm >/dev/null 2>&1 || { echo -e "'nasm' is required, but missing. T
 
 # We didn't automatically check for a c compiler, OpenSSL, valgrind, lcov
 
-
+# parallelizes all Make-based builds (in Conan, etc.). Hardcoded to 8 cores, since portable detection in bash is icky.
+export MAKEFLAGS='-j8'
 
 export IMAGEFLOW_BUILD_OVERRIDE="${IMAGEFLOW_BUILD_OVERRIDE:-$1}"
 
