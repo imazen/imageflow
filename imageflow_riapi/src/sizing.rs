@@ -109,9 +109,9 @@ impl AspectRatio {
     pub fn box_of(&self, target: &AspectRatio, kind: BoxKind) -> Result<AspectRatio> {
         if target.aspect_wider_than(self) == (kind == BoxKind::Inner) {
             //calculate height
-            AspectRatio::create(target.w, self.height_for(target.w, Some(&target))?)
+            AspectRatio::create(target.w, self.height_for(target.w, Some(target))?)
         } else {
-            AspectRatio::create(self.width_for(target.h, Some(&target))?, target.h)
+            AspectRatio::create(self.width_for(target.h, Some(target))?, target.h)
         }
     }
 

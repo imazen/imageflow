@@ -233,7 +233,7 @@ impl Color {
             &Color::Srgb(ref srgb) => {
                 match srgb {
                     &ColorSrgb::Hex(ref hex_srgb) => {
-                        parse_color_hex(&hex_srgb)
+                        parse_color_hex(hex_srgb)
                     }
                 }
             }
@@ -1170,16 +1170,16 @@ mod key_casing {
     use serde_json;
 
     fn collect_keys(list: &mut Vec<String>, from: &serde_json::Value) {
-        match from {
-            &serde_json::Value::Object(ref map) => {
+        match *from {
+            serde_json::Value::Object(ref map) => {
                 for (k, v) in map {
                     list.push(k.to_owned());
                     collect_keys(list, &v);
                 }
             }
-            &serde_json::Value::Array(ref vec) => {
+            serde_json::Value::Array(ref vec) => {
                 for v in vec {
-                    collect_keys(list, &v);
+                    collect_keys(list, v);
                 }
             }
             _ => {}

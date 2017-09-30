@@ -35,10 +35,10 @@ pub fn transform(s: &str, transform: Transform) -> String {
             s.replace("_","")
         },
         Transform::Capitalize => {
-            Regex::new(r"(_|\b)([a-z])").unwrap().replace_all(&s, |c: &Captures | c[0].to_uppercase()).into_owned()
+            Regex::new(r"(_|\b)([a-z])").unwrap().replace_all(s, |c: &Captures | c[0].to_uppercase()).into_owned()
         }
         Transform::LowerFirst => {
-            Regex::new(r"(\A|\s+)([A-Z])").unwrap().replace_all(&s, |c: &Captures | c[0].to_lowercase()).into_owned()
+            Regex::new(r"(\A|\s+)([A-Z])").unwrap().replace_all(s, |c: &Captures | c[0].to_lowercase()).into_owned()
         }
     }
 }

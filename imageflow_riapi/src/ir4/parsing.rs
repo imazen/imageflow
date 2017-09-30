@@ -285,12 +285,12 @@ impl Instructions{
         let mut i = Instructions::new();
         i.f_sharpen = p.parse_f64("f.sharpen");
 
-        i.w = p.parse_i32("width").or(p.parse_i32("w"));
-        i.h = p.parse_i32("height").or(p.parse_i32("h"));
+        i.w = p.parse_i32("width").or_else(|| p.parse_i32("w"));
+        i.h = p.parse_i32("height").or_else(|| p.parse_i32("h"));
         i.legacy_max_height = p.parse_i32("maxheight");
         i.legacy_max_width = p.parse_i32("maxwidth");
         i.flip = p.parse_flip("flip").map(|v| v.clean());
-        i.sflip = p.parse_flip("sflip").or(p.parse_flip("sourceFlip")).map(|v| v.clean());
+        i.sflip = p.parse_flip("sflip").or_else(|| p.parse_flip("sourceFlip")).map(|v| v.clean());
 
         let mode_string = p.parse_fit_mode("mode");
         if mode_string == Some(FitModeStrings::Carve){
@@ -304,7 +304,7 @@ impl Instructions{
         i.scale = p.parse_scale("scale").map(|v| v.clean());
 
 
-        i.format = p.parse_format("format").or(p.parse_format("thumbnail")).map(|v| v.clean());
+        i.format = p.parse_format("format").or_else(|| p.parse_format("thumbnail")).map(|v| v.clean());
         i.srotate = p.parse_rotate("srotate");
         i.rotate = p.parse_rotate("rotate");
         i.autorotate = p.parse_bool("autorotate");
@@ -652,7 +652,7 @@ impl FitModeStrings{
             FitModeStrings::Max => Some(FitMode::Max),
             FitModeStrings::Pad => Some(FitMode::Pad),
             FitModeStrings::Crop => Some(FitMode::Crop),
-            FitModeStrings::Carve => Some(FitMode::Stretch),
+            FitModeStrings::Carve |
             FitModeStrings::Stretch => Some(FitMode::Stretch)
         }
     }

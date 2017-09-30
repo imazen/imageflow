@@ -17,14 +17,13 @@ pub enum Ir4Command{
 
 impl Ir4Command{
     pub fn parse(&self) -> sizing::Result<Ir4Result> {
-        let (i, warn) = match self {
-            &Ir4Command::Url(ref url) => parsing::parse_url(&::url::Url::from_str(&url).expect("ImageResizer4 Url cannot be parsed into instructions: invalid URI")),
-            &Ir4Command::Instructions(i) => (i, vec![]),
-            &Ir4Command::QueryString(ref s) => {
+        let (i, warn) = match *self {
+            Ir4Command::Url(ref url) => parsing::parse_url(&::url::Url::from_str(url).expect("ImageResizer4 Url cannot be parsed into instructions: invalid URI")),
+            Ir4Command::Instructions(i) => (i, vec![]),
+            Ir4Command::QueryString(ref s) => {
                 let url = ::url::Url::from_str(&format!("https://fakeurl/img.jpg?{}", s)).expect("Must be a valid querystring, excluding ?");
                 parsing::parse_url(&url)
             }
-
         };
         Ok(Ir4Result{
             parse_warnings: warn,
@@ -86,7 +85,7 @@ impl Ir4Translate{
 //        }
 
         //delete whitespace from instructions
-        let mut without_trimming: Instructions = r.parsed.clone();
+        let mut without_trimming: Instructions = r.parsed;
         without_trimming.trim_whitespace_padding_percent = None;
         without_trimming.trim_whitespace_threshold = None;
 
@@ -196,7 +195,8 @@ impl Ir4Expand{
 
         if let Some(id) = self.encode_id {
 
-            let format = i.format.or(self.source.get_format_from_mime()).unwrap_or(self.source.get_format_from_frame());
+            let format = i.format.or_else(|| self.source.get_format_from_mime())
+                .unwrap_or_else(|| self.source.get_format_from_frame());
 
             let encoder = match format {
                 OutputFormat::Gif => s::EncoderPreset::Gif,

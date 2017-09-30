@@ -20,7 +20,8 @@ use std::path::Path;
 use imageflow_core::{Context, ErrorKind, FlowError, CodeLocation};
 
 fn default_build_config(debug: bool) -> s::Build001Config {
-    s::Build001Config{graph_recording: match debug{ true => Some(s::Build001GraphRecording::debug_defaults()), false => None} ,
+    s::Build001Config{
+        graph_recording: if debug {Some(s::Build001GraphRecording::debug_defaults())} else {None},
     }
 }
 
@@ -55,7 +56,7 @@ fn smoke_test(input: Option<s::IoEnum>, output: Option<s::IoEnum>,  debug: bool,
 
 }
 
-fn compare(input: Option<s::IoEnum>, allowed_off_by_one_bytes: usize, checksum_name: String, store_if_missing: bool, debug: bool, mut steps: Vec<s::Node>) -> bool {
+fn compare(input: Option<s::IoEnum>, allowed_off_by_one_bytes: usize, checksum_name: &str, store_if_missing: bool, debug: bool, mut steps: Vec<s::Node>) -> bool {
     let mut dest_bitmap: *mut imageflow_core::ffi::BitmapBgra = std::ptr::null_mut();
 
     let ptr_to_ptr = &mut dest_bitmap as *mut *mut imageflow_core::ffi::BitmapBgra;
@@ -109,7 +110,7 @@ fn compare(input: Option<s::IoEnum>, allowed_off_by_one_bytes: usize, checksum_n
         let mut ctx = checkums_ctx_for(&context);
         ctx.create_if_missing = store_if_missing;
         ctx.max_off_by_one_ratio = allowed_off_by_one_bytes as f32 / ((*dest_bitmap).h * (*dest_bitmap).stride) as f32;
-        regression_check(&ctx, dest_bitmap, &checksum_name)
+        regression_check(&ctx, dest_bitmap, checksum_name)
     }
 }
 fn checkums_ctx_for<'a>(c: &'a Context) -> ChecksumCtx<'a>{
@@ -128,7 +129,7 @@ fn checkums_ctx_for<'a>(c: &'a Context) -> ChecksumCtx<'a>{
 #[test]
 fn test_fill_rect(){
     let matched = compare(None, 500,
-                          "FillRectEECCFF".to_owned(), POPULATE_CHECKSUMS, DEBUG_GRAPH, vec![
+                          "FillRectEECCFF", POPULATE_CHECKSUMS, DEBUG_GRAPH, vec![
         s::Node::CreateCanvas {w: 200, h: 200, format: s::PixelFormat::Bgra32, color: s::Color::Transparent},
         s::Node::FillRect{x1:0, y1:0, x2:100, y2:100, color: s::Color::Srgb(s::ColorSrgb::Hex("EECCFFFF".to_owned()))},
         s::Node::Resample2D{ w: 400, h: 400, down_filter: Some(s::Filter::Hermite), up_filter: Some(s::Filter::Hermite), hints: None, scaling_colorspace: None }
@@ -140,7 +141,7 @@ fn test_fill_rect(){
 #[test]
 fn test_expand_rect(){
     let matched = compare(None, 500,
-                          "FillRectEECCFFExpand2233AAFF".to_owned(), POPULATE_CHECKSUMS, DEBUG_GRAPH, vec![
+                          "FillRectEECCFFExpand2233AAFF", POPULATE_CHECKSUMS, DEBUG_GRAPH, vec![
         s::Node::CreateCanvas {w: 200, h: 200, format: s::PixelFormat::Bgra32, color: s::Color::Transparent},
         s::Node::FillRect{x1:0, y1:0, x2:100, y2:100, color: s::Color::Srgb(s::ColorSrgb::Hex("EECCFFFF".to_owned()))},
         s::Node::ExpandCanvas{left: 10, top: 15, right: 20, bottom: 25, color: s::Color::Srgb(s::ColorSrgb::Hex("2233AAFF".to_owned()))},
@@ -155,7 +156,7 @@ fn test_expand_rect(){
 fn test_crop(){
     for _ in 1..100 {
         let matched = compare(None, 500,
-                              "FillRectAndCrop".to_owned(), POPULATE_CHECKSUMS, DEBUG_GRAPH, vec![
+                              "FillRectAndCrop", POPULATE_CHECKSUMS, DEBUG_GRAPH, vec![
             s::Node::CreateCanvas { w: 200, h: 200, format: s::PixelFormat::Bgra32, color: s::Color::Srgb(s::ColorSrgb::Hex("FF5555FF".to_owned())) },
             s::Node::FillRect { x1: 0, y1: 0, x2: 10, y2: 100, color: s::Color::Srgb(s::ColorSrgb::Hex("0000FFFF".to_owned())) },
             s::Node::Crop { x1: 0, y1: 50, x2: 100, y2: 100 }
@@ -171,7 +172,7 @@ fn test_crop(){
 #[test]
 fn test_scale_rings(){
     let matched = compare(Some(s::IoEnum::Url("https://s3-us-west-2.amazonaws.com/imageflow-resources/test_inputs/rings2.png".to_owned())), 500,
-        "RingsDownscaling".to_owned(), POPULATE_CHECKSUMS, DEBUG_GRAPH, vec![
+        "RingsDownscaling", POPULATE_CHECKSUMS, DEBUG_GRAPH, vec![
         s::Node::Decode {io_id: 0, commands: None},
         s::Node::Resample2D{ w: 400, h: 400, down_filter: Some(s::Filter::Hermite), up_filter: Some(s::Filter::Hermite), hints: None, scaling_colorspace: None }
         ]
@@ -184,8 +185,7 @@ fn test_scale_rings(){
 fn test_fill_rect_original(){
     //let white = s::Color::Srgb(s::ColorSrgb::Hex("FFFFFFFF".to_owned()));
     let blue = s::Color::Srgb(s::ColorSrgb::Hex("0000FFFF".to_owned()));
-    let matched = compare(None, 1,
-                          "FillRect".to_owned(), POPULATE_CHECKSUMS, DEBUG_GRAPH, vec![
+    let matched = compare(None, 1, "FillRect", POPULATE_CHECKSUMS, DEBUG_GRAPH, vec![
         s::Node::CreateCanvas {w: 400, h: 300, format: s::PixelFormat::Bgra32, color: s::Color::Transparent},
         s::Node::FillRect{x1:0, y1:0, x2:50, y2:100, color: blue},
         ]
@@ -198,7 +198,7 @@ fn test_fill_rect_original(){
 #[test]
 fn test_scale_image() {
     let matched = compare(Some(s::IoEnum::Url("https://s3-us-west-2.amazonaws.com/imageflow-resources/test_inputs/waterhouse.jpg".to_owned())), 500,
-                          "ScaleTheHouse".to_owned(), POPULATE_CHECKSUMS, DEBUG_GRAPH, vec![
+                          "ScaleTheHouse", POPULATE_CHECKSUMS, DEBUG_GRAPH, vec![
         s::Node::Decode {io_id: 0, commands: None},
         s::Node::Resample2D{ w: 400, h: 300, down_filter: Some(s::Filter::Robidoux), up_filter: Some(s::Filter::Robidoux), hints: None, scaling_colorspace: None }
         ]
@@ -211,7 +211,7 @@ fn test_scale_image() {
 #[test]
 fn test_white_balance_image() {
     let matched = compare(Some(s::IoEnum::Url("https://s3-us-west-2.amazonaws.com/imageflow-resources/test_inputs/red-night.png".to_owned())), 500,
-                          "WhiteBalanceNight".to_owned(), POPULATE_CHECKSUMS, DEBUG_GRAPH, vec![
+                          "WhiteBalanceNight", POPULATE_CHECKSUMS, DEBUG_GRAPH, vec![
             s::Node::Decode {io_id: 0, commands: None},
             s::Node::WhiteBalanceHistogramAreaThresholdSrgb { threshold: None}
         ]
@@ -221,7 +221,7 @@ fn test_white_balance_image() {
 #[test]
 fn test_read_gif() {
     let matched = compare(Some(s::IoEnum::Url("https://s3-us-west-2.amazonaws.com/imageflow-resources/test_inputs/mountain_800.gif".to_owned())), 500,
-                          "mountain_gif_scaled400".to_owned(), POPULATE_CHECKSUMS, DEBUG_GRAPH, vec![
+                          "mountain_gif_scaled400", POPULATE_CHECKSUMS, DEBUG_GRAPH, vec![
             s::Node::Decode {io_id: 0, commands: None},
             s::Node::Resample2D{ w: 400, h: 300, down_filter: Some(s::Filter::Robidoux), up_filter: Some(s::Filter::Robidoux), hints: None, scaling_colorspace: None }
         ]
@@ -234,7 +234,7 @@ fn test_read_gif() {
 #[test]
 fn test_jpeg_icc2_color_profile() {
     let matched = compare(Some(s::IoEnum::Url("https://s3-us-west-2.amazonaws.com/imageflow-resources/test_inputs/MarsRGB_tagged.jpg".to_owned())), 500,
-                          "MarsRGB_ICC_Scaled400300".to_owned(), POPULATE_CHECKSUMS, DEBUG_GRAPH, vec![
+                          "MarsRGB_ICC_Scaled400300", POPULATE_CHECKSUMS, DEBUG_GRAPH, vec![
 s::Node::Decode {io_id: 0, commands: None},
 s::Node::Resample2D{ w: 400, h: 300, down_filter: Some(s::Filter::Robidoux), up_filter: Some(s::Filter::Robidoux), hints: None, scaling_colorspace: None }
 ]
@@ -245,7 +245,7 @@ s::Node::Resample2D{ w: 400, h: 300, down_filter: Some(s::Filter::Robidoux), up_
 #[test]
 fn test_jpeg_icc4_color_profile() {
     let matched = compare(Some(s::IoEnum::Url("https://s3-us-west-2.amazonaws.com/imageflow-resources/test_inputs/MarsRGB_v4_sYCC_8bit.jpg".to_owned())), 500,
-                          "MarsRGB_ICCv4_Scaled400300".to_owned(), POPULATE_CHECKSUMS, DEBUG_GRAPH, vec![
+                          "MarsRGB_ICCv4_Scaled400300", POPULATE_CHECKSUMS, DEBUG_GRAPH, vec![
 s::Node::Decode {io_id: 0, commands: None},
 s::Node::Resample2D{ w: 400, h: 300, down_filter: Some(s::Filter::Robidoux), up_filter: Some(s::Filter::Robidoux), hints: None, scaling_colorspace: None }
 ]
@@ -261,7 +261,7 @@ fn test_jpeg_rotation() {
         for flag in 1..9 {
             let url = format!("https://s3-us-west-2.amazonaws.com/imageflow-resources/test_inputs/orientation/{}_{}.jpg", orientation, flag);
             let title = format!("Test_Apply_Orientation_{}_{}.jpg", orientation, flag);
-            let matched = compare(Some(s::IoEnum::Url(url)), 500, title, POPULATE_CHECKSUMS, DEBUG_GRAPH, vec![s::Node::Decode {io_id: 0, commands: None}, s::Node::Constrain(s::Constraint::Within{w: Some(70), h: Some(70), hints: None})]);
+            let matched = compare(Some(s::IoEnum::Url(url)), 500, &title, POPULATE_CHECKSUMS, DEBUG_GRAPH, vec![s::Node::Decode {io_id: 0, commands: None}, s::Node::Constrain(s::Constraint::Within{w: Some(70), h: Some(70), hints: None})]);
             assert!(matched);
         }
     }
@@ -272,7 +272,7 @@ fn test_jpeg_rotation() {
 #[test]
 fn test_jpeg_crop() {
     let matched = compare(Some(s::IoEnum::Url("https://s3-us-west-2.amazonaws.com/imageflow-resources/test_inputs/waterhouse.jpg".to_owned())), 500,
-                          "jpeg_crop".to_owned(), POPULATE_CHECKSUMS, DEBUG_GRAPH, vec![
+                          "jpeg_crop", POPULATE_CHECKSUMS, DEBUG_GRAPH, vec![
             s::Node::CommandString{
                 kind: s::CommandStringKind::ImageResizer4,
                 value: "width=100&height=200&mode=crop".to_owned(),
@@ -288,7 +288,7 @@ fn test_jpeg_crop() {
 //#[test]
 //fn test_gif_ir4(){
 //        let matched = compare(Some(s::IoEnum::Url("https://s3-us-west-2.amazonaws.com/imageflow-resources/test_inputs/waterhouse.jpg".to_owned())), 500,
-//                              "Read".to_owned(), true, DEBUG_GRAPH, vec![
+//                              "Read", true, DEBUG_GRAPH, vec![
 //                s::Node::CommandString{
 //                    kind: s::CommandStringKind::ImageResizer4,
 //                    value: "width=200&height=200&format=gif".to_owned(),
@@ -471,7 +471,7 @@ fn test_get_info_png() {
 //    //let white = s::Color::Srgb(s::ColorSrgb::Hex("FFFFFFFF".to_owned()));
 //    let blue = s::Color::Srgb(s::ColorSrgb::Hex("0000FFFF".to_owned()));
 //    let matched = compare(None, 1,
-//                          "DetectWhitespace".to_owned(), POPULATE_CHECKSUMS, DEBUG_GRAPH, vec![
+//                          "DetectWhitespace", POPULATE_CHECKSUMS, DEBUG_GRAPH, vec![
 //            s::Node::CreateCanvas {w: 400, h: 300, format: s::PixelFormat::Bgra32, color: s::Color::Transparent},
 //            s::Node::FillRect{x1:0, y1:0, x2:50, y2:100, color: blue},
 //            s::Node::CropWhitespace {threshold: 80, percent_padding: 0f32}
@@ -522,26 +522,26 @@ fn test_idct_no_gamma_callback(info: s::ImageInfo) -> (Option<s::DecoderCommand>
 
 #[test]
 fn test_idct_linear(){
-    let matched = test_with_callback("ScaleIDCTFastvsSlow".to_owned(), s::IoEnum::Url("https://s3-us-west-2.amazonaws.com/imageflow-resources/test_inputs/roof_test_800x600.jpg".to_owned()),
+    let matched = test_with_callback("ScaleIDCTFastvsSlow", s::IoEnum::Url("https://s3-us-west-2.amazonaws.com/imageflow-resources/test_inputs/roof_test_800x600.jpg".to_owned()),
     test_idct_callback);
     assert!(matched);
 }
 
 #[test]
 fn test_idct_spatial_no_gamma(){
-    let matched = test_with_callback("ScaleIDCT_approx_gamma".to_owned(), s::IoEnum::Url("https://s3-us-west-2.amazonaws.com/imageflow-resources/test_inputs/roof_test_800x600.jpg".to_owned()),
+    let matched = test_with_callback("ScaleIDCT_approx_gamma", s::IoEnum::Url("https://s3-us-west-2.amazonaws.com/imageflow-resources/test_inputs/roof_test_800x600.jpg".to_owned()),
                                      test_idct_no_gamma_callback);
     assert!(matched);
 }
 //
 //#[test]
 //fn test_fail(){
-//    let matched = test_with_callback("ScaleIDCTFastvsSlow".to_owned(), s::IoEnum::Url("https://s3-us-west-2.amazonaws.com/imageflow-resources/test_inputs/roof_test_800x600.jpg".to_owned()),
+//    let matched = test_with_callback("ScaleIDCTFastvsSlow", s::IoEnum::Url("https://s3-us-west-2.amazonaws.com/imageflow-resources/test_inputs/roof_test_800x600.jpg".to_owned()),
 //                                     test_idct_callback_no_gamma);
 //    assert!(matched);
 //}
 
-fn test_with_callback(checksum_name: String, input: s::IoEnum, callback: fn(s::ImageInfo) -> (Option<s::DecoderCommand>, Vec<s::Node>) ) -> bool{
+fn test_with_callback(checksum_name: &str, input: s::IoEnum, callback: fn(s::ImageInfo) -> (Option<s::DecoderCommand>, Vec<s::Node>) ) -> bool{
     let mut context = Context::create().unwrap();
     let matched:bool;
 

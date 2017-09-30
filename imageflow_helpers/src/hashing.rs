@@ -31,7 +31,7 @@ pub fn hash_256(bytes: &[u8]) -> [u8;32]{
     hash
 }
 fn hash256_to(bytes: &[u8], to: &mut [u8;32]){
-    to.copy_from_slice(blake2b(32, &[], &bytes).as_bytes());
+    to.copy_from_slice(blake2b(32, &[], bytes).as_bytes());
 }
 
 pub fn legacy_djb2(bytes: &[u8]) -> u64{
@@ -50,7 +50,7 @@ pub fn bits_format(bits: &[u8], format: &'static str) -> String{
       static ref RE: Regex = Regex::new(r"\{([0-9]+)-([0-9]+):(0([0-9]+))?x\}").unwrap();
     };
 
-    RE.replace_all(&format, |c: &Captures | {
+    RE.replace_all(format, |c: &Captures | {
         let from = c[1].parse::<usize>().unwrap();
         let until = c[2].parse::<usize>().unwrap();
         let padding = c.get(4).and_then(|f| Some(f.as_str().parse::<usize>().unwrap_or(0))).unwrap_or(0);
@@ -83,9 +83,9 @@ pub fn bytes_to_hex(bytes: &[u8]) -> String{
 
 /// Behavior undefined on platforms where the directory separator is not / or \
 pub fn normalize_slashes(s: String) -> String {
-    if MAIN_SEPARATOR == '/' && s.contains("\\") {
+    if MAIN_SEPARATOR == '/' && s.contains('\\') {
         s.replace("\\", "/")
-    } else if MAIN_SEPARATOR == '\\' && s.contains("/") {
+    } else if MAIN_SEPARATOR == '\\' && s.contains('/') {
         s.replace("/", "\\")
     }else{
         s
