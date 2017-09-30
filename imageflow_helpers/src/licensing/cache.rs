@@ -134,7 +134,7 @@ pub enum StringCachePutResult {
     WriteComplete,
     WriteFailed
 }
-pub trait PersistentStringCache{
+pub trait PersistentStringCache: Sync + Send{
 
     fn try_put(&self, key: &String, value: &str) -> StringCachePutResult;
     fn get(&self, key: &String) -> Option<String>;
@@ -203,6 +203,4 @@ impl PersistentStringCache for WriteThroughCache{
             }
         }
     }
-
-
 }
