@@ -4,7 +4,6 @@ use serde_json;
 use std;
 extern crate core;
 extern crate serde;
-// use self::core::slice::SliceExt;
 
 use std::collections::HashMap;
 use std::fs::File;
