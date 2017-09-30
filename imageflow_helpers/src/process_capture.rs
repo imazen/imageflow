@@ -42,7 +42,7 @@ impl CaptureTo{
     fn write_bytes(&self, suffix: &str, bytes: &[u8]) -> std::result::Result<(),std::io::Error>{
         let filename = format!("{}_{}", self.basepath, suffix);
         let mut file = BufWriter::new(File::create(&filename)?);
-        file.write(bytes).and_then(|_| Ok(()))
+        file.write_all(bytes).and_then(|_| Ok(()))
     }
 
     fn run_and_save_output_to(&self, suffix: &str, args: &[&str]) -> std::result::Result<(),std::io::Error>{
@@ -54,12 +54,12 @@ impl CaptureTo{
         let mut file = BufWriter::new(File::create(&filename)?);
 
         let header = format!("{:?} exited with status {:?}\nSTDERR:\n", cmd, output.status);
-        file.write(&header.into_bytes())?;
-        file.write(&output.stderr)?;
+        file.write_all(&header.into_bytes())?;
+        file.write_all(&output.stderr)?;
 
         let header = format!("\n\n\nSTDOUT:\n");
-        file.write(&header.into_bytes())?;
-        file.write(&output.stdout)?;
+        file.write_all(&header.into_bytes())?;
+        file.write_all(&output.stdout)?;
         Ok(())
     }
     pub fn run(&self) -> (){
