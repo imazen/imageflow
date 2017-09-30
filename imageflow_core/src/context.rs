@@ -195,7 +195,7 @@ impl Context {
 
 
     pub fn build_1(&mut self, parsed: s::Build001) -> Result<s::ResponsePayload> {
-        let mut g =::parsing::GraphTranslator::new().translate_framewise(parsed.framewise).map_err(|e| e.at(here!())) ?;
+        let g = ::parsing::GraphTranslator::new().translate_framewise(parsed.framewise).map_err(|e| e.at(here!())) ?;
 
 
         if let Some(s::Build001Config { graph_recording, .. }) = parsed.builder_config {

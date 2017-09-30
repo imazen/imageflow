@@ -192,8 +192,7 @@ impl<'a> Engine<'a> {
 
             let result_value = {
                 let ctx = self.op_ctx_mut();
-                let r = result.map_err( |e| e.at(here!()).with_ctx_mut(&ctx,NodeIndex::new(index)))?;
-                r
+                result.map_err( |e| e.at(here!()).with_ctx_mut(&ctx,NodeIndex::new(index)))?
             };
 
             if let Some((io_id, commands)) = result_value {

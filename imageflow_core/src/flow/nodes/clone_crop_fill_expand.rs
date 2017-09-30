@@ -277,7 +277,7 @@ impl NodeDef for CropMutNodeDef{
     fn can_execute(&self) -> bool { true }
 
     fn execute(&self, ctx: &mut OpCtxMut, ix: NodeIndex) -> Result<NodeResult> {
-        let mut input = unsafe {
+        let input = unsafe {
             &mut *ctx.bitmap_bgra_from(ix, EdgeKind::Input).map_err(|e| e.at(here!()).with_ctx_mut(ctx, ix))?
         };
         ctx.consume_parent_result(ix, EdgeKind::Input)?;

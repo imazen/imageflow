@@ -735,7 +735,7 @@ pub extern "C" fn imageflow_context_get_output_buffer_by_id(context: *mut Contex
                                                                result_buffer: *mut *const u8,
                                                                result_buffer_length: *mut libc::size_t)
                                                                -> bool {
-    let mut c: &mut Context = context_ready!(context);
+    let c: &mut Context = context_ready!(context);
     if result_buffer.is_null() {
         c.outward_error_mut().try_set_error(nerror!(ErrorKind::NullArgument, "The argument 'result_buffer' is null."));
         return false;

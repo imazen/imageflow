@@ -473,7 +473,7 @@ impl ColorTransformCache{
 
     fn apply_transform(frame: &mut BitmapBgra, transform: &Transform<u32,u32, ThreadContext,DisallowCache>) {
         for row in 0..frame.h {
-            let mut pixels = unsafe{ slice::from_raw_parts_mut(frame.pixels.offset((row * frame.stride) as isize) as *mut u32, frame.w as usize) };
+            let pixels = unsafe{ slice::from_raw_parts_mut(frame.pixels.offset((row * frame.stride) as isize) as *mut u32, frame.w as usize) };
             transform.transform_in_place(pixels)
         }
     }
