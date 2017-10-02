@@ -22,7 +22,6 @@ extern crate chrono;
 extern crate zip;
 extern crate serde;
 extern crate serde_json;
-extern crate libc;
 extern crate backtrace;
 extern crate num;
 extern crate base64;
@@ -74,8 +73,10 @@ mod tests {
 // We'll put our errors in an `errors` module, and other modules in
 // this crate will `use errors::*;` to get access to everything
 // `error_chain!` creates.
+#[allow(unused_doc_comment)]
 mod errors {
     // Create the Error, ErrorKind, ResultExt, and Result types
+
     error_chain! {
 
         errors{

@@ -1,11 +1,7 @@
 use ::preludes::from_std::*;
 use ::std;
-use num::{One, Zero};
-use num::bigint::{BigInt, Sign};
-use sha2::{Sha512, Digest};
 use ::chrono::{DateTime,FixedOffset};
 use unicase::UniCase;
-use ::app_dirs::*;
 use errors::*;
 use errors::Result;
 use ::lockless::primitives::append_list::AppendList;
@@ -13,7 +9,6 @@ use lockless::primitives::append_list::AppendListIterator;
 use std::ascii::AsciiExt;
 use chrono::Utc;
 use std::thread;
-use std::sync::mpsc::channel;
 use std::thread::JoinHandle;
 use ::parking_lot::{Mutex, Condvar};
 use std::panic::AssertUnwindSafe;
@@ -184,7 +179,7 @@ impl LicenseManagerSingleton{
     }
     fn get_by_alias(&self, license: &Cow<'static, str>) -> Option<&License>{
         if let Some(id) = self.aliases_to_id.get(license){
-            if let Some(lic) = self.get_by_id(license.as_ref()){
+            if let Some(lic) = self.get_by_id(license.as_ref()){ //TODO: should be ID
                 return Some(lic);
             }
         }

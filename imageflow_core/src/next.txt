@@ -1,6 +1,3 @@
-
-Try reqwest
-
 Add server JSON endpoint
 
 Reserved endpoints for fully encoded arbitrary requests, though, where we can pass through auth info to the upstream gateway

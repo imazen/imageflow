@@ -16,34 +16,7 @@ use ::imageflow_riapi::sizing::LayoutError;
 fn test_file_macro_for_this_build(){
     assert!(file!().starts_with(env!("CARGO_PKG_NAME")))
 }
-// Uncomment these macros if you can't get file!() to include the crate folder
-//#[cfg(not(target_os = "windows"))]
-//#[macro_export]
-//macro_rules! os_path_separator {
-//    () => ("/");
-//}
-//#[cfg(target_os = "windows")]
-//#[macro_export]
-//macro_rules! os_path_separator {
-//    () => ("\\");
-//}
 
-//#[macro_export]
-//macro_rules! here {
-//    () => (
-//        ::CodeLocation{ line: line!(), column: column!(), file: file!(), crate_name: env!("CARGO_PKG_NAME")}
-//    );
-//}
-//
-//#[macro_export]
-//macro_rules! loc {
-//    () => (
-//        concat!(env!("CARGO_PKG_NAME"), os_path_separator!(), file!(), ":", line!(), ":", column!())
-//    );
-//    ($msg:expr) => (
-//        concat!($msg, " at\n", env!("CARGO_PKG_NAME"), os_path_separator!(), file!(), ":", line!(), ":", column!())
-//    );
-//}
 #[macro_export]
 macro_rules! here {
     () => (
@@ -251,7 +224,6 @@ pub struct CodeLocation{
     file: &'static str,
     line: u32,
     column: u32
-    //pub crate_name: &'static str,
 }
 impl CodeLocation{
     pub fn new(file: &'static str, line: u32, column: u32) -> CodeLocation{
@@ -435,11 +407,6 @@ impl fmt::Debug for FlowError {
             if let Some(ref url) = url{
                 write!(f, "{}{}#L{}\n",url, recorded_frame.file(), recorded_frame.line())?;
             }
-//            write!(f, "{}{}{}:{}:{}\n", recorded_frame.crate_name, os_path_separator!(), recorded_frame.file, recorded_frame.line, recorded_frame.column)?;
-//
-//            if let Some(ref url) = url{
-//                write!(f, "{}{}{}{}#L{}\n",url, recorded_frame.crate_name, os_path_separator!(), recorded_frame.file, recorded_frame.line)?;
-//            }
         }
         if let Some(ref n) = self.node{
             write!(f, "Active node:\n{:#?}\n", n)?;
@@ -734,10 +701,10 @@ impl CError{
         self.message_and_stack
     }
     pub fn new(status: CStatus, message_and_stack: String) -> CError{
-        CError{ status: status, message_and_stack: message_and_stack}
+        CError{ status, message_and_stack }
     }
     pub fn from_status(status: CStatus) -> CError{
-        CError{ status: status, message_and_stack: String::new()}
+        CError{ status, message_and_stack: String::new()}
     }
     pub fn is_oom(&self) -> bool{
         self.status == CStatus::Cat(ErrorCategory::OutOfMemory)

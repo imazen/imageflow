@@ -207,7 +207,6 @@ pub struct BitmapBgra {
     pub h: u32,
     /// byte length of each row (may include any amount of padding)
     pub stride: u32,
-    // FIXME: replace with a vec or slice
     /// pointer to pixel 0,0; should be of length > h * stride
     pub pixels: *mut u8,
 

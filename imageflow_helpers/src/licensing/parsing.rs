@@ -1,5 +1,4 @@
 use ::preludes::from_std::*;
-use ::std;
 use num::{One, Zero};
 use num::bigint::{BigInt, Sign};
 use sha2::{Sha512, Digest};
@@ -8,7 +7,6 @@ use unicase::UniCase;
 use errors::*;
 use errors::Result;
 use ::smallvec::SmallVec;
-use std::iter::FromIterator;
 
 #[derive(Debug)]
 pub struct LicenseParser{

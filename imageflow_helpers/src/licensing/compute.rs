@@ -2,7 +2,6 @@ use super::*;
 
 use ::smallvec::SmallVec;
 use std::iter::FromIterator;
-use chrono::Offset;
 
 pub enum License{
     Pair(LicensePair),

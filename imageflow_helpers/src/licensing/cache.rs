@@ -1,5 +1,4 @@
 use ::preludes::from_std::*;
-use ::std;
 use ::app_dirs::*;
 
 
@@ -55,7 +54,7 @@ impl DiskStorage{
 
     fn try_delete_inner<P>(&self, name: P)
                            -> io::Result<()> where P: AsRef<Path> {
-        let write_lock = self.filesystem.write();
+        let _write_lock = self.filesystem.write();
         let path = self.get_folder()?.join(name);
         if path.is_file() {
             ::std::fs::remove_file(path)?;
@@ -75,8 +74,8 @@ impl DiskStorage{
     }
     fn try_write_inner<P>(&self, name: P, value: &str)
                           -> io::Result<()> where P: AsRef<Path>{
-        let write_lock = self.filesystem.write();
-        if !self.get_folder()?.is_dir(){
+        let _write_lock = self.filesystem.write();
+        if !self.get_folder()?.is_dir(){ 
             ::std::fs::create_dir_all(self.get_folder()?)?;
 
         }
@@ -110,7 +109,7 @@ impl DiskStorage{
 
     fn try_read_inner<P>(&self, name: P)
                          -> io::Result<Option<Vec<u8>>> where P: AsRef<Path> {
-        let read_lock = self.filesystem.read();
+        let _read_lock = self.filesystem.read();
         let path = self.get_folder()?.join(name);
         if path.is_file() {
             let mut file = File::open(path)?;

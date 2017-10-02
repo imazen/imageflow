@@ -4,13 +4,12 @@ mod support;
 use self::strings::*;
 use self::support::*;
 use super::*;
-use super::cache::*;
+//use super::cache::*;
 use super::compute::*;
-use super::license_pair::*;
-use super::parsing::*;
-use super::support::*;
+//use super::license_pair::*;
+//use super::parsing::*;
+//use super::support::*;
 
-use mockito;
 use mockito::mock;
 
 use ::smallvec::SmallVec;
@@ -48,7 +47,7 @@ fn test_remote_license_success(){
 
     assert!(!mgr.compute(true, LicenseScope::All,&req_features ).licensed());
 
-    let license = mgr.get_or_add(&Cow::Borrowed(SITE_WIDE_PLACEHOLDER)).unwrap();
+    let _license = mgr.get_or_add(&Cow::Borrowed(SITE_WIDE_PLACEHOLDER)).unwrap();
 
     LicenseManagerSingleton::create_thread(mgr.clone());
     mgr.wait_for(1);
