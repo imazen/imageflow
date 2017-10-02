@@ -86,37 +86,37 @@ impl ProcOutput {
         self.stdout().len()
     }
     pub fn stdout_bytes(&self) -> &[u8] {
-        &self.stdout()
+        self.stdout()
     }
     pub fn stderr_bytes(&self) -> &[u8] {
-        &self.stderr()
+        self.stderr()
     }
     pub fn stderr_byte_count(&self) -> usize {
         self.stderr().len()
     }
 
     pub fn stderr_str(&self) -> &str {
-        std::str::from_utf8(&self.stderr())
+        std::str::from_utf8(self.stderr())
             .expect("Implement lossy UTF-8 decoding for test results")
     }
     pub fn stdout_str(&self) -> &str {
-        std::str::from_utf8(&self.stdout())
+        std::str::from_utf8(self.stdout())
             .expect("Implement lossy UTF-8 decoding for test results")
     }
     pub fn expect_exit_0_no_output(&self, m: &str) -> &ProcOutput {
         if self.stderr_byte_count() > 0 || self.stdout_byte_count() > 0 || self.status_code() != Some(0) {
             panic!("{}\nExpected exit code 0 and no output to stderr or stdout. Received\n {:?}\n{}",
                    m,
-                   &self.r, std::str::from_utf8(&self.stderr()).unwrap());
+                   &self.r, std::str::from_utf8(self.stderr()).unwrap());
         }
-        &self
+        self
     }
     pub fn expect_status_code(&self, code: Option<i32>) -> &ProcOutput {
         if code != self.status_code(){
             self.dump();
             assert_eq!(code, self.status_code());
         }
-        &self
+        self
     }
     pub fn expect_stderr_contains(&self, substring: &str) -> &ProcOutput {
         if !self.stderr_str().contains(substring) {

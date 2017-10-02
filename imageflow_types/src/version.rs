@@ -142,7 +142,7 @@ pub fn all_build_info_pairs() -> String {
 
     for (k, v) in pairs {
         let line = match *v {
-            Some(ref s) => format!("{}={}\n", k, s),
+            Some(s) => format!("{}={}\n", k, s),
             None => format!("{} (None)\n", k),
         };
         s += &line;

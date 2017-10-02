@@ -316,8 +316,8 @@ impl Ir4Layout{
         if let Some(g) = self.i.s_grayscale {
             b.add(s::Node::ColorFilterSrgb(match g{
                 GrayscaleAlgorithm::Flat => s::ColorFilterSrgb::GrayscaleFlat,
-                GrayscaleAlgorithm::True => s::ColorFilterSrgb::GrayscaleNtsc ,
-                GrayscaleAlgorithm::Ntsc => s::ColorFilterSrgb::GrayscaleNtsc,
+                GrayscaleAlgorithm::True |
+                GrayscaleAlgorithm::Ntsc |
                 GrayscaleAlgorithm::Y => s::ColorFilterSrgb::GrayscaleNtsc,
                 GrayscaleAlgorithm::Bt709 => s::ColorFilterSrgb::GrayscaleBt709,
                 GrayscaleAlgorithm::Ry => s::ColorFilterSrgb::GrayscaleRy

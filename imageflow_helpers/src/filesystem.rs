@@ -6,7 +6,7 @@ pub fn read_file_bytes<P: AsRef<Path>>(path: P) -> std::io::Result<Vec<u8>>{
     let mut f = OpenOptions::new().read(true).create(false).open(path)?;
     let mut data = Vec::new();
     f.read_to_end(&mut data)?;
-    Ok((data))
+    Ok(data)
 }
 
 pub fn zip_directory_nonrecursive<P: AsRef<Path>>(dir: P, archive_name: P) -> zip::result::ZipResult<()> {
@@ -20,19 +20,17 @@ pub fn zip_directory_nonrecursive<P: AsRef<Path>>(dir: P, archive_name: P) -> zi
     for entry_maybe in entries {
         if let Ok(entry) = entry_maybe {
             let file_name = entry.file_name().into_string().unwrap();
-            if file_name.starts_with(".") {
+            if file_name.starts_with('.') {
                 //skipping
-            } else {
-                if entry.path().is_file() {
-                    let mut file = File::open(entry.path()).unwrap();
-                    let mut contents = Vec::new();
-                    file.read_to_end(&mut contents).unwrap();
+            } else if entry.path().is_file() {
+                let mut file = File::open(entry.path()).unwrap();
+                let mut contents = Vec::new();
+                file.read_to_end(&mut contents).unwrap();
 
-                    let options = zip::write::FileOptions::default().compression_method(zip::CompressionMethod::Stored);
+                let options = zip::write::FileOptions::default().compression_method(zip::CompressionMethod::Stored);
 
-                    zip.start_file(file_name, options)?;
-                    zip.write_all(&contents)?;
-                }
+                zip.start_file(file_name, options)?;
+                zip.write_all(&contents)?;
             }
         }
         //println!("Name: {}", path.unwrap().path().display())
