@@ -178,6 +178,7 @@ impl Decoder for ClassicDecoder{
     }
     fn read_frame(&mut self, c: &Context) -> Result<*mut BitmapBgra> {
 
+        #[allow(non_snake_case)]
         let blank_xyY = CIExyY{
             x: 0f64,
             y: 0f64,

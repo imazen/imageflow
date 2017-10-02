@@ -126,7 +126,7 @@ impl Decoder for GifDecoder {
             let buf_size = self.reader.width() as usize * self.reader.height() as usize;
 
             let buf_mut = self.buffer.get_or_insert_with(|| vec![0; buf_size]);
-            let mut slice = &mut buf_mut[..self.reader.buffer_size()];
+            let slice = &mut buf_mut[..self.reader.buffer_size()];
 
             unsafe {
                 ptr::write_bytes(slice.as_mut_ptr(), 0, slice.len() - 1);

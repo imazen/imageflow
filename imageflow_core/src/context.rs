@@ -225,7 +225,7 @@ impl Context {
     }
 
     pub fn execute_1(&mut self, what: s::Execute001) -> Result<s::ResponsePayload>{
-        let mut g = ::parsing::GraphTranslator::new().translate_framewise(what.framewise).map_err(|e| e.at(here!()))?;
+        let g = ::parsing::GraphTranslator::new().translate_framewise(what.framewise).map_err(|e| e.at(here!()))?;
         if let Some(r) = what.graph_recording {
             self.configure_graph_recording(r);
         }

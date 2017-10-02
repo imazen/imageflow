@@ -12,8 +12,8 @@ use std::slice::SliceConcatExt;
 extern crate wait_timeout;
 use wait_timeout::ChildExt;
 use std::time::Duration;
-use std::process::{Command, Stdio, Child,Output};
-use std::net::{TcpListener, TcpStream};
+use std::process::{Command, Stdio, Output};
+use std::net::{TcpListener};
 
 #[macro_use]
 extern crate lazy_static;
@@ -21,9 +21,7 @@ extern crate lazy_static;
 use std::sync::Mutex;
 
 use ::imageflow_helpers::process_testing::*;
-use fc::test_helpers::*;
 use fc::test_helpers::process_testing::ProcTestContextExtras;
-use fc::test_helpers::process_testing::ProcOutputExtras;
 use ::imageflow_helpers::fetching::{fetch, fetch_bytes,get_status_code_for, FetchError, FetchConfig};
 
 use std::collections::vec_deque::VecDeque;
@@ -119,7 +117,9 @@ fn get_next_port() -> u16 {
 struct ServerInstance{
     port: u16,
     protocol: Proto,
+    #[allow(dead_code)]
     trust_ca_file: Option<PathBuf>,
+    #[allow(dead_code)]
     cert: Option<PathBuf>
 
 }
@@ -132,10 +132,6 @@ enum Proto{
     Https
 }
 impl ServerInstance{
-
-    fn speaks_http(&self) -> bool{
-        self.hello().is_ok()
-    }
 
     fn hello(&self) -> std::result::Result<hyper::status::StatusCode, FetchError> {
         get_status_code_for(&self.url_for("/hello/are/you/running?"))
@@ -154,12 +150,9 @@ impl ServerInstance{
         get_status_code_for(&self.url_for(rel_path))
     }
 
-
     fn request_stop(&self) -> std::result::Result<hyper::status::StatusCode, FetchError> {
         get_status_code_for(&self.url_for("/test/shutdown"))
     }
-
-
 
     fn run<F>(c: &ProcTestContext, protocol: Proto, args: Vec<&str>, callback: F) -> (ProcOutput, CallbackResult)
     where F: Fn(&ServerInstance) -> CallbackResult {
@@ -170,7 +163,7 @@ impl ServerInstance{
 
         let instance = ServerInstance {
             port: get_next_port(),
-            protocol: protocol,
+            protocol,
             trust_ca_file: Some(ca_path),
             cert: Some(cert_path.clone())
         };
@@ -223,7 +216,7 @@ fn run_server_test_i4(){
         //TODO: test diagnose --call-panic (xplat hard)
 
         //Test incorrect args
-        c.execute(vec!["demo"], false, |child: &mut std::process::Child| {
+        c.execute(vec!["demo"], false, |_child: &mut std::process::Child| {
         }).expect_status_code(Some(1));
 
     }
@@ -231,13 +224,13 @@ fn run_server_test_i4(){
     {
         let c = context.subfolder_context("demo"); //stuck on port 39876
         c.subfolder_context("demo");
-        let (po, callback_result) = ServerInstance::run(&c, Proto::Http, vec!["--demo", "--data-dir=."], | server | {
+        let (_po, callback_result) = ServerInstance::run(&c, Proto::Http, vec!["--demo", "--data-dir=."], | server | {
             fetch_bytes(&server.url_for("/ir4/proxy_unsplash/photo-1422493757035-1e5e03968f95?width=100"))?;
             assert_eq!(server.get_status("/ir4/proxy_unsplash/notthere.jpg")?, hyper::status::StatusCode::NotFound);
 
             let url = server.url_for("/proxied_demo/index.html");
             match fetch(&url, Some(FetchConfig{ custom_ca_trust_file: None, read_error_body: Some(true)})){
-                Ok(v) => {},
+                Ok(_) => {},
                 Err(e) => { panic!("{:?} for {}", &e, &url); }
             }
 
@@ -254,7 +247,7 @@ fn run_server_test_i4(){
     {
         let c = context.subfolder_context("proxy");
         c.subfolder_context("proxy");
-        let (po, callback_result) = ServerInstance::run(&c, Proto::Http, vec!["--data-dir=.", "--mount","/extern/:ir4_http:http:://images.unsplash.com/"], | server | {
+        let (_po, callback_result) = ServerInstance::run(&c, Proto::Http, vec!["--data-dir=.", "--mount","/extern/:ir4_http:http:://images.unsplash.com/"], | server | {
             fetch_bytes(&server.url_for("/extern/photo-1422493757035-1e5e03968f95?width=100"))?;
             Ok(())
         });
@@ -300,10 +293,11 @@ fn run_server_test_i4(){
         callback_result.unwrap();
     }
 
-    // we can't currently test https server suppor. We *should* be able to, on linux - but ... nope.
+    // we can't currently test https server support. We *should* be able to, on linux - but ... nope.
     //test_https(context);
 }
 
+#[allow(dead_code)]
 #[cfg(not(any(target_os = "windows", target_os = "macos")))]
 fn test_https(context: ProcTestContext){
     {
@@ -383,7 +377,7 @@ impl ProcTestContextHttp for ProcTestContext{
         let result = callback(&mut child);
 
 
-        ///child.kill().unwrap();
+        //child.kill().unwrap();
         let timeout = Some(Duration::from_secs(1));
 
         let (status_code, output) = match timeout {

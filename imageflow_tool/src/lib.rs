@@ -1,5 +1,6 @@
 #![feature(slice_concat_ext)]
 #![feature(alloc_system)]
+#[allow(unused_extern_crates)]
 extern crate alloc_system;
 
 extern crate clap;
@@ -7,7 +8,6 @@ extern crate imageflow_helpers;
 extern crate imageflow_types as s;
 extern crate imageflow_core as fc;
 extern crate serde_json;
-extern crate serde;
 
 use imageflow_helpers as hlp;
 

@@ -4,6 +4,7 @@
 // `error_chain!` can recurse deeply
 #![recursion_limit = "1024"]
 
+#[allow(unused_extern_crates)]
 extern crate alloc_system;
 
 #[macro_use]
@@ -20,8 +21,8 @@ extern crate blake2_rfc;
 extern crate twox_hash;
 extern crate chrono;
 extern crate zip;
-extern crate serde;
-extern crate serde_json;
+//extern crate serde;
+//extern crate serde_json;
 extern crate backtrace;
 extern crate num;
 extern crate base64;

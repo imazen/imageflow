@@ -113,6 +113,7 @@
 #![feature(core_intrinsics)]
 #[macro_use]
 extern crate imageflow_core as c;
+#[allow(unused_extern_crates)]
 extern crate alloc_system;
 extern crate libc;
 extern crate smallvec;
@@ -121,7 +122,7 @@ use c::ffi;
 
 pub use c::{Context, ErrorCategory};
 pub use c::ffi::ImageflowJsonResponse as JsonResponse;
-use c::IoDirection;
+//use c::IoDirection;
 use c::{ErrorKind, CodeLocation, FlowError};
 use std::ptr;
 use std::panic::{catch_unwind, AssertUnwindSafe};
@@ -459,7 +460,7 @@ pub extern fn imageflow_json_response_read(context: *mut Context,
                                                   status_as_http_code_out: *mut i64,
                                                   buffer_utf8_no_nulls_out: *mut *const u8,
                                                   buffer_size_out: *mut libc::size_t) -> bool {
-    let mut c = context!(context); // Must be readable in error state
+    let c = context!(context); // Must be readable in error state
 
     if response_in.is_null() {
         c.outward_error_mut().try_set_error(nerror!(ErrorKind::NullArgument, "The argument response_in (* JsonResponse) is null."));
@@ -605,7 +606,7 @@ pub fn create_abi_json_response(c: &mut Context,
         imageflow_response.buffer_size = json_bytes.len();
         imageflow_response.status_code = status_code;
 
-        let mut out_json_bytes = std::slice::from_raw_parts_mut(pointer_to_final_buffer,
+        let out_json_bytes = std::slice::from_raw_parts_mut(pointer_to_final_buffer,
                                                                 json_bytes.len());
 
         out_json_bytes.clone_from_slice(&json_bytes);
@@ -627,7 +628,6 @@ pub fn create_abi_json_response(c: &mut Context,
 ///// As always, `mode` is not enforced except for the file open flags.
 /////
 //#[no_mangle]
-//#[allow(unused_variables)]
 //pub extern "C" fn imageflow_context_add_file(context: *mut Context, io_id: i32, direction: Direction,
 //                                                      mode: IoMode,
 //                                                      filename: *const libc::c_char)
@@ -667,7 +667,6 @@ pub fn create_abi_json_response(c: &mut Context,
 ///
 ///
 #[no_mangle]
-#[allow(unused_variables)]
 pub extern "C" fn imageflow_context_add_input_buffer(context: *mut Context,
                                                          io_id: i32,
                                                          buffer: *const u8,
@@ -675,7 +674,7 @@ pub extern "C" fn imageflow_context_add_input_buffer(context: *mut Context,
                                                             lifetime: Lifetime)
                                                          -> bool {
 
-    let mut c : &mut Context = context_ready!(context);
+    let c: &mut Context = context_ready!(context);
     if buffer.is_null() {
         c.outward_error_mut().try_set_error(nerror!(ErrorKind::NullArgument, "The argument 'buffer' is null."));
         return false;
@@ -711,10 +710,9 @@ pub extern "C" fn imageflow_context_add_input_buffer(context: *mut Context,
 ///
 /// Returns null if allocation failed; check the context for error details.
 #[no_mangle]
-#[allow(unused_variables)]
 pub extern "C" fn imageflow_context_add_output_buffer(context: *mut Context, io_id: i32)
                                                                -> bool {
-    let mut c = context_ready!(context);
+    let c = context_ready!(context);
     let result = catch_unwind(AssertUnwindSafe(|| {
         c.add_output_buffer(io_id).map_err(|e| e.at(here!()))?;
         Ok(true)

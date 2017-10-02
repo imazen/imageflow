@@ -17,14 +17,17 @@ enum Strategy {
 ///
 /// `down.fitw=scale(max(w, obox.w), auto) down.fith=scale(auto,max(h, obox.h) up.fit=none`
 /// `down.fit=proportional(obox), up.fit=none`
+    #[allow(dead_code)]
     MaxAny,
     /// Upscale minimally until one dimension matches. Never downscale, if larger.
 /// `up.fit=scale(max(d, ibox.other), auto) down.fit=none`
 /// `up.fit=proportional(ibox), down.fit=none`
+    #[allow(dead_code)]
     MinAny,
     /// Upscale minimally until the image meets or exceeds both specified dimensions. Never downscale.
 /// `up.fit=scale(d, auto) up.fit=none`
 /// `up.fit=proportional(obox), down.fit=none`
+    #[allow(dead_code)]
     Min,
     /// Downscale the image and pad to meet aspect ratio. If smaller in both dimensions, give up and leave as-is.
 /// `down.fit=proportional(ibox), pad(target), up.fit=none` - won't work, second dimension will classify as upscale.
@@ -42,25 +45,31 @@ enum Strategy {
     CropOrAspect,
     /// Downscale & crop. If smaller, pad to achieve desired aspect ratio.
 /// `down.fit=proportional(obox),crop(target) up.fit=padaspect(target)`
+    #[allow(dead_code)]
     CropOrAspectPad,
 
     // perhaps a lint for pad (or distort) in down. but not up. ?
 
     /// Minimally pad to match desired aspect ratio. Downscale or upscale to exact dimensions provided.
 /// `always.fit.xy=proportional(ibox),pad(target)`
+    #[allow(dead_code)]
     ExactPadAllowUpscaling,
     /// Minimally crop to match desired aspect ratio. Downscale or upscale to exact dimensions provided.
 /// `up.fit.xy=proportional(ibox),crop(target)`, `down.fit.xy=proportional(obox), crop(target)
+    #[allow(dead_code)]
     ExactCropAllowUpscaling,
 
     /// `always.fit.xy=distort(target)`
     Distort,
     /// `down.fit.xy=proportional(obox),cropcareful(target).scale(ibox)`
+    #[allow(dead_code)]
     CropCarefulDownscale,
     /// `down.fit.xy=proportional(obox),cropcareful(target),proportional(target),pad2d(target)` -doesn't work; second dimension never executes pad. (unless we run smaller dimension first)
 /// `down.fit.xy=proportional(obox),cropcareful(target),proportional(target),pad2d(target.aspect)` -doesn't work; second dimension never executes pad. (unless we run smaller dimension first)
+    #[allow(dead_code)]
     CropCarefulPadDownscale,
     /// `down.fit.xy=proportional(obox),cropcareful(target),proportional(target),pad(target) up.xy.fit=cropcareful(targetaspect),pad(targetaspect)`
+    #[allow(dead_code)]
     CropCarefulDownscaleOrForceAspect,
 
     // When cropping an image to achieve aspect ratio makes it smaller than the desired box, thereby changing the rules...
@@ -126,9 +135,9 @@ fn step_kits() -> Vec<Kit>{
     let no_crop = Expect::That{ a: ExpectVal::SourceCrop, is: Cond::Equal, b: ExpectVal::Source};
     let no_4_side_cropping = Expect::That{ a: ExpectVal::SourceCrop, is: Cond::Either(Ordering::Equal), b: ExpectVal::Source};
     let no_padding = Expect::CanvasAgainstImage(Cond::Equal);
-    let no_scaling = Expect::That{ a: ExpectVal::SourceCrop, is: Cond::Equal, b: ExpectVal::Image};
+    // let no_scaling = Expect::That{ a: ExpectVal::SourceCrop, is: Cond::Equal, b: ExpectVal::Image};
     let no_upscaling = Expect::That{ a: ExpectVal::SourceCrop, is: Cond::Neither(Ordering::Less), b: ExpectVal::Image};
-    let no_downscaling = Expect::That{ a: ExpectVal::SourceCrop, is: Cond::Neither(Ordering::Greater), b: ExpectVal::Image};
+    // let no_downscaling = Expect::That{ a: ExpectVal::SourceCrop, is: Cond::Neither(Ordering::Greater), b: ExpectVal::Image};
     let never_larger_than_target = Expect::CanvasAgainstTarget(Cond::Neither(Ordering::Greater));
     let no_4_side_padding = Expect::CanvasAgainstImage(Cond::Either(Ordering::Equal));
 
@@ -378,11 +387,14 @@ macro_rules! w(
 
 #[derive(Copy,Clone,Debug,PartialEq, Eq, Hash)]
 enum ExpectVal{
+    #[allow(dead_code)]
     Val(AspectRatio),
+    #[allow(dead_code)]
     Canvas,
     Source,
     SourceCrop,
     Image,
+    #[allow(dead_code)]
     Target
 }
 #[derive(Copy,Clone,Debug,PartialEq, Eq, Hash)]
@@ -391,24 +403,30 @@ enum Expect {
     /// Just end the noise, okay?
     Whatever,
     Always,
+    #[allow(dead_code)]
     Error,
     Ok,
     That{a: ExpectVal, is: Cond, b: ExpectVal},
     CanvasMatchesTarget,
     CanvasMatchesSource,
+    #[allow(dead_code)]
     Canvas {
         against: AspectRatio,
         expect: Cond
     },
+    #[allow(dead_code)]
     Image {
         against: AspectRatio,
         expect: Cond
     },
+    #[allow(dead_code)]
     Source {
         against: AspectRatio,
         expect: Cond
     },
+    #[allow(dead_code)]
     CanvasAgainstSource(Cond),
+    #[allow(dead_code)]
     ImageAgainstSource(Cond),
     CanvasAgainstTarget(Cond),
     ImageAgainstTarget(Cond),

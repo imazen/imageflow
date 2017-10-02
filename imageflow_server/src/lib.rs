@@ -19,7 +19,6 @@ extern crate staticfile;
 extern crate rustc_serialize;
 #[macro_use] extern crate hyper;
 
-extern crate libc;
 extern crate time;
 #[macro_use] extern crate lazy_static;
 extern crate regex;
@@ -74,6 +73,7 @@ use router::Router;
 
 use time::precise_time_ns;
 
+#[allow(unused_imports)]
 #[macro_use] extern crate log;
 extern crate env_logger;
 
@@ -128,7 +128,7 @@ impl From<hlp::fetching::FetchError> for ServerError {
             hlp::fetching::FetchError::HyperError(e) => ServerError::HyperError(e),
             hlp::fetching::FetchError::IoError(e) => ServerError::IoError(e),
             hlp::fetching::FetchError::UpstreamResponseError(e) => ServerError::UpstreamResponseError(e),
-            hlp::fetching::FetchError::UpstreamResponseErrorWithResponse{status,response}=> ServerError::UpstreamResponseError(status),
+            hlp::fetching::FetchError::UpstreamResponseErrorWithResponse{status, ..}=> ServerError::UpstreamResponseError(status),
             hlp::fetching::FetchError::ReqwestError(e) => ServerError::ReqwestError(e)
         }
 
@@ -366,7 +366,7 @@ fn ir4_http_respond<F>(shared: &SharedData, url: &str, framewise_generator: F) -
 }
 
 
-fn ir4_framewise(info: s::ImageInfo, url: &Url) -> std::result::Result<s::Framewise, ServerError> {
+fn ir4_framewise(_info: s::ImageInfo, url: &Url) -> std::result::Result<s::Framewise, ServerError> {
     let t = ::imageflow_riapi::ir4::Ir4Translate{
         i: ::imageflow_riapi::ir4::Ir4Command::Url(url.as_str().to_owned()),
         decode_id: Some(0),

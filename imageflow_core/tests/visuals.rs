@@ -1,14 +1,12 @@
 #![feature(alloc_system)]
+#[allow(unused_extern_crates)]
 extern crate alloc_system;
 
-extern crate hyper;
 #[macro_use]
 extern crate imageflow_core;
 extern crate libc;
-extern crate rustc_serialize;
 extern crate imageflow_types as s;
 extern crate imageflow_helpers as hlp;
-extern crate serde;
 extern crate serde_json;
 extern crate smallvec;
 

@@ -199,7 +199,7 @@ impl NodeDef for DecoderPrimitiveDef {
         let io_id = decoder_get_io_id(&ctx.weight(ix).params)?;
 
         let mut codec = ctx.c.get_codec(io_id).map_err(|e| e.at(here!()))?;
-        let mut decoder = codec.get_decoder().map_err(|e| e.at(here!()))?;
+        let decoder = codec.get_decoder().map_err(|e| e.at(here!()))?;
 
         let result = decoder.read_frame(ctx.c).map_err(|e| e.at(here!()))?;
 

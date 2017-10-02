@@ -2,7 +2,6 @@ use fc;
 use s;
 use serde_json;
 use std;
-extern crate core;
 extern crate serde;
 
 use std::collections::HashMap;

@@ -1,5 +1,6 @@
 #![feature(conservative_impl_trait)]
 #![feature(alloc_system)]
+#[allow(unused_extern_crates)]
 extern crate alloc_system;
 
 #[macro_use] extern crate macro_attr;

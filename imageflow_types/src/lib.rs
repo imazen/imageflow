@@ -29,6 +29,7 @@
 #![feature(proc_macro)]
 #![feature(conservative_impl_trait)]
 #![feature(alloc_system)]
+#[allow(unused_extern_crates)]
 extern crate alloc_system;
 pub mod build_env_info;
 pub mod version;
@@ -43,7 +44,6 @@ extern crate imageflow_helpers;
 extern crate chrono;
 extern crate serde;
 extern crate serde_json;
-extern crate regex;
 use std::ascii::AsciiExt;
 use std::str::FromStr;
 pub mod collections;
@@ -301,7 +301,7 @@ pub struct ConstraintResamplingHints {
 impl ConstraintResamplingHints{
     pub fn with(filter: Option<Filter>, sharpen_percent: Option<f32>) -> ConstraintResamplingHints{
         ConstraintResamplingHints{
-            sharpen_percent: sharpen_percent,
+            sharpen_percent,
             down_filter: filter,
             up_filter: filter,
             resample_when: None,
@@ -331,6 +331,7 @@ pub enum CompositingMode {
     Overwrite
 }
 
+#[allow(unreachable_patterns)]
 #[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
 pub enum Node {
     #[serde(rename="flip_v")]
@@ -651,13 +652,13 @@ impl Build001{
 }
 impl IoEnum {
     pub fn example_byte_array() -> IoEnum {
-        let tinypng = vec![0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, 0x00, 0x00, 0x00, 0x0D,
+        let tiny_png = vec![0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, 0x00, 0x00, 0x00, 0x0D,
                            0x49, 0x48, 0x44, 0x52, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01,
                            0x08, 0x06, 0x00, 0x00, 0x00, 0x1F, 0x15, 0xC4, 0x89, 0x00, 0x00, 0x00,
                            0x0A, 0x49, 0x44, 0x41, 0x54, 0x78, 0x9C, 0x63, 0x00, 0x01, 0x00, 0x00,
                            0x05, 0x00, 0x01, 0x0D, 0x0A, 0x2D, 0xB4, 0x00, 0x00, 0x00, 0x00, 0x49,
                            0x45, 0x4E, 0x44, 0xAE, 0x42, 0x60, 0x82];
-        IoEnum::ByteArray(tinypng)
+        IoEnum::ByteArray(tiny_png)
     }
     pub fn example_byte_array_truncated() -> IoEnum {
         IoEnum::ByteArray(vec![0x89, 0x50, 0x4E, 0x47])
@@ -853,7 +854,7 @@ impl Framewise {
                             to: 5,
                             kind: EdgeKind::Input,
                         }],
-            nodes: nodes,
+            nodes,
         })
     }
 }

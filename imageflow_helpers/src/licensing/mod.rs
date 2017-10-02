@@ -162,7 +162,7 @@ impl LicenseManagerSingleton{
 
     pub fn heartbeat(&self){
         let _ = self.heartbeat_count.fetch_add(1, Ordering::Relaxed);
-        for l in self.licenses.iter(){
+        for _ in self.licenses.iter(){
             //trigger heartbeat
         }
     }

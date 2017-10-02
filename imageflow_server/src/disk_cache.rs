@@ -207,8 +207,8 @@ impl<'a> CacheEntry<'a>{
 
 }
 
-/// If one migrates from one FolderLayout to another, or is moving off of a old cache directory, then multiple queries make sense
-/// Check for meta/tiny, meta/normal, meta/huge presence to auto-populate
+// If one migrates from one FolderLayout to another, or is moving off of a old cache directory, then multiple queries make sense
+// Check for meta/tiny, meta/normal, meta/huge presence to auto-populate
 //struct CacheReader{
 //    folders: Vec<CacheFolder>
 //}
@@ -260,43 +260,40 @@ impl<'a> CacheEntry<'a>{
 
 
 
-
+//
 //hashes are 32 bytes?
 //
-/// Cache write
-/// Create 3 parent directories
-///
-//
-//
-//
-/// There is no cleanup
-/// 64 x 64 x 1 nested directories by default. Optional 64x64x16 + 1. with read through
-///
-///
+//Cache write
+//Create 3 parent directories
 //
 //
 //
 //
-/// Allow read-through to
-/// There is no index
+//There is no cleanup
+//64 x 64 x 1 nested directories by default. Optional 64x64x16 + 1. with read through
 //
 //
-/// Fetch by hash - blake2d 256bit
-///
-/// blake2-rfc = "0.2.17" or https://github.com/RustCrypto/hashes
-///
-///
-/// base 32?
 //
 //
-/// Filesystem
-/// Disable 8.3 on windows
-/// Disable all metadata (as much as possible)
-/// only list unsorted
-/// https://stackoverflow.com/questions/197162/ntfs-performance-and-large-volumes-of-files-and-directories
+//
+//
+//Allow read-through to
+//There is no index
+//
+//
+//Fetch by hash - blake2d 256bit
+//
+//blake2-rfc = "0.2.17" or https://github.com/RustCrypto/hashes
+//base 32?
+//
+//
+//Filesystem
+//Disable 8.3 on windows
+//Disable all metadata (as much as possible)
+//only list unsorted
+//https://stackoverflow.com/questions/197162/ntfs-performance-and-large-volumes-of-files-and-directories
 
-//
-fn a(){}
+
 
 
 

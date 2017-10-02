@@ -1,14 +1,14 @@
 extern crate std;
-use fc::for_other_imageflow_crates::preludes::default::*;
+extern crate imageflow_core;
+use self::imageflow_core::for_other_imageflow_crates::preludes::default::*;
 use std::slice::SliceConcatExt;
-extern crate imageflow_core as fc;
 
 //extern crate imageflow_helpers;
 
 use imageflow_helpers::process_testing::*;
-use fc::test_helpers::*;
-use fc::test_helpers::process_testing::ProcTestContextExtras;
-use fc::test_helpers::process_testing::ProcOutputExtras;
+use self::imageflow_core::test_helpers::*;
+use self::imageflow_core::test_helpers::process_testing::ProcTestContextExtras;
+use self::imageflow_core::test_helpers::process_testing::ProcOutputExtras;
 
 
 

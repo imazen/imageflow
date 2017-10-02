@@ -218,7 +218,7 @@ impl<'a> Engine<'a> {
     fn assign_stable_ids(&mut self) -> Result<()> {
         // Assign stable IDs;
         for index in 0..self.g.node_count() {
-            let mut weight = self.g.node_weight_mut(NodeIndex::new(index)).unwrap();
+            let weight = self.g.node_weight_mut(NodeIndex::new(index)).unwrap();
             if weight.stable_id < 0 {
                 weight.stable_id = self.job.next_stable_node_id;
                 self.job.next_stable_node_id += 1;

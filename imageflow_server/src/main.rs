@@ -1,6 +1,5 @@
 extern crate clap;
 extern crate imageflow_server;
-extern crate regex;
 
 
 use clap::{App, Arg, SubCommand, AppSettings};

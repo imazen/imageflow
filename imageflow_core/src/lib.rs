@@ -18,11 +18,10 @@
 #![allow(unused_imports)]
 #![allow(dead_code)]
 #![allow(unused_variables)]
-
+#[allow(unused_extern_crates)]
 extern crate alloc_system;
 extern crate petgraph;
 extern crate daggy;
-extern crate time;
 extern crate imageflow_types;
 
 extern crate imageflow_helpers;
@@ -36,17 +35,12 @@ extern crate lazy_static;
 extern crate serde_derive;
 extern crate serde_json;
 extern crate lcms2;
-extern crate serde;
 extern crate libc;
-extern crate alloc;
 extern crate rustc_serialize;
-extern crate url;
 extern crate uuid;
 extern crate gif;
 extern crate smallvec;
-extern crate core;
 extern crate chashmap;
-extern crate lcms2_sys;
 extern crate rgb;
 
 #[macro_use]
