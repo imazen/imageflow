@@ -305,6 +305,7 @@ fi
 
 ############ GIT VALUES ##################
 
+export GIT_UPSTREAM_COMMIT=$(git rev-parse '@{u}' || git rev-parse 'master@{u}' || git rev-parse origin/master)
 export GIT_COMMIT
 GIT_COMMIT="${GIT_COMMIT:-$(git rev-parse HEAD)}"
 GIT_COMMIT="${GIT_COMMIT:-unknown-commit}"
