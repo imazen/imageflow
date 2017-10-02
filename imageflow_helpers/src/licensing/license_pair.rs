@@ -1,14 +1,16 @@
 use super::*;
 
-lazy_static! {
-    static ref DEFAULT_LICENSE_SERVERS: Vec<&'static str> = vec!["https://s3-us-west-2.amazonaws.com/licenses.imazen.net/", "https://licenses-redirect.imazen.net/", "https://licenses.imazen.net", "https://licenses2.imazen.net"];
-}
+//lazy_static! {
+//    static ref DEFAULT_LICENSE_SERVERS: Vec<&'static str> = vec!["https://s3-us-west-2.amazonaws.com/licenses.imazen.net/", "https://licenses-redirect.imazen.net/", "https://licenses.imazen.net", "https://licenses2.imazen.net"];
+//}
 
 pub struct LicensePair{
     id: String,
     secret: String,
+    #[allow(dead_code)]
     cache_key: String,
     placeholder: LicenseBlob,
+    #[allow(dead_code)]
     license_server_stack: Vec<Cow<'static,str>>,
     remote: Arc<::parking_lot::RwLock<Option<LicenseBlob>>>,
 }

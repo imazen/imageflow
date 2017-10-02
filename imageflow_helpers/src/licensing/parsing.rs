@@ -324,13 +324,13 @@ fn get_test_keys() -> Vec<RSADecryptPublic> {
 
 
 lazy_static!{
-        pub static ref PRODUCTION_KEYS: Vec<RSADecryptPublic> = get_production_keys();
 
         pub static ref TEST_KEYS: Vec<RSADecryptPublic> = get_test_keys();
 
-        pub static ref ALL_KEYS: Vec<RSADecryptPublic> = {
-            get_production_keys().into_iter().chain(get_test_keys().into_iter()).collect()
-        };
+//        pub static ref PRODUCTION_KEYS: Vec<RSADecryptPublic> = get_production_keys();
+//        pub static ref ALL_KEYS: Vec<RSADecryptPublic> = {
+//            get_production_keys().into_iter().chain(get_test_keys().into_iter()).collect()
+//        };
     }
 
 #[cfg(test)]

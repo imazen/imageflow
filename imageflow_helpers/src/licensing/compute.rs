@@ -202,6 +202,19 @@ impl<'mgr> LicenseComputation<'mgr>{
             .map(|opt| opt.unwrap()))
     }
 
+    pub fn get_diagnostics(&self) -> String{
+        let header = if self.enforced {
+            "Licensing Enforced"
+        } else {
+            "Licensing not enforced"
+        };
+
+        let mut page = String::with_capacity(1024);
+        page = page + header;
+        // WIP
+        page
+    }
+
     fn validate_usage(&mut self, license: &LicenseBlob, required_features: &::smallvec::SmallVec<[&str;1]>) -> bool{
         if self.validate_license(license){
             let features = license.fields().features();

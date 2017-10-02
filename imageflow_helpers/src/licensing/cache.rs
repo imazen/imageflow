@@ -40,11 +40,14 @@ impl DiskStorage{
         }
     }
 
+    #[allow(dead_code)]
     fn try_delete<P>(&self, name: P)
                      -> io::Result<()> where P: AsRef<Path>, P: ::std::fmt::Debug {
         match self.try_delete_inner(name.as_ref()) {
             Err(e) => {
-                eprintln!("Failed to delete {} named {:?} in folder {:?}: {:?}", self.data_kind, name.as_ref(), self.folder, e);
+                if self.log_stderr{
+                    eprintln!("Failed to delete {} named {:?} in folder {:?}: {:?}", self.data_kind, name.as_ref(), self.folder, e);
+                }
                 Err(e)
             },
             ok => ok
@@ -52,6 +55,7 @@ impl DiskStorage{
     }
 
 
+    #[allow(dead_code)]
     fn try_delete_inner<P>(&self, name: P)
                            -> io::Result<()> where P: AsRef<Path> {
         let _write_lock = self.filesystem.write();
@@ -66,7 +70,9 @@ impl DiskStorage{
                     -> io::Result<()> where P: AsRef<Path>, P: ::std::fmt::Debug {
         match self.try_write_inner(name.as_ref(), value) {
             Err(e) => {
-                eprintln!("Failed to write {} named {:?} in folder {:?}: {:?}", self.data_kind, name.as_ref(), self.folder, e);
+                if self.log_stderr {
+                    eprintln!("Failed to write {} named {:?} in folder {:?}: {:?}", self.data_kind, name.as_ref(), self.folder, e);
+                }
                 Err(e)
             },
             ok => ok
@@ -91,13 +97,17 @@ impl DiskStorage{
                    -> io::Result<Option<String>> where P: AsRef<Path>, P: ::std::fmt::Debug {
         match self.try_read_inner(name.as_ref()) {
             Err(e) => {
-                eprintln!("Failed to read {} named {:?} in folder {:?}: {:?}", self.data_kind, name.as_ref(), self.folder, e);
+                if self.log_stderr {
+                    eprintln!("Failed to read {} named {:?} in folder {:?}: {:?}", self.data_kind, name.as_ref(), self.folder, e);
+                }
                 Err(e)
             },
             Ok(Some(v)) => {
                 match String::from_utf8(v){
                     Err(e) => {
-                        eprintln!("Invalid UTF8-butes in {} named {:?} in folder {:?}: {:?}", self.data_kind, name.as_ref(), self.folder, e);
+                        if self.log_stderr {
+                            eprintln!("Invalid UTF8-butes in {} named {:?} in folder {:?}: {:?}", self.data_kind, name.as_ref(), self.folder, e);
+                        }
                         Err(io::Error::new(io::ErrorKind::InvalidData, e))
                     },
                     Ok(s) => Ok(Some(s))
@@ -169,7 +179,7 @@ impl WriteThroughCache{
             format!("{}{}.txt", self.prefix, key)
         }
     }
-
+    #[allow(dead_code)]
     pub fn as_cache(&self) -> &PersistentStringCache{
         self
     }

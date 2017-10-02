@@ -48,10 +48,12 @@ pub struct LicenseManagerSingleton{
     licenses: AppendList<License>,
     aliases_to_id: ::chashmap::CHashMap<Cow<'static, str>,Cow<'static, str>>,
     cached: ::chashmap::CHashMap<Cow<'static, str>,LicenseBlob>,
+    #[allow(dead_code)]
     sink: IssueSink,
     trusted_keys: &'static [RSADecryptPublic],
     cache: Box<PersistentStringCache>,
     created: DateTime<Utc>,
+    #[allow(dead_code)]
     uid: ::uuid::Uuid,
     heartbeat_count: AtomicU64,
     clock: Box<LicenseClock>,
@@ -111,7 +113,7 @@ impl LicenseManagerSingleton{
                         let mut response = client.get(&url).send().unwrap();
                         if response.status().is_success() {
                             let mut buf = Vec::new();
-                            response.read_to_end(&mut buf);
+                            response.read_to_end(&mut buf).unwrap();
                             let s = ::std::str::from_utf8(&buf).unwrap();
                             let blob = LicenseBlob::deserialize(mgr.trusted_keys, s, "remote license").unwrap();
                             p.update_remote(blob).unwrap();

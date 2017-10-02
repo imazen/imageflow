@@ -53,6 +53,7 @@ pub mod process_testing;
 pub mod process_capture;
 pub mod colors;
 pub mod debug;
+#[cfg(test)]
 pub mod licensing;
 
 pub mod timeywimey{
