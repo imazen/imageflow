@@ -75,7 +75,7 @@ impl DiskStorage{
     fn try_write_inner<P>(&self, name: P, value: &str)
                           -> io::Result<()> where P: AsRef<Path>{
         let _write_lock = self.filesystem.write();
-        if !self.get_folder()?.is_dir(){ 
+        if self.create_folder && !self.get_folder()?.is_dir(){
             ::std::fs::create_dir_all(self.get_folder()?)?;
 
         }

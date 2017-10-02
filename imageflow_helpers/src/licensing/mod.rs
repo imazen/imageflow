@@ -179,7 +179,7 @@ impl LicenseManagerSingleton{
     }
     fn get_by_alias(&self, license: &Cow<'static, str>) -> Option<&License>{
         if let Some(id) = self.aliases_to_id.get(license){
-            if let Some(lic) = self.get_by_id(license.as_ref()){ //TODO: should be ID
+            if let Some(lic) = self.get_by_id(&id){ //TODO: should be ID
                 return Some(lic);
             }
         }
