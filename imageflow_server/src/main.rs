@@ -135,7 +135,7 @@ fn main_with_exit_code() -> i32 {
             let alt_data_dir = Path::new(".").join("imageflow_data");
 
 
-            let demo_commit = s::version::get_build_env_value("GIT_COMMIT").unwrap();
+            let demo_commit = s::version::get_build_env_value("GIT_UPSTREAM_COMMIT").unwrap();
 
             let mut mounts = vec![
             MountLocation {

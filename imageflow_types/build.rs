@@ -144,6 +144,7 @@ fn collect_info(shopping_list: Vec<EnvTidbit>) -> HashMap<String, Option<String>
 fn what_to_collect() -> Vec<EnvTidbit>{
     let mut c = Vec::new();
     c.push(EnvTidbit::CmdOrEnvReq {key: "GIT_COMMIT", cmd: "git rev-parse HEAD"});
+    c.push(EnvTidbit::CmdOrEnvReq {key: "GIT_UPSTREAM_COMMIT", cmd: "git rev-parse '@{u}' || git rev-parse 'master@{u}' || git rev-parse origin/master"});
     c.push(EnvTidbit::CmdOrEnv{key: "GIT_COMMIT_SHORT", cmd: "git rev-parse --short HEAD"});
     c.push(EnvTidbit::CmdOrEnv{key: "GIT_DESCRIBE_ALWAYS", cmd: "git describe --always --tags"});
     c.push(EnvTidbit::CmdOrEnvReq{key: "GIT_DESCRIBE_ALWAYS_LONG", cmd: "git describe --always --tags --long"});
