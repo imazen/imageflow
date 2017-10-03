@@ -26,7 +26,7 @@ impl NodeDefOneInputExpand for ApplyOrientationDef{
         "imazen.apply_orientation"
     }
     fn estimate(&self, p: &NodeParams, input: FrameEstimate) -> Result<FrameEstimate> {
-        if let &NodeParams::Json(s::Node::ApplyOrientation { flag }) = p {
+        if let NodeParams::Json(s::Node::ApplyOrientation { flag }) = *p {
             input.map_frame(|info| {
                 let swap = flag >= 5 && flag <= 8;
                 Ok(FrameInfo {

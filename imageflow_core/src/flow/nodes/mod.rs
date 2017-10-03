@@ -213,7 +213,7 @@ impl<'c> OpCtxMut<'c> {
         let parent = self.first_parent_of_kind_required(ix, filter_by_kind)?;
 
         let result = &self.graph.node_weight(parent).expect(loc!("first_parent_of_kind_required provided invalid node index")).result;
-        if let &NodeResult::Frame(bitmap) = result {
+        if let NodeResult::Frame(bitmap) = *result {
             if bitmap.is_null() {
                 Err(nerror!(::ErrorKind::BitmapPointerNull, "Parent {:?} node has NodeResult::Frame(null)", filter_by_kind).with_ctx_mut(self, ix))
             } else {

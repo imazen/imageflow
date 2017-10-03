@@ -28,7 +28,7 @@ impl NodeDefOneInputOneCanvas for CopyRectNodeDef{
     }
 
     fn render(&self, c: &Context, canvas: &mut BitmapBgra, input: &mut BitmapBgra,  p: &NodeParams) -> Result<()> {
-        if let &NodeParams::Json(s::Node::CopyRectToCanvas { from_x, from_y, width, height, x, y }) = p {
+        if let NodeParams::Json(s::Node::CopyRectToCanvas { from_x, from_y, width, height, x, y }) = *p {
 
 
             if input.fmt != canvas.fmt {
@@ -99,7 +99,7 @@ impl NodeDefMutateBitmap for FillRectNodeDef {
         Ok(())
     }
     fn mutate(&self, c: &Context, bitmap: &mut BitmapBgra,  p: &NodeParams) -> Result<()>{
-        if let &NodeParams::Json(s::Node::FillRect { x1, x2, y1, y2, ref color }) = p{
+        if let NodeParams::Json(s::Node::FillRect { x1, x2, y1, y2, ref color }) = *p{
 
             if x2 <= x1 || y2 <= y1 || (x1 as i32) < 0 || (y1 as i32) < 0 || x2 > bitmap.w || y2 > bitmap.h{
                return Err(nerror!(::ErrorKind::InvalidCoordinates, "Invalid coordinates for {}x{} bitmap: {:?}", bitmap.w, bitmap.h, p));
@@ -180,7 +180,7 @@ impl NodeDefOneInputExpand for ExpandCanvasDef{
         "imazen.expand_canvas"
     }
     fn estimate(&self, p: &NodeParams, input: FrameEstimate) -> Result<FrameEstimate> {
-        if let &NodeParams::Json(s::Node::ExpandCanvas { left, top, bottom, right, ref color }) = p {
+        if let NodeParams::Json(s::Node::ExpandCanvas { left, top, bottom, right, ref color }) = *p {
             input.map_frame( |info| {
                 Ok(FrameInfo {
                     w: info.w + left as i32 + right as i32,
@@ -233,7 +233,7 @@ pub struct CropMutNodeDef;
 
 impl CropMutNodeDef {
     fn est_validate(&self, p: &NodeParams, input_est: FrameEstimate) -> Result<FrameEstimate> {
-        if let &NodeParams::Json(s::Node::Crop {  x1,  y1,  x2,  y2 }) = p {
+        if let NodeParams::Json(s::Node::Crop {  x1,  y1,  x2,  y2 }) = *p {
             if (x1 as i32) < 0 || (y1 as i32) < 0 || x2 <= x1 || y2 <= y1 {
                 Err(nerror!(::ErrorKind::InvalidNodeParams, "Invalid coordinates: {},{} {},{} should describe the top-left and bottom-right corners of a rectangle", x1,y1,x2,y2))
             } else if let FrameEstimate::Some(input) = input_est {
@@ -285,7 +285,7 @@ impl NodeDef for CropMutNodeDef{
         // Validate against actual bitmap
         let _ = self.est_validate(&ctx.weight(ix).params, FrameEstimate::Some(input.frame_info())).map_err(|e| e.at(here!()))?;
 
-        if let &NodeParams::Json(s::Node::Crop { x1, x2, y1, y2 }) = &ctx.weight(ix).params {
+        if let NodeParams::Json(s::Node::Crop { x1, x2, y1, y2 }) = ctx.weight(ix).params {
             // println!("Cropping {}x{} to ({},{}) ({},{})", (*input).w, (*input).h, x1, y1, x2, y2);
 
             let (w, h) = (input.w, input.h);

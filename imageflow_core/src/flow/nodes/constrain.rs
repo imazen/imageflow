@@ -12,10 +12,10 @@ pub static EXPANDING_COMMAND_STRING: CommandStringPartiallyExpandedDef = Command
 fn get_expand(ctx: &mut OpCtxMut, ix: NodeIndex) -> Result<::imageflow_riapi::ir4::Ir4Expand>{
     let input = ctx.first_parent_frame_info_some(ix).ok_or_else(|| nerror!(::ErrorKind::InvalidNodeConnections, "CommandString node requires that its parent nodes be perfectly estimable"))?;
     let params = &ctx.weight(ix).params;
-    if let &NodeParams::Json(s::Node::CommandString{ref kind, ref value, ref decode, ref encode}) =
-    params {
-        match kind {
-            &s::CommandStringKind::ImageResizer4 => {
+    if let NodeParams::Json(s::Node::CommandString{ref kind, ref value, ref decode, ref encode}) =
+    *params {
+        match *kind {
+            s::CommandStringKind::ImageResizer4 => {
                 Ok(::imageflow_riapi::ir4::Ir4Expand {
                     i: ::imageflow_riapi::ir4::Ir4Command::QueryString(value.to_owned()),
                     encode_id: *encode,
@@ -80,7 +80,7 @@ impl NodeDef for CommandStringPartiallyExpandedDef{
         match e.expand_steps().map_err(|e| FlowError::from_layout(e).at(here!())) {
             Ok(r) => {
                 //TODO: Find a way to expose warnings
-                ctx.replace_node(ix, r.steps.unwrap().into_iter().map(|n| Node::from(n)).collect::<>());
+                ctx.replace_node(ix, r.steps.unwrap().into_iter().map( Node::from).collect::<>());
                 Ok(())
             }
             Err(e) => {
@@ -105,7 +105,7 @@ impl NodeDefOneInputExpand for ConstrainDef{
         "imazen.constrain"
     }
     fn estimate(&self, params: &NodeParams, input: FrameEstimate) -> Result<FrameEstimate>{
-        if let &NodeParams::Json(s::Node::Constrain(ref constraint)) = params {
+        if let NodeParams::Json(s::Node::Constrain(ref constraint)) = *params {
             input.map_frame(|input| {
                 let (w, h, _) = constrain(input.w as u32, input.h as u32, constraint);
                 Ok(FrameInfo {

@@ -1,16 +1,16 @@
-//! # imageflow_types
+//! # `imageflow_types`
 //!
 //! Responsible for the schema of the JSON API, as well as for providing types used internally.
 //! (There is a lot of overlap, as there can be, in early versions).
 //!
-//! ## snake_case vs camelCase
+//! ## `snake_case` vs `camelCase`
 //!
 //! We don't currently do any style transformations, but we have tests to try to ensure they're
 //! always possible.
 //! Here are the transformation rules we use to verify all key names we select can be round-tripped
 //! between styles:
 //!
-//! #### camelCase to snake_case
+//! #### `camelCase` to `snake_case`
 //!
 //! 1. Add a leading underscore to every group of numbers unless preceded by a lowercase x or y.
 //!    `/([^xy])([0-9]+)/ with "$1_$2"/`
@@ -19,7 +19,7 @@
 //! 4. Collapse all duplicate underscores `replace("__", "_")`
 //! 5. Lowercase the resulting string
 //!
-//! #### snake_case to camelCase
+//! #### `snake_case` to `camelCase`
 //!
 //!  1. Uppercase every letter following an underscore or word boundary.
 //!     `Regex::new(r"(_|\b)([a-z])").unwrap().replace_all(&s, |c: &Captures| c[0].to_uppercase())`
@@ -66,7 +66,7 @@ impl PixelFormat{
         match *self{
             PixelFormat::Gray8 => 1,
             PixelFormat::Bgr24 => 3,
-            PixelFormat::Bgra32 => 4,
+            PixelFormat::Bgra32 |
             PixelFormat::Bgr32 => 4
         }
     }
@@ -126,10 +126,10 @@ impl FromStr for Filter {
             "cubicfast" => Ok(Filter::CubicFast),
             "cubic_0_1" => Ok(Filter::Cubic),
             "cubicsharp" => Ok(Filter::CubicSharp),
-            "catmullrom" => Ok(Filter::CatmullRom),
+            "catmullrom" |
             "catrom" => Ok(Filter::CatmullRom),
             "mitchell" => Ok(Filter::Mitchell),
-            "cubicbspline" => Ok(Filter::CubicBSpline),
+            "cubicbspline" |
             "bspline" => Ok(Filter::CubicBSpline),
             "hermite" => Ok(Filter::Hermite),
             "jinc" => Ok(Filter::Jinc),
@@ -229,16 +229,16 @@ impl Color {
     }
     pub fn to_color_32(&self) -> std::result::Result<Color32, ParseColorError> {
 
-        match self {
-            &Color::Srgb(ref srgb) => {
-                match srgb {
-                    &ColorSrgb::Hex(ref hex_srgb) => {
+        match *self {
+            Color::Srgb(ref srgb) => {
+                match *srgb {
+                    ColorSrgb::Hex(ref hex_srgb) => {
                         parse_color_hex(hex_srgb)
                     }
                 }
             }
-            &Color::Black => Ok(Color32::black()),
-            &Color::Transparent => Ok(Color32::transparent_black()),
+            Color::Black => Ok(Color32::black()),
+            Color::Transparent => Ok(Color32::transparent_black()),
         }
     }
 
@@ -540,7 +540,7 @@ pub enum Framewise {
 }
 
 impl Framewise {
-    pub fn clone_nodes<'a>(&'a self) -> Vec<&'a Node> {
+    pub fn clone_nodes(&self) -> Vec<&Node> {
         match *self {
             Framewise::Graph(ref graph) => graph.nodes.values().collect::<Vec<&Node>>(),
             Framewise::Steps(ref nodes) => nodes.iter().collect::<Vec<&Node>>(),
@@ -549,9 +549,9 @@ impl Framewise {
 
     fn io_ids_and_directions(&self) -> Vec<(i32, IoDirection)>{
         let mut vec = self.clone_nodes().into_iter().map(|n|{
-            match n{
-                &Node::Decode{io_id, ..} => Some((io_id, IoDirection::In)),
-                &Node::Encode{io_id, ..} => Some((io_id, IoDirection::Out)),
+            match *n{
+                Node::Decode{io_id, ..} => Some((io_id, IoDirection::In)),
+                Node::Encode{io_id, ..} => Some((io_id, IoDirection::Out)),
                 _ => None
             }
         }).filter(|v| v.is_some()).map(|v| v.unwrap()).collect::<Vec<(i32, IoDirection)>>();
@@ -1021,16 +1021,16 @@ impl Response001 {
                                       ext: &'static str)
                                       -> Response001 {
 
-        let frame_perf = FramePerformance{ nodes: vec![ NodePerf {wall_microseconds: 30000, name: "decode".to_owned()}], overhead_microseconds: 100, wall_microseconds: 30100};
+        let frame_perf = FramePerformance{ nodes: vec![ NodePerf {wall_microseconds: 30_000, name: "decode".to_owned()}], overhead_microseconds: 100, wall_microseconds: 30_100};
         Response001 {
             code: 200,
             success: true,
             message: None,
             data: ResponsePayload::JobResult(JobResult {
                 encodes: vec![EncodeResult {
-                                  io_id: io_id,
-                                  w: w,
-                                  h: h,
+                                  io_id,
+                                  w,
+                                  h,
                                   preferred_mime_type: mime.to_owned(),
                                   preferred_extension: ext.to_owned(),
                                   bytes: ResultBytes::Elsewhere,
@@ -1175,7 +1175,7 @@ mod key_casing {
             serde_json::Value::Object(ref map) => {
                 for (k, v) in map {
                     list.push(k.to_owned());
-                    collect_keys(list, &v);
+                    collect_keys(list, v);
                 }
             }
             serde_json::Value::Array(ref vec) => {

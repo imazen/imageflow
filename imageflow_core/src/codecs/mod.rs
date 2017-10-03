@@ -77,12 +77,12 @@ impl CodecInstanceContainer {
 
             io.seek(c, 0).map_err(|e| e.at(here!()))?;
             if buffer.starts_with(b"GIF89a") || buffer.starts_with(b"GIF87a") {
-                return Ok(CodecInstanceContainer
+                Ok(CodecInstanceContainer
                     {
                         io_id,
                         codec: CodecKind::Decoder(Box::new(gif::GifDecoder::create(c, io, io_id)?)),
                         encode_io: None
-                    });
+                    })
             } else {
                 Ok(CodecInstanceContainer
                     {

@@ -183,12 +183,10 @@ pub fn parse_url(url: &Url) -> (Instructions, Vec<ParseWarning>) {
         let v = value.into_owned();
         if map.contains_key(&k) {
             warnings.push(ParseWarning::DuplicateKey((k, v)));
+        } else if !IR4_KEYS.contains(&k.as_str()) {
+            warnings.push(ParseWarning::KeyNotRecognized((k, v)));
         } else {
-            if !IR4_KEYS.contains(&k.as_str()) {
-                warnings.push(ParseWarning::KeyNotRecognized((k, v)));
-            } else {
-                map.insert(k, v.to_owned());
-            }
+            map.insert(k, v.to_owned());
         }
     }
     let i = Instructions::delete_from_map(&mut map, Some(&mut warnings));
@@ -333,7 +331,7 @@ impl Instructions{
         i.s_brightness = p.parse_f64("s.brightness");
         i.s_sepia = p.parse_bool("s.sepia");
         i.a_balance_white = match p.parse_white_balance("a.balancewhite"){
-            Some(HistogramThresholdAlgorithm::True) => Some(HistogramThresholdAlgorithm::Area),
+            Some(HistogramThresholdAlgorithm::True) |
             Some(HistogramThresholdAlgorithm::Area) => Some(HistogramThresholdAlgorithm::Area),
             None => None,
             Some(other) => {

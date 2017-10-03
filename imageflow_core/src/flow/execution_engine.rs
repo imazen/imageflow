@@ -42,7 +42,7 @@ impl<'a> Engine<'a> {
     }
 
     pub fn validate_graph(&self) -> Result<()> {
-        for node_index in (0..self.g.node_count()).map(|i| NodeIndex::new(i)) {
+        for node_index in (0..self.g.node_count()).map(NodeIndex::new) {
             let n = self.g.node_weight(node_index).unwrap();
 
             let (req_edges_in, req_edges_out) = n.def.edges_required(&n.params).unwrap();
@@ -196,7 +196,7 @@ impl<'a> Engine<'a> {
             };
 
             if let Some((io_id, commands)) = result_value {
-                for c in commands.iter() {
+                for c in commands {
                     self.job.tell_decoder(io_id, c.to_owned()).unwrap();
                 }
             }
@@ -238,7 +238,7 @@ impl<'a> Engine<'a> {
             render_graph_versions: self.job.graph_recording.record_graph_versions.unwrap_or(false),
             maximum_graph_versions: 100,
         };
-        let update = notify_graph_changed(&mut self.g, info)?;
+        let update = notify_graph_changed(&mut self.g, &info)?;
         if let Some(GraphRecordingUpdate { next_graph_version }) = update {
             self.job.next_graph_version = next_graph_version;
         }
@@ -335,7 +335,7 @@ impl<'a> Engine<'a> {
                 // Restore this one nodes' estimate
                 self.g.node_weight_mut(node_id).unwrap().frame_est = FrameEstimate::InvalidateGraph;
 
-                return self.estimate_node_recursive(node_id, recurse_limit -1)
+                self.estimate_node_recursive(node_id, recurse_limit -1)
             },
             other => other
         }
@@ -367,20 +367,16 @@ impl<'a> Engine<'a> {
                     .node_weight(nix)
                     .unwrap()
                     .def;
-                if def.can_expand(){
-
-                    if self.parents_complete(nix) {
-                        if let FrameEstimate::Some(_) = self.g
-                            .node_weight(nix)
-                            .unwrap()
-                            .frame_est {} else {
-                            //Try estimation one last time if it didn't happen yet
-                            let _ = self.estimate_node_recursive(nix,100).map_err(|e| e.at(here!()))?;
-                        }
-                        next = Some((nix, def));
-                        break;
+                if def.can_expand() && self.parents_complete(nix) {
+                    if let FrameEstimate::Some(_) = self.g
+                        .node_weight(nix)
+                        .unwrap()
+                        .frame_est {} else {
+                        //Try estimation one last time if it didn't happen yet
+                        let _ = self.estimate_node_recursive(nix, 100).map_err(|e| e.at(here!()))?;
                     }
-
+                    next = Some((nix, def));
+                    break;
                 }
             }
             match next {
@@ -388,7 +384,7 @@ impl<'a> Engine<'a> {
                 Some((next_ix, def)) => {
                     let more_frames = {
                         let mut ctx = self.op_ctx_mut();
-                        let _ = def.expand(&mut ctx, next_ix).map_err(|e| e.with_ctx_mut(&ctx, next_ix).at(here!()))?;
+                        def.expand(&mut ctx, next_ix).map_err(|e| e.with_ctx_mut(&ctx, next_ix).at(here!()))?;
                         ctx.more_frames.get()
                     };
                     self.more_frames = self.more_frames || more_frames;
@@ -460,7 +456,7 @@ impl<'a> Engine<'a> {
                             return Err(nerror!(::ErrorKind::InvalidOperation, "Node {} execution returned {:?}", def.name(), result).into());
                         }else{
                             // Force update the estimate to match reality
-                            if let &NodeResult::Frame(bit) = &result{
+                            if let NodeResult::Frame(bit) = result{
                                 if !bit.is_null() {
                                     unsafe {
                                         ctx.weight_mut(next_ix).frame_est = FrameEstimate::Some((*bit).frame_info());

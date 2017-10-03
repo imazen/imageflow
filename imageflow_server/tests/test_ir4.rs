@@ -31,7 +31,7 @@ lazy_static! {
 }
 
 fn assert_valid_image(url: &str) {
-    match fetch(&url, Some(FetchConfig{ custom_ca_trust_file: None, read_error_body: Some(true)})){
+    match fetch(url, Some(FetchConfig{ custom_ca_trust_file: None, read_error_body: Some(true)})){
         Ok(v) => {
             fc::clients::stateless::LibClient {}.get_image_info(&v.bytes).expect("Image response should be valid");
         },
@@ -299,7 +299,7 @@ fn run_server_test_i4(){
 
 #[allow(dead_code)]
 #[cfg(not(any(target_os = "windows", target_os = "macos")))]
-fn test_https(context: ProcTestContext){
+fn test_https(context: &ProcTestContext){
     {
         let c = context.subfolder_context("https_demo"); //stuck on port 39876
         c.subfolder_context("demo");
@@ -403,8 +403,8 @@ impl ProcTestContextHttp for ProcTestContext{
         // Double check we dumped output on segfault
         if status_code == None {
             if let Some(ref out) = output {
-                std::io::stderr().write(&out.stderr).unwrap();
-                std::io::stdout().write(&out.stdout).unwrap();
+                std::io::stderr().write_all(&out.stderr).unwrap();
+                std::io::stdout().write_all(&out.stdout).unwrap();
             }
             let _ = writeln!(&mut std::io::stderr(),
                              "exit code {:?}", status_code);

@@ -175,37 +175,37 @@ pub enum ErrorKind{
 }
 impl CategorizedError for ErrorKind{
     fn category(&self) -> ErrorCategory{
-        match self{
-            &ErrorKind::AllocationFailed => ErrorCategory::OutOfMemory,
+        match *self{
+            ErrorKind::AllocationFailed => ErrorCategory::OutOfMemory,
 
-            &ErrorKind::GraphInvalid |
-            &ErrorKind::GraphCyclic |
-            &ErrorKind::InvalidNodeConnections => ErrorCategory::GraphInvalid,
-            &ErrorKind::NullArgument |
-            &ErrorKind::InvalidArgument |
-            &ErrorKind::InvalidCoordinates |
-            &ErrorKind::InvalidMessageEndpoint |
-            &ErrorKind::IoIdNotFound |
-            &ErrorKind::ItemNotFound |
-            &ErrorKind::DuplicateIoId |
-            &ErrorKind::LayoutError |
-            &ErrorKind::InvalidNodeParams => ErrorCategory::ArgumentInvalid,
+            ErrorKind::GraphInvalid |
+            ErrorKind::GraphCyclic |
+            ErrorKind::InvalidNodeConnections => ErrorCategory::GraphInvalid,
+            ErrorKind::NullArgument |
+            ErrorKind::InvalidArgument |
+            ErrorKind::InvalidCoordinates |
+            ErrorKind::InvalidMessageEndpoint |
+            ErrorKind::IoIdNotFound |
+            ErrorKind::ItemNotFound |
+            ErrorKind::DuplicateIoId |
+            ErrorKind::LayoutError |
+            ErrorKind::InvalidNodeParams => ErrorCategory::ArgumentInvalid,
 
-            &ErrorKind::FailedBorrow |
-            &ErrorKind::NodeParamsMismatch |
-            &ErrorKind::BitmapPointerNull |
-            &ErrorKind::MethodNotImplemented |
-            &ErrorKind::ValidationNotImplemented |
-            &ErrorKind::InvalidOperation |
-            &ErrorKind::InternalError |
-            &ErrorKind::InvalidState => ErrorCategory::InternalError,
-            &ErrorKind::GifDecodingError |
-            &ErrorKind::ColorProfileError => ErrorCategory::ImageMalformed,
-            &ErrorKind::DecodingIoError => ErrorCategory::IoError,
-            &ErrorKind::EncodingIoError => ErrorCategory::IoError,
-            &ErrorKind::GifEncodingError => ErrorCategory::InternalError,
-            &ErrorKind::CError(ref e) => e.category(),
-            &ErrorKind::Category(c) => c
+            ErrorKind::FailedBorrow |
+            ErrorKind::NodeParamsMismatch |
+            ErrorKind::BitmapPointerNull |
+            ErrorKind::MethodNotImplemented |
+            ErrorKind::ValidationNotImplemented |
+            ErrorKind::InvalidOperation |
+            ErrorKind::InternalError |
+            ErrorKind::InvalidState |
+            ErrorKind::GifEncodingError => ErrorCategory::InternalError,
+            ErrorKind::GifDecodingError |
+            ErrorKind::ColorProfileError => ErrorCategory::ImageMalformed,
+            ErrorKind::DecodingIoError |
+            ErrorKind::EncodingIoError => ErrorCategory::IoError,
+            ErrorKind::CError(ref e) => e.category(),
+            ErrorKind::Category(c) => c
         }
     }
 }
@@ -635,11 +635,7 @@ impl OutwardErrorBuffer{
     }
     pub fn recoverable(&self) -> bool {
         if let Some(ref e) = self.last_error {
-            if self.last_panic.is_none() && e.recoverable() {
-                true
-            } else {
-                false
-            }
+            self.last_panic.is_none() && e.recoverable()
         } else {
             true
         }
@@ -721,11 +717,11 @@ pub enum CStatus{
 }
 impl CategorizedError for CStatus{
     fn category(&self) -> ErrorCategory {
-        match self{
-            &CStatus::Custom(_) => ErrorCategory::Custom,
-            &CStatus::Unknown(_) => ErrorCategory::Unknown,
-            &CStatus::ErrorMismatch => ErrorCategory::InternalError,
-            &CStatus::Cat(c) => c
+        match *self{
+            CStatus::Custom(_) => ErrorCategory::Custom,
+            CStatus::Unknown(_) => ErrorCategory::Unknown,
+            CStatus::ErrorMismatch => ErrorCategory::InternalError,
+            CStatus::Cat(c) => c
         }
     }
 }
@@ -744,11 +740,11 @@ impl From<i32> for CStatus{
 }
 impl CStatus {
     pub fn to_i32(&self) -> i32{
-        match self{
-            &CStatus::Custom(v) => v,
-            &CStatus::Unknown(v) => v,
-            &CStatus::ErrorMismatch => 90,
-            &CStatus::Cat(c) => c.to_c_error_code()
+        match *self{
+            CStatus::Custom(v) |
+            CStatus::Unknown(v) => v,
+            CStatus::ErrorMismatch => 90,
+            CStatus::Cat(c) => c.to_c_error_code()
         }
     }
 }
@@ -789,19 +785,19 @@ pub mod writing_to_slices {
             let error_kind = result.as_ref().map_err(|e| e.kind()).err();
             match error_kind {
                 Some(std::io::ErrorKind::WriteZero) => WriteResult::TruncatedAt(bytes_written),
-                Some(error) => WriteResult::Error { bytes_written: bytes_written, error: result.unwrap_err() },
+                Some(error) => WriteResult::Error { bytes_written, error: result.unwrap_err() },
                 None => WriteResult::AllWritten(bytes_written)
             }
         }
         pub fn bytes_written(&self) -> usize {
-            match self {
-                &WriteResult::AllWritten(v) => v,
-                &WriteResult::TruncatedAt(v) => v,
-                &WriteResult::Error { bytes_written, .. } => bytes_written
+            match *self {
+                WriteResult::AllWritten(v) |
+                WriteResult::TruncatedAt(v) => v,
+                WriteResult::Error { bytes_written, .. } => bytes_written
             }
         }
         pub fn is_ok(&self) -> bool {
-            if let &WriteResult::AllWritten(_) = self {
+            if let WriteResult::AllWritten(_) = *self {
                 true
             } else {
                 false

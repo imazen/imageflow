@@ -3,7 +3,7 @@
 //! This module contains the functions exported for use by other languages.
 //!
 //!
-//! If you're writing bindings, you're in the right place. Don't use imageflow_core::ffi
+//! If you're writing bindings, you're in the right place. Don't use `imageflow_core::ffi`
 //!
 //! Don't call functions against the same job context from multiple threads. You can create contexts
 //! from as many threads as you like, but you are responsible for synchronizing API calls
@@ -30,7 +30,7 @@
 //! ### Destroying things
 //!
 //! * An `imageflow_context` should ALWAYS be destroyed with `imageflow_context_destroy`
-//! * JsonResponse structures can be released early with `imageflow_json_response_destroy`
+//! * `JsonResponse` structures can be released early with `imageflow_json_response_destroy`
 //!
 //! ## ... when allocated by the client, Imageflow only borrows it for the `invocation`
 //!
@@ -50,7 +50,7 @@
 //! will be documented.
 //!
 //! * If you give Imageflow a buffer to read an image from, it will need to access that buffer
-//!   much longer than the initial io_create call.
+//!   until the context is disposed (unless otherwise specified)
 //!
 //! ## What if I need something to outlive the `context`?
 //!
@@ -63,12 +63,12 @@
 //! Two types are platform-specific - use the corresponding pointer or size type that varies with
 //! your platform.
 //!
-//! * libc::c_void (or anything *mut or *const): Platform-sized pointer. 32 or 64 bits.
-//! * The above includes *mut Context an *mut JsonResponse
-//! * libc::size_t (or usize): Unsigned integer, platform-sized. 32 or 64 bits.
+//! * `libc::c_void` (or anything *mut or *const): Platform-sized pointer. 32 or 64 bits.
+//! * The above includes *mut Context an *mut `JsonResponse`
+//! * `libc::size_t` (or usize): Unsigned integer, platform-sized. 32 or 64 bits.
 //!
 //!
-//! Treat *mut Context and *mut JsonResponse as opaque pointers.
+//! Treat *mut `Context` and *mut `JsonResponse` as opaque pointers.
 //!
 //! ## Strings
 //!
@@ -79,8 +79,8 @@
 //! * Operating system null-terminated. Only applicable to `imageflow_io_create_for_file`.
 //! * UTF-8 buffer with length. You'll usually see *const u8 and a length parameter. This is common for buffers of UTF-8 encoded json.
 //!
-//! filename: *const libc::c_char
-//! function_name: *const libc::c_char
+//! filename: *const `libc::c_char`
+//! `function_name`: *const `libc::c_char`
 //!
 //! Fixed size
 //!
@@ -103,7 +103,7 @@
 //! This "fail fast" behavior offers the best opportunity for a useful stacktrace, and it's not a
 //! recoverable error.
 //!
-//! If you try to continue using an errored imageflow_context, the process will terminate.
+//! If you try to continue using an errored `imageflow_context`, the process will terminate.
 //! Some errors can be recovered from, but you *must* do that before trying to use the context again.
 //!
 //! For all APIS: You'll likely segfault the process if you provide a `context` pointer that is dangling or invalid.
@@ -237,7 +237,7 @@ include!("abi_version.rs");
 /// Call this method before doing anything else to ensure that your header or FFI bindings are compatible
 /// with the libimageflow that is currently loaded.
 ///
-/// Provide the values IMAGEFLOW_ABI_VER_MAJOR and IMAGEFLOW_ABI_VER_MINOR to this function.
+/// Provide the values `IMAGEFLOW_ABI_VER_MAJOR` and `IMAGEFLOW_ABI_VER_MINOR` to this function.
 ///
 /// False means that
 ///
@@ -270,7 +270,7 @@ pub extern "C" fn imageflow_abi_version_minor() -> u32 {
 #[no_mangle]
 pub extern "C" fn imageflow_context_create(imageflow_abi_ver_major: u32, imageflow_abi_ver_minor: u32) -> *mut Context {
     if imageflow_abi_compatible(imageflow_abi_ver_major, imageflow_abi_ver_minor) {
-        Context::create_cant_panic().map(|b| Box::into_raw(b)).unwrap_or(std::ptr::null_mut())
+        Context::create_cant_panic().map(Box::into_raw).unwrap_or(std::ptr::null_mut())
     }else{
         ptr::null_mut()
     }
@@ -278,7 +278,7 @@ pub extern "C" fn imageflow_context_create(imageflow_abi_ver_major: u32, imagefl
 
 /// Begins the process of destroying the context, yet leaves error information intact
 /// so that any errors in the tear-down process can be
-/// debugged with imageflow_context_error_write_to_buffer.
+/// debugged with `imageflow_context_error_write_to_buffer`.
 ///
 /// Returns true if no errors occurred. Returns false if there were tear-down issues.
 #[no_mangle]
@@ -288,7 +288,7 @@ pub extern "C" fn imageflow_context_begin_terminate(context: *mut Context) -> bo
 }
 
 /// Destroys the imageflow context and frees the context object.
-/// Only use this with contexts created using imageflow_context_create
+/// Only use this with contexts created using `imageflow_context_create`
 #[no_mangle]
 pub extern "C" fn imageflow_context_destroy(context: *mut Context) {
     if !context.is_null() {
@@ -446,9 +446,9 @@ pub extern "C" fn imageflow_context_print_and_exit_if_error(context: *mut Contex
 
 
 ///
-/// Writes fields from the given imageflow_json_response to the locations referenced.
+/// Writes fields from the given `imageflow_json_response` to the locations referenced.
 /// The buffer pointer sent out will be a UTF-8 byte array of the given length (not null-terminated). It will
-/// also become invalid if the JsonResponse associated is freed, or if the context is destroyed.
+/// also become invalid if the `JsonResponse` associated is freed, or if the context is destroyed.
 ///
 /// See `imageflow_context_error_as_http_code` for just the http status code equivalent.
 ///
@@ -477,7 +477,7 @@ pub extern fn imageflow_json_response_read(context: *mut Context,
             *buffer_size_out = (*response_in).buffer_size;
         }
     }
-    return true;
+    true
 }
 
 
@@ -501,7 +501,7 @@ pub extern "C" fn imageflow_json_response_destroy(context: *mut Context,
 }
 
 ///
-/// Sends a JSON message to the imageflow_context using endpoint `method`.
+/// Sends a JSON message to the `imageflow_context` using endpoint `method`.
 ///
 /// ## Endpoints
 ///
@@ -520,7 +520,7 @@ pub extern "C" fn imageflow_json_response_destroy(context: *mut Context,
 ///
 /// You should call `imageflow_context_has_error()` to see if this succeeded.
 ///
-/// A JsonResponse is returned for success and most error conditions.
+/// A `JsonResponse` is returned for success and most error conditions.
 /// Call `imageflow_json_response_destroy` when you're done with it (or dispose the context).
 #[no_mangle]
 pub extern "C" fn imageflow_context_send_json(context: *mut Context,
@@ -609,7 +609,7 @@ pub fn create_abi_json_response(c: &mut Context,
         let out_json_bytes = std::slice::from_raw_parts_mut(pointer_to_final_buffer,
                                                                 json_bytes.len());
 
-        out_json_bytes.clone_from_slice(&json_bytes);
+        out_json_bytes.clone_from_slice(json_bytes);
 
         imageflow_response as *const JsonResponse
     }
@@ -663,7 +663,7 @@ pub fn create_abi_json_response(c: &mut Context,
 ///
 /// Adds an input buffer to the job context.
 /// You are ALWAYS responsible for freeing the memory provided (at the time specified by Lifetime).
-/// If you specify OutlivesFunctionCall, then the buffer will be copied.
+/// If you specify `OutlivesFunctionCall`, then the buffer will be copied.
 ///
 ///
 #[no_mangle]
@@ -725,7 +725,7 @@ pub extern "C" fn imageflow_context_add_output_buffer(context: *mut Context, io_
 
 
 ///
-/// Provides access to the underlying buffer for the given imageflow_io object.
+/// Provides access to the underlying buffer for the given io_id
 ///
 #[no_mangle]
 pub extern "C" fn imageflow_context_get_output_buffer_by_id(context: *mut Context,
@@ -788,7 +788,7 @@ pub extern "C" fn imageflow_context_memory_allocate(context: *mut Context,
 }
 
 ///
-/// Frees memory allocated with imageflow_context_memory_allocate early.
+/// Frees memory allocated with `imageflow_context_memory_allocate` early.
 ///
 /// * filename/line may be used for debugging purposes. They are optional. Provide null/-1 to skip.
 /// * If provided, `filename` should be an null-terminated UTF-8 or ASCII string which will outlive the context.

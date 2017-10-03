@@ -12,7 +12,7 @@ pub struct BitmapBgraDef{}
 
 impl BitmapBgraDef{
     fn get(&self, p: &NodeParams) -> Result<*mut *mut BitmapBgra> {
-        if let &NodeParams::Json(s::Node::FlowBitmapBgraPtr { ptr_to_flow_bitmap_bgra_ptr }) = p {
+        if let NodeParams::Json(s::Node::FlowBitmapBgraPtr { ptr_to_flow_bitmap_bgra_ptr }) = *p {
             let ptr: *mut *mut BitmapBgra = ptr_to_flow_bitmap_bgra_ptr as *mut *mut BitmapBgra;
             if ptr.is_null() {
                 return Err(nerror!(::ErrorKind::InvalidNodeParams, "The pointer to the bitmap bgra pointer is null! Must be a valid reference to a pointer's location."));
@@ -45,7 +45,7 @@ impl NodeDef for BitmapBgraDef {
         unsafe {
             if (*ptr).is_null() {
                 let input = ctx.frame_est_from(ix, EdgeKind::Input).map_err(|e| e.at(here!()))?;
-                Ok((input))
+                Ok(input)
             } else {
                 let b = &(**ptr);
                 Ok(FrameEstimate::Some(FrameInfo {
@@ -84,7 +84,7 @@ impl NodeDef for BitmapBgraDef {
 pub struct DecoderDef{}
 
 fn decoder_get_io_id(params: &NodeParams) -> Result<i32> {
-    if let &NodeParams::Json(s::Node::Decode { io_id, .. }) = params {
+    if let NodeParams::Json(s::Node::Decode { io_id, .. }) = *params {
         Ok(io_id)
     }else{
         Err(nerror!(::ErrorKind::NodeParamsMismatch, "Need Decode, got {:?}", params))
@@ -157,7 +157,7 @@ pub struct DecoderPrimitiveDef{}
 
 impl DecoderPrimitiveDef{
     fn get(&self, params: &NodeParams) -> Result<(i32, Option<Vec<s::DecoderCommand>>)> {
-        if let &NodeParams::Json(s::Node::Decode { io_id, ref commands }) = params {
+        if let NodeParams::Json(s::Node::Decode { io_id, ref commands }) = *params {
             Ok((io_id, commands.clone()))
         }else{
             Err(nerror!(::ErrorKind::NodeParamsMismatch, "Need Decode, got {:?}", params))
@@ -219,7 +219,7 @@ pub struct EncoderDef{}
 
 impl EncoderDef{
     fn get(&self, params: &NodeParams) -> Result<(i32, s::EncoderPreset)> {
-        if let &NodeParams::Json(s::Node::Encode { io_id, ref preset }) = params {
+        if let NodeParams::Json(s::Node::Encode { io_id, ref preset }) = *params {
             Ok((io_id, preset.clone()))
         }else{
             Err(nerror!(::ErrorKind::NodeParamsMismatch, "Need Encode, got {:?}", params))

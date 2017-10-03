@@ -30,8 +30,8 @@ impl<T> AppendOnlySet<T> {
     // allocated with the same address.
     // Pointer is never dereferenced
     pub fn get_reference(&self, ptr: *const T) -> Option<&T> {
-        for ref item in self.slots.borrow().iter() {
-            let item_ptr = &***item as *const T;
+        for item in self.slots.borrow().iter() {
+            let item_ptr = &**item as *const T;
             if ptr == item_ptr {
                 //Change lifetime to that of of AppendOnlySet instead of slots.borrow()
                 return Some(unsafe { &*item_ptr })
@@ -135,7 +135,7 @@ impl<T> AddRemoveSet<T> {
         match self.try_get_option_reference_mut(v)? {
             Some(mut ref_obj) => {
                 *ref_obj = None;
-                return Ok(true)
+                Ok(true)
             },
             None => Ok(false),
         }

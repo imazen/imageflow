@@ -3,7 +3,7 @@
 //! It intentionally avoids dealing with positioning. The idea is that sizing determines output image size, and is therefore
 //! something a user tunes separately from alignment issues within the canvas. For face/region of interest cropping
 //! and careful cropping (resort to padding before cropping off a face, for example), it cannot know. Therefore it
-//! accepts a PartialCropProvider to determine how close to the desired crop the provider is willing to go.
+//! accepts a `PartialCropProvider` to determine how close to the desired crop the provider is willing to go.
 //! The provider is only used to adjust the layout sizes, but users should also have the provider handle alignment of crops.
 use imageflow_helpers::preludes::from_std::*;
 use ::std;
@@ -388,7 +388,8 @@ impl Layout {
     }
 }
 
-/// Implements PartialCropProvider but always crops fully - same as regular crop
+/// Implements `PartialCropProvider` but always crops fully - same as regular crop
+#[derive(Default)]
 pub struct IdentityCropProvider {}
 impl IdentityCropProvider{
     pub fn new() -> IdentityCropProvider{

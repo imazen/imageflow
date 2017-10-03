@@ -56,7 +56,7 @@ impl Screen {
         let pal = local_pal.as_ref().or(self.global_pal.as_ref()).ok_or("the frame must have _some_ palette")?;
 
         self.disposal.dispose(&mut self.pixels, self.width, self.bg_color);
-        self.disposal = Disposal::new(&frame, &self.pixels, self.width);
+        self.disposal = Disposal::new(frame, &self.pixels, self.width);
 
         for (dst, &src) in self.pixels.iter_mut().subimage(frame.left as usize, frame.top as usize, frame.width as usize, frame.height as usize, self.width).zip(buffer.iter()) {
             if let Some(transparent) = frame.transparent {

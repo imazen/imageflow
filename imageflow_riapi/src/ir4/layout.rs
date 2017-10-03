@@ -408,6 +408,7 @@ impl Ir4Layout{
     }
 
 }
+#[derive(Default)]
 pub struct FramewiseBuilder{
     steps: Vec<s::Node>
 }

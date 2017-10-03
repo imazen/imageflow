@@ -77,10 +77,11 @@ fn compare(input: Option<s::IoEnum>, allowed_off_by_one_bytes: usize, checksum_n
 
     let build = s::Build001 {
         builder_config: Some(s::Build001Config {
-            graph_recording: match debug {
-                true => Some(s::Build001GraphRecording::debug_defaults()),
-                false => None
-            },
+            graph_recording: if debug {
+                Some(s::Build001GraphRecording::debug_defaults())
+            }else {
+                None
+            }
         }),
         io: inputs,
         framewise: s::Framewise::Steps(steps)
@@ -105,17 +106,17 @@ fn compare(input: Option<s::IoEnum>, allowed_off_by_one_bytes: usize, checksum_n
             println!("{:?}", dest_bitmap);
         }
 
-        let mut ctx = checkums_ctx_for(&context);
+        let mut ctx = checksums_ctx_for(&context);
         ctx.create_if_missing = store_if_missing;
         ctx.max_off_by_one_ratio = allowed_off_by_one_bytes as f32 / ((*dest_bitmap).h * (*dest_bitmap).stride) as f32;
         regression_check(&ctx, dest_bitmap, checksum_name)
     }
 }
-fn checkums_ctx_for<'a>(c: &'a Context) -> ChecksumCtx<'a>{
+fn checksums_ctx_for(c: &Context) -> ChecksumCtx{
     let visuals = Path::new(env!("CARGO_MANIFEST_DIR")).join(Path::new("tests")).join(Path::new("visuals"));
     std::fs::create_dir_all(&visuals).unwrap();
     ChecksumCtx {
-        c: c,
+        c,
         visuals_dir: visuals.clone(),
         cache_dir: visuals.join(Path::new("cache")),
         create_if_missing: true,
@@ -399,7 +400,7 @@ fn get_result_dimensions(steps: Vec<s::Node>, io: Vec<s::IoObject>, debug: bool)
 
     let build = s::Build001{
         builder_config: Some(default_build_config(debug)),
-        io: io,
+        io,
         framewise: s::Framewise::Steps(steps)
     };
     let mut context = Context::create().unwrap();
@@ -574,7 +575,7 @@ fn test_with_callback(checksum_name: &str, input: s::IoEnum, callback: fn(s::Ima
 
         context.execute_1(send_execute).unwrap();
 
-        let ctx = checkums_ctx_for(&context);
+        let ctx = checksums_ctx_for(&context);
         matched = regression_check(&ctx, *ptr_to_ptr, &checksum_name)
 
 
@@ -600,7 +601,7 @@ fn checksum_bitmap(bitmap: &BitmapBgra) -> String {
         let info = format!("{}x{} fmt={}", bitmap.w, bitmap.h, bitmap.fmt as i32);
         let width_bytes = bitmap.w as usize *  bitmap.fmt.bytes();
         //TODO: Support Bgr32 properly by skipping alpha channel
-        let mut hash = XxHash::with_seed(0x8ed12ad9483d28a0);
+        let mut hash = XxHash::with_seed(0x8ed1_2ad9_483d_28a0);
         for h in 0isize..(bitmap.h as isize){
             let row_slice = ::std::slice::from_raw_parts(bitmap.pixels.offset(h * bitmap.stride as isize), width_bytes);
             hash.write(row_slice)

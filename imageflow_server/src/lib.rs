@@ -387,7 +387,7 @@ fn ir4_local_respond<F>(_: &SharedData, source: &Path, framewise_generator: F) -
 }
 
 fn ir4_local_handler(req: &mut Request, local_path: &PathBuf, _: &MountLocation) -> IronResult<Response> {
-    let requested_path = requested_path::RequestedPath::new(local_path, &req);
+    let requested_path = requested_path::RequestedPath::new(local_path, req);
 
     let url: url::Url = req.url.clone().into();
     let shared = req.get::<persistent::Read<SharedData>>().unwrap();
@@ -549,7 +549,7 @@ pub fn serve(c: StartServerConfig) {
     // Mount prefix (external) (url|relative path)
     // pass through static files (whitelisted??)
 
-    for m in c.mounts.into_iter() {
+    for m in c.mounts {
         let copy = m.clone();
         let mount_result = match m.engine {
             //MountedEngine::Ir4Https => "ir4_https",

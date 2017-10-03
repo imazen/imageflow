@@ -127,7 +127,7 @@ impl Ir4SourceFrameInfo{
     }
 }
 
-/// Cannot expand decoder. use Ir4Translate for that.
+/// Cannot expand decoder. use `Ir4Translate` for that.
 pub struct Ir4Expand{
     pub i: Ir4Command,
     pub source: Ir4SourceFrameInfo,

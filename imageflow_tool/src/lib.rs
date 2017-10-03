@@ -149,7 +149,7 @@ pub fn main_with_exit_code() -> i32 {
         if let Some(dir_str) = m.value_of("debug-package").and_then(|v| Some(v.to_owned())){
             builder.write_errors_maybe().unwrap();
             let dir = Path::new(&dir_str);
-            builder.bundle_to(&dir);
+            builder.bundle_to(dir);
             let curdir = std::env::current_dir().unwrap();
             std::env::set_current_dir(&dir).unwrap();
             let cap = hlp::process_capture::CaptureTo::create("recipe", None, vec![subcommand_name.to_owned(), "--json".to_owned(), "recipe.json".to_owned()], artifact_source());
@@ -159,22 +159,21 @@ pub fn main_with_exit_code() -> i32 {
             let archive_name = PathBuf::from(format!("{}.zip", &dir_str));
             hlp::filesystem::zip_directory_nonrecursive(&dir,&archive_name.as_path()).unwrap();
             return cap.exit_code();
-        }else {
-            if let Some(dir) = m.value_of("bundle-to").and_then(|v| Some(v.to_owned())) {
+        } else if let Some(dir) = m.value_of("bundle-to").and_then(|v| Some(v.to_owned())) {
                 builder.write_errors_maybe().unwrap();
                 let dir = Path::new(&dir);
-                return builder.bundle_to(&dir);
-            } else {
-                builder.write_response_maybe(m.value_of("response"))
-                    .expect("IO error writing JSON output file. Does the directory exist?");
-                builder.write_errors_maybe().expect("Writing to stderr failed!");
-                return builder.get_exit_code().unwrap();
-            }
+                return builder.bundle_to(dir);
+        } else {
+            builder.write_response_maybe(m.value_of("response"))
+                .expect("IO error writing JSON output file. Does the directory exist?");
+            builder.write_errors_maybe().expect("Writing to stderr failed!");
+            return builder.get_exit_code().unwrap();
         }
+
     }
 
-    if let Some(ref matches) = matches.subcommand_matches("diagnose") {
-        let m: &&clap::ArgMatches = matches;
+    if let Some(matches) = matches.subcommand_matches("diagnose") {
+        let m: &clap::ArgMatches = matches;
 
         if m.is_present("show-compilation-info") {
             println!("{}\n{}\n",
@@ -188,7 +187,7 @@ pub fn main_with_exit_code() -> i32 {
         }
         if m.is_present("wait") {
             let mut input_buf = String::new();
-            let input = std::io::stdin().read_line(&mut input_buf).ok().expect("Failed to read from stdin. Are you using --wait in a non-interactive shell?");
+            let input = std::io::stdin().read_line(&mut input_buf).expect("Failed to read from stdin. Are you using --wait in a non-interactive shell?");
             println!("{}", input);
             return 0;
         }
@@ -196,8 +195,8 @@ pub fn main_with_exit_code() -> i32 {
             panic!("Panicking on command");
         }
     }
-    if let Some(ref matches) = matches.subcommand_matches("examples") {
-        let m: &&clap::ArgMatches = matches;
+    if let Some(matches) = matches.subcommand_matches("examples") {
+        let m: &clap::ArgMatches = matches;
 
         if m.is_present("generate") {
             self_test::export_examples(None);

@@ -29,7 +29,7 @@ pub type BGRA16 = BGRA<u16>;
 impl<T: Clone> BGRA<T> {
     #[must_use] #[inline(always)]
     pub fn new(r: T, g: T, b: T, a: T) -> Self {
-        BGRA{r:r,g:g,b:b,a:a}
+        BGRA{r,g,b,a }
     }
 
     /// Iterate over all components (length=4)

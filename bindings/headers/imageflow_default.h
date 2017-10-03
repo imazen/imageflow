@@ -44,7 +44,7 @@ typedef enum imageflow_lifetime {
 /// Call this method before doing anything else to ensure that your header or FFI bindings are compatible
 /// with the libimageflow that is currently loaded.
 ///
-/// Provide the values IMAGEFLOW_ABI_VER_MAJOR and IMAGEFLOW_ABI_VER_MINOR to this function.
+/// Provide the values `IMAGEFLOW_ABI_VER_MAJOR` and `IMAGEFLOW_ABI_VER_MINOR` to this function.
 ///
 /// False means that
 ///
@@ -71,13 +71,13 @@ struct imageflow_context* imageflow_context_create(uint32_t imageflow_abi_ver_ma
 
 /// Begins the process of destroying the context, yet leaves error information intact
 /// so that any errors in the tear-down process can be
-/// debugged with imageflow_context_error_write_to_buffer.
+/// debugged with `imageflow_context_error_write_to_buffer`.
 ///
 /// Returns true if no errors occurred. Returns false if there were tear-down issues.
 bool imageflow_context_begin_terminate(struct imageflow_context* context);
 
 /// Destroys the imageflow context and frees the context object.
-/// Only use this with contexts created using imageflow_context_create
+/// Only use this with contexts created using `imageflow_context_create`
 void imageflow_context_destroy(struct imageflow_context* context);
 
 /// Returns true if the context is in an error state. You must immediately deal with the error,
@@ -153,9 +153,9 @@ bool imageflow_context_error_write_to_buffer(struct imageflow_context* context, 
 bool imageflow_context_print_and_exit_if_error(struct imageflow_context* context);
 
 ///
-/// Writes fields from the given imageflow_json_response to the locations referenced.
+/// Writes fields from the given `imageflow_json_response` to the locations referenced.
 /// The buffer pointer sent out will be a UTF-8 byte array of the given length (not null-terminated). It will
-/// also become invalid if the struct imageflow_json_response associated is freed, or if the context is destroyed.
+/// also become invalid if the `struct imageflow_json_response` associated is freed, or if the context is destroyed.
 ///
 /// See `imageflow_context_error_as_http_code` for just the http status code equivalent.
 ///
@@ -178,7 +178,7 @@ bool imageflow_json_response_read(struct imageflow_context* context, struct imag
 bool imageflow_json_response_destroy(struct imageflow_context* context, struct imageflow_json_response* response);
 
 ///
-/// Sends a JSON message to the imageflow_context using endpoint `method`.
+/// Sends a JSON message to the `imageflow_context` using endpoint `method`.
 ///
 /// ## Endpoints
 ///
@@ -197,14 +197,14 @@ bool imageflow_json_response_destroy(struct imageflow_context* context, struct i
 ///
 /// You should call `imageflow_context_has_error()` to see if this succeeded.
 ///
-/// A struct imageflow_json_response is returned for success and most error conditions.
+/// A `struct imageflow_json_response` is returned for success and most error conditions.
 /// Call `imageflow_json_response_destroy` when you're done with it (or dispose the context).
 struct imageflow_json_response const* imageflow_context_send_json(struct imageflow_context* context, char const* method, uint8_t const* json_buffer, size_t json_buffer_size);
 
 ///
 /// Adds an input buffer to the job context.
 /// You are ALWAYS responsible for freeing the memory provided (at the time specified by imageflow_lifetime).
-/// If you specify OutlivesFunctionCall, then the buffer will be copied.
+/// If you specify `OutlivesFunctionCall`, then the buffer will be copied.
 ///
 ///
 bool imageflow_context_add_input_buffer(struct imageflow_context* context, int32_t io_id, uint8_t const* buffer, size_t buffer_byte_count, imageflow_lifetime lifetime);
@@ -218,7 +218,7 @@ bool imageflow_context_add_input_buffer(struct imageflow_context* context, int32
 bool imageflow_context_add_output_buffer(struct imageflow_context* context, int32_t io_id);
 
 ///
-/// Provides access to the underlying buffer for the given imageflow_io object.
+/// Provides access to the underlying buffer for the given io_id
 ///
 bool imageflow_context_get_output_buffer_by_id(struct imageflow_context* context, int32_t io_id, uint8_t const** result_buffer, size_t* result_buffer_length);
 
@@ -233,7 +233,7 @@ bool imageflow_context_get_output_buffer_by_id(struct imageflow_context* context
 void* imageflow_context_memory_allocate(struct imageflow_context* context, size_t bytes, char const* filename, int32_t line);
 
 ///
-/// Frees memory allocated with imageflow_context_memory_allocate early.
+/// Frees memory allocated with `imageflow_context_memory_allocate` early.
 ///
 /// * filename/line may be used for debugging purposes. They are optional. Provide null/-1 to skip.
 /// * If provided, `filename` should be an null-terminated UTF-8 or ASCII string which will outlive the context.

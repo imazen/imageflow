@@ -51,7 +51,7 @@ impl GifDecoder {
     fn read_next_frame_info(&mut self) -> Result<()>{
         self.last_frame = self.next_frame.take();
         // Currently clones local palette
-        self.next_frame = self.reader.next_frame_info().map_err(|e| FlowError::from(e).at(here!()))?.map(|v|v.clone());
+        self.next_frame = self.reader.next_frame_info().map_err(|e| FlowError::from(e).at(here!()))?.cloned();
         Ok(())
     }
 
@@ -62,7 +62,7 @@ impl GifDecoder {
             let w = self.screen.width;
             let h = self.screen.height;
             let copy = ffi::flow_bitmap_bgra_create(c.flow_c(), w as i32, h as i32, false, ffi::PixelFormat::Bgra32);
-            if copy == ptr::null_mut() {
+            if copy.is_null() {
                 cerror!(c).panic();
             }
             let copy_mut = &mut *copy;
@@ -197,7 +197,7 @@ impl Encoder for GifEncoder{
             pixels.extend_from_slice(frame.pixels_slice_mut().expect("Frame must have pixel buffer"));
 
             let mut f = match frame.fmt {
-                ::ffi::PixelFormat::Bgr24 => Ok(from_bgr_with_stride(frame.w as u16, frame.h as u16, &mut pixels, frame.stride as usize)),
+                ::ffi::PixelFormat::Bgr24 => Ok(from_bgr_with_stride(frame.w as u16, frame.h as u16, &pixels, frame.stride as usize)),
                 ::ffi::PixelFormat::Bgra32 => Ok(from_bgra_with_stride(frame.w as u16, frame.h as u16, &mut pixels, frame.stride as usize)),
                 ::ffi::PixelFormat::Bgr32 => Ok(from_bgrx_with_stride(frame.w as u16, frame.h as u16, &mut pixels, frame.stride as usize)),
                 other =>  Err(nerror!(ErrorKind::InvalidArgument, "PixelFormat {:?} not supported for gif encoding", frame.fmt))
@@ -256,9 +256,7 @@ fn remove_padding(width: u16, pixels: &[u8], stride: usize) -> Vec<u8>{
 pub fn from_bgra_with_stride(width: u16, height: u16, pixels: &mut [u8], stride: usize) -> ::gif::Frame<'static> {
     let mut without_padding = remove_padding(width, pixels, stride);
     for pix in without_padding.chunks_mut(4) {
-        let a = pix[0];
-        pix[0] = pix[2];
-        pix[2] = a;
+        pix.swap(0,2);
     }
     ::gif::Frame::from_rgba(width, height, &mut without_padding)
 }
@@ -267,9 +265,7 @@ pub fn from_bgrx_with_stride(width: u16, height: u16, pixels: &mut [u8], stride:
     let mut without_padding = remove_padding(width, pixels, stride);
 
     for pix in without_padding.chunks_mut(4) {
-        let a = pix[0];
-        pix[0] = pix[2];
-        pix[2] = a;
+        pix.swap(0,2);
         pix[3] = 0xFF;
     }
     ::gif::Frame::from_rgba(width, height, &mut without_padding)
@@ -283,9 +279,7 @@ pub fn from_bgrx_with_stride(width: u16, height: u16, pixels: &mut [u8], stride:
 pub fn from_bgr_with_stride(width: u16, height: u16, pixels: &[u8], stride: usize) -> ::gif::Frame<'static> {
     let mut without_padding = remove_padding(width, pixels, stride);
     for pix in without_padding.chunks_mut(3) {
-        let a = pix[0];
-        pix[0] = pix[2];
-        pix[2] = a;
+        pix.swap(0,2);
     }
-    ::gif::Frame::from_rgb(width, height, &mut without_padding)
+    ::gif::Frame::from_rgb(width, height, &without_padding)
 }

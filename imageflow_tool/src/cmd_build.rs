@@ -91,7 +91,7 @@ impl CategorizedError for CmdError{
 impl CmdError {
     pub fn to_json(&self) -> JsonResponse{
         let message = format!("{:#?}", self);
-        JsonResponse::fail_with_message(self.category().http_status_code() as i64, &message)
+        JsonResponse::fail_with_message(i64::from(self.category().http_status_code()), &message)
     }
     pub fn exit_code(&self) -> i32 {
         self.category().process_exit_code()
@@ -120,7 +120,7 @@ impl From<fc::FlowError> for CmdError {
 
 impl std::fmt::Display for CmdError {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        if let &CmdError::FlowError(ref e) = self {
+        if let CmdError::FlowError(ref e) = *self {
             write!(f, "{}", e)
         } else {
             write!(f, "{:#?}", self)
@@ -192,7 +192,7 @@ impl CmdBuild {
             return Ok(before);
         }
         let args: Vec<String> = inject.unwrap();
-        if args.len() == 0 {
+        if args.is_empty() {
             return Ok(before);
         }
 
@@ -211,10 +211,8 @@ impl CmdBuild {
 
 
 
-        let max_possible_args = match user_providing_numbers {
-            true => args.len() / 2,
-            false => args.len(),
-        };
+        let max_possible_args = if user_providing_numbers { args.len() / 2 } else { args.len() };
+
         if max_possible_args > old_io_ids.len() {
             return Err(CmdError::BadArguments(format!("Too many arguments provided for {:?}. Only {} openings in the recipe ({:?}).",
                                                       dir,
@@ -222,47 +220,44 @@ impl CmdBuild {
                                                       &old_io_ids)));
         }
 
-        let vec_of_io_results = match user_providing_numbers {
-            true => {
-                args.as_slice().chunks(2).map(|pair| {
-                    if pair.len() == 1 {
-                        return Err(CmdError::InconsistentUseOfIoId(
-                            format!("Use of io_id values must be consistent. Odd number of values ({}) for {:?}", args.len(), dir)));
+        let vec_of_io_results = if user_providing_numbers {
+
+            args.as_slice().chunks(2).map(|pair| {
+                if pair.len() == 1 {
+                    return Err(CmdError::InconsistentUseOfIoId(
+                        format!("Use of io_id values must be consistent. Odd number of values ({}) for {:?}", args.len(), dir)));
+                }
+                let io_id = match pair[0].parse::<i32>() {
+                    Ok(v) if old_io_ids.contains(&v) => v,
+                    Ok(v) => {
+                        return Err(CmdError::IoIdNotInRecipe(v));
                     }
-                    let io_id = match pair[0].parse::<i32>() {
-                        Ok(v) if old_io_ids.contains(&v) => v,
-                        Ok(v) => {
-                            return Err(CmdError::IoIdNotInRecipe(v));
-                        }
-                        Err(_) => {
-                            return Err(CmdError::InconsistentUseOfIoId(
-                                format!("Expected numeric io_id, found {}. Use io_ids consistently or allow implicit numbering by order of IoObject appearance in the json file", pair[0])));
-                        }
-                    };
-                    Ok((io_id, pair[1].as_ref()))
-                }).collect::<Vec<Result<(i32,&str)>>>()
-            }
-            false => {
-                args.as_slice()
-                    .iter()
-                    .enumerate()
-                    .map(|(index, v)| Ok((old_io_ids[index], v.as_ref())))
-                    .collect::<Vec<Result<(i32, &str)>>>()
-            }
+                    Err(_) => {
+                        return Err(CmdError::InconsistentUseOfIoId(
+                            format!("Expected numeric io_id, found {}. Use io_ids consistently or allow implicit numbering by order of IoObject appearance in the json file", pair[0])));
+                    }
+                };
+                Ok((io_id, pair[1].as_ref()))
+            }).collect::<Vec<Result<(i32,&str)>>>()
+        } else {
+            args.as_slice()
+                .iter()
+                .enumerate()
+                .map(|(index, v)| Ok((old_io_ids[index], v.as_ref())))
+                .collect::<Vec<Result<(i32, &str)>>>()
         };
 
 
+
         let mut hash = HashMap::new();
-        for item in vec_of_io_results.into_iter() {
+        for item in vec_of_io_results {
             let (k, v) = item?;
-            match hash.insert(k, v) {
-                Some(ref old_value) => {
-                    return Err(CmdError::BadArguments(format!("Duplicate values for io_id {}: {} and {}",
-                                                              k,
-                                                              old_value,
-                                                              v)));
-                }
-                _ => {}
+
+            if let Some(old_value) = hash.insert(k, v) {
+                return Err(CmdError::BadArguments(format!("Duplicate values for io_id {}: {} and {}",
+                                                          k,
+                                                          old_value,
+                                                          v)));
             }
         }
 
@@ -328,7 +323,7 @@ impl CmdBuild {
                         let new_path = directory.join(&fname).as_os_str().to_str().unwrap().to_owned();
                         let bytes = ::imageflow_helpers::fetching::fetch_bytes(&url).unwrap();
                         let mut file = BufWriter::new(File::create(&new_path).unwrap());
-                        file.write(&bytes).unwrap();
+                        file.write_all(&bytes).unwrap();
                         log.push(format!("Downloaded {} to {} (referenced as {})", &url, &new_path, &fname));
                         s::IoEnum::Filename(fname)
                     }
@@ -406,11 +401,11 @@ impl CmdBuild {
     pub fn write_response_maybe(&self, response_file: Option<&str>) -> std::io::Result<()> {
         if  self.response.is_some() {
 
-            if let Some(ref filename) = response_file {
+            if let Some(filename) = response_file {
                 let mut file = BufWriter::new(File::create(filename).unwrap());
-                file.write(&self.get_json_response().response_json)?;
+                file.write_all(&self.get_json_response().response_json)?;
             } else {
-                std::io::stdout().write(&self.get_json_response().response_json)?;
+                std::io::stdout().write_all(&self.get_json_response().response_json)?;
             }
 
         }

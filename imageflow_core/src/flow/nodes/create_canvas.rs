@@ -9,17 +9,17 @@ pub struct CreateCanvasNodeDef{}
 
 impl CreateCanvasNodeDef{
     fn get(&self, n: &NodeParams) -> Result<(usize, usize, PixelFormat, s::Color)>{
-        if let &NodeParams::Json(s::Node::CreateCanvas { format,
+        if let NodeParams::Json(s::Node::CreateCanvas { format,
                                     w,
                                     h,
-                                    ref color }) = n{
-            let max_dimension = 2000000; // 2million
+                                    ref color }) = *n{
+            let max_dimension = 2_000_000; // 2million
 
             if w < 1 || w > max_dimension {
                 Err(nerror!(::ErrorKind::InvalidCoordinates, "canvas width ({}) must be greater than zero and less than {}.", w, max_dimension))
             } else if h < 1 || h > max_dimension {
                 Err(nerror!(::ErrorKind::InvalidCoordinates, "canvas height ({}) must be greater than zero and less than {}.", w, max_dimension))
-            } else if h * w > 100000000 {
+            } else if h * w > 100_000_000 {
                 Err(nerror!(::ErrorKind::InvalidCoordinates, "canvas size ({}) cannot exceed 100 megapixels.", w))
             } else if format == ffi::PixelFormat::Gray8 {
                 Err(nerror!(::ErrorKind::InvalidNodeParams, "canvas format cannot be grayscale; single-channel grayscale bitmaps are not yet supported in Imageflow"))

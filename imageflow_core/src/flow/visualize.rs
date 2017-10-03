@@ -18,7 +18,7 @@ pub struct GraphRecordingUpdate {
 }
 
 pub fn notify_graph_changed(graph_ref: &mut Graph,
-                            r: GraphRecordingInfo)
+                            r: &GraphRecordingInfo)
                             -> Result<Option<GraphRecordingUpdate>> {
     if !r.record_graph_versions || r.current_graph_version > r.maximum_graph_versions {
         return Ok(None);
@@ -103,17 +103,17 @@ pub fn print_graph(f: &mut std::io::Write,
                    g: &Graph,
                    node_frame_filename_prefix: Option<&str>)
                    -> std::io::Result<()> {
-    try!(writeln!(f, "digraph g {{\n"));
-    try!(writeln!(f, "{}node [shape=box, fontsize=20, fontcolor=\"#5AFA0A\" fontname=\"sans-serif bold\"]\n  size=\"12,18\"\n", INDENT));
-    try!(writeln!(f, "{}edge [fontsize=20, fontname=\"sans-serif\"]\n", INDENT));
+    writeln!(f, "digraph g {{\n")?;
+    writeln!(f, "{}node [shape=box, fontsize=20, fontcolor=\"#5AFA0A\" fontname=\"sans-serif bold\"]\n  size=\"12,18\"\n", INDENT)?;
+    writeln!(f, "{}edge [fontsize=20, fontname=\"sans-serif\"]\n", INDENT)?;
 
 
     // output all edges
     for (i, edge) in g.raw_edges().iter().enumerate() {
-        try!(write!(f, "{}n{} -> n{}",
-                    INDENT,
-                    edge.source().index(),
-                    edge.target().index()));
+        write!(f, "{}n{} -> n{}",
+               INDENT,
+               edge.source().index(),
+               edge.target().index())?;
 
         let weight = g.node_weight(edge.source()).unwrap();
 
@@ -131,10 +131,10 @@ pub fn print_graph(f: &mut std::io::Write,
                 }
             }
         };
-        try!(write!(f, " [label=\"e{}: {}{}\"]\n", i, dimensions, match g.edge_weight(EdgeIndex::new(i)).unwrap() {
-            &EdgeKind::Canvas => " canvas",
+        write!(f, " [label=\"e{}: {}{}\"]\n", i, dimensions, match *g.edge_weight(EdgeIndex::new(i)).unwrap() {
+            EdgeKind::Canvas => " canvas",
             _ => ""
-        }));
+        })?;
     }
 
     let mut total_ns: u64 = 0;
@@ -145,19 +145,19 @@ pub fn print_graph(f: &mut std::io::Write,
         total_ns += weight.cost.wall_ns as u64;
         let ms = weight.cost.wall_ns as f64 / 1000f64;
 
-        try!(write!(f, "{}n{} [", INDENT, index.index()));
+        write!(f, "{}n{} [", INDENT, index.index())?;
 
         if let Some(prefix) = node_frame_filename_prefix {
-            try!(write!(f, "image=\"{}{}.png\", ", prefix, weight.stable_id));
+            write!(f, "image=\"{}{}.png\", ", prefix, weight.stable_id)?;
         }
-        try!(write!(f, "label=\"n{}: ",  index.index()));
-        try!(weight.graphviz_node_label(f));
-        try!(write!(f, "\n{:.5}ms\"]\n", ms));
+        write!(f, "label=\"n{}: ", index.index())?;
+        weight.graphviz_node_label(f)?;
+        write!(f, "\n{:.5}ms\"]\n", ms)?;
     }
     let total_ms = (total_ns as f64) / 1000.0f64;
-    try!(writeln!(f, "{}graphinfo [label=\"{} nodes\n{} edges\nExecution time: {:.3}ms\"]\n",
-                  INDENT, g.node_count(), g.edge_count(), total_ms));
-    try!(writeln!(f, "}}"));
+    writeln!(f, "{}graphinfo [label=\"{} nodes\n{} edges\nExecution time: {:.3}ms\"]\n",
+             INDENT, g.node_count(), g.edge_count(), total_ms)?;
+    writeln!(f, "}}")?;
     Ok(())
 }
 
@@ -169,12 +169,12 @@ fn remove_file_if_exists(path: &str) -> io::Result<()> {
     result
 }
 fn files_identical(filename_a: &str, filename_b: &str) -> std::io::Result<bool> {
-    let mut a = try!(File::open(filename_a));
+    let mut a = File::open(filename_a)?;
     let mut a_str = Vec::new();
-    try!(a.read_to_end(&mut a_str));
+    a.read_to_end(&mut a_str)?;
     let mut b = try!(File::open(filename_b));
     let mut b_str = Vec::new();
-    try!(b.read_to_end(&mut b_str));
+    b.read_to_end(&mut b_str)?;
 
     Ok(a_str == b_str)
 }
@@ -191,7 +191,7 @@ fn job_delete_graphviz(job_id: i32) -> io::Result<()> {
             break;
         } else {
             node_index += 1;
-            try!(remove_file_if_exists(&next));
+            remove_file_if_exists(&next)?;
         }
     }
     let mut version_index = 0;
@@ -203,9 +203,9 @@ fn job_delete_graphviz(job_id: i32) -> io::Result<()> {
             break;
         } else {
             version_index += 1;
-            try!(remove_file_if_exists(&next));
-            try!(remove_file_if_exists(&next_png));
-            try!(remove_file_if_exists(&next_svg));
+            remove_file_if_exists(&next)?;
+            remove_file_if_exists(&next_png)?;
+            remove_file_if_exists(&next_svg)?;
         }
     }
     Ok(())

@@ -65,8 +65,8 @@ fn built_ago() -> (i64, &'static str){
 pub fn one_line_version() -> String {
     //Create options for branch and release_tag
     let branch = benv::BUILD_ENV_INFO.get("GIT_OPTIONAL_BRANCH").unwrap(); //still needs to be unwrapped
-    let release_tag = if let &Some(ref tag) = benv::BUILD_ENV_INFO.get("GIT_OPTIONAL_TAG").unwrap() {
-        if tag.starts_with("v") {
+    let release_tag = if let Some(tag) = *benv::BUILD_ENV_INFO.get("GIT_OPTIONAL_TAG").unwrap() {
+        if tag.starts_with('v') {
             Some(&tag[1..])
         } else { None }
     } else {None};
@@ -96,9 +96,7 @@ pub fn one_line_version() -> String {
 
         let source = if ci_job_title.starts_with("Travis 88888"){
             "simulation CI"
-        }else if ci_job_title.starts_with("Travis "){
-            "unofficial CI"
-        }else if ci_job_title.starts_with("AppVeyor ") {
+        }else if ci_job_title.starts_with("Travis ") ||  ci_job_title.starts_with("AppVeyor ") {
             "unofficial CI"
         }else if ci_job_title.starts_with("Local ") {
             "user-compiled"

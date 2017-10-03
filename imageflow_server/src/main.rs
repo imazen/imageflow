@@ -73,7 +73,7 @@ fn main_with_exit_code() -> i32 {
 
     let matches = app.get_matches();
 
-    if let Some(ref matches) = matches.subcommand_matches("diagnose") {
+    if let Some(matches) = matches.subcommand_matches("diagnose") {
         let m: &&clap::ArgMatches = matches;
 
         if m.is_present("show-compilation-info") {
@@ -90,14 +90,14 @@ fn main_with_exit_code() -> i32 {
             return 0;
         }
     }
-    if let Some(ref matches) = matches.subcommand_matches("start") {
+    if let Some(matches) = matches.subcommand_matches("start") {
         let m: &&clap::ArgMatches = matches;
 
 
         let port = matches.value_of("port").map(|s| s.parse::<u16>().expect("Port must be a valid 16-bit positive integer") ).unwrap_or(39876);
         let integration_test = matches.is_present("integration-test");
-        let data_dir = m.value_of("data-dir").map(|s| PathBuf::from(s));
-        let cert = m.value_of("cert").map(|s| PathBuf::from(s));
+        let data_dir = m.value_of("data-dir").map(PathBuf::from(s));
+        let cert = m.value_of("cert").map(PathBuf::from(s));
         if let Some(ref p) = cert{
             if !p.is_file(){
                 println!("The provided certificate file does not exist: {:?}", &cert);

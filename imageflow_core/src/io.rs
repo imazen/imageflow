@@ -158,7 +158,7 @@ impl IoProxy {
 
     fn check_io_id(context: &Context, io_id: i32) -> Result<()>{
         if context.io_id_present(io_id){
-            return Err(nerror!(ErrorKind::DuplicateIoId, "io_id {} is already in use on this context", io_id));
+            Err(nerror!(ErrorKind::DuplicateIoId, "io_id {} is already in use on this context", io_id))
         }else{
             Ok(())
         }

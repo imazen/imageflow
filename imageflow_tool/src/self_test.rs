@@ -20,8 +20,9 @@ enum ReplacementInput{
 }
 impl ReplacementInput{
     pub fn prepare(&self, c: &ProcTestContext){
-        match self{
-            &ReplacementInput::File{ref path, ref source} => {
+        #[cfg_attr(feature = "cargo-clippy", allow(single_match))]
+        match *self{
+            ReplacementInput::File{ref path, ref source} => {
                 let bytes = source.get_bytes();
                 c.write_file(path, &bytes);
             }
@@ -29,9 +30,9 @@ impl ReplacementInput{
         }
     }
     pub fn parameter(& self) -> String{
-        match self{
-            &ReplacementInput::File{ref path, ..} => path.to_owned(),
-            &ReplacementInput::Url(ref str) => str.to_owned()
+        match *self{
+            ReplacementInput::File{ref path, ..} => path.to_owned(),
+            ReplacementInput::Url(ref str) => str.to_owned()
         }
     }
 }
@@ -44,13 +45,13 @@ struct ReplacementOutput{
 impl ReplacementOutput{
     pub fn file(io_id: i32, path: &'static str) -> ReplacementOutput{
         ReplacementOutput{
-            io_id: io_id,
+            io_id,
             value: OutputDestination::File{path: path.to_owned()}
         }
     }
     pub fn b64(io_id: i32) -> ReplacementOutput{
         ReplacementOutput{
-            io_id: io_id,
+            io_id,
             value: OutputDestination::Base64
         }
     }
@@ -113,20 +114,20 @@ impl BuildScenario{
         c.write_json(&json_fname, &self.recipe);
 
         let mut command = format!("{} v0.1/build --json {}", c.bin_location().to_str().unwrap(), json_fname);
-        if self.new_inputs.len() > 0 {
+        if !self.new_inputs.is_empty() {
             let arg = format!(" --in {}", self.new_inputs.as_slice().iter().map(|i| i.parameter()).collect::<Vec<String>>().join(" "));
             command.push_str(&arg);
         }
-        if self.new_outputs.len() > 0 {
+        if !self.new_outputs.is_empty() {
             let arg = format!(" --out {}", self.new_outputs.as_slice().iter().map(|i| i.parameter()).collect::<Vec<String>>().join(" "));
             command.push_str(&arg);
         }
-        if let Some(ref outfile) = self.json_out{
+        if let Some(outfile) = self.json_out{
             let arg = format!(" --response {}", outfile);
             command.push_str(&arg);
         }
 
-        c.write_file(Self::default_script_name(), &command.as_bytes());
+        c.write_file(Self::default_script_name(), command.as_bytes());
         c
     }
 
@@ -138,8 +139,8 @@ impl BuildScenario{
 
         let product = c.exec_full(&full_command);
 
-        if let Some(ScenarioExpectations{ref status_code}) = self.expectations{
-            product.expect_status_code(status_code.clone());
+        if let Some(ScenarioExpectations{status_code}) = self.expectations{
+            product.expect_status_code(status_code);
         }
         product
     }
@@ -380,7 +381,7 @@ pub fn run(tool_location: Option<PathBuf>) -> i32 {
         match resp.data {
             s::ResponsePayload::BuildResult(info) => {
 
-                assert!(info.encodes.len() == 1);
+                assert_eq!(info.encodes.len(), 1);
                 let encode: &s::EncodeResult = &info.encodes[0];
                 assert_eq!(encode.w, 45);
                 assert_eq!(encode.h, 45);
@@ -402,7 +403,7 @@ pub fn run(tool_location: Option<PathBuf>) -> i32 {
         match resp.data {
             s::ResponsePayload::BuildResult(info) => {
 
-                assert!(info.encodes.len() == 1);
+                assert_eq!(info.encodes.len(),1);
                 let encode: &s::EncodeResult = &info.encodes[0];
                 assert_eq!(encode.w, 40);
                 assert_eq!(encode.h, 40);
@@ -422,7 +423,7 @@ pub fn run(tool_location: Option<PathBuf>) -> i32 {
 //        match resp.data {
 //            s::ResponsePayload::BuildResult(info) => {
 //
-//                assert!(info.encodes.len() == 1);
+//                assert_eq!(info.encodes.len(), 1);
 //                let encode: &s::EncodeResult = &info.encodes[0];
 //                assert_eq!(encode.preferred_extension, "gif".to_owned());
 //            }

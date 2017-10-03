@@ -107,7 +107,7 @@ impl CacheFolder{
         CacheEntry {
             path: self.root.join(hlp::hashing::normalize_slashes(hlp::hashing::bits_format(hash, self.bits_format))),
             hash: *hash,
-            parent: &self
+            parent: self
         }
     }
 // PUT A README IN THE CACHE ROOT! DO IT!

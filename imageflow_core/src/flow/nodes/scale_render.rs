@@ -21,7 +21,7 @@ impl NodeDefOneInputExpand for ScaleDef{
         "imazen.scale"
     }
     fn estimate(&self, params: &NodeParams, input: FrameEstimate) -> Result<FrameEstimate>{
-        if let &NodeParams::Json(s::Node::Resample2D { w, h, .. }) = params{
+        if let NodeParams::Json(s::Node::Resample2D { w, h, .. }) = *params{
 
             input.map_frame(|info| {
                 Ok(FrameInfo {
@@ -238,7 +238,7 @@ impl NodeDefOneInputOneCanvas for DrawImageDef {
     }
 
     fn render(&self, c: &Context, canvas: &mut BitmapBgra, input: &mut BitmapBgra, p: &NodeParams) -> Result<()> {
-        if let &NodeParams::Json(s::Node::DrawImageExact { x, y, w, h, hints, blend }) = p {
+        if let NodeParams::Json(s::Node::DrawImageExact { x, y, w, h, hints, blend }) = *p {
 
             if x + w > canvas.w || y + h > canvas.h {
 
@@ -311,7 +311,7 @@ impl NodeDefOneInputOneCanvas for Scale2dDef {
     }
 
     fn render(&self, c: &Context, canvas: &mut BitmapBgra, input: &mut BitmapBgra, p: &NodeParams) -> Result<()> {
-        if let &NodeParams::Json(s::Node::Resample2D { w, h, down_filter, up_filter, hints, scaling_colorspace }) = p {
+        if let NodeParams::Json(s::Node::Resample2D { w, h, down_filter, up_filter, hints, scaling_colorspace }) = *p {
 
 
             if w != canvas.w || h != canvas.h {

@@ -21,7 +21,7 @@ impl NodeDefMutateBitmap for ColorMatrixSrgbMutDef{
         "imazen.color_matrix_srgb_mut"
     }
     fn mutate(&self, c: &Context, bitmap: &mut BitmapBgra,  p: &NodeParams) -> Result<()> {
-        if let &NodeParams::Json(s::Node::ColorMatrixSrgb { ref matrix }) = p {
+        if let NodeParams::Json(s::Node::ColorMatrixSrgb { ref matrix }) = *p {
             unsafe {
                 let color_matrix_ptrs = matrix.iter().map(|row| row as *const f32).collect::<Vec<*const f32>>();
 
@@ -138,7 +138,7 @@ struct Color{
     a: u8
 }
 
-fn color_shift(c: Color) -> [[f32;5];5]{
+fn color_shift(c: &Color) -> [[f32;5];5]{
     let percent = c.a as f32 / 255.0f32;
     [
         [1f32 - percent, 0f32, 0f32, 0f32, 0f32],

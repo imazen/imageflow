@@ -110,7 +110,7 @@ impl LibClient {
                 context.add_output_buffer(*io_id).map_err(|e| e.at(here!()))?;
             }
             if let s::Node::CommandString { ref encode, ..} = *node{
-                if let &Some(io_id) = encode{
+                if let Some(io_id) = *encode{
                     context.add_output_buffer(io_id).map_err(|e| e.at(here!()))?;
                 }
             }
@@ -130,7 +130,7 @@ impl LibClient {
         let (encodes, perf): (Vec<s::EncodeResult>, Option<s::BuildPerformance>) = match payload {
             s::ResponsePayload::JobResult(s::JobResult { encodes, performance}) => (encodes, performance),
             _ => {
-                unreachable!();
+                unreachable!()
             }
         };
 

@@ -1,6 +1,8 @@
 use ::preludes::from_std::*;
 use ::std;
 
+#[cfg_attr(feature = "cargo-clippy", allow(unreadable_literal))]
+
 fn parse_rgba_slices(r: &str, g: &str, b: &str, a :&str) -> Result<Color32,std::num::ParseIntError>{
    [a, r,g,b].iter().map(|s|{
         match s.len() {
@@ -83,7 +85,7 @@ impl Color32{
     }
 
     pub fn black() -> Color32{
-        Color32(0xFF000000)
+        Color32(0xFF_00_00_00)
     }
 
 }
