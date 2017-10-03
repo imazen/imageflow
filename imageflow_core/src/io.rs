@@ -210,7 +210,7 @@ impl IoProxy {
     }
 
 
-    pub fn copy_slice<'a, 'b>(context: &'a Context, io_id: i32, bytes: &'b [u8]) -> Result<IoProxy> {
+    pub fn copy_slice(context: &Context, io_id: i32, bytes: & [u8]) -> Result<IoProxy> {
         IoProxy::check_io_id(context,io_id)?;
         unsafe {
             let buf: *mut u8 =

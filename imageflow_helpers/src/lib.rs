@@ -4,6 +4,10 @@
 // `error_chain!` can recurse deeply
 #![recursion_limit = "1024"]
 
+//hexadecimal colors aren't numbers
+#![cfg_attr(feature = "cargo-clippy", allow(unreadable_literal))]
+
+#[cfg_attr(feature = "cargo-clippy", allow(useless_attribute))]
 #[allow(unused_extern_crates)]
 extern crate alloc_system;
 

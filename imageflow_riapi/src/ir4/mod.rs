@@ -10,7 +10,7 @@ use ::ir4::parsing::*;
 use ::ir4::layout::*;
 
 pub enum Ir4Command{
-    Instructions(Instructions),
+    Instructions(Box<Instructions>),
     Url(String),
     QueryString(String)
 }
@@ -19,7 +19,7 @@ impl Ir4Command{
     pub fn parse(&self) -> sizing::Result<Ir4Result> {
         let (i, warn) = match *self {
             Ir4Command::Url(ref url) => parsing::parse_url(&::url::Url::from_str(url).expect("ImageResizer4 Url cannot be parsed into instructions: invalid URI")),
-            Ir4Command::Instructions(i) => (i, vec![]),
+            Ir4Command::Instructions(ref i) => (**i, vec![]),
             Ir4Command::QueryString(ref s) => {
                 let url = ::url::Url::from_str(&format!("https://fakeurl/img.jpg?{}", s)).expect("Must be a valid querystring, excluding ?");
                 parsing::parse_url(&url)

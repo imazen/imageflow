@@ -27,12 +27,16 @@ pub type BGRA8 = BGRA<u8>;
 pub type BGRA16 = BGRA<u16>;
 
 impl<T: Clone> BGRA<T> {
+    // NJ: Haven't profiled this, just assuming someone has
+    #[cfg_attr(feature = "cargo-clippy", allow(inline_always))]
     #[must_use] #[inline(always)]
     pub fn new(r: T, g: T, b: T, a: T) -> Self {
         BGRA{r,g,b,a }
     }
 
     /// Iterate over all components (length=4)
+    // NJ: Haven't profiled this, just assuming someone has
+    #[cfg_attr(feature = "cargo-clippy", allow(inline_always))]
     #[inline(always)]
     pub fn iter(&self) -> std::iter::Cloned<std::slice::Iter<T>> {
         self.as_slice().iter().cloned()
@@ -42,6 +46,8 @@ impl<T: Clone> BGRA<T> {
 
 
 impl<T: Copy, B> ComponentMap<BGRA<B>, T, B> for BGRA<T> {
+    // NJ: Haven't profiled this, just assuming someone has
+    #[cfg_attr(feature = "cargo-clippy", allow(inline_always))]
     #[inline(always)]
     fn map<F>(&self, mut f: F) -> BGRA<B>
         where F: FnMut(T) -> B {
@@ -55,13 +61,16 @@ impl<T: Copy, B> ComponentMap<BGRA<B>, T, B> for BGRA<T> {
 }
 
 impl<T> ComponentBytes<T> for BGRA<T> {
+    // NJ: Haven't profiled this, just assuming someone has
+    #[cfg_attr(feature = "cargo-clippy", allow(inline_always))]
     #[inline(always)]
     fn as_slice(&self) -> &[T] {
         unsafe {
             std::slice::from_raw_parts(self as *const BGRA<T> as *const T, 4)
         }
     }
-
+    // NJ: Haven't profiled this, just assuming someone has
+    #[cfg_attr(feature = "cargo-clippy", allow(inline_always))]
     #[inline(always)]
     fn as_mut_slice(&mut self) -> &mut [T] {
         unsafe {
@@ -71,6 +80,8 @@ impl<T> ComponentBytes<T> for BGRA<T> {
 }
 
 impl<T> std::iter::FromIterator<T> for BGRA<T> {
+    // NJ: Haven't profiled this, just assuming someone has
+    #[cfg_attr(feature = "cargo-clippy", allow(inline_always))]
     #[inline(always)]
     fn from_iter<I: IntoIterator<Item = T>>(into_iter: I) -> Self {
         let mut iter = into_iter.into_iter();

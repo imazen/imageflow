@@ -1,5 +1,6 @@
 #![feature(conservative_impl_trait)]
 #![feature(alloc_system)]
+#[cfg_attr(feature = "cargo-clippy", allow(useless_attribute))]
 #[allow(unused_extern_crates)]
 extern crate alloc_system;
 

@@ -77,10 +77,10 @@ impl FluentNode {
                          color: s::Color)
                          -> FluentNode {
         self.to(s::Node::CreateCanvas {
-            w: w,
-            h: h,
+            w,
+            h,
             format: s::PixelFormat::Bgra32,
-            color: color,
+            color,
         })
     }
 
@@ -94,24 +94,24 @@ impl FluentNode {
                          color: s::Color)
                          -> FluentNode {
         self.to(s::Node::CreateCanvas {
-            w: w,
-            h: h,
-            format: format,
-            color: color,
+            w,
+            h,
+            format,
+            color,
         })
     }
 
 
     pub fn decode(self, io_id: i32) -> FluentNode {
         self.to(s::Node::Decode {
-            io_id: io_id,
+            io_id,
             commands: None,
         })
     }
     pub fn encode(self, io_id: i32, preset: s::EncoderPreset) -> FluentNode {
         self.to(s::Node::Encode {
-            io_id: io_id,
-            preset: preset
+            io_id,
+            preset
         })
     }
 
@@ -138,7 +138,8 @@ impl FluentNode {
     pub fn transpose(self) -> FluentNode {
         self.to(s::Node::Transpose)
     }
-    //#[allow(too_many_arguments)]
+
+    #[cfg_attr(feature = "cargo-clippy", allow(too_many_arguments))]
     pub fn copy_rect_from(self,
                           from: FluentNode,
                           from_x: u32,
@@ -151,12 +152,12 @@ impl FluentNode {
                           -> FluentNode {
         from.node_with_canvas(self,
                               s::Node::CopyRectToCanvas {
-                           from_x: from_x,
-                           from_y: from_y,
-                           width: width,
-                           height: height,
-                           x: x,
-                           y: y,
+                           from_x,
+                           from_y,
+                           width,
+                           height,
+                           x,
+                           y,
                        })
     }
 }
@@ -186,7 +187,7 @@ impl FluentGraphBuilder {
         FluentGraphBuilder { output_nodes: new_vec }
     }
 
-    fn collect_unique(&self) -> Vec<&Box<FluentNode>> {
+    fn collect_unique(&self) -> Vec<&FluentNode> {
         let mut set = HashSet::new();
         let mut todo = Vec::new();
         let mut unique = Vec::new();
@@ -201,7 +202,7 @@ impl FluentGraphBuilder {
             let next = todo.pop().unwrap();
             if !set.contains(&next.uid) {
                 set.insert(next.uid);
-                unique.push(next);
+                unique.push(next.as_ref());
                 if let Some(ref c) = next.canvas {
                     todo.push(c);
                 }
@@ -214,7 +215,7 @@ impl FluentGraphBuilder {
         unique
     }
 
-    fn collect_edges(&self, for_nodes: &[&Box<FluentNode>]) -> Vec<(u64, u64, s::EdgeKind)> {
+    fn collect_edges(&self, for_nodes: &[&FluentNode]) -> Vec<(u64, u64, s::EdgeKind)> {
         let mut edges = vec![];
         for n in for_nodes {
             if let Some(ref parent) = n.canvas {
@@ -226,7 +227,7 @@ impl FluentGraphBuilder {
         }
         edges
     }
-    fn lowest_uid(for_nodes: &[&Box<FluentNode>]) -> Option<u64> {
+    fn lowest_uid(for_nodes: &[&FluentNode]) -> Option<u64> {
         for_nodes.iter().map(|n| n.uid).min()
     }
     pub fn to_framewise(&self) -> s::Framewise {

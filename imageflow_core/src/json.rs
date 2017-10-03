@@ -3,6 +3,7 @@ use ::internal_prelude::works_everywhere::*;
 type ResponderFn<'a, T, D> = Box<Fn(&mut T, D) -> Result<s::ResponsePayload> + 'a + Sync>;
 type MethodHandler<'a, T> = Box<Fn(&mut T, &[u8]) -> (JsonResponse, std::result::Result<(), FlowError>) + 'a + Sync>;
 
+#[cfg_attr(feature = "cargo-clippy", allow(new_without_default_derive))] // clippy is broke
 #[derive(Default)]
 pub struct MethodRouter<'a, T> {
     handlers: HashMap<&'static str, MethodHandler<'a, T>>,
@@ -10,6 +11,7 @@ pub struct MethodRouter<'a, T> {
 }
 
 impl<'a, T> MethodRouter<'a, T> {
+    #[cfg_attr(feature = "cargo-clippy", allow(new_without_default_derive))] // clippy is broke
     pub fn new() -> MethodRouter<'a, T> {
         MethodRouter {
             handlers: HashMap::new(),

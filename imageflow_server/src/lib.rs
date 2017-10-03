@@ -74,6 +74,7 @@ use router::Router;
 
 use time::precise_time_ns;
 
+#[cfg_attr(feature = "cargo-clippy", allow(useless_attribute))]
 #[allow(unused_imports)]
 #[macro_use] extern crate log;
 extern crate env_logger;

@@ -111,8 +111,15 @@
 #![crate_type = "cdylib"]
 #![feature(alloc_system)]
 #![feature(core_intrinsics)]
+
+// These functions are not for use from Rust, so marking them unsafe just reduces compile-time verification and safety
+#![cfg_attr(feature = "cargo-clippy", allow(not_unsafe_ptr_arg_deref))]
+
+
+
 #[macro_use]
 extern crate imageflow_core as c;
+#[cfg_attr(feature = "cargo-clippy", allow(useless_attribute))]
 #[allow(unused_extern_crates)]
 extern crate alloc_system;
 extern crate libc;
@@ -242,6 +249,7 @@ include!("abi_version.rs");
 /// False means that
 ///
 #[no_mangle]
+#[cfg_attr(feature = "cargo-clippy", allow(absurd_extreme_comparisons))]
 pub extern "C" fn imageflow_abi_compatible(imageflow_abi_ver_major: u32, imageflow_abi_ver_minor: u32) -> bool {
     imageflow_abi_ver_major == IMAGEFLOW_ABI_VER_MAJOR && imageflow_abi_ver_minor <= IMAGEFLOW_ABI_VER_MINOR
 }
@@ -725,7 +733,7 @@ pub extern "C" fn imageflow_context_add_output_buffer(context: *mut Context, io_
 
 
 ///
-/// Provides access to the underlying buffer for the given io_id
+/// Provides access to the underlying buffer for the given io id
 ///
 #[no_mangle]
 pub extern "C" fn imageflow_context_get_output_buffer_by_id(context: *mut Context,
@@ -834,7 +842,7 @@ pub fn exercise_json_message() {
                                            json_in.as_ptr(),
                                            json_in.len());
 
-        assert!(response != ptr::null());
+        assert_ne!(response, ptr::null());
 
         let mut json_out_ptr: *const u8 = ptr::null_mut();
         let mut json_out_size: usize = 0;

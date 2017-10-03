@@ -29,6 +29,7 @@
 #![feature(proc_macro)]
 #![feature(conservative_impl_trait)]
 #![feature(alloc_system)]
+#[cfg_attr(feature = "cargo-clippy", allow(useless_attribute))]
 #[allow(unused_extern_crates)]
 extern crate alloc_system;
 pub mod build_env_info;
@@ -220,11 +221,11 @@ use ::imageflow_helpers::colors::*;
 impl Color {
 
 
-    pub fn to_u32_bgra(self) -> std::result::Result<u32, ParseColorError> {
+    pub fn to_u32_bgra(&self) -> std::result::Result<u32, ParseColorError> {
         self.to_color_32().map(|c| c.to_bgra_le() )
     }
 
-    pub fn to_u32_rgba_big_endian(self) -> std::result::Result<u32, ParseColorError> {
+    pub fn to_u32_rgba_big_endian(&self) -> std::result::Result<u32, ParseColorError> {
         self.to_color_32().map(|c| c.to_abgr_le() )
     }
     pub fn to_color_32(&self) -> std::result::Result<Color32, ParseColorError> {

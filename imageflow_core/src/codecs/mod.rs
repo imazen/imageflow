@@ -54,9 +54,9 @@ pub struct CodecInstanceContainer{
 
 impl CodecInstanceContainer {
 
-    pub fn get_decoder(&mut self) -> Result<&mut Box<Decoder>>{
+    pub fn get_decoder(&mut self) -> Result<&mut Decoder>{
         if let CodecKind::Decoder(ref mut d) = self.codec{
-            Ok(d)
+            Ok(&mut **d)
         }else{
             Err(nerror!(ErrorKind::InvalidArgument, "Not a decoder"))
         }

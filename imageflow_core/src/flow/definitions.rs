@@ -163,8 +163,8 @@ pub trait NodeDef: ::std::fmt::Debug{
 
     fn fqn(&self) -> &'static str{
         let convenience_fqn = self.as_one_input_expand().map(|n| n.fqn())
-            .or(self.as_one_input_one_canvas().map(|n| n.fqn()))
-            .or(self.as_one_mutate_bitmap().map(|n| n.fqn()));
+            .or_else(||self.as_one_input_one_canvas().map(|n| n.fqn()))
+            .or_else(||self.as_one_mutate_bitmap().map(|n| n.fqn()));
         convenience_fqn.unwrap_or_else(|| unimplemented!())
     }
     fn name(&self) -> &'static str{

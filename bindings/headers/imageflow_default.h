@@ -218,7 +218,7 @@ bool imageflow_context_add_input_buffer(struct imageflow_context* context, int32
 bool imageflow_context_add_output_buffer(struct imageflow_context* context, int32_t io_id);
 
 ///
-/// Provides access to the underlying buffer for the given io_id
+/// Provides access to the underlying buffer for the given io id
 ///
 bool imageflow_context_get_output_buffer_by_id(struct imageflow_context* context, int32_t io_id, uint8_t const** result_buffer, size_t* result_buffer_length);
 

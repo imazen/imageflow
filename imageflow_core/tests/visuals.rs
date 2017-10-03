@@ -1,4 +1,5 @@
 #![feature(alloc_system)]
+#[cfg_attr(feature = "cargo-clippy", allow(useless_attribute))]
 #[allow(unused_extern_crates)]
 extern crate alloc_system;
 
@@ -390,8 +391,8 @@ fn test_encode_png32_smoke() {
     );
 }
 
-fn get_result_dimensions(steps: Vec<s::Node>, io: Vec<s::IoObject>, debug: bool) -> (u32, u32) {
-    let mut steps = steps.clone();
+fn get_result_dimensions(steps: &[s::Node], io: Vec<s::IoObject>, debug: bool) -> (u32, u32) {
+    let mut steps = steps.to_vec();
 
     let mut dest_bitmap: *mut imageflow_core::ffi::BitmapBgra = std::ptr::null_mut();
     let ptr_to_ptr = &mut dest_bitmap as *mut *mut imageflow_core::ffi::BitmapBgra;
@@ -421,7 +422,7 @@ fn test_dimensions(){
     s::Node::Resample2D{w:200,h:133, down_filter: None, up_filter: None, hints: None, scaling_colorspace: None},
     s::Node::ExpandCanvas{left:1, top: 0, right:0, bottom: 0, color: s::Color::Transparent},
     ];
-    let (w, h) = get_result_dimensions(steps, vec![], DEBUG_GRAPH);
+    let (w, h) = get_result_dimensions(&steps, vec![], DEBUG_GRAPH);
     assert_eq!(w,201);
     assert_eq!(h,133);
 
@@ -449,7 +450,7 @@ fn test_decode_png_and_scale_dimensions(){
     //s::Node::Crop { x1: 0, y1: 0, x2: 638, y2: 423},
     s::Node::Resample2D{w:300,h:200,  down_filter: None, up_filter: None, hints: None, scaling_colorspace: None},
     ];
-    let (w, h) = get_result_dimensions(steps, vec![png], false);
+    let (w, h) = get_result_dimensions(&steps, vec![png], false);
     assert_eq!(w,300);
     assert_eq!(h,200);
 
@@ -490,7 +491,7 @@ fn test_get_info_png() {
 //}
 
 
-fn test_idct_callback(_: s::ImageInfo) -> (Option<s::DecoderCommand>, Vec<s::Node>)
+fn test_idct_callback(_: &s::ImageInfo) -> (Option<s::DecoderCommand>, Vec<s::Node>)
 {
     let new_w = (800 * 4 + 8 - 1) / 8;
     let new_h = (600 * 4 + 8 - 1) / 8;
@@ -503,7 +504,7 @@ fn test_idct_callback(_: s::ImageInfo) -> (Option<s::DecoderCommand>, Vec<s::Nod
     (Some(s::DecoderCommand::JpegDownscaleHints(hints)), vec![s::Node::Decode{io_id:0, commands: None}])
 }
 
-fn test_idct_no_gamma_callback(info: s::ImageInfo) -> (Option<s::DecoderCommand>, Vec<s::Node>)
+fn test_idct_no_gamma_callback(info: &s::ImageInfo) -> (Option<s::DecoderCommand>, Vec<s::Node>)
 {
     let new_w = (info.image_width * 6 + 8 - 1) / 8;
     let new_h = (info.image_height * 6 + 8 - 1) / 8;
@@ -540,7 +541,7 @@ fn test_idct_spatial_no_gamma(){
 //    assert!(matched);
 //}
 
-fn test_with_callback(checksum_name: &str, input: s::IoEnum, callback: fn(s::ImageInfo) -> (Option<s::DecoderCommand>, Vec<s::Node>) ) -> bool{
+fn test_with_callback(checksum_name: &str, input: s::IoEnum, callback: fn(&s::ImageInfo) -> (Option<s::DecoderCommand>, Vec<s::Node>) ) -> bool{
     let mut context = Context::create().unwrap();
     let matched:bool;
 
@@ -550,7 +551,7 @@ fn test_with_callback(checksum_name: &str, input: s::IoEnum, callback: fn(s::Ima
 
         let image_info = context.get_image_info(0).unwrap();
 
-        let (tell_decoder, mut steps): (Option<s::DecoderCommand>, Vec<s::Node>) = callback(image_info);
+        let (tell_decoder, mut steps): (Option<s::DecoderCommand>, Vec<s::Node>) = callback(&image_info);
 
         if let Some(what) = tell_decoder {
             let send_hints = s::TellDecoder001 {

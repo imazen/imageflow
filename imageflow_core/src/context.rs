@@ -59,7 +59,7 @@ impl Context {
             //imageflow_helpers::debug::upgrade_panic_hook_once_if_backtraces_wanted();
 
             Context::create_can_panic()
-        }).unwrap_or(Err(err_oom!())) //err_oom because it doesn't allocate anything.
+        }).unwrap_or_else(|_|Err(err_oom!())) //err_oom because it doesn't allocate anything.
     }
 
 
@@ -116,7 +116,7 @@ impl Context {
         Ok(())
     }
 
-    pub fn get_output_buffer_slice<'b>(&'b self, io_id: i32) -> Result<&'b [u8]> {
+    pub fn get_output_buffer_slice(&self, io_id: i32) -> Result<&[u8]> {
         self.get_codec(io_id).map_err(|e| e.at(here!()))?.get_encode_io()?.expect("Not an output buffer").get_output_buffer_bytes(self).map_err(|e| e.at(here!()))
     }
 
