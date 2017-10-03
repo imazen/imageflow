@@ -10,7 +10,7 @@ fn parse_rgba_slices(r: &str, g: &str, b: &str, a :&str) -> Result<Color32,std::
             1 => u8::from_str_radix(s, 16).map(|v| (v << 4) | v),
             2 => u8::from_str_radix(s, 16),
             _ => panic!("segments may be zero to two characters, but no more"),
-        }.map(|v| v as u32)
+        }.map( u32::from)
     }).fold(Ok(0u32), |acc, item| {
         if let Ok(argb) = acc{
             if let Ok(v) = item {
@@ -63,7 +63,7 @@ pub fn parse_color_hex_or_named(value: &str) -> std::result::Result<Color32, Par
 }
 
 /// Native storage format is 0xAARRGGBB
-/// Can only represent sRGB values
+/// Can only represent `sRGB` values
 #[derive(Copy,Clone,Debug,Eq,PartialEq)]
 pub struct Color32(pub u32);
 

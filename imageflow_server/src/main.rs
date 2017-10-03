@@ -18,7 +18,7 @@ fn main() {
 
 fn parse_mount(s: &str) -> std::result::Result<MountLocation, String>{
     //Escape ::
-    let mut parts = s.replace("::","||||||").split(":").map(|s| s.replace("||||||",":")).collect::<Vec<String>>();
+    let mut parts = s.replace("::","||||||").split(':').map(|s| s.replace("||||||",":")).collect::<Vec<String>>();
     if parts.len() < 2 {
         Err(format!("--mount prefix:engine:args  Mount value must contain at least prefix:engine - received {:?} ({:?})", s, &parts))
     }else{
@@ -74,7 +74,7 @@ fn main_with_exit_code() -> i32 {
     let matches = app.get_matches();
 
     if let Some(matches) = matches.subcommand_matches("diagnose") {
-        let m: &&clap::ArgMatches = matches;
+        let m: &clap::ArgMatches = matches;
 
         if m.is_present("show-compilation-info") {
             println!("{}\n{}\n",
@@ -91,13 +91,13 @@ fn main_with_exit_code() -> i32 {
         }
     }
     if let Some(matches) = matches.subcommand_matches("start") {
-        let m: &&clap::ArgMatches = matches;
+        let m: &clap::ArgMatches = matches;
 
 
-        let port = matches.value_of("port").map(|s| s.parse::<u16>().expect("Port must be a valid 16-bit positive integer") ).unwrap_or(39876);
+        let port = matches.value_of("port").map(|s| s.parse::<u16>().expect("Port must be a valid 16-bit positive integer") ).unwrap_or(39_876);
         let integration_test = matches.is_present("integration-test");
-        let data_dir = m.value_of("data-dir").map(PathBuf::from(s));
-        let cert = m.value_of("cert").map(PathBuf::from(s));
+        let data_dir = m.value_of("data-dir").map(PathBuf::from);
+        let cert = m.value_of("cert").map(PathBuf::from);
         if let Some(ref p) = cert{
             if !p.is_file(){
                 println!("The provided certificate file does not exist: {:?}", &cert);

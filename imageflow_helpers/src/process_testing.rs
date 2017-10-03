@@ -255,7 +255,7 @@ impl ProcTestContext {
         let mut child_process = match cmd.spawn(){
             Ok(v) => v,
             Err(e) => {
-                panic!("Failed to start {:?} {:?} error: {:?}", &exe, &cmd, e);
+                panic!("Failed to start {:?} {:?} error: {:?}", &exe, &cmd, e)
             }
         };
 

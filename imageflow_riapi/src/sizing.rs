@@ -1,5 +1,5 @@
 //! `imageflow_riapi::sizing::` provides logic and constraint evaluation for determining sizes
-//! of things in a layout. I.e, WxH of source imagery to copy. WxH of canvas, including padding, WxH of image within canvas.
+//! of things in a layout. I.e, `WxH` of source imagery to copy. `WxH` of canvas, including padding, `WxH` of image within canvas.
 //! It intentionally avoids dealing with positioning. The idea is that sizing determines output image size, and is therefore
 //! something a user tunes separately from alignment issues within the canvas. For face/region of interest cropping
 //! and careful cropping (resort to padding before cropping off a face, for example), it cannot know. Therefore it
@@ -11,7 +11,7 @@ use ::std;
 // Serves as a size *and* an aspect ratio. There's benefit to keeping these together.
 // Rounding errors are problematic when they cause an off-by-one versus target width/height or original width/height.
 // So aspect ratios include the fraction they were derived from, and implementors should round to these if one of the 2 dimensions matches.
-#[derive(Copy, Clone,  PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Copy, Clone,  Eq, PartialOrd, Ord)]
 pub struct AspectRatio {
     pub w: i32, //Make private! We loose validation
     pub h: i32,
@@ -35,7 +35,7 @@ impl AspectRatio {
     }
 
     pub fn ratio_f64(&self) -> f64{
-        self.w as f64 / self.h as f64
+        f64::from(self.w) / f64::from(self.h)
     }
     pub fn width(&self) -> i32{
         self.w
@@ -63,22 +63,22 @@ impl AspectRatio {
 
     pub fn proportional(ratio: f64, inverse: bool, basis: i32, snap_a: i32, snap_b: i32) -> Result<i32> {
         let float = if inverse {
-            basis as f64 / ratio
+            f64::from(basis) / ratio
         } else {
-            ratio * basis as f64
+            ratio * f64::from(basis)
         };
 
-        let res = if (float - snap_a as f64).abs() < 1f64 {
+        if (float - f64::from(snap_a)).abs() < 1f64 {
             Ok(snap_a)
-        } else if (float - snap_b as f64).abs() < 1f64 {
+        } else if (float - f64::from(snap_b)).abs() < 1f64 {
             Ok(snap_b)
         } else {
             let rounded = float.round();
             // We replace 0 with 1.
-            if rounded <= std::i32::MIN as f64 || rounded >= std::i32::MAX as f64 {
+            if rounded <= f64::from(std::i32::MIN) || rounded >= f64::from(std::i32::MAX) {
                 Err(LayoutError::ValueScalingFailed{
-                    ratio: ratio,
-                    basis: basis,
+                    ratio,
+                    basis,
                     invalid_result: rounded
                 })
             } else{
@@ -87,8 +87,8 @@ impl AspectRatio {
         }.and_then(|v|
             if v < 0{
                 Err(LayoutError::ValueScalingFailed{
-                    ratio: ratio,
-                    basis: basis,
+                    ratio,
+                    basis,
                     invalid_result: float
                 })
             }else if v == 0{
@@ -96,12 +96,12 @@ impl AspectRatio {
             } else {
                 Ok(v)
             }
-        );
+        )
 
 //        if let Err(ref e) = res {
 //            panic!("{:?} during proportional({},{},{},{},{})", e, ratio, inverse, basis, snap_a, snap_b);
 //        }
-        res
+//        res
     }
 
     /// Create a ibox (inner box) or obox (outer box) using own ratio, but other's min/max box.
@@ -150,6 +150,12 @@ impl std::hash::Hash for AspectRatio {
         self.h.hash(state);
     }
 }
+
+impl PartialEq for AspectRatio{
+    fn eq(&self, other: &AspectRatio) -> bool {
+        self.w == other.w && self.h == other.h
+    }
+}
 impl fmt::Debug for AspectRatio {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "{}x{}", self.w, self.h)
@@ -158,7 +164,7 @@ impl fmt::Debug for AspectRatio {
 
 
 fn mult_fraction(value: i32, num: i32, denom: i32) -> Result<i32> {
-    Ok((value as i64 * num as i64 / denom as i64) as i32)
+    Ok((i64::from(value) * i64::from(num) / i64::from(denom)) as i32)
 }
 
 #[test]
@@ -383,7 +389,7 @@ impl Layout {
             image: original,
             source: original,
             source_max: original,
-            target: target
+            target
         }
     }
 }

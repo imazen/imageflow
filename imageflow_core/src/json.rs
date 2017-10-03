@@ -3,7 +3,7 @@ use ::internal_prelude::works_everywhere::*;
 type ResponderFn<'a, T, D> = Box<Fn(&mut T, D) -> Result<s::ResponsePayload> + 'a + Sync>;
 type MethodHandler<'a, T> = Box<Fn(&mut T, &[u8]) -> (JsonResponse, std::result::Result<(), FlowError>) + 'a + Sync>;
 
-
+#[derive(Default)]
 pub struct MethodRouter<'a, T> {
     handlers: HashMap<&'static str, MethodHandler<'a, T>>,
     method_names: Vec<&'static str>,
@@ -97,7 +97,7 @@ pub struct JsonResponse {
 impl JsonResponse {
     pub fn from_flow_error(err: &FlowError) -> JsonResponse{
         let message = format!("{}", err);
-        JsonResponse::fail_with_message(err.category().http_status_code() as i64,
+        JsonResponse::fail_with_message(i64::from(err.category().http_status_code()),
                                         &message)
     }
 

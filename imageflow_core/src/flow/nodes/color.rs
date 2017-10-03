@@ -139,13 +139,13 @@ struct Color{
 }
 
 fn color_shift(c: &Color) -> [[f32;5];5]{
-    let percent = c.a as f32 / 255.0f32;
+    let percent = f32::from(c.a) / 255.0f32;
     [
         [1f32 - percent, 0f32, 0f32, 0f32, 0f32],
         [0f32, 1f32 - percent, 0f32, 0f32, 0f32],
         [0f32, 0f32, 1f32 - percent, 0f32, 0f32],
         [0f32, 0f32, 0f32, 1f32, 0f32],
-        [(c.r as f32 - 128f32) / 128f32 * percent, (c.g as f32 - 128f32) / 128f32 * percent, (c.b as f32 - 128f32) / 128f32 * percent, 0f32, 1f32]
+        [(f32::from(c.r) - 128f32) / 128f32 * percent, (f32::from(c.g) - 128f32) / 128f32 * percent, (f32::from(c.b) - 128f32) / 128f32 * percent, 0f32, 1f32]
     ]
 }
 fn invert() -> [[f32;5];5] {

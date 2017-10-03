@@ -177,12 +177,10 @@ pub trait NodeDef: ::std::fmt::Debug{
 
     /// Edges will be validated before calling estimation or execution or flattening
     fn edges_required(&self, p: &NodeParams) -> Result<(EdgesIn, EdgesOut)>{
-        if self.as_one_input_expand().is_some(){
+        if self.as_one_input_expand().is_some() || self.as_one_mutate_bitmap().is_some(){
             Ok((EdgesIn::OneInput, EdgesOut::Any))
         } else if self.as_one_input_one_canvas().is_some(){
             Ok((EdgesIn::OneInputOneCanvas, EdgesOut::Any))
-        } else if self.as_one_mutate_bitmap().is_some(){
-            Ok((EdgesIn::OneInput, EdgesOut::Any))
         } else{
             Err(unimpl!())
         }
@@ -360,7 +358,7 @@ impl FrameEstimate{
         self == &FrameEstimate::None
     }
     pub fn is_some(&self) -> bool{
-        if let &FrameEstimate::Some(_) = self {
+        if let FrameEstimate::Some(_) = *self {
             true
         }else{
             false

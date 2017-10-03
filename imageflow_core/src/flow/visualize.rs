@@ -142,7 +142,7 @@ pub fn print_graph(f: &mut std::io::Write,
     // output all labels
     for index in g.graph().node_indices() {
         let weight: &Node = g.node_weight(index).unwrap();
-        total_ns += weight.cost.wall_ns as u64;
+        total_ns += u64::from(weight.cost.wall_ns);
         let ms = weight.cost.wall_ns as f64 / 1000f64;
 
         write!(f, "{}n{} [", INDENT, index.index())?;

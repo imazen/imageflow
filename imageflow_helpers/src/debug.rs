@@ -12,7 +12,7 @@ static SET_HOOK: Once = ONCE_INIT;
 
 
 ///
-/// Returns true if RUST_BACKTRACE=1
+/// Returns true if `RUST_BACKTRACE=1`
 pub fn backtraces_wanted() -> bool{
     if let Ok(val) = std::env::var("RUST_BACKTRACE"){
         val == "1"

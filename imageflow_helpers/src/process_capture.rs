@@ -57,8 +57,8 @@ impl CaptureTo{
         file.write_all(&header.into_bytes())?;
         file.write_all(&output.stderr)?;
 
-        let header = format!("\n\n\nSTDOUT:\n");
-        file.write_all(&header.into_bytes())?;
+        let header = "\n\n\nSTDOUT:\n";
+        file.write_all(header.as_bytes())?;
         file.write_all(&output.stdout)?;
         Ok(())
     }

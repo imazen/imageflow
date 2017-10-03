@@ -175,12 +175,15 @@ pub enum ParseWarning{
     ValueInvalid((&'static str, String))
 }
 
+#[cfg_attr(feature = "cargo-clippy", allow(map_entry))]
 pub fn parse_url(url: &Url) -> (Instructions, Vec<ParseWarning>) {
     let mut warnings = Vec::new();
     let mut map = HashMap::new();
     for (key, value) in url.query_pairs() {
         let k = key.to_lowercase(); //Trim whitespace?
         let v = value.into_owned();
+
+
         if map.contains_key(&k) {
             warnings.push(ParseWarning::DuplicateKey((k, v)));
         } else if !IR4_KEYS.contains(&k.as_str()) {

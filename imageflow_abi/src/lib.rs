@@ -508,7 +508,7 @@ pub extern "C" fn imageflow_json_response_destroy(context: *mut Context,
 /// * 'v0.1/build`
 ///
 /// For endpoints supported by the latest nightly build, see
-/// https://s3-us-west-1.amazonaws.com/imageflow-nightlies/master/doc/context_json_api.txt
+/// `https://s3-us-west-1.amazonaws.com/imageflow-nightlies/master/doc/context_json_api.txt`
 ///
 /// ## Notes
 ///
@@ -516,7 +516,7 @@ pub extern "C" fn imageflow_json_response_destroy(context: *mut Context,
 ///    responsible for their cleanup (if necessary - static strings are handy for things like
 ///    `method`).
 /// * `method` should be a UTF-8 null-terminated string.
-///   `json_buffer` should be a UTF-8 encoded buffer (not null terminated) of length json_buffer_size.
+///   `json_buffer` should be a UTF-8 encoded buffer (not null terminated) of length `json_buffer_size`.
 ///
 /// You should call `imageflow_context_has_error()` to see if this succeeded.
 ///

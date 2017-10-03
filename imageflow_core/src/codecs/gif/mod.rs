@@ -94,8 +94,8 @@ impl Decoder for GifDecoder {
     fn get_image_info(&mut self, c: &Context) -> Result<s::ImageInfo> {
         Ok(s::ImageInfo {
             frame_decodes_into: s::PixelFormat::Bgra32,
-            image_width: self.reader.width() as i32,
-            image_height: self.reader.height() as i32,
+            image_width: i32::from(self.reader.width()),
+            image_height: i32::from(self.reader.height()),
 //            current_frame_index: 0,
 //            frame_count: 1,
             // We would have to read in the entire GIF to know!
@@ -248,7 +248,7 @@ impl Encoder for GifEncoder{
 
 
 fn remove_padding(width: u16, pixels: &[u8], stride: usize) -> Vec<u8>{
-    pixels.chunks(stride).flat_map(|s| s[0..width as usize * 4].iter().map(|v| *v)).collect()
+    pixels.chunks(stride).flat_map(|s| s[0..width as usize * 4].iter().cloned()).collect()
 }
 /// Creates a frame from pixels in RGBA format.
 ///

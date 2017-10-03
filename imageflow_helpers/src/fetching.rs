@@ -30,7 +30,7 @@ pub struct FetchedResponse {
 impl fmt::Debug for FetchedResponse {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         // If there is a second key/value, we're assuming it is 'charset'
-        if self.content_type.2.len() > 0 || (self.content_type.0).0 == hyper::mime::TopLevel::Text{
+        if !self.content_type.2.is_empty() || (self.content_type.0).0 == hyper::mime::TopLevel::Text{
             write!(f, "FetchedResponse {{ content_type: {:?}, length: {}, as_string: {:?} }}", self.content_type, self.bytes.len(), std::str::from_utf8(&self.bytes))
         }else{
             write!(f, "FetchedResponse {{ content_type: {:?}, length: {} }}", self.content_type, self.bytes.len())

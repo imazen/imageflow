@@ -353,7 +353,7 @@ impl FlowError {
                 }else{
                     line.to_owned()
                 }
-            }).unwrap_or("[input line not found]".to_owned());
+            }).unwrap_or_else(||"[input line not found]".to_owned());
             FlowError {
                 kind: ErrorKind::Category(ErrorCategory::InvalidJson),
                 at: ::smallvec::SmallVec::new(),
@@ -598,6 +598,11 @@ pub struct OutwardErrorBuffer{
     category: ErrorCategory,
     last_panic: Option<Box<Any>>,
     last_error: Option<FlowError>
+}
+impl Default for OutwardErrorBuffer {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 impl OutwardErrorBuffer{
     pub fn new() -> OutwardErrorBuffer{

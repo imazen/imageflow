@@ -71,6 +71,7 @@ use router::Router;
 
 
 
+
 use time::precise_time_ns;
 
 #[allow(unused_imports)]
@@ -253,7 +254,7 @@ fn fetch_bytes_from_disk(url: &Path) -> std::result::Result<(Vec<u8>, AcquirePer
     Ok((vec, AcquirePerf { cache_read_ns: end - start, ..Default::default() }))
 }
 
-#[derive(Default, Copy, Clone, Debug)]
+#[derive(Default, Copy,  Clone, Debug)]
 struct AcquirePerf {
     fetch_ns: u64,
     cache_read_ns: u64,
@@ -274,11 +275,11 @@ struct RequestPerf {
 }
 
 impl RequestPerf {
-    fn short(&self) -> String{
+    fn short(&self) -> String {
         format!("execute {:.2}ms getinfo {:.2}ms fetch-through: {:.2}ms",
-                (self.execute_ns as f64) / 1000000.0
-        ,(self.get_image_info_ns as f64) / 1000000.0,
-        (self.acquire.total() as f64) / 1000000.0)
+                self.execute_ns as f64 / 1_000_000.0f64
+                , self.get_image_info_ns as f64 / 1_000_000.0f64,
+                (self.acquire.total() as f64) / 1_000_000.0f64)
     }
 }
 
@@ -323,7 +324,7 @@ fn respond_using<F, F2, A>(debug_info: A, bytes_provider: F2, framewise_generato
         Ok((output, perf)) => {
             let mime = output.mime_type
                 .parse::<Mime>()
-                .unwrap_or(Mime::from_str("application/octet-stream").unwrap());
+                .unwrap_or_else(|_| Mime::from_str("application/octet-stream").unwrap());
             let mut res = Response::with((mime, status::Ok, output.bytes));
 
             res.headers.set(XImageflowPerf(perf.short()));
@@ -336,9 +337,10 @@ fn respond_using<F, F2, A>(debug_info: A, bytes_provider: F2, framewise_generato
 fn respond_with_server_error<A>(debug_info: A, e: ServerError, detailed_errors: bool) -> IronResult<Response> where A: std::fmt::Debug {
     match e {
         ServerError::UpstreamResponseError(hyper::status::StatusCode::NotFound) => {
-            let bytes = match detailed_errors {
-                false => format!("Remote file not found (upstream server responded with 404)").into_bytes(),
-                true => format!("Remote file not found (upstream server responded with 404 to {:?})", debug_info).into_bytes(),
+            let bytes = if detailed_errors {
+                b"Remote file not found (upstream server responded with 404)".to_vec()
+            }else {
+                format!("Remote file not found (upstream server responded with 404 to {:?})", debug_info).into_bytes()
             };
 
             Ok(Response::with((Mime::from_str("text/plain").unwrap(),
@@ -346,9 +348,10 @@ fn respond_with_server_error<A>(debug_info: A, e: ServerError, detailed_errors: 
                                bytes)))
         },
         e => {
-            let bytes = match detailed_errors {
-                true => format!("Internal Server Error\nInfo:{:?}\nError:{:?}", debug_info, e).into_bytes(),
-                false => format!("Internal Server Error").into_bytes()
+            let bytes = if detailed_errors {
+                format!("Internal Server Error\nInfo:{:?}\nError:{:?}", debug_info, e).into_bytes()
+            }else{
+                b"Internal Server Error".to_vec()
             };
             Ok(Response::with((Mime::from_str("text/plain").unwrap(),
                                status::InternalServerError,
@@ -366,13 +369,13 @@ fn ir4_http_respond<F>(shared: &SharedData, url: &str, framewise_generator: F) -
 }
 
 
-fn ir4_framewise(_info: s::ImageInfo, url: &Url) -> std::result::Result<s::Framewise, ServerError> {
+fn ir4_framewise(_info: &s::ImageInfo, url: &Url) -> std::result::Result<s::Framewise, ServerError> {
     let t = ::imageflow_riapi::ir4::Ir4Translate{
         i: ::imageflow_riapi::ir4::Ir4Command::Url(url.as_str().to_owned()),
         decode_id: Some(0),
         encode_id: Some(1),
     };
-    t.translate().map_err(|e| ServerError::LayoutSizingError(e)).and_then(|r: ::imageflow_riapi::ir4::Ir4Result| Ok(s::Framewise::Steps(r.steps.unwrap())))
+    t.translate().map_err( ServerError::LayoutSizingError).and_then(|r: ::imageflow_riapi::ir4::Ir4Result| Ok(s::Framewise::Steps(r.steps.unwrap())))
 }
 
 
@@ -394,25 +397,23 @@ fn ir4_local_handler(req: &mut Request, local_path: &PathBuf, _: &MountLocation)
 
     if requested_path.path.exists() {
         return ir4_local_respond(&shared, requested_path.path.as_path(), move |info: s::ImageInfo| {
-            ir4_framewise(info, &url)
+            ir4_framewise(&info, &url)
         });
     }
 
     let _ = writeln!(&mut std::io::stderr(), "404 {:?} using local path {:?} and base {:?}", &url.path(), requested_path.path.as_path(), local_path);
     //writeln!(&mut std::io::stdout(), "404 {:?} using local path {:?}", &url.path(), original );
 
-    let bytes = format!("File not found").into_bytes();
     Ok(Response::with((Mime::from_str("text/plain").unwrap(),
                        status::NotFound,
-                       bytes)))
+                       b"File not found".to_vec())))
 }
 
 fn static_handler(_: &mut Request, _: &Static, _: &MountLocation) -> IronResult<Response> {
 
-    let bytes = format!("Do not use").into_bytes();
     Ok(Response::with((Mime::from_str("text/plain").unwrap(),
                        status::InternalServerError,
-                       bytes)))
+                       b"Do not use".to_vec())))
 }
 
 fn ir4_local_setup(mount: &MountLocation) -> Result<(PathBuf, EngineHandler<PathBuf>), String> {
@@ -432,7 +433,7 @@ fn static_setup(mount: &MountLocation) -> Result<(Static, EngineHandler<Static>)
         //TODO: validate path
         let path = Path::new(&mount.engine_args[0]).canonicalize().map_err(|e| format!("{:?}", e))?;
         let h = if mount.engine_args.len() > 1 {
-            panic!("Static file cache headers not yet supported"); //(we must compile staticfile with the 'cache' feature enabled)
+            panic!("Static file cache headers not yet supported") //(we must compile staticfile with the 'cache' feature enabled)
 //            let mins = mount.engine_args[1].parse::<i64>().expect("second argument to static must be the number of minutes to browser cache for");
 //            Static::new(path).cache(Duration::minutes(mins))
         } else {
@@ -453,7 +454,7 @@ fn permacache_proxy_handler(req: &mut Request, base_url: &String, _: &MountLocat
         Ok((output, _)) => {
             let mime = output.content_type
                 .parse::<Mime>()
-                .unwrap_or(Mime::from_str("application/octet-stream").unwrap());
+                .unwrap_or_else(|_|Mime::from_str("application/octet-stream").unwrap());
 
             Ok(Response::with((mime, status::Ok, output.bytes)))
         }
@@ -476,7 +477,7 @@ fn permacache_proxy_handler_guess_types(req: &mut Request, base_url: &String, _:
         Ok((bytes, _)) => {
 
             let part_path = Path::new(&url.path()[1..]);
-            let mime_str = MIME_TYPES.mime_for_path(&part_path);
+            let mime_str = MIME_TYPES.mime_for_path(part_path);
             let mime:Mime  = mime_str.parse().unwrap();
 
 //            let mime = output.content_type
@@ -497,7 +498,7 @@ fn ir4_http_handler(req: &mut Request, base_url: &String, _: &MountLocation) -> 
     let remote_url = format!("{}{}", base_url, &url.path()[1..]);
 
     ir4_http_respond(&shared, &remote_url, move |info: s::ImageInfo| {
-        ir4_framewise(info, &url)
+        ir4_framewise(&info, &url)
     })
 }
 
@@ -596,7 +597,7 @@ pub fn serve(c: StartServerConfig) {
 
     println!("Listening on {}", c.bind_addr.as_str());
     if c.cert.is_some() {
-        let pwd = c.cert_pwd.unwrap_or("".into());
+        let pwd = c.cert_pwd.unwrap_or_default();
         let ssl = NativeTlsServer::new(c.cert.unwrap(), &pwd).unwrap();
 
         Iron::new(chain).https(c.bind_addr.as_str(), ssl).unwrap();

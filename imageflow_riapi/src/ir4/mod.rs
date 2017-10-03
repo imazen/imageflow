@@ -146,7 +146,7 @@ impl Ir4Expand{
         let layout = self.get_layout(&i)?;
         let (from, to): (AspectRatio, AspectRatio) = layout.get_downscaling()?;
 
-        let downscale_ratio = (from.w as f64 / to.w as f64).min(from.h as f64 / to.w as f64);
+        let downscale_ratio = (f64::from(from.w) / f64::from(to.w)).min(f64::from(from.h) / f64::from(to.w));
 
         let preshrink_ratio = i.min_precise_scaling_ratio.unwrap_or(2.1f64) / downscale_ratio;
 
@@ -154,8 +154,8 @@ impl Ir4Expand{
             Ok(Some(s::DecoderCommand::JpegDownscaleHints(s::JpegIDCTDownscaleHints {
                 scale_luma_spatially: Some(gamma_correct),
                 gamma_correct_for_srgb_during_spatial_luma_scaling: Some(gamma_correct),
-                width: (self.source.w as f64 * preshrink_ratio).floor() as i64,
-                height: (self.source.h as f64 * preshrink_ratio).floor() as i64
+                width: (f64::from(self.source.w) * preshrink_ratio).floor() as i64,
+                height: (f64::from(self.source.h) * preshrink_ratio).floor() as i64
             })))
         } else {
             Ok(None)

@@ -16,16 +16,16 @@ fn area_threshold(histogram: &[u64], total_pixels: u64, low_threshold: f64, high
     let mut area = 0u64;
     let pixel_count = total_pixels as f64;
     for (ix, value) in histogram.iter().enumerate(){
-        area += *value as u64;
-        if area as f64 / pixel_count as f64 > low_threshold {
+        area += u64::from(*value);
+        if area as f64 / f64::from(pixel_count) > low_threshold {
             low = ix;
             break;
         }
     }
     area = 0u64;
     for (ix, value) in histogram.iter().enumerate().rev(){
-        area += *value as u64;
-        if area as f64 / pixel_count as f64 > low_threshold {
+        area += u64::from(*value);
+        if area as f64 / f64::from(pixel_count) > low_threshold {
             high = ix;
             break;
         }
@@ -88,8 +88,8 @@ fn apply_mappings(bitmap: *mut BitmapBgra, map_red: &[u8], map_green: &[u8], map
 }
 
 fn white_balance_srgb_mut(bitmap: *mut BitmapBgra, histograms: &[u64;768], pixels_sampled: u64, low_threshold: Option<f32>, high_threshold: Option<f32>) -> Result<()>{
-    let low_threshold = low_threshold.unwrap_or(0.006) as f64;
-    let high_threshold = high_threshold.unwrap_or(0.006) as f64;
+    let low_threshold = f64::from(low_threshold.unwrap_or(0.006));
+    let high_threshold = f64::from(high_threshold.unwrap_or(0.006));
 
     let (red_low, red_high) = area_threshold(&histograms[0..256], pixels_sampled, low_threshold, high_threshold);
     let (green_low, green_high) = area_threshold(&histograms[256..512], pixels_sampled, low_threshold, high_threshold);

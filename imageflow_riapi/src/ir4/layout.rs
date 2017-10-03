@@ -75,11 +75,11 @@ impl Ir4Layout{
         //if all dimensions are absent, support zoom=x + scale=canvas | scale=both
         // and exit
         //No more than 1/80000 or 80000/1
-        let zoom = Self::float_max(0.00008f64, Self::float_min(self.i.zoom.unwrap_or(1f64), 80000f64).unwrap()).unwrap();
+        let zoom = Self::float_max(0.000_08f64, Self::float_min(self.i.zoom.unwrap_or(1f64), 80_000f64).unwrap()).unwrap();
 
         //Apply zoom directly to target dimensions. This differs from IR4 but should be easier to reason about.
-        let w = Self::float_max(1f64, Self::float_min((w as f64 * zoom).round(), std::i32::MAX as f64).unwrap()).unwrap() as i32;
-        let h = Self::float_max(1f64, Self::float_min((h as f64 * zoom).round(), std::i32::MAX as f64).unwrap()).unwrap() as i32;
+        let w = Self::float_max(1f64, Self::float_min((f64::from(w) * zoom).round(), f64::from(std::i32::MAX)).unwrap()).unwrap() as i32;
+        let h = Self::float_max(1f64, Self::float_min((f64::from(h) * zoom).round(), f64::from(std::i32::MAX)).unwrap()).unwrap() as i32;
 
         AspectRatio::create(w,h)
     }
@@ -382,13 +382,13 @@ impl Ir4Layout{
     }
 
     fn get_initial_copy_window_floats(&self, original_width: i32, original_height: i32) -> [f64;4]{
-        let defaults = [0f64, 0f64, original_width as f64, original_height as f64];
+        let defaults = [0f64, 0f64, f64::from(original_width), f64::from(original_height)];
         if let Some(values) = self.i.crop{
-            let xunits = self.i.cropxunits.map(|v| if v == 0f64 {original_width as f64} else { v }).unwrap_or(original_width as f64);
-            let yunits = self.i.cropyunits.map(|v| if v == 0f64 {original_height as f64} else { v }).unwrap_or(original_height as f64);
+            let xunits = self.i.cropxunits.map(|v| if v == 0f64 {f64::from(original_width)} else { v }).unwrap_or(f64::from(original_width));
+            let yunits = self.i.cropyunits.map(|v| if v == 0f64 {f64::from(original_height)} else { v }).unwrap_or(f64::from(original_height));
             let floats = values.iter().enumerate().map(|(ix, item)| {
                 let relative_to = if ix % 2 == 0 { xunits } else { yunits} as f64;
-                let max_dimension = if ix % 2 == 0 {original_width } else {original_height} as f64;
+                let max_dimension = f64::from(if ix % 2 == 0 {original_width } else {original_height});
                 let mut v = *item * max_dimension / relative_to;
                 if ix < 2 && v < 0f64 || ix > 1 && v <= 0f64{
                     v += max_dimension; //Support negative offsets from bottom right.

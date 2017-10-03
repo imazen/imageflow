@@ -49,7 +49,7 @@ pub fn transform(s: &str, transform: Transform) -> String {
 pub fn style_id(s: &str, style: Style) -> String{
     let mut temp = s.to_owned();
     //Normalize to underscores (unless there are already some)
-    if !temp.contains("_") {
+    if !temp.contains('_') {
         temp = transform(&temp, Transform::AddUnderscores);
     }
     //Normalize to lower (relying on underscores now)

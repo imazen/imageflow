@@ -35,7 +35,7 @@ fn hash256_to(bytes: &[u8], to: &mut [u8;32]){
 }
 
 pub fn legacy_djb2(bytes: &[u8]) -> u64{
-    bytes.iter().fold(5381u64, |hash, c| ((hash << 5).wrapping_add(hash)).wrapping_add(*c as u64))
+    bytes.iter().fold(5381u64, |hash, c| ((hash << 5).wrapping_add(hash)).wrapping_add(u64::from(*c)))
 }
 
 
@@ -71,7 +71,7 @@ pub fn bits_select(hash: &[u8], from: usize, until: usize) -> Option<u64>{
     let truncate_right = (8 - until % 8) % 8;
     let mask = if until == from { 0 } else{ !0u64 >> (64 - (until - from)) };
 
-    Some((relevant_bytes.iter().fold(0u64, | acc, elem| (*elem as u64 | (acc << 8)) ) >> truncate_right) & mask)
+    Some((relevant_bytes.iter().fold(0u64, | acc, elem| (u64::from(*elem) | (acc << 8)) ) >> truncate_right) & mask)
     //println!("bits {} to {} of {:032x} - using bytes {} to {}. Unshift {} and mask {:#016x} to produce {:x}",from, until, HexableBytes(hash), (from / 8), (until + 7) / 8, truncate_right, mask, res.unwrap());
 }
 

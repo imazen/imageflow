@@ -510,8 +510,8 @@ fn test_idct_no_gamma_callback(info: s::ImageInfo) -> (Option<s::DecoderCommand>
     let hints = s::JpegIDCTDownscaleHints{
         gamma_correct_for_srgb_during_spatial_luma_scaling: Some(false),
         scale_luma_spatially: Some(true),
-        width: new_w as i64,
-        height: new_h as i64
+        width: i64::from(new_w),
+        height: i64::from(new_h)
     };
     //Here we send the hints via the Decode node instead.
     (Some(s::DecoderCommand::JpegDownscaleHints(hints.clone())),
@@ -576,7 +576,7 @@ fn test_with_callback(checksum_name: &str, input: s::IoEnum, callback: fn(s::Ima
         context.execute_1(send_execute).unwrap();
 
         let ctx = checksums_ctx_for(&context);
-        matched = regression_check(&ctx, *ptr_to_ptr, &checksum_name)
+        matched = regression_check(&ctx, *ptr_to_ptr, checksum_name)
 
 
     }
@@ -585,7 +585,7 @@ fn test_with_callback(checksum_name: &str, input: s::IoEnum, callback: fn(s::Ima
 }
 
 fn djb2(bytes: &[u8]) -> u64{
-    bytes.iter().fold(5381u64, |hash, c| ((hash << 5).wrapping_add(hash)).wrapping_add(*c as u64))
+    bytes.iter().fold(5381u64, |hash, c| ((hash << 5).wrapping_add(hash)).wrapping_add(u64::from(*c)))
 }
 
 use imageflow_core::ffi::BitmapBgra;
@@ -703,7 +703,7 @@ fn load_visual(c: &ChecksumCtx, checksum: &str) -> *const BitmapBgra{
 /// Returns the number of bytes that differ, followed by the total value of all differences
 /// If these are equal, then only off-by-one errors are occurring
 fn diff_bytes(a: &[u8], b: &[u8]) ->(i64,i64){
-    a.iter().zip(b.iter()).fold((0,0), |(count, delta), (a,b)| if a != b { (count + 1, delta + (*a as i64 - *b as i64).abs()) } else { (count,delta)})
+    a.iter().zip(b.iter()).fold((0,0), |(count, delta), (a,b)| if a != b { (count + 1, delta + (i64::from(*a) - i64::from(*b)).abs()) } else { (count,delta)})
 }
 
 
