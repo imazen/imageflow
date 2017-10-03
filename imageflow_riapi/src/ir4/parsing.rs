@@ -281,6 +281,8 @@ impl Instructions{
         add(&mut m, "decoder.min_precise_scaling_ratio", self.min_precise_scaling_ratio);
         m
     }
+
+    #[cfg_attr(feature = "cargo-clippy", allow(or_fun_call))]
     pub fn delete_from_map(map: &mut HashMap<String,String>, warnings: Option<&mut Vec<ParseWarning>>) -> Instructions {
         let mut p = Parser { m: map, w: warnings, delete_supported: true };
         let mut i = Instructions::new();
@@ -298,6 +300,7 @@ impl Instructions{
            p.warn(ParseWarning::ValueInvalid(("mode", "carve".to_owned())).to_owned());
         }
 
+        // Side effects wanted for or()
         i.mode = mode_string.and_then(|v| v.clean())
             .or(p.parse_test_pair("stretch", "fill").and_then(|b| if b { Some(FitMode::Stretch) } else { None }))
             .or(p.parse_test_pair("crop", "auto").and_then(|b| if b { Some(FitMode::Crop) } else { None }));

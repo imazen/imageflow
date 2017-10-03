@@ -1061,6 +1061,7 @@ impl Response001 {
         }
     }
 }
+#[cfg_attr(feature = "cargo-clippy", allow(needless_pass_by_value))]
 pub fn rtf<'de,T>(value: T) -> usize
     where T: serde::Serialize,
           T: serde::Deserialize<'de>
@@ -1241,16 +1242,6 @@ mod key_casing {
         }
         fail_count
     }
-
-    #[allow(dead_code)]
-    pub fn print_keys_not_roundtrippable_consuming<'de, T>(value: T) -> usize
-        where T: serde::Serialize,
-              T: serde::Deserialize<'de>
-    {
-        print_keys_not_roundtrippable(&value)
-    }
-
-
 
     use ::imageflow_helpers::identifier_styles::*;
 }

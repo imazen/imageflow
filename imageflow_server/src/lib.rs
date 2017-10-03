@@ -314,7 +314,7 @@ fn execute_using<F, F2>(bytes_provider: F2, framewise_generator: F)
 }
 header! { (XImageflowPerf, "X-Imageflow-Perf") => [String] }
 
-fn respond_using<F, F2, A>(debug_info: A, bytes_provider: F2, framewise_generator: F)
+fn respond_using<F, F2, A>(debug_info: &A, bytes_provider: F2, framewise_generator: F)
                         -> IronResult<Response>
     where F: Fn(s::ImageInfo) -> std::result::Result<s::Framewise, ServerError>,
           F2: Fn() -> std::result::Result<(Vec<u8>, AcquirePerf), ServerError>,
@@ -331,11 +331,11 @@ fn respond_using<F, F2, A>(debug_info: A, bytes_provider: F2, framewise_generato
             res.headers.set(XImageflowPerf(perf.short()));
             Ok(res)
         }
-        Err(e) => respond_with_server_error(debug_info, e, true)
+        Err(e) => respond_with_server_error(&debug_info, e, true)
     }
 }
 
-fn respond_with_server_error<A>(debug_info: A, e: ServerError, detailed_errors: bool) -> IronResult<Response> where A: std::fmt::Debug {
+fn respond_with_server_error<A>(debug_info: &A, e: ServerError, detailed_errors: bool) -> IronResult<Response> where A: std::fmt::Debug {
     match e {
         ServerError::UpstreamResponseError(hyper::status::StatusCode::NotFound) => {
             let bytes = if detailed_errors {
@@ -366,7 +366,7 @@ fn respond_with_server_error<A>(debug_info: A, e: ServerError, detailed_errors: 
 fn ir4_http_respond<F>(shared: &SharedData, url: &str, framewise_generator: F) -> IronResult<Response>
     where F: Fn(s::ImageInfo) -> std::result::Result<s::Framewise, ServerError>
 {
-    respond_using(url, || fetch_bytes_using_cache_by_url(&shared.source_cache, url).map_err(error_upstream), framewise_generator)
+    respond_using(&url, || fetch_bytes_using_cache_by_url(&shared.source_cache, url).map_err(error_upstream), framewise_generator)
 }
 
 
@@ -387,7 +387,7 @@ type EngineSetup<T> = fn(mount: &MountLocation) -> Result<(T, EngineHandler<T>),
 fn ir4_local_respond<F>(_: &SharedData, source: &Path, framewise_generator: F) -> IronResult<Response>
     where F: Fn(s::ImageInfo) -> std::result::Result<s::Framewise, ServerError>
 {
-    respond_using(source, || fetch_bytes_from_disk(source), framewise_generator)
+    respond_using(&source, || fetch_bytes_from_disk(source), framewise_generator)
 }
 
 fn ir4_local_handler(req: &mut Request, local_path: &PathBuf, _: &MountLocation) -> IronResult<Response> {
@@ -444,7 +444,8 @@ fn static_setup(mount: &MountLocation) -> Result<(Static, EngineHandler<Static>)
     }
 }
 
-
+//Function is passed as generic trait (generic over 2nd arg), thus &String
+#[cfg_attr(feature = "cargo-clippy", allow(ptr_arg))]
 fn permacache_proxy_handler(req: &mut Request, base_url: &String, _: &MountLocation) -> IronResult<Response> {
     let url: url::Url = req.url.clone().into();
     let shared = req.get::<persistent::Read<SharedData>>().unwrap();
@@ -465,9 +466,10 @@ fn permacache_proxy_handler(req: &mut Request, base_url: &String, _: &MountLocat
 lazy_static! {
     static ref MIME_TYPES: mime_types::Types = mime_types::Types::new().unwrap();
 }
+
+//Function is passed as generic trait (generic over 2nd arg), thus &String
+#[cfg_attr(feature = "cargo-clippy", allow(ptr_arg))]
 fn permacache_proxy_handler_guess_types(req: &mut Request, base_url: &String, _: &MountLocation) -> IronResult<Response> {
-
-
 
     let url: url::Url = req.url.clone().into();
 
@@ -491,7 +493,8 @@ fn permacache_proxy_handler_guess_types(req: &mut Request, base_url: &String, _:
     }
 }
 
-
+//Function is passed as generic trait (generic over 2nd arg), thus &String
+#[cfg_attr(feature = "cargo-clippy", allow(ptr_arg))]
 fn ir4_http_handler(req: &mut Request, base_url: &String, _: &MountLocation) -> IronResult<Response> {
     let url: url::Url = req.url.clone().into();
     let shared = req.get::<persistent::Read<SharedData>>().unwrap();
