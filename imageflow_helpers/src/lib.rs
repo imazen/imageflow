@@ -85,13 +85,13 @@ mod errors {
 
     error_chain! {
 
-//        errors{
-//           LicenseCorrupted(msg: String) {
-//                description("Please verify/reinstall license; license corrupt.")
-//                display("Please verify/reinstall license; license corrupt: {}", msg)
-//           }
-//           RsaDecryptInputLargerThanModulus
-//        }
+        errors{
+           LicenseCorrupted(msg: String) {
+                description("Please verify/reinstall license; license corrupt.")
+                display("Please verify/reinstall license; license corrupt: {}", msg)
+           }
+           RsaDecryptInputLargerThanModulus
+        }
 
     }
 }
