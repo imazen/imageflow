@@ -126,7 +126,7 @@ static bool png_decoder_load_color_profile(flow_c * c, struct flow_codecs_png_de
     // Pre-transform color_type (prior to all pre-decode format transforms)
     int is_color_png = state->color_type & PNG_COLOR_MASK_COLOR;
 
-    if (png_get_iCCP(state->png_ptr, state->info_ptr, &(png_charp){ 0 }, &(int){ 0 }, &profile_buf, &profile_length)) {
+    if (png_get_iCCP(state->png_ptr, state->info_ptr, &(png_charp){ 0 }, &(int){ 0 }, &profile_buf, &profile_length) && profile_length > 0) {
         if (!flow_profile_is_srgb(profile_buf, profile_length)) {
 
             state->color.profile_buf = (uint8_t *) FLOW_malloc(c, profile_length);
@@ -135,6 +135,8 @@ static bool png_decoder_load_color_profile(flow_c * c, struct flow_codecs_png_de
                 return false;
             }
             memcpy(state->color.profile_buf, profile_buf, profile_length);
+            state->color.buf_length = profile_length;
+
             if (is_color_png) {
                 state->color.source = flow_codec_color_profile_source_ICCP;
             } else {

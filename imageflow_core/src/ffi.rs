@@ -636,11 +636,11 @@ pub struct RenderToCanvas1d {
 #[repr(C)]
 #[derive(Clone,Debug,Copy,  PartialEq)]
 pub enum ColorProfileSource {
-    Null,
-    ICCP,
-    ICCP_GRAY,
-    GAMA_CHRM,
-    sRGB,
+    Null = 0,
+    ICCP = 1,
+    ICCP_GRAY = 2,
+    GAMA_CHRM = 3,
+    sRGB = 4,
 
 }
 

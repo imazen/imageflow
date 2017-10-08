@@ -152,11 +152,11 @@ PUB void flow_context_profiler_start(flow_c * c, const char * name, bool allow_r
 PUB void flow_context_profiler_stop(flow_c * c, const char * name, bool assert_started, bool stop_children);
 
 typedef enum flow_codec_color_profile_source {
-    flow_codec_color_profile_source_null,
-    flow_codec_color_profile_source_ICCP,
-    flow_codec_color_profile_source_ICCP_GRAY,
-    flow_codec_color_profile_source_GAMA_CHRM,
-    flow_codec_color_profile_source_sRGB,
+    flow_codec_color_profile_source_null = 0,
+    flow_codec_color_profile_source_ICCP = 1,
+    flow_codec_color_profile_source_ICCP_GRAY = 2,
+    flow_codec_color_profile_source_GAMA_CHRM = 3,
+    flow_codec_color_profile_source_sRGB = 4,
 
 } flow_codec_color_profile_source;
 

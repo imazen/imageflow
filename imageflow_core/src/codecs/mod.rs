@@ -466,7 +466,7 @@ impl ColorTransformCache{
                     // Skip first 80 bytes when hashing.
                     Some(imageflow_helpers::hashing::hash_64(&bytes[80..]) ^ pixel_format as u64)
                 } else {
-                    unreachable!("Profile source should never be set to ICCP without a profile buffer");
+                    unreachable!("Profile source should never be set to ICCP without a profile buffer. Buffer length {}", color.buffer_length);
                 }
             }
         }
