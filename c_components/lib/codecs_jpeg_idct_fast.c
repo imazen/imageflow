@@ -11,7 +11,7 @@
 #if defined(__GNUC__) && !defined(__clang__)
 #define HOT                                                                                                            \
     __attribute__((hot))                                                                                               \
-        __attribute__((optimize("-funsafe-math-optimizations", "-ftree-vectorize", "-ftree-vectorizer-verbose=7")))
+        __attribute__((optimize("-funsafe-math-optimizations", "-ftree-vectorize")))
 #else
 #if defined(__GNUC__)
 #define HOT __attribute__((hot))
