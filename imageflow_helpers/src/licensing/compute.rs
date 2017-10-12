@@ -3,84 +3,73 @@ use super::*;
 use ::smallvec::SmallVec;
 use std::iter::FromIterator;
 
-pub enum License{
-    Pair(LicensePair),
-    Single(LicenseBlob)
+
+trait DoSome{
+    type Item;
+    fn do_some<F>(&mut self, f: F) -> () where F: FnMut(&mut Self::Item) -> ();
 }
-impl License{
-    pub fn id(&self) -> &str{
-        match *self{
-            License::Single(ref b) => b.fields().id(),
-            License::Pair(ref p) => p.id()
+impl<T> DoSome for Option<T>{
+    type Item = T;
+    fn do_some<F>(&mut self, mut f: F) -> () where
+        F: FnMut(&mut Self::Item) -> () {
+        if let Some(ref mut v) = *self{
+            f(v)
         }
-    }
-    pub fn new(parsed: LicenseBlob) -> Result<License>{
-        if parsed.fields().is_remote_placeholder(){
-            Ok(License::Pair(LicensePair::new(parsed)?))
-        }else{
-            Ok(License::Single(parsed))
-        }
-    }
-    pub fn is_pending(&self) -> bool{
-        if let License::Pair(ref p) = *self{
-            p.is_pending()
-        }else {
-            false
-        }
-    }
-
-    pub fn first(&self) -> &LicenseBlob{
-        match *self {
-            License::Single(ref b) => b,
-            License::Pair(ref p) => &p.placeholder()
-        }
-    }
-
-    pub fn fresh_remote(&self) -> Option<::parking_lot::RwLockReadGuard<Option<LicenseBlob>>>{
-        match *self {
-            License::Single(..) => None,
-            License::Pair(ref p) => Some(p.fresh_remote())
-        }
-    }
-
-    pub fn dates(&self, manager: &LicenseManagerSingleton) -> SmallVec<[DateTime<Utc>;4]>{
-        let mut vec = SmallVec::new();
-
-        if let Some(d) = self.first().fields().issued(){
-            vec.push(d);
-        }
-        if let Some(d) = self.first().fields().expires(){
-            vec.push(d);
-        }
-        if let Some(read) = self.fresh_remote(){
-            if let Some(ref license) = *read{
-                if let Some(d) = license.fields().issued(){
-                    vec.push(d);
-                }
-                if let Some(d) = license.fields().expires(){
-                    vec.push(d);
-                }
-            }
-        }else if let Some(license) = manager.cached_remote(self.id()){
-                if let Some(d) = license.fields().issued(){
-                    vec.push(d);
-                }
-                if let Some(d) = license.fields().expires(){
-                    vec.push(d);
-                }
-        }
-        vec
     }
 }
 
+pub enum EnforcementMethod{ None, Watermark, Error}
 
+
+pub struct LicenseReportInfo<'a>{
+    enforcement: EnforcementMethod,
+    relevant_domains: Vec<&'a str>,
+    public_report: bool,
+}
+
+impl<'a>  LicenseReportInfo<'a>{
+    fn create_header<'mgr>(&self, c: &mut LicenseComputation<'mgr>) -> Option<String>{
+        Some(String::new())
+    }
+
+    fn create_body<'mgr>(&self, c: &mut LicenseComputation<'mgr>) -> Option<String>{
+        Some(String::new())
+    }
+}
+
+//
+//pub fn license_status_summary(&self){
+//    if self.licensed_all() {
+//        "License valid for all domains"
+//    } else {
+//
+//    }
+//}
+//pub fn get_header(&self, include_sales: bool, include_scope: bool) -> String{
+//    let header = if self.enforced {
+//        "------------------------- Licensing ON -------------------------\r\n"
+//    } else {
+//        "------------------------- Licensing OFF -------------------------\r\n"
+//    };
+//
+//    let mut page = String::with_capacity(1024);
+//    page = page + header + "\n\n\n";
+//
+//
+//    page = page + &format!("{}", self.sink);
+//    // WIP
+//    page
+//}
 
 pub struct LicenseComputation<'mgr> {
-    sink: IssueSink,
+    sink: Option<IssueSink>,
     mgr: &'mgr LicenseManagerSingleton,
     expires: Option<DateTime<Utc>>,
-    enforced: bool,
-    licensed: bool,
+    licensed_some: bool,
+    licensed_all: bool,
+    licensed_domains: SmallVec<[UniCase<String>;2]>,
+    report_header: Option<String>,
+    report_body: Option<String>
 }
 
 
@@ -105,8 +94,15 @@ impl<'a> LicenseScope<'a>{
 impl<'mgr> LicenseComputation<'mgr>{
 
     pub fn licensed(&self) -> bool{
-        self.licensed
+        self.licensed_some
     }
+    pub fn licensed_all(&self) -> bool{
+        self.licensed_all
+    }
+    pub fn licensed_domains(&self) -> &SmallVec<[UniCase<String>;2]>{
+        &self.licensed_domains
+    }
+
 
     fn build_date(&self) -> DateTime<Utc>{
         self.mgr.clock().get_build_date()
@@ -121,73 +117,18 @@ impl<'mgr> LicenseComputation<'mgr>{
     }
     fn is_license_expired(&self, license: &LicenseBlob) -> bool{
         if let Some(when) = license.fields().expires(){
-            when < self.mgr.clock().get_utc_now().with_timezone(&when.timezone())
+            when < self.mgr.clock().get_utc_now()
         }else {
             false
         }
     }
     fn has_license_begin(&self, license: &LicenseBlob) -> bool{
         if let Some(when) = license.fields().issued(){
-            when < self.mgr.clock().get_utc_now().with_timezone(&when.timezone())
+            when < self.mgr.clock().get_utc_now()
         }else {
             false
         }
     }
-
-    fn validate_license(&mut self, license: &LicenseBlob) -> bool {
-        if self.is_license_expired(license){
-            self.sink.error(format!("License {} has expired.", license.id()), license.fields().to_redacted_str());
-            return false;
-        }
-        if !self.has_license_begin(license){
-            self.sink.error(format!("License {} was issued in the future; check system clock.", license.id()), license.fields().to_redacted_str());
-            return false;
-        }
-
-        if !self.is_build_date_ok(license){
-            let build_date = self.build_date();
-            self.sink.error(format!("License {} covers Imageflow versions prior to {}, but you are using a build dated {:?}.", license.id(),
-                            license.fields().subscription_expiration_date().unwrap().format("%F"),
-                            build_date),
-                            license.fields().to_redacted_str());
-            return false;
-        }
-        if license.fields().is_revoked(){
-            let message = license.fields().message().unwrap_or("license is no longer valid");
-            self.sink.error(format!("License {}: {}.", license.id(), message),
-                            license.fields().to_redacted_str());
-            return false;
-        }
-        true
-    }
-
-
-    fn validate_grace_period(&mut self, license: &License) -> Option<DateTime<Utc>>{
-        if !self.validate_license(license.first()){
-            return None;
-        }
-
-        let grace_minutes = license.first().fields().network_grace_minutes().unwrap_or(6);
-        let expires = self.mgr.created() + ::time::Duration::minutes(grace_minutes as i64);
-
-        if expires < self.mgr.clock().get_utc_now(){
-            self.sink.error(format!("Grace period of {}m expired for license {}.", grace_minutes, license.id()),
-            format!("License {} was not found in the disk cache and could not be retrieved from the remote server within {} minutes.", license.id(), grace_minutes));
-            return None;
-        }
-
-        let thirty_seconds = self.mgr.created() + ::time::Duration::seconds(30);
-        if thirty_seconds > self.mgr.clock().get_utc_now() {
-            self.sink.warn(format!("Fetching license {} (not found in disk cache).", license.id()),
-                           format!("Network grace period expires in {} minutes.", grace_minutes));
-            return Some(thirty_seconds);
-        }
-        self.sink.error(format!("Grace period of {}m will expire for license {} at UTC {} on {}", grace_minutes, license.id(), expires.format("%H%M"), expires.format("%F")),
-                        format!("License {} was not found in the disk cache and could not be retrieved from the remote server.", license.id()));
-        Some(expires)
-
-    }
-
 
     fn get_messages<'lic>(&self, license: &'lic LicenseBlob) -> SmallVec<[&'lic str;3]> {
         let array = [
@@ -198,24 +139,66 @@ impl<'mgr> LicenseComputation<'mgr>{
 
         SmallVec::from_iter(array
             .iter()
-            .filter(|opt| opt.is_some() && !opt.unwrap().is_ascii_whitespace())
-            .map(|opt| opt.unwrap()))
+            .filter_map(|opt| opt.and_then(|v| if v.is_ascii_whitespace() { None } else { Some(v) }))
+        )
     }
 
-    pub fn get_diagnostics(&self) -> String{
-        let header = if self.enforced {
-            "Licensing Enforced"
-        } else {
-            "Licensing not enforced"
-        };
+    fn validate_license(&mut self, license: &LicenseBlob) -> bool{
+        let messages = self.get_messages(license);
+        for m in messages {
+            self.sink.do_some(|s| s.message(format!("License {}: {}", license.id(), m), String::new()));
+        }
 
-        let mut page = String::with_capacity(1024);
-        page = page + header + "\n\n\n";
+        if self.is_license_expired(license){
+            self.sink.do_some(|s| s.error(format!("License {} has expired.", license.id()), license.fields().to_redacted_str()));
+            return false;
+        }
+        if !self.has_license_begin(license){
+            self.sink.do_some(|s| s.error(format!("License {} was issued in the future; check system clock.", license.id()), license.fields().to_redacted_str()));
+            return false;
+        }
 
+        if !self.is_build_date_ok(license){
+            let build_date = self.build_date();
+            self.sink.do_some(|s| s.error(format!("License {} covers Imageflow versions prior to {}, but you are using a build dated {:?}.", license.id(),
+                            license.fields().subscription_expiration_date().unwrap().format("%F"),
+                            build_date),
+                            license.fields().to_redacted_str()));
+            return false;
+        }
+        if license.fields().is_revoked(){
+            let message = license.fields().message().unwrap_or("license is no longer valid");
+            self.sink.do_some(|s| s.error(format!("License {}: {}.", license.id(), message),
+                            license.fields().to_redacted_str()));
+            return false;
+        }
+        true
+    }
 
-        page = page + &format!("{}", self.sink);
-        // WIP
-        page
+    fn validate_grace_period(&mut self, license: &License) -> Option<DateTime<Utc>>{
+        if !self.validate_license(license.first()){
+            return None;
+        }
+
+        let grace_minutes = license.first().fields().network_grace_minutes().unwrap_or(6);
+        let expires = self.mgr.created() + ::time::Duration::minutes(grace_minutes as i64);
+
+        if expires < self.mgr.clock().get_utc_now(){
+            self.sink.do_some(|s| s.error(format!("Grace period of {}m expired for license {}.", grace_minutes, license.id()),
+            format!("License {} was not found in the disk cache and could not be retrieved from the remote server within {} minutes.", license.id(), grace_minutes)));
+            return None;
+        }
+
+        let thirty_seconds = self.mgr.created() + ::time::Duration::seconds(30);
+        if thirty_seconds > self.mgr.clock().get_utc_now() {
+            self.sink.do_some(|s| s.warn(format!("Fetching license {} (not found in disk cache).", license.id()),
+                           format!("Network grace period expires in {} minutes.", grace_minutes)));
+            return Some(thirty_seconds);
+        }
+        self.sink.do_some(|s| s.error(format!("Grace period of {}m will expire for license {} at UTC {} on {}", grace_minutes, license.id(), expires.format("%H%M"), expires.format("%F")),
+                        format!("License {} was not found in the disk cache and could not be retrieved from the remote server.", license.id())));
+        Some(expires)
+
     }
 
     fn validate_blob_usage(&mut self, license: &LicenseBlob, required_features: &::smallvec::SmallVec<[&str;1]>) -> bool{
@@ -229,7 +212,7 @@ impl<'mgr> LicenseComputation<'mgr>{
                 }
             }
             if not_covered.len() > 0{
-                self.sink.error(format!("License {} needs to be upgraded; it does not cover in-use features {:?}", license.id(), not_covered), license.fields().to_redacted_str());
+                self.sink.do_some(|s| s.error(format!("License {} needs to be upgraded; it does not cover in-use features {:?}", license.id(), not_covered), license.fields().to_redacted_str()));
                 false
             }else{
                 true
@@ -240,25 +223,30 @@ impl<'mgr> LicenseComputation<'mgr>{
 
     }
 
-    /// Attempt to validate remote, then cached, then placeholder. Stop validating on success.
-    fn validate_license_usage(&mut self, license: &License, required_features: &::smallvec::SmallVec<[&str;1]>) -> bool{
-        if let Some(read) = license.fresh_remote(){
-            if let Some(ref remote) = *read{
-                if self.validate_blob_usage(&remote, &required_features){
-                    return true;
+    /// Attempt to validate remote, then cached, then placeholder. Stop validating on success, and return domain names (if any)
+    /// Allocates to own domain names
+    fn validate_license_usage(&mut self, license: &License, required_features: &::smallvec::SmallVec<[&str;1]>) -> Option<SmallVec<[UniCase<String>;2]>>{
+        if license.is_pair() {
+            if let Some(read) = license.fresh_remote() {
+                if let Some(ref remote) = *read {
+                    if self.validate_blob_usage(&remote, &required_features) {
+                        return Some(remote.fields().domains_owned());
+                    }
                 }
             }
-        }
-        if let Some(remote) = self.mgr.cached_remote(license.id()){
-            if self.validate_blob_usage(&remote, &required_features){
-                return true;
+            if let Some(remote) = self.mgr.cached_remote(license.id()) {
+                if self.validate_blob_usage(&remote, &required_features) {
+                    return Some(remote.fields().domains_owned());
+                }
             }
+        } else if self.validate_blob_usage(license.first(), &required_features) {
+            return Some(license.first().fields().domains_owned());
         }
-        self.validate_blob_usage(license.first(), &required_features)
+        None
     }
 
-    pub fn new(mgr: &'mgr LicenseManagerSingleton,
-               enforced: bool,
+    pub fn new<'a>(mgr: &'mgr LicenseManagerSingleton,
+               info: Option<&'a LicenseReportInfo>,
                scope: LicenseScope, required_features: &::smallvec::SmallVec<[&str;1]>) -> Self{
 
         let compute_started = mgr.clock().get_utc_now();
@@ -267,17 +255,20 @@ impl<'mgr> LicenseComputation<'mgr>{
 
         let mut c = LicenseComputation{
             mgr,
-            enforced,
             expires: None,
-            sink: IssueSink::new("LicenseComputation"),
-            licensed: false,
+            sink: if info.is_some() { Some( IssueSink::new("License Computation") ) } else { None },
+            licensed_some: false,
+            licensed_all: false,
+            licensed_domains: SmallVec::new(),
+            report_header: None,
+            report_body: None,
         };
 
         // .validate_grace_period() validates all pending licenses
         let grace_periods: SmallVec<[DateTime<Utc>;1]> = SmallVec::from_iter(
             licenses
                 .iter()
-                .filter(|license| license.is_pending())
+                .filter(|license| license.is_pair() && !license.remote_fetched())
                 .filter_map(|license| c.validate_grace_period(license))
         );
 
@@ -292,12 +283,22 @@ impl<'mgr> LicenseComputation<'mgr>{
 
         // Validate all non-pending licenses even if we already have authorization (so that all the appropriate warnings are logged to the sink)
         for license in licenses {
-            if !license.is_pending() && c.validate_license_usage(license, &required_features){
-                c.licensed = true;
+            if let Some(domains) = c.validate_license_usage(license, &required_features){
+                if domains.is_empty() {
+                    c.licensed_all = true;
+                }else {
+                    c.licensed_domains.extend(domains);
+                }
             }
         }
 
-        c.licensed = c.licensed || grace_period_active;
+        c.licensed_all = c.licensed_all || grace_period_active;
+        c.licensed_some = !c.licensed_domains.is_empty() || c.licensed_all;
+
+        if let Some(info) = info{
+            c.report_header = info.create_header(&mut c);
+            c.report_body = info.create_body(&mut c);
+        }
         c
     }
 }

@@ -1,8 +1,87 @@
 use super::*;
-
+use ::smallvec::SmallVec;
 //lazy_static! {
 //    static ref DEFAULT_LICENSE_SERVERS: Vec<&'static str> = vec!["https://s3-us-west-2.amazonaws.com/licenses.imazen.net/", "https://licenses-redirect.imazen.net/", "https://licenses.imazen.net", "https://licenses2.imazen.net"];
 //}
+
+
+pub enum License{
+    Pair(LicensePair),
+    Single(LicenseBlob)
+}
+impl License{
+    pub fn id(&self) -> &str{
+        match *self{
+            License::Single(ref b) => b.fields().id(),
+            License::Pair(ref p) => p.id()
+        }
+    }
+    pub fn new(parsed: LicenseBlob) -> Result<License>{
+        if parsed.fields().is_remote_placeholder(){
+            Ok(License::Pair(LicensePair::new(parsed)?))
+        }else{
+            Ok(License::Single(parsed))
+        }
+    }
+    pub fn is_pair(&self) -> bool{
+        if let License::Pair(_) = *self{
+            true
+        }else {
+            false
+        }
+    }
+    pub fn remote_fetched(&self) -> bool{
+        if let License::Pair(ref p) = *self{
+            p.remote_fetched()
+        }else {
+            false
+        }
+    }
+
+    pub fn first(&self) -> &LicenseBlob{
+        match *self {
+            License::Single(ref b) => b,
+            License::Pair(ref p) => &p.placeholder()
+        }
+    }
+
+    pub fn fresh_remote(&self) -> Option<::parking_lot::RwLockReadGuard<Option<LicenseBlob>>>{
+        match *self {
+            License::Single(..) => None,
+            License::Pair(ref p) => Some(p.fresh_remote())
+        }
+    }
+
+    pub fn dates(&self, manager: &LicenseManagerSingleton) -> SmallVec<[DateTime<Utc>;4]>{
+        let mut vec = SmallVec::new();
+
+        if let Some(d) = self.first().fields().issued(){
+            vec.push(d);
+        }
+        if let Some(d) = self.first().fields().expires(){
+            vec.push(d);
+        }
+        if let Some(read) = self.fresh_remote(){
+            if let Some(ref license) = *read{
+                if let Some(d) = license.fields().issued(){
+                    vec.push(d);
+                }
+                if let Some(d) = license.fields().expires(){
+                    vec.push(d);
+                }
+            }
+        }else if let Some(license) = manager.cached_remote(self.id()){
+            if let Some(d) = license.fields().issued(){
+                vec.push(d);
+            }
+            if let Some(d) = license.fields().expires(){
+                vec.push(d);
+            }
+        }
+        vec
+    }
+}
+
 
 pub struct LicensePair{
     id: String,
@@ -42,8 +121,8 @@ impl LicensePair{
         Ok(())
     }
 
-    pub fn is_pending(&self) -> bool{
-        self.remote.read().is_none()
+    pub fn remote_fetched(&self) -> bool{
+        self.remote.read().is_some()
     }
 
     pub fn placeholder(&self) -> &LicenseBlob{

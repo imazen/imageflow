@@ -46,16 +46,14 @@ fn test_remote_license_success(){
     let cache = StringMemCache::new().into_cache();
     let mgr = Arc::new(LicenseManagerSingleton::new(&*parsing::TEST_KEYS, clock, cache).rewind_boot_time(TWENTY_HOURS));
 
-    assert!(!mgr.compute(true, LicenseScope::All,&req_features ).licensed());
+    assert!(!mgr.compute_feature("R_Creative").licensed());
 
     let _license = mgr.get_or_add(&Cow::Borrowed(SITE_WIDE_PLACEHOLDER)).unwrap();
 
     LicenseManagerSingleton::create_thread(mgr.clone());
     mgr.wait_for(1);
 
-    let compute = mgr.compute(true, LicenseScope::All,&req_features );
-
-    assert!(compute.licensed());
+    assert!(mgr.compute_feature("R_Creative").licensed());
 
     mock.assert();
 }
@@ -76,8 +74,8 @@ fn test_remote_license_void(){
     mgr.add_static(CANCELLED_PLACEHOLDER).unwrap();
 
     // Not licensed after placeholder
-    let c = mgr.compute_feature("R_Creative");
-    eprintln!("{}", c.get_diagnostics());
+    //let c = mgr.compute_feature("R_Creative");
+//    eprintln!("{}", c.get_diagnostics());
     assert!(!mgr.compute_feature("R_Creative").licensed());
 
 

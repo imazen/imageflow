@@ -5,7 +5,7 @@ use super::*;
 
 
 #[derive(Debug,PartialEq)]
-pub enum IssueKind{ Error, Warning}
+pub enum IssueKind{ Error, Warning, Message}
 
 #[derive(Debug, PartialEq)]
 pub struct Issue{
@@ -48,7 +48,10 @@ impl IssueSink{
         let issue = Issue::new(IssueKind::Warning,msg, detail, self.source);
         self.dict.insert(issue.hash, issue);
     }
-
+    pub fn message(&mut self, msg: String, detail: String){
+        let issue = Issue::new(IssueKind::Message,msg, detail, self.source);
+        self.dict.insert(issue.hash, issue);
+    }
 
 
 }

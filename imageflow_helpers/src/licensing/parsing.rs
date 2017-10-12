@@ -137,6 +137,10 @@ impl LicenseParser{
         vec
     }
 
+    pub fn domains_owned(&self) -> SmallVec<[UniCase<String>;2]>{
+        SmallVec::from_iter(self.domains().into_iter().map(|s| UniCase::new(s.as_ref().to_owned())))
+    }
+
     pub fn license_servers(&self) -> SmallVec<[&str;4]>{
         let mut vec = SmallVec::new();
         if let Some(features) = self.get("LicenseServers") {

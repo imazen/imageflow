@@ -94,6 +94,11 @@ impl LicenseManagerSingleton{
         self.created = self.created.checked_sub_signed(::chrono::Duration::seconds(seconds)).unwrap();
         self
     }
+    #[cfg(test)]
+    pub fn set_boot_time(mut self, time: DateTime<Utc>) -> Self{
+        self.created = time;
+        self
+    }
 
     fn set_handle(&self, h: Option<JoinHandle<()>>){
         *self.handle.write() = h
@@ -232,12 +237,12 @@ impl LicenseManagerSingleton{
 
     pub fn compute_feature(&self, feature: &str) -> LicenseComputation{
         let required_features = ::smallvec::SmallVec::from_buf([feature]);
-        LicenseComputation::new(self, true, LicenseScope::All, &required_features)
+        LicenseComputation::new(self, None, LicenseScope::All, &required_features)
     }
 
-    pub fn compute(&self, enforced: bool,
+    pub fn compute(&self, info: Option<&LicenseReportInfo>,
                    scope: LicenseScope, required_features: &::smallvec::SmallVec<[&str;1]>) -> LicenseComputation{
-        LicenseComputation::new(self, enforced, scope, required_features)
+        LicenseComputation::new(self, info, scope, required_features)
     }
 
 }
