@@ -66,6 +66,7 @@ fn test_remote_license_void(){
     let mock = mock_plaintext_200("/v1/licenses/latest/test8b47045eb7b8ca42aa967f33ee1d014ba89f8d1ac207426b482d34b5c0d90935.txt", CANCELLED_REMOTE);
 
     let clock = Box::new(OffsetClock::new("2017-04-25", "2017-04-25"));
+
     let cache = StringMemCache::new().into_cache();
     let mgr = Arc::new(LicenseManagerSingleton::new(&*parsing::TEST_KEYS, clock, cache).rewind_boot_time(TWENTY_HOURS));
 
@@ -76,7 +77,7 @@ fn test_remote_license_void(){
 
     // Not licensed after placeholder
     let c = mgr.compute_feature("R_Creative");
-    //c.get_diagnostics()
+    eprintln!("{}", c.get_diagnostics());
     assert!(!mgr.compute_feature("R_Creative").licensed());
 
 

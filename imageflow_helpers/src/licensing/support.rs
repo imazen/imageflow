@@ -49,7 +49,20 @@ impl IssueSink{
         self.dict.insert(issue.hash, issue);
     }
 
+
+
 }
+
+
+impl fmt::Display for IssueSink {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        for issue in self.dict.values(){
+            write!(f,"{} {:?}: {}\n{}\n\n", self.source, issue.kind, issue.message, issue.detail)?;
+        }
+        Ok(())
+    }
+}
+
 
 //#[allow(dead_code)]
 //pub struct IssueSync{

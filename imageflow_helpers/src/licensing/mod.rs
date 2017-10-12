@@ -71,6 +71,7 @@ const URL: &'static str = ::mockito::SERVER_URL;
 
 impl LicenseManagerSingleton{
     pub fn new(trusted_keys: &'static [RSADecryptPublic], clock: Box<LicenseClock + Sync>, cache: Box<PersistentStringCache>) -> Self{
+        let created = clock.get_utc_now();
         LicenseManagerSingleton{
             trusted_keys,
             clock,
@@ -79,7 +80,7 @@ impl LicenseManagerSingleton{
             aliases_to_id: ::chashmap::CHashMap::new(),
             licenses: AppendList::new(),
             sink: IssueSink::new("LicenseManager"),
-            created: ::chrono::Utc::now(),
+            created,
             uid: ::uuid::Uuid::new_v4(),
             heartbeat_count: ::std::sync::atomic::ATOMIC_U64_INIT,
             handle: Arc::new(::parking_lot::RwLock::new(None)),

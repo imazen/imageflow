@@ -210,8 +210,10 @@ impl<'mgr> LicenseComputation<'mgr>{
         };
 
         let mut page = String::with_capacity(1024);
-        page = page + header;
+        page = page + header + "\n\n\n";
 
+
+        page = page + &format!("{}", self.sink);
         // WIP
         page
     }
