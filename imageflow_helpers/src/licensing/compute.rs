@@ -9,9 +9,9 @@ pub enum License{
 }
 impl License{
     pub fn id(&self) -> &str{
-        match self{
-            &License::Single(ref b) => b.fields().id(),
-            &License::Pair(ref p) => p.id()
+        match *self{
+            License::Single(ref b) => b.fields().id(),
+            License::Pair(ref p) => p.id()
         }
     }
     pub fn new(parsed: LicenseBlob) -> Result<License>{
@@ -22,7 +22,7 @@ impl License{
         }
     }
     pub fn is_pending(&self) -> bool{
-        if let &License::Pair(ref p) = self{
+        if let License::Pair(ref p) = *self{
             p.is_pending()
         }else {
             false
@@ -30,20 +30,20 @@ impl License{
     }
 
     pub fn first(&self) -> &LicenseBlob{
-        match self {
-            &License::Single(ref b) => b,
-            &License::Pair(ref p) => &p.placeholder()
+        match *self {
+            License::Single(ref b) => b,
+            License::Pair(ref p) => &p.placeholder()
         }
     }
 
     pub fn fresh_remote(&self) -> Option<::parking_lot::RwLockReadGuard<Option<LicenseBlob>>>{
-        match self {
-            &License::Single(..) => None,
-            &License::Pair(ref p) => Some(p.fresh_remote())
+        match *self {
+            License::Single(..) => None,
+            License::Pair(ref p) => Some(p.fresh_remote())
         }
     }
 
-    pub fn dates(&self, manager: &LicenseManagerSingleton) -> SmallVec<[DateTime<FixedOffset>;4]>{
+    pub fn dates(&self, manager: &LicenseManagerSingleton) -> SmallVec<[DateTime<Utc>;4]>{
         let mut vec = SmallVec::new();
 
         if let Some(d) = self.first().fields().issued(){
@@ -78,7 +78,7 @@ impl License{
 pub struct LicenseComputation<'mgr> {
     sink: IssueSink,
     mgr: &'mgr LicenseManagerSingleton,
-    expires: Option<DateTime<FixedOffset>>,
+    expires: Option<DateTime<Utc>>,
     enforced: bool,
     licensed: bool,
 }
@@ -87,7 +87,7 @@ pub struct LicenseComputation<'mgr> {
 pub enum LicenseScope<'a>{
     All,
     AllShared,
-    List(::smallvec::SmallVec<[&'a str; 1]>)
+    IdList(::smallvec::SmallVec<[&'a str; 1]>)
 }
 
 impl<'a> LicenseScope<'a>{
@@ -95,7 +95,7 @@ impl<'a> LicenseScope<'a>{
         match self{
             &LicenseScope::All => SmallVec::from_iter(mgr.iter_all()),
             &LicenseScope::AllShared => SmallVec::from_iter(mgr.iter_shared()),
-            &LicenseScope::List(ref vec) =>
+            &LicenseScope::IdList(ref vec) =>
                 SmallVec::from_iter(vec.iter().map(|id| mgr.get_by_id(id)).filter(|v|v.is_some()).map(|v| v.unwrap()))
 
         }
@@ -108,7 +108,7 @@ impl<'mgr> LicenseComputation<'mgr>{
         self.licensed
     }
 
-    fn build_date(&self) -> DateTime<FixedOffset>{
+    fn build_date(&self) -> DateTime<Utc>{
         self.mgr.clock().get_build_date()
     }
 
@@ -162,7 +162,7 @@ impl<'mgr> LicenseComputation<'mgr>{
     }
 
 
-    fn grace_period_for(&mut self, license: &License) -> Option<DateTime<Utc>>{
+    fn validate_grace_period(&mut self, license: &License) -> Option<DateTime<Utc>>{
         if !self.validate_license(license.first()){
             return None;
         }
@@ -211,11 +211,12 @@ impl<'mgr> LicenseComputation<'mgr>{
 
         let mut page = String::with_capacity(1024);
         page = page + header;
+
         // WIP
         page
     }
 
-    fn validate_usage(&mut self, license: &LicenseBlob, required_features: &::smallvec::SmallVec<[&str;1]>) -> bool{
+    fn validate_blob_usage(&mut self, license: &LicenseBlob, required_features: &::smallvec::SmallVec<[&str;1]>) -> bool{
         if self.validate_license(license){
             let features = license.fields().features();
             let mut not_covered: SmallVec<[&str;1]> = SmallVec::new();
@@ -237,13 +238,30 @@ impl<'mgr> LicenseComputation<'mgr>{
 
     }
 
+    /// Attempt to validate remote, then cached, then placeholder. Stop validating on success.
+    fn validate_license_usage(&mut self, license: &License, required_features: &::smallvec::SmallVec<[&str;1]>) -> bool{
+        if let Some(read) = license.fresh_remote(){
+            if let Some(ref remote) = *read{
+                if self.validate_blob_usage(&remote, &required_features){
+                    return true;
+                }
+            }
+        }
+        if let Some(remote) = self.mgr.cached_remote(license.id()){
+            if self.validate_blob_usage(&remote, &required_features){
+                return true;
+            }
+        }
+        self.validate_blob_usage(license.first(), &required_features)
+    }
+
     pub fn new(mgr: &'mgr LicenseManagerSingleton,
                enforced: bool,
                scope: LicenseScope, required_features: &::smallvec::SmallVec<[&str;1]>) -> Self{
 
+        let compute_started = mgr.clock().get_utc_now();
+
         let licenses = scope.collect_from(mgr);
-
-
 
         let mut c = LicenseComputation{
             mgr,
@@ -253,46 +271,31 @@ impl<'mgr> LicenseComputation<'mgr>{
             licensed: false,
         };
 
+        // .validate_grace_period() validates all pending licenses
         let grace_periods: SmallVec<[DateTime<Utc>;1]> = SmallVec::from_iter(
             licenses
                 .iter()
                 .filter(|license| license.is_pending())
-                .map(|license| c.grace_period_for(license))
-                .filter(|period| period.is_some()).map(|period| period.unwrap())
+                .filter_map(|license| c.validate_grace_period(license))
         );
 
+        let grace_period_active = !grace_periods.is_empty();
+
+        // Take the nearest future issued, expired, or grace period expiration dates
         c.expires = licenses
                 .iter().flat_map(|license| license.dates(mgr))
-                .chain(grace_periods.iter().map(|r| r.with_timezone(&FixedOffset::east(0))))
+                .chain(grace_periods.into_iter())
+                .filter(|date| date > &compute_started)
                 .min();
 
-        c.licensed = grace_periods.len() > 0;
-
-        if !c.licensed{
-            for license in licenses.iter()
-                    .filter(|license| !license.is_pending()){
-
-                if let Some(read) = license.fresh_remote(){
-                    if let Some(ref remote) = *read{
-                        if c.validate_usage(&remote, &required_features){
-                            c.licensed = true;
-                            break;
-                        }
-                    }
-                }
-                if let Some(remote) = c.mgr.cached_remote(license.id()){
-                        if c.validate_usage(&remote, &required_features){
-                            c.licensed = true;
-                            break;
-                        }
-                }
-                if c.validate_usage(license.first(), &required_features ){
-                    c.licensed = true;
-                    break;
-                }
+        // Validate all non-pending licenses even if we already have authorization (so that all the appropriate warnings are logged to the sink)
+        for license in licenses {
+            if !license.is_pending() && c.validate_license_usage(license, &required_features){
+                c.licensed = true;
             }
         }
 
+        c.licensed = c.licensed || grace_period_active;
         c
     }
 }

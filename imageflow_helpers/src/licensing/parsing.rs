@@ -2,21 +2,26 @@ use ::preludes::from_std::*;
 use num::{One, Zero};
 use num::bigint::{BigInt, Sign};
 use sha2::{Sha512, Digest};
-use ::chrono::{DateTime,FixedOffset};
+use ::chrono::{DateTime, Utc};
 use unicase::UniCase;
 use errors::*;
 use errors::Result;
 use ::smallvec::SmallVec;
+use std::iter::FromIterator;
+
+use super::AsciiFolding;
 
 #[derive(Debug)]
 pub struct LicenseParser{
     id: String,
-    issued: Option<DateTime<FixedOffset>>,
-    expires: Option<DateTime<FixedOffset>>,
-    subscription_expiration_date: Option<DateTime<FixedOffset>>,
-    pairs: HashMap<UniCase<String>,String>,
+    issued: Option<DateTime<Utc>>,
+    expires: Option<DateTime<Utc>>,
+    subscription_expiration_date: Option<DateTime<Utc>>,
+    pairs: HashMap<AsciiFolding<String>,String>,
     original_length: usize
 }
+
+
 
 impl LicenseParser{
     pub fn new(s: &str) -> Result<LicenseParser>{
@@ -24,13 +29,13 @@ impl LicenseParser{
         let mut pairs = HashMap::new();
         for line in s.lines(){
             if let Some(colon) = line.find(":") {
-                let key = UniCase::new(line[..colon].trim().to_owned());
+                let key = AsciiFolding::new(line[..colon].trim().to_owned());
                 let value = line[colon+1..].trim();
                 pairs.insert(key, value.to_owned());
             }
         }
         let mut parser = LicenseParser {
-            id: "".to_owned(),
+            id: String::new(),
             issued: None,
             expires: None,
             subscription_expiration_date: None,
@@ -51,17 +56,16 @@ impl LicenseParser{
     }
 
     pub fn get(&self, key: &str) -> Option<&str>{
-        //TODO: remove allocation somehow
-        self.pairs.get(&UniCase::new(key.to_owned())).map(|s| s.as_ref())
+        self.pairs.get(AsciiFolding::borrowed(key)).map(|s| s.as_ref())
     }
 
-    pub fn iter(&self) -> ::std::collections::hash_map::Iter<UniCase<String>,String>{
+    pub fn iter(&self) -> ::std::collections::hash_map::Iter<AsciiFolding<String>,String>{
         self.pairs.iter()
     }
 
 
-    fn parse_date(&self, key: &str) -> Option<DateTime<FixedOffset>>{
-        self.get(key).map(|s| DateTime::parse_from_rfc3339(s).expect("License dates must be valid iso1806/rfc3339 date strings."))
+    fn parse_date(&self, key: &str) -> Option<DateTime<Utc>>{
+        self.get(key).map(|s| DateTime::parse_from_rfc3339(s).expect("License dates must be valid iso1806/rfc3339 date strings.").with_timezone(&::chrono::Utc))
     }
 
     fn parse_int(&self, key: &str) -> Option<i32> {
@@ -71,13 +75,13 @@ impl LicenseParser{
     pub fn id(&self) -> &str{
         &self.id
     }
-    pub fn issued(&self) -> Option<DateTime<FixedOffset>>{
+    pub fn issued(&self) -> Option<DateTime<Utc>>{
         self.issued
     }
-    pub fn expires(&self) -> Option<DateTime<FixedOffset>>{
+    pub fn expires(&self) -> Option<DateTime<Utc>>{
         self.expires
     }
-    pub fn subscription_expiration_date(&self) -> Option<DateTime<FixedOffset>>{
+    pub fn subscription_expiration_date(&self) -> Option<DateTime<Utc>>{
         self.subscription_expiration_date
     }
     pub fn is_remote_placeholder(&self) -> bool{
@@ -147,7 +151,7 @@ impl LicenseParser{
     pub fn to_redacted_str(&self) -> String{
         let mut result = String::with_capacity(self.original_length + 20);
         for (k,v) in self.iter(){
-            if k.eq_ignore_ascii_case("secret"){
+            if k.as_ref().eq_ignore_ascii_case("secret"){
                 result.push_str("secret: ****redacted****");
             }else{
                 result.push_str(k.as_ref());
@@ -189,7 +193,7 @@ impl LicenseBlob{
     }
 
     pub fn deserialize(trusted_keys: &[RSADecryptPublic], license: &str, error_prefix: &str) -> Result<LicenseBlob>{
-        let parts = license.split(":").map(|s| s.trim()).collect::<Vec<&str>>();
+        let parts: SmallVec<[&str;4]> = SmallVec::from_iter(license.split(":").map(|s| s.trim()));
         if parts.len() < 2{
             return Err(Error::from_kind(ErrorKind::LicenseCorrupted(format!("{} Incomplete: not enough ':' delimited segments found.\n{}",error_prefix, license))));
         }
@@ -213,7 +217,7 @@ impl LicenseBlob{
 
         let fields = {
             let data_string = str::from_utf8(&data_bytes).chain_err(|| format!("{} License contents must be valid UTF-8 bytes", error_prefix))?;
-            LicenseParser::new(data_string)?
+            LicenseParser::new(data_string)? // Each key, each value, is an alloc (plus HashMap and Id)
         };
         Ok(
             LicenseBlob{
@@ -225,13 +229,17 @@ impl LicenseBlob{
         )
     }
 
-    fn validate_signature(data: &[u8], signature: &[u8], trusted_keys: &[RSADecryptPublic]) -> Result<bool>{
+    fn validate_signature(data: &[u8], signature_bytes: &[u8], trusted_keys: &[RSADecryptPublic]) -> Result<bool>{
         let mut hasher = Sha512::default();
         hasher.input(data);
-        let digest = hasher.result();
+        use ::digest::FixedOutput;
+        let digest = hasher.fixed_result();
+
+        let sig = RSAData::from(signature_bytes); // This allocates (BigInt)
+
         for rsa in trusted_keys{
-            let decrypted = rsa.decrypt_public(signature)?;
-            if decrypted.as_slice() == digest.as_slice() {
+            let decrypted = rsa.decrypt_public(&sig)?; // This allocates to do math (BigInt)
+            if decrypted.as_ref() == digest.as_ref() {
                 return Ok(true);
             }
         }
@@ -291,18 +299,29 @@ impl RSADecryptPublic{
         RSADecryptPublic::powm(input, &self.exponent, &self.modulus)
     }
 
-    pub fn decrypt_public(&self, bytes: &[u8]) -> Result<Vec<u8>>{
+    /// This method allocates quite a bit due to use of BigInt
+    pub fn decrypt_public(&self, data: &RSAData) -> Result<SmallVec<[u8;64]>>{
         // RSA specifies big-endian
-        //BigInt allocates
         // There's an upper bound on all of these allocations. Wish SmallVec was an option
-        let input = BigInt::from_bytes_be(Sign::Plus, bytes);
-        if input >= self.modulus{
+        let input = data.data();
+        if input >= &self.modulus{
             // input too long for RSA cipher block size
             Err(Error::from_kind(ErrorKind::RsaDecryptInputLargerThanModulus))
         }else {
             //.skip_while(|v| *v != 0).skip(1) skips padding
-            Ok(self.mod_pow(&input).to_bytes_be().1.into_iter().skip_while(|v| *v != 0).skip(1).collect())
+            Ok(SmallVec::from_iter(self.mod_pow(&input).to_bytes_be().1.into_iter().skip_while(|v| *v != 0).skip(1)))
         }
+    }
+}
+
+pub struct RSAData(BigInt);
+impl RSAData{
+    pub fn from(bytes: &[u8]) -> RSAData{
+        // This allocates a vector to reverse, then allocates again for the integer
+        RSAData(BigInt::from_bytes_be(Sign::Plus, bytes))
+    }
+    pub fn data(&self) -> &BigInt{
+        &self.0
     }
 }
 

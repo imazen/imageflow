@@ -123,7 +123,7 @@ pub trait NodeDefMutateBitmap{
 }
 
 
-// Rust prevents us from autoimplementing these conversion because it fears trait conflicts between the three.... gah
+// Rust prevents us from auto-implementing these conversions because it fears trait conflicts between the three.... gah
 //
 //impl<T> NodeDef for T where T: NodeDefMutateBitmap + ::std::fmt::Debug {
 //    fn as_one_mutate_bitmap(&self) -> Option<&NodeDefMutateBitmap>{
@@ -512,7 +512,7 @@ impl Node {
 
     pub fn n(def: &'static NodeDef, params: NodeParams) -> Node {
         Node {
-            def: def,
+            def,
             frame_est: FrameEstimate::None,
             cost_est: CostEstimate::None,
             cost: CostInfo {
@@ -522,7 +522,7 @@ impl Node {
                 peak_temp_bytes: 0,
             },
             stable_id: -1,
-            params: params,
+            params,
             result: NodeResult::None,
         }
     }

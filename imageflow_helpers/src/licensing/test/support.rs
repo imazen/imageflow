@@ -10,7 +10,7 @@ fn parse_date_as_utc(s: &str) -> DateTime<Utc>{
 }
 #[derive(Debug,Clone,Copy)]
 pub struct OffsetClock{
-    pub build_date: DateTime<FixedOffset>,
+    pub build_date: DateTime<Utc>,
     pub ticks_offset_ns: u64,
     pub offset: ::chrono::Duration,
 }
@@ -19,7 +19,7 @@ impl OffsetClock{
         OffsetClock{
             offset: Utc::now().signed_duration_since(parse_date_as_utc(date)),
             ticks_offset_ns: ::time::precise_time_ns() -1,
-            build_date: parse_date_as_utc(build_date).with_timezone(&FixedOffset::east(0).fix())
+            build_date: parse_date_as_utc(build_date).with_timezone(&Utc)
         }
     }
 }
@@ -33,7 +33,7 @@ impl  LicenseClock for OffsetClock{
         100000000
     }
 
-    fn get_build_date(&self) -> DateTime<FixedOffset> {
+    fn get_build_date(&self) -> DateTime<Utc> {
         self.build_date
     }
 

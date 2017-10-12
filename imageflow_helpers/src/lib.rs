@@ -42,6 +42,8 @@ extern crate smallvec;
 #[cfg(test)]
 extern crate mockito;
 
+extern crate digest;
+
 #[cfg(not(any(target_os = "windows", target_os = "macos")))]
 extern crate openssl;
 #[cfg(not(any(target_os = "windows", target_os = "macos")))]

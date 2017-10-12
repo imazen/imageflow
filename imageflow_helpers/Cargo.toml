@@ -25,6 +25,7 @@ twox-hash = "1"
 fnv = "*"
 blake2-rfc = "*"
 sha2 = "*"
+digest = "*"
 
 uuid = { version = "*", features= ["v4", "v5"]}
 

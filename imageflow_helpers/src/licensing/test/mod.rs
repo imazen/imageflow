@@ -29,21 +29,22 @@ use ::smallvec::SmallVec;
 //.with_body("world")
 //.create();
 
+const TWENTY_HOURS: i64 = 60 * 60 * 20;
 
+fn mock_plaintext_200(path: &'static str, body: &'static str) -> ::mockito::Mock{
+    mock("GET", path).with_status(200).with_header("content-type", "text/plain").with_body(body).create()
+}
 
 #[test]
 fn test_remote_license_success(){
 
     let req_features = SmallVec::from_buf(["R_Creative"]);
 
-    let mock = mock("GET", "/v1/licenses/latest/testda42e8a40db14c091dea84efd572933fdfe31ba9620e5fee79edb823a448b6e8.txt").with_status(200).with_header("content-type", "text/plain").with_body(SITE_WIDE_REMOTE).create();
+    let mock = mock_plaintext_200("/v1/licenses/latest/testda42e8a40db14c091dea84efd572933fdfe31ba9620e5fee79edb823a448b6e8.txt", SITE_WIDE_REMOTE);
 
     let clock = Box::new(OffsetClock::new("2017-04-25", "2017-04-25"));
     let cache = StringMemCache::new().into_cache();
-    let mut mgr =LicenseManagerSingleton::new(&*parsing::TEST_KEYS, clock, cache);
-    mgr.rewind_created_date(60 * 60 * 20);
-
-    let mgr =  Arc::new(mgr);
+    let mgr = Arc::new(LicenseManagerSingleton::new(&*parsing::TEST_KEYS, clock, cache).rewind_boot_time(TWENTY_HOURS));
 
     assert!(!mgr.compute(true, LicenseScope::All,&req_features ).licensed());
 
@@ -52,11 +53,38 @@ fn test_remote_license_success(){
     LicenseManagerSingleton::create_thread(mgr.clone());
     mgr.wait_for(1);
 
-
-
     let compute = mgr.compute(true, LicenseScope::All,&req_features );
 
     assert!(compute.licensed());
+
+    mock.assert();
+}
+
+
+#[test]
+fn test_remote_license_void(){
+    let mock = mock_plaintext_200("/v1/licenses/latest/test8b47045eb7b8ca42aa967f33ee1d014ba89f8d1ac207426b482d34b5c0d90935.txt", CANCELLED_REMOTE);
+
+    let clock = Box::new(OffsetClock::new("2017-04-25", "2017-04-25"));
+    let cache = StringMemCache::new().into_cache();
+    let mgr = Arc::new(LicenseManagerSingleton::new(&*parsing::TEST_KEYS, clock, cache).rewind_boot_time(TWENTY_HOURS));
+
+    // Not licensed before placeholder
+    assert!(!mgr.compute_feature("R_Creative").licensed());
+
+    mgr.add_static(CANCELLED_PLACEHOLDER).unwrap();
+
+    // Not licensed after placeholder
+    let c = mgr.compute_feature("R_Creative");
+    //c.get_diagnostics()
+    assert!(!mgr.compute_feature("R_Creative").licensed());
+
+
+    LicenseManagerSingleton::create_thread(mgr.clone());
+    mgr.wait_for(1);
+
+    // Not licensed after remote is fetched
+    assert!(!mgr.compute_feature("R_Creative").licensed());
 
     mock.assert();
 }

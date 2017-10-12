@@ -1,6 +1,6 @@
 use ::preludes::from_std::*;
 use ::std;
-use ::chrono::{DateTime,FixedOffset};
+use ::chrono::{DateTime};
 use unicase::UniCase;
 use errors::*;
 use errors::Result;
@@ -39,7 +39,7 @@ use self::compute::*;
 pub trait LicenseClock: Sync + Send{
     fn get_timestamp_ticks(&self) -> u64;
     fn ticks_per_second(&self) -> u64;
-    fn get_build_date(&self) -> DateTime<FixedOffset>;
+    fn get_build_date(&self) -> DateTime<Utc>;
     fn get_utc_now(&self) -> DateTime<Utc>;
 }
 
@@ -89,9 +89,11 @@ impl LicenseManagerSingleton{
 
     }
     #[cfg(test)]
-    pub fn rewind_created_date(&mut self, seconds: i64){
+    pub fn rewind_boot_time(mut self, seconds: i64) -> Self{
         self.created = self.created.checked_sub_signed(::chrono::Duration::seconds(seconds)).unwrap();
+        self
     }
+
     fn set_handle(&self, h: Option<JoinHandle<()>>){
         *self.handle.write() = h
     }
@@ -188,13 +190,17 @@ impl LicenseManagerSingleton{
         None
     }
 
+    pub fn add_static(&self, license: &'static str) -> Result<()>{
+        self.get_or_add(&Cow::Borrowed(license)).map(|_| ())
+    }
+
     pub fn get_or_add(&self, license: &Cow<'static, str>) -> Result<&License>{
+        // License parsing involves several dozen allocations.
+        // Not cheap; thus the aliases_to_id table and get_by_alias
         if let Some(lic) = self.get_by_alias(license){
             return Ok(lic)
         }
 
-        // License parsing involves several dozen allocations.
-        // Not cheap; thus the aliases_to_id table
         let parsed = LicenseBlob::deserialize(self.trusted_keys, license.as_ref(), "local license")?;
 
         let id = parsed.fields().id().to_owned();
@@ -218,13 +224,19 @@ impl LicenseManagerSingleton{
     pub fn iter_all(&self) -> AppendListIterator<License>{
         self.licenses.iter()
     }
+
     pub fn iter_shared(&self) -> AppendListIterator<License>{
         self.licenses.iter()
     }
 
+    pub fn compute_feature(&self, feature: &str) -> LicenseComputation{
+        let required_features = ::smallvec::SmallVec::from_buf([feature]);
+        LicenseComputation::new(self, true, LicenseScope::All, &required_features)
+    }
+
     pub fn compute(&self, enforced: bool,
                    scope: LicenseScope, required_features: &::smallvec::SmallVec<[&str;1]>) -> LicenseComputation{
-        LicenseComputation::new(self,enforced, scope, required_features)
+        LicenseComputation::new(self, enforced, scope, required_features)
     }
 
 }
