@@ -117,7 +117,9 @@ impl Context {
     }
 
     pub fn get_output_buffer_slice(&self, io_id: i32) -> Result<&[u8]> {
-        self.get_codec(io_id).map_err(|e| e.at(here!()))?.get_encode_io()?.expect("Not an output buffer").get_output_buffer_bytes(self).map_err(|e| e.at(here!()))
+        let codec = self.get_codec(io_id).map_err(|e| e.at(here!()))?;
+        let io = codec.get_encode_io()?.expect("Not an output buffer");
+        io.map(|io| io.get_output_buffer_bytes(self).map_err(|e| e.at(here!())))
     }
 
     pub fn add_file(&mut self, io_id: i32, direction: IoDirection, path: &str) -> Result<()> {

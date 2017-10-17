@@ -17,7 +17,7 @@ use ::std::any::Any;
 use ::lcms2::*;
 use ::lcms2;
 mod gif;
-
+use io::IoProxyRef;
 
 pub trait DecoderFactory{
     fn create(c: &Context, io: &mut IoProxy, io_id: i32) -> Option<Result<Box<Decoder>>>;
@@ -37,7 +37,7 @@ pub trait Encoder{
     // encode entire frames and enable transparency (default)
     fn write_frame(&mut self, c: &Context, preset: &s::EncoderPreset, frame: &mut BitmapBgra, decoder_io_ids: &[i32]) -> Result<s::EncodeResult>;
 
-    fn get_io(&self) -> Result<&IoProxy>;
+    fn get_io(&self) -> Result<IoProxyRef>;
 }
 
 enum CodecKind{
@@ -354,8 +354,8 @@ impl Encoder for ClassicEncoder{
             })
         }
     }
-    fn get_io(&self) -> Result<&IoProxy> {
-        Ok(&self.io)
+    fn get_io(&self) -> Result<IoProxyRef> {
+        Ok(IoProxyRef::Borrow(&self.io))
     }
 }
 
@@ -391,11 +391,13 @@ impl CodecInstanceContainer{
          }
     }
 
-    pub fn get_encode_io(&self) -> Result<Option<&IoProxy>>{
+    pub fn get_encode_io(&self) -> Result<Option<IoProxyRef>>{
         if let CodecKind::Encoder(ref e) = self.codec {
             Ok(Some(e.get_io().map_err(|e| e.at(here!()))?))
-        }else{
-            Ok(self.encode_io.as_ref())
+        }else if let Some(ref e) = self.encode_io{
+            Ok(Some(IoProxyRef::Borrow(e)))
+        } else {
+            Ok(None)
         }
     }
 }

@@ -6,6 +6,27 @@ use ::ffi::ImageflowJobIo;
 use ::imageflow_types::collections::AddRemoveSet;
 use std::ascii::AsciiExt;
 use uuid::Uuid;
+use std::rc::Rc;
+
+
+pub enum IoProxyRef<'a>{
+   Borrow(&'a IoProxy),
+    BoxedAsRef(Box<AsRef<IoProxy>>),
+    Ref(Ref<'a, IoProxy>)
+}
+impl<'a> IoProxyRef<'a> {
+    pub fn map<B, F>(self, mut f: F) -> B
+        where
+            F: FnMut(&IoProxy) -> B{
+
+        match self {
+            IoProxyRef::Borrow(r) => f(r),
+            IoProxyRef::BoxedAsRef(r) => f((*r).as_ref()),
+            IoProxyRef::Ref(r) => f(&*r)
+        }
+
+    }
+}
 
 pub struct IoProxy{
     c: &'static Context,
@@ -14,6 +35,18 @@ pub struct IoProxy{
     path: Option<PathBuf>,
     c_path: Option<CString>,
     drop_with_job: bool
+}
+
+
+pub struct IoProxyProxy(pub Rc<RefCell<IoProxy>>);
+impl Write for IoProxyProxy{
+    fn write(&mut self, buf: &[u8]) -> ::std::io::Result<usize> {
+        self.0.borrow_mut().write(buf)
+    }
+
+    fn flush(&mut self) -> ::std::io::Result<()> {
+        self.0.borrow_mut().flush()
+    }
 }
 
 // Not sure these are actually used?
@@ -184,8 +217,11 @@ impl IoProxy {
         unsafe {
             let mut buf_start: *const u8 = ptr::null();
             let mut buf_len: usize = 0;
-            let worked = ::ffi::flow_io_get_output_buffer(self.c.flow_c(),
-                                                          self.classic,
+            let flow_c = self.c.flow_c();
+            let classic = self.classic;
+
+            let worked = ::ffi::flow_io_get_output_buffer(flow_c    ,
+                                                          classic,
                                                           &mut buf_start as *mut *const u8,
                                                           &mut buf_len as *mut usize);
             if !worked {

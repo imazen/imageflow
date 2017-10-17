@@ -18,6 +18,9 @@ use self::bgra::BGRA8;
 use self::screen::Screen;
 use ::gif::Frame;
 use ::gif::SetParameter;
+use std::rc::Rc;
+use io::IoProxyProxy;
+use io::IoProxyRef;
 
 pub struct GifDecoder{
     reader: ::gif::Reader<IoProxy>,
@@ -155,18 +158,21 @@ impl Decoder for GifDecoder {
 
 pub struct GifEncoder{
     io_id: i32,
-    encoder: ::gif::Encoder<IoProxy>,
-    io_ref: &'static IoProxy, //unsafe self-referential,
+    encoder: ::gif::Encoder<IoProxyProxy>,
+    io_ref: Rc<RefCell<IoProxy>>,
     frame_ix: i32
 }
 
 impl GifEncoder{
     pub(crate) fn create(c: &Context, preset: &s::EncoderPreset, io: IoProxy, first_frame: &BitmapBgra) -> Result<GifEncoder>{
+        let io_id = io.io_id();
+        let io_ref = Rc::new(RefCell::new(io));
+
         Ok(GifEncoder{
-            io_id: io.io_id(),
-            io_ref: unsafe { &*(&io as *const IoProxy) },
+            io_id,
+            io_ref: io_ref.clone(),
             // Global color table??
-            encoder: ::gif::Encoder::new(io, first_frame.w as u16, first_frame.h as u16, &[]).map_err(|e| FlowError::from_gif_encoder(e).at(here!()))?,
+            encoder: ::gif::Encoder::new(IoProxyProxy(io_ref), first_frame.w as u16, first_frame.h as u16, &[]).map_err(|e| FlowError::from_gif_encoder(e).at(here!()))?,
             frame_ix: 0
         })
     }
@@ -241,8 +247,8 @@ impl Encoder for GifEncoder{
             )
         }
     }
-    fn get_io(&self) -> Result<&IoProxy> {
-        Ok(self.io_ref)
+    fn get_io(&self) -> Result<IoProxyRef> {
+        Ok(IoProxyRef::Ref(self.io_ref.borrow()))
     }
 }
 
