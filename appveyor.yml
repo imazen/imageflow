@@ -6,16 +6,34 @@ environment:
     PYTHON_ARCH: "32"
     RUST_BACKTRACE: 1
     CARGO_INCREMENTAL: 1
-    TARGET_CPU: sandybridge
     RUST_TOOLCHAIN: nightly-2017-08-01
     VSINSTALL:  "Microsoft Visual Studio\\2017\\Community\\VC\\Auxiliary\\Build"
     CONAN_VISUAL_VERSIONS: 15
     VS150COMNTOOLS: "C:\\Program Files (x86)\\Microsoft Visual Studio\\2017\\Community\\Common7\\Tools\\"
+    TARGET_DIR: "target\\"
+    matrix:
+      - platform: x86
+        RUST_TARGET: i686-pc-windows-msvc
+        TARGET_CPU: x86
+        NUGET_RUNTIME: win7-x86
+        PACKAGE_SUFFIX: win-x86
+        BITS: 32
+        CONAN_ARCH: x86
+      - platform: x64
+        RUST_TARGET: x86_64-pc-windows-msvc
+        TARGET_CPU: x86_x64
+        NUGET_RUNTIME: win7-x64
+        PACKAGE_SUFFIX: win-x86_64
+        BITS: 64
+        CONAN_ARCH: x86_64
+      - platform: x64
+        RUST_TARGET: x86_64-pc-windows-msvc
+        TARGET_CPU: haswell
+        NUGET_RUNTIME: win7-x64
+        PACKAGE_SUFFIX: win-x86_64-haswell
+        BITS: 64
+        CONAN_ARCH: x86_64
 configuration: Release
-
-platform:
-- x64
-- x86
 
 cache:
   - '%USERPROFILE%\.cargo'
