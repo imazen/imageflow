@@ -21,7 +21,7 @@ environment:
         CONAN_ARCH: x86
       - platform: x64
         RUST_TARGET: x86_64-pc-windows-msvc
-        TARGET_CPU: x86_x64
+        TARGET_CPU: x86-64
         NUGET_RUNTIME: win7-x64
         PACKAGE_SUFFIX: win-x86_64
         BITS: 64
