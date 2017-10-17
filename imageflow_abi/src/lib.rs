@@ -886,7 +886,78 @@ fn test_allocate_free() {
     }
 }
 
+#[cfg(test)]
+extern crate base64;
+
+#[test]
+fn test_job_with_buffers() {
+    unsafe {
+        let c = imageflow_context_create(IMAGEFLOW_ABI_VER_MAJOR, IMAGEFLOW_ABI_VER_MINOR);
+        assert!(!c.is_null());
+
+        let input_bytes = base64::decode(&b"iVBORw0KGgoAAAANSUhEUgAAAAEAAAABAQMAAAAl21bKAAAAA1BMVEX/TQBcNTh/AAAAAXRSTlPM0jRW/QAAAApJREFUeJxjYgAAAAYAAzY3fKgAAAAASUVORK5CYII=".to_vec()).unwrap();
+
+
+
+        imageflow_context_add_input_buffer(c, 0, input_bytes.as_ptr(), input_bytes.len(), Lifetime::OutlivesContext);
+        imageflow_context_print_and_exit_if_error(c);
+
+
+        imageflow_context_add_output_buffer(c, 1);
+        imageflow_context_print_and_exit_if_error(c);
+
+
+        let method_in = static_char!("v0.1/execute");
+        let json_in = "{\"framewise\":{\"steps\":[{\"decode\":{\"io_id\":0}},{\"flip_h\":null},{\"rotate_90\":null},{\"resample_2d\":{\"w\":30,\"h\":20,\"down_filter\":null,\"up_filter\":null,\"hints\":{\"sharpen_percent\":null}}},{\"constrain\":{\"within\":{\"w\":5,\"h\":5}}},{\"encode\":{\"io_id\":1,\"preset\":{\"gif\":null}}}]}}";
+
+        let response = imageflow_context_send_json(c,
+
+                                                   method_in,
+                                                   json_in.as_ptr(),
+                                                   json_in.len());
+
+        assert_ne!(response, ptr::null());
+        imageflow_context_print_and_exit_if_error(c);
+
+
+        let mut json_out_ptr: *const u8 = ptr::null_mut();
+        let mut json_out_size: usize = 0;
+        let mut json_status_code: i64 = 0;
+
+        assert!(imageflow_json_response_read(c,
+                                             response,
+                                             &mut json_status_code,
+                                             &mut json_out_ptr,
+                                             &mut json_out_size));
+
+
+        let json_out_str =
+            ::std::str::from_utf8(std::slice::from_raw_parts(json_out_ptr, json_out_size)).unwrap();
+
+
+        let mut buf: *const u8 = ptr::null();
+        let mut buf_len: usize = 0;
+        assert!(imageflow_context_get_output_buffer_by_id(c, 1, &mut buf as *mut *const u8, &mut buf_len as *mut usize));
+
+
+        imageflow_context_print_and_exit_if_error(c);
+
+        let expected_json_out = "{\n  \"code\": 200,\n  \"success\": true,\n  \"message\": \"OK\",\n  \"data\": {\n    \"job_result\": {\n      \"encodes\": [\n        {\n          \"preferred_mime_type\": \"image/gif\",\n          \"preferred_extension\": \"gif\",\n          \"io_id\": 1,\n          \"w\": 5,\n          \"h\": 3,\n          \"bytes\": \"elsewhere\"\n        }\n      ],\n      \"performance\": {\n        \"frames\": [\n          {\n            \"nodes\": [\n              {\n                \"wall_microseconds\": 3911,\n                \"name\": \"primitive_encoder\"\n              },\n              {\n                \"wall_microseconds\": 62,\n                \"name\": \"scale_2d_to_canvas\"\n              },\n              {\n                \"wall_microseconds\": 39,\n                \"name\": \"primitive_decoder\"\n              },\n              {\n                \"wall_microseconds\": 32,\n                \"name\": \"scale_2d_to_canvas\"\n              },\n              {\n                \"wall_microseconds\": 6,\n                \"name\": \"create_canvas\"\n              },\n              {\n                \"wall_microseconds\": 5,\n                \"name\": \"transpose_mut\"\n              },\n              {\n                \"wall_microseconds\": 4,\n                \"name\": \"flip_vertical_mutate\"\n              },\n              {\n                \"wall_microseconds\": 3,\n                \"name\": \"create_canvas\"\n              },\n              {\n                \"wall_microseconds\": 3,\n                \"name\": \"flip_vertical_mutate\"\n              },\n              {\n                \"wall_microseconds\": 2,\n                \"name\": \"create_canvas\"\n              }\n            ],\n            \"wall_microseconds\": 4678,\n            \"overhead_microseconds\": 611\n          }\n        ]\n      }\n    }\n  }\n}";
+        let expected_response_status = 200;
+
+
+        //assert_eq!(json_out_str, expected_json_out);
+        assert_eq!(json_status_code, expected_response_status);
+
+        imageflow_context_destroy(c);
+    }
+}
+
+
+
 #[test]
 fn test_file_macro_for_this_build(){
     assert!(file!().starts_with(env!("CARGO_PKG_NAME")))
 }
+
+
