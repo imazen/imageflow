@@ -4,7 +4,12 @@ set -e #Exit on failure.
 # REQUIRES PACKAGE_SUFFIX
 # REQUIRES NUGET_RUNTIME
 # REQUIRES CI_TAG
-export NUGET_PACKAGE_NAME=Imageflow.NativeRuntime.${PACKAGE_SUFFIX}
+
+if [[ "$1" == "tool" ]]; then
+    export NUGET_PACKAGE_NAME=Imageflow.NativeTool.${PACKAGE_SUFFIX}
+else
+    export NUGET_PACKAGE_NAME=Imageflow.NativeRuntime.${PACKAGE_SUFFIX}
+fi
 
 
 if [[ "$CI_TAG" == 'v'* ]]; then
@@ -36,40 +41,38 @@ mkdir -p "$STAGING_DIR" || true
 	PROPS_PATH="build/net45/${NUGET_PACKAGE_NAME}.props"
 	NUGET_OUTPUT_DIR="${SCRIPT_DIR}/../../artifacts/nuget"
 	NUGET_OUTPUT_FILE="${NUGET_OUTPUT_DIR}/${NUGET_COMBINED_NAME}.nupkg"
-	echo RELEASE_DIR=$RELEASE_DIR
+	echo RELEASE_DIR=${RELEASE_DIR}
 
 	mkdir -p "${NUGET_OUTPUT_DIR}" || true
 
 
 	if [[ "${NUGET_RUNTIME}" == *'win'* ]]; then
 		LIB_NAME=imageflow.dll
+		TOOL_NAME=imageflow_tool.exe
 	elif [[ "${NUGET_RUNTIME}" == *'osx'* ]]; then
 		LIB_NAME=libimageflow.dylib
+		TOOL_NAME=imageflow_tool
 	else
 		LIB_NAME=libimageflow.so
+		TOOL_NAME=imageflow_tool
 	fi
-
-	#mkdir -p _rels 
-	#cat ../../.rels | sed -e "s/:nuspec_name:/${NUGET_PACKAGE_NAME}.nuspec/g"  > "_rels/.rels"
-	#cp "../../[Content_Types].xml" "[Content_Types].xml"
-
 
 	mkdir -p lib/netstandard1.0
 	echo "" > lib/netstandard1.0/_._
 
 	mkdir -p "$RUNTIME_DIR"
-	cp "${RELEASE_DIR}${LIB_NAME}" "${RUNTIME_DIR}${LIB_NAME}"
+	if [[ "$1" == "tool" ]]; then
+	    cp "${RELEASE_DIR}${TOOL_NAME}" "${RUNTIME_DIR}${TOOL_NAME}"
+	else
+	    cp "${RELEASE_DIR}${LIB_NAME}" "${RUNTIME_DIR}${LIB_NAME}"
+	fi
 
 
 	SED_NUGET_PACKAGE_NAME="$(echo $NUGET_PACKAGE_NAME | sed -e 's/[\/&]/\\&/g')"
 	SED_NUGET_PACKAGE_VERSION="$(echo $NUGET_PACKAGE_VERSION | sed -e 's/[\/&]/\\&/g')"
-	SED_NUGET_PACKAGE_NAME="$(echo $NUGET_PACKAGE_NAME | sed -e 's/[\/&]/\\&/g')"
 	SED_NUGET_LIBFILE="$(echo $RUNTIME_DIR$LIB_NAME | sed -e 's/[\/&]/\\&/g' | sed -e 's/\//\\/g')" # fix slashes too
-	PROPS_PATH="$(echo $PROPS_PATH | sed -e 's/\//\\/g')" #fix slashes
-	PROPS="<file src=\"$PROPS_PATH\" target=\"$PROPS_PATH\" />"
-	SED_NUGET_PROPS="$(echo $PROPS | sed -e 's/[\/&]/\\&/g')"
-	
-	
+
+
 	if [[ "${NUGET_RUNTIME}" == *'win'* ]]; then
 		
 		if [[ "${NUGET_RUNTIME}" == *'x64'* ]]; then
@@ -82,15 +85,16 @@ mkdir -p "$STAGING_DIR" || true
 			cat ../../imageflow_x86.props | sed -e "s/:rid:/$NUGET_RUNTIME/g" > "$PROPS_PATH"
 		fi
 	fi
-	
-	# If these elements turn out to be needed, re-add them to native.nuspec
-        #<file src="lib\netstandard1.0\_._" target="lib\netstandard1.0\_._" />
-        #<file src=":libfile:" target=":libfile:" />
-	cat ../../native.nuspec \
+
+    if [[ "$1" == "tool" ]]; then
+	    NUSPEC_NAME="native_tool.nuspec"
+	else
+	    NUSPEC_NAME="native.nuspec"
+	fi
+
+	cat ../../${NUSPEC_NAME} \
 		| sed -e "s/:id:/${SED_NUGET_PACKAGE_NAME}/g" \
-		 | sed -e "s/:version:/${SED_NUGET_PACKAGE_VERSION}/g" \
-		 | sed -e "s/:libfile:/${SED_NUGET_LIBFILE}/" \
-		 | sed -e "s/:props:/${SED_NUGET_PROPS}/" > "${NUGET_PACKAGE_NAME}.nuspec"
+		 | sed -e "s/:version:/${SED_NUGET_PACKAGE_VERSION}/g" > "${NUGET_PACKAGE_NAME}.nuspec"
 
 
 	echo "${NUGET_PACKAGE_NAME}.nuspec:"

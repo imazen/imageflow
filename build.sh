@@ -690,8 +690,9 @@ if [[ "$BUILD_RELEASE" == 'True' ]]; then
 		cp -a ${TARGET_DIR}doc/* "./artifacts/upload/${DOCS_UPLOAD_DIR_2}/"
 	fi
 
-	# Create the nuget artifact
+	# Create the nuget artifacts
 	./ci/pack_nuget/pack.sh
+	./ci/pack_nuget/pack.sh tool
 
 fi
 echo_maybe

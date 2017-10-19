@@ -167,6 +167,7 @@ test_script:
   - cd %APPVEYOR_BUILD_FOLDER%
   - appveyor PushArtifact "%ARTIFACT_NAME%.zip"
   - sh ./ci/pack_nuget/pack.sh
+  - sh ./ci/pack_nuget/pack.sh tool
   - echo. && echo. && echo Cleaning up
   - rmdir /q /s .\%TARGET_DIR%doc || exit 0
   - rmdir /q /s .\%TARGET_DIR%debug || exit 0
