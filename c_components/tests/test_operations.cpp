@@ -199,6 +199,7 @@ int64_t scale2d(int w, int h, int to_w, int to_h, flow_pixel_format fmt, flow_wo
         info.x = 0;
         info.y = 0;
         info.scale_in_colorspace = floatspace;
+        info.sharpen_percent_goal = 0.0f;
 
         result = flow_node_execute_scale2d_render1d(c, a, b, &info);
     }
