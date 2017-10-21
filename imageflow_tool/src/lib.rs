@@ -1,8 +1,5 @@
 #![feature(slice_concat_ext)]
-#![feature(alloc_system)]
-#[cfg_attr(feature = "cargo-clippy", allow(useless_attribute))]
-#[allow(unused_extern_crates)]
-extern crate alloc_system;
+
 
 extern crate clap;
 extern crate imageflow_helpers;

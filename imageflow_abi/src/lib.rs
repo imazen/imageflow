@@ -109,7 +109,6 @@
 //! For all APIS: You'll likely segfault the process if you provide a `context` pointer that is dangling or invalid.
 //!
 #![crate_type = "cdylib"]
-#![feature(alloc_system)]
 #![feature(core_intrinsics)]
 
 // These functions are not for use from Rust, so marking them unsafe just reduces compile-time verification and safety
@@ -119,9 +118,7 @@
 
 #[macro_use]
 extern crate imageflow_core as c;
-#[cfg_attr(feature = "cargo-clippy", allow(useless_attribute))]
-#[allow(unused_extern_crates)]
-extern crate alloc_system;
+
 extern crate libc;
 extern crate smallvec;
 extern crate backtrace;

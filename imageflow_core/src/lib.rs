@@ -1,7 +1,5 @@
 #![feature(concat_idents)]
-#![feature(alloc)]
 #![feature(oom)]
-#![feature(alloc_system)]
 #![feature(conservative_impl_trait)]
 #![feature(proc_macro)]
 #![feature(integer_atomics)]
@@ -18,9 +16,7 @@
 #![allow(unused_imports)]
 #![allow(dead_code)]
 #![allow(unused_variables)]
-#[cfg_attr(feature = "cargo-clippy", allow(useless_attribute))]
-#[allow(unused_extern_crates)]
-extern crate alloc_system;
+
 extern crate petgraph;
 extern crate daggy;
 extern crate imageflow_types;

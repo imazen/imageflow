@@ -1,15 +1,35 @@
-#![feature(alloc_system)]
+#![feature(global_allocator, allocator_api, heap_api)]
+
 #![feature(integer_atomics)]
 #![feature(ascii_ctype)]
+#![feature(i128_type)] // Not used heavily, removable
 // `error_chain!` can recurse deeply
 #![recursion_limit = "1024"]
 
 //hexadecimal colors aren't numbers
 #![cfg_attr(feature = "cargo-clippy", allow(unreadable_literal))]
 
-#[cfg_attr(feature = "cargo-clippy", allow(useless_attribute))]
-#[allow(unused_extern_crates)]
-extern crate alloc_system;
+
+//
+//use std::heap::{Alloc, System, Layout, AllocErr};
+//
+//struct MyAllocator;
+//
+//unsafe impl<'a> Alloc for &'a MyAllocator {
+//    unsafe fn alloc(&mut self, layout: Layout) -> Result<*mut u8, AllocErr> {
+//        System.alloc(layout)
+//    }
+//
+//    unsafe fn dealloc(&mut self, ptr: *mut u8, layout: Layout) {
+//        System.dealloc(ptr, layout)
+//    }
+//}
+
+#[global_allocator]
+static GLOBAL: ::std::heap::System = ::std::heap::System;
+
+
+
 
 #[macro_use]
 extern crate error_chain;

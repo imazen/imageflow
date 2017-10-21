@@ -1,8 +1,5 @@
 #![feature(conservative_impl_trait)]
-#![feature(alloc_system)]
-#[cfg_attr(feature = "cargo-clippy", allow(useless_attribute))]
-#[allow(unused_extern_crates)]
-extern crate alloc_system;
+
 
 #[macro_use] extern crate macro_attr;
 #[macro_use] extern crate enum_derive;
