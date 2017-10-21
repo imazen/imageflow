@@ -220,7 +220,7 @@ Rust crates
 * imageflow_tool
 * imageflow_server
 
-C source is located in ./c_componenets/lib, and ./c_components/tests
+C source is located in ./c_components/lib, and ./c_components/tests
 
 Headers for libimageflow.dll are located in `bindings/headers`
 
