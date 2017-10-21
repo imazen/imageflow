@@ -80,19 +80,7 @@ install:
   #- refreshenv
   #- vs_buildtools.exe --add Microsoft.VisualStudio.Workload.MSBuildTools --add Microsoft.VisualStudio.Workload.VCTools --includeRecommended
   #- C:\"Program Files (x86)"\"%VSINSTALL%"\vcvarsall.bat %PLATFORM%
-  - if "%PLATFORM%"=="x86" SET RUST_TARGET=i686-pc-windows-msvc
-  - if "%PLATFORM%"=="x64" SET RUST_TARGET=x86_64-pc-windows-msvc
-  - if "%PLATFORM%"=="x86" SET TARGET_DIR=target\ #i686-pc-windows-msvc\
-  - if "%PLATFORM%"=="x64" SET TARGET_DIR=target\ #x86_64-pc-windows-msvc\
-  - if "%PLATFORM%"=="x86" SET PACKAGE_SUFFIX=win-x86
-  - if "%PLATFORM%"=="x64" SET PACKAGE_SUFFIX=win-x86_64-sandybridge
-  - if "%PLATFORM%"=="x86" SET NUGET_RUNTIME=win7-x86
-  - if "%PLATFORM%"=="x64" SET NUGET_RUNTIME=win7-x64
   - SET TARGET_ARG= #--target=%RUST_TARGET%
-  - if "%PLATFORM%"=="x86" SET BITS=32
-  - if "%PLATFORM%"=="x64" SET BITS=64
-  - if "%PLATFORM%"=="x86" set CONAN_ARCH=x86
-  - if "%PLATFORM%"=="x64" set CONAN_ARCH=x86_64
   - echo "RUST_TARGET=%RUST_TARGET%, TARGET=%TARGET%, BITS=%BITS%, CPU_TARGET=%CPU_TARGET% CONAN_ARCH=%CONAN_ARCH% RUSTFLAGS=%RUSTFLAGS%"
   - SET RUSTUP_INIT=https://static.rust-lang.org/rustup/dist/%RUST_TARGET%/rustup-init.exe
   - echo Fetching %RUSTUP_INIT%
