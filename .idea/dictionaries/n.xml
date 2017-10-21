@@ -8,6 +8,7 @@
       <w>byteorder</w>
       <w>calloc</w>
       <w>callstack</w>
+      <w>caseless</w>
       <w>cdylib</w>
       <w>chashmap</w>
       <w>checksums</w>
@@ -20,6 +21,7 @@
       <w>cropyunits</w>
       <w>cstr</w>
       <w>daggy</w>
+      <w>debounce</w>
       <w>dequantize</w>
       <w>dotfile</w>
       <w>dssim</w>
