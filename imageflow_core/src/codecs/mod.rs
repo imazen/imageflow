@@ -286,7 +286,7 @@ impl ClassicEncoder{
                      },
                  }))
             }
-            s::EncoderPreset::Gif => {
+            _ => {
                 Err(unimpl!("Classic encoder only supports libjpeg and libpng"))
             }
         }
@@ -370,11 +370,9 @@ impl CodecInstanceContainer{
 
              let codec = match *preset {
                  s::EncoderPreset::Gif => {
-                     //println!("Using gif encoder");
                      CodecKind::Encoder(Box::new(gif::GifEncoder::create(c, preset, io, frame)?))
                  },
-                 _ => {
-                     //println!("Using classic encoder");
+                 s::EncoderPreset::Libpng {..} | s::EncoderPreset::LibjpegTurbo {..} => {
                      CodecKind::Encoder(Box::new(
                          ClassicEncoder::get_empty(self.io_id, io)?))
                  }
