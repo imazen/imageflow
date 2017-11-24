@@ -1,10 +1,10 @@
-use ::std;
-use ::for_other_imageflow_crates::preludes::external_without_std::*;
-use ::ffi;
+use std;
+use for_other_imageflow_crates::preludes::external_without_std::*;
+use ffi;
 use ::{Context, CError, Result, JsonResponse, ErrorKind};
-use ::ffi::ImageflowJobIo;
-use ::imageflow_types::collections::AddRemoveSet;
-use std::ascii::AsciiExt;
+use ffi::ImageflowJobIo;
+use imageflow_types::collections::AddRemoveSet;
+#[allow(unused)] use std::ascii::AsciiExt;
 use uuid::Uuid;
 use std::rc::Rc;
 

@@ -55,8 +55,8 @@ mod io;
 
 pub use context::{Context};
 pub use io::IoProxy;
-pub use ::ffi::{IoDirection, IoMode};
-pub use ::flow::definitions::Graph;
+pub use ffi::{IoDirection, IoMode};
+pub use flow::definitions::Graph;
 pub use json::JsonResponse;
 pub use json::MethodRouter;
 // use std::ops::DerefMut;
@@ -66,7 +66,7 @@ pub mod parsing;
 pub mod test_helpers;
 use std::fmt;
 use std::borrow::Cow;
-use ::petgraph::graph::NodeIndex;
+use petgraph::graph::NodeIndex;
 
 
 #[doc(hidden)]

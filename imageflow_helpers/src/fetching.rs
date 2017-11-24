@@ -1,10 +1,10 @@
-use ::preludes::from_std::*;
-use ::std;
-use ::reqwest;
-use ::hyper;
-use ::hyper::Client;
-use ::hyper::net::HttpsConnector;
-use ::hyper_native_tls::NativeTlsClient;
+use preludes::from_std::*;
+use std;
+use reqwest;
+use hyper;
+use hyper::Client;
+use hyper::net::HttpsConnector;
+use hyper_native_tls::NativeTlsClient;
 
 #[cfg(not(any(target_os = "windows", target_os = "macos")))]
 use openssl::ssl::{SslMethod, SslConnectorBuilder};

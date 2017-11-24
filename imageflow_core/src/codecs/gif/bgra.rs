@@ -1,6 +1,6 @@
-use ::rgb::{ComponentBytes, ComponentMap};
-use ::std::fmt;
-use ::std;
+use rgb::{ComponentBytes, ComponentMap};
+use std::fmt;
+use std;
 
 #[repr(C)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]

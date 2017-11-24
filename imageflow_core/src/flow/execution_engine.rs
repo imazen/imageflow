@@ -1,13 +1,13 @@
-use ::{Context};
-use ::flow::definitions::*;
-use ::ffi::CodecInstance;
-use ::internal_prelude::works_everywhere::*;
+use Context;
+use flow::definitions::*;
+use ffi::CodecInstance;
+use internal_prelude::works_everywhere::*;
 use petgraph::dot::Dot;
 use std::process::Command;
 use super::visualize::{notify_graph_changed, GraphRecordingUpdate, GraphRecordingInfo};
 use petgraph::EdgeDirection;
-use ::rustc_serialize::base64;
-use ::rustc_serialize::base64::ToBase64;
+use rustc_serialize::base64;
+use rustc_serialize::base64::ToBase64;
 
 pub struct Engine<'a> {
     c: &'a Context,

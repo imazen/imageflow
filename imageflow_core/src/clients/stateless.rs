@@ -1,10 +1,10 @@
-use ::Context;
-use ::JsonResponse;
-use ::ErrorCategory;
-use ::errors::PanicFormatter;
+use Context;
+use JsonResponse;
+use ErrorCategory;
+use errors::PanicFormatter;
 
 pub use imageflow_types::Framewise;
-use ::internal_prelude::works_everywhere::*;
+use internal_prelude::works_everywhere::*;
 
 #[derive(Default)]
 pub struct LibClient {

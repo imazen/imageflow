@@ -1,9 +1,9 @@
 use ffi::{ImageflowContext, BitmapBgra};
-pub use ::ffi::EdgeKind;
-pub use ::ffi::PixelFormat;
-use ::{Context};
+pub use ffi::EdgeKind;
+pub use ffi::PixelFormat;
+use Context;
 use flow::nodes;
-use ::internal_prelude::works_everywhere::*;
+use internal_prelude::works_everywhere::*;
 use std::any::Any;
 use flow::nodes::*;
 

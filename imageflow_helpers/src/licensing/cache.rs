@@ -1,5 +1,5 @@
-use ::preludes::from_std::*;
-use ::app_dirs::*;
+use preludes::from_std::*;
+use app_dirs::*;
 
 
 const APP_INFO: AppInfo = AppInfo{name: "Imageflow", author: "Imazen"};

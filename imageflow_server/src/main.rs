@@ -3,8 +3,8 @@ extern crate imageflow_server;
 
 
 use clap::{App, Arg, SubCommand, AppSettings};
-use ::imageflow_server::preludes::*;
-use ::std::path::{Path, PathBuf};
+use imageflow_server::preludes::*;
+use std::path::{Path, PathBuf};
 
 use std::net::ToSocketAddrs;
 

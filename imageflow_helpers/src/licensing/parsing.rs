@@ -1,12 +1,12 @@
-use ::preludes::from_std::*;
+use preludes::from_std::*;
 use num::{One, Zero};
 use num::bigint::{BigInt, Sign};
 use sha2::{Sha512, Digest};
-use ::chrono::{DateTime, Utc};
+use chrono::{DateTime, Utc};
 use unicase::UniCase;
 use errors::*;
 use errors::Result;
-use ::smallvec::SmallVec;
+use smallvec::SmallVec;
 use std::iter::FromIterator;
 
 use super::AsciiFolding;

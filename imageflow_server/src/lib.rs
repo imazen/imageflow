@@ -40,9 +40,9 @@ extern crate imageflow_types as s;
 extern crate imageflow_riapi;
 extern crate reqwest;
 
-use ::imageflow_helpers as hlp;
-use ::imageflow_helpers::fetching::FetchConfig;
-use ::imageflow_helpers::preludes::from_std::*;
+use imageflow_helpers as hlp;
+use imageflow_helpers::fetching::FetchConfig;
+use imageflow_helpers::preludes::from_std::*;
 use imageflow_core::clients::stateless;
 
 use hyper::Url;

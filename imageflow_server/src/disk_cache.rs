@@ -5,11 +5,11 @@
 /// Append-only log for transitioning to more complex system
 /// Staging folder - files are renamed into final locations
 /// soft and hard count and byte limit - NO DELETION
-use ::std::path::*;
-use ::std::io;
-use ::std;
-use ::std::io::prelude::*;
-use ::std::fs::{create_dir_all, File};
+use std::path::*;
+use std::io;
+use std;
+use std::io::prelude::*;
+use std::fs::{create_dir_all, File};
 use std::sync::atomic::{AtomicBool, Ordering};
 
 // TODO:

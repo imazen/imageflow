@@ -12,7 +12,7 @@ use super::compute::*;
 
 use mockito::mock;
 
-use ::smallvec::SmallVec;
+use smallvec::SmallVec;
 
 
 //#[cfg(not(test))]

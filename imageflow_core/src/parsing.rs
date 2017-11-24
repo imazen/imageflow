@@ -1,9 +1,9 @@
 use flow::definitions::{Graph, Node, NodeParams, EdgeKind};
 use flow::nodes;
 use internal_prelude::works_everywhere::*;
-use ::ffi;
-use ::rustc_serialize::hex::FromHex;
-use ::rustc_serialize::base64::FromBase64;
+use ffi;
+use rustc_serialize::hex::FromHex;
+use rustc_serialize::base64::FromBase64;
 use ::{Context,IoProxy};
 
 #[derive(Default)]
