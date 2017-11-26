@@ -148,6 +148,8 @@ pub enum ErrorKind{
     AllocationFailed,
     GifDecodingError,
     GifEncodingError,
+    QuantizationError,
+    LodepngEncodingError,
     DecodingIoError,
     ColorProfileError,
     EncodingIoError,
@@ -199,6 +201,8 @@ impl CategorizedError for ErrorKind{
             ErrorKind::InvalidOperation |
             ErrorKind::InternalError |
             ErrorKind::InvalidState |
+            ErrorKind::QuantizationError |
+            ErrorKind::LodepngEncodingError |
             ErrorKind::GifEncodingError => ErrorCategory::InternalError,
             ErrorKind::GifDecodingError |
             ErrorKind::ColorProfileError => ErrorCategory::ImageMalformed,
@@ -262,6 +266,18 @@ impl From<::gif::DecodingError> for FlowError{
 impl From<::lcms2::Error> for FlowError{
     fn from(e: ::lcms2::Error) -> Self {
         FlowError::without_location(ErrorKind::ColorProfileError, format!("{:?}", e))
+    }
+}
+
+impl From<::imagequant::liq_error> for FlowError {
+    fn from(e: ::imagequant::liq_error) -> Self {
+        FlowError::without_location(ErrorKind::QuantizationError, format!("pngquant: {}", e))
+    }
+}
+
+impl From<::lodepng::Error> for FlowError {
+    fn from(e: ::lodepng::Error) -> Self {
+        FlowError::without_location(ErrorKind::LodepngEncodingError, format!("lodepng: {}", e))
     }
 }
 
