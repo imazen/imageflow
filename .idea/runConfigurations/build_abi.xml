@@ -4,6 +4,7 @@
     <option name="command" value="build --package imageflow_abi" />
     <option name="nocapture" value="true" />
     <option name="backtrace" value="FULL" />
+    <option name="workingDirectory" value="file://$PROJECT_DIR$" />
     <envs />
     <method />
   </configuration>
