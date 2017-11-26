@@ -86,8 +86,8 @@ install:
   - echo Fetching %RUSTUP_INIT%
   - curl -L -o  rustup-init.exe %RUSTUP_INIT%
   - rustup-init.exe -y --default-toolchain %RUST_TOOLCHAIN% --default-host %RUST_TARGET%
-  - rustc --version --verbose
   - set PATH=%PATH%;%PYTHON%/Scripts/;C:\Program Files (x86)\nasm;%USERPROFILE%\.cargo\bin
+  - rustc --version --verbose
   - echo. && echo. && echo Installing NASM
   - curl -L -o nasminst.exe http://www.nasm.us/pub/nasm/releasebuilds/2.12.02/win64/nasm-2.12.02-installer-x64.exe
   - start /wait nasminst.exe /S
