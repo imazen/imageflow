@@ -54,7 +54,7 @@ class ImageFlowConan(ConanFile):
         else:
             self.clean_cmake_cache(build_dir)
         os.chdir(build_dir)
-        cmake = CMake(self.settings)
+        cmake = CMake(self)
         cmake_settings = ""
 
         if self.scope.dev and self.scope.coverage:
