@@ -9,11 +9,11 @@ imageflow_core = { path = "../imageflow_core", version = "*" }
 imageflow_types = { path = "../imageflow_types", version = "*" }
 libc = "0.2.0"
 clap = "2"
-time = "*"
+time = "0.1"
 rustc-serialize = "*"
 threadpool = "1"
-serde = "*"
-serde_json = "*"
+serde = "1"
+serde_json = "1"
 imageflow_helpers = { path = "../imageflow_helpers", version = "*" }
 
 [[bin]]

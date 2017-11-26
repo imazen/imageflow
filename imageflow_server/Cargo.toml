@@ -10,13 +10,13 @@ workspace = "../"
 libc = "0.2"
 
 # time
-time = "*"
+time = "0.1"
 chrono =  "0.4"
 
 # serialization
-serde = "*"
-serde_json = "*"
-serde_derive = "*"
+serde = "1"
+serde_json = "1"
+serde_derive = "1"
 rustc-serialize = "*"
 
 #lazy static
@@ -32,11 +32,11 @@ blake2-rfc = "*"
 
 clap = "2"
 
-router = "*"
-iron = "*"
+router = "0.5"
+iron = "=0.5.1"
 
 
-hyper = { version = "*", default-features = false }
+hyper = { version = "=0.10.12", default-features = false }
 threadpool = "1.0"
 
 imageflow_core = { path = "../imageflow_core", version = "*" }
@@ -45,19 +45,19 @@ imageflow_helpers = { path = "../imageflow_helpers", version = "*" }
 imageflow_riapi = { path = "../imageflow_riapi", version = "*" }
 
 
-rand = "*"
-lru-cache = "*"
-persistent = "*"
+rand = "0.3"
+lru-cache = "0.1"
+persistent = "0.3"
 regex = "0.2"
-log="*"
-env_logger="*"
+log="0.3"
+env_logger="0.4"
 wait-timeout = "0.1"
 bincode= {git= "https://github.com/TyOverby/bincode" }
 staticfile = { git= "https://github.com/onur/staticfile", rev= "9f2ff7201eda648128c92e3f5597c587f0629f51" }
-conduit-mime-types = "*"
-url="*"
-hyper-native-tls="*"
-reqwest="*"
+conduit-mime-types = "0.7"
+url="1.4"
+hyper-native-tls="0.2"
+reqwest="0.6"
 
 [build-dependencies]
 cmake = "0.1.17"
@@ -68,9 +68,9 @@ path = "src/main.rs"
 doc = false
 
 [dependencies.mount]
-
 git = "https://github.com/iron/mount.git"
+rev = "2c3d719be4c158d4ddbd8cdb402fafccdefec58c"
 
 [dependencies.logger]
-
 git = "https://github.com/iron/logger.git"
+rev = "0daead5fe10c3cd0c4738767c162dc63a59c3fb3"

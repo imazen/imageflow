@@ -8,7 +8,7 @@ workspace = "../"
 imageflow_types = { path = "../imageflow_types", version = "*" }
 imageflow_helpers = { path = "../imageflow_helpers", version = "*" }
 url = "*"
-ieee754 ="*"
+ieee754 ="0.2"
 time="*"
 macro-attr= { git="https://github.com/DanielKeep/rust-custom-derive.git"}
 enum_derive= { git="https://github.com/DanielKeep/rust-custom-derive.git" }

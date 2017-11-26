@@ -10,14 +10,14 @@ name="imageflow_types"
 doctest = false
 
 [dependencies]
-serde = "*"
-serde_json = "*"
-serde_derive = "*"
-lazy_static = "*"
-regex = "*"
+serde = "1"
+serde_json = "1"
+serde_derive = "1"
+lazy_static = "0.2"
+regex = "0.2"
 imageflow_helpers = { path = "../imageflow_helpers", version = "*" }
-chrono ="*"
+chrono = "0.4"
 
 [build-dependencies]
 quick-error = "1"
-chrono =  "0.4"
+chrono = "0.4"
