@@ -16,14 +16,14 @@ libc = "0.2"
 num = "0.1"
 
 # time
-time = "*"
+time = "0.1"
 chrono =  "0.4"
 
 # serialization
-serde = "*"
-serde_json = "*"
-serde_derive = "*"
-rustc-serialize = "*"
+serde = "1"
+serde_json = "1"
+serde_derive = "1"
+rustc-serialize = "0.3"
 
 #lazy static
 lazy_static = "0.2"
@@ -31,7 +31,7 @@ lazy_static = "0.2"
 # fast hashes, crypto hashs
 twox-hash = "1"
 fnv = "*"
-blake2-rfc = "*"
+blake2-rfc = "0.2"
 
 ## Crate-specific dependencies
 
@@ -45,11 +45,11 @@ smallvec = "*"
 gif = "*"
 rgb = "0.7"
 
-lcms2 = { git = "https://github.com/pornel/rust-lcms2.git", rev = "e0bd98cdd1b1269848bfde92ec098d22fc0a8a32" }
+lcms2 = "5.0"
 lcms2-sys = {version="*", default-features = false}
-chashmap = "*"
+chashmap = "2.2"
 
-url = "*"
+url = "1.4"
 uuid = { version = "0.5", features = ["v4"] }
 
 imageflow_types = { path = "../imageflow_types", version = "*" }
@@ -58,7 +58,7 @@ imageflow_riapi = { path = "../imageflow_riapi", version = "*" }
 
 
 [dev-dependencies]
-hyper = { version = "*" }
+hyper = "=0.10.12"
 
 
 [build-dependencies]

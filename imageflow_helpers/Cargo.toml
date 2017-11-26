@@ -32,7 +32,7 @@ uuid = { version = "*", features= ["v4", "v5"]}
 lockless = "*"
 smallvec = "*"
 # regex
-regex = "*"
+regex = "0.2"
 
 num = "*"
 
@@ -42,17 +42,16 @@ zip = { version = "0.2", default-features = false }
 
 
 app_dirs = "^1.1.1"
-chashmap = "*"
+chashmap = "2.2"
 parking_lot = {version = "0.4", features = ["nightly"]}
-
 
 unicase = "2"
 # HTTPS is a little bit of a nightmare
 
 error-chain = "*"
 
-hyper = "*"
-reqwest = "*"
+hyper = "=0.10.12"
+reqwest = "0.6"
 hyper-native-tls = "*"
 
 backtrace = "0.3.2"

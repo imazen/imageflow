@@ -16,9 +16,9 @@ libc = "0.2"
 imageflow_core = { path = "../imageflow_core", version = "*" }
 backtrace = "*"
 smallvec="*"
-base64="*"
+base64="0.5"
 
 [build-dependencies]
 imageflow_helpers = { path = "../imageflow_helpers", version = "*" }
 moz-cheddar = "0.4.1"
-regex = "*"
+regex = "0.2"
