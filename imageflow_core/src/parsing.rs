@@ -103,6 +103,7 @@ impl IoTranslator {
                 c.add_file(io_id, dir, &path )
             }
             s::IoEnum::Url(url) => {
+                // TODO: eliminate unwrap
                 let bytes = ::imageflow_helpers::fetching::fetch_bytes(&url).unwrap();
                 c.add_copied_input_buffer(io_id, &bytes).map_err(|e| e.at(here!()))
             }

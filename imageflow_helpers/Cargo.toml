@@ -33,6 +33,7 @@ lockless = "*"
 smallvec = "*"
 # regex
 regex = "0.2"
+rand = "*"
 
 num = "*"
 

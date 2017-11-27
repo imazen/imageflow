@@ -37,6 +37,7 @@ extern crate error_chain;
 #[macro_use]
 extern crate lazy_static;
 
+extern crate rand;
 extern crate reqwest;
 extern crate hyper_native_tls;
 extern crate regex;
