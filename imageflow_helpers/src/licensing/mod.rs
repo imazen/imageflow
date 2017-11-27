@@ -1,16 +1,16 @@
-use ::preludes::from_std::*;
-use ::std;
-use ::chrono::{DateTime};
+use preludes::from_std::*;
+use std;
+use chrono::{DateTime};
 use unicase::UniCase;
 use errors::*;
 use errors::Result;
-use ::lockless::primitives::append_list::AppendList;
+use lockless::primitives::append_list::AppendList;
 use lockless::primitives::append_list::AppendListIterator;
-use std::ascii::AsciiExt;
+#[allow(unused)] use std::ascii::AsciiExt;
 use chrono::Utc;
 use std::thread;
 use std::thread::JoinHandle;
-use ::parking_lot::{Mutex, Condvar};
+use parking_lot::{Mutex, Condvar};
 use std::panic::AssertUnwindSafe;
 use std::any::Any;
 

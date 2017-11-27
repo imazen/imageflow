@@ -323,3 +323,12 @@ FakesAssemblies/
 
 #Xamarin
 *.userprefs
+
+dssim.tar.gz
+/dssim/
+imageflow_core/conanbuildinfo.txt
+
+/examples/*/*.json
+/examples/*/*.jpg
+/examples/*/*.png
+/examples/*/*.sh

@@ -1,13 +1,13 @@
-use ::std;
-use ::for_other_imageflow_crates::preludes::external_without_std::*;
-use ::ffi;
+use std;
+use for_other_imageflow_crates::preludes::external_without_std::*;
+use ffi;
 use ::{CError, JsonResponse, ErrorKind, FlowError, Result};
 use io::IoProxy;
 use flow::definitions::Graph;
 use std::any::Any;
-use ::imageflow_types::collections::AddRemoveSet;
-use ::ffi::ImageflowJsonResponse;
-use ::errors::{OutwardErrorBuffer, CErrorProxy};
+use imageflow_types::collections::AddRemoveSet;
+use ffi::ImageflowJsonResponse;
+use errors::{OutwardErrorBuffer, CErrorProxy};
 
 use codecs::CodecInstanceContainer;
 use ffi::IoDirection;

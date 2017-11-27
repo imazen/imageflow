@@ -1,4 +1,4 @@
-use ::internal_prelude::works_everywhere::*;
+use internal_prelude::works_everywhere::*;
 use std::sync::atomic::{AtomicU64, ATOMIC_U64_INIT};
 use std::sync::atomic;
 

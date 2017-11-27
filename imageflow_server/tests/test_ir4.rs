@@ -4,7 +4,7 @@
 extern crate imageflow_helpers;
 extern crate imageflow_core as fc;
 extern crate imageflow_types as s;
-use ::imageflow_helpers::preludes::from_std::*;
+use imageflow_helpers::preludes::from_std::*;
 extern crate hyper;
 
 use std::slice::SliceConcatExt;
@@ -20,9 +20,9 @@ extern crate lazy_static;
 
 use std::sync::Mutex;
 
-use ::imageflow_helpers::process_testing::*;
+use imageflow_helpers::process_testing::*;
 use fc::test_helpers::process_testing::ProcTestContextExtras;
-use ::imageflow_helpers::fetching::{fetch, fetch_bytes,get_status_code_for, FetchError, FetchConfig};
+use imageflow_helpers::fetching::{fetch, fetch_bytes,get_status_code_for, FetchError, FetchConfig};
 
 use std::collections::vec_deque::VecDeque;
 

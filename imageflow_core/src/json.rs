@@ -1,4 +1,4 @@
-use ::internal_prelude::works_everywhere::*;
+use internal_prelude::works_everywhere::*;
 
 type ResponderFn<'a, T, D> = Box<Fn(&mut T, D) -> Result<s::ResponsePayload> + 'a + Sync>;
 type MethodHandler<'a, T> = Box<Fn(&mut T, &[u8]) -> (JsonResponse, std::result::Result<(), FlowError>) + 'a + Sync>;

@@ -1,5 +1,5 @@
-use ::internal_prelude::works_everywhere::*;
-use ::clients::stateless;
+use internal_prelude::works_everywhere::*;
+use clients::stateless;
 
 
 pub mod process_testing {

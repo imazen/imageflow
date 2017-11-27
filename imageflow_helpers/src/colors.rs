@@ -1,5 +1,5 @@
-use ::preludes::from_std::*;
-use ::std;
+use preludes::from_std::*;
+use std;
 
 
 fn parse_rgba_slices(r: &str, g: &str, b: &str, a :&str) -> Result<Color32,std::num::ParseIntError>{

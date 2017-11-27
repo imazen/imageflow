@@ -1,13 +1,13 @@
 use imageflow_helpers::preludes::from_std::*;
-use ::imageflow_types as s;
+use imageflow_types as s;
 
 pub mod parsing;
 mod layout;
 
-use ::sizing;
-use ::sizing::prelude::*;
-use ::ir4::parsing::*;
-use ::ir4::layout::*;
+use sizing;
+use sizing::prelude::*;
+use ir4::parsing::*;
+use ir4::layout::*;
 
 pub enum Ir4Command{
     Instructions(Box<Instructions>),
