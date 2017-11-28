@@ -42,7 +42,7 @@ extern crate imageflow_helpers;
 extern crate chrono;
 extern crate serde;
 extern crate serde_json;
-use std::ascii::AsciiExt;
+#[allow(unused)] use std::ascii::AsciiExt;
 use std::str::FromStr;
 pub mod collections;
 
@@ -214,7 +214,7 @@ pub enum Color {
     #[serde(rename="srgb")]
     Srgb(ColorSrgb),
 }
-use ::imageflow_helpers::colors::*;
+use imageflow_helpers::colors::*;
 impl Color {
 
 

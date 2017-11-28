@@ -1,7 +1,7 @@
-use ::preludes::from_std::*;
-use ::std;
+use preludes::from_std::*;
+use std;
 
-use ::backtrace::{Backtrace, BacktraceFrame};
+use backtrace::{Backtrace, BacktraceFrame};
 use std::panic;
 use std::thread;
 

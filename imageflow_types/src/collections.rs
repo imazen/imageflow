@@ -1,4 +1,4 @@
-use ::std::cell::*;
+use std::cell::*;
 
 /// Provides interior mutability for a add-only set.
 /// Items can be added (a reference is returned)

@@ -13,7 +13,7 @@ pub use imageflow_types::EdgeKind;
 pub use imageflow_types::Filter;
 pub use imageflow_types::IoDirection;
 pub use imageflow_types::PixelFormat;
-use ::internal_prelude::works_everywhere::*;
+use internal_prelude::works_everywhere::*;
 
 // These are reused in the external ABI, but only as opaque pointers
 ///

@@ -1,10 +1,10 @@
 use blake2_rfc::blake2b::{ blake2b};
-use ::std;
-use ::preludes::from_std::*;
-use ::std::path::MAIN_SEPARATOR;
-use ::regex::{Regex,Captures};
+use std;
+use preludes::from_std::*;
+use std::path::MAIN_SEPARATOR;
+use regex::{Regex,Captures};
 use twox_hash::XxHash;
-use ::std::hash::Hasher;
+use std::hash::Hasher;
 
 // Guidance for selecting a hash function
 // Need cryptographic? Use black2b 256 or 512 and a secret seed.

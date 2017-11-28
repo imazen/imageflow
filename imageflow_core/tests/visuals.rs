@@ -591,9 +591,9 @@ fn djb2(bytes: &[u8]) -> u64{
 
 use imageflow_core::ffi::BitmapBgra;
 use std::collections::HashMap;
-use ::std::fs::File;
-use ::std::path::{PathBuf};
-use ::std::io::Write;
+use std::fs::File;
+use std::path::{PathBuf};
+use std::io::Write;
 use twox_hash::XxHash;
 use std::hash::Hasher;
 

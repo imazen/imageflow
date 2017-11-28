@@ -6,7 +6,7 @@
 //! accepts a `PartialCropProvider` to determine how close to the desired crop the provider is willing to go.
 //! The provider is only used to adjust the layout sizes, but users should also have the provider handle alignment of crops.
 use imageflow_helpers::preludes::from_std::*;
-use ::std;
+use std;
 
 // Serves as a size *and* an aspect ratio. There's benefit to keeping these together.
 // Rounding errors are problematic when they cause an off-by-one versus target width/height or original width/height.

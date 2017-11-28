@@ -1,6 +1,6 @@
-use ::std;
-use ::preludes::from_std::*;
-use ::zip;
+use std;
+use preludes::from_std::*;
+use zip;
 
 pub fn read_file_bytes<P: AsRef<Path>>(path: P) -> std::io::Result<Vec<u8>>{
     let mut f = OpenOptions::new().read(true).create(false).open(path)?;

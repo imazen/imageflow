@@ -1,8 +1,8 @@
 use imageflow_helpers::preludes::from_std::*;
-use ::std;
-use ::sizing::{steps, BoxParam, BoxTarget, AspectRatio, Cond, Step, Layout, LayoutError, BoxKind};
-use ::sizing;
-use ::time::precise_time_ns;
+use std;
+use sizing::{steps, BoxParam, BoxTarget, AspectRatio, Cond, Step, Layout, LayoutError, BoxKind};
+use sizing;
+use time::precise_time_ns;
 
 #[derive(Copy, Clone, PartialEq, Debug)]
 enum Strategy {

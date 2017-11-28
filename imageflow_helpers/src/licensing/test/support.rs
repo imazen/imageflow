@@ -1,4 +1,4 @@
-use ::chrono::prelude::*;
+use chrono::prelude::*;
 
 use super::super::*;
 

@@ -1,16 +1,16 @@
-use ::std;
-use ::std::fmt;
-use ::context::Context;
+use std;
+use std::fmt;
+use context::Context;
 use std::borrow::Cow;
 use std::any::Any;
 use std::io::Write;
 use std::io;
 use std::cmp;
 use num::FromPrimitive;
-use ::ffi;
+use ffi;
 use std::ffi::CStr;
 use std::ptr;
-use ::imageflow_riapi::sizing::LayoutError;
+use imageflow_riapi::sizing::LayoutError;
 
 #[test]
 fn test_file_macro_for_this_build(){

@@ -1,4 +1,4 @@
-use ::internal_prelude::external::*;
+use internal_prelude::external::*;
 
 #[macro_use]
 pub mod definitions;
