@@ -424,7 +424,7 @@ flow_interpolation_line_contributions_create(flow_c * context, const uint32_t ou
 
         float neg_factor, pos_factor;
         if (total_weight <= 0 || desired_sharpen_ratio > sharpen_ratio) {
-            float total_positive_weight = total_weight + total_negative_weight;
+            float total_positive_weight = total_weight - total_negative_weight;
             float target_negative_weight = desired_sharpen_ratio * total_positive_weight;
             pos_factor = 1;
             neg_factor = target_negative_weight / total_negative_weight;
