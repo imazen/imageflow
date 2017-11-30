@@ -1,5 +1,8 @@
 use std::cell::*;
 
+//TODO: phase these out
+//TODO: Move to imageflow_helpers crate
+
 /// Provides interior mutability for a add-only set.
 /// Items can be added (a reference is returned)
 /// References can be looked up via a pointer to the item

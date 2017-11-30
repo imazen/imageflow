@@ -1,3 +1,10 @@
+//!
+//! This module provides a thin wrapper over job building and image info retreival.
+//! It catches panics and reports them as part of a very simple error enum.
+//!
+//! It would be nice for this to go away or be merged with Context
+//!
+
 use Context;
 use JsonResponse;
 use ErrorCategory;

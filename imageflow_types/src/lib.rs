@@ -46,6 +46,10 @@ extern crate serde_json;
 use std::str::FromStr;
 pub mod collections;
 
+
+
+/// Memory layout for pixels.
+/// sRGB w/ gamma encoding assumed for 8-bit channels.
 #[repr(C)]
 #[derive(Serialize, Deserialize, Copy, Clone, PartialEq, Debug)]
 pub enum PixelFormat {
@@ -60,6 +64,7 @@ pub enum PixelFormat {
 }
 
 impl PixelFormat{
+    /// The number of bytes required to store the given pixel type
     pub fn bytes(&self) -> usize{
         match *self{
             PixelFormat::Gray8 => 1,
@@ -70,6 +75,7 @@ impl PixelFormat{
     }
 }
 
+/// Named interpolation function+configuration presets
 #[repr(C)]
 #[derive(Copy, Serialize, Deserialize, Clone, PartialEq, PartialOrd, Debug)]
 pub enum Filter {
@@ -107,6 +113,7 @@ pub enum Filter {
     NCubic = 29,
     NCubicSharp = 30,
 }
+
 impl FromStr for Filter {
     type Err = &'static str;
 
@@ -157,6 +164,7 @@ pub enum PngBitDepth {
     Png24,
 }
 
+/// The color space to blend/combine pixels in. Downscaling is best done in linear light.
 #[derive(Serialize, Deserialize, Clone, Copy, PartialEq, Debug)]
 pub enum ScalingFloatspace {
     #[serde(rename="srgb")]
@@ -165,6 +173,7 @@ pub enum ScalingFloatspace {
     Linear, // gamma = 2,
 }
 
+/// Encoder presets (each with optional configuration). These are exposed by the JSON API.
 #[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
 pub enum EncoderPreset {
     #[serde(rename="libjpegturbo")]
@@ -183,28 +192,40 @@ pub enum EncoderPreset {
     Gif
 }
 
+
 impl EncoderPreset {
     pub fn libpng32() -> EncoderPreset {
         EncoderPreset::Libpng {
             depth: Some(PngBitDepth::Png32),
             matte: None,
-            zlib_compression: None,
+            zlib_compression: None, // Use default
         }
     }
     pub fn libjpegturbo() -> EncoderPreset {
-        EncoderPreset::LibjpegTurbo { quality: Some(100), optimize_huffman_coding: None, progressive: None }
+        EncoderPreset::LibjpegTurbo {
+            quality: Some(100),
+            optimize_huffman_coding: None,
+            progressive: None
+        }
     }
     pub fn libjpegturbo_q(quality: Option<i32>) -> EncoderPreset {
-        EncoderPreset::LibjpegTurbo { quality: quality, optimize_huffman_coding: None, progressive: None }
+        EncoderPreset::LibjpegTurbo {
+            quality: quality,
+            optimize_huffman_coding: None,
+            progressive: None
+        }
     }
 }
 
+/// Represenations of an sRGB color value.
 #[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
 pub enum ColorSrgb {
     /// Hex in RRGGBBAA (css) form or variant thereof
     #[serde(rename="hex")]
     Hex(String),
 }
+
+/// Represents arbitrary colors (not color space specific)
 #[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
 pub enum Color {
     #[serde(rename="transparent")]
@@ -214,9 +235,9 @@ pub enum Color {
     #[serde(rename="srgb")]
     Srgb(ColorSrgb),
 }
+
 use imageflow_helpers::colors::*;
 impl Color {
-
 
     pub fn to_u32_bgra(&self) -> std::result::Result<u32, ParseColorError> {
         self.to_color_32().map(|c| c.to_bgra_le() )
@@ -225,8 +246,9 @@ impl Color {
     pub fn to_u32_rgba_big_endian(&self) -> std::result::Result<u32, ParseColorError> {
         self.to_color_32().map(|c| c.to_abgr_le() )
     }
-    pub fn to_color_32(&self) -> std::result::Result<Color32, ParseColorError> {
 
+    /// Parse a Color into a 32-bit sRGBA value.
+    pub fn to_color_32(&self) -> std::result::Result<Color32, ParseColorError> {
         match *self {
             Color::Srgb(ref srgb) => {
                 match *srgb {
@@ -296,6 +318,7 @@ pub struct ConstraintResamplingHints {
     pub scaling_colorspace: Option<ScalingFloatspace>,
     pub resample_when: Option<ResampleWhen>
 }
+
 impl ConstraintResamplingHints{
     pub fn with(filter: Option<Filter>, sharpen_percent: Option<f32>) -> ConstraintResamplingHints{
         ConstraintResamplingHints{
@@ -314,6 +337,7 @@ pub enum CommandStringKind{
     ImageResizer4
 }
 
+/// Constraint types. TODO: expand to include nearly everthing RIAPI does.
 #[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
 pub enum Constraint {
     #[serde(rename="within")]
@@ -321,6 +345,7 @@ pub enum Constraint {
     //max * {down, up, both, canvas}
 }
 
+/// Blend pixels (if transparent) or replace?
 #[derive(Serialize, Deserialize, Clone, Copy, PartialEq, Debug)]
 pub enum CompositingMode {
     #[serde(rename="compose")]
@@ -329,6 +354,8 @@ pub enum CompositingMode {
     Overwrite
 }
 
+/// Represents a image operation. Currently used both externally (for JSON API) and internally.
+/// The most important data type
 #[allow(unreachable_patterns)]
 #[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
 pub enum Node {
@@ -469,7 +496,9 @@ pub enum ColorFilterSrgb {
     Saturation(f32),
 }
 
-
+/// Operation nodes are connected by edges. Many operations require both an input and a canvas node.
+///
+/// In the future, some operations may have multiple inputs, and new edge types may be introduced for non-bitmap data.
 #[derive(Serialize, Deserialize, Copy, Clone, PartialEq, Debug)]
 pub enum EdgeKind {
     #[serde(rename="input")]
@@ -477,19 +506,24 @@ pub enum EdgeKind {
     #[serde(rename="canvas")]
     Canvas,
 }
+
+/// Operation nodes are connected by edges. JSON only.
 #[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
 pub struct Edge {
     pub from: i32,
     pub to: i32,
     pub kind: EdgeKind,
 }
+
+
+/// An operation graph; should be directed and acyclic. JSON only.
 #[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
 pub struct Graph {
     pub nodes: std::collections::HashMap<String, Node>,
     pub edges: Vec<Edge>,
 }
 
-
+/// We must mark IO objects as data sources or data destinations.
 #[derive(Serialize, Deserialize, Clone, Copy, PartialEq, Debug)]
 #[repr(C)]
 pub enum IoDirection {
@@ -499,7 +533,7 @@ pub enum IoDirection {
     In = 4,
 }
 
-
+/// Describes (or contains) a data source or destination
 #[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
 pub enum IoEnum {
     #[serde(rename="bytes_hex")]
@@ -521,7 +555,7 @@ pub enum IoEnum {
     Placeholder
 }
 
-
+/// Data source or destination (including IO ID).
 #[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
 pub struct IoObject {
     pub io_id: i32,
@@ -529,6 +563,8 @@ pub struct IoObject {
     pub io: IoEnum,
 }
 
+/// Represents an operation graph or series (series is simpler to think about and suitable for most tasks).
+/// Operation graphs *may* be applied to each frame in the source data - thus 'Framewise'.
 #[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
 pub enum Framewise {
     #[serde(rename="graph")]
@@ -573,6 +609,9 @@ impl Framewise {
     }
 }
 
+/// TODO: clean up!
+/// Contains flags that instruct how job execution is recorded during execution.
+/// v0.0.1
 #[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
 pub struct Build001GraphRecording {
     pub record_graph_versions: Option<bool>,
@@ -610,26 +649,20 @@ pub struct Build001Config {
     pub graph_recording: Option<Build001GraphRecording>,
 
 }
+
+/// Represents a complete build job, combining IO objects with a framewise operation graph.
+/// TODO: cleaup builder_config.
 #[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
 pub struct Build001 {
     pub builder_config: Option<Build001Config>,
     pub io: Vec<IoObject>,
     pub framewise: Framewise,
 }
+
 impl Build001{
 
-    // How will things be sorted
-    pub fn add_replace_sort_io(self, obj: IoObject) -> Build001{
-        let mut new_io_vec = self.io.clone();
-        new_io_vec.retain(|v| v.io_id != obj.io_id);
-        new_io_vec.push(obj);
-        Build001{
-            builder_config: self.builder_config,
-            io: new_io_vec,
-            framewise: self.framewise
-        }
-    }
-    // Panics if no io_id found
+
+    /// Replaces the specified IO object by io_id.  Panics if no such io_id found
     pub fn replace_io(self, io_id: i32, value: IoEnum) -> Build001{
         let value_ref = &value;
         let new_io_vec = self.io.into_iter().map(|obj| {
@@ -648,6 +681,10 @@ impl Build001{
     }
 
 }
+
+
+////////////// Examples
+
 impl IoEnum {
     pub fn example_byte_array() -> IoEnum {
         let tiny_png = vec![0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, 0x00, 0x00, 0x00, 0x0D,

@@ -62,7 +62,7 @@ pub fn parse_color_hex_or_named(value: &str) -> std::result::Result<Color32, Par
 }
 
 /// Native storage format is 0xAARRGGBB
-/// Can only represent `sRGB` values
+/// Can only represent `sRGB`, non-linear values with 8 bit precision per channel.
 #[derive(Copy,Clone,Debug,Eq,PartialEq)]
 pub struct Color32(pub u32);
 

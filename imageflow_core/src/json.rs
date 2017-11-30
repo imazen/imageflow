@@ -1,3 +1,6 @@
+
+//! Kind of like a routing table for JSON endpoints
+
 use internal_prelude::works_everywhere::*;
 
 type ResponderFn<'a, T, D> = Box<Fn(&mut T, D) -> Result<s::ResponsePayload> + 'a + Sync>;
