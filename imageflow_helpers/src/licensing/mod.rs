@@ -199,10 +199,6 @@ impl LicenseManagerSingleton{
     }
 
 
-
-
-
-
     pub fn join_thread(self) {
         match Arc::try_unwrap(self.fetcher_token){
             Ok(t) => {

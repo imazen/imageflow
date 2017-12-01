@@ -555,6 +555,23 @@ pub enum IoEnum {
     Placeholder
 }
 
+impl IoEnum{
+    pub fn into_input(self, io_id: i32) -> IoObject{
+        IoObject{
+            io_id,
+            direction: IoDirection::In,
+            io: self
+        }
+    }
+    pub fn into_output(self, io_id: i32) -> IoObject{
+        IoObject{
+            io_id,
+            direction: IoDirection::Out,
+            io: self
+        }
+    }
+}
+
 /// Data source or destination (including IO ID).
 #[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
 pub struct IoObject {

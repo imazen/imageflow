@@ -234,6 +234,7 @@ impl BitmapBgra{
             fmt: self.fmt
         }
     }
+    /// If the format is Bgr32, set each alpha byte to 0xff
     pub fn normalize_alpha(&mut self) -> Result<()>{
         if self.fmt == PixelFormat::Bgr32 {
             let width_bytes = self.w as usize * self.fmt.bytes();
@@ -246,6 +247,29 @@ impl BitmapBgra{
         }
         Ok(())
     }
+
+    /// Call normalize_alpha first; this function does not skip unused alpha bytes, only unused whole pixels.
+    /// Otherwise Bgr32 may be non-deterministic
+    pub fn short_hash_pixels(&self) -> u64{
+        use std::hash::Hasher;
+
+        let width_bytes = self.w as usize *  self.fmt.bytes();
+
+        let mut hash = ::twox_hash::XxHash::with_seed(0x8ed1_2ad9_483d_28a0);
+        for h in 0isize..(self.h as isize){
+            let row_slice = unsafe{ ::std::slice::from_raw_parts(self.pixels.offset(h * self.stride as isize), width_bytes) };
+            hash.write(row_slice)
+        }
+        hash.finish()
+    }
+
+
+    pub unsafe fn destroy(bitmap: *mut Self, c: &::Context) {
+        unsafe{
+            flow_destroy(c.flow_c(), bitmap as *const libc::c_void, std::ptr::null(), 0);
+        }
+    }
+
 
     //bgr24_to_bgra32 -> Set alpha as 0xff
     //bgr24_to_bgrx32 -> skip alpha
@@ -736,7 +760,7 @@ mod mid_term {
     extern "C" {
 
     pub fn flow_bitmap_bgra_load_png(c: *mut ImageflowContext,
-    b_ref: *mut *const BitmapBgra,
+    b_ref: *mut *mut BitmapBgra,
     path: *const libc::c_char)
     -> bool;
 

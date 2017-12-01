@@ -195,7 +195,7 @@ impl Context {
 
 
 
-
+    /// For executing a complete job
     pub fn build_1(&mut self, parsed: s::Build001) -> Result<s::ResponsePayload> {
         let g = ::parsing::GraphTranslator::new().translate_framewise(parsed.framewise).map_err(|e| e.at(here!())) ?;
 
@@ -226,6 +226,7 @@ impl Context {
         self.graph_recording = r;
     }
 
+    /// For executing an operation graph (assumes you have already configured the context with IO sources/destinations as needed)
     pub fn execute_1(&mut self, what: s::Execute001) -> Result<s::ResponsePayload>{
         let g = ::parsing::GraphTranslator::new().translate_framewise(what.framewise).map_err(|e| e.at(here!()))?;
         if let Some(r) = what.graph_recording {

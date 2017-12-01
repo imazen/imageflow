@@ -41,6 +41,7 @@ extern crate smallvec;
 extern crate chashmap;
 extern crate rgb;
 extern crate lodepng;
+extern crate twox_hash;
 
 #[macro_use]
 pub mod errors;

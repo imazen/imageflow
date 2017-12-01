@@ -28,7 +28,7 @@ rustc-serialize = "0.3"
 #lazy static
 lazy_static = "0.2"
 
-# fast hashes, crypto hashs
+# fast hashes, crypto hashes
 twox-hash = "1"
 fnv = "*"
 blake2-rfc = "0.2"
@@ -41,6 +41,8 @@ petgraph = "0.4"
 daggy = "0.5"
 
 smallvec = "*"
+
+itertools = "*"
 
 gif = "*"
 rgb = "0.8.5"

@@ -38,8 +38,6 @@ pub fn legacy_djb2(bytes: &[u8]) -> u64{
     bytes.iter().fold(5381u64, |hash, c| ((hash << 5).wrapping_add(hash)).wrapping_add(u64::from(*c)))
 }
 
-
-///
 /// Format string supports printing specific bit ranges in hexadecimal:
 /// `{0-23:x}` will print the first 23 bits of the hash in hex - WITHOUT leading zeroes
 /// `{0-256:064x}` will print all 256 bits, padded to 64 hex digits (256 bits) with zeroes

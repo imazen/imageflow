@@ -459,8 +459,8 @@ fn test_with_callback(checksum_name: &str, input: s::IoEnum, callback: fn(&s::Im
         };
         context.execute_1(send_execute).unwrap();
 
-        let ctx = checksums_ctx_for(&context);
-        matched = regression_check(&ctx, bit.ptr_to_bitmap(), checksum_name)
+        let ctx = ChecksumCtx::visuals(&context);
+        matched = regression_check(&ctx, bit.bitmap().unwrap(), checksum_name)
     }
     context.destroy().unwrap();
     matched
