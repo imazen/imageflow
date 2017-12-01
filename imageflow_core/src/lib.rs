@@ -35,10 +35,12 @@ extern crate lcms2;
 extern crate libc;
 extern crate rustc_serialize;
 extern crate uuid;
+extern crate imagequant;
 extern crate gif;
 extern crate smallvec;
 extern crate chashmap;
 extern crate rgb;
+extern crate lodepng;
 
 #[macro_use]
 pub mod errors;

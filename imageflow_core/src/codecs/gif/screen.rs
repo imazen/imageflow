@@ -36,7 +36,7 @@ impl Screen {
         let bg_color = if let (Some(bg_index), Some(pal)) = (reader.bg_color(), pal.as_ref()) {
             pal[bg_index]
         } else {
-            BGRA8::new(0,0,0,0)
+            BGRA8::default()
         };
 
         Screen {

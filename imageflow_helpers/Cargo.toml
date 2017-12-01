@@ -52,6 +52,7 @@ unicase = "2"
 error-chain = "*"
 
 hyper = "=0.10.12"
+hyper-openssl = "=0.2.6"
 reqwest = "0.6"
 hyper-native-tls = "*"
 

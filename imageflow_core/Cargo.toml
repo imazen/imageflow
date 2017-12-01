@@ -43,11 +43,16 @@ daggy = "0.5"
 smallvec = "*"
 
 gif = "*"
-rgb = "0.7"
+rgb = "0.8.5"
+imagequant = "2.11.7"
+lodepng = "2.0.5"
 
 lcms2 = "5.0"
 lcms2-sys = {version="*", default-features = false}
 chashmap = "2.2"
+
+dssim = "2"
+getopts ="0.2.15"
 
 url = "1.4"
 uuid = { version = "0.5", features = ["v4"] }

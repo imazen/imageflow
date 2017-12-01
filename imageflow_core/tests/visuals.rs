@@ -10,6 +10,7 @@ extern crate imageflow_types as s;
 extern crate imageflow_helpers as hlp;
 extern crate serde_json;
 extern crate smallvec;
+extern crate dssim;
 
 extern crate twox_hash;
 
@@ -26,6 +27,12 @@ fn default_build_config(debug: bool) -> s::Build001Config {
 
 const DEBUG_GRAPH: bool = false;
 const POPULATE_CHECKSUMS: bool = false;
+
+// Encoder testing
+// quantization - compare exactly.
+// DSSIM compare
+// Output size range acceptable.
+
 
 fn smoke_test(input: Option<s::IoEnum>, output: Option<s::IoEnum>,  debug: bool, steps: Vec<s::Node>){
     let mut io_list = Vec::new();
