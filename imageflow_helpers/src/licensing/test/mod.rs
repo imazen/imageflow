@@ -78,15 +78,9 @@ fn test_remote_license_success(){
 
     assert!(mgr.compute_feature("R_Creative").licensed());
 
-    mgr.begin_kill_thread(1000);
+    LicenseManagerSingleton::kill_thread(mgr,1000);
 
-
-    Arc::try_unwrap(mgr).ok().unwrap().join_thread();
-
-
-    // mockito is broke for some reason (which doesn't seem possible given the code)
-    // it responds, but doesn't count the request
-    //  mock.assert();
+    mock.assert();
 }
 
 
@@ -119,12 +113,9 @@ fn test_remote_license_void(){
     assert!(!mgr.compute_feature("R_Creative").licensed());
 
 
-    mgr.begin_kill_thread(1000);
-    Arc::try_unwrap(mgr).ok().unwrap().join_thread();
+    LicenseManagerSingleton::kill_thread(mgr,1000);
 
-    // mockito is broke for some reason (which doesn't seem possible given the code)
-    // it responds, but doesn't count the request
-    //  mock.assert();
+    mock.assert();
 }
 
 
@@ -132,21 +123,3 @@ lazy_static!{
     static ref TEST_REF: Arc<Mutex<i32>> = Arc::new(Mutex::new(0));
 }
 
-#[test]
-fn test_static_ref(){
-
-    let threads = (0..20).map(|_| thread::spawn(|| {
-        let state = TEST_REF.clone();
-        let mut state_mutex = state.lock();
-        *state_mutex = *state_mutex + 1;
-    })).collect::<Vec<JoinHandle<()>>>();
-
-    for t in threads{
-        t.join().unwrap();
-    }
-    {
-        let state = TEST_REF.clone();
-        let mut state_mutex = state.lock();
-        assert_eq!(20, *state_mutex);
-    }
-}

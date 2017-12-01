@@ -170,11 +170,38 @@ impl LicenseManagerSingleton{
     }
 
 
-    pub fn begin_kill_thread(&self, ms: u64) {
-        if !self.fetcher_token().wait_for_shutdown(::std::time::Duration::from_millis(ms)) {
-            panic!("Failed to shutdown fetcher thread within {}ms", ms);
+    pub fn begin_kill_thread(&self, timeout_ms: u64) {
+        if !self.fetcher_token().wait_for_shutdown(::std::time::Duration::from_millis(timeout_ms)) {
+            panic!("Failed to shutdown fetcher thread within {}ms", timeout_ms);
         }
     }
+
+    pub fn kill_thread(arc_mgr: Arc<LicenseManagerSingleton>, timeout_ms: u64) {
+        let start = ::time::precise_time_ns();
+        let mut m = arc_mgr;
+        m.begin_kill_thread(timeout_ms);
+        loop {
+            match Arc::try_unwrap(m) {
+                Ok(mgr) => {
+                    mgr.join_thread();
+                    return;
+                }
+                Err(arc_mgr) => {
+                    if (::time::precise_time_ns() - start) / 1000 > timeout_ms {
+                        panic!("Failed to join fetcher thread within {}ms", timeout_ms);
+                    } else {
+                        ::std::thread::sleep_ms(15);
+                        m = arc_mgr;
+                    }
+                }
+            }
+        }
+    }
+
+
+
+
+
 
     pub fn join_thread(self) {
         match Arc::try_unwrap(self.fetcher_token){

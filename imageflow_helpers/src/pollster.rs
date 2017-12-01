@@ -264,7 +264,7 @@ impl SharedToken{
         self.request_cancel();
     }
 
-    /// Tell everyone that teh shutdown is complete; the thread can be joined.
+    /// Tell everyone that the shutdown is complete; the thread can be joined.
     pub fn shutdown_complete(&self){
         let mut c = self.shutdown_finished.lock();
         *c = true;
@@ -287,7 +287,7 @@ impl SharedToken{
 
     }
 
-    /// Reset the cancelation
+    /// Reset the cancellation
     pub fn reset_cancel(&self){
         let mut c = self.cancel.lock();
         *c = false;
@@ -295,7 +295,7 @@ impl SharedToken{
         self.cancel_change.notify_one();
     }
 
-    /// Waits until cancelation is requested
+    /// Waits until cancellation is requested
     pub fn wait_for_cancel(&self, timeout: ::std::time::Duration) -> bool{
         let mut canceled = self.cancel.lock();
         *canceled || (!self.cancel_change.wait_for(&mut canceled, timeout).timed_out() && *canceled)
