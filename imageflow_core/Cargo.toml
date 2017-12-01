@@ -43,6 +43,7 @@ daggy = "0.5"
 smallvec = "*"
 
 itertools = "*"
+imgref = "*"
 
 gif = "*"
 rgb = "0.8.5"

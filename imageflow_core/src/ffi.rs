@@ -265,9 +265,7 @@ impl BitmapBgra{
 
 
     pub unsafe fn destroy(bitmap: *mut Self, c: &::Context) {
-        unsafe{
-            flow_destroy(c.flow_c(), bitmap as *const libc::c_void, std::ptr::null(), 0);
-        }
+        flow_destroy(c.flow_c(), bitmap as *const libc::c_void, std::ptr::null(), 0);
     }
 
 

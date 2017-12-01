@@ -13,7 +13,59 @@ use common::*;
 use imageflow_core::{Context, ErrorKind, FlowError, CodeLocation};
 
 const DEBUG_GRAPH: bool = false;
-const POPULATE_CHECKSUMS: bool = false;
+const POPULATE_CHECKSUMS: bool = true;
+
+
+
+#[test]
+fn test_encode_gradients() {
+    let steps = vec![
+        s::Node::Decode { io_id: 0, commands: None },
+        s::Node::Encode {
+            io_id: 1,
+            preset: s::EncoderPreset::libpng32()
+        }
+    ];
+
+    compare_encoded(Some(s::IoEnum::Url("https://s3-us-west-2.amazonaws.com/imageflow-resources/test_inputs/gradients.png".to_owned())),
+                    "encode_gradients",
+                    POPULATE_CHECKSUMS,
+                    DEBUG_GRAPH,
+                    Constraints {
+                        max_file_size: Some(100000),
+                        similarity: Similarity::AllowOffByOneBytesRatio(0.01)
+                    },
+                    steps
+    );
+}
+
+
+
+
+#[test]
+fn test_encode_frymire() {
+    let steps = vec![
+        s::Node::Decode { io_id: 0, commands: None },
+        s::Node::FlipV,
+        s::Node::Encode {
+            io_id: 1,
+            preset: s::EncoderPreset::libpng32()
+        }
+    ];
+
+    compare_encoded(Some(s::IoEnum::Url("https://s3-us-west-2.amazonaws.com/imageflow-resources/test_inputs/frymire.png".to_owned())),
+                    "encode_frymire",
+                    POPULATE_CHECKSUMS,
+                    DEBUG_GRAPH,
+                    Constraints {
+                        max_file_size: None,
+                        similarity: Similarity::AllowOffByOneBytesRatio(0.01)
+                    },
+                    steps
+    );
+}
+
+
 
 #[test]
 fn test_fill_rect(){
@@ -301,6 +353,7 @@ fn test_encode_png32_smoke() {
     );
 }
 
+
 #[test]
 fn test_dimensions(){
     let steps = vec![
@@ -460,7 +513,7 @@ fn test_with_callback(checksum_name: &str, input: s::IoEnum, callback: fn(&s::Im
         context.execute_1(send_execute).unwrap();
 
         let ctx = ChecksumCtx::visuals(&context);
-        matched = regression_check(&ctx, bit.bitmap().unwrap(), checksum_name)
+        matched = bitmap_regression_check(&ctx, bit.bitmap(&context).unwrap(), checksum_name, 500)
     }
     context.destroy().unwrap();
     matched
