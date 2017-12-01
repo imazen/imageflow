@@ -9,9 +9,9 @@ use errors::Result;
 use smallvec::SmallVec;
 use std::iter::FromIterator;
 
-use super::AsciiFolding;
+use super::super::util::*;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct LicenseParser{
     id: String,
     issued: Option<DateTime<Utc>>,
@@ -20,8 +20,6 @@ pub struct LicenseParser{
     pairs: HashMap<AsciiFolding<String>,String>,
     original_length: usize
 }
-
-
 
 impl LicenseParser{
     pub fn new(s: &str) -> Result<LicenseParser>{
@@ -179,7 +177,7 @@ impl LicenseParser{
     }
 
 }
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct LicenseBlob{
 //    original: String,
     signature: Vec<u8>,
@@ -371,7 +369,8 @@ mod test{
         let blob = LicenseBlob::deserialize(&[rsa],"localhost:RG9tYWluOiBsb2NhbGhvc3QKT3duZXI6IEV2ZXJ5b25lCklzc3VlZDogMjAxNS0wMy0yOFQwOTozNjo1OVoKRmVhdHVyZXM6IFI0RWxpdGUgUjRDcmVhdGl2ZSBSNFBlcmZvcm1hbmNlCg==:h6D+kIXbF3qmvmW2gDpb+b4gdxBjnrkZLvSzXmEnqKAywNJNpTdFekpTOB4SwU14WbTeVyWwvFngHax7WuHBV+0WkQ5lDqKFaRW32vj8CJQeG8Wvnyj9PaNGaS/FpKhNjZbDEmh3qqirBp2NR0bpN4QbhP9NMy7+rOMo0nynAruwWvJKCnuf7mWWdb9a5uTZO9OUcSeS/tY8QaNeIhaCnhPe0Yx9qvOXe5nMnl10CR9ur+EtS54d1qzBGHqN/3oFhiB+xlqNELwz23qR4c8HxbTEyNarkG4CZx8CbbgJfHmPxAYGJTTBTPJ+cdah8MJR16Ta36cRZ2Buy8XYo/nf1g==", "test_generic");
         if let Err(e) = blob{
             use error_chain::ChainedError;
-            eprintln!("{}",e.display());
+            eprintln!("{}",e
+            );
             assert!(false);
         }
     }

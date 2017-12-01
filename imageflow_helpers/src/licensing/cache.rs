@@ -1,6 +1,7 @@
 use preludes::from_std::*;
 use app_dirs::*;
 
+use super::super::util::*;
 
 const APP_INFO: AppInfo = AppInfo{name: "Imageflow", author: "Imazen"};
 
@@ -106,7 +107,7 @@ impl DiskStorage{
                 match String::from_utf8(v){
                     Err(e) => {
                         if self.log_stderr {
-                            eprintln!("Invalid UTF8-butes in {} named {:?} in folder {:?}: {:?}", self.data_kind, name.as_ref(), self.folder, e);
+                            eprintln!("Invalid UTF8-bytes in {} named {:?} in folder {:?}: {:?}", self.data_kind, name.as_ref(), self.folder, e);
                         }
                         Err(io::Error::new(io::ErrorKind::InvalidData, e))
                     },

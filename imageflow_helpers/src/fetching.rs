@@ -21,6 +21,7 @@ pub enum FetchError {
     UpstreamResponseErrorWithResponse{ status: hyper::status::StatusCode, response: FetchedResponse},
 }
 
+pub type FetchResult = ::std::result::Result<FetchedResponse,FetchError>;
 
 pub struct FetchedResponse {
     pub bytes: Vec<u8>,

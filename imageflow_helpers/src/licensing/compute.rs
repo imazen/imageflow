@@ -2,21 +2,8 @@ use super::*;
 
 use smallvec::SmallVec;
 use std::iter::FromIterator;
+use super::super::util::*;
 
-
-trait DoSome{
-    type Item;
-    fn do_some<F>(&mut self, f: F) -> () where F: FnMut(&mut Self::Item) -> ();
-}
-impl<T> DoSome for Option<T>{
-    type Item = T;
-    fn do_some<F>(&mut self, mut f: F) -> () where
-        F: FnMut(&mut Self::Item) -> () {
-        if let Some(ref mut v) = *self{
-            f(v)
-        }
-    }
-}
 
 pub enum EnforcementMethod{ None, Watermark, Error}
 

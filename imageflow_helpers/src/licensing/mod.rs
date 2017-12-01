@@ -10,10 +10,12 @@ use lockless::primitives::append_list::AppendListIterator;
 use chrono::Utc;
 use std::thread;
 use std::thread::JoinHandle;
-use parking_lot::{Mutex, Condvar};
+use parking_lot::{Mutex, Condvar, RwLock};
 use std::panic::AssertUnwindSafe;
 use std::any::Any;
-
+use ::smallvec::SmallVec;
+use std::iter::FromIterator;
+use super::util::*;
 // Get build date
 // Get ticks
 // Get utcnow
@@ -23,7 +25,7 @@ use std::sync::atomic::{AtomicU64, Ordering};
 mod cache;
 mod parsing;
 mod compute;
-mod support;
+pub mod support;
 mod license_pair;
 
 #[cfg(test)]
@@ -34,19 +36,77 @@ use self::support::*;
 use self::cache::*;
 use self::parsing::*;
 use self::compute::*;
+use super::pollster::*;
 // IssueSink
 
-pub trait LicenseClock: Sync + Send{
-    fn get_timestamp_ticks(&self) -> u64;
-    fn ticks_per_second(&self) -> u64;
-    fn get_build_date(&self) -> DateTime<Utc>;
-    fn get_utc_now(&self) -> DateTime<Utc>;
+
+
+pub struct LicenseEndpoint{
+    path: String,
+    id: String,
+    mgr: Arc<LicenseManagerSingleton>,
+    base_urls: RwLock<SmallVec<[Cow<'static, str>;6]>>
+}
+
+impl LicenseEndpoint{
+    pub fn new(mgr: Arc<LicenseManagerSingleton>, license: &License) -> Self{
+        LicenseEndpoint{
+            path: format!("/v1/licenses/latest/{}.txt", license.first().fields().secret().expect("secret is required")),
+            mgr,
+            base_urls: RwLock::new(Self::default_urls()),
+            id: license.id().to_owned()
+        }
+    }
+
+    fn default_urls() -> SmallVec<[Cow<'static, str>;6]> {
+        SmallVec::from_iter([
+        Cow::Borrowed("https://s3-us-west-2.amazonaws.com/licenses.imazen.net/"),
+        Cow::Borrowed("https://licenses-redirect.imazen.net/"),
+        Cow::Borrowed("https://licenses.imazen.net/"),
+        Cow::Borrowed("https://licenses2.imazen.net")].into_iter().map(|v| v.clone()))
+    }
+    pub fn box_endpoint(self) -> Box<Endpoint>{
+        Box::new(self)
+    }
+}
+
+impl Endpoint for LicenseEndpoint{
+    fn redact(&self, str: &mut str) {
+        //TODO: implement secret redaction
+    }
+
+    fn get_fetch_interval(&self) -> ::chrono::Duration {
+        ::chrono::Duration::hours(1)
+    }
+
+    fn get_query(&self) -> ::std::result::Result<&str, String> {
+        Ok("")
+    }
+
+    fn get_path(&self) -> ::std::result::Result<&str, String> {
+        Ok(&self.path)
+    }
+
+    fn get_base_urls(&self) -> SmallVec<[Cow<'static, str>; 6]> {
+        SmallVec::from_iter(self.base_urls.read().iter().map(|c| c.clone()))
+    }
+
+    fn process_response(&self, content_type: Option<&::hyper::header::ContentType>, bytes: Vec<u8>) -> ::std::result::Result<(), String> {
+        let s =  ::std::str::from_utf8(&bytes).unwrap();
+        let blob = LicenseBlob::deserialize(self.mgr.trusted_keys, s, "remote license").unwrap();
+        if let Some(&License::Pair(ref p)) = self.mgr.get_by_id(&self.id){
+            p.update_remote(blob.clone()).map_err(|e| format!("{}", e))?;
+        }
+        // TODO: update base urls
+        self.mgr.update_cache(&self.id, blob);
+        Ok(())
+    }
 }
 
 
 pub struct LicenseManagerSingleton{
     licenses: AppendList<License>,
-    aliases_to_id: ::chashmap::CHashMap<Cow<'static, str>,Cow<'static, str>>,
+    aliases_to_id: ::chashmap::CHashMap<Cow<'static, str>,String>,
     cached: ::chashmap::CHashMap<Cow<'static, str>,LicenseBlob>,
     #[allow(dead_code)]
     sink: IssueSink,
@@ -56,10 +116,8 @@ pub struct LicenseManagerSingleton{
     #[allow(dead_code)]
     uid: ::uuid::Uuid,
     heartbeat_count: AtomicU64,
-    clock: Box<LicenseClock>,
-    handle: Arc<::parking_lot::RwLock<Option<JoinHandle<()>>>>,
-    licenses_fetched: Mutex<usize>,
-    licenses_fetched_change: ::parking_lot::Condvar,
+    clock: Arc<AppClock>,
+    fetcher_token: Arc<SharedToken>
 }
 
 #[cfg(not(test))]
@@ -70,7 +128,7 @@ const URL: &'static str = ::mockito::SERVER_URL;
 
 
 impl LicenseManagerSingleton{
-    pub fn new(trusted_keys: &'static [RSADecryptPublic], clock: Box<LicenseClock + Sync>, cache: Box<PersistentStringCache>) -> Self{
+    pub fn new(trusted_keys: &'static [RSADecryptPublic], clock: Arc<AppClock>, cache: Box<PersistentStringCache>) -> Self{
         let created = clock.get_utc_now();
         LicenseManagerSingleton{
             trusted_keys,
@@ -83,9 +141,7 @@ impl LicenseManagerSingleton{
             created,
             uid: ::uuid::Uuid::new_v4(),
             heartbeat_count: ::std::sync::atomic::ATOMIC_U64_INIT,
-            handle: Arc::new(::parking_lot::RwLock::new(None)),
-            licenses_fetched: Mutex::new(0),
-            licenses_fetched_change: Condvar::new(),
+            fetcher_token: Arc::new(SharedToken::new())
         }
 
     }
@@ -100,70 +156,39 @@ impl LicenseManagerSingleton{
         self
     }
 
-    fn set_handle(&self, h: Option<JoinHandle<()>>){
-        *self.handle.write() = h
-    }
-
-
     pub fn create_thread(mgr: Arc<LicenseManagerSingleton>){
-        let clone = mgr.clone();
-        let handle = thread::spawn(move || {
-
-            eprintln!("starting thread");
-            let result = ::std::panic::catch_unwind( AssertUnwindSafe(move || {
-                let _ = mgr.created();
-
-                let client = ::reqwest::Client::new().unwrap();
-                for license in mgr.iter_all() {
-                    if let &License::Pair(ref p) = license {
-                        let url = format!("{}/v1/licenses/latest/{}.txt", URL, p.secret());
-                        eprintln!("requesting {}", &url);
-                        let mut response = client.get(&url).send().unwrap();
-                        if response.status().is_success() {
-                            let mut buf = Vec::new();
-                            response.read_to_end(&mut buf).unwrap();
-                            let s = ::std::str::from_utf8(&buf).unwrap();
-                            let blob = LicenseBlob::deserialize(mgr.trusted_keys, s, "remote license").unwrap();
-                            p.update_remote(blob).unwrap();
-                            eprintln!("Updating remote");
-                            let mut fetched = mgr.licenses_fetched.lock();
-                            *fetched = *fetched + 1;
-                            mgr.licenses_fetched_change.notify_one();
-                        }else{
-                            eprintln!("{:?}", response);
-                        }
-                    }
-                }
-                ()
-            }));
-            if let Err(e) = result{
-
-                struct PanicFormatter<'a>(pub &'a Any);
-                impl<'a> std::fmt::Display for PanicFormatter<'a> {
-                    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-                        if let Some(str) = self.0.downcast_ref::<String>() {
-                            write!(f, "panicked: {}\n", str)?;
-                        } else if let Some(str) = self.0.downcast_ref::<&str>() {
-                            write!(f, "panicked: {}\n", str)?;
-                        }
-                        Ok(())
-                    }
-                }
-
-                eprintln!("{}", PanicFormatter(&e));
-            }
-            eprintln!("finishing thread");
-        });
-        clone.set_handle(Some(handle));
+        let mgr_clone = mgr.clone();
+        Fetcher::ensure_spawned(mgr.fetcher_token.clone(), mgr.clock.clone(),
+                                move || mgr_clone.licenses.iter()
+            .filter(|lic| lic.is_pair())
+            .map(|lic| LicenseEndpoint::new(mgr_clone.clone(), lic).box_endpoint())
+            .collect());
     }
 
-    pub fn wait_for(&self, fetch_count: usize){
-        let mut fetched = self.licenses_fetched.lock();
-        while *fetched < fetch_count{
-            self.licenses_fetched_change.wait(&mut fetched);
+    pub fn fetcher_token(&self) -> Arc<SharedToken>{
+        self.fetcher_token.clone()
+    }
+
+
+    pub fn begin_kill_thread(&self, ms: u64) {
+        if !self.fetcher_token().wait_for_shutdown(::std::time::Duration::from_millis(ms)) {
+            panic!("Failed to shutdown fetcher thread within {}ms", ms);
         }
     }
-    pub fn clock(&self) -> &LicenseClock{
+
+    pub fn join_thread(self) {
+        match Arc::try_unwrap(self.fetcher_token){
+            Ok(t) => {
+                t.join_thread().unwrap();
+            },
+            Err(arc) => {
+                panic!("Other references to the fetcher token exist. They must be dropped before the thread can be killed");
+            }
+        }
+    }
+
+
+    pub fn clock(&self) -> &AppClock {
         &*self.clock
     }
     pub fn created(&self) -> DateTime<Utc>{
@@ -187,6 +212,11 @@ impl LicenseManagerSingleton{
         self.cached.get(&Cow::Owned(id.to_owned()))
 
     }
+    pub fn update_cache(&self, id: &str, license: LicenseBlob){
+        self.cached.insert(Cow::Owned(id.to_owned()), license);
+
+    }
+
     fn get_by_alias(&self, license: &Cow<'static, str>) -> Option<&License>{
         if let Some(id) = self.aliases_to_id.get(license){
             if let Some(lic) = self.get_by_id(&id){ //TODO: should be ID
@@ -211,7 +241,7 @@ impl LicenseManagerSingleton{
 
         let id = parsed.fields().id().to_owned();
 
-        self.aliases_to_id.insert(license.clone(), Cow::Owned(id.to_owned()));
+        self.aliases_to_id.insert(license.clone(), id.to_owned());
 
         if let Some(lic) = self.get_by_id(&id){
             Ok(lic)

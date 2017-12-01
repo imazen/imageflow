@@ -80,8 +80,10 @@ pub mod process_testing;
 pub mod process_capture;
 pub mod colors;
 pub mod debug;
-#[cfg(test)]
 pub mod licensing;
+pub mod pollster;
+pub mod util;
+
 
 pub mod timeywimey{
     pub fn time_bucket(seconds_per_bucket: u64, bucket_count: u64) -> u64{

@@ -1,5 +1,6 @@
 use chrono::prelude::*;
 
+use super::super::super::util::*;
 use super::super::*;
 
 fn parse_date_as_utc(s: &str) -> DateTime<Utc>{
@@ -23,7 +24,7 @@ impl OffsetClock{
         }
     }
 }
-impl  LicenseClock for OffsetClock{
+impl AppClock for OffsetClock{
     fn get_timestamp_ticks(&self) -> u64 {
 
         ::time::precise_time_ns() - self.ticks_offset_ns
