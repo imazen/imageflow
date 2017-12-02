@@ -190,8 +190,8 @@ pub enum EncoderPreset {
     },
     #[serde(rename="pngquant")]
     Pngquant {
-        quality: (u8, u8),
-        speed: u8,
+        quality: Option<(u8, u8)>,
+        speed: Option<u8>,
     },
     #[serde(rename="gif")]
     Gif

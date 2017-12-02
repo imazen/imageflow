@@ -18,10 +18,14 @@ pub struct PngquantEncoder {
 }
 
 impl PngquantEncoder {
-    pub(crate) fn create(c: &Context, speed: u8, quality: (u8, u8), io: IoProxy) -> Result<Self> {
+    pub(crate) fn create(c: &Context, speed: Option<u8>, quality: Option<(u8, u8)>, io: IoProxy) -> Result<Self> {
         let mut liq = imagequant::new();
-        liq.set_speed(speed.into());
-        liq.set_quality(quality.0.into(), quality.1.into());
+        if let Some(speed) = speed {
+            liq.set_speed(speed.into());
+        }
+        if let Some((min, max)) = quality {
+            liq.set_quality(min.into(), max.into());
+        }
         Ok(PngquantEncoder {
             liq,
             io,

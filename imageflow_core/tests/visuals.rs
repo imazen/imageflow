@@ -73,8 +73,8 @@ fn test_encode_pngquant() {
         s::Node::Encode {
             io_id: 1,
             preset: s::EncoderPreset::Pngquant {
-                speed: 3,
-                quality: (0, 100),
+                speed: None,
+                quality: Some((0, 100)),
             }
         }
     ];
