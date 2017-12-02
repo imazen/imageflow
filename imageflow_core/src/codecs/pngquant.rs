@@ -48,12 +48,14 @@ impl Encoder for PngquantEncoder {
         lode.set_filter_strategy(lodepng::FilterStrategy::ZERO, false);
 
         let png = lode.encode(&pixels, frame.w as usize, frame.h as usize)?;
+use std::io::Write;
+        self.io.write_all(&png).unwrap();
 
         Ok(EncodeResult {
             w: frame.w as i32,
             h: frame.h as i32,
             io_id: self.io.io_id(),
-            bytes: ::imageflow_types::ResultBytes::ByteArray(png),
+            bytes: ::imageflow_types::ResultBytes::Elsewhere,
             preferred_extension: "png".to_owned(),
             preferred_mime_type: "image/png".to_owned(),
         })
