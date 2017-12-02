@@ -470,10 +470,10 @@ fn get_imgref_bgra32<'a>(b: &'a mut BitmapBgra) -> imgref::ImgVec<rgb::RGBA<f32>
     use self::dssim::*;
 
     match b.fmt {
+        s::PixelFormat::Bgra32 => {},
         s::PixelFormat::Bgr32 => {
             b.normalize_alpha().unwrap();
         },
-        s::PixelFormat::Bgra32 => {},
         _ => unimplemented!(""),
     };
 
