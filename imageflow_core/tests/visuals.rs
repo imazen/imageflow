@@ -59,7 +59,7 @@ fn test_encode_frymire() {
                     DEBUG_GRAPH,
                     Constraints {
                         max_file_size: None,
-                        similarity: Similarity::AllowDssimMatch(0.00)
+                        similarity: Similarity::AllowDssimMatch(0.00, 0.00)
                     },
                     steps
     );
@@ -83,7 +83,7 @@ fn test_encode_pngquant() {
                               DEBUG_GRAPH,
                               Constraints {
                                   max_file_size: None,
-                                  similarity: Similarity::AllowDssimMatch(0.008),
+                                  similarity: Similarity::AllowDssimMatch(0.005, 0.008),
                               },
                               steps
     );

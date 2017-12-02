@@ -400,7 +400,7 @@ pub enum Similarity{
     Exact,
     AllowOffByOneBytesCount(i64),
     AllowOffByOneBytesRatio(f32),
-    AllowDssimMatch(f64)
+    AllowDssimMatch(f64, f64)
 }
 
 impl Similarity{
@@ -410,19 +410,17 @@ impl Similarity{
             Similarity::AllowOffByOneBytesCount(v) => v,
             Similarity::AllowOffByOneBytesRatio(ratio) => (ratio * len as f32) as i64,
             Similarity::Exact => 0i64,
-            Similarity::AllowDssimMatch(_) => std::i64::MAX
+            Similarity::AllowDssimMatch(..) => return None,
         };
 eprintln!("{} {} {} {:?}", count, delta, len, self);
 
-        if allowed_off_by_one_bytes < std::i64::MAX {
-            if count != delta {
-                return Some(format!("Bitmaps mismatched, and not just off-by-one errors! count={} delta={}", count, delta));
-            }
+        if count != delta {
+            return Some(format!("Bitmaps mismatched, and not just off-by-one errors! count={} delta={}", count, delta));
+        }
 
 
-            if delta > allowed_off_by_one_bytes {
-                return Some(format!("There were {} off-by-one errors, more than the {} ({}%) allowed.", delta, allowed_off_by_one_bytes, allowed_off_by_one_bytes as f64 / len as f64 * 100f64));
-            }
+        if delta > allowed_off_by_one_bytes {
+            return Some(format!("There were {} off-by-one errors, more than the {} ({}%) allowed.", delta, allowed_off_by_one_bytes, allowed_off_by_one_bytes as f64 / len as f64 * 100f64));
         }
         None
     }
@@ -479,27 +477,34 @@ pub fn compare_bitmaps(_c: &ChecksumCtx,  actual: &mut BitmapBgra, expected: &mu
         return true;
     }
 
-    if let Similarity::AllowDssimMatch(value) = require {
-       let actual_ref = get_imgref_bgra32(actual);
-       let expected_ref = get_imgref_bgra32(expected);
-       let mut d = dssim::new();
+    if let Similarity::AllowDssimMatch(minval, maxval) = require {
+        let actual_ref = get_imgref_bgra32(actual);
+        let expected_ref = get_imgref_bgra32(expected);
+        let mut d = dssim::new();
 
-       let actual_img = d.create_image(&actual_ref).unwrap();
-       let expected_img = d.create_image(&expected_ref).unwrap();
+        let actual_img = d.create_image(&actual_ref).unwrap();
+        let expected_img = d.create_image(&expected_ref).unwrap();
 
-       let (dssim, _) = d.compare(&expected_img, actual_img);
+        let (dssim, _) = d.compare(&expected_img, actual_img);
 
-       if dssim > value {
-           let message = format!("The dssim {} is greater than the permitted value {}", dssim, value);
-           if panic {
-               panic!("{}" ,message);
-           } else {
-               eprintln!("{}", message);
-               false
-           }
-       } else {
-           true
-       }
+        let failure = if dssim > maxval {
+           Some(format!("The dssim {} is greater than the permitted value {}", dssim, maxval))
+        } else if dssim < minval {
+            Some(format!("The dssim {} is lower than expected minimum value {}", dssim, minval))
+        } else {
+            None
+        };
+
+        if let Some(message) = failure {
+            if panic {
+                panic!("{}", message);
+            } else {
+                eprintln!("{}", message);
+                false
+            }
+        } else {
+            true
+        }
     } else {
         if let Some(message) = require.report_on_bytes(count, delta, actual.w as usize * actual.h as usize * actual.fmt.bytes()){
             if panic{
