@@ -188,6 +188,11 @@ pub enum EncoderPreset {
         matte: Option<Color>,
         zlib_compression: Option<i32>,
     },
+    #[serde(rename="pngquant")]
+    Pngquant {
+        quality: (u8, u8),
+        speed: u8,
+    },
     #[serde(rename="gif")]
     Gif
 }

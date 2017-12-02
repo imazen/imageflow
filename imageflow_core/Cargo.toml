@@ -45,6 +45,7 @@ smallvec = "*"
 itertools = "*"
 imgref = "*"
 
+dssim = "2.9.2"
 gif = "*"
 rgb = "0.8.5"
 imagequant = "2.11.7"
@@ -54,7 +55,6 @@ lcms2 = "5.0"
 lcms2-sys = {version="*", default-features = false}
 chashmap = "2.2"
 
-dssim = "2"
 getopts ="0.2.15"
 
 url = "1.4"

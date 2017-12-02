@@ -66,6 +66,33 @@ fn test_encode_frymire() {
 }
 
 
+#[test]
+fn test_encode_pngquant() {
+    let steps = vec![
+        s::Node::Decode { io_id: 0, commands: None },
+        s::Node::FlipV,
+        s::Node::Encode {
+            io_id: 1,
+            preset: s::EncoderPreset::Pngquant {
+                speed: 3,
+                quality: (0, 100),
+            }
+        }
+    ];
+
+    compare_encoded(Some(s::IoEnum::Url("https://s3-us-west-2.amazonaws.com/imageflow-resources/test_inputs/frymire.png".to_owned())),
+                    "encode_pngquant",
+                    POPULATE_CHECKSUMS,
+                    DEBUG_GRAPH,
+                    Constraints {
+                        max_file_size: None,
+                        similarity: Similarity::AllowDssimMatch(0.000000001),
+                    },
+                    steps
+    );
+}
+
+
 
 #[test]
 fn test_fill_rect(){
@@ -133,8 +160,6 @@ fn test_fill_rect_original(){
     );
     assert!(matched);
 }
-
-
 
 #[test]
 fn test_scale_image() {

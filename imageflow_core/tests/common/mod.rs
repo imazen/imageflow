@@ -21,10 +21,8 @@ use std::path::{PathBuf};
 use std::io::Write;
 use std;
 use imageflow_core;
-use common::rgb::alt::BGRA;
 
 use std::sync::RwLock;
-use common::dssim::Dssim;
 
 /// Executes the given steps (adding a frame buffer container to the end of them).
 /// Returns the width and height of the resulting frame.
@@ -433,60 +431,58 @@ impl<'a> ResultKind<'a>{
     }
 }
 
-// Uncomment when BGRA is supported
-//fn get_imgref_bgra32<'a>(b: &'a mut BitmapBgra) -> imgref::Img<&'a [BGRA<u8,u8>]>{
-//
-//    if b.fmt == ::s::PixelFormat::Bgr32 {
-//        b.normalize_alpha().unwrap();
-//        b.fmt == ::s::PixelFormat::Bgra32;
-//    }
-//
-//    if b.fmt != ::s::PixelFormat::Bgra32 {
-//        unimplemented!("");
-//    }
-//
-//    let pixels = unsafe{
-//        ::std::slice::from_raw_parts(b.pixels as *const rgb::alt::BGRA8, (b.stride * b.h / 4) as usize)
-//    };
-//
-//    imgref::Img::new_stride(pixels.to_rgbaplu(), b.w as usize, b.h as usize, b.stride as usize / b.fmt.bytes())
-//}
+fn get_imgref_bgra32<'a>(b: &'a mut BitmapBgra) -> imgref::ImgVec<rgb::RGBA<f32>>{
+    use self::dssim::*;
+
+    if b.fmt == ::s::PixelFormat::Bgr32 {
+        b.normalize_alpha().unwrap();
+        assert_eq!(b.fmt, ::s::PixelFormat::Bgra32);
+    }
+
+    if b.fmt != ::s::PixelFormat::Bgra32 {
+        unimplemented!("");
+    }
+
+    let stride_px = b.stride as usize / b.fmt.bytes();
+    let pixels = unsafe {
+        ::std::slice::from_raw_parts(b.pixels as *const rgb::alt::BGRA8, stride_px * b.h as usize + b.w as usize - stride_px)
+    };
+
+    assert!(pixels.len() >= b.w as usize * b.h as usize);
+
+    imgref::Img::new_stride(pixels.to_rgbaplu(), b.w as usize, b.h as usize, stride_px)
+}
 
 /// Compare two bgra32 or bgr32 frames using the given similarity requirements
-pub fn compare_bitmaps(c: &ChecksumCtx, name: &str, actual: &mut BitmapBgra, expected: &mut BitmapBgra, require: Similarity, panic: bool) -> bool{
+pub fn compare_bitmaps(_c: &ChecksumCtx, _name: &str, actual: &mut BitmapBgra, expected: &mut BitmapBgra, require: Similarity, panic: bool) -> bool{
     let (count, delta) = diff_bitmap_bytes(actual, expected);
 
     if count == 0 {
         return true;
     }
 
-    if let Similarity::AllowDssimMatch(value) = require{
+    if let Similarity::AllowDssimMatch(value) = require {
+       let actual_ref = get_imgref_bgra32(actual);
+       let expected_ref = get_imgref_bgra32(expected);
+       let mut d = dssim::new();
 
-        //TODO: DSSIM crate does not support BGRA<u8> yet.
-//
-//        let actual_ref = get_imgref_bgra32(actual);
-//        let expected_ref = get_imgref_bgra32(expected);
-//        let mut d = dssim::new();
-//
-//        let actual_img = d.create_image(&actual_ref).unwrap();
-//        let expected_img = d.create_image(&expected_ref).unwrap();
-//
-//        let (dssim, ssim_maps) = d.compare(&expected_img, actual_img);
-//
-//        if dssim > value{
-//            let message = format!("The dssim {} is greater than the permitted value {}", dssim, value);
-//            if panic{
-//                panic!("{}" ,message);
-//            }else{
-//                eprintln!("{}", message);
-//                return false;
-//            }
-//        }else{
-//            true
-//        }
-        unimplemented!("DSSIM crate does not support BGRA<u8> yet. ")
+       let actual_img = d.create_image(&actual_ref).unwrap();
+       let expected_img = d.create_image(&expected_ref).unwrap();
 
-    }else{
+       let (dssim, _) = d.compare(&expected_img, actual_img);
+
+       if dssim > value {
+           let message = format!("The dssim {} is greater than the permitted value {}", dssim, value);
+           if panic {
+               panic!("{}" ,message);
+           } else {
+               eprintln!("{}", message);
+               false
+           }
+       } else {
+           true
+       }
+    } else {
         if let Some(message) = require.report_on_bytes(count, delta, actual.w as usize * actual.h as usize * actual.fmt.bytes()){
             if panic{
                 panic!("{}" ,message);
@@ -604,7 +600,7 @@ pub fn compare_encoded(input: Option<s::IoEnum>, checksum_name: &str, store_if_m
     }
 
     let mut context = Context::create().unwrap();
-    let response = context.build_1(build).unwrap();
+    let _ = context.build_1(build).unwrap();
 
     let bytes = context.get_output_buffer_slice(1).unwrap();
 

@@ -332,3 +332,4 @@ imageflow_core/conanbuildinfo.txt
 /examples/*/*.jpg
 /examples/*/*.png
 /examples/*/*.sh
+imageflow_core/tests/visuals/images.txt

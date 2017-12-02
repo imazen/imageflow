@@ -17,6 +17,7 @@ use std::any::Any;
 use lcms2::*;
 use lcms2;
 mod gif;
+mod pngquant;
 use io::IoProxyRef;
 
 pub trait DecoderFactory{
@@ -286,7 +287,7 @@ impl ClassicEncoder{
                      },
                  }))
             }
-            s::EncoderPreset::Gif => {
+            _ => {
                 Err(unimpl!("Classic encoder only supports libjpeg and libpng"))
             }
         }
@@ -318,9 +319,9 @@ impl Encoder for ClassicEncoder{
             let classic = &mut self.classic;
 
             let (result_mime, result_ext) = match *preset {
-                s::EncoderPreset::Libpng { .. } => ("image/png", "png"),
+                s::EncoderPreset::Libpng { .. } |
+                s::EncoderPreset::Pngquant { .. } => ("image/png", "png"),
                 s::EncoderPreset::LibjpegTurbo { .. } => ("image/jpeg", "jpg"),
-
                 s::EncoderPreset::Gif { .. } => ("image/gif", "gif"),
             };
 
@@ -364,17 +365,18 @@ impl CodecInstanceContainer{
      pub fn write_frame(&mut self, c: &Context, preset: &s::EncoderPreset, frame: &mut BitmapBgra, decoder_io_ids: &[i32]) -> Result<s::EncodeResult>{
 
          // Pick encoder
-         if let CodecKind::EncoderPlaceholder = self.codec{
+         if let CodecKind::EncoderPlaceholder = self.codec {
 
              let io = self.encode_io.take().unwrap();
 
              let codec = match *preset {
                  s::EncoderPreset::Gif => {
-                     //println!("Using gif encoder");
                      CodecKind::Encoder(Box::new(gif::GifEncoder::create(c, preset, io, frame)?))
                  },
-                 _ => {
-                     //println!("Using classic encoder");
+                 s::EncoderPreset::Pngquant {speed, quality} => {
+                     CodecKind::Encoder(Box::new(pngquant::PngquantEncoder::create(c, speed, quality, io)?))
+                 },
+                 s::EncoderPreset::Libpng {..} | s::EncoderPreset::LibjpegTurbo {..} => {
                      CodecKind::Encoder(Box::new(
                          ClassicEncoder::get_empty(self.io_id, io)?))
                  }
