@@ -24,6 +24,13 @@ use imageflow_core;
 
 use std::sync::RwLock;
 
+#[derive(Debug, Copy, Clone, Eq, PartialEq)]
+pub enum ChecksumMatch {
+    Match,
+    Mismatch,
+    NewStored,
+}
+
 /// Executes the given steps (adding a frame buffer container to the end of them).
 /// Returns the width and height of the resulting frame.
 /// Steps must be open-ended - they cannot be terminated with an encoder.
@@ -277,7 +284,7 @@ impl<'a> ChecksumCtx<'a>{
     ///
     /// if there is no trusted checksum, create_if_missing is set, then
     /// the checksum will be stored, and the function will return true.
-    pub fn bitmap_matches(&self, bitmap: &mut BitmapBgra, name: &str) -> (bool, String){
+    pub fn bitmap_matches(&self, bitmap: &mut BitmapBgra, name: &str) -> (ChecksumMatch, String){
         bitmap.normalize_alpha().unwrap();
 
         let actual = Self::checksum_bitmap(bitmap);
@@ -294,7 +301,7 @@ impl<'a> ChecksumCtx<'a>{
     ///
     /// if there is no trusted checksum, create_if_missing is set, then
     /// the checksum will be stored, and the function will return true.
-    pub fn bytes_match(&self, bytes: &[u8], name: &str) -> (bool, String){
+    pub fn bytes_match(&self, bytes: &[u8], name: &str) -> (ChecksumMatch, String){
         let actual = Self::checksum_bytes(bytes);
 
         //println!("actual = {}", &actual);
@@ -312,19 +319,19 @@ impl<'a> ChecksumCtx<'a>{
     ///
     /// if there is no trusted checksum, create_if_missing is set, then
     /// the checksum will be stored, and the function will return true.
-    pub fn exact_match(&self, actual_checksum: String, name: &str) -> (bool, String){
+    pub fn exact_match(&self, actual_checksum: String, name: &str) -> (ChecksumMatch, String){
         if let Some(trusted) = self.get(name){
             if trusted == actual_checksum{
-                (true, trusted)
+                (ChecksumMatch::Match, trusted)
             }else{
                 println!("====================\n{}\nThe stored checksum {} differs from the actual_checksum one {}", name, &trusted, &actual_checksum);
-                (false, trusted)
+                (ChecksumMatch::Mismatch, trusted)
             }
         }else{
             if self.create_if_missing {
                 println!("====================\n{}\nStoring checksum {}", name, &actual_checksum);
                 self.set(name.to_owned(), actual_checksum.clone()).unwrap();
-                (true, actual_checksum)
+                (ChecksumMatch::NewStored, actual_checksum)
             } else {
                 panic!("There is no stored checksum for {}; rerun with create_if_missing=true", name);
             }
@@ -423,7 +430,7 @@ pub enum ResultKind<'a>{
     Bytes(&'a [u8])
 }
 impl<'a> ResultKind<'a>{
-    fn exact_match_verbose(&mut self, c: &ChecksumCtx, name: &str) -> (bool, String){
+    fn exact_match_verbose(&mut self, c: &ChecksumCtx, name: &str) -> (ChecksumMatch, String){
         match *self{
             ResultKind::Bitmap(ref mut b) => c.bitmap_matches(*b, name),
             ResultKind::Bytes(ref b) => c.bytes_match(b, name)
@@ -512,14 +519,12 @@ pub fn evaluate_result<'a>(c: &ChecksumCtx, name: &str, mut result: ResultKind<'
     }
 
 
-    if exact {
+    if exact == ChecksumMatch::Match {
         true
-    }else{
-        #[allow(unused_variables)] // Context must remain in scope until we are done with expected_bitmap
+    } else {
         let (expected_context, expected_bitmap) = c.load_image(&trusted);
-
         let mut image_context = Context::create().unwrap();
-        let actual_bitmap = match result{
+        let actual_bitmap = match result {
             ResultKind::Bitmap(actual_bitmap) => actual_bitmap,
             ResultKind::Bytes(actual_bytes) => {
                 image_context.add_input_bytes(0, actual_bytes).unwrap();
@@ -527,7 +532,9 @@ pub fn evaluate_result<'a>(c: &ChecksumCtx, name: &str, mut result: ResultKind<'
             }
         };
 
-        compare_bitmaps(c, name, actual_bitmap, unsafe{ &mut *expected_bitmap }, require.similarity, panic)
+        let res = compare_bitmaps(c, name, actual_bitmap, unsafe{ &mut *expected_bitmap }, require.similarity, panic);
+        drop(expected_context); // Context must remain in scope until we are done with expected_bitmap
+        res
     }
 }
 
