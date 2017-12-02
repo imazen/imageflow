@@ -43,9 +43,9 @@ daggy = "0.5"
 smallvec = "*"
 
 itertools = "*"
-imgref = "*"
+imgref = "1.3.2"
 
-dssim = "2.9.2"
+dssim = "2.9.4"
 gif = "*"
 rgb = "0.8.5"
 imagequant = "2.11.7"
