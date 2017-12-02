@@ -441,14 +441,15 @@ impl<'a> ResultKind<'a>{
 fn get_imgref_bgra32<'a>(b: &'a mut BitmapBgra) -> imgref::ImgVec<rgb::RGBA<f32>>{
     use self::dssim::*;
 
-    if b.fmt == ::s::PixelFormat::Bgr32 {
-        b.normalize_alpha().unwrap();
-        assert_eq!(b.fmt, ::s::PixelFormat::Bgra32);
-    }
+    match b.fmt {
+        s::PixelFormat::Bgr32 => {
+            b.normalize_alpha().unwrap();
+        },
+        s::PixelFormat::Bgra32 => {},
+        _ => unimplemented!(""),
+    };
 
-    if b.fmt != ::s::PixelFormat::Bgra32 {
-        unimplemented!("");
-    }
+    assert_eq!(0, b.stride as usize % b.fmt.bytes());
 
     let stride_px = b.stride as usize / b.fmt.bytes();
     let pixels = unsafe {
