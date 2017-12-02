@@ -449,6 +449,7 @@ fn get_imgref_bgra32<'a>(b: &'a mut BitmapBgra) -> imgref::ImgVec<rgb::RGBA<f32>
         _ => unimplemented!(""),
     };
 
+
     assert_eq!(0, b.stride as usize % b.fmt.bytes());
 
     let stride_px = b.stride as usize / b.fmt.bytes();

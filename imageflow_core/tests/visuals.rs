@@ -46,7 +46,7 @@ fn test_encode_gradients() {
 fn test_encode_frymire() {
     let steps = vec![
         s::Node::Decode { io_id: 0, commands: None },
-        s::Node::FlipV,
+        s::Node::FlipH,
         s::Node::Encode {
             io_id: 1,
             preset: s::EncoderPreset::libpng32()
@@ -59,7 +59,7 @@ fn test_encode_frymire() {
                     DEBUG_GRAPH,
                     Constraints {
                         max_file_size: None,
-                        similarity: Similarity::AllowOffByOneBytesRatio(0.01)
+                        similarity: Similarity::AllowDssimMatch(0.00)
                     },
                     steps
     );
