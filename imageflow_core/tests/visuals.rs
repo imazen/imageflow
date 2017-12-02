@@ -70,7 +70,6 @@ fn test_encode_frymire() {
 fn test_encode_pngquant() {
     let steps = vec![
         s::Node::Decode { io_id: 0, commands: None },
-        s::Node::FlipV,
         s::Node::Encode {
             io_id: 1,
             preset: s::EncoderPreset::Pngquant {
@@ -82,11 +81,11 @@ fn test_encode_pngquant() {
 
     compare_encoded_to_source(s::IoEnum::Url("https://s3-us-west-2.amazonaws.com/imageflow-resources/test_inputs/frymire.png".to_owned()),
                               DEBUG_GRAPH,
-                    Constraints {
-                        max_file_size: None,
-                        similarity: Similarity::AllowDssimMatch(0.000000001),
-                    },
-                    steps
+                              Constraints {
+                                  max_file_size: None,
+                                  similarity: Similarity::AllowDssimMatch(0.000000001),
+                              },
+                              steps
     );
 }
 
