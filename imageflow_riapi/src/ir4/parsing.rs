@@ -2,7 +2,7 @@ use imageflow_helpers::preludes::from_std::*;
 use std;
 use url::Url;
 use imageflow_types as s;
-use option_filter::OptionFilterExt;
+#[allow(unused)] use option_filter::OptionFilterExt;
 use imageflow_helpers::colors::*;
 
 macro_attr! {

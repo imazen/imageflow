@@ -4,7 +4,7 @@ use ::std;
 use ::std::borrow::Borrow;
 use ::std::hash::{Hash, Hasher};
 use ::std::any::Any;
-use std::ascii::AsciiExt;
+#[allow(unused)] use std::ascii::AsciiExt;
 
 // TODO: uncomment this when support lands in rustc for improved safety
 //#[repr(transparent)]
