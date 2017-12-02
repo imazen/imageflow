@@ -242,6 +242,13 @@ impl<'a> ChecksumCtx<'a>{
         }
     }
 
+    /// Save the given image to disk by calculating its checksum.
+    pub fn checksum_and_save_frame(&self, bit: &BitmapBgra){
+        let checksum = Self::checksum_bitmap(bit);
+        self.save_frame(bit, &checksum)
+    }
+
+
     /// Save the given bytes to disk by calculating their checksum.
     pub fn save_bytes(&self, bytes: &[u8], checksum: &str){
         let dest_path = self.image_path(&checksum);
@@ -356,6 +363,25 @@ pub fn decode_image<'a>(c: &'a mut Context, io_id: i32) ->  &'a mut BitmapBgra {
     unsafe{ bit.bitmap(c).unwrap() }
 }
 
+pub fn decode_input<'a>(c: &'a mut Context, input: s::IoEnum) ->  &'a mut BitmapBgra {
+    let mut bit = BitmapBgraContainer::empty();
+    let _result = c.build_1(s::Build001 {
+        builder_config: None,
+        io: vec![input.into_input(0)
+        ],
+        framewise: s::Framewise::Steps(vec![
+            s::Node::Decode {
+                io_id: 0,
+                commands: None
+            },
+            unsafe { bit.get_node() }
+        ])
+    }).unwrap();
+    unsafe { bit.bitmap(c).unwrap() }
+}
+
+
+
 
 /// Returns the number of bytes that differ, followed by the total value of all differences
 /// If these are equal, then only off-by-one errors are occurring
@@ -421,10 +447,12 @@ eprintln!("{} {} {} {:?}", count, delta, len, self);
     }
 }
 
+#[derive(Clone)]
 pub struct Constraints{
     pub similarity: Similarity,
     pub max_file_size: Option<usize>
 }
+
 pub enum ResultKind<'a>{
     Bitmap(&'a mut BitmapBgra),
     Bytes(&'a [u8])
@@ -463,7 +491,7 @@ fn get_imgref_bgra32<'a>(b: &'a mut BitmapBgra) -> imgref::ImgVec<rgb::RGBA<f32>
 }
 
 /// Compare two bgra32 or bgr32 frames using the given similarity requirements
-pub fn compare_bitmaps(_c: &ChecksumCtx, _name: &str, actual: &mut BitmapBgra, expected: &mut BitmapBgra, require: Similarity, panic: bool) -> bool{
+pub fn compare_bitmaps(_c: &ChecksumCtx,  actual: &mut BitmapBgra, expected: &mut BitmapBgra, require: Similarity, panic: bool) -> bool{
     let (count, delta) = diff_bitmap_bytes(actual, expected);
 
     if count == 0 {
@@ -505,10 +533,32 @@ pub fn compare_bitmaps(_c: &ChecksumCtx, _name: &str, actual: &mut BitmapBgra, e
 }
 
 /// Evalutates the given result against known truth, applying the given constraints
-pub fn evaluate_result<'a>(c: &ChecksumCtx, name: &str, mut result: ResultKind<'a>, require: Constraints, panic: bool) -> bool{
-    let (exact, trusted) = result.exact_match_verbose(c, name);
+pub fn compare_with<'a, 'b>(c: &ChecksumCtx, expected_checksum: &str, expected_bitmap : &'b mut BitmapBgra, mut result: ResultKind<'a>, require: Constraints, panic: bool) -> bool{
+    if !check_size(&result, require.clone(), panic) {
+        return false;
+    }
 
-    if let ResultKind::Bytes(ref actual_bytes) = result {
+
+    let mut image_context = Context::create().unwrap();
+    let actual_bitmap = match result {
+        ResultKind::Bitmap(actual_bitmap) => actual_bitmap,
+        ResultKind::Bytes(actual_bytes) => decode_input(&mut image_context, s::IoEnum::ByteArray(actual_bytes.to_vec()))
+    };
+
+    let result_checksum = ChecksumCtx::checksum_bitmap(actual_bitmap);
+
+
+
+
+    if result_checksum == expected_checksum {
+        true
+    } else{
+        compare_bitmaps(c, actual_bitmap, unsafe{ &mut *expected_bitmap }, require.similarity, panic)
+    }
+}
+
+pub fn check_size<'a>( result: &ResultKind<'a>, require: Constraints, panic: bool) -> bool{
+    if let ResultKind::Bytes(ref actual_bytes) = *result {
         if actual_bytes.len() > require.max_file_size.unwrap_or(actual_bytes.len()) {
             let message = format!("Encoded size ({}) exceeds limit ({})", actual_bytes.len(), require.max_file_size.unwrap());
             if panic {
@@ -518,6 +568,21 @@ pub fn evaluate_result<'a>(c: &ChecksumCtx, name: &str, mut result: ResultKind<'
                 return false;
             }
         }
+
+    }
+    true
+}
+
+
+
+
+/// Evalutates the given result against known truth, applying the given constraints
+pub fn evaluate_result<'a>(c: &ChecksumCtx, name: &str, mut result: ResultKind<'a>, require: Constraints, panic: bool) -> bool{
+    let (exact, trusted) = result.exact_match_verbose(c, name);
+
+
+    if !check_size(&result, require.clone(), panic) {
+        return false;
     }
 
 
@@ -534,7 +599,7 @@ pub fn evaluate_result<'a>(c: &ChecksumCtx, name: &str, mut result: ResultKind<'
             }
         };
 
-        let res = compare_bitmaps(c, name, actual_bitmap, unsafe{ &mut *expected_bitmap }, require.similarity, panic);
+        let res = compare_bitmaps(c, actual_bitmap, unsafe{ &mut *expected_bitmap }, require.similarity, panic);
         drop(expected_context); // Context must remain in scope until we are done with expected_bitmap
         res
     }
@@ -616,8 +681,48 @@ pub fn compare_encoded(input: Option<s::IoEnum>, checksum_name: &str, store_if_m
     let mut ctx = ChecksumCtx::visuals(&context);
     ctx.create_if_missing = store_if_missing;
 
+
+
     evaluate_result(&ctx, checksum_name, ResultKind::Bytes(bytes), require, true)
 }
+
+
+
+/// Compares the encoded result of a given job to the source. If there is a checksum mismatch, a percentage of off-by-one bytes can be allowed.
+/// The output io_id is 1
+pub fn compare_encoded_to_source(input: s::IoEnum, debug: bool, require: Constraints, steps: Vec<s::Node>) -> bool {
+
+    let input_copy = input.clone();
+
+    let mut io = vec![s::IoEnum::OutputBuffer.into_output(1)];
+    io.insert(0, input.into_input(0));
+    let build = s::Build001 {
+        builder_config: Some(default_build_config(debug)),
+        io,
+        framewise: s::Framewise::Steps(steps)
+    };
+
+    if debug {
+        println!("{}", serde_json::to_string_pretty(&build).unwrap());
+    }
+
+    let mut context = Context::create().unwrap();
+    let _ = context.build_1(build).unwrap();
+
+    let bytes = context.get_output_buffer_slice(1).unwrap();
+
+    let mut ctx = ChecksumCtx::visuals(&context);
+
+    let mut context2 = Context::create().unwrap();
+    let original = decode_input(&mut context2, input_copy);
+
+    let original_checksum = ChecksumCtx::checksum_bitmap(original);
+    ctx.save_frame(original, &original_checksum);
+
+
+    compare_with(&ctx, &original_checksum, original, ResultKind::Bytes(bytes), require, true)
+}
+
 
 
 

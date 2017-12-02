@@ -80,10 +80,8 @@ fn test_encode_pngquant() {
         }
     ];
 
-    compare_encoded(Some(s::IoEnum::Url("https://s3-us-west-2.amazonaws.com/imageflow-resources/test_inputs/frymire.png".to_owned())),
-                    "encode_pngquant",
-                    POPULATE_CHECKSUMS,
-                    DEBUG_GRAPH,
+    compare_encoded_to_source(s::IoEnum::Url("https://s3-us-west-2.amazonaws.com/imageflow-resources/test_inputs/frymire.png".to_owned()),
+                              DEBUG_GRAPH,
                     Constraints {
                         max_file_size: None,
                         similarity: Similarity::AllowDssimMatch(0.000000001),
