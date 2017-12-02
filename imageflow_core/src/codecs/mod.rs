@@ -18,6 +18,7 @@ use lcms2::*;
 use lcms2;
 mod gif;
 mod pngquant;
+mod lode;
 use io::IoProxyRef;
 
 pub trait DecoderFactory{

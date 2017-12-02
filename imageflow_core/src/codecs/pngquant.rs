@@ -10,7 +10,7 @@ use std::rc::Rc;
 use std::cell::RefCell;
 use std::os::raw::c_int;
 use imagequant;
-use lodepng;
+use codecs::lode;
 
 pub struct PngquantEncoder {
     liq: imagequant::Attributes,
@@ -37,23 +37,7 @@ impl Encoder for PngquantEncoder {
     fn write_frame(&mut self, c: &Context, preset: &EncoderPreset, frame: &mut BitmapBgra, decoder_io_ids: &[i32]) -> Result<EncodeResult> {
         let (pal, pixels) = Self::quantize(frame)?;
 
-        let mut lode = lodepng::State::new();
-
-        for c in pal {
-            lode.info_raw_mut().palette_add(c).unwrap();
-            lode.info_png_mut().color.palette_add(c).unwrap();
-        }
-
-        lode.info_raw_mut().colortype = lodepng::ColorType::PALETTE;
-        lode.info_raw_mut().set_bitdepth(8);
-        lode.info_png_mut().color.colortype = lodepng::ColorType::PALETTE;
-        lode.info_png_mut().color.set_bitdepth(8);
-        lode.set_auto_convert(false);
-        lode.set_filter_strategy(lodepng::FilterStrategy::ZERO, false);
-
-        let png = lode.encode(&pixels, frame.w as usize, frame.h as usize)?;
-use std::io::Write;
-        self.io.write_all(&png).unwrap();
+        lode::LodepngEncoder::write_png8(&mut self.io, &pal, &pixels, frame.w as usize, frame.h as usize)?;
 
         Ok(EncodeResult {
             w: frame.w as i32,
