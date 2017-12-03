@@ -20,7 +20,7 @@ serde_derive = "1"
 rustc-serialize = "*"
 
 #lazy static
-lazy_static = "0.2"
+lazy_static = "1"
 
 # fast hashes, crypto hashs
 twox-hash = "1"

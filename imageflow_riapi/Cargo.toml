@@ -13,7 +13,7 @@ time="*"
 macro-attr= { git="https://github.com/DanielKeep/rust-custom-derive.git"}
 enum_derive= { git="https://github.com/DanielKeep/rust-custom-derive.git" }
 option-filter = "1"
-lazy_static = "*"
+lazy_static = "1"
 
 difference = "1"
 

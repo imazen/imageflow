@@ -18,7 +18,7 @@ serde_derive = "*"
 rustc-serialize = "*"
 
 #lazy static
-lazy_static = "0.2"
+lazy_static = "1"
 
 # fast hashes, crypto hashs
 twox-hash = "1"
@@ -37,14 +37,14 @@ rand = "*"
 
 num = "*"
 
-base64 = "*"
+base64 = "0.6"
 mockito = "*"
 zip = { version = "0.2", default-features = false }
 
 
 app_dirs = "^1.1.1"
 chashmap = "2.2"
-parking_lot = {version = "0.4", features = ["nightly"]}
+parking_lot = {version = "0.5", features = ["nightly"]}
 
 unicase = "2"
 # HTTPS is a little bit of a nightmare
