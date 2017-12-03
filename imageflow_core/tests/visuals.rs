@@ -83,7 +83,7 @@ fn test_encode_pngquant() {
                               DEBUG_GRAPH,
                               Constraints {
                                   max_file_size: None,
-                                  similarity: Similarity::AllowDssimMatch(0.000000001),
+                                  similarity: Similarity::AllowDssimMatch(0.008),
                               },
                               steps
     );
