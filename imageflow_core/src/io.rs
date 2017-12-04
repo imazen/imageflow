@@ -8,7 +8,8 @@ use imageflow_types::collections::AddRemoveSet;
 use uuid::Uuid;
 use std::rc::Rc;
 
-
+/// Codecs own their IoProxy, but sometimes Imageflow needs access (like when it needs to read a buffer).
+/// This enum can be extended as needed.
 pub enum IoProxyRef<'a>{
    Borrow(&'a IoProxy),
     BoxedAsRef(Box<AsRef<IoProxy>>),
@@ -28,6 +29,8 @@ impl<'a> IoProxyRef<'a> {
     }
 }
 
+/// A safer proxy over the C IO object.
+/// Implements Read/Write
 pub struct IoProxy{
     c: &'static Context,
     classic: *mut ImageflowJobIo,
@@ -38,18 +41,7 @@ pub struct IoProxy{
 }
 
 
-pub struct IoProxyProxy(pub Rc<RefCell<IoProxy>>);
-impl Write for IoProxyProxy{
-    fn write(&mut self, buf: &[u8]) -> ::std::io::Result<usize> {
-        self.0.borrow_mut().write(buf)
-    }
 
-    fn flush(&mut self) -> ::std::io::Result<()> {
-        self.0.borrow_mut().flush()
-    }
-}
-
-// Not sure these are actually used?
 impl io::Read for IoProxy{
 
     fn read(&mut self, buf: &mut [u8]) -> io::Result<usize>{
@@ -76,6 +68,19 @@ impl io::Write for IoProxy{
         Ok(())
     }
 
+}
+
+
+/// Allows access to Write trait through an Rc<RefCell<>>
+pub struct IoProxyProxy(pub Rc<RefCell<IoProxy>>);
+impl Write for IoProxyProxy{
+    fn write(&mut self, buf: &[u8]) -> ::std::io::Result<usize> {
+        self.0.borrow_mut().write(buf)
+    }
+
+    fn flush(&mut self) -> ::std::io::Result<()> {
+        self.0.borrow_mut().flush()
+    }
 }
 
 

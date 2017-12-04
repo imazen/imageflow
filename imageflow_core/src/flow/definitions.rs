@@ -394,15 +394,20 @@ impl FrameEstimate{
         }).unwrap()
     }
 }
-
+/// Describes the final cost of an operation
 #[derive(Clone,Debug,PartialEq)]
 pub struct CostInfo {
-    pub wall_ns: u64, // Estimated wall ticks to execute
-    pub cpu_ticks: Option<u64>, // Estimate overall CPU ticks (larger, if multi-threaded)
+    /// Wall nanoseconds elapsed during execution
+    pub wall_ns: u64,
+    // Overall CPU ticks (larger than wall time, if multi-threaded)
+    pub cpu_ticks: Option<u64>,
+    /// Bytes allocated on heap
     pub heap_bytes: u32,
+    /// Peak memory usage
     pub peak_temp_bytes: u32,
 }
 
+/// An estimate of an operation's cost.
 #[derive(Clone,Debug,PartialEq)]
 pub enum CostEstimate {
     None,
@@ -413,9 +418,14 @@ pub enum CostEstimate {
 }
 #[derive(Clone,Debug,PartialEq)]
 pub enum NodeResult {
-    None, // No result yet
-    Consumed, /* Ownership has been transferred to another node for exclusive mutation. If another node tries to access, a panic will occur. Don't consume without verifying no other nodes want access. */
+    /// No result yet
+    None,
+    /// Ownership has been transferred to another node for exclusive mutation. If another node tries to access, a panic will occur. Don't consume without verifying no other nodes want access.
+    Consumed,
+
+    /// A frame result
     Frame(*mut BitmapBgra), // Should this be boxed?
+    ///
     Encoded(s::EncodeResult),
 }
 #[derive(Clone,Debug,PartialEq)]
@@ -431,6 +441,7 @@ pub enum NodeParamsInternal {
         compositing_mode: ::ffi::BitmapCompositingMode,
     },
 }
+/// In case we ever need more than s::Node
 #[derive(Clone,Debug,PartialEq)]
 pub enum NodeParams {
     None,
@@ -438,14 +449,24 @@ pub enum NodeParams {
     Internal(NodeParamsInternal),
 }
 
+/// A mutable node in the operation graph.
 #[derive(Clone,Debug)]
 pub struct Node {
+    /// The implementation of this operation node
     pub def: &'static NodeDef,
+    /// Input parameters (not including input/canvas/output nodes)
+    ///
     pub params: NodeParams,
+    /// Modified during estimation phase
     pub frame_est: FrameEstimate,
+    /// Modified during estimation phase
     pub cost_est: CostEstimate,
+    /// The total tallied cost after execution
     pub cost: CostInfo,
+    /// The result of the operation
     pub result: NodeResult,
+
+    /// An numeric ID that doesn't change when the graph is changed. Useful for visualizations
     pub stable_id: i32,
 }
 
@@ -456,6 +477,7 @@ fn limit_node_bytes(){
     assert!(size < 1024);
 }
 
+/// Convert s::Node to Node
 impl From<s::Node> for Node {
     fn from(node: s::Node) -> Node {
         match node {

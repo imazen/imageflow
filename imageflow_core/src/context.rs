@@ -12,16 +12,23 @@ use errors::{OutwardErrorBuffer, CErrorProxy};
 use codecs::CodecInstanceContainer;
 use ffi::IoDirection;
 
+/// Something of a God object (which is necessary for a reasonable FFI interface).
 pub struct Context {
+    /// The C context object
     c_ctx: *mut ffi::ImageflowContext,
+    /// Provides access to errors in the C context
     error: CErrorProxy,
+    /// Buffer for errors presented to users of an FFI interface
     outward_error:  OutwardErrorBuffer,
     pub debug_job_id: i32,
     pub next_stable_node_id: i32,
     pub next_graph_version: i32,
     pub max_calc_flatten_execute_passes: i32,
     pub graph_recording: s::Build001GraphRecording,
+
+    /// Codecs, which in turn connect to I/O instances.
     pub codecs: AddRemoveSet<CodecInstanceContainer>, // This loans out exclusive mutable references to items, bounding the ownership lifetime to Context
+    /// A list of io_ids already in use
     pub io_id_list: RefCell<Vec<i32>>
 }
 
@@ -248,7 +255,7 @@ impl Drop for Context {
         if let Err(e) = self.codecs.clear(){
             //TODO: log issue somewhere?
         }
-        self.codecs.mut_clear(); // Dangerous, because there's no prohibiton on dangling references.
+        self.codecs.mut_clear(); // Dangerous, because there's no prohibition on dangling references.
         if !self.c_ctx.is_null() {
             unsafe {
                 ffi::flow_context_destroy(self.c_ctx);

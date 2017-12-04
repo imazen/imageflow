@@ -100,6 +100,12 @@ impl<'a> Engine<'a> {
         }
     }
 
+
+    /// This function is a legacy mess. The work duplication isn't terrible, but a cleaner
+    /// implementation is definitely possible.
+    ///
+    /// We also don't yet implement graph-comprehensive optimizations, like reducing a no-op
+    /// to copying encoded bytes.
     fn execute(&mut self) -> Result<(bool, s::FramePerformance)> {
 
         let start = time::precise_time_ns();

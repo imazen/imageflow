@@ -17,6 +17,10 @@ fn test_file_macro_for_this_build(){
     assert!(file!().starts_with(env!("CARGO_PKG_NAME")))
 }
 
+///
+/// For use when adding a call frame to an error.
+/// Expands to `::CodeLocation::new(file!(), line!(), column!())`
+///
 #[macro_export]
 macro_rules! here {
     () => (
@@ -24,6 +28,10 @@ macro_rules! here {
     );
 }
 
+/// Creates a string literal containing the file, line, and column, with an optional message line prepended.
+/// Example `loc!("hi!")` might resolve to `hi! at\nimageflow_core/src/errors.rs:32:20` with `crate build --package imageflow_core`
+/// or `hi! at\n src/errors.rs:32:20` if built from the crate directory instead of the workspace.
+///
 #[macro_export]
 macro_rules! loc {
     () => (
@@ -34,6 +42,11 @@ macro_rules! loc {
     );
 }
 
+///
+/// Creates a FlowError struct with the given ErrorKind and optional message format string/args.
+/// Zero-allocation unless there is a message (which requires a String allocation)
+/// Adds the current file:line:col to the manual call stack
+///
 #[macro_export]
 macro_rules! nerror {
     ($kind:expr) => (
@@ -62,6 +75,7 @@ macro_rules! nerror {
     );
 }
 
+/// Creates a FlowError of  ::ErrorKind::MethodNotImplemented with an optional message string
 #[macro_export]
 macro_rules! unimpl {
     () => (
@@ -83,13 +97,17 @@ macro_rules! unimpl {
 }
 
 
+/// Creates a FlowError of kind ErrorKind::CError based on the C error present in the
+/// provided Context. Optional message format & args.
+/// Always zero-allocation for out-of-memory errors.
+///
 #[macro_export]
 macro_rules! cerror {
     ($context:expr) => {{
         let cerr = $ context.c_error().require();
         ::FlowError{
             kind: ::ErrorKind::CError(cerr.status()),
-            message: cerr.into_string(),
+            message: cerr.into_string(), // String::new() is zero-alloc (always on OOM)
             at: ::smallvec::SmallVec::new(),
             node: None
         }.at(here ! ())
@@ -122,6 +140,7 @@ macro_rules! cerror {
     }};
 }
 
+/// Create an AllocationFailed FlowError with the current stack location.
 #[macro_export]
 macro_rules! err_oom {
     () => (
@@ -134,14 +153,17 @@ macro_rules! err_oom {
     );
 }
 
+
 pub type Result<T> = std::result::Result<T, FlowError>;
 
+/// A wide range of error types can be used, but we need to be able to get the category
 pub trait CategorizedError{
     fn category(&self) -> ErrorCategory;
 }
 
 
-
+/// The internal error kind. Used only by Rust code (and within strings)
+/// ErrorCategory is the externally provided enumeration.
 #[derive(Debug,  Clone, PartialEq, Eq)]
 pub enum ErrorKind{
     InternalError,
@@ -220,9 +242,12 @@ impl ErrorKind{
     pub fn is_oom(&self) -> bool{
         self.category() == ErrorCategory::OutOfMemory
     }
-
 }
 
+/// We manually record stack locations when an error occurs. Each takes 32 bytes.
+/// We need the ability to debug production, and there are
+/// few other options. &'static str *is* expensive at 24 bytes,
+/// but interning adds complexity. We would need lockless interning.
 #[derive(Debug, Copy, Clone, PartialEq)]
 pub struct CodeLocation{
     file: &'static str,
@@ -244,6 +269,10 @@ impl CodeLocation{
     }
 }
 
+/// The most widely-used error type. Preferred for its ability to store stack locations,
+/// map to ErrorCategories easily, and include structured information about the problematic
+/// operation node. 88 bytes, and allocation-free unless (a) a message is used, or (b) more than one
+/// stack location is recorded. No allocations ever occur if ErrorKind::AllocationFailed.
 #[derive(Clone, PartialEq)]
 pub struct FlowError {
     pub kind: ErrorKind,
@@ -290,6 +319,7 @@ impl FlowError {
         }
 
     }
+
 }
 
 
@@ -318,13 +348,17 @@ fn test_flow_error_size(){
     assert!(std::mem::size_of::<FlowError>() < 90);
 }
 
+/// Fuck the description() method. It prevents lazy-allocating solutions.
 impl ::std::error::Error for FlowError {
     fn description(&self) -> &str {
         &self.message
     }
 }
+
+
 impl FlowError {
 
+    /// Create a FlowError without a recorded stack location
     pub fn without_location(kind: ErrorKind, message: String) -> Self{
         FlowError{
             kind,
@@ -333,6 +367,9 @@ impl FlowError {
             node:None
         }
     }
+    /// Append the given stack location. Usually invoked as `result.map_err(|e| e.at(here!()))`
+    /// Does nothing if the FlowError is AllocationFailed
+    ///
     pub fn at(mut self, c: CodeLocation ) -> FlowError {
         // Prevent allocations when the error is OOM
         if self.kind.is_oom() && self.at.len() == self.at.capacity(){
@@ -346,6 +383,8 @@ impl FlowError {
             self
         }
     }
+
+    // We have not yet implemented FFI-recoverable errors of any kind (nor do they yet seem useful)
     pub fn recoverable(&self) -> bool{
         false
     }
@@ -358,6 +397,10 @@ impl FlowError {
         eprintln!("{}", self);
         panic!(format!("{}", self));
     }
+
+    /// Create a FlowError (InvalidJson) from ::serde_json::Error
+    /// Tries to include relevant context (like an annotated source line)
+    ///
     pub fn from_serde(e: ::serde_json::Error, json_bytes: &[u8]) -> FlowError{
         let str_result = ::std::str::from_utf8(json_bytes);
         let line_ix = e.line() - 1;
@@ -402,6 +445,8 @@ impl fmt::Display for FlowError {
         write!(f, "{:?}: {:?}", self.category(), self)
     }
 }
+
+
 impl fmt::Debug for FlowError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         if self.message.is_empty() {
@@ -410,7 +455,10 @@ impl fmt::Debug for FlowError {
             write!(f, "{} at\n", self.message)?;
         }
 
-
+        // If CI was used, we assume a publicly-accessible commit
+        // And we assume that any recorded stack frames are from within the `imageflow` repository.
+        // Click-to-source is handy
+        
         let url = if::imageflow_types::build_env_info::BUILT_ON_CI{
             let repo = ::imageflow_types::build_env_info::BUILD_ENV_INFO.get("CI_REPO").unwrap_or(&Some("imazen/imageflow")).unwrap_or("imazen/imageflow");
             let commit =  ::imageflow_types::build_env_info::GIT_COMMIT;
@@ -431,7 +479,9 @@ impl fmt::Debug for FlowError {
     }
 }
 
-
+/// The highest-level error enumeration.
+/// All errors should be able to map to one of these.
+///
 #[repr(u32)]
 #[derive(Debug, PartialEq, Clone, Copy, Eq)]
 pub enum ErrorCategory{
@@ -610,6 +660,7 @@ impl ErrorCategory{
     }
 }
 
+/// A buffer for errors/panics that can occur when libimageflow is being used via FFI
 pub struct OutwardErrorBuffer{
     category: ErrorCategory,
     last_panic: Option<Box<Any>>,
@@ -628,6 +679,8 @@ impl OutwardErrorBuffer{
             last_panic: None
         }
     }
+    /// Sets the last panic (but only if none is set)
+    /// We always prefer to keep the earliest panic
     pub fn try_set_panic_error(&mut self, value: Box<Any>) -> bool{
         if self.last_panic.is_none() {
             self.category = ErrorCategory::InternalError;
@@ -637,6 +690,8 @@ impl OutwardErrorBuffer{
             false
         }
     }
+    /// Sets the last error (but only if none is set)
+    /// We always prefer to keep the earliest error, as it is likely the root problem
     pub fn try_set_error(&mut self, error: FlowError) -> bool{
         if self.last_error.is_none() {
             self.category = error.category();
@@ -671,6 +726,8 @@ impl OutwardErrorBuffer{
             false
         }
     }
+
+    /// We need a zero-allocation write in case this is OOM
     pub fn get_buffer_writer(&self) -> writing_to_slices::NonAllocatingFormatter<&Self>{
         writing_to_slices::NonAllocatingFormatter(self)
     }
@@ -698,7 +755,7 @@ impl std::fmt::Display for OutwardErrorBuffer {
 }
 
 
-
+/// Represents a C error
 #[derive(Debug, Clone, PartialEq)]
 pub struct CError {
     status: CStatus,
@@ -770,6 +827,9 @@ impl CStatus {
     }
 }
 
+
+/// Implement Display for various Any types that are raised via Panic
+/// Currently only implemented for owned and static strings
 pub struct PanicFormatter<'a>(pub &'a Any);
 impl<'a> std::fmt::Display for PanicFormatter<'a> {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
@@ -895,6 +955,7 @@ pub mod writing_to_slices {
 
 
     /// Unlike `io::Cursor`, this does not box (allocate) a `WriteZero` error result
+    ///
     #[derive(Debug)]
     struct NonAllocatingCursor<'a> {
         inner: &'a mut [u8],
@@ -952,13 +1013,14 @@ pub mod writing_to_slices {
         let mut small = [0u8; 5];
 
         let result = a.write_and_write_errors_to_cstring_slice(&mut small, None);
-        assert!(result.is_ok() == false);
+        assert_eq!(result.is_ok(), false);
         assert_eq!(result.bytes_written(), 4);
 
     }
 }
 
-
+///
+/// Provides a safer interface to access errors provided by the underlying C context.
 #[derive(Clone,Debug)]
 pub struct CErrorProxy {
     c_ctx: *mut ffi::ImageflowContext,
