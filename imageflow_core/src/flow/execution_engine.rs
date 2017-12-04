@@ -113,7 +113,7 @@ impl<'a> Engine<'a> {
         self.validate_graph()?;
         self.notify_graph_changed()?;
 
-        self.link_codecs()?;
+        self.request_decoder_commands()?;
 
         let mut passes = 0;
         loop {
@@ -130,7 +130,7 @@ impl<'a> Engine<'a> {
                 //            error_msg!(c, FlowStatusCode::MaximumGraphPassesExceeded);
                 //            return false;
             }
-            self.link_codecs()?;
+            self.request_decoder_commands()?;
 
             self.populate_dimensions_where_certain()?;
             self.notify_graph_changed()?;
@@ -138,12 +138,12 @@ impl<'a> Engine<'a> {
             self.graph_pre_optimize_flatten()?;
             self.notify_graph_changed()?;
 
-            self.link_codecs()?;
+            self.request_decoder_commands()?;
 
             self.graph_pre_optimize_flatten()?;
             self.notify_graph_changed()?;
 
-            self.link_codecs()?;
+            self.request_decoder_commands()?;
 
 
             self.populate_dimensions_where_certain()?;
@@ -184,7 +184,7 @@ impl<'a> Engine<'a> {
     }
 
 
-    pub fn link_codecs(&mut self) -> Result<()> {
+    pub fn request_decoder_commands(&mut self) -> Result<()> {
         self.notify_graph_changed()?;
 
         for index in 0..self.g.node_count() {
