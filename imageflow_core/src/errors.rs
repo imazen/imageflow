@@ -311,9 +311,9 @@ impl From<::lodepng::Error> for FlowError {
 }
 
 impl FlowError {
-    pub fn from_gif_encoder(e: ::std::io::Error) -> Self{
+    pub fn from_encoder(e: ::std::io::Error) -> Self{
         if e.kind() == ::std::io::ErrorKind::InvalidInput{
-            FlowError::without_location(ErrorKind::GifEncodingError, format!("{:?}", e))
+            FlowError::without_location(ErrorKind::InternalError, format!("{:?}", e))
         }else{
             FlowError::without_location(ErrorKind::EncodingIoError, format!("{:?}", e))
         }

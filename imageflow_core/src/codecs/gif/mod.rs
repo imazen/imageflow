@@ -155,7 +155,55 @@ impl Decoder for GifDecoder {
     }
 }
 
+pub trait EasyEncoder{
+    fn write_frame(&mut self, w: &mut Write, c: &Context, frame: &mut BitmapBgra) -> Result<s::EncodeResult>;
+}
 
+
+pub struct EncoderAdapter<T> where T: EasyEncoder{
+    io_id: i32,
+    encoder: T,
+    io_ref: Rc<RefCell<IoProxy>>,
+}
+impl<T> EncoderAdapter<T>  where T: EasyEncoder{
+    pub(crate) fn create(io: IoProxy, encoder: T) -> EncoderAdapter<T>{
+        let io_id = io.io_id();
+        let io_ref = Rc::new(RefCell::new(io));
+
+        EncoderAdapter {
+            io_id,
+            io_ref: io_ref.clone(),
+            encoder
+        }
+    }
+
+    fn get_io_ref(&self) -> Rc<RefCell<IoProxy>>{
+        self.io_ref.clone()
+    }
+}
+
+impl<T> Encoder for EncoderAdapter<T>  where T: EasyEncoder{
+    fn write_frame(&mut self, c: &Context, preset: &s::EncoderPreset, frame: &mut BitmapBgra,  decoder_io_ids: &[i32]) -> Result<s::EncodeResult> {
+        let io_proxy = IoProxyProxy(self.io_ref.clone());
+
+        self.encoder.write_frame(&mut IoProxyProxy(self.io_ref.clone()), c,  frame).map_err(|e|e.at(here!())).and_then(|mut r| {
+            r.io_id = self.io_id;
+            match r.bytes {
+                s::ResultBytes::ByteArray(vec) => {
+                    let _ = IoProxyProxy(self.io_ref.clone()).write_all(&vec).map_err(|e| FlowError::from_encoder(e).at(here!()))?;
+                    r.bytes = s::ResultBytes::Elsewhere;
+                    Ok(r)
+                },
+                _ => Ok(r)
+
+            }
+        })
+    }
+
+    fn get_io(&self) -> Result<IoProxyRef> {
+        Ok(IoProxyRef::Ref(self.io_ref.borrow()))
+    }
+}
 pub struct GifEncoder{
     io_id: i32,
     encoder: ::gif::Encoder<IoProxyProxy>,
@@ -172,7 +220,7 @@ impl GifEncoder{
             io_id,
             io_ref: io_ref.clone(),
             // Global color table??
-            encoder: ::gif::Encoder::new(IoProxyProxy(io_ref), first_frame.w as u16, first_frame.h as u16, &[]).map_err(|e| FlowError::from_gif_encoder(e).at(here!()))?,
+            encoder: ::gif::Encoder::new(IoProxyProxy(io_ref), first_frame.w as u16, first_frame.h as u16, &[]).map_err(|e| FlowError::from_encoder(e).at(here!()))?,
             frame_ix: 0
         })
     }
@@ -217,7 +265,7 @@ impl Encoder for GifEncoder{
                 // Only write before any frames
                 if let Some(r) = repeat {
 //                    eprintln!("Writing repeat");
-                    self.encoder.write_extension(::gif::ExtensionData::Repetitions(r)).map_err(|e| FlowError::from_gif_encoder(e).at(here!()))?;
+                    self.encoder.write_extension(::gif::ExtensionData::Repetitions(r)).map_err(|e| FlowError::from_encoder(e).at(here!()))?;
                 }else{
 //                    eprintln!("Skipping repeat");
                 }
@@ -232,7 +280,7 @@ impl Encoder for GifEncoder{
             // rect
             // transparency??
 
-            self.encoder.write_frame(&f).map_err(|e| FlowError::from_gif_encoder(e).at(here!()))?;
+            self.encoder.write_frame(&f).map_err(|e| FlowError::from_encoder(e).at(here!()))?;
 
             self.frame_ix+=1;
             Ok(

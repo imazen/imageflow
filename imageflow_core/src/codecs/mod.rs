@@ -41,6 +41,9 @@ pub trait Encoder{
     fn get_io(&self) -> Result<IoProxyRef>;
 }
 
+
+
+
 enum CodecKind{
     EncoderPlaceholder,
     Encoder(Box<Encoder>),
@@ -386,7 +389,16 @@ impl CodecInstanceContainer{
 
 
          if let CodecKind::Encoder(ref mut e) = self.codec {
-             e.write_frame(c, preset, frame, decoder_io_ids).map_err(|e| e.at(here!()))
+             match e.write_frame(c, preset, frame, decoder_io_ids).map_err(|e| e.at(here!())){
+                 Err(e) => Err(e),
+                 Ok(result) => {
+                     match result.bytes{
+                         s::ResultBytes::Elsewhere => Ok(result),
+                         other => Err(nerror!(ErrorKind::InternalError, "Encoders must return s::ResultBytes::Elsewhere and write to their owned IO. Found {:?}", other))
+
+                     }
+                 }
+             }
          }else{
              Err(unimpl!())
              //Err(FlowError::ErrNotImpl)
