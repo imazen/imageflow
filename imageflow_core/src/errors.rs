@@ -458,7 +458,7 @@ impl fmt::Debug for FlowError {
         // If CI was used, we assume a publicly-accessible commit
         // And we assume that any recorded stack frames are from within the `imageflow` repository.
         // Click-to-source is handy
-        
+
         let url = if::imageflow_types::build_env_info::BUILT_ON_CI{
             let repo = ::imageflow_types::build_env_info::BUILD_ENV_INFO.get("CI_REPO").unwrap_or(&Some("imazen/imageflow")).unwrap_or("imazen/imageflow");
             let commit =  ::imageflow_types::build_env_info::GIT_COMMIT;

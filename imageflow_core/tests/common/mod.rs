@@ -203,17 +203,6 @@ impl<'a> ChecksumCtx<'a>{
         }
     }
 
-    /// Load the given file from disk (and download it if it's not on disk)
-    pub fn load_bytes(&self, checksum: &str) -> Vec<u8> {
-        self.fetch_image(checksum);
-        let mut buffer = Vec::new();
-        use hlp::preludes::from_std::Read;
-        File::open(&self.image_path(checksum)).unwrap().read_to_end(&mut buffer).unwrap();
-        buffer
-    }
-
-
-
     /// Load the given image from disk (and download it if it's not on disk)
     /// The bitmap will be destroyed when the returned Context goes out of scope
     pub fn load_image(&self, checksum: &str) -> (Box<Context>, *mut BitmapBgra) {
@@ -241,14 +230,6 @@ impl<'a> ChecksumCtx<'a>{
             }
         }
     }
-
-    /// Save the given image to disk by calculating its checksum.
-    pub fn checksum_and_save_frame(&self, bit: &BitmapBgra){
-        let checksum = Self::checksum_bitmap(bit);
-        self.save_frame(bit, &checksum)
-    }
-
-
     /// Save the given bytes to disk by calculating their checksum.
     pub fn save_bytes(&self, bytes: &[u8], checksum: &str){
         let dest_path = self.image_path(&checksum);
@@ -533,7 +514,7 @@ pub fn compare_bitmaps(_c: &ChecksumCtx,  actual: &mut BitmapBgra, expected: &mu
 }
 
 /// Evalutates the given result against known truth, applying the given constraints
-pub fn compare_with<'a, 'b>(c: &ChecksumCtx, expected_checksum: &str, expected_bitmap : &'b mut BitmapBgra, mut result: ResultKind<'a>, require: Constraints, panic: bool) -> bool{
+pub fn compare_with<'a, 'b>(c: &ChecksumCtx, expected_checksum: &str, expected_bitmap : &'b mut BitmapBgra, result: ResultKind<'a>, require: Constraints, panic: bool) -> bool{
     if !check_size(&result, require.clone(), panic) {
         return false;
     }
@@ -553,7 +534,7 @@ pub fn compare_with<'a, 'b>(c: &ChecksumCtx, expected_checksum: &str, expected_b
     if result_checksum == expected_checksum {
         true
     } else{
-        compare_bitmaps(c, actual_bitmap, unsafe{ &mut *expected_bitmap }, require.similarity, panic)
+        compare_bitmaps(c, actual_bitmap, expected_bitmap, require.similarity, panic)
     }
 }
 
@@ -711,7 +692,7 @@ pub fn compare_encoded_to_source(input: s::IoEnum, debug: bool, require: Constra
 
     let bytes = context.get_output_buffer_slice(1).unwrap();
 
-    let mut ctx = ChecksumCtx::visuals(&context);
+    let ctx = ChecksumCtx::visuals(&context);
 
     let mut context2 = Context::create().unwrap();
     let original = decode_input(&mut context2, input_copy);
