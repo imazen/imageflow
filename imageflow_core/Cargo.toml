@@ -49,7 +49,7 @@ dssim = "2.9.4"
 gif = "*"
 rgb = "0.8.5"
 imagequant = "2.11.7"
-lodepng = "2.0.5"
+lodepng = "2.1.0"
 
 lcms2 = "5.0"
 lcms2-sys = {version="*", default-features = false}
