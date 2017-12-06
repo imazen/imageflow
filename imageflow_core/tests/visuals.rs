@@ -90,6 +90,27 @@ fn test_encode_pngquant() {
 }
 
 
+#[test]
+fn test_encode_lodepng() {
+    let steps = vec![
+        s::Node::Decode { io_id: 0, commands: None },
+        s::Node::Encode {
+            io_id: 1,
+            preset: s::EncoderPreset::Lodepng,
+        }
+    ];
+
+    compare_encoded_to_source(s::IoEnum::Url("https://s3-us-west-2.amazonaws.com/imageflow-resources/test_inputs/frymire.png".to_owned()),
+                              DEBUG_GRAPH,
+                              Constraints {
+                                  max_file_size: Some(390_000),
+                                  similarity: Similarity::AllowDssimMatch(0., 0.),
+                              },
+                              steps
+    );
+}
+
+
 
 #[test]
 fn test_fill_rect(){
