@@ -175,26 +175,23 @@ pub enum ScalingFloatspace {
 
 /// Encoder presets (each with optional configuration). These are exposed by the JSON API.
 #[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
+#[serde(rename_all = "lowercase")]
 pub enum EncoderPreset {
-    #[serde(rename="libjpegturbo")]
     LibjpegTurbo {
         quality: Option<i32>,
         progressive: Option<bool>,
         optimize_huffman_coding: Option<bool>
     },
-    #[serde(rename="libpng")]
     Libpng {
         depth: Option<PngBitDepth>,
         matte: Option<Color>,
         zlib_compression: Option<i32>,
     },
-    #[serde(rename="pngquant")]
     Pngquant {
         quality: Option<(u8, u8)>,
         speed: Option<u8>,
     },
-    #[serde(rename="gif")]
-    Gif
+    Gif,
 }
 
 
