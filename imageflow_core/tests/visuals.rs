@@ -82,7 +82,7 @@ fn test_encode_pngquant() {
     compare_encoded_to_source(s::IoEnum::Url("https://s3-us-west-2.amazonaws.com/imageflow-resources/test_inputs/frymire.png".to_owned()),
                               DEBUG_GRAPH,
                               Constraints {
-                                  max_file_size: Some(320_000),
+                                  max_file_size: Some(280_000),
                                   similarity: Similarity::AllowDssimMatch(0.005, 0.008),
                               },
                               steps

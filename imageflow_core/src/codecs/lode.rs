@@ -9,7 +9,8 @@ use std::slice;
 use std::io::Write;
 use std::rc::Rc;
 use std::cell::RefCell;
-use std::os::raw::c_int;
+use std::os::raw::{c_int, c_uint, c_ulong};
+use libc;
 use rgb;
 use lodepng;
 
@@ -52,9 +53,10 @@ impl LodepngEncoder {
         let pixels_slice = unsafe {frame.pixels_slice()}.ok_or(nerror!(ErrorKind::BitmapPointerNull))?;
         let mut pixels_buf;
         let pixels = if frame.stride != frame.w {
+            let width_bytes = frame.width() * frame.fmt.bytes();
             pixels_buf = Vec::with_capacity(frame.width() * frame.height());
             pixels_buf.extend(pixels_slice.chunks(frame.stride())
-                .flat_map(|s| s[0..frame.width()].iter()));
+                .flat_map(|s| s[0..width_bytes].iter()));
             &pixels_buf
         } else {
             pixels_slice
@@ -67,6 +69,8 @@ impl LodepngEncoder {
             PixelFormat::Gray8 => lodepng::ColorType::GREY,
         };
         lode.info_raw_mut().set_bitdepth(8);
+
+        lode.encoder.zlibsettings.custom_zlib = Some(zlib_compress_adapter);
 
         let png = lode.encode(pixels, frame.width(), frame.height())?;
 
@@ -89,9 +93,27 @@ impl LodepngEncoder {
         lode.set_auto_convert(false);
         lode.set_filter_strategy(lodepng::FilterStrategy::ZERO, false);
 
+        lode.encoder.zlibsettings.custom_zlib = Some(zlib_compress_adapter);
+
         let png = lode.encode(&pixels, width, height)?;
 
         writer.write_all(&png).map_err(|e| FlowError::from_encoder(e))?;
         Ok(())
     }
 }
+
+extern "C" {
+    /// zlib
+    fn compress2(dest: *mut u8, dest_len: &mut c_ulong, source: *const u8, source_len: c_ulong, level: c_int) -> c_int;
+}
+
+unsafe extern "C" fn zlib_compress_adapter(dest: &mut *mut u8, dest_size: &mut usize, source: *const u8, source_size: usize, info: *const lodepng::CompressSettings) -> c_uint {
+    assert!(dest.is_null());
+    let dest_buf_size = source_size * 1001/1000 + 12;
+    *dest = libc::malloc(dest_buf_size) as *mut u8;
+    let mut compressed_size = dest_buf_size as c_ulong;
+    compress2(*dest, &mut compressed_size, source, source_size as c_ulong, 6);
+    *dest_size = compressed_size as usize;
+    0
+}
+
