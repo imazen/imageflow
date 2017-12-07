@@ -7,7 +7,7 @@
 //! These aren't to be exposed, but rather to connect to `imageflow_c`/`c_components` internals.
 //! Overlaps in naming are artifacts from restructuring
 //!
-
+use std::slice;
 pub use imageflow_types::EdgeKind;
 
 pub use imageflow_types::Filter;
@@ -219,12 +219,38 @@ pub struct BitmapBgra {
 }
 
 
-impl BitmapBgra{
+impl BitmapBgra {
+    #[inline]
+    pub fn width(&self) -> usize {
+        self.w as usize
+    }
+
+    #[inline]
+    pub fn stride(&self) -> usize {
+        self.stride as usize
+    }
+
+    #[inline]
+    pub fn height(&self) -> usize {
+        self.h as usize
+    }
+
+    #[inline]
+    pub unsafe fn pixels_slice(&self) -> Option<&[u8]> {
+        if self.pixels.is_null() {
+            None
+        } else {
+            let stride = self.stride();
+            // Subimages in bottom right corner may not have pixels left for full stride
+            Some(slice::from_raw_parts(self.pixels, stride * self.height() + self.width() - stride))
+        }
+    }
+
     pub unsafe fn pixels_slice_mut(&mut self) -> Option<&mut [u8]>{
         if self.pixels.is_null() {
             None
         }else{
-            Some(::std::slice::from_raw_parts_mut(self.pixels, (self.stride * self.h) as usize))
+            Some(slice::from_raw_parts_mut(self.pixels, (self.stride * self.h) as usize))
         }
     }
     pub fn frame_info(&self) -> ::flow::definitions::FrameInfo {
@@ -239,7 +265,7 @@ impl BitmapBgra{
         if self.fmt == PixelFormat::Bgr32 {
             let width_bytes = self.w as usize * self.fmt.bytes();
             for h in 0isize..self.h as isize{
-                let s = unsafe { ::std::slice::from_raw_parts_mut(self.pixels.offset(h * self.stride as isize), width_bytes) };
+                let s = unsafe { slice::from_raw_parts_mut(self.pixels.offset(h * self.stride as isize), width_bytes) };
                 for pix in s.chunks_mut(4) {
                     pix[3] = 0xff;
                 }
@@ -257,7 +283,7 @@ impl BitmapBgra{
 
         let mut hash = ::twox_hash::XxHash::with_seed(0x8ed1_2ad9_483d_28a0);
         for h in 0isize..(self.h as isize){
-            let row_slice = unsafe{ ::std::slice::from_raw_parts(self.pixels.offset(h * self.stride as isize), width_bytes) };
+            let row_slice = unsafe{ slice::from_raw_parts(self.pixels.offset(h * self.stride as isize), width_bytes) };
             hash.write(row_slice)
         }
         hash.finish()
