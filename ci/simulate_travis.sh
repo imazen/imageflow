@@ -214,9 +214,9 @@ rsync -q -av --delete "${SCRIPT_DIR}/.." "$WORKING_DIR" --filter=':- .gitignore'
 	#conan user 1>&9
 
 	# For os x convenience
-	if [[ "$(uname -s)" == 'Darwin' ]]; then
-		eval "$(docker-machine env default)"
-	fi
+	#if [[ "$(uname -s)" == 'Darwin' ]]; then
+	#	eval "$(docker-machine env default)"
+	#fi
 
 	TRAVIS_RUN_VARS=(
 		"PACKAGE_SUFFIX=${PACKAGE_SUFFIX}"
