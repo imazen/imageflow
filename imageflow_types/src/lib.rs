@@ -191,6 +191,7 @@ pub enum EncoderPreset {
         quality: Option<(u8, u8)>,
         speed: Option<u8>,
     },
+    Lodepng,
     Gif,
 }
 

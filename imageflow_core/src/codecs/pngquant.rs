@@ -4,6 +4,7 @@ use io::IoProxy;
 use ffi::BitmapBgra;
 use imageflow_types::PixelFormat;
 use ::{Context, Result, ErrorKind};
+use std::result::Result as StdResult;
 use io::IoProxyRef;
 use std::slice;
 use std::rc::Rc;
@@ -35,9 +36,11 @@ impl PngquantEncoder {
 
 impl Encoder for PngquantEncoder {
     fn write_frame(&mut self, c: &Context, preset: &EncoderPreset, frame: &mut BitmapBgra, decoder_io_ids: &[i32]) -> Result<EncodeResult> {
-        let (pal, pixels) = Self::quantize(frame)?;
-
-        lode::LodepngEncoder::write_png8(&mut self.io, &pal, &pixels, frame.w as usize, frame.h as usize)?;
+        if let Some((pal, pixels)) = self.quantize(frame)? {
+            lode::LodepngEncoder::write_png8(&mut self.io, &pal, &pixels, frame.w as usize, frame.h as usize)?;
+        } else {
+            lode::LodepngEncoder::write_png_auto(&mut self.io, &frame)?;
+        };
 
         Ok(EncodeResult {
             w: frame.w as i32,
@@ -55,7 +58,7 @@ impl Encoder for PngquantEncoder {
 }
 
 impl PngquantEncoder {
-    fn quantize(frame: &BitmapBgra) -> Result<(Vec<imagequant::Color>, Vec<u8>)> {
+    fn quantize(&mut self, frame: &BitmapBgra) -> StdResult<Option<(Vec<imagequant::Color>, Vec<u8>)>, imagequant::liq_error> {
         // BitmapBgra contains a *mut pointer, which isn't Sync.
         struct SyncBitmap<'a> {
             pixels: &'a [u8],
@@ -125,7 +128,6 @@ impl PngquantEncoder {
             },
         };
 
-        let mut liq = imagequant::new();
         let stride_bytes = frame.stride as usize;
         let width_bytes = frame.w as usize * frame.fmt.bytes();
         let mut frame_sync = SyncBitmap {
@@ -134,9 +136,13 @@ impl PngquantEncoder {
             },
             stride_bytes,
         };
-        let mut img = imagequant::Image::new_unsafe_fn(&liq, convert_row, &mut frame_sync, frame.w as usize, frame.h as usize, 0.)?;
-        let mut res = liq.quantize(&mut img)?;
+        let mut img = imagequant::Image::new_unsafe_fn(&self.liq, convert_row, &mut frame_sync, frame.w as usize, frame.h as usize, 0.)?;
+        let mut res = match self.liq.quantize(&mut img) {
+            Ok(res) => res,
+            Err(imagequant::liq_error::LIQ_QUALITY_TOO_LOW) => return Ok(None),
+            Err(err) => return Err(err)?,
+        };
         res.set_dithering_level(1.);
-        Ok(res.remapped(&mut img)?)
+        Ok(Some(res.remapped(&mut img)?))
     }
 }

@@ -241,8 +241,9 @@ impl BitmapBgra {
             None
         } else {
             let stride = self.stride();
+            let width_bytes = self.width() * self.fmt.bytes();
             // Subimages in bottom right corner may not have pixels left for full stride
-            Some(slice::from_raw_parts(self.pixels, stride * self.height() + self.width() - stride))
+            Some(slice::from_raw_parts(self.pixels, stride * self.height() + width_bytes - stride))
         }
     }
 

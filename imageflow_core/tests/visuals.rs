@@ -82,8 +82,52 @@ fn test_encode_pngquant() {
     compare_encoded_to_source(s::IoEnum::Url("https://s3-us-west-2.amazonaws.com/imageflow-resources/test_inputs/frymire.png".to_owned()),
                               DEBUG_GRAPH,
                               Constraints {
-                                  max_file_size: Some(320_000),
+                                  max_file_size: Some(280_000),
                                   similarity: Similarity::AllowDssimMatch(0.005, 0.008),
+                              },
+                              steps
+    );
+}
+
+#[test]
+fn test_encode_pngquant_fallback() {
+    let steps = vec![
+        s::Node::Decode { io_id: 0, commands: None },
+        s::Node::Encode {
+            io_id: 1,
+            preset: s::EncoderPreset::Pngquant {
+                speed: None,
+                quality: Some((99, 100)),
+            }
+        }
+    ];
+
+    compare_encoded_to_source(s::IoEnum::Url("https://s3-us-west-2.amazonaws.com/imageflow-resources/test_inputs/frymire.png".to_owned()),
+                              DEBUG_GRAPH,
+                              Constraints {
+                                  max_file_size: None,
+                                  similarity: Similarity::AllowDssimMatch(0.000, 0.001),
+                              },
+                              steps
+    );
+}
+
+
+#[test]
+fn test_encode_lodepng() {
+    let steps = vec![
+        s::Node::Decode { io_id: 0, commands: None },
+        s::Node::Encode {
+            io_id: 1,
+            preset: s::EncoderPreset::Lodepng,
+        }
+    ];
+
+    compare_encoded_to_source(s::IoEnum::Url("https://s3-us-west-2.amazonaws.com/imageflow-resources/test_inputs/frymire.png".to_owned()),
+                              DEBUG_GRAPH,
+                              Constraints {
+                                  max_file_size: Some(390_000),
+                                  similarity: Similarity::AllowDssimMatch(0., 0.),
                               },
                               steps
     );

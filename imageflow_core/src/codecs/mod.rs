@@ -324,6 +324,7 @@ impl Encoder for ClassicEncoder{
 
             let (result_mime, result_ext) = match *preset {
                 s::EncoderPreset::Libpng { .. } |
+                s::EncoderPreset::Lodepng { .. } |
                 s::EncoderPreset::Pngquant { .. } => ("image/png", "png"),
                 s::EncoderPreset::LibjpegTurbo { .. } => ("image/jpeg", "jpg"),
                 s::EncoderPreset::Gif { .. } => ("image/gif", "gif"),
@@ -379,6 +380,9 @@ impl CodecInstanceContainer{
                  },
                  s::EncoderPreset::Pngquant {speed, quality} => {
                      CodecKind::Encoder(Box::new(pngquant::PngquantEncoder::create(c, speed, quality, io)?))
+                 },
+                 s::EncoderPreset::Lodepng => {
+                     CodecKind::Encoder(Box::new(lode::LodepngEncoder::create(c, io)?))
                  },
                  s::EncoderPreset::Libpng {..} | s::EncoderPreset::LibjpegTurbo {..} => {
                      CodecKind::Encoder(Box::new(
