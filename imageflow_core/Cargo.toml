@@ -45,7 +45,7 @@ smallvec = "*"
 itertools = "*"
 imgref = "1.3.2"
 
-dssim = "2.9.4"
+dssim = "2.9.5"
 gif = "*"
 rgb = "0.8.5"
 imagequant = "2.11.7"
