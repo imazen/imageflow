@@ -46,22 +46,19 @@ fn test_encode_gradients() {
 fn test_encode_frymire() {
     let steps = vec![
         s::Node::Decode { io_id: 0, commands: None },
-        s::Node::FlipH,
         s::Node::Encode {
             io_id: 1,
-            preset: s::EncoderPreset::libpng32()
+            preset: s::EncoderPreset::Lodepng
         }
     ];
 
-    compare_encoded(Some(s::IoEnum::Url("https://s3-us-west-2.amazonaws.com/imageflow-resources/test_inputs/frymire.png".to_owned())),
-                    "encode_frymire",
-                    POPULATE_CHECKSUMS,
-                    DEBUG_GRAPH,
-                    Constraints {
-                        max_file_size: None,
-                        similarity: Similarity::AllowDssimMatch(0.00, 0.00)
-                    },
-                    steps
+    compare_encoded_to_source(s::IoEnum::Url("https://s3-us-west-2.amazonaws.com/imageflow-resources/test_inputs/frymire.png".to_owned()),
+                              DEBUG_GRAPH,
+                              Constraints {
+                                  max_file_size: Some(390_000),
+                                  similarity: Similarity::AllowDssimMatch(0.0, 0.0),
+                              },
+                              steps
     );
 }
 
