@@ -50,6 +50,7 @@ gif = "*"
 rgb = "0.8.6"
 imagequant = "2.11.7"
 lodepng = "2.1.2"
+mozjpeg-sys = "0.5.4"
 
 lcms2 = "5.0"
 lcms2-sys = {version="*", default-features = false}
