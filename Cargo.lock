@@ -557,6 +557,7 @@ dependencies = [
  "lcms2-sys 2.4.6 (registry+https://github.com/rust-lang/crates.io-index)",
  "libc 0.2.34 (registry+https://github.com/rust-lang/crates.io-index)",
  "lodepng 2.1.2 (registry+https://github.com/rust-lang/crates.io-index)",
+ "mozjpeg-sys 0.5.4 (registry+https://github.com/rust-lang/crates.io-index)",
  "num 0.1.41 (registry+https://github.com/rust-lang/crates.io-index)",
  "petgraph 0.4.10 (registry+https://github.com/rust-lang/crates.io-index)",
  "rgb 0.8.6 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -943,6 +944,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "mozjpeg-sys"
+version = "0.5.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+dependencies = [
+ "cc 1.0.3 (registry+https://github.com/rust-lang/crates.io-index)",
+ "libc 0.2.34 (registry+https://github.com/rust-lang/crates.io-index)",
+ "nasm-rs 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
+]
+
+[[package]]
 name = "msdos_time"
 version = "0.1.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -950,6 +961,14 @@ dependencies = [
  "kernel32-sys 0.2.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "time 0.1.38 (registry+https://github.com/rust-lang/crates.io-index)",
  "winapi 0.2.8 (registry+https://github.com/rust-lang/crates.io-index)",
+]
+
+[[package]]
+name = "nasm-rs"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+dependencies = [
+ "rayon 0.8.2 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
@@ -1850,7 +1869,9 @@ dependencies = [
 "checksum mount 0.3.0 (git+https://github.com/iron/mount.git?rev=2c3d719be4c158d4ddbd8cdb402fafccdefec58c)" = "<none>"
 "checksum mount 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)" = "32245731923cd096899502fc4c4317cfd09f121e80e73f7f576cf3777a824256"
 "checksum moz-cheddar 0.4.2 (registry+https://github.com/rust-lang/crates.io-index)" = "43b29fdad80b06f38d959105a138ab8ca8c5a57c3435f5bfbd770fa73e625015"
+"checksum mozjpeg-sys 0.5.4 (registry+https://github.com/rust-lang/crates.io-index)" = "9ce7dda211a2d47bb9c6494e595a17daae2653e25bea2ecb75e7e2367100c5c5"
 "checksum msdos_time 0.1.5 (registry+https://github.com/rust-lang/crates.io-index)" = "65ba9d75bcea84e07812618fedf284a64776c2f2ea0cad6bca7f69739695a958"
+"checksum nasm-rs 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)" = "53ebe3f4680263b858a966594f47a22b4038a16161a0d0a8d393173df0de6835"
 "checksum native-tls 0.1.4 (registry+https://github.com/rust-lang/crates.io-index)" = "04b781c9134a954c84f0594b9ab3f5606abc516030388e8511887ef4c204a1e5"
 "checksum nodrop 0.1.12 (registry+https://github.com/rust-lang/crates.io-index)" = "9a2228dca57108069a5262f2ed8bd2e82496d2e074a06d1ccc7ce1687b6ae0a2"
 "checksum num 0.1.41 (registry+https://github.com/rust-lang/crates.io-index)" = "cc4083e14b542ea3eb9b5f33ff48bd373a92d78687e74f4cc0a30caeb754f0ca"
