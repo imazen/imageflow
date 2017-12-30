@@ -116,7 +116,6 @@ We need a few packages in order to build the C dependencies. You probably have m
 * build-essential, nasm, dh-autoreconf, pkg-config
 * wget, curl, git
 * libpng, libssl, ca-certificates
-* python, pip, and setuptools
 
 ## For Ubuntu 14.04 and 16.04:
 
@@ -124,8 +123,7 @@ We need a few packages in order to build the C dependencies. You probably have m
 sudo apt-get install --no-install-recommends \
   build-essential nasm dh-autoreconf pkg-config \
   wget curl git ca-certificates \
-  libpng-dev libssl-dev \
-  python-minimal python-pip python-setuptools
+  libpng-dev libssl-dev
 ```
 
 After installing the above, you'll need cmake 3.4.1+, dssim, and Rust Nightly.
@@ -150,7 +148,7 @@ Please consult the [official Dockerfiles](https://github.com/imazen/dockerfiles_
 You'll need a bit less on OS X, although this may not be comprehensive:
 
 ```bash
-brew install nasm cmake python libpng automake libtool pkg-config wget
+brew install nasm cmake libpng automake libtool pkg-config wget
 ./ci/nixtools/install_dssim.sh
 ./build.sh
 ```

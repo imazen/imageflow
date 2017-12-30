@@ -1,9 +1,6 @@
 image: Visual Studio 2017
 build: false
 environment:
-    PYTHON: "C:\\Python27"
-    PYTHON_VERSION: "2.7.8"
-    PYTHON_ARCH: "32"
     RUST_BACKTRACE: 1
     CARGO_INCREMENTAL: 1
     RUST_TOOLCHAIN: nightly-2017-11-24
@@ -80,7 +77,7 @@ install:
   - echo Fetching %RUSTUP_INIT%
   - curl -L -o  rustup-init.exe %RUSTUP_INIT%
   - rustup-init.exe -y --default-toolchain %RUST_TOOLCHAIN% --default-host %RUST_TARGET%
-  - set PATH=%PATH%;%PYTHON%/Scripts/;C:\Program Files (x86)\nasm;%USERPROFILE%\.cargo\bin
+  - set PATH=%PATH%;C:\Program Files (x86)\nasm;%USERPROFILE%\.cargo\bin
   - rustc --version --verbose
   - echo. && echo. && echo Installing NASM
   - curl -L -o nasminst.exe http://www.nasm.us/pub/nasm/releasebuilds/2.12.02/win64/nasm-2.12.02-installer-x64.exe

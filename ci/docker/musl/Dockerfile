@@ -12,7 +12,6 @@ RUN apt-get update \
   file \
   git \
   g++ \
-  python \
   make \
   nano \
   ca-certificates \
@@ -24,7 +23,6 @@ RUN apt-get update \
   sudo \
   luajit \
   ruby-dev ruby-bundler rubygems-integration \
-  python-minimal python-pip python-setuptools \
   && apt-get clean -y \
   && apt-get autoremove -y \
   && rm -rf /var/lib/apt/lists/* \
@@ -68,8 +66,6 @@ ENV SSL_VER=1.0.2j \
 #     && ln -sf -t $TOOLCHAIN_DIR/lib/ $TOOLCHAIN_DIR/lib/rustlib/x86_64-unknown-linux-gnu/lib/*.so \
 #     && rustup show \
 #     && rustc -V
-
-# # RUN sudo pip install conan --upgrade
 
 RUN RUSTVER="nightly-2016-11-03" && curl https://sh.rustup.rs -sSf | sh -s -- -y --default-toolchain $RUSTVER -v \
 	&& rustup target add x86_64-unknown-linux-musl
