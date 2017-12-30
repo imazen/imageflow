@@ -67,7 +67,6 @@ install:
   - echo "GIT_COMMIT=%GIT_COMMIT%" && echo "CI_STRING=%CI_STRING%" && echo "CI_TAG=%CI_TAG%" && echo "CI_RELATED_BRANCH=%CI_RELATED_BRANCH%" && echo "CI_PULL_REQUEST_INFO=%CI_PULL_REQUEST_INFO%" && echo "ARTIFACT_SERIES_NAME=%ARTIFACT_SERIES_NAME%"
   - echo.
   - echo. && echo. echo Installing tools
-  #- choco install cmake --installargs 'ADD_CMAKE_TO_PATH=""User""'
   #- refreshenv
   #- vs_buildtools.exe --add Microsoft.VisualStudio.Workload.MSBuildTools --add Microsoft.VisualStudio.Workload.VCTools --includeRecommended
   #- C:\"Program Files (x86)"\"%VSINSTALL%"\vcvarsall.bat %PLATFORM%
@@ -83,14 +82,12 @@ install:
   - curl -L -o nasminst.exe http://www.nasm.us/pub/nasm/releasebuilds/2.12.02/win64/nasm-2.12.02-installer-x64.exe
   - start /wait nasminst.exe /S
 
-#https://cmake.org/files/v3.9/cmake-3.9.1-win64-x64.msi
 test_script:
   - if NOT "%CI_TAG%"=="" echo Purging build files for %CI_TAG%
   - if NOT "%CI_TAG%"=="" rmdir /s /q target || exit 0
   - if NOT "%CI_TAG%"=="" rmdir /s /q c_components/build || exit 0
   - if NOT "%CI_TAG%"=="" SET CARGO_INCREMENTAL=0
   - echo %PATH%
-  - cmake --version
   - rustc -V
   - cargo -V
   - nasm -v

@@ -69,8 +69,4 @@ imageflow_riapi = { path = "../imageflow_riapi", version = "*" }
 hyper = "=0.10.12"
 
 
-[build-dependencies]
-cmake = "0.1.17"
-
-
 #cp ../../../cargo/target/x86_64-unknown-linux-gnu/release/cargo /home/n/.cargo/bin/

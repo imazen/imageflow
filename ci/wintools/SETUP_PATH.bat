@@ -4,7 +4,6 @@ echo .
 set PATH=%PATH%;C:\Program Files\Git\bin;C:\Program Files\Git\mingw64\bin
 set PATH=%PATH%;C:\Program Files (x86)\NASM;
 set PATH=%PATH%;C:\Program Files (x86)\Rust\bin
-set PATH=%PATH%;C:\Program Files\CMake\bin
 
 echo Updated path to
 echo %PATH%

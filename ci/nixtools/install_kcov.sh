@@ -1,6 +1,6 @@
 #!/bin/bash
 
-#Installs python2 
+#Installs python2
 
 set -e #Exit on failure.
 set -x
@@ -16,7 +16,7 @@ command -v python2 >/dev/null 2>&1 || { sudo apt-get install --no-install-recomm
 
 
 sudo apt-get install --no-install-recommends -y \
-  libcurl4-openssl-dev libelf-dev libdw-dev
+  libcurl4-openssl-dev libelf-dev libdw-dev cmake
 
 
 wget -O kcov.tar.gz https://github.com/SimonKagstrom/kcov/archive/master.tar.gz \

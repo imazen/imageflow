@@ -59,9 +59,6 @@ url="1.4"
 hyper-native-tls="0.2"
 reqwest="0.6"
 
-[build-dependencies]
-cmake = "0.1.17"
-
 [[bin]]
 name = "imageflow_server"
 path = "src/main.rs"

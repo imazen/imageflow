@@ -23,7 +23,6 @@ fi
 # clang or gcc 4.8, 4.9, or 5.4
 # Rust nightly
 # nasm
-# Cmake
 # OpenSSL (on linux)
 # DSSIM
 # lcov (if coverage is used)
@@ -32,7 +31,6 @@ fi
 # Check prerequisites
 command -v zip >/dev/null 2>&1 || { echo -e "'zip' is required, but missing. Try: apt-get install zip\nAborting." >&2; exit 1; }
 command -v cargo >/dev/null 2>&1  || { echo -e "'cargo' is required, but missing. Try: curl https://sh.rustup.rs -sSf | sh -s -- -y --default-toolchain nightly-2017-08-01\nAborting." >&2; exit 1; }
-command -v cmake >/dev/null 2>&1  || { echo -e "'cmake' is required, but missing. Try: ./ci/nixtools/install_cmake.sh\nAborting." >&2; exit 1; }
 command -v dssim >/dev/null 2>&1  || { echo -e "'dssim' is required, but missing. Try: ./ci/nixtools/install_dssim.sh\nAborting." >&2; exit 1; }
 command -v nasm >/dev/null 2>&1 || { echo -e "'nasm' is required, but missing. Try: apt-get install nasm\nAborting." >&2; exit 1; }
 
@@ -431,71 +429,21 @@ export RUST_FLAGS="$TEST_RUST_FLAGS"
 if [[ -n "$CARGO_TARGET" ]]; then
 	export CARGO_ARGS=("--target" "$CARGO_TARGET")
 	export TARGET_DIR="target/$CARGO_TARGET/"
-else 
+else
 	export CARGO_ARGS=()
 	export TARGET_DIR="target/"
 fi
 
 printf "TARGET_CPU=%s  RUST_FLAGS=%s CFLAGS=%s TARGET_DIR=%s\n" "$TARGET_CPU" "$RUST_FLAGS" "$CFLAGS" "$TARGET_DIR"
-	
+
 
 echo_maybe "build.sh sees these relevant variables: ${BUILD_VARS[*]}"
 
-
-( 
-	cd c_components  
-	if [[ "$CLEAN_DEBUG" == 'True' ]]; then
-		rm -rf ./build
-	fi 
-	if [[ "$CLEAN_RELEASE" == 'True' ]]; then
-		rm -rf ./build
-	fi 
-
-	[[ -d build ]] || mkdir build
-
-	echo_maybe "================================== C/C++ =========================== [build.sh]"
-
-	if [[ "$TEST_C" == 'True' ]]; then
-		echo_maybe "Testing C/C++ components of Imageflow "
-		echo_maybe "(and fetching and compiling dependencies)"
-		echo_maybe 
-		echo_maybe
-
-		(
-			cd build
-			eval "$COPY_VALGRINDRC"
-			date_stamp
-
-			#Sync to build/CTestTestfile.cmake
-			#Also update imageflow_core/build_c.sh
-			if [[ "$VALGRIND" == 'True' ]]; then
-				(
-					cd ../..
-					./valgrind_existing.sh ./c_components/build/bin/test_imageflow  1>&6
-					./valgrind_existing.sh ./c_components/build/bin/test_variations  1>&6
-					./valgrind_existing.sh ./c_components/build/bin/test_fastscaling  1>&6
-					#echo "This next test is slow; it's a quickcheck running under valgrind"
-					#./valgrind_existing.sh ./c_components/bin/test_theft_render
-				)
-				#./bin/test_theft_render
-			fi 
-		)
-		if [[ "$LCOV" == 'True' ]]; then
-
-			echo_maybe "==================================================================== [build.sh]"
-			echo_maybe "Process coverage information with lcov"
-			lcov -q --directory ./build --capture --output-file coverage.info 1>&9
-			lcov -q --remove coverage.info 'tests/*' '/usr/*' --output-file coverage.info 1>&9
-		fi
-	fi
-
-)
-
-echo_maybe 
+echo_maybe
 echo_maybe "================================== Rust ============================ [build.sh]"
 
 
-rustc --version 
+rustc --version
 cargo --version 1>&9
 date_stamp
 

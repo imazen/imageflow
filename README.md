@@ -126,11 +126,10 @@ sudo apt-get install --no-install-recommends \
   libpng-dev libssl-dev
 ```
 
-After installing the above, you'll need cmake 3.4.1+, dssim, and Rust Nightly.
+After installing the above, you'll need dssim, and Rust Nightly.
 
 ```bash
 curl https://sh.rustup.rs -sSf | sh -s -- -y --default-toolchain nightly-2017-08-01
-./ci/nixtools/install_cmake.sh
 ./ci/nixtools/install_dssim.sh
 ./build.sh
 ```
@@ -148,14 +147,10 @@ Please consult the [official Dockerfiles](https://github.com/imazen/dockerfiles_
 You'll need a bit less on OS X, although this may not be comprehensive:
 
 ```bash
-brew install nasm cmake libpng automake libtool pkg-config wget
+brew install nasm libpng automake libtool pkg-config wget
 ./ci/nixtools/install_dssim.sh
 ./build.sh
 ```
-
-## Windows
-
-Don't use a C++ IDE until you've run `win_build_c.bat`, as CMake needs to generate files.
 
 ### Pre-requisites
 
@@ -163,7 +158,6 @@ Don't use a C++ IDE until you've run `win_build_c.bat`, as CMake needs to genera
 2. Install [Git 64-bit](https://git-scm.com/download/win).
 3. Install [NASM 64-bit](http://www.nasm.us/pub/nasm/releasebuilds/2.12.02/win64/nasm-2.12.02-installer-x64.exe) Installer must be `Run as Administrator` - it will not prompt.
 4. Install [Rust 64-bit](https://static.rust-lang.org/rustup/dist/x86_64-pc-windows-msvc/rustup-init.exe). Install toolchain `nightly-2017-06-08` and set it as default. For the moment, 32-bit builds also require [a 32-bit Rust](https://static.rust-lang.org/rustup/dist/i686-pc-windows-msvc/rustup-init.exe).
-5. Install [CMake 3.7 64-bit](https://cmake.org/download/) (3.8.0-rc3 makes paths too long)
 
 You need all of these to be in %PATH%. Edit `ci/wintools/SETUP_PATH.bat` as appropriate to ensure that rust/cargo, nasm, git, and Git/mingw64/bin are all available.
 
