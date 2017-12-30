@@ -16,7 +16,7 @@ if [[ "$(uname -s)" == 'Darwin' ]]; then
     set -x
     brew update || brew update
     date "$STAMP"
-    brew install conan nasm
+    brew install nasm
     ./ci/nixtools/install_dssim.sh
     set +x
 else

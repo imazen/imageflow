@@ -35,10 +35,6 @@ clang-format -i c_components/{lib,tests}/*.{c,h,cpp,hpp}
 
 1. export CC=gcc-4.8
 2. export CPP=g++-4.8
-3. Edit `compiler.version` in ~/.conan/conan.conf 
-
-Per https://github.com/conan-io/conan/issues/178
-Destroy the ./build directory before trying again.(`rm -rf build`)
 
 
 ## Generating animated gifs of graph progression.

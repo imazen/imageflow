@@ -5,8 +5,5 @@ cmake --version
 echo RUST MUST BE NIGHTLY 2017-06-08 or later
 rustc -V
 cargo -V
-echo Conan must be 0.21+
-conan --version
-
 
 echo ============ END VERIFY TOOLS REPORT ==============

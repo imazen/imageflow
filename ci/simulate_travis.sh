@@ -127,16 +127,14 @@ rsync -q -av --delete "${SCRIPT_DIR}/.." "$WORKING_DIR" --filter=':- .gitignore'
 
 	# The first two are only needed in test.sh, since we're rsycning away the whole /target folder
 	export SIM_DOCKER_CACHE_VARS=(
-		-v 
+		-v
 		"${WORKING_DIR}_cache/${TARGET_DIR}debug:/home/conan/imageflow/${TARGET_DIR}debug"
-		-v 
+		-v
 		"${WORKING_DIR}_cache/${TARGET_DIR}release:/home/conan/imageflow/${TARGET_DIR}release"
-		-v 
-		"${WORKING_DIR}_cache/conan_data:/home/conan/.conan/data" 
-		-v 
+		-v
+		"${WORKING_DIR}_cache/conan_data:/home/conan/.conan/data"
+		-v
 		"${WORKING_DIR}_cache/ccache:/home/conan/.ccache"
-		-v 
-		"${WORKING_DIR}_cache/c_components/build:/home/conan/imageflow/c_components/build"  
 	)
 	if [[ "$COPY_HOST_CARGO_DIR" == "True" ]]; then
 		SIM_DOCKER_CACHE_VARS+=(		
