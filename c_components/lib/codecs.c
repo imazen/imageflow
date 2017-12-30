@@ -1,7 +1,6 @@
-#include <lcms2.h>
+#include "lcms2.h"
 #include "imageflow_private.h"
 
-#include "lcms2.h"
 #include "codecs.h"
 
 extern const struct flow_codec_definition flow_codec_definition_decode_jpeg;

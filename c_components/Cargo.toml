@@ -1,0 +1,29 @@
+[package]
+name = "imageflow_c_components"
+version = "0.1.0"
+authors = ["Nathanael Jones <nathanael.jones@gmail.com>", "Kornel Lesiński <kornel@geekhood.net>"]
+links = "imageflow_c"
+workspace = "../"
+
+[lib]
+name = "imageflow_c_components"
+doctest = false
+
+[build-dependencies]
+glob = "0.2.11"
+
+[build-dependencies.cc]
+version = "1.0.3"
+features = ["parallel"]
+
+[features]
+coverage = []
+c_tests = []
+profiling = []
+shared = []
+
+[dependencies]
+mozjpeg-sys = "0.5.8"
+libz-sys = "1.0.18"
+libpng-sys = "0.2.3"
+lcms2-sys = "2.4.8"

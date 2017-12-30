@@ -1,6 +1,6 @@
 #pragma once
 
-#include <lcms2.h>
+#include "lcms2.h"
 #include "imageflow.h"
 
 #ifdef __cplusplus

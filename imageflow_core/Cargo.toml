@@ -2,8 +2,6 @@
 name = "imageflow_core"
 version = "0.1.0"
 authors = ["Nathanael Jones <nathanael.jones@gmail.com>"]
-build = "conan_cargo_build.rs"
-links = "imageflow_c"
 workspace = "../"
 
 [lib]
@@ -52,7 +50,6 @@ imagequant = "2.11.7"
 lodepng = "2.1.2"
 
 lcms2 = "5.0"
-lcms2-sys = {version="*", default-features = false}
 chashmap = "2.2"
 
 getopts ="0.2.15"
@@ -63,10 +60,7 @@ uuid = { version = "0.5", features = ["v4"] }
 imageflow_types = { path = "../imageflow_types", version = "*" }
 imageflow_helpers = { path = "../imageflow_helpers", version = "*" }
 imageflow_riapi = { path = "../imageflow_riapi", version = "*" }
-
+imageflow_c_components = { path = "../c_components" }
 
 [dev-dependencies]
 hyper = "=0.10.12"
-
-
-#cp ../../../cargo/target/x86_64-unknown-linux-gnu/release/cargo /home/n/.cargo/bin/

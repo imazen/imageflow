@@ -69,6 +69,8 @@ if [[ "$IMAGEFLOW_BUILD_OVERRIDE" == 'cleanup' ]]; then
 fi 
 
 
+# old, unused
+rm -rf c_components/build
 
 if [[ "$IMAGEFLOW_BUILD_OVERRIDE" == 'purge' ]]; then
 	echo "Purging artifacts and temporary files"
