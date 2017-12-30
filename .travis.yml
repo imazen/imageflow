@@ -35,8 +35,6 @@ matrix:
     services:
     - docker
   - os: osx
-    osx_image: xcode8
-    #Should be compatible with El Capitan forward. xcode8
     env: TARGET_CPU=nehalem PACKAGE_SUFFIX=osx_10_11-x86_64 NUGET_RUNTIME=osx.10.11-x64 UPLOAD_BUILD=True TARGET=x86_64-apple-darwin FETCH_COMMIT_SUFFIX=mac64
     language: rust
     rust: nightly-2017-11-26

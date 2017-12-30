@@ -245,7 +245,7 @@ echo_maybe(){
 }
 echo_maybe "============================= [build.sh] ======================================"
 
-
+export MACOSX_DEPLOYMENT_TARGET=10.11
 export TARGET_CPU="${TARGET_CPU:-native}"
 export TUNE_CPU="${TUNE_CPU:-}"
 export CARGO_TARGET="${CARGO_TARGET:-}"
