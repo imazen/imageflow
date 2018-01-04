@@ -23,7 +23,7 @@ profiling = []
 shared = []
 
 [dependencies]
-mozjpeg-sys = "0.5.8"
+mozjpeg-sys = { version = "0.5.10", git = "https://github.com/kornelski/mozjpeg-sys", branch = "win" }
 libz-sys = "1.0.18"
 libpng-sys = "0.2.3"
 lcms2-sys = "2.4.8"
