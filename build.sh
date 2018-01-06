@@ -175,7 +175,8 @@ fi
 
 if [[ "$IMAGEFLOW_BUILD_OVERRIDE" == *'valgrind'* ]]; then
 	export TEST_C=True
-	export TEST_DEBUG=True
+	export TEST_DEBUG=False
+	export TEST_RELEASE=True
 	export VALGRIND=True
 	export COVERAGE=True
 fi 
@@ -477,11 +478,7 @@ fi
 if [[ "$TEST_DEBUG" == 'True' ]]; then
 	echo_maybe Running debug cargo test
 	date_stamp
-	RUST_TEST_THREADS=1 cargo test --all "${CARGO_ARGS[@]}" 1>&7
-	if [[ "$VALGRIND" == 'True' ]]; then
-		date_stamp
-		./valgrind_existing.sh   1>&6
-	fi
+	cargo test --all "${CARGO_ARGS[@]}" 1>&7
 fi
 if [[ "$COVERAGE" == 'True' ]]; then
 	date_stamp
@@ -514,7 +511,10 @@ if [[ "$TEST_RELEASE" == 'True' ]]; then
 	date_stamp
 	cargo test --all --release "${CARGO_ARGS[@]}" 1>&7
 	date_stamp
-fi 
+	if [[ "$VALGRIND" == 'True' ]]; then
+		./valgrind_existing.sh   1>&6
+	fi
+fi
 
 if [[ "$BUILD_RELEASE" == 'True' ]]; then
 	echo_maybe "==================================================================== [build.sh]"
