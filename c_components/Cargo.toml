@@ -4,6 +4,7 @@ version = "0.1.0"
 authors = ["Nathanael Jones <nathanael.jones@gmail.com>", "Kornel Lesiński <kornel@geekhood.net>"]
 links = "imageflow_c"
 workspace = "../"
+build = "build.rs"
 
 [lib]
 name = "imageflow_c_components"

@@ -1,0 +1,15 @@
+[package]
+name = "c_components_tests"
+version = "0.1.0"
+authors = ["Nathanael Jones <nathanael.jones@gmail.com>", "Kornel Lesiński <kornel@geekhood.net>"]
+workspace = "../../"
+build = "src/build.rs"
+
+[dependencies]
+imageflow_c_components = {path = ".."}
+lcms2-sys = "2.4.8"
+libpng-sys = "0.2.3"
+
+[build-dependencies.cc]
+version = "1.0.3"
+features = ["parallel"]
