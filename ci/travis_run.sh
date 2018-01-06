@@ -360,10 +360,6 @@ else
 			/bin/bash -c "./ci/travis_run_docker.sh"  
 			)
 	export DOCKER_CACHE_VARS=(
-		-v 
-		"$HOME/.ccache:/home/conan/.ccache"
-		-v 
-		"$HOME/.conan/data:/home/conan/.conan/data"
 	)
 	DOCKER_INVOCATION=(docker run "--rm")
 

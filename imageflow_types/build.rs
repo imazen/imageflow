@@ -158,7 +158,6 @@ fn what_to_collect() -> Vec<EnvTidbit>{
     }
     c.push(EnvTidbit::EnvReq("CARGO_MANIFEST_DIR"));
     c.push(EnvTidbit::Cmd{key: "GIT_STATUS", cmd: "git checkout ../c_components/tests/visuals/weights.txt && git status"});
-    c.push(EnvTidbit::Cmd{key: "CONAN_VERSION", cmd: "conan -V"});
     c.push(EnvTidbit::Cmd{key: "GLIBC_VERSION", cmd: "ldd --version"});
     c.push(EnvTidbit::Cmd{key: "UNAME", cmd: "uname -av"});
     c.push(EnvTidbit::Cmd{key: "WIN_SYSTEMINFO", cmd: "systeminfo.exe"});
@@ -167,7 +166,6 @@ fn what_to_collect() -> Vec<EnvTidbit>{
     c.push(EnvTidbit::Cmd{key: "DEFAULT_CLANG_VERSION", cmd: "clang --version"});
     c.push(EnvTidbit::CmdReq{key: "DEFAULT_RUSTC_VERSION", cmd: "rustc -V"});
     c.push(EnvTidbit::CmdReq{key: "DEFAULT_CARGO_VERSION", cmd: "cargo -V"});
-    c.push(EnvTidbit::FileContentsReq{key: "conaninfo.txt", relative_to_build_rs: "../imageflow_core/conaninfo.txt"});
     c
 }
 
@@ -182,25 +180,6 @@ fn write_file(name: &str, file_contents: String) -> std::result::Result<(), Erro
     Ok(())
 }
 
-fn parse_conanfile(info: &mut  HashMap<String, Option<String>>) {
-    let conan_str = info.get("conaninfo.txt").unwrap().to_owned().unwrap();
-    let mut in_requirements_section = false;
-    for line in conan_str.lines() {
-        let t = line.trim();
-        if t.starts_with("[") {
-            in_requirements_section = false;
-        }
-        if t == "[full_requires]" {
-            in_requirements_section = true;
-            continue
-        }
-        if in_requirements_section {
-            let k = format!("C_DEPENDENCY_{}",t.split("/").next().unwrap().to_uppercase());
-            info.insert(k, Some(t.to_owned()));
-        }
-    }
-}
-
 fn main() {
     let todo = what_to_collect();
     let utcnow_val =Utc::now();
@@ -208,9 +187,6 @@ fn main() {
     let mut results = collect_info(todo);
     results.insert("GENERATED_DATETIME_UTC".to_owned(), Some(utcnow_val.to_rfc3339()));
     results.insert("GENERATED_DATE_UTC".to_owned(), Some(utcnow_val.format("%Y-%m-%d").to_string()));
-    parse_conanfile(&mut results);
-
-
 
     let mut contents = String::new();
     contents += "use std::collections::HashMap;\n";

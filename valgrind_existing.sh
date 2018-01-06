@@ -6,7 +6,7 @@ VALGRIND_ARGS="-q --error-exitcode=9 --gen-suppressions=all"
 
 TEST_BINARIES_TARGET="${TARGET_DIR:-target/}"
 
-# Valgrind script args, or fallback to discovering them in ./target/debug
+# Valgrind script args, or fallback to discovering them in ./target/release
 TEST_BINARIES=("$@")
 
 printf "%s valgrind_existing.sh " "$(date '+[%H:%M:%S]')"
@@ -14,11 +14,11 @@ printf "%s valgrind_existing.sh " "$(date '+[%H:%M:%S]')"
 if [ "$#" -lt 1 ]; then
 	# Remove old grind folders; they're going to be a problem with discovery
 	(
-		cd "./${TEST_BINARIES_TARGET}debug"
+		cd "./${TEST_BINARIES_TARGET}release"
 		find . -type d -name 'grind_*' -exec rm -rf {} +
 	)
 	shopt -s nullglob
-	TEST_BINARIES=(./${TEST_BINARIES_TARGET}debug/*-[a-f0-9][a-f0-9][a-f0-9][a-f0-9][a-f0-9][a-f0-9][a-f0-9][a-f0-9][a-f0-9][a-f0-9][a-f0-9][a-f0-9][a-f0-9][a-f0-9][a-f0-9][a-f0-9])
+	TEST_BINARIES=(./${TEST_BINARIES_TARGET}release/*-[a-f0-9][a-f0-9][a-f0-9][a-f0-9][a-f0-9][a-f0-9][a-f0-9][a-f0-9][a-f0-9][a-f0-9][a-f0-9][a-f0-9][a-f0-9][a-f0-9][a-f0-9][a-f0-9])
 	shopt -u nullglob
 	printf "discovered binaries:\n"
 else
@@ -34,10 +34,10 @@ printf "%s\n" "${TEST_BINARIES[@]}"
 # imageflow_helpers and imageflow_types uses Regex, which valgrind causes to segfault
 # imageflow_riapi takes years to run under valgrind
 # Neither uses unsafe code
-SKIP_BINARIES+=("$(ls ./"${TEST_BINARIES_TARGET}"debug/test_ir4* || true )")
-SKIP_BINARIES+=("$(ls ./"${TEST_BINARIES_TARGET}"debug/*imageflow_helpers* || true )")
-SKIP_BINARIES+=("$(ls ./"${TEST_BINARIES_TARGET}"debug/*imageflow_riapi* || true )")
-SKIP_BINARIES+=("$(ls ./"${TEST_BINARIES_TARGET}"debug/*imageflow_types* || true )")
+SKIP_BINARIES+=("$(ls ./"${TEST_BINARIES_TARGET}"release/test_ir4* || true )")
+SKIP_BINARIES+=("$(ls ./"${TEST_BINARIES_TARGET}"release/*imageflow_helpers* || true )")
+SKIP_BINARIES+=("$(ls ./"${TEST_BINARIES_TARGET}"release/*imageflow_riapi* || true )")
+SKIP_BINARIES+=("$(ls ./"${TEST_BINARIES_TARGET}"release/*imageflow_types* || true )")
 function join_by { local IFS="$1"; shift; echo "$*"; }
 SKIP_BINARIES_STR="$(join_by " " "${SKIP_BINARIES[@]}")"
 SKIP_BINARIES_STR=" $SKIP_BINARIES_STR "

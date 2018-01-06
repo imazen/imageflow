@@ -1008,6 +1008,10 @@ static bool flow_codecs_jpeg_write_frame(flow_c * c, void * codec_state, struct 
         state->cinfo.input_components = 3;
     }
 
+    if (jpeg_c_int_param_supported(&state->cinfo, JINT_COMPRESS_PROFILE)) {
+        jpeg_c_set_int_param(&state->cinfo, JINT_COMPRESS_PROFILE, JCP_FASTEST);
+    }
+
     jpeg_set_defaults(&state->cinfo);
 
     int32_t quality = hints == NULL ? 90 : hints->jpeg_encode_quality;

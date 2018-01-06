@@ -1,6 +1,6 @@
 FROM ubuntu:xenial
 
-MAINTAINER Nathanael Jones 
+MAINTAINER Nathanael Jones
 
 
 RUN apt-get update \
@@ -12,7 +12,6 @@ RUN apt-get update \
   file \
   git \
   g++ \
-  python \
   make \
   nano \
   ca-certificates \
@@ -24,8 +23,6 @@ RUN apt-get update \
   sudo \
   luajit \
   ruby-dev ruby-bundler rubygems-integration \
-  python-minimal python-pip python-setuptools \
-  && pip install conan \
   && apt-get clean -y \
   && apt-get autoremove -y \
   && rm -rf /var/lib/apt/lists/* \
@@ -42,7 +39,6 @@ RUN groupadd 1001 -g 1001 &&\
     useradd -ms /bin/bash conan -g 1001 -G 1000 &&\
     echo "conan:conan" | chpasswd && adduser conan sudo &&\
     echo "conan ALL= NOPASSWD: ALL\n" >> /etc/sudoers &&\
-    mkdir -p /home/conan/.conan && sudo chown conan: /home/conan/.conan
 
 USER conan
 
@@ -71,10 +67,8 @@ ENV SSL_VER=1.0.2j \
 #     && rustup show \
 #     && rustc -V
 
-# # RUN sudo pip install conan --upgrade
-
 RUN RUSTVER="nightly-2016-11-03" && curl https://sh.rustup.rs -sSf | sh -s -- -y --default-toolchain $RUSTVER -v \
-	&& rustup target add x86_64-unknown-linux-musl 
+	&& rustup target add x86_64-unknown-linux-musl
 RUN RUSTVER="nightly-2016-11-03" && rustup default $RUSTVER \
     && rustup show \
     && rustc -V \

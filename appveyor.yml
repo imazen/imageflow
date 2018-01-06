@@ -1,14 +1,10 @@
 image: Visual Studio 2017
 build: false
 environment:
-    PYTHON: "C:\\Python27"
-    PYTHON_VERSION: "2.7.8"
-    PYTHON_ARCH: "32"
     RUST_BACKTRACE: 1
     CARGO_INCREMENTAL: 1
     RUST_TOOLCHAIN: nightly-2017-11-24
     VSINSTALL:  "Microsoft Visual Studio\\2017\\Community\\VC\\Auxiliary\\Build"
-    CONAN_VISUAL_VERSIONS: 15
     VS150COMNTOOLS: "C:\\Program Files (x86)\\Microsoft Visual Studio\\2017\\Community\\Common7\\Tools\\"
     TARGET_DIR: "target\\"
     matrix:
@@ -18,27 +14,22 @@ environment:
         NUGET_RUNTIME: win7-x86
         PACKAGE_SUFFIX: win-x86
         BITS: 32
-        CONAN_ARCH: x86
       - platform: x64
         RUST_TARGET: x86_64-pc-windows-msvc
         TARGET_CPU: x86-64
         NUGET_RUNTIME: win7-x64
         PACKAGE_SUFFIX: win-x86_64
         BITS: 64
-        CONAN_ARCH: x86_64
       - platform: x64
         RUST_TARGET: x86_64-pc-windows-msvc
         TARGET_CPU: haswell
         NUGET_RUNTIME: win7-x64
         PACKAGE_SUFFIX: win-x86_64-haswell
         BITS: 64
-        CONAN_ARCH: x86_64
 configuration: Release
 
 cache:
   - '%USERPROFILE%\.cargo'
-  - '%USERPROFILE%\.conan'
-  - 'c_components\build'
   - 'target'
 matrix:
   fast_finish: false
@@ -76,53 +67,34 @@ install:
   - echo "GIT_COMMIT=%GIT_COMMIT%" && echo "CI_STRING=%CI_STRING%" && echo "CI_TAG=%CI_TAG%" && echo "CI_RELATED_BRANCH=%CI_RELATED_BRANCH%" && echo "CI_PULL_REQUEST_INFO=%CI_PULL_REQUEST_INFO%" && echo "ARTIFACT_SERIES_NAME=%ARTIFACT_SERIES_NAME%"
   - echo.
   - echo. && echo. echo Installing tools
-  #- choco install cmake --installargs 'ADD_CMAKE_TO_PATH=""User""'
   #- refreshenv
   #- vs_buildtools.exe --add Microsoft.VisualStudio.Workload.MSBuildTools --add Microsoft.VisualStudio.Workload.VCTools --includeRecommended
   #- C:\"Program Files (x86)"\"%VSINSTALL%"\vcvarsall.bat %PLATFORM%
   - SET TARGET_ARG= #--target=%RUST_TARGET%
-  - echo "RUST_TARGET=%RUST_TARGET%, TARGET=%TARGET%, BITS=%BITS%, CPU_TARGET=%CPU_TARGET% CONAN_ARCH=%CONAN_ARCH% RUSTFLAGS=%RUSTFLAGS%"
+  - echo "RUST_TARGET=%RUST_TARGET%, TARGET=%TARGET%, BITS=%BITS%, CPU_TARGET=%CPU_TARGET% RUSTFLAGS=%RUSTFLAGS%"
   - SET RUSTUP_INIT=https://static.rust-lang.org/rustup/dist/%RUST_TARGET%/rustup-init.exe
   - echo Fetching %RUSTUP_INIT%
   - curl -L -o  rustup-init.exe %RUSTUP_INIT%
   - rustup-init.exe -y --default-toolchain %RUST_TOOLCHAIN% --default-host %RUST_TARGET%
-  - set PATH=%PATH%;%PYTHON%/Scripts/;C:\Program Files (x86)\nasm;%USERPROFILE%\.cargo\bin
+  - set PATH=%PATH%;C:\Program Files (x86)\nasm;%USERPROFILE%\.cargo\bin
   - rustc --version --verbose
   - echo. && echo. && echo Installing NASM
   - curl -L -o nasminst.exe http://www.nasm.us/pub/nasm/releasebuilds/2.12.02/win64/nasm-2.12.02-installer-x64.exe
   - start /wait nasminst.exe /S
-  - echo. && echo. && echo Installing Conan
-  - pip.exe install conan
-  - conan user # Creates the conan data directory
-  - conan remote add imageflow https://api.bintray.com/conan/imazen/imageflow  || exit 0
-  - copy /Y .\ci\updated_conan_settings.yml C:\Users\appveyor\.conan\settings.yml #Fixes settings.yml
 
-#https://cmake.org/files/v3.9/cmake-3.9.1-win64-x64.msi
 test_script:
   - if NOT "%CI_TAG%"=="" echo Purging build files for %CI_TAG%
   - if NOT "%CI_TAG%"=="" rmdir /s /q target || exit 0
   - if NOT "%CI_TAG%"=="" rmdir /s /q c_components/build || exit 0
   - if NOT "%CI_TAG%"=="" SET CARGO_INCREMENTAL=0
   - echo %PATH%
-  - conan --version
-  - cmake --version
   - rustc -V
   - cargo -V
   - nasm -v
-  - conan remove imageflow_c/* -f || exit 0
   - cd c_components
   - mkdir build || exit 0
-  - cd build
-  #- SET PATH=%PATH%;C:\MinGW\bin
-  - conan install --scope build_tests=True -s compiler="Visual Studio" -o shared=True --build missing -s build_type=Release -s arch=%CONAN_ARCH% -s target_cpu=%TARGET_CPU% -u ../
-  - conan build ../
-  - cd ..
-  - conan remove imageflow_c/* -f
-  - conan export imazen/testing
   - cd %APPVEYOR_BUILD_FOLDER%
   - SET RUST_TEST_THREADS=1
-  - cd imageflow_core
-  - conan install --build missing -s build_type=Release -s arch=%CONAN_ARCH% -s target_cpu=%TARGET_CPU%
   - cd %APPVEYOR_BUILD_FOLDER%
   - cargo test --all --release %TARGET_ARG%
   - cargo build --all --release %TARGET_ARG%
@@ -160,7 +132,6 @@ test_script:
   - echo. && echo. && echo Cleaning up
   - rmdir /q /s .\%TARGET_DIR%doc || exit 0
   - rmdir /q /s .\%TARGET_DIR%debug || exit 0
-  - conan remove imageflow_c/* -f || exit 0
   - if NOT "%CI_TAG%"=="" echo Purging build files following %CI_TAG%
   - if NOT "%CI_TAG%"=="" rmdir /s /q target || exit 0
   - if NOT "%CI_TAG%"=="" rmdir /s /q c_components/build || exit 0

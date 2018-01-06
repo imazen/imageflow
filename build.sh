@@ -20,11 +20,9 @@ if has_shellcheck; then
 fi
 
 # You're going to need:
-# Conan
 # clang or gcc 4.8, 4.9, or 5.4
 # Rust nightly
 # nasm
-# Cmake
 # OpenSSL (on linux)
 # DSSIM
 # lcov (if coverage is used)
@@ -33,15 +31,10 @@ fi
 # Check prerequisites
 command -v zip >/dev/null 2>&1 || { echo -e "'zip' is required, but missing. Try: apt-get install zip\nAborting." >&2; exit 1; }
 command -v cargo >/dev/null 2>&1  || { echo -e "'cargo' is required, but missing. Try: curl https://sh.rustup.rs -sSf | sh -s -- -y --default-toolchain nightly-2017-08-01\nAborting." >&2; exit 1; }
-command -v conan >/dev/null 2>&1  || { echo -e "'conan' is required, but missing. Try: pip install conan\nAborting." >&2; exit 1; }
-command -v cmake >/dev/null 2>&1  || { echo -e "'cmake' is required, but missing. Try: ./ci/nixtools/install_cmake.sh\nAborting." >&2; exit 1; }
 command -v dssim >/dev/null 2>&1  || { echo -e "'dssim' is required, but missing. Try: ./ci/nixtools/install_dssim.sh\nAborting." >&2; exit 1; }
 command -v nasm >/dev/null 2>&1 || { echo -e "'nasm' is required, but missing. Try: apt-get install nasm\nAborting." >&2; exit 1; }
 
 # We didn't automatically check for a c compiler, OpenSSL, valgrind, lcov
-
-# parallelizes all Make-based builds (in Conan, etc.). Hardcoded to 8 cores, since portable detection in bash is icky.
-export MAKEFLAGS='-j8'
 
 export IMAGEFLOW_BUILD_OVERRIDE="${IMAGEFLOW_BUILD_OVERRIDE:-$1}"
 
@@ -76,6 +69,8 @@ if [[ "$IMAGEFLOW_BUILD_OVERRIDE" == 'cleanup' ]]; then
 fi 
 
 
+# old, unused
+rm -rf c_components/build
 
 if [[ "$IMAGEFLOW_BUILD_OVERRIDE" == 'purge' ]]; then
 	echo "Purging artifacts and temporary files"
@@ -95,26 +90,21 @@ if [[ "$IMAGEFLOW_BUILD_OVERRIDE" == 'purge' ]]; then
 	rm -rf bin
 	rm ./*.{png,jpg,jpeg,gif,user}
 	rm ./*~
-	conan remove imageflow_c/* -f
 
 	exit 0
-fi 
+fi
 
 if [[ "$IMAGEFLOW_BUILD_OVERRIDE" == 'c' ]]; then
 	echo "Rebuilding c_components"
-	(cd c_components
-        conan remove imageflow_c/* -f
-        conan export imazen/testing
-    )
-    (cd imageflow_core
-        conan install --build missing -s target_cpu=haswell # Will build imageflow package with your current settings
+    (cd c_components
+        cargo build --release
     )
 	exit 0
 fi
 
 if [[ "$IMAGEFLOW_BUILD_OVERRIDE" == 'codestats' ]]; then
 	echo "Check on unsafe code statistics"
-	(	  
+	(
 		(cd imageflow_core && cargo count --unsafe-statistics)
 		(cd imageflow_abi && cargo count --unsafe-statistics)
 		(cd imageflow_tool && cargo count --unsafe-statistics)
@@ -185,7 +175,8 @@ fi
 
 if [[ "$IMAGEFLOW_BUILD_OVERRIDE" == *'valgrind'* ]]; then
 	export TEST_C=True
-	export TEST_DEBUG=True
+	export TEST_DEBUG=False
+	export TEST_RELEASE=True
 	export VALGRIND=True
 	export COVERAGE=True
 fi 
@@ -259,7 +250,6 @@ export CARGO_TARGET="${CARGO_TARGET:-}"
 
 # clean release build (not incremental)
 
-# clean conan dependencies
 # clean target/release
 # 
 
@@ -442,110 +432,21 @@ export RUST_FLAGS="$TEST_RUST_FLAGS"
 if [[ -n "$CARGO_TARGET" ]]; then
 	export CARGO_ARGS=("--target" "$CARGO_TARGET")
 	export TARGET_DIR="target/$CARGO_TARGET/"
-else 
+else
 	export CARGO_ARGS=()
 	export TARGET_DIR="target/"
 fi
 
 printf "TARGET_CPU=%s  RUST_FLAGS=%s CFLAGS=%s TARGET_DIR=%s\n" "$TARGET_CPU" "$RUST_FLAGS" "$CFLAGS" "$TARGET_DIR"
-	
+
 
 echo_maybe "build.sh sees these relevant variables: ${BUILD_VARS[*]}"
 
-
-( 
-	cd c_components  
-	if [[ "$CLEAN_DEBUG" == 'True' ]]; then
-		rm -rf ./build
-	fi 
-	if [[ "$CLEAN_RELEASE" == 'True' ]]; then
-		rm -rf ./build
-	fi 
-
-	[[ -d build ]] || mkdir build
-
-	echo_maybe "================================== C/C++ =========================== [build.sh]"
-    conan remote add imageflow https://api.bintray.com/conan/imazen/imageflow || true
-
-	if [[ "$TEST_C" == 'True' ]]; then
-		echo_maybe "Testing C/C++ components of Imageflow "
-		echo_maybe "(and fetching and compiling dependencies)"
-		echo_maybe 
-		echo_maybe
-
-		(
-			cd build
-			eval "$COPY_VALGRINDRC"
-			conan install --scope build_tests=True -s "target_cpu=$TARGET_CPU" --scope "debug_build=${VALGRIND:-False}" --scope "coverage=${COVERAGE:-False}" --scope "skip_test_run=${VALGRIND:-False}" --build missing -u ../ 1>&8
-			date_stamp
-			conan build ../ 1>&8
-
-			#Sync to build/CTestTestfile.cmake
-			#Also update imageflow_core/build_c.sh
-			if [[ "$VALGRIND" == 'True' ]]; then
-				(
-					cd ../..
-					./valgrind_existing.sh ./c_components/build/bin/test_imageflow  1>&6
-					./valgrind_existing.sh ./c_components/build/bin/test_variations  1>&6
-					./valgrind_existing.sh ./c_components/build/bin/test_fastscaling  1>&6
-					#echo "This next test is slow; it's a quickcheck running under valgrind"
-					#./valgrind_existing.sh ./c_components/bin/test_theft_render
-				)
-				#./bin/test_theft_render
-			fi 
-		)
-		if [[ "$LCOV" == 'True' ]]; then
-
-			echo_maybe "==================================================================== [build.sh]"
-			echo_maybe "Process coverage information with lcov"
-			lcov -q --directory ./build --capture --output-file coverage.info 1>&9
-			lcov -q --remove coverage.info 'tests/*' '.conan/*' '/usr/*' --output-file coverage.info 1>&9
-		fi
-	fi
-
-
-	echo_maybe "==================================================================== [build.sh]"
-	echo_maybe "Build C/C++ parts of Imageflow & dependencies as needed"
-	echo_maybe 
-	if [[ "$REBUILD_C" == 'True' ]]; then
-		conan remove imageflow_c/* -f
-	fi 
-	conan export imazen/testing   1>&8
-	
-	(
-		cd ../imageflow_core
-		date_stamp
-
-		# Conan regens every time. Let's avoid triggering rebuilds
-		mkdir -p ../${TARGET_DIR}debug || true 
-		BACKUP_FILE=../${TARGET_DIR}debug/conan_cargo_build.rs
-		CHANGING_FILE=./conan_cargo_build.rs
-		if [[ -f "$CHANGING_FILE" ]]; then 
-			# Prefer in-tree copy
-			cp -p "$CHANGING_FILE" "$BACKUP_FILE"
-		fi 
-
-		#Conan modifies it
-		conan install --build missing -s build_type=Release  -s "target_cpu=$TARGET_CPU" 1>&8
-
-		#We restore metadata if identical
-		if [[ -f "$BACKUP_FILE" ]]; then 
-			if cmp -s "$CHANGING_FILE" "$BACKUP_FILE" ; then
-				 cp -p "$BACKUP_FILE" "$CHANGING_FILE"
-			fi
-		else
-			cp -p "$CHANGING_FILE" "$BACKUP_FILE"
-		fi 
-
-		date_stamp
-	)
-)
-
-echo_maybe 
+echo_maybe
 echo_maybe "================================== Rust ============================ [build.sh]"
 
 
-rustc --version 
+rustc --version
 cargo --version 1>&9
 date_stamp
 
@@ -577,11 +478,7 @@ fi
 if [[ "$TEST_DEBUG" == 'True' ]]; then
 	echo_maybe Running debug cargo test
 	date_stamp
-	RUST_TEST_THREADS=1 cargo test --all "${CARGO_ARGS[@]}" 1>&7
-	if [[ "$VALGRIND" == 'True' ]]; then
-		date_stamp
-		./valgrind_existing.sh   1>&6
-	fi
+	cargo test --all "${CARGO_ARGS[@]}" 1>&7
 fi
 if [[ "$COVERAGE" == 'True' ]]; then
 	date_stamp
@@ -614,7 +511,10 @@ if [[ "$TEST_RELEASE" == 'True' ]]; then
 	date_stamp
 	cargo test --all --release "${CARGO_ARGS[@]}" 1>&7
 	date_stamp
-fi 
+	if [[ "$VALGRIND" == 'True' ]]; then
+		./valgrind_existing.sh   1>&6
+	fi
+fi
 
 if [[ "$BUILD_RELEASE" == 'True' ]]; then
 	echo_maybe "==================================================================== [build.sh]"

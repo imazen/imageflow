@@ -7,12 +7,6 @@ printf "travis_run_docker.sh:"
 sudo chown -R "$(id -u -n)": ~/
 sudo chmod -R a+rw .
 
-conan user 1>/dev/null
-
-#Copy conan settings - always
-cp "./ci/updated_conan_settings.yml" "${HOME}/.conan/settings.yml"
-
-
 if [[ -d "${HOME}/host_cargo/git" && -d "${HOME}/host_cargo/registry" ]]; then
 	echo "copying ~/host_cargo"
 	cp -Rp "${HOME}/host_cargo/git" "${HOME}/.cargo/git" 

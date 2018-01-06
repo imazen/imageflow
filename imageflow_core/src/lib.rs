@@ -20,7 +20,7 @@
 extern crate petgraph;
 extern crate daggy;
 extern crate imageflow_types;
-
+extern crate imageflow_c_components;
 extern crate imageflow_helpers;
 extern crate imageflow_riapi;
 extern crate num;

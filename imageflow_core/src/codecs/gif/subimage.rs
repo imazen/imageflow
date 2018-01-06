@@ -1,4 +1,4 @@
-// Taken from https://github.com/pornel/image-gif-dispose (MIT/Apache dual license)
+// Taken from https://github.com/kornelski/image-gif-dispose (MIT/Apache dual license)
 
 use std::iter;
 

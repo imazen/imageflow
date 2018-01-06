@@ -1,5 +1,0 @@
-[requires]
-libpng/1.6.23@lasote/stable
-
-[generators]
-gcc
