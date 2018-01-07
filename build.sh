@@ -222,8 +222,6 @@ else
 	exec 6>/dev/null
 fi
 
-
-
 ######################################################
 #### Parameters used by build.sh
 
@@ -235,6 +233,24 @@ echo_maybe(){
 	fi
 }
 echo_maybe "============================= [build.sh] ======================================"
+
+######################################################
+
+if test -n "$AWS_ACCESS_KEY_ID" -a -n "$AWS_SECRET_ACCESS_KEY" -a -n "$SCCACHE_BUCKET"; then
+	SCCACHE_BIN=$HOME/.cargo/bin/sccache
+	if test '!' -x "$SCCACHE_BIN"; then
+		PKG_CONFIG_ALL_STATIC=1 cargo install --force --git=https://github.com/mozilla/sccache.git --features=s3
+	fi
+
+	if "$SCCACHE_BIN" --start-server; then
+		export RUSTC_WRAPPER=$SCCACHE_BIN
+		echo_maybe "Using S3 sccache for $(uname -ms)"
+	else
+		echo_maybe "warning: Failed to set up S3 sccache for $(uname -ms)"
+	fi
+else
+	echo_maybe "AWS bucket for sccache not set up (AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID + AWS_SECRET_ACCESS_KEY + SCCACHE_BUCKET=$SCCACHE_BUCKET)"
+fi
 
 export MACOSX_DEPLOYMENT_TARGET=10.11
 export TARGET_CPU="${TARGET_CPU:-native}"
@@ -598,4 +614,6 @@ echo_maybe
 date_stamp
 echo_maybe "========================== Build complete :) =================== [build.sh]"
 
-
+if test -n "$SCCACHE_BIN"; then
+	"$SCCACHE_BIN" --stop-server || true;
+fi
