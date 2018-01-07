@@ -270,6 +270,9 @@ export BUILD_DEBUG="${BUILD_DEBUG:-False}"
 export CHECK_DEBUG="${CHECK_DEBUG:-$BUILD_DEBUG}"
 export TEST_DEBUG="${TEST_DEBUG:-$BUILD_DEBUG}" #(involve VALGRIND/COVERAGE)
 
+if test ! -s 'c_components/tests/catch.hpp'; then
+	curl -fLo 'c_components/tests/catch.hpp' 'https://github.com/catchorg/Catch2/releases/download/v1.11.0/catch.hpp'
+fi
 
 export CLEAN_RELEASE="${CLEAN_RELEASE:-False}"
 export BUILD_RELEASE="${BUILD_RELEASE:-True}"

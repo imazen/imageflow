@@ -1,4 +1,4 @@
-#include "catch.hpp"
+#include "catch.hpp" // If this fails, download https://github.com/catchorg/Catch2/releases/download/v1.11.0/catch.hpp
 #include "helpers.h"
 #include "test_weighting_helpers.h"
 

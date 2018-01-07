@@ -191,7 +191,7 @@ bool create_path_from_relative(flow_c * c, const char * base_file, bool create_p
         return false;
     }
     const char * this_file = base_file;
-    char * last_slash = strrchr(this_file, '/');
+    const char * last_slash = strrchr(this_file, '/');
     if (last_slash == NULL) {
         last_slash = strrchr(this_file, '\\');
     }
