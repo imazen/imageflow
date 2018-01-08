@@ -113,7 +113,7 @@ This will create caches within `~/.docker_imageflow_caches` specific to the dock
 
 We need a few packages in order to build the C dependencies. You probably have most of these already.
 
-* build-essential, nasm, dh-autoreconf, pkg-config
+* build-essential, nasm, pkg-config
 * wget, curl, git
 * libpng, libssl, ca-certificates
 
@@ -121,7 +121,7 @@ We need a few packages in order to build the C dependencies. You probably have m
 
 ```bash
 sudo apt-get install --no-install-recommends \
-  build-essential nasm dh-autoreconf pkg-config \
+  build-essential nasm pkg-config \
   wget curl git ca-certificates \
   libpng-dev libssl-dev
 ```
@@ -147,7 +147,7 @@ Please consult the [official Dockerfiles](https://github.com/imazen/dockerfiles_
 You'll need a bit less on OS X, although this may not be comprehensive:
 
 ```bash
-brew install nasm libpng automake libtool pkg-config wget
+brew install nasm libpng pkg-config wget
 ./ci/nixtools/install_dssim.sh
 ./build.sh
 ```
