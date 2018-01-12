@@ -2,6 +2,7 @@
 
 #include "lcms2.h"
 #include "imageflow.h"
+#include <stdarg.h>
 
 #ifdef __cplusplus
 extern "C" {
