@@ -3,12 +3,7 @@ language: generic
 services:
 - docker
 cache:
-  ccache: true
-  directories:
-  - "$HOME/.conan/data"
-  - "$HOME/.cargo"
-  - "$TRAVIS_BUILD_DIR/c_components/build"
-  - "$TRAVIS_BUILD_DIR/target"
+  cargo: true
 env:
   global:
     - secure: "oO/CIaTFVTxvV6U7nG8mM7AxrQNKm89RodXXDHbibmGQuliaOcU4BTkr6gLsx/vezjgMo1ocfHItxZPlU52GeNiLBf5uwPEjiq6w2+Lq20Xjui8HbtC5wEj1NaAa/Rn5I53+Y0KmoTVXB4YKsY6rWHELW2dpJc07kyFqSE5b2tY="
@@ -52,6 +47,7 @@ script:
 before_cache:
   - rm -rf $TRAVIS_BUILD_DIR/target/debug/valgrind_*_temp
   - rm -rf $TRAVIS_BUILD_DIR/target/doc
+  - rm -rf $HOME/.cargo/registry/src
 before_deploy:
   - export GITHUB_FILES="$(ls artifacts/upload/releases/v*/imageflow-v*.tar.gz)"
   - echo "Planning to upload ${GITHUB_FILES} to GitHub"
