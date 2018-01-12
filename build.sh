@@ -453,10 +453,6 @@ rustc --version
 cargo --version 1>&9
 date_stamp
 
-if [[ "$SILENCE_CARGO" != "True" ]]; then
-	export RUST_LOG=cargo::ops::cargo_rustc::fingerprint=info
-fi
-
 if [[ "$CLEAN_RUST_TARGETS" == 'True' ]]; then
 	echo "Removing output imageflow binaries (but not dependencies)"
 	if [ -d "./${TARGET_DIR}debug" ]; then
