@@ -110,7 +110,7 @@ bool flow_dir_exists_eh(const char * dir_path)
     e = stat(dir_path, &sb);
     // I think this logic is vague around permissions. Merits some test if exercised more heavily
     if (e == 0) {
-        if ((sb.st_mode & S_IFREG) || !(sb.st_mode & S_IFDIR)) {
+        if (S_ISREG(sb.st_mode) || !S_ISDIR(sb.st_mode)) {
             // fprintf(stdout, "%s exists, but is not a directory!\n", dir_path);
             return false;
         }
@@ -127,7 +127,7 @@ void flow_utils_ensure_directory_exists(const char * dir_path)
     int e;
     e = stat(dir_path, &sb);
     if (e == 0) {
-        if ((sb.st_mode & S_IFREG) || !(sb.st_mode & S_IFDIR)) {
+        if (S_ISREG(sb.st_mode) || !S_ISDIR(sb.st_mode)) {
             fprintf(stdout, "%s exists, but is not a directory!\n", dir_path);
             exit(1);
         }
