@@ -5,6 +5,10 @@ authors = ["Nathanael Jones <nathanael.jones@gmail.com>", "Kornel Lesiński <kor
 workspace = "../../"
 build = "src/build.rs"
 
+[[bin]]
+name = "profile_imageflow"
+path = "src/profile.rs"
+
 [dependencies]
 imageflow_c_components = {path = ".."}
 lcms2-sys = "2.4.8"

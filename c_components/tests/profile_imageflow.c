@@ -28,7 +28,8 @@ static int64_t transpose(int w, int h, flow_pixel_format fmt, int runs)
 
     return end - start;
 }
-int main(void)
+
+void profile_main(void)
 {
     int fmt = 4;
     for (int w = 1; w < 5000; w += 631)

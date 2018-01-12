@@ -19,20 +19,26 @@ fn main() {
     cc.include(c_root);
     cc.include(&test_root);
 
-    cc.cpp(true);
-    cc.flag("-std=c++11");
+    let mut cxx = cc.clone();
+
+    cc.flag("-std=c11");
+    cc.file(test_root.join("helpers.c"));
+    cc.file(test_root.join("profile_imageflow.c"));
+    cc.compile("imageflow_c_tests");
+
+    cxx.cpp(true);
+    cxx.flag("-std=c++11");
 
     // the C code wants __FILE__ to contain slashes
-    cc.file(test_root.join("runner.cpp"));
-    cc.file(test_root.join("test.cpp"));
-    cc.file(test_root.join("helpers.c"));
-    cc.file(test_root.join("test_context.cpp"));
-    cc.file(test_root.join("test_error_handling.cpp"));
-    cc.file(test_root.join("test_integration.cpp"));
-    cc.file(test_root.join("test_io.cpp"));
-    cc.file(test_root.join("test_operations.cpp"));
-    cc.file(test_root.join("test_variations.cpp"));
-    cc.file(test_root.join("test_weighting.cpp"));
-    cc.file(test_root.join("test_weighting_helpers.cpp"));
-    cc.compile("imageflow_c_tests");
+    cxx.file(test_root.join("runner.cpp"));
+    cxx.file(test_root.join("test.cpp"));
+    cxx.file(test_root.join("test_context.cpp"));
+    cxx.file(test_root.join("test_error_handling.cpp"));
+    cxx.file(test_root.join("test_integration.cpp"));
+    cxx.file(test_root.join("test_io.cpp"));
+    cxx.file(test_root.join("test_operations.cpp"));
+    cxx.file(test_root.join("test_variations.cpp"));
+    cxx.file(test_root.join("test_weighting.cpp"));
+    cxx.file(test_root.join("test_weighting_helpers.cpp"));
+    cxx.compile("imageflow_cxx_tests");
 }
