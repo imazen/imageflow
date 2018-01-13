@@ -2,10 +2,10 @@
 set -e
 shopt -s extglob
 
-#FOR THE CLEANEST TEST - 100% ephemeral. 
+#FOR THE CLEANEST TEST - 100% ephemeral.
 # DISABLE_COMPILATION_CACHES=True
 
-# To remove (the LARGE) caches this writes to your home directory 
+# To remove (the LARGE) caches this writes to your home directory
 # rm -rf ~/.docker_imageflow_caches
 
 #Or, to prevent copying of the host's ~/.cargo directory into the instance
@@ -52,13 +52,13 @@ fi
 if [[ -z "$1" ]]; then
 	echo "You must provide a docker image name as the first argument"
 	exit 1
-fi 
+fi
 
 
 echo_maybe "Preparing to build Imageflow"
 
-# We change this default (not like Travis), but for speed. 
-# Not relevant when DISABLE_COMPILATION_CACHES=True 
+# We change this default (not like Travis), but for speed.
+# Not relevant when DISABLE_COMPILATION_CACHES=True
 export CLEAN_RUST_TARGETS="${CLEAN_RUST_TARGETS:-False}"
 
 export IMAGEFLOW_BUILD_OVERRIDE="${IMAGEFLOW_BUILD_OVERRIDE}"
@@ -77,7 +77,7 @@ export CARGO_TARGET="${CARGO_TARGET:-}"
 
 if [[ -n "$CARGO_TARGET" ]]; then
 		export TARGET_DIR="target/${CARGO_TARGET}/"
-else 
+else
 		export TARGET_DIR="target/"
 fi
 
@@ -117,7 +117,7 @@ rsync -q -av --delete "${SCRIPT_DIR}/.." "$WORKING_DIR" --filter=':- .gitignore'
 	export SIM_DOCKER_CACHE_VAR
 
 
-	
+
 	mkdir -p "${WORKING_DIR}_cache/${TARGET_DIR}debug" || true
 	mkdir -p "${WORKING_DIR}_cache/${TARGET_DIR}release" || true
 	mkdir -p "${WORKING_DIR}_cache/conan_data" || true
@@ -135,22 +135,22 @@ rsync -q -av --delete "${SCRIPT_DIR}/.." "$WORKING_DIR" --filter=':- .gitignore'
 		"${WORKING_DIR}_cache/ccache:/home/conan/.ccache"
 	)
 	if [[ "$COPY_HOST_CARGO_DIR" == "True" ]]; then
-		SIM_DOCKER_CACHE_VARS+=(		
-			-v 
-			"${HOME}/.cargo:/home/conan/host_cargo" 
+		SIM_DOCKER_CACHE_VARS+=(
+			-v
+			"${HOME}/.cargo:/home/conan/host_cargo"
 		)
-	fi 
+	fi
 	if [[ -n "$IMAGEFLOW_DOCKER_TEST_MAP_EXTRA_DIR" ]]; then
 		SIM_DOCKER_CACHE_VARS+=(
-				-v 
-				"${WORKING_DIR}_cache/${IMAGEFLOW_DOCKER_TEST_MAP_EXTRA_DIR}:/home/conan/imageflow/${IMAGEFLOW_DOCKER_TEST_MAP_EXTRA_DIR}"		
+				-v
+				"${WORKING_DIR}_cache/${IMAGEFLOW_DOCKER_TEST_MAP_EXTRA_DIR}:/home/conan/imageflow/${IMAGEFLOW_DOCKER_TEST_MAP_EXTRA_DIR}"
 		)
-	fi 
+	fi
 	# The very last is unique to test.sh (for speed?)
 	#Ensure that .cargo is NOT volume mapped; cargo will not work. Also, cargo fetches faster than rsync, it seems?
 
 
-	if [[ "$DISABLE_COMPILATION_CACHES" == 'True' ]]; then		
+	if [[ "$DISABLE_COMPILATION_CACHES" == 'True' ]]; then
 		echo "DISABLE_COMPILATION_CACHES=${DISABLE_COMPILATION_CACHES:-False}"
 		export SIM_DOCKER_CACHE_VARS=()
 	fi
@@ -164,11 +164,11 @@ rsync -q -av --delete "${SCRIPT_DIR}/.." "$WORKING_DIR" --filter=':- .gitignore'
 
 	if [[ "${TARGET_CPU}" == "x86-64" || "${TARGET_CPU}" == "" ]]; then
 		ARCH_SUFFIX="x86_64"
-	else  
+	else
 		if [[ "${TARGET_CPU}" == "native" ]]; then
 			ARCH_SUFFIX="HOST-NATIVE"
-		fi 
-	fi 
+		fi
+	fi
 
 	if [[ "$DOCKER_IMAGE" == 'imazen/imageflow_build_ubuntu14' ]]; then
 		export PACKAGE_SUFFIX="${PACKAGE_SUFFIX:-${ARCH_SUFFIX}-linux-gcc48-eglibc219}"
@@ -192,7 +192,7 @@ rsync -q -av --delete "${SCRIPT_DIR}/.." "$WORKING_DIR" --filter=':- .gitignore'
 
 	## CONFIGURATION
 	# VALGRIND=True or False
-	# 
+	#
 	## MOST LIKELY TO GET POLLUTED
 	# GIT_* vars
 	# BUILD_RELEASE
@@ -250,14 +250,14 @@ rsync -q -av --delete "${SCRIPT_DIR}/.." "$WORKING_DIR" --filter=':- .gitignore'
 
 	if [[ "$BUILD_QUIETER" -ne "True" ]]; then
 		printf "TRAVIS_RUN_VARS: \n%s\n" "${TRAVIS_RUN_VARS[@]}"
-	fi 
-	
+	fi
+
 	#echo "SIM_DOCKER_CACHE_VARS ${SIM_DOCKER_CACHE_VARS[*]}"
 
 	echo_maybe ""
 	echo_maybe "switching to ./ci/travis_run.sh ================================"
 
 	#echo "SIM_DOCKER_CACHE_VARS ${SIM_DOCKER_CACHE_VARS[*]}"
-	
+
 	SIM_DOCKER_CACHE_VARS="${SIM_DOCKER_CACHE_VARS[*]}" ./ci/travis_run.sh
 )

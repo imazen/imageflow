@@ -5,7 +5,7 @@ set -e #Exit on failure.
 cd "$( dirname "${BASH_SOURCE[0]}" )"
 
 has_shellcheck() {
-	command -v shellcheck >/dev/null 2>&1 
+	command -v shellcheck >/dev/null 2>&1
 }
 if has_shellcheck; then
 	shellcheck ./*.sh
@@ -16,7 +16,7 @@ if has_shellcheck; then
 	shellcheck ./ci/cloud/*/*.sh
 	shellcheck ./ci/nixtools/*.sh
 	# wait until v0.44 for this; global ignores are needed shellcheck ./imageflow_tool/result_testing/*.sh
-	
+
 fi
 
 # You're going to need:
@@ -42,12 +42,12 @@ if [[ -n "$IMAGEFLOW_BUILD_OVERRIDE" ]]; then
 	printf "Applying IMAGEFLOW_BUILD_OVERRIDE %s\n" "$IMAGEFLOW_BUILD_OVERRIDE"
 	#Change the defaults when we're invoking an override
 	export BUILD_QUIETER="${BUILD_QUIETER:-True}"
-	export REBUILD_C="False" 
+	export REBUILD_C="False"
 	export TEST_C="False"
 	export BUILD_RELEASE="False"
 	export BUILD_DEBUG="False"
 	export CLEAN_RUST_TARGETS="False"
-fi 
+fi
 
 if [[ "$IMAGEFLOW_BUILD_OVERRIDE" == 'cleanup' ]]; then
 	echo "Cleaning up temporary files created by running tests"
@@ -66,7 +66,7 @@ if [[ "$IMAGEFLOW_BUILD_OVERRIDE" == 'cleanup' ]]; then
 	# Remove disassembly files in c_components
 	find . -type f -name '*.c.s' -exec rm {} +
 	exit 0
-fi 
+fi
 
 
 # old, unused
@@ -135,24 +135,24 @@ if [[ "$IMAGEFLOW_BUILD_OVERRIDE" == *'clean'* ]]; then
 	export CLEAN_RUST_TARGETS=True
 	export REBUILD_C=True
 	IMAGEFLOW_BUILD_OVERRIDE="${IMAGEFLOW_BUILD_OVERRIDE/clean/}"
-fi 
+fi
 if [[ "$IMAGEFLOW_BUILD_OVERRIDE" == *'debug'* ]]; then
 	export BUILD_DEBUG=True
 	IMAGEFLOW_BUILD_OVERRIDE="${IMAGEFLOW_BUILD_OVERRIDE/debug/}"
-fi 
+fi
 if [[ "$IMAGEFLOW_BUILD_OVERRIDE" == *'release'* ]]; then
 	export BUILD_RELEASE=True
 	IMAGEFLOW_BUILD_OVERRIDE="${IMAGEFLOW_BUILD_OVERRIDE/release/}"
-fi 
+fi
 if [[ "$IMAGEFLOW_BUILD_OVERRIDE" == *'rusttest'* ]]; then
 	export TEST_DEBUG=True
 	IMAGEFLOW_BUILD_OVERRIDE="${IMAGEFLOW_BUILD_OVERRIDE/rusttest/}"
-fi 
+fi
 if [[ "$IMAGEFLOW_BUILD_OVERRIDE" == *'test'* ]]; then
 	export TEST_C=True
 	export TEST_DEBUG=True
 	IMAGEFLOW_BUILD_OVERRIDE="${IMAGEFLOW_BUILD_OVERRIDE/test/}"
-fi 
+fi
 
 if [[ "$IMAGEFLOW_BUILD_OVERRIDE" == *'kcov'* ]]; then
 	export TEST_C=True
@@ -163,14 +163,14 @@ if [[ "$IMAGEFLOW_BUILD_OVERRIDE" == *'kcov'* ]]; then
 	export CLEAN_RUST_TARGETS=False
 	export COVERAGE=True
 	IMAGEFLOW_BUILD_OVERRIDE="${IMAGEFLOW_BUILD_OVERRIDE/kcov/}"
-fi 
+fi
 
 if [[ "$IMAGEFLOW_BUILD_OVERRIDE" == *'codecov'* ]]; then
 	export BUILD_QUIETER=False
 	export SILENCE_CARGO=True
 	export CODECOV=True
 	IMAGEFLOW_BUILD_OVERRIDE="${IMAGEFLOW_BUILD_OVERRIDE/codecov/}"
-fi 
+fi
 
 
 if [[ "$IMAGEFLOW_BUILD_OVERRIDE" == *'valgrind'* ]]; then
@@ -179,27 +179,27 @@ if [[ "$IMAGEFLOW_BUILD_OVERRIDE" == *'valgrind'* ]]; then
 	export TEST_RELEASE=True
 	export VALGRIND=True
 	export COVERAGE=True
-fi 
+fi
 if [[ "$IMAGEFLOW_BUILD_OVERRIDE" == *'quiet1'* ]]; then
 	export BUILD_QUIETER=True
-fi 
+fi
 if [[ "$IMAGEFLOW_BUILD_OVERRIDE" == *'quiet2'* ]]; then
 	export BUILD_QUIETER=True
 	export SILENCE_CARGO=True
-fi 
+fi
 if [[ "$IMAGEFLOW_BUILD_OVERRIDE" == *'quiet3'* ]]; then
 	export BUILD_QUIETER=True
 	export SILENCE_CARGO=True
 	export SILENCE_VALGRIND=True
-fi 
+fi
 if [[ "$IMAGEFLOW_BUILD_OVERRIDE" == *'quiet0'* ]]; then
 	export BUILD_QUIETER=False
 	export SILENCE_CARGO=False
 	export SILENCE_VALGRIND=False
-fi 
+fi
 if [[ "$IMAGEFLOW_BUILD_OVERRIDE" == *'target64linux'* ]]; then
 	export CARGO_TARGET="x86_64-unknown-linux-gnu"
-fi 
+fi
 
 ############# SILENCE STUFF #######################
 export SILENCE_CARGO="${SILENCE_CARGO:-False}"
@@ -225,13 +225,13 @@ fi
 
 
 ######################################################
-#### Parameters used by build.sh 
+#### Parameters used by build.sh
 
 #echo "$BUILD_QUIETER $SILENCE_CARGO $SILENCE_VALGRIND"
 
 echo_maybe(){
 	if [[ "$BUILD_QUIETER" != "True" ]]; then
-			echo "$1" 
+			echo "$1"
 	fi
 }
 echo_maybe "============================= [build.sh] ======================================"
@@ -241,9 +241,9 @@ export TARGET_CPU="${TARGET_CPU:-native}"
 export TUNE_CPU="${TUNE_CPU:-}"
 export CARGO_TARGET="${CARGO_TARGET:-}"
 
-## all incremental 
-# check debug, test debug  BUILD_DEBUG + 
-# check debug, valgrind debug tests w/coverage 
+## all incremental
+# check debug, test debug  BUILD_DEBUG +
+# check debug, valgrind debug tests w/coverage
 # test release, build release, doc release
 # build release
 # build debug
@@ -251,13 +251,13 @@ export CARGO_TARGET="${CARGO_TARGET:-}"
 # clean release build (not incremental)
 
 # clean target/release
-# 
+#
 
 # Compile and run C tests
 export TEST_C="${TEST_C:-True}"
 # Run debug tests (both C and Rust) under Valgrind. Forces C tests to run under debug
 export VALGRIND="${VALGRIND:-False}"
-# Enables generated coverage information for C/Rust. 
+# Enables generated coverage information for C/Rust.
 export COVERAGE="${COVERAGE:-False}"
 export LCOV="${LCOV:-False}"
 # Rebuild C part of libimageflow (release mode only)
@@ -289,11 +289,11 @@ export IMAGEFLOW_SERVER=True
 # Chooses values for ARTIFACT_UPLOAD_PATH and DOCS_UPLOAD_DIR if they are empty
 export UPLOAD_BY_DEFAULT="${UPLOAD_BY_DEFAULT:-False}"
 
-if [[ "$CLEAN_RUST_TARGETS" == "False" ]]; then 
+if [[ "$CLEAN_RUST_TARGETS" == "False" ]]; then
 	export CARGO_INCREMENTAL="${CARGO_INCREMENTAL:-1}"
 else
 	export CARGO_INCREMENTAL="${CARGO_INCREMENTAL:-0}"
-fi 
+fi
 
 
 ############ GIT VALUES ##################
@@ -316,11 +316,11 @@ export GIT_DESCRIBE_AAL
 GIT_DESCRIBE_AAL="${GIT_DESCRIBE_AAL:-$(git describe --always --all --long)}"
 
 # But let others override GIT_OPTIONAL_BRANCH, as HEAD might not have a symbolic ref, and it could crash
-# I.e, provide GIT_OPTIONAL_BRANCH to this script in Travis - but NOT For 
+# I.e, provide GIT_OPTIONAL_BRANCH to this script in Travis - but NOT For
 export GIT_OPTIONAL_BRANCH
-if git symbolic-ref --short HEAD 2>&9 1>&9 ; then 
+if git symbolic-ref --short HEAD 2>&9 1>&9 ; then
 	GIT_OPTIONAL_BRANCH="${GIT_OPTIONAL_BRANCH:-$(git symbolic-ref --short HEAD)}"
-fi 
+fi
 
 ############ NAMING OF ARTIFACTS (local-only, CI should determint the rest) ##################
 
@@ -376,22 +376,22 @@ BUILD_VARS=(
 	"SILENCE_CARGO=${SILENCE_CARGO}"
 	"SILENCE_VALGRIND=${SILENCE_VALGRIND}"
 	"IMAGEFLOW_BUILD_OVERRIDE=${IMAGEFLOW_BUILD_OVERRIDE}"
-	"VALGRIND=${VALGRIND}" 
+	"VALGRIND=${VALGRIND}"
 	"TEST_C=${TEST_C}"
 	"REBUILD_C=${REBUILD_C}"
 	"CLEAN_RUST_TARGETS=${CLEAN_RUST_TARGETS}"
-	"COVERAGE=${COVERAGE}" 
-	"COVERALLS=${COVERALLS}" 
-	"CODECOV=${CODECOV}" 
+	"COVERAGE=${COVERAGE}"
+	"COVERALLS=${COVERALLS}"
+	"CODECOV=${CODECOV}"
 	"COVERALLS_TOKEN=${COVERALLS_TOKEN}"
-	"GIT_COMMIT=${GIT_COMMIT}" 
-	"ARTIFACT_UPLOAD_PATH=${ARTIFACT_UPLOAD_PATH}"  
-	"ARTIFACT_UPLOAD_PATH_2=${ARTIFACT_UPLOAD_PATH_2}" 
-	"ARTIFACT_UPLOAD_PATH_3=${ARTIFACT_UPLOAD_PATH_3}" 
-	"DOCS_UPLOAD_DIR=${DOCS_UPLOAD_DIR}" 
-	"DOCS_UPLOAD_DIR_2=${DOCS_UPLOAD_DIR_2}" 
-	"RUNTIME_REQUIREMENTS_FILE=${RUNTIME_REQUIREMENTS_FILE}" 
-	"RUST_BACKTRACE=${RUST_BACKTRACE}" 
+	"GIT_COMMIT=${GIT_COMMIT}"
+	"ARTIFACT_UPLOAD_PATH=${ARTIFACT_UPLOAD_PATH}"
+	"ARTIFACT_UPLOAD_PATH_2=${ARTIFACT_UPLOAD_PATH_2}"
+	"ARTIFACT_UPLOAD_PATH_3=${ARTIFACT_UPLOAD_PATH_3}"
+	"DOCS_UPLOAD_DIR=${DOCS_UPLOAD_DIR}"
+	"DOCS_UPLOAD_DIR_2=${DOCS_UPLOAD_DIR_2}"
+	"RUNTIME_REQUIREMENTS_FILE=${RUNTIME_REQUIREMENTS_FILE}"
+	"RUST_BACKTRACE=${RUST_BACKTRACE}"
 )
 
 
@@ -402,23 +402,23 @@ sep_bar(){
 
 
 
-if [[ -n "$TARGET_CPU" ]]; then 
+if [[ -n "$TARGET_CPU" ]]; then
 	export RUST_FLAGS="$RUST_FLAGS -C target-cpu=$TARGET_CPU"
 
 	export FIXUP_CPU="$TARGET_CPU"
-	if [[ "$CC" == *"gcc"* ]]; then 
-		if [[ "$($CC --version)" == *"4.8."* ]]; then 
+	if [[ "$CC" == *"gcc"* ]]; then
+		if [[ "$($CC --version)" == *"4.8."* ]]; then
 			if [[ "$FIXUP_CPU" == "sandybridge" ]]; then
 				FIXUP_CPU="corei7-avx"
 			fi
 			if [[ "$FIXUP_CPU" == "haswell" ]]; then
 				FIXUP_CPU="core-avx2"
 			fi
-		fi 
-	fi 
+		fi
+	fi
 	export CFLAGS="${CFLAGS} -march=$FIXUP_CPU -O3"
 	export CXXFLAGS="${CXXFLAGS} -march=$FIXUP_CPU -O3"
-fi 
+fi
 
 if [[ -n "$TUNE_CPU" ]]; then
 	export CFLAGS="${CFLAGS} -mtune=$TUNE_CPU"
@@ -467,13 +467,13 @@ if [[ "$CLEAN_DEBUG" == 'True' ]]; then
 	rm -rf ./target/debug
 else
 	export CARGO_INCREMENTAL=1
-fi 
+fi
 
 if [[ "$CHECK_DEBUG" == 'True' ]]; then
-	echo_maybe Running debug cargo check 
+	echo_maybe Running debug cargo check
 	date_stamp
 	cargo check --all "${CARGO_ARGS[@]}" 1>&7
-fi 
+fi
 if [[ "$TEST_DEBUG" == 'True' ]]; then
 	echo_maybe Running debug cargo test
 	date_stamp
@@ -494,19 +494,19 @@ if [[ "$BUILD_DEBUG" == 'True' ]]; then
 	date_stamp
 	cargo build --all "${CARGO_ARGS[@]}" 1>&7
 	./${TARGET_DIR}debug/imageflow_tool diagnose --show-compilation-info 1>&9
-fi 
+fi
 
 if [[ "$CLEAN_RELEASE" == 'True' ]]; then
 	export CARGO_INCREMENTAL=0
 	rm -rf ./target/release
 else
 	export CARGO_INCREMENTAL=1
-fi 
+fi
 
 if [[ "$TEST_RELEASE" == 'True' ]]; then
 	echo_maybe "==================================================================== [build.sh]"
 	echo "Running release mode tests"
-	echo_maybe 
+	echo_maybe
 	date_stamp
 	cargo test --all --release "${CARGO_ARGS[@]}" 1>&7
 	date_stamp
@@ -518,7 +518,7 @@ fi
 if [[ "$BUILD_RELEASE" == 'True' ]]; then
 	echo_maybe "==================================================================== [build.sh]"
 	echo "Building release mode binaries"
-	echo_maybe 
+	echo_maybe
 	date_stamp
 	cargo build --all --release "${CARGO_ARGS[@]}"  1>&7
 	echo_maybe "Generating docs"
@@ -529,15 +529,15 @@ if [[ "$BUILD_RELEASE" == 'True' ]]; then
 	date_stamp
 	echo_maybe "==================================================================== [build.sh]"
 	echo "Populating artifacts folder"
-	date_stamp 
-	date_stamp 
+	date_stamp
+	date_stamp
 	## Artifacts folder should exist - and be empty - at the beginning
-	if [[ -d "./artifacts/upload" ]]; then 
+	if [[ -d "./artifacts/upload" ]]; then
 		rm -rf ./artifacts/upload
-	fi 
-	if [[ -d "./artifacts/staging" ]]; then 
+	fi
+	if [[ -d "./artifacts/staging" ]]; then
 		rm -rf ./artifacts/staging
-	fi 
+	fi
 	mkdir -p ./artifacts/upload || true
 	mkdir -p ./artifacts/staging/headers || true
 
@@ -558,7 +558,7 @@ if [[ "$BUILD_RELEASE" == 'True' ]]; then
 	rm -rf ./artifacts/staging/release || true
 
 	if [[ -n "$RUNTIME_REQUIREMENTS_FILE" ]]; then
-		cp "${RUNTIME_REQUIREMENTS_FILE}" ./artifacts/staging/runtime_requirements.txt 
+		cp "${RUNTIME_REQUIREMENTS_FILE}" ./artifacts/staging/runtime_requirements.txt
 	fi
 
 	(

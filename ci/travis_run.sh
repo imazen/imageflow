@@ -37,7 +37,7 @@ printf "travis_run.sh:  "
 
 ## CONFIGURATION
 # VALGRIND=True or False
-# 
+#
 ## MOST LIKELY TO GET POLLUTED
 # GIT_* vars
 # BUILD_RELEASE
@@ -103,11 +103,11 @@ export GIT_DESCRIBE_AAL
 GIT_DESCRIBE_AAL="${GIT_DESCRIBE_AAL:-$(git describe --always --all --long)}"
 
 # But let others override GIT_OPTIONAL_BRANCH, as HEAD might not have a symbolic ref, and it could crash
-# I.e, provide GIT_OPTIONAL_BRANCH to this script in Travis - but NOT For 
+# I.e, provide GIT_OPTIONAL_BRANCH to this script in Travis - but NOT For
 export GIT_OPTIONAL_BRANCH
-if git symbolic-ref --short HEAD 1>&9 2>&9 ; then 
+if git symbolic-ref --short HEAD 1>&9 2>&9 ; then
 	GIT_OPTIONAL_BRANCH="${GIT_OPTIONAL_BRANCH:-$(git symbolic-ref --short HEAD)}"
-fi 
+fi
 echo_maybe "Naming things... (using TRAVIS_TAG=${TRAVIS_TAG}, GIT_OPTIONAL_BRANCH=${GIT_OPTIONAL_BRANCH}, PACKAGE_SUFFIX=${PACKAGE_SUFFIX}, GIT_DESCRIBE_ALWAYS_LONG=${GIT_DESCRIBE_ALWAYS_LONG}, CI_SEQUENTIAL_BUILD_NUMBER=${CI_SEQUENTIAL_BUILD_NUMBER}, GIT_COMMIT_SHORT=$GIT_COMMIT_SHORT, GIT_COMMIT=$GIT_COMMIT, FETCH_COMMIT_SUFFIX=${FETCH_COMMIT_SUFFIX})"
 ################## NAMING THINGS ####################
 
@@ -141,7 +141,7 @@ if [ "${TRAVIS_PULL_REQUEST}" == "false" ]; then
 			export ESTIMATED_DOCS_URL="${ESTIMATED_DOCS_URL:-${ESTIMATED_DOCS_URL_2}}"
 			if [[ "$ESTIMATED_DOCS_URL_2" == "$ESTIMATED_DOCS_URL" ]]; then
 				export ESTIMATED_DOCS_URL_2=
-			fi 
+			fi
 		fi
 
 		if [ -n "${FETCH_COMMIT_SUFFIX}" ]; then
@@ -176,14 +176,14 @@ else
 
 	export URL_LIST
 	URL_LIST="$(printf "\n%s\n\n%s\n\n%s\n\n%s\n\n%s\n" "${ESTIMATED_ARTIFACT_URL}" "${ESTIMATED_ARTIFACT_URL_2}" "${ESTIMATED_ARTIFACT_URL_3}" "${ESTIMATED_DOCS_URL}" "${ESTIMATED_DOCS_URL_2}" | tr -s '\n')"
-	
+
 fi
 
-if [[ "$(echo "$URL_LIST" | tr -d '\r\n')" != "" ]]; then 
+if [[ "$(echo "$URL_LIST" | tr -d '\r\n')" != "" ]]; then
 	printf "\n=================================================\n\n" 1>&9
 	printf "Estimated upload URLs:\n%s\n" "${URL_LIST}"
 	printf "\n=================================================\n" 1>&9
-fi 
+fi
 
 
 
@@ -192,7 +192,7 @@ export COVERAGE="${COVERAGE:-False}"
 export VALGRIND="${VALGRIND:-False}"
 
 ## Force rebuild of the final binaries (not even the shared libraries of imageflow) when TRAVIS_TAG=true
-if [[ -n "$TRAVIS_TAG" ]]; then 
+if [[ -n "$TRAVIS_TAG" ]]; then
 	export CLEAN_RUST_TARGETS="${CLEAN_RUST_TARGETS:-True}"
 	export CLEAN_RELEASE=True
 	export CLEAN_DEBUG=True
@@ -222,11 +222,11 @@ if [[ "$VALGRIND" == "True" ]]; then
 else
 	export BUILD_RELEASE="${BUILD_RELEASE:-True}"
 	export TEST_RELEASE="${TEST_RELEASE:-True}"
-fi 
+fi
 
 # Compile and run C tests
 export TEST_C="${TEST_C:-True}"
-# Enables generated coverage information for the C portion of the code. 
+# Enables generated coverage information for the C portion of the code.
 # Also forces C tests to build in debug mode
 export COVERAGE="${COVERAGE:-False}"
 # travis_run_docker.sh uploads Coverage information when true
@@ -267,7 +267,7 @@ DOCKER_ENV_VARS=(
 	"-e"
 	 "BUILD_RELEASE=${BUILD_RELEASE}"
 	"-e"
-	 "VALGRIND=${VALGRIND}" 
+	 "VALGRIND=${VALGRIND}"
 	"-e"
 	 "TEST_C=${TEST_C}"
 	"-e"
@@ -275,77 +275,77 @@ DOCKER_ENV_VARS=(
 	"-e"
 	 "TUNE_CPU=${TUNE_CPU}"
 	"-e"
-	 "COVERAGE=${COVERAGE}" 
+	 "COVERAGE=${COVERAGE}"
 	"-e"
-	"CARGO_TARGET=${CARGO_TARGET}" 
+	"CARGO_TARGET=${CARGO_TARGET}"
 	"-e"
-	 "COVERALLS=${COVERALLS}" 
+	 "COVERALLS=${COVERALLS}"
 	 "-e"
-	 "CODECOV=${CODECOV}" 
+	 "CODECOV=${CODECOV}"
 	"-e"
 	 "COVERALLS_TOKEN=${COVERALLS_TOKEN}"
 	"-e"
-	 "DOCS_UPLOAD_DIR=${DOCS_UPLOAD_DIR}" 
+	 "DOCS_UPLOAD_DIR=${DOCS_UPLOAD_DIR}"
 	"-e"
-	 "DOCS_UPLOAD_DIR_2=${DOCS_UPLOAD_DIR}" 
+	 "DOCS_UPLOAD_DIR_2=${DOCS_UPLOAD_DIR}"
 	"-e"
-	 "ARTIFACT_UPLOAD_PATH=${ARTIFACT_UPLOAD_PATH}"  
+	 "ARTIFACT_UPLOAD_PATH=${ARTIFACT_UPLOAD_PATH}"
 	"-e"
-	 "ARTIFACT_UPLOAD_PATH_2=${ARTIFACT_UPLOAD_PATH_2}" 
+	 "ARTIFACT_UPLOAD_PATH_2=${ARTIFACT_UPLOAD_PATH_2}"
 	"-e"
-	 "ARTIFACT_UPLOAD_PATH_3=${ARTIFACT_UPLOAD_PATH_3}" 
+	 "ARTIFACT_UPLOAD_PATH_3=${ARTIFACT_UPLOAD_PATH_3}"
 		"-e"
-	 "GIT_COMMIT=${GIT_COMMIT}" 
+	 "GIT_COMMIT=${GIT_COMMIT}"
 		"-e"
-	 "PACKAGE_SUFFIX=${PACKAGE_SUFFIX}" 
+	 "PACKAGE_SUFFIX=${PACKAGE_SUFFIX}"
 	"-e"
-	"NUGET_RUNTIME=${NUGET_RUNTIME}" 
+	"NUGET_RUNTIME=${NUGET_RUNTIME}"
 	"-e"
-	 "GIT_COMMIT_SHORT=${GIT_COMMIT_SHORT}" 
+	 "GIT_COMMIT_SHORT=${GIT_COMMIT_SHORT}"
 	"-e"
-	 "GIT_OPTIONAL_TAG=${GIT_OPTIONAL_TAG}" 
+	 "GIT_OPTIONAL_TAG=${GIT_OPTIONAL_TAG}"
 	"-e"
-	 "GIT_DESCRIBE_ALWAYS=${GIT_DESCRIBE_ALWAYS}" 
+	 "GIT_DESCRIBE_ALWAYS=${GIT_DESCRIBE_ALWAYS}"
 	"-e"
-	 "GIT_DESCRIBE_ALWAYS_LONG=${GIT_DESCRIBE_ALWAYS_LONG}" 
+	 "GIT_DESCRIBE_ALWAYS_LONG=${GIT_DESCRIBE_ALWAYS_LONG}"
 	 "-e"
 	 "RUNTIME_REQUIREMENTS_FILE=${RUNTIME_REQUIREMENTS_FILE}"
 	"-e"
-	 "GIT_DESCRIBE_AAL=${GIT_DESCRIBE_AAL}" 
+	 "GIT_DESCRIBE_AAL=${GIT_DESCRIBE_AAL}"
 	"-e"
-	 "GIT_OPTIONAL_BRANCH=${GIT_OPTIONAL_BRANCH}" 
+	 "GIT_OPTIONAL_BRANCH=${GIT_OPTIONAL_BRANCH}"
 	"-e"
-	 "ESTIMATED_ARTIFACT_URL=${ESTIMATED_ARTIFACT_URL}" 
+	 "ESTIMATED_ARTIFACT_URL=${ESTIMATED_ARTIFACT_URL}"
 	"-e"
-	 "ESTIMATED_DOCS_URL=${ESTIMATED_DOCS_URL}" 
+	 "ESTIMATED_DOCS_URL=${ESTIMATED_DOCS_URL}"
 	"-e"
-	 "CI_SEQUENTIAL_BUILD_NUMBER=${CI_SEQUENTIAL_BUILD_NUMBER}" 
+	 "CI_SEQUENTIAL_BUILD_NUMBER=${CI_SEQUENTIAL_BUILD_NUMBER}"
 	"-e"
-	 "CI_BUILD_URL=${CI_BUILD_URL}" 
+	 "CI_BUILD_URL=${CI_BUILD_URL}"
 	"-e"
-	 "CI_JOB_URL=${CI_JOB_URL}" 
+	 "CI_JOB_URL=${CI_JOB_URL}"
 	"-e"
-	 "CI_JOB_TITLE=${CI_JOB_TITLE}" 
+	 "CI_JOB_TITLE=${CI_JOB_TITLE}"
 	"-e"
-	 "CI_STRING=${CI_STRING}" 
+	 "CI_STRING=${CI_STRING}"
 	"-e"
-	 "CI_PULL_REQUEST_INFO=${CI_PULL_REQUEST_INFO}" 
+	 "CI_PULL_REQUEST_INFO=${CI_PULL_REQUEST_INFO}"
 	"-e"
-	 "CI_TAG=${CI_TAG}" 
+	 "CI_TAG=${CI_TAG}"
 	 "-e"
-	 "CI_REPO=${CI_REPO}" 
+	 "CI_REPO=${CI_REPO}"
 	"-e"
-	 "CI_RELATED_BRANCH=${CI_RELATED_BRANCH}" 
+	 "CI_RELATED_BRANCH=${CI_RELATED_BRANCH}"
 	 "-e"
 	 "BUILD_QUIETER=${BUILD_QUIETER}"
 )
 
 
-echo_maybe 
+echo_maybe
 echo_maybe "========================================================="
 echo_maybe "Relevant dockered ENV VARS for build.sh: ${DOCKER_ENV_VARS[*]}"
 echo_maybe "========================================================="
-echo_maybe 
+echo_maybe
 ##############################
 
 
@@ -357,7 +357,7 @@ else
 	echo
 
 	DOCKER_COMMAND=(
-			/bin/bash -c "./ci/travis_run_docker.sh"  
+			/bin/bash -c "./ci/travis_run_docker.sh"
 			)
 	export DOCKER_CACHE_VARS=(
 	)
@@ -379,12 +379,12 @@ else
 			DOCKER_INVOCATION=(docker run "--interactive" "$DOCKER_TTY_FLAG" "--rm")
 		fi
 
-		
+
 	fi
 	#echo "SIM_DOCKER_CACHE_VARS ${SIM_DOCKER_CACHE_VARS[*]}"
 
 	set -x
-	"${DOCKER_INVOCATION[@]}" -v "${TRAVIS_BUILD_DIR}:/home/conan/imageflow" "${DOCKER_CACHE_VARS[@]}" "${DOCKER_ENV_VARS[@]}" "${DOCKER_IMAGE}" "${DOCKER_COMMAND[@]}" 
+	"${DOCKER_INVOCATION[@]}" -v "${TRAVIS_BUILD_DIR}:/home/conan/imageflow" "${DOCKER_CACHE_VARS[@]}" "${DOCKER_ENV_VARS[@]}" "${DOCKER_IMAGE}" "${DOCKER_COMMAND[@]}"
 	set +x
 fi
 if [[ "$SIM_CI" != 'True' ]]; then
@@ -394,7 +394,7 @@ if [[ "$SIM_CI" != 'True' ]]; then
 		sudo rm -rf ./c_components/build || sudo rm -rf ./c_components/build || true
 		sudo rm -rf ~/.conan || sudo rm -rf ~/.conan || true
 		sudo rm -rf ~/.cargo || sudo rm -rf ~/.cargo || true
-	fi 
+	fi
 
 	# Don't let the cache become polluted by a build profile we aren't doing
 	if [[ "$BUILD_RELEASE" == "False" ]]; then
