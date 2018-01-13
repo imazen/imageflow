@@ -45,8 +45,6 @@ install:
 script:
 - ci/travis_run.sh
 before_cache:
-  - rm -rf $TRAVIS_BUILD_DIR/target/debug/valgrind_*_temp
-  - rm -rf $TRAVIS_BUILD_DIR/target/doc
   - rm -rf $HOME/.cargo/registry/src
 before_deploy:
   - export GITHUB_FILES="$(ls artifacts/upload/releases/v*/imageflow-v*.tar.gz)"
