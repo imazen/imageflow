@@ -350,7 +350,7 @@ echo_maybe
 
 
 if [[ "$(uname -s)" == 'Darwin' && -z "$SIM_CI" ]]; then
-	./ci/travis_run_osx.sh
+	./build.sh
 else
 	echo_maybe "===================================================================== [travis_run.sh]"
 	echo "Launching docker SIM_CI=${SIM_CI}"

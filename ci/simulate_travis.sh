@@ -132,8 +132,6 @@ rsync -q -av --delete "${SCRIPT_DIR}/.." "$WORKING_DIR" --filter=':- .gitignore'
 		-v
 		"${WORKING_DIR}_cache/${TARGET_DIR}release:/home/conan/imageflow/${TARGET_DIR}release"
 		-v
-		"${WORKING_DIR}_cache/conan_data:/home/conan/.conan/data"
-		-v
 		"${WORKING_DIR}_cache/ccache:/home/conan/.ccache"
 	)
 	if [[ "$COPY_HOST_CARGO_DIR" == "True" ]]; then
