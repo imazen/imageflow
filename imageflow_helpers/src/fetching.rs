@@ -63,7 +63,7 @@ impl FetchConfig {
     pub fn create_hyper_client(&self) -> Client{
         let mut ssl = SslConnectorBuilder::new(SslMethod::tls()).unwrap();
         if let Some(ref path) = self.custom_ca_trust_file{
-            ssl.builder_mut().set_ca_file(path).unwrap();
+            ssl.set_ca_file(path).unwrap();
         }
         let ssl = OpensslClient::from(ssl.build());
         let connector = HttpsConnector::new(ssl);

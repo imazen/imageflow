@@ -10,12 +10,10 @@ use errors::Result;
 use ::lockless::primitives::append_list::AppendList;
 use lockless::primitives::append_list::AppendListIterator;
 use std::ascii::AsciiExt;
-use chrono::Utc;
 use std::thread;
 use std::thread::JoinHandle;
-use ::parking_lot::{Mutex, Condvar};
+use ::parking_lot::Mutex;
 use std::panic::AssertUnwindSafe;
-use std::any::Any;
 use std::sync::atomic::AtomicBool;
 use super::licensing::support::IssueSink;
 use smallvec::SmallVec;
@@ -24,7 +22,6 @@ use smallvec::SmallVec;
 // Get utcnow
 use std::sync::Arc;
 use std::sync::atomic::{AtomicU64, Ordering, ATOMIC_BOOL_INIT};
-use super::fetching::*;
 use super::licensing::*;
 use super::util::*;
 
@@ -342,9 +339,7 @@ impl<'clock> Fetcher<'clock>{
     }
 
 
-    fn main(&mut self, token: Arc<SharedToken>){
-        let client = ::reqwest::Client::new().unwrap();
-
+    fn main(&mut self, token: Arc<SharedToken>) {
         while !token.canceled() {
             let mut wake_at = u64::max_value();
             for endpoint in self.endpoints.iter_mut() {
