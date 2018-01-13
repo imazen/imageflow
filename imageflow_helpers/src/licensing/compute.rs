@@ -1,3 +1,5 @@
+#![allow(bad_style)]
+#![allow(unused)]
 use super::*;
 
 use smallvec::SmallVec;

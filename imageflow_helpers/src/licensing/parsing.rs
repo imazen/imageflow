@@ -1,3 +1,5 @@
+#![allow(bad_style)]
+#![allow(unused)]
 use preludes::from_std::*;
 use num::{One, Zero};
 use num::bigint::{BigInt, Sign};

@@ -1,3 +1,4 @@
+#![allow(bad_style)]
 mod strings;
 mod support;
 
