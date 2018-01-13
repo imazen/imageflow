@@ -9,12 +9,12 @@ sudo chmod -R a+rw .
 
 if [[ -d "${HOME}/host_cargo/git" && -d "${HOME}/host_cargo/registry" ]]; then
 	echo "copying ~/host_cargo"
-	cp -Rp "${HOME}/host_cargo/git" "${HOME}/.cargo/git" 
-	cp -Rp "${HOME}/host_cargo/registry" "${HOME}/.cargo/registry" 
+	cp -Rp "${HOME}/host_cargo/git" "${HOME}/.cargo/git"
+	cp -Rp "${HOME}/host_cargo/registry" "${HOME}/.cargo/registry"
 fi
 
 ./build.sh
-
+test -d target/doc && chmod a+rwX target/doc # travis cache process can't delete it otherwise
 
 if [[ "$COVERALLS" == 'true' ]]; then
   pwd
