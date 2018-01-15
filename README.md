@@ -151,13 +151,14 @@ brew install nasm libpng pkg-config wget
 ./ci/nixtools/install_dssim.sh
 ./build.sh
 ```
+## Windows
 
 ### Pre-requisites
 
-1. Visual Studio 2015 (for the C++ build tools)
+1. Visual Studio 2015 or 2017 (Only the C++ Build Tools component is required)
 2. Install [Git 64-bit](https://git-scm.com/download/win).
 3. Install [NASM 64-bit](http://www.nasm.us/pub/nasm/releasebuilds/2.12.02/win64/nasm-2.12.02-installer-x64.exe) Installer must be `Run as Administrator` - it will not prompt.
-4. Install [Rust 64-bit](https://static.rust-lang.org/rustup/dist/x86_64-pc-windows-msvc/rustup-init.exe). Install toolchain `nightly-2017-06-08` and set it as default. For the moment, 32-bit builds also require [a 32-bit Rust](https://static.rust-lang.org/rustup/dist/i686-pc-windows-msvc/rustup-init.exe).
+4. Install [Rust 64-bit](https://static.rust-lang.org/rustup/dist/x86_64-pc-windows-msvc/rustup-init.exe). Install toolchain `nightly-2017-11-24` and set it as default. For the moment, 32-bit builds also require [a 32-bit Rust](https://static.rust-lang.org/rustup/dist/i686-pc-windows-msvc/rustup-init.exe).
 
 You need all of these to be in %PATH%. Edit `ci/wintools/SETUP_PATH.bat` as appropriate to ensure that rust/cargo, nasm, git, and Git/mingw64/bin are all available.
 
