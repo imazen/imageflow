@@ -752,7 +752,7 @@ pub extern "C" fn imageflow_context_get_output_buffer_by_id(context: *mut Contex
         let s = c.get_output_buffer_slice(io_id).map_err(|e| e.at(here!()))?;
 
         if s.len().leading_zeros() == 0 {
-            Err(nerror!(ErrorKind::Category(ErrorCategory::InternalError), "Error retriving output buffer; length overflow prevented (most significant bit set)."))
+            Err(nerror!(ErrorKind::Category(ErrorCategory::InternalError), "Error retrieving output buffer; length overflow prevented (most significant bit set)."))
         } else {
             unsafe {
                 (*result_buffer) = s.as_ptr();
@@ -831,7 +831,7 @@ pub fn exercise_json_message() {
         let expected_response = c::JsonResponse::teapot();
         let expected_json_out = ::std::str::from_utf8(
             expected_response.response_json.as_ref()).unwrap();
-        let expected_reponse_status = expected_response.status_code;
+        let expected_response_status = expected_response.status_code;
 
         let response = imageflow_context_send_json(c,
 
@@ -856,7 +856,7 @@ pub fn exercise_json_message() {
             ::std::str::from_utf8(std::slice::from_raw_parts(json_out_ptr, json_out_size)).unwrap();
         assert_eq!(json_out_str, expected_json_out);
 
-        assert_eq!(json_status_code, expected_reponse_status);
+        assert_eq!(json_status_code, expected_response_status);
 
         imageflow_context_destroy(c);
     }

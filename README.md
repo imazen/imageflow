@@ -29,7 +29,7 @@ You can use command strings that are compatible with [ImageResizer 4 querystring
 
 Or submit a JSON job file. JSON jobs can have multiple inputs and outputs, and can represent any kind of operation graph.
 
-The following generates mutiple sizes of an image from an example job file:
+The following generates multiple sizes of an image from an example job file:
 
 ```
 imageflow_tool v0.1/build --json examples/export_4_sizes/export_4_sizes.json
@@ -43,7 +43,7 @@ imageflow_tool v0.1/build --json examples/export_4_sizes/export_4_sizes.json
 
 By default, imageflow_tool prints a JSON response to stdout. You write this to disk with `--response`.
 
-`--debug-package` will create a .zip file to reproduce problematic behavior with both `v0.1/build` and `v0.1/ir4`. Please sumbit bug reports; we try to make it easy.
+`--debug-package` will create a .zip file to reproduce problematic behavior with both `v0.1/build` and `v0.1/ir4`. Please submit bug reports; we try to make it easy.
 
 ## Using imageflow_server for dynamic imaging
 
@@ -64,7 +64,7 @@ Now you can edit images from HTML... and use srcset without headache.
 
 ### Beyond the demo
 
-You'll want to mount varous image source locations to prefixes. The `--mount` command parses a colon (`:`) delimited list of arguments. The first is the prefix you'll use in the URL (like `http://localhost:39876/prefix/`. The second is the engine name. Remaining arguments are sent to the engine.
+You'll want to mount various image source locations to prefixes. The `--mount` command parses a colon (`:`) delimited list of arguments. The first is the prefix you'll use in the URL (like `http://localhost:39876/prefix/`. The second is the engine name. Remaining arguments are sent to the engine.
 
 #### Examples
 

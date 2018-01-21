@@ -1,5 +1,5 @@
 // Single thread
-// shared datastructure for adding endpoints
+// shared data structure for adding endpoints
 // Endpoints callback
 use ::preludes::from_std::*;
 use ::std;

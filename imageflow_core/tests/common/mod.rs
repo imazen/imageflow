@@ -518,7 +518,7 @@ pub fn compare_bitmaps(_c: &ChecksumCtx,  actual: &mut BitmapBgra, expected: &mu
     }
 }
 
-/// Evalutates the given result against known truth, applying the given constraints
+/// Evaluates the given result against known truth, applying the given constraints
 pub fn compare_with<'a, 'b>(c: &ChecksumCtx, expected_checksum: &str, expected_bitmap : &'b mut BitmapBgra, result: ResultKind<'a>, require: Constraints, panic: bool) -> bool{
     if !check_size(&result, require.clone(), panic) {
         return false;
@@ -562,7 +562,7 @@ pub fn check_size<'a>( result: &ResultKind<'a>, require: Constraints, panic: boo
 
 
 
-/// Evalutates the given result against known truth, applying the given constraints
+/// Evaluates the given result against known truth, applying the given constraints
 pub fn evaluate_result<'a>(c: &ChecksumCtx, name: &str, mut result: ResultKind<'a>, require: Constraints, panic: bool) -> bool{
     let (exact, trusted) = result.exact_match_verbose(c, name);
 

@@ -7,7 +7,7 @@
 //// This test case helped expose a flaw in graph creation, where we swapped max_edges and max_nodes and caused memory
 //// overlap
 //// It also showed how that post_optimize_flatten calls which create pre_optimize_flattenable nodes
-//// Can cause execution to fail in fewer than 6 passes. We may want to re-evaluate our graph exeuction approach
+//// Can cause execution to fail in fewer than 6 passes. We may want to re-evaluate our graph execution approach
 //flow_c * c = flow_context_create();
 //struct flow_graph * g = flow_graph_create(c, 10, 10, 200, 2.0);
 //ERR(c);

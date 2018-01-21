@@ -240,7 +240,7 @@ module Imageflow
             log << "\nComparing against #{reference}\n"
             png_images.each do |output|
               log << `dssim #{reference} #{output}`
-              log << "Viusalize with > compare #{reference} #{output} -fuzz 1%  x:\n"
+              log << "Visualize with > compare #{reference} #{output} -fuzz 1%  x:\n"
             end
           end
         end

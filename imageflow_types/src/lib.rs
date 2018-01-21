@@ -340,7 +340,7 @@ pub enum CommandStringKind{
     ImageResizer4
 }
 
-/// Constraint types. TODO: expand to include nearly everthing RIAPI does.
+/// Constraint types. TODO: expand to include nearly everything RIAPI does.
 #[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
 pub enum Constraint {
     #[serde(rename="within")]
@@ -671,7 +671,7 @@ pub struct Build001Config {
 }
 
 /// Represents a complete build job, combining IO objects with a framewise operation graph.
-/// TODO: cleaup builder_config.
+/// TODO: cleanup builder_config.
 #[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
 pub struct Build001 {
     pub builder_config: Option<Build001Config>,

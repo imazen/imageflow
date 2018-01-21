@@ -59,7 +59,7 @@ typedef enum flow_codec_type {
 
 typedef enum flow_scanlines_filter_type {
     flow_scanlines_filter_Sharpen, // 3x3, percentage-based
-    flow_scanlines_filter_Blur, // 3x box blur to simulate guassian
+    flow_scanlines_filter_Blur, // 3x box blur to simulate Gaussian
     flow_scanlines_filter_Convolve, // Apply convolution kernel
     flow_scanlines_filter_ColorMatrix, // Apply color matrix
     flow_scanlines_filter_ToLinear,

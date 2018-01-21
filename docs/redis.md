@@ -4,9 +4,9 @@
 
 * volatile-ttl allows us to confidently store metadata for remote objects, but also utilize leftover space for byte or bitmap data caching
 * Persistence required, but interval is less crucial. 
-* maxmemory-policy to noeviction will block writes instead of exhasuting resources.
+* maxmemory-policy to noeviction will block writes instead of exhausting resources.
 
-Partitioning across Redis servers needs to happen by an inexpensively-computed key. For RIAPI requests this could be the 'primay image' base URL. For JSON requests this could be the first listed resource. Duplicates would happen for multi-image sources.
+Partitioning across Redis servers needs to happen by an inexpensively-computed key. For RIAPI requests this could be the 'primary image' base URL. For JSON requests this could be the first listed resource. Duplicates would happen for multi-image sources.
 
 ## Schema:
 
@@ -107,7 +107,7 @@ Metadata always goes in when encountered. Blobs have admission criteria
 
 * Second request?
 * Sliding scale based on recent evictions?
-* Request/compuation cost vs. storage container retreival cost
+* Request/computation cost vs. storage container retrieval cost
 
 
 

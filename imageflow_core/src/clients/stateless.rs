@@ -1,5 +1,5 @@
 //!
-//! This module provides a thin wrapper over job building and image info retreival.
+//! This module provides a thin wrapper over job building and image info retrieval.
 //! It catches panics and reports them as part of a very simple error enum.
 //!
 //! It would be nice for this to go away or be merged with Context
@@ -100,7 +100,7 @@ impl LibClient {
             Ok(Ok(v)) => Ok(v)
         };
 
-        context.destroy()?; // Termination errors trump exectuion errors/panics
+        context.destroy()?; // Termination errors trump execution errors/panics
         result
 
     }
