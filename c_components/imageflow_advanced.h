@@ -272,7 +272,7 @@ typedef double (*flow_detailed_interpolation_method)(const struct flow_interpola
 struct flow_interpolation_details {
     // 1 is the default; near-zero overlapping between windows. 2 overlaps 50% on each side.
     double window;
-    // Coefficients for bucubic weighting
+    // Coefficients for bicubic weighting
     double p1, p2, p3, q1, q2, q3, q4;
     // Blurring factor when > 1, sharpening factor when < 1. Applied to weights.
     double blur;
@@ -322,7 +322,7 @@ struct flow_interpolation_pixel_contributions {
     float * Weights; /* Normalized weights of neighboring pixels */
     int Left; /* Bounds of source pixels window */
     int Right;
-}; /* Contirbution information for a single pixel */
+}; /* Contribution information for a single pixel */
 
 struct flow_interpolation_line_contributions {
     struct flow_interpolation_pixel_contributions * ContribRow; /* Row (or column) of contribution weights */

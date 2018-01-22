@@ -7,7 +7,7 @@ use std::thread;
 
 use std::sync::{Once, ONCE_INIT};
 
-static CONIDITIONAL_SET: Once = ONCE_INIT;
+static CONDITIONAL_SET: Once = ONCE_INIT;
 static SET_HOOK: Once = ONCE_INIT;
 
 
@@ -21,7 +21,7 @@ pub fn backtraces_wanted() -> bool{
     }
 }
 pub fn upgrade_panic_hook_once_if_backtraces_wanted(){
-    CONIDITIONAL_SET.call_once(|| {
+    CONDITIONAL_SET.call_once(|| {
         if backtraces_wanted(){
             set_panic_hook_once();
         }

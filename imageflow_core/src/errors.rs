@@ -1100,7 +1100,7 @@ impl CErrorProxy{
     ///  `imageflow_context_clear_error`. You'll be ignored, as will future
     ///   `imageflow_add_to_callstack` invocations.
     ///
-    /// * If you provide an error code of zero one will be substited for you.
+    /// * If you provide an error code of zero one will be substituted for you.
     ///
     /// Returns None if the context already has an error
     fn raise_error(&mut self, e: FlowError)

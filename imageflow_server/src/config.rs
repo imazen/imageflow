@@ -27,7 +27,7 @@
 // pub enum BlobSource{
 //    Directory(String),
 //    HttpServer(String),
-//    //TODO: Azure and S3 blob backens
+//    //TODO: Azure and S3 blob backend
 // }
 //
 // pub enum InternalCachingStrategy{

@@ -629,7 +629,7 @@ fn test_steps() {
     let mut temp = Vec::new();
     let mut source_sizes = Vec::new();
 
-    //Holds resuable maps/vectors for collecting info
+    //Holds reusable maps/vectors for collecting info
     let mut current = invalid_group_data();
 
     let mut failed_kits = Vec::new();

@@ -125,7 +125,7 @@ impl Decoder for GifDecoder {
             // Grab a reference
             let frame = self.next_frame.as_ref().ok_or_else(|| nerror!(ErrorKind::InvalidOperation, "read_frame was called without a frame available"))?;
 
-            //Prepare our resuable buffer
+            //Prepare our reusable buffer
             let buf_size = self.reader.width() as usize * self.reader.height() as usize;
 
             let buf_mut = self.buffer.get_or_insert_with(|| vec![0; buf_size]);

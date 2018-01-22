@@ -17,7 +17,7 @@ use internal_prelude::works_everywhere::*;
 
 // These are reused in the external ABI, but only as opaque pointers
 ///
-/// `ImaeflowJsonResponse` contains a buffer and buffer length (in bytes), as well as a status code
+/// `ImageflowJsonResponse` contains a buffer and buffer length (in bytes), as well as a status code
 /// The status code can be used to avoid actual parsing of the response in some cases.
 /// For example, you may not care about parsing an error message if you're hacking around -
 /// Or, you may not care about success details if you were sending a command that doesn't imply
@@ -386,7 +386,7 @@ pub struct BitmapFloat {
     pixels_borrowed: bool,
     /// The number of floats in the buffer
     float_count: uint32_t,
-    /// The number of floats betwen (0,0) and (0,1)
+    /// The number of floats between (0,0) and (0,1)
     float_stride: uint32_t,
 
     /// If true, alpha has been premultiplied
