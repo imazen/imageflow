@@ -366,7 +366,7 @@ flow_interpolation_line_contributions_create(flow_c * context, const uint32_t ou
                                              const struct flow_interpolation_details * details)
 {
     const double sharpen_ratio = flow_interpolation_details_percent_negative_weight(details);
-    const double desired_sharpen_ratio = details->sharpen_percent_goal / 100.0;
+    const double desired_sharpen_ratio = fmin(0.999999999f, fmax(sharpen_ratio, details->sharpen_percent_goal / 100.0));
 
     const double scale_factor = (double)output_line_size / (double)input_line_size;
     const double downscale_factor = fmin(1.0, scale_factor);
@@ -392,8 +392,11 @@ flow_interpolation_line_contributions_create(flow_c * context, const uint32_t ou
         const uint32_t left_src_pixel = (uint32_t)int_max(0, left_edge);
         const uint32_t right_src_pixel = (uint32_t)int_min(right_edge, (int)input_line_size - 1);
 
+        // Net weight
         double total_weight = 0.0;
+        // Sum of negative and positive weights
         double total_negative_weight = 0.0;
+        double total_positive_weight = 0.0;
 
         const uint32_t source_pixel_count = right_src_pixel - left_src_pixel + 1;
 
@@ -419,18 +422,36 @@ flow_interpolation_line_contributions_create(flow_c * context, const uint32_t ou
             }
             weights[tx] = (float)add;
             total_weight += add;
-            total_negative_weight -= fmin(0, add);
+            total_negative_weight += fmin(0, add);
+            total_positive_weight += fmax(0, add);
         }
 
         float neg_factor, pos_factor;
-        if (total_weight <= 0 || desired_sharpen_ratio > sharpen_ratio) {
-            float total_positive_weight = total_weight - total_negative_weight;
-            float target_negative_weight = desired_sharpen_ratio * total_positive_weight;
-            pos_factor = 1;
-            neg_factor = target_negative_weight / total_negative_weight;
-        } else {
-            neg_factor = pos_factor = (float)(1.0f / total_weight);
+        neg_factor = pos_factor = (float)(1.0f / total_weight);
+
+        //printf("cur= %f cur+= %f cur-= %f desired_sharpen_ratio=%f sharpen_ratio-=%f\n", total_weight, total_positive_weight, total_negative_weight, desired_sharpen_ratio, sharpen_ratio);
+
+
+        if (total_weight <= 0.0f || desired_sharpen_ratio > sharpen_ratio) {
+            if (total_negative_weight < 0.0f){
+                if (desired_sharpen_ratio < 1.0f){
+                    double target_positive_weight = 1.0f / (1.0f - desired_sharpen_ratio);
+                    double target_negative_weight = desired_sharpen_ratio * -target_positive_weight;
+
+
+                    pos_factor = (float)(target_positive_weight / total_positive_weight);
+                    neg_factor = (float)(target_negative_weight / total_negative_weight);
+
+                    if (total_negative_weight == 0) neg_factor = 1.0f;
+
+                    //printf("target=%f target-=%f, pos_factor=%f neg_factor=%f\n", total_positive_weight - target_negative_weight,  target_negative_weight, pos_factor, neg_factor);
+                }
+            } else if (total_weight == 0){
+                // In this situation we have a problem to report
+            }
         }
+        //printf("\n");
+
         for (ix = 0; ix < source_pixel_count; ix++) {
             if (weights[ix] < 0) {
                 weights[ix] *= neg_factor;
