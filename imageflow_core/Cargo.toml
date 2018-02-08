@@ -55,7 +55,7 @@ chashmap = "2.2"
 getopts ="0.2.15"
 
 url = "1.4"
-uuid = { version = "0.5", features = ["v4"] }
+uuid = { version = "0.6", features = ["v4"] }
 
 imageflow_types = { path = "../imageflow_types", version = "*" }
 imageflow_helpers = { path = "../imageflow_helpers", version = "*" }
