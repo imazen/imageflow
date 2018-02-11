@@ -8,13 +8,21 @@ sudo chown -R "$(id -u -n)": ~/
 sudo chmod -R a+rw .
 
 if [[ -d "${HOME}/host_cargo/git" && -d "${HOME}/host_cargo/registry" ]]; then
-	echo "copying ~/host_cargo"
+	echo "importing host_cargo/git and host_cargo/registry"
 	cp -Rp "${HOME}/host_cargo/git" "${HOME}/.cargo/git"
 	cp -Rp "${HOME}/host_cargo/registry" "${HOME}/.cargo/registry"
 fi
 
 ./build.sh
 test -d target/doc && chmod a+rwX target/doc # travis cache process can't delete it otherwise
+
+if [[ "SKIP_HOST_CARGO_EXPORT" == 'True' ]]; then
+    if [[ -d "${HOME}/.cargo/git" && -d "${HOME}/.cargo/registry" ]]; then
+        echo "exporting to host_cargo"
+        cp -Rp "${HOME}/.cargo/git" "${HOME}/host_cargo/git"
+        cp -Rp "${HOME}/.cargo/registry" "${HOME}/host_cargo/registry"
+    fi
+fi
 
 if [[ "$COVERALLS" == 'true' ]]; then
   pwd
