@@ -366,6 +366,8 @@ else
 			/bin/bash -c "./ci/travis_run_docker.sh"
 			)
 	export DOCKER_CACHE_VARS=(
+			-v
+			"${HOME}/.cargo:/home/conan/host_cargo"
 	)
 	DOCKER_INVOCATION=(docker run "--rm")
 
@@ -387,10 +389,15 @@ else
 
 
 	fi
+	if [[ "$SIM_CI" == 'True' ]]; then
+	    TRAVIS_WAIT=()
+	else
+	    TRAVIS_WAIT=(travis_wait 40)
+	fi
 	#echo "SIM_DOCKER_CACHE_VARS ${SIM_DOCKER_CACHE_VARS[*]}"
 
 	set -x
-	"${DOCKER_INVOCATION[@]}" -v "${TRAVIS_BUILD_DIR}:/home/conan/imageflow" "${DOCKER_CACHE_VARS[@]}" "${DOCKER_ENV_VARS[@]}" "${DOCKER_IMAGE}" "${DOCKER_COMMAND[@]}"
+	"${TRAVIS_WAIT[@]}" "${DOCKER_INVOCATION[@]}" -v "${TRAVIS_BUILD_DIR}:/home/conan/imageflow" "${DOCKER_CACHE_VARS[@]}" "${DOCKER_ENV_VARS[@]}" "${DOCKER_IMAGE}" "${DOCKER_COMMAND[@]}"
 	set +x
 fi
 if [[ "$SIM_CI" != 'True' ]]; then
