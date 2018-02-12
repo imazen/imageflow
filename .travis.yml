@@ -1,5 +1,6 @@
 sudo: required
 language: generic
+filter_secrets: false
 services:
 - docker
 cache:
