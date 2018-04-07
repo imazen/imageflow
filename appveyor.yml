@@ -3,7 +3,7 @@ build: false
 environment:
     RUST_BACKTRACE: 1
     CARGO_INCREMENTAL: 1
-    RUST_TOOLCHAIN: nightly-2017-11-24
+    RUST_TOOLCHAIN: nightly-2018-03-03
     VSINSTALL:  "Microsoft Visual Studio\\2017\\Community\\VC\\Auxiliary\\Build"
     VS150COMNTOOLS: "C:\\Program Files (x86)\\Microsoft Visual Studio\\2017\\Community\\Common7\\Tools\\"
     TARGET_DIR: "target\\"
