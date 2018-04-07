@@ -9,7 +9,6 @@ use errors::*;
 use errors::Result;
 use ::lockless::primitives::append_list::AppendList;
 use lockless::primitives::append_list::AppendListIterator;
-use std::ascii::AsciiExt;
 use std::thread;
 use std::thread::JoinHandle;
 use ::parking_lot::Mutex;

@@ -192,7 +192,7 @@ impl LicenseManagerSingleton{
                     if (::time::precise_time_ns() - start) / 1000 > timeout_ms {
                         panic!("Failed to join fetcher thread within {}ms", timeout_ms);
                     } else {
-                        ::std::thread::sleep_ms(15);
+                        thread::sleep(::std::time::Duration::from_millis(15));
                         m = arc_mgr;
                     }
                 }
