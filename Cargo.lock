@@ -506,7 +506,7 @@ dependencies = [
  "lcms2-sys 2.4.8 (registry+https://github.com/rust-lang/crates.io-index)",
  "libpng-sys 0.2.3 (registry+https://github.com/rust-lang/crates.io-index)",
  "libz-sys 1.0.18 (registry+https://github.com/rust-lang/crates.io-index)",
- "mozjpeg-sys 0.5.10 (git+https://github.com/kornelski/mozjpeg-sys?branch=win)",
+ "mozjpeg-sys 0.5.10 (git+https://github.com/kornelski/mozjpeg-sys?rev=56047c2450eb696cf5f4df10e120ef00b6eae098)",
 ]
 
 [[package]]
@@ -947,12 +947,12 @@ dependencies = [
 [[package]]
 name = "mozjpeg-sys"
 version = "0.5.10"
-source = "git+https://github.com/kornelski/mozjpeg-sys?branch=win#b783922183b3158e4fc6da2ba0de972ddb12cdbd"
+source = "git+https://github.com/kornelski/mozjpeg-sys?rev=56047c2450eb696cf5f4df10e120ef00b6eae098#56047c2450eb696cf5f4df10e120ef00b6eae098"
 dependencies = [
  "cc 1.0.4 (registry+https://github.com/rust-lang/crates.io-index)",
  "dunce 0.1.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "libc 0.2.36 (registry+https://github.com/rust-lang/crates.io-index)",
- "nasm-rs 0.1.2 (git+https://github.com/kornelski/nasm-rs.git)",
+ "nasm-rs 0.1.2 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
@@ -968,7 +968,7 @@ dependencies = [
 [[package]]
 name = "nasm-rs"
 version = "0.1.2"
-source = "git+https://github.com/kornelski/nasm-rs.git#ca42a9e04584e6e61b3f3b5c49747eb613357f79"
+source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
  "rayon 0.9.0 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
@@ -1870,9 +1870,9 @@ dependencies = [
 "checksum mount 0.3.0 (git+https://github.com/iron/mount.git?rev=2c3d719be4c158d4ddbd8cdb402fafccdefec58c)" = "<none>"
 "checksum mount 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)" = "32245731923cd096899502fc4c4317cfd09f121e80e73f7f576cf3777a824256"
 "checksum moz-cheddar 0.4.2 (registry+https://github.com/rust-lang/crates.io-index)" = "43b29fdad80b06f38d959105a138ab8ca8c5a57c3435f5bfbd770fa73e625015"
-"checksum mozjpeg-sys 0.5.10 (git+https://github.com/kornelski/mozjpeg-sys?branch=win)" = "<none>"
+"checksum mozjpeg-sys 0.5.10 (git+https://github.com/kornelski/mozjpeg-sys?rev=56047c2450eb696cf5f4df10e120ef00b6eae098)" = "<none>"
 "checksum msdos_time 0.1.5 (registry+https://github.com/rust-lang/crates.io-index)" = "65ba9d75bcea84e07812618fedf284a64776c2f2ea0cad6bca7f69739695a958"
-"checksum nasm-rs 0.1.2 (git+https://github.com/kornelski/nasm-rs.git)" = "<none>"
+"checksum nasm-rs 0.1.2 (registry+https://github.com/rust-lang/crates.io-index)" = "15a836b9e54726e4728ea43f1a926ac1d3763ff762fa015a77c27d7bd2f896d8"
 "checksum native-tls 0.1.5 (registry+https://github.com/rust-lang/crates.io-index)" = "f74dbadc8b43df7864539cedb7bc91345e532fdd913cfdc23ad94f4d2d40fbc0"
 "checksum nodrop 0.1.12 (registry+https://github.com/rust-lang/crates.io-index)" = "9a2228dca57108069a5262f2ed8bd2e82496d2e074a06d1ccc7ce1687b6ae0a2"
 "checksum num 0.1.41 (registry+https://github.com/rust-lang/crates.io-index)" = "cc4083e14b542ea3eb9b5f33ff48bd373a92d78687e74f4cc0a30caeb754f0ca"
