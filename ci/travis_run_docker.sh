@@ -21,9 +21,10 @@ if [[ "SKIP_HOST_CARGO_EXPORT" != 'True' ]]; then
     if [[ -d "${HOME}/.cargo/git" && -d "${HOME}/.cargo/registry" ]]; then
         echo "exporting to host_cargo"
         cp -Rp "${HOME}/.cargo/git" "${HOME}/host_cargo/git"
-        cp -Rp "${HOME}/.cargo/registry" "${HOME}/host_cargo/registry"
+        cp -Rp "${HOME}/.cargo/registry/index" "${HOME}/host_cargo/registry/"
+        cp -Rp "${HOME}/.cargo/registry/cache" "${HOME}/host_cargo/registry/"
         cp -Rp "${HOME}/.cargo/bin" "${HOME}/host_cargo/bin"
-        chmod a+rwX "${HOME}/host_cargo/"*
+        chmod -R a+rwX "${HOME}/host_cargo"
     fi
 fi
 
