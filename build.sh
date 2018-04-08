@@ -236,11 +236,13 @@ echo_maybe "============================= [build.sh] ===========================
 
 ######################################################
 
+
 if test -n "$AWS_ACCESS_KEY_ID" -a -n "$AWS_SECRET_ACCESS_KEY" -a -n "$SCCACHE_BUCKET"; then
-	SCCACHE_BIN=$HOME/.cargo/bin/sccache
-	if test '!' -x "$SCCACHE_BIN"; then
-		PKG_CONFIG_ALL_STATIC=1 cargo install --force --git=https://github.com/mozilla/sccache.git --features=s3
+	export PATH=$HOME/.cargo/bin:$PATH
+	if ! command -v sccache > /dev/null; then
+		PKG_CONFIG_ALL_STATIC=1 cargo install --force sccache --features=s3
 	fi
+	SCCACHE_BIN=$(command -v sccache)
 
 	if "$SCCACHE_BIN" --start-server; then
 		export RUSTC_WRAPPER=$SCCACHE_BIN
