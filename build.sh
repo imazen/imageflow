@@ -239,14 +239,7 @@ echo_maybe "============================= [build.sh] ===========================
 
 if test -n "$AWS_ACCESS_KEY_ID" -a -n "$AWS_SECRET_ACCESS_KEY" -a -n "$SCCACHE_BUCKET"; then
 	export PATH=$HOME/.cargo/bin:$PATH
-	if ! command -v sccache > /dev/null; then
-		if command -v brew > /dev/null; then
-			brew install sccache
-		else
-			PKG_CONFIG_ALL_STATIC=1 cargo install --force sccache --features=s3
-		fi
-	fi
-	SCCACHE_BIN=$(command -v sccache)
+	SCCACHE_BIN=$(command -v sccache || echo false)
 
 	if "$SCCACHE_BIN" --start-server; then
 		export RUSTC_WRAPPER=$SCCACHE_BIN

@@ -1,8 +1,6 @@
 sudo: required
 language: generic
 filter_secrets: false
-services:
-- docker
 cache:
   cargo: true
 env:
@@ -34,7 +32,9 @@ matrix:
     env: TARGET_CPU=nehalem PACKAGE_SUFFIX=osx_10_11-x86_64 NUGET_RUNTIME=osx.10.11-x64 UPLOAD_BUILD=True TARGET=x86_64-apple-darwin FETCH_COMMIT_SUFFIX=mac64
     language: rust
     rust: nightly-2018-03-03
-    dotnet: 2.0.0
+    install:
+      - ci/travis_install.sh
+      - brew install sccache
   - os: linux
     dist: trusty
     env: UPLOAD_BUILD=False COVERAGE=True CODECOV=True VALGRIND=True BUILD_RELEASE=False CLEAN_RUST_TARGETS=True TARGET_CPU=sandybridge P PACKAGE_SUFFIX=x86_64-sandy_valgrind_linux-gcc54 DOCKER_IMAGE=imazen/imageflow_build_ubuntu16:latest
