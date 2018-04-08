@@ -8,9 +8,10 @@ sudo chown -R "$(id -u -n)": ~/
 sudo chmod -R a+rw .
 
 if [[ -d "${HOME}/host_cargo/git" && -d "${HOME}/host_cargo/registry" ]]; then
-	echo "importing host_cargo/git and host_cargo/registry"
-	cp -Rp "${HOME}/host_cargo/git" "${HOME}/.cargo/git"
-	cp -Rp "${HOME}/host_cargo/registry" "${HOME}/.cargo/registry"
+	echo "importing host_cargo"
+  cp -Rp "${HOME}/host_cargo/git" "${HOME}/.cargo/git"
+  cp -Rp "${HOME}/host_cargo/registry" "${HOME}/.cargo/registry"
+	cp -Rp "${HOME}/host_cargo/bin" "${HOME}/.cargo/bin"
 fi
 
 ./build.sh
@@ -21,6 +22,7 @@ if [[ "SKIP_HOST_CARGO_EXPORT" == 'True' ]]; then
         echo "exporting to host_cargo"
         cp -Rp "${HOME}/.cargo/git" "${HOME}/host_cargo/git"
         cp -Rp "${HOME}/.cargo/registry" "${HOME}/host_cargo/registry"
+        cp -Rp "${HOME}/.cargo/bin" "${HOME}/host_cargo/bin"
     fi
 fi
 
