@@ -23,6 +23,7 @@ if [[ "SKIP_HOST_CARGO_EXPORT" != 'True' ]]; then
         cp -Rp "${HOME}/.cargo/git" "${HOME}/host_cargo/git"
         cp -Rp "${HOME}/.cargo/registry" "${HOME}/host_cargo/registry"
         cp -Rp "${HOME}/.cargo/bin" "${HOME}/host_cargo/bin"
+        chmod a+rwX "${HOME}/host_cargo/"*
     fi
 fi
 
