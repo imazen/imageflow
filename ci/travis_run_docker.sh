@@ -29,13 +29,12 @@ if [[ "SKIP_HOST_CARGO_EXPORT" != 'True' ]]; then
 fi
 
 if [[ "$COVERALLS" == 'true' ]]; then
-  pwd
-  echo "*******  See coverage **************"
-  lcov --list coverage.info # debug before upload
+      pwd
+      echo "*******  See coverage **************"
+      lcov --list coverage.info # debug before upload
 
-  echo "******* Uploading to coveralls **************"
-  coveralls-lcov "--repo-token=${COVERALLS_TOKEN}" coverage.info # uploads to coveralls
+      echo "******* Uploading to coveralls **************"
+      coveralls-lcov "--repo-token=${COVERALLS_TOKEN}" coverage.info # uploads to coveralls
 
-  #kcov --coveralls-id=$TRAVIS_JOB_ID --exclude-pattern=/.cargo target/kcov target/debug/<<<MY_PROJECT_NAME>>>-*
-
+      #kcov --coveralls-id=$TRAVIS_JOB_ID --exclude-pattern=/.cargo target/kcov target/debug/<<<MY_PROJECT_NAME>>>-*
 fi
