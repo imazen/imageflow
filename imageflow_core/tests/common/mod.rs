@@ -397,7 +397,6 @@ fn diff_bitmap_bytes(a: &BitmapBgra, b: &BitmapBgra) -> (i64,i64){
 
 #[derive(Debug, Copy, Clone, PartialEq)]
 pub enum Similarity{
-    Exact,
     AllowOffByOneBytesCount(i64),
     AllowOffByOneBytesRatio(f32),
     AllowDssimMatch(f64, f64)
@@ -409,10 +408,9 @@ impl Similarity{
         let allowed_off_by_one_bytes: i64 = match *self {
             Similarity::AllowOffByOneBytesCount(v) => v,
             Similarity::AllowOffByOneBytesRatio(ratio) => (ratio * len as f32) as i64,
-            Similarity::Exact => 0i64,
             Similarity::AllowDssimMatch(..) => return None,
         };
-eprintln!("{} {} {} {:?}", count, delta, len, self);
+        eprintln!("{} {} {} {:?}", count, delta, len, self);
 
         if count != delta {
             return Some(format!("Bitmaps mismatched, and not just off-by-one errors! count={} delta={}", count, delta));

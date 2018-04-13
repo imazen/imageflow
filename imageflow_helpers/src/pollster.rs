@@ -3,12 +3,6 @@
 // Endpoints callback
 use ::preludes::from_std::*;
 use ::std;
-use ::chrono::{DateTime};
-use unicase::UniCase;
-use errors::*;
-use errors::Result;
-use ::lockless::primitives::append_list::AppendList;
-use lockless::primitives::append_list::AppendListIterator;
 use std::thread;
 use std::thread::JoinHandle;
 use ::parking_lot::Mutex;
@@ -20,8 +14,7 @@ use smallvec::SmallVec;
 // Get ticks
 // Get utcnow
 use std::sync::Arc;
-use std::sync::atomic::{AtomicU64, Ordering, ATOMIC_BOOL_INIT};
-use super::licensing::*;
+use std::sync::atomic::{Ordering, ATOMIC_BOOL_INIT};
 use super::util::*;
 
 pub trait Endpoint{
@@ -57,7 +50,6 @@ pub struct FetcherConfig<'clock>{
     client: ::reqwest::Client,
     clock: &'clock AppClock,
     initial_error_interval: ::chrono::Duration,
-    error_interval_multiplier: f32,
 }
 
 #[cfg(not(test))]
@@ -65,7 +57,7 @@ fn mock_swap_base_urls(v: SmallVec<[Cow<'static, str>;6]>) -> SmallVec<[Cow<'sta
     v
 }
 #[cfg(test)]
-fn mock_swap_base_urls(v: SmallVec<[Cow<'static, str>;6]>) -> SmallVec<[Cow<'static, str>;6]> {
+fn mock_swap_base_urls(_v: SmallVec<[Cow<'static, str>;6]>) -> SmallVec<[Cow<'static, str>;6]> {
     let mut nv = SmallVec::new();
     nv.push(Cow::from(::mockito::SERVER_URL));
     nv
@@ -75,7 +67,6 @@ impl<'clock> FetcherConfig<'clock>{
     pub fn new(clock: &'clock AppClock) -> Self{
         FetcherConfig{
             client: ::reqwest::Client::new().unwrap(),
-            error_interval_multiplier: 3f32,
             initial_error_interval: ::chrono::Duration::seconds(3),
             clock,
             sink: IssueSink::new("Fetcher")
@@ -155,9 +146,10 @@ impl<'clock> FetcherConfig<'clock>{
         e.endpoint.redact(&mut detail);
         self.sink.error(message, detail);
 
-        let mut e_interval = e.error_interval.interval();
+        // let mut e_interval = e.error_interval.interval();
         e.error_interval.set_interval_if_stopped(self.initial_error_interval);
 
+        /*
         if is_error_retry && !e_interval.is_zero(){
             e_interval = ::chrono::Duration::milliseconds((e_interval.num_milliseconds() as f32 * self.error_interval_multiplier) as i64);
             use rand::Rng;
@@ -167,7 +159,7 @@ impl<'clock> FetcherConfig<'clock>{
             if e_interval > e.interval.interval(){
                 e_interval = e.interval.interval() * 7 / 3;
             }
-        }
+        }*/
 
         // Increment the fetch count if we got any HTTP response whatsoever
         if responses.iter().any(|p| p.0 > 0){
@@ -349,7 +341,7 @@ impl<'clock> Fetcher<'clock>{
             }
             let ticks_now = self.config.clock.get_timestamp_ticks();
             if wake_at > ticks_now {
-                let sleep_seconds = cmp::max(1, ((wake_at - ticks_now) / self.config.clock.ticks_per_second()));
+                let sleep_seconds = cmp::max(1, (wake_at - ticks_now) / self.config.clock.ticks_per_second());
                 eprintln!("Sleeping for {}s", sleep_seconds);
                 if token.wait_for_cancel(std::time::Duration::from_secs(sleep_seconds)) {
                     return;

@@ -317,8 +317,10 @@ fn test_https(context: &ProcTestContext){
         callback_result.unwrap();
     }
 }
+
+#[allow(dead_code)]
 #[cfg(any(target_os = "windows", target_os = "macos"))]
-fn test_https(context: ProcTestContext){}
+fn test_https(_context: ProcTestContext){}
 
 #[test]
 fn run_server_test_ir4_heavy(){
