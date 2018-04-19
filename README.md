@@ -15,7 +15,7 @@ ImageFlow will bring world-class image quality and performance to all languages 
 
 [![travis-master](https://img.shields.io/travis/imazen/imageflow/master.svg?label=travis%20master%20mac%20linux)
 [![AppVeyor build status](https://ci.appveyor.com/api/projects/status/0356x95fa312m3wy/branch/master?svg=true)](https://ci.appveyor.com/project/imazen/imageflow/branch/master)
-](https://travis-ci.org/imazen/imageflow/builds) 
+[![Build Status](https://travis-ci.org/imazen/imageflow.svg?branch=master)](https://travis-ci.org/imazen/imageflow)
 [![Coverage Status](https://coveralls.io/repos/github/imazen/imageflow/badge.svg?branch=master)](https://coveralls.io/github/imazen/imageflow?branch=master)
 [![Coverity Scan Build Status](https://scan.coverity.com/projects/8403/badge.svg)](https://scan.coverity.com/projects/imazen-imageflow)
 
