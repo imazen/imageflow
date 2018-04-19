@@ -1,6 +1,5 @@
 #![feature(concat_idents)]
 #![feature(oom)]
-#![feature(conservative_impl_trait)]
 #![feature(proc_macro)]
 #![feature(integer_atomics)]
 #![feature(as_c_str)]

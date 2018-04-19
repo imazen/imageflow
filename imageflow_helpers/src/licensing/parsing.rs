@@ -1,5 +1,5 @@
 #![allow(bad_style)]
-#![allow(unused)]
+#![allow(unused, deprecated)]
 use preludes::from_std::*;
 use num::{One, Zero};
 use num::bigint::{BigInt, Sign};
@@ -10,6 +10,7 @@ use errors::*;
 use errors::Result;
 use smallvec::SmallVec;
 use std::iter::FromIterator;
+use std::ascii::AsciiExt;
 
 use super::super::util::*;
 

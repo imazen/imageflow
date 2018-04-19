@@ -1,7 +1,6 @@
 #[doc(hidden)]
 pub mod from_std {
     pub use std::{ptr, marker, str, slice, cell, io, string, fmt, mem, cmp};
-    pub use std::ascii::AsciiExt;
     pub use std::borrow::Cow;
     pub use std::cell::{Cell, RefCell, Ref, RefMut};
     pub use std::collections::{HashSet, HashMap};

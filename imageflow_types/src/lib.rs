@@ -27,7 +27,6 @@
 //!  3. Delete all underscores from string
 
 #![feature(proc_macro)]
-#![feature(conservative_impl_trait)]
 
 pub mod build_env_info;
 pub mod version;
@@ -42,7 +41,6 @@ extern crate imageflow_helpers;
 extern crate chrono;
 extern crate serde;
 extern crate serde_json;
-#[allow(unused)] use std::ascii::AsciiExt;
 use std::str::FromStr;
 pub mod collections;
 

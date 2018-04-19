@@ -8,7 +8,6 @@ use errors::*;
 use errors::Result;
 use lockless::primitives::append_list::AppendList;
 use lockless::primitives::append_list::AppendListIterator;
-#[allow(unused)] use std::ascii::AsciiExt;
 use chrono::Utc;
 use std::thread;
 use std::thread::JoinHandle;

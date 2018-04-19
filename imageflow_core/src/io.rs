@@ -4,7 +4,6 @@ use ffi;
 use ::{Context, CError, Result, JsonResponse, ErrorKind};
 use ffi::ImageflowJobIo;
 use imageflow_types::collections::AddRemoveSet;
-#[allow(unused)] use std::ascii::AsciiExt;
 use uuid::Uuid;
 use std::rc::Rc;
 

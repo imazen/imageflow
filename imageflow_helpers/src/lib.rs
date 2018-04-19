@@ -2,7 +2,6 @@
 
 #![feature(integer_atomics)]
 #![feature(ascii_ctype)]
-#![feature(i128_type)] // Not used heavily, removable
 // `error_chain!` can recurse deeply
 #![recursion_limit = "1024"]
 

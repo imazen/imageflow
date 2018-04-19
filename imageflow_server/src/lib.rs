@@ -1,6 +1,5 @@
 #![feature(proc_macro)]
 #![feature(integer_atomics)]
-#![feature(conservative_impl_trait)]
 
 extern crate iron;
 extern crate persistent;

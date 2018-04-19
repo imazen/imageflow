@@ -1,7 +1,7 @@
 #![allow(bad_style)]
-#![allow(unused)]
+#![allow(unused, deprecated)]
 use super::*;
-
+use std::ascii::AsciiExt;
 use smallvec::SmallVec;
 use std::iter::FromIterator;
 use super::super::util::*;

@@ -81,7 +81,7 @@ impl<'clock> FetcherConfig<'clock>{
         }
     }
 
-    fn fetch_inner(&mut self, e: &mut EndpointEntry,token: Arc<SharedToken>,  is_error_retry: bool) -> ::std::result::Result<(),String>{
+    fn fetch_inner(&mut self, e: &mut EndpointEntry,token: Arc<SharedToken>, _is_error_retry: bool) -> ::std::result::Result<(),String>{
 
         let path = e.endpoint.get_path().map_err(|mut s| { s.insert_str(0,".get_path() failed:"); s })?;
         let query = e.endpoint.get_query().map_err(|mut s| { s.insert_str(0,".get_query() failed:"); s })?;
