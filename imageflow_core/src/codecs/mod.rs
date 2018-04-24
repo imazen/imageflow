@@ -19,6 +19,7 @@ use lcms2;
 mod gif;
 mod pngquant;
 mod lode;
+mod mozjpeg;
 use io::IoProxyRef;
 
 pub trait DecoderFactory{
@@ -326,6 +327,7 @@ impl Encoder for ClassicEncoder{
                 s::EncoderPreset::Libpng { .. } |
                 s::EncoderPreset::Lodepng { .. } |
                 s::EncoderPreset::Pngquant { .. } => ("image/png", "png"),
+                s::EncoderPreset::Mozjpeg { .. } |
                 s::EncoderPreset::LibjpegTurbo { .. } => ("image/jpeg", "jpg"),
                 s::EncoderPreset::Gif { .. } => ("image/gif", "gif"),
             };
@@ -380,6 +382,9 @@ impl CodecInstanceContainer{
                  },
                  s::EncoderPreset::Pngquant {speed, quality} => {
                      CodecKind::Encoder(Box::new(pngquant::PngquantEncoder::create(c, speed, quality, io)?))
+                 },
+                 s::EncoderPreset::Mozjpeg {quality} => {
+                     CodecKind::Encoder(Box::new(mozjpeg::MozjpegEncoder::create(c, quality, io)?))
                  },
                  s::EncoderPreset::Lodepng => {
                      CodecKind::Encoder(Box::new(lode::LodepngEncoder::create(c, io)?))

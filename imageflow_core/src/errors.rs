@@ -172,6 +172,7 @@ pub enum ErrorKind{
     GifEncodingError,
     QuantizationError,
     LodepngEncodingError,
+    MozjpegEncodingError,
     DecodingIoError,
     ColorProfileError,
     EncodingIoError,
@@ -225,6 +226,7 @@ impl CategorizedError for ErrorKind{
             ErrorKind::InvalidState |
             ErrorKind::QuantizationError |
             ErrorKind::LodepngEncodingError |
+            ErrorKind::MozjpegEncodingError |
             ErrorKind::GifEncodingError => ErrorCategory::InternalError,
             ErrorKind::GifDecodingError |
             ErrorKind::ColorProfileError => ErrorCategory::ImageMalformed,

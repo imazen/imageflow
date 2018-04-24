@@ -131,6 +131,28 @@ fn test_encode_lodepng() {
 }
 
 
+#[test]
+fn test_encode_mozjpeg() {
+    let steps = vec![
+        s::Node::Decode { io_id: 0, commands: None },
+        s::Node::Encode {
+            io_id: 1,
+            preset: s::EncoderPreset::Mozjpeg {
+                quality: Some(50),
+            },
+        },
+    ];
+
+    compare_encoded_to_source(s::IoEnum::Url("https://s3-us-west-2.amazonaws.com/imageflow-resources/test_inputs/frymire.png".to_owned()),
+                              DEBUG_GRAPH,
+                              Constraints {
+                                  max_file_size: Some(205_000),
+                                  similarity: Similarity::AllowDssimMatch(0.04, 0.06),
+                              },
+                              steps
+    );
+}
+
 
 #[test]
 fn test_fill_rect(){
