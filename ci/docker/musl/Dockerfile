@@ -57,7 +57,7 @@ ENV SSL_VER=1.0.2j \
 
 
 # #Install nightly Rust and make default
-# RUN RUSTVER="nightly-2018-03-03" && curl https://sh.rustup.rs -sSf | sh -s -- -y --default-toolchain $RUSTVER -v \
+# RUN RUSTVER="nightly-2018-04-04" && curl https://sh.rustup.rs -sSf | sh -s -- -y --default-toolchain $RUSTVER -v \
 #     && rustup default $RUSTVER \
 #     && HI=$(rustup which rustc) && HI=${HI%/bin/rustc} && export TOOLCHAIN_DIR=$HI && echo TOOLCHAIN_DIR=$TOOLCHAIN_DIR \
 #     && sudo rm -rf $TOOLCHAIN_DIR/share/doc \
@@ -67,9 +67,9 @@ ENV SSL_VER=1.0.2j \
 #     && rustup show \
 #     && rustc -V
 
-RUN RUSTVER="nightly-2018-03-03" && curl https://sh.rustup.rs -sSf | sh -s -- -y --default-toolchain $RUSTVER -v \
+RUN RUSTVER="nightly-2018-04-04" && curl https://sh.rustup.rs -sSf | sh -s -- -y --default-toolchain $RUSTVER -v \
 	&& rustup target add x86_64-unknown-linux-musl
-RUN RUSTVER="nightly-2018-03-03" && rustup default $RUSTVER \
+RUN RUSTVER="nightly-2018-04-04" && rustup default $RUSTVER \
     && rustup show \
     && rustc -V \
     && echo "[build]\ntarget = \"x86_64-unknown-linux-musl\"" > ~/.cargo/config

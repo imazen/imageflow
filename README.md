@@ -129,7 +129,7 @@ sudo apt-get install --no-install-recommends \
 After installing the above, you'll need dssim, and Rust Nightly.
 
 ```bash
-curl https://sh.rustup.rs -sSf | sh -s -- -y --default-toolchain nightly-2018-03-03
+curl https://sh.rustup.rs -sSf | sh -s -- -y --default-toolchain nightly-2018-04-04
 ./ci/nixtools/install_dssim.sh
 ./build.sh
 ```
@@ -158,7 +158,7 @@ brew install nasm libpng pkg-config wget
 1. Visual Studio 2015 or 2017 (Only the C++ Build Tools component is required)
 2. Install [Git 64-bit](https://git-scm.com/download/win).
 3. Install [NASM 64-bit](http://www.nasm.us/pub/nasm/releasebuilds/2.12.02/win64/nasm-2.12.02-installer-x64.exe) Installer must be `Run as Administrator` - it will not prompt.
-4. Install [Rust 64-bit](https://static.rust-lang.org/rustup/dist/x86_64-pc-windows-msvc/rustup-init.exe). Install toolchain `nightly-2018-03-03` and set it as default. For the moment, 32-bit builds also require [a 32-bit Rust](https://static.rust-lang.org/rustup/dist/i686-pc-windows-msvc/rustup-init.exe).
+4. Install [Rust 64-bit](https://static.rust-lang.org/rustup/dist/x86_64-pc-windows-msvc/rustup-init.exe). Install toolchain `nightly-2018-04-04` and set it as default. For the moment, 32-bit builds also require [a 32-bit Rust](https://static.rust-lang.org/rustup/dist/i686-pc-windows-msvc/rustup-init.exe).
 
 You need all of these to be in %PATH%. Edit `ci/wintools/SETUP_PATH.bat` as appropriate to ensure that rust/cargo, nasm, git, and Git/mingw64/bin are all available.
 

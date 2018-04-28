@@ -19,11 +19,5 @@ if [[ "$(uname -s)" == 'Darwin' ]]; then
     brew install nasm
     ./ci/nixtools/install_dssim.sh
     set +x
-else
-    cat /proc/cpuinfo
-    date "$STAMP"
-    set -x
-    docker pull "${DOCKER_IMAGE}"
-    set +x
 fi
 

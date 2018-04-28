@@ -12,32 +12,40 @@ matrix:
   include:
   - os: linux
     dist: trusty
-    env: TARGET_CPU=x86-64 PACKAGE_SUFFIX=ubuntu_14_04-x86_64 NUGET_RUNTIME=ubuntu.14.04-x64 DOCKER_IMAGE=imazen/imageflow_build_ubuntu14:latest UPLOAD_BUILD=True FETCH_COMMIT_SUFFIX=linux64
+    before_install:
+      - docker build -t ubuntu14 ci/docker/travis/ubuntu14
+    env: TARGET_CPU=x86-64 PACKAGE_SUFFIX=ubuntu_14_04-x86_64 NUGET_RUNTIME=ubuntu.14.04-x64 DOCKER_IMAGE=ubuntu14 UPLOAD_BUILD=True FETCH_COMMIT_SUFFIX=linux64
     sudo: required
     services:
     - docker
   - os: linux
     dist: trusty
-    env: TARGET_CPU=sandybridge PACKAGE_SUFFIX=ubuntu_16_04-x86_64-sandybridge NUGET_RUNTIME=ubuntu.16.04-x64 DOCKER_IMAGE=imazen/imageflow_build_ubuntu16:latest UPLOAD_BUILD=True UPLOAD_DOCS=True FETCH_COMMIT_SUFFIX=linux64_sandybridge_glibc223
+    before_install:
+      - docker build -t ubuntu16 ci/docker/travis/ubuntu16
+    env: TARGET_CPU=sandybridge PACKAGE_SUFFIX=ubuntu_16_04-x86_64-sandybridge NUGET_RUNTIME=ubuntu.16.04-x64 DOCKER_IMAGE=ubuntu16 UPLOAD_BUILD=True UPLOAD_DOCS=True FETCH_COMMIT_SUFFIX=linux64_sandybridge_glibc223
     sudo: required
     services:
     - docker
   - os: linux
     dist: trusty
-    env: TARGET_CPU=haswell PACKAGE_SUFFIX=ubuntu_16_04-x86_64-haswell NUGET_RUNTIME=ubuntu.16.04-x64 DOCKER_IMAGE=imazen/imageflow_build_ubuntu16:latest UPLOAD_BUILD=True UPLOAD_DOCS=True FETCH_COMMIT_SUFFIX=linux64_haswell_glibc223
+    before_install:
+      - docker build -t ubuntu16 ci/docker/travis/ubuntu16
+    env: TARGET_CPU=haswell PACKAGE_SUFFIX=ubuntu_16_04-x86_64-haswell NUGET_RUNTIME=ubuntu.16.04-x64 DOCKER_IMAGE=ubuntu16 UPLOAD_BUILD=True UPLOAD_DOCS=True FETCH_COMMIT_SUFFIX=linux64_haswell_glibc223
     sudo: required
     services:
     - docker
   - os: osx
     env: TARGET_CPU=nehalem PACKAGE_SUFFIX=osx_10_11-x86_64 NUGET_RUNTIME=osx.10.11-x64 UPLOAD_BUILD=True TARGET=x86_64-apple-darwin FETCH_COMMIT_SUFFIX=mac64
     language: rust
-    rust: nightly-2018-03-03
+    rust: nightly-2018-04-04
     install:
       - ci/travis_install.sh
       - brew install sccache
   - os: linux
     dist: trusty
-    env: UPLOAD_BUILD=False COVERAGE=True CODECOV=True VALGRIND=True BUILD_RELEASE=False CLEAN_RUST_TARGETS=True TARGET_CPU=sandybridge P PACKAGE_SUFFIX=x86_64-sandy_valgrind_linux-gcc54 DOCKER_IMAGE=imazen/imageflow_build_ubuntu16:latest
+    before_install:
+      - docker build -t ubuntu16 ci/docker/travis/ubuntu16
+    env: UPLOAD_BUILD=False COVERAGE=True CODECOV=True VALGRIND=True BUILD_RELEASE=False CLEAN_RUST_TARGETS=True TARGET_CPU=sandybridge P PACKAGE_SUFFIX=x86_64-sandy_valgrind_linux-gcc54 DOCKER_IMAGE=ubuntu16
     sudo: required
     services:
     - docker
