@@ -29,7 +29,7 @@ digest = "*"
 
 uuid = { version = "*", features= ["v4", "v5"]}
 
-lockless = "*"
+lockless = "0.2"
 smallvec = "*"
 # regex
 regex = "0.2"
