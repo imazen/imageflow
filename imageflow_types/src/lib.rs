@@ -1192,7 +1192,7 @@ fn error_from_string() {
             unreachable!()
         }
     };
-    assert_eq!(msg, "ErrorImpl { code: Message(\"invalid type: string \\\"hi\\\", expected i32\"), line: 1, column: 18 }");
+    assert_eq!(msg, "Error(\"invalid type: string \\\"hi\\\", expected i32\", line: 1, column: 18)");
 }
 
 #[test]
@@ -1214,7 +1214,7 @@ fn error_from_value() {
         }
     };
 
-    assert_eq!(msg, "ErrorImpl { code: Message(\"invalid type: string \\\"hi\\\", expected i32\"), line: 0, column: 0 }");
+    assert_eq!(msg, "Error(\"invalid type: string \\\"hi\\\", expected i32\", line: 0, column: 0)");
     // When parsing from a value, we cannot tell which line or character caused it. I suppose we
     // must serialize/deserialize again, in order to inject an indicator into the text?
     // We cannot recreate the original location AFAICT
