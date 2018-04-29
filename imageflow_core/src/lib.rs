@@ -1,7 +1,6 @@
 #![feature(concat_idents)]
 #![feature(oom)]
 #![feature(proc_macro)]
-#![feature(integer_atomics)]
 #![feature(as_c_str)]
 #![feature(core_intrinsics)]
 #![feature(fn_must_use)]

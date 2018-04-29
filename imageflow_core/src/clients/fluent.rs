@@ -3,10 +3,10 @@
 
 
 use internal_prelude::works_everywhere::*;
-use std::sync::atomic::{AtomicU64, ATOMIC_U64_INIT};
+use std::sync::atomic::{AtomicUsize, ATOMIC_USIZE_INIT};
 use std::sync::atomic;
 
-static NEXT_FLUENT_NODE_ID: AtomicU64 = ATOMIC_U64_INIT;
+static NEXT_FLUENT_NODE_ID: AtomicUsize = ATOMIC_USIZE_INIT;
 
 
 pub fn fluently() -> FluentNode {
@@ -23,7 +23,7 @@ pub struct FluentNode {
 
 impl FluentNode {
     fn next_uid() -> u64 {
-        NEXT_FLUENT_NODE_ID.fetch_add(1, atomic::Ordering::SeqCst)
+        NEXT_FLUENT_NODE_ID.fetch_add(1, atomic::Ordering::SeqCst) as u64
     }
     fn new(node: s::Node,
            input_node: Option<FluentNode>,

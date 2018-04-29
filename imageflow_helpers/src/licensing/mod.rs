@@ -21,7 +21,7 @@ use super::util::*;
 // Get ticks
 // Get utcnow
 use std::sync::Arc;
-use std::sync::atomic::{AtomicU64, Ordering};
+use std::sync::atomic::{AtomicUsize, Ordering};
 
 mod cache;
 mod parsing;
@@ -116,7 +116,7 @@ pub struct LicenseManagerSingleton{
     created: DateTime<Utc>,
     #[allow(dead_code)]
     uid: ::uuid::Uuid,
-    heartbeat_count: AtomicU64,
+    heartbeat_count: AtomicUsize,
     clock: Arc<AppClock>,
     fetcher_token: Arc<SharedToken>
 }
@@ -141,7 +141,7 @@ impl LicenseManagerSingleton{
             sink: IssueSink::new("LicenseManager"),
             created,
             uid: ::uuid::Uuid::new_v4(),
-            heartbeat_count: ::std::sync::atomic::ATOMIC_U64_INIT,
+            heartbeat_count: ::std::sync::atomic::ATOMIC_USIZE_INIT,
             fetcher_token: Arc::new(SharedToken::new())
         }
 

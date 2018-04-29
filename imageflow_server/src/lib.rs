@@ -1,5 +1,4 @@
 #![feature(proc_macro)]
-#![feature(integer_atomics)]
 
 extern crate iron;
 extern crate persistent;
@@ -26,7 +25,7 @@ extern crate hyper_native_tls;
 
 use hyper_native_tls::NativeTlsServer;
 
-use std::sync::atomic::{AtomicU64, ATOMIC_U64_INIT};
+use std::sync::atomic::{AtomicUsize, ATOMIC_USIZE_INIT};
 
 
 extern crate conduit_mime_types as mime_types;
@@ -83,7 +82,7 @@ extern crate env_logger;
 struct SharedData {
     source_cache: CacheFolder,
     output_cache: CacheFolder,
-    requests_received: AtomicU64,
+    requests_received: AtomicUsize,
     //detailed_errors: bool
 }
 
@@ -544,7 +543,7 @@ pub fn serve(c: StartServerConfig) {
     let shared_data = SharedData {
         source_cache: CacheFolder::new(c.data_dir.join(Path::new("source_cache")).as_path(), c.default_cache_layout.unwrap_or(FolderLayout::Normal)),
         output_cache: CacheFolder::new(c.data_dir.join(Path::new("output_cache")).as_path(), c.default_cache_layout.unwrap_or(FolderLayout::Normal)),
-        requests_received: ATOMIC_U64_INIT //NOT YET USED
+        requests_received: ATOMIC_USIZE_INIT //NOT YET USED
     };
 
     let mut mou = mount::Mount::new();

@@ -1,5 +1,4 @@
 #![feature(slice_concat_ext)]
-#![feature(integer_atomics)]
 
 extern crate imageflow_helpers;
 extern crate imageflow_core as fc;
