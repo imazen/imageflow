@@ -180,6 +180,11 @@ pub enum EncoderPreset {
         progressive: Option<bool>,
         optimize_huffman_coding: Option<bool>
     },
+    LibjpegTurbo {
+        quality: Option<i32>,
+        progressive: Option<bool>,
+        optimize_huffman_coding: Option<bool>
+    },
     Libpng {
         depth: Option<PngBitDepth>,
         matte: Option<Color>,
@@ -192,6 +197,7 @@ pub enum EncoderPreset {
     Lodepng,
     Mozjpeg {
         quality: Option<u8>,
+        progressive: Option<bool>,
     },
     Gif,
 }
@@ -831,7 +837,7 @@ impl Framewise {
                               },
                               Node::Encode {
                                   io_id: 1,
-                                  preset: EncoderPreset::LibjpegTurboClassic { quality: Some(90), optimize_huffman_coding: Some(true), progressive: Some(true)},
+                                  preset: EncoderPreset::LibjpegTurbo { quality: Some(90), optimize_huffman_coding: Some(true), progressive: Some(true)},
                               }])
     }
     pub fn example_graph() -> Framewise {
@@ -881,7 +887,7 @@ impl Framewise {
         nodes.insert("5".to_owned(),
                      Node::Encode {
                          io_id: 2,
-                         preset: EncoderPreset::LibjpegTurboClassic { quality: Some(90), optimize_huffman_coding: Some(true), progressive: Some(true) },
+                         preset: EncoderPreset::LibjpegTurbo { quality: Some(90), optimize_huffman_coding: Some(true), progressive: Some(true) },
                      });
 
         Framewise::Graph(Graph {

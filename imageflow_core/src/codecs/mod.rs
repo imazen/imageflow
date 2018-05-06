@@ -329,6 +329,7 @@ impl Encoder for ClassicEncoder{
                 s::EncoderPreset::Lodepng { .. } |
                 s::EncoderPreset::Pngquant { .. } => ("image/png", "png"),
                 s::EncoderPreset::Mozjpeg { .. } |
+                s::EncoderPreset::LibjpegTurbo { .. } |
                 s::EncoderPreset::LibjpegTurboClassic { .. } => ("image/jpeg", "jpg"),
                 s::EncoderPreset::Gif { .. } => ("image/gif", "gif"),
             };
@@ -384,8 +385,11 @@ impl CodecInstanceContainer{
                  s::EncoderPreset::Pngquant {speed, quality} => {
                      CodecKind::Encoder(Box::new(pngquant::PngquantEncoder::create(c, speed, quality, io)?))
                  },
-                 s::EncoderPreset::Mozjpeg {quality} => {
-                     CodecKind::Encoder(Box::new(mozjpeg::MozjpegEncoder::create(c, quality, io)?))
+                 s::EncoderPreset::Mozjpeg {quality, progressive} => {
+                     CodecKind::Encoder(Box::new(mozjpeg::MozjpegEncoder::create(c, quality, progressive, io)?))
+                 },
+                 s::EncoderPreset::LibjpegTurbo {quality, progressive, optimize_huffman_coding} => {
+                     CodecKind::Encoder(Box::new(mozjpeg::MozjpegEncoder::create_classic(c, quality.map(|q| q as u8), progressive, optimize_huffman_coding, io)?))
                  },
                  s::EncoderPreset::Lodepng => {
                      CodecKind::Encoder(Box::new(lode::LodepngEncoder::create(c, io)?))

@@ -138,6 +138,7 @@ fn test_encode_mozjpeg() {
         s::Node::Encode {
             io_id: 1,
             preset: s::EncoderPreset::Mozjpeg {
+                progressive: None,
                 quality: Some(50),
             },
         },
@@ -396,7 +397,7 @@ fn test_encode_jpeg_smoke() {
     let steps = vec![
     s::Node::Decode {io_id: 0, commands: None},
     s::Node::Resample2D{ w: 400, h: 300, down_filter: Some(s::Filter::Robidoux), up_filter: Some(s::Filter::Robidoux), hints: None, scaling_colorspace: None },
-    s::Node::Encode{ io_id: 1, preset: s::EncoderPreset::LibjpegTurboClassic {quality: Some(100), progressive: None, optimize_huffman_coding: None}}
+    s::Node::Encode{ io_id: 1, preset: s::EncoderPreset::LibjpegTurbo {quality: Some(100), progressive: None, optimize_huffman_coding: None}}
     ];
 
     smoke_test(Some(s::IoEnum::Url("https://s3-us-west-2.amazonaws.com/imageflow-resources/test_inputs/MarsRGB_v4_sYCC_8bit.jpg".to_owned())),
