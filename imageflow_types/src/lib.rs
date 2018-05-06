@@ -175,7 +175,7 @@ pub enum ScalingFloatspace {
 #[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
 #[serde(rename_all = "lowercase")]
 pub enum EncoderPreset {
-    LibjpegTurbo {
+    LibjpegTurboClassic {
         quality: Option<i32>,
         progressive: Option<bool>,
         optimize_huffman_coding: Option<bool>
@@ -205,15 +205,15 @@ impl EncoderPreset {
             zlib_compression: None, // Use default
         }
     }
-    pub fn libjpegturbo() -> EncoderPreset {
-        EncoderPreset::LibjpegTurbo {
+    pub fn libjpeg_turbo_classic() -> EncoderPreset {
+        EncoderPreset::LibjpegTurboClassic {
             quality: Some(100),
             optimize_huffman_coding: None,
             progressive: None
         }
     }
-    pub fn libjpegturbo_q(quality: Option<i32>) -> EncoderPreset {
-        EncoderPreset::LibjpegTurbo {
+    pub fn libjpeg_turbo_classic_q(quality: Option<i32>) -> EncoderPreset {
+        EncoderPreset::LibjpegTurboClassic {
             quality: quality,
             optimize_huffman_coding: None,
             progressive: None
@@ -831,7 +831,7 @@ impl Framewise {
                               },
                               Node::Encode {
                                   io_id: 1,
-                                  preset: EncoderPreset::LibjpegTurbo { quality: Some(90), optimize_huffman_coding: Some(true), progressive: Some(true)},
+                                  preset: EncoderPreset::LibjpegTurboClassic { quality: Some(90), optimize_huffman_coding: Some(true), progressive: Some(true)},
                               }])
     }
     pub fn example_graph() -> Framewise {
@@ -881,7 +881,7 @@ impl Framewise {
         nodes.insert("5".to_owned(),
                      Node::Encode {
                          io_id: 2,
-                         preset: EncoderPreset::LibjpegTurbo { quality: Some(90), optimize_huffman_coding: Some(true), progressive: Some(true) },
+                         preset: EncoderPreset::LibjpegTurboClassic { quality: Some(90), optimize_huffman_coding: Some(true), progressive: Some(true) },
                      });
 
         Framewise::Graph(Graph {

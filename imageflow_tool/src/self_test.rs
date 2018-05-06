@@ -154,7 +154,7 @@ struct ScenarioExpectations{
     status_code: Option<i32>
 }
 fn scenario_export_4() -> BuildScenario{
-    let preset = s::EncoderPreset::libjpegturbo_q(Some(90));
+    let preset = s::EncoderPreset::libjpeg_turbo_classic_q(Some(90));
     let s = fluent::fluently().decode(0);
     let v1 = s.branch().constrain_within(Some(1600), None, None);
     let v2 = v1.branch().constrain_within(Some(1200), None, None);
@@ -265,7 +265,7 @@ fn scenario_laundry_list() -> BuildScenario{
         description: "A rather nonsensical enumeration of operations",
         slug: "laundry_list",
         recipe: framewise.wrap_in_build_0_1(),
-        new_inputs: vec![ReplacementInput::File{path: "blank3200.jpg".to_owned(), source: TestImageSource::Blank(BlankImage{w: 3200, h:3200, color: s::Color::Black, encoding: s::EncoderPreset::libjpegturbo_q(Some(5))})}
+        new_inputs: vec![ReplacementInput::File{path: "blank3200.jpg".to_owned(), source: TestImageSource::Blank(BlankImage{w: 3200, h:3200, color: s::Color::Black, encoding: s::EncoderPreset::libjpeg_turbo_classic_q(Some(5))})}
 ],
         new_outputs: vec![ReplacementOutput::file(1,"wat.jpg")],
         json_out: None,
@@ -335,7 +335,7 @@ pub fn run(tool_location: Option<PathBuf>) -> i32 {
     {
         let recipe = s::Build001::example_with_steps();
         c.write_json("example1.json", &recipe);
-        c.create_blank_image_here("200x200", 200, 200, s::EncoderPreset::libjpegturbo());
+        c.create_blank_image_here("200x200", 200, 200, s::EncoderPreset::libjpeg_turbo_classic());
         c.create_blank_image_here("200x200", 200, 200, s::EncoderPreset::libpng32());
 
         c.exec("v0.1/build --json example1.json --in 200x200.png 200x200.jpg --out out0.jpg --response out0.json").expect_exit_0_no_output("");
@@ -347,7 +347,7 @@ pub fn run(tool_location: Option<PathBuf>) -> i32 {
     {
         let recipe =  s::Build001::example_with_steps();
         c.write_json("example2.json",&recipe);
-        c.create_blank_image_here("200x200", 200, 200, s::EncoderPreset::libjpegturbo());
+        c.create_blank_image_here("200x200", 200, 200, s::EncoderPreset::libjpeg_turbo_classic());
         c.create_blank_image_here("200x200", 200, 200, s::EncoderPreset::libpng32());
 
         let result =
@@ -368,9 +368,9 @@ pub fn run(tool_location: Option<PathBuf>) -> i32 {
 
     }
     {
-        let recipe = fluent::fluently().decode(0).constrain_within(Some(60), Some(45), None).encode(1, s::EncoderPreset::libjpegturbo()).into_build_0_1();
+        let recipe = fluent::fluently().decode(0).constrain_within(Some(60), Some(45), None).encode(1, s::EncoderPreset::libjpeg_turbo_classic()).into_build_0_1();
         c.write_json("example2.json", &recipe);
-        c.create_blank_image_here("200x200", 200, 200, s::EncoderPreset::libjpegturbo());
+        c.create_blank_image_here("200x200", 200, 200, s::EncoderPreset::libjpeg_turbo_classic());
 
         let result =
         c.exec("v0.1/build --json example2.json --in 200x200.jpg --out out3.jpg");
@@ -392,7 +392,7 @@ pub fn run(tool_location: Option<PathBuf>) -> i32 {
     }
     {
         let c = c.subfolder_context("query");
-        c.create_blank_image_here("100x100", 100, 100, s::EncoderPreset::libjpegturbo());
+        c.create_blank_image_here("100x100", 100, 100, s::EncoderPreset::libjpeg_turbo_classic());
 
         let result =
             c.exec("v0.1/ir4 --command width=60&height=40&mode=max&format=jpg --in 100x100.jpg --out out4.jpg");
@@ -573,7 +573,7 @@ pub fn test_capture(tool_location: Option<PathBuf>) -> i32 {
     {
         let recipe = s::Build001::example_with_steps();
         c.write_json("example1.json", &recipe);
-        c.create_blank_image_here("200x200", 200, 200, s::EncoderPreset::libjpegturbo());
+        c.create_blank_image_here("200x200", 200, 200, s::EncoderPreset::libjpeg_turbo_classic());
         c.create_blank_image_here("200x200", 200, 200, s::EncoderPreset::libpng32());
 
         c.exec("v0.1/build --json example1.json --in 200x200.png 200x200.jpg --out out0.jpg --response out0.json").expect_exit_0_no_output("");
@@ -587,7 +587,7 @@ pub fn test_capture(tool_location: Option<PathBuf>) -> i32 {
     {
         let recipe = s::Build001::example_with_steps();
         c.write_json("example1.json", &recipe);
-        c.create_blank_image_here("200x200", 200, 200, s::EncoderPreset::libjpegturbo());
+        c.create_blank_image_here("200x200", 200, 200, s::EncoderPreset::libjpeg_turbo_classic());
         c.create_blank_image_here("200x200", 200, 200, s::EncoderPreset::libpng32());
 
         c.exec("v0.1/build --debug-package debug_example --json example1.json --in 200x200.png 200x200.jpg --out out0.jpg --response out0.json").expect_status_code(Some(0));

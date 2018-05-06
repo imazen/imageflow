@@ -200,7 +200,7 @@ impl Ir4Expand{
 
             let encoder = match format {
                 OutputFormat::Gif => s::EncoderPreset::Gif,
-                OutputFormat::Jpeg => s::EncoderPreset::LibjpegTurbo {
+                OutputFormat::Jpeg => s::EncoderPreset::LibjpegTurboClassic {
                     quality: Some(i.quality.unwrap_or(90)),
                     optimize_huffman_coding: i.jpeg_progressive,
                     progressive: i.jpeg_progressive

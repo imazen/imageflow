@@ -29,7 +29,7 @@ fn create_blank(dir: &str, filename_without_ext: &str, w: usize, h: usize, encod
 }
 fn setup(dir: &str){
 
-    create_blank(dir, "200x200", 200, 200, s::EncoderPreset::libjpegturbo());
+    create_blank(dir, "200x200", 200, 200, s::EncoderPreset::libjpeg_turbo_classic());
     //create_blank(dir, "200x200", 200, 200, s::EncoderPreset::libpng32());
 //    let to_path =  Path::new(dir).join("valgrind_suppressions.txt");
 //    std::fs::copy("../../valgrind_suppressions.txt", to_path).unwrap();

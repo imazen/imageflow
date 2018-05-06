@@ -12,7 +12,7 @@ fn smoke_jpeg_to_jpeg() {
     let framewise = fluent::fluently()
         .decode(0)
         .constrain_within(Some(40), Some(40), Some(s::ConstraintResamplingHints::with(None, Some(25f32))))
-        .encode(1, s::EncoderPreset::libjpegturbo()).builder().to_framewise();
+        .encode(1, s::EncoderPreset::libjpeg_turbo_classic()).builder().to_framewise();
 
     let bytes = include_bytes!("assets/tiny.jpg");
 

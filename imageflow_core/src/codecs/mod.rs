@@ -20,6 +20,7 @@ mod gif;
 mod pngquant;
 mod lode;
 mod mozjpeg;
+mod libjpeg_turbo;
 use io::IoProxyRef;
 
 pub trait DecoderFactory{
@@ -265,7 +266,7 @@ struct ClassicEncoder{
 impl ClassicEncoder{
     fn get_codec_id_and_hints(preset: &s::EncoderPreset) -> Result<(i64, ffi::EncoderHints)>{
         match *preset {
-            s::EncoderPreset::LibjpegTurbo { quality, progressive, optimize_huffman_coding } => {
+            s::EncoderPreset::LibjpegTurboClassic { quality, progressive, optimize_huffman_coding } => {
                 Ok((ffi::CodecType::EncodeJpeg as i64,
                  ffi::EncoderHints {
                      jpeg_encode_quality: quality.unwrap_or(90),
@@ -328,7 +329,7 @@ impl Encoder for ClassicEncoder{
                 s::EncoderPreset::Lodepng { .. } |
                 s::EncoderPreset::Pngquant { .. } => ("image/png", "png"),
                 s::EncoderPreset::Mozjpeg { .. } |
-                s::EncoderPreset::LibjpegTurbo { .. } => ("image/jpeg", "jpg"),
+                s::EncoderPreset::LibjpegTurboClassic { .. } => ("image/jpeg", "jpg"),
                 s::EncoderPreset::Gif { .. } => ("image/gif", "gif"),
             };
 
@@ -389,7 +390,7 @@ impl CodecInstanceContainer{
                  s::EncoderPreset::Lodepng => {
                      CodecKind::Encoder(Box::new(lode::LodepngEncoder::create(c, io)?))
                  },
-                 s::EncoderPreset::Libpng {..} | s::EncoderPreset::LibjpegTurbo {..} => {
+                 s::EncoderPreset::Libpng {..} | s::EncoderPreset::LibjpegTurboClassic {..} => {
                      CodecKind::Encoder(Box::new(
                          ClassicEncoder::get_empty(self.io_id, io)?))
                  }
