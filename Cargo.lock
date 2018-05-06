@@ -569,7 +569,7 @@ dependencies = [
  "lcms2 5.0.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "libc 0.2.40 (registry+https://github.com/rust-lang/crates.io-index)",
  "lodepng 2.1.5 (registry+https://github.com/rust-lang/crates.io-index)",
- "mozjpeg 0.8.1 (registry+https://github.com/rust-lang/crates.io-index)",
+ "mozjpeg 0.8.5 (registry+https://github.com/rust-lang/crates.io-index)",
  "num 0.1.42 (registry+https://github.com/rust-lang/crates.io-index)",
  "petgraph 0.4.12 (registry+https://github.com/rust-lang/crates.io-index)",
  "rgb 0.8.7 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -1012,7 +1012,7 @@ dependencies = [
 
 [[package]]
 name = "mozjpeg"
-version = "0.8.1"
+version = "0.8.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
  "arrayvec 0.4.7 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -1981,7 +1981,7 @@ dependencies = [
 "checksum mount 0.3.0 (git+https://github.com/iron/mount.git?rev=2c3d719be4c158d4ddbd8cdb402fafccdefec58c)" = "<none>"
 "checksum mount 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)" = "32245731923cd096899502fc4c4317cfd09f121e80e73f7f576cf3777a824256"
 "checksum moz-cheddar 0.4.2 (registry+https://github.com/rust-lang/crates.io-index)" = "43b29fdad80b06f38d959105a138ab8ca8c5a57c3435f5bfbd770fa73e625015"
-"checksum mozjpeg 0.8.1 (registry+https://github.com/rust-lang/crates.io-index)" = "e8ae282880c52c5cb1196faef7594969aa24a44f7d7e6ed3613c9ce8987394c4"
+"checksum mozjpeg 0.8.5 (registry+https://github.com/rust-lang/crates.io-index)" = "64055463c93ad47dd637848c8d01337595083511a20fa2c42cbe29c8d649b8d7"
 "checksum mozjpeg-sys 0.5.13 (registry+https://github.com/rust-lang/crates.io-index)" = "0d5f18bd49c7fb80c9125d277f5db00c6505e2ab560af2810c0945d4c0a38ce7"
 "checksum msdos_time 0.1.6 (registry+https://github.com/rust-lang/crates.io-index)" = "aad9dfe950c057b1bfe9c1f2aa51583a8468ef2a5baba2ebbe06d775efeb7729"
 "checksum nasm-rs 0.1.3 (registry+https://github.com/rust-lang/crates.io-index)" = "050b2ce3f43a1b40dbf91b1e747924cb38ee6d24d6807704137f40c89798c688"

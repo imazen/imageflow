@@ -61,7 +61,7 @@ imageflow_types = { path = "../imageflow_types", version = "*" }
 imageflow_helpers = { path = "../imageflow_helpers", version = "*" }
 imageflow_riapi = { path = "../imageflow_riapi", version = "*" }
 imageflow_c_components = { path = "../c_components" }
-mozjpeg = "0.8.1"
+mozjpeg = "0.8.5"
 
 [dev-dependencies]
 hyper = "=0.10.12"
