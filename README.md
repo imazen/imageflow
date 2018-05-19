@@ -1,25 +1,39 @@
 ## ![imageflow](https://www.imageflow.io/images/imageflow.svg) optimal images at incredible speeds
 
-[![travis-master](https://img.shields.io/travis/imazen/imageflow/master.svg?label=master%3A%20mac64%20ubuntu64%2014.04%2016.04)](https://travis-ci.org/imazen/imageflow/builds) [![AppVeyor build status](https://ci.appveyor.com/api/projects/status/0356x95fa312m3wy/branch/master?svg=true&passingText=master%3A%20win32%20win64%20-%20passing&failingText=master%3A%20win32%20win64%20-%20failed)](https://ci.appveyor.com/project/imazen/imageflow/branch/master) [![Coverity Scan Build Status](https://scan.coverity.com/projects/8403/badge.svg)](https://scan.coverity.com/projects/imazen-imageflow) [![state: technical preview](https://img.shields.io/badge/state-technical%E2%80%93preview-yellow.svg)](#flaws)
+[![travis-master](https://img.shields.io/travis/imazen/imageflow/master.svg?label=master%3A%20mac64%20ubuntu64%2014.04%2016.04)](https://travis-ci.org/imazen/imageflow/builds) [![AppVeyor build status](https://ci.appveyor.com/api/projects/status/0356x95fa312m3wy/branch/master?svg=true&passingText=master%3A%20win32%20win64%20-%20passing&failingText=master%3A%20win32%20win64%20-%20failed)](https://ci.appveyor.com/project/imazen/imageflow/branch/master) [![Coverity Scan Build Status](https://scan.coverity.com/projects/8403/badge.svg)](https://scan.coverity.com/projects/imazen-imageflow) [![state: technical preview](https://img.shields.io/badge/state-release%E2%80%93candidate-yellow.svg)](#flaws)
 
-* **imageflow_server** can run jobs or manipulate images in-flight (e.g.`/bucket/img.jpg?w=200`) for direct use from HTML. Source images can reside in blob storage, on another server, or on the filesystem.
-* **libimageflow** is for direct (in-process) use from *your* programming language.  It has a simple [C-compatible ABI](https://s3-us-west-1.amazonaws.com/imageflow-nightlies/master/doc/imageflow/index.html) and [bindings](https://github.com/imazen/imageflow/tree/master/bindings).
-* **imageflow_tool** is a command-line tool for experimenting, running batch jobs, or when you want process isolation. Up to 17x faster than ImageMagick.
+[![Docker Pulls](https://img.shields.io/docker/pulls/imazen/imageflow_tool.svg)](https://hub.docker.com/r/imazen/imageflow_tool/)
+[![view releases](https://img.shields.io/badge/-download%20binaries%20for%20windows,%20mac,%20or%20linux-green.svg)](https://github.com/imazen/imageflow/releases)
 
-These all offer the JSON [`/build` API](https://s3-us-west-1.amazonaws.com/imageflow-nightlies/master/doc/context_json_api.txt) as well as the traditional `width=300&height=200&mode=crop&format=jpg` command string form. Each is available as a self-contained binary for Windows and Mac. We offer Docker images for Linux (where glibc and OpenSSL are required).
 
-libimageflow offers interactive job manipulation as well [like `/tell_decoder`, `/get_image_info`, and `/execute`](https://s3-us-west-1.amazonaws.com/imageflow-nightlies/master/doc/job_json_api.txt). Unless you are using memory buffers for I/O, it's better to use `/build`.
+[Download](https://github.com/imazen/imageflow/releases) blazing fast and uniquely [safer](https://cve.mitre.org/cgi-bin/cvekey.cgi?keyword=imagemagick) tools for a modern image workflow.
 
-[![view releases](https://img.shields.io/badge/-view%20downloads%20and%20releases-green.svg)](https://github.com/imazen/imageflow/releases) or `docker run --rm imazen/imageflow_tool`
 
-[We thank our backers on Kickstarter](https://www.kickstarter.com/projects/njones/imageflow-respect-the-pixels-a-secure-alt-to-image/posts/1616122) and [the many supporters of ImageResizer](https://imageresizing.net) for making this project a reality.
+* **imageflow_tool** is a command-line tool for experimenting, running batch jobs,
+or when you want process isolation. Up to 17x faster than ImageMagick. Also produces smaller files at higher quality.
+* **imageflow_server** can run JSON jobs or manipulate images in-flight (e.g.`/bucket/img.jpg?w=200`) for direct use from
+HTML. Source images can reside in blob storage, on another server, or on the filesystem.
+* **libimageflow** is for direct (in-process) use from *your* programming language.  It has a simple
+[C-compatible ABI](https://s3-us-west-1.amazonaws.com/imageflow-nightlies/master/doc/imageflow/index.html)
+and [bindings](https://github.com/imazen/imageflow/tree/master/bindings).
+
+**Note: We aren't labeling Imageflow as 'stable' until enough people have tested it. Please help us test and provide feedback!**
+Also, please, *please*, **please** [send us 'challenging' images and tasks](https://github.com/imazen/imageflow/issues/98).
+
+
+These all offer the JSON [`/build` API](https://s3-us-west-1.amazonaws.com/imageflow-nightlies/master/doc/context_json_api.txt)
+as well as the traditional `width=300&height=200&mode=crop&format=jpg` command string form. Each is available as a
+[self-contained binary](https://github.com/imazen/imageflow/releases) for Windows, Ubuntu, and Mac. We also offer Docker images for Linux (where glibc and OpenSSL are required).
+
+libimageflow offers interactive job manipulation as well [like `/tell_decoder`, `/get_image_info`, and `/execute`](https://s3-us-west-1.amazonaws.com/imageflow-nightlies/master/doc/job_json_api.txt).
+Unless you are using memory buffers for I/O, it's better to use `/build`.
+
+[We thank our backers on Kickstarter](https://www.kickstarter.com/projects/njones/imageflow-respect-the-pixels-a-secure-alt-to-image/posts/1616122)
+and [the many supporters of ImageResizer](https://imageresizing.net) for making this project a reality.
 Email support@imageflow.io if you need an AGPLv3 exception for commercial use.
 
-Also, please [send us 'challenging' images and tasks](https://github.com/imazen/imageflow/issues/98). We'd also appreciate it if you'd explore the JSON APIs and [review them and other topics where we are requesting feedback](https://github.com/imazen/imageflow/issues?q=is%3Aopen+is%3Aissue+label%3Arequesting-feedback). And – we need help with benchmarking on Windows.
 
-If we enough people beta-test Imageflow and provide feedback, we aim to publish a stable 1.0 release in August 2017 (along with Ruby and Node bindings). **See [flaws and missing features](#flaws) for project status.**
-
-## Using imageflow_tool
+## Start with imageflow_tool (recommended)
 
 `imageflow_tool examples --generate` - creates an *examples* directory with JSON jobs and invocation scripts.
 
@@ -77,129 +91,32 @@ You'll want to mount various image source locations to prefixes. The `--mount` c
 
 ![](https://www.imageflow.io/images/imageflow-server-advanced.svg)
 
-## Using libimageflow
+## Using libimageflow from your language
 
 ![](https://www.imageflow.io/images/libimageflow-direct.svg)
 
-* C# - @samuelenglard has volunteered to create C# bindings for Imageflow. We're tracking [design here](https://github.com/imazen/imageflow/issues/67).
+* Preview C# bindings can be found at https://github.com/imazen/imageflow-dotnet
 * Ruby - Basic bindings can be found in [bindings/ruby/](https://github.com/imazen/imageflow/tree/master/bindings/ruby)
+* C and C++ interface is stable - use [bindings/headers/imageflow_default.h](https://github.com/imazen/imageflow/blob/master/bindings/headers/imageflow_default.h) or one of the many alternate conventions provided with each release.
+* Rust - Imageflow is written in Rust, so you can use the `imageflow_core` crate.
 * Node - Not yet started. Want to help? [generate bindings from the header files](https://github.com/tjfontaine/node-ffi-generate)
-* C and C++ - use [bindings/headers/imageflow_default.h](https://github.com/imazen/imageflow/blob/master/bindings/headers/imageflow_default.h) or one of the many alternate conventions provided with each release.
-* Rust - Imageflow is written in Rust. Use the `imageflow_core` crate, but be warned that this interface will evolve more rapidly than the FFI `imageflow` crate.
 * other languages - Use an [FFI](https://en.wikipedia.org/wiki/Foreign_function_interface) binding-generation tool for your language, and feed it whichever [header file it likes best](https://github.com/imazen/imageflow/tree/master/bindings/headers).
 
-Official Ruby and Node bindings will be released by August 2017.
+You also may find that `imageflow_tool` is quite fast enough for your needs.
 
+### Crates within this project
 
-# How to build Imageflow from source
-
-We're assuming you've cloned already.
-
-```bash
-     git clone git@github.com:imazen/imageflow.git
-     cd imageflow
-```
-
-## Docker (linux/macOS/WinUbuntu)
-
-This will create caches within `~/.docker_imageflow_caches` specific to the docker image used. Instances will be ephemeral; the only state will be in the caches.
-
-```bash
-./build_via_docker.sh debug
-```
-
-
-## Linux (native)
-
-We need a few packages in order to build the C dependencies. You probably have most of these already.
-
-* build-essential, nasm, pkg-config
-* wget, curl, git
-* libpng, libssl, ca-certificates
-
-## For Ubuntu 14.04 and 16.04:
-
-```bash
-sudo apt-get install --no-install-recommends \
-  build-essential nasm pkg-config \
-  wget curl git ca-certificates \
-  libpng-dev libssl-dev
-```
-
-After installing the above, you'll need dssim, and Rust Nightly.
-
-```bash
-curl https://sh.rustup.rs -sSf | sh -s -- -y --default-toolchain nightly-2018-04-04
-./ci/nixtools/install_dssim.sh
-./build.sh
-```
-
-We aren't listing dependencies needed for
-
-* Valgrind (common versions break openssl; you may need to build from source)
-* Code coverage
-* Bindings.
-
-Please consult the [official Dockerfiles](https://github.com/imazen/dockerfiles_imageflow) for these.
-
-## OS X (native)
-
-You'll need a bit less on OS X, although this may not be comprehensive:
-
-```bash
-brew install nasm libpng pkg-config wget
-./ci/nixtools/install_dssim.sh
-./build.sh
-```
-## Windows
-
-### Pre-requisites
-
-1. Visual Studio 2015 or 2017 (Only the C++ Build Tools component is required)
-2. Install [Git 64-bit](https://git-scm.com/download/win).
-3. Install [NASM 64-bit](http://www.nasm.us/pub/nasm/releasebuilds/2.12.02/win64/nasm-2.12.02-installer-x64.exe) Installer must be `Run as Administrator` - it will not prompt.
-4. Install [Rust 64-bit](https://static.rust-lang.org/rustup/dist/x86_64-pc-windows-msvc/rustup-init.exe). Install toolchain `nightly-2018-04-04` and set it as default. For the moment, 32-bit builds also require [a 32-bit Rust](https://static.rust-lang.org/rustup/dist/i686-pc-windows-msvc/rustup-init.exe).
-
-You need all of these to be in %PATH%. Edit `ci/wintools/SETUP_PATH.bat` as appropriate to ensure that rust/cargo, nasm, git, and Git/mingw64/bin are all available.
-
-1. Run `win_enter_env.bat` to start a sub-shell with VS tools loaded and a proper PATH. Edit the file per its comments to target a 32-bit build (you may want a separate imageflow folder for each target).
-4. `cd ..\..` back to the root and run `win_build_c.bat` again.
-5. Run `win_build_rust.bat` to compile the Rust components
-
-
-## How does one learn image processing for the web?
-
-First, [read High Performance Images](http://shop.oreilly.com/product/0636920039730.do) for context.
-
-There are not many great textbooks on the subject. Here are some from my personal bookshelf. Between them (and Wikipedia) I was able to put together about 60% of the knowledge I needed; the rest I found by reading the source code to [many popular image processing libraries](https://github.com/nathanaeljones/imaging-wiki?files=1).
-
-I would start by reading [Principles of Digital Image Processing: Core Algorithms](http://www.amazon.com/gp/product/1848001940?psc=1&redirect=true&ref_=oh_aui_search_detailpage) front-to-back, then [Digital Image Warping](http://www.amazon.com/gp/product/0818689447?psc=1&redirect=true&ref_=oh_aui_search_detailpage).  Wikipedia is also a useful reference, although the relevant pages are not linked or categorized together - use specific search terms, like ["bilinear interpolation"](https://en.wikipedia.org/wiki/Bilinear_interpolation) and ["Lab color space"](https://en.wikipedia.org/wiki/Lab_color_space).
-
-* [Digital Image Warping](http://www.amazon.com/gp/product/0818689447?psc=1&redirect=true&ref_=oh_aui_search_detailpage)
-* [Computer Graphics: Principles and Practice in C (2nd Edition)](http://www.amazon.com/gp/product/0201848406?psc=1&redirect=true&ref_=oh_aui_search_detailpage)
-* [Principles of Digital Image Processing: Fundamental Techniques](http://www.amazon.com/gp/product/1848001908?psc=1&redirect=true&ref_=oh_aui_search_detailpage)
-* [Principles of Digital Image Processing: Core Algorithms](http://www.amazon.com/gp/product/1848001940?psc=1&redirect=true&ref_=oh_aui_search_detailpage)
-* [Principles of Digital Image Processing: Advanced Methods](http://www.amazon.com/gp/product/1848829183?psc=1&redirect=true&ref_=oh_aui_search_detailpage)
-
-I have found the source code for OpenCV, LibGD, FreeImage, Libvips, Pixman, Cairo, ImageMagick, stb_image, Skia, and FrameWave is very useful for understanding real-world implementations and considerations. Most textbooks assume an infinite plane, ignore off-by-one errors, floating-point limitations, color space accuracy, and operational symmetry within a bounded region. I cannot recommend any textbook  as an accurate reference, only as a conceptual starting point. [I made some notes regarding issues to be aware of when creating an imaging library](https://github.com/imazen/Graphics-vNext/blob/master/aware.md).
-
-Also, keep in mind that computer vision is very different from image creation. In computer vision, resampling accuracy matters very little, for example. But in image creation, you are serving images to photographers, people with far keener visual perception than the average developer. The images produced will be rendered side-by-side with other CSS and images, and the least significant bit of inaccuracy is quite visible. You are competing with Lightroom; with offline tools that produce visually perfect results. End-user software will be discarded if photographers feel it is corrupting their work.
-
-### Source organization
-
-Rust crates
-
-* imageflow_types - Shared types, with JSON serialization
+* imageflow_abi - The stable API of libimageflow/imageflow.dll.
+  Headers for libimageflow are located in `bindings/headers`
+* imageflow_tool - The command-line tool
+* imageflow_server - The HTTP server
+* c_components - A rust crate containing C source
+* c_components/tests - Tests for the C components
+* imageflow_types - Shared types used by most crates, with JSON serialization
 * imageflow_helpers - Common helper functions and utilities
 * imageflow_riapi - RIAPI and ImageResizer4 compatibility parsing/layout
-* imageflow_core - The main library
-* imageflow_abi - The C-Compatible API - exposes functionality from imageflow_core
-* imageflow_tool
-* imageflow_server
+* imageflow_core - The main library and execution engine
 
-C source is located in ./c_components/lib, and ./c_components/tests
-
-Headers for libimageflow.dll are located in `bindings/headers`
 
 ### Known flaws and missing features (as of July 2017)
 
@@ -218,3 +135,116 @@ Headers for libimageflow.dll are located in `bindings/headers`
 
 - [ ] Job cost prediction (delayed - no interest from community)
 - [ ] Node bindings (delayed - no interest from community)
+
+
+# Building from Source without Docker
+
+You'll need more than just Rust to compile Imageflow, as it has a couple C dependencies.
+
+1. **Install platform-specific prerequisites (find the right section below).**
+2. Run `cargo install dssim`
+3. Clone and cd into this repository
+   E.g., `git clone git@github.com:imazen/imageflow.git && cd imageflow`)
+
+If you are using `bash` on any platform, you should be able to use `build.sh`
+* `./build.sh clean` - to clean
+* `./build.sh test` - run all tests
+* `./build.sh debug` - generate slow debug binaries
+* `./build.sh release` - generate release binaries
+* `./build.sh install` - install release binaries to `/usr/local` (must run `./build.sh release first)
+* `./build.sh uninstall` - uninstall release binaries
+
+`build.sh` places binaries in the `./artifacts/ directory`
+
+If you are on Windows, only run build commands in the window created by `win_enter_env.bat`.
+
+You can also build using `cargo` directly, although this will place binaries in `./target/release` instead.
+    * `cargo test --all` to test Imageflow in debug (slooow) mode
+    * `cargo build --package imageflow_abi --release` to compile `libimageflow/imageflow.dll`
+    * `cargo build --package imageflow_tool --release` to compile `imageflow_tool(.exe)`
+    * `cargo build --package imageflow_server --release` to compile `imageflow_server(.exe)`
+    * `cargo build --all --release` to compile everything in release mode
+    * `cargo doc --no-deps --all --release` to generate documentation.
+
+
+## Building from Source with Docker
+If you want to replicate the Imageflow CI environment:
+1. [Install Docker](https://docs.docker.com/install/)
+2. Run from a bash session (Windows WSL, macOS, or linux)
+3. ```bash
+   git clone git@github.com:imazen/imageflow.git
+   cd imageflow
+   ./build_via_docker.sh debug
+   ```
+
+This will create caches within `~/.docker_imageflow_caches` specific to the docker image used. Instances will be ephemeral; the only state will be in the caches.
+
+The [official Dockerfiles](https://github.com/imazen/dockerfiles_imageflow) are also a great place to get more detailed environment setup steps, as we don't list steps for setting up:
+* Valgrind (common versions break openssl; you may need to build from source)
+* Code coverage
+* Bindings.
+
+## Linux Pre-requisites
+
+(tested on Ubuntu 14.04, 16.04, and 18.04.)
+
+```bash
+#Install Rust Nightly by running
+`curl https://sh.rustup.rs -sSf | sh -s -- -y --default-toolchain nightly-2018-05-15`
+#Ensure build tools are installed (git, curl, wget, gcc, g++, nasm, pkg-config, openssl, ca-certificates)
+`sudo apt-get install git wget curl build-essential pkg-config libssl-dev libpng-dev nasm `
+```
+
+## Mac OS Pre-requisites
+
+1. Install [XCode Command-Line Tools](http://railsapps.github.io/xcode-command-line-tools.html) if you haven't already
+2. Install [Homebrew](https://brew.sh/) if you haven't already.
+3. Install nasm, pkg-config, and wget
+   `brew install nasm pkg-config wget`
+4. Install [Rust](https://www.rust-lang.org/en-US/install.html)
+
+
+## Windows WSL (Ubuntu Bionic Subsystem) Pre-requisites
+
+1. Install [Ubuntu 18.04 from the Windows Store](https://www.microsoft.com/store/productId/9N9TNGVNDL3Q)
+2. Run Ubuntu 18.04 and create your username/password
+3. `sudo apt-get update` to update available packages.
+4. Install Rust Nightly by running
+  `curl https://sh.rustup.rs -sSf | sh -s -- -y --default-toolchain nightly-2018-05-15`
+5. Ensure build tools are installed (git, curl, wget, gcc, g++, nasm, pkg-config, openssl, ca-certificates)
+    `sudo apt-get install git wget curl build-essential pkg-config libssl-dev libpng-dev nasm `
+6. (optional) To use a graphical text editor, you'll need to download imageflow to a "Windows" directory, then map it to a location in Ubuntu.
+   For example, if you cloned imageflow to Documents/imageflow, you would run:
+   `ln -s /mnt/c/Users/[YourWindowsUserName]/Documents/imageflow ~/win_imageflow`
+7. Close and re-open Ubuntu
+
+
+## Windows 10 Pre-requisites
+
+1. Install Visual Studio 2017 Build Tools ([separately](https://www.visualstudio.com/thank-you-downloading-visual-studio/?sku=BuildTools&rel=15) or as a VS component)
+2. Install [Git 64-bit](https://git-scm.com/download/win).
+3. `Run As Administrator` the [NASM 64-bit](http://www.nasm.us/pub/nasm/releasebuilds/2.12.02/win64/nasm-2.12.02-installer-x64.exe) installer - it will not prompt.
+4. Install [Rust 64-bit](https://static.rust-lang.org/rustup/dist/x86_64-pc-windows-msvc/rustup-init.exe) if you want 64-bit Imageflow or [Rust 32-bit](https://static.rust-lang.org/rustup/dist/i686-pc-windows-msvc/rustup-init.exe) if you don't.
+Install toolchain `nightly-2018-05-15` as the default, and confirm adding it to `PATH`.
+5. Open the command line and switch to this repository's root directory
+5. Edit `ci/wintools/SETUP_PATH.bat` to ensure that rust/cargo, nasm, git, and Git/mingw64/bin are all in `%PATH%`.
+7. Run `win_enter_env.bat` to start a sub-shell (edit it if you want a 32-bit build)
+8. All build commands should be run in the sub-shell. Run `cmd.exe /c "ci\wintools\win_verify_tools.bat"` to check tools are present.
+
+## How does one learn image processing for the web?
+
+First, [read High Performance Images](http://shop.oreilly.com/product/0636920039730.do) for context.
+
+There are not many great textbooks on the subject. Here are some from my personal bookshelf. Between them (and Wikipedia) I was able to put together about 60% of the knowledge I needed; the rest I found by reading the source code to [many popular image processing libraries](https://github.com/nathanaeljones/imaging-wiki?files=1).
+
+I would start by reading [Principles of Digital Image Processing: Core Algorithms](http://www.amazon.com/gp/product/1848001940?psc=1&redirect=true&ref_=oh_aui_search_detailpage) front-to-back, then [Digital Image Warping](http://www.amazon.com/gp/product/0818689447?psc=1&redirect=true&ref_=oh_aui_search_detailpage).  Wikipedia is also a useful reference, although the relevant pages are not linked or categorized together - use specific search terms, like ["bilinear interpolation"](https://en.wikipedia.org/wiki/Bilinear_interpolation) and ["Lab color space"](https://en.wikipedia.org/wiki/Lab_color_space).
+
+* [Digital Image Warping](http://www.amazon.com/gp/product/0818689447?psc=1&redirect=true&ref_=oh_aui_search_detailpage)
+* [Computer Graphics: Principles and Practice in C (2nd Edition)](http://www.amazon.com/gp/product/0201848406?psc=1&redirect=true&ref_=oh_aui_search_detailpage)
+* [Principles of Digital Image Processing: Fundamental Techniques](http://www.amazon.com/gp/product/1848001908?psc=1&redirect=true&ref_=oh_aui_search_detailpage)
+* [Principles of Digital Image Processing: Core Algorithms](http://www.amazon.com/gp/product/1848001940?psc=1&redirect=true&ref_=oh_aui_search_detailpage)
+* [Principles of Digital Image Processing: Advanced Methods](http://www.amazon.com/gp/product/1848829183?psc=1&redirect=true&ref_=oh_aui_search_detailpage)
+
+I have found the source code for OpenCV, LibGD, FreeImage, Libvips, Pixman, Cairo, ImageMagick, stb_image, Skia, and FrameWave is very useful for understanding real-world implementations and considerations. Most textbooks assume an infinite plane, ignore off-by-one errors, floating-point limitations, color space accuracy, and operational symmetry within a bounded region. I cannot recommend any textbook  as an accurate reference, only as a conceptual starting point. [I made some notes regarding issues to be aware of when creating an imaging library](https://github.com/imazen/Graphics-vNext/blob/master/aware.md).
+
+Also, keep in mind that computer vision is very different from image creation. In computer vision, resampling accuracy matters very little, for example. But in image creation, you are serving images to photographers, people with far keener visual perception than the average developer. The images produced will be rendered side-by-side with other CSS and images, and the least significant bit of inaccuracy is quite visible. You are competing with Lightroom; with offline tools that produce visually perfect results. End-user software will be discarded if photographers feel it is corrupting their work.
