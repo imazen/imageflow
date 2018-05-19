@@ -170,7 +170,7 @@ You can also build using `cargo` directly, although this will place binaries in 
 ## Building from Source with Docker
 If you want to replicate the Imageflow CI environment:
 1. [Install Docker](https://docs.docker.com/install/)
-2. Run from a bash session (Windows WSL, macOS, or linux)
+2. Run from a bash session ([Docker + Windows WSL](https://nickjanetakis.com/blog/setting-up-docker-for-windows-and-wsl-to-work-flawlessly), macOS, or linux)
 3. ```bash
    git clone git@github.com:imazen/imageflow.git
    cd imageflow
