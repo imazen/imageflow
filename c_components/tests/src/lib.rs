@@ -22,7 +22,7 @@ fn c_catch() {
         assert_eq!(0, run_c_components_tests());
     }
 }
-
+//
 //// Uncomment if you're not seeing C test output
 //#[test]
 //fn test_failure_works() {

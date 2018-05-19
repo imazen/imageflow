@@ -13,7 +13,7 @@ TEST_CASE("Verify .cpp and .c files are being compiled with compatible type size
     REQUIRE(info.sizeof_int == sizeof(int));
 }
 
-TEST_CASE("Test failure works", ".fail")
+TEST_CASE("Test failure works", "[.]")
 {
     REQUIRE(false);
 }
