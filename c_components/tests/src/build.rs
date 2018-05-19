@@ -1,4 +1,6 @@
 extern crate cc;
+extern crate glob;
+
 use std::env;
 use std::path::PathBuf;
 
@@ -6,6 +8,9 @@ fn main() {
     let mut cc = cc::Build::new();
     cc.warnings(false);
 
+    for path in env::split_paths(&env::var_os("DEP_JPEG_INCLUDE").expect("include paths from mozjpeg-sys")) {
+        cc.include(path);
+    }
     for path in env::split_paths(&env::var_os("DEP_PNG_INCLUDE").expect("include paths from libpng-sys")) {
         cc.include(path);
     }
@@ -17,20 +22,30 @@ fn main() {
     let c_root = test_root.parent().unwrap();
     cc.include(c_root.join("lib"));
     cc.include(c_root);
+
+
     cc.include(&test_root);
 
-    let mut cxx = cc.clone();
+    cc.define("imageflow_c_BUILD_STATIC", Some("1")); // -Dimageflow_c_BUILD_SHARED for DLL
 
-    cc.flag("-std=c11");
     cc.file(test_root.join("helpers.c"));
     cc.file(test_root.join("profile_imageflow.c"));
-    cc.compile("imageflow_c_tests");
 
+
+    let mut cxx = cc.clone();
     cxx.cpp(true);
-    cxx.flag("-std=c++11");
+
+    if !cc.get_compiler().is_like_msvc() {
+        cc.flag("-std=c11");
+        cxx.flag("-std=c++11");
+    }
+
+    // No need to compile profiling binary separately from tests (AFAICT)
+    //cc.compile("imageflow_c_tests");
+
 
     // the C code wants __FILE__ to contain slashes
-    cxx.file(test_root.join("runner.cpp"));
+
     cxx.file(test_root.join("test.cpp"));
     cxx.file(test_root.join("test_context.cpp"));
     cxx.file(test_root.join("test_error_handling.cpp"));
@@ -40,5 +55,6 @@ fn main() {
     cxx.file(test_root.join("test_variations.cpp"));
     cxx.file(test_root.join("test_weighting.cpp"));
     cxx.file(test_root.join("test_weighting_helpers.cpp"));
+    cxx.file(test_root.join("runner.cpp"));
     cxx.compile("imageflow_cxx_tests");
 }

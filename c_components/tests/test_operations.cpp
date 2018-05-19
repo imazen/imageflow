@@ -2,6 +2,8 @@
 #include <lib/codecs.h>
 #include "catch.hpp"
 
+extern "C" void keep6() {}
+
 // TODO: Test with opaque and transparent images
 // TODO: Test using random dots instead of rectangles to see if overlaps are correct.
 

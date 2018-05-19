@@ -7,6 +7,7 @@
 #include "string.h"
 #include "lcms2.h"
 
+extern "C" void keep4() {}
 // TODO: https://github.com/kornelski/pngquant/
 //
 // uint8_t gif_bytes_32[]

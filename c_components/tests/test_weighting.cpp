@@ -2,6 +2,8 @@
 #include "helpers.h"
 #include "test_weighting_helpers.h"
 
+extern "C" void keep9() {}
+
 TEST_CASE("Test contrib windows", "[fastscaling]")
 {
 

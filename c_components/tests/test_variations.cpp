@@ -1,6 +1,9 @@
 #include "catch.hpp"
 #include "helpers.h"
 
+
+extern "C" void keep8() {}
+
 #define GENERATE_CODE_LITERALS
 //#define GENERATE_INTEGER_WEIGHTS
 //#define GENERATE_FLOAT_LITERALS

@@ -2,6 +2,8 @@
 #include "imageflow_private.h"
 #include "helpers.h"
 
+extern "C" void keep1() {}
+
 TEST_CASE("Verify .cpp and .c files are being compiled with compatible type sizes")
 {
     struct flow_sanity_check info;
@@ -9,6 +11,11 @@ TEST_CASE("Verify .cpp and .c files are being compiled with compatible type size
     REQUIRE(info.sizeof_bool == sizeof(bool));
     REQUIRE(info.sizeof_size_t == sizeof(size_t));
     REQUIRE(info.sizeof_int == sizeof(int));
+}
+
+TEST_CASE("Test failure works", ".fail")
+{
+    REQUIRE(false);
 }
 
 TEST_CASE("Test size of flow_context")

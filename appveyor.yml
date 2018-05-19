@@ -81,7 +81,6 @@ install:
   - echo. && echo. && echo Installing NASM
   - curl -L -o nasminst.exe http://www.nasm.us/pub/nasm/releasebuilds/2.12.02/win64/nasm-2.12.02-installer-x64.exe
   - start /wait nasminst.exe /S
-  - curl -L -o "c_components/tests/catch.hpp" "https://github.com/catchorg/Catch2/releases/download/v1.11.0/catch.hpp"
 
 test_script:
   - if NOT "%CI_TAG%"=="" echo Purging build files for %CI_TAG%

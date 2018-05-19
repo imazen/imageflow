@@ -2,6 +2,8 @@
 #include "imageflow_private.h"
 #include "helpers.h"
 
+extern "C" void keep5() {}
+
 TEST_CASE("Test memory io", "")
 {
     flow_c * c = flow_context_create();
