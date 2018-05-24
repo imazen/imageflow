@@ -23,14 +23,9 @@ fn main() {
     cc.include(c_root.join("lib"));
     cc.include(c_root);
 
-
     cc.include(&test_root);
 
     cc.define("imageflow_c_BUILD_STATIC", Some("1")); // -Dimageflow_c_BUILD_SHARED for DLL
-
-    cc.file(test_root.join("helpers.c"));
-    cc.file(test_root.join("profile_imageflow.c"));
-
 
     let mut cxx = cc.clone();
     cxx.cpp(true);
@@ -40,9 +35,10 @@ fn main() {
         cxx.flag("-std=c++11");
     }
 
-    // No need to compile profiling binary separately from tests (AFAICT)
-    //cc.compile("imageflow_c_tests");
-
+    // C and C++ tests have to be compiled separately, otherwise C files get wrong symbols.
+    cc.file(test_root.join("helpers.c"));
+    cc.file(test_root.join("profile_imageflow.c"));
+    cc.compile("imageflow_c_tests");
 
     // the C code wants __FILE__ to contain slashes
 

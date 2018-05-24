@@ -1,6 +1,7 @@
 [package]
 name = "c_components_tests"
 version = "0.1.0"
+links = "imageflow_private_c_components_tests"
 authors = ["Nathanael Jones <nathanael.jones@gmail.com>", "Kornel Lesiński <kornel@geekhood.net>"]
 workspace = "../../"
 build = "src/build.rs"
