@@ -16,8 +16,7 @@ if [[ "$(uname -s)" == 'Darwin' ]]; then
     set -x
     brew update || brew update
     date "$STAMP"
-    brew install nasm
-    ./ci/nixtools/install_dssim.sh
+    brew install nasm dssim
     set +x
 fi
 
