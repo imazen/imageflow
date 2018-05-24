@@ -12,7 +12,7 @@ path = "src/profile.rs"
 [dependencies]
 imageflow_c_components = {path = ".."}
 lcms2-sys = "2.4.8"
-libpng-sys = "0.2.3"
+libpng-sys = "0.2.4"
 
 [build-dependencies.cc]
 version = "1.0.3"
