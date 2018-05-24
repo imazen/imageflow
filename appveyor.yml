@@ -91,9 +91,6 @@ test_script:
   - rustc -V
   - cargo -V
   - nasm -v
-  - cd c_components
-  - mkdir build || exit 0
-  - cd %APPVEYOR_BUILD_FOLDER%
   - SET RUST_TEST_THREADS=1
   - cd %APPVEYOR_BUILD_FOLDER%
   - cargo test --all --release %TARGET_ARG%
