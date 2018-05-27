@@ -22,7 +22,7 @@ fi
 ./build.sh
 test -d target/doc && chmod a+rwX target/doc # travis cache process can't delete it otherwise
 
-if [[ "SKIP_HOST_CARGO_EXPORT" != 'True' ]]; then
+if [[ "$SKIP_HOST_CARGO_EXPORT" != 'True' ]]; then
     if [[ -d "${HOME}/.cargo/git" && -d "${HOME}/.cargo/registry" ]]; then
         echo "exporting registry to host_cargo"
         cp -Rp "${HOME}/.cargo/git" "${HOME}/host_cargo/git"
