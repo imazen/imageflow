@@ -9,6 +9,8 @@
 
 #include "imageflow_private.h"
 
+extern "C" void keep10() {}
+
 bool test_contrib_windows(flow_c * context, char * msg)
 {
     int bad = -1;

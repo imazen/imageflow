@@ -12,6 +12,8 @@
 #include "jpeglib.h"
 #include "png.h"
 
+extern "C" void keep7() {}
+
 bool test(int sx, int sy, flow_pixel_format sbpp, int cx, int cy, flow_pixel_format cbpp, bool transpose, bool flipx,
           bool flipy, flow_interpolation_filter filter);
 

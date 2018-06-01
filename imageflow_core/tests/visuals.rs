@@ -138,6 +138,7 @@ fn test_encode_mozjpeg() {
         s::Node::Encode {
             io_id: 1,
             preset: s::EncoderPreset::Mozjpeg {
+                progressive: None,
                 quality: Some(50),
             },
         },

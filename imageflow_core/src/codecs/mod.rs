@@ -20,6 +20,7 @@ mod gif;
 mod pngquant;
 mod lode;
 mod mozjpeg;
+mod libjpeg_turbo;
 use io::IoProxyRef;
 
 pub trait DecoderFactory{
@@ -265,7 +266,7 @@ struct ClassicEncoder{
 impl ClassicEncoder{
     fn get_codec_id_and_hints(preset: &s::EncoderPreset) -> Result<(i64, ffi::EncoderHints)>{
         match *preset {
-            s::EncoderPreset::LibjpegTurbo { quality, progressive, optimize_huffman_coding } => {
+            s::EncoderPreset::LibjpegTurboClassic { quality, progressive, optimize_huffman_coding } => {
                 Ok((ffi::CodecType::EncodeJpeg as i64,
                  ffi::EncoderHints {
                      jpeg_encode_quality: quality.unwrap_or(90),
@@ -328,7 +329,8 @@ impl Encoder for ClassicEncoder{
                 s::EncoderPreset::Lodepng { .. } |
                 s::EncoderPreset::Pngquant { .. } => ("image/png", "png"),
                 s::EncoderPreset::Mozjpeg { .. } |
-                s::EncoderPreset::LibjpegTurbo { .. } => ("image/jpeg", "jpg"),
+                s::EncoderPreset::LibjpegTurbo { .. } |
+                s::EncoderPreset::LibjpegTurboClassic { .. } => ("image/jpeg", "jpg"),
                 s::EncoderPreset::Gif { .. } => ("image/gif", "gif"),
             };
 
@@ -383,13 +385,16 @@ impl CodecInstanceContainer{
                  s::EncoderPreset::Pngquant {speed, quality} => {
                      CodecKind::Encoder(Box::new(pngquant::PngquantEncoder::create(c, speed, quality, io)?))
                  },
-                 s::EncoderPreset::Mozjpeg {quality} => {
-                     CodecKind::Encoder(Box::new(mozjpeg::MozjpegEncoder::create(c, quality, io)?))
+                 s::EncoderPreset::Mozjpeg {quality, progressive} => {
+                     CodecKind::Encoder(Box::new(mozjpeg::MozjpegEncoder::create(c, quality, progressive, io)?))
+                 },
+                 s::EncoderPreset::LibjpegTurbo {quality, progressive, optimize_huffman_coding} => {
+                     CodecKind::Encoder(Box::new(mozjpeg::MozjpegEncoder::create_classic(c, quality.map(|q| q as u8), progressive, optimize_huffman_coding, io)?))
                  },
                  s::EncoderPreset::Lodepng => {
                      CodecKind::Encoder(Box::new(lode::LodepngEncoder::create(c, io)?))
                  },
-                 s::EncoderPreset::Libpng {..} | s::EncoderPreset::LibjpegTurbo {..} => {
+                 s::EncoderPreset::Libpng {..} | s::EncoderPreset::LibjpegTurboClassic {..} => {
                      CodecKind::Encoder(Box::new(
                          ClassicEncoder::get_empty(self.io_id, io)?))
                  }

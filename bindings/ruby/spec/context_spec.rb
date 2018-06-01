@@ -70,7 +70,7 @@ module Imageflow
         c.execute framewise: {steps: [
             {decode: {io_id: 0}},
             {resample_2d: {w: 300, h: 200}},
-            {encode: {io_id: 1, preset: {"libjpegturbo": {quality: 90}}}}
+            {encode: {io_id: 1, preset: {"libjpeg": {quality: 90}}}}
         ]}
 
         out_bytes = c.get_buffer(io_id: 1)
@@ -103,7 +103,7 @@ module Imageflow
         c.execute framewise: {steps: [
             {decode: {io_id: 0}},
             {resample_2d: {w: 300, h: 200}},
-            {encode: {io_id: 1, preset: {"libjpegturbo": {}}}}
+            {encode: {io_id: 1, preset: {"libjpeg": {}}}}
         ]}
 
         out_bytes = c.get_buffer(io_id: 1)
