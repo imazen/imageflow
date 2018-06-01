@@ -392,9 +392,10 @@ else
 
 	fi
 	#echo "SIM_DOCKER_CACHE_VARS ${SIM_DOCKER_CACHE_VARS[*]}"
-
+	echo "PWD=${PWD}"
+	ls "$TRAVIS_BUILD_DIR/ci/travis_run_docker.sh"
 	set -x
-	"${DOCKER_INVOCATION[@]}" -v "${TRAVIS_BUILD_DIR}:/home/conan/imageflow" "${DOCKER_CACHE_VARS[@]}" "${DOCKER_ENV_VARS[@]}" "${DOCKER_IMAGE}" "${DOCKER_COMMAND[@]}"
+	"${DOCKER_INVOCATION[@]}" -w "/home/conan/imageflow" -v "${TRAVIS_BUILD_DIR}:/home/conan/imageflow" "${DOCKER_CACHE_VARS[@]}" "${DOCKER_ENV_VARS[@]}" "${DOCKER_IMAGE}" "${DOCKER_COMMAND[@]}"
 	set +x
 fi
 if [[ "$SIM_CI" != 'True' ]]; then
