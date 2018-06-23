@@ -211,15 +211,15 @@ impl EncoderPreset {
             zlib_compression: None, // Use default
         }
     }
-    pub fn libjpeg_turbo_classic() -> EncoderPreset {
-        EncoderPreset::LibjpegTurboClassic {
+    pub fn libjpeg_turbo() -> EncoderPreset {
+        EncoderPreset::LibjpegTurbo {
             quality: Some(100),
             optimize_huffman_coding: None,
             progressive: None
         }
     }
-    pub fn libjpeg_turbo_classic_q(quality: Option<i32>) -> EncoderPreset {
-        EncoderPreset::LibjpegTurboClassic {
+    pub fn libjpeg_turbo_q(quality: Option<i32>) -> EncoderPreset {
+        EncoderPreset::LibjpegTurbo {
             quality: quality,
             optimize_huffman_coding: None,
             progressive: None

@@ -369,7 +369,7 @@ fn smoke_test_graph_builder() {
         })
         .to(s::Node::FlipV);
     let b = a.branch().to(s::Node::Encode {
-        preset: s::EncoderPreset::libjpeg_turbo_classic(),
+        preset: s::EncoderPreset::libjpeg_turbo(),
         io_id: 0,
     });
     let c = a.branch()
