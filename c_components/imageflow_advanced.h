@@ -1,6 +1,8 @@
 #pragma once
 
+#define register /*lcms2 is for C99, not C++*/
 #include "lcms2.h"
+#undef register
 #include "imageflow.h"
 #include <stdarg.h>
 
