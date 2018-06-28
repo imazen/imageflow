@@ -195,6 +195,7 @@ pub enum ErrorKind{
     ValidationNotImplemented,
     InvalidOperation,
     InvalidState,
+    FetchError,
     Category(ErrorCategory),
     CError(CStatus)
 }
@@ -230,6 +231,7 @@ impl CategorizedError for ErrorKind{
             ErrorKind::GifEncodingError => ErrorCategory::InternalError,
             ErrorKind::GifDecodingError |
             ErrorKind::ColorProfileError => ErrorCategory::ImageMalformed,
+            ErrorKind::FetchError |
             ErrorKind::DecodingIoError |
             ErrorKind::EncodingIoError => ErrorCategory::IoError,
             ErrorKind::CError(ref e) => e.category(),

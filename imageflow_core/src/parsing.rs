@@ -90,8 +90,8 @@ impl IoTranslator {
             }
             s::IoEnum::Base64(b64_string) => {
                 //TODO: test and disable slow methods
-                //TODO fix unwrap on base64/hex
-                let bytes = b64_string.as_str().from_base64().unwrap();
+                let bytes = b64_string.as_str().from_base64()
+                    .map_err(|e| nerror!(ErrorKind::InvalidArgument, "base64: {}", e))?;
                 c.add_copied_input_buffer(io_id, &bytes).map_err(|e| e.at(here!()))
             }
             s::IoEnum::BytesHex(hex_string) => {
@@ -103,8 +103,8 @@ impl IoTranslator {
                 c.add_file(io_id, dir, &path )
             }
             s::IoEnum::Url(url) => {
-                // TODO: eliminate unwrap
-                let bytes = ::imageflow_helpers::fetching::fetch_bytes(&url).unwrap();
+                let bytes = ::imageflow_helpers::fetching::fetch_bytes(&url)
+                    .map_err(|e| nerror!(ErrorKind::FetchError, "{}: {}", url, e))?;
                 c.add_copied_input_buffer(io_id, &bytes).map_err(|e| e.at(here!()))
             }
             s::IoEnum::OutputBuffer |
