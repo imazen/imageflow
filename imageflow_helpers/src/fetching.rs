@@ -1,5 +1,6 @@
 use preludes::from_std::*;
 use std;
+use std::fmt;
 use reqwest;
 use hyper;
 use hyper::Client;
@@ -19,6 +20,20 @@ pub enum FetchError {
     UpstreamResponseError(hyper::status::StatusCode),
 
     UpstreamResponseErrorWithResponse{ status: hyper::status::StatusCode, response: FetchedResponse},
+}
+
+impl fmt::Display for FetchError {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match *self {
+            FetchError::ReqwestError(ref e) => e.fmt(f),
+            FetchError::HyperError(ref e) => e.fmt(f),
+            FetchError::IoError(ref e) => e.fmt(f),
+            FetchError::UpstreamResponseError(ref status) |
+            FetchError::UpstreamResponseErrorWithResponse {ref status, ..} => {
+                write!(f, "Response status {}", status)
+            },
+        }
+    }
 }
 
 pub type FetchResult = ::std::result::Result<FetchedResponse,FetchError>;
