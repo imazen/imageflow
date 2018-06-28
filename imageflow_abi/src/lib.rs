@@ -896,24 +896,23 @@ fn test_job_with_buffers() {
 
 
 
-        imageflow_context_add_input_buffer(c, 0, input_bytes.as_ptr(), input_bytes.len(), Lifetime::OutlivesContext);
+        let res = imageflow_context_add_input_buffer(c, 0, input_bytes.as_ptr(), input_bytes.len(), Lifetime::OutlivesContext);
         imageflow_context_print_and_exit_if_error(c);
+        assert!(res);
 
-
-        imageflow_context_add_output_buffer(c, 1);
+        let res = imageflow_context_add_output_buffer(c, 1);
         imageflow_context_print_and_exit_if_error(c);
-
+        assert!(res);
 
         let method_in = static_char!("v0.1/execute");
-        let json_in = "{\"framewise\":{\"steps\":[{\"decode\":{\"io_id\":0}},{\"flip_h\":null},{\"rotate_90\":null},{\"resample_2d\":{\"w\":30,\"h\":20,\"down_filter\":null,\"up_filter\":null,\"hints\":{\"sharpen_percent\":null}}},{\"constrain\":{\"within\":{\"w\":5,\"h\":5}}},{\"encode\":{\"io_id\":1,\"preset\":{\"gif\":null}}}]}}";
+        let json_in = r#"{"framewise":{"steps":[{"decode":{"io_id":0}},{"flip_h":null},{"rotate_90":null},{"resample_2d":{"w":30,"h":20,"down_filter":null,"up_filter":null,"hints":{"sharpen_percent":null}}},{"constrain":{"within":{"w":5,"h":5}}},{"encode":{"io_id":1,"preset":{"gif":null}}}]}}"#;
 
         let response = imageflow_context_send_json(c,
-
                                                    method_in,
                                                    json_in.as_ptr(),
                                                    json_in.len());
 
-        assert_ne!(response, ptr::null());
+        assert!(!response.is_null());
         imageflow_context_print_and_exit_if_error(c);
 
 
@@ -938,9 +937,9 @@ fn test_job_with_buffers() {
 
         let mut buf: *const u8 = ptr::null();
         let mut buf_len: usize = 0;
-        assert!(imageflow_context_get_output_buffer_by_id(c, 1, &mut buf as *mut *const u8, &mut buf_len as *mut usize));
-
+        let res = imageflow_context_get_output_buffer_by_id(c, 1, &mut buf as *mut *const u8, &mut buf_len as *mut usize);
         imageflow_context_print_and_exit_if_error(c);
+        assert!(res);
 
         let expected_response_status = 200;
         assert_eq!(json_status_code, expected_response_status);
