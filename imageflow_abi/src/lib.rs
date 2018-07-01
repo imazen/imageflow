@@ -109,7 +109,7 @@
 //! For all APIS: You'll likely segfault the process if you provide a `context` pointer that is dangling or invalid.
 //!
 #![crate_type = "cdylib"]
-#![feature(core_intrinsics)]
+#![cfg_attr(feature = "nightly", feature(core_intrinsics))]
 
 // These functions are not for use from Rust, so marking them unsafe just reduces compile-time verification and safety
 #![cfg_attr(feature = "cargo-clippy", allow(not_unsafe_ptr_arg_deref))]
@@ -177,9 +177,15 @@ macro_rules! static_char {
     }
 }
 
+#[cfg(feature = "nightly")]
 fn type_name_of<T>(_: T) -> &'static str {
     extern crate core;
     unsafe { core::intrinsics::type_name::<T>() }
+}
+
+#[cfg(not(feature = "nightly"))]
+fn type_name_of<T>(_: T) -> &'static str {
+    ""
 }
 
 macro_rules! context {
