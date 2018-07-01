@@ -21,7 +21,7 @@ fi
 
 # You're going to need:
 # clang or gcc 4.8, 4.9, or 5.4
-# Rust nightly
+# Rust beta
 # nasm
 # OpenSSL (on linux)
 # DSSIM
@@ -30,7 +30,7 @@ fi
 
 # Check prerequisites
 command -v zip >/dev/null 2>&1 || { echo -e "'zip' is required, but missing. Try: apt-get install zip\nAborting." >&2; exit 1; }
-command -v cargo >/dev/null 2>&1  || { echo -e "'cargo' is required, but missing. Try: curl https://sh.rustup.rs -sSf | sh -s -- -y --default-toolchain nightly-2018-04-04\nAborting." >&2; exit 1; }
+command -v cargo >/dev/null 2>&1  || { echo -e "'cargo' is required, but missing. Try: curl https://sh.rustup.rs -sSf | sh -s -- -y --default-toolchain beta\nAborting." >&2; exit 1; }
 command -v dssim >/dev/null 2>&1  || { echo -e "'dssim' is required, but missing. Try: cargo install dssim\nAborting." >&2; exit 1; }
 command -v nasm >/dev/null 2>&1 || { echo -e "'nasm' is required, but missing. Try: apt-get install nasm\nAborting." >&2; exit 1; }
 

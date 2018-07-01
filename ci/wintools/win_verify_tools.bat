@@ -1,6 +1,6 @@
 
 echo ============ VERIFY TOOLS REPORT ==================
-echo RUST MUST BE NIGHTLY 2018-04-04 or later
+echo RUST MUST BE 1.28-beta or later
 rustc -V
 cargo -V
 

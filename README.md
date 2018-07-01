@@ -189,8 +189,8 @@ The [official Dockerfiles](https://github.com/imazen/dockerfiles_imageflow) are 
 (tested on Ubuntu 14.04, 16.04, and 18.04.)
 
 ```bash
-#Install Rust Nightly by running
-`curl https://sh.rustup.rs -sSf | sh -s -- -y --default-toolchain nightly-2018-05-15`
+#Install Rust 1.28+ by running
+`curl https://sh.rustup.rs -sSf | sh -s -- -y --default-toolchain beta`
 #Ensure build tools are installed (git, curl, wget, gcc, g++, nasm, pkg-config, openssl, ca-certificates)
 `sudo apt-get install git wget curl build-essential pkg-config libssl-dev libpng-dev nasm `
 ```
@@ -209,8 +209,8 @@ The [official Dockerfiles](https://github.com/imazen/dockerfiles_imageflow) are 
 1. Install [Ubuntu 18.04 from the Windows Store](https://www.microsoft.com/store/productId/9N9TNGVNDL3Q)
 2. Run Ubuntu 18.04 and create your username/password
 3. `sudo apt-get update` to update available packages.
-4. Install Rust Nightly by running
-  `curl https://sh.rustup.rs -sSf | sh -s -- -y --default-toolchain nightly-2018-05-15`
+4. Install Rust 1.28+ by running
+  `curl https://sh.rustup.rs -sSf | sh -s -- -y --default-toolchain beta`
 5. Ensure build tools are installed (git, curl, wget, gcc, g++, nasm, pkg-config, openssl, ca-certificates)
     `sudo apt-get install git wget curl build-essential pkg-config libssl-dev libpng-dev nasm `
 6. (optional) To use a graphical text editor, you'll need to download imageflow to a "Windows" directory, then map it to a location in Ubuntu.
@@ -225,7 +225,7 @@ The [official Dockerfiles](https://github.com/imazen/dockerfiles_imageflow) are 
 2. Install [Git 64-bit](https://git-scm.com/download/win).
 3. `Run As Administrator` the [NASM 64-bit](http://www.nasm.us/pub/nasm/releasebuilds/2.12.02/win64/nasm-2.12.02-installer-x64.exe) installer - it will not prompt.
 4. Install [Rust 64-bit](https://static.rust-lang.org/rustup/dist/x86_64-pc-windows-msvc/rustup-init.exe) if you want 64-bit Imageflow or [Rust 32-bit](https://static.rust-lang.org/rustup/dist/i686-pc-windows-msvc/rustup-init.exe) if you don't.
-Install toolchain `nightly-2018-05-15` as the default, and confirm adding it to `PATH`.
+Install toolchain `beta` as the default, and confirm adding it to `PATH`.
 5. Open the command line and switch to this repository's root directory
 5. Edit `ci/wintools/SETUP_PATH.bat` to ensure that rust/cargo, nasm, git, and Git/mingw64/bin are all in `%PATH%`.
 7. Run `win_enter_env.bat` to start a sub-shell (edit it if you want a 32-bit build)
