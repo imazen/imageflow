@@ -20,3 +20,6 @@ imageflow_helpers = { path = "../imageflow_helpers", version = "*" }
 name = "imageflow_tool"
 path = "src/main.rs"
 doc = false
+
+[features]
+nightly = ["imageflow_helpers/nightly"]

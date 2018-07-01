@@ -71,3 +71,6 @@ rev = "2c3d719be4c158d4ddbd8cdb402fafccdefec58c"
 [dependencies.logger]
 git = "https://github.com/iron/logger.git"
 rev = "0daead5fe10c3cd0c4738767c162dc63a59c3fb3"
+
+[features]
+nightly = ["imageflow_core/nightly", "imageflow_helpers/nightly"]

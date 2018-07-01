@@ -21,3 +21,6 @@ chrono = "0.4"
 [build-dependencies]
 quick-error = "1"
 chrono = "0.4"
+
+[features]
+nightly = ["imageflow_helpers/nightly"]

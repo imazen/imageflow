@@ -609,7 +609,7 @@ dependencies = [
  "hyper-openssl 0.2.7 (registry+https://github.com/rust-lang/crates.io-index)",
  "lazy_static 1.0.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "libc 0.2.42 (registry+https://github.com/rust-lang/crates.io-index)",
- "lockless 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "lockless 0.2.0 (git+https://github.com/Diggsey/lockless?rev=15264477a4889a9cb2964180b33a53919d72d3fc)",
  "mockito 0.10.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "num 0.1.42 (registry+https://github.com/rust-lang/crates.io-index)",
  "openssl 0.9.24 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -860,7 +860,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 [[package]]
 name = "lockless"
 version = "0.2.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
+source = "git+https://github.com/Diggsey/lockless?rev=15264477a4889a9cb2964180b33a53919d72d3fc#15264477a4889a9cb2964180b33a53919d72d3fc"
 dependencies = [
  "futures 0.1.21 (registry+https://github.com/rust-lang/crates.io-index)",
  "parking_lot 0.3.8 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -1969,7 +1969,7 @@ dependencies = [
 "checksum libpng-sys 0.2.6 (registry+https://github.com/rust-lang/crates.io-index)" = "c19f272a9e11c3cbc83c0a302959d1eef48b1eea8bc992ad7f1b45719e6e06c5"
 "checksum libz-sys 1.0.18 (registry+https://github.com/rust-lang/crates.io-index)" = "87f737ad6cc6fd6eefe3d9dc5412f1573865bded441300904d2f42269e140f16"
 "checksum linked-hash-map 0.4.2 (registry+https://github.com/rust-lang/crates.io-index)" = "7860ec297f7008ff7a1e3382d7f7e1dcd69efc94751a2284bafc3d013c2aa939"
-"checksum lockless 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)" = "5fd89de3ad8ae79677fc14d458726c3b86cf922e15f7c08791517ee1b96729a9"
+"checksum lockless 0.2.0 (git+https://github.com/Diggsey/lockless?rev=15264477a4889a9cb2964180b33a53919d72d3fc)" = "<none>"
 "checksum lodepng 2.1.5 (registry+https://github.com/rust-lang/crates.io-index)" = "20b9f5396fc505b84841953e03a76a1fce948d8df43c2e5609cff511b3a70e52"
 "checksum log 0.3.9 (registry+https://github.com/rust-lang/crates.io-index)" = "e19e8d5c34a3e0e2223db8e060f9e8264aeeb5c5fc64a4ee9965c062211c024b"
 "checksum log 0.4.1 (registry+https://github.com/rust-lang/crates.io-index)" = "89f010e843f2b1a31dbd316b3b8d443758bc634bed37aabade59c686d644e0a2"

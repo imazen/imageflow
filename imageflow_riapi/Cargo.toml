@@ -17,4 +17,5 @@ lazy_static = "1"
 
 difference = "1"
 
-
+[features]
+nightly = ["imageflow_helpers/nightly"]
