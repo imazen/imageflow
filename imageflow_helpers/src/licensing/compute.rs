@@ -128,7 +128,7 @@ impl<'mgr> LicenseComputation<'mgr>{
 
         SmallVec::from_iter(array
             .iter()
-            .filter_map(|opt| opt.and_then(|v| if v.is_ascii_whitespace() { None } else { Some(v) }))
+            .filter_map(|opt| opt.and_then(|v| if v.chars().all(|c|c.is_ascii_whitespace()) { None } else { Some(v) }))
         )
     }
 

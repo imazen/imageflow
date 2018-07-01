@@ -1,6 +1,5 @@
 #![feature(global_allocator, alloc_system, allocator_api)]
 
-#![feature(ascii_ctype)]
 // `error_chain!` can recurse deeply
 #![recursion_limit = "1024"]
 

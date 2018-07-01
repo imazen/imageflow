@@ -46,7 +46,7 @@ impl LicenseParser{
         parser.id = parser.get("Id").or_else(||parser.get("Domain")).expect("No 'Id' or 'Domain' fields found in license. At least one is required.").to_owned();
 
         if parser.is_remote_placeholder(){
-            let _ = parser.secret().and_then(|s| if s.is_ascii_whitespace() { None } else {Some(s)}).expect("Placeholder license (Kind: id) is missing secret.");
+            let _ = parser.secret().and_then(|s| if s.chars().all(|c|c.is_ascii_whitespace()) { None } else {Some(s)}).expect("Placeholder license (Kind: id) is missing secret.");
         }
 
         parser.issued = parser.parse_date("Issued");
