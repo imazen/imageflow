@@ -100,7 +100,8 @@ mod tests {
 // We'll put our errors in an `errors` module, and other modules in
 // this crate will `use errors::*;` to get access to everything
 // `error_chain!` creates.
-#[allow(unused_doc_comment)]
+#[allow(unused_doc_comments)]
+#[allow(renamed_and_removed_lints)]
 mod errors {
     // Create the Error, ErrorKind, ResultExt, and Result types
 
