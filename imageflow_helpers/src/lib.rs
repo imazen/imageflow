@@ -1,4 +1,3 @@
-#![feature(global_allocator, alloc_system, allocator_api)]
 
 // `error_chain!` can recurse deeply
 #![recursion_limit = "1024"]
@@ -22,10 +21,10 @@
 //    }
 //}
 
-extern crate alloc_system;
+use std::alloc::System;
 
 #[global_allocator]
-static GLOBAL: alloc_system::System = alloc_system::System;
+static GLOBAL: System = System;
 
 
 #[macro_use]
