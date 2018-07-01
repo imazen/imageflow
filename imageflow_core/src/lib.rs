@@ -44,7 +44,6 @@ extern crate twox_hash;
 
 #[macro_use]
 pub mod errors;
-#[macro_use]
 pub use errors::*;
 
 

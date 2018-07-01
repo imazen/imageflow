@@ -1,4 +1,3 @@
-#[macro_use]
 use super::internal_prelude::*;
 // TODO: someday look into better algorithms - see http://colorconstancy.com/ and http://ipg.fer.hr/ipg/resources/color_constancy
 // http://localhost:39876/ir4/proxy_unsplash/photo-1496264057429-6a331647b69e?a.balancewhite=true&w=800

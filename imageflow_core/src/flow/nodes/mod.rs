@@ -23,7 +23,6 @@ mod internal_prelude {
     pub use ::internal_prelude::works_everywhere::*;
     pub use petgraph::EdgeDirection;
     pub use super::*;
-    #[macro_use]
     pub use super::super::*;
     pub use ::{Context, Result, FlowError};
 }
@@ -63,7 +62,6 @@ pub use self::color::COLOR_MATRIX_SRGB_MUTATE;
 pub use self::color::COLOR_MATRIX_SRGB;
 pub use self::color::COLOR_FILTER_SRGB;
 
-#[macro_use]
 use super::definitions::*;
 
 #[test]
