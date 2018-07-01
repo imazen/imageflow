@@ -26,7 +26,6 @@
 //!  2. Lowercase first character of string
 //!  3. Delete all underscores from string
 
-#![feature(proc_macro)]
 
 pub mod build_env_info;
 pub mod version;

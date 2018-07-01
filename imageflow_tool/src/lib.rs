@@ -1,4 +1,3 @@
-#![feature(slice_concat_ext)]
 
 
 extern crate clap;

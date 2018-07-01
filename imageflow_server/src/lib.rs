@@ -1,4 +1,3 @@
-#![feature(proc_macro)]
 
 extern crate iron;
 extern crate persistent;

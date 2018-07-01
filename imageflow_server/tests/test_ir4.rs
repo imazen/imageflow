@@ -1,4 +1,3 @@
-#![feature(slice_concat_ext)]
 
 extern crate imageflow_helpers;
 extern crate imageflow_core as fc;
@@ -6,7 +5,6 @@ extern crate imageflow_types as s;
 use imageflow_helpers::preludes::from_std::*;
 extern crate hyper;
 
-use std::slice::SliceConcatExt;
 
 extern crate wait_timeout;
 use wait_timeout::ChildExt;

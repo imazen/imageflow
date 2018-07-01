@@ -1,7 +1,6 @@
 extern crate std;
 extern crate imageflow_core;
 use self::imageflow_core::for_other_imageflow_crates::preludes::default::*;
-use std::slice::SliceConcatExt;
 
 //extern crate imageflow_helpers;
 
