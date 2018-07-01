@@ -1,4 +1,4 @@
-#![feature(global_allocator, allocator_api, heap_api)]
+#![feature(global_allocator, alloc_system, allocator_api)]
 
 #![feature(integer_atomics)]
 #![feature(ascii_ctype)]
@@ -24,10 +24,10 @@
 //    }
 //}
 
+extern crate alloc_system;
+
 #[global_allocator]
-static GLOBAL: ::std::heap::System = ::std::heap::System;
-
-
+static GLOBAL: alloc_system::System = alloc_system::System;
 
 
 #[macro_use]
