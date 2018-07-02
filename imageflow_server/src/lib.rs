@@ -366,6 +366,15 @@ fn ir4_http_respond<F>(shared: &SharedData, url: &str, framewise_generator: F) -
     respond_using(&url, || fetch_bytes_using_cache_by_url(&shared.source_cache, url).map_err(error_upstream), framewise_generator)
 }
 
+fn ir4_http_respond_uncached<F>(shared: &SharedData, url: &str, framewise_generator: F) -> IronResult<Response>
+    where F: Fn(s::ImageInfo) -> std::result::Result<s::Framewise, ServerError>
+{
+    respond_using(&url, || {
+        fetch_bytes( url, None).map_err(error_upstream).map(|r|
+            (r.bytes, r.perf))
+    }, framewise_generator)
+}
+
 
 fn ir4_framewise(_info: &s::ImageInfo, url: &Url) -> std::result::Result<s::Framewise, ServerError> {
     let t = ::imageflow_riapi::ir4::Ir4Translate{
@@ -503,11 +512,31 @@ fn ir4_http_handler(req: &mut Request, base_url: &String, _: &MountLocation) -> 
     })
 }
 
+#[cfg_attr(feature = "cargo-clippy", allow(ptr_arg))]
+fn ir4_proxy_uncached_handler(req: &mut Request, base_url: &String, _: &MountLocation) -> IronResult<Response> {
+    let url: url::Url = req.url.clone().into();
+    let shared = req.get::<persistent::Read<SharedData>>().unwrap();
+    //TODO: Ensure the combined url is canonical (or, at least, lacks ..)
+    let remote_url = format!("{}{}", base_url, &url.path()[1..]);
+
+    ir4_http_respond_uncached(&shared, &remote_url, move |info: s::ImageInfo| {
+        ir4_framewise(&info, &url)
+    })
+}
+
 fn ir4_http_setup(mount: &MountLocation) -> Result<(String, EngineHandler<String>), String> {
     if mount.engine_args.len() < 1 {
         Err("ir4_http requires at least one argument - the base url to suffix paths to".to_owned())
     } else {
         Ok((mount.engine_args[0].to_owned(), ir4_http_handler))
+    }
+}
+
+fn ir4_http_uncached_setup(mount: &MountLocation) -> Result<(String, EngineHandler<String>), String> {
+    if mount.engine_args.len() < 1 {
+        Err("ir4_proxy_uncached requires at least one argument - the base url to suffix paths to".to_owned())
+    } else {
+        Ok((mount.engine_args[0].to_owned(), ir4_proxy_uncached_handler))
     }
 }
 
@@ -556,6 +585,7 @@ pub fn serve(c: StartServerConfig) {
         let mount_result = match m.engine {
             //MountedEngine::Ir4Https => "ir4_https",
             MountedEngine::Ir4Http => mount(m, &mut mou, ir4_http_setup),
+            MountedEngine::Ir4ProxyUncached => mount(m, &mut mou, ir4_http_uncached_setup),
             MountedEngine::Ir4Local => mount(m, &mut mou, ir4_local_setup),
             MountedEngine::PermacacheProxy => mount(m, &mut mou, permacache_proxy_setup),
             MountedEngine::PermacacheProxyGuessContentTypes => mount(m, &mut mou, permacache_proxy_guess_content_types_setup),
@@ -612,6 +642,7 @@ pub fn serve(c: StartServerConfig) {
 pub enum MountedEngine {
     Ir4Local,
     Ir4Http,
+    Ir4ProxyUncached,
     PermacacheProxy,
     PermacacheProxyGuessContentTypes,
     Static,
@@ -623,6 +654,7 @@ impl MountedEngine {
         match *self {
             //MountedEngine::Ir4Https => "ir4_https",
             MountedEngine::Ir4Http => "ir4_http",
+            MountedEngine::Ir4ProxyUncached => "ir4_proxy_uncached",
             MountedEngine::Ir4Local => "ir4_local",
             MountedEngine::PermacacheProxy => "permacache_proxy",
             MountedEngine::PermacacheProxyGuessContentTypes => "permacache_proxy_guess_content_types",
@@ -633,6 +665,7 @@ impl MountedEngine {
         match s {
             "ir4_local" => Some(MountedEngine::Ir4Local),
             "ir4_http" => Some(MountedEngine::Ir4Http),
+            "ir4_proxy_uncached" => Some(MountedEngine::Ir4ProxyUncached),
             "permacache_proxy" => Some(MountedEngine::PermacacheProxy),
             "permacache_proxy_guess_content_types" => Some(MountedEngine::PermacacheProxyGuessContentTypes),
             "static" => Some(MountedEngine::Static),
