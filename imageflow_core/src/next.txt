@@ -2,7 +2,6 @@ Add server JSON endpoint
 
 Reserved endpoints for fully encoded arbitrary requests, though, where we can pass through auth info to the upstream gateway
 
-
 HTTP caching at build layer
 
 maybe move imageflow_abi header gen to a test? probably adds to build time.
@@ -11,16 +10,6 @@ Add security policies
 
 
 Add server configuration via TOML (or JSON API?) We need a form of persistence that is lightweight and not always tied to the filesystem.
-
-
-Port https://github.com/Mysticial/FeatureDetector to Rust - OR - distribute as separate tool?
-
-
-
-
-
-
-
 
 
 ///img hash https://github.com/abonander/img_hash is interesting
@@ -240,17 +229,7 @@ https://vision.arc.nasa.gov/publications/publications.html#compression
 
 ### Refactorings
 
-
-- [x] Begin porting to Rust. 
-- [x] Explicit control flow in all C code.
-- [x] Full debugging information by recording errors at failure point, then appending the stacktrace (C only)
-- [x] Give user complete control over allocation method and timing.
-- [x] Use [Conan.io](http://conan.io) for package management and builds to eliminate dependency hell.
-- [x] Make codecs and node definitions uniform
-- [x] Establish automated code formatting rules in .clang-format
-- [ ] Replace giflib
 - [ ] replace zlib with zlib-ng
-- [ ] Replace ruby prototype of libimageflow-server with a Rust version
 - [ ] Look into replacing parts of the jpeg codec with concurrent alternatives. 
 - [ ] Add fuzz testing for JSON and I/O 
 - [ ] Find cleaner way to use SSE2 constructs with scalar fallbacks, it is messy in a few areas.
