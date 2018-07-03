@@ -107,7 +107,7 @@ impl NodeDefOneInputExpand for ConstrainDef{
     fn estimate(&self, params: &NodeParams, input: FrameEstimate) -> Result<FrameEstimate>{
         if let NodeParams::Json(s::Node::Constrain(ref constraint)) = *params {
             input.map_frame(|input| {
-                let (w, h, _) = constrain(input.w as u32, input.h as u32, constraint);
+                let (w, h, _) = constrain(input.w as u32, input.h as u32, constraint.clone());
                 Ok(FrameInfo {
                     w: w as i32,
                     h: h as i32,
@@ -124,9 +124,9 @@ impl NodeDefOneInputExpand for ConstrainDef{
             let input_w = parent.w as u32;
             let input_h = parent.h as u32;
 
-            let (new_w, new_h, hints_val) = constrain(input_w, input_h, &constraint);
+            let (new_w, new_h, hints_val) = constrain(input_w, input_h, constraint.clone());
 
-            let hints = &hints_val;
+            let hints = hints_val.as_ref();
 
             let resample_when = hints.and_then(|ref h| h.resample_when).unwrap_or(s::ResampleWhen::SizeDiffers);
             let size_differs = new_w != input_w || new_h != input_h;
@@ -148,6 +148,7 @@ impl NodeDefOneInputExpand for ConstrainDef{
                     scaling_colorspace: hints.and_then(|h| h.scaling_colorspace),
                     hints: hints.map(|h| s::ResampleHints {
                         sharpen_percent: h.sharpen_percent,
+                        background_color: hints.and_then(|h| h.background_color.clone())
                     }),
                 };
 
@@ -172,28 +173,28 @@ fn scale_b_to(aspect_ratio_a_over_b: f32, a_from: u32, a_to: u32, b_from: u32) -
     let result = b_from as f32 * scale_factor;// * aspect_ratio_a_over_b;
     result.round() as u32
 }
-fn constrain(old_w: u32, old_h: u32, constraint: &s::Constraint) -> (u32,u32, Option<s::ConstraintResamplingHints>){
+fn constrain(old_w: u32, old_h: u32, constraint: s::Constraint) -> (u32,u32, Option<s::ConstraintResamplingHints>){
     let aspect = old_w as f32 / old_h as f32;
-    match constraint.clone(){
+    match constraint{
 
-        s::Constraint::Within{ w: Some(w), h: None, ref hints} if w < old_w => {
-            (w, scale_b_to(aspect, old_w, w, old_h), *hints)
+        s::Constraint::Within{ w: Some(w), h: None,  ref hints} if w < old_w => {
+            (w, scale_b_to(aspect, old_w, w, old_h), hints.clone())
         }
-        s::Constraint::Within{ w: None, h: Some(h), ref hints} if h < old_h => {
-            (scale_b_to(1f32 / aspect, old_h, h, old_w), h, *hints)
+        s::Constraint::Within{ w: None, h: Some(h),  ref hints} if h < old_h => {
+            (scale_b_to(1f32 / aspect, old_h, h, old_w), h, hints.clone())
         }
-        s::Constraint::Within{ w: Some(w), h: Some(h), ref hints} if w < old_w || h < old_h => {
+        s::Constraint::Within{ w: Some(w), h: Some(h),  ref hints} if w < old_w || h < old_h => {
 
             let constraint_aspect = w as f32 / h as f32;
             if constraint_aspect > aspect{
                 //height is the constraint
-                (scale_b_to(1f32 / aspect, old_h, h, old_w), h, *hints)
+                (scale_b_to(1f32 / aspect, old_h, h, old_w), h, hints.clone())
             }else{
                 //width is the constraint
-                (w, scale_b_to(aspect, old_w, w, old_h), *hints)
+                (w, scale_b_to(aspect, old_w, w, old_h), hints.clone())
             }
         }
-        s::Constraint::Within{ ref hints, ..} => (old_w, old_h, *hints),
+        s::Constraint::Within{ ref hints, ..} => (old_w, old_h, hints.clone()),
     }
 }
 
@@ -202,23 +203,23 @@ fn test_constrain(){
     //let hints = s::ConstraintResamplingHints{down_filter: None, up_filter: None, resample_when: None, sharpen_percent: None};
     {
         let constraint = s::Constraint::Within { w: Some(100), h: Some(100), hints: None };
-        assert_eq!(constrain(200, 50, &constraint), (100, 25, None));
+        assert_eq!(constrain(200, 50, constraint), (100, 25, None));
     }
     {
         let constraint = s::Constraint::Within { w: Some(100), h: Some(100), hints: None };
-        assert_eq!(constrain(50, 200, &constraint), (25, 100, None));
+        assert_eq!(constrain(50, 200, constraint), (25, 100, None));
     }
     {
         let constraint = s::Constraint::Within { w: Some(640), h: Some(480), hints: None };
-        assert_eq!(constrain(200, 50, &constraint), (200, 50, None));
+        assert_eq!(constrain(200, 50, constraint), (200, 50, None));
     }
     {
         let constraint = s::Constraint::Within { w: Some(100), h: Some(100), hints: None };
-        assert_eq!(constrain(100, 100, &constraint), (100, 100, None));
+        assert_eq!(constrain(100, 100, constraint), (100, 100, None));
     }
     {
         let constraint = s::Constraint::Within { w: Some(100), h: Some(100), hints: None };
-        assert_eq!(constrain(100, 100, &constraint), (100, 100, None));
+        assert_eq!(constrain(100, 100, constraint), (100, 100, None));
     }
 
 }

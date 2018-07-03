@@ -271,6 +271,9 @@ impl Color {
         }
     }
 
+    pub fn is_transparent(&self) -> bool{
+        self.to_color_32().unwrap_or(Color32::black()).is_transparent()
+    }
 }
 
 #[cfg(test)]
@@ -302,10 +305,10 @@ fn test_bgra() {
 
 }
 
-#[derive(Serialize, Deserialize, Copy, Clone, PartialEq, Debug)]
+#[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
 pub struct ResampleHints {
     pub sharpen_percent: Option<f32>,
-
+    pub background_color: Option<Color>
     // pub prefer_1d_twice: Option<bool>,
 }
 
@@ -319,13 +322,14 @@ pub enum ResampleWhen{
     Always
 }
 
-#[derive(Serialize, Deserialize, Copy, Clone, PartialEq, Debug)]
+#[derive(Serialize, Deserialize,  Clone, PartialEq, Debug)]
 pub struct ConstraintResamplingHints {
     pub sharpen_percent: Option<f32>,
     pub down_filter: Option<Filter>,
     pub up_filter: Option<Filter>,
     pub scaling_colorspace: Option<ScalingFloatspace>,
-    pub resample_when: Option<ResampleWhen>
+    pub background_color: Option<Color>,
+    pub resample_when: Option<ResampleWhen>,
 }
 
 impl ConstraintResamplingHints{
@@ -335,9 +339,11 @@ impl ConstraintResamplingHints{
             down_filter: filter,
             up_filter: filter,
             resample_when: None,
-            scaling_colorspace: None
+            scaling_colorspace: None,
+            background_color: None
         }
     }
+
 }
 
 #[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
@@ -823,6 +829,7 @@ impl Framewise {
                                   scaling_colorspace: Some(ScalingFloatspace::Linear),
                                   hints: Some(ResampleHints {
                                       sharpen_percent: Some(10f32),
+                                      background_color: Some(Color::Srgb(ColorSrgb::Hex("FFEEAACC".to_owned())))
                                       //prefer_1d_twice: None,
                                   }),
                               },
@@ -870,7 +877,8 @@ impl Framewise {
                          down_filter: Some(Filter::Robidoux),
                          up_filter: None,
                          hints: Some(ResampleHints{
-                             sharpen_percent: Some(20f32)
+                             sharpen_percent: Some(20f32),
+                             background_color: Some(Color::Srgb(ColorSrgb::Hex("FFEEAACC".to_owned())))
                          }),
                          scaling_colorspace: Some(ScalingFloatspace::Linear),
                      });

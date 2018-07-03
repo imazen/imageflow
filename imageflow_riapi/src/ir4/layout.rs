@@ -272,8 +272,20 @@ impl Ir4Layout{
             b.add(s::Node::Crop { x1: c[0], y1: c[1], x2: c[2], y2: c[3] });
         }
 
+        //get bgcolor - default to transparent (or white if targeting jpeg)
+        let bgcolor_default = if  Some(OutputFormat::Jpeg) == self.i.format{
+            s::Color::Srgb(s::ColorSrgb::Hex("FFFFFFFF".to_owned()))
+        } else{
+            s::Color::Transparent
+        };
+        let bgcolor = self.i.bgcolor_srgb.map(|v| v.to_rrggbbaa_string()).map(|str| s::Color::Srgb(s::ColorSrgb::Hex(str)))
+            .unwrap_or(bgcolor_default);
+
+
+
         //Scale
-        if image.width() != new_crop.width() || image.height() != new_crop.height() || self.i.f_sharpen.unwrap_or(0f64) > 0f64 {
+        if image.width() != new_crop.width() || image.height() != new_crop.height() || self.i.f_sharpen.unwrap_or(0f64) > 0f64  ||
+            !bgcolor.is_transparent(){
             let downscaling = image.width() < new_crop.width() || image.height() < new_crop.height();
             b.add(s::Node::Resample2D {
                 w: image.width() as u32,
@@ -286,7 +298,7 @@ impl Ir4Layout{
                     _ => None
 
                 },
-                hints: Some(s::ResampleHints { sharpen_percent: self.i.f_sharpen.map(|v| v as f32) })
+                hints: Some(s::ResampleHints { sharpen_percent: self.i.f_sharpen.map(|v| v as f32), background_color: Some(bgcolor.clone()) })
             });
         }
 
@@ -324,10 +336,7 @@ impl Ir4Layout{
             }));
         }
 
-        //get bgcolor - default to transparent white
-        let bgcolor = self.i.bgcolor_srgb.map(|v| v.to_rrggbbaa_string()).map(|str| s::Color::Srgb(s::ColorSrgb::Hex(str)));
 
-        let default_bgcolor = s::Color::Srgb(s::ColorSrgb::Hex("FFFFFF00".to_owned()));
 
         let (left, top) = Self::align(align, image, canvas).expect("Outer box should never be smaller than inner box. All values must > 0");
 
@@ -335,7 +344,7 @@ impl Ir4Layout{
         //Add padding. This may need to be revisited - how do jpegs behave with transparent padding?
         if left > 0 || top > 0 || right > 0 || bottom > 0 {
             if left >= 0 && top >= 0 && right >= 0 && bottom >= 0 {
-                b.add(s::Node::ExpandCanvas { color: bgcolor.clone().unwrap_or(default_bgcolor), left: left as u32, top: top as u32, right: right as u32, bottom: bottom as u32 });
+                b.add(s::Node::ExpandCanvas { color: bgcolor, left: left as u32, top: top as u32, right: right as u32, bottom: bottom as u32 });
             } else {
                 panic!("Negative padding showed up: {},{},{},{}", left, top, right, bottom);
             }
@@ -457,7 +466,7 @@ fn test_crop_and_scale(){
     let l  = Ir4Layout::new(Instructions{w: Some(100), h: Some(200), mode: Some(FitMode::Crop), .. Default::default() }, 768, 433);
     l.add_steps(&mut b).unwrap();
 
-    assert_eq!(b.steps, vec![s::Node::Crop { x1: 275, y1: 0, x2: 492, y2: 433 }, s::Node::Resample2D { w: 100, h: 200, down_filter: None, up_filter: None, scaling_colorspace: None, hints: Some(s::ResampleHints { sharpen_percent: None }) }]);
+    assert_eq!(b.steps, vec![s::Node::Crop { x1: 275, y1: 0, x2: 492, y2: 433 }, s::Node::Resample2D { w: 100, h: 200, down_filter: None, up_filter: None, scaling_colorspace: None, hints: Some(s::ResampleHints { sharpen_percent: None, background_color: None }) }]);
 }
 
 
@@ -467,7 +476,7 @@ fn test_scale(){
 
     let l  = Ir4Layout::new(Instructions{w: Some(2560), h: Some(1696), mode: Some(FitMode::Max), .. Default::default() }, 5104, 3380);
     l.add_steps(&mut b).unwrap();
-    assert_eq!(b.steps, vec![s::Node::Resample2D { w: 2560, h: 1696, down_filter: None, up_filter: None, scaling_colorspace: None, hints: Some(s::ResampleHints { sharpen_percent: None}) }]);
+    assert_eq!(b.steps, vec![s::Node::Resample2D { w: 2560, h: 1696, down_filter: None, up_filter: None, scaling_colorspace: None, hints: Some(s::ResampleHints { sharpen_percent: None, background_color: None}) }]);
 
     // 5104x3380 "?w=2560&h=1696&mode=max&format=png&decoder.min_precise_scaling_ratio=2.1&down.colorspace=linear"
 

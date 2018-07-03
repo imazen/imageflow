@@ -232,6 +232,7 @@ fn scenario_laundry_list() -> BuildScenario{
             scaling_colorspace: Some(s::ScalingFloatspace::Linear),
             hints: Some(s::ResampleHints {
                 sharpen_percent: Some(10f32),
+                background_color: None
             }),
         })
         .to(s::Node::ApplyOrientation{flag: 7}).flip_horizontal().flip_vertical().transpose().rotate_90().rotate_180().rotate_270()

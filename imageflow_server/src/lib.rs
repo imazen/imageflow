@@ -366,7 +366,7 @@ fn ir4_http_respond<F>(shared: &SharedData, url: &str, framewise_generator: F) -
     respond_using(&url, || fetch_bytes_using_cache_by_url(&shared.source_cache, url).map_err(error_upstream), framewise_generator)
 }
 
-fn ir4_http_respond_uncached<F>(shared: &SharedData, url: &str, framewise_generator: F) -> IronResult<Response>
+fn ir4_http_respond_uncached<F>(_shared: &SharedData, url: &str, framewise_generator: F) -> IronResult<Response>
     where F: Fn(s::ImageInfo) -> std::result::Result<s::Framewise, ServerError>
 {
     respond_using(&url, || {
