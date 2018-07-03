@@ -759,15 +759,15 @@ fn debug_diff<T>(a : &T, b: &T) where T: std::fmt::Debug, T: PartialEq{
     if a != b {
         let text1 = format!("{:#?}", a);
         let text2 = format!("{:#?}", b);
-        use ::difference::{diff, Difference};
+        use ::difference::{Changeset, Difference};
 
         // compare both texts, the third parameter defines the split level
-        let (_dist, changeset) = diff(&text1, &text2, "\n");
+        let changeset = Changeset::new(&text1, &text2, "\n");
 
         let mut t = ::std::io::stderr();
 
-        for i in 0..changeset.len() {
-            match changeset[i] {
+        for i in 0..changeset.diffs.len() {
+            match changeset.diffs[i] {
                 Difference::Same(ref x) => {
                     let _ = writeln!(t, " {}", x);
                 },
