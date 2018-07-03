@@ -183,18 +183,22 @@ fn type_name_of<T>(_: T) -> &'static str {
     unsafe { core::intrinsics::type_name::<T>() }
 }
 
-#[cfg(not(feature = "nightly"))]
-fn type_name_of<T>(_: T) -> &'static str {
-    ""
+#[cfg(feature = "nightly")]
+fn parent_function_name<T>(_: T) -> &'static str {
+    let name = type_name_of(f);
+    &name[..name.len() - 4].rsplit_terminator(":").next().unwrap_or("[function name not found]")
 }
 
+#[cfg(not(feature = "nightly"))]
+fn parent_function_name<T>(_: T) -> &'static str {
+    "[function name only available in Rust Nightly]"
+}
 macro_rules! context {
     ($ptr:ident) => {{
         if $ptr.is_null() {
             fn f() {}
-            let name = type_name_of(f);
-            let shortname = &name[..name.len() - 4].rsplit_terminator(":").next().unwrap_or("[function name not found]");
-            eprintln!("Null context pointer provided to {}. Terminating process.", shortname);
+            let name = parent_function_name(f);
+            eprintln!("Null context pointer provided to {}. Terminating process.", name);
             let bt = ::backtrace::Backtrace::new();
             eprintln!("{:?}", bt);
             ::std::process::abort();
@@ -207,21 +211,19 @@ macro_rules! context_ready {
     ($ptr:ident) => {{
         if $ptr.is_null() {
             fn f() {}
-            let name = type_name_of(f);
-            let shortname = &name[..name.len() - 4].rsplit_terminator(":").next().unwrap_or("[function name not found]");
-            eprintln!("Null context pointer provided to {}. Terminating process.", shortname);
+            let name = parent_function_name(f);
+            eprintln!("Null context pointer provided to {}. Terminating process.", name);
             let bt = ::backtrace::Backtrace::new();
             eprintln!("{:?}", bt);
             ::std::process::abort();
         }else if unsafe{(&*$ptr)}.outward_error().has_error(){
             fn f() {}
-            let name = type_name_of(f);
-            let shortname = &name[..name.len() - 4].rsplit_terminator(":").next().unwrap_or("[function name not found]");
-            eprintln!("The Context passed to {} is in an error state and cannot be used. Terminating process.", shortname);
+            let name = parent_function_name(f);
+            eprintln!("The Context passed to {} is in an error state and cannot be used. Terminating process.", name);
             eprintln!("{}",unsafe{(&*$ptr)}.outward_error());
 
             let bt = ::backtrace::Backtrace::new();
-            eprintln!("{} was invoked by: \n{:?}", shortname, bt);
+            eprintln!("{} was invoked by: \n{:?}", name, bt);
             ::std::process::abort();
         }
         (unsafe{&mut *$ptr})
@@ -314,6 +316,8 @@ pub extern "C" fn imageflow_context_destroy(context: *mut Context) {
 fn test_create_destroy() {
     exercise_create_destroy();
 }
+
+
 
 pub fn exercise_create_destroy() {
     let c = imageflow_context_create(IMAGEFLOW_ABI_VER_MAJOR, IMAGEFLOW_ABI_VER_MINOR);
@@ -490,7 +494,6 @@ pub extern fn imageflow_json_response_read(context: *mut Context,
     }
     true
 }
-
 
 /// Frees memory associated with the given object (and owned objects) after
 /// running any owned or attached destructors. Returns false if something went wrong during tear-down.
