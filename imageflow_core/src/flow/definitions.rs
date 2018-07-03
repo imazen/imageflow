@@ -109,6 +109,11 @@ pub trait NodeDefOneInputExpand {
     }
     fn expand(&self, ctx: &mut OpCtxMut, ix: NodeIndex, params: NodeParams, parent: FrameInfo) -> Result<()>;
 }
+pub trait NodeDefOneInputOneCanvasExpand{
+    fn fqn(&self) -> &'static str;
+    fn validate_params(&self, p: &NodeParams) -> Result<()>;
+    fn expand(&self, ctx: &mut OpCtxMut, ix: NodeIndex, params: NodeParams, input: FrameInfo, canvas: FrameInfo) -> Result<()>;
+}
 pub trait NodeDefOneInputOneCanvas{
     fn fqn(&self) -> &'static str;
     fn validate_params(&self, p: &NodeParams) -> Result<()>;
@@ -156,6 +161,9 @@ pub trait NodeDef: ::std::fmt::Debug{
     fn as_one_input_one_canvas(&self) -> Option<&NodeDefOneInputOneCanvas>{
         None
     }
+    fn as_one_input_one_canvas_expand(&self) -> Option<&NodeDefOneInputOneCanvasExpand>{
+        None
+    }
     fn as_one_mutate_bitmap(&self) -> Option<&NodeDefMutateBitmap>{
         None
     }
@@ -164,6 +172,7 @@ pub trait NodeDef: ::std::fmt::Debug{
     fn fqn(&self) -> &'static str{
         let convenience_fqn = self.as_one_input_expand().map(|n| n.fqn())
             .or_else(||self.as_one_input_one_canvas().map(|n| n.fqn()))
+            .or_else(||self.as_one_input_one_canvas_expand().map(|n| n.fqn()))
             .or_else(||self.as_one_mutate_bitmap().map(|n| n.fqn()));
         convenience_fqn.unwrap_or_else(|| unimplemented!())
     }
@@ -179,7 +188,7 @@ pub trait NodeDef: ::std::fmt::Debug{
     fn edges_required(&self, p: &NodeParams) -> Result<(EdgesIn, EdgesOut)>{
         if self.as_one_input_expand().is_some() || self.as_one_mutate_bitmap().is_some(){
             Ok((EdgesIn::OneInput, EdgesOut::Any))
-        } else if self.as_one_input_one_canvas().is_some(){
+        } else if self.as_one_input_one_canvas().is_some() || self.as_one_input_one_canvas_expand().is_some(){
             Ok((EdgesIn::OneInputOneCanvas, EdgesOut::Any))
         } else{
             Err(unimpl!())
@@ -190,6 +199,8 @@ pub trait NodeDef: ::std::fmt::Debug{
         if let Some(n) = self.as_one_input_one_canvas(){
             n.validate_params(p).map_err(|e| e.at(here!()))
         } else if let Some(n) = self.as_one_mutate_bitmap(){
+            n.validate_params(p).map_err(|e| e.at(here!()))
+        } else if let Some(n) = self.as_one_input_one_canvas_expand(){
             n.validate_params(p).map_err(|e| e.at(here!()))
         } else if let Some(n) = self.as_one_input_expand(){
             n.validate_params(p).map_err(|e| e.at(here!()))
@@ -203,7 +214,8 @@ pub trait NodeDef: ::std::fmt::Debug{
             let input = ctx.frame_est_from(ix, EdgeKind::Input).map_err(|e| e.at(here!()))?;
             let params = &ctx.weight(ix).params;
             n.estimate(params, input).map_err(|e| e.at(here!()))
-        } else if self.as_one_input_one_canvas().is_some(){
+        } else if self.as_one_input_one_canvas().is_some()||
+            self.as_one_input_one_canvas_expand().is_some(){
             ctx.frame_est_from(ix, EdgeKind::Canvas).map_err(|e| e.at(here!()))
         } else if self.as_one_mutate_bitmap().is_some(){
             ctx.frame_est_from(ix, EdgeKind::Input).map_err(|e| e.at(here!()))
@@ -213,7 +225,7 @@ pub trait NodeDef: ::std::fmt::Debug{
     }
 
     fn can_expand(&self) -> bool{
-        self.as_one_input_expand().is_some()
+        self.as_one_input_expand().is_some() || self.as_one_input_one_canvas_expand().is_some()
     }
 
     fn expand(&self, ctx: &mut OpCtxMut, ix: NodeIndex) -> Result<()>{
@@ -221,6 +233,12 @@ pub trait NodeDef: ::std::fmt::Debug{
             let parent = ctx.frame_info_from(ix, EdgeKind::Input)?;
             let params = ctx.weight(ix).params.clone();
             n.expand(ctx, ix, params, parent)
+                .map_err(|e| e.at(here!()))
+        }else if let Some(n) = self.as_one_input_one_canvas_expand() {
+            let input = ctx.frame_info_from(ix, EdgeKind::Input)?;
+            let canvas = ctx.frame_info_from(ix, EdgeKind::Canvas)?;
+            let params = ctx.weight(ix).params.clone();
+            n.expand(ctx, ix, params, input, canvas)
                 .map_err(|e| e.at(here!()))
         }else {
             Err(unimpl!())
