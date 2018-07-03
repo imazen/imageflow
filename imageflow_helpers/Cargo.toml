@@ -38,7 +38,7 @@ rand = "*"
 num = "*"
 
 base64 = "0.6"
-mockito = "*"
+mockito = "0.12"
 zip = { version = "0.2", default-features = false }
 
 
