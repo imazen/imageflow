@@ -67,9 +67,9 @@ web:
     - NAME=Friendly Users
   deployment_strategy: high_availability
   target_num_containers: 1 #4
-  working_dir: /home/conan/imageflow
-  entrypoint: /home/conan/imageflow/imageflow_server
-  user: conan
+  working_dir: /home/imageflow/imageflow
+  entrypoint: /home/imageflow/imageflow/imageflow_server
+  user: imageflow
 redis:
   image: redis
   autorestart: always

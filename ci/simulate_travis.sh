@@ -120,30 +120,28 @@ rsync -q -av --delete "${SCRIPT_DIR}/.." "$WORKING_DIR" --filter=':- .gitignore'
 
 	mkdir -p "${WORKING_DIR}_cache/${TARGET_DIR}debug" || true
 	mkdir -p "${WORKING_DIR}_cache/${TARGET_DIR}release" || true
-	mkdir -p "${WORKING_DIR}_cache/conan_data" || true
-	mkdir -p "${WORKING_DIR}_cache/ccache" || true
-	mkdir -p "${WORKING_DIR}_cache/c_components/build" || true
+	mkdir -p "${WORKING_DIR}_cache/.cache" || true
 
 
 	# The first two are only needed in test.sh, since we're rsycning away the whole /target folder
 	export SIM_DOCKER_CACHE_VARS=(
 		-v
-		"${WORKING_DIR}_cache/${TARGET_DIR}debug:/home/conan/imageflow/${TARGET_DIR}debug"
+		"${WORKING_DIR}_cache/${TARGET_DIR}debug:/home/imageflow/imageflow/${TARGET_DIR}debug"
 		-v
-		"${WORKING_DIR}_cache/${TARGET_DIR}release:/home/conan/imageflow/${TARGET_DIR}release"
+		"${WORKING_DIR}_cache/${TARGET_DIR}release:/home/imageflow/imageflow/${TARGET_DIR}release"
 		-v
-		"${WORKING_DIR}_cache/ccache:/home/conan/.ccache"
+		"${WORKING_DIR}_cache/.cache:/home/imageflow/.cache"
 	)
 	if [[ "$COPY_HOST_CARGO_DIR" == "True" ]]; then
 		SIM_DOCKER_CACHE_VARS+=(
 			-v
-			"${HOME}/.cargo:/home/conan/host_cargo"
+			"${HOME}/.cargo:/home/imageflow/host_cargo"
 		)
 	fi
 	if [[ -n "$IMAGEFLOW_DOCKER_TEST_MAP_EXTRA_DIR" ]]; then
 		SIM_DOCKER_CACHE_VARS+=(
 				-v
-				"${WORKING_DIR}_cache/${IMAGEFLOW_DOCKER_TEST_MAP_EXTRA_DIR}:/home/conan/imageflow/${IMAGEFLOW_DOCKER_TEST_MAP_EXTRA_DIR}"
+				"${WORKING_DIR}_cache/${IMAGEFLOW_DOCKER_TEST_MAP_EXTRA_DIR}:/home/imageflow/imageflow/${IMAGEFLOW_DOCKER_TEST_MAP_EXTRA_DIR}"
 		)
 	fi
 	# The very last is unique to test.sh (for speed?)
@@ -176,6 +174,9 @@ rsync -q -av --delete "${SCRIPT_DIR}/.." "$WORKING_DIR" --filter=':- .gitignore'
 	if [[ "$DOCKER_IMAGE" == 'imazen/imageflow_build_ubuntu16' ]]; then
 		export PACKAGE_SUFFIX="${PACKAGE_SUFFIX:-${ARCH_SUFFIX}-linux-gcc54-glibc223}"
 	fi
+    if [[ "$DOCKER_IMAGE" == 'imazen/imageflow_build_ubuntu18' ]]; then
+		export PACKAGE_SUFFIX="${PACKAGE_SUFFIX:-${ARCH_SUFFIX}-linux-gcc73-glibc227}"
+	fi
 
 
 	export TRAVIS_BUILD_NUMBER=99999
@@ -206,8 +207,6 @@ rsync -q -av --delete "${SCRIPT_DIR}/.." "$WORKING_DIR" --filter=':- .gitignore'
 	export COVERALLS=
 	export COVERALLS_TOKEN=
 
-	#Uncommenting may resolve some permissions issues
-	#conan user 1>&9
 
 	# For os x convenience
 	#if [[ "$(uname -s)" == 'Darwin' ]]; then

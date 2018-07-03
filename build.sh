@@ -79,9 +79,6 @@ if [[ "$IMAGEFLOW_BUILD_OVERRIDE" == 'purge' ]]; then
 	rm -rf c_components/build
 	rm -rf target
 	rm libimageflow.so
-	rm c_components/conaninfo.txt
-	rm c_components/conanbuildinfo.cmake
-	rm c_components/conanfile.pyc
 	rm -rf node_frames
 	rm c_components/tests/visuals/compare*.png
 	rm c_components/tests/visuals/*.html

@@ -369,7 +369,7 @@ else
 			)
 	export DOCKER_CACHE_VARS=(
 			-v
-			"${HOME}/.cargo:/home/conan/host_cargo"
+			"${HOME}/.cargo:/home/imageflow/host_cargo"
 	)
 	DOCKER_INVOCATION=(docker run "--rm")
 
@@ -395,7 +395,7 @@ else
 	echo "PWD=${PWD}"
 	ls "$TRAVIS_BUILD_DIR/ci/travis_run_docker.sh"
 	set -x
-	"${DOCKER_INVOCATION[@]}" -w "/home/conan/imageflow" -v "${TRAVIS_BUILD_DIR}:/home/conan/imageflow" "${DOCKER_CACHE_VARS[@]}" "${DOCKER_ENV_VARS[@]}" "${DOCKER_IMAGE}" "${DOCKER_COMMAND[@]}"
+	"${DOCKER_INVOCATION[@]}" -w "/home/imageflow/imageflow" -v "${TRAVIS_BUILD_DIR}:/home/imageflow/imageflow" "${DOCKER_CACHE_VARS[@]}" "${DOCKER_ENV_VARS[@]}" "${DOCKER_IMAGE}" "${DOCKER_COMMAND[@]}"
 	set +x
 fi
 if [[ "$SIM_CI" != 'True' ]]; then
@@ -403,7 +403,6 @@ if [[ "$SIM_CI" != 'True' ]]; then
 		# We always cleanup after a tagged release; no point in wasting cache space
 		sudo rm -rf ./target || sudo rm -rf ./target || true
 		sudo rm -rf ./c_components/build || sudo rm -rf ./c_components/build || true
-		sudo rm -rf ~/.conan || sudo rm -rf ~/.conan || true
 		sudo rm -rf ~/.cargo || sudo rm -rf ~/.cargo || true
 	fi
 

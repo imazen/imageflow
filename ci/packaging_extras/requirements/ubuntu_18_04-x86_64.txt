@@ -1,0 +1,1 @@
+64-bit Ubuntu 18.04 or other linux supplying Ubuntu GLIBC 2.27-3ubuntu1
