@@ -507,8 +507,10 @@ static bool flow_codecs_initialize_encode_png(flow_c * c, struct flow_codec_inst
     }
     return true;
 }
-
-bool flow_bitmap_bgra_write_png(flow_c * c, struct flow_bitmap_bgra * frame, struct flow_io * io)
+bool flow_bitmap_bgra_write_png(flow_c * c, struct flow_bitmap_bgra * frame, struct flow_io * io){
+    return flow_bitmap_bgra_write_png_with_hints(c, frame, io, NULL);
+}
+bool flow_bitmap_bgra_write_png_with_hints(flow_c * c, struct flow_bitmap_bgra * frame, struct flow_io * io, struct flow_encoder_hints * hints)
 {
     struct flow_codec_instance instance;
     instance.codec_id = flow_codec_type_encode_png;
@@ -521,7 +523,7 @@ bool flow_bitmap_bgra_write_png(flow_c * c, struct flow_bitmap_bgra * frame, str
         FLOW_error_return(c);
     }
 
-    if (!flow_codecs_png_write_frame(c, instance.codec_state, frame, NULL)) {
+    if (!flow_codecs_png_write_frame(c, instance.codec_state, frame, hints)) {
         FLOW_error_return(c);
     }
     return true;
@@ -539,9 +541,3 @@ const struct flow_codec_definition flow_codec_definition_decode_png
         .preferred_mime_type = "image/png",
         .preferred_extension = "png" };
 
-const struct flow_codec_definition flow_codec_definition_encode_png = { .codec_id = flow_codec_type_encode_png,
-                                                                        .initialize = flow_codecs_initialize_encode_png,
-                                                                        .write_frame = flow_codecs_png_write_frame,
-                                                                        .name = "encode png",
-                                                                        .preferred_mime_type = "image/png",
-                                                                        .preferred_extension = "png" };

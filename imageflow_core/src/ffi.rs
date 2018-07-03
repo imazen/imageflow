@@ -648,11 +648,6 @@ pub struct DecoderDownscaleHints {
 #[repr(C)]
 #[derive(Clone,Debug,PartialEq)]
 pub struct EncoderHints {
-    pub jpeg_encode_quality: int32_t,
-    pub jpeg_allow_low_quality_non_baseline: bool,
-    pub jpeg_progressive: bool,
-    pub jpeg_optimize_huffman_coding: bool,
-    pub jpeg_use_arithmetic_coding: bool,
     pub disable_png_alpha: bool,
 }
 
@@ -904,6 +899,8 @@ mod mid_term {
 
         pub fn flow_bitmap_bgra_transpose(c: *mut ImageflowContext, input: *mut BitmapBgra, output: *mut BitmapBgra) -> bool;
 
+
+    pub fn flow_bitmap_bgra_write_png_with_hints(c: *mut ImageflowContext, input: *mut BitmapBgra, io: *mut ImageflowJobIo, hints: *const EncoderHints) -> bool;
 
 }
 }

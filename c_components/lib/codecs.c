@@ -5,7 +5,6 @@
 
 extern const struct flow_codec_definition flow_codec_definition_decode_jpeg;
 extern const struct flow_codec_definition flow_codec_definition_decode_png;
-extern const struct flow_codec_definition flow_codec_definition_encode_png;
 
 static struct flow_context_codec_set cached_default_codec_set;
 static struct flow_codec_definition cached_default_set[6];
@@ -15,7 +14,6 @@ struct flow_context_codec_set * flow_context_get_default_codec_set()
     size_t i = 0;
     cached_default_set[i++] = flow_codec_definition_decode_jpeg;
     cached_default_set[i++] = flow_codec_definition_decode_png;
-    cached_default_set[i++] = flow_codec_definition_encode_png;
     // flow_codec_definition_encode_gif;
     cached_default_codec_set.codecs = &cached_default_set[0];
     cached_default_codec_set.codecs_count = i; // sizeof(cached_default_set) / sizeof(struct flow_codec_definition);

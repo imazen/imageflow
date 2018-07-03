@@ -164,11 +164,6 @@ struct flow_decoder_downscale_hints;
 struct flow_bitmap_bgra;
 
 struct flow_encoder_hints {
-    int32_t jpeg_encode_quality;
-    bool jpeg_allow_low_quality_non_baseline;
-    bool jpeg_progressive;
-    bool jpeg_optimize_huffman_coding;
-    bool jpeg_use_arithmetic_coding;
     bool disable_png_alpha;
 };
 
@@ -256,6 +251,7 @@ struct flow_decoder_info {
 };
 
 PUB bool flow_bitmap_bgra_write_png(flow_c * c, struct flow_bitmap_bgra * frame, struct flow_io * io);
+PUB bool flow_bitmap_bgra_write_png_with_hints(flow_c * c, struct flow_bitmap_bgra * frame, struct flow_io * io, struct flow_encoder_hints * hints);
 
 #undef PUB
 

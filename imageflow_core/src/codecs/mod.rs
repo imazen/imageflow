@@ -20,7 +20,6 @@ mod gif;
 mod pngquant;
 mod lode;
 mod mozjpeg;
-mod libjpeg_turbo;
 use io::IoProxyRef;
 
 pub trait DecoderFactory{
@@ -257,111 +256,41 @@ impl Decoder for ClassicDecoder{
     }
 }
 
-struct ClassicEncoder{
-    classic: CodecInstance,
-    io_id: i32,
-    io: IoProxy
+struct LibpngEncoder{
+    pub io_id: i32,
+    pub io: IoProxy
 }
-
-impl ClassicEncoder{
-    fn get_codec_id_and_hints(preset: &s::EncoderPreset) -> Result<(i64, ffi::EncoderHints)>{
-        match *preset {
-            s::EncoderPreset::LibjpegTurboClassic { quality, progressive, optimize_huffman_coding } => {
-                Ok((ffi::CodecType::EncodeJpeg as i64,
-                 ffi::EncoderHints {
-                     jpeg_encode_quality: quality.unwrap_or(90),
-                     disable_png_alpha: false,
-                     jpeg_allow_low_quality_non_baseline: false,
-                     jpeg_optimize_huffman_coding: optimize_huffman_coding.unwrap_or(false), //2x slowdown
-                     jpeg_progressive: progressive.unwrap_or(false), //5x slowdown
-                     jpeg_use_arithmetic_coding: false, // arithmetic coding is not widely supported
-                 }))
-            }
-            s::EncoderPreset::Libpng { ref matte,
-                zlib_compression,
-                ref depth } => {
-                Ok((ffi::CodecType::EncodePng as i64,
-                 ffi::EncoderHints {
-                     jpeg_encode_quality: -1,
-                     jpeg_allow_low_quality_non_baseline: false,
-                     jpeg_optimize_huffman_coding: true,
-                     jpeg_progressive: true,
-                     jpeg_use_arithmetic_coding: false, // arithmetic coding is not widely supported
-                     disable_png_alpha: match *depth {
-                         Some(s::PngBitDepth::Png24) => true,
-                         _ => false,
-                     },
-                 }))
-            }
-            _ => {
-                Err(unimpl!("Classic encoder only supports libjpeg and libpng"))
-            }
-        }
-    }
-    fn get_empty(io_id: i32, io: IoProxy) -> Result<ClassicEncoder> {
-        let ptr = io.get_io_ptr();
-        Ok(ClassicEncoder {
-            io_id,
-            io,
-            classic: CodecInstance {
-                io_id,
-                codec_id: 0,
-                codec_state: ptr::null_mut(),
-                direction: IoDirection::Out,
-                io: ptr
-            }
-        })
-    }
-
-
-}
-
-impl Encoder for ClassicEncoder{
+impl Encoder for LibpngEncoder{
 
     fn write_frame(&mut self, c: &Context, preset: &s::EncoderPreset, frame: &mut BitmapBgra, decoder_io_ids: &[i32]) -> Result<s::EncodeResult> {
-
-        let (wanted_id, hints) = ClassicEncoder::get_codec_id_and_hints(preset)?;
-        unsafe {
-            let classic = &mut self.classic;
-
-            let (result_mime, result_ext) = match *preset {
-                s::EncoderPreset::Libpng { .. } |
-                s::EncoderPreset::Lodepng { .. } |
-                s::EncoderPreset::Pngquant { .. } => ("image/png", "png"),
-                s::EncoderPreset::Mozjpeg { .. } |
-                s::EncoderPreset::LibjpegTurbo { .. } |
-                s::EncoderPreset::LibjpegTurboClassic { .. } => ("image/jpeg", "jpg"),
-                s::EncoderPreset::Gif { .. } => ("image/gif", "gif"),
+        if let s::EncoderPreset::Libpng {
+            ref matte,
+            zlib_compression,
+            ref depth
+        } = preset {
+            let hints = ffi::EncoderHints {
+                disable_png_alpha: match *depth {
+                    Some(s::PngBitDepth::Png24) => true,
+                    _ => false,
+                },
             };
 
-            classic.codec_id = wanted_id;
-            if !ffi::flow_codec_initialize(c.flow_c(), classic as *mut ffi::CodecInstance) {
-                return Err(cerror!(c))?
+            unsafe {
+                if !::ffi::flow_bitmap_bgra_write_png_with_hints(c.flow_c(), frame as *mut BitmapBgra, self.io.get_io_ptr(),
+                                                                 &hints as *const ffi::EncoderHints) {
+                    return Err(cerror!(c))?
+                }
             }
-            let codec_def = ffi::flow_codec_get_definition(c.flow_c(), wanted_id);
-            if codec_def.is_null() {
-                return Err(cerror!(c))?
-            }
-            let write_fn = (*codec_def).write_frame;
-            if write_fn == None {
-                unimpl!("Codec didn't implement write_frame");
-            }
-
-            if !write_fn.unwrap()(c.flow_c(),
-                                  classic.codec_state,
-                                  frame as *mut BitmapBgra,
-                                  &hints as *const ffi::EncoderHints) {
-                return Err(cerror!(c))?
-            }
-
             Ok(s::EncodeResult {
                 w: (*frame).w as i32,
                 h: (*frame).h as i32,
-                preferred_mime_type: result_mime.to_owned(),
-                preferred_extension: result_ext.to_owned(),
+                preferred_mime_type: "image/png".to_owned(),
+                preferred_extension: "png".to_owned(),
                 io_id: self.io_id,
                 bytes: s::ResultBytes::Elsewhere,
             })
+        } else {
+            Err(unimpl!("This encoder only supports png encoding"))
         }
     }
     fn get_io(&self) -> Result<IoProxyRef> {
@@ -394,9 +323,9 @@ impl CodecInstanceContainer{
                  s::EncoderPreset::Lodepng => {
                      CodecKind::Encoder(Box::new(lode::LodepngEncoder::create(c, io)?))
                  },
-                 s::EncoderPreset::Libpng {..} | s::EncoderPreset::LibjpegTurboClassic {..} => {
+                 s::EncoderPreset::Libpng {..}  => {
                      CodecKind::Encoder(Box::new(
-                         ClassicEncoder::get_empty(self.io_id, io)?))
+                         LibpngEncoder{ io_id: self.io_id, io}))
                  }
              };
              self.codec = codec;

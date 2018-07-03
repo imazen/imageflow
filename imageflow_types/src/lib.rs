@@ -174,11 +174,6 @@ pub enum ScalingFloatspace {
 #[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
 #[serde(rename_all = "lowercase")]
 pub enum EncoderPreset {
-    LibjpegTurboClassic {
-        quality: Option<i32>,
-        progressive: Option<bool>,
-        optimize_huffman_coding: Option<bool>
-    },
     LibjpegTurbo {
         quality: Option<i32>,
         progressive: Option<bool>,
