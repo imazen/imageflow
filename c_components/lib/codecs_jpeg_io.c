@@ -15,77 +15,6 @@ struct flow_jpeg_source_manager {
     boolean bytes_have_been_read;
 };
 
-struct flow_jpeg_destination_manager {
-    struct jpeg_destination_mgr pub;
-    struct flow_io * io;
-    JOCTET * buffer;
-};
-
-//! called by jpeg_finish_compress(). It must leave next_output_byte and free_in_buffer with space available for
-// immediate writing.
-static void _flow_jpeg_io_dest_init(j_compress_ptr cinfo)
-{
-    struct flow_jpeg_destination_manager * dest = (struct flow_jpeg_destination_manager *)cinfo->dest;
-
-    dest->buffer = (JOCTET *)(*cinfo->mem->alloc_small)((j_common_ptr)cinfo, JPOOL_IMAGE,
-                                                        FLOW_JPEG_OUTPUT_BUFFER_SIZE * sizeof(JOCTET));
-    dest->pub.next_output_byte = dest->buffer;
-    dest->pub.free_in_buffer = FLOW_JPEG_OUTPUT_BUFFER_SIZE;
-}
-
-//! Called when free_in_buffer == 0; should flush entire underlying buffer and reset pointer/count. Always returns TRUE
-//- suspension not supported.
-static boolean _flow_jpeg_io_dest_empty_output_buffer(j_compress_ptr cinfo)
-{
-    struct flow_jpeg_destination_manager * dest = (struct flow_jpeg_destination_manager *)cinfo->dest;
-
-    if (dest->io->write_func(dest->io->context, dest->io, dest->buffer, FLOW_JPEG_OUTPUT_BUFFER_SIZE)
-        != FLOW_JPEG_OUTPUT_BUFFER_SIZE) {
-        if (flow_context_has_error(dest->io->context)) {
-            FLOW_add_to_callstack(dest->io->context);
-        } else {
-            FLOW_error_msg(dest->io->context, flow_status_IO_error, "Failed to write all %l bytes to output flow_io *",
-                           FLOW_JPEG_OUTPUT_BUFFER_SIZE);
-        }
-        jpeg_destroy((j_common_ptr)cinfo);
-
-        // Raise error with jpeg and call error_exit which will jump back to our handler
-        struct jpeg_error_mgr * err = cinfo->err;
-        err->msg_code = JERR_FILE_WRITE;
-        err->error_exit((j_common_ptr)cinfo);
-    }
-
-    dest->pub.next_output_byte = dest->buffer;
-    dest->pub.free_in_buffer = FLOW_JPEG_OUTPUT_BUFFER_SIZE;
-
-    return TRUE;
-}
-
-//! called by jpeg_finish_compress() to flush remaining bytes after last write
-static void _flow_jpeg_io_dest_terminate(j_compress_ptr cinfo)
-{
-    struct flow_jpeg_destination_manager * dest = (struct flow_jpeg_destination_manager *)cinfo->dest;
-
-    size_t remaining_bytes = FLOW_JPEG_OUTPUT_BUFFER_SIZE - dest->pub.free_in_buffer;
-    // Flush to underlying io
-    if (remaining_bytes > 0) {
-        if (dest->io->write_func(dest->io->context, dest->io, dest->buffer, (size_t)remaining_bytes)
-            != (int64_t)remaining_bytes) {
-            if (flow_context_has_error(dest->io->context)) {
-                FLOW_add_to_callstack(dest->io->context);
-            } else {
-                FLOW_error_msg(dest->io->context, flow_status_IO_error,
-                               "Failed to write all %l bytes to output flow_io *", remaining_bytes);
-            }
-            jpeg_destroy((j_common_ptr)cinfo);
-            // Raise error with jpeg and call error_exit which will jump back to our handler
-            struct jpeg_error_mgr * err = cinfo->err;
-            err->msg_code = JERR_FILE_WRITE;
-            err->error_exit((j_common_ptr)cinfo);
-        }
-    }
-}
-
 //! Called by jpeg_read_header() before anything is read.
 static void _flow_jpeg_io_source_init(j_decompress_ptr cinfo)
 {
@@ -183,22 +112,4 @@ void flow_codecs_jpeg_setup_source_manager(j_decompress_ptr cinfo, struct flow_i
     // We don't pre-fill any bytes
     src->pub.bytes_in_buffer = 0;
     src->pub.next_input_byte = NULL;
-}
-
-//! Sets up the jpeg output proxy to work with *io.
-void flow_codecs_jpeg_setup_dest_manager(j_compress_ptr cinfo, struct flow_io * io)
-{
-
-    struct flow_jpeg_destination_manager * dest;
-
-    if (cinfo->dest == NULL) {
-        cinfo->dest = (struct jpeg_destination_mgr *)(*cinfo->mem->alloc_small)(
-            (j_common_ptr)cinfo, JPOOL_PERMANENT, sizeof(struct flow_jpeg_destination_manager));
-    }
-
-    dest = (struct flow_jpeg_destination_manager *)cinfo->dest;
-    dest->pub.init_destination = _flow_jpeg_io_dest_init;
-    dest->pub.empty_output_buffer = _flow_jpeg_io_dest_empty_output_buffer;
-    dest->pub.term_destination = _flow_jpeg_io_dest_terminate;
-    dest->io = io;
 }

@@ -48,15 +48,6 @@ struct flow_codecs_jpeg_codec_state_common {
     flow_c * context; // MUST be third
     size_t codec_id; // MUST be fourth
 };
-struct flow_codecs_jpeg_encoder_state {
-    struct jpeg_error_mgr error_mgr; // MUST be first
-    jmp_buf error_handler_jmp; // MUST be second
-    flow_c * context; // MUST be third
-    size_t codec_id; // MUST be fourth
-    struct jpeg_compress_struct cinfo;
-    struct flow_io * io;
-    int32_t quality;
-};
 
 #ifdef __cplusplus
 }

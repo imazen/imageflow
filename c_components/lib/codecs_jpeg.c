@@ -947,110 +947,6 @@ static bool flow_codecs_jpeg_read_frame(flow_c * c, void * codec_state, struct f
     }
 }
 
-static bool flow_codecs_initialize_encode_jpeg(flow_c * c, struct flow_codec_instance * item)
-{
-    // flow_codecs_png_decoder_state
-    if (item->codec_state == NULL) {
-        struct flow_codecs_jpeg_encoder_state * state = (struct flow_codecs_jpeg_encoder_state *)FLOW_malloc(
-            c, sizeof(struct flow_codecs_jpeg_encoder_state)); // TODO: ownership other than context?
-        if (state == NULL) {
-            FLOW_error(c, flow_status_Out_of_memory);
-            return false;
-        }
-        state->codec_id = item->codec_id;
-        state->context = c;
-        state->io = item->io;
-        item->codec_state = state;
-    }
-    return true;
-}
-
-static bool flow_codecs_jpeg_write_frame(flow_c * c, void * codec_state, struct flow_bitmap_bgra * frame,
-                                         struct flow_encoder_hints * hints)
-{
-
-    flow_pixel_format effective_format = flow_effective_pixel_format(frame);
-    if (effective_format != flow_bgra32 && effective_format != flow_bgr24 && effective_format != flow_bgr32) {
-        FLOW_error(c, flow_status_Unsupported_pixel_format);
-        return false;
-    }
-
-    struct flow_codecs_jpeg_encoder_state * state = (struct flow_codecs_jpeg_encoder_state *)codec_state;
-    state->context = c;
-
-    state->cinfo.err = jpeg_std_error(&state->error_mgr);
-    state->error_mgr.error_exit = jpeg_error_exit;
-    state->error_mgr.output_message = flow_jpeg_output_message;
-
-    if (setjmp(state->error_handler_jmp)) {
-        // Execution comes back to this point if an error happens
-        // We assume that the handler already set the context error
-        return false;
-    }
-
-    jpeg_create_compress(&state->cinfo);
-    flow_codecs_jpeg_setup_dest_manager(&state->cinfo, state->io);
-
-    state->cinfo.image_height = frame->h;
-    state->cinfo.image_width = frame->w;
-    state->cinfo.optimize_coding = hints->jpeg_optimize_huffman_coding; // entropy coding
-    state->cinfo.arith_code = hints->jpeg_use_arithmetic_coding;
-
-    if (effective_format == flow_bgra32) {
-        state->cinfo.in_color_space = JCS_EXT_BGRA;
-        state->cinfo.input_components = 4;
-
-    } else if (effective_format == flow_bgr32) {
-        state->cinfo.in_color_space = JCS_EXT_BGRX;
-        state->cinfo.input_components = 4;
-    } else if (effective_format == flow_bgr24) {
-        state->cinfo.in_color_space = JCS_EXT_BGR;
-        state->cinfo.input_components = 3;
-    }
-
-    if (jpeg_c_int_param_supported(&state->cinfo, JINT_COMPRESS_PROFILE)) {
-        jpeg_c_set_int_param(&state->cinfo, JINT_COMPRESS_PROFILE, JCP_FASTEST);
-    }
-
-    jpeg_set_defaults(&state->cinfo);
-
-    int32_t quality = hints == NULL ? 90 : hints->jpeg_encode_quality;
-    if (quality < 0)
-        quality = 90;
-    if (quality > 100)
-        quality = 100;
-
-    jpeg_set_quality(&state->cinfo, quality,
-                     hints->jpeg_allow_low_quality_non_baseline /* limit to baseline-JPEG values */);
-
-    if (hints->jpeg_progressive) {
-        jpeg_simple_progression(&state->cinfo);
-    }
-
-    jpeg_start_compress(&state->cinfo, TRUE);
-
-    uint8_t ** rows
-        = flow_bitmap_create_row_pointers(c, frame->pixels, frame->stride * frame->h, frame->stride, frame->h);
-    if (rows == NULL) {
-        FLOW_add_to_callstack(c);
-        jpeg_destroy_compress(&state->cinfo);
-        return false;
-    }
-
-    (void)jpeg_write_scanlines(&state->cinfo, rows, frame->h);
-
-    jpeg_finish_compress(&state->cinfo);
-
-    jpeg_destroy_compress(&state->cinfo);
-
-    if (state->error_mgr.num_warnings > 0) {
-        FLOW_error(c, flow_status_Invalid_internal_state);
-        return false;
-    }
-
-    return true;
-}
-
 static struct flow_codec_magic_bytes jpeg_magic_bytes[] = { {
                                                               .byte_count = 3, .bytes = (uint8_t *)&jpeg_bytes_a,
 
@@ -1067,13 +963,5 @@ const struct flow_codec_definition flow_codec_definition_decode_jpeg
         .magic_byte_sets = &jpeg_magic_bytes[0],
         .magic_byte_sets_count = sizeof(jpeg_magic_bytes) / sizeof(struct flow_codec_magic_bytes),
         .name = "decode jpeg",
-        .preferred_mime_type = "image/jpeg",
-        .preferred_extension = "jpg" };
-
-const struct flow_codec_definition flow_codec_definition_encode_jpeg
-    = { .codec_id = flow_codec_type_encode_jpeg,
-        .initialize = flow_codecs_initialize_encode_jpeg,
-        .write_frame = flow_codecs_jpeg_write_frame,
-        .name = "encode jpeg",
         .preferred_mime_type = "image/jpeg",
         .preferred_extension = "jpg" };
