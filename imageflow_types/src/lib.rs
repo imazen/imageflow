@@ -40,6 +40,10 @@ extern crate imageflow_helpers;
 extern crate chrono;
 extern crate serde;
 extern crate serde_json;
+extern crate rgb;
+extern crate imgref;
+
+use imgref::ImgRef;
 use std::str::FromStr;
 pub mod collections;
 
@@ -62,7 +66,7 @@ pub enum PixelFormat {
 
 impl PixelFormat{
     /// The number of bytes required to store the given pixel type
-    pub fn bytes(&self) -> usize{
+    pub fn bytes(&self) -> usize {
         match *self{
             PixelFormat::Gray8 => 1,
             PixelFormat::Bgr24 => 3,
@@ -70,6 +74,14 @@ impl PixelFormat{
             PixelFormat::Bgr32 => 4
         }
     }
+}
+
+/// Internal 2d representation of pixel slices
+pub enum PixelBuffer<'a> {
+    Bgra32(ImgRef<'a, rgb::alt::BGRA8>),
+    Bgr32(ImgRef<'a, rgb::alt::BGRA8>), // there's no BGRX support in the rgb crate
+    Bgr24(ImgRef<'a, rgb::alt::BGR8>),
+    Gray8(ImgRef<'a, rgb::alt::GRAY8>),
 }
 
 /// Named interpolation function+configuration presets

@@ -8,11 +8,14 @@
 //! Overlaps in naming are artifacts from restructuring
 //!
 use std::slice;
+use imgref::ImgRef;
+
 pub use imageflow_types::EdgeKind;
 
 pub use imageflow_types::Filter;
 pub use imageflow_types::IoDirection;
 pub use imageflow_types::PixelFormat;
+use imageflow_types::PixelBuffer;
 use internal_prelude::works_everywhere::*;
 
 // These are reused in the external ABI, but only as opaque pointers
@@ -247,6 +250,33 @@ impl BitmapBgra {
         }
     }
 
+    /// Unsafe, because it depends on the raw pixels pointer being alive
+    pub unsafe fn pixels_buffer(&self) -> Option<PixelBuffer> {
+        if self.pixels.is_null() {
+            return None;
+        }
+        let stride_px = self.stride() / self.fmt.bytes();
+        let buffer_size_px = stride_px * self.height() + self.width() - stride_px;
+        Some(match self.fmt {
+            PixelFormat::Bgra32 => {
+                let buf = slice::from_raw_parts(self.pixels as *const _, buffer_size_px);
+                PixelBuffer::Bgra32(ImgRef::new_stride(buf, self.width(), self.height(), stride_px))
+            },
+            PixelFormat::Bgr32 => {
+                let buf = slice::from_raw_parts(self.pixels as *const _, buffer_size_px);
+                PixelBuffer::Bgr32(ImgRef::new_stride(buf, self.width(), self.height(), stride_px))
+            },
+            PixelFormat::Bgr24 => {
+                let buf = slice::from_raw_parts(self.pixels as *const _, buffer_size_px);
+                PixelBuffer::Bgr24(ImgRef::new_stride(buf, self.width(), self.height(), stride_px))
+            },
+            PixelFormat::Gray8 => {
+                let buf = slice::from_raw_parts(self.pixels as *const _, buffer_size_px);
+                PixelBuffer::Gray8(ImgRef::new_stride(buf, self.width(), self.height(), stride_px))
+            },
+        })
+    }
+
     pub unsafe fn pixels_slice_mut(&mut self) -> Option<&mut [u8]>{
         if self.pixels.is_null() {
             None
@@ -254,6 +284,7 @@ impl BitmapBgra {
             Some(slice::from_raw_parts_mut(self.pixels, (self.stride * self.h) as usize))
         }
     }
+
     pub fn frame_info(&self) -> ::flow::definitions::FrameInfo {
         ::flow::definitions::FrameInfo {
             w: self.w as i32,

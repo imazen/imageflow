@@ -32,6 +32,7 @@ extern crate gif;
 extern crate smallvec;
 extern crate chashmap;
 extern crate rgb;
+extern crate imgref;
 extern crate lodepng;
 extern crate mozjpeg;
 extern crate evalchroma;
