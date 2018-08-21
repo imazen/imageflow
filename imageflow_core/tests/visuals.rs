@@ -130,6 +130,30 @@ fn test_encode_lodepng() {
     );
 }
 
+#[test]
+fn test_encode_mozjpeg_resized() {
+    let steps = vec![
+        s::Node::Decode { io_id: 0, commands: None },
+        s::Node::Resample2D{ w: 550, h: 550, down_filter: Some(s::Filter::Hermite), up_filter: Some(s::Filter::Hermite), hints: None, scaling_colorspace: None },
+        s::Node::Resample2D{ w: 1118, h: 1105, down_filter: Some(s::Filter::Hermite), up_filter: Some(s::Filter::Hermite), hints: None, scaling_colorspace: None },
+        s::Node::Encode {
+            io_id: 1,
+            preset: s::EncoderPreset::Mozjpeg {
+                progressive: None,
+                quality: Some(50),
+            },
+        },
+    ];
+
+    compare_encoded_to_source(s::IoEnum::Url("https://s3-us-west-2.amazonaws.com/imageflow-resources/test_inputs/frymire.png".to_owned()),
+                              DEBUG_GRAPH,
+                              Constraints {
+                                  max_file_size: Some(160_000),
+                                  similarity: Similarity::AllowDssimMatch(0.1, 0.2),
+                              },
+                              steps
+    );
+}
 
 #[test]
 fn test_encode_mozjpeg() {
@@ -147,12 +171,13 @@ fn test_encode_mozjpeg() {
     compare_encoded_to_source(s::IoEnum::Url("https://s3-us-west-2.amazonaws.com/imageflow-resources/test_inputs/frymire.png".to_owned()),
                               DEBUG_GRAPH,
                               Constraints {
-                                  max_file_size: Some(205_000),
+                                  max_file_size: Some(301_000),
                                   similarity: Similarity::AllowDssimMatch(0.03, 0.06),
                               },
                               steps
     );
 }
+
 
 
 #[test]
