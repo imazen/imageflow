@@ -16,4 +16,4 @@ export UPLOAD_BUILD=False
 export UPLOAD_DOCS=False
 export IMAGEFLOW_BUILD_OVERRIDE="$OVERRIDE"
 
-./simulate_travis.sh imazen/imageflow_build_ubuntu16
+./simulate_travis.sh imazen/imageflow_build_ubuntu18
