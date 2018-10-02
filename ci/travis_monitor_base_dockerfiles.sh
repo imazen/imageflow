@@ -3,6 +3,13 @@
 # and TRAVIS_BUILD_DIR set to the build dir
 # Docker hub only triggers if $TRAVIS_BRANCH or $TRAVIS_TAG are set
 
+#Or invoke script with 'force' parameter to force all to trigger
+if [[ "$1" == 'force' ]]; then
+    TRAVIS_COMMIT_RANGE=force
+    TRAVIS_BUILD_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )/.." && pwd )"
+fi
+
+
 
 # PURPOSE: to efficiently trigger new docker hub builds if and only if the dockerfiles are edited
 # To use, configure a Docker Hub Automated Build, but disable build-on-push
@@ -27,18 +34,25 @@ trigger_docker_hub_if_changed(){
     if [ -z "${TRAVIS_COMMIT_RANGE}" ]; then
         echo "TRAVIS_COMMIT_RANGE not set - should be commit range to check for changes, like 6544f0b..a62c029. Exiting." && exit 1;
     else
-        echo "Scanning ${TRAVIS_COMMIT_RANGE} for changes to $1";
-        git diff -s --exit-code "${TRAVIS_COMMIT_RANGE}" -- $1
-        RETVAL=$?
-        if [ $RETVAL -eq 1 ]; then
-            echo ... found changes in $1, invoking travis_trigger_docker_cloud.sh
-            ./ci/travis_trigger_docker_cloud.sh "$2"
-        elif [ $RETVAL -eq 0 ]; then
-            echo ... no changes
+        if [[ "$TRAVIS_COMMIT_RANGE" == 'force' ]]; then
+            echo "Forcing trigger for $1"
+            {
+                export TRAVIS_BRANCH="${TRAVIS_BRANCH:-master}"
+                ./ci/travis_trigger_docker_cloud.sh "$2"
+            }
         else
-            echo ... git command failed with error ${RETVAL}
+            echo "Scanning ${TRAVIS_COMMIT_RANGE} for changes to $1";
+            git diff -s --exit-code "${TRAVIS_COMMIT_RANGE}" -- $1
+            RETVAL=$?
+            if [ $RETVAL -eq 1 ]; then
+                echo ... found changes in $1, invoking travis_trigger_docker_cloud.sh
+                ./ci/travis_trigger_docker_cloud.sh "$2"
+            elif [ $RETVAL -eq 0 ]; then
+                echo ... no changes
+            else
+                echo ... git command failed with error ${RETVAL}
+            fi
         fi
-
     fi
 }
 
