@@ -18,12 +18,12 @@ inform_docker_hub_if_changed(){
         echo "TRAVIS_COMMIT_RANGE not set - should be commit range to check for changes, like 6544f0b..a62c029. Exiting." && exit 1;
     else
         echo "Scanning ${TRAVIS_COMMIT_RANGE} for changes to $1";
-        git diff -s --exit-code ${TRAVIS_COMMIT_RANGE} ./README.m
-        RETVAL = $?
-        if [ RETVAL -eq 1 ]; then
+        git diff -s --exit-code "${TRAVIS_COMMIT_RANGE}" ./README.m
+        RETVAL=$?
+        if [ $RETVAL -eq 1 ]; then
             echo ... found changes, invoking travis_trigger_docker_cloud.sh
             ./ci/travis_trigger_docker_cloud.sh "$2"
-        elif [ RETVAL -eq 0 ]; then
+        elif [ $RETVAL -eq 0 ]; then
             echo ... no changes
         else
             echo ... git command failed with error ${RETVAL}
@@ -32,7 +32,7 @@ inform_docker_hub_if_changed(){
     fi
 }
 
-cd "$TRAVIS_BUILD_DIR"
+cd "$TRAVIS_BUILD_DIR" || exit
 
 #inform_docker_hub_if_changed("./docker/imageflow_base_os/Dockerfile","")
 #inform_docker_hub_if_changed("./docker/imageflow_build_ubuntu16/Dockerfile","")

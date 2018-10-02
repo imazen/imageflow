@@ -41,6 +41,8 @@ matrix:
     sudo: required
     services:
     - docker
+before_install:
+- ci/travis_monitor_base_dockerfiles.sh
 install:
 - ci/travis_install.sh
 script:
