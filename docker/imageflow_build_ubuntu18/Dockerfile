@@ -7,7 +7,7 @@ FROM ubuntu:18.04
 RUN  apt-get update \
   && apt-get upgrade -y \
   && apt-get install --no-install-recommends -y \
-    sudo build-essential nasm dh-autoreconf pkg-config \
+    sudo build-essential nasm dh-autoreconf pkg-config ca-certificates \
     git zip curl libpng-dev libssl-dev wget \
     libcurl4-openssl-dev libelf-dev libdw-dev \
   && apt-get clean -y \
@@ -39,7 +39,7 @@ RUN RUSTVER="stable" && curl https://sh.rustup.rs -sSf | sh -s -- -y --default-t
     && HI=$(rustup which rustc) && HI=${HI%/bin/rustc} && export TOOLCHAIN_DIR=$HI && echo TOOLCHAIN_DIR=$TOOLCHAIN_DIR \
     && sudo rm -rf $TOOLCHAIN_DIR/share/doc \
     && sudo rm -rf $TOOLCHAIN_DIR/share/man \
-    && sudo rm -rf /home/conan/.rustup/toolchains/${RUSTVER}-x86_64-unknown-linux-gnu/share/doc \
+    && sudo rm -rf /home/imageflow/.rustup/toolchains/${RUSTVER}-x86_64-unknown-linux-gnu/share/doc \
     && ln -sf -t $TOOLCHAIN_DIR/lib/ $TOOLCHAIN_DIR/lib/rustlib/x86_64-unknown-linux-gnu/lib/*.so \
     && rustup show \
     && rustc -V
@@ -48,7 +48,7 @@ RUN PKG_CONFIG_ALL_STATIC=1 cargo install --force --git=https://github.com/mozil
     && PKG_CONFIG_ALL_STATIC=1 cargo install dssim \
     && rm -rf ~/.cargo/registry
 
-WORKDIR /home/imageflow/imageflow
 
+WORKDIR /home/imageflow/imageflow
 
 MAINTAINER Lilith River

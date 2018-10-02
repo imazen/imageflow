@@ -34,16 +34,17 @@ RUN RUSTVER="stable" && curl https://sh.rustup.rs -sSf | sh -s -- -y --default-t
     && HI=$(rustup which rustc) && HI=${HI%/bin/rustc} && export TOOLCHAIN_DIR=$HI && echo TOOLCHAIN_DIR=$TOOLCHAIN_DIR \
     && sudo rm -rf $TOOLCHAIN_DIR/share/doc \
     && sudo rm -rf $TOOLCHAIN_DIR/share/man \
-    && sudo rm -rf /home/conan/.multirust/toolchains/${RUSTVER}-x86_64-unknown-linux-gnu/share/doc \
+    && sudo rm -rf /home/imageflow/.multirust/toolchains/${RUSTVER}-x86_64-unknown-linux-gnu/share/doc \
     && ln -sf -t $TOOLCHAIN_DIR/lib/ $TOOLCHAIN_DIR/lib/rustlib/x86_64-unknown-linux-gnu/lib/*.so \
     && rustup show \
     && rustc -V
 
 RUN PKG_CONFIG_ALL_STATIC=1 cargo install --force --git=https://github.com/mozilla/sccache.git --features=s3 \
-    && PKG_CONFIG_ALL_STATIC=1 cargo install dssim
+    && PKG_CONFIG_ALL_STATIC=1 cargo install dssim \
+    && rm -rf ~/.cargo/registry
+
 
 WORKDIR /home/imageflow/imageflow
-
 
 MAINTAINER Lilith River
 
