@@ -34,7 +34,8 @@
 *.hs eol=lf
 *.yml eol=lf
 *.rs eol=lf
-
+*.sh eol=lf
+Dockerfile eol=lf
 
 
 *.csproj eol=crlf
@@ -44,6 +45,7 @@
 *.dbproj eol=crlf
 *.sln eol=crlf
 *.txt eol=crlf
+*.bat eol=crlf
 
 .gitattributes eol=lf
 .gitignore eol=lf
