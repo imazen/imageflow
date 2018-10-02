@@ -3,9 +3,19 @@
 # and TRAVIS_BUILD_DIR set to the build dir
 # Docker hub only triggers if $TRAVIS_BRANCH or $TRAVIS_TAG are set
 
+
+# PURPOSE: to efficiently trigger new docker hub builds if and only if the dockerfiles are edited
+# To use, configure a Docker Hub Automated Build, but disable build-on-push
+# Modify the Dockerfile Location field for both tags and branches to point to the folder, like /docker/imageflow_tool/
+# Generate a trigger URL and use below
+
+# It's safe for trigger tokens to be public, they are deduped and rate limited to 10 and can't do much harm
+# Docker hub only checks GitHub for the given tag/branch - it does not accept any data.
+
+
 # first param is file to monitor for changes
 # second is endpoint to inform
-inform_docker_hub_if_changed(){
+trigger_docker_hub_if_changed(){
 
     if [ -z "$1" ]; then
         echo "First parameter must be a file to diff for changes. Exiting." && exit 1;
@@ -21,7 +31,7 @@ inform_docker_hub_if_changed(){
         git diff -s --exit-code "${TRAVIS_COMMIT_RANGE}" -- $1
         RETVAL=$?
         if [ $RETVAL -eq 1 ]; then
-            echo ... found changes, invoking travis_trigger_docker_cloud.sh
+            echo ... found changes in $1, invoking travis_trigger_docker_cloud.sh
             ./ci/travis_trigger_docker_cloud.sh "$2"
         elif [ $RETVAL -eq 0 ]; then
             echo ... no changes
@@ -35,9 +45,8 @@ inform_docker_hub_if_changed(){
 cd "$TRAVIS_BUILD_DIR" || exit
 
 
-inform_docker_hub_if_changed "./docker/imageflow_base_os/Dockerfile" "https://registry.hub.docker.com/u/imazen/imageflow_base_os/trigger/50b3bc74-1719-4f80-ae72-d141b0dc4b56/"
-inform_docker_hub_if_changed "./docker/imageflow_build_ubuntu16/Dockerfile" "https://registry.hub.docker.com/u/imazen/imageflow_build_ubuntu16/trigger/125d6410-19fa-433b-be54-512b0372d1a3/"
-
-inform_docker_hub_if_changed "./docker/imageflow_build_ubuntu18/Dockerfile" "https://registry.hub.docker.com/u/imazen/imageflow_build_ubuntu18/trigger/fb077cf4-066e-46d0-bfe2-7c8d96acfeca/"
-inform_docker_hub_if_changed "./docker/imageflow_build_ubuntu18_debug/Dockerfile" "https://registry.hub.docker.com/u/imazen/imageflow_build_ubuntu18_debug/trigger/38852860-517f-49c2-81c2-a033aba36a5b/"
+trigger_docker_hub_if_changed "./docker/imageflow_base_os/Dockerfile" "https://registry.hub.docker.com/u/imazen/imageflow_base_os/trigger/50b3bc74-1719-4f80-ae72-d141b0dc4b56/"
+trigger_docker_hub_if_changed "./docker/imageflow_build_ubuntu18/Dockerfile" "https://registry.hub.docker.com/u/imazen/imageflow_build_ubuntu18/trigger/fb077cf4-066e-46d0-bfe2-7c8d96acfeca/"
+trigger_docker_hub_if_changed "./docker/imageflow_build_ubuntu16/Dockerfile" "https://registry.hub.docker.com/u/imazen/imageflow_build_ubuntu16/trigger/125d6410-19fa-433b-be54-512b0372d1a3/"
+trigger_docker_hub_if_changed "./docker/imageflow_build_ubuntu18_debug/Dockerfile" "https://registry.hub.docker.com/u/imazen/imageflow_build_ubuntu18_debug/trigger/38852860-517f-49c2-81c2-a033aba36a5b/"
 
