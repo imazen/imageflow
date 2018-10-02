@@ -77,6 +77,7 @@ RUN RUSTVER="stable" && curl https://sh.rustup.rs -sSf | sh -s -- -y --default-t
 RUN PKG_CONFIG_ALL_STATIC=1 cargo install --force --git=https://github.com/mozilla/sccache.git --features=s3 \
     && PKG_CONFIG_ALL_STATIC=1 cargo install dssim
 
+
 MAINTAINER Lilith River
 
 WORKDIR /home/imageflow/imageflow

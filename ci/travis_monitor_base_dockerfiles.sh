@@ -18,7 +18,7 @@ inform_docker_hub_if_changed(){
         echo "TRAVIS_COMMIT_RANGE not set - should be commit range to check for changes, like 6544f0b..a62c029. Exiting." && exit 1;
     else
         echo "Scanning ${TRAVIS_COMMIT_RANGE} for changes to $1";
-        git diff -s --exit-code "${TRAVIS_COMMIT_RANGE}" ./README.m
+        git diff -s --exit-code "${TRAVIS_COMMIT_RANGE}" -- $1
         RETVAL=$?
         if [ $RETVAL -eq 1 ]; then
             echo ... found changes, invoking travis_trigger_docker_cloud.sh
