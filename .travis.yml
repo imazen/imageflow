@@ -42,7 +42,7 @@ matrix:
     services:
     - docker
 before_install:
-- ci/travis_monitor_base_dockerfiles.sh
+- if [[ "$FETCH_COMMIT_SUFFIX" == "linux64" ]]; then ./ci/travis_monitor_base_dockerfiles.sh; fi
 install:
 - ci/travis_install.sh
 script:
