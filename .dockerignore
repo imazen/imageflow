@@ -1,0 +1,4 @@
+# Exclude stuff from the docker build context
+
+target
+.docker_*/

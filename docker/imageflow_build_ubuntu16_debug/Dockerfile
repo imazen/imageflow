@@ -1,0 +1,106 @@
+FROM ubuntu:xenial
+
+RUN  apt-get update \
+  && apt-get upgrade -y \
+  && apt-get install --no-install-recommends -y \
+  sudo build-essential nasm dh-autoreconf pkg-config ca-certificates gnupg \
+  git zip curl libpng-dev libssl-dev wget libc6-dbg  \
+  libcurl4-openssl-dev libelf-dev libdw-dev apt-transport-https \
+  && apt-get clean -y \
+  && apt-get autoremove -y \
+  && rm -rf /var/lib/apt/lists/* \
+  && bash -c 'rm -rf {/usr/share/doc,/usr/share/man,/var/cache,/usr/doc,/usr/local/share/doc,/usr/local/share/man}' \
+  && bash -c 'rm -rf /tmp/*' \
+  && bash -c 'rm -rf /var/tmp/*' \
+  && sudo mkdir -p /var/cache/apt/archives/partial \
+  && sudo touch /var/cache/apt/archives/lock \
+  && sudo chmod 640 /var/cache/apt/archives/lock
+
+
+RUN wget -q https://packages.microsoft.com/config/ubuntu/16.04/packages-microsoft-prod.deb \
+  && sudo dpkg -i packages-microsoft-prod.deb \
+  && apt-get update \
+  && apt-get install --no-install-recommends -y \
+  ruby-dev ruby-bundler rubygems-integration \
+  luajit \
+  python-minimal python-pip python-setuptools \
+  && apt-get clean -y \
+  && apt-get autoremove -y \
+  && rm -rf /var/lib/apt/lists/* \
+  && bash -c 'rm -rf {/usr/share/doc,/usr/share/man,/var/cache,/usr/doc,/usr/local/share/doc,/usr/local/share/man}' \
+  && bash -c 'rm -rf /tmp/* || true' \
+  && bash -c 'rm -rf /var/tmp/*' \
+  && sudo mkdir -p /var/cache/apt/archives/partial \
+  && sudo touch /var/cache/apt/archives/lock \
+  && sudo chmod 640 /var/cache/apt/archives/lock
+
+
+#dotnet-sdk-2.1.200 \
+
+# Install CMake 3.4.1 (minimal)
+# Mirrored for speed from https://cmake.org/files/v3.4/cmake-3.4.1-Linux-x86_64.tar.gz
+RUN wget -nv https://s3.amazonaws.com/public-unit-test-resources/cmake-3.4.1-Linux-x86_64.tar.gz \
+    && tar -xzf cmake-3.4.1-Linux-x86_64.tar.gz \
+    && cp cmake-3.4.1-Linux-x86_64/bin/cmake /usr/bin/cmake \
+    && cp cmake-3.4.1-Linux-x86_64/bin/ctest /usr/bin/ctest \
+    && cp -fR cmake-3.4.1-Linux-x86_64/share/* /usr/share \
+    && rm -rf cmake-3.4.1-Linux-x86_64 && rm cmake-3.4.1-Linux-x86_64.tar.gz
+
+# Install lcov and  coveralls-lcov
+RUN wget -nv  -O lcov.tar.gz http://ftp.de.debian.org/debian/pool/main/l/lcov/lcov_1.11.orig.tar.gz \
+    && tar xvzf lcov.tar.gz && rm lcov.tar.gz && mv lcov-1.11 lcov \
+    && sudo make -C lcov/ install \
+    && rm -rf lcov && rm -rf /usr/share/man \
+    && sudo gem install coveralls-lcov
+
+# Install kcov
+RUN wget -nv  -O kcov.tar.gz https://github.com/SimonKagstrom/kcov/archive/master.tar.gz \
+    && tar xvzf kcov.tar.gz && rm kcov.tar.gz && mv kcov-master kcov \
+    && mkdir kcov/build && cd kcov/build \
+    && cmake .. && make && sudo make install \
+    && cd ../.. && rm -rf kcov && rm -rf /usr/local/share/man
+
+
+# 3.12 fixes the bug when running against anything linked to openssl
+RUN VALGRIND_VER="valgrind-3.12.0" \
+  && wget -nv http://valgrind.org/downloads/${VALGRIND_VER}.tar.bz2 \
+  && tar -vxjf ${VALGRIND_VER}.tar.bz2 && rm ${VALGRIND_VER}.tar.* \
+  && cd "${VALGRIND_VER}" && ./configure && make install \
+  && cd .. && rm -rf "${VALGRIND_VER}" \
+  && bash -c 'rm -rf {/usr/share/doc,/usr/share/man,/var/cache,/usr/doc,/usr/local/share/doc,/usr/local/share/man}' \
+  && bash -c 'rm -rf /usr/lib/valgrind/*-x86-*' \
+  && bash -c 'rm -rf /usr/local/lib/valgrind/*-x86-*' \
+  && bash -c 'rm -rf /usr/lib/valgrind/{power,mips,s390,arm,32bit,i386}*' \
+  && bash -c 'rm -rf /usr/local/lib/valgrind/{power,mips,s390,arm,32bit,i386}*' \
+  && bash -c 'rm -rf /tmp/* || true' \
+  && bash -c 'rm -rf /var/tmp/*'
+
+
+RUN groupadd 1001 -g 1001 &&\
+    groupadd 1000 -g 1000 &&\
+    useradd -ms /bin/bash imageflow -g 1001 -G 1000 &&\
+    echo "imageflow:imageflow" | chpasswd && adduser imageflow sudo &&\
+    echo "imageflow ALL= NOPASSWD: ALL\n" >> /etc/sudoers
+
+USER imageflow
+
+ENV PATH=/home/imageflow/.cargo/bin:$PATH
+
+
+#Install beta Rust and make default
+RUN RUSTVER="stable" && curl https://sh.rustup.rs -sSf | sh -s -- -y --default-toolchain $RUSTVER -v \
+    && rustup default $RUSTVER \
+    && HI=$(rustup which rustc) && HI=${HI%/bin/rustc} && export TOOLCHAIN_DIR=$HI && echo TOOLCHAIN_DIR=$TOOLCHAIN_DIR \
+    && sudo rm -rf $TOOLCHAIN_DIR/share/doc \
+    && sudo rm -rf $TOOLCHAIN_DIR/share/man \
+    && sudo rm -rf /home/conan/.multirust/toolchains/${RUSTVER}-x86_64-unknown-linux-gnu/share/doc \
+    && ln -sf -t $TOOLCHAIN_DIR/lib/ $TOOLCHAIN_DIR/lib/rustlib/x86_64-unknown-linux-gnu/lib/*.so \
+    && rustup show \
+    && rustc -V
+
+RUN PKG_CONFIG_ALL_STATIC=1 cargo install --force --git=https://github.com/mozilla/sccache.git --features=s3 \
+    && PKG_CONFIG_ALL_STATIC=1 cargo install dssim
+
+MAINTAINER Lilith River
+
+WORKDIR /home/imageflow/imageflow
