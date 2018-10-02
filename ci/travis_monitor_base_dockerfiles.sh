@@ -35,7 +35,7 @@ inform_docker_hub_if_changed(){
 cd "$TRAVIS_BUILD_DIR" || exit
 
 
-inform_docker_hub_if_changed "./docker/imageflow_base_os/Dockerfile" "https://registry.hub.docker.com/u/lilithriver/imageflow_base_os/trigger/078fed80-2091-44a4-b144-a61de9660d8e/"
+inform_docker_hub_if_changed "./docker/imageflow_base_os/Dockerfile" "https://registry.hub.docker.com/u/imazen/imageflow_base_os/trigger/50b3bc74-1719-4f80-ae72-d141b0dc4b56/"
 inform_docker_hub_if_changed "./docker/imageflow_build_ubuntu16/Dockerfile" "https://registry.hub.docker.com/u/imazen/imageflow_build_ubuntu16/trigger/125d6410-19fa-433b-be54-512b0372d1a3/"
 
 inform_docker_hub_if_changed "./docker/imageflow_build_ubuntu18/Dockerfile" "https://registry.hub.docker.com/u/imazen/imageflow_build_ubuntu18/trigger/fb077cf4-066e-46d0-bfe2-7c8d96acfeca/"
