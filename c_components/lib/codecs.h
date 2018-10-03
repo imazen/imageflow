@@ -32,7 +32,6 @@ typedef struct jpeg_decompress_struct * j_decompress_ptr;
 
 void flow_codecs_jpeg_setup_source_manager(j_decompress_ptr cinfo, struct flow_io * io);
 
-bool flow_bitmap_bgra_write_png_with_hints(flow_c * c, struct flow_bitmap_bgra * frame, struct flow_io * io, struct flow_encoder_hints * hints);
 
 #ifdef __cplusplus
 }
