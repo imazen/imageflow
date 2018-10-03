@@ -5,7 +5,7 @@ FROM imazen/imageflow_build_ubuntu18 as builder
 USER imageflow
 
 # We have to wrest ownership of /home/imageflow/imageflow, as for some reason Docker makes root owner
-RUN sudo chown imageflow: /home/imageflow/imageflow
+RUN sudo chown imageflow: /home/imageflow/imageflow || true
 # Also set ownership of files copied in
 COPY --chown=1000 . /home/imageflow/imageflow
 
@@ -21,6 +21,6 @@ FROM imazen/imageflow_base_os
 MAINTAINER Lilith River
 
 WORKDIR /home/imageflow
-COPY --from=builder /home/imageflow/target/release/imaegflow_tool .
+COPY --from=builder /home/imageflow/imageflow/target/release/imageflow_tool .
 RUN ./imageflow_tool diagnose --show-compilation-info
 CMD ["./imageflow_tool"]
