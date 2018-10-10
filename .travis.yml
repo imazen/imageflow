@@ -5,8 +5,7 @@ cache:
   cargo: true
 env:
   global:
-    - secure: "oO/CIaTFVTxvV6U7nG8mM7AxrQNKm89RodXXDHbibmGQuliaOcU4BTkr6gLsx/vezjgMo1ocfHItxZPlU52GeNiLBf5uwPEjiq6w2+Lq20Xjui8HbtC5wEj1NaAa/Rn5I53+Y0KmoTVXB4YKsY6rWHELW2dpJc07kyFqSE5b2tY="
-
+    - secure: BIzhYi9ukCgT18QNCUur0yf0wGq+FwNGEj724FQq3OLGFCUrpaLv4H40hSsySLBIiWM42aIL/UcWH6dW/xMr9EQ18AMO3qbXHgbpD/x+l1vCf6HGaxV2o586UOK3JY8vQNUUf23JyHXo8Kq1T8YSwb/YaBrCuZW2eJpSagqo5Us=
 matrix:
   fast_finish: true
   include:
