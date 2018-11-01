@@ -336,9 +336,9 @@ impl NodeDefOneInputExpand for CropWhitespaceDef {
                         if rect.x2 <= rect.x1 || rect.y2 <= rect.y1 {
                             return Err(nerror!(::ErrorKind::InvalidState, "Whitespace detection returned invalid rectangle"));
                         }
-                        let padding = (percent_padding * (rect.x2 - rect.x1 + rect.y2 - rect.y1) as f32 / 2f32).ceil() as u32;
-                        Ok((cmp::max(0, rect.x1 - padding) as u32, cmp::max(0, rect.y1 - padding) as u32,
-                            cmp::min(bit_ref.w, rect.x2 + padding), cmp::min(bit_ref.h, rect.y2 + padding)))
+                        let padding = (percent_padding * (rect.x2 - rect.x1 + rect.y2 - rect.y1) as f32 / 2f32).ceil() as i64;
+                        Ok((cmp::max(0, rect.x1 as i64  - padding) as u32, cmp::max(0, rect.y1 as i64 - padding) as u32,
+                            cmp::min(bit_ref.w as i64, rect.x2 as i64 + padding) as u32, cmp::min(bit_ref.h as i64, rect.y2 as i64 + padding) as u32))
                     } else {
                         return Err(nerror!(::ErrorKind::InvalidState, "Failed to complete whitespace detection"));
                     }
