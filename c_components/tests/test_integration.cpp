@@ -3,7 +3,6 @@
 #include "helpers.h"
 #include "png.h"
 #include "test_weighting_helpers.h"
-#include "trim_whitespace.h"
 #include "string.h"
 #include "lcms2.h"
 

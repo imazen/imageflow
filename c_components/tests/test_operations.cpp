@@ -1,4 +1,3 @@
-#include <lib/trim_whitespace.h>
 #include <lib/codecs.h>
 #include "catch.hpp"
 
