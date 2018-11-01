@@ -10,7 +10,7 @@ Gem::Specification.new do |s|
   s.platform    = Gem::Platform::RUBY
   s.summary     = "Wrapper for libimageflow"
   s.description = "Process images quickly and correctly for the  web"
-  s.authors     = ["Nathanael Jones"]
+  s.authors     = ["Lilith River"]
   s.email       = ["support@imageresizing.net"]
   s.homepage    = "http://github.com/imazen/imageflow"
   s.required_rubygems_version = ">= 1.3.6"
