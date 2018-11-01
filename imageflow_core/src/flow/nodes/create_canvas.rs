@@ -63,40 +63,11 @@ impl NodeDef for CreateCanvasNodeDef {
     fn execute(&self, ctx: &mut OpCtxMut, ix: NodeIndex) -> Result<NodeResult> {
         match self.get(&ctx.weight(ix).params) {
             Ok((w, h, format, color)) => {
-                let flow_pointer = ctx.flow_c();
+                let ptr = BitmapBgra::create(ctx.c, w as u32, h as u32, format, color)?;
+
                 let weight = &mut ctx.weight_mut(ix);
-
-                unsafe {
-
-                    let ptr =
-                        ::ffi::flow_bitmap_bgra_create(flow_pointer, w as i32, h as i32, true, format);
-                    if ptr.is_null() {
-                        return Err(cerror!(ctx.c, "Failed to allocate {}x{}x{} bitmap ({} bytes). Reduce dimensions or increase RAM.", w, h, format.bytes(), w * h * format.bytes()))
-                    }
-                    let color_val = color.clone();
-                    let color_srgb_argb = color_val.clone().to_u32_bgra().unwrap();
-                    (*ptr).compositing_mode = ::ffi::BitmapCompositingMode::ReplaceSelf;
-                    if color_val != s::Color::Transparent {
-                        if !ffi::flow_bitmap_bgra_fill_rect(flow_pointer,
-                                                            ptr,
-                                                            0,
-                                                            0,
-                                                            w as u32,
-                                                            h as u32,
-                                                            color_srgb_argb) {
-                            return Err(cerror!(ctx.c, "Failed to fill rectangle"))
-
-                        }
-                        (*ptr).compositing_mode = ::ffi::BitmapCompositingMode::BlendWithMatte;
-                    }
-
-                    (*ptr).matte_color = mem::transmute(color_srgb_argb);
-
-
-                    weight.result = NodeResult::Frame(ptr);
-
-                    Ok(NodeResult::Frame(ptr))
-                }
+                weight.result = NodeResult::Frame(ptr);
+                Ok(NodeResult::Frame(ptr))
             },
             Err(e) => Err(e)
         }

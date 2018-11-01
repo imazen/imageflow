@@ -327,6 +327,51 @@ impl BitmapBgra {
     }
 
 
+    pub fn fill_rect(&mut self, c: &::Context, x1: u32, y1: u32, x2: u32, y2: u32, color: &s::Color) -> Result<()> {
+        let color_srgb_argb = color.clone().to_u32_bgra().unwrap();
+        unsafe {
+            if !flow_bitmap_bgra_fill_rect(c.flow_c(),
+                                           self as *mut BitmapBgra,
+                                           x1,
+                                           y1,
+                                           x2,
+                                           y2,
+                                           color_srgb_argb) {
+                return Err(cerror!(c, "Failed to fill rectangle"))
+            }
+        }
+        Ok(())
+    }
+
+
+    pub fn create(c: &::Context, w: u32, h: u32, format: PixelFormat, color: s::Color) -> Result<*mut BitmapBgra> {
+        let flow_pointer = c.flow_c();
+
+        unsafe {
+            let ptr =
+                ::ffi::flow_bitmap_bgra_create(flow_pointer, w as i32, h as i32, true, format);
+            if ptr.is_null() {
+                return Err(cerror!(c, "Failed to allocate {}x{}x{} bitmap ({} bytes). Reduce dimensions or increase RAM.", w, h, format.bytes(), w as usize * h as usize * format.bytes()))
+            }
+            let color_val = color.clone();
+            let color_srgb_argb = color_val.clone().to_u32_bgra().unwrap();
+            (*ptr).compositing_mode = ::ffi::BitmapCompositingMode::ReplaceSelf;
+            if color_val != s::Color::Transparent {
+                (&mut *ptr).fill_rect(c,
+                                      0,
+                                      0,
+                                      w as u32,
+                                      h as u32,
+                                      &color)?;
+                (*ptr).compositing_mode = ::ffi::BitmapCompositingMode::BlendWithMatte;
+            }
+
+            (*ptr).matte_color = mem::transmute(color_srgb_argb);
+
+            Ok(ptr)
+        }
+    }
+
     //bgr24_to_bgra32 -> Set alpha as 0xff
     //bgr24_to_bgrx32 -> skip alpha
     //bgrx32_to_bgr24
