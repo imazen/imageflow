@@ -355,7 +355,7 @@ fn fill_grayscale_buffer_from_bitmap(buf: &mut Buffer, b: &BitmapBgra) {
                 let mut buf_ix = 0usize;
                 for y in 0..h {
                     for x in 0..w {
-                        let bgra = &input_bitmap[input_index..input_index + 5];
+                        let bgra = &input_bitmap[input_index..input_index + 4];
                         let gray = (((233 * bgra[0] as u32 + 1197 * bgra[1] as u32 + 610 * bgra[2] as u32) * bgra[3] as u32 + 524288 - 1) / 524288) as u16;
                         buf.pixels[buf_ix] = if gray > 255 { 255 } else { gray as u8 };
                         input_index += 4;
@@ -368,7 +368,7 @@ fn fill_grayscale_buffer_from_bitmap(buf: &mut Buffer, b: &BitmapBgra) {
                 let mut buf_ix = 0usize;
                 for y in 0..h {
                     for x in 0..w {
-                        let bgra = &input_bitmap[input_index..input_index + 4];
+                        let bgra = &input_bitmap[input_index..input_index + 3];
                         buf.pixels[buf_ix] = ((233 * bgra[0] as u32 + 1197 * bgra[1] as u32 + 610 * bgra[2] as u32) / 2048) as u8;
                         input_index += 3;
                         buf_ix += 1;
@@ -380,7 +380,7 @@ fn fill_grayscale_buffer_from_bitmap(buf: &mut Buffer, b: &BitmapBgra) {
                 let mut buf_ix = 0usize;
                 for y in 0..h {
                     for x in 0..w {
-                        let bgra = &input_bitmap[input_index..input_index + 5];
+                        let bgra = &input_bitmap[input_index..input_index + 4];
                         buf.pixels[buf_ix] = ((233 * bgra[0] as u32 + 1197 * bgra[1] as u32 + 610 * bgra[2] as u32) / 2048) as u8;
                         input_index += 4;
                         buf_ix += 1;
@@ -392,7 +392,7 @@ fn fill_grayscale_buffer_from_bitmap(buf: &mut Buffer, b: &BitmapBgra) {
                 let mut buf_ix = 0usize;
                 for y in 0..h {
                     for x in 0..w {
-                        let bgra = &input_bitmap[input_index..input_index + 2];
+                        let bgra = &input_bitmap[input_index..input_index + 1];
                         buf.pixels[buf_ix] = bgra[0];
                         input_index += 1;
                         buf_ix += 1;
@@ -463,13 +463,13 @@ fn sobel_scharr_detect(buf: &Buffer, search: &mut WhitespaceSearch) {
                 }
                 for mx in 0..3usize {
                     let mut edge_found = false;
-                    if (matrix[mx] as i32 - matrix[mx + 3] as i32) > threshold {
+                    if (matrix[mx] as i32 - matrix[mx + 3] as i32).abs() > threshold {
                         // horizontal edge between y = 0,1
                         local_min_y = cmp::min(local_min_y, 1);
                         local_max_y = cmp::max(local_max_y, 1);
                         edge_found = true;
                     }
-                    if (matrix[mx + 3] as i32 - matrix[mx + 6] as i32) > threshold {
+                    if (matrix[mx + 3] as i32 - matrix[mx + 6] as i32).abs() > threshold {
                         // horizontal edge between y = 1,2
                         local_min_y = cmp::min(local_min_y, 2);
                         local_max_y = cmp::max(local_max_y, 2);

@@ -11,6 +11,10 @@ mod common;
 use common::*;
 
 use imageflow_core::{Context, ErrorKind, FlowError, CodeLocation};
+use imageflow_core::ffi::BitmapBgra;
+use s::PixelFormat;
+use s::Color;
+
 
 const DEBUG_GRAPH: bool = false;
 const POPULATE_CHECKSUMS: bool = true;
@@ -530,91 +534,79 @@ fn test_detect_whitespace(){
     );
     assert!(matched);
 }
-//
-//#[test]
-//fn test_detect_whitespace_all_small_images(){
-//    for w in 3..12{
-//        for h in 3..12{
-//
-//        }
-//    }
-//}
-//TEST_CASE("Exhaustive test of detect_content for small images", "")
-//{
-//    flow_c * c = flow_context_create();
-//
-//    flow_rect r;
-//    for (int w = 3; w < 12; w++) {
-//        for (int h = 3; h < 12; h++) {
-//            flow_bitmap_bgra * b = flow_bitmap_bgra_create(c, w, h, true, flow_bgra32);
-//
-//            for (int x = 0; x < w; x++) {
-//                for (int y = 0; y < h; y++) {
-//
-//                    if (x == 1 && y == 1 && w == 3 && h == 3) {
-//                        continue;
-//                        // This is a checkerboard, we don't support them
-//                    }
-//                    flow_bitmap_bgra_fill_rect(c, b, 0, 0, w, h, 0xFF000000);
-//
-//                    flow_bitmap_bgra_fill_rect(c, b, x, y, x + 1, y + 1, 0xFF0000FF);
-//
-//                    flow_context_print_and_exit_if_err(c);
-//
-//                    flow_rect r = detect_content(c, b, 1);
-//
-//                    bool correct = ((r.x1 == x) && (r.y1 == y) && (r.x2 == x + 1) && (r.y2 == y + 1));
-//
-//                    if (!correct) {
-//                        r = detect_content(c, b, 1);
-//                        CAPTURE(w);
-//                        CAPTURE(h);
-//                        CAPTURE(x);
-//                        CAPTURE(y);
-//                        CAPTURE(r.x1);
-//                        CAPTURE(r.y1);
-//                        CAPTURE(r.x2);
-//                        CAPTURE(r.y2);
-//                        REQUIRE(r.x2 == x + 1);
-//                        REQUIRE(r.y2 == y + 1);
-//                        REQUIRE(r.x1 == x);
-//                        REQUIRE(r.y1 == y);
-//                    }
-//                }
-//            }
-//            FLOW_destroy(c, b);
-//        }
-//    }
-//
-//    flow_context_destroy(c);
-//}
-//
-//TEST_CASE("Test detect_content", "")
-//{
-//    flow_rect r;
-//
-//    r = test_detect_content_for(10, 10, 1, 1, 9, 9, 0xFF0000FF);
-//
-//    CAPTURE(r.x1);
-//    CAPTURE(r.y1);
-//    CAPTURE(r.x2);
-//    CAPTURE(r.y2);
-//    REQUIRE(r.x2 == 9);
-//    REQUIRE(r.y2 == 9);
-//    REQUIRE(r.x1 == 1);
-//    REQUIRE(r.y1 == 1);
-//
-//    r = test_detect_content_for(100, 100, 2, 3, 70, 70, 0xFF0000FF);
-//
-//    CAPTURE(r.x1);
-//    CAPTURE(r.y1);
-//    CAPTURE(r.x2);
-//    CAPTURE(r.y2);
-//    REQUIRE(r.x2 == 70);
-//    REQUIRE(r.y2 == 70);
-//    REQUIRE(r.x1 == 2);
-//    REQUIRE(r.y1 == 3);
-//}
+
+#[test]
+fn test_detect_whitespace_all_small_images(){
+    let ctx = Context::create_can_panic().unwrap();
+
+    let red = s::Color::Srgb(s::ColorSrgb::Hex("FF0000FF".to_owned()));
+    let mut failed_count = 0;
+    let mut count = 0;
+    for w in 3..12u32{
+        for h in 3..12u32{
+            let b = unsafe { &mut *BitmapBgra::create(&ctx, w, h, PixelFormat::Bgra32, Color::Black).unwrap() };
+
+            for x in 0..w{
+                for y in 0..h{
+                    if x == 1 && y == 1 && w == 3 && h == 3 {
+                        continue;
+                        // This is a checkerboard, we don't support them
+                    }
+
+                    for size in 1..3 {
+                        if x + size <= w && y + size <= h {
+                            b.fill_rect(&ctx, 0, 0, w, h, &s::Color::Transparent).unwrap();
+                            b.fill_rect(&ctx, x, y, x + size, y + size, &red).unwrap();
+                            let r = ::imageflow_core::graphics::whitespace::detect_content(&b, 1).unwrap();
+                            let correct = (r.x1 == x) && (r.y1 == y) && (r.x2 == x + size) && (r.y2 == y + size);
+                            if !correct {
+                                eprint!("Failed to correctly detect {}px dot at {},{} within {}x{}. Detected ", size, x, y, w, h);
+                                if r.x1 != x { eprint!("x1={}({})", r.x1, x);}
+                                if r.y1 != y { eprint!("y1={}({})", r.y1, y);}
+                                if r.x2 != x + size { eprint!("Detected x2={}({})", r.x2, x + size);}
+                                if r.y2 != y + size { eprint!("Detected y2={}({})", r.y2, y + size);}
+                                eprintln!(".");
+                                failed_count += 1;
+                            }
+                            count += 1;
+                        }
+
+                    }
+                }
+            }
+
+            unsafe{ BitmapBgra::destroy(b, &ctx); }
+
+        }
+    }
+    if failed_count > 0{
+        panic!("Failed {} of {} whitespace detection tests", failed_count, count);
+    }
+}
+
+
+#[test]
+fn test_detect_whitespace_basic(){
+    let ctx = Context::create_can_panic().unwrap();
+
+    let red = s::Color::Srgb(s::ColorSrgb::Hex("FF0000FF".to_owned()));
+
+    let b = unsafe { &mut *BitmapBgra::create(&ctx, 10, 10, PixelFormat::Bgra32, Color::Black).unwrap() };
+    b.fill_rect(&ctx, 1, 1, 9, 9, &red).unwrap();
+    let r = ::imageflow_core::graphics::whitespace::detect_content(&b, 1).unwrap();
+    assert_eq!(r.x1,1);
+    assert_eq!(r.y1,1);
+    assert_eq!(r.x2,9);
+    assert_eq!(r.y2,9);
+
+    let b = unsafe { &mut *BitmapBgra::create(&ctx, 100, 100, PixelFormat::Bgra32, Color::Black).unwrap() };
+    b.fill_rect(&ctx, 2, 3, 70, 70, &red).unwrap();
+    let r = ::imageflow_core::graphics::whitespace::detect_content(&b, 1).unwrap();
+    assert_eq!(r.x1,2);
+    assert_eq!(r.y1,3);
+    assert_eq!(r.x2,70);
+    assert_eq!(r.y2,70);
+}
 
 //#[test]
 //fn test_get_info_png_invalid() {
