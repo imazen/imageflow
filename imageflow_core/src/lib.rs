@@ -49,6 +49,7 @@ mod context_methods;
 mod context;
 mod codecs;
 mod io;
+mod graphics;
 
 pub use context::{Context};
 pub use io::IoProxy;

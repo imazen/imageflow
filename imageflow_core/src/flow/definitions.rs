@@ -500,7 +500,7 @@ impl From<s::Node> for Node {
     fn from(node: s::Node) -> Node {
         match node {
             s::Node::Crop { .. } => Node::n(&nodes::CROP, NodeParams::Json(node)),
-            //s::Node::CropWhitespace { .. } => Node::n(&nodes::CROP_WHITESPACE, NodeParams::Json(node)),
+            s::Node::CropWhitespace { .. } => Node::n(&nodes::CROP_WHITESPACE, NodeParams::Json(node)),
             s::Node::Decode { .. } => Node::n(&nodes::DECODER, NodeParams::Json(node)),
             s::Node::FlowBitmapBgraPtr { .. } => {
                 Node::n(&nodes::BITMAP_BGRA_POINTER, NodeParams::Json(node))

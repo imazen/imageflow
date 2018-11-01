@@ -387,8 +387,8 @@ pub enum Node {
     FlipH,
     #[serde(rename="crop")]
     Crop { x1: u32, y1: u32, x2: u32, y2: u32 },
-    // #[serde(rename="crop_whitespace")]
-    // CropWhitespace { threshold: u32, percent_padding: f32 },
+    #[serde(rename="crop_whitespace")]
+    CropWhitespace { threshold: u32, percent_padding: f32 },
     #[serde(rename="create_canvas")]
     CreateCanvas {
         format: PixelFormat,
