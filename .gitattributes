@@ -1,6 +1,4 @@
-*.jpg   binary
-*.png   binary
-*.gif   binary
+* text=lf
 
 *.cs text eol=lf diff=csharp
 *.vb text eol=lf
@@ -55,6 +53,17 @@ Dockerfile text eol=lf
 *.sln text eol=crlf
 *.txt text eol=crlf
 *.bat text eol=crlf
+
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.pdf binary
+*.bmp binary
+*.ppm binary
+*.gif binary
+*.tif binary
+*.tiff binary
+
 
 .gitattributes text eol=lf
 .gitignore text eol=lf
