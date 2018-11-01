@@ -153,15 +153,15 @@ pub enum ScalingColorspace {
 
 }
 
-pub static IR4_KEYS: [&'static str;61] = ["mode", "anchor", "flip", "sflip", "scale", "cache", "process",
+pub static IR4_KEYS: [&'static str;63] = ["mode", "anchor", "flip", "sflip", "scale", "cache", "process",
     "quality", "zoom", "crop", "cropxunits", "cropyunits",
     "w", "h", "width", "height", "maxwidth", "maxheight", "format", "thumbnail",
      "autorotate", "srotate", "rotate", "ignoreicc", //really? : "precise_scaling_ratio",
     "stretch",
     "frame", "page", "subsampling", "colors", "f.sharpen", "down.colorspace",
     "404", "bgcolor", "paddingcolor", "bordercolor", "preset", "floatspace", "jpeg_idct_downscale_linear", "watermark",
-    "s.invert", "s.sepia", "s.grayscale", "s.alpha", "s.brightness", "s.contrast", "s.saturation", /* "trim.threshold",
-    "trim.percentpadding",*/ "a.blur", "a.sharpen", "a.removenoise", "a.balancewhite", "dither","jpeg.progressive",
+    "s.invert", "s.sepia", "s.grayscale", "s.alpha", "s.brightness", "s.contrast", "s.saturation",  "trim.threshold",
+    "trim.percentpadding", "a.blur", "a.sharpen", "a.removenoise", "a.balancewhite", "dither","jpeg.progressive",
     "encoder", "decoder", "builder", "s.roundcorners.", "paddingwidth", "paddingheight", "margin", "borderwidth", "decoder.min_precise_scaling_ratio"];
 
 
