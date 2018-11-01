@@ -49,9 +49,18 @@ use super::super::util::*;
 
 const TWENTY_HOURS: i64 = 60 * 60 * 20;
 
+#[cfg(all(target_os = "windows", target_pointer_width="64"))]
+fn get_verb_fixup() -> &'static str{
+    "<UNKNOWN>"
+}
+#[cfg(not(all(target_os = "windows", target_pointer_width="64")))]
+fn get_verb_fixup() -> &'static str{
+"GET"
+}
 fn mock_plaintext_200(path: &'static str, body: &'static str) -> ::mockito::Mock{
     ::mockito::start();
-    mock("GET", path).with_status(200).with_header("content-type", "text/plain").with_body(body).expect(1).create()
+
+    mock(get_verb_fixup(), path).with_status(200).with_header("content-type", "text/plain").with_body(body).expect(1).create()
 }
 
 #[test]
