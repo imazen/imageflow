@@ -45,7 +45,7 @@ before_install:
 install:
 - ci/travis_install.sh
 script:
-- ci/travis_run.sh
+- travis_wait ci/travis_run.sh
 before_cache:
   - rm -rf $HOME/.cargo/registry/src
 before_deploy:
