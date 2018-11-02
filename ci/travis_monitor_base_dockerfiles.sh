@@ -32,7 +32,12 @@ trigger_docker_hub_if_changed(){
     fi
 
     if [ -z "${TRAVIS_COMMIT_RANGE}" ]; then
-        echo "TRAVIS_COMMIT_RANGE not set - should be commit range to check for changes, like 6544f0b..a62c029. Exiting." && exit 1;
+        if [ -z "${TRAVIS_TAG}" ]; then
+            echo "TRAVIS_COMMIT_RANGE and TRAVIS_TAG not set - should be commit range to check for changes, like 6544f0b..a62c029. Exiting." && exit 1;
+        else
+            echo "Build tagged {TRAVIS_TAG}, forcing docker hub trigger."
+            ./ci/travis_trigger_docker_cloud.sh "$2"
+        fi
     else
         if [[ "$TRAVIS_COMMIT_RANGE" == 'force' ]]; then
             echo "Forcing trigger for $1"
@@ -42,10 +47,10 @@ trigger_docker_hub_if_changed(){
             }
         else
             echo "Scanning ${TRAVIS_COMMIT_RANGE} for changes to $1";
-            git diff -s --exit-code "${TRAVIS_COMMIT_RANGE}" -- $1
+            git diff -s --exit-code "${TRAVIS_COMMIT_RANGE}" -- "$1"
             RETVAL=$?
             if [ $RETVAL -eq 1 ]; then
-                echo ... found changes in $1, invoking travis_trigger_docker_cloud.sh
+                echo "... found changes in $1, invoking travis_trigger_docker_cloud.sh"
                 ./ci/travis_trigger_docker_cloud.sh "$2"
             elif [ $RETVAL -eq 0 ]; then
                 echo ... no changes
