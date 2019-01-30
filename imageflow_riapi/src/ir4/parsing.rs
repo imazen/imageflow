@@ -341,7 +341,7 @@ impl Instructions{
             Some(HistogramThresholdAlgorithm::Area) => Some(HistogramThresholdAlgorithm::Area),
             None => None,
             Some(other) => {
-                p.warn(ParseWarning::ValueInvalid(("a.balancewhite", format!("{:?}", other).to_lowercase()))).to_owned();
+                p.warn(ParseWarning::ValueInvalid(("a.balancewhite", format!("{:?}", other).to_lowercase())));
                 Some(other)
             }
         };
