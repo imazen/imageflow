@@ -410,7 +410,7 @@ impl ColorTransformCache{
 
         Ok(transform)
     }
-    fn hash(color: &ffi::DecoderColorInfo, pixel_format: PixelFormat) -> Option<u64>{
+    fn hash(color: &ffi::DecoderColorInfo, pixel_format: ffi::PixelFormat) -> Option<u64>{
         match color.source {
             ffi::ColorProfileSource::Null | ffi::ColorProfileSource::sRGB => None,
             ffi::ColorProfileSource::GAMA_CHRM => {
@@ -456,7 +456,7 @@ impl ColorTransformCache{
                     ColorTransformCache::apply_transform(frame, &transform);
                     Ok(())
                 }else{
-                    let hash = ColorTransformCache::hash(color, pixel_format).unwrap();
+                    let hash = ColorTransformCache::hash(color, frame.fmt).unwrap();
                     if !GAMA_TRANSFORMS.contains_key(&hash) {
                         let transform = ColorTransformCache::create_gama_transform(color, pixel_format).map_err(|e| e.at(here!()))?;
                         GAMA_TRANSFORMS.insert(hash, transform);
@@ -472,7 +472,7 @@ impl ColorTransformCache{
                     ColorTransformCache::apply_transform(frame, &transform);
                     Ok(())
                 }else{
-                    let hash = ColorTransformCache::hash(color, pixel_format).unwrap();
+                    let hash = ColorTransformCache::hash(color, frame.fmt).unwrap();
                     if !PROFILE_TRANSFORMS.contains_key(&hash) {
                         let transform = ColorTransformCache::create_profile_transform(color, pixel_format).map_err(|e| e.at(here!()))?;
                         PROFILE_TRANSFORMS.insert(hash, transform);
