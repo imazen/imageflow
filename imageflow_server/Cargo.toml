@@ -48,7 +48,7 @@ imageflow_riapi = { path = "../imageflow_riapi", version = "*" }
 rand = "0.3"
 lru-cache = "0.1"
 persistent = "0.3"
-regex = "0.2"
+regex = "1.0"
 log="0.3"
 env_logger="0.4"
 wait-timeout = "0.1"
