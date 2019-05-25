@@ -11,8 +11,6 @@ members = [
     "c_components/tests",
 ]
 
-[dependencies.regex]
-features=["pattern"]
 
 [profile.release]
 debug = true

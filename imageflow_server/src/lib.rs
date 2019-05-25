@@ -24,7 +24,7 @@ extern crate hyper_native_tls;
 
 use hyper_native_tls::NativeTlsServer;
 
-use std::sync::atomic::{AtomicUsize, ATOMIC_USIZE_INIT};
+use std::sync::atomic::AtomicUsize;
 
 
 extern crate conduit_mime_types as mime_types;
@@ -571,7 +571,7 @@ pub fn serve(c: StartServerConfig) {
     let shared_data = SharedData {
         source_cache: CacheFolder::new(c.data_dir.join(Path::new("source_cache")).as_path(), c.default_cache_layout.unwrap_or(FolderLayout::Normal)),
         output_cache: CacheFolder::new(c.data_dir.join(Path::new("output_cache")).as_path(), c.default_cache_layout.unwrap_or(FolderLayout::Normal)),
-        requests_received: ATOMIC_USIZE_INIT //NOT YET USED
+        requests_received: AtomicUsize::new(0) //NOT YET USED
     };
 
     let mut mou = mount::Mount::new();

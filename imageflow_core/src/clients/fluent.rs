@@ -3,10 +3,10 @@
 
 
 use internal_prelude::works_everywhere::*;
-use std::sync::atomic::{AtomicUsize, ATOMIC_USIZE_INIT};
+use std::sync::atomic::AtomicUsize;
 use std::sync::atomic;
 
-static NEXT_FLUENT_NODE_ID: AtomicUsize = ATOMIC_USIZE_INIT;
+static NEXT_FLUENT_NODE_ID: AtomicUsize = AtomicUsize::new(0);
 
 
 pub fn fluently() -> FluentNode {

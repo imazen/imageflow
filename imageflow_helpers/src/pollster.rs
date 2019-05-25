@@ -7,14 +7,13 @@ use std::thread;
 use std::thread::JoinHandle;
 use ::parking_lot::Mutex;
 use std::panic::AssertUnwindSafe;
-use std::sync::atomic::AtomicBool;
 use super::licensing::support::IssueSink;
 use smallvec::SmallVec;
 // Get build date
 // Get ticks
 // Get utcnow
 use std::sync::Arc;
-use std::sync::atomic::{Ordering, ATOMIC_BOOL_INIT};
+use std::sync::atomic::{Ordering, AtomicBool};
 use super::util::*;
 
 pub trait Endpoint{
@@ -202,8 +201,8 @@ impl SharedToken{
             licenses_fetched_change: ::parking_lot::Condvar::new(),
             cancel: ::parking_lot::Mutex::new(false),
             cancel_change: ::parking_lot::Condvar::new(),
-            cancel_light: ATOMIC_BOOL_INIT,
-            shutdown_requested: ATOMIC_BOOL_INIT,
+            cancel_light: AtomicBool::new(false),
+            shutdown_requested: AtomicBool::new(false),
             shutdown_finished: ::parking_lot::Mutex::new(false),
             shutdown_finished_change: ::parking_lot::Condvar::new(),
             thread_handle: Mutex::new(None),

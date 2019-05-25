@@ -141,7 +141,7 @@ impl LicenseManagerSingleton{
             sink: IssueSink::new("LicenseManager"),
             created,
             uid: ::uuid::Uuid::new_v4(),
-            heartbeat_count: ::std::sync::atomic::ATOMIC_USIZE_INIT,
+            heartbeat_count: ::std::sync::atomic::AtomicUsize::new(0),
             fetcher_token: Arc::new(SharedToken::new())
         }
 
