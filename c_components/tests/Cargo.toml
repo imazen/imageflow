@@ -23,4 +23,4 @@ version = "1.0.3"
 features = ["parallel"]
 
 [build-dependencies]
-glob = "0.2.11"
+glob = "0.3.0"
