@@ -50,7 +50,7 @@ lru-cache = "0.1"
 persistent = "0.4"
 regex = "0.2"
 log="0.3"
-env_logger="0.4"
+env_logger="0.6"
 wait-timeout = "0.1"
 bincode = { git = "https://github.com/TyOverby/bincode", rev = "0bc25445" }
 staticfile = { git= "https://github.com/onur/staticfile", rev= "9f2ff7201eda648128c92e3f5597c587f0629f51" }
