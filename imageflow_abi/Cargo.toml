@@ -21,7 +21,7 @@ base64="0.5"
 [build-dependencies]
 imageflow_helpers = { path = "../imageflow_helpers", version = "*" }
 moz-cheddar = "0.4.1"
-regex = "0.2"
+regex = "1.1"
 
 [features]
 nightly = ["imageflow_core/nightly", "imageflow_helpers/nightly"]
