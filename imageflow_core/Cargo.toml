@@ -57,6 +57,7 @@ getopts ="0.2.15"
 url = "1.4"
 uuid = { version = "0.6", features = ["v4"] }
 
+rustface = { git = "https://github.com/atomashpolskiy/rustface" }
 imageflow_types = { path = "../imageflow_types", version = "*" }
 imageflow_helpers = { path = "../imageflow_helpers", version = "*" }
 imageflow_riapi = { path = "../imageflow_riapi", version = "*" }
