@@ -27,4 +27,4 @@ shared = []
 mozjpeg-sys = "0.5.11"
 libz-sys = "1.0.18"
 libpng-sys = "0.2.4"
-lcms2-sys = "2.4.8"
+lcms2-sys = "3.1.0"
