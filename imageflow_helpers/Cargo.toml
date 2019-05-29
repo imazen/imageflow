@@ -51,7 +51,7 @@ unicase = "2"
 
 error-chain = "*"
 
-hyper = "=0.10.12"
+hyper = "=0.12.28"
 reqwest = "0.6"
 hyper-native-tls = "*"
 

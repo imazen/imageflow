@@ -36,7 +36,7 @@ router = "0.5"
 iron = "=0.5.1"
 
 
-hyper = { version = "=0.10.12", default-features = false }
+hyper = { version = "=0.12.28", default-features = false }
 threadpool = "1.0"
 
 imageflow_core = { path = "../imageflow_core", version = "*" }
