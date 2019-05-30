@@ -15,7 +15,7 @@ enum_derive= { git="https://github.com/DanielKeep/rust-custom-derive.git" }
 option-filter = "1"
 lazy_static = "1"
 
-difference = "1" # update to v2
+difference = "2" # update to v2
 
 [features]
 nightly = ["imageflow_helpers/nightly"]
