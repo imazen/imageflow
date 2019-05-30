@@ -51,7 +51,7 @@ conduit-mime-types = "0.7"
 router = "0.5"
 iron = "=0.5.1"
 persistent = "0.3"
-hyper = { version = "=0.10.12", default-features = false }
+hyper = { version = "=0.12.29", default-features = false }
 threadpool = "1.0"
 url="1"
 hyper-native-tls="0.2"
