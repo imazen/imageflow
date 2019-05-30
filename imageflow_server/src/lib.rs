@@ -566,7 +566,7 @@ fn mount<T>(mount: MountLocation, mou: &mut mount::Mount, setup: EngineSetup<T>)
 
 
 pub fn serve(c: StartServerConfig) {
-    env_logger::init().unwrap();
+    env_logger::init();
 
     let shared_data = SharedData {
         source_cache: CacheFolder::new(c.data_dir.join(Path::new("source_cache")).as_path(), c.default_cache_layout.unwrap_or(FolderLayout::Normal)),

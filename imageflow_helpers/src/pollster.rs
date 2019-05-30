@@ -58,7 +58,7 @@ fn mock_swap_base_urls(v: SmallVec<[Cow<'static, str>;6]>) -> SmallVec<[Cow<'sta
 #[cfg(test)]
 fn mock_swap_base_urls(_v: SmallVec<[Cow<'static, str>;6]>) -> SmallVec<[Cow<'static, str>;6]> {
     let mut nv = SmallVec::new();
-    nv.push(Cow::from(::mockito::SERVER_URL));
+    nv.push(Cow::from(::mockito::server_url()));
     nv
 }
 

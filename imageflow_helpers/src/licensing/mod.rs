@@ -121,11 +121,17 @@ pub struct LicenseManagerSingleton{
     fetcher_token: Arc<SharedToken>
 }
 
-#[cfg(not(test))]
-const URL: &'static str = "https://licenses-redirect.imazen.net";
 
+
+
+#[cfg(not(test))]
+fn GetServerUrl() -> String{
+    "https://licenses-redirect.imazen.net".to_owned()
+}
 #[cfg(test)]
-const URL: &'static str = ::mockito::SERVER_URL;
+fn GetServerUrl() -> String{
+    ::mockito::server_url()
+}
 
 
 impl LicenseManagerSingleton{

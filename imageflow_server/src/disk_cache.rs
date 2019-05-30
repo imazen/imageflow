@@ -11,7 +11,7 @@ use std;
 use std::io::prelude::*;
 use std::fs::{create_dir_all, File};
 use std::sync::atomic::{AtomicBool, Ordering};
-
+use self::rand::RngCore;
 // TODO:
 // Cleanup staging folders automatically (failed renames)
 // Implement write-only log
@@ -22,7 +22,6 @@ use std::sync::atomic::{AtomicBool, Ordering};
 
 extern crate rand;
 extern crate imageflow_helpers;
-use self::rand::Rng;
 use self::imageflow_helpers as hlp;
 
 
