@@ -14,7 +14,7 @@ use staticfile::Static;
 
 extern crate staticfile;
 extern crate rustc_serialize;
-#[macro_use] extern crate hyper;
+extern crate hyper;
 
 extern crate time;
 #[macro_use] extern crate lazy_static;
@@ -42,7 +42,6 @@ use imageflow_helpers::fetching::FetchConfig;
 use imageflow_helpers::preludes::from_std::*;
 use imageflow_core::clients::stateless;
 
-use hyper::Url;
 
 pub mod disk_cache;
 pub mod resizer;
@@ -97,7 +96,7 @@ pub enum ServerError {
     IoError(std::io::Error),
     DiskCacheReadIoError(std::io::Error),
     DiskCacheWriteIoError(std::io::Error),
-    UpstreamResponseError(hyper::status::StatusCode),
+    UpstreamResponseError(reqwest::StatusCode),
     UpstreamHyperError(hyper::Error),
     UpstreamReqwestError(reqwest::Error),
     UpstreamIoError(std::io::Error),
@@ -143,7 +142,7 @@ impl From<std::io::Error> for ServerError {
 struct FetchedResponse {
     bytes: Vec<u8>,
     perf: AcquirePerf,
-    content_type: hyper::header::ContentType,
+    content_type: http::header::HeaderValue,
 }
 
 fn fetch_bytes(url: &str, config: Option<FetchConfig>) -> std::result::Result<FetchedResponse, ServerError> {
@@ -235,7 +234,7 @@ fn fetch_response_using_cache_by_url(cache: &CacheFolder, url: &str) -> std::res
             match entry.write(&bytes) {
                 Ok(()) => {
                     let end = precise_time_ns();
-                    Ok((CachedResponse { bytes: fetched.bytes, content_type: format!("{}", fetched.content_type) }, AcquirePerf { cache_write_ns: end - start, ..fetched.perf }))
+                    Ok((CachedResponse { bytes: fetched.bytes, content_type: format!("{}", fetched.content_type.to_str().unwrap()) }, AcquirePerf { cache_write_ns: end - start, ..fetched.perf }))
                 },
                 Err(e) => Err(ServerError::DiskCacheWriteIoError(e))
             }
@@ -309,7 +308,6 @@ fn execute_using<F, F2>(bytes_provider: F2, framewise_generator: F)
             execute_ns: end_execute - start_execute,
         }))
 }
-header! { (XImageflowPerf, "X-Imageflow-Perf") => [String] }
 
 fn respond_using<F, F2, A>(debug_info: &A, bytes_provider: F2, framewise_generator: F)
                         -> IronResult<Response>
@@ -325,7 +323,9 @@ fn respond_using<F, F2, A>(debug_info: &A, bytes_provider: F2, framewise_generat
                 .unwrap_or_else(|_| Mime::from_str("application/octet-stream").unwrap());
             let mut res = Response::with((mime, status::Ok, output.bytes));
 
-            res.headers.set(XImageflowPerf(perf.short()));
+
+
+            res.headers.set_raw("X-Imageflow-Perf", vec![perf.short().into_bytes()]);
             Ok(res)
         }
         Err(e) => respond_with_server_error(&debug_info, e, true)
@@ -334,7 +334,7 @@ fn respond_using<F, F2, A>(debug_info: &A, bytes_provider: F2, framewise_generat
 
 fn respond_with_server_error<A>(debug_info: &A, e: ServerError, detailed_errors: bool) -> IronResult<Response> where A: std::fmt::Debug {
     match e {
-        ServerError::UpstreamResponseError(hyper::status::StatusCode::NotFound) => {
+        ServerError::UpstreamResponseError(http::StatusCode::NOT_FOUND) => {
             let bytes = if detailed_errors {
                 b"Remote file not found (upstream server responded with 404)".to_vec()
             }else {
@@ -376,7 +376,7 @@ fn ir4_http_respond_uncached<F>(_shared: &SharedData, url: &str, framewise_gener
 }
 
 
-fn ir4_framewise(_info: &s::ImageInfo, url: &Url) -> std::result::Result<s::Framewise, ServerError> {
+fn ir4_framewise(_info: &s::ImageInfo, url: &url::Url) -> std::result::Result<s::Framewise, ServerError> {
     let t = ::imageflow_riapi::ir4::Ir4Translate{
         i: ::imageflow_riapi::ir4::Ir4Command::Url(url.as_str().to_owned()),
         decode_id: Some(0),

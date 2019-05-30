@@ -57,7 +57,7 @@ pub fn fetch_bytes(url: &str) -> std::result::Result<Vec<u8>, FetchError> {
 pub struct FetchConfig{
     /// Only honored on linux (maybe outdated?)
     /// PEM format
-    pub custom_ca_trust_file: Option<String>,
+    pub custom_ca_trust_file: Option<PathBuf>,
     pub read_error_body: Option<bool>
 }
 
