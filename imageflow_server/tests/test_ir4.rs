@@ -302,7 +302,7 @@ fn test_https(context: &ProcTestContext){
         c.subfolder_context("demo");
         let (_, callback_result) = ServerInstance::run(&c, Proto::Https, vec!["--demo", "--data-dir=."], | server | {
             let url = server.url_for("/ir4/proxy_unsplash/photo-1422493757035-1e5e03968f95?width=100");
-            let bytes = fetch(&url, Some(FetchConfig{custom_ca_trust_file: server.trust_ca_file.clone(), read_error_body: Some(true) })).expect(&url).bytes;
+            let bytes = fetch(&url, Some(FetchConfig{custom_ca_trust_filec: server.trust_ca_file.clone(), read_error_body: Some(true) })).expect(&url).bytes;
             let _ = fc::clients::stateless::LibClient {}.get_image_info(&bytes).expect("Image response should be valid");
 
             //assert_eq!(server.get_status("/ir4/proxy_unsplash/notthere.jpg")?, hyper::status::StatusCode::NotFound);

@@ -22,7 +22,7 @@ pub trait Endpoint{
     fn get_query(&self) -> ::std::result::Result<&str, String>;
     fn get_path(&self) -> ::std::result::Result<&str, String>;
     fn get_base_urls(&self) -> SmallVec<[Cow<'static, str>;6]>;
-    fn process_response(&self, content_type: Option<&::hyper::header::ContentType>, bytes: Vec<u8>) -> ::std::result::Result<(), String>;
+    fn process_response(&self, content_type: Option<&::reqwest::header::HeaderValue>, bytes: Vec<u8>) -> ::std::result::Result<(), String>;
 }
 
 
@@ -65,7 +65,7 @@ fn mock_swap_base_urls(_v: SmallVec<[Cow<'static, str>;6]>) -> SmallVec<[Cow<'st
 impl<'clock> FetcherConfig<'clock>{
     pub fn new(clock: &'clock AppClock) -> Self{
         FetcherConfig{
-            client: ::reqwest::Client::new().unwrap(),
+            client: ::reqwest::Client::new(),
             initial_error_interval: ::chrono::Duration::seconds(3),
             clock,
             sink: IssueSink::new("Fetcher")
@@ -100,13 +100,13 @@ impl<'clock> FetcherConfig<'clock>{
             let url_str = format!("{}{}{}", base, path, query);
             match ::reqwest::Url::from_str(&url_str) {
                 Ok(url) => {
-                    match self.client.request(::reqwest::Method::Get, url).send() {
+                    match self.client.request(::reqwest::Method::GET, url).send() {
                         Ok(mut response) => {
                             if response.status().is_success() {
                                 let mut bytes = Vec::new();
                                 response.read_to_end(&mut bytes).unwrap();
 
-                                let content_type = response.headers().get::<::hyper::header::ContentType>().clone();
+                                let content_type = response.headers().get(::reqwest::header::CONTENT_TYPE).clone();
 
                                 println!("Fetched {}", &url_str);
                                 match e.endpoint.process_response(content_type, bytes) {
@@ -120,7 +120,7 @@ impl<'clock> FetcherConfig<'clock>{
                                     }
                                 }
                             }else{
-                                responses.push((i32::from(response.status().to_u16()), format!("Server returned {} for {}", response.status(), &url_str)));
+                                responses.push((i32::from(response.status().as_u16()), format!("Server returned {} for {}", response.status(), &url_str)));
                             }
                         },
                         Err(err) => {

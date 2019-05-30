@@ -37,30 +37,30 @@ rand = "*"
 
 num = "*"
 
-base64 = "0.6"
-mockito = { git="https://github.com/lipanski/mockito"}
+base64 = "0.10"
+mockito = "*"
 zip = { version = "0.5", default-features = false }
 
 
 app_dirs = "^1.1.1"
 chashmap = "2.2"
-parking_lot = {version = "0.6"}
+parking_lot = {version = "0.8"}
 
 unicase = "2"
 # HTTPS is a little bit of a nightmare
 
 error-chain = "*"
 
-hyper = "=0.10.12"
-reqwest = "0.6"
+hyper = "0.12"
+reqwest = "0.9"
 hyper-native-tls = "*"
 
-backtrace = "0.3.2"
+backtrace = "0.3"
 
 
 [target.'cfg(not(any(target_os = "windows", target_os = "macos")))'.dependencies]
-openssl = "0.9"
-hyper-openssl = "0.2.6"
+openssl = "0.10"
+hyper-openssl = "0.7"
 
 [features]
 nightly = ["parking_lot/nightly"]

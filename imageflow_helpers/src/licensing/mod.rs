@@ -92,7 +92,7 @@ impl Endpoint for LicenseEndpoint{
         SmallVec::from_iter(self.base_urls.read().iter().map(|c| c.clone()))
     }
 
-    fn process_response(&self, content_type: Option<&::hyper::header::ContentType>, bytes: Vec<u8>) -> ::std::result::Result<(), String> {
+    fn process_response(&self, content_type: Option<&::reqwest::header::HeaderValue>, bytes: Vec<u8>) -> ::std::result::Result<(), String> {
         let s =  ::std::str::from_utf8(&bytes).unwrap();
         let blob = LicenseBlob::deserialize(self.mgr.trusted_keys, s, "remote license").unwrap();
         if let Some(&License::Pair(ref p)) = self.mgr.get_by_id(&self.id){
