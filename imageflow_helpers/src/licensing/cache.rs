@@ -188,7 +188,7 @@ impl WriteThroughCache{
 
 impl PersistentStringCache for WriteThroughCache{
     fn try_put(&self, key: &String, value: &str) -> StringCachePutResult {
-        if let Some(v) = self.cache.get(&key){
+        if let Some(v) = self.cache.get(key){
             if *v == value{
                 return StringCachePutResult::Duplicate;
             }
