@@ -231,7 +231,7 @@ fn fetch_response_using_cache_by_url(cache: &CacheFolder, url: &str) -> std::res
         let result = fetch_bytes(url, None);
         if let Ok(fetched) = result {
             let start = precise_time_ns();
-            let bytes = bincode::serialize(&fetched.bytes, bincode::Infinite).unwrap();
+            let bytes = bincode::serialize(&fetched.bytes).unwrap();
             match entry.write(&bytes) {
                 Ok(()) => {
                     let end = precise_time_ns();

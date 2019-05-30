@@ -11,7 +11,7 @@ doctest = false
 [dependencies]
 libc = "0.2"
 
-num = "0.1"
+num = "0.2"
 
 # time
 time = "0.1"
@@ -36,12 +36,12 @@ blake2-rfc = "0.2"
 clap = "2"
 threadpool = "1"
 petgraph = "0.4"
-daggy = "0.5"
+daggy = "0.5" # Upgrade to 0.6
 
 smallvec = "*"
 
 itertools = "*"
-imgref = "1.3.3"
+imgref = "1.3.3" # upgrade to 1.3.5
 
 dssim = "2.9.7"
 gif = "*"
@@ -52,17 +52,17 @@ lodepng = "2.1.2"
 lcms2 = "5.1.3"
 chashmap = "2.2"
 
-getopts ="0.2.15"
+getopts ="0.2"
 
-url = "1.4"
-uuid = { version = "0.6", features = ["v4"] }
+url = "1"
+uuid = { version = "0.7", features = ["v4"] }
 
 rustface = { git = "https://github.com/atomashpolskiy/rustface" }
 imageflow_types = { path = "../imageflow_types", version = "*" }
 imageflow_helpers = { path = "../imageflow_helpers", version = "*" }
 imageflow_riapi = { path = "../imageflow_riapi", version = "*" }
 imageflow_c_components = { path = "../c_components" }
-mozjpeg = "0.8.5"
+mozjpeg = "0.8.5" # upgrade to 0.8.14
 evalchroma = "0.1.1"
 
 [dev-dependencies]

@@ -16,12 +16,12 @@ libc = "0.2"
 imageflow_core = { path = "../imageflow_core", version = "*" }
 backtrace = "*"
 smallvec="*"
-base64="0.5"
+base64="0.10"
 
 [build-dependencies]
 imageflow_helpers = { path = "../imageflow_helpers", version = "*" }
 moz-cheddar = "0.4.1"
-regex = "0.2"
+regex = "1"
 
 [features]
 nightly = ["imageflow_core/nightly", "imageflow_helpers/nightly"]
