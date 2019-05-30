@@ -49,11 +49,7 @@ use super::super::util::*;
 
 const TWENTY_HOURS: i64 = 60 * 60 * 20;
 
-#[cfg(all(target_os = "windows", target_pointer_width="64"))]
-fn get_verb_fixup() -> &'static str{
-    "<UNKNOWN>"
-}
-#[cfg(not(all(target_os = "windows", target_pointer_width="64")))]
+
 fn get_verb_fixup() -> &'static str{
 "GET"
 }
