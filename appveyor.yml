@@ -1,8 +1,8 @@
 image: Visual Studio 2017
 build: off
 environment:
-    RUST_BACKTRACE: 1
-    CARGO_INCREMENTAL: 1
+    RUST_BACKTRACE: "1"
+    CARGO_INCREMENTAL: "1"
     RUST_TOOLCHAIN: stable
     VSINSTALL:  "Microsoft Visual Studio\\2017\\Community\\VC\\Auxiliary\\Build"
     VS150COMNTOOLS: "C:\\Program Files (x86)\\Microsoft Visual Studio\\2017\\Community\\Common7\\Tools\\"
@@ -29,8 +29,8 @@ environment:
 configuration: Release
 
 cache:
-  - '%USERPROFILE%\.cargo'
-  - 'target'
+  - '%USERPROFILE%\.cargo' -> Cargo.lock
+  - 'target' -> Cargo.lock
 matrix:
   fast_finish: false
 
