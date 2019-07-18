@@ -44,7 +44,7 @@ zip = { version = "0.5", default-features = false }
 
 app_dirs = "^1.1.1"
 chashmap = "2.2"
-parking_lot = {version = "0.8"}
+parking_lot = {version = "0.9"}
 
 unicase = "2"
 # HTTPS is a little bit of a nightmare
