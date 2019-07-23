@@ -13,9 +13,9 @@
 //g = flow_graph_create(c, 10, 10, 200, 2.0);
 //ERR(c);
 //
-//int32_t input_placeholder = 0;
+//i32 input_placeholder = 0;
 //
-//int32_t last;
+//i32 last;
 //last = flow_node_create_decoder(c, &g, -1, input_placeholder);
 //last = flow_node_create_scale(c, &g, last, 300, 200, (flow_interpolation_filter_Robidoux),
 //(flow_interpolation_filter_Robidoux), 0, 0);

@@ -75,7 +75,7 @@ mod internal_prelude {
 
         pub use imageflow_helpers::preludes::from_std::*;
         pub use daggy::{Dag, EdgeIndex, NodeIndex};
-        pub use libc::{c_void, c_float, int32_t, int64_t, size_t, uint32_t};
+        pub use libc::{c_void, c_float, size_t};
         pub extern crate daggy;
         pub extern crate petgraph;
         pub extern crate serde;

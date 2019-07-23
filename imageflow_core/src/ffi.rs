@@ -39,7 +39,7 @@ use internal_prelude::works_everywhere::*;
 #[repr(C)]
 pub struct ImageflowJsonResponse {
     pub status_code: i64,
-    pub buffer_utf8_no_nulls: *const libc::uint8_t,
+    pub buffer_utf8_no_nulls: *const u8,
     pub buffer_size: libc::size_t,
 }
 
@@ -451,19 +451,19 @@ pub enum BitmapCompositingMode {
 #[derive(Clone,Debug,PartialEq)]
 pub struct BitmapFloat {
     /// buffer width in pixels
-    w: uint32_t,
+    w: u32,
     /// buffer height in pixels
-    h: uint32_t,
+    h: u32,
     /// The number of floats per pixel
-    channels: uint32_t,
+    channels: u32,
     /// The pixel data
     pixels: *mut c_float,
     /// If true, don't dispose the buffer with the struct
     pixels_borrowed: bool,
     /// The number of floats in the buffer
-    float_count: uint32_t,
+    float_count: u32,
     /// The number of floats between (0,0) and (0,1)
-    float_stride: uint32_t,
+    float_stride: u32,
 
     /// If true, alpha has been premultiplied
     alpha_premultiplied: bool,
@@ -713,10 +713,10 @@ enum ScaleFlags {
 #[repr(C)]
 #[derive(Clone,Debug,PartialEq)]
 pub struct DecoderDownscaleHints {
-    pub downscale_if_wider_than: int64_t,
-    pub or_if_taller_than: int64_t,
-    pub downscaled_min_width: int64_t,
-    pub downscaled_min_height: int64_t,
+    pub downscale_if_wider_than: i64,
+    pub or_if_taller_than: i64,
+    pub downscaled_min_width: i64,
+    pub downscaled_min_height: i64,
     pub scale_luma_spatially: bool,
     pub gamma_correct_for_srgb_during_spatial_luma_scaling: bool,
 }

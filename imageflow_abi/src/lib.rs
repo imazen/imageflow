@@ -614,7 +614,7 @@ pub fn create_abi_json_response(c: &mut Context,
         }
 
         let pointer_to_final_buffer =
-            pointer.offset(sizeof_struct as isize) as *mut libc::uint8_t;
+            pointer.offset(sizeof_struct as isize) as *mut u8;
         let imageflow_response = &mut (*(pointer as *mut JsonResponse));
         imageflow_response.buffer_utf8_no_nulls = pointer_to_final_buffer;
         imageflow_response.buffer_size = json_bytes.len();

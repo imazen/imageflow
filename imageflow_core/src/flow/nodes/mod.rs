@@ -1,6 +1,6 @@
 use daggy::{Dag, EdgeIndex, NodeIndex, Walker};
 use ffi::{ImageflowContext, BitmapBgra};
-use libc::{int32_t, size_t};
+use libc::size_t;
 use petgraph::EdgeDirection;
 use petgraph::visit::EdgeRef;
 use std::error::Error;
