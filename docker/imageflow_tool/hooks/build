@@ -3,11 +3,10 @@
 echo "SOURCE_COMMIT: $SOURCE_COMMIT"
 
 if [[ -z "$SOURCE_COMMIT" ]]; then
-  export SOURCE_COMMIT="${SOURCE_COMMIT:-$(git rev-parse HEAD)}"
-  echo "Updating SOURCE_COMMIT from git rev-parse HEAD"
-  echo "SOURCE_COMMIT: $SOURCE_COMMIT"
+	export SOURCE_COMMIT="${SOURCE_COMMIT:-$(git rev-parse HEAD)}"
+	echo "Updating SOURCE_COMMIT from git rev-parse HEAD"
+	echo "SOURCE_COMMIT: $SOURCE_COMMIT"
 fi
-
 
 echo "DOCKER_TAG: $DOCKER_TAG"
 

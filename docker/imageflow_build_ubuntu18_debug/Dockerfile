@@ -78,7 +78,6 @@ RUN PKG_CONFIG_ALL_STATIC=1 cargo install --force --git=https://github.com/mozil
     && PKG_CONFIG_ALL_STATIC=1 cargo install dssim \
     && rm -rf ~/.cargo/registry
 
-
 WORKDIR /home/imageflow/imageflow
 
 MAINTAINER Lilith River

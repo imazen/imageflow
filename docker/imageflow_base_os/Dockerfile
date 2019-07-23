@@ -10,7 +10,7 @@ RUN if [ -z "${BASE_OS_SOURCE_COMMIT}" ]; then echo "BASE_OS_SOURCE_COMMIT not s
 RUN apt-get update \
   && apt-get upgrade -y \
   && apt-get install --no-install-recommends -y \
-    sudo wget libcurl4-openssl-dev  curl libssl-dev ca-certificates libpng-dev \
+    sudo wget libcurl4-openssl-dev curl libssl-dev ca-certificates libpng-dev \
   && apt-get clean -y \
   && apt-get autoremove -y \
   && rm -rf /var/lib/apt/lists/* \
