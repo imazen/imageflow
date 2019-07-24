@@ -54,7 +54,7 @@ chashmap = "2.2"
 
 getopts ="0.2"
 
-url = "1"
+url = "2"
 uuid = { version = "0.7", features = ["v4"] }
 
 rustface = { git = "https://github.com/atomashpolskiy/rustface" }
