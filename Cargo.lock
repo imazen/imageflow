@@ -188,7 +188,7 @@ dependencies = [
  "lcms2-sys 3.1.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "libpng-sys 1.1.5 (registry+https://github.com/rust-lang/crates.io-index)",
  "libz-sys 1.0.25 (registry+https://github.com/rust-lang/crates.io-index)",
- "mozjpeg-sys 0.10.1 (registry+https://github.com/rust-lang/crates.io-index)",
+ "mozjpeg-sys 0.10.2 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
@@ -416,11 +416,6 @@ dependencies = [
 [[package]]
 name = "dtoa"
 version = "0.4.4"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-
-[[package]]
-name = "dunce"
-version = "0.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 
 [[package]]
@@ -814,7 +809,7 @@ dependencies = [
  "lcms2-sys 3.1.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "libpng-sys 1.1.5 (registry+https://github.com/rust-lang/crates.io-index)",
  "libz-sys 1.0.25 (registry+https://github.com/rust-lang/crates.io-index)",
- "mozjpeg-sys 0.10.1 (registry+https://github.com/rust-lang/crates.io-index)",
+ "mozjpeg-sys 0.10.2 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
@@ -1377,17 +1372,17 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
  "arrayvec 0.4.11 (registry+https://github.com/rust-lang/crates.io-index)",
  "libc 0.2.60 (registry+https://github.com/rust-lang/crates.io-index)",
- "mozjpeg-sys 0.10.1 (registry+https://github.com/rust-lang/crates.io-index)",
+ "mozjpeg-sys 0.10.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "rgb 0.8.13 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
 name = "mozjpeg-sys"
-version = "0.10.1"
+version = "0.10.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
  "cc 1.0.37 (registry+https://github.com/rust-lang/crates.io-index)",
- "dunce 0.1.1 (registry+https://github.com/rust-lang/crates.io-index)",
+ "dunce 1.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "libc 0.2.60 (registry+https://github.com/rust-lang/crates.io-index)",
  "nasm-rs 0.1.4 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
@@ -2819,7 +2814,6 @@ dependencies = [
 "checksum digest 0.8.1 (registry+https://github.com/rust-lang/crates.io-index)" = "f3d0c8c8752312f9713efd397ff63acb9f85585afbf179282e720e7704954dd5"
 "checksum dssim 2.9.9 (registry+https://github.com/rust-lang/crates.io-index)" = "5c43cf195ae122e892254a63dbb45f4029874bf5344663613ad69f4eeab291fc"
 "checksum dtoa 0.4.4 (registry+https://github.com/rust-lang/crates.io-index)" = "ea57b42383d091c85abcc2706240b94ab2a8fa1fc81c10ff23c4de06e2a90b5e"
-"checksum dunce 0.1.1 (registry+https://github.com/rust-lang/crates.io-index)" = "e86b07356baf1cc7058c95807ffba0bebe0c8cadd0df4c40b292c86194eabb37"
 "checksum dunce 1.0.0 (registry+https://github.com/rust-lang/crates.io-index)" = "d0ad6bf6a88548d1126045c413548df1453d9be094a8ab9fd59bf1fdd338da4f"
 "checksum either 1.5.2 (registry+https://github.com/rust-lang/crates.io-index)" = "5527cfe0d098f36e3f8839852688e63c8fff1c90b2b405aef730615f9a7bcf7b"
 "checksum encoding_rs 0.8.17 (registry+https://github.com/rust-lang/crates.io-index)" = "4155785c79f2f6701f185eb2e6b4caf0555ec03477cb4c70db67b465311620ed"
@@ -2907,7 +2901,7 @@ dependencies = [
 "checksum mount 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)" = "32245731923cd096899502fc4c4317cfd09f121e80e73f7f576cf3777a824256"
 "checksum moz-cheddar 0.4.2 (registry+https://github.com/rust-lang/crates.io-index)" = "43b29fdad80b06f38d959105a138ab8ca8c5a57c3435f5bfbd770fa73e625015"
 "checksum mozjpeg 0.8.14 (registry+https://github.com/rust-lang/crates.io-index)" = "a493696d6086a3d47c2d7a7cc9075dde2dae720bfdd7f0e08d7433cc8e2d7abf"
-"checksum mozjpeg-sys 0.10.1 (registry+https://github.com/rust-lang/crates.io-index)" = "eb2b3c2b892650d0fca3256053297edb786c3dfc4a95941c11950f7d3f47f878"
+"checksum mozjpeg-sys 0.10.2 (registry+https://github.com/rust-lang/crates.io-index)" = "2cbbce9468ebee629e54a5bc0b33316c4db7c44fe25e59743f65aff72638a8eb"
 "checksum nasm-rs 0.1.4 (registry+https://github.com/rust-lang/crates.io-index)" = "9645f700973fc1890a98a4a04401a49bc0be01bcba1e77b5d0741389fe609e10"
 "checksum native-tls 0.2.3 (registry+https://github.com/rust-lang/crates.io-index)" = "4b2df1a4c22fd44a62147fd8f13dd0f95c9d8ca7b2610299b2a2f9cf8964274e"
 "checksum net2 0.2.33 (registry+https://github.com/rust-lang/crates.io-index)" = "42550d9fb7b6684a6d404d9fa7250c2eb2646df731d1c06afc06dcee9e1bcf88"
