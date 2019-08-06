@@ -186,7 +186,7 @@ dependencies = [
  "glob 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "imageflow_c_components 0.1.0",
  "lcms2-sys 3.1.1 (registry+https://github.com/rust-lang/crates.io-index)",
- "libpng-sys 1.1.6 (registry+https://github.com/rust-lang/crates.io-index)",
+ "libpng-sys 1.1.7 (registry+https://github.com/rust-lang/crates.io-index)",
  "libz-sys 1.0.25 (registry+https://github.com/rust-lang/crates.io-index)",
  "mozjpeg-sys 0.10.2 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
@@ -807,7 +807,7 @@ dependencies = [
  "cc 1.0.38 (registry+https://github.com/rust-lang/crates.io-index)",
  "glob 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "lcms2-sys 3.1.1 (registry+https://github.com/rust-lang/crates.io-index)",
- "libpng-sys 1.1.6 (registry+https://github.com/rust-lang/crates.io-index)",
+ "libpng-sys 1.1.7 (registry+https://github.com/rust-lang/crates.io-index)",
  "libz-sys 1.0.25 (registry+https://github.com/rust-lang/crates.io-index)",
  "mozjpeg-sys 0.10.2 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
@@ -1113,7 +1113,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 
 [[package]]
 name = "libpng-sys"
-version = "1.1.6"
+version = "1.1.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
  "cc 1.0.38 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -2871,7 +2871,7 @@ dependencies = [
 "checksum lcms2 5.1.4 (registry+https://github.com/rust-lang/crates.io-index)" = "e567dbeaa8586afda1154bea7d664e9eec8b19aad4a001d33c4d342774ea4245"
 "checksum lcms2-sys 3.1.1 (registry+https://github.com/rust-lang/crates.io-index)" = "3e1f005ee0641b9dd09d556e55c4902c3111ee7c21f22b6a33253e6c5f12a92f"
 "checksum libc 0.2.60 (registry+https://github.com/rust-lang/crates.io-index)" = "d44e80633f007889c7eff624b709ab43c92d708caad982295768a7b13ca3b5eb"
-"checksum libpng-sys 1.1.6 (registry+https://github.com/rust-lang/crates.io-index)" = "6b9e9eedd866cf0e41f42db8f7187c149516229a1fbe7dd864f79925e7577162"
+"checksum libpng-sys 1.1.7 (registry+https://github.com/rust-lang/crates.io-index)" = "cfde556d773c4d57def2d77bb76566abb400e2006e07f068c4f532075f2d3fd0"
 "checksum libz-sys 1.0.25 (registry+https://github.com/rust-lang/crates.io-index)" = "2eb5e43362e38e2bca2fd5f5134c4d4564a23a5c28e9b95411652021a8675ebe"
 "checksum linked-hash-map 0.5.2 (registry+https://github.com/rust-lang/crates.io-index)" = "ae91b68aebc4ddb91978b11a1b02ddd8602a05ec19002801c5666000e05e0f83"
 "checksum linked_hash_set 0.1.3 (registry+https://github.com/rust-lang/crates.io-index)" = "3c7c91c4c7bbeb4f2f7c4e5be11e6a05bd6830bc37249c47ce1ad86ad453ff9c"
