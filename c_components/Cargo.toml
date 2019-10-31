@@ -24,6 +24,7 @@ profiling = []
 shared = []
 
 [dependencies]
+libturbojpeg-sys = { git = "https://github.com/mjc/libturbojpeg-sys" }
 mozjpeg-sys = "0.10.2"
 libz-sys = "1.0.18"
 libpng-sys = "1.1.7"
