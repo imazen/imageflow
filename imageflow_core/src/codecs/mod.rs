@@ -17,10 +17,23 @@ use std::any::Any;
 use lcms2::*;
 use lcms2;
 mod gif;
+mod jpeg;
 mod pngquant;
 mod lode;
 mod mozjpeg;
 use io::IoProxyRef;
+use std::i64;
+
+enum Decoders {
+    GifDecoder,
+    JpegDecoder,
+}
+
+static MAGIC_BYTES: [(&[u8], Decoders); 3] = [
+    (b"GIF89a", Decoders::GifDecoder),
+    (b"GIF87a", Decoders::GifDecoder),
+    (&[0xff, 0xd8, 0xff], Decoders::JpegDecoder),
+];
 
 pub trait DecoderFactory{
     fn create(c: &Context, io: &mut IoProxy, io_id: i32) -> Option<Result<Box<Decoder>>>;
@@ -82,21 +95,36 @@ impl CodecInstanceContainer {
             let result = io.read_to_buffer(c, &mut buffer).map_err(|e| e.at(here!()))?;
 
             io.seek(c, 0).map_err(|e| e.at(here!()))?;
-            if buffer.starts_with(b"GIF89a") || buffer.starts_with(b"GIF87a") {
-                Ok(CodecInstanceContainer
-                    {
-                        io_id,
-                        codec: CodecKind::Decoder(Box::new(gif::GifDecoder::create(c, io, io_id)?)),
-                        encode_io: None
-                    })
-            } else {
-                Ok(CodecInstanceContainer
-                    {
-                        io_id,
-                        codec: CodecKind::Decoder(ClassicDecoder::create(c, io, io_id)?),
-                        encode_io: None
-                    })
+
+            for &(signature, decoder) in &MAGIC_BYTES {
+                if buffer.starts_with(signature) {
+                    match decoder {
+                        Decoders::GifDecoder => {
+                            return Ok(CodecInstanceContainer
+                                {
+                                    io_id,
+                                    codec: CodecKind::Decoder(Box::new(gif::GifDecoder::create(c, io, io_id)?)),
+                                    encode_io: None
+                                });
+                        }
+                        Decoders::JpegDecoder => {
+                            Ok(CodecInstanceContainer
+                                {
+                                    io_id,
+                                    codec: CodecKind::Decoder(Box::new(jpeg::JpegDecoder::create(c, io, io_id)?)),
+                                    encode_io: None
+                                });
+                        }
+                    }
+                }
             }
+
+            Ok(CodecInstanceContainer
+                {
+                    io_id,
+                    codec: CodecKind::Decoder(ClassicDecoder::create(c, io, io_id)?),
+                    encode_io: None
+                })
         }
     }
 

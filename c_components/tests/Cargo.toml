@@ -14,7 +14,7 @@ path = "src/profile.rs"
 imageflow_c_components = {path = ".."}
 lcms2-sys = "3.1.1"
 libpng-sys = "1.1.7"
-mozjpeg-sys = "0.10"
+mozjpeg-sys = {version = "^0.10.2", features = ["nasm_simd", "turbojpeg_api"], git = "https://github.com/mjc/mozjpeg-sys.git", branch = "turbojpeg_bindings" }
 libz-sys = "1.0.18"
 
 
