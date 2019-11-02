@@ -96,7 +96,7 @@ impl CodecInstanceContainer {
 
             io.seek(c, 0).map_err(|e| e.at(here!()))?;
 
-            for &(signature, decoder) in &MAGIC_BYTES {
+            for (signature, decoder) in &MAGIC_BYTES {
                 if buffer.starts_with(signature) {
                     match decoder {
                         Decoders::GifDecoder => {
@@ -108,12 +108,12 @@ impl CodecInstanceContainer {
                                 });
                         }
                         Decoders::JpegDecoder => {
-                            Ok(CodecInstanceContainer
-                                {
-                                    io_id,
-                                    codec: CodecKind::Decoder(Box::new(jpeg::JpegDecoder::create(c, io, io_id)?)),
-                                    encode_io: None
-                                });
+//                            return Ok(CodecInstanceContainer
+//                                {
+//                                    io_id,
+//                                    codec: CodecKind::Decoder(Box::new(jpeg::JpegDecoder::create(c, io, io_id)?)),
+//                                    encode_io: None
+//                                });
                         }
                     }
                 }

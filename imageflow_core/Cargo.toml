@@ -62,6 +62,7 @@ imageflow_types = { path = "../imageflow_types", version = "*" }
 imageflow_helpers = { path = "../imageflow_helpers", version = "*" }
 imageflow_riapi = { path = "../imageflow_riapi", version = "*" }
 imageflow_c_components = { path = "../c_components" }
+mozjpeg-sys = {version = "0.10.2", features = ["nasm_simd", "turbojpeg_api"], git = "https://github.com/mjc/mozjpeg-sys.git", branch = "turbojpeg_bindings" }
 mozjpeg = {version = "^0.8.15", git = "https://github.com/tehprofessor/mozjpeg-rust.git", branch = "my_master"} # upgrade to 0.8.14
 evalchroma = "0.1.1"
 
