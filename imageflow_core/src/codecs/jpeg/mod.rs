@@ -115,8 +115,8 @@ mod tests {
         // @TODO: later reduce the use of unsafe
         // @TODO: we will also make a wrapper
         let tj_slice = unsafe {
-            let allocated_size: usize = height as usize * width as usize * mem::size_of::<i32>();
-            let decompressed = tjAlloc(allocated_size as i32);
+            let allocated_size: usize = height as usize * width as usize * 4;
+            let decompressed: *mut u8 = tjAlloc(allocated_size as i32);
             let tjhandle = tjInitDecompress();
             tjDecompressHeader3(
                 tjhandle,
