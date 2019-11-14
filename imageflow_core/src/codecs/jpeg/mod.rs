@@ -14,7 +14,7 @@ use ffi::BitmapCompositingMode;
 use gif::DecodingError;
 
 pub struct JpegDecoder {
-    tj_handle: tjhandle,
+//    tj_handle: tjhandle,
     reader: BufReader<IoProxy>,
     buffer: Option<BitmapBgra>,
     header: JpegHeader,
@@ -24,8 +24,8 @@ pub struct JpegHeader {
     width: i32,
     height: i32,
     // TODO: These should be rust enums
-    jpegSubsamp: i32,
-    jpegColorspace: i32,
+    jpeg_subsamp: i32,
+    jpeg_colorspace: i32,
 }
 
 impl JpegHeader {
@@ -49,15 +49,15 @@ impl JpegHeader {
             );
         }
 
-        JpegHeader { width, height, jpegSubsamp, jpegColorspace }
+        JpegHeader { width, height, jpeg_subsamp: jpegSubsamp, jpeg_colorspace: jpegColorspace }
     }
 }
 
-impl Drop for JpegDecoder {
-    fn drop(&mut self) {
-        unsafe { tjDestroy(self.tj_handle as *mut _) };
-    }
-}
+//impl Drop for JpegDecoder {
+//    fn drop(&mut self) {
+//        unsafe { tjDestroy(self.tj_handle as *mut _) };
+//    }
+//}
 
 impl JpegDecoder {
     pub fn create(c: &Context, io: IoProxy, io_id: i32) -> Result<JpegDecoder> {
@@ -68,47 +68,101 @@ impl JpegDecoder {
             return Err(FlowError::from(std::io::ErrorKind::UnexpectedEof).at(here!()))
         }
 
-        let tj_handle = unsafe { tjInitDecompress() };
-        let jpeg_header = JpegHeader::create(&jpeg_buffer, tj_handle);
-
-        let pitch = jpeg_header.width * 4;
-        let allocated_size: usize = jpeg_header.height as usize * pitch as usize;
-        let mut decompressed = Vec::with_capacity(allocated_size).into_boxed_slice();
-
         let size: u64 = jpeg_buffer.len() as u64;
+        let mut width: i32 = 0;
+        let mut height: i32 = 0;
+        let mut jpeg_subsamp: i32 = 0;
+        let mut jpeg_colorspace: i32 = 0;
+
+        let tj_handle = unsafe { tjInitDecompress() };
 
         unsafe {
+            tjDecompressHeader3(
+                tj_handle,
+                jpeg_buffer.as_ptr(),
+                size,
+                &mut width,
+                &mut height,
+                &mut jpeg_subsamp,
+                &mut jpeg_colorspace,
+            );
+        }
+
+        if height == 0 || width == 0 {
+            // TODO: This needs to be JpegDecoder error
+            return Err(FlowError::from(std::io::ErrorKind::UnexpectedEof).at(here!()))
+        }
+
+        let jpeg_header = JpegHeader { width, height, jpeg_colorspace, jpeg_subsamp };
+
+        // @TODO: later reduce the use of unsafe
+        // @TODO: we will also make a wrapper
+        let pitch = jpeg_header.width * 4;
+        let allocated_size: usize = jpeg_header.height as usize * pitch as usize;
+        let bitmap = unsafe {
+            let decompressed: *mut u8 = tjAlloc(allocated_size as i32);
+            let pitch = 0;
             tjDecompress2(
                 tj_handle,
                 jpeg_buffer.as_ptr(),
                 size,
-                decompressed.as_mut_ptr(),
-                jpeg_header.width,
+                decompressed,
+                width,
                 pitch,
-                jpeg_header.height,
+                height,
                 TJPF_TJPF_BGRA,
                 TJFLAG_NOREALLOC as i32,
             );
+
+            tjDestroy(tj_handle);
+
+            BitmapBgra {
+                w: width as u32,
+                h: height as u32,
+                stride: allocated_size as u32 / height as u32,
+                pixels: decompressed,
+                fmt: PixelFormat::Bgra32,
+                matte_color: [255; 4],
+                compositing_mode: BitmapCompositingMode::ReplaceSelf
+            }
         };
 
-        let bitmap = BitmapBgra {
-            w: jpeg_header.width as u32,
-            h: jpeg_header.height as u32,
-            stride: allocated_size as u32 / jpeg_header.height as u32,
-            pixels: decompressed.as_mut_ptr(),
-            fmt: PixelFormat::Bgra32,
-            matte_color: [255; 4],
-            compositing_mode: BitmapCompositingMode::ReplaceSelf
-        };
-
-        let decoder = JpegDecoder {
-            tj_handle,
-            reader,
-            header: jpeg_header,
-            buffer: Some(bitmap),
-        };
-
-        // TODO: Throw error on CMYK from get_image_info... bcuz fuckin' really.
+//        let tj_handle = unsafe { tjInitDecompress() };
+//        let jpeg_header = JpegHeader::create(&jpeg_buffer, tj_handle);
+//
+//        let pitch = jpeg_header.width * 4;
+//        let allocated_size: usize = jpeg_header.height as usize * pitch as usize;
+//        let mut decompressed = Vec::with_capacity(allocated_size).into_boxed_slice();
+//
+//        let size: u64 = jpeg_buffer.len() as u64;
+//
+//        unsafe {
+//            tjDecompress2(
+//                tj_handle,
+//                jpeg_buffer.as_ptr(),
+//                size,
+//                decompressed.as_mut_ptr(),
+//                jpeg_header.width,
+//                pitch,
+//                jpeg_header.height,
+//                TJPF_TJPF_BGRA,
+//                TJFLAG_NOREALLOC as i32,
+//            );
+//        };
+//
+//        let bitmap = BitmapBgra {
+//            w: jpeg_header.width as u32,
+//            h: jpeg_header.height as u32,
+//            stride: allocated_size as u32 / jpeg_header.height as u32,
+//            pixels: decompressed.as_mut_ptr(),
+//            fmt: PixelFormat::Bgra32,
+//            matte_color: [255; 4],
+//            compositing_mode: BitmapCompositingMode::ReplaceSelf
+//        };
+//
+        let decoder = JpegDecoder { reader, buffer: Some(bitmap), header: jpeg_header };
+//
+//        // TODO: Throw error on CMYK from get_image_info... bcuz fuckin' really.
         Ok(decoder)
     }
 }
@@ -182,12 +236,11 @@ mod tests {
         let mut jpegSubsamp: i32 = 0;
         let mut jpegColorspace: i32 = 0;
 
-        // @TODO: later reduce the use of unsafe
-        // @TODO: we will also make a wrapper
-        let bitmap = unsafe {
-            let tjhandle = tjInitDecompress();
+        let tj_handle = unsafe { tjInitDecompress() };
+
+        unsafe {
             tjDecompressHeader3(
-                tjhandle,
+                tj_handle,
                 jpegBuffer.as_mut_ptr(),
                 size,
                 &mut width,
@@ -195,11 +248,16 @@ mod tests {
                 &mut jpegSubsamp,
                 &mut jpegColorspace,
             );
+        }
+
+        // @TODO: later reduce the use of unsafe
+        // @TODO: we will also make a wrapper
+        let bitmap = unsafe {
             let allocated_size: usize = height as usize * width as usize * 4;
             let decompressed: *mut u8 = tjAlloc(allocated_size as i32);
             let pitch = 0;
             tjDecompress2(
-                tjhandle,
+                tj_handle,
                 jpegBuffer.as_mut_ptr(),
                 size,
                 decompressed,
@@ -210,8 +268,7 @@ mod tests {
                 TJFLAG_NOREALLOC as i32,
             );
 
-            tjDestroy(tjhandle);
-            slice::from_raw_parts(decompressed, allocated_size);
+            tjDestroy(tj_handle);
 
             BitmapBgra {
                 w: width as u32,
