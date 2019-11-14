@@ -302,6 +302,18 @@ impl From<::lcms2::Error> for FlowError{
     }
 }
 
+impl From<std::io::Error> for FlowError{
+    fn from(e: ::std::io::Error) -> Self {
+        FlowError::without_location(ErrorKind::DecodingIoError, format!("{:?}", e))
+    }
+}
+
+impl From<std::io::ErrorKind> for FlowError{
+    fn from(e: ::std::io::ErrorKind) -> Self {
+        FlowError::without_location(ErrorKind::DecodingIoError, format!("{:?}", e))
+    }
+}
+
 impl From<::imagequant::liq_error> for FlowError {
     fn from(e: ::imagequant::liq_error) -> Self {
         FlowError::without_location(ErrorKind::QuantizationError, format!("pngquant: {}", e))

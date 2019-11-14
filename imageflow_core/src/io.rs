@@ -42,7 +42,6 @@ pub struct IoProxy{
 
 
 impl io::Read for IoProxy{
-
     fn read(&mut self, buf: &mut [u8]) -> io::Result<usize>{
         self.read_to_buffer(self.c, buf).and_then(|read_bytes|
             if read_bytes.leading_zeros() < 1 {

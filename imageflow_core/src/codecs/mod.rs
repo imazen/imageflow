@@ -108,12 +108,12 @@ impl CodecInstanceContainer {
                                 });
                         }
                         Decoders::JpegDecoder => {
-//                            return Ok(CodecInstanceContainer
-//                                {
-//                                    io_id,
-//                                    codec: CodecKind::Decoder(Box::new(jpeg::JpegDecoder::create(c, io, io_id)?)),
-//                                    encode_io: None
-//                                });
+                            return Ok(CodecInstanceContainer
+                                {
+                                    io_id,
+                                    codec: CodecKind::Decoder(Box::new(jpeg::JpegDecoder::create(c, io, io_id)?)),
+                                    encode_io: None
+                                });
                         }
                     }
                 }
