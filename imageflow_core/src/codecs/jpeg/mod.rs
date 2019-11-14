@@ -99,6 +99,7 @@ impl JpegDecoder {
         // @TODO: we will also make a wrapper
         let pitch = jpeg_header.width * 4;
         let allocated_size: usize = jpeg_header.height as usize * pitch as usize;
+
         let bitmap = unsafe {
             let decompressed: *mut u8 = tjAlloc(allocated_size as i32);
             let pitch = 0;
