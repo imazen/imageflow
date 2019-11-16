@@ -20,7 +20,7 @@ jobs:
     - name: Publish to Docker Repository
       uses: elgohr/Publish-Docker-Github-Action@master
       env:
-        BASE_OS_SOURCE_COMMIT: ${{ GITHUB_SHA }} 
+        BASE_OS_SOURCE_COMMIT: $GITHUB_SHA
       with:
         name: imazen/imageflow_base_os
         username: ${{ secrets.DOCKER_USERNAME }}
