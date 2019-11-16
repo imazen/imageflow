@@ -1,4 +1,4 @@
-name: Docker Image CI
+name: Build base dockerfiles for test and production
 
 on:
   push:
