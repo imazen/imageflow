@@ -62,7 +62,10 @@ impl JpegHeader {
 impl JpegDecoder {
     pub fn create(c: &Context, io: IoProxy, io_id: i32) -> Result<JpegDecoder> {
         let mut reader = io::BufReader::new(io);
-        let mut jpeg_buffer = reader.fill_buf().map_err(|e| FlowError::from(e).at(here!()))?;
+        let mut jpeg_buffer: Vec<u8> = Vec::new();
+        reader
+            .read_to_end(&mut jpeg_buffer)
+            .map_err(|e| FlowError::from(e).at(here!()))?;
 
         if jpeg_buffer.len() == 0 {
             return Err(FlowError::from(std::io::ErrorKind::UnexpectedEof).at(here!()))
