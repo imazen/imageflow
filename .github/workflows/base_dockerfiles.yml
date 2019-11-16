@@ -19,11 +19,14 @@ jobs:
     - uses: actions/checkout@v1
     - name: Publish to Docker Repository
       uses: elgohr/Publish-Docker-Github-Action@master
+      env:
+        BASE_OS_SOURCE_COMMIT: ${{ GITHUB_SHA }} 
       with:
         name: imazen/imageflow_base_os
         username: ${{ secrets.DOCKER_USERNAME }}
         password: ${{ secrets.DOCKER_PASSWORD }}
         workdir: docker/imageflow_base_os
+        buildargs: BASE_OS_SOURCE_COMMIT
   ubuntu16:
     name: imageflow_build_ubuntu16
     runs-on: ubuntu-latest
