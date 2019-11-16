@@ -24,7 +24,7 @@ RUN wget -q https://packages.microsoft.com/config/ubuntu/16.04/packages-microsof
   && apt-get install --no-install-recommends -y \
   ruby-dev ruby-bundler rubygems-integration \
   luajit \
-  python-minimal python-pip python-setuptools \
+  python3-minimal python3-pip python3-setuptools \
   && apt-get clean -y \
   && apt-get autoremove -y \
   && rm -rf /var/lib/apt/lists/* \
