@@ -47,7 +47,7 @@ dssim = "2.9.7"
 gif = "*"
 rgb = "0.8.6"
 imagequant = "2.11.7"
-lodepng = "2.1.2"
+lodepng = "2.5.0"
 
 lcms2 = "5.1.4"
 chashmap = "2.2"
