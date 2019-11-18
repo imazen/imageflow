@@ -96,7 +96,7 @@ impl NodeDef for CommandStringPartiallyExpandedDef{
 #[derive(Debug,Clone)]
 pub struct ConstrainDef;
 impl NodeDef for ConstrainDef{
-    fn as_one_input_expand(&self) -> Option<&NodeDefOneInputExpand>{
+    fn as_one_input_expand(&self) -> Option<&dyn NodeDefOneInputExpand>{
         Some(self)
     }
 }

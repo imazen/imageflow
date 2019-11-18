@@ -155,16 +155,16 @@ pub trait NodeDefMutateBitmap{
 
 pub trait NodeDef: ::std::fmt::Debug{
 
-    fn as_one_input_expand(&self) -> Option<&NodeDefOneInputExpand>{
+    fn as_one_input_expand(&self) -> Option<&dyn NodeDefOneInputExpand>{
         None
     }
-    fn as_one_input_one_canvas(&self) -> Option<&NodeDefOneInputOneCanvas>{
+    fn as_one_input_one_canvas(&self) -> Option<&dyn NodeDefOneInputOneCanvas>{
         None
     }
-    fn as_one_input_one_canvas_expand(&self) -> Option<&NodeDefOneInputOneCanvasExpand>{
+    fn as_one_input_one_canvas_expand(&self) -> Option<&dyn NodeDefOneInputOneCanvasExpand>{
         None
     }
-    fn as_one_mutate_bitmap(&self) -> Option<&NodeDefMutateBitmap>{
+    fn as_one_mutate_bitmap(&self) -> Option<&dyn NodeDefMutateBitmap>{
         None
     }
 
@@ -273,7 +273,7 @@ pub trait NodeDef: ::std::fmt::Debug{
     }
 
 
-    fn graphviz_node_label(&self, n: &Node, f: &mut std::io::Write) -> std::io::Result<()>{
+    fn graphviz_node_label(&self, n: &Node, f: &mut dyn std::io::Write) -> std::io::Result<()>{
         write!(f, "{}", self.name())
     }
 }
@@ -293,7 +293,7 @@ impl<T> MutProtect<T> where T: NodeDef {
     }
 }
 impl<T> NodeDef for MutProtect<T> where T: NodeDef{
-    fn as_one_input_expand(&self) -> Option<&NodeDefOneInputExpand>{
+    fn as_one_input_expand(&self) -> Option<&dyn NodeDefOneInputExpand>{
         Some(self)
     }
     fn validate_params(&self, p: &NodeParams) -> Result<()>{
@@ -471,7 +471,7 @@ pub enum NodeParams {
 #[derive(Clone,Debug)]
 pub struct Node {
     /// The implementation of this operation node
-    pub def: &'static NodeDef,
+    pub def: &'static dyn NodeDef,
     /// Input parameters (not including input/canvas/output nodes)
     ///
     pub params: NodeParams,
@@ -546,11 +546,11 @@ impl From<s::Node> for Node {
 
 
 impl Node {
-    pub fn new(def: &'static NodeDef, params: NodeParams) -> Node {
+    pub fn new(def: &'static dyn NodeDef, params: NodeParams) -> Node {
         Node::n(def, params)
     }
 
-    pub fn n(def: &'static NodeDef, params: NodeParams) -> Node {
+    pub fn n(def: &'static dyn NodeDef, params: NodeParams) -> Node {
         Node {
             def,
             frame_est: FrameEstimate::None,
@@ -568,7 +568,7 @@ impl Node {
     }
 
 
-    pub fn graphviz_node_label(&self, f: &mut std::io::Write) -> std::io::Result<()> {
+    pub fn graphviz_node_label(&self, f: &mut dyn std::io::Write) -> std::io::Result<()> {
         self.def.graphviz_node_label(self, f)
     }
 }

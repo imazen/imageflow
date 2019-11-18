@@ -8,7 +8,7 @@ pub static DRAW_IMAGE_EXACT: DrawImageDef = DrawImageDef{};
 #[derive(Debug,Clone)]
 pub struct ScaleDef;
 impl NodeDef for ScaleDef{
-    fn as_one_input_expand(&self) -> Option<&NodeDefOneInputExpand>{
+    fn as_one_input_expand(&self) -> Option<&dyn NodeDefOneInputExpand>{
         Some(self)
     }
 }
@@ -73,7 +73,7 @@ impl NodeDefOneInputExpand for ScaleDef {
 pub struct Scale2dDef;
 
 impl NodeDef for Scale2dDef {
-    fn as_one_input_one_canvas_expand(&self) -> Option<&NodeDefOneInputOneCanvasExpand> {
+    fn as_one_input_one_canvas_expand(&self) -> Option<&dyn NodeDefOneInputOneCanvasExpand> {
         Some(self)
     }
 }
@@ -129,7 +129,7 @@ impl NodeDefOneInputOneCanvasExpand for Scale2dDef {
 pub struct DrawImageDef;
 
 impl NodeDef for DrawImageDef {
-    fn as_one_input_one_canvas(&self) -> Option<&NodeDefOneInputOneCanvas> {
+    fn as_one_input_one_canvas(&self) -> Option<&dyn NodeDefOneInputOneCanvas> {
         Some(self)
     }
 }

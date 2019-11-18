@@ -52,7 +52,7 @@ impl Screen {
     /// Advance the screen by one frame.
     /// The result will be in `screen.pixels`
     #[cfg_attr(feature = "cargo-clippy", allow(or_fun_call))]
-    pub fn blit(&mut self, frame: &gif::Frame, buffer: &[u8]) -> Result<(), Box<Error>> {
+    pub fn blit(&mut self, frame: &gif::Frame, buffer: &[u8]) -> Result<(), Box<dyn Error>> {
         let local_pal : Option<Vec<_>> = frame.palette.as_ref().map(|bytes| to_bgra(bytes));
         let pal = local_pal.as_ref().or(self.global_pal.as_ref()).ok_or("the frame must have _some_ palette")?;
 

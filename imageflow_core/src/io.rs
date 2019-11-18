@@ -11,7 +11,7 @@ use std::rc::Rc;
 /// This enum can be extended as needed.
 pub enum IoProxyRef<'a>{
    Borrow(&'a IoProxy),
-    BoxedAsRef(Box<AsRef<IoProxy>>),
+    BoxedAsRef(Box<dyn AsRef<IoProxy>>),
     Ref(Ref<'a, IoProxy>)
 }
 impl<'a> IoProxyRef<'a> {

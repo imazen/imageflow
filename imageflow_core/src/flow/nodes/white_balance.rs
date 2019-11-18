@@ -104,7 +104,7 @@ fn white_balance_srgb_mut(bitmap: *mut BitmapBgra, histograms: &[u64;768], pixel
 #[derive(Debug, Clone)]
 pub struct WhiteBalanceSrgbMutDef;
 impl NodeDef for WhiteBalanceSrgbMutDef{
-    fn as_one_mutate_bitmap(&self) -> Option<&NodeDefMutateBitmap>{
+    fn as_one_mutate_bitmap(&self) -> Option<&dyn NodeDefMutateBitmap>{
         Some(self)
     }
 }

@@ -23,7 +23,7 @@ mod mozjpeg;
 use io::IoProxyRef;
 
 pub trait DecoderFactory{
-    fn create(c: &Context, io: &mut IoProxy, io_id: i32) -> Option<Result<Box<Decoder>>>;
+    fn create(c: &Context, io: &mut IoProxy, io_id: i32) -> Option<Result<Box<dyn Decoder>>>;
 }
 pub trait Decoder : Any{
     fn initialize(&mut self, c: &Context) -> Result<()>;
@@ -32,7 +32,7 @@ pub trait Decoder : Any{
     fn tell_decoder(&mut self, c: &Context, tell: s::DecoderCommand) -> Result<()>;
     fn read_frame(&mut self, c: &Context) -> Result<*mut BitmapBgra>;
     fn has_more_frames(&mut self) -> Result<bool>;
-    fn as_any(&self) -> &Any;
+    fn as_any(&self) -> &dyn Any;
 }
 pub trait Encoder{
     // GIF encoder will need to know if transparency is required (we could guess based on first input frame)
@@ -48,8 +48,8 @@ pub trait Encoder{
 
 enum CodecKind{
     EncoderPlaceholder,
-    Encoder(Box<Encoder>),
-    Decoder(Box<Decoder>)
+    Encoder(Box<dyn Encoder>),
+    Decoder(Box<dyn Decoder>)
 }
 // We need a rust-friendly codec instance, codec definition, and a way to wrap C codecs
 pub struct CodecInstanceContainer{
@@ -60,7 +60,7 @@ pub struct CodecInstanceContainer{
 
 impl CodecInstanceContainer {
 
-    pub fn get_decoder(&mut self) -> Result<&mut Decoder>{
+    pub fn get_decoder(&mut self) -> Result<&mut dyn Decoder>{
         if let CodecKind::Decoder(ref mut d) = self.codec{
             Ok(&mut **d)
         }else{
@@ -251,8 +251,8 @@ impl Decoder for ClassicDecoder{
     fn has_more_frames(&mut self) -> Result<bool> {
         Ok(false)
     }
-    fn as_any(& self) -> &Any {
-        self as &Any
+    fn as_any(& self) -> &dyn Any {
+        self as &dyn Any
     }
 }
 

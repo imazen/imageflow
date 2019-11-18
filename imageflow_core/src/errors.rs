@@ -667,7 +667,7 @@ impl ErrorCategory{
 /// A buffer for errors/panics that can occur when libimageflow is being used via FFI
 pub struct OutwardErrorBuffer{
     category: ErrorCategory,
-    last_panic: Option<Box<Any>>,
+    last_panic: Option<Box<dyn Any>>,
     last_error: Option<FlowError>
 }
 impl Default for OutwardErrorBuffer {
@@ -685,7 +685,7 @@ impl OutwardErrorBuffer{
     }
     /// Sets the last panic (but only if none is set)
     /// We always prefer to keep the earliest panic
-    pub fn try_set_panic_error(&mut self, value: Box<Any>) -> bool{
+    pub fn try_set_panic_error(&mut self, value: Box<dyn Any>) -> bool{
         if self.last_panic.is_none() {
             self.category = ErrorCategory::InternalError;
             self.last_panic = Some(value);
@@ -834,7 +834,7 @@ impl CStatus {
 
 /// Implement Display for various Any types that are raised via Panic
 /// Currently only implemented for owned and static strings
-pub struct PanicFormatter<'a>(pub &'a Any);
+pub struct PanicFormatter<'a>(pub &'a dyn Any);
 impl<'a> std::fmt::Display for PanicFormatter<'a> {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         if let Some(str) = self.0.downcast_ref::<String>() {

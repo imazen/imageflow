@@ -14,7 +14,7 @@ pub static CROP_WHITESPACE: CropWhitespaceDef = CropWhitespaceDef{};
 pub struct CopyRectNodeDef;
 
 impl NodeDef for CopyRectNodeDef {
-    fn as_one_input_one_canvas(&self) -> Option<&NodeDefOneInputOneCanvas> {
+    fn as_one_input_one_canvas(&self) -> Option<&dyn NodeDefOneInputOneCanvas> {
         Some(self)
     }
 }
@@ -87,7 +87,7 @@ impl NodeDefOneInputOneCanvas for CopyRectNodeDef{
 #[derive(Debug, Clone)]
 pub struct FillRectNodeDef;
 impl NodeDef for FillRectNodeDef{
-    fn as_one_mutate_bitmap(&self) -> Option<&NodeDefMutateBitmap>{
+    fn as_one_mutate_bitmap(&self) -> Option<&dyn NodeDefMutateBitmap>{
         Some(self)
     }
 }
@@ -132,7 +132,7 @@ impl NodeDefMutateBitmap for FillRectNodeDef {
 #[derive(Debug,Clone)]
 pub struct CloneDef;
 impl NodeDef for CloneDef{
-    fn as_one_input_expand(&self) -> Option<&NodeDefOneInputExpand>{
+    fn as_one_input_expand(&self) -> Option<&dyn NodeDefOneInputExpand>{
         Some(self)
     }
 }
@@ -171,7 +171,7 @@ impl NodeDefOneInputExpand for CloneDef{
 #[derive(Debug,Clone)]
 pub struct ExpandCanvasDef;
 impl NodeDef for ExpandCanvasDef{
-    fn as_one_input_expand(&self) -> Option<&NodeDefOneInputExpand>{
+    fn as_one_input_expand(&self) -> Option<&dyn NodeDefOneInputExpand>{
         Some(self)
     }
 }
@@ -313,7 +313,7 @@ impl NodeDef for CropMutNodeDef{
 #[derive(Debug,Clone)]
 pub struct CropWhitespaceDef;
 impl NodeDef for CropWhitespaceDef{
-    fn as_one_input_expand(&self) -> Option<&NodeDefOneInputExpand>{
+    fn as_one_input_expand(&self) -> Option<&dyn NodeDefOneInputExpand>{
         Some(self)
     }
 }

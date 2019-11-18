@@ -12,7 +12,7 @@ pub static COLOR_MATRIX_SRGB_MUTATE: ColorMatrixSrgbMutDef = ColorMatrixSrgbMutD
 #[derive(Debug, Clone)]
 pub struct ColorMatrixSrgbMutDef;
 impl NodeDef for ColorMatrixSrgbMutDef{
-    fn as_one_mutate_bitmap(&self) -> Option<&NodeDefMutateBitmap>{
+    fn as_one_mutate_bitmap(&self) -> Option<&dyn NodeDefMutateBitmap>{
         Some(self)
     }
 }
@@ -43,7 +43,7 @@ impl NodeDefMutateBitmap for ColorMatrixSrgbMutDef{
 #[derive(Debug,Clone)]
 pub struct ColorFilterSrgb;
 impl NodeDef for ColorFilterSrgb{
-    fn as_one_input_expand(&self) -> Option<&NodeDefOneInputExpand>{
+    fn as_one_input_expand(&self) -> Option<&dyn NodeDefOneInputExpand>{
         Some(self)
     }
 }

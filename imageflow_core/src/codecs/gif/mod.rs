@@ -150,13 +150,13 @@ impl Decoder for GifDecoder {
     fn has_more_frames(&mut self) -> Result<bool> {
         Ok(self.next_frame.is_some())
     }
-    fn as_any(&self) -> &Any {
-        self as &Any
+    fn as_any(&self) -> &dyn Any {
+        self as &dyn Any
     }
 }
 
 pub trait EasyEncoder{
-    fn write_frame(&mut self, w: &mut Write, c: &Context, frame: &mut BitmapBgra) -> Result<s::EncodeResult>;
+    fn write_frame(&mut self, w: &mut dyn Write, c: &Context, frame: &mut BitmapBgra) -> Result<s::EncodeResult>;
 }
 
 
