@@ -46,7 +46,7 @@ imgref = "1.4.0" # upgrade to 1.3.5
 dssim = "2.9.7"
 gif = "*"
 rgb = "0.8.6"
-imagequant = "2.11.7"
+imagequant = "2.12.5"
 lodepng = "2.1.2"
 
 lcms2 = "5.1.4"
