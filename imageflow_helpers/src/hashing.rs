@@ -26,7 +26,7 @@ pub fn hash_64(bytes: &[u8]) -> u64{
 ///
 /// Returns a 32-byte cryptographic hash of the given data (via Blake2b), with a null seed.
 pub fn hash_256(bytes: &[u8]) -> [u8;32]{
-    let mut hash: [u8;32] = unsafe {::std::mem::uninitialized() };
+    let mut hash: [u8;32] = [0u8;32];
     hash256_to(bytes, &mut hash);
     hash
 }

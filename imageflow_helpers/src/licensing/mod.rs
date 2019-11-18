@@ -66,7 +66,7 @@ impl LicenseEndpoint{
         Cow::Borrowed("https://licenses.imazen.net/"),
         Cow::Borrowed("https://licenses2.imazen.net")].into_iter().map(|v| v.clone()))
     }
-    pub fn box_endpoint(self) -> Box<Endpoint>{
+    pub fn box_endpoint(self) -> Box<dyn Endpoint>{
         Box::new(self)
     }
 }
@@ -112,12 +112,12 @@ pub struct LicenseManagerSingleton{
     #[allow(dead_code)]
     sink: IssueSink,
     trusted_keys: &'static [RSADecryptPublic],
-    cache: Box<PersistentStringCache>,
+    cache: Box<dyn PersistentStringCache>,
     created: DateTime<Utc>,
     #[allow(dead_code)]
     uid: ::uuid::Uuid,
     heartbeat_count: AtomicUsize,
-    clock: Arc<AppClock>,
+    clock: Arc<dyn AppClock>,
     fetcher_token: Arc<SharedToken>
 }
 
@@ -135,7 +135,7 @@ fn GetServerUrl() -> String{
 
 
 impl LicenseManagerSingleton{
-    pub fn new(trusted_keys: &'static [RSADecryptPublic], clock: Arc<AppClock>, cache: Box<PersistentStringCache>) -> Self{
+    pub fn new(trusted_keys: &'static [RSADecryptPublic], clock: Arc<dyn AppClock>, cache: Box<dyn PersistentStringCache>) -> Self{
         let created = clock.get_utc_now();
         LicenseManagerSingleton{
             trusted_keys,
@@ -218,7 +218,7 @@ impl LicenseManagerSingleton{
     }
 
 
-    pub fn clock(&self) -> &AppClock {
+    pub fn clock(&self) -> &dyn AppClock {
         &*self.clock
     }
     pub fn created(&self) -> DateTime<Utc>{

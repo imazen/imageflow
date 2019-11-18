@@ -27,13 +27,13 @@ pub trait Endpoint{
 
 
 pub struct EndpointEntry{
-    endpoint: Box<Endpoint>,
+    endpoint: Box<dyn Endpoint>,
     sleep_until: Ticks,
     interval: Debounce,
     error_interval: Debounce,
 }
 impl EndpointEntry{
-    pub fn new(e: Box<Endpoint>, clock: &AppClock) -> EndpointEntry{
+    pub fn new(e: Box<dyn Endpoint>, clock: &dyn AppClock) -> EndpointEntry{
         let interval = Debounce::new(e.get_fetch_interval(), clock);
         EndpointEntry{
             endpoint: e,
@@ -47,7 +47,7 @@ impl EndpointEntry{
 pub struct FetcherConfig<'clock>{
     sink: IssueSink,
     client: ::reqwest::Client,
-    clock: &'clock AppClock,
+    clock: &'clock dyn AppClock,
     initial_error_interval: ::chrono::Duration,
 }
 
@@ -63,7 +63,7 @@ fn mock_swap_base_urls(_v: SmallVec<[Cow<'static, str>;6]>) -> SmallVec<[Cow<'st
 }
 
 impl<'clock> FetcherConfig<'clock>{
-    pub fn new(clock: &'clock AppClock) -> Self{
+    pub fn new(clock: &'clock dyn AppClock) -> Self{
         FetcherConfig{
             client: ::reqwest::Client::new(),
             initial_error_interval: ::chrono::Duration::seconds(3),
@@ -321,7 +321,7 @@ pub struct Fetcher<'clock>{
 
 impl<'clock> Fetcher<'clock>{
 
-    pub fn new(endpoints: Vec<Box<Endpoint>>, clock: &'clock AppClock) -> Self{
+    pub fn new(endpoints: Vec<Box<dyn Endpoint>>, clock: &'clock dyn AppClock) -> Self{
         Fetcher{
             config: FetcherConfig::new(clock),
             endpoints: endpoints.into_iter().map(|e| EndpointEntry::new(e, clock)).collect()
@@ -350,8 +350,8 @@ impl<'clock> Fetcher<'clock>{
     }
 
 
-    pub fn ensure_spawned<F>(token: Arc<SharedToken>, clock: Arc<AppClock>, endpoint_producer: F)
-        where F: Fn() -> Vec<Box<Endpoint>>, F: Send + 'static {
+    pub fn ensure_spawned<F>(token: Arc<SharedToken>, clock: Arc<dyn AppClock>, endpoint_producer: F)
+        where F: Fn() -> Vec<Box<dyn Endpoint>>, F: Send + 'static {
 
         token.clone().ensure_spawned(move || {
             eprintln!("starting thread");

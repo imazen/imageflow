@@ -181,7 +181,7 @@ impl WriteThroughCache{
         }
     }
     #[allow(dead_code)]
-    pub fn as_cache(&self) -> &PersistentStringCache{
+    pub fn as_cache(&self) -> &dyn PersistentStringCache{
         self
     }
 }

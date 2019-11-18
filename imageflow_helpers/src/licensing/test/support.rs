@@ -52,7 +52,7 @@ impl StringMemCache{
             cache: ::chashmap::CHashMap::new()
         }
     }
-    pub fn into_cache(self) -> Box<PersistentStringCache + Send + Sync>{
+    pub fn into_cache(self) -> Box<dyn PersistentStringCache + Send + Sync>{
         Box::new(self)
     }
 }
