@@ -86,6 +86,6 @@ deploy:
       tags: true
       condition: $UPLOAD_BUILD = True
 
-after_success:
+after_deploy:
   - ./ci/travis_publish_docker_images.sh docker/imageflow_tool imazen/imageflow_tool
   - ./ci/travis_publish_docker_images.sh docker/imageflow_server_unsecured imazen/imageflow_server_unsecured
