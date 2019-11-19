@@ -128,7 +128,7 @@ You also may find that `imageflow_tool` is quite fast enough for your needs.
 #### Missing features
 
 - [ ] Animated GIF write support (reading individual frames is supported)
-- [ ] Some advanced rendering features: Whitespace detection/cropping, watermarking, blurring.
+- [ ] Some advanced rendering features: watermarking, blurring.
 - [ ] Automatic encoder selection and tuning.
 
 #### Delayed features
@@ -223,7 +223,7 @@ The [official Dockerfiles](https://github.com/imazen/dockerfiles_imageflow) are 
 
 1. Install Visual Studio 2017 Build Tools ([separately](https://www.visualstudio.com/thank-you-downloading-visual-studio/?sku=BuildTools&rel=15) or as a VS component)
 2. Install [Git 64-bit](https://git-scm.com/download/win).
-3. `Run As Administrator` the [NASM 64-bit](http://www.nasm.us/pub/nasm/releasebuilds/2.12.02/win64/nasm-2.12.02-installer-x64.exe) installer - it will not prompt.
+3. `Run As Administrator` the [NASM 64-bit](https://www.nasm.us/pub/nasm/releasebuilds/2.14.02/win64/nasm-2.14.02-installer-x64.exe) installer - it will not prompt.
 4. Install [Rust 64-bit](https://static.rust-lang.org/rustup/dist/x86_64-pc-windows-msvc/rustup-init.exe) if you want 64-bit Imageflow or [Rust 32-bit](https://static.rust-lang.org/rustup/dist/i686-pc-windows-msvc/rustup-init.exe) if you don't.
 Install toolchain `beta` as the default, and confirm adding it to `PATH`.
 5. Open the command line and switch to this repository's root directory
