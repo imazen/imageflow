@@ -12,6 +12,7 @@ fi
 if [[ "$PUBLISH_DOCKER" == "True" ]]; then
     echo Publishing to docker hub enabled
 else
+    echo "Publishing to docker hub disabled. Exiting."
     exit 1;
 fi
 
