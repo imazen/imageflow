@@ -89,3 +89,5 @@ deploy:
 after_success:
   - if [[ "$FETCH_COMMIT_SUFFIX" == "linux64_glibc227" ]]; then ./ci/travis_trigger_docker_cloud.sh "https://registry.hub.docker.com/u/imazen/imageflow_server_unsecured/trigger/3682f725-3a98-49dd-9e96-acd594721250/"; fi
   - if [[ "$FETCH_COMMIT_SUFFIX" == "linux64_glibc227" ]]; then ./ci/travis_trigger_docker_cloud.sh "https://registry.hub.docker.com/u/imazen/imageflow_tool/trigger/d4943bd2-6350-4cda-9012-f56fe2deaef8/"; fi
+  - if [[ "$FETCH_COMMIT_SUFFIX" == "linux64_glibc227" ]]; then ./ci/travis_publish_docker_images.sh docker/imageflow_tool imazen/imageflow_tool
+  - if [[ "$FETCH_COMMIT_SUFFIX" == "linux64_glibc227" ]]; then ./ci/travis_publish_docker_images.sh docker/imageflow_server_unsecured imazen/imageflow_server_unsecured
