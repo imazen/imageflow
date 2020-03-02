@@ -55,7 +55,7 @@ hyper = { version = "0.12", default-features = false }
 threadpool = "1.0"
 url="1"
 hyper-native-tls="0.3"
-reqwest="0.9"
+reqwest="0.10"
 http="*"
 
 [[bin]]
