@@ -134,8 +134,8 @@ use std::panic::{catch_unwind, AssertUnwindSafe};
 use std::str;
 
 
-///
-/// What is possible with the IO object
+//
+// What is possible with the IO object
 //#[repr(C)]
 //pub enum IoMode {
 //    None = 0,
@@ -146,7 +146,7 @@ use std::str;
 //    ReadWriteSeekable = 15, // 1 | 2 | 4 | 8
 //}
 
-/// Input or output?
+// Input or output?
 //#[repr(C)]
 //#[derive(Copy,Clone)]
 //pub enum Direction {

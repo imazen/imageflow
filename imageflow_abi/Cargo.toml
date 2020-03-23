@@ -20,7 +20,7 @@ base64="0.11"
 
 [build-dependencies]
 imageflow_helpers = { path = "../imageflow_helpers", version = "*" }
-moz-cheddar = "0.4.1"
+cbindgen = "0.13.2"
 regex = "1"
 
 [features]
