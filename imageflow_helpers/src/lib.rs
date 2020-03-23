@@ -88,7 +88,7 @@ pub mod timeywimey{
 
     pub fn precise_time_ns() -> u64{
         use std::time::{SystemTime, UNIX_EPOCH};
-        //TODO: consider if u64 is too small 
+        //TODO: consider if u64 is too small
         SystemTime::now().duration_since(UNIX_EPOCH)
                 .expect("Time went backwards").as_nanos() as u64
     }
