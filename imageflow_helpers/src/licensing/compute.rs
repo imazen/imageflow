@@ -170,7 +170,7 @@ impl<'mgr> LicenseComputation<'mgr>{
         }
 
         let grace_minutes = license.first().fields().network_grace_minutes().unwrap_or(6);
-        let expires = self.mgr.created() + ::time::Duration::minutes(grace_minutes as i64);
+        let expires = self.mgr.created() + ::chrono::Duration::minutes(grace_minutes as i64);
 
         if expires < self.mgr.clock().get_utc_now(){
             self.sink.do_some(|s| s.error(format!("Grace period of {}m expired for license {}.", grace_minutes, license.id()),
@@ -178,7 +178,7 @@ impl<'mgr> LicenseComputation<'mgr>{
             return None;
         }
 
-        let thirty_seconds = self.mgr.created() + ::time::Duration::seconds(30);
+        let thirty_seconds = self.mgr.created() + ::chrono::Duration::seconds(30);
         if thirty_seconds > self.mgr.clock().get_utc_now() {
             self.sink.do_some(|s| s.warn(format!("Fetching license {} (not found in disk cache).", license.id()),
                            format!("Network grace period expires in {} minutes.", grace_minutes)));

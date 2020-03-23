@@ -2,7 +2,6 @@ use imageflow_helpers::preludes::from_std::*;
 use std;
 use sizing::{steps, BoxParam, BoxTarget, AspectRatio, Cond, Step, Layout, LayoutError, BoxKind};
 use sizing;
-use time::precise_time_ns;
 
 #[derive(Copy, Clone, PartialEq, Debug)]
 enum Strategy {
@@ -635,7 +634,7 @@ fn test_steps() {
     let mut failed_kits = Vec::new();
 
     for kit in kits{
-        let start_time = precise_time_ns();
+        let start_time = ::imageflow_helpers::timeywimey::precise_time_ns();
         let mut test_failed = false;
         for target in target_sizes.iter() {
             generate_aspects(&mut source_sizes, &mut temp, *target);
@@ -673,7 +672,7 @@ fn test_steps() {
 
         }
 
-        let duration = precise_time_ns() - start_time;
+        let duration = ::imageflow_helpers::timeywimey::precise_time_ns() - start_time;
         w!("\nSpent {:.0}ms testing {:?}\n\n", (duration  as f64) / 1000000., &kit.steps);
 
         if test_failed{

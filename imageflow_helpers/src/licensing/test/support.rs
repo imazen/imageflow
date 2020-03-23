@@ -19,7 +19,7 @@ impl OffsetClock{
     pub fn new(date: &str, build_date: &str) -> OffsetClock{
         OffsetClock{
             offset: Utc::now().signed_duration_since(parse_date_as_utc(date)),
-            ticks_offset_ns: ::time::precise_time_ns() -1,
+            ticks_offset_ns: ::timeywimey::precise_time_ns() -1,
             build_date: parse_date_as_utc(build_date).with_timezone(&Utc)
         }
     }
@@ -27,7 +27,7 @@ impl OffsetClock{
 impl AppClock for OffsetClock{
     fn get_timestamp_ticks(&self) -> u64 {
 
-        ::time::precise_time_ns() - self.ticks_offset_ns
+        ::timeywimey::precise_time_ns() - self.ticks_offset_ns
     }
 
     fn ticks_per_second(&self) -> u64 {

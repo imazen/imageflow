@@ -184,7 +184,7 @@ impl LicenseManagerSingleton{
     }
 
     pub fn kill_thread(arc_mgr: Arc<LicenseManagerSingleton>, timeout_ms: u64) {
-        let start = ::time::precise_time_ns();
+        let start = ::timeywimey::precise_time_ns();
         let mut m = arc_mgr;
         m.begin_kill_thread(timeout_ms);
         loop {
@@ -194,7 +194,7 @@ impl LicenseManagerSingleton{
                     return;
                 }
                 Err(arc_mgr) => {
-                    if (::time::precise_time_ns() - start) / 1000 > timeout_ms {
+                    if (::timeywimey::precise_time_ns() - start) / 1000 > timeout_ms {
                         panic!("Failed to join fetcher thread within {}ms", timeout_ms);
                     } else {
                         thread::sleep(::std::time::Duration::from_millis(15));

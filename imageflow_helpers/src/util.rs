@@ -149,7 +149,7 @@ pub struct DefaultClock{
 }
 impl AppClock for DefaultClock{
     fn get_timestamp_ticks(&self) -> u64 {
-        ::time::precise_time_ns()
+        ::timeywimey::precise_time_ns()
     }
 
     fn ticks_per_second(&self) -> u64 {
