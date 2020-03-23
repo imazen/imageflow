@@ -64,7 +64,7 @@ impl LicenseEndpoint{
         Cow::Borrowed("https://s3-us-west-2.amazonaws.com/licenses.imazen.net/"),
         Cow::Borrowed("https://licenses-redirect.imazen.net/"),
         Cow::Borrowed("https://licenses.imazen.net/"),
-        Cow::Borrowed("https://licenses2.imazen.net")].into_iter().map(|v| v.clone()))
+        Cow::Borrowed("https://licenses2.imazen.net")].iter().map(|v| v.clone()))
     }
     pub fn box_endpoint(self) -> Box<dyn Endpoint>{
         Box::new(self)

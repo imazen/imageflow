@@ -226,7 +226,7 @@ fn generate(target: Target) -> String {
 
     let mut header = format!("\n#ifndef generated_imageflow_h\n#define generated_imageflow_h\n{}", get_version_consts(allow_comments));
 
-    let mut footer = "\n#endif // generated_imageflow_h\n".to_owned();
+    let footer = "\n#endif // generated_imageflow_h\n".to_owned();
 
     if target == Target::PInvoke {
         header.push_str(DEFINE_INTS);
