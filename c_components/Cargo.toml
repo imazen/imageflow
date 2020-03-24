@@ -24,7 +24,7 @@ profiling = []
 shared = []
 
 [dependencies]
-mozjpeg-sys = "0.10.2"
+mozjpeg-sys = "0.10.3"
 libz-sys = "1.0.18"
 libpng-sys = "1.1.7"
 lcms2-sys = "3.1.1"
