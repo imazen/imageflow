@@ -359,12 +359,41 @@ pub enum CommandStringKind{
     ImageResizer4
 }
 
-/// Constraint types. TODO: expand to include nearly everything RIAPI does.
+#[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
+pub struct CropHints{
+// align
+// detect faces
+// objects
+
+}
+
+/// Constraint types.
+/// _exact constraints always produce the requested size
+/// _aspect constraints match the aspect ratio of the requested size
+/// _aspect constraints will produce the requested size with `upscale: true` and `downscale: true`
 #[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
 pub enum Constraint {
-    #[serde(rename="within")]
-    Within{w: Option<u32>, h: Option<u32>, hints: Option<ConstraintResamplingHints>}
-    //max * {down, up, both, canvas}
+    /// Ensure the result fits within the provided dimensions.
+    #[serde(rename = "within")]
+    Within { w: Option<u32>, h: Option<u32> /*, upscale: Option<bool>*/, hints: Option<ConstraintResamplingHints> },
+
+    // Exact: produces Distorts the image to exactly the provided dimensions, ignoring aspect ratio.
+    // Upscales
+//    #[serde(rename = "distort_exact")]
+//    DistortExact { w: u32, h: u32, hints: Option<ConstraintResamplingHints> },
+
+//    #[serde(rename = "pad_exact")]
+//    PadExact { w: u32, h: u32, upscale: bool, anchor: , hints: Option<ConstraintResamplingHints> },
+//
+//    #[serde(rename = "pad_aspect")]
+//    PadAspect { w: u32, h: u32, upscale: bool, downscale:bool, anchor: , hints: Option<ConstraintResamplingHints> },
+//
+//    #[serde(rename = "crop_aspect")]
+//    CropAspect { w: u32, h: u32, upscale: bool, downscale:bool, anchor: , hints: Option<ConstraintResamplingHints> },
+//
+
+
+//max * {down, up, both, canvas}
 }
 
 /// Blend pixels (if transparent) or replace?
@@ -389,6 +418,7 @@ pub enum Node {
     Crop { x1: u32, y1: u32, x2: u32, y2: u32 },
     #[serde(rename="crop_whitespace")]
     CropWhitespace { threshold: u32, percent_padding: f32 },
+
     #[serde(rename="create_canvas")]
     CreateCanvas {
         format: PixelFormat,

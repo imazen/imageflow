@@ -144,6 +144,11 @@ fn main_with_exit_code() -> i32 {
                 engine_args: vec!["http://resizer-images.s3.amazonaws.com/".to_owned()]
             },
             MountLocation {
+                engine: MountedEngine::Ir4Http,
+                prefix: "/website_images/".to_owned(),
+                engine_args: vec!["http://resizer-web.s3.amazonaws.com/".to_owned()]
+            },
+            MountLocation {
                 engine: MountedEngine::Ir4ProxyUncached,
                 prefix: "/demo_images_uncached/".to_owned(),
                 engine_args: vec!["http://resizer-images.s3.amazonaws.com/".to_owned()]
