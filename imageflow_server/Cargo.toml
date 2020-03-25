@@ -48,9 +48,9 @@ wait-timeout = "0.2"
 bincode = "1"
 staticfile = { git= "https://github.com/onur/staticfile", rev= "9f2ff7201eda648128c92e3f5597c587f0629f51" }
 conduit-mime-types = "0.7"
-router = "0.5"
+router = "=0.5"
 iron = "=0.5.1"
-persistent = "0.4"
+persistent = "=0.4"
 hyper = { version = "0.12", default-features = false }
 threadpool = "1.0"
 url="1"
