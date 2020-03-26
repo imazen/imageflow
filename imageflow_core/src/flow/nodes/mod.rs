@@ -14,7 +14,7 @@ mod codecs_and_pointer;
 mod constrain;
 mod white_balance;
 mod color;
-mod detection;
+//mod detection;
 
 mod internal_prelude {
     pub use ::ffi;
@@ -62,7 +62,7 @@ pub use self::white_balance::WHITE_BALANCE_SRGB;
 pub use self::color::COLOR_MATRIX_SRGB_MUTATE;
 pub use self::color::COLOR_MATRIX_SRGB;
 pub use self::color::COLOR_FILTER_SRGB;
-pub use self::detection::CROP_FACES;
+//pub use self::detection::CROP_FACES;
 
 use super::definitions::*;
 
