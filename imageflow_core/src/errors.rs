@@ -170,6 +170,7 @@ pub enum ErrorKind{
     AllocationFailed,
     GifDecodingError,
     GifEncodingError,
+    JpegDecodingError,
     QuantizationError,
     LodepngEncodingError,
     MozjpegEncodingError,
@@ -230,6 +231,7 @@ impl CategorizedError for ErrorKind{
             ErrorKind::MozjpegEncodingError |
             ErrorKind::GifEncodingError => ErrorCategory::InternalError,
             ErrorKind::GifDecodingError |
+            ErrorKind::JpegDecodingError |
             ErrorKind::ColorProfileError => ErrorCategory::ImageMalformed,
             ErrorKind::FetchError |
             ErrorKind::DecodingIoError |
@@ -292,6 +294,18 @@ impl From<::gif::DecodingError> for FlowError{
             ::gif::DecodingError::Io(e) => FlowError::without_location(ErrorKind::DecodingIoError, format!("{:?}", e)),
             ::gif::DecodingError::Internal(msg) => FlowError::without_location(ErrorKind::InternalError,format!("Internal error in gif decoder: {:?}",msg)),
             ::gif::DecodingError::Format(msg) => FlowError::without_location(ErrorKind::GifDecodingError,format!("{:?}",msg))
+        }
+    }
+}
+
+
+impl From<jpeg_decoder::Error> for FlowError{
+    fn from(f: jpeg_decoder::Error) -> Self {
+        match f {
+            jpeg_decoder::Error::Io(e) => FlowError::without_location(ErrorKind::DecodingIoError, format!("{:?}", e)),
+            jpeg_decoder::Error::Internal(msg) => FlowError::without_location(ErrorKind::InternalError,format!("Internal error in rust jpeg_decoder: {:?}",msg)),
+            jpeg_decoder::Error::Format(msg) => FlowError::without_location(ErrorKind::JpegDecodingError,format!("{:?}",msg)),
+            jpeg_decoder::Error::Unsupported(feature) => FlowError::without_location(ErrorKind::JpegDecodingError,format!("rust jpeg_decoder: Unsupported jpeg feature{:?}",feature)),
         }
     }
 }

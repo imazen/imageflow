@@ -20,6 +20,7 @@ mod gif;
 mod pngquant;
 mod lode;
 mod mozjpeg;
+mod jpeg_decoder;
 use io::IoProxyRef;
 
 pub trait DecoderFactory{
@@ -89,6 +90,13 @@ impl CodecInstanceContainer {
                         codec: CodecKind::Decoder(Box::new(gif::GifDecoder::create(c, io, io_id)?)),
                         encode_io: None
                     })
+            } else if buffer.starts_with(b"\xFF\xD8\xFF") {
+                Ok(CodecInstanceContainer
+                {
+                    io_id,
+                    codec: CodecKind::Decoder(Box::new(jpeg_decoder::JpegDecoder::create(c, io, io_id)?)),
+                    encode_io: None
+                })
             } else {
                 Ok(CodecInstanceContainer
                     {
