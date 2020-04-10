@@ -14,7 +14,7 @@ libc = "0.2"
 num = "0.2"
 
 # time
-time = "0.1"
+time = "0.1" # Update to 0.2.9
 chrono =  "0.4"
 
 # serialization
@@ -35,29 +35,30 @@ blake2-rfc = "0.2"
 
 clap = "2"
 threadpool = "1"
-petgraph = "0.4"
+petgraph = "0.4" #Upgrade to 0.5
 daggy = "0.5" # Upgrade to 0.6
 
 smallvec = "*"
 
 itertools = "*"
-imgref = "1.4.0" # upgrade to 1.3.5
+imgref = "1.4.1"
 
-dssim = "2.9.7"
+dssim = "2.9"
 gif = "*"
-rgb = "0.8.6"
-imagequant = "2.11.7"
-lodepng = "2.1.2"
+rgb = "0.8.16"
+imagequant = "2.12.5"
+lodepng = "2.4.0"
+
 
 jpeg-decoder = "0.1"
 
-lcms2 = "5.1.4"
+lcms2 = "5.1.5"
 chashmap = "2.2"
 
 getopts ="0.2"
 
-url = "1"
-uuid = { version = "0.7", features = ["v4"] }
+url = "1" # Upgrade to 2.1.1
+uuid = { version = "0.7", features = ["v4"] } # Upgrade to 0.8
 
 rustface = { git = "https://github.com/atomashpolskiy/rustface" }
 imageflow_types = { path = "../imageflow_types", version = "*" }
