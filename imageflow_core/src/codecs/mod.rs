@@ -21,6 +21,7 @@ mod pngquant;
 mod lode;
 mod mozjpeg;
 mod jpeg_decoder;
+mod turbo_jpeg_decoder;
 use io::IoProxyRef;
 
 pub trait DecoderFactory{

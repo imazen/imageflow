@@ -507,7 +507,10 @@ static bool flow_codecs_jpg_decoder_FinishRead(flow_c * c, struct flow_codecs_jp
         FLOW_error(c, flow_status_Out_of_memory);
         return false;
     }
-
+  if (setjmp(state->error_handler_jmp)) {
+        // Execution comes back to this point if an error happens
+        return false;
+    }
     /* Step 5: Start decompressor */
 
     (void)jpeg_start_decompress(state->cinfo);
@@ -525,10 +528,7 @@ static bool flow_codecs_jpg_decoder_FinishRead(flow_c * c, struct flow_codecs_jp
     state->color.gamma = state->cinfo->output_gamma;
 
     state->stage = flow_codecs_jpg_decoder_stage_FinishRead;
-    if (setjmp(state->error_handler_jmp)) {
-        // Execution comes back to this point if an error happens
-        return false;
-    }
+
 
     state->pixel_buffer_row_pointers = flow_bitmap_create_row_pointers(c, state->pixel_buffer, state->pixel_buffer_size,
                                                                        state->row_stride, state->h);
@@ -644,6 +644,7 @@ static bool flow_codecs_jpg_decoder_reset(flow_c * c, struct flow_codecs_jpeg_de
     } else {
 
         if (state->cinfo != NULL) {
+            // TODO: does setjmp need to be called before jpeg_destroy_decompress?
             jpeg_destroy_decompress(state->cinfo);
             FLOW_free(c, state->cinfo);
             state->cinfo = NULL;
