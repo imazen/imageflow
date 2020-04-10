@@ -159,7 +159,6 @@ typedef struct flow_context flow_c;
 #include "color.h"
 
 PUB bool write_frame_to_disk(flow_c * c, const char * path, struct flow_bitmap_bgra * b);
-PUB int64_t flow_codec_select_from_seekable_io(flow_c * c, struct flow_io * io);
 
 struct flow_nodeinfo_render_to_canvas_1d;
 struct flow_nodeinfo_scale2d_render_to_canvas1d;
@@ -323,7 +322,6 @@ struct flow_codec_instance {
 
 PUB int32_t flow_codecs_jpg_decoder_get_exif(flow_c * c, struct flow_codec_instance * codec_instance);
 
-PUB bool flow_bitmap_bgra_load_png(flow_c * c, struct flow_bitmap_bgra ** b_ref, const char * path);
 PUB bool flow_bitmap_bgra_save_png(flow_c * c, struct flow_bitmap_bgra * b, const char * path);
 PUB uint8_t ** flow_bitmap_create_row_pointers(flow_c * c, void * buffer, size_t buffer_size, size_t stride,
                                                size_t height);

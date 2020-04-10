@@ -855,10 +855,6 @@ mod mid_term {
 
     extern "C" {
 
-    pub fn flow_bitmap_bgra_load_png(c: *mut ImageflowContext,
-    b_ref: *mut *mut BitmapBgra,
-    path: *const libc::c_char)
-    -> bool;
 
         pub fn flow_bitmap_bgra_save_png(c: *mut ImageflowContext,
                                          input: *const BitmapBgra,
@@ -959,7 +955,6 @@ mod mid_term {
                                              instance: *mut CodecInstance, color_info: *mut DecoderColorInfo)
                                              -> *mut BitmapBgra;
 
-        pub fn flow_codec_select_from_seekable_io(context: *mut ImageflowContext, io: *mut ImageflowJobIo) -> i64;
 
         pub fn flow_codec_decoder_get_info(c: *mut ImageflowContext,
                                            codec_state: *mut libc::c_void, codec_id: i64, info: *mut DecoderInfo) -> bool;

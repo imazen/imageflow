@@ -172,56 +172,6 @@ struct flow_codec_definition * flow_codec_get_definition(flow_c * c, int64_t cod
     return NULL;
 }
 
-int64_t flow_codec_select(flow_c * c, uint8_t * data, size_t data_bytes)
-{
-    int32_t codec_ix = 0;
-    for (codec_ix = 0; codec_ix < (int)c->codec_set->codecs_count; codec_ix++) {
-        int32_t series_ix = 0;
-        struct flow_codec_definition * def = &c->codec_set->codecs[codec_ix];
-        for (series_ix = 0; series_ix < (int)def->magic_byte_sets_count; series_ix++) {
-            struct flow_codec_magic_bytes * magic = &def->magic_byte_sets[series_ix];
-            if (data_bytes < magic->byte_count) {
-                continue;
-            }
-            bool match = true;
-            uint32_t i;
-            for (i = 0; i < magic->byte_count; i++) {
-                if (magic->bytes[i] != data[i]) {
-                    match = false;
-                    break;
-                }
-            }
-            if (match)
-                return def->codec_id;
-        }
-    }
-    return flow_codec_type_null;
-}
-
-int64_t flow_codec_select_from_seekable_io(flow_c * c, struct flow_io * io)
-{
-
-    uint8_t buffer[8];
-    int64_t bytes_read = io->read_func(c, io, &buffer[0], 8);
-    if (bytes_read != 8) {
-        FLOW_error_msg(c, flow_status_IO_error, "Failed to read first 8 bytes of file");
-        return false;
-    }
-    if (!io->seek_function(c, io, 0)) {
-        FLOW_error_msg(c, flow_status_IO_error, "Failed to seek to byte 0 in file");
-        return false;
-    }
-
-    int64_t ctype = flow_codec_select(c, &buffer[0], bytes_read);
-    if (ctype == flow_codec_type_null) {
-        // unknown
-        FLOW_error_msg(c, flow_status_Not_implemented,
-                       "Unrecognized leading byte sequence %02x%02x%02x%02x%02x%02x%02x%02x", buffer[0], buffer[1],
-                       buffer[2], buffer[3], buffer[4], buffer[5], buffer[6],
-                       buffer[7]); // Or bad buffer, unsupported file type, etc.
-    }
-    return ctype;
-}
 
 struct flow_bitmap_bgra * flow_codec_execute_read_frame(flow_c * c, struct flow_codec_instance * codec, struct flow_decoder_color_info * color_info)
 {
