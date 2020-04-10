@@ -393,25 +393,25 @@ fn test_jpeg_crop() {
 
 
 
-//
-//#[test]
-//fn decode_cmyk_jpeg(){
-//
-//    let steps = vec![
-//        s::Node::CommandString{
-//            kind: s::CommandStringKind::ImageResizer4,
-//            value: "width=200&height=200&format=gif".to_owned(),
-//            decode: Some(0),
-//            encode: Some(1)
-//        }
-//    ];
-//
-//    smoke_test(Some(s::IoEnum::Url("https://upload.wikimedia.org/wikipedia/commons/0/0e/Youngstown_State_Athletics.jpg".to_owned())),
-//               Some(s::IoEnum::OutputBuffer),
-//               DEBUG_GRAPH,
-//               steps,
-//    );
-//}
+
+#[test]
+fn decode_cmyk_jpeg(){
+
+   let steps = vec![
+       s::Node::CommandString{
+           kind: s::CommandStringKind::ImageResizer4,
+           value: "width=200&height=200&format=gif".to_owned(),
+           decode: Some(0),
+           encode: Some(1)
+       }
+   ];
+
+   smoke_test(Some(s::IoEnum::Url("https://upload.wikimedia.org/wikipedia/commons/0/0e/Youngstown_State_Athletics.jpg".to_owned())),
+              Some(s::IoEnum::OutputBuffer),
+              DEBUG_GRAPH,
+              steps,
+   ).expect_err("CMYK jpeg decodes should fail");
+}
 
 
 
@@ -431,7 +431,7 @@ fn smoke_test_gif_ir4(){
                Some(s::IoEnum::OutputBuffer),
                DEBUG_GRAPH,
                steps,
-    );
+    ).unwrap();
 }
 
 #[test]
@@ -450,7 +450,7 @@ fn smoke_test_png_ir4(){
                Some(s::IoEnum::OutputBuffer),
                DEBUG_GRAPH,
                steps,
-    );
+    ).unwrap();
 }
 
 
@@ -468,7 +468,7 @@ fn test_encode_jpeg_smoke() {
                Some(s::IoEnum::OutputBuffer),
                DEBUG_GRAPH,
                steps,
-    );
+    ).unwrap();
 }
 
 #[test]
@@ -483,7 +483,7 @@ fn test_encode_gif_smoke() {
                Some(s::IoEnum::OutputBuffer),
                DEBUG_GRAPH,
                steps,
-    );
+    ).unwrap();
 }
 
 #[test]
@@ -500,7 +500,7 @@ fn test_encode_png32_smoke() {
                Some(s::IoEnum::OutputBuffer),
                DEBUG_GRAPH,
                steps,
-    );
+    ).unwrap();
 }
 
 

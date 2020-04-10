@@ -55,7 +55,7 @@ pub fn get_result_dimensions(steps: &[s::Node], io: Vec<s::IoObject>, debug: boo
 }
 
 /// Just validates that no errors are thrown during job execution
-pub fn smoke_test(input: Option<s::IoEnum>, output: Option<s::IoEnum>,  debug: bool, steps: Vec<s::Node>){
+pub fn smoke_test(input: Option<s::IoEnum>, output: Option<s::IoEnum>,  debug: bool, steps: Vec<s::Node>) -> Result<s::ResponsePayload, imageflow_core::FlowError>{
     let mut io_list = Vec::new();
     if input.is_some() {
         io_list.push(s::IoObject {
@@ -79,8 +79,7 @@ pub fn smoke_test(input: Option<s::IoEnum>, output: Option<s::IoEnum>,  debug: b
         framewise: s::Framewise::Steps(steps)
     };
     let mut context = Context::create().unwrap();
-    let _ = context.build_1(build).unwrap();
-
+    context.build_1(build)
 }
 
 
