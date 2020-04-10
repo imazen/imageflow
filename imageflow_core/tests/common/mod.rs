@@ -605,11 +605,16 @@ pub fn bitmap_regression_check(c: &ChecksumCtx, bitmap: &mut BitmapBgra, name: &
 
 
 
+
 /// Compares the bitmap frame result of a given job to the known good checksum. If there is a checksum mismatch, a percentage of off-by-one bytes can be allowed.
 /// If no good checksum has been stored, pass 'store_if_missing' in order to add it.
 /// If you accidentally store a bad checksum, just delete it from the JSON file manually.
 ///
 pub fn compare(input: Option<s::IoEnum>, allowed_off_by_one_bytes: usize, checksum_name: &str, store_if_missing: bool, debug: bool, mut steps: Vec<s::Node>) -> bool {
+    let mut context = Context::create().unwrap();
+    compare_with_context(&mut context, input, allowed_off_by_one_bytes, checksum_name, store_if_missing, debug, steps)
+}
+pub fn compare_with_context(context: &mut Context, input: Option<s::IoEnum>, allowed_off_by_one_bytes: usize, checksum_name: &str, store_if_missing: bool, debug: bool, mut steps: Vec<s::Node>) -> bool {
     let mut bit = BitmapBgraContainer::empty();
     steps.push(unsafe{ bit.get_node()});
 
@@ -625,7 +630,7 @@ pub fn compare(input: Option<s::IoEnum>, allowed_off_by_one_bytes: usize, checks
         println!("{}", serde_json::to_string_pretty(&build).unwrap());
     }
 
-    let mut context = Context::create().unwrap();
+
     let response = context.build_1(build).unwrap();
 
     if let Some(b) = unsafe { bit.bitmap(&context) } {

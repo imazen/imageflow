@@ -10,6 +10,7 @@ use ffi::ImageflowJsonResponse;
 use errors::{OutwardErrorBuffer, CErrorProxy};
 
 use codecs::CodecInstanceContainer;
+use codecs::EnabledCodecs;
 use ffi::IoDirection;
 
 /// Something of a God object (which is necessary for a reasonable FFI interface).
@@ -29,7 +30,9 @@ pub struct Context {
     /// Codecs, which in turn connect to I/O instances.
     pub codecs: AddRemoveSet<CodecInstanceContainer>, // This loans out exclusive mutable references to items, bounding the ownership lifetime to Context
     /// A list of io_ids already in use
-    pub io_id_list: RefCell<Vec<i32>>
+    pub io_id_list: RefCell<Vec<i32>>,
+
+    pub enabled_codecs: EnabledCodecs
 }
 
 static mut JOB_ID: i32 = 0;
@@ -54,7 +57,8 @@ impl Context {
                 max_calc_flatten_execute_passes: 40,
                 graph_recording: s::Build001GraphRecording::off(),
                 codecs: AddRemoveSet::with_capacity(4),
-                io_id_list: RefCell::new(Vec::with_capacity(2))
+                io_id_list: RefCell::new(Vec::with_capacity(2)),
+                enabled_codecs: EnabledCodecs::default()
             }))
         }
     }

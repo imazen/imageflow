@@ -52,6 +52,85 @@ enum CodecKind{
     Encoder(Box<dyn Encoder>),
     Decoder(Box<dyn Decoder>)
 }
+
+#[derive(PartialEq, Copy, Clone)]
+pub enum NamedDecoders{
+    MozJpegDecoder,
+    WICJpegDecoder,
+    ImageRsJpegDecoder,
+    LibPngDecoder,
+    GifRsDecoder,
+}
+impl NamedDecoders{
+    pub fn works_for_magic_bytes(&self, bytes: &[u8]) -> bool{
+        match self{
+            NamedDecoders::WICJpegDecoder | NamedDecoders::ImageRsJpegDecoder | NamedDecoders::MozJpegDecoder => {
+                bytes.starts_with(b"\xFF\xD8\xFF")
+            },
+            NamedDecoders::GifRsDecoder => {
+                bytes.starts_with(b"GIF89a") || bytes.starts_with(b"GIF87a")
+            },
+            NamedDecoders::LibPngDecoder => {
+                bytes.starts_with( b"\x89\x50\x4E\x47\x0D\x0A\x1A\x0A")
+            }
+        }
+    }
+
+    pub fn create(&self, c: &Context, io: IoProxy, io_id: i32) -> Result<Box<dyn Decoder>>{
+        match self{
+            NamedDecoders::LibPngDecoder => Ok(ClassicDecoder::create(c, io, io_id, 1)?),
+            NamedDecoders::MozJpegDecoder => Ok(ClassicDecoder::create(c, io, io_id, 3)?),
+            NamedDecoders::GifRsDecoder => Ok(Box::new(gif::GifDecoder::create(c, io, io_id)?)),
+            NamedDecoders::ImageRsJpegDecoder => Ok(Box::new(jpeg_decoder::JpegDecoder::create(c, io, io_id)?)),
+            NamedDecoders::WICJpegDecoder => {
+                panic!("WIC Jpeg Decoder not implemented"); //TODO, use actual error for this
+            }
+        }
+    }
+
+}
+#[derive(PartialEq, Copy, Clone)]
+pub enum NamedEncoders{
+    GifEncoder,
+    MozJpegEncoder,
+    PngQuantEncoder,
+    LodePngEncoder
+}
+pub struct EnabledCodecs{
+    pub decoders: ::smallvec::SmallVec<[NamedDecoders;4]>,
+    pub encoders: ::smallvec::SmallVec<[NamedEncoders;4]>,
+}
+impl Default for EnabledCodecs {
+    fn default() -> Self {
+        EnabledCodecs{
+            decoders: smallvec::SmallVec::from_slice(
+                &[NamedDecoders::MozJpegDecoder,
+                    NamedDecoders::LibPngDecoder,
+                    NamedDecoders::GifRsDecoder]),
+            encoders: smallvec::SmallVec::from_slice(
+                &[NamedEncoders::GifEncoder,
+                    NamedEncoders::MozJpegEncoder,
+                    NamedEncoders::PngQuantEncoder,
+                    NamedEncoders::LodePngEncoder])
+        }
+    }
+}
+
+impl EnabledCodecs{
+    pub fn prefer_image_rs_jpeg_decoder(&mut self){
+        self.decoders.retain( |item| item != &NamedDecoders::ImageRsJpegDecoder);
+        self.decoders.insert(0, NamedDecoders::ImageRsJpegDecoder);
+    }
+    pub fn create_decoder_for_magic_bytes(&self, bytes: &[u8], c: &Context, io: IoProxy, io_id: i32) -> Result<Box<dyn Decoder>>{
+        for &decoder in self.decoders.iter(){
+            if decoder.works_for_magic_bytes(bytes){
+                return decoder.create(c, io, io_id);
+            }
+        }
+        return Err(nerror!(ErrorKind::NoDecoderFound,  "No decoder found for file starting in {:X?}", bytes))
+    }
+}
+
 // We need a rust-friendly codec instance, codec definition, and a way to wrap C codecs
 pub struct CodecInstanceContainer{
     pub io_id: i32,
@@ -83,28 +162,15 @@ impl CodecInstanceContainer {
             let result = io.read_to_buffer(c, &mut buffer).map_err(|e| e.at(here!()))?;
 
             io.seek(c, 0).map_err(|e| e.at(here!()))?;
-            if buffer.starts_with(b"GIF89a") || buffer.starts_with(b"GIF87a") {
-                Ok(CodecInstanceContainer
-                    {
-                        io_id,
-                        codec: CodecKind::Decoder(Box::new(gif::GifDecoder::create(c, io, io_id)?)),
-                        encode_io: None
-                    })
-            } else if buffer.starts_with(b"\xFF\xD8\xFF") {
-                Ok(CodecInstanceContainer
-                {
-                    io_id,
-                    codec: CodecKind::Decoder(Box::new(jpeg_decoder::JpegDecoder::create(c, io, io_id)?)),
-                    encode_io: None
-                })
-            } else {
-                Ok(CodecInstanceContainer
-                    {
-                        io_id,
-                        codec: CodecKind::Decoder(ClassicDecoder::create(c, io, io_id)?),
-                        encode_io: None
-                    })
-            }
+
+
+            Ok(CodecInstanceContainer
+            {
+                io_id,
+                codec: CodecKind::Decoder(c.enabled_codecs.create_decoder_for_magic_bytes(&buffer, c, io, io_id)?),
+                encode_io: None
+            })
+
         }
     }
 
@@ -117,10 +183,7 @@ struct ClassicDecoder{
 }
 
 impl ClassicDecoder {
-    fn create(c: &Context, io:  IoProxy, io_id: i32) -> Result<Box<impl Decoder>> {
-        let codec_id = unsafe {
-            ::ffi::flow_codec_select_from_seekable_io(c.flow_c(), io.get_io_ptr())
-        };
+    fn create(c: &Context, io:  IoProxy, io_id: i32, codec_id: i64) -> Result<Box<impl Decoder>> {
         if codec_id == 0 {
             Err(cerror!(c))
         } else {
