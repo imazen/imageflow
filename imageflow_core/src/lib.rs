@@ -35,6 +35,7 @@ extern crate rgb;
 extern crate imgref;
 extern crate lodepng;
 extern crate mozjpeg;
+extern crate mozjpeg_sys;
 extern crate evalchroma;
 extern crate twox_hash;
 
