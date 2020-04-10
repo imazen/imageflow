@@ -118,10 +118,11 @@ impl Default for EnabledCodecs {
 }
 
 impl EnabledCodecs{
-    pub fn prefer_image_rs_jpeg_decoder(&mut self){
-        self.decoders.retain( |item| item != &NamedDecoders::ImageRsJpegDecoder);
-        self.decoders.insert(0, NamedDecoders::ImageRsJpegDecoder);
+    pub fn prefer_decoder(&mut self, decoder: NamedDecoders){
+        self.decoders.retain( |item| item != &decoder);
+        self.decoders.insert(0, decoder);
     }
+
     pub fn create_decoder_for_magic_bytes(&self, bytes: &[u8], c: &Context, io: IoProxy, io_id: i32) -> Result<Box<dyn Decoder>>{
         for &decoder in self.decoders.iter(){
             if decoder.works_for_magic_bytes(bytes){

@@ -610,7 +610,7 @@ pub fn bitmap_regression_check(c: &ChecksumCtx, bitmap: &mut BitmapBgra, name: &
 /// If no good checksum has been stored, pass 'store_if_missing' in order to add it.
 /// If you accidentally store a bad checksum, just delete it from the JSON file manually.
 ///
-pub fn compare(input: Option<s::IoEnum>, allowed_off_by_one_bytes: usize, checksum_name: &str, store_if_missing: bool, debug: bool, mut steps: Vec<s::Node>) -> bool {
+pub fn compare(input: Option<s::IoEnum>, allowed_off_by_one_bytes: usize, checksum_name: &str, store_if_missing: bool, debug: bool, steps: Vec<s::Node>) -> bool {
     let mut context = Context::create().unwrap();
     compare_with_context(&mut context, input, allowed_off_by_one_bytes, checksum_name, store_if_missing, debug, steps)
 }

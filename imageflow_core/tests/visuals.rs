@@ -265,7 +265,7 @@ fn test_scale_image() {
 #[test]
 fn test_image_rs_jpeg_decode(){
     let mut context = Context::create().unwrap();
-    context.enabled_codecs.prefer_image_rs_jpeg_decoder();
+    context.enabled_codecs.prefer_decoder(imageflow_core::NamedDecoders::ImageRsJpegDecoder);
     let matched = compare_with_context(&mut context,Some(s::IoEnum::Url("https://s3-us-west-2.amazonaws.com/imageflow-resources/test_inputs/waterhouse.jpg".to_owned())), 500,
                           "DecodeWithImageRs", POPULATE_CHECKSUMS, DEBUG_GRAPH, vec![
             s::Node::Decode {io_id: 0, commands: None},

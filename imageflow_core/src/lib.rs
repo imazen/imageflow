@@ -58,6 +58,7 @@ pub use ffi::{IoDirection, IoMode};
 pub use flow::definitions::Graph;
 pub use json::JsonResponse;
 pub use json::MethodRouter;
+pub use codecs::NamedDecoders;
 // use std::ops::DerefMut;
 pub mod clients;
 pub mod ffi;
