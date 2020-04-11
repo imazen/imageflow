@@ -101,7 +101,8 @@ pub enum NamedEncoders{
     MozJpegEncoder,
     PngQuantEncoder,
     LodePngEncoder,
-    WebPEncoder
+    WebPEncoder,
+    LibPngEncoder,
 }
 pub struct EnabledCodecs{
     pub decoders: ::smallvec::SmallVec<[NamedDecoders;4]>,
@@ -120,7 +121,9 @@ impl Default for EnabledCodecs {
                     NamedEncoders::MozJpegEncoder,
                     NamedEncoders::PngQuantEncoder,
                     NamedEncoders::LodePngEncoder,
-                NamedEncoders::WebPEncoder])
+                    NamedEncoders::WebPEncoder,
+                    NamedEncoders::LibPngEncoder
+                ])
         }
     }
 }
@@ -346,6 +349,17 @@ struct LibpngEncoder{
     pub io_id: i32,
     pub io: IoProxy
 }
+impl LibpngEncoder{
+    pub(crate) fn create(c: &Context, io: IoProxy, io_id: i32) -> Result<Self> {
+        if !c.enabled_codecs.encoders.contains(&crate::codecs::NamedEncoders::LibPngEncoder){
+            return Err(nerror!(ErrorKind::CodecDisabledError, "The LibPng encoder has been disabled"));
+        }
+        Ok(LibpngEncoder {
+            io_id,
+            io
+        })
+    }
+}
 impl Encoder for LibpngEncoder{
 
     fn write_frame(&mut self, c: &Context, preset: &s::EncoderPreset, frame: &mut BitmapBgra, decoder_io_ids: &[i32]) -> Result<s::EncodeResult> {
@@ -412,7 +426,7 @@ impl CodecInstanceContainer{
                  },
                  s::EncoderPreset::Libpng {..}  => {
                      CodecKind::Encoder(Box::new(
-                         LibpngEncoder{ io_id: self.io_id, io}))
+                         LibpngEncoder::create(c, io, self.io_id)?))
                  },
                  s::EncoderPreset::WebPLossless => CodecKind::Encoder(Box::new(webp::WebPEncoder::create(c, io)?)),
                  s::EncoderPreset::WebPLossy {quality}=> CodecKind::Encoder(Box::new(webp::WebPEncoder::create(c, io)?)),

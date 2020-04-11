@@ -213,6 +213,9 @@ pub struct GifEncoder{
 
 impl GifEncoder{
     pub(crate) fn create(c: &Context, preset: &s::EncoderPreset, io: IoProxy, first_frame: &BitmapBgra) -> Result<GifEncoder>{
+        if !c.enabled_codecs.encoders.contains(&NamedEncoders::GifEncoder){
+            return Err(nerror!(ErrorKind::CodecDisabledError, "The gif encoder has been disabled"));
+        } 
         let io_id = io.io_id();
         let io_ref = Rc::new(RefCell::new(io));
 

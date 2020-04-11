@@ -34,6 +34,9 @@ pub struct MozjpegEncoder {
 impl MozjpegEncoder {
     // Quality is in range 0-100
     pub(crate) fn create(c: &Context, quality: Option<u8>, progressive: Option<bool>, io: IoProxy) -> Result<Self> {
+        if !c.enabled_codecs.encoders.contains(&crate::codecs::NamedEncoders::MozJpegEncoder){
+            return Err(nerror!(ErrorKind::CodecDisabledError, "The MozJpeg encoder has been disabled"));
+        }
         Ok(MozjpegEncoder {
             io, quality, progressive,
             optimize_coding: Some(true),

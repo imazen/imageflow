@@ -20,6 +20,9 @@ pub struct LodepngEncoder {
 
 impl LodepngEncoder {
     pub(crate) fn create(c: &Context, io: IoProxy) -> Result<Self> {
+        if !c.enabled_codecs.encoders.contains(&crate::codecs::NamedEncoders::LodePngEncoder){
+            return Err(nerror!(ErrorKind::CodecDisabledError, "The LodePNG encoder has been disabled"));
+        }
         Ok(LodepngEncoder {
             io,
         })

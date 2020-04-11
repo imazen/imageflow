@@ -20,6 +20,9 @@ pub struct PngquantEncoder {
 
 impl PngquantEncoder {
     pub(crate) fn create(c: &Context, speed: Option<u8>, quality: Option<(u8, u8)>, io: IoProxy) -> Result<Self> {
+        if !c.enabled_codecs.encoders.contains(&crate::codecs::NamedEncoders::PngQuantEncoder){
+            return Err(nerror!(ErrorKind::CodecDisabledError, "The PNGQuant encoder has been disabled"));
+        }
         let mut liq = imagequant::new();
         if let Some(speed) = speed {
             liq.set_speed(speed.into());

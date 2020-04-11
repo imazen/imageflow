@@ -167,6 +167,9 @@ pub struct WebPEncoder {
 
 impl WebPEncoder {
     pub(crate) fn create(c: &Context, io: IoProxy) -> Result<Self> {
+        if !c.enabled_codecs.encoders.contains(&crate::codecs::NamedEncoders::WebPEncoder){
+            return Err(nerror!(ErrorKind::CodecDisabledError, "The LodePNG encoder has been disabled"));
+        }
         Ok(WebPEncoder {
             io
         })
