@@ -18,6 +18,7 @@ use io::IoProxyRef;
 use rgb::alt::BGRA8;
 use libwebp_sys::*;
 use libwebp_sys::WEBP_CSP_MODE::MODE_BGRA;
+use imageflow_helpers::preludes::from_std::ptr::null;
 
 
 pub struct WebPDecoder{
@@ -157,5 +158,60 @@ impl Decoder for WebPDecoder {
     }
     fn as_any(&self) -> &dyn Any {
         self as &dyn Any
+    }
+}
+
+
+pub struct WebPEncoder {
+    io: IoProxy
+}
+
+impl WebPEncoder {
+    pub(crate) fn create(c: &Context, io: IoProxy) -> Result<Self> {
+        Ok(WebPEncoder {
+            io
+        })
+    }
+}
+
+impl Encoder for WebPEncoder {
+    fn write_frame(&mut self, c: &Context, preset: &s::EncoderPreset, frame: &mut BitmapBgra, decoder_io_ids: &[i32]) -> Result<s::EncodeResult> {
+
+        unsafe {
+            let mut output: *mut u8 = ptr::null_mut();
+            let output_len: usize;
+
+            match preset {
+                s::EncoderPreset::WebPLossy { quality } => {
+                    output_len = WebPEncodeBGRA(frame.pixels, frame.width() as i32, frame.height() as i32, frame.stride() as i32, *quality, &mut output);
+                },
+                s::EncoderPreset::WebPLossless => {
+                    output_len = WebPEncodeLosslessBGRA(frame.pixels, frame.width() as i32, frame.height() as i32, frame.stride() as i32, &mut output);
+                },
+                _ => {
+                    panic!("Incorrect encoder for encoder preset")
+                }
+            }
+            if output_len == 0 {
+                return Err(nerror!(ErrorKind::ImageEncodingError, "libwebp encoding error"));
+            } else {
+                let bytes = slice::from_raw_parts(output, output_len);
+                self.io.write_all(bytes).map_err(|e| FlowError::from_encoder(e).at(here!()))?;
+                WebPFree(output as *mut libc::c_void);
+            }
+        }
+
+        Ok(s::EncodeResult {
+            w: frame.w as i32,
+            h: frame.h as i32,
+            io_id: self.io.io_id(),
+            bytes: ::imageflow_types::ResultBytes::Elsewhere,
+            preferred_extension: "webp".to_owned(),
+            preferred_mime_type: "image/webp".to_owned(),
+        })
+    }
+
+    fn get_io(&self) -> Result<IoProxyRef> {
+        Ok(IoProxyRef::Borrow(&self.io))
     }
 }

@@ -205,6 +205,10 @@ pub enum EncoderPreset {
         quality: Option<u8>,
         progressive: Option<bool>,
     },
+    WebPLossy{
+        quality: f32
+    },
+    WebPLossless,
     Gif,
 }
 
@@ -226,7 +230,7 @@ impl EncoderPreset {
     }
     pub fn libjpeg_turbo_q(quality: Option<i32>) -> EncoderPreset {
         EncoderPreset::LibjpegTurbo {
-            quality: quality,
+            quality,
             optimize_huffman_coding: None,
             progressive: None
         }

@@ -407,7 +407,10 @@ impl CodecInstanceContainer{
                  s::EncoderPreset::Libpng {..}  => {
                      CodecKind::Encoder(Box::new(
                          LibpngEncoder{ io_id: self.io_id, io}))
-                 }
+                 },
+                 s::EncoderPreset::WebPLossless => CodecKind::Encoder(Box::new(webp::WebPEncoder::create(c, io)?)),
+                 s::EncoderPreset::WebPLossy {quality}=> CodecKind::Encoder(Box::new(webp::WebPEncoder::create(c, io)?)),
+
              };
              self.codec = codec;
          };

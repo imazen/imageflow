@@ -444,7 +444,42 @@ fn webp_lossy_alpha_decode_and_scale() {
     assert!(matched);
 }
 
+#[test]
+fn webp_lossless_alpha_roundtrip(){
 
+    let steps = vec![
+        s::Node::CommandString{
+            kind: s::CommandStringKind::ImageResizer4,
+            value: "format=webp".to_owned(),
+            decode: Some(0),
+            encode: Some(1)
+        }
+    ];
+
+    smoke_test(Some(s::IoEnum::Url("https://imageflow-resources.s3-us-west-2.amazonaws.com/test_inputs/1_webp_ll.sm.png".to_owned())),
+               Some(s::IoEnum::OutputBuffer),
+               DEBUG_GRAPH,
+               steps,
+    ).unwrap();
+}
+#[test]
+fn webp_lossy_alpha_roundtrip(){
+
+    let steps = vec![
+        s::Node::CommandString{
+            kind: s::CommandStringKind::ImageResizer4,
+            value: "format=webp&quality=90".to_owned(),
+            decode: Some(0),
+            encode: Some(1)
+        }
+    ];
+
+    smoke_test(Some(s::IoEnum::Url("https://imageflow-resources.s3-us-west-2.amazonaws.com/test_inputs/1_webp_a.sm.png".to_owned())),
+               Some(s::IoEnum::OutputBuffer),
+               DEBUG_GRAPH,
+               steps,
+    ).unwrap();
+}
 #[test]
 fn smoke_test_gif_ir4(){
 

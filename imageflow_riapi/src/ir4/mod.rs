@@ -116,6 +116,7 @@ impl Ir4SourceFrameInfo{
                         "image/jpeg" => Some(OutputFormat::Jpeg),
                         "image/png" => Some(OutputFormat::Png),
                         "image/gif" => Some(OutputFormat::Gif),
+                        "image/webp" => Some(OutputFormat::Webp),
                         _ => None
                     })
     }
@@ -137,7 +138,7 @@ pub struct Ir4Expand{
 
 impl Ir4Expand{
 
-    pub fn get_decode_commands(&self) -> sizing::Result<Option<Vec<s::DecoderCommand>>> {
+    pub fn get_decode_commands(&self) -> sizing::Result<Option<Vec<s::DecoderCommand>>> { //TODO: consider smallvec or generalizing decoder hints
         let i = self.i.parse()?.parsed;
 
         // Default to gamma correct
@@ -221,7 +222,11 @@ impl Ir4Expand{
                     depth: Some(if i.bgcolor_srgb.is_some() { s::PngBitDepth::Png24 } else { s::PngBitDepth::Png32 }),
                     zlib_compression: None,
                     matte: i.bgcolor_srgb.map(|sr| s::Color::Srgb(s::ColorSrgb::Hex(sr.to_rrggbbaa_string())))
-                }
+                },
+                OutputFormat::Webp if i.quality.is_some() => s::EncoderPreset::WebPLossy {
+                    quality: i.quality.unwrap() as f32
+                },
+                OutputFormat::Webp => s::EncoderPreset::WebPLossless
             };
             Some(s::Node::Encode { io_id: id, preset: encoder })
         }else{

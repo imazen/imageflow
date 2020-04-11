@@ -35,7 +35,8 @@ pub enum OutputFormatStrings {
     Exif,
     Jpeg,
     Png,
-    Gif
+    Gif,
+    Webp
 }
 }
 
@@ -634,6 +635,7 @@ impl OutputFormatStrings{
         match *self{
             OutputFormatStrings::Png => OutputFormat::Png,
             OutputFormatStrings::Gif => OutputFormat::Gif,
+            OutputFormatStrings::Webp => OutputFormat::Webp,
             _ => OutputFormat::Jpeg
         }
     }
@@ -738,7 +740,8 @@ pub enum Anchor1D{
 pub enum OutputFormat{
     Jpeg,
     Png,
-    Gif
+    Gif,
+    Webp
 }
 
 /// Controls whether the image is allowed to upscale, downscale, both, or if only the canvas gets to be upscaled.
