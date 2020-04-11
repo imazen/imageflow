@@ -80,6 +80,7 @@ install:
   - rustc --version --verbose
   - echo. && echo. && echo Installing NASM
   - choco install nasm
+  - where /r C:\ nasm.exe
 
 test_script:
   - if NOT "%CI_TAG%"=="" echo Purging build files for %CI_TAG%
