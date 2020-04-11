@@ -79,8 +79,7 @@ install:
   - set PATH=%PATH%;C:\Program Files (x86)\nasm;%USERPROFILE%\.cargo\bin;%LOCALAPPDATA%\bin\NASM
   - rustc --version --verbose
   - echo. && echo. && echo Installing NASM
-  - curl -L -o nasminst.exe https://www.nasm.us/pub/nasm/releasebuilds/2.14.02/win64/nasm-2.14.02-installer-x64.exe
-  - start /wait nasminst.exe /S
+  - choco install nasm
 
 test_script:
   - if NOT "%CI_TAG%"=="" echo Purging build files for %CI_TAG%
