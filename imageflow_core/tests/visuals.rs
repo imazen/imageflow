@@ -417,7 +417,7 @@ fn decode_cmyk_jpeg(){
 
 #[test]
 fn webp_lossless_alpha_decode_and_scale() {
-    let matched = compare(Some(s::IoEnum::Url("https://imageflow-resources.s3-us-west-2.amazonaws.com/test_inputs/1_webp_ll.sm.png".to_owned())), 500,
+    let matched = compare(Some(s::IoEnum::Url("https://imageflow-resources.s3-us-west-2.amazonaws.com/test_inputs/1_webp_ll.webp".to_owned())), 500,
                           "webp_lossless_alpha_decode_and_scale", POPULATE_CHECKSUMS, DEBUG_GRAPH, vec![
             s::Node::CommandString{
                 kind: s::CommandStringKind::ImageResizer4,
@@ -431,7 +431,7 @@ fn webp_lossless_alpha_decode_and_scale() {
 }
 #[test]
 fn webp_lossy_alpha_decode_and_scale() {
-    let matched = compare(Some(s::IoEnum::Url("https://imageflow-resources.s3-us-west-2.amazonaws.com/test_inputs/1_webp_a.sm.png".to_owned())), 500,
+    let matched = compare(Some(s::IoEnum::Url("https://imageflow-resources.s3-us-west-2.amazonaws.com/test_inputs/1_webp_a.webp".to_owned())), 500,
                           "webp_lossy_alpha_decode_and_scale", POPULATE_CHECKSUMS, DEBUG_GRAPH, vec![
             s::Node::CommandString{
                 kind: s::CommandStringKind::ImageResizer4,
@@ -456,7 +456,7 @@ fn webp_lossless_alpha_roundtrip(){
         }
     ];
 
-    smoke_test(Some(s::IoEnum::Url("https://imageflow-resources.s3-us-west-2.amazonaws.com/test_inputs/1_webp_ll.sm.png".to_owned())),
+    smoke_test(Some(s::IoEnum::Url("https://imageflow-resources.s3-us-west-2.amazonaws.com/test_inputs/1_webp_ll.webp".to_owned())),
                Some(s::IoEnum::OutputBuffer),
                DEBUG_GRAPH,
                steps,
@@ -474,7 +474,7 @@ fn webp_lossy_alpha_roundtrip(){
         }
     ];
 
-    smoke_test(Some(s::IoEnum::Url("https://imageflow-resources.s3-us-west-2.amazonaws.com/test_inputs/1_webp_a.sm.png".to_owned())),
+    smoke_test(Some(s::IoEnum::Url("https://imageflow-resources.s3-us-west-2.amazonaws.com/test_inputs/1_webp_a.webp".to_owned())),
                Some(s::IoEnum::OutputBuffer),
                DEBUG_GRAPH,
                steps,

@@ -24,7 +24,7 @@ use imageflow_helpers::preludes::from_std::ptr::null;
 pub struct WebPDecoder{
     io:  IoProxy,
     bytes: Option<Vec<u8>>,
-    config: Option<WebPDecoderConfig>,
+    config: WebPDecoderConfig,
     features_read: bool
 }
 
@@ -33,7 +33,8 @@ impl WebPDecoder {
         Ok(WebPDecoder{
             io,
             bytes: None,
-            config: None,
+            config: WebPDecoderConfig::new()
+                .expect("Failed to initialize WebPDecoderConfig"),
             features_read: false
         })
     }
@@ -49,28 +50,28 @@ impl WebPDecoder {
 
     pub fn input_width(&self) -> Option<i32>{
         if self.features_read {
-            Some(self.config.unwrap().input.width)
+            Some(self.config.input.width)
         }else{
             None
         }
     }
     pub fn input_height(&self) -> Option<i32>{
         if self.features_read {
-            Some(self.config.unwrap().input.height)
+            Some(self.config.input.height)
         }else{
             None
         }
     }
     pub fn output_width(&self) -> Option<i32>{
-        if self.features_read && self.config.unwrap().options.use_scaling == 1{
-            Some(self.config.unwrap().options.scaled_width)
+        if self.features_read && self.config.options.use_scaling == 1{
+            Some(self.config.options.scaled_width)
         }else{
             self.input_width()
         }
     }
     pub fn output_height(&self) -> Option<i32>{
-        if self.features_read && self.config.unwrap().options.use_scaling == 1{
-            Some(self.config.unwrap().options.scaled_height)
+        if self.features_read && self.config.options.use_scaling == 1{
+            Some(self.config.options.scaled_height)
         }else{
             self.input_height()
         }
@@ -80,9 +81,6 @@ impl WebPDecoder {
 
 impl Decoder for WebPDecoder {
     fn initialize(&mut self, c: &Context) -> Result<()> {
-        self.config = Some(WebPDecoderConfig::new()
-            .expect("Failed to initialize WebPDecoderConfig"));
-
         Ok(())
     }
 
@@ -93,11 +91,12 @@ impl Decoder for WebPDecoder {
             let buf = &self.bytes.as_ref().unwrap(); //Cannot fail after ensure_data_buffered
             let len = buf.len();
             unsafe {
-                let error_code = WebPGetFeatures(buf.as_ptr(), len, &mut self.config.unwrap().input);
+                let error_code = WebPGetFeatures(buf.as_ptr(), len, &mut self.config.input);
                 if error_code != VP8StatusCode::VP8_STATUS_OK {
                     return Err(nerror!(ErrorKind::ImageDecodingError, "libwebp features decoding error {:?}", error_code));
                 }
             }
+            self.features_read = true;
         }
         Ok(s::ImageInfo {
             frame_decodes_into: s::PixelFormat::Bgra32,
@@ -115,9 +114,9 @@ impl Decoder for WebPDecoder {
 
     fn tell_decoder(&mut self, c: &Context, tell: s::DecoderCommand) -> Result<()> {
         if let s::DecoderCommand::WebPDecoderHints(hints) = tell{
-            self.config.unwrap().options.use_scaling = 1;
-            self.config.unwrap().options.scaled_width = hints.width;
-            self.config.unwrap().options.scaled_height = hints.height;
+            self.config.options.use_scaling = 1;
+            self.config.options.scaled_width = hints.width;
+            self.config.options.scaled_height = hints.height;
         }
         Ok(())
     }
@@ -135,17 +134,17 @@ impl Decoder for WebPDecoder {
 
 
             // Specify the desired output colorspace:
-            self.config.unwrap().output.colorspace = MODE_BGRA;
+            self.config.output.colorspace = MODE_BGRA;
             // Have config.output point to an external buffer:
-            self.config.unwrap().output.u.RGBA.rgba = (*copy).pixels;
-            self.config.unwrap().output.u.RGBA.stride = (*copy).stride as i32;
-            self.config.unwrap().output.u.RGBA.size = (*copy).stride as usize * (*copy).h as usize;
-            self.config.unwrap().output.is_external_memory = 1;
+            self.config.output.u.RGBA.rgba = (*copy).pixels;
+            self.config.output.u.RGBA.stride = (*copy).stride as i32;
+            self.config.output.u.RGBA.size = (*copy).stride as usize * (*copy).h as usize;
+            self.config.output.is_external_memory = 1;
 
 
             let len = self.bytes.as_ref().unwrap().len();
 
-            let error_code = WebPDecode(self.bytes.as_ref().unwrap().as_ptr(), len, &mut self.config.unwrap());
+            let error_code = WebPDecode(self.bytes.as_ref().unwrap().as_ptr(), len, &mut self.config);
             if error_code != VP8StatusCode::VP8_STATUS_OK {
                 return Err(nerror!(ErrorKind::ImageDecodingError, "libwebp decoding error {:?}", error_code));
             }

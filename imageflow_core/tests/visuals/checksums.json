@@ -34,7 +34,6 @@
   "encode_pngquant": "0BD7DEBB451A58B0A.png",
   "jpeg_crop": "0227EE691E56BA13A_0FB5487907981932B",
   "mountain_gif_scaled400": "036AA4DCCE19C8DB7_05C9232CFE2672D1C",
-  "webp_lossless_alpha_decode_and_scale": "0FCB5CCEA5ABBFA36_0172196390B512E97",
-  "webp_lossless_decode_and_scale": "0BF1D10BD0B0C5E83_0172197807FCD9F98",
-  "webp_lossy_alpha_decode_and_scale": "0D1D23044A7DC58FF_0172196390B512E97"
+  "webp_lossless_alpha_decode_and_scale": "057FA4CBAC9D0E267_0172196390B512E97",
+  "webp_lossy_alpha_decode_and_scale": "09F54D063249F69C8_0172196390B512E97"
 }

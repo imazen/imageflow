@@ -100,11 +100,12 @@ pub enum NamedEncoders{
     GifEncoder,
     MozJpegEncoder,
     PngQuantEncoder,
-    LodePngEncoder
+    LodePngEncoder,
+    WebPEncoder
 }
 pub struct EnabledCodecs{
     pub decoders: ::smallvec::SmallVec<[NamedDecoders;4]>,
-    pub encoders: ::smallvec::SmallVec<[NamedEncoders;4]>,
+    pub encoders: ::smallvec::SmallVec<[NamedEncoders;8]>,
 }
 impl Default for EnabledCodecs {
     fn default() -> Self {
@@ -112,12 +113,14 @@ impl Default for EnabledCodecs {
             decoders: smallvec::SmallVec::from_slice(
                 &[NamedDecoders::MozJpegDecoder,
                     NamedDecoders::LibPngDecoder,
-                    NamedDecoders::GifRsDecoder]),
+                    NamedDecoders::GifRsDecoder,
+                    NamedDecoders::WebPDecoder]),
             encoders: smallvec::SmallVec::from_slice(
                 &[NamedEncoders::GifEncoder,
                     NamedEncoders::MozJpegEncoder,
                     NamedEncoders::PngQuantEncoder,
-                    NamedEncoders::LodePngEncoder])
+                    NamedEncoders::LodePngEncoder,
+                NamedEncoders::WebPEncoder])
         }
     }
 }
@@ -127,14 +130,16 @@ impl EnabledCodecs{
         self.decoders.retain( |item| item != &decoder);
         self.decoders.insert(0, decoder);
     }
-
+    pub fn disable_decoder(&mut self, decoder: NamedDecoders){
+        self.decoders.retain( |item| item != &decoder);
+    }
     pub fn create_decoder_for_magic_bytes(&self, bytes: &[u8], c: &Context, io: IoProxy, io_id: i32) -> Result<Box<dyn Decoder>>{
         for &decoder in self.decoders.iter(){
             if decoder.works_for_magic_bytes(bytes){
                 return decoder.create(c, io, io_id);
             }
         }
-        return Err(nerror!(ErrorKind::NoDecoderFound,  "No decoder found for file starting in {:X?}", bytes))
+        return Err(nerror!(ErrorKind::NoEnabledDecoderFound,  "No ENABLED decoder found for file starting in {:X?}", bytes))
     }
 }
 
@@ -390,6 +395,7 @@ impl CodecInstanceContainer{
 
              let codec = match *preset {
                  s::EncoderPreset::Gif => {
+                     //TODO: enforce killbits - if c.enabled_codecs.encoders.contains()
                      CodecKind::Encoder(Box::new(gif::GifEncoder::create(c, preset, io, frame)?))
                  },
                  s::EncoderPreset::Pngquant {speed, quality} => {

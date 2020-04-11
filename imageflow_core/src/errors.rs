@@ -176,7 +176,8 @@ pub enum ErrorKind{
     QuantizationError,
     LodepngEncodingError,
     MozjpegEncodingError,
-    NoDecoderFound,
+    CodecDisabledError,
+    NoEnabledDecoderFound,
     DecodingIoError,
     ColorProfileError,
     EncodingIoError,
@@ -219,6 +220,7 @@ impl CategorizedError for ErrorKind{
             ErrorKind::ItemNotFound |
             ErrorKind::DuplicateIoId |
             ErrorKind::LayoutError |
+            ErrorKind::CodecDisabledError |
             ErrorKind::InvalidNodeParams => ErrorCategory::ArgumentInvalid,
 
             ErrorKind::FailedBorrow |
@@ -236,7 +238,7 @@ impl CategorizedError for ErrorKind{
             ErrorKind::GifEncodingError => ErrorCategory::InternalError,
             ErrorKind::GifDecodingError |
             ErrorKind::JpegDecodingError |
-            ErrorKind::NoDecoderFound |
+            ErrorKind::NoEnabledDecoderFound |
             ErrorKind::ImageDecodingError |
             ErrorKind::ColorProfileError => ErrorCategory::ImageMalformed,
             ErrorKind::FetchError |
