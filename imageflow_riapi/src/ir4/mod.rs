@@ -137,7 +137,7 @@ pub struct Ir4Expand{
 
 impl Ir4Expand{
 
-    pub fn get_decode_commands(&self) -> sizing::Result<Option<s::DecoderCommand>> {
+    pub fn get_decode_commands(&self) -> sizing::Result<Option<Vec<s::DecoderCommand>>> {
         let i = self.i.parse()?.parsed;
 
         // Default to gamma correct
@@ -150,13 +150,23 @@ impl Ir4Expand{
 
         let preshrink_ratio = i.min_precise_scaling_ratio.unwrap_or(2.1f64) / downscale_ratio;
 
+        let scaled_width = (f64::from(self.source.w) * preshrink_ratio).floor() as i64;
+        let scaled_height = (f64::from(self.source.h) * preshrink_ratio).floor() as i64;
         if preshrink_ratio < 1f64 {
-            Ok(Some(s::DecoderCommand::JpegDownscaleHints(s::JpegIDCTDownscaleHints {
+            let mut vec = Vec::with_capacity(2);
+            vec.push(s::DecoderCommand::JpegDownscaleHints(s::JpegIDCTDownscaleHints {
                 scale_luma_spatially: Some(gamma_correct),
                 gamma_correct_for_srgb_during_spatial_luma_scaling: Some(gamma_correct),
-                width: (f64::from(self.source.w) * preshrink_ratio).floor() as i64,
-                height: (f64::from(self.source.h) * preshrink_ratio).floor() as i64
-            })))
+                width: scaled_width,
+                height: scaled_height
+            }));
+            if !gamma_correct{
+                vec.push(s::DecoderCommand::WebPDecoderHints(s::WebPDecoderHints{
+                    width: scaled_width as i32,
+                    height: scaled_height as i32,
+                }));
+            }
+            Ok(Some(vec))
         } else {
             Ok(None)
         }

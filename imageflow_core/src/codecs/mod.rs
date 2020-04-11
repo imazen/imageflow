@@ -21,6 +21,7 @@ mod pngquant;
 mod lode;
 mod mozjpeg;
 mod jpeg_decoder;
+mod webp;
 use io::IoProxyRef;
 
 pub trait DecoderFactory{
@@ -60,6 +61,7 @@ pub enum NamedDecoders{
     ImageRsJpegDecoder,
     LibPngDecoder,
     GifRsDecoder,
+    WebPDecoder,
 }
 impl NamedDecoders{
     pub fn works_for_magic_bytes(&self, bytes: &[u8]) -> bool{
@@ -72,6 +74,9 @@ impl NamedDecoders{
             },
             NamedDecoders::LibPngDecoder => {
                 bytes.starts_with( b"\x89\x50\x4E\x47\x0D\x0A\x1A\x0A")
+            },
+            NamedDecoders::WebPDecoder => {
+                bytes.starts_with(b"RIFF") && bytes[8..12].starts_with(b"WEBP")
             }
         }
     }
@@ -82,6 +87,7 @@ impl NamedDecoders{
             NamedDecoders::MozJpegDecoder => Ok(ClassicDecoder::create(c, io, io_id, 3)?),
             NamedDecoders::GifRsDecoder => Ok(Box::new(gif::GifDecoder::create(c, io, io_id)?)),
             NamedDecoders::ImageRsJpegDecoder => Ok(Box::new(jpeg_decoder::JpegDecoder::create(c, io, io_id)?)),
+            NamedDecoders::WebPDecoder => Ok(Box::new(webp::WebPDecoder::create(c, io, io_id)?)),
             NamedDecoders::WICJpegDecoder => {
                 panic!("WIC Jpeg Decoder not implemented"); //TODO, use actual error for this
             }
@@ -159,7 +165,7 @@ impl CodecInstanceContainer {
                     encode_io: Some(io),
                 })
         }else {
-            let mut buffer = [0u8; 8];
+            let mut buffer = [0u8; 12];
             let result = io.read_to_buffer(c, &mut buffer).map_err(|e| e.at(here!()))?;
 
             io.seek(c, 0).map_err(|e| e.at(here!()))?;
@@ -314,6 +320,9 @@ impl Decoder for ClassicDecoder{
                     }
                 }
             },
+            s::DecoderCommand::WebPDecoderHints(hints) =>{
+                Ok(()) // We can safely ignore webp hints
+            }
             s::DecoderCommand::DiscardColorProfile => {
                 self.ignore_color_profile = true;
                 Ok(())

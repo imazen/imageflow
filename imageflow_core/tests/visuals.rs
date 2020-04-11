@@ -415,6 +415,35 @@ fn decode_cmyk_jpeg(){
 }
 
 
+#[test]
+fn webp_lossless_alpha_decode_and_scale() {
+    let matched = compare(Some(s::IoEnum::Url("https://imageflow-resources.s3-us-west-2.amazonaws.com/test_inputs/1_webp_ll.sm.png".to_owned())), 500,
+                          "webp_lossless_alpha_decode_and_scale", POPULATE_CHECKSUMS, DEBUG_GRAPH, vec![
+            s::Node::CommandString{
+                kind: s::CommandStringKind::ImageResizer4,
+                value: "width=100&height=100".to_owned(),
+                decode: Some(0),
+                encode: None
+            }
+        ]
+    );
+    assert!(matched);
+}
+#[test]
+fn webp_lossy_alpha_decode_and_scale() {
+    let matched = compare(Some(s::IoEnum::Url("https://imageflow-resources.s3-us-west-2.amazonaws.com/test_inputs/1_webp_a.sm.png".to_owned())), 500,
+                          "webp_lossy_alpha_decode_and_scale", POPULATE_CHECKSUMS, DEBUG_GRAPH, vec![
+            s::Node::CommandString{
+                kind: s::CommandStringKind::ImageResizer4,
+                value: "width=100&height=100".to_owned(),
+                decode: Some(0),
+                encode: None
+            }
+        ]
+    );
+    assert!(matched);
+}
+
 
 #[test]
 fn smoke_test_gif_ir4(){

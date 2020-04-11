@@ -38,6 +38,7 @@ extern crate mozjpeg;
 extern crate mozjpeg_sys;
 extern crate evalchroma;
 extern crate twox_hash;
+extern crate libwebp_sys;
 
 #[macro_use]
 pub mod errors;

@@ -48,7 +48,7 @@ gif = "*"
 rgb = "0.8.16"
 imagequant = "2.12.5"
 lodepng = "2.4.0"
-
+libwebp-sys = "0.3"
 
 jpeg-decoder = "0.1"
 

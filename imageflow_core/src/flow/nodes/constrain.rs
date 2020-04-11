@@ -58,10 +58,12 @@ impl NodeDef for CommandStringPartiallyExpandedDef{
         } else {
             let e = get_expand(ctx, ix).map_err(|e| e.at(here!()))?;
 
-            if let Some(command) = e.get_decode_commands().map_err(|e|FlowError::from_layout(e).at(here!()))? {
-                //Send command to codec
-                for (io_id, decoder_ix) in ctx.get_decoder_io_ids_and_indexes(ix) {
-                    ctx.job.tell_decoder(io_id, command.clone()).map_err(|e| e.at(here!()))?;
+            if let Some(commands) = e.get_decode_commands().map_err(|e|FlowError::from_layout(e).at(here!()))? {
+                for command in commands {
+                    //Send command to codec
+                    for (io_id, decoder_ix) in ctx.get_decoder_io_ids_and_indexes(ix) {
+                        ctx.job.tell_decoder(io_id, command.clone()).map_err(|e| e.at(here!()))?;
+                    }
                 }
             }
 

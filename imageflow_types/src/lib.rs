@@ -996,10 +996,19 @@ pub struct JpegIDCTDownscaleHints {
     pub scale_luma_spatially: Option<bool>,
     pub gamma_correct_for_srgb_during_spatial_luma_scaling: Option<bool>,
 }
+
+#[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
+pub struct WebPDecoderHints {
+    pub width: i32,
+    pub height: i32,
+}
+
 #[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
 pub enum DecoderCommand {
     #[serde(rename="jpeg_downscale_hints")]
     JpegDownscaleHints(JpegIDCTDownscaleHints),
+    #[serde(rename="webp_decoder_hints")]
+    WebPDecoderHints(WebPDecoderHints),
     #[serde(rename="discard_color_profile")]
     DiscardColorProfile
 }

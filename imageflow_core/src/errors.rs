@@ -170,6 +170,8 @@ pub enum ErrorKind{
     AllocationFailed,
     GifDecodingError,
     GifEncodingError,
+    ImageDecodingError,
+    ImageEncodingError,
     JpegDecodingError,
     QuantizationError,
     LodepngEncodingError,
@@ -230,10 +232,12 @@ impl CategorizedError for ErrorKind{
             ErrorKind::QuantizationError |
             ErrorKind::LodepngEncodingError |
             ErrorKind::MozjpegEncodingError |
+            ErrorKind::ImageEncodingError |
             ErrorKind::GifEncodingError => ErrorCategory::InternalError,
             ErrorKind::GifDecodingError |
             ErrorKind::JpegDecodingError |
             ErrorKind::NoDecoderFound |
+            ErrorKind::ImageDecodingError |
             ErrorKind::ColorProfileError => ErrorCategory::ImageMalformed,
             ErrorKind::FetchError |
             ErrorKind::DecodingIoError |
@@ -339,7 +343,14 @@ impl FlowError {
         }
 
     }
+    pub fn from_decoder(e: ::std::io::Error) -> Self{
+        if e.kind() == ::std::io::ErrorKind::InvalidInput{
+            FlowError::without_location(ErrorKind::InternalError, format!("{:?}", e))
+        }else{
+            FlowError::without_location(ErrorKind::DecodingIoError, format!("{:?}", e))
+        }
 
+    }
 }
 
 
