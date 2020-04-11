@@ -76,12 +76,10 @@ install:
   - echo Fetching %RUSTUP_INIT%
   - curl -L -o  rustup-init.exe %RUSTUP_INIT%
   - rustup-init.exe -y --default-toolchain %RUST_TOOLCHAIN% --default-host %RUST_TARGET%
-  - set PATH=%PATH%;C:\Program Files (x86)\nasm;%USERPROFILE%\.cargo\bin;%LOCALAPPDATA%\bin\NASM
+  - set PATH=%PATH%;C:\Program Files\NASM;C:\Program Files (x86)\nasm;%USERPROFILE%\.cargo\bin;%LOCALAPPDATA%\bin\NASM
   - rustc --version --verbose
   - echo. && echo. && echo Installing NASM
   - choco install nasm
-  - where /r C:\ nasm.exe
-
 test_script:
   - if NOT "%CI_TAG%"=="" echo Purging build files for %CI_TAG%
   - if NOT "%CI_TAG%"=="" rmdir /s /q target || exit 0
