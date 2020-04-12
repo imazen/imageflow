@@ -1,13 +1,13 @@
 #![allow(bad_style)]
 #![allow(unused, deprecated)]
-use preludes::from_std::*;
+use crate::preludes::from_std::*;
 use num::{One, Zero};
 use num::bigint::{BigInt, Sign};
 use sha2::{Sha512, Digest};
 use chrono::{DateTime, Utc};
 use unicase::UniCase;
-use errors::*;
-use errors::Result;
+use crate::errors::*;
+use crate::errors::Result;
 use smallvec::SmallVec;
 use std::iter::FromIterator;
 use std::ascii::AsciiExt;

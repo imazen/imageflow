@@ -18,7 +18,7 @@ extern crate lazy_static;
 use std::sync::Mutex;
 
 use imageflow_helpers::process_testing::*;
-use fc::test_helpers::process_testing::ProcTestContextExtras;
+use crate::fc::test_helpers::process_testing::ProcTestContextExtras;
 use imageflow_helpers::fetching::{fetch, fetch_bytes,get_status_code_for, FetchError, FetchConfig};
 
 use std::collections::vec_deque::VecDeque;
@@ -43,8 +43,8 @@ fn assert_valid_image(url: &str) {
 //}
 
 fn build_dirs() -> Vec<PathBuf>{
-    let target_triple = ::s::version::get_build_env_value("TARGET").expect("TARGET triple required");
-    let profile = ::s::version::get_build_env_value("PROFILE").expect("PROFILE (debug/release) required");
+    let target_triple = crate::s::version::get_build_env_value("TARGET").expect("TARGET triple required");
+    let profile = crate::s::version::get_build_env_value("PROFILE").expect("PROFILE (debug/release) required");
 
 
     let target_dir = Path::new(env!("CARGO_MANIFEST_DIR")).parent().unwrap().join("target");

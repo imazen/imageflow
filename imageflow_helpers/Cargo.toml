@@ -3,6 +3,7 @@ name = "imageflow_helpers"
 version = "0.1.0"
 authors = ["Lilith River <lilith@imazen.io>"]
 workspace = "../"
+edition = "2018"
 
 [dependencies]
 libc = "0.2"

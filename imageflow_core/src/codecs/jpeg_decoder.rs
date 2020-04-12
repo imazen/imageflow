@@ -1,20 +1,18 @@
 use std;
-use for_other_imageflow_crates::preludes::external_without_std::*;
-use ffi;
-use ::{Context, CError,  Result, JsonResponse};
-use ffi::CodecInstance;
-use ffi::BitmapBgra;
+use crate::for_other_imageflow_crates::preludes::external_without_std::*;
+use crate::ffi;
+use crate::{Context, CError,  Result, JsonResponse};
+use crate::ffi::CodecInstance;
+use crate::ffi::BitmapBgra;
 use imageflow_types::collections::AddRemoveSet;
-use io::IoProxy;
+use crate::io::IoProxy;
 use uuid::Uuid;
 use imageflow_types::IoDirection;
 use super::*;
 use std::any::Any;
-use gif::Frame;
-use gif::SetParameter;
 use std::rc::Rc;
-use io::IoProxyProxy;
-use io::IoProxyRef;
+use crate::io::IoProxyProxy;
+use crate::io::IoProxyRef;
 use rgb::alt::BGRA8;
 
 extern crate jpeg_decoder as jpeg;

@@ -1,7 +1,7 @@
 use imageflow_helpers::preludes::from_std::*;
 use imageflow_core::clients::stateless;
 use imageflow_core::clients::fluent;
-use s;
+use crate::s;
 use rustc_serialize::base64::FromBase64;
 
 

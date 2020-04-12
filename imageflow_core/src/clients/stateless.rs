@@ -5,13 +5,13 @@
 //! It would be nice for this to go away or be merged with Context
 //!
 
-use Context;
-use JsonResponse;
-use ErrorCategory;
-use errors::PanicFormatter;
+use crate::Context;
+use crate::JsonResponse;
+use crate::ErrorCategory;
+use crate::errors::PanicFormatter;
 
 pub use imageflow_types::Framewise;
-use internal_prelude::works_everywhere::*;
+use crate::internal_prelude::works_everywhere::*;
 
 #[derive(Default)]
 pub struct LibClient {
@@ -56,8 +56,8 @@ pub enum BuildFailure {
     Error { httpish_code: i32, message: String },
 }
 
-impl From<::FlowError> for BuildFailure {
-    fn from(e: ::FlowError) -> BuildFailure {
+impl From<crate::FlowError> for BuildFailure {
+    fn from(e: crate::FlowError) -> BuildFailure {
         match e.category() {
             ErrorCategory::OutOfMemory => BuildFailure::OutOfMemory,
             other => {

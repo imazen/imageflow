@@ -50,7 +50,7 @@ pub mod diagnose;
 mod requested_path;
 extern crate url;
 
-use disk_cache::{CacheFolder,  FolderLayout};
+use crate::disk_cache::{CacheFolder,  FolderLayout};
 use logger::Logger;
 
 pub mod preludes {

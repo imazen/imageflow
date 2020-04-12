@@ -1,14 +1,14 @@
 use std;
 use std::sync::*;
-use for_other_imageflow_crates::preludes::external_without_std::*;
-use ffi;
-use ::{Context, CError, Result, JsonResponse, ErrorKind, FlowError, ErrorCategory};
-use ffi::CodecInstance;
-use ffi::BitmapBgra;
-use ffi::DecoderColorInfo;
-use ffi::ColorProfileSource;
+use crate::for_other_imageflow_crates::preludes::external_without_std::*;
+use crate::ffi;
+use crate::{Context, CError, Result, JsonResponse, ErrorKind, FlowError, ErrorCategory};
+use crate::ffi::CodecInstance;
+use crate::ffi::BitmapBgra;
+use crate::ffi::DecoderColorInfo;
+use crate::ffi::ColorProfileSource;
 use imageflow_types::collections::AddRemoveSet;
-use io::IoProxy;
+use crate::io::IoProxy;
 use uuid::Uuid;
 use imageflow_types::IoDirection;
 use std::borrow::BorrowMut;
@@ -22,7 +22,7 @@ mod lode;
 mod mozjpeg;
 mod jpeg_decoder;
 mod webp;
-use io::IoProxyRef;
+use crate::io::IoProxyRef;
 
 pub trait DecoderFactory{
     fn create(c: &Context, io: &mut IoProxy, io_id: i32) -> Option<Result<Box<dyn Decoder>>>;
@@ -220,7 +220,7 @@ impl ClassicDecoder {
 impl Decoder for ClassicDecoder{
     fn initialize(&mut self, c: &Context) -> Result<()>{
         unsafe {
-            if !::ffi::flow_codec_initialize(c.flow_c(), &mut self.classic as *mut CodecInstance) {
+            if !crate::ffi::flow_codec_initialize(c.flow_c(), &mut self.classic as *mut CodecInstance) {
                 return Err(cerror!(c));
             }
 
@@ -233,9 +233,9 @@ impl Decoder for ClassicDecoder{
         unsafe {
             let classic = &self.classic;
 
-            let mut info: ::ffi::DecoderInfo = ::ffi::DecoderInfo { ..Default::default() };
+            let mut info: crate::ffi::DecoderInfo = crate::ffi::DecoderInfo { ..Default::default() };
 
-            if !::ffi::flow_codec_decoder_get_info(c.flow_c(), classic.codec_state, classic.codec_id, &mut info ){
+            if !crate::ffi::flow_codec_decoder_get_info(c.flow_c(), classic.codec_state, classic.codec_id, &mut info ){
                 Err(cerror!(c))
             }else {
                 Ok(s::ImageInfo {
@@ -311,7 +311,7 @@ impl Decoder for ClassicDecoder{
 
         match tell {
             s::DecoderCommand::JpegDownscaleHints(hints) => {
-                let h = ::ffi::DecoderDownscaleHints {
+                let h = crate::ffi::DecoderDownscaleHints {
                     downscale_if_wider_than: hints.width,
                     downscaled_min_width: hints.width,
                     or_if_taller_than: hints.height,
@@ -321,7 +321,7 @@ impl Decoder for ClassicDecoder{
                 };
                 unsafe {
 
-                    if !::ffi::flow_codec_decoder_set_downscale_hints(c.flow_c(), classic as *mut CodecInstance, &h, false) {
+                    if !crate::ffi::flow_codec_decoder_set_downscale_hints(c.flow_c(), classic as *mut CodecInstance, &h, false) {
                         Err(cerror!(c))
                     } else {
                         Ok(())
@@ -376,7 +376,7 @@ impl Encoder for LibpngEncoder{
             };
 
             unsafe {
-                if !::ffi::flow_bitmap_bgra_write_png_with_hints(c.flow_c(), frame as *mut BitmapBgra, self.io.get_io_ptr(),
+                if !crate::ffi::flow_bitmap_bgra_write_png_with_hints(c.flow_c(), frame as *mut BitmapBgra, self.io.get_io_ptr(),
                                                                  &hints as *const ffi::EncoderHints) {
                     return Err(cerror!(c))?
                 }

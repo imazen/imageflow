@@ -122,12 +122,12 @@ extern crate imageflow_core as c;
 extern crate libc;
 extern crate smallvec;
 extern crate backtrace;
-use c::ffi;
+use crate::c::ffi;
 
-pub use c::{Context, ErrorCategory};
-pub use c::ffi::ImageflowJsonResponse as JsonResponse;
+pub use crate::c::{Context, ErrorCategory};
+pub use crate::c::ffi::ImageflowJsonResponse as JsonResponse;
 //use c::IoDirection;
-use c::{ErrorKind, CodeLocation, FlowError};
+use crate::c::{ErrorKind, CodeLocation, FlowError};
 use std::ptr;
 use std::panic::{catch_unwind, AssertUnwindSafe};
 #[cfg(test)]
@@ -417,7 +417,7 @@ pub extern "C" fn imageflow_context_error_write_to_buffer(context: *mut Context,
     if buffer.is_null(){
         false
     }else {
-        use c::errors::writing_to_slices::WriteResult;
+        use crate::c::errors::writing_to_slices::WriteResult;
         let c = context!(context);
 
         if buffer_length.leading_zeros() == 0{
@@ -597,7 +597,7 @@ pub fn create_abi_json_response(c: &mut Context,
         let sizeof_struct = std::mem::size_of::<JsonResponse>();
         let alloc_size = sizeof_struct + json_bytes.len();
 
-        let pointer = ::ffi::flow_context_calloc(c.flow_c(),
+        let pointer = crate::ffi::flow_context_calloc(c.flow_c(),
                                                  1,
                                                  alloc_size,
                                                  ptr::null(),

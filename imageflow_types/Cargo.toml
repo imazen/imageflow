@@ -4,6 +4,7 @@ version = "0.1.0"
 authors = ["Lilith River <lilith@imazen.io>"]
 workspace = "../"
 build = "build.rs"
+edition = "2018"
 
 [lib]
 name="imageflow_types"

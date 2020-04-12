@@ -148,7 +148,7 @@ pub struct DefaultClock{
 }
 impl AppClock for DefaultClock{
     fn get_timestamp_ticks(&self) -> u64 {
-        ::timeywimey::precise_time_ns()
+        crate::timeywimey::precise_time_ns()
     }
 
     fn ticks_per_second(&self) -> u64 {
@@ -197,7 +197,7 @@ pub struct Issue{
 
 impl Issue{
     pub fn new(kind: IssueKind, message: String, detail:String, source: &'static str) -> Self{
-        let hash = ::hashing::hash_64(message.as_bytes());
+        let hash = crate::hashing::hash_64(message.as_bytes());
         Issue{
             hash,
             message,

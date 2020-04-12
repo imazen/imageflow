@@ -1,10 +1,10 @@
-use preludes::from_std::*;
+use crate::preludes::from_std::*;
 use std;
 use std::fmt;
 use reqwest;
 use hyper;
 use reqwest::{Client, Certificate};
-use filesystem::read_file_bytes;
+use crate::filesystem::read_file_bytes;
 
 
 #[derive(Debug)]

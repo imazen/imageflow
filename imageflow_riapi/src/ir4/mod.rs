@@ -4,10 +4,10 @@ use imageflow_types as s;
 pub mod parsing;
 mod layout;
 
-use sizing;
-use sizing::prelude::*;
-use ir4::parsing::*;
-use ir4::layout::*;
+use crate::sizing;
+use crate::sizing::prelude::*;
+use crate::ir4::parsing::*;
+use crate::ir4::layout::*;
 
 pub enum Ir4Command{
     Instructions(Box<Instructions>),
@@ -66,7 +66,7 @@ impl Ir4Translate{
 
     pub fn translate(&self) -> sizing::Result<Ir4Result> {
         let mut r = self.i.parse()?;
-        let mut b = ::ir4::layout::FramewiseBuilder::new();
+        let mut b = crate::ir4::layout::FramewiseBuilder::new();
         //Expand decoder early if trimming
         let delayed_id = if r.parsed.trim_whitespace_threshold.is_some() {
             if let Some(n) = self.get_decode_node() {

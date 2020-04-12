@@ -97,7 +97,7 @@ impl LicensePair{
     pub fn new(placeholder: LicenseBlob) -> Result<Self>{
         let id =  placeholder.fields().id().to_owned();
         let secret = placeholder.fields().secret().ok_or_else(|| "Remote placeholder license does not contain required field 'secret'.")?.to_owned();
-        let cache_key = format!("{}_{:x}", &id, ::hashing::hash_64(secret.as_bytes()));
+        let cache_key = format!("{}_{:x}", &id, crate::hashing::hash_64(secret.as_bytes()));
         Ok(LicensePair{
             id,
             secret,

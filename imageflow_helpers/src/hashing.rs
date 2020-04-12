@@ -1,6 +1,6 @@
 use blake2_rfc::blake2b::{ blake2b};
 use std;
-use preludes::from_std::*;
+use crate::preludes::from_std::*;
 use std::path::MAIN_SEPARATOR;
 use regex::{Regex,Captures};
 use twox_hash::XxHash;

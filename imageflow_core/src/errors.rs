@@ -1,13 +1,13 @@
 use std;
 use std::fmt;
-use context::Context;
+use crate::context::Context;
 use std::borrow::Cow;
 use std::any::Any;
 use std::io::Write;
 use std::io;
 use std::cmp;
 use num::FromPrimitive;
-use ffi;
+use crate::ffi;
 use std::ffi::CStr;
 use std::ptr;
 use imageflow_riapi::sizing::LayoutError;
@@ -24,7 +24,7 @@ fn test_file_macro_for_this_build(){
 #[macro_export]
 macro_rules! here {
     () => (
-        ::CodeLocation::new(file!(), line!(), column!())
+        crate::CodeLocation::new(file!(), line!(), column!())
     );
 }
 
@@ -50,7 +50,7 @@ macro_rules! loc {
 #[macro_export]
 macro_rules! nerror {
     ($kind:expr) => (
-        ::FlowError{
+        crate::FlowError{
             kind: $kind,
             message: String::new(), // If .message() is needed after all, then crate_enum_derive on ErrorKind and switch message to Cow<>
             at: ::smallvec::SmallVec::new(),
@@ -58,7 +58,7 @@ macro_rules! nerror {
         }.at(here!())
     );
     ($kind:expr, $fmt:expr) => (
-        ::FlowError{
+        crate::FlowError{
             kind: $kind,
             message:  format!(concat!("{:?}: ",$fmt ), $kind,),
             at: ::smallvec::SmallVec::new(),
@@ -66,7 +66,7 @@ macro_rules! nerror {
         }.at(here!())
     );
     ($kind:expr, $fmt:expr, $($arg:tt)*) => (
-        ::FlowError{
+        crate::FlowError{
             kind: $kind,
             message:  format!(concat!("{:?}: ", $fmt), $kind, $($arg)*),
             at: ::smallvec::SmallVec::new(),
@@ -79,17 +79,17 @@ macro_rules! nerror {
 #[macro_export]
 macro_rules! unimpl {
     () => (
-        ::FlowError{
-            kind: ::ErrorKind::MethodNotImplemented,
+        crate::FlowError{
+            kind: crate::ErrorKind::MethodNotImplemented,
             message: String::new(),
             at: ::smallvec::SmallVec::new(),
             node: None
         }.at(here!())
     );
     ($fmt:expr) => (
-        ::FlowError{
-            kind: ::ErrorKind::MethodNotImplemented,
-            message: format!(concat!("{:?}: ",$fmt ), ::ErrorKind::MethodNotImplemented),
+        crate::FlowError{
+            kind: crate::ErrorKind::MethodNotImplemented,
+            message: format!(concat!("{:?}: ",$fmt ), crate::ErrorKind::MethodNotImplemented),
             at: ::smallvec::SmallVec::new(),
             node: None
         }.at(here!())
@@ -105,8 +105,8 @@ macro_rules! unimpl {
 macro_rules! cerror {
     ($context:expr) => {{
         let cerr = $ context.c_error().require();
-        ::FlowError{
-            kind: ::ErrorKind::CError(cerr.status()),
+        crate::FlowError{
+            kind: crate::ErrorKind::CError(cerr.status()),
             message: cerr.into_string(), // String::new() is zero-alloc (always on OOM)
             at: ::smallvec::SmallVec::new(),
             node: None
@@ -114,8 +114,8 @@ macro_rules! cerror {
     }};
     ($context:expr, $fmt:expr) => {{
         let cerr = $context.c_error().require();
-        ::FlowError{
-            kind: ::ErrorKind::CError(cerr.status()),
+        crate::FlowError{
+            kind: crate::ErrorKind::CError(cerr.status()),
             message: if cerr.is_oom() {
                         cerr.into_string()
                      }else {
@@ -127,8 +127,8 @@ macro_rules! cerror {
     }};
     ($context:expr, $fmt:expr, $($arg:tt)*) => {{
         let cerr = $context.c_error().require();
-        ::FlowError{
-            kind: ::ErrorKind::CError(cerr.status()),
+        crate::FlowError{
+            kind: crate::ErrorKind::CError(cerr.status()),
             message: if cerr.is_oom() {
                         cerr.into_string()
                      }else {
@@ -144,8 +144,8 @@ macro_rules! cerror {
 #[macro_export]
 macro_rules! err_oom {
     () => (
-        ::FlowError{
-            kind: ::ErrorKind::AllocationFailed,
+        crate::FlowError{
+            kind: crate::ErrorKind::AllocationFailed,
             message: String::new(),
             at: ::smallvec::SmallVec::new(),
             node: None
@@ -292,7 +292,7 @@ pub struct FlowError {
     pub kind: ErrorKind,
     pub message: String,
     pub at: ::smallvec::SmallVec<[CodeLocation;1]>,
-    pub node: Option<Box<::flow::definitions::NodeDebugInfo>>
+    pub node: Option<Box<crate::flow::definitions::NodeDebugInfo>>
 }
 
 
@@ -1104,7 +1104,7 @@ impl CErrorProxy {
             let mut buf = vec![0u8; 2048];
 
             let chars_written =
-                ::ffi::flow_context_error_and_stacktrace(self.c_ctx, buf.as_mut_ptr(), buf.len(), false);
+                crate::ffi::flow_context_error_and_stacktrace(self.c_ctx, buf.as_mut_ptr(), buf.len(), false);
 
             if chars_written < 0 {
                 //TODO: Retry until it fits

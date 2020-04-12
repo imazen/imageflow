@@ -1,17 +1,17 @@
 use super::Encoder;
 use super::s::{EncoderPreset, EncodeResult};
-use io::IoProxy;
-use ffi::BitmapBgra;
+use crate::io::IoProxy;
+use crate::ffi::BitmapBgra;
 use imageflow_types::PixelFormat;
-use ::{Context, Result, ErrorKind};
+use crate::{Context, Result, ErrorKind};
 use std::result::Result as StdResult;
-use io::IoProxyRef;
+use crate::io::IoProxyRef;
 use std::slice;
 use std::rc::Rc;
 use std::cell::RefCell;
 use std::os::raw::c_int;
 use imagequant;
-use codecs::lode;
+use crate::codecs::lode;
 
 pub struct PngquantEncoder {
     liq: imagequant::Attributes,

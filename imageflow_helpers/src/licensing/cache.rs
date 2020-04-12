@@ -1,4 +1,4 @@
-use preludes::from_std::*;
+use crate::preludes::from_std::*;
 use app_dirs::*;
 
 use super::super::util::*;
@@ -169,8 +169,8 @@ impl WriteThroughCache{
         }
     }
     fn hash_to_base16(data: &str) -> String{
-        let hash = ::hashing::hash_256(data.as_bytes());
-        ::hashing::bytes_to_hex(&hash)
+        let hash = crate::hashing::hash_256(data.as_bytes());
+        crate::hashing::bytes_to_hex(&hash)
     }
 
     fn filename_key_for(&self, key: &str) -> String{

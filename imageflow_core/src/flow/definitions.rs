@@ -1,11 +1,11 @@
-use ffi::{ImageflowContext, BitmapBgra};
-pub use ffi::EdgeKind;
-pub use ffi::PixelFormat;
-use Context;
-use flow::nodes;
-use internal_prelude::works_everywhere::*;
+use crate::ffi::{ImageflowContext, BitmapBgra};
+pub use crate::ffi::EdgeKind;
+pub use crate::ffi::PixelFormat;
+use crate::Context;
+use crate::flow::nodes;
+use crate::internal_prelude::works_everywhere::*;
 use std::any::Any;
-use flow::nodes::*;
+use crate::flow::nodes::*;
 
 pub type Graph = Dag<Node, EdgeKind>;
 
@@ -456,7 +456,7 @@ pub enum NodeParamsInternal {
         sharpen_percent_goal: Option<f32>,
         transpose_on_write: bool,
         matte_color: Option<s::Color>,
-        compositing_mode: ::ffi::BitmapCompositingMode,
+        compositing_mode: crate::ffi::BitmapCompositingMode,
     },
 }
 /// In case we ever need more than s::Node

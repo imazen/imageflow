@@ -25,7 +25,7 @@ impl NodeDefMutateBitmap for ColorMatrixSrgbMutDef{
             unsafe {
                 let color_matrix_ptrs = matrix.iter().map(|row| row as *const f32).collect::<Vec<*const f32>>();
 
-                if !::ffi::flow_bitmap_bgra_apply_color_matrix(c.flow_c(), bitmap, 0, (*bitmap).h, color_matrix_ptrs.as_ptr()) {
+                if !crate::ffi::flow_bitmap_bgra_apply_color_matrix(c.flow_c(), bitmap, 0, (*bitmap).h, color_matrix_ptrs.as_ptr()) {
                     return Err(cerror!(c, "Failed to apply color matrix"))
                 }
 
@@ -34,7 +34,7 @@ impl NodeDefMutateBitmap for ColorMatrixSrgbMutDef{
             }
             Ok(())
         } else {
-            Err(nerror!(::ErrorKind::NodeParamsMismatch, "Need ColorMatrixSrgb, got {:?}", p))
+            Err(nerror!(crate::ErrorKind::NodeParamsMismatch, "Need ColorMatrixSrgb, got {:?}", p))
         }
     }
 }
@@ -69,7 +69,7 @@ impl NodeDefOneInputExpand for ColorFilterSrgb{
                                                 NodeParams::Json(s::Node::ColorMatrixSrgb { matrix: matrix }))]);
             Ok(())
         }else{
-            Err(nerror!(::ErrorKind::NodeParamsMismatch, "Need ColorFilterSrgb, got {:?}", p))
+            Err(nerror!(crate::ErrorKind::NodeParamsMismatch, "Need ColorFilterSrgb, got {:?}", p))
         }
     }
 }

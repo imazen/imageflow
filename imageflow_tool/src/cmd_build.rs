@@ -1,5 +1,5 @@
-use fc;
-use s;
+use crate::fc;
+use crate::s;
 use serde_json;
 use std;
 extern crate serde;
@@ -8,8 +8,8 @@ use std::collections::HashMap;
 use std::fs::File;
 use std::path::{Path};
 use std::io::{Write, Read, BufWriter};
-use fc::{JsonResponse,  ErrorCategory};
-use fc::errors::CategorizedError;
+use crate::fc::{JsonResponse,  ErrorCategory};
+use crate::fc::errors::CategorizedError;
 
 pub enum JobSource {
     JsonFile(String),

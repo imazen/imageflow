@@ -1,5 +1,5 @@
 use std;
-use preludes::from_std::*;
+use crate::preludes::from_std::*;
 
 use std::process::{Command, Output};
 

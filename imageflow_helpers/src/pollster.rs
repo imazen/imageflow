@@ -1,7 +1,7 @@
 // Single thread
 // shared data structure for adding endpoints
 // Endpoints callback
-use ::preludes::from_std::*;
+use crate::preludes::from_std::*;
 use ::std;
 use std::thread;
 use std::thread::JoinHandle;
@@ -216,10 +216,10 @@ impl SharedToken{
         }
     }
     pub fn wait_for_fetches_ms(&self, fetch_count: usize, timeout_milliseconds: u64) -> bool{
-        let started_at = ::timeywimey::precise_time_ns();
+        let started_at = crate::timeywimey::precise_time_ns();
         let mut fetched = self.licenses_fetched.lock();
         while *fetched < fetch_count{
-            let now = ::timeywimey::precise_time_ns();
+            let now = crate::timeywimey::precise_time_ns();
             let wait_until = started_at + timeout_milliseconds * 1000000;
             if wait_until < now {
                 return *fetched >= fetch_count;

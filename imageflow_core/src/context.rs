@@ -1,17 +1,17 @@
 use std;
-use for_other_imageflow_crates::preludes::external_without_std::*;
-use ffi;
-use ::{CError, JsonResponse, ErrorKind, FlowError, Result};
-use io::IoProxy;
-use flow::definitions::Graph;
+use crate::for_other_imageflow_crates::preludes::external_without_std::*;
+use crate::ffi;
+use crate::{CError, JsonResponse, ErrorKind, FlowError, Result};
+use crate::io::IoProxy;
+use crate::flow::definitions::Graph;
 use std::any::Any;
 use imageflow_types::collections::AddRemoveSet;
-use ffi::ImageflowJsonResponse;
-use errors::{OutwardErrorBuffer, CErrorProxy};
+use crate::ffi::ImageflowJsonResponse;
+use crate::errors::{OutwardErrorBuffer, CErrorProxy};
 
-use codecs::CodecInstanceContainer;
-use codecs::EnabledCodecs;
-use ffi::IoDirection;
+use crate::codecs::CodecInstanceContainer;
+use crate::codecs::EnabledCodecs;
+use crate::ffi::IoDirection;
 
 /// Something of a God object (which is necessary for a reasonable FFI interface).
 pub struct Context {
@@ -105,7 +105,7 @@ impl Context {
 
 
     pub fn message(&mut self, method: &str, json: &[u8]) -> (JsonResponse, Result<()>) {
-        ::context_methods::CONTEXT_ROUTER.invoke(self, method, json)
+        crate::context_methods::CONTEXT_ROUTER.invoke(self, method, json)
     }
 
 
@@ -135,12 +135,12 @@ impl Context {
 
     pub fn add_file(&mut self, io_id: i32, direction: IoDirection, path: &str) -> Result<()> {
         let mode = match direction {
-            s::IoDirection::In => ::ffi::IoMode::ReadSeekable,
-            s::IoDirection::Out => ::ffi::IoMode::WriteSeekable,
+            s::IoDirection::In => crate::ffi::IoMode::ReadSeekable,
+            s::IoDirection::Out => crate::ffi::IoMode::WriteSeekable,
         };
         self.add_file_with_mode(io_id, direction, path, mode).map_err(|e| e.at(here!()))
     }
-    pub fn add_file_with_mode(&mut self, io_id: i32, direction: IoDirection, path: &str, mode: ::IoMode) -> Result<()> {
+    pub fn add_file_with_mode(&mut self, io_id: i32, direction: IoDirection, path: &str, mode: crate::IoMode) -> Result<()> {
         if direction == IoDirection::In && !mode.can_read() {
             return Err(nerror!(ErrorKind::InvalidArgument, "You cannot add an input file with an IoMode that can't read"));
         }
@@ -208,7 +208,7 @@ impl Context {
 
     /// For executing a complete job
     pub fn build_1(&mut self, parsed: s::Build001) -> Result<s::ResponsePayload> {
-        let g = ::parsing::GraphTranslator::new().translate_framewise(parsed.framewise).map_err(|e| e.at(here!())) ?;
+        let g = crate::parsing::GraphTranslator::new().translate_framewise(parsed.framewise).map_err(|e| e.at(here!())) ?;
 
 
         if let Some(s::Build001Config { graph_recording, .. }) = parsed.builder_config {
@@ -217,9 +217,9 @@ impl Context {
             }
         }
 
-        ::parsing::IoTranslator{}.add_all( self, parsed.io.clone())?;
+        crate::parsing::IoTranslator{}.add_all( self, parsed.io.clone())?;
 
-        let mut engine = ::flow::execution_engine::Engine::create(self, g);
+        let mut engine = crate::flow::execution_engine::Engine::create(self, g);
 
         let perf = engine.execute_many().map_err(|e| e.at(here!())) ?;
 
@@ -239,11 +239,11 @@ impl Context {
 
     /// For executing an operation graph (assumes you have already configured the context with IO sources/destinations as needed)
     pub fn execute_1(&mut self, what: s::Execute001) -> Result<s::ResponsePayload>{
-        let g = ::parsing::GraphTranslator::new().translate_framewise(what.framewise).map_err(|e| e.at(here!()))?;
+        let g = crate::parsing::GraphTranslator::new().translate_framewise(what.framewise).map_err(|e| e.at(here!()))?;
         if let Some(r) = what.graph_recording {
             self.configure_graph_recording(r);
         }
-        let mut engine = ::flow::execution_engine::Engine::create(self, g);
+        let mut engine = crate::flow::execution_engine::Engine::create(self, g);
 
         let perf = engine.execute_many().map_err(|e| e.at(here!()))?;
 

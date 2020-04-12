@@ -1,10 +1,10 @@
 use super::Encoder;
 use super::s::{EncoderPreset, EncodeResult};
-use io::IoProxy;
-use ffi::BitmapBgra;
+use crate::io::IoProxy;
+use crate::ffi::BitmapBgra;
 use imageflow_types::PixelFormat;
-use ::{Context, Result, ErrorKind, FlowError};
-use io::IoProxyRef;
+use crate::{Context, Result, ErrorKind, FlowError};
+use crate::io::IoProxyRef;
 use std::slice;
 use std::io::Write;
 use std::rc::Rc;

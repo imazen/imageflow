@@ -1,12 +1,12 @@
-use internal_prelude::works_everywhere::*;
-use clients::stateless;
+use crate::internal_prelude::works_everywhere::*;
+use crate::clients::stateless;
 
 
 pub mod process_testing {
-    use ::internal_prelude::works_everywhere::*;
+    use crate::internal_prelude::works_everywhere::*;
     use ::imageflow_helpers::process_testing::*;
     use super::*;
-    use ::clients::stateless;
+    use crate::clients::stateless;
 
 
     pub trait ProcTestContextExtras {
@@ -106,7 +106,7 @@ impl BlankImage{
             export_graphs_to: None, /* Some(std::path::PathBuf::from(format!("./{}/{}_debug", dir, filename_without_ext))) */
         };
 
-        let result = ::clients::stateless::LibClient::new().build(req).unwrap();
+        let result = crate::clients::stateless::LibClient::new().build(req).unwrap();
         result.outputs.into_iter().next().unwrap()
     }
 }

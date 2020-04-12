@@ -1,7 +1,7 @@
 use imageflow_helpers::preludes::from_std::*;
 use std;
-use sizing::{steps, BoxParam, BoxTarget, AspectRatio, Cond, Step, Layout, LayoutError, BoxKind};
-use sizing;
+use crate::sizing::{steps, BoxParam, BoxTarget, AspectRatio, Cond, Step, Layout, LayoutError, BoxKind};
+use crate::sizing;
 
 #[derive(Copy, Clone, PartialEq, Debug)]
 enum Strategy {

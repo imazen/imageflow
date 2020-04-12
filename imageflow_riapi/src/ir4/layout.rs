@@ -1,9 +1,9 @@
 use imageflow_helpers::preludes::from_std::*;
 use std;
 use imageflow_types as s;
-use sizing;
-use sizing::prelude::*;
-use ir4::parsing::*;
+use crate::sizing;
+use crate::sizing::prelude::*;
+use crate::ir4::parsing::*;
 
 
 pub struct Ir4Layout{

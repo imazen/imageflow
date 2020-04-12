@@ -40,7 +40,7 @@ impl NodeDefOneInputExpand for ApplyOrientationDef{
                 })
             })
         } else {
-            Err(nerror!(::ErrorKind::NodeParamsMismatch, "Need ApplyOrientation, got {:?}", p))
+            Err(nerror!(crate::ErrorKind::NodeParamsMismatch, "Need ApplyOrientation, got {:?}", p))
         }
     }
 
@@ -62,7 +62,7 @@ impl NodeDefOneInputExpand for ApplyOrientationDef{
                                  .collect());
             Ok(())
         } else {
-            Err(nerror!(::ErrorKind::NodeParamsMismatch, "Need ApplyOrientation, got {:?}", p))
+            Err(nerror!(crate::ErrorKind::NodeParamsMismatch, "Need ApplyOrientation, got {:?}", p))
         }
     }
 }
@@ -148,7 +148,7 @@ impl NodeDefOneInputOneCanvas for TransposeMutDef {
                 panic!("Canvas and input must be different bitmaps for transpose to work!")
             }
 
-            if !::ffi::flow_bitmap_bgra_transpose(c.flow_c(), input as *mut BitmapBgra, canvas as *mut BitmapBgra) {
+            if !crate::ffi::flow_bitmap_bgra_transpose(c.flow_c(), input as *mut BitmapBgra, canvas as *mut BitmapBgra) {
                 panic!("Failed to transpose bitmap")
             }
         }
@@ -170,7 +170,7 @@ impl NodeDefMutateBitmap for FlipVerticalMutNodeDef{
     }
     fn mutate(&self, c: &Context, bitmap: &mut BitmapBgra,  p: &NodeParams) -> Result<()>{
         unsafe {
-            if !::ffi::flow_bitmap_bgra_flip_vertical(c.flow_c(), bitmap as *mut BitmapBgra){
+            if !crate::ffi::flow_bitmap_bgra_flip_vertical(c.flow_c(), bitmap as *mut BitmapBgra){
                 return Err(cerror!(c))
             }
         }
@@ -190,7 +190,7 @@ impl NodeDefMutateBitmap for FlipHorizontalMutNodeDef{
     }
     fn mutate(&self, c: &Context, bitmap: &mut BitmapBgra,  p: &NodeParams) -> Result<()>{
         unsafe {
-            if !::ffi::flow_bitmap_bgra_flip_horizontal(c.flow_c(), bitmap as *mut BitmapBgra){
+            if !crate::ffi::flow_bitmap_bgra_flip_horizontal(c.flow_c(), bitmap as *mut BitmapBgra){
                 return Err(cerror!(c))
             }
         }

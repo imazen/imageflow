@@ -8,12 +8,12 @@ extern crate serde_json;
 extern crate smallvec;
 
 mod common;
-use common::*;
+use crate::common::*;
 
 use imageflow_core::{Context, ErrorKind, FlowError, CodeLocation};
 use imageflow_core::ffi::BitmapBgra;
-use s::PixelFormat;
-use s::Color;
+use crate::s::PixelFormat;
+use crate::s::Color;
 
 
 const DEBUG_GRAPH: bool = false;

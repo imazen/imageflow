@@ -1,10 +1,10 @@
-use flow::definitions::{Graph, Node, NodeParams, EdgeKind};
-use flow::nodes;
-use internal_prelude::works_everywhere::*;
-use ffi;
+use crate::flow::definitions::{Graph, Node, NodeParams, EdgeKind};
+use crate::flow::nodes;
+use crate::internal_prelude::works_everywhere::*;
+use crate::ffi;
 use rustc_serialize::hex::FromHex;
 use rustc_serialize::base64::FromBase64;
-use ::{Context,IoProxy};
+use crate::{Context,IoProxy};
 
 #[derive(Default)]
 pub struct GraphTranslator {

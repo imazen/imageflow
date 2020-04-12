@@ -1,6 +1,6 @@
-use Graph;
-use ffi::BitmapBgra;
-use internal_prelude::works_everywhere::*;
+use crate::Graph;
+use crate::ffi::BitmapBgra;
+use crate::internal_prelude::works_everywhere::*;
 use super::definitions::{FrameEstimate, Node, PixelFormat, EdgeKind, NodeResult};
 
 

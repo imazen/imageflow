@@ -1,12 +1,12 @@
 use super::Encoder;
 use super::s::{EncoderPreset, EncodeResult};
-use io::IoProxy;
-use ffi::BitmapBgra;
+use crate::io::IoProxy;
+use crate::ffi::BitmapBgra;
 use imageflow_types::PixelFormat;
 use imageflow_types::PixelBuffer;
-use ::{Context, Result, ErrorKind, FlowError};
+use crate::{Context, Result, ErrorKind, FlowError};
 use std::result::Result as StdResult;
-use io::IoProxyRef;
+use crate::io::IoProxyRef;
 use std::slice;
 use std::rc::Rc;
 use std::cell::RefCell;
@@ -14,7 +14,7 @@ use std::os::raw::c_int;
 use mozjpeg;
 use evalchroma;
 use evalchroma::PixelSize;
-use codecs::lode;
+use crate::codecs::lode;
 use std::io::Write;
 
 #[derive(Copy, Clone)]

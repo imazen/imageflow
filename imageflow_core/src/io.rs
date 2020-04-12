@@ -1,8 +1,8 @@
 use std;
-use for_other_imageflow_crates::preludes::external_without_std::*;
-use ffi;
-use ::{Context, CError, Result, JsonResponse, ErrorKind};
-use ffi::ImageflowJobIo;
+use crate::for_other_imageflow_crates::preludes::external_without_std::*;
+use crate::ffi;
+use crate::{Context, CError, Result, JsonResponse, ErrorKind};
+use crate::ffi::ImageflowJobIo;
 use imageflow_types::collections::AddRemoveSet;
 use uuid::Uuid;
 use std::rc::Rc;
@@ -116,7 +116,7 @@ impl IoProxy {
             io_id
         }
     }
-    pub fn wrap_classic(context: &Context, classic_io: *mut ::ffi::ImageflowJobIo, io_id: i32) -> Result<IoProxy> {
+    pub fn wrap_classic(context: &Context, classic_io: *mut crate::ffi::ImageflowJobIo, io_id: i32) -> Result<IoProxy> {
         if classic_io.is_null() {
             Err(cerror!(context, "Failed to create ImageflowJobIo *"))
         } else {
@@ -126,7 +126,7 @@ impl IoProxy {
         }
     }
 
-    pub fn get_io_ptr(&self) -> *mut ::ffi::ImageflowJobIo {
+    pub fn get_io_ptr(&self) -> *mut crate::ffi::ImageflowJobIo {
         self.classic
     }
 
@@ -205,8 +205,8 @@ impl IoProxy {
         IoProxy::check_io_id(context,io_id)?;
         unsafe {
             // Owner parameter is only for io_struct, not buffer.
-            let p = ::ffi::flow_io_create_from_memory(context.flow_c(),
-                                                      ::ffi::IoMode::ReadSeekable,
+            let p = crate::ffi::flow_io_create_from_memory(context.flow_c(),
+                                                      crate::ffi::IoMode::ReadSeekable,
                                                       bytes.as_ptr(),
                                                       bytes.len(),
                                                       context.flow_c() as *const libc::c_void,
@@ -224,7 +224,7 @@ impl IoProxy {
             let flow_c = self.c.flow_c();
             let classic = self.classic;
 
-            let worked = ::ffi::flow_io_get_output_buffer(flow_c    ,
+            let worked = crate::ffi::flow_io_get_output_buffer(flow_c    ,
                                                           classic,
                                                           &mut buf_start as *mut *const u8,
                                                           &mut buf_len as *mut usize);
@@ -243,7 +243,7 @@ impl IoProxy {
         IoProxy::check_io_id(context,io_id)?;
         unsafe {
             let p =
-                ::ffi::flow_io_create_for_output_buffer(context.flow_c(),
+                crate::ffi::flow_io_create_for_output_buffer(context.flow_c(),
                                                         context.flow_c() as *const libc::c_void);
             IoProxy::wrap_classic(context, p, io_id).map_err(|e| e.at(here!()))
         }
@@ -254,7 +254,7 @@ impl IoProxy {
         IoProxy::check_io_id(context,io_id)?;
         unsafe {
             let buf: *mut u8 =
-                ::ffi::flow_context_calloc(context.flow_c(),
+                crate::ffi::flow_context_calloc(context.flow_c(),
                                            1,
                                            bytes.len(),
                                            ptr::null(),
@@ -267,20 +267,20 @@ impl IoProxy {
             }
             ptr::copy_nonoverlapping(bytes.as_ptr(), buf, bytes.len());
 
-            let io_ptr = ::ffi::flow_io_create_from_memory(context.flow_c(),
-                                                           ::ffi::IoMode::ReadSeekable,
+            let io_ptr = crate::ffi::flow_io_create_from_memory(context.flow_c(),
+                                                           crate::ffi::IoMode::ReadSeekable,
                                                            buf,
                                                            bytes.len(),
                                                            context.flow_c() as *const libc::c_void,
                                                            ptr::null());
             if io_ptr.is_null(){
-                let _ = ::ffi::flow_destroy(context.flow_c(), buf as *mut libc::c_void, ptr::null(), 0);
+                let _ = crate::ffi::flow_destroy(context.flow_c(), buf as *mut libc::c_void, ptr::null(), 0);
             }
             IoProxy::wrap_classic(context, io_ptr, io_id).map_err(|e| e.at(here!()))
         }
     }
 
-    pub fn file_with_mode<T: AsRef<Path>>(context: &Context, io_id: i32, path: T, mode: ::IoMode) -> Result<IoProxy> {
+    pub fn file_with_mode<T: AsRef<Path>>(context: &Context, io_id: i32, path: T, mode: crate::IoMode) -> Result<IoProxy> {
         IoProxy::check_io_id(context,io_id)?;
         unsafe {
             // TODO: add support for a wider variety of character sets
@@ -292,7 +292,7 @@ impl IoProxy {
                 CString::new(path_str).map_err(|e| nerror!(ErrorKind::InvalidArgument, "The argument 'path' contains a null byte.") )?
             };
 
-            let p = ::ffi::flow_io_create_for_file(context.flow_c(),
+            let p = crate::ffi::flow_io_create_for_file(context.flow_c(),
                                                    mode,
                                                    c_path.as_ptr(),
                                                    context.flow_c() as *const libc::c_void);

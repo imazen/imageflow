@@ -1,7 +1,7 @@
 
 //! Kind of like a routing table for JSON endpoints
 
-use internal_prelude::works_everywhere::*;
+use crate::internal_prelude::works_everywhere::*;
 
 type ResponderFn<'a, T, D> = Box<dyn Fn(&mut T, D) -> Result<s::ResponsePayload> + 'a + Sync + Send>;
 type MethodHandler<'a, T> = Box<dyn Fn(&mut T, &[u8]) -> (JsonResponse, std::result::Result<(), FlowError>) + 'a + Sync + Send>;

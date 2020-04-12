@@ -16,7 +16,7 @@ pub use imageflow_types::Filter;
 pub use imageflow_types::IoDirection;
 pub use imageflow_types::PixelFormat;
 use imageflow_types::PixelBuffer;
-use internal_prelude::works_everywhere::*;
+use crate::internal_prelude::works_everywhere::*;
 
 // These are reused in the external ABI, but only as opaque pointers
 ///
@@ -285,8 +285,8 @@ impl BitmapBgra {
         }
     }
 
-    pub fn frame_info(&self) -> ::flow::definitions::FrameInfo {
-        ::flow::definitions::FrameInfo {
+    pub fn frame_info(&self) -> crate::flow::definitions::FrameInfo {
+        crate::flow::definitions::FrameInfo {
             w: self.w as i32,
             h: self.h as i32,
             fmt: self.fmt
@@ -322,12 +322,12 @@ impl BitmapBgra {
     }
 
 
-    pub unsafe fn destroy(bitmap: *mut Self, c: &::Context) {
+    pub unsafe fn destroy(bitmap: *mut Self, c: &crate::Context) {
         flow_destroy(c.flow_c(), bitmap as *const libc::c_void, std::ptr::null(), 0);
     }
 
 
-    pub fn fill_rect(&mut self, c: &::Context, x1: u32, y1: u32, x2: u32, y2: u32, color: &s::Color) -> Result<()> {
+    pub fn fill_rect(&mut self, c: &crate::Context, x1: u32, y1: u32, x2: u32, y2: u32, color: &s::Color) -> Result<()> {
         let color_srgb_argb = color.clone().to_u32_bgra().unwrap();
         unsafe {
             if !flow_bitmap_bgra_fill_rect(c.flow_c(),
@@ -344,18 +344,18 @@ impl BitmapBgra {
     }
 
 
-    pub fn create(c: &::Context, w: u32, h: u32, format: PixelFormat, color: s::Color) -> Result<*mut BitmapBgra> {
+    pub fn create(c: &crate::Context, w: u32, h: u32, format: PixelFormat, color: s::Color) -> Result<*mut BitmapBgra> {
         let flow_pointer = c.flow_c();
 
         unsafe {
             let ptr =
-                ::ffi::flow_bitmap_bgra_create(flow_pointer, w as i32, h as i32, true, format);
+                crate::ffi::flow_bitmap_bgra_create(flow_pointer, w as i32, h as i32, true, format);
             if ptr.is_null() {
                 return Err(cerror!(c, "Failed to allocate {}x{}x{} bitmap ({} bytes). Reduce dimensions or increase RAM.", w, h, format.bytes(), w as usize * h as usize * format.bytes()))
             }
             let color_val = color.clone();
             let color_srgb_argb = color_val.clone().to_u32_bgra().unwrap();
-            (*ptr).compositing_mode = ::ffi::BitmapCompositingMode::ReplaceSelf;
+            (*ptr).compositing_mode = crate::ffi::BitmapCompositingMode::ReplaceSelf;
             if color_val != s::Color::Transparent {
                 (&mut *ptr).fill_rect(c,
                                       0,
@@ -363,7 +363,7 @@ impl BitmapBgra {
                                       w as u32,
                                       h as u32,
                                       &color)?;
-                (*ptr).compositing_mode = ::ffi::BitmapCompositingMode::BlendWithMatte;
+                (*ptr).compositing_mode = crate::ffi::BitmapCompositingMode::BlendWithMatte;
             }
 
             (*ptr).matte_color = mem::transmute(color_srgb_argb);
