@@ -12,23 +12,21 @@
 #define MAX_BYTES_IN_MARKER 65533 /* maximum data len of a JPEG marker */
 #define MAX_DATA_BYTES_IN_MARKER (MAX_BYTES_IN_MARKER - ICC_OVERHEAD_LEN)
 
-static uint8_t jpeg_bytes_a[] = { 0xFF, 0xD8, 0xFF };
-
-
 static bool flow_codecs_jpg_decoder_reset(flow_c * c, struct flow_codecs_jpeg_decoder_state * state);
 
 static void jpeg_error_exit(j_common_ptr cinfo) {
     /* cinfo->err really points to a my_error_mgr struct, so coerce pointer */
     struct flow_codecs_jpeg_decoder_state *state = (struct flow_codecs_jpeg_decoder_state *) cinfo->err;
 
-    /* Acquire the message. */
+    // Uncomment to permit JPEGs with unknown markers
+    // if (state->error_mgr.msg_code == JERR_UNKNOWN_MARKER) return;
 
+
+    /* Acquire the message. */
     char warning_buffer[JMSG_LENGTH_MAX];
     //Q: If this ever fails to set a null byte we are screwed when we format it later
     cinfo->err->format_message(cinfo, warning_buffer);
 
-    // Uncomment to permit JPEGs with unknown markers
-    // if (state->error_mgr.msg_code == JERR_UNKNOWN_MARKER) return;
 
     // Destroy memory allocs and temp files
     // Specialized routines are wrappers for jpeg_destroy_compress
@@ -44,7 +42,7 @@ static void jpeg_error_exit(j_common_ptr cinfo) {
     longjmp(state->error_handler_jmp, 1);
 }
 
-//! Sends errors and warnings
+//! Sends errors and warnings to stderr
 static void flow_jpeg_output_message(j_common_ptr cinfo)
 {
     char buffer[JMSG_LENGTH_MAX];
@@ -894,12 +892,6 @@ static bool flow_codecs_jpeg_read_frame(flow_c * c, void * codec_state, struct f
     }
 }
 
-static struct flow_codec_magic_bytes jpeg_magic_bytes[] = { {
-                                                              .byte_count = 3, .bytes = (uint8_t *)&jpeg_bytes_a,
-
-                                                            },
-                                                             };
-
 const struct flow_codec_definition flow_codec_definition_decode_jpeg
     = { .codec_id = flow_codec_type_decode_jpeg,
         .initialize = flow_codecs_initialize_decode_jpeg,
@@ -907,8 +899,6 @@ const struct flow_codec_definition flow_codec_definition_decode_jpeg
         .get_frame_info = flow_codecs_jpeg_get_frame_info,
         .read_frame = flow_codecs_jpeg_read_frame,
         .set_downscale_hints = set_downscale_hints,
-        .magic_byte_sets = &jpeg_magic_bytes[0],
-        .magic_byte_sets_count = sizeof(jpeg_magic_bytes) / sizeof(struct flow_codec_magic_bytes),
         .name = "decode jpeg",
         .preferred_mime_type = "image/jpeg",
         .preferred_extension = "jpg" };

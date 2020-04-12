@@ -617,16 +617,8 @@ pub struct CodecDefinition {
     pub name: *const u8,
     pub preferred_mime_type: *const u8,
     pub preferred_extension: *const u8,
-    pub magic_byte_sets: *const CodecMagicBytes,
-    pub magic_bytes_sets_count: size_t,
 }
 
-#[repr(C)]
-#[derive(Clone,Debug,PartialEq)]
-pub struct CodecMagicBytes {
-    pub byte_count: size_t,
-    pub bytes: *const u8
-}
 #[repr(C)]
 #[derive(Clone,Debug,PartialEq)]
 struct CodecDefinitionSet {

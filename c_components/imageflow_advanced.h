@@ -231,8 +231,6 @@ struct flow_codec_definition {
     const char * name;
     const char * preferred_mime_type;
     const char * preferred_extension;
-    struct flow_codec_magic_bytes * magic_byte_sets;
-    size_t magic_byte_sets_count;
 };
 
 struct flow_context_codec_set {
