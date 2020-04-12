@@ -42,6 +42,7 @@ static boolean _flow_jpeg_io_source_fill_input_buffer(j_decompress_ptr cinfo)
             jpeg_destroy((j_common_ptr)cinfo);
 
             // Raise error with jpeg and call error_exit which will jump back to our handler
+            // Q: Is this safe?
             struct jpeg_error_mgr * err = cinfo->err;
             err->msg_code = JERR_INPUT_EMPTY;
             err->error_exit((j_common_ptr)cinfo);
