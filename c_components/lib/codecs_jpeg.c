@@ -563,7 +563,7 @@ static bool flow_codecs_jpg_decoder_FinishRead(flow_c * c, struct flow_codecs_jp
     /* We can ignore the return value since suspension is not possible
      * with the stdio data source.
      */
-    
+
     jpeg_destroy_decompress(state->cinfo);
     FLOW_free(c, state->cinfo);
     state->cinfo = NULL;
@@ -590,7 +590,7 @@ static bool flow_codecs_jpg_decoder_reset(flow_c * c, struct flow_codecs_jpeg_de
     } else {
 
         if (state->cinfo != NULL) {
-            // TODO: does setjmp need to be called before jpeg_destroy_decompress?
+            // Q: does setjmp need to be called before jpeg_destroy_decompress?
             jpeg_destroy_decompress(state->cinfo);
             FLOW_free(c, state->cinfo);
             state->cinfo = NULL;
