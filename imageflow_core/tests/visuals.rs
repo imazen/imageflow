@@ -396,22 +396,25 @@ fn test_jpeg_crop() {
 
 
 #[test]
-fn decode_cmyk_jpeg(){
+fn decode_cmyk_jpeg() {
+    let steps = vec![
+        s::Node::CommandString {
+            kind: s::CommandStringKind::ImageResizer4,
+            value: "width=200&height=200&format=gif".to_owned(),
+            decode: Some(0),
+            encode: Some(1)
+        }
+    ];
 
-   let steps = vec![
-       s::Node::CommandString{
-           kind: s::CommandStringKind::ImageResizer4,
-           value: "width=200&height=200&format=gif".to_owned(),
-           decode: Some(0),
-           encode: Some(1)
-       }
-   ];
+    let result = smoke_test(Some(s::IoEnum::Url("https://upload.wikimedia.org/wikipedia/commons/0/0e/Youngstown_State_Athletics.jpg".to_owned())),
+                            Some(s::IoEnum::OutputBuffer),
+                            DEBUG_GRAPH,
+                            steps,
+    );
+    let err = result.expect_err("CMYK jpeg decodes should fail");
+    assert_eq!(err.category(), crate::imageflow_core::ErrorCategory::ImageMalformed);
+    assert!(err.message.starts_with("CError 60: Image decoding failed : Mozjpeg decoding error: Unsupported color conversion request"));
 
-   smoke_test(Some(s::IoEnum::Url("https://upload.wikimedia.org/wikipedia/commons/0/0e/Youngstown_State_Athletics.jpg".to_owned())),
-              Some(s::IoEnum::OutputBuffer),
-              DEBUG_GRAPH,
-              steps,
-   ).expect_err("CMYK jpeg decodes should fail");
 }
 
 

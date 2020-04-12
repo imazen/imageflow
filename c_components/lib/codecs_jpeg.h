@@ -18,10 +18,10 @@ struct flow_codecs_jpeg_decoder_state;
 typedef uint8_t (*flow_codecs_jpeg_linear_to_srgb)(struct flow_codecs_jpeg_decoder_state * state, float v);
 
 struct flow_codecs_jpeg_decoder_state {
-    struct jpeg_error_mgr error_mgr; // MUST be first
-    jmp_buf error_handler_jmp; // MUST be second
-    flow_c * context; // MUST be third
-    size_t codec_id; // MUST be fourth
+    struct jpeg_error_mgr error_mgr;
+    jmp_buf error_handler_jmp;
+    flow_c * context;
+    size_t codec_id;
     flow_codecs_jpeg_decoder_stage stage;
     struct jpeg_decompress_struct * cinfo;
     size_t row_stride;
@@ -40,14 +40,9 @@ struct flow_codecs_jpeg_decoder_state {
     struct flow_decoder_downscale_hints hints;
     float lut_to_linear[256];
     uint8_t flat_lut_linear[256 * 13];
+
 };
 
-struct flow_codecs_jpeg_codec_state_common {
-    struct jpeg_error_mgr error_mgr; // MUST be first
-    jmp_buf error_handler_jmp; // MUST be second
-    flow_c * context; // MUST be third
-    size_t codec_id; // MUST be fourth
-};
 
 #ifdef __cplusplus
 }

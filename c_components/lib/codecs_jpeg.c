@@ -17,14 +17,15 @@ static uint8_t jpeg_bytes_a[] = { 0xFF, 0xD8, 0xFF };
 
 static bool flow_codecs_jpg_decoder_reset(flow_c * c, struct flow_codecs_jpeg_decoder_state * state);
 
-static void jpeg_error_exit(j_common_ptr cinfo)
-{
+static void jpeg_error_exit(j_common_ptr cinfo) {
     /* cinfo->err really points to a my_error_mgr struct, so coerce pointer */
-    struct flow_codecs_jpeg_codec_state_common * state = (struct flow_codecs_jpeg_codec_state_common *)cinfo->err;
+    struct flow_codecs_jpeg_decoder_state *state = (struct flow_codecs_jpeg_decoder_state *) cinfo->err;
 
-    /* Always display the message. */
-    /* We could postpone this until after returning, if we chose. */
-    (*cinfo->err->output_message)(cinfo);
+    /* Acquire the message. */
+
+    char warning_buffer[JMSG_LENGTH_MAX];
+    //Q: If this ever fails to set a null byte we are screwed when we format it later
+    cinfo->err->format_message(cinfo, warning_buffer);
 
     // Uncomment to permit JPEGs with unknown markers
     // if (state->error_mgr.msg_code == JERR_UNKNOWN_MARKER) return;
@@ -33,25 +34,17 @@ static void jpeg_error_exit(j_common_ptr cinfo)
     // Specialized routines are wrappers for jpeg_destroy_compress
     jpeg_destroy(cinfo);
 
-    if (state->codec_id == flow_codec_type_encode_jpeg) {
-        if (!flow_context_has_error(state->context)) {
-            FLOW_error(state->context, flow_status_Image_encoding_failed);
-        }
-    } else if (state->codec_id == flow_codec_type_decode_jpeg) {
-        struct flow_codecs_jpeg_decoder_state * decoder = (struct flow_codecs_jpeg_decoder_state *)state;
-        flow_codecs_jpg_decoder_reset(decoder->context, decoder);
-        decoder->stage = flow_codecs_jpg_decoder_stage_Failed;
-        if (!flow_context_has_error(state->context)) {
-            FLOW_error(state->context, flow_status_Image_decoding_failed);
-        }
+    flow_codecs_jpg_decoder_reset(state->context, state);
+    state->stage = flow_codecs_jpg_decoder_stage_Failed;
+    if (!flow_context_has_error(state->context)) {
+        FLOW_error_msg(state->context, flow_status_Image_decoding_failed, "Mozjpeg decoding error: %s", warning_buffer);
     }
 
     /* Return control to the setjmp point */
     longjmp(state->error_handler_jmp, 1);
 }
 
-//! Sends errors and warnings to where they should go
-
+//! Sends errors and warnings
 static void flow_jpeg_output_message(j_common_ptr cinfo)
 {
     char buffer[JMSG_LENGTH_MAX];
@@ -435,17 +428,18 @@ static bool flow_codecs_jpg_decoder_BeginRead(flow_c * c, struct flow_codecs_jpe
     state->stage = flow_codecs_jpg_decoder_stage_BeginRead;
 
     state->cinfo = (struct jpeg_decompress_struct *)FLOW_calloc(c, 1, sizeof(struct jpeg_decompress_struct));
-
-    /* We set up the normal JPEG error routines, then override error_exit. */
-    state->cinfo->err = jpeg_std_error(&state->error_mgr);
-    state->error_mgr.error_exit = jpeg_error_exit;
-
     if (state->cinfo == NULL) {
         FLOW_error(c, flow_status_Out_of_memory);
         flow_codecs_jpg_decoder_reset(c, state);
         state->stage = flow_codecs_jpg_decoder_stage_Failed;
         return false;
     }
+
+    /* We set up the normal JPEG error routines, then override error_exit. */
+    state->cinfo->err = jpeg_std_error(&state->error_mgr);
+    state->error_mgr.error_exit = jpeg_error_exit;
+
+
     /* Establish the setjmp return context for jpeg_error_exit to use. */
     if (setjmp(state->error_handler_jmp)) {
         /* If we get here, the JPEG code has signaled an error.
