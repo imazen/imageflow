@@ -5,8 +5,7 @@ use ::std::borrow::Borrow;
 use ::std::hash::{Hash, Hasher};
 use ::std::any::Any;
 
-// TODO: uncomment this when support lands in rustc for improved safety
-//#[repr(transparent)]
+#[repr(transparent)]
 #[derive(Copy,Clone,Debug)]
 pub struct AsciiFolding<S: ?Sized>(S);
 
