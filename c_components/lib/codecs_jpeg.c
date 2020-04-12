@@ -435,9 +435,10 @@ static bool flow_codecs_jpg_decoder_BeginRead(flow_c * c, struct flow_codecs_jpe
         return false;
     }
 
-    /* We set up the normal JPEG error routines, then override error_exit. */
+    /* We set up the normal JPEG error routines, then override error_exit and output_message. */
     state->cinfo->err = jpeg_std_error(&state->error_mgr);
     state->error_mgr.error_exit = jpeg_error_exit;
+    state->error_mgr.output_message = flow_jpeg_output_message; // Prevent USE_WINDOWS_MESSAGEBOX
 
 
     /* Establish the setjmp return context for jpeg_error_exit to use. */
