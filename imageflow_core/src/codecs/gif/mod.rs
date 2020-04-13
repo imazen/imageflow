@@ -314,6 +314,12 @@ pub fn from_bgra_with_stride(width: u16, height: u16, pixels: &mut [u8], stride:
     let mut without_padding = remove_padding(width, pixels, stride);
     for pix in without_padding.chunks_mut(4) {
         pix.swap(0,2);
+        if pix[3] < 0x10{
+            pix[0] = 0;
+            pix[1] = 0;
+            pix[2] = 0;
+            pix[3] = 0;
+        }
     }
     ::gif::Frame::from_rgba(width, height, &mut without_padding)
 }
