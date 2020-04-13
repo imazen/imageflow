@@ -179,14 +179,30 @@ impl Encoder for WebPEncoder {
 
         unsafe {
             let mut output: *mut u8 = ptr::null_mut();
-            let output_len: usize;
+            let mut output_len: usize = 0;
 
             match preset {
                 s::EncoderPreset::WebPLossy { quality } => {
-                    output_len = WebPEncodeBGRA(frame.pixels, frame.width() as i32, frame.height() as i32, frame.stride() as i32, *quality, &mut output);
+                    if frame.fmt == ffi::PixelFormat::Bgra32 || frame.fmt == ffi::PixelFormat::Bgr32{
+                        if frame.fmt == ffi::PixelFormat::Bgr32{
+                            frame.normalize_alpha()?;
+                        }
+                        output_len = WebPEncodeBGRA(frame.pixels, frame.width() as i32, frame.height() as i32, frame.stride() as i32, *quality, &mut output);
+                    }else if frame.fmt == ffi::PixelFormat::Bgr24{
+                        output_len = WebPEncodeBGR(frame.pixels, frame.width() as i32, frame.height() as i32, frame.stride() as i32, *quality, &mut output);
+                    }
+
                 },
                 s::EncoderPreset::WebPLossless => {
-                    output_len = WebPEncodeLosslessBGRA(frame.pixels, frame.width() as i32, frame.height() as i32, frame.stride() as i32, &mut output);
+                    if frame.fmt == ffi::PixelFormat::Bgra32 || frame.fmt == ffi::PixelFormat::Bgr32{
+                        if frame.fmt == ffi::PixelFormat::Bgr32{
+                            frame.normalize_alpha()?;
+                        }
+                        output_len = WebPEncodeLosslessBGRA(frame.pixels, frame.width() as i32, frame.height() as i32, frame.stride() as i32,  &mut output);
+                    }else if frame.fmt == ffi::PixelFormat::Bgr24{
+                        output_len = WebPEncodeLosslessBGR(frame.pixels, frame.width() as i32, frame.height() as i32, frame.stride() as i32,  &mut output);
+                    }
+
                 },
                 _ => {
                     panic!("Incorrect encoder for encoder preset")
