@@ -154,11 +154,11 @@ pub enum ScalingColorspace {
 
 }
 
-pub static IR4_KEYS: [&'static str;63] = ["mode", "anchor", "flip", "sflip", "scale", "cache", "process",
+pub static IR4_KEYS: [&'static str;65] = ["mode", "anchor", "flip", "sflip", "scale", "cache", "process",
     "quality", "zoom", "crop", "cropxunits", "cropyunits",
     "w", "h", "width", "height", "maxwidth", "maxheight", "format", "thumbnail",
      "autorotate", "srotate", "rotate", "ignoreicc", //really? : "precise_scaling_ratio",
-    "stretch",
+    "stretch", "webp.lossless", "webp.quality",
     "frame", "page", "subsampling", "colors", "f.sharpen", "down.colorspace",
     "404", "bgcolor", "paddingcolor", "bordercolor", "preset", "floatspace", "jpeg_idct_downscale_linear", "watermark",
     "s.invert", "s.sepia", "s.grayscale", "s.alpha", "s.brightness", "s.contrast", "s.saturation",  "trim.threshold",
@@ -254,6 +254,8 @@ impl Instructions{
         add(&mut m, "cropxunits", self.cropxunits);
         add(&mut m, "cropyunits", self.cropyunits);
         add(&mut m, "quality", self.quality);
+        add(&mut m, "webp.quality", self.webp_quality);
+        add(&mut m, "webp.lossless", self.webp_lossless);
         add(&mut m, "zoom", self.zoom);
 
         add(&mut m, "s.contrast", self.s_contrast);
@@ -322,6 +324,8 @@ impl Instructions{
         i.bgcolor_srgb = p.parse_color_srgb("bgcolor").or_else(||p.parse_color_srgb("bgcolor"));
         i.jpeg_subsampling = p.parse_subsampling("subsampling");
 
+        i.webp_quality = p.parse_f64("webp.quality");
+        i.webp_lossless = p.parse_bool("webp.lossless");
         i.anchor = p.parse_anchor("anchor");
 
 
@@ -712,6 +716,8 @@ pub struct Instructions{
     pub cropyunits: Option<f64>,
     pub zoom: Option<f64>,
     pub quality: Option<i32>,
+    pub webp_quality: Option<f64>,
+    pub webp_lossless: Option<bool>,
     pub f_sharpen: Option<f64>,
     pub bgcolor_srgb: Option<Color32>,
     pub jpeg_subsampling: Option<i32>,
@@ -827,6 +833,8 @@ fn test_url_parsing() {
     t("thumbnail=exif", Instructions { format: Some(OutputFormat::Jpeg), ..Default::default() }, vec![]);
     t("cropxunits=2.3&cropyunits=100", Instructions { cropxunits: Some(2.3f64), cropyunits: Some(100f64), ..Default::default() }, vec![]);
     t("quality=85", Instructions { quality: Some(85), ..Default::default() }, vec![]);
+    t("webp.quality=85", Instructions { webp_quality: Some(85f64), ..Default::default() }, vec![]);
+    t("webp.lossless=true", Instructions { webp_lossless: Some(true), ..Default::default() }, vec![]);
     t("zoom=0.02", Instructions { zoom: Some(0.02f64), ..Default::default() }, vec![]);
     t("trim.threshold=80&trim.percentpadding=0.02", Instructions { trim_whitespace_threshold: Some(80),  trim_whitespace_padding_percent: Some(0.02f64), ..Default::default() }, vec![]);
     t("w=10&f.sharpen=80.5", Instructions { w: Some(10), f_sharpen: Some(80.5f64), ..Default::default() }, vec![]);
@@ -909,7 +917,8 @@ fn test_tostr(){
     t("bgcolor=ffffffff", Instructions { bgcolor_srgb: Some(Color32(0xffffffff)), ..Default::default() });
     t("crop=0,0,40,50", Instructions { crop: Some([0f64,0f64,40f64,50f64]), ..Default::default() });
     t("a.balancewhite=area",  Instructions{a_balance_white: Some(HistogramThresholdAlgorithm::Area), ..Default::default()});
-
+    t("webp.quality=85", Instructions { webp_quality: Some(85f64), ..Default::default() });
+    t("webp.lossless=true", Instructions { webp_lossless: Some(true), ..Default::default() });
     t("down.colorspace=srgb",  Instructions{down_colorspace: Some(ScalingColorspace::Srgb), ..Default::default()});
     t("down.colorspace=linear",  Instructions{down_colorspace: Some(ScalingColorspace::Linear), ..Default::default()});
 

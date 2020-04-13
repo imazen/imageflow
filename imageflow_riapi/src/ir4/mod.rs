@@ -223,10 +223,10 @@ impl Ir4Expand{
                     zlib_compression: None,
                     matte: i.bgcolor_srgb.map(|sr| s::Color::Srgb(s::ColorSrgb::Hex(sr.to_rrggbbaa_string())))
                 },
-                OutputFormat::Webp if i.quality.is_some() => s::EncoderPreset::WebPLossy {
-                    quality: i.quality.unwrap() as f32
+                OutputFormat::Webp if i.webp_lossless == Some(true) => s::EncoderPreset::WebPLossless,
+                OutputFormat::Webp => s::EncoderPreset::WebPLossy {
+                    quality: i.webp_quality.unwrap_or(90f64) as f32
                 },
-                OutputFormat::Webp => s::EncoderPreset::WebPLossless
             };
             Some(s::Node::Encode { io_id: id, preset: encoder })
         }else{
