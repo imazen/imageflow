@@ -61,7 +61,7 @@ backtrace = "0.3"
 
 [target.'cfg(not(any(target_os = "windows", target_os = "macos")))'.dependencies]
 openssl = "0.10"
-hyper-openssl = "0.7"
+hyper-openssl = "0.8"
 
 [features]
 nightly = ["parking_lot/nightly"]
