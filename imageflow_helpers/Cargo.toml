@@ -53,7 +53,7 @@ unicase = "2"
 error-chain = "*"
 
 hyper = "0.13"
-reqwest = "0.9"
+reqwest = "0.10"
 hyper-native-tls = "*"
 
 backtrace = "0.3"
