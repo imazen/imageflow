@@ -72,7 +72,7 @@ mozjpeg-sys = {version = "0.10.4", features = ["nasm_simd", "turbojpeg_api"]}
 evalchroma = "0.1.1"
 
 [dev-dependencies]
-hyper = "0.12"
+hyper = "0.13"
 
 [features]
 nightly = ["imageflow_helpers/nightly"]
