@@ -75,7 +75,7 @@ deploy:
   - deploy:
     provider: releases
     api_key:
-      - secure: "U9jYsyiN3u9GVPbMtroFDyDmUIrzV6vyvtfCAY7I9YiepjrL+zP7FzmZU8sk56ukV1ZRM7QXP1fs1hTeAkcEPgfhITvqnCsQRcGzIEg3Ri5OZ+HVjt7ATGqVCndadL/cBhydmpq7cDfEIxhdzhmvfhcg/fjqX4oVOh6EM+dUG3E="
+      secure: bmyTqVANN+h8t42pXD3EKN3f+RQYhH2aaV6ChCV+Wlv52oXWBzGcRAK/99KnRYpiVPRWzpLYZtI0O5NMOLSnpF3t4OViDkHZmbLk2X1zYfyK+zPK0hee5yxtJyDMB1iQwVaulbOJrusm7qLRHUJW/JsGztCQdWyyDbqiICrZ0xk=
     file_glob: true
     file: "${GITHUB_FILES}"
     skip_cleanup: true
