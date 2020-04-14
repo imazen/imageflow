@@ -17,7 +17,7 @@ libc = "0.2"
 imageflow_core = { path = "../imageflow_core", version = "*" }
 backtrace = "*"
 smallvec="*"
-base64="0.11"
+base64="0.12"
 
 [build-dependencies]
 imageflow_helpers = { path = "../imageflow_helpers", version = "*" }

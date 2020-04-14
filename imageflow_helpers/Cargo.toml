@@ -38,7 +38,7 @@ rand = "*"
 
 num = "*"
 
-base64 = "0.11"
+base64 = "0.12"
 mockito = "*"
 zip = { version = "0.5", default-features = false }
 
@@ -52,7 +52,7 @@ unicase = "2"
 
 error-chain = "*"
 
-hyper = "0.12"
+hyper = "0.13"
 reqwest = "0.9"
 hyper-native-tls = "*"
 
@@ -61,7 +61,7 @@ backtrace = "0.3"
 
 [target.'cfg(not(any(target_os = "windows", target_os = "macos")))'.dependencies]
 openssl = "0.10"
-hyper-openssl = "0.7"
+hyper-openssl = "0.8"
 
 [features]
 nightly = ["parking_lot/nightly"]
