@@ -40,7 +40,7 @@ if [[ -n "$PUBLISH_DOCKER_TAG" ]]; then
 
     echo "Building image $2:$PUBLISH_DOCKER_TAG in directory $1"
 
-    (cd $1 && docker build -t "$2:$PUBLISH_DOCKER_TAG" --build-arg "SOURCE_COMMIT=$SOURCE_COMMIT" --build-arg "DOCKER_TAG=$PUBLISH_DOCKER_TAG" . && docker push "$2:$PUBLISH_DOCKER_TAG")
+    (cd $1 && docker build -t "$2:$PUBLISH_DOCKER_TAG" --build-arg "SOURCE_COMMIT=$SOURCE_COMMIT" --build-arg "DOCKER_TAG=$PUBLISH_DOCKER_TAG" . && docker push "$2:$PUBLISH_DOCKER_TAG" && echo Exited with code $?)
 
 
 fi
