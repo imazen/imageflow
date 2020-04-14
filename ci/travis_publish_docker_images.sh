@@ -33,6 +33,9 @@ if [[ -n "$PUBLISH_DOCKER_TAG" ]]; then
         echo "Updating SOURCE_COMMIT from git rev-parse HEAD"
         echo "SOURCE_COMMIT: $SOURCE_COMMIT"
     fi
+    echo "Logging into Docker"
+    docker login -u "$DOCKER_USERNAME" -p "$DOCKER_PASSWORD"
+
 
     echo "Building image $2:$PUBLISH_DOCKER_TAG in directory $1"
 
