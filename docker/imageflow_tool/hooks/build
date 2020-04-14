@@ -3,11 +3,11 @@
 echo "SOURCE_COMMIT: $SOURCE_COMMIT"
 
 if [[ -z "$SOURCE_COMMIT" ]]; then
-	export SOURCE_COMMIT="${SOURCE_COMMIT:-$(git rev-parse HEAD)}"
 	echo "Updating SOURCE_COMMIT from git rev-parse HEAD"
+	export SOURCE_COMMIT="${SOURCE_COMMIT:-$(git rev-parse HEAD)}"
 	echo "SOURCE_COMMIT: $SOURCE_COMMIT"
 fi
 
 echo "DOCKER_TAG: $DOCKER_TAG"
 
-docker build -t "$IMAGE_NAME" -f $DOCKERFILE_PATH --build-arg "SOURCE_COMMIT=$SOURCE_COMMIT" --build-arg "DOCKER_TAG=$DOCKER_TAG" .
+docker build -t "$IMAGE_NAME" -f $DOCKERFILE_PATH --build-arg "SOURCE_COMMIT=$SOURCE_COMMIT" --build-arg "DOCKER_TAG=$DOCKER_TAG"
