@@ -333,7 +333,7 @@ impl<'a> ChecksumCtx<'a>{
     // TODO: implement uploader
 }
 
-pub fn decode_image<'a>(c: &'a mut Context, io_id: i32) ->  &'a mut BitmapBgra {
+pub fn decode_image(c: &mut Context, io_id: i32) -> &mut BitmapBgra {
     let mut bit = BitmapBgraContainer::empty();
     let _result = c.execute_1(s::Execute001 {
         graph_recording: None,
@@ -348,7 +348,7 @@ pub fn decode_image<'a>(c: &'a mut Context, io_id: i32) ->  &'a mut BitmapBgra {
     unsafe{ bit.bitmap(c).unwrap() }
 }
 
-pub fn decode_input<'a>(c: &'a mut Context, input: s::IoEnum) ->  &'a mut BitmapBgra {
+pub fn decode_input(c: &mut Context, input: s::IoEnum) -> &mut BitmapBgra {
     let mut bit = BitmapBgraContainer::empty();
     let _result = c.build_1(s::Build001 {
         builder_config: None,
@@ -447,7 +447,7 @@ impl<'a> ResultKind<'a>{
     }
 }
 
-fn get_imgref_bgra32<'a>(b: &'a mut BitmapBgra) -> imgref::ImgVec<rgb::RGBA<f32>>{
+fn get_imgref_bgra32(b: &mut BitmapBgra) -> imgref::ImgVec<rgb::RGBA<f32>> {
     use self::dssim::*;
 
     match b.fmt {
@@ -545,7 +545,7 @@ pub fn compare_with<'a, 'b>(c: &ChecksumCtx, expected_checksum: &str, expected_b
     }
 }
 
-pub fn check_size<'a>( result: &ResultKind<'a>, require: Constraints, panic: bool) -> bool{
+pub fn check_size(result: &ResultKind, require: Constraints, panic: bool) -> bool{
     if let ResultKind::Bytes(ref actual_bytes) = *result {
         if actual_bytes.len() > require.max_file_size.unwrap_or(actual_bytes.len()) {
             let message = format!("Encoded size ({}) exceeds limit ({})", actual_bytes.len(), require.max_file_size.unwrap());
@@ -681,46 +681,11 @@ pub fn compare_encoded(input: Option<s::IoEnum>, checksum_name: &str, store_if_m
 
 
 
-/// Compares the encoded result of a given job to the source. If there is a checksum mismatch, a percentage of off-by-one bytes can be allowed.
-/// The output io_id is 1
-pub fn compare_encoded_to_source(input: s::IoEnum, debug: bool, require: Constraints, steps: Vec<s::Node>) -> bool {
-
-    let input_copy = input.clone();
-
-    let mut io = vec![s::IoEnum::OutputBuffer.into_output(1)];
-    io.insert(0, input.into_input(0));
-    let build = s::Build001 {
-        builder_config: Some(default_build_config(debug)),
-        io,
-        framewise: s::Framewise::Steps(steps)
-    };
-
-    if debug {
-        println!("{}", serde_json::to_string_pretty(&build).unwrap());
-    }
-
-    let mut context = Context::create().unwrap();
-    let _ = context.build_1(build).unwrap();
-
-    let bytes = context.get_output_buffer_slice(1).unwrap();
-
-    let ctx = ChecksumCtx::visuals(&context);
-
-    let mut context2 = Context::create().unwrap();
-    let original = decode_input(&mut context2, input_copy);
-
-    let original_checksum = ChecksumCtx::checksum_bitmap(original);
-    ctx.save_frame(original, &original_checksum);
-
-
-    compare_with(&ctx, &original_checksum, original, ResultKind::Bytes(bytes), require, true)
-}
-
 
 
 
 /// Simplified graph recording configuration
-fn default_build_config(debug: bool) -> s::Build001Config {
+pub fn default_build_config(debug: bool) -> s::Build001Config {
     s::Build001Config{
         graph_recording: if debug {Some(s::Build001GraphRecording::debug_defaults())} else {None},
     }
