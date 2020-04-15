@@ -422,20 +422,27 @@ if [[ "$DELETE_UPLOAD_FOLDER" == 'True' ]]; then
 else
 
 	if [ -d "./artifacts/nuget" ]; then
-		(cd ./artifacts/nuget
-			for i in *.nupkg; do
-				[ -f "$i" ] || break
-				echo "Copying nuget artifact for S3 upload"
-				cp $i ../upload/$i
-				echo -e "\nUploading $i to NuGet.org\n"Rn
-				# Upload each package
-				#dotnet nuget push "$i" --api-key "${NUGET_API_KEY}" -s "nuget.org"
-				#dotnet nuget push "$NUGET_TEST_PACKAGE" --api-key "${NUGET_API_KEY}" -s "nuget.org"
 
-				#curl -L "https://www.nuget.org/api/v2/package" -H "X-NuGet-ApiKey: ${NUGET_API_KEY}" -H "X-NuGet-Client-Version: 4.1.0" -A "NuGet Command Line/3.4.4.1321 (Unix 4.4.0.92)" --upload-file "$NUGET_TEST_PACKAGE"
+      (cd ./artifacts/nuget
+        for i in *.nupkg; do
+          [ -f "$i" ] || break
+          echo "Copying nuget artifact for S3 upload"
+          cp "$i" "../upload/$i"
 
-				curl -L "https://www.nuget.org/api/v2/package" -H "X-NuGet-ApiKey: ${NUGET_API_KEY}" -H "X-NuGet-Client-Version: 4.1.0" -A "NuGet Command Line/3.4.4.1321 (Unix 4.4.0.92)" --upload-file "$i"
-			done
-		)
+          # Upload each package
+          #dotnet nuget push "$i" --api-key "${NUGET_API_KEY}" -s "nuget.org"
+          #dotnet nuget push "$NUGET_TEST_PACKAGE" --api-key "${NUGET_API_KEY}" -s "nuget.org"
+
+          #curl -L "https://www.nuget.org/api/v2/package" -H "X-NuGet-ApiKey: ${NUGET_API_KEY}" -H "X-NuGet-Client-Version: 4.1.0" -A "NuGet Command Line/3.4.4.1321 (Unix 4.4.0.92)" --upload-file "$NUGET_TEST_PACKAGE"
+          if [[ -n "$NUGET_API_KEY" ]]; then
+            echo -e "\nUploading $i to NuGet.org\n"Rn
+            curl -L "https://www.nuget.org/api/v2/package" -H "X-NuGet-ApiKey: ${NUGET_API_KEY}" -H "X-NuGet-Client-Version: 4.1.0" -A "NuGet Command Line/3.4.4.1321 (Unix 4.4.0.92)" --upload-file "$i" --fail
+          else
+		        echo "NUGET_API_KEY not defined ... skipping nuget upload"
+		      fi
+        done
+		  )
+
+
 	fi
 fi
