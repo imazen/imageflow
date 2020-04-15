@@ -42,13 +42,13 @@ static void jpeg_error_exit(j_common_ptr cinfo) {
     longjmp(state->error_handler_jmp, 1);
 }
 
-//! Sends errors and warnings to stderr
+//! Ignores warnings
 static void flow_jpeg_output_message(j_common_ptr cinfo)
 {
-    char buffer[JMSG_LENGTH_MAX];
-    cinfo->err->format_message(cinfo, buffer);
+    // char buffer[JMSG_LENGTH_MAX];
+    // cinfo->err->format_message(cinfo, buffer);
     // TODO: maybe create a warnings log in flow_context, and append? Users aren't reading stderr
-    fprintf(stderr, "%s", &buffer[0]);
+    // fprintf(stderr, "%s", &buffer[0]);
 }
 
 static boolean marker_is_icc(jpeg_saved_marker_ptr marker)
