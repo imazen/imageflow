@@ -81,7 +81,7 @@ deploy:
     skip_cleanup: true
     local_dir: artifacts/nuget
     on:
-      tags: true 
+      tags: true
       condition: $UPLOAD_BUILD = True
   - deploy:
     provider: releases

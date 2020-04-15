@@ -434,7 +434,7 @@ else
           #curl -L "https://www.nuget.org/api/v2/package" -H "X-NuGet-ApiKey: ${NUGET_API_KEY}" -H "X-NuGet-Client-Version: 4.1.0" -A "NuGet Command Line/3.4.4.1321 (Unix 4.4.0.92)" --upload-file "$NUGET_TEST_PACKAGE"
           if [[ -n "$NUGET_API_KEY" ]]; then
             echo -e "\nUploading $i to NuGet.org\n"Rn
-            curl -L "https://www.nuget.org/api/v2/package" -H "X-NuGet-ApiKey: ${NUGET_API_KEY}" -H "X-NuGet-Client-Version: 4.1.0" -A "NuGet Command Line/3.4.4.1321 (Unix 4.4.0.92)" --upload-file "$i" --fail
+            curl -L "https://www.nuget.org/api/v2/package" -H "X-NuGet-ApiKey: ${NUGET_API_KEY}" -H "X-NuGet-Client-Version: 4.1.0" -A "NuGet Command Line/3.4.4.1321 (Unix 4.4.0.92)" --upload-file "$i" 
           else
 		        echo "NUGET_API_KEY not defined ... skipping nuget upload"
 		      fi
