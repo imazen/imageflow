@@ -426,8 +426,6 @@ else
       (cd ./artifacts/nuget
         for i in *.nupkg; do
           [ -f "$i" ] || break
-          echo "Copying nuget artifact for S3 upload"
-          cp "$i" "../upload/$i"
 
           # Upload each package
           #dotnet nuget push "$i" --api-key "${NUGET_API_KEY}" -s "nuget.org"
