@@ -3,9 +3,6 @@ language: generic
 filter_secrets: false
 cache:
   cargo: true
-env:
-  global:
-  - secure: 1d0V9T1h9QiRjgYePBB0/z3nTvUgM6F9bXU9c/NZhU5mzNrLmqqZkCsQY9eRCHjSJPeGIMFdkEjHPlRaFc2dEoRo5Ul0//o9ly4YfRs0g9mi0NMjR4ifjGriTZPzAN3eIv1ZKIcEAGGjjshJgvPSmMomMrfMz4B1ufxoC+INod0=
 matrix:
   fast_finish: true
   include:
