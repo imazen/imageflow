@@ -74,7 +74,7 @@ fn test_expand_rect(){
 
 #[test]
 fn test_crop(){
-    for _ in 1..100 {
+    for _ in 1..100 { //WTF are we looping 100 times for?
         let matched = compare(None, 500,
                               "FillRectAndCrop", POPULATE_CHECKSUMS, DEBUG_GRAPH, vec![
             s::Node::CreateCanvas { w: 200, h: 200, format: s::PixelFormat::Bgra32, color: s::Color::Srgb(s::ColorSrgb::Hex("FF5555FF".to_owned())) },
@@ -86,6 +86,45 @@ fn test_crop(){
     }
 }
 
+#[test]
+fn test_off_surface_region(){
+
+        let matched = compare(None, 500,
+                              "TestOffSurfaceRegion", POPULATE_CHECKSUMS, DEBUG_GRAPH, vec![
+                s::Node::CreateCanvas { w: 200, h: 200, format: s::PixelFormat::Bgra32, color: s::Color::Srgb(s::ColorSrgb::Hex("FF5555FF".to_owned())) },
+                s::Node::FillRect { x1: 0, y1: 0, x2: 10, y2: 100, color: s::Color::Srgb(s::ColorSrgb::Hex("0000FFFF".to_owned())) },
+                s::Node::RegionPercent { x1: -100f32, y1: -100f32, x2: -1f32, y2: -1f32, background_color: s::Color::Transparent}
+            ]
+        );
+        assert!(matched);
+
+}
+#[test]
+fn test_partial_region(){
+
+    let matched = compare(None, 500,
+                          "TestPartialRegion", POPULATE_CHECKSUMS, DEBUG_GRAPH, vec![
+            s::Node::CreateCanvas { w: 200, h: 200, format: s::PixelFormat::Bgra32, color: s::Color::Srgb(s::ColorSrgb::Hex("FF5555FF".to_owned())) },
+            s::Node::FillRect { x1: 0, y1: 0, x2: 10, y2: 100, color: s::Color::Srgb(s::ColorSrgb::Hex("0000FFFF".to_owned())) },
+            s::Node::RegionPercent { x1: -10f32, y1: -10f32, x2: 40f32, y2: 40f32, background_color: s::Color::Transparent}
+        ]
+    );
+    assert!(matched);
+
+}
+#[test]
+fn test_pixels_region(){
+
+    let matched = compare(None, 500,
+                          "TestPixelsRegion", POPULATE_CHECKSUMS, DEBUG_GRAPH, vec![
+            s::Node::CreateCanvas { w: 200, h: 200, format: s::PixelFormat::Bgra32, color: s::Color::Srgb(s::ColorSrgb::Hex("FF5555FF".to_owned())) },
+            s::Node::FillRect { x1: 0, y1: 0, x2: 10, y2: 100, color: s::Color::Srgb(s::ColorSrgb::Hex("0000FFFF".to_owned())) },
+            s::Node::Region { x1: -10, y1: -10, x2: 120, y2: 50, background_color: s::Color::Transparent}
+        ]
+    );
+    assert!(matched);
+
+}
 
 
 //  Replaces TEST_CASE("Test scale rings", "")

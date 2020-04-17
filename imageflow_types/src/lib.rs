@@ -509,11 +509,19 @@ pub enum Node {
     },
     #[serde(rename="region_percent")]
     RegionPercent {
-        left: f32,
-        top: f32,
-        right: f32,
-        bottom: f32,
-        color: Color,
+        x1: f32,
+        y1: f32,
+        x2: f32,
+        y2: f32,
+        background_color: Color,
+    },
+    #[serde(rename="region")]
+    Region {
+        x1: i32,
+        y1: i32,
+        x2: i32,
+        y2: i32,
+        background_color: Color,
     },
     #[serde(rename="transpose")]
     Transpose,
