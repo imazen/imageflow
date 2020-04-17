@@ -7,6 +7,18 @@ use imageflow_helpers::colors::*;
 
 macro_attr! {
 
+
+#[derive(Debug,Copy, Clone,PartialEq,
+IterVariants!(SharpenWhenVariants), IterVariantNames!(SharpenWhenNames))]
+pub enum SharpenWhen {
+    Downscaling,
+    SizeDiffers,
+    Always
+}
+
+}
+
+macro_attr! {
 #[derive(Debug, Copy, Clone, PartialEq, Eq,
 IterVariants!(FlipStringsVariants), IterVariantNames!(FlipStringsNames))]
 pub enum FlipStrings{
@@ -154,12 +166,12 @@ pub enum ScalingColorspace {
 
 }
 
-pub static IR4_KEYS: [&'static str;65] = ["mode", "anchor", "flip", "sflip", "scale", "cache", "process",
+pub static IR4_KEYS: [&'static str;66] = ["mode", "anchor", "flip", "sflip", "scale", "cache", "process",
     "quality", "zoom", "crop", "cropxunits", "cropyunits",
     "w", "h", "width", "height", "maxwidth", "maxheight", "format", "thumbnail",
      "autorotate", "srotate", "rotate", "ignoreicc", //really? : "precise_scaling_ratio",
     "stretch", "webp.lossless", "webp.quality",
-    "frame", "page", "subsampling", "colors", "f.sharpen", "down.colorspace",
+    "frame", "page", "subsampling", "colors", "f.sharpen", "f.sharpen_when", "down.colorspace",
     "404", "bgcolor", "paddingcolor", "bordercolor", "preset", "floatspace", "jpeg_idct_downscale_linear", "watermark",
     "s.invert", "s.sepia", "s.grayscale", "s.alpha", "s.brightness", "s.contrast", "s.saturation",  "trim.threshold",
     "trim.percentpadding", "a.blur", "a.sharpen", "a.removenoise", "a.balancewhite", "dither","jpeg.progressive",
@@ -272,6 +284,7 @@ impl Instructions{
         add(&mut m, "subsampling", self.jpeg_subsampling);
         add(&mut m, "bgcolor", self.bgcolor_srgb.and_then(|v| Some(v.to_rrggbbaa_string().to_lowercase())));
         add(&mut m, "f.sharpen", self.f_sharpen);
+        add(&mut m, "f.sharpen_when", self.f_sharpen_when.map(|v| format!("{:?}", v).to_lowercase()));
         add(&mut m, "trim.percentpadding", self.trim_whitespace_padding_percent);
         add(&mut m, "trim.threshold", self.trim_whitespace_threshold);
 
@@ -290,6 +303,7 @@ impl Instructions{
         let mut p = Parser { m: map, w: warnings, delete_supported: true };
         let mut i = Instructions::new();
         i.f_sharpen = p.parse_f64("f.sharpen");
+        i.f_sharpen_when = p.parse_sharpen_when("f.sharpen_when");
 
         i.w = p.parse_i32("width").or_else(|| p.parse_i32("w"));
         i.h = p.parse_i32("height").or_else(|| p.parse_i32("h"));
@@ -544,6 +558,17 @@ fn parse_colorspace(&mut self, key: &'static str) -> Option<ScalingColorspace> {
         })
     }
 
+    fn parse_sharpen_when(&mut self, key: &'static str) -> Option<SharpenWhen>{
+        self.parse(key, |value| {
+            for (k, v) in SharpenWhen::iter_variant_names().zip(SharpenWhen::iter_variants()) {
+                if k.eq_ignore_ascii_case(value) {
+                    return Ok(v)
+                }
+            }
+            Err(())
+        })
+    }
+
     fn parse_white_balance(&mut self, key: &'static str) -> Option<HistogramThresholdAlgorithm>{
         self.parse(key, |value| {
             for (k, v) in HistogramThresholdAlgorithm::iter_variant_names().zip(HistogramThresholdAlgorithm::iter_variants()) {
@@ -719,6 +744,7 @@ pub struct Instructions{
     pub webp_quality: Option<f64>,
     pub webp_lossless: Option<bool>,
     pub f_sharpen: Option<f64>,
+    pub f_sharpen_when: Option<SharpenWhen>,
     pub bgcolor_srgb: Option<Color32>,
     pub jpeg_subsampling: Option<i32>,
     pub anchor: Option<(Anchor1D, Anchor1D)>,
@@ -762,6 +788,7 @@ pub enum ScaleMode {
     /// When the image is smaller than the requested size, padding is added instead of stretching the image
     UpscaleCanvas
 }
+
 
 #[cfg(test)]
 fn debug_diff<T>(a : &T, b: &T) where T: std::fmt::Debug, T: PartialEq{
@@ -840,6 +867,9 @@ fn test_url_parsing() {
     t("w=10&f.sharpen=80.5", Instructions { w: Some(10), f_sharpen: Some(80.5f64), ..Default::default() }, vec![]);
 
     t("f.sharpen=80.5", Instructions { f_sharpen: Some(80.5f64), ..Default::default() }, vec![]);
+    t("f.sharpen_when=always", Instructions{ f_sharpen_when: Some(SharpenWhen::Always), ..Default::default()}, vec![]);
+    t("f.sharpen_when=downscaling", Instructions{ f_sharpen_when: Some(SharpenWhen::Downscaling), ..Default::default()}, vec![]);
+    t("f.sharpen_when=sizediffers", Instructions{ f_sharpen_when: Some(SharpenWhen::SizeDiffers), ..Default::default()}, vec![]);
 
     t("s.sepia=true&s.brightness=0.1&s.saturation=-0.1&s.contrast=1&s.alpha=0", Instructions { s_alpha: Some(0f64), s_contrast: Some(1f64), s_sepia: Some(true), s_brightness: Some(0.1f64), s_saturation: Some(-0.1f64), ..Default::default() }, vec![]);
 
@@ -921,7 +951,10 @@ fn test_tostr(){
     t("webp.lossless=true", Instructions { webp_lossless: Some(true), ..Default::default() });
     t("down.colorspace=srgb",  Instructions{down_colorspace: Some(ScalingColorspace::Srgb), ..Default::default()});
     t("down.colorspace=linear",  Instructions{down_colorspace: Some(ScalingColorspace::Linear), ..Default::default()});
-
+    t("f.sharpen=10", Instructions{ f_sharpen: Some(10f64), ..Default::default()});
+    t("f.sharpen_when=always", Instructions{ f_sharpen_when: Some(SharpenWhen::Always), ..Default::default()});
+    t("f.sharpen_when=downscaling", Instructions{ f_sharpen_when: Some(SharpenWhen::Downscaling), ..Default::default()});
+    t("f.sharpen_when=sizediffers", Instructions{ f_sharpen_when: Some(SharpenWhen::SizeDiffers), ..Default::default()});
     t("s.grayscale=bt709",  Instructions{s_grayscale: Some(GrayscaleAlgorithm::Bt709), ..Default::default()});
     t("s.alpha=0&s.brightness=0.1&s.contrast=1&s.saturation=-0.1&s.sepia=true", Instructions { s_alpha: Some(0f64), s_contrast: Some(1f64), s_sepia: Some(true), s_brightness: Some(0.1f64), s_saturation: Some(-0.1f64), ..Default::default() });
 

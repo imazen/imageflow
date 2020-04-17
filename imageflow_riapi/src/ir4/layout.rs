@@ -281,12 +281,19 @@ impl Ir4Layout{
         let bgcolor = self.i.bgcolor_srgb.map(|v| v.to_rrggbbaa_string()).map(|str| s::Color::Srgb(s::ColorSrgb::Hex(str)))
             .unwrap_or(bgcolor_default);
 
+        let size_differs = image.width() != new_crop.width() || image.height() != new_crop.height();
+        let downscaling = image.width() < new_crop.width() || image.height() < new_crop.height();
 
+        let sharpen_percent = match self.i.f_sharpen_when.unwrap_or(SharpenWhen::Always){
+            SharpenWhen::SizeDiffers if size_differs => self.i.f_sharpen,
+            SharpenWhen::Downscaling if downscaling => self.i.f_sharpen,
+            SharpenWhen::Always => self.i.f_sharpen,
+            _ => None
+        };
 
         //Scale
-        if image.width() != new_crop.width() || image.height() != new_crop.height() || self.i.f_sharpen.unwrap_or(0f64) > 0f64  ||
+        if size_differs || sharpen_percent.unwrap_or(0f64) > 0f64  ||
             !bgcolor.is_transparent(){
-            let downscaling = image.width() < new_crop.width() || image.height() < new_crop.height();
             b.add(s::Node::Resample2D {
                 w: image.width() as u32,
                 h: image.height() as u32,
@@ -298,7 +305,7 @@ impl Ir4Layout{
                     _ => None
 
                 },
-                hints: Some(s::ResampleHints { sharpen_percent: self.i.f_sharpen.map(|v| v as f32), background_color: Some(bgcolor.clone()) })
+                hints: Some(s::ResampleHints { sharpen_percent: sharpen_percent.map(|v| v as f32), background_color: Some(bgcolor.clone()) })
             });
         }
 
