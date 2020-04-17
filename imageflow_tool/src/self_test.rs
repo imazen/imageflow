@@ -240,6 +240,8 @@ fn scenario_laundry_list() -> BuildScenario{
                 sharpen_when: None
             }),
         })
+        .to(s::Node::RegionPercent {x1: -1f32, y1: -1f32, x2: 101f32, y2: 101f32, background_color: s::Color::Transparent})
+        .to(s::Node::Region {x1: -1, y1: -1, x2: 800, y2: 800, background_color: s::Color::Transparent})
         .to(s::Node::ApplyOrientation{flag: 7}).flip_horizontal().flip_vertical().transpose().rotate_90().rotate_180().rotate_270()
         .to(s::Node::FillRect {
             x1: 0,
