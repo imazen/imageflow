@@ -128,39 +128,20 @@ impl NodeDefOneInputExpand for ConstrainDef{
 
             let (new_w, new_h, hints_val) = constrain(input_w, input_h, constraint.clone());
 
-            let hints = hints_val.as_ref();
-
-            let resample_when = hints.and_then(|ref h| h.resample_when).unwrap_or(s::ResampleWhen::SizeDiffers);
-            let size_differs = new_w != input_w || new_h != input_h;
-            let sharpen_requested = hints.and_then(|h| h.sharpen_percent).unwrap_or(0f32) > 0f32;
-
-            let resample = match resample_when {
-                s::ResampleWhen::Always => true,
-                s::ResampleWhen::SizeDiffers if size_differs => true,
-                s::ResampleWhen::SizeDiffersOrSharpeningRequested if size_differs || sharpen_requested => true,
-                _ => false
+            let scale2d_params = imageflow_types::Node::Resample2D {
+                w: new_w,
+                h: new_h,
+                up_filter: None,
+                down_filter: None,
+                scaling_colorspace: None,
+                hints: hints_val,
             };
 
-            if resample {
-                let scale2d_params = s::Node::Resample2D {
-                    w: new_w,
-                    h: new_h,
-                    up_filter: hints.and_then(|h| h.up_filter),
-                    down_filter: hints.and_then(|h| h.down_filter),
-                    scaling_colorspace: hints.and_then(|h| h.scaling_colorspace),
-                    hints: hints.map(|h| s::ResampleHints {
-                        sharpen_percent: h.sharpen_percent,
-                        background_color: hints.and_then(|h| h.background_color.clone())
-                    }),
-                };
+            let scale2d = ctx.graph
+                .add_node(Node::n(&super::SCALE,
+                                    NodeParams::Json(scale2d_params)));
+            ctx.replace_node_with_existing(ix, scale2d);
 
-                let scale2d = ctx.graph
-                    .add_node(Node::n(&super::SCALE,
-                                        NodeParams::Json(scale2d_params)));
-                ctx.replace_node_with_existing(ix, scale2d);
-            } else {
-                ctx.delete_node_and_snap_together(ix);
-            }
             Ok(())
         } else {
             Err(nerror!(crate::ErrorKind::NodeParamsMismatch, "Need Constrain, got {:?}", params))
@@ -175,6 +156,8 @@ fn scale_b_to(aspect_ratio_a_over_b: f32, a_from: u32, a_to: u32, b_from: u32) -
     let result = b_from as f32 * scale_factor;// * aspect_ratio_a_over_b;
     result.round() as u32
 }
+
+
 fn constrain(old_w: u32, old_h: u32, constraint: s::Constraint) -> (u32,u32, Option<s::ConstraintResamplingHints>){
     let aspect = old_w as f32 / old_h as f32;
     match constraint{

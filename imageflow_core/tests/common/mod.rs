@@ -316,7 +316,11 @@ impl<'a> ChecksumCtx<'a>{
             if trusted == actual_checksum{
                 (ChecksumMatch::Match, trusted)
             }else{
-                println!("====================\n{}\nThe stored checksum {} differs from the actual_checksum one {}", name, &trusted, &actual_checksum);
+                println!("====================\n{}\nThe stored checksum {} differs from the actual_checksum one {}\nTrusted: {}\nActual: {}\n",
+                         name, &trusted,
+                         &actual_checksum,
+                         self.image_path(&trusted).to_str().unwrap(),
+                         self.image_path(&actual_checksum).to_str().unwrap());
                 (ChecksumMatch::Mismatch, trusted)
             }
         }else{

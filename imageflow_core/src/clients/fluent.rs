@@ -322,12 +322,17 @@ fn smoke_test_many_operations(){
         .to(s::Node::Resample2D {
             w: 800,
             h: 800,
-            down_filter: Some(s::Filter::Robidoux),
-            up_filter: Some(s::Filter::Ginseng),
+            down_filter: None,
+            up_filter: None,
             scaling_colorspace: None,
-            hints: Some(s::ResampleHints {
+            hints: Some(s::ConstraintResamplingHints {
                 sharpen_percent: Some(10f32),
-                background_color: None
+                background_color: None,
+                resample_when: None,
+                down_filter: Some(s::Filter::Robidoux),
+                up_filter: Some(s::Filter::Ginseng),
+                scaling_colorspace: None,
+                sharpen_when: None
             }),
         })
         .to(s::Node::ApplyOrientation{flag: 7}).flip_horizontal().flip_vertical().transpose().rotate_90().rotate_180().rotate_270()

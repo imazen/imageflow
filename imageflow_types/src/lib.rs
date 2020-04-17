@@ -333,6 +333,18 @@ pub enum ResampleWhen{
     Always
 }
 
+#[derive(Serialize, Deserialize, Clone, Copy, PartialEq, Debug)]
+pub enum SharpenWhen{
+    #[serde(rename="downscaling")]
+    Downscaling,
+    #[serde(rename="upscaling")]
+    Upscaling,
+    #[serde(rename="size_differs")]
+    SizeDiffers,
+    #[serde(rename="always")]
+    Always
+}
+
 #[derive(Serialize, Deserialize,  Clone, PartialEq, Debug)]
 pub struct ConstraintResamplingHints {
     pub sharpen_percent: Option<f32>,
@@ -341,9 +353,35 @@ pub struct ConstraintResamplingHints {
     pub scaling_colorspace: Option<ScalingFloatspace>,
     pub background_color: Option<Color>,
     pub resample_when: Option<ResampleWhen>,
+    pub sharpen_when: Option<SharpenWhen>
 }
 
 impl ConstraintResamplingHints{
+    pub fn new() -> ConstraintResamplingHints{
+        ConstraintResamplingHints{
+            sharpen_percent: None,
+            down_filter: None,
+            up_filter: None,
+            scaling_colorspace: None,
+            background_color: None,
+            resample_when: None,
+            sharpen_when: None
+        }
+    }
+    pub fn with_bi_filter(self, filter: Filter) -> ConstraintResamplingHints{
+        ConstraintResamplingHints{
+            down_filter: Some(filter),
+            up_filter: Some(filter),
+            .. self
+        }
+    }
+    pub fn with_floatspace(self, space: ScalingFloatspace) -> ConstraintResamplingHints{
+        ConstraintResamplingHints{
+            scaling_colorspace: Some(space),
+            .. self
+        }
+    }
+
     pub fn with(filter: Option<Filter>, sharpen_percent: Option<f32>) -> ConstraintResamplingHints{
         ConstraintResamplingHints{
             sharpen_percent,
@@ -351,7 +389,8 @@ impl ConstraintResamplingHints{
             up_filter: filter,
             resample_when: None,
             scaling_colorspace: None,
-            background_color: None
+            background_color: None,
+            sharpen_when: None
         }
     }
 
@@ -488,10 +527,10 @@ pub enum Node {
     Resample2D {
         w: u32,
         h: u32,
-        down_filter: Option<Filter>, //TODO: refactor to use ConstraintResamplingHints
-        up_filter: Option<Filter>,
-        scaling_colorspace: Option<ScalingFloatspace>,
-        hints: Option<ResampleHints>,
+        down_filter: Option<Filter>, //TODO: remove on next API break
+        up_filter: Option<Filter>, //TODO: remove on next API break
+        scaling_colorspace: Option<ScalingFloatspace>, //TODO: remove on next API break
+        hints: Option<ConstraintResamplingHints>,
     },
     #[serde(rename="draw_image_exact")]
     DrawImageExact {
@@ -865,13 +904,18 @@ impl Framewise {
                               Node::Resample2D {
                                   w: 100,
                                   h: 75,
-                                  down_filter: Some(Filter::Robidoux),
-                                  up_filter: Some(Filter::Ginseng),
-                                  scaling_colorspace: Some(ScalingFloatspace::Linear),
-                                  hints: Some(ResampleHints {
+                                  down_filter: None,
+                                  up_filter: None,
+                                  scaling_colorspace: None,
+                                  hints: Some(ConstraintResamplingHints {
                                       sharpen_percent: Some(10f32),
-                                      background_color: Some(Color::Srgb(ColorSrgb::Hex("FFEEAACC".to_owned())))
+                                      down_filter: Some(Filter::Robidoux),
+                                      up_filter: Some(Filter::Ginseng),
+                                      scaling_colorspace: Some(ScalingFloatspace::Linear),
+                                      background_color: Some(Color::Srgb(ColorSrgb::Hex("FFEEAACC".to_owned()))),
                                       //prefer_1d_twice: None,
+                                      resample_when: Some(ResampleWhen::SizeDiffersOrSharpeningRequested),
+                                      sharpen_when: Some(SharpenWhen::Downscaling)
                                   }),
                               },
                               Node::Resample2D {
@@ -879,8 +923,16 @@ impl Framewise {
                                   h: 150,
                                   up_filter: None,
                                   down_filter: None,
-                                  scaling_colorspace: Some(ScalingFloatspace::Srgb),
-                                  hints: None,
+                                  scaling_colorspace: None,
+                                  hints: Some(ConstraintResamplingHints{
+                                      sharpen_percent: None,
+                                      down_filter: None,
+                                      up_filter: None,
+                                      scaling_colorspace: Some(ScalingFloatspace::Srgb),
+                                      background_color: None,
+                                      resample_when: None,
+                                      sharpen_when: None
+                                  }),
                               },
                               Node::Encode {
                                   io_id: 1,
@@ -915,13 +967,19 @@ impl Framewise {
                      Node::Resample2D {
                          w: 100,
                          h: 100,
-                         down_filter: Some(Filter::Robidoux),
+                         down_filter: None,
                          up_filter: None,
-                         hints: Some(ResampleHints{
-                             sharpen_percent: Some(20f32),
-                             background_color: Some(Color::Srgb(ColorSrgb::Hex("FFEEAACC".to_owned())))
+                         hints: Some(ConstraintResamplingHints {
+                             sharpen_percent: Some(10f32),
+                             down_filter: Some(Filter::Robidoux),
+                             up_filter: Some(Filter::Ginseng),
+                             scaling_colorspace: Some(ScalingFloatspace::Linear),
+                             background_color: Some(Color::Srgb(ColorSrgb::Hex("FFEEAACC".to_owned()))),
+                             //prefer_1d_twice: None,
+                             resample_when: Some(ResampleWhen::SizeDiffersOrSharpeningRequested),
+                             sharpen_when: Some(SharpenWhen::Downscaling)
                          }),
-                         scaling_colorspace: Some(ScalingFloatspace::Linear),
+                         scaling_colorspace: None,
                      });
         nodes.insert("4".to_owned(),
                      Node::Encode {

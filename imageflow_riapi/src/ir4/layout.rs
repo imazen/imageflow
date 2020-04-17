@@ -281,33 +281,40 @@ impl Ir4Layout{
         let bgcolor = self.i.bgcolor_srgb.map(|v| v.to_rrggbbaa_string()).map(|str| s::Color::Srgb(s::ColorSrgb::Hex(str)))
             .unwrap_or(bgcolor_default);
 
-        let size_differs = image.width() != new_crop.width() || image.height() != new_crop.height();
         let downscaling = image.width() < new_crop.width() || image.height() < new_crop.height();
 
-        let sharpen_percent = match self.i.f_sharpen_when.unwrap_or(SharpenWhen::Always){
-            SharpenWhen::SizeDiffers if size_differs => self.i.f_sharpen,
-            SharpenWhen::Downscaling if downscaling => self.i.f_sharpen,
-            SharpenWhen::Always => self.i.f_sharpen,
-            _ => None
+        let sharpen_when = match self.i.f_sharpen_when{
+            Some(SharpenWhen::Downscaling) => Some(s::SharpenWhen::Downscaling),
+            Some(SharpenWhen::SizeDiffers) => Some(s::SharpenWhen::SizeDiffers),
+            Some(SharpenWhen::Always) => Some(s::SharpenWhen::Always),
+            None => None
         };
 
-        //Scale
-        if size_differs || sharpen_percent.unwrap_or(0f64) > 0f64  ||
-            !bgcolor.is_transparent(){
-            b.add(s::Node::Resample2D {
-                w: image.width() as u32,
-                h: image.height() as u32,
+        let scaling_colorspace = match self.i.down_colorspace {
+            Some(ScalingColorspace::Linear) if downscaling => Some(s::ScalingFloatspace::Linear),
+            Some(ScalingColorspace::Srgb) if downscaling => Some(s::ScalingFloatspace::Srgb),
+            _ => None
+
+        };
+
+
+        b.add(s::Node::Resample2D {
+            w: image.width() as u32,
+            h: image.height() as u32,
+            down_filter: None,
+            up_filter: None,
+            scaling_colorspace: None,
+            hints: Some(imageflow_types::ConstraintResamplingHints {
+                sharpen_percent: self.i.f_sharpen.map(|v| v as f32),
                 down_filter: None,
                 up_filter: None,
-                scaling_colorspace: match self.i.down_colorspace {
-                    Some(ScalingColorspace::Linear) if downscaling => Some(s::ScalingFloatspace::Linear),
-                    Some(ScalingColorspace::Srgb) if downscaling => Some(s::ScalingFloatspace::Srgb),
-                    _ => None
+                scaling_colorspace,
+                background_color: Some(bgcolor.clone()),
+                resample_when: Some(s::ResampleWhen::SizeDiffersOrSharpeningRequested),
+                sharpen_when
+            })
+        });
 
-                },
-                hints: Some(s::ResampleHints { sharpen_percent: sharpen_percent.map(|v| v as f32), background_color: Some(bgcolor.clone()) })
-            });
-        }
 
 
         // Perform white balance
@@ -473,7 +480,23 @@ fn test_crop_and_scale(){
     let l  = Ir4Layout::new(Instructions{w: Some(100), h: Some(200), mode: Some(FitMode::Crop), .. Default::default() }, 768, 433);
     l.add_steps(&mut b).unwrap();
 
-    assert_eq!(b.steps, vec![s::Node::Crop { x1: 275, y1: 0, x2: 492, y2: 433 }, s::Node::Resample2D { w: 100, h: 200, down_filter: None, up_filter: None, scaling_colorspace: None, hints: Some(s::ResampleHints { sharpen_percent: None, background_color:  Some(s::Color::Transparent) }) }]);
+    assert_eq!(b.steps, vec![s::Node::Crop { x1: 275, y1: 0, x2: 492, y2: 433 },
+                             s::Node::Resample2D {
+                                 w: 100,
+                                 h: 200,
+                                 down_filter: None,
+                                 up_filter: None,
+                                 scaling_colorspace: None,
+                                 hints: Some(s::ConstraintResamplingHints {
+                                     sharpen_percent: None,
+                                     down_filter: None,
+                                     up_filter: None,
+                                     scaling_colorspace: None,
+                                     background_color: Some(s::Color::Transparent),
+                                     resample_when: Some(s::ResampleWhen::SizeDiffersOrSharpeningRequested),
+                                     sharpen_when: None
+                                 })
+                             }]);
 }
 
 
@@ -481,9 +504,21 @@ fn test_crop_and_scale(){
 fn test_scale(){
     let mut b = FramewiseBuilder::new();
 
-    let l  = Ir4Layout::new(Instructions{w: Some(2560), h: Some(1696), mode: Some(FitMode::Max), .. Default::default() }, 5104, 3380);
+    let l  = Ir4Layout::new(Instructions{w: Some(2560), h: Some(1696), mode: Some(FitMode::Max), f_sharpen_when: Some(SharpenWhen::Downscaling), .. Default::default() }, 5104, 3380);
     l.add_steps(&mut b).unwrap();
-    assert_eq!(b.steps, vec![s::Node::Resample2D { w: 2560, h: 1696, down_filter: None, up_filter: None, scaling_colorspace: None, hints: Some(s::ResampleHints { sharpen_percent: None, background_color: Some(s::Color::Transparent)}) }]);
+    assert_eq!(b.steps, vec![s::Node::Resample2D { w: 2560, h: 1696,
+        down_filter: None,
+        up_filter: None,
+        scaling_colorspace: None,
+        hints: Some(s::ConstraintResamplingHints {
+            sharpen_percent: None,
+            down_filter: None,
+            up_filter: None,
+            scaling_colorspace: None,
+            background_color: Some(s::Color::Transparent),
+            resample_when: Some(s::ResampleWhen::SizeDiffersOrSharpeningRequested),
+            sharpen_when: Some(s::SharpenWhen::Downscaling)
+        }) }]);
 
     // 5104x3380 "?w=2560&h=1696&mode=max&format=png&decoder.min_precise_scaling_ratio=2.1&down.colorspace=linear"
 
