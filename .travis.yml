@@ -3,9 +3,6 @@ language: generic
 filter_secrets: false
 cache:
   cargo: true
-env:
-  global:
-  - secure: 1d0V9T1h9QiRjgYePBB0/z3nTvUgM6F9bXU9c/NZhU5mzNrLmqqZkCsQY9eRCHjSJPeGIMFdkEjHPlRaFc2dEoRo5Ul0//o9ly4YfRs0g9mi0NMjR4ifjGriTZPzAN3eIv1ZKIcEAGGjjshJgvPSmMomMrfMz4B1ufxoC+INod0=
 matrix:
   fast_finish: true
   include:
@@ -51,6 +48,7 @@ before_deploy:
   - echo "Planning to upload ${GITHUB_FILES} to GitHub"
 deploy:
   - provider: s3
+    edge: true
     access_key_id: AKIAIMZ7QOL24GUASH6A
     secret_access_key:
       secure: izS5sgSOhDwjuQaFTTgMlhUd5759ZnuoxxoFDo41XZATNw58P6FtzdfslfoVa+xXjq/1N0GDAM+ENm7XYNITVqq1aJARYKy5X+IUwVKQw/UYx0rb1X2ZV7oDHsFvY5pSRiVFD1tQ0fZ9JKAkb1LTnSutfVYHNYvPHiyYQf07nig=
@@ -62,6 +60,7 @@ deploy:
       branch: master
       condition: $UPLOAD_BUILD = True
   - provider: s3
+    edge: true
     access_key_id: AKIAIMZ7QOL24GUASH6A
     secret_access_key:
       secure: izS5sgSOhDwjuQaFTTgMlhUd5759ZnuoxxoFDo41XZATNw58P6FtzdfslfoVa+xXjq/1N0GDAM+ENm7XYNITVqq1aJARYKy5X+IUwVKQw/UYx0rb1X2ZV7oDHsFvY5pSRiVFD1tQ0fZ9JKAkb1LTnSutfVYHNYvPHiyYQf07nig=
@@ -73,6 +72,7 @@ deploy:
       tags: true
       condition: $UPLOAD_BUILD = True
   - provider: s3
+    edge: true
     access_key_id: AKIAIMZ7QOL24GUASH6A
     secret_access_key:
       secure: izS5sgSOhDwjuQaFTTgMlhUd5759ZnuoxxoFDo41XZATNw58P6FtzdfslfoVa+xXjq/1N0GDAM+ENm7XYNITVqq1aJARYKy5X+IUwVKQw/UYx0rb1X2ZV7oDHsFvY5pSRiVFD1tQ0fZ9JKAkb1LTnSutfVYHNYvPHiyYQf07nig=
@@ -84,6 +84,7 @@ deploy:
       tags: true
       condition: $UPLOAD_BUILD = True
   - deploy:
+    edge: true
     provider: releases
     api_key:
       secure: bmyTqVANN+h8t42pXD3EKN3f+RQYhH2aaV6ChCV+Wlv52oXWBzGcRAK/99KnRYpiVPRWzpLYZtI0O5NMOLSnpF3t4OViDkHZmbLk2X1zYfyK+zPK0hee5yxtJyDMB1iQwVaulbOJrusm7qLRHUJW/JsGztCQdWyyDbqiICrZ0xk=
