@@ -158,7 +158,7 @@ fn scale_b_to(aspect_ratio_a_over_b: f32, a_from: u32, a_to: u32, b_from: u32) -
 }
 
 
-fn constrain(old_w: u32, old_h: u32, constraint: s::Constraint) -> (u32,u32, Option<s::ConstraintResamplingHints>){
+fn constrain(old_w: u32, old_h: u32, constraint: s::Constraint) -> (u32,u32, Option<imageflow_types::ResampleHints>){
     let aspect = old_w as f32 / old_h as f32;
     match constraint{
 

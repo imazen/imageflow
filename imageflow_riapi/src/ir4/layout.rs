@@ -304,7 +304,7 @@ impl Ir4Layout{
             down_filter: None,
             up_filter: None,
             scaling_colorspace: None,
-            hints: Some(imageflow_types::ConstraintResamplingHints {
+            hints: Some(imageflow_types::ResampleHints {
                 sharpen_percent: self.i.f_sharpen.map(|v| v as f32),
                 down_filter: None,
                 up_filter: None,
@@ -487,7 +487,7 @@ fn test_crop_and_scale(){
                                  down_filter: None,
                                  up_filter: None,
                                  scaling_colorspace: None,
-                                 hints: Some(s::ConstraintResamplingHints {
+                                 hints: Some(s::ResampleHints {
                                      sharpen_percent: None,
                                      down_filter: None,
                                      up_filter: None,
@@ -510,7 +510,7 @@ fn test_scale(){
         down_filter: None,
         up_filter: None,
         scaling_colorspace: None,
-        hints: Some(s::ConstraintResamplingHints {
+        hints: Some(s::ResampleHints {
             sharpen_percent: None,
             down_filter: None,
             up_filter: None,

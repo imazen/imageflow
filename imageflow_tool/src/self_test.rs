@@ -180,7 +180,7 @@ const BLUE_PNG32_200X200_B64:&'static str = "iVBORw0KGgoAAAANSUhEUgAAAMgAAADICAY
 fn scenario_pure_json() -> BuildScenario{
     let framewise = fluent::fluently()
         .decode(0)
-        .constrain_within(Some(40), Some(40), Some(s::ConstraintResamplingHints::with(None, Some(25f32))))
+        .constrain_within(Some(40), Some(40), Some(s::ResampleHints::with(None, Some(25f32))))
         .encode(1, s::EncoderPreset::libpng32()).builder().to_framewise();
 
     BuildScenario{
@@ -198,7 +198,7 @@ fn scenario_pure_json() -> BuildScenario{
 fn scenario_response_stdout() -> BuildScenario{
     let framewise = fluent::fluently()
         .decode(0)
-        .constrain_within(Some(40), Some(40), Some(s::ConstraintResamplingHints::with(None, Some(25f32))))
+        .constrain_within(Some(40), Some(40), Some(s::ResampleHints::with(None, Some(25f32))))
         .encode(1, s::EncoderPreset::libpng32()).builder().to_framewise();
 
     BuildScenario{
@@ -223,14 +223,14 @@ fn scenario_laundry_list() -> BuildScenario{
             height:1600
     })])})
         .constrain_within(Some(1400), None,None)
-        .constrain_within(Some(1400), Some(1400), Some(s::ConstraintResamplingHints::with(Some(s::Filter::CatmullRom), Some(40f32))))
+        .constrain_within(Some(1400), Some(1400), Some(s::ResampleHints::with(Some(s::Filter::CatmullRom), Some(40f32))))
         .to(s::Node::Resample2D {
             w: 800,
             h: 800,
             down_filter: None,
             up_filter: None,
             scaling_colorspace: None,
-            hints: Some(s::ConstraintResamplingHints {
+            hints: Some(s::ResampleHints {
                 sharpen_percent: Some(10f32),
                 background_color: None,
                 resample_when: None,
@@ -282,7 +282,7 @@ fn scenario_laundry_list() -> BuildScenario{
 fn scenario_request_base64() -> BuildScenario{
     let framewise = fluent::fluently()
         .decode(0)
-        .constrain_within(Some(5), Some(5), Some(s::ConstraintResamplingHints::with(None, Some(25f32))))
+        .constrain_within(Some(5), Some(5), Some(s::ResampleHints::with(None, Some(25f32))))
         .encode(1, s::EncoderPreset::libpng32()).builder().to_framewise();
 
     BuildScenario{

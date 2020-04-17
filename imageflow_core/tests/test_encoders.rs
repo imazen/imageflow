@@ -84,7 +84,7 @@ fn test_encode_lodepng() {
 
 #[test]
 fn test_encode_mozjpeg_resized() {
-    let use_hermite = s::ConstraintResamplingHints::new().with_bi_filter(s::Filter::Hermite);
+    let use_hermite = s::ResampleHints::new().with_bi_filter(s::Filter::Hermite);
     let steps = vec![
         s::Node::Decode { io_id: 0, commands: None },
         s::Node::Resample2D{ w: 550, h: 550, down_filter: None, up_filter: None, hints: Some(use_hermite.clone()), scaling_colorspace: None },

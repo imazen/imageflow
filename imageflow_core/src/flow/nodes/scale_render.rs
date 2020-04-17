@@ -67,7 +67,7 @@ impl NodeDefOneInputExpand for ScaleDef {
                     up_filter: None,
                     down_filter: None,
                     scaling_colorspace: None,
-                    hints: Some(imageflow_types::ConstraintResamplingHints {
+                    hints: Some(imageflow_types::ResampleHints {
                         sharpen_percent: Some(sharpen_percent),
                         down_filter: hints.as_ref().and_then(|h| h.down_filter).or(down_filter),
                         up_filter: hints.as_ref().and_then(|h| h.up_filter).or(up_filter),
@@ -145,7 +145,7 @@ impl NodeDefOneInputOneCanvasExpand for Scale2dDef {
                 }else{
                     None
                 },
-                hints: Some(::imageflow_types::ConstraintResamplingHints {
+                hints: Some(::imageflow_types::ResampleHints {
                     sharpen_percent: hints.as_ref().and_then(|h| h.sharpen_percent),
                     down_filter: hints.as_ref().and_then(|h| h.down_filter).or(down_filter),
                     up_filter: hints.as_ref().and_then(|h| h.up_filter).or(up_filter),

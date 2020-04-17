@@ -65,7 +65,7 @@ fn test_expand_rect(){
         s::Node::FillRect{x1:0, y1:0, x2:100, y2:100, color: s::Color::Srgb(s::ColorSrgb::Hex("EECCFFFF".to_owned()))},
         s::Node::ExpandCanvas{left: 10, top: 15, right: 20, bottom: 25, color: s::Color::Srgb(s::ColorSrgb::Hex("2233AAFF".to_owned()))},
         s::Node::Resample2D{ w: 400, h: 400, down_filter: None, up_filter: None,
-            hints: Some(s::ConstraintResamplingHints::new().with_bi_filter(s::Filter::Hermite).with_floatspace(s::ScalingFloatspace::Linear))
+            hints: Some(s::ResampleHints::new().with_bi_filter(s::Filter::Hermite).with_floatspace(s::ScalingFloatspace::Linear))
             , scaling_colorspace: None }
         ]
     );
@@ -94,7 +94,7 @@ fn test_scale_rings(){
     let matched = compare(Some(s::IoEnum::Url("https://s3-us-west-2.amazonaws.com/imageflow-resources/test_inputs/rings2.png".to_owned())), 500,
         "RingsDownscaling", POPULATE_CHECKSUMS, DEBUG_GRAPH, vec![
         s::Node::Decode {io_id: 0, commands: None},
-        s::Node::Resample2D{ w: 400, h: 400,  down_filter: None, up_filter: None, hints: Some(s::ConstraintResamplingHints::new().with_bi_filter(s::Filter::Hermite)), scaling_colorspace: None }
+        s::Node::Resample2D{ w: 400, h: 400,  down_filter: None, up_filter: None, hints: Some(s::ResampleHints::new().with_bi_filter(s::Filter::Hermite)), scaling_colorspace: None }
         ]
     );
     assert!(matched);
@@ -118,7 +118,7 @@ fn test_scale_image() {
     let matched = compare(Some(s::IoEnum::Url("https://s3-us-west-2.amazonaws.com/imageflow-resources/test_inputs/waterhouse.jpg".to_owned())), 500,
                           "ScaleTheHouse", POPULATE_CHECKSUMS, DEBUG_GRAPH, vec![
         s::Node::Decode {io_id: 0, commands: None},
-        s::Node::Resample2D{ w: 400, h: 300,  down_filter: None, up_filter: None, hints: Some(s::ConstraintResamplingHints::new().with_bi_filter(s::Filter::Robidoux)), scaling_colorspace: None }
+        s::Node::Resample2D{ w: 400, h: 300,  down_filter: None, up_filter: None, hints: Some(s::ResampleHints::new().with_bi_filter(s::Filter::Robidoux)), scaling_colorspace: None }
         ]
     );
     assert!(matched);
@@ -153,7 +153,7 @@ fn test_read_gif() {
     let matched = compare(Some(s::IoEnum::Url("https://s3-us-west-2.amazonaws.com/imageflow-resources/test_inputs/mountain_800.gif".to_owned())), 500,
                           "mountain_gif_scaled400", POPULATE_CHECKSUMS, DEBUG_GRAPH, vec![
             s::Node::Decode {io_id: 0, commands: None},
-            s::Node::Resample2D{ w: 400, h: 300, down_filter: None, up_filter: None, hints: Some(s::ConstraintResamplingHints::new().with_bi_filter(s::Filter::Robidoux)), scaling_colorspace: None }
+            s::Node::Resample2D{ w: 400, h: 300, down_filter: None, up_filter: None, hints: Some(s::ResampleHints::new().with_bi_filter(s::Filter::Robidoux)), scaling_colorspace: None }
         ]
     );
     assert!(matched);
@@ -166,7 +166,7 @@ fn test_jpeg_icc2_color_profile() {
     let matched = compare(Some(s::IoEnum::Url("https://s3-us-west-2.amazonaws.com/imageflow-resources/test_inputs/MarsRGB_tagged.jpg".to_owned())), 500,
                           "MarsRGB_ICC_Scaled400300", POPULATE_CHECKSUMS, DEBUG_GRAPH, vec![
 s::Node::Decode {io_id: 0, commands: None},
-s::Node::Resample2D{ w: 400, h: 300, down_filter: None, up_filter: None, hints: Some(s::ConstraintResamplingHints::new().with_bi_filter(s::Filter::Robidoux)), scaling_colorspace: None }
+s::Node::Resample2D{ w: 400, h: 300, down_filter: None, up_filter: None, hints: Some(s::ResampleHints::new().with_bi_filter(s::Filter::Robidoux)), scaling_colorspace: None }
 ]
     );
     assert!(matched);
@@ -177,7 +177,7 @@ fn test_jpeg_icc4_color_profile() {
     let matched = compare(Some(s::IoEnum::Url("https://s3-us-west-2.amazonaws.com/imageflow-resources/test_inputs/MarsRGB_v4_sYCC_8bit.jpg".to_owned())), 500,
                           "MarsRGB_ICCv4_Scaled400300", POPULATE_CHECKSUMS, DEBUG_GRAPH, vec![
 s::Node::Decode {io_id: 0, commands: None},
-s::Node::Resample2D{ w: 400, h: 300, down_filter: None, up_filter: None, hints: Some(s::ConstraintResamplingHints::new().with_bi_filter(s::Filter::Robidoux)), scaling_colorspace: None }
+s::Node::Resample2D{ w: 400, h: 300, down_filter: None, up_filter: None, hints: Some(s::ResampleHints::new().with_bi_filter(s::Filter::Robidoux)), scaling_colorspace: None }
 ]
     );
     assert!(matched);
@@ -389,9 +389,9 @@ fn smoke_test_png_ir4(){
 #[test]
 fn test_encode_jpeg_smoke() {
     let steps = vec![
-    s::Node::Decode {io_id: 0, commands: None},
-    s::Node::Resample2D{ w: 400, h: 300, down_filter: None, up_filter: None, hints: Some(s::ConstraintResamplingHints::new().with_bi_filter(s::Filter::Robidoux)), scaling_colorspace: None },
-    s::Node::Encode{ io_id: 1, preset: s::EncoderPreset::LibjpegTurbo {quality: Some(100), progressive: None, optimize_huffman_coding: None}}
+        s::Node::Decode {io_id: 0, commands: None},
+        s::Node::Resample2D{ w: 400, h: 300, down_filter: None, up_filter: None, hints: Some(s::ResampleHints::new().with_bi_filter(s::Filter::Robidoux)), scaling_colorspace: None },
+        s::Node::Encode{ io_id: 1, preset: s::EncoderPreset::LibjpegTurbo {quality: Some(100), progressive: None, optimize_huffman_coding: None}}
     ];
 
     smoke_test(Some(s::IoEnum::Url("https://s3-us-west-2.amazonaws.com/imageflow-resources/test_inputs/MarsRGB_v4_sYCC_8bit.jpg".to_owned())),
@@ -405,7 +405,7 @@ fn test_encode_jpeg_smoke() {
 fn test_encode_gif_smoke() {
     let steps = vec![
         s::Node::Decode {io_id: 0, commands: None},
-        s::Node::Resample2D{ w: 400, h: 300, down_filter: None, up_filter: None, hints: Some(s::ConstraintResamplingHints::new().with_bi_filter(s::Filter::Robidoux)), scaling_colorspace: None },
+        s::Node::Resample2D{ w: 400, h: 300, down_filter: None, up_filter: None, hints: Some(s::ResampleHints::new().with_bi_filter(s::Filter::Robidoux)), scaling_colorspace: None },
         s::Node::Encode{ io_id: 1, preset: s::EncoderPreset::Gif}
     ];
 
@@ -419,11 +419,11 @@ fn test_encode_gif_smoke() {
 #[test]
 fn test_encode_png32_smoke() {
     let steps = vec![
-    s::Node::Decode {io_id: 0, commands: None},
-    s::Node::Resample2D{ w: 400, h: 300, down_filter: None, up_filter: None, hints: Some(s::ConstraintResamplingHints::new().with_bi_filter(s::Filter::Robidoux)), scaling_colorspace: None },
-    s::Node::FlipV,
-    s::Node::Crop{ x1: 20, y1: 20, x2: 380, y2: 280},
-    s::Node::Encode{ io_id: 1, preset: s::EncoderPreset::Libpng {depth: Some(s::PngBitDepth::Png32), matte: None,  zlib_compression: None}}
+        s::Node::Decode {io_id: 0, commands: None},
+        s::Node::Resample2D{ w: 400, h: 300, down_filter: None, up_filter: None, hints: Some(s::ResampleHints::new().with_bi_filter(s::Filter::Robidoux)), scaling_colorspace: None },
+        s::Node::FlipV,
+        s::Node::Crop{ x1: 20, y1: 20, x2: 380, y2: 280},
+        s::Node::Encode{ io_id: 1, preset: s::EncoderPreset::Libpng {depth: Some(s::PngBitDepth::Png32), matte: None,  zlib_compression: None}}
     ];
 
     smoke_test(Some(s::IoEnum::Url("https://s3-us-west-2.amazonaws.com/imageflow-resources/test_inputs/MarsRGB_v4_sYCC_8bit.jpg".to_owned())),

@@ -316,12 +316,6 @@ fn test_bgra() {
 
 }
 
-#[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
-pub struct ResampleHints {
-    pub sharpen_percent: Option<f32>,
-    pub background_color: Option<Color>
-    // pub prefer_1d_twice: Option<bool>,
-}
 
 #[derive(Serialize, Deserialize, Clone, Copy, PartialEq, Debug)]
 pub enum ResampleWhen{
@@ -346,7 +340,7 @@ pub enum SharpenWhen{
 }
 
 #[derive(Serialize, Deserialize,  Clone, PartialEq, Debug)]
-pub struct ConstraintResamplingHints {
+pub struct ResampleHints {
     pub sharpen_percent: Option<f32>,
     pub down_filter: Option<Filter>,
     pub up_filter: Option<Filter>,
@@ -356,9 +350,9 @@ pub struct ConstraintResamplingHints {
     pub sharpen_when: Option<SharpenWhen>
 }
 
-impl ConstraintResamplingHints{
-    pub fn new() -> ConstraintResamplingHints{
-        ConstraintResamplingHints{
+impl ResampleHints {
+    pub fn new() -> ResampleHints {
+        ResampleHints {
             sharpen_percent: None,
             down_filter: None,
             up_filter: None,
@@ -368,22 +362,22 @@ impl ConstraintResamplingHints{
             sharpen_when: None
         }
     }
-    pub fn with_bi_filter(self, filter: Filter) -> ConstraintResamplingHints{
-        ConstraintResamplingHints{
+    pub fn with_bi_filter(self, filter: Filter) -> ResampleHints {
+        ResampleHints {
             down_filter: Some(filter),
             up_filter: Some(filter),
             .. self
         }
     }
-    pub fn with_floatspace(self, space: ScalingFloatspace) -> ConstraintResamplingHints{
-        ConstraintResamplingHints{
+    pub fn with_floatspace(self, space: ScalingFloatspace) -> ResampleHints {
+        ResampleHints {
             scaling_colorspace: Some(space),
             .. self
         }
     }
 
-    pub fn with(filter: Option<Filter>, sharpen_percent: Option<f32>) -> ConstraintResamplingHints{
-        ConstraintResamplingHints{
+    pub fn with(filter: Option<Filter>, sharpen_percent: Option<f32>) -> ResampleHints {
+        ResampleHints {
             sharpen_percent,
             down_filter: filter,
             up_filter: filter,
@@ -418,7 +412,7 @@ pub struct CropHints{
 pub enum Constraint {
     /// Ensure the result fits within the provided dimensions.
     #[serde(rename = "within")]
-    Within { w: Option<u32>, h: Option<u32> /*, upscale: Option<bool>*/, hints: Option<ConstraintResamplingHints> },
+    Within { w: Option<u32>, h: Option<u32> /*, upscale: Option<bool>*/, hints: Option<ResampleHints> },
 
     // Exact: produces Distorts the image to exactly the provided dimensions, ignoring aspect ratio.
     // Upscales
@@ -530,7 +524,7 @@ pub enum Node {
         down_filter: Option<Filter>, //TODO: remove on next API break
         up_filter: Option<Filter>, //TODO: remove on next API break
         scaling_colorspace: Option<ScalingFloatspace>, //TODO: remove on next API break
-        hints: Option<ConstraintResamplingHints>,
+        hints: Option<ResampleHints>,
     },
     #[serde(rename="draw_image_exact")]
     DrawImageExact {
@@ -539,7 +533,7 @@ pub enum Node {
         w: u32,
         h: u32,
         blend: Option<CompositingMode>,
-        hints: Option<ConstraintResamplingHints>,
+        hints: Option<ResampleHints>,
     },
 //    #[serde(rename="resample_1d")]
 //    Resample1D {
@@ -907,7 +901,7 @@ impl Framewise {
                                   down_filter: None,
                                   up_filter: None,
                                   scaling_colorspace: None,
-                                  hints: Some(ConstraintResamplingHints {
+                                  hints: Some(ResampleHints {
                                       sharpen_percent: Some(10f32),
                                       down_filter: Some(Filter::Robidoux),
                                       up_filter: Some(Filter::Ginseng),
@@ -924,7 +918,7 @@ impl Framewise {
                                   up_filter: None,
                                   down_filter: None,
                                   scaling_colorspace: None,
-                                  hints: Some(ConstraintResamplingHints{
+                                  hints: Some(ResampleHints {
                                       sharpen_percent: None,
                                       down_filter: None,
                                       up_filter: None,
@@ -969,7 +963,7 @@ impl Framewise {
                          h: 100,
                          down_filter: None,
                          up_filter: None,
-                         hints: Some(ConstraintResamplingHints {
+                         hints: Some(ResampleHints {
                              sharpen_percent: Some(10f32),
                              down_filter: Some(Filter::Robidoux),
                              up_filter: Some(Filter::Ginseng),

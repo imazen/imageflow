@@ -70,7 +70,7 @@ impl FluentNode {
         self.builder().to_framewise().wrap_in_build_0_1()
     }
 
-    pub fn constrain_within(self, w: Option<u32>, h: Option<u32>, resampling_hints: Option<s::ConstraintResamplingHints>) -> FluentNode{
+    pub fn constrain_within(self, w: Option<u32>, h: Option<u32>, resampling_hints: Option<s::ResampleHints>) -> FluentNode{
         self.to(s::Node::Constrain(s::Constraint::Within{ w: w, h: h, hints: resampling_hints}))
     }
 
@@ -297,7 +297,7 @@ fn smoke_test_chaining(){
 
     let chain = fluently()
         .decode(0)
-        .constrain_within(Some(1400), Some(1400), Some(s::ConstraintResamplingHints::with(Some(s::Filter::CatmullRom), Some(40f32))))
+        .constrain_within(Some(1400), Some(1400), Some(s::ResampleHints::with(Some(s::Filter::CatmullRom), Some(40f32))))
         .flip_horizontal()
         .flip_vertical()
         .transpose()
@@ -318,14 +318,14 @@ fn smoke_test_many_operations(){
             height:1600
         })])})
         .constrain_within(Some(1400), None,None)
-        .constrain_within(Some(1400), Some(1400), Some(s::ConstraintResamplingHints::with(Some(s::Filter::CatmullRom), Some(40f32))))
+        .constrain_within(Some(1400), Some(1400), Some(s::ResampleHints::with(Some(s::Filter::CatmullRom), Some(40f32))))
         .to(s::Node::Resample2D {
             w: 800,
             h: 800,
             down_filter: None,
             up_filter: None,
             scaling_colorspace: None,
-            hints: Some(s::ConstraintResamplingHints {
+            hints: Some(s::ResampleHints {
                 sharpen_percent: Some(10f32),
                 background_color: None,
                 resample_when: None,
