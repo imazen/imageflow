@@ -520,6 +520,9 @@ impl From<s::Node> for Node {
             s::Node::CreateCanvas { .. } => {
                 Node::n(&nodes::CREATE_CANVAS, NodeParams::Json(node))
             }
+            s::Node::RegionPercent { .. } => {
+                Node::n(&nodes::REGION_PERCENT, NodeParams::Json(node))
+            }
             s::Node::CopyRectToCanvas { .. } => {
                 Node::n(&nodes::COPY_RECT, NodeParams::Json(node))
             }

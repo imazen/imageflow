@@ -35,6 +35,7 @@ pub use self::clone_crop_fill_expand::CROP;
 pub use self::clone_crop_fill_expand::CROP_WHITESPACE;
 pub use self::clone_crop_fill_expand::CROP_MUTATE;
 pub use self::clone_crop_fill_expand::EXPAND_CANVAS;
+pub use self::clone_crop_fill_expand::REGION_PERCENT;
 pub use self::clone_crop_fill_expand::FILL_RECT;
 pub use self::codecs_and_pointer::BITMAP_BGRA_POINTER;
 pub use self::codecs_and_pointer::DECODER;
@@ -62,6 +63,7 @@ pub use self::white_balance::WHITE_BALANCE_SRGB;
 pub use self::color::COLOR_MATRIX_SRGB_MUTATE;
 pub use self::color::COLOR_MATRIX_SRGB;
 pub use self::color::COLOR_FILTER_SRGB;
+
 //pub use self::detection::CROP_FACES;
 
 use super::definitions::*;

@@ -8,7 +8,7 @@ pub static CROP_MUTATE: CropMutNodeDef = CropMutNodeDef{};
 pub static CLONE: CloneDef = CloneDef{};
 pub static EXPAND_CANVAS: ExpandCanvasDef = ExpandCanvasDef{};
 pub static CROP_WHITESPACE: CropWhitespaceDef = CropWhitespaceDef{};
-
+pub static REGION_PERCENT: RegionPercentDef = RegionPercentDef {};
 
 #[derive(Debug, Clone)]
 pub struct CopyRectNodeDef;
@@ -227,6 +227,101 @@ impl NodeDefOneInputExpand for ExpandCanvasDef{
     }
 }
 
+#[derive(Debug,Clone)]
+pub struct RegionPercentDef;
+impl RegionPercentDef {
+    fn get_coords(info:FrameInfo, left: f32, top: f32, right: f32, bottom: f32) -> (i32,i32,i32,i32){
+        let (x1, y1, mut x2, mut y2) =
+            ((info.w as f32 * left).round() as i32,
+            (info.h as f32 * top).round() as i32,
+            (info.w as f32 * right).round() as i32,
+             (info.h as f32 * bottom).round() as i32);
+        //Round up to 1px if our percentages land on the same pixel
+        if x2 < x1 {
+            x2 = x1 + 1;
+        }
+        if y2 < y1{
+            y2 = y1 + 1;
+        }
+        return (x1,y1,x2,y2);
+
+    }
+}
+impl NodeDef for RegionPercentDef {
+    fn as_one_input_expand(&self) -> Option<&dyn NodeDefOneInputExpand>{
+        Some(self)
+    }
+}
+impl NodeDefOneInputExpand for RegionPercentDef {
+    fn fqn(&self) -> &'static str{
+        "imazen.region_percent"
+    }
+    fn estimate(&self, p: &NodeParams, input: FrameEstimate) -> Result<FrameEstimate> {
+        if let NodeParams::Json(s::Node::RegionPercent { left, top, bottom, right, ref color }) = *p {
+            input.map_frame( |info| {
+                let (x1, y1, x2, y2) = RegionPercentDef::get_coords(info, left, top, right, bottom);
+                Ok(FrameInfo {
+                    w: x2 - x1,
+                    h: y2 - y1,
+                    fmt: ffi::PixelFormat::from(info.fmt)
+                })
+            })
+        } else {
+            Err(nerror!(crate::ErrorKind::NodeParamsMismatch, "Need ExpandCanvas, got {:?}", p))
+        }
+    }
+    //TODO: If we want to support transparency on jpeg inputs we have to fix expand_canvas and copy_rect too
+    fn expand(&self, ctx: &mut OpCtxMut, ix: NodeIndex, p: NodeParams, input: FrameInfo) -> Result<()>{
+        if let NodeParams::Json(imageflow_types::Node::RegionPercent { left, top, bottom, right, color }) = p {
+            if bottom <= top || right <= left {
+                return Err(nerror!(crate::ErrorKind::InvalidNodeParams, "Invalid coordinates: {},{} {},{} should describe the top-left and bottom-right corners of the region in percentages. Not a rectangle.", left, top, right, bottom));
+            }
+
+            let (x1, y1, x2, y2) = RegionPercentDef::get_coords(input, left, top, right, bottom);
+
+
+            if x1 >= input.w || y1 >= input.h || x2 <= 0 || y2 <= 0{
+                // No cropping of input image, we just create a canvas
+                let canvas_params = s::Node::CreateCanvas {
+                    w: (x2-x1) as usize,
+                    h: (y2-y1) as usize,
+                    format: s::PixelFormat::from(input.fmt),
+                    color: color.clone(),
+                };
+                let canvas = ctx.graph
+                    .add_node(Node::n(&CREATE_CANVAS,
+                                      NodeParams::Json(canvas_params)));
+                ctx.replace_node_with_existing(ix, canvas);
+            }else{
+                let crop_params = imageflow_types::Node::Crop {
+                    x1: i32::min(input.w, i32::max(0,x1)) as u32,
+                    y1: i32::min(input.h, i32::max(0,y1)) as u32,
+                    x2: i32::min(input.w, i32::max(0,x2)) as u32,
+                    y2: i32::min(input.h, i32::max(0,y2)) as u32
+                };
+                let expand_params = imageflow_types::Node::ExpandCanvas {
+                  left: (i32::max(0, x1) * -1) as u32,
+                    top: (i32::max(0, y1) * -1) as u32,
+                    right: i32::min(0, x2 - input.w) as u32,
+                    bottom: i32::min(0, y2 - input.h) as u32,
+                    color: color.clone()
+                };
+
+                //First crop, then expand
+                ctx.replace_node(ix, vec![
+                    Node::n(&CROP,
+                            NodeParams::Json(crop_params)),
+                    Node::n(&EXPAND_CANVAS,
+                            NodeParams::Json(expand_params)),
+                ]);
+            }
+
+            Ok(())
+        } else {
+            Err(nerror!(crate::ErrorKind::NodeParamsMismatch, "Need RegionPercentage, got {:?}", p))
+        }
+    }
+}
 
 #[derive(Debug, Clone)]
 pub struct CropMutNodeDef;
