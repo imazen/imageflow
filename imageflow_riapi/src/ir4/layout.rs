@@ -4,6 +4,7 @@ use imageflow_types as s;
 use crate::sizing;
 use crate::sizing::prelude::*;
 use crate::ir4::parsing::*;
+use imageflow_types::{ConstraintMode, ConstraintGravity};
 
 
 pub struct Ir4Layout{
@@ -12,6 +13,14 @@ pub struct Ir4Layout{
     w: i32,
     h: i32
 }
+
+pub struct ConstraintResults{
+    pub crop: Option<[u32;4]>,
+    pub scale_to: AspectRatio,
+    pub pad: Option<[u32;4]>,
+    pub final_canvas: AspectRatio,
+}
+
 
 pub struct Ir4LayoutInfo{
     pub canvas: AspectRatio
@@ -23,7 +32,7 @@ impl Ir4Layout{
                w: i32,
                h: i32) -> Ir4Layout{
         Ir4Layout{
-            i: i, w: w, h: h
+            i, w, h
         }
     }
 
@@ -215,6 +224,110 @@ impl Ir4Layout{
 
 
 
+    fn get_instructions(constraint: &imageflow_types::Constraint) -> Option<Instructions> {
+        let mut i = Instructions::new();
+        i.w = constraint.w.map(|v| v as i32);
+        i.h = constraint.h.map(|v| v as i32);
+        match constraint.mode{
+            ConstraintMode::Distort => {
+                i.mode = Some(FitMode::Stretch);
+                i.scale = Some(ScaleMode::Both);
+            },
+            ConstraintMode::Within => {
+                i.mode = Some(FitMode::Max);
+                i.scale = Some(ScaleMode::DownscaleOnly);
+            },
+            ConstraintMode::Fit => {
+                i.mode = Some(FitMode::Max);
+                i.scale = Some(ScaleMode::Both);
+            },
+            ConstraintMode::LargerThan => {
+                i.mode = Some(FitMode::Max);
+                i.scale = Some(ScaleMode::UpscaleOnly);
+            },
+            ConstraintMode::WithinCrop => {
+                i.mode = Some(FitMode::Crop);
+                i.scale = Some(ScaleMode::DownscaleOnly);
+            },
+            ConstraintMode::FitCrop => {
+                i.mode = Some(FitMode::Crop);
+                i.scale = Some(ScaleMode::Both);
+            },
+            ConstraintMode::WithinPad => {
+                i.mode = Some(FitMode::Pad);
+                i.scale = Some(ScaleMode::DownscaleOnly);
+            },
+            ConstraintMode::FitPad => {
+                i.mode = Some(FitMode::Crop);
+                i.scale = Some(ScaleMode::Both);
+            },
+            // ConstraintType::AspectCrop => {
+            //     return None;
+            // },
+        }
+        Some(i)
+    }
+
+    pub fn process_constraint(source_w: i32, source_h: i32, constraint: &imageflow_types::Constraint) -> sizing::Result<ConstraintResults>{
+
+        let instructions = Ir4Layout::get_instructions(&constraint).expect("aspect_crop is enabled but not supported");
+
+        let ir_layout = Ir4Layout::new(instructions, source_w, source_h);
+
+        let initial_size = AspectRatio::create(source_w, source_h)?;
+
+        let target = ir_layout.get_ideal_target_size(initial_size)?;
+
+        let constraints = ir_layout.build_constraints();
+
+        //We would change this for face or ROI support
+        let cropper = sizing::IdentityCropProvider::new();
+
+        // ======== This is where we do the sizing and constraint evaluation \/
+        let layout = sizing::Layout::create(initial_size, target).execute_all(&constraints, &cropper)?;
+
+        //println!("executed constraints {:?} to get layout {:?} from target {:?}", &constraints, &layout, &target);
+        let new_crop = layout.get_source_crop();
+
+
+        //align crop
+        let (inner_crop_x1, inner_crop_y1) = Ir4Layout::align_gravity(constraint.gravity.clone().unwrap_or(ConstraintGravity::Center) , new_crop, initial_size)
+            .expect("Outer box should never be smaller than inner box. All values must > 0");
+        //add manual crop offset
+        let (crop_x1, crop_y1) = ((inner_crop_x1) as u32, ( inner_crop_y1) as u32);
+
+        //println!("Crop initial={:?}, new: {:?}, x1: {}, y1: {}", &initial_crop, &new_crop, crop_x1, crop_y1);
+        let final_crop = if crop_x1 > 0 || crop_y1 > 0 || initial_size.width() != new_crop.width() || initial_size.height() != new_crop.height() {
+            Some([crop_x1, crop_y1, crop_x1 + new_crop.width() as u32, crop_y1 + new_crop.height() as u32])
+        }else{
+            None
+        };
+
+        //Align padding
+        let final_canvas = layout.get_box(BoxTarget::CurrentCanvas);
+        let scale_to = layout.get_box(BoxTarget::CurrentImage);
+        let (left, top) = Ir4Layout::align_gravity(constraint.gravity.clone().unwrap_or(ConstraintGravity::Center) , scale_to, final_canvas)
+            .expect("Outer box should never be smaller than inner box. All values must > 0");
+
+        let (right, bottom) = (final_canvas.width() - scale_to.width() - left, final_canvas.height() - scale_to.height() - top);
+        //Add padding. This may need to be revisited - how do jpegs behave with transparent padding?
+        let mut pad = None;
+        if left > 0 || top > 0 || right > 0 || bottom > 0 {
+            if left >= 0 && top >= 0 && right >= 0 && bottom >= 0 {
+                pad = Some([left as u32,top as u32,right as u32,bottom as u32]);
+            } else {
+                panic!("Negative padding showed up: {},{},{},{}", left, top, right, bottom);
+            }
+        }
+
+        Ok(ConstraintResults{
+            crop: final_crop,
+            scale_to,
+            final_canvas,
+            pad
+        })
+    }
+
     pub fn get_crop_and_layout(&self) -> sizing::Result<(Option<[u32;4]>,sizing::Layout)> {
         let (precrop_w, precrop_h) = self.get_precrop();
 
@@ -369,7 +482,7 @@ impl Ir4Layout{
         b.add_flip(self.i.flip);
 
         Ok(Ir4LayoutInfo {
-            canvas: canvas
+            canvas
         })
     }
 
@@ -388,6 +501,23 @@ impl Ir4Layout{
     fn align(alignment: (Anchor1D, Anchor1D), inner: AspectRatio, outer: AspectRatio) -> std::result::Result<(i32,i32),()>{
         let (x,y) = alignment;
         Ok((Self::align1d(x,inner.width(), outer.width())?, Self::align1d(y, inner.height(), outer.height())?))
+    }
+
+    fn gravity1d(align_percentage: f32, inner: i32, outer: i32) -> std::result::Result<i32, ()>{
+        let ratio = f32::min(100f32, f32::max(0f32,align_percentage)) / 100f32;
+        if outer < inner && inner < 1 || outer < 1 {
+            Err(())
+        }else{
+            Ok(((outer-inner) as f32 * ratio).round() as i32)
+        }
+    }
+
+    fn align_gravity(gravity: imageflow_types::ConstraintGravity, inner: AspectRatio, outer: AspectRatio) -> std::result::Result<(i32,i32),()>{
+        let (x,y) = match gravity{
+            imageflow_types::ConstraintGravity::Center => (50f32,50f32),
+            imageflow_types::ConstraintGravity::Percentage {x,y} => (x, y)
+        };
+        Ok((Self::gravity1d(x,inner.width(), outer.width())?, Self::gravity1d(y, inner.height(), outer.height())?))
     }
 
     fn get_initial_copy_window(&self, w: i32, h: i32) -> [i32;4]{

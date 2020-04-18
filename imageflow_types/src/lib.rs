@@ -397,40 +397,59 @@ pub enum CommandStringKind{
 }
 
 #[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
-pub struct CropHints{
-// align
-// detect faces
-// objects
-
+pub enum ConstraintMode {
+    /// Distort the image to exactly the given dimensions.
+    /// If only one dimension is specified, behaves like `fit`.
+    #[serde(rename = "distort")]
+    Distort,
+    /// Ensure the result fits within the provided dimensions. No upscaling.
+    #[serde(rename = "within")]
+    Within,
+    /// Fit the image within the dimensions, upscaling if needed
+    #[serde(rename = "fit")]
+    Fit,
+    /// Ensure the image is larger than the given dimensions
+    #[serde(rename = "larger_than")]
+    LargerThan,
+    /// Crop to desired aspect ratio if image is larger than requested, then downscale. Ignores smaller images.
+    /// If only one dimension is specified, behaves like `within`.
+    #[serde(rename = "within_crop")]
+    WithinCrop,
+    /// Crop to desired aspect ratio, then downscale or upscale to fit.
+    /// If only one dimension is specified, behaves like `fit`.
+    #[serde(rename = "fit_crop")]
+    FitCrop,
+    // /// Crop to desired aspect ratio, no upscaling or downscaling. If only one dimension is specified, behaves like Fit.
+    // #[serde(rename = "aspect_crop")]
+    // AspectCrop,
+    /// Pad to desired aspect ratio if image is larger than requested, then downscale. Ignores smaller images.
+    /// If only one dimension is specified, behaves like `within`
+    #[serde(rename = "within_pad")]
+    WithinPad,
+    /// Pad to desired aspect ratio, then downscale or upscale to fit
+    /// If only one dimension is specified, behaves like `fit`.
+    #[serde(rename = "fit_pad")]
+    FitPad,
 }
 
-/// Constraint types.
-/// _exact constraints always produce the requested size
-/// _aspect constraints match the aspect ratio of the requested size
-/// _aspect constraints will produce the requested size with `upscale: true` and `downscale: true`
+
+
+
+
 #[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
-pub enum Constraint {
-    /// Ensure the result fits within the provided dimensions.
-    #[serde(rename = "within")]
-    Within { w: Option<u32>, h: Option<u32> /*, upscale: Option<bool>*/, hints: Option<ResampleHints> },
-
-    // Exact: produces Distorts the image to exactly the provided dimensions, ignoring aspect ratio.
-    // Upscales
-//    #[serde(rename = "distort_exact")]
-//    DistortExact { w: u32, h: u32, hints: Option<ConstraintResamplingHints> },
-
-//    #[serde(rename = "pad_exact")]
-//    PadExact { w: u32, h: u32, upscale: bool, anchor: , hints: Option<ConstraintResamplingHints> },
-//
-//    #[serde(rename = "pad_aspect")]
-//    PadAspect { w: u32, h: u32, upscale: bool, downscale:bool, anchor: , hints: Option<ConstraintResamplingHints> },
-//
-//    #[serde(rename = "crop_aspect")]
-//    CropAspect { w: u32, h: u32, upscale: bool, downscale:bool, anchor: , hints: Option<ConstraintResamplingHints> },
-//
-
-
-//max * {down, up, both, canvas}
+pub enum ConstraintGravity {
+    #[serde(rename = "center")]
+    Center,
+    Percentage{x: f32, y: f32}
+}
+#[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
+pub struct Constraint {
+    pub mode: ConstraintMode,
+    pub w: Option<u32>,
+    pub h: Option<u32>,
+    pub hints: Option<ResampleHints>,
+    pub gravity: Option<ConstraintGravity>,
+    pub canvas_color: Option<Color>
 }
 
 /// Blend pixels (if transparent) or replace?

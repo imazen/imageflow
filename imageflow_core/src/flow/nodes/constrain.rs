@@ -1,5 +1,6 @@
 use super::internal_prelude::*;
-
+use imageflow_riapi::sizing::{Layout, AspectRatio, LayoutError};
+use imageflow_types::ConstraintMode;
 
 pub static CONSTRAIN: ConstrainDef = ConstrainDef{};
 pub static COMMAND_STRING: CommandStringDef = CommandStringDef{};
@@ -109,10 +110,10 @@ impl NodeDefOneInputExpand for ConstrainDef{
     fn estimate(&self, params: &NodeParams, input: FrameEstimate) -> Result<FrameEstimate>{
         if let NodeParams::Json(s::Node::Constrain(ref constraint)) = *params {
             input.map_frame(|input| {
-                let (w, h, _) = constrain(input.w as u32, input.h as u32, constraint.clone());
+                let constraint_results = imageflow_riapi::ir4::process_constraint(input.w, input.h, constraint).unwrap(); //TODO: fix unwrap
                 Ok(FrameInfo {
-                    w: w as i32,
-                    h: h as i32,
+                    w: constraint_results.final_canvas.width() as i32,
+                    h: constraint_results.final_canvas.height() as i32,
                     fmt: ffi::PixelFormat::from(input.fmt),
                 })
             })
@@ -121,26 +122,37 @@ impl NodeDefOneInputExpand for ConstrainDef{
         }
     }
 
-    fn expand(&self, ctx: &mut OpCtxMut, ix: NodeIndex, params: NodeParams, parent: FrameInfo) -> Result<()> {
+    fn expand(&self, ctx: &mut OpCtxMut, ix: NodeIndex, params: NodeParams, input: FrameInfo) -> Result<()> {
         if let NodeParams::Json(s::Node::Constrain(constraint)) = params {
-            let input_w = parent.w as u32;
-            let input_h = parent.h as u32;
+            let constraint_results = imageflow_riapi::ir4::process_constraint(input.w, input.h, &constraint).unwrap(); //TODO: fix unwrap
 
-            let (new_w, new_h, hints_val) = constrain(input_w, input_h, constraint.clone());
+            let mut b  = Vec::new();
+            if let Some(c) = constraint_results.crop{
+                b.push(Node::from(s::Node::Crop { x1: c[0], y1: c[1], x2: c[2], y2: c[3] }));
+            }
+            b.push(Node::from(
+                imageflow_types::Node::Resample2D {
+                    w: constraint_results.scale_to.width() as u32,
+                    h: constraint_results.scale_to.height() as u32,
+                    up_filter: None,
+                    down_filter: None,
+                    scaling_colorspace: None,
+                    hints: constraint.hints,
+                })
+            );
 
-            let scale2d_params = imageflow_types::Node::Resample2D {
-                w: new_w,
-                h: new_h,
-                up_filter: None,
-                down_filter: None,
-                scaling_colorspace: None,
-                hints: hints_val,
-            };
+            if let Some(pad) = constraint_results.pad{
+                b.push(Node::from(
+                imageflow_types::Node::ExpandCanvas {
+                    left: pad[0],
+                    top: pad[1],
+                    right: pad[2],
+                    bottom: pad[3],
+                    color: constraint.canvas_color.unwrap_or(imageflow_types::Color::Transparent)
+                }));
+            }
 
-            let scale2d = ctx.graph
-                .add_node(Node::n(&super::SCALE,
-                                    NodeParams::Json(scale2d_params)));
-            ctx.replace_node_with_existing(ix, scale2d);
+            ctx.replace_node(ix, b);
 
             Ok(())
         } else {
@@ -151,63 +163,6 @@ impl NodeDefOneInputExpand for ConstrainDef{
 
 
 
-fn scale_b_to(aspect_ratio_a_over_b: f32, a_from: u32, a_to: u32, b_from: u32) -> u32{
-    let scale_factor = a_to as f32 / a_from as f32;
-    let result = b_from as f32 * scale_factor;// * aspect_ratio_a_over_b;
-    result.round() as u32
-}
-
-
-fn constrain(old_w: u32, old_h: u32, constraint: s::Constraint) -> (u32,u32, Option<imageflow_types::ResampleHints>){
-    let aspect = old_w as f32 / old_h as f32;
-    match constraint{
-
-        s::Constraint::Within{ w: Some(w), h: None,  ref hints} if w < old_w => {
-            (w, scale_b_to(aspect, old_w, w, old_h), hints.clone())
-        }
-        s::Constraint::Within{ w: None, h: Some(h),  ref hints} if h < old_h => {
-            (scale_b_to(1f32 / aspect, old_h, h, old_w), h, hints.clone())
-        }
-        s::Constraint::Within{ w: Some(w), h: Some(h),  ref hints} if w < old_w || h < old_h => {
-
-            let constraint_aspect = w as f32 / h as f32;
-            if constraint_aspect > aspect{
-                //height is the constraint
-                (scale_b_to(1f32 / aspect, old_h, h, old_w), h, hints.clone())
-            }else{
-                //width is the constraint
-                (w, scale_b_to(aspect, old_w, w, old_h), hints.clone())
-            }
-        }
-        s::Constraint::Within{ ref hints, ..} => (old_w, old_h, hints.clone()),
-    }
-}
-
-#[test]
-fn test_constrain(){
-    //let hints = s::ConstraintResamplingHints{down_filter: None, up_filter: None, resample_when: None, sharpen_percent: None};
-    {
-        let constraint = s::Constraint::Within { w: Some(100), h: Some(100), hints: None };
-        assert_eq!(constrain(200, 50, constraint), (100, 25, None));
-    }
-    {
-        let constraint = s::Constraint::Within { w: Some(100), h: Some(100), hints: None };
-        assert_eq!(constrain(50, 200, constraint), (25, 100, None));
-    }
-    {
-        let constraint = s::Constraint::Within { w: Some(640), h: Some(480), hints: None };
-        assert_eq!(constrain(200, 50, constraint), (200, 50, None));
-    }
-    {
-        let constraint = s::Constraint::Within { w: Some(100), h: Some(100), hints: None };
-        assert_eq!(constrain(100, 100, constraint), (100, 100, None));
-    }
-    {
-        let constraint = s::Constraint::Within { w: Some(100), h: Some(100), hints: None };
-        assert_eq!(constrain(100, 100, constraint), (100, 100, None));
-    }
-
-}
 
 #[derive(Debug,Clone)]
 pub struct CommandStringDef;
@@ -261,3 +216,4 @@ impl NodeDef for CommandStringDef{
         }
     }
 }
+

@@ -230,7 +230,9 @@ fn test_jpeg_rotation() {
         for flag in 1..9 {
             let url = format!("https://s3-us-west-2.amazonaws.com/imageflow-resources/test_inputs/orientation/{}_{}.jpg", orientation, flag);
             let title = format!("Test_Apply_Orientation_{}_{}.jpg", orientation, flag);
-            let matched = compare(Some(s::IoEnum::Url(url)), 500, &title, POPULATE_CHECKSUMS, DEBUG_GRAPH, vec![s::Node::Decode {io_id: 0, commands: None}, s::Node::Constrain(s::Constraint::Within{w: Some(70), h: Some(70), hints: None})]);
+            let matched = compare(Some(s::IoEnum::Url(url)), 500, &title, POPULATE_CHECKSUMS, DEBUG_GRAPH,
+                                  vec![s::Node::Decode {io_id: 0, commands: None},
+                                       s::Node::Constrain(s::Constraint{mode: s::ConstraintMode::Within, w: Some(70), h: Some(70), hints: None, gravity: None, canvas_color: None })]);
             assert!(matched);
         }
     }

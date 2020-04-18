@@ -71,7 +71,7 @@ impl FluentNode {
     }
 
     pub fn constrain_within(self, w: Option<u32>, h: Option<u32>, resampling_hints: Option<s::ResampleHints>) -> FluentNode{
-        self.to(s::Node::Constrain(s::Constraint::Within{ w: w, h: h, hints: resampling_hints}))
+        self.to(s::Node::Constrain(imageflow_types::Constraint{ mode: s::ConstraintMode::Within , w, h, hints: resampling_hints, gravity: None, canvas_color: None }))
     }
 
     pub fn canvas_bgra32(self,

@@ -9,6 +9,12 @@ use crate::sizing::prelude::*;
 use crate::ir4::parsing::*;
 use crate::ir4::layout::*;
 
+pub use layout::ConstraintResults;
+
+pub fn process_constraint(source_w: i32, source_h: i32, constraint: &imageflow_types::Constraint) -> sizing::Result<ConstraintResults>{
+    layout::Ir4Layout::process_constraint(source_w,source_h, constraint)
+}
+
 pub enum Ir4Command{
     Instructions(Box<Instructions>),
     Url(String),
