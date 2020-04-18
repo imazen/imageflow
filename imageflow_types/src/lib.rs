@@ -556,9 +556,6 @@ pub enum Node {
     Resample2D {
         w: u32,
         h: u32,
-        down_filter: Option<Filter>, //TODO: remove on next API break
-        up_filter: Option<Filter>, //TODO: remove on next API break
-        scaling_colorspace: Option<ScalingFloatspace>, //TODO: remove on next API break
         hints: Option<ResampleHints>,
     },
     #[serde(rename="draw_image_exact")]
@@ -933,9 +930,6 @@ impl Framewise {
                               Node::Resample2D {
                                   w: 100,
                                   h: 75,
-                                  down_filter: None,
-                                  up_filter: None,
-                                  scaling_colorspace: None,
                                   hints: Some(ResampleHints {
                                       sharpen_percent: Some(10f32),
                                       down_filter: Some(Filter::Robidoux),
@@ -950,9 +944,6 @@ impl Framewise {
                               Node::Resample2D {
                                   w: 200,
                                   h: 150,
-                                  up_filter: None,
-                                  down_filter: None,
-                                  scaling_colorspace: None,
                                   hints: Some(ResampleHints {
                                       sharpen_percent: None,
                                       down_filter: None,
@@ -996,8 +987,6 @@ impl Framewise {
                      Node::Resample2D {
                          w: 100,
                          h: 100,
-                         down_filter: None,
-                         up_filter: None,
                          hints: Some(ResampleHints {
                              sharpen_percent: Some(10f32),
                              down_filter: Some(Filter::Robidoux),
@@ -1008,7 +997,6 @@ impl Framewise {
                              resample_when: Some(ResampleWhen::SizeDiffersOrSharpeningRequested),
                              sharpen_when: Some(SharpenWhen::Downscaling)
                          }),
-                         scaling_colorspace: None,
                      });
         nodes.insert("4".to_owned(),
                      Node::Encode {

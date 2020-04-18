@@ -414,9 +414,6 @@ impl Ir4Layout{
         b.add(s::Node::Resample2D {
             w: image.width() as u32,
             h: image.height() as u32,
-            down_filter: None,
-            up_filter: None,
-            scaling_colorspace: None,
             hints: Some(imageflow_types::ResampleHints {
                 sharpen_percent: self.i.f_sharpen.map(|v| v as f32),
                 down_filter: None,
@@ -614,9 +611,6 @@ fn test_crop_and_scale(){
                              s::Node::Resample2D {
                                  w: 100,
                                  h: 200,
-                                 down_filter: None,
-                                 up_filter: None,
-                                 scaling_colorspace: None,
                                  hints: Some(s::ResampleHints {
                                      sharpen_percent: None,
                                      down_filter: None,
@@ -637,9 +631,7 @@ fn test_scale(){
     let l  = Ir4Layout::new(Instructions{w: Some(2560), h: Some(1696), mode: Some(FitMode::Max), f_sharpen_when: Some(SharpenWhen::Downscaling), .. Default::default() }, 5104, 3380);
     l.add_steps(&mut b).unwrap();
     assert_eq!(b.steps, vec![s::Node::Resample2D { w: 2560, h: 1696,
-        down_filter: None,
-        up_filter: None,
-        scaling_colorspace: None,
+
         hints: Some(s::ResampleHints {
             sharpen_percent: None,
             down_filter: None,

@@ -227,9 +227,6 @@ fn scenario_laundry_list() -> BuildScenario{
         .to(s::Node::Resample2D {
             w: 800,
             h: 800,
-            down_filter: None,
-            up_filter: None,
-            scaling_colorspace: None,
             hints: Some(s::ResampleHints {
                 sharpen_percent: Some(10f32),
                 background_color: None,

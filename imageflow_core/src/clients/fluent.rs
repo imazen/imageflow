@@ -322,9 +322,6 @@ fn smoke_test_many_operations(){
         .to(s::Node::Resample2D {
             w: 800,
             h: 800,
-            down_filter: None,
-            up_filter: None,
-            scaling_colorspace: None,
             hints: Some(s::ResampleHints {
                 sharpen_percent: Some(10f32),
                 background_color: None,
@@ -382,9 +379,6 @@ fn smoke_test_graph_builder() {
         .to(s::Node::Resample2D {
             w: 100,
             h: 100,
-            down_filter: None,
-            up_filter: None,
-            scaling_colorspace: None,
             hints: None,
         })
         .to(s::Node::Encode {

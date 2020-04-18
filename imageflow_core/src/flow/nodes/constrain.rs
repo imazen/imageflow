@@ -134,9 +134,6 @@ impl NodeDefOneInputExpand for ConstrainDef{
                 imageflow_types::Node::Resample2D {
                     w: constraint_results.scale_to.width() as u32,
                     h: constraint_results.scale_to.height() as u32,
-                    up_filter: None,
-                    down_filter: None,
-                    scaling_colorspace: None,
                     hints: constraint.hints,
                 })
             );

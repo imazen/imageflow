@@ -30,7 +30,7 @@ impl NodeDefOneInputExpand for ScaleDef {
         }
     }
     fn expand(&self, ctx: &mut OpCtxMut, ix: NodeIndex, params: NodeParams, parent: FrameInfo) -> Result<()> {
-        if let NodeParams::Json(s::Node::Resample2D { w, h, down_filter, up_filter, scaling_colorspace, hints }) =
+        if let NodeParams::Json(s::Node::Resample2D { w, h, hints }) =
         params {
             let resample_when = hints.as_ref().and_then(|ref h| h.resample_when).unwrap_or(s::ResampleWhen::SizeDiffersOrSharpeningRequested);
 
@@ -64,14 +64,11 @@ impl NodeDefOneInputExpand for ScaleDef {
                 let scale2d_params = imageflow_types::Node::Resample2D {
                     w,
                     h,
-                    up_filter: None,
-                    down_filter: None,
-                    scaling_colorspace: None,
                     hints: Some(imageflow_types::ResampleHints {
                         sharpen_percent: Some(sharpen_percent),
-                        down_filter: hints.as_ref().and_then(|h| h.down_filter).or(down_filter),
-                        up_filter: hints.as_ref().and_then(|h| h.up_filter).or(up_filter),
-                        scaling_colorspace: hints.as_ref().and_then(|h| h.scaling_colorspace).or(scaling_colorspace),
+                        down_filter: hints.as_ref().and_then(|h| h.down_filter),
+                        up_filter: hints.as_ref().and_then(|h| h.up_filter),
+                        scaling_colorspace: hints.as_ref().and_then(|h| h.scaling_colorspace),
                         background_color: hints.as_ref().and_then(|h| h.background_color.clone()),
                         resample_when: Some(s::ResampleWhen::Always),
                         sharpen_when: hints.as_ref().and_then(|h| h.sharpen_when)
@@ -121,7 +118,7 @@ impl NodeDefOneInputOneCanvasExpand for Scale2dDef {
     }
 
     fn expand(&self, ctx: &mut OpCtxMut, ix: NodeIndex, params: NodeParams, input: FrameInfo, canvas: FrameInfo) -> Result<()> {
-        if let NodeParams::Json(imageflow_types::Node::Resample2D { w, h, down_filter, up_filter, scaling_colorspace, hints }) =
+        if let NodeParams::Json(imageflow_types::Node::Resample2D { w, h, hints }) =
         params {
 
             if w != canvas.w as u32 || h != canvas.h as u32 {
@@ -147,9 +144,9 @@ impl NodeDefOneInputOneCanvasExpand for Scale2dDef {
                 },
                 hints: Some(::imageflow_types::ResampleHints {
                     sharpen_percent: hints.as_ref().and_then(|h| h.sharpen_percent),
-                    down_filter: hints.as_ref().and_then(|h| h.down_filter).or(down_filter),
-                    up_filter: hints.as_ref().and_then(|h| h.up_filter).or(up_filter),
-                    scaling_colorspace: hints.as_ref().and_then(|h| h.scaling_colorspace).or(scaling_colorspace),
+                    down_filter: hints.as_ref().and_then(|h| h.down_filter),
+                    up_filter: hints.as_ref().and_then(|h| h.up_filter),
+                    scaling_colorspace: hints.as_ref().and_then(|h| h.scaling_colorspace),
                     background_color: Some(bgcolor),
                     resample_when: None, //We already threw and error if this wasn't none or always
                     sharpen_when: hints.as_ref().and_then(|h| h.sharpen_when)

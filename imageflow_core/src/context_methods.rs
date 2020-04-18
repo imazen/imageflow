@@ -131,9 +131,6 @@ fn test_handler() {
     steps.push(s::Node::Resample2D {
         w: 20,
         h: 30,
-        down_filter: None,
-        up_filter: None,
-        scaling_colorspace: None,
         hints: None,
     });
     steps.push(s::Node::FlipV);
