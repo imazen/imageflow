@@ -177,22 +177,17 @@ macro_rules! static_char {
     }
 }
 
-#[cfg(feature = "nightly")]
+
 fn type_name_of<T>(_: T) -> &'static str {
     extern crate core;
-    unsafe { core::intrinsics::type_name::<T>() }
+    std::any::type_name::<T>()
 }
 
-#[cfg(feature = "nightly")]
-fn parent_function_name<T>(_: T) -> &'static str {
+fn parent_function_name<T>(f: T) -> &'static str {
     let name = type_name_of(f);
-    &name[..name.len() - 4].rsplit_terminator(":").next().unwrap_or("[function name not found]")
+    &name[..name.len() - 3].rsplit_terminator(":").next().unwrap_or("[function name not found]")
 }
 
-#[cfg(not(feature = "nightly"))]
-fn parent_function_name<T>(_: T) -> &'static str {
-    "[function name only available in Rust Nightly]"
-}
 macro_rules! context {
     ($ptr:ident) => {{
         if $ptr.is_null() {
