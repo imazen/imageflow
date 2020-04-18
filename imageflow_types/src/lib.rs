@@ -440,6 +440,7 @@ pub enum ConstraintMode {
 pub enum ConstraintGravity {
     #[serde(rename = "center")]
     Center,
+    #[serde(rename = "percentage")]
     Percentage{x: f32, y: f32}
 }
 #[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
