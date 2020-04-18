@@ -489,7 +489,17 @@ fn test_dimensions(){
 
 }
 
+#[test]
+fn test_aspect_crop_dimensions(){
+    let steps = vec![
+        s::Node::CreateCanvas{w: 638, h: 423, format: s::PixelFormat::Bgra32, color: s::Color::Black},
+        s::Node::Constrain(imageflow_types::Constraint{ mode: imageflow_types::ConstraintMode::AspectCrop, w: Some(200),h: Some(133), hints: None, gravity: None, canvas_color: None })
+    ];
+    let (w, h) = get_result_dimensions(&steps, vec![], DEBUG_GRAPH);
+    assert_eq!(w,636);
+    assert_eq!(h,423);
 
+}
 
 
 #[test]

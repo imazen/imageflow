@@ -419,9 +419,9 @@ pub enum ConstraintMode {
     /// If only one dimension is specified, behaves like `fit`.
     #[serde(rename = "fit_crop")]
     FitCrop,
-    // /// Crop to desired aspect ratio, no upscaling or downscaling. If only one dimension is specified, behaves like Fit.
-    // #[serde(rename = "aspect_crop")]
-    // AspectCrop,
+    /// Crop to desired aspect ratio, no upscaling or downscaling. If only one dimension is specified, behaves like Fit.
+    #[serde(rename = "aspect_crop")]
+    AspectCrop,
     /// Pad to desired aspect ratio if image is larger than requested, then downscale. Ignores smaller images.
     /// If only one dimension is specified, behaves like `within`
     #[serde(rename = "within_pad")]

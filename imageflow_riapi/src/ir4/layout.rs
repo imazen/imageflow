@@ -210,6 +210,10 @@ impl Ir4Layout{
                 steps().skip_if(Cond::Either(Ordering::Less)).scale_to_outer().crop()
                     .new_seq().skip_unless(Cond::Larger1DSmaller1D).virtual_canvas(BoxParam::Exact(BoxTarget::Target))
             },
+            (FitMode::AspectCrop, _) => {
+                //scale to the outer box and crop to target, always. Easy.
+                steps().crop_aspect()
+            },
         }.into_vec()
     }
 
@@ -261,9 +265,9 @@ impl Ir4Layout{
                 i.mode = Some(FitMode::Crop);
                 i.scale = Some(ScaleMode::Both);
             },
-            // ConstraintType::AspectCrop => {
-            //     return None;
-            // },
+            ConstraintMode::AspectCrop => {
+                i.mode = Some(FitMode::AspectCrop);
+            },
         }
         Some(i)
     }

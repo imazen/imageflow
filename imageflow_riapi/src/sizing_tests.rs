@@ -615,8 +615,8 @@ fn test_scale_to_outer_and_crop(){
 #[test]
 fn test_crop_aspect(){
     let cropper = sizing::IdentityCropProvider::new();
-    let result = Layout::create(r(2,4), r(1,3)).execute_all(&steps().crop_aspect().into_vec(), &cropper).unwrap();
-    assert_eq!(result.get_source_crop(), r(1,4))
+    let result = Layout::create(r(638,423), r(200,133)).execute_all(&steps().crop_aspect().into_vec(), &cropper).unwrap();
+    assert_eq!(result.get_source_crop(), r(636,423))
 }
 
 #[test]

@@ -86,6 +86,7 @@ pub enum FitModeStrings {
     Carve,
     /// Width and height are considered exact values - if there is an aspect ratio difference, the image is stretched.
     Stretch,
+    AspectCrop
 }
 }
 macro_attr! {
@@ -688,7 +689,8 @@ impl FitModeStrings{
             FitModeStrings::Pad => Some(FitMode::Pad),
             FitModeStrings::Crop => Some(FitMode::Crop),
             FitModeStrings::Carve |
-            FitModeStrings::Stretch => Some(FitMode::Stretch)
+            FitModeStrings::Stretch => Some(FitMode::Stretch),
+            FitModeStrings::AspectCrop => Some(FitMode::AspectCrop)
         }
     }
 }
@@ -718,6 +720,8 @@ pub enum FitMode {
     Crop,
     /// Width and height are considered exact values - if there is an aspect ratio difference, the image is stretched.
     Stretch,
+    /// Width and height are considered a target aspect ratio for cropping
+    AspectCrop,
 }
 
 
@@ -854,6 +858,7 @@ fn test_url_parsing() {
     t("srotate=360&rotate=-90", Instructions { srotate: Some(0), rotate: Some(270), ..Default::default() }, vec![]);
     t("srotate=-20.922222&rotate=-46.2", Instructions { srotate: Some(0), rotate: Some(270), ..Default::default() }, vec![]);
     t("autorotate=false&ignoreicc=true", Instructions { autorotate: Some(false), ignoreicc: Some(true) , ..Default::default() }, vec![]);
+    t("mode=aspectcrop", Instructions { mode: Some(FitMode::AspectCrop), ..Default::default() }, vec![]);
     t("mode=max&stretch=fill", Instructions { mode: Some(FitMode::Max), ..Default::default() }, vec![]);
     t("stretch=fill", Instructions { mode: Some(FitMode::Stretch), ..Default::default() }, vec![]);
     t("crop=auto", Instructions { mode: Some(FitMode::Crop), ..Default::default() }, vec![]);
@@ -937,6 +942,7 @@ fn test_tostr(){
     t("rotate=270&srotate=0", Instructions { srotate: Some(0), rotate: Some(270), ..Default::default() });
     t("autorotate=false&ignoreicc=true", Instructions { autorotate: Some(false), ignoreicc: Some(true) , ..Default::default() });
     t("mode=max", Instructions { mode: Some(FitMode::Max), ..Default::default() });
+    t("mode=aspectcrop", Instructions { mode: Some(FitMode::AspectCrop), ..Default::default() });
     t("cropxunits=2.3&cropyunits=100", Instructions { cropxunits: Some(2.3f64), cropyunits: Some(100f64), ..Default::default() });
     t("quality=85", Instructions { quality: Some(85), ..Default::default() });
     t("zoom=0.02", Instructions { zoom: Some(0.02f64), ..Default::default() });
