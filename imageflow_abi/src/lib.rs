@@ -446,7 +446,7 @@ pub extern "C" fn imageflow_context_print_and_exit_if_error(context: *mut Contex
     let e = context!(context).outward_error();
     if e.has_error(){
         eprintln!("{}",e);
-        true
+        std::process::exit(e.category().process_exit_code())
     }else{
         false
     }
