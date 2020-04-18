@@ -158,8 +158,8 @@ impl FluentNode {
                               s::Node::CopyRectToCanvas {
                            from_x,
                            from_y,
-                           width,
-                           height,
+                                  w: width,
+                                  h: height,
                            x,
                            y,
                        })

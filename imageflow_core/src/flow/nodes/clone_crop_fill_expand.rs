@@ -29,7 +29,7 @@ impl NodeDefOneInputOneCanvas for CopyRectNodeDef{
     }
 
     fn render(&self, c: &Context, canvas: &mut BitmapBgra, input: &mut BitmapBgra,  p: &NodeParams) -> Result<()> {
-        if let NodeParams::Json(s::Node::CopyRectToCanvas { from_x, from_y, width, height, x, y }) = *p {
+        if let NodeParams::Json(s::Node::CopyRectToCanvas { from_x, from_y,  w, h, x, y }) = *p {
 
 
             if input.fmt != canvas.fmt {
@@ -40,10 +40,10 @@ impl NodeDefOneInputOneCanvas for CopyRectNodeDef{
             }
 
             if input.w <= from_x || input.h <= from_y ||
-                input.w < from_x + width ||
-                input.h < from_y + height ||
-                canvas.w < x + width ||
-                canvas.h < y + height {
+                input.w < from_x + w ||
+                input.h < from_y + h ||
+                canvas.w < x + w ||
+                canvas.h < y + h {
                 return Err(nerror!(crate::ErrorKind::InvalidNodeParams, "Invalid coordinates. Canvas is {}x{}, Input is {}x{}, Params provided: {:?}",
                          canvas.w,
                          canvas.h,
@@ -54,7 +54,7 @@ impl NodeDefOneInputOneCanvas for CopyRectNodeDef{
             canvas.compositing_mode = crate::ffi::BitmapCompositingMode::BlendWithSelf;
 
             let bytes_pp = input.fmt.bytes() as u32;
-            if from_x == 0 && x == 0 && width == input.w && width == canvas.w &&
+            if from_x == 0 && x == 0 && w == input.w && w == canvas.w &&
                 input.stride == canvas.stride {
                 //This optimization has the side effect of copying irrelevant data, so we don't want to do it if windowed, only
                 // if padded or permanently cropped.
@@ -63,17 +63,17 @@ impl NodeDefOneInputOneCanvas for CopyRectNodeDef{
                     let from_ptr = input.pixels.offset(from_offset as isize);
                     let to_offset = canvas.stride * y;
                     let to_ptr = canvas.pixels.offset(to_offset as isize);
-                    ptr::copy_nonoverlapping(from_ptr, to_ptr, (input.stride * height) as usize);
+                    ptr::copy_nonoverlapping(from_ptr, to_ptr, (input.stride * h) as usize);
                 }
             } else {
-                for row in 0..height {
+                for row in 0..h {
                     unsafe {
                         let from_offset = input.stride * (from_y + row) + bytes_pp * from_x;
                         let from_ptr = input.pixels.offset(from_offset as isize);
                         let to_offset = canvas.stride * (y + row) + bytes_pp * x;
                         let to_ptr = canvas.pixels.offset(to_offset as isize);
 
-                        ptr::copy_nonoverlapping(from_ptr, to_ptr, (width * bytes_pp) as usize);
+                        ptr::copy_nonoverlapping(from_ptr, to_ptr, (w * bytes_pp) as usize);
                     }
                 }
             }
@@ -155,8 +155,8 @@ impl NodeDefOneInputExpand for CloneDef{
             from_y: 0,
             x: 0,
             y: 0,
-            width: parent.w as u32,
-            height: parent.h as u32,
+            w: parent.w as u32,
+            h: parent.h as u32,
         };
         let canvas = ctx.graph
             .add_node(Node::n(&CREATE_CANVAS, NodeParams::Json(canvas_params)));
@@ -211,8 +211,8 @@ impl NodeDefOneInputExpand for ExpandCanvasDef{
                 from_y: 0,
                 x: left,
                 y: top,
-                width: w as u32,
-                height: h as u32,
+                w: w as u32,
+                h: h as u32,
             };
             let canvas = ctx.graph
                 .add_node(Node::n(&CREATE_CANVAS,

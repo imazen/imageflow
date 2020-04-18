@@ -495,8 +495,8 @@ pub enum Node {
     CopyRectToCanvas {
         from_x: u32,
         from_y: u32,
-        width: u32, //TODO: inconsistent with w/h or x2/y2 elsewhere
-        height: u32,
+        w: u32, //TODO: inconsistent with w/h or x2/y2 elsewhere
+        h: u32,
         x: u32,
         y: u32,
     },
@@ -980,8 +980,8 @@ impl Framewise {
                          y: 0,
                          from_x: 0,
                          from_y: 0,
-                         width: 100,
-                         height: 100,
+                         w: 100,
+                         h: 100,
                      });
         nodes.insert("3".to_owned(),
                      Node::Resample2D {
