@@ -39,6 +39,7 @@ if [[ "$SKIP_HOST_CARGO_EXPORT" != 'True' ]]; then
 fi
 
 if [[ $DEPLOY_DOCS == 'True' ]]; then
+  echo "*******  mdbook build docs **************"
   mdbook build docs
   mdbook test docs
   ls docs/book
