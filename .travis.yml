@@ -14,7 +14,7 @@ matrix:
     - docker
   - os: linux
     dist: trusty
-    env: TARGET_CPU=x86-64 PACKAGE_SUFFIX=ubuntu_18_04-x86_64 NUGET_RUNTIME=ubuntu.18.04-x64 DOCKER_IMAGE=imazen/imageflow_build_ubuntu18 UPLOAD_BUILD=True FETCH_COMMIT_SUFFIX=linux64_glibc227 PUBLISH_DOCKER=True
+    env: TARGET_CPU=x86-64 PACKAGE_SUFFIX=ubuntu_18_04-x86_64 NUGET_RUNTIME=ubuntu.18.04-x64 DOCKER_IMAGE=imazen/imageflow_build_ubuntu18 UPLOAD_BUILD=True FETCH_COMMIT_SUFFIX=linux64_glibc227 PUBLISH_DOCKER=True DEPLOY_DOCS=True
     sudo: required
     services:
     - docker
@@ -95,7 +95,17 @@ deploy:
     on:
       tags: true
       condition: $UPLOAD_BUILD = True
-
+  - deploy:
+    provider: pages
+    skip-cleanup: true
+    github-token:
+      secure: bmyTqVANN+h8t42pXD3EKN3f+RQYhH2aaV6ChCV+Wlv52oXWBzGcRAK/99KnRYpiVPRWzpLYZtI0O5NMOLSnpF3t4OViDkHZmbLk2X1zYfyK+zPK0hee5yxtJyDMB1iQwVaulbOJrusm7qLRHUJW/JsGztCQdWyyDbqiICrZ0xk=
+    local-dir: docs/book
+    keep-history: false
+    fqdn: docs.imageflow.io
+    on:
+      branch: master
+      condition: $DEPLOY_DOCS = True
 after_deploy:
   - ./ci/travis_publish_docker_images.sh docker/imageflow_tool imazen/imageflow_tool
   - ./ci/travis_publish_docker_images.sh docker/imageflow_server_unsecured imazen/imageflow_server_unsecured
