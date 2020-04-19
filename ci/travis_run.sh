@@ -415,6 +415,12 @@ if [[ "$SIM_CI" != 'True' ]]; then
 	fi
 fi
 
+if [[ $DEPLOY_DOCS == 'True' ]]; then
+  (cd docs
+     mdbook build . && mdbook test .
+  )
+fi
+
 if [[ "$DELETE_UPLOAD_FOLDER" == 'True' ]]; then
 	echo_maybe -e "\nRemvoing all files scheduled for upload to s3\n\n"
 	sudo rm -rf ./artifacts/upload || sudo rm -rf ./artifacts/upload || true

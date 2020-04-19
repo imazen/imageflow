@@ -1,0 +1,6 @@
+[book]
+authors = ["Lilith River"]
+language = "en"
+multilingual = false
+src = "src"
+title = "Imageflow"
