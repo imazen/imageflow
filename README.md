@@ -15,7 +15,7 @@ or when you want process isolation. Up to 17x faster than ImageMagick. Also prod
 HTML. Source images can reside in blob storage, on another server, or on the filesystem.
 * **libimageflow** is for direct (in-process) use from *your* programming language.  It has a simple
 [C-compatible ABI](https://s3-us-west-1.amazonaws.com/imageflow-nightlies/master/doc/imageflow/index.html)
-and [bindings](https://github.com/imazen/imageflow/tree/master/bindings).
+and [fluent **bindings for .NET Core**](https://github.com/imazen/imageflow-dotnet) .
 
 **Note: We aren't labeling Imageflow as 'stable' until enough people have tested it. Please help us test and provide feedback!**
 Also, please, *please*, **please** [send us 'challenging' images and tasks](https://github.com/imazen/imageflow/issues/98).
