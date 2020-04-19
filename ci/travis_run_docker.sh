@@ -39,9 +39,8 @@ if [[ "$SKIP_HOST_CARGO_EXPORT" != 'True' ]]; then
 fi
 
 if [[ $DEPLOY_DOCS == 'True' ]]; then
-  (cd docs
-     mdbook build . && mdbook test .
-  )
+  mdbook build docs
+  mdbook test docs
 fi
 
 if [[ "$COVERALLS" == 'true' ]]; then
