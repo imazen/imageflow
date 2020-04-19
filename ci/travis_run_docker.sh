@@ -41,6 +41,7 @@ fi
 if [[ $DEPLOY_DOCS == 'True' ]]; then
   mdbook build docs
   mdbook test docs
+  ls docs/book
 fi
 
 if [[ "$COVERALLS" == 'true' ]]; then
