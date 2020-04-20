@@ -116,7 +116,6 @@ static inline uint8_t flow_colorcontext_floatspace_to_srgb(struct flow_colorcont
         return uchar_clamp_ff(linear_to_srgb(v));
     return uchar_clamp_ff(255.0f * v);
 }
-FLOW_HINT_PURE
 
 static inline void linear_to_yxz(float bgr[])
 {
