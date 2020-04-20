@@ -12,7 +12,7 @@ enum Strategy {
 /// `down.fit=proportional(target), up.fit=none`
 /// `down.fit=proportional(ibox), up.fit=none`
     Max,
-    /// Downscale minimally until the image fits one of the dimensions (it may exceed the other). Never uspcale.
+    /// Downscale minimally until the image fits one of the dimensions (it may exceed the other). Never upscale.
 ///
 /// `down.fitw=scale(max(w, obox.w), auto) down.fith=scale(auto,max(h, obox.h) up.fit=none`
 /// `down.fit=proportional(obox), up.fit=none`
