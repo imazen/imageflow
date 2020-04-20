@@ -39,7 +39,7 @@ imageflow_helpers = { path = "../imageflow_helpers", version = "*" }
 imageflow_riapi = { path = "../imageflow_riapi", version = "*" }
 
 
-rand = "0.6"
+rand = "0.7"
 lru-cache = "0.1"
 regex = "1"
 log="0.4"
