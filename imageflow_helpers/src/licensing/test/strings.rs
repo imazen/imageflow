@@ -103,7 +103,7 @@ pub const SOFT_REVOCATION_PLACEHOLDER: &'static str= "License 2037987837 for Acm
 /// Id: 2037987837
 /// Owner: Acme Corp
 /// Features: R_Elite R_Creative R_Performance
-/// Product: OEM redistribtuion license
+/// Product: OEM redistribution license
 /// Kind: oem
 /// Issued: 2017-04-21T00:00:00+00:00
 /// Expires: 2017-06-05T00:00:00+00:00
@@ -112,7 +112,7 @@ pub const SOFT_REVOCATION_PLACEHOLDER: &'static str= "License 2037987837 for Acm
 /// SubscriptionExpirationDate: 2017-04-21T00:00:00+00:00
 /// Message: This license has been compromised; please contact Vendor Gamma for an updated license
 /// Restrictions: Only for use within Vendor Gamma Prduct
-pub const SOFT_REVOCATION_REMOTE: &'static str= "License 2037987837 for Acme Corp (OEM redistribtuion license) :SWQ6IDIwMzc5ODc4MzcKT3duZXI6IEFjbWUgQ29ycApGZWF0dXJlczogUl9FbGl0ZSBSX0NyZWF0aXZlIFJfUGVyZm9ybWFuY2UKUHJvZHVjdDogT0VNIHJlZGlzdHJpYnR1aW9uIGxpY2Vuc2UKS2luZDogb2VtCklzc3VlZDogMjAxNy0wNC0yMVQwMDowMDowMCswMDowMApFeHBpcmVzOiAyMDE3LTA2LTA1VDAwOjAwOjAwKzAwOjAwCklzUHVibGljOiB0cnVlCk11c3RCZUZldGNoZWQ6IHRydWUKU3Vic2NyaXB0aW9uRXhwaXJhdGlvbkRhdGU6IDIwMTctMDQtMjFUMDA6MDA6MDArMDA6MDAKTWVzc2FnZTogVGhpcyBsaWNlbnNlIGhhcyBiZWVuIGNvbXByb21pc2VkOyBwbGVhc2UgY29udGFjdCBWZW5kb3IgR2FtbWEgZm9yIGFuIHVwZGF0ZWQgbGljZW5zZQpSZXN0cmljdGlvbnM6IE9ubHkgZm9yIHVzZSB3aXRoaW4gVmVuZG9yIEdhbW1hIFByZHVjdA==:i/OYk3IhtPc23zMrBU/J793bfmc9bhEXwHRwq7uV9Ec3EO0fAIPtwlCa0ovn7rx1O1hKo941hkY4CiJCIMEzPhbGYXszdUXrOScpxXZjs22iFLt2pL8I8YriZrveAqlwTa+Q/dU+hOyNEPyI0fTtO+Bw2vctyzS/HlprsEPM/vAF9k3DZCW8HETysVmO1itrKGKBiUZsT0r4a0TFlEO6EzZcidRKWmuR1+sengAKUV30driF0D4uhhPqt+Cyc4K4rb00uVDRdfq1cVZq07pVmbtM6RntHvtOYUAM+fIQBnnaWseofNBv2SV/4O0SkwEoKGAHgET51dLaIuFT5F3Fsg==";
+pub const SOFT_REVOCATION_REMOTE: &'static str= "License 2037987837 for Acme Corp (OEM redistribution license) :SWQ6IDIwMzc5ODc4MzcKT3duZXI6IEFjbWUgQ29ycApGZWF0dXJlczogUl9FbGl0ZSBSX0NyZWF0aXZlIFJfUGVyZm9ybWFuY2UKUHJvZHVjdDogT0VNIHJlZGlzdHJpYnR1aW9uIGxpY2Vuc2UKS2luZDogb2VtCklzc3VlZDogMjAxNy0wNC0yMVQwMDowMDowMCswMDowMApFeHBpcmVzOiAyMDE3LTA2LTA1VDAwOjAwOjAwKzAwOjAwCklzUHVibGljOiB0cnVlCk11c3RCZUZldGNoZWQ6IHRydWUKU3Vic2NyaXB0aW9uRXhwaXJhdGlvbkRhdGU6IDIwMTctMDQtMjFUMDA6MDA6MDArMDA6MDAKTWVzc2FnZTogVGhpcyBsaWNlbnNlIGhhcyBiZWVuIGNvbXByb21pc2VkOyBwbGVhc2UgY29udGFjdCBWZW5kb3IgR2FtbWEgZm9yIGFuIHVwZGF0ZWQgbGljZW5zZQpSZXN0cmljdGlvbnM6IE9ubHkgZm9yIHVzZSB3aXRoaW4gVmVuZG9yIEdhbW1hIFByZHVjdA==:i/OYk3IhtPc23zMrBU/J793bfmc9bhEXwHRwq7uV9Ec3EO0fAIPtwlCa0ovn7rx1O1hKo941hkY4CiJCIMEzPhbGYXszdUXrOScpxXZjs22iFLt2pL8I8YriZrveAqlwTa+Q/dU+hOyNEPyI0fTtO+Bw2vctyzS/HlprsEPM/vAF9k3DZCW8HETysVmO1itrKGKBiUZsT0r4a0TFlEO6EzZcidRKWmuR1+sengAKUV30driF0D4uhhPqt+Cyc4K4rb00uVDRdfq1cVZq07pVmbtM6RntHvtOYUAM+fIQBnnaWseofNBv2SV/4O0SkwEoKGAHgET51dLaIuFT5F3Fsg==";
 
 /// Kind: id
 /// Id: 590782408
@@ -190,7 +190,7 @@ pub const OEM_PLACEHOLDER: &'static str= "License 2613256515 for Acme Corp :S2lu
 /// Id: 2613256515
 /// Owner: Acme Corp
 /// Features: R_Elite R_Creative R_Performance
-/// Product: OEM redistribtuion license
+/// Product: OEM redistribution license
 /// Kind: oem
 /// Issued: 2017-04-21T00:00:00+00:00
 /// Expires: 2017-06-10T00:00:00+00:00
@@ -198,7 +198,7 @@ pub const OEM_PLACEHOLDER: &'static str= "License 2613256515 for Acme Corp :S2lu
 /// MustBeFetched: true
 /// ManageYourSubscription: https://account.imazen.io
 /// Restrictions: Only for use within Vendor Gamma Prduct
-pub const OEM_REMOTE: &'static str= "License 2613256515 for Acme Corp (OEM redistribtuion license) :SWQ6IDI2MTMyNTY1MTUKT3duZXI6IEFjbWUgQ29ycApGZWF0dXJlczogUl9FbGl0ZSBSX0NyZWF0aXZlIFJfUGVyZm9ybWFuY2UKUHJvZHVjdDogT0VNIHJlZGlzdHJpYnR1aW9uIGxpY2Vuc2UKS2luZDogb2VtCklzc3VlZDogMjAxNy0wNC0yMVQwMDowMDowMCswMDowMApFeHBpcmVzOiAyMDE3LTA2LTEwVDAwOjAwOjAwKzAwOjAwCklzUHVibGljOiB0cnVlCk11c3RCZUZldGNoZWQ6IHRydWUKTWFuYWdlWW91clN1YnNjcmlwdGlvbjogaHR0cHM6Ly9hY2NvdW50LmltYXplbi5pbwpSZXN0cmljdGlvbnM6IE9ubHkgZm9yIHVzZSB3aXRoaW4gVmVuZG9yIEdhbW1hIFByZHVjdA==:Czr3ds3Dn5/Q9pcKFmv4PLi4BcDL3C4zdK40hQNw/mO224nWM+LAYFF82pv5GnA6ocFqZ7knxrF5tt4l9JaXVzbVkV0SSNnPuzsQQd94C+O7TF9YJnGSMEjrJEm0NeKwH0N8RMqtbcIyFiJf0BDM3amQJ5gQY+sNS56shtzCtqh1P3KYXzM7wgfJVFP9fCSANGfJxthF0qntp2RccUBMEUIqLEimUkxNLE5kNLPnJHe8x1Pf7FfnhgATeXZj7azQy6Q9UH4dSUU3GdOIGAjEMt1L3x7iFSPyd9oYKrXJV3J6w5zIFLh7tC8+l/enIxzTYp21ixjWjmkVbDyCPmmfTg==";
+pub const OEM_REMOTE: &'static str= "License 2613256515 for Acme Corp (OEM redistribution license) :SWQ6IDI2MTMyNTY1MTUKT3duZXI6IEFjbWUgQ29ycApGZWF0dXJlczogUl9FbGl0ZSBSX0NyZWF0aXZlIFJfUGVyZm9ybWFuY2UKUHJvZHVjdDogT0VNIHJlZGlzdHJpYnR1aW9uIGxpY2Vuc2UKS2luZDogb2VtCklzc3VlZDogMjAxNy0wNC0yMVQwMDowMDowMCswMDowMApFeHBpcmVzOiAyMDE3LTA2LTEwVDAwOjAwOjAwKzAwOjAwCklzUHVibGljOiB0cnVlCk11c3RCZUZldGNoZWQ6IHRydWUKTWFuYWdlWW91clN1YnNjcmlwdGlvbjogaHR0cHM6Ly9hY2NvdW50LmltYXplbi5pbwpSZXN0cmljdGlvbnM6IE9ubHkgZm9yIHVzZSB3aXRoaW4gVmVuZG9yIEdhbW1hIFByZHVjdA==:Czr3ds3Dn5/Q9pcKFmv4PLi4BcDL3C4zdK40hQNw/mO224nWM+LAYFF82pv5GnA6ocFqZ7knxrF5tt4l9JaXVzbVkV0SSNnPuzsQQd94C+O7TF9YJnGSMEjrJEm0NeKwH0N8RMqtbcIyFiJf0BDM3amQJ5gQY+sNS56shtzCtqh1P3KYXzM7wgfJVFP9fCSANGfJxthF0qntp2RccUBMEUIqLEimUkxNLE5kNLPnJHe8x1Pf7FfnhgATeXZj7azQy6Q9UH4dSUU3GdOIGAjEMt1L3x7iFSPyd9oYKrXJV3J6w5zIFLh7tC8+l/enIxzTYp21ixjWjmkVbDyCPmmfTg==";
 
 /// Kind: id
 /// Id: 3550635254

@@ -418,7 +418,7 @@ if [[ "$SIM_CI" != 'True' ]]; then
 fi
 
 if [[ "$DELETE_UPLOAD_FOLDER" == 'True' ]]; then
-	echo_maybe -e "\nRemvoing all files scheduled for upload to s3\n\n"
+	echo_maybe -e "\nRemoving all files scheduled for upload to s3\n\n"
 	sudo rm -rf ./artifacts/upload || sudo rm -rf ./artifacts/upload || true
 	mkdir -p ./artifacts/upload || true
 else

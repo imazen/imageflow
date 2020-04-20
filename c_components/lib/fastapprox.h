@@ -1206,7 +1206,7 @@ static inline v4sf vfastersigmoid(const v4sf x)
 //
 // WARNING: fastsinfull, fastcosfull, and fasttanfull can be slower than
 // libc calls on older machines (!) and on newer machines are only
-// slighly faster.  however:
+// slightly faster.  however:
 //   * vectorized versions are competitive
 //   * faster full versions are competitive
 

@@ -68,7 +68,7 @@ FLOW_HINT_HOT FLOW_HINT_UNSAFE_MATH_OPTIMIZATIONS
     struct flow_colorcontext_info colorcontext;
     flow_colorcontext_init(c, &colorcontext, info->scale_in_colorspace, 0, 0, 0);
 
-    // Use details as a parent struture to ensure everything gets freed
+    // Use details as a parent structure to ensure everything gets freed
     struct flow_interpolation_details * details = flow_interpolation_details_create_from(c, info->interpolation_filter);
     if (details == NULL) {
         FLOW_error_return(c);
@@ -185,7 +185,7 @@ FLOW_HINT_HOT FLOW_HINT_UNSAFE_MATH_OPTIMIZATIONS
             }
             float weight = contrib.Weights[input_row - contrib.Left];
             if (fabs(weight) > 0.00000002) {
-                // Apply coefficent, update tracking
+                // Apply coefficient, update tracking
                 float delta_coefficient = weight / row_coefficients[active_buf_ix];
                 multiply_row(rows[active_buf_ix], row_floats, delta_coefficient);
                 row_coefficients[active_buf_ix] = weight;

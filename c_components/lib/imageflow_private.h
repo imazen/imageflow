@@ -53,7 +53,7 @@ struct flow_bitmap_float {
     bool pixels_borrowed;
     // The number of floats in the buffer
     uint32_t float_count;
-    // The number of floats betwen (0,0) and (0,1)
+    // The number of floats between (0,0) and (0,1)
     uint32_t float_stride;
 
     // If true, alpha has been premultiplied

@@ -197,7 +197,7 @@ https://vision.arc.nasa.gov/publications/publications.html#compression
 - [ ] Time-constant guassian approximation (%97) blur (1 bug remaining)
 - [ ] Improve contrast/saturation/luma adjustment ergonomics
 - [x] Integrate libjpeg-turbo (read/write)
-- [x] Create correct and ooptimized IDCT downscaling for libjpeg-turbo (linear light, robidoux filter)
+- [x] Create correct and optimized IDCT downscaling for libjpeg-turbo (linear light, robidoux filter)
 - [x] Integrate libpng (read/write) (32-bit only)
 - [ ] Integrate Rust gif codec
 - [ ] Support animated gifs
@@ -220,7 +220,7 @@ https://vision.arc.nasa.gov/publications/publications.html#compression
 - [x] Validate basic functionality via simple ruby REST [RIAPI](http://riapi.org) server to wrap libimageflow
 - [x] Design correct error handling protocol so all APIs report detailed stacktrace w/ line numbers and useful error messages for all API surfaces. 
 - [x] Expose flexible I/O interface so a variety if I/O types can be cleanly supported from host languages (I.e, .NET Stream, FILE *, membuffer, circular buffer, etc)
-- [x] Replace direct graph maniupulation with JSON API
+- [x] Replace direct graph manipulation with JSON API
 - [ ] Finish API design and test coverage for image composition, whitespace detection/cropping, sharpening, blurring, contrast/saturation, and white balance (algorithms already complete or well defined). 
 - [ ] Create plugin interface for codecs 
 - [ ] Create documentation

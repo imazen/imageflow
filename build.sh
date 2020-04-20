@@ -330,7 +330,7 @@ if git symbolic-ref --short HEAD 2>&9 1>&9 ; then
 	GIT_OPTIONAL_BRANCH="${GIT_OPTIONAL_BRANCH:-$(git symbolic-ref --short HEAD)}"
 fi
 
-############ NAMING OF ARTIFACTS (local-only, CI should determint the rest) ##################
+############ NAMING OF ARTIFACTS (local-only, CI should determine the rest) ##################
 
 if [[ "$(uname -s)" == 'Darwin' ]]; then
 	export SHORT_OS_NAME="${SHORT_OS_NAME:-mac}"

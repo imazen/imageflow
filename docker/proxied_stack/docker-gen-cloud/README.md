@@ -1,6 +1,6 @@
 # docker-gen for Docker Cloud
 
-This is an enhancment to the [docker-gen](https://github.com/jwilder/docker-gen) image that adds support
+This is an enhancement to the [docker-gen](https://github.com/jwilder/docker-gen) image that adds support
 for [Docker Cloud](https://cloud.docker.com).
 
 This image is used in context of [this](https://blog.switchbit.io/developing-a-ghost-theme-with-gulp-part-5/) 

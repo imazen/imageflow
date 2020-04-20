@@ -164,7 +164,7 @@ enum Constraint1DAndAspectStrategy {
     /// The constraint is an upper bound; the image will never be upscaled,
 /// and downscaling will preserve the original aspect ratio
     Max,
-    /// Ensures that at least one dimension is equal to or smaller than the provided box (alt. dimension estimated via aspect ratio). aka. MinimalSupersetNoUspcaling
+    /// Ensures that at least one dimension is equal to or smaller than the provided box (alt. dimension estimated via aspect ratio). aka. MinimalSupersetNoUpscaling
 /// (fits outside box)
     MaxAny,
     /// (no use case) The constraint is a lower bound. If the image is smaller than this value, it will be upscaled, preserving the original aspect ratio.
