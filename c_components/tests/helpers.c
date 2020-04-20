@@ -253,7 +253,7 @@ struct flow_bitmap_bgra * BitmapBgra_create_test_image(flow_c * c)
     return test;
 }
 
-// Returns average delte per channel per pixel. returns (double)INT32_MAX if dimension or channel mismatch
+// Returns average delta per channel per pixel. returns (double)INT32_MAX if dimension or channel mismatch
 double flow_bitmap_float_compare(flow_c * c, struct flow_bitmap_float * a, struct flow_bitmap_float * b,
                                  float * out_max_delta)
 {

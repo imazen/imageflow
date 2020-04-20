@@ -284,7 +284,7 @@ impl IoProxy {
         IoProxy::check_io_id(context,io_id)?;
         unsafe {
             // TODO: add support for a wider variety of character sets
-            // Winows fopen needs ansii
+            // Windows fopen needs ansii
             let path_buf = path.as_ref().to_path_buf();
 
             let c_path = {

@@ -195,7 +195,7 @@ typedef bool (*flow_io_seek_function)(flow_c * c, struct flow_io * io, int64_t p
 // Make your own codecs
 struct flow_decoder_frame_info;
 
-typedef bool (*codec_intialize)(flow_c * c, struct flow_codec_instance * instance);
+typedef bool (*codec_initialize)(flow_c * c, struct flow_codec_instance * instance);
 
 typedef bool (*codec_get_info_fn)(flow_c * c, void * codec_state, struct flow_decoder_info * decoder_info_ref);
 typedef bool (*codec_switch_frame_fn)(flow_c * c, void * codec_state, size_t frame_index);
@@ -220,7 +220,7 @@ struct flow_codec_magic_bytes {
 
 struct flow_codec_definition {
     int64_t codec_id;
-    codec_intialize initialize;
+    codec_initialize initialize;
     codec_get_info_fn get_info;
     codec_get_frame_info_fn get_frame_info;
     codec_set_downscale_hints_fn set_downscale_hints;
