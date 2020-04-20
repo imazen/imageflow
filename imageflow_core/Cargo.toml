@@ -46,7 +46,7 @@ imgref = "1.4.1"
 
 dssim = "2.9"
 gif = "*"
-rgb = "0.8.16"
+rgb = "0.8.17"
 imagequant = "2.12.5"
 lodepng = "2.4.0"
 libwebp-sys = "0.3"
