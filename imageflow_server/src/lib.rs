@@ -142,7 +142,7 @@ impl From<std::io::Error> for ServerError {
 struct FetchedResponse {
     bytes: Vec<u8>,
     perf: AcquirePerf,
-    content_type: http::header::HeaderValue,
+    content_type: reqwest::header::HeaderValue,
 }
 
 fn fetch_bytes(url: &str, config: Option<FetchConfig>) -> std::result::Result<FetchedResponse, ServerError> {
@@ -334,7 +334,7 @@ fn respond_using<F, F2, A>(debug_info: &A, bytes_provider: F2, framewise_generat
 
 fn respond_with_server_error<A>(debug_info: &A, e: ServerError, detailed_errors: bool) -> IronResult<Response> where A: std::fmt::Debug {
     match e {
-        ServerError::UpstreamResponseError(http::StatusCode::NOT_FOUND) => {
+        ServerError::UpstreamResponseError(reqwest::StatusCode::NOT_FOUND) => {
             let bytes = if detailed_errors {
                 b"Remote file not found (upstream server responded with 404)".to_vec()
             }else {

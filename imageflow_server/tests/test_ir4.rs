@@ -22,6 +22,7 @@ use crate::fc::test_helpers::process_testing::ProcTestContextExtras;
 use imageflow_helpers::fetching::{fetch, fetch_bytes,get_status_code_for, FetchError, FetchConfig};
 
 use std::collections::vec_deque::VecDeque;
+use reqwest::StatusCode;
 
 lazy_static! {
     static ref RECENT_PORTS: Mutex<VecDeque<u16>> = Mutex::new(VecDeque::new());
@@ -130,7 +131,7 @@ enum Proto{
 }
 impl ServerInstance{
 
-    fn hello(&self) -> std::result::Result<http::StatusCode, FetchError> {
+    fn hello(&self) -> Result<StatusCode, FetchError> {
         get_status_code_for(&self.url_for("/hello/are/you/running?"))
     }
 
@@ -143,11 +144,11 @@ impl ServerInstance{
 
     }
 
-    fn get_status(&self, rel_path: &str) -> std::result::Result<http::StatusCode, FetchError> {
+    fn get_status(&self, rel_path: &str) -> Result<StatusCode, FetchError> {
         get_status_code_for(&self.url_for(rel_path))
     }
 
-    fn request_stop(&self) -> std::result::Result<http::StatusCode, FetchError> {
+    fn request_stop(&self) -> Result<StatusCode, FetchError> {
         get_status_code_for(&self.url_for("/test/shutdown"))
     }
 
@@ -282,8 +283,8 @@ fn run_server_test_i4(){
             }
 
 
-            assert_eq!(server.get_status("/local/notthere.jpg")?, http::StatusCode::NOT_FOUND);
-            assert_eq!(server.get_status("/notrouted")?, http::StatusCode::NOT_FOUND);
+            assert_eq!(server.get_status("/local/notthere.jpg")?, StatusCode::NOT_FOUND);
+            assert_eq!(server.get_status("/notrouted")?, StatusCode::NOT_FOUND);
             Ok(())
         });
         //po.expect_status_code(Some(0));
