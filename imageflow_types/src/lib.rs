@@ -237,7 +237,7 @@ impl EncoderPreset {
     }
 }
 
-/// Represenations of an sRGB color value.
+/// Representations of an sRGB color value.
 #[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
 pub enum ColorSrgb {
     /// Hex in RRGGBBAA (css) form or variant thereof
