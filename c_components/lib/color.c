@@ -230,11 +230,11 @@ bool flow_bitmap_bgra_populate_histogram(flow_c * context, struct flow_bitmap_bg
 
 #ifdef EXPOSE_SIGMOID
 
-flow_static void colorcontext_sigmoid_internal(flow_colorcontext_info * c, float x_coefficent, float x_offset,
+flow_static void colorcontext_sigmoid_internal(flow_colorcontext_info * c, float x_coefficient, float x_offset,
                                                float constant)
 {
     c->sigmoid.constant = constant; // 1
-    c->sigmoid.x_coeff = x_coefficent; // 2
+    c->sigmoid.x_coeff = x_coefficient; // 2
     c->sigmoid.x_offset = x_offset; //-1
     c->sigmoid.y_offset = 0;
     c->sigmoid.y_coeff = 1;
