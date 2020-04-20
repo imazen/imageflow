@@ -290,7 +290,7 @@ static int32_t get_orientation(j_decompress_ptr cinfo)
     if (exif_marker->data_length < 32)
         return 0;
 
-    /* Check for TIFF header and catch endianess */
+    /* Check for TIFF header and catch endianness */
     i = 0;
 
     /* Just skip data until TIFF header - it should be within 16 bytes from marker start.
@@ -299,7 +299,7 @@ static int32_t get_orientation(j_decompress_ptr cinfo)
                0x0002: APP1 length entry = 2 bytes
             0x0004: Exif Identifier entry = 6 bytes
             0x000A: Start of TIFF header (Byte order entry) - 4 bytes
-                        - This is what we look for, to determine endianess.
+                        - This is what we look for, to determine endianness.
             0x000E: 0th IFD offset pointer - 4 bytes
 
             exif_marker->data points to the first data after the APP1 marker
