@@ -68,7 +68,7 @@ FLOW_HINT_HOT FLOW_HINT_UNSAFE_MATH_OPTIMIZATIONS
     struct flow_colorcontext_info colorcontext;
     flow_colorcontext_init(c, &colorcontext, info->scale_in_colorspace, 0, 0, 0);
 
-    // Use details as a parent struture to ensure everything gets freed
+    // Use details as a parent structure to ensure everything gets freed
     struct flow_interpolation_details * details = flow_interpolation_details_create_from(c, info->interpolation_filter);
     if (details == NULL) {
         FLOW_error_return(c);
