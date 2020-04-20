@@ -1,0 +1,28 @@
+# Base 64 encodings
+Base64\("[A-Za-z0-9+/=:]*"
+\&b"[A-Za-z0-9+/=:]*"
+_B64:\&'static str = "[A-Za-z0-9+/=:]*"
+deserialize\(.*?"[A-Za-z0-9+/=:]*"
+^      secure: [A-Za-z0-9+/=:]*$
+# dos shell variables
+\%[A-Z_]+\%
+# url encoded characters
+\%[A-F0-9]{2}
+# github
+https://github.com/\S+
+#
+Secret: test[a-f0-9]+
+# License
+\&'static str= "License \d+.*:[A-Za-z0-9+/=:]+"
+# Hex
+(?:0[Xx]|U\+|#)[a-f0-9A-FGgRr]{2,}[Uu]?[Ll]?\b
+Hex\("[A-F0-9]+"
+"bgcolor=[a-f0-9]+"
+t\("[a-f0-9]+", Color32
+assert_eq!\("[a-f0-9/]+"
+# valgrind
+^   fun:_\S+$
+# GUID
+\{CODECOV_TOKEN:(?:-[a-f0-9]+){5}\}
+# travis
+access_key_id: [A-Z0-9]+

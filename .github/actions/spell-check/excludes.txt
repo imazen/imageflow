@@ -1,0 +1,11 @@
+(?:^|/)Cargo\.
+/checksums\.
+/perf\.data$
+/\.rakeTasks$
+\.jpg$
+\.props$
+^appveyor\.yml$
+^imageflow_core/tests/visuals\.rs$
+^imageflow_server/src/assets/
+^\.github/actions/spell-check/
+^\.gitignore$
