@@ -9,6 +9,16 @@ pub static EXPANDING_COMMAND_STRING: CommandStringPartiallyExpandedDef = Command
 
 
 
+fn get_decoder_mime(ctx: &mut OpCtxMut, ix: NodeIndex) -> Result<Option<String>>{
+    let decoders = ctx.get_decoder_io_ids_and_indexes(ix);
+    if let Some((io_id, _)) = decoders.first(){
+        Ok(Some(ctx.c.get_codec(*io_id)?.get_decoder()?.get_image_info(ctx.c)?.preferred_mime_type))
+    }
+    else{
+        Ok(None)
+    }
+
+}
 
 fn get_expand(ctx: &mut OpCtxMut, ix: NodeIndex) -> Result<::imageflow_riapi::ir4::Ir4Expand>{
     let input = ctx.first_parent_frame_info_some(ix).ok_or_else(|| nerror!(crate::ErrorKind::InvalidNodeConnections, "CommandString node requires that its parent nodes be perfectly estimable"))?;
@@ -24,7 +34,7 @@ fn get_expand(ctx: &mut OpCtxMut, ix: NodeIndex) -> Result<::imageflow_riapi::ir
                         w: input.w,
                         h: input.h,
                         fmt: input.fmt,
-                        original_mime: None
+                        original_mime: get_decoder_mime(ctx,ix)?
                     }
                 })
             }
