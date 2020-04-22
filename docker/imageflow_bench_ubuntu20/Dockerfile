@@ -61,11 +61,18 @@ RUN RUSTVER="stable" && curl https://sh.rustup.rs -sSf | sh -s -- -y --default-t
     && rustup show \
     && rustc -V
 
+#Install hyperfine
+RUN wget https://github.com/sharkdp/hyperfine/releases/download/v1.9.0/hyperfine_1.9.0_amd64.deb \
+    && sudo dpkg -i hyperfine_1.9.0_amd64.deb
+
+# Install DSSIM
+RUN cargo install dssim
+
 # Build Imageflow v1.3.0-rc30 from source with AVX2 support (haswell), then delete everything except the binary
 RUN cd /home/imageflow \
     && git clone https://github.com/imazen/imageflow \
     && cd /home/imageflow/imageflow \
-    && git checkout v1.3.0-rc30 \
+    && git checkout v1.3.1-rc31 \
     && TARGET_CPU=haswell cargo build -p imageflow_tool_lib --release \
     && mkdir $HOME/bin  \
     && cp target/release/imageflow_tool $HOME/bin/imageflow_tool \
@@ -74,15 +81,12 @@ RUN cd /home/imageflow \
 
 WORKDIR /home/imageflow
 
-#Install hyperfine
-RUN wget https://github.com/sharkdp/hyperfine/releases/download/v1.9.0/hyperfine_1.9.0_amd64.deb \
-    && sudo dpkg -i hyperfine_1.9.0_amd64.deb
-
-
 RUN wget -nc --quiet  https://s3-us-west-2.amazonaws.com/imageflow-resources/test_inputs/u1.jpg
 ADD bench.sh .
 RUN sudo chmod +x $HOME/bench.sh
 
-ENTRYPOINT ./bench.sh
+CMD ["thumbnail"]
+
+ENTRYPOINT ["./bench.sh"]
 
 MAINTAINER Lilith River
