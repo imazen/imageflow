@@ -61,6 +61,8 @@ RUN RUSTVER="stable" && curl https://sh.rustup.rs -sSf | sh -s -- -y --default-t
     && rustup show \
     && rustc -V
 
+WORKDIR /home/imageflow
+
 #Install hyperfine
 RUN wget https://github.com/sharkdp/hyperfine/releases/download/v1.9.0/hyperfine_1.9.0_amd64.deb \
     && sudo dpkg -i hyperfine_1.9.0_amd64.deb
@@ -79,7 +81,6 @@ RUN cd /home/imageflow \
     && cd $HOME \
     && rm -rf $HOME/imageflow
 
-WORKDIR /home/imageflow
 
 RUN wget -nc --quiet  https://s3-us-west-2.amazonaws.com/imageflow-resources/test_inputs/u1.jpg
 ADD bench.sh .
