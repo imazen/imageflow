@@ -217,11 +217,9 @@ impl Ir4Expand{
 
             let encoder = match format {
                 OutputFormat::Gif => s::EncoderPreset::Gif,
-                OutputFormat::Jpeg => s::EncoderPreset::LibjpegTurbo {
-                    quality: Some(i.quality.unwrap_or(90)),
-                    optimize_huffman_coding: i.jpeg_progressive,
+                OutputFormat::Jpeg => s::EncoderPreset::Mozjpeg {
+                    quality: Some(i.quality.unwrap_or(90) as u8),
                     progressive: i.jpeg_progressive
-                    //TODO: support self.i.jpeg_subsampling
                 },
                 // TODO: introduce support for 24-bit png and self.i.bgcolor_srgb (matte)
                 OutputFormat::Png  => s::EncoderPreset::Libpng {
