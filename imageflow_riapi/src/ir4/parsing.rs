@@ -167,7 +167,7 @@ pub enum ScalingColorspace {
 
 }
 
-pub static IR4_KEYS: [&'static str;66] = ["mode", "anchor", "flip", "sflip", "scale", "cache", "process",
+pub static IR4_KEYS: [&'static str;67] = ["mode", "anchor", "flip", "sflip", "scale", "cache", "process",
     "quality", "zoom", "crop", "cropxunits", "cropyunits",
     "w", "h", "width", "height", "maxwidth", "maxheight", "format", "thumbnail",
      "autorotate", "srotate", "rotate", "ignoreicc", //really? : "precise_scaling_ratio",
@@ -175,7 +175,7 @@ pub static IR4_KEYS: [&'static str;66] = ["mode", "anchor", "flip", "sflip", "sc
     "frame", "page", "subsampling", "colors", "f.sharpen", "f.sharpen_when", "down.colorspace",
     "404", "bgcolor", "paddingcolor", "bordercolor", "preset", "floatspace", "jpeg_idct_downscale_linear", "watermark",
     "s.invert", "s.sepia", "s.grayscale", "s.alpha", "s.brightness", "s.contrast", "s.saturation",  "trim.threshold",
-    "trim.percentpadding", "a.blur", "a.sharpen", "a.removenoise", "a.balancewhite", "dither","jpeg.progressive",
+    "trim.percentpadding", "a.blur", "a.sharpen", "a.removenoise", "a.balancewhite", "dither","jpeg.progressive", "jpeg.turbo",
     "encoder", "decoder", "builder", "s.roundcorners.", "paddingwidth", "paddingheight", "margin", "borderwidth", "decoder.min_precise_scaling_ratio"];
 
 
@@ -278,6 +278,7 @@ impl Instructions{
         add(&mut m, "s.saturation", self.s_saturation);
         add(&mut m, "s.sepia", self.s_sepia);
         add(&mut m, "jpeg.progressive", self.jpeg_progressive);
+        add(&mut m, "jpeg.turbo", self.jpeg_turbo);
 
 
         add(&mut m, "s.grayscale", self.s_grayscale.map(|v| format!("{:?}", v).to_lowercase()));
@@ -371,6 +372,7 @@ impl Instructions{
 
         let _ = p.parse_test_pair("fastscale", "true");
         i.jpeg_progressive = p.parse_bool("jpeg.progressive");
+        i.jpeg_turbo = p.parse_bool("jpeg.turbo");
 
         i
     }
@@ -764,6 +766,7 @@ pub struct Instructions{
     pub min_precise_scaling_ratio: Option<f64>,
     pub down_colorspace: Option<ScalingColorspace>,
     pub jpeg_progressive: Option<bool>,
+    pub jpeg_turbo: Option<bool>,
 }
 #[derive(Debug,Copy, Clone,PartialEq)]
 pub enum Anchor1D{
@@ -867,6 +870,8 @@ fn test_url_parsing() {
     t("quality=85", Instructions { quality: Some(85), ..Default::default() }, vec![]);
     t("webp.quality=85", Instructions { webp_quality: Some(85f64), ..Default::default() }, vec![]);
     t("webp.lossless=true", Instructions { webp_lossless: Some(true), ..Default::default() }, vec![]);
+    t("jpeg.progressive=true", Instructions { jpeg_progressive: Some(true), ..Default::default() }, vec![]);
+    t("jpeg.turbo=true", Instructions { jpeg_turbo: Some(true), ..Default::default() }, vec![]);
     t("zoom=0.02", Instructions { zoom: Some(0.02f64), ..Default::default() }, vec![]);
     t("trim.threshold=80&trim.percentpadding=0.02", Instructions { trim_whitespace_threshold: Some(80),  trim_whitespace_padding_percent: Some(0.02f64), ..Default::default() }, vec![]);
     t("w=10&f.sharpen=80.5", Instructions { w: Some(10), f_sharpen: Some(80.5f64), ..Default::default() }, vec![]);
@@ -963,5 +968,6 @@ fn test_tostr(){
     t("f.sharpen_when=sizediffers", Instructions{ f_sharpen_when: Some(SharpenWhen::SizeDiffers), ..Default::default()});
     t("s.grayscale=bt709",  Instructions{s_grayscale: Some(GrayscaleAlgorithm::Bt709), ..Default::default()});
     t("s.alpha=0&s.brightness=0.1&s.contrast=1&s.saturation=-0.1&s.sepia=true", Instructions { s_alpha: Some(0f64), s_contrast: Some(1f64), s_sepia: Some(true), s_brightness: Some(0.1f64), s_saturation: Some(-0.1f64), ..Default::default() });
-
+    t("jpeg.progressive=true", Instructions { jpeg_progressive: Some(true), ..Default::default() });
+    t("jpeg.turbo=true", Instructions { jpeg_turbo: Some(true), ..Default::default() });
 }
