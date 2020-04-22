@@ -10,7 +10,7 @@ RUN export DEBIAN_FRONTEND=noninteractive \
   && apt-get install --no-install-recommends -y \
     sudo tzdata build-essential nasm dh-autoreconf pkg-config ca-certificates \
     git zip curl libpng-dev libssl-dev wget \
-    libcurl4-openssl-dev libelf-dev libdw-dev parallel time imagemagick \
+    libcurl4-openssl-dev libelf-dev libdw-dev parallel time imagemagick graphicsmagick \
   && ln -fs /usr/share/zoneinfo/America/Denver /etc/localtime \
   && dpkg-reconfigure --frontend noninteractive tzdata \
   && apt-get clean -y \
@@ -45,6 +45,7 @@ RUN groupadd 1001 -g 1001 &&\
 
 USER imageflow
 
+RUN gm version
 RUN convert --version
 RUN vipsthumbnail --vips-version
 
@@ -74,7 +75,7 @@ RUN cargo install dssim
 RUN cd /home/imageflow \
     && git clone https://github.com/imazen/imageflow \
     && cd /home/imageflow/imageflow \
-    && git checkout v1.3.1-rc31 \
+    && git checkout v1.3.2-rc32 \
     && TARGET_CPU=haswell cargo build -p imageflow_tool_lib --release \
     && mkdir $HOME/bin  \
     && cp target/release/imageflow_tool $HOME/bin/imageflow_tool \
