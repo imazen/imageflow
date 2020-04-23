@@ -398,14 +398,16 @@ impl CmdBuild {
     }
     ///
     /// Write the JSON response (if present) to the given file or STDOUT
-    pub fn write_response_maybe(&self, response_file: Option<&str>) -> std::io::Result<()> {
+    pub fn write_response_maybe(&self, response_file: Option<&str>, allow_stdout: bool) -> std::io::Result<()> {
         if  self.response.is_some() {
 
             if let Some(filename) = response_file {
                 let mut file = BufWriter::new(File::create(filename).unwrap());
                 file.write_all(&self.get_json_response().response_json)?;
             } else {
-                std::io::stdout().write_all(&self.get_json_response().response_json)?;
+                if allow_stdout {
+                    std::io::stdout().write_all(&self.get_json_response().response_json)?;
+                }
             }
 
         }

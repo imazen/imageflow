@@ -23,8 +23,8 @@ cd bench_in
 
 if [[ "$1" == "thumbnail" ]]; then
   # shellcheck disable=SC2016
-  hyperfine --export-markdown results.md \
-    'parallel "$HOME/bin/imageflow_tool v0.1/ir4 --in {} --out ../bench_out/{.}_200x200.jpg --command width=\"200&height=200&mode=max&quality=90&jpeg.turbo=true\"" ::: *.jpg' \
+  hyperfine --export-markdown results.md  --warmup 1 \
+    'parallel "$HOME/bin/imageflow_tool v0.1/ir4 --in {} --out ../bench_out/{.}_200x200.jpg --command width=200&height=200&quality=90" ::: *.jpg' \
     'parallel "vipsthumbnail --linear --size=200x200  --output=../bench_out/{.}_vips_200x200.jpg[Q=90,strip] {}" ::: *.jpg' \
     'parallel "gm convert {} -set colorspace sRGB -colorspace RGB -filter Mitchell -resize 200x200  -colorspace sRGB -quality 90 ../bench_out/{.}_gm_200x200.jpg" ::: *.jpg' \
     'parallel "convert {} -set colorspace sRGB -colorspace RGB -filter Robidoux -resize 200x200  -colorspace sRGB -quality 90 ../bench_out/{.}_magick_200x200.jpg" ::: *.jpg'
@@ -35,10 +35,10 @@ if [[ "$1" == "thumbnail" ]]; then
 fi
 if [[ "$1" == "downscale" ]]; then
   # shellcheck disable=SC2016
-  hyperfine --export-markdown results.md \
-    'parallel "$HOME/bin/imageflow_tool v0.1/ir4 --in {} --out ../bench_out/{.}_2000x2000.jpg --command width=\"2000&height=2000&mode=max&quality=90&jpeg.turbo=true\"" ::: *.jpg' \
+  hyperfine --export-markdown results.md  --warmup 1 \
+    'parallel "$HOME/bin/imageflow_tool v0.1/ir4 --in {} --out ../bench_out/{.}_2000x2000.jpg --command width=2000&height=2000&quality=90" ::: *.jpg' \
     'parallel "vipsthumbnail --linear --size=2000x2000  --output=../bench_out/{.}_vips_2000x2000.jpg[Q=90] {}" ::: *.jpg' \
-    'parallel "gm convert {} -set colorspace sRGB -colorspace RGB -filter Mitchell -resize 2000x2000  -colorspace sRGB -quality 90 ../bench_out/{.}_gm_0200x0200.jpg" ::: *.jpg' \
+    'parallel "gm convert {} -set colorspace sRGB -colorspace RGB -filter Mitchell -resize 2000x2000  -colorspace sRGB -quality 90 ../bench_out/{.}_gm_2000x2000.jpg" ::: *.jpg' \
     'parallel "convert {} -set colorspace sRGB -colorspace RGB -filter Robidoux -resize 2000x2000  -colorspace sRGB -quality 90 ../bench_out/{.}_magick_2000x2000.jpg" ::: *.jpg'
 
   echo "=============== Results in Markdown format ======================"

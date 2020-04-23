@@ -417,6 +417,17 @@ pub fn run(tool_location: Option<PathBuf>) -> i32 {
 
     }
     {
+        let c = c.subfolder_context("queryquiet");
+        c.create_blank_image_here("100x100", 100, 100, s::EncoderPreset::libjpeg_turbo());
+
+        let result =
+            c.exec("v0.1/ir4 --quiet --command \"width=60&height=40&mode=max&format=jpg\" --in 100x100.jpg --out out4.jpg");
+
+        result.expect_status_code(Some(0));
+        assert_eq!(0, result.stdout_byte_count());
+
+    }
+    {
         let c = c.subfolder_context("gif");
         let result =
             c.exec("v0.1/ir4 --command width=200&height=200&format=gif --in https://s3-us-west-2.amazonaws.com/imageflow-resources/test_inputs/waterhouse.jpg --out out5.gif");
