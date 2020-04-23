@@ -1,0 +1,4 @@
+esults
+graphicsmagick
+jpegsize
+queryquiet
