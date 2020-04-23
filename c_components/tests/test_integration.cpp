@@ -180,7 +180,7 @@ TEST_CASE("Load png", "[fastscaling]")
 //                    flow_interpolation_filter::flow_interpolation_filter_Robidoux);
 //                details->interpolate_last_percent = 2.1f;
 //                details->minimum_sample_window_to_interposharpen = 1.5;
-//                details->havling_acceptable_pixel_loss = 0.26f;
+//                details->halving_acceptable_pixel_loss = 0.26f;
 //
 //                REQUIRE_FALSE(details == NULL);
 //                //                details->sharpen_percent_goal = 50;

@@ -625,7 +625,6 @@ halfpiminustwopi
 haproxy
 hashmap
 haswell
-havling
 hc
 hdr
 hdri
