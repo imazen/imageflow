@@ -75,7 +75,7 @@ RUN cargo install dssim
 RUN cd /home/imageflow \
     && git clone https://github.com/imazen/imageflow \
     && cd /home/imageflow/imageflow \
-    && git checkout v1.3.2-rc32 \
+    && git checkout v1.3.3-rc33 \
     && TARGET_CPU=haswell cargo build -p imageflow_tool_lib --release \
     && mkdir $HOME/bin  \
     && cp target/release/imageflow_tool $HOME/bin/imageflow_tool \

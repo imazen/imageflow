@@ -24,7 +24,7 @@ cd bench_in
 if [[ "$1" == "thumbnail" ]]; then
   # shellcheck disable=SC2016
   hyperfine --export-markdown results.md  --warmup 1 \
-    'parallel "$HOME/bin/imageflow_tool v0.1/ir4 --in {} --out ../bench_out/{.}_200x200.jpg --command width=200&height=200&quality=90" ::: *.jpg' \
+    'parallel "$HOME/bin/imageflow_tool v0.1/ir4 --in {} --quiet --out ../bench_out/{.}_200x200.jpg --command width=200&height=200&mode=max&quality=100" ::: *.jpg' \
     'parallel "vipsthumbnail --linear --size=200x200  --output=../bench_out/{.}_vips_200x200.jpg[Q=90,strip] {}" ::: *.jpg' \
     'parallel "gm convert {} -set colorspace sRGB -colorspace RGB -filter Mitchell -resize 200x200  -colorspace sRGB -quality 90 ../bench_out/{.}_gm_200x200.jpg" ::: *.jpg' \
     'parallel "convert {} -set colorspace sRGB -colorspace RGB -filter Robidoux -resize 200x200  -colorspace sRGB -quality 90 ../bench_out/{.}_magick_200x200.jpg" ::: *.jpg'
@@ -36,11 +36,12 @@ fi
 if [[ "$1" == "downscale" ]]; then
   # shellcheck disable=SC2016
   hyperfine --export-markdown results.md  --warmup 1 \
-    'parallel "$HOME/bin/imageflow_tool v0.1/ir4 --in {} --out ../bench_out/{.}_2000x2000.jpg --command width=2000&height=2000&quality=90" ::: *.jpg' \
+    'parallel "$HOME/bin/imageflow_tool v0.1/ir4 --in {}  --quiet --out ../bench_out/{.}_2000x2000.jpg --command width=2000&height=2000&mode=max&quality=90" ::: *.jpg' \
     'parallel "vipsthumbnail --linear --size=2000x2000  --output=../bench_out/{.}_vips_2000x2000.jpg[Q=90] {}" ::: *.jpg' \
-    'parallel "gm convert {} -set colorspace sRGB -colorspace RGB -filter Mitchell -resize 2000x2000  -colorspace sRGB -quality 90 ../bench_out/{.}_gm_2000x2000.jpg" ::: *.jpg' \
     'parallel "convert {} -set colorspace sRGB -colorspace RGB -filter Robidoux -resize 2000x2000  -colorspace sRGB -quality 90 ../bench_out/{.}_magick_2000x2000.jpg" ::: *.jpg'
 
+# Can't get graphicsmagick to work
+#  'parallel --show-output "gm convert {} -set colorspace sRGB -colorspace RGB -filter Mitchell -resize 2000x2000  -colorspace sRGB -quality 90 ../bench_out/{.}_gm_2000x2000.jpg" ::: *.jpg' \
   echo "=============== Results in Markdown format ======================"
   cat results.md
   echo "================================================================="
@@ -48,17 +49,17 @@ fi
 
 if [[ "$1" == "jpegsize" ]]; then
 
-  "$HOME/bin/imageflow_tool" v0.1/ir4 --in c1.jpg --out ../bench_out/imageflow_2000x2000.jpg --command "width=2000&height=2000&mode=max&quality=89" 1>/dev/null
+  "$HOME/bin/imageflow_tool" v0.1/ir4  --quiet --in c1.jpg --out ../bench_out/imageflow_2000x2000.jpg --command "width=2000&height=2000&mode=max&quality=89"
   vipsthumbnail --linear --size=2000x2000  --output=../bench_out/vips_2000x2000.jpg[Q=89,strip,optimize-coding] c1.jpg
   convert c1.jpg -set colorspace sRGB -colorspace RGB -filter Robidoux -resize 2000x2000  -colorspace sRGB -quality 89 ../bench_out/magick_2000x2000.jpg
 
-  "$HOME/bin/imageflow_tool" v0.1/ir4 --in c1.jpg --out ../bench_out/imageflow_reference_2000x2000.png --command "width=2000&height=2000&mode=max&format=png" 1>/dev/null
+  "$HOME/bin/imageflow_tool" v0.1/ir4  --quiet --in c1.jpg --out ../bench_out/imageflow_reference_2000x2000.png --command "width=2000&height=2000&mode=max&format=png"
   vipsthumbnail --linear --size=2000x2000  --output=../bench_out/vips_reference_2000x2000.png c1.jpg
   convert c1.jpg -set colorspace sRGB -colorspace RGB -filter Robidoux -resize 2000x2000  -colorspace sRGB ../bench_out/magick_reference_2000x2000.png
 
-  "$HOME/bin/imageflow_tool" v0.1/ir4 --in ../bench_out/imageflow_2000x2000.jpg --out ../bench_out/imageflow_2000x2000.png --command "format=png" 1>/dev/null
-  "$HOME/bin/imageflow_tool" v0.1/ir4 --in ../bench_out/vips_2000x2000.jpg --out ../bench_out/vips_2000x2000.png --command "format=png" 1>/dev/null
-  "$HOME/bin/imageflow_tool" v0.1/ir4 --in ../bench_out/magick_2000x2000.jpg --out ../bench_out/magick_2000x2000.png --command "format=png" 1>/dev/null
+  "$HOME/bin/imageflow_tool" v0.1/ir4 --quiet --in ../bench_out/imageflow_2000x2000.jpg --out ../bench_out/imageflow_2000x2000.png --command "format=png"
+  "$HOME/bin/imageflow_tool" v0.1/ir4 --quiet --in ../bench_out/vips_2000x2000.jpg --out ../bench_out/vips_2000x2000.png --command "format=png"
+  "$HOME/bin/imageflow_tool" v0.1/ir4 --quiet --in ../bench_out/magick_2000x2000.jpg --out ../bench_out/magick_2000x2000.png --command "format=png"
 
   echo "=============== DSSIM relative to imageflow reference (lower is better)  ======================"
   dssim ../bench_out/imageflow_reference_2000x2000.png ../bench_out/imageflow_2000x2000.png
@@ -75,8 +76,8 @@ if [[ "$1" == "jpegsize" ]]; then
   dssim ../bench_out/magick_reference_2000x2000.png ../bench_out/vips_2000x2000.png
   dssim ../bench_out/magick_reference_2000x2000.png ../bench_out/magick_2000x2000.png
 
-  "$HOME/bin/imageflow_tool" v0.1/ir4 --in c1.jpg --out ../bench_out/imageflow_idct_scaling_2000x2000.png --command "width=2000&height=2000&mode=max&format=png" 1>/dev/null
-  "$HOME/bin/imageflow_tool" v0.1/ir4 --in c1.jpg --out ../bench_out/imageflow_no_idct_scaling_2000x2000.png --command "width=2000&height=2000&mode=max&format=png&decoder.min_precise_scaling_ratio=100" 1>/dev/null
+  "$HOME/bin/imageflow_tool" v0.1/ir4 --quiet --in c1.jpg --out ../bench_out/imageflow_idct_scaling_2000x2000.png --command "width=2000&height=2000&mode=max&format=png"
+  "$HOME/bin/imageflow_tool" v0.1/ir4 --quiet --in c1.jpg --out ../bench_out/imageflow_no_idct_scaling_2000x2000.png --command "width=2000&height=2000&mode=max&format=png&decoder.min_precise_scaling_ratio=100"
 
   echo "=============== DSSIM with linear IDCT scaling turned on vs. no IDCT scaling  ======================"
   dssim ../bench_out/imageflow_no_idct_scaling_2000x2000.png ../bench_out/imageflow_idct_scaling_2000x2000.png
