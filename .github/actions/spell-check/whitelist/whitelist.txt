@@ -600,6 +600,7 @@ google
 googleapis
 gprof
 gradle
+graphicsmagick
 graphinfo
 graphviz
 grayscale
@@ -770,6 +771,7 @@ jpe
 jpeg
 jpegemb
 jpeglib
+jpegsize
 JPEGv
 jpg
 JPOOL
@@ -781,7 +783,6 @@ JSAMPARRAY
 jsample
 JSAMPROW
 json
-jsoref
 junit
 junitreport
 Jv
@@ -865,6 +866,7 @@ llvm
 loadu
 localbuild
 localhost
+localtime
 lodepng
 logarg
 logfile
@@ -918,7 +920,7 @@ mediumslateblue
 mediumspringgreen
 mediumturquoise
 mediumvioletred
-megapixels
+megapixel
 Meh
 membuffer
 Memcheck
@@ -1156,6 +1158,7 @@ qa
 QNX
 qpprox
 qpproxsq
+queryquiet
 querystring
 radware
 RAII
@@ -1449,6 +1452,7 @@ twox
 typedef
 typemap
 typename
+tzdata
 tzip
 ubuntu
 uchar
@@ -1657,6 +1661,7 @@ zedzone
 zlib
 zlibsettings
 ZNK
+zoneinfo
 zu
 zucchi
 zxf

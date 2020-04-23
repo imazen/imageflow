@@ -26,3 +26,5 @@ assert_eq!\("[a-f0-9/]+"
 \{CODECOV_TOKEN:(?:-[a-f0-9]+){5}\}
 # travis
 access_key_id: [A-Z0-9]+
+# bench.sh
+\\results:
