@@ -223,7 +223,11 @@ static bool flow_codecs_png_decoder_BeginRead(flow_c * c, struct flow_codecs_png
     if (!(state->color_type & PNG_COLOR_MASK_ALPHA)) {
         png_set_expand(state->png_ptr);
         png_set_filler(state->png_ptr, 65535L, PNG_FILLER_AFTER);
-        state->canvas_fmt = flow_bgr32;
+        if (state->color_type == PNG_COLOR_TYPE_PALETTE){
+            state->canvas_fmt = flow_bgra32;
+        }else{
+            state->canvas_fmt = flow_bgr32;
+        }
     } else {
         state->canvas_fmt = flow_bgra32;
     }
