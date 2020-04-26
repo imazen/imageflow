@@ -226,7 +226,10 @@ impl Ir4Expand{
                     quality: Some(i.quality.unwrap_or(90) as u8),
                     progressive: i.jpeg_progressive
                 },
-                // TODO: introduce support for 24-bit png and self.i.bgcolor_srgb (matte)
+                OutputFormat::Png if i.png_quality.is_some() => s::EncoderPreset::Pngquant {
+                    quality: Some((i.png_min_quality.unwrap_or(i.png_quality.unwrap()), i.png_quality.unwrap())),
+                    speed: i.png_quantization_speed
+                },
                 OutputFormat::Png  => s::EncoderPreset::Libpng {
                     depth: Some(if i.bgcolor_srgb.is_some() { s::PngBitDepth::Png24 } else { s::PngBitDepth::Png32 }),
                     zlib_compression: None,

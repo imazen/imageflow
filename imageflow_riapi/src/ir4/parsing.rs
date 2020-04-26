@@ -167,16 +167,19 @@ pub enum ScalingColorspace {
 
 }
 
-pub static IR4_KEYS: [&'static str;67] = ["mode", "anchor", "flip", "sflip", "scale", "cache", "process",
+pub static IR4_KEYS: [&'static str;70] = ["mode", "anchor", "flip", "sflip", "scale", "cache", "process",
     "quality", "zoom", "crop", "cropxunits", "cropyunits",
     "w", "h", "width", "height", "maxwidth", "maxheight", "format", "thumbnail",
      "autorotate", "srotate", "rotate", "ignoreicc", //really? : "precise_scaling_ratio",
     "stretch", "webp.lossless", "webp.quality",
     "frame", "page", "subsampling", "colors", "f.sharpen", "f.sharpen_when", "down.colorspace",
-    "404", "bgcolor", "paddingcolor", "bordercolor", "preset", "floatspace", "jpeg_idct_downscale_linear", "watermark",
-    "s.invert", "s.sepia", "s.grayscale", "s.alpha", "s.brightness", "s.contrast", "s.saturation",  "trim.threshold",
-    "trim.percentpadding", "a.blur", "a.sharpen", "a.removenoise", "a.balancewhite", "dither","jpeg.progressive", "jpeg.turbo",
-    "encoder", "decoder", "builder", "s.roundcorners.", "paddingwidth", "paddingheight", "margin", "borderwidth", "decoder.min_precise_scaling_ratio"];
+    "404", "bgcolor", "paddingcolor", "bordercolor", "preset", "floatspace",
+    "jpeg_idct_downscale_linear", "watermark", "s.invert", "s.sepia", "s.grayscale", "s.alpha",
+    "s.brightness", "s.contrast", "s.saturation",  "trim.threshold", "trim.percentpadding",
+    "a.blur", "a.sharpen", "a.removenoise", "a.balancewhite", "dither","jpeg.progressive",
+    "jpeg.turbo", "encoder", "decoder", "builder", "s.roundcorners.", "paddingwidth",
+    "paddingheight", "margin", "borderwidth", "decoder.min_precise_scaling_ratio",
+    "png.quality","png.min_quality", "png.quantization_speed"];
 
 
 #[derive(PartialEq,Debug, Clone)]
@@ -279,7 +282,9 @@ impl Instructions{
         add(&mut m, "s.sepia", self.s_sepia);
         add(&mut m, "jpeg.progressive", self.jpeg_progressive);
         add(&mut m, "jpeg.turbo", self.jpeg_turbo);
-
+        add(&mut m, "png.quality", self.png_quality);
+        add(&mut m, "png.min_quality", self.png_min_quality);
+        add(&mut m, "png.quantization_speed", self.png_quantization_speed);
 
         add(&mut m, "s.grayscale", self.s_grayscale.map(|v| format!("{:?}", v).to_lowercase()));
         add(&mut m, "a.balancewhite", self.a_balance_white.map(|v| format!("{:?}", v).to_lowercase()));
@@ -342,6 +347,9 @@ impl Instructions{
 
         i.webp_quality = p.parse_f64("webp.quality");
         i.webp_lossless = p.parse_bool("webp.lossless");
+        i.png_min_quality = p.parse_u8("png.min_quality");
+        i.png_quality = p.parse_u8("png.quality");
+        i.png_quantization_speed= p.parse_u8("png.quantization_speed");
         i.anchor = p.parse_anchor("anchor");
 
 
@@ -500,7 +508,9 @@ impl<'a> Parser<'a>{
             }
         )
     }
-
+    fn parse_u8(&mut self, key: &'static str) -> Option<u8>{
+        self.parse(key, |s| s.parse::<u8>() )
+    }
     fn parse_i32(&mut self, key: &'static str) -> Option<i32>{
         self.parse(key, |s| s.parse::<i32>() )
     }
@@ -767,6 +777,9 @@ pub struct Instructions{
     pub down_colorspace: Option<ScalingColorspace>,
     pub jpeg_progressive: Option<bool>,
     pub jpeg_turbo: Option<bool>,
+    pub png_quality: Option<u8>,
+    pub png_min_quality: Option<u8>,
+    pub png_quantization_speed: Option<u8>
 }
 #[derive(Debug,Copy, Clone,PartialEq)]
 pub enum Anchor1D{
@@ -872,6 +885,9 @@ fn test_url_parsing() {
     t("webp.lossless=true", Instructions { webp_lossless: Some(true), ..Default::default() }, vec![]);
     t("jpeg.progressive=true", Instructions { jpeg_progressive: Some(true), ..Default::default() }, vec![]);
     t("jpeg.turbo=true", Instructions { jpeg_turbo: Some(true), ..Default::default() }, vec![]);
+    t("png.quality=90", Instructions { png_quality: Some(90), ..Default::default() }, vec![]);
+    t("png.min_quality=90", Instructions { png_min_quality: Some(90), ..Default::default() }, vec![]);
+    t("png.quantization_speed=4", Instructions { png_quantization_speed: Some(4), ..Default::default() }, vec![]);
     t("zoom=0.02", Instructions { zoom: Some(0.02f64), ..Default::default() }, vec![]);
     t("trim.threshold=80&trim.percentpadding=0.02", Instructions { trim_whitespace_threshold: Some(80),  trim_whitespace_padding_percent: Some(0.02f64), ..Default::default() }, vec![]);
     t("w=10&f.sharpen=80.5", Instructions { w: Some(10), f_sharpen: Some(80.5f64), ..Default::default() }, vec![]);
@@ -970,4 +986,7 @@ fn test_tostr(){
     t("s.alpha=0&s.brightness=0.1&s.contrast=1&s.saturation=-0.1&s.sepia=true", Instructions { s_alpha: Some(0f64), s_contrast: Some(1f64), s_sepia: Some(true), s_brightness: Some(0.1f64), s_saturation: Some(-0.1f64), ..Default::default() });
     t("jpeg.progressive=true", Instructions { jpeg_progressive: Some(true), ..Default::default() });
     t("jpeg.turbo=true", Instructions { jpeg_turbo: Some(true), ..Default::default() });
+    t("png.quality=90", Instructions { png_quality: Some(90), ..Default::default() });
+    t("png.min_quality=90", Instructions { png_min_quality: Some(90), ..Default::default() });
+    t("png.quantization_speed=4", Instructions { png_quantization_speed: Some(4), ..Default::default() });
 }
