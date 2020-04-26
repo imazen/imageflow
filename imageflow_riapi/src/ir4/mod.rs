@@ -230,11 +230,12 @@ impl Ir4Expand{
                     quality: Some((i.png_min_quality.unwrap_or(i.png_quality.unwrap()), i.png_quality.unwrap())),
                     speed: i.png_quantization_speed
                 },
-                OutputFormat::Png  => s::EncoderPreset::Libpng {
+                OutputFormat::Png if i.png_libpng == Some(true) => s::EncoderPreset::Libpng {
                     depth: Some(if i.bgcolor_srgb.is_some() { s::PngBitDepth::Png24 } else { s::PngBitDepth::Png32 }),
                     zlib_compression: None,
                     matte: i.bgcolor_srgb.map(|sr| s::Color::Srgb(s::ColorSrgb::Hex(sr.to_rrggbbaa_string())))
                 },
+                OutputFormat::Png => s::EncoderPreset::Lodepng,
                 OutputFormat::Webp if i.webp_lossless == Some(true) => s::EncoderPreset::WebPLossless,
                 OutputFormat::Webp => s::EncoderPreset::WebPLossy {
                     quality: i.webp_quality.unwrap_or(90f64) as f32
