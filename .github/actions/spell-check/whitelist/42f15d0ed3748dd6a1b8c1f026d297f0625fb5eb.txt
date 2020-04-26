@@ -1,5 +1,0 @@
-frontend
-localtime
-megapixel
-tzdata
-zoneinfo
