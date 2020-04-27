@@ -11,7 +11,7 @@ edition = "2018"
 libc = "0.2"
 
 # time
-time = "0.1"
+time = "0.2"
 chrono =  "0.4"
 
 # serialization
