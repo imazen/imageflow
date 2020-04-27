@@ -10,7 +10,7 @@ imageflow_core = { path = "../imageflow_core", version = "*" }
 imageflow_types = { path = "../imageflow_types", version = "*" }
 libc = "0.2"
 clap = "2"
-time = "0.1"
+time = "0.2"
 rustc-serialize = "*"
 threadpool = "1"
 serde = "1"
