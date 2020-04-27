@@ -285,6 +285,10 @@ impl Color {
     pub fn is_transparent(&self) -> bool{
         self.to_color_32().unwrap_or(Color32::black()).is_transparent()
     }
+
+    pub fn is_opaque(&self) -> bool{
+        self.to_color_32().unwrap_or(Color32::black()).is_opaque()
+    }
 }
 
 #[cfg(test)]
