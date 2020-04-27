@@ -53,7 +53,7 @@ router = "=0.5"
 iron = "=0.5.1"
 persistent = "=0.4"
 hyper = { version = "0.13", default-features = false }
-threadpool = "1.0"
+threadpool = "1.8"
 url="1"
 hyper-native-tls="0.3"
 reqwest="0.9"
