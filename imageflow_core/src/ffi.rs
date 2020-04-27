@@ -717,6 +717,7 @@ pub struct DecoderDownscaleHints {
 #[derive(Clone,Debug,PartialEq)]
 pub struct EncoderHints {
     pub disable_png_alpha: bool,
+    pub zlib_compression_level: i32
 }
 
 

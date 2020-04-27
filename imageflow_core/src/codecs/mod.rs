@@ -373,6 +373,7 @@ impl Encoder for LibpngEncoder{
                     Some(s::PngBitDepth::Png24) => true,
                     _ => false,
                 },
+                zlib_compression_level: zlib_compression.unwrap_or(6)
             };
 
             unsafe {

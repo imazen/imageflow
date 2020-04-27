@@ -165,6 +165,7 @@ struct flow_bitmap_bgra;
 
 struct flow_encoder_hints {
     bool disable_png_alpha;
+    int zlib_compression_level;
 };
 
 
