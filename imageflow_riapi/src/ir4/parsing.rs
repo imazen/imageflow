@@ -167,7 +167,7 @@ pub enum ScalingColorspace {
 
 }
 
-pub static IR4_KEYS: [&'static str;71] = ["mode", "anchor", "flip", "sflip", "scale", "cache", "process",
+pub static IR4_KEYS: [&'static str;72] = ["mode", "anchor", "flip", "sflip", "scale", "cache", "process",
     "quality", "zoom", "crop", "cropxunits", "cropyunits",
     "w", "h", "width", "height", "maxwidth", "maxheight", "format", "thumbnail",
      "autorotate", "srotate", "rotate", "ignoreicc", //really? : "precise_scaling_ratio",
@@ -179,7 +179,7 @@ pub static IR4_KEYS: [&'static str;71] = ["mode", "anchor", "flip", "sflip", "sc
     "a.blur", "a.sharpen", "a.removenoise", "a.balancewhite", "dither","jpeg.progressive",
     "jpeg.turbo", "encoder", "decoder", "builder", "s.roundcorners.", "paddingwidth",
     "paddingheight", "margin", "borderwidth", "decoder.min_precise_scaling_ratio",
-    "png.quality","png.min_quality", "png.quantization_speed", "png.libpng"];
+    "png.quality","png.min_quality", "png.quantization_speed", "png.libpng", "png.max_deflate"];
 
 
 #[derive(PartialEq,Debug, Clone)]
@@ -286,6 +286,7 @@ impl Instructions{
         add(&mut m, "png.min_quality", self.png_min_quality);
         add(&mut m, "png.quantization_speed", self.png_quantization_speed);
         add(&mut m, "png.libpng", self.png_libpng);
+        add(&mut m, "png.max_deflate", self.png_max_deflate);
         add(&mut m, "s.grayscale", self.s_grayscale.map(|v| format!("{:?}", v).to_lowercase()));
         add(&mut m, "a.balancewhite", self.a_balance_white.map(|v| format!("{:?}", v).to_lowercase()));
         add(&mut m, "subsampling", self.jpeg_subsampling);
@@ -351,6 +352,7 @@ impl Instructions{
         i.png_quality = p.parse_u8("png.quality");
         i.png_quantization_speed= p.parse_u8("png.quantization_speed");
         i.png_libpng = p.parse_bool("png.libpng");
+        i.png_max_deflate = p.parse_bool("png.max_deflate");
         i.anchor = p.parse_anchor("anchor");
 
 
@@ -781,7 +783,8 @@ pub struct Instructions{
     pub png_quality: Option<u8>,
     pub png_min_quality: Option<u8>,
     pub png_quantization_speed: Option<u8>,
-    pub png_libpng: Option<bool>
+    pub png_libpng: Option<bool>,
+    pub png_max_deflate: Option<bool>
 }
 #[derive(Debug,Copy, Clone,PartialEq)]
 pub enum Anchor1D{
@@ -891,6 +894,7 @@ fn test_url_parsing() {
     t("png.min_quality=90", Instructions { png_min_quality: Some(90), ..Default::default() }, vec![]);
     t("png.quantization_speed=4", Instructions { png_quantization_speed: Some(4), ..Default::default() }, vec![]);
     t("png.libpng=true", Instructions { png_libpng: Some(true), ..Default::default() }, vec![]);
+    t("png_max_deflate=true", Instructions { png_max_deflate: Some(true), ..Default::default() }, vec![]);
     t("zoom=0.02", Instructions { zoom: Some(0.02f64), ..Default::default() }, vec![]);
     t("trim.threshold=80&trim.percentpadding=0.02", Instructions { trim_whitespace_threshold: Some(80),  trim_whitespace_padding_percent: Some(0.02f64), ..Default::default() }, vec![]);
     t("w=10&f.sharpen=80.5", Instructions { w: Some(10), f_sharpen: Some(80.5f64), ..Default::default() }, vec![]);
@@ -993,4 +997,5 @@ fn test_tostr(){
     t("png.min_quality=90", Instructions { png_min_quality: Some(90), ..Default::default() });
     t("png.quantization_speed=4", Instructions { png_quantization_speed: Some(4), ..Default::default() });
     t("png.libpng=true", Instructions { png_libpng: Some(true), ..Default::default() });
+    t("png_max_deflate=true", Instructions { png_max_deflate: Some(true), ..Default::default() });
 }

@@ -199,8 +199,11 @@ pub enum EncoderPreset {
     Pngquant {
         quality: Option<(u8, u8)>,
         speed: Option<u8>,
+        maximum_deflate: Option<bool>
     },
-    Lodepng,
+    Lodepng {
+        maximum_deflate: Option<bool>
+    },
     Mozjpeg {
         quality: Option<u8>,
         progressive: Option<bool>,

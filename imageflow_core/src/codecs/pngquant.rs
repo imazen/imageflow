@@ -16,10 +16,11 @@ use crate::codecs::lode;
 pub struct PngquantEncoder {
     liq: imagequant::Attributes,
     io: IoProxy,
+    maximum_deflate: Option<bool>,
 }
 
 impl PngquantEncoder {
-    pub(crate) fn create(c: &Context, speed: Option<u8>, quality: Option<(u8, u8)>, io: IoProxy) -> Result<Self> {
+    pub(crate) fn create(c: &Context, speed: Option<u8>, quality: Option<(u8, u8)>, maximum_deflate: Option<bool>, io: IoProxy) -> Result<Self> {
         if !c.enabled_codecs.encoders.contains(&crate::codecs::NamedEncoders::PngQuantEncoder){
             return Err(nerror!(ErrorKind::CodecDisabledError, "The PNGQuant encoder has been disabled"));
         }
@@ -33,6 +34,7 @@ impl PngquantEncoder {
         Ok(PngquantEncoder {
             liq,
             io,
+            maximum_deflate
         })
     }
 }
@@ -40,9 +42,9 @@ impl PngquantEncoder {
 impl Encoder for PngquantEncoder {
     fn write_frame(&mut self, c: &Context, preset: &EncoderPreset, frame: &mut BitmapBgra, decoder_io_ids: &[i32]) -> Result<EncodeResult> {
         if let Some((pal, pixels)) = self.quantize(frame)? {
-            lode::LodepngEncoder::write_png8(&mut self.io, &pal, &pixels, frame.w as usize, frame.h as usize)?;
+            lode::LodepngEncoder::write_png8(&mut self.io, &pal, &pixels, frame.w as usize, frame.h as usize, self.maximum_deflate)?;
         } else {
-            lode::LodepngEncoder::write_png_auto(&mut self.io, &frame)?;
+            lode::LodepngEncoder::write_png_auto(&mut self.io, &frame, self.maximum_deflate)?;
         };
 
         Ok(EncodeResult {

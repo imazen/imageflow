@@ -21,7 +21,9 @@ const FRYMIRE_URL: &'static str = "https://s3-us-west-2.amazonaws.com/imageflow-
 
 #[test]
 fn test_encode_png() {
-    let steps = reencode_with(s::EncoderPreset::Lodepng);
+    let steps = reencode_with(s::EncoderPreset::Lodepng {
+        maximum_deflate: None
+    });
 
     compare_encoded_to_source(s::IoEnum::Url(FRYMIRE_URL.to_owned()),
                               DEBUG_GRAPH,
@@ -39,6 +41,7 @@ fn test_encode_pngquant() {
     let steps = reencode_with(s::EncoderPreset::Pngquant {
                 speed: None,
                 quality: Some((0, 100)),
+                maximum_deflate: None
             });
 
     compare_encoded_to_source(s::IoEnum::Url(FRYMIRE_URL.to_owned()),
@@ -68,6 +71,7 @@ fn test_encode_pngquant_fallback() {
     let steps = reencode_with(s::EncoderPreset::Pngquant {
                 speed: None,
                 quality: Some((99, 100)),
+                maximum_deflate: None
             });
 
     compare_encoded_to_source(s::IoEnum::Url(FRYMIRE_URL.to_owned()),
@@ -95,7 +99,9 @@ fn test_encode_pngquant_fallback_command() {
 
 #[test]
 fn test_encode_lodepng() {
-    let steps = reencode_with(s::EncoderPreset::Lodepng);
+    let steps = reencode_with(s::EncoderPreset::Lodepng{
+        maximum_deflate: None
+    });
 
     compare_encoded_to_source(s::IoEnum::Url(FRYMIRE_URL.to_owned()),
                               DEBUG_GRAPH,
