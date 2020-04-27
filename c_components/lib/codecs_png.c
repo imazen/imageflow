@@ -436,8 +436,8 @@ static bool flow_codecs_png_write_frame(flow_c * c, void * codec_state, struct f
         return false;
     }
 
-    png_set_compression_level(png_ptr, Z_BEST_SPEED);
-    png_set_text_compression_level(png_ptr, Z_DEFAULT_COMPRESSION);
+    png_set_compression_level(png_ptr, Z_BEST_COMPRESSION);
+    png_set_text_compression_level(png_ptr, Z_BEST_COMPRESSION);
 
     png_set_write_fn(png_ptr, state, png_write_data_callback, png_flush_nullop);
 
