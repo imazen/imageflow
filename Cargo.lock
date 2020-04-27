@@ -221,7 +221,7 @@ dependencies = [
 
 [[package]]
 name = "cbindgen"
-version = "0.13.2"
+version = "0.14.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
  "clap 2.33.0 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -956,7 +956,7 @@ version = "0.1.0"
 dependencies = [
  "backtrace 0.3.46 (registry+https://github.com/rust-lang/crates.io-index)",
  "base64 0.12.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "cbindgen 0.13.2 (registry+https://github.com/rust-lang/crates.io-index)",
+ "cbindgen 0.14.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "imageflow_core 0.1.0",
  "imageflow_helpers 0.1.0",
  "libc 0.2.69 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -3120,7 +3120,7 @@ dependencies = [
 "checksum bytes 0.4.12 (registry+https://github.com/rust-lang/crates.io-index)" = "206fdffcfa2df7cbe15601ef46c813fce0965eb3286db6b56c583b814b51c81c"
 "checksum bytes 0.5.4 (registry+https://github.com/rust-lang/crates.io-index)" = "130aac562c0dd69c56b3b1cc8ffd2e17be31d0b6c25b61c96b76231aa23e39e1"
 "checksum c2-chacha 0.2.3 (registry+https://github.com/rust-lang/crates.io-index)" = "214238caa1bf3a496ec3392968969cab8549f96ff30652c9e56885329315f6bb"
-"checksum cbindgen 0.13.2 (registry+https://github.com/rust-lang/crates.io-index)" = "2db2df1ebc842c41fd2c4ae5b5a577faf63bd5151b953db752fc686812bee318"
+"checksum cbindgen 0.14.1 (registry+https://github.com/rust-lang/crates.io-index)" = "b15be43e426e5133330fffd63026e178e70ecc74df7a4a844a8ff6e6ffc2fcde"
 "checksum cc 1.0.52 (registry+https://github.com/rust-lang/crates.io-index)" = "c3d87b23d6a92cd03af510a5ade527033f6aa6fa92161e2d5863a907d4c5e31d"
 "checksum cfg-if 0.1.10 (registry+https://github.com/rust-lang/crates.io-index)" = "4785bdd1c96b2a846b2bd7cc02e86b6b3dbf14e7e53446c4f54c92a361040822"
 "checksum chashmap 2.2.2 (registry+https://github.com/rust-lang/crates.io-index)" = "ff41a3c2c1e39921b9003de14bf0439c7b63a9039637c291e1a64925d8ddfa45"
