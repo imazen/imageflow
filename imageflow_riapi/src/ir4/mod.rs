@@ -233,7 +233,7 @@ impl Ir4Expand{
                 },
                 OutputFormat::Png if i.png_libpng == Some(true) => s::EncoderPreset::Libpng {
                     depth: Some(if i.bgcolor_srgb.is_some() { s::PngBitDepth::Png24 } else { s::PngBitDepth::Png32 }),
-                    zlib_compression: None,
+                    zlib_compression: if i.png_max_deflate == Some(true) { Some(9) } else { None },
                     matte: i.bgcolor_srgb.map(|sr| s::Color::Srgb(s::ColorSrgb::Hex(sr.to_rrggbbaa_string())))
                 },
                 OutputFormat::Png => s::EncoderPreset::Lodepng{
