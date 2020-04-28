@@ -435,7 +435,7 @@ static bool flow_codecs_png_write_frame(flow_c * c, void * codec_state, struct f
         FLOW_error(c, flow_status_Out_of_memory);
         return false;
     }
-    if hints->zlib_compression_level >= -1 && hints->zlib_compression_level <= 9
+    if (hints->zlib_compression_level >= -1 && hints->zlib_compression_level <= 9)
     {
         png_set_compression_level(png_ptr, hints->zlib_compression_level);
         png_set_text_compression_level(png_ptr, hints->zlib_compression_level);
