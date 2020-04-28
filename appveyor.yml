@@ -11,19 +11,19 @@ environment:
       - platform: x86
         RUST_TARGET: i686-pc-windows-msvc
         TARGET_CPU: x86
-        NUGET_RUNTIME: win7-x86
+        NUGET_RUNTIME: win-x86
         PACKAGE_SUFFIX: win-x86
         BITS: 32
       - platform: x64
         RUST_TARGET: x86_64-pc-windows-msvc
         TARGET_CPU: x86-64
-        NUGET_RUNTIME: win7-x64
+        NUGET_RUNTIME: win-x64
         PACKAGE_SUFFIX: win-x86_64
         BITS: 64
       - platform: x64
         RUST_TARGET: x86_64-pc-windows-msvc
         TARGET_CPU: haswell
-        NUGET_RUNTIME: win7-x64
+        NUGET_RUNTIME: win-x64
         PACKAGE_SUFFIX: win-x86_64-haswell
         BITS: 64
 configuration: Release
