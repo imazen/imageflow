@@ -45,7 +45,7 @@ We store the commit ID of imageflow_tool used alone in a file named "imageflow_c
 We upload to S3, and have CreateObject trigger an AWS lambda.
 AWS lambda fetches package, then fetches the Imageflow build for that commit ID and a matching glibc. We run that
 imageflow_tool in --troubleshoot-package mode against the uploaded file, and let it augment the report on a different OS.
-We then ship that report to nathanael.jones@gmail.com, or some other system, and upload the
+We then ship that report to lilith@imazen.io, or some other system, and upload the
 complete pacakge (perhaps in interactive HTML form) to Amazon S3 again.
 
 If we want to store image output for multiple experiments, we should rename them to their checksum and edit the experiment JSON.
