@@ -894,7 +894,7 @@ fn test_url_parsing() {
     t("png.min_quality=90", Instructions { png_min_quality: Some(90), ..Default::default() }, vec![]);
     t("png.quantization_speed=4", Instructions { png_quantization_speed: Some(4), ..Default::default() }, vec![]);
     t("png.libpng=true", Instructions { png_libpng: Some(true), ..Default::default() }, vec![]);
-    t("png_max_deflate=true", Instructions { png_max_deflate: Some(true), ..Default::default() }, vec![]);
+    t("png.max_deflate=true", Instructions { png_max_deflate: Some(true), ..Default::default() }, vec![]);
     t("zoom=0.02", Instructions { zoom: Some(0.02f64), ..Default::default() }, vec![]);
     t("trim.threshold=80&trim.percentpadding=0.02", Instructions { trim_whitespace_threshold: Some(80),  trim_whitespace_padding_percent: Some(0.02f64), ..Default::default() }, vec![]);
     t("w=10&f.sharpen=80.5", Instructions { w: Some(10), f_sharpen: Some(80.5f64), ..Default::default() }, vec![]);
@@ -997,5 +997,5 @@ fn test_tostr(){
     t("png.min_quality=90", Instructions { png_min_quality: Some(90), ..Default::default() });
     t("png.quantization_speed=4", Instructions { png_quantization_speed: Some(4), ..Default::default() });
     t("png.libpng=true", Instructions { png_libpng: Some(true), ..Default::default() });
-    t("png_max_deflate=true", Instructions { png_max_deflate: Some(true), ..Default::default() });
+    t("png.max_deflate=true", Instructions { png_max_deflate: Some(true), ..Default::default() });
 }
