@@ -129,8 +129,12 @@ impl Context {
 
     pub fn get_output_buffer_slice(&self, io_id: i32) -> Result<&[u8]> {
         let codec = self.get_codec(io_id).map_err(|e| e.at(here!()))?;
-        let io = codec.get_encode_io()?.expect("Not an output buffer");
-        io.map(|io| io.get_output_buffer_bytes(self).map_err(|e| e.at(here!())))
+        let result = if let Some(io) = codec.get_encode_io().map_err(|e| e.at(here!()))? {
+            io.map(|io| io.get_output_buffer_bytes(self).map_err(|e| e.at(here!())))
+        }else{
+            Err(nerror!(ErrorKind::InvalidArgument, "io_id {} is not an output buffer", io_id))
+        };
+        result
     }
 
     pub fn add_file(&mut self, io_id: i32, direction: IoDirection, path: &str) -> Result<()> {
@@ -250,6 +254,16 @@ impl Context {
         Ok(s::ResponsePayload::JobResult(s::JobResult { encodes: engine.collect_encode_results(), performance: Some(perf) }))
     }
 
+
+}
+
+#[cfg(test)]
+fn test_get_output_buffer_slice_wrong_type_error(){
+
+    let mut context = Context::create().unwrap();
+    context.add_input_bytes(0, b"abcdef").unwrap();
+
+    assert_eq!(ErrorKind::InvalidArgument, context.get_output_buffer_slice(0).err().unwrap().kind);
 
 }
 
