@@ -439,7 +439,38 @@ pub enum ConstraintMode {
     FitPad,
 }
 
-
+#[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
+pub enum WatermarkConstraintMode {
+    /// Distort the image to exactly the given dimensions.
+    /// If only one dimension is specified, behaves like `fit`.
+    #[serde(rename = "distort")]
+    Distort,
+    /// Ensure the result fits within the provided dimensions. No upscaling.
+    #[serde(rename = "within")]
+    Within,
+    /// Fit the image within the dimensions, upscaling if needed
+    #[serde(rename = "fit")]
+    Fit,
+    /// Crop to desired aspect ratio if image is larger than requested, then downscale. Ignores smaller images.
+    /// If only one dimension is specified, behaves like `within`.
+    #[serde(rename = "within_crop")]
+    WithinCrop,
+    /// Crop to desired aspect ratio, then downscale or upscale to fit.
+    /// If only one dimension is specified, behaves like `fit`.
+    #[serde(rename = "fit_crop")]
+    FitCrop,
+}
+impl From<WatermarkConstraintMode> for ConstraintMode{
+    fn from(mode: WatermarkConstraintMode) -> Self {
+        match mode{
+            WatermarkConstraintMode::Distort => ConstraintMode::Distort,
+            WatermarkConstraintMode::Within => ConstraintMode::Within,
+            WatermarkConstraintMode::Fit => ConstraintMode::Fit,
+            WatermarkConstraintMode::WithinCrop => ConstraintMode::WithinCrop,
+            WatermarkConstraintMode::FitCrop => ConstraintMode::FitCrop,
+        }
+    }
+}
 
 
 
@@ -458,6 +489,25 @@ pub struct Constraint {
     pub hints: Option<ResampleHints>,
     pub gravity: Option<ConstraintGravity>,
     pub canvas_color: Option<Color>
+}
+
+#[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
+pub enum WatermarkConstraintBox{
+    #[serde(rename = "image_percentage")]
+    ImagePercentage{ x1: f32, y1: f32, x2: f32, y2: f32},
+    #[serde(rename = "image_margins")]
+    ImageMargins{ left: u32, top: u32, right: u32, bottom: u32},
+}
+
+
+#[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
+pub struct Watermark{
+    pub io_id: i32,
+    pub gravity: Option<ConstraintGravity>,
+    pub fit_box: Option<WatermarkConstraintBox>,
+    pub fit_mode: Option<WatermarkConstraintMode>,
+    pub opacity: Option<f32>,
+    pub hints: Option<ResampleHints>
 }
 
 /// Blend pixels (if transparent) or replace?
@@ -582,6 +632,8 @@ pub enum Node {
 //        interpolation_filter: Option<Filter>,
 //        scaling_colorspace: Option<ScalingFloatspace>,
 //    },
+    #[serde(rename="watermark")]
+    Watermark (Watermark),
     #[serde(rename="white_balance_histogram_area_threshold_srgb")]
     WhiteBalanceHistogramAreaThresholdSrgb{
         threshold: Option<f32>

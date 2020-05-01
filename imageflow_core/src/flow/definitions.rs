@@ -545,7 +545,7 @@ impl From<s::Node> for Node {
             s::Node::ColorFilterSrgb { ..} => {
                 Node::n(&nodes::COLOR_FILTER_SRGB, NodeParams::Json(node))
             },
-
+            s::Node::Watermark (_) => Node::n(&nodes::WATERMARK, NodeParams::Json(node)),
         }
     }
 }

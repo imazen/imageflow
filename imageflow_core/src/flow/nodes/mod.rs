@@ -14,6 +14,7 @@ mod codecs_and_pointer;
 mod constrain;
 mod white_balance;
 mod color;
+mod watermark;
 //mod detection;
 
 mod internal_prelude {
@@ -64,6 +65,7 @@ pub use self::white_balance::WHITE_BALANCE_SRGB;
 pub use self::color::COLOR_MATRIX_SRGB_MUTATE;
 pub use self::color::COLOR_MATRIX_SRGB;
 pub use self::color::COLOR_FILTER_SRGB;
+pub use self::watermark::WATERMARK;
 
 //pub use self::detection::CROP_FACES;
 
@@ -300,23 +302,32 @@ impl<'c> OpCtxMut<'c> {
         };
     }
 
-    // Links nodes with Input edges
-    pub fn replace_node(&mut self, index: NodeIndex, with_list: Vec<Node>) {
-        let mut with = with_list.clone();
+    /// Adds the given nodes in a chain, then returns the first and last node index
+    pub fn add_nodes(&mut self, list: Vec<Node>) -> Option<(NodeIndex,NodeIndex)>{
+        let mut with = list.clone();
         match with.len() {
-            0 => self.delete_node_and_snap_together(index),
+            0 => None,
             n => {
                 with.reverse();
                 let mut last_ix = self.graph.add_node(with.pop().unwrap());
-                self.copy_edges_to(index, last_ix, EdgeDirection::Incoming);
+                let first_ix = last_ix.clone();
                 while !with.is_empty() {
                     let new_ix = self.graph.add_node(with.pop().unwrap());
                     self.graph.add_edge(last_ix, new_ix, EdgeKind::Input).unwrap();
                     last_ix = new_ix;
                 }
-                self.copy_edges_to(index, last_ix, EdgeDirection::Outgoing);
-                self.graph.remove_node(index).unwrap();
+                Some((first_ix, last_ix))
             }
+        }
+    }
+    // Links nodes with Input edges
+    pub fn replace_node(&mut self, index: NodeIndex, with_list: Vec<Node>) {
+        if let Some((first_ix,last_ix)) = self.add_nodes(with_list){
+            self.copy_edges_to(index, first_ix, EdgeDirection::Incoming);
+            self.copy_edges_to(index, last_ix, EdgeDirection::Outgoing);
+            self.graph.remove_node(index).unwrap();
+        }else{
+            self.delete_node_and_snap_together(index)
         }
     }
 
