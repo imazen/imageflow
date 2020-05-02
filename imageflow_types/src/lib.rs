@@ -88,8 +88,8 @@ pub enum PixelBuffer<'a> {
 #[repr(C)]
 #[derive(Copy, Serialize, Deserialize, Clone, PartialEq, PartialOrd, Debug)]
 pub enum Filter {
-    // #[serde(rename="robidoux_fast")]
-    // RobidouxFast = 1,
+    #[serde(rename="robidoux_fast")]
+    RobidouxFast = 1,
     #[serde(rename="robidoux")]
     Robidoux = 2,
     #[serde(rename="robidoux_sharp")]
@@ -102,10 +102,10 @@ pub enum Filter {
     Lanczos = 6,
     #[serde(rename="lanczos_sharp")]
     LanczosSharp = 7,
-    // #[serde(rename="lanczos_2")]
-    // Lanczos2 = 8,
-    // #[serde(rename="lanczos_2_sharp")]
-    // Lanczos2Sharp = 9,
+    #[serde(rename="lanczos_2")]
+    Lanczos2 = 8,
+    #[serde(rename="lanczos_2_sharp")]
+    Lanczos2Sharp = 9,
     // #[serde(rename="cubic_fast")]
     // CubicFast = 10,
     #[serde(rename="cubic")]

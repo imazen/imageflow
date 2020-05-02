@@ -32,10 +32,13 @@ If only one dimension is specified, behaves like `fit`.
  
 * `robidoux` - The default and recommended downsampling filter
 * `robidoux_sharp` - A sharper version of the above
+* `robidoux_fast` - A faster, less accurate version of robidoux
 * `ginseng` - The default and suggested upsampling filter
 * `ginseng_sharp` 
 * `lanczos` 
 * `lanczos_sharp`   
+* `lanczos_2` 
+* `lanczos_2_sharp`  
 * `cubic` 
 * `cubic_sharp` 
 * `catmull_rom` 
