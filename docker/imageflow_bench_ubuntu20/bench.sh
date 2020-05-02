@@ -6,12 +6,12 @@ echo 'This benchmark is for ubuntu 20.04. '
 convert --version
 vipsthumbnail --vips-version
 
-#wget -nc --quiet  https://s3-us-west-2.amazonaws.com/imageflow-resources/test_inputs/u1.jpg
 
 mkdir bench_out
 mkdir bench_in
-rm bench_out/*.jpg
-rm bench_in/*.jpg
+sudo chmod -R a+rwx bench_out
+rm -rf bench_out/**
+rm -rf bench_in/**
 
 export COUNT=32
 
@@ -22,6 +22,7 @@ done
 cd bench_in
 
 if [[ "$1" == "thumbnail" ]]; then
+
   # shellcheck disable=SC2016
   hyperfine --export-markdown results.md  --warmup 1 \
     'parallel "$HOME/bin/imageflow_tool v0.1/ir4 --in {} --quiet --out ../bench_out/{.}_200x200.jpg --command width=200&height=200&mode=max&quality=100" ::: *.jpg' \
@@ -82,14 +83,69 @@ if [[ "$1" == "jpegsize" ]]; then
   echo "=============== DSSIM with linear IDCT scaling turned on vs. no IDCT scaling  ======================"
   dssim ../bench_out/imageflow_no_idct_scaling_2000x2000.png ../bench_out/imageflow_idct_scaling_2000x2000.png
 
-
-
   echo "=============== File sizes ======================"
-  ls -l ../bench_out
-  echo "================================================================="
-  # shellcheck disable=SC2028
-  echo "To see results, run docker run -v %CD%\results:/home/imageflow/bench_out imazen/imageflow_bench_ubuntu20 jpegsize"
-  echo 'or on linux,  docker run -v \"$(pwd)\"/results:/home/imageflow/bench_out imazen/imageflow_bench_ubuntu20 jpegsize'
+  ls -l -S ../bench_out
+  echo "================================================="
 
 fi
 
+
+if [[ "$1" == "pngsize" ]]; then
+
+pngsize(){
+
+  mkdir ../bench_out/$2
+  cp $1 ../bench_out/$2/$2_original.png
+  echo "Running compression tools"
+   "$HOME/bin/imageflow_tool" v0.1/ir4  --quiet --in $1 --out ../bench_out/$2/$2_expanded.png --command "format=png"
+
+   "$HOME/bin/imageflow_tool" v0.1/ir4  --quiet --in ../bench_out/$2/$2_expanded.png --out ../bench_out/$2/$2_imageflow.png --command "format=png&png.max_deflate=true&png.libpng=true"
+   "$HOME/bin/imageflow_tool" v0.1/ir4  --quiet --in ../bench_out/$2/$2_expanded.png --out ../bench_out/$2/$2_imageflow_fast.png --command "format=png"
+   "$HOME/bin/imageflow_tool" v0.1/ir4  --quiet --in ../bench_out/$2/$2_expanded.png --out ../bench_out/$2/$2_imageflow_lossy_fast.png --command "format=png&png.min_quality=0&png.quality=80"
+   "$HOME/bin/imageflow_tool" v0.1/ir4  --quiet --in ../bench_out/$2/$2_expanded.png --out ../bench_out/$2/$2_imageflow_lossy.png --command "format=png&png.max_deflate=true&png.min_quality=0&png.quality=80"
+   convert ../bench_out/$2/$2_expanded.png -set colorspace sRGB -colorspace RGB -colorspace sRGB ../bench_out/$2/$2_magick.png
+   pngcrush -q ../bench_out/$2/$2_expanded.png ../bench_out/$2/$2_pngcrush.png
+   cp ../bench_out/$2/$2_expanded.png ../bench_out/$2/$2_oxipng.png
+   oxipng -q -o 4 --strip safe ../bench_out/$2/$2_oxipng.png
+
+
+  echo "=============== DSSIM relative to original (lower is better)  ============="
+  dssim ../bench_in/$1 ../bench_out/$2/$2_imageflow.png
+  dssim ../bench_in/$1 ../bench_out/$2/$2_imageflow_fast.png
+  dssim ../bench_in/$1 ../bench_out/$2/$2_imageflow_lossy.png
+  dssim ../bench_in/$1 ../bench_out/$2/$2_imageflow_lossy_fast.png
+  dssim ../bench_in/$1 ../bench_out/$2/$2_pngcrush.png
+  dssim ../bench_in/$1 ../bench_out/$2/$2_magick.png
+  dssim ../bench_in/$1 ../bench_out/$2/$2_oxipng.png
+
+  echo "=============== File sizes ================================================="
+  ls -l -S ../bench_out/$2
+  echo "============================================================================"
+
+}
+   echo "Downloading test files..."
+   wget -nc --quiet  https://s3-us-west-2.amazonaws.com/imageflow-resources/test_inputs/rose.png
+   wget -nc --quiet  https://s3-us-west-2.amazonaws.com/imageflow-resources/test_inputs/dice.png
+   wget -nc --quiet  https://s3-us-west-2.amazonaws.com/imageflow-resources/test_inputs/compass.png
+   wget -nc --quiet  https://s3-us-west-2.amazonaws.com/imageflow-resources/test_inputs/u1.jpg
+   wget -nc --quiet  https://s3-us-west-2.amazonaws.com/imageflow-resources/test_inputs/u6.jpg
+   wget -nc --quiet  https://s3-us-west-2.amazonaws.com/imageflow-resources/test_inputs/waterhouse.jpg
+
+
+   "$HOME/bin/imageflow_tool" v0.1/ir4  --quiet --in u1.jpg --out van.png --command "format=png&width=800"
+   "$HOME/bin/imageflow_tool" v0.1/ir4  --quiet --in u6.jpg --out pier.png --command "format=png&width=800"
+   "$HOME/bin/imageflow_tool" v0.1/ir4  --quiet --in waterhouse.jpg --out waterhouse.png --command "format=png&width=800"
+
+    pngsize "waterhouse.png" "waterhouse"
+    pngsize "dice.png" "dice"
+    pngsize "rose.png" "rose"
+    pngsize "van.png" "van"
+    pngsize "pier.png" "pier"
+
+fi
+
+sudo chmod -R a+rwx ../bench_out/
+
+# shellcheck disable=SC2028
+echo "To see results, run docker run -v %CD%\results:/home/imageflow/bench_out imazen/imageflow_bench_ubuntu20 jpegsize"
+echo 'or on linux,  docker run -v "$(pwd)"/results:/home/imageflow/bench_out imazen/imageflow_bench_ubuntu20 jpegsize'

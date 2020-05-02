@@ -413,15 +413,14 @@ impl Ir4Layout{
             _ => None
 
         };
-
-
+        
         b.add(s::Node::Resample2D {
             w: image.width() as u32,
             h: image.height() as u32,
             hints: Some(imageflow_types::ResampleHints {
                 sharpen_percent: self.i.f_sharpen.map(|v| v as f32),
-                down_filter: None,
-                up_filter: None,
+                down_filter: self.i.down_filter.map(|v| v.to_filter()),
+                up_filter: self.i.up_filter.map(|v| v.to_filter()),
                 scaling_colorspace,
                 background_color: Some(bgcolor.clone()),
                 resample_when: Some(s::ResampleWhen::SizeDiffersOrSharpeningRequested),

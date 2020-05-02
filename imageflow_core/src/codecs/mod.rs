@@ -373,6 +373,7 @@ impl Encoder for LibpngEncoder{
                     Some(s::PngBitDepth::Png24) => true,
                     _ => false,
                 },
+                zlib_compression_level: zlib_compression.unwrap_or(6)
             };
 
             unsafe {
@@ -412,8 +413,8 @@ impl CodecInstanceContainer{
                      //TODO: enforce killbits - if c.enabled_codecs.encoders.contains()
                      CodecKind::Encoder(Box::new(gif::GifEncoder::create(c, preset, io, frame)?))
                  },
-                 s::EncoderPreset::Pngquant {speed, quality} => {
-                     CodecKind::Encoder(Box::new(pngquant::PngquantEncoder::create(c, speed, quality, io)?))
+                 s::EncoderPreset::Pngquant {speed, quality, maximum_deflate} => {
+                     CodecKind::Encoder(Box::new(pngquant::PngquantEncoder::create(c, speed, quality, maximum_deflate, io)?))
                  },
                  s::EncoderPreset::Mozjpeg {quality, progressive} => {
                      CodecKind::Encoder(Box::new(mozjpeg::MozjpegEncoder::create(c, quality, progressive, io)?))
@@ -421,8 +422,8 @@ impl CodecInstanceContainer{
                  s::EncoderPreset::LibjpegTurbo {quality, progressive, optimize_huffman_coding} => {
                      CodecKind::Encoder(Box::new(mozjpeg::MozjpegEncoder::create_classic(c, quality.map(|q| q as u8), progressive, optimize_huffman_coding, io)?))
                  },
-                 s::EncoderPreset::Lodepng => {
-                     CodecKind::Encoder(Box::new(lode::LodepngEncoder::create(c, io)?))
+                 s::EncoderPreset::Lodepng { maximum_deflate }=> {
+                     CodecKind::Encoder(Box::new(lode::LodepngEncoder::create(c, io, maximum_deflate)?))
                  },
                  s::EncoderPreset::Libpng {..}  => {
                      CodecKind::Encoder(Box::new(

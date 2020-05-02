@@ -12,6 +12,7 @@ use crate::common::*;
 use crate::common::default_build_config;
 
 use imageflow_core::{Context, ErrorKind, FlowError, CodeLocation};
+use s::CommandStringKind;
 
 
 const DEBUG_GRAPH: bool = false;
@@ -20,7 +21,9 @@ const FRYMIRE_URL: &'static str = "https://s3-us-west-2.amazonaws.com/imageflow-
 
 #[test]
 fn test_encode_png() {
-    let steps = reencode_with(s::EncoderPreset::Lodepng);
+    let steps = reencode_with(s::EncoderPreset::Lodepng {
+        maximum_deflate: None
+    });
 
     compare_encoded_to_source(s::IoEnum::Url(FRYMIRE_URL.to_owned()),
                               DEBUG_GRAPH,
@@ -38,6 +41,7 @@ fn test_encode_pngquant() {
     let steps = reencode_with(s::EncoderPreset::Pngquant {
                 speed: None,
                 quality: Some((0, 100)),
+                maximum_deflate: None
             });
 
     compare_encoded_to_source(s::IoEnum::Url(FRYMIRE_URL.to_owned()),
@@ -49,12 +53,25 @@ fn test_encode_pngquant() {
                               steps
     );
 }
+#[test]
+fn test_encode_pngquant_command() {
+    let steps = reencode_with_command("png.min_quality=0&png.quality=100");
 
+    compare_encoded_to_source(s::IoEnum::Url(FRYMIRE_URL.to_owned()),
+                              DEBUG_GRAPH,
+                              Constraints {
+                                  max_file_size: Some(280_000),
+                                  similarity: Similarity::AllowDssimMatch(0.005, 0.008),
+                              },
+                              steps
+    );
+}
 #[test]
 fn test_encode_pngquant_fallback() {
     let steps = reencode_with(s::EncoderPreset::Pngquant {
                 speed: None,
                 quality: Some((99, 100)),
+                maximum_deflate: None
             });
 
     compare_encoded_to_source(s::IoEnum::Url(FRYMIRE_URL.to_owned()),
@@ -66,11 +83,25 @@ fn test_encode_pngquant_fallback() {
                               steps
     );
 }
+#[test]
+fn test_encode_pngquant_fallback_command() {
+    let steps =  reencode_with_command("png.min_quality=99&png.quality=100");
 
+    compare_encoded_to_source(s::IoEnum::Url(FRYMIRE_URL.to_owned()),
+                              DEBUG_GRAPH,
+                              Constraints {
+                                  max_file_size: None,
+                                  similarity: Similarity::AllowDssimMatch(0.000, 0.001),
+                              },
+                              steps
+    );
+}
 
 #[test]
 fn test_encode_lodepng() {
-    let steps = reencode_with(s::EncoderPreset::Lodepng);
+    let steps = reencode_with(s::EncoderPreset::Lodepng{
+        maximum_deflate: None
+    });
 
     compare_encoded_to_source(s::IoEnum::Url(FRYMIRE_URL.to_owned()),
                               DEBUG_GRAPH,
@@ -176,7 +207,16 @@ pub fn reencode_with(preset: s::EncoderPreset) -> Vec<s::Node>{
         },
     ]
 }
-
+pub fn reencode_with_command(command: &str) -> Vec<s::Node>{
+    vec![
+        s::Node::CommandString {
+            kind: CommandStringKind::ImageResizer4,
+            value: command.to_owned(),
+            decode: Some(0),
+            encode: Some(1)
+        }
+    ]
+}
 
 /// Compares the encoded result of a given job to the source. If there is a checksum mismatch, a percentage of off-by-one bytes can be allowed.
 /// The output io_id is 1

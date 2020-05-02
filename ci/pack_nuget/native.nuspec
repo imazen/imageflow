@@ -3,8 +3,8 @@
     <metadata>
         <id>:id:</id>
         <version>:version:</version>
-        <authors>Imazen, nathanaeljones</authors>
-        <owners>Imazen, nathanaeljones</owners>
+        <authors>Imazen, lilith</authors>
+        <owners>Imazen, lilith</owners>
         <requireLicenseAcceptance>false</requireLicenseAcceptance>
         <description>Imageflow is a fast, correct image processing library for web servers. This package contains only the native library; see Imageflow.Net for the managed wrapper. </description>
         <copyright>AGPLv3 or commercial</copyright>

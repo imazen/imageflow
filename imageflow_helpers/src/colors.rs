@@ -90,6 +90,9 @@ impl Color32{
     pub fn is_transparent(&self) -> bool{
         (self.0 & 0xFF_00_00_00) == 0
     }
+    pub fn is_opaque(&self) -> bool{
+        (self.0 & 0xFF_00_00_00) == 0xFF_00_00_00
+    }
 }
 
 #[test]

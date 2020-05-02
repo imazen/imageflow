@@ -4,6 +4,8 @@ use url::Url;
 use imageflow_types as s;
 #[allow(unused)] use option_filter::OptionFilterExt;
 use imageflow_helpers::colors::*;
+use imageflow_types::Filter;
+use imageflow_helpers::preludes::from_std::fmt::Formatter;
 
 macro_attr! {
 
@@ -67,6 +69,7 @@ pub enum ScaleModeStrings{
     UpscaleCanvas
 }
 }
+
 macro_attr! {
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq,
@@ -89,6 +92,8 @@ pub enum FitModeStrings {
     AspectCrop
 }
 }
+
+
 macro_attr! {
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq,
@@ -119,6 +124,48 @@ pub enum ProcessWhen {
 }
 
 
+}
+macro_attr! {
+
+
+#[allow(non_camel_case_types)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq,
+IterVariants!(FilterVariants), IterVariantNames!(FilterNames))]
+pub enum FilterStrings {
+    Robidoux,
+    Robidoux_Fast,
+    RobidouxFast,
+    Robidoux_Sharp,
+    RobidouxSharp,
+    Ginseng,
+    GinsengSharp,
+    Ginseng_Sharp,
+    Lanczos,
+    LanczosSharp,
+    Lanczos_Sharp,
+    Lanczos2,
+    Lanczos_2,
+    Lanczos2Sharp,
+    Lanczos_2_Sharp,
+    Cubic,
+    CubicSharp,
+    Cubic_Sharp,
+    CatmullRom,
+    Catmull_Rom,
+    Mitchell,
+    CubicBSpline,
+    Cubic_B_Spline,
+    Hermite,
+    Jinc,
+    Triangle,
+    Linear,
+    Box,
+    Fastest,
+    NCubic,
+    N_Cubic,
+    NCubicSharp,
+    N_Cubic_Sharp,
+}
 }
 
 macro_attr! {
@@ -167,16 +214,20 @@ pub enum ScalingColorspace {
 
 }
 
-pub static IR4_KEYS: [&'static str;67] = ["mode", "anchor", "flip", "sflip", "scale", "cache", "process",
+pub static IR4_KEYS: [&'static str;74] = ["mode", "anchor", "flip", "sflip", "scale", "cache", "process",
     "quality", "zoom", "crop", "cropxunits", "cropyunits",
     "w", "h", "width", "height", "maxwidth", "maxheight", "format", "thumbnail",
      "autorotate", "srotate", "rotate", "ignoreicc", //really? : "precise_scaling_ratio",
     "stretch", "webp.lossless", "webp.quality",
     "frame", "page", "subsampling", "colors", "f.sharpen", "f.sharpen_when", "down.colorspace",
-    "404", "bgcolor", "paddingcolor", "bordercolor", "preset", "floatspace", "jpeg_idct_downscale_linear", "watermark",
-    "s.invert", "s.sepia", "s.grayscale", "s.alpha", "s.brightness", "s.contrast", "s.saturation",  "trim.threshold",
-    "trim.percentpadding", "a.blur", "a.sharpen", "a.removenoise", "a.balancewhite", "dither","jpeg.progressive", "jpeg.turbo",
-    "encoder", "decoder", "builder", "s.roundcorners.", "paddingwidth", "paddingheight", "margin", "borderwidth", "decoder.min_precise_scaling_ratio"];
+    "404", "bgcolor", "paddingcolor", "bordercolor", "preset", "floatspace",
+    "jpeg_idct_downscale_linear", "watermark", "s.invert", "s.sepia", "s.grayscale", "s.alpha",
+    "s.brightness", "s.contrast", "s.saturation",  "trim.threshold", "trim.percentpadding",
+    "a.blur", "a.sharpen", "a.removenoise", "a.balancewhite", "dither","jpeg.progressive",
+    "jpeg.turbo", "encoder", "decoder", "builder", "s.roundcorners.", "paddingwidth",
+    "paddingheight", "margin", "borderwidth", "decoder.min_precise_scaling_ratio",
+    "png.quality","png.min_quality", "png.quantization_speed", "png.libpng", "png.max_deflate",
+    "up.filter", "down.filter"];
 
 
 #[derive(PartialEq,Debug, Clone)]
@@ -213,6 +264,11 @@ pub fn parse_url(url: &Url) -> (Instructions, Vec<ParseWarning>) {
         (i, warnings)
 }
 
+impl std::fmt::Display for Instructions{
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", &self.to_string())
+    }
+}
 
 impl Instructions{
 
@@ -279,8 +335,11 @@ impl Instructions{
         add(&mut m, "s.sepia", self.s_sepia);
         add(&mut m, "jpeg.progressive", self.jpeg_progressive);
         add(&mut m, "jpeg.turbo", self.jpeg_turbo);
-
-
+        add(&mut m, "png.quality", self.png_quality);
+        add(&mut m, "png.min_quality", self.png_min_quality);
+        add(&mut m, "png.quantization_speed", self.png_quantization_speed);
+        add(&mut m, "png.libpng", self.png_libpng);
+        add(&mut m, "png.max_deflate", self.png_max_deflate);
         add(&mut m, "s.grayscale", self.s_grayscale.map(|v| format!("{:?}", v).to_lowercase()));
         add(&mut m, "a.balancewhite", self.a_balance_white.map(|v| format!("{:?}", v).to_lowercase()));
         add(&mut m, "subsampling", self.jpeg_subsampling);
@@ -295,7 +354,8 @@ impl Instructions{
 
 
         add(&mut m, "down.colorspace", self.down_colorspace.map(|v| format!("{:?}", v).to_lowercase()));
-
+        add(&mut m, "down.filter", self.down_filter.map(|v| format!("{:?}", v).to_lowercase()));
+        add(&mut m, "up.filter", self.up_filter.map(|v| format!("{:?}", v).to_lowercase()));
         add(&mut m, "decoder.min_precise_scaling_ratio", self.min_precise_scaling_ratio);
         m
     }
@@ -342,6 +402,11 @@ impl Instructions{
 
         i.webp_quality = p.parse_f64("webp.quality");
         i.webp_lossless = p.parse_bool("webp.lossless");
+        i.png_min_quality = p.parse_u8("png.min_quality");
+        i.png_quality = p.parse_u8("png.quality");
+        i.png_quantization_speed= p.parse_u8("png.quantization_speed");
+        i.png_libpng = p.parse_bool("png.libpng");
+        i.png_max_deflate = p.parse_bool("png.max_deflate");
         i.anchor = p.parse_anchor("anchor");
 
 
@@ -368,6 +433,8 @@ impl Instructions{
         };
 
         i.down_colorspace = p.parse_colorspace("down.colorspace");
+        i.down_filter = p.parse_filter("down.filter");
+        i.up_filter = p.parse_filter("up.filter");
 
 
         let _ = p.parse_test_pair("fastscale", "true");
@@ -500,7 +567,9 @@ impl<'a> Parser<'a>{
             }
         )
     }
-
+    fn parse_u8(&mut self, key: &'static str) -> Option<u8>{
+        self.parse(key, |s| s.parse::<u8>() )
+    }
     fn parse_i32(&mut self, key: &'static str) -> Option<i32>{
         self.parse(key, |s| s.parse::<i32>() )
     }
@@ -553,6 +622,16 @@ fn parse_colorspace(&mut self, key: &'static str) -> Option<ScalingColorspace> {
     fn parse_fit_mode(&mut self, key: &'static str) -> Option<FitModeStrings>{
         self.parse(key, |value| {
             for (k, v) in FitModeStrings::iter_variant_names().zip(FitModeStrings::iter_variants()) {
+                if k.eq_ignore_ascii_case(value) {
+                    return Ok(v)
+                }
+            }
+            Err(())
+        })
+    }
+    fn parse_filter(&mut self, key: &'static str) -> Option<FilterStrings>{
+        self.parse(key, |value| {
+            for (k, v) in FilterStrings::iter_variant_names().zip(FilterStrings::iter_variants()) {
                 if k.eq_ignore_ascii_case(value) {
                     return Ok(v)
                 }
@@ -697,6 +776,34 @@ impl FitModeStrings{
     }
 }
 
+impl FilterStrings{
+    pub fn to_filter(&self) -> Filter{
+        match *self{
+            FilterStrings::Robidoux => Filter::Robidoux,
+            FilterStrings::Robidoux_Sharp | FilterStrings::RobidouxSharp => Filter::RobidouxSharp,
+            FilterStrings::Robidoux_Fast | FilterStrings::RobidouxFast => Filter::RobidouxFast,
+            FilterStrings::Ginseng => Filter::Ginseng,
+            FilterStrings::Ginseng_Sharp | FilterStrings::GinsengSharp => Filter::GinsengSharp,
+            FilterStrings::Lanczos => Filter::Lanczos,
+            FilterStrings::Lanczos_Sharp | FilterStrings::LanczosSharp => Filter::LanczosSharp,
+            FilterStrings::Lanczos_2 | FilterStrings::Lanczos2 => Filter::Lanczos2,
+            FilterStrings::Lanczos_2_Sharp | FilterStrings::Lanczos2Sharp => Filter::Lanczos2Sharp,
+            FilterStrings::Cubic => Filter::Cubic,
+            FilterStrings::Cubic_Sharp | FilterStrings::CubicSharp => Filter::CubicSharp,
+            FilterStrings::Catmull_Rom | FilterStrings::CatmullRom => Filter::CatmullRom,
+            FilterStrings::Mitchell => Filter::Mitchell,
+            FilterStrings::Cubic_B_Spline | FilterStrings::CubicBSpline => Filter::CubicBSpline,
+            FilterStrings::Hermite => Filter::Hermite,
+            FilterStrings::Jinc => Filter::Jinc,
+            FilterStrings::Triangle => Filter::Triangle,
+            FilterStrings::Linear => Filter::Linear,
+            FilterStrings::Box => Filter::Box,
+            FilterStrings::Fastest => Filter::Fastest,
+            FilterStrings::N_Cubic | FilterStrings::NCubic => Filter::NCubic,
+            FilterStrings::N_Cubic_Sharp | FilterStrings::NCubicSharp => Filter::NCubicSharp,
+        }
+    }
+}
 
 
 
@@ -767,6 +874,13 @@ pub struct Instructions{
     pub down_colorspace: Option<ScalingColorspace>,
     pub jpeg_progressive: Option<bool>,
     pub jpeg_turbo: Option<bool>,
+    pub png_quality: Option<u8>,
+    pub png_min_quality: Option<u8>,
+    pub png_quantization_speed: Option<u8>,
+    pub png_libpng: Option<bool>,
+    pub png_max_deflate: Option<bool>,
+    pub up_filter: Option<FilterStrings>,
+    pub down_filter: Option<FilterStrings>,
 }
 #[derive(Debug,Copy, Clone,PartialEq)]
 pub enum Anchor1D{
@@ -872,6 +986,11 @@ fn test_url_parsing() {
     t("webp.lossless=true", Instructions { webp_lossless: Some(true), ..Default::default() }, vec![]);
     t("jpeg.progressive=true", Instructions { jpeg_progressive: Some(true), ..Default::default() }, vec![]);
     t("jpeg.turbo=true", Instructions { jpeg_turbo: Some(true), ..Default::default() }, vec![]);
+    t("png.quality=90", Instructions { png_quality: Some(90), ..Default::default() }, vec![]);
+    t("png.min_quality=90", Instructions { png_min_quality: Some(90), ..Default::default() }, vec![]);
+    t("png.quantization_speed=4", Instructions { png_quantization_speed: Some(4), ..Default::default() }, vec![]);
+    t("png.libpng=true", Instructions { png_libpng: Some(true), ..Default::default() }, vec![]);
+    t("png.max_deflate=true", Instructions { png_max_deflate: Some(true), ..Default::default() }, vec![]);
     t("zoom=0.02", Instructions { zoom: Some(0.02f64), ..Default::default() }, vec![]);
     t("trim.threshold=80&trim.percentpadding=0.02", Instructions { trim_whitespace_threshold: Some(80),  trim_whitespace_padding_percent: Some(0.02f64), ..Default::default() }, vec![]);
     t("w=10&f.sharpen=80.5", Instructions { w: Some(10), f_sharpen: Some(80.5f64), ..Default::default() }, vec![]);
@@ -919,6 +1038,9 @@ fn test_url_parsing() {
     t("a.balancewhite=area",  Instructions{a_balance_white: Some(HistogramThresholdAlgorithm::Area), ..Default::default()}, vec![]);
     t("down.colorspace=linear",  Instructions{down_colorspace: Some(ScalingColorspace::Linear), ..Default::default()}, vec![]);
     t("down.colorspace=srgb",  Instructions{down_colorspace: Some(ScalingColorspace::Srgb), ..Default::default()}, vec![]);
+    t("up.filter=mitchell",  Instructions{up_filter: Some(FilterStrings::Mitchell), ..Default::default()}, vec![]);
+    t("down.filter=lanczos",  Instructions{down_filter: Some(FilterStrings::Lanczos), ..Default::default()}, vec![]);
+
 
     expect_warning("a.balancewhite","gimp",  Instructions{a_balance_white: Some(HistogramThresholdAlgorithm::Gimp), ..Default::default()});
     expect_warning("a.balancewhite","simple",  Instructions{a_balance_white: Some(HistogramThresholdAlgorithm::Simple), ..Default::default()});
@@ -970,4 +1092,12 @@ fn test_tostr(){
     t("s.alpha=0&s.brightness=0.1&s.contrast=1&s.saturation=-0.1&s.sepia=true", Instructions { s_alpha: Some(0f64), s_contrast: Some(1f64), s_sepia: Some(true), s_brightness: Some(0.1f64), s_saturation: Some(-0.1f64), ..Default::default() });
     t("jpeg.progressive=true", Instructions { jpeg_progressive: Some(true), ..Default::default() });
     t("jpeg.turbo=true", Instructions { jpeg_turbo: Some(true), ..Default::default() });
+    t("png.quality=90", Instructions { png_quality: Some(90), ..Default::default() });
+    t("png.min_quality=90", Instructions { png_min_quality: Some(90), ..Default::default() });
+    t("png.quantization_speed=4", Instructions { png_quantization_speed: Some(4), ..Default::default() });
+    t("png.libpng=true", Instructions { png_libpng: Some(true), ..Default::default() });
+    t("png.max_deflate=true", Instructions { png_max_deflate: Some(true), ..Default::default() });
+    t("up.filter=mitchell",  Instructions{up_filter: Some(FilterStrings::Mitchell), ..Default::default()});
+    t("down.filter=lanczos",  Instructions{down_filter: Some(FilterStrings::Lanczos), ..Default::default()});
+
 }

@@ -15,7 +15,7 @@ libc = "0.2"
 num = "0.2"
 
 # time
-time = "0.1" # Update to 0.2.9
+time = "0.2" # Update to 0.2.9
 chrono =  "0.4"
 
 # serialization

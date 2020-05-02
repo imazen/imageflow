@@ -614,10 +614,15 @@ pub fn bitmap_regression_check(c: &ChecksumCtx, bitmap: &mut BitmapBgra, name: &
 /// If you accidentally store a bad checksum, just delete it from the JSON file manually.
 ///
 pub fn compare(input: Option<s::IoEnum>, allowed_off_by_one_bytes: usize, checksum_name: &str, store_if_missing: bool, debug: bool, steps: Vec<s::Node>) -> bool {
-    let mut context = Context::create().unwrap();
-    compare_with_context(&mut context, input, allowed_off_by_one_bytes, checksum_name, store_if_missing, debug, steps)
+
+    compare_multiple(input.map(|i| vec![i]), allowed_off_by_one_bytes, checksum_name, store_if_missing, debug, steps)
 }
-pub fn compare_with_context(context: &mut Context, input: Option<s::IoEnum>, allowed_off_by_one_bytes: usize, checksum_name: &str, store_if_missing: bool, debug: bool, mut steps: Vec<s::Node>) -> bool {
+pub fn compare_multiple(inputs: Option<Vec<s::IoEnum>>, allowed_off_by_one_bytes: usize, checksum_name: &str, store_if_missing: bool, debug: bool, steps: Vec<s::Node>) -> bool {
+    let mut context = Context::create().unwrap();
+    compare_with_context(&mut context, inputs, allowed_off_by_one_bytes, checksum_name, store_if_missing, debug, steps)
+}
+
+pub fn compare_with_context(context: &mut Context, inputs: Option<Vec<s::IoEnum>>, allowed_off_by_one_bytes: usize, checksum_name: &str, store_if_missing: bool, debug: bool, mut steps: Vec<s::Node>) -> bool {
     let mut bit = BitmapBgraContainer::empty();
     steps.push(unsafe{ bit.get_node()});
 
@@ -625,7 +630,12 @@ pub fn compare_with_context(context: &mut Context, input: Option<s::IoEnum>, all
 
     let build = s::Build001 {
         builder_config: Some(default_build_config(debug)),
-        io: input.map(|i| vec![i.into_input(0)]).unwrap_or(Vec::new()),
+        io: inputs.map(|v|
+            v.into_iter()
+                .enumerate()
+                .map(|(ix,i)|i.into_input(ix as i32))
+                .collect())
+            .unwrap_or(Vec::new()),
         framewise: s::Framewise::Steps(steps)
     };
 

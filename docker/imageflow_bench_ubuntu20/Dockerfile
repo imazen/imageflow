@@ -10,7 +10,7 @@ RUN export DEBIAN_FRONTEND=noninteractive \
   && apt-get install --no-install-recommends -y \
     sudo tzdata build-essential nasm dh-autoreconf pkg-config ca-certificates \
     git zip curl libpng-dev libssl-dev wget \
-    libcurl4-openssl-dev libelf-dev libdw-dev parallel time imagemagick graphicsmagick \
+    libcurl4-openssl-dev libelf-dev libdw-dev parallel time imagemagick graphicsmagick pngcrush optipng \
   && ln -fs /usr/share/zoneinfo/America/Denver /etc/localtime \
   && dpkg-reconfigure --frontend noninteractive tzdata \
   && apt-get clean -y \
@@ -69,26 +69,25 @@ RUN wget https://github.com/sharkdp/hyperfine/releases/download/v1.9.0/hyperfine
     && sudo dpkg -i hyperfine_1.9.0_amd64.deb
 
 # Install DSSIM
-RUN cargo install dssim
+RUN cargo install dssim && cargo install oxipng
 
-# Build Imageflow v1.3.0-rc30 from source with AVX2 support (haswell), then delete everything except the binary
+# Build Imageflow from source with AVX2 support (haswell), then delete everything except the binary
 RUN cd /home/imageflow \
     && git clone https://github.com/imazen/imageflow \
     && cd /home/imageflow/imageflow \
-    && git checkout v1.3.3-rc33 \
+    && git checkout v1.3.6-rc36 \
     && TARGET_CPU=haswell cargo build -p imageflow_tool_lib --release \
     && mkdir $HOME/bin  \
     && cp target/release/imageflow_tool $HOME/bin/imageflow_tool \
     && cd $HOME \
     && rm -rf $HOME/imageflow
 
-
 RUN wget -nc --quiet  https://s3-us-west-2.amazonaws.com/imageflow-resources/test_inputs/u1.jpg
-ADD bench.sh .
-RUN sudo chmod +x $HOME/bench.sh
 
 CMD ["thumbnail"]
-
 ENTRYPOINT ["./bench.sh"]
 
 MAINTAINER Lilith River
+
+ADD bench.sh .
+RUN sudo chmod +x $HOME/bench.sh

@@ -3,8 +3,8 @@
     <metadata>
         <id>:id:</id>
         <version>:version:</version>
-        <authors>Imazen, nathanaeljones</authors>
-        <owners>Imazen, nathanaeljones</owners>
+        <authors>Imazen, lilith</authors>
+        <owners>Imazen, lilith</owners>
         <requireLicenseAcceptance>false</requireLicenseAcceptance>
         <description>imageflow_tool is a fast, correct image processing tool suitable for web servers. This package contains only the native executable; see Imageflow.Net for a managed wrapper.</description>
         <copyright>AGPLv3 or commercial</copyright>

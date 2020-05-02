@@ -44,7 +44,7 @@ extern crate rgb;
 extern crate imgref;
 
 use imgref::ImgRef;
-use std::str::FromStr;
+//use std::str::FromStr;
 pub mod collections;
 
 
@@ -88,82 +88,110 @@ pub enum PixelBuffer<'a> {
 #[repr(C)]
 #[derive(Copy, Serialize, Deserialize, Clone, PartialEq, PartialOrd, Debug)]
 pub enum Filter {
+    #[serde(rename="robidoux_fast")]
     RobidouxFast = 1,
+    #[serde(rename="robidoux")]
     Robidoux = 2,
+    #[serde(rename="robidoux_sharp")]
     RobidouxSharp = 3,
+    #[serde(rename="ginseng")]
     Ginseng = 4,
+    #[serde(rename="ginseng_sharp")]
     GinsengSharp = 5,
+    #[serde(rename="lanczos")]
     Lanczos = 6,
+    #[serde(rename="lanczos_sharp")]
     LanczosSharp = 7,
+    #[serde(rename="lanczos_2")]
     Lanczos2 = 8,
+    #[serde(rename="lanczos_2_sharp")]
     Lanczos2Sharp = 9,
-    CubicFast = 10,
+    // #[serde(rename="cubic_fast")]
+    // CubicFast = 10,
+    #[serde(rename="cubic")]
     Cubic = 11,
+    #[serde(rename="cubic_sharp")]
     CubicSharp = 12,
+    #[serde(rename="catmull_rom")]
     CatmullRom = 13,
+    #[serde(rename="mitchell")]
     Mitchell = 14,
-
+    #[serde(rename="cubic_b_spline")]
     CubicBSpline = 15,
+    #[serde(rename="hermite")]
     Hermite = 16,
+    #[serde(rename="jinc")]
     Jinc = 17,
-    RawLanczos3 = 18,
-    RawLanczos3Sharp = 19,
-    RawLanczos2 = 20,
-    RawLanczos2Sharp = 21,
+    // #[serde(rename="raw_lanczos_3")]
+    // RawLanczos3 = 18,
+    // #[serde(rename="raw_lanczos_3_sharp")]
+    // RawLanczos3Sharp = 19,
+    // #[serde(rename="raw_lanczos_2")]
+    // RawLanczos2 = 20,
+    // #[serde(rename="raw_lanczos_2_sharp")]
+    // RawLanczos2Sharp = 21,
+    #[serde(rename="triangle")]
     Triangle = 22,
+    #[serde(rename="linear")]
     Linear = 23,
+    #[serde(rename="box")]
     Box = 24,
-    CatmullRomFast = 25,
-    CatmullRomFastSharp = 26,
+    // #[serde(rename="catmull_rom_fast")]
+    // CatmullRomFast = 25,
+    // #[serde(rename="catmull_rom_fast_sharp")]
+    // CatmullRomFastSharp = 26,
 
+    #[serde(rename="fastest")]
     Fastest = 27,
-
-    MitchellFast = 28,
+    // #[serde(rename="mitchell_fast")]
+    // MitchellFast = 28,
+    #[serde(rename="n_cubic")]
     NCubic = 29,
+    #[serde(rename="n_cubic_sharp")]
     NCubicSharp = 30,
 }
-
-impl FromStr for Filter {
-    type Err = &'static str;
-
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        match &*s.to_ascii_lowercase() {
-            "robidouxfast" => Ok(Filter::RobidouxFast),
-            "robidoux" => Ok(Filter::Robidoux),
-            "robidouxsharp" => Ok(Filter::RobidouxSharp),
-            "ginseng" => Ok(Filter::Ginseng),
-            "ginsengsharp" => Ok(Filter::GinsengSharp),
-            "lanczos" => Ok(Filter::Lanczos),
-            "lanczossharp" => Ok(Filter::LanczosSharp),
-            "lanczos2" => Ok(Filter::Lanczos2),
-            "lanczos2sharp" => Ok(Filter::Lanczos2Sharp),
-            "cubicfast" => Ok(Filter::CubicFast),
-            "cubic_0_1" => Ok(Filter::Cubic),
-            "cubicsharp" => Ok(Filter::CubicSharp),
-            "catmullrom" |
-            "catrom" => Ok(Filter::CatmullRom),
-            "mitchell" => Ok(Filter::Mitchell),
-            "cubicbspline" |
-            "bspline" => Ok(Filter::CubicBSpline),
-            "hermite" => Ok(Filter::Hermite),
-            "jinc" => Ok(Filter::Jinc),
-            "rawlanczos3" => Ok(Filter::RawLanczos3),
-            "rawlanczos3sharp" => Ok(Filter::RawLanczos3Sharp),
-            "rawlanczos2" => Ok(Filter::RawLanczos2),
-            "rawlanczos2sharp" => Ok(Filter::RawLanczos2Sharp),
-            "triangle" => Ok(Filter::Triangle),
-            "linear" => Ok(Filter::Linear),
-            "box" => Ok(Filter::Box),
-            "catmullromfast" => Ok(Filter::CatmullRomFast),
-            "catmullromfastsharp" => Ok(Filter::CatmullRomFastSharp),
-            "fastest" => Ok(Filter::Fastest),
-            "mitchellfast" => Ok(Filter::MitchellFast),
-            "ncubic" => Ok(Filter::NCubic),
-            "ncubicsharp" => Ok(Filter::NCubicSharp),
-            _ => Err("no match"),
-        }
-    }
-}
+//
+// impl FromStr for Filter {
+//     type Err = &'static str;
+//
+//     fn from_str(s: &str) -> Result<Self, Self::Err> {
+//         match &*s.to_ascii_lowercase() {
+//             "robidouxfast" => Ok(Filter::RobidouxFast),
+//             "robidoux" => Ok(Filter::Robidoux),
+//             "robidouxsharp" => Ok(Filter::RobidouxSharp),
+//             "ginseng" => Ok(Filter::Ginseng),
+//             "ginsengsharp" => Ok(Filter::GinsengSharp),
+//             "lanczos" => Ok(Filter::Lanczos),
+//             "lanczossharp" => Ok(Filter::LanczosSharp),
+//             "lanczos2" => Ok(Filter::Lanczos2),
+//             "lanczos2sharp" => Ok(Filter::Lanczos2Sharp),
+//             "cubicfast" => Ok(Filter::CubicFast),
+//             "cubic_0_1" => Ok(Filter::Cubic),
+//             "cubicsharp" => Ok(Filter::CubicSharp),
+//             "catmullrom" |
+//             "catrom" => Ok(Filter::CatmullRom),
+//             "mitchell" => Ok(Filter::Mitchell),
+//             "cubicbspline" |
+//             "bspline" => Ok(Filter::CubicBSpline),
+//             "hermite" => Ok(Filter::Hermite),
+//             "jinc" => Ok(Filter::Jinc),
+//             "rawlanczos3" => Ok(Filter::RawLanczos3),
+//             "rawlanczos3sharp" => Ok(Filter::RawLanczos3Sharp),
+//             "rawlanczos2" => Ok(Filter::RawLanczos2),
+//             "rawlanczos2sharp" => Ok(Filter::RawLanczos2Sharp),
+//             "triangle" => Ok(Filter::Triangle),
+//             "linear" => Ok(Filter::Linear),
+//             "box" => Ok(Filter::Box),
+//             "catmullromfast" => Ok(Filter::CatmullRomFast),
+//             "catmullromfastsharp" => Ok(Filter::CatmullRomFastSharp),
+//             "fastest" => Ok(Filter::Fastest),
+//             "mitchellfast" => Ok(Filter::MitchellFast),
+//             "ncubic" => Ok(Filter::NCubic),
+//             "ncubicsharp" => Ok(Filter::NCubicSharp),
+//             _ => Err("no match"),
+//         }
+//     }
+// }
 
 #[derive(Serialize, Deserialize, Clone, Copy, PartialEq, Debug)]
 pub enum PngBitDepth {
@@ -199,8 +227,11 @@ pub enum EncoderPreset {
     Pngquant {
         quality: Option<(u8, u8)>,
         speed: Option<u8>,
+        maximum_deflate: Option<bool>
     },
-    Lodepng,
+    Lodepng {
+        maximum_deflate: Option<bool>
+    },
     Mozjpeg {
         quality: Option<u8>,
         progressive: Option<bool>,
@@ -284,6 +315,10 @@ impl Color {
 
     pub fn is_transparent(&self) -> bool{
         self.to_color_32().unwrap_or(Color32::black()).is_transparent()
+    }
+
+    pub fn is_opaque(&self) -> bool{
+        self.to_color_32().unwrap_or(Color32::black()).is_opaque()
     }
 }
 
@@ -432,7 +467,38 @@ pub enum ConstraintMode {
     FitPad,
 }
 
-
+#[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
+pub enum WatermarkConstraintMode {
+    /// Distort the image to exactly the given dimensions.
+    /// If only one dimension is specified, behaves like `fit`.
+    #[serde(rename = "distort")]
+    Distort,
+    /// Ensure the result fits within the provided dimensions. No upscaling.
+    #[serde(rename = "within")]
+    Within,
+    /// Fit the image within the dimensions, upscaling if needed
+    #[serde(rename = "fit")]
+    Fit,
+    /// Crop to desired aspect ratio if image is larger than requested, then downscale. Ignores smaller images.
+    /// If only one dimension is specified, behaves like `within`.
+    #[serde(rename = "within_crop")]
+    WithinCrop,
+    /// Crop to desired aspect ratio, then downscale or upscale to fit.
+    /// If only one dimension is specified, behaves like `fit`.
+    #[serde(rename = "fit_crop")]
+    FitCrop,
+}
+impl From<WatermarkConstraintMode> for ConstraintMode{
+    fn from(mode: WatermarkConstraintMode) -> Self {
+        match mode{
+            WatermarkConstraintMode::Distort => ConstraintMode::Distort,
+            WatermarkConstraintMode::Within => ConstraintMode::Within,
+            WatermarkConstraintMode::Fit => ConstraintMode::Fit,
+            WatermarkConstraintMode::WithinCrop => ConstraintMode::WithinCrop,
+            WatermarkConstraintMode::FitCrop => ConstraintMode::FitCrop,
+        }
+    }
+}
 
 
 
@@ -451,6 +517,25 @@ pub struct Constraint {
     pub hints: Option<ResampleHints>,
     pub gravity: Option<ConstraintGravity>,
     pub canvas_color: Option<Color>
+}
+
+#[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
+pub enum WatermarkConstraintBox{
+    #[serde(rename = "image_percentage")]
+    ImagePercentage{ x1: f32, y1: f32, x2: f32, y2: f32},
+    #[serde(rename = "image_margins")]
+    ImageMargins{ left: u32, top: u32, right: u32, bottom: u32},
+}
+
+
+#[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
+pub struct Watermark{
+    pub io_id: i32,
+    pub gravity: Option<ConstraintGravity>,
+    pub fit_box: Option<WatermarkConstraintBox>,
+    pub fit_mode: Option<WatermarkConstraintMode>,
+    pub opacity: Option<f32>,
+    pub hints: Option<ResampleHints>
 }
 
 /// Blend pixels (if transparent) or replace?
@@ -575,6 +660,8 @@ pub enum Node {
 //        interpolation_filter: Option<Filter>,
 //        scaling_colorspace: Option<ScalingFloatspace>,
 //    },
+    #[serde(rename="watermark")]
+    Watermark (Watermark),
     #[serde(rename="white_balance_histogram_area_threshold_srgb")]
     WhiteBalanceHistogramAreaThresholdSrgb{
         threshold: Option<f32>

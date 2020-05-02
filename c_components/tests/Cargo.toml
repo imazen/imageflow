@@ -19,7 +19,7 @@ libz-sys = "1.0.18"
 
 
 [build-dependencies.cc]
-version = "1.0.40"
+version = "1.0.52"
 features = ["parallel"]
 
 [build-dependencies]
