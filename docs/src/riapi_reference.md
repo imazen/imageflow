@@ -1,83 +1,89 @@
-# RIAPI (querystring) Reference
+# Querystring API
+
+*Also called RIAPI (RESTful Image API)*
+
+This API doesn't care about the order in which you specify commands; they're executed in a standard order regardless.
+
+`srotate` -> `sflip` -> `crop` -> `scale` -> `filter` -> `pad` -> `rotate` -> `flip`
 
 
-# Basic commands
+## Common examples
 
-<style type="text/css">
-.lineup img {vertical-align:top;}
-</style>
-
-## Width & Height
-
-You can set bounds for an image with the `width` and/or `height` commands. How those bounds are interpreted is determined by the `mode` and `scale` commands. If only `width` *or* `height` is specified, aspect ratio is maintained.
-
-### Fit Mode
-
-* `stretch` distorts the image to be exactly the given dimensions, if `scale=both`. If `scale=down` (the default), the image is only scaled if `width` and `height` are smaller than the image. 
-* `pad` scales the image to fit within `width` and `height`, then pads 2 edges (`bgcolor`) to make it 
-
-
-## Scale=down|both|canvas
-
-**By default, images are *not* enlarged** - the image stays its original size if you request a larger size.
-
-
-To allow both reduction and enlargement, use `scale=both`. Image enlargement causes blurriness and should be avoided. `scale=canvas` is another option. The image never gets upscaled, but the canvas is expanded to fill the desired area.
-
-Here we attempt to upscale an image using `scale=down`, `scale=both`, and `scale=canvas` respectively.
-
-<img src="https://z.zr.io/ri/tractor-tiny.jpg;width=150;scale=down" style="border: 1px solid gray" />
-<img src="https://z.zr.io/ri/tractor-tiny.jpg;width=150;scale=both" style="border: 1px solid gray"  />
-<img src="https://z.zr.io/ri/tractor-tiny.jpg;width=150;scale=canvas" style="border: 1px solid gray"  />
-
-You can [change the default behavior from `scale=down` to something else with the DefaultSettings plugin](/plugins/defaultsettings).
-
-## Alignment
-
-So, you don't like images being centered when you use `mode=crop`, `mode=pad`, or `scale=canvas`? You can pick the alignment type with the `anchor` command. 
-
-Valid values are `topleft`, `topcenter`, `topright`, `middleleft`, `middlecenter`, `middleright`, `bottomleft`, `bottomcenter`, and `bottomright`.
-
-Mode=Crop, Anchor=Topleft: ![](https://z.zr.io/ri/zermatt.jpg;w=100;h=100;mode=crop;anchor=topleft)
-Anchor=bottomright: ![](https://z.zr.io/ri/zermatt.jpg;w=100;h=100;mode=crop;anchor=bottomright)
-
-Mode=Pad, Bgcolor=gray, Anchor=Topleft: ![](https://z.zr.io/ri/zermatt.jpg;w=100;h=100;bgcolor=gray;anchor=topleft)
- Anchor=bottomright: ![](https://z.zr.io/ri/zermatt.jpg;w=100;h=100;bgcolor=gray;anchor=bottomright)
-
-Scale=canvas, bgcolor=gray, Anchor=Topleft: ![](https://z.zr.io/ri/tractor-tiny.jpg;w=150;bgcolor=gray;scale=canvas;anchor=topleft)
-
-## Formats & compression
-
-Set `format=jpg`, `format=gif`, or `format=png` to force a particular output format. By default, the original format (or the closest match) is used; however, you can convert *any* format file to *any* other file, maintaining transparency, IF the [PrettyGifs plugin](/plugins/prettygifs) is installed.
-
-Adjust jpeg compression with the `quality=0..100` command. The default is 90, an excellent tradeoff between size and perfection. 
+* `width=100&height=100&mode=max&scale=down` ensures the image is downscaled to 100x100 or less,
+but does not upscale the image if it is already smaller than that. Aspect ratio is maintained. 
+* `width=200&height=200&mode=max&scale=both` ensures the image is downscaled or upscaled to fit within 200x200, 
+maintaining aspect ratio. 
+* `width=200&height=200&mode=pad&scale=both` ensures the image is downscaled or upscaled to fit within 200x200, 
+  maintaining aspect ratio, then is padded to make the result always 200x200.
+* `width=300&height=300&mode=crop&scale=both` ensures the image is downscaled or upscaled to fit around 300x300,
+then minimally cropped to meet the aspect ratio. `scale=both` ensures the image is upscaled if smaller so the result 
+is always 300x300. 
 
 
 
-## Background color
+## Commands - image transforms
 
-Dislike white? Transparent padding is added (when required) for PNGs and GIFs, but jpegs don't support transparency.
+* `width` constrains the image width.
+* `height` constrains the image height.
+* `dpr` is a multiplier for `width`/`height` to make responsive image usage easier. 
+* `mode` determines how to handle aspect ratio differences.
+    * `stretch` distorts the image to be exactly the given dimensions, if `scale=both`. If `scale=down` (the default), the image is only scaled if `width` and `height` are smaller than the image. 
+    * `pad` scales the image to fit within `width` and `height`, then pads 2 edges (`bgcolor`) to make it.
+    * `crop` scales the image to fit above `width` and `height`, then minimally crops to meet aspect ratio. 
+    * `max` scales the image to fit within `width` and `height`
+* `scale` controls whether images are upsampled or not.
+    *  `down` - Never upscale an image - return at original size instead
+    *  `both` - Downscale or upscale to meet size requirements. Image enlargement causes blurriness and should be avoided.
+    *  `canvas` - Add padding instead of upscaling to meet size requirements.
+    *  `up` - Never downscale, only upscale to meet requirements. Rarely used. 
+* `anchor` determines how the image is aligned when you use `mode=crop`, `mode=pad` or `scale=canvas`. 
+The default is `middlecenter`
+    * values are `topleft`, `topcenter`, `topright`, `middleleft`, `middlecenter`, `middleright`, 
+    `bottomleft`, `bottomcenter`, and `bottomright`.
+* `sflip` flips the source image in the `x`, `y`, or `xy` dimensions. 
+* `flip` flips the result image in the `x`, `y`, or `xy` dimensions. 
+* `srotate` rotates the source image `90`, `180`, or `270` degrees. 
+* `rotate` rotates the result image `90`, `180`, or `270` degrees. 
+* `crop=x1,y1,x2,y2` crops the source image to the given coordinates. If x2 or y2 are negative, they are relative to 
+the bottom-right corner of the image. `crop=10,10,-10,-10` removes 10 pixels from the edge of the image. 
+* `cropxunits=100&cropyunits=100` makes the `crop` coordinates percentages of the image instead of pixels. 
+* `bgcolor` must be in the form RGB, RGBA, RRGGBBAA, RRGGBB, or be a named color.
+`bgcolor` determines the color of padding added with `mode=pad` or `scale=canvas`. 
+* `trim.threshold=80` specifies a threshold to use for trimming whitespace.
+* `trim.percentpadding=0.5` specifies percentage of padding to restore after trimming.
 
-Add **bgcolor=name** or **bgcolor=33ddff** to set the background (matte) color. Named colors and hex values supported.
 
-<img src="https://z.zr.io/ri/quality-original.jpg;w=100;h=100;bgcolor=33ddff" />
+## Commands - image filters
 
-## Cropping 
+* `f.sharpen=0..99` determines how much sharpening to apply when scaling the image.
+* `f.sharpenwhen=always|downscaling|sizediffers` determines when to sharpen. 
+* `down.filter`determines the down-sampling filter to use. Must be one of `robidoux`, 
+`robidoux_sharp`, `robidoux_fast`, `ginseng`, `ginseng_sharp`, `lanczos`, `lanczos_sharp`
+, `lanczos_2`, `lanczos_2_sharp` , `cubic`, `cubic_sharp`, `catmull_rom`, `mitchell`, 
+`cubic_b_spline`, `hermite`, `jinc`, `triangle`, `linear`, `box`, `fastest`, `n_cubic`, `n_cubic_sharp`  
+* `up.filter` determines the up-sampling filter to use. See `down.filter`
+* `down.colorspace=srgb` downscales in the srgb color space instead of linear RGB. Mimics widespread but bad behavior; destroys image highlights. 
+* `s.grayscale`=`true|y|ry|ntsc|bt709|flat` transforms the image into grayscale using various methods.
+* `s.sepia=true` turns the image into sepia tone
+* `s.invert=true` inverts the image colors in the srgb space
+* `s.alpha=0..1` makes the image partially transparent
+* `s.contrast=-1..1` adjusts the contrast in the srgb space
+* `s.brightness=-1..1` adjusts brightness in the srgb space
+* `s.saturation=-1..1` adjusts saturation in the srgb space
 
-The URL syntax for cropping is `&crop=x1,y1,x2,y2`. The coordinates are relative to the top-left corner of the original image - if they are positive values.
+## Commands - image encoding
 
-If X2 or Y2 are 0 or less, they are relative to the bottom-right corner. This allows easy trimming without knowing the size of the image.
+* `format=png|gif|jpeg|webp` determines the format to encode the image as. Defaults to the original format.
+* `quality=0..100` determines the jpeg encoding quality. Default is `90`
+* `jpeg.progressive=true` enables progressive jpeg encoding. 
+* `jpeg.turbo=true` encodes files faster at the expense of file size. 
+* `webp.quality=0..100` determines the webp encoding quality.
+* `webp.lossless=true` enables lossless webp encoding. 
+* `png.quality=0..100` determines the png quality. If absent lossless is used. 
+* `png.min_quality=0..100` determines the minimum png quality that must be realized before lossless is used.
 
-For example, crop=0,0,0,0 leaves the image uncropped. crop=10,10,-10,-10 removes 10 pixels from all edges of the image.
 
-In addition, you can specify `cropxunits` and `cropyunits`. Setting them to 100 allows you to crop by percentage. Example which crops 10% off each edge: `?cropxunits=100&cropyunits=100&crop=10,10,90,90`. Setting them to the width/height of the display image allows you to crop in display coordinates, without needing to know the original size of the image.
-
-## Back to cooler stuff...
-
-The following filters require the [SimpleFilters plugin](/plugins/simplefilters), part of the Creative edition.
-
-![Original image](https://z.zr.io/ri/utah2.jpg;width=200)
-
+## Examples
 
 ### 4 ways to grayscale
 
@@ -163,48 +169,3 @@ For true transparency, combine with `format=png`. Otherwise, the image will be b
 ![](https://z.zr.io/ri/red-leaf.jpg;width=100;s.saturation=0.5)
 ![](https://z.zr.io/ri/red-leaf.jpg;width=100;s.saturation=0.9)
 ![](https://z.zr.io/ri/red-leaf.jpg;width=100;s.saturation=1)
-
-# Full command reference
-
-Full Command Reference
-
-Rotation & flipping
-autorotate=true Automatically rotates the image based on the EXIF info from the camera. autorotate.default=true will only autorotate if the image is processed.
-sflip=none|x|y|xy Flips the source image prior to processing (new in V3.1).
-srotate=0|90|180|270 Rotates the source image prior to processing (only 90 degree intervals) (new in V3.1).
-rotate=degrees – Rotates the image any arbitrary angle (occurs after cropping).
-flip=none|x|y|xy - Flips the image after everything is done.
-Manual cropping
-crop=(x1,y1,x2,y2) – Crop the image to the specified rectangle on the source image. You can use negative coordinates to specify bottom-right relative locations.
-cropxunits The width which the x1 and x2 coordinates are relative to, e.g., use '100' to make x1 and x2 percentages. Useful when you don't know the original image size.
-cropyunits The height which the y1 and y2 coordinates are relative to, e.g., use '100' to make y1 and y2 percentages. Useful when you don't know the original image size.
-Sizing (and padding, autocropping, carving and stretching)
-Please note that width/height/maxwidth/maxheight do NOT include border, margin, or padding widths, and do not include the extra space used by rotation. They constrain the image, not the canvas.
-
-maxwidth, maxheight – Fit the image within the specified bounds, preserving aspect ratio.
-width, height – Force the final width and/or height to certain dimensions. Whitespace will be added if the aspect ratio is different.
-mode=max|pad|crop|carve|stretch - How to handle aspect-ratio conflicts between the image and width+height. 'pad' adds whitespace, 'crop' crops minimally, 'carve' uses seam carving, 'stretch' loses aspect-ratio, stretching the image. 'max' behaves like maxwidth/maxheight (new in V3.1).
-anchor=topleft|topcenter|topright|middleleft|middlecenter|middleright|bottomleft|bottomcenter|bottomright How to anchor the image when padding or cropping (new in V3.1).
-scale=both|upscaleonly|downscaleonly|upscalecanvas – By default, images are never upscaled. Use &scale=both to upscale images if they are smaller than width and height.
-zoom=0..infinity - Scale the image by a multiplier. Useful for mobile devices and situations where you need to retain all the existing width/height/crop settings, but scale the result up or down. Defaults to 1. 0.5 produces a half-size image, 2 produces a double-size image.
-Border, padding, margins and background colors
-bgcolor=color name | hex code (6-char). Sets the background/whitespace color.
-margin=3 or margin=5,5,10,10 Specify a universal margin or left,top,right,bottom widths (new in V3.1.
-Output format
-format=jpg|png|gif - The output format to use.
-quality - Jpeg compression: 0-100 100=best, 90=very good balance, 0=ugly.
-
-Watermark plugin
-watermark - The name of one or more watermark layers (or layer groups) to render.
-
-SimpleFilters plugin
-&s.grayscale=true|y|ry|ntsc|bt709|flat (true, ntsc, and y produce identical results)
-&s.sepia=true
-&s.alpha= 0..1
-&s.brightness=-1..1
-&s.contrast=-1..1
-&s.saturation=-1..1
-&s.invert=true
-
-trim.threshold=80 - The threshold to use for trimming whitespace.
-trim.percentpadding=0.5 - The percentage of padding to restore after trimming.
