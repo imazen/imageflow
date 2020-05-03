@@ -214,7 +214,7 @@ pub enum ScalingColorspace {
 
 }
 
-pub static IR4_KEYS: [&'static str;74] = ["mode", "anchor", "flip", "sflip", "scale", "cache", "process",
+pub static IR4_KEYS: [&'static str;75] = ["mode", "anchor", "flip", "sflip", "scale", "cache", "process",
     "quality", "zoom", "crop", "cropxunits", "cropyunits",
     "w", "h", "width", "height", "maxwidth", "maxheight", "format", "thumbnail",
      "autorotate", "srotate", "rotate", "ignoreicc", //really? : "precise_scaling_ratio",
@@ -227,7 +227,7 @@ pub static IR4_KEYS: [&'static str;74] = ["mode", "anchor", "flip", "sflip", "sc
     "jpeg.turbo", "encoder", "decoder", "builder", "s.roundcorners.", "paddingwidth",
     "paddingheight", "margin", "borderwidth", "decoder.min_precise_scaling_ratio",
     "png.quality","png.min_quality", "png.quantization_speed", "png.libpng", "png.max_deflate",
-    "up.filter", "down.filter"];
+    "up.filter", "down.filter", "dpr"];
 
 
 #[derive(PartialEq,Debug, Clone)]
@@ -396,7 +396,7 @@ impl Instructions{
         i.cropxunits = p.parse_f64("cropxunits");
         i.cropyunits = p.parse_f64("cropyunits");
         i.quality = p.parse_i32("quality");
-        i.zoom = p.parse_f64("zoom");
+        i.zoom = p.parse_f64("zoom").or_else(|| p.parse_f64("dpr"));
         i.bgcolor_srgb = p.parse_color_srgb("bgcolor").or_else(||p.parse_color_srgb("bgcolor"));
         i.jpeg_subsampling = p.parse_subsampling("subsampling");
 
