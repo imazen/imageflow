@@ -214,8 +214,8 @@ pub enum ScalingColorspace {
 
 }
 
-pub static IR4_KEYS: [&'static str;75] = ["mode", "anchor", "flip", "sflip", "scale", "cache", "process",
-    "quality", "zoom", "crop", "cropxunits", "cropyunits",
+pub static IR4_KEYS: [&'static str;76] = ["mode", "anchor", "flip", "sflip", "scale", "cache", "process",
+    "quality", "jpeg.quality", "zoom", "crop", "cropxunits", "cropyunits",
     "w", "h", "width", "height", "maxwidth", "maxheight", "format", "thumbnail",
      "autorotate", "srotate", "rotate", "ignoreicc", //really? : "precise_scaling_ratio",
     "stretch", "webp.lossless", "webp.quality",
@@ -224,7 +224,7 @@ pub static IR4_KEYS: [&'static str;75] = ["mode", "anchor", "flip", "sflip", "sc
     "jpeg_idct_downscale_linear", "watermark", "s.invert", "s.sepia", "s.grayscale", "s.alpha",
     "s.brightness", "s.contrast", "s.saturation",  "trim.threshold", "trim.percentpadding",
     "a.blur", "a.sharpen", "a.removenoise", "a.balancewhite", "dither","jpeg.progressive",
-    "jpeg.turbo", "encoder", "decoder", "builder", "s.roundcorners.", "paddingwidth",
+    "jpeg.turbo", "encoder", "decoder", "builder", "s.roundcorners", "paddingwidth",
     "paddingheight", "margin", "borderwidth", "decoder.min_precise_scaling_ratio",
     "png.quality","png.min_quality", "png.quantization_speed", "png.libpng", "png.max_deflate",
     "up.filter", "down.filter", "dpr"];

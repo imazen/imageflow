@@ -413,7 +413,7 @@ impl Ir4Layout{
             _ => None
 
         };
-        
+
         b.add(s::Node::Resample2D {
             w: image.width() as u32,
             h: image.height() as u32,
