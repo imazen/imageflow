@@ -183,13 +183,15 @@ impl Encoder for WebPEncoder {
 
             match preset {
                 s::EncoderPreset::WebPLossy { quality } => {
+                    let quality = f32::min(100f32,f32::max(0f32,*quality));
                     if frame.fmt == ffi::PixelFormat::Bgra32 || frame.fmt == ffi::PixelFormat::Bgr32{
                         if frame.fmt == ffi::PixelFormat::Bgr32{
                             frame.normalize_alpha()?;
                         }
-                        output_len = WebPEncodeBGRA(frame.pixels, frame.width() as i32, frame.height() as i32, frame.stride() as i32, *quality, &mut output);
+
+                        output_len = WebPEncodeBGRA(frame.pixels, frame.width() as i32, frame.height() as i32, frame.stride() as i32, quality, &mut output);
                     }else if frame.fmt == ffi::PixelFormat::Bgr24{
-                        output_len = WebPEncodeBGR(frame.pixels, frame.width() as i32, frame.height() as i32, frame.stride() as i32, *quality, &mut output);
+                        output_len = WebPEncodeBGR(frame.pixels, frame.width() as i32, frame.height() as i32, frame.stride() as i32, quality, &mut output);
                     }
 
                 },

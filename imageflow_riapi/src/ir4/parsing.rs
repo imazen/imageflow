@@ -395,7 +395,7 @@ impl Instructions{
         i.crop = p.parse_crop_strict("crop").or_else(|| p.parse_crop("crop"));
         i.cropxunits = p.parse_f64("cropxunits");
         i.cropyunits = p.parse_f64("cropyunits");
-        i.quality = p.parse_i32("quality");
+        i.quality = p.parse_i32("quality").or_else(||p.parse_i32("jpeg.quality"));
         i.zoom = p.parse_f64("zoom").or_else(|| p.parse_f64("dpr"));
         i.bgcolor_srgb = p.parse_color_srgb("bgcolor").or_else(||p.parse_color_srgb("bgcolor"));
         i.jpeg_subsampling = p.parse_subsampling("subsampling");
