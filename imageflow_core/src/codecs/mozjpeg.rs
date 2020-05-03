@@ -70,7 +70,7 @@ impl Encoder for MozjpegEncoder {
             },
         }
         if let Some(q) = self.quality {
-            cinfo.set_quality(q.into());
+            cinfo.set_quality(u8::min(100,q).into());
         }
         if let Some(p) = self.progressive {
             if p {
