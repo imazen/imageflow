@@ -6,6 +6,16 @@ This API doesn't care about the order in which you specify commands; they're exe
 
 `srotate` -> `sflip` -> `crop` -> `scale` -> `filter` -> `pad` -> `rotate` -> `flip`
 
+### Executing with imageflow_tool
+
+
+```bash
+imageflow_tool v0.1/ir4 --in a.jpg --out b.jpg --command "w=100&h=100&mode=max" --quiet
+```
+
+### URLs with demo server
+
+http://localhost:39876/demo_images/tulip-leaf.jpg?w=300&h=300&mode=max
 
 ## Common examples
 
@@ -23,8 +33,8 @@ is always 300x300.
 
 ## Commands - image transforms
 
-* `width` constrains the image width.
-* `height` constrains the image height.
+* `width` constrains the image width. `w` is an alias for `width`
+* `height` constrains the image height. `h` is an alias for `height`
 * `dpr` is a multiplier for `width`/`height` to make responsive image usage easier. 
 * `mode` determines how to handle aspect ratio differences.
     * `stretch` distorts the image to be exactly the given dimensions, if `scale=both`. If `scale=down` (the default), the image is only scaled if `width` and `height` are smaller than the image. 
