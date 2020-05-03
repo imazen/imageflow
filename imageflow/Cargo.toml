@@ -5,6 +5,10 @@ authors = ["Lilith River <lilith@imazen.io>"]
 edition = "2018"
 workspace = "../"
 
+[lib]
+name = "imageflow_api"
+doc = true
+
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
