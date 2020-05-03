@@ -951,6 +951,16 @@ version = "0.2.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 
 [[package]]
+name = "imageflow"
+version = "0.1.0"
+dependencies = [
+ "imageflow_core 0.1.0",
+ "imageflow_helpers 0.1.0",
+ "imageflow_riapi 0.1.0",
+ "imageflow_types 0.1.0",
+]
+
+[[package]]
 name = "imageflow_abi"
 version = "0.1.0"
 dependencies = [

@@ -5,6 +5,7 @@ members = [
     "imageflow_riapi",
     "imageflow_core",
     "imageflow_abi",
+    "imageflow",
     "imageflow_tool",
     "imageflow_server",
     "c_components",
