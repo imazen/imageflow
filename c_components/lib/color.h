@@ -7,9 +7,6 @@
  */
 #pragma once
 
-#ifdef _MSC_VER
-#pragma unmanaged
-#endif
 
 #ifdef __cplusplus
 extern "C" {
