@@ -20,6 +20,7 @@
     - [Watermark](json/watermark.md)
     - [Command String](json/command_string.md)
     - [White Balance sRGB](json/white_balance_srgb.md)
+    - [Color Filter sRGB](json/color_filter_srgb.md)
     - [Re-sampling Hints](json/resampling_hints.md)
     - [Specifying Colors](json/color.md)
     - [Graph API](json/graph.md)
