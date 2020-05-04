@@ -582,7 +582,7 @@ pub enum Node {
     CopyRectToCanvas {
         from_x: u32,
         from_y: u32,
-        w: u32, //TODO: inconsistent with w/h or x2/y2 elsewhere
+        w: u32,
         h: u32,
         x: u32,
         y: u32,
