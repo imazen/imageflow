@@ -225,7 +225,8 @@ pub enum EncoderPreset {
         zlib_compression: Option<i32>,
     },
     Pngquant {
-        quality: Option<(u8, u8)>,
+        quality: Option<u8>,
+        minimum_quality: Option<u8>,
         speed: Option<u8>,
         maximum_deflate: Option<bool>
     },

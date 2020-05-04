@@ -20,7 +20,7 @@ pub struct PngquantEncoder {
 }
 
 impl PngquantEncoder {
-    pub(crate) fn create(c: &Context, speed: Option<u8>, quality: Option<(u8, u8)>, maximum_deflate: Option<bool>, io: IoProxy) -> Result<Self> {
+    pub(crate) fn create(c: &Context, speed: Option<u8>, quality: Option<u8>, minimum_quality: Option<u8>, maximum_deflate: Option<bool>, io: IoProxy) -> Result<Self> {
         if !c.enabled_codecs.encoders.contains(&crate::codecs::NamedEncoders::PngQuantEncoder){
             return Err(nerror!(ErrorKind::CodecDisabledError, "The PNGQuant encoder has been disabled"));
         }
@@ -28,9 +28,10 @@ impl PngquantEncoder {
         if let Some(speed) = speed {
             liq.set_speed(speed.into());
         }
-        if let Some((min, max)) = quality {
-            liq.set_quality(min.into(), max.into());
-        }
+        let min = u8::min(100, minimum_quality.unwrap_or(0));
+        let max = u8::min(100,quality.unwrap_or(100));
+        liq.set_quality(min.into(), max.into());
+
         Ok(PngquantEncoder {
             liq,
             io,

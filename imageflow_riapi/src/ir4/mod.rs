@@ -227,7 +227,8 @@ impl Ir4Expand{
                     progressive: i.jpeg_progressive
                 },
                 OutputFormat::Png if i.png_quality.is_some() => s::EncoderPreset::Pngquant {
-                    quality: Some((i.png_min_quality.unwrap_or(i.png_quality.unwrap()), i.png_quality.unwrap())),
+                    quality: Some(i.png_quality.unwrap()),
+                    minimum_quality: Some(i.png_min_quality.unwrap_or(0)),
                     speed: i.png_quantization_speed,
                     maximum_deflate: i.png_max_deflate
                 },

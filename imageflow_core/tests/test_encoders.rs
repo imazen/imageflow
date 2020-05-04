@@ -40,9 +40,10 @@ fn test_encode_png() {
 fn test_encode_pngquant() {
     let steps = reencode_with(s::EncoderPreset::Pngquant {
                 speed: None,
-                quality: Some((0, 100)),
-                maximum_deflate: None
-            });
+                quality: Some(100),
+                maximum_deflate: None,
+        minimum_quality: None
+    });
 
     compare_encoded_to_source(s::IoEnum::Url(FRYMIRE_URL.to_owned()),
                               DEBUG_GRAPH,
@@ -70,9 +71,10 @@ fn test_encode_pngquant_command() {
 fn test_encode_pngquant_fallback() {
     let steps = reencode_with(s::EncoderPreset::Pngquant {
                 speed: None,
-                quality: Some((99, 100)),
-                maximum_deflate: None
-            });
+                quality: Some(100),
+                maximum_deflate: None,
+        minimum_quality: Some(99)
+    });
 
     compare_encoded_to_source(s::IoEnum::Url(FRYMIRE_URL.to_owned()),
                               DEBUG_GRAPH,

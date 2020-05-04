@@ -413,8 +413,8 @@ impl CodecInstanceContainer{
                      //TODO: enforce killbits - if c.enabled_codecs.encoders.contains()
                      CodecKind::Encoder(Box::new(gif::GifEncoder::create(c, preset, io, frame)?))
                  },
-                 s::EncoderPreset::Pngquant {speed, quality, maximum_deflate} => {
-                     CodecKind::Encoder(Box::new(pngquant::PngquantEncoder::create(c, speed, quality, maximum_deflate, io)?))
+                 s::EncoderPreset::Pngquant {speed, quality , minimum_quality, maximum_deflate} => {
+                     CodecKind::Encoder(Box::new(pngquant::PngquantEncoder::create(c, speed, quality, minimum_quality, maximum_deflate, io)?))
                  },
                  s::EncoderPreset::Mozjpeg {quality, progressive} => {
                      CodecKind::Encoder(Box::new(mozjpeg::MozjpegEncoder::create(c, quality, progressive, io)?))
