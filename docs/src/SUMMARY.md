@@ -19,6 +19,7 @@
     - [Expand Canvas](json/expand_canvas.md)
     - [Watermark](json/watermark.md)
     - [Create Canvas](json/create_canvas.md)
+    - [Copy Rectangle](json/copy_rect_to_canvas.md)
     - [Command String](json/command_string.md)
     - [Re-sampling Hints](json/resampling_hints.md)
     - [Specifying Colors](json/color.md)
