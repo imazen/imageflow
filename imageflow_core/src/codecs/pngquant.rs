@@ -26,7 +26,7 @@ impl PngquantEncoder {
         }
         let mut liq = imagequant::new();
         if let Some(speed) = speed {
-            liq.set_speed(speed.into());
+            liq.set_speed(u8::min(10, u8::max(1, speed)).into());
         }
         let min = u8::min(100, minimum_quality.unwrap_or(0));
         let max = u8::min(100,quality.unwrap_or(100));
