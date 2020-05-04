@@ -13,6 +13,7 @@
     - [Encode](json/encode.md)
     - [Constrain](json/constrain.md)
     - [Region](json/region.md)
+    - [Crop Whitespace](json/crop_whitespace.md)
     - [Rotate & Flip](json/rotate_flip.md)
     - [Fill Rectangle](json/fill_rect.md)
     - [Expand Canvas](json/expand_canvas.md)
