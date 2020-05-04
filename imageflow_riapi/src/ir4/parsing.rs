@@ -214,7 +214,7 @@ pub enum ScalingColorspace {
 
 }
 
-pub static IR4_KEYS: [&'static str;76] = ["mode", "anchor", "flip", "sflip", "scale", "cache", "process",
+pub static IR4_KEYS: [&'static str;77] = ["mode", "anchor", "flip", "sflip", "scale", "cache", "process",
     "quality", "jpeg.quality", "zoom", "crop", "cropxunits", "cropyunits",
     "w", "h", "width", "height", "maxwidth", "maxheight", "format", "thumbnail",
      "autorotate", "srotate", "rotate", "ignoreicc", //really? : "precise_scaling_ratio",
@@ -227,7 +227,7 @@ pub static IR4_KEYS: [&'static str;76] = ["mode", "anchor", "flip", "sflip", "sc
     "jpeg.turbo", "encoder", "decoder", "builder", "s.roundcorners", "paddingwidth",
     "paddingheight", "margin", "borderwidth", "decoder.min_precise_scaling_ratio",
     "png.quality","png.min_quality", "png.quantization_speed", "png.libpng", "png.max_deflate",
-    "up.filter", "down.filter", "dpr"];
+    "png.lossless", "up.filter", "down.filter", "dpr"];
 
 
 #[derive(PartialEq,Debug, Clone)]
@@ -340,6 +340,7 @@ impl Instructions{
         add(&mut m, "png.quantization_speed", self.png_quantization_speed);
         add(&mut m, "png.libpng", self.png_libpng);
         add(&mut m, "png.max_deflate", self.png_max_deflate);
+        add(&mut m, "png.lossless", self.png_lossless);
         add(&mut m, "s.grayscale", self.s_grayscale.map(|v| format!("{:?}", v).to_lowercase()));
         add(&mut m, "a.balancewhite", self.a_balance_white.map(|v| format!("{:?}", v).to_lowercase()));
         add(&mut m, "subsampling", self.jpeg_subsampling);
@@ -402,6 +403,7 @@ impl Instructions{
 
         i.webp_quality = p.parse_f64("webp.quality");
         i.webp_lossless = p.parse_bool("webp.lossless");
+        i.png_lossless = p.parse_bool("png.lossless");
         i.png_min_quality = p.parse_u8("png.min_quality");
         i.png_quality = p.parse_u8("png.quality");
         i.png_quantization_speed= p.parse_u8("png.quantization_speed");
@@ -879,6 +881,7 @@ pub struct Instructions{
     pub png_quantization_speed: Option<u8>,
     pub png_libpng: Option<bool>,
     pub png_max_deflate: Option<bool>,
+    pub png_lossless: Option<bool>,
     pub up_filter: Option<FilterStrings>,
     pub down_filter: Option<FilterStrings>,
 }
@@ -989,6 +992,7 @@ fn test_url_parsing() {
     t("png.quality=90", Instructions { png_quality: Some(90), ..Default::default() }, vec![]);
     t("png.min_quality=90", Instructions { png_min_quality: Some(90), ..Default::default() }, vec![]);
     t("png.quantization_speed=4", Instructions { png_quantization_speed: Some(4), ..Default::default() }, vec![]);
+    t("png.lossless=true", Instructions { png_lossless: Some(true), ..Default::default() }, vec![]);
     t("png.libpng=true", Instructions { png_libpng: Some(true), ..Default::default() }, vec![]);
     t("png.max_deflate=true", Instructions { png_max_deflate: Some(true), ..Default::default() }, vec![]);
     t("zoom=0.02", Instructions { zoom: Some(0.02f64), ..Default::default() }, vec![]);
@@ -1097,6 +1101,7 @@ fn test_tostr(){
     t("png.quantization_speed=4", Instructions { png_quantization_speed: Some(4), ..Default::default() });
     t("png.libpng=true", Instructions { png_libpng: Some(true), ..Default::default() });
     t("png.max_deflate=true", Instructions { png_max_deflate: Some(true), ..Default::default() });
+    t("png.lossless=true", Instructions { png_lossless: Some(true), ..Default::default()});
     t("up.filter=mitchell",  Instructions{up_filter: Some(FilterStrings::Mitchell), ..Default::default()});
     t("down.filter=lanczos",  Instructions{down_filter: Some(FilterStrings::Lanczos), ..Default::default()});
 

@@ -215,6 +215,11 @@ impl Ir4Expand{
             let format = i.format.or_else(|| self.source.get_format_from_mime())
                 .unwrap_or_else(|| self.source.get_format_from_frame());
 
+            let png_lossless = i.png_lossless.unwrap_or(i.png_libpng == Some(true) ||
+                i.png_quality.is_none());
+
+
+
             let encoder = match format {
                 OutputFormat::Gif => s::EncoderPreset::Gif,
                 OutputFormat::Jpeg if Some(true) == i.jpeg_turbo => s::EncoderPreset::LibjpegTurbo {
@@ -226,8 +231,8 @@ impl Ir4Expand{
                     quality: Some(i.quality.unwrap_or(90) as u8),
                     progressive: i.jpeg_progressive
                 },
-                OutputFormat::Png if i.png_quality.is_some() => s::EncoderPreset::Pngquant {
-                    quality: Some(i.png_quality.unwrap()),
+                OutputFormat::Png if !png_lossless => s::EncoderPreset::Pngquant {
+                    quality: Some(i.png_quality.unwrap_or(100)),
                     minimum_quality: Some(i.png_min_quality.unwrap_or(0)),
                     speed: i.png_quantization_speed,
                     maximum_deflate: i.png_max_deflate
