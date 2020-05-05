@@ -31,14 +31,9 @@ impl NodeDefOneInputOneCanvas for CopyRectNodeDef{
     fn render(&self, c: &Context, canvas: &mut BitmapBgra, input: &mut BitmapBgra,  p: &NodeParams) -> Result<()> {
         if let NodeParams::Json(s::Node::CopyRectToCanvas { from_x, from_y,  w, h, x, y }) = *p {
 
-
-            if input.fmt != canvas.fmt {
-                return Err(nerror!(crate::ErrorKind::InvalidNodeConnections, "Canvas pixel format {:?} differs from Input pixel format {:?}.", input.fmt, canvas.fmt));
-            }
             if input == canvas {
                 return Err(nerror!(crate::ErrorKind::InvalidNodeConnections, "Canvas and Input are the same bitmap!"));
             }
-
             if input.w <= from_x || input.h <= from_y ||
                 input.w < from_x + w ||
                 input.h < from_y + h ||
@@ -51,32 +46,7 @@ impl NodeDefOneInputOneCanvas for CopyRectNodeDef{
                          input.h,
                          p));
             }
-            canvas.compositing_mode = crate::ffi::BitmapCompositingMode::BlendWithSelf;
-
-            let bytes_pp = input.fmt.bytes() as u32;
-            if from_x == 0 && x == 0 && w == input.w && w == canvas.w &&
-                input.stride == canvas.stride {
-                //This optimization has the side effect of copying irrelevant data, so we don't want to do it if windowed, only
-                // if padded or permanently cropped.
-                unsafe {
-                    let from_offset = input.stride * from_y;
-                    let from_ptr = input.pixels.offset(from_offset as isize);
-                    let to_offset = canvas.stride * y;
-                    let to_ptr = canvas.pixels.offset(to_offset as isize);
-                    ptr::copy_nonoverlapping(from_ptr, to_ptr, (input.stride * h) as usize);
-                }
-            } else {
-                for row in 0..h {
-                    unsafe {
-                        let from_offset = input.stride * (from_y + row) + bytes_pp * from_x;
-                        let from_ptr = input.pixels.offset(from_offset as isize);
-                        let to_offset = canvas.stride * (y + row) + bytes_pp * x;
-                        let to_ptr = canvas.pixels.offset(to_offset as isize);
-
-                        ptr::copy_nonoverlapping(from_ptr, to_ptr, (w * bytes_pp) as usize);
-                    }
-                }
-            }
+            crate::graphics::copy_rect::copy_rect(input, canvas, from_x, from_y, x, y, w, h)?;
             Ok(())
         } else {
             Err(nerror!(crate::ErrorKind::NodeParamsMismatch, "Need CopyRectToCanvas, got {:?}", p))
@@ -181,12 +151,16 @@ impl NodeDefOneInputExpand for ExpandCanvasDef{
         "imazen.expand_canvas"
     }
     fn estimate(&self, p: &NodeParams, input: FrameEstimate) -> Result<FrameEstimate> {
-        if let NodeParams::Json(s::Node::ExpandCanvas { left, top, bottom, right, ref color }) = *p {
+        if let NodeParams::Json(imageflow_types::Node::ExpandCanvas { left, top, bottom, right, ref color }) = *p {
             input.map_frame( |info| {
                 Ok(FrameInfo {
                     w: info.w + left as i32 + right as i32,
                     h: info.h + top as i32 + bottom as i32,
-                    fmt: ffi::PixelFormat::from(info.fmt)
+                    fmt: if color.is_opaque() {
+                        ffi::PixelFormat::from(info.fmt)
+                    } else{
+                        PixelFormat::Bgra32
+                    }
                 })
             })
         } else {
@@ -203,7 +177,11 @@ impl NodeDefOneInputExpand for ExpandCanvasDef{
             let canvas_params = s::Node::CreateCanvas {
                 w: new_w as usize,
                 h: new_h as usize,
-                format: s::PixelFormat::from(fmt),
+                format: if color.is_opaque() {
+                    ffi::PixelFormat::from(fmt)
+                } else{
+                    PixelFormat::Bgra32
+                },
                 color: color.clone(),
             };
             let copy_params = s::Node::CopyRectToCanvas {

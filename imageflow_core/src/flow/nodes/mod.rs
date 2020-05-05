@@ -15,6 +15,7 @@ mod constrain;
 mod white_balance;
 mod color;
 mod watermark;
+mod enable_transparency;
 //mod detection;
 
 mod internal_prelude {
@@ -66,6 +67,7 @@ pub use self::color::COLOR_MATRIX_SRGB_MUTATE;
 pub use self::color::COLOR_MATRIX_SRGB;
 pub use self::color::COLOR_FILTER_SRGB;
 pub use self::watermark::WATERMARK;
+pub use self::enable_transparency::ENABLE_TRANSPARENCY;
 
 //pub use self::detection::CROP_FACES;
 

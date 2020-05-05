@@ -53,6 +53,7 @@ impl NodeDefOneInputExpand for ColorFilterSrgb{
     }
     fn expand(&self, ctx: &mut OpCtxMut, ix: NodeIndex, p: NodeParams, parent: FrameInfo) -> Result<()> {
         if let NodeParams::Json(s::Node::ColorFilterSrgb(filter))= p {
+
             let matrix = match filter as s::ColorFilterSrgb {
                 s::ColorFilterSrgb::Sepia => sepia(),
                 s::ColorFilterSrgb::GrayscaleNtsc => grayscale_ntsc(),
@@ -65,8 +66,15 @@ impl NodeDefOneInputExpand for ColorFilterSrgb{
                 s::ColorFilterSrgb::Saturation(a) => saturation(a),
                 s::ColorFilterSrgb::Brightness(a) => brightness(a),
             };
-            ctx.replace_node(ix, vec![Node::n(&COLOR_MATRIX_SRGB_MUTATE,
-                                                NodeParams::Json(s::Node::ColorMatrixSrgb { matrix: matrix }))]);
+            let mut nodes = Vec::new();
+            if let  imageflow_types::ColorFilterSrgb::Alpha(_) = filter{
+                nodes.push(Node::n(&ENABLE_TRANSPARENCY, NodeParams::None));
+
+            }
+            nodes.push(Node::n(&COLOR_MATRIX_SRGB_MUTATE,
+                               NodeParams::Json(s::Node::ColorMatrixSrgb { matrix })));
+
+            ctx.replace_node(ix, nodes);
             Ok(())
         }else{
             Err(nerror!(crate::ErrorKind::NodeParamsMismatch, "Need ColorFilterSrgb, got {:?}", p))
