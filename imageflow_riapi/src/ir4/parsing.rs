@@ -447,7 +447,7 @@ impl Instructions{
     }
 
     fn anchor_string(&self) -> Option<String>{
-        if let Some((v,h)) = self.anchor{
+        if let Some((h,v)) = self.anchor{
             let first = match v{
                 Anchor1D::Near => "top",
                 Anchor1D::Center => "middle",
@@ -1045,6 +1045,7 @@ fn test_url_parsing() {
     t("up.filter=mitchell",  Instructions{up_filter: Some(FilterStrings::Mitchell), ..Default::default()}, vec![]);
     t("down.filter=lanczos",  Instructions{down_filter: Some(FilterStrings::Lanczos), ..Default::default()}, vec![]);
 
+    t("anchor=bottomleft",  Instructions{anchor: Some((Anchor1D::Near, Anchor1D::Far)), ..Default::default()}, vec![]);
 
     expect_warning("a.balancewhite","gimp",  Instructions{a_balance_white: Some(HistogramThresholdAlgorithm::Gimp), ..Default::default()});
     expect_warning("a.balancewhite","simple",  Instructions{a_balance_white: Some(HistogramThresholdAlgorithm::Simple), ..Default::default()});
@@ -1104,5 +1105,6 @@ fn test_tostr(){
     t("png.lossless=true", Instructions { png_lossless: Some(true), ..Default::default()});
     t("up.filter=mitchell",  Instructions{up_filter: Some(FilterStrings::Mitchell), ..Default::default()});
     t("down.filter=lanczos",  Instructions{down_filter: Some(FilterStrings::Lanczos), ..Default::default()});
+    t("anchor=bottomleft",  Instructions{anchor: Some((Anchor1D::Near, Anchor1D::Far)), ..Default::default()});
 
 }
