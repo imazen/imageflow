@@ -211,7 +211,7 @@ bool imageflow_context_print_and_exit_if_error(void *context);
 //
 // ## Endpoints
 //
-// * 'v0.1/build`
+// * 'v1/build`
 //
 // For endpoints supported by the latest nightly build, see
 // `https://s3-us-west-1.amazonaws.com/imageflow-nightlies/master/doc/context_json_api.txt`

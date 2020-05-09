@@ -41,14 +41,14 @@ Email support@imageflow.io if you need an AGPLv3 exception for commercial use.
 
 You can use command strings that are compatible with [ImageResizer 4 querystrings](https://imageresizing.net/docs/basics):
 
-`imageflow_tool v0.1/ir4 --in source.jpg  --out thumb.jpg --command "width=50&height=50&mode=crop&format=jpg" `
+`imageflow_tool v1/querystring --in source.jpg  --out thumb.jpg --command "width=50&height=50&mode=crop&format=jpg" `
 
 Or submit a JSON job file. JSON jobs can have multiple inputs and outputs, and can represent any kind of operation graph.
 
 The following generates multiple sizes of an image from an example job file:
 
 ```
-imageflow_tool v0.1/build --json examples/export_4_sizes/export_4_sizes.json
+imageflow_tool v1/build --json examples/export_4_sizes/export_4_sizes.json
         --in http://s3-us-west-2.amazonaws.com/imageflow-resources/test_inputs/waterhouse.jpg
         --out 1 waterhouse_w1600.jpg
               2 waterhouse_w1200.jpg
@@ -59,7 +59,7 @@ imageflow_tool v0.1/build --json examples/export_4_sizes/export_4_sizes.json
 
 By default, imageflow_tool prints a JSON response to stdout. You write this to disk with `--response`.
 
-`--debug-package` will create a .zip file to reproduce problematic behavior with both `v0.1/build` and `v0.1/ir4`. Please submit bug reports; we try to make it easy.
+`--debug-package` will create a .zip file to reproduce problematic behavior with both `v1/build` and `v1/querystring`. Please submit bug reports; we try to make it easy.
 
 ## Using imageflow_server for dynamic imaging
 
