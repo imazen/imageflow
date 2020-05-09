@@ -1,38 +1,33 @@
 ## ![imageflow](https://www.imageflow.io/images/imageflow.svg) optimal images at incredible speeds
 
-[![travis-master](https://img.shields.io/travis/imazen/imageflow/master.svg?label=master%3A%20mac64%20ubuntu64%2016.04%2018.04)](https://travis-ci.org/imazen/imageflow/builds) [![AppVeyor build status](https://ci.appveyor.com/api/projects/status/0356x95fa312m3wy/branch/master?svg=true&passingText=master%3A%20win32%20win64%20-%20passing&failingText=master%3A%20win32%20win64%20-%20failed)](https://ci.appveyor.com/project/imazen/imageflow/branch/master) [![Coverity Scan Build Status](https://scan.coverity.com/projects/8403/badge.svg)](https://scan.coverity.com/projects/imazen-imageflow) [![state: technical preview](https://img.shields.io/badge/state-release%E2%80%93candidate-yellow.svg)](#flaws)
+[![travis-master](https://img.shields.io/travis/imazen/imageflow/master.svg?label=master%3A%20MacOS,%20Ubuntu%2016.04%2018.04)](https://travis-ci.org/imazen/imageflow/builds) [![AppVeyor build status](https://ci.appveyor.com/api/projects/status/0356x95fa312m3wy/branch/master?svg=true&passingText=master%3A%20win32%20win64%20-%20passing&failingText=master%3A%20win32%20win64%20-%20failed)](https://ci.appveyor.com/project/imazen/imageflow/branch/master) [![Coverity Scan Build Status](https://scan.coverity.com/projects/8403/badge.svg)](https://scan.coverity.com/projects/imazen-imageflow) [![state: technical preview](https://img.shields.io/badge/state-release%E2%80%93candidate-yellow.svg)](#flaws)
 
 [![Docker Pulls](https://img.shields.io/docker/pulls/imazen/imageflow_tool.svg)](https://hub.docker.com/r/imazen/imageflow_tool/)
-[![view releases](https://img.shields.io/badge/-download%20binaries%20for%20windows,%20mac,%20or%20linux-green.svg)](https://github.com/imazen/imageflow/releases) [![license: AGPLv3/Commercial](https://img.shields.io/badge/license-AGPLv3/Commercial-green.svg)](#flaws)
+[![view releases](https://img.shields.io/badge/-download%20binaries%20for%20windows,%20mac,%20or%20linux-green.svg)](https://github.com/imazen/imageflow/releases) [![license: Choose AGPLv3 or Commercial](https://img.shields.io/badge/license-Choose%20AGPLv3%20or%20Commercial-green.svg)](https://imageresizing.net/pricing)
 
 
-[Download](https://github.com/imazen/imageflow/releases) blazing fast and uniquely [safer](https://cve.mitre.org/cgi-bin/cvekey.cgi?keyword=imagemagick) tools for a modern image workflow.
+[Download](https://github.com/imazen/imageflow/releases) blazing fast and [safer](https://cve.mitre.org/cgi-bin/cvekey.cgi?keyword=imagemagick) tools for a modern image workflow.
 
 
 * **imageflow_tool** is a command-line tool for experimenting, running batch jobs,
 or when you want process isolation. Up to 17x faster than ImageMagick. Also produces smaller files at higher quality.
 * **imageflow_server** can run JSON jobs or manipulate images in-flight (e.g.`/bucket/img.jpg?w=200`) for direct use from
 HTML. Source images can reside in blob storage, on another server, or on the filesystem.
-* **libimageflow** is for direct (in-process) use from *your* programming language.  It has a simple
-[C-compatible ABI](https://s3-us-west-1.amazonaws.com/imageflow-nightlies/master/doc/imageflow/index.html)
-and [fluent **bindings for .NET Core**](https://github.com/imazen/imageflow-dotnet).
+* **libimageflow** is for direct (in-process) use from *your* programming language. [**Node bindings available here**](https://github.com/imazen/imageflow-node), and  [**.NET Standard bindings here**](https://github.com/imazen/imageflow-dotnet). If we don't already have bindings for your language, consider spending a day to add them. Imageflow has a simple
+C-compatible ABI, of which only 4 methods are needed to implement bindings. 
 
-**Open an issue to have us write example code for your use case. We believe in feedback-driven design, and streamlining real-world usage is the fastest way to a great product.**
+**[Open an issue](https://github.com/imazen/imageflow/issues/new) to have us write example code for your use case. We believe in feedback-driven design, and streamlining real-world usage is the fastest way to a great product.**
 
-Note: We aren't labeling Imageflow as 'stable' until enough people have tested it. Please help us test and provide feedback!
-Also, please, *please*, **please** [send us 'challenging' images and tasks](https://github.com/imazen/imageflow/issues/98).
+[Querystring API Documentation](https://docs.imageflow.io/querystring/introduction.html)
 
+[JSON API Documentation](https://docs.imageflow.io/json/introduction.html) 
 
-These all offer the JSON [`/build` API](https://s3-us-west-1.amazonaws.com/imageflow-nightlies/master/doc/context_json_api.txt)
-as well as the traditional `width=300&height=200&mode=crop&format=jpg` command string form. Each is available as a
-[self-contained binary](https://github.com/imazen/imageflow/releases) for Windows, Ubuntu, and Mac. We also offer Docker images for Linux (where glibc and OpenSSL are required).
-
-libimageflow offers interactive job manipulation as well [like `/tell_decoder`, `/get_image_info`, and `/execute`](https://s3-us-west-1.amazonaws.com/imageflow-nightlies/master/doc/job_json_api.txt).
-Unless you are using memory buffers for I/O, it's better to use `/build`.
+libimageflow, imageflow_tool, and imageflow_server are available as
+[self-contained binaries](https://github.com/imazen/imageflow/releases) for Windows, Ubuntu, and Mac. We also offer [Docker images](https://hub.docker.com/r/imazen/imageflow_tool/) for Linux (where glibc and OpenSSL are required). 
 
 [We thank our backers on Kickstarter](https://www.kickstarter.com/projects/njones/imageflow-respect-the-pixels-a-secure-alt-to-image/posts/1616122)
 and [the many supporters of ImageResizer](https://imageresizing.net) for making this project a reality.
-Email support@imageflow.io if you need an AGPLv3 exception for commercial use.
+Visit [Imageresizing.net](https://imageresizing.net/pricing) if you need an AGPLv3 exception for commercial use.
 
 
 ## Start with imageflow_tool (recommended)
@@ -97,11 +92,11 @@ You'll want to mount various image source locations to prefixes. The `--mount` c
 
 ![](https://www.imageflow.io/images/libimageflow-direct.svg)
 
-* Preview C# bindings can be found at https://github.com/imazen/imageflow-dotnet
+* .NET Standard bindings can be found at https://github.com/imazen/imageflow-dotnet
+* Node bindings available  at https://github.com/imazen/imageflow-node
 * Ruby - Basic bindings can be found in [bindings/ruby/](https://github.com/imazen/imageflow/tree/master/bindings/ruby)
 * C and C++ interface is stable - use [bindings/headers/imageflow_default.h](https://github.com/imazen/imageflow/blob/master/bindings/headers/imageflow_default.h) or one of the many alternate conventions provided with each release.
 * Rust - Imageflow is written in Rust, so you can use the `imageflow_core` crate.
-* Node - Not yet started. Want to help? [generate bindings from the header files](https://github.com/tjfontaine/node-ffi-generate)
 * other languages - Use an [FFI](https://en.wikipedia.org/wiki/Foreign_function_interface) binding-generation tool for your language, and feed it whichever [header file it likes best](https://github.com/imazen/imageflow/tree/master/bindings/headers).
 
 You also may find that `imageflow_tool` is quite fast enough for your needs.
@@ -120,7 +115,7 @@ You also may find that `imageflow_tool` is quite fast enough for your needs.
 * imageflow_core - The main library and execution engine
 
 
-### Known flaws and missing features (as of July 2017)
+### Known flaws and missing features (as of May 2020)
 
 #### Flaws
 
@@ -129,15 +124,11 @@ You also may find that `imageflow_tool` is quite fast enough for your needs.
 
 #### Missing features
 
-- [ ] Animated GIF write support (reading individual frames is supported)
-- [ ] Some advanced rendering features: watermarking, blurring.
-- [ ] Automatic encoder selection and tuning.
+- [ ] Blurring.
 
 #### Delayed features
 
 - [ ] Job cost prediction (delayed - no interest from community)
-- [ ] Node bindings (delayed - no interest from community)
-
 
 # Building from Source without Docker
 
@@ -188,10 +179,10 @@ The [official Dockerfiles](https://github.com/imazen/dockerfiles_imageflow) are 
 
 ## Linux Pre-requisites
 
-(tested on Ubuntu 14.04, 16.04, and 18.04.)
+(tested on Ubuntu 16.04 and 18.04.)
 
 ```bash
-#Install Rust 1.28+ by running
+#Install Rust 1.41+ by running
 `curl https://sh.rustup.rs -sSf | sh -s -- -y --default-toolchain beta`
 #Ensure build tools are installed (git, curl, wget, gcc, g++, nasm, pkg-config, openssl, ca-certificates)
 `sudo apt-get install git wget curl build-essential pkg-config libssl-dev libpng-dev nasm `
