@@ -741,7 +741,7 @@ fn test_with_callback(checksum_name: &str, input: IoEnum, callback: fn(&imageflo
                 command: what
             };
             let send_hints_str = serde_json::to_string_pretty(&send_hints).unwrap();
-            context.message("v0.1/tell_decoder", send_hints_str.as_bytes()).1.unwrap();
+            context.message("v1/tell_decoder", send_hints_str.as_bytes()).1.unwrap();
         }
 
 

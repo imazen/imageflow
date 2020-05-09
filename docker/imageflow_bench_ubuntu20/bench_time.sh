@@ -35,7 +35,7 @@ cd bench_in || exit
 
 
 echo Using imageflow to thumbnail $COUNT images in parallel
-$TIME_COMMAND parallel '$HOME/bin/imageflow_tool v0.1/ir4 --in {} --out ../bench_out/{.}_200x200.jpg --command width=200&height=200&quality=90' ::: *.jpg
+$TIME_COMMAND parallel '$HOME/bin/imageflow_tool v1/querystring --in {} --out ../bench_out/{.}_200x200.jpg --command width=200&height=200&quality=90' ::: *.jpg
 echo
 echo
 echo Using libvips to thumbnail $COUNT images in parallel
@@ -55,7 +55,7 @@ $TIME_COMMAND parallel 'convert {} -set colorspace sRGB -colorspace RGB -filter 
 echo
 echo
 echo Using imageflow to create 2000px versions of $COUNT images in parallel
-$TIME_COMMAND parallel '$HOME/bin/imageflow_tool v0.1/ir4 --in {} --out ../bench_out/{.}_2000x2000.jpg --command width=2000&height=2000&quality=90' ::: *.jpg
+$TIME_COMMAND parallel '$HOME/bin/imageflow_tool v1/querystring --in {} --out ../bench_out/{.}_2000x2000.jpg --command width=2000&height=2000&quality=90' ::: *.jpg
 echo
 echo
 echo Using libvips to create 2000px versions of $COUNT images in parallel

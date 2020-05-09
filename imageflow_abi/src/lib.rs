@@ -514,7 +514,7 @@ pub extern "C" fn imageflow_json_response_destroy(context: *mut Context,
 ///
 /// ## Endpoints
 ///
-/// * 'v0.1/build`
+/// * 'v1/build`
 ///
 /// For endpoints supported by the latest nightly build, see
 /// `https://s3-us-west-1.amazonaws.com/imageflow-nightlies/master/doc/context_json_api.txt`
@@ -908,7 +908,7 @@ fn test_job_with_buffers() {
         imageflow_context_print_and_exit_if_error(c);
         assert!(res);
 
-        let method_in = static_char!("v0.1/execute");
+        let method_in = static_char!("v1/execute");
         let json_in = r#"{"framewise":{"steps":[{"decode":{"io_id":0}},{"flip_h":null},{"rotate_90":null},{"resample_2d":{"w":30,"h":20,"hints":{"sharpen_percent":null}}},{"constrain":{ "mode" :"within", "w": 5,"h": 5}},{"encode":{"io_id":1,"preset":{"gif":null}}}]}}"#;
 
         let response = imageflow_context_send_json(c,
@@ -964,7 +964,7 @@ fn test_job_with_bad_json() {
         imageflow_context_print_and_exit_if_error(c);
         assert!(res);
 
-        let method_in = static_char!("v0.1/execute");
+        let method_in = static_char!("v1/execute");
         let json_in = r#"{"framewise":{"steps":[{"decode":{"io_id":0}},{"flip_h":null},{"rotate_90":null},{"resample_2d":{"w":30,"h":20,"down_filter":null,"up_filter":null,"hints":{"sharpen_percent":null}}},{"constrain":{"within":{"w":5,"h":5}}},{"encode":{"io_id":1,"preset":{"gif":null}}}]}}"#;
 
         let response = imageflow_context_send_json(c,

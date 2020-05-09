@@ -8,7 +8,7 @@ nodes and edges (which allows for multiple inputs and outputs).  Note that you c
 JSON jobs have the keys `io` and `framewise`, which refer to your inputs/outputs and steps/graph to apply to each image frame. 
 
 
-If you're using `imageflow_tool v0.1/build`, you'll need to specify your inputs and outputs. This isn't needed if you're using `libimageflow` and `v0.1/execute`, as you'll have already registered the inputs and outputs.  
+If you're using `imageflow_tool v1/build`, you'll need to specify your inputs and outputs. This isn't needed if you're using `libimageflow` and `v1/execute`, as you'll have already registered the inputs and outputs.  
 
 The following example uses `steps` to constrain an image to 1400px or less and encodes it in 8-bit png. 
 ```json

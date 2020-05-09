@@ -10,7 +10,7 @@ This API doesn't care about the order in which you specify commands; they're exe
 
 
 ```bash
-imageflow_tool v0.1/ir4 --in a.jpg --out b.jpg --command "w=100&h=100&mode=max" --quiet
+imageflow_tool v1/querystring --in a.jpg --out b.jpg --command "w=100&h=100&mode=max" --quiet
 ```
 
 ### URLs with demo server
