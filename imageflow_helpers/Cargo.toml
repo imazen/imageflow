@@ -43,7 +43,6 @@ zip = { version = "0.5", default-features = false }
 
 
 
-chashmap = "2.2"
 parking_lot = {version = "0.10"}
 
 unicase = "2"
