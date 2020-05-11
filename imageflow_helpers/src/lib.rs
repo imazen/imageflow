@@ -48,7 +48,6 @@ extern crate sha2;
 extern crate unicase;
 
 
-extern crate parking_lot;
 extern crate time;
 extern crate uuid;
 extern crate smallvec;

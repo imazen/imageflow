@@ -43,7 +43,6 @@ zip = { version = "0.5", default-features = false }
 
 
 
-parking_lot = {version = "0.10"}
 
 unicase = "2"
 # HTTPS is a little bit of a nightmare
@@ -57,5 +56,5 @@ backtrace = "0.3"
 mockito = "*"
 
 [features]
-nightly = ["parking_lot/nightly"]
+nightly = []
 
