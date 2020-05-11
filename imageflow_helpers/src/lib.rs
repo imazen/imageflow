@@ -70,7 +70,6 @@ pub mod identifier_styles;
 pub mod preludes;
 pub mod filesystem;
 pub mod fetching;
-pub mod caching;
 pub mod hashing;
 pub mod process_testing;
 pub mod process_capture;
