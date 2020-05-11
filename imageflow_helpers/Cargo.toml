@@ -39,7 +39,7 @@ rand = "*"
 num = "*"
 
 base64 = "0.12"
-mockito = "*"
+
 zip = { version = "0.5", default-features = false }
 
 
@@ -62,6 +62,9 @@ backtrace = "0.3"
 [target.'cfg(not(any(target_os = "windows", target_os = "macos")))'.dependencies]
 openssl = "0.10"
 hyper-openssl = "0.8"
+
+[dev-dependencies]
+mockito = "*"
 
 [features]
 nightly = ["parking_lot/nightly"]
