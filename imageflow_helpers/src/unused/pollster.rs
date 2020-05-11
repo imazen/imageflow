@@ -7,7 +7,7 @@ use std::thread;
 use std::thread::JoinHandle;
 use ::parking_lot::Mutex;
 use std::panic::AssertUnwindSafe;
-use super::licensing::support::IssueSink;
+use super::unused::support::IssueSink;
 use smallvec::SmallVec;
 // Get build date
 // Get ticks
