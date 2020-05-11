@@ -43,7 +43,6 @@ extern crate zip;
 //extern crate serde;
 //extern crate serde_json;
 extern crate backtrace;
-extern crate num;
 extern crate base64;
 extern crate sha2;
 extern crate unicase;
