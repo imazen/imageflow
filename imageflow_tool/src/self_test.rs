@@ -33,8 +33,7 @@ impl TestImageSource{
 #[derive(Clone,Debug,PartialEq)]
 enum ReplacementInput{
     File{path: String, source: TestImageSource
-    },
-    Url(String),
+    }
 }
 impl ReplacementInput{
     pub fn prepare(&self, c: &ProcTestContext){
@@ -44,13 +43,11 @@ impl ReplacementInput{
                 let bytes = source.get_bytes();
                 c.write_file(path, &bytes);
             }
-            _ => {}
         }
     }
     pub fn parameter(& self) -> String{
         match *self{
             ReplacementInput::File{ref path, ..} => path.to_owned(),
-            ReplacementInput::Url(ref str) => str.to_owned()
         }
     }
 }
@@ -184,7 +181,8 @@ fn scenario_export_4() -> BuildScenario{
         description: "Generate 4 sizes of a jpeg",
         slug: "export_4_sizes",
         recipe: framewise.wrap_in_build_0_1(),
-        new_inputs: vec![ReplacementInput::Url("http://s3-us-west-2.amazonaws.com/imageflow-resources/test_inputs/waterhouse.jpg".to_owned())],
+        new_inputs: vec![ReplacementInput::File{ path: "waterhouse.jpg".to_owned(),
+        source: TestImageSource::Url("http://s3-us-west-2.amazonaws.com/imageflow-resources/test_inputs/waterhouse.jpg".to_owned())}],
         new_outputs: vec![ReplacementOutput::file(1, "waterhouse_w1600.jpg"),
         ReplacementOutput::file(2, "waterhouse_w1200.jpg"),
         ReplacementOutput::file(3, "waterhouse_w800.jpg"),
@@ -456,26 +454,7 @@ pub fn run(tool_location: Option<PathBuf>) -> i32 {
         assert_eq!(0, result.stdout_byte_count());
 
     }
-    {
-        let c = c.subfolder_context("gif");
-        let result =
-            c.exec("v1/querystring --command width=200&height=200&format=gif --in https://s3-us-west-2.amazonaws.com/imageflow-resources/test_inputs/waterhouse.jpg --out out5.gif");
 
-        result.expect_status_code(Some(0));
-
-//        let resp: s::Response001 = result.parse_stdout_as::<s::Response001>().unwrap();
-//        match resp.data {
-//            s::ResponsePayload::BuildResult(info) => {
-//
-//                assert_eq!(info.encodes.len(), 1);
-//                let encode: &s::EncodeResult = &info.encodes[0];
-//                assert_eq!(encode.preferred_extension, "gif".to_owned());
-//            }
-//            _ => panic!("Build result not sent"),
-//        }
-
-
-    }
 
     // It seems that Clap always uses status code 1 to indicate a parsing failure
     c.exec("bad command").expect_status_code(Some(1));

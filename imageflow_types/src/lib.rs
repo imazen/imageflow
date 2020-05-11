@@ -936,6 +936,10 @@ impl Build001 {
         Build001 {
             builder_config: None,
             io: vec![
+            IoObject {direction: IoDirection::In,
+                io_id: 0,
+                io: IoEnum::Placeholder
+            },
             IoObject {
 
                 direction: IoDirection::In,

@@ -44,7 +44,7 @@ The following generates multiple sizes of an image from an example job file:
 
 ```
 imageflow_tool v1/build --json examples/export_4_sizes/export_4_sizes.json
-        --in http://s3-us-west-2.amazonaws.com/imageflow-resources/test_inputs/waterhouse.jpg
+        --in waterhouse.jpg
         --out 1 waterhouse_w1600.jpg
               2 waterhouse_w1200.jpg
               3 waterhouse_w800.jpg
