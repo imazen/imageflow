@@ -72,6 +72,9 @@ evalchroma = "0.1.1"
 
 [dev-dependencies]
 hyper = "0.13"
+imageflow_http_helpers = { path = "../imageflow_http_helpers", version = "*" }
+
 
 [features]
+default = []
 nightly = ["imageflow_helpers/nightly"]

@@ -133,7 +133,7 @@ impl std::fmt::Display for CmdError {
 fn parse_io_enum(s: &str) -> s::IoEnum {
     match s {
         "base64:" => s::IoEnum::OutputBase64,
-        s if s.starts_with("http://") || s.starts_with("https://") => s::IoEnum::Url(s.to_owned()),
+        s if s.starts_with("http://") || s.starts_with("https://") => panic!("URLs are not permitted"),
         s => s::IoEnum::Filename(s.to_owned()),
     }
 }
@@ -317,16 +317,16 @@ impl CmdBuild {
                         log.push(format!("Copied {} to {} (referenced as {})", &path, &new_path, &fname));
                         s::IoEnum::Filename(fname)
                     }
-                    s::IoEnum::Url(url) => {
-
-                        let fname = format!("input_{}", obj.io_id);
-                        let new_path = directory.join(&fname).as_os_str().to_str().unwrap().to_owned();
-                        let bytes = ::imageflow_helpers::fetching::fetch_bytes(&url).unwrap();
-                        let mut file = BufWriter::new(File::create(&new_path).unwrap());
-                        file.write_all(&bytes).unwrap();
-                        log.push(format!("Downloaded {} to {} (referenced as {})", &url, &new_path, &fname));
-                        s::IoEnum::Filename(fname)
-                    }
+                    // s::IoEnum::Url(url) => {
+                    //
+                    //     let fname = format!("input_{}", obj.io_id);
+                    //     let new_path = directory.join(&fname).as_os_str().to_str().unwrap().to_owned();
+                    //     let bytes = ::imageflow_http_helpers::fetch_bytes(&url).unwrap();
+                    //     let mut file = BufWriter::new(File::create(&new_path).unwrap());
+                    //     file.write_all(&bytes).unwrap();
+                    //     log.push(format!("Downloaded {} to {} (referenced as {})", &url, &new_path, &fname));
+                    //     s::IoEnum::Filename(fname)
+                    // }
                     other => other
                 }
             }else{

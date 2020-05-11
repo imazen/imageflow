@@ -19,7 +19,7 @@ use std::sync::Mutex;
 
 use imageflow_helpers::process_testing::*;
 use crate::fc::test_helpers::process_testing::ProcTestContextExtras;
-use imageflow_helpers::fetching::{fetch, fetch_bytes,get_status_code_for, FetchError, FetchConfig};
+use ::imageflow_http_helpers::{fetch, fetch_bytes,get_status_code_for, FetchError, FetchConfig};
 
 use std::collections::vec_deque::VecDeque;
 use reqwest::StatusCode;
@@ -122,7 +122,7 @@ struct ServerInstance{
 
 }
 
-type CallbackResult = std::result::Result<(), ::imageflow_helpers::fetching::FetchError>;
+type CallbackResult = std::result::Result<(), ::imageflow_http_helpers::FetchError>;
 
 #[derive(Debug,PartialEq,Eq,Copy,Clone)]
 enum Proto{
@@ -181,7 +181,7 @@ impl ServerInstance{
         all_args.insert(0, "start");
 
         c.execute_callback(all_args, false,
-                           |_child: &mut std::process::Child| -> std::result::Result<(), ::imageflow_helpers::fetching::FetchError> {
+                           |_child: &mut std::process::Child| -> std::result::Result<(), ::imageflow_http_helpers::FetchError> {
 
                                ::std::thread::sleep(::std::time::Duration::from_millis(500));
                                // Server may not be running

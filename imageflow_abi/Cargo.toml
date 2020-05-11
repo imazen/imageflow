@@ -14,13 +14,13 @@ doctest = false
 
 [dependencies]
 libc = "0.2"
-imageflow_core = { path = "../imageflow_core", version = "*" }
+imageflow_core = { path = "../imageflow_core", version = "*"}
 backtrace = "*"
 smallvec="*"
 base64="0.12"
 
 [build-dependencies]
-imageflow_helpers = { path = "../imageflow_helpers", version = "*" }
+imageflow_helpers = { path = "../imageflow_helpers", version = "*"}
 cbindgen = "0.14.1"
 regex = "1"
 

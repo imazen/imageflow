@@ -52,19 +52,12 @@ unicase = "2"
 
 error-chain = "*"
 
-hyper = "0.13"
-reqwest = "0.9"
-hyper-native-tls = "*"
 
 backtrace = "0.3"
-
-
-[target.'cfg(not(any(target_os = "windows", target_os = "macos")))'.dependencies]
-openssl = "0.10"
-hyper-openssl = "0.8"
 
 [dev-dependencies]
 mockito = "*"
 
 [features]
 nightly = ["parking_lot/nightly"]
+

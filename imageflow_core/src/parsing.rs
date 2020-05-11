@@ -102,11 +102,7 @@ impl IoTranslator {
 
                 c.add_file(io_id, dir, &path )
             }
-            s::IoEnum::Url(url) => {
-                let bytes = ::imageflow_helpers::fetching::fetch_bytes(&url)
-                    .map_err(|e| nerror!(ErrorKind::FetchError, "{}: {}", url, e))?;
-                c.add_copied_input_buffer(io_id, &bytes).map_err(|e| e.at(here!()))
-            }
+
             s::IoEnum::OutputBuffer |
             s::IoEnum::OutputBase64 => {
                 c.add_output_buffer(io_id).map_err(|e| e.at(here!()))

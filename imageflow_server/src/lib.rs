@@ -38,7 +38,7 @@ extern crate imageflow_riapi;
 extern crate reqwest;
 
 use ::imageflow_helpers as hlp;
-use imageflow_helpers::fetching::FetchConfig;
+use imageflow_http_helpers::FetchConfig;
 use imageflow_helpers::preludes::from_std::*;
 use imageflow_core::clients::stateless;
 
@@ -120,14 +120,14 @@ impl From<hyper::Error> for ServerError {
         ServerError::HyperError(e)
     }
 }
-impl From<hlp::fetching::FetchError> for ServerError {
-    fn from(e: hlp::fetching::FetchError) -> ServerError {
+impl From<::imageflow_http_helpers::FetchError> for ServerError {
+    fn from(e: ::imageflow_http_helpers::FetchError) -> ServerError {
         match e{
-            hlp::fetching::FetchError::HyperError(e) => ServerError::HyperError(e),
-            hlp::fetching::FetchError::IoError(e) => ServerError::IoError(e),
-            hlp::fetching::FetchError::UpstreamResponseError(e) => ServerError::UpstreamResponseError(e),
-            hlp::fetching::FetchError::UpstreamResponseErrorWithResponse{status, ..}=> ServerError::UpstreamResponseError(status),
-            hlp::fetching::FetchError::ReqwestError(e) => ServerError::ReqwestError(e)
+            ::imageflow_http_helpers::FetchError::HyperError(e) => ServerError::HyperError(e),
+            ::imageflow_http_helpers::FetchError::IoError(e) => ServerError::IoError(e),
+            ::imageflow_http_helpers::FetchError::UpstreamResponseError(e) => ServerError::UpstreamResponseError(e),
+            ::imageflow_http_helpers::FetchError::UpstreamResponseErrorWithResponse{status, ..}=> ServerError::UpstreamResponseError(status),
+            ::imageflow_http_helpers::FetchError::ReqwestError(e) => ServerError::ReqwestError(e)
         }
 
     }
@@ -147,7 +147,7 @@ struct FetchedResponse {
 
 fn fetch_bytes(url: &str, config: Option<FetchConfig>) -> std::result::Result<FetchedResponse, ServerError> {
     let start = precise_time_ns();
-    let result = hlp::fetching::fetch(url, config);
+    let result = ::imageflow_http_helpers::fetch(url, config);
     let downloaded = precise_time_ns();
 
     match result{

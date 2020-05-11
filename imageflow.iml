@@ -43,6 +43,7 @@
       <sourceFolder url="file://$MODULE_DIR$/imageflow_abi/tests" isTestSource="true" />
       <sourceFolder url="file://$MODULE_DIR$/imageflow_abi/benches" isTestSource="true" />
       <sourceFolder url="file://$MODULE_DIR$/imageflow/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/imageflow_http_helpers/src" isTestSource="false" />
       <excludeFolder url="file://$MODULE_DIR$/c_components/target" />
       <excludeFolder url="file://$MODULE_DIR$/c_components/tests/target" />
       <excludeFolder url="file://$MODULE_DIR$/imageflow_abi/target" />

@@ -16,6 +16,7 @@ enum_derive= { git="https://github.com/DanielKeep/rust-custom-derive.git" }
 option-filter = "1"
 lazy_static = "1"
 
+[dev-dependencies]
 difference = "2" # update to v2
 
 [features]

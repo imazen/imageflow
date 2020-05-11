@@ -16,6 +16,8 @@ threadpool = "1"
 serde = "1"
 serde_json = "1"
 imageflow_helpers = { path = "../imageflow_helpers", version = "*" }
+imageflow_http_helpers = { path = "../imageflow_http_helpers", version = "*" }
+
 
 [[bin]]
 name = "imageflow_tool"

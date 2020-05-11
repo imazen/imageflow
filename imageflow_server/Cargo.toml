@@ -37,6 +37,7 @@ imageflow_core = { path = "../imageflow_core", version = "*" }
 imageflow_types = { path = "../imageflow_types", version = "*" }
 imageflow_helpers = { path = "../imageflow_helpers", version = "*" }
 imageflow_riapi = { path = "../imageflow_riapi", version = "*" }
+imageflow_http_helpers = { path = "../imageflow_http_helpers", version = "*" }
 
 
 rand = "0.6"

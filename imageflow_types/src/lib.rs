@@ -754,8 +754,6 @@ pub enum IoEnum {
     ByteArray(Vec<u8>),
     #[serde(rename="file")]
     Filename(String),
-    #[serde(rename="url")]
-    Url(String),
     #[serde(rename="output_buffer")]
     OutputBuffer,
     #[serde(rename="output_base_64")]
@@ -938,12 +936,6 @@ impl Build001 {
         Build001 {
             builder_config: None,
             io: vec![
-            IoObject {
-
-                direction: IoDirection::In,
-                io_id: 0,
-                io: IoEnum::Url("http://s3-us-west-2.amazonaws.com/imageflow-resources/test_inputs/waterhouse.jpg".to_owned())
-            },
             IoObject {
 
                 direction: IoDirection::In,

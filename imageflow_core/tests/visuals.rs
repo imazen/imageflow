@@ -12,9 +12,9 @@ use crate::common::*;
 use imageflow_types;
 use imageflow_core::{Context, ErrorKind, FlowError, CodeLocation};
 use imageflow_core::ffi::BitmapBgra;
-use imageflow_types::{PixelFormat, Color, Node, IoEnum, ColorSrgb,
+use imageflow_types::{PixelFormat, Color, Node, ColorSrgb,
                       EncoderPreset, ResampleHints, Filter, CommandStringKind,
-                        ConstraintMode, IoDirection, Constraint, PngBitDepth};
+                        ConstraintMode, Constraint, PngBitDepth};
 
 
 const DEBUG_GRAPH: bool = false;
@@ -32,7 +32,7 @@ fn test_encode_gradients() {
         }
     ];
 
-    compare_encoded(Some(IoEnum::Url("https://s3-us-west-2.amazonaws.com/imageflow-resources/test_inputs/gradients.png".to_owned())),
+    compare_encoded(Some(IoTestEnum::Url("https://s3-us-west-2.amazonaws.com/imageflow-resources/test_inputs/gradients.png".to_owned())),
                     "encode_gradients",
                     POPULATE_CHECKSUMS,
                     DEBUG_GRAPH,
@@ -131,7 +131,7 @@ fn test_pixels_region(){
 //  Replaces TEST_CASE("Test scale rings", "")
 #[test]
 fn test_scale_rings(){
-    let matched = compare(Some(IoEnum::Url("https://s3-us-west-2.amazonaws.com/imageflow-resources/test_inputs/rings2.png".to_owned())), 500,
+    let matched = compare(Some(IoTestEnum::Url("https://s3-us-west-2.amazonaws.com/imageflow-resources/test_inputs/rings2.png".to_owned())), 500,
         "RingsDownscaling", POPULATE_CHECKSUMS, DEBUG_GRAPH, vec![
         Node::Decode {io_id: 0, commands: None},
         Node::Resample2D{ w: 400, h: 400,  hints: Some(ResampleHints::new().with_bi_filter(Filter::Hermite)) }
@@ -155,7 +155,7 @@ fn test_fill_rect_original(){
 
 #[test]
 fn test_scale_image() {
-    let matched = compare(Some(IoEnum::Url("https://s3-us-west-2.amazonaws.com/imageflow-resources/test_inputs/waterhouse.jpg".to_owned())), 500,
+    let matched = compare(Some(IoTestEnum::Url("https://s3-us-west-2.amazonaws.com/imageflow-resources/test_inputs/waterhouse.jpg".to_owned())), 500,
                           "ScaleTheHouse", POPULATE_CHECKSUMS, DEBUG_GRAPH, vec![
         Node::Decode {io_id: 0, commands: None},
         Node::Resample2D{ w: 400, h: 300,  hints: Some(ResampleHints::new().with_bi_filter(Filter::Robidoux)) }
@@ -167,8 +167,8 @@ fn test_scale_image() {
 #[test]
 fn test_watermark_image() {
     let matched = compare_multiple(Some(vec![
-        IoEnum::Url("https://s3-us-west-2.amazonaws.com/imageflow-resources/test_inputs/waterhouse.jpg".to_owned()),
-        IoEnum::Url("https://s3-us-west-2.amazonaws.com/imageflow-resources/test_inputs/dice.png".to_owned())
+        IoTestEnum::Url("https://s3-us-west-2.amazonaws.com/imageflow-resources/test_inputs/waterhouse.jpg".to_owned()),
+        IoTestEnum::Url("https://s3-us-west-2.amazonaws.com/imageflow-resources/test_inputs/dice.png".to_owned())
     ]), 500,
                           "Watermark1", POPULATE_CHECKSUMS, DEBUG_GRAPH, vec![
             Node::Decode {io_id: 0, commands: None},
@@ -207,7 +207,7 @@ fn test_watermark_image() {
 // fn test_image_rs_jpeg_decode(){
 //     let mut context = Context::create().unwrap();
 //     context.enabled_codecs.prefer_decoder(imageflow_core::NamedDecoders::ImageRsJpegDecoder);
-//     let matched = compare_with_context(&mut context,Some(IoEnum::Url("https://s3-us-west-2.amazonaws.com/imageflow-resources/test_inputs/waterhouse.jpg".to_owned())), 500,
+//     let matched = compare_with_context(&mut context,Some(IoTestEnum::Url("https://s3-us-west-2.amazonaws.com/imageflow-resources/test_inputs/waterhouse.jpg".to_owned())), 500,
 //                           "DecodeWithImageRs", POPULATE_CHECKSUMS, DEBUG_GRAPH, vec![
 //             Node::Decode {io_id: 0, commands: None},
 //             Node::Resample2D{ w: 400, h: 300, down_filter: Some(Filter::Robidoux), up_filter: Some(Filter::Robidoux), hints: None, scaling_colorspace: None }
@@ -218,7 +218,7 @@ fn test_watermark_image() {
 
 #[test]
 fn test_white_balance_image() {
-    let matched = compare(Some(IoEnum::Url("https://s3-us-west-2.amazonaws.com/imageflow-resources/test_inputs/red-night.png".to_owned())), 500,
+    let matched = compare(Some(IoTestEnum::Url("https://s3-us-west-2.amazonaws.com/imageflow-resources/test_inputs/red-night.png".to_owned())), 500,
                           "WhiteBalanceNight", POPULATE_CHECKSUMS, DEBUG_GRAPH, vec![
             Node::Decode {io_id: 0, commands: None},
             Node::WhiteBalanceHistogramAreaThresholdSrgb { threshold: None}
@@ -228,7 +228,7 @@ fn test_white_balance_image() {
 }
 #[test]
 fn test_read_gif() {
-    let matched = compare(Some(IoEnum::Url("https://s3-us-west-2.amazonaws.com/imageflow-resources/test_inputs/mountain_800.gif".to_owned())), 500,
+    let matched = compare(Some(IoTestEnum::Url("https://s3-us-west-2.amazonaws.com/imageflow-resources/test_inputs/mountain_800.gif".to_owned())), 500,
                           "mountain_gif_scaled400", POPULATE_CHECKSUMS, DEBUG_GRAPH, vec![
             Node::Decode {io_id: 0, commands: None},
             Node::Resample2D{ w: 400, h: 300,  hints: Some(ResampleHints::new().with_bi_filter(Filter::Robidoux)) }
@@ -241,7 +241,7 @@ fn test_read_gif() {
 
 #[test]
 fn test_jpeg_icc2_color_profile() {
-    let matched = compare(Some(IoEnum::Url("https://s3-us-west-2.amazonaws.com/imageflow-resources/test_inputs/MarsRGB_tagged.jpg".to_owned())), 500,
+    let matched = compare(Some(IoTestEnum::Url("https://s3-us-west-2.amazonaws.com/imageflow-resources/test_inputs/MarsRGB_tagged.jpg".to_owned())), 500,
                           "MarsRGB_ICC_Scaled400300", POPULATE_CHECKSUMS, DEBUG_GRAPH, vec![
 Node::Decode {io_id: 0, commands: None},
 Node::Resample2D{ w: 400, h: 300,  hints: Some(ResampleHints::new().with_bi_filter(Filter::Robidoux)) }
@@ -252,7 +252,7 @@ Node::Resample2D{ w: 400, h: 300,  hints: Some(ResampleHints::new().with_bi_filt
 
 #[test]
 fn test_jpeg_icc4_color_profile() {
-    let matched = compare(Some(IoEnum::Url("https://s3-us-west-2.amazonaws.com/imageflow-resources/test_inputs/MarsRGB_v4_sYCC_8bit.jpg".to_owned())), 500,
+    let matched = compare(Some(IoTestEnum::Url("https://s3-us-west-2.amazonaws.com/imageflow-resources/test_inputs/MarsRGB_v4_sYCC_8bit.jpg".to_owned())), 500,
                           "MarsRGB_ICCv4_Scaled400300", POPULATE_CHECKSUMS, DEBUG_GRAPH, vec![
 Node::Decode {io_id: 0, commands: None},
 Node::Resample2D{ w: 400, h: 300,  hints: Some(ResampleHints::new().with_bi_filter(Filter::Robidoux)) }
@@ -269,7 +269,7 @@ fn test_jpeg_rotation() {
         for flag in 1..9 {
             let url = format!("https://s3-us-west-2.amazonaws.com/imageflow-resources/test_inputs/orientation/{}_{}.jpg", orientation, flag);
             let title = format!("Test_Apply_Orientation_{}_{}.jpg", orientation, flag);
-            let matched = compare(Some(IoEnum::Url(url)), 500, &title, POPULATE_CHECKSUMS, DEBUG_GRAPH,
+            let matched = compare(Some(IoTestEnum::Url(url)), 500, &title, POPULATE_CHECKSUMS, DEBUG_GRAPH,
                                   vec![Node::Decode {io_id: 0, commands: None},
                                        Node::Constrain(Constraint{mode: ConstraintMode::Within, w: Some(70), h: Some(70), hints: None, gravity: None, canvas_color: None })]);
             assert!(matched);
@@ -281,7 +281,7 @@ fn test_jpeg_rotation() {
 
 #[test]
 fn test_jpeg_crop() {
-    let matched = compare(Some(IoEnum::Url("https://s3-us-west-2.amazonaws.com/imageflow-resources/test_inputs/waterhouse.jpg".to_owned())), 500,
+    let matched = compare(Some(IoTestEnum::Url("https://s3-us-west-2.amazonaws.com/imageflow-resources/test_inputs/waterhouse.jpg".to_owned())), 500,
                           "jpeg_crop", POPULATE_CHECKSUMS, DEBUG_GRAPH, vec![
             Node::CommandString{
                 kind: CommandStringKind::ImageResizer4,
@@ -297,7 +297,7 @@ fn test_jpeg_crop() {
 //
 //#[test]
 //fn test_gif_ir4(){
-//        let matched = compare(Some(IoEnum::Url("https://s3-us-west-2.amazonaws.com/imageflow-resources/test_inputs/waterhouse.jpg".to_owned())), 500,
+//        let matched = compare(Some(IoTestEnum::Url("https://s3-us-west-2.amazonaws.com/imageflow-resources/test_inputs/waterhouse.jpg".to_owned())), 500,
 //                              "Read", true, DEBUG_GRAPH, vec![
 //                Node::CommandString{
 //                    kind: CommandStringKind::ImageResizer4,
@@ -327,8 +327,8 @@ fn test_jpeg_crop() {
 //        }
 //    ];
 //
-//    smoke_test(Some(IoEnum::Url("https://s3-us-west-2.amazonaws.com/imageflow-resources/test_inputs/waterhouse.jpg".to_owned())),
-//               Some(IoEnum::OutputBuffer),
+//    smoke_test(Some(IoTestEnum::Url("https://s3-us-west-2.amazonaws.com/imageflow-resources/test_inputs/waterhouse.jpg".to_owned())),
+//               Some(IoTestEnum::OutputBuffer),
 //               DEBUG_GRAPH,
 //               steps,
 //    );
@@ -348,8 +348,8 @@ fn decode_cmyk_jpeg() {
         }
     ];
 
-    let result = smoke_test(Some(IoEnum::Url("https://upload.wikimedia.org/wikipedia/commons/0/0e/Youngstown_State_Athletics.jpg".to_owned())),
-                            Some(IoEnum::OutputBuffer),
+    let result = smoke_test(Some(IoTestEnum::Url("https://upload.wikimedia.org/wikipedia/commons/0/0e/Youngstown_State_Athletics.jpg".to_owned())),
+                            Some(IoTestEnum::OutputBuffer),
                             DEBUG_GRAPH,
                             steps,
     );
@@ -362,7 +362,7 @@ fn decode_cmyk_jpeg() {
 
 #[test]
 fn webp_lossless_alpha_decode_and_scale() {
-    let matched = compare(Some(IoEnum::Url("https://imageflow-resources.s3-us-west-2.amazonaws.com/test_inputs/1_webp_ll.webp".to_owned())), 500,
+    let matched = compare(Some(IoTestEnum::Url("https://imageflow-resources.s3-us-west-2.amazonaws.com/test_inputs/1_webp_ll.webp".to_owned())), 500,
                           "webp_lossless_alpha_decode_and_scale", POPULATE_CHECKSUMS, DEBUG_GRAPH, vec![
             Node::CommandString{
                 kind: CommandStringKind::ImageResizer4,
@@ -376,7 +376,7 @@ fn webp_lossless_alpha_decode_and_scale() {
 }
 #[test]
 fn webp_lossy_alpha_decode_and_scale() {
-    let matched = compare(Some(IoEnum::Url("https://imageflow-resources.s3-us-west-2.amazonaws.com/test_inputs/1_webp_a.webp".to_owned())), 500,
+    let matched = compare(Some(IoTestEnum::Url("https://imageflow-resources.s3-us-west-2.amazonaws.com/test_inputs/1_webp_a.webp".to_owned())), 500,
                           "webp_lossy_alpha_decode_and_scale", POPULATE_CHECKSUMS, DEBUG_GRAPH, vec![
             Node::CommandString{
                 kind: CommandStringKind::ImageResizer4,
@@ -401,8 +401,8 @@ fn webp_lossless_alpha_roundtrip(){
         }
     ];
 
-    smoke_test(Some(IoEnum::Url("https://imageflow-resources.s3-us-west-2.amazonaws.com/test_inputs/1_webp_ll.webp".to_owned())),
-               Some(IoEnum::OutputBuffer),
+    smoke_test(Some(IoTestEnum::Url("https://imageflow-resources.s3-us-west-2.amazonaws.com/test_inputs/1_webp_ll.webp".to_owned())),
+               Some(IoTestEnum::OutputBuffer),
                DEBUG_GRAPH,
                steps,
     ).unwrap();
@@ -419,8 +419,8 @@ fn webp_lossy_alpha_roundtrip(){
         }
     ];
 
-    smoke_test(Some(IoEnum::Url("https://imageflow-resources.s3-us-west-2.amazonaws.com/test_inputs/1_webp_a.webp".to_owned())),
-               Some(IoEnum::OutputBuffer),
+    smoke_test(Some(IoTestEnum::Url("https://imageflow-resources.s3-us-west-2.amazonaws.com/test_inputs/1_webp_a.webp".to_owned())),
+               Some(IoTestEnum::OutputBuffer),
                DEBUG_GRAPH,
                steps,
     ).unwrap();
@@ -437,8 +437,8 @@ fn smoke_test_gif_ir4(){
         }
     ];
 
-    smoke_test(Some(IoEnum::Url("https://s3-us-west-2.amazonaws.com/imageflow-resources/test_inputs/waterhouse.jpg".to_owned())),
-               Some(IoEnum::OutputBuffer),
+    smoke_test(Some(IoTestEnum::Url("https://s3-us-west-2.amazonaws.com/imageflow-resources/test_inputs/waterhouse.jpg".to_owned())),
+               Some(IoTestEnum::OutputBuffer),
                DEBUG_GRAPH,
                steps,
     ).unwrap();
@@ -456,8 +456,8 @@ fn smoke_test_png_ir4(){
         }
     ];
 
-    smoke_test(Some(IoEnum::Url("https://user-images.githubusercontent.com/2650124/31182064-e1c54784-a8f0-11e7-8bb3-833bba872975.png".to_owned())),
-               Some(IoEnum::OutputBuffer),
+    smoke_test(Some(IoTestEnum::Url("https://user-images.githubusercontent.com/2650124/31182064-e1c54784-a8f0-11e7-8bb3-833bba872975.png".to_owned())),
+               Some(IoTestEnum::OutputBuffer),
                DEBUG_GRAPH,
                steps,
     ).unwrap();
@@ -474,8 +474,8 @@ fn test_encode_jpeg_smoke() {
         Node::Encode{ io_id: 1, preset: EncoderPreset::LibjpegTurbo {quality: Some(100), progressive: None, optimize_huffman_coding: None}}
     ];
 
-    smoke_test(Some(IoEnum::Url("https://s3-us-west-2.amazonaws.com/imageflow-resources/test_inputs/MarsRGB_v4_sYCC_8bit.jpg".to_owned())),
-               Some(IoEnum::OutputBuffer),
+    smoke_test(Some(IoTestEnum::Url("https://s3-us-west-2.amazonaws.com/imageflow-resources/test_inputs/MarsRGB_v4_sYCC_8bit.jpg".to_owned())),
+               Some(IoTestEnum::OutputBuffer),
                DEBUG_GRAPH,
                steps,
     ).unwrap();
@@ -489,8 +489,8 @@ fn test_encode_gif_smoke() {
         Node::Encode{ io_id: 1, preset: EncoderPreset::Gif}
     ];
 
-    smoke_test(Some(IoEnum::Url("https://s3-us-west-2.amazonaws.com/imageflow-resources/test_inputs/MarsRGB_v4_sYCC_8bit.jpg".to_owned())),
-               Some(IoEnum::OutputBuffer),
+    smoke_test(Some(IoTestEnum::Url("https://s3-us-west-2.amazonaws.com/imageflow-resources/test_inputs/MarsRGB_v4_sYCC_8bit.jpg".to_owned())),
+               Some(IoTestEnum::OutputBuffer),
                DEBUG_GRAPH,
                steps,
     ).unwrap();
@@ -506,8 +506,8 @@ fn test_encode_png32_smoke() {
         Node::Encode{ io_id: 1, preset: EncoderPreset::Libpng {depth: Some(PngBitDepth::Png32), matte: None,  zlib_compression: None}}
     ];
 
-    smoke_test(Some(IoEnum::Url("https://s3-us-west-2.amazonaws.com/imageflow-resources/test_inputs/MarsRGB_v4_sYCC_8bit.jpg".to_owned())),
-               Some(IoEnum::OutputBuffer),
+    smoke_test(Some(IoTestEnum::Url("https://s3-us-west-2.amazonaws.com/imageflow-resources/test_inputs/MarsRGB_v4_sYCC_8bit.jpg".to_owned())),
+               Some(IoTestEnum::OutputBuffer),
                DEBUG_GRAPH,
                steps,
     ).unwrap();
@@ -549,18 +549,13 @@ fn test_decode_png_and_scale_dimensions(){
     0x00, 0x00, 0x0A, 0x49, 0x44, 0x41, 0x54, 0x78, 0x9C, 0x63, 0x00, 0x01, 0x00, 0x00, 0x05, 0x00, 0x01,
         0x0D, 0x0A, 0x2D, 0xB4, 0x00, 0x00, 0x00, 0x00, 0x49, 0x45, 0x4E, 0x44, 0xAE, 0x42, 0x60, 0x82 ];
 
-    let png = imageflow_types::IoObject{
-        io_id: 0,
-        direction: imageflow_types::IoDirection::In,
 
-        io: IoEnum::ByteArray(tinypng)
-    };
     let steps = vec![
     Node::Decode{io_id: 0, commands: None},
     //Node::Crop { x1: 0, y1: 0, x2: 638, y2: 423},
     Node::Resample2D{w:300,h:200,  hints: None},
     ];
-    let (w, h) = get_result_dimensions(&steps, vec![png], false);
+    let (w, h) = get_result_dimensions(&steps, vec![ IoTestEnum::ByteArray(tinypng)], false);
     assert_eq!(w,300);
     assert_eq!(h,200);
 
@@ -704,60 +699,23 @@ fn test_idct_no_gamma_callback(info: &imageflow_types::ImageInfo) -> (Option<ima
 
 #[test]
 fn test_idct_linear(){
-    let matched = test_with_callback("ScaleIDCTFastvsSlow", IoEnum::Url("https://s3-us-west-2.amazonaws.com/imageflow-resources/test_inputs/roof_test_800x600.jpg".to_owned()),
+    let matched = test_with_callback("ScaleIDCTFastvsSlow", IoTestEnum::Url("https://s3-us-west-2.amazonaws.com/imageflow-resources/test_inputs/roof_test_800x600.jpg".to_owned()),
     test_idct_callback);
     assert!(matched);
 }
 
 #[test]
 fn test_idct_spatial_no_gamma(){
-    let matched = test_with_callback("ScaleIDCT_approx_gamma", IoEnum::Url("https://s3-us-west-2.amazonaws.com/imageflow-resources/test_inputs/roof_test_800x600.jpg".to_owned()),
+    let matched = test_with_callback("ScaleIDCT_approx_gamma", IoTestEnum::Url("https://s3-us-west-2.amazonaws.com/imageflow-resources/test_inputs/roof_test_800x600.jpg".to_owned()),
                                      test_idct_no_gamma_callback);
     assert!(matched);
 }
 //
 //#[test]
 //fn test_fail(){
-//    let matched = test_with_callback("ScaleIDCTFastvsSlow", IoEnum::Url("https://s3-us-west-2.amazonaws.com/imageflow-resources/test_inputs/roof_test_800x600.jpg".to_owned()),
+//    let matched = test_with_callback("ScaleIDCTFastvsSlow", IoTestEnum::Url("https://s3-us-west-2.amazonaws.com/imageflow-resources/test_inputs/roof_test_800x600.jpg".to_owned()),
 //                                     test_idct_callback_no_gamma);
 //    assert!(matched);
 //}
 
-fn test_with_callback(checksum_name: &str, input: IoEnum, callback: fn(&imageflow_types::ImageInfo) -> (Option<imageflow_types::DecoderCommand>, Vec<Node>) ) -> bool{
-    let mut context = Context::create().unwrap();
-    let matched:bool;
-
-    unsafe {
-        ::imageflow_core::parsing::IoTranslator{}.add_all(&mut context, vec![imageflow_types::IoObject{ io_id:0, direction: IoDirection::In, io: input}]).unwrap();
-
-
-        let image_info = context.get_image_info(0).unwrap();
-
-        let (tell_decoder, mut steps): (Option<imageflow_types::DecoderCommand>, Vec<Node>) = callback(&image_info);
-
-        if let Some(what) = tell_decoder {
-            let send_hints = imageflow_types::TellDecoder001 {
-                io_id: 0,
-                command: what
-            };
-            let send_hints_str = serde_json::to_string_pretty(&send_hints).unwrap();
-            context.message("v1/tell_decoder", send_hints_str.as_bytes()).1.unwrap();
-        }
-
-
-        let mut bit = BitmapBgraContainer::empty();
-        steps.push(bit.get_node());
-
-        let send_execute = imageflow_types::Execute001{
-            framewise: imageflow_types::Framewise::Steps(steps),
-            graph_recording: None
-        };
-        context.execute_1(send_execute).unwrap();
-
-        let ctx = ChecksumCtx::visuals(&context);
-        matched = bitmap_regression_check(&ctx, bit.bitmap(&context).unwrap(), checksum_name, 500)
-    }
-    context.destroy().unwrap();
-    matched
-}
 

@@ -34,10 +34,8 @@ extern crate error_chain;
 extern crate lazy_static;
 
 extern crate rand;
-extern crate reqwest;
-extern crate hyper_native_tls;
+
 extern crate regex;
-extern crate hyper;
 extern crate blake2_rfc;
 extern crate twox_hash;
 extern crate chrono;
@@ -60,23 +58,15 @@ extern crate smallvec;
 extern crate mockito;
 
 extern crate digest;
-
-#[cfg(not(any(target_os = "windows", target_os = "macos")))]
-extern crate openssl;
-#[cfg(not(any(target_os = "windows", target_os = "macos")))]
-extern crate hyper_openssl;
-
 pub mod identifier_styles;
 pub mod preludes;
 pub mod filesystem;
-pub mod fetching;
 pub mod hashing;
 pub mod process_testing;
 pub mod process_capture;
 pub mod colors;
 pub mod debug;
 pub mod util;
-
 
 pub mod timeywimey{
     pub fn time_bucket(seconds_per_bucket: u64, bucket_count: u64) -> u64{

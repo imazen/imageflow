@@ -12,6 +12,25 @@ use self::imageflow_core::test_helpers::process_testing::ProcOutputExtras;
 
 
 #[derive(Clone,Debug,PartialEq)]
+pub enum TestImageSource {
+    Url(String),
+    Blank(BlankImage)
+}
+
+impl TestImageSource{
+    pub fn get_bytes(&self) -> Vec<u8>{
+        match *self{
+            TestImageSource::Url(ref url) => {
+                ::imageflow_http_helpers::fetch_bytes(url).unwrap()
+            },
+            TestImageSource::Blank(ref blank) => {
+                blank.generate().bytes
+            }
+        }
+    }
+}
+
+#[derive(Clone,Debug,PartialEq)]
 enum ReplacementInput{
     File{path: String, source: TestImageSource
     },

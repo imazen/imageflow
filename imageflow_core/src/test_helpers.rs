@@ -63,24 +63,6 @@ pub mod process_testing {
 }
 
 #[derive(Clone,Debug,PartialEq)]
-pub enum TestImageSource {
-    Url(String),
-    Blank(BlankImage)
-}
-
-impl TestImageSource{
-    pub fn get_bytes(&self) -> Vec<u8>{
-        match *self{
-            TestImageSource::Url(ref url) => {
-                ::imageflow_helpers::fetching::fetch_bytes(url).unwrap()
-            },
-            TestImageSource::Blank(ref blank) => {
-                blank.generate().bytes
-            }
-        }
-    }
-}
-#[derive(Clone,Debug,PartialEq)]
 pub struct BlankImage{
     pub w: u32,
     pub h: u32,
@@ -89,7 +71,7 @@ pub struct BlankImage{
 }
 
 impl BlankImage{
-    fn generate(&self) -> stateless::BuildOutput{
+    pub fn generate(&self) -> stateless::BuildOutput{
         // Invalid read here; the result of create_canvas is not being accessed correctly.
         let req = stateless::BuildRequest {
             inputs: vec![],

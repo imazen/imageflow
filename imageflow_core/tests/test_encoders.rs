@@ -9,10 +9,10 @@ extern crate smallvec;
 
 pub mod common;
 use crate::common::*;
-use crate::common::default_build_config;
+
 
 use imageflow_core::{Context, ErrorKind, FlowError, CodeLocation};
-use s::CommandStringKind;
+use s::{CommandStringKind};
 
 
 const DEBUG_GRAPH: bool = false;
@@ -25,7 +25,7 @@ fn test_encode_png() {
         maximum_deflate: None
     });
 
-    compare_encoded_to_source(s::IoEnum::Url(FRYMIRE_URL.to_owned()),
+    compare_encoded_to_source(IoTestEnum::Url(FRYMIRE_URL.to_owned()),
                               DEBUG_GRAPH,
                               Constraints {
                                   max_file_size: Some(390_000),
@@ -45,7 +45,7 @@ fn test_encode_pngquant() {
         minimum_quality: None
     });
 
-    compare_encoded_to_source(s::IoEnum::Url(FRYMIRE_URL.to_owned()),
+    compare_encoded_to_source(IoTestEnum::Url(FRYMIRE_URL.to_owned()),
                               DEBUG_GRAPH,
                               Constraints {
                                   max_file_size: Some(280_000),
@@ -58,7 +58,7 @@ fn test_encode_pngquant() {
 fn test_encode_pngquant_command() {
     let steps = reencode_with_command("png.min_quality=0&png.quality=100");
 
-    compare_encoded_to_source(s::IoEnum::Url(FRYMIRE_URL.to_owned()),
+    compare_encoded_to_source(IoTestEnum::Url(FRYMIRE_URL.to_owned()),
                               DEBUG_GRAPH,
                               Constraints {
                                   max_file_size: Some(280_000),
@@ -76,7 +76,7 @@ fn test_encode_pngquant_fallback() {
         minimum_quality: Some(99)
     });
 
-    compare_encoded_to_source(s::IoEnum::Url(FRYMIRE_URL.to_owned()),
+    compare_encoded_to_source(IoTestEnum::Url(FRYMIRE_URL.to_owned()),
                               DEBUG_GRAPH,
                               Constraints {
                                   max_file_size: None,
@@ -89,7 +89,7 @@ fn test_encode_pngquant_fallback() {
 fn test_encode_pngquant_fallback_command() {
     let steps =  reencode_with_command("png.min_quality=99&png.quality=100");
 
-    compare_encoded_to_source(s::IoEnum::Url(FRYMIRE_URL.to_owned()),
+    compare_encoded_to_source(IoTestEnum::Url(FRYMIRE_URL.to_owned()),
                               DEBUG_GRAPH,
                               Constraints {
                                   max_file_size: None,
@@ -105,7 +105,7 @@ fn test_encode_lodepng() {
         maximum_deflate: None
     });
 
-    compare_encoded_to_source(s::IoEnum::Url(FRYMIRE_URL.to_owned()),
+    compare_encoded_to_source(IoTestEnum::Url(FRYMIRE_URL.to_owned()),
                               DEBUG_GRAPH,
                               Constraints {
                                   max_file_size: Some(390_000),
@@ -131,7 +131,7 @@ fn test_encode_mozjpeg_resized() {
         },
     ];
 
-    compare_encoded_to_source(s::IoEnum::Url(FRYMIRE_URL.to_owned()),
+    compare_encoded_to_source(IoTestEnum::Url(FRYMIRE_URL.to_owned()),
                               DEBUG_GRAPH,
                               Constraints {
                                   max_file_size: Some(160_000),
@@ -148,7 +148,7 @@ fn test_encode_mozjpeg() {
                 quality: Some(50),
             });
 
-    compare_encoded_to_source(s::IoEnum::Url(FRYMIRE_URL.to_owned()),
+    compare_encoded_to_source(IoTestEnum::Url(FRYMIRE_URL.to_owned()),
                               DEBUG_GRAPH,
                               Constraints {
                                   max_file_size: Some(301_000),
@@ -162,7 +162,7 @@ fn test_encode_mozjpeg() {
 fn test_encode_webp_lossless() {
     let steps = reencode_with(s::EncoderPreset::WebPLossless);
 
-    compare_encoded_to_source(s::IoEnum::Url(FRYMIRE_URL.to_owned()),
+    compare_encoded_to_source(IoTestEnum::Url(FRYMIRE_URL.to_owned()),
                               DEBUG_GRAPH,
                               Constraints {
                                   max_file_size: Some(301_000),
@@ -176,7 +176,7 @@ fn test_encode_webp_lossless() {
 fn test_roundtrip_webp_lossless() {
     let steps = reencode_with(s::EncoderPreset::WebPLossless);
 
-    compare_encoded_to_source(s::IoEnum::Url("https://s3-us-west-2.amazonaws.com/imageflow-resources/test_inputs/5_webp_ll.webp".to_owned()),
+    compare_encoded_to_source(IoTestEnum::Url("https://s3-us-west-2.amazonaws.com/imageflow-resources/test_inputs/5_webp_ll.webp".to_owned()),
                               DEBUG_GRAPH,
                               Constraints {
                                   max_file_size: Some(301_000),
@@ -190,7 +190,7 @@ fn test_roundtrip_webp_lossless() {
 fn test_encode_webp_lossy() {
     let steps = reencode_with(s::EncoderPreset::WebPLossy{quality:90f32});
 
-    compare_encoded_to_source(s::IoEnum::Url(FRYMIRE_URL.to_owned()),
+    compare_encoded_to_source(IoTestEnum::Url(FRYMIRE_URL.to_owned()),
                               DEBUG_GRAPH,
                               Constraints {
                                   max_file_size: Some(425_000),
@@ -222,24 +222,27 @@ pub fn reencode_with_command(command: &str) -> Vec<s::Node>{
 
 /// Compares the encoded result of a given job to the source. If there is a checksum mismatch, a percentage of off-by-one bytes can be allowed.
 /// The output io_id is 1
-pub fn compare_encoded_to_source(input: s::IoEnum, debug: bool, require: Constraints, steps: Vec<s::Node>) -> bool {
+pub fn compare_encoded_to_source(input: IoTestEnum, debug: bool, require: Constraints, steps: Vec<s::Node>) -> bool {
 
     let input_copy = input.clone();
 
-    let mut io = vec![s::IoEnum::OutputBuffer.into_output(1)];
-    io.insert(0, input.into_input(0));
-    let build = s::Build001 {
-        builder_config: Some(default_build_config(debug)),
-        io,
+
+
+
+    let execute = s::Execute001 {
+        graph_recording: default_graph_recording(debug),
         framewise: s::Framewise::Steps(steps)
     };
 
     if debug {
-        println!("{}", serde_json::to_string_pretty(&build).unwrap());
+        println!("{}", serde_json::to_string_pretty(&execute).unwrap());
     }
 
     let mut context = Context::create().unwrap();
-    let _ = context.build_1(build).unwrap();
+    IoTestTranslator{}.add(&mut context, 0, input).unwrap();
+    IoTestTranslator{}.add(&mut context, 1, IoTestEnum::OutputBuffer).unwrap();
+
+    let _ = context.execute_1(execute).unwrap();
 
     let bytes = context.get_output_buffer_slice(1).unwrap();
 

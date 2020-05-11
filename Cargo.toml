@@ -1,6 +1,7 @@
 [workspace]
 members = [
     "imageflow_helpers",
+    "imageflow_http_helpers",
     "imageflow_types",
     "imageflow_riapi",
     "imageflow_core",

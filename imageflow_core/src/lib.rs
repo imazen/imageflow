@@ -69,7 +69,6 @@ use std::fmt;
 use std::borrow::Cow;
 use petgraph::graph::NodeIndex;
 
-
 #[doc(hidden)]
 mod internal_prelude {
     #[doc(hidden)]
