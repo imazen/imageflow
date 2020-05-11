@@ -43,7 +43,7 @@ smallvec = "*"
 itertools = "*"
 imgref = "1.4.1"
 
-dssim = "2.9"
+
 gif = "*"
 rgb = "0.8.16"
 imagequant = "2.12.5"
@@ -73,7 +73,7 @@ evalchroma = "0.1.1"
 [dev-dependencies]
 hyper = "0.13"
 imageflow_http_helpers = { path = "../imageflow_http_helpers", version = "*" }
-
+dssim = "2.9"
 
 [features]
 default = []
