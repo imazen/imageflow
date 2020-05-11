@@ -46,12 +46,11 @@ extern crate backtrace;
 extern crate base64;
 extern crate sha2;
 extern crate unicase;
-extern crate app_dirs;
+
 extern crate chashmap;
 extern crate parking_lot;
 extern crate time;
 extern crate uuid;
-extern crate lockless;
 extern crate smallvec;
 #[cfg(test)]
 extern crate mockito;

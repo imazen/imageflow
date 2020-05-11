@@ -30,7 +30,7 @@ digest = "*"
 
 uuid = { version = "*", features= ["v4", "v5"]}
 
-lockless = { git="https://github.com/Diggsey/lockless", rev="15264477a4889a9cb2964180b33a53919d72d3fc" }
+#lockless = { git="https://github.com/Diggsey/lockless", rev="15264477a4889a9cb2964180b33a53919d72d3fc" }
 smallvec = "*"
 # regex
 regex = { version = "1" } #, features = ["pattern"]
@@ -42,7 +42,7 @@ base64 = "0.12"
 zip = { version = "0.5", default-features = false }
 
 
-app_dirs = "^1.1.1"
+
 chashmap = "2.2"
 parking_lot = {version = "0.10"}
 
