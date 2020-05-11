@@ -34,7 +34,6 @@ blake2-rfc = "0.2"
 
 ## Crate-specific dependencies
 
-clap = "2"
 threadpool = "1"
 petgraph = "0.4" #Upgrade to 0.5
 daggy = "0.5" # Upgrade to 0.6
