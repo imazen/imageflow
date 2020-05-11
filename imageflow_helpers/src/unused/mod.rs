@@ -307,3 +307,24 @@ impl LicenseManagerSingleton{
 
 }
 
+
+// We'll put our errors in an `errors` module, and other modules in
+// this crate will `use errors::*;` to get access to everything
+// `error_chain!` creates.
+#[allow(unused_doc_comments)]
+#[allow(renamed_and_removed_lints)]
+mod errors {
+    // Create the Error, ErrorKind, ResultExt, and Result types
+
+    error_chain! {
+
+        errors{
+           LicenseCorrupted(msg: String) {
+                description("Please verify/reinstall license; license corrupt.")
+                display("Please verify/reinstall license; license corrupt: {}", msg)
+           }
+           RsaDecryptInputLargerThanModulus
+        }
+
+    }
+}

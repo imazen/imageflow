@@ -47,7 +47,7 @@ zip = { version = "0.5", default-features = false }
 unicase = "2"
 # HTTPS is a little bit of a nightmare
 
-error-chain = "*"
+#error-chain = "*"
 
 
 backtrace = "0.3"
