@@ -406,42 +406,6 @@ bool flow_bitmap_float_approx_gaussian_blur_rows(flow_c * context, struct flow_b
     return true;
 }
 
-// static void flow_bitmap_bgra_sharpen_in_place_x(struct flow_bitmap_bgra * im, float pct)
-//{
-//    const float n = (float)(-pct / (pct - 1)); //if 0 < pct < 1
-//    const float c_o = n / -2.0f;
-//    const float c_i = n + 1;
-//
-//    uint32_t y, current, next;
-//
-//    const uint32_t sy = im->h;
-//    const uint32_t stride = im->stride;
-//    const uint32_t bytes_pp = flow_pixel_format_bytes_per_pixel (im->fmt);
-//
-//
-//    if (pct <= 0 || im->w < 3 || bytes_pp < 3) return;
-//
-//    for (y = 0; y < sy; y++)
-//    {
-//
-//        unsigned char *row = im->pixels + y * stride;
-//        float left_b = (float)row[0];
-//        float left_g = (float)row[1];
-//        float left_r = (float)row[2];
-//        for (current = bytes_pp, next = bytes_pp + bytes_pp; next < stride; current = next,
-// next += bytes_pp){
-//            const float b = row[current + 0];
-//            const float g = row[current + 1];
-//            const float r = row[current + 2];
-//            row[current + 0] = left_b * c_o + b * c_i + row[current + bytes_pp + 0] * c_o;
-//            row[current + 1] = left_g * c_o + g * c_i + row[current + bytes_pp + 1] * c_o;
-//            row[current + 2] = left_r * c_o + r * c_i + row[current + bytes_pp + 2] * c_o;
-//            left_b = b;
-//            left_g = g;
-//            left_r = r;
-//        }
-//    }
-//}
 
 FLOW_HINT_HOT FLOW_HINT_UNSAFE_MATH_OPTIMIZATIONS static inline void transpose4x4_SSE(float * A, float * B,
                                                                                       const int lda, const int ldb)
