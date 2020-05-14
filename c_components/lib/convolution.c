@@ -97,7 +97,7 @@ struct flow_convolution_kernel * flow_convolution_kernel_create_gaussian_normali
     return kernel;
 }
 
-struct flow_convolution_kernel * flow_convolution_kernel_create_guassian_sharpen(flow_c * context, double stdDev,
+struct flow_convolution_kernel * flow_convolution_kernel_create_gaussian_sharpen(flow_c * context, double stdDev,
                                                                                  uint32_t radius)
 {
     struct flow_convolution_kernel * kernel = flow_convolution_kernel_create_guassian(context, stdDev, radius);

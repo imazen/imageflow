@@ -347,7 +347,7 @@ PUB double flow_convolution_kernel_sum(struct flow_convolution_kernel * kernel);
 PUB void flow_convolution_kernel_normalize(struct flow_convolution_kernel * kernel, float desiredSum);
 PUB struct flow_convolution_kernel * flow_convolution_kernel_create_gaussian_normalized(flow_c * c, double stdDev,
                                                                                         uint32_t radius);
-PUB struct flow_convolution_kernel * flow_convolution_kernel_create_guassian_sharpen(flow_c * c, double stdDev,
+PUB struct flow_convolution_kernel * flow_convolution_kernel_create_gaussian_sharpen(flow_c * c, double stdDev,
                                                                                      uint32_t radius);
 
 PUB bool flow_bitmap_bgra_populate_histogram(flow_c * c, struct flow_bitmap_bgra * bmp, uint64_t * histograms,
