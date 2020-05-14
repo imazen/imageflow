@@ -43,12 +43,16 @@ static void jpeg_error_exit(j_common_ptr cinfo) {
 }
 
 //! Ignores warnings
-static void flow_jpeg_output_message(j_common_ptr cinfo)
+static void flow_jpeg_ignore_message(j_common_ptr cinfo)
 {
     // char buffer[JMSG_LENGTH_MAX];
     // cinfo->err->format_message(cinfo, buffer);
     // TODO: maybe create a warnings log in flow_context, and append? Users aren't reading stderr
     // fprintf(stderr, "%s", &buffer[0]);
+}
+//! Ignores warnings
+static void flow_jpeg_ignore_emit(j_common_ptr cinfo, int level)
+{
 }
 
 static boolean marker_is_icc(jpeg_saved_marker_ptr marker)
@@ -436,7 +440,8 @@ static bool flow_codecs_jpg_decoder_BeginRead(flow_c * c, struct flow_codecs_jpe
     /* We set up the normal JPEG error routines, then override error_exit and output_message. */
     state->cinfo->err = jpeg_std_error(&state->error_mgr);
     state->error_mgr.error_exit = jpeg_error_exit;
-    state->error_mgr.output_message = flow_jpeg_output_message; // Prevent USE_WINDOWS_MESSAGEBOX
+    state->error_mgr.emit_message = flow_jpeg_ignore_emit;
+    state->error_mgr.output_message = flow_jpeg_ignore_message; // Prevent USE_WINDOWS_MESSAGEBOX
 
 
     /* Establish the setjmp return context for jpeg_error_exit to use. */
