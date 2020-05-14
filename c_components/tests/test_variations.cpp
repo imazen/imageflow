@@ -1061,10 +1061,7 @@ bool scale_down(flow_c * c, uint8_t * bytes, size_t bytes_count, bool scale_luma
         return false;
     }
 
-    if (!flow_bitmap_bgra_sharpen_block_edges(c, *ref, target_block_size, post_sharpen)) {
-        FLOW_add_to_callstack(c);
-        return false;
-    }
+
     if (!flow_job_destroy(c, job)) {
         FLOW_add_to_callstack(c);
         return false;
