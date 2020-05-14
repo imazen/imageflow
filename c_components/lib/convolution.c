@@ -55,14 +55,14 @@ void flow_convolution_kernel_destroy(flow_c * context, struct flow_convolution_k
     FLOW_free(context, kernel);
 }
 
-struct flow_convolution_kernel * flow_convolution_kernel_create_guassian(flow_c * context, double stdDev,
+struct flow_convolution_kernel * flow_convolution_kernel_create_gaussian(flow_c * context, double stdDev,
                                                                          uint32_t radius)
 {
     struct flow_convolution_kernel * k = flow_convolution_kernel_create(context, radius);
     if (k != NULL) {
         for (uint32_t i = 0; i < k->width; i++) {
 
-            k->kernel[i] = (float)ir_guassian(abs((int)radius - (int)i), stdDev);
+            k->kernel[i] = (float)ir_gaussian(abs((int)radius - (int)i), stdDev);
         }
     }
     return k;
@@ -90,7 +90,7 @@ void flow_convolution_kernel_normalize(struct flow_convolution_kernel * kernel, 
 struct flow_convolution_kernel * flow_convolution_kernel_create_gaussian_normalized(flow_c * context, double stdDev,
                                                                                     uint32_t radius)
 {
-    struct flow_convolution_kernel * kernel = flow_convolution_kernel_create_guassian(context, stdDev, radius);
+    struct flow_convolution_kernel * kernel = flow_convolution_kernel_create_gaussian(context, stdDev, radius);
     if (kernel != NULL) {
         flow_convolution_kernel_normalize(kernel, 1);
     }
@@ -100,7 +100,7 @@ struct flow_convolution_kernel * flow_convolution_kernel_create_gaussian_normali
 struct flow_convolution_kernel * flow_convolution_kernel_create_gaussian_sharpen(flow_c * context, double stdDev,
                                                                                  uint32_t radius)
 {
-    struct flow_convolution_kernel * kernel = flow_convolution_kernel_create_guassian(context, stdDev, radius);
+    struct flow_convolution_kernel * kernel = flow_convolution_kernel_create_gaussian(context, stdDev, radius);
     if (kernel != NULL) {
         double sum = flow_convolution_kernel_sum(kernel);
         for (uint32_t i = 0; i < kernel->width; i++) {

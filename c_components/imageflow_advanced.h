@@ -340,7 +340,7 @@ PUB void flow_interpolation_line_contributions_destroy(flow_c * c, struct flow_i
 PUB struct flow_convolution_kernel * flow_convolution_kernel_create(flow_c * c, uint32_t radius);
 PUB void flow_convolution_kernel_destroy(flow_c * c, struct flow_convolution_kernel * kernel);
 
-PUB struct flow_convolution_kernel * flow_convolution_kernel_create_guassian(flow_c * c, double stdDev,
+PUB struct flow_convolution_kernel * flow_convolution_kernel_create_gaussian(flow_c * c, double stdDev,
                                                                              uint32_t radius);
 // The only error these 2 could generate would be a null pointer. Should they have a context just for this?
 PUB double flow_convolution_kernel_sum(struct flow_convolution_kernel * kernel);

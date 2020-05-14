@@ -613,7 +613,7 @@ gstreamer
 gstvaapidecode
 gsub
 gtk
-guassian
+gaussian
 GUINT
 gunzip
 gvc
