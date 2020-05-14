@@ -443,65 +443,6 @@ bool flow_bitmap_float_approx_gaussian_blur_rows(flow_c * context, struct flow_b
 //    }
 //}
 
-static void flow_bitmap_bgra32_sharpen_block_edges_x(struct flow_bitmap_bgra * im, int block_size, float pct)
-{
-    pct = pct / 100.0f;
-    if (pct < -1.0f)
-        pct = -1;
-    if (pct > 1.0f)
-        pct = 1;
-    const float n = (float)(-pct / (pct - 1.0)); // if 0 < pct < 1
-    // indexes used are coord % block_size
-    float c_l[7]; // left coefficient
-    float c_c[7]; // center
-    float c_r[7]; // right
-    for (int i = 0; i < block_size; i++) {
-        c_c[i] = 1;
-        c_l[i] = 0;
-        c_r[i] = 0;
-    }
-    if (block_size == 1) {
-        c_c[0] = n + 1;
-        c_r[0] = c_l[0] = n / -2.0f;
-    } else {
-        // Only adjust edge pixels for each block;
-        c_c[0] = c_c[block_size - 1] = n / 2.0f + 1;
-        c_l[0] = c_r[block_size - 1] = n / -2.0f;
-    }
-
-    uint32_t y, current, next;
-    const uint32_t sy = im->h;
-    const uint32_t stride = im->stride;
-    const uint32_t bytes_pp = 4;
-
-    if (im->w < 3 || flow_pixel_format_bytes_per_pixel(im->fmt) != 4)
-        return;
-
-    for (y = 0; y < sy; y++) {
-        unsigned char * row = im->pixels + y * stride;
-        float left_b = (float)row[0];
-        float left_g = (float)row[1];
-        float left_r = (float)row[2];
-        int coord = 0;
-        for (current = bytes_pp, next = bytes_pp + bytes_pp; next < stride; current = next, next += bytes_pp) {
-            const float b = row[current + 0];
-            const float g = row[current + 1];
-            const float r = row[current + 2];
-            const int weight_ix = coord % block_size;
-            row[current + 0] = uchar_clamp_ff(left_b * c_l[weight_ix] + b * c_c[weight_ix]
-                                              + row[current + bytes_pp + 0] * c_r[weight_ix]);
-            row[current + 1] = uchar_clamp_ff(left_g * c_l[weight_ix] + g * c_c[weight_ix]
-                                              + row[current + bytes_pp + 1] * c_r[weight_ix]);
-            row[current + 2] = uchar_clamp_ff(left_r * c_l[weight_ix] + r * c_c[weight_ix]
-                                              + row[current + bytes_pp + 2] * c_r[weight_ix]);
-            left_b = b;
-            left_g = g;
-            left_r = r;
-            coord++;
-        }
-    }
-}
-
 FLOW_HINT_HOT FLOW_HINT_UNSAFE_MATH_OPTIMIZATIONS static inline void transpose4x4_SSE(float * A, float * B,
                                                                                       const int lda, const int ldb)
 {
@@ -705,36 +646,7 @@ bool flow_bitmap_bgra_transpose_slow(flow_c * c, struct flow_bitmap_bgra * from,
 }
 
 FLOW_HINT_HOT FLOW_HINT_UNSAFE_MATH_OPTIMIZATIONS
-
-    bool
-    flow_bitmap_bgra_sharpen_block_edges(flow_c * c, struct flow_bitmap_bgra * im, int block_size, float pct)
-{
-    if (pct == 0.0f)
-        return true;
-    if (im->fmt != flow_bgra32 || im->fmt != flow_bgr32) {
-        FLOW_error(c, flow_status_Unsupported_pixel_format);
-        return false;
-    }
-    flow_bitmap_bgra32_sharpen_block_edges_x(im, block_size, pct);
-    struct flow_bitmap_bgra * temp = flow_bitmap_bgra_create(c, im->h, im->w, false, im->fmt);
-    if (temp == NULL) {
-        FLOW_add_to_callstack(c);
-        return false;
-    }
-    if (!flow_bitmap_bgra_transpose(c, im, temp)) {
-        flow_bitmap_bgra_destroy(c, temp);
-        FLOW_add_to_callstack(c);
-        return false;
-    }
-    flow_bitmap_bgra32_sharpen_block_edges_x(temp, block_size, pct);
-    if (!flow_bitmap_bgra_transpose(c, temp, im)) {
-        flow_bitmap_bgra_destroy(c, temp);
-        FLOW_add_to_callstack(c);
-        return false;
-    }
-    flow_bitmap_bgra_destroy(c, temp);
-    return true;
-}
+    
 FLOW_HINT_HOT
 
 static void SharpenBgraFloatInPlace(float * buf, unsigned int count, double pct, int step)
