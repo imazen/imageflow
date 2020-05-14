@@ -825,11 +825,6 @@ mod long_term{
                                                   canvas: *mut BitmapBgra,
                                                   info: *const Scale2dRenderToCanvas1d)
                                                   -> bool;
-        pub fn flow_node_execute_render_to_canvas_1d(c: *mut ImageflowContext,
-                                                     input: *mut BitmapBgra,
-                                                     canvas: *mut BitmapBgra,
-                                                     info: *const RenderToCanvas1d)
-                                                     -> bool;
 
         pub fn flow_bitmap_bgra_fill_rect(c: *mut ImageflowContext,
                                           input: *mut BitmapBgra,

@@ -160,20 +160,8 @@ typedef struct flow_context flow_c;
 
 PUB bool write_frame_to_disk(flow_c * c, const char * path, struct flow_bitmap_bgra * b);
 
-struct flow_nodeinfo_render_to_canvas_1d;
 struct flow_nodeinfo_scale2d_render_to_canvas1d;
 
-struct flow_nodeinfo_render_to_canvas_1d {
-    // There will need to be consistency checks against the createcanvas node
-
-    flow_interpolation_filter interpolation_filter;
-    // struct flow_interpolation_details * interpolationDetails;
-    int32_t scale_to_width;
-
-    bool transpose_on_write;
-
-    flow_working_floatspace scale_in_colorspace;
-};
 
 struct flow_nodeinfo_scale2d_render_to_canvas1d {
     // There will need to be consistency checks against the createcanvas node
@@ -189,9 +177,7 @@ struct flow_nodeinfo_scale2d_render_to_canvas1d {
 
     flow_working_floatspace scale_in_colorspace;
 };
-PUB bool flow_node_execute_render_to_canvas_1d(flow_c * c, struct flow_bitmap_bgra * input,
-                                               struct flow_bitmap_bgra * canvas,
-                                               struct flow_nodeinfo_render_to_canvas_1d * info);
+
 PUB bool flow_node_execute_scale2d_render1d(
     flow_c * c, struct flow_bitmap_bgra * input, struct flow_bitmap_bgra * canvas,
     struct flow_nodeinfo_scale2d_render_to_canvas1d * info) FLOW_HINT_HOT FLOW_HINT_UNSAFE_MATH_OPTIMIZATIONS;
