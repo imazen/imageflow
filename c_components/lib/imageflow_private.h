@@ -195,8 +195,6 @@ PUB bool flow_bitmap_float_convolve_rows(flow_c * c, struct flow_bitmap_float * 
                                          struct flow_convolution_kernel * kernel, uint32_t convolve_channels,
                                          uint32_t from_row, int row_count);
 
-PUB bool flow_bitmap_float_sharpen_rows(flow_c * c, struct flow_bitmap_float * im, uint32_t start_row,
-                                        uint32_t row_count, double pct);
 
 PUB bool flow_bitmap_float_convert_srgb_to_linear(flow_c * c, struct flow_colorcontext_info * colorcontext,
                                                   struct flow_bitmap_bgra * src, uint32_t from_row,
