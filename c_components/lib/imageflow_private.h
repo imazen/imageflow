@@ -241,11 +241,6 @@ PUB bool flow_bitmap_float_copy_linear_over_srgb(flow_c * c, struct flow_colorco
 PUB bool flow_bitmap_bgra_fill_rect(flow_c * c, struct flow_bitmap_bgra * b, uint32_t x1, uint32_t y1, uint32_t x2,
                                     uint32_t y2, uint32_t color_srgb_argb);
 
-PUB bool flow_halve(flow_c * c, struct flow_colorcontext_info * colorcontext, const struct flow_bitmap_bgra * from,
-                    struct flow_bitmap_bgra * to, int divisor);
-
-PUB bool flow_halve_in_place(flow_c * c, struct flow_colorcontext_info * colorcontext, struct flow_bitmap_bgra * from,
-                             int divisor);
 
 PUB void flow_scale_spatial_srgb_7x7(uint8_t input[64], uint8_t ** output_rows, uint32_t output_col);
 
