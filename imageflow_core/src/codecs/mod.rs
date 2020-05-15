@@ -58,6 +58,7 @@ enum CodecKind{
 #[derive(PartialEq, Copy, Clone)]
 pub enum NamedDecoders{
     MozJpegDecoder,
+    MozJpegRsDecoder,
     WICJpegDecoder,
     ImageRsJpegDecoder,
     LibPngDecoder,
@@ -67,7 +68,7 @@ pub enum NamedDecoders{
 impl NamedDecoders{
     pub fn works_for_magic_bytes(&self, bytes: &[u8]) -> bool{
         match self{
-            NamedDecoders::WICJpegDecoder | NamedDecoders::ImageRsJpegDecoder | NamedDecoders::MozJpegDecoder => {
+            NamedDecoders::WICJpegDecoder | NamedDecoders::ImageRsJpegDecoder | NamedDecoders::MozJpegDecoder | NamedDecoders::MozJpegRsDecoder => {
                 bytes.starts_with(b"\xFF\xD8\xFF")
             },
             NamedDecoders::GifRsDecoder => {
@@ -86,6 +87,7 @@ impl NamedDecoders{
         match self{
             NamedDecoders::LibPngDecoder => Ok(ClassicDecoder::create(c, io, io_id, 1)?),
             NamedDecoders::MozJpegDecoder => Ok(ClassicDecoder::create(c, io, io_id, 3)?),
+            NamedDecoders::MozJpegRsDecoder => Ok(Box::new(mozjpeg_decoder::MozJpegDecoder::create(c, io, io_id)?)),
             NamedDecoders::GifRsDecoder => Ok(Box::new(gif::GifDecoder::create(c, io, io_id)?)),
             NamedDecoders::ImageRsJpegDecoder => Ok(Box::new(jpeg_decoder::JpegDecoder::create(c, io, io_id)?)),
             NamedDecoders::WebPDecoder => Ok(Box::new(webp::WebPDecoder::create(c, io, io_id)?)),
@@ -113,7 +115,7 @@ impl Default for EnabledCodecs {
     fn default() -> Self {
         EnabledCodecs{
             decoders: smallvec::SmallVec::from_slice(
-                &[NamedDecoders::MozJpegDecoder,
+                &[NamedDecoders::MozJpegRsDecoder,
                     NamedDecoders::LibPngDecoder,
                     NamedDecoders::GifRsDecoder,
                     NamedDecoders::WebPDecoder]),

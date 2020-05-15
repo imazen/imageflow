@@ -344,6 +344,14 @@ impl BitmapBgra {
         Ok(())
     }
 
+    pub fn get_row_pointers(&self) -> Result<Vec<*mut u8>>{
+        let mut vec = Vec::with_capacity(self.h as usize);
+        for y in 0..self.h{
+            vec.push(unsafe{ self.pixels.offset(self.stride as isize * y as isize) } )
+        }
+        Ok(vec)
+    }
+
 
     pub fn create(c: &crate::Context, w: u32, h: u32, format: PixelFormat, color: s::Color) -> Result<*mut BitmapBgra> {
         let flow_pointer = c.flow_c();
@@ -788,7 +796,7 @@ impl Rect{
 }
 
 
-type WrapJpegErrorHandler = extern fn(*mut c_void, *mut mozjpeg_sys::jpeg_common_struct, int32, *u8, int32) -> bool;
+type WrapJpegErrorHandler = extern fn(*mut c_void, *mut mozjpeg_sys::jpeg_common_struct, i32, *const u8, i32) -> bool;
 
 type WrapJpegSourceManagerFunc = extern fn(&mut mozjpeg_sys::jpeg_decompress_struct, *mut c_void) -> bool;
 type WrapJpegSourceManagerFillBufferFunc = extern fn(&mut mozjpeg_sys::jpeg_decompress_struct, *mut c_void, &mut bool) -> bool;
@@ -801,7 +809,14 @@ pub struct WrapJpegSourceManager {
     pub term_source_fn: Option<WrapJpegSourceManagerFunc>,
     pub fill_input_buffer_fn: Option<WrapJpegSourceManagerFillBufferFunc>,
     pub skip_input_data_fn: Option<WrapJpegSourceManagerSkipBytesFunc>,
-    pub custom_state: *mut void,
+    pub custom_state: *mut c_void,
+}
+
+#[repr(C)]
+pub enum JpegMarker{
+    App0 = 0xE0,
+    ICC = 0xE2,
+    EXIF = 0xE1
 }
 
 mod must_replace{}
@@ -849,19 +864,32 @@ mod long_term{
 
         pub fn wrap_jpeg_error_state_bytes() -> usize;
 
-        pub fn wrap_jpeg_setup_error_handler(codec_info: *mut ::mozjpeg_sys::jpeg_common_struct,
+        pub fn wrap_jpeg_setup_error_handler(codec_info: *mut ::mozjpeg_sys::jpeg_decompress_struct,
                                              error_state: *mut c_void,
                                              custom_state: *mut c_void,
                                              error_handler: WrapJpegErrorHandler);
 
-        pub fn wrap_jpeg_get_custom_state(codec_info: *mut ::mozjpeg_sys::jpeg_common_struct) -> *mut c_void;
+        pub fn wrap_jpeg_set_downscale_type(codec_info: *mut ::mozjpeg_sys::jpeg_decompress_struct,
+                                            scale_luma_spatially: bool,
+                                            gamma_correct_for_srgb_during_spatial_luma_scaling: bool);
+        pub fn wrap_jpeg_set_idct_method_selector(codec_info: *mut ::mozjpeg_sys::jpeg_decompress_struct);
+
+        pub fn wrap_jpeg_get_custom_state(codec_info: *mut ::mozjpeg_sys::jpeg_decompress_struct) -> *mut c_void;
         pub fn wrap_jpeg_create_decompress(codec_info: *mut ::mozjpeg_sys::jpeg_decompress_struct) -> bool;
 
         pub fn wrap_jpeg_setup_source_manager(source_manager: &mut WrapJpegSourceManager);
 
         pub fn wrap_jpeg_read_header(codec_info: *mut ::mozjpeg_sys::jpeg_decompress_struct) -> bool;
 
+        pub fn wrap_jpeg_start_decompress(codec_info: *mut ::mozjpeg_sys::jpeg_decompress_struct) -> bool;
 
+        pub fn wrap_jpeg_finish_decompress(codec_info: *mut ::mozjpeg_sys::jpeg_decompress_struct) -> bool;
+
+        pub fn wrap_jpeg_read_scan_lines(codec_info: *mut ::mozjpeg_sys::jpeg_decompress_struct,
+                                         scan_lines: *const *mut u8, max_scan_lines: u32,
+                                         scan_lines_read: * mut u32) -> bool;
+
+        pub fn wrap_jpeg_save_markers(codec_info: *mut ::mozjpeg_sys::jpeg_decompress_struct, marker_code: i32, length_limit: u32) -> bool;
     }
 }
 
