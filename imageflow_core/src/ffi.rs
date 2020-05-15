@@ -17,6 +17,7 @@ pub use imageflow_types::IoDirection;
 pub use imageflow_types::PixelFormat;
 use imageflow_types::PixelBuffer;
 use crate::internal_prelude::works_everywhere::*;
+use mozjpeg_sys::{c_void, c_long};
 
 // These are reused in the external ABI, but only as opaque pointers
 ///
@@ -779,20 +780,31 @@ pub struct Rect {
     pub x2: i32,
     pub y2: i32
 }
+
 impl Rect{
     pub fn failure() -> Rect{
         Rect{ x1: -1, y1: -1, x2: -1, y2: -1}
     }
 }
 
-mod must_replace{
-    use super::*;
-    use ::libc;
-    extern "C" {
 
-    }
+type WrapJpegErrorHandler = extern fn(*mut c_void, *mut mozjpeg_sys::jpeg_common_struct, int32, *u8, int32) -> bool;
 
+type WrapJpegSourceManagerFunc = extern fn(&mut mozjpeg_sys::jpeg_decompress_struct, *mut c_void) -> bool;
+type WrapJpegSourceManagerFillBufferFunc = extern fn(&mut mozjpeg_sys::jpeg_decompress_struct, *mut c_void, &mut bool) -> bool;
+type WrapJpegSourceManagerSkipBytesFunc = extern fn(&mut mozjpeg_sys::jpeg_decompress_struct, *mut c_void, c_long) -> bool;
+
+#[repr(C)]
+pub struct WrapJpegSourceManager {
+    pub shared_mgr: mozjpeg_sys::jpeg_source_mgr,
+    pub init_source_fn: Option<WrapJpegSourceManagerFunc>,
+    pub term_source_fn: Option<WrapJpegSourceManagerFunc>,
+    pub fill_input_buffer_fn: Option<WrapJpegSourceManagerFillBufferFunc>,
+    pub skip_input_data_fn: Option<WrapJpegSourceManagerSkipBytesFunc>,
+    pub custom_state: *mut void,
 }
+
+mod must_replace{}
 
 mod long_term{
     use super::*;
@@ -834,6 +846,22 @@ mod long_term{
                                           y2: u32,
                                           color_srgb_argb: u32)
                                           -> bool;
+
+        pub fn wrap_jpeg_error_state_bytes() -> usize;
+
+        pub fn wrap_jpeg_setup_error_handler(codec_info: *mut ::mozjpeg_sys::jpeg_common_struct,
+                                             error_state: *mut c_void,
+                                             custom_state: *mut c_void,
+                                             error_handler: WrapJpegErrorHandler);
+
+        pub fn wrap_jpeg_get_custom_state(codec_info: *mut ::mozjpeg_sys::jpeg_common_struct) -> *mut c_void;
+        pub fn wrap_jpeg_create_decompress(codec_info: *mut ::mozjpeg_sys::jpeg_decompress_struct) -> bool;
+
+        pub fn wrap_jpeg_setup_source_manager(source_manager: &mut WrapJpegSourceManager);
+
+        pub fn wrap_jpeg_read_header(codec_info: *mut ::mozjpeg_sys::jpeg_decompress_struct) -> bool;
+
+
     }
 }
 

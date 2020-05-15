@@ -20,6 +20,7 @@ mod gif;
 mod pngquant;
 mod lode;
 mod mozjpeg;
+mod mozjpeg_decoder;
 mod jpeg_decoder;
 mod webp;
 use crate::io::IoProxyRef;
