@@ -470,6 +470,9 @@ impl MzDec{
             self.color_profile =
                 crate::codecs::mozjpeg_decoder_helpers::read_icc_profile(&self.codec_info);
         }
+        if self.exif_rotation_flag.is_none(){
+            self.exif_rotation_flag = crate::codecs::mozjpeg_decoder_helpers::get_exif_orientation(&self.codec_info);
+        }
     }
 
     fn get_decoder_color_info(&mut self) -> ffi::DecoderColorInfo{
