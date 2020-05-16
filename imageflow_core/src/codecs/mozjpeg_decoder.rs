@@ -439,9 +439,14 @@ impl MzDec{
     }
 
     fn apply_downscaling(&mut self) {
+        // It's a segfault to call
+        if self.codec_info_disposed {
+            return;
+        }
         unsafe {
             ffi::wrap_jpeg_set_idct_method_selector(&mut self.codec_info)
         }
+
 
         if self.hints.downscaled_min_width > 0 && self.hints.downscaled_min_height > 0 {
             if self.original_width > self.hints.downscale_if_wider_than as u32
