@@ -16,7 +16,7 @@ use crate::io::IoProxyRef;
 use rgb::alt::BGRA8;
 extern crate mozjpeg_sys;
 use ::mozjpeg_sys::*;
-use imageflow_helpers::preludes::from_std::ptr::{null, slice_from_raw_parts};
+use imageflow_helpers::preludes::from_std::ptr::{null, slice_from_raw_parts, null_mut};
 
 pub struct MozJpegDecoder{
     decoder: Box<MzDec>
@@ -84,6 +84,7 @@ impl Decoder for MozJpegDecoder {
             BitmapBgra::create(c, w, h, ffi::PixelFormat::Bgr32, s::Color::Transparent)?;
 
         self.decoder.read_frame(canvas)?;
+
         Ok(canvas)
     }
     fn has_more_frames(&mut self) -> Result<bool> {
@@ -93,6 +94,7 @@ impl Decoder for MozJpegDecoder {
         self as &dyn Any
     }
 }
+
 
 #[repr(C)]
 struct SourceManager{
@@ -115,7 +117,9 @@ struct MzDec{
     w: u32,
     h: u32,
     exif_rotation_flag: Option<i32>,
-    pub ignore_color_profile: bool
+    pub ignore_color_profile: bool,
+    color_profile: Option<Vec<u8>>,
+    gamma: f64
 
 }
 impl Drop for MzDec{
@@ -160,9 +164,9 @@ impl MzDec{
             error_state.push(0u8);
         }
 
-        let mut decoder = Box::new(MzDec{
+        let mut decoder = Box::new(MzDec {
             error_state,
-            codec_info: unsafe{ mem::zeroed() } ,
+            codec_info: unsafe { mem::zeroed() },
             codec_info_disposed: false,
             error: None,
             io,
@@ -170,7 +174,7 @@ impl MzDec{
             header_read: false,
             original_width: 0,
             original_height: 0,
-            hints: ffi::DecoderDownscaleHints{
+            hints: ffi::DecoderDownscaleHints {
                 downscale_if_wider_than: 0,
                 or_if_taller_than: 0,
                 downscaled_min_width: 0,
@@ -181,7 +185,9 @@ impl MzDec{
             w: 0,
             h: 0,
             exif_rotation_flag: None,
-            ignore_color_profile: false
+            ignore_color_profile: false,
+            color_profile: None,
+            gamma: 0.45455
         });
 
         unsafe {
@@ -251,6 +257,8 @@ impl MzDec{
             }
         }
 
+        self.gamma = self.codec_info.output_gamma;
+
         let mut row_pointers = unsafe{ (*canvas).get_row_pointers()}?;
 
         if row_pointers.len() != self.codec_info.output_height as usize{
@@ -278,7 +286,9 @@ impl MzDec{
             return Err(self.error.clone().expect("error missing").at(here!()));
         }
 
-        // TODO: Read metadata, ICC profile/exif flag (yes we look twice)
+
+        // Read metadata again, ICC profile/exif flag (yes we look twice)
+        self.interpret_metadata();
 
         unsafe {
             if !ffi::wrap_jpeg_finish_decompress(&mut self.codec_info) {
@@ -287,6 +297,13 @@ impl MzDec{
         }
 
         self.dispose_codec();
+
+        let color_info = self.get_decoder_color_info();
+
+        if !self.ignore_color_profile {
+            ColorTransformCache::transform_to_srgb(unsafe { &mut *canvas }, &color_info)?;
+        }
+
         Ok(())
     }
 
@@ -400,7 +417,7 @@ impl MzDec{
             return Err(self.error.clone().expect("error missing").at(here!()));
         }
 
-        //TODO: interpret metadata, including ICC and exif
+        self.interpret_metadata();
 
         self.original_width = self.codec_info.image_width;
         self.original_height = self.codec_info.image_height;
@@ -410,26 +427,6 @@ impl MzDec{
         self.header_read = true;
         Ok(())
 
-// Available only after `jpeg_read_header()`
-//         let width = cinfo.image_width;
-//         let height = cinfo.image_height;
-//
-// // Output settings be set before calling `jpeg_start_decompress()`
-//         cinfo.out_color_space = J_COLOR_SPACE::JCS_RGB;
-//         jpeg_start_decompress(&mut cinfo);
-//         let row_stride = cinfo.image_width as usize * cinfo.output_components as usize;
-//         let buffer_size = row_stride * cinfo.image_height as usize;
-//         let mut buffer = vec![0u8; buffer_size];
-//
-//         while cinfo.output_scanline < cinfo.output_height {
-//             let offset = cinfo.output_scanline as usize * row_stride;
-//             let mut jsamparray = [buffer[offset..].as_mut_ptr()];
-//             jpeg_read_scanlines(&mut cinfo, jsamparray.as_mut_ptr(), 1);
-//         }
-//
-//         jpeg_finish_decompress(&mut cinfo);
-//         jpeg_destroy_decompress(&mut cinfo);
-//         libc::fclose(fh);
     }
 
     fn set_downscale_hints(&mut self, hints: ffi::DecoderDownscaleHints){
@@ -466,5 +463,36 @@ impl MzDec{
                 }
             }
         }
+    }
+
+    fn interpret_metadata(&mut self){
+        if self.color_profile.is_none() {
+            self.color_profile =
+                crate::codecs::mozjpeg_decoder_helpers::read_icc_profile(&self.codec_info);
+        }
+    }
+
+    fn get_decoder_color_info(&mut self) -> ffi::DecoderColorInfo{
+        let mut info = ffi::DecoderColorInfo{
+            source: ColorProfileSource::Null,
+            profile_buffer: null_mut(),
+            buffer_length: 0,
+            white_point: Default::default(),
+            primaries: ::lcms2::CIExyYTRIPLE{
+                Red: Default::default(),
+                Green: Default::default(),
+                Blue: Default::default()
+            },
+            gamma: self.gamma
+        };
+
+        // TODO: check for rgb and use that instead
+        if let Some(profile) = self.color_profile.as_deref_mut(){
+            info.profile_buffer =  profile.as_mut_ptr();
+            info.buffer_length = profile.len();
+            info.source = ColorProfileSource::ICCP;
+
+        }
+        info
     }
 }
