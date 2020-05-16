@@ -355,7 +355,7 @@ fn decode_cmyk_jpeg() {
     );
     let err = result.expect_err("CMYK jpeg decodes should fail");
     assert_eq!(err.category(), crate::imageflow_core::ErrorCategory::ImageMalformed);
-    assert!(err.message.starts_with("CError 60: Image decoding failed : Mozjpeg decoding error: Unsupported color conversion request"));
+    assert_eq!(err.message,"JpegDecodingError: CMYK JPEG support not implemented");
 
 }
 

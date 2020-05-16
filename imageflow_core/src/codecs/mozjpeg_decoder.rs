@@ -248,7 +248,7 @@ impl MzDec{
         if !is_cmyk {
             self.codec_info.out_color_space = mozjpeg_sys::JCS_EXT_BGRA; //Why not BGRX? Maybe because it doesn't clear the alpha values
         } else {
-            return Err(nerror!(ErrorKind::MethodNotImplemented, "CMYK JPEG support not implemented"));
+            return Err(nerror!(ErrorKind::JpegDecodingError, "CMYK JPEG support not implemented"));
         }
 
         unsafe {
