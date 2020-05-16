@@ -196,7 +196,7 @@ bool wrap_jpeg_start_decompress(j_decompress_ptr codec_info){
 }
 
 
-bool wrap_jpeg_read_scan_lines(j_decompress_ptr codec_info, uint8_t ** scan_lines, uint max_scan_lines, uint * scan_lines_read){
+bool wrap_jpeg_read_scan_lines(j_decompress_ptr codec_info, uint8_t ** scan_lines, uint32_t max_scan_lines, uint32_t * scan_lines_read){
     /* codec_info->err really points to a wrap_jpeg_error_state struct, so coerce pointer */
     struct wrap_jpeg_error_state *state = (struct wrap_jpeg_error_state *) codec_info->err;
     if (setjmp(state->error_handler_jmp)) {

@@ -2,7 +2,7 @@
 #include "imageflow_private.h"
 #include "jpeglib.h"
 #include "jerror.h"
-#include "png.h"
+
 
 #define PUB FLOW_EXPORT
 
@@ -31,7 +31,7 @@ PUB bool wrap_jpeg_save_markers(j_decompress_ptr codec_info,
 PUB bool wrap_jpeg_start_decompress(j_decompress_ptr codec_info);
 PUB bool wrap_jpeg_finish_decompress(j_decompress_ptr codec_info);
 
-PUB bool wrap_jpeg_read_scan_lines(j_decompress_ptr codec_info, uint8_t ** scan_lines, uint max_scan_lines, uint * scan_lines_read);
+PUB bool wrap_jpeg_read_scan_lines(j_decompress_ptr codec_info, uint8_t ** scan_lines, uint32_t max_scan_lines, uint32_t * scan_lines_read);
 
 PUB void wrap_jpeg_set_downscale_type(j_decompress_ptr codec_info, bool scale_luma_spatially, bool gamma_correct_for_srgb_during_spatial_luma_scaling);
 PUB void wrap_jpeg_set_idct_method_selector(j_decompress_ptr codec_info);
