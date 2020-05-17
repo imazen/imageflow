@@ -296,13 +296,13 @@ impl MzDec{
             }
         }
 
-        self.dispose_codec();
-
         let color_info = self.get_decoder_color_info();
 
         if !self.ignore_color_profile {
             ColorTransformCache::transform_to_srgb(unsafe { &mut *canvas }, &color_info)?;
         }
+
+        self.dispose_codec();
 
         Ok(())
     }
@@ -496,6 +496,7 @@ impl MzDec{
 
         // TODO: check for rgb and use that instead
         if let Some(profile) = self.color_profile.as_deref_mut(){
+
             info.profile_buffer =  profile.as_mut_ptr();
             info.buffer_length = profile.len();
             info.source = ColorProfileSource::ICCP;

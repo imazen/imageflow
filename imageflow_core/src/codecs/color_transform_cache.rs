@@ -87,6 +87,8 @@ impl ColorTransformCache{
 
         let bytes = unsafe { slice::from_raw_parts(color.profile_buffer, color.buffer_length) };
 
+        let _ = (bytes.first(), bytes.last());
+
         let p = Profile::new_icc_context(ThreadContext::new(), bytes).map_err(|e| FlowError::from(e).at(here!()))?;
         //TODO: handle gray transform on rgb expanded images.
         //TODO: Add test coverage for grayscale png
@@ -109,7 +111,7 @@ impl ColorTransformCache{
                 if !color.profile_buffer.is_null() && color.buffer_length > 0 {
                     let bytes = unsafe { slice::from_raw_parts(color.profile_buffer, color.buffer_length) };
 
-                    // Skip first 80 bytes when hashing.
+                    // Skip first 80 bytes when hashing. Wait, why?
                     Some(imageflow_helpers::hashing::hash_64(&bytes[80..]) ^ pixel_format as u64)
                 } else {
                     unreachable!("Profile source should never be set to ICCP without a profile buffer. Buffer length {}", color.buffer_length);
@@ -121,6 +123,7 @@ impl ColorTransformCache{
     fn apply_transform(frame: &mut BitmapBgra, transform: &Transform<u32,u32, ThreadContext,DisallowCache>) {
         for row in 0..frame.h {
             let pixels = unsafe{ slice::from_raw_parts_mut(frame.pixels.offset((row * frame.stride) as isize) as *mut u32, frame.w as usize) };
+            let _ = (pixels.first(), pixels.last());
             transform.transform_in_place(pixels)
         }
     }
