@@ -494,17 +494,16 @@ impl MzDec{
             gamma: self.gamma
         };
         
-        if let Some(profile) = self.color_profile.as_deref_mut(){
-            let hash = imageflow_helpers::hashing::hash_64(&profile[80..]);
+        if let Some(profile) = self.color_profile.as_deref_mut() {
+            //let hash = imageflow_helpers::hashing::hash_64(&profile[80..]);
 
-            if hash == 250807001850340861 {
-                info.source = ColorProfileSource::sRGB;
-            }else {
-                info.profile_buffer = profile.as_mut_ptr();
-                info.buffer_length = profile.len();
-                info.source = ColorProfileSource::ICCP;
-            }
-
+            // if hash == 250807001850340861 {
+            //     info.source = ColorProfileSource::sRGB;
+            // }else {
+            info.profile_buffer = profile.as_mut_ptr();
+            info.buffer_length = profile.len();
+            info.source = ColorProfileSource::ICCP;
+            //}
         }
         info
     }
