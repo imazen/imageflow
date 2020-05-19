@@ -25,6 +25,7 @@ shared = []
 
 [dependencies]
 mozjpeg-sys = {version = "0.10.4", features = ["nasm_simd", "turbojpeg_api"]}
+libc = "0.2.*"
 
 # For build info see
 
