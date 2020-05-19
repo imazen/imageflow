@@ -180,26 +180,32 @@ pub type uint64_t = __uint64_t;
 pub type FLOW_DIRECTION = libc::c_uint;
 pub const FLOW_INPUT: FLOW_DIRECTION = 4;
 pub const FLOW_OUTPUT: FLOW_DIRECTION = 8;
-pub type flow_status_code = libc::c_uint;
-pub const flow_status_Last_user_defined_error: flow_status_code = 2147483647;
-pub const flow_status_First_user_defined_error: flow_status_code = 1025;
-pub const flow_status____Last_library_error: flow_status_code = 1025;
-pub const flow_status_Other_error: flow_status_code = 1024;
-pub const flow_status_First_rust_error: flow_status_code = 200;
-pub const flow_status_ErrorReportingInconsistency: flow_status_code = 90;
-pub const flow_status_Image_encoding_failed: flow_status_code = 61;
-pub const flow_status_Image_decoding_failed: flow_status_code = 60;
-pub const flow_status_Item_does_not_exist: flow_status_code = 54;
-pub const flow_status_Unsupported_pixel_format: flow_status_code = 53;
-pub const flow_status_Invalid_dimensions: flow_status_code = 52;
-pub const flow_status_Null_argument: flow_status_code = 51;
-pub const flow_status_Invalid_argument: flow_status_code = 50;
-pub const flow_status_Not_implemented: flow_status_code = 40;
-pub const flow_status_Panic: flow_status_code = 31;
-pub const flow_status_Invalid_internal_state: flow_status_code = 30;
-pub const flow_status_IO_error: flow_status_code = 20;
-pub const flow_status_Out_of_memory: flow_status_code = 10;
-pub const flow_status_No_Error: flow_status_code = 0;
+
+#[repr(u32)]
+#[derive(Copy, Clone)]
+pub enum flow_status_code {
+    No_Error = 0,
+    Out_of_memory = 10,
+    IO_error = 20,
+    Invalid_internal_state = 30,
+    Panic = 31,
+    Not_implemented = 40,
+    Invalid_argument = 50,
+    Null_argument = 51,
+    Invalid_dimensions = 52,
+    Unsupported_pixel_format = 53,
+    Item_does_not_exist = 54,
+
+    Image_decoding_failed = 60,
+    Image_encoding_failed = 61,
+    ErrorReportingInconsistency = 90,
+    First_rust_error = 200,
+
+    Other_error = 1024,
+    // ___Last_library_error,
+    First_user_defined_error = 1025,
+    Last_user_defined_error = 2147483647
+}
 pub type flow_interpolation_filter = libc::c_uint;
 pub const flow_interpolation_filter_NCubicSharp: flow_interpolation_filter = 30;
 pub const flow_interpolation_filter_NCubic: flow_interpolation_filter = 29;
@@ -1057,7 +1063,7 @@ pub unsafe extern "C" fn flow_interpolation_details_create(
     if d.is_null() {
         flow_context_set_error_get_message_buffer(
             context,
-            flow_status_Out_of_memory,
+            flow_status_code::Out_of_memory,
             b"lib/graphics.c\x00" as *const u8 as *const libc::c_char,
             191 as libc::c_int,
             (*::std::mem::transmute::<&[u8; 34], &[libc::c_char; 34]>(
@@ -1612,7 +1618,7 @@ unsafe extern "C" fn InterpolationDetails_create_from_internal(
         flow_snprintf(
             flow_context_set_error_get_message_buffer(
                 context,
-                flow_status_Invalid_argument,
+                flow_status_code::Invalid_argument,
                 b"lib/graphics.c\x00" as *const u8 as *const libc::c_char,
                 323 as libc::c_int,
                 (*::std::mem::transmute::<&[u8; 42], &[libc::c_char; 42]>(
@@ -1657,7 +1663,7 @@ unsafe extern "C" fn LineContributions_alloc(
     if res.is_null() {
         flow_context_set_error_get_message_buffer(
             context,
-            flow_status_Out_of_memory,
+            flow_status_code::Out_of_memory,
             b"lib/graphics.c\x00" as *const u8 as *const libc::c_char,
             345 as libc::c_int,
             (*::std::mem::transmute::<&[u8; 24], &[libc::c_char; 24]>(
@@ -1688,7 +1694,7 @@ unsafe extern "C" fn LineContributions_alloc(
         );
         flow_context_set_error_get_message_buffer(
             context,
-            flow_status_Out_of_memory,
+            flow_status_code::Out_of_memory,
             b"lib/graphics.c\x00" as *const u8 as *const libc::c_char,
             354 as libc::c_int,
             (*::std::mem::transmute::<&[u8; 24], &[libc::c_char; 24]>(
@@ -1722,7 +1728,7 @@ unsafe extern "C" fn LineContributions_alloc(
         );
         flow_context_set_error_get_message_buffer(
             context,
-            flow_status_Out_of_memory,
+            flow_status_code::Out_of_memory,
             b"lib/graphics.c\x00" as *const u8 as *const libc::c_char,
             362 as libc::c_int,
             (*::std::mem::transmute::<&[u8; 24], &[libc::c_char; 24]>(
@@ -1839,7 +1845,7 @@ pub unsafe extern "C" fn flow_interpolation_line_contributions_create(
             flow_interpolation_line_contributions_destroy(context, res);
             flow_context_set_error_get_message_buffer(
                 context,
-                flow_status_Invalid_internal_state,
+                flow_status_code::Invalid_internal_state,
                 b"lib/graphics.c\x00" as *const u8 as *const libc::c_char,
                 426 as libc::c_int,
                 (*::std::mem::transmute::<&[u8; 45], &[libc::c_char; 45]>(
@@ -1956,7 +1962,7 @@ pub unsafe extern "C" fn flow_bitmap_float_scale_rows(
     if min_channels > 4 as libc::c_int as libc::c_uint {
         flow_context_set_error_get_message_buffer(
             context,
-            flow_status_Invalid_internal_state,
+            flow_status_code::Invalid_internal_state,
             b"lib/graphics.c\x00" as *const u8 as *const libc::c_char,
             520 as libc::c_int,
             (*::std::mem::transmute::<&[u8; 29], &[libc::c_char; 29]>(
@@ -2144,7 +2150,7 @@ unsafe extern "C" fn crop(
     if h.wrapping_add(y) > (*b).h || w.wrapping_add(x) > (*b).w {
         flow_context_set_error_get_message_buffer(
             c,
-            flow_status_Invalid_argument,
+            flow_status_code::Invalid_argument,
             b"lib/graphics.c\x00" as *const u8 as *const libc::c_char,
             632 as libc::c_int,
             (*::std::mem::transmute::<&[u8; 5], &[libc::c_char; 5]>(b"crop\x00")).as_ptr(),
@@ -2183,6 +2189,10 @@ unsafe extern "C" fn crop(
     (*cropped_canvas).stride = (*b).stride;
     return cropped_canvas;
 }
+// fn FLOW_error(context: *mut flow_context, status_code: u32) {                                                                           \
+//     flow_context_set_error_get_message_buffer(context, status_code, __FILE__, __LINE__, __func__)
+// }
+
 #[no_mangle]
 pub unsafe extern "C" fn flow_node_execute_scale2d_render1d(
     c: *mut flow_c,
@@ -2195,7 +2205,7 @@ pub unsafe extern "C" fn flow_node_execute_scale2d_render1d(
     {
         flow_context_set_error_get_message_buffer(
             c,
-            flow_status_Invalid_argument,
+            flow_status_code::Invalid_argument,
             b"lib/graphics.c\x00" as *const u8 as *const libc::c_char,
             659 as libc::c_int,
             (*::std::mem::transmute::<&[u8; 35], &[libc::c_char; 35]>(
@@ -2240,7 +2250,7 @@ pub unsafe extern "C" fn flow_node_execute_scale2d_render1d(
     {
         flow_context_set_error_get_message_buffer(
             c,
-            flow_status_Not_implemented,
+            flow_status_code::Not_implemented,
             b"lib/graphics.c\x00" as *const u8 as *const libc::c_char,
             672 as libc::c_int,
             (*::std::mem::transmute::<&[u8; 35], &[libc::c_char; 35]>(
@@ -2255,7 +2265,7 @@ pub unsafe extern "C" fn flow_node_execute_scale2d_render1d(
     {
         flow_context_set_error_get_message_buffer(
             c,
-            flow_status_Not_implemented,
+            flow_status_code::Not_implemented,
             b"lib/graphics.c\x00" as *const u8 as *const libc::c_char,
             676 as libc::c_int,
             (*::std::mem::transmute::<&[u8; 35], &[libc::c_char; 35]>(
@@ -2570,7 +2580,7 @@ pub unsafe extern "C" fn flow_node_execute_scale2d_render1d(
                 );
                 flow_context_set_error_get_message_buffer(
                     c,
-                    flow_status_Invalid_internal_state,
+                    flow_status_code::Invalid_internal_state,
                     b"lib/graphics.c\x00" as *const u8 as *const libc::c_char,
                     780 as libc::c_int,
                     (*::std::mem::transmute::<&[u8; 35], &[libc::c_char; 35]>(
@@ -2792,7 +2802,7 @@ pub unsafe extern "C" fn flow_convolution_kernel_create(
         );
         flow_context_set_error_get_message_buffer(
             context,
-            flow_status_Out_of_memory,
+            flow_status_code::Out_of_memory,
             b"lib/graphics.c\x00" as *const u8 as *const libc::c_char,
             842 as libc::c_int,
             (*::std::mem::transmute::<&[u8; 31], &[libc::c_char; 31]>(
@@ -3247,7 +3257,7 @@ unsafe extern "C" fn BitmapFloat_boxblur_misaligned_rows(
     if align != 1 as libc::c_int && align != -(1 as libc::c_int) {
         flow_context_set_error_get_message_buffer(
             context,
-            flow_status_Invalid_internal_state,
+            flow_status_code::Invalid_internal_state,
             b"lib/graphics.c\x00" as *const u8 as *const libc::c_char,
             1088 as libc::c_int,
             (*::std::mem::transmute::<&[u8; 36], &[libc::c_char; 36]>(
@@ -3444,7 +3454,7 @@ pub unsafe extern "C" fn flow_bitmap_float_approx_gaussian_blur_rows(
     if sigma < 2 as libc::c_int as libc::c_float {
         flow_context_set_error_get_message_buffer(
             context,
-            flow_status_Invalid_internal_state,
+            flow_status_code::Invalid_internal_state,
             b"lib/graphics.c\x00" as *const u8 as *const libc::c_char,
             1173 as libc::c_int,
             (*::std::mem::transmute::<&[u8; 44], &[libc::c_char; 44]>(
@@ -3461,7 +3471,7 @@ pub unsafe extern "C" fn flow_bitmap_float_approx_gaussian_blur_rows(
     {
         flow_context_set_error_get_message_buffer(
             context,
-            flow_status_Invalid_internal_state,
+            flow_status_code::Invalid_internal_state,
             b"lib/graphics.c\x00" as *const u8 as *const libc::c_char,
             1179 as libc::c_int,
             (*::std::mem::transmute::<&[u8; 44], &[libc::c_char; 44]>(
@@ -3655,7 +3665,7 @@ pub unsafe extern "C" fn flow_bitmap_bgra_transpose(
     {
         flow_context_set_error_get_message_buffer(
             c,
-            flow_status_Invalid_argument,
+            flow_status_code::Invalid_argument,
             b"lib/graphics.c\x00" as *const u8 as *const libc::c_char,
             1252 as libc::c_int,
             (*::std::mem::transmute::<&[u8; 27], &[libc::c_char; 27]>(
@@ -3692,7 +3702,7 @@ pub unsafe extern "C" fn flow_bitmap_bgra_transpose(
     {
         flow_context_set_error_get_message_buffer(
             c,
-            flow_status_Invalid_argument,
+            flow_status_code::Invalid_argument,
             b"lib/graphics.c\x00" as *const u8 as *const libc::c_char,
             1269 as libc::c_int,
             (*::std::mem::transmute::<&[u8; 27], &[libc::c_char; 27]>(
@@ -3772,7 +3782,7 @@ pub unsafe extern "C" fn flow_bitmap_bgra_transpose_slow(
     {
         flow_context_set_error_get_message_buffer(
             c,
-            flow_status_Invalid_argument,
+            flow_status_code::Invalid_argument,
             b"lib/graphics.c\x00" as *const u8 as *const libc::c_char,
             1300 as libc::c_int,
             (*::std::mem::transmute::<&[u8; 32], &[libc::c_char; 32]>(
@@ -3852,7 +3862,7 @@ pub unsafe extern "C" fn flow_bitmap_bgra_transpose_slow(
     } else {
         flow_context_set_error_get_message_buffer(
             c,
-            flow_status_Invalid_argument,
+            flow_status_code::Invalid_argument,
             b"lib/graphics.c\x00" as *const u8 as *const libc::c_char,
             1325 as libc::c_int,
             (*::std::mem::transmute::<&[u8; 32], &[libc::c_char; 32]>(
@@ -3876,7 +3886,7 @@ pub unsafe extern "C" fn flow_bitmap_float_convert_srgb_to_linear(
     if ((*src).w != (*dest).w) as libc::c_int as libc::c_long != 0 {
         flow_context_set_error_get_message_buffer(
             context,
-            flow_status_Invalid_internal_state,
+            flow_status_code::Invalid_internal_state,
             b"lib/graphics.c\x00" as *const u8 as *const libc::c_char,
             1339 as libc::c_int,
             (*::std::mem::transmute::<&[u8; 41], &[libc::c_char; 41]>(
@@ -3892,7 +3902,7 @@ pub unsafe extern "C" fn flow_bitmap_float_convert_srgb_to_linear(
     {
         flow_context_set_error_get_message_buffer(
             context,
-            flow_status_Invalid_internal_state,
+            flow_status_code::Invalid_internal_state,
             b"lib/graphics.c\x00" as *const u8 as *const libc::c_char,
             1345 as libc::c_int,
             (*::std::mem::transmute::<&[u8; 41], &[libc::c_char; 41]>(
@@ -3912,7 +3922,7 @@ pub unsafe extern "C" fn flow_bitmap_float_convert_srgb_to_linear(
         flow_snprintf(
             flow_context_set_error_get_message_buffer(
                 context,
-                flow_status_Unsupported_pixel_format,
+                flow_status_code::Unsupported_pixel_format,
                 b"lib/graphics.c\x00" as *const u8 as *const libc::c_char,
                 1361 as libc::c_int,
                 (*::std::mem::transmute::<&[u8; 41], &[libc::c_char; 41]>(
@@ -3930,7 +3940,7 @@ pub unsafe extern "C" fn flow_bitmap_float_convert_srgb_to_linear(
         flow_snprintf(
             flow_context_set_error_get_message_buffer(
                 context,
-                flow_status_Unsupported_pixel_format,
+                flow_status_code::Unsupported_pixel_format,
                 b"lib/graphics.c\x00" as *const u8 as *const libc::c_char,
                 1368 as libc::c_int,
                 (*::std::mem::transmute::<&[u8; 41], &[libc::c_char; 41]>(
@@ -4141,7 +4151,7 @@ pub unsafe extern "C" fn flow_bitmap_float_convert_srgb_to_linear(
         flow_snprintf(
             flow_context_set_error_get_message_buffer(
                 context,
-                flow_status_Unsupported_pixel_format,
+                flow_status_code::Unsupported_pixel_format,
                 b"lib/graphics.c\x00" as *const u8 as *const libc::c_char,
                 1411 as libc::c_int,
                 (*::std::mem::transmute::<&[u8; 41], &[libc::c_char; 41]>(
@@ -4184,7 +4194,7 @@ pub unsafe extern "C" fn flow_bitmap_bgra_flip_vertical(
     if swap.is_null() {
         flow_context_set_error_get_message_buffer(
             context,
-            flow_status_Out_of_memory,
+            flow_status_code::Out_of_memory,
             b"lib/graphics.c\x00" as *const u8 as *const libc::c_char,
             1432 as libc::c_int,
             (*::std::mem::transmute::<&[u8; 31], &[libc::c_char; 31]>(
@@ -5106,7 +5116,7 @@ pub unsafe extern "C" fn flow_bitmap_float_composite_linear_over_srgb(
         // TODO: Add more bounds checks
         flow_context_set_error_get_message_buffer(
             context,
-            flow_status_Invalid_internal_state,
+            flow_status_code::Invalid_internal_state,
             b"lib/graphics.c\x00" as *const u8 as *const libc::c_char,
             1699 as libc::c_int,
             (*::std::mem::transmute::<&[u8; 45], &[libc::c_char; 45]>(
@@ -5125,7 +5135,7 @@ pub unsafe extern "C" fn flow_bitmap_float_composite_linear_over_srgb(
             // Something went wrong. We should always have alpha premultiplied.
             flow_context_set_error_get_message_buffer(
                 context,
-                flow_status_Invalid_internal_state,
+                flow_status_code::Invalid_internal_state,
                 b"lib/graphics.c\x00" as *const u8 as *const libc::c_char,
                 1706 as libc::c_int,
                 (*::std::mem::transmute::<&[u8; 45], &[libc::c_char; 45]>(
@@ -5241,7 +5251,7 @@ pub unsafe extern "C" fn flow_bitmap_float_linear_to_luv_rows(
     if !(start_row.wrapping_add(row_count) <= (*bit).h) {
         flow_context_set_error_get_message_buffer(
             context,
-            flow_status_Invalid_internal_state,
+            flow_status_code::Invalid_internal_state,
             b"lib/graphics.c\x00" as *const u8 as *const libc::c_char,
             1751 as libc::c_int,
             (*::std::mem::transmute::<&[u8; 37], &[libc::c_char; 37]>(
@@ -5254,7 +5264,7 @@ pub unsafe extern "C" fn flow_bitmap_float_linear_to_luv_rows(
     if (*bit).w.wrapping_mul((*bit).channels) != (*bit).float_stride {
         flow_context_set_error_get_message_buffer(
             context,
-            flow_status_Invalid_internal_state,
+            flow_status_code::Invalid_internal_state,
             b"lib/graphics.c\x00" as *const u8 as *const libc::c_char,
             1755 as libc::c_int,
             (*::std::mem::transmute::<&[u8; 37], &[libc::c_char; 37]>(
@@ -5289,7 +5299,7 @@ pub unsafe extern "C" fn flow_bitmap_float_luv_to_linear_rows(
     if !(start_row.wrapping_add(row_count) <= (*bit).h) {
         flow_context_set_error_get_message_buffer(
             context,
-            flow_status_Invalid_internal_state,
+            flow_status_code::Invalid_internal_state,
             b"lib/graphics.c\x00" as *const u8 as *const libc::c_char,
             1772 as libc::c_int,
             (*::std::mem::transmute::<&[u8; 37], &[libc::c_char; 37]>(
@@ -5302,7 +5312,7 @@ pub unsafe extern "C" fn flow_bitmap_float_luv_to_linear_rows(
     if (*bit).w.wrapping_mul((*bit).channels) != (*bit).float_stride {
         flow_context_set_error_get_message_buffer(
             context,
-            flow_status_Invalid_internal_state,
+            flow_status_code::Invalid_internal_state,
             b"lib/graphics.c\x00" as *const u8 as *const libc::c_char,
             1776 as libc::c_int,
             (*::std::mem::transmute::<&[u8; 37], &[libc::c_char; 37]>(
@@ -5480,7 +5490,7 @@ pub unsafe extern "C" fn flow_bitmap_bgra_apply_color_matrix(
     } else {
         flow_context_set_error_get_message_buffer(
             context,
-            flow_status_Unsupported_pixel_format,
+            flow_status_code::Unsupported_pixel_format,
             b"lib/graphics.c\x00" as *const u8 as *const libc::c_char,
             1838 as libc::c_int,
             (*::std::mem::transmute::<&[u8; 36], &[libc::c_char; 36]>(
@@ -5618,7 +5628,7 @@ pub unsafe extern "C" fn flow_bitmap_float_apply_color_matrix(
         _ => {
             flow_context_set_error_get_message_buffer(
                 context,
-                flow_status_Unsupported_pixel_format,
+                flow_status_code::Unsupported_pixel_format,
                 b"lib/graphics.c\x00" as *const u8 as *const libc::c_char,
                 1893 as libc::c_int,
                 (*::std::mem::transmute::<&[u8; 37], &[libc::c_char; 37]>(
@@ -5649,7 +5659,7 @@ pub unsafe extern "C" fn flow_bitmap_bgra_populate_histogram(
         // We're restricting it to this for speed
         flow_context_set_error_get_message_buffer(
             context,
-            flow_status_Invalid_argument,
+            flow_status_code::Invalid_argument,
             b"lib/graphics.c\x00" as *const u8 as *const libc::c_char,
             1912 as libc::c_int,
             (*::std::mem::transmute::<&[u8; 36], &[libc::c_char; 36]>(
@@ -5758,7 +5768,7 @@ pub unsafe extern "C" fn flow_bitmap_bgra_populate_histogram(
         } else {
             flow_context_set_error_get_message_buffer(
                 context,
-                flow_status_Invalid_internal_state,
+                flow_status_code::Invalid_internal_state,
                 b"lib/graphics.c\x00" as *const u8 as *const libc::c_char,
                 1950 as libc::c_int,
                 (*::std::mem::transmute::<&[u8; 36], &[libc::c_char; 36]>(
@@ -5772,7 +5782,7 @@ pub unsafe extern "C" fn flow_bitmap_bgra_populate_histogram(
     } else {
         flow_context_set_error_get_message_buffer(
             context,
-            flow_status_Unsupported_pixel_format,
+            flow_status_code::Unsupported_pixel_format,
             b"lib/graphics.c\x00" as *const u8 as *const libc::c_char,
             1956 as libc::c_int,
             (*::std::mem::transmute::<&[u8; 36], &[libc::c_char; 36]>(
