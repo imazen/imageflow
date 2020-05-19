@@ -6,6 +6,7 @@
     non_upper_case_globals,
     unused_assignments
 )]
+use std::f64;
 #[cfg(target_arch = "x86")]
 pub use std::arch::x86::{
     __m128, _mm_add_ps, _mm_loadu_ps, _mm_movehl_ps, _mm_movelh_ps, _mm_mul_ps, _mm_set1_ps,
@@ -24,10 +25,6 @@ pub struct flow_decoder_frame_info {
     pub format: flow_pixel_format,
 }
 extern "C" {
-    #[no_mangle]
-    fn sin(_: libc::c_double) -> libc::c_double;
-    #[no_mangle]
-    fn abs(_: libc::c_int) -> libc::c_int;
     #[no_mangle]
     fn flow_pixel_format_bytes_per_pixel(format: flow_pixel_format) -> uint32_t;
     #[no_mangle]
@@ -934,8 +931,8 @@ unsafe extern "C" fn filter_sinc(
     if abs_t > (*d).window {
         return 0 as libc::c_int as libc::c_double;
     }
-    let a: libc::c_double = abs_t * IR_PI;
-    return sin(a) / a;
+    let a = abs_t * IR_PI;
+    return a.sin() / a;
 }
 unsafe extern "C" fn filter_box(
     d: *const flow_interpolation_details,
@@ -971,7 +968,7 @@ unsafe extern "C" fn filter_sinc_windowed(
     if abs_t > (*d).window {
         return 0 as libc::c_int as libc::c_double;
     }
-    return (*d).window * sin(IR_PI * x / (*d).window) * sin(x * IR_PI) / (IR_PI * IR_PI * x * x);
+    return (*d).window * (IR_PI * x / (*d).window).sin() * (x * IR_PI).sin() / (IR_PI * IR_PI * x * x);
 }
 unsafe extern "C" fn filter_jinc(
     d: *const flow_interpolation_details,
@@ -1014,7 +1011,7 @@ unsafe extern "C" fn filter_ginseng(
     }
     let jinc_input: libc::c_double = 1.2196698912665045f64 * t_pi / (*d).window;
     let jinc_output: libc::c_double = j1(jinc_input) / (jinc_input * 0.5f64);
-    return jinc_output * sin(t_pi) / t_pi;
+    return jinc_output * (t_pi).sin() / t_pi;
 }
 pub const TONY: libc::c_double = 0.00001f64;
 #[no_mangle]
@@ -5495,6 +5492,7 @@ pub unsafe extern "C" fn flow_bitmap_bgra_apply_color_matrix(
     }
     return true;
 }
+// note: this file isn't exercised by test suite
 #[no_mangle]
 pub unsafe extern "C" fn flow_bitmap_float_apply_color_matrix(
     context: *mut flow_c,
