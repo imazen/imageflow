@@ -2849,7 +2849,7 @@ pub unsafe extern "C" fn flow_convolution_kernel_create_gaussian(
         let mut i: uint32_t = 0 as libc::c_int as uint32_t;
         while i < (*k).width {
             *(*k).kernel.offset(i as isize) = ir_gaussian(
-                abs(radius as libc::c_int - i as libc::c_int) as libc::c_double,
+                (radius as libc::c_int - i as libc::c_int).abs() as f64,
                 stdDev,
             ) as libc::c_float;
             i = i.wrapping_add(1)
@@ -5743,10 +5743,10 @@ pub unsafe extern "C" fn flow_bitmap_bgra_populate_histogram(
                             (int_max(
                                 255 as libc::c_int,
                                 int_max(
-                                    abs(*data_1.offset(2 as libc::c_int as isize) as libc::c_int
-                                        - *data_1.offset(1 as libc::c_int as isize) as libc::c_int),
-                                    abs(*data_1.offset(1 as libc::c_int as isize) as libc::c_int
-                                        - *data_1.offset(0 as libc::c_int as isize) as libc::c_int),
+                                    (*data_1.offset(2 as libc::c_int as isize) as libc::c_int
+                                        - *data_1.offset(1 as libc::c_int as isize) as libc::c_int).abs(),
+                                    (*data_1.offset(1 as libc::c_int as isize) as libc::c_int
+                                        - *data_1.offset(0 as libc::c_int as isize) as libc::c_int).abs(),
                                 ),
                             ) >> shift) as libc::c_uint,
                         ) as isize);
