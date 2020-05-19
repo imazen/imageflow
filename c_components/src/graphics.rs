@@ -6345,32 +6345,22 @@ pub unsafe extern "C" fn flow_bitmap_bgra_populate_histogram(context:
 // Gamma correction  http://www.4p8.com/eric.brasseur/gamma.html#formulas
 #[no_mangle]
 pub unsafe extern "C" fn flow_colorcontext_init(_context: *mut flow_c,
-                                                mut colorcontext:
-                                                    *mut flow_colorcontext_info,
-                                                space:
-                                                    flow_working_floatspace,
-                                                a: libc::c_float,
-                                                _b: libc::c_float,
-                                                _c: libc::c_float) {
+                                                mut colorcontext: *mut flow_colorcontext_info,
+                                                space: flow_working_floatspace,
+                                                a: f32,
+                                                _b: f32,
+                                                _c: f32) {
     (*colorcontext).floatspace = space;
-    (*colorcontext).apply_srgb =
-        space as libc::c_uint &
-            flow_working_floatspace_linear as libc::c_int as libc::c_uint >
-            0 as libc::c_int as libc::c_uint;
-    (*colorcontext).apply_gamma =
-        space as libc::c_uint &
-            flow_working_floatspace_gamma as libc::c_int as libc::c_uint >
-            0 as libc::c_int as libc::c_uint;
+    (*colorcontext).apply_srgb = (space & flow_working_floatspace_linear) > 0;
+    (*colorcontext).apply_gamma = (space & flow_working_floatspace_gamma) > 0;
+    /* Code guarded by #ifdef EXPOSE_SIGMOID not translated */
     if (*colorcontext).apply_gamma {
         (*colorcontext).gamma = a;
-        (*colorcontext).gamma_inverse =
-            (1.0f64 / a as libc::c_double) as libc::c_float
+        (*colorcontext).gamma_inverse = (1.0f64 / a as f64) as f32
     }
-    let mut n: uint32_t = 0 as libc::c_int as uint32_t;
-    while n < 256 as libc::c_int as libc::c_uint {
-        (*colorcontext).byte_to_float[n as usize] =
+    for n in 0..256 {
+        (*colorcontext).byte_to_float[n] =
             flow_colorcontext_srgb_to_floatspace_uncached(colorcontext,
                                                           n as uint8_t);
-        n = n.wrapping_add(1)
-    };
+    }
 }
