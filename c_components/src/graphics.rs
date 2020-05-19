@@ -3973,17 +3973,14 @@ pub unsafe extern "C" fn flow_bitmap_float_convert_srgb_to_linear(context:
                                                                             &[libc::c_char; 41]>(b"flow_bitmap_float_convert_srgb_to_linear\x00")).as_ptr());
         return false
     }
-    let w: uint32_t = (*src).w;
-    let units: uint32_t =
-        w.wrapping_mul(flow_pixel_format_bytes_per_pixel((*src).fmt));
+    let w = (*src).w;
+    let units: uint32_t = w * flow_pixel_format_bytes_per_pixel((*src).fmt);
     let from_step: uint32_t = flow_pixel_format_bytes_per_pixel((*src).fmt);
     let from_copy: uint32_t =
         flow_pixel_format_channels(flow_effective_pixel_format(src));
     let to_step: uint32_t = (*dest).channels;
     let copy_step: uint32_t = umin(from_copy, to_step);
-    if (copy_step != 3 as libc::c_int as libc::c_uint &&
-            copy_step != 4 as libc::c_int as libc::c_uint) as libc::c_int as
-           libc::c_long != 0 {
+    if copy_step != 3 && copy_step != 4 {
         flow_snprintf(flow_context_set_error_get_message_buffer(context,
                                                                 flow_status_Unsupported_pixel_format,
                                                                 b"lib/graphics.c\x00"
@@ -4000,10 +3997,7 @@ pub unsafe extern "C" fn flow_bitmap_float_convert_srgb_to_linear(context:
                       copy_step);
         return false
     }
-    if (copy_step == 4 as libc::c_int as libc::c_uint &&
-            from_step != 4 as libc::c_int as libc::c_uint &&
-            to_step != 4 as libc::c_int as libc::c_uint) as libc::c_int as
-           libc::c_long != 0 {
+    if copy_step == 4 && from_step != 4 && to_step != 4 {
         flow_snprintf(flow_context_set_error_get_message_buffer(context,
                                                                 flow_status_Unsupported_pixel_format,
                                                                 b"lib/graphics.c\x00"
@@ -4021,8 +4015,7 @@ pub unsafe extern "C" fn flow_bitmap_float_convert_srgb_to_linear(context:
                       from_step, to_step);
         return false
     }
-    if (copy_step == 4 as libc::c_int as libc::c_uint) as libc::c_int as
-           libc::c_long != 0 {
+    if copy_step == 4 {
         let mut row: uint32_t = 0 as libc::c_int as uint32_t;
         while row < row_count {
             let src_start: *mut uint8_t =
@@ -4082,217 +4075,213 @@ pub unsafe extern "C" fn flow_bitmap_float_convert_srgb_to_linear(context:
             }
             row = row.wrapping_add(1)
         }
-    } else if from_step == 3 as libc::c_int as libc::c_uint &&
-                  to_step == 3 as libc::c_int as libc::c_uint {
-        let mut row_0: uint32_t = 0 as libc::c_int as uint32_t;
-        while row_0 < row_count {
+    } else if from_step == 3 && to_step == 3 {
+        let mut row: uint32_t = 0 as libc::c_int as uint32_t;
+        while row < row_count {
             let src_start_0: *mut uint8_t =
-                (*src).pixels.offset(from_row.wrapping_add(row_0).wrapping_mul((*src).stride)
+                (*src).pixels.offset(from_row.wrapping_add(row).wrapping_mul((*src).stride)
                                          as isize);
-            let buf_0: *mut libc::c_float =
-                (*dest).pixels.offset((*dest).float_stride.wrapping_mul(row_0.wrapping_add(dest_row))
+            let buf: *mut libc::c_float =
+                (*dest).pixels.offset((*dest).float_stride.wrapping_mul(row.wrapping_add(dest_row))
                                           as isize);
-            let mut to_x_0: uint32_t = 0 as libc::c_int as uint32_t;
-            let mut bix_0: uint32_t = 0 as libc::c_int as uint32_t;
-            while bix_0 < units {
-                *buf_0.offset(to_x_0 as isize) =
+            let mut to_x: uint32_t = 0 as libc::c_int as uint32_t;
+            let mut bix: uint32_t = 0 as libc::c_int as uint32_t;
+            while bix < units {
+                *buf.offset(to_x as isize) =
                     flow_colorcontext_srgb_to_floatspace(colorcontext,
-                                                         *src_start_0.offset(bix_0
+                                                         *src_start_0.offset(bix
                                                                                  as
                                                                                  isize));
-                *buf_0.offset(to_x_0.wrapping_add(1 as libc::c_int as
+                *buf.offset(to_x.wrapping_add(1 as libc::c_int as
                                                       libc::c_uint) as isize)
                     =
                     flow_colorcontext_srgb_to_floatspace(colorcontext,
-                                                         *src_start_0.offset(bix_0.wrapping_add(1
+                                                         *src_start_0.offset(bix.wrapping_add(1
                                                                                                     as
                                                                                                     libc::c_int
                                                                                                     as
                                                                                                     libc::c_uint)
                                                                                  as
                                                                                  isize));
-                *buf_0.offset(to_x_0.wrapping_add(2 as libc::c_int as
+                *buf.offset(to_x.wrapping_add(2 as libc::c_int as
                                                       libc::c_uint) as isize)
                     =
                     flow_colorcontext_srgb_to_floatspace(colorcontext,
-                                                         *src_start_0.offset(bix_0.wrapping_add(2
+                                                         *src_start_0.offset(bix.wrapping_add(2
                                                                                                     as
                                                                                                     libc::c_int
                                                                                                     as
                                                                                                     libc::c_uint)
                                                                                  as
                                                                                  isize));
-                to_x_0 =
-                    (to_x_0 as
+                to_x =
+                    (to_x as
                          libc::c_uint).wrapping_add(3 as libc::c_int as
                                                         libc::c_uint) as
                         uint32_t as uint32_t;
-                bix_0 =
-                    (bix_0 as
+                bix =
+                    (bix as
                          libc::c_uint).wrapping_add(3 as libc::c_int as
                                                         libc::c_uint) as
                         uint32_t as uint32_t
             }
-            row_0 = row_0.wrapping_add(1)
+            row += 1
         }
-    } else if from_step == 4 as libc::c_int as libc::c_uint &&
-                  to_step == 3 as libc::c_int as libc::c_uint {
-        let mut row_1: uint32_t = 0 as libc::c_int as uint32_t;
-        while row_1 < row_count {
-            let src_start_1: *mut uint8_t =
-                (*src).pixels.offset(from_row.wrapping_add(row_1).wrapping_mul((*src).stride)
+    } else if from_step == 4 && to_step == 3 {
+        let mut row: uint32_t = 0 as libc::c_int as uint32_t;
+        while row < row_count {
+            let src_start: *mut uint8_t =
+                (*src).pixels.offset(from_row.wrapping_add(row).wrapping_mul((*src).stride)
                                          as isize);
-            let buf_1: *mut libc::c_float =
-                (*dest).pixels.offset((*dest).float_stride.wrapping_mul(row_1.wrapping_add(dest_row))
+            let buf: *mut libc::c_float =
+                (*dest).pixels.offset((*dest).float_stride.wrapping_mul(row.wrapping_add(dest_row))
                                           as isize);
-            let mut to_x_1: uint32_t = 0 as libc::c_int as uint32_t;
-            let mut bix_1: uint32_t = 0 as libc::c_int as uint32_t;
-            while bix_1 < units {
-                *buf_1.offset(to_x_1 as isize) =
+            let mut to_x: uint32_t = 0 as libc::c_int as uint32_t;
+            let mut bix: uint32_t = 0 as libc::c_int as uint32_t;
+            while bix < units {
+                *buf.offset(to_x as isize) =
                     flow_colorcontext_srgb_to_floatspace(colorcontext,
-                                                         *src_start_1.offset(bix_1
+                                                         *src_start.offset(bix
                                                                                  as
                                                                                  isize));
-                *buf_1.offset(to_x_1.wrapping_add(1 as libc::c_int as
+                *buf.offset(to_x.wrapping_add(1 as libc::c_int as
                                                       libc::c_uint) as isize)
                     =
                     flow_colorcontext_srgb_to_floatspace(colorcontext,
-                                                         *src_start_1.offset(bix_1.wrapping_add(1
+                                                         *src_start.offset(bix.wrapping_add(1
                                                                                                     as
                                                                                                     libc::c_int
                                                                                                     as
                                                                                                     libc::c_uint)
                                                                                  as
                                                                                  isize));
-                *buf_1.offset(to_x_1.wrapping_add(2 as libc::c_int as
+                *buf.offset(to_x.wrapping_add(2 as libc::c_int as
                                                       libc::c_uint) as isize)
                     =
                     flow_colorcontext_srgb_to_floatspace(colorcontext,
-                                                         *src_start_1.offset(bix_1.wrapping_add(2
+                                                         *src_start.offset(bix.wrapping_add(2
                                                                                                     as
                                                                                                     libc::c_int
                                                                                                     as
                                                                                                     libc::c_uint)
                                                                                  as
                                                                                  isize));
-                to_x_1 =
-                    (to_x_1 as
+                to_x =
+                    (to_x as
                          libc::c_uint).wrapping_add(3 as libc::c_int as
                                                         libc::c_uint) as
                         uint32_t as uint32_t;
-                bix_1 =
-                    (bix_1 as
+                bix =
+                    (bix as
                          libc::c_uint).wrapping_add(4 as libc::c_int as
                                                         libc::c_uint) as
                         uint32_t as uint32_t
             }
-            row_1 = row_1.wrapping_add(1)
+            row += 1
         }
-    } else if from_step == 3 as libc::c_int as libc::c_uint &&
-                  to_step == 4 as libc::c_int as libc::c_uint {
-        let mut row_2: uint32_t = 0 as libc::c_int as uint32_t;
-        while row_2 < row_count {
-            let src_start_2: *mut uint8_t =
-                (*src).pixels.offset(from_row.wrapping_add(row_2).wrapping_mul((*src).stride)
+    } else if from_step == 3 && to_step == 4 {
+        let mut row: uint32_t = 0 as libc::c_int as uint32_t;
+        while row < row_count {
+            let src_start: *mut uint8_t =
+                (*src).pixels.offset(from_row.wrapping_add(row).wrapping_mul((*src).stride)
                                          as isize);
-            let buf_2: *mut libc::c_float =
-                (*dest).pixels.offset((*dest).float_stride.wrapping_mul(row_2.wrapping_add(dest_row))
+            let buf: *mut libc::c_float =
+                (*dest).pixels.offset((*dest).float_stride.wrapping_mul(row.wrapping_add(dest_row))
                                           as isize);
-            let mut to_x_2: uint32_t = 0 as libc::c_int as uint32_t;
-            let mut bix_2: uint32_t = 0 as libc::c_int as uint32_t;
-            while bix_2 < units {
-                *buf_2.offset(to_x_2 as isize) =
+            let mut to_x: uint32_t = 0 as libc::c_int as uint32_t;
+            let mut bix: uint32_t = 0 as libc::c_int as uint32_t;
+            while bix < units {
+                *buf.offset(to_x as isize) =
                     flow_colorcontext_srgb_to_floatspace(colorcontext,
-                                                         *src_start_2.offset(bix_2
+                                                         *src_start.offset(bix
                                                                                  as
                                                                                  isize));
-                *buf_2.offset(to_x_2.wrapping_add(1 as libc::c_int as
+                *buf.offset(to_x.wrapping_add(1 as libc::c_int as
                                                       libc::c_uint) as isize)
                     =
                     flow_colorcontext_srgb_to_floatspace(colorcontext,
-                                                         *src_start_2.offset(bix_2.wrapping_add(1
+                                                         *src_start.offset(bix.wrapping_add(1
                                                                                                     as
                                                                                                     libc::c_int
                                                                                                     as
                                                                                                     libc::c_uint)
                                                                                  as
                                                                                  isize));
-                *buf_2.offset(to_x_2.wrapping_add(2 as libc::c_int as
+                *buf.offset(to_x.wrapping_add(2 as libc::c_int as
                                                       libc::c_uint) as isize)
                     =
                     flow_colorcontext_srgb_to_floatspace(colorcontext,
-                                                         *src_start_2.offset(bix_2.wrapping_add(2
+                                                         *src_start.offset(bix.wrapping_add(2
                                                                                                     as
                                                                                                     libc::c_int
                                                                                                     as
                                                                                                     libc::c_uint)
                                                                                  as
                                                                                  isize));
-                to_x_2 =
-                    (to_x_2 as
+                to_x =
+                    (to_x as
                          libc::c_uint).wrapping_add(4 as libc::c_int as
                                                         libc::c_uint) as
                         uint32_t as uint32_t;
-                bix_2 =
-                    (bix_2 as
+                bix =
+                    (bix as
                          libc::c_uint).wrapping_add(3 as libc::c_int as
                                                         libc::c_uint) as
                         uint32_t as uint32_t
             }
-            row_2 = row_2.wrapping_add(1)
+            row += 1
         }
-    } else if from_step == 4 as libc::c_int as libc::c_uint &&
-                  to_step == 4 as libc::c_int as libc::c_uint {
-        let mut row_3: uint32_t = 0 as libc::c_int as uint32_t;
-        while row_3 < row_count {
-            let src_start_3: *mut uint8_t =
-                (*src).pixels.offset(from_row.wrapping_add(row_3).wrapping_mul((*src).stride)
+    } else if from_step == 4 && to_step == 4 {
+        let mut row: uint32_t = 0 as libc::c_int as uint32_t;
+        while row < row_count {
+            let src_start: *mut uint8_t =
+                (*src).pixels.offset(from_row.wrapping_add(row).wrapping_mul((*src).stride)
                                          as isize);
-            let buf_3: *mut libc::c_float =
-                (*dest).pixels.offset((*dest).float_stride.wrapping_mul(row_3.wrapping_add(dest_row))
+            let buf: *mut libc::c_float =
+                (*dest).pixels.offset((*dest).float_stride.wrapping_mul(row.wrapping_add(dest_row))
                                           as isize);
-            let mut to_x_3: uint32_t = 0 as libc::c_int as uint32_t;
-            let mut bix_3: uint32_t = 0 as libc::c_int as uint32_t;
-            while bix_3 < units {
-                *buf_3.offset(to_x_3 as isize) =
+            let mut to_x: uint32_t = 0 as libc::c_int as uint32_t;
+            let mut bix: uint32_t = 0 as libc::c_int as uint32_t;
+            while bix < units {
+                *buf.offset(to_x as isize) =
                     flow_colorcontext_srgb_to_floatspace(colorcontext,
-                                                         *src_start_3.offset(bix_3
+                                                         *src_start.offset(bix
                                                                                  as
                                                                                  isize));
-                *buf_3.offset(to_x_3.wrapping_add(1 as libc::c_int as
+                *buf.offset(to_x.wrapping_add(1 as libc::c_int as
                                                       libc::c_uint) as isize)
                     =
                     flow_colorcontext_srgb_to_floatspace(colorcontext,
-                                                         *src_start_3.offset(bix_3.wrapping_add(1
+                                                         *src_start.offset(bix.wrapping_add(1
                                                                                                     as
                                                                                                     libc::c_int
                                                                                                     as
                                                                                                     libc::c_uint)
                                                                                  as
                                                                                  isize));
-                *buf_3.offset(to_x_3.wrapping_add(2 as libc::c_int as
+                *buf.offset(to_x.wrapping_add(2 as libc::c_int as
                                                       libc::c_uint) as isize)
                     =
                     flow_colorcontext_srgb_to_floatspace(colorcontext,
-                                                         *src_start_3.offset(bix_3.wrapping_add(2
+                                                         *src_start.offset(bix.wrapping_add(2
                                                                                                     as
                                                                                                     libc::c_int
                                                                                                     as
                                                                                                     libc::c_uint)
                                                                                  as
                                                                                  isize));
-                to_x_3 =
-                    (to_x_3 as
+                to_x =
+                    (to_x as
                          libc::c_uint).wrapping_add(4 as libc::c_int as
                                                         libc::c_uint) as
                         uint32_t as uint32_t;
-                bix_3 =
-                    (bix_3 as
+                bix =
+                    (bix as
                          libc::c_uint).wrapping_add(4 as libc::c_int as
                                                         libc::c_uint) as
                         uint32_t as uint32_t
             }
-            row_3 = row_3.wrapping_add(1)
+            row += 1
         }
     } else {
         flow_snprintf(flow_context_set_error_get_message_buffer(context,
