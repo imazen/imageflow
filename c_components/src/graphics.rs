@@ -1,5 +1,5 @@
 #![allow(dead_code, mutable_transmutes, non_camel_case_types, non_snake_case,
-         non_upper_case_globals, unused_assignments, unused_mut)]
+         non_upper_case_globals, unused_assignments)]
 #[cfg(target_arch = "x86")]
 pub use std::arch::x86::{__m128, _mm_loadu_ps, _mm_storeu_ps, _mm_movehl_ps,
                          _mm_movelh_ps, _mm_unpackhi_ps, _mm_unpacklo_ps,
@@ -627,9 +627,9 @@ pub const BESSEL_01: unsafe extern "C" fn(_: libc::c_double) -> libc::c_double
           =
     j1;
 #[inline]
-unsafe extern "C" fn flow_colorcontext_srgb_to_floatspace_uncached(mut colorcontext:
+unsafe extern "C" fn flow_colorcontext_srgb_to_floatspace_uncached(colorcontext:
                                                                        *mut flow_colorcontext_info,
-                                                                   mut value:
+                                                                   value:
                                                                        uint8_t)
  -> libc::c_float {
     let mut v: libc::c_float = value as libc::c_float * (1.0f32 / 255.0f32);
@@ -641,15 +641,15 @@ unsafe extern "C" fn flow_colorcontext_srgb_to_floatspace_uncached(mut colorcont
     return v;
 }
 #[inline]
-unsafe extern "C" fn flow_colorcontext_remove_gamma(mut colorcontext:
+unsafe extern "C" fn flow_colorcontext_remove_gamma(colorcontext:
                                                         *mut flow_colorcontext_info,
-                                                    mut value: libc::c_float)
+                                                    value: libc::c_float)
  -> libc::c_float {
     return pow(value as libc::c_double,
                (*colorcontext).gamma as libc::c_double) as libc::c_float;
 }
 #[inline]
-unsafe extern "C" fn srgb_to_linear(mut s: libc::c_float) -> libc::c_float {
+unsafe extern "C" fn srgb_to_linear(s: libc::c_float) -> libc::c_float {
     if s <= 0.04045f32 {
         return s / 12.92f32
     } else {
@@ -661,32 +661,32 @@ unsafe extern "C" fn srgb_to_linear(mut s: libc::c_float) -> libc::c_float {
 }
 pub const NULL: libc::c_int = 0 as libc::c_int;
 #[inline]
-unsafe extern "C" fn umin(mut a: libc::c_uint, mut b: libc::c_uint)
+unsafe extern "C" fn umin(a: libc::c_uint, b: libc::c_uint)
  -> libc::c_uint {
     return if a <= b { a } else { b };
 }
 pub const FLOW_ERROR_MESSAGE_SIZE: libc::c_int = 1023 as libc::c_int;
 pub const IR_PI: libc::c_double = 3.1415926535897932384626433832795f64;
 #[inline]
-unsafe extern "C" fn int_max(mut a: libc::c_int, mut b: libc::c_int)
+unsafe extern "C" fn int_max(a: libc::c_int, b: libc::c_int)
  -> libc::c_int {
     return if a >= b { a } else { b };
 }
 #[inline]
-unsafe extern "C" fn int_min(mut a: libc::c_int, mut b: libc::c_int)
+unsafe extern "C" fn int_min(a: libc::c_int, b: libc::c_int)
  -> libc::c_int {
     return if a <= b { a } else { b };
 }
 #[inline]
-unsafe extern "C" fn ir_gaussian(mut x: libc::c_double,
-                                 mut stdDev: libc::c_double)
+unsafe extern "C" fn ir_gaussian(x: libc::c_double,
+                                 stdDev: libc::c_double)
  -> libc::c_double {
     return exp(-x * x /
                    (2 as libc::c_int as libc::c_double * stdDev * stdDev)) /
                (sqrt(2 as libc::c_int as libc::c_double * IR_PI) * stdDev);
 }
 #[inline]
-unsafe extern "C" fn uchar_clamp_ff(mut clr: libc::c_float) -> uint8_t {
+unsafe extern "C" fn uchar_clamp_ff(clr: libc::c_float) -> uint8_t {
     let mut result: uint16_t = 0;
     result = (clr as libc::c_double + 0.5f64) as int16_t as uint16_t;
     if result as libc::c_int > 255 as libc::c_int {
@@ -698,16 +698,16 @@ unsafe extern "C" fn uchar_clamp_ff(mut clr: libc::c_float) -> uint8_t {
     return result as uint8_t;
 }
 #[inline]
-unsafe extern "C" fn fastpow2(mut p: libc::c_float) -> libc::c_float {
-    let mut offset: libc::c_float =
+unsafe extern "C" fn fastpow2(p: libc::c_float) -> libc::c_float {
+    let offset: libc::c_float =
         if p < 0 as libc::c_int as libc::c_float { 1.0f32 } else { 0.0f32 };
-    let mut clipp: libc::c_float =
+    let clipp: libc::c_float =
         if p < -(126 as libc::c_int) as libc::c_float {
             -126.0f32
         } else { p };
-    let mut w: libc::c_int = clipp as libc::c_int;
-    let mut z: libc::c_float = clipp - w as libc::c_float + offset;
-    let mut v: C2RustUnnamed =
+    let w: libc::c_int = clipp as libc::c_int;
+    let z: libc::c_float = clipp - w as libc::c_float + offset;
+    let v: C2RustUnnamed =
         C2RustUnnamed{i:
                           (((1 as libc::c_int) << 23 as libc::c_int) as
                                libc::c_float *
@@ -717,9 +717,9 @@ unsafe extern "C" fn fastpow2(mut p: libc::c_float) -> libc::c_float {
     return v.f;
 }
 #[inline]
-unsafe extern "C" fn fastlog2(mut x: libc::c_float) -> libc::c_float {
-    let mut vx: C2RustUnnamed_1 = C2RustUnnamed_1{f: x,};
-    let mut mx: C2RustUnnamed_0 =
+unsafe extern "C" fn fastlog2(x: libc::c_float) -> libc::c_float {
+    let vx: C2RustUnnamed_1 = C2RustUnnamed_1{f: x,};
+    let mx: C2RustUnnamed_0 =
         C2RustUnnamed_0{i:
                             vx.i & 0x7fffff as libc::c_int as libc::c_uint |
                                 0x3f000000 as libc::c_int as libc::c_uint,};
@@ -729,38 +729,38 @@ unsafe extern "C" fn fastlog2(mut x: libc::c_float) -> libc::c_float {
                1.72587999f32 / (0.3520887068f32 + mx.f);
 }
 #[inline]
-unsafe extern "C" fn fastpow(mut x: libc::c_float, mut p: libc::c_float)
+unsafe extern "C" fn fastpow(x: libc::c_float, p: libc::c_float)
  -> libc::c_float {
     return fastpow2(p * fastlog2(x));
 }
 #[inline]
-unsafe extern "C" fn linear_to_srgb(mut clr: libc::c_float) -> libc::c_float {
+unsafe extern "C" fn linear_to_srgb(clr: libc::c_float) -> libc::c_float {
     if clr <= 0.0031308f32 { return 12.92f32 * clr * 255.0f32 }
     return 1.055f32 * 255.0f32 * fastpow(clr, 0.41666666f32) - 14.025f32;
 }
 #[inline]
-unsafe extern "C" fn flow_colorcontext_apply_gamma(mut colorcontext:
+unsafe extern "C" fn flow_colorcontext_apply_gamma(colorcontext:
                                                        *mut flow_colorcontext_info,
-                                                   mut value: libc::c_float)
+                                                   value: libc::c_float)
  -> libc::c_float {
     return pow(value as libc::c_double,
                (*colorcontext).gamma_inverse as libc::c_double) as
                libc::c_float;
 }
 #[inline]
-unsafe extern "C" fn flow_colorcontext_srgb_to_floatspace(mut colorcontext:
+unsafe extern "C" fn flow_colorcontext_srgb_to_floatspace(colorcontext:
                                                               *mut flow_colorcontext_info,
-                                                          mut value: uint8_t)
+                                                          value: uint8_t)
  -> libc::c_float {
     return (*colorcontext).byte_to_float[value as usize];
 }
 #[inline]
-unsafe extern "C" fn flow_colorcontext_floatspace_to_srgb(mut color:
+unsafe extern "C" fn flow_colorcontext_floatspace_to_srgb(color:
                                                               *mut flow_colorcontext_info,
-                                                          mut space_value:
+                                                          space_value:
                                                               libc::c_float)
  -> uint8_t {
-    let mut v: libc::c_float = space_value;
+    let v: libc::c_float = space_value;
     if (*color).apply_gamma {
         return uchar_clamp_ff(flow_colorcontext_apply_gamma(color, v) *
                                   255.0f32)
@@ -769,7 +769,7 @@ unsafe extern "C" fn flow_colorcontext_floatspace_to_srgb(mut color:
     return uchar_clamp_ff(255.0f32 * v);
 }
 #[inline]
-unsafe extern "C" fn linear_to_luv(mut bgr: *mut libc::c_float) {
+unsafe extern "C" fn linear_to_luv(bgr: *mut libc::c_float) {
     let xn: libc::c_float = 0.312713f32;
     let yn: libc::c_float = 0.329016f32;
     let Yn: libc::c_float = 1.0f32;
@@ -828,7 +828,7 @@ unsafe extern "C" fn linear_to_luv(mut bgr: *mut libc::c_float) {
             100 as libc::c_int as libc::c_float;
 }
 #[inline]
-unsafe extern "C" fn luv_to_linear(mut luv: *mut libc::c_float) {
+unsafe extern "C" fn luv_to_linear(luv: *mut libc::c_float) {
     let L: libc::c_float = *luv.offset(0 as libc::c_int as isize);
     let U: libc::c_float = *luv.offset(1 as libc::c_int as isize) - 100.0f32;
     let V: libc::c_float = *luv.offset(2 as libc::c_int as isize) - 100.0f32;
@@ -879,11 +879,11 @@ unsafe extern "C" fn luv_to_linear(mut luv: *mut libc::c_float) {
     *luv.offset(1 as libc::c_int as isize) = g;
     *luv.offset(2 as libc::c_int as isize) = r;
 }
-unsafe extern "C" fn derive_cubic_coefficients(mut B: libc::c_double,
-                                               mut C: libc::c_double,
-                                               mut out:
+unsafe extern "C" fn derive_cubic_coefficients(B: libc::c_double,
+                                               C: libc::c_double,
+                                               out:
                                                    *mut flow_interpolation_details) {
-    let mut bx2: libc::c_double = B + B;
+    let bx2: libc::c_double = B + B;
     (*out).p1 = 1.0f64 - 1.0f64 / 3.0f64 * B;
     (*out).p2 = -3.0f64 + bx2 + C;
     (*out).p3 = 2.0f64 - 1.5f64 * B - C;
@@ -892,9 +892,8 @@ unsafe extern "C" fn derive_cubic_coefficients(mut B: libc::c_double,
     (*out).q3 = B + 5.0f64 * C;
     (*out).q4 = -1.0f64 / 6.0f64 * B - C;
 }
-unsafe extern "C" fn filter_flex_cubic(mut d:
-                                           *const flow_interpolation_details,
-                                       mut x: libc::c_double)
+unsafe extern "C" fn filter_flex_cubic(d: *const flow_interpolation_details,
+                                       x: libc::c_double)
  -> libc::c_double {
     let t: libc::c_double = fabs(x) / (*d).blur;
     if t < 1.0f64 { return (*d).p1 + t * (t * ((*d).p2 + t * (*d).p3)) }
@@ -903,12 +902,12 @@ unsafe extern "C" fn filter_flex_cubic(mut d:
     }
     return 0.0f64;
 }
-unsafe extern "C" fn filter_bicubic_fast(mut d:
+unsafe extern "C" fn filter_bicubic_fast(d:
                                              *const flow_interpolation_details,
-                                         mut t: libc::c_double)
+                                         t: libc::c_double)
  -> libc::c_double {
-    let mut abs_t: libc::c_double = fabs(t) / (*d).blur;
-    let mut abs_t_sq: libc::c_double = abs_t * abs_t;
+    let abs_t: libc::c_double = fabs(t) / (*d).blur;
+    let abs_t_sq: libc::c_double = abs_t * abs_t;
     if abs_t < 1 as libc::c_int as libc::c_double {
         return 1 as libc::c_int as libc::c_double -
                    2 as libc::c_int as libc::c_double * abs_t_sq +
@@ -922,8 +921,8 @@ unsafe extern "C" fn filter_bicubic_fast(mut d:
     }
     return 0 as libc::c_int as libc::c_double;
 }
-unsafe extern "C" fn filter_sinc(mut d: *const flow_interpolation_details,
-                                 mut t: libc::c_double) -> libc::c_double {
+unsafe extern "C" fn filter_sinc(d: *const flow_interpolation_details,
+                                 t: libc::c_double) -> libc::c_double {
     let abs_t: libc::c_double = fabs(t) / (*d).blur;
     if abs_t == 0 as libc::c_int as libc::c_double {
         return 1 as libc::c_int as libc::c_double
@@ -933,24 +932,24 @@ unsafe extern "C" fn filter_sinc(mut d: *const flow_interpolation_details,
     let a: libc::c_double = abs_t * IR_PI;
     return sin(a) / a;
 }
-unsafe extern "C" fn filter_box(mut d: *const flow_interpolation_details,
-                                mut t: libc::c_double) -> libc::c_double {
+unsafe extern "C" fn filter_box(d: *const flow_interpolation_details,
+                                t: libc::c_double) -> libc::c_double {
     let x: libc::c_double = t / (*d).blur;
     return if x >= -(1 as libc::c_int) as libc::c_double * (*d).window &&
                   x < (*d).window {
                1 as libc::c_int
            } else { 0 as libc::c_int } as libc::c_double;
 }
-unsafe extern "C" fn filter_triangle(mut d: *const flow_interpolation_details,
-                                     mut t: libc::c_double)
+unsafe extern "C" fn filter_triangle(d: *const flow_interpolation_details,
+                                     t: libc::c_double)
  -> libc::c_double {
     let x: libc::c_double = fabs(t) / (*d).blur;
     if x < 1.0f64 { return 1.0f64 - x }
     return 0.0f64;
 }
-unsafe extern "C" fn filter_sinc_windowed(mut d:
+unsafe extern "C" fn filter_sinc_windowed(d:
                                               *const flow_interpolation_details,
-                                          mut t: libc::c_double)
+                                          t: libc::c_double)
  -> libc::c_double {
     let x: libc::c_double = t / (*d).blur;
     let abs_t: libc::c_double = fabs(x);
@@ -962,8 +961,8 @@ unsafe extern "C" fn filter_sinc_windowed(mut d:
     return (*d).window * sin(IR_PI * x / (*d).window) * sin(x * IR_PI) /
                (IR_PI * IR_PI * x * x);
 }
-unsafe extern "C" fn filter_jinc(mut d: *const flow_interpolation_details,
-                                 mut t: libc::c_double) -> libc::c_double {
+unsafe extern "C" fn filter_jinc(d: *const flow_interpolation_details,
+                                 t: libc::c_double) -> libc::c_double {
     let x: libc::c_double = fabs(t) / (*d).blur;
     if x == 0.0f64 { return 0.5f64 * IR_PI }
     return j1(IR_PI * x) / x;
@@ -983,8 +982,8 @@ static double filter_window_jinc (const struct flow_interpolation_details * d, d
     return window_jinc (t / (d->blur * d->window));
 }
 */
-unsafe extern "C" fn filter_ginseng(mut d: *const flow_interpolation_details,
-                                    mut t: libc::c_double) -> libc::c_double {
+unsafe extern "C" fn filter_ginseng(d: *const flow_interpolation_details,
+                                    t: libc::c_double) -> libc::c_double {
     // Sinc windowed by jinc
     let abs_t: libc::c_double = fabs(t) / (*d).blur;
     let t_pi: libc::c_double = abs_t * IR_PI;
@@ -1002,11 +1001,11 @@ unsafe extern "C" fn filter_ginseng(mut d: *const flow_interpolation_details,
 }
 pub const TONY: libc::c_double = 0.00001f64;
 #[no_mangle]
-pub unsafe extern "C" fn flow_interpolation_details_percent_negative_weight(mut details:
+pub unsafe extern "C" fn flow_interpolation_details_percent_negative_weight(details:
                                                                                 *const flow_interpolation_details)
  -> libc::c_double {
     let samples: libc::c_int = 50 as libc::c_int;
-    let mut step: libc::c_double =
+    let step: libc::c_double =
         (*details).window / samples as libc::c_double;
     let mut last_height: libc::c_double =
         (*details).filter.expect("non-null function pointer")(details, -step);
@@ -1031,8 +1030,7 @@ pub unsafe extern "C" fn flow_interpolation_details_percent_negative_weight(mut 
     return negative_area / positive_area;
 }
 #[no_mangle]
-pub unsafe extern "C" fn flow_interpolation_details_create(mut context:
-                                                               *mut flow_c)
+pub unsafe extern "C" fn flow_interpolation_details_create(context: *mut flow_c)
  -> *mut flow_interpolation_details {
     let mut d: *mut flow_interpolation_details =
         flow_context_calloc(context, 1 as libc::c_int as size_t,
@@ -1070,15 +1068,15 @@ pub unsafe extern "C" fn flow_interpolation_details_create(mut context:
     return d;
 }
 #[no_mangle]
-pub unsafe extern "C" fn flow_interpolation_details_create_bicubic_custom(mut context:
+pub unsafe extern "C" fn flow_interpolation_details_create_bicubic_custom(context:
                                                                               *mut flow_c,
-                                                                          mut window:
+                                                                          window:
                                                                               libc::c_double,
-                                                                          mut blur:
+                                                                          blur:
                                                                               libc::c_double,
-                                                                          mut B:
+                                                                          B:
                                                                               libc::c_double,
-                                                                          mut C:
+                                                                          C:
                                                                               libc::c_double)
  -> *mut flow_interpolation_details {
     let mut d: *mut flow_interpolation_details =
@@ -1104,13 +1102,13 @@ pub unsafe extern "C" fn flow_interpolation_details_create_bicubic_custom(mut co
     return d;
 }
 #[no_mangle]
-pub unsafe extern "C" fn flow_interpolation_details_create_custom(mut context:
+pub unsafe extern "C" fn flow_interpolation_details_create_custom(context:
                                                                       *mut flow_c,
-                                                                  mut window:
+                                                                  window:
                                                                       libc::c_double,
-                                                                  mut blur:
+                                                                  blur:
                                                                       libc::c_double,
-                                                                  mut filter:
+                                                                  filter:
                                                                       flow_detailed_interpolation_method)
  -> *mut flow_interpolation_details {
     let mut d: *mut flow_interpolation_details =
@@ -1130,23 +1128,23 @@ pub unsafe extern "C" fn flow_interpolation_details_create_custom(mut context:
     return d;
 }
 #[no_mangle]
-pub unsafe extern "C" fn flow_interpolation_details_destroy(mut context:
+pub unsafe extern "C" fn flow_interpolation_details_destroy(context:
                                                                 *mut flow_c,
-                                                            mut details:
+                                                             details:
                                                                 *mut flow_interpolation_details) {
     flow_deprecated_free(context, details as *mut libc::c_void,
                          b"lib/graphics.c\x00" as *const u8 as
                              *const libc::c_char, 233 as libc::c_int);
 }
-unsafe extern "C" fn InterpolationDetails_create_from_internal(mut context:
+unsafe extern "C" fn InterpolationDetails_create_from_internal(context:
                                                                    *mut flow_c,
-                                                               mut filter:
+                                                               filter:
                                                                    flow_interpolation_filter,
-                                                               mut checkExistenceOnly:
+                                                               checkExistenceOnly:
                                                                    bool)
  -> *mut flow_interpolation_details {
-    let mut ex: bool = checkExistenceOnly;
-    let mut truePtr: *mut flow_interpolation_details =
+    let ex: bool = checkExistenceOnly;
+    let truePtr: *mut flow_interpolation_details =
         -(1 as libc::c_int) as *mut flow_interpolation_details;
     match filter as libc::c_uint {
         23 | 22 => {
@@ -1747,23 +1745,23 @@ unsafe extern "C" fn InterpolationDetails_create_from_internal(mut context:
     return NULL as *mut flow_interpolation_details;
 }
 #[no_mangle]
-pub unsafe extern "C" fn flow_interpolation_details_create_from(mut context:
+pub unsafe extern "C" fn flow_interpolation_details_create_from(context:
                                                                     *mut flow_c,
-                                                                mut filter:
+                                                                filter:
                                                                     flow_interpolation_filter)
  -> *mut flow_interpolation_details {
     return InterpolationDetails_create_from_internal(context, filter,
                                                      false);
 }
 #[no_mangle]
-pub unsafe extern "C" fn flow_interpolation_filter_exists(mut filter:
+pub unsafe extern "C" fn flow_interpolation_filter_exists(filter:
                                                               flow_interpolation_filter)
  -> bool {
     return !InterpolationDetails_create_from_internal(NULL as *mut flow_c,
                                                       filter,
                                                       true).is_null();
 }
-unsafe extern "C" fn LineContributions_alloc(mut context: *mut flow_c,
+unsafe extern "C" fn LineContributions_alloc(context: *mut flow_c,
                                              line_length: uint32_t,
                                              windows_size: uint32_t)
  -> *mut flow_interpolation_line_contributions {
@@ -1820,7 +1818,7 @@ unsafe extern "C" fn LineContributions_alloc(mut context: *mut flow_c,
                                                                             &[libc::c_char; 24]>(b"LineContributions_alloc\x00")).as_ptr());
         return NULL as *mut flow_interpolation_line_contributions
     }
-    let mut allWeights: *mut libc::c_float =
+    let allWeights: *mut libc::c_float =
         flow_context_calloc(context,
                             windows_size.wrapping_mul(line_length) as size_t,
                             ::std::mem::size_of::<libc::c_float>() as
@@ -1859,9 +1857,9 @@ unsafe extern "C" fn LineContributions_alloc(mut context: *mut flow_c,
     return res;
 }
 #[no_mangle]
-pub unsafe extern "C" fn flow_interpolation_line_contributions_destroy(mut context:
+pub unsafe extern "C" fn flow_interpolation_line_contributions_destroy(context:
                                                                            *mut flow_c,
-                                                                       mut p:
+                                                                       p:
                                                                            *mut flow_interpolation_line_contributions) {
     if !p.is_null() {
         if !(*p).ContribRow.is_null() {
@@ -1881,13 +1879,13 @@ pub unsafe extern "C" fn flow_interpolation_line_contributions_destroy(mut conte
                              *const libc::c_char, 381 as libc::c_int);
 }
 #[no_mangle]
-pub unsafe extern "C" fn flow_interpolation_line_contributions_create(mut context:
+pub unsafe extern "C" fn flow_interpolation_line_contributions_create(context:
                                                                           *mut flow_c,
                                                                       output_line_size:
                                                                           uint32_t,
                                                                       input_line_size:
                                                                           uint32_t,
-                                                                      mut details:
+                                                                      details:
                                                                           *const flow_interpolation_details)
  -> *mut flow_interpolation_line_contributions {
     let sharpen_ratio: libc::c_double =
@@ -1985,7 +1983,7 @@ pub unsafe extern "C" fn flow_interpolation_line_contributions_create(mut contex
             (*(*res).ContribRow.offset(u as isize)).Weights;
         ix = left_src_pixel;
         while ix <= right_src_pixel {
-            let mut tx: libc::c_int =
+            let tx: libc::c_int =
                 ix.wrapping_sub(left_src_pixel) as libc::c_int;
             let mut add: libc::c_double =
                 Some((*details).filter.expect("non-null function pointer")).expect("non-null function pointer")(details,
@@ -2020,11 +2018,11 @@ pub unsafe extern "C" fn flow_interpolation_line_contributions_create(mut contex
                desired_sharpen_ratio > sharpen_ratio {
             if total_negative_weight < 0.0f32 as libc::c_double {
                 if desired_sharpen_ratio < 1.0f32 as libc::c_double {
-                    let mut target_positive_weight: libc::c_double =
+                    let target_positive_weight: libc::c_double =
                         1.0f32 as libc::c_double /
                             (1.0f32 as libc::c_double -
                                  desired_sharpen_ratio);
-                    let mut target_negative_weight: libc::c_double =
+                    let target_negative_weight: libc::c_double =
                         desired_sharpen_ratio * -target_positive_weight;
                     pos_factor =
                         (target_positive_weight / total_positive_weight) as
@@ -2038,7 +2036,9 @@ pub unsafe extern "C" fn flow_interpolation_line_contributions_create(mut contex
                     }
                     //printf("target=%f target-=%f, pos_factor=%f neg_factor=%f\n", total_positive_weight - target_negative_weight,  target_negative_weight, pos_factor, neg_factor);
                 }
-            } else { (total_weight) == 0 as libc::c_int as libc::c_double; }
+            } else if total_weight == 0.0 {
+                // In this situation we have a problem to report
+             }
         }
         //printf("\n");
         ix = 0 as libc::c_int as uint32_t;
@@ -2092,16 +2092,16 @@ pub unsafe extern "C" fn flow_interpolation_line_contributions_create(mut contex
     return res;
 }
 #[no_mangle]
-pub unsafe extern "C" fn flow_bitmap_float_scale_rows(mut context:
+pub unsafe extern "C" fn flow_bitmap_float_scale_rows(context:
                                                           *mut flow_c,
-                                                      mut from:
+                                                      from:
                                                           *mut flow_bitmap_float,
-                                                      mut from_row: uint32_t,
-                                                      mut to:
+                                                      from_row: uint32_t,
+                                                      to:
                                                           *mut flow_bitmap_float,
-                                                      mut to_row: uint32_t,
-                                                      mut row_count: uint32_t,
-                                                      mut weights:
+                                                      to_row: uint32_t,
+                                                      row_count: uint32_t,
+                                                      weights:
                                                           *mut flow_interpolation_pixel_contributions)
  -> bool {
     let from_step: uint32_t = (*from).channels;
@@ -2126,10 +2126,10 @@ pub unsafe extern "C" fn flow_bitmap_float_scale_rows(mut context:
            to_step == 4 as libc::c_int as libc::c_uint {
         let mut row: uint32_t = 0 as libc::c_int as uint32_t;
         while row < row_count {
-            let mut source_buffer: *const __m128 =
+            let source_buffer: *const __m128 =
                 (*from).pixels.offset(from_row.wrapping_add(row).wrapping_mul((*from).float_stride)
                                           as isize) as *mut __m128;
-            let mut dest_buffer: *mut __m128 =
+            let dest_buffer: *mut __m128 =
                 (*to).pixels.offset(to_row.wrapping_add(row).wrapping_mul((*to).float_stride)
                                         as isize) as *mut __m128;
             ndx = 0 as libc::c_int as uint32_t;
@@ -2138,14 +2138,14 @@ pub unsafe extern "C" fn flow_bitmap_float_scale_rows(mut context:
                 let left: libc::c_int = (*weights.offset(ndx as isize)).Left;
                 let right: libc::c_int =
                     (*weights.offset(ndx as isize)).Right;
-                let mut weightArray: *const libc::c_float =
+                let weightArray: *const libc::c_float =
                     (*weights.offset(ndx as isize)).Weights;
                 let mut i: libc::c_int = 0;
                 /* Accumulate each channel */
                 i = left;
                 while i <= right {
                     // TODO: Do a better job with this.
-                    let mut factor: __m128 =
+                    let factor: __m128 =
                         _mm_set1_ps(*weightArray.offset((i - left) as isize));
                     // sums += factor * *source_buffer.offset(i as isize);
                     let t = _mm_mul_ps(factor, *source_buffer.offset(i as isize));
@@ -2161,10 +2161,10 @@ pub unsafe extern "C" fn flow_bitmap_float_scale_rows(mut context:
                   to_step == 3 as libc::c_int as libc::c_uint {
         let mut row_0: uint32_t = 0 as libc::c_int as uint32_t;
         while row_0 < row_count {
-            let mut source_buffer_0: *const libc::c_float =
+            let source_buffer_0: *const libc::c_float =
                 (*from).pixels.offset(from_row.wrapping_add(row_0).wrapping_mul((*from).float_stride)
                                           as isize);
-            let mut dest_buffer_0: *mut libc::c_float =
+            let dest_buffer_0: *mut libc::c_float =
                 (*to).pixels.offset(to_row.wrapping_add(row_0).wrapping_mul((*to).float_stride)
                                         as isize);
             ndx = 0 as libc::c_int as uint32_t;
@@ -2174,7 +2174,7 @@ pub unsafe extern "C" fn flow_bitmap_float_scale_rows(mut context:
                     (*weights.offset(ndx as isize)).Left;
                 let right_0: libc::c_int =
                     (*weights.offset(ndx as isize)).Right;
-                let mut weightArray_0: *const libc::c_float =
+                let weightArray_0: *const libc::c_float =
                     (*weights.offset(ndx as isize)).Weights;
                 let mut i_0: libc::c_int = 0;
                 /* Accumulate each channel */
@@ -2230,10 +2230,10 @@ pub unsafe extern "C" fn flow_bitmap_float_scale_rows(mut context:
     } else {
         let mut row_1: uint32_t = 0 as libc::c_int as uint32_t;
         while row_1 < row_count {
-            let mut source_buffer_1: *const libc::c_float =
+            let source_buffer_1: *const libc::c_float =
                 (*from).pixels.offset(from_row.wrapping_add(row_1).wrapping_mul((*from).float_stride)
                                           as isize);
-            let mut dest_buffer_1: *mut libc::c_float =
+            let dest_buffer_1: *mut libc::c_float =
                 (*to).pixels.offset(to_row.wrapping_add(row_1).wrapping_mul((*to).float_stride)
                                         as isize);
             ndx = 0 as libc::c_int as uint32_t;
@@ -2250,7 +2250,7 @@ pub unsafe extern "C" fn flow_bitmap_float_scale_rows(mut context:
                     (*weights.offset(ndx as isize)).Left;
                 let right_1: libc::c_int =
                     (*weights.offset(ndx as isize)).Right;
-                let mut weightArray_1: *const libc::c_float =
+                let weightArray_1: *const libc::c_float =
                     (*weights.offset(ndx as isize)).Weights;
                 /* Accumulate each channel */
                 let mut i_1: libc::c_int = left_1;
@@ -2281,7 +2281,7 @@ pub unsafe extern "C" fn flow_bitmap_float_scale_rows(mut context:
     }
     return true;
 }
-unsafe extern "C" fn multiply_row(mut row: *mut libc::c_float, length: size_t,
+unsafe extern "C" fn multiply_row(row: *mut libc::c_float, length: size_t,
                                   coefficient: libc::c_float) {
     let mut i: size_t = 0 as libc::c_int as size_t;
     while i < length {
@@ -2289,8 +2289,8 @@ unsafe extern "C" fn multiply_row(mut row: *mut libc::c_float, length: size_t,
         i = i.wrapping_add(1)
     };
 }
-unsafe extern "C" fn add_row(mut mutate_row: *mut libc::c_float,
-                             mut input_row: *mut libc::c_float,
+unsafe extern "C" fn add_row(mutate_row: *mut libc::c_float,
+                             input_row: *mut libc::c_float,
                              length: size_t) {
     let mut i: size_t = 0 as libc::c_int as size_t;
     while i < length {
@@ -2298,9 +2298,9 @@ unsafe extern "C" fn add_row(mut mutate_row: *mut libc::c_float,
         i = i.wrapping_add(1)
     };
 }
-unsafe extern "C" fn crop(mut c: *mut flow_c, mut b: *mut flow_bitmap_bgra,
-                          mut x: uint32_t, mut y: uint32_t, mut w: uint32_t,
-                          mut h: uint32_t) -> *mut flow_bitmap_bgra {
+unsafe extern "C" fn crop(c: *mut flow_c, b: *mut flow_bitmap_bgra,
+                          x: uint32_t, y: uint32_t, w: uint32_t,
+                          h: uint32_t) -> *mut flow_bitmap_bgra {
     if h.wrapping_add(y) > (*b).h || w.wrapping_add(x) > (*b).w {
         flow_context_set_error_get_message_buffer(c,
                                                   flow_status_Invalid_argument,
@@ -2314,7 +2314,7 @@ unsafe extern "C" fn crop(mut c: *mut flow_c, mut b: *mut flow_bitmap_bgra,
     }
     let mut cropped_canvas: *mut flow_bitmap_bgra =
         flow_bitmap_bgra_create_header(c, w as libc::c_int, h as libc::c_int);
-    let mut bpp: uint32_t = flow_pixel_format_bytes_per_pixel((*b).fmt);
+    let bpp: uint32_t = flow_pixel_format_bytes_per_pixel((*b).fmt);
     if cropped_canvas.is_null() {
         flow_context_add_to_callstack(c,
                                       b"lib/graphics.c\x00" as *const u8 as
@@ -2342,13 +2342,13 @@ unsafe extern "C" fn crop(mut c: *mut flow_c, mut b: *mut flow_bitmap_bgra,
     return cropped_canvas;
 }
 #[no_mangle]
-pub unsafe extern "C" fn flow_node_execute_scale2d_render1d(mut c:
+pub unsafe extern "C" fn flow_node_execute_scale2d_render1d(c:
                                                                 *mut flow_c,
-                                                            mut input:
+                                                            input:
                                                                 *mut flow_bitmap_bgra,
-                                                            mut uncropped_canvas:
+                                                            uncropped_canvas:
                                                                 *mut flow_bitmap_bgra,
-                                                            mut info:
+                                                            info:
                                                                 *mut flow_nodeinfo_scale2d_render_to_canvas1d)
  -> bool {
     if (*info).h.wrapping_add((*info).y) > (*uncropped_canvas).h ||
@@ -2363,7 +2363,7 @@ pub unsafe extern "C" fn flow_node_execute_scale2d_render1d(mut c:
                                                                             &[libc::c_char; 35]>(b"flow_node_execute_scale2d_render1d\x00")).as_ptr());
         return false
     }
-    let mut cropped_canvas: *mut flow_bitmap_bgra =
+    let cropped_canvas: *mut flow_bitmap_bgra =
         if (*info).x == 0 as libc::c_int as libc::c_uint &&
                (*info).y == 0 as libc::c_int as libc::c_uint &&
                (*info).w == (*uncropped_canvas).w &&
@@ -2382,8 +2382,8 @@ pub unsafe extern "C" fn flow_node_execute_scale2d_render1d(mut c:
                                                                 &[libc::c_char; 35]>(b"flow_node_execute_scale2d_render1d\x00")).as_ptr());
         return false
     }
-    let mut input_fmt: flow_pixel_format = flow_effective_pixel_format(input);
-    let mut canvas_fmt: flow_pixel_format =
+    let input_fmt: flow_pixel_format = flow_effective_pixel_format(input);
+    let canvas_fmt: flow_pixel_format =
         flow_effective_pixel_format(cropped_canvas);
     if input_fmt as libc::c_uint != flow_bgra32 as libc::c_int as libc::c_uint
            &&
@@ -2538,7 +2538,7 @@ pub unsafe extern "C" fn flow_node_execute_scale2d_render1d(mut c:
     let mut max_input_rows: int32_t = 0 as libc::c_int;
     let mut i: uint32_t = 0 as libc::c_int as uint32_t;
     while i < (*contrib_v).LineLength {
-        let mut inputs: libc::c_int =
+        let inputs: libc::c_int =
             (*(*contrib_v).ContribRow.offset(i as isize)).Right -
                 (*(*contrib_v).ContribRow.offset(i as isize)).Left +
                 1 as libc::c_int;
@@ -2546,9 +2546,9 @@ pub unsafe extern "C" fn flow_node_execute_scale2d_render1d(mut c:
         i = i.wrapping_add(1)
     }
     // Allocate space
-    let mut row_floats: size_t =
+    let row_floats: size_t =
         (4 as libc::c_int as libc::c_uint).wrapping_mul((*input).w) as size_t;
-    let mut buf: *mut libc::c_float =
+    let buf: *mut libc::c_float =
         flow_context_malloc(c,
                             (::std::mem::size_of::<libc::c_float>() as
                                  libc::c_ulong).wrapping_mul(row_floats).wrapping_mul((max_input_rows
@@ -2566,7 +2566,7 @@ pub unsafe extern "C" fn flow_node_execute_scale2d_render1d(mut c:
                             b"lib/graphics.c\x00" as *const u8 as
                                 *const libc::c_char, 737 as libc::c_int) as
             *mut libc::c_float;
-    let mut rows: *mut *mut libc::c_float =
+    let rows: *mut *mut libc::c_float =
         flow_context_malloc(c,
                             (::std::mem::size_of::<*mut libc::c_float>() as
                                  libc::c_ulong).wrapping_mul(max_input_rows as
@@ -2579,7 +2579,7 @@ pub unsafe extern "C" fn flow_node_execute_scale2d_render1d(mut c:
                             b"lib/graphics.c\x00" as *const u8 as
                                 *const libc::c_char, 738 as libc::c_int) as
             *mut *mut libc::c_float;
-    let mut row_coefficients: *mut libc::c_float =
+    let row_coefficients: *mut libc::c_float =
         flow_context_malloc(c,
                             (::std::mem::size_of::<libc::c_float>() as
                                  libc::c_ulong).wrapping_mul(max_input_rows as
@@ -2592,7 +2592,7 @@ pub unsafe extern "C" fn flow_node_execute_scale2d_render1d(mut c:
                             b"lib/graphics.c\x00" as *const u8 as
                                 *const libc::c_char, 739 as libc::c_int) as
             *mut libc::c_float;
-    let mut row_indexes: *mut int32_t =
+    let row_indexes: *mut int32_t =
         flow_context_malloc(c,
                             (::std::mem::size_of::<int32_t>() as
                                  libc::c_ulong).wrapping_mul(max_input_rows as
@@ -2618,7 +2618,7 @@ pub unsafe extern "C" fn flow_node_execute_scale2d_render1d(mut c:
                                                                 &[libc::c_char; 35]>(b"flow_node_execute_scale2d_render1d\x00")).as_ptr());
         return false
     }
-    let mut output_address: *mut libc::c_float =
+    let output_address: *mut libc::c_float =
         &mut *buf.offset(row_floats.wrapping_mul(max_input_rows as
                                                      libc::c_ulong) as isize)
             as *mut libc::c_float;
@@ -2638,7 +2638,7 @@ pub unsafe extern "C" fn flow_node_execute_scale2d_render1d(mut c:
     }
     let mut out_row: uint32_t = 0 as libc::c_int as uint32_t;
     while out_row < (*cropped_canvas).h {
-        let mut contrib: flow_interpolation_pixel_contributions =
+        let contrib: flow_interpolation_pixel_contributions =
             *(*contrib_v).ContribRow.offset(out_row as isize);
         // Clear output row
         memset(output_address as *mut libc::c_void, 0 as libc::c_int,
@@ -2726,11 +2726,11 @@ pub unsafe extern "C" fn flow_node_execute_scale2d_render1d(mut c:
                 *row_indexes.offset(active_buf_ix as isize) = input_row;
                 loaded = true
             }
-            let mut weight: libc::c_float =
+            let weight: libc::c_float =
                 *contrib.Weights.offset((input_row - contrib.Left) as isize);
             if fabs(weight as libc::c_double) > 0.00000002f64 {
                 // Apply coefficient, update tracking
-                let mut delta_coefficient: libc::c_float =
+                let delta_coefficient: libc::c_float =
                     weight / *row_coefficients.offset(active_buf_ix as isize);
                 multiply_row(*rows.offset(active_buf_ix as isize), row_floats,
                              delta_coefficient);
@@ -2804,9 +2804,9 @@ pub unsafe extern "C" fn flow_node_execute_scale2d_render1d(mut c:
     return true;
 }
 #[no_mangle]
-pub unsafe extern "C" fn flow_convolution_kernel_create(mut context:
+pub unsafe extern "C" fn flow_convolution_kernel_create(context:
                                                             *mut flow_c,
-                                                        mut radius: uint32_t)
+                                                        radius: uint32_t)
  -> *mut flow_convolution_kernel {
     let mut k: *mut flow_convolution_kernel =
         flow_context_calloc(context, 1 as libc::c_int as size_t,
@@ -2821,7 +2821,7 @@ pub unsafe extern "C" fn flow_convolution_kernel_create(mut context:
                                 *const libc::c_char, 832 as libc::c_int) as
             *mut flow_convolution_kernel;
     // For the actual array;
-    let mut a: *mut libc::c_float =
+    let a: *mut libc::c_float =
         flow_context_calloc(context,
                             radius.wrapping_mul(2 as libc::c_int as
                                                     libc::c_uint).wrapping_add(1
@@ -2841,7 +2841,7 @@ pub unsafe extern "C" fn flow_convolution_kernel_create(mut context:
                                 *const libc::c_char, 834 as libc::c_int) as
             *mut libc::c_float;
     // we assume a maximum of 4 channels are going to need buffering during convolution
-    let mut buf: *mut libc::c_float =
+    let buf: *mut libc::c_float =
         flow_context_malloc(context,
                             (radius.wrapping_add(2 as libc::c_int as
                                                      libc::c_uint).wrapping_mul(4
@@ -2891,7 +2891,7 @@ pub unsafe extern "C" fn flow_convolution_kernel_create(mut context:
     return k;
 }
 #[no_mangle]
-pub unsafe extern "C" fn flow_convolution_kernel_destroy(mut context:
+pub unsafe extern "C" fn flow_convolution_kernel_destroy(context:
                                                              *mut flow_c,
                                                          mut kernel:
                                                              *mut flow_convolution_kernel) {
@@ -2910,14 +2910,14 @@ pub unsafe extern "C" fn flow_convolution_kernel_destroy(mut context:
                              *const libc::c_char, 859 as libc::c_int);
 }
 #[no_mangle]
-pub unsafe extern "C" fn flow_convolution_kernel_create_gaussian(mut context:
+pub unsafe extern "C" fn flow_convolution_kernel_create_gaussian(context:
                                                                      *mut flow_c,
-                                                                 mut stdDev:
+                                                                 stdDev:
                                                                      libc::c_double,
-                                                                 mut radius:
+                                                                 radius:
                                                                      uint32_t)
  -> *mut flow_convolution_kernel {
-    let mut k: *mut flow_convolution_kernel =
+    let k: *mut flow_convolution_kernel =
         flow_convolution_kernel_create(context, radius);
     if !k.is_null() {
         let mut i: uint32_t = 0 as libc::c_int as uint32_t;
@@ -2931,7 +2931,7 @@ pub unsafe extern "C" fn flow_convolution_kernel_create_gaussian(mut context:
     return k;
 }
 #[no_mangle]
-pub unsafe extern "C" fn flow_convolution_kernel_sum(mut kernel:
+pub unsafe extern "C" fn flow_convolution_kernel_sum(kernel:
                                                          *mut flow_convolution_kernel)
  -> libc::c_double {
     let mut sum: libc::c_double = 0 as libc::c_int as libc::c_double;
@@ -2943,13 +2943,13 @@ pub unsafe extern "C" fn flow_convolution_kernel_sum(mut kernel:
     return sum;
 }
 #[no_mangle]
-pub unsafe extern "C" fn flow_convolution_kernel_normalize(mut kernel:
+pub unsafe extern "C" fn flow_convolution_kernel_normalize(kernel:
                                                                *mut flow_convolution_kernel,
-                                                           mut desiredSum:
+                                                           desiredSum:
                                                                libc::c_float) {
-    let mut sum: libc::c_double = flow_convolution_kernel_sum(kernel);
+    let sum: libc::c_double = flow_convolution_kernel_sum(kernel);
     if sum == 0 as libc::c_int as libc::c_double { return }
-    let mut factor: libc::c_float =
+    let factor: libc::c_float =
         (desiredSum as libc::c_double / sum) as libc::c_float;
     let mut i: uint32_t = 0 as libc::c_int as uint32_t;
     while i < (*kernel).width {
@@ -2958,14 +2958,14 @@ pub unsafe extern "C" fn flow_convolution_kernel_normalize(mut kernel:
     };
 }
 #[no_mangle]
-pub unsafe extern "C" fn flow_convolution_kernel_create_gaussian_normalized(mut context:
+pub unsafe extern "C" fn flow_convolution_kernel_create_gaussian_normalized(context:
                                                                                 *mut flow_c,
-                                                                            mut stdDev:
+                                                                            stdDev:
                                                                                 libc::c_double,
-                                                                            mut radius:
+                                                                            radius:
                                                                                 uint32_t)
  -> *mut flow_convolution_kernel {
-    let mut kernel: *mut flow_convolution_kernel =
+    let kernel: *mut flow_convolution_kernel =
         flow_convolution_kernel_create_gaussian(context, stdDev, radius);
     if !kernel.is_null() {
         flow_convolution_kernel_normalize(kernel,
@@ -2974,17 +2974,17 @@ pub unsafe extern "C" fn flow_convolution_kernel_create_gaussian_normalized(mut 
     return kernel;
 }
 #[no_mangle]
-pub unsafe extern "C" fn flow_convolution_kernel_create_gaussian_sharpen(mut context:
+pub unsafe extern "C" fn flow_convolution_kernel_create_gaussian_sharpen(context:
                                                                              *mut flow_c,
-                                                                         mut stdDev:
+                                                                         stdDev:
                                                                              libc::c_double,
-                                                                         mut radius:
+                                                                         radius:
                                                                              uint32_t)
  -> *mut flow_convolution_kernel {
-    let mut kernel: *mut flow_convolution_kernel =
+    let kernel: *mut flow_convolution_kernel =
         flow_convolution_kernel_create_gaussian(context, stdDev, radius);
     if !kernel.is_null() {
-        let mut sum: libc::c_double = flow_convolution_kernel_sum(kernel);
+        let sum: libc::c_double = flow_convolution_kernel_sum(kernel);
         let mut i: uint32_t = 0 as libc::c_int as uint32_t;
         while i < (*kernel).width {
             if i == radius {
@@ -3004,17 +3004,17 @@ pub unsafe extern "C" fn flow_convolution_kernel_create_gaussian_sharpen(mut con
     return kernel;
 }
 #[no_mangle]
-pub unsafe extern "C" fn flow_bitmap_float_convolve_rows(mut context:
+pub unsafe extern "C" fn flow_bitmap_float_convolve_rows(_context:
                                                              *mut flow_c,
-                                                         mut buf:
+                                                         buf:
                                                              *mut flow_bitmap_float,
-                                                         mut kernel:
+                                                         kernel:
                                                              *mut flow_convolution_kernel,
-                                                         mut convolve_channels:
+                                                         convolve_channels:
                                                              uint32_t,
-                                                         mut from_row:
+                                                         from_row:
                                                              uint32_t,
-                                                         mut row_count:
+                                                         row_count:
                                                              libc::c_int)
  -> bool {
     let radius: uint32_t = (*kernel).radius;
@@ -3034,15 +3034,15 @@ pub unsafe extern "C" fn flow_bitmap_float_convolve_rows(mut context:
             (*buf).h
         } else { from_row.wrapping_add(row_count as libc::c_uint) };
     let ch_used: uint32_t = convolve_channels;
-    let mut buffer: *mut libc::c_float = (*kernel).buffer;
-    let mut avg: *mut libc::c_float =
+    let buffer: *mut libc::c_float = (*kernel).buffer;
+    let avg: *mut libc::c_float =
         &mut *(*kernel).buffer.offset(buffer_count.wrapping_mul(ch_used) as
                                           isize) as *mut libc::c_float;
-    let mut kern: *const libc::c_float = (*kernel).kernel;
+    let kern: *const libc::c_float = (*kernel).kernel;
     let wrap_mode: libc::c_int = 0 as libc::c_int;
     let mut row: uint32_t = from_row;
     while row < until_row {
-        let mut source_buffer: *mut libc::c_float =
+        let source_buffer: *mut libc::c_float =
             &mut *(*buf).pixels.offset(row.wrapping_mul((*buf).float_stride)
                                            as isize) as *mut libc::c_float;
         let mut circular_idx: libc::c_int = 0 as libc::c_int;
@@ -3194,16 +3194,16 @@ pub unsafe extern "C" fn flow_bitmap_float_convolve_rows(mut context:
     }
     return true;
 }
-unsafe extern "C" fn BitmapFloat_boxblur_rows(mut context: *mut flow_c,
-                                              mut image:
+unsafe extern "C" fn BitmapFloat_boxblur_rows(_context: *mut flow_c,
+                                              image:
                                                   *mut flow_bitmap_float,
-                                              mut radius: uint32_t,
-                                              mut passes: uint32_t,
+                                              radius: uint32_t,
+                                              passes: uint32_t,
                                               convolve_channels: uint32_t,
-                                              mut work_buffer:
+                                              work_buffer:
                                                   *mut libc::c_float,
-                                              mut from_row: uint32_t,
-                                              mut row_count: libc::c_int)
+                                              from_row: uint32_t,
+                                              row_count: libc::c_int)
  -> bool {
     let buffer_count: uint32_t =
         radius.wrapping_add(1 as libc::c_int as libc::c_uint);
@@ -3214,7 +3214,7 @@ unsafe extern "C" fn BitmapFloat_boxblur_rows(mut context: *mut flow_c,
             (*image).h
         } else { from_row.wrapping_add(row_count as libc::c_uint) };
     let ch_used: uint32_t = (*image).channels;
-    let mut buffer: *mut libc::c_float = work_buffer;
+    let buffer: *mut libc::c_float = work_buffer;
     let std_count: uint32_t =
         radius.wrapping_mul(2 as libc::c_int as
                                 libc::c_uint).wrapping_add(1 as libc::c_int as
@@ -3222,7 +3222,7 @@ unsafe extern "C" fn BitmapFloat_boxblur_rows(mut context: *mut flow_c,
     let std_factor: libc::c_float = 1.0f32 / std_count as libc::c_float;
     let mut row: uint32_t = from_row;
     while row < until_row {
-        let mut source_buffer: *mut libc::c_float =
+        let source_buffer: *mut libc::c_float =
             &mut *(*image).pixels.offset(row.wrapping_mul((*image).float_stride)
                                              as isize) as *mut libc::c_float;
         let mut pass_index: uint32_t = 0 as libc::c_int as uint32_t;
@@ -3323,20 +3323,20 @@ unsafe extern "C" fn BitmapFloat_boxblur_rows(mut context: *mut flow_c,
     }
     return true;
 }
-unsafe extern "C" fn BitmapFloat_boxblur_misaligned_rows(mut context:
+unsafe extern "C" fn BitmapFloat_boxblur_misaligned_rows(context:
                                                              *mut flow_c,
-                                                         mut image:
+                                                         image:
                                                              *mut flow_bitmap_float,
-                                                         mut radius: uint32_t,
-                                                         mut align:
+                                                         radius: uint32_t,
+                                                         align:
                                                              libc::c_int,
                                                          convolve_channels:
                                                              uint32_t,
-                                                         mut work_buffer:
+                                                         work_buffer:
                                                              *mut libc::c_float,
-                                                         mut from_row:
+                                                         from_row:
                                                              uint32_t,
-                                                         mut row_count:
+                                                         row_count:
                                                              libc::c_int)
  -> bool {
     if align != 1 as libc::c_int && align != -(1 as libc::c_int) {
@@ -3359,14 +3359,14 @@ unsafe extern "C" fn BitmapFloat_boxblur_misaligned_rows(mut context:
             (*image).h
         } else { from_row.wrapping_add(row_count as libc::c_uint) };
     let ch_used: uint32_t = (*image).channels;
-    let mut buffer: *mut libc::c_float = work_buffer;
+    let buffer: *mut libc::c_float = work_buffer;
     let write_offset: uint32_t =
         if align == -(1 as libc::c_int) {
             0 as libc::c_int
         } else { 1 as libc::c_int } as uint32_t;
     let mut row: uint32_t = from_row;
     while row < until_row {
-        let mut source_buffer: *mut libc::c_float =
+        let source_buffer: *mut libc::c_float =
             &mut *(*image).pixels.offset(row.wrapping_mul((*image).float_stride)
                                              as isize) as *mut libc::c_float;
         let mut circular_idx: libc::c_int = 0 as libc::c_int;
@@ -3378,7 +3378,7 @@ unsafe extern "C" fn BitmapFloat_boxblur_misaligned_rows(mut context:
         let mut count: libc::c_float = 0 as libc::c_int as libc::c_float;
         let mut ndx: uint32_t = 0 as libc::c_int as uint32_t;
         while ndx < radius {
-            let mut factor: libc::c_float =
+            let factor: libc::c_float =
                 if ndx ==
                        radius.wrapping_sub(1 as libc::c_int as libc::c_uint) {
                     0.5f32
@@ -3486,9 +3486,9 @@ unsafe extern "C" fn BitmapFloat_boxblur_misaligned_rows(mut context:
     return true;
 }
 #[no_mangle]
-pub unsafe extern "C" fn flow_bitmap_float_approx_gaussian_calculate_d(mut sigma:
+pub unsafe extern "C" fn flow_bitmap_float_approx_gaussian_calculate_d(sigma:
                                                                            libc::c_float,
-                                                                       mut bitmap_width:
+                                                                       bitmap_width:
                                                                            uint32_t)
  -> uint32_t {
     let mut d: uint32_t =
@@ -3504,9 +3504,9 @@ pub unsafe extern "C" fn flow_bitmap_float_approx_gaussian_calculate_d(mut sigma
     return d;
 }
 #[no_mangle]
-pub unsafe extern "C" fn flow_bitmap_float_approx_gaussian_buffer_element_count_required(mut sigma:
+pub unsafe extern "C" fn flow_bitmap_float_approx_gaussian_buffer_element_count_required(sigma:
                                                                                              libc::c_float,
-                                                                                         mut bitmap_width:
+                                                                                         bitmap_width:
                                                                                              uint32_t)
  -> uint32_t {
     return flow_bitmap_float_approx_gaussian_calculate_d(sigma,
@@ -3522,19 +3522,19 @@ pub unsafe extern "C" fn flow_bitmap_float_approx_gaussian_buffer_element_count_
     // * sizeof(float);
 }
 #[no_mangle]
-pub unsafe extern "C" fn flow_bitmap_float_approx_gaussian_blur_rows(mut context:
+pub unsafe extern "C" fn flow_bitmap_float_approx_gaussian_blur_rows(context:
                                                                          *mut flow_c,
-                                                                     mut image:
+                                                                     image:
                                                                          *mut flow_bitmap_float,
-                                                                     mut sigma:
+                                                                     sigma:
                                                                          libc::c_float,
-                                                                     mut buffer:
+                                                                     buffer:
                                                                          *mut libc::c_float,
-                                                                     mut buffer_element_count:
+                                                                     buffer_element_count:
                                                                          size_t,
-                                                                     mut from_row:
+                                                                     from_row:
                                                                          uint32_t,
-                                                                     mut row_count:
+                                                                     row_count:
                                                                          libc::c_int)
  -> bool {
     // Ensure sigma is large enough for approximation to be accurate.
@@ -3567,7 +3567,7 @@ pub unsafe extern "C" fn flow_bitmap_float_approx_gaussian_blur_rows(mut context
     // For larger values of 's' (s >= 2.0), an approximation can be used :
     // Three successive box - blurs build a piece - wise quadratic convolution kernel, which approximates the Gaussian
     // kernel to within roughly 3 % .
-    let mut d: uint32_t =
+    let d: uint32_t =
         flow_bitmap_float_approx_gaussian_calculate_d(sigma, (*image).w);
     //... if d is odd, use three box - blurs of size 'd', centered on the output pixel.
     if d.wrapping_rem(2 as libc::c_int as libc::c_uint) >
@@ -3645,8 +3645,8 @@ pub unsafe extern "C" fn flow_bitmap_float_approx_gaussian_blur_rows(mut context
     return true;
 }
 #[inline]
-unsafe extern "C" fn transpose4x4_SSE(mut A: *mut libc::c_float,
-                                      mut B: *mut libc::c_float,
+unsafe extern "C" fn transpose4x4_SSE(A: *mut libc::c_float,
+                                      B: *mut libc::c_float,
                                       lda: libc::c_int, ldb: libc::c_int) {
     let mut row1: __m128 =
         _mm_loadu_ps(&mut *A.offset((0 as libc::c_int * lda) as isize));
@@ -3674,8 +3674,8 @@ unsafe extern "C" fn transpose4x4_SSE(mut A: *mut libc::c_float,
     _mm_storeu_ps(&mut *B.offset((3 as libc::c_int * ldb) as isize), row4);
 }
 #[inline]
-unsafe extern "C" fn transpose_block_SSE4x4(mut A: *mut libc::c_float,
-                                            mut B: *mut libc::c_float,
+unsafe extern "C" fn transpose_block_SSE4x4(A: *mut libc::c_float,
+                                            B: *mut libc::c_float,
                                             n: libc::c_int, m: libc::c_int,
                                             lda: libc::c_int,
                                             ldb: libc::c_int,
@@ -3685,9 +3685,9 @@ unsafe extern "C" fn transpose_block_SSE4x4(mut A: *mut libc::c_float,
     while i < n {
         let mut j: libc::c_int = 0 as libc::c_int;
         while j < m {
-            let mut max_i2: libc::c_int =
+            let max_i2: libc::c_int =
                 if i + block_size < n { (i) + block_size } else { n };
-            let mut max_j2: libc::c_int =
+            let max_j2: libc::c_int =
                 if j + block_size < m { (j) + block_size } else { m };
             let mut i2: libc::c_int = i;
             while i2 < max_i2 {
@@ -3706,10 +3706,10 @@ unsafe extern "C" fn transpose_block_SSE4x4(mut A: *mut libc::c_float,
     };
 }
 #[no_mangle]
-pub unsafe extern "C" fn flow_bitmap_bgra_transpose(mut c: *mut flow_c,
-                                                    mut from:
+pub unsafe extern "C" fn flow_bitmap_bgra_transpose(c: *mut flow_c,
+                                                    from:
                                                         *mut flow_bitmap_bgra,
-                                                    mut to:
+                                                    to:
                                                         *mut flow_bitmap_bgra)
  -> bool {
     if (*from).w != (*to).h || (*from).h != (*to).w ||
@@ -3757,12 +3757,12 @@ pub unsafe extern "C" fn flow_bitmap_bgra_transpose(mut c: *mut flow_c,
         return false
     }
     // 256 (1024x1024 bytes) at 18.18ms, 128 at 18.6ms,  64 at 20.4ms, 16 at 25.71ms
-    let mut block_size: libc::c_int = 128 as libc::c_int;
-    let mut cropped_h: libc::c_int =
+    let block_size: libc::c_int = 128 as libc::c_int;
+    let cropped_h: libc::c_int =
         (*from).h.wrapping_sub((*from).h.wrapping_rem(min_block_size as
                                                           libc::c_uint)) as
             libc::c_int;
-    let mut cropped_w: libc::c_int =
+    let cropped_w: libc::c_int =
         (*from).w.wrapping_sub((*from).w.wrapping_rem(min_block_size as
                                                           libc::c_uint)) as
             libc::c_int;
@@ -3817,10 +3817,10 @@ pub unsafe extern "C" fn flow_bitmap_bgra_transpose(mut c: *mut flow_c,
     return true;
 }
 #[no_mangle]
-pub unsafe extern "C" fn flow_bitmap_bgra_transpose_slow(mut c: *mut flow_c,
-                                                         mut from:
+pub unsafe extern "C" fn flow_bitmap_bgra_transpose_slow(c: *mut flow_c,
+                                                         from:
                                                              *mut flow_bitmap_bgra,
-                                                         mut to:
+                                                         to:
                                                              *mut flow_bitmap_bgra)
  -> bool {
     if (*from).w != (*to).h || (*from).h != (*to).w ||
@@ -3861,8 +3861,8 @@ pub unsafe extern "C" fn flow_bitmap_bgra_transpose_slow(mut c: *mut flow_c,
         return true
     } else if (*from).fmt as libc::c_uint ==
                   flow_bgr24 as libc::c_int as libc::c_uint {
-        let mut from_stride: libc::c_int = (*from).stride as libc::c_int;
-        let mut to_stride: libc::c_int = (*to).stride as libc::c_int;
+        let from_stride: libc::c_int = (*from).stride as libc::c_int;
+        let to_stride: libc::c_int = (*to).stride as libc::c_int;
         let mut x_0: uint32_t = 0 as libc::c_int as uint32_t;
         let mut x_stride: uint32_t = 0 as libc::c_int as uint32_t;
         let mut x_3: uint32_t = 0 as libc::c_int as uint32_t;
@@ -3934,19 +3934,19 @@ pub unsafe extern "C" fn flow_bitmap_bgra_transpose_slow(mut c: *mut flow_c,
     };
 }
 #[no_mangle]
-pub unsafe extern "C" fn flow_bitmap_float_convert_srgb_to_linear(mut context:
+pub unsafe extern "C" fn flow_bitmap_float_convert_srgb_to_linear(context:
                                                                       *mut flow_c,
-                                                                  mut colorcontext:
+                                                                  colorcontext:
                                                                       *mut flow_colorcontext_info,
-                                                                  mut src:
+                                                                  src:
                                                                       *mut flow_bitmap_bgra,
-                                                                  mut from_row:
+                                                                  from_row:
                                                                       uint32_t,
-                                                                  mut dest:
+                                                                  dest:
                                                                       *mut flow_bitmap_float,
-                                                                  mut dest_row:
+                                                                  dest_row:
                                                                       uint32_t,
-                                                                  mut row_count:
+                                                                  row_count:
                                                                       uint32_t)
  -> bool {
     if ((*src).w != (*dest).w) as libc::c_int as libc::c_long != 0 {
@@ -4025,10 +4025,10 @@ pub unsafe extern "C" fn flow_bitmap_float_convert_srgb_to_linear(mut context:
            libc::c_long != 0 {
         let mut row: uint32_t = 0 as libc::c_int as uint32_t;
         while row < row_count {
-            let mut src_start: *mut uint8_t =
+            let src_start: *mut uint8_t =
                 (*src).pixels.offset(from_row.wrapping_add(row).wrapping_mul((*src).stride)
                                          as isize);
-            let mut buf: *mut libc::c_float =
+            let buf: *mut libc::c_float =
                 (*dest).pixels.offset((*dest).float_stride.wrapping_mul(row.wrapping_add(dest_row))
                                           as isize);
             let mut to_x: uint32_t = 0 as libc::c_int as uint32_t;
@@ -4086,10 +4086,10 @@ pub unsafe extern "C" fn flow_bitmap_float_convert_srgb_to_linear(mut context:
                   to_step == 3 as libc::c_int as libc::c_uint {
         let mut row_0: uint32_t = 0 as libc::c_int as uint32_t;
         while row_0 < row_count {
-            let mut src_start_0: *mut uint8_t =
+            let src_start_0: *mut uint8_t =
                 (*src).pixels.offset(from_row.wrapping_add(row_0).wrapping_mul((*src).stride)
                                          as isize);
-            let mut buf_0: *mut libc::c_float =
+            let buf_0: *mut libc::c_float =
                 (*dest).pixels.offset((*dest).float_stride.wrapping_mul(row_0.wrapping_add(dest_row))
                                           as isize);
             let mut to_x_0: uint32_t = 0 as libc::c_int as uint32_t;
@@ -4139,10 +4139,10 @@ pub unsafe extern "C" fn flow_bitmap_float_convert_srgb_to_linear(mut context:
                   to_step == 3 as libc::c_int as libc::c_uint {
         let mut row_1: uint32_t = 0 as libc::c_int as uint32_t;
         while row_1 < row_count {
-            let mut src_start_1: *mut uint8_t =
+            let src_start_1: *mut uint8_t =
                 (*src).pixels.offset(from_row.wrapping_add(row_1).wrapping_mul((*src).stride)
                                          as isize);
-            let mut buf_1: *mut libc::c_float =
+            let buf_1: *mut libc::c_float =
                 (*dest).pixels.offset((*dest).float_stride.wrapping_mul(row_1.wrapping_add(dest_row))
                                           as isize);
             let mut to_x_1: uint32_t = 0 as libc::c_int as uint32_t;
@@ -4192,10 +4192,10 @@ pub unsafe extern "C" fn flow_bitmap_float_convert_srgb_to_linear(mut context:
                   to_step == 4 as libc::c_int as libc::c_uint {
         let mut row_2: uint32_t = 0 as libc::c_int as uint32_t;
         while row_2 < row_count {
-            let mut src_start_2: *mut uint8_t =
+            let src_start_2: *mut uint8_t =
                 (*src).pixels.offset(from_row.wrapping_add(row_2).wrapping_mul((*src).stride)
                                          as isize);
-            let mut buf_2: *mut libc::c_float =
+            let buf_2: *mut libc::c_float =
                 (*dest).pixels.offset((*dest).float_stride.wrapping_mul(row_2.wrapping_add(dest_row))
                                           as isize);
             let mut to_x_2: uint32_t = 0 as libc::c_int as uint32_t;
@@ -4245,10 +4245,10 @@ pub unsafe extern "C" fn flow_bitmap_float_convert_srgb_to_linear(mut context:
                   to_step == 4 as libc::c_int as libc::c_uint {
         let mut row_3: uint32_t = 0 as libc::c_int as uint32_t;
         while row_3 < row_count {
-            let mut src_start_3: *mut uint8_t =
+            let src_start_3: *mut uint8_t =
                 (*src).pixels.offset(from_row.wrapping_add(row_3).wrapping_mul((*src).stride)
                                          as isize);
-            let mut buf_3: *mut libc::c_float =
+            let buf_3: *mut libc::c_float =
                 (*dest).pixels.offset((*dest).float_stride.wrapping_mul(row_3.wrapping_add(dest_row))
                                           as isize);
             let mut to_x_3: uint32_t = 0 as libc::c_int as uint32_t;
@@ -4324,12 +4324,12 @@ static void unpack24bitRow(uint32_t width, unsigned char* sourceLine, unsigned c
 }
 */
 #[no_mangle]
-pub unsafe extern "C" fn flow_bitmap_bgra_flip_vertical(mut context:
+pub unsafe extern "C" fn flow_bitmap_bgra_flip_vertical(context:
                                                             *mut flow_c,
-                                                        mut b:
+                                                        b:
                                                             *mut flow_bitmap_bgra)
  -> bool {
-    let mut swap: *mut libc::c_void =
+    let swap: *mut libc::c_void =
         flow_context_malloc(context, (*b).stride as size_t,
                             ::std::mem::transmute::<libc::intptr_t,
                                                     flow_destructor_function>(NULL
@@ -4351,15 +4351,15 @@ pub unsafe extern "C" fn flow_bitmap_bgra_flip_vertical(mut context:
     }
     // Dont' copy the full stride (padding), it could be windowed!
     // Todo: try multiple swap rows? 5ms isn't bad, but could be better
-    let mut row_length: uint32_t =
+    let row_length: uint32_t =
         umin((*b).stride,
              (*b).w.wrapping_mul(flow_pixel_format_bytes_per_pixel((*b).fmt)));
     let mut i: uint32_t = 0 as libc::c_int as uint32_t;
     while i < (*b).h.wrapping_div(2 as libc::c_int as libc::c_uint) {
-        let mut top: *mut libc::c_void =
+        let top: *mut libc::c_void =
             (*b).pixels.offset(i.wrapping_mul((*b).stride) as isize) as
                 *mut libc::c_void;
-        let mut bottom: *mut libc::c_void =
+        let bottom: *mut libc::c_void =
             (*b).pixels.offset((*b).h.wrapping_sub(1 as libc::c_int as
                                                        libc::c_uint).wrapping_sub(i).wrapping_mul((*b).stride)
                                    as isize) as *mut libc::c_void;
@@ -4374,9 +4374,9 @@ pub unsafe extern "C" fn flow_bitmap_bgra_flip_vertical(mut context:
     return true;
 }
 #[no_mangle]
-pub unsafe extern "C" fn flow_bitmap_bgra_flip_horizontal(mut context:
+pub unsafe extern "C" fn flow_bitmap_bgra_flip_horizontal(_context:
                                                               *mut flow_c,
-                                                          mut b:
+                                                          b:
                                                               *mut flow_bitmap_bgra)
  -> bool {
     if (*b).fmt as libc::c_uint == flow_bgra32 as libc::c_int as libc::c_uint
@@ -4400,7 +4400,7 @@ pub unsafe extern "C" fn flow_bitmap_bgra_flip_horizontal(mut context:
                                                          as isize) as
                     *mut uint32_t;
             while left < right {
-                let mut swap: uint32_t = *left;
+                let swap: uint32_t = *left;
                 *left = *right;
                 *right = swap;
                 left = left.offset(1);
@@ -4482,10 +4482,10 @@ pub unsafe extern "C" fn flow_bitmap_bgra_flip_horizontal(mut context:
     }
     return true;
 }
-unsafe extern "C" fn flow_bitmap_float_blend_matte(mut context: *mut flow_c,
-                                                   mut colorcontext:
+unsafe extern "C" fn flow_bitmap_float_blend_matte(_context: *mut flow_c,
+                                                   colorcontext:
                                                        *mut flow_colorcontext_info,
-                                                   mut src:
+                                                   src:
                                                        *mut flow_bitmap_float,
                                                    from_row: uint32_t,
                                                    row_count: uint32_t,
@@ -4508,8 +4508,8 @@ unsafe extern "C" fn flow_bitmap_float_blend_matte(mut context: *mut flow_c,
                                                                isize));
     let mut row: uint32_t = from_row;
     while row < from_row.wrapping_add(row_count) {
-        let mut start_ix: uint32_t = row.wrapping_mul((*src).float_stride);
-        let mut end_ix: uint32_t =
+        let start_ix: uint32_t = row.wrapping_mul((*src).float_stride);
+        let end_ix: uint32_t =
             start_ix.wrapping_add((*src).w.wrapping_mul((*src).channels));
         let mut ix: uint32_t = start_ix;
         while ix < end_ix {
@@ -4548,9 +4548,9 @@ unsafe extern "C" fn flow_bitmap_float_blend_matte(mut context: *mut flow_c,
     return true;
 }
 #[no_mangle]
-pub unsafe extern "C" fn flow_bitmap_float_demultiply_alpha(mut context:
+pub unsafe extern "C" fn flow_bitmap_float_demultiply_alpha(_context:
                                                                 *mut flow_c,
-                                                            mut src:
+                                                            src:
                                                                 *mut flow_bitmap_float,
                                                             from_row:
                                                                 uint32_t,
@@ -4559,8 +4559,8 @@ pub unsafe extern "C" fn flow_bitmap_float_demultiply_alpha(mut context:
  -> bool {
     let mut row: uint32_t = from_row;
     while row < from_row.wrapping_add(row_count) {
-        let mut start_ix: uint32_t = row.wrapping_mul((*src).float_stride);
-        let mut end_ix: uint32_t =
+        let start_ix: uint32_t = row.wrapping_mul((*src).float_stride);
+        let end_ix: uint32_t =
             start_ix.wrapping_add((*src).w.wrapping_mul((*src).channels));
         let mut ix: uint32_t = start_ix;
         while ix < end_ix {
@@ -4588,15 +4588,15 @@ pub unsafe extern "C" fn flow_bitmap_float_demultiply_alpha(mut context:
     return true;
 }
 #[no_mangle]
-pub unsafe extern "C" fn flow_bitmap_float_copy_linear_over_srgb(mut context:
+pub unsafe extern "C" fn flow_bitmap_float_copy_linear_over_srgb(_context:
                                                                      *mut flow_c,
-                                                                 mut colorcontext:
+                                                                 colorcontext:
                                                                      *mut flow_colorcontext_info,
-                                                                 mut src:
+                                                                 src:
                                                                      *mut flow_bitmap_float,
                                                                  from_row:
                                                                      uint32_t,
-                                                                 mut dest:
+                                                                 dest:
                                                                      *mut flow_bitmap_bgra,
                                                                  dest_row:
                                                                      uint32_t,
@@ -4637,7 +4637,7 @@ pub unsafe extern "C" fn flow_bitmap_float_copy_linear_over_srgb(mut context:
             if copy_alpha  && !clean_alpha {
                 let mut row: uint32_t = 0 as libc::c_int as uint32_t;
                 while row < row_count {
-                    let mut src_row: *mut libc::c_float =
+                    let src_row: *mut libc::c_float =
                         (*src).pixels.offset(row.wrapping_add(from_row).wrapping_mul((*src).float_stride)
                                                  as isize);
                     let mut dest_row_bytes: *mut uint8_t =
@@ -4699,7 +4699,7 @@ pub unsafe extern "C" fn flow_bitmap_float_copy_linear_over_srgb(mut context:
             if !copy_alpha && !clean_alpha {
                 let mut row_0: uint32_t = 0 as libc::c_int as uint32_t;
                 while row_0 < row_count {
-                    let mut src_row_0: *mut libc::c_float =
+                    let src_row_0: *mut libc::c_float =
                         (*src).pixels.offset(row_0.wrapping_add(from_row).wrapping_mul((*src).float_stride)
                                                  as isize);
                     let mut dest_row_bytes_0: *mut uint8_t =
@@ -4754,7 +4754,7 @@ pub unsafe extern "C" fn flow_bitmap_float_copy_linear_over_srgb(mut context:
             if !copy_alpha  && clean_alpha  {
                 let mut row_1: uint32_t = 0 as libc::c_int as uint32_t;
                 while row_1 < row_count {
-                    let mut src_row_1: *mut libc::c_float =
+                    let src_row_1: *mut libc::c_float =
                         (*src).pixels.offset(row_1.wrapping_add(from_row).wrapping_mul((*src).float_stride)
                                                  as isize);
                     let mut dest_row_bytes_1: *mut uint8_t =
@@ -4813,7 +4813,7 @@ pub unsafe extern "C" fn flow_bitmap_float_copy_linear_over_srgb(mut context:
             if copy_alpha  && !clean_alpha {
                 let mut row_2: uint32_t = 0 as libc::c_int as uint32_t;
                 while row_2 < row_count {
-                    let mut src_row_2: *mut libc::c_float =
+                    let src_row_2: *mut libc::c_float =
                         (*src).pixels.offset(row_2.wrapping_add(from_row).wrapping_mul((*src).float_stride)
                                                  as isize);
                     let mut dest_row_bytes_2: *mut uint8_t =
@@ -4876,7 +4876,7 @@ pub unsafe extern "C" fn flow_bitmap_float_copy_linear_over_srgb(mut context:
             if !copy_alpha && !clean_alpha {
                 let mut row_3: uint32_t = 0 as libc::c_int as uint32_t;
                 while row_3 < row_count {
-                    let mut src_row_3: *mut libc::c_float =
+                    let src_row_3: *mut libc::c_float =
                         (*src).pixels.offset(row_3.wrapping_add(from_row).wrapping_mul((*src).float_stride)
                                                  as isize);
                     let mut dest_row_bytes_3: *mut uint8_t =
@@ -4931,7 +4931,7 @@ pub unsafe extern "C" fn flow_bitmap_float_copy_linear_over_srgb(mut context:
             if !copy_alpha && clean_alpha {
                 let mut row_4: uint32_t = 0 as libc::c_int as uint32_t;
                 while row_4 < row_count {
-                    let mut src_row_4: *mut libc::c_float =
+                    let src_row_4: *mut libc::c_float =
                         (*src).pixels.offset(row_4.wrapping_add(from_row).wrapping_mul((*src).float_stride)
                                                  as isize);
                     let mut dest_row_bytes_4: *mut uint8_t =
@@ -4991,7 +4991,7 @@ pub unsafe extern "C" fn flow_bitmap_float_copy_linear_over_srgb(mut context:
             if copy_alpha  && !clean_alpha {
                 let mut row_5: uint32_t = 0 as libc::c_int as uint32_t;
                 while row_5 < row_count {
-                    let mut src_row_5: *mut libc::c_float =
+                    let src_row_5: *mut libc::c_float =
                         (*src).pixels.offset(row_5.wrapping_add(from_row).wrapping_mul((*src).float_stride)
                                                  as isize);
                     let mut dest_row_bytes_5: *mut uint8_t =
@@ -5050,7 +5050,7 @@ pub unsafe extern "C" fn flow_bitmap_float_copy_linear_over_srgb(mut context:
             if !copy_alpha  && !clean_alpha {
                 let mut row_6: uint32_t = 0 as libc::c_int as uint32_t;
                 while row_6 < row_count {
-                    let mut src_row_6: *mut libc::c_float =
+                    let src_row_6: *mut libc::c_float =
                         (*src).pixels.offset(row_6.wrapping_add(from_row).wrapping_mul((*src).float_stride)
                                                  as isize);
                     let mut dest_row_bytes_6: *mut uint8_t =
@@ -5101,7 +5101,7 @@ pub unsafe extern "C" fn flow_bitmap_float_copy_linear_over_srgb(mut context:
             if !copy_alpha && clean_alpha  {
                 let mut row_7: uint32_t = 0 as libc::c_int as uint32_t;
                 while row_7 < row_count {
-                    let mut src_row_7: *mut libc::c_float =
+                    let src_row_7: *mut libc::c_float =
                         (*src).pixels.offset(row_7.wrapping_add(from_row).wrapping_mul((*src).float_stride)
                                                  as isize);
                     let mut dest_row_bytes_7: *mut uint8_t =
@@ -5156,7 +5156,7 @@ pub unsafe extern "C" fn flow_bitmap_float_copy_linear_over_srgb(mut context:
             if copy_alpha  && !clean_alpha {
                 let mut row_8: uint32_t = 0 as libc::c_int as uint32_t;
                 while row_8 < row_count {
-                    let mut src_row_8: *mut libc::c_float =
+                    let src_row_8: *mut libc::c_float =
                         (*src).pixels.offset(row_8.wrapping_add(from_row).wrapping_mul((*src).float_stride)
                                                  as isize);
                     let mut dest_row_bytes_8: *mut uint8_t =
@@ -5215,7 +5215,7 @@ pub unsafe extern "C" fn flow_bitmap_float_copy_linear_over_srgb(mut context:
             if !copy_alpha && !clean_alpha {
                 let mut row_9: uint32_t = 0 as libc::c_int as uint32_t;
                 while row_9 < row_count {
-                    let mut src_row_9: *mut libc::c_float =
+                    let src_row_9: *mut libc::c_float =
                         (*src).pixels.offset(row_9.wrapping_add(from_row).wrapping_mul((*src).float_stride)
                                                  as isize);
                     let mut dest_row_bytes_9: *mut uint8_t =
@@ -5266,7 +5266,7 @@ pub unsafe extern "C" fn flow_bitmap_float_copy_linear_over_srgb(mut context:
             if !copy_alpha && clean_alpha  {
                 let mut row_10: uint32_t = 0 as libc::c_int as uint32_t;
                 while row_10 < row_count {
-                    let mut src_row_10: *mut libc::c_float =
+                    let src_row_10: *mut libc::c_float =
                         (*src).pixels.offset(row_10.wrapping_add(from_row).wrapping_mul((*src).float_stride)
                                                  as isize);
                     let mut dest_row_bytes_10: *mut uint8_t =
@@ -5320,14 +5320,14 @@ pub unsafe extern "C" fn flow_bitmap_float_copy_linear_over_srgb(mut context:
     }
     return true;
 }
-unsafe extern "C" fn BitmapFloat_compose_linear_over_srgb(mut context:
+unsafe extern "C" fn BitmapFloat_compose_linear_over_srgb(_context:
                                                               *mut flow_c,
-                                                          mut colorcontext:
+                                                          colorcontext:
                                                               *mut flow_colorcontext_info,
-                                                          mut src:
+                                                          src:
                                                               *mut flow_bitmap_float,
                                                           from_row: uint32_t,
-                                                          mut dest:
+                                                          dest:
                                                               *mut flow_bitmap_bgra,
                                                           dest_row: uint32_t,
                                                           row_count: uint32_t,
@@ -5367,7 +5367,7 @@ unsafe extern "C" fn BitmapFloat_compose_linear_over_srgb(mut context:
     let mut row: uint32_t = 0 as libc::c_int as uint32_t;
     while row < row_count {
         // const float * const __restrict src_row = src->pixels + (row + from_row) * src->float_stride;
-        let mut src_row: *mut libc::c_float =
+        let src_row: *mut libc::c_float =
             (*src).pixels.offset(row.wrapping_add(from_row).wrapping_mul((*src).float_stride)
                                      as isize);
         let mut dest_row_bytes: *mut uint8_t =
@@ -5436,21 +5436,21 @@ unsafe extern "C" fn BitmapFloat_compose_linear_over_srgb(mut context:
     return true;
 }
 #[no_mangle]
-pub unsafe extern "C" fn flow_bitmap_float_composite_linear_over_srgb(mut context:
+pub unsafe extern "C" fn flow_bitmap_float_composite_linear_over_srgb(context:
                                                                           *mut flow_c,
-                                                                      mut colorcontext:
+                                                                      colorcontext:
                                                                           *mut flow_colorcontext_info,
-                                                                      mut src_mut:
+                                                                      src_mut:
                                                                           *mut flow_bitmap_float,
-                                                                      mut from_row:
+                                                                      from_row:
                                                                           uint32_t,
-                                                                      mut dest:
+                                                                      dest:
                                                                           *mut flow_bitmap_bgra,
-                                                                      mut dest_row:
+                                                                      dest_row:
                                                                           uint32_t,
-                                                                      mut row_count:
+                                                                      row_count:
                                                                           uint32_t,
-                                                                      mut transpose:
+                                                                      transpose:
                                                                           bool)
  -> bool {
     if if transpose as libc::c_int != 0 {
@@ -5554,9 +5554,9 @@ pub unsafe extern "C" fn flow_bitmap_float_composite_linear_over_srgb(mut contex
     return true;
 }
 #[no_mangle]
-pub unsafe extern "C" fn flow_bitmap_float_linear_to_luv_rows(mut context:
+pub unsafe extern "C" fn flow_bitmap_float_linear_to_luv_rows(context:
                                                                   *mut flow_c,
-                                                              mut bit:
+                                                              bit:
                                                                   *mut flow_bitmap_float,
                                                               start_row:
                                                                   uint32_t,
@@ -5585,10 +5585,10 @@ pub unsafe extern "C" fn flow_bitmap_float_linear_to_luv_rows(mut context:
                                                                             &[libc::c_char; 37]>(b"flow_bitmap_float_linear_to_luv_rows\x00")).as_ptr());
         return false
     }
-    let mut start_at: *mut libc::c_float =
+    let start_at: *mut libc::c_float =
         (*bit).pixels.offset((*bit).float_stride.wrapping_mul(start_row) as
                                  isize);
-    let mut end_at: *const libc::c_float =
+    let end_at: *const libc::c_float =
         (*bit).pixels.offset((*bit).float_stride.wrapping_mul(start_row.wrapping_add(row_count))
                                  as isize);
     let mut pix: *mut libc::c_float = start_at;
@@ -5599,9 +5599,9 @@ pub unsafe extern "C" fn flow_bitmap_float_linear_to_luv_rows(mut context:
     return true;
 }
 #[no_mangle]
-pub unsafe extern "C" fn flow_bitmap_float_luv_to_linear_rows(mut context:
+pub unsafe extern "C" fn flow_bitmap_float_luv_to_linear_rows(context:
                                                                   *mut flow_c,
-                                                              mut bit:
+                                                              bit:
                                                                   *mut flow_bitmap_float,
                                                               start_row:
                                                                   uint32_t,
@@ -5630,10 +5630,10 @@ pub unsafe extern "C" fn flow_bitmap_float_luv_to_linear_rows(mut context:
                                                                             &[libc::c_char; 37]>(b"flow_bitmap_float_luv_to_linear_rows\x00")).as_ptr());
         return false
     }
-    let mut start_at: *mut libc::c_float =
+    let start_at: *mut libc::c_float =
         (*bit).pixels.offset((*bit).float_stride.wrapping_mul(start_row) as
                                  isize);
-    let mut end_at: *const libc::c_float =
+    let end_at: *const libc::c_float =
         (*bit).pixels.offset((*bit).float_stride.wrapping_mul(start_row.wrapping_add(row_count))
                                  as isize);
     let mut pix: *mut libc::c_float = start_at;
@@ -5644,13 +5644,13 @@ pub unsafe extern "C" fn flow_bitmap_float_luv_to_linear_rows(mut context:
     return true;
 }
 #[no_mangle]
-pub unsafe extern "C" fn flow_bitmap_bgra_apply_color_matrix(mut context:
+pub unsafe extern "C" fn flow_bitmap_bgra_apply_color_matrix(context:
                                                                  *mut flow_c,
-                                                             mut bmp:
+                                                             bmp:
                                                                  *mut flow_bitmap_bgra,
                                                              row: uint32_t,
                                                              count: uint32_t,
-                                                             mut m:
+                                                             m:
                                                                  *const *mut libc::c_float)
  -> bool {
     let stride: uint32_t = (*bmp).stride;
@@ -5822,7 +5822,7 @@ pub unsafe extern "C" fn flow_bitmap_bgra_apply_color_matrix(mut context:
                                                             isize) as
                                                libc::c_int as libc::c_float +
                                        m43);
-                let mut newdata: *mut uint8_t =
+                let newdata: *mut uint8_t =
                     (*bmp).pixels.offset(stride.wrapping_mul(y) as
                                              isize).offset(x.wrapping_mul(ch)
                                                                as isize);
@@ -5927,7 +5927,7 @@ pub unsafe extern "C" fn flow_bitmap_bgra_apply_color_matrix(mut context:
                                                               isize) as
                                                libc::c_int as libc::c_float +
                                        m42);
-                let mut newdata_0: *mut uint8_t =
+                let newdata_0: *mut uint8_t =
                     (*bmp).pixels.offset(stride.wrapping_mul(y_0) as
                                              isize).offset(x_0.wrapping_mul(ch)
                                                                as isize);
@@ -5952,13 +5952,13 @@ pub unsafe extern "C" fn flow_bitmap_bgra_apply_color_matrix(mut context:
     return true;
 }
 #[no_mangle]
-pub unsafe extern "C" fn flow_bitmap_float_apply_color_matrix(mut context:
+pub unsafe extern "C" fn flow_bitmap_float_apply_color_matrix(context:
                                                                   *mut flow_c,
-                                                              mut bmp:
+                                                              bmp:
                                                                   *mut flow_bitmap_float,
                                                               row: uint32_t,
                                                               count: uint32_t,
-                                                              mut m:
+                                                              m:
                                                                   *mut *mut libc::c_float)
  -> bool {
     let stride: uint32_t = (*bmp).float_stride;
@@ -6055,7 +6055,7 @@ pub unsafe extern "C" fn flow_bitmap_float_apply_color_matrix(mut context:
                             *(*m.offset(4 as libc::c_int as
                                             isize)).offset(3 as libc::c_int as
                                                                isize);
-                    let mut newdata: *mut libc::c_float =
+                    let newdata: *mut libc::c_float =
                         (*bmp).pixels.offset(stride.wrapping_mul(y) as
                                                  isize).offset(x.wrapping_mul(ch)
                                                                    as isize);
@@ -6126,7 +6126,7 @@ pub unsafe extern "C" fn flow_bitmap_float_apply_color_matrix(mut context:
                             *(*m.offset(4 as libc::c_int as
                                             isize)).offset(2 as libc::c_int as
                                                                isize);
-                    let mut newdata_0: *mut libc::c_float =
+                    let newdata_0: *mut libc::c_float =
                         (*bmp).pixels.offset(stride.wrapping_mul(y_0) as
                                                  isize).offset(x_0.wrapping_mul(ch)
                                                                    as isize);
@@ -6153,17 +6153,17 @@ pub unsafe extern "C" fn flow_bitmap_float_apply_color_matrix(mut context:
     };
 }
 #[no_mangle]
-pub unsafe extern "C" fn flow_bitmap_bgra_populate_histogram(mut context:
+pub unsafe extern "C" fn flow_bitmap_bgra_populate_histogram(context:
                                                                  *mut flow_c,
-                                                             mut bmp:
+                                                             bmp:
                                                                  *mut flow_bitmap_bgra,
-                                                             mut histograms:
+                                                             histograms:
                                                                  *mut uint64_t,
-                                                             mut histogram_size_per_channel:
+                                                             histogram_size_per_channel:
                                                                  uint32_t,
-                                                             mut histogram_count:
+                                                             histogram_count:
                                                                  uint32_t,
-                                                             mut pixels_sampled:
+                                                             pixels_sampled:
                                                                  *mut uint64_t)
  -> bool {
     let row: uint32_t = 0 as libc::c_int as uint32_t;
@@ -6355,14 +6355,14 @@ pub unsafe extern "C" fn flow_bitmap_bgra_populate_histogram(mut context:
 }
 // Gamma correction  http://www.4p8.com/eric.brasseur/gamma.html#formulas
 #[no_mangle]
-pub unsafe extern "C" fn flow_colorcontext_init(mut context: *mut flow_c,
+pub unsafe extern "C" fn flow_colorcontext_init(_context: *mut flow_c,
                                                 mut colorcontext:
                                                     *mut flow_colorcontext_info,
-                                                mut space:
+                                                space:
                                                     flow_working_floatspace,
-                                                mut a: libc::c_float,
-                                                mut b: libc::c_float,
-                                                mut c: libc::c_float) {
+                                                a: libc::c_float,
+                                                _b: libc::c_float,
+                                                _c: libc::c_float) {
     (*colorcontext).floatspace = space;
     (*colorcontext).apply_srgb =
         space as libc::c_uint &
