@@ -1,8 +1,4 @@
 
-## Use [conventional git commits](https://github.com/angular/angular.js/blob/master/CONTRIBUTING.md)
-
-
-
 ### Contributing code - legally
 
 We reserve the right to relicense this software (or portions thereof) in order to ensure its sustainability. To make this possible, we have [a Contributor Agreement](http://imageresizing.net/licenses/contribute) lifted from the Apache foundation.
