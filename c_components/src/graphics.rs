@@ -7,16 +7,17 @@
     unused_assignments
 )]
 use std::f64;
+use std::ffi::CString; 
 #[cfg(target_arch = "x86")]
 pub use std::arch::x86::{
     __m128, _mm_add_ps, _mm_loadu_ps, _mm_movehl_ps, _mm_movelh_ps, _mm_mul_ps, _mm_set1_ps,
     _mm_setr_ps, _mm_setzero_ps, _mm_storeu_ps, _mm_unpackhi_ps, _mm_unpacklo_ps,
 };
 #[cfg(target_arch = "x86_64")]
-pub use std::arch::x86_64::{
+pub use std::{arch::x86_64::{
     __m128, _mm_add_ps, _mm_loadu_ps, _mm_movehl_ps, _mm_movelh_ps, _mm_mul_ps, _mm_set1_ps,
     _mm_setr_ps, _mm_setzero_ps, _mm_storeu_ps, _mm_unpackhi_ps, _mm_unpacklo_ps,
-};
+}};
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub struct flow_decoder_frame_info {
@@ -2189,9 +2190,22 @@ unsafe extern "C" fn crop(
     (*cropped_canvas).stride = (*b).stride;
     return cropped_canvas;
 }
-// fn FLOW_error(context: *mut flow_context, status_code: u32) {                                                                           \
-//     flow_context_set_error_get_message_buffer(context, status_code, __FILE__, __LINE__, __func__)
-// }
+
+/// Note: Rust version of `FLOW_error` takes the name of the caller as its third parameter since
+/// there does not seem to be a way to get the name of the current or calling function in Rust.
+fn FLOW_error(context: *mut flow_context, status_code: flow_status_code, caller: &str) -> *mut libc::c_char {
+    let file = CString::new(file!()).unwrap().as_ptr();
+    let func = CString::new(caller).unwrap().as_ptr();
+    unsafe {
+        flow_context_set_error_get_message_buffer(
+            context, 
+            status_code, 
+            file as *const libc::c_char, 
+            line!() as i32, 
+            func as *const libc::c_char // was __func__ in C macro
+        )
+    }
+}
 
 #[no_mangle]
 pub unsafe extern "C" fn flow_node_execute_scale2d_render1d(
@@ -2203,20 +2217,11 @@ pub unsafe extern "C" fn flow_node_execute_scale2d_render1d(
     if (*info).h.wrapping_add((*info).y) > (*uncropped_canvas).h
         || (*info).w.wrapping_add((*info).x) > (*uncropped_canvas).w
     {
-        flow_context_set_error_get_message_buffer(
-            c,
-            flow_status_code::Invalid_argument,
-            b"lib/graphics.c\x00" as *const u8 as *const libc::c_char,
-            659 as libc::c_int,
-            (*::std::mem::transmute::<&[u8; 35], &[libc::c_char; 35]>(
-                b"flow_node_execute_scale2d_render1d\x00",
-            ))
-            .as_ptr(),
-        );
+        FLOW_error(c, flow_status_code::Invalid_argument, "flow_node_execute_scale2d_render1d");
         return false;
     }
-    let cropped_canvas: *mut flow_bitmap_bgra = if (*info).x == 0 as libc::c_int as libc::c_uint
-        && (*info).y == 0 as libc::c_int as libc::c_uint
+    let cropped_canvas: *mut flow_bitmap_bgra = if (*info).x == 0
+        && (*info).y == 0
         && (*info).w == (*uncropped_canvas).w
         && (*info).h == (*uncropped_canvas).h
     {
@@ -2248,31 +2253,13 @@ pub unsafe extern "C" fn flow_node_execute_scale2d_render1d(
     if input_fmt as libc::c_uint != flow_bgra32 as libc::c_int as libc::c_uint
         && input_fmt as libc::c_uint != flow_bgr32 as libc::c_int as libc::c_uint
     {
-        flow_context_set_error_get_message_buffer(
-            c,
-            flow_status_code::Not_implemented,
-            b"lib/graphics.c\x00" as *const u8 as *const libc::c_char,
-            672 as libc::c_int,
-            (*::std::mem::transmute::<&[u8; 35], &[libc::c_char; 35]>(
-                b"flow_node_execute_scale2d_render1d\x00",
-            ))
-            .as_ptr(),
-        );
+        FLOW_error(c, flow_status_code::Not_implemented, "flow_node_execute_scale2d_render1d");
         return false;
     }
     if canvas_fmt as libc::c_uint != flow_bgra32 as libc::c_int as libc::c_uint
         && canvas_fmt as libc::c_uint != flow_bgr32 as libc::c_int as libc::c_uint
     {
-        flow_context_set_error_get_message_buffer(
-            c,
-            flow_status_code::Not_implemented,
-            b"lib/graphics.c\x00" as *const u8 as *const libc::c_char,
-            676 as libc::c_int,
-            (*::std::mem::transmute::<&[u8; 35], &[libc::c_char; 35]>(
-                b"flow_node_execute_scale2d_render1d\x00",
-            ))
-            .as_ptr(),
-        );
+        FLOW_error(c, flow_status_code::Not_implemented, "flow_node_execute_scale2d_render1d");
         return false;
     }
     let mut colorcontext: flow_colorcontext_info = flow_colorcontext_info {
