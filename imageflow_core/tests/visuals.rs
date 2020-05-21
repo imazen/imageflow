@@ -262,6 +262,18 @@ Node::Resample2D{ w: 400, h: 300,  hints: Some(ResampleHints::new().with_bi_filt
 }
 
 #[test]
+fn test_jpeg_simple() {
+    let url = "https://s3-us-west-2.amazonaws.com/imageflow-resources/test_inputs/orientation/Landscape_1.jpg".to_owned();
+    let title = "Test_Jpeg_Simple.jpg".to_owned();
+    let matched = compare(Some(IoTestEnum::Url(url)), 500, &title, POPULATE_CHECKSUMS, DEBUG_GRAPH,
+                          vec![Node::Decode { io_id: 0, commands: None },
+                               Node::Constrain(Constraint { mode: ConstraintMode::Within, w: Some(70), h: Some(70), hints: None, gravity: None, canvas_color: None })]);
+    assert!(matched);
+}
+
+
+
+#[test]
 fn test_jpeg_rotation() {
     let orientations = vec!["Landscape", "Portrait"];
 
