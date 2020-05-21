@@ -129,8 +129,6 @@ extern "C" {
     #[no_mangle]
     fn exp(_: libc::c_double) -> libc::c_double;
     #[no_mangle]
-    fn floorf(_: libc::c_float) -> libc::c_float;
-    #[no_mangle]
     fn memset(_: *mut libc::c_void, _: libc::c_int, _: libc::c_ulong) -> *mut libc::c_void;
     #[no_mangle]
     fn flow_bitmap_float_create(
@@ -3407,7 +3405,7 @@ pub unsafe extern "C" fn flow_bitmap_float_approx_gaussian_calculate_d(
     bitmap_width: uint32_t,
 ) -> uint32_t {
     let mut d: uint32_t =
-        floorf(1.8799712059732503768118239636082839397552400554574537f32 * sigma + 0.5f32)
+        (1.8799712059732503768118239636082839397552400554574537f32 * sigma + 0.5f32).floor()
             as libc::c_int as uint32_t;
     d = umin(
         d,
