@@ -1973,40 +1973,41 @@ pub unsafe extern "C" fn flow_bitmap_float_scale_rows(
     }
     let mut avg: [libc::c_float; 4] = [0.; 4];
     // if both have alpha, process it
-    if from_step == 4 as libc::c_int as libc::c_uint && to_step == 4 as libc::c_int as libc::c_uint
+    if from_step == 4 && to_step == 4
     {
-        let mut row: uint32_t = 0 as libc::c_int as uint32_t;
+        let mut row: uint32_t = 0;
         while row < row_count {
-            let source_buffer: *const __m128 = (*from).pixels.offset(
-                from_row
-                    .wrapping_add(row)
-                    .wrapping_mul((*from).float_stride) as isize,
-            ) as *mut __m128;
-            let dest_buffer: *mut __m128 = (*to)
-                .pixels
-                .offset(to_row.wrapping_add(row).wrapping_mul((*to).float_stride) as isize)
-                as *mut __m128;
-            ndx = 0 as libc::c_int as uint32_t;
+            let source_offset = ((from_row + row) * (*from).float_stride) as isize; 
+            let source_buffer: *const __m128 = (*from).pixels.offset(source_offset) as *const __m128;
+            let dest_offset = ((to_row + row) * (*to).float_stride) as isize;
+            let dest_buffer: *mut __m128 = (*to).pixels.offset(dest_offset) as *mut __m128;
+            let dest_buffer: &mut[__m128] = std::slice::from_raw_parts_mut(
+                dest_buffer, 
+                dest_buffer_count as usize
+            );
+            ndx = 0;
             while ndx < dest_buffer_count {
                 let mut sums: __m128 = _mm_set1_ps(0.0);
                 let left: libc::c_int = (*weights.offset(ndx as isize)).Left;
                 let right: libc::c_int = (*weights.offset(ndx as isize)).Right;
                 let weightArray: *const libc::c_float = (*weights.offset(ndx as isize)).Weights;
-                let mut i: libc::c_int = 0;
+                let source_buffer: &[__m128] = std::slice::from_raw_parts(
+                    source_buffer, 
+                    (right + 1) as usize
+                );
                 /* Accumulate each channel */
-                i = left;
+                let mut i = left;
                 while i <= right {
-                    // TODO: Do a better job with this.
                     let factor: __m128 = _mm_set1_ps(*weightArray.offset((i - left) as isize));
-                    // sums += factor * *source_buffer.offset(i as isize);
-                    let t = _mm_mul_ps(factor, *source_buffer.offset(i as isize));
-                    sums = _mm_add_ps(sums, t);
+                    // sums += factor * *source_buffer[i as usize];
+                    let mid = _mm_mul_ps(factor, source_buffer[i as usize]);
+                    sums = _mm_add_ps(sums, mid);
                     i += 1
                 }
-                *dest_buffer.offset(ndx as isize) = sums;
-                ndx = ndx.wrapping_add(1)
+                dest_buffer[ndx as usize] = sums;
+                ndx += 1
             }
-            row = row.wrapping_add(1)
+            row += 1
         }
     } else if from_step == 3 as libc::c_int as libc::c_uint
         && to_step == 3 as libc::c_int as libc::c_uint
