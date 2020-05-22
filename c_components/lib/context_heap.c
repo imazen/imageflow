@@ -447,27 +447,51 @@ bool flow_heap_set_custom(flow_c * context, flow_heap_calloc_function calloc, fl
 
 static void * f_default_calloc(struct flow_context * context, struct flow_heap * heap, size_t count,
                                size_t element_size, const char * file, int line)
-{
+{ 
+ #ifdef _MSC_VER   
+    // there is no _aligned_calloc so we ensure alignment via _aligned_malloc
+    const size_t total =  count * element_size;
+    if (total / element_size != count) {
+        FLOW_error(context, flow_status_Invalid_argument);
+        return NULL;
+     }
+    void *const ptr = _aligned_malloc(total, 16);
+    if (ptr) memset(ptr, 0, total);
+    return ptr;
+ #else
     return calloc(count, element_size);
+ #endif // _MSC_VER 
 }
 
 static void * f_default_malloc(struct flow_context * context, struct flow_heap * heap, size_t byte_count,
                                const char * file, int line)
 {
-    return malloc(byte_count);
+#ifdef _MSC_VER
+    return _aligned_malloc(byte_count, 16);
+#else
+    return malloc(byte_count); 
+#endif // _MSC_VER
 }
 
 static void * f_default_realloc(struct flow_context * context, struct flow_heap * heap, void * old_pointer,
                                 size_t new_byte_count, const char * file, int line)
 {
+#ifdef _MSC_VER
+    return _aligned_realloc(old_pointer, new_byte_count, 16);
+#else
     return realloc(old_pointer, new_byte_count);
+#endif // _MSC_VER
 }
 
 static void f_default_free(struct flow_context * context, struct flow_heap * heap, void * pointer, const char * file,
                            int line)
 {
     // fprintf(stdout, "Freeing %p\n", pointer);
+#ifdef _MSC_VER    
+    _aligned_free(pointer);
+#else
     free(pointer);
+#endif // _MSC_VER
 }
 
 bool flow_heap_set_default(flow_c * context)
