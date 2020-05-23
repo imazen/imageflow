@@ -669,10 +669,6 @@ unsafe extern "C" fn srgb_to_linear(s: libc::c_float) -> libc::c_float {
     };
 }
 pub const NULL: libc::c_int = 0 as libc::c_int;
-#[inline]
-unsafe extern "C" fn umin(a: libc::c_uint, b: libc::c_uint) -> libc::c_uint {
-    return if a <= b { a } else { b };
-}
 pub const FLOW_ERROR_MESSAGE_SIZE: libc::c_int = 1023 as libc::c_int;
 pub const IR_PI: libc::c_double = 3.1415926535897932384626433832795f64;
 #[inline]
@@ -1949,7 +1945,7 @@ pub unsafe extern "C" fn flow_bitmap_float_scale_rows(
     let from_step: uint32_t = (*from).channels;
     let to_step: uint32_t = (*to).channels;
     let dest_buffer_count: uint32_t = (*to).w;
-    let min_channels: uint32_t = umin(from_step, to_step);
+    let min_channels: uint32_t = from_step.min(to_step);
     let mut ndx: uint32_t = 0;
     if min_channels > 4 as libc::c_int as libc::c_uint {
         flow_context_set_error_get_message_buffer(
@@ -3401,11 +3397,10 @@ pub unsafe extern "C" fn flow_bitmap_float_approx_gaussian_calculate_d(
     let mut d: uint32_t =
         (1.8799712059732503768118239636082839397552400554574537f32 * sigma + 0.5f32).floor()
             as libc::c_int as uint32_t;
-    d = umin(
-        d,
+    d = d.min(
         bitmap_width
             .wrapping_sub(1 as libc::c_int as libc::c_uint)
-            .wrapping_div(2 as libc::c_int as libc::c_uint),
+            .wrapping_div(2 as libc::c_int as libc::c_uint)
     );
     return d;
 }
@@ -3895,7 +3890,7 @@ pub unsafe extern "C" fn flow_bitmap_float_convert_srgb_to_linear(
     let from_step: uint32_t = flow_pixel_format_bytes_per_pixel((*src).fmt);
     let from_copy: uint32_t = flow_pixel_format_channels(flow_effective_pixel_format(src));
     let to_step: uint32_t = (*dest).channels;
-    let copy_step: uint32_t = umin(from_copy, to_step);
+    let copy_step: uint32_t = from_copy.min(to_step);
     if copy_step != 3 && copy_step != 4 {
         flow_snprintf(
             flow_context_set_error_get_message_buffer(
@@ -4184,10 +4179,8 @@ pub unsafe extern "C" fn flow_bitmap_bgra_flip_vertical(
     }
     // Dont' copy the full stride (padding), it could be windowed!
     // Todo: try multiple swap rows? 5ms isn't bad, but could be better
-    let row_length: uint32_t = umin(
-        (*b).stride,
-        (*b).w
-            .wrapping_mul(flow_pixel_format_bytes_per_pixel((*b).fmt)),
+    let row_length: uint32_t =  (*b).stride.min((*b).w
+            .wrapping_mul(flow_pixel_format_bytes_per_pixel((*b).fmt))
     );
     let mut i: uint32_t = 0 as libc::c_int as uint32_t;
     while i < (*b).h.wrapping_div(2 as libc::c_int as libc::c_uint) {
@@ -4424,8 +4417,9 @@ pub unsafe extern "C" fn flow_bitmap_float_copy_linear_over_srgb(
     transpose: bool,
 ) -> bool {
     let dest_bytes_pp: uint32_t = flow_pixel_format_bytes_per_pixel((*dest).fmt);
-    let srcitems: uint32_t =
-        umin(from_col.wrapping_add(col_count), (*src).w).wrapping_mul((*src).channels);
+    let srcitems: uint32_t = from_col.wrapping_add(col_count).min(
+        (*src).w).wrapping_mul((*src).channels
+    );
     let dest_fmt: flow_pixel_format = flow_effective_pixel_format(dest);
     let ch: uint32_t = (*src).channels;
     let copy_alpha: bool = dest_fmt as libc::c_uint == flow_bgra32 as libc::c_int as libc::c_uint
@@ -5001,8 +4995,9 @@ unsafe extern "C" fn BitmapFloat_compose_linear_over_srgb(
     } else {
         dest_bytes_pp
     };
-    let srcitems: uint32_t =
-        umin(from_col.wrapping_add(col_count), (*src).w).wrapping_mul((*src).channels);
+    let srcitems: uint32_t = from_col.wrapping_add(col_count).min(
+        (*src).w).wrapping_mul((*src).channels
+    );
     let ch: uint32_t = (*src).channels;
     let dest_effective_format: flow_pixel_format = flow_effective_pixel_format(dest);
     let dest_alpha: bool =
@@ -5326,7 +5321,7 @@ pub unsafe extern "C" fn flow_bitmap_bgra_apply_color_matrix(
     let stride: uint32_t = (*bmp).stride;
     let ch: uint32_t = flow_pixel_format_bytes_per_pixel((*bmp).fmt);
     let w: uint32_t = (*bmp).w;
-    let h: uint32_t = umin(row.wrapping_add(count), (*bmp).h);
+    let h: uint32_t = row.wrapping_add(count).min((*bmp).h);
     let m40: libc::c_float =
         *(*m.offset(4 as libc::c_int as isize)).offset(0 as libc::c_int as isize) * 255.0f32;
     let m41: libc::c_float =
@@ -5492,7 +5487,7 @@ pub unsafe extern "C" fn flow_bitmap_float_apply_color_matrix(
     let stride: uint32_t = (*bmp).float_stride;
     let ch: uint32_t = (*bmp).channels;
     let w: uint32_t = (*bmp).w;
-    let h: uint32_t = umin(row.wrapping_add(count), (*bmp).h);
+    let h: uint32_t = row.wrapping_add(count).min((*bmp).h);
     match ch {
         4 => {
             let mut y: uint32_t = row;
@@ -5632,22 +5627,13 @@ pub unsafe extern "C" fn flow_bitmap_bgra_populate_histogram(
     let stride: uint32_t = (*bmp).stride;
     let ch: uint32_t = flow_pixel_format_bytes_per_pixel((*bmp).fmt);
     let w: uint32_t = (*bmp).w;
-    let h: uint32_t = umin(row.wrapping_add(count), (*bmp).h);
+    let h: uint32_t = (row.wrapping_add(count)).min((*bmp).h);
     if histogram_size_per_channel != 256 {
         // We're restricting it to this for speed
-        flow_context_set_error_get_message_buffer(
-            context,
-            flow_status_code::Invalid_argument,
-            b"lib/graphics.c\x00" as *const u8 as *const libc::c_char,
-            1912 as libc::c_int,
-            (*::std::mem::transmute::<&[u8; 36], &[libc::c_char; 36]>(
-                b"flow_bitmap_bgra_populate_histogram\x00",
-            ))
-            .as_ptr(),
-        ); // 8 - intlog2(histogram_size_per_channel);
+        FLOW_error(context, flow_status_code::Invalid_argument, "flow_bitmap_bgra_populate_histogram");
         return false;
     }
-    let shift = 0;
+    let shift = 0; // 8 - intlog2(histogram_size_per_channel);
     if ch == 4 || ch == 3 {
         if histogram_count == 1 {
             let mut y: uint32_t = row;
@@ -5673,28 +5659,28 @@ pub unsafe extern "C" fn flow_bitmap_bgra_populate_histogram(
                 y = y.wrapping_add(1)
             }
         } else if histogram_count == 3 {
-            let mut y_0: uint32_t = row;
-            while y_0 < h {
-                let mut x_0: uint32_t = 0;
-                while x_0 < w {
-                    let data_0: *const uint8_t = (*bmp)
+            let mut y: uint32_t = row;
+            while y < h {
+                let mut x: uint32_t = 0;
+                while x < w {
+                    let data: *const uint8_t = (*bmp)
                         .pixels
-                        .offset(stride.wrapping_mul(y_0) as isize)
-                        .offset(x_0.wrapping_mul(ch) as isize);
+                        .offset((stride * y) as isize)
+                        .offset((x * ch) as isize);
                     let ref mut fresh10 = *histograms.offset(
-                        (*data_0.offset(2 as libc::c_int as isize) as libc::c_int >> shift)
+                        (*data.offset(2) as libc::c_int >> shift)
                             as isize,
                     );
                     *fresh10 = (*fresh10).wrapping_add(1);
                     let ref mut fresh11 = *histograms.offset(
-                        ((*data_0.offset(1 as libc::c_int as isize) as libc::c_int >> shift)
+                        ((*data.offset(1) as libc::c_int >> shift)
                             as libc::c_uint)
                             .wrapping_add(histogram_size_per_channel)
                             as isize,
                     );
                     *fresh11 = (*fresh11).wrapping_add(1);
                     let ref mut fresh12 = *histograms.offset(
-                        ((*data_0.offset(0 as libc::c_int as isize) as libc::c_int >> shift)
+                        ((*data.offset(0 as libc::c_int as isize) as libc::c_int >> shift)
                             as libc::c_uint)
                             .wrapping_add(
                                 (2 as libc::c_int as libc::c_uint)
@@ -5702,9 +5688,9 @@ pub unsafe extern "C" fn flow_bitmap_bgra_populate_histogram(
                             ) as isize,
                     );
                     *fresh12 = (*fresh12).wrapping_add(1);
-                    x_0 = x_0.wrapping_add(1)
+                    x = x.wrapping_add(1)
                 }
-                y_0 = y_0.wrapping_add(1)
+                y = y.wrapping_add(1)
             }
         } else if histogram_count == 2 {
             let mut y_1: uint32_t = row;
