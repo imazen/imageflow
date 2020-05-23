@@ -146,14 +146,7 @@ extern "C" {
         channels: libc::c_int,
     ) -> *mut flow_bitmap_float;
 }
-pub type size_t = libc::c_ulong;
-pub type __uint8_t = libc::c_uchar;
-pub type __int16_t = libc::c_short;
-pub type __uint16_t = libc::c_ushort;
-pub type __int32_t = libc::c_int;
-pub type __uint32_t = libc::c_uint;
-pub type __int64_t = libc::c_long;
-pub type __uint64_t = libc::c_ulong;
+pub type size_t = usize;
 pub type cmsFloat64Number = libc::c_double;
 #[derive(Copy, Clone)]
 #[repr(C)]
@@ -169,13 +162,13 @@ pub struct cmsCIExyYTRIPLE {
     pub Green: cmsCIExyY,
     pub Blue: cmsCIExyY,
 }
-pub type int16_t = __int16_t;
-pub type int32_t = __int32_t;
-pub type int64_t = __int64_t;
-pub type uint8_t = __uint8_t;
-pub type uint16_t = __uint16_t;
-pub type uint32_t = __uint32_t;
-pub type uint64_t = __uint64_t;
+pub type int16_t = i16;
+pub type int32_t = i32;
+pub type int64_t = i64;
+pub type uint8_t = u8;
+pub type uint16_t = u16;
+pub type uint32_t = u32;
+pub type uint64_t = u64;
 pub type FLOW_DIRECTION = libc::c_uint;
 pub const FLOW_INPUT: FLOW_DIRECTION = 4;
 pub const FLOW_OUTPUT: FLOW_DIRECTION = 8;
@@ -1053,7 +1046,7 @@ pub unsafe extern "C" fn flow_interpolation_details_create(
     let mut d: *mut flow_interpolation_details = flow_context_calloc(
         context,
         1 as libc::c_int as size_t,
-        ::std::mem::size_of::<flow_interpolation_details>() as libc::c_ulong,
+        ::std::mem::size_of::<flow_interpolation_details>(),
         ::std::mem::transmute::<libc::intptr_t, flow_destructor_function>(NULL as libc::intptr_t),
         context as *mut libc::c_void,
         b"lib/graphics.c\x00" as *const u8 as *const libc::c_char,
@@ -1652,7 +1645,7 @@ unsafe extern "C" fn LineContributions_alloc(
 ) -> *mut flow_interpolation_line_contributions {
     let mut res: *mut flow_interpolation_line_contributions = flow_context_malloc(
         context,
-        ::std::mem::size_of::<flow_interpolation_line_contributions>() as libc::c_ulong,
+        ::std::mem::size_of::<flow_interpolation_line_contributions>(),
         ::std::mem::transmute::<libc::intptr_t, flow_destructor_function>(NULL as libc::intptr_t),
         context as *mut libc::c_void,
         b"lib/graphics.c\x00" as *const u8 as *const libc::c_char,
@@ -1676,9 +1669,9 @@ unsafe extern "C" fn LineContributions_alloc(
     (*res).LineLength = line_length;
     (*res).ContribRow = flow_context_malloc(
         context,
-        (line_length as libc::c_ulong).wrapping_mul(::std::mem::size_of::<
+        (line_length as usize).wrapping_mul(::std::mem::size_of::<
             flow_interpolation_pixel_contributions,
-        >() as libc::c_ulong),
+        >()),
         ::std::mem::transmute::<libc::intptr_t, flow_destructor_function>(NULL as libc::intptr_t),
         context as *mut libc::c_void,
         b"lib/graphics.c\x00" as *const u8 as *const libc::c_char,
@@ -1706,7 +1699,7 @@ unsafe extern "C" fn LineContributions_alloc(
     let allWeights: *mut libc::c_float = flow_context_calloc(
         context,
         windows_size.wrapping_mul(line_length) as size_t,
-        ::std::mem::size_of::<libc::c_float>() as libc::c_ulong,
+        ::std::mem::size_of::<libc::c_float>(),
         ::std::mem::transmute::<libc::intptr_t, flow_destructor_function>(NULL as libc::intptr_t),
         context as *mut libc::c_void,
         b"lib/graphics.c\x00" as *const u8 as *const libc::c_char,
@@ -2451,9 +2444,9 @@ pub unsafe extern "C" fn flow_node_execute_scale2d_render1d(
     let row_floats: size_t = (4 as libc::c_int as libc::c_uint).wrapping_mul((*input).w) as size_t;
     let buf: *mut libc::c_float = flow_context_malloc(
         c,
-        (::std::mem::size_of::<libc::c_float>() as libc::c_ulong)
+        ::std::mem::size_of::<libc::c_float>()
             .wrapping_mul(row_floats)
-            .wrapping_mul((max_input_rows + 1 as libc::c_int) as libc::c_ulong),
+            .wrapping_mul((max_input_rows + 1) as usize),
         ::std::mem::transmute::<libc::intptr_t, flow_destructor_function>(NULL as libc::intptr_t),
         details as *mut libc::c_void,
         b"lib/graphics.c\x00" as *const u8 as *const libc::c_char,
@@ -2461,8 +2454,8 @@ pub unsafe extern "C" fn flow_node_execute_scale2d_render1d(
     ) as *mut libc::c_float;
     let rows: *mut *mut libc::c_float = flow_context_malloc(
         c,
-        (::std::mem::size_of::<*mut libc::c_float>() as libc::c_ulong)
-            .wrapping_mul(max_input_rows as libc::c_ulong),
+        (::std::mem::size_of::<*mut libc::c_float>())
+            .wrapping_mul(max_input_rows as usize),
         ::std::mem::transmute::<libc::intptr_t, flow_destructor_function>(NULL as libc::intptr_t),
         details as *mut libc::c_void,
         b"lib/graphics.c\x00" as *const u8 as *const libc::c_char,
@@ -2470,8 +2463,8 @@ pub unsafe extern "C" fn flow_node_execute_scale2d_render1d(
     ) as *mut *mut libc::c_float;
     let row_coefficients: *mut libc::c_float = flow_context_malloc(
         c,
-        (::std::mem::size_of::<libc::c_float>() as libc::c_ulong)
-            .wrapping_mul(max_input_rows as libc::c_ulong),
+        ::std::mem::size_of::<libc::c_float>()
+            .wrapping_mul(max_input_rows as usize),
         ::std::mem::transmute::<libc::intptr_t, flow_destructor_function>(NULL as libc::intptr_t),
         details as *mut libc::c_void,
         b"lib/graphics.c\x00" as *const u8 as *const libc::c_char,
@@ -2479,8 +2472,8 @@ pub unsafe extern "C" fn flow_node_execute_scale2d_render1d(
     ) as *mut libc::c_float;
     let row_indexes: *mut int32_t = flow_context_malloc(
         c,
-        (::std::mem::size_of::<int32_t>() as libc::c_ulong)
-            .wrapping_mul(max_input_rows as libc::c_ulong),
+        ::std::mem::size_of::<int32_t>()
+            .wrapping_mul(max_input_rows as usize),
         ::std::mem::transmute::<libc::intptr_t, flow_destructor_function>(NULL as libc::intptr_t),
         details as *mut libc::c_void,
         b"lib/graphics.c\x00" as *const u8 as *const libc::c_char,
@@ -2505,7 +2498,7 @@ pub unsafe extern "C" fn flow_node_execute_scale2d_render1d(
         return false;
     }
     let output_address: *mut libc::c_float = &mut *buf
-        .offset(row_floats.wrapping_mul(max_input_rows as libc::c_ulong) as isize)
+        .offset(row_floats.wrapping_mul(max_input_rows as usize) as isize)
         as *mut libc::c_float;
     let mut i_0: libc::c_int = 0 as libc::c_int;
     while i_0 < max_input_rows {
@@ -2527,7 +2520,7 @@ pub unsafe extern "C" fn flow_node_execute_scale2d_render1d(
         memset(
             output_address as *mut libc::c_void,
             0 as libc::c_int,
-            (::std::mem::size_of::<libc::c_float>() as libc::c_ulong).wrapping_mul(row_floats),
+            ::std::mem::size_of::<libc::c_float>().wrapping_mul(row_floats) as u32,
         );
         let mut input_row: libc::c_int = contrib.Left;
         while input_row <= contrib.Right {
@@ -2737,7 +2730,7 @@ pub unsafe extern "C" fn flow_convolution_kernel_create(
     let mut k: *mut flow_convolution_kernel = flow_context_calloc(
         context,
         1 as libc::c_int as size_t,
-        ::std::mem::size_of::<flow_convolution_kernel>() as libc::c_ulong,
+        ::std::mem::size_of::<flow_convolution_kernel>(),
         ::std::mem::transmute::<libc::intptr_t, flow_destructor_function>(NULL as libc::intptr_t),
         context as *mut libc::c_void,
         b"lib/graphics.c\x00" as *const u8 as *const libc::c_char,
@@ -2749,7 +2742,7 @@ pub unsafe extern "C" fn flow_convolution_kernel_create(
         radius
             .wrapping_mul(2 as libc::c_int as libc::c_uint)
             .wrapping_add(1 as libc::c_int as libc::c_uint) as size_t,
-        ::std::mem::size_of::<libc::c_float>() as libc::c_ulong,
+        ::std::mem::size_of::<libc::c_float>(),
         ::std::mem::transmute::<libc::intptr_t, flow_destructor_function>(NULL as libc::intptr_t),
         context as *mut libc::c_void,
         b"lib/graphics.c\x00" as *const u8 as *const libc::c_char,
@@ -2758,10 +2751,10 @@ pub unsafe extern "C" fn flow_convolution_kernel_create(
     // we assume a maximum of 4 channels are going to need buffering during convolution
     let buf: *mut libc::c_float = flow_context_malloc(
         context,
-        (radius
-            .wrapping_add(2 as libc::c_int as libc::c_uint)
-            .wrapping_mul(4 as libc::c_int as libc::c_uint) as libc::c_ulong)
-            .wrapping_mul(::std::mem::size_of::<libc::c_float>() as libc::c_ulong),
+        (radius as usize)
+            .wrapping_add(2)
+            .wrapping_mul(4)
+            .wrapping_mul(::std::mem::size_of::<libc::c_float>()),
         ::std::mem::transmute::<libc::intptr_t, flow_destructor_function>(NULL as libc::intptr_t),
         context as *mut libc::c_void,
         b"lib/graphics.c\x00" as *const u8 as *const libc::c_char,
@@ -3452,8 +3445,7 @@ pub unsafe extern "C" fn flow_bitmap_float_approx_gaussian_blur_rows(
     }
     // Ensure the buffer is large enough
     if flow_bitmap_float_approx_gaussian_buffer_element_count_required(sigma, (*image).w)
-        as libc::c_ulong
-        > buffer_element_count
+        as usize > buffer_element_count
     {
         flow_context_set_error_get_message_buffer(
             context,
@@ -5629,19 +5621,19 @@ pub unsafe extern "C" fn flow_bitmap_float_apply_color_matrix(
 #[no_mangle]
 pub unsafe extern "C" fn flow_bitmap_bgra_populate_histogram(
     context: *mut flow_c,
-    bmp: *mut flow_bitmap_bgra,
+    bmp: *const flow_bitmap_bgra,
     histograms: *mut uint64_t,
     histogram_size_per_channel: uint32_t,
     histogram_count: uint32_t,
     pixels_sampled: *mut uint64_t,
 ) -> bool {
-    let row: uint32_t = 0 as libc::c_int as uint32_t;
+    let row: uint32_t = 0;
     let count: uint32_t = (*bmp).h;
     let stride: uint32_t = (*bmp).stride;
     let ch: uint32_t = flow_pixel_format_bytes_per_pixel((*bmp).fmt);
     let w: uint32_t = (*bmp).w;
     let h: uint32_t = umin(row.wrapping_add(count), (*bmp).h);
-    if histogram_size_per_channel != 256 as libc::c_int as libc::c_uint {
+    if histogram_size_per_channel != 256 {
         // We're restricting it to this for speed
         flow_context_set_error_get_message_buffer(
             context,
@@ -5655,14 +5647,14 @@ pub unsafe extern "C" fn flow_bitmap_bgra_populate_histogram(
         ); // 8 - intlog2(histogram_size_per_channel);
         return false;
     }
-    let shift: libc::c_int = 0 as libc::c_int;
-    if ch == 4 as libc::c_int as libc::c_uint || ch == 3 as libc::c_int as libc::c_uint {
-        if histogram_count == 1 as libc::c_int as libc::c_uint {
+    let shift = 0;
+    if ch == 4 || ch == 3 {
+        if histogram_count == 1 {
             let mut y: uint32_t = row;
             while y < h {
-                let mut x: uint32_t = 0 as libc::c_int as uint32_t;
+                let mut x: uint32_t = 0;
                 while x < w {
-                    let data: *mut uint8_t = (*bmp)
+                    let data: *const uint8_t = (*bmp)
                         .pixels
                         .offset(stride.wrapping_mul(y) as isize)
                         .offset(x.wrapping_mul(ch) as isize);
@@ -5680,12 +5672,12 @@ pub unsafe extern "C" fn flow_bitmap_bgra_populate_histogram(
                 }
                 y = y.wrapping_add(1)
             }
-        } else if histogram_count == 3 as libc::c_int as libc::c_uint {
+        } else if histogram_count == 3 {
             let mut y_0: uint32_t = row;
             while y_0 < h {
-                let mut x_0: uint32_t = 0 as libc::c_int as uint32_t;
+                let mut x_0: uint32_t = 0;
                 while x_0 < w {
-                    let data_0: *mut uint8_t = (*bmp)
+                    let data_0: *const uint8_t = (*bmp)
                         .pixels
                         .offset(stride.wrapping_mul(y_0) as isize)
                         .offset(x_0.wrapping_mul(ch) as isize);
@@ -5714,12 +5706,12 @@ pub unsafe extern "C" fn flow_bitmap_bgra_populate_histogram(
                 }
                 y_0 = y_0.wrapping_add(1)
             }
-        } else if histogram_count == 2 as libc::c_int as libc::c_uint {
+        } else if histogram_count == 2 {
             let mut y_1: uint32_t = row;
             while y_1 < h {
                 let mut x_1: uint32_t = 0 as libc::c_int as uint32_t;
                 while x_1 < w {
-                    let data_1: *mut uint8_t = (*bmp)
+                    let data_1: *const uint8_t = (*bmp)
                         .pixels
                         .offset(stride.wrapping_mul(y_1) as isize)
                         .offset(x_1.wrapping_mul(ch) as isize);
