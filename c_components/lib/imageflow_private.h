@@ -148,7 +148,6 @@ struct flow_objtracking_info {
 /** flow_context: main structure **/
 
 struct flow_context {
-    struct flow_context_codec_set * codec_set;
     struct flow_heap underlying_heap;
     struct flow_objtracking_info object_tracking;
     struct flow_profiling_log log;

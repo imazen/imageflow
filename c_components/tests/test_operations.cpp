@@ -1,4 +1,4 @@
-#include <lib/codecs.h>
+#include "imageflow_private.h"
 #include "catch.hpp"
 
 extern "C" void keep6() {}
@@ -6,16 +6,6 @@ extern "C" void keep6() {}
 // TODO: Test with opaque and transparent images
 // TODO: Test using random dots instead of rectangles to see if overlaps are correct.
 
-
-TEST_CASE("Test isSrgb", "")
-{
-    void * buf = malloc(90);
-
-    REQUIRE(flow_profile_is_srgb((unsigned char *)buf, 90) == false);
-
-    free(buf);
-
-}
 
 
 // TODO: Compare to a reference scaling
