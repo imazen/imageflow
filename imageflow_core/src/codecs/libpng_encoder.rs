@@ -15,7 +15,6 @@ use rgb;
 use crate::ffi;
 use imageflow_helpers::preludes::from_std::CStr;
 use std::ffi::c_void;
-use crate::codecs::LibpngEncoder;
 
 pub struct LibPngEncoder {
     io: IoProxy,

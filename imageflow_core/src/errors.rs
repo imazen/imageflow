@@ -174,7 +174,7 @@ pub enum ErrorKind{
     ImageEncodingError,
     JpegDecodingError,
     QuantizationError,
-    LodepngEncodingError,
+    LodePngEncodingError,
     MozjpegEncodingError,
     CodecDisabledError,
     NoEnabledDecoderFound,
@@ -232,7 +232,7 @@ impl CategorizedError for ErrorKind{
             ErrorKind::InternalError |
             ErrorKind::InvalidState |
             ErrorKind::QuantizationError |
-            ErrorKind::LodepngEncodingError |
+            ErrorKind::LodePngEncodingError |
             ErrorKind::MozjpegEncodingError |
             ErrorKind::ImageEncodingError |
             ErrorKind::GifEncodingError => ErrorCategory::InternalError,
@@ -332,7 +332,7 @@ impl From<::imagequant::liq_error> for FlowError {
 
 impl From<::lodepng::Error> for FlowError {
     fn from(e: ::lodepng::Error) -> Self {
-        FlowError::without_location(ErrorKind::LodepngEncodingError, format!("lodepng: {}", e))
+        FlowError::without_location(ErrorKind::LodePngEncodingError, format!("lodepng: {}", e))
     }
 }
 
