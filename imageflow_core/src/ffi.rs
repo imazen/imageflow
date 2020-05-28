@@ -808,7 +808,8 @@ type WrapPngCustomReadFunction = extern fn(*mut c_void, *mut c_void, *mut u8, us
 //typedef void (*wrap_png_error_handler) (png_structp png_ptr, void * custom_state, char * error_message);
 type WrapPngErrorHandler = extern fn(*mut c_void, *mut c_void, *const c_char);
 
-
+//typedef  bool (*wrap_png_custom_write_function) (png_structp png_ptr, void * custom_state, uint8_t * buffer, size_t buffer_length);
+type WrapPngCustomWriteFunction = extern fn(*mut c_void, *mut c_void, *mut u8, usize) -> bool;
 
 #[repr(C)]
 pub struct WrapJpegSourceManager {
@@ -842,8 +843,6 @@ mod long_term{
                             line: i32)
                             -> bool;
 
-
-
         pub fn flow_bitmap_bgra_flip_vertical(c: *mut ImageflowContext, bitmap: *mut BitmapBgra) -> bool;
         pub fn flow_bitmap_bgra_flip_horizontal(c: *mut ImageflowContext, bitmap: *mut BitmapBgra) -> bool;
 
@@ -853,7 +852,6 @@ mod long_term{
                                        zeroed: bool,
                                        format: PixelFormat)
                                        -> *mut BitmapBgra;
-
 
         pub fn flow_node_execute_scale2d_render1d(c: *mut ImageflowContext,
                                                   input: *mut BitmapBgra,
@@ -869,8 +867,6 @@ mod long_term{
                                           y2: u32,
                                           color_srgb_argb: u32)
                                           -> bool;
-
-
 
         pub fn wrap_jpeg_error_state_bytes() -> usize;
 
@@ -897,17 +893,14 @@ mod long_term{
 
         pub fn wrap_jpeg_read_scan_lines(codec_info: *mut ::mozjpeg_sys::jpeg_decompress_struct,
                                          scan_lines: *const *mut u8, max_scan_lines: u32,
-                                         scan_lines_read: * mut u32) -> bool;
+                                         scan_lines_read: *mut u32) -> bool;
 
         pub fn wrap_jpeg_save_markers(codec_info: *mut ::mozjpeg_sys::jpeg_decompress_struct, marker_code: i32, length_limit: u32) -> bool;
-
-
 
         pub fn wrap_png_decoder_state_bytes() -> usize;
 
         pub fn wrap_png_decoder_state_init(state: *mut c_void, custom_state: *mut c_void,
-            error_handler: WrapPngErrorHandler, read_function: WrapPngCustomReadFunction) -> bool;
-
+                                           error_handler: WrapPngErrorHandler, read_function: WrapPngCustomReadFunction) -> bool;
 
         pub fn wrap_png_decode_image_info(state: *mut c_void) -> bool;
 
@@ -919,11 +912,19 @@ mod long_term{
 
         pub fn wrap_png_decoder_get_color_info(state: *mut c_void) -> *const DecoderColorInfo;
 
-
         pub fn wrap_png_decoder_destroy(state: *mut c_void) -> bool;
 
         pub fn wrap_png_decoder_get_info(state: *mut c_void, w: &mut u32, h: &mut u32, uses_alpha: &mut bool) -> bool;
 
+        pub fn wrap_png_encoder_write_png(custom_state: *mut c_void,
+                                          error_handler: WrapPngErrorHandler,
+                                          write_function: WrapPngCustomWriteFunction,
+                                          row_pointers: *const *mut u8,
+                                          w: usize,
+                                          h: usize,
+                                          disable_png_alpha: bool,
+                                          zlib_compression_level: i32,
+                                          pixel_format: PixelFormat) -> bool;
     }
 }
 

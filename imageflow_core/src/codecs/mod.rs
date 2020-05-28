@@ -22,12 +22,15 @@ mod lode;
 mod mozjpeg;
 mod mozjpeg_decoder;
 mod libpng_decoder;
+mod libpng_encoder;
 mod mozjpeg_decoder_helpers;
 mod jpeg_decoder;
+
 mod webp;
 mod color_transform_cache;
 use crate::io::IoProxyRef;
 use crate::codecs::color_transform_cache::ColorTransformCache;
+use crate::codecs::NamedEncoders::LibPngEncoder;
 
 pub trait DecoderFactory{
     fn create(c: &Context, io: &mut IoProxy, io_id: i32) -> Option<Result<Box<dyn Decoder>>>;
@@ -112,6 +115,7 @@ pub enum NamedEncoders{
     LodePngEncoder,
     WebPEncoder,
     LibPngEncoder,
+    LibPngRsEncoder,
 }
 pub struct EnabledCodecs{
     pub decoders: ::smallvec::SmallVec<[NamedDecoders;4]>,
@@ -131,7 +135,7 @@ impl Default for EnabledCodecs {
                     NamedEncoders::PngQuantEncoder,
                     NamedEncoders::LodePngEncoder,
                     NamedEncoders::WebPEncoder,
-                    NamedEncoders::LibPngEncoder
+                    NamedEncoders::LibPngRsEncoder
                 ])
         }
     }
@@ -436,7 +440,7 @@ impl CodecInstanceContainer{
                  },
                  s::EncoderPreset::Libpng {..}  => {
                      CodecKind::Encoder(Box::new(
-                         LibpngEncoder::create(c, io, self.io_id)?))
+                         libpng_encoder::LibPngEncoder::create(c, io)?))
                  },
                  s::EncoderPreset::WebPLossless => CodecKind::Encoder(Box::new(webp::WebPEncoder::create(c, io)?)),
                  s::EncoderPreset::WebPLossy {quality}=> CodecKind::Encoder(Box::new(webp::WebPEncoder::create(c, io)?)),

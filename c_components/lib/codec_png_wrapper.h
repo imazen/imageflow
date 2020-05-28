@@ -35,6 +35,7 @@ typedef void (*wrap_png_error_handler) (png_structp png_ptr, void * custom_state
 
 typedef  bool (*wrap_png_custom_read_function) (png_structp png_ptr, void * custom_state, uint8_t * buffer, size_t bytes_requested, size_t * out_bytes_read);
 
+
 PUB size_t wrap_png_decoder_state_bytes(void);
 
 PUB bool wrap_png_decoder_state_init(struct wrap_png_decoder_state * state, void * custom_state,
@@ -55,6 +56,19 @@ PUB bool wrap_png_decoder_get_info(struct wrap_png_decoder_state * state, uint32
 
 PUB struct flow_decoder_color_info * wrap_png_decoder_get_color_info(struct wrap_png_decoder_state * state);
 
+typedef  bool (*wrap_png_custom_write_function) (png_structp png_ptr, void * custom_state, uint8_t * buffer, size_t buffer_length);
+
+
+
+PUB bool wrap_png_encoder_write_png(void * custom_state,
+                                    wrap_png_error_handler error_handler,
+                                    wrap_png_custom_write_function write_function,
+                                    uint8_t * * row_pointers,
+                                    size_t w,
+                                    size_t h,
+                                    bool disable_png_alpha,
+                                    int zlib_compression_level,
+                                    flow_pixel_format pixel_format);
 
 #ifdef __cplusplus
 }

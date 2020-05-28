@@ -120,7 +120,7 @@ bool wrap_png_decode_image_info(struct wrap_png_decoder_state * state)
 {
     state->png_ptr = png_create_read_struct(PNG_LIBPNG_VER_STRING, state, wrap_png_decoder_error_handler, NULL);
     if (state->png_ptr == NULL) {
-        state->error_handler(state->png_ptr, state->custom_state, "Out of memory - png_create_read_struct failed");
+        state->error_handler(state->png_ptr, state->custom_state, "OOM in wrap_png_decode_image_info: png_create_read_struct failed. Out of memory.\"");
         return false;
     }
 
@@ -133,7 +133,7 @@ bool wrap_png_decode_image_info(struct wrap_png_decoder_state * state)
 
     state->info_ptr = png_create_info_struct(state->png_ptr);
     if (state->info_ptr == NULL) {
-        state->error_handler(state->png_ptr, state->custom_state, "Out of memory - png_create_info_struct failed");
+        state->error_handler(state->png_ptr, state->custom_state, "OOM in wrap_png_decode_image_info: png_create_info_struct failed. Out of memory.");
         return false;
     }
 
@@ -254,5 +254,137 @@ bool wrap_png_decoder_get_info(struct wrap_png_decoder_state * state, uint32_t *
     *w = state->w;
     *h = state->h;
     *uses_alpha = state->alpha_used;
+    return true;
+}
+
+/******************************************* ENCODER **************************************************/
+
+
+struct wrap_png_encoder_state {
+    wrap_png_error_handler error_handler;
+    wrap_png_custom_write_function write_function;
+    void * custom_state;
+    jmp_buf error_handler_jmp;
+};
+
+static void wrap_png_encoder_error_handler(png_structp png_ptr, png_const_charp msg)
+{
+    struct wrap_png_encoder_state * state = (struct wrap_png_encoder_state *)png_get_error_ptr(png_ptr);
+
+    state->error_handler(png_ptr, state->custom_state, msg);
+
+    /* Return control to the setjmp point */
+    longjmp(state->error_handler_jmp, 1);
+}
+
+static void wrap_png_encoder_custom_write_data(png_structp png_ptr, png_bytep buffer, png_size_t buffer_length)
+{
+    struct wrap_png_encoder_state * state = (struct wrap_png_encoder_state *)png_get_io_ptr(png_ptr);
+
+    if (state == NULL || state->custom_state == NULL) {
+        png_error(png_ptr, "PNG Write Error - state or custom_state null");
+    }
+
+    if (state->write_function == NULL) {
+        png_error(png_ptr, "PNG Write Error - write_function null");
+    }
+
+    if (!state->write_function(png_ptr, state->custom_state, buffer, buffer_length)){
+        png_error(png_ptr, "Write error in write_function callback");
+    }
+}
+
+static bool wrap_png_encoder_state_init(struct wrap_png_encoder_state * state, void * custom_state,
+                                 wrap_png_error_handler error_handler, wrap_png_custom_write_function write_function)
+{
+    memset(state, 0, sizeof(struct wrap_png_encoder_state));
+    state->custom_state = custom_state;
+    state->write_function = write_function;
+    state->error_handler = error_handler;
+    return true;
+}
+
+static void png_flush_nullop(png_structp png_ptr) {}
+
+bool wrap_png_encoder_write_png(void * custom_state,
+                                wrap_png_error_handler error_handler,
+                                wrap_png_custom_write_function write_function,
+                                uint8_t * * row_pointers,
+                                size_t w,
+                                size_t h,
+                                bool disable_png_alpha,
+                                int zlib_compression_level,
+                                flow_pixel_format pixel_format){
+
+
+
+    struct wrap_png_encoder_state state;
+    wrap_png_encoder_state_init(&state,custom_state,error_handler,write_function);
+
+    if (pixel_format != flow_bgra32 && pixel_format != flow_bgr24 && pixel_format != flow_bgr32) {
+        state.error_handler(NULL, state.custom_state, "Unsupported pixel_format passed to wrap_png_encoder_write_png");
+        return false;
+    }
+
+    png_structp png_ptr = png_create_write_struct(PNG_LIBPNG_VER_STRING, &state, wrap_png_encoder_error_handler,
+                                                  NULL); // makepng_error, makepng_warning);
+    png_infop info_ptr = NULL;
+    if (png_ptr == NULL){
+        state.error_handler(png_ptr, state.custom_state, "OOM in wrap_png_encoder_write_png: png_create_write_struct failed. Out of memory.");
+        return false;
+    }
+
+    if (setjmp(state.error_handler_jmp)) {
+        return false;
+    }
+    if (zlib_compression_level >= -1 && zlib_compression_level <= 9)
+    {
+        png_set_compression_level(png_ptr, zlib_compression_level);
+        png_set_text_compression_level(png_ptr, zlib_compression_level);
+    }else{
+        png_set_compression_level(png_ptr,  PNG_Z_DEFAULT_COMPRESSION);
+        png_set_text_compression_level(png_ptr, PNG_Z_DEFAULT_COMPRESSION);
+    }
+
+    png_set_write_fn(png_ptr, &state, wrap_png_encoder_custom_write_data, png_flush_nullop);
+
+    info_ptr = png_create_info_struct(png_ptr);
+    if (info_ptr == NULL){
+        png_destroy_write_struct(&png_ptr, &info_ptr);
+        state.error_handler(png_ptr, state.custom_state, "OOM in wrap_png_encoder_write_png: png_create_info_struct failed. Out of memory.");
+        return false;
+    }
+
+    png_set_rows(png_ptr, info_ptr, row_pointers);
+
+    int color_type;
+    int transform;
+    if ((pixel_format == flow_bgra32 && disable_png_alpha) || pixel_format == flow_bgr32) {
+        color_type = PNG_COLOR_TYPE_RGB;
+        transform = PNG_TRANSFORM_BGR | PNG_TRANSFORM_STRIP_FILLER_AFTER;
+    } else if (pixel_format == flow_bgr24) {
+        color_type = PNG_COLOR_TYPE_RGB;
+        transform = PNG_TRANSFORM_BGR;
+    } else if (pixel_format == flow_bgra32) {
+        color_type = PNG_COLOR_TYPE_RGB_ALPHA;
+        transform = PNG_TRANSFORM_BGR;
+    } else {
+        png_destroy_write_struct(&png_ptr, &info_ptr);
+        state.error_handler(png_ptr, state.custom_state, "Invalid pixel_format argument passed to wrap_png_encoder_write_png.");
+        return false;
+    }
+
+    png_set_IHDR(png_ptr, info_ptr, (png_uint_32)w, (png_uint_32)h, 8, color_type, PNG_INTERLACE_NONE,
+                 PNG_COMPRESSION_TYPE_BASE, PNG_FILTER_TYPE_BASE);
+
+    png_set_sRGB_gAMA_and_cHRM(png_ptr, info_ptr, PNG_sRGB_INTENT_PERCEPTUAL);
+
+    if ( disable_png_alpha) {
+        // png_set_filler(png_ptr, (png_uint_32)0, PNG_FILLER_AFTER);
+    }
+
+    png_write_png(png_ptr, info_ptr, transform, NULL);
+
+    png_destroy_write_struct(&png_ptr, &info_ptr);
     return true;
 }

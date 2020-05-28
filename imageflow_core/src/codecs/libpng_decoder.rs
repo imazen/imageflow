@@ -107,8 +107,8 @@ impl Drop for PngDec{
 
 impl PngDec{
     #[no_mangle]
-    extern "C" fn png_error_handler(png_ptr: *mut c_void, custom_state: *mut c_void,
-                                     message: *const c_char){
+    extern "C" fn png_decoder_error_handler(png_ptr: *mut c_void, custom_state: *mut c_void,
+                                            message: *const c_char){
         let decoder = unsafe{ &mut *(custom_state as *mut PngDec) };
 
         if decoder.error.is_none() {
@@ -123,7 +123,7 @@ impl PngDec{
 
 
     #[no_mangle]
-    extern "C" fn custom_read_function(png_ptr: *mut c_void, custom_state: *mut c_void, buffer: *mut u8, bytes_requested: usize, out_bytes_read: &mut usize) -> bool {
+    extern "C" fn png_decoder_custom_read_function(png_ptr: *mut c_void, custom_state: *mut c_void, buffer: *mut u8, bytes_requested: usize, out_bytes_read: &mut usize) -> bool {
         let decoder = unsafe{ &mut *(custom_state as *mut PngDec) };
 
         let buffer_slice = unsafe{ std::slice::from_raw_parts_mut(buffer, bytes_requested) };
@@ -144,7 +144,7 @@ impl PngDec{
                 }
             },
             Err(err) => {
-                decoder.error = Some(FlowError::from_decoder(err));
+                decoder.error = Some(FlowError::from_decoder(err).at(here!()));
                 false
             }
         }
@@ -189,9 +189,9 @@ impl PngDec{
 
         unsafe {
             if !ffi::wrap_png_decoder_state_init(decoder.c_state.as_mut_ptr() as *mut c_void,
-                                             decoder.as_mut() as *mut PngDec as *mut c_void,
-                                             PngDec::png_error_handler,
-                                            PngDec::custom_read_function){
+                                                 decoder.as_mut() as *mut PngDec as *mut c_void,
+                                                 PngDec::png_decoder_error_handler,
+                                                 PngDec::png_decoder_custom_read_function){
                 return Err(decoder.error.clone().expect("error missing").at(here!()));
             }
         }
