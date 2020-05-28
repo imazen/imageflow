@@ -802,6 +802,14 @@ type WrapJpegSourceManagerFunc = extern fn(&mut mozjpeg_sys::jpeg_decompress_str
 type WrapJpegSourceManagerFillBufferFunc = extern fn(&mut mozjpeg_sys::jpeg_decompress_struct, *mut c_void, &mut bool) -> bool;
 type WrapJpegSourceManagerSkipBytesFunc = extern fn(&mut mozjpeg_sys::jpeg_decompress_struct, *mut c_void, c_long) -> bool;
 
+
+// typedef  bool (*wrap_png_custom_read_function) (png_structp png_ptr, void * custom_state, uint8_t * buffer, size_t bytes_requested, size_t * out_bytes_read);
+type WrapPngCustomReadFunction = extern fn(*mut c_void, *mut c_void, *mut u8, usize, &mut usize) -> bool;
+//typedef void (*wrap_png_error_handler) (png_structp png_ptr, void * custom_state, char * error_message);
+type WrapPngErrorHandler = extern fn(*mut c_void, *mut c_void, *const c_char);
+
+
+
 #[repr(C)]
 pub struct WrapJpegSourceManager {
     pub shared_mgr: mozjpeg_sys::jpeg_source_mgr,
@@ -862,6 +870,8 @@ mod long_term{
                                           color_srgb_argb: u32)
                                           -> bool;
 
+
+
         pub fn wrap_jpeg_error_state_bytes() -> usize;
 
         pub fn wrap_jpeg_setup_error_handler(codec_info: *mut ::mozjpeg_sys::jpeg_decompress_struct,
@@ -890,6 +900,30 @@ mod long_term{
                                          scan_lines_read: * mut u32) -> bool;
 
         pub fn wrap_jpeg_save_markers(codec_info: *mut ::mozjpeg_sys::jpeg_decompress_struct, marker_code: i32, length_limit: u32) -> bool;
+
+
+
+        pub fn wrap_png_decoder_state_bytes() -> usize;
+
+        pub fn wrap_png_decoder_state_init(state: *mut c_void, custom_state: *mut c_void,
+            error_handler: WrapPngErrorHandler, read_function: WrapPngCustomReadFunction) -> bool;
+
+
+        pub fn wrap_png_decode_image_info(state: *mut c_void) -> bool;
+
+        pub fn wrap_png_decode_finish(state: *mut c_void, row_pointers: *mut *mut u8, row_count: usize, row_bytes: usize) -> bool;
+
+        pub fn wrap_png_decoder_get_png_ptr(state: *mut c_void) -> *mut c_void;
+
+        pub fn wrap_png_decoder_get_info_ptr(state: *mut c_void) -> *mut c_void;
+
+        pub fn wrap_png_decoder_get_color_info(state: *mut c_void) -> *const DecoderColorInfo;
+
+
+        pub fn wrap_png_decoder_destroy(state: *mut c_void) -> bool;
+
+        pub fn wrap_png_decoder_get_info(state: *mut c_void, w: &mut u32, h: &mut u32, uses_alpha: &mut bool) -> bool;
+
     }
 }
 
@@ -1021,7 +1055,7 @@ mod mid_term {
 pub use self::must_replace::*;
 pub use self::long_term::*;
 pub use self::mid_term::*;
-
+use std::os::raw::c_char;
 
 
 // https://github.com/rust-lang/rust/issues/17417

@@ -71,6 +71,12 @@ mozjpeg-sys = {version = "0.10.4", features = ["nasm_simd", "turbojpeg_api"]}
 
 evalchroma = "0.1.1"
 
+# For build info see https://github.com/kornelski/rust-libpng-sys/blob/master/Cargo.toml
+# And https://github.com/kornelski/rust-libpng-sys/blob/master/build.rs
+libpng-sys = { version = "1.1.8", features = ["static", "static-libz", "libz-sys"] }
+
+
+
 [dev-dependencies]
 hyper = "0.13"
 imageflow_http_helpers = { path = "../imageflow_http_helpers", version = "*" }

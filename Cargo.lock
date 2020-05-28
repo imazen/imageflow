@@ -1015,6 +1015,7 @@ dependencies = [
  "lazy_static 1.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "lcms2 5.1.6 (registry+https://github.com/rust-lang/crates.io-index)",
  "libc 0.2.70 (registry+https://github.com/rust-lang/crates.io-index)",
+ "libpng-sys 1.1.8 (registry+https://github.com/rust-lang/crates.io-index)",
  "libwebp-sys 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "lodepng 2.6.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "mozjpeg 0.8.16 (registry+https://github.com/rust-lang/crates.io-index)",

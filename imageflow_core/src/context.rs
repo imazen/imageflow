@@ -186,7 +186,12 @@ impl Context {
     }
 
     pub fn get_exif_rotation_flag(&mut self, io_id: i32) -> Result<Option<i32>>{
-        self.get_codec(io_id).map_err(|e| e.at(here!()))?.get_decoder().map_err(|e| e.at(here!()))?.get_exif_rotation_flag( self).map_err(|e| e.at(here!()))
+        self.get_codec(io_id)
+            .map_err(|e| e.at(here!()))?
+            .get_decoder()
+            .map_err(|e| e.at(here!()))?
+            .get_exif_rotation_flag( self)
+            .map_err(|e| e.at(here!()))
 
     }
 

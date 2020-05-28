@@ -23,17 +23,20 @@ static void wrap_jpeg_error_exit(j_common_ptr codec_info)
 
     bool result = state->error_handler(state->custom_state, codec_info, &state->error_mgr, state->error_mgr.msg_code, &warning_buffer[0], JMSG_LENGTH_MAX );
 
+    // Uncomment to permit JPEGs with unknown markers
+    // if (state->error_mgr.msg_code == JERR_UNKNOWN_MARKER) return;
+    // Destroy memory allocs and temp files
+    // Specialized routines are wrappers for jpeg_destroy_compress
+
+    // TODO: Determine if we should call jpeg_destroy first
+    // jpeg_destroy(codec_info);
+
     if (result) {
         return;
     }else{
         /* Return control to the setjmp point */
         longjmp(state->error_handler_jmp, 1);
     }
-    // Uncomment to permit JPEGs with unknown markers
-    // if (state->error_mgr.msg_code == JERR_UNKNOWN_MARKER) return;
-    // Destroy memory allocs and temp files
-    // Specialized routines are wrappers for jpeg_destroy_compress
-    jpeg_destroy(codec_info);
 }
 
 //! Ignores warnings
