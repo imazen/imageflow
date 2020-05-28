@@ -2512,11 +2512,12 @@ pub unsafe extern "C" fn flow_node_execute_scale2d_render1d(
     while out_row < (*cropped_canvas).h {
         let contrib: flow_interpolation_pixel_contributions =
             *(*contrib_v).ContribRow.offset(out_row as isize);
+
         // Clear output row
-        memset(
+        ::libc::memset(
             output_address as *mut libc::c_void,
             0 as libc::c_int,
-            ::std::mem::size_of::<libc::c_float>().wrapping_mul(row_floats) as u32,
+            ::std::mem::size_of::<libc::c_float>().wrapping_mul(row_floats),
         );
         let mut input_row: libc::c_int = contrib.Left;
         while input_row <= contrib.Right {
