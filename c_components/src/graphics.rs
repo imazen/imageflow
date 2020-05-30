@@ -6,18 +6,18 @@
     non_upper_case_globals,
     unused_assignments
 )]
-use std::f64;
-use std::ffi::CString; 
 #[cfg(target_arch = "x86")]
 pub use std::arch::x86::{
     __m128, _mm_add_ps, _mm_loadu_ps, _mm_movehl_ps, _mm_movelh_ps, _mm_mul_ps, _mm_set1_ps,
     _mm_setr_ps, _mm_setzero_ps, _mm_storeu_ps, _mm_unpackhi_ps, _mm_unpacklo_ps,
 };
 #[cfg(target_arch = "x86_64")]
-pub use std::{arch::x86_64::{
+pub use std::arch::x86_64::{
     __m128, _mm_add_ps, _mm_loadu_ps, _mm_movehl_ps, _mm_movelh_ps, _mm_mul_ps, _mm_set1_ps,
     _mm_setr_ps, _mm_setzero_ps, _mm_storeu_ps, _mm_unpackhi_ps, _mm_unpacklo_ps,
-}};
+};
+use std::f64;
+use std::ffi::CString;
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub struct flow_decoder_frame_info {
@@ -33,12 +33,7 @@ extern "C" {
     #[no_mangle]
     fn flow_pixel_format_channels(format: flow_pixel_format) -> u32;
     #[no_mangle]
-    fn flow_snprintf(
-        s: *mut libc::c_char,
-        n: usize,
-        fmt: *const libc::c_char,
-        _: ...
-    ) -> i32;
+    fn flow_snprintf(s: *mut libc::c_char, n: usize, fmt: *const libc::c_char, _: ...) -> i32;
     #[no_mangle]
     fn flow_set_owner(c: *mut flow_c, thing: *mut libc::c_void, owner: *mut libc::c_void) -> bool;
     #[no_mangle]
@@ -105,11 +100,7 @@ extern "C" {
     #[no_mangle]
     fn pow(_: f64, _: f64) -> f64;
     #[no_mangle]
-    fn flow_bitmap_bgra_create_header(
-        c: *mut flow_c,
-        sx: i32,
-        sy: i32,
-    ) -> *mut flow_bitmap_bgra;
+    fn flow_bitmap_bgra_create_header(c: *mut flow_c, sx: i32, sy: i32) -> *mut flow_bitmap_bgra;
     #[no_mangle]
     fn memcpy(_: *mut libc::c_void, _: *const libc::c_void, _: u64) -> *mut libc::c_void;
     #[no_mangle]
@@ -189,7 +180,7 @@ pub enum flow_status_code {
     Other_error = 1024,
     // ___Last_library_error,
     First_user_defined_error = 1025,
-    Last_user_defined_error = 2147483647
+    Last_user_defined_error = 2147483647,
 }
 pub type flow_interpolation_filter = u32;
 pub const flow_interpolation_filter_NCubicSharp: flow_interpolation_filter = 30;
@@ -494,12 +485,10 @@ pub type flow_io_seek_function =
     Option<unsafe extern "C" fn(_: *mut flow_c, _: *mut flow_io, _: i64) -> bool>;
 pub type flow_io_position_function =
     Option<unsafe extern "C" fn(_: *mut flow_c, _: *mut flow_io) -> i64>;
-pub type flow_io_write_function = Option<
-    unsafe extern "C" fn(_: *mut flow_c, _: *mut flow_io, _: *const u8, _: usize) -> i64,
->;
-pub type flow_io_read_function = Option<
-    unsafe extern "C" fn(_: *mut flow_c, _: *mut flow_io, _: *mut u8, _: usize) -> i64,
->;
+pub type flow_io_write_function =
+    Option<unsafe extern "C" fn(_: *mut flow_c, _: *mut flow_io, _: *const u8, _: usize) -> i64>;
+pub type flow_io_read_function =
+    Option<unsafe extern "C" fn(_: *mut flow_c, _: *mut flow_io, _: *mut u8, _: usize) -> i64>;
 pub type codec_get_frame_info_fn = Option<
     unsafe extern "C" fn(
         _: *mut flow_c,
@@ -552,9 +541,8 @@ pub struct flow_interpolation_details {
     pub filter: flow_detailed_interpolation_method,
     pub sharpen_percent_goal: f32,
 }
-pub type flow_detailed_interpolation_method = Option<
-    unsafe extern "C" fn(_: *const flow_interpolation_details, _: f64) -> f64,
->;
+pub type flow_detailed_interpolation_method =
+    Option<unsafe extern "C" fn(_: *const flow_interpolation_details, _: f64) -> f64>;
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub struct flow_interpolation_pixel_contributions {
@@ -645,10 +633,7 @@ unsafe extern "C" fn flow_colorcontext_remove_gamma(
     colorcontext: *mut flow_colorcontext_info,
     value: f32,
 ) -> f32 {
-    return pow(
-        value as f64,
-        (*colorcontext).gamma as f64,
-    ) as f32;
+    return pow(value as f64, (*colorcontext).gamma as f64) as f32;
 }
 #[inline]
 unsafe extern "C" fn srgb_to_linear(s: f32) -> f32 {
@@ -692,11 +677,7 @@ unsafe extern "C" fn uchar_clamp_ff(clr: f32) -> u8 {
 }
 #[inline]
 unsafe extern "C" fn fastpow2(p: f32) -> f32 {
-    let offset: f32 = if p < 0 as i32 as f32 {
-        1.0f32
-    } else {
-        0.0f32
-    };
+    let offset: f32 = if p < 0 as i32 as f32 { 1.0f32 } else { 0.0f32 };
     let clipp: f32 = if p < -(126 as i32) as f32 {
         -126.0f32
     } else {
@@ -715,8 +696,7 @@ unsafe extern "C" fn fastpow2(p: f32) -> f32 {
 unsafe extern "C" fn fastlog2(x: f32) -> f32 {
     let vx: C2RustUnnamed_1 = C2RustUnnamed_1 { f: x };
     let mx: C2RustUnnamed_0 = C2RustUnnamed_0 {
-        i: vx.i & 0x7fffff as i32 as u32
-            | 0x3f000000 as i32 as u32,
+        i: vx.i & 0x7fffff as i32 as u32 | 0x3f000000 as i32 as u32,
     };
     let mut y: f32 = vx.i as f32;
     y *= 1.1920928955078125e-7f32;
@@ -738,10 +718,7 @@ unsafe extern "C" fn flow_colorcontext_apply_gamma(
     colorcontext: *mut flow_colorcontext_info,
     value: f32,
 ) -> f32 {
-    return pow(
-        value as f64,
-        (*colorcontext).gamma_inverse as f64,
-    ) as f32;
+    return pow(value as f64, (*colorcontext).gamma_inverse as f64) as f32;
 }
 #[inline]
 unsafe extern "C" fn flow_colorcontext_srgb_to_floatspace(
@@ -769,23 +746,16 @@ unsafe extern "C" fn linear_to_luv(bgr: *mut f32) {
     let xn: f32 = 0.312713f32;
     let yn: f32 = 0.329016f32;
     let Yn: f32 = 1.0f32;
-    let un: f32 = 4 as i32 as f32 * xn
-        / (-(2 as i32) as f32 * xn
-            + 12 as i32 as f32 * yn
-            + 3 as i32 as f32);
-    let vn: f32 = 9 as i32 as f32 * yn
-        / (-(2 as i32) as f32 * xn
-            + 12 as i32 as f32 * yn
-            + 3 as i32 as f32);
+    let un: f32 =
+        4 as i32 as f32 * xn / (-(2 as i32) as f32 * xn + 12 as i32 as f32 * yn + 3 as i32 as f32);
+    let vn: f32 =
+        9 as i32 as f32 * yn / (-(2 as i32) as f32 * xn + 12 as i32 as f32 * yn + 3 as i32 as f32);
     let y_split: f32 = 0.00885645f32;
     let y_adjust: f32 = 903.3f32;
     let R: f32 = *bgr.offset(2);
     let G: f32 = *bgr.offset(1);
     let B: f32 = *bgr.offset(0);
-    if R == 0 as i32 as f32
-        && G == 0 as i32 as f32
-        && B == 0 as i32 as f32
-    {
+    if R == 0 as i32 as f32 && G == 0 as i32 as f32 && B == 0 as i32 as f32 {
         *bgr.offset(0) = 0 as i32 as f32;
         let ref mut fresh0 = *bgr.offset(2);
         *fresh0 = 100 as i32 as f32;
@@ -796,23 +766,17 @@ unsafe extern "C" fn linear_to_luv(bgr: *mut f32) {
     let Y: f32 = 0.212671f32 * R + 0.71516f32 * G + 0.072169f32 * B;
     let Z: f32 = 0.019334f32 * R + 0.119193f32 * G + 0.950227f32 * B;
     let Yd: f32 = Y / Yn;
-    let u: f32 = 4 as i32 as f32 * X
-        / (X + 15 as i32 as f32 * Y + 3 as i32 as f32 * Z);
-    let v: f32 = 9 as i32 as f32 * Y
-        / (X + 15 as i32 as f32 * Y + 3 as i32 as f32 * Z);
+    let u: f32 = 4 as i32 as f32 * X / (X + 15 as i32 as f32 * Y + 3 as i32 as f32 * Z);
+    let v: f32 = 9 as i32 as f32 * Y / (X + 15 as i32 as f32 * Y + 3 as i32 as f32 * Z);
     let ref mut fresh1 = *bgr.offset(0);
     *fresh1 = if Yd > y_split {
-        (116 as i32 as f32
-            * pow(Yd as f64, (1.0f32 / 3.0f32) as f64) as f32)
-            - 16 as i32 as f32
+        (116 as i32 as f32 * pow(Yd as f64, (1.0f32 / 3.0f32) as f64) as f32) - 16 as i32 as f32
     } else {
         (y_adjust) * Yd
     };
     let L: f32 = *fresh1;
-    *bgr.offset(1) =
-        13 as i32 as f32 * L * (u - un) + 100 as i32 as f32;
-    *bgr.offset(2) =
-        13 as i32 as f32 * L * (v - vn) + 100 as i32 as f32;
+    *bgr.offset(1) = 13 as i32 as f32 * L * (u - un) + 100 as i32 as f32;
+    *bgr.offset(2) = 13 as i32 as f32 * L * (v - vn) + 100 as i32 as f32;
 }
 #[inline]
 unsafe extern "C" fn luv_to_linear(luv: *mut f32) {
@@ -830,31 +794,23 @@ unsafe extern "C" fn luv_to_linear(luv: *mut f32) {
     let xn: f32 = 0.312713f32;
     let yn: f32 = 0.329016f32;
     let Yn: f32 = 1.0f32;
-    let un: f32 = 4 as i32 as f32 * xn
-        / (-(2 as i32) as f32 * xn
-            + 12 as i32 as f32 * yn
-            + 3 as i32 as f32);
-    let vn: f32 = 9 as i32 as f32 * yn
-        / (-(2 as i32) as f32 * xn
-            + 12 as i32 as f32 * yn
-            + 3 as i32 as f32);
+    let un: f32 =
+        4 as i32 as f32 * xn / (-(2 as i32) as f32 * xn + 12 as i32 as f32 * yn + 3 as i32 as f32);
+    let vn: f32 =
+        9 as i32 as f32 * yn / (-(2 as i32) as f32 * xn + 12 as i32 as f32 * yn + 3 as i32 as f32);
     let y_adjust_2: f32 = 0.00110705645f32;
     let u: f32 = U / (13 as i32 as f32 * L) + un;
     let v: f32 = V / (13 as i32 as f32 * L) + vn;
     let Y: f32 = if L > 8 as i32 as f32 {
         (Yn) * pow(
-            ((L + 16 as i32 as f32) / 116 as i32 as f32)
-                as f64,
+            ((L + 16 as i32 as f32) / 116 as i32 as f32) as f64,
             3 as i32 as f64,
         ) as f32
     } else {
         (Yn * L) * y_adjust_2
     };
     let X: f32 = 9 as i32 as f32 / 4.0f32 * Y * u / v;
-    let Z: f32 = (9 as i32 as f32 * Y
-        - 15 as i32 as f32 * v * Y
-        - v * X)
-        / (3 as i32 as f32 * v);
+    let Z: f32 = (9 as i32 as f32 * Y - 15 as i32 as f32 * v * Y - v * X) / (3 as i32 as f32 * v);
     let r: f32 = 3.240479f32 * X - 1.53715f32 * Y - 0.498535f32 * Z;
     let g: f32 = -0.969256f32 * X + 1.875991f32 * Y + 0.041556f32 * Z;
     let b: f32 = 0.055648f32 * X - 0.204043f32 * Y + 1.057311f32 * Z;
@@ -876,10 +832,7 @@ unsafe extern "C" fn derive_cubic_coefficients(
     (*out).q3 = B + 5.0f64 * C;
     (*out).q4 = -1.0f64 / 6.0f64 * B - C;
 }
-unsafe extern "C" fn filter_flex_cubic(
-    d: *const flow_interpolation_details,
-    x: f64,
-) -> f64 {
+unsafe extern "C" fn filter_flex_cubic(d: *const flow_interpolation_details, x: f64) -> f64 {
     let t: f64 = fabs(x) / (*d).blur;
     if t < 1.0f64 {
         return (*d).p1 + t * (t * ((*d).p2 + t * (*d).p3));
@@ -889,27 +842,19 @@ unsafe extern "C" fn filter_flex_cubic(
     }
     return 0.0f64;
 }
-unsafe extern "C" fn filter_bicubic_fast(
-    d: *const flow_interpolation_details,
-    t: f64,
-) -> f64 {
+unsafe extern "C" fn filter_bicubic_fast(d: *const flow_interpolation_details, t: f64) -> f64 {
     let abs_t: f64 = fabs(t) / (*d).blur;
     let abs_t_sq: f64 = abs_t * abs_t;
     if abs_t < 1 as i32 as f64 {
-        return 1 as i32 as f64 - 2 as i32 as f64 * abs_t_sq
-            + abs_t_sq * abs_t;
+        return 1 as i32 as f64 - 2 as i32 as f64 * abs_t_sq + abs_t_sq * abs_t;
     }
     if abs_t < 2 as i32 as f64 {
-        return 4 as i32 as f64 - 8 as i32 as f64 * abs_t
-            + 5 as i32 as f64 * abs_t_sq
+        return 4 as i32 as f64 - 8 as i32 as f64 * abs_t + 5 as i32 as f64 * abs_t_sq
             - abs_t_sq * abs_t;
     }
     return 0 as i32 as f64;
 }
-unsafe extern "C" fn filter_sinc(
-    d: *const flow_interpolation_details,
-    t: f64,
-) -> f64 {
+unsafe extern "C" fn filter_sinc(d: *const flow_interpolation_details, t: f64) -> f64 {
     let abs_t: f64 = fabs(t) / (*d).blur;
     if abs_t == 0 as i32 as f64 {
         return 1 as i32 as f64;
@@ -921,10 +866,7 @@ unsafe extern "C" fn filter_sinc(
     let a = abs_t * IR_PI;
     return a.sin() / a;
 }
-unsafe extern "C" fn filter_box(
-    d: *const flow_interpolation_details,
-    t: f64,
-) -> f64 {
+unsafe extern "C" fn filter_box(d: *const flow_interpolation_details, t: f64) -> f64 {
     let x: f64 = t / (*d).blur;
     return if x >= -(1 as i32) as f64 * (*d).window && x < (*d).window {
         1 as i32
@@ -932,20 +874,14 @@ unsafe extern "C" fn filter_box(
         0 as i32
     } as f64;
 }
-unsafe extern "C" fn filter_triangle(
-    d: *const flow_interpolation_details,
-    t: f64,
-) -> f64 {
+unsafe extern "C" fn filter_triangle(d: *const flow_interpolation_details, t: f64) -> f64 {
     let x: f64 = fabs(t) / (*d).blur;
     if x < 1.0f64 {
         return 1.0f64 - x;
     }
     return 0.0f64;
 }
-unsafe extern "C" fn filter_sinc_windowed(
-    d: *const flow_interpolation_details,
-    t: f64,
-) -> f64 {
+unsafe extern "C" fn filter_sinc_windowed(d: *const flow_interpolation_details, t: f64) -> f64 {
     let x: f64 = t / (*d).blur;
     let abs_t: f64 = fabs(x);
     if abs_t == 0 as i32 as f64 {
@@ -955,12 +891,10 @@ unsafe extern "C" fn filter_sinc_windowed(
     if abs_t > (*d).window {
         return 0 as i32 as f64;
     }
-    return (*d).window * (IR_PI * x / (*d).window).sin() * (x * IR_PI).sin() / (IR_PI * IR_PI * x * x);
+    return (*d).window * (IR_PI * x / (*d).window).sin() * (x * IR_PI).sin()
+        / (IR_PI * IR_PI * x * x);
 }
-unsafe extern "C" fn filter_jinc(
-    d: *const flow_interpolation_details,
-    t: f64,
-) -> f64 {
+unsafe extern "C" fn filter_jinc(d: *const flow_interpolation_details, t: f64) -> f64 {
     let x: f64 = fabs(t) / (*d).blur;
     if x == 0.0f64 {
         return 0.5f64 * IR_PI;
@@ -982,10 +916,7 @@ static double filter_window_jinc (const struct flow_interpolation_details * d, d
     return window_jinc (t / (d->blur * d->window));
 }
 */
-unsafe extern "C" fn filter_ginseng(
-    d: *const flow_interpolation_details,
-    t: f64,
-) -> f64 {
+unsafe extern "C" fn filter_ginseng(d: *const flow_interpolation_details, t: f64) -> f64 {
     // Sinc windowed by jinc
     let abs_t: f64 = fabs(t) / (*d).blur;
     let t_pi: f64 = abs_t * IR_PI;
@@ -1013,10 +944,8 @@ pub unsafe extern "C" fn flow_interpolation_details_percent_negative_weight(
     let mut negative_area: f64 = 0 as i32 as f64;
     let mut i: i32 = 0 as i32;
     while i <= samples + 2 as i32 {
-        let height: f64 = (*details).filter.expect("non-null function pointer")(
-            details,
-            i as f64 * step,
-        );
+        let height: f64 =
+            (*details).filter.expect("non-null function pointer")(details, i as f64 * step);
         let area: f64 = (height + last_height) / 2.0f64 * step;
         last_height = height;
         if area > 0 as i32 as f64 {
@@ -1080,10 +1009,7 @@ pub unsafe extern "C" fn flow_interpolation_details_create_bicubic_custom(
         derive_cubic_coefficients(B, C, d);
         (*d).filter = Some(
             filter_flex_cubic
-                as unsafe extern "C" fn(
-                    _: *const flow_interpolation_details,
-                    _: f64,
-                ) -> f64,
+                as unsafe extern "C" fn(_: *const flow_interpolation_details, _: f64) -> f64,
         );
         (*d).window = window
     } else {
@@ -1142,8 +1068,7 @@ unsafe extern "C" fn InterpolationDetails_create_from_internal(
     checkExistenceOnly: bool,
 ) -> *mut flow_interpolation_details {
     let ex: bool = checkExistenceOnly;
-    let truePtr: *mut flow_interpolation_details =
-        -(1 as i32) as *mut flow_interpolation_details;
+    let truePtr: *mut flow_interpolation_details = -(1 as i32) as *mut flow_interpolation_details;
     match filter as u32 {
         23 | 22 => {
             return if ex as i32 != 0 {
@@ -1658,9 +1583,8 @@ unsafe extern "C" fn LineContributions_alloc(
     (*res).LineLength = line_length;
     (*res).ContribRow = flow_context_malloc(
         context,
-        (line_length as usize).wrapping_mul(::std::mem::size_of::<
-            flow_interpolation_pixel_contributions,
-        >()),
+        (line_length as usize)
+            .wrapping_mul(::std::mem::size_of::<flow_interpolation_pixel_contributions>()),
         ::std::mem::transmute::<libc::intptr_t, flow_destructor_function>(NULL as libc::intptr_t),
         context as *mut libc::c_void,
         b"lib/graphics.c\x00" as *const u8 as *const libc::c_char,
@@ -1770,13 +1694,11 @@ pub unsafe extern "C" fn flow_interpolation_line_contributions_create(
             (*details).sharpen_percent_goal as f64 / 100.0f64,
         ),
     );
-    let scale_factor: f64 =
-        output_line_size as f64 / input_line_size as f64;
+    let scale_factor: f64 = output_line_size as f64 / input_line_size as f64;
     let downscale_factor: f64 = fmin(1.0f64, scale_factor);
     let half_source_window: f64 = ((*details).window + 0.5f64) / downscale_factor;
     let allocated_window_size: u32 =
-        (ceil(2 as i32 as f64 * (half_source_window - TONY)) as i32
-            + 1 as i32) as u32;
+        (ceil(2 as i32 as f64 * (half_source_window - TONY)) as i32 + 1 as i32) as u32;
     let mut u: u32 = 0;
     let mut ix: u32 = 0;
     let mut res: *mut flow_interpolation_line_contributions =
@@ -1797,23 +1719,15 @@ pub unsafe extern "C" fn flow_interpolation_line_contributions_create(
     let mut positive_area: f64 = 0 as i32 as f64;
     u = 0 as i32 as u32;
     while u < output_line_size {
-        let center_src_pixel: f64 =
-            (u as f64 + 0.5f64) / scale_factor - 0.5f64;
+        let center_src_pixel: f64 = (u as f64 + 0.5f64) / scale_factor - 0.5f64;
         let left_edge: i32 = (floor(center_src_pixel) as i32 as u32)
-            .wrapping_sub(
-                allocated_window_size
-                    .wrapping_sub(1u32)
-                    .wrapping_div(2u32),
-            ) as i32;
+            .wrapping_sub(allocated_window_size.wrapping_sub(1u32).wrapping_div(2u32))
+            as i32;
         let right_edge: i32 = (left_edge as u32)
             .wrapping_add(allocated_window_size)
-            .wrapping_sub(1u32)
-            as i32;
+            .wrapping_sub(1u32) as i32;
         let left_src_pixel: u32 = int_max(0 as i32, left_edge) as u32;
-        let right_src_pixel: u32 = int_min(
-            right_edge,
-            input_line_size as i32 - 1 as i32,
-        ) as u32;
+        let right_src_pixel: u32 = int_min(right_edge, input_line_size as i32 - 1 as i32) as u32;
         // Net weight
         let mut total_weight: f64 = 0.0f64;
         // Sum of negative and positive weights
@@ -1842,12 +1756,11 @@ pub unsafe extern "C" fn flow_interpolation_line_contributions_create(
         ix = left_src_pixel;
         while ix <= right_src_pixel {
             let tx: i32 = ix.wrapping_sub(left_src_pixel) as i32;
-            let mut add: f64 =
-                Some((*details).filter.expect("non-null function pointer"))
-                    .expect("non-null function pointer")(
-                    details,
-                    downscale_factor * (ix as f64 - center_src_pixel),
-                );
+            let mut add: f64 = Some((*details).filter.expect("non-null function pointer"))
+                .expect("non-null function pointer")(
+                details,
+                downscale_factor * (ix as f64 - center_src_pixel),
+            );
             if fabs(add) <= 0.00000002f64 {
                 add = 0.0f64
                 // Weights below a certain threshold make consistent x-plat
@@ -1868,8 +1781,8 @@ pub unsafe extern "C" fn flow_interpolation_line_contributions_create(
         if total_weight <= 0.0f32 as f64 || desired_sharpen_ratio > sharpen_ratio {
             if total_negative_weight < 0.0f32 as f64 {
                 if desired_sharpen_ratio < 1.0f32 as f64 {
-                    let target_positive_weight: f64 = 1.0f32 as f64
-                        / (1.0f32 as f64 - desired_sharpen_ratio);
+                    let target_positive_weight: f64 =
+                        1.0f32 as f64 / (1.0f32 as f64 - desired_sharpen_ratio);
                     let target_negative_weight: f64 =
                         desired_sharpen_ratio * -target_positive_weight;
                     pos_factor = (target_positive_weight / total_positive_weight) as f32;
@@ -1955,28 +1868,24 @@ pub unsafe extern "C" fn flow_bitmap_float_scale_rows(
     }
     let mut avg: [f32; 4] = [0.; 4];
     // if both have alpha, process it
-    if from_step == 4 && to_step == 4
-    {
+    if from_step == 4 && to_step == 4 {
         let mut row: u32 = 0;
         while row < row_count {
-            let source_offset = ((from_row + row) * (*from).float_stride) as isize; 
-            let source_buffer: *const __m128 = (*from).pixels.offset(source_offset) as *const __m128;
+            let source_offset = ((from_row + row) * (*from).float_stride) as isize;
+            let source_buffer: *const __m128 =
+                (*from).pixels.offset(source_offset) as *const __m128;
             let dest_offset = ((to_row + row) * (*to).float_stride) as isize;
             let dest_buffer: *mut __m128 = (*to).pixels.offset(dest_offset) as *mut __m128;
-            let dest_buffer: &mut[__m128] = std::slice::from_raw_parts_mut(
-                dest_buffer, 
-                dest_buffer_count as usize
-            );
+            let dest_buffer: &mut [__m128] =
+                std::slice::from_raw_parts_mut(dest_buffer, dest_buffer_count as usize);
             ndx = 0;
             while ndx < dest_buffer_count {
                 let mut sums: __m128 = _mm_set1_ps(0.0);
                 let left: i32 = (*weights.offset(ndx as isize)).Left;
                 let right: i32 = (*weights.offset(ndx as isize)).Right;
                 let weightArray: *const f32 = (*weights.offset(ndx as isize)).Weights;
-                let source_buffer: &[__m128] = std::slice::from_raw_parts(
-                    source_buffer, 
-                    (right + 1) as usize
-                );
+                let source_buffer: &[__m128] =
+                    std::slice::from_raw_parts(source_buffer, (right + 1) as usize);
                 /* Accumulate each channel */
                 let mut i = left;
                 while i <= right {
@@ -1991,9 +1900,7 @@ pub unsafe extern "C" fn flow_bitmap_float_scale_rows(
             }
             row += 1
         }
-    } else if from_step == 3 as i32 as u32
-        && to_step == 3 as i32 as u32
-    {
+    } else if from_step == 3 as i32 as u32 && to_step == 3 as i32 as u32 {
         let mut row_0: u32 = 0 as i32 as u32;
         while row_0 < row_count {
             let source_buffer_0: *const f32 = (*from).pixels.offset(
@@ -2016,36 +1923,22 @@ pub unsafe extern "C" fn flow_bitmap_float_scale_rows(
                 while i_0 <= right_0 {
                     let weight: f32 = *weightArray_0.offset((i_0 - left_0) as isize);
                     bgr[0] += weight
-                        * *source_buffer_0
-                            .offset((i_0 as u32).wrapping_mul(from_step) as isize);
+                        * *source_buffer_0.offset((i_0 as u32).wrapping_mul(from_step) as isize);
                     bgr[1] += weight
                         * *source_buffer_0.offset(
-                            (i_0 as u32)
-                                .wrapping_mul(from_step)
-                                .wrapping_add(1u32)
-                                as isize,
+                            (i_0 as u32).wrapping_mul(from_step).wrapping_add(1u32) as isize,
                         );
                     bgr[2] += weight
                         * *source_buffer_0.offset(
-                            (i_0 as u32)
-                                .wrapping_mul(from_step)
-                                .wrapping_add(2u32)
-                                as isize,
+                            (i_0 as u32).wrapping_mul(from_step).wrapping_add(2u32) as isize,
                         );
                     i_0 += 1
                 }
-                *dest_buffer_0.offset(ndx.wrapping_mul(to_step) as isize) =
-                    bgr[0];
-                *dest_buffer_0.offset(
-                    ndx.wrapping_mul(to_step)
-                        .wrapping_add(1u32)
-                        as isize,
-                ) = bgr[1];
-                *dest_buffer_0.offset(
-                    ndx.wrapping_mul(to_step)
-                        .wrapping_add(2u32)
-                        as isize,
-                ) = bgr[2];
+                *dest_buffer_0.offset(ndx.wrapping_mul(to_step) as isize) = bgr[0];
+                *dest_buffer_0.offset(ndx.wrapping_mul(to_step).wrapping_add(1u32) as isize) =
+                    bgr[1];
+                *dest_buffer_0.offset(ndx.wrapping_mul(to_step).wrapping_add(2u32) as isize) =
+                    bgr[2];
                 ndx = ndx.wrapping_add(1)
             }
             row_0 = row_0.wrapping_add(1)
@@ -2078,9 +1971,7 @@ pub unsafe extern "C" fn flow_bitmap_float_scale_rows(
                     while j < min_channels {
                         avg[j as usize] += weight_0
                             * *source_buffer_1.offset(
-                                (i_1 as u32)
-                                    .wrapping_mul(from_step)
-                                    .wrapping_add(j) as isize,
+                                (i_1 as u32).wrapping_mul(from_step).wrapping_add(j) as isize,
                             );
                         j = j.wrapping_add(1)
                     }
@@ -2099,22 +1990,14 @@ pub unsafe extern "C" fn flow_bitmap_float_scale_rows(
     }
     return true;
 }
-unsafe extern "C" fn multiply_row(
-    row: *mut f32,
-    length: usize,
-    coefficient: f32,
-) {
+unsafe extern "C" fn multiply_row(row: *mut f32, length: usize, coefficient: f32) {
     let mut i: usize = 0 as i32 as usize;
     while i < length {
         *row.offset(i as isize) *= coefficient;
         i = i.wrapping_add(1)
     }
 }
-unsafe extern "C" fn add_row(
-    mutate_row: *mut f32,
-    input_row: *mut f32,
-    length: usize,
-) {
+unsafe extern "C" fn add_row(mutate_row: *mut f32, input_row: *mut f32, length: usize) {
     let mut i: usize = 0 as i32 as usize;
     while i < length {
         *mutate_row.offset(i as isize) += *input_row.offset(i as isize);
@@ -2153,14 +2036,8 @@ unsafe extern "C" fn crop(
     }
     (*cropped_canvas).fmt = (*b).fmt;
     memcpy(
-        &mut *(*cropped_canvas)
-            .matte_color
-            .as_mut_ptr()
-            .offset(0) as *mut u8 as *mut libc::c_void,
-        &mut *(*b)
-            .matte_color
-            .as_mut_ptr()
-            .offset(0) as *mut u8 as *const libc::c_void,
+        &mut *(*cropped_canvas).matte_color.as_mut_ptr().offset(0) as *mut u8 as *mut libc::c_void,
+        &mut *(*b).matte_color.as_mut_ptr().offset(0) as *mut u8 as *const libc::c_void,
         ::std::mem::size_of::<[u8; 4]>() as u64,
     );
     (*cropped_canvas).compositing_mode = (*b).compositing_mode;
@@ -2174,16 +2051,20 @@ unsafe extern "C" fn crop(
 
 /// Note: Rust version of `FLOW_error` takes the name of the caller as its third parameter since
 /// there does not seem to be a way to get the name of the current or calling function in Rust.
-fn FLOW_error(context: *mut flow_context, status_code: flow_status_code, caller: &str) -> *mut libc::c_char {
+fn FLOW_error(
+    context: *mut flow_context,
+    status_code: flow_status_code,
+    caller: &str,
+) -> *mut libc::c_char {
     let file = CString::new(file!()).unwrap().as_ptr();
     let func = CString::new(caller).unwrap().as_ptr();
     unsafe {
         flow_context_set_error_get_message_buffer(
-            context, 
-            status_code, 
-            file as *const libc::c_char, 
-            line!() as i32, 
-            func as *const libc::c_char // was __func__ in C macro
+            context,
+            status_code,
+            file as *const libc::c_char,
+            line!() as i32,
+            func as *const libc::c_char, // was __func__ in C macro
         )
     }
 }
@@ -2198,7 +2079,11 @@ pub unsafe extern "C" fn flow_node_execute_scale2d_render1d(
     if (*info).h.wrapping_add((*info).y) > (*uncropped_canvas).h
         || (*info).w.wrapping_add((*info).x) > (*uncropped_canvas).w
     {
-        FLOW_error(c, flow_status_code::Invalid_argument, "flow_node_execute_scale2d_render1d");
+        FLOW_error(
+            c,
+            flow_status_code::Invalid_argument,
+            "flow_node_execute_scale2d_render1d",
+        );
         return false;
     }
     let cropped_canvas: *mut flow_bitmap_bgra = if (*info).x == 0
@@ -2231,16 +2116,23 @@ pub unsafe extern "C" fn flow_node_execute_scale2d_render1d(
     }
     let input_fmt: flow_pixel_format = flow_effective_pixel_format(input);
     let canvas_fmt: flow_pixel_format = flow_effective_pixel_format(cropped_canvas);
-    if input_fmt as u32 != flow_bgra32 as i32 as u32
-        && input_fmt as u32 != flow_bgr32 as i32 as u32
+    if input_fmt as u32 != flow_bgra32 as i32 as u32 && input_fmt as u32 != flow_bgr32 as i32 as u32
     {
-        FLOW_error(c, flow_status_code::Not_implemented, "flow_node_execute_scale2d_render1d");
+        FLOW_error(
+            c,
+            flow_status_code::Not_implemented,
+            "flow_node_execute_scale2d_render1d",
+        );
         return false;
     }
     if canvas_fmt as u32 != flow_bgra32 as i32 as u32
         && canvas_fmt as u32 != flow_bgr32 as i32 as u32
     {
-        FLOW_error(c, flow_status_code::Not_implemented, "flow_node_execute_scale2d_render1d");
+        FLOW_error(
+            c,
+            flow_status_code::Not_implemented,
+            "flow_node_execute_scale2d_render1d",
+        );
         return false;
     }
     let mut colorcontext: flow_colorcontext_info = flow_colorcontext_info {
@@ -2345,12 +2237,8 @@ pub unsafe extern "C" fn flow_node_execute_scale2d_render1d(
         b"create_bitmap_float (buffers)\x00" as *const u8 as *const libc::c_char,
         0 as i32 != 0,
     );
-    let mut source_buf: *mut flow_bitmap_float = flow_bitmap_float_create_header(
-        c,
-        (*input).w as i32,
-        1 as i32,
-        4 as i32,
-    );
+    let mut source_buf: *mut flow_bitmap_float =
+        flow_bitmap_float_create_header(c, (*input).w as i32, 1 as i32, 4 as i32);
     if source_buf.is_null()
         || !flow_set_owner(
             c,
@@ -2375,13 +2263,8 @@ pub unsafe extern "C" fn flow_node_execute_scale2d_render1d(
         );
         return false;
     }
-    let mut dest_buf: *mut flow_bitmap_float = flow_bitmap_float_create(
-        c,
-        (*info).w as i32,
-        1 as i32,
-        4 as i32,
-        true,
-    );
+    let mut dest_buf: *mut flow_bitmap_float =
+        flow_bitmap_float_create(c, (*info).w as i32, 1 as i32, 4 as i32, true);
     if dest_buf.is_null()
         || !flow_set_owner(
             c,
@@ -2406,8 +2289,7 @@ pub unsafe extern "C" fn flow_node_execute_scale2d_render1d(
         );
         return false;
     }
-    (*source_buf).alpha_meaningful =
-        input_fmt as u32 == flow_bgra32 as i32 as u32;
+    (*source_buf).alpha_meaningful = input_fmt as u32 == flow_bgra32 as i32 as u32;
     (*dest_buf).alpha_meaningful = (*source_buf).alpha_meaningful;
     (*source_buf).alpha_premultiplied = (*source_buf).channels == 4 as i32 as u32;
     (*dest_buf).alpha_premultiplied = (*source_buf).alpha_premultiplied;
@@ -2443,8 +2325,7 @@ pub unsafe extern "C" fn flow_node_execute_scale2d_render1d(
     ) as *mut f32;
     let rows: *mut *mut f32 = flow_context_malloc(
         c,
-        (::std::mem::size_of::<*mut f32>())
-            .wrapping_mul(max_input_rows as usize),
+        (::std::mem::size_of::<*mut f32>()).wrapping_mul(max_input_rows as usize),
         ::std::mem::transmute::<libc::intptr_t, flow_destructor_function>(NULL as libc::intptr_t),
         details as *mut libc::c_void,
         b"lib/graphics.c\x00" as *const u8 as *const libc::c_char,
@@ -2452,8 +2333,7 @@ pub unsafe extern "C" fn flow_node_execute_scale2d_render1d(
     ) as *mut *mut f32;
     let row_coefficients: *mut f32 = flow_context_malloc(
         c,
-        ::std::mem::size_of::<f32>()
-            .wrapping_mul(max_input_rows as usize),
+        ::std::mem::size_of::<f32>().wrapping_mul(max_input_rows as usize),
         ::std::mem::transmute::<libc::intptr_t, flow_destructor_function>(NULL as libc::intptr_t),
         details as *mut libc::c_void,
         b"lib/graphics.c\x00" as *const u8 as *const libc::c_char,
@@ -2461,8 +2341,7 @@ pub unsafe extern "C" fn flow_node_execute_scale2d_render1d(
     ) as *mut f32;
     let row_indexes: *mut i32 = flow_context_malloc(
         c,
-        ::std::mem::size_of::<i32>()
-            .wrapping_mul(max_input_rows as usize),
+        ::std::mem::size_of::<i32>().wrapping_mul(max_input_rows as usize),
         ::std::mem::transmute::<libc::intptr_t, flow_destructor_function>(NULL as libc::intptr_t),
         details as *mut libc::c_void,
         b"lib/graphics.c\x00" as *const u8 as *const libc::c_char,
@@ -2486,17 +2365,14 @@ pub unsafe extern "C" fn flow_node_execute_scale2d_render1d(
         );
         return false;
     }
-    let output_address: *mut f32 = &mut *buf
-        .offset(row_floats.wrapping_mul(max_input_rows as usize) as isize)
-        as *mut f32;
+    let output_address: *mut f32 =
+        &mut *buf.offset(row_floats.wrapping_mul(max_input_rows as usize) as isize) as *mut f32;
     let mut i_0: i32 = 0 as i32;
     while i_0 < max_input_rows {
         let ref mut fresh8 = *rows.offset(i_0 as isize);
-        *fresh8 = &mut *buf.offset(
-            (4u32)
-                .wrapping_mul((*input).w)
-                .wrapping_mul(i_0 as u32) as isize,
-        ) as *mut f32;
+        *fresh8 = &mut *buf
+            .offset((4u32).wrapping_mul((*input).w).wrapping_mul(i_0 as u32) as isize)
+            as *mut f32;
         *row_coefficients.offset(i_0 as isize) = 1 as i32 as f32;
         *row_indexes.offset(i_0 as isize) = -(1 as i32);
         i_0 += 1
@@ -2599,13 +2475,11 @@ pub unsafe extern "C" fn flow_node_execute_scale2d_render1d(
                     1 as i32 != 0,
                     0 as i32 != 0,
                 );
-                *row_coefficients.offset(active_buf_ix as isize) =
-                    1 as i32 as f32;
+                *row_coefficients.offset(active_buf_ix as isize) = 1 as i32 as f32;
                 *row_indexes.offset(active_buf_ix as isize) = input_row;
                 loaded = true
             }
-            let weight: f32 =
-                *contrib.Weights.offset((input_row - contrib.Left) as isize);
+            let weight: f32 = *contrib.Weights.offset((input_row - contrib.Left) as isize);
             if fabs(weight as f64) > 0.00000002f64 {
                 // Apply coefficient, update tracking
                 let delta_coefficient: f32 =
@@ -2729,9 +2603,7 @@ pub unsafe extern "C" fn flow_convolution_kernel_create(
     // For the actual array;
     let a: *mut f32 = flow_context_calloc(
         context,
-        radius
-            .wrapping_mul(2u32)
-            .wrapping_add(1u32) as usize,
+        radius.wrapping_mul(2u32).wrapping_add(1u32) as usize,
         ::std::mem::size_of::<f32>(),
         ::std::mem::transmute::<libc::intptr_t, flow_destructor_function>(NULL as libc::intptr_t),
         context as *mut libc::c_void,
@@ -2782,9 +2654,7 @@ pub unsafe extern "C" fn flow_convolution_kernel_create(
         return NULL as *mut flow_convolution_kernel;
     }
     (*k).kernel = a;
-    (*k).width = radius
-        .wrapping_mul(2u32)
-        .wrapping_add(1u32);
+    (*k).width = radius.wrapping_mul(2u32).wrapping_add(1u32);
     (*k).buffer = buf;
     (*k).radius = radius;
     return k;
@@ -2827,19 +2697,15 @@ pub unsafe extern "C" fn flow_convolution_kernel_create_gaussian(
     if !k.is_null() {
         let mut i: u32 = 0 as i32 as u32;
         while i < (*k).width {
-            *(*k).kernel.offset(i as isize) = ir_gaussian(
-                (radius as i32 - i as i32).abs() as f64,
-                stdDev,
-            ) as f32;
+            *(*k).kernel.offset(i as isize) =
+                ir_gaussian((radius as i32 - i as i32).abs() as f64, stdDev) as f32;
             i = i.wrapping_add(1)
         }
     }
     return k;
 }
 #[no_mangle]
-pub unsafe extern "C" fn flow_convolution_kernel_sum(
-    kernel: *mut flow_convolution_kernel,
-) -> f64 {
+pub unsafe extern "C" fn flow_convolution_kernel_sum(kernel: *mut flow_convolution_kernel) -> f64 {
     let mut sum: f64 = 0 as i32 as f64;
     let mut i: u32 = 0 as i32 as u32;
     while i < (*kernel).width {
@@ -2890,9 +2756,8 @@ pub unsafe extern "C" fn flow_convolution_kernel_create_gaussian_sharpen(
         let mut i: u32 = 0 as i32 as u32;
         while i < (*kernel).width {
             if i == radius {
-                *(*kernel).kernel.offset(i as isize) = (2 as i32 as f64 * sum
-                    - *(*kernel).kernel.offset(i as isize) as f64)
-                    as f32
+                *(*kernel).kernel.offset(i as isize) =
+                    (2 as i32 as f64 * sum - *(*kernel).kernel.offset(i as isize) as f64) as f32
             } else {
                 *(*kernel).kernel.offset(i as isize) *= -(1 as i32) as f32
             }
@@ -2931,8 +2796,7 @@ pub unsafe extern "C" fn flow_bitmap_float_convolve_rows(
     let buffer: *mut f32 = (*kernel).buffer;
     let avg: *mut f32 = &mut *(*kernel)
         .buffer
-        .offset(buffer_count.wrapping_mul(ch_used) as isize)
-        as *mut f32;
+        .offset(buffer_count.wrapping_mul(ch_used) as isize) as *mut f32;
     let kern: *const f32 = (*kernel).kernel;
     let wrap_mode: i32 = 0 as i32;
     let mut row: u32 = from_row;
@@ -2950,11 +2814,9 @@ pub unsafe extern "C" fn flow_bitmap_float_convolve_rows(
                     &mut *source_buffer
                         .offset(ndx.wrapping_sub(buffer_count).wrapping_mul(step) as isize)
                         as *mut f32 as *mut libc::c_void,
-                    &mut *buffer
-                        .offset((circular_idx as u32).wrapping_mul(ch_used) as isize)
+                    &mut *buffer.offset((circular_idx as u32).wrapping_mul(ch_used) as isize)
                         as *mut f32 as *const libc::c_void,
-                    (ch_used as u64)
-                        .wrapping_mul(::std::mem::size_of::<f32>() as u64),
+                    (ch_used as u64).wrapping_mul(::std::mem::size_of::<f32>() as u64),
                 );
             }
             // Calculate and enqueue new value
@@ -2965,8 +2827,7 @@ pub unsafe extern "C" fn flow_bitmap_float_convolve_rows(
                 memset(
                     avg as *mut libc::c_void,
                     0 as i32,
-                    (::std::mem::size_of::<f32>() as u64)
-                        .wrapping_mul(ch_used as u64),
+                    (::std::mem::size_of::<f32>() as u64).wrapping_mul(ch_used as u64),
                 );
                 if left < 0 as i32 || right >= w as i32 {
                     if wrap_mode == 0 as i32 {
@@ -2981,10 +2842,9 @@ pub unsafe extern "C" fn flow_bitmap_float_convolve_rows(
                                 let mut j: u32 = 0 as i32 as u32;
                                 while j < ch_used {
                                     *avg.offset(j as isize) += weight
-                                        * *source_buffer.offset(
-                                            (i as u32).wrapping_mul(step).wrapping_add(j)
-                                                as isize,
-                                        );
+                                        * *source_buffer
+                                            .offset((i as u32).wrapping_mul(step).wrapping_add(j)
+                                                as isize);
                                     j = j.wrapping_add(1)
                                 }
                             }
@@ -3027,8 +2887,7 @@ pub unsafe extern "C" fn flow_bitmap_float_convolve_rows(
                         while j_2 < ch_used {
                             *avg.offset(j_2 as isize) += weight_1
                                 * *source_buffer.offset(
-                                    (i as u32).wrapping_mul(step).wrapping_add(j_2)
-                                        as isize,
+                                    (i as u32).wrapping_mul(step).wrapping_add(j_2) as isize,
                                 );
                             j_2 = j_2.wrapping_add(1)
                         }
@@ -3037,46 +2896,35 @@ pub unsafe extern "C" fn flow_bitmap_float_convolve_rows(
                 }
                 // Enqueue difference
                 memcpy(
-                    &mut *buffer
-                        .offset((circular_idx as u32).wrapping_mul(ch_used) as isize)
+                    &mut *buffer.offset((circular_idx as u32).wrapping_mul(ch_used) as isize)
                         as *mut f32 as *mut libc::c_void,
                     avg as *const libc::c_void,
-                    (ch_used as u64)
-                        .wrapping_mul(::std::mem::size_of::<f32>() as u64),
+                    (ch_used as u64).wrapping_mul(::std::mem::size_of::<f32>() as u64),
                 );
-                if threshold_min > 0 as i32 as f32
-                    || threshold_max > 0 as i32 as f32
-                {
+                if threshold_min > 0 as i32 as f32 || threshold_max > 0 as i32 as f32 {
                     let mut change: f32 = 0 as i32 as f32;
                     let mut j_3: u32 = 0 as i32 as u32;
                     while j_3 < ch_used {
                         change += fabs(
                             (*source_buffer
                                 .offset(ndx.wrapping_mul(step).wrapping_add(j_3) as isize)
-                                - *avg.offset(j_3 as isize))
-                                as f64,
+                                - *avg.offset(j_3 as isize)) as f64,
                         ) as f32;
                         j_3 = j_3.wrapping_add(1)
                     }
                     if change < threshold_min || change > threshold_max {
                         memcpy(
-                            &mut *buffer.offset(
-                                (circular_idx as u32).wrapping_mul(ch_used) as isize,
-                            ) as *mut f32
-                                as *mut libc::c_void,
-                            &mut *source_buffer.offset(ndx.wrapping_mul(step) as isize)
-                                as *mut f32
+                            &mut *buffer
+                                .offset((circular_idx as u32).wrapping_mul(ch_used) as isize)
+                                as *mut f32 as *mut libc::c_void,
+                            &mut *source_buffer.offset(ndx.wrapping_mul(step) as isize) as *mut f32
                                 as *const libc::c_void,
-                            (ch_used as u64)
-                                .wrapping_mul(
-                                    ::std::mem::size_of::<f32>() as u64
-                                ),
+                            (ch_used as u64).wrapping_mul(::std::mem::size_of::<f32>() as u64),
                         );
                     }
                 }
             }
-            circular_idx = ((circular_idx + 1 as i32) as u32)
-                .wrapping_rem(buffer_count) as i32;
+            circular_idx = ((circular_idx + 1 as i32) as u32).wrapping_rem(buffer_count) as i32;
             ndx = ndx.wrapping_add(1)
         }
         row = row.wrapping_add(1)
@@ -3103,9 +2951,7 @@ unsafe extern "C" fn BitmapFloat_boxblur_rows(
     };
     let ch_used: u32 = (*image).channels;
     let buffer: *mut f32 = work_buffer;
-    let std_count: u32 = radius
-        .wrapping_mul(2u32)
-        .wrapping_add(1u32);
+    let std_count: u32 = radius.wrapping_mul(2u32).wrapping_add(1u32);
     let std_factor: f32 = 1.0f32 / std_count as f32;
     let mut row: u32 = from_row;
     while row < until_row {
@@ -3157,11 +3003,9 @@ unsafe extern "C" fn BitmapFloat_boxblur_rows(
                         &mut *source_buffer
                             .offset(ndx_0.wrapping_sub(buffer_count).wrapping_mul(step) as isize)
                             as *mut f32 as *mut libc::c_void,
-                        &mut *buffer
-                            .offset((circular_idx as u32).wrapping_mul(ch_used) as isize)
+                        &mut *buffer.offset((circular_idx as u32).wrapping_mul(ch_used) as isize)
                             as *mut f32 as *const libc::c_void,
-                        (ch_used as u64)
-                            .wrapping_mul(::std::mem::size_of::<f32>() as u64),
+                        (ch_used as u64).wrapping_mul(::std::mem::size_of::<f32>() as u64),
                     );
                 }
                 // Calculate and enqueue new value
@@ -3203,8 +3047,7 @@ unsafe extern "C" fn BitmapFloat_boxblur_rows(
                         }
                     }
                 }
-                circular_idx = ((circular_idx + 1 as i32) as u32)
-                    .wrapping_rem(buffer_count) as i32;
+                circular_idx = ((circular_idx + 1 as i32) as u32).wrapping_rem(buffer_count) as i32;
                 ndx_0 = ndx_0.wrapping_add(1)
             }
             pass_index = pass_index.wrapping_add(1)
@@ -3267,12 +3110,11 @@ unsafe extern "C" fn BitmapFloat_boxblur_misaligned_rows(
         let mut count: f32 = 0 as i32 as f32;
         let mut ndx: u32 = 0 as i32 as u32;
         while ndx < radius {
-            let factor: f32 =
-                if ndx == radius.wrapping_sub(1u32) {
-                    0.5f32
-                } else {
-                    1 as i32 as f32
-                };
+            let factor: f32 = if ndx == radius.wrapping_sub(1u32) {
+                0.5f32
+            } else {
+                1 as i32 as f32
+            };
             let mut ch: u32 = 0 as i32 as u32;
             while ch < convolve_channels {
                 sum[ch as usize] += *source_buffer
@@ -3301,10 +3143,7 @@ unsafe extern "C" fn BitmapFloat_boxblur_misaligned_rows(
                     }
                     count += 0.5f32
                 }
-                if ndx_0
-                    < w.wrapping_sub(radius)
-                        .wrapping_add(1u32)
-                {
+                if ndx_0 < w.wrapping_sub(radius).wrapping_add(1u32) {
                     let mut ch_1: u32 = 0 as i32 as u32;
                     while ch_1 < convolve_channels {
                         sum[ch_1 as usize] += *source_buffer.offset(
@@ -3356,11 +3195,9 @@ unsafe extern "C" fn BitmapFloat_boxblur_misaligned_rows(
                             .wrapping_sub(buffer_count)
                             .wrapping_mul(step) as isize,
                     ) as *mut f32 as *mut libc::c_void,
-                    &mut *buffer
-                        .offset((circular_idx as u32).wrapping_mul(ch_used) as isize)
+                    &mut *buffer.offset((circular_idx as u32).wrapping_mul(ch_used) as isize)
                         as *mut f32 as *const libc::c_void,
-                    (ch_used as u64)
-                        .wrapping_mul(::std::mem::size_of::<f32>() as u64),
+                    (ch_used as u64).wrapping_mul(::std::mem::size_of::<f32>() as u64),
                 );
             }
             // enqueue new value
@@ -3375,8 +3212,7 @@ unsafe extern "C" fn BitmapFloat_boxblur_misaligned_rows(
                     ch_4 = ch_4.wrapping_add(1)
                 }
             }
-            circular_idx = ((circular_idx + 1 as i32) as u32)
-                .wrapping_rem(buffer_count) as i32;
+            circular_idx = ((circular_idx + 1 as i32) as u32).wrapping_rem(buffer_count) as i32;
             ndx_0 = ndx_0.wrapping_add(1)
         }
         row = row.wrapping_add(1)
@@ -3388,14 +3224,9 @@ pub unsafe extern "C" fn flow_bitmap_float_approx_gaussian_calculate_d(
     sigma: f32,
     bitmap_width: u32,
 ) -> u32 {
-    let mut d: u32 =
-        (1.8799712059732503768118239636082839397552400554574537f32 * sigma + 0.5f32).floor()
-            as i32 as u32;
-    d = d.min(
-        bitmap_width
-            .wrapping_sub(1u32)
-            .wrapping_div(2u32)
-    );
+    let mut d: u32 = (1.8799712059732503768118239636082839397552400554574537f32 * sigma + 0.5f32)
+        .floor() as i32 as u32;
+    d = d.min(bitmap_width.wrapping_sub(1u32).wrapping_div(2u32));
     return d;
 }
 #[no_mangle]
@@ -3433,8 +3264,8 @@ pub unsafe extern "C" fn flow_bitmap_float_approx_gaussian_blur_rows(
         return false;
     }
     // Ensure the buffer is large enough
-    if flow_bitmap_float_approx_gaussian_buffer_element_count_required(sigma, (*image).w)
-        as usize > buffer_element_count
+    if flow_bitmap_float_approx_gaussian_buffer_element_count_required(sigma, (*image).w) as usize
+        > buffer_element_count
     {
         flow_context_set_error_get_message_buffer(
             context,
@@ -3526,8 +3357,7 @@ pub unsafe extern "C" fn flow_bitmap_float_approx_gaussian_blur_rows(
         if !BitmapFloat_boxblur_rows(
             context,
             image,
-            d.wrapping_div(2u32)
-                .wrapping_add(1u32),
+            d.wrapping_div(2u32).wrapping_add(1u32),
             1 as i32 as u32,
             (*image).channels,
             buffer,
@@ -3549,12 +3379,7 @@ pub unsafe extern "C" fn flow_bitmap_float_approx_gaussian_blur_rows(
     return true;
 }
 #[inline]
-unsafe extern "C" fn transpose4x4_SSE(
-    A: *mut f32,
-    B: *mut f32,
-    lda: i32,
-    ldb: i32,
-) {
+unsafe extern "C" fn transpose4x4_SSE(A: *mut f32, B: *mut f32, lda: i32, ldb: i32) {
     let mut row1: __m128 = _mm_loadu_ps(&mut *A.offset((0 as i32 * lda) as isize));
     let mut row2: __m128 = _mm_loadu_ps(&mut *A.offset((1 as i32 * lda) as isize));
     let mut row3: __m128 = _mm_loadu_ps(&mut *A.offset((2 as i32 * lda) as isize));
@@ -3626,10 +3451,7 @@ pub unsafe extern "C" fn flow_bitmap_bgra_transpose(
     from: *mut flow_bitmap_bgra,
     to: *mut flow_bitmap_bgra,
 ) -> bool {
-    if (*from).w != (*to).h
-        || (*from).h != (*to).w
-        || (*from).fmt as u32 != (*to).fmt as u32
-    {
+    if (*from).w != (*to).h || (*from).h != (*to).w || (*from).fmt as u32 != (*to).fmt as u32 {
         flow_context_set_error_get_message_buffer(
             c,
             flow_status_code::Invalid_argument,
@@ -3662,10 +3484,8 @@ pub unsafe extern "C" fn flow_bitmap_bgra_transpose(
     // We require 8 when we only need 4 - in case we ever want to enable avx (like if we make it faster)
     let min_block_size: i32 = 8 as i32;
     // Strides must be multiple of required alignments
-    if (*from).stride.wrapping_rem(min_block_size as u32)
-        != 0 as i32 as u32
-        || (*to).stride.wrapping_rem(min_block_size as u32)
-            != 0 as i32 as u32
+    if (*from).stride.wrapping_rem(min_block_size as u32) != 0 as i32 as u32
+        || (*to).stride.wrapping_rem(min_block_size as u32) != 0 as i32 as u32
     {
         flow_context_set_error_get_message_buffer(
             c,
@@ -3694,9 +3514,7 @@ pub unsafe extern "C" fn flow_bitmap_bgra_transpose(
         (*to).pixels as *mut f32,
         cropped_h,
         cropped_w,
-        (*from)
-            .stride
-            .wrapping_div(4u32) as i32,
+        (*from).stride.wrapping_div(4u32) as i32,
         (*to).stride.wrapping_div(4u32) as i32,
         block_size,
     );
@@ -3710,8 +3528,7 @@ pub unsafe extern "C" fn flow_bitmap_bgra_transpose(
                     .wrapping_add(y.wrapping_mul((*to).stride)) as isize,
             ) as *mut libc::c_uchar as *mut u32) = *(&mut *(*from).pixels.offset(
                 x.wrapping_mul((*from).stride)
-                    .wrapping_add(y.wrapping_mul(4u32))
-                    as isize,
+                    .wrapping_add(y.wrapping_mul(4u32)) as isize,
             ) as *mut libc::c_uchar
                 as *mut u32);
             y = y.wrapping_add(1)
@@ -3727,8 +3544,7 @@ pub unsafe extern "C" fn flow_bitmap_bgra_transpose(
                     .wrapping_add(y_0.wrapping_mul((*to).stride)) as isize,
             ) as *mut libc::c_uchar as *mut u32) = *(&mut *(*from).pixels.offset(
                 x_0.wrapping_mul((*from).stride)
-                    .wrapping_add(y_0.wrapping_mul(4u32))
-                    as isize,
+                    .wrapping_add(y_0.wrapping_mul(4u32)) as isize,
             ) as *mut libc::c_uchar
                 as *mut u32);
             y_0 = y_0.wrapping_add(1)
@@ -3743,10 +3559,7 @@ pub unsafe extern "C" fn flow_bitmap_bgra_transpose_slow(
     from: *mut flow_bitmap_bgra,
     to: *mut flow_bitmap_bgra,
 ) -> bool {
-    if (*from).w != (*to).h
-        || (*from).h != (*to).w
-        || (*from).fmt as u32 != (*to).fmt as u32
-    {
+    if (*from).w != (*to).h || (*from).h != (*to).w || (*from).fmt as u32 != (*to).fmt as u32 {
         flow_context_set_error_get_message_buffer(
             c,
             flow_status_code::Invalid_argument,
@@ -3769,12 +3582,11 @@ pub unsafe extern "C" fn flow_bitmap_bgra_transpose_slow(
                 *(&mut *(*to).pixels.offset(
                     x.wrapping_mul(4u32)
                         .wrapping_add(y.wrapping_mul((*to).stride)) as isize,
-                ) as *mut libc::c_uchar as *mut u32) =
-                    *(&mut *(*from).pixels.offset(
-                        x.wrapping_mul((*from).stride)
-                            .wrapping_add(y.wrapping_mul(4u32))
-                            as isize,
-                    ) as *mut libc::c_uchar as *mut u32);
+                ) as *mut libc::c_uchar as *mut u32) = *(&mut *(*from).pixels.offset(
+                    x.wrapping_mul((*from).stride)
+                        .wrapping_add(y.wrapping_mul(4u32)) as isize,
+                ) as *mut libc::c_uchar
+                    as *mut u32);
                 y = y.wrapping_add(1)
             }
             x = x.wrapping_add(1)
@@ -3793,37 +3605,23 @@ pub unsafe extern "C" fn flow_bitmap_bgra_transpose_slow(
             while y_0 < (*to).h {
                 *(*to).pixels.offset(x_3.wrapping_add(y_stride) as isize) =
                     *(*from).pixels.offset(x_stride.wrapping_add(y_3) as isize);
-                *(*to).pixels.offset(
-                    x_3.wrapping_add(y_stride)
-                        .wrapping_add(1u32)
-                        as isize,
-                ) = *(*from).pixels.offset(
-                    x_stride
-                        .wrapping_add(y_3)
-                        .wrapping_add(1u32)
-                        as isize,
-                );
-                *(*to).pixels.offset(
-                    x_3.wrapping_add(y_stride)
-                        .wrapping_add(2u32)
-                        as isize,
-                ) = *(*from).pixels.offset(
-                    x_stride
-                        .wrapping_add(y_3)
-                        .wrapping_add(2u32)
-                        as isize,
-                );
+                *(*to)
+                    .pixels
+                    .offset(x_3.wrapping_add(y_stride).wrapping_add(1u32) as isize) = *(*from)
+                    .pixels
+                    .offset(x_stride.wrapping_add(y_3).wrapping_add(1u32) as isize);
+                *(*to)
+                    .pixels
+                    .offset(x_3.wrapping_add(y_stride).wrapping_add(2u32) as isize) = *(*from)
+                    .pixels
+                    .offset(x_stride.wrapping_add(y_3).wrapping_add(2u32) as isize);
                 y_0 = y_0.wrapping_add(1);
-                y_stride = (y_stride as u32).wrapping_add(to_stride as u32)
-                    as u32 as u32;
-                y_3 = (y_3 as u32).wrapping_add(3u32)
-                    as u32 as u32
+                y_stride = (y_stride as u32).wrapping_add(to_stride as u32) as u32 as u32;
+                y_3 = (y_3 as u32).wrapping_add(3u32) as u32 as u32
             }
             x_0 = x_0.wrapping_add(1);
-            x_stride = (x_stride as u32).wrapping_add(from_stride as u32)
-                as u32 as u32;
-            x_3 = (x_3 as u32).wrapping_add(3u32) as u32
-                as u32
+            x_stride = (x_stride as u32).wrapping_add(from_stride as u32) as u32 as u32;
+            x_3 = (x_3 as u32).wrapping_add(3u32) as u32 as u32
         }
         return true;
     } else {
@@ -3937,10 +3735,8 @@ pub unsafe extern "C" fn flow_bitmap_float_convert_srgb_to_linear(
             let mut to_x: u32 = 0 as i32 as u32;
             let mut bix: u32 = 0 as i32 as u32;
             while bix < units {
-                let alpha: f32 = *src_start
-                    .offset(bix.wrapping_add(3u32) as isize)
-                    as f32
-                    / 255.0f32;
+                let alpha: f32 =
+                    *src_start.offset(bix.wrapping_add(3u32) as isize) as f32 / 255.0f32;
                 *buf.offset(to_x as isize) = alpha
                     * flow_colorcontext_srgb_to_floatspace(
                         colorcontext,
@@ -3949,20 +3745,16 @@ pub unsafe extern "C" fn flow_bitmap_float_convert_srgb_to_linear(
                 *buf.offset(to_x.wrapping_add(1u32) as isize) = alpha
                     * flow_colorcontext_srgb_to_floatspace(
                         colorcontext,
-                        *src_start
-                            .offset(bix.wrapping_add(1u32) as isize),
+                        *src_start.offset(bix.wrapping_add(1u32) as isize),
                     );
                 *buf.offset(to_x.wrapping_add(2u32) as isize) = alpha
                     * flow_colorcontext_srgb_to_floatspace(
                         colorcontext,
-                        *src_start
-                            .offset(bix.wrapping_add(2u32) as isize),
+                        *src_start.offset(bix.wrapping_add(2u32) as isize),
                     );
                 *buf.offset(to_x.wrapping_add(3u32) as isize) = alpha;
-                to_x = (to_x as u32).wrapping_add(4u32)
-                    as u32 as u32;
-                bix = (bix as u32).wrapping_add(4u32)
-                    as u32 as u32
+                to_x = (to_x as u32).wrapping_add(4u32) as u32 as u32;
+                bix = (bix as u32).wrapping_add(4u32) as u32 as u32
             }
             row = row.wrapping_add(1)
         }
@@ -3987,19 +3779,15 @@ pub unsafe extern "C" fn flow_bitmap_float_convert_srgb_to_linear(
                 *buf.offset(to_x.wrapping_add(1u32) as isize) =
                     flow_colorcontext_srgb_to_floatspace(
                         colorcontext,
-                        *src_start_0
-                            .offset(bix.wrapping_add(1u32) as isize),
+                        *src_start_0.offset(bix.wrapping_add(1u32) as isize),
                     );
                 *buf.offset(to_x.wrapping_add(2u32) as isize) =
                     flow_colorcontext_srgb_to_floatspace(
                         colorcontext,
-                        *src_start_0
-                            .offset(bix.wrapping_add(2u32) as isize),
+                        *src_start_0.offset(bix.wrapping_add(2u32) as isize),
                     );
-                to_x = (to_x as u32).wrapping_add(3u32)
-                    as u32 as u32;
-                bix = (bix as u32).wrapping_add(3u32)
-                    as u32 as u32
+                to_x = (to_x as u32).wrapping_add(3u32) as u32 as u32;
+                bix = (bix as u32).wrapping_add(3u32) as u32 as u32
             }
             row += 1
         }
@@ -4024,19 +3812,15 @@ pub unsafe extern "C" fn flow_bitmap_float_convert_srgb_to_linear(
                 *buf.offset(to_x.wrapping_add(1u32) as isize) =
                     flow_colorcontext_srgb_to_floatspace(
                         colorcontext,
-                        *src_start
-                            .offset(bix.wrapping_add(1u32) as isize),
+                        *src_start.offset(bix.wrapping_add(1u32) as isize),
                     );
                 *buf.offset(to_x.wrapping_add(2u32) as isize) =
                     flow_colorcontext_srgb_to_floatspace(
                         colorcontext,
-                        *src_start
-                            .offset(bix.wrapping_add(2u32) as isize),
+                        *src_start.offset(bix.wrapping_add(2u32) as isize),
                     );
-                to_x = (to_x as u32).wrapping_add(3u32)
-                    as u32 as u32;
-                bix = (bix as u32).wrapping_add(4u32)
-                    as u32 as u32
+                to_x = (to_x as u32).wrapping_add(3u32) as u32 as u32;
+                bix = (bix as u32).wrapping_add(4u32) as u32 as u32
             }
             row += 1
         }
@@ -4061,19 +3845,15 @@ pub unsafe extern "C" fn flow_bitmap_float_convert_srgb_to_linear(
                 *buf.offset(to_x.wrapping_add(1u32) as isize) =
                     flow_colorcontext_srgb_to_floatspace(
                         colorcontext,
-                        *src_start
-                            .offset(bix.wrapping_add(1u32) as isize),
+                        *src_start.offset(bix.wrapping_add(1u32) as isize),
                     );
                 *buf.offset(to_x.wrapping_add(2u32) as isize) =
                     flow_colorcontext_srgb_to_floatspace(
                         colorcontext,
-                        *src_start
-                            .offset(bix.wrapping_add(2u32) as isize),
+                        *src_start.offset(bix.wrapping_add(2u32) as isize),
                     );
-                to_x = (to_x as u32).wrapping_add(4u32)
-                    as u32 as u32;
-                bix = (bix as u32).wrapping_add(3u32)
-                    as u32 as u32
+                to_x = (to_x as u32).wrapping_add(4u32) as u32 as u32;
+                bix = (bix as u32).wrapping_add(3u32) as u32 as u32
             }
             row += 1
         }
@@ -4098,19 +3878,15 @@ pub unsafe extern "C" fn flow_bitmap_float_convert_srgb_to_linear(
                 *buf.offset(to_x.wrapping_add(1u32) as isize) =
                     flow_colorcontext_srgb_to_floatspace(
                         colorcontext,
-                        *src_start
-                            .offset(bix.wrapping_add(1u32) as isize),
+                        *src_start.offset(bix.wrapping_add(1u32) as isize),
                     );
                 *buf.offset(to_x.wrapping_add(2u32) as isize) =
                     flow_colorcontext_srgb_to_floatspace(
                         colorcontext,
-                        *src_start
-                            .offset(bix.wrapping_add(2u32) as isize),
+                        *src_start.offset(bix.wrapping_add(2u32) as isize),
                     );
-                to_x = (to_x as u32).wrapping_add(4u32)
-                    as u32 as u32;
-                bix = (bix as u32).wrapping_add(4u32)
-                    as u32 as u32
+                to_x = (to_x as u32).wrapping_add(4u32) as u32 as u32;
+                bix = (bix as u32).wrapping_add(4u32) as u32 as u32
             }
             row += 1
         }
@@ -4173,8 +3949,9 @@ pub unsafe extern "C" fn flow_bitmap_bgra_flip_vertical(
     }
     // Dont' copy the full stride (padding), it could be windowed!
     // Todo: try multiple swap rows? 5ms isn't bad, but could be better
-    let row_length: u32 =  (*b).stride.min((*b).w
-            .wrapping_mul(flow_pixel_format_bytes_per_pixel((*b).fmt))
+    let row_length: u32 = (*b).stride.min(
+        (*b).w
+            .wrapping_mul(flow_pixel_format_bytes_per_pixel((*b).fmt)),
     );
     let mut i: u32 = 0 as i32 as u32;
     while i < (*b).h.wrapping_div(2u32) {
@@ -4204,9 +3981,7 @@ pub unsafe extern "C" fn flow_bitmap_bgra_flip_horizontal(
     _context: *mut flow_c,
     b: *mut flow_bitmap_bgra,
 ) -> bool {
-    if (*b).fmt as u32 == flow_bgra32 as i32 as u32
-        || (*b).fmt as u32 == flow_bgr32 as i32 as u32
-    {
+    if (*b).fmt as u32 == flow_bgra32 as i32 as u32 || (*b).fmt as u32 == flow_bgr32 as i32 as u32 {
         // 12ms simple
         let mut y: u32 = 0 as i32 as u32;
         while y < (*b).h {
@@ -4215,11 +3990,8 @@ pub unsafe extern "C" fn flow_bitmap_bgra_flip_horizontal(
             let mut right: *mut u32 = (*b)
                 .pixels
                 .offset(y.wrapping_mul((*b).stride) as isize)
-                .offset(
-                    (4u32)
-                        .wrapping_mul((*b).w.wrapping_sub(1u32))
-                        as isize,
-                ) as *mut u32;
+                .offset((4u32).wrapping_mul((*b).w.wrapping_sub(1u32)) as isize)
+                as *mut u32;
             while left < right {
                 let swap: u32 = *left;
                 *left = *right;
@@ -4234,16 +4006,11 @@ pub unsafe extern "C" fn flow_bitmap_bgra_flip_horizontal(
         // Dont' copy the full stride (padding), it could be windowed!
         let mut y_0: u32 = 0 as i32 as u32;
         while y_0 < (*b).h {
-            let mut left_0: *mut u8 =
-                (*b).pixels.offset(y_0.wrapping_mul((*b).stride) as isize);
+            let mut left_0: *mut u8 = (*b).pixels.offset(y_0.wrapping_mul((*b).stride) as isize);
             let mut right_0: *mut u8 = (*b)
                 .pixels
                 .offset(y_0.wrapping_mul((*b).stride) as isize)
-                .offset(
-                    (3u32)
-                        .wrapping_mul((*b).w.wrapping_sub(1u32))
-                        as isize,
-                );
+                .offset((3u32).wrapping_mul((*b).w.wrapping_sub(1u32)) as isize);
             while left_0 < right_0 {
                 memcpy(
                     &mut swap_0 as *mut [u32; 4] as *mut libc::c_void,
@@ -4270,15 +4037,13 @@ pub unsafe extern "C" fn flow_bitmap_bgra_flip_horizontal(
         // Dont' copy the full stride (padding), it could be windowed!
         let mut y_1: u32 = 0 as i32 as u32;
         while y_1 < (*b).h {
-            let mut left_1: *mut u8 =
-                (*b).pixels.offset(y_1.wrapping_mul((*b).stride) as isize);
+            let mut left_1: *mut u8 = (*b).pixels.offset(y_1.wrapping_mul((*b).stride) as isize);
             let mut right_1: *mut u8 = (*b)
                 .pixels
                 .offset(y_1.wrapping_mul((*b).stride) as isize)
                 .offset(
                     flow_pixel_format_bytes_per_pixel((*b).fmt)
-                        .wrapping_mul((*b).w.wrapping_sub(1u32))
-                        as isize,
+                        .wrapping_mul((*b).w.wrapping_sub(1u32)) as isize,
                 );
             while left_1 < right_1 {
                 memcpy(
@@ -4313,52 +4078,27 @@ unsafe extern "C" fn flow_bitmap_float_blend_matte(
     matte: *const u8,
 ) -> bool {
     // We assume that matte is BGRA, regardless.
-    let matte_a: f32 =
-        *matte.offset(3 as i32 as isize) as f32 / 255.0f32;
-    let b: f32 = flow_colorcontext_srgb_to_floatspace(
-        colorcontext,
-        *matte.offset(0),
-    );
-    let g: f32 = flow_colorcontext_srgb_to_floatspace(
-        colorcontext,
-        *matte.offset(1),
-    );
-    let r: f32 = flow_colorcontext_srgb_to_floatspace(
-        colorcontext,
-        *matte.offset(2),
-    );
+    let matte_a: f32 = *matte.offset(3 as i32 as isize) as f32 / 255.0f32;
+    let b: f32 = flow_colorcontext_srgb_to_floatspace(colorcontext, *matte.offset(0));
+    let g: f32 = flow_colorcontext_srgb_to_floatspace(colorcontext, *matte.offset(1));
+    let r: f32 = flow_colorcontext_srgb_to_floatspace(colorcontext, *matte.offset(2));
     let mut row: u32 = from_row;
     while row < from_row.wrapping_add(row_count) {
         let start_ix: u32 = row.wrapping_mul((*src).float_stride);
         let end_ix: u32 = start_ix.wrapping_add((*src).w.wrapping_mul((*src).channels));
         let mut ix: u32 = start_ix;
         while ix < end_ix {
-            let src_a: f32 = *(*src)
-                .pixels
-                .offset(ix.wrapping_add(3u32) as isize);
+            let src_a: f32 = *(*src).pixels.offset(ix.wrapping_add(3u32) as isize);
             let a: f32 = (1.0f32 - src_a) * matte_a;
             let final_alpha: f32 = src_a + a;
             *(*src).pixels.offset(ix as isize) =
                 (*(*src).pixels.offset(ix as isize) + b * a) / final_alpha;
-            *(*src)
-                .pixels
-                .offset(ix.wrapping_add(1u32) as isize) = (*(*src)
-                .pixels
-                .offset(ix.wrapping_add(1u32) as isize)
-                + g * a)
-                / final_alpha;
-            *(*src)
-                .pixels
-                .offset(ix.wrapping_add(2u32) as isize) = (*(*src)
-                .pixels
-                .offset(ix.wrapping_add(2u32) as isize)
-                + r * a)
-                / final_alpha;
-            *(*src)
-                .pixels
-                .offset(ix.wrapping_add(3u32) as isize) = final_alpha;
-            ix = (ix as u32).wrapping_add(4u32) as u32
-                as u32
+            *(*src).pixels.offset(ix.wrapping_add(1u32) as isize) =
+                (*(*src).pixels.offset(ix.wrapping_add(1u32) as isize) + g * a) / final_alpha;
+            *(*src).pixels.offset(ix.wrapping_add(2u32) as isize) =
+                (*(*src).pixels.offset(ix.wrapping_add(2u32) as isize) + r * a) / final_alpha;
+            *(*src).pixels.offset(ix.wrapping_add(3u32) as isize) = final_alpha;
+            ix = (ix as u32).wrapping_add(4u32) as u32 as u32
         }
         row = row.wrapping_add(1)
     }
@@ -4378,20 +4118,13 @@ pub unsafe extern "C" fn flow_bitmap_float_demultiply_alpha(
         let end_ix: u32 = start_ix.wrapping_add((*src).w.wrapping_mul((*src).channels));
         let mut ix: u32 = start_ix;
         while ix < end_ix {
-            let alpha: f32 = *(*src)
-                .pixels
-                .offset(ix.wrapping_add(3u32) as isize);
+            let alpha: f32 = *(*src).pixels.offset(ix.wrapping_add(3u32) as isize);
             if alpha > 0 as i32 as f32 {
                 *(*src).pixels.offset(ix as isize) /= alpha;
-                *(*src)
-                    .pixels
-                    .offset(ix.wrapping_add(1u32) as isize) /= alpha;
-                *(*src)
-                    .pixels
-                    .offset(ix.wrapping_add(2u32) as isize) /= alpha
+                *(*src).pixels.offset(ix.wrapping_add(1u32) as isize) /= alpha;
+                *(*src).pixels.offset(ix.wrapping_add(2u32) as isize) /= alpha
             }
-            ix = (ix as u32).wrapping_add(4u32) as u32
-                as u32
+            ix = (ix as u32).wrapping_add(4u32) as u32 as u32
         }
         row = row.wrapping_add(1)
     }
@@ -4411,16 +4144,16 @@ pub unsafe extern "C" fn flow_bitmap_float_copy_linear_over_srgb(
     transpose: bool,
 ) -> bool {
     let dest_bytes_pp: u32 = flow_pixel_format_bytes_per_pixel((*dest).fmt);
-    let srcitems: u32 = from_col.wrapping_add(col_count).min(
-        (*src).w).wrapping_mul((*src).channels
-    );
+    let srcitems: u32 = from_col
+        .wrapping_add(col_count)
+        .min((*src).w)
+        .wrapping_mul((*src).channels);
     let dest_fmt: flow_pixel_format = flow_effective_pixel_format(dest);
     let ch: u32 = (*src).channels;
     let copy_alpha: bool = dest_fmt as u32 == flow_bgra32 as i32 as u32
         && ch == 4 as i32 as u32
         && (*src).alpha_meaningful as i32 != 0;
-    let clean_alpha: bool =
-        !copy_alpha && dest_fmt as u32 == flow_bgra32 as i32 as u32;
+    let clean_alpha: bool = !copy_alpha && dest_fmt as u32 == flow_bgra32 as i32 as u32;
     let dest_row_stride: u32 = if transpose as i32 != 0 {
         dest_bytes_pp
     } else {
@@ -4447,33 +4180,23 @@ pub unsafe extern "C" fn flow_bitmap_float_copy_linear_over_srgb(
                         .offset(from_col.wrapping_mul(4u32) as isize);
                     let mut ix: u32 = from_col.wrapping_mul(3u32);
                     while ix < srcitems {
-                        *dest_row_bytes.offset(0) =
-                            flow_colorcontext_floatspace_to_srgb(
-                                colorcontext,
-                                *src_row.offset(ix as isize),
-                            );
-                        *dest_row_bytes.offset(1) =
-                            flow_colorcontext_floatspace_to_srgb(
-                                colorcontext,
-                                *src_row.offset(
-                                    ix.wrapping_add(1u32) as isize
-                                ),
-                            );
-                        *dest_row_bytes.offset(2) =
-                            flow_colorcontext_floatspace_to_srgb(
-                                colorcontext,
-                                *src_row.offset(
-                                    ix.wrapping_add(2u32) as isize
-                                ),
-                            );
+                        *dest_row_bytes.offset(0) = flow_colorcontext_floatspace_to_srgb(
+                            colorcontext,
+                            *src_row.offset(ix as isize),
+                        );
+                        *dest_row_bytes.offset(1) = flow_colorcontext_floatspace_to_srgb(
+                            colorcontext,
+                            *src_row.offset(ix.wrapping_add(1u32) as isize),
+                        );
+                        *dest_row_bytes.offset(2) = flow_colorcontext_floatspace_to_srgb(
+                            colorcontext,
+                            *src_row.offset(ix.wrapping_add(2u32) as isize),
+                        );
                         *dest_row_bytes.offset(3 as i32 as isize) = uchar_clamp_ff(
-                            *src_row
-                                .offset(ix.wrapping_add(3u32) as isize)
-                                * 255.0f32,
+                            *src_row.offset(ix.wrapping_add(3u32) as isize) * 255.0f32,
                         );
                         dest_row_bytes = dest_row_bytes.offset(4 as i32 as isize);
-                        ix = (ix as u32).wrapping_add(3u32)
-                            as u32 as u32
+                        ix = (ix as u32).wrapping_add(3u32) as u32 as u32
                     }
                     row = row.wrapping_add(1)
                 }
@@ -4490,31 +4213,22 @@ pub unsafe extern "C" fn flow_bitmap_float_copy_linear_over_srgb(
                         .pixels
                         .offset(dest_row.wrapping_add(row_0).wrapping_mul(dest_row_stride) as isize)
                         .offset(from_col.wrapping_mul(4u32) as isize);
-                    let mut ix_0: u32 =
-                        from_col.wrapping_mul(3u32);
+                    let mut ix_0: u32 = from_col.wrapping_mul(3u32);
                     while ix_0 < srcitems {
-                        *dest_row_bytes_0.offset(0) =
-                            flow_colorcontext_floatspace_to_srgb(
-                                colorcontext,
-                                *src_row_0.offset(ix_0 as isize),
-                            );
-                        *dest_row_bytes_0.offset(1) =
-                            flow_colorcontext_floatspace_to_srgb(
-                                colorcontext,
-                                *src_row_0
-                                    .offset(ix_0.wrapping_add(1u32)
-                                        as isize),
-                            );
-                        *dest_row_bytes_0.offset(2) =
-                            flow_colorcontext_floatspace_to_srgb(
-                                colorcontext,
-                                *src_row_0
-                                    .offset(ix_0.wrapping_add(2u32)
-                                        as isize),
-                            );
+                        *dest_row_bytes_0.offset(0) = flow_colorcontext_floatspace_to_srgb(
+                            colorcontext,
+                            *src_row_0.offset(ix_0 as isize),
+                        );
+                        *dest_row_bytes_0.offset(1) = flow_colorcontext_floatspace_to_srgb(
+                            colorcontext,
+                            *src_row_0.offset(ix_0.wrapping_add(1u32) as isize),
+                        );
+                        *dest_row_bytes_0.offset(2) = flow_colorcontext_floatspace_to_srgb(
+                            colorcontext,
+                            *src_row_0.offset(ix_0.wrapping_add(2u32) as isize),
+                        );
                         dest_row_bytes_0 = dest_row_bytes_0.offset(4 as i32 as isize);
-                        ix_0 = (ix_0 as u32).wrapping_add(3u32)
-                            as u32 as u32
+                        ix_0 = (ix_0 as u32).wrapping_add(3u32) as u32 as u32
                     }
                     row_0 = row_0.wrapping_add(1)
                 }
@@ -4531,33 +4245,23 @@ pub unsafe extern "C" fn flow_bitmap_float_copy_linear_over_srgb(
                         .pixels
                         .offset(dest_row.wrapping_add(row_1).wrapping_mul(dest_row_stride) as isize)
                         .offset(from_col.wrapping_mul(4u32) as isize);
-                    let mut ix_1: u32 =
-                        from_col.wrapping_mul(3u32);
+                    let mut ix_1: u32 = from_col.wrapping_mul(3u32);
                     while ix_1 < srcitems {
-                        *dest_row_bytes_1.offset(0) =
-                            flow_colorcontext_floatspace_to_srgb(
-                                colorcontext,
-                                *src_row_1.offset(ix_1 as isize),
-                            );
-                        *dest_row_bytes_1.offset(1) =
-                            flow_colorcontext_floatspace_to_srgb(
-                                colorcontext,
-                                *src_row_1
-                                    .offset(ix_1.wrapping_add(1u32)
-                                        as isize),
-                            );
-                        *dest_row_bytes_1.offset(2) =
-                            flow_colorcontext_floatspace_to_srgb(
-                                colorcontext,
-                                *src_row_1
-                                    .offset(ix_1.wrapping_add(2u32)
-                                        as isize),
-                            );
-                        *dest_row_bytes_1.offset(3 as i32 as isize) =
-                            0xff as i32 as u8;
+                        *dest_row_bytes_1.offset(0) = flow_colorcontext_floatspace_to_srgb(
+                            colorcontext,
+                            *src_row_1.offset(ix_1 as isize),
+                        );
+                        *dest_row_bytes_1.offset(1) = flow_colorcontext_floatspace_to_srgb(
+                            colorcontext,
+                            *src_row_1.offset(ix_1.wrapping_add(1u32) as isize),
+                        );
+                        *dest_row_bytes_1.offset(2) = flow_colorcontext_floatspace_to_srgb(
+                            colorcontext,
+                            *src_row_1.offset(ix_1.wrapping_add(2u32) as isize),
+                        );
+                        *dest_row_bytes_1.offset(3 as i32 as isize) = 0xff as i32 as u8;
                         dest_row_bytes_1 = dest_row_bytes_1.offset(4 as i32 as isize);
-                        ix_1 = (ix_1 as u32).wrapping_add(3u32)
-                            as u32 as u32
+                        ix_1 = (ix_1 as u32).wrapping_add(3u32) as u32 as u32
                     }
                     row_1 = row_1.wrapping_add(1)
                 }
@@ -4576,36 +4280,25 @@ pub unsafe extern "C" fn flow_bitmap_float_copy_linear_over_srgb(
                         .pixels
                         .offset(dest_row.wrapping_add(row_2).wrapping_mul(dest_row_stride) as isize)
                         .offset(from_col.wrapping_mul(4u32) as isize);
-                    let mut ix_2: u32 =
-                        from_col.wrapping_mul(4u32);
+                    let mut ix_2: u32 = from_col.wrapping_mul(4u32);
                     while ix_2 < srcitems {
-                        *dest_row_bytes_2.offset(0) =
-                            flow_colorcontext_floatspace_to_srgb(
-                                colorcontext,
-                                *src_row_2.offset(ix_2 as isize),
-                            );
-                        *dest_row_bytes_2.offset(1) =
-                            flow_colorcontext_floatspace_to_srgb(
-                                colorcontext,
-                                *src_row_2
-                                    .offset(ix_2.wrapping_add(1u32)
-                                        as isize),
-                            );
-                        *dest_row_bytes_2.offset(2) =
-                            flow_colorcontext_floatspace_to_srgb(
-                                colorcontext,
-                                *src_row_2
-                                    .offset(ix_2.wrapping_add(2u32)
-                                        as isize),
-                            );
+                        *dest_row_bytes_2.offset(0) = flow_colorcontext_floatspace_to_srgb(
+                            colorcontext,
+                            *src_row_2.offset(ix_2 as isize),
+                        );
+                        *dest_row_bytes_2.offset(1) = flow_colorcontext_floatspace_to_srgb(
+                            colorcontext,
+                            *src_row_2.offset(ix_2.wrapping_add(1u32) as isize),
+                        );
+                        *dest_row_bytes_2.offset(2) = flow_colorcontext_floatspace_to_srgb(
+                            colorcontext,
+                            *src_row_2.offset(ix_2.wrapping_add(2u32) as isize),
+                        );
                         *dest_row_bytes_2.offset(3 as i32 as isize) = uchar_clamp_ff(
-                            *src_row_2.offset(
-                                ix_2.wrapping_add(3u32) as isize
-                            ) * 255.0f32,
+                            *src_row_2.offset(ix_2.wrapping_add(3u32) as isize) * 255.0f32,
                         );
                         dest_row_bytes_2 = dest_row_bytes_2.offset(4 as i32 as isize);
-                        ix_2 = (ix_2 as u32).wrapping_add(4u32)
-                            as u32 as u32
+                        ix_2 = (ix_2 as u32).wrapping_add(4u32) as u32 as u32
                     }
                     row_2 = row_2.wrapping_add(1)
                 }
@@ -4622,31 +4315,22 @@ pub unsafe extern "C" fn flow_bitmap_float_copy_linear_over_srgb(
                         .pixels
                         .offset(dest_row.wrapping_add(row_3).wrapping_mul(dest_row_stride) as isize)
                         .offset(from_col.wrapping_mul(4u32) as isize);
-                    let mut ix_3: u32 =
-                        from_col.wrapping_mul(4u32);
+                    let mut ix_3: u32 = from_col.wrapping_mul(4u32);
                     while ix_3 < srcitems {
-                        *dest_row_bytes_3.offset(0) =
-                            flow_colorcontext_floatspace_to_srgb(
-                                colorcontext,
-                                *src_row_3.offset(ix_3 as isize),
-                            );
-                        *dest_row_bytes_3.offset(1) =
-                            flow_colorcontext_floatspace_to_srgb(
-                                colorcontext,
-                                *src_row_3
-                                    .offset(ix_3.wrapping_add(1u32)
-                                        as isize),
-                            );
-                        *dest_row_bytes_3.offset(2) =
-                            flow_colorcontext_floatspace_to_srgb(
-                                colorcontext,
-                                *src_row_3
-                                    .offset(ix_3.wrapping_add(2u32)
-                                        as isize),
-                            );
+                        *dest_row_bytes_3.offset(0) = flow_colorcontext_floatspace_to_srgb(
+                            colorcontext,
+                            *src_row_3.offset(ix_3 as isize),
+                        );
+                        *dest_row_bytes_3.offset(1) = flow_colorcontext_floatspace_to_srgb(
+                            colorcontext,
+                            *src_row_3.offset(ix_3.wrapping_add(1u32) as isize),
+                        );
+                        *dest_row_bytes_3.offset(2) = flow_colorcontext_floatspace_to_srgb(
+                            colorcontext,
+                            *src_row_3.offset(ix_3.wrapping_add(2u32) as isize),
+                        );
                         dest_row_bytes_3 = dest_row_bytes_3.offset(4 as i32 as isize);
-                        ix_3 = (ix_3 as u32).wrapping_add(4u32)
-                            as u32 as u32
+                        ix_3 = (ix_3 as u32).wrapping_add(4u32) as u32 as u32
                     }
                     row_3 = row_3.wrapping_add(1)
                 }
@@ -4663,33 +4347,23 @@ pub unsafe extern "C" fn flow_bitmap_float_copy_linear_over_srgb(
                         .pixels
                         .offset(dest_row.wrapping_add(row_4).wrapping_mul(dest_row_stride) as isize)
                         .offset(from_col.wrapping_mul(4u32) as isize);
-                    let mut ix_4: u32 =
-                        from_col.wrapping_mul(4u32);
+                    let mut ix_4: u32 = from_col.wrapping_mul(4u32);
                     while ix_4 < srcitems {
-                        *dest_row_bytes_4.offset(0) =
-                            flow_colorcontext_floatspace_to_srgb(
-                                colorcontext,
-                                *src_row_4.offset(ix_4 as isize),
-                            );
-                        *dest_row_bytes_4.offset(1) =
-                            flow_colorcontext_floatspace_to_srgb(
-                                colorcontext,
-                                *src_row_4
-                                    .offset(ix_4.wrapping_add(1u32)
-                                        as isize),
-                            );
-                        *dest_row_bytes_4.offset(2) =
-                            flow_colorcontext_floatspace_to_srgb(
-                                colorcontext,
-                                *src_row_4
-                                    .offset(ix_4.wrapping_add(2u32)
-                                        as isize),
-                            );
-                        *dest_row_bytes_4.offset(3 as i32 as isize) =
-                            0xff as i32 as u8;
+                        *dest_row_bytes_4.offset(0) = flow_colorcontext_floatspace_to_srgb(
+                            colorcontext,
+                            *src_row_4.offset(ix_4 as isize),
+                        );
+                        *dest_row_bytes_4.offset(1) = flow_colorcontext_floatspace_to_srgb(
+                            colorcontext,
+                            *src_row_4.offset(ix_4.wrapping_add(1u32) as isize),
+                        );
+                        *dest_row_bytes_4.offset(2) = flow_colorcontext_floatspace_to_srgb(
+                            colorcontext,
+                            *src_row_4.offset(ix_4.wrapping_add(2u32) as isize),
+                        );
+                        *dest_row_bytes_4.offset(3 as i32 as isize) = 0xff as i32 as u8;
                         dest_row_bytes_4 = dest_row_bytes_4.offset(4 as i32 as isize);
-                        ix_4 = (ix_4 as u32).wrapping_add(4u32)
-                            as u32 as u32
+                        ix_4 = (ix_4 as u32).wrapping_add(4u32) as u32 as u32
                     }
                     row_4 = row_4.wrapping_add(1)
                 }
@@ -4709,36 +4383,25 @@ pub unsafe extern "C" fn flow_bitmap_float_copy_linear_over_srgb(
                         .pixels
                         .offset(dest_row.wrapping_add(row_5).wrapping_mul(dest_row_stride) as isize)
                         .offset(from_col.wrapping_mul(dest_pixel_stride) as isize);
-                    let mut ix_5: u32 =
-                        from_col.wrapping_mul(3u32);
+                    let mut ix_5: u32 = from_col.wrapping_mul(3u32);
                     while ix_5 < srcitems {
-                        *dest_row_bytes_5.offset(0) =
-                            flow_colorcontext_floatspace_to_srgb(
-                                colorcontext,
-                                *src_row_5.offset(ix_5 as isize),
-                            );
-                        *dest_row_bytes_5.offset(1) =
-                            flow_colorcontext_floatspace_to_srgb(
-                                colorcontext,
-                                *src_row_5
-                                    .offset(ix_5.wrapping_add(1u32)
-                                        as isize),
-                            );
-                        *dest_row_bytes_5.offset(2) =
-                            flow_colorcontext_floatspace_to_srgb(
-                                colorcontext,
-                                *src_row_5
-                                    .offset(ix_5.wrapping_add(2u32)
-                                        as isize),
-                            );
+                        *dest_row_bytes_5.offset(0) = flow_colorcontext_floatspace_to_srgb(
+                            colorcontext,
+                            *src_row_5.offset(ix_5 as isize),
+                        );
+                        *dest_row_bytes_5.offset(1) = flow_colorcontext_floatspace_to_srgb(
+                            colorcontext,
+                            *src_row_5.offset(ix_5.wrapping_add(1u32) as isize),
+                        );
+                        *dest_row_bytes_5.offset(2) = flow_colorcontext_floatspace_to_srgb(
+                            colorcontext,
+                            *src_row_5.offset(ix_5.wrapping_add(2u32) as isize),
+                        );
                         *dest_row_bytes_5.offset(3 as i32 as isize) = uchar_clamp_ff(
-                            *src_row_5.offset(
-                                ix_5.wrapping_add(3u32) as isize
-                            ) * 255.0f32,
+                            *src_row_5.offset(ix_5.wrapping_add(3u32) as isize) * 255.0f32,
                         );
                         dest_row_bytes_5 = dest_row_bytes_5.offset(dest_pixel_stride as isize);
-                        ix_5 = (ix_5 as u32).wrapping_add(3u32)
-                            as u32 as u32
+                        ix_5 = (ix_5 as u32).wrapping_add(3u32) as u32 as u32
                     }
                     row_5 = row_5.wrapping_add(1)
                 }
@@ -4755,31 +4418,22 @@ pub unsafe extern "C" fn flow_bitmap_float_copy_linear_over_srgb(
                         .pixels
                         .offset(dest_row.wrapping_add(row_6).wrapping_mul(dest_row_stride) as isize)
                         .offset(from_col.wrapping_mul(dest_pixel_stride) as isize);
-                    let mut ix_6: u32 =
-                        from_col.wrapping_mul(3u32);
+                    let mut ix_6: u32 = from_col.wrapping_mul(3u32);
                     while ix_6 < srcitems {
-                        *dest_row_bytes_6.offset(0) =
-                            flow_colorcontext_floatspace_to_srgb(
-                                colorcontext,
-                                *src_row_6.offset(ix_6 as isize),
-                            );
-                        *dest_row_bytes_6.offset(1) =
-                            flow_colorcontext_floatspace_to_srgb(
-                                colorcontext,
-                                *src_row_6
-                                    .offset(ix_6.wrapping_add(1u32)
-                                        as isize),
-                            );
-                        *dest_row_bytes_6.offset(2) =
-                            flow_colorcontext_floatspace_to_srgb(
-                                colorcontext,
-                                *src_row_6
-                                    .offset(ix_6.wrapping_add(2u32)
-                                        as isize),
-                            );
+                        *dest_row_bytes_6.offset(0) = flow_colorcontext_floatspace_to_srgb(
+                            colorcontext,
+                            *src_row_6.offset(ix_6 as isize),
+                        );
+                        *dest_row_bytes_6.offset(1) = flow_colorcontext_floatspace_to_srgb(
+                            colorcontext,
+                            *src_row_6.offset(ix_6.wrapping_add(1u32) as isize),
+                        );
+                        *dest_row_bytes_6.offset(2) = flow_colorcontext_floatspace_to_srgb(
+                            colorcontext,
+                            *src_row_6.offset(ix_6.wrapping_add(2u32) as isize),
+                        );
                         dest_row_bytes_6 = dest_row_bytes_6.offset(dest_pixel_stride as isize);
-                        ix_6 = (ix_6 as u32).wrapping_add(3u32)
-                            as u32 as u32
+                        ix_6 = (ix_6 as u32).wrapping_add(3u32) as u32 as u32
                     }
                     row_6 = row_6.wrapping_add(1)
                 }
@@ -4796,33 +4450,23 @@ pub unsafe extern "C" fn flow_bitmap_float_copy_linear_over_srgb(
                         .pixels
                         .offset(dest_row.wrapping_add(row_7).wrapping_mul(dest_row_stride) as isize)
                         .offset(from_col.wrapping_mul(dest_pixel_stride) as isize);
-                    let mut ix_7: u32 =
-                        from_col.wrapping_mul(3u32);
+                    let mut ix_7: u32 = from_col.wrapping_mul(3u32);
                     while ix_7 < srcitems {
-                        *dest_row_bytes_7.offset(0) =
-                            flow_colorcontext_floatspace_to_srgb(
-                                colorcontext,
-                                *src_row_7.offset(ix_7 as isize),
-                            );
-                        *dest_row_bytes_7.offset(1) =
-                            flow_colorcontext_floatspace_to_srgb(
-                                colorcontext,
-                                *src_row_7
-                                    .offset(ix_7.wrapping_add(1u32)
-                                        as isize),
-                            );
-                        *dest_row_bytes_7.offset(2) =
-                            flow_colorcontext_floatspace_to_srgb(
-                                colorcontext,
-                                *src_row_7
-                                    .offset(ix_7.wrapping_add(2u32)
-                                        as isize),
-                            );
-                        *dest_row_bytes_7.offset(3 as i32 as isize) =
-                            0xff as i32 as u8;
+                        *dest_row_bytes_7.offset(0) = flow_colorcontext_floatspace_to_srgb(
+                            colorcontext,
+                            *src_row_7.offset(ix_7 as isize),
+                        );
+                        *dest_row_bytes_7.offset(1) = flow_colorcontext_floatspace_to_srgb(
+                            colorcontext,
+                            *src_row_7.offset(ix_7.wrapping_add(1u32) as isize),
+                        );
+                        *dest_row_bytes_7.offset(2) = flow_colorcontext_floatspace_to_srgb(
+                            colorcontext,
+                            *src_row_7.offset(ix_7.wrapping_add(2u32) as isize),
+                        );
+                        *dest_row_bytes_7.offset(3 as i32 as isize) = 0xff as i32 as u8;
                         dest_row_bytes_7 = dest_row_bytes_7.offset(dest_pixel_stride as isize);
-                        ix_7 = (ix_7 as u32).wrapping_add(3u32)
-                            as u32 as u32
+                        ix_7 = (ix_7 as u32).wrapping_add(3u32) as u32 as u32
                     }
                     row_7 = row_7.wrapping_add(1)
                 }
@@ -4841,36 +4485,25 @@ pub unsafe extern "C" fn flow_bitmap_float_copy_linear_over_srgb(
                         .pixels
                         .offset(dest_row.wrapping_add(row_8).wrapping_mul(dest_row_stride) as isize)
                         .offset(from_col.wrapping_mul(dest_pixel_stride) as isize);
-                    let mut ix_8: u32 =
-                        from_col.wrapping_mul(4u32);
+                    let mut ix_8: u32 = from_col.wrapping_mul(4u32);
                     while ix_8 < srcitems {
-                        *dest_row_bytes_8.offset(0) =
-                            flow_colorcontext_floatspace_to_srgb(
-                                colorcontext,
-                                *src_row_8.offset(ix_8 as isize),
-                            );
-                        *dest_row_bytes_8.offset(1) =
-                            flow_colorcontext_floatspace_to_srgb(
-                                colorcontext,
-                                *src_row_8
-                                    .offset(ix_8.wrapping_add(1u32)
-                                        as isize),
-                            );
-                        *dest_row_bytes_8.offset(2) =
-                            flow_colorcontext_floatspace_to_srgb(
-                                colorcontext,
-                                *src_row_8
-                                    .offset(ix_8.wrapping_add(2u32)
-                                        as isize),
-                            );
+                        *dest_row_bytes_8.offset(0) = flow_colorcontext_floatspace_to_srgb(
+                            colorcontext,
+                            *src_row_8.offset(ix_8 as isize),
+                        );
+                        *dest_row_bytes_8.offset(1) = flow_colorcontext_floatspace_to_srgb(
+                            colorcontext,
+                            *src_row_8.offset(ix_8.wrapping_add(1u32) as isize),
+                        );
+                        *dest_row_bytes_8.offset(2) = flow_colorcontext_floatspace_to_srgb(
+                            colorcontext,
+                            *src_row_8.offset(ix_8.wrapping_add(2u32) as isize),
+                        );
                         *dest_row_bytes_8.offset(3 as i32 as isize) = uchar_clamp_ff(
-                            *src_row_8.offset(
-                                ix_8.wrapping_add(3u32) as isize
-                            ) * 255.0f32,
+                            *src_row_8.offset(ix_8.wrapping_add(3u32) as isize) * 255.0f32,
                         );
                         dest_row_bytes_8 = dest_row_bytes_8.offset(dest_pixel_stride as isize);
-                        ix_8 = (ix_8 as u32).wrapping_add(4u32)
-                            as u32 as u32
+                        ix_8 = (ix_8 as u32).wrapping_add(4u32) as u32 as u32
                     }
                     row_8 = row_8.wrapping_add(1)
                 }
@@ -4887,31 +4520,22 @@ pub unsafe extern "C" fn flow_bitmap_float_copy_linear_over_srgb(
                         .pixels
                         .offset(dest_row.wrapping_add(row_9).wrapping_mul(dest_row_stride) as isize)
                         .offset(from_col.wrapping_mul(dest_pixel_stride) as isize);
-                    let mut ix_9: u32 =
-                        from_col.wrapping_mul(4u32);
+                    let mut ix_9: u32 = from_col.wrapping_mul(4u32);
                     while ix_9 < srcitems {
-                        *dest_row_bytes_9.offset(0) =
-                            flow_colorcontext_floatspace_to_srgb(
-                                colorcontext,
-                                *src_row_9.offset(ix_9 as isize),
-                            );
-                        *dest_row_bytes_9.offset(1) =
-                            flow_colorcontext_floatspace_to_srgb(
-                                colorcontext,
-                                *src_row_9
-                                    .offset(ix_9.wrapping_add(1u32)
-                                        as isize),
-                            );
-                        *dest_row_bytes_9.offset(2) =
-                            flow_colorcontext_floatspace_to_srgb(
-                                colorcontext,
-                                *src_row_9
-                                    .offset(ix_9.wrapping_add(2u32)
-                                        as isize),
-                            );
+                        *dest_row_bytes_9.offset(0) = flow_colorcontext_floatspace_to_srgb(
+                            colorcontext,
+                            *src_row_9.offset(ix_9 as isize),
+                        );
+                        *dest_row_bytes_9.offset(1) = flow_colorcontext_floatspace_to_srgb(
+                            colorcontext,
+                            *src_row_9.offset(ix_9.wrapping_add(1u32) as isize),
+                        );
+                        *dest_row_bytes_9.offset(2) = flow_colorcontext_floatspace_to_srgb(
+                            colorcontext,
+                            *src_row_9.offset(ix_9.wrapping_add(2u32) as isize),
+                        );
                         dest_row_bytes_9 = dest_row_bytes_9.offset(dest_pixel_stride as isize);
-                        ix_9 = (ix_9 as u32).wrapping_add(4u32)
-                            as u32 as u32
+                        ix_9 = (ix_9 as u32).wrapping_add(4u32) as u32 as u32
                     }
                     row_9 = row_9.wrapping_add(1)
                 }
@@ -4930,34 +4554,23 @@ pub unsafe extern "C" fn flow_bitmap_float_copy_linear_over_srgb(
                             .offset(dest_row.wrapping_add(row_10).wrapping_mul(dest_row_stride)
                                 as isize)
                             .offset(from_col.wrapping_mul(dest_pixel_stride) as isize);
-                    let mut ix_10: u32 =
-                        from_col.wrapping_mul(4u32);
+                    let mut ix_10: u32 = from_col.wrapping_mul(4u32);
                     while ix_10 < srcitems {
-                        *dest_row_bytes_10.offset(0) =
-                            flow_colorcontext_floatspace_to_srgb(
-                                colorcontext,
-                                *src_row_10.offset(ix_10 as isize),
-                            );
-                        *dest_row_bytes_10.offset(1) =
-                            flow_colorcontext_floatspace_to_srgb(
-                                colorcontext,
-                                *src_row_10
-                                    .offset(ix_10.wrapping_add(1u32)
-                                        as isize),
-                            );
-                        *dest_row_bytes_10.offset(2) =
-                            flow_colorcontext_floatspace_to_srgb(
-                                colorcontext,
-                                *src_row_10
-                                    .offset(ix_10.wrapping_add(2u32)
-                                        as isize),
-                            );
-                        *dest_row_bytes_10.offset(3 as i32 as isize) =
-                            0xff as i32 as u8;
+                        *dest_row_bytes_10.offset(0) = flow_colorcontext_floatspace_to_srgb(
+                            colorcontext,
+                            *src_row_10.offset(ix_10 as isize),
+                        );
+                        *dest_row_bytes_10.offset(1) = flow_colorcontext_floatspace_to_srgb(
+                            colorcontext,
+                            *src_row_10.offset(ix_10.wrapping_add(1u32) as isize),
+                        );
+                        *dest_row_bytes_10.offset(2) = flow_colorcontext_floatspace_to_srgb(
+                            colorcontext,
+                            *src_row_10.offset(ix_10.wrapping_add(2u32) as isize),
+                        );
+                        *dest_row_bytes_10.offset(3 as i32 as isize) = 0xff as i32 as u8;
                         dest_row_bytes_10 = dest_row_bytes_10.offset(dest_pixel_stride as isize);
-                        ix_10 = (ix_10 as u32)
-                            .wrapping_add(4u32)
-                            as u32 as u32
+                        ix_10 = (ix_10 as u32).wrapping_add(4u32) as u32 as u32
                     }
                     row_10 = row_10.wrapping_add(1)
                 }
@@ -4989,13 +4602,13 @@ unsafe extern "C" fn BitmapFloat_compose_linear_over_srgb(
     } else {
         dest_bytes_pp
     };
-    let srcitems: u32 = from_col.wrapping_add(col_count).min(
-        (*src).w).wrapping_mul((*src).channels
-    );
+    let srcitems: u32 = from_col
+        .wrapping_add(col_count)
+        .min((*src).w)
+        .wrapping_mul((*src).channels);
     let ch: u32 = (*src).channels;
     let dest_effective_format: flow_pixel_format = flow_effective_pixel_format(dest);
-    let dest_alpha: bool =
-        dest_effective_format as u32 == flow_bgra32 as i32 as u32;
+    let dest_alpha: bool = dest_effective_format as u32 == flow_bgra32 as i32 as u32;
     let dest_alpha_index: u8 = if dest_alpha as i32 != 0 {
         3 as i32
     } else {
@@ -5027,23 +4640,15 @@ unsafe extern "C" fn BitmapFloat_compose_linear_over_srgb(
             let dest_g: u8 = *dest_row_bytes.offset(1);
             let dest_r: u8 = *dest_row_bytes.offset(2);
             let dest_a: u8 = *dest_row_bytes.offset(dest_alpha_index as isize);
-            let src_b: f32 =
-                *src_row.offset(ix.wrapping_add(0u32) as isize);
-            let src_g: f32 =
-                *src_row.offset(ix.wrapping_add(1u32) as isize);
-            let src_r: f32 =
-                *src_row.offset(ix.wrapping_add(2u32) as isize);
-            let src_a: f32 =
-                *src_row.offset(ix.wrapping_add(3u32) as isize);
+            let src_b: f32 = *src_row.offset(ix.wrapping_add(0u32) as isize);
+            let src_g: f32 = *src_row.offset(ix.wrapping_add(1u32) as isize);
+            let src_r: f32 = *src_row.offset(ix.wrapping_add(2u32) as isize);
+            let src_a: f32 = *src_row.offset(ix.wrapping_add(3u32) as isize);
             let a: f32 = (1.0f32 - src_a)
-                * (dest_alpha_to_float_coeff * dest_a as i32 as f32
-                    + dest_alpha_to_float_offset);
-            let b: f32 =
-                flow_colorcontext_srgb_to_floatspace(colorcontext, dest_b) * a + src_b;
-            let g: f32 =
-                flow_colorcontext_srgb_to_floatspace(colorcontext, dest_g) * a + src_g;
-            let r: f32 =
-                flow_colorcontext_srgb_to_floatspace(colorcontext, dest_r) * a + src_r;
+                * (dest_alpha_to_float_coeff * dest_a as i32 as f32 + dest_alpha_to_float_offset);
+            let b: f32 = flow_colorcontext_srgb_to_floatspace(colorcontext, dest_b) * a + src_b;
+            let g: f32 = flow_colorcontext_srgb_to_floatspace(colorcontext, dest_g) * a + src_g;
+            let r: f32 = flow_colorcontext_srgb_to_floatspace(colorcontext, dest_r) * a + src_r;
             let final_alpha: f32 = src_a + a;
             *dest_row_bytes.offset(0) =
                 flow_colorcontext_floatspace_to_srgb(colorcontext, b / final_alpha);
@@ -5093,8 +4698,7 @@ pub unsafe extern "C" fn flow_bitmap_float_composite_linear_over_srgb(
         );
         return false;
     }
-    if (*dest).compositing_mode as u32
-        == flow_bitmap_compositing_blend_with_self as i32 as u32
+    if (*dest).compositing_mode as u32 == flow_bitmap_compositing_blend_with_self as i32 as u32
         && (*src_mut).alpha_meaningful as i32 != 0
         && (*src_mut).channels == 4 as i32 as u32
     {
@@ -5137,9 +4741,7 @@ pub unsafe extern "C" fn flow_bitmap_float_composite_linear_over_srgb(
             return false;
         }
     } else {
-        if (*src_mut).channels == 4 as i32 as u32
-            && (*src_mut).alpha_meaningful as i32 != 0
-        {
+        if (*src_mut).channels == 4 as i32 as u32 && (*src_mut).alpha_meaningful as i32 != 0 {
             let mut demultiply: bool = (*src_mut).alpha_premultiplied;
             if (*dest).compositing_mode as u32
                 == flow_bitmap_compositing_blend_with_matte as i32 as u32
@@ -5316,14 +4918,10 @@ pub unsafe extern "C" fn flow_bitmap_bgra_apply_color_matrix(
     let ch: u32 = flow_pixel_format_bytes_per_pixel((*bmp).fmt);
     let w: u32 = (*bmp).w;
     let h: u32 = row.wrapping_add(count).min((*bmp).h);
-    let m40: f32 =
-        *(*m.offset(4 as i32 as isize)).offset(0) * 255.0f32;
-    let m41: f32 =
-        *(*m.offset(4 as i32 as isize)).offset(1) * 255.0f32;
-    let m42: f32 =
-        *(*m.offset(4 as i32 as isize)).offset(2) * 255.0f32;
-    let m43: f32 =
-        *(*m.offset(4 as i32 as isize)).offset(3 as i32 as isize) * 255.0f32;
+    let m40: f32 = *(*m.offset(4 as i32 as isize)).offset(0) * 255.0f32;
+    let m41: f32 = *(*m.offset(4 as i32 as isize)).offset(1) * 255.0f32;
+    let m42: f32 = *(*m.offset(4 as i32 as isize)).offset(2) * 255.0f32;
+    let m43: f32 = *(*m.offset(4 as i32 as isize)).offset(3 as i32 as isize) * 255.0f32;
     if ch == 4 as i32 as u32 {
         let mut y: u32 = row;
         while y < h {
@@ -5334,59 +4932,35 @@ pub unsafe extern "C" fn flow_bitmap_bgra_apply_color_matrix(
                     .offset(stride.wrapping_mul(y) as isize)
                     .offset(x.wrapping_mul(ch) as isize);
                 let r: u8 = uchar_clamp_ff(
-                    *(*m.offset(0)).offset(0)
-                        * *data.offset(2) as i32 as f32
-                        + *(*m.offset(1)).offset(0)
-                            * *data.offset(1) as i32
-                                as f32
-                        + *(*m.offset(2)).offset(0)
-                            * *data.offset(0) as i32
-                                as f32
+                    *(*m.offset(0)).offset(0) * *data.offset(2) as i32 as f32
+                        + *(*m.offset(1)).offset(0) * *data.offset(1) as i32 as f32
+                        + *(*m.offset(2)).offset(0) * *data.offset(0) as i32 as f32
                         + *(*m.offset(3 as i32 as isize)).offset(0)
-                            * *data.offset(3 as i32 as isize) as i32
-                                as f32
+                            * *data.offset(3 as i32 as isize) as i32 as f32
                         + m40,
                 );
                 let g: u8 = uchar_clamp_ff(
-                    *(*m.offset(0)).offset(1)
-                        * *data.offset(2) as i32 as f32
-                        + *(*m.offset(1)).offset(1)
-                            * *data.offset(1) as i32
-                                as f32
-                        + *(*m.offset(2)).offset(1)
-                            * *data.offset(0) as i32
-                                as f32
+                    *(*m.offset(0)).offset(1) * *data.offset(2) as i32 as f32
+                        + *(*m.offset(1)).offset(1) * *data.offset(1) as i32 as f32
+                        + *(*m.offset(2)).offset(1) * *data.offset(0) as i32 as f32
                         + *(*m.offset(3 as i32 as isize)).offset(1)
-                            * *data.offset(3 as i32 as isize) as i32
-                                as f32
+                            * *data.offset(3 as i32 as isize) as i32 as f32
                         + m41,
                 );
                 let b: u8 = uchar_clamp_ff(
-                    *(*m.offset(0)).offset(2)
-                        * *data.offset(2) as i32 as f32
-                        + *(*m.offset(1)).offset(2)
-                            * *data.offset(1) as i32
-                                as f32
-                        + *(*m.offset(2)).offset(2)
-                            * *data.offset(0) as i32
-                                as f32
+                    *(*m.offset(0)).offset(2) * *data.offset(2) as i32 as f32
+                        + *(*m.offset(1)).offset(2) * *data.offset(1) as i32 as f32
+                        + *(*m.offset(2)).offset(2) * *data.offset(0) as i32 as f32
                         + *(*m.offset(3 as i32 as isize)).offset(2)
-                            * *data.offset(3 as i32 as isize) as i32
-                                as f32
+                            * *data.offset(3 as i32 as isize) as i32 as f32
                         + m42,
                 );
                 let a: u8 = uchar_clamp_ff(
-                    *(*m.offset(0)).offset(3 as i32 as isize)
-                        * *data.offset(2) as i32 as f32
-                        + *(*m.offset(1)).offset(3 as i32 as isize)
-                            * *data.offset(1) as i32
-                                as f32
-                        + *(*m.offset(2)).offset(3 as i32 as isize)
-                            * *data.offset(0) as i32
-                                as f32
+                    *(*m.offset(0)).offset(3 as i32 as isize) * *data.offset(2) as i32 as f32
+                        + *(*m.offset(1)).offset(3 as i32 as isize) * *data.offset(1) as i32 as f32
+                        + *(*m.offset(2)).offset(3 as i32 as isize) * *data.offset(0) as i32 as f32
                         + *(*m.offset(3 as i32 as isize)).offset(3 as i32 as isize)
-                            * *data.offset(3 as i32 as isize) as i32
-                                as f32
+                            * *data.offset(3 as i32 as isize) as i32 as f32
                         + m43,
                 );
                 let newdata: *mut u8 = (*bmp)
@@ -5411,36 +4985,21 @@ pub unsafe extern "C" fn flow_bitmap_bgra_apply_color_matrix(
                     .offset(stride.wrapping_mul(y_0) as isize)
                     .offset(x_0.wrapping_mul(ch) as isize);
                 let r_0: u8 = uchar_clamp_ff(
-                    *(*m.offset(0)).offset(0)
-                        * *data_0.offset(2) as i32 as f32
-                        + *(*m.offset(1)).offset(0)
-                            * *data_0.offset(1) as i32
-                                as f32
-                        + *(*m.offset(2)).offset(0)
-                            * *data_0.offset(0) as i32
-                                as f32
+                    *(*m.offset(0)).offset(0) * *data_0.offset(2) as i32 as f32
+                        + *(*m.offset(1)).offset(0) * *data_0.offset(1) as i32 as f32
+                        + *(*m.offset(2)).offset(0) * *data_0.offset(0) as i32 as f32
                         + m40,
                 );
                 let g_0: u8 = uchar_clamp_ff(
-                    *(*m.offset(0)).offset(1)
-                        * *data_0.offset(2) as i32 as f32
-                        + *(*m.offset(1)).offset(1)
-                            * *data_0.offset(1) as i32
-                                as f32
-                        + *(*m.offset(2)).offset(1)
-                            * *data_0.offset(0) as i32
-                                as f32
+                    *(*m.offset(0)).offset(1) * *data_0.offset(2) as i32 as f32
+                        + *(*m.offset(1)).offset(1) * *data_0.offset(1) as i32 as f32
+                        + *(*m.offset(2)).offset(1) * *data_0.offset(0) as i32 as f32
                         + m41,
                 );
                 let b_0: u8 = uchar_clamp_ff(
-                    *(*m.offset(0)).offset(2)
-                        * *data_0.offset(2) as i32 as f32
-                        + *(*m.offset(1)).offset(2)
-                            * *data_0.offset(1) as i32
-                                as f32
-                        + *(*m.offset(2)).offset(2)
-                            * *data_0.offset(0) as i32
-                                as f32
+                    *(*m.offset(0)).offset(2) * *data_0.offset(2) as i32 as f32
+                        + *(*m.offset(1)).offset(2) * *data_0.offset(1) as i32 as f32
+                        + *(*m.offset(2)).offset(2) * *data_0.offset(0) as i32 as f32
                         + m42,
                 );
                 let newdata_0: *mut u8 = (*bmp)
@@ -5492,43 +5051,27 @@ pub unsafe extern "C" fn flow_bitmap_float_apply_color_matrix(
                         .pixels
                         .offset(stride.wrapping_mul(y) as isize)
                         .offset(x.wrapping_mul(ch) as isize);
-                    let r: f32 = *(*m.offset(0))
-                        .offset(0)
-                        * *data.offset(2)
-                        + *(*m.offset(1)).offset(0)
-                            * *data.offset(1)
-                        + *(*m.offset(2)).offset(0)
-                            * *data.offset(0)
+                    let r: f32 = *(*m.offset(0)).offset(0) * *data.offset(2)
+                        + *(*m.offset(1)).offset(0) * *data.offset(1)
+                        + *(*m.offset(2)).offset(0) * *data.offset(0)
                         + *(*m.offset(3 as i32 as isize)).offset(0)
                             * *data.offset(3 as i32 as isize)
                         + *(*m.offset(4 as i32 as isize)).offset(0);
-                    let g: f32 = *(*m.offset(0))
-                        .offset(1)
-                        * *data.offset(2)
-                        + *(*m.offset(1)).offset(1)
-                            * *data.offset(1)
-                        + *(*m.offset(2)).offset(1)
-                            * *data.offset(0)
+                    let g: f32 = *(*m.offset(0)).offset(1) * *data.offset(2)
+                        + *(*m.offset(1)).offset(1) * *data.offset(1)
+                        + *(*m.offset(2)).offset(1) * *data.offset(0)
                         + *(*m.offset(3 as i32 as isize)).offset(1)
                             * *data.offset(3 as i32 as isize)
                         + *(*m.offset(4 as i32 as isize)).offset(1);
-                    let b: f32 = *(*m.offset(0))
-                        .offset(2)
-                        * *data.offset(2)
-                        + *(*m.offset(1)).offset(2)
-                            * *data.offset(1)
-                        + *(*m.offset(2)).offset(2)
-                            * *data.offset(0)
+                    let b: f32 = *(*m.offset(0)).offset(2) * *data.offset(2)
+                        + *(*m.offset(1)).offset(2) * *data.offset(1)
+                        + *(*m.offset(2)).offset(2) * *data.offset(0)
                         + *(*m.offset(3 as i32 as isize)).offset(2)
                             * *data.offset(3 as i32 as isize)
                         + *(*m.offset(4 as i32 as isize)).offset(2);
-                    let a: f32 = *(*m.offset(0))
-                        .offset(3 as i32 as isize)
-                        * *data.offset(2)
-                        + *(*m.offset(1)).offset(3 as i32 as isize)
-                            * *data.offset(1)
-                        + *(*m.offset(2)).offset(3 as i32 as isize)
-                            * *data.offset(0)
+                    let a: f32 = *(*m.offset(0)).offset(3 as i32 as isize) * *data.offset(2)
+                        + *(*m.offset(1)).offset(3 as i32 as isize) * *data.offset(1)
+                        + *(*m.offset(2)).offset(3 as i32 as isize) * *data.offset(0)
                         + *(*m.offset(3 as i32 as isize)).offset(3 as i32 as isize)
                             * *data.offset(3 as i32 as isize)
                         + *(*m.offset(4 as i32 as isize)).offset(3 as i32 as isize);
@@ -5555,29 +5098,17 @@ pub unsafe extern "C" fn flow_bitmap_float_apply_color_matrix(
                         .pixels
                         .offset(stride.wrapping_mul(y_0) as isize)
                         .offset(x_0.wrapping_mul(ch) as isize);
-                    let r_0: f32 = *(*m.offset(0))
-                        .offset(0)
-                        * *data_0.offset(2)
-                        + *(*m.offset(1)).offset(0)
-                            * *data_0.offset(1)
-                        + *(*m.offset(2)).offset(0)
-                            * *data_0.offset(0)
+                    let r_0: f32 = *(*m.offset(0)).offset(0) * *data_0.offset(2)
+                        + *(*m.offset(1)).offset(0) * *data_0.offset(1)
+                        + *(*m.offset(2)).offset(0) * *data_0.offset(0)
                         + *(*m.offset(4 as i32 as isize)).offset(0);
-                    let g_0: f32 = *(*m.offset(0))
-                        .offset(1)
-                        * *data_0.offset(2)
-                        + *(*m.offset(1)).offset(1)
-                            * *data_0.offset(1)
-                        + *(*m.offset(2)).offset(1)
-                            * *data_0.offset(0)
+                    let g_0: f32 = *(*m.offset(0)).offset(1) * *data_0.offset(2)
+                        + *(*m.offset(1)).offset(1) * *data_0.offset(1)
+                        + *(*m.offset(2)).offset(1) * *data_0.offset(0)
                         + *(*m.offset(4 as i32 as isize)).offset(1);
-                    let b_0: f32 = *(*m.offset(0))
-                        .offset(2)
-                        * *data_0.offset(2)
-                        + *(*m.offset(1)).offset(2)
-                            * *data_0.offset(1)
-                        + *(*m.offset(2)).offset(2)
-                            * *data_0.offset(0)
+                    let b_0: f32 = *(*m.offset(0)).offset(2) * *data_0.offset(2)
+                        + *(*m.offset(1)).offset(2) * *data_0.offset(1)
+                        + *(*m.offset(2)).offset(2) * *data_0.offset(0)
                         + *(*m.offset(4 as i32 as isize)).offset(2);
                     let newdata_0: *mut f32 = (*bmp)
                         .pixels
@@ -5624,7 +5155,11 @@ pub unsafe extern "C" fn flow_bitmap_bgra_populate_histogram(
     let h: u32 = (row.wrapping_add(count)).min((*bmp).h);
     if histogram_size_per_channel != 256 {
         // We're restricting it to this for speed
-        FLOW_error(context, flow_status_code::Invalid_argument, "flow_bitmap_bgra_populate_histogram");
+        FLOW_error(
+            context,
+            flow_status_code::Invalid_argument,
+            "flow_bitmap_bgra_populate_histogram",
+        );
         return false;
     }
     let shift = 0; // 8 - intlog2(histogram_size_per_channel);
@@ -5639,12 +5174,9 @@ pub unsafe extern "C" fn flow_bitmap_bgra_populate_histogram(
                         .offset(stride.wrapping_mul(y) as isize)
                         .offset(x.wrapping_mul(ch) as isize);
                     let ref mut fresh9 = *histograms.offset(
-                        (306 as i32
-                            * *data.offset(2) as i32
-                            + 601 as i32
-                                * *data.offset(1) as i32
-                            + 117 as i32
-                                * *data.offset(0) as i32
+                        (306 as i32 * *data.offset(2) as i32
+                            + 601 as i32 * *data.offset(1) as i32
+                            + 117 as i32 * *data.offset(0) as i32
                             >> shift) as isize,
                     );
                     *fresh9 = (*fresh9).wrapping_add(1);
@@ -5661,25 +5193,19 @@ pub unsafe extern "C" fn flow_bitmap_bgra_populate_histogram(
                         .pixels
                         .offset((stride * y) as isize)
                         .offset((x * ch) as isize);
-                    let ref mut fresh10 = *histograms.offset(
-                        (*data.offset(2) as i32 >> shift)
-                            as isize,
-                    );
+                    let ref mut fresh10 =
+                        *histograms.offset((*data.offset(2) as i32 >> shift) as isize);
                     *fresh10 = (*fresh10).wrapping_add(1);
                     let ref mut fresh11 = *histograms.offset(
-                        ((*data.offset(1) as i32 >> shift)
-                            as u32)
+                        ((*data.offset(1) as i32 >> shift) as u32)
                             .wrapping_add(histogram_size_per_channel)
                             as isize,
                     );
                     *fresh11 = (*fresh11).wrapping_add(1);
                     let ref mut fresh12 = *histograms.offset(
-                        ((*data.offset(0) as i32 >> shift)
-                            as u32)
-                            .wrapping_add(
-                                (2u32)
-                                    .wrapping_mul(histogram_size_per_channel),
-                            ) as isize,
+                        ((*data.offset(0) as i32 >> shift) as u32)
+                            .wrapping_add((2u32).wrapping_mul(histogram_size_per_channel))
+                            as isize,
                     );
                     *fresh12 = (*fresh12).wrapping_add(1);
                     x = x.wrapping_add(1)
@@ -5697,12 +5223,9 @@ pub unsafe extern "C" fn flow_bitmap_bgra_populate_histogram(
                         .offset(x_1.wrapping_mul(ch) as isize);
                     // Calculate luminosity and saturation
                     let ref mut fresh13 = *histograms.offset(
-                        (306 as i32
-                            * *data_1.offset(2) as i32
-                            + 601 as i32
-                                * *data_1.offset(1) as i32
-                            + 117 as i32
-                                * *data_1.offset(0) as i32
+                        (306 as i32 * *data_1.offset(2) as i32
+                            + 601 as i32 * *data_1.offset(1) as i32
+                            + 117 as i32 * *data_1.offset(0) as i32
                             >> shift) as isize,
                     );
                     *fresh13 = (*fresh13).wrapping_add(1);
@@ -5711,10 +5234,8 @@ pub unsafe extern "C" fn flow_bitmap_bgra_populate_histogram(
                             (int_max(
                                 255 as i32,
                                 int_max(
-                                    (*data_1.offset(2) as i32
-                                        - *data_1.offset(1) as i32).abs(),
-                                    (*data_1.offset(1) as i32
-                                        - *data_1.offset(0) as i32).abs(),
+                                    (*data_1.offset(2) as i32 - *data_1.offset(1) as i32).abs(),
+                                    (*data_1.offset(1) as i32 - *data_1.offset(0) as i32).abs(),
                                 ),
                             ) >> shift) as u32,
                         ) as isize);
