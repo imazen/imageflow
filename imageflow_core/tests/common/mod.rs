@@ -76,9 +76,25 @@ impl IoTestTranslator {
             //     c.add_file(io_id, dir, &path )
             // }
             IoTestEnum::Url(url) => {
-                let bytes = ::imageflow_http_helpers::fetch_bytes(&url)
-                    .map_err(|e| nerror!(ErrorKind::FetchError, "{}: {}", url, e))?;
-                c.add_copied_input_buffer(io_id, &bytes).map_err(|e| e.at(here!()))
+                let mut retry_count = 3;
+                let mut retry_wait = 100;
+                loop {
+                    match ::imageflow_http_helpers::fetch_bytes(&url)
+                        .map_err(|e| nerror!(ErrorKind::FetchError, "{}: {}", url, e)){
+                        Err(e) => {
+                            if retry_count > 0{
+                                retry_count -= 1;
+                                std::thread::sleep(Duration::from_millis( retry_wait));
+                                retry_wait *= 5;
+                            }else{
+                                return Err(e)
+                            }
+                        }
+                        Ok(bytes) => {
+                            return c.add_input_vector(io_id, bytes).map_err(|e| e.at(here!()))
+                        }
+                    }
+                }
             },
 
             IoTestEnum::OutputBuffer  => {
