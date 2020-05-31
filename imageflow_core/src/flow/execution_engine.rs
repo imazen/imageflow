@@ -1,6 +1,5 @@
 use crate::Context;
 use crate::flow::definitions::*;
-use crate::ffi::CodecInstance;
 use crate::internal_prelude::works_everywhere::*;
 use petgraph::dot::Dot;
 use std::process::Command;

@@ -44,39 +44,8 @@ pub struct ImageflowJsonResponse {
     pub buffer_size: libc::size_t,
 }
 
-#[repr(C)]
-pub struct ImageflowJobIo {
-    context: *mut ImageflowContext,
-    mode: IoMode,// Call nothing, dereference nothing, if this is 0
-    pub read_fn: Option<IoReadFn>,// Optional for write modes
-    pub write_fn: Option<IoWriteFn>,// Optional for read modes
-    position_fn: Option<IoPositionFn>, // Optional for sequential modes
-    pub seek_fn: Option<IoSeekFn>, // Optional for sequential modes
-    dispose_fn: Option<DestructorFn>,// Optional
-    user_data: *mut c_void,
-    /// Whoever sets up this structure can populate this value - or set it to -1 - as they
-    /// wish. useful for resource estimation.
-    optional_file_length: i64
-}
 
-#[repr(C)]
-#[derive(Debug,Copy,Clone, PartialEq)]
-pub enum IoMode {
-    None = 0,
-    ReadSequential = 1,
-    WriteSequential = 2,
-    ReadSeekable = 5, // 1 | 4,
-    WriteSeekable = 6, // 2 | 4,
-    ReadWriteSeekable = 15, // 1 | 2 | 4 | 8
-}
-impl IoMode{
-    pub fn can_read(self) -> bool{
-        (self as i32 & IoMode::ReadSequential as i32) > 0
-    }
-    pub fn can_write(self) -> bool{
-        (self as i32 & IoMode::WriteSequential as i32) > 0
-    }
-}
+
 #[repr(C)]
 #[derive(Clone,Debug,PartialEq)]
 pub struct ImageflowContext {
@@ -87,16 +56,6 @@ pub struct ImageflowContext {
 }
 
 // end reuse
-
-#[repr(C)]
-#[derive(Clone,Debug,PartialEq)]
-pub struct CodecInstance {
-    pub io_id: i32,
-    pub codec_id: i64,
-    pub codec_state: *mut c_void,
-    pub io: *mut ImageflowJobIo,
-    pub direction: IoDirection,
-}
 
 
 
@@ -170,34 +129,6 @@ pub const FILTER_OPTIONS: &'static [&'static str] = &["robidouxfast",
                                                       "ncubic",
                                                       "ncubicsharp"];
 
-
-
-impl Default for DecoderInfo {
-    fn default() -> DecoderInfo {
-        DecoderInfo {
-            codec_id: -1,
-            preferred_mime_type: ptr::null(),
-            preferred_extension: ptr::null(),
-            frame_count: 0,
-            current_frame_index: 0,
-            image_width: 0,
-            image_height: 0,
-            frame_decodes_into: PixelFormat::Bgra32,
-        }
-    }
-}
-
-#[repr(C)]
-pub struct DecoderInfo {
-    pub codec_id: i64,
-    pub preferred_mime_type: *const i8,
-    pub preferred_extension: *const i8,
-    pub frame_count: usize,
-    pub current_frame_index: i64,
-    pub image_width: i32,
-    pub image_height: i32,
-    pub frame_decodes_into: PixelFormat,
-}
 
 
 
@@ -550,31 +481,6 @@ pub struct ObjTrackingInfo {
 
 
 
-// TODO: find a way to distinguish between (rust/c) context and IO types here
-
-
-type DestructorFn = extern fn(*mut ImageflowContext, *mut c_void) -> bool;
-
-
-/// Returns the number of read into the buffer. Failure to read 'count' bytes could mean EOF or failure. Check context
-/// status. Pass NULL to buffer if you want to skip 'count' many bytes, seeking ahead.
-type IoReadFn = extern fn(*mut ImageflowContext, *mut ImageflowJobIo, *mut u8, size_t) -> i64;
-
-/// Returns the number of bytes written. If it doesn't equal 'count', there was an error. Check context status
-type IoWriteFn = extern fn(*mut ImageflowContext, *mut ImageflowJobIo, *const u8, size_t) -> i64;
-
-
-/// Returns negative on failure - check context for more detail. Returns the current position in the stream when
-/// successful
-type IoPositionFn = extern fn(*mut ImageflowContext, *mut ImageflowJobIo) -> i64;
-
-/// Returns true if seek was successful.
-type IoSeekFn = extern fn(*mut ImageflowContext, *mut ImageflowJobIo, i64) -> bool;
-
-
-
-
-
 #[repr(C)]
 #[derive(Clone,Debug,PartialEq)]
 pub struct ProfilingLog {
@@ -886,30 +792,6 @@ mod mid_term {
                                    line: i32)
                                    -> *mut libc::c_void;
 
-        pub fn flow_io_create_from_memory(context: *mut ImageflowContext,
-                                          mode: IoMode,
-                                          memory: *const u8,
-                                          length: libc::size_t,
-                                          owner: *const libc::c_void,
-                                          destructor_function: *const libc::c_void)
-                                          -> *mut ImageflowJobIo;
-        pub fn flow_io_create_for_file(context: *mut ImageflowContext,
-                                       mode: IoMode,
-                                       filename: *const libc::c_char,
-                                       owner: *const libc::c_void)
-                                       -> *mut ImageflowJobIo;
-        pub fn flow_io_create_for_output_buffer(context: *mut ImageflowContext,
-                                                owner: *const libc::c_void)
-                                                -> *mut ImageflowJobIo;
-
-
-        // Returns false if the flow_io struct is disposed or not an output buffer type (or for any other error)
-        //
-        pub fn flow_io_get_output_buffer(context: *mut ImageflowContext,
-                                         io: *mut ImageflowJobIo,
-                                         result_buffer: *mut *const u8,
-                                         result_buffer_length: *mut libc::size_t)
-                                         -> bool;
 
         pub fn flow_bitmap_bgra_populate_histogram(c: *mut ImageflowContext, input: *mut BitmapBgra, histograms: *mut u64, histogram_size_per_channel: u32, histogram_count: u32, pixels_sampled: *mut u64) -> bool;
         pub fn flow_bitmap_bgra_apply_color_matrix(c: *mut ImageflowContext, input: *mut BitmapBgra, row: u32, count: u32, matrix: *const *const f32) -> bool;

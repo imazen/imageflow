@@ -2,7 +2,7 @@ use std;
 use crate::for_other_imageflow_crates::preludes::external_without_std::*;
 use crate::ffi;
 use crate::{Context, CError,  Result, JsonResponse};
-use crate::ffi::{CodecInstance, wrap_jpeg_get_custom_state, WrapJpegSourceManager, flow_node_execute_scale2d_render1d};
+use crate::ffi::{wrap_jpeg_get_custom_state, WrapJpegSourceManager, flow_node_execute_scale2d_render1d};
 use crate::ffi::BitmapBgra;
 use imageflow_types::collections::AddRemoveSet;
 use crate::io::IoProxy;
@@ -128,20 +128,10 @@ impl PngDec{
 
         let buffer_slice = unsafe{ std::slice::from_raw_parts_mut(buffer, bytes_requested) };
 
-        return match decoder.io.read(buffer_slice) {
-            Ok(size) => {
-                if size != 0 {
-                    *out_bytes_read = size;
-                    decoder.bytes_have_been_read = true;
-                    true
-                } else {
-                    if !decoder.bytes_have_been_read {
-                        decoder.error = Some(nerror!(ErrorKind::ImageDecodingError, "Empty source file"));
-                        false
-                    } else {
-                        true
-                    }
-                }
+        return match decoder.io.read_exact(buffer_slice) {
+            Ok(()) => {
+                *out_bytes_read = buffer_slice.len();
+                true
             },
             Err(err) => {
                 decoder.error = Some(FlowError::from_decoder(err).at(here!()));

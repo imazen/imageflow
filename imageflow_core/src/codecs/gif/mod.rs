@@ -2,7 +2,6 @@ use std;
 use crate::for_other_imageflow_crates::preludes::external_without_std::*;
 use crate::ffi;
 use crate::{Context, CError,  Result, JsonResponse};
-use crate::ffi::CodecInstance;
 use crate::ffi::BitmapBgra;
 use imageflow_types::collections::AddRemoveSet;
 use crate::io::IoProxy;

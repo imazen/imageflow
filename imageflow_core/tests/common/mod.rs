@@ -24,6 +24,7 @@ use imageflow_core;
 
 use std::sync::RwLock;
 use imageflow_types::{ Node, ResponsePayload};
+use std::time::Duration;
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 pub enum ChecksumMatch {

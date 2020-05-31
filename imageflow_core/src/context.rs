@@ -138,34 +138,27 @@ impl Context {
     }
 
     pub fn add_file(&mut self, io_id: i32, direction: IoDirection, path: &str) -> Result<()> {
-        let mode = match direction {
-            s::IoDirection::In => crate::ffi::IoMode::ReadSeekable,
-            s::IoDirection::Out => crate::ffi::IoMode::WriteSeekable,
-        };
-        self.add_file_with_mode(io_id, direction, path, mode).map_err(|e| e.at(here!()))
-    }
-    pub fn add_file_with_mode(&mut self, io_id: i32, direction: IoDirection, path: &str, mode: crate::IoMode) -> Result<()> {
-        if direction == IoDirection::In && !mode.can_read() {
-            return Err(nerror!(ErrorKind::InvalidArgument, "You cannot add an input file with an IoMode that can't read"));
-        }
-        if direction == IoDirection::Out && !mode.can_write() {
-            return Err(nerror!(ErrorKind::InvalidArgument, "You cannot add an output file with an IoMode that can't write"));
-        }
-        let io =  IoProxy::file_with_mode(self, io_id,  path, mode).map_err(|e| e.at(here!()))?;
+        let io =  IoProxy::file_with_mode(self, io_id,  path, direction)
+            .map_err(|e| e.at(here!()))?;
         self.add_io(io, io_id, direction).map_err(|e| e.at(here!()))
     }
-
 
     pub fn add_copied_input_buffer(&mut self, io_id: i32, bytes: &[u8]) -> Result<()> {
         let io = IoProxy::copy_slice(self, io_id,  bytes).map_err(|e| e.at(here!()))?;
 
         self.add_io(io, io_id, IoDirection::In).map_err(|e| e.at(here!()))
     }
+    pub fn add_input_vector(&mut self, io_id: i32, bytes: Vec<u8>) -> Result<()> {
+        let io = IoProxy::read_vec(self, io_id,  bytes).map_err(|e| e.at(here!()))?;
+
+        self.add_io(io, io_id, IoDirection::In).map_err(|e| e.at(here!()))
+    }
+
     pub fn add_input_bytes<'b>(&'b mut self, io_id: i32, bytes: &'b [u8]) -> Result<()> {
         self.add_input_buffer(io_id, bytes)
     }
     pub fn add_input_buffer<'b>(&'b mut self, io_id: i32, bytes: &'b [u8]) -> Result<()> {
-        let io = IoProxy::read_slice(self, io_id,  bytes).map_err(|e| e.at(here!()))?;
+        let io = unsafe { IoProxy::read_slice(self, io_id,  bytes)}.map_err(|e| e.at(here!()))?;
 
         self.add_io(io, io_id, IoDirection::In).map_err(|e| e.at(here!()))
     }

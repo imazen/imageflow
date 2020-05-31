@@ -3,7 +3,6 @@ use std::sync::*;
 use crate::for_other_imageflow_crates::preludes::external_without_std::*;
 use crate::ffi;
 use crate::{Context, CError, Result, JsonResponse, ErrorKind, FlowError, ErrorCategory};
-use crate::ffi::CodecInstance;
 use crate::ffi::BitmapBgra;
 use crate::ffi::DecoderColorInfo;
 use crate::ffi::ColorProfileSource;
@@ -172,7 +171,7 @@ impl CodecInstanceContainer {
 
     }
 
-    pub fn create(c: &Context, io: IoProxy, io_id: i32, direction: IoDirection) -> Result<CodecInstanceContainer>{
+    pub fn create(c: &Context, mut io: IoProxy, io_id: i32, direction: IoDirection) -> Result<CodecInstanceContainer>{
         if direction == IoDirection::Out {
             Ok(CodecInstanceContainer
                 {
@@ -182,9 +181,11 @@ impl CodecInstanceContainer {
                 })
         }else {
             let mut buffer = [0u8; 12];
-            let result = io.read_to_buffer(c, &mut buffer).map_err(|e| e.at(here!()))?;
+            let result = io.read(&mut buffer)
+                .map_err(|e|  FlowError::from_decoder(e).at(here!()))?;
 
-            io.seek(c, 0).map_err(|e| e.at(here!()))?;
+            io.seek( io::SeekFrom::Start(0))
+                .map_err(|e|  FlowError::from_decoder(e).at(here!()))?;
 
 
             Ok(CodecInstanceContainer
