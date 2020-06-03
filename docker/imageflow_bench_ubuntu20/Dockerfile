@@ -75,7 +75,7 @@ RUN cargo install dssim && cargo install oxipng
 RUN cd /home/imageflow \
     && git clone https://github.com/imazen/imageflow \
     && cd /home/imageflow/imageflow \
-    && git checkout v1.3.6-rc36 \
+    && git checkout v1.4.0-rc40 \
     && TARGET_CPU=haswell cargo build -p imageflow_tool_lib --release \
     && mkdir $HOME/bin  \
     && cp target/release/imageflow_tool $HOME/bin/imageflow_tool \

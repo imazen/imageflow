@@ -87,8 +87,52 @@ if [[ "$1" == "jpegsize" ]]; then
   ls -l -S ../bench_out
   echo "================================================="
 
+  # shellcheck disable=SC2028
+  echo "To see results, run docker run -v %CD%\results:/home/imageflow/bench_out imazen/imageflow_bench_ubuntu20 jpegsize"
+  echo 'or on linux,  docker run -v "$(pwd)"/results:/home/imageflow/bench_out imazen/imageflow_bench_ubuntu20 jpegsize'
+
 fi
 
+if [[ "$1" == "jpegtinysize" ]]; then
+
+  "$HOME/bin/imageflow_tool" v1/querystring  --quiet --in c1.jpg --out ../bench_out/imageflow_128x128.jpg --command "width=128&height=128&mode=max&quality=89"
+  vipsthumbnail --linear --size=128x128  --output=../bench_out/vips_128x128.jpg[optimize-coding,strip,Q=89] c1.jpg
+  convert c1.jpg -set colorspace sRGB -colorspace RGB -filter Robidoux -resize 128x128  -colorspace sRGB -quality 89 ../bench_out/magick_128x128.jpg
+
+  "$HOME/bin/imageflow_tool" v1/querystring  --quiet --in c1.jpg --out ../bench_out/imageflow_reference_128x128.png --command "width=128&height=128&mode=max&format=png"
+  vipsthumbnail --linear --size=128x128  --output=../bench_out/vips_reference_128x128.png c1.jpg
+  convert c1.jpg -set colorspace sRGB -colorspace RGB -filter Robidoux -resize 128x128  -colorspace sRGB ../bench_out/magick_reference_128x128.png
+
+  "$HOME/bin/imageflow_tool" v1/querystring --quiet --in ../bench_out/imageflow_128x128.jpg --out ../bench_out/imageflow_128x128.png --command "format=png"
+  "$HOME/bin/imageflow_tool" v1/querystring --quiet --in ../bench_out/vips_128x128.jpg --out ../bench_out/vips_128x128.png --command "format=png"
+  "$HOME/bin/imageflow_tool" v1/querystring --quiet --in ../bench_out/magick_128x128.jpg --out ../bench_out/magick_128x128.png --command "format=png"
+
+  echo "=============== DSSIM relative to imageflow reference (lower is better)  ======================"
+  dssim ../bench_out/imageflow_reference_128x128.png ../bench_out/imageflow_128x128.png
+  dssim ../bench_out/imageflow_reference_128x128.png ../bench_out/vips_128x128.png
+  dssim ../bench_out/imageflow_reference_128x128.png ../bench_out/magick_128x128.png
+
+  echo "=============== DSSIM relative to libvips reference (lower is better)  ======================"
+  dssim ../bench_out/vips_reference_128x128.png ../bench_out/imageflow_128x128.png
+  dssim ../bench_out/vips_reference_128x128.png ../bench_out/vips_128x128.png
+  dssim ../bench_out/vips_reference_128x128.png ../bench_out/magick_128x128.png
+
+  echo "=============== DSSIM relative to ImageMagick reference (lower is better)  ======================"
+  dssim ../bench_out/magick_reference_128x128.png ../bench_out/imageflow_128x128.png
+  dssim ../bench_out/magick_reference_128x128.png ../bench_out/vips_128x128.png
+  dssim ../bench_out/magick_reference_128x128.png ../bench_out/magick_128x128.png
+
+  echo "=============== File sizes ======================"
+  ls -l -S ../bench_out
+  echo "================================================="
+
+  # shellcheck disable=SC2028
+  echo "To see results, run docker run -v %CD%\results:/home/imageflow/bench_out imazen/imageflow_bench_ubuntu20 jpegtinysize"
+  # shellcheck disable=SC2016
+  echo 'or on linux,  docker run -v "$(pwd)"/results:/home/imageflow/bench_out imazen/imageflow_bench_ubuntu20 jpegtinysize'
+
+
+fi
 
 if [[ "$1" == "pngsize" ]]; then
 
@@ -146,6 +190,3 @@ fi
 
 sudo chmod -R a+rwx ../bench_out/
 
-# shellcheck disable=SC2028
-echo "To see results, run docker run -v %CD%\results:/home/imageflow/bench_out imazen/imageflow_bench_ubuntu20 jpegsize"
-echo 'or on linux,  docker run -v "$(pwd)"/results:/home/imageflow/bench_out imazen/imageflow_bench_ubuntu20 jpegsize'
