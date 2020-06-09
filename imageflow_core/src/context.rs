@@ -252,7 +252,14 @@ impl Context {
         Ok(s::ResponsePayload::JobResult(s::JobResult { encodes: engine.collect_encode_results(), performance: Some(perf) }))
     }
 
-
+    pub fn get_version_info(&self) -> Result<s::VersionInfo>{
+        Ok(s::VersionInfo{
+            long_version_string: imageflow_types::version::one_line_version().to_string(),
+            last_git_commit: imageflow_types::version::last_commit().to_string(),
+            dirty_working_tree: imageflow_types::version::dirty(),
+            build_date: imageflow_types::version::get_build_date().to_string()
+        })
+    }
 }
 
 #[cfg(test)]

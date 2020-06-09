@@ -1148,6 +1148,11 @@ pub struct GetImageInfo001 {
     pub io_id: i32,
 }
 
+#[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
+pub struct GetVersionInfo{
+
+}
+
 impl GetImageInfo001 {
     pub fn example_get_image_info() -> GetImageInfo001 {
         GetImageInfo001 { io_id: 0 }
@@ -1256,6 +1261,14 @@ pub struct JobResult {
     pub encodes: Vec<EncodeResult>,
     pub performance: Option<BuildPerformance>
 }
+
+#[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
+pub struct VersionInfo{
+    pub long_version_string: String,
+    pub last_git_commit: String,
+    pub dirty_working_tree: bool,
+    pub build_date: String,
+}
 #[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
 pub enum ResponsePayload {
     #[serde(rename="image_info")]
@@ -1264,6 +1277,8 @@ pub enum ResponsePayload {
     JobResult(JobResult),
     #[serde(rename="build_result")]
     BuildResult(JobResult),
+    #[serde(rename="version_info")]
+    VersionInfo(VersionInfo),
     #[serde(rename="none")]
     None,
 }

@@ -994,6 +994,41 @@ fn test_job_with_bad_json() {
     }
 }
 
+
+#[test]
+fn test_get_version_info() {
+    let c = imageflow_context_create(IMAGEFLOW_ABI_VER_MAJOR, IMAGEFLOW_ABI_VER_MINOR);
+    assert!(!c.is_null());
+
+
+    let method_in = static_char!("v1/get_version_info");
+    let json_in = "{}";
+
+    let response = imageflow_context_send_json(c,
+                                               method_in,
+                                               json_in.as_ptr(),
+                                               json_in.len());
+
+    assert!(!response.is_null());
+
+
+    let mut json_out_ptr: *const u8 = ptr::null_mut();
+    let mut json_out_size: usize = 0;
+    let mut json_status_code: i64 = 0;
+
+    assert!(imageflow_json_response_read(c,
+                                         response,
+                                         &mut json_status_code,
+                                         &mut json_out_ptr,
+                                         &mut json_out_size));
+    assert!(!imageflow_context_has_error(c));
+
+    let expected_response_status = 200; //bad request
+    assert_eq!(json_status_code, expected_response_status);
+
+    imageflow_context_destroy(c);
+}
+
 #[test]
 fn test_file_macro_for_this_build(){
     assert!(file!().starts_with(env!("CARGO_PKG_NAME")))

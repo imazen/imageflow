@@ -49,6 +49,10 @@ fn create_context_router() -> MethodRouter<'static, Context> {
                     Box::new(move |context: &mut Context, parsed: s::Execute001| {
                         context.execute_1(parsed).map_err(|e| e.at(here!()))
                     }));
+    r.add_responder("v1/get_version_info",
+                    Box::new(move |context: &mut Context, data: s::GetVersionInfo| {
+                        Ok(s::ResponsePayload::VersionInfo(context.get_version_info().map_err(|e| e.at(here!()))?))
+                    }));
     r.add("brew_coffee",
           Box::new(move |context: &mut Context, bytes: &[u8]| (JsonResponse::teapot(), Ok(()))));
     r
