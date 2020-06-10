@@ -84,7 +84,9 @@ impl NodeDefOneInputExpand for WatermarkDef{
                     canvas_color: None
                 };
 
-                let constraint_results = imageflow_riapi::ir4::process_constraint(input.w, input.h, &constraint).unwrap(); //TODO: fix unwrap
+                let watermark_info = ctx.job.get_image_info(watermark.io_id).map_err(|e| e.at(here!()))?;
+
+                let constraint_results = imageflow_riapi::ir4::process_constraint(watermark_info.image_width, watermark_info.image_height, &constraint).unwrap(); //TODO: fix unwrap
 
                 let w = constraint_results.scale_to.width() as u32;
                 let h =  constraint_results.scale_to.height() as u32;

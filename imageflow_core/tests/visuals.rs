@@ -236,6 +236,42 @@ fn test_watermark_image_command_string() {
     assert!(matched);
 }
 
+#[test]
+fn test_watermark_image_small() {
+    let matched = compare_multiple(Some(vec![
+        IoTestEnum::Url("https://s3-us-west-2.amazonaws.com/imageflow-resources/test_inputs/waterhouse.jpg".to_owned()),
+        IoTestEnum::Url("https://s3-us-west-2.amazonaws.com/imageflow-resources/test_inputs/1_webp_a.sm.png".to_owned())
+    ]), 500,
+                                   "WatermarkSmall", POPULATE_CHECKSUMS, DEBUG_GRAPH, vec![
+            Node::Decode {io_id: 0, commands: None},
+            Node::Constrain(imageflow_types::Constraint{
+                w: Some(800),
+                h: Some(800),
+                hints: None,
+                gravity: None,
+                mode: ConstraintMode::Within,
+                canvas_color: None
+            }),
+            Node::Watermark(imageflow_types::Watermark{
+                io_id: 1,
+                gravity: Some(imageflow_types::ConstraintGravity::Percentage {x: 100f32, y: 100f32}),
+                fit_box: Some(imageflow_types::WatermarkConstraintBox::ImagePercentage {x1: 0f32, y1: 0f32, x2: 90f32, y2: 90f32}),
+                fit_mode: Some(imageflow_types::WatermarkConstraintMode::Within),
+                opacity: Some(0.9f32),
+                hints: Some(imageflow_types::ResampleHints{
+                    sharpen_percent: Some(15f32),
+                    down_filter: None,
+                    up_filter: None,
+                    scaling_colorspace: None,
+                    background_color: None,
+                    resample_when: None,
+                    sharpen_when: None
+                })
+            })
+        ]
+    );
+    assert!(matched);
+}
 // Does not reproduce across different compiler optimizations
 // #[test]
 // fn test_image_rs_jpeg_decode(){
