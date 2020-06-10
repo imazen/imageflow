@@ -381,6 +381,7 @@ fn ir4_framewise(_info: &s::ImageInfo, url: &url::Url) -> std::result::Result<s:
         i: ::imageflow_riapi::ir4::Ir4Command::Url(url.as_str().to_owned()),
         decode_id: Some(0),
         encode_id: Some(1),
+        watermarks: None
     };
     t.translate().map_err( ServerError::LayoutSizingError).and_then(|r: ::imageflow_riapi::ir4::Ir4Result| Ok(s::Framewise::Steps(r.steps.unwrap())))
 }

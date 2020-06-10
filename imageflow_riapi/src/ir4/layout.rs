@@ -4,7 +4,7 @@ use imageflow_types as s;
 use crate::sizing;
 use crate::sizing::prelude::*;
 use crate::ir4::parsing::*;
-use imageflow_types::{ConstraintMode, ConstraintGravity};
+use imageflow_types::{ConstraintMode, ConstraintGravity, WatermarkConstraintBox};
 
 
 pub struct Ir4Layout{
@@ -373,7 +373,7 @@ impl Ir4Layout{
 
 
     /// Does not add trimwhitespace or decode/encode
-    pub fn add_steps(&self, b: &mut FramewiseBuilder) -> sizing::Result<Ir4LayoutInfo> {
+    pub fn add_steps(&self, b: &mut FramewiseBuilder, watermarks: &Option<Vec<imageflow_types::Watermark>>) -> sizing::Result<Ir4LayoutInfo> {
         b.add_rotate(self.i.srotate);
         b.add_flip(self.i.sflip);
 
@@ -463,7 +463,18 @@ impl Ir4Layout{
             }));
         }
 
-
+        if let Some(v) = watermarks{
+            for w in v {
+                match w.fit_box{
+                    Some(WatermarkConstraintBox::ImageMargins {..}) |
+                    Some(WatermarkConstraintBox::ImagePercentage {..}) |
+                    None => {
+                        b.add(s::Node::Watermark(w.clone()));
+                    }
+                    _ => {}
+                }
+            }
+        }
 
         let (left, top) = Self::align(align, image, canvas).expect("Outer box should never be smaller than inner box. All values must > 0");
 
@@ -474,6 +485,18 @@ impl Ir4Layout{
                 b.add(s::Node::ExpandCanvas { color: bgcolor, left: left as u32, top: top as u32, right: right as u32, bottom: bottom as u32 });
             } else {
                 panic!("Negative padding showed up: {},{},{},{}", left, top, right, bottom);
+            }
+        }
+
+        if let Some(v) = watermarks{
+            for w in v {
+                match w.fit_box{
+                    Some(WatermarkConstraintBox::CanvasMargins {..}) |
+                    Some(WatermarkConstraintBox::CanvasPercentage {..}) => {
+                        b.add(s::Node::Watermark(w.clone()));
+                    }
+                    _ => {}
+                }
             }
         }
 
@@ -608,7 +631,7 @@ fn test_crop_and_scale(){
     let mut b = FramewiseBuilder::new();
 
     let l  = Ir4Layout::new(Instructions{w: Some(100), h: Some(200), mode: Some(FitMode::Crop), .. Default::default() }, 768, 433);
-    l.add_steps(&mut b).unwrap();
+    l.add_steps(&mut b, &None).unwrap();
 
     assert_eq!(b.steps, vec![s::Node::Crop { x1: 275, y1: 0, x2: 492, y2: 433 },
                              s::Node::Resample2D {
@@ -631,8 +654,16 @@ fn test_crop_and_scale(){
 fn test_scale(){
     let mut b = FramewiseBuilder::new();
 
+    let w = imageflow_types::Watermark{
+        io_id: 3,
+        gravity: None,
+        fit_box: None,
+        fit_mode: None,
+        opacity: None,
+        hints: None
+    };
     let l  = Ir4Layout::new(Instructions{w: Some(2560), h: Some(1696), mode: Some(FitMode::Max), f_sharpen_when: Some(SharpenWhen::Downscaling), .. Default::default() }, 5104, 3380);
-    l.add_steps(&mut b).unwrap();
+    l.add_steps(&mut b, &Some(vec![w.clone()])).unwrap();
     assert_eq!(b.steps, vec![s::Node::Resample2D { w: 2560, h: 1696,
 
         hints: Some(s::ResampleHints {
@@ -643,7 +674,7 @@ fn test_scale(){
             background_color: Some(s::Color::Transparent),
             resample_when: Some(s::ResampleWhen::SizeDiffersOrSharpeningRequested),
             sharpen_when: Some(s::SharpenWhen::Downscaling)
-        }) }]);
+        }) }, s::Node::Watermark(w)]);
 
     // 5104x3380 "?w=2560&h=1696&mode=max&format=png&decoder.min_precise_scaling_ratio=2.1&down.colorspace=linear"
 

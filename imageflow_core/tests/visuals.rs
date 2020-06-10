@@ -201,6 +201,40 @@ fn test_watermark_image() {
     assert!(matched);
 }
 
+#[test]
+fn test_watermark_image_command_string() {
+    let matched = compare_multiple(Some(vec![
+        IoTestEnum::Url("https://s3-us-west-2.amazonaws.com/imageflow-resources/test_inputs/waterhouse.jpg".to_owned()),
+        IoTestEnum::Url("https://s3-us-west-2.amazonaws.com/imageflow-resources/test_inputs/dice.png".to_owned())
+    ]), 500,
+                                   "Watermark1", POPULATE_CHECKSUMS, DEBUG_GRAPH, vec![
+            Node::CommandString{
+                kind: CommandStringKind::ImageResizer4,
+                value: "width=800&height=800&mode=max".to_string(),
+                decode: Some(0),
+                encode: None,
+                watermarks: Some(vec![imageflow_types::Watermark{
+                    io_id: 1,
+                    gravity: Some(imageflow_types::ConstraintGravity::Percentage {x: 100f32, y: 100f32}),
+                    fit_box: Some(imageflow_types::WatermarkConstraintBox::ImagePercentage {x1: 30f32, y1: 50f32, x2: 90f32, y2: 90f32}),
+                    fit_mode: Some(imageflow_types::WatermarkConstraintMode::FitCrop),
+                    opacity: Some(0.9f32),
+                    hints: Some(imageflow_types::ResampleHints{
+                        sharpen_percent: Some(15f32),
+                        down_filter: None,
+                        up_filter: None,
+                        scaling_colorspace: None,
+                        background_color: None,
+                        resample_when: None,
+                        sharpen_when: None
+                    })
+                }
+                ])
+            }
+        ]
+    );
+    assert!(matched);
+}
 
 // Does not reproduce across different compiler optimizations
 // #[test]
@@ -299,7 +333,8 @@ fn test_jpeg_crop() {
                 kind: CommandStringKind::ImageResizer4,
                 value: "width=100&height=200&mode=crop".to_owned(),
                 decode: Some(0),
-                encode: None
+                encode: None,
+                watermarks: None
             }
         ]
     );
@@ -356,7 +391,8 @@ fn decode_cmyk_jpeg() {
             kind: CommandStringKind::ImageResizer4,
             value: "width=200&height=200&format=gif".to_owned(),
             decode: Some(0),
-            encode: Some(1)
+            encode: Some(1),
+            watermarks: None
         }
     ];
 
@@ -380,7 +416,8 @@ fn webp_lossless_alpha_decode_and_scale() {
                 kind: CommandStringKind::ImageResizer4,
                 value: "width=100&height=100".to_owned(),
                 decode: Some(0),
-                encode: None
+                encode: None,
+                watermarks: None
             }
         ]
     );
@@ -394,7 +431,8 @@ fn webp_lossy_alpha_decode_and_scale() {
                 kind: CommandStringKind::ImageResizer4,
                 value: "width=100&height=100".to_owned(),
                 decode: Some(0),
-                encode: None
+                encode: None,
+                watermarks: None
             }
         ]
     );
@@ -409,7 +447,8 @@ fn webp_lossless_alpha_roundtrip(){
             kind: CommandStringKind::ImageResizer4,
             value: "format=webp".to_owned(),
             decode: Some(0),
-            encode: Some(1)
+            encode: Some(1),
+            watermarks: None
         }
     ];
 
@@ -427,7 +466,8 @@ fn webp_lossy_alpha_roundtrip(){
             kind: CommandStringKind::ImageResizer4,
             value: "format=webp&quality=90".to_owned(),
             decode: Some(0),
-            encode: Some(1)
+            encode: Some(1),
+            watermarks: None
         }
     ];
 
@@ -445,7 +485,8 @@ fn smoke_test_gif_ir4(){
             kind: CommandStringKind::ImageResizer4,
             value: "width=200&height=200&format=gif".to_owned(),
             decode: Some(0),
-            encode: Some(1)
+            encode: Some(1),
+            watermarks: None
         }
     ];
 
@@ -464,7 +505,8 @@ fn smoke_test_png_ir4(){
             kind: CommandStringKind::ImageResizer4,
             value: "width=200&height=200&format=png".to_owned(),
             decode: Some(0),
-            encode: Some(1)
+            encode: Some(1),
+            watermarks: None
         }
     ];
 

@@ -23,13 +23,14 @@ fn get_decoder_mime(ctx: &mut OpCtxMut, ix: NodeIndex) -> Result<Option<String>>
 fn get_expand(ctx: &mut OpCtxMut, ix: NodeIndex) -> Result<::imageflow_riapi::ir4::Ir4Expand>{
     let input = ctx.first_parent_frame_info_some(ix).ok_or_else(|| nerror!(crate::ErrorKind::InvalidNodeConnections, "CommandString node requires that its parent nodes be perfectly estimable"))?;
     let params = &ctx.weight(ix).params;
-    if let NodeParams::Json(s::Node::CommandString{ref kind, ref value, ref decode, ref encode}) =
+    if let NodeParams::Json(s::Node::CommandString{ref kind, ref value, ref decode, ref encode, ref watermarks}) =
     *params {
         match *kind {
             s::CommandStringKind::ImageResizer4 => {
                 Ok(::imageflow_riapi::ir4::Ir4Expand {
                     i: ::imageflow_riapi::ir4::Ir4Command::QueryString(value.to_owned()),
                     encode_id: *encode,
+                    watermarks: watermarks.clone(),
                     source: ::imageflow_riapi::ir4::Ir4SourceFrameInfo {
                         w: input.w,
                         h: input.h,
@@ -195,7 +196,7 @@ impl NodeDef for CommandStringDef{
         let params = ctx.weight(ix).params.clone();
         let params_copy = ctx.weight(ix).params.clone();
 
-        if let NodeParams::Json(s::Node::CommandString { kind, value, decode, encode }) = params_copy {
+        if let NodeParams::Json(s::Node::CommandString { kind, value, decode, encode, watermarks }) = params_copy {
             if let Some(d_id) = decode {
                 if has_parent {
                     return Err(nerror!(crate::ErrorKind::InvalidNodeParams, "CommandString must either have decode: null or have no parent nodes. Specifying a value for decode creates a new decoder node."));
@@ -204,6 +205,7 @@ impl NodeDef for CommandStringDef{
                     i: ::imageflow_riapi::ir4::Ir4Command::QueryString(value.to_owned()),
                     decode_id: Some(d_id),
                     encode_id: None,
+                    watermarks,
                 }.get_decode_node().unwrap();
                 ctx.replace_node(ix, vec![
                     Node::from(decode_node),

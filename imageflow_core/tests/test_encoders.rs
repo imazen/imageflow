@@ -215,7 +215,8 @@ pub fn reencode_with_command(command: &str) -> Vec<s::Node>{
             kind: CommandStringKind::ImageResizer4,
             value: command.to_owned(),
             decode: Some(0),
-            encode: Some(1)
+            encode: Some(1),
+            watermarks: None
         }
     ]
 }

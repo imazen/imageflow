@@ -174,8 +174,9 @@ impl CmdBuild {
                         decode: Some(0),
                         encode: Some(1),
                         kind: s::CommandStringKind::ImageResizer4,
-                        value: query
-                    }])
+                        value: query,
+                            watermarks: None
+                        }])
                 };
                 Ok(build)
             }

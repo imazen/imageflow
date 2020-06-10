@@ -13,13 +13,15 @@ impl WatermarkDef{
     fn get_bounding_box(w: u32, h: u32, fit_box: Option<imageflow_types::WatermarkConstraintBox>) -> Option<(i32,i32,i32,i32)>{
         match fit_box{
             None => Some((0,0,w as i32,h as i32)),
-            Some(imageflow_types::WatermarkConstraintBox::ImageMargins { left, top, right, bottom }) =>
+            Some(imageflow_types::WatermarkConstraintBox::ImageMargins { left, top, right, bottom }) |
+            Some(imageflow_types::WatermarkConstraintBox::CanvasMargins { left, top, right, bottom }) =>
                 if left + right < w && top + bottom < h{
                     Some((left as i32, top as i32, w as i32 - right as i32, h as i32 - bottom as i32) )
                 }else{
                     None
                 }
-            Some(imageflow_types::WatermarkConstraintBox::ImagePercentage { x1, y1, x2, y2 }) => {
+            Some(imageflow_types::WatermarkConstraintBox::ImagePercentage { x1, y1, x2, y2 }) |
+            Some(imageflow_types::WatermarkConstraintBox::CanvasPercentage { x1, y1, x2, y2 }) => {
                 fn to_pixels(percent: f32, canvas: u32) -> i32{
                     let ratio = f32::min(100f32, f32::max(0f32,percent)) / 100f32;
                     (ratio * canvas as f32).round() as i32

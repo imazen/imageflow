@@ -46,6 +46,7 @@ pub struct Ir4Translate{
     pub i: Ir4Command,
     pub decode_id: Option<i32>,
     pub encode_id: Option<i32>,
+    pub watermarks: Option<Vec<imageflow_types::Watermark>>
 }
 
 // If using trim.threshold, delayed expansion is required.
@@ -99,7 +100,8 @@ impl Ir4Translate{
             kind: s::CommandStringKind::ImageResizer4,
             value: without_trimming.to_string(),
             decode: delayed_id,
-            encode: self.encode_id
+            encode: self.encode_id,
+            watermarks: self.watermarks.clone()
         });
 
         r.steps = Some(b.into_steps());
@@ -139,7 +141,7 @@ pub struct Ir4Expand{
     pub i: Ir4Command,
     pub source: Ir4SourceFrameInfo,
     pub encode_id: Option<i32>,
-
+    pub watermarks: Option<Vec<imageflow_types::Watermark>>
 }
 
 impl Ir4Expand{
@@ -198,7 +200,7 @@ impl Ir4Expand{
         let layout = self.get_layout(&r.parsed)?;
 
         let mut b = FramewiseBuilder::new();
-        r.canvas = Some(layout.add_steps(&mut b)?.canvas);
+        r.canvas = Some(layout.add_steps(&mut b, &self.watermarks)?.canvas);
 
         if let Some(n) = self.get_encoder_node(&r.parsed) {
             b.add(n);

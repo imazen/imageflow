@@ -426,13 +426,13 @@ impl ResampleHints {
 
 }
 
-#[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
+#[derive(Serialize, Deserialize, Copy, Clone, PartialEq, Debug)]
 pub enum CommandStringKind{
     #[serde(rename="ir4")]
     ImageResizer4
 }
 
-#[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
+#[derive(Serialize, Deserialize, Copy, Clone, PartialEq, Debug)]
 pub enum ConstraintMode {
     /// Distort the image to exactly the given dimensions.
     /// If only one dimension is specified, behaves like `fit`.
@@ -468,7 +468,7 @@ pub enum ConstraintMode {
     FitPad,
 }
 
-#[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
+#[derive(Serialize, Deserialize, Copy, Clone, PartialEq, Debug)]
 pub enum WatermarkConstraintMode {
     /// Distort the image to exactly the given dimensions.
     /// If only one dimension is specified, behaves like `fit`.
@@ -503,7 +503,7 @@ impl From<WatermarkConstraintMode> for ConstraintMode{
 
 
 
-#[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
+#[derive(Serialize, Deserialize, Copy, Clone, PartialEq, Debug)]
 pub enum ConstraintGravity {
     #[serde(rename = "center")]
     Center,
@@ -520,12 +520,17 @@ pub struct Constraint {
     pub canvas_color: Option<Color>
 }
 
-#[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
+#[derive(Serialize, Deserialize, Copy, Clone, PartialEq, Debug)]
 pub enum WatermarkConstraintBox{
     #[serde(rename = "image_percentage")]
     ImagePercentage{ x1: f32, y1: f32, x2: f32, y2: f32},
     #[serde(rename = "image_margins")]
     ImageMargins{ left: u32, top: u32, right: u32, bottom: u32},
+    #[serde(rename = "canvas_percentage")]
+    CanvasPercentage{ x1: f32, y1: f32, x2: f32, y2: f32},
+    #[serde(rename = "canvas_margins")]
+    CanvasMargins{ left: u32, top: u32, right: u32, bottom: u32},
+
 }
 
 
@@ -574,7 +579,8 @@ pub enum Node {
         kind: CommandStringKind,
         value: String,
         decode: Option<i32>,
-        encode: Option<i32>
+        encode: Option<i32>,
+        watermarks: Option<Vec<Watermark>>
     },
     #[serde(rename="constrain")]
     Constrain(Constraint),
