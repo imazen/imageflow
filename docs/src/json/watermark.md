@@ -9,12 +9,14 @@
  Meanings are the same as for [constraint modes](constrain.md#constraint-modes). *Default: `within`*
 * `fit_box` can be either `image_percentage` (a box represented by percentages of target image width/height) or 
 `image_margins` (a box represented by pixels from the edge of the image). *Default `image_margins` 0*
+* `min_canvas_width` sets a minimum canvas width below which the watermark will be hidden. 
+* `min_canvas_height` sets a minimum canvas height below which the watermark will be hidden. 
 * `opacity` (0..1) How opaque to draw the image. *Default 1.0*
 * `hints` See [resampling hints](resampling_hints.md)
 #### Example with fit_box: image_percentage
 This will align the watermark to 10% from the bottom and right edges of the image, 
 scaling the watermark down if it takes more than 80% of the image space,
-drawing it at 80% opacity and applying 15% sharpening.  
+drawing it at 80% opacity and applying 15% sharpening. It will not display on images smaller than 50x50px in either dimension.
 ```json
 {
   "watermark": {
@@ -33,7 +35,9 @@ drawing it at 80% opacity and applying 15% sharpening.
         "x2": 90,
         "y2": 90
       } 
-    },
+    }, 
+    "min_canvas_width": 50,
+    "min_canvas_height": 50,
     "opacity": 0.8,
     "hints": {
       "sharpen_percent": 15

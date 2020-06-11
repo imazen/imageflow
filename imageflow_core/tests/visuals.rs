@@ -185,6 +185,8 @@ fn test_watermark_image() {
                 gravity: Some(imageflow_types::ConstraintGravity::Percentage {x: 100f32, y: 100f32}),
                 fit_box: Some(imageflow_types::WatermarkConstraintBox::ImagePercentage {x1: 30f32, y1: 50f32, x2: 90f32, y2: 90f32}),
                 fit_mode: Some(imageflow_types::WatermarkConstraintMode::FitCrop),
+                min_canvas_width: None,
+                min_canvas_height: None,
                 opacity: Some(0.9f32),
                 hints: Some(imageflow_types::ResampleHints{
                     sharpen_percent: Some(15f32),
@@ -194,7 +196,7 @@ fn test_watermark_image() {
                     background_color: None,
                     resample_when: None,
                     sharpen_when: None
-                })
+                }),
             })
         ]
     );
@@ -215,9 +217,11 @@ fn test_watermark_image_command_string() {
                 encode: None,
                 watermarks: Some(vec![imageflow_types::Watermark{
                     io_id: 1,
-                    gravity: Some(imageflow_types::ConstraintGravity::Percentage {x: 100f32, y: 100f32}),
                     fit_box: Some(imageflow_types::WatermarkConstraintBox::ImagePercentage {x1: 30f32, y1: 50f32, x2: 90f32, y2: 90f32}),
                     fit_mode: Some(imageflow_types::WatermarkConstraintMode::FitCrop),
+                    gravity: Some(imageflow_types::ConstraintGravity::Percentage {x: 100f32, y: 100f32}),
+                    min_canvas_width: None,
+                    min_canvas_height: None,
                     opacity: Some(0.9f32),
                     hints: Some(imageflow_types::ResampleHints{
                         sharpen_percent: Some(15f32),
@@ -227,7 +231,8 @@ fn test_watermark_image_command_string() {
                         background_color: None,
                         resample_when: None,
                         sharpen_when: None
-                    })
+                    }),
+
                 }
                 ])
             }
@@ -257,6 +262,8 @@ fn test_watermark_image_small() {
                 gravity: Some(imageflow_types::ConstraintGravity::Percentage {x: 100f32, y: 100f32}),
                 fit_box: Some(imageflow_types::WatermarkConstraintBox::ImagePercentage {x1: 0f32, y1: 0f32, x2: 90f32, y2: 90f32}),
                 fit_mode: Some(imageflow_types::WatermarkConstraintMode::Within),
+                min_canvas_width: None,
+                min_canvas_height: None,
                 opacity: Some(0.9f32),
                 hints: Some(imageflow_types::ResampleHints{
                     sharpen_percent: Some(15f32),
@@ -266,7 +273,8 @@ fn test_watermark_image_small() {
                     background_color: None,
                     resample_when: None,
                     sharpen_when: None
-                })
+                }),
+
             })
         ]
     );

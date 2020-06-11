@@ -537,11 +537,13 @@ pub enum WatermarkConstraintBox{
 #[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
 pub struct Watermark{
     pub io_id: i32,
-    pub gravity: Option<ConstraintGravity>,
     pub fit_box: Option<WatermarkConstraintBox>,
     pub fit_mode: Option<WatermarkConstraintMode>,
+    pub gravity: Option<ConstraintGravity>,
+    pub min_canvas_width: Option<u32>,
+    pub min_canvas_height: Option<u32>,
     pub opacity: Option<f32>,
-    pub hints: Option<ResampleHints>
+    pub hints: Option<ResampleHints>,
 }
 
 /// Blend pixels (if transparent) or replace?

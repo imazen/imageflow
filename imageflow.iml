@@ -13,7 +13,7 @@
       <sourceFolder url="file://$MODULE_DIR$/c_components/src" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/c_components/examples" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/c_components/tests" isTestSource="true" />
-      <sourceFolder url="file://$MODULE_DIR$/c_components/benches" isTestSource="true" />
+      <sourceFolder url="file://$MODULE_DIR$/imageflow_core/benches" isTestSource="true" />
       <sourceFolder url="file://$MODULE_DIR$/imageflow_server/src" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/imageflow_server/examples" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/imageflow_server/tests" isTestSource="true" />
