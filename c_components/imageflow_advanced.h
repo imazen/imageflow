@@ -195,7 +195,7 @@ typedef bool (*flow_io_seek_function)(flow_c * c, struct flow_io * io, int64_t p
 // Make your own codecs
 struct flow_decoder_frame_info;
 
-typedef bool (*codec_intialize)(flow_c * c, struct flow_codec_instance * instance);
+typedef bool (*codec_initialize)(flow_c * c, struct flow_codec_instance * instance);
 
 typedef bool (*codec_get_info_fn)(flow_c * c, void * codec_state, struct flow_decoder_info * decoder_info_ref);
 typedef bool (*codec_switch_frame_fn)(flow_c * c, void * codec_state, size_t frame_index);
@@ -220,7 +220,7 @@ struct flow_codec_magic_bytes {
 
 struct flow_codec_definition {
     int64_t codec_id;
-    codec_intialize initialize;
+    codec_initialize initialize;
     codec_get_info_fn get_info;
     codec_get_frame_info_fn get_frame_info;
     codec_set_downscale_hints_fn set_downscale_hints;
@@ -231,8 +231,6 @@ struct flow_codec_definition {
     const char * name;
     const char * preferred_mime_type;
     const char * preferred_extension;
-    struct flow_codec_magic_bytes * magic_byte_sets;
-    size_t magic_byte_sets_count;
 };
 
 struct flow_context_codec_set {
@@ -296,7 +294,6 @@ struct flow_convolution_kernel {
 
 PUB bool flow_bitmap_bgra_transpose(flow_c * c, struct flow_bitmap_bgra * from, struct flow_bitmap_bgra * to);
 PUB bool flow_bitmap_bgra_transpose_slow(flow_c * c, struct flow_bitmap_bgra * from, struct flow_bitmap_bgra * to);
-PUB bool flow_bitmap_bgra_sharpen_block_edges(flow_c * c, struct flow_bitmap_bgra * im, int block_size, float pct);
 
 PUB struct flow_bitmap_bgra * flow_bitmap_bgra_create(flow_c * c, int sx, int sy, bool zeroed,
                                                       flow_pixel_format format);
@@ -342,14 +339,14 @@ PUB void flow_interpolation_line_contributions_destroy(flow_c * c, struct flow_i
 PUB struct flow_convolution_kernel * flow_convolution_kernel_create(flow_c * c, uint32_t radius);
 PUB void flow_convolution_kernel_destroy(flow_c * c, struct flow_convolution_kernel * kernel);
 
-PUB struct flow_convolution_kernel * flow_convolution_kernel_create_guassian(flow_c * c, double stdDev,
+PUB struct flow_convolution_kernel * flow_convolution_kernel_create_gaussian(flow_c * c, double stdDev,
                                                                              uint32_t radius);
 // The only error these 2 could generate would be a null pointer. Should they have a context just for this?
 PUB double flow_convolution_kernel_sum(struct flow_convolution_kernel * kernel);
 PUB void flow_convolution_kernel_normalize(struct flow_convolution_kernel * kernel, float desiredSum);
 PUB struct flow_convolution_kernel * flow_convolution_kernel_create_gaussian_normalized(flow_c * c, double stdDev,
                                                                                         uint32_t radius);
-PUB struct flow_convolution_kernel * flow_convolution_kernel_create_guassian_sharpen(flow_c * c, double stdDev,
+PUB struct flow_convolution_kernel * flow_convolution_kernel_create_gaussian_sharpen(flow_c * c, double stdDev,
                                                                                      uint32_t radius);
 
 PUB bool flow_bitmap_bgra_populate_histogram(flow_c * c, struct flow_bitmap_bgra * bmp, uint64_t * histograms,

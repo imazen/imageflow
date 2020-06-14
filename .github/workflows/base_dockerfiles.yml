@@ -1,0 +1,77 @@
+name: Build base dockerfiles for test and production
+
+# uses https://github.com/elgohr/Publish-Docker-Github-Action
+
+on:
+  push:
+    paths:
+      - 'docker/imageflow_base_os/Dockerfile'
+      - 'docker/imageflow_build_ubuntu16/Dockerfile'
+      - 'docker/imageflow_build_ubuntu18/Dockerfile'
+      - 'docker/imageflow_build_ubuntu18_debug/Dockerfile'
+  schedule:
+    # Also build on the first and sixteenth of every month
+    - cron: '0 0 1,16 * *'
+
+jobs:
+  base_os:
+    name: imageflow_base_os
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v1
+    - name: Publish to Docker Repository
+      uses: elgohr/Publish-Docker-Github-Action@master
+      env:
+        BASE_OS_SOURCE_COMMIT: $GITHUB_SHA
+      with:
+        name: imazen/imageflow_base_os
+        username: ${{ secrets.DOCKER_USERNAME }}
+        password: ${{ secrets.DOCKER_PASSWORD }}
+        workdir: docker/imageflow_base_os
+        buildargs: BASE_OS_SOURCE_COMMIT
+  ubuntu16:
+    name: imageflow_build_ubuntu16
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v1
+    - name: Publish to Docker Repository
+      uses: elgohr/Publish-Docker-Github-Action@master
+      with:
+        name: imazen/imageflow_build_ubuntu16
+        username: ${{ secrets.DOCKER_USERNAME }}
+        password: ${{ secrets.DOCKER_PASSWORD }}
+        workdir: docker/imageflow_build_ubuntu16
+        snapshot: true
+  ubuntu18:
+    name: imageflow_build_ubuntu18
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v1
+    - name: Publish to Docker Repository
+      uses: elgohr/Publish-Docker-Github-Action@master
+      with:
+        name: imazen/imageflow_build_ubuntu18
+        username: ${{ secrets.DOCKER_USERNAME }}
+        password: ${{ secrets.DOCKER_PASSWORD }}
+        workdir: docker/imageflow_build_ubuntu18
+  ubuntu18_debug:
+    name: imageflow_build_ubuntu18_debug
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v1
+    - name: Publish to Docker Repository
+      uses: elgohr/Publish-Docker-Github-Action@master
+      with:
+        name: imazen/imageflow_build_ubuntu18_debug
+        username: ${{ secrets.DOCKER_USERNAME }}
+        password: ${{ secrets.DOCKER_PASSWORD }}
+        workdir: docker/imageflow_build_ubuntu18_debug
+        snapshot: true
+
+
+        
+#tag_names:true
+#snapshot_ture
+
+
+ 

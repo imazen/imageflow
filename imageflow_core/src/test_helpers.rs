@@ -1,12 +1,12 @@
-use internal_prelude::works_everywhere::*;
-use clients::stateless;
+use crate::internal_prelude::works_everywhere::*;
+use crate::clients::stateless;
 
 
 pub mod process_testing {
-    use ::internal_prelude::works_everywhere::*;
+    use crate::internal_prelude::works_everywhere::*;
     use ::imageflow_helpers::process_testing::*;
     use super::*;
-    use ::clients::stateless;
+    use crate::clients::stateless;
 
 
     pub trait ProcTestContextExtras {
@@ -63,24 +63,6 @@ pub mod process_testing {
 }
 
 #[derive(Clone,Debug,PartialEq)]
-pub enum TestImageSource {
-    Url(String),
-    Blank(BlankImage)
-}
-
-impl TestImageSource{
-    pub fn get_bytes(&self) -> Vec<u8>{
-        match *self{
-            TestImageSource::Url(ref url) => {
-                ::imageflow_helpers::fetching::fetch_bytes(url).unwrap()
-            },
-            TestImageSource::Blank(ref blank) => {
-                blank.generate().bytes
-            }
-        }
-    }
-}
-#[derive(Clone,Debug,PartialEq)]
 pub struct BlankImage{
     pub w: u32,
     pub h: u32,
@@ -89,7 +71,7 @@ pub struct BlankImage{
 }
 
 impl BlankImage{
-    fn generate(&self) -> stateless::BuildOutput{
+    pub fn generate(&self) -> stateless::BuildOutput{
         // Invalid read here; the result of create_canvas is not being accessed correctly.
         let req = stateless::BuildRequest {
             inputs: vec![],
@@ -106,7 +88,7 @@ impl BlankImage{
             export_graphs_to: None, /* Some(std::path::PathBuf::from(format!("./{}/{}_debug", dir, filename_without_ext))) */
         };
 
-        let result = ::clients::stateless::LibClient::new().build(req).unwrap();
+        let result = crate::clients::stateless::LibClient::new().build(req).unwrap();
         result.outputs.into_iter().next().unwrap()
     }
 }

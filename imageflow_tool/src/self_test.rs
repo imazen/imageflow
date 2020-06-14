@@ -12,10 +12,28 @@ use self::imageflow_core::test_helpers::process_testing::ProcOutputExtras;
 
 
 #[derive(Clone,Debug,PartialEq)]
+pub enum TestImageSource {
+    Url(String),
+    Blank(BlankImage)
+}
+
+impl TestImageSource{
+    pub fn get_bytes(&self) -> Vec<u8>{
+        match *self{
+            TestImageSource::Url(ref url) => {
+                ::imageflow_http_helpers::fetch_bytes(url).unwrap()
+            },
+            TestImageSource::Blank(ref blank) => {
+                blank.generate().bytes
+            }
+        }
+    }
+}
+
+#[derive(Clone,Debug,PartialEq)]
 enum ReplacementInput{
     File{path: String, source: TestImageSource
-    },
-    Url(String),
+    }
 }
 impl ReplacementInput{
     pub fn prepare(&self, c: &ProcTestContext){
@@ -25,13 +43,11 @@ impl ReplacementInput{
                 let bytes = source.get_bytes();
                 c.write_file(path, &bytes);
             }
-            _ => {}
         }
     }
     pub fn parameter(& self) -> String{
         match *self{
             ReplacementInput::File{ref path, ..} => path.to_owned(),
-            ReplacementInput::Url(ref str) => str.to_owned()
         }
     }
 }
@@ -112,7 +128,7 @@ impl BuildScenario{
         let json_fname = format!("{}.json", self.slug);
         c.write_json(&json_fname, &self.recipe);
 
-        let mut command = format!("{} v0.1/build --json {}", c.bin_location().to_str().unwrap(), json_fname);
+        let mut command = format!("{} v1/build --json {}", c.bin_location().to_str().unwrap(), json_fname);
         if !self.new_inputs.is_empty() {
             let arg = format!(" --in {}", self.new_inputs.as_slice().iter().map(|i| i.parameter()).collect::<Vec<String>>().join(" "));
             command.push_str(&arg);
@@ -165,7 +181,8 @@ fn scenario_export_4() -> BuildScenario{
         description: "Generate 4 sizes of a jpeg",
         slug: "export_4_sizes",
         recipe: framewise.wrap_in_build_0_1(),
-        new_inputs: vec![ReplacementInput::Url("http://s3-us-west-2.amazonaws.com/imageflow-resources/test_inputs/waterhouse.jpg".to_owned())],
+        new_inputs: vec![ReplacementInput::File{ path: "waterhouse.jpg".to_owned(),
+        source: TestImageSource::Url("http://s3-us-west-2.amazonaws.com/imageflow-resources/test_inputs/waterhouse.jpg".to_owned())}],
         new_outputs: vec![ReplacementOutput::file(1, "waterhouse_w1600.jpg"),
         ReplacementOutput::file(2, "waterhouse_w1200.jpg"),
         ReplacementOutput::file(3, "waterhouse_w800.jpg"),
@@ -180,7 +197,7 @@ const BLUE_PNG32_200X200_B64:&'static str = "iVBORw0KGgoAAAANSUhEUgAAAMgAAADICAY
 fn scenario_pure_json() -> BuildScenario{
     let framewise = fluent::fluently()
         .decode(0)
-        .constrain_within(Some(40), Some(40), Some(s::ConstraintResamplingHints::with(None, Some(25f32))))
+        .constrain_within(Some(40), Some(40), Some(s::ResampleHints::with(None, Some(25f32))))
         .encode(1, s::EncoderPreset::libpng32()).builder().to_framewise();
 
     BuildScenario{
@@ -198,7 +215,7 @@ fn scenario_pure_json() -> BuildScenario{
 fn scenario_response_stdout() -> BuildScenario{
     let framewise = fluent::fluently()
         .decode(0)
-        .constrain_within(Some(40), Some(40), Some(s::ConstraintResamplingHints::with(None, Some(25f32))))
+        .constrain_within(Some(40), Some(40), Some(s::ResampleHints::with(None, Some(25f32))))
         .encode(1, s::EncoderPreset::libpng32()).builder().to_framewise();
 
     BuildScenario{
@@ -223,18 +240,22 @@ fn scenario_laundry_list() -> BuildScenario{
             height:1600
     })])})
         .constrain_within(Some(1400), None,None)
-        .constrain_within(Some(1400), Some(1400), Some(s::ConstraintResamplingHints::with(Some(s::Filter::CatmullRom), Some(40f32))))
+        .constrain_within(Some(1400), Some(1400), Some(s::ResampleHints::with(Some(s::Filter::CatmullRom), Some(40f32))))
         .to(s::Node::Resample2D {
             w: 800,
             h: 800,
-            down_filter: Some(s::Filter::Robidoux),
-            up_filter: Some(s::Filter::Ginseng),
-            scaling_colorspace: Some(s::ScalingFloatspace::Linear),
             hints: Some(s::ResampleHints {
                 sharpen_percent: Some(10f32),
-                background_color: None
+                background_color: None,
+                resample_when: None,
+                down_filter: Some(s::Filter::Robidoux),
+                up_filter: Some(s::Filter::Ginseng),
+                scaling_colorspace: Some(s::ScalingFloatspace::Linear),
+                sharpen_when: None
             }),
         })
+        .to(s::Node::RegionPercent {x1: -1f32, y1: -1f32, x2: 101f32, y2: 101f32, background_color: s::Color::Transparent})
+        .to(s::Node::Region {x1: -1, y1: -1, x2: 800, y2: 800, background_color: s::Color::Transparent})
         .to(s::Node::ApplyOrientation{flag: 7}).flip_horizontal().flip_vertical().transpose().rotate_90().rotate_180().rotate_270()
         .to(s::Node::FillRect {
             x1: 0,
@@ -277,7 +298,7 @@ fn scenario_laundry_list() -> BuildScenario{
 fn scenario_request_base64() -> BuildScenario{
     let framewise = fluent::fluently()
         .decode(0)
-        .constrain_within(Some(5), Some(5), Some(s::ConstraintResamplingHints::with(None, Some(25f32))))
+        .constrain_within(Some(5), Some(5), Some(s::ResampleHints::with(None, Some(25f32))))
         .encode(1, s::EncoderPreset::libpng32()).builder().to_framewise();
 
     BuildScenario{
@@ -338,9 +359,9 @@ pub fn run(tool_location: Option<PathBuf>) -> i32 {
         c.create_blank_image_here("200x200", 200, 200, s::EncoderPreset::libjpeg_turbo());
         c.create_blank_image_here("200x200", 200, 200, s::EncoderPreset::libpng32());
 
-        c.exec("v0.1/build --json example1.json --in 200x200.png 200x200.jpg --out out0.jpg --response out0.json").expect_exit_0_no_output("");
+        c.exec("v1/build --json example1.json --in 200x200.png 200x200.jpg --out out0.jpg --response out0.json").expect_exit_0_no_output("");
         // TODO: Verify out0.json exists and was created
-        c.exec("v0.1/build --bundle-to bundle_example_1 --json example1.json --in 200x200.png 200x200.jpg --out out0.jpg --response out0.json").expect_status_code(Some(0));
+        c.exec("v1/build --bundle-to bundle_example_1 --json example1.json --in 200x200.png 200x200.jpg --out out0.jpg --response out0.json").expect_status_code(Some(0));
         //TODO: verify bundle was created
         //TODO: test URL fetch
     }
@@ -351,7 +372,7 @@ pub fn run(tool_location: Option<PathBuf>) -> i32 {
         c.create_blank_image_here("200x200", 200, 200, s::EncoderPreset::libpng32());
 
         let result =
-            c.exec("v0.1/build --json example2.json --in 200x200.png 200x200.jpg --out out0.jpg");
+            c.exec("v1/build --json example2.json --in 200x200.png 200x200.jpg --out out0.jpg");
 
         result.expect_status_code(Some(0));
 
@@ -395,7 +416,7 @@ pub fn run(tool_location: Option<PathBuf>) -> i32 {
         c.create_blank_image_here("100x100", 100, 100, s::EncoderPreset::libjpeg_turbo());
 
         let result =
-            c.exec("v0.1/ir4 --command width=60&height=40&mode=max&format=jpg --in 100x100.jpg --out out4.jpg");
+            c.exec("v1/querystring --command width=60&height=40&mode=max&format=jpg --in 100x100.jpg --out out4.jpg");
 
         result.expect_status_code(Some(0));
 
@@ -410,28 +431,30 @@ pub fn run(tool_location: Option<PathBuf>) -> i32 {
             }
             _ => panic!("Build result not sent"),
         }
+    }
+    {
+        let c = c.subfolder_context("queryquiet");
+        c.create_blank_image_here("100x100", 100, 100, s::EncoderPreset::libjpeg_turbo());
+
+        let result =
+            c.exec("v1/querystring --quiet --command \"width=60&height=40&mode=max&format=jpg\" --in 100x100.jpg --out out4.jpg");
+
+        result.expect_status_code(Some(0));
+        assert_eq!(0, result.stdout_byte_count());
 
     }
     {
-        let c = c.subfolder_context("gif");
+        let c = c.subfolder_context("0.1/ir4");
+        c.create_blank_image_here("100x100", 100, 100, s::EncoderPreset::libjpeg_turbo());
+
         let result =
-            c.exec("v0.1/ir4 --command width=200&height=200&format=gif --in https://s3-us-west-2.amazonaws.com/imageflow-resources/test_inputs/waterhouse.jpg --out out5.gif");
+            c.exec("v0.1/ir4 --quiet --command \"width=60&height=40&mode=max&format=jpg\" --in 100x100.jpg --out out4.jpg");
 
         result.expect_status_code(Some(0));
-
-//        let resp: s::Response001 = result.parse_stdout_as::<s::Response001>().unwrap();
-//        match resp.data {
-//            s::ResponsePayload::BuildResult(info) => {
-//
-//                assert_eq!(info.encodes.len(), 1);
-//                let encode: &s::EncodeResult = &info.encodes[0];
-//                assert_eq!(encode.preferred_extension, "gif".to_owned());
-//            }
-//            _ => panic!("Build result not sent"),
-//        }
-
+        assert_eq!(0, result.stdout_byte_count());
 
     }
+
 
     // It seems that Clap always uses status code 1 to indicate a parsing failure
     c.exec("bad command").expect_status_code(Some(1));
@@ -439,7 +462,7 @@ pub fn run(tool_location: Option<PathBuf>) -> i32 {
     // Write something unexpected, but valid JSON
     c.write_json("random_object.json", &s::PngBitDepth::Png24);
 
-    c.exec("v0.1/build --json random_object.json")
+    c.exec("v1/build --json random_object.json")
         .expect_status_code(Some(65))
         .expect_stderr_contains("expected struct Build001");
     // .expect_stdout_contains("")   ; //todo: should respond with JSON version of error message
@@ -455,7 +478,7 @@ pub fn run(tool_location: Option<PathBuf>) -> i32 {
             framewise: b.builder().to_framewise(),
             io: vec![]};
             c.write_json("bad__canvas_and_input_equal.json",&recipe);
-        c.exec("v0.1/build --json bad__canvas_and_input_equal.json").dump();
+        c.exec("v1/build --json bad__canvas_and_input_equal.json").dump();
     }
 
     {
@@ -482,7 +505,7 @@ pub fn run(tool_location: Option<PathBuf>) -> i32 {
             io: vec![],
         };
         c.write_json("bad__cycle.json",&recipe);
-        c.exec("v0.1/build --json bad__cycle.json").dump();
+        c.exec("v1/build --json bad__cycle.json").dump();
     }
     {
         // Test invalid edges (FlipV doesn't take a canvas)
@@ -509,7 +532,7 @@ pub fn run(tool_location: Option<PathBuf>) -> i32 {
 //            io: vec![],
 //        };
 //        c.write_json("bad__node_inputs.json",&recipe);
-//        c.exec("v0.1/build --json bad__node_inputs.json").dump();
+//        c.exec("v1/build --json bad__node_inputs.json").dump();
     }
     {
         // Test a loop TODO: Fix
@@ -529,7 +552,7 @@ pub fn run(tool_location: Option<PathBuf>) -> i32 {
 //            io: vec![],
 //        };
 //        c.write_json("bad__loop.json",&recipe);
-//        let _ = c.exec("v0.1/build --json bad__loop.json");
+//        let _ = c.exec("v1/build --json bad__loop.json");
         // Stack overflow. None on linux, Some(1073741571) on windows
         //assert_eq!(result., None);
     }
@@ -576,12 +599,12 @@ pub fn test_capture(tool_location: Option<PathBuf>) -> i32 {
         c.create_blank_image_here("200x200", 200, 200, s::EncoderPreset::libjpeg_turbo());
         c.create_blank_image_here("200x200", 200, 200, s::EncoderPreset::libpng32());
 
-        c.exec("v0.1/build --json example1.json --in 200x200.png 200x200.jpg --out out0.jpg --response out0.json").expect_exit_0_no_output("");
+        c.exec("v1/build --json example1.json --in 200x200.png 200x200.jpg --out out0.jpg --response out0.json").expect_exit_0_no_output("");
         // TODO: Verify out0.json exists and was created
-        c.exec("v0.1/build --bundle-to bundle_example_1 --json example1.json --in 200x200.png 200x200.jpg --out out0.jpg --response out0.json").expect_status_code(Some(0));
+        c.exec("v1/build --bundle-to bundle_example_1 --json example1.json --in 200x200.png 200x200.jpg --out out0.jpg --response out0.json").expect_status_code(Some(0));
         //TODO: verify bundle was created
         //TODO: test URL fetch
-        c.subfolder_context(Path::new("bundle_example_1")).exec("--capture-to recipe v0.1/build --json recipe.json --response response.json").dump().expect_status_code(Some(0));
+        c.subfolder_context(Path::new("bundle_example_1")).exec("--capture-to recipe v1/build --json recipe.json --response response.json").dump().expect_status_code(Some(0));
 
     }
     {
@@ -590,7 +613,7 @@ pub fn test_capture(tool_location: Option<PathBuf>) -> i32 {
         c.create_blank_image_here("200x200", 200, 200, s::EncoderPreset::libjpeg_turbo());
         c.create_blank_image_here("200x200", 200, 200, s::EncoderPreset::libpng32());
 
-        c.exec("v0.1/build --debug-package debug_example --json example1.json --in 200x200.png 200x200.jpg --out out0.jpg --response out0.json").expect_status_code(Some(0));
+        c.exec("v1/build --debug-package debug_example --json example1.json --in 200x200.png 200x200.jpg --out out0.jpg --response out0.json").expect_status_code(Some(0));
     }
 
 

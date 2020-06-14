@@ -1,12 +1,58 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <module type="RUST_MODULE" version="4">
-  <component name="NewModuleRootManager" inherit-compiler-output="true">
-    <exclude-output />
+  <component name="NewModuleRootManager">
     <content url="file://$MODULE_DIR$">
       <sourceFolder url="file://$MODULE_DIR$/src" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/examples" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/tests" isTestSource="true" />
       <sourceFolder url="file://$MODULE_DIR$/benches" isTestSource="true" />
+      <sourceFolder url="file://$MODULE_DIR$/imageflow_core/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/imageflow_core/examples" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/imageflow_core/tests" isTestSource="true" />
+      <sourceFolder url="file://$MODULE_DIR$/imageflow_core/benches" isTestSource="true" />
+      <sourceFolder url="file://$MODULE_DIR$/c_components/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/c_components/examples" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/c_components/tests" isTestSource="true" />
+      <sourceFolder url="file://$MODULE_DIR$/imageflow_core/benches" isTestSource="true" />
+      <sourceFolder url="file://$MODULE_DIR$/imageflow_server/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/imageflow_server/examples" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/imageflow_server/tests" isTestSource="true" />
+      <sourceFolder url="file://$MODULE_DIR$/imageflow_server/benches" isTestSource="true" />
+      <sourceFolder url="file://$MODULE_DIR$/imageflow_riapi/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/imageflow_riapi/examples" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/imageflow_riapi/tests" isTestSource="true" />
+      <sourceFolder url="file://$MODULE_DIR$/imageflow_riapi/benches" isTestSource="true" />
+      <sourceFolder url="file://$MODULE_DIR$/imageflow_types/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/imageflow_types/examples" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/imageflow_types/tests" isTestSource="true" />
+      <sourceFolder url="file://$MODULE_DIR$/imageflow_types/benches" isTestSource="true" />
+      <sourceFolder url="file://$MODULE_DIR$/imageflow_tool/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/imageflow_tool/examples" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/imageflow_tool/tests" isTestSource="true" />
+      <sourceFolder url="file://$MODULE_DIR$/imageflow_tool/benches" isTestSource="true" />
+      <sourceFolder url="file://$MODULE_DIR$/imageflow_helpers/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/imageflow_helpers/examples" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/imageflow_helpers/tests" isTestSource="true" />
+      <sourceFolder url="file://$MODULE_DIR$/imageflow_helpers/benches" isTestSource="true" />
+      <sourceFolder url="file://$MODULE_DIR$/c_components/tests/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/c_components/tests/examples" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/c_components/tests/tests" isTestSource="true" />
+      <sourceFolder url="file://$MODULE_DIR$/c_components/tests/benches" isTestSource="true" />
+      <sourceFolder url="file://$MODULE_DIR$/imageflow_abi/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/imageflow_abi/examples" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/imageflow_abi/tests" isTestSource="true" />
+      <sourceFolder url="file://$MODULE_DIR$/imageflow_abi/benches" isTestSource="true" />
+      <sourceFolder url="file://$MODULE_DIR$/imageflow/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/imageflow_http_helpers/src" isTestSource="false" />
+      <excludeFolder url="file://$MODULE_DIR$/c_components/target" />
+      <excludeFolder url="file://$MODULE_DIR$/c_components/tests/target" />
+      <excludeFolder url="file://$MODULE_DIR$/imageflow_abi/target" />
+      <excludeFolder url="file://$MODULE_DIR$/imageflow_core/target" />
+      <excludeFolder url="file://$MODULE_DIR$/imageflow_helpers/target" />
+      <excludeFolder url="file://$MODULE_DIR$/imageflow_riapi/target" />
+      <excludeFolder url="file://$MODULE_DIR$/imageflow_server/target" />
+      <excludeFolder url="file://$MODULE_DIR$/imageflow_tool/target" />
+      <excludeFolder url="file://$MODULE_DIR$/imageflow_types/target" />
       <excludeFolder url="file://$MODULE_DIR$/target" />
     </content>
     <orderEntry type="inheritedJdk" />

@@ -1,9 +1,9 @@
 
-use build_env_info as benv;
+use crate::build_env_info as benv;
 use std;
 
 
-fn dirty() -> bool {
+pub fn dirty() -> bool {
     match *benv::BUILD_ENV_INFO.get("GIT_STATUS").unwrap() {
         Some(v) => v.contains("modified"),
         None => true, //because we don't know
@@ -19,6 +19,11 @@ pub fn crate_parent_folder() -> std::path::PathBuf{
 fn dirty_star() -> &'static str {
     if dirty() { "*" } else { "" }
 }
+
+pub fn last_commit() -> &'static str {
+    benv::GIT_COMMIT
+}
+
 
 fn commit9_and_date() -> String {
     format!("{}{} {}",
@@ -40,6 +45,9 @@ pub fn get_build_env_value(key: &str) -> &Option<&'static str> {
          Some(v) => v,
          None => &NONE
      }
+}
+pub fn get_build_date() -> &'static str{
+    benv::GENERATED_DATETIME_UTC
 }
 
 fn built_ago() -> (i64, &'static str){

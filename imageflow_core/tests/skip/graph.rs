@@ -12,14 +12,14 @@
 //struct flow_graph * g = flow_graph_create(c, 10, 10, 200, 2.0);
 //ERR(c);
 //
-//int32_t input_placeholder = 0, output_placeholder = 1;
+//i32 input_placeholder = 0, output_placeholder = 1;
 //
-//int32_t input = flow_node_create_decoder(c, &g, -1, input_placeholder);
-//int32_t clone_a = flow_node_create_clone(c, &g, input);
+//i32 input = flow_node_create_decoder(c, &g, -1, input_placeholder);
+//i32 clone_a = flow_node_create_clone(c, &g, input);
 //clone_a = flow_node_create_rotate_90(c, &g, clone_a);
-//int32_t clone_b = flow_node_create_clone(c, &g, input);
+//i32 clone_b = flow_node_create_clone(c, &g, input);
 //clone_b = flow_node_create_rotate_180(c, &g, clone_b);
-//int32_t clone_c = flow_node_create_clone(c, &g, input);
+//i32 clone_c = flow_node_create_clone(c, &g, input);
 //clone_c = flow_node_create_rotate_270(c, &g, clone_c);
 //flow_node_create_encoder_placeholder(c, &g, clone_a, output_placeholder);
 //
@@ -39,9 +39,9 @@
 //ERR(c);
 //
 //struct flow_bitmap_bgra * p;
-//int32_t first = flow_node_create_bitmap_bgra_reference(c, &g, -1, &p);
-//int32_t encoder = flow_node_create_encoder_placeholder(c, &g, first, 0);
-//int32_t second = flow_node_create_clone(c, &g, encoder);
+//i32 first = flow_node_create_bitmap_bgra_reference(c, &g, -1, &p);
+//i32 encoder = flow_node_create_encoder_placeholder(c, &g, first, 0);
+//i32 second = flow_node_create_clone(c, &g, encoder);
 //REQUIRE_FALSE(flow_context_has_error(c));
 //REQUIRE_FALSE(flow_graph_validate(c, g));
 //REQUIRE(flow_context_error_reason(c) == flow_status_Graph_invalid);
@@ -51,7 +51,7 @@
 //flow_node_delete(c, g, second);
 //
 //// Canvas input not permitted to encoder
-//int32_t canvas = flow_node_create_clone(c, &g, -1);
+//i32 canvas = flow_node_create_clone(c, &g, -1);
 //flow_edge_create(c, &g, canvas, encoder, flow_edgetype_canvas);
 //// We shouldn't have an error until we call validate
 //REQUIRE_FALSE(flow_context_has_error(c));

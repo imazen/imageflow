@@ -1,49 +1,69 @@
-*.jpg   binary
-*.png   binary
-*.gif   binary
+* text=lf
 
-*.cs eol=lf diff=csharp
-*.vb eol=lf
-*.resx eol=lf
-*.c eol=lf diff=cpp
-*.cpp eol=lf diff=cpp
-*.cxx eol=lf diff=cpp
-*.h eol=lf diff=cpp
-*.hxx eol=lf diff=cpp
-*.py eol=lf
-*.rb eol=lf
-*.java eol=lf
-*.html eol=lf diff=html
-*.htm eol=lf diff=html
-*.css eol=lf
-*.scss eol=lf
-*.sass eol=lf
-*.less eol=lf
-*.js eol=lf
-*.json eol=lf
-*.lisp eol=lf
-*.clj eol=lf
-*.sql eol=lf
-*.php eol=lf
-*.lua eol=lf
-*.m eol=lf
-*.asm eol=lf
-*.erl eol=lf
-*.fs eol=lf
-*.fsx eol=lf
-*.hs eol=lf
-*.yml eol=lf
-*.rs eol=lf
+*.cs text eol=lf diff=csharp
+*.vb text eol=lf
+*.resx text eol=lf
+*.c text eol=lf diff=cpp
+*.cpp text eol=lf diff=cpp
+*.cxx text eol=lf diff=cpp
+*.h text eol=lf diff=cpp
+*.hxx text eol=lf diff=cpp
+*.hpp text eol=lf diff=cpp
+*.py text eol=lf
+*.rb text eol=lf
+*.java text eol=lf
+*.html text eol=lf diff=html
+*.htm text eol=lf diff=html
+*.css text eol=lf
+*.scss text eol=lf
+*.sass text eol=lf
+*.less text eol=lf
+*.js text eol=lf
+*.json text eol=lf
+*.lisp text eol=lf
+*.clj text eol=lf
+*.sql text eol=lf
+*.php text eol=lf
+*.lua text eol=lf
+*.m text eol=lf
+*.asm text eol=lf
+*.erl text eol=lf
+*.fs text eol=lf
+*.fsx text eol=lf
+*.hs text eol=lf
+*.yml text eol=lf
+*.rs text eol=lf
+*.sh text eol=lf
+*.toml text eol=lf
+*.md text eol=lf
+*.pem text eol=lf
+*.xml text eol=lf
+*.svg -text
+*.config text eol=lf
+Dockerfile text eol=lf
 
 
+*.csproj text eol=crlf
+*.xproj text eol=crlf
+*.vbproj text eol=crlf
+*.fsproj text eol=crlf
+*.dbproj text eol=crlf
+*.nuspec text eol=crlf
+*.props text eol=crlf
+*.sln text eol=crlf
+*.txt text eol=crlf
+*.bat text eol=crlf
 
-*.csproj eol=crlf
-*.xproj eol=crlf
-*.vbproj eol=crlf
-*.fsproj eol=crlf
-*.dbproj eol=crlf
-*.sln eol=crlf
-*.txt eol=crlf
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.pdf binary
+*.bmp binary
+*.ppm binary
+*.gif binary
+*.tif binary
+*.tiff binary
 
-.gitattributes eol=lf
-.gitignore eol=lf
+
+.gitattributes text eol=lf
+.gitignore text eol=lf

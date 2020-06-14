@@ -15,12 +15,12 @@ impl BitmapBgraDef{
         if let NodeParams::Json(s::Node::FlowBitmapBgraPtr { ptr_to_flow_bitmap_bgra_ptr }) = *p {
             let ptr: *mut *mut BitmapBgra = ptr_to_flow_bitmap_bgra_ptr as *mut *mut BitmapBgra;
             if ptr.is_null() {
-                return Err(nerror!(::ErrorKind::InvalidNodeParams, "The pointer to the bitmap bgra pointer is null! Must be a valid reference to a pointer's location."));
+                return Err(nerror!(crate::ErrorKind::InvalidNodeParams, "The pointer to the bitmap bgra pointer is null! Must be a valid reference to a pointer's location."));
             } else {
                 Ok(ptr)
             }
         }else{
-            Err(nerror!(::ErrorKind::NodeParamsMismatch, "Need FlowBitmapBgraPtr, got {:?}", p))
+            Err(nerror!(crate::ErrorKind::NodeParamsMismatch, "Need FlowBitmapBgraPtr, got {:?}", p))
         }
     }
 }
@@ -72,7 +72,7 @@ impl NodeDef for BitmapBgraDef {
         } else {
             unsafe {
                 if (*ptr).is_null() {
-                    return Err(nerror!(::ErrorKind::InvalidNodeParams, "When serving as an input node (no parent), FlowBitmapBgraPtr must point to a pointer to a valid BitmapBgra struct."));
+                    return Err(nerror!(crate::ErrorKind::InvalidNodeParams, "When serving as an input node (no parent), FlowBitmapBgraPtr must point to a pointer to a valid BitmapBgra struct."));
                 }
                 Ok(NodeResult::Frame(*ptr))
             }
@@ -87,7 +87,7 @@ fn decoder_get_io_id(params: &NodeParams) -> Result<i32> {
     if let NodeParams::Json(s::Node::Decode { io_id, .. }) = *params {
         Ok(io_id)
     }else{
-        Err(nerror!(::ErrorKind::NodeParamsMismatch, "Need Decode, got {:?}", params))
+        Err(nerror!(crate::ErrorKind::NodeParamsMismatch, "Need Decode, got {:?}", params))
     }
 }
 fn decoder_estimate(ctx: &mut OpCtxMut, ix: NodeIndex) -> Result<FrameEstimate> {
@@ -160,7 +160,7 @@ impl DecoderPrimitiveDef{
         if let NodeParams::Json(s::Node::Decode { io_id, ref commands }) = *params {
             Ok((io_id, commands.clone()))
         }else{
-            Err(nerror!(::ErrorKind::NodeParamsMismatch, "Need Decode, got {:?}", params))
+            Err(nerror!(crate::ErrorKind::NodeParamsMismatch, "Need Decode, got {:?}", params))
         }
     }
 }
@@ -222,7 +222,7 @@ impl EncoderDef{
         if let NodeParams::Json(s::Node::Encode { io_id, ref preset }) = *params {
             Ok((io_id, preset.clone()))
         }else{
-            Err(nerror!(::ErrorKind::NodeParamsMismatch, "Need Encode, got {:?}", params))
+            Err(nerror!(crate::ErrorKind::NodeParamsMismatch, "Need Encode, got {:?}", params))
         }
     }
 }

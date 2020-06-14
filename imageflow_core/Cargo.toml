@@ -1,8 +1,9 @@
 [package]
 name = "imageflow_core"
 version = "0.1.0"
-authors = ["Nathanael Jones <nathanael.jones@gmail.com>"]
+authors = ["Lilith River <lilith@imazen.io>"]
 workspace = "../"
+edition = "2018"
 
 [lib]
 name = "imageflow_core"
@@ -11,10 +12,10 @@ doctest = false
 [dependencies]
 libc = "0.2"
 
-num = "0.1"
+num = "0.2"
 
 # time
-time = "0.1"
+time = "0.2" # Update to 0.2.9
 chrono =  "0.4"
 
 # serialization
@@ -33,38 +34,54 @@ blake2-rfc = "0.2"
 
 ## Crate-specific dependencies
 
-clap = "2"
 threadpool = "1"
-petgraph = "0.4"
-daggy = "0.5"
+petgraph = "0.4" #Upgrade to 0.5
+daggy = "0.5" # Upgrade to 0.6
 
 smallvec = "*"
 
 itertools = "*"
-imgref = "1.3.3"
+imgref = "1.4.1"
 
-dssim = "2.9.7"
+
 gif = "*"
-rgb = "0.8.6"
-imagequant = "2.11.7"
-lodepng = "2.1.2"
+rgb = "0.8.16"
+imagequant = "2.12.5"
+lodepng = "2.4.0"
+libwebp-sys = "0.3"
 
-lcms2 = "5.0"
+jpeg-decoder = "0.1"
+
+lcms2 = "5.1.5"
 chashmap = "2.2"
 
-getopts ="0.2.15"
+getopts ="0.2"
+byteorder="1"
 
-url = "1.4"
-uuid = { version = "0.6", features = ["v4"] }
+url = "1" # Upgrade to 2.1.1
+uuid = { version = "0.7", features = ["v4"] } # Upgrade to 0.8
 
+rustface = { git = "https://github.com/atomashpolskiy/rustface" }
 imageflow_types = { path = "../imageflow_types", version = "*" }
 imageflow_helpers = { path = "../imageflow_helpers", version = "*" }
 imageflow_riapi = { path = "../imageflow_riapi", version = "*" }
 imageflow_c_components = { path = "../c_components" }
-mozjpeg = "0.8.5"
+mozjpeg = "0.8.16"
+mozjpeg-sys = {version = "0.10.4", features = ["nasm_simd", "turbojpeg_api"]}
+
+evalchroma = "0.1.1"
+
+# For build info see https://github.com/kornelski/rust-libpng-sys/blob/master/Cargo.toml
+# And https://github.com/kornelski/rust-libpng-sys/blob/master/build.rs
+libpng-sys = { version = "1.1.8", features = ["static", "static-libz", "libz-sys"] }
+
+
 
 [dev-dependencies]
-hyper = "=0.10.12"
+hyper = "0.13"
+imageflow_http_helpers = { path = "../imageflow_http_helpers", version = "*" }
+dssim = "2.9"
 
 [features]
+default = []
 nightly = ["imageflow_helpers/nightly"]

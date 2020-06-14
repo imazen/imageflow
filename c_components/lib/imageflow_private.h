@@ -53,7 +53,7 @@ struct flow_bitmap_float {
     bool pixels_borrowed;
     // The number of floats in the buffer
     uint32_t float_count;
-    // The number of floats betwen (0,0) and (0,1)
+    // The number of floats between (0,0) and (0,1)
     uint32_t float_stride;
 
     // If true, alpha has been premultiplied
@@ -148,7 +148,6 @@ struct flow_objtracking_info {
 /** flow_context: main structure **/
 
 struct flow_context {
-    struct flow_context_codec_set * codec_set;
     struct flow_heap underlying_heap;
     struct flow_objtracking_info object_tracking;
     struct flow_profiling_log log;
@@ -159,22 +158,9 @@ typedef struct flow_context flow_c;
 #include "color.h"
 
 PUB bool write_frame_to_disk(flow_c * c, const char * path, struct flow_bitmap_bgra * b);
-PUB int64_t flow_codec_select_from_seekable_io(flow_c * c, struct flow_io * io);
 
-struct flow_nodeinfo_render_to_canvas_1d;
 struct flow_nodeinfo_scale2d_render_to_canvas1d;
 
-struct flow_nodeinfo_render_to_canvas_1d {
-    // There will need to be consistency checks against the createcanvas node
-
-    flow_interpolation_filter interpolation_filter;
-    // struct flow_interpolation_details * interpolationDetails;
-    int32_t scale_to_width;
-
-    bool transpose_on_write;
-
-    flow_working_floatspace scale_in_colorspace;
-};
 
 struct flow_nodeinfo_scale2d_render_to_canvas1d {
     // There will need to be consistency checks against the createcanvas node
@@ -190,9 +176,7 @@ struct flow_nodeinfo_scale2d_render_to_canvas1d {
 
     flow_working_floatspace scale_in_colorspace;
 };
-PUB bool flow_node_execute_render_to_canvas_1d(flow_c * c, struct flow_bitmap_bgra * input,
-                                               struct flow_bitmap_bgra * canvas,
-                                               struct flow_nodeinfo_render_to_canvas_1d * info);
+
 PUB bool flow_node_execute_scale2d_render1d(
     flow_c * c, struct flow_bitmap_bgra * input, struct flow_bitmap_bgra * canvas,
     struct flow_nodeinfo_scale2d_render_to_canvas1d * info) FLOW_HINT_HOT FLOW_HINT_UNSAFE_MATH_OPTIMIZATIONS;
@@ -210,8 +194,6 @@ PUB bool flow_bitmap_float_convolve_rows(flow_c * c, struct flow_bitmap_float * 
                                          struct flow_convolution_kernel * kernel, uint32_t convolve_channels,
                                          uint32_t from_row, int row_count);
 
-PUB bool flow_bitmap_float_sharpen_rows(flow_c * c, struct flow_bitmap_float * im, uint32_t start_row,
-                                        uint32_t row_count, double pct);
 
 PUB bool flow_bitmap_float_convert_srgb_to_linear(flow_c * c, struct flow_colorcontext_info * colorcontext,
                                                   struct flow_bitmap_bgra * src, uint32_t from_row,
@@ -242,11 +224,6 @@ PUB bool flow_bitmap_float_copy_linear_over_srgb(flow_c * c, struct flow_colorco
 PUB bool flow_bitmap_bgra_fill_rect(flow_c * c, struct flow_bitmap_bgra * b, uint32_t x1, uint32_t y1, uint32_t x2,
                                     uint32_t y2, uint32_t color_srgb_argb);
 
-PUB bool flow_halve(flow_c * c, struct flow_colorcontext_info * colorcontext, const struct flow_bitmap_bgra * from,
-                    struct flow_bitmap_bgra * to, int divisor);
-
-PUB bool flow_halve_in_place(flow_c * c, struct flow_colorcontext_info * colorcontext, struct flow_bitmap_bgra * from,
-                             int divisor);
 
 PUB void flow_scale_spatial_srgb_7x7(uint8_t input[64], uint8_t ** output_rows, uint32_t output_col);
 
@@ -323,7 +300,6 @@ struct flow_codec_instance {
 
 PUB int32_t flow_codecs_jpg_decoder_get_exif(flow_c * c, struct flow_codec_instance * codec_instance);
 
-PUB bool flow_bitmap_bgra_load_png(flow_c * c, struct flow_bitmap_bgra ** b_ref, const char * path);
 PUB bool flow_bitmap_bgra_save_png(flow_c * c, struct flow_bitmap_bgra * b, const char * path);
 PUB uint8_t ** flow_bitmap_create_row_pointers(flow_c * c, void * buffer, size_t buffer_size, size_t stride,
                                                size_t height);

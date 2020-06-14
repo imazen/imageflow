@@ -1,5 +1,6 @@
 use super::internal_prelude::*;
-
+use imageflow_riapi::sizing::{Layout, AspectRatio, LayoutError};
+use imageflow_types::ConstraintMode;
 
 pub static CONSTRAIN: ConstrainDef = ConstrainDef{};
 pub static COMMAND_STRING: CommandStringDef = CommandStringDef{};
@@ -8,28 +9,39 @@ pub static EXPANDING_COMMAND_STRING: CommandStringPartiallyExpandedDef = Command
 
 
 
+fn get_decoder_mime(ctx: &mut OpCtxMut, ix: NodeIndex) -> Result<Option<String>>{
+    let decoders = ctx.get_decoder_io_ids_and_indexes(ix);
+    if let Some((io_id, _)) = decoders.first(){
+        Ok(Some(ctx.c.get_codec(*io_id)?.get_decoder()?.get_image_info(ctx.c)?.preferred_mime_type))
+    }
+    else{
+        Ok(None)
+    }
+
+}
 
 fn get_expand(ctx: &mut OpCtxMut, ix: NodeIndex) -> Result<::imageflow_riapi::ir4::Ir4Expand>{
-    let input = ctx.first_parent_frame_info_some(ix).ok_or_else(|| nerror!(::ErrorKind::InvalidNodeConnections, "CommandString node requires that its parent nodes be perfectly estimable"))?;
+    let input = ctx.first_parent_frame_info_some(ix).ok_or_else(|| nerror!(crate::ErrorKind::InvalidNodeConnections, "CommandString node requires that its parent nodes be perfectly estimable"))?;
     let params = &ctx.weight(ix).params;
-    if let NodeParams::Json(s::Node::CommandString{ref kind, ref value, ref decode, ref encode}) =
+    if let NodeParams::Json(s::Node::CommandString{ref kind, ref value, ref decode, ref encode, ref watermarks}) =
     *params {
         match *kind {
             s::CommandStringKind::ImageResizer4 => {
                 Ok(::imageflow_riapi::ir4::Ir4Expand {
                     i: ::imageflow_riapi::ir4::Ir4Command::QueryString(value.to_owned()),
                     encode_id: *encode,
+                    watermarks: watermarks.clone(),
                     source: ::imageflow_riapi::ir4::Ir4SourceFrameInfo {
                         w: input.w,
                         h: input.h,
                         fmt: input.fmt,
-                        original_mime: None
+                        original_mime: get_decoder_mime(ctx,ix)?
                     }
                 })
             }
         }
     }else{
-        Err(nerror!(::ErrorKind::NodeParamsMismatch, "Need CommandString, got {:?}", params))
+        Err(nerror!(crate::ErrorKind::NodeParamsMismatch, "Need CommandString, got {:?}", params))
     }
 }
 
@@ -58,10 +70,12 @@ impl NodeDef for CommandStringPartiallyExpandedDef{
         } else {
             let e = get_expand(ctx, ix).map_err(|e| e.at(here!()))?;
 
-            if let Some(command) = e.get_decode_commands().map_err(|e|FlowError::from_layout(e).at(here!()))? {
-                //Send command to codec
-                for (io_id, decoder_ix) in ctx.get_decoder_io_ids_and_indexes(ix) {
-                    ctx.job.tell_decoder(io_id, command.clone()).map_err(|e| e.at(here!()))?;
+            if let Some(commands) = e.get_decode_commands().map_err(|e|FlowError::from_layout(e).at(here!()))? {
+                for command in commands {
+                    //Send command to codec
+                    for (io_id, decoder_ix) in ctx.get_decoder_io_ids_and_indexes(ix) {
+                        ctx.job.tell_decoder(io_id, command.clone()).map_err(|e| e.at(here!()))?;
+                    }
                 }
             }
 
@@ -96,7 +110,7 @@ impl NodeDef for CommandStringPartiallyExpandedDef{
 #[derive(Debug,Clone)]
 pub struct ConstrainDef;
 impl NodeDef for ConstrainDef{
-    fn as_one_input_expand(&self) -> Option<&NodeDefOneInputExpand>{
+    fn as_one_input_expand(&self) -> Option<&dyn NodeDefOneInputExpand>{
         Some(self)
     }
 }
@@ -107,122 +121,56 @@ impl NodeDefOneInputExpand for ConstrainDef{
     fn estimate(&self, params: &NodeParams, input: FrameEstimate) -> Result<FrameEstimate>{
         if let NodeParams::Json(s::Node::Constrain(ref constraint)) = *params {
             input.map_frame(|input| {
-                let (w, h, _) = constrain(input.w as u32, input.h as u32, constraint.clone());
+                let constraint_results = imageflow_riapi::ir4::process_constraint(input.w, input.h, constraint).unwrap(); //TODO: fix unwrap
                 Ok(FrameInfo {
-                    w: w as i32,
-                    h: h as i32,
+                    w: constraint_results.final_canvas.width() as i32,
+                    h: constraint_results.final_canvas.height() as i32,
                     fmt: ffi::PixelFormat::from(input.fmt),
                 })
             })
         }else{
-            Err(nerror!(::ErrorKind::NodeParamsMismatch, "Need Constrain, got {:?}", params))
+            Err(nerror!(crate::ErrorKind::NodeParamsMismatch, "Need Constrain, got {:?}", params))
         }
     }
 
-    fn expand(&self, ctx: &mut OpCtxMut, ix: NodeIndex, params: NodeParams, parent: FrameInfo) -> Result<()> {
+    fn expand(&self, ctx: &mut OpCtxMut, ix: NodeIndex, params: NodeParams, input: FrameInfo) -> Result<()> {
         if let NodeParams::Json(s::Node::Constrain(constraint)) = params {
-            let input_w = parent.w as u32;
-            let input_h = parent.h as u32;
+            let constraint_results = imageflow_riapi::ir4::process_constraint(input.w, input.h, &constraint).unwrap(); //TODO: fix unwrap
 
-            let (new_w, new_h, hints_val) = constrain(input_w, input_h, constraint.clone());
-
-            let hints = hints_val.as_ref();
-
-            let resample_when = hints.and_then(|ref h| h.resample_when).unwrap_or(s::ResampleWhen::SizeDiffers);
-            let size_differs = new_w != input_w || new_h != input_h;
-            let sharpen_requested = hints.and_then(|h| h.sharpen_percent).unwrap_or(0f32) > 0f32;
-
-            let resample = match resample_when {
-                s::ResampleWhen::Always => true,
-                s::ResampleWhen::SizeDiffers if size_differs => true,
-                s::ResampleWhen::SizeDiffersOrSharpeningRequested if size_differs || sharpen_requested => true,
-                _ => false
-            };
-
-            if resample {
-                let scale2d_params = s::Node::Resample2D {
-                    w: new_w,
-                    h: new_h,
-                    up_filter: hints.and_then(|h| h.up_filter),
-                    down_filter: hints.and_then(|h| h.down_filter),
-                    scaling_colorspace: hints.and_then(|h| h.scaling_colorspace),
-                    hints: hints.map(|h| s::ResampleHints {
-                        sharpen_percent: h.sharpen_percent,
-                        background_color: hints.and_then(|h| h.background_color.clone())
-                    }),
-                };
-
-                let scale2d = ctx.graph
-                    .add_node(Node::n(&super::SCALE,
-                                        NodeParams::Json(scale2d_params)));
-                ctx.replace_node_with_existing(ix, scale2d);
-            } else {
-                ctx.delete_node_and_snap_together(ix);
+            let mut b  = Vec::new();
+            if let Some(c) = constraint_results.crop{
+                b.push(Node::from(s::Node::Crop { x1: c[0], y1: c[1], x2: c[2], y2: c[3] }));
             }
+            b.push(Node::from(
+                imageflow_types::Node::Resample2D {
+                    w: constraint_results.scale_to.width() as u32,
+                    h: constraint_results.scale_to.height() as u32,
+                    hints: constraint.hints,
+                })
+            );
+
+            if let Some(pad) = constraint_results.pad{
+                b.push(Node::from(
+                imageflow_types::Node::ExpandCanvas {
+                    left: pad[0],
+                    top: pad[1],
+                    right: pad[2],
+                    bottom: pad[3],
+                    color: constraint.canvas_color.unwrap_or(imageflow_types::Color::Transparent)
+                }));
+            }
+
+            ctx.replace_node(ix, b);
+
             Ok(())
         } else {
-            Err(nerror!(::ErrorKind::NodeParamsMismatch, "Need Constrain, got {:?}", params))
+            Err(nerror!(crate::ErrorKind::NodeParamsMismatch, "Need Constrain, got {:?}", params))
         }
     }
 }
 
 
 
-fn scale_b_to(aspect_ratio_a_over_b: f32, a_from: u32, a_to: u32, b_from: u32) -> u32{
-    let scale_factor = a_to as f32 / a_from as f32;
-    let result = b_from as f32 * scale_factor;// * aspect_ratio_a_over_b;
-    result.round() as u32
-}
-fn constrain(old_w: u32, old_h: u32, constraint: s::Constraint) -> (u32,u32, Option<s::ConstraintResamplingHints>){
-    let aspect = old_w as f32 / old_h as f32;
-    match constraint{
-
-        s::Constraint::Within{ w: Some(w), h: None,  ref hints} if w < old_w => {
-            (w, scale_b_to(aspect, old_w, w, old_h), hints.clone())
-        }
-        s::Constraint::Within{ w: None, h: Some(h),  ref hints} if h < old_h => {
-            (scale_b_to(1f32 / aspect, old_h, h, old_w), h, hints.clone())
-        }
-        s::Constraint::Within{ w: Some(w), h: Some(h),  ref hints} if w < old_w || h < old_h => {
-
-            let constraint_aspect = w as f32 / h as f32;
-            if constraint_aspect > aspect{
-                //height is the constraint
-                (scale_b_to(1f32 / aspect, old_h, h, old_w), h, hints.clone())
-            }else{
-                //width is the constraint
-                (w, scale_b_to(aspect, old_w, w, old_h), hints.clone())
-            }
-        }
-        s::Constraint::Within{ ref hints, ..} => (old_w, old_h, hints.clone()),
-    }
-}
-
-#[test]
-fn test_constrain(){
-    //let hints = s::ConstraintResamplingHints{down_filter: None, up_filter: None, resample_when: None, sharpen_percent: None};
-    {
-        let constraint = s::Constraint::Within { w: Some(100), h: Some(100), hints: None };
-        assert_eq!(constrain(200, 50, constraint), (100, 25, None));
-    }
-    {
-        let constraint = s::Constraint::Within { w: Some(100), h: Some(100), hints: None };
-        assert_eq!(constrain(50, 200, constraint), (25, 100, None));
-    }
-    {
-        let constraint = s::Constraint::Within { w: Some(640), h: Some(480), hints: None };
-        assert_eq!(constrain(200, 50, constraint), (200, 50, None));
-    }
-    {
-        let constraint = s::Constraint::Within { w: Some(100), h: Some(100), hints: None };
-        assert_eq!(constrain(100, 100, constraint), (100, 100, None));
-    }
-    {
-        let constraint = s::Constraint::Within { w: Some(100), h: Some(100), hints: None };
-        assert_eq!(constrain(100, 100, constraint), (100, 100, None));
-    }
-
-}
 
 #[derive(Debug,Clone)]
 pub struct CommandStringDef;
@@ -248,15 +196,16 @@ impl NodeDef for CommandStringDef{
         let params = ctx.weight(ix).params.clone();
         let params_copy = ctx.weight(ix).params.clone();
 
-        if let NodeParams::Json(s::Node::CommandString { kind, value, decode, encode }) = params_copy {
+        if let NodeParams::Json(s::Node::CommandString { kind, value, decode, encode, watermarks }) = params_copy {
             if let Some(d_id) = decode {
                 if has_parent {
-                    return Err(nerror!(::ErrorKind::InvalidNodeParams, "CommandString must either have decode: null or have no parent nodes. Specifying a value for decode creates a new decoder node."));
+                    return Err(nerror!(crate::ErrorKind::InvalidNodeParams, "CommandString must either have decode: null or have no parent nodes. Specifying a value for decode creates a new decoder node."));
                 }
                 let decode_node = ::imageflow_riapi::ir4::Ir4Translate {
                     i: ::imageflow_riapi::ir4::Ir4Command::QueryString(value.to_owned()),
                     decode_id: Some(d_id),
                     encode_id: None,
+                    watermarks,
                 }.get_decode_node().unwrap();
                 ctx.replace_node(ix, vec![
                     Node::from(decode_node),
@@ -264,7 +213,7 @@ impl NodeDef for CommandStringDef{
                 ]);
             } else {
                 if !has_parent {
-                    return Err(nerror!(::ErrorKind::InvalidNodeParams,"CommandString must have a parent node unless 'decode' has a numeric value. Otherwise it has no image source. "));
+                    return Err(nerror!(crate::ErrorKind::InvalidNodeParams,"CommandString must have a parent node unless 'decode' has a numeric value. Otherwise it has no image source. "));
                 }
                 ctx.replace_node(ix, vec![
                     Node::n(&EXPANDING_COMMAND_STRING, params)
@@ -272,7 +221,8 @@ impl NodeDef for CommandStringDef{
             }
             Ok(())
         } else {
-            Err(nerror!(::ErrorKind::NodeParamsMismatch, "Need Constrain, got {:?}", params))
+            Err(nerror!(crate::ErrorKind::NodeParamsMismatch, "Need Constrain, got {:?}", params))
         }
     }
 }
+

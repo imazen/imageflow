@@ -281,7 +281,6 @@ int64_t flow_context_stacktrace(flow_c * context, char * buffer, size_t buffer_s
     return buffer_size - remaining_space;
 }
 
-struct flow_context_node_set * flow_context_get_default_node_set(void);
 
 void flow_context_initialize(flow_c * context)
 {
@@ -299,7 +298,6 @@ void flow_context_initialize(flow_c * context)
     context->error.locked = false;
     flow_heap_set_default(context);
     flow_context_objtracking_initialize(&context->object_tracking);
-    context->codec_set = flow_context_get_default_codec_set();
 }
 
 flow_c * flow_context_create(void)

@@ -2,7 +2,7 @@
 name = "c_components_tests"
 version = "0.1.0"
 links = "imageflow_private_c_components_tests"
-authors = ["Nathanael Jones <nathanael.jones@gmail.com>", "Kornel Lesiński <kornel@geekhood.net>"]
+authors = ["Lilith River <lilith@imazen.io>", "Kornel Lesiński <kornel@geekhood.net>"]
 workspace = "../../"
 build = "src/build.rs"
 
@@ -12,15 +12,15 @@ path = "src/profile.rs"
 
 [dependencies]
 imageflow_c_components = {path = ".."}
-lcms2-sys = "2.4.8"
-libpng-sys = "0.2.4"
-mozjpeg-sys = "0.5.11"
+lcms2-sys = "3.1.1"
+libpng-sys = "1.1.7"
+mozjpeg-sys = "0.10"
 libz-sys = "1.0.18"
 
 
 [build-dependencies.cc]
-version = "1.0.3"
+version = "1.0.52"
 features = ["parallel"]
 
 [build-dependencies]
-glob = "0.2.11"
+glob = "0.3.0"

@@ -1,5 +1,5 @@
-use fc;
-use s;
+use crate::fc;
+use crate::s;
 use serde_json;
 use std;
 extern crate serde;
@@ -8,8 +8,8 @@ use std::collections::HashMap;
 use std::fs::File;
 use std::path::{Path};
 use std::io::{Write, Read, BufWriter};
-use fc::{JsonResponse,  ErrorCategory};
-use fc::errors::CategorizedError;
+use crate::fc::{JsonResponse,  ErrorCategory};
+use crate::fc::errors::CategorizedError;
 
 pub enum JobSource {
     JsonFile(String),
@@ -133,7 +133,7 @@ impl std::fmt::Display for CmdError {
 fn parse_io_enum(s: &str) -> s::IoEnum {
     match s {
         "base64:" => s::IoEnum::OutputBase64,
-        s if s.starts_with("http://") || s.starts_with("https://") => s::IoEnum::Url(s.to_owned()),
+        s if s.starts_with("http://") || s.starts_with("https://") => panic!("URLs are not permitted"),
         s => s::IoEnum::Filename(s.to_owned()),
     }
 }
@@ -174,8 +174,9 @@ impl CmdBuild {
                         decode: Some(0),
                         encode: Some(1),
                         kind: s::CommandStringKind::ImageResizer4,
-                        value: query
-                    }])
+                        value: query,
+                            watermarks: None
+                        }])
                 };
                 Ok(build)
             }
@@ -317,16 +318,16 @@ impl CmdBuild {
                         log.push(format!("Copied {} to {} (referenced as {})", &path, &new_path, &fname));
                         s::IoEnum::Filename(fname)
                     }
-                    s::IoEnum::Url(url) => {
-
-                        let fname = format!("input_{}", obj.io_id);
-                        let new_path = directory.join(&fname).as_os_str().to_str().unwrap().to_owned();
-                        let bytes = ::imageflow_helpers::fetching::fetch_bytes(&url).unwrap();
-                        let mut file = BufWriter::new(File::create(&new_path).unwrap());
-                        file.write_all(&bytes).unwrap();
-                        log.push(format!("Downloaded {} to {} (referenced as {})", &url, &new_path, &fname));
-                        s::IoEnum::Filename(fname)
-                    }
+                    // s::IoEnum::Url(url) => {
+                    //
+                    //     let fname = format!("input_{}", obj.io_id);
+                    //     let new_path = directory.join(&fname).as_os_str().to_str().unwrap().to_owned();
+                    //     let bytes = ::imageflow_http_helpers::fetch_bytes(&url).unwrap();
+                    //     let mut file = BufWriter::new(File::create(&new_path).unwrap());
+                    //     file.write_all(&bytes).unwrap();
+                    //     log.push(format!("Downloaded {} to {} (referenced as {})", &url, &new_path, &fname));
+                    //     s::IoEnum::Filename(fname)
+                    // }
                     other => other
                 }
             }else{
@@ -398,14 +399,16 @@ impl CmdBuild {
     }
     ///
     /// Write the JSON response (if present) to the given file or STDOUT
-    pub fn write_response_maybe(&self, response_file: Option<&str>) -> std::io::Result<()> {
+    pub fn write_response_maybe(&self, response_file: Option<&str>, allow_stdout: bool) -> std::io::Result<()> {
         if  self.response.is_some() {
 
             if let Some(filename) = response_file {
                 let mut file = BufWriter::new(File::create(filename).unwrap());
                 file.write_all(&self.get_json_response().response_json)?;
             } else {
-                std::io::stdout().write_all(&self.get_json_response().response_json)?;
+                if allow_stdout {
+                    std::io::stdout().write_all(&self.get_json_response().response_json)?;
+                }
             }
 
         }

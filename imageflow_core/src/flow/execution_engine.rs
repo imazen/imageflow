@@ -1,13 +1,13 @@
-use Context;
-use flow::definitions::*;
-use ffi::CodecInstance;
-use internal_prelude::works_everywhere::*;
+use crate::Context;
+use crate::flow::definitions::*;
+use crate::internal_prelude::works_everywhere::*;
 use petgraph::dot::Dot;
 use std::process::Command;
 use super::visualize::{notify_graph_changed, GraphRecordingUpdate, GraphRecordingInfo};
 use petgraph::EdgeDirection;
 use rustc_serialize::base64;
 use rustc_serialize::base64::ToBase64;
+use imageflow_helpers::timeywimey::precise_time_ns;
 
 pub struct Engine<'a> {
     c: &'a Context,
@@ -37,7 +37,7 @@ impl<'a> Engine<'a> {
         }
     }
 
-    fn flow_c(&self) -> *mut ::ffi::ImageflowContext{
+    fn flow_c(&self) -> *mut crate::ffi::ImageflowContext{
         self.c.flow_c()
     }
 
@@ -72,9 +72,9 @@ impl<'a> Engine<'a> {
             let result = if let Err(e) = n.def.validate_params(&n.params) {
                 Err(e)
             } else if inputs_failed {
-                Err(nerror!(::ErrorKind::InvalidNodeConnections, "Node type {} requires {:?}, but had {} inputs, {} canvases.", n.def.name(), req_edges_in, input_count, canvas_count))
+                Err(nerror!(crate::ErrorKind::InvalidNodeConnections, "Node type {} requires {:?}, but had {} inputs, {} canvases.", n.def.name(), req_edges_in, input_count, canvas_count))
             } else if req_edges_out != EdgesOut::Any && outbound_count > 0 {
-                Err(nerror!(::ErrorKind::InvalidNodeConnections, "Node type {} prohibits child nodes, but had {} outbound edges.", n.def.name(), outbound_count))
+                Err(nerror!(crate::ErrorKind::InvalidNodeConnections, "Node type {} prohibits child nodes, but had {} outbound edges.", n.def.name(), outbound_count))
             } else{
                 Ok(())
             };
@@ -108,7 +108,7 @@ impl<'a> Engine<'a> {
     /// to copying encoded bytes.
     fn execute(&mut self) -> Result<(bool, s::FramePerformance)> {
 
-        let start = time::precise_time_ns();
+        let start = precise_time_ns();
         self.more_frames = false;
         self.validate_graph()?;
         self.notify_graph_changed()?;
@@ -176,7 +176,7 @@ impl<'a> Engine<'a> {
 
 
         let total_node_ns = self.g.node_weights_mut().map(|n|  n.cost.wall_ns).sum::<u64>();
-        let total_ns = time::precise_time_ns() - start;
+        let total_ns = precise_time_ns() - start;
         let wall_microseconds = (total_ns as f64 / 1000f64).round() as u64;
         let overhead_microseconds = ((total_ns as i64 - total_node_ns as i64) as f64 / 1000f64).round() as i64;
 
@@ -265,7 +265,7 @@ impl<'a> Engine<'a> {
 
 
     pub fn estimate_node(&mut self, node_id: NodeIndex) -> Result<FrameEstimate> {
-        let now = time::precise_time_ns();
+        let now = precise_time_ns();
         let mut ctx = self.op_ctx_mut();
 
         // Invoke estimation
@@ -281,7 +281,7 @@ impl<'a> Engine<'a> {
             ctx.weight_mut(node_id).frame_est = v;
         }
 
-        ctx.weight_mut(node_id).cost.wall_ns += time::precise_time_ns() - now;
+        ctx.weight_mut(node_id).cost.wall_ns += precise_time_ns() - now;
         result
     }
 
@@ -447,19 +447,19 @@ impl<'a> Engine<'a> {
                     }
 
                 } else if !def.can_expand(){
-                    return Err(nerror!(::ErrorKind::MethodNotImplemented, "Nodes must can_execute() or can_expand(). {:?} does neither", def).into());
+                    return Err(nerror!(crate::ErrorKind::MethodNotImplemented, "Nodes must can_execute() or can_expand(). {:?} does neither", def).into());
                 }
             }
             match next {
                 None => return Ok(()),
                 Some((next_ix, def)) => {
                     let more_frames = {
-                        let now = time::precise_time_ns();
+                        let now = precise_time_ns();
                         let mut ctx = self.op_ctx_mut();
                         let result = def.execute(&mut ctx, next_ix).map_err(|e| e.with_ctx_mut(&ctx, next_ix).at(here!()))?;
 
                         if result == NodeResult::None {
-                            return Err(nerror!(::ErrorKind::InvalidOperation, "Node {} execution returned {:?}", def.name(), result).into());
+                            return Err(nerror!(crate::ErrorKind::InvalidOperation, "Node {} execution returned {:?}", def.name(), result).into());
                         }else{
                             // Force update the estimate to match reality
                             if let NodeResult::Frame(bit) = result{
@@ -471,7 +471,7 @@ impl<'a> Engine<'a> {
                             }
                             ctx.weight_mut(next_ix).result = result;
                         }
-                        ctx.weight_mut(next_ix).cost.wall_ns += time::precise_time_ns() - now;
+                        ctx.weight_mut(next_ix).cost.wall_ns += precise_time_ns() - now;
                         ctx.more_frames.get()
                     };
 
@@ -489,7 +489,7 @@ impl<'a> Engine<'a> {
                                 let path_copy = path.clone();
                                 let path_cstr = std::ffi::CString::new(path).unwrap();
                                 let _ = std::fs::create_dir("node_frames");
-                                if !::ffi::flow_bitmap_bgra_save_png(self.c.flow_c(),
+                                if !crate::ffi::flow_bitmap_bgra_save_png(self.c.flow_c(),
                                                                      ptr,
                                                                      path_cstr.as_ptr()) {
                                     println!("Failed to save frame {} (from node {})",
@@ -531,7 +531,7 @@ impl<'a> Engine<'a> {
     pub fn collect_encode_results(&self) -> Vec<s::EncodeResult>{
         let mut encodes = Vec::new();
         for node in self.g.raw_nodes() {
-            if let ::flow::definitions::NodeResult::Encoded(ref r) = node.weight.result {
+            if let crate::flow::definitions::NodeResult::Encoded(ref r) = node.weight.result {
                 encodes.push((*r).clone());
             }
         }

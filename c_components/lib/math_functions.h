@@ -28,7 +28,7 @@ static inline uint64_t umax64(uint64_t a, uint64_t b) { return a >= b ? a : b; }
 
 #define EVIL_CLAMP(x, low, high) (((x) > (high)) ? (high) : (((x) < (low)) ? (low) : (x)))
 
-static inline double ir_guassian(double x, double stdDev)
+static inline double ir_gaussian(double x, double stdDev)
 {
     return (exp((-x * x) / (2 * stdDev * stdDev)) / (sqrt(2 * IR_PI) * stdDev));
 }

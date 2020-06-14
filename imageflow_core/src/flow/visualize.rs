@@ -1,6 +1,6 @@
-use Graph;
-use ffi::BitmapBgra;
-use internal_prelude::works_everywhere::*;
+use crate::Graph;
+use crate::ffi::BitmapBgra;
+use crate::internal_prelude::works_everywhere::*;
 use super::definitions::{FrameEstimate, Node, PixelFormat, EdgeKind, NodeResult};
 
 
@@ -99,7 +99,7 @@ fn get_pixel_format_name(fmt: PixelFormat) -> &'static str {
     }
 }
 
-pub fn print_graph(f: &mut std::io::Write,
+pub fn print_graph(f: &mut dyn std::io::Write,
                    g: &Graph,
                    node_frame_filename_prefix: Option<&str>)
                    -> std::io::Result<()> {
@@ -172,7 +172,7 @@ fn files_identical(filename_a: &str, filename_b: &str) -> std::io::Result<bool> 
     let mut a = File::open(filename_a)?;
     let mut a_str = Vec::new();
     a.read_to_end(&mut a_str)?;
-    let mut b = try!(File::open(filename_b));
+    let mut b = File::open(filename_b)?;
     let mut b_str = Vec::new();
     b.read_to_end(&mut b_str)?;
 

@@ -2,11 +2,11 @@
 //! Fluent (chainable) Rust API for building an operation graph in an easier and more readable way.
 
 
-use internal_prelude::works_everywhere::*;
-use std::sync::atomic::{AtomicUsize, ATOMIC_USIZE_INIT};
+use crate::internal_prelude::works_everywhere::*;
+use std::sync::atomic::AtomicUsize;
 use std::sync::atomic;
 
-static NEXT_FLUENT_NODE_ID: AtomicUsize = ATOMIC_USIZE_INIT;
+static NEXT_FLUENT_NODE_ID: AtomicUsize = AtomicUsize::new(0);
 
 
 pub fn fluently() -> FluentNode {
@@ -70,8 +70,8 @@ impl FluentNode {
         self.builder().to_framewise().wrap_in_build_0_1()
     }
 
-    pub fn constrain_within(self, w: Option<u32>, h: Option<u32>, resampling_hints: Option<s::ConstraintResamplingHints>) -> FluentNode{
-        self.to(s::Node::Constrain(s::Constraint::Within{ w: w, h: h, hints: resampling_hints}))
+    pub fn constrain_within(self, w: Option<u32>, h: Option<u32>, resampling_hints: Option<s::ResampleHints>) -> FluentNode{
+        self.to(s::Node::Constrain(imageflow_types::Constraint{ mode: s::ConstraintMode::Within , w, h, hints: resampling_hints, gravity: None, canvas_color: None }))
     }
 
     pub fn canvas_bgra32(self,
@@ -158,8 +158,8 @@ impl FluentNode {
                               s::Node::CopyRectToCanvas {
                            from_x,
                            from_y,
-                           width,
-                           height,
+                                  w: width,
+                                  h: height,
                            x,
                            y,
                        })
@@ -297,7 +297,7 @@ fn smoke_test_chaining(){
 
     let chain = fluently()
         .decode(0)
-        .constrain_within(Some(1400), Some(1400), Some(s::ConstraintResamplingHints::with(Some(s::Filter::CatmullRom), Some(40f32))))
+        .constrain_within(Some(1400), Some(1400), Some(s::ResampleHints::with(Some(s::Filter::CatmullRom), Some(40f32))))
         .flip_horizontal()
         .flip_vertical()
         .transpose()
@@ -318,16 +318,18 @@ fn smoke_test_many_operations(){
             height:1600
         })])})
         .constrain_within(Some(1400), None,None)
-        .constrain_within(Some(1400), Some(1400), Some(s::ConstraintResamplingHints::with(Some(s::Filter::CatmullRom), Some(40f32))))
+        .constrain_within(Some(1400), Some(1400), Some(s::ResampleHints::with(Some(s::Filter::CatmullRom), Some(40f32))))
         .to(s::Node::Resample2D {
             w: 800,
             h: 800,
-            down_filter: Some(s::Filter::Robidoux),
-            up_filter: Some(s::Filter::Ginseng),
-            scaling_colorspace: None,
             hints: Some(s::ResampleHints {
                 sharpen_percent: Some(10f32),
-                background_color: None
+                background_color: None,
+                resample_when: None,
+                down_filter: Some(s::Filter::Robidoux),
+                up_filter: Some(s::Filter::Ginseng),
+                scaling_colorspace: None,
+                sharpen_when: None
             }),
         })
         .to(s::Node::ApplyOrientation{flag: 7}).flip_horizontal().flip_vertical().transpose().rotate_90().rotate_180().rotate_270()
@@ -377,9 +379,6 @@ fn smoke_test_graph_builder() {
         .to(s::Node::Resample2D {
             w: 100,
             h: 100,
-            down_filter: None,
-            up_filter: None,
-            scaling_colorspace: None,
             hints: None,
         })
         .to(s::Node::Encode {

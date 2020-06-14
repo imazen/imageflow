@@ -31,7 +31,7 @@ extern "C" {
 
 /* This file intended to serve as a drop-in replacement for
 *  unistd.h on Windows
-*  Please add functionality as neeeded
+*  Please add functionality as needed
 */
 
 #include <stdlib.h>

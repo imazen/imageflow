@@ -1,9 +1,10 @@
 [package]
 name = "imageflow_abi"
 version = "0.1.0"
-authors = ["Nathanael Jones <nathanael.jones@gmail.com>"]
+authors = ["Lilith River <lilith@imazen.io>"]
 workspace = "../"
 build = "build.rs"
+edition = "2018"
 
 [lib]
 name = "imageflow"
@@ -13,15 +14,15 @@ doctest = false
 
 [dependencies]
 libc = "0.2"
-imageflow_core = { path = "../imageflow_core", version = "*" }
+imageflow_core = { path = "../imageflow_core", version = "*"}
 backtrace = "*"
 smallvec="*"
-base64="0.5"
+base64="0.12"
 
 [build-dependencies]
-imageflow_helpers = { path = "../imageflow_helpers", version = "*" }
-moz-cheddar = "0.4.1"
-regex = "0.2"
+imageflow_helpers = { path = "../imageflow_helpers", version = "*"}
+cbindgen = "0.14.1"
+regex = "1"
 
 [features]
 nightly = ["imageflow_core/nightly", "imageflow_helpers/nightly"]

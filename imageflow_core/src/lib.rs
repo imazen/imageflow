@@ -32,13 +32,17 @@ extern crate gif;
 extern crate smallvec;
 extern crate chashmap;
 extern crate rgb;
+extern crate imgref;
 extern crate lodepng;
 extern crate mozjpeg;
+extern crate mozjpeg_sys;
+extern crate evalchroma;
 extern crate twox_hash;
+extern crate libwebp_sys;
 
 #[macro_use]
 pub mod errors;
-pub use errors::*;
+pub use crate::errors::*;
 
 
 mod json;
@@ -47,14 +51,15 @@ mod context_methods;
 mod context;
 mod codecs;
 mod io;
-mod imaging;
+pub mod graphics;
 
-pub use context::{Context};
-pub use io::IoProxy;
-pub use ffi::{IoDirection, IoMode};
-pub use flow::definitions::Graph;
-pub use json::JsonResponse;
-pub use json::MethodRouter;
+pub use crate::context::{Context};
+pub use crate::io::IoProxy;
+pub use crate::ffi::{IoDirection};
+pub use crate::flow::definitions::Graph;
+pub use crate::json::JsonResponse;
+pub use crate::json::MethodRouter;
+pub use crate::codecs::NamedDecoders;
 // use std::ops::DerefMut;
 pub mod clients;
 pub mod ffi;
@@ -64,7 +69,6 @@ use std::fmt;
 use std::borrow::Cow;
 use petgraph::graph::NodeIndex;
 
-
 #[doc(hidden)]
 mod internal_prelude {
     #[doc(hidden)]
@@ -73,7 +77,7 @@ mod internal_prelude {
 
         pub use imageflow_helpers::preludes::from_std::*;
         pub use daggy::{Dag, EdgeIndex, NodeIndex};
-        pub use libc::{c_void, c_float, int32_t, int64_t, size_t, uint32_t};
+        pub use libc::{c_void, c_float, size_t};
         pub extern crate daggy;
         pub extern crate petgraph;
         pub extern crate serde;
@@ -86,33 +90,33 @@ mod internal_prelude {
     #[doc(hidden)]
     pub mod imageflow_core_all {
         #[doc(no_inline)]
-        pub use ::{Graph, Context, JsonResponse,
+        pub use crate::{Graph, Context, JsonResponse,
                    MethodRouter};
         #[doc(no_inline)]
-        pub use ::{CError, clients, FlowError, Result, ErrorKind};
+        pub use crate::{CError, clients, FlowError, Result, ErrorKind};
         #[doc(no_inline)]
-        pub use ::clients::fluent;
+        pub use crate::clients::fluent;
     }
     #[doc(hidden)]
     pub mod external {
         #[doc(no_inline)]
-        pub use ::internal_prelude::external_without_std::*;
+        pub use crate::internal_prelude::external_without_std::*;
         pub extern crate std;
     }
     #[doc(hidden)]
     pub mod works_everywhere {
         #[doc(no_inline)]
-        pub use ::{CError, clients, FlowError, Result, ErrorKind};
+        pub use crate::{CError, clients, FlowError, Result, ErrorKind};
         #[doc(no_inline)]
-        pub use ::internal_prelude::external::*;
+        pub use crate::internal_prelude::external::*;
     }
     #[doc(hidden)]
     pub mod default {
         #[doc(no_inline)]
-        pub use ::{Graph, Context, JsonResponse,
+        pub use crate::{Graph, Context, JsonResponse,
                    MethodRouter};
         #[doc(no_inline)]
-        pub use ::internal_prelude::works_everywhere::*;
+        pub use crate::internal_prelude::works_everywhere::*;
     }
     #[doc(hidden)]
     pub mod c_components {}
@@ -124,14 +128,14 @@ pub mod for_other_imageflow_crates {
         #[doc(hidden)]
         pub mod external_without_std {
             #[doc(no_inline)]
-            pub use ::internal_prelude::external_without_std::*;
+            pub use crate::internal_prelude::external_without_std::*;
         }
         #[doc(hidden)]
         pub mod default {
             #[doc(no_inline)]
-            pub use ::internal_prelude::external_without_std::*;
+            pub use crate::internal_prelude::external_without_std::*;
             #[doc(no_inline)]
-            pub use ::internal_prelude::imageflow_core_all::*;
+            pub use crate::internal_prelude::imageflow_core_all::*;
         }
     }
 }

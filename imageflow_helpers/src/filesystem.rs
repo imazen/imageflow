@@ -1,5 +1,5 @@
 use std;
-use preludes::from_std::*;
+use crate::preludes::from_std::*;
 use zip;
 
 pub fn read_file_bytes<P: AsRef<Path>>(path: P) -> std::io::Result<Vec<u8>>{

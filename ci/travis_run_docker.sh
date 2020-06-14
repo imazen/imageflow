@@ -38,6 +38,13 @@ if [[ "$SKIP_HOST_CARGO_EXPORT" != 'True' ]]; then
     chmod -R a+rwX "${HOME}/host_cargo"
 fi
 
+if [[ $DEPLOY_DOCS == 'True' ]]; then
+  echo "*******  mdbook build docs **************"
+  mdbook build docs
+  mdbook test docs
+  ls docs/book
+fi
+
 if [[ "$COVERALLS" == 'true' ]]; then
       pwd
       echo "*******  See coverage **************"

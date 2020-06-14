@@ -1,7 +1,7 @@
 [package]
 name = "imageflow_c_components"
 version = "0.1.0"
-authors = ["Nathanael Jones <nathanael.jones@gmail.com>", "Kornel Lesiński <kornel@geekhood.net>"]
+authors = ["Lilith River <lilith@imazen.io>", "Kornel Lesiński <kornel@geekhood.net>"]
 links = "imageflow_c"
 workspace = "../"
 build = "build.rs"
@@ -11,10 +11,10 @@ name = "imageflow_c_components"
 doctest = false
 
 [build-dependencies]
-glob = "0.2.11"
+glob = "0.3.0"
 
 [build-dependencies.cc]
-version = "1.0.3"
+version = "1.0.52"
 features = ["parallel"]
 
 [features]
@@ -24,7 +24,15 @@ profiling = []
 shared = []
 
 [dependencies]
-mozjpeg-sys = "0.5.11"
-libz-sys = "1.0.18"
-libpng-sys = "0.2.4"
-lcms2-sys = "2.4.8"
+mozjpeg-sys = {version = "0.10.4", features = ["nasm_simd", "turbojpeg_api"]}
+
+# For build info see
+
+libz-sys = { version = "1.0.18", features = ["static"] }
+
+# For build info see https://github.com/kornelski/rust-libpng-sys/blob/master/Cargo.toml
+# And https://github.com/kornelski/rust-libpng-sys/blob/master/build.rs
+libpng-sys = { version = "1.1.8", features = ["static", "static-libz", "libz-sys"] }
+
+# For build info see https://github.com/kornelski/rust-lcms2-sys/blob/master/src/build.rs
+lcms2-sys = { version = "3.1.1", features = ["static",  "static-fallback", "parallel"] }

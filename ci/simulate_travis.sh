@@ -123,7 +123,7 @@ rsync -q -av --delete "${SCRIPT_DIR}/.." "$WORKING_DIR" --filter=':- .gitignore'
 	mkdir -p "${WORKING_DIR}_cache/.cache" || true
 
 
-	# The first two are only needed in test.sh, since we're rsycning away the whole /target folder
+	# The first two are only needed in test.sh, since we're rsyncing away the whole /target folder
 	export SIM_DOCKER_CACHE_VARS=(
 		-v
 		"${WORKING_DIR}_cache/${TARGET_DIR}debug:/home/imageflow/imageflow/${TARGET_DIR}debug"

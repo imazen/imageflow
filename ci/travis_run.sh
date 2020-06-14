@@ -289,6 +289,8 @@ DOCKER_ENV_VARS=(
 	"-e"
 	 "DOCS_UPLOAD_DIR=${DOCS_UPLOAD_DIR}"
 	"-e"
+	"DEPLOY_DOCS=${DEPLOY_DOCS}"
+	"-e"
 	 "DOCS_UPLOAD_DIR_2=${DOCS_UPLOAD_DIR}"
 	"-e"
 	 "ARTIFACT_UPLOAD_PATH=${ARTIFACT_UPLOAD_PATH}"
@@ -416,24 +418,31 @@ if [[ "$SIM_CI" != 'True' ]]; then
 fi
 
 if [[ "$DELETE_UPLOAD_FOLDER" == 'True' ]]; then
-	echo_maybe -e "\nRemvoing all files scheduled for upload to s3\n\n"
+	echo_maybe -e "\nRemoving all files scheduled for upload to s3\n\n"
 	sudo rm -rf ./artifacts/upload || sudo rm -rf ./artifacts/upload || true
 	mkdir -p ./artifacts/upload || true
 else
 
 	if [ -d "./artifacts/nuget" ]; then
-		(cd ./artifacts/nuget
-			for i in *.nupkg; do
-				[ -f "$i" ] || break
-				echo -e "\nUploading $i to NuGet.org\n"Rn
-				# Upload each package
-				#dotnet nuget push "$i" --api-key "${NUGET_API_KEY}" -s "nuget.org"
-				#dotnet nuget push "$NUGET_TEST_PACKAGE" --api-key "${NUGET_API_KEY}" -s "nuget.org"
 
-				#curl -L "https://www.nuget.org/api/v2/package" -H "X-NuGet-ApiKey: ${NUGET_API_KEY}" -H "X-NuGet-Client-Version: 4.1.0" -A "NuGet Command Line/3.4.4.1321 (Unix 4.4.0.92)" --upload-file "$NUGET_TEST_PACKAGE"
+      (cd ./artifacts/nuget
+        for i in *.nupkg; do
+          [ -f "$i" ] || break
 
-				curl -L "https://www.nuget.org/api/v2/package" -H "X-NuGet-ApiKey: ${NUGET_API_KEY}" -H "X-NuGet-Client-Version: 4.1.0" -A "NuGet Command Line/3.4.4.1321 (Unix 4.4.0.92)" --upload-file "$i"
-			done
-		)
+          # Upload each package
+          #dotnet nuget push "$i" --api-key "${NUGET_API_KEY}" -s "nuget.org"
+          #dotnet nuget push "$NUGET_TEST_PACKAGE" --api-key "${NUGET_API_KEY}" -s "nuget.org"
+
+          #curl -L "https://www.nuget.org/api/v2/package" -H "X-NuGet-ApiKey: ${NUGET_API_KEY}" -H "X-NuGet-Client-Version: 4.1.0" -A "NuGet Command Line/3.4.4.1321 (Unix 4.4.0.92)" --upload-file "$NUGET_TEST_PACKAGE"
+          if [[ -n "$NUGET_API_KEY" ]]; then
+            echo -e "\nUploading $i to NuGet.org\n"Rn
+            curl -L "https://www.nuget.org/api/v2/package" -H "X-NuGet-ApiKey: ${NUGET_API_KEY}" -H "X-NuGet-Client-Version: 4.1.0" -A "NuGet Command Line/3.4.4.1321 (Unix 4.4.0.92)" --upload-file "$i" --fail
+          else
+		        echo "NUGET_API_KEY not defined ... skipping nuget upload"
+		      fi
+        done
+		  )
+
+
 	fi
 fi

@@ -76,7 +76,7 @@ pub fn main_with_exit_code() -> i32 {
         // file.json --in 0 a.png 1 b.png --out 3 base64
 
 
-        .subcommand(SubCommand::with_name("v0.1/build")
+        .subcommand(SubCommand::with_name("v1/build").alias("v0.1/build")
             .about("Runs the given operation file")
             .arg(
                 Arg::with_name("in").long("in").min_values(1)
@@ -87,13 +87,14 @@ pub fn main_with_exit_code() -> i32 {
                 .help("Replace/add outputs for the operation file"))
             //.arg(Arg::with_name("demo").long("demo").takes_value(true).possible_values(&["example:200x200_png"]))
             .arg(Arg::with_name("json").long("json").takes_value(true).required(true).help("The JSON operation file."))
+            .arg(Arg::with_name("quiet").long("quiet").takes_value(false).help("Don't write the JSON response to stdout"))
             .arg(Arg::with_name("response").long("response").takes_value(true).help("Write the JSON job result to file instead of stdout"))
             .arg(Arg::with_name("bundle-to").long("bundle-to").takes_value(true).help("Copies the recipe and all dependencies into the given folder, simplifying it."))
             .arg(Arg::with_name("debug-package").long("debug-package").takes_value(true).help("Creates a debug package in the given folder so others can reproduce the behavior you are seeing"))
 
         )
-        .subcommand(SubCommand::with_name("v0.1/ir4")
-            .about("Run an ImageResizer 4 command string")
+        .subcommand(SubCommand::with_name("v1/querystring").aliases(&["v0.1/ir4","v1/ir4"])
+            .about("Run an command querystring")
             .arg(
                 Arg::with_name("in").long("in").min_values(1)
                     .multiple(true).required(true)
@@ -101,8 +102,9 @@ pub fn main_with_exit_code() -> i32 {
             )
             .arg(Arg::with_name("out").long("out").multiple(true).min_values(1).required(true)
                 .help("Output image"))
+            .arg(Arg::with_name("quiet").long("quiet").takes_value(false).help("Don't write the JSON response to stdout"))
             .arg(Arg::with_name("response").long("response").takes_value(true).help("Write the JSON job result to file instead of stdout"))
-            .arg(Arg::with_name("command").long("command").takes_value(true).required(true).help("w=200&h=200&mode=crop&format=png&rotate=90&flip=v - ImageResizer4 style command"))
+            .arg(Arg::with_name("command").long("command").takes_value(true).required(true).help("w=200&h=200&mode=crop&format=png&rotate=90&flip=v - querystring style command"))
             .arg(Arg::with_name("bundle-to").long("bundle-to").takes_value(true).help("Copies the recipe and all dependencies into the given folder, simplifying it."))
             .arg(Arg::with_name("debug-package").long("debug-package").takes_value(true).help("Creates a debug package in the given folder so others can reproduce the behavior you are seeing"))
 
@@ -127,15 +129,15 @@ pub fn main_with_exit_code() -> i32 {
         return cap.exit_code();
     }
 
-    let build_triple = if let Some(m) = matches.subcommand_matches("v0.1/build") {
+    let build_triple = if let Some(m) = matches.subcommand_matches("v1/build") {
         let source = if m.is_present("demo") {
             cmd_build::JobSource::NamedDemo(m.value_of("demo").unwrap().to_owned())
         } else {
             cmd_build::JobSource::JsonFile(m.value_of("json").unwrap().to_owned())
         };
-        Some((m, source, "v0.1/build"))
-    }else if let Some(m) = matches.subcommand_matches("v0.1/ir4"){
-        Some((m,cmd_build::JobSource::Ir4QueryString(m.value_of("command").unwrap().to_owned()), "v0.1/ir4"))
+        Some((m, source, "v1/build"))
+    }else if let Some(m) = matches.subcommand_matches("v1/querystring"){
+        Some((m,cmd_build::JobSource::Ir4QueryString(m.value_of("command").unwrap().to_owned()), "v1/querystring"))
     }else{ None };
 
     if let Some((m, source, subcommand_name)) = build_triple{
@@ -161,7 +163,7 @@ pub fn main_with_exit_code() -> i32 {
                 let dir = Path::new(&dir);
                 return builder.bundle_to(dir);
         } else {
-            builder.write_response_maybe(m.value_of("response"))
+            builder.write_response_maybe(m.value_of("response"), !m.is_present("quiet"))
                 .expect("IO error writing JSON output file. Does the directory exist?");
             builder.write_errors_maybe().expect("Writing to stderr failed!");
             return builder.get_exit_code().unwrap();

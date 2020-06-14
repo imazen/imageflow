@@ -1,8 +1,9 @@
 [package]
 name = "imageflow_riapi"
 version = "0.1.0"
-authors = ["Nathanael Jones <nathanael.jones@gmail.com>"]
+authors = ["Lilith River <lilith@imazen.io>"]
 workspace = "../"
+edition = "2018"
 
 [dependencies]
 imageflow_types = { path = "../imageflow_types", version = "*" }
@@ -15,7 +16,8 @@ enum_derive= { git="https://github.com/DanielKeep/rust-custom-derive.git" }
 option-filter = "1"
 lazy_static = "1"
 
-difference = "1"
+[dev-dependencies]
+difference = "2" # update to v2
 
 [features]
 nightly = ["imageflow_helpers/nightly"]

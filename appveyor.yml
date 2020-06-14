@@ -1,9 +1,9 @@
 image: Visual Studio 2017
-build: false
+build: off
 environment:
-    RUST_BACKTRACE: 1
-    CARGO_INCREMENTAL: 1
-    RUST_TOOLCHAIN: beta
+    RUST_BACKTRACE: "1"
+    CARGO_INCREMENTAL: "1"
+    RUST_TOOLCHAIN: stable
     VSINSTALL:  "Microsoft Visual Studio\\2017\\Community\\VC\\Auxiliary\\Build"
     VS150COMNTOOLS: "C:\\Program Files (x86)\\Microsoft Visual Studio\\2017\\Community\\Common7\\Tools\\"
     TARGET_DIR: "target\\"
@@ -11,26 +11,26 @@ environment:
       - platform: x86
         RUST_TARGET: i686-pc-windows-msvc
         TARGET_CPU: x86
-        NUGET_RUNTIME: win7-x86
+        NUGET_RUNTIME: win-x86
         PACKAGE_SUFFIX: win-x86
         BITS: 32
       - platform: x64
         RUST_TARGET: x86_64-pc-windows-msvc
         TARGET_CPU: x86-64
-        NUGET_RUNTIME: win7-x64
+        NUGET_RUNTIME: win-x64
         PACKAGE_SUFFIX: win-x86_64
         BITS: 64
       - platform: x64
         RUST_TARGET: x86_64-pc-windows-msvc
         TARGET_CPU: haswell
-        NUGET_RUNTIME: win7-x64
+        NUGET_RUNTIME: win-x64
         PACKAGE_SUFFIX: win-x86_64-haswell
         BITS: 64
 configuration: Release
 
 cache:
-  - '%USERPROFILE%\.cargo'
-  - 'target'
+  - '%USERPROFILE%\.cargo -> Cargo.lock'
+  - 'target -> Cargo.lock'
 matrix:
   fast_finish: false
 
@@ -76,12 +76,10 @@ install:
   - echo Fetching %RUSTUP_INIT%
   - curl -L -o  rustup-init.exe %RUSTUP_INIT%
   - rustup-init.exe -y --default-toolchain %RUST_TOOLCHAIN% --default-host %RUST_TARGET%
-  - set PATH=%PATH%;C:\Program Files (x86)\nasm;%USERPROFILE%\.cargo\bin
+  - set PATH=%PATH%;C:\Program Files\NASM;C:\Program Files (x86)\nasm;%USERPROFILE%\.cargo\bin;%LOCALAPPDATA%\bin\NASM
   - rustc --version --verbose
   - echo. && echo. && echo Installing NASM
-  - curl -L -o nasminst.exe http://www.nasm.us/pub/nasm/releasebuilds/2.12.02/win64/nasm-2.12.02-installer-x64.exe
-  - start /wait nasminst.exe /S
-
+  - choco install nasm
 test_script:
   - if NOT "%CI_TAG%"=="" echo Purging build files for %CI_TAG%
   - if NOT "%CI_TAG%"=="" rmdir /s /q target || exit 0
@@ -145,11 +143,11 @@ deploy:
     draft: false
     prerelease: true
     auth_token:
-        secure: 3h3WYw5/HWY1FxuR89OHsoDenpQWkmGXEFzxTBxLdgID37mmThDEqFM3xyyXk+Tq
+        secure: jyfMnhmukB9auv+ws4A0xpmfCh34Xrc3EcGBH9xR/ga+sgBjTQFamaxkxi3h84q9
     on:
       appveyor_repo_tag: true
   - provider: NuGet
     api_key:
-      secure: vQj0uASp+URSv7pV5idYAZsdZlTigr/2uPZbnsVFrct7QwvPsa5Ljv39j4m7VlTv
+      secure: jPnriIusKBYppJGfXCxBJdSvJozEfUzsojmG0834ZCJjJqGV8c5KSBsmxADNc4R+
     skip_symbols: true
     artifact: /.*\.nupkg/

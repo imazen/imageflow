@@ -1,5 +1,5 @@
 
-extern crate cheddar;
+extern crate cbindgen;
 extern crate regex;
 extern crate imageflow_helpers;
 use imageflow_helpers::identifier_styles::*;
@@ -7,42 +7,10 @@ use imageflow_helpers::identifier_styles::*;
 use regex::{Regex, Captures};
 use std::io::Write;
 use std::path;
-use cheddar::*;
+use cbindgen::Builder;
+use std::io::Cursor;
+use std::env;
 
-//We've reimplemented I/O for cheddar so we can post-process
-
-pub fn write<F, P: AsRef<path::Path>>(cheddar: &Cheddar, file: P, filter:F) -> Result<(), Vec<Error>>where
-    F:  FnOnce(String) -> String  {
-    let file = file.as_ref();
-
-    if let Some(dir) = file.parent() {
-        if let Err(error) = std::fs::create_dir_all(dir) {
-            panic!("could not create directories in '{}': {}", dir.display(), error);
-        }
-    }
-
-    let file_name = file.file_stem().map_or("default".into(), |os| os.to_string_lossy());
-    let header = cheddar.compile(&file_name)?;
-    let filtered_header = filter(header);
-
-    let bytes_buf = filtered_header.into_bytes();
-    if let Err(error) = std::fs::File::create(&file).and_then(|mut f| f.write_all(&bytes_buf)) {
-        panic!("could not write to '{}': {}", file.display(), error);
-    } else {
-        Ok(())
-    }
-}
-
-pub fn run_build<F, P: AsRef<path::Path>>(cheddar: &Cheddar,  file: P, filter: F) where
-F:  FnOnce(String) -> String {
-    if let Err(errors) = write(cheddar, file, filter) {
-        for error in &errors {
-            cheddar.print_error(error);
-        }
-
-        panic!("errors compiling header file");
-    }
-}
 
 static OPAQUE_STRUCTS: &'static str = r#"
 struct Context;
@@ -58,21 +26,15 @@ typedef signed int int32_t;
 typedef unsigned byte uint8_t;
         "#;
 
-//not used
-//static TYPEDEF_VOID_STRUCTS: &'static str = r#"
-//typedef void* Context;
-//typedef void* JobIo;
-//typedef void* Job;
-//typedef void* JsonResponse;
-//        "#;
-
-
 include!("src/abi_version.rs");
 
 
-fn get_version_consts() -> String{
-
-    format!("\n// Incremented for breaking changes\n#define IMAGEFLOW_ABI_VER_MAJOR {}\n\n// Incremented for non-breaking additions\n#define IMAGEFLOW_ABI_VER_MINOR {}\n\n", IMAGEFLOW_ABI_VER_MAJOR, IMAGEFLOW_ABI_VER_MINOR)
+fn get_version_consts(include_comments: bool) -> String{
+    if include_comments {
+        format!("\n// Incremented for breaking changes\n#define IMAGEFLOW_ABI_VER_MAJOR {}\n\n// Incremented for non-breaking additions\n#define IMAGEFLOW_ABI_VER_MINOR {}\n\n", IMAGEFLOW_ABI_VER_MAJOR, IMAGEFLOW_ABI_VER_MINOR)
+    }else{
+        format!("\n#define IMAGEFLOW_ABI_VER_MAJOR {}\n#define IMAGEFLOW_ABI_VER_MINOR {}\n\n", IMAGEFLOW_ABI_VER_MAJOR, IMAGEFLOW_ABI_VER_MINOR)
+    }
 }
 
 
@@ -211,75 +173,137 @@ fn strip_preprocessor_directives(contents: &str) -> String{
 }
 
 
-fn strip_comments(contents: &str) -> String{
-    let temp = Regex::new(r"//[^\n\r]*").unwrap().replace_all(&contents, "");
-    let temp2 = Regex::new(r"[\n\r\s\t]+\n").unwrap().replace_all(&temp, "\n\n").into();
-    temp2
+fn build(file: String, target: Target) {
+    create_file_and_parent(file, generate(target))
 }
-fn build(file: String, target: Target){
 
-    let insert = match target{
-        Target::PInvoke => format!("{}\n\n{}",get_version_consts(), DEFINE_INTS),
-        _ =>  format!("{}\n\n{}",get_version_consts(), OPAQUE_STRUCTS)
-    };
-
-    if target == Target::Raw {
-        run_build(cheddar::Cheddar::new().expect("could not read manifest")
-                      .insert_code(&insert), file, |s| s);
-    }else {
-        let should_strip_preprocessor_directives = target == Target::Lua || target == Target::SignaturesOnly;
-        let should_strip_comments = target == Target::SignaturesOnly;
-        let target = match target {
-            Target::PrefixAll { prefix, struct_name, enum_name, enum_member } => Target::Other {
-                structs: StructModification::Prefix { prefix: prefix, style: struct_name },
-                enums: EnumModification {
-                    name_prefix: prefix, name_style: enum_name,
-                    member_prefix: prefix, member_style: enum_member
-                }
-            },
-            Target::Default | Target::Lua => Target::Other {
-                structs: StructModification::Prefix { prefix: "Imageflow", style: Style::Snake },
-                enums: EnumModification {
-                    name_prefix: "Imageflow", name_style: Style::Snake,
-                    member_prefix: "Imageflow", member_style: Style::Snake
-                }
-            },
-            Target::PInvoke => Target::Other {
-                structs: StructModification::Erase,
-                enums: EnumModification {
-                    name_prefix: "", name_style: Style::PascalCase,
-                    member_prefix: "", member_style: Style::PascalCase
-                }
-            },
-             Target::SignaturesOnly => Target::Other {
-                structs: StructModification::Erase,
-                enums: EnumModification {
-                    name_prefix: "Imageflow", name_style: Style::Snake,
-                    member_prefix: "Imageflow", member_style: Style::Snake
-                }
-            },
-            t => t
-        };
-        if let Target::Other { structs, enums } = target {
-            run_build(cheddar::Cheddar::new().expect("could not read manifest")
-                          .insert_code(&insert), file, |s: String| -> String {
-                let temp = filter_enums(filter_structs(s, &STRUCT_NAMES, structs), &ENUM_NAMES, enums);
-                let temp = if should_strip_preprocessor_directives{
-                    strip_preprocessor_directives(&temp)
-                }else {
-                    temp
-                };
-                if should_strip_comments{
-                    strip_comments(&temp)
-                } else{
-                    temp
-                }
-            });
-        } else {
-            panic!("");
-        }
+fn target_flatten(target: Target) -> Target{
+    match target {
+        Target::PrefixAll { prefix, struct_name, enum_name, enum_member } => Target::Other {
+            structs: StructModification::Prefix { prefix, style: struct_name },
+            enums: EnumModification {
+                name_prefix: prefix,
+                name_style: enum_name,
+                member_prefix: prefix,
+                member_style: enum_member
+            }
+        },
+        Target::Default | Target::Lua => Target::Other {
+            structs: StructModification::Prefix { prefix: "Imageflow", style: Style::Snake },
+            enums: EnumModification {
+                name_prefix: "Imageflow",
+                name_style: Style::Snake,
+                member_prefix: "Imageflow",
+                member_style: Style::Snake
+            }
+        },
+        Target::PInvoke => Target::Other {
+            structs: StructModification::Erase,
+            enums: EnumModification {
+                name_prefix: "",
+                name_style: Style::PascalCase,
+                member_prefix: "",
+                member_style: Style::PascalCase
+            }
+        },
+        Target::SignaturesOnly => Target::Other {
+            structs: StructModification::Erase,
+            enums: EnumModification {
+                name_prefix: "Imageflow",
+                name_style: Style::Snake,
+                member_prefix: "Imageflow",
+                member_style: Style::Snake
+            }
+        },
+        t => t
     }
 }
+fn generate(target: Target) -> String {
+    let allow_comments = target != Target::SignaturesOnly;
+
+
+    let crate_dir = env::var("CARGO_MANIFEST_DIR").unwrap();
+
+    let mut header = format!("\n#ifndef generated_imageflow_h\n#define generated_imageflow_h\n{}", get_version_consts(allow_comments));
+
+    let footer = "\n#endif // generated_imageflow_h\n".to_owned();
+
+    if target == Target::PInvoke {
+        header.push_str(DEFINE_INTS);
+    } else {
+        header.push_str(OPAQUE_STRUCTS);
+    }
+
+    let no_preprocessor_directives = target == Target::Lua || target == Target::SignaturesOnly;
+
+    let mut config = cbindgen::Config::default();
+    config.language = cbindgen::Language::C;
+    config.header = Some(header);
+    config.trailer = Some(footer);
+    config.cpp_compat = !no_preprocessor_directives;
+    config.include_guard = None;
+    config.documentation = allow_comments;
+    config.documentation_style = cbindgen::DocumentationStyle::C99;
+    config.style = cbindgen::Style::Both;
+
+
+    if target == Target::Raw {
+        let builder = cbindgen::Builder::new().with_config(config).with_crate(crate_dir);
+        generate_to_string(builder)
+    } else if let Target::Other { structs, enums } = target_flatten(target) {
+        let mut enum_config = cbindgen::EnumConfig::default();
+        enum_config.rename_variants = Some(cbindgen::RenameRule::SnakeCase);
+        enum_config.prefix_with_name = true;
+        config.enumeration = enum_config;
+
+        let builder = cbindgen::Builder::new().with_config(config).with_crate(crate_dir);
+        let s = generate_to_string(builder);
+        let temp = filter_enums(filter_structs(s, &STRUCT_NAMES, structs), &ENUM_NAMES, enums);
+        if no_preprocessor_directives {
+            strip_preprocessor_directives(&temp)
+        } else {
+            temp
+        }
+    } else {
+        panic!("");
+    }
+}
+
+
+fn generate_to_string(builder: Builder) -> String{
+    let mut buf = Cursor::new(vec![0; 15]);
+    match builder.generate() {
+        Err(error) => {
+            eprintln!("{:?}", error);
+            panic!("errors compiling header file");
+        }
+        Ok(v) => {
+            v.write(&mut buf);
+        }
+    }
+
+    buf.set_position(0);
+    let mut buf_str = String::new();
+    use std::io::Read;
+    buf.read_to_string(&mut buf_str).expect("failed to convert to string");
+    buf_str
+}
+
+fn create_file_and_parent<P: AsRef<path::Path>>( file: P, text: String)  {
+
+    let file = file.as_ref();
+
+    if let Some(dir) = file.parent() {
+        if let Err(error) = std::fs::create_dir_all(dir) {
+            panic!("could not create directories in '{}': {}", dir.display(), error);
+        }
+    }
+    let bytes_buf = text.into_bytes();
+    if let Err(error) = std::fs::File::create(&file).and_then(|mut f| f.write_all(&bytes_buf)) {
+        panic!("could not write to '{}': {}", file.display(), error);
+    }
+}
+
 
 fn main() {
     //let base = "imageflow_"; //for debugging more easily

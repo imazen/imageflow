@@ -14,7 +14,7 @@ use staticfile::Static;
 
 extern crate staticfile;
 extern crate rustc_serialize;
-#[macro_use] extern crate hyper;
+extern crate hyper;
 
 extern crate time;
 #[macro_use] extern crate lazy_static;
@@ -24,7 +24,7 @@ extern crate hyper_native_tls;
 
 use hyper_native_tls::NativeTlsServer;
 
-use std::sync::atomic::{AtomicUsize, ATOMIC_USIZE_INIT};
+use std::sync::atomic::AtomicUsize;
 
 
 extern crate conduit_mime_types as mime_types;
@@ -38,11 +38,10 @@ extern crate imageflow_riapi;
 extern crate reqwest;
 
 use ::imageflow_helpers as hlp;
-use imageflow_helpers::fetching::FetchConfig;
+use imageflow_http_helpers::FetchConfig;
 use imageflow_helpers::preludes::from_std::*;
 use imageflow_core::clients::stateless;
 
-use hyper::Url;
 
 pub mod disk_cache;
 pub mod resizer;
@@ -51,7 +50,7 @@ pub mod diagnose;
 mod requested_path;
 extern crate url;
 
-use disk_cache::{CacheFolder,  FolderLayout};
+use crate::disk_cache::{CacheFolder,  FolderLayout};
 use logger::Logger;
 
 pub mod preludes {
@@ -69,7 +68,7 @@ use router::Router;
 
 
 
-use time::precise_time_ns;
+use imageflow_helpers::timeywimey::precise_time_ns;
 
 #[cfg_attr(feature = "cargo-clippy", allow(useless_attribute))]
 #[allow(unused_imports)]
@@ -97,7 +96,7 @@ pub enum ServerError {
     IoError(std::io::Error),
     DiskCacheReadIoError(std::io::Error),
     DiskCacheWriteIoError(std::io::Error),
-    UpstreamResponseError(hyper::status::StatusCode),
+    UpstreamResponseError(reqwest::StatusCode),
     UpstreamHyperError(hyper::Error),
     UpstreamReqwestError(reqwest::Error),
     UpstreamIoError(std::io::Error),
@@ -121,14 +120,14 @@ impl From<hyper::Error> for ServerError {
         ServerError::HyperError(e)
     }
 }
-impl From<hlp::fetching::FetchError> for ServerError {
-    fn from(e: hlp::fetching::FetchError) -> ServerError {
+impl From<::imageflow_http_helpers::FetchError> for ServerError {
+    fn from(e: ::imageflow_http_helpers::FetchError) -> ServerError {
         match e{
-            hlp::fetching::FetchError::HyperError(e) => ServerError::HyperError(e),
-            hlp::fetching::FetchError::IoError(e) => ServerError::IoError(e),
-            hlp::fetching::FetchError::UpstreamResponseError(e) => ServerError::UpstreamResponseError(e),
-            hlp::fetching::FetchError::UpstreamResponseErrorWithResponse{status, ..}=> ServerError::UpstreamResponseError(status),
-            hlp::fetching::FetchError::ReqwestError(e) => ServerError::ReqwestError(e)
+            ::imageflow_http_helpers::FetchError::HyperError(e) => ServerError::HyperError(e),
+            ::imageflow_http_helpers::FetchError::IoError(e) => ServerError::IoError(e),
+            ::imageflow_http_helpers::FetchError::UpstreamResponseError(e) => ServerError::UpstreamResponseError(e),
+            ::imageflow_http_helpers::FetchError::UpstreamResponseErrorWithResponse{status, ..}=> ServerError::UpstreamResponseError(status),
+            ::imageflow_http_helpers::FetchError::ReqwestError(e) => ServerError::ReqwestError(e)
         }
 
     }
@@ -143,12 +142,12 @@ impl From<std::io::Error> for ServerError {
 struct FetchedResponse {
     bytes: Vec<u8>,
     perf: AcquirePerf,
-    content_type: hyper::header::ContentType,
+    content_type: reqwest::header::HeaderValue,
 }
 
 fn fetch_bytes(url: &str, config: Option<FetchConfig>) -> std::result::Result<FetchedResponse, ServerError> {
     let start = precise_time_ns();
-    let result = hlp::fetching::fetch(url, config);
+    let result = ::imageflow_http_helpers::fetch(url, config);
     let downloaded = precise_time_ns();
 
     match result{
@@ -231,11 +230,11 @@ fn fetch_response_using_cache_by_url(cache: &CacheFolder, url: &str) -> std::res
         let result = fetch_bytes(url, None);
         if let Ok(fetched) = result {
             let start = precise_time_ns();
-            let bytes = bincode::serialize(&fetched.bytes, bincode::Infinite).unwrap();
+            let bytes = bincode::serialize(&fetched.bytes).unwrap();
             match entry.write(&bytes) {
                 Ok(()) => {
                     let end = precise_time_ns();
-                    Ok((CachedResponse { bytes: fetched.bytes, content_type: format!("{}", fetched.content_type) }, AcquirePerf { cache_write_ns: end - start, ..fetched.perf }))
+                    Ok((CachedResponse { bytes: fetched.bytes, content_type: format!("{}", fetched.content_type.to_str().unwrap()) }, AcquirePerf { cache_write_ns: end - start, ..fetched.perf }))
                 },
                 Err(e) => Err(ServerError::DiskCacheWriteIoError(e))
             }
@@ -309,7 +308,6 @@ fn execute_using<F, F2>(bytes_provider: F2, framewise_generator: F)
             execute_ns: end_execute - start_execute,
         }))
 }
-header! { (XImageflowPerf, "X-Imageflow-Perf") => [String] }
 
 fn respond_using<F, F2, A>(debug_info: &A, bytes_provider: F2, framewise_generator: F)
                         -> IronResult<Response>
@@ -325,7 +323,9 @@ fn respond_using<F, F2, A>(debug_info: &A, bytes_provider: F2, framewise_generat
                 .unwrap_or_else(|_| Mime::from_str("application/octet-stream").unwrap());
             let mut res = Response::with((mime, status::Ok, output.bytes));
 
-            res.headers.set(XImageflowPerf(perf.short()));
+
+
+            res.headers.set_raw("X-Imageflow-Perf", vec![perf.short().into_bytes()]);
             Ok(res)
         }
         Err(e) => respond_with_server_error(&debug_info, e, true)
@@ -334,7 +334,7 @@ fn respond_using<F, F2, A>(debug_info: &A, bytes_provider: F2, framewise_generat
 
 fn respond_with_server_error<A>(debug_info: &A, e: ServerError, detailed_errors: bool) -> IronResult<Response> where A: std::fmt::Debug {
     match e {
-        ServerError::UpstreamResponseError(hyper::status::StatusCode::NotFound) => {
+        ServerError::UpstreamResponseError(reqwest::StatusCode::NOT_FOUND) => {
             let bytes = if detailed_errors {
                 b"Remote file not found (upstream server responded with 404)".to_vec()
             }else {
@@ -376,11 +376,12 @@ fn ir4_http_respond_uncached<F>(_shared: &SharedData, url: &str, framewise_gener
 }
 
 
-fn ir4_framewise(_info: &s::ImageInfo, url: &Url) -> std::result::Result<s::Framewise, ServerError> {
+fn ir4_framewise(_info: &s::ImageInfo, url: &url::Url) -> std::result::Result<s::Framewise, ServerError> {
     let t = ::imageflow_riapi::ir4::Ir4Translate{
         i: ::imageflow_riapi::ir4::Ir4Command::Url(url.as_str().to_owned()),
         decode_id: Some(0),
         encode_id: Some(1),
+        watermarks: None
     };
     t.translate().map_err( ServerError::LayoutSizingError).and_then(|r: ::imageflow_riapi::ir4::Ir4Result| Ok(s::Framewise::Steps(r.steps.unwrap())))
 }
@@ -566,12 +567,12 @@ fn mount<T>(mount: MountLocation, mou: &mut mount::Mount, setup: EngineSetup<T>)
 
 
 pub fn serve(c: StartServerConfig) {
-    env_logger::init().unwrap();
+    env_logger::init();
 
     let shared_data = SharedData {
         source_cache: CacheFolder::new(c.data_dir.join(Path::new("source_cache")).as_path(), c.default_cache_layout.unwrap_or(FolderLayout::Normal)),
         output_cache: CacheFolder::new(c.data_dir.join(Path::new("output_cache")).as_path(), c.default_cache_layout.unwrap_or(FolderLayout::Normal)),
-        requests_received: ATOMIC_USIZE_INIT //NOT YET USED
+        requests_received: AtomicUsize::new(0) //NOT YET USED
     };
 
     let mut mou = mount::Mount::new();

@@ -1,0 +1,12 @@
+Autorelease
+chrm
+cmyk
+coords
+Endianness
+IFD
+Jdk
+Jpe
+JSAMPLE
+Mz
+ths
+YCCK

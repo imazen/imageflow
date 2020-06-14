@@ -17,7 +17,7 @@ pub static TRANSPOSE_MUT: TransposeMutDef = TransposeMutDef{};
 #[derive(Debug,Clone)]
 pub struct ApplyOrientationDef;
 impl NodeDef for ApplyOrientationDef{
-    fn as_one_input_expand(&self) -> Option<&NodeDefOneInputExpand>{
+    fn as_one_input_expand(&self) -> Option<&dyn NodeDefOneInputExpand>{
         Some(self)
     }
 }
@@ -40,13 +40,13 @@ impl NodeDefOneInputExpand for ApplyOrientationDef{
                 })
             })
         } else {
-            Err(nerror!(::ErrorKind::NodeParamsMismatch, "Need ApplyOrientation, got {:?}", p))
+            Err(nerror!(crate::ErrorKind::NodeParamsMismatch, "Need ApplyOrientation, got {:?}", p))
         }
     }
 
     fn expand(&self, ctx: &mut OpCtxMut, ix: NodeIndex, p: NodeParams, parent: FrameInfo) -> Result<()>{
         if let NodeParams::Json(s::Node::ApplyOrientation { flag }) = p {
-            let replacement_nodes: Vec<&'static NodeDef> = match flag {
+            let replacement_nodes: Vec<&'static dyn NodeDef> = match flag {
                 7 => vec![&ROTATE_180, &TRANSPOSE],
                 8 => vec![&ROTATE_90],
                 6 => vec![&ROTATE_270],
@@ -62,7 +62,7 @@ impl NodeDefOneInputExpand for ApplyOrientationDef{
                                  .collect());
             Ok(())
         } else {
-            Err(nerror!(::ErrorKind::NodeParamsMismatch, "Need ApplyOrientation, got {:?}", p))
+            Err(nerror!(crate::ErrorKind::NodeParamsMismatch, "Need ApplyOrientation, got {:?}", p))
         }
     }
 }
@@ -71,7 +71,7 @@ impl NodeDefOneInputExpand for ApplyOrientationDef{
 #[derive(Debug,Clone)]
 pub struct TransposeDef;
 impl NodeDef for TransposeDef{
-    fn as_one_input_expand(&self) -> Option<&NodeDefOneInputExpand>{
+    fn as_one_input_expand(&self) -> Option<&dyn NodeDefOneInputExpand>{
         Some(self)
     }
 }
@@ -104,7 +104,7 @@ impl NodeDefOneInputExpand for TransposeDef {
 #[derive(Debug,Clone)]
 pub struct NoOpDef;
 impl NodeDef for NoOpDef{
-    fn as_one_input_expand(&self) -> Option<&NodeDefOneInputExpand>{
+    fn as_one_input_expand(&self) -> Option<&dyn NodeDefOneInputExpand>{
         Some(self)
     }
 }
@@ -126,7 +126,7 @@ impl NodeDefOneInputExpand for NoOpDef {
 pub struct TransposeMutDef;
 
 impl NodeDef for TransposeMutDef {
-    fn as_one_input_one_canvas(&self) -> Option<&NodeDefOneInputOneCanvas> {
+    fn as_one_input_one_canvas(&self) -> Option<&dyn NodeDefOneInputOneCanvas> {
         Some(self)
     }
 }
@@ -148,7 +148,7 @@ impl NodeDefOneInputOneCanvas for TransposeMutDef {
                 panic!("Canvas and input must be different bitmaps for transpose to work!")
             }
 
-            if !::ffi::flow_bitmap_bgra_transpose(c.flow_c(), input as *mut BitmapBgra, canvas as *mut BitmapBgra) {
+            if !crate::ffi::flow_bitmap_bgra_transpose(c.flow_c(), input as *mut BitmapBgra, canvas as *mut BitmapBgra) {
                 panic!("Failed to transpose bitmap")
             }
         }
@@ -160,7 +160,7 @@ impl NodeDefOneInputOneCanvas for TransposeMutDef {
 #[derive(Debug, Clone)]
 pub struct FlipVerticalMutNodeDef;
 impl NodeDef for FlipVerticalMutNodeDef{
-    fn as_one_mutate_bitmap(&self) -> Option<&NodeDefMutateBitmap>{
+    fn as_one_mutate_bitmap(&self) -> Option<&dyn NodeDefMutateBitmap>{
         Some(self)
     }
 }
@@ -170,7 +170,7 @@ impl NodeDefMutateBitmap for FlipVerticalMutNodeDef{
     }
     fn mutate(&self, c: &Context, bitmap: &mut BitmapBgra,  p: &NodeParams) -> Result<()>{
         unsafe {
-            if !::ffi::flow_bitmap_bgra_flip_vertical(c.flow_c(), bitmap as *mut BitmapBgra){
+            if !crate::ffi::flow_bitmap_bgra_flip_vertical(c.flow_c(), bitmap as *mut BitmapBgra){
                 return Err(cerror!(c))
             }
         }
@@ -180,7 +180,7 @@ impl NodeDefMutateBitmap for FlipVerticalMutNodeDef{
 #[derive(Debug, Clone)]
 pub struct FlipHorizontalMutNodeDef;
 impl NodeDef for FlipHorizontalMutNodeDef{
-    fn as_one_mutate_bitmap(&self) -> Option<&NodeDefMutateBitmap>{
+    fn as_one_mutate_bitmap(&self) -> Option<&dyn NodeDefMutateBitmap>{
         Some(self)
     }
 }
@@ -190,7 +190,7 @@ impl NodeDefMutateBitmap for FlipHorizontalMutNodeDef{
     }
     fn mutate(&self, c: &Context, bitmap: &mut BitmapBgra,  p: &NodeParams) -> Result<()>{
         unsafe {
-            if !::ffi::flow_bitmap_bgra_flip_horizontal(c.flow_c(), bitmap as *mut BitmapBgra){
+            if !crate::ffi::flow_bitmap_bgra_flip_horizontal(c.flow_c(), bitmap as *mut BitmapBgra){
                 return Err(cerror!(c))
             }
         }
@@ -201,7 +201,7 @@ impl NodeDefMutateBitmap for FlipHorizontalMutNodeDef{
 #[derive(Debug,Clone)]
 pub struct Rotate90Def;
 impl NodeDef for Rotate90Def{
-    fn as_one_input_expand(&self) -> Option<&NodeDefOneInputExpand>{
+    fn as_one_input_expand(&self) -> Option<&dyn NodeDefOneInputExpand>{
         Some(self)
     }
 }
@@ -227,7 +227,7 @@ impl NodeDefOneInputExpand for Rotate90Def {
 #[derive(Debug,Clone)]
 pub struct Rotate270Def;
 impl NodeDef for Rotate270Def{
-    fn as_one_input_expand(&self) -> Option<&NodeDefOneInputExpand>{
+    fn as_one_input_expand(&self) -> Option<&dyn NodeDefOneInputExpand>{
         Some(self)
     }
 }
@@ -252,7 +252,7 @@ impl NodeDefOneInputExpand for Rotate270Def {
 #[derive(Debug,Clone)]
 pub struct Rotate180Def;
 impl NodeDef for Rotate180Def{
-    fn as_one_input_expand(&self) -> Option<&NodeDefOneInputExpand>{
+    fn as_one_input_expand(&self) -> Option<&dyn NodeDefOneInputExpand>{
         Some(self)
     }
 }
@@ -267,7 +267,7 @@ impl NodeDefOneInputExpand for Rotate180Def {
     fn expand(&self, ctx: &mut OpCtxMut, ix: NodeIndex, p: NodeParams, parent: FrameInfo) -> Result<()> {
         ctx.replace_node(ix,
                          vec![
-                             Node::n(&FLIP_V as &NodeDef, NodeParams::None),
+                             Node::n(&FLIP_V as &dyn NodeDef, NodeParams::None),
                              Node::n(&FLIP_H, NodeParams::None),
                          ]);
         Ok(())

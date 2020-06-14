@@ -1,17 +1,20 @@
 use super::Encoder;
 use super::s::{EncoderPreset, EncodeResult};
-use io::IoProxy;
-use ffi::BitmapBgra;
+use crate::io::IoProxy;
+use crate::ffi::BitmapBgra;
 use imageflow_types::PixelFormat;
-use ::{Context, Result, ErrorKind, FlowError};
+use imageflow_types::PixelBuffer;
+use crate::{Context, Result, ErrorKind, FlowError};
 use std::result::Result as StdResult;
-use io::IoProxyRef;
+use crate::io::IoProxyRef;
 use std::slice;
 use std::rc::Rc;
 use std::cell::RefCell;
 use std::os::raw::c_int;
 use mozjpeg;
-use codecs::lode;
+use evalchroma;
+use evalchroma::PixelSize;
+use crate::codecs::lode;
 use std::io::Write;
 
 #[derive(Copy, Clone)]
@@ -31,6 +34,9 @@ pub struct MozjpegEncoder {
 impl MozjpegEncoder {
     // Quality is in range 0-100
     pub(crate) fn create(c: &Context, quality: Option<u8>, progressive: Option<bool>, io: IoProxy) -> Result<Self> {
+        if !c.enabled_codecs.encoders.contains(&crate::codecs::NamedEncoders::MozJpegEncoder){
+            return Err(nerror!(ErrorKind::CodecDisabledError, "The MozJpeg encoder has been disabled"));
+        }
         Ok(MozjpegEncoder {
             io, quality, progressive,
             optimize_coding: Some(true),
@@ -64,7 +70,7 @@ impl Encoder for MozjpegEncoder {
             },
         }
         if let Some(q) = self.quality {
-            cinfo.set_quality(q.into());
+            cinfo.set_quality(u8::min(100,q).into());
         }
         if let Some(p) = self.progressive {
             if p {
@@ -74,6 +80,26 @@ impl Encoder for MozjpegEncoder {
         if let Some(o) = self.optimize_coding {
             cinfo.set_optimize_coding(o);
         }
+
+        let chroma_quality = self.quality.unwrap_or(75) as f32; // Lower values allow blurrier color
+        let pixels_buffer = unsafe {frame.pixels_buffer()}.ok_or(nerror!(ErrorKind::BitmapPointerNull))?;
+        let max_sampling = PixelSize{cb:(2,2), cr:(2,2)}; // Set to 1 to force higher res
+        let res = match pixels_buffer {
+            PixelBuffer::Bgra32(buf) => evalchroma::adjust_sampling(buf, max_sampling, chroma_quality),
+            PixelBuffer::Bgr32(buf) => evalchroma::adjust_sampling(buf, max_sampling, chroma_quality),
+            PixelBuffer::Bgr24(buf) => evalchroma::adjust_sampling(buf, max_sampling, chroma_quality),
+            PixelBuffer::Gray8(buf) => evalchroma::adjust_sampling(buf, max_sampling, chroma_quality),
+        };
+
+        // Translate chroma pixel size into JPEG's channel-relative samples per pixel
+        let max_sampling_h = res.subsampling.cb.0.max(res.subsampling.cr.0);
+        let max_sampling_v = res.subsampling.cb.1.max(res.subsampling.cr.1);
+        let px_sizes = &[(1,1), res.subsampling.cb, res.subsampling.cr];
+        for (c, &(h, v)) in cinfo.components_mut().iter_mut().zip(px_sizes) {
+            c.h_samp_factor = (max_sampling_h / h).into();
+            c.v_samp_factor = (max_sampling_v / v).into();
+        }
+
         cinfo.set_mem_dest();
         cinfo.start_compress();
         let pixels_slice = unsafe {frame.pixels_slice()}.ok_or(nerror!(ErrorKind::BitmapPointerNull))?;

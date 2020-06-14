@@ -2,13 +2,13 @@
   <configuration default="false" name="test riapi" type="CargoCommandRunConfiguration" factoryName="Cargo Command">
     <option name="channel" value="DEFAULT" />
     <option name="command" value="test --package imageflow_riapi" />
-    <option name="nocapture" value="true" />
+    <option name="allFeatures" value="false" />
     <option name="backtrace" value="FULL" />
     <option name="workingDirectory" value="file://$PROJECT_DIR$" />
     <envs>
       <env name="CARGO_INCREMENTAL" value="1" />
       <env name="RUST_TEST_THREADS" value="1" />
     </envs>
-    <method />
+    <method v="2" />
   </configuration>
 </component>

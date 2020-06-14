@@ -40,7 +40,11 @@ extern crate imageflow_helpers;
 extern crate chrono;
 extern crate serde;
 extern crate serde_json;
-use std::str::FromStr;
+extern crate rgb;
+extern crate imgref;
+
+use imgref::ImgRef;
+//use std::str::FromStr;
 pub mod collections;
 
 
@@ -62,7 +66,7 @@ pub enum PixelFormat {
 
 impl PixelFormat{
     /// The number of bytes required to store the given pixel type
-    pub fn bytes(&self) -> usize{
+    pub fn bytes(&self) -> usize {
         match *self{
             PixelFormat::Gray8 => 1,
             PixelFormat::Bgr24 => 3,
@@ -72,86 +76,122 @@ impl PixelFormat{
     }
 }
 
+/// Internal 2d representation of pixel slices
+pub enum PixelBuffer<'a> {
+    Bgra32(ImgRef<'a, rgb::alt::BGRA8>),
+    Bgr32(ImgRef<'a, rgb::alt::BGRA8>), // there's no BGRX support in the rgb crate
+    Bgr24(ImgRef<'a, rgb::alt::BGR8>),
+    Gray8(ImgRef<'a, rgb::alt::GRAY8>),
+}
+
 /// Named interpolation function+configuration presets
 #[repr(C)]
 #[derive(Copy, Serialize, Deserialize, Clone, PartialEq, PartialOrd, Debug)]
 pub enum Filter {
+    #[serde(rename="robidoux_fast")]
     RobidouxFast = 1,
+    #[serde(rename="robidoux")]
     Robidoux = 2,
+    #[serde(rename="robidoux_sharp")]
     RobidouxSharp = 3,
+    #[serde(rename="ginseng")]
     Ginseng = 4,
+    #[serde(rename="ginseng_sharp")]
     GinsengSharp = 5,
+    #[serde(rename="lanczos")]
     Lanczos = 6,
+    #[serde(rename="lanczos_sharp")]
     LanczosSharp = 7,
+    #[serde(rename="lanczos_2")]
     Lanczos2 = 8,
+    #[serde(rename="lanczos_2_sharp")]
     Lanczos2Sharp = 9,
-    CubicFast = 10,
+    // #[serde(rename="cubic_fast")]
+    // CubicFast = 10,
+    #[serde(rename="cubic")]
     Cubic = 11,
+    #[serde(rename="cubic_sharp")]
     CubicSharp = 12,
+    #[serde(rename="catmull_rom")]
     CatmullRom = 13,
+    #[serde(rename="mitchell")]
     Mitchell = 14,
-
+    #[serde(rename="cubic_b_spline")]
     CubicBSpline = 15,
+    #[serde(rename="hermite")]
     Hermite = 16,
+    #[serde(rename="jinc")]
     Jinc = 17,
-    RawLanczos3 = 18,
-    RawLanczos3Sharp = 19,
-    RawLanczos2 = 20,
-    RawLanczos2Sharp = 21,
+    // #[serde(rename="raw_lanczos_3")]
+    // RawLanczos3 = 18,
+    // #[serde(rename="raw_lanczos_3_sharp")]
+    // RawLanczos3Sharp = 19,
+    // #[serde(rename="raw_lanczos_2")]
+    // RawLanczos2 = 20,
+    // #[serde(rename="raw_lanczos_2_sharp")]
+    // RawLanczos2Sharp = 21,
+    #[serde(rename="triangle")]
     Triangle = 22,
+    #[serde(rename="linear")]
     Linear = 23,
+    #[serde(rename="box")]
     Box = 24,
-    CatmullRomFast = 25,
-    CatmullRomFastSharp = 26,
+    // #[serde(rename="catmull_rom_fast")]
+    // CatmullRomFast = 25,
+    // #[serde(rename="catmull_rom_fast_sharp")]
+    // CatmullRomFastSharp = 26,
 
+    #[serde(rename="fastest")]
     Fastest = 27,
-
-    MitchellFast = 28,
+    // #[serde(rename="mitchell_fast")]
+    // MitchellFast = 28,
+    #[serde(rename="n_cubic")]
     NCubic = 29,
+    #[serde(rename="n_cubic_sharp")]
     NCubicSharp = 30,
 }
-
-impl FromStr for Filter {
-    type Err = &'static str;
-
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        match &*s.to_ascii_lowercase() {
-            "robidouxfast" => Ok(Filter::RobidouxFast),
-            "robidoux" => Ok(Filter::Robidoux),
-            "robidouxsharp" => Ok(Filter::RobidouxSharp),
-            "ginseng" => Ok(Filter::Ginseng),
-            "ginsengsharp" => Ok(Filter::GinsengSharp),
-            "lanczos" => Ok(Filter::Lanczos),
-            "lanczossharp" => Ok(Filter::LanczosSharp),
-            "lanczos2" => Ok(Filter::Lanczos2),
-            "lanczos2sharp" => Ok(Filter::Lanczos2Sharp),
-            "cubicfast" => Ok(Filter::CubicFast),
-            "cubic_0_1" => Ok(Filter::Cubic),
-            "cubicsharp" => Ok(Filter::CubicSharp),
-            "catmullrom" |
-            "catrom" => Ok(Filter::CatmullRom),
-            "mitchell" => Ok(Filter::Mitchell),
-            "cubicbspline" |
-            "bspline" => Ok(Filter::CubicBSpline),
-            "hermite" => Ok(Filter::Hermite),
-            "jinc" => Ok(Filter::Jinc),
-            "rawlanczos3" => Ok(Filter::RawLanczos3),
-            "rawlanczos3sharp" => Ok(Filter::RawLanczos3Sharp),
-            "rawlanczos2" => Ok(Filter::RawLanczos2),
-            "rawlanczos2sharp" => Ok(Filter::RawLanczos2Sharp),
-            "triangle" => Ok(Filter::Triangle),
-            "linear" => Ok(Filter::Linear),
-            "box" => Ok(Filter::Box),
-            "catmullromfast" => Ok(Filter::CatmullRomFast),
-            "catmullromfastsharp" => Ok(Filter::CatmullRomFastSharp),
-            "fastest" => Ok(Filter::Fastest),
-            "mitchellfast" => Ok(Filter::MitchellFast),
-            "ncubic" => Ok(Filter::NCubic),
-            "ncubicsharp" => Ok(Filter::NCubicSharp),
-            _ => Err("no match"),
-        }
-    }
-}
+//
+// impl FromStr for Filter {
+//     type Err = &'static str;
+//
+//     fn from_str(s: &str) -> Result<Self, Self::Err> {
+//         match &*s.to_ascii_lowercase() {
+//             "robidouxfast" => Ok(Filter::RobidouxFast),
+//             "robidoux" => Ok(Filter::Robidoux),
+//             "robidouxsharp" => Ok(Filter::RobidouxSharp),
+//             "ginseng" => Ok(Filter::Ginseng),
+//             "ginsengsharp" => Ok(Filter::GinsengSharp),
+//             "lanczos" => Ok(Filter::Lanczos),
+//             "lanczossharp" => Ok(Filter::LanczosSharp),
+//             "lanczos2" => Ok(Filter::Lanczos2),
+//             "lanczos2sharp" => Ok(Filter::Lanczos2Sharp),
+//             "cubicfast" => Ok(Filter::CubicFast),
+//             "cubic_0_1" => Ok(Filter::Cubic),
+//             "cubicsharp" => Ok(Filter::CubicSharp),
+//             "catmullrom" |
+//             "catrom" => Ok(Filter::CatmullRom),
+//             "mitchell" => Ok(Filter::Mitchell),
+//             "cubicbspline" |
+//             "bspline" => Ok(Filter::CubicBSpline),
+//             "hermite" => Ok(Filter::Hermite),
+//             "jinc" => Ok(Filter::Jinc),
+//             "rawlanczos3" => Ok(Filter::RawLanczos3),
+//             "rawlanczos3sharp" => Ok(Filter::RawLanczos3Sharp),
+//             "rawlanczos2" => Ok(Filter::RawLanczos2),
+//             "rawlanczos2sharp" => Ok(Filter::RawLanczos2Sharp),
+//             "triangle" => Ok(Filter::Triangle),
+//             "linear" => Ok(Filter::Linear),
+//             "box" => Ok(Filter::Box),
+//             "catmullromfast" => Ok(Filter::CatmullRomFast),
+//             "catmullromfastsharp" => Ok(Filter::CatmullRomFastSharp),
+//             "fastest" => Ok(Filter::Fastest),
+//             "mitchellfast" => Ok(Filter::MitchellFast),
+//             "ncubic" => Ok(Filter::NCubic),
+//             "ncubicsharp" => Ok(Filter::NCubicSharp),
+//             _ => Err("no match"),
+//         }
+//     }
+// }
 
 #[derive(Serialize, Deserialize, Clone, Copy, PartialEq, Debug)]
 pub enum PngBitDepth {
@@ -185,14 +225,22 @@ pub enum EncoderPreset {
         zlib_compression: Option<i32>,
     },
     Pngquant {
-        quality: Option<(u8, u8)>,
+        quality: Option<u8>,
+        minimum_quality: Option<u8>,
         speed: Option<u8>,
+        maximum_deflate: Option<bool>
     },
-    Lodepng,
+    Lodepng {
+        maximum_deflate: Option<bool>
+    },
     Mozjpeg {
         quality: Option<u8>,
         progressive: Option<bool>,
     },
+    WebPLossy{
+        quality: f32
+    },
+    WebPLossless,
     Gif,
 }
 
@@ -214,14 +262,14 @@ impl EncoderPreset {
     }
     pub fn libjpeg_turbo_q(quality: Option<i32>) -> EncoderPreset {
         EncoderPreset::LibjpegTurbo {
-            quality: quality,
+            quality,
             optimize_huffman_coding: None,
             progressive: None
         }
     }
 }
 
-/// Represenations of an sRGB color value.
+/// Representations of an sRGB color value.
 #[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
 pub enum ColorSrgb {
     /// Hex in RRGGBBAA (css) form or variant thereof
@@ -269,6 +317,10 @@ impl Color {
     pub fn is_transparent(&self) -> bool{
         self.to_color_32().unwrap_or(Color32::black()).is_transparent()
     }
+
+    pub fn is_opaque(&self) -> bool{
+        self.to_color_32().unwrap_or(Color32::black()).is_opaque()
+    }
 }
 
 #[cfg(test)]
@@ -300,12 +352,6 @@ fn test_bgra() {
 
 }
 
-#[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
-pub struct ResampleHints {
-    pub sharpen_percent: Option<f32>,
-    pub background_color: Option<Color>
-    // pub prefer_1d_twice: Option<bool>,
-}
 
 #[derive(Serialize, Deserialize, Clone, Copy, PartialEq, Debug)]
 pub enum ResampleWhen{
@@ -317,42 +363,187 @@ pub enum ResampleWhen{
     Always
 }
 
+#[derive(Serialize, Deserialize, Clone, Copy, PartialEq, Debug)]
+pub enum SharpenWhen{
+    #[serde(rename="downscaling")]
+    Downscaling,
+    #[serde(rename="upscaling")]
+    Upscaling,
+    #[serde(rename="size_differs")]
+    SizeDiffers,
+    #[serde(rename="always")]
+    Always
+}
+
 #[derive(Serialize, Deserialize,  Clone, PartialEq, Debug)]
-pub struct ConstraintResamplingHints {
+pub struct ResampleHints {
     pub sharpen_percent: Option<f32>,
     pub down_filter: Option<Filter>,
     pub up_filter: Option<Filter>,
     pub scaling_colorspace: Option<ScalingFloatspace>,
     pub background_color: Option<Color>,
     pub resample_when: Option<ResampleWhen>,
+    pub sharpen_when: Option<SharpenWhen>
 }
 
-impl ConstraintResamplingHints{
-    pub fn with(filter: Option<Filter>, sharpen_percent: Option<f32>) -> ConstraintResamplingHints{
-        ConstraintResamplingHints{
+impl ResampleHints {
+    pub fn new() -> ResampleHints {
+        ResampleHints {
+            sharpen_percent: None,
+            down_filter: None,
+            up_filter: None,
+            scaling_colorspace: None,
+            background_color: None,
+            resample_when: None,
+            sharpen_when: None
+        }
+    }
+    pub fn with_bi_filter(self, filter: Filter) -> ResampleHints {
+        ResampleHints {
+            down_filter: Some(filter),
+            up_filter: Some(filter),
+            .. self
+        }
+    }
+    pub fn with_floatspace(self, space: ScalingFloatspace) -> ResampleHints {
+        ResampleHints {
+            scaling_colorspace: Some(space),
+            .. self
+        }
+    }
+
+    pub fn with(filter: Option<Filter>, sharpen_percent: Option<f32>) -> ResampleHints {
+        ResampleHints {
             sharpen_percent,
             down_filter: filter,
             up_filter: filter,
             resample_when: None,
             scaling_colorspace: None,
-            background_color: None
+            background_color: None,
+            sharpen_when: None
         }
     }
 
 }
 
-#[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
+#[derive(Serialize, Deserialize, Copy, Clone, PartialEq, Debug)]
 pub enum CommandStringKind{
     #[serde(rename="ir4")]
     ImageResizer4
 }
 
-/// Constraint types. TODO: expand to include nearly everything RIAPI does.
+#[derive(Serialize, Deserialize, Copy, Clone, PartialEq, Debug)]
+pub enum ConstraintMode {
+    /// Distort the image to exactly the given dimensions.
+    /// If only one dimension is specified, behaves like `fit`.
+    #[serde(rename = "distort")]
+    Distort,
+    /// Ensure the result fits within the provided dimensions. No upscaling.
+    #[serde(rename = "within")]
+    Within,
+    /// Fit the image within the dimensions, upscaling if needed
+    #[serde(rename = "fit")]
+    Fit,
+    /// Ensure the image is larger than the given dimensions
+    #[serde(rename = "larger_than")]
+    LargerThan,
+    /// Crop to desired aspect ratio if image is larger than requested, then downscale. Ignores smaller images.
+    /// If only one dimension is specified, behaves like `within`.
+    #[serde(rename = "within_crop")]
+    WithinCrop,
+    /// Crop to desired aspect ratio, then downscale or upscale to fit.
+    /// If only one dimension is specified, behaves like `fit`.
+    #[serde(rename = "fit_crop")]
+    FitCrop,
+    /// Crop to desired aspect ratio, no upscaling or downscaling. If only one dimension is specified, behaves like Fit.
+    #[serde(rename = "aspect_crop")]
+    AspectCrop,
+    /// Pad to desired aspect ratio if image is larger than requested, then downscale. Ignores smaller images.
+    /// If only one dimension is specified, behaves like `within`
+    #[serde(rename = "within_pad")]
+    WithinPad,
+    /// Pad to desired aspect ratio, then downscale or upscale to fit
+    /// If only one dimension is specified, behaves like `fit`.
+    #[serde(rename = "fit_pad")]
+    FitPad,
+}
+
+#[derive(Serialize, Deserialize, Copy, Clone, PartialEq, Debug)]
+pub enum WatermarkConstraintMode {
+    /// Distort the image to exactly the given dimensions.
+    /// If only one dimension is specified, behaves like `fit`.
+    #[serde(rename = "distort")]
+    Distort,
+    /// Ensure the result fits within the provided dimensions. No upscaling.
+    #[serde(rename = "within")]
+    Within,
+    /// Fit the image within the dimensions, upscaling if needed
+    #[serde(rename = "fit")]
+    Fit,
+    /// Crop to desired aspect ratio if image is larger than requested, then downscale. Ignores smaller images.
+    /// If only one dimension is specified, behaves like `within`.
+    #[serde(rename = "within_crop")]
+    WithinCrop,
+    /// Crop to desired aspect ratio, then downscale or upscale to fit.
+    /// If only one dimension is specified, behaves like `fit`.
+    #[serde(rename = "fit_crop")]
+    FitCrop,
+}
+impl From<WatermarkConstraintMode> for ConstraintMode{
+    fn from(mode: WatermarkConstraintMode) -> Self {
+        match mode{
+            WatermarkConstraintMode::Distort => ConstraintMode::Distort,
+            WatermarkConstraintMode::Within => ConstraintMode::Within,
+            WatermarkConstraintMode::Fit => ConstraintMode::Fit,
+            WatermarkConstraintMode::WithinCrop => ConstraintMode::WithinCrop,
+            WatermarkConstraintMode::FitCrop => ConstraintMode::FitCrop,
+        }
+    }
+}
+
+
+
+#[derive(Serialize, Deserialize, Copy, Clone, PartialEq, Debug)]
+pub enum ConstraintGravity {
+    #[serde(rename = "center")]
+    Center,
+    #[serde(rename = "percentage")]
+    Percentage{x: f32, y: f32}
+}
 #[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
-pub enum Constraint {
-    #[serde(rename="within")]
-    Within{w: Option<u32>, h: Option<u32>, hints: Option<ConstraintResamplingHints>}
-    //max * {down, up, both, canvas}
+pub struct Constraint {
+    pub mode: ConstraintMode,
+    pub w: Option<u32>,
+    pub h: Option<u32>,
+    pub hints: Option<ResampleHints>,
+    pub gravity: Option<ConstraintGravity>,
+    pub canvas_color: Option<Color>
+}
+
+#[derive(Serialize, Deserialize, Copy, Clone, PartialEq, Debug)]
+pub enum WatermarkConstraintBox{
+    #[serde(rename = "image_percentage")]
+    ImagePercentage{ x1: f32, y1: f32, x2: f32, y2: f32},
+    #[serde(rename = "image_margins")]
+    ImageMargins{ left: u32, top: u32, right: u32, bottom: u32},
+    #[serde(rename = "canvas_percentage")]
+    CanvasPercentage{ x1: f32, y1: f32, x2: f32, y2: f32},
+    #[serde(rename = "canvas_margins")]
+    CanvasMargins{ left: u32, top: u32, right: u32, bottom: u32},
+
+}
+
+
+#[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
+pub struct Watermark{
+    pub io_id: i32,
+    pub fit_box: Option<WatermarkConstraintBox>,
+    pub fit_mode: Option<WatermarkConstraintMode>,
+    pub gravity: Option<ConstraintGravity>,
+    pub min_canvas_width: Option<u32>,
+    pub min_canvas_height: Option<u32>,
+    pub opacity: Option<f32>,
+    pub hints: Option<ResampleHints>,
 }
 
 /// Blend pixels (if transparent) or replace?
@@ -375,8 +566,9 @@ pub enum Node {
     FlipH,
     #[serde(rename="crop")]
     Crop { x1: u32, y1: u32, x2: u32, y2: u32 },
-    // #[serde(rename="crop_whitespace")]
-    // CropWhitespace { threshold: u32, percent_padding: f32 },
+    #[serde(rename="crop_whitespace")]
+    CropWhitespace { threshold: u32, percent_padding: f32 },
+
     #[serde(rename="create_canvas")]
     CreateCanvas {
         format: PixelFormat,
@@ -389,7 +581,8 @@ pub enum Node {
         kind: CommandStringKind,
         value: String,
         decode: Option<i32>,
-        encode: Option<i32>
+        encode: Option<i32>,
+        watermarks: Option<Vec<Watermark>>
     },
     #[serde(rename="constrain")]
     Constrain(Constraint),
@@ -397,8 +590,8 @@ pub enum Node {
     CopyRectToCanvas {
         from_x: u32,
         from_y: u32,
-        width: u32, //TODO: inconsistent with w/h or x2/y2 elsewhere
-        height: u32,
+        w: u32,
+        h: u32,
         x: u32,
         y: u32,
     },
@@ -428,6 +621,22 @@ pub enum Node {
         bottom: u32,
         color: Color,
     },
+    #[serde(rename="region_percent")]
+    RegionPercent {
+        x1: f32,
+        y1: f32,
+        x2: f32,
+        y2: f32,
+        background_color: Color,
+    },
+    #[serde(rename="region")]
+    Region {
+        x1: i32,
+        y1: i32,
+        x2: i32,
+        y2: i32,
+        background_color: Color,
+    },
     #[serde(rename="transpose")]
     Transpose,
     #[serde(rename="rotate_90")]
@@ -442,9 +651,6 @@ pub enum Node {
     Resample2D {
         w: u32,
         h: u32,
-        down_filter: Option<Filter>, //TODO: refactor to use ConstraintResamplingHints
-        up_filter: Option<Filter>,
-        scaling_colorspace: Option<ScalingFloatspace>,
         hints: Option<ResampleHints>,
     },
     #[serde(rename="draw_image_exact")]
@@ -454,7 +660,7 @@ pub enum Node {
         w: u32,
         h: u32,
         blend: Option<CompositingMode>,
-        hints: Option<ConstraintResamplingHints>,
+        hints: Option<ResampleHints>,
     },
 //    #[serde(rename="resample_1d")]
 //    Resample1D {
@@ -463,6 +669,8 @@ pub enum Node {
 //        interpolation_filter: Option<Filter>,
 //        scaling_colorspace: Option<ScalingFloatspace>,
 //    },
+    #[serde(rename="watermark")]
+    Watermark (Watermark),
     #[serde(rename="white_balance_histogram_area_threshold_srgb")]
     WhiteBalanceHistogramAreaThresholdSrgb{
         threshold: Option<f32>
@@ -554,8 +762,6 @@ pub enum IoEnum {
     ByteArray(Vec<u8>),
     #[serde(rename="file")]
     Filename(String),
-    #[serde(rename="url")]
-    Url(String),
     #[serde(rename="output_buffer")]
     OutputBuffer,
     #[serde(rename="output_base_64")]
@@ -738,11 +944,9 @@ impl Build001 {
         Build001 {
             builder_config: None,
             io: vec![
-            IoObject {
-
-                direction: IoDirection::In,
+            IoObject {direction: IoDirection::In,
                 io_id: 0,
-                io: IoEnum::Url("http://s3-us-west-2.amazonaws.com/imageflow-resources/test_inputs/waterhouse.jpg".to_owned())
+                io: IoEnum::Placeholder
             },
             IoObject {
 
@@ -819,22 +1023,29 @@ impl Framewise {
                               Node::Resample2D {
                                   w: 100,
                                   h: 75,
-                                  down_filter: Some(Filter::Robidoux),
-                                  up_filter: Some(Filter::Ginseng),
-                                  scaling_colorspace: Some(ScalingFloatspace::Linear),
                                   hints: Some(ResampleHints {
                                       sharpen_percent: Some(10f32),
-                                      background_color: Some(Color::Srgb(ColorSrgb::Hex("FFEEAACC".to_owned())))
+                                      down_filter: Some(Filter::Robidoux),
+                                      up_filter: Some(Filter::Ginseng),
+                                      scaling_colorspace: Some(ScalingFloatspace::Linear),
+                                      background_color: Some(Color::Srgb(ColorSrgb::Hex("FFEEAACC".to_owned()))),
                                       //prefer_1d_twice: None,
+                                      resample_when: Some(ResampleWhen::SizeDiffersOrSharpeningRequested),
+                                      sharpen_when: Some(SharpenWhen::Downscaling)
                                   }),
                               },
                               Node::Resample2D {
                                   w: 200,
                                   h: 150,
-                                  up_filter: None,
-                                  down_filter: None,
-                                  scaling_colorspace: Some(ScalingFloatspace::Srgb),
-                                  hints: None,
+                                  hints: Some(ResampleHints {
+                                      sharpen_percent: None,
+                                      down_filter: None,
+                                      up_filter: None,
+                                      scaling_colorspace: Some(ScalingFloatspace::Srgb),
+                                      background_color: None,
+                                      resample_when: None,
+                                      sharpen_when: None
+                                  }),
                               },
                               Node::Encode {
                                   io_id: 1,
@@ -862,20 +1073,23 @@ impl Framewise {
                          y: 0,
                          from_x: 0,
                          from_y: 0,
-                         width: 100,
-                         height: 100,
+                         w: 100,
+                         h: 100,
                      });
         nodes.insert("3".to_owned(),
                      Node::Resample2D {
                          w: 100,
                          h: 100,
-                         down_filter: Some(Filter::Robidoux),
-                         up_filter: None,
-                         hints: Some(ResampleHints{
-                             sharpen_percent: Some(20f32),
-                             background_color: Some(Color::Srgb(ColorSrgb::Hex("FFEEAACC".to_owned())))
+                         hints: Some(ResampleHints {
+                             sharpen_percent: Some(10f32),
+                             down_filter: Some(Filter::Robidoux),
+                             up_filter: Some(Filter::Ginseng),
+                             scaling_colorspace: Some(ScalingFloatspace::Linear),
+                             background_color: Some(Color::Srgb(ColorSrgb::Hex("FFEEAACC".to_owned()))),
+                             //prefer_1d_twice: None,
+                             resample_when: Some(ResampleWhen::SizeDiffersOrSharpeningRequested),
+                             sharpen_when: Some(SharpenWhen::Downscaling)
                          }),
-                         scaling_colorspace: Some(ScalingFloatspace::Linear),
                      });
         nodes.insert("4".to_owned(),
                      Node::Encode {
@@ -942,6 +1156,11 @@ pub struct GetImageInfo001 {
     pub io_id: i32,
 }
 
+#[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
+pub struct GetVersionInfo{
+
+}
+
 impl GetImageInfo001 {
     pub fn example_get_image_info() -> GetImageInfo001 {
         GetImageInfo001 { io_id: 0 }
@@ -954,10 +1173,19 @@ pub struct JpegIDCTDownscaleHints {
     pub scale_luma_spatially: Option<bool>,
     pub gamma_correct_for_srgb_during_spatial_luma_scaling: Option<bool>,
 }
+
+#[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
+pub struct WebPDecoderHints {
+    pub width: i32,
+    pub height: i32,
+}
+
 #[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
 pub enum DecoderCommand {
     #[serde(rename="jpeg_downscale_hints")]
     JpegDownscaleHints(JpegIDCTDownscaleHints),
+    #[serde(rename="webp_decoder_hints")]
+    WebPDecoderHints(WebPDecoderHints),
     #[serde(rename="discard_color_profile")]
     DiscardColorProfile
 }
@@ -1041,6 +1269,14 @@ pub struct JobResult {
     pub encodes: Vec<EncodeResult>,
     pub performance: Option<BuildPerformance>
 }
+
+#[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
+pub struct VersionInfo{
+    pub long_version_string: String,
+    pub last_git_commit: String,
+    pub dirty_working_tree: bool,
+    pub build_date: String,
+}
 #[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
 pub enum ResponsePayload {
     #[serde(rename="image_info")]
@@ -1049,6 +1285,8 @@ pub enum ResponsePayload {
     JobResult(JobResult),
     #[serde(rename="build_result")]
     BuildResult(JobResult),
+    #[serde(rename="version_info")]
+    VersionInfo(VersionInfo),
     #[serde(rename="none")]
     None,
 }

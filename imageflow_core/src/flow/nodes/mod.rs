@@ -1,6 +1,6 @@
 use daggy::{Dag, EdgeIndex, NodeIndex, Walker};
-use ffi::{ImageflowContext, BitmapBgra};
-use libc::{int32_t, size_t};
+use crate::ffi::{ImageflowContext, BitmapBgra};
+use libc::size_t;
 use petgraph::EdgeDirection;
 use petgraph::visit::EdgeRef;
 use std::error::Error;
@@ -14,26 +14,31 @@ mod codecs_and_pointer;
 mod constrain;
 mod white_balance;
 mod color;
+mod watermark;
+mod enable_transparency;
+//mod detection;
 
 mod internal_prelude {
-    pub use ::ffi;
-    pub use ffi::{ImageflowContext};
-    pub use ffi::BitmapBgra;
-    pub use flow::definitions::*;
-    pub use ::internal_prelude::works_everywhere::*;
+    pub use crate::ffi;
+    pub use crate::ffi::{ImageflowContext};
+    pub use crate::ffi::BitmapBgra;
+    pub use crate::flow::definitions::*;
+    pub use crate::internal_prelude::works_everywhere::*;
     pub use petgraph::EdgeDirection;
     pub use super::*;
     pub use super::super::*;
-    pub use ::{Context, Result, FlowError};
+    pub use crate::{Context, Result, FlowError};
 }
-use ::{Context, Result, FlowError};
+use crate::{Context, Result, FlowError};
 extern crate imageflow_types as s;
 pub use self::clone_crop_fill_expand::CLONE;
 pub use self::clone_crop_fill_expand::COPY_RECT;
 pub use self::clone_crop_fill_expand::CROP;
-//pub use self::clone_crop_fill_expand::CROP_WHITESPACE;
+pub use self::clone_crop_fill_expand::CROP_WHITESPACE;
 pub use self::clone_crop_fill_expand::CROP_MUTATE;
 pub use self::clone_crop_fill_expand::EXPAND_CANVAS;
+pub use self::clone_crop_fill_expand::REGION_PERCENT;
+pub use self::clone_crop_fill_expand::REGION;
 pub use self::clone_crop_fill_expand::FILL_RECT;
 pub use self::codecs_and_pointer::BITMAP_BGRA_POINTER;
 pub use self::codecs_and_pointer::DECODER;
@@ -61,18 +66,22 @@ pub use self::white_balance::WHITE_BALANCE_SRGB;
 pub use self::color::COLOR_MATRIX_SRGB_MUTATE;
 pub use self::color::COLOR_MATRIX_SRGB;
 pub use self::color::COLOR_FILTER_SRGB;
+pub use self::watermark::WATERMARK;
+pub use self::enable_transparency::ENABLE_TRANSPARENCY;
+
+//pub use self::detection::CROP_FACES;
 
 use super::definitions::*;
 
 #[test]
 fn test_err() {
 
-    let e = nerror!(::ErrorKind::BitmapPointerNull);
-    assert_eq!(e.kind, ::ErrorKind::BitmapPointerNull);
+    let e = nerror!(crate::ErrorKind::BitmapPointerNull);
+    assert_eq!(e.kind, crate::ErrorKind::BitmapPointerNull);
     assert!(format!("{}",&e).starts_with("InternalError: BitmapPointerNull at"));
-    let e = nerror!(::ErrorKind::BitmapPointerNull, "hi");
+    let e = nerror!(crate::ErrorKind::BitmapPointerNull, "hi");
     assert!(format!("{}",&e).starts_with("InternalError: BitmapPointerNull: hi at"));
-    let e = nerror!(::ErrorKind::BitmapPointerNull, "hi {}", 1);
+    let e = nerror!(crate::ErrorKind::BitmapPointerNull, "hi {}", 1);
     assert!(format!("{}",&e).starts_with("InternalError: BitmapPointerNull: hi 1 at"));
 }
 impl<'c> OpCtxMut<'c> {
@@ -99,11 +108,11 @@ impl<'c> OpCtxMut<'c> {
         if let Some(ix) = self.first_parent_of_kind(of_node, filter_by_kind){
             Ok(ix)
         }else {
-            Err(nerror!(::ErrorKind::InvalidOperation, "Parent {:?} node not found", filter_by_kind).with_ctx_mut(self, of_node))
+            Err(nerror!(crate::ErrorKind::InvalidOperation, "Parent {:?} node not found", filter_by_kind).with_ctx_mut(self, of_node))
         }
     }
 
-    pub fn flow_c(&self) -> *mut ::ffi::ImageflowContext{
+    pub fn flow_c(&self) -> *mut crate::ffi::ImageflowContext{
         self.c.flow_c()
     }
 
@@ -192,7 +201,7 @@ impl<'c> OpCtxMut<'c> {
         if let  FrameEstimate::Some(info) = est{
             Ok(info)
         } else {
-            Err(nerror!(::ErrorKind::InvalidOperation, "Parent {:?} node lacks FrameEstimate::Some (required for expand/execute). Value is {:?}", filter_by_kind, est).with_ctx_mut(self, ix))
+            Err(nerror!(crate::ErrorKind::InvalidOperation, "Parent {:?} node lacks FrameEstimate::Some (required for expand/execute). Value is {:?}", filter_by_kind, est).with_ctx_mut(self, ix))
         }
     }
     pub fn frame_est_from(&self, ix: NodeIndex, filter_by_kind: EdgeKind) -> Result<FrameEstimate> {
@@ -200,7 +209,7 @@ impl<'c> OpCtxMut<'c> {
 
         let est = self.graph.node_weight(parent).expect(loc!("first_parent_of_kind_required provided invalid node index")).frame_est;
         if est == FrameEstimate::None {
-            Err(nerror!(::ErrorKind::InvalidOperation, "Parent {:?} node lacks FrameEstimate. Value is {:?}", filter_by_kind, est).with_ctx_mut(self, ix))
+            Err(nerror!(crate::ErrorKind::InvalidOperation, "Parent {:?} node lacks FrameEstimate. Value is {:?}", filter_by_kind, est).with_ctx_mut(self, ix))
         } else {
             Ok(est)
         }
@@ -213,12 +222,12 @@ impl<'c> OpCtxMut<'c> {
         let result = &self.graph.node_weight(parent).expect(loc!("first_parent_of_kind_required provided invalid node index")).result;
         if let NodeResult::Frame(bitmap) = *result {
             if bitmap.is_null() {
-                Err(nerror!(::ErrorKind::BitmapPointerNull, "Parent {:?} node has NodeResult::Frame(null)", filter_by_kind).with_ctx_mut(self, ix))
+                Err(nerror!(crate::ErrorKind::BitmapPointerNull, "Parent {:?} node has NodeResult::Frame(null)", filter_by_kind).with_ctx_mut(self, ix))
             } else {
                 Ok(bitmap)
             }
         }else{
-            Err(nerror!(::ErrorKind::InvalidOperation, "Parent {:?} node lacks NodeResult::Frame(bitmap). Value is {:?}", filter_by_kind, result).with_ctx_mut(self, ix))
+            Err(nerror!(crate::ErrorKind::InvalidOperation, "Parent {:?} node lacks NodeResult::Frame(bitmap). Value is {:?}", filter_by_kind, result).with_ctx_mut(self, ix))
         }
     }
     pub fn consume_parent_result(&mut self, ix: NodeIndex, filter_by_kind: EdgeKind) -> Result<()> {
@@ -229,9 +238,9 @@ impl<'c> OpCtxMut<'c> {
             if let NodeResult::Frame(bitmap) = weight.result {
                 Ok(())
             } else if let NodeResult::Consumed = weight.result {
-                Err(nerror!(::ErrorKind::InvalidOperation, "Parent {:?} node's result has already been consumed", filter_by_kind).with_ctx_mut(self, ix))
+                Err(nerror!(crate::ErrorKind::InvalidOperation, "Parent {:?} node's result has already been consumed", filter_by_kind).with_ctx_mut(self, ix))
             } else {
-                Err(nerror!(::ErrorKind::InvalidOperation, "Parent {:?} node's result cannot be consumed. Value is {:?}", filter_by_kind, weight.result).with_ctx_mut(self, ix))
+                Err(nerror!(crate::ErrorKind::InvalidOperation, "Parent {:?} node's result cannot be consumed. Value is {:?}", filter_by_kind, weight.result).with_ctx_mut(self, ix))
             }
         };
         if result.is_ok(){
@@ -295,23 +304,32 @@ impl<'c> OpCtxMut<'c> {
         };
     }
 
-    // Links nodes with Input edges
-    pub fn replace_node(&mut self, index: NodeIndex, with_list: Vec<Node>) {
-        let mut with = with_list.clone();
+    /// Adds the given nodes in a chain, then returns the first and last node index
+    pub fn add_nodes(&mut self, list: Vec<Node>) -> Option<(NodeIndex,NodeIndex)>{
+        let mut with = list.clone();
         match with.len() {
-            0 => self.delete_node_and_snap_together(index),
+            0 => None,
             n => {
                 with.reverse();
                 let mut last_ix = self.graph.add_node(with.pop().unwrap());
-                self.copy_edges_to(index, last_ix, EdgeDirection::Incoming);
+                let first_ix = last_ix.clone();
                 while !with.is_empty() {
                     let new_ix = self.graph.add_node(with.pop().unwrap());
                     self.graph.add_edge(last_ix, new_ix, EdgeKind::Input).unwrap();
                     last_ix = new_ix;
                 }
-                self.copy_edges_to(index, last_ix, EdgeDirection::Outgoing);
-                self.graph.remove_node(index).unwrap();
+                Some((first_ix, last_ix))
             }
+        }
+    }
+    // Links nodes with Input edges
+    pub fn replace_node(&mut self, index: NodeIndex, with_list: Vec<Node>) {
+        if let Some((first_ix,last_ix)) = self.add_nodes(with_list){
+            self.copy_edges_to(index, first_ix, EdgeDirection::Incoming);
+            self.copy_edges_to(index, last_ix, EdgeDirection::Outgoing);
+            self.graph.remove_node(index).unwrap();
+        }else{
+            self.delete_node_and_snap_together(index)
         }
     }
 

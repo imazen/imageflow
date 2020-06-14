@@ -83,7 +83,7 @@
              title="With ?rotate=180&width=200&height=200&mode=crop&bgcolor=black"/>
 
         <h2>Flipping</h2>
-        <p>You can horizontally or verically flip an image, as well as both. <strong>&amp;flip=h|v|both</strong></p>
+        <p>You can horizontally or vertically flip an image, as well as both. <strong>&amp;flip=h|v|both</strong></p>
         <img src="tractor.jpg?flip=v&crop=(60,200,250,400)"
              title="Using ?flip=v&crop=(60,200,250,400)"
         />
@@ -170,6 +170,16 @@
         <img src="sun_256.png" />
         <img src="sun_256.png?width=100" />
         <img style="background-color:black" src="sun_256.png?&maxwidth=200" />
+        <h3>Transparency is maintained when resizing WebP images and converting PNG to WebP</h3>
+        <img src="1_webp_ll.webp?format=webp" />
+        <img src="sun_256.png?width=100&format=webp&webp.quality=100" />
+        <h3>Jpegs can be converted to webp</h3>
+        <img src="tulip-leaf.jpg?webp.quality=100&width=100&format=webp" />
+        <img src="tulip-leaf.jpg?width=100&format=webp" />
+
+        <h3>Whitespace cropping</h3>
+        <img src="/website_images/pluginexamples/example-022-whitespace.jpg?width=400" />
+        <img src="/website_images/pluginexamples/example-022-whitespace.jpg?width=400&trim.threshold=80" />
         <!--
 
         <h3>Matte backgrounds can be applied with bgcolor. </h3>

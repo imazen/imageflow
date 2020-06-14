@@ -1,8 +1,7 @@
 use imageflow_helpers::preludes::from_std::*;
 use std;
-use sizing::{steps, BoxParam, BoxTarget, AspectRatio, Cond, Step, Layout, LayoutError, BoxKind};
-use sizing;
-use time::precise_time_ns;
+use crate::sizing::{steps, BoxParam, BoxTarget, AspectRatio, Cond, Step, Layout, LayoutError, BoxKind};
+use crate::sizing;
 
 #[derive(Copy, Clone, PartialEq, Debug)]
 enum Strategy {
@@ -13,7 +12,7 @@ enum Strategy {
 /// `down.fit=proportional(target), up.fit=none`
 /// `down.fit=proportional(ibox), up.fit=none`
     Max,
-    /// Downscale minimally until the image fits one of the dimensions (it may exceed the other). Never uspcale.
+    /// Downscale minimally until the image fits one of the dimensions (it may exceed the other). Never upscale.
 ///
 /// `down.fitw=scale(max(w, obox.w), auto) down.fith=scale(auto,max(h, obox.h) up.fit=none`
 /// `down.fit=proportional(obox), up.fit=none`
@@ -616,8 +615,8 @@ fn test_scale_to_outer_and_crop(){
 #[test]
 fn test_crop_aspect(){
     let cropper = sizing::IdentityCropProvider::new();
-    let result = Layout::create(r(2,4), r(1,3)).execute_all(&steps().crop_aspect().into_vec(), &cropper).unwrap();
-    assert_eq!(result.get_source_crop(), r(1,4))
+    let result = Layout::create(r(638,423), r(200,133)).execute_all(&steps().crop_aspect().into_vec(), &cropper).unwrap();
+    assert_eq!(result.get_source_crop(), r(636,423))
 }
 
 #[test]
@@ -635,7 +634,7 @@ fn test_steps() {
     let mut failed_kits = Vec::new();
 
     for kit in kits{
-        let start_time = precise_time_ns();
+        let start_time = ::imageflow_helpers::timeywimey::precise_time_ns();
         let mut test_failed = false;
         for target in target_sizes.iter() {
             generate_aspects(&mut source_sizes, &mut temp, *target);
@@ -673,7 +672,7 @@ fn test_steps() {
 
         }
 
-        let duration = precise_time_ns() - start_time;
+        let duration = ::imageflow_helpers::timeywimey::precise_time_ns() - start_time;
         w!("\nSpent {:.0}ms testing {:?}\n\n", (duration  as f64) / 1000000., &kit.steps);
 
         if test_failed{

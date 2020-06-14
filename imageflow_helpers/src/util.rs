@@ -5,8 +5,7 @@ use ::std::borrow::Borrow;
 use ::std::hash::{Hash, Hasher};
 use ::std::any::Any;
 
-// TODO: uncomment this when support lands in rustc for improved safety
-//#[repr(transparent)]
+#[repr(transparent)]
 #[derive(Copy,Clone,Debug)]
 pub struct AsciiFolding<S: ?Sized>(S);
 
@@ -76,7 +75,7 @@ pub struct Debounce{
     ticks_per_second: Ticks,
 }
 impl Debounce{
-    pub fn new(interval: ::chrono::Duration, clock: &AppClock) -> Debounce{
+    pub fn new(interval: ::chrono::Duration, clock: &dyn AppClock) -> Debounce{
         let mut d= Debounce{
             interval: 0,
             next: 0,
@@ -104,7 +103,7 @@ impl Debounce{
     pub fn next(&self) -> Ticks{
         self.next
     }
-    pub fn allow(&mut self, clock: &AppClock) -> bool{
+    pub fn allow(&mut self, clock: &dyn AppClock) -> bool{
         if self.interval <= 0{
             return false;
         } else {
@@ -149,7 +148,7 @@ pub struct DefaultClock{
 }
 impl AppClock for DefaultClock{
     fn get_timestamp_ticks(&self) -> u64 {
-        ::time::precise_time_ns()
+        crate::timeywimey::precise_time_ns()
     }
 
     fn ticks_per_second(&self) -> u64 {
@@ -167,7 +166,7 @@ impl AppClock for DefaultClock{
 
 
 /// Allow a &str or String panic value to be printed
-pub struct PanicFormatter<'a>(pub &'a Any);
+pub struct PanicFormatter<'a>(pub &'a dyn Any);
 impl<'a> std::fmt::Display for PanicFormatter<'a> {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         if let Some(str) = self.0.downcast_ref::<String>() {
@@ -198,7 +197,7 @@ pub struct Issue{
 
 impl Issue{
     pub fn new(kind: IssueKind, message: String, detail:String, source: &'static str) -> Self{
-        let hash = ::hashing::hash_64(message.as_bytes());
+        let hash = crate::hashing::hash_64(message.as_bytes());
         Issue{
             hash,
             message,

@@ -4,9 +4,23 @@ use url::Url;
 use imageflow_types as s;
 #[allow(unused)] use option_filter::OptionFilterExt;
 use imageflow_helpers::colors::*;
+use imageflow_types::Filter;
+use imageflow_helpers::preludes::from_std::fmt::Formatter;
 
 macro_attr! {
 
+
+#[derive(Debug,Copy, Clone,PartialEq,
+IterVariants!(SharpenWhenVariants), IterVariantNames!(SharpenWhenNames))]
+pub enum SharpenWhen {
+    Downscaling,
+    SizeDiffers,
+    Always
+}
+
+}
+
+macro_attr! {
 #[derive(Debug, Copy, Clone, PartialEq, Eq,
 IterVariants!(FlipStringsVariants), IterVariantNames!(FlipStringsNames))]
 pub enum FlipStrings{
@@ -35,7 +49,8 @@ pub enum OutputFormatStrings {
     Exif,
     Jpeg,
     Png,
-    Gif
+    Gif,
+    Webp
 }
 }
 
@@ -54,6 +69,7 @@ pub enum ScaleModeStrings{
     UpscaleCanvas
 }
 }
+
 macro_attr! {
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq,
@@ -73,8 +89,11 @@ pub enum FitModeStrings {
     Carve,
     /// Width and height are considered exact values - if there is an aspect ratio difference, the image is stretched.
     Stretch,
+    AspectCrop
 }
 }
+
+
 macro_attr! {
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq,
@@ -105,6 +124,48 @@ pub enum ProcessWhen {
 }
 
 
+}
+macro_attr! {
+
+
+#[allow(non_camel_case_types)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq,
+IterVariants!(FilterVariants), IterVariantNames!(FilterNames))]
+pub enum FilterStrings {
+    Robidoux,
+    Robidoux_Fast,
+    RobidouxFast,
+    Robidoux_Sharp,
+    RobidouxSharp,
+    Ginseng,
+    GinsengSharp,
+    Ginseng_Sharp,
+    Lanczos,
+    LanczosSharp,
+    Lanczos_Sharp,
+    Lanczos2,
+    Lanczos_2,
+    Lanczos2Sharp,
+    Lanczos_2_Sharp,
+    Cubic,
+    CubicSharp,
+    Cubic_Sharp,
+    CatmullRom,
+    Catmull_Rom,
+    Mitchell,
+    CubicBSpline,
+    Cubic_B_Spline,
+    Hermite,
+    Jinc,
+    Triangle,
+    Linear,
+    Box,
+    Fastest,
+    NCubic,
+    N_Cubic,
+    NCubicSharp,
+    N_Cubic_Sharp,
+}
 }
 
 macro_attr! {
@@ -153,16 +214,20 @@ pub enum ScalingColorspace {
 
 }
 
-pub static IR4_KEYS: [&'static str;61] = ["mode", "anchor", "flip", "sflip", "scale", "cache", "process",
-    "quality", "zoom", "crop", "cropxunits", "cropyunits",
+pub static IR4_KEYS: [&'static str;77] = ["mode", "anchor", "flip", "sflip", "scale", "cache", "process",
+    "quality", "jpeg.quality", "zoom", "crop", "cropxunits", "cropyunits",
     "w", "h", "width", "height", "maxwidth", "maxheight", "format", "thumbnail",
      "autorotate", "srotate", "rotate", "ignoreicc", //really? : "precise_scaling_ratio",
-    "stretch",
-    "frame", "page", "subsampling", "colors", "f.sharpen", "down.colorspace",
-    "404", "bgcolor", "paddingcolor", "bordercolor", "preset", "floatspace", "jpeg_idct_downscale_linear", "watermark",
-    "s.invert", "s.sepia", "s.grayscale", "s.alpha", "s.brightness", "s.contrast", "s.saturation", /* "trim.threshold",
-    "trim.percentpadding",*/ "a.blur", "a.sharpen", "a.removenoise", "a.balancewhite", "dither","jpeg.progressive",
-    "encoder", "decoder", "builder", "s.roundcorners.", "paddingwidth", "paddingheight", "margin", "borderwidth", "decoder.min_precise_scaling_ratio"];
+    "stretch", "webp.lossless", "webp.quality",
+    "frame", "page", "subsampling", "colors", "f.sharpen", "f.sharpen_when", "down.colorspace",
+    "404", "bgcolor", "paddingcolor", "bordercolor", "preset", "floatspace",
+    "jpeg_idct_downscale_linear", "watermark", "s.invert", "s.sepia", "s.grayscale", "s.alpha",
+    "s.brightness", "s.contrast", "s.saturation",  "trim.threshold", "trim.percentpadding",
+    "a.blur", "a.sharpen", "a.removenoise", "a.balancewhite", "dither","jpeg.progressive",
+    "jpeg.turbo", "encoder", "decoder", "builder", "s.roundcorners", "paddingwidth",
+    "paddingheight", "margin", "borderwidth", "decoder.min_precise_scaling_ratio",
+    "png.quality","png.min_quality", "png.quantization_speed", "png.libpng", "png.max_deflate",
+    "png.lossless", "up.filter", "down.filter", "dpr"];
 
 
 #[derive(PartialEq,Debug, Clone)]
@@ -199,6 +264,11 @@ pub fn parse_url(url: &Url) -> (Instructions, Vec<ParseWarning>) {
         (i, warnings)
 }
 
+impl std::fmt::Display for Instructions{
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", &self.to_string())
+    }
+}
 
 impl Instructions{
 
@@ -253,6 +323,8 @@ impl Instructions{
         add(&mut m, "cropxunits", self.cropxunits);
         add(&mut m, "cropyunits", self.cropyunits);
         add(&mut m, "quality", self.quality);
+        add(&mut m, "webp.quality", self.webp_quality);
+        add(&mut m, "webp.lossless", self.webp_lossless);
         add(&mut m, "zoom", self.zoom);
 
         add(&mut m, "s.contrast", self.s_contrast);
@@ -262,13 +334,19 @@ impl Instructions{
         add(&mut m, "s.saturation", self.s_saturation);
         add(&mut m, "s.sepia", self.s_sepia);
         add(&mut m, "jpeg.progressive", self.jpeg_progressive);
-
-
+        add(&mut m, "jpeg.turbo", self.jpeg_turbo);
+        add(&mut m, "png.quality", self.png_quality);
+        add(&mut m, "png.min_quality", self.png_min_quality);
+        add(&mut m, "png.quantization_speed", self.png_quantization_speed);
+        add(&mut m, "png.libpng", self.png_libpng);
+        add(&mut m, "png.max_deflate", self.png_max_deflate);
+        add(&mut m, "png.lossless", self.png_lossless);
         add(&mut m, "s.grayscale", self.s_grayscale.map(|v| format!("{:?}", v).to_lowercase()));
         add(&mut m, "a.balancewhite", self.a_balance_white.map(|v| format!("{:?}", v).to_lowercase()));
         add(&mut m, "subsampling", self.jpeg_subsampling);
         add(&mut m, "bgcolor", self.bgcolor_srgb.and_then(|v| Some(v.to_rrggbbaa_string().to_lowercase())));
         add(&mut m, "f.sharpen", self.f_sharpen);
+        add(&mut m, "f.sharpen_when", self.f_sharpen_when.map(|v| format!("{:?}", v).to_lowercase()));
         add(&mut m, "trim.percentpadding", self.trim_whitespace_padding_percent);
         add(&mut m, "trim.threshold", self.trim_whitespace_threshold);
 
@@ -277,7 +355,8 @@ impl Instructions{
 
 
         add(&mut m, "down.colorspace", self.down_colorspace.map(|v| format!("{:?}", v).to_lowercase()));
-
+        add(&mut m, "down.filter", self.down_filter.map(|v| format!("{:?}", v).to_lowercase()));
+        add(&mut m, "up.filter", self.up_filter.map(|v| format!("{:?}", v).to_lowercase()));
         add(&mut m, "decoder.min_precise_scaling_ratio", self.min_precise_scaling_ratio);
         m
     }
@@ -287,6 +366,7 @@ impl Instructions{
         let mut p = Parser { m: map, w: warnings, delete_supported: true };
         let mut i = Instructions::new();
         i.f_sharpen = p.parse_f64("f.sharpen");
+        i.f_sharpen_when = p.parse_sharpen_when("f.sharpen_when");
 
         i.w = p.parse_i32("width").or_else(|| p.parse_i32("w"));
         i.h = p.parse_i32("height").or_else(|| p.parse_i32("h"));
@@ -316,11 +396,19 @@ impl Instructions{
         i.crop = p.parse_crop_strict("crop").or_else(|| p.parse_crop("crop"));
         i.cropxunits = p.parse_f64("cropxunits");
         i.cropyunits = p.parse_f64("cropyunits");
-        i.quality = p.parse_i32("quality");
-        i.zoom = p.parse_f64("zoom");
+        i.quality = p.parse_i32("quality").or_else(||p.parse_i32("jpeg.quality"));
+        i.zoom = p.parse_f64("zoom").or_else(|| p.parse_f64("dpr"));
         i.bgcolor_srgb = p.parse_color_srgb("bgcolor").or_else(||p.parse_color_srgb("bgcolor"));
         i.jpeg_subsampling = p.parse_subsampling("subsampling");
 
+        i.webp_quality = p.parse_f64("webp.quality");
+        i.webp_lossless = p.parse_bool("webp.lossless");
+        i.png_lossless = p.parse_bool("png.lossless");
+        i.png_min_quality = p.parse_u8("png.min_quality");
+        i.png_quality = p.parse_u8("png.quality");
+        i.png_quantization_speed= p.parse_u8("png.quantization_speed");
+        i.png_libpng = p.parse_bool("png.libpng");
+        i.png_max_deflate = p.parse_bool("png.max_deflate");
         i.anchor = p.parse_anchor("anchor");
 
 
@@ -341,22 +429,25 @@ impl Instructions{
             Some(HistogramThresholdAlgorithm::Area) => Some(HistogramThresholdAlgorithm::Area),
             None => None,
             Some(other) => {
-                p.warn(ParseWarning::ValueInvalid(("a.balancewhite", format!("{:?}", other).to_lowercase()))).to_owned();
+                p.warn(ParseWarning::ValueInvalid(("a.balancewhite", format!("{:?}", other).to_lowercase())));
                 Some(other)
             }
         };
 
         i.down_colorspace = p.parse_colorspace("down.colorspace");
+        i.down_filter = p.parse_filter("down.filter");
+        i.up_filter = p.parse_filter("up.filter");
 
 
         let _ = p.parse_test_pair("fastscale", "true");
         i.jpeg_progressive = p.parse_bool("jpeg.progressive");
+        i.jpeg_turbo = p.parse_bool("jpeg.turbo");
 
         i
     }
 
     fn anchor_string(&self) -> Option<String>{
-        if let Some((v,h)) = self.anchor{
+        if let Some((h,v)) = self.anchor{
             let first = match v{
                 Anchor1D::Near => "top",
                 Anchor1D::Center => "middle",
@@ -478,7 +569,9 @@ impl<'a> Parser<'a>{
             }
         )
     }
-
+    fn parse_u8(&mut self, key: &'static str) -> Option<u8>{
+        self.parse(key, |s| s.parse::<u8>() )
+    }
     fn parse_i32(&mut self, key: &'static str) -> Option<i32>{
         self.parse(key, |s| s.parse::<i32>() )
     }
@@ -531,6 +624,27 @@ fn parse_colorspace(&mut self, key: &'static str) -> Option<ScalingColorspace> {
     fn parse_fit_mode(&mut self, key: &'static str) -> Option<FitModeStrings>{
         self.parse(key, |value| {
             for (k, v) in FitModeStrings::iter_variant_names().zip(FitModeStrings::iter_variants()) {
+                if k.eq_ignore_ascii_case(value) {
+                    return Ok(v)
+                }
+            }
+            Err(())
+        })
+    }
+    fn parse_filter(&mut self, key: &'static str) -> Option<FilterStrings>{
+        self.parse(key, |value| {
+            for (k, v) in FilterStrings::iter_variant_names().zip(FilterStrings::iter_variants()) {
+                if k.eq_ignore_ascii_case(value) {
+                    return Ok(v)
+                }
+            }
+            Err(())
+        })
+    }
+
+    fn parse_sharpen_when(&mut self, key: &'static str) -> Option<SharpenWhen>{
+        self.parse(key, |value| {
+            for (k, v) in SharpenWhen::iter_variant_names().zip(SharpenWhen::iter_variants()) {
                 if k.eq_ignore_ascii_case(value) {
                     return Ok(v)
                 }
@@ -634,6 +748,7 @@ impl OutputFormatStrings{
         match *self{
             OutputFormatStrings::Png => OutputFormat::Png,
             OutputFormatStrings::Gif => OutputFormat::Gif,
+            OutputFormatStrings::Webp => OutputFormat::Webp,
             _ => OutputFormat::Jpeg
         }
     }
@@ -657,11 +772,40 @@ impl FitModeStrings{
             FitModeStrings::Pad => Some(FitMode::Pad),
             FitModeStrings::Crop => Some(FitMode::Crop),
             FitModeStrings::Carve |
-            FitModeStrings::Stretch => Some(FitMode::Stretch)
+            FitModeStrings::Stretch => Some(FitMode::Stretch),
+            FitModeStrings::AspectCrop => Some(FitMode::AspectCrop)
         }
     }
 }
 
+impl FilterStrings{
+    pub fn to_filter(&self) -> Filter{
+        match *self{
+            FilterStrings::Robidoux => Filter::Robidoux,
+            FilterStrings::Robidoux_Sharp | FilterStrings::RobidouxSharp => Filter::RobidouxSharp,
+            FilterStrings::Robidoux_Fast | FilterStrings::RobidouxFast => Filter::RobidouxFast,
+            FilterStrings::Ginseng => Filter::Ginseng,
+            FilterStrings::Ginseng_Sharp | FilterStrings::GinsengSharp => Filter::GinsengSharp,
+            FilterStrings::Lanczos => Filter::Lanczos,
+            FilterStrings::Lanczos_Sharp | FilterStrings::LanczosSharp => Filter::LanczosSharp,
+            FilterStrings::Lanczos_2 | FilterStrings::Lanczos2 => Filter::Lanczos2,
+            FilterStrings::Lanczos_2_Sharp | FilterStrings::Lanczos2Sharp => Filter::Lanczos2Sharp,
+            FilterStrings::Cubic => Filter::Cubic,
+            FilterStrings::Cubic_Sharp | FilterStrings::CubicSharp => Filter::CubicSharp,
+            FilterStrings::Catmull_Rom | FilterStrings::CatmullRom => Filter::CatmullRom,
+            FilterStrings::Mitchell => Filter::Mitchell,
+            FilterStrings::Cubic_B_Spline | FilterStrings::CubicBSpline => Filter::CubicBSpline,
+            FilterStrings::Hermite => Filter::Hermite,
+            FilterStrings::Jinc => Filter::Jinc,
+            FilterStrings::Triangle => Filter::Triangle,
+            FilterStrings::Linear => Filter::Linear,
+            FilterStrings::Box => Filter::Box,
+            FilterStrings::Fastest => Filter::Fastest,
+            FilterStrings::N_Cubic | FilterStrings::NCubic => Filter::NCubic,
+            FilterStrings::N_Cubic_Sharp | FilterStrings::NCubicSharp => Filter::NCubicSharp,
+        }
+    }
+}
 
 
 
@@ -687,6 +831,8 @@ pub enum FitMode {
     Crop,
     /// Width and height are considered exact values - if there is an aspect ratio difference, the image is stretched.
     Stretch,
+    /// Width and height are considered a target aspect ratio for cropping
+    AspectCrop,
 }
 
 
@@ -710,7 +856,10 @@ pub struct Instructions{
     pub cropyunits: Option<f64>,
     pub zoom: Option<f64>,
     pub quality: Option<i32>,
+    pub webp_quality: Option<f64>,
+    pub webp_lossless: Option<bool>,
     pub f_sharpen: Option<f64>,
+    pub f_sharpen_when: Option<SharpenWhen>,
     pub bgcolor_srgb: Option<Color32>,
     pub jpeg_subsampling: Option<i32>,
     pub anchor: Option<(Anchor1D, Anchor1D)>,
@@ -726,6 +875,15 @@ pub struct Instructions{
     pub min_precise_scaling_ratio: Option<f64>,
     pub down_colorspace: Option<ScalingColorspace>,
     pub jpeg_progressive: Option<bool>,
+    pub jpeg_turbo: Option<bool>,
+    pub png_quality: Option<u8>,
+    pub png_min_quality: Option<u8>,
+    pub png_quantization_speed: Option<u8>,
+    pub png_libpng: Option<bool>,
+    pub png_max_deflate: Option<bool>,
+    pub png_lossless: Option<bool>,
+    pub up_filter: Option<FilterStrings>,
+    pub down_filter: Option<FilterStrings>,
 }
 #[derive(Debug,Copy, Clone,PartialEq)]
 pub enum Anchor1D{
@@ -738,7 +896,8 @@ pub enum Anchor1D{
 pub enum OutputFormat{
     Jpeg,
     Png,
-    Gif
+    Gif,
+    Webp
 }
 
 /// Controls whether the image is allowed to upscale, downscale, both, or if only the canvas gets to be upscaled.
@@ -753,6 +912,7 @@ pub enum ScaleMode {
     /// When the image is smaller than the requested size, padding is added instead of stretching the image
     UpscaleCanvas
 }
+
 
 #[cfg(test)]
 fn debug_diff<T>(a : &T, b: &T) where T: std::fmt::Debug, T: PartialEq{
@@ -818,17 +978,31 @@ fn test_url_parsing() {
     t("srotate=360&rotate=-90", Instructions { srotate: Some(0), rotate: Some(270), ..Default::default() }, vec![]);
     t("srotate=-20.922222&rotate=-46.2", Instructions { srotate: Some(0), rotate: Some(270), ..Default::default() }, vec![]);
     t("autorotate=false&ignoreicc=true", Instructions { autorotate: Some(false), ignoreicc: Some(true) , ..Default::default() }, vec![]);
+    t("mode=aspectcrop", Instructions { mode: Some(FitMode::AspectCrop), ..Default::default() }, vec![]);
     t("mode=max&stretch=fill", Instructions { mode: Some(FitMode::Max), ..Default::default() }, vec![]);
     t("stretch=fill", Instructions { mode: Some(FitMode::Stretch), ..Default::default() }, vec![]);
     t("crop=auto", Instructions { mode: Some(FitMode::Crop), ..Default::default() }, vec![]);
     t("thumbnail=exif", Instructions { format: Some(OutputFormat::Jpeg), ..Default::default() }, vec![]);
     t("cropxunits=2.3&cropyunits=100", Instructions { cropxunits: Some(2.3f64), cropyunits: Some(100f64), ..Default::default() }, vec![]);
     t("quality=85", Instructions { quality: Some(85), ..Default::default() }, vec![]);
+    t("webp.quality=85", Instructions { webp_quality: Some(85f64), ..Default::default() }, vec![]);
+    t("webp.lossless=true", Instructions { webp_lossless: Some(true), ..Default::default() }, vec![]);
+    t("jpeg.progressive=true", Instructions { jpeg_progressive: Some(true), ..Default::default() }, vec![]);
+    t("jpeg.turbo=true", Instructions { jpeg_turbo: Some(true), ..Default::default() }, vec![]);
+    t("png.quality=90", Instructions { png_quality: Some(90), ..Default::default() }, vec![]);
+    t("png.min_quality=90", Instructions { png_min_quality: Some(90), ..Default::default() }, vec![]);
+    t("png.quantization_speed=4", Instructions { png_quantization_speed: Some(4), ..Default::default() }, vec![]);
+    t("png.lossless=true", Instructions { png_lossless: Some(true), ..Default::default() }, vec![]);
+    t("png.libpng=true", Instructions { png_libpng: Some(true), ..Default::default() }, vec![]);
+    t("png.max_deflate=true", Instructions { png_max_deflate: Some(true), ..Default::default() }, vec![]);
     t("zoom=0.02", Instructions { zoom: Some(0.02f64), ..Default::default() }, vec![]);
-//    t("trim.threshold=80&trim.percentpadding=0.02", Instructions { trim_whitespace_threshold: Some(80),  trim_whitespace_padding_percent: Some(0.02f64), ..Default::default() }, vec![]);
+    t("trim.threshold=80&trim.percentpadding=0.02", Instructions { trim_whitespace_threshold: Some(80),  trim_whitespace_padding_percent: Some(0.02f64), ..Default::default() }, vec![]);
     t("w=10&f.sharpen=80.5", Instructions { w: Some(10), f_sharpen: Some(80.5f64), ..Default::default() }, vec![]);
 
     t("f.sharpen=80.5", Instructions { f_sharpen: Some(80.5f64), ..Default::default() }, vec![]);
+    t("f.sharpen_when=always", Instructions{ f_sharpen_when: Some(SharpenWhen::Always), ..Default::default()}, vec![]);
+    t("f.sharpen_when=downscaling", Instructions{ f_sharpen_when: Some(SharpenWhen::Downscaling), ..Default::default()}, vec![]);
+    t("f.sharpen_when=sizediffers", Instructions{ f_sharpen_when: Some(SharpenWhen::SizeDiffers), ..Default::default()}, vec![]);
 
     t("s.sepia=true&s.brightness=0.1&s.saturation=-0.1&s.contrast=1&s.alpha=0", Instructions { s_alpha: Some(0f64), s_contrast: Some(1f64), s_sepia: Some(true), s_brightness: Some(0.1f64), s_saturation: Some(-0.1f64), ..Default::default() }, vec![]);
 
@@ -868,6 +1042,10 @@ fn test_url_parsing() {
     t("a.balancewhite=area",  Instructions{a_balance_white: Some(HistogramThresholdAlgorithm::Area), ..Default::default()}, vec![]);
     t("down.colorspace=linear",  Instructions{down_colorspace: Some(ScalingColorspace::Linear), ..Default::default()}, vec![]);
     t("down.colorspace=srgb",  Instructions{down_colorspace: Some(ScalingColorspace::Srgb), ..Default::default()}, vec![]);
+    t("up.filter=mitchell",  Instructions{up_filter: Some(FilterStrings::Mitchell), ..Default::default()}, vec![]);
+    t("down.filter=lanczos",  Instructions{down_filter: Some(FilterStrings::Lanczos), ..Default::default()}, vec![]);
+
+    t("anchor=bottomleft",  Instructions{anchor: Some((Anchor1D::Near, Anchor1D::Far)), ..Default::default()}, vec![]);
 
     expect_warning("a.balancewhite","gimp",  Instructions{a_balance_white: Some(HistogramThresholdAlgorithm::Gimp), ..Default::default()});
     expect_warning("a.balancewhite","simple",  Instructions{a_balance_white: Some(HistogramThresholdAlgorithm::Simple), ..Default::default()});
@@ -896,21 +1074,37 @@ fn test_tostr(){
     t("rotate=270&srotate=0", Instructions { srotate: Some(0), rotate: Some(270), ..Default::default() });
     t("autorotate=false&ignoreicc=true", Instructions { autorotate: Some(false), ignoreicc: Some(true) , ..Default::default() });
     t("mode=max", Instructions { mode: Some(FitMode::Max), ..Default::default() });
+    t("mode=aspectcrop", Instructions { mode: Some(FitMode::AspectCrop), ..Default::default() });
     t("cropxunits=2.3&cropyunits=100", Instructions { cropxunits: Some(2.3f64), cropyunits: Some(100f64), ..Default::default() });
     t("quality=85", Instructions { quality: Some(85), ..Default::default() });
     t("zoom=0.02", Instructions { zoom: Some(0.02f64), ..Default::default() });
-//    t("trim.percentpadding=0.02&trim.threshold=80", Instructions { trim_whitespace_threshold: Some(80),  trim_whitespace_padding_percent: Some(0.02f64), ..Default::default() });
+    t("trim.percentpadding=0.02&trim.threshold=80", Instructions { trim_whitespace_threshold: Some(80),  trim_whitespace_padding_percent: Some(0.02f64), ..Default::default() });
     t("bgcolor=ff0000ff", Instructions { bgcolor_srgb: Some(Color32(0xffff0000)), ..Default::default() });
     t("bgcolor=8fbc8bff", Instructions { bgcolor_srgb: Some(Color32(0xff8fbc8b)), ..Default::default() });
     t("bgcolor=77889953", Instructions { bgcolor_srgb: Some(Color32(0x53778899)), ..Default::default() });
     t("bgcolor=ffffffff", Instructions { bgcolor_srgb: Some(Color32(0xffffffff)), ..Default::default() });
     t("crop=0,0,40,50", Instructions { crop: Some([0f64,0f64,40f64,50f64]), ..Default::default() });
     t("a.balancewhite=area",  Instructions{a_balance_white: Some(HistogramThresholdAlgorithm::Area), ..Default::default()});
-
+    t("webp.quality=85", Instructions { webp_quality: Some(85f64), ..Default::default() });
+    t("webp.lossless=true", Instructions { webp_lossless: Some(true), ..Default::default() });
     t("down.colorspace=srgb",  Instructions{down_colorspace: Some(ScalingColorspace::Srgb), ..Default::default()});
     t("down.colorspace=linear",  Instructions{down_colorspace: Some(ScalingColorspace::Linear), ..Default::default()});
-
+    t("f.sharpen=10", Instructions{ f_sharpen: Some(10f64), ..Default::default()});
+    t("f.sharpen_when=always", Instructions{ f_sharpen_when: Some(SharpenWhen::Always), ..Default::default()});
+    t("f.sharpen_when=downscaling", Instructions{ f_sharpen_when: Some(SharpenWhen::Downscaling), ..Default::default()});
+    t("f.sharpen_when=sizediffers", Instructions{ f_sharpen_when: Some(SharpenWhen::SizeDiffers), ..Default::default()});
     t("s.grayscale=bt709",  Instructions{s_grayscale: Some(GrayscaleAlgorithm::Bt709), ..Default::default()});
     t("s.alpha=0&s.brightness=0.1&s.contrast=1&s.saturation=-0.1&s.sepia=true", Instructions { s_alpha: Some(0f64), s_contrast: Some(1f64), s_sepia: Some(true), s_brightness: Some(0.1f64), s_saturation: Some(-0.1f64), ..Default::default() });
+    t("jpeg.progressive=true", Instructions { jpeg_progressive: Some(true), ..Default::default() });
+    t("jpeg.turbo=true", Instructions { jpeg_turbo: Some(true), ..Default::default() });
+    t("png.quality=90", Instructions { png_quality: Some(90), ..Default::default() });
+    t("png.min_quality=90", Instructions { png_min_quality: Some(90), ..Default::default() });
+    t("png.quantization_speed=4", Instructions { png_quantization_speed: Some(4), ..Default::default() });
+    t("png.libpng=true", Instructions { png_libpng: Some(true), ..Default::default() });
+    t("png.max_deflate=true", Instructions { png_max_deflate: Some(true), ..Default::default() });
+    t("png.lossless=true", Instructions { png_lossless: Some(true), ..Default::default()});
+    t("up.filter=mitchell",  Instructions{up_filter: Some(FilterStrings::Mitchell), ..Default::default()});
+    t("down.filter=lanczos",  Instructions{down_filter: Some(FilterStrings::Lanczos), ..Default::default()});
+    t("anchor=bottomleft",  Instructions{anchor: Some((Anchor1D::Near, Anchor1D::Far)), ..Default::default()});
 
 }

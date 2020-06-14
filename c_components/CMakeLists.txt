@@ -50,7 +50,7 @@ endif()
 
 
 if (NOT MSVC)
-    #message(FATAL_ERROR "Using optimzation flags ${IMAGEFLOW_C_OPTIMIZE}")
+    #message(FATAL_ERROR "Using optimization flags ${IMAGEFLOW_C_OPTIMIZE}")
     #mpfmath=sse is required for accuracy
     set(SHARED_FLAGS "-pipe -iquotelib -fPIC -mfpmath=sse")
     set(SHARED_WARNINGS "-Wpointer-arith -Wcast-qual -Wpedantic -Wall -Wextra -Wno-unused-parameter -Wuninitialized -Wredundant-decls -Wno-error=unused-function -Wno-parentheses -Werror")

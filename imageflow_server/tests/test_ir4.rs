@@ -18,10 +18,11 @@ extern crate lazy_static;
 use std::sync::Mutex;
 
 use imageflow_helpers::process_testing::*;
-use fc::test_helpers::process_testing::ProcTestContextExtras;
-use imageflow_helpers::fetching::{fetch, fetch_bytes,get_status_code_for, FetchError, FetchConfig};
+use crate::fc::test_helpers::process_testing::ProcTestContextExtras;
+use ::imageflow_http_helpers::{fetch, fetch_bytes,get_status_code_for, FetchError, FetchConfig};
 
 use std::collections::vec_deque::VecDeque;
+use reqwest::StatusCode;
 
 lazy_static! {
     static ref RECENT_PORTS: Mutex<VecDeque<u16>> = Mutex::new(VecDeque::new());
@@ -43,8 +44,8 @@ fn assert_valid_image(url: &str) {
 //}
 
 fn build_dirs() -> Vec<PathBuf>{
-    let target_triple = ::s::version::get_build_env_value("TARGET").expect("TARGET triple required");
-    let profile = ::s::version::get_build_env_value("PROFILE").expect("PROFILE (debug/release) required");
+    let target_triple = crate::s::version::get_build_env_value("TARGET").expect("TARGET triple required");
+    let profile = crate::s::version::get_build_env_value("PROFILE").expect("PROFILE (debug/release) required");
 
 
     let target_dir = Path::new(env!("CARGO_MANIFEST_DIR")).parent().unwrap().join("target");
@@ -121,7 +122,7 @@ struct ServerInstance{
 
 }
 
-type CallbackResult = std::result::Result<(), ::imageflow_helpers::fetching::FetchError>;
+type CallbackResult = std::result::Result<(), ::imageflow_http_helpers::FetchError>;
 
 #[derive(Debug,PartialEq,Eq,Copy,Clone)]
 enum Proto{
@@ -130,7 +131,7 @@ enum Proto{
 }
 impl ServerInstance{
 
-    fn hello(&self) -> std::result::Result<hyper::status::StatusCode, FetchError> {
+    fn hello(&self) -> Result<StatusCode, FetchError> {
         get_status_code_for(&self.url_for("/hello/are/you/running?"))
     }
 
@@ -143,11 +144,11 @@ impl ServerInstance{
 
     }
 
-    fn get_status(&self, rel_path: &str) -> std::result::Result<hyper::status::StatusCode, FetchError> {
+    fn get_status(&self, rel_path: &str) -> Result<StatusCode, FetchError> {
         get_status_code_for(&self.url_for(rel_path))
     }
 
-    fn request_stop(&self) -> std::result::Result<hyper::status::StatusCode, FetchError> {
+    fn request_stop(&self) -> Result<StatusCode, FetchError> {
         get_status_code_for(&self.url_for("/test/shutdown"))
     }
 
@@ -180,7 +181,7 @@ impl ServerInstance{
         all_args.insert(0, "start");
 
         c.execute_callback(all_args, false,
-                           |_child: &mut std::process::Child| -> std::result::Result<(), ::imageflow_helpers::fetching::FetchError> {
+                           |_child: &mut std::process::Child| -> std::result::Result<(), ::imageflow_http_helpers::FetchError> {
 
                                ::std::thread::sleep(::std::time::Duration::from_millis(500));
                                // Server may not be running
@@ -223,7 +224,8 @@ fn run_server_test_i4(){
         c.subfolder_context("demo");
         let (_po, callback_result) = ServerInstance::run(&c, Proto::Http, vec!["--demo", "--data-dir=."], | server | {
             fetch_bytes(&server.url_for("/ir4/proxy_unsplash/photo-1422493757035-1e5e03968f95?width=100"))?;
-            assert_eq!(server.get_status("/ir4/proxy_unsplash/notthere.jpg")?, hyper::status::StatusCode::NotFound);
+            //TODO: Find a way to test upstream 404 and 403 errors
+            // assert_eq!(server.get_status("/demo_images/notthere.jpg")?, http::StatusCode::NOT_FOUND);
 
             let url = server.url_for("/proxied_demo/index.html");
             match fetch(&url, Some(FetchConfig{ custom_ca_trust_file: None, read_error_body: Some(true)})){
@@ -281,8 +283,8 @@ fn run_server_test_i4(){
             }
 
 
-            assert_eq!(server.get_status("/local/notthere.jpg")?, hyper::status::StatusCode::NotFound);
-            assert_eq!(server.get_status("/notrouted")?, hyper::status::StatusCode::NotFound);
+            assert_eq!(server.get_status("/local/notthere.jpg")?, StatusCode::NOT_FOUND);
+            assert_eq!(server.get_status("/notrouted")?, StatusCode::NOT_FOUND);
             Ok(())
         });
         //po.expect_status_code(Some(0));
@@ -305,7 +307,7 @@ fn test_https(context: &ProcTestContext){
             let bytes = fetch(&url, Some(FetchConfig{custom_ca_trust_file: server.trust_ca_file.clone(), read_error_body: Some(true) })).expect(&url).bytes;
             let _ = fc::clients::stateless::LibClient {}.get_image_info(&bytes).expect("Image response should be valid");
 
-            //assert_eq!(server.get_status("/ir4/proxy_unsplash/notthere.jpg")?, hyper::status::StatusCode::NotFound);
+            //assert_eq!(server.get_status("/ir4/proxy_unsplash/notthere.jpg")?, http::StatusCode::NOT_FOUND);
             Ok(())
         });
 

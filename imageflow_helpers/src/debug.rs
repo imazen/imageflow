@@ -1,14 +1,14 @@
-use preludes::from_std::*;
+use crate::preludes::from_std::*;
 use std;
 
 use backtrace::{Backtrace, BacktraceFrame};
 use std::panic;
 use std::thread;
 
-use std::sync::{Once, ONCE_INIT};
+use std::sync::{Once};
 
-static CONDITIONAL_SET: Once = ONCE_INIT;
-static SET_HOOK: Once = ONCE_INIT;
+static CONDITIONAL_SET: Once = Once::new();
+static SET_HOOK: Once = Once::new();
 
 
 ///

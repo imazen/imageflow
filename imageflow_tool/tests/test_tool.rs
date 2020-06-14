@@ -6,8 +6,8 @@ use std::path::{Path,PathBuf};
 
 
 fn build_dirs() -> Vec<PathBuf>{
-    let target_triple = ::s::version::get_build_env_value("TARGET").expect("TARGET triple required");
-    let profile = ::s::version::get_build_env_value("PROFILE").expect("PROFILE (debug/release) required");
+    let target_triple = crate::s::version::get_build_env_value("TARGET").expect("TARGET triple required");
+    let profile = crate::s::version::get_build_env_value("PROFILE").expect("PROFILE (debug/release) required");
 
 
     let target_dir = Path::new(env!("CARGO_MANIFEST_DIR")).parent().unwrap().join("target");

@@ -1,11 +1,10 @@
 use std;
-use for_other_imageflow_crates::preludes::external_without_std::*;
-use ffi;
-use ::{Context, CError,  Result, JsonResponse};
-use ffi::CodecInstance;
-use ffi::BitmapBgra;
+use crate::for_other_imageflow_crates::preludes::external_without_std::*;
+use crate::ffi;
+use crate::{Context, CError,  Result, JsonResponse};
+use crate::ffi::BitmapBgra;
 use imageflow_types::collections::AddRemoveSet;
-use io::IoProxy;
+use crate::io::IoProxy;
 use uuid::Uuid;
 use imageflow_types::IoDirection;
 use super::*;
@@ -16,11 +15,11 @@ mod screen;
 mod bgra;
 use self::bgra::BGRA8;
 use self::screen::Screen;
-use gif::Frame;
-use gif::SetParameter;
+use crate::gif::Frame;
+use crate::gif::SetParameter;
 use std::rc::Rc;
-use io::IoProxyProxy;
-use io::IoProxyRef;
+use crate::io::IoProxyProxy;
+use crate::io::IoProxyRef;
 
 pub struct GifDecoder{
     reader: ::gif::Reader<IoProxy>,
@@ -150,13 +149,13 @@ impl Decoder for GifDecoder {
     fn has_more_frames(&mut self) -> Result<bool> {
         Ok(self.next_frame.is_some())
     }
-    fn as_any(&self) -> &Any {
-        self as &Any
+    fn as_any(&self) -> &dyn Any {
+        self as &dyn Any
     }
 }
 
 pub trait EasyEncoder{
-    fn write_frame(&mut self, w: &mut Write, c: &Context, frame: &mut BitmapBgra) -> Result<s::EncodeResult>;
+    fn write_frame(&mut self, w: &mut dyn Write, c: &Context, frame: &mut BitmapBgra) -> Result<s::EncodeResult>;
 }
 
 
@@ -213,6 +212,9 @@ pub struct GifEncoder{
 
 impl GifEncoder{
     pub(crate) fn create(c: &Context, preset: &s::EncoderPreset, io: IoProxy, first_frame: &BitmapBgra) -> Result<GifEncoder>{
+        if !c.enabled_codecs.encoders.contains(&NamedEncoders::GifEncoder){
+            return Err(nerror!(ErrorKind::CodecDisabledError, "The gif encoder has been disabled"));
+        }
         let io_id = io.io_id();
         let io_ref = Rc::new(RefCell::new(io));
 
@@ -251,9 +253,9 @@ impl Encoder for GifEncoder{
             pixels.extend_from_slice(frame.pixels_slice_mut().expect("Frame must have pixel buffer"));
 
             let mut f = match frame.fmt {
-                ::ffi::PixelFormat::Bgr24 => Ok(from_bgr_with_stride(frame.w as u16, frame.h as u16, &pixels, frame.stride as usize)),
-                ::ffi::PixelFormat::Bgra32 => Ok(from_bgra_with_stride(frame.w as u16, frame.h as u16, &mut pixels, frame.stride as usize)),
-                ::ffi::PixelFormat::Bgr32 => Ok(from_bgrx_with_stride(frame.w as u16, frame.h as u16, &mut pixels, frame.stride as usize)),
+                crate::ffi::PixelFormat::Bgr24 => Ok(from_bgr_with_stride(frame.w as u16, frame.h as u16, &pixels, frame.stride as usize)),
+                crate::ffi::PixelFormat::Bgra32 => Ok(from_bgra_with_stride(frame.w as u16, frame.h as u16, &mut pixels, frame.stride as usize)),
+                crate::ffi::PixelFormat::Bgr32 => Ok(from_bgrx_with_stride(frame.w as u16, frame.h as u16, &mut pixels, frame.stride as usize)),
                 other =>  Err(nerror!(ErrorKind::InvalidArgument, "PixelFormat {:?} not supported for gif encoding", frame.fmt))
             }?;
 
@@ -311,6 +313,12 @@ pub fn from_bgra_with_stride(width: u16, height: u16, pixels: &mut [u8], stride:
     let mut without_padding = remove_padding(width, pixels, stride);
     for pix in without_padding.chunks_mut(4) {
         pix.swap(0,2);
+        if pix[3] < 0x10{
+            pix[0] = 0;
+            pix[1] = 0;
+            pix[2] = 0;
+            pix[3] = 0;
+        }
     }
     ::gif::Frame::from_rgba(width, height, &mut without_padding)
 }

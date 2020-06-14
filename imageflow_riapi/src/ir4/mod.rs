@@ -4,10 +4,16 @@ use imageflow_types as s;
 pub mod parsing;
 mod layout;
 
-use sizing;
-use sizing::prelude::*;
-use ir4::parsing::*;
-use ir4::layout::*;
+use crate::sizing;
+use crate::sizing::prelude::*;
+use crate::ir4::parsing::*;
+use crate::ir4::layout::*;
+
+pub use layout::ConstraintResults;
+
+pub fn process_constraint(source_w: i32, source_h: i32, constraint: &imageflow_types::Constraint) -> sizing::Result<ConstraintResults>{
+    layout::Ir4Layout::process_constraint(source_w,source_h, constraint)
+}
 
 pub enum Ir4Command{
     Instructions(Box<Instructions>),
@@ -40,6 +46,7 @@ pub struct Ir4Translate{
     pub i: Ir4Command,
     pub decode_id: Option<i32>,
     pub encode_id: Option<i32>,
+    pub watermarks: Option<Vec<imageflow_types::Watermark>>
 }
 
 // If using trim.threshold, delayed expansion is required.
@@ -66,7 +73,7 @@ impl Ir4Translate{
 
     pub fn translate(&self) -> sizing::Result<Ir4Result> {
         let mut r = self.i.parse()?;
-        let mut b = ::ir4::layout::FramewiseBuilder::new();
+        let mut b = crate::ir4::layout::FramewiseBuilder::new();
         //Expand decoder early if trimming
         let delayed_id = if r.parsed.trim_whitespace_threshold.is_some() {
             if let Some(n) = self.get_decode_node() {
@@ -77,12 +84,12 @@ impl Ir4Translate{
             self.decode_id
         };
         // Add CropWhitespace
-//        if r.parsed.trim_whitespace_threshold.is_some(){
-//            b.add(s::Node::CropWhitespace {
-//                threshold: cmp::max(0,r.parsed.trim_whitespace_threshold.unwrap()) as u32,
-//                percent_padding: r.parsed.trim_whitespace_padding_percent.unwrap_or(0f64) as f32
-//            });
-//        }
+        if r.parsed.trim_whitespace_threshold.is_some(){
+            b.add(s::Node::CropWhitespace {
+                threshold: cmp::max(0,r.parsed.trim_whitespace_threshold.unwrap()) as u32,
+                percent_padding: r.parsed.trim_whitespace_padding_percent.unwrap_or(0f64) as f32
+            });
+        }
 
         //delete whitespace from instructions
         let mut without_trimming: Instructions = r.parsed;
@@ -93,7 +100,8 @@ impl Ir4Translate{
             kind: s::CommandStringKind::ImageResizer4,
             value: without_trimming.to_string(),
             decode: delayed_id,
-            encode: self.encode_id
+            encode: self.encode_id,
+            watermarks: self.watermarks.clone()
         });
 
         r.steps = Some(b.into_steps());
@@ -116,6 +124,7 @@ impl Ir4SourceFrameInfo{
                         "image/jpeg" => Some(OutputFormat::Jpeg),
                         "image/png" => Some(OutputFormat::Png),
                         "image/gif" => Some(OutputFormat::Gif),
+                        "image/webp" => Some(OutputFormat::Webp),
                         _ => None
                     })
     }
@@ -132,12 +141,12 @@ pub struct Ir4Expand{
     pub i: Ir4Command,
     pub source: Ir4SourceFrameInfo,
     pub encode_id: Option<i32>,
-
+    pub watermarks: Option<Vec<imageflow_types::Watermark>>
 }
 
 impl Ir4Expand{
 
-    pub fn get_decode_commands(&self) -> sizing::Result<Option<s::DecoderCommand>> {
+    pub fn get_decode_commands(&self) -> sizing::Result<Option<Vec<s::DecoderCommand>>> { //TODO: consider smallvec or generalizing decoder hints
         let i = self.i.parse()?.parsed;
 
         // Default to gamma correct
@@ -150,13 +159,23 @@ impl Ir4Expand{
 
         let preshrink_ratio = i.min_precise_scaling_ratio.unwrap_or(2.1f64) / downscale_ratio;
 
+        let scaled_width = (f64::from(self.source.w) * preshrink_ratio).floor() as i64;
+        let scaled_height = (f64::from(self.source.h) * preshrink_ratio).floor() as i64;
         if preshrink_ratio < 1f64 {
-            Ok(Some(s::DecoderCommand::JpegDownscaleHints(s::JpegIDCTDownscaleHints {
+            let mut vec = Vec::with_capacity(2);
+            vec.push(s::DecoderCommand::JpegDownscaleHints(s::JpegIDCTDownscaleHints {
                 scale_luma_spatially: Some(gamma_correct),
                 gamma_correct_for_srgb_during_spatial_luma_scaling: Some(gamma_correct),
-                width: (f64::from(self.source.w) * preshrink_ratio).floor() as i64,
-                height: (f64::from(self.source.h) * preshrink_ratio).floor() as i64
-            })))
+                width: scaled_width,
+                height: scaled_height
+            }));
+            if !gamma_correct{
+                vec.push(s::DecoderCommand::WebPDecoderHints(s::WebPDecoderHints{
+                    width: scaled_width as i32,
+                    height: scaled_height as i32,
+                }));
+            }
+            Ok(Some(vec))
         } else {
             Ok(None)
         }
@@ -181,7 +200,7 @@ impl Ir4Expand{
         let layout = self.get_layout(&r.parsed)?;
 
         let mut b = FramewiseBuilder::new();
-        r.canvas = Some(layout.add_steps(&mut b)?.canvas);
+        r.canvas = Some(layout.add_steps(&mut b, &self.watermarks)?.canvas);
 
         if let Some(n) = self.get_encoder_node(&r.parsed) {
             b.add(n);
@@ -198,20 +217,40 @@ impl Ir4Expand{
             let format = i.format.or_else(|| self.source.get_format_from_mime())
                 .unwrap_or_else(|| self.source.get_format_from_frame());
 
+            let png_lossless = i.png_lossless.unwrap_or(i.png_libpng == Some(true) ||
+                i.png_quality.is_none());
+
+
+
             let encoder = match format {
                 OutputFormat::Gif => s::EncoderPreset::Gif,
-                OutputFormat::Jpeg => s::EncoderPreset::LibjpegTurbo {
+                OutputFormat::Jpeg if Some(true) == i.jpeg_turbo => s::EncoderPreset::LibjpegTurbo {
                     quality: Some(i.quality.unwrap_or(90)),
-                    optimize_huffman_coding: i.jpeg_progressive,
-                    progressive: i.jpeg_progressive
-                    //TODO: support self.i.jpeg_subsampling
+                    progressive: i.jpeg_progressive,
+                    optimize_huffman_coding:  i.jpeg_progressive
                 },
-                // TODO: introduce support for 24-bit png and self.i.bgcolor_srgb (matte)
-                OutputFormat::Png  => s::EncoderPreset::Libpng {
+                OutputFormat::Jpeg=> s::EncoderPreset::Mozjpeg {
+                    quality: Some(i.quality.unwrap_or(90) as u8),
+                    progressive: i.jpeg_progressive
+                },
+                OutputFormat::Png if !png_lossless => s::EncoderPreset::Pngquant {
+                    quality: Some(i.png_quality.unwrap_or(100)),
+                    minimum_quality: Some(i.png_min_quality.unwrap_or(0)),
+                    speed: i.png_quantization_speed,
+                    maximum_deflate: i.png_max_deflate
+                },
+                OutputFormat::Png if i.png_libpng == Some(true) => s::EncoderPreset::Libpng {
                     depth: Some(if i.bgcolor_srgb.is_some() { s::PngBitDepth::Png24 } else { s::PngBitDepth::Png32 }),
-                    zlib_compression: None,
+                    zlib_compression: if i.png_max_deflate == Some(true) { Some(9) } else { None },
                     matte: i.bgcolor_srgb.map(|sr| s::Color::Srgb(s::ColorSrgb::Hex(sr.to_rrggbbaa_string())))
-                }
+                },
+                OutputFormat::Png => s::EncoderPreset::Lodepng{
+                    maximum_deflate: i.png_max_deflate
+                },
+                OutputFormat::Webp if i.webp_lossless == Some(true) => s::EncoderPreset::WebPLossless,
+                OutputFormat::Webp => s::EncoderPreset::WebPLossy {
+                    quality: i.webp_quality.unwrap_or(80f64) as f32
+                },
             };
             Some(s::Node::Encode { io_id: id, preset: encoder })
         }else{

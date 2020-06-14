@@ -25,11 +25,11 @@ impl AspectRatio {
     pub fn create(w: i32, h: i32) -> Result<AspectRatio> {
         if w < 1 || h < 1 {
             //panic!("");
-            Err(LayoutError::InvalidDimensions { w: w, h: h })
+            Err(LayoutError::InvalidDimensions { w, h })
         } else {
             Ok(AspectRatio {
-                w: w,
-                h: h,
+                w,
+                h,
             })
         }
     }

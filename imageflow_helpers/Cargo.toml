@@ -1,8 +1,9 @@
 [package]
 name = "imageflow_helpers"
 version = "0.1.0"
-authors = ["Nathanael Jones <nathanael.jones@gmail.com>"]
+authors = ["Lilith River <lilith@imazen.io>"]
 workspace = "../"
+edition = "2018"
 
 [dependencies]
 libc = "0.2"
@@ -29,38 +30,31 @@ digest = "*"
 
 uuid = { version = "*", features= ["v4", "v5"]}
 
-lockless = { git="https://github.com/Diggsey/lockless", rev="15264477a4889a9cb2964180b33a53919d72d3fc" }
+#lockless = { git="https://github.com/Diggsey/lockless", rev="15264477a4889a9cb2964180b33a53919d72d3fc" }
 smallvec = "*"
 # regex
-regex = "0.2"
+regex = { version = "1" } #, features = ["pattern"]
 rand = "*"
 
-num = "*"
 
-base64 = "0.6"
-mockito = "0.12"
-zip = { version = "0.2", default-features = false }
+base64 = "0.12"
+
+zip = { version = "0.5", default-features = false }
 
 
-app_dirs = "^1.1.1"
-chashmap = "2.2"
-parking_lot = {version = "0.5"}
+
 
 unicase = "2"
 # HTTPS is a little bit of a nightmare
 
-error-chain = "*"
-
-hyper = "=0.10.12"
-reqwest = "0.6"
-hyper-native-tls = "*"
-
-backtrace = "0.3.2"
+#error-chain = "*"
 
 
-[target.'cfg(not(any(target_os = "windows", target_os = "macos")))'.dependencies]
-openssl = "0.9"
-hyper-openssl = "0.2.6"
+backtrace = "0.3"
+
+[dev-dependencies]
+mockito = "*"
 
 [features]
-nightly = ["parking_lot/nightly"]
+nightly = []
+

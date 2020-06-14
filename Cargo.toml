@@ -1,22 +1,22 @@
 [workspace]
 members = [
     "imageflow_helpers",
+    "imageflow_http_helpers",
     "imageflow_types",
     "imageflow_riapi",
     "imageflow_core",
     "imageflow_abi",
+    "imageflow",
     "imageflow_tool",
     "imageflow_server",
     "c_components",
     "c_components/tests",
 ]
 
-[dependencies.regex]
-features=["pattern"]
 
 [profile.release]
 debug = true
 
 # RIAPI Tests take 600ms each at 0, 200ms each at 1, 36ms each at 2, 26ms each at 3
 [profile.test]
-opt-level = 1
+opt-level = 2

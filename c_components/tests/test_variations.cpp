@@ -842,7 +842,7 @@ bool scale_down(flow_c * c, uint8_t * bytes, size_t bytes_count, bool scale_luma
                 int block_scale_to_y, int scale_to_x, int scale_to_y, flow_interpolation_filter precise_filter,
                 float post_sharpen, float blur, flow_bitmap_bgra ** ref);
 
-TEST_CASE("Exhasutive search for best block downscaling params", "")
+TEST_CASE("Exhaustive search for best block downscaling params", "")
 {
     //    flow_interpolation_filter filters[] = { flow_interpolation_filter_Robidoux };
     //    float blurs[] = { 1. / 1.1685777620836932 };
@@ -1061,10 +1061,7 @@ bool scale_down(flow_c * c, uint8_t * bytes, size_t bytes_count, bool scale_luma
         return false;
     }
 
-    if (!flow_bitmap_bgra_sharpen_block_edges(c, *ref, target_block_size, post_sharpen)) {
-        FLOW_add_to_callstack(c);
-        return false;
-    }
+
     if (!flow_job_destroy(c, job)) {
         FLOW_add_to_callstack(c);
         return false;

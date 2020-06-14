@@ -1,36 +1,33 @@
 ## ![imageflow](https://www.imageflow.io/images/imageflow.svg) optimal images at incredible speeds
 
-[![travis-master](https://img.shields.io/travis/imazen/imageflow/master.svg?label=master%3A%20mac64%20ubuntu64%2014.04%2016.04)](https://travis-ci.org/imazen/imageflow/builds) [![AppVeyor build status](https://ci.appveyor.com/api/projects/status/0356x95fa312m3wy/branch/master?svg=true&passingText=master%3A%20win32%20win64%20-%20passing&failingText=master%3A%20win32%20win64%20-%20failed)](https://ci.appveyor.com/project/imazen/imageflow/branch/master) [![Coverity Scan Build Status](https://scan.coverity.com/projects/8403/badge.svg)](https://scan.coverity.com/projects/imazen-imageflow) [![state: technical preview](https://img.shields.io/badge/state-release%E2%80%93candidate-yellow.svg)](#flaws)
+[![travis-master](https://img.shields.io/travis/imazen/imageflow/master.svg?label=master%3A%20MacOS,%20Ubuntu%2016.04%2018.04)](https://travis-ci.org/imazen/imageflow/builds) [![AppVeyor build status](https://ci.appveyor.com/api/projects/status/0356x95fa312m3wy/branch/master?svg=true&passingText=master%3A%20win32%20win64%20-%20passing&failingText=master%3A%20win32%20win64%20-%20failed)](https://ci.appveyor.com/project/imazen/imageflow/branch/master) [![state: technical preview](https://img.shields.io/badge/state-release%E2%80%93candidate-yellow.svg)](#flaws)
 
 [![Docker Pulls](https://img.shields.io/docker/pulls/imazen/imageflow_tool.svg)](https://hub.docker.com/r/imazen/imageflow_tool/)
-[![view releases](https://img.shields.io/badge/-download%20binaries%20for%20windows,%20mac,%20or%20linux-green.svg)](https://github.com/imazen/imageflow/releases)
+[![view releases](https://img.shields.io/badge/-download%20binaries%20for%20windows,%20mac,%20or%20linux-green.svg)](https://github.com/imazen/imageflow/releases) [![license: Choose AGPLv3 or Commercial](https://img.shields.io/badge/license-Choose%20AGPLv3%20or%20Commercial-green.svg)](https://imageresizing.net/pricing)
 
 
-[Download](https://github.com/imazen/imageflow/releases) blazing fast and uniquely [safer](https://cve.mitre.org/cgi-bin/cvekey.cgi?keyword=imagemagick) tools for a modern image workflow.
+[Download](https://github.com/imazen/imageflow/releases) blazing fast and [safer](https://cve.mitre.org/cgi-bin/cvekey.cgi?keyword=imagemagick) tools for a modern image workflow.
 
 
 * **imageflow_tool** is a command-line tool for experimenting, running batch jobs,
 or when you want process isolation. Up to 17x faster than ImageMagick. Also produces smaller files at higher quality.
 * **imageflow_server** can run JSON jobs or manipulate images in-flight (e.g.`/bucket/img.jpg?w=200`) for direct use from
 HTML. Source images can reside in blob storage, on another server, or on the filesystem.
-* **libimageflow** is for direct (in-process) use from *your* programming language.  It has a simple
-[C-compatible ABI](https://s3-us-west-1.amazonaws.com/imageflow-nightlies/master/doc/imageflow/index.html)
-and [bindings](https://github.com/imazen/imageflow/tree/master/bindings).
+* **libimageflow** is for direct (in-process) use from *your* programming language. [**Node bindings available here**](https://github.com/imazen/imageflow-node),  [**Go bindings available here**](https://github.com/imazen/imageflow-go), and  [**.NET Standard bindings here**](https://github.com/imazen/imageflow-dotnet). If we don't already have bindings for your language, consider spending a day to add them. Imageflow has a simple
+C-compatible ABI, of which only 4 methods are needed to implement bindings. 
 
-**Note: We aren't labeling Imageflow as 'stable' until enough people have tested it. Please help us test and provide feedback!**
-Also, please, *please*, **please** [send us 'challenging' images and tasks](https://github.com/imazen/imageflow/issues/98).
+**[Open an issue](https://github.com/imazen/imageflow/issues/new) to have us write example code for your use case. We believe in feedback-driven design, and streamlining real-world usage is the fastest way to a great product.**
 
+[Querystring API Documentation](https://docs.imageflow.io/querystring/introduction.html)
 
-These all offer the JSON [`/build` API](https://s3-us-west-1.amazonaws.com/imageflow-nightlies/master/doc/context_json_api.txt)
-as well as the traditional `width=300&height=200&mode=crop&format=jpg` command string form. Each is available as a
-[self-contained binary](https://github.com/imazen/imageflow/releases) for Windows, Ubuntu, and Mac. We also offer Docker images for Linux (where glibc and OpenSSL are required).
+[JSON API Documentation](https://docs.imageflow.io/json/introduction.html) 
 
-libimageflow offers interactive job manipulation as well [like `/tell_decoder`, `/get_image_info`, and `/execute`](https://s3-us-west-1.amazonaws.com/imageflow-nightlies/master/doc/job_json_api.txt).
-Unless you are using memory buffers for I/O, it's better to use `/build`.
+libimageflow, imageflow_tool, and imageflow_server are available as
+[self-contained binaries](https://github.com/imazen/imageflow/releases) for Windows, Ubuntu, and Mac. We also offer [Docker images](https://hub.docker.com/r/imazen/imageflow_tool/) for Linux (where glibc and OpenSSL are required). 
 
 [We thank our backers on Kickstarter](https://www.kickstarter.com/projects/njones/imageflow-respect-the-pixels-a-secure-alt-to-image/posts/1616122)
 and [the many supporters of ImageResizer](https://imageresizing.net) for making this project a reality.
-Email support@imageflow.io if you need an AGPLv3 exception for commercial use.
+Visit [Imageresizing.net](https://imageresizing.net/pricing) if you need an AGPLv3 exception for commercial use.
 
 
 ## Start with imageflow_tool (recommended)
@@ -39,15 +36,15 @@ Email support@imageflow.io if you need an AGPLv3 exception for commercial use.
 
 You can use command strings that are compatible with [ImageResizer 4 querystrings](https://imageresizing.net/docs/basics):
 
-`imageflow_tool v0.1/ir4 --in source.jpg  --out thumb.jpg --command "width=50&height=50&mode=crop&format=jpg" `
+`imageflow_tool v1/querystring --in source.jpg  --out thumb.jpg --command "width=50&height=50&mode=crop&format=jpg" `
 
 Or submit a JSON job file. JSON jobs can have multiple inputs and outputs, and can represent any kind of operation graph.
 
 The following generates multiple sizes of an image from an example job file:
 
 ```
-imageflow_tool v0.1/build --json examples/export_4_sizes/export_4_sizes.json
-        --in http://s3-us-west-2.amazonaws.com/imageflow-resources/test_inputs/waterhouse.jpg
+imageflow_tool v1/build --json examples/export_4_sizes/export_4_sizes.json
+        --in waterhouse.jpg
         --out 1 waterhouse_w1600.jpg
               2 waterhouse_w1200.jpg
               3 waterhouse_w800.jpg
@@ -57,7 +54,7 @@ imageflow_tool v0.1/build --json examples/export_4_sizes/export_4_sizes.json
 
 By default, imageflow_tool prints a JSON response to stdout. You write this to disk with `--response`.
 
-`--debug-package` will create a .zip file to reproduce problematic behavior with both `v0.1/build` and `v0.1/ir4`. Please submit bug reports; we try to make it easy.
+`--debug-package` will create a .zip file to reproduce problematic behavior with both `v1/build` and `v1/querystring`. Please submit bug reports; we try to make it easy.
 
 ## Using imageflow_server for dynamic imaging
 
@@ -95,11 +92,11 @@ You'll want to mount various image source locations to prefixes. The `--mount` c
 
 ![](https://www.imageflow.io/images/libimageflow-direct.svg)
 
-* Preview C# bindings can be found at https://github.com/imazen/imageflow-dotnet
+* .NET Standard bindings can be found at https://github.com/imazen/imageflow-dotnet
+* Node bindings available  at https://github.com/imazen/imageflow-node
 * Ruby - Basic bindings can be found in [bindings/ruby/](https://github.com/imazen/imageflow/tree/master/bindings/ruby)
 * C and C++ interface is stable - use [bindings/headers/imageflow_default.h](https://github.com/imazen/imageflow/blob/master/bindings/headers/imageflow_default.h) or one of the many alternate conventions provided with each release.
 * Rust - Imageflow is written in Rust, so you can use the `imageflow_core` crate.
-* Node - Not yet started. Want to help? [generate bindings from the header files](https://github.com/tjfontaine/node-ffi-generate)
 * other languages - Use an [FFI](https://en.wikipedia.org/wiki/Foreign_function_interface) binding-generation tool for your language, and feed it whichever [header file it likes best](https://github.com/imazen/imageflow/tree/master/bindings/headers).
 
 You also may find that `imageflow_tool` is quite fast enough for your needs.
@@ -118,7 +115,7 @@ You also may find that `imageflow_tool` is quite fast enough for your needs.
 * imageflow_core - The main library and execution engine
 
 
-### Known flaws and missing features (as of July 2017)
+### Known flaws and missing features (as of May 2020)
 
 #### Flaws
 
@@ -127,15 +124,11 @@ You also may find that `imageflow_tool` is quite fast enough for your needs.
 
 #### Missing features
 
-- [ ] Animated GIF write support (reading individual frames is supported)
-- [ ] Some advanced rendering features: Whitespace detection/cropping, watermarking, blurring.
-- [ ] Automatic encoder selection and tuning.
+- [ ] Blurring.
 
 #### Delayed features
 
 - [ ] Job cost prediction (delayed - no interest from community)
-- [ ] Node bindings (delayed - no interest from community)
-
 
 # Building from Source without Docker
 
@@ -186,10 +179,10 @@ The [official Dockerfiles](https://github.com/imazen/dockerfiles_imageflow) are 
 
 ## Linux Pre-requisites
 
-(tested on Ubuntu 14.04, 16.04, and 18.04.)
+(tested on Ubuntu 16.04 and 18.04.)
 
 ```bash
-#Install Rust 1.28+ by running
+#Install Rust 1.41+ by running
 `curl https://sh.rustup.rs -sSf | sh -s -- -y --default-toolchain beta`
 #Ensure build tools are installed (git, curl, wget, gcc, g++, nasm, pkg-config, openssl, ca-certificates)
 `sudo apt-get install git wget curl build-essential pkg-config libssl-dev libpng-dev nasm `
@@ -223,7 +216,7 @@ The [official Dockerfiles](https://github.com/imazen/dockerfiles_imageflow) are 
 
 1. Install Visual Studio 2017 Build Tools ([separately](https://www.visualstudio.com/thank-you-downloading-visual-studio/?sku=BuildTools&rel=15) or as a VS component)
 2. Install [Git 64-bit](https://git-scm.com/download/win).
-3. `Run As Administrator` the [NASM 64-bit](http://www.nasm.us/pub/nasm/releasebuilds/2.12.02/win64/nasm-2.12.02-installer-x64.exe) installer - it will not prompt.
+3. `Run As Administrator` the [NASM 64-bit](https://www.nasm.us/pub/nasm/releasebuilds/2.14.02/win64/nasm-2.14.02-installer-x64.exe) installer - it will not prompt.
 4. Install [Rust 64-bit](https://static.rust-lang.org/rustup/dist/x86_64-pc-windows-msvc/rustup-init.exe) if you want 64-bit Imageflow or [Rust 32-bit](https://static.rust-lang.org/rustup/dist/i686-pc-windows-msvc/rustup-init.exe) if you don't.
 Install toolchain `beta` as the default, and confirm adding it to `PATH`.
 5. Open the command line and switch to this repository's root directory
@@ -235,7 +228,7 @@ Install toolchain `beta` as the default, and confirm adding it to `PATH`.
 
 First, [read High Performance Images](http://shop.oreilly.com/product/0636920039730.do) for context.
 
-There are not many great textbooks on the subject. Here are some from my personal bookshelf. Between them (and Wikipedia) I was able to put together about 60% of the knowledge I needed; the rest I found by reading the source code to [many popular image processing libraries](https://github.com/nathanaeljones/imaging-wiki?files=1).
+There are not many great textbooks on the subject. Here are some from my personal bookshelf. Between them (and Wikipedia) I was able to put together about 60% of the knowledge I needed; the rest I found by reading the source code to [many popular image processing libraries](https://github.com/lilith/imaging-wiki?files=1).
 
 I would start by reading [Principles of Digital Image Processing: Core Algorithms](http://www.amazon.com/gp/product/1848001940?psc=1&redirect=true&ref_=oh_aui_search_detailpage) front-to-back, then [Digital Image Warping](http://www.amazon.com/gp/product/0818689447?psc=1&redirect=true&ref_=oh_aui_search_detailpage).  Wikipedia is also a useful reference, although the relevant pages are not linked or categorized together - use specific search terms, like ["bilinear interpolation"](https://en.wikipedia.org/wiki/Bilinear_interpolation) and ["Lab color space"](https://en.wikipedia.org/wiki/Lab_color_space).
 

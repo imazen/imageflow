@@ -1,20 +1,23 @@
 [package]
 name = "imageflow_tool_lib"
 version = "0.1.0"
-authors = ["Nathanael Jones <nathanael.jones@gmail.com>"]
+authors = ["Lilith River <lilith@imazen.io>"]
 workspace = "../"
+edition = "2018"
 
 [dependencies]
 imageflow_core = { path = "../imageflow_core", version = "*" }
 imageflow_types = { path = "../imageflow_types", version = "*" }
-libc = "0.2.0"
+libc = "0.2"
 clap = "2"
-time = "0.1"
+time = "0.2"
 rustc-serialize = "*"
 threadpool = "1"
 serde = "1"
 serde_json = "1"
 imageflow_helpers = { path = "../imageflow_helpers", version = "*" }
+imageflow_http_helpers = { path = "../imageflow_http_helpers", version = "*" }
+
 
 [[bin]]
 name = "imageflow_tool"

@@ -1,1 +1,0 @@
-64-bit Ubuntu 16.04 or other linux supplying Ubuntu GLIBC 2.23-0ubuntu3
