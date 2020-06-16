@@ -1,6 +1,6 @@
 ## ![imageflow](https://www.imageflow.io/images/imageflow.svg) optimal images at incredible speeds
 
-[![travis-master](https://img.shields.io/travis/imazen/imageflow/master.svg?label=master%3A%20MacOS,%20Ubuntu%2016.04%2018.04)](https://travis-ci.org/imazen/imageflow/builds) [![AppVeyor build status](https://ci.appveyor.com/api/projects/status/0356x95fa312m3wy/branch/master?svg=true&passingText=master%3A%20win32%20win64%20-%20passing&failingText=master%3A%20win32%20win64%20-%20failed)](https://ci.appveyor.com/project/imazen/imageflow/branch/master) [![state: technical preview](https://img.shields.io/badge/state-release%E2%80%93candidate-yellow.svg)](#flaws)
+[![travis-main](https://img.shields.io/travis/imazen/imageflow/main.svg?label=main%3A%20MacOS,%20Ubuntu%2016.04%2018.04)](https://travis-ci.org/imazen/imageflow/builds) [![AppVeyor build status](https://ci.appveyor.com/api/projects/status/0356x95fa312m3wy/branch/main?svg=true&passingText=main%3A%20win32%20win64%20-%20passing&failingText=main%3A%20win32%20win64%20-%20failed)](https://ci.appveyor.com/project/imazen/imageflow/branch/main) [![state: release candidate](https://img.shields.io/badge/state-release%E2%80%93candidate-yellow.svg)](#flaws)
 
 [![Docker Pulls](https://img.shields.io/docker/pulls/imazen/imageflow_tool.svg)](https://hub.docker.com/r/imazen/imageflow_tool/)
 [![view releases](https://img.shields.io/badge/-download%20binaries%20for%20windows,%20mac,%20or%20linux-green.svg)](https://github.com/imazen/imageflow/releases) [![license: Choose AGPLv3 or Commercial](https://img.shields.io/badge/license-Choose%20AGPLv3%20or%20Commercial-green.svg)](https://imageresizing.net/pricing)
@@ -94,10 +94,10 @@ You'll want to mount various image source locations to prefixes. The `--mount` c
 
 * .NET Standard bindings can be found at https://github.com/imazen/imageflow-dotnet
 * Node bindings available  at https://github.com/imazen/imageflow-node
-* Ruby - Basic bindings can be found in [bindings/ruby/](https://github.com/imazen/imageflow/tree/master/bindings/ruby)
-* C and C++ interface is stable - use [bindings/headers/imageflow_default.h](https://github.com/imazen/imageflow/blob/master/bindings/headers/imageflow_default.h) or one of the many alternate conventions provided with each release.
+* Ruby - Basic bindings can be found in [bindings/ruby/](https://github.com/imazen/imageflow/tree/main/bindings/ruby)
+* C and C++ interface is stable - use [bindings/headers/imageflow_default.h](https://github.com/imazen/imageflow/blob/main/bindings/headers/imageflow_default.h) or one of the many alternate conventions provided with each release.
 * Rust - Imageflow is written in Rust, so you can use the `imageflow_core` crate.
-* other languages - Use an [FFI](https://en.wikipedia.org/wiki/Foreign_function_interface) binding-generation tool for your language, and feed it whichever [header file it likes best](https://github.com/imazen/imageflow/tree/master/bindings/headers).
+* other languages - Use an [FFI](https://en.wikipedia.org/wiki/Foreign_function_interface) binding-generation tool for your language, and feed it whichever [header file it likes best](https://github.com/imazen/imageflow/tree/main/bindings/headers).
 
 You also may find that `imageflow_tool` is quite fast enough for your needs.
 

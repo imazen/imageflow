@@ -20,7 +20,7 @@ if [[ -z "$TRAVIS_PULL_REQUEST_SHA" ]]; then
 	if [[ -n "$TRAVIS_TAG" ]]; then
 		export PUBLISH_DOCKER_TAG="${TRAVIS_TAG}"
 	else
-		if [[ "$TRAVIS_BRANCH" == "master" ]]; then
+		if [[ "$TRAVIS_BRANCH" == "main" ]]; then
 			export PUBLISH_DOCKER_TAG="latest"
 		fi
 	fi
