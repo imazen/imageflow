@@ -8,6 +8,8 @@ JSON jobs have a `security` key that can be filled out like this:
 Note that `max_frame_size` also limits the maximum decode and encode size, 
 so you don't have to specify `max_decode_size` and `max_encode_size` unless they are smaller.
 
+If you don't specify a default, a `max_frame_size` of 10,000x10,000 and 100 megapixels will be set for you.
+
 ```json
 {
 "security": {
