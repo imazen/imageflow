@@ -32,7 +32,9 @@ pub struct Context {
     /// A list of io_ids already in use
     pub io_id_list: RefCell<Vec<i32>>,
 
-    pub enabled_codecs: EnabledCodecs
+    pub enabled_codecs: EnabledCodecs,
+
+    pub security: imageflow_types::ExecutionSecurity
 }
 
 static mut JOB_ID: i32 = 0;
@@ -58,7 +60,16 @@ impl Context {
                 graph_recording: s::Build001GraphRecording::off(),
                 codecs: AddRemoveSet::with_capacity(4),
                 io_id_list: RefCell::new(Vec::with_capacity(2)),
-                enabled_codecs: EnabledCodecs::default()
+                enabled_codecs: EnabledCodecs::default(),
+                security: imageflow_types::ExecutionSecurity{
+                    max_decode_size: None,
+                    max_frame_size: Some(imageflow_types::FrameSizeLimit{
+                        w: 10000,
+                        h: 10000,
+                        megapixels: 100f32
+                    }),
+                    max_encode_size: None
+                }
             }))
         }
     }
@@ -213,11 +224,16 @@ impl Context {
         let g = crate::parsing::GraphTranslator::new().translate_framewise(parsed.framewise).map_err(|e| e.at(here!())) ?;
 
 
-        if let Some(s::Build001Config { graph_recording, .. }) = parsed.builder_config {
+        if let Some(s::Build001Config { graph_recording, security, .. }) = parsed.builder_config {
             if let Some(r) = graph_recording {
                 self.configure_graph_recording(r);
             }
+            if let Some(s) = security{
+                self.configure_security(s);
+            }
         }
+
+
 
         crate::parsing::IoTranslator{}.add_all( self, parsed.io.clone())?;
 
@@ -239,12 +255,28 @@ impl Context {
         self.graph_recording = r;
     }
 
+    pub fn configure_security(&mut self, s: s::ExecutionSecurity) {
+        if let Some(decode) = s.max_decode_size{
+            self.security.max_decode_size = Some(decode);
+        }
+        if let Some(frame) = s.max_frame_size{
+            self.security.max_frame_size = Some(frame);
+        }
+        if let Some(encode) = s.max_encode_size{
+            self.security.max_encode_size = Some(encode);
+        }
+    }
+
     /// For executing an operation graph (assumes you have already configured the context with IO sources/destinations as needed)
     pub fn execute_1(&mut self, what: s::Execute001) -> Result<s::ResponsePayload>{
         let g = crate::parsing::GraphTranslator::new().translate_framewise(what.framewise).map_err(|e| e.at(here!()))?;
         if let Some(r) = what.graph_recording {
             self.configure_graph_recording(r);
         }
+        if let Some(s) = what.security{
+            self.configure_security(s);
+        }
+
         let mut engine = crate::flow::execution_engine::Engine::create(self, g);
 
         let perf = engine.execute_many().map_err(|e| e.at(here!()))?;

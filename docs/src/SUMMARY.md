@@ -9,6 +9,7 @@
     - [Examples](querystring/examples.md)
 - [JSON Reference](json/introduction.md)
     - [Introduction](json/introduction.md)
+    - [Security](json/security.md)
     - [Decode](json/decode.md)
     - [Encode](json/encode.md)
     - [Constrain](json/constrain.md)

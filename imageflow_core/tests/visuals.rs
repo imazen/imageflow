@@ -442,6 +442,7 @@ fn decode_cmyk_jpeg() {
 
     let result = smoke_test(Some(IoTestEnum::Url("https://upload.wikimedia.org/wikipedia/commons/0/0e/Youngstown_State_Athletics.jpg".to_owned())),
                             Some(IoTestEnum::OutputBuffer),
+                            None,
                             DEBUG_GRAPH,
                             steps,
     );
@@ -498,6 +499,7 @@ fn webp_lossless_alpha_roundtrip(){
 
     smoke_test(Some(IoTestEnum::Url("https://imageflow-resources.s3-us-west-2.amazonaws.com/test_inputs/1_webp_ll.webp".to_owned())),
                Some(IoTestEnum::OutputBuffer),
+               None,
                DEBUG_GRAPH,
                steps,
     ).unwrap();
@@ -517,6 +519,7 @@ fn webp_lossy_alpha_roundtrip(){
 
     smoke_test(Some(IoTestEnum::Url("https://imageflow-resources.s3-us-west-2.amazonaws.com/test_inputs/1_webp_a.webp".to_owned())),
                Some(IoTestEnum::OutputBuffer),
+               None,
                DEBUG_GRAPH,
                steps,
     ).unwrap();
@@ -536,9 +539,105 @@ fn smoke_test_gif_ir4(){
 
     smoke_test(Some(IoTestEnum::Url("https://s3-us-west-2.amazonaws.com/imageflow-resources/test_inputs/waterhouse.jpg".to_owned())),
                Some(IoTestEnum::OutputBuffer),
+               None,
                DEBUG_GRAPH,
                steps,
     ).unwrap();
+}
+
+#[test]
+fn test_max_encode_dimensions(){
+
+    let tinypng = vec![0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, 0x00, 0x00, 0x00, 0x0D, 0x49, 0x48, 0x44, 0x52, 0x00,
+                       0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x08, 0x06, 0x00, 0x00, 0x00, 0x1F, 0x15, 0xC4, 0x89, 0x00,
+                       0x00, 0x00, 0x0A, 0x49, 0x44, 0x41, 0x54, 0x78, 0x9C, 0x63, 0x00, 0x01, 0x00, 0x00, 0x05, 0x00, 0x01,
+                       0x0D, 0x0A, 0x2D, 0xB4, 0x00, 0x00, 0x00, 0x00, 0x49, 0x45, 0x4E, 0x44, 0xAE, 0x42, 0x60, 0x82 ];
+
+    let steps = vec![
+        Node::CommandString{
+            kind: CommandStringKind::ImageResizer4,
+            value: "width=2&height=2&mode=pad&scale=both".to_owned(),
+            decode: Some(0),
+            encode: Some(1),
+            watermarks: None
+        }
+    ];
+
+    let e = smoke_test(Some(IoTestEnum::ByteArray(tinypng)),
+               Some(IoTestEnum::OutputBuffer),
+               Some(imageflow_types::ExecutionSecurity{
+                   max_decode_size: None,
+                   max_frame_size: None,
+                   max_encode_size: Some(imageflow_types::FrameSizeLimit{
+                       w: 3,
+                       h: 1,
+                       megapixels: 100.0
+                   })
+               }),
+               DEBUG_GRAPH,
+               steps,
+    ).expect_err("Should fail");
+
+    assert_eq!(e.kind, ErrorKind::SizeLimitExceeded);
+
+    assert_eq!(e.message, "SizeLimitExceeded: Frame height 2 exceeds max_encode_size.h 1");
+
+}
+
+#[test]
+fn test_max_decode_dimensions(){
+
+    let steps = vec![
+        Node::Decode {io_id: 0, commands: None},
+    ];
+
+    let e = smoke_test(Some(IoTestEnum::Url("https://s3-us-west-2.amazonaws.com/imageflow-resources/test_inputs/waterhouse.jpg".to_owned())),
+               None,
+               Some(imageflow_types::ExecutionSecurity{
+                   max_decode_size: Some(imageflow_types::FrameSizeLimit{
+                       w: 10,
+                       h: 100000,
+                       megapixels: 100.0
+                   }),
+                   max_frame_size: None,
+                   max_encode_size: None
+               }),
+               DEBUG_GRAPH,
+               steps,
+    ).expect_err("Should fail");
+    assert_eq!(e.kind, ErrorKind::SizeLimitExceeded);
+
+}
+
+#[test]
+fn test_max_frame_dimensions(){
+
+    let steps = vec![
+        Node::CreateCanvas {
+            format: PixelFormat::Bgra32,
+            w: 1000,
+            h: 1000,
+            color: Color::Transparent
+        }
+    ];
+
+    let e = smoke_test(None,
+               None,
+               Some(imageflow_types::ExecutionSecurity{
+                   max_frame_size: Some(imageflow_types::FrameSizeLimit{
+                       w: 10000,
+                       h: 10000,
+                       megapixels: 0.5
+                   }),
+                   max_decode_size: None,
+                   max_encode_size: None
+               }),
+               DEBUG_GRAPH,
+               steps,
+    ).expect_err("Should fail");
+
+    assert_eq!(e.kind, ErrorKind::SizeLimitExceeded);
+
 }
 
 #[test]
@@ -556,6 +655,7 @@ fn smoke_test_png_ir4(){
 
     smoke_test(Some(IoTestEnum::Url("https://user-images.githubusercontent.com/2650124/31182064-e1c54784-a8f0-11e7-8bb3-833bba872975.png".to_owned())),
                Some(IoTestEnum::OutputBuffer),
+               None,
                DEBUG_GRAPH,
                steps,
     ).unwrap();
@@ -574,6 +674,7 @@ fn test_encode_jpeg_smoke() {
 
     smoke_test(Some(IoTestEnum::Url("https://s3-us-west-2.amazonaws.com/imageflow-resources/test_inputs/MarsRGB_v4_sYCC_8bit.jpg".to_owned())),
                Some(IoTestEnum::OutputBuffer),
+               None,
                DEBUG_GRAPH,
                steps,
     ).unwrap();
@@ -589,6 +690,7 @@ fn test_encode_gif_smoke() {
 
     smoke_test(Some(IoTestEnum::Url("https://s3-us-west-2.amazonaws.com/imageflow-resources/test_inputs/MarsRGB_v4_sYCC_8bit.jpg".to_owned())),
                Some(IoTestEnum::OutputBuffer),
+               None,
                DEBUG_GRAPH,
                steps,
     ).unwrap();
@@ -606,6 +708,7 @@ fn test_encode_png32_smoke() {
 
     smoke_test(Some(IoTestEnum::Url("https://s3-us-west-2.amazonaws.com/imageflow-resources/test_inputs/MarsRGB_v4_sYCC_8bit.jpg".to_owned())),
                Some(IoTestEnum::OutputBuffer),
+               None,
                DEBUG_GRAPH,
                steps,
     ).unwrap();

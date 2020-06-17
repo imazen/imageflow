@@ -109,12 +109,13 @@ impl IoTestTranslator {
 
 }
 
-pub fn build_steps(context: &mut Context, steps: &[s::Node], io: Vec<IoTestEnum>, debug: bool) -> Result<ResponsePayload, FlowError>{
+pub fn build_steps(context: &mut Context, steps: &[s::Node], io: Vec<IoTestEnum>, security: Option<imageflow_types::ExecutionSecurity>,  debug: bool) -> Result<ResponsePayload, FlowError>{
 
     for (ix, val) in io.into_iter().enumerate() {
         IoTestTranslator{}.add(context, ix as i32, val)?;
     }
     let build = s::Execute001{
+        security,
         graph_recording: default_graph_recording(debug),
         framewise: s::Framewise::Steps(steps.to_vec())
     };
@@ -135,7 +136,7 @@ pub fn get_result_dimensions(steps: &[s::Node], io: Vec<IoTestEnum>, debug: bool
 
     let mut context = Context::create().unwrap();
 
-    let result = build_steps(&mut context, &steps, io, debug).unwrap();
+    let result = build_steps(&mut context, &steps, io, None, debug).unwrap();
 
     if let Some(b) = unsafe { bit.bitmap(&context) } {
         (b.w, b.h)
@@ -145,7 +146,7 @@ pub fn get_result_dimensions(steps: &[s::Node], io: Vec<IoTestEnum>, debug: bool
 }
 
 /// Just validates that no errors are thrown during job execution
-pub fn smoke_test(input: Option<IoTestEnum>, output: Option<IoTestEnum>,  debug: bool, steps: Vec<s::Node>) -> Result<s::ResponsePayload, imageflow_core::FlowError>{
+pub fn smoke_test(input: Option<IoTestEnum>, output: Option<IoTestEnum>, security: Option<imageflow_types::ExecutionSecurity>, debug: bool, steps: Vec<s::Node>) -> Result<s::ResponsePayload, imageflow_core::FlowError>{
     let mut io_list = Vec::new();
     if input.is_some() {
         io_list.push(input.unwrap());
@@ -154,7 +155,7 @@ pub fn smoke_test(input: Option<IoTestEnum>, output: Option<IoTestEnum>,  debug:
         io_list.push(output.unwrap());
     }
     let mut context = Context::create().unwrap();
-    build_steps(&mut context, &steps, io_list, debug)
+    build_steps(&mut context, &steps, io_list, security, debug)
 }
 
 
@@ -416,6 +417,7 @@ pub fn decode_image(c: &mut Context, io_id: i32) -> &mut BitmapBgra {
     let mut bit = BitmapBgraContainer::empty();
     let _result = c.execute_1(s::Execute001 {
         graph_recording: None,
+        security: None,
         framewise: s::Framewise::Steps(vec![
             s::Node::Decode {
                 io_id,
@@ -436,7 +438,7 @@ pub fn decode_input(c: &mut Context, input: IoTestEnum) -> &mut BitmapBgra {
             commands: None
         },
         unsafe { bit.get_node() }
-    ], vec![input], false).unwrap();
+    ], vec![input], None, false).unwrap();
 
     unsafe { bit.bitmap(c).unwrap() }
 }
@@ -558,7 +560,7 @@ pub fn compare_bitmaps(_c: &ChecksumCtx,  actual: &mut BitmapBgra, expected: &mu
     if let Similarity::AllowDssimMatch(minval, maxval) = require {
         let actual_ref = get_imgref_bgra32(actual);
         let expected_ref = get_imgref_bgra32(expected);
-        let mut d = dssim::new();
+        let d = dssim::new();
 
         let actual_img = d.create_image(&actual_ref).unwrap();
         let expected_img = d.create_image(&expected_ref).unwrap();
@@ -698,7 +700,7 @@ pub fn compare_with_context(context: &mut Context, inputs: Option<Vec<IoTestEnum
     let mut bit = BitmapBgraContainer::empty();
     steps.push(unsafe{ bit.get_node()});
 
-    let response = build_steps(context, &steps,inputs.unwrap_or(vec![]), debug ).unwrap();
+    let response = build_steps(context, &steps,inputs.unwrap_or(vec![]), None, debug ).unwrap();
 
     if let Some(b) = unsafe { bit.bitmap(&context) } {
         if debug {
@@ -730,7 +732,7 @@ pub fn compare_encoded(input: Option<IoTestEnum>, checksum_name: &str, store_if_
     let mut context = Context::create().unwrap();
 
 
-    let _ = build_steps(&mut context, &steps, io_vec, debug);
+    let _ = build_steps(&mut context, &steps, io_vec, None, debug);
 
     let bytes = context.get_output_buffer_slice(1).unwrap();
 
@@ -769,6 +771,7 @@ pub fn test_with_callback(checksum_name: &str, input: IoTestEnum, callback: fn(&
 
         let send_execute = imageflow_types::Execute001{
             framewise: imageflow_types::Framewise::Steps(steps),
+            security: None,
             graph_recording: None
         };
         context.execute_1(send_execute).unwrap();
@@ -786,6 +789,7 @@ pub fn test_with_callback(checksum_name: &str, input: IoTestEnum, callback: fn(&
 /// Simplified graph recording configuration
 pub fn default_build_config(debug: bool) -> s::Build001Config {
     s::Build001Config{
+        security: None,
         graph_recording: if debug {Some(s::Build001GraphRecording::debug_defaults())} else {None},
     }
 }

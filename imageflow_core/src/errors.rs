@@ -11,6 +11,7 @@ use crate::ffi;
 use std::ffi::CStr;
 use std::ptr;
 use imageflow_riapi::sizing::LayoutError;
+use crate::flow::definitions::FrameEstimate;
 
 #[test]
 fn test_file_macro_for_this_build(){
@@ -201,6 +202,7 @@ pub enum ErrorKind{
     InvalidOperation,
     InvalidState,
     FetchError,
+    SizeLimitExceeded,
     Category(ErrorCategory),
     CError(CStatus)
 }
@@ -221,6 +223,7 @@ impl CategorizedError for ErrorKind{
             ErrorKind::DuplicateIoId |
             ErrorKind::LayoutError |
             ErrorKind::CodecDisabledError |
+            ErrorKind::SizeLimitExceeded |
             ErrorKind::InvalidNodeParams => ErrorCategory::ArgumentInvalid,
 
             ErrorKind::FailedBorrow |
@@ -354,6 +357,7 @@ impl FlowError {
 
     }
 }
+
 
 
 #[test]

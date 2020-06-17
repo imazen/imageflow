@@ -232,6 +232,7 @@ pub fn compare_encoded_to_source(input: IoTestEnum, debug: bool, require: Constr
 
     let execute = s::Execute001 {
         graph_recording: default_graph_recording(debug),
+        security: None,
         framewise: s::Framewise::Steps(steps)
     };
 

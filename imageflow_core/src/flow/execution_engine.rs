@@ -263,6 +263,33 @@ impl<'a> Engine<'a> {
         Ok(())
     }
 
+    fn validate_frame_size(est: FrameEstimate, security: &imageflow_types::ExecutionSecurity) -> Result<()>{
+        // Validate frame size
+        let info = match est{
+            FrameEstimate::Some(info) => Some(info),
+            FrameEstimate::UpperBound(info) => Some(info),
+            _ => None
+        };
+        if let Some(frame_info) = info{
+            let max_frame_size = security.max_frame_size.clone()
+                .expect("Context.security.max_frame_size required");
+            if max_frame_size.w.leading_zeros() == 0 ||
+                max_frame_size.h.leading_zeros() == 0{
+                return Err(nerror!(ErrorKind::SizeLimitExceeded, "max_frame_size values overflow an i32"));
+            }
+            if frame_info.w > max_frame_size.w as i32 {
+                return Err(nerror!(ErrorKind::SizeLimitExceeded, "Frame width {} exceeds max_frame_size.w {}", frame_info.w, max_frame_size.w))
+            }
+            if frame_info.h > max_frame_size.h as i32 {
+                return Err(nerror!(ErrorKind::SizeLimitExceeded, "Frame height {} exceeds max_frame_size.h {}", frame_info.h, max_frame_size.h))
+            }
+            let megapixels = frame_info.w as f32 * frame_info.h as f32 / 1000000f32;
+            if megapixels > max_frame_size.megapixels {
+                return Err(nerror!(ErrorKind::SizeLimitExceeded, "Frame megapixels {} exceeds max_frame_size.megapixels {}", megapixels, max_frame_size.megapixels))
+            }
+        }
+        Ok(())
+    }
 
     pub fn estimate_node(&mut self, node_id: NodeIndex) -> Result<FrameEstimate> {
         let now = precise_time_ns();
@@ -279,6 +306,8 @@ impl<'a> Engine<'a> {
 
         if let Ok(v) = result {
             ctx.weight_mut(node_id).frame_est = v;
+
+            Engine::validate_frame_size(v, &ctx.c.security)?;
         }
 
         ctx.weight_mut(node_id).cost.wall_ns += precise_time_ns() - now;
@@ -571,7 +600,7 @@ impl<'a> OpCtxMut<'a> {
 
 
 use daggy::walker::Walker;
-
+use crate::flow::definitions::NodeResult::Frame;
 
 
 pub fn flow_node_has_dimensions(g: &Graph, node_id: NodeIndex) -> bool {

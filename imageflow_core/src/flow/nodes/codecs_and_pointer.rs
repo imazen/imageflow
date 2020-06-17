@@ -198,6 +198,10 @@ impl NodeDef for DecoderPrimitiveDef {
     fn execute(&self, ctx: &mut OpCtxMut, ix: NodeIndex) -> Result<NodeResult> {
         let io_id = decoder_get_io_id(&ctx.weight(ix).params)?;
 
+        let estimate = self.estimate(ctx, ix)?;
+
+        validate_frame_size(estimate, &ctx.c.security.max_decode_size, "max_decode_size")?;
+
         let mut codec = ctx.c.get_codec(io_id).map_err(|e| e.at(here!()))?;
         let decoder = codec.get_decoder().map_err(|e| e.at(here!()))?;
 
@@ -211,6 +215,33 @@ impl NodeDef for DecoderPrimitiveDef {
     }
 }
 
+fn validate_frame_size(est: FrameEstimate, limit_maybe: &Option<imageflow_types::FrameSizeLimit>, limit_name: &'static str) -> Result<()>{
+    if let Some(limit)= limit_maybe {
+        // Validate frame size
+        let info = match est {
+            FrameEstimate::Some(info) => Some(info),
+            FrameEstimate::UpperBound(info) => Some(info),
+            _ => None
+        };
+        if let Some(frame_info) = info {
+            if limit.w.leading_zeros() == 0 ||
+                limit.h.leading_zeros() == 0 {
+                return Err(nerror!(ErrorKind::SizeLimitExceeded, "{} values overflow an i32", limit_name));
+            }
+            if frame_info.w > limit.w as i32 {
+                return Err(nerror!(ErrorKind::SizeLimitExceeded, "Frame width {} exceeds {}.w {}", frame_info.w, limit_name, limit.w))
+            }
+            if frame_info.h > limit.h as i32 {
+                return Err(nerror!(ErrorKind::SizeLimitExceeded, "Frame height {} exceeds {}.h {}", frame_info.h, limit_name, limit.h))
+            }
+            let megapixels = frame_info.w as f32 * frame_info.h as f32  / 1000000f32;
+            if megapixels > limit.megapixels {
+                return Err(nerror!(ErrorKind::SizeLimitExceeded, "Frame megapixels {} exceeds {}.megapixels {}", megapixels, limit_name, limit.megapixels))
+            }
+        }
+    }
+    Ok(())
+}
 
 
 
@@ -250,6 +281,10 @@ impl NodeDef for EncoderDef {
     fn execute(&self, ctx: &mut OpCtxMut, ix: NodeIndex) -> Result<NodeResult> {
         let (io_id, preset) = self.get(&ctx.weight(ix).params)?;
         let input_bitmap = ctx.bitmap_bgra_from(ix, EdgeKind::Input).map_err(|e| e.at(here!()))?;
+
+        // Validate max encode size
+        let estimate = self.estimate(ctx, ix)?;
+        validate_frame_size(estimate, &ctx.c.security.max_encode_size, "max_encode_size")?;
 
         let decoders = ctx.get_decoder_io_ids_and_indexes(ix).into_iter().map(|(io_id, ix)| io_id).collect::<Vec<i32>>();
 

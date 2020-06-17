@@ -555,6 +555,20 @@ pub enum CompositingMode {
     Overwrite
 }
 
+#[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
+pub struct FrameSizeLimit{
+    pub w: u32,
+    pub h: u32,
+    pub megapixels: f32
+}
+
+#[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
+pub struct ExecutionSecurity{
+    pub max_decode_size: Option<FrameSizeLimit>,
+    pub max_frame_size: Option<FrameSizeLimit>,
+    pub max_encode_size: Option<FrameSizeLimit>
+}
+
 /// Represents a image operation. Currently used both externally (for JSON API) and internally.
 /// The most important data type
 #[allow(unreachable_patterns)]
@@ -880,7 +894,7 @@ impl Build001GraphRecording {
 pub struct Build001Config {
     // pub process_all_gif_frames: Option<bool>,
     pub graph_recording: Option<Build001GraphRecording>,
-
+    pub security: Option<ExecutionSecurity>,
 }
 
 /// Represents a complete build job, combining IO objects with a framewise operation graph.
@@ -980,6 +994,7 @@ impl Build001 {
 #[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
 pub struct Execute001 {
     pub graph_recording: Option<Build001GraphRecording>,
+    pub security: Option<ExecutionSecurity>,
     pub framewise: Framewise,
 }
 
@@ -1140,12 +1155,14 @@ impl Execute001 {
     pub fn example_steps() -> Execute001 {
         Execute001 {
             graph_recording: None,
+            security: None,
             framewise: Framewise::example_steps(),
         }
     }
     pub fn example_graph() -> Execute001 {
         Execute001 {
             graph_recording: None,
+            security: None,
             framewise: Framewise::example_graph(),
         }
     }

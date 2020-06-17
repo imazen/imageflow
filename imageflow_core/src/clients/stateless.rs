@@ -125,6 +125,7 @@ impl LibClient {
 
         let send_execute = s::Execute001 {
             framewise: task.framewise,
+            security: None,
             graph_recording: match task.export_graphs_to {
                 Some(_) => Some(s::Build001GraphRecording::debug_defaults()),
                 None => None,
