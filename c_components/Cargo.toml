@@ -35,4 +35,4 @@ libz-sys = { version = "1.0.18", features = ["static"] }
 libpng-sys = { version = "1.1.8", features = ["static", "static-libz", "libz-sys"] }
 
 # For build info see https://github.com/kornelski/rust-lcms2-sys/blob/master/src/build.rs
-lcms2-sys = { version = "3.1.1", features = ["static",  "static-fallback", "parallel"] }
+lcms2-sys = { version = "3.1.4", features = ["static",  "static-fallback", "parallel"] }
