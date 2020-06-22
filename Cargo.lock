@@ -1029,7 +1029,7 @@ dependencies = [
  "libpng-sys 1.1.8 (registry+https://github.com/rust-lang/crates.io-index)",
  "libwebp-sys 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "lodepng 2.6.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "mozjpeg 0.8.16 (registry+https://github.com/rust-lang/crates.io-index)",
+ "mozjpeg 0.8.17 (registry+https://github.com/rust-lang/crates.io-index)",
  "mozjpeg-sys 0.10.5 (registry+https://github.com/rust-lang/crates.io-index)",
  "num 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "petgraph 0.4.13 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -1543,7 +1543,7 @@ dependencies = [
 
 [[package]]
 name = "mozjpeg"
-version = "0.8.16"
+version = "0.8.17"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
  "arrayvec 0.5.1 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -3239,7 +3239,7 @@ dependencies = [
 "checksum modifier 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)" = "41f5c9112cb662acd3b204077e0de5bc66305fa8df65c8019d5adb10e9ab6e58"
 "checksum mount 0.3.0 (git+https://github.com/iron/mount.git?rev=2c3d719be4c158d4ddbd8cdb402fafccdefec58c)" = "<none>"
 "checksum mount 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)" = "32245731923cd096899502fc4c4317cfd09f121e80e73f7f576cf3777a824256"
-"checksum mozjpeg 0.8.16 (registry+https://github.com/rust-lang/crates.io-index)" = "de9b3784f8be84c13e19c85448c95d90714f855bf6409fd23b9fbb5584c89213"
+"checksum mozjpeg 0.8.17 (registry+https://github.com/rust-lang/crates.io-index)" = "5bf0f3daa270a898a2731beb90ffc19712238e985e8cb02f7dfa307f632053ef"
 "checksum mozjpeg-sys 0.10.5 (registry+https://github.com/rust-lang/crates.io-index)" = "9e0158bd331112b72ebc6407fc3a2112f8c284050222c24b809fbc669f4304b2"
 "checksum nasm-rs 0.1.7 (registry+https://github.com/rust-lang/crates.io-index)" = "fea4fa2ba8f650120445ddcf137d8a6370ff01d55f00e6b29e0ab01b7c846464"
 "checksum native-tls 0.2.3 (registry+https://github.com/rust-lang/crates.io-index)" = "4b2df1a4c22fd44a62147fd8f13dd0f95c9d8ca7b2610299b2a2f9cf8964274e"
