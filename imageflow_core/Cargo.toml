@@ -66,7 +66,7 @@ imageflow_types = { path = "../imageflow_types", version = "*" }
 imageflow_helpers = { path = "../imageflow_helpers", version = "*" }
 imageflow_riapi = { path = "../imageflow_riapi", version = "*" }
 imageflow_c_components = { path = "../c_components" }
-mozjpeg = "0.8.16"
+mozjpeg = "0.8.17"
 mozjpeg-sys = {version = "0.10.5", features = ["nasm_simd", "turbojpeg_api"]}
 
 evalchroma = "0.1.1"
