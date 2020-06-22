@@ -24,7 +24,7 @@ profiling = []
 shared = []
 
 [dependencies]
-mozjpeg-sys = {version = "0.10.4", features = ["nasm_simd", "turbojpeg_api"]}
+mozjpeg-sys = {version = "0.10.5", features = ["nasm_simd", "turbojpeg_api"]}
 
 # For build info see
 
