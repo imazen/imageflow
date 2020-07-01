@@ -1204,7 +1204,9 @@ pub enum DecoderCommand {
     #[serde(rename="webp_decoder_hints")]
     WebPDecoderHints(WebPDecoderHints),
     #[serde(rename="discard_color_profile")]
-    DiscardColorProfile
+    DiscardColorProfile,
+    #[serde(rename="ignore_color_profile_errors")]
+    IgnoreColorProfileErrors
 }
 #[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
 pub struct TellDecoder001 {

@@ -546,6 +546,27 @@ fn smoke_test_gif_ir4(){
 }
 
 #[test]
+fn smoke_test_ignore_invalid_color_profile(){
+
+    let steps = vec![
+        Node::CommandString{
+            kind: CommandStringKind::ImageResizer4,
+            value: "width=200&height=200&ignore_icc_errors=true".to_owned(),
+            decode: Some(0),
+            encode: Some(1),
+            watermarks: None
+        }
+    ];
+
+    smoke_test(Some(IoTestEnum::Url("https://s3-us-west-2.amazonaws.com/imageflow-resources/test_inputs/color_profile_error.jpg".to_owned())),
+               Some(IoTestEnum::OutputBuffer),
+               None,
+               DEBUG_GRAPH,
+               steps,
+    ).unwrap();
+}
+
+#[test]
 fn test_max_encode_dimensions(){
 
     let tinypng = vec![0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, 0x00, 0x00, 0x00, 0x0D, 0x49, 0x48, 0x44, 0x52, 0x00,

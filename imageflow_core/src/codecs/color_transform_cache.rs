@@ -90,6 +90,7 @@ impl ColorTransformCache{
         let _ = (bytes.first(), bytes.last());
 
         let p = Profile::new_icc_context(ThreadContext::new(), bytes).map_err(|e| FlowError::from(e).at(here!()))?;
+
         //TODO: handle gray transform on rgb expanded images.
         //TODO: Add test coverage for grayscale png
 

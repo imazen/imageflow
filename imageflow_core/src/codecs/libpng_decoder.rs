@@ -62,6 +62,10 @@ impl Decoder for LibPngDecoder {
                 self.decoder.ignore_color_profile = true;
                 Ok(())
             }
+            s::DecoderCommand::IgnoreColorProfileErrors => {
+                self.decoder.ignore_color_profile_errors = true;
+                Ok(())
+            }
         }
     }
 
@@ -96,6 +100,7 @@ struct PngDec{
     h: u32,
     pixel_format: ffi::PixelFormat,
     pub ignore_color_profile: bool,
+    pub ignore_color_profile_errors: bool,
     color_profile: Option<Vec<u8>>,
     color: ffi::DecoderColorInfo
 }
@@ -162,6 +167,7 @@ impl PngDec{
             h: 0,
             pixel_format: ffi::PixelFormat::Bgra32,
             ignore_color_profile: false,
+            ignore_color_profile_errors: false,
             color_profile: None,
             color: ffi::DecoderColorInfo{
                 source: ColorProfileSource::Null,
@@ -258,8 +264,12 @@ impl PngDec{
             let color_info = &*ffi::wrap_png_decoder_get_color_info(c_state);
 
             if !self.ignore_color_profile {
-                ColorTransformCache::transform_to_srgb(&mut *canvas, color_info)
-                    .map_err(|e| e.at(here!()))?;
+
+                let result = ColorTransformCache::transform_to_srgb(&mut *canvas, color_info)
+                    .map_err(|e| e.at(here!()));
+                if result.is_err() && !self.ignore_color_profile_errors{
+                    return result;
+                }
             }
         }
 

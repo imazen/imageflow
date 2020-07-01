@@ -161,8 +161,16 @@ impl Ir4Expand{
 
         let scaled_width = (f64::from(self.source.w) * preshrink_ratio).floor() as i64;
         let scaled_height = (f64::from(self.source.h) * preshrink_ratio).floor() as i64;
+        let mut vec = Vec::with_capacity(4);
+
+        if i.ignoreicc == Some(true){
+            vec.push(s::DecoderCommand::DiscardColorProfile);
+        }
+        if i.ignore_icc_errors == Some(true){
+            vec.push(s::DecoderCommand::IgnoreColorProfileErrors);
+        }
+
         if preshrink_ratio < 1f64 {
-            let mut vec = Vec::with_capacity(2);
             vec.push(s::DecoderCommand::JpegDownscaleHints(s::JpegIDCTDownscaleHints {
                 scale_luma_spatially: Some(gamma_correct),
                 gamma_correct_for_srgb_during_spatial_luma_scaling: Some(gamma_correct),
@@ -175,9 +183,11 @@ impl Ir4Expand{
                     height: scaled_height as i32,
                 }));
             }
-            Ok(Some(vec))
-        } else {
+        }
+        if vec.is_empty() {
             Ok(None)
+        }else{
+            Ok(Some(vec))
         }
     }
 

@@ -214,10 +214,10 @@ pub enum ScalingColorspace {
 
 }
 
-pub static IR4_KEYS: [&'static str;77] = ["mode", "anchor", "flip", "sflip", "scale", "cache", "process",
+pub static IR4_KEYS: [&'static str;78] = ["mode", "anchor", "flip", "sflip", "scale", "cache", "process",
     "quality", "jpeg.quality", "zoom", "crop", "cropxunits", "cropyunits",
     "w", "h", "width", "height", "maxwidth", "maxheight", "format", "thumbnail",
-     "autorotate", "srotate", "rotate", "ignoreicc", //really? : "precise_scaling_ratio",
+     "autorotate", "srotate", "rotate", "ignoreicc", "ignore_icc_errors", //really? : "precise_scaling_ratio",
     "stretch", "webp.lossless", "webp.quality",
     "frame", "page", "subsampling", "colors", "f.sharpen", "f.sharpen_when", "down.colorspace",
     "404", "bgcolor", "paddingcolor", "bordercolor", "preset", "floatspace",
@@ -320,6 +320,7 @@ impl Instructions{
         add(&mut m, "rotate", self.rotate);
         add(&mut m, "autorotate", self.autorotate);
         add(&mut m, "ignoreicc", self.ignoreicc);
+        add(&mut m, "ignore_icc_errors", self.ignore_icc_errors);
         add(&mut m, "cropxunits", self.cropxunits);
         add(&mut m, "cropyunits", self.cropyunits);
         add(&mut m, "quality", self.quality);
@@ -393,6 +394,7 @@ impl Instructions{
         i.rotate = p.parse_rotate("rotate");
         i.autorotate = p.parse_bool("autorotate");
         i.ignoreicc = p.parse_bool("ignoreicc");
+        i.ignore_icc_errors = p.parse_bool("ignore_icc_errors");
         i.crop = p.parse_crop_strict("crop").or_else(|| p.parse_crop("crop"));
         i.cropxunits = p.parse_f64("cropxunits");
         i.cropyunits = p.parse_f64("cropyunits");
@@ -851,6 +853,7 @@ pub struct Instructions{
     pub rotate: Option<i32>,
     pub autorotate: Option<bool>,
     pub ignoreicc: Option<bool>,
+    pub ignore_icc_errors: Option<bool>,
     pub crop: Option<[f64;4]>,
     pub cropxunits: Option<f64>,
     pub cropyunits: Option<f64>,
@@ -988,6 +991,8 @@ fn test_url_parsing() {
     t("webp.quality=85", Instructions { webp_quality: Some(85f64), ..Default::default() }, vec![]);
     t("webp.lossless=true", Instructions { webp_lossless: Some(true), ..Default::default() }, vec![]);
     t("jpeg.progressive=true", Instructions { jpeg_progressive: Some(true), ..Default::default() }, vec![]);
+    t("ignoreicc=true", Instructions { ignoreicc: Some(true), ..Default::default() }, vec![]);
+    t("ignore_icc_errors=true", Instructions { ignore_icc_errors: Some(true), ..Default::default() }, vec![]);
     t("jpeg.turbo=true", Instructions { jpeg_turbo: Some(true), ..Default::default() }, vec![]);
     t("png.quality=90", Instructions { png_quality: Some(90), ..Default::default() }, vec![]);
     t("png.min_quality=90", Instructions { png_min_quality: Some(90), ..Default::default() }, vec![]);
@@ -1106,5 +1111,7 @@ fn test_tostr(){
     t("up.filter=mitchell",  Instructions{up_filter: Some(FilterStrings::Mitchell), ..Default::default()});
     t("down.filter=lanczos",  Instructions{down_filter: Some(FilterStrings::Lanczos), ..Default::default()});
     t("anchor=bottomleft",  Instructions{anchor: Some((Anchor1D::Near, Anchor1D::Far)), ..Default::default()});
+    t("ignoreicc=true", Instructions { ignoreicc: Some(true), ..Default::default() });
+    t("ignore_icc_errors=true", Instructions { ignore_icc_errors: Some(true), ..Default::default() });
 
 }

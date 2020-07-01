@@ -73,6 +73,10 @@ impl Decoder for MozJpegDecoder {
                 self.decoder.ignore_color_profile = true;
                 Ok(())
             }
+            s::DecoderCommand::IgnoreColorProfileErrors => {
+                self.decoder.ignore_color_profile_errors = true;
+                Ok(())
+            }
         }
     }
 
@@ -118,6 +122,7 @@ struct MzDec{
     h: u32,
     exif_rotation_flag: Option<i32>,
     pub ignore_color_profile: bool,
+    pub ignore_color_profile_errors: bool,
     color_profile: Option<Vec<u8>>,
     gamma: f64
 
@@ -186,6 +191,7 @@ impl MzDec{
             h: 0,
             exif_rotation_flag: None,
             ignore_color_profile: false,
+            ignore_color_profile_errors: false,
             color_profile: None,
             gamma: 0.45455
         });
@@ -241,8 +247,12 @@ impl MzDec{
             }
         }
 
-        let is_cmyk = self.codec_info.jpeg_color_space == mozjpeg_sys::JCS_CMYK ||
-            self.codec_info.jpeg_color_space == mozjpeg_sys::JCS_YCCK;
+        let jpeg_color_space = self.codec_info.jpeg_color_space;
+
+        let is_cmyk = jpeg_color_space == mozjpeg_sys::JCS_CMYK ||
+            jpeg_color_space == mozjpeg_sys::JCS_YCCK;
+
+        let is_grayscale = jpeg_color_space == mozjpeg_sys::JCS_GRAYSCALE;
 
 
         if !is_cmyk {
@@ -299,7 +309,13 @@ impl MzDec{
         let color_info = self.get_decoder_color_info();
 
         if !self.ignore_color_profile {
-            ColorTransformCache::transform_to_srgb(unsafe { &mut *canvas }, &color_info)?;
+
+            let result = ColorTransformCache::transform_to_srgb(unsafe { &mut *canvas }, &color_info)
+                .map_err(|e| e.at(here!()));
+            if result.is_err() && !self.ignore_color_profile_errors{
+                return result;
+            }
+
         }
 
         self.dispose_codec();
