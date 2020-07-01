@@ -257,6 +257,7 @@ impl NodeDefOneInputOneCanvas for DrawImageDef {
                     return Err(cerror!(c, "Failed to execute Scale2D:  "));
                 }
             }
+            canvas.compositing_mode = crate::ffi::BitmapCompositingMode::BlendWithSelf;
 
             Ok(())
         } else {

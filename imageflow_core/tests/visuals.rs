@@ -203,6 +203,8 @@ fn test_watermark_image() {
     assert!(matched);
 }
 
+
+
 #[test]
 fn test_watermark_image_command_string() {
     let matched = compare_multiple(Some(vec![
@@ -213,6 +215,45 @@ fn test_watermark_image_command_string() {
             Node::CommandString{
                 kind: CommandStringKind::ImageResizer4,
                 value: "width=800&height=800&mode=max".to_string(),
+                decode: Some(0),
+                encode: None,
+                watermarks: Some(vec![imageflow_types::Watermark{
+                    io_id: 1,
+                    fit_box: Some(imageflow_types::WatermarkConstraintBox::ImagePercentage {x1: 30f32, y1: 50f32, x2: 90f32, y2: 90f32}),
+                    fit_mode: Some(imageflow_types::WatermarkConstraintMode::FitCrop),
+                    gravity: Some(imageflow_types::ConstraintGravity::Percentage {x: 100f32, y: 100f32}),
+                    min_canvas_width: None,
+                    min_canvas_height: None,
+                    opacity: Some(0.9f32),
+                    hints: Some(imageflow_types::ResampleHints{
+                        sharpen_percent: Some(15f32),
+                        down_filter: None,
+                        up_filter: None,
+                        scaling_colorspace: None,
+                        background_color: None,
+                        resample_when: None,
+                        sharpen_when: None
+                    }),
+
+                }
+                ])
+            }
+        ]
+    );
+    assert!(matched);
+}
+
+
+#[test]
+fn test_watermark_image_command_string_with_bgcolor() {
+    let matched = compare_multiple(Some(vec![
+        IoTestEnum::Url("https://s3-us-west-2.amazonaws.com/imageflow-resources/test_inputs/waterhouse.jpg".to_owned()),
+        IoTestEnum::Url("https://s3-us-west-2.amazonaws.com/imageflow-resources/test_inputs/dice.png".to_owned())
+    ]), 500,
+                                   "Watermark1", POPULATE_CHECKSUMS, DEBUG_GRAPH, vec![
+            Node::CommandString{
+                kind: CommandStringKind::ImageResizer4,
+                value: "width=800&height=800&mode=max&bgcolor=aaeeff".to_string(),
                 decode: Some(0),
                 encode: None,
                 watermarks: Some(vec![imageflow_types::Watermark{
