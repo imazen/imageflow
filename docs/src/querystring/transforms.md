@@ -29,3 +29,5 @@ the bottom-right corner of the image. `crop=10,10,-10,-10` removes 10 pixels fro
 * `trim.percentpadding=0.5` specifies percentage of padding to restore after trimming.
 * `bgcolor` must be in the form RGB, RGBA, RRGGBBAA, RRGGBB, or be a named color.
 `bgcolor` determines the color of padding added with `mode=pad` or `scale=canvas`. 
+* `ignoreicc=true` causes the source image's color profile to be ignored and treated as sRGB. 
+* `ignore_icc_errors=true` causes color profile errors to be ignored rather than causing the operation to fail. 

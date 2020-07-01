@@ -32,3 +32,48 @@ The image may not be scaled to the exact size requested, but it will be closer.
     }
 }
 ```
+
+You can also do this for WebP images, although there is no support for linear light scaling:
+
+```json
+
+{
+    "decode": {
+      "io_id": 0,
+      "commands": [
+        {
+          "webp_decoder_hints": {
+            "width": 1600,
+            "height": 1600
+          }
+        }
+      ]
+    }
+}
+```
+
+You can force the color profile to be ignored. 
+```json
+
+{
+    "decode": {
+      "io_id": 0,
+      "commands": [
+        "discard_color_profile"
+      ]
+    }
+}
+```
+
+Or just ignore color profile errors. 
+```json
+
+{
+    "decode": {
+      "io_id": 0,
+      "commands": [
+        "ignore_color_profile_errors"
+      ]
+    }
+}
+```
