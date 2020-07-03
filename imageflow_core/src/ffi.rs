@@ -587,7 +587,7 @@ pub enum ColorProfileSource {
 #[derive(Clone,Debug,Copy, PartialEq)]
 pub struct DecoderColorInfo {
     pub source: ColorProfileSource,
-    pub profile_buffer: *mut u8,
+    pub profile_buffer: *const u8,
     pub buffer_length: usize,
     pub white_point: ::lcms2::CIExyY,
     pub primaries: ::lcms2::CIExyYTRIPLE,

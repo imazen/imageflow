@@ -52,7 +52,8 @@ libwebp-sys = "0.3"
 
 jpeg-decoder = "0.1"
 
-lcms2 = "5.1.5"
+lcms2 = { git = "https://github.com/imazen/rust-lcms2" }
+lcms2-sys = "*"
 chashmap = "2.2"
 
 getopts ="0.2"

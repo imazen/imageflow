@@ -265,7 +265,7 @@ impl PngDec{
 
             if !self.ignore_color_profile {
 
-                let result = ColorTransformCache::transform_to_srgb(&mut *canvas, color_info)
+                let result = ColorTransformCache::transform_to_srgb(&mut *canvas, color_info, PixelFormat::BGRA_8, PixelFormat::BGRA_8)
                     .map_err(|e| e.at(here!()));
                 if result.is_err() && !self.ignore_color_profile_errors{
                     return result;

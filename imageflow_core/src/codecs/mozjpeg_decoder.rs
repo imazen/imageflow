@@ -17,6 +17,10 @@ use rgb::alt::BGRA8;
 extern crate mozjpeg_sys;
 use ::mozjpeg_sys::*;
 use imageflow_helpers::preludes::from_std::ptr::{null, slice_from_raw_parts, null_mut};
+use imageflow_types::DecoderCommand::IgnoreColorProfileErrors;
+
+static CMYK_PROFILE: &'static [u8] = include_bytes!("cmyk.icc");
+
 
 pub struct MozJpegDecoder{
     decoder: Box<MzDec>
@@ -257,8 +261,7 @@ impl MzDec{
 
         if !is_cmyk {
             self.codec_info.out_color_space = mozjpeg_sys::JCS_EXT_BGRA; //Why not BGRX? Maybe because it doesn't clear the alpha values
-        } else {
-            return Err(nerror!(ErrorKind::JpegDecodingError, "CMYK JPEG support not implemented"));
+
         }
 
         unsafe {
@@ -306,11 +309,19 @@ impl MzDec{
             }
         }
 
-        let color_info = self.get_decoder_color_info();
+        let mut color_info = self.get_decoder_color_info();
 
-        if !self.ignore_color_profile {
+        if is_cmyk && color_info.source != ColorProfileSource::ICCP{
+            color_info.source = ColorProfileSource::ICCP;
+            color_info.profile_buffer = &CMYK_PROFILE[0];
+            color_info.buffer_length = CMYK_PROFILE.len();
+        }
 
-            let result = ColorTransformCache::transform_to_srgb(unsafe { &mut *canvas }, &color_info)
+        if !self.ignore_color_profile || is_cmyk{
+
+            let input_pixel_format = if is_cmyk { PixelFormat::CMYK_8_REV } else { PixelFormat::BGRA_8 };
+
+            let result = ColorTransformCache::transform_to_srgb(unsafe { &mut *canvas }, &color_info, input_pixel_format, PixelFormat::BGRA_8)
                 .map_err(|e| e.at(here!()));
             if result.is_err() && !self.ignore_color_profile_errors{
                 return result;

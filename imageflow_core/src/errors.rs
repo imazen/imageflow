@@ -321,11 +321,6 @@ impl From<jpeg_decoder::Error> for FlowError{
     }
 }
 
-impl From<::lcms2::Error> for FlowError{
-    fn from(e: ::lcms2::Error) -> Self {
-        FlowError::without_location(ErrorKind::ColorProfileError, format!("{:?}", e))
-    }
-}
 
 impl From<::imagequant::liq_error> for FlowError {
     fn from(e: ::imagequant::liq_error) -> Self {

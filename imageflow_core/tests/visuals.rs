@@ -471,25 +471,18 @@ fn test_jpeg_crop() {
 
 #[test]
 fn decode_cmyk_jpeg() {
-    let steps = vec![
-        Node::CommandString {
-            kind: CommandStringKind::ImageResizer4,
-            value: "width=200&height=200&format=gif".to_owned(),
-            decode: Some(0),
-            encode: Some(1),
-            watermarks: None
-        }
-    ];
-
-    let result = smoke_test(Some(IoTestEnum::Url("https://upload.wikimedia.org/wikipedia/commons/0/0e/Youngstown_State_Athletics.jpg".to_owned())),
-                            Some(IoTestEnum::OutputBuffer),
-                            None,
-                            DEBUG_GRAPH,
-                            steps,
+    let matched = compare(Some(IoTestEnum::Url("https://imageflow-resources.s3-us-west-2.amazonaws.com/test_inputs/cmyk_logo.jpg".to_owned())), 500,
+                          "cmyk_decode", POPULATE_CHECKSUMS, DEBUG_GRAPH, vec![
+            Node::CommandString{
+                kind: CommandStringKind::ImageResizer4,
+                value: "".to_owned(),
+                decode: Some(0),
+                encode: None,
+                watermarks: None
+            }
+        ]
     );
-    let err = result.expect_err("CMYK jpeg decodes should fail");
-    assert_eq!(err.category(), crate::imageflow_core::ErrorCategory::ImageMalformed);
-    assert_eq!(err.message,"JpegDecodingError: CMYK JPEG support not implemented");
+    assert!(matched);
 
 }
 

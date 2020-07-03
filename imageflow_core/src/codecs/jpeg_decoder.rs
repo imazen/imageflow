@@ -14,6 +14,7 @@ use crate::io::IoProxyProxy;
 use crate::io::IoProxyRef;
 use rgb::alt::BGRA8;
 
+
 extern crate jpeg_decoder as jpeg;
 
 
