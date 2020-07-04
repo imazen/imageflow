@@ -36,7 +36,7 @@ impl WebPDecoder {
         })
     }
 
-    pub fn ensure_data_buffered(&mut self, c: &Context) -> Result<()>{
+    fn ensure_data_buffered(&mut self) -> Result<()>{
         if self.bytes.is_none() {
             let mut bytes = Vec::with_capacity(2048);
             let _ = self.io.read_to_end(&mut bytes).map_err(|e| FlowError::from_decoder(e));
@@ -73,17 +73,9 @@ impl WebPDecoder {
             self.input_height()
         }
     }
-}
 
-
-impl Decoder for WebPDecoder {
-    fn initialize(&mut self, c: &Context) -> Result<()> {
-        Ok(())
-    }
-
-
-    fn get_image_info(&mut self, c: &Context) -> Result<s::ImageInfo> {
-        self.ensure_data_buffered(c)?;
+    fn ensure_features_read(&mut self) -> Result<()>{
+        self.ensure_data_buffered()?;
         if !self.features_read {
             let buf = &self.bytes.as_ref().unwrap(); //Cannot fail after ensure_data_buffered
             let len = buf.len();
@@ -95,6 +87,32 @@ impl Decoder for WebPDecoder {
             }
             self.features_read = true;
         }
+        Ok(())
+    }
+}
+
+
+impl Decoder for WebPDecoder {
+    fn initialize(&mut self, c: &Context) -> Result<()> {
+        Ok(())
+    }
+
+
+    fn get_scaled_image_info(&mut self, c: &Context) -> Result<s::ImageInfo> {
+        self.ensure_features_read()?;
+
+        Ok(s::ImageInfo {
+            frame_decodes_into: s::PixelFormat::Bgra32,
+            image_width: self.output_width().unwrap(),
+            image_height: self.output_height().unwrap(),
+            preferred_mime_type: "image/webp".to_owned(),
+            preferred_extension: "webp".to_owned()
+        })
+    }
+
+    fn get_unscaled_image_info(&mut self, c: &Context) -> Result<s::ImageInfo> {
+        self.ensure_features_read()?;
+
         Ok(s::ImageInfo {
             frame_decodes_into: s::PixelFormat::Bgra32,
             image_width: self.input_width().unwrap(),
@@ -119,7 +137,7 @@ impl Decoder for WebPDecoder {
     }
 
     fn read_frame(&mut self, c: &Context) -> Result<*mut BitmapBgra> {
-        let _ = self.get_image_info(c)?;
+        let _ = self.get_scaled_image_info(c)?;
 
         unsafe {
             let w = self.output_width().unwrap();

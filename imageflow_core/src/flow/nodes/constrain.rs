@@ -1,6 +1,6 @@
 use super::internal_prelude::*;
 use imageflow_riapi::sizing::{Layout, AspectRatio, LayoutError};
-use imageflow_types::ConstraintMode;
+use imageflow_types::{ConstraintMode, ImageInfo};
 
 pub static CONSTRAIN: ConstrainDef = ConstrainDef{};
 pub static COMMAND_STRING: CommandStringDef = CommandStringDef{};
@@ -12,7 +12,7 @@ pub static EXPANDING_COMMAND_STRING: CommandStringPartiallyExpandedDef = Command
 fn get_decoder_mime(ctx: &mut OpCtxMut, ix: NodeIndex) -> Result<Option<String>>{
     let decoders = ctx.get_decoder_io_ids_and_indexes(ix);
     if let Some((io_id, _)) = decoders.first(){
-        Ok(Some(ctx.c.get_codec(*io_id)?.get_decoder()?.get_image_info(ctx.c)?.preferred_mime_type))
+        Ok(Some(ctx.job.get_unscaled_image_info(*io_id)?.preferred_mime_type))
     }
     else{
         Ok(None)
@@ -22,6 +22,15 @@ fn get_decoder_mime(ctx: &mut OpCtxMut, ix: NodeIndex) -> Result<Option<String>>
 
 fn get_expand(ctx: &mut OpCtxMut, ix: NodeIndex) -> Result<::imageflow_riapi::ir4::Ir4Expand>{
     let input = ctx.first_parent_frame_info_some(ix).ok_or_else(|| nerror!(crate::ErrorKind::InvalidNodeConnections, "CommandString node requires that its parent nodes be perfectly estimable"))?;
+
+    let mut image_info: Option<ImageInfo> = None;
+    if let Some((io_id, decoder_ix)) = ctx.get_decoder_io_ids_and_indexes(ix).first(){
+        image_info = Some(ctx.job.get_unscaled_image_info(*io_id).map_err(|e| e.at(here!()))?);
+
+    }
+
+
+
     let params = &ctx.weight(ix).params;
     if let NodeParams::Json(s::Node::CommandString{ref kind, ref value, ref decode, ref encode, ref watermarks}) =
     *params {
@@ -36,7 +45,10 @@ fn get_expand(ctx: &mut OpCtxMut, ix: NodeIndex) -> Result<::imageflow_riapi::ir
                         h: input.h,
                         fmt: input.fmt,
                         original_mime: get_decoder_mime(ctx,ix)?
-                    }
+                    },
+                    reference_width: image_info.as_ref().map(|i| i.image_width).unwrap_or(input.w),
+                    reference_height: image_info.as_ref().map(|i| i.image_height).unwrap_or(input.h),
+
                 })
             }
         }
@@ -206,7 +218,7 @@ impl NodeDef for CommandStringDef{
                     decode_id: Some(d_id),
                     encode_id: None,
                     watermarks,
-                }.get_decode_node().unwrap();
+                }.get_decode_node_without_commands().unwrap();
                 ctx.replace_node(ix, vec![
                     Node::from(decode_node),
                     Node::n(&EXPANDING_COMMAND_STRING, params)

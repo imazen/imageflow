@@ -486,6 +486,22 @@ fn decode_cmyk_jpeg() {
 
 }
 
+#[test]
+fn test_crop_with_preshrink() {
+    let matched = compare(Some(IoTestEnum::Url("https://resizer-images.s3.amazonaws.com/private/cropissue.jpg".to_owned())), 500,
+                          "crop_with_preshrink", POPULATE_CHECKSUMS, DEBUG_GRAPH, vec![
+            Node::CommandString{
+                kind: CommandStringKind::ImageResizer4,
+                value: "w=170&h=220&mode=crop&scale=both&crop=449,0,-472,0".to_owned(),
+                decode: Some(0),
+                encode: None,
+                watermarks: None
+            }
+        ]
+    );
+    assert!(matched);
+
+}
 
 #[test]
 fn webp_lossless_alpha_decode_and_scale() {

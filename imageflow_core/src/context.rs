@@ -181,10 +181,12 @@ impl Context {
     }
 
 
-    pub fn get_image_info(&mut self, io_id: i32) -> Result<s::ImageInfo> {
-        self.get_codec(io_id).map_err(|e| e.at(here!()))?.get_decoder().map_err(|e| e.at(here!()))?.get_image_info(self).map_err(|e| e.at(here!()))
+    pub fn get_unscaled_image_info(&mut self, io_id: i32) -> Result<s::ImageInfo> {
+        self.get_codec(io_id).map_err(|e| e.at(here!()))?.get_decoder().map_err(|e| e.at(here!()))?.get_unscaled_image_info(self).map_err(|e| e.at(here!()))
     }
-
+    pub fn get_scaled_image_info(&mut self, io_id: i32) -> Result<s::ImageInfo> {
+        self.get_codec(io_id).map_err(|e| e.at(here!()))?.get_decoder().map_err(|e| e.at(here!()))?.get_scaled_image_info(self).map_err(|e| e.at(here!()))
+    }
     pub fn tell_decoder(&mut self, io_id: i32, tell: s::DecoderCommand) -> Result<()> {
         self.get_codec(io_id).map_err(|e| e.at(here!()))?.get_decoder().map_err(|e| e.at(here!()))?.tell_decoder(self,  tell).map_err(|e| e.at(here!()))
     }

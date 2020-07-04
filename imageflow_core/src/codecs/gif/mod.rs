@@ -92,8 +92,10 @@ impl Decoder for GifDecoder {
         Ok(())
     }
 
-
-    fn get_image_info(&mut self, c: &Context) -> Result<s::ImageInfo> {
+    fn get_scaled_image_info(&mut self, c: &Context) -> Result<s::ImageInfo>{
+        self.get_unscaled_image_info(c)
+    }
+    fn get_unscaled_image_info(&mut self, c: &Context) -> Result<s::ImageInfo> {
         Ok(s::ImageInfo {
             frame_decodes_into: s::PixelFormat::Bgra32,
             image_width: i32::from(self.reader.width()),

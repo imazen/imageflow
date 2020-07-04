@@ -9,6 +9,8 @@ use imageflow_types::{ConstraintMode, ConstraintGravity, WatermarkConstraintBox}
 
 pub struct Ir4Layout{
     i: Instructions,
+    reference_width: i32,
+    reference_height: i32,
     /// source width
     w: i32,
     h: i32
@@ -28,11 +30,12 @@ pub struct Ir4LayoutInfo{
 impl Ir4Layout{
 
     pub fn new(i: Instructions,
-
-               w: i32,
-               h: i32) -> Ir4Layout{
+                w: i32,
+                h: i32,
+                reference_width: i32,
+                reference_height: i32) -> Ir4Layout{
         Ir4Layout{
-            i, w, h
+            i, w, h, reference_width, reference_height
         }
     }
 
@@ -43,6 +46,14 @@ impl Ir4Layout{
             (self.w, self.h)
         } else {
             (self.h, self.w)
+        }
+    }
+
+    fn get_precrop_reference(&self) -> (i32,i32){
+        if((self.i.srotate.unwrap_or(0) / 90 + 4) % 2) == 0 {
+            (self.reference_width, self.reference_height)
+        } else {
+            (self.reference_height, self.reference_width)
         }
     }
 
@@ -276,7 +287,7 @@ impl Ir4Layout{
 
         let instructions = Ir4Layout::get_instructions(&constraint).expect("aspect_crop is enabled but not supported");
 
-        let ir_layout = Ir4Layout::new(instructions, source_w, source_h);
+        let ir_layout = Ir4Layout::new(instructions, source_w, source_h, source_w, source_h);
 
         let initial_size = AspectRatio::create(source_w, source_h)?;
 
@@ -338,7 +349,7 @@ impl Ir4Layout{
         // later consider adding f.sharpen, f.ignorealpha
         // (up/down).(filter,window,blur,preserve,colorspace,speed)
 
-        let initial_crop = self.get_initial_copy_window(precrop_w, precrop_h);
+        let initial_crop = self.get_initial_copy_window();
 
         let initial_size = sizing::AspectRatio::create(initial_crop[2] - initial_crop[0], initial_crop[3] - initial_crop[1])?;
 
@@ -543,8 +554,20 @@ impl Ir4Layout{
         Ok((Self::gravity1d(x,inner.width(), outer.width())?, Self::gravity1d(y, inner.height(), outer.height())?))
     }
 
-    fn get_initial_copy_window(&self, w: i32, h: i32) -> [i32;4]{
-        let floats = self.get_initial_copy_window_floats(w,h);
+    fn get_initial_copy_window(&self) -> [i32;4]{
+
+        let (w, h) = self.get_precrop();
+        let (ref_w, ref_h) = self.get_precrop_reference();
+
+        let mut floats = self.get_initial_copy_window_floats(ref_w,ref_h);
+
+        //Re-scale crop values against real width/height (after decoder downscaling)
+        if ref_w != w || ref_h != h{
+            floats[0] = floats[0] * w as f64 / ref_w as f64;
+            floats[2] = floats[2] * w as f64 / ref_w as f64;
+            floats[1] = floats[1] * h as f64 / ref_h as f64;
+            floats[3] = floats[3] * h as f64 / ref_h as f64;
+        }
         let maximums = [w, h];
         let ints = floats.iter().enumerate().map(|(ix, item)| {
             cmp::max(0i32, cmp::min(item.round() as i32, maximums[ix % 2]))
@@ -572,9 +595,11 @@ impl Ir4Layout{
                 if ix < 2 && v < 0f64 || ix > 1 && v <= 0f64{
                     v += max_dimension; //Support negative offsets from bottom right.
                 }
+                if v < 0f64 { v = 0f64;}
+                if v > max_dimension { v = max_dimension; }
                 v
             }).collect::<Vec<f64>>();
-            if floats[3] <= floats[1] || floats[2] <= floats[0] {
+            if floats[3].round() <= floats[1].round() || floats[2].round() <= floats[0].round() {
                 //violation of X2 > X1 or Y2 > Y1
                 defaults
             }else{
@@ -630,13 +655,43 @@ impl FramewiseBuilder {
 fn test_crop_and_scale(){
     let mut b = FramewiseBuilder::new();
 
-    let l  = Ir4Layout::new(Instructions{w: Some(100), h: Some(200), mode: Some(FitMode::Crop), .. Default::default() }, 768, 433);
+    let l  = Ir4Layout::new(Instructions{w: Some(100), h: Some(200), mode: Some(FitMode::Crop), .. Default::default() }, 768, 433, 768, 433);
     l.add_steps(&mut b, &None).unwrap();
 
     assert_eq!(b.steps, vec![s::Node::Crop { x1: 275, y1: 0, x2: 492, y2: 433 },
                              s::Node::Resample2D {
                                  w: 100,
                                  h: 200,
+                                 hints: Some(s::ResampleHints {
+                                     sharpen_percent: None,
+                                     down_filter: None,
+                                     up_filter: None,
+                                     scaling_colorspace: None,
+                                     background_color: Some(s::Color::Transparent),
+                                     resample_when: Some(s::ResampleWhen::SizeDiffersOrSharpeningRequested),
+                                     sharpen_when: None
+                                 })
+                             }]);
+}
+
+#[test]
+fn test_custom_crop_with_preshrink(){
+    let mut b = FramewiseBuilder::new();
+
+    let l  = Ir4Layout::new(Instructions{
+        w: Some(170),
+        h: Some(220),
+        mode: Some(FitMode::Crop),
+        scale: Some(ScaleMode::Both),
+        crop: Some([449f64,0f64,-472f64,0f64]),
+        .. Default::default() },
+                            641, 960, 2560, 1707); //TODO: plug in preshrink values
+    l.add_steps(&mut b, &None).unwrap();
+
+    assert_eq!(b.steps, vec![s::Node::Crop { x1: 112, y1: 214, x2: 523, y2: 746 },
+                             s::Node::Resample2D {
+                                 w: 170,
+                                 h: 220,
                                  hints: Some(s::ResampleHints {
                                      sharpen_percent: None,
                                      down_filter: None,
@@ -664,7 +719,7 @@ fn test_scale(){
         min_canvas_width: None,
         min_canvas_height: None
     };
-    let l  = Ir4Layout::new(Instructions{w: Some(2560), h: Some(1696), mode: Some(FitMode::Max), f_sharpen_when: Some(SharpenWhen::Downscaling), .. Default::default() }, 5104, 3380);
+    let l  = Ir4Layout::new(Instructions{w: Some(2560), h: Some(1696), mode: Some(FitMode::Max), f_sharpen_when: Some(SharpenWhen::Downscaling), .. Default::default() }, 5104, 3380,5104, 3380);
     l.add_steps(&mut b, &Some(vec![w.clone()])).unwrap();
     assert_eq!(b.steps, vec![s::Node::Resample2D { w: 2560, h: 1696,
 

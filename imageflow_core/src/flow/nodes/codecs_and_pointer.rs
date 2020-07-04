@@ -92,7 +92,7 @@ fn decoder_get_io_id(params: &NodeParams) -> Result<i32> {
 }
 fn decoder_estimate(ctx: &mut OpCtxMut, ix: NodeIndex) -> Result<FrameEstimate> {
     let io_id = decoder_get_io_id(&ctx.weight(ix).params).map_err(|e| e.at(here!()))?;
-    let frame_info = ctx.job.get_image_info(io_id).map_err(|e| e.at(here!()))?;
+    let frame_info = ctx.job.get_scaled_image_info(io_id).map_err(|e| e.at(here!()))?;
 
     Ok(FrameEstimate::Some(FrameInfo {
         fmt: frame_info.frame_decodes_into,

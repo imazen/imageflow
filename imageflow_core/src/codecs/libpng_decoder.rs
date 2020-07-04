@@ -38,7 +38,11 @@ impl Decoder for LibPngDecoder {
         Ok(())
     }
 
-    fn get_image_info(&mut self, c: &Context) -> Result<s::ImageInfo> {
+    fn get_scaled_image_info(&mut self, c: &Context) -> Result<s::ImageInfo>{
+        self.get_unscaled_image_info(c)
+    }
+
+    fn get_unscaled_image_info(&mut self, c: &Context) -> Result<s::ImageInfo> {
         let (w,h,fmt) = self.decoder.get_info()?;
 
         Ok(s::ImageInfo {

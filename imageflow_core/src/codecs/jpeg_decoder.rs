@@ -45,8 +45,11 @@ impl Decoder for JpegDecoder {
         Ok(())
     }
 
+    fn get_scaled_image_info(&mut self, c: &Context) -> Result<s::ImageInfo>{
+        self.get_unscaled_image_info(c)
+    }
 
-    fn get_image_info(&mut self, c: &Context) -> Result<s::ImageInfo> {
+    fn get_unscaled_image_info(&mut self, c: &Context) -> Result<s::ImageInfo> {
 
         self.decoder.read_info()?;
         let info = self.decoder.info().expect("error handling not yet implemented for jpeg");
@@ -77,7 +80,7 @@ impl Decoder for JpegDecoder {
     fn read_frame(&mut self, c: &Context) -> Result<*mut BitmapBgra> {
 
         if self.width.is_none() {
-            let _ = self.get_image_info(c)?;
+            let _ = self.get_scaled_image_info(c)?;
         }
         let pixels = self.decoder.decode()?;
 

@@ -40,7 +40,20 @@ impl Decoder for MozJpegDecoder {
         Ok(())
     }
 
-    fn get_image_info(&mut self, c: &Context) -> Result<s::ImageInfo> {
+
+    fn get_unscaled_image_info(&mut self, c: &Context) -> Result<s::ImageInfo> {
+        let (w,h) = self.decoder.get_original_size()?;
+
+        Ok(s::ImageInfo {
+            frame_decodes_into: s::PixelFormat::Bgr32,
+            image_width: w as i32,
+            image_height: h as i32,
+            preferred_mime_type: "image/jpeg".to_owned(),
+            preferred_extension: "jpg".to_owned()
+        })
+    }
+
+    fn get_scaled_image_info(&mut self, c: &Context) -> Result<s::ImageInfo> {
         let (w,h) = self.decoder.get_final_size()?;
 
         Ok(s::ImageInfo {
@@ -230,6 +243,10 @@ impl MzDec{
         self.read_header()?;
         self.apply_downscaling();
         Ok((self.w, self.h))
+    }
+    fn get_original_size(&mut self) -> Result<(u32,u32)>{
+        self.read_header()?;
+        Ok((self.original_width, self.original_height))
     }
 
     fn get_exif_rotation_flag(&mut self) -> Result<Option<i32>>{

@@ -752,7 +752,7 @@ pub fn test_with_callback(checksum_name: &str, input: IoTestEnum, callback: fn(&
     unsafe {
         IoTestTranslator{}.add(&mut context, 0, input).unwrap();
 
-        let image_info = context.get_image_info(0).unwrap();
+        let image_info = context.get_unscaled_image_info(0).unwrap();
 
         let (tell_decoder, mut steps): (Option<imageflow_types::DecoderCommand>, Vec<Node>) = callback(&image_info);
 

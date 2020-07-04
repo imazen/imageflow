@@ -36,7 +36,8 @@ pub trait DecoderFactory{
 }
 pub trait Decoder : Any{
     fn initialize(&mut self, c: &Context) -> Result<()>;
-    fn get_image_info(&mut self, c: &Context) -> Result<s::ImageInfo>;
+    fn get_unscaled_image_info(&mut self, c: &Context) -> Result<s::ImageInfo>;
+    fn get_scaled_image_info(&mut self, c: &Context) -> Result<s::ImageInfo>;
     fn get_exif_rotation_flag(&mut self, c: &Context) -> Result<Option<i32>>;
     fn tell_decoder(&mut self, c: &Context, tell: s::DecoderCommand) -> Result<()>;
     fn read_frame(&mut self, c: &Context) -> Result<*mut BitmapBgra>;

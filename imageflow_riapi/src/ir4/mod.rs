@@ -63,7 +63,7 @@ impl Ir4Translate{
 
 
 
-    pub fn get_decode_node(&self) -> Option<s::Node>{
+    pub fn get_decode_node_without_commands(&self) -> Option<s::Node>{
         if let Some(id) = self.decode_id {
             Some(s::Node::Decode { io_id: id, commands: None })
         }else{
@@ -76,7 +76,7 @@ impl Ir4Translate{
         let mut b = crate::ir4::layout::FramewiseBuilder::new();
         //Expand decoder early if trimming
         let delayed_id = if r.parsed.trim_whitespace_threshold.is_some() {
-            if let Some(n) = self.get_decode_node() {
+            if let Some(n) = self.get_decode_node_without_commands() {
                 b.add(n);
             }
             None
@@ -140,11 +140,24 @@ impl Ir4SourceFrameInfo{
 pub struct Ir4Expand{
     pub i: Ir4Command,
     pub source: Ir4SourceFrameInfo,
+    pub reference_width: i32,
+    pub reference_height: i32,
     pub encode_id: Option<i32>,
     pub watermarks: Option<Vec<imageflow_types::Watermark>>
 }
 
 impl Ir4Expand{
+
+    pub fn get_preshrink_ratio(&self) -> sizing::Result<f64>{
+        let i = self.i.parse()?.parsed;
+
+        let layout = self.get_layout(&i)?;
+        let (from, to): (AspectRatio, AspectRatio) = layout.get_downscaling()?;
+
+        let downscale_ratio = (f64::from(from.w) / f64::from(to.w)).min(f64::from(from.h) / f64::from(to.w));
+
+        Ok(i.min_precise_scaling_ratio.unwrap_or(2.1f64) / downscale_ratio)
+    }
 
     pub fn get_decode_commands(&self) -> sizing::Result<Option<Vec<s::DecoderCommand>>> { //TODO: consider smallvec or generalizing decoder hints
         let i = self.i.parse()?.parsed;
@@ -152,12 +165,7 @@ impl Ir4Expand{
         // Default to gamma correct
         let gamma_correct = i.down_colorspace != Some(ScalingColorspace::Srgb);
 
-        let layout = self.get_layout(&i)?;
-        let (from, to): (AspectRatio, AspectRatio) = layout.get_downscaling()?;
-
-        let downscale_ratio = (f64::from(from.w) / f64::from(to.w)).min(f64::from(from.h) / f64::from(to.w));
-
-        let preshrink_ratio = i.min_precise_scaling_ratio.unwrap_or(2.1f64) / downscale_ratio;
+        let preshrink_ratio = self.get_preshrink_ratio()?;
 
         let scaled_width = (f64::from(self.source.w) * preshrink_ratio).floor() as i64;
         let scaled_height = (f64::from(self.source.h) * preshrink_ratio).floor() as i64;
@@ -201,7 +209,7 @@ impl Ir4Expand{
         if i.trim_whitespace_threshold.is_some() {
             return Err(sizing::LayoutError::ContentDependent);
         }
-        Ok(layout::Ir4Layout::new(*i, self.source.w, self.source.h))
+        Ok(layout::Ir4Layout::new(*i, self.source.w, self.source.h, self.reference_width, self.reference_height))
     }
 
     pub fn expand_steps(&self) -> sizing::Result<Ir4Result> {

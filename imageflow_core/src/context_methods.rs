@@ -25,11 +25,15 @@ fn create_context_router() -> MethodRouter<'static, Context> {
                     }));
     r.add_responder("v0.1/get_image_info",
                     Box::new(move |context: &mut Context, data: s::GetImageInfo001| {
-                        Ok(s::ResponsePayload::ImageInfo(context.get_image_info(data.io_id).map_err(|e| e.at(here!()))?))
+                        Ok(s::ResponsePayload::ImageInfo(context.get_unscaled_image_info(data.io_id).map_err(|e| e.at(here!()))?))
                     }));
     r.add_responder("v1/get_image_info",
                     Box::new(move |context: &mut Context, data: s::GetImageInfo001| {
-                        Ok(s::ResponsePayload::ImageInfo(context.get_image_info(data.io_id).map_err(|e| e.at(here!()))?))
+                        Ok(s::ResponsePayload::ImageInfo(context.get_unscaled_image_info(data.io_id).map_err(|e| e.at(here!()))?))
+                    }));
+    r.add_responder("v1/get_scaled_image_info",
+                    Box::new(move |context: &mut Context, data: s::GetImageInfo001| {
+                        Ok(s::ResponsePayload::ImageInfo(context.get_scaled_image_info(data.io_id).map_err(|e| e.at(here!()))?))
                     }));
     r.add_responder("v0.1/tell_decoder",
                     Box::new(move |context: &mut Context, data: s::TellDecoder001| {
