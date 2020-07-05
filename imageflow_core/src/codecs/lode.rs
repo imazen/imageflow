@@ -13,6 +13,8 @@ use std::os::raw::{c_int, c_uint, c_ulong};
 use libc;
 use rgb;
 use lodepng;
+use lodepng::{CompressSettings, DecompressSettings};
+use flate2::Compression;
 
 pub struct LodepngEncoder {
     io: IoProxy,
@@ -52,8 +54,9 @@ impl Encoder for LodepngEncoder {
 
 impl LodepngEncoder {
     pub fn write_png_auto<W: Write>(mut writer: W, frame: &BitmapBgra, use_highest_compression: Option<bool>) -> Result<()> {
-        let mut lode = lodepng::State::new();
+        let mut lode = lodepng::Encoder::new();
         lode.set_auto_convert(true);
+
 
         let pixels_slice = unsafe {frame.pixels_slice()}.ok_or(nerror!(ErrorKind::BitmapPointerNull))?;
         let mut pixels_buf;
@@ -76,9 +79,9 @@ impl LodepngEncoder {
         lode.info_raw_mut().set_bitdepth(8);
 
         if use_highest_compression.unwrap_or(false){
-            lode.encoder.zlibsettings.custom_zlib = Some(zlib_compress_adapter_slowest);
+            lode.set_custom_zlib(Some(zlib_compressor_9), std::ptr::null());
         }else{
-            lode.encoder.zlibsettings.custom_zlib = Some(zlib_compress_adapter);
+            lode.set_custom_zlib(Some(zlib_compressor_6), std::ptr::null());
         }
 
         let png = lode.encode(pixels, frame.width(), frame.height())?;
@@ -88,7 +91,7 @@ impl LodepngEncoder {
     }
 
     pub fn write_png8<W: Write>(mut writer: W, pal: &[rgb::RGBA8], pixels: &[u8], width: usize, height: usize, use_highest_compression: Option<bool>) -> Result<()> {
-        let mut lode = lodepng::State::new();
+        let mut lode = lodepng::Encoder::new();
 
         for &c in pal {
             lode.info_raw_mut().palette_add(c)?;
@@ -103,9 +106,9 @@ impl LodepngEncoder {
         lode.set_filter_strategy(lodepng::FilterStrategy::ZERO, false);
 
         if use_highest_compression.unwrap_or(false){
-            lode.encoder.zlibsettings.custom_zlib = Some(zlib_compress_adapter_slowest);
+            lode.set_custom_zlib(Some(zlib_compressor_9), std::ptr::null());
         }else{
-            lode.encoder.zlibsettings.custom_zlib = Some(zlib_compress_adapter);
+            lode.set_custom_zlib(Some(zlib_compressor_6), std::ptr::null());
         }
 
         let png = lode.encode(&pixels, width, height)?;
@@ -120,21 +123,19 @@ extern "C" {
     fn compress2(dest: *mut u8, dest_len: &mut c_ulong, source: *const u8, source_len: c_ulong, level: c_int) -> c_int;
 }
 
-unsafe extern "C" fn zlib_compress_adapter(dest: &mut *mut u8, dest_size: &mut usize, source: *const u8, source_size: usize, info: *const lodepng::CompressSettings) -> c_uint {
-    assert!(dest.is_null());
-    let dest_buf_size = source_size * 1001/1000 + 12;
-    *dest = libc::malloc(dest_buf_size) as *mut u8;
-    let mut compressed_size = dest_buf_size as c_ulong;
-    compress2(*dest, &mut compressed_size, source, source_size as c_ulong, 6);
-    *dest_size = compressed_size as usize;
-    0
+fn zlib_compressor_6(input: &[u8], output: &mut dyn std::io::Write, context: &CompressSettings) -> std::result::Result<(), lodepng::Error> {
+    zlib_compressor(input, output, context, 6)
 }
-unsafe extern "C" fn zlib_compress_adapter_slowest(dest: &mut *mut u8, dest_size: &mut usize, source: *const u8, source_size: usize, info: *const lodepng::CompressSettings) -> c_uint {
-    assert!(dest.is_null());
-    let dest_buf_size = source_size * 1001/1000 + 12;
-    *dest = libc::malloc(dest_buf_size) as *mut u8;
-    let mut compressed_size = dest_buf_size as c_ulong;
-    compress2(*dest, &mut compressed_size, source, source_size as c_ulong, 9);
-    *dest_size = compressed_size as usize;
-    0
+fn zlib_compressor_9(input: &[u8], output: &mut dyn std::io::Write, context: &CompressSettings) -> std::result::Result<(), lodepng::Error> {
+    zlib_compressor(input, output, context, 9)
+}
+fn zlib_compressor(input: &[u8], output: &mut dyn std::io::Write, context: &CompressSettings, zlib_level: u32) -> std::result::Result<(), lodepng::Error>{
+    let mut compress = flate2::write::ZlibEncoder::new(output, flate2::Compression::new(zlib_level));
+    if let Err(e) = compress.write_all(&input){
+        return Err(lodepng::Error::new(1008));
+    }
+    if let Err(e) = compress.finish(){
+        return Err(lodepng::Error::new(1009));
+    }
+    Ok(())
 }
