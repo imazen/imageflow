@@ -83,7 +83,7 @@ libpng-sys = { version = "1.1.8", features = ["static", "static-libz", "libz-sys
 [dev-dependencies]
 hyper = "0.13"
 imageflow_http_helpers = { path = "../imageflow_http_helpers", version = "*" }
-dssim = "2.10"
+dssim = "2.11.1"
 
 [features]
 default = []
