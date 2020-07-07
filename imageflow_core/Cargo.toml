@@ -45,9 +45,9 @@ imgref = "1.4.1"
 
 
 gif = "*"
-rgb = "0.8.16"
-imagequant = "2.12.5"
-lodepng = "3.0.0-alpha.1"
+rgb = "0.8"
+imagequant = "2"
+lodepng = "3"
 flate2 = { version = "1.0", features = ["zlib"], default-features = false }
 libwebp-sys = "0.3"
 libz-sys = { version="1", features = ["static"] }
