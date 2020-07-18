@@ -3,6 +3,8 @@
 /perf\.data$
 /\.rakeTasks$
 \.jpg$
+\.png$
+\.icc$
 \.props$
 ^appveyor\.yml$
 ^imageflow_core/tests/visuals\.rs$
