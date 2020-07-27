@@ -10,7 +10,7 @@ edition = "2018"
 imageflow_helpers = { path = "../imageflow_helpers", version = "*" }
 
 hyper = { version = "0.13"}
-reqwest = { version = "0.9"}
+reqwest = { version = "0.10"}
 hyper-native-tls = { version = "*"}
 
 
