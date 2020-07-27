@@ -1018,7 +1018,7 @@ dependencies = [
  "libwebp-sys 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "libz-sys 1.0.25 (registry+https://github.com/rust-lang/crates.io-index)",
  "lodepng 3.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "mozjpeg 0.8.19 (registry+https://github.com/rust-lang/crates.io-index)",
+ "mozjpeg 0.8.20 (registry+https://github.com/rust-lang/crates.io-index)",
  "mozjpeg-sys 0.10.9 (registry+https://github.com/rust-lang/crates.io-index)",
  "num 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "petgraph 0.4.13 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -1103,7 +1103,7 @@ dependencies = [
  "conduit-mime-types 0.7.3 (registry+https://github.com/rust-lang/crates.io-index)",
  "env_logger 0.7.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "fnv 1.0.7 (registry+https://github.com/rust-lang/crates.io-index)",
- "http 0.1.21 (registry+https://github.com/rust-lang/crates.io-index)",
+ "http 0.2.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "hyper 0.13.7 (registry+https://github.com/rust-lang/crates.io-index)",
  "hyper-native-tls 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "imageflow_core 0.1.0",
@@ -1364,7 +1364,7 @@ dependencies = [
  "imgref 1.6.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "lcms2 5.3.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "lodepng 3.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "mozjpeg 0.8.19 (registry+https://github.com/rust-lang/crates.io-index)",
+ "mozjpeg 0.8.20 (registry+https://github.com/rust-lang/crates.io-index)",
  "rexif 0.5.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "rgb 0.8.20 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
@@ -1564,7 +1564,7 @@ dependencies = [
 
 [[package]]
 name = "mozjpeg"
-version = "0.8.19"
+version = "0.8.20"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
  "arrayvec 0.5.1 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -3309,7 +3309,7 @@ dependencies = [
 "checksum modifier 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)" = "41f5c9112cb662acd3b204077e0de5bc66305fa8df65c8019d5adb10e9ab6e58"
 "checksum mount 0.3.0 (git+https://github.com/iron/mount.git?rev=2c3d719be4c158d4ddbd8cdb402fafccdefec58c)" = "<none>"
 "checksum mount 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)" = "32245731923cd096899502fc4c4317cfd09f121e80e73f7f576cf3777a824256"
-"checksum mozjpeg 0.8.19 (registry+https://github.com/rust-lang/crates.io-index)" = "e48f720b666d5a659335383a7e4ed0f5a20e50eddf58e53bb91185bb197cc8b4"
+"checksum mozjpeg 0.8.20 (registry+https://github.com/rust-lang/crates.io-index)" = "c1d3a4f737389e9512b662e4f2c412761919994203874e2366afa97927865b27"
 "checksum mozjpeg-sys 0.10.9 (registry+https://github.com/rust-lang/crates.io-index)" = "2002433c9090aa7f53599c9b106511f59f8d69fb1c49dfd04fb42c614f935fcf"
 "checksum nasm-rs 0.1.7 (registry+https://github.com/rust-lang/crates.io-index)" = "fea4fa2ba8f650120445ddcf137d8a6370ff01d55f00e6b29e0ab01b7c846464"
 "checksum native-tls 0.2.4 (registry+https://github.com/rust-lang/crates.io-index)" = "2b0d88c06fe90d5ee94048ba40409ef1d9315d86f6f38c2efdaad4fb50c58b2d"
