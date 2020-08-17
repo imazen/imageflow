@@ -28,7 +28,7 @@ mozjpeg-sys = {version = "0.10.5", features = ["nasm_simd", "turbojpeg_api"]}
 
 # For build info see
 
-libz-sys = { version = "1.0.18", features = ["static"] }
+libz-sys = { version = "1.0.27", features = ["static"] }
 
 # For build info see https://github.com/kornelski/rust-libpng-sys/blob/master/Cargo.toml
 # And https://github.com/kornelski/rust-libpng-sys/blob/master/build.rs
