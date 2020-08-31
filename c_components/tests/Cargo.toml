@@ -15,7 +15,7 @@ imageflow_c_components = {path = ".."}
 lcms2-sys = "3.1.4"
 libpng-sys = "1.1.7"
 mozjpeg-sys = "0.10"
-libz-sys = "1.0.18"
+libz-sys = "1.1.1"
 
 
 [build-dependencies.cc]
