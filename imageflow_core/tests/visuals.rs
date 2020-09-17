@@ -487,6 +487,24 @@ fn decode_cmyk_jpeg() {
 }
 
 #[test]
+fn decode_rgb_with_cmyk_profile_jpeg() {
+    let matched = compare(Some(IoTestEnum::Url("https://imageflow-resources.s3-us-west-2.amazonaws.com/test_inputs/wrenches.jpg".to_owned())), 500,
+                          "wrenches_decode", POPULATE_CHECKSUMS, DEBUG_GRAPH, vec![
+            Node::CommandString{
+                kind: CommandStringKind::ImageResizer4,
+                value: "ignore_icc_errors=true".to_owned(),
+                decode: Some(0),
+                encode: None,
+                watermarks: None
+            }
+        ]
+    );
+    assert!(matched);
+
+}
+
+
+#[test]
 fn test_crop_with_preshrink() {
     let matched = compare(Some(IoTestEnum::Url("https://resizer-images.s3.amazonaws.com/private/cropissue.jpg".to_owned())), 500,
                           "crop_with_preshrink", POPULATE_CHECKSUMS, DEBUG_GRAPH, vec![
