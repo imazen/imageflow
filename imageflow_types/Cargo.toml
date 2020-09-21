@@ -19,7 +19,7 @@ regex = { version = "1" } #, features = ["pattern"]
 imageflow_helpers = { path = "../imageflow_helpers", version = "*" }
 chrono = "0.4"
 imgref = "1.4.0"
-rgb = "0.8.11"
+rgb = "0.8.25"
 
 [build-dependencies]
 quick-error = "1"
