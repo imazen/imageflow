@@ -41,7 +41,7 @@ daggy = "0.5" # Upgrade to 0.6
 smallvec = "*"
 
 itertools = "*"
-imgref = "1.4.1"
+imgref = "1.7.0"
 
 
 gif = "*"
