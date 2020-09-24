@@ -3,9 +3,9 @@
 
 #ifndef FLOW_GCC_IDCT
 #define JPEG_INTERNALS
-#include "jdct.h" /* Private declarations for DCT subsystem */
-#include "jpeglib.h"
 #include <stdio.h>
+#include "jpeglib.h"
+#include "jdct.h" /* Private declarations for DCT subsystem */
 #endif
 
 #if defined(__GNUC__) && !defined(__clang__)
