@@ -45,7 +45,6 @@ fn main() {
     cxx.file(test_root.join("test.cpp"));
     cxx.file(test_root.join("test_context.cpp"));
     cxx.file(test_root.join("test_error_handling.cpp"));
-    cxx.file(test_root.join("test_io.cpp"));
     cxx.file(test_root.join("test_operations.cpp"));
     cxx.file(test_root.join("test_variations.cpp"));
     cxx.file(test_root.join("test_weighting.cpp"));

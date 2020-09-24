@@ -217,21 +217,6 @@ typedef bool (*flow_destructor_function)(flow_c * c, void * thing);
 // Assuming, here, that we never get a pointer to address 42 in memory.
 #define FLOW_OWNER_IMMORTAL ((void *)42)
 
-PUB struct flow_io * flow_io_create_for_file(flow_c * c, flow_io_mode mode, const char * filename, void * owner);
-
-PUB struct flow_io * flow_io_create_from_file_pointer(flow_c * c, flow_io_mode mode, FILE * file_pointer,
-                                                      int64_t optional_file_length, void * owner);
-
-PUB struct flow_io * flow_io_create_from_memory(flow_c * c, flow_io_mode mode, uint8_t * memory, size_t length,
-                                                void * owner, flow_destructor_function memory_free);
-PUB struct flow_io * flow_io_create_for_output_buffer(flow_c * c, void * owner);
-
-// Returns false if the flow_io struct is disposed or not an output buffer type (or for any other error)
-PUB bool flow_io_get_output_buffer(flow_c * c, struct flow_io * io, uint8_t ** out_pointer_to_buffer,
-                                   size_t * out_length);
-
-PUB bool flow_io_write_output_buffer_to_file(flow_c * c, struct flow_io * io, const char * file_path);
-
 
 PUB uint32_t flow_pixel_format_bytes_per_pixel(flow_pixel_format format);
 PUB flow_pixel_format flow_effective_pixel_format(struct flow_bitmap_bgra * b);
@@ -251,8 +236,6 @@ struct flow_decoder_info {
     // bool flow_profile_is_srgb;
 };
 
-PUB bool flow_bitmap_bgra_write_png(flow_c * c, struct flow_bitmap_bgra * frame, struct flow_io * io);
-PUB bool flow_bitmap_bgra_write_png_with_hints(flow_c * c, struct flow_bitmap_bgra * frame, struct flow_io * io, struct flow_encoder_hints * hints);
 
 #undef PUB
 
