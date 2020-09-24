@@ -3,15 +3,13 @@
 
 #ifndef FLOW_GCC_IDCT
 #define JPEG_INTERNALS
-#include <stdio.h>
-#include "jpeglib.h"
 #include "jdct.h" /* Private declarations for DCT subsystem */
+#include "jpeglib.h"
+#include <stdio.h>
 #endif
 
 #if defined(__GNUC__) && !defined(__clang__)
-#define HOT                                                                                                            \
-    __attribute__((hot))                                                                                               \
-        __attribute__((optimize("-funsafe-math-optimizations", "-ftree-vectorize")))
+#define HOT __attribute__((hot)) __attribute__((optimize("-funsafe-math-optimizations", "-ftree-vectorize")))
 #else
 #if defined(__GNUC__)
 #define HOT __attribute__((hot))
@@ -306,25 +304,38 @@ FLOW_EXPORT void flow_scale_spatial_7x7(uint8_t input[64], uint8_t ** output_row
     int32_t i, sum, j;
     FLOW_ALIGN_16_VAR(int32_t temp[48]);
     FLOW_ALIGN_16_VAR(int32_t weights_for_col_0[]) = {
-        29, 3,
+        29,
+        3,
     };
     FLOW_ALIGN_16_VAR(int32_t weights_for_col_1[]) = {
-        -2, 103, 27,
+        -2,
+        103,
+        27,
     };
     FLOW_ALIGN_16_VAR(int32_t weights_for_col_2[]) = {
-        -3, 86, 45,
+        -3,
+        86,
+        45,
     };
     FLOW_ALIGN_16_VAR(int32_t weights_for_col_3[]) = {
-        -3, 67, 67, -3,
+        -3,
+        67,
+        67,
+        -3,
     };
     FLOW_ALIGN_16_VAR(int32_t weights_for_col_4[]) = {
-        45, 86, -3,
+        45,
+        86,
+        -3,
     };
     FLOW_ALIGN_16_VAR(int32_t weights_for_col_5[]) = {
-        27, 103, -2,
+        27,
+        103,
+        -2,
     };
     FLOW_ALIGN_16_VAR(int32_t weights_for_col_6[]) = {
-        3, 29,
+        3,
+        29,
     };
 
     // Begin work for output row 0
@@ -883,22 +894,34 @@ FLOW_EXPORT void flow_scale_spatial_6x6(uint8_t input[64], uint8_t ** output_row
     int32_t i, sum, j;
     FLOW_ALIGN_16_VAR(int32_t temp[48]);
     FLOW_ALIGN_16_VAR(int32_t weights_for_col_0[]) = {
-        6, 2,
+        6,
+        2,
     };
     FLOW_ALIGN_16_VAR(int32_t weights_for_col_1[]) = {
-        -1, 33, 33, -1,
+        -1,
+        33,
+        33,
+        -1,
     };
     FLOW_ALIGN_16_VAR(int32_t weights_for_col_2[]) = {
-        31, 92, 5,
+        31,
+        92,
+        5,
     };
     FLOW_ALIGN_16_VAR(int32_t weights_for_col_3[]) = {
-        5, 92, 31,
+        5,
+        92,
+        31,
     };
     FLOW_ALIGN_16_VAR(int32_t weights_for_col_4[]) = {
-        -1, 33, 33, -1,
+        -1,
+        33,
+        33,
+        -1,
     };
     FLOW_ALIGN_16_VAR(int32_t weights_for_col_5[]) = {
-        2, 6,
+        2,
+        6,
     };
 
     // Begin work for output row 0
@@ -1328,19 +1351,32 @@ FLOW_EXPORT void flow_scale_spatial_5x5(uint8_t input[64], uint8_t ** output_row
     int32_t i, sum, j;
     FLOW_ALIGN_16_VAR(int32_t temp[48]);
     FLOW_ALIGN_16_VAR(int32_t weights_for_col_0[]) = {
-        78, 51, -1,
+        78,
+        51,
+        -1,
     };
     FLOW_ALIGN_16_VAR(int32_t weights_for_col_1[]) = {
-        -2, 32, 79, 19,
+        -2,
+        32,
+        79,
+        19,
     };
     FLOW_ALIGN_16_VAR(int32_t weights_for_col_2[]) = {
-        1, 31, 31, 1,
+        1,
+        31,
+        31,
+        1,
     };
     FLOW_ALIGN_16_VAR(int32_t weights_for_col_3[]) = {
-        19, 79, 32, -2,
+        19,
+        79,
+        32,
+        -2,
     };
     FLOW_ALIGN_16_VAR(int32_t weights_for_col_4[]) = {
-        -1, 51, 78,
+        -1,
+        51,
+        78,
     };
 
     // Begin work for output row 0
@@ -1663,16 +1699,26 @@ FLOW_EXPORT void flow_scale_spatial_4x4(uint8_t input[64], uint8_t ** output_row
     int32_t i, sum, j;
     FLOW_ALIGN_16_VAR(int32_t temp[48]);
     FLOW_ALIGN_16_VAR(int32_t weights_for_col_0[]) = {
-        117, 117, 22,
+        117,
+        117,
+        22,
     };
     FLOW_ALIGN_16_VAR(int32_t weights_for_col_1[]) = {
-        21, 107, 107, 21,
+        21,
+        107,
+        107,
+        21,
     };
     FLOW_ALIGN_16_VAR(int32_t weights_for_col_2[]) = {
-        21, 107, 107, 21,
+        21,
+        107,
+        107,
+        21,
     };
     FLOW_ALIGN_16_VAR(int32_t weights_for_col_3[]) = {
-        22, 117, 117,
+        22,
+        117,
+        117,
     };
 
     // Begin work for output row 0
@@ -1695,8 +1741,8 @@ FLOW_EXPORT void flow_scale_spatial_4x4(uint8_t input[64], uint8_t ** output_row
     sum = 32768;
     for (i = 0; i < 3; i++)
         sum += temp[40 + i];
-    *(output_rows[0] + output_col + 0) = sum < 0 ? (uint8_t)0
-                                                 : (sum >= 268435456 ? (uint8_t)255 : (uint8_t)(sum >> 16));
+    *(output_rows[0] + output_col + 0)
+        = sum < 0 ? (uint8_t)0 : (sum >= 268435456 ? (uint8_t)255 : (uint8_t)(sum >> 16));
     // Pixel 0,0 complete
 
     // Begin work for output pixel 1,0
@@ -1705,8 +1751,8 @@ FLOW_EXPORT void flow_scale_spatial_4x4(uint8_t input[64], uint8_t ** output_row
     sum = 32768;
     for (i = 0; i < 4; i++)
         sum += temp[40 + i];
-    *(output_rows[0] + output_col + 1) = sum < 0 ? (uint8_t)0
-                                                 : (sum >= 268435456 ? (uint8_t)255 : (uint8_t)(sum >> 16));
+    *(output_rows[0] + output_col + 1)
+        = sum < 0 ? (uint8_t)0 : (sum >= 268435456 ? (uint8_t)255 : (uint8_t)(sum >> 16));
     // Pixel 1,0 complete
 
     // Begin work for output pixel 2,0
@@ -1715,8 +1761,8 @@ FLOW_EXPORT void flow_scale_spatial_4x4(uint8_t input[64], uint8_t ** output_row
     sum = 32768;
     for (i = 0; i < 4; i++)
         sum += temp[40 + i];
-    *(output_rows[0] + output_col + 2) = sum < 0 ? (uint8_t)0
-                                                 : (sum >= 268435456 ? (uint8_t)255 : (uint8_t)(sum >> 16));
+    *(output_rows[0] + output_col + 2)
+        = sum < 0 ? (uint8_t)0 : (sum >= 268435456 ? (uint8_t)255 : (uint8_t)(sum >> 16));
     // Pixel 2,0 complete
 
     // Begin work for output pixel 3,0
@@ -1725,8 +1771,8 @@ FLOW_EXPORT void flow_scale_spatial_4x4(uint8_t input[64], uint8_t ** output_row
     sum = 32768;
     for (i = 0; i < 3; i++)
         sum += temp[40 + i];
-    *(output_rows[0] + output_col + 3) = sum < 0 ? (uint8_t)0
-                                                 : (sum >= 268435456 ? (uint8_t)255 : (uint8_t)(sum >> 16));
+    *(output_rows[0] + output_col + 3)
+        = sum < 0 ? (uint8_t)0 : (sum >= 268435456 ? (uint8_t)255 : (uint8_t)(sum >> 16));
     // Pixel 3,0 complete
 
     // Begin work for output row 1
@@ -1751,8 +1797,8 @@ FLOW_EXPORT void flow_scale_spatial_4x4(uint8_t input[64], uint8_t ** output_row
     sum = 32768;
     for (i = 0; i < 3; i++)
         sum += temp[40 + i];
-    *(output_rows[1] + output_col + 0) = sum < 0 ? (uint8_t)0
-                                                 : (sum >= 268435456 ? (uint8_t)255 : (uint8_t)(sum >> 16));
+    *(output_rows[1] + output_col + 0)
+        = sum < 0 ? (uint8_t)0 : (sum >= 268435456 ? (uint8_t)255 : (uint8_t)(sum >> 16));
     // Pixel 0,1 complete
 
     // Begin work for output pixel 1,1
@@ -1761,8 +1807,8 @@ FLOW_EXPORT void flow_scale_spatial_4x4(uint8_t input[64], uint8_t ** output_row
     sum = 32768;
     for (i = 0; i < 4; i++)
         sum += temp[40 + i];
-    *(output_rows[1] + output_col + 1) = sum < 0 ? (uint8_t)0
-                                                 : (sum >= 268435456 ? (uint8_t)255 : (uint8_t)(sum >> 16));
+    *(output_rows[1] + output_col + 1)
+        = sum < 0 ? (uint8_t)0 : (sum >= 268435456 ? (uint8_t)255 : (uint8_t)(sum >> 16));
     // Pixel 1,1 complete
 
     // Begin work for output pixel 2,1
@@ -1771,8 +1817,8 @@ FLOW_EXPORT void flow_scale_spatial_4x4(uint8_t input[64], uint8_t ** output_row
     sum = 32768;
     for (i = 0; i < 4; i++)
         sum += temp[40 + i];
-    *(output_rows[1] + output_col + 2) = sum < 0 ? (uint8_t)0
-                                                 : (sum >= 268435456 ? (uint8_t)255 : (uint8_t)(sum >> 16));
+    *(output_rows[1] + output_col + 2)
+        = sum < 0 ? (uint8_t)0 : (sum >= 268435456 ? (uint8_t)255 : (uint8_t)(sum >> 16));
     // Pixel 2,1 complete
 
     // Begin work for output pixel 3,1
@@ -1781,8 +1827,8 @@ FLOW_EXPORT void flow_scale_spatial_4x4(uint8_t input[64], uint8_t ** output_row
     sum = 32768;
     for (i = 0; i < 3; i++)
         sum += temp[40 + i];
-    *(output_rows[1] + output_col + 3) = sum < 0 ? (uint8_t)0
-                                                 : (sum >= 268435456 ? (uint8_t)255 : (uint8_t)(sum >> 16));
+    *(output_rows[1] + output_col + 3)
+        = sum < 0 ? (uint8_t)0 : (sum >= 268435456 ? (uint8_t)255 : (uint8_t)(sum >> 16));
     // Pixel 3,1 complete
 
     // Begin work for output row 2
@@ -1807,8 +1853,8 @@ FLOW_EXPORT void flow_scale_spatial_4x4(uint8_t input[64], uint8_t ** output_row
     sum = 32768;
     for (i = 0; i < 3; i++)
         sum += temp[40 + i];
-    *(output_rows[2] + output_col + 0) = sum < 0 ? (uint8_t)0
-                                                 : (sum >= 268435456 ? (uint8_t)255 : (uint8_t)(sum >> 16));
+    *(output_rows[2] + output_col + 0)
+        = sum < 0 ? (uint8_t)0 : (sum >= 268435456 ? (uint8_t)255 : (uint8_t)(sum >> 16));
     // Pixel 0,2 complete
 
     // Begin work for output pixel 1,2
@@ -1817,8 +1863,8 @@ FLOW_EXPORT void flow_scale_spatial_4x4(uint8_t input[64], uint8_t ** output_row
     sum = 32768;
     for (i = 0; i < 4; i++)
         sum += temp[40 + i];
-    *(output_rows[2] + output_col + 1) = sum < 0 ? (uint8_t)0
-                                                 : (sum >= 268435456 ? (uint8_t)255 : (uint8_t)(sum >> 16));
+    *(output_rows[2] + output_col + 1)
+        = sum < 0 ? (uint8_t)0 : (sum >= 268435456 ? (uint8_t)255 : (uint8_t)(sum >> 16));
     // Pixel 1,2 complete
 
     // Begin work for output pixel 2,2
@@ -1827,8 +1873,8 @@ FLOW_EXPORT void flow_scale_spatial_4x4(uint8_t input[64], uint8_t ** output_row
     sum = 32768;
     for (i = 0; i < 4; i++)
         sum += temp[40 + i];
-    *(output_rows[2] + output_col + 2) = sum < 0 ? (uint8_t)0
-                                                 : (sum >= 268435456 ? (uint8_t)255 : (uint8_t)(sum >> 16));
+    *(output_rows[2] + output_col + 2)
+        = sum < 0 ? (uint8_t)0 : (sum >= 268435456 ? (uint8_t)255 : (uint8_t)(sum >> 16));
     // Pixel 2,2 complete
 
     // Begin work for output pixel 3,2
@@ -1837,8 +1883,8 @@ FLOW_EXPORT void flow_scale_spatial_4x4(uint8_t input[64], uint8_t ** output_row
     sum = 32768;
     for (i = 0; i < 3; i++)
         sum += temp[40 + i];
-    *(output_rows[2] + output_col + 3) = sum < 0 ? (uint8_t)0
-                                                 : (sum >= 268435456 ? (uint8_t)255 : (uint8_t)(sum >> 16));
+    *(output_rows[2] + output_col + 3)
+        = sum < 0 ? (uint8_t)0 : (sum >= 268435456 ? (uint8_t)255 : (uint8_t)(sum >> 16));
     // Pixel 3,2 complete
 
     // Begin work for output row 3
@@ -1861,8 +1907,8 @@ FLOW_EXPORT void flow_scale_spatial_4x4(uint8_t input[64], uint8_t ** output_row
     sum = 32768;
     for (i = 0; i < 3; i++)
         sum += temp[40 + i];
-    *(output_rows[3] + output_col + 0) = sum < 0 ? (uint8_t)0
-                                                 : (sum >= 268435456 ? (uint8_t)255 : (uint8_t)(sum >> 16));
+    *(output_rows[3] + output_col + 0)
+        = sum < 0 ? (uint8_t)0 : (sum >= 268435456 ? (uint8_t)255 : (uint8_t)(sum >> 16));
     // Pixel 0,3 complete
 
     // Begin work for output pixel 1,3
@@ -1871,8 +1917,8 @@ FLOW_EXPORT void flow_scale_spatial_4x4(uint8_t input[64], uint8_t ** output_row
     sum = 32768;
     for (i = 0; i < 4; i++)
         sum += temp[40 + i];
-    *(output_rows[3] + output_col + 1) = sum < 0 ? (uint8_t)0
-                                                 : (sum >= 268435456 ? (uint8_t)255 : (uint8_t)(sum >> 16));
+    *(output_rows[3] + output_col + 1)
+        = sum < 0 ? (uint8_t)0 : (sum >= 268435456 ? (uint8_t)255 : (uint8_t)(sum >> 16));
     // Pixel 1,3 complete
 
     // Begin work for output pixel 2,3
@@ -1881,8 +1927,8 @@ FLOW_EXPORT void flow_scale_spatial_4x4(uint8_t input[64], uint8_t ** output_row
     sum = 32768;
     for (i = 0; i < 4; i++)
         sum += temp[40 + i];
-    *(output_rows[3] + output_col + 2) = sum < 0 ? (uint8_t)0
-                                                 : (sum >= 268435456 ? (uint8_t)255 : (uint8_t)(sum >> 16));
+    *(output_rows[3] + output_col + 2)
+        = sum < 0 ? (uint8_t)0 : (sum >= 268435456 ? (uint8_t)255 : (uint8_t)(sum >> 16));
     // Pixel 2,3 complete
 
     // Begin work for output pixel 3,3
@@ -1891,8 +1937,8 @@ FLOW_EXPORT void flow_scale_spatial_4x4(uint8_t input[64], uint8_t ** output_row
     sum = 32768;
     for (i = 0; i < 3; i++)
         sum += temp[40 + i];
-    *(output_rows[3] + output_col + 3) = sum < 0 ? (uint8_t)0
-                                                 : (sum >= 268435456 ? (uint8_t)255 : (uint8_t)(sum >> 16));
+    *(output_rows[3] + output_col + 3)
+        = sum < 0 ? (uint8_t)0 : (sum >= 268435456 ? (uint8_t)255 : (uint8_t)(sum >> 16));
     // Pixel 3,3 complete
 }
 
@@ -1914,13 +1960,19 @@ FLOW_EXPORT void flow_scale_spatial_3x3(uint8_t input[64], uint8_t ** output_row
     int32_t i, sum, j;
     FLOW_ALIGN_16_VAR(int32_t temp[64]);
     FLOW_ALIGN_16_VAR(int32_t weights_for_col_0[]) = {
-        80, 103, 62, 11,
+        80,
+        103,
+        62,
+        11,
     };
     FLOW_ALIGN_16_VAR(int32_t weights_for_col_1[]) = {
         2, 39, 87, 87, 39, 2,
     };
     FLOW_ALIGN_16_VAR(int32_t weights_for_col_2[]) = {
-        11, 62, 103, 80,
+        11,
+        62,
+        103,
+        80,
     };
 
     // Begin work for output row 0
@@ -1945,8 +1997,8 @@ FLOW_EXPORT void flow_scale_spatial_3x3(uint8_t input[64], uint8_t ** output_row
     sum = 32768;
     for (i = 0; i < 4; i++)
         sum += temp[56 + i];
-    *(output_rows[0] + output_col + 0) = sum < 0 ? (uint8_t)0
-                                                 : (sum >= 268435456 ? (uint8_t)255 : (uint8_t)(sum >> 16));
+    *(output_rows[0] + output_col + 0)
+        = sum < 0 ? (uint8_t)0 : (sum >= 268435456 ? (uint8_t)255 : (uint8_t)(sum >> 16));
     // Pixel 0,0 complete
 
     // Begin work for output pixel 1,0
@@ -1955,8 +2007,8 @@ FLOW_EXPORT void flow_scale_spatial_3x3(uint8_t input[64], uint8_t ** output_row
     sum = 32768;
     for (i = 0; i < 6; i++)
         sum += temp[56 + i];
-    *(output_rows[0] + output_col + 1) = sum < 0 ? (uint8_t)0
-                                                 : (sum >= 268435456 ? (uint8_t)255 : (uint8_t)(sum >> 16));
+    *(output_rows[0] + output_col + 1)
+        = sum < 0 ? (uint8_t)0 : (sum >= 268435456 ? (uint8_t)255 : (uint8_t)(sum >> 16));
     // Pixel 1,0 complete
 
     // Begin work for output pixel 2,0
@@ -1965,8 +2017,8 @@ FLOW_EXPORT void flow_scale_spatial_3x3(uint8_t input[64], uint8_t ** output_row
     sum = 32768;
     for (i = 0; i < 4; i++)
         sum += temp[56 + i];
-    *(output_rows[0] + output_col + 2) = sum < 0 ? (uint8_t)0
-                                                 : (sum >= 268435456 ? (uint8_t)255 : (uint8_t)(sum >> 16));
+    *(output_rows[0] + output_col + 2)
+        = sum < 0 ? (uint8_t)0 : (sum >= 268435456 ? (uint8_t)255 : (uint8_t)(sum >> 16));
     // Pixel 2,0 complete
 
     // Begin work for output row 1
@@ -1995,8 +2047,8 @@ FLOW_EXPORT void flow_scale_spatial_3x3(uint8_t input[64], uint8_t ** output_row
     sum = 32768;
     for (i = 0; i < 4; i++)
         sum += temp[56 + i];
-    *(output_rows[1] + output_col + 0) = sum < 0 ? (uint8_t)0
-                                                 : (sum >= 268435456 ? (uint8_t)255 : (uint8_t)(sum >> 16));
+    *(output_rows[1] + output_col + 0)
+        = sum < 0 ? (uint8_t)0 : (sum >= 268435456 ? (uint8_t)255 : (uint8_t)(sum >> 16));
     // Pixel 0,1 complete
 
     // Begin work for output pixel 1,1
@@ -2005,8 +2057,8 @@ FLOW_EXPORT void flow_scale_spatial_3x3(uint8_t input[64], uint8_t ** output_row
     sum = 32768;
     for (i = 0; i < 6; i++)
         sum += temp[56 + i];
-    *(output_rows[1] + output_col + 1) = sum < 0 ? (uint8_t)0
-                                                 : (sum >= 268435456 ? (uint8_t)255 : (uint8_t)(sum >> 16));
+    *(output_rows[1] + output_col + 1)
+        = sum < 0 ? (uint8_t)0 : (sum >= 268435456 ? (uint8_t)255 : (uint8_t)(sum >> 16));
     // Pixel 1,1 complete
 
     // Begin work for output pixel 2,1
@@ -2015,8 +2067,8 @@ FLOW_EXPORT void flow_scale_spatial_3x3(uint8_t input[64], uint8_t ** output_row
     sum = 32768;
     for (i = 0; i < 4; i++)
         sum += temp[56 + i];
-    *(output_rows[1] + output_col + 2) = sum < 0 ? (uint8_t)0
-                                                 : (sum >= 268435456 ? (uint8_t)255 : (uint8_t)(sum >> 16));
+    *(output_rows[1] + output_col + 2)
+        = sum < 0 ? (uint8_t)0 : (sum >= 268435456 ? (uint8_t)255 : (uint8_t)(sum >> 16));
     // Pixel 2,1 complete
 
     // Begin work for output row 2
@@ -2041,8 +2093,8 @@ FLOW_EXPORT void flow_scale_spatial_3x3(uint8_t input[64], uint8_t ** output_row
     sum = 32768;
     for (i = 0; i < 4; i++)
         sum += temp[56 + i];
-    *(output_rows[2] + output_col + 0) = sum < 0 ? (uint8_t)0
-                                                 : (sum >= 268435456 ? (uint8_t)255 : (uint8_t)(sum >> 16));
+    *(output_rows[2] + output_col + 0)
+        = sum < 0 ? (uint8_t)0 : (sum >= 268435456 ? (uint8_t)255 : (uint8_t)(sum >> 16));
     // Pixel 0,2 complete
 
     // Begin work for output pixel 1,2
@@ -2051,8 +2103,8 @@ FLOW_EXPORT void flow_scale_spatial_3x3(uint8_t input[64], uint8_t ** output_row
     sum = 32768;
     for (i = 0; i < 6; i++)
         sum += temp[56 + i];
-    *(output_rows[2] + output_col + 1) = sum < 0 ? (uint8_t)0
-                                                 : (sum >= 268435456 ? (uint8_t)255 : (uint8_t)(sum >> 16));
+    *(output_rows[2] + output_col + 1)
+        = sum < 0 ? (uint8_t)0 : (sum >= 268435456 ? (uint8_t)255 : (uint8_t)(sum >> 16));
     // Pixel 1,2 complete
 
     // Begin work for output pixel 2,2
@@ -2061,8 +2113,8 @@ FLOW_EXPORT void flow_scale_spatial_3x3(uint8_t input[64], uint8_t ** output_row
     sum = 32768;
     for (i = 0; i < 4; i++)
         sum += temp[56 + i];
-    *(output_rows[2] + output_col + 2) = sum < 0 ? (uint8_t)0
-                                                 : (sum >= 268435456 ? (uint8_t)255 : (uint8_t)(sum >> 16));
+    *(output_rows[2] + output_col + 2)
+        = sum < 0 ? (uint8_t)0 : (sum >= 268435456 ? (uint8_t)255 : (uint8_t)(sum >> 16));
     // Pixel 2,2 complete
 }
 
@@ -2116,8 +2168,8 @@ FLOW_EXPORT void flow_scale_spatial_2x2(uint8_t input[64], uint8_t ** output_row
     sum = 32768;
     for (i = 0; i < 6; i++)
         sum += temp[56 + i];
-    *(output_rows[0] + output_col + 0) = sum < 0 ? (uint8_t)0
-                                                 : (sum >= 268435456 ? (uint8_t)255 : (uint8_t)(sum >> 16));
+    *(output_rows[0] + output_col + 0)
+        = sum < 0 ? (uint8_t)0 : (sum >= 268435456 ? (uint8_t)255 : (uint8_t)(sum >> 16));
     // Pixel 0,0 complete
 
     // Begin work for output pixel 1,0
@@ -2126,8 +2178,8 @@ FLOW_EXPORT void flow_scale_spatial_2x2(uint8_t input[64], uint8_t ** output_row
     sum = 32768;
     for (i = 0; i < 6; i++)
         sum += temp[56 + i];
-    *(output_rows[0] + output_col + 1) = sum < 0 ? (uint8_t)0
-                                                 : (sum >= 268435456 ? (uint8_t)255 : (uint8_t)(sum >> 16));
+    *(output_rows[0] + output_col + 1)
+        = sum < 0 ? (uint8_t)0 : (sum >= 268435456 ? (uint8_t)255 : (uint8_t)(sum >> 16));
     // Pixel 1,0 complete
 
     // Begin work for output row 1
@@ -2156,8 +2208,8 @@ FLOW_EXPORT void flow_scale_spatial_2x2(uint8_t input[64], uint8_t ** output_row
     sum = 32768;
     for (i = 0; i < 6; i++)
         sum += temp[56 + i];
-    *(output_rows[1] + output_col + 0) = sum < 0 ? (uint8_t)0
-                                                 : (sum >= 268435456 ? (uint8_t)255 : (uint8_t)(sum >> 16));
+    *(output_rows[1] + output_col + 0)
+        = sum < 0 ? (uint8_t)0 : (sum >= 268435456 ? (uint8_t)255 : (uint8_t)(sum >> 16));
     // Pixel 0,1 complete
 
     // Begin work for output pixel 1,1
@@ -2166,8 +2218,8 @@ FLOW_EXPORT void flow_scale_spatial_2x2(uint8_t input[64], uint8_t ** output_row
     sum = 32768;
     for (i = 0; i < 6; i++)
         sum += temp[56 + i];
-    *(output_rows[1] + output_col + 1) = sum < 0 ? (uint8_t)0
-                                                 : (sum >= 268435456 ? (uint8_t)255 : (uint8_t)(sum >> 16));
+    *(output_rows[1] + output_col + 1)
+        = sum < 0 ? (uint8_t)0 : (sum >= 268435456 ? (uint8_t)255 : (uint8_t)(sum >> 16));
     // Pixel 1,1 complete
 }
 
@@ -2222,8 +2274,8 @@ FLOW_EXPORT void flow_scale_spatial_1x1(uint8_t input[64], uint8_t ** output_row
     sum = 131072;
     for (i = 0; i < 8; i++)
         sum += temp[72 + i];
-    *(output_rows[0] + output_col + 0) = sum < 0 ? (uint8_t)0
-                                                 : (sum >= 1073741824 ? (uint8_t)255 : (uint8_t)(sum >> 18));
+    *(output_rows[0] + output_col + 0)
+        = sum < 0 ? (uint8_t)0 : (sum >= 1073741824 ? (uint8_t)255 : (uint8_t)(sum >> 18));
     // Pixel 0,0 complete
 }
 
@@ -2249,25 +2301,38 @@ FLOW_EXPORT void flow_scale_spatial_srgb_7x7(uint8_t input[64], uint8_t ** outpu
 
     FLOW_ALIGN_16_VAR(int32_t temp[48]);
     FLOW_ALIGN_16_VAR(int32_t weights_for_col_0[]) = {
-        29, 3,
+        29,
+        3,
     };
     FLOW_ALIGN_16_VAR(int32_t weights_for_col_1[]) = {
-        -2, 103, 27,
+        -2,
+        103,
+        27,
     };
     FLOW_ALIGN_16_VAR(int32_t weights_for_col_2[]) = {
-        -3, 86, 45,
+        -3,
+        86,
+        45,
     };
     FLOW_ALIGN_16_VAR(int32_t weights_for_col_3[]) = {
-        -3, 67, 67, -3,
+        -3,
+        67,
+        67,
+        -3,
     };
     FLOW_ALIGN_16_VAR(int32_t weights_for_col_4[]) = {
-        45, 86, -3,
+        45,
+        86,
+        -3,
     };
     FLOW_ALIGN_16_VAR(int32_t weights_for_col_5[]) = {
-        27, 103, -2,
+        27,
+        103,
+        -2,
     };
     FLOW_ALIGN_16_VAR(int32_t weights_for_col_6[]) = {
-        3, 29,
+        3,
+        29,
     };
 
     // Begin work for output row 0
@@ -2879,22 +2944,34 @@ FLOW_EXPORT void flow_scale_spatial_srgb_6x6(uint8_t input[64], uint8_t ** outpu
 
     FLOW_ALIGN_16_VAR(int32_t temp[48]);
     FLOW_ALIGN_16_VAR(int32_t weights_for_col_0[]) = {
-        6, 2,
+        6,
+        2,
     };
     FLOW_ALIGN_16_VAR(int32_t weights_for_col_1[]) = {
-        -1, 33, 33, -1,
+        -1,
+        33,
+        33,
+        -1,
     };
     FLOW_ALIGN_16_VAR(int32_t weights_for_col_2[]) = {
-        31, 92, 5,
+        31,
+        92,
+        5,
     };
     FLOW_ALIGN_16_VAR(int32_t weights_for_col_3[]) = {
-        5, 92, 31,
+        5,
+        92,
+        31,
     };
     FLOW_ALIGN_16_VAR(int32_t weights_for_col_4[]) = {
-        -1, 33, 33, -1,
+        -1,
+        33,
+        33,
+        -1,
     };
     FLOW_ALIGN_16_VAR(int32_t weights_for_col_5[]) = {
-        2, 6,
+        2,
+        6,
     };
 
     // Begin work for output row 0
@@ -3364,19 +3441,32 @@ FLOW_EXPORT void flow_scale_spatial_srgb_5x5(uint8_t input[64], uint8_t ** outpu
 
     FLOW_ALIGN_16_VAR(int32_t temp[48]);
     FLOW_ALIGN_16_VAR(int32_t weights_for_col_0[]) = {
-        78, 51, -1,
+        78,
+        51,
+        -1,
     };
     FLOW_ALIGN_16_VAR(int32_t weights_for_col_1[]) = {
-        -2, 32, 79, 19,
+        -2,
+        32,
+        79,
+        19,
     };
     FLOW_ALIGN_16_VAR(int32_t weights_for_col_2[]) = {
-        1, 31, 31, 1,
+        1,
+        31,
+        31,
+        1,
     };
     FLOW_ALIGN_16_VAR(int32_t weights_for_col_3[]) = {
-        19, 79, 32, -2,
+        19,
+        79,
+        32,
+        -2,
     };
     FLOW_ALIGN_16_VAR(int32_t weights_for_col_4[]) = {
-        -1, 51, 78,
+        -1,
+        51,
+        78,
     };
 
     // Begin work for output row 0
@@ -3728,16 +3818,26 @@ FLOW_EXPORT void flow_scale_spatial_srgb_4x4(uint8_t input[64], uint8_t ** outpu
 
     FLOW_ALIGN_16_VAR(int32_t temp[48]);
     FLOW_ALIGN_16_VAR(int32_t weights_for_col_0[]) = {
-        117, 117, 22,
+        117,
+        117,
+        22,
     };
     FLOW_ALIGN_16_VAR(int32_t weights_for_col_1[]) = {
-        21, 107, 107, 21,
+        21,
+        107,
+        107,
+        21,
     };
     FLOW_ALIGN_16_VAR(int32_t weights_for_col_2[]) = {
-        21, 107, 107, 21,
+        21,
+        107,
+        107,
+        21,
     };
     FLOW_ALIGN_16_VAR(int32_t weights_for_col_3[]) = {
-        22, 117, 117,
+        22,
+        117,
+        117,
     };
 
     // Begin work for output row 0
@@ -3983,13 +4083,19 @@ FLOW_EXPORT void flow_scale_spatial_srgb_3x3(uint8_t input[64], uint8_t ** outpu
 
     FLOW_ALIGN_16_VAR(int32_t temp[64]);
     FLOW_ALIGN_16_VAR(int32_t weights_for_col_0[]) = {
-        80, 103, 62, 11,
+        80,
+        103,
+        62,
+        11,
     };
     FLOW_ALIGN_16_VAR(int32_t weights_for_col_1[]) = {
         2, 39, 87, 87, 39, 2,
     };
     FLOW_ALIGN_16_VAR(int32_t weights_for_col_2[]) = {
-        11, 62, 103, 80,
+        11,
+        62,
+        103,
+        80,
     };
 
     // Begin work for output row 0
