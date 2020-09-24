@@ -2,7 +2,15 @@
 #include "catch.hpp"
 
 extern "C" int run_c_components_tests() {
-    return Catch::Session().run();
+    Catch::Session session;
+    Catch::ConfigData c;
+    c.listTests = true;
+    //c.showSuccessfulTests = true;
+    session.useConfigData(c);
+    session.run();
+    c.listTests = false;
+    session.useConfigData(c);
+    return session.run();
 }
 
 extern "C" int run_c_components_test_failure() {
