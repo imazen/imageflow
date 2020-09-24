@@ -7,7 +7,6 @@ extern "C" {
     pub fn keep1();
     pub fn keep2();
     pub fn keep3();
-    pub fn keep4();
     pub fn keep5();
     pub fn keep6();
     pub fn keep7();
@@ -37,7 +36,6 @@ fn test_prevent_lto_stripping() {
         keep1();
         keep2();
         keep3();
-        keep4();
         keep5();
         keep6();
         //keep7(); skipping test_simple_fastscaling
