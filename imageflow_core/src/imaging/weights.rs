@@ -380,20 +380,10 @@ pub  fn populate_weights(container: &mut dyn WeightContainer, output_line_size :
         weights.clear();
         let center_src_pixel: f64 =
             (u as f64 + 0.5f64) / scale_factor - 0.5f64;
-        let left_edge: i32 =
-            (center_src_pixel.floor() as
-                u32).wrapping_sub(allocated_window_size.wrapping_sub(1i32
-                as
-                u32).wrapping_div(2i32
-                as
-                u32))
-                as i32;
-        let right_edge: i32 =
-            (left_edge as
-                u32).wrapping_add(allocated_window_size).wrapping_sub(1i32
-                as
-                u32)
-                as i32;
+        let left_edge: i32 = (center_src_pixel - details.window / downscale_factor - 0.0001)
+            .ceil() as i32;
+        let right_edge: i32 = (center_src_pixel + details.window / downscale_factor + 0.0001)
+            .floor() as i32;
         let left_src_pixel: u32 =
             0i32.max(left_edge) as u32;
         let right_src_pixel: u32 =
