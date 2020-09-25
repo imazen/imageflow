@@ -488,6 +488,15 @@ int index_of_first_nonzero(int8_t * array, size_t count)
     }
     return -1;
 }
+int index_of_last_nonzero(int8_t * array, size_t count)
+{
+    for (size_t i = count - 1; i > 0; i--) {
+        if (array[i] != 0)
+            return i;
+    }
+    return -1;
+}
+
 void print_function(FILE * stream, int scale_size, struct flow_interpolation_line_contributions * contribs, bool linear)
 {
 
@@ -517,17 +526,14 @@ void print_function(FILE * stream, int scale_size, struct flow_interpolation_lin
     int matrix_counts[8];
     for (col = 0; col < scale_size; col++) {
         int left = index_of_first_nonzero(&matrix[col * 8], 8);
+        int right = index_of_last_nonzero(&matrix[col * 8], 8);
         int col_inputs = 0;
         // Write down weights for 1 output pixel
         fprintf(stream, "    FLOW_ALIGN_16_VAR(int32_t weights_for_col_%d[]) = {", col);
-        for (int input_col = left; input_col < 8; input_col++) {
+        for (int input_col = left; input_col <= right; input_col++) {
             int8_t weight = matrix[col * 8 + input_col];
-            if (weight != 0) {
-                fprintf(stream, "%d,", weight);
-                col_inputs++;
-            } else {
-                break;
-            }
+            fprintf(stream, "%d,", weight);
+            col_inputs++;
         }
         matrix_counts[col] = col_inputs;
         fprintf(stream, "};\n");
@@ -538,18 +544,16 @@ void print_function(FILE * stream, int scale_size, struct flow_interpolation_lin
         fprintf(stream, "\n    // Begin work for output row %d\n", row);
 
         int input_starts_at = index_of_first_nonzero(&matrix[row * 8], 8);
+        int input_ends_at = index_of_last_nonzero(&matrix[row * 8], 8);
+
         int input_row_count = 0;
         // Multiply rows
-        for (input_row = input_starts_at; input_row < 8; input_row++) {
+        for (input_row = input_starts_at; input_row <= input_ends_at; input_row++) {
             int8_t weight = matrix[row * 8 + input_row];
             int relative_row = input_row - input_starts_at;
-            if (weight != 0) {
-                fprintf(stream, "    for (i = 0; i < 8; i++) temp[i + %2d] = %3d * %s[i + %2d];\n", relative_row * 8,
-                        weight, linear ? "linearized" : "input", input_row * 8);
-                input_row_count++;
-            } else {
-                break;
-            }
+            fprintf(stream, "    for (i = 0; i < 8; i++) temp[i + %2d] = %3d * %s[i + %2d];\n", relative_row * 8,
+                    weight, linear ? "linearized" : "input", input_row * 8);
+            input_row_count++;
         }
         int temp_row_index_a = 8 * max_window_size;
         int temp_row_index_b = 8 * (max_window_size + 1);
