@@ -214,7 +214,7 @@ pub enum ScalingColorspace {
 
 }
 
-pub static IR4_KEYS: [&'static str;78] = ["mode", "anchor", "flip", "sflip", "scale", "cache", "process",
+pub static IR4_KEYS: [&'static str;79] = ["mode", "anchor", "flip", "sflip", "scale", "cache", "process",
     "quality", "jpeg.quality", "zoom", "crop", "cropxunits", "cropyunits",
     "w", "h", "width", "height", "maxwidth", "maxheight", "format", "thumbnail",
      "autorotate", "srotate", "rotate", "ignoreicc", "ignore_icc_errors", //really? : "precise_scaling_ratio",
@@ -227,7 +227,7 @@ pub static IR4_KEYS: [&'static str;78] = ["mode", "anchor", "flip", "sflip", "sc
     "jpeg.turbo", "encoder", "decoder", "builder", "s.roundcorners", "paddingwidth",
     "paddingheight", "margin", "borderwidth", "decoder.min_precise_scaling_ratio",
     "png.quality","png.min_quality", "png.quantization_speed", "png.libpng", "png.max_deflate",
-    "png.lossless", "up.filter", "down.filter", "dpr"];
+    "png.lossless", "up.filter", "down.filter", "dpr", "up.colorspace"];
 
 
 #[derive(PartialEq,Debug, Clone)]
@@ -356,6 +356,7 @@ impl Instructions{
 
 
         add(&mut m, "down.colorspace", self.down_colorspace.map(|v| format!("{:?}", v).to_lowercase()));
+        add(&mut m, "up.colorspace", self.up_colorspace.map(|v| format!("{:?}", v).to_lowercase()));
         add(&mut m, "down.filter", self.down_filter.map(|v| format!("{:?}", v).to_lowercase()));
         add(&mut m, "up.filter", self.up_filter.map(|v| format!("{:?}", v).to_lowercase()));
         add(&mut m, "decoder.min_precise_scaling_ratio", self.min_precise_scaling_ratio);
@@ -437,6 +438,7 @@ impl Instructions{
         };
 
         i.down_colorspace = p.parse_colorspace("down.colorspace");
+        i.up_colorspace = p.parse_colorspace("up.colorspace");
         i.down_filter = p.parse_filter("down.filter");
         i.up_filter = p.parse_filter("up.filter");
 
@@ -877,6 +879,7 @@ pub struct Instructions{
     pub s_grayscale: Option<GrayscaleAlgorithm>,
     pub min_precise_scaling_ratio: Option<f64>,
     pub down_colorspace: Option<ScalingColorspace>,
+    pub up_colorspace: Option<ScalingColorspace>,
     pub jpeg_progressive: Option<bool>,
     pub jpeg_turbo: Option<bool>,
     pub png_quality: Option<u8>,
@@ -1047,6 +1050,8 @@ fn test_url_parsing() {
     t("a.balancewhite=area",  Instructions{a_balance_white: Some(HistogramThresholdAlgorithm::Area), ..Default::default()}, vec![]);
     t("down.colorspace=linear",  Instructions{down_colorspace: Some(ScalingColorspace::Linear), ..Default::default()}, vec![]);
     t("down.colorspace=srgb",  Instructions{down_colorspace: Some(ScalingColorspace::Srgb), ..Default::default()}, vec![]);
+    t("up.colorspace=linear",  Instructions{up_colorspace: Some(ScalingColorspace::Linear), ..Default::default()}, vec![]);
+    t("up.colorspace=srgb",  Instructions{up_colorspace: Some(ScalingColorspace::Srgb), ..Default::default()}, vec![]);
     t("up.filter=mitchell",  Instructions{up_filter: Some(FilterStrings::Mitchell), ..Default::default()}, vec![]);
     t("down.filter=lanczos",  Instructions{down_filter: Some(FilterStrings::Lanczos), ..Default::default()}, vec![]);
 
@@ -1092,6 +1097,8 @@ fn test_tostr(){
     t("a.balancewhite=area",  Instructions{a_balance_white: Some(HistogramThresholdAlgorithm::Area), ..Default::default()});
     t("webp.quality=85", Instructions { webp_quality: Some(85f64), ..Default::default() });
     t("webp.lossless=true", Instructions { webp_lossless: Some(true), ..Default::default() });
+    t("up.colorspace=srgb",  Instructions{up_colorspace: Some(ScalingColorspace::Srgb), ..Default::default()});
+    t("up.colorspace=linear",  Instructions{up_colorspace: Some(ScalingColorspace::Linear), ..Default::default()});
     t("down.colorspace=srgb",  Instructions{down_colorspace: Some(ScalingColorspace::Srgb), ..Default::default()});
     t("down.colorspace=linear",  Instructions{down_colorspace: Some(ScalingColorspace::Linear), ..Default::default()});
     t("f.sharpen=10", Instructions{ f_sharpen: Some(10f64), ..Default::default()});

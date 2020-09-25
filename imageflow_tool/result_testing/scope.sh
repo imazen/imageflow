@@ -96,11 +96,11 @@ do
   convert ./pdr.png ${m} -resize 275x555\!  -colorspace sRGB magick_${i}_pdr.png
   convert ./plr.png ${m} -resize 15x555\!  -colorspace sRGB magick_${i}_plr.png
 
-  echo "../imageflow_tool v1/querystring --quiet --in pd.png --out flow_${i}_pd.png --command=\"w=555&h=275&mode=stretch&scale=both&format=png&down.colorspace=srgb&down.filter=${f}&up.filter=${f}\""
-  ../imageflow_tool v1/querystring --quiet --in pd.png --out flow_${i}_pd.png --command="w=555&h=275&mode=stretch&scale=both&format=png&down.colorspace=srgb&down.filter=${f}&up.filter=${f}"
-  ../imageflow_tool v1/querystring --quiet --in pl.png --out flow_${i}_pl.png --command="w=555&h=15&mode=stretch&scale=both&format=png&down.colorspace=srgb&down.filter=${f}&up.filter=${f}"
-  ../imageflow_tool v1/querystring --quiet --in pdr.png --out flow_${i}_pdr.png --command="w=275&h=555&mode=stretch&scale=both&format=png&down.colorspace=srgb&down.filter=${f}&up.filter=${f}"
-  ../imageflow_tool v1/querystring --quiet --in plr.png --out flow_${i}_plr.png --command="w=15&h=555&mode=stretch&scale=both&format=png&down.colorspace=srgb&down.filter=${f}&up.filter=${f}"
+  echo "../imageflow_tool v1/querystring --quiet --in pd.png --out flow_${i}_pd.png --command=\"w=555&h=275&mode=stretch&scale=both&format=png&down.colorspace=srgb&up.colorspace=srgb&down.filter=${f}&up.filter=${f}\""
+  ../imageflow_tool v1/querystring --quiet --in pd.png --out flow_${i}_pd.png --command="w=555&h=275&mode=stretch&scale=both&format=png&down.colorspace=srgb&up.colorspace=srgb&down.filter=${f}&up.filter=${f}"
+  ../imageflow_tool v1/querystring --quiet --in pl.png --out flow_${i}_pl.png --command="w=555&h=15&mode=stretch&scale=both&format=png&down.colorspace=srgb&up.colorspace=srgb&down.filter=${f}&up.filter=${f}"
+  ../imageflow_tool v1/querystring --quiet --in pdr.png --out flow_${i}_pdr.png --command="w=275&h=555&mode=stretch&scale=both&format=png&down.colorspace=srgb&up.colorspace=srgb&down.filter=${f}&up.filter=${f}"
+  ../imageflow_tool v1/querystring --quiet --in plr.png --out flow_${i}_plr.png --command="w=15&h=555&mode=stretch&scale=both&format=png&down.colorspace=srgb&up.colorspace=srgb&down.filter=${f}&up.filter=${f}"
 
   echo "<h1>${i}</h1>" >> "./index.html"
   echo "<h4>Imageflow vs ImageWorsener</h4>" >> "./index.html"

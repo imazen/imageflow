@@ -8,6 +8,7 @@
 `cubic_b_spline`, `hermite`, `jinc`, `triangle`, `linear`, `box`, `fastest`, `n_cubic`, `n_cubic_sharp`  
 * `up.filter` determines the up-sampling filter to use. See `down.filter`
 * `down.colorspace=srgb` downscales in the srgb color space instead of linear RGB. Mimics widespread but bad behavior; destroys image highlights. 
+* `up.colorspace=srgb` up-scales in the srgb color space instead of linear RGB. 
 * `s.grayscale`=`true|y|ry|ntsc|bt709|flat` transforms the image into grayscale using various methods.
 * `s.sepia=true` turns the image into sepia tone
 * `s.invert=true` inverts the image colors in the srgb space
