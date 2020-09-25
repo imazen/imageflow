@@ -14,7 +14,7 @@ then
   echo "Skipping compilation of imageflow, ./imageflow_tool exists. Delete to rebuild"
 else
   cd ../..
-  ./build_only.sh
+  cargo build --release -p imageflow_tool_lib
   cd imageflow_tool/result_testing
   cp ../../target/release/imageflow_tool .
 fi 
