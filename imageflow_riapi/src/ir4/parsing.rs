@@ -1008,6 +1008,10 @@ fn test_url_parsing() {
     t("w=10&f.sharpen=80.5", Instructions { w: Some(10), f_sharpen: Some(80.5f64), ..Default::default() }, vec![]);
 
     t("f.sharpen=80.5", Instructions { f_sharpen: Some(80.5f64), ..Default::default() }, vec![]);
+    t("decoder.min_precise_scaling_ratio=3.5", Instructions { f_sharpen: Some(3.5f64), ..Default::default() }, vec![]);
+
+
+
     t("f.sharpen_when=always", Instructions{ f_sharpen_when: Some(SharpenWhen::Always), ..Default::default()}, vec![]);
     t("f.sharpen_when=downscaling", Instructions{ f_sharpen_when: Some(SharpenWhen::Downscaling), ..Default::default()}, vec![]);
     t("f.sharpen_when=sizediffers", Instructions{ f_sharpen_when: Some(SharpenWhen::SizeDiffers), ..Default::default()}, vec![]);
@@ -1101,6 +1105,8 @@ fn test_tostr(){
     t("up.colorspace=linear",  Instructions{up_colorspace: Some(ScalingColorspace::Linear), ..Default::default()});
     t("down.colorspace=srgb",  Instructions{down_colorspace: Some(ScalingColorspace::Srgb), ..Default::default()});
     t("down.colorspace=linear",  Instructions{down_colorspace: Some(ScalingColorspace::Linear), ..Default::default()});
+    t("decoder.min_precise_scaling_ratio=3.5", Instructions { f_sharpen: Some(3.5f64), ..Default::default() });
+
     t("f.sharpen=10", Instructions{ f_sharpen: Some(10f64), ..Default::default()});
     t("f.sharpen_when=always", Instructions{ f_sharpen_when: Some(SharpenWhen::Always), ..Default::default()});
     t("f.sharpen_when=downscaling", Instructions{ f_sharpen_when: Some(SharpenWhen::Downscaling), ..Default::default()});
