@@ -211,19 +211,19 @@ TEST_CASE("Test output weights", "[fastscaling]")
                 ERR(c);
             }
 
-            fprintf(output, "\nfilter_%02d (%2dpx to %2dpx): ", filter_id, from_width, to_width);
+            fprintf(output, "\r\nfilter_%02d (%2dpx to %2dpx):", filter_id, from_width, to_width);
 
             for (uint32_t output_pixel = 0; output_pixel < lct->LineLength; output_pixel++) {
                 struct flow_interpolation_pixel_contributions * current = &lct->ContribRow[output_pixel];
 
-                fprintf(output, "x=%i from ", output_pixel);
+                fprintf(output, " x=%i from ", output_pixel);
 
                 for (int32_t ix = current->Left; ix <= current->Right; ix++) {
                     float weight = current->Weights[ix - current->Left];
                     fprintf(output, (ix == current->Left) ? "(" : " ");
                     fprintf(output, "%.06f", weight);
                 }
-                fprintf(output, "), ");
+                fprintf(output, "),");
             }
 
             FLOW_destroy(&context, lct);
