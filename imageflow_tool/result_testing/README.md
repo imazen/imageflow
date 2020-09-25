@@ -24,6 +24,6 @@ Open ./compare/index.html in your browser when complete.
 ## Updating Imageflow results
 
 1.  Run `./compare_reset_flow_images.sh` to invalidate all imageflow-generated results. 
-2. delete flow-proto1
+2. delete imageflow_tool
 3. Run `./install_tools.sh`
 4. Run  `./compare.rb`
