@@ -102,10 +102,12 @@ TEST_CASE("Verify weights are symmetric and bounded", "[fastscaling]")
     // filter, 2, from, 200, to, 300, weights, src, 0, (0.00001, 0.00200, 1.2200), 1, ...
     int32_t filter_id = 1;
     int32_t scalings[] = { /*downscale to 1px*/ 1, 1, 2, 1, 3, 1, 4, 1,  5, 1, 6, 1, 7, 1, 17, 1,
-                           /*upscale from 2px*/ 2, 3, 2, 4, 2, 5, 2, 17,
-                           /*other*/ 11,           7, 7, 3, 8, 4 };
+        /*upscale from 2px*/ 2, 3, 2, 4, 2, 5, 2, 17,
+        /*other*/ 11,           7, 7, 3,
+        /* IDCT kernel sizes */ 8, 8, 8, 7, 8, 6, 8, 5, 8, 4, 8, 3, 8, 2, 8, 1 };
 
-    flow_interpolation_filter first_filter = flow_interpolation_filter_NCubicSharp;
+    flow_interpolation_filter first_filter = flow_interpolation_filter_RobidouxFast;
+    //flow_interpolation_filter first_filter = flow_interpolation_filter_NCubicSharp;
     flow_interpolation_filter last_filter = flow_interpolation_filter_NCubicSharp;
     uint32_t scaling_ix;
     for (filter_id = (int32_t)first_filter; filter_id <= (int32_t)last_filter; filter_id++) {

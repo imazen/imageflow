@@ -407,8 +407,8 @@ flow_interpolation_line_contributions_create(flow_c * context, const uint32_t ou
     for (u = 0; u < output_line_size; u++) {
         const double center_src_pixel = ((double)u + 0.5) / scale_factor - 0.5;
 
-        const int left_edge = (int)floor(center_src_pixel) - ((allocated_window_size - 1) / 2);
-        const int right_edge = left_edge + allocated_window_size - 1;
+        const int left_edge =  (int)ceil(center_src_pixel - details->window/downscale_factor -0.0001);
+        const int right_edge = (int)floor(center_src_pixel + details->window/downscale_factor +0.0001);
 
         const uint32_t left_src_pixel = (uint32_t)int_max(0, left_edge);
         const uint32_t right_src_pixel = (uint32_t)int_min(right_edge, (int)input_line_size - 1);
