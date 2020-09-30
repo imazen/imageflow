@@ -42,3 +42,31 @@ fn test_prevent_lto_stripping() {
         keep10();
     }
 }
+
+extern "C" {
+    fn flow_scale_spatial_srgb_1x1(input: *const u8, output_rows: *mut *mut u8, output_col: u32);
+}
+
+#[test]
+fn test_spatial_scaling(){
+
+    let mut input: [u8; 64] = [0; 64];
+    for x in 0..64{
+        input[x] = if x % 2 == 0 {
+            0
+        }else{
+            255
+        };
+    }
+
+    let mut output: [u8; 1] = [0;1];
+    let mut output_rows: [*mut u8;1] = [&mut output[0]];
+    let output_col = 0;
+
+    unsafe {
+        flow_scale_spatial_srgb_1x1(&mut input[0], &mut output_rows[0], output_col)
+    }
+
+    assert_eq!(output[0], 188);
+
+}
