@@ -10,6 +10,7 @@ build = "build.rs"
 name = "imageflow_c_components"
 doctest = false
 
+
 [build-dependencies]
 glob = "0.3.0"
 
@@ -36,3 +37,5 @@ libpng-sys = { version = "1.1.8", features = ["static", "static-libz", "libz-sys
 
 # For build info see https://github.com/kornelski/rust-lcms2-sys/blob/master/src/build.rs
 lcms2-sys = { version = "3.1.4", features = ["static",  "static-fallback", "parallel"] }
+
+libc="0.2.79"
