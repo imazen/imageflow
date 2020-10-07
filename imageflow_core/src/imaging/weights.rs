@@ -13,20 +13,20 @@ use std::u32;
 
 pub struct InterpolationDetails {
     /// 1 is the default; near-zero overlapping between windows. 2 overlaps 50% on each side.
-    window: f64,
+    pub window: f64,
     /// Coefficients for bicubic weighting
-    p1: f64,
-    p2: f64,
-    p3: f64,
-    q1: f64,
-    q2: f64,
-    q3: f64,
-    q4: f64,
+    pub p1: f64,
+    pub p2: f64,
+    pub p3: f64,
+    pub q1: f64,
+    pub q2: f64,
+    pub q3: f64,
+    pub q4: f64,
     /// Blurring factor when > 1, sharpening factor when < 1. Applied to weights.
-    blur: f64,
-    filter: fn(&InterpolationDetails,f64) -> f64,
+    pub blur: f64,
+    pub filter: fn(&InterpolationDetails,f64) -> f64,
     /// How much sharpening we are requesting
-    sharpen_percent_goal: f32
+    pub sharpen_percent_goal: f32
 }
 impl Default for InterpolationDetails {
     fn default() -> InterpolationDetails {
@@ -45,6 +45,7 @@ impl Default for InterpolationDetails {
         }
     }
 }
+
 impl InterpolationDetails{
     fn bicubic(window: f64, blur: f64, b: f64, c: f64) -> InterpolationDetails{
         let bx2 = b + b;
@@ -62,20 +63,20 @@ impl InterpolationDetails{
         }
     }
 
-    fn create(filter: Filter) -> InterpolationDetails {
+    pub fn create(filter: Filter) -> InterpolationDetails {
         match filter {
             Filter::Triangle | Filter::Linear
             => InterpolationDetails { window: 1f64, blur: 1f64, filter: filter_triangle, ..Default::default() },
 
-            Filter::RawLanczos2 => InterpolationDetails { window: 2f64, blur: 1f64, filter: filter_sinc, ..Default::default() },
-            Filter::RawLanczos3 => InterpolationDetails { window: 3f64, blur: 1f64, filter: filter_sinc, ..Default::default() },
-            Filter::RawLanczos2Sharp => InterpolationDetails { window: 2f64, blur: 0.9549963639785485f64, filter: filter_sinc, ..Default::default() },
-            Filter::RawLanczos3Sharp => InterpolationDetails { window: 3f64, blur: 0.9812505644269356f64, filter: filter_sinc, ..Default::default() },
+            // Filter::RawLanczos2 => InterpolationDetails { window: 2f64, blur: 1f64, filter: filter_sinc, ..Default::default() },
+            // Filter::RawLanczos3 => InterpolationDetails { window: 3f64, blur: 1f64, filter: filter_sinc, ..Default::default() },
+            // Filter::RawLanczos2Sharp => InterpolationDetails { window: 2f64, blur: 0.9549963639785485f64, filter: filter_sinc, ..Default::default() },
+            // Filter::RawLanczos3Sharp => InterpolationDetails { window: 3f64, blur: 0.9812505644269356f64, filter: filter_sinc, ..Default::default() },
             Filter::Lanczos2 => InterpolationDetails { window: 2f64, blur: 1f64, filter: filter_sinc_windowed, ..Default::default() },
             Filter::Lanczos => InterpolationDetails { window: 3f64, blur: 1f64, filter: filter_sinc_windowed, ..Default::default() },
             Filter::Lanczos2Sharp => InterpolationDetails { window: 2f64, blur: 0.9549963639785485f64, filter: filter_sinc_windowed, ..Default::default() },
             Filter::LanczosSharp => InterpolationDetails { window: 3f64, blur: 0.9812505644269356f64, filter: filter_sinc_windowed, ..Default::default() },
-            Filter::CubicFast => InterpolationDetails { window: 2f64, blur: 1f64, filter: filter_bicubic_fast, ..Default::default() },
+            // Filter::CubicFast => InterpolationDetails { window: 2f64, blur: 1f64, filter: filter_bicubic_fast, ..Default::default() },
             Filter::Box => InterpolationDetails { window: 0.5f64, blur: 1f64, filter: filter_box, ..Default::default() },
             Filter::Ginseng => InterpolationDetails { window: 3f64, blur: 1f64, filter: filter_ginseng, ..Default::default() },
             Filter::GinsengSharp => InterpolationDetails { window: 3f64, blur: 0.9812505644269356f64, filter: filter_ginseng, ..Default::default() },
@@ -85,13 +86,13 @@ impl InterpolationDetails{
             Filter::CubicSharp => InterpolationDetails::bicubic(2f64, 0.9549963639785485f64, 0f64, 1f64),
 
             Filter::CatmullRom => InterpolationDetails::bicubic(2f64, 1f64, 0f64, 0.5f64),
-            Filter::CatmullRomFast => InterpolationDetails::bicubic(1f64, 1f64, 0f64, 0.5f64),
-            Filter::CatmullRomFastSharp => InterpolationDetails::bicubic(1f64, 13.0f64
-                /
-                16.0f64, 0f64, 0.5f64),
+            // Filter::CatmullRomFast => InterpolationDetails::bicubic(1f64, 1f64, 0f64, 0.5f64),
+            // Filter::CatmullRomFastSharp => InterpolationDetails::bicubic(1f64, 13.0f64
+               // /
+               // 16.0f64, 0f64, 0.5f64),
 
             Filter::Mitchell => InterpolationDetails::bicubic(2f64, 1f64, 1.0f64 / 3.0f64, 1.0f64 / 3.0f64),
-            Filter::MitchellFast => InterpolationDetails::bicubic(1f64, 1f64, 1.0f64 / 3.0f64, 1.0f64 / 3.0f64),
+            // Filter::MitchellFast => InterpolationDetails::bicubic(1f64, 1f64, 1.0f64 / 3.0f64, 1.0f64 / 3.0f64),
             Filter::NCubic => InterpolationDetails::bicubic(2.5f64, 1.0f64
                 /
                 1.1685777620836933f64,
@@ -152,7 +153,7 @@ impl InterpolationDetails{
         negative_area / positive_area
     }
 }
-fn filter_flex_cubic(d: &InterpolationDetails, x: f64) -> f64{
+pub fn filter_flex_cubic(d: &InterpolationDetails, x: f64) -> f64{
     let t: f64 = x.abs() / d.blur;
     if t < 1.0 {
         return d.p1 + t * (t * (d.p2 + t * d.p3));
@@ -163,7 +164,7 @@ fn filter_flex_cubic(d: &InterpolationDetails, x: f64) -> f64{
     0.0
 }
 
-fn filter_bicubic_fast(d: &InterpolationDetails,
+pub fn filter_bicubic_fast(d: &InterpolationDetails,
                                           t: f64)
                                          -> f64 {
     let abs_t: f64 = t.abs() / d.blur;
@@ -179,7 +180,7 @@ fn filter_bicubic_fast(d: &InterpolationDetails,
     }
 }
 
-fn filter_sinc( d: &InterpolationDetails,t: f64) -> f64 {
+pub fn filter_sinc( d: &InterpolationDetails,t: f64) -> f64 {
     let abs_t: f64 = t.abs() / d.blur;
     if abs_t == 0f64 {
         // Avoid division by zero
@@ -191,7 +192,7 @@ fn filter_sinc( d: &InterpolationDetails,t: f64) -> f64 {
         return a.sin() / a
     };
 }
-fn filter_box(d: &InterpolationDetails, t: f64) -> f64 {
+pub fn filter_box(d: &InterpolationDetails, t: f64) -> f64 {
     let x: f64 = t / d.blur;
     if x >= -1f64 * d.window && x < d.window {
         1f64
@@ -199,12 +200,12 @@ fn filter_box(d: &InterpolationDetails, t: f64) -> f64 {
         0f64
     }
 }
-fn filter_triangle(d: &InterpolationDetails, t: f64) -> f64 {
+pub fn filter_triangle(d: &InterpolationDetails, t: f64) -> f64 {
     let x: f64 = t.abs() / d.blur;
     if x < 1.0f64 { return 1.0f64 - x } else { return 0.0f64 };
 }
 
-fn filter_sinc_windowed( d: &InterpolationDetails,
+pub fn filter_sinc_windowed( d: &InterpolationDetails,
                                            t: f64)
                                           -> f64 {
     let x: f64 = t / d.blur;
@@ -222,7 +223,7 @@ fn filter_sinc_windowed( d: &InterpolationDetails,
 }
 
 
-fn filter_jinc(d: &InterpolationDetails, t: f64) -> f64 {
+pub fn filter_jinc(d: &InterpolationDetails, t: f64) -> f64 {
     let x: f64 = t.abs() / d.blur;
     ////x crossing #1 1.2196698912665045
     if x == 0.0f64 {
@@ -249,7 +250,7 @@ static double filter_window_jinc (const struct flow_interpolation_details * d, d
 }
 */
 
-fn filter_ginseng(d: &InterpolationDetails, t: f64) -> f64 {
+pub fn filter_ginseng(d: &InterpolationDetails, t: f64) -> f64 {
     // Sinc windowed by jinc
     let abs_t: f64 = t.abs() / d.blur;
     let t_pi: f64 = abs_t * f64::consts::PI;
@@ -268,7 +269,7 @@ fn filter_ginseng(d: &InterpolationDetails, t: f64) -> f64 {
 }
 
 
-fn bessj1(x :f64) -> f64 {
+pub fn bessj1(x :f64) -> f64 {
     // For improvement consider https://www.cl.cam.ac.uk/~jrh13/papers/bessel.pdf
     // TODO: test jinc filters against C impl
     let ax = x.abs();
