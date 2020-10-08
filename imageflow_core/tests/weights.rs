@@ -2,7 +2,14 @@ extern crate imageflow_core;
 extern crate imageflow_helpers as hlp;
 extern crate imageflow_types as s;
 
+use itertools::Itertools;
+
+use imageflow_core::ffi::ImageflowContext;
 use imageflow_core::imaging::weights::InterpolationDetails;
+
+// extern "C" {
+//     fn flow_interpolation_line_contributions_create(context:&ImageflowContext,to_width:i32,from_width:i32,details:);
+// }
 
 fn function_bounded(details: &InterpolationDetails,
                     input_start_value: f64, stop_at_abs: f64, input_step: f64, result_low_threshold: f64,
@@ -23,7 +30,24 @@ fn function_bounded(details: &InterpolationDetails,
                      result_low_threshold, result_high_threshold)
 }
 
-
+// struct InterpolationLineContributions {
+//     ContribRow: *mut InterpolationPixelContribution,
+//     /* Row (or column) of contribution weights */
+//     WindowSize: u32,
+//     /* Filter window size (of affecting source pixels) */
+//     LineLength: u32,
+//     /* Length of line (no. or rows / cols) */
+//     percent_negative: f64,
+//     /* Estimates the sharpening effect actually applied*/
+// };
+//
+// struct InterpolationPixelContribution {
+//     Weights: *mut f64,
+//     /* Normalized weights of neighboring pixels */
+//     Left: i32,
+//     /* Bounds of source pixels window */
+//     Right: i32,
+// }
 
 macro_rules! function_bounded_bi {
     ($details:expr,$input_start_value:expr, $stop_at_abs:expr, $input_step:expr, $result_low_threshold:expr,$result_high_threshold:expr) => {
@@ -79,4 +103,36 @@ fn test_interpolation_filter() {
     test_filter(s::Filter::Lanczos2Sharp, 0.954, 1.86, 1f64, 0.08, 2f64);
     test_filter(s::Filter::Lanczos, 1f64, 2f64, 1f64, 0.1, 3f64);
     test_filter(s::Filter::Lanczos2Sharp, 0.98, 1.9625, 1f64, 0.1, 2.943)
+}
+
+#[test]
+fn test_output_weight() {
+    use s::Filter::*;
+    let scalings: [u32; 44] = [/*downscale to 1px*/ 1, 1, 2, 1, 3, 1, 4, 1, 5, 1, 6, 1, 7, 1, 17, 1,
+        /*upscale from 2px*/ 2, 3, 2, 4, 2, 5, 2, 17,
+        /*other*/ 11, 7, 7, 3,
+        /* IDCT kernel sizes */ 8, 8, 8, 7, 8, 6, 8, 5, 8, 4, 8, 3, 8, 2, 8, 1];
+    let filters = [RobidouxFast, RobidouxFast, RobidouxSharp, Ginseng, GinsengSharp, Lanczos, LanczosSharp, Lanczos2, Lanczos2Sharp, Cubic, CubicSharp, CatmullRom, Mitchell, CubicBSpline, Hermite, Jinc, RawLanczos3, RawLanczos3Sharp, RawLanczos2, RawLanczos2Sharp, Triangle, Linear, Box, CatmullRomFast, CatmullRomFastSharp, Fastest, MitchellFast, NCubic, NCubicSharp
+    ];
+    // let filters=[RobidouxFast,RobidouxFast];
+
+    for &filter in filters.iter() {
+        let details = InterpolationDetails::create(filter);
+        for i in (0..scalings.len()).step_by(2) {
+            let mut w = imageflow_core::imaging::weights::PixelRowWeights {
+                contrib_row: vec![],
+                window_size: 0,
+                line_length: 0,
+                percent_negative: 0.0,
+            };
+            println!("{:?} {} {}",filter,scalings[i+1], scalings[i]);
+            assert_eq!(imageflow_core::imaging::weights::populate_weights(&mut w, scalings[i+1], scalings[i], &details),true);
+            for output_pixel in w.contrib_row{
+                for current in output_pixel.right..=output_pixel.left{
+
+                }
+            }
+
+        }
+    }
 }

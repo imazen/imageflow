@@ -68,10 +68,10 @@ impl InterpolationDetails{
             Filter::Triangle | Filter::Linear
             => InterpolationDetails { window: 1f64, blur: 1f64, filter: filter_triangle, ..Default::default() },
 
-            // Filter::RawLanczos2 => InterpolationDetails { window: 2f64, blur: 1f64, filter: filter_sinc, ..Default::default() },
-            // Filter::RawLanczos3 => InterpolationDetails { window: 3f64, blur: 1f64, filter: filter_sinc, ..Default::default() },
-            // Filter::RawLanczos2Sharp => InterpolationDetails { window: 2f64, blur: 0.9549963639785485f64, filter: filter_sinc, ..Default::default() },
-            // Filter::RawLanczos3Sharp => InterpolationDetails { window: 3f64, blur: 0.9812505644269356f64, filter: filter_sinc, ..Default::default() },
+            Filter::RawLanczos2 => InterpolationDetails { window: 2f64, blur: 1f64, filter: filter_sinc, ..Default::default() },
+            Filter::RawLanczos3 => InterpolationDetails { window: 3f64, blur: 1f64, filter: filter_sinc, ..Default::default() },
+            Filter::RawLanczos2Sharp => InterpolationDetails { window: 2f64, blur: 0.9549963639785485f64, filter: filter_sinc, ..Default::default() },
+            Filter::RawLanczos3Sharp => InterpolationDetails { window: 3f64, blur: 0.9812505644269356f64, filter: filter_sinc, ..Default::default() },
             Filter::Lanczos2 => InterpolationDetails { window: 2f64, blur: 1f64, filter: filter_sinc_windowed, ..Default::default() },
             Filter::Lanczos => InterpolationDetails { window: 3f64, blur: 1f64, filter: filter_sinc_windowed, ..Default::default() },
             Filter::Lanczos2Sharp => InterpolationDetails { window: 2f64, blur: 0.9549963639785485f64, filter: filter_sinc_windowed, ..Default::default() },
@@ -86,13 +86,13 @@ impl InterpolationDetails{
             Filter::CubicSharp => InterpolationDetails::bicubic(2f64, 0.9549963639785485f64, 0f64, 1f64),
 
             Filter::CatmullRom => InterpolationDetails::bicubic(2f64, 1f64, 0f64, 0.5f64),
-            // Filter::CatmullRomFast => InterpolationDetails::bicubic(1f64, 1f64, 0f64, 0.5f64),
-            // Filter::CatmullRomFastSharp => InterpolationDetails::bicubic(1f64, 13.0f64
-               // /
-               // 16.0f64, 0f64, 0.5f64),
+            Filter::CatmullRomFast => InterpolationDetails::bicubic(1f64, 1f64, 0f64, 0.5f64),
+            Filter::CatmullRomFastSharp => InterpolationDetails::bicubic(1f64, 13.0f64
+               /
+                16.0f64, 0f64, 0.5f64),
 
             Filter::Mitchell => InterpolationDetails::bicubic(2f64, 1f64, 1.0f64 / 3.0f64, 1.0f64 / 3.0f64),
-            // Filter::MitchellFast => InterpolationDetails::bicubic(1f64, 1f64, 1.0f64 / 3.0f64, 1.0f64 / 3.0f64),
+            Filter::MitchellFast => InterpolationDetails::bicubic(1f64, 1f64, 1.0f64 / 3.0f64, 1.0f64 / 3.0f64),
             Filter::NCubic => InterpolationDetails::bicubic(2.5f64, 1.0f64
                 /
                 1.1685777620836933f64,
