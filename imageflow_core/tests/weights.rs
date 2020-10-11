@@ -142,3 +142,39 @@ fn test_output_weight() {
     }
     assert_eq!(output.trim(),include_str!("visuals/weights.txt").to_string().trim());
 }
+
+#[test]
+fn test_output_weight_symmetric() {
+    use s::Filter::*;
+    let scalings: [u32; 44] = [/*downscale to 1px*/ 1, 1, 2, 1, 3, 1, 4, 1, 5, 1, 6, 1, 7, 1, 17, 1,
+        /*upscale from 2px*/ 2, 3, 2, 4, 2, 5, 2, 17,
+        /*other*/ 11, 7, 7, 3,
+        /* IDCT kernel sizes */ 8, 8, 8, 7, 8, 6, 8, 5, 8, 4, 8, 3, 8, 2, 8, 1];
+    let filters = [RobidouxFast, Robidoux, RobidouxSharp, Ginseng, GinsengSharp, Lanczos, LanczosSharp, Lanczos2, Lanczos2Sharp, CubicFast,Cubic, CubicSharp, CatmullRom, Mitchell, CubicBSpline, Hermite, Jinc, RawLanczos3, RawLanczos3Sharp, RawLanczos2, RawLanczos2Sharp, Triangle, Linear, Box, CatmullRomFast, CatmullRomFastSharp, Fastest, MitchellFast, NCubic, NCubicSharp
+    ];
+    for &filter in filters.iter(){
+        let details = InterpolationDetails::create(filter);
+        for i in (0..scalings.len()).step_by(2) {
+            let mut w = imageflow_core::imaging::weights::PixelRowWeights {
+                contrib_row: vec![],
+                window_size: 0,
+                line_length: 0,
+                percent_negative: 0.0,
+            };
+            assert_eq!(imageflow_core::imaging::weights::populate_weights(&mut w, scalings[i+1], scalings[i], &details),true);
+            for o_index in 0..w.contrib_row.len()/2{
+                let output_pixel=&w.contrib_row[o_index];
+                let opposite_output_pixel=&w.contrib_row[w.contrib_row.len()-1-o_index];
+               assert_eq!((scalings[i] as i32)-1-opposite_output_pixel.right,output_pixel.left);
+               assert_eq!((scalings[i] as i32)-1-output_pixel.right,opposite_output_pixel.left);
+                for (w_index,&weight) in output_pixel.weights.iter().enumerate(){
+                    assert_eq!((weight-opposite_output_pixel.weights[opposite_output_pixel.weights.len()-1-w_index]).abs()<1e-5,true);
+                    assert_eq!(weight<5f32,true)
+                }
+            }
+            //let expexted_output=std::fs::read("./weights.txt").expect("unable to find the file");
+
+        }
+    }
+    //assert_eq!(output.trim(),include_str!("visuals/weights.txt").to_string().trim());
+}
