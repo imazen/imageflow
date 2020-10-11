@@ -76,7 +76,7 @@ impl InterpolationDetails{
             Filter::Lanczos => InterpolationDetails { window: 3f64, blur: 1f64, filter: filter_sinc_windowed, ..Default::default() },
             Filter::Lanczos2Sharp => InterpolationDetails { window: 2f64, blur: 0.9549963639785485f64, filter: filter_sinc_windowed, ..Default::default() },
             Filter::LanczosSharp => InterpolationDetails { window: 3f64, blur: 0.9812505644269356f64, filter: filter_sinc_windowed, ..Default::default() },
-            // Filter::CubicFast => InterpolationDetails { window: 2f64, blur: 1f64, filter: filter_bicubic_fast, ..Default::default() },
+            Filter::CubicFast => InterpolationDetails { window: 2f64, blur: 1f64, filter: filter_bicubic_fast, ..Default::default() },
             Filter::Box => InterpolationDetails { window: 0.5f64, blur: 1f64, filter: filter_box, ..Default::default() },
             Filter::Ginseng => InterpolationDetails { window: 3f64, blur: 1f64, filter: filter_ginseng, ..Default::default() },
             Filter::GinsengSharp => InterpolationDetails { window: 3f64, blur: 0.9812505644269356f64, filter: filter_ginseng, ..Default::default() },
@@ -466,7 +466,7 @@ pub  fn populate_weights(container: &mut dyn WeightContainer, output_line_size :
         let mut shrunk_right_src_pixel = right_src_pixel;
         while weights.ends_with(&[0f32]) {
             shrunk_right_src_pixel -= 1;
-            weights.truncate(1);
+            weights.truncate(weights.len() - 1);
         }
         let mut shrunk_left_src_pixel = left_src_pixel;
         while weights.starts_with(&[0f32]) {

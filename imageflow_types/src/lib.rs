@@ -106,8 +106,8 @@ pub enum Filter {
     Lanczos2 = 8,
     #[serde(rename="lanczos_2_sharp")]
     Lanczos2Sharp = 9,
-    // #[serde(rename="cubic_fast")]
-    // CubicFast = 10,
+    #[serde(rename="cubic_fast")]
+    CubicFast = 10,
     #[serde(rename="cubic")]
     Cubic = 11,
     #[serde(rename="cubic_sharp")]
@@ -149,6 +149,7 @@ pub enum Filter {
     NCubic = 29,
     #[serde(rename="n_cubic_sharp")]
     NCubicSharp = 30,
+
 }
 //
 // impl FromStr for Filter {

@@ -112,12 +112,13 @@ fn test_output_weight() {
         /*upscale from 2px*/ 2, 3, 2, 4, 2, 5, 2, 17,
         /*other*/ 11, 7, 7, 3,
         /* IDCT kernel sizes */ 8, 8, 8, 7, 8, 6, 8, 5, 8, 4, 8, 3, 8, 2, 8, 1];
-    let filters = [RobidouxFast, RobidouxFast, RobidouxSharp, Ginseng, GinsengSharp, Lanczos, LanczosSharp, Lanczos2, Lanczos2Sharp, Cubic, CubicSharp, CatmullRom, Mitchell, CubicBSpline, Hermite, Jinc, RawLanczos3, RawLanczos3Sharp, RawLanczos2, RawLanczos2Sharp, Triangle, Linear, Box, CatmullRomFast, CatmullRomFastSharp, Fastest, MitchellFast, NCubic, NCubicSharp
+    let filters = [RobidouxFast, Robidoux, RobidouxSharp, Ginseng, GinsengSharp, Lanczos, LanczosSharp, Lanczos2, Lanczos2Sharp, CubicFast,Cubic, CubicSharp, CatmullRom, Mitchell, CubicBSpline, Hermite, Jinc, RawLanczos3, RawLanczos3Sharp, RawLanczos2, RawLanczos2Sharp, Triangle, Linear, Box, CatmullRomFast, CatmullRomFastSharp, Fastest, MitchellFast, NCubic, NCubicSharp
     ];
     // let filters=[RobidouxFast,RobidouxFast];
-
-    for &filter in filters.iter() {
+    let mut output=String::from("filter, from_width, to_width, weights");
+    for (index,&filter) in filters.iter().enumerate() {
         let details = InterpolationDetails::create(filter);
+
         for i in (0..scalings.len()).step_by(2) {
             let mut w = imageflow_core::imaging::weights::PixelRowWeights {
                 contrib_row: vec![],
@@ -125,14 +126,19 @@ fn test_output_weight() {
                 line_length: 0,
                 percent_negative: 0.0,
             };
-            println!("{:?} {} {}",filter,scalings[i+1], scalings[i]);
+            output.push_str(&format!("\r\nfilter_{:0>2} ({: >2}px to {: >2}px):",index+1,scalings[i],scalings[i+1]));
             assert_eq!(imageflow_core::imaging::weights::populate_weights(&mut w, scalings[i+1], scalings[i], &details),true);
-            for output_pixel in w.contrib_row{
-                for current in output_pixel.right..=output_pixel.left{
-
+            for (o_index,output_pixel) in w.contrib_row.iter().enumerate(){
+                output.push_str(&format!(" x={} from ",o_index));
+                for (w_index,&weight) in output_pixel.weights.iter().enumerate(){
+                    output.push_str(if w_index==0 {"(" } else {" "});
+                    output.push_str(&format!("{:.6}",weight));
                 }
+                output.push_str("),");
             }
+            //let expexted_output=std::fs::read("./weights.txt").expect("unable to find the file");
 
         }
     }
+    assert_eq!(output.trim(),include_str!("visuals/weights.txt").to_string().trim());
 }
