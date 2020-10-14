@@ -135,8 +135,6 @@ fn test_output_weight() {
                 }
                 output.push_str("),");
             }
-            //let expexted_output=std::fs::read("./weights.txt").expect("unable to find the file");
-
         }
     }
     assert_eq!(output.trim(),include_str!("visuals/weights.txt").to_string().trim());
