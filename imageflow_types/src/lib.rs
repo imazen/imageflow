@@ -106,8 +106,8 @@ pub enum Filter {
     Lanczos2 = 8,
     #[serde(rename="lanczos_2_sharp")]
     Lanczos2Sharp = 9,
-    #[serde(rename="cubic_fast")]
-    CubicFast = 10,
+    // #[serde(rename="cubic_fast")]
+    // CubicFast = 10,
     #[serde(rename="cubic")]
     Cubic = 11,
     #[serde(rename="cubic_sharp")]
@@ -122,34 +122,33 @@ pub enum Filter {
     Hermite = 16,
     #[serde(rename="jinc")]
     Jinc = 17,
-    #[serde(rename="raw_lanczos_3")]
-    RawLanczos3 = 18,
-    #[serde(rename="raw_lanczos_3_sharp")]
-    RawLanczos3Sharp = 19,
-    #[serde(rename="raw_lanczos_2")]
-    RawLanczos2 = 20,
-    #[serde(rename="raw_lanczos_2_sharp")]
-    RawLanczos2Sharp = 21,
+    // #[serde(rename="raw_lanczos_3")]
+    // RawLanczos3 = 18,
+    // #[serde(rename="raw_lanczos_3_sharp")]
+    // RawLanczos3Sharp = 19,
+    // #[serde(rename="raw_lanczos_2")]
+    // RawLanczos2 = 20,
+    // #[serde(rename="raw_lanczos_2_sharp")]
+    // RawLanczos2Sharp = 21,
     #[serde(rename="triangle")]
     Triangle = 22,
     #[serde(rename="linear")]
     Linear = 23,
     #[serde(rename="box")]
     Box = 24,
-    #[serde(rename="catmull_rom_fast")]
-    CatmullRomFast = 25,
-    #[serde(rename="catmull_rom_fast_sharp")]
-    CatmullRomFastSharp = 26,
+    // #[serde(rename="catmull_rom_fast")]
+    // CatmullRomFast = 25,
+    // #[serde(rename="catmull_rom_fast_sharp")]
+    // CatmullRomFastSharp = 26,
 
     #[serde(rename="fastest")]
     Fastest = 27,
-    #[serde(rename="mitchell_fast")]
-    MitchellFast = 28,
+   // #[serde(rename="mitchell_fast")]
+   // MitchellFast = 28,
     #[serde(rename="n_cubic")]
     NCubic = 29,
     #[serde(rename="n_cubic_sharp")]
     NCubicSharp = 30,
-
 }
 //
 // impl FromStr for Filter {

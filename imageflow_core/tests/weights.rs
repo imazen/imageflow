@@ -58,7 +58,7 @@ macro_rules! function_bounded_bi {
     }
 }
 
-fn test_filter(filter: s::Filter, expected_first_crossing: f64, expected_second_crossing: f64, expected_near0: f64, near0_threshold: f64, expected_end: f64) {
+fn test_filter(filter: imageflow_core::imaging::weights::Filter, expected_first_crossing: f64, expected_second_crossing: f64, expected_near0: f64, near0_threshold: f64, expected_end: f64) {
     let details = imageflow_core::imaging::weights::InterpolationDetails::create(filter);
     let top = (details.filter)(&details, 0.0);
 
@@ -90,31 +90,30 @@ fn test_filter(filter: s::Filter, expected_first_crossing: f64, expected_second_
 
 #[test]
 fn test_interpolation_filter() {
-    test_filter(s::Filter::Cubic, 1f64, 2f64, 1f64, 0.08f64, 2f64);
-    test_filter(s::Filter::Hermite, 0f64, 0f64, 0.99f64, 0.08f64, 1f64);
-    test_filter(s::Filter::Triangle, 0f64, 0f64, 0.99f64, 0.08f64, 1f64);
-    test_filter(s::Filter::Box, 0f64, 0f64, 0.51f64, 0.001f64, 0.51f64);
-    test_filter(s::Filter::CatmullRom, 1f64, 2f64, 1f64, 0.08f64, 2f64);
-    test_filter(s::Filter::CubicBSpline, 0f64, 0f64, 1.75f64, 0.08f64, 2f64);
-    test_filter(s::Filter::Mitchell, 8.0 / 7.0, 2.0, 1f64, 0.08, 2.0);
-    test_filter(s::Filter::Robidoux, 1.1685777620836932, 2f64, 1f64, 0.08, 2f64);
-    test_filter(s::Filter::RobidouxSharp, 1.105822933719019, 2f64, 1f64, 0.08, 2f64);
-    test_filter(s::Filter::Lanczos2, 1f64, 2f64, 1f64, 0.08, 2f64);
-    test_filter(s::Filter::Lanczos2Sharp, 0.954, 1.86, 1f64, 0.08, 2f64);
-    test_filter(s::Filter::Lanczos, 1f64, 2f64, 1f64, 0.1, 3f64);
-    test_filter(s::Filter::Lanczos2Sharp, 0.98, 1.9625, 1f64, 0.1, 2.943)
+    test_filter(imageflow_core::imaging::weights::Filter::Cubic, 1f64, 2f64, 1f64, 0.08f64, 2f64);
+    test_filter(imageflow_core::imaging::weights::Filter::Hermite, 0f64, 0f64, 0.99f64, 0.08f64, 1f64);
+    test_filter(imageflow_core::imaging::weights::Filter::Triangle, 0f64, 0f64, 0.99f64, 0.08f64, 1f64);
+    test_filter(imageflow_core::imaging::weights::Filter::Box, 0f64, 0f64, 0.51f64, 0.001f64, 0.51f64);
+    test_filter(imageflow_core::imaging::weights::Filter::CatmullRom, 1f64, 2f64, 1f64, 0.08f64, 2f64);
+    test_filter(imageflow_core::imaging::weights::Filter::CubicBSpline, 0f64, 0f64, 1.75f64, 0.08f64, 2f64);
+    test_filter(imageflow_core::imaging::weights::Filter::Mitchell, 8.0 / 7.0, 2.0, 1f64, 0.08, 2.0);
+    test_filter(imageflow_core::imaging::weights::Filter::Robidoux, 1.1685777620836932, 2f64, 1f64, 0.08, 2f64);
+    test_filter(imageflow_core::imaging::weights::Filter::RobidouxSharp, 1.105822933719019, 2f64, 1f64, 0.08, 2f64);
+    test_filter(imageflow_core::imaging::weights::Filter::Lanczos2, 1f64, 2f64, 1f64, 0.08, 2f64);
+    test_filter(imageflow_core::imaging::weights::Filter::Lanczos2Sharp, 0.954, 1.86, 1f64, 0.08, 2f64);
+    test_filter(imageflow_core::imaging::weights::Filter::Lanczos, 1f64, 2f64, 1f64, 0.1, 3f64);
+    test_filter(imageflow_core::imaging::weights::Filter::Lanczos2Sharp, 0.98, 1.9625, 1f64, 0.1, 2.943)
 }
 
 #[test]
 fn test_output_weight() {
-    use s::Filter::*;
+    use imageflow_core::imaging::weights::Filter::*;
     let scalings: [u32; 44] = [/*downscale to 1px*/ 1, 1, 2, 1, 3, 1, 4, 1, 5, 1, 6, 1, 7, 1, 17, 1,
         /*upscale from 2px*/ 2, 3, 2, 4, 2, 5, 2, 17,
         /*other*/ 11, 7, 7, 3,
         /* IDCT kernel sizes */ 8, 8, 8, 7, 8, 6, 8, 5, 8, 4, 8, 3, 8, 2, 8, 1];
     let filters = [RobidouxFast, Robidoux, RobidouxSharp, Ginseng, GinsengSharp, Lanczos, LanczosSharp, Lanczos2, Lanczos2Sharp, CubicFast,Cubic, CubicSharp, CatmullRom, Mitchell, CubicBSpline, Hermite, Jinc, RawLanczos3, RawLanczos3Sharp, RawLanczos2, RawLanczos2Sharp, Triangle, Linear, Box, CatmullRomFast, CatmullRomFastSharp, Fastest, MitchellFast, NCubic, NCubicSharp
     ];
-    // let filters=[RobidouxFast,RobidouxFast];
     let mut output=String::from("filter, from_width, to_width, weights");
     for (index,&filter) in filters.iter().enumerate() {
         let details = InterpolationDetails::create(filter);
@@ -145,7 +144,7 @@ fn test_output_weight() {
 
 #[test]
 fn test_output_weight_symmetric() {
-    use s::Filter::*;
+    use imageflow_core::imaging::weights::Filter::*;
     let scalings: [u32; 44] = [/*downscale to 1px*/ 1, 1, 2, 1, 3, 1, 4, 1, 5, 1, 6, 1, 7, 1, 17, 1,
         /*upscale from 2px*/ 2, 3, 2, 4, 2, 5, 2, 17,
         /*other*/ 11, 7, 7, 3,
@@ -162,19 +161,18 @@ fn test_output_weight_symmetric() {
                 percent_negative: 0.0,
             };
             assert_eq!(imageflow_core::imaging::weights::populate_weights(&mut w, scalings[i+1], scalings[i], &details),true);
-            for o_index in 0..w.contrib_row.len()/2{
-                let output_pixel=&w.contrib_row[o_index];
-                let opposite_output_pixel=&w.contrib_row[w.contrib_row.len()-1-o_index];
-               assert_eq!((scalings[i] as i32)-1-opposite_output_pixel.right,output_pixel.left);
-               assert_eq!((scalings[i] as i32)-1-output_pixel.right,opposite_output_pixel.left);
-                for (w_index,&weight) in output_pixel.weights.iter().enumerate(){
-                    assert_eq!((weight-opposite_output_pixel.weights[opposite_output_pixel.weights.len()-1-w_index]).abs()<1e-5,true);
-                    assert_eq!(weight<5f32,true)
+            for o_index in 0..w.contrib_row.len()/2 {
+                let output_pixel = &w.contrib_row[o_index];
+                let opposite_output_pixel = &w.contrib_row[w.contrib_row.len() - 1 - o_index];
+                assert_eq!((scalings[i] as i32) - 1 - opposite_output_pixel.right, output_pixel.left);
+                assert_eq!((scalings[i] as i32) - 1 - output_pixel.right, opposite_output_pixel.left);
+                for (w_index, &weight) in output_pixel.weights.iter().enumerate() {
+                    assert_eq!((weight - opposite_output_pixel.weights[opposite_output_pixel.weights.len() - 1 - w_index]).abs() < 1e-5, true);
+                    assert_eq!(weight < 5f32, true)
                 }
             }
-            //let expexted_output=std::fs::read("./weights.txt").expect("unable to find the file");
 
         }
     }
-    //assert_eq!(output.trim(),include_str!("visuals/weights.txt").to_string().trim());
+
 }
