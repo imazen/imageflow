@@ -1,0 +1,44 @@
+name: Macos
+
+on:
+  release:
+    types:
+      - published
+
+jobs:
+  build:
+    strategy:
+      matrix:
+        cpu: [native]
+    runs-on: macos-latest
+
+    steps:
+      - uses: actions/checkout@v2
+      - name: Cache cargo registry
+        uses: actions/cache@v1
+        with:
+          path: ~/.cargo/registry
+          key: ${{ runner.os }}-cargo-registry-${{ hashFiles('**/Cargo.lock') }}
+      - name: Cache cargo index
+        uses: actions/cache@v1
+        with:
+          path: ~/.cargo/git
+          key: ${{ runner.os }}-cargo1073325810292-index-${{ hashFiles('**/Cargo.lock') }}
+      - name: Cache cargo build
+        uses: actions/cache@v1
+        with:
+          path: target
+          key: ${{ runner.os }}-cargo-build-target-${{ hashFiles('**/Cargo.lock') }}
+      - name: Build
+        run: RUSTFLAGS='-C target-feature=+crt-static -C target-cpu=${{matrix.cpu}}' cargo build --release
+        shell: bash
+      - name: Zip file
+        run: tar -czvf imageflow_macos_x86_${{matrix.cpu}}.tar.gz ./target/release/libimageflow.a
+      - name: Upload Release Asset
+        id: upload-release-asset
+        uses: Shopify/upload-to-release@master
+        with:
+          path: ./imageflow_macos_x86_${{matrix.cpu}}.tar.gz
+          name: imageflow_macos_x86_${{matrix.cpu}}.tar.gz
+          content-type: application/zip
+          repo-token: ${{ secrets.GITHUB_TOKEN }}

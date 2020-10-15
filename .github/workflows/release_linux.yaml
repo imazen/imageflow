@@ -1,0 +1,51 @@
+name: Linux
+
+on:
+  release:
+    types:
+      - published
+jobs:
+  build:
+    strategy:
+      matrix:
+        cpu: [native, haswell]
+
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@master
+      - name: Cache cargo registry
+        uses: actions/cache@v1
+        with:
+          path: ~/.cargo/registry
+          key: ${{ runner.os }}-cargo-registry-${{ hashFiles('**/Cargo.lock') }}
+      - name: Cache cargo index
+        uses: actions/cache@v1
+        with:
+          path: ~/.cargo/git
+          key: ${{ runner.os }}-cargo1073325810292-index-${{ hashFiles('**/Cargo.lock') }}
+      - name: Cache cargo build
+        uses: actions/cache@v1
+        with:
+          path: target
+          key: ${{ runner.os }}-cargo-build-target-${{ hashFiles('**/Cargo.lock') }}
+      - name: Build
+        run: |
+          sudo add-apt-repository ppa:ubuntu-toolchain-r/test
+          sudo apt-get update
+          sudo apt-get install musl-tools musl musl-dev libssl-dev pkg-config g++
+          sudo mv /usr/bin/gcc-9 /usr/bin/gcc
+          sudo cp /usr/bin/g++-9 /usr/bin/musl-g++
+          rustup target add x86_64-unknown-linux-musl
+          gcc --version
+          PKG_CONFIG_ALLOW_CROSS=1 RUSTFLAGS='-C target-feature=+crt-static -C target-cpu=${{matrix.cpu}}' cargo build --target x86_64-unknown-linux-musl --release
+      - name: Zip file
+        run: tar -czvf imageflow_linux_x86_${{matrix.cpu}}.tar.gz ./target/x86_64-unknown-linux-musl/release/libimageflow.a
+      - name: Upload Release Asset
+        id: upload-release-asset
+        uses: Shopify/upload-to-release@master
+        with:
+          path: ./imageflow_linux_x86_${{matrix.cpu}}.tar.gz
+          name: imageflow_linux_x86_${{matrix.cpu}}.tar.gz
+          content-type: application/zip
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
