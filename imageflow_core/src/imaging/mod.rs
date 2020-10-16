@@ -1,4 +1,4 @@
-mod weights;
+pub mod weights;
 //
 //
 //struct ConvolutionKernel {
