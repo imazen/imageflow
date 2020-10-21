@@ -14,68 +14,38 @@ use serde::{Serialize,Deserialize};
 
 /// Named interpolation function+configuration presets
 #[repr(C)]
-#[derive(Copy, Serialize, Deserialize, Clone, PartialEq, PartialOrd, Debug)]
+#[derive(Copy, Clone, PartialEq, PartialOrd, Debug)]
 pub enum Filter {
-    #[serde(rename="robidoux_fast")]
     RobidouxFast = 1,
-    #[serde(rename="robidoux")]
     Robidoux = 2,
-    #[serde(rename="robidoux_sharp")]
     RobidouxSharp = 3,
-    #[serde(rename="ginseng")]
     Ginseng = 4,
-    #[serde(rename="ginseng_sharp")]
     GinsengSharp = 5,
-    #[serde(rename="lanczos")]
     Lanczos = 6,
-    #[serde(rename="lanczos_sharp")]
     LanczosSharp = 7,
-    #[serde(rename="lanczos_2")]
     Lanczos2 = 8,
-    #[serde(rename="lanczos_2_sharp")]
     Lanczos2Sharp = 9,
-    #[serde(rename="cubic_fast")]
     CubicFast = 10,
-    #[serde(rename="cubic")]
     Cubic = 11,
-    #[serde(rename="cubic_sharp")]
     CubicSharp = 12,
-    #[serde(rename="catmull_rom")]
     CatmullRom = 13,
-    #[serde(rename="mitchell")]
     Mitchell = 14,
-    #[serde(rename="cubic_b_spline")]
     CubicBSpline = 15,
-    #[serde(rename="hermite")]
     Hermite = 16,
-    #[serde(rename="jinc")]
     Jinc = 17,
-    #[serde(rename="raw_lanczos_3")]
     RawLanczos3 = 18,
-    #[serde(rename="raw_lanczos_3_sharp")]
     RawLanczos3Sharp = 19,
-    #[serde(rename="raw_lanczos_2")]
     RawLanczos2 = 20,
-    #[serde(rename="raw_lanczos_2_sharp")]
     RawLanczos2Sharp = 21,
-    #[serde(rename="triangle")]
     Triangle = 22,
-    #[serde(rename="linear")]
     Linear = 23,
-    #[serde(rename="box")]
     Box = 24,
-    #[serde(rename="catmull_rom_fast")]
     CatmullRomFast = 25,
-    #[serde(rename="catmull_rom_fast_sharp")]
     CatmullRomFastSharp = 26,
 
-    #[serde(rename="fastest")]
     Fastest = 27,
-    #[serde(rename="mitchell_fast")]
     MitchellFast = 28,
-    #[serde(rename="n_cubic")]
     NCubic = 29,
-    #[serde(rename="n_cubic_sharp")]
     NCubicSharp = 30,
 
 }
@@ -369,27 +339,91 @@ static double filter_window_jinc (const struct flow_interpolation_details * d, d
 }
 
 
+#[derive(Debug,  Clone, PartialEq, Eq)]
+pub enum WeightsError{
+    NoPixelInputs,
+    ContribDataAllocation,
+    PixelWeightsAllocation,
+    SourcePixelCountTooLarge
+}
 
 
 
  pub trait WeightContainer{
-    fn try_reserve(&mut self, total_output_pixels: u32, inputs_per_outputs: u32) -> bool;
-    fn add_output_pixel(&mut self, left_input_pixel: u32, right_input_pixel: u32, weights: &[f32]) -> bool;
+    fn try_reserve(&mut self, total_output_pixels: u32, inputs_per_outputs: u32) -> Result<(),WeightsError>;
+    fn add_output_pixel(&mut self, left_input_pixel: u32, right_input_pixel: u32, weights: &[f32]) -> Result<(),WeightsError>;
 
 }
 
-//TODO: use an arena
-#[derive (  Clone )]
+#[derive(Clone)]
 #[repr(C)]
 pub struct PixelRowWeights {
-    pub contrib_row: Vec<PixelWeights>,
-    pub window_size: u32,
-    pub line_length: u32,
-    pub percent_negative: f64,
+    pub contrib_row: Vec<PixelWeightIndexes>,
+    pub weights: Vec<f32>,
 }
-#[derive (  Clone )]
+#[derive(Clone)]
 #[repr(C)]
-pub struct PixelWeights {
+pub struct PixelWeightIndexes {
+    /// index of weight for first input pixel
+    pub left_weight: u32,
+    /// index of weight for last input pixel
+    pub right_weight: u32,
+    /// index of first input pixel
+    pub left_pixel: u32,
+    /// index of last input pixel
+    pub right_pixel: u32,
+}
+
+impl WeightContainer for PixelRowWeights {
+    fn try_reserve(&mut self, total_output_pixels: u32, inputs_per_outputs: u32) -> Result<(),WeightsError> {
+        let space_needed = total_output_pixels as usize - self.contrib_row.len();
+        if space_needed > 0{
+            self.contrib_row.reserve_exact(space_needed)
+        }
+        let weight_space_needed = (inputs_per_outputs * total_output_pixels) as usize - self.weights.len();
+        if weight_space_needed > 0{
+            self.weights.reserve_exact(weight_space_needed);
+
+        }
+        Ok(()) //TODO: use fallible allocators in nightly mode
+    }
+
+    fn add_output_pixel(&mut self, left_input_pixel: u32, right_input_pixel: u32, weights: &[f32]) -> Result<(),WeightsError> {
+        if self.contrib_row.len() >= self.contrib_row.capacity() {
+            return Err(WeightsError::ContribDataAllocation);
+        }
+        if self.weights.len() + weights.len() > self.weights.capacity() {
+            return Err(WeightsError::PixelWeightsAllocation);
+        }
+        if weights.len() == 0 {
+            return Err(WeightsError::NoPixelInputs);
+        }
+
+
+        let left_weight = self.weights.len();
+        let right_weight = self.weights.len() + weights.len() - 1;
+
+        self.weights.extend_from_slice(weights);
+
+        self.contrib_row.push(PixelWeightIndexes {
+            left_weight: left_weight as u32,
+            right_weight: right_weight as u32,
+            left_pixel: left_input_pixel,
+            right_pixel: right_input_pixel
+        });
+        Ok(())
+    }
+}
+
+
+#[derive(Clone)]
+#[repr(C)]
+pub struct PixelRowWeightsSimple {
+    pub contrib_row: Vec<PixelWeightsSimple>,
+}
+#[derive(Clone)]
+#[repr(C)]
+pub struct PixelWeightsSimple {
     /// weights for input pixels
     pub weights: Vec<f32>,
     /// index of first input pixel
@@ -398,27 +432,27 @@ pub struct PixelWeights {
     pub right: i32,
 }
 
-impl WeightContainer for PixelRowWeights{
-    fn try_reserve(&mut self, total_output_pixels: u32, inputs_per_outputs: u32) -> bool {
-        let space_needed = total_output_pixels as usize - self.contrib_row.capacity();
+impl WeightContainer for PixelRowWeightsSimple {
+    fn try_reserve(&mut self, total_output_pixels: u32, inputs_per_outputs: u32) -> Result<(),WeightsError> {
+        let space_needed = total_output_pixels as usize - self.contrib_row.len();
         if space_needed > 0{
             self.contrib_row.reserve_exact(space_needed)
         }
-        true //TODO: use fallible allocators in nightly mode
+        Ok(()) //TODO: use fallible allocators in nightly mode
     }
 
-    fn add_output_pixel(&mut self, left_input_pixel: u32, right_input_pixel: u32, weights: &[f32]) -> bool {
+    fn add_output_pixel(&mut self, left_input_pixel: u32, right_input_pixel: u32, weights: &[f32]) -> Result<(),WeightsError> {
         if self.contrib_row.len() < self.contrib_row.capacity() {
-            self.contrib_row.push(PixelWeights { weights: weights.to_vec(), left: left_input_pixel as i32, right: right_input_pixel as i32});
-            true
+            self.contrib_row.push(PixelWeightsSimple { weights: weights.to_vec(), left: left_input_pixel as i32, right: right_input_pixel as i32});
+            Ok(())
         }else{
-            false
+            Err(WeightsError::ContribDataAllocation)
         }
 
     }
 }
-pub  fn populate_weights(container: &mut dyn WeightContainer, output_line_size :u32,
-                         input_line_size :u32,details: &InterpolationDetails) -> bool {
+pub  fn populate_weights<T:WeightContainer>(container: &mut T, output_line_size :u32,
+                         input_line_size :u32,details: &InterpolationDetails) -> Result<(),WeightsError> {
     let sharpen_ratio: f64 = details.calculate_percent_negative_weight();
     let desired_sharpen_ratio: f64 =
         1.0f64.min(
@@ -435,9 +469,8 @@ pub  fn populate_weights(container: &mut dyn WeightContainer, output_line_size :
         ((2i32 as f64 * (half_source_window - 0.00001f64)).ceil() as
             i32 + 1i32) as u32;
 
-    if !container.try_reserve(output_line_size, allocated_window_size) {
-        return false
-    }
+    container.try_reserve(output_line_size, allocated_window_size)?;
+
 
 
     let filter_func = details.filter;
@@ -471,7 +504,7 @@ pub  fn populate_weights(container: &mut dyn WeightContainer, output_line_size :
                 u32);
         if source_pixel_count > allocated_window_size {
             //flow_status_Invalid_internal_state,
-            return false;
+            return Err(WeightsError::SourcePixelCountTooLarge);
         }
 
         for ix in left_src_pixel..=right_src_pixel {
@@ -544,12 +577,10 @@ pub  fn populate_weights(container: &mut dyn WeightContainer, output_line_size :
             weights.remove(0);
         }
 
-        if !container.add_output_pixel(shrunk_left_src_pixel, shrunk_right_src_pixel, &weights) {
-            return false;
-        }
+        container.add_output_pixel(shrunk_left_src_pixel, shrunk_right_src_pixel, &weights)?;
     }
     //(*res).percent_negative = negative_area / positive_area;
-    return true
+    Ok(())
 }
 //
 //

@@ -116,17 +116,15 @@ fn test_output_weight() {
         let details = InterpolationDetails::create(filter);
 
         for i in (0..scalings.len()).step_by(2) {
-            let mut w = imageflow_core::imaging::weights::PixelRowWeights {
+            let mut w = imageflow_core::imaging::weights::PixelRowWeights{
                 contrib_row: vec![],
-                window_size: 0,
-                line_length: 0,
-                percent_negative: 0.0,
+                weights: vec![]
             };
             output.push_str(&format!("\r\nfilter_{:0>2} ({: >2}px to {: >2}px):",index+1,scalings[i],scalings[i+1]));
-            assert_eq!(imageflow_core::imaging::weights::populate_weights(&mut w, scalings[i+1], scalings[i], &details),true);
+            assert_eq!(imageflow_core::imaging::weights::populate_weights(&mut w, scalings[i+1], scalings[i], &details),Ok(()));
             for (o_index,output_pixel) in w.contrib_row.iter().enumerate(){
                 output.push_str(&format!(" x={} from ",o_index));
-                for (w_index,&weight) in output_pixel.weights.iter().enumerate(){
+                for (w_index,&weight) in w.weights[output_pixel.left_weight as usize..=output_pixel.right_weight as usize].iter().enumerate(){
                     output.push_str(if w_index==0 {"(" } else {" "});
                     output.push_str(&format!("{:.6}",weight));
                 }
@@ -151,18 +149,17 @@ fn test_output_weight_symmetric() {
         for i in (0..scalings.len()).step_by(2) {
             let mut w = imageflow_core::imaging::weights::PixelRowWeights {
                 contrib_row: vec![],
-                window_size: 0,
-                line_length: 0,
-                percent_negative: 0.0,
+                weights: vec![]
             };
-            assert_eq!(imageflow_core::imaging::weights::populate_weights(&mut w, scalings[i+1], scalings[i], &details),true);
+            assert_eq!(imageflow_core::imaging::weights::populate_weights(&mut w, scalings[i+1], scalings[i], &details),Ok(()));
             for o_index in 0..w.contrib_row.len()/2 {
                 let output_pixel = &w.contrib_row[o_index];
                 let opposite_output_pixel = &w.contrib_row[w.contrib_row.len() - 1 - o_index];
-                assert_eq!((scalings[i] as i32) - 1 - opposite_output_pixel.right, output_pixel.left);
-                assert_eq!((scalings[i] as i32) - 1 - output_pixel.right, opposite_output_pixel.left);
-                for (w_index, &weight) in output_pixel.weights.iter().enumerate() {
-                    assert_eq!((weight - opposite_output_pixel.weights[opposite_output_pixel.weights.len() - 1 - w_index]).abs() < 1e-5, true);
+                assert_eq!((scalings[i] as i32) - 1 - opposite_output_pixel.right_pixel as i32, output_pixel.left_pixel as i32);
+                assert_eq!((scalings[i] as i32) - 1 - output_pixel.right_pixel as i32, opposite_output_pixel.left_pixel as i32);
+                for (w_index, &weight) in w.weights[output_pixel.left_weight as usize..=output_pixel.right_weight as usize].iter().enumerate() {
+                    let opposite_weights = &w.weights[opposite_output_pixel.left_weight as usize..=opposite_output_pixel.right_weight as usize];
+                    assert_eq!((weight - opposite_weights[opposite_weights.len() - 1 - w_index]).abs() < 1e-5, true);
                     assert_eq!(weight < 5f32, true)
                 }
             }
