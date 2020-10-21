@@ -38,6 +38,9 @@ impl NodeDefOneInputExpand for ScaleDef {
             let size_differs = w != parent.w as u32 || h != parent.h as u32;
             let downscaling = w < parent.w as u32 || h < parent.h as u32;
             let upscaling = w > parent.w as u32 || h > parent.h as u32;
+            let matte_color = hints.as_ref().and_then(|h| h.background_color.as_ref());
+            let apply_matte = parent.fmt == PixelFormat::Bgra32 &&
+                matte_color != Some(&s::Color::Transparent) && matte_color != None;
 
             let sharpen_percent_raw = hints.as_ref().and_then(|h| h.sharpen_percent).unwrap_or(0f32);
 
@@ -60,7 +63,8 @@ impl NodeDefOneInputExpand for ScaleDef {
                 _ => false
             };
 
-            if resample {
+            // TODO: apply matte in a more efficient way than resampling.
+            if resample || apply_matte {
                 let scale2d_params = imageflow_types::Node::Resample2D {
                     w,
                     h,
