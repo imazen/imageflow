@@ -47,7 +47,7 @@ pub enum Filter {
     MitchellFast = 28,
     NCubic = 29,
     NCubicSharp = 30,
-
+    LegacyIDCTFilter = 31
 }
 
 
@@ -148,6 +148,12 @@ impl InterpolationDetails{
             Filter::Robidoux => InterpolationDetails::bicubic(2f64, 1.0f64,
                                                               0.3782157550939987f64,
                                                               0.3108921224530007f64),
+
+            Filter::LegacyIDCTFilter => InterpolationDetails::bicubic(2f64, 1. / 1.1685777620836932,
+                                                                      0.3782157550939987f64,
+                                                                      0.3108921224530007f64),
+
+
             Filter::Fastest => InterpolationDetails::bicubic(0.74f64,
                                                              0.74f64,
                                                              0.3782157550939987f64,
