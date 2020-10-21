@@ -54,7 +54,7 @@ fn test_transparent_png_to_jpeg() {
         POPULATE_CHECKSUMS,
         DEBUG_GRAPH,
         Constraints {
-            similarity: Similarity::AllowDssimMatch(0.0, 0.00001),
+            similarity: Similarity::AllowDssimMatch(0.0, 0.002),
             max_file_size: None
         },
         vec![
