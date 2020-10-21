@@ -475,7 +475,7 @@ pub  fn populate_weights(container: &mut dyn WeightContainer, output_line_size :
         }
 
         for ix in left_src_pixel..=right_src_pixel {
-            let mut tx = ix - left_src_pixel;
+            let tx = ix - left_src_pixel;
             let mut add: f64 =
                 filter_func(details,
                             downscale_factor
@@ -521,7 +521,7 @@ pub  fn populate_weights(container: &mut dyn WeightContainer, output_line_size :
             }
         }
         //printf("\n");
-        for mut v in weights.iter_mut() {
+        for v in weights.iter_mut() {
             if *v < 0f32 {
                 *v *= neg_factor;
                 negative_area -= *v as f64;

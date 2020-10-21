@@ -2,9 +2,6 @@ extern crate imageflow_core;
 extern crate imageflow_helpers as hlp;
 extern crate imageflow_types as s;
 
-use itertools::Itertools;
-
-use imageflow_core::ffi::ImageflowContext;
 use imageflow_core::imaging::weights::InterpolationDetails;
 
 // extern "C" {
