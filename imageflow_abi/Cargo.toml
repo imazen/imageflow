@@ -17,11 +17,11 @@ libc = "0.2"
 imageflow_core = { path = "../imageflow_core", version = "*"}
 backtrace = "*"
 smallvec="*"
-base64="0.12"
+base64="0.13"
 
 [build-dependencies]
 imageflow_helpers = { path = "../imageflow_helpers", version = "*"}
-cbindgen = "0.14.1"
+cbindgen = "0.15"
 regex = "1"
 
 [features]
