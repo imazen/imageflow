@@ -286,6 +286,7 @@ static void wrap_jpeg_idct_method_selector(j_decompress_ptr codec_info, jpeg_com
 
     if (scaled > 0 && scaled < 8 && state->scale_luma_spatially) {
         if (state->gamma_correct_for_srgb_during_spatial_luma_scaling) {
+            //fprintf(stderr, "jpeg_idct_spatial_srgb_8_to_%d", scaled);
             switch (scaled) {
                 case 1:
                     *set_idct_method = jpeg_idct_spatial_srgb_1x1;
@@ -310,6 +311,7 @@ static void wrap_jpeg_idct_method_selector(j_decompress_ptr codec_info, jpeg_com
                     break;
             }
         } else {
+            //fprintf(stderr, "jpeg_idct_spatial_8_to_%d", scaled);
             switch (scaled) {
                 case 1:
                     *set_idct_method = jpeg_idct_spatial_1x1;
