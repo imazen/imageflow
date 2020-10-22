@@ -487,9 +487,9 @@ checksum = "212d0f5754cb6769937f4501cc0e67f4f4483c8d2c3e1e922ee9edbe4ab4c7c0"
 
 [[package]]
 name = "dssim"
-version = "2.11.3"
+version = "2.11.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ccf63d56cce067886bfb0431c8a50ae54ea978fe835e582ccb286b678c57da3e"
+checksum = "954e53471eecceda335998447b620822683db24eb1c5a1a2e676e85490e21ec0"
 dependencies = [
  "dssim-core",
  "getopts",
