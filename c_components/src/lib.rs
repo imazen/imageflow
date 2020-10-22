@@ -4,4 +4,4 @@ extern crate libpng_sys;
 
 extern crate libc;
 
-mod graphics;
+//mod graphics;
