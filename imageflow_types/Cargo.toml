@@ -22,7 +22,7 @@ imgref = "1.4.0"
 rgb = "0.8.11"
 
 [build-dependencies]
-quick-error = "1"
+quick-error = "2"
 chrono = "0.4"
 
 [features]
