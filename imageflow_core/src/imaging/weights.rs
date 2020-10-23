@@ -350,7 +350,8 @@ pub enum WeightsError{
     NoPixelInputs,
     ContribDataAllocation,
     PixelWeightsAllocation,
-    SourcePixelCountTooLarge
+    SourcePixelCountTooLarge,
+    TotalWeightZero
 }
 
 
@@ -557,6 +558,7 @@ pub  fn populate_weights<T:WeightContainer>(container: &mut T, output_line_size 
                 }
             } else if total_weight == 0f64{
                 // In this situation we have a problem to report
+                return Err(WeightsError::TotalWeightZero);
             }
         }
         //printf("\n");
