@@ -809,12 +809,12 @@ dependencies = [
 
 [[package]]
 name = "gif"
-version = "0.10.3"
+version = "0.11.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "471d90201b3b223f3451cd4ad53e34295f16a1df17b1edf3736d47761c3981af"
+checksum = "02efba560f227847cb41463a7395c514d127d4f74fff12ef0137fff1b84b96c4"
 dependencies = [
  "color_quant",
- "lzw",
+ "weezl",
 ]
 
 [[package]]
@@ -1606,12 +1606,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "lzw"
-version = "0.10.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7d947cbb889ed21c2a84be6ffbaebf5b4e0f4340638cba0444907e38b56be084"
-
-[[package]]
 name = "macro-attr"
 version = "0.2.1"
 source = "git+https://github.com/DanielKeep/rust-custom-derive.git#1252f258cdb9b7c9867f937c52c2f5c0e69a9c03"
@@ -1735,7 +1729,8 @@ checksum = "41f5c9112cb662acd3b204077e0de5bc66305fa8df65c8019d5adb10e9ab6e58"
 [[package]]
 name = "mount"
 version = "0.3.0"
-source = "git+https://github.com/iron/mount.git?rev=2c3d719be4c158d4ddbd8cdb402fafccdefec58c#2c3d719be4c158d4ddbd8cdb402fafccdefec58c"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "32245731923cd096899502fc4c4317cfd09f121e80e73f7f576cf3777a824256"
 dependencies = [
  "iron",
  "sequence_trie",
@@ -1744,8 +1739,7 @@ dependencies = [
 [[package]]
 name = "mount"
 version = "0.3.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "32245731923cd096899502fc4c4317cfd09f121e80e73f7f576cf3777a824256"
+source = "git+https://github.com/iron/mount.git?rev=2c3d719be4c158d4ddbd8cdb402fafccdefec58c#2c3d719be4c158d4ddbd8cdb402fafccdefec58c"
 dependencies = [
  "iron",
  "sequence_trie",
@@ -3485,6 +3479,12 @@ name = "wasm-bindgen-shared"
 version = "0.2.64"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7f7b90ea6c632dd06fd765d44542e234d5e63d9bb917ecd64d79778a13bd79ae"
+
+[[package]]
+name = "weezl"
+version = "0.1.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "8795d6e0e17485803cc10ef126bb8c0d59b7c61b219d66cfe0b3216dd0e8580a"
 
 [[package]]
 name = "winapi"
