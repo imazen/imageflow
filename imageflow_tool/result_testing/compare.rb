@@ -1,6 +1,6 @@
 #!/usr/bin/env ruby
 
-IMAGES = ["turtleegglarge.jpg","rings2.png","gamma_dalai_lama_gray.jpg","u1.jpg","waterhouse.jpg","u6.jpg","premult_test.png","gamma_test.jpg"]
+IMAGES = ["turtleegglarge.jpg","rings2.png","gamma_dalai_lama_gray.jpg","u1.jpg", "u1_square.jpg", "waterhouse.jpg","u6.jpg","premult_test.png","gamma_test.jpg"]
 
 
 version_info = `convert --version` + `./imageflow_tool --version` + `./imagew --version`
@@ -71,9 +71,9 @@ def create_command(tool, image, nogamma, filter, sharpen, w)
       command = "convert #{infile} -set colorspace sRGB -colorspace RGB #{magick_filter}  -resize #{w} -colorspace sRGB #{OUTPATH}#{outfile}"
     end
   end
-  if tool == :flow
-    outputformat = image =~ /\.png/ ? "png" : "png24"
-    command = "#{EXEPATH}imageflow_tool v1/querystring --command=\"&f.sharpen=#{sharpen}&w=#{w}&down.filter=#{filter}#{nogamma ? '&down.colorspace=srgb&up.colorspace=srgb' : ''}&decoder.min_precise_scaling_ratio=100&up.filter=#{filter}&format=#{outputformat}&scale=both\" --in #{infile} --out #{OUTPATH}#{outfile} --quiet"
+  if tool == :flow || tool == :flow_preshrink
+    outputformat = image =~ /\.png/ ? "png" : "png"
+    command = "#{EXEPATH}imageflow_tool v1/querystring --command=\"&f.sharpen=#{sharpen}&w=#{w}&down.filter=#{filter}#{nogamma ? '&down.colorspace=srgb&up.colorspace=srgb' : '&down.colorspace=linear&up.colorspace=linear'}&decoder.min_precise_scaling_ratio=#{tool == :flow ? 100 : 1}&up.filter=#{filter}&format=#{outputformat}&scale=both\" --in #{infile} --out #{OUTPATH}#{outfile} --quiet"
   end
   {command: command, image: image, gamma: nogamma ? 'nogamma' : 'linear', filter: filter, sharpen: sharpen,
     w: w, tool: tool,
@@ -87,7 +87,7 @@ SIZES = [200,400,800]
 FILTERS = [:triangle, :lanczos, :lanczos2, :ginseng, :n_cubic, :n_cubic_sharp, :robidoux, :robidoux_sharp,
 :cubic_b_spline, :hermite, :catmull_rom, :mitchell]
 GAMMAS = [true, false]
-SHARPENS = [0,2,5,10]
+SHARPENS = [0]
 
 def generate_for(tool)
   commands = []
@@ -105,11 +105,11 @@ def generate_for(tool)
   commands.compact
 end
 
-tools = [:flow, :magick, :imagew]
+tools = [:flow, :flow_preshrink, :magick, :imagew]
 
 require 'thread'
 
-flow_commands = generate_for(:flow)
+flow_commands = generate_for(:flow) + generate_for(:flow_preshrink)
 
 commands = generate_for(:imagew) + generate_for(:magick) + flow_commands
 
@@ -125,7 +125,12 @@ consumers = (0..5).map do |t|
     while !queue.empty? do
       work = queue.pop
       unless File.exist? work[:path]
-        work[:output] = `#{work[:command]}`
+        begin
+            work[:output] = `#{work[:command]}`
+        rescue => e
+            puts "Failed to run #{work[:command]}: #{e}"
+            raise
+        end
       end
       completed_work << work
     end
@@ -140,7 +145,7 @@ consumers = (0..5).map do |t|
   Thread.new do
     while !queue.empty? do
       work = queue.pop
-      compare_to_path = work[:path].gsub(/_flow_/,"_imagew_")
+      compare_to_path = work[:path].gsub(/_flow_preshrink_/,"_imagew_").gsub(/_flow_/,"_imagew_")
       next unless File.exist? compare_to_path
 
       dssim_path = "#{work[:path]}_dssim.txt"

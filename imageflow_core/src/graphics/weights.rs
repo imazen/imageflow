@@ -14,70 +14,40 @@ use serde::{Serialize,Deserialize};
 
 /// Named interpolation function+configuration presets
 #[repr(C)]
-#[derive(Copy, Serialize, Deserialize, Clone, PartialEq, PartialOrd, Debug)]
+#[derive(Copy, Clone, PartialEq, PartialOrd, Debug)]
 pub enum Filter {
-    #[serde(rename="robidoux_fast")]
     RobidouxFast = 1,
-    #[serde(rename="robidoux")]
     Robidoux = 2,
-    #[serde(rename="robidoux_sharp")]
     RobidouxSharp = 3,
-    #[serde(rename="ginseng")]
     Ginseng = 4,
-    #[serde(rename="ginseng_sharp")]
     GinsengSharp = 5,
-    #[serde(rename="lanczos")]
     Lanczos = 6,
-    #[serde(rename="lanczos_sharp")]
     LanczosSharp = 7,
-    #[serde(rename="lanczos_2")]
     Lanczos2 = 8,
-    #[serde(rename="lanczos_2_sharp")]
     Lanczos2Sharp = 9,
-    #[serde(rename="cubic_fast")]
     CubicFast = 10,
-    #[serde(rename="cubic")]
     Cubic = 11,
-    #[serde(rename="cubic_sharp")]
     CubicSharp = 12,
-    #[serde(rename="catmull_rom")]
     CatmullRom = 13,
-    #[serde(rename="mitchell")]
     Mitchell = 14,
-    #[serde(rename="cubic_b_spline")]
     CubicBSpline = 15,
-    #[serde(rename="hermite")]
     Hermite = 16,
-    #[serde(rename="jinc")]
     Jinc = 17,
-    #[serde(rename="raw_lanczos_3")]
     RawLanczos3 = 18,
-    #[serde(rename="raw_lanczos_3_sharp")]
     RawLanczos3Sharp = 19,
-    #[serde(rename="raw_lanczos_2")]
     RawLanczos2 = 20,
-    #[serde(rename="raw_lanczos_2_sharp")]
     RawLanczos2Sharp = 21,
-    #[serde(rename="triangle")]
     Triangle = 22,
-    #[serde(rename="linear")]
     Linear = 23,
-    #[serde(rename="box")]
     Box = 24,
-    #[serde(rename="catmull_rom_fast")]
     CatmullRomFast = 25,
-    #[serde(rename="catmull_rom_fast_sharp")]
     CatmullRomFastSharp = 26,
 
-    #[serde(rename="fastest")]
     Fastest = 27,
-    #[serde(rename="mitchell_fast")]
     MitchellFast = 28,
-    #[serde(rename="n_cubic")]
     NCubic = 29,
-    #[serde(rename="n_cubic_sharp")]
     NCubicSharp = 30,
-
+    LegacyIDCTFilter = 31
 }
 
 
@@ -178,6 +148,12 @@ impl InterpolationDetails{
             Filter::Robidoux => InterpolationDetails::bicubic(2f64, 1.0f64,
                                                               0.3782157550939987f64,
                                                               0.3108921224530007f64),
+
+            Filter::LegacyIDCTFilter => InterpolationDetails::bicubic(2f64, 1. / 1.1685777620836932,
+                                                                      0.3782157550939987f64,
+                                                                      0.3108921224530007f64),
+
+
             Filter::Fastest => InterpolationDetails::bicubic(0.74f64,
                                                              0.74f64,
                                                              0.3782157550939987f64,
@@ -369,27 +345,92 @@ static double filter_window_jinc (const struct flow_interpolation_details * d, d
 }
 
 
+#[derive(Debug,  Clone, PartialEq, Eq)]
+pub enum WeightsError{
+    NoPixelInputs,
+    ContribDataAllocation,
+    PixelWeightsAllocation,
+    SourcePixelCountTooLarge,
+    TotalWeightZero
+}
 
 
 
  pub trait WeightContainer{
-    fn try_reserve(&mut self, total_output_pixels: u32, inputs_per_outputs: u32) -> bool;
-    fn add_output_pixel(&mut self, left_input_pixel: u32, right_input_pixel: u32, weights: &[f32]) -> bool;
+    fn try_reserve(&mut self, total_output_pixels: u32, inputs_per_outputs: u32) -> Result<(),WeightsError>;
+    fn add_output_pixel(&mut self, left_input_pixel: u32, right_input_pixel: u32, weights: &[f32]) -> Result<(),WeightsError>;
 
 }
 
-//TODO: use an arena
-#[derive (  Clone )]
+#[derive(Clone)]
 #[repr(C)]
 pub struct PixelRowWeights {
-    pub contrib_row: Vec<PixelWeights>,
-    pub window_size: u32,
-    pub line_length: u32,
-    pub percent_negative: f64,
+    pub contrib_row: Vec<PixelWeightIndexes>,
+    pub weights: Vec<f32>,
 }
-#[derive (  Clone )]
+#[derive(Clone)]
 #[repr(C)]
-pub struct PixelWeights {
+pub struct PixelWeightIndexes {
+    /// index of weight for first input pixel
+    pub left_weight: u32,
+    /// index of weight for last input pixel
+    pub right_weight: u32,
+    /// index of first input pixel
+    pub left_pixel: u32,
+    /// index of last input pixel
+    pub right_pixel: u32,
+}
+
+impl WeightContainer for PixelRowWeights {
+    fn try_reserve(&mut self, total_output_pixels: u32, inputs_per_outputs: u32) -> Result<(),WeightsError> {
+        let space_needed = total_output_pixels as usize - self.contrib_row.len();
+        if space_needed > 0{
+            self.contrib_row.reserve_exact(space_needed)
+        }
+        let weight_space_needed = (inputs_per_outputs * total_output_pixels) as usize - self.weights.len();
+        if weight_space_needed > 0{
+            self.weights.reserve_exact(weight_space_needed);
+
+        }
+        Ok(()) //TODO: use fallible allocators in nightly mode
+    }
+
+    fn add_output_pixel(&mut self, left_input_pixel: u32, right_input_pixel: u32, weights: &[f32]) -> Result<(),WeightsError> {
+        if self.contrib_row.len() >= self.contrib_row.capacity() {
+            return Err(WeightsError::ContribDataAllocation);
+        }
+        if self.weights.len() + weights.len() > self.weights.capacity() {
+            return Err(WeightsError::PixelWeightsAllocation);
+        }
+        if weights.len() == 0 {
+            return Err(WeightsError::NoPixelInputs);
+        }
+
+
+        let left_weight = self.weights.len();
+        let right_weight = self.weights.len() + weights.len() - 1;
+
+        self.weights.extend_from_slice(weights);
+
+        self.contrib_row.push(PixelWeightIndexes {
+            left_weight: left_weight as u32,
+            right_weight: right_weight as u32,
+            left_pixel: left_input_pixel,
+            right_pixel: right_input_pixel
+        });
+        Ok(())
+    }
+}
+
+
+#[derive(Clone)]
+#[repr(C)]
+pub struct PixelRowWeightsSimple {
+    pub contrib_row: Vec<PixelWeightsSimple>,
+}
+#[derive(Clone)]
+#[repr(C)]
+pub struct PixelWeightsSimple {
     /// weights for input pixels
     pub weights: Vec<f32>,
     /// index of first input pixel
@@ -398,27 +439,27 @@ pub struct PixelWeights {
     pub right: i32,
 }
 
-impl WeightContainer for PixelRowWeights{
-    fn try_reserve(&mut self, total_output_pixels: u32, inputs_per_outputs: u32) -> bool {
-        let space_needed = total_output_pixels as usize - self.contrib_row.capacity();
+impl WeightContainer for PixelRowWeightsSimple {
+    fn try_reserve(&mut self, total_output_pixels: u32, inputs_per_outputs: u32) -> Result<(),WeightsError> {
+        let space_needed = total_output_pixels as usize - self.contrib_row.len();
         if space_needed > 0{
             self.contrib_row.reserve_exact(space_needed)
         }
-        true //TODO: use fallible allocators in nightly mode
+        Ok(()) //TODO: use fallible allocators in nightly mode
     }
 
-    fn add_output_pixel(&mut self, left_input_pixel: u32, right_input_pixel: u32, weights: &[f32]) -> bool {
+    fn add_output_pixel(&mut self, left_input_pixel: u32, right_input_pixel: u32, weights: &[f32]) -> Result<(),WeightsError> {
         if self.contrib_row.len() < self.contrib_row.capacity() {
-            self.contrib_row.push(PixelWeights { weights: weights.to_vec(), left: left_input_pixel as i32, right: right_input_pixel as i32});
-            true
+            self.contrib_row.push(PixelWeightsSimple { weights: weights.to_vec(), left: left_input_pixel as i32, right: right_input_pixel as i32});
+            Ok(())
         }else{
-            false
+            Err(WeightsError::ContribDataAllocation)
         }
 
     }
 }
-pub  fn populate_weights(container: &mut dyn WeightContainer, output_line_size :u32,
-                         input_line_size :u32,details: &InterpolationDetails) -> bool {
+pub  fn populate_weights<T:WeightContainer>(container: &mut T, output_line_size :u32,
+                         input_line_size :u32,details: &InterpolationDetails) -> Result<(),WeightsError> {
     let sharpen_ratio: f64 = details.calculate_percent_negative_weight();
     let desired_sharpen_ratio: f64 =
         1.0f64.min(
@@ -435,9 +476,8 @@ pub  fn populate_weights(container: &mut dyn WeightContainer, output_line_size :
         ((2i32 as f64 * (half_source_window - 0.00001f64)).ceil() as
             i32 + 1i32) as u32;
 
-    if !container.try_reserve(output_line_size, allocated_window_size) {
-        return false
-    }
+    container.try_reserve(output_line_size, allocated_window_size)?;
+
 
 
     let filter_func = details.filter;
@@ -471,11 +511,11 @@ pub  fn populate_weights(container: &mut dyn WeightContainer, output_line_size :
                 u32);
         if source_pixel_count > allocated_window_size {
             //flow_status_Invalid_internal_state,
-            return false;
+            return Err(WeightsError::SourcePixelCountTooLarge);
         }
 
         for ix in left_src_pixel..=right_src_pixel {
-            let mut tx = ix - left_src_pixel;
+            let tx = ix - left_src_pixel;
             let mut add: f64 =
                 filter_func(details,
                             downscale_factor
@@ -518,10 +558,11 @@ pub  fn populate_weights(container: &mut dyn WeightContainer, output_line_size :
                 }
             } else if total_weight == 0f64{
                 // In this situation we have a problem to report
+                return Err(WeightsError::TotalWeightZero);
             }
         }
         //printf("\n");
-        for mut v in weights.iter_mut() {
+        for v in weights.iter_mut() {
             if *v < 0f32 {
                 *v *= neg_factor;
                 negative_area -= *v as f64;
@@ -544,90 +585,8 @@ pub  fn populate_weights(container: &mut dyn WeightContainer, output_line_size :
             weights.remove(0);
         }
 
-        if !container.add_output_pixel(shrunk_left_src_pixel, shrunk_right_src_pixel, &weights) {
-            return false;
-        }
+        container.add_output_pixel(shrunk_left_src_pixel, shrunk_right_src_pixel, &weights)?;
     }
     //(*res).percent_negative = negative_area / positive_area;
-    return true
+    Ok(())
 }
-//
-//
-//struct flow_interpolation_line_contributions *
-//flow_interpolation_line_contributions_create(flow_c * context, const u32 output_line_size,
-//                                             const u32 input_line_size,
-//                                             const struct flow_interpolation_details * details)
-//{
-//    const double sharpen_ratio = flow_interpolation_details_percent_negative_weight(details);
-//    const double desired_sharpen_ratio = fmin(0.999999999f, fmax(sharpen_ratio, details->sharpen_percent_goal / 100.0));
-//
-//    const double scale_factor = (double)output_line_size / (double)input_line_size;
-//    const double downscale_factor = fmin(1.0, scale_factor);
-//    const double half_source_window = (details->window + 0.5) / downscale_factor;
-//
-//    const u32 allocated_window_size = (int)ceil(2 * (half_source_window - TONY)) + 1;
-//    u32 u, ix;
-//    struct flow_interpolation_line_contributions * res
-//        = LineContributions_alloc(context, output_line_size, allocated_window_size);
-//    if (res == NULL) {
-//        FLOW_add_to_callstack(context);
-//        return NULL;
-//    }
-//    double negative_area = 0;
-//    double positive_area = 0;
-//
-//    for (u = 0; u < output_line_size; u++) {
-//        const double center_src_pixel = ((double)u + 0.5) / scale_factor - 0.5;
-//
-//        const int left_edge = (int)floor(center_src_pixel) - ((allocated_window_size - 1) / 2);
-//        const int right_edge = left_edge + allocated_window_size - 1;
-//
-//        const u32 left_src_pixel = (u32)int_max(0, left_edge);
-//        const u32 right_src_pixel = (u32)int_min(right_edge, (int)input_line_size - 1);
-//
-//        // Net weight
-//        double total_weight = 0.0;
-//        // Sum of negative and positive weights
-//        double total_negative_weight = 0.0;
-//        double total_positive_weight = 0.0;
-//
-//        const u32 source_pixel_count = right_src_pixel - left_src_pixel + 1;
-//
-//        if (source_pixel_count > allocated_window_size) {
-//            flow_interpolation_line_contributions_destroy(context, res);
-//            FLOW_error(context, flow_status_Invalid_internal_state);
-//            return NULL;
-//        }
-//
-//        res->ContribRow[u].Left = left_src_pixel;
-//        res->ContribRow[u].Right = right_src_pixel;
-//
-//        float * weights = res->ContribRow[u].Weights;
-//
-//        for (ix = left_src_pixel; ix <= right_src_pixel; ix++) {
-//            int tx = ix - left_src_pixel;
-//            double add = (*details->filter)(details, downscale_factor *((double)ix - center_src_pixel));
-//            if (fabs(add) <= 0.00000002) {
-//                add = 0.0;
-//                // Weights below a certain threshold make consistent x-plat
-//                // integration test results impossible. pos/neg zero, etc.
-//                // They should be rounded down to zero at the threshold at which results are consistent.
-//            }
-//            weights[tx] = (float)add;
-//            total_weight += add;
-//            total_negative_weight += fmin(0, add);
-//            total_positive_weight += fmax(0, add);
-//        }
-//
-//
-//        //printf("cur= %f cur+= %f cur-= %f desired_sharpen_ratio=%f sharpen_ratio-=%f\n", total_weight, total_positive_weight, total_negative_weight, desired_sharpen_ratio, sharpen_ratio);
-//
-//
-//
-//
-//
-//
-//    }
-//    res->percent_negative = negative_area / positive_area;
-//    return res;
-//}

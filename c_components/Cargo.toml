@@ -25,7 +25,7 @@ shared = []
 
 [dependencies]
 mozjpeg-sys = {version = "0.10.5", features = ["nasm_simd"]}
-
+libc = "0.2.*"
 # For build info see
 
 libz-sys = { version = "1.0.18", features = ["static"] }

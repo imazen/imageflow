@@ -2,3 +2,4 @@ bessj
 jrh
 libm
 uk
+powf

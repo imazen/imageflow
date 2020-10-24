@@ -42,10 +42,10 @@ smallvec = "*"
 
 itertools = "*"
 imgref = "1.4.1"
-
+slotmap = "0.4.0"
 
 gif = "*"
-rgb = "0.8"
+rgb = { version = "0.8", features = ["argb"] }
 imagequant = "2"
 lodepng = "3"
 flate2 = { version = "1.0", features = ["zlib"], default-features = false }
@@ -83,7 +83,7 @@ libpng-sys = { version = "1.1.8", features = ["static", "static-libz", "libz-sys
 [dev-dependencies]
 hyper = "0.13"
 imageflow_http_helpers = { path = "../imageflow_http_helpers", version = "*" }
-dssim = "2.11.1"
+dssim = "2.11.4"
 
 [features]
 default = []

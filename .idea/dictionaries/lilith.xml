@@ -6,6 +6,7 @@
       <w>luma</w>
       <w>mozjpeg</w>
       <w>pngquant</w>
+      <w>premultiplied</w>
       <w>zlib</w>
     </words>
   </dictionary>

@@ -43,12 +43,14 @@ fn test_prevent_lto_stripping() {
     }
 }
 
-extern "C" {
-    fn flow_scale_spatial_srgb_1x1(input: *const u8, output_rows: *mut *mut u8, output_col: u32);
-}
+
 
 #[test]
 fn test_spatial_scaling(){
+
+    extern "C" {
+        fn flow_scale_spatial_srgb_1x1(input: *const u8, output_rows: *mut *mut u8, output_col: u32);
+    }
 
     let mut input: [u8; 64] = [0; 64];
     for x in 0..64{

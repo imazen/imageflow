@@ -25,8 +25,8 @@ $(function(){
   var sizes = window.data.widths;//[200,400,800];
   fill_dd(list_w, sizes);
   
-  fill_dd(list_tool, ['flow', 'magick','imagew' ]);
-  fill_dd(list_baseline_tool, ['imagew','flow', 'magick']);
+  fill_dd(list_tool, ['flow', 'magick','imagew', 'flow_preshrink' ]);
+  fill_dd(list_baseline_tool, ['imagew','flow', 'magick', 'flow_preshrink']);
   
   var filters = window.data.filters;//['ncubic' , 'ncubicsharp' , 'robidoux' , 'robidouxsharp' , 'ginseng' , 'lanczos' , 'lanczos2' ,
   //'box' , 'triangle' , 'bspline' , 'hermite' , 'catrom' , 'mitchell'];

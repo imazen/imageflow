@@ -732,7 +732,7 @@ pub fn compare_encoded(input: Option<IoTestEnum>, checksum_name: &str, store_if_
     let mut context = Context::create().unwrap();
 
 
-    let _ = build_steps(&mut context, &steps, io_vec, None, debug);
+    let _ = build_steps(&mut context, &steps, io_vec, None, debug).unwrap();
 
     let bytes = context.get_output_buffer_slice(1).unwrap();
 

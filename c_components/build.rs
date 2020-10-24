@@ -69,8 +69,12 @@ fn main() {
         cc.flag("-Wc++-compat");
     }
 
+    //let skipped = PathBuf::from("lib/graphics.c");
     for file in glob::glob("lib/*.c").unwrap() {
-        cc.file(file.unwrap());
+        let path = file.unwrap();
+        //if path != skipped {
+            cc.file(path);
+        //}
     }
 
     if cfg!(feature = "coverage") {

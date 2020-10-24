@@ -52,7 +52,6 @@ mod context;
 mod codecs;
 mod io;
 pub mod graphics;
-pub mod imaging;
 
 pub use crate::context::{Context};
 pub use crate::io::IoProxy;

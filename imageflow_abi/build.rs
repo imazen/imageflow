@@ -245,6 +245,7 @@ fn generate(target: Target) -> String {
     config.documentation = allow_comments;
     config.documentation_style = cbindgen::DocumentationStyle::C99;
     config.style = cbindgen::Style::Both;
+    config.sort_by = cbindgen::SortKey::Name;
 
 
     if target == Target::Raw {
@@ -252,7 +253,7 @@ fn generate(target: Target) -> String {
         generate_to_string(builder)
     } else if let Target::Other { structs, enums } = target_flatten(target) {
         let mut enum_config = cbindgen::EnumConfig::default();
-        enum_config.rename_variants = Some(cbindgen::RenameRule::SnakeCase);
+        enum_config.rename_variants = cbindgen::RenameRule::SnakeCase;
         enum_config.prefix_with_name = true;
         config.enumeration = enum_config;
 
