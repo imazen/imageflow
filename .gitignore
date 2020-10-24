@@ -325,3 +325,4 @@ imageflow_core/tests/visuals/images.txt
 c_components/tests/generated_idct.c
 c_components/tests/rect_1_1_9_9.png
 c_components/tests/rect_2_3_70_70.png
+imageflow_core/generated_idct.c
