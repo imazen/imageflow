@@ -11,6 +11,7 @@ use std::i32;
 use std::u32;
 
 use serde::{Serialize,Deserialize};
+use crate::graphics::aligned_buffer::AlignedBuffer;
 
 /// Named interpolation function+configuration presets
 #[repr(C)]
@@ -347,28 +348,56 @@ static double filter_window_jinc (const struct flow_interpolation_details * d, d
 
 #[derive(Debug,  Clone, PartialEq, Eq)]
 pub enum WeightsError{
+    AllocationFailed,
     NoPixelInputs,
-    ContribDataAllocation,
-    PixelWeightsAllocation,
+    ContribDataTooSmall,
+    PixelWeightsTooSmall,
     SourcePixelCountTooLarge,
-    TotalWeightZero
+    TotalWeightZero,
+    TryReserveCalledRepeatedly,
+    TryReserveNotCalled
 }
 
 
 
  pub trait WeightContainer{
+     /// Must be called before add_output_pixel, and must only be called once
     fn try_reserve(&mut self, total_output_pixels: u32, inputs_per_outputs: u32) -> Result<(),WeightsError>;
     fn add_output_pixel(&mut self, left_input_pixel: u32, right_input_pixel: u32, weights: &[f32]) -> Result<(),WeightsError>;
 
 }
 
-#[derive(Clone)]
-#[repr(C)]
 pub struct PixelRowWeights {
-    pub contrib_row: Vec<PixelWeightIndexes>,
-    pub weights: Vec<f32>,
+    contrib_row: Option<AlignedBuffer<PixelWeightIndexes>>,
+    contrib_row_length: usize,
+    weights: Option<AlignedBuffer<f32>>,
+    weights_length: usize
 }
-#[derive(Clone)]
+
+impl PixelRowWeights{
+    pub fn new() -> PixelRowWeights{
+        PixelRowWeights{
+            contrib_row: None,
+            contrib_row_length: 0,
+            weights: None,
+            weights_length: 0
+        }
+    }
+    pub fn contrib_row(&self) -> &[PixelWeightIndexes]{
+        self.contrib_row
+            .as_ref()
+            .map(|r| &r.as_slice()[..self.contrib_row_length])
+            .unwrap_or(&[])
+    }
+    pub fn weights(&self) -> &[f32]{
+        self.weights
+            .as_ref()
+            .map(|r| &r.as_slice()[..self.weights_length])
+            .unwrap_or(&[])
+    }
+
+}
+#[derive(Clone, Copy)]
 #[repr(C)]
 pub struct PixelWeightIndexes {
     /// index of weight for first input pixel
@@ -381,43 +410,56 @@ pub struct PixelWeightIndexes {
     pub right_pixel: u32,
 }
 
+unsafe impl rgb::Zeroable for PixelWeightIndexes{}
+
 impl WeightContainer for PixelRowWeights {
     fn try_reserve(&mut self, total_output_pixels: u32, inputs_per_outputs: u32) -> Result<(),WeightsError> {
-        let space_needed = total_output_pixels as usize - self.contrib_row.len();
-        if space_needed > 0{
-            self.contrib_row.reserve_exact(space_needed)
+        if self.contrib_row.is_some() ||
+            self.weights.is_some(){
+            return Err(WeightsError::TryReserveCalledRepeatedly);
         }
-        let weight_space_needed = (inputs_per_outputs * total_output_pixels) as usize - self.weights.len();
-        if weight_space_needed > 0{
-            self.weights.reserve_exact(weight_space_needed);
+        self.contrib_row = Some(AlignedBuffer::new(total_output_pixels as usize, 16)
+            .map_err(|e| WeightsError::AllocationFailed )?);
 
-        }
+        self.weights = Some(AlignedBuffer::new(inputs_per_outputs as usize * total_output_pixels as usize, 64)
+            .map_err(|e| WeightsError::AllocationFailed )?);
+
         Ok(()) //TODO: use fallible allocators in nightly mode
     }
 
-    fn add_output_pixel(&mut self, left_input_pixel: u32, right_input_pixel: u32, weights: &[f32]) -> Result<(),WeightsError> {
-        if self.contrib_row.len() >= self.contrib_row.capacity() {
-            return Err(WeightsError::ContribDataAllocation);
+    fn add_output_pixel(&mut self, left_input_pixel: u32, right_input_pixel: u32, weights_to_add: &[f32]) -> Result<(),WeightsError> {
+        if self.contrib_row.is_none() ||
+            self.weights.is_none(){
+            return Err(WeightsError::TryReserveNotCalled)
         }
-        if self.weights.len() + weights.len() > self.weights.capacity() {
-            return Err(WeightsError::PixelWeightsAllocation);
+        let contrib_row = self.contrib_row.as_mut().unwrap().as_slice_mut();
+        let weights = self.weights.as_mut().unwrap().as_slice_mut();
+
+
+        if self.contrib_row_length >= contrib_row.len() {
+            return Err(WeightsError::ContribDataTooSmall);
         }
-        if weights.len() == 0 {
+        if self.weights_length + weights_to_add.len() > weights.len() {
+            return Err(WeightsError::PixelWeightsTooSmall);
+        }
+        if weights_to_add.len() == 0 {
             return Err(WeightsError::NoPixelInputs);
         }
 
 
-        let left_weight = self.weights.len();
-        let right_weight = self.weights.len() + weights.len() - 1;
+        let left_weight = self.weights_length;
+        let right_weight = self.weights_length + weights_to_add.len() - 1;
 
-        self.weights.extend_from_slice(weights);
+        weights[left_weight..=right_weight].copy_from_slice(weights_to_add);
+        self.weights_length = right_weight + 1;
 
-        self.contrib_row.push(PixelWeightIndexes {
+        contrib_row[self.contrib_row_length] = PixelWeightIndexes {
             left_weight: left_weight as u32,
             right_weight: right_weight as u32,
             left_pixel: left_input_pixel,
             right_pixel: right_input_pixel
-        });
+        };
+        self.contrib_row_length += 1;
         Ok(())
     }
 }
@@ -453,7 +495,7 @@ impl WeightContainer for PixelRowWeightsSimple {
             self.contrib_row.push(PixelWeightsSimple { weights: weights.to_vec(), left: left_input_pixel as i32, right: right_input_pixel as i32});
             Ok(())
         }else{
-            Err(WeightsError::ContribDataAllocation)
+            Err(WeightsError::ContribDataTooSmall)
         }
 
     }
