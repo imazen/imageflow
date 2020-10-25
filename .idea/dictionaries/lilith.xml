@@ -2,9 +2,13 @@
   <dictionary name="lilith">
     <words>
       <w>cmyk</w>
+      <w>colorcontext</w>
+      <w>demultiply</w>
+      <w>dest</w>
       <w>libpng</w>
       <w>luma</w>
       <w>mozjpeg</w>
+      <w>mult</w>
       <w>pngquant</w>
       <w>premultiplied</w>
       <w>zlib</w>
