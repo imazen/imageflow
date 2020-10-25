@@ -185,7 +185,7 @@ impl JsonResponse {
     pub fn fail_with_message(code: i64, message: &str) -> JsonResponse {
         let r = s::Response001 {
             success: false,
-            code: code,
+            code,
             message: Some(message.to_owned()),
             data: s::ResponsePayload::None,
         };
@@ -195,29 +195,3 @@ impl JsonResponse {
         }
     }
 }
-
-
-
-// struct Meh{}
-//
-// #[derive(Deserialize,Clone)]
-// struct Val{
-//    i:i32
-// }
-//
-// fn tryit(){
-//    let mut m = Meh{};
-//    let mut r = MethodRouter::new();
-//    r.add("/api", create_handler_over_responder(
-//       Box::new( move |upon: &mut Meh, v: Val|{
-//           Ok(s::ResponsePayload::None)
-//       })
-//    ));
-// }
-
-// pub fn wrap<T,D>(responder: Box<Fn(&mut T, D) -> Vec<u8>>) -> Box<Fn(&mut T, &[u8]) -> Vec<u8>> where D: serde::Deserialize, D: 'static{
-//    Box::new( move | upon: &mut T, json_request_bytes: & [u8] | {
-//        responder(upon, serde_json::from_slice(json_request_bytes).unwrap())
-//    })
-// }
-//
