@@ -69,6 +69,7 @@ impl NodeDefMutateBitmap for EnableTransparencyMutDef{
         if bitmap.fmt == PixelFormat::Bgr32 {
             bitmap.normalize_alpha()?;
             bitmap.fmt = PixelFormat::Bgra32;
+            //TODO: COMPOSEFIX Cannot write to .compositing_mode as it will be discarded
             bitmap.compositing_mode = BitmapCompositingMode::BlendWithSelf;
             Ok(())
         } else {

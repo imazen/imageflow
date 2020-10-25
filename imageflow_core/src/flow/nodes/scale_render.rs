@@ -237,6 +237,8 @@ impl NodeDefOneInputOneCanvas for DrawImageDef {
 
             let compose = blend.unwrap_or(::imageflow_types::CompositingMode::Compose) == s::CompositingMode::Compose;
 
+            //TODO: COMPOSEFIX Cannot write to .compositing_mode as it will be discarded
+
             if canvas.compositing_mode == crate::ffi::BitmapCompositingMode::ReplaceSelf && compose{
                 canvas.compositing_mode = crate::ffi::BitmapCompositingMode::BlendWithSelf;
             }

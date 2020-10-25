@@ -76,6 +76,7 @@ impl NodeDefMutateBitmap for FillRectNodeDef {
                return Err(nerror!(crate::ErrorKind::InvalidCoordinates, "Invalid coordinates for {}x{} bitmap: {:?}", bitmap.w, bitmap.h, p));
             }
 
+            //TODO: COMPOSEFIX Cannot write to .compositing_mode as it will be discarded
             bitmap.compositing_mode = crate::ffi::BitmapCompositingMode::BlendWithSelf;
             unsafe {
                 crate::graphics::fill::flow_bitmap_bgra_fill_rect(
