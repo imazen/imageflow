@@ -8,6 +8,7 @@ pub mod weights;
 mod scaling;
 mod flip;
 mod transpose;
+mod histogram;
 
 //pub mod faces;
 
