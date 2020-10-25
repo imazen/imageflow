@@ -37,10 +37,6 @@ impl<'a> Engine<'a> {
         }
     }
 
-    fn flow_c(&self) -> *mut crate::ffi::ImageflowContext{
-        self.c.flow_c()
-    }
-
     pub fn validate_graph(&self) -> Result<()> {
         for node_index in (0..self.g.node_count()).map(NodeIndex::new) {
             let n = self.g.node_weight(node_index).unwrap();
