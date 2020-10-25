@@ -92,7 +92,7 @@ fn decoder_get_io_id(params: &NodeParams) -> Result<i32> {
 }
 fn decoder_estimate(ctx: &mut OpCtxMut, ix: NodeIndex) -> Result<FrameEstimate> {
     let io_id = decoder_get_io_id(&ctx.weight(ix).params).map_err(|e| e.at(here!()))?;
-    let frame_info = ctx.job.get_scaled_image_info(io_id).map_err(|e| e.at(here!()))?;
+    let frame_info = ctx.c.get_scaled_image_info(io_id).map_err(|e| e.at(here!()))?;
 
     Ok(FrameEstimate::Some(FrameInfo {
         fmt: frame_info.frame_decodes_into,
@@ -129,7 +129,7 @@ impl NodeDef for DecoderDef {
         let io_id = decoder_get_io_id(&ctx.weight(ix).params)?;
 
         // Add the necessary rotation step afterwards
-        if let Some(exif_flag) = ctx.job.get_exif_rotation_flag(io_id).map_err(|e| e.at(here!()))?{
+        if let Some(exif_flag) = ctx.c.get_exif_rotation_flag(io_id).map_err(|e| e.at(here!()))?{
             if exif_flag > 0 {
                 let new_node = ctx.graph
                     .add_node(Node::n(&APPLY_ORIENTATION,
@@ -288,7 +288,7 @@ impl NodeDef for EncoderDef {
 
         let decoders = ctx.get_decoder_io_ids_and_indexes(ix).into_iter().map(|(io_id, ix)| io_id).collect::<Vec<i32>>();
 
-        let mut codec = ctx.job.get_codec(io_id).map_err(|e| e.at(here!()))?;
+        let mut codec = ctx.c.get_codec(io_id).map_err(|e| e.at(here!()))?;
         let result = codec.write_frame(ctx.c, &preset,unsafe{ &mut *input_bitmap }, &decoders ).map_err(|e| e.at(here!()))?;
 
 

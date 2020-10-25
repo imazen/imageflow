@@ -47,6 +47,8 @@ impl NodeDefOneInputOneCanvas for CopyRectNodeDef{
                          p));
             }
             crate::graphics::copy_rect::copy_rect(input, canvas, from_x, from_y, x, y, w, h)?;
+
+            //TODO: COMPOSEFIX - set bitmap compose to BlendWithSelf
             Ok(())
         } else {
             Err(nerror!(crate::ErrorKind::NodeParamsMismatch, "Need CopyRectToCanvas, got {:?}", p))
