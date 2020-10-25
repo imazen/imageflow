@@ -27,15 +27,16 @@ extern "C" {
 pub const BESSEL_01: unsafe extern "C" fn(_: f64) -> f64 = j1;
 pub const IR_PI: f64 = 3.1415926535897932384626433832795f64;
 #[inline]
-unsafe extern "C" fn int_max(a: i32, b: i32) -> i32 {
+unsafe fn int_max(a: i32, b: i32) -> i32 {
     return if a >= b { a } else { b };
 }
 #[inline]
-unsafe extern "C" fn int_min(a: i32, b: i32) -> i32 {
+unsafe fn int_min(a: i32, b: i32) -> i32 {
     return if a <= b { a } else { b };
 }
+
 #[inline]
-unsafe extern "C" fn ir_gaussian(x: f64, std_dev: f64) -> f64 {
+pub unsafe fn ir_gaussian(x: f64, std_dev: f64) -> f64 {
     return exp(-x * x / (2 as i32 as f64 * std_dev * std_dev))
         / (sqrt(2 as i32 as f64 * IR_PI) * std_dev);
 }

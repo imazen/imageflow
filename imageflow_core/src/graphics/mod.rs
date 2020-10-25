@@ -11,6 +11,7 @@ mod transpose;
 mod histogram;
 mod color_matrix;
 mod luv;
+mod convolve;
 
 //pub mod faces;
 
