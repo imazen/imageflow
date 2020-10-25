@@ -162,8 +162,7 @@ pub fn smoke_test(input: Option<IoTestEnum>, output: Option<IoTestEnum>, securit
 /// A context for getting/storing frames and frame checksums by test name.
 /// Currently has read-only support for remote storage.
 /// TODO: Add upload support; it's very annoying to do it manually
-pub struct ChecksumCtx<'a>{
-    c: &'a Context,
+pub struct ChecksumCtx{
     checksum_file: PathBuf,
     url_list_file: PathBuf,
     visuals_dir: PathBuf,
@@ -177,14 +176,13 @@ lazy_static! {
     static ref CHECKSUM_FILE: RwLock<()> = RwLock::new(());
 }
 
-impl<'a> ChecksumCtx<'a>{
+impl ChecksumCtx{
 
     /// A checksum context configured for tests/visuals/*
-    pub fn visuals(c: &Context) -> ChecksumCtx{
+    pub fn visuals() -> ChecksumCtx{
         let visuals = Path::new(env!("CARGO_MANIFEST_DIR")).join(Path::new("tests")).join(Path::new("visuals"));
         std::fs::create_dir_all(&visuals).unwrap();
         ChecksumCtx {
-            c,
             visuals_dir: visuals.clone(),
             cache_dir: visuals.join(Path::new("cache")),
             create_if_missing: true,
@@ -703,7 +701,7 @@ pub fn compare_with_context(context: &mut Context, inputs: Option<Vec<IoTestEnum
         if debug {
             println!("{:?}", b);
         }
-        let mut ctx = ChecksumCtx::visuals(&context);
+        let mut ctx = ChecksumCtx::visuals();
         ctx.create_if_missing = store_if_missing;
         bitmap_regression_check(&ctx, b, checksum_name, allowed_off_by_one_bytes)
 
@@ -733,7 +731,7 @@ pub fn compare_encoded(input: Option<IoTestEnum>, checksum_name: &str, store_if_
 
     let bytes = context.get_output_buffer_slice(1).unwrap();
 
-    let mut ctx = ChecksumCtx::visuals(&context);
+    let mut ctx = ChecksumCtx::visuals();
     ctx.create_if_missing = store_if_missing;
 
 
@@ -773,7 +771,7 @@ pub fn test_with_callback(checksum_name: &str, input: IoTestEnum, callback: fn(&
         };
         context.execute_1(send_execute).unwrap();
 
-        let ctx = ChecksumCtx::visuals(&context);
+        let ctx = ChecksumCtx::visuals();
         matched = bitmap_regression_check(&ctx, bit.bitmap(&context).unwrap(), checksum_name, 500)
     }
     context.destroy().unwrap();

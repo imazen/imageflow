@@ -53,7 +53,7 @@ impl Encoder for LodepngEncoder {
     }
 }
 
-pub fn write_png<T: AsRef<std::path::Path>>(path: T, frame: &BitmapBgra) -> Result<()>{
+pub unsafe fn write_png<T: AsRef<std::path::Path>>(path: T, frame: &BitmapBgra) -> Result<()>{
 
     let file = std::fs::File::create(path)
         .map_err(|e| nerror!(ErrorKind::InvalidOperation))?;
