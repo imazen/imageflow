@@ -7,6 +7,7 @@ pub mod color;
 pub mod weights;
 mod scaling;
 mod flip;
+mod transpose;
 
 //pub mod faces;
 
