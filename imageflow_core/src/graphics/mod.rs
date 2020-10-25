@@ -9,6 +9,7 @@ mod scaling;
 mod flip;
 mod transpose;
 mod histogram;
+mod color_matrix;
 
 //pub mod faces;
 
