@@ -125,7 +125,7 @@ pub(crate) fn uchar_clamp_ff(clr: f32) -> u8 {
 
 #[inline]
 #[allow(non_snake_case)]
-unsafe fn linear_to_luv(bgr: *mut f32) {
+pub unsafe fn linear_to_luv(bgr: *mut f32) {
     let xn: f32 = 0.312713f32;
     let yn: f32 = 0.329016f32;
     let Yn: f32 = 1.0f32;
@@ -163,7 +163,7 @@ unsafe fn linear_to_luv(bgr: *mut f32) {
 }
 #[inline]
 #[allow(non_snake_case)]
-unsafe fn luv_to_linear(luv: *mut f32) {
+pub unsafe fn luv_to_linear(luv: *mut f32) {
     let L: f32 = *luv.offset(0);
     let U: f32 = *luv.offset(1) - 100.0f32;
     let V: f32 = *luv.offset(2) - 100.0f32;

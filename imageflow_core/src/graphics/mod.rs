@@ -10,6 +10,7 @@ mod flip;
 mod transpose;
 mod histogram;
 mod color_matrix;
+mod luv;
 
 //pub mod faces;
 
