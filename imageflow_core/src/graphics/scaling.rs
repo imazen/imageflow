@@ -28,173 +28,12 @@ fn flow_pixel_format_bytes_per_pixel(format: crate::ffi::PixelFormat) -> u32
 {
     format.bytes() as u32
 }
-fn flow_effective_pixel_format(b: &BitmapBgra) -> crate::ffi::PixelFormat { b.fmt }
-
 fn flow_pixel_format_channels(format: crate::ffi::PixelFormat) -> u32{
     match format{
         PixelFormat::Bgra32 => 4,
         PixelFormat::Bgr32 => 3,
         PixelFormat::Bgr24 => 3,
         PixelFormat::Gray8 => 1
-    }
-}
-pub unsafe fn flow_bitmap_float_scale_rows(
-    from: &BitmapFloat,
-    from_row: u32,
-    to: &mut BitmapFloat,
-    to_row: u32,
-    row_count: u32,
-    weights: &PixelRowWeights
-) -> Result<(), FlowError> {
-    let from_step: u32 = from.channels;
-    let to_step: u32 = to.channels;
-    let dest_buffer_count: u32 = to.w;
-    let min_channels: u32 = from_step.min(to_step);
-    let mut ndx;
-    if min_channels > 4 as i32 as u32 {
-        return Err(nerror!(ErrorKind::InvalidState));
-    }
-    let weight_indexes = weights.contrib_row();
-    let weight_values = weights.weights();
-    let mut avg: [f32; 4] = [0.; 4];
-    // if both have alpha, process it
-    if from_step == 4 && to_step == 4 {
-        let mut row: u32 = 0;
-        while row < row_count {
-            let source_offset = ((from_row + row) * (*from).float_stride) as isize;
-            let source_buffer: *const __m128 =
-                (*from).pixels.offset(source_offset) as *const __m128;
-            let dest_offset = ((to_row + row) * (*to).float_stride) as isize;
-            let dest_buffer: *mut __m128 = (*to).pixels.offset(dest_offset) as *mut __m128;
-            let dest_buffer: &mut [__m128] =
-                std::slice::from_raw_parts_mut(dest_buffer, dest_buffer_count as usize);
-            ndx = 0;
-            while ndx < dest_buffer_count {
-                let mut sums: __m128 = _mm_set1_ps(0.0);
-                let weight_index_set = weight_indexes.get_unchecked(ndx as usize);
-                let left: i32 = weight_index_set.left_pixel as i32;
-                let right: i32 = weight_index_set.right_pixel as i32;
-                let weight_array: *const f32 = weight_values.as_ptr().offset(weight_index_set.left_weight as isize);
-                let source_buffer: &[__m128] =
-                    std::slice::from_raw_parts(source_buffer, (right + 1) as usize);
-                /* Accumulate each channel */
-                let mut i = left;
-                while i <= right {
-                    let factor: __m128 = _mm_set1_ps(*weight_array.offset((i - left) as isize));
-                    // sums += factor * *source_buffer[i as usize];
-                    let mid = _mm_mul_ps(factor, source_buffer[i as usize]);
-                    sums = _mm_add_ps(sums, mid);
-                    i += 1
-                }
-                dest_buffer[ndx as usize] = sums;
-                ndx += 1
-            }
-            row += 1
-        }
-    } else if from_step == 3 as i32 as u32 && to_step == 3 as i32 as u32 {
-        let mut row_0: u32 = 0 as i32 as u32;
-        while row_0 < row_count {
-            let source_buffer_0: *const f32 = (*from).pixels.offset(
-                from_row
-                    .wrapping_add(row_0)
-                    .wrapping_mul((*from).float_stride) as isize,
-            );
-            let dest_buffer_0: *mut f32 = (*to)
-                .pixels
-                .offset(to_row.wrapping_add(row_0).wrapping_mul((*to).float_stride) as isize);
-            ndx = 0 as i32 as u32;
-            while ndx < dest_buffer_count {
-                let mut bgr: [f32; 3] = [0.0f32, 0.0f32, 0.0f32];
-                let weight_index_set = weight_indexes.get_unchecked(ndx as usize);
-                let left: i32 = weight_index_set.left_pixel as i32;
-                let right: i32 = weight_index_set.right_pixel as i32;
-                let weight_array: *const f32 = weight_values.as_ptr().offset(weight_index_set.left_weight as isize);
-                let mut i_0;
-                /* Accumulate each channel */
-                i_0 = left;
-                while i_0 <= right {
-                    let weight: f32 = *weight_array.offset((i_0 - left) as isize);
-                    bgr[0] += weight
-                        * *source_buffer_0.offset((i_0 as u32).wrapping_mul(from_step) as isize);
-                    bgr[1] += weight
-                        * *source_buffer_0.offset(
-                        (i_0 as u32).wrapping_mul(from_step).wrapping_add(1u32) as isize,
-                    );
-                    bgr[2] += weight
-                        * *source_buffer_0.offset(
-                        (i_0 as u32).wrapping_mul(from_step).wrapping_add(2u32) as isize,
-                    );
-                    i_0 += 1
-                }
-                *dest_buffer_0.offset(ndx.wrapping_mul(to_step) as isize) = bgr[0];
-                *dest_buffer_0.offset(ndx.wrapping_mul(to_step).wrapping_add(1u32) as isize) =
-                    bgr[1];
-                *dest_buffer_0.offset(ndx.wrapping_mul(to_step).wrapping_add(2u32) as isize) =
-                    bgr[2];
-                ndx = ndx.wrapping_add(1)
-            }
-            row_0 = row_0.wrapping_add(1)
-        }
-    } else {
-        let mut row_1: u32 = 0 as i32 as u32;
-        while row_1 < row_count {
-            let source_buffer_1: *const f32 = (*from).pixels.offset(
-                from_row
-                    .wrapping_add(row_1)
-                    .wrapping_mul((*from).float_stride) as isize,
-            );
-            let dest_buffer_1: *mut f32 = (*to)
-                .pixels
-                .offset(to_row.wrapping_add(row_1).wrapping_mul((*to).float_stride) as isize);
-            ndx = 0 as i32 as u32;
-            while ndx < dest_buffer_count {
-                avg[0] = 0 as i32 as f32;
-                avg[1] = 0 as i32 as f32;
-                avg[2] = 0 as i32 as f32;
-                avg[3 as i32 as usize] = 0 as i32 as f32;
-                let weight_index_set = weight_indexes.get_unchecked(ndx as usize);
-                let left: i32 = weight_index_set.left_pixel as i32;
-                let right: i32 = weight_index_set.right_pixel as i32;
-                let weight_array: *const f32 = weight_values.as_ptr().offset(weight_index_set.left_weight as isize);
-                /* Accumulate each channel */
-                let mut i_1: i32 = left;
-                while i_1 <= right {
-                    let weight_0: f32 = *weight_array.offset((i_1 - left) as isize);
-                    let mut j: u32 = 0 as i32 as u32;
-                    while j < min_channels {
-                        avg[j as usize] += weight_0
-                            * *source_buffer_1.offset(
-                            (i_1 as u32).wrapping_mul(from_step).wrapping_add(j) as isize,
-                        );
-                        j = j.wrapping_add(1)
-                    }
-                    i_1 += 1
-                }
-                let mut j_0: u32 = 0 as i32 as u32;
-                while j_0 < min_channels {
-                    *dest_buffer_1.offset(ndx.wrapping_mul(to_step).wrapping_add(j_0) as isize) =
-                        avg[j_0 as usize];
-                    j_0 = j_0.wrapping_add(1)
-                }
-                ndx = ndx.wrapping_add(1)
-            }
-            row_1 = row_1.wrapping_add(1)
-        }
-    }
-    Ok(())
-}
-unsafe fn multiply_row(row: *mut f32, length: usize, coefficient: f32) {
-    let mut i: usize = 0 as i32 as usize;
-    while i < length {
-        *row.offset(i as isize) *= coefficient;
-        i = i.wrapping_add(1)
-    }
-}
-unsafe fn add_row(mutate_row: *mut f32, input_row: *mut f32, length: usize) {
-    let mut i: usize = 0 as i32 as usize;
-    while i < length {
-        *mutate_row.offset(i as isize) += *input_row.offset(i as isize);
-        i = i.wrapping_add(1)
     }
 }
 
@@ -383,6 +222,165 @@ pub unsafe fn flow_node_execute_scale2d_render1d(
     Ok(())
 }
 
+pub unsafe fn flow_bitmap_float_scale_rows(
+    from: &BitmapFloat,
+    from_row: u32,
+    to: &mut BitmapFloat,
+    to_row: u32,
+    row_count: u32,
+    weights: &PixelRowWeights
+) -> Result<(), FlowError> {
+    let from_step: u32 = from.channels;
+    let to_step: u32 = to.channels;
+    let dest_buffer_count: u32 = to.w;
+    let min_channels: u32 = from_step.min(to_step);
+    let mut ndx;
+    if min_channels > 4 as i32 as u32 {
+        return Err(nerror!(ErrorKind::InvalidState));
+    }
+    let weight_indexes = weights.contrib_row();
+    let weight_values = weights.weights();
+    let mut avg: [f32; 4] = [0.; 4];
+    // if both have alpha, process it
+    if from_step == 4 && to_step == 4 {
+        let mut row: u32 = 0;
+        while row < row_count {
+            let source_offset = ((from_row + row) * (*from).float_stride) as isize;
+            let source_buffer: *const __m128 =
+                (*from).pixels.offset(source_offset) as *const __m128;
+            let dest_offset = ((to_row + row) * (*to).float_stride) as isize;
+            let dest_buffer: *mut __m128 = (*to).pixels.offset(dest_offset) as *mut __m128;
+            let dest_buffer: &mut [__m128] =
+                std::slice::from_raw_parts_mut(dest_buffer, dest_buffer_count as usize);
+            ndx = 0;
+            while ndx < dest_buffer_count {
+                let mut sums: __m128 = _mm_set1_ps(0.0);
+                let weight_index_set = weight_indexes.get_unchecked(ndx as usize);
+                let left: i32 = weight_index_set.left_pixel as i32;
+                let right: i32 = weight_index_set.right_pixel as i32;
+                let weight_array: *const f32 = weight_values.as_ptr().offset(weight_index_set.left_weight as isize);
+                let source_buffer: &[__m128] =
+                    std::slice::from_raw_parts(source_buffer, (right + 1) as usize);
+                /* Accumulate each channel */
+                let mut i = left;
+                while i <= right {
+                    let factor: __m128 = _mm_set1_ps(*weight_array.offset((i - left) as isize));
+                    // sums += factor * *source_buffer[i as usize];
+                    let mid = _mm_mul_ps(factor, source_buffer[i as usize]);
+                    sums = _mm_add_ps(sums, mid);
+                    i += 1
+                }
+                dest_buffer[ndx as usize] = sums;
+                ndx += 1
+            }
+            row += 1
+        }
+    } else if from_step == 3 as i32 as u32 && to_step == 3 as i32 as u32 {
+        let mut row_0: u32 = 0 as i32 as u32;
+        while row_0 < row_count {
+            let source_buffer_0: *const f32 = (*from).pixels.offset(
+                from_row
+                    .wrapping_add(row_0)
+                    .wrapping_mul((*from).float_stride) as isize,
+            );
+            let dest_buffer_0: *mut f32 = (*to)
+                .pixels
+                .offset(to_row.wrapping_add(row_0).wrapping_mul((*to).float_stride) as isize);
+            ndx = 0 as i32 as u32;
+            while ndx < dest_buffer_count {
+                let mut bgr: [f32; 3] = [0.0f32, 0.0f32, 0.0f32];
+                let weight_index_set = weight_indexes.get_unchecked(ndx as usize);
+                let left: i32 = weight_index_set.left_pixel as i32;
+                let right: i32 = weight_index_set.right_pixel as i32;
+                let weight_array: *const f32 = weight_values.as_ptr().offset(weight_index_set.left_weight as isize);
+                let mut i_0;
+                /* Accumulate each channel */
+                i_0 = left;
+                while i_0 <= right {
+                    let weight: f32 = *weight_array.offset((i_0 - left) as isize);
+                    bgr[0] += weight
+                        * *source_buffer_0.offset((i_0 as u32).wrapping_mul(from_step) as isize);
+                    bgr[1] += weight
+                        * *source_buffer_0.offset(
+                        (i_0 as u32).wrapping_mul(from_step).wrapping_add(1u32) as isize,
+                    );
+                    bgr[2] += weight
+                        * *source_buffer_0.offset(
+                        (i_0 as u32).wrapping_mul(from_step).wrapping_add(2u32) as isize,
+                    );
+                    i_0 += 1
+                }
+                *dest_buffer_0.offset(ndx.wrapping_mul(to_step) as isize) = bgr[0];
+                *dest_buffer_0.offset(ndx.wrapping_mul(to_step).wrapping_add(1u32) as isize) =
+                    bgr[1];
+                *dest_buffer_0.offset(ndx.wrapping_mul(to_step).wrapping_add(2u32) as isize) =
+                    bgr[2];
+                ndx = ndx.wrapping_add(1)
+            }
+            row_0 = row_0.wrapping_add(1)
+        }
+    } else {
+        let mut row_1: u32 = 0 as i32 as u32;
+        while row_1 < row_count {
+            let source_buffer_1: *const f32 = (*from).pixels.offset(
+                from_row
+                    .wrapping_add(row_1)
+                    .wrapping_mul((*from).float_stride) as isize,
+            );
+            let dest_buffer_1: *mut f32 = (*to)
+                .pixels
+                .offset(to_row.wrapping_add(row_1).wrapping_mul((*to).float_stride) as isize);
+            ndx = 0 as i32 as u32;
+            while ndx < dest_buffer_count {
+                avg[0] = 0 as i32 as f32;
+                avg[1] = 0 as i32 as f32;
+                avg[2] = 0 as i32 as f32;
+                avg[3 as i32 as usize] = 0 as i32 as f32;
+                let weight_index_set = weight_indexes.get_unchecked(ndx as usize);
+                let left: i32 = weight_index_set.left_pixel as i32;
+                let right: i32 = weight_index_set.right_pixel as i32;
+                let weight_array: *const f32 = weight_values.as_ptr().offset(weight_index_set.left_weight as isize);
+                /* Accumulate each channel */
+                let mut i_1: i32 = left;
+                while i_1 <= right {
+                    let weight_0: f32 = *weight_array.offset((i_1 - left) as isize);
+                    let mut j: u32 = 0 as i32 as u32;
+                    while j < min_channels {
+                        avg[j as usize] += weight_0
+                            * *source_buffer_1.offset(
+                            (i_1 as u32).wrapping_mul(from_step).wrapping_add(j) as isize,
+                        );
+                        j = j.wrapping_add(1)
+                    }
+                    i_1 += 1
+                }
+                let mut j_0: u32 = 0 as i32 as u32;
+                while j_0 < min_channels {
+                    *dest_buffer_1.offset(ndx.wrapping_mul(to_step).wrapping_add(j_0) as isize) =
+                        avg[j_0 as usize];
+                    j_0 = j_0.wrapping_add(1)
+                }
+                ndx = ndx.wrapping_add(1)
+            }
+            row_1 = row_1.wrapping_add(1)
+        }
+    }
+    Ok(())
+}
+unsafe fn multiply_row(row: *mut f32, length: usize, coefficient: f32) {
+    let mut i: usize = 0 as i32 as usize;
+    while i < length {
+        *row.offset(i as isize) *= coefficient;
+        i = i.wrapping_add(1)
+    }
+}
+unsafe fn add_row(mutate_row: *mut f32, input_row: *mut f32, length: usize) {
+    let mut i: usize = 0 as i32 as usize;
+    while i < length {
+        *mutate_row.offset(i as isize) += *input_row.offset(i as isize);
+        i = i.wrapping_add(1)
+    }
+}
 
 pub unsafe  fn flow_bitmap_float_convert_srgb_to_linear(
     colorcontext: &ColorContext,
