@@ -296,7 +296,6 @@ impl<'a> ChecksumCtx<'a>{
     pub fn save_frame(&self, bit: &BitmapBgra, checksum: &str){
         let dest_path = self.image_path(&checksum);
         if !dest_path.exists(){
-            let dest_cpath = self.image_path_cstring(&checksum);
             let path_str = dest_path.to_str();
             if let Some(path) = path_str{
                 println!("Writing {}", &path);
@@ -304,9 +303,7 @@ impl<'a> ChecksumCtx<'a>{
                 println!("Writing {:#?}", &dest_path);
             }
             unsafe {
-                if !::imageflow_core::ffi::flow_bitmap_bgra_save_png(self.c.flow_c(), bit as *const BitmapBgra, dest_cpath.as_ptr()){
-                    cerror!(self.c).panic();
-                }
+                imageflow_core::helpers::write_png(dest_path, bit).unwrap();
             }
         }
     }

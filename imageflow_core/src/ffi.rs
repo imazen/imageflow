@@ -792,12 +792,6 @@ mod mid_term {
                                           y2: u32,
                                           color_srgb_argb: u32)
                                           -> bool;
-
-        pub fn flow_bitmap_bgra_save_png(c: *mut ImageflowContext,
-                                         input: *const BitmapBgra,
-                                         path: *const libc::c_char)
-                                         -> bool;
-
         pub fn flow_context_has_error(context: *mut ImageflowContext) -> bool;
         pub fn flow_context_clear_error(context: *mut ImageflowContext);
         pub fn flow_context_error_and_stacktrace(context: *mut ImageflowContext,

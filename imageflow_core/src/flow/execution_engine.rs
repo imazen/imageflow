@@ -511,17 +511,11 @@ impl<'a> Engine<'a> {
                                 let path = format!("node_frames/job_{}_node_{}.png",
                                                    self.job.debug_job_id,
                                                    self.g.node_weight(next_ix).unwrap().stable_id);
-                                let path_copy = path.clone();
-                                let path_cstr = std::ffi::CString::new(path).unwrap();
                                 let _ = std::fs::create_dir("node_frames");
-                                if !crate::ffi::flow_bitmap_bgra_save_png(self.c.flow_c(),
-                                                                     ptr,
-                                                                     path_cstr.as_ptr()) {
-                                    println!("Failed to save frame {} (from node {})",
-                                             path_copy,
-                                             next_ix.index());
-                                    cerror!(self.c).panic();
-                                }
+
+                                crate::codecs::write_png(&path, &*ptr)
+                                    .map_err(|e| e.at(here!()))?;
+
                             }
                         }
                     }
@@ -597,6 +591,7 @@ impl<'a> OpCtxMut<'a> {
 
 use daggy::walker::Walker;
 use crate::flow::definitions::NodeResult::Frame;
+use crate::codecs::NamedEncoders::LodePngEncoder;
 
 
 pub fn flow_node_has_dimensions(g: &Graph, node_id: NodeIndex) -> bool {
