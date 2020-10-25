@@ -78,21 +78,16 @@ impl NodeDefMutateBitmap for FillRectNodeDef {
 
             bitmap.compositing_mode = crate::ffi::BitmapCompositingMode::BlendWithSelf;
             unsafe {
-
-                if !ffi::flow_bitmap_bgra_fill_rect(c.flow_c(),
-                                                    bitmap as *mut BitmapBgra,
+                crate::graphics::fill::flow_bitmap_bgra_fill_rect(
+                                                    bitmap,
                                                     x1,
                                                     y1,
                                                     x2,
                                                     y2,
-                                                    color.clone().to_u32_bgra().unwrap()) {
-                    return Err(cerror!(c, "Failed to fill rectangle"))
-                }else{
-                    Ok(())
-                }
-
+                                                    color.clone().to_u32_bgra().unwrap())
+                    .map_err(|e| e.at(here!()))?;
             }
-
+            Ok(())
         } else {
             Err(nerror!(crate::ErrorKind::NodeParamsMismatch, "Need FillRect, got {:?}", p))
         }

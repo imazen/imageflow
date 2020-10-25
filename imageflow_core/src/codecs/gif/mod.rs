@@ -63,10 +63,12 @@ impl GifDecoder {
         unsafe {
             let w = self.screen.width;
             let h = self.screen.height;
-            let copy = ffi::flow_bitmap_bgra_create(c.flow_c(), w as i32, h as i32, false, ffi::PixelFormat::Bgra32);
-            if copy.is_null() {
-                cerror!(c).panic();
-            }
+            let copy = BitmapBgra::create(c,
+                                          w as u32,
+                                          h as u32,
+                                          ffi::PixelFormat::Bgra32,
+                                          s::Color::Transparent)
+                .map_err(|e| e.at(here!()))?;
             let copy_mut = &mut *copy;
 
             for row in 0..h{

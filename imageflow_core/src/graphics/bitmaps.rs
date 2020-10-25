@@ -23,9 +23,9 @@ pub struct BitmapsContainer{
 }
 
 impl BitmapsContainer{
-    pub fn new() -> BitmapsContainer{
+    pub fn with_capacity(capacity: usize) -> BitmapsContainer{
         BitmapsContainer{
-            map: ::slotmap::DenseSlotMap::<BitmapKey, RefCell<Bitmap>>::with_capacity_and_key(16)
+            map: ::slotmap::DenseSlotMap::<BitmapKey, RefCell<Bitmap>>::with_capacity_and_key(capacity)
         }
     }
     pub fn get(&self, key: BitmapKey) -> Option<&RefCell<Bitmap>>{
@@ -47,19 +47,20 @@ impl BitmapsContainer{
                              pixel_layout: PixelLayout,
                              alpha_premultiplied: bool,
                              alpha_meaningful: bool,
-                             color_space: ColorSpace) -> Result<BitmapKey, FlowError>{
-        Ok(self.map.insert(RefCell::new(Bitmap::create_u8(w,h,pixel_layout, alpha_premultiplied, alpha_meaningful, color_space)?)))
+                             color_space: ColorSpace,
+                             compose: BitmapCompositing) -> Result<BitmapKey, FlowError>{
+        Ok(self.map.insert(RefCell::new(Bitmap::create_u8(w,h,pixel_layout, alpha_premultiplied, alpha_meaningful, color_space, compose)?)))
     }
 }
 
 #[test]
 fn crop_bitmap(){
-    let mut c = BitmapsContainer::new();
+    let mut c = BitmapsContainer::with_capacity(2);
     let b1 =
         c.create_bitmap_f32(10,10, PixelLayout::BGRA, false, true, ColorSpace::LinearRGB)
             .unwrap();
     let b2 =
-        c.create_bitmap_u8(10,10, PixelLayout::BGRA, false, true, ColorSpace::StandardRGB)
+        c.create_bitmap_u8(10,10, PixelLayout::BGRA, false, true, ColorSpace::StandardRGB, BitmapCompositing::ReplaceSelf)
             .unwrap();
 
     let mut bitmap = c.get(b1).unwrap().borrow_mut();
@@ -140,7 +141,7 @@ impl<'a,T>  BitmapWindowMut<'a, T> {
         Ok(b)
     }
 
-    pub(crate) unsafe fn to_bitmap_bgra(&mut self, compositing_mode: BitmapCompositingMode) -> Result<BitmapBgra, FlowError>{
+    pub(crate) unsafe fn to_bitmap_bgra(&mut self) -> Result<BitmapBgra, FlowError>{
         if std::mem::size_of::<T>() != 1{
             return Err(nerror!(ErrorKind::InvalidState));
         }
@@ -157,7 +158,30 @@ impl<'a,T>  BitmapWindowMut<'a, T> {
             self.h(),
             fmt)
             .map_err(|e| e.at(here!()))?;
-        b.compositing_mode = compositing_mode;
+        match &self.info().compose{
+            BitmapCompositing::ReplaceSelf =>
+                {b.compositing_mode = crate::ffi::BitmapCompositingMode::ReplaceSelf},
+            BitmapCompositing::BlendWithSelf =>
+                {b.compositing_mode = crate::ffi::BitmapCompositingMode::BlendWithSelf},
+            BitmapCompositing::BlendWithMatte(c) => {
+                b.compositing_mode = crate::ffi::BitmapCompositingMode::BlendWithMatte;
+
+                let color_val = c.clone();
+                let color_srgb_argb = color_val.clone().to_u32_bgra().unwrap();
+
+                b.matte_color = std::mem::transmute(color_srgb_argb);
+
+                if c != &imageflow_types::Color::Transparent {
+                    b.fill_rect(
+                                          0,
+                                          0,
+                                          self.w(),
+                                          self.h(),
+                                          &color_val)?;
+                }
+            }
+        }
+
 
         b.pixels = self.slice.as_mut_ptr() as *mut u8;
         Ok(b)
@@ -314,6 +338,10 @@ impl BitmapInfo{
     pub fn alpha_meaningful(&self) -> bool{
         self.alpha_meaningful
     }
+    #[inline]
+    pub fn compose(&self) -> &BitmapCompositing{
+        &self.compose
+    }
 }
 pub struct Bitmap{
     buffer: BitmapBuffer,
@@ -395,16 +423,18 @@ impl Bitmap{
                     pixel_layout: PixelLayout,
                     alpha_premultiplied: bool,
                     alpha_meaningful: bool,
-                    color_space: ColorSpace) -> Result<Bitmap, FlowError>{
+                    color_space: ColorSpace,
+                    compositing_mode: BitmapCompositing) -> Result<Bitmap, FlowError>{
 
         // Pad rows to 64 bytes (this does not guarantee memory alignment, just stride alignment)
         let stride = Bitmap::get_stride::<u8>(w as usize, h as usize, pixel_layout.channels(), 64)?;
 
-
         //TODO: Note that allocs could be aligned to 16 instead of 64 bytes.
-        Ok(Bitmap{
+        let mut b = Bitmap{
             buffer: BitmapBuffer::Bytes(AlignedBuffer::new(stride as usize * h as usize, 64)
-                .map_err(|e| nerror!(ErrorKind::AllocationFailed))?),
+                .map_err(|e| nerror!(ErrorKind::AllocationFailed,
+                 "Failed to allocate {}x{}x{} bitmap ({} bytes). Reduce dimensions or increase RAM.",
+                  w, h, pixel_layout.channels(), w as usize * h as usize * pixel_layout.channels()))?),
             offset: 0,
             info: BitmapInfo {
                 w,
@@ -414,9 +444,26 @@ impl Bitmap{
                 alpha_premultiplied,
                 alpha_meaningful,
                 pixel_layout,
-                compose: BitmapCompositing::BlendWithSelf
+                compose: compositing_mode.clone()
             }
-        })
+        };
+
+        if let BitmapCompositing::BlendWithMatte(c) = compositing_mode{
+            let color_val = c.clone();
+            let color_srgb_argb = color_val.clone().to_u32_bgra().unwrap();
+            if color_val != imageflow_types::Color::Transparent {
+                unsafe {
+                    b.get_window_u8().unwrap().to_bitmap_bgra()
+                        .map_err(|e| e.at(here!()))?
+                        .fill_rect(0,
+                                  0,
+                                  w as u32,
+                                  h as u32,
+                                  &color_val)?;
+                }
+            }
+        }
+        Ok(b)
     }
 }
 

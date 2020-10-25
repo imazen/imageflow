@@ -12,6 +12,7 @@ mod histogram;
 mod color_matrix;
 mod luv;
 mod convolve;
+pub(crate) mod fill;
 
 //pub mod faces;
 

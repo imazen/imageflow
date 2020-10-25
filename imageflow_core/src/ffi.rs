@@ -258,18 +258,12 @@ impl BitmapBgra {
     }
 
 
-    pub fn fill_rect(&mut self, c: &crate::Context, x1: u32, y1: u32, x2: u32, y2: u32, color: &s::Color) -> Result<()> {
+    pub fn fill_rect(&mut self, x1: u32, y1: u32, x2: u32, y2: u32, color: &s::Color) -> Result<()> {
         let color_srgb_argb = color.clone().to_u32_bgra().unwrap();
         unsafe {
-            if !flow_bitmap_bgra_fill_rect(c.flow_c(),
-                                           self as *mut BitmapBgra,
-                                           x1,
-                                           y1,
-                                           x2,
-                                           y2,
-                                           color_srgb_argb) {
-                return Err(cerror!(c, "Failed to fill rectangle"))
-            }
+            crate::graphics::fill::flow_bitmap_bgra_fill_rect(self, x1,y1,x2,y2, color_srgb_argb)
+                .map_err(|e| e.at(here!()))?;
+
         }
         Ok(())
     }
@@ -304,6 +298,25 @@ impl BitmapBgra {
 
 
     pub fn create(c: &crate::Context, w: u32, h: u32, format: PixelFormat, color: s::Color) -> Result<*mut BitmapBgra> {
+
+        let mut container =
+            c.bitmaps.try_borrow_mut().map_err(|e| nerror!(ErrorKind::FailedBorrow))?;
+
+        let layout = match format{
+            PixelFormat::Bgra32 => PixelLayout::BGRA,
+            PixelFormat::Bgr32 => PixelLayout::BGRA,
+            PixelFormat::Bgr24 => PixelLayout::BGR,
+            PixelFormat::Gray8 => PixelLayout::Gray
+        };
+
+
+        // let key = container.create_bitmap_u8(w,h, layout,  false,
+        //     format == PixelFormat::Bgra32,
+        //                                      crate::graphics::bitmaps::ColorSpace::StandardRGB)
+        //     .map_err(|e| e.at(here!()))?;
+
+        //let window = container.get(key).unwrap().borrow_mut().get_window_u8().unwrap();
+
         let flow_pointer = c.flow_c();
 
         unsafe {
@@ -316,7 +329,7 @@ impl BitmapBgra {
             let color_srgb_argb = color_val.clone().to_u32_bgra().unwrap();
             (*ptr).compositing_mode = crate::ffi::BitmapCompositingMode::ReplaceSelf;
             if color_val != s::Color::Transparent {
-                (&mut *ptr).fill_rect(c,
+                (&mut *ptr).fill_rect(
                                       0,
                                       0,
                                       w as u32,
@@ -784,14 +797,7 @@ mod mid_term {
                                                   info: *const Scale2dRenderToCanvas1d)
                                                   -> bool;
 
-        pub fn flow_bitmap_bgra_fill_rect(c: *mut ImageflowContext,
-                                          input: *mut BitmapBgra,
-                                          x1: u32,
-                                          y1: u32,
-                                          x2: u32,
-                                          y2: u32,
-                                          color_srgb_argb: u32)
-                                          -> bool;
+
         pub fn flow_context_has_error(context: *mut ImageflowContext) -> bool;
         pub fn flow_context_clear_error(context: *mut ImageflowContext);
         pub fn flow_context_error_and_stacktrace(context: *mut ImageflowContext,
@@ -840,6 +846,7 @@ pub use self::must_replace::*;
 pub use self::long_term::*;
 pub use self::mid_term::*;
 use std::os::raw::c_char;
+use crate::graphics::bitmaps::PixelLayout;
 
 
 // https://github.com/rust-lang/rust/issues/17417
