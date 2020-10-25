@@ -1,5 +1,7 @@
+use crate::graphics::prelude::*;
+
 #[inline]
-unsafe extern "C" fn transpose4x4_SSE(A: *mut f32, B: *mut f32, lda: i32, ldb: i32) {
+unsafe fn transpose4x4_SSE(A: *mut f32, B: *mut f32, lda: i32, ldb: i32) {
     let mut row1: __m128 = _mm_loadu_ps(&mut *A.offset((0 as i32 * lda) as isize));
     let mut row2: __m128 = _mm_loadu_ps(&mut *A.offset((1 as i32 * lda) as isize));
     let mut row3: __m128 = _mm_loadu_ps(&mut *A.offset((2 as i32 * lda) as isize));

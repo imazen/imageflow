@@ -1,41 +1,8 @@
-use crate::ffi::{BitmapFloat,BitmapBgra,BitmapCompositingMode};
+use crate::graphics::prelude::*;
 use crate::graphics::weights::*;
-use crate::FlowError;
-use crate::errors::ErrorKind;
-
-#[cfg(target_arch = "x86")]
-pub use std::arch::x86::{
-    __m128, _mm_add_ps, _mm_loadu_ps, _mm_movehl_ps, _mm_movelh_ps, _mm_mul_ps, _mm_set1_ps,
-    _mm_setr_ps, _mm_setzero_ps, _mm_storeu_ps, _mm_unpackhi_ps, _mm_unpacklo_ps,
-};
-#[cfg(target_arch = "x86_64")]
-pub use std::arch::x86_64::{
-    __m128, _mm_add_ps, _mm_loadu_ps, _mm_movehl_ps, _mm_movelh_ps, _mm_mul_ps, _mm_set1_ps,
-    _mm_setr_ps, _mm_setzero_ps, _mm_storeu_ps, _mm_unpackhi_ps, _mm_unpacklo_ps,
-};
-use crate::graphics::bitmaps::{BitmapWindowMut, PixelLayout, Bitmap, ColorSpace};
-use crate::graphics::color::{WorkingFloatspace, ColorContext, flow_colorcontext_floatspace_to_srgb, uchar_clamp_ff};
-use crate::graphics::weights::{PixelRowWeights, PixelWeightIndexes};
-use crate::graphics::aligned_buffer::AlignedBuffer;
 use itertools::max;
 
-use crate::ffi::BitmapFloat as flow_bitmap_float;
-use crate::ffi::BitmapBgra as flow_bitmap_bgra;
-use imageflow_types::PixelFormat;
-use crate::ErrorKind::BitmapPointerNull;
 
-fn flow_pixel_format_bytes_per_pixel(format: crate::ffi::PixelFormat) -> u32
-{
-    format.bytes() as u32
-}
-fn flow_pixel_format_channels(format: crate::ffi::PixelFormat) -> u32{
-    match format{
-        PixelFormat::Bgra32 => 4,
-        PixelFormat::Bgr32 => 3,
-        PixelFormat::Bgr24 => 3,
-        PixelFormat::Gray8 => 1
-    }
-}
 
 #[derive(Copy, Clone)]
 pub struct ScaleAndRenderParams {
