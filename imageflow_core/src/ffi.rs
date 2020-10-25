@@ -283,6 +283,26 @@ impl BitmapBgra {
     }
 
 
+    pub fn create_header(w: u32, h: u32, format: PixelFormat) -> Result<BitmapBgra> {
+
+        let byte_stride = crate::graphics::bitmaps::Bitmap::get_stride::<u8>(
+            w as usize, h as usize, format.bytes(), 64)
+            .map_err(|e| e.at(here!()))?;
+
+
+        Ok(BitmapBgra {
+            w: w as u32,
+            h: h as u32,
+            stride: byte_stride,
+            pixels: ptr::null_mut(),
+
+            fmt: format,
+            matte_color: [0;4],
+            compositing_mode: crate::ffi::BitmapCompositingMode::ReplaceSelf
+        })
+    }
+
+
     pub fn create(c: &crate::Context, w: u32, h: u32, format: PixelFormat, color: s::Color) -> Result<*mut BitmapBgra> {
         let flow_pointer = c.flow_c();
 
@@ -390,24 +410,46 @@ pub enum BitmapCompositingMode {
 #[derive(Clone,Debug,PartialEq)]
 pub struct BitmapFloat {
     /// buffer width in pixels
-    w: u32,
+    pub w: u32,
     /// buffer height in pixels
-    h: u32,
+    pub h: u32,
     /// The number of floats per pixel
-    channels: u32,
+    pub channels: u32,
     /// The pixel data
-    pixels: *mut c_float,
+    pub pixels: *mut c_float,
     /// If true, don't dispose the buffer with the struct
-    pixels_borrowed: bool,
+    pub pixels_borrowed: bool,
     /// The number of floats in the buffer
-    float_count: u32,
+    pub float_count: u32,
     /// The number of floats between (0,0) and (0,1)
-    float_stride: u32,
+    pub float_stride: u32,
 
     /// If true, alpha has been premultiplied
-    alpha_premultiplied: bool,
+    pub alpha_premultiplied: bool,
     /// If true, the alpha channel holds meaningful data
-    alpha_meaningful: bool,
+    pub alpha_meaningful: bool,
+}
+
+impl BitmapFloat{
+    pub fn create_header(sx: u32, sy: u32, channels: usize) -> Result<BitmapFloat>
+    {
+        let float_stride = crate::graphics::bitmaps::Bitmap::get_stride::<f32>(
+            sx as usize, sy as usize, channels, 64)
+            .map_err(|e| e.at(here!()))?;
+
+
+        Ok(BitmapFloat {
+            w: sx as u32,
+            h: sy as u32,
+            pixels: ptr::null_mut(),
+            pixels_borrowed: true,
+            channels: channels as u32,
+            alpha_meaningful: channels == 4,
+            alpha_premultiplied: true,
+            float_stride,
+            float_count: float_stride * sy
+        })
+    }
 }
 
 /** flow context: Heap Manager **/

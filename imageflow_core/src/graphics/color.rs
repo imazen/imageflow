@@ -1,58 +1,115 @@
 use crate::graphics::math::{pow, fastpow};
 
+
+#[derive(Copy, Clone, PartialEq, Eq)]
+pub enum WorkingFloatspace {
+    StandardRGB,
+    LinearRGB,
+    Gamma
+}
+
+// Gamma correction  http://www.4p8.com/eric.brasseur/gamma.html#formulas
+
 #[derive(Copy, Clone)]
-#[repr(C)]
-pub struct flow_colorcontext_info {
-    pub byte_to_float: [f32; 256],
-    pub apply_srgb: bool,
-    pub apply_gamma: bool,
-    pub gamma: f32,
-    pub gamma_inverse: f32,
+pub struct ColorContext {
+    byte_to_float: [f32; 256],
+    apply_srgb: bool,
+    apply_gamma: bool,
+    gamma: f32,
+    gamma_inverse: f32,
 }
 
+impl ColorContext{
 
-#[inline]
-unsafe fn flow_colorcontext_srgb_to_floatspace_uncached(
-    colorcontext: *mut flow_colorcontext_info,
-    value: u8,
-) -> f32 {
-    let mut v: f32 = value as f32 * (1.0f32 / 255.0f32);
-    if (*colorcontext).apply_srgb {
-        v = srgb_to_linear(v)
-    } else if (*colorcontext).apply_gamma {
-        v = flow_colorcontext_remove_gamma(colorcontext, v)
+    pub fn new(space: WorkingFloatspace, gamma: f32) -> ColorContext{
+        let mut c = ColorContext{
+            apply_gamma: space == WorkingFloatspace::Gamma,
+            apply_srgb: space == WorkingFloatspace::StandardRGB,
+            gamma,
+            gamma_inverse: (1.0f64 / gamma as f64) as f32,
+            byte_to_float: [0f32;256]
+        };
+        for n in 0..256 {
+            c.byte_to_float[n] =
+                c.srgb_to_floatspace_uncached(n as u8);
+        }
+        c
     }
-    return v;
-}
-#[inline]
-unsafe fn flow_colorcontext_remove_gamma(
-    colorcontext: *mut flow_colorcontext_info,
-    value: f32,
-) -> f32 {
-    return pow(value as f64, (*colorcontext).gamma as f64) as f32;
+
+
+    #[inline]
+    pub fn srgb_to_floatspace_uncached(&self, value: u8) -> f32{
+        let mut v: f32 = value as f32 * (1.0f32 / 255.0f32);
+        if self.apply_srgb {
+            v = srgb_to_linear(v)
+        } else if self.apply_gamma {
+            v = self.remove_gamma(v)
+        }
+        return v;
+    }
+
+    #[inline]
+    pub fn remove_gamma(&self, value: f32) -> f32{
+        f32::powf(value, self.gamma)
+    }
+    #[inline]
+    pub fn apply_gamma(&self, value: f32) -> f32{
+        f32::powf(value, self.gamma_inverse)
+    }
+
+    #[inline]
+    pub fn srgb_to_floatspace(&self, value: u8) -> f32{
+        // Safe because array length is larger than u8 max value
+        unsafe {
+            *self.byte_to_float.get_unchecked(value as usize)
+        }
+    }
+    #[inline]
+    pub fn floatspace_to_srgb(&self, space_value: f32) -> u8{
+        let v: f32 = space_value;
+        if self.apply_gamma {
+            return uchar_clamp_ff(self.apply_gamma(v) * 255.0f32);
+        }
+        if self.apply_srgb {
+            return uchar_clamp_ff(linear_to_srgb(v));
+        }
+        return uchar_clamp_ff(255.0f32 * v);
+    }
+
 }
 
 #[inline]
-unsafe fn srgb_to_linear(s: f32) -> f32 {
+pub fn flow_colorcontext_floatspace_to_srgb(c: &ColorContext, space_value: f32) -> u8{
+    c.floatspace_to_srgb(space_value)
+}
+
+#[inline]
+pub fn flow_colorcontext_srgb_to_floatspace(c: &ColorContext, value: u8) -> f32{
+    c.srgb_to_floatspace(value)
+}
+
+
+#[inline]
+fn srgb_to_linear(s: f32) -> f32 {
     if s <= 0.04045f32 {
         s / 12.92f32
     } else {
-        pow(
-            ((s + 0.055f32) / (1 as i32 as f32 + 0.055f32)) as f64,
-            2.4f32 as f64,
-        ) as f32
+        f32::powf(
+            (s + 0.055f32) / (1 as i32 as f32 + 0.055f32),
+            2.4f32,
+        )
     }
 }
 #[inline]
-unsafe fn linear_to_srgb(clr: f32) -> f32 {
+fn linear_to_srgb(clr: f32) -> f32 {
     if clr <= 0.0031308f32 {
         12.92f32 * clr * 255.0f32
     }else {
-        1.055f32 * 255.0f32 * fastpow(clr, 0.41666666f32) - 14.025f32
+        1.055f32 * 255.0f32 * unsafe{ fastpow(clr, 0.41666666f32)} - 14.025f32
     }
 }
 #[inline]
-unsafe fn uchar_clamp_ff(clr: f32) -> u8 {
+pub(crate) fn uchar_clamp_ff(clr: f32) -> u8 {
     let mut result: u16;
     result = (clr as f64 + 0.5f64) as i16 as u16;
     if result as i32 > 255 as i32 {
@@ -66,34 +123,6 @@ unsafe fn uchar_clamp_ff(clr: f32) -> u8 {
 }
 
 
-#[inline]
-unsafe fn flow_colorcontext_apply_gamma(
-    colorcontext: *mut flow_colorcontext_info,
-    value: f32,
-) -> f32 {
-    return pow(value as f64, (*colorcontext).gamma_inverse as f64) as f32;
-}
-#[inline]
-unsafe fn flow_colorcontext_srgb_to_floatspace(
-    colorcontext: *mut flow_colorcontext_info,
-    value: u8,
-) -> f32 {
-    return (*colorcontext).byte_to_float[value as usize];
-}
-#[inline]
-unsafe fn flow_colorcontext_floatspace_to_srgb(
-    color: *mut flow_colorcontext_info,
-    space_value: f32,
-) -> u8 {
-    let v: f32 = space_value;
-    if (*color).apply_gamma {
-        return uchar_clamp_ff(flow_colorcontext_apply_gamma(color, v) * 255.0f32);
-    }
-    if (*color).apply_srgb {
-        return uchar_clamp_ff(linear_to_srgb(v));
-    }
-    return uchar_clamp_ff(255.0f32 * v);
-}
 #[inline]
 #[allow(non_snake_case)]
 unsafe fn linear_to_luv(bgr: *mut f32) {

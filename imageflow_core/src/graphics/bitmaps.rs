@@ -1,6 +1,6 @@
 use crate::{FlowError, ErrorKind};
-use crate::ffi::PixelFormat;
-use imageflow_types::PixelBuffer;
+use crate::ffi::{PixelFormat, BitmapFloat, BitmapBgra, BitmapCompositingMode};
+use imageflow_types::{PixelBuffer, CompositingMode};
 use imgref::ImgRef;
 use std::slice;
 use slotmap::*;
@@ -63,7 +63,8 @@ fn crop_bitmap(){
             .unwrap();
 
     let mut bitmap = c.get(b1).unwrap().borrow_mut();
-    let mut window = bitmap.get_window_f32().unwrap().window(1,1,6,6).unwrap();
+    let mut full_window = bitmap.get_window_f32().unwrap();
+    let mut window = full_window.window(1,1,6,6).unwrap();
     window.slice()[0] = 3f32;
 
     bitmap.set_alpha_meaningful(false);
@@ -113,19 +114,103 @@ pub struct BitmapWindowMut<'a, T>{
     slice: &'a mut [T],
     info: BitmapInfo
 }
+
+
 impl<'a,T>  BitmapWindowMut<'a, T> {
+
+    pub(crate) unsafe fn to_bitmap_float(&mut self) -> Result<BitmapFloat, FlowError>{
+        if std::mem::size_of::<T>() != 4{
+            return Err(nerror!(ErrorKind::InvalidState));
+        }
+        let mut b  = BitmapFloat::create_header(
+            self.w(),
+            self.h(),
+            self.info().channels())
+            .map_err(|e| e.at(here!()))?;
+        b.alpha_meaningful = self.info().alpha_meaningful;
+        b.alpha_premultiplied = self.info().alpha_premultiplied;
+        if b.float_stride != self.info().item_stride(){
+            return Err(nerror!(ErrorKind::InvalidState, "BitmapWindowMut and BitmapFloat have different strides"))
+        }
+        if b.float_count != self.info().item_stride() * self.h(){
+            return Err(nerror!(ErrorKind::InvalidState, "BitmapWindowMut and BitmapFloat have different item counts"))
+        }
+        b.pixels_borrowed = true;
+        b.pixels = self.slice.as_mut_ptr() as *mut f32;
+        Ok(b)
+    }
+
+    pub(crate) unsafe fn to_bitmap_bgra(&mut self, compositing_mode: BitmapCompositingMode) -> Result<BitmapBgra, FlowError>{
+        if std::mem::size_of::<T>() != 1{
+            return Err(nerror!(ErrorKind::InvalidState));
+        }
+
+        let fmt = match self.info().pixel_layout(){
+            PixelLayout::BGR => PixelFormat::Bgr24,
+            PixelLayout::BGRA if self.info().alpha_meaningful() => PixelFormat::Bgra32,
+            PixelLayout::BGRA if !self.info().alpha_meaningful() => PixelFormat::Bgr32,
+            PixelLayout::Gray => PixelFormat::Gray8,
+            _ => { return Err(nerror!(ErrorKind::InvalidState)); }
+        };
+        let mut b  = BitmapBgra::create_header(
+            self.w(),
+            self.h(),
+            fmt)
+            .map_err(|e| e.at(here!()))?;
+        b.compositing_mode = compositing_mode;
+
+        b.pixels = self.slice.as_mut_ptr() as *mut u8;
+        Ok(b)
+    }
+
+
+    pub fn w(&self) -> u32{
+        self.info.width()
+    }
+    pub fn h(&self) -> u32{
+        self.info.height()
+    }
+
+    /// Replaces all data with zeroes. Will zero data outside the window if this is a cropped window.
+    pub fn clear_slice(&mut self){
+        unsafe {
+            std::ptr::write_bytes(self.slice.as_mut_ptr(), 0, self.slice.len() - 1);
+        }
+    }
+
+    pub fn row(&mut self, index: u32) -> Option<&mut [T]>{
+        if index >= self.info.h {
+            None
+        }else {
+            let start_index = self.info.item_stride.checked_mul(index).unwrap() as usize;
+            let end_index = start_index + self.info.w as usize * self.info.channels();
+            Some(&mut self.slice[start_index..end_index])
+        }
+    }
+
+    pub fn row_window(&mut self, index: u32) -> Option<BitmapWindowMut<T>>{
+        let w= self.w();
+        self.window(0, index, w, index + 1)
+    }
+
+
     pub fn slice(&'a mut self) -> &'a mut [T]{
         self.slice
     }
+
+    pub(crate) fn slice_ptr(&mut self) -> *mut T {
+        self.slice.as_mut_ptr()
+    }
+
     pub fn info(&'a self) -> &'a BitmapInfo{
         &self.info
     }
-    pub fn window(self, x1: u32, y1: u32, x2: u32, y2: u32) -> Result<BitmapWindowMut<'a, T>, FlowError>{
+    pub fn window(&mut self, x1: u32, y1: u32, x2: u32, y2: u32) -> Option<BitmapWindowMut<T>>{
         if x1 >= x2 || y1 >= y2 || x2 > self.info.width() || y2 > self.info.height(){
-            return Err(nerror!(ErrorKind::InvalidArgument, "x1,y1,x2,y2 must be within window bounds"));
+            return None;// Err(nerror!(ErrorKind::InvalidArgument, "x1,y1,x2,y2 must be within window bounds"));
         }
         let offset = x1 + (y1 * self.info.item_stride());
-        Ok(BitmapWindowMut{
+        Some(BitmapWindowMut{
             slice: &mut self.slice[offset as usize..],
             info: BitmapInfo {
                 w: x2 - x1,
@@ -143,7 +228,7 @@ impl<'a,T>  BitmapWindowMut<'a, T> {
 
 
 impl Bitmap{
-    fn get_window_u8(&mut self) -> Option<BitmapWindowMut<u8>>{
+    pub(crate) fn get_window_u8(&mut self) -> Option<BitmapWindowMut<u8>>{
         let info = self.info().clone();
         let offset = self.offset() as usize;
 
@@ -155,7 +240,7 @@ impl Bitmap{
         })
     }
 
-    fn get_window_f32(&mut self) -> Option<BitmapWindowMut<f32>>{
+    pub(crate) fn get_window_f32(&mut self) -> Option<BitmapWindowMut<f32>>{
         let info = self.info().clone();
         let offset = self.offset() as usize;
 
@@ -248,7 +333,7 @@ impl Bitmap{
     }
 
 
-    fn check_dimensions<T>(w: usize, h: usize) -> Result<(), FlowError>
+    pub fn check_dimensions<T>(w: usize, h: usize) -> Result<(), FlowError>
     {
         if w == 0 || h == 0{
             return Err(nerror!(ErrorKind::InvalidArgument, "Bitmap dimensions cannot be zero"))
@@ -259,7 +344,7 @@ impl Bitmap{
         Ok(())
     }
 
-    fn get_stride<T>(w: usize, h: usize, items_per_pixel: usize,  alignment_in_bytes: usize) -> Result<u32,FlowError>{
+    pub fn get_stride<T>(w: usize, h: usize, items_per_pixel: usize,  alignment_in_bytes: usize) -> Result<u32,FlowError>{
 
         Bitmap::check_dimensions::<T>(w, items_per_pixel)
             .map_err(|e| e.at(here!()))?;
@@ -279,7 +364,7 @@ impl Bitmap{
         Ok(stride as u32)
     }
 
-   fn create_float(w: u32,
+   pub(crate) fn create_float(w: u32,
                             h: u32,
                             pixel_layout: PixelLayout,
                             alpha_premultiplied: bool,
@@ -305,7 +390,7 @@ impl Bitmap{
             }
         })
     }
-    fn create_u8(w: u32,
+    pub(crate) fn create_u8(w: u32,
                     h: u32,
                     pixel_layout: PixelLayout,
                     alpha_premultiplied: bool,

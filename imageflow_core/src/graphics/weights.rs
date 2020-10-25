@@ -88,6 +88,9 @@ impl Default for InterpolationDetails {
 }
 
 impl InterpolationDetails{
+    pub fn set_sharpen_percent_goal(&mut self, goal: f32){
+        self.sharpen_percent_goal = goal;
+    }
     fn bicubic(window: f64, blur: f64, b: f64, c: f64) -> InterpolationDetails{
         let bx2 = b + b;
         InterpolationDetails{
@@ -394,6 +397,14 @@ impl PixelRowWeights{
             .as_ref()
             .map(|r| &r.as_slice()[..self.weights_length])
             .unwrap_or(&[])
+    }
+
+    pub fn create_for(details: &InterpolationDetails,
+                      output_line_size :u32,
+                      input_line_size :u32) -> Result<PixelRowWeights,WeightsError>{
+        let mut weights = PixelRowWeights::new();
+        populate_weights(&mut weights, output_line_size, input_line_size, details)?;
+        Ok(weights)
     }
 
 }

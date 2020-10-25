@@ -7,7 +7,7 @@ static REVERSE_LUT_SIZE_SHORT: u32 = 256 * 16;
 // function to find integer near weight with common denominator. i8 bound check is very important.
 fn find_integral_weights(divisor: &mut u32, contribs: &PixelWeightsSimple) -> Result<[i8; 8], String>
 {
-    let mut eight = [0i8; 8];
+    let mut eight;
 
     let mut fail_reason = "".to_owned();
     for divisor_bits in (7..=10).rev() {
