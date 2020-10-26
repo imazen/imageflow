@@ -140,7 +140,7 @@ impl<'a,T>  BitmapWindowMut<'a, T> {
         Ok(b)
     }
 
-    pub(crate) unsafe fn to_bitmap_bgra(&mut self, compositing_mode: BitmapCompositingMode) -> Result<BitmapBgra, FlowError>{
+    pub unsafe fn to_bitmap_bgra(&mut self, compositing_mode: BitmapCompositingMode) -> Result<BitmapBgra, FlowError>{
         if std::mem::size_of::<T>() != 1{
             return Err(nerror!(ErrorKind::InvalidState));
         }
@@ -228,7 +228,7 @@ impl<'a,T>  BitmapWindowMut<'a, T> {
 
 
 impl Bitmap{
-    pub(crate) fn get_window_u8(&mut self) -> Option<BitmapWindowMut<u8>>{
+    pub fn get_window_u8(&mut self) -> Option<BitmapWindowMut<u8>>{
         let info = self.info().clone();
         let offset = self.offset() as usize;
 
@@ -390,7 +390,7 @@ impl Bitmap{
             }
         })
     }
-    pub(crate) fn create_u8(w: u32,
+    pub fn create_u8(w: u32,
                     h: u32,
                     pixel_layout: PixelLayout,
                     alpha_premultiplied: bool,
