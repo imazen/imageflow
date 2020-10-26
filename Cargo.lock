@@ -1315,9 +1315,9 @@ dependencies = [
 
 [[package]]
 name = "imagequant"
-version = "2.12.5"
+version = "2.13.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ed204263cc50c834608cc09afae352fbc7f408dd2eaac484914870f686c56a28"
+checksum = "c0b4956599cc38af9162b51fe752f73f3901b07139a6990b5dc63274868aae38"
 dependencies = [
  "imagequant-sys",
  "libc",
@@ -1325,9 +1325,9 @@ dependencies = [
 
 [[package]]
 name = "imagequant-sys"
-version = "2.12.5"
+version = "2.13.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "bfdae38117d89989b2c2352cec3d7dca12a207b48b4e20e183b7d0d6b1fd390c"
+checksum = "b689fca169e3d72d737a058ac1b9ab608b336cb01f8e582af15fc8a06cae4d9f"
 dependencies = [
  "cc",
  "rgb",
@@ -1735,7 +1735,8 @@ checksum = "41f5c9112cb662acd3b204077e0de5bc66305fa8df65c8019d5adb10e9ab6e58"
 [[package]]
 name = "mount"
 version = "0.3.0"
-source = "git+https://github.com/iron/mount.git?rev=2c3d719be4c158d4ddbd8cdb402fafccdefec58c#2c3d719be4c158d4ddbd8cdb402fafccdefec58c"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "32245731923cd096899502fc4c4317cfd09f121e80e73f7f576cf3777a824256"
 dependencies = [
  "iron",
  "sequence_trie",
@@ -1744,8 +1745,7 @@ dependencies = [
 [[package]]
 name = "mount"
 version = "0.3.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "32245731923cd096899502fc4c4317cfd09f121e80e73f7f576cf3777a824256"
+source = "git+https://github.com/iron/mount.git?rev=2c3d719be4c158d4ddbd8cdb402fafccdefec58c#2c3d719be4c158d4ddbd8cdb402fafccdefec58c"
 dependencies = [
  "iron",
  "sequence_trie",
