@@ -1458,9 +1458,9 @@ dependencies = [
 
 [[package]]
 name = "lcms2-sys"
-version = "3.1.4"
+version = "3.1.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "bb7d2f71158c0c27e642fa8a60e6dac6cb31216cab818c6454f8ec39717771a4"
+checksum = "8437eb413e1bf7fa279ea5eebef5c12abf46242ff2701d3738d850cab6f7dc47"
 dependencies = [
  "cc",
  "dunce",
@@ -1735,7 +1735,8 @@ checksum = "41f5c9112cb662acd3b204077e0de5bc66305fa8df65c8019d5adb10e9ab6e58"
 [[package]]
 name = "mount"
 version = "0.3.0"
-source = "git+https://github.com/iron/mount.git?rev=2c3d719be4c158d4ddbd8cdb402fafccdefec58c#2c3d719be4c158d4ddbd8cdb402fafccdefec58c"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "32245731923cd096899502fc4c4317cfd09f121e80e73f7f576cf3777a824256"
 dependencies = [
  "iron",
  "sequence_trie",
@@ -1744,8 +1745,7 @@ dependencies = [
 [[package]]
 name = "mount"
 version = "0.3.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "32245731923cd096899502fc4c4317cfd09f121e80e73f7f576cf3777a824256"
+source = "git+https://github.com/iron/mount.git?rev=2c3d719be4c158d4ddbd8cdb402fafccdefec58c#2c3d719be4c158d4ddbd8cdb402fafccdefec58c"
 dependencies = [
  "iron",
  "sequence_trie",
@@ -2139,9 +2139,9 @@ checksum = "8b870d8c151b6f2fb93e84a13146138f05d02ed11c7e7c54f8826aaaf7c9f184"
 
 [[package]]
 name = "pkg-config"
-version = "0.3.17"
+version = "0.3.19"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "05da548ad6865900e60eaba7f589cc0783590a92e940c26953ff81ddbab2d677"
+checksum = "3831453b3449ceb48b6d9c7ad7c96d5ea673e9b470a1dc578c2ce6521230884c"
 
 [[package]]
 name = "plugin"
