@@ -1035,9 +1035,9 @@ dependencies = [
 
 [[package]]
 name = "hyper-openssl"
-version = "0.8.0"
+version = "0.8.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ed123fc8c1833f305468df3c3a6a837c34a7ae616567d40a5e3c2bf3cac2e31d"
+checksum = "90705b797966f4774ffbc5e4dbda9e5b95f2a49991a3187f753171cdd7db3c58"
 dependencies = [
  "antidote",
  "bytes 0.5.5",
@@ -1049,6 +1049,7 @@ dependencies = [
  "openssl-sys",
  "tokio 0.2.21",
  "tokio-openssl",
+ "tower-layer",
 ]
 
 [[package]]
@@ -1735,7 +1736,8 @@ checksum = "41f5c9112cb662acd3b204077e0de5bc66305fa8df65c8019d5adb10e9ab6e58"
 [[package]]
 name = "mount"
 version = "0.3.0"
-source = "git+https://github.com/iron/mount.git?rev=2c3d719be4c158d4ddbd8cdb402fafccdefec58c#2c3d719be4c158d4ddbd8cdb402fafccdefec58c"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "32245731923cd096899502fc4c4317cfd09f121e80e73f7f576cf3777a824256"
 dependencies = [
  "iron",
  "sequence_trie",
@@ -1744,8 +1746,7 @@ dependencies = [
 [[package]]
 name = "mount"
 version = "0.3.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "32245731923cd096899502fc4c4317cfd09f121e80e73f7f576cf3777a824256"
+source = "git+https://github.com/iron/mount.git?rev=2c3d719be4c158d4ddbd8cdb402fafccdefec58c#2c3d719be4c158d4ddbd8cdb402fafccdefec58c"
 dependencies = [
  "iron",
  "sequence_trie",
@@ -3188,6 +3189,12 @@ checksum = "ffc92d160b1eef40665be3a05630d003936a3bc7da7421277846c2613e92c71a"
 dependencies = [
  "serde",
 ]
+
+[[package]]
+name = "tower-layer"
+version = "0.3.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a35d656f2638b288b33495d1053ea74c40dc05ec0b92084dd71ca5566c4ed1dc"
 
 [[package]]
 name = "tower-service"
