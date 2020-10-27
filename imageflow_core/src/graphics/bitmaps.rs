@@ -37,6 +37,11 @@ impl BitmapsContainer{
             .try_borrow_mut()
             .map_err(|e| nerror!(ErrorKind::FailedBorrow))
     }
+
+    pub fn free(&mut self, key: BitmapKey) -> bool {
+        self.map.remove(key).is_some()
+    }
+
     pub fn create_bitmap_f32(&mut self,
                             w: u32,
                             h: u32,

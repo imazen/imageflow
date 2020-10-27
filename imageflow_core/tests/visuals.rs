@@ -11,10 +11,8 @@ use crate::common::*;
 
 use imageflow_types;
 use imageflow_core::{Context, ErrorKind, FlowError, CodeLocation};
-use imageflow_core::ffi::BitmapBgra;
-use imageflow_types::{PixelFormat, Color, Node, ColorSrgb,
-                      EncoderPreset, ResampleHints, Filter, CommandStringKind,
-                        ConstraintMode, Constraint, PngBitDepth};
+use imageflow_types::{PixelFormat, Color, Node, ColorSrgb, EncoderPreset, ResampleHints, Filter, CommandStringKind, ConstraintMode, Constraint, PngBitDepth, PixelLayout};
+use imageflow_core::graphics::bitmaps::{BitmapCompositing, ColorSpace};
 
 
 const DEBUG_GRAPH: bool = false;
@@ -908,38 +906,55 @@ fn test_detect_whitespace_all_small_images(){
     let mut count = 0;
     for w in 3..12u32{
         for h in 3..12u32{
-            let b = unsafe { &mut *BitmapBgra::create(&ctx, w, h, PixelFormat::Bgra32, Color::Black).unwrap() };
 
-            for x in 0..w{
-                for y in 0..h{
-                    if x == 1 && y == 1 && w == 3 && h == 3 {
-                        continue;
-                        // This is a checkerboard, we don't support them
-                    }
+            let mut bitmaps = ctx.borrow_bitmaps_mut().unwrap();
 
-                    for size in 1..3 {
-                        if x + size <= w && y + size <= h {
-                            b.fill_rect(0, 0, w, h, &Color::Transparent).unwrap();
-                            b.fill_rect(x, y, x + size, y + size, &red).unwrap();
-                            let r = ::imageflow_core::graphics::whitespace::detect_content(&b, 1).unwrap();
-                            let correct = (r.x1 == x) && (r.y1 == y) && (r.x2 == x + size) && (r.y2 == y + size);
-                            if !correct {
-                                eprint!("Failed to correctly detect {}px dot at {},{} within {}x{}. Detected ", size, x, y, w, h);
-                                if r.x1 != x { eprint!("x1={}({})", r.x1, x);}
-                                if r.y1 != y { eprint!("y1={}({})", r.y1, y);}
-                                if r.x2 != x + size { eprint!("Detected x2={}({})", r.x2, x + size);}
-                                if r.y2 != y + size { eprint!("Detected y2={}({})", r.y2, y + size);}
-                                eprintln!(".");
-                                failed_count += 1;
-                            }
-                            count += 1;
+            let bitmap_key = bitmaps.create_bitmap_u8(
+                w,
+                h,
+                PixelLayout::BGRA,
+                false,
+                true,
+                ColorSpace::StandardRGB,
+                BitmapCompositing::BlendWithMatte(Color::Black)
+
+            ).unwrap();
+
+            {
+                let mut bitmap = bitmaps.try_borrow_mut(bitmap_key).unwrap();
+
+                let mut b = unsafe { bitmap.get_window_u8().unwrap().to_bitmap_bgra().unwrap() };
+
+                for x in 0..w {
+                    for y in 0..h {
+                        if x == 1 && y == 1 && w == 3 && h == 3 {
+                            continue;
+                            // This is a checkerboard, we don't support them
                         }
 
+                        for size in 1..3 {
+                            if x + size <= w && y + size <= h {
+                                b.fill_rect(0, 0, w, h, &Color::Transparent).unwrap();
+                                b.fill_rect(x, y, x + size, y + size, &red).unwrap();
+                                let r = ::imageflow_core::graphics::whitespace::detect_content(&b, 1).unwrap();
+                                let correct = (r.x1 == x) && (r.y1 == y) && (r.x2 == x + size) && (r.y2 == y + size);
+                                if !correct {
+                                    eprint!("Failed to correctly detect {}px dot at {},{} within {}x{}. Detected ", size, x, y, w, h);
+                                    if r.x1 != x { eprint!("x1={}({})", r.x1, x); }
+                                    if r.y1 != y { eprint!("y1={}({})", r.y1, y); }
+                                    if r.x2 != x + size { eprint!("Detected x2={}({})", r.x2, x + size); }
+                                    if r.y2 != y + size { eprint!("Detected y2={}({})", r.y2, y + size); }
+                                    eprintln!(".");
+                                    failed_count += 1;
+                                }
+                                count += 1;
+                            }
+                        }
                     }
                 }
             }
 
-            unsafe{ BitmapBgra::destroy(b, &ctx); }
+            assert!(bitmaps.free(bitmap_key));
 
         }
     }
@@ -955,21 +970,54 @@ fn test_detect_whitespace_basic(){
 
     let red = Color::Srgb(ColorSrgb::Hex("FF0000FF".to_owned()));
 
-    let b = unsafe { &mut *BitmapBgra::create(&ctx, 10, 10, PixelFormat::Bgra32, Color::Black).unwrap() };
-    b.fill_rect(1, 1, 9, 9, &red).unwrap();
-    let r = ::imageflow_core::graphics::whitespace::detect_content(&b, 1).unwrap();
-    assert_eq!(r.x1,1);
-    assert_eq!(r.y1,1);
-    assert_eq!(r.x2,9);
-    assert_eq!(r.y2,9);
+    let mut bitmaps = ctx.borrow_bitmaps_mut().unwrap();
 
-    let b = unsafe { &mut *BitmapBgra::create(&ctx, 100, 100, PixelFormat::Bgra32, Color::Black).unwrap() };
-    b.fill_rect(2, 3, 70, 70, &red).unwrap();
-    let r = ::imageflow_core::graphics::whitespace::detect_content(&b, 1).unwrap();
-    assert_eq!(r.x1,2);
-    assert_eq!(r.y1,3);
-    assert_eq!(r.x2,70);
-    assert_eq!(r.y2,70);
+    let bitmap_key_a = bitmaps.create_bitmap_u8(
+        10,
+        10,
+        PixelLayout::BGRA,
+        false,
+        true,
+        ColorSpace::StandardRGB,
+        BitmapCompositing::BlendWithMatte(Color::Black)
+
+    ).unwrap();
+
+    {
+        let mut bitmap = bitmaps.try_borrow_mut(bitmap_key_a).unwrap();
+        let mut b = unsafe { bitmap.get_window_u8().unwrap().to_bitmap_bgra().unwrap() };
+
+
+        b.fill_rect(1, 1, 9, 9, &red).unwrap();
+        let r = ::imageflow_core::graphics::whitespace::detect_content(&b, 1).unwrap();
+        assert_eq!(r.x1, 1);
+        assert_eq!(r.y1, 1);
+        assert_eq!(r.x2, 9);
+        assert_eq!(r.y2, 9);
+    }
+
+    let bitmap_key_b = bitmaps.create_bitmap_u8(
+        100,
+        100,
+        PixelLayout::BGRA,
+        false,
+        true,
+        ColorSpace::StandardRGB,
+        BitmapCompositing::BlendWithMatte(Color::Black)
+
+    ).unwrap();
+
+    {
+        let mut bitmap = bitmaps.try_borrow_mut(bitmap_key_b).unwrap();
+        let mut b = unsafe { bitmap.get_window_u8().unwrap().to_bitmap_bgra().unwrap() };
+
+        b.fill_rect(2, 3, 70, 70, &red).unwrap();
+        let r = ::imageflow_core::graphics::whitespace::detect_content(&b, 1).unwrap();
+        assert_eq!(r.x1, 2);
+        assert_eq!(r.y1, 3);
+        assert_eq!(r.x2, 70);
+        assert_eq!(r.y2, 70);
+    }
 }
 
 //#[test]

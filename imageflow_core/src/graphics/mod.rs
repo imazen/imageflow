@@ -1,6 +1,6 @@
 pub mod whitespace;
 pub(crate) mod copy_rect;
-pub(crate) mod bitmaps;
+pub mod bitmaps;
 pub(crate) mod  aligned_buffer;
 pub(crate) mod math;
 pub(crate) mod color;

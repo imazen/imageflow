@@ -253,11 +253,6 @@ impl BitmapBgra {
     }
 
 
-    pub unsafe fn destroy(bitmap: *mut Self, c: &crate::Context) {
-        flow_destroy(c.flow_c(), bitmap as *const libc::c_void, std::ptr::null(), 0);
-    }
-
-
     pub fn fill_rect(&mut self, x1: u32, y1: u32, x2: u32, y2: u32, color: &s::Color) -> Result<()> {
         let color_srgb_argb = color.clone().to_u32_bgra().unwrap();
         unsafe {
@@ -275,61 +270,7 @@ impl BitmapBgra {
         }
         Ok(vec)
     }
-
-
-
-    pub fn create(c: &crate::Context, w: u32, h: u32, format: PixelFormat, color: s::Color) -> Result<*mut BitmapBgra> {
-
-        let mut container =
-            c.bitmaps.try_borrow_mut().map_err(|e| nerror!(ErrorKind::FailedBorrow))?;
-
-        let layout = match format{
-            PixelFormat::Bgra32 => PixelLayout::BGRA,
-            PixelFormat::Bgr32 => PixelLayout::BGRA,
-            PixelFormat::Bgr24 => PixelLayout::BGR,
-            PixelFormat::Gray8 => PixelLayout::Gray
-        };
-
-        let compose = match color.clone(){
-            imageflow_types::Color::Transparent => BitmapCompositing::ReplaceSelf,
-            other => BitmapCompositing::BlendWithMatte(other)
-        };
-
-        let key = container.create_bitmap_u8(w,h, layout,  false,
-            format == PixelFormat::Bgra32,
-                                             crate::graphics::bitmaps::ColorSpace::StandardRGB,
-            compose)
-            .map_err(|e| e.at(here!()))?;
-
-        let window = container.get(key).unwrap().borrow_mut().get_window_u8().unwrap();
-
-        let flow_pointer = c.flow_c();
-
-        unsafe {
-            let ptr =
-                crate::ffi::flow_bitmap_bgra_create(flow_pointer, w as i32, h as i32, true, format);
-            if ptr.is_null() {
-                return Err(cerror!(c, "Failed to allocate {}x{}x{} bitmap ({} bytes). Reduce dimensions or increase RAM.", w, h, format.bytes(), w as usize * h as usize * format.bytes()))
-            }
-            let color_val = color.clone();
-            let color_srgb_argb = color_val.clone().to_u32_bgra().unwrap();
-            (*ptr).compositing_mode = crate::ffi::BitmapCompositingMode::ReplaceSelf;
-            if color_val != s::Color::Transparent {
-                (&mut *ptr).fill_rect(
-                                      0,
-                                      0,
-                                      w as u32,
-                                      h as u32,
-                                      &color)?;
-                (*ptr).compositing_mode = crate::ffi::BitmapCompositingMode::BlendWithMatte;
-            }
-
-            (*ptr).matte_color = mem::transmute(color_srgb_argb);
-
-            Ok(ptr)
-        }
-    }
-
+    
     //bgr24_to_bgra32 -> Set alpha as 0xff
     //bgr24_to_bgrx32 -> skip alpha
     //bgrx32_to_bgr24
