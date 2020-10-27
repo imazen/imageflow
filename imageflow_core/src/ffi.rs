@@ -270,7 +270,7 @@ impl BitmapBgra {
         }
         Ok(vec)
     }
-    
+
     //bgr24_to_bgra32 -> Set alpha as 0xff
     //bgr24_to_bgrx32 -> skip alpha
     //bgrx32_to_bgr24
@@ -370,27 +370,7 @@ pub struct BitmapFloat {
     pub alpha_meaningful: bool,
 }
 
-impl BitmapFloat{
-    pub fn create_header(sx: u32, sy: u32, channels: usize) -> Result<BitmapFloat>
-    {
-        let float_stride = crate::graphics::bitmaps::Bitmap::get_stride::<f32>(
-            sx as usize, sy as usize, channels, 64)
-            .map_err(|e| e.at(here!()))?;
 
-
-        Ok(BitmapFloat {
-            w: sx as u32,
-            h: sy as u32,
-            pixels: ptr::null_mut(),
-            pixels_borrowed: true,
-            channels: channels as u32,
-            alpha_meaningful: channels == 4,
-            alpha_premultiplied: true,
-            float_stride,
-            float_count: float_stride * sy
-        })
-    }
-}
 
 /** flow context: Heap Manager **/
 #[repr(C)]

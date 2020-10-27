@@ -121,22 +121,18 @@ impl<'a,T>  BitmapWindowMut<'a, T> {
         if std::mem::size_of::<T>() != 4{
             return Err(nerror!(ErrorKind::InvalidState));
         }
-        let mut b  = BitmapFloat::create_header(
-            self.w(),
-            self.h(),
-            self.info().channels())
-            .map_err(|e| e.at(here!()))?;
-        b.alpha_meaningful = self.info().alpha_meaningful;
-        b.alpha_premultiplied = self.info().alpha_premultiplied;
-        if b.float_stride != self.info().item_stride(){
-            return Err(nerror!(ErrorKind::InvalidState, "BitmapWindowMut and BitmapFloat have different strides"))
-        }
-        if b.float_count != self.info().item_stride() * self.h(){
-            return Err(nerror!(ErrorKind::InvalidState, "BitmapWindowMut and BitmapFloat have different item counts"))
-        }
-        b.pixels_borrowed = true;
-        b.pixels = self.slice.as_mut_ptr() as *mut f32;
-        Ok(b)
+
+        Ok(BitmapFloat {
+            w: self.w() as u32,
+            h: self.h() as u32,
+            pixels:  self.slice.as_mut_ptr() as *mut f32,
+            pixels_borrowed: true,
+            channels: self.info().channels() as u32,
+            alpha_meaningful: self.info().alpha_meaningful,
+            alpha_premultiplied: self.info().alpha_premultiplied,
+            float_stride: self.info().item_stride(),
+            float_count: self.info().item_stride() * self.h()
+        })
     }
 
     pub unsafe fn to_bitmap_bgra(&mut self) -> Result<BitmapBgra, FlowError>{
