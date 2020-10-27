@@ -12,6 +12,7 @@ use std::cell::RefCell;
 use std::os::raw::c_int;
 use imagequant;
 use crate::codecs::lode;
+use crate::graphics::bitmaps::BitmapKey;
 
 pub struct PngquantEncoder {
     liq: imagequant::Attributes,
@@ -41,21 +42,36 @@ impl PngquantEncoder {
 }
 
 impl Encoder for PngquantEncoder {
-    fn write_frame(&mut self, c: &Context, preset: &EncoderPreset, frame: &mut BitmapBgra, decoder_io_ids: &[i32]) -> Result<EncodeResult> {
-        if let Some((pal, pixels)) = self.quantize(frame)? {
-            lode::LodepngEncoder::write_png8(&mut self.io, &pal, &pixels, frame.w as usize, frame.h as usize, self.maximum_deflate)?;
-        } else {
-            lode::LodepngEncoder::write_png_auto(&mut self.io, &frame, self.maximum_deflate)?;
-        };
+    fn write_frame(&mut self, c: &Context, preset: &EncoderPreset, bitmap_key: BitmapKey, decoder_io_ids: &[i32]) -> Result<EncodeResult> {
 
-        Ok(EncodeResult {
-            w: frame.w as i32,
-            h: frame.h as i32,
-            io_id: self.io.io_id(),
-            bytes: ::imageflow_types::ResultBytes::Elsewhere,
-            preferred_extension: "png".to_owned(),
-            preferred_mime_type: "image/png".to_owned(),
-        })
+        let bitmaps = c.borrow_bitmaps()
+            .map_err(|e| e.at(here!()))?;
+
+        let mut bitmap = bitmaps.try_borrow_mut(bitmap_key)
+            .map_err(|e| e.at(here!()))?;
+
+        unsafe {
+            let frame = bitmap.get_window_u8()
+                .ok_or_else(|| nerror!(ErrorKind::InvalidBitmapType))?
+                .to_bitmap_bgra().map_err(|e| e.at(here!()))?;
+
+
+            if let Some((pal, pixels)) = self.quantize(&frame)? {
+                lode::LodepngEncoder::write_png8(&mut self.io, &pal, &pixels, bitmap.w() as usize, bitmap.h() as usize, self.maximum_deflate)?;
+            } else {
+                lode::LodepngEncoder::write_png_auto(&mut self.io, &frame, self.maximum_deflate)?;
+            };
+
+
+            Ok(EncodeResult {
+                w: frame.w as i32,
+                h: frame.h as i32,
+                io_id: self.io.io_id(),
+                bytes: ::imageflow_types::ResultBytes::Elsewhere,
+                preferred_extension: "png".to_owned(),
+                preferred_mime_type: "image/png".to_owned(),
+            })
+        }
     }
 
     fn get_io(&self) -> Result<IoProxyRef> {

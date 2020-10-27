@@ -1,4 +1,5 @@
 use super::internal_prelude::*;
+use crate::graphics::bitmaps::{PixelLayout, ColorSpace, BitmapCompositing};
 
 
 pub static CREATE_CANVAS: CreateCanvasNodeDef = CreateCanvasNodeDef{};
@@ -63,11 +64,28 @@ impl NodeDef for CreateCanvasNodeDef {
     fn execute(&self, ctx: &mut OpCtxMut, ix: NodeIndex) -> Result<NodeResult> {
         match self.get(&ctx.weight(ix).params) {
             Ok((w, h, format, color)) => {
-                let ptr = BitmapBgra::create(ctx.c, w as u32, h as u32, format, color)?;
+
+                let compose = match color{
+                    imageflow_types::Color::Transparent => BitmapCompositing::ReplaceSelf,
+                    other => BitmapCompositing::BlendWithMatte(other)
+                };
+
+
+                let key = ctx.c.borrow_bitmaps_mut()
+                    .map_err(|e| e.at(here!()))?
+                    .create_bitmap_u8(
+                    w as u32,
+                    h as u32,
+                    format.pixel_layout(),
+                    false,
+                    format == PixelFormat::Bgra32,
+                    ColorSpace::StandardRGB,
+                        compose
+                ).map_err(|e| e.at(here!()))?;
 
                 let weight = &mut ctx.weight_mut(ix);
-                weight.result = NodeResult::Frame(ptr);
-                Ok(NodeResult::Frame(ptr))
+                weight.result = NodeResult::Frame(key);
+                Ok(NodeResult::Frame(key))
             },
             Err(e) => Err(e)
         }

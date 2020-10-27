@@ -72,6 +72,7 @@ pub use self::enable_transparency::ENABLE_TRANSPARENCY;
 //pub use self::detection::CROP_FACES;
 
 use super::definitions::*;
+use crate::graphics::bitmaps::BitmapKey;
 
 #[test]
 fn test_err() {
@@ -144,11 +145,11 @@ impl<'c> OpCtxMut<'c> {
     pub fn first_parent_result_frame(&self,
                                              of_node: NodeIndex,
                                              kind: EdgeKind)
-                                             -> Option<*mut BitmapBgra> {
+                                             -> Option<BitmapKey> {
         self.first_parent_of_kind(of_node, kind)
             .and_then(|ix| self.graph.node_weight(ix))
             .and_then(|w| match w.result {
-                NodeResult::Frame(ptr) => Some(ptr),
+                NodeResult::Frame(key) => Some(key),
                 _ => None,
             })
     }
@@ -215,19 +216,18 @@ impl<'c> OpCtxMut<'c> {
         }
     }
 
-
-    pub fn bitmap_bgra_from(&mut self, ix: NodeIndex, filter_by_kind: EdgeKind) -> Result<*mut BitmapBgra> {
+    pub fn bitmap_key_from(&mut self, ix: NodeIndex, filter_by_kind: EdgeKind) -> Result<BitmapKey> {
         let parent = self.first_parent_of_kind_required(ix, filter_by_kind)?;
 
         let result = &self.graph.node_weight(parent).expect(loc!("first_parent_of_kind_required provided invalid node index")).result;
-        if let NodeResult::Frame(bitmap) = *result {
-            if bitmap.is_null() {
-                Err(nerror!(crate::ErrorKind::BitmapPointerNull, "Parent {:?} node has NodeResult::Frame(null)", filter_by_kind).with_ctx_mut(self, ix))
+        if let NodeResult::Frame(bitmap_key) = *result {
+            if self.c.bitmaps.borrow().get(bitmap_key).is_none(){
+                Err(nerror!(crate::ErrorKind::BitmapPointerNull, "Parent {:?} node has NodeResult::Frame(invalid key)", filter_by_kind).with_ctx_mut(self, ix))
             } else {
-                Ok(bitmap)
+                Ok(bitmap_key)
             }
         }else{
-            Err(nerror!(crate::ErrorKind::InvalidOperation, "Parent {:?} node lacks NodeResult::Frame(bitmap). Value is {:?}", filter_by_kind, result).with_ctx_mut(self, ix))
+            Err(nerror!(crate::ErrorKind::InvalidOperation, "Parent {:?} node lacks NodeResult::Frame(bitmap_key). Value is {:?}", filter_by_kind, result).with_ctx_mut(self, ix))
         }
     }
     pub fn consume_parent_result(&mut self, ix: NodeIndex, filter_by_kind: EdgeKind) -> Result<()> {

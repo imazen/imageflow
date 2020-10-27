@@ -277,25 +277,6 @@ impl BitmapBgra {
     }
 
 
-    pub fn create_header(w: u32, h: u32, format: PixelFormat) -> Result<BitmapBgra> {
-
-        let byte_stride = crate::graphics::bitmaps::Bitmap::get_stride::<u8>(
-            w as usize, h as usize, format.bytes(), 64)
-            .map_err(|e| e.at(here!()))?;
-
-
-        Ok(BitmapBgra {
-            w: w as u32,
-            h: h as u32,
-            stride: byte_stride,
-            pixels: ptr::null_mut(),
-
-            fmt: format,
-            matte_color: [0;4],
-            compositing_mode: crate::ffi::BitmapCompositingMode::ReplaceSelf
-        })
-    }
-
 
     pub fn create(c: &crate::Context, w: u32, h: u32, format: PixelFormat, color: s::Color) -> Result<*mut BitmapBgra> {
 
@@ -309,13 +290,18 @@ impl BitmapBgra {
             PixelFormat::Gray8 => PixelLayout::Gray
         };
 
+        let compose = match color.clone(){
+            imageflow_types::Color::Transparent => BitmapCompositing::ReplaceSelf,
+            other => BitmapCompositing::BlendWithMatte(other)
+        };
 
-        // let key = container.create_bitmap_u8(w,h, layout,  false,
-        //     format == PixelFormat::Bgra32,
-        //                                      crate::graphics::bitmaps::ColorSpace::StandardRGB)
-        //     .map_err(|e| e.at(here!()))?;
+        let key = container.create_bitmap_u8(w,h, layout,  false,
+            format == PixelFormat::Bgra32,
+                                             crate::graphics::bitmaps::ColorSpace::StandardRGB,
+            compose)
+            .map_err(|e| e.at(here!()))?;
 
-        //let window = container.get(key).unwrap().borrow_mut().get_window_u8().unwrap();
+        let window = container.get(key).unwrap().borrow_mut().get_window_u8().unwrap();
 
         let flow_pointer = c.flow_c();
 
@@ -846,7 +832,7 @@ pub use self::must_replace::*;
 pub use self::long_term::*;
 pub use self::mid_term::*;
 use std::os::raw::c_char;
-use crate::graphics::bitmaps::PixelLayout;
+use crate::graphics::bitmaps::{PixelLayout, BitmapCompositing};
 
 
 // https://github.com/rust-lang/rust/issues/17417

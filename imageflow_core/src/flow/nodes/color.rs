@@ -20,12 +20,20 @@ impl NodeDefMutateBitmap for ColorMatrixSrgbMutDef{
     fn fqn(&self) -> &'static str{
         "imazen.color_matrix_srgb_mut"
     }
-    fn mutate(&self, c: &Context, bitmap: &mut BitmapBgra,  p: &NodeParams) -> Result<()> {
+    fn mutate(&self, c: &Context, bitmap_key: BitmapKey,  p: &NodeParams) -> Result<()> {
         if let NodeParams::Json(s::Node::ColorMatrixSrgb { ref matrix }) = *p {
             unsafe {
+                let bitmaps = c.borrow_bitmaps()
+                    .map_err(|e| e.at(here!()))?;
+                let mut bitmap_bitmap = bitmaps.try_borrow_mut(bitmap_key)
+                    .map_err(|e| e.at(here!()))?;
+
+                let mut bitmap = bitmap_bitmap.get_window_u8().unwrap().to_bitmap_bgra()?;
+
+
                 let color_matrix_ptrs = matrix.iter().map(|row| row as *const f32).collect::<Vec<*const f32>>();
 
-                if !crate::ffi::flow_bitmap_bgra_apply_color_matrix(c.flow_c(), bitmap, 0, (*bitmap).h, color_matrix_ptrs.as_ptr()) {
+                if !crate::ffi::flow_bitmap_bgra_apply_color_matrix(c.flow_c(), &mut bitmap, 0, bitmap.h, color_matrix_ptrs.as_ptr()) {
                     return Err(cerror!(c, "Failed to apply color matrix"))
                 }
 

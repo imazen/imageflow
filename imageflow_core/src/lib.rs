@@ -69,6 +69,7 @@ use std::fmt;
 use std::borrow::Cow;
 use petgraph::graph::NodeIndex;
 
+pub use crate::graphics::bitmaps::BitmapKey;
 
 pub mod helpers{
     pub use crate::codecs::write_png;

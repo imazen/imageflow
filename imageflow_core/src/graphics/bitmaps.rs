@@ -5,7 +5,7 @@ use imgref::ImgRef;
 use std::slice;
 use slotmap::*;
 use crate::graphics::aligned_buffer::AlignedBuffer;
-use std::cell::RefCell;
+use std::cell::{RefCell, RefMut};
 use std;
 use std::ops::DerefMut;
 use crate::ErrorKind::BitmapPointerNull;
@@ -30,6 +30,12 @@ impl BitmapsContainer{
     }
     pub fn get(&self, key: BitmapKey) -> Option<&RefCell<Bitmap>>{
         self.map.get(key)
+    }
+
+    pub fn try_borrow_mut(&self, key: BitmapKey) -> Result<RefMut<Bitmap>, FlowError> {
+        self.get(key).ok_or_else(|| nerror!(ErrorKind::BitmapKeyNotFound))?
+            .try_borrow_mut()
+            .map_err(|e| nerror!(ErrorKind::FailedBorrow))
     }
     pub fn create_bitmap_f32(&mut self,
                             w: u32,
@@ -78,12 +84,7 @@ pub enum ColorSpace{
     StandardRGB,
     LinearRGB
 }
-#[derive(Copy, Clone, Debug, Eq, PartialEq, Ord, PartialOrd)]
-pub enum PixelLayout{
-    BGR,
-    BGRA,
-    Gray
-}
+
 
 
 #[derive(Clone,Debug,PartialEq)]
@@ -92,17 +93,9 @@ pub enum BitmapCompositing {
     BlendWithSelf,
     BlendWithMatte(imageflow_types::Color),
 }
+pub use imageflow_types::PixelLayout;
 
 
-impl PixelLayout{
-    pub fn channels(&self) -> usize{
-        match self{
-            PixelLayout::BGR => 3,
-            PixelLayout::BGRA => 4,
-            PixelLayout::Gray => 1
-        }
-    }
-}
 pub enum BitmapBuffer{
     Floats(AlignedBuffer<f32>),
     Bytes(AlignedBuffer<u8>),
@@ -119,7 +112,7 @@ pub struct BitmapWindowMut<'a, T>{
 
 impl<'a,T>  BitmapWindowMut<'a, T> {
 
-    pub(crate) unsafe fn to_bitmap_float(&mut self) -> Result<BitmapFloat, FlowError>{
+    pub unsafe fn to_bitmap_float(&mut self) -> Result<BitmapFloat, FlowError>{
         if std::mem::size_of::<T>() != 4{
             return Err(nerror!(ErrorKind::InvalidState));
         }
@@ -141,23 +134,26 @@ impl<'a,T>  BitmapWindowMut<'a, T> {
         Ok(b)
     }
 
-    pub(crate) unsafe fn to_bitmap_bgra(&mut self) -> Result<BitmapBgra, FlowError>{
+    pub unsafe fn to_bitmap_bgra(&mut self) -> Result<BitmapBgra, FlowError>{
         if std::mem::size_of::<T>() != 1{
             return Err(nerror!(ErrorKind::InvalidState));
         }
 
-        let fmt = match self.info().pixel_layout(){
-            PixelLayout::BGR => PixelFormat::Bgr24,
-            PixelLayout::BGRA if self.info().alpha_meaningful() => PixelFormat::Bgra32,
-            PixelLayout::BGRA if !self.info().alpha_meaningful() => PixelFormat::Bgr32,
-            PixelLayout::Gray => PixelFormat::Gray8,
-            _ => { return Err(nerror!(ErrorKind::InvalidState)); }
-        };
-        let mut b  = BitmapBgra::create_header(
-            self.w(),
-            self.h(),
-            fmt)
+        let fmt = self.info().calculate_pixel_format()
             .map_err(|e| e.at(here!()))?;
+
+
+        let mut b = BitmapBgra {
+            w: self.w() as u32,
+            h: self.h() as u32,
+            stride: self.info.item_stride,
+            pixels: self.slice.as_mut_ptr() as *mut u8,
+            fmt,
+            matte_color: [0;4],
+            compositing_mode: crate::ffi::BitmapCompositingMode::ReplaceSelf
+        };
+
+
         match &self.info().compose{
             BitmapCompositing::ReplaceSelf =>
                 {b.compositing_mode = crate::ffi::BitmapCompositingMode::ReplaceSelf},
@@ -183,7 +179,7 @@ impl<'a,T>  BitmapWindowMut<'a, T> {
         }
 
 
-        b.pixels = self.slice.as_mut_ptr() as *mut u8;
+
         Ok(b)
     }
 
@@ -252,7 +248,7 @@ impl<'a,T>  BitmapWindowMut<'a, T> {
 
 
 impl Bitmap{
-    pub(crate) fn get_window_u8(&mut self) -> Option<BitmapWindowMut<u8>>{
+    pub fn get_window_u8(&mut self) -> Option<BitmapWindowMut<u8>>{
         let info = self.info().clone();
         let offset = self.offset() as usize;
 
@@ -264,7 +260,7 @@ impl Bitmap{
         })
     }
 
-    pub(crate) fn get_window_f32(&mut self) -> Option<BitmapWindowMut<f32>>{
+    pub fn get_window_f32(&mut self) -> Option<BitmapWindowMut<f32>>{
         let info = self.info().clone();
         let offset = self.offset() as usize;
 
@@ -305,6 +301,19 @@ pub struct BitmapInfo{
     pixel_layout: PixelLayout,
     compose: BitmapCompositing
 }
+
+impl BitmapInfo {
+    pub(crate) fn calculate_pixel_format(&self) -> Result<PixelFormat, FlowError> {
+        Ok(match self.pixel_layout(){
+            PixelLayout::BGR => PixelFormat::Bgr24,
+            PixelLayout::BGRA if self.alpha_meaningful() => PixelFormat::Bgra32,
+            PixelLayout::BGRA if !self.alpha_meaningful() => PixelFormat::Bgr32,
+            PixelLayout::Gray => PixelFormat::Gray8,
+            _ => { return Err(nerror!(ErrorKind::InvalidState)); }
+        })
+    }
+}
+
 impl BitmapInfo{
     #[inline]
     pub fn width(&self) -> u32{
@@ -353,13 +362,35 @@ impl Bitmap{
     pub fn offset(&self) -> u32{
         self.offset
     }
+    #[inline]
     pub fn info(&self) -> &BitmapInfo{
         &self.info
     }
+    #[inline]
     pub fn set_alpha_meaningful(&mut self, value: bool){
         self.info.alpha_meaningful = value;
     }
+    #[inline]
+    pub fn set_compositing(&mut self, value: BitmapCompositing){
+        self.info.compose = value;
+    }
+    #[inline]
+    pub fn w(&self) -> u32{
+        self.info.w
+    }
+    #[inline]
+    pub fn h(&self) -> u32{
+        self.info.h
+    }
 
+    pub fn frame_info(&self) -> crate::flow::definitions::FrameInfo {
+        crate::flow::definitions::FrameInfo {
+            w: self.w() as i32,
+            h: self.h() as i32,
+            fmt: self.info().calculate_pixel_format()
+                .expect("Only call frame_info() on classic bitmap_bgra formats")
+        }
+    }
 
     pub fn check_dimensions<T>(w: usize, h: usize) -> Result<(), FlowError>
     {
@@ -464,6 +495,19 @@ impl Bitmap{
             }
         }
         Ok(b)
+    }
+
+    pub fn crop(&mut self, x1: u32, y1: u32, x2: u32, y2: u32) -> Result<(), FlowError>{
+        let (w, h) = (self.w(), self.h());
+        if x2 <= x1 || y2 <= y1 || x2 > w || y2 > h {
+            return Err(nerror!(ErrorKind::InvalidArgument,
+            "Invalid crop bounds {:?} (image {}x{})", ((x1, y1), (x2, y2)), w, h));
+        }
+
+        self.offset = self.offset + (self.info.item_stride * y1) + (self.info.pixel_layout().channels() as u32 * x1);
+        self.info.w = x2 - x1;
+        self.info.h = y2 - y1;
+        Ok(())
     }
 }
 

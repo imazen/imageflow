@@ -1,4 +1,6 @@
 use super::internal_prelude::*;
+use slotmap::{KeyData, Key};
+use crate::ErrorKind::BitmapKeyNotFound;
 
 pub static BITMAP_BGRA_POINTER: BitmapBgraDef = BitmapBgraDef{};
 
@@ -11,11 +13,11 @@ pub static PRIMITIVE_DECODER: DecoderPrimitiveDef = DecoderPrimitiveDef{};
 pub struct BitmapBgraDef{}
 
 impl BitmapBgraDef{
-    fn get(&self, p: &NodeParams) -> Result<*mut *mut BitmapBgra> {
+    fn get_key_ptr(&self, p: &NodeParams) -> Result<*mut u64> {
         if let NodeParams::Json(s::Node::FlowBitmapBgraPtr { ptr_to_flow_bitmap_bgra_ptr }) = *p {
-            let ptr: *mut *mut BitmapBgra = ptr_to_flow_bitmap_bgra_ptr as *mut *mut BitmapBgra;
+            let ptr: *mut u64 = ptr_to_flow_bitmap_bgra_ptr as *mut u64;
             if ptr.is_null() {
-                return Err(nerror!(crate::ErrorKind::InvalidNodeParams, "The pointer to the bitmap bgra pointer is null! Must be a valid reference to a pointer's location."));
+                return Err(nerror!(crate::ErrorKind::InvalidNodeParams, "The pointer to the bitmap key is null! Must be a valid reference to a pointer's location."));
             } else {
                 Ok(ptr)
             }
@@ -34,26 +36,30 @@ impl NodeDef for BitmapBgraDef {
     }
 
     fn validate_params(&self, p: &NodeParams) -> Result<()> {
-        self.get(p).map_err(|e| e.at(here!())).map(|_| ())
+        self.get_key_ptr(p).map_err(|e| e.at(here!())).map(|_| ())
     }
 
     fn estimate(&self, ctx: &mut OpCtxMut, ix: NodeIndex) -> Result<FrameEstimate> {
         let params = &ctx.weight(ix).params;
 
-        let ptr = self.get(params).map_err(|e| e.at(here!()))?;
+        let key_ptr = self.get_key_ptr(params).map_err(|e| e.at(here!()))?;
 
-        unsafe {
-            if (*ptr).is_null() {
-                let input = ctx.frame_est_from(ix, EdgeKind::Input).map_err(|e| e.at(here!()))?;
-                Ok(input)
-            } else {
-                let b = &(**ptr);
-                Ok(FrameEstimate::Some(FrameInfo {
-                    w: b.w as i32,
-                    h: b.h as i32,
-                    fmt: b.fmt,
-                }))
-            }
+        //This is the dangerous step, as the pointer may be invalid
+        let key: BitmapKey = KeyData::from_ffi(unsafe { *key_ptr }).into();
+
+
+        let bitmaps = ctx.c.borrow_bitmaps()
+            .map_err(|e| e.at(here!()))?;
+
+        // TODO: make this faster by not calling try_borrow_mut which adds unnecessary error data
+        let bitmap_maybe = bitmaps.try_borrow_mut(key);
+
+
+        if bitmap_maybe.is_err() {
+            let input = ctx.frame_est_from(ix, EdgeKind::Input).map_err(|e| e.at(here!()))?;
+            Ok(input)
+        } else {
+            Ok(FrameEstimate::Some(bitmap_maybe.unwrap().frame_info()))
         }
     }
 
@@ -62,19 +68,27 @@ impl NodeDef for BitmapBgraDef {
     }
 
     fn execute(&self, ctx: &mut OpCtxMut, ix: NodeIndex) -> Result<NodeResult> {
-        let ptr = self.get(&ctx.weight(ix).params).map_err(|e| e.at(here!()))?;
+        let key_ptr = self.get_key_ptr(&ctx.weight(ix).params).map_err(|e| e.at(here!()))?;
 
-        let frame = ctx.first_parent_result_frame(ix, EdgeKind::Input);
-        if let Some(input_ptr) = frame {
-            unsafe { *ptr = input_ptr };
+        let parent_frame = ctx.first_parent_result_frame(ix, EdgeKind::Input);
+        if let Some(bitmap_key) = parent_frame {
+
             ctx.consume_parent_result(ix, EdgeKind::Input)?;
-            Ok(NodeResult::Frame(input_ptr))
+
+            // Also very dangerous, as invalid data can cause us to write this byte to arbitrary
+            // memory
+            unsafe {
+                *key_ptr = KeyData::from(bitmap_key).as_ffi();
+            }
+            Ok(NodeResult::Frame(bitmap_key))
         } else {
             unsafe {
-                if (*ptr).is_null() {
-                    return Err(nerror!(crate::ErrorKind::InvalidNodeParams, "When serving as an input node (no parent), FlowBitmapBgraPtr must point to a pointer to a valid BitmapBgra struct."));
+                if (*key_ptr) == 0 ||
+                    BitmapKey::from(KeyData::from_ffi(*key_ptr)).is_null(){
+                    return Err(nerror!(crate::ErrorKind::InvalidNodeParams, "When serving as an input node (no parent), FlowBitmapBgraPtr must point to a u64 (BitmapKey in ffi mode)."));
                 }
-                Ok(NodeResult::Frame(*ptr))
+                //Ok(NodeResult::Frame(*ptr))
+                Ok(NodeResult::Frame(BitmapKey::null()))
             }
         }
     }
@@ -280,7 +294,10 @@ impl NodeDef for EncoderDef {
 
     fn execute(&self, ctx: &mut OpCtxMut, ix: NodeIndex) -> Result<NodeResult> {
         let (io_id, preset) = self.get(&ctx.weight(ix).params)?;
-        let input_bitmap = ctx.bitmap_bgra_from(ix, EdgeKind::Input).map_err(|e| e.at(here!()))?;
+
+
+        let input_key = ctx.bitmap_key_from(ix, EdgeKind::Input)
+            .map_err(|e| e.at(here!()))?;
 
         // Validate max encode size
         let estimate = self.estimate(ctx, ix)?;
@@ -289,7 +306,7 @@ impl NodeDef for EncoderDef {
         let decoders = ctx.get_decoder_io_ids_and_indexes(ix).into_iter().map(|(io_id, ix)| io_id).collect::<Vec<i32>>();
 
         let mut codec = ctx.c.get_codec(io_id).map_err(|e| e.at(here!()))?;
-        let result = codec.write_frame(ctx.c, &preset,unsafe{ &mut *input_bitmap }, &decoders ).map_err(|e| e.at(here!()))?;
+        let result = codec.write_frame(ctx.c, &preset,input_key, &decoders ).map_err(|e| e.at(here!()))?;
 
 
         Ok(NodeResult::Encoded(result))

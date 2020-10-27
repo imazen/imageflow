@@ -235,7 +235,7 @@ impl<'a> Engine<'a> {
             render_graph_versions: self.c.graph_recording.record_graph_versions.unwrap_or(false),
             maximum_graph_versions: 100,
         };
-        let update = notify_graph_changed(&mut self.g, &info)?;
+        let update = notify_graph_changed(self.c,&mut self.g, &info)?;
         if let Some(GraphRecordingUpdate { next_graph_version }) = update {
             self.c.next_graph_version = next_graph_version;
         }
@@ -482,12 +482,15 @@ impl<'a> Engine<'a> {
                             return Err(nerror!(crate::ErrorKind::InvalidOperation, "Node {} execution returned {:?}", def.name(), result).into());
                         }else{
                             // Force update the estimate to match reality
-                            if let NodeResult::Frame(bit) = result{
-                                if !bit.is_null() {
-                                    unsafe {
-                                        ctx.weight_mut(next_ix).frame_est = FrameEstimate::Some((*bit).frame_info());
-                                    }
-                                }
+                            if let NodeResult::Frame(bitmap_key) = result {
+
+                                let bitmap_frame_info = ctx.c.borrow_bitmaps()
+                                    .map_err(|e| e.at(here!()))?
+                                    .try_borrow_mut(bitmap_key)
+                                    .map_err(|e| e.at(here!()))?
+                                    .frame_info();
+
+                                ctx.weight_mut(next_ix).frame_est = FrameEstimate::Some(bitmap_frame_info);
                             }
                             ctx.weight_mut(next_ix).result = result;
                         }
@@ -499,7 +502,7 @@ impl<'a> Engine<'a> {
 
                     unsafe {
                         if self.c.graph_recording.record_frame_images.unwrap_or(false) {
-                            if let NodeResult::Frame(ptr) = self.g
+                            if let NodeResult::Frame(bitmap_key) = self.g
                                 .node_weight(next_ix)
                                 .unwrap()
                                 .result {
@@ -508,7 +511,15 @@ impl<'a> Engine<'a> {
                                                    self.g.node_weight(next_ix).unwrap().stable_id);
                                 let _ = std::fs::create_dir("node_frames");
 
-                                crate::codecs::write_png(&path, &*ptr)
+
+                                let bitmaps = self.c.borrow_bitmaps()
+                                    .map_err(|e| e.at(here!()))?;
+                                let mut bitmap = bitmaps.try_borrow_mut(bitmap_key)
+                                    .map_err(|e| e.at(here!()))?;
+
+                                let bitmap_bgra = bitmap.get_window_u8().unwrap().to_bitmap_bgra()?;
+
+                                crate::codecs::write_png(&path, &bitmap_bgra)
                                     .map_err(|e| e.at(here!()))?;
 
                             }
@@ -576,7 +587,7 @@ impl<'a> Engine<'a> {
 impl<'a> OpCtxMut<'a> {
     pub fn graph_to_str(&mut self) -> Result<String> {
         let mut vec = Vec::new();
-        super::visualize::print_graph(&mut vec, self.graph, None).unwrap();
+        super::visualize::print_graph(self.c, &mut vec, self.graph, None).unwrap();
         Ok(String::from_utf8(vec).unwrap())
     }
 }

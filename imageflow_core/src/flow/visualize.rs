@@ -17,7 +17,8 @@ pub struct GraphRecordingUpdate {
     pub next_graph_version: i32,
 }
 
-pub fn notify_graph_changed(graph_ref: &mut Graph,
+pub fn notify_graph_changed(c: &crate::Context,
+                            graph_ref: &mut Graph,
                             r: &GraphRecordingInfo)
                             -> Result<Option<GraphRecordingUpdate>> {
     if !r.record_graph_versions || r.current_graph_version > r.maximum_graph_versions {
@@ -36,7 +37,7 @@ pub fn notify_graph_changed(graph_ref: &mut Graph,
         format!("job_{}_graph_version_{}.dot", r.debug_job_id, r.current_graph_version);
     {
         let mut f = File::create(&current_filename).unwrap();
-        print_graph(&mut f, graph_ref, Some(&frame_prefix)).unwrap();
+        print_graph(c, &mut f, graph_ref, Some(&frame_prefix)).unwrap();
         println!("Writing file {}", &current_filename);
     }
     if prev_graph_version >= 0 {
@@ -99,13 +100,16 @@ fn get_pixel_format_name(fmt: PixelFormat) -> &'static str {
     }
 }
 
-pub fn print_graph(f: &mut dyn std::io::Write,
+pub fn print_graph(c: &crate::Context,
+                   f: &mut dyn std::io::Write,
                    g: &Graph,
                    node_frame_filename_prefix: Option<&str>)
-                   -> std::io::Result<()> {
-    writeln!(f, "digraph g {{\n")?;
-    writeln!(f, "{}node [shape=box, fontsize=20, fontcolor=\"#5AFA0A\" fontname=\"sans-serif bold\"]\n  size=\"12,18\"\n", INDENT)?;
-    writeln!(f, "{}edge [fontsize=20, fontname=\"sans-serif\"]\n", INDENT)?;
+                   -> Result<()> {
+    writeln!(f, "digraph g {{\n").map_err(|e| FlowError::from_visualizer(e))?;
+    writeln!(f, "{}node [shape=box, fontsize=20, fontcolor=\"#5AFA0A\" fontname=\"sans-serif bold\"]\n  size=\"12,18\"\n", INDENT)
+        .map_err(|e| FlowError::from_visualizer(e))?;
+    writeln!(f, "{}edge [fontsize=20, fontname=\"sans-serif\"]\n", INDENT)
+        .map_err(|e| FlowError::from_visualizer(e))?;
 
 
     // output all edges
@@ -113,15 +117,21 @@ pub fn print_graph(f: &mut dyn std::io::Write,
         write!(f, "{}n{} -> n{}",
                INDENT,
                edge.source().index(),
-               edge.target().index())?;
+               edge.target().index())
+            .map_err(|e| FlowError::from_visualizer(e))?;
 
         let weight = g.node_weight(edge.source()).unwrap();
 
         let dimensions = match weight.result {
-            NodeResult::Frame(ptr) => {
-                unsafe {
-                    format!("frame {}x{} {}", (*ptr).w, (*ptr).h, get_pixel_format_name_for(ptr))
-                }
+            NodeResult::Frame(bitmap_key) => {
+
+                let bitmaps = c.borrow_bitmaps()
+                    .map_err(|e| e.at(here!()))?;
+                let bitmap = bitmaps.try_borrow_mut(bitmap_key)
+                    .map_err(|e| e.at(here!()))?;
+
+                let format_name = bitmap.info().calculate_pixel_format()?.debug_name();
+                format!("frame {}x{} {}", bitmap.w(), bitmap.h(), format_name)
             }
             _ => {
                 match weight.frame_est {
@@ -134,7 +144,7 @@ pub fn print_graph(f: &mut dyn std::io::Write,
         write!(f, " [label=\"e{}: {}{}\"]\n", i, dimensions, match *g.edge_weight(EdgeIndex::new(i)).unwrap() {
             EdgeKind::Canvas => " canvas",
             _ => ""
-        })?;
+        }).map_err(|e| FlowError::from_visualizer(e))?;
     }
 
     let mut total_ns: u64 = 0;
@@ -145,19 +155,26 @@ pub fn print_graph(f: &mut dyn std::io::Write,
         total_ns += u64::from(weight.cost.wall_ns);
         let ms = weight.cost.wall_ns as f64 / 1000f64;
 
-        write!(f, "{}n{} [", INDENT, index.index())?;
+        write!(f, "{}n{} [", INDENT, index.index())
+            .map_err(|e| FlowError::from_visualizer(e))?;
 
         if let Some(prefix) = node_frame_filename_prefix {
-            write!(f, "image=\"{}{}.png\", ", prefix, weight.stable_id)?;
+            write!(f, "image=\"{}{}.png\", ", prefix, weight.stable_id)
+                .map_err(|e| FlowError::from_visualizer(e))?;
         }
-        write!(f, "label=\"n{}: ", index.index())?;
-        weight.graphviz_node_label(f)?;
-        write!(f, "\n{:.5}ms\"]\n", ms)?;
+        write!(f, "label=\"n{}: ", index.index())
+            .map_err(|e| FlowError::from_visualizer(e))?;
+        weight.graphviz_node_label(f)
+            .map_err(|e| FlowError::from_visualizer(e))?;
+        write!(f, "\n{:.5}ms\"]\n", ms)
+            .map_err(|e| FlowError::from_visualizer(e))?;
     }
     let total_ms = (total_ns as f64) / 1000.0f64;
     writeln!(f, "{}graphinfo [label=\"{} nodes\n{} edges\nExecution time: {:.3}ms\"]\n",
-             INDENT, g.node_count(), g.edge_count(), total_ms)?;
-    writeln!(f, "}}")?;
+             INDENT, g.node_count(), g.edge_count(), total_ms)
+        .map_err(|e| FlowError::from_visualizer(e))?;
+    writeln!(f, "}}")
+        .map_err(|e| FlowError::from_visualizer(e))?;
     Ok(())
 }
 

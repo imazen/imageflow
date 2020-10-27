@@ -12,8 +12,9 @@ use crate::errors::{OutwardErrorBuffer, CErrorProxy};
 use crate::codecs::CodecInstanceContainer;
 use crate::codecs::EnabledCodecs;
 use crate::ffi::IoDirection;
+use crate::graphics::bitmaps::{BitmapWindowMut, BitmapKey, Bitmap, BitmapsContainer};
 
-/// Something of a God object (which is necessary for a reasonable FFI interface).
+/// Something of a god object (which is necessary for a reasonable FFI interface).
 pub struct Context {
     /// The C context object
     c_ctx: *mut ffi::ImageflowContext,
@@ -39,7 +40,9 @@ pub struct Context {
     pub bitmaps: RefCell<crate::graphics::bitmaps::BitmapsContainer>
 }
 
+//TODO: isn't this supposed to increment with each new context in process?
 static mut JOB_ID: i32 = 0;
+
 impl Context {
 
     pub fn create() -> Result<Box<Context>>{
@@ -120,6 +123,17 @@ impl Context {
 
     pub fn message(&mut self, method: &str, json: &[u8]) -> (JsonResponse, Result<()>) {
         crate::context_methods::CONTEXT_ROUTER.invoke(self, method, json)
+    }
+
+    pub fn borrow_bitmaps_mut(&self) -> Result<RefMut<BitmapsContainer>>{
+        self.bitmaps.try_borrow_mut()
+            .map_err(|e| nerror!(ErrorKind::FailedBorrow, "{:?}", e))
+
+    }
+    pub fn borrow_bitmaps(&self) -> Result<Ref<BitmapsContainer>>{
+        self.bitmaps.try_borrow()
+            .map_err(|e| nerror!(ErrorKind::FailedBorrow, "{:?}", e))
+
     }
 
 

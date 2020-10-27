@@ -31,6 +31,7 @@ mod color_transform_cache;
 use crate::io::IoProxyRef;
 use crate::codecs::color_transform_cache::ColorTransformCache;
 use crate::codecs::NamedEncoders::LibPngRsEncoder;
+use crate::graphics::bitmaps::BitmapKey;
 
 pub trait DecoderFactory{
     fn create(c: &Context, io: &mut IoProxy, io_id: i32) -> Option<Result<Box<dyn Decoder>>>;
@@ -41,7 +42,7 @@ pub trait Decoder : Any{
     fn get_scaled_image_info(&mut self, c: &Context) -> Result<s::ImageInfo>;
     fn get_exif_rotation_flag(&mut self, c: &Context) -> Result<Option<i32>>;
     fn tell_decoder(&mut self, c: &Context, tell: s::DecoderCommand) -> Result<()>;
-    fn read_frame(&mut self, c: &Context) -> Result<*mut BitmapBgra>;
+    fn read_frame(&mut self, c: &Context) -> Result<BitmapKey>;
     fn has_more_frames(&mut self) -> Result<bool>;
     fn as_any(&self) -> &dyn Any;
 }
@@ -49,7 +50,7 @@ pub trait Encoder{
     // GIF encoder will need to know if transparency is required (we could guess based on first input frame)
     // If not required, we can do frame shrinking and delta encoding. Otherwise we have to
     // encode entire frames and enable transparency (default)
-    fn write_frame(&mut self, c: &Context, preset: &s::EncoderPreset, frame: &mut BitmapBgra, decoder_io_ids: &[i32]) -> Result<s::EncodeResult>;
+    fn write_frame(&mut self, c: &Context, preset: &s::EncoderPreset, frame: BitmapKey, decoder_io_ids: &[i32]) -> Result<s::EncodeResult>;
 
     fn get_io(&self) -> Result<IoProxyRef>;
 }
@@ -205,7 +206,7 @@ impl CodecInstanceContainer {
 
 impl CodecInstanceContainer{
 
-     pub fn write_frame(&mut self, c: &Context, preset: &s::EncoderPreset, frame: &mut BitmapBgra, decoder_io_ids: &[i32]) -> Result<s::EncodeResult>{
+     pub fn write_frame(&mut self, c: &Context, preset: &s::EncoderPreset, bitmap_key: BitmapKey, decoder_io_ids: &[i32]) -> Result<s::EncodeResult>{
 
          // Pick encoder
          if let CodecKind::EncoderPlaceholder = self.codec {
@@ -215,7 +216,7 @@ impl CodecInstanceContainer{
              let codec = match *preset {
                  s::EncoderPreset::Gif => {
                      //TODO: enforce killbits - if c.enabled_codecs.encoders.contains()
-                     CodecKind::Encoder(Box::new(gif::GifEncoder::create(c, preset, io, frame)?))
+                     CodecKind::Encoder(Box::new(gif::GifEncoder::create(c, preset, io, bitmap_key)?))
                  },
                  s::EncoderPreset::Pngquant {speed, quality , minimum_quality, maximum_deflate} => {
                      CodecKind::Encoder(Box::new(pngquant::PngquantEncoder::create(c, speed, quality, minimum_quality, maximum_deflate, io)?))
@@ -242,7 +243,7 @@ impl CodecInstanceContainer{
 
 
          if let CodecKind::Encoder(ref mut e) = self.codec {
-             match e.write_frame(c, preset, frame, decoder_io_ids).map_err(|e| e.at(here!())){
+             match e.write_frame(c, preset, bitmap_key, decoder_io_ids).map_err(|e| e.at(here!())){
                  Err(e) => Err(e),
                  Ok(result) => {
                      match result.bytes{

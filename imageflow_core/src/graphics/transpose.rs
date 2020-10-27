@@ -75,11 +75,12 @@ pub unsafe fn flow_bitmap_bgra_transpose(
     from: *mut flow_bitmap_bgra,
     to: *mut flow_bitmap_bgra,
 ) -> Result<(), FlowError> {
-    if (*from).w != (*to).h || (*from).h != (*to).w || (*from).fmt as u32 != (*to).fmt as u32 {
-        return Err(nerror!(ErrorKind::InvalidArgument));
+    if (*from).w != (*to).h || (*from).h != (*to).w || (*from).fmt != (*to).fmt  {
+        return Err(nerror!(ErrorKind::InvalidArgument, "Canvas and input formats must be the same and dimensions must be swapped"));
     }
+
     if (*from).fmt != PixelFormat::Bgra32
-        && (*from).fmt != PixelFormat::Bgra32
+        && (*from).fmt != PixelFormat::Bgr32
     {
         flow_bitmap_bgra_transpose_slow( from, to)
             .map_err(|e| e.at(here!()))?;

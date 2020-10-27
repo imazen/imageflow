@@ -99,7 +99,7 @@ fn test_expand_rect(){
 
 #[test]
 fn test_crop(){
-    for _ in 1..100 { //WTF are we looping 100 times for?
+    for _ in 1..100 { //TODO: WTF are we looping 100 times for?
         let matched = compare(None, 500,
                               "FillRectAndCrop", POPULATE_CHECKSUMS, DEBUG_GRAPH, vec![
             Node::CreateCanvas { w: 200, h: 200, format: PixelFormat::Bgra32, color: Color::Srgb(ColorSrgb::Hex("FF5555FF".to_owned())) },
