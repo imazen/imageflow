@@ -6,6 +6,7 @@ use crate::flow::nodes;
 use crate::internal_prelude::works_everywhere::*;
 use std::any::Any;
 use crate::flow::nodes::*;
+use crate::graphics::bitmaps::BitmapKey;
 
 pub type Graph = Dag<Node, EdgeKind>;
 
@@ -114,14 +115,14 @@ pub trait NodeDefOneInputOneCanvasExpand{
 pub trait NodeDefOneInputOneCanvas{
     fn fqn(&self) -> &'static str;
     fn validate_params(&self, p: &NodeParams) -> Result<()>;
-    fn render(&self, c: &Context, canvas: &mut BitmapBgra, input: &mut BitmapBgra,  p: &NodeParams) -> Result<()>;
+    fn render(&self, c: &Context, canvas_key: BitmapKey, input_key: BitmapKey,  p: &NodeParams) -> Result<()>;
 }
 pub trait NodeDefMutateBitmap{
     fn fqn(&self) -> &'static str;
     fn validate_params(&self, p: &NodeParams) -> Result<()>{
         Ok(())
     }
-    fn mutate(&self, c: &Context, bitmap: &mut BitmapBgra,  p: &NodeParams) -> Result<()>;
+    fn mutate(&self, c: &Context, bitmap_key: BitmapKey,  p: &NodeParams) -> Result<()>;
 }
 
 
@@ -248,20 +249,20 @@ pub trait NodeDef: ::std::fmt::Debug{
 
     fn execute(&self, ctx: &mut OpCtxMut, ix: NodeIndex) -> Result<NodeResult>{
         if let Some(n) = self.as_one_input_one_canvas(){
-            let input = ctx.bitmap_bgra_from(ix, EdgeKind::Input).map_err(|e| e.at(here!()))?;
-            let canvas = ctx.bitmap_bgra_from(ix, EdgeKind::Canvas).map_err(|e| e.at(here!()))?;
+            let input = ctx.bitmap_key_from(ix, EdgeKind::Input).map_err(|e| e.at(here!()))?;
+            let canvas = ctx.bitmap_key_from(ix, EdgeKind::Canvas).map_err(|e| e.at(here!()))?;
 
             ctx.consume_parent_result(ix, EdgeKind::Canvas)?;
 
-            n.render(ctx.c, unsafe { &mut *canvas }, unsafe { &mut *input }, &ctx.weight(ix).params).map_err(|e| e.at(here!()).with_ctx_mut(ctx,ix))?;
+            n.render(ctx.c, canvas, input, &ctx.weight(ix).params).map_err(|e| e.at(here!()).with_ctx_mut(ctx,ix))?;
 
             Ok(NodeResult::Frame(canvas))
 
         } else if let Some(n) = self.as_one_mutate_bitmap(){
-            let input = ctx.bitmap_bgra_from(ix, EdgeKind::Input).map_err(|e| e.at(here!()).with_ctx_mut(ctx,ix))?;
+            let input = ctx.bitmap_key_from(ix, EdgeKind::Input).map_err(|e| e.at(here!()).with_ctx_mut(ctx,ix))?;
             ctx.consume_parent_result(ix, EdgeKind::Input)?;
 
-            n.mutate(ctx.c, unsafe { &mut *input }, &ctx.weight(ix).params).map_err(|e| e.at(here!()))?;
+            n.mutate(ctx.c, input, &ctx.weight(ix).params).map_err(|e| e.at(here!()))?;
 
             Ok(NodeResult::Frame(input))
         }else {
@@ -439,7 +440,7 @@ pub enum NodeResult {
     Consumed,
 
     /// A frame result
-    Frame(*mut BitmapBgra), // Should this be boxed?
+    Frame(BitmapKey),
     ///
     Encoded(s::EncodeResult),
 }
@@ -499,8 +500,8 @@ impl From<s::Node> for Node {
             s::Node::Crop { .. } => Node::n(&nodes::CROP, NodeParams::Json(node)),
             s::Node::CropWhitespace { .. } => Node::n(&nodes::CROP_WHITESPACE, NodeParams::Json(node)),
             s::Node::Decode { .. } => Node::n(&nodes::DECODER, NodeParams::Json(node)),
-            s::Node::FlowBitmapBgraPtr { .. } => {
-                Node::n(&nodes::BITMAP_BGRA_POINTER, NodeParams::Json(node))
+            s::Node::FlowBitmapKeyPtr { .. } => {
+                Node::n(&nodes::BITMAP_KEY_POINTER, NodeParams::Json(node))
             }
             s::Node::CommandString{ .. } => Node::n(&nodes::COMMAND_STRING, NodeParams::Json(node)),
             s::Node::FlipV => Node::n(&nodes::FLIP_V, NodeParams::Json(node)),

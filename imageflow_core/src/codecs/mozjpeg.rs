@@ -16,6 +16,7 @@ use evalchroma;
 use evalchroma::PixelSize;
 use crate::codecs::lode;
 use std::io::Write;
+use crate::graphics::bitmaps::BitmapKey;
 
 #[derive(Copy, Clone)]
 enum Defaults {
@@ -54,7 +55,21 @@ impl MozjpegEncoder {
 }
 
 impl Encoder for MozjpegEncoder {
-    fn write_frame(&mut self, c: &Context, _preset: &EncoderPreset, frame: &mut BitmapBgra, _decoder_io_ids: &[i32]) -> Result<EncodeResult> {
+    fn write_frame(&mut self, c: &Context, _preset: &EncoderPreset, bitmap_key: BitmapKey, _decoder_io_ids: &[i32]) -> Result<EncodeResult> {
+
+        let bitmaps = c.borrow_bitmaps()
+            .map_err(|e| e.at(here!()))?;
+
+        let mut bitmap = bitmaps.try_borrow_mut(bitmap_key)
+            .map_err(|e| e.at(here!()))?;
+
+
+        let frame = unsafe{ bitmap.get_window_u8()
+            .ok_or_else(|| nerror!(ErrorKind::InvalidBitmapType))?
+            .to_bitmap_bgra().map_err(|e| e.at(here!()))?};
+
+
+
         let in_color_space = match frame.fmt {
             PixelFormat::Bgra32 => mozjpeg::ColorSpace::JCS_EXT_BGRA,
             PixelFormat::Bgr32 => mozjpeg::ColorSpace::JCS_EXT_BGRX,

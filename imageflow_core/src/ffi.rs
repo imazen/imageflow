@@ -253,11 +253,6 @@ impl BitmapBgra {
     }
 
 
-    pub unsafe fn destroy(bitmap: *mut Self, c: &crate::Context) {
-        flow_destroy(c.flow_c(), bitmap as *const libc::c_void, std::ptr::null(), 0);
-    }
-
-
     pub fn fill_rect(&mut self, x1: u32, y1: u32, x2: u32, y2: u32, color: &s::Color) -> Result<()> {
         let color_srgb_argb = color.clone().to_u32_bgra().unwrap();
         unsafe {
@@ -274,74 +269,6 @@ impl BitmapBgra {
             vec.push(unsafe{ self.pixels.offset(self.stride as isize * y as isize) } )
         }
         Ok(vec)
-    }
-
-
-    pub fn create_header(w: u32, h: u32, format: PixelFormat) -> Result<BitmapBgra> {
-
-        let byte_stride = crate::graphics::bitmaps::Bitmap::get_stride::<u8>(
-            w as usize, h as usize, format.bytes(), 64)
-            .map_err(|e| e.at(here!()))?;
-
-
-        Ok(BitmapBgra {
-            w: w as u32,
-            h: h as u32,
-            stride: byte_stride,
-            pixels: ptr::null_mut(),
-
-            fmt: format,
-            matte_color: [0;4],
-            compositing_mode: crate::ffi::BitmapCompositingMode::ReplaceSelf
-        })
-    }
-
-
-    pub fn create(c: &crate::Context, w: u32, h: u32, format: PixelFormat, color: s::Color) -> Result<*mut BitmapBgra> {
-
-        let mut container =
-            c.bitmaps.try_borrow_mut().map_err(|e| nerror!(ErrorKind::FailedBorrow))?;
-
-        let layout = match format{
-            PixelFormat::Bgra32 => PixelLayout::BGRA,
-            PixelFormat::Bgr32 => PixelLayout::BGRA,
-            PixelFormat::Bgr24 => PixelLayout::BGR,
-            PixelFormat::Gray8 => PixelLayout::Gray
-        };
-
-
-        // let key = container.create_bitmap_u8(w,h, layout,  false,
-        //     format == PixelFormat::Bgra32,
-        //                                      crate::graphics::bitmaps::ColorSpace::StandardRGB)
-        //     .map_err(|e| e.at(here!()))?;
-
-        //let window = container.get(key).unwrap().borrow_mut().get_window_u8().unwrap();
-
-        let flow_pointer = c.flow_c();
-
-        unsafe {
-            let ptr =
-                crate::ffi::flow_bitmap_bgra_create(flow_pointer, w as i32, h as i32, true, format);
-            if ptr.is_null() {
-                return Err(cerror!(c, "Failed to allocate {}x{}x{} bitmap ({} bytes). Reduce dimensions or increase RAM.", w, h, format.bytes(), w as usize * h as usize * format.bytes()))
-            }
-            let color_val = color.clone();
-            let color_srgb_argb = color_val.clone().to_u32_bgra().unwrap();
-            (*ptr).compositing_mode = crate::ffi::BitmapCompositingMode::ReplaceSelf;
-            if color_val != s::Color::Transparent {
-                (&mut *ptr).fill_rect(
-                                      0,
-                                      0,
-                                      w as u32,
-                                      h as u32,
-                                      &color)?;
-                (*ptr).compositing_mode = crate::ffi::BitmapCompositingMode::BlendWithMatte;
-            }
-
-            (*ptr).matte_color = mem::transmute(color_srgb_argb);
-
-            Ok(ptr)
-        }
     }
 
     //bgr24_to_bgra32 -> Set alpha as 0xff
@@ -443,27 +370,7 @@ pub struct BitmapFloat {
     pub alpha_meaningful: bool,
 }
 
-impl BitmapFloat{
-    pub fn create_header(sx: u32, sy: u32, channels: usize) -> Result<BitmapFloat>
-    {
-        let float_stride = crate::graphics::bitmaps::Bitmap::get_stride::<f32>(
-            sx as usize, sy as usize, channels, 64)
-            .map_err(|e| e.at(here!()))?;
 
-
-        Ok(BitmapFloat {
-            w: sx as u32,
-            h: sy as u32,
-            pixels: ptr::null_mut(),
-            pixels_borrowed: true,
-            channels: channels as u32,
-            alpha_meaningful: channels == 4,
-            alpha_premultiplied: true,
-            float_stride,
-            float_count: float_stride * sy
-        })
-    }
-}
 
 /** flow context: Heap Manager **/
 #[repr(C)]
@@ -825,16 +732,6 @@ mod mid_term {
                                              function_name: *const libc::c_char)
                                              -> bool;
 
-        pub fn flow_context_calloc(context: *mut ImageflowContext,
-                                   instance_count: usize,
-                                   instance_size: usize,
-                                   destructor: *const libc::c_void,
-                                   owner: *const libc::c_void,
-                                   file: *const libc::c_char,
-                                   line: i32)
-                                   -> *mut libc::c_void;
-
-
         pub fn flow_bitmap_bgra_populate_histogram(c: *mut ImageflowContext, input: *mut BitmapBgra, histograms: *mut u64, histogram_size_per_channel: u32, histogram_count: u32, pixels_sampled: *mut u64) -> bool;
         pub fn flow_bitmap_bgra_apply_color_matrix(c: *mut ImageflowContext, input: *mut BitmapBgra, row: u32, count: u32, matrix: *const *const f32) -> bool;
 
@@ -846,7 +743,7 @@ pub use self::must_replace::*;
 pub use self::long_term::*;
 pub use self::mid_term::*;
 use std::os::raw::c_char;
-use crate::graphics::bitmaps::PixelLayout;
+use crate::graphics::bitmaps::{PixelLayout, BitmapCompositing};
 
 
 // https://github.com/rust-lang/rust/issues/17417

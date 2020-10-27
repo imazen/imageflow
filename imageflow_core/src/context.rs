@@ -12,8 +12,10 @@ use crate::errors::{OutwardErrorBuffer, CErrorProxy};
 use crate::codecs::CodecInstanceContainer;
 use crate::codecs::EnabledCodecs;
 use crate::ffi::IoDirection;
+use crate::graphics::bitmaps::{BitmapWindowMut, BitmapKey, Bitmap, BitmapsContainer};
+use crate::allocation_container::AllocationContainer;
 
-/// Something of a God object (which is necessary for a reasonable FFI interface).
+/// Something of a god object (which is necessary for a reasonable FFI interface).
 pub struct Context {
     /// The C context object
     c_ctx: *mut ffi::ImageflowContext,
@@ -36,10 +38,14 @@ pub struct Context {
 
     pub security: imageflow_types::ExecutionSecurity,
 
-    pub bitmaps: RefCell<crate::graphics::bitmaps::BitmapsContainer>
+    pub bitmaps: RefCell<crate::graphics::bitmaps::BitmapsContainer>,
+
+    pub allocations: RefCell<AllocationContainer>
 }
 
+//TODO: isn't this supposed to increment with each new context in process?
 static mut JOB_ID: i32 = 0;
+
 impl Context {
 
     pub fn create() -> Result<Box<Context>>{
@@ -72,7 +78,8 @@ impl Context {
                         megapixels: 100f32
                     }),
                     max_encode_size: None
-                }
+                },
+                allocations: RefCell::new(AllocationContainer::new())
             }))
         }
     }
@@ -121,6 +128,53 @@ impl Context {
     pub fn message(&mut self, method: &str, json: &[u8]) -> (JsonResponse, Result<()>) {
         crate::context_methods::CONTEXT_ROUTER.invoke(self, method, json)
     }
+
+    pub fn borrow_bitmaps_mut(&self) -> Result<RefMut<BitmapsContainer>>{
+        self.bitmaps.try_borrow_mut()
+            .map_err(|e| nerror!(ErrorKind::FailedBorrow, "Failed to mutably borrow bitmaps collection: {:?}", e))
+
+    }
+    pub fn borrow_bitmaps(&self) -> Result<Ref<BitmapsContainer>>{
+        self.bitmaps.try_borrow()
+            .map_err(|e| nerror!(ErrorKind::FailedBorrow, "Failed to borrow bitmaps collection: {:?}", e))
+
+    }
+
+    /// mem_calloc should not panic
+    pub unsafe fn mem_calloc(&self, bytes: usize, alignment: usize,filename: *const libc::c_char, line: i32) -> Result<*mut u8>{
+        let mut allocations = self.allocations.try_borrow_mut()
+            .map_err(|e| {
+                let filename_str = if filename.is_null(){
+                    "[no filename provided]"
+                } else{
+                    let c_filename = CStr::from_ptr(filename);
+                    c_filename.to_str().unwrap_or("[non UTF-8 filename]")
+                };
+
+                nerror!(ErrorKind::FailedBorrow, "Failed to mutably borrow allocations collection: {:?}\n{}:{}", e, filename_str, line)
+            })?;
+
+        let result = allocations.allocate(bytes, alignment)
+            .map_err(|e| {
+                let filename_str = if filename.is_null(){
+                    "[no filename provided]"
+                } else{
+                    let c_filename = CStr::from_ptr(filename);
+                    c_filename.to_str().unwrap_or("[non UTF-8 filename]")
+                };
+
+                nerror!(ErrorKind::AllocationFailed, "Failed to allocate {} bytes with alignment {}: {:?}\n{}:{}", bytes, alignment, e, filename_str, line)
+            })?;
+        Ok(result)
+    }
+
+    /// mem_calloc should not panic
+    pub unsafe fn mem_free(&self, ptr: *const u8) -> bool{
+        self.allocations.try_borrow_mut()
+            .map(|mut list| list.free(ptr))
+            .unwrap_or(false)
+    }
+
 
 
     pub fn flow_c(&self) -> *mut ffi::ImageflowContext{
