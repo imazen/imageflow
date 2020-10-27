@@ -18,13 +18,14 @@ use lcms2;
 mod gif;
 mod pngquant;
 mod lode;
+pub use lode::write_png;
+
 mod mozjpeg;
 mod mozjpeg_decoder;
 mod libpng_decoder;
 mod libpng_encoder;
 mod mozjpeg_decoder_helpers;
 mod jpeg_decoder;
-
 mod webp;
 mod color_transform_cache;
 use crate::io::IoProxyRef;

@@ -77,13 +77,11 @@ pub enum EdgesOut {
 
 pub struct OpCtx<'a> {
     pub c: &'a Context,
-    pub job: &'a Context,
     pub graph: &'a Graph,
 }
 
 pub struct OpCtxMut<'a> {
-    pub c: &'a Context,
-    pub job: &'a mut Context,
+    pub c: &'a mut Context,
     pub graph: &'a mut Graph,
     pub more_frames: Cell<bool>,
 }
@@ -92,7 +90,6 @@ impl<'a> From<&'a OpCtxMut<'a>> for OpCtx<'a> {
     fn from(ctx: &'a OpCtxMut<'a>) -> Self {
         OpCtx{
             c: ctx.c,
-            job: ctx.job,
             graph: ctx.graph
         }
     }

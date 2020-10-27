@@ -919,8 +919,8 @@ fn test_detect_whitespace_all_small_images(){
 
                     for size in 1..3 {
                         if x + size <= w && y + size <= h {
-                            b.fill_rect(&ctx, 0, 0, w, h, &Color::Transparent).unwrap();
-                            b.fill_rect(&ctx, x, y, x + size, y + size, &red).unwrap();
+                            b.fill_rect(0, 0, w, h, &Color::Transparent).unwrap();
+                            b.fill_rect(x, y, x + size, y + size, &red).unwrap();
                             let r = ::imageflow_core::graphics::whitespace::detect_content(&b, 1).unwrap();
                             let correct = (r.x1 == x) && (r.y1 == y) && (r.x2 == x + size) && (r.y2 == y + size);
                             if !correct {
@@ -956,7 +956,7 @@ fn test_detect_whitespace_basic(){
     let red = Color::Srgb(ColorSrgb::Hex("FF0000FF".to_owned()));
 
     let b = unsafe { &mut *BitmapBgra::create(&ctx, 10, 10, PixelFormat::Bgra32, Color::Black).unwrap() };
-    b.fill_rect(&ctx, 1, 1, 9, 9, &red).unwrap();
+    b.fill_rect(1, 1, 9, 9, &red).unwrap();
     let r = ::imageflow_core::graphics::whitespace::detect_content(&b, 1).unwrap();
     assert_eq!(r.x1,1);
     assert_eq!(r.y1,1);
@@ -964,7 +964,7 @@ fn test_detect_whitespace_basic(){
     assert_eq!(r.y2,9);
 
     let b = unsafe { &mut *BitmapBgra::create(&ctx, 100, 100, PixelFormat::Bgra32, Color::Black).unwrap() };
-    b.fill_rect(&ctx, 2, 3, 70, 70, &red).unwrap();
+    b.fill_rect(2, 3, 70, 70, &red).unwrap();
     let r = ::imageflow_core::graphics::whitespace::detect_content(&b, 1).unwrap();
     assert_eq!(r.x1,2);
     assert_eq!(r.y1,3);

@@ -69,6 +69,10 @@ use std::fmt;
 use std::borrow::Cow;
 use petgraph::graph::NodeIndex;
 
+
+pub mod helpers{
+    pub use crate::codecs::write_png;
+}
 #[doc(hidden)]
 mod internal_prelude {
     #[doc(hidden)]

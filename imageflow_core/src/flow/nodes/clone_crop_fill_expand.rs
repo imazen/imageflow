@@ -47,6 +47,8 @@ impl NodeDefOneInputOneCanvas for CopyRectNodeDef{
                          p));
             }
             crate::graphics::copy_rect::copy_rect(input, canvas, from_x, from_y, x, y, w, h)?;
+
+            //TODO: COMPOSEFIX - set bitmap compose to BlendWithSelf
             Ok(())
         } else {
             Err(nerror!(crate::ErrorKind::NodeParamsMismatch, "Need CopyRectToCanvas, got {:?}", p))
@@ -76,23 +78,19 @@ impl NodeDefMutateBitmap for FillRectNodeDef {
                return Err(nerror!(crate::ErrorKind::InvalidCoordinates, "Invalid coordinates for {}x{} bitmap: {:?}", bitmap.w, bitmap.h, p));
             }
 
+            //TODO: COMPOSEFIX Cannot write to .compositing_mode as it will be discarded
             bitmap.compositing_mode = crate::ffi::BitmapCompositingMode::BlendWithSelf;
             unsafe {
-
-                if !ffi::flow_bitmap_bgra_fill_rect(c.flow_c(),
-                                                    bitmap as *mut BitmapBgra,
+                crate::graphics::fill::flow_bitmap_bgra_fill_rect(
+                                                    bitmap,
                                                     x1,
                                                     y1,
                                                     x2,
                                                     y2,
-                                                    color.clone().to_u32_bgra().unwrap()) {
-                    return Err(cerror!(c, "Failed to fill rectangle"))
-                }else{
-                    Ok(())
-                }
-
+                                                    color.clone().to_u32_bgra().unwrap())
+                    .map_err(|e| e.at(here!()))?;
             }
-
+            Ok(())
         } else {
             Err(nerror!(crate::ErrorKind::NodeParamsMismatch, "Need FillRect, got {:?}", p))
         }

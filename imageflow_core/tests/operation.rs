@@ -11,15 +11,15 @@ fn benchmark_transpose(ctx: &mut Criterion) {
     for w in (1u32..3000u32).step_by(1373) {
         for h in (1u32..3000u32).step_by(1373) {
             let c = Context::create().unwrap();
-            let mut a = Bitmap::create_u8(w, h, PixelLayout::BGRA, true, true, ColorSpace::LinearRGB).unwrap();
+            let mut a = Bitmap::create_u8(w, h, PixelLayout::BGRA, true, true, ColorSpace::LinearRGB,BitmapCompositing::ReplaceSelf).unwrap();
             let mut a = unsafe {
-                let mut a_bgra = a.get_window_u8().unwrap().to_bitmap_bgra(BitmapCompositingMode::ReplaceSelf).unwrap();
-                a_bgra.fill_rect(&c, 0u32, 0u32, w, h, &Color::Srgb(ColorSrgb::Hex("FF0000FF".to_string()))).unwrap();
+                let mut a_bgra = a.get_window_u8().unwrap().to_bitmap_bgra().unwrap();
+                a_bgra.fill_rect( 0u32, 0u32, w, h, &Color::Srgb(ColorSrgb::Hex("FF0000FF".to_string()))).unwrap();
                 a_bgra
             };
-            let mut b = Bitmap::create_u8(h,w, PixelLayout::BGRA, true, true, ColorSpace::LinearRGB).unwrap();
+            let mut b = Bitmap::create_u8(h,w, PixelLayout::BGRA, true, true, ColorSpace::LinearRGB,BitmapCompositing::ReplaceSelf).unwrap();
             let mut b = unsafe {
-                let a_bgra=b.get_window_u8().unwrap().to_bitmap_bgra(BitmapCompositingMode::ReplaceSelf).unwrap();
+                let a_bgra=b.get_window_u8().unwrap().to_bitmap_bgra().unwrap();
                 a_bgra
             };
             ctx.bench_function(&format!("transpose w={} && h={}", w, h), |bn| bn.iter(|| { unsafe { assert_eq!(flow_bitmap_bgra_transpose(c.flow_c(), &mut a as *mut BitmapBgra, &mut b as *mut BitmapBgra), true) } }));
@@ -36,10 +36,10 @@ fn benchmark_flip_v(ctx: &mut Criterion) {
         for w in (1u32..3000u32).step_by(1373){
             for h in (1u32..3000u32).step_by(1373){
                 let c = Context::create().unwrap();
-                let mut a = Bitmap::create_u8(w, h, fmt, true, true, ColorSpace::LinearRGB).unwrap();
+                let mut a = Bitmap::create_u8(w, h, fmt, true, true, ColorSpace::LinearRGB,BitmapCompositing::ReplaceSelf).unwrap();
                 let mut a = unsafe {
-                    let mut a_bgra = a.get_window_u8().unwrap().to_bitmap_bgra(BitmapCompositingMode::ReplaceSelf).unwrap();
-                    a_bgra.fill_rect(&c, 0u32, 0u32, w, h, &Color::Srgb(ColorSrgb::Hex("FF0000FF".to_string()))).unwrap();
+                    let mut a_bgra = a.get_window_u8().unwrap().to_bitmap_bgra().unwrap();
+                    a_bgra.fill_rect( 0u32, 0u32, w, h, &Color::Srgb(ColorSrgb::Hex("FF0000FF".to_string()))).unwrap();
                     a_bgra
                 };
                 ctx.bench_function(&format!("flip_v w={} && h={} fmt={:?}",w,h,fmt), |bn| bn.iter(|| { unsafe { assert_eq!(flow_bitmap_bgra_flip_vertical(c.flow_c(), &mut a as *mut BitmapBgra),true) } } ));
@@ -57,10 +57,10 @@ fn benchmark_flip_h(ctx: &mut Criterion) {
         for w in (1u32..3000u32).step_by(1373){
             for h in (1u32..3000u32).step_by(1373){
                 let c = Context::create().unwrap();
-                let mut a = Bitmap::create_u8(w, h, fmt, true, true, ColorSpace::LinearRGB).unwrap();
+                let mut a = Bitmap::create_u8(w, h, fmt, true, true, ColorSpace::LinearRGB,BitmapCompositing::ReplaceSelf).unwrap();
                 let mut a = unsafe {
-                    let mut a_bgra = a.get_window_u8().unwrap().to_bitmap_bgra(BitmapCompositingMode::ReplaceSelf).unwrap();
-                    a_bgra.fill_rect(&c, 0u32, 0u32, w, h, &Color::Srgb(ColorSrgb::Hex("FF0000FF".to_string()))).unwrap();
+                    let mut a_bgra = a.get_window_u8().unwrap().to_bitmap_bgra().unwrap();
+                    a_bgra.fill_rect( 0u32, 0u32, w, h, &Color::Srgb(ColorSrgb::Hex("FF0000FF".to_string()))).unwrap();
                     a_bgra
                 };
                 ctx.bench_function(&format!("flip_h w={} && h={} fmt={:?}",w,h,fmt), |bn| bn.iter(|| { unsafe { assert_eq!(flow_bitmap_bgra_flip_horizontal(c.flow_c(), &mut a as *mut BitmapBgra),true) } } ));
@@ -78,15 +78,15 @@ fn benchmark_scale_2d(ctx: &mut Criterion) {
             for w in (2000u32..4000u32).step_by(1373){
                 for h in (2000u32..4000u32).step_by(1373){
                     let c = Context::create().unwrap();
-                    let mut a = Bitmap::create_u8(w, h, PixelLayout::BGRA, true, true, ColorSpace::LinearRGB).unwrap();
+                    let mut a = Bitmap::create_u8(w, h, PixelLayout::BGRA, true, true, ColorSpace::LinearRGB,BitmapCompositing::ReplaceSelf).unwrap();
                     let mut a = unsafe {
-                        let mut a_bgra = a.get_window_u8().unwrap().to_bitmap_bgra(BitmapCompositingMode::ReplaceSelf).unwrap();
-                        a_bgra.fill_rect(&c, 0u32, 0u32, w, h, &Color::Srgb(ColorSrgb::Hex("FF0000FF".to_string()))).unwrap();
+                        let mut a_bgra = a.get_window_u8().unwrap().to_bitmap_bgra().unwrap();
+                        a_bgra.fill_rect( 0u32, 0u32, w, h, &Color::Srgb(ColorSrgb::Hex("FF0000FF".to_string()))).unwrap();
                         a_bgra
                     };
-                    let mut b = Bitmap::create_u8(800u32,800u32, PixelLayout::BGRA, true, true, ColorSpace::LinearRGB).unwrap();
+                    let mut b = Bitmap::create_u8(800u32,800u32, PixelLayout::BGRA, true, true, ColorSpace::LinearRGB,BitmapCompositing::ReplaceSelf).unwrap();
                     let mut b = unsafe {
-                        let a_bgra=b.get_window_u8().unwrap().to_bitmap_bgra(BitmapCompositingMode::ReplaceSelf).unwrap();
+                        let a_bgra=b.get_window_u8().unwrap().to_bitmap_bgra().unwrap();
                         a_bgra
                     };
                     let scale=Scale2dRenderToCanvas1d{
@@ -106,7 +106,7 @@ fn benchmark_scale_2d(ctx: &mut Criterion) {
         }
     }
 }
-
+//
 extern "C" {
     pub fn flow_scale_spatial_srgb_7x7(input:*const u8, output_rows:*const*mut u8, output_col:u32);
     pub fn flow_scale_spatial_srgb_6x6(input:*const u8, output_rows:*const*mut u8, output_col:u32);

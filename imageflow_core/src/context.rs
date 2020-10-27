@@ -34,7 +34,9 @@ pub struct Context {
 
     pub enabled_codecs: EnabledCodecs,
 
-    pub security: imageflow_types::ExecutionSecurity
+    pub security: imageflow_types::ExecutionSecurity,
+
+    pub bitmaps: RefCell<crate::graphics::bitmaps::BitmapsContainer>
 }
 
 static mut JOB_ID: i32 = 0;
@@ -61,6 +63,7 @@ impl Context {
                 codecs: AddRemoveSet::with_capacity(4),
                 io_id_list: RefCell::new(Vec::with_capacity(2)),
                 enabled_codecs: EnabledCodecs::default(),
+                bitmaps: RefCell::new(crate::graphics::bitmaps::BitmapsContainer::with_capacity(16)),
                 security: imageflow_types::ExecutionSecurity{
                     max_decode_size: None,
                     max_frame_size: Some(imageflow_types::FrameSizeLimit{

@@ -15,6 +15,7 @@ use rgb;
 use lodepng;
 use lodepng::{CompressSettings, DecompressSettings};
 use flate2::Compression;
+use crate::codecs::NamedEncoders::LodePngEncoder;
 
 pub struct LodepngEncoder {
     io: IoProxy,
@@ -52,7 +53,20 @@ impl Encoder for LodepngEncoder {
     }
 }
 
+pub unsafe fn write_png<T: AsRef<std::path::Path>>(path: T, frame: &BitmapBgra) -> Result<()>{
+
+    let file = std::fs::File::create(path)
+        .map_err(|e| nerror!(ErrorKind::InvalidOperation))?;
+
+    LodepngEncoder::write_png_auto(file, frame, None)
+        .map_err(|e| e.at(here!()))?;
+    Ok(())
+}
+
 impl LodepngEncoder {
+
+
+
     pub fn write_png_auto<W: Write>(mut writer: W, frame: &BitmapBgra, use_highest_compression: Option<bool>) -> Result<()> {
         let mut lode = lodepng::Encoder::new();
         lode.set_auto_convert(true);

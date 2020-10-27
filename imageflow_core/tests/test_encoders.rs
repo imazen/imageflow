@@ -11,7 +11,7 @@ pub mod common;
 use crate::common::*;
 
 
-use imageflow_core::{Context, ErrorKind, FlowError, CodeLocation};
+use imageflow_core::{Context, FlowError, CodeLocation};
 use s::{CommandStringKind};
 
 
@@ -248,7 +248,7 @@ pub fn compare_encoded_to_source(input: IoTestEnum, debug: bool, require: Constr
 
     let bytes = context.get_output_buffer_slice(1).unwrap();
 
-    let ctx = ChecksumCtx::visuals(&context);
+    let ctx = ChecksumCtx::visuals();
 
     let mut context2 = Context::create().unwrap();
     let original = decode_input(&mut context2, input_copy);

@@ -300,10 +300,6 @@ struct flow_codec_instance {
 
 PUB int32_t flow_codecs_jpg_decoder_get_exif(flow_c * c, struct flow_codec_instance * codec_instance);
 
-PUB bool flow_bitmap_bgra_save_png(flow_c * c, struct flow_bitmap_bgra * b, const char * path);
-PUB uint8_t ** flow_bitmap_create_row_pointers(flow_c * c, void * buffer, size_t buffer_size, size_t stride,
-                                               size_t height);
-
 PUB bool flow_codec_decoder_set_downscale_hints(flow_c * c, struct flow_codec_instance * codec,
                                                 struct flow_decoder_downscale_hints * hints,
                                                 bool crash_if_not_implemented);
