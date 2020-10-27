@@ -122,7 +122,6 @@ extern crate imageflow_core as c;
 extern crate libc;
 extern crate smallvec;
 extern crate backtrace;
-use crate::c::ffi;
 
 pub use crate::c::{Context, ErrorCategory};
 pub use crate::c::ffi::ImageflowJsonResponse as JsonResponse;
@@ -592,21 +591,18 @@ pub fn create_abi_json_response(c: &mut Context,
         let sizeof_struct = std::mem::size_of::<JsonResponse>();
         let alloc_size = sizeof_struct + json_bytes.len();
 
-        let pointer = crate::ffi::flow_context_calloc(c.flow_c(),
-                                                 1,
-                                                 alloc_size,
-                                                 ptr::null(),
-                                                 c.flow_c() as *mut libc::c_void,
-                                                 ptr::null(),
-                                                 line!() as i32) as *mut u8;
-        if pointer.is_null() {
-            c.outward_error_mut().try_set_error(nerror!(ErrorKind::AllocationFailed, "Failed to allocate JsonResponse ({} bytes)", alloc_size));
-            return ptr::null();
-        }
         if json_bytes.len().leading_zeros() == 0{
             c.outward_error_mut().try_set_error(nerror!(ErrorKind::Category(ErrorCategory::InternalError), "Error in creating JSON structure; length overflow prevented (most significant bit set)."));
             return ptr::null();
         }
+
+        let pointer = match c.mem_calloc(alloc_size, 16, ptr::null(), -1){
+            Err(e) => {
+                c.outward_error_mut().try_set_error(e);
+                return ptr::null();
+            }
+            Ok(v) => v
+        };
 
         let pointer_to_final_buffer =
             pointer.offset(sizeof_struct as isize) as *mut u8;
@@ -784,16 +780,20 @@ pub extern "C" fn imageflow_context_memory_allocate(context: *mut Context,
                                                     bytes: libc::size_t,
                                                     filename: *const libc::c_char,
                                                     line: i32) -> *mut libc::c_void {
-
     let c = context_ready!(context);
 
-    if bytes.leading_zeros() == 0{
+    if bytes.leading_zeros() == 0 {
         c.outward_error_mut().try_set_error(nerror!(ErrorKind::InvalidArgument, "Argument `bytes` likely came from a negative integer. Imageflow prohibits having the leading bit set on unsigned integers (this reduces the maximum value to 2^31 or 2^63)."));
         return ptr::null_mut();
     }
-    unsafe {
-        ffi::flow_context_calloc(c.flow_c(), 1, bytes, ptr::null(), c.flow_c() as *const libc::c_void, filename, line)
-    }
+    let pointer = match unsafe{ c.mem_calloc(bytes, 16, filename, line) }{
+        Err(e) => {
+            c.outward_error_mut().try_set_error(e);
+            return ptr::null_mut();
+        }
+        Ok(v) => v
+    };
+    pointer as *mut libc::c_void
 }
 
 ///
@@ -807,13 +807,11 @@ pub extern "C" fn imageflow_context_memory_allocate(context: *mut Context,
 #[no_mangle]
 pub  extern "C" fn imageflow_context_memory_free(context: *mut Context,
                                                        pointer: *mut libc::c_void,
-                                                       filename: *const libc::c_char,
-                                                       line: i32) -> bool {
+                                                       _filename: *const libc::c_char,
+                                                       _line: i32) -> bool {
     let c = context!(context); // We must be able to free in an errored state
     if !pointer.is_null() {
-        unsafe {
-            ffi::flow_destroy(c.flow_c(), pointer, filename, line)
-        }
+        unsafe{ c.mem_free(pointer as *const u8) }
     }else {
         true
     }

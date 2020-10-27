@@ -55,8 +55,8 @@ void *imageflow_context_memory_allocate(void *context,
 
 bool imageflow_context_memory_free(void *context,
                                    void *pointer,
-                                   const char *filename,
-                                   int32_t line);
+                                   const char *_filename,
+                                   int32_t _line);
 
 bool imageflow_context_print_and_exit_if_error(void *context);
 

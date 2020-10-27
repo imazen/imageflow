@@ -65,6 +65,8 @@ pub mod clients;
 pub mod ffi;
 pub mod parsing;
 pub mod test_helpers;
+mod allocation_container;
+
 use std::fmt;
 use std::borrow::Cow;
 use petgraph::graph::NodeIndex;
