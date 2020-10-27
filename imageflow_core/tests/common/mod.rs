@@ -848,7 +848,7 @@ impl BitmapBgraContainer{
     /// Creates an operation node containing a pointer to self. Do not move self!
     pub unsafe fn get_node(&mut self) -> s::Node{
         let ptr_to_key = &mut self.dest_bitmap as *mut BitmapKey;
-        s::Node::FlowBitmapBgraPtr { ptr_to_flow_bitmap_bgra_ptr: ptr_to_key as usize}
+        s::Node::FlowBitmapKeyPtr { ptr_to_bitmap_key: ptr_to_key as usize}
     }
 
     pub unsafe fn bitmap_key(&self, _c: &Context) -> Option<BitmapKey>{

@@ -2,7 +2,7 @@ use super::internal_prelude::*;
 use slotmap::{KeyData, Key};
 use crate::ErrorKind::BitmapKeyNotFound;
 
-pub static BITMAP_BGRA_POINTER: BitmapBgraDef = BitmapBgraDef{};
+pub static BITMAP_KEY_POINTER: BitmapKeyDef = BitmapKeyDef{};
 
 pub static DECODER: DecoderDef = DecoderDef{};
 pub static ENCODE: EncoderDef = EncoderDef{};
@@ -10,24 +10,24 @@ pub static PRIMITIVE_DECODER: DecoderPrimitiveDef = DecoderPrimitiveDef{};
 
 
 #[derive(Debug,Clone)]
-pub struct BitmapBgraDef{}
+pub struct BitmapKeyDef{}
 
-impl BitmapBgraDef{
+impl BitmapKeyDef{
     fn get_key_ptr(&self, p: &NodeParams) -> Result<*mut u64> {
-        if let NodeParams::Json(s::Node::FlowBitmapBgraPtr { ptr_to_flow_bitmap_bgra_ptr }) = *p {
-            let ptr: *mut u64 = ptr_to_flow_bitmap_bgra_ptr as *mut u64;
+        if let NodeParams::Json(s::Node::FlowBitmapKeyPtr { ptr_to_bitmap_key }) = *p {
+            let ptr: *mut u64 = ptr_to_bitmap_key as *mut u64;
             if ptr.is_null() {
                 return Err(nerror!(crate::ErrorKind::InvalidNodeParams, "The pointer to the bitmap key is null! Must be a valid reference to a pointer's location."));
             } else {
                 Ok(ptr)
             }
         }else{
-            Err(nerror!(crate::ErrorKind::NodeParamsMismatch, "Need FlowBitmapBgraPtr, got {:?}", p))
+            Err(nerror!(crate::ErrorKind::NodeParamsMismatch, "Need FlowBitmapKeyPtr, got {:?}", p))
         }
     }
 }
 
-impl NodeDef for BitmapBgraDef {
+impl NodeDef for BitmapKeyDef {
     fn fqn(&self) -> &'static str {
         "imazen.bitmap_bgra_pointer"
     }
@@ -85,7 +85,7 @@ impl NodeDef for BitmapBgraDef {
             unsafe {
                 if (*key_ptr) == 0 ||
                     BitmapKey::from(KeyData::from_ffi(*key_ptr)).is_null(){
-                    return Err(nerror!(crate::ErrorKind::InvalidNodeParams, "When serving as an input node (no parent), FlowBitmapBgraPtr must point to a u64 (BitmapKey in ffi mode)."));
+                    return Err(nerror!(crate::ErrorKind::InvalidNodeParams, "When serving as an input node (no parent), FlowBitmapKeyPtr must point to a u64 (BitmapKey in ffi mode)."));
                 }
                 //Ok(NodeResult::Frame(*ptr))
                 Ok(NodeResult::Frame(BitmapKey::null()))

@@ -736,10 +736,10 @@ pub enum Node {
     #[serde(rename="color_filter_srgb")]
     ColorFilterSrgb (ColorFilterSrgb),
     // TODO: Block use except from FFI/unit test use
-    #[serde(rename="flow_bitmap_bgra_ptr")]
-    FlowBitmapBgraPtr {
+    #[serde(rename="flow_bitmap_key_ptr")]
+    FlowBitmapKeyPtr {
         //TODO: Rename this
-        ptr_to_flow_bitmap_bgra_ptr: usize,
+        ptr_to_bitmap_key: usize,
     },
 }
 

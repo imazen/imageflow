@@ -500,8 +500,8 @@ impl From<s::Node> for Node {
             s::Node::Crop { .. } => Node::n(&nodes::CROP, NodeParams::Json(node)),
             s::Node::CropWhitespace { .. } => Node::n(&nodes::CROP_WHITESPACE, NodeParams::Json(node)),
             s::Node::Decode { .. } => Node::n(&nodes::DECODER, NodeParams::Json(node)),
-            s::Node::FlowBitmapBgraPtr { .. } => {
-                Node::n(&nodes::BITMAP_BGRA_POINTER, NodeParams::Json(node))
+            s::Node::FlowBitmapKeyPtr { .. } => {
+                Node::n(&nodes::BITMAP_KEY_POINTER, NodeParams::Json(node))
             }
             s::Node::CommandString{ .. } => Node::n(&nodes::COMMAND_STRING, NodeParams::Json(node)),
             s::Node::FlipV => Node::n(&nodes::FLIP_V, NodeParams::Json(node)),
