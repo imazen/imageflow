@@ -191,9 +191,9 @@ impl NodeDefMutateBitmap for FlipVerticalMutNodeDef{
             let mut bitmap_bgra = bitmap.get_window_u8().unwrap()
                 .to_bitmap_bgra().map_err(|e| e.at(here!()))?;
 
-            if !crate::ffi::flow_bitmap_bgra_flip_vertical(c.flow_c(), &mut bitmap_bgra as *mut BitmapBgra){
-                return Err(cerror!(c))
-            }
+            crate::graphics::flip::flow_bitmap_bgra_flip_vertical(&mut bitmap_bgra)
+                .map_err(|e| e.at(here!()))?;
+
         }
         Ok(())
     }
@@ -220,9 +220,9 @@ impl NodeDefMutateBitmap for FlipHorizontalMutNodeDef{
             let mut bitmap_bgra = bitmap.get_window_u8().unwrap()
                     .to_bitmap_bgra().map_err(|e| e.at(here!()))?;
 
-            if !crate::ffi::flow_bitmap_bgra_flip_horizontal(c.flow_c(), &mut bitmap_bgra as *mut BitmapBgra){
-                return Err(cerror!(c))
-            }
+            crate::graphics::flip::flow_bitmap_bgra_flip_horizontal(&mut bitmap_bgra)
+                .map_err(|e| e.at(here!()))?;
+
         }
         Ok(())
     }

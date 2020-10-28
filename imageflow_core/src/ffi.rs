@@ -691,12 +691,7 @@ mod mid_term {
         pub fn flow_bitmap_bgra_flip_vertical(c: *mut ImageflowContext, bitmap: *mut BitmapBgra) -> bool;
         pub fn flow_bitmap_bgra_flip_horizontal(c: *mut ImageflowContext, bitmap: *mut BitmapBgra) -> bool;
 
-        pub fn flow_bitmap_bgra_create(c: *mut ImageflowContext,
-                                       sx: i32,
-                                       sy: i32,
-                                       zeroed: bool,
-                                       format: PixelFormat)
-                                       -> *mut BitmapBgra;
+
 
         pub fn flow_node_execute_scale2d_render1d(c: *mut ImageflowContext,
                                                   input: *mut BitmapBgra,
