@@ -12,7 +12,7 @@ pub static EXPANDING_COMMAND_STRING: CommandStringPartiallyExpandedDef = Command
 fn get_decoder_mime(ctx: &mut OpCtxMut, ix: NodeIndex) -> Result<Option<String>>{
     let decoders = ctx.get_decoder_io_ids_and_indexes(ix);
     if let Some((io_id, _)) = decoders.first(){
-        Ok(Some(ctx.c.get_unscaled_image_info(*io_id)?.preferred_mime_type))
+        Ok(Some(ctx.c.get_unscaled_rotated_image_info(*io_id)?.preferred_mime_type))
     }
     else{
         Ok(None)
@@ -25,7 +25,7 @@ fn get_expand(ctx: &mut OpCtxMut, ix: NodeIndex) -> Result<::imageflow_riapi::ir
 
     let mut image_info: Option<ImageInfo> = None;
     if let Some((io_id, decoder_ix)) = ctx.get_decoder_io_ids_and_indexes(ix).first(){
-        image_info = Some(ctx.c.get_unscaled_image_info(*io_id).map_err(|e| e.at(here!()))?);
+        image_info = Some(ctx.c.get_unscaled_rotated_image_info(*io_id).map_err(|e| e.at(here!()))?);
 
     }
 

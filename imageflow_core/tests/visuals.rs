@@ -431,6 +431,24 @@ fn test_jpeg_rotation() {
 
 }
 
+#[test]
+fn test_jpeg_rotation_cropped() {
+
+        for flag in 1..9 {
+            let url = format!("https://s3-us-west-2.amazonaws.com/imageflow-resources/test_inputs/orientation/Portrait_{}.jpg", flag);
+            let title = format!("Test_Apply_Orientation_Cropped_Portrait_{}.jpg", flag);
+            let matched = compare(Some(IoTestEnum::Url(url)), 500, &title, POPULATE_CHECKSUMS, DEBUG_GRAPH,
+                                  vec![Node::CommandString{
+                kind: CommandStringKind::ImageResizer4,
+                value: "crop=134,155,279,439".to_owned(),
+                decode: Some(0),
+                encode: None,
+                watermarks: None
+            }]);
+            assert!(matched);
+        }
+}
+
 
 #[test]
 fn test_jpeg_crop() {

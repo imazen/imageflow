@@ -14,6 +14,7 @@ use crate::codecs::EnabledCodecs;
 use crate::ffi::IoDirection;
 use crate::graphics::bitmaps::{BitmapWindowMut, BitmapKey, Bitmap, BitmapsContainer};
 use crate::allocation_container::AllocationContainer;
+use imageflow_types::ImageInfo;
 
 /// Something of a god object (which is necessary for a reasonable FFI interface).
 pub struct Context {
@@ -237,13 +238,60 @@ impl Context {
         self.add_io(io, io_id, IoDirection::Out).map_err(|e| e.at(here!()))
     }
 
+    
+    fn swap_dimensions_by_exif(&mut self, io_id: i32, image_info: &mut ImageInfo) -> Result<()>{
+        let exif_maybe = self.get_codec(io_id)
+            .map_err(|e| e.at(here!()))?
+            .get_decoder()
+            .map_err(|e| e.at(here!()))?
+            .get_exif_rotation_flag(self)
+            .map_err(|e| e.at(here!()))?;
 
-    pub fn get_unscaled_image_info(&mut self, io_id: i32) -> Result<s::ImageInfo> {
-        self.get_codec(io_id).map_err(|e| e.at(here!()))?.get_decoder().map_err(|e| e.at(here!()))?.get_unscaled_image_info(self).map_err(|e| e.at(here!()))
+        if let Some(exif_flag) = exif_maybe{
+            if exif_flag >= 5 && exif_flag <= 8 {
+                let temp = image_info.image_width;
+                image_info.image_width = image_info.image_height;
+                image_info.image_height = temp;
+            }
+        }
+        Ok(())
     }
-    pub fn get_scaled_image_info(&mut self, io_id: i32) -> Result<s::ImageInfo> {
-        self.get_codec(io_id).map_err(|e| e.at(here!()))?.get_decoder().map_err(|e| e.at(here!()))?.get_scaled_image_info(self).map_err(|e| e.at(here!()))
+
+    pub fn get_unscaled_unrotated_image_info(&mut self, io_id: i32) -> Result<s::ImageInfo> {
+        self.get_codec(io_id)
+            .map_err(|e| e.at(here!()))?
+            .get_decoder()
+            .map_err(|e| e.at(here!()))?
+            .get_unscaled_image_info(self)
+            .map_err(|e| e.at(here!()))
     }
+
+    pub fn get_unscaled_rotated_image_info(&mut self, io_id: i32) -> Result<s::ImageInfo> {
+        let mut image_info = self.get_unscaled_unrotated_image_info(io_id).
+            map_err(|e| e.at(here!()))?;
+
+        self.swap_dimensions_by_exif(io_id, &mut image_info)?;
+        Ok(image_info)
+    }
+
+    pub fn get_scaled_unrotated_image_info(&mut self, io_id: i32) -> Result<s::ImageInfo> {
+        self.get_codec(io_id)
+            .map_err(|e| e.at(here!()))?
+            .get_decoder()
+            .map_err(|e| e.at(here!()))?
+            .get_scaled_image_info(self)
+            .map_err(|e| e.at(here!()))
+    }
+
+    pub fn get_scaled_rotated_image_info(&mut self, io_id: i32) -> Result<s::ImageInfo> {
+        let mut image_info = self.get_scaled_unrotated_image_info(io_id)
+            .map_err(|e| e.at(here!()))?;
+
+        self.swap_dimensions_by_exif(io_id, &mut image_info)?;
+        Ok(image_info)
+    }
+
+
     pub fn tell_decoder(&mut self, io_id: i32, tell: s::DecoderCommand) -> Result<()> {
         self.get_codec(io_id).map_err(|e| e.at(here!()))?.get_decoder().map_err(|e| e.at(here!()))?.tell_decoder(self,  tell).map_err(|e| e.at(here!()))
     }
