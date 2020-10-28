@@ -32,7 +32,7 @@ pub unsafe fn flow_bitmap_bgra_flip_vertical(
 }
 pub unsafe fn flow_bitmap_bgra_flip_horizontal(
     b: *mut flow_bitmap_bgra,
-) -> bool {
+) -> Result<(), FlowError> {
     if (*b).fmt == PixelFormat::Bgra32 || (*b).fmt == PixelFormat::Bgr32 {
         // 12ms simple
         let mut y: u32 = 0 as i32 as u32;
@@ -119,5 +119,5 @@ pub unsafe fn flow_bitmap_bgra_flip_horizontal(
             y_1 = y_1.wrapping_add(1)
         }
     }
-    return true;
+    Ok(())
 }
