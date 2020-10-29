@@ -11,3 +11,4 @@
 ^imageflow_server/src/assets/
 ^\.github/actions/spell-check/
 ^\.gitignore$
+^valgrind_suppressions.txt

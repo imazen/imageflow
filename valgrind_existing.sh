@@ -38,6 +38,8 @@ SKIP_BINARIES+=("$(ls ./"${TEST_BINARIES_TARGET}"release/test_ir4* || true )")
 SKIP_BINARIES+=("$(ls ./"${TEST_BINARIES_TARGET}"release/*imageflow_helpers* || true )")
 SKIP_BINARIES+=("$(ls ./"${TEST_BINARIES_TARGET}"release/*imageflow_riapi* || true )")
 SKIP_BINARIES+=("$(ls ./"${TEST_BINARIES_TARGET}"release/*imageflow_types* || true )")
+SKIP_BINARIES+=("$(ls ./"${TEST_BINARIES_TARGET}"release/bench_graphics* || true )")
+
 function join_by { local IFS="$1"; shift; echo "$*"; }
 SKIP_BINARIES_STR="$(join_by " " "${SKIP_BINARIES[@]}")"
 SKIP_BINARIES_STR=" $SKIP_BINARIES_STR "

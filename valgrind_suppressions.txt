@@ -159,3 +159,14 @@
    fun:deflate
    ...
 }
+
+{
+   See http://zlib.net/zlib_faq.html#faq36
+   Memcheck:Cond
+   fun:slide_hash
+   fun:fill_window
+   fun:deflate_fast
+   fun:deflate
+   fun:png_compress_IDAT
+   ...
+}

@@ -6,13 +6,14 @@ use crate::ffi::BitmapBgra;
 use imageflow_types::collections::AddRemoveSet;
 use crate::io::IoProxy;
 use uuid::Uuid;
-use imageflow_types::IoDirection;
+use imageflow_types::{IoDirection, PixelLayout};
 use super::*;
 use std::any::Any;
 use std::rc::Rc;
 use crate::io::IoProxyProxy;
 use crate::io::IoProxyRef;
 use rgb::alt::BGRA8;
+use crate::graphics::bitmaps::{ColorSpace, BitmapCompositing};
 
 
 extern crate jpeg_decoder as jpeg;
@@ -77,7 +78,7 @@ impl Decoder for JpegDecoder {
         Ok(())
     }
 
-    fn read_frame(&mut self, c: &Context) -> Result<*mut BitmapBgra> {
+    fn read_frame(&mut self, c: &Context) -> Result<BitmapKey> {
 
         if self.width.is_none() {
             let _ = self.get_scaled_image_info(c)?;
@@ -89,11 +90,30 @@ impl Decoder for JpegDecoder {
         unsafe {
             let w = self.width.unwrap();
             let h = self.height.unwrap();
-            let copy = ffi::flow_bitmap_bgra_create(c.flow_c(), w as i32, h as i32, false, ffi::PixelFormat::Bgra32);
-            if copy.is_null() {
-                cerror!(c).panic();
-            }
-            let copy_mut = &mut *copy;
+
+            let bitmap_key = c.bitmaps.try_borrow_mut()
+                .map_err(|e| nerror!(ErrorKind::FailedBorrow, "{:?}", e))?
+                .create_bitmap_u8(w as u32,
+                                  h as u32,
+                                  PixelLayout::BGRA,
+                                  false,
+                                  true,
+                                  ColorSpace::StandardRGB,
+                                  BitmapCompositing::ReplaceSelf)
+                .map_err(|e| e.at(here!()))?;
+
+            let bitmaps = c.borrow_bitmaps()
+                .map_err(|e| e.at(here!()))?;
+            let mut bitmap = bitmaps.try_borrow_mut(bitmap_key)
+                .map_err(|e| e.at(here!()))?;
+
+
+            let mut copy = bitmap.get_window_u8().unwrap()
+                .to_bitmap_bgra()?;
+
+            //TODO: Shouldn't this be Bgr24
+
+            let copy_mut = &mut copy;
 
             match self.pixel_format.unwrap(){
                 jpeg::PixelFormat::RGB24 => {
@@ -129,7 +149,7 @@ impl Decoder for JpegDecoder {
 
             }
 
-            Ok(copy)
+            Ok(bitmap_key)
         }
     }
     fn has_more_frames(&mut self) -> Result<bool> {

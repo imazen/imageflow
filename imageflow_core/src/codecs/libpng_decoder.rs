@@ -2,7 +2,7 @@ use std;
 use crate::for_other_imageflow_crates::preludes::external_without_std::*;
 use crate::ffi;
 use crate::{Context, CError,  Result, JsonResponse};
-use crate::ffi::{wrap_jpeg_get_custom_state, WrapJpegSourceManager, flow_node_execute_scale2d_render1d};
+use crate::ffi::{wrap_jpeg_get_custom_state, WrapJpegSourceManager};
 use crate::ffi::BitmapBgra;
 use imageflow_types::collections::AddRemoveSet;
 use crate::io::IoProxy;
@@ -18,7 +18,7 @@ use rgb::alt::BGRA8;
 use imageflow_helpers::preludes::from_std::ptr::{null, slice_from_raw_parts, null_mut};
 use mozjpeg_sys::c_void;
 use std::os::raw::c_char;
-
+use crate::graphics::bitmaps::{BitmapKey, ColorSpace, BitmapCompositing};
 
 pub struct LibPngDecoder{
     decoder: Box<PngDec>
@@ -73,16 +73,30 @@ impl Decoder for LibPngDecoder {
         }
     }
 
-    fn read_frame(&mut self, c: &Context) -> Result<*mut BitmapBgra> {
+    fn read_frame(&mut self, c: &Context) -> Result<BitmapKey> {
 
         let (w,h, fmt) = self.decoder.get_info()?;
 
-        let canvas =
-            BitmapBgra::create(c, w, h, fmt, s::Color::Transparent)?;
+        let mut bitmaps = c.borrow_bitmaps_mut()
+            .map_err(|e| e.at(here!()))?;
 
-        self.decoder.read_frame(canvas)?;
+        let canvas_key = bitmaps.create_bitmap_u8(
+            w,h,fmt.pixel_layout(),
+            false, fmt.alpha_meaningful(),
+            ColorSpace::StandardRGB,
+            BitmapCompositing::BlendWithMatte(s::Color::Transparent))
+            .map_err(|e| e.at(here!()))?;
 
-        Ok(canvas)
+
+        let mut canvas = unsafe { bitmaps.try_borrow_mut(canvas_key)
+            .map_err(|e| e.at(here!()))?
+            .get_window_u8().unwrap()
+            .to_bitmap_bgra().map_err(|e| e.at(here!()))?
+        };
+
+        self.decoder.read_frame(&mut canvas)?;
+
+        Ok(canvas_key)
     }
     fn has_more_frames(&mut self) -> Result<bool> {
         Ok(false)

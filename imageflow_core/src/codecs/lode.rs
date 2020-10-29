@@ -15,6 +15,8 @@ use rgb;
 use lodepng;
 use lodepng::{CompressSettings, DecompressSettings};
 use flate2::Compression;
+use crate::codecs::NamedEncoders::LodePngEncoder;
+use crate::graphics::bitmaps::BitmapKey;
 
 pub struct LodepngEncoder {
     io: IoProxy,
@@ -34,17 +36,31 @@ impl LodepngEncoder {
 }
 
 impl Encoder for LodepngEncoder {
-    fn write_frame(&mut self, c: &Context, _preset: &EncoderPreset, frame: &mut BitmapBgra, decoder_io_ids: &[i32]) -> Result<EncodeResult> {
-        Self::write_png_auto(&mut self.io, frame, self.use_highest_compression)?;
+    fn write_frame(&mut self, c: &Context, _preset: &EncoderPreset, bitmap_key: BitmapKey, decoder_io_ids: &[i32]) -> Result<EncodeResult> {
 
-        Ok(EncodeResult {
-            w: frame.w as i32,
-            h: frame.h as i32,
-            io_id: self.io.io_id(),
-            bytes: ::imageflow_types::ResultBytes::Elsewhere,
-            preferred_extension: "png".to_owned(),
-            preferred_mime_type: "image/png".to_owned(),
-        })
+        let bitmaps = c.borrow_bitmaps()
+            .map_err(|e| e.at(here!()))?;
+
+        let mut bitmap = bitmaps.try_borrow_mut(bitmap_key)
+            .map_err(|e| e.at(here!()))?;
+
+        unsafe {
+            let frame = bitmap.get_window_u8()
+                .ok_or_else(|| nerror!(ErrorKind::InvalidBitmapType))?
+                .to_bitmap_bgra().map_err(|e| e.at(here!()))?;
+
+
+            Self::write_png_auto(&mut self.io, &frame, self.use_highest_compression)?;
+
+            Ok(EncodeResult {
+                w: frame.w as i32,
+                h: frame.h as i32,
+                io_id: self.io.io_id(),
+                bytes: ::imageflow_types::ResultBytes::Elsewhere,
+                preferred_extension: "png".to_owned(),
+                preferred_mime_type: "image/png".to_owned(),
+            })
+        }
     }
 
     fn get_io(&self) -> Result<IoProxyRef> {
@@ -52,7 +68,20 @@ impl Encoder for LodepngEncoder {
     }
 }
 
+pub unsafe fn write_png<T: AsRef<std::path::Path>>(path: T, frame: &BitmapBgra) -> Result<()>{
+
+    let file = std::fs::File::create(path)
+        .map_err(|e| nerror!(ErrorKind::InvalidOperation))?;
+
+    LodepngEncoder::write_png_auto(file, frame, None)
+        .map_err(|e| e.at(here!()))?;
+    Ok(())
+}
+
 impl LodepngEncoder {
+
+
+
     pub fn write_png_auto<W: Write>(mut writer: W, frame: &BitmapBgra, use_highest_compression: Option<bool>) -> Result<()> {
         let mut lode = lodepng::Encoder::new();
         lode.set_auto_convert(true);

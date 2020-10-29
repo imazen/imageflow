@@ -8,6 +8,7 @@ edition = "2018"
 [lib]
 name = "imageflow_core"
 doctest = false
+bench = false
 
 [dependencies]
 libc = "0.2"
@@ -91,6 +92,6 @@ default = []
 nightly = ["imageflow_helpers/nightly"]
 
 [[bench]]
-name="operations"
-path = "tests/operation.rs"
+name="bench_graphics"
+path = "benches/bench_graphics.rs"
 harness = false

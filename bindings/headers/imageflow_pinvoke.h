@@ -197,8 +197,8 @@ void *imageflow_context_memory_allocate(void *context,
 //
 bool imageflow_context_memory_free(void *context,
                                    void *pointer,
-                                   const char *filename,
-                                   int32_t line);
+                                   const char *_filename,
+                                   int32_t _line);
 
 // Prints the error to stderr and exits the process if an error has been raised on the context.
 // If no error is present, the function returns false.

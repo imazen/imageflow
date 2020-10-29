@@ -24,7 +24,7 @@ impl ColorContext{
     pub fn new(space: WorkingFloatspace, gamma: f32) -> ColorContext{
         let mut c = ColorContext{
             apply_gamma: space == WorkingFloatspace::Gamma,
-            apply_srgb: space == WorkingFloatspace::StandardRGB,
+            apply_srgb: space == WorkingFloatspace::LinearRGB,
             gamma,
             gamma_inverse: (1.0f64 / gamma as f64) as f32,
             byte_to_float: [0f32;256]

@@ -332,13 +332,13 @@ fn fill_grayscale_buffer_from_bitmap(buf: &mut Buffer, b: &BitmapBgra) {
     approximate_grayscale(&mut buf.pixels, buf.w as usize,buf.x, buf.y, buf.w, buf.h, b)
 }
 pub fn approximate_grayscale(grayscale: &mut [u8], grayscale_stride: usize, x: u32, y: u32, w: u32, h: u32, source_bitmap: &BitmapBgra) {
-        /* Red: 0.299;
+    /* Red: 0.299;
 Green: 0.587;
 Blue: 0.114;
 */
     let b = source_bitmap;
 
-    if grayscale_stride < w as usize{
+    if grayscale_stride < w as usize {
         panic!("Invalid grayscale_Stride")
     }
 
@@ -346,67 +346,66 @@ Blue: 0.114;
     let first_pixel = b.stride as usize * y as usize + bytes_per_pixel * x as usize;
     let remnant: usize = b.stride as usize - (bytes_per_pixel * w as usize);
     let gray_remnant: usize = grayscale_stride - w as usize;
-    unsafe {
-        let bitmap_bytes_accessed = b.stride as usize * (y + h - 1) as usize + (bytes_per_pixel * (x + w) as usize);
-        if bitmap_bytes_accessed > b.stride as usize * b.h as usize {
-            panic!("Out of bounds bitmap access prevented");
-        }
 
-        let input_bitmap = b.pixels_slice().unwrap();
-        let mut input_index = b.stride as usize * y as usize + bytes_per_pixel * x as usize;
-        match b.fmt {
-            PixelFormat::Bgra32 => {
-                let mut buf_ix = 0usize;
-                for y in 0..h {
-                    for x in 0..w {
-                        let bgra = &input_bitmap[input_index..input_index + 4];
-                        let gray = (((233 * bgra[0] as u32 + 1197 * bgra[1] as u32 + 610 * bgra[2] as u32) * bgra[3] as u32 + 524288 - 1) / 524288) as u16;
-                        grayscale[buf_ix] = if gray > 255 { 255 } else { gray as u8 };
-                        input_index += 4;
-                        buf_ix += 1;
-                    }
-                    buf_ix += gray_remnant;
-                    input_index += remnant;
+    let bitmap_bytes_accessed = b.stride as usize * (y + h - 1) as usize + (bytes_per_pixel * (x + w) as usize);
+    if bitmap_bytes_accessed > b.stride as usize * b.h as usize {
+        panic!("Out of bounds bitmap access prevented");
+    }
+
+    let input_bitmap = unsafe{ b.pixels_slice().unwrap() } ;
+    let mut input_index = b.stride as usize * y as usize + bytes_per_pixel * x as usize;
+    match b.fmt {
+        PixelFormat::Bgra32 => {
+            let mut buf_ix = 0usize;
+            for y in 0..h {
+                for x in 0..w {
+                    let bgra = &input_bitmap[input_index..input_index + 4];
+                    let gray = (((233 * bgra[0] as u32 + 1197 * bgra[1] as u32 + 610 * bgra[2] as u32) * bgra[3] as u32 + 524288 - 1) / 524288) as u16;
+                    grayscale[buf_ix] = if gray > 255 { 255 } else { gray as u8 };
+                    input_index += 4;
+                    buf_ix += 1;
                 }
+                buf_ix += gray_remnant;
+                input_index += remnant;
             }
-            PixelFormat::Bgr24 => {
-                let mut buf_ix = 0usize;
-                for y in 0..h {
-                    for x in 0..w {
-                        let bgra = &input_bitmap[input_index..input_index + 3];
-                        grayscale[buf_ix] = ((233 * bgra[0] as u32 + 1197 * bgra[1] as u32 + 610 * bgra[2] as u32) / 2048) as u8;
-                        input_index += 3;
-                        buf_ix += 1;
-                    }
-                    buf_ix += gray_remnant;
-                    input_index += remnant;
+        }
+        PixelFormat::Bgr24 => {
+            let mut buf_ix = 0usize;
+            for y in 0..h {
+                for x in 0..w {
+                    let bgra = &input_bitmap[input_index..input_index + 3];
+                    grayscale[buf_ix] = ((233 * bgra[0] as u32 + 1197 * bgra[1] as u32 + 610 * bgra[2] as u32) / 2048) as u8;
+                    input_index += 3;
+                    buf_ix += 1;
                 }
+                buf_ix += gray_remnant;
+                input_index += remnant;
             }
-            PixelFormat::Bgr32 => {
-                let mut buf_ix = 0usize;
-                for y in 0..h {
-                    for x in 0..w {
-                        let bgra = &input_bitmap[input_index..input_index + 4];
-                        grayscale[buf_ix] = ((233 * bgra[0] as u32 + 1197 * bgra[1] as u32 + 610 * bgra[2] as u32) / 2048) as u8;
-                        input_index += 4;
-                        buf_ix += 1;
-                    }
-                    buf_ix += gray_remnant;
-                    input_index += remnant;
+        }
+        PixelFormat::Bgr32 => {
+            let mut buf_ix = 0usize;
+            for y in 0..h {
+                for x in 0..w {
+                    let bgra = &input_bitmap[input_index..input_index + 4];
+                    grayscale[buf_ix] = ((233 * bgra[0] as u32 + 1197 * bgra[1] as u32 + 610 * bgra[2] as u32) / 2048) as u8;
+                    input_index += 4;
+                    buf_ix += 1;
                 }
+                buf_ix += gray_remnant;
+                input_index += remnant;
             }
-            PixelFormat::Gray8 => {
-                let mut buf_ix = 0usize;
-                for y in 0..h {
-                    for x in 0..w {
-                        let bgra = &input_bitmap[input_index..input_index + 1];
-                        grayscale[buf_ix] = bgra[0];
-                        input_index += 1;
-                        buf_ix += 1;
-                    }
-                    buf_ix += gray_remnant;
-                    input_index += remnant;
+        }
+        PixelFormat::Gray8 => {
+            let mut buf_ix = 0usize;
+            for y in 0..h {
+                for x in 0..w {
+                    let bgra = &input_bitmap[input_index..input_index + 1];
+                    grayscale[buf_ix] = bgra[0];
+                    input_index += 1;
+                    buf_ix += 1;
                 }
+                buf_ix += gray_remnant;
+                input_index += remnant;
             }
         }
     }

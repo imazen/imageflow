@@ -10,8 +10,7 @@ use rustc_serialize::base64::ToBase64;
 use imageflow_helpers::timeywimey::precise_time_ns;
 
 pub struct Engine<'a> {
-    c: &'a Context,
-    job: &'a mut Context,
+    c: &'a mut Context,
     g: Graph,
     more_frames: bool,
 }
@@ -19,11 +18,8 @@ pub struct Engine<'a> {
 impl<'a> Engine<'a> {
 
     pub fn create(context: &'a mut Context, g: Graph) -> Engine<'a> {
-        let split_context_2 = unsafe{ &mut *(context as *mut Context) };
-
         Engine {
             c: context,
-            job: split_context_2,
             g,
             more_frames: false,
         }
@@ -32,13 +28,8 @@ impl<'a> Engine<'a> {
     pub fn ctx(&self) -> OpCtx{
         OpCtx{
             c: self.c,
-            graph: &self.g,
-            job: self.job,
+            graph: &self.g
         }
-    }
-
-    fn flow_c(&self) -> *mut crate::ffi::ImageflowContext{
-        self.c.flow_c()
     }
 
     pub fn validate_graph(&self) -> Result<()> {
@@ -121,7 +112,7 @@ impl<'a> Engine<'a> {
                 break;
             }
 
-            if passes >= self.job.max_calc_flatten_execute_passes {
+            if passes >= self.c.max_calc_flatten_execute_passes {
                 {
                     self.notify_graph_complete()?;
                 }
@@ -203,7 +194,7 @@ impl<'a> Engine<'a> {
 
             if let Some((io_id, commands)) = result_value {
                 for c in commands {
-                    self.job.tell_decoder(io_id, c.to_owned()).unwrap();
+                    self.c.tell_decoder(io_id, c.to_owned()).unwrap();
                 }
             }
         }
@@ -226,8 +217,8 @@ impl<'a> Engine<'a> {
         for index in 0..self.g.node_count() {
             let weight = self.g.node_weight_mut(NodeIndex::new(index)).unwrap();
             if weight.stable_id < 0 {
-                weight.stable_id = self.job.next_stable_node_id;
-                self.job.next_stable_node_id += 1;
+                weight.stable_id = self.c.next_stable_node_id;
+                self.c.next_stable_node_id += 1;
             }
         }
         Ok(())
@@ -238,25 +229,25 @@ impl<'a> Engine<'a> {
         self.assign_stable_ids()?;
 
         let info = GraphRecordingInfo {
-            debug_job_id: self.job.debug_job_id,
-            record_graph_versions: self.job.graph_recording.record_graph_versions.unwrap_or(false),
-            current_graph_version: self.job.next_graph_version,
-            render_graph_versions: self.job.graph_recording.record_graph_versions.unwrap_or(false),
+            debug_job_id: self.c.debug_job_id,
+            record_graph_versions: self.c.graph_recording.record_graph_versions.unwrap_or(false),
+            current_graph_version: self.c.next_graph_version,
+            render_graph_versions: self.c.graph_recording.record_graph_versions.unwrap_or(false),
             maximum_graph_versions: 100,
         };
-        let update = notify_graph_changed(&mut self.g, &info)?;
+        let update = notify_graph_changed(self.c,&mut self.g, &info)?;
         if let Some(GraphRecordingUpdate { next_graph_version }) = update {
-            self.job.next_graph_version = next_graph_version;
+            self.c.next_graph_version = next_graph_version;
         }
         Ok(())
     }
 
     fn notify_graph_complete(&mut self) -> Result<()> {
-        if self.job.next_graph_version > 0 && self.job.graph_recording.record_graph_versions.unwrap_or(false) {
+        if self.c.next_graph_version > 0 && self.c.graph_recording.record_graph_versions.unwrap_or(false) {
             let prev_filename =
                 format!("job_{}_graph_version_{}.dot",
-                        self.job.debug_job_id,
-                        self.job.next_graph_version - 1);
+                        self.c.debug_job_id,
+                        self.c.next_graph_version - 1);
 
             super::visualize::render_dotfile_to_png(&prev_filename);
         }
@@ -491,12 +482,15 @@ impl<'a> Engine<'a> {
                             return Err(nerror!(crate::ErrorKind::InvalidOperation, "Node {} execution returned {:?}", def.name(), result).into());
                         }else{
                             // Force update the estimate to match reality
-                            if let NodeResult::Frame(bit) = result{
-                                if !bit.is_null() {
-                                    unsafe {
-                                        ctx.weight_mut(next_ix).frame_est = FrameEstimate::Some((*bit).frame_info());
-                                    }
-                                }
+                            if let NodeResult::Frame(bitmap_key) = result {
+
+                                let bitmap_frame_info = ctx.c.borrow_bitmaps()
+                                    .map_err(|e| e.at(here!()))?
+                                    .try_borrow_mut(bitmap_key)
+                                    .map_err(|e| e.at(here!()))?
+                                    .frame_info();
+
+                                ctx.weight_mut(next_ix).frame_est = FrameEstimate::Some(bitmap_frame_info);
                             }
                             ctx.weight_mut(next_ix).result = result;
                         }
@@ -507,25 +501,27 @@ impl<'a> Engine<'a> {
                     self.more_frames = self.more_frames || more_frames;
 
                     unsafe {
-                        if self.job.graph_recording.record_frame_images.unwrap_or(false) {
-                            if let NodeResult::Frame(ptr) = self.g
+                        if self.c.graph_recording.record_frame_images.unwrap_or(false) {
+                            if let NodeResult::Frame(bitmap_key) = self.g
                                 .node_weight(next_ix)
                                 .unwrap()
                                 .result {
                                 let path = format!("node_frames/job_{}_node_{}.png",
-                                                   self.job.debug_job_id,
+                                                   self.c.debug_job_id,
                                                    self.g.node_weight(next_ix).unwrap().stable_id);
-                                let path_copy = path.clone();
-                                let path_cstr = std::ffi::CString::new(path).unwrap();
                                 let _ = std::fs::create_dir("node_frames");
-                                if !crate::ffi::flow_bitmap_bgra_save_png(self.c.flow_c(),
-                                                                     ptr,
-                                                                     path_cstr.as_ptr()) {
-                                    println!("Failed to save frame {} (from node {})",
-                                             path_copy,
-                                             next_ix.index());
-                                    cerror!(self.c).panic();
-                                }
+
+
+                                let bitmaps = self.c.borrow_bitmaps()
+                                    .map_err(|e| e.at(here!()))?;
+                                let mut bitmap = bitmaps.try_borrow_mut(bitmap_key)
+                                    .map_err(|e| e.at(here!()))?;
+
+                                let bitmap_bgra = bitmap.get_window_u8().unwrap().to_bitmap_bgra()?;
+
+                                crate::codecs::write_png(&path, &bitmap_bgra)
+                                    .map_err(|e| e.at(here!()))?;
+
                             }
                         }
                     }
@@ -538,7 +534,6 @@ impl<'a> Engine<'a> {
         OpCtxMut {
             c: self.c,
             graph: &mut self.g,
-            job: self.job,
             more_frames: Cell::new(false),
         }
     }
@@ -592,7 +587,7 @@ impl<'a> Engine<'a> {
 impl<'a> OpCtxMut<'a> {
     pub fn graph_to_str(&mut self) -> Result<String> {
         let mut vec = Vec::new();
-        super::visualize::print_graph(&mut vec, self.graph, None).unwrap();
+        super::visualize::print_graph(self.c, &mut vec, self.graph, None).unwrap();
         Ok(String::from_utf8(vec).unwrap())
     }
 }
@@ -601,6 +596,7 @@ impl<'a> OpCtxMut<'a> {
 
 use daggy::walker::Walker;
 use crate::flow::definitions::NodeResult::Frame;
+use crate::codecs::NamedEncoders::LodePngEncoder;
 
 
 pub fn flow_node_has_dimensions(g: &Graph, node_id: NodeIndex) -> bool {

@@ -1,6 +1,7 @@
 use super::internal_prelude::*;
 use imageflow_types::{PixelFormat, CompositingMode};
 use crate::ffi::BitmapCompositingMode;
+use crate::graphics::bitmaps::BitmapCompositing;
 
 pub static ENABLE_TRANSPARENCY: EnableTransparencyDef = EnableTransparencyDef{};
 pub static ENABLE_TRANSPARENCY_MUT: EnableTransparencyMutDef = EnableTransparencyMutDef{};
@@ -65,14 +66,24 @@ impl NodeDefMutateBitmap for EnableTransparencyMutDef{
     fn fqn(&self) -> &'static str{
         "imazen.enable_transparency_mut"
     }
-    fn mutate(&self, c: &Context, bitmap: &mut BitmapBgra,  p: &NodeParams) -> Result<()> {
-        if bitmap.fmt == PixelFormat::Bgr32 {
+    fn mutate(&self, c: &Context, bitmap_key: BitmapKey,  p: &NodeParams) -> Result<()> {
+
+        let bitmaps = c.borrow_bitmaps()
+            .map_err(|e| e.at(here!()))?;
+        let mut bitmap_bitmap = bitmaps.try_borrow_mut(bitmap_key)
+            .map_err(|e| e.at(here!()))?;
+
+        if bitmap_bitmap.info().alpha_meaningful(){
+            Err(nerror!(crate::ErrorKind::InvalidNodeConnections, "Need Bgr32 input image to convert to bgra32"))
+        }else{
+            let mut bitmap = unsafe { bitmap_bitmap.get_window_u8().unwrap().to_bitmap_bgra()? };
+
             bitmap.normalize_alpha()?;
-            bitmap.fmt = PixelFormat::Bgra32;
-            bitmap.compositing_mode = BitmapCompositingMode::BlendWithSelf;
+
+            bitmap_bitmap.set_alpha_meaningful(true);
+            bitmap_bitmap.set_compositing(BitmapCompositing::BlendWithSelf);
             Ok(())
-        } else {
-            Err(nerror!(crate::ErrorKind::InvalidNodeConnections, "Need Bgr32 input image to convert to bgra32, got {:?}", bitmap.fmt))
         }
+
     }
 }

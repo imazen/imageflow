@@ -15,6 +15,7 @@ use rgb;
 use crate::ffi;
 use imageflow_helpers::preludes::from_std::CStr;
 use std::ffi::c_void;
+use crate::graphics::bitmaps::BitmapKey;
 
 pub struct LibPngEncoder {
     io: IoProxy,
@@ -34,17 +35,30 @@ impl LibPngEncoder {
 }
 
 impl Encoder for LibPngEncoder {
-    fn write_frame(&mut self, c: &Context, preset: &EncoderPreset, frame: &mut BitmapBgra, decoder_io_ids: &[i32]) -> Result<EncodeResult> {
-        self.write_png(frame, preset).map_err(|e| e.at(here!()))?;
+    fn write_frame(&mut self, c: &Context, preset: &EncoderPreset, bitmap_key: BitmapKey, decoder_io_ids: &[i32]) -> Result<EncodeResult> {
 
-        Ok(EncodeResult {
-            w: frame.w as i32,
-            h: frame.h as i32,
-            io_id: self.io.io_id(),
-            bytes: ::imageflow_types::ResultBytes::Elsewhere,
-            preferred_extension: "png".to_owned(),
-            preferred_mime_type: "image/png".to_owned(),
-        })
+        let bitmaps = c.borrow_bitmaps()
+            .map_err(|e| e.at(here!()))?;
+
+        let mut bitmap = bitmaps.try_borrow_mut(bitmap_key)
+            .map_err(|e| e.at(here!()))?;
+
+        unsafe {
+            let frame = bitmap.get_window_u8()
+                .ok_or_else(|| nerror!(ErrorKind::InvalidBitmapType))?
+                .to_bitmap_bgra().map_err(|e| e.at(here!()))?;
+
+            self.write_png(&frame, preset).map_err(|e| e.at(here!()))?;
+
+            Ok(EncodeResult {
+                w: frame.w as i32,
+                h: frame.h as i32,
+                io_id: self.io.io_id(),
+                bytes: ::imageflow_types::ResultBytes::Elsewhere,
+                preferred_extension: "png".to_owned(),
+                preferred_mime_type: "image/png".to_owned(),
+            })
+        }
     }
 
     fn get_io(&self) -> Result<IoProxyRef> {

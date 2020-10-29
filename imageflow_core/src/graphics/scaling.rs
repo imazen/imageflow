@@ -13,7 +13,6 @@ pub struct ScaleAndRenderParams {
     pub sharpen_percent_goal: f32,
     pub interpolation_filter: crate::graphics::weights::Filter,
     pub scale_in_colorspace: WorkingFloatspace,
-    pub compositing_mode: BitmapCompositingMode
 }
 
 
@@ -127,7 +126,7 @@ pub unsafe fn flow_node_execute_scale2d_render1d(
                 // Load row
                 flow_bitmap_float_convert_srgb_to_linear(
                     &colorcontext,
-                    &mut input.to_bitmap_bgra(BitmapCompositingMode::ReplaceSelf)
+                    &mut input.to_bitmap_bgra()
                         .map_err(|e| e.at(here!()))?,
                     input_row_ix,
                     &mut mult_buf_window.row_window(reusable_index as u32).unwrap()
@@ -179,7 +178,7 @@ pub unsafe fn flow_node_execute_scale2d_render1d(
             &mut h_scaled_buf_window.to_bitmap_float()
                     .map_err(|e| e.at(here!()))?,
             0 as i32 as u32,
-            &mut cropped_canvas.to_bitmap_bgra(info.compositing_mode)
+            &mut cropped_canvas.to_bitmap_bgra()
                     .map_err(|e| e.at(here!()))?,
             out_row_ix as u32,
             1 as i32 as u32,

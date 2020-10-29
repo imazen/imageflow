@@ -6,7 +6,7 @@ use crate::ffi::BitmapBgra;
 use imageflow_types::collections::AddRemoveSet;
 use crate::io::IoProxy;
 use uuid::Uuid;
-use imageflow_types::IoDirection;
+use imageflow_types::{IoDirection, PixelLayout};
 use super::*;
 use std::any::Any;
 use std::rc::Rc;
@@ -16,6 +16,7 @@ use rgb::alt::BGRA8;
 use libwebp_sys::*;
 use libwebp_sys::WEBP_CSP_MODE::MODE_BGRA;
 use imageflow_helpers::preludes::from_std::ptr::null;
+use crate::graphics::bitmaps::{ColorSpace, BitmapCompositing};
 
 
 pub struct WebPDecoder{
@@ -136,24 +137,40 @@ impl Decoder for WebPDecoder {
         Ok(())
     }
 
-    fn read_frame(&mut self, c: &Context) -> Result<*mut BitmapBgra> {
+    fn read_frame(&mut self, c: &Context) -> Result<BitmapKey> {
         let _ = self.get_scaled_image_info(c)?;
 
         unsafe {
             let w = self.output_width().unwrap();
             let h = self.output_height().unwrap();
-            let copy = ffi::flow_bitmap_bgra_create(c.flow_c(), w as i32, h as i32, false, ffi::PixelFormat::Bgra32);
-            if copy.is_null() {
-                cerror!(c).panic();
-            }
+
+            let mut bitmaps = c.borrow_bitmaps_mut()
+                .map_err(|e| e.at(here!()))?;
+
+            let bitmap_key = bitmaps
+                .create_bitmap_u8(w as u32,
+                                  h as u32,
+                                  PixelLayout::BGRA,
+                                  false,
+                                  true,
+                                  ColorSpace::StandardRGB,
+                                  BitmapCompositing::ReplaceSelf)
+                .map_err(|e| e.at(here!()))?;
+
+
+            let mut bitmap = bitmaps.try_borrow_mut(bitmap_key)
+                .map_err(|e| e.at(here!()))?;
+
+            let copy = bitmap.get_window_u8().unwrap()
+                .to_bitmap_bgra()?;
 
 
             // Specify the desired output colorspace:
             self.config.output.colorspace = MODE_BGRA;
             // Have config.output point to an external buffer:
-            self.config.output.u.RGBA.rgba = (*copy).pixels;
-            self.config.output.u.RGBA.stride = (*copy).stride as i32;
-            self.config.output.u.RGBA.size = (*copy).stride as usize * (*copy).h as usize;
+            self.config.output.u.RGBA.rgba = copy.pixels;
+            self.config.output.u.RGBA.stride = copy.stride as i32;
+            self.config.output.u.RGBA.size = copy.stride as usize * copy.h as usize;
             self.config.output.is_external_memory = 1;
 
 
@@ -164,7 +181,7 @@ impl Decoder for WebPDecoder {
                 return Err(nerror!(ErrorKind::ImageDecodingError, "libwebp decoding error {:?}", error_code));
             }
 
-            Ok(copy)
+            Ok(bitmap_key)
         }
     }
     fn has_more_frames(&mut self) -> Result<bool> {
@@ -192,36 +209,44 @@ impl WebPEncoder {
 }
 
 impl Encoder for WebPEncoder {
-    fn write_frame(&mut self, c: &Context, preset: &s::EncoderPreset, frame: &mut BitmapBgra, decoder_io_ids: &[i32]) -> Result<s::EncodeResult> {
+    fn write_frame(&mut self, c: &Context, preset: &s::EncoderPreset, bitmap_key: BitmapKey, decoder_io_ids: &[i32]) -> Result<s::EncodeResult> {
 
         unsafe {
+            let bitmaps = c.borrow_bitmaps()
+                .map_err(|e| e.at(here!()))?;
+            let mut bitmap = bitmaps.try_borrow_mut(bitmap_key)
+                .map_err(|e| e.at(here!()))?;
+
+            let mut frame = bitmap.get_window_u8()
+                .ok_or_else(|| nerror!(ErrorKind::InvalidBitmapType))?
+                .to_bitmap_bgra().map_err(|e| e.at(here!()))?;
+
+
             let mut output: *mut u8 = ptr::null_mut();
             let mut output_len: usize = 0;
 
             match preset {
                 s::EncoderPreset::WebPLossy { quality } => {
-                    let quality = f32::min(100f32,f32::max(0f32,*quality));
-                    if frame.fmt == ffi::PixelFormat::Bgra32 || frame.fmt == ffi::PixelFormat::Bgr32{
-                        if frame.fmt == ffi::PixelFormat::Bgr32{
+                    let quality = f32::min(100f32, f32::max(0f32, *quality));
+                    if frame.fmt == ffi::PixelFormat::Bgra32 || frame.fmt == ffi::PixelFormat::Bgr32 {
+                        if frame.fmt == ffi::PixelFormat::Bgr32 {
                             frame.normalize_alpha()?;
                         }
 
                         output_len = WebPEncodeBGRA(frame.pixels, frame.width() as i32, frame.height() as i32, frame.stride() as i32, quality, &mut output);
-                    }else if frame.fmt == ffi::PixelFormat::Bgr24{
+                    } else if frame.fmt == ffi::PixelFormat::Bgr24 {
                         output_len = WebPEncodeBGR(frame.pixels, frame.width() as i32, frame.height() as i32, frame.stride() as i32, quality, &mut output);
                     }
-
                 },
                 s::EncoderPreset::WebPLossless => {
-                    if frame.fmt == ffi::PixelFormat::Bgra32 || frame.fmt == ffi::PixelFormat::Bgr32{
-                        if frame.fmt == ffi::PixelFormat::Bgr32{
+                    if frame.fmt == ffi::PixelFormat::Bgra32 || frame.fmt == ffi::PixelFormat::Bgr32 {
+                        if frame.fmt == ffi::PixelFormat::Bgr32 {
                             frame.normalize_alpha()?;
                         }
-                        output_len = WebPEncodeLosslessBGRA(frame.pixels, frame.width() as i32, frame.height() as i32, frame.stride() as i32,  &mut output);
-                    }else if frame.fmt == ffi::PixelFormat::Bgr24{
-                        output_len = WebPEncodeLosslessBGR(frame.pixels, frame.width() as i32, frame.height() as i32, frame.stride() as i32,  &mut output);
+                        output_len = WebPEncodeLosslessBGRA(frame.pixels, frame.width() as i32, frame.height() as i32, frame.stride() as i32, &mut output);
+                    } else if frame.fmt == ffi::PixelFormat::Bgr24 {
+                        output_len = WebPEncodeLosslessBGR(frame.pixels, frame.width() as i32, frame.height() as i32, frame.stride() as i32, &mut output);
                     }
-
                 },
                 _ => {
                     panic!("Incorrect encoder for encoder preset")
@@ -234,16 +259,17 @@ impl Encoder for WebPEncoder {
                 self.io.write_all(bytes).map_err(|e| FlowError::from_encoder(e).at(here!()))?;
                 WebPFree(output as *mut libc::c_void);
             }
-        }
 
-        Ok(s::EncodeResult {
-            w: frame.w as i32,
-            h: frame.h as i32,
-            io_id: self.io.io_id(),
-            bytes: ::imageflow_types::ResultBytes::Elsewhere,
-            preferred_extension: "webp".to_owned(),
-            preferred_mime_type: "image/webp".to_owned(),
-        })
+
+            Ok(s::EncodeResult {
+                w: frame.w as i32,
+                h: frame.h as i32,
+                io_id: self.io.io_id(),
+                bytes: ::imageflow_types::ResultBytes::Elsewhere,
+                preferred_extension: "webp".to_owned(),
+                preferred_mime_type: "image/webp".to_owned(),
+            })
+        }
     }
 
     fn get_io(&self) -> Result<IoProxyRef> {

@@ -47,7 +47,22 @@ use imgref::ImgRef;
 //use std::str::FromStr;
 pub mod collections;
 
+#[derive(Copy, Clone, Debug, Eq, PartialEq, Ord, PartialOrd)]
+pub enum PixelLayout{
+    BGR,
+    BGRA,
+    Gray
+}
 
+impl PixelLayout{
+    pub fn channels(&self) -> usize{
+        match self{
+            PixelLayout::BGR => 3,
+            PixelLayout::BGRA => 4,
+            PixelLayout::Gray => 1
+        }
+    }
+}
 
 /// Memory layout for pixels.
 /// sRGB w/ gamma encoding assumed for 8-bit channels.
@@ -62,6 +77,31 @@ pub enum PixelFormat {
     Bgr24 = 3,
     #[serde(rename="gray_8")]
     Gray8 = 1,
+}
+
+impl PixelFormat {
+    pub fn pixel_layout(&self) -> PixelLayout {
+        match self{
+            PixelFormat::Bgra32 => PixelLayout::BGRA,
+            PixelFormat::Bgr32 => PixelLayout::BGRA,
+            PixelFormat::Bgr24 => PixelLayout::BGR,
+            PixelFormat::Gray8 => PixelLayout::Gray,
+        }
+    }
+    pub fn alpha_meaningful(&self) -> bool{
+        self == &PixelFormat::Bgra32
+    }
+
+    pub fn debug_name(&self) -> &'static str {
+        match self {
+            PixelFormat::Bgr24 => "bgra24",
+            PixelFormat::Gray8 => "gray8",
+            PixelFormat::Bgra32 => "bgra32",
+            PixelFormat::Bgr32 => "bgr32",
+            // _ => "?"
+        }
+    }
+
 }
 
 impl PixelFormat{
@@ -696,9 +736,10 @@ pub enum Node {
     #[serde(rename="color_filter_srgb")]
     ColorFilterSrgb (ColorFilterSrgb),
     // TODO: Block use except from FFI/unit test use
-    #[serde(rename="flow_bitmap_bgra_ptr")]
-    FlowBitmapBgraPtr {
-        ptr_to_flow_bitmap_bgra_ptr: usize,
+    #[serde(rename="flow_bitmap_key_ptr")]
+    FlowBitmapKeyPtr {
+        //TODO: Rename this
+        ptr_to_bitmap_key: usize,
     },
 }
 

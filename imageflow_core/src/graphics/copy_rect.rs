@@ -22,7 +22,7 @@ pub fn copy_rect(input: &mut BitmapBgra, canvas: &mut BitmapBgra, from_x: u32, f
                          (from_x,from_y,to_x,to_y,w,h)));
     }
 
-
+    //TODO: COMPOSE FIX Cannot write to .compositing_mode as it will be discarded
     canvas.compositing_mode = crate::ffi::BitmapCompositingMode::BlendWithSelf;
 
     if canvas.fmt == input.fmt ||

@@ -112,16 +112,25 @@ impl NodeDefMutateBitmap for WhiteBalanceSrgbMutDef{
     fn fqn(&self) -> &'static str{
         "imazen.white_balance_srgb_mut"
     }
-    fn mutate(&self, c: &Context, bitmap: &mut BitmapBgra,  p: &NodeParams) -> Result<()> {
+    fn mutate(&self, c: &Context, bitmap_key: BitmapKey,  p: &NodeParams) -> Result<()> {
 
         unsafe {
+
+            let bitmaps = c.borrow_bitmaps()
+                .map_err(|e| e.at(here!()))?;
+            let mut bitmap_bitmap = bitmaps.try_borrow_mut(bitmap_key)
+                .map_err(|e| e.at(here!()))?;
+
+            let mut bitmap = bitmap_bitmap.get_window_u8().unwrap().to_bitmap_bgra()?;
+
+
             let mut histograms: [u64; 768] = [0; 768];
             let mut pixels_sampled: u64 = 0;
-            if !crate::ffi::flow_bitmap_bgra_populate_histogram(c.flow_c(), bitmap as *mut BitmapBgra, histograms.as_mut_ptr(), 256, 3, &mut pixels_sampled as *mut u64) {
+            if !crate::ffi::flow_bitmap_bgra_populate_histogram(c.flow_c(), &mut bitmap as *mut BitmapBgra, histograms.as_mut_ptr(), 256, 3, &mut pixels_sampled as *mut u64) {
                 return Err(cerror!(c, "Failed to populate histogram"))
             }
             if let NodeParams::Json(s::Node::WhiteBalanceHistogramAreaThresholdSrgb { threshold }) = *p {
-                white_balance_srgb_mut(bitmap, &histograms, pixels_sampled, threshold, threshold)
+                white_balance_srgb_mut(&mut bitmap, &histograms, pixels_sampled, threshold, threshold)
             } else {
                 Err(nerror!(crate::ErrorKind::NodeParamsMismatch, "Need ColorMatrixSrgb, got {:?}", p))
             }

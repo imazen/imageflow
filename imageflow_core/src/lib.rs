@@ -65,10 +65,17 @@ pub mod clients;
 pub mod ffi;
 pub mod parsing;
 pub mod test_helpers;
+mod allocation_container;
+
 use std::fmt;
 use std::borrow::Cow;
 use petgraph::graph::NodeIndex;
 
+pub use crate::graphics::bitmaps::BitmapKey;
+
+pub mod helpers{
+    pub use crate::codecs::write_png;
+}
 #[doc(hidden)]
 mod internal_prelude {
     #[doc(hidden)]

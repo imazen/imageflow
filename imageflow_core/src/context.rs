@@ -12,8 +12,11 @@ use crate::errors::{OutwardErrorBuffer, CErrorProxy};
 use crate::codecs::CodecInstanceContainer;
 use crate::codecs::EnabledCodecs;
 use crate::ffi::IoDirection;
+use crate::graphics::bitmaps::{BitmapWindowMut, BitmapKey, Bitmap, BitmapsContainer};
+use crate::allocation_container::AllocationContainer;
+use imageflow_types::ImageInfo;
 
-/// Something of a God object (which is necessary for a reasonable FFI interface).
+/// Something of a god object (which is necessary for a reasonable FFI interface).
 pub struct Context {
     /// The C context object
     c_ctx: *mut ffi::ImageflowContext,
@@ -34,10 +37,16 @@ pub struct Context {
 
     pub enabled_codecs: EnabledCodecs,
 
-    pub security: imageflow_types::ExecutionSecurity
+    pub security: imageflow_types::ExecutionSecurity,
+
+    pub bitmaps: RefCell<crate::graphics::bitmaps::BitmapsContainer>,
+
+    pub allocations: RefCell<AllocationContainer>
 }
 
+//TODO: isn't this supposed to increment with each new context in process?
 static mut JOB_ID: i32 = 0;
+
 impl Context {
 
     pub fn create() -> Result<Box<Context>>{
@@ -61,6 +70,7 @@ impl Context {
                 codecs: AddRemoveSet::with_capacity(4),
                 io_id_list: RefCell::new(Vec::with_capacity(2)),
                 enabled_codecs: EnabledCodecs::default(),
+                bitmaps: RefCell::new(crate::graphics::bitmaps::BitmapsContainer::with_capacity(16)),
                 security: imageflow_types::ExecutionSecurity{
                     max_decode_size: None,
                     max_frame_size: Some(imageflow_types::FrameSizeLimit{
@@ -69,7 +79,8 @@ impl Context {
                         megapixels: 100f32
                     }),
                     max_encode_size: None
-                }
+                },
+                allocations: RefCell::new(AllocationContainer::new())
             }))
         }
     }
@@ -118,6 +129,53 @@ impl Context {
     pub fn message(&mut self, method: &str, json: &[u8]) -> (JsonResponse, Result<()>) {
         crate::context_methods::CONTEXT_ROUTER.invoke(self, method, json)
     }
+
+    pub fn borrow_bitmaps_mut(&self) -> Result<RefMut<BitmapsContainer>>{
+        self.bitmaps.try_borrow_mut()
+            .map_err(|e| nerror!(ErrorKind::FailedBorrow, "Failed to mutably borrow bitmaps collection: {:?}", e))
+
+    }
+    pub fn borrow_bitmaps(&self) -> Result<Ref<BitmapsContainer>>{
+        self.bitmaps.try_borrow()
+            .map_err(|e| nerror!(ErrorKind::FailedBorrow, "Failed to borrow bitmaps collection: {:?}", e))
+
+    }
+
+    /// mem_calloc should not panic
+    pub unsafe fn mem_calloc(&self, bytes: usize, alignment: usize,filename: *const libc::c_char, line: i32) -> Result<*mut u8>{
+        let mut allocations = self.allocations.try_borrow_mut()
+            .map_err(|e| {
+                let filename_str = if filename.is_null(){
+                    "[no filename provided]"
+                } else{
+                    let c_filename = CStr::from_ptr(filename);
+                    c_filename.to_str().unwrap_or("[non UTF-8 filename]")
+                };
+
+                nerror!(ErrorKind::FailedBorrow, "Failed to mutably borrow allocations collection: {:?}\n{}:{}", e, filename_str, line)
+            })?;
+
+        let result = allocations.allocate(bytes, alignment)
+            .map_err(|e| {
+                let filename_str = if filename.is_null(){
+                    "[no filename provided]"
+                } else{
+                    let c_filename = CStr::from_ptr(filename);
+                    c_filename.to_str().unwrap_or("[non UTF-8 filename]")
+                };
+
+                nerror!(ErrorKind::AllocationFailed, "Failed to allocate {} bytes with alignment {}: {:?}\n{}:{}", bytes, alignment, e, filename_str, line)
+            })?;
+        Ok(result)
+    }
+
+    /// mem_calloc should not panic
+    pub unsafe fn mem_free(&self, ptr: *const u8) -> bool{
+        self.allocations.try_borrow_mut()
+            .map(|mut list| list.free(ptr))
+            .unwrap_or(false)
+    }
+
 
 
     pub fn flow_c(&self) -> *mut ffi::ImageflowContext{
@@ -180,13 +238,60 @@ impl Context {
         self.add_io(io, io_id, IoDirection::Out).map_err(|e| e.at(here!()))
     }
 
+    
+    fn swap_dimensions_by_exif(&mut self, io_id: i32, image_info: &mut ImageInfo) -> Result<()>{
+        let exif_maybe = self.get_codec(io_id)
+            .map_err(|e| e.at(here!()))?
+            .get_decoder()
+            .map_err(|e| e.at(here!()))?
+            .get_exif_rotation_flag(self)
+            .map_err(|e| e.at(here!()))?;
 
-    pub fn get_unscaled_image_info(&mut self, io_id: i32) -> Result<s::ImageInfo> {
-        self.get_codec(io_id).map_err(|e| e.at(here!()))?.get_decoder().map_err(|e| e.at(here!()))?.get_unscaled_image_info(self).map_err(|e| e.at(here!()))
+        if let Some(exif_flag) = exif_maybe{
+            if exif_flag >= 5 && exif_flag <= 8 {
+                let temp = image_info.image_width;
+                image_info.image_width = image_info.image_height;
+                image_info.image_height = temp;
+            }
+        }
+        Ok(())
     }
-    pub fn get_scaled_image_info(&mut self, io_id: i32) -> Result<s::ImageInfo> {
-        self.get_codec(io_id).map_err(|e| e.at(here!()))?.get_decoder().map_err(|e| e.at(here!()))?.get_scaled_image_info(self).map_err(|e| e.at(here!()))
+
+    pub fn get_unscaled_unrotated_image_info(&mut self, io_id: i32) -> Result<s::ImageInfo> {
+        self.get_codec(io_id)
+            .map_err(|e| e.at(here!()))?
+            .get_decoder()
+            .map_err(|e| e.at(here!()))?
+            .get_unscaled_image_info(self)
+            .map_err(|e| e.at(here!()))
     }
+
+    pub fn get_unscaled_rotated_image_info(&mut self, io_id: i32) -> Result<s::ImageInfo> {
+        let mut image_info = self.get_unscaled_unrotated_image_info(io_id).
+            map_err(|e| e.at(here!()))?;
+
+        self.swap_dimensions_by_exif(io_id, &mut image_info)?;
+        Ok(image_info)
+    }
+
+    pub fn get_scaled_unrotated_image_info(&mut self, io_id: i32) -> Result<s::ImageInfo> {
+        self.get_codec(io_id)
+            .map_err(|e| e.at(here!()))?
+            .get_decoder()
+            .map_err(|e| e.at(here!()))?
+            .get_scaled_image_info(self)
+            .map_err(|e| e.at(here!()))
+    }
+
+    pub fn get_scaled_rotated_image_info(&mut self, io_id: i32) -> Result<s::ImageInfo> {
+        let mut image_info = self.get_scaled_unrotated_image_info(io_id)
+            .map_err(|e| e.at(here!()))?;
+
+        self.swap_dimensions_by_exif(io_id, &mut image_info)?;
+        Ok(image_info)
+    }
+
+
     pub fn tell_decoder(&mut self, io_id: i32, tell: s::DecoderCommand) -> Result<()> {
         self.get_codec(io_id).map_err(|e| e.at(here!()))?.get_decoder().map_err(|e| e.at(here!()))?.tell_decoder(self,  tell).map_err(|e| e.at(here!()))
     }

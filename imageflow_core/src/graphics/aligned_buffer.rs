@@ -1,4 +1,5 @@
 
+#[derive(Debug, Clone)]
 pub enum AlignedBufferError{
     SizeOverflow,
     InvalidAlignment,

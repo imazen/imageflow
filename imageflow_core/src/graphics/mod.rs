@@ -1,17 +1,18 @@
 pub mod whitespace;
-pub mod copy_rect;
+pub(crate) mod copy_rect;
 pub mod bitmaps;
-mod aligned_buffer;
-pub mod math;
+pub(crate) mod  aligned_buffer;
+pub(crate) mod math;
 pub mod color;
 pub mod weights;
-mod scaling;
-mod flip;
-mod transpose;
-mod histogram;
-mod color_matrix;
-mod luv;
-mod convolve;
+pub mod scaling;
+pub mod flip;
+pub mod transpose;
+pub(crate) mod histogram;
+pub(crate) mod color_matrix;
+pub(crate) mod luv;
+pub(crate) mod convolve;
+pub(crate) mod fill;
 
 //pub mod faces;
 

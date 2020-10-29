@@ -1,4 +1,5 @@
 use super::internal_prelude::*;
+use crate::graphics::bitmaps::BitmapCompositing;
 
 pub static SCALE_2D_RENDER_TO_CANVAS_1D: Scale2dDef = Scale2dDef{};
 pub static SCALE: ScaleDef = ScaleDef{};
@@ -186,18 +187,31 @@ impl NodeDefOneInputOneCanvas for DrawImageDef {
         Ok(())
     }
 
-    fn render(&self, c: &Context, canvas: &mut BitmapBgra, input: &mut BitmapBgra, p: &NodeParams) -> Result<()> {
+    fn render(&self, c: &Context, canvas_key: BitmapKey, input_key: BitmapKey, p: &NodeParams) -> Result<()> {
         if let NodeParams::Json(s::Node::DrawImageExact { x, y, w, h, ref hints, blend }) = *p {
+
+        unsafe {
+            let bitmaps = c.borrow_bitmaps()
+                .map_err(|e| e.at(here!()))?;
+            let mut canvas_bitmap = bitmaps.try_borrow_mut(canvas_key)
+                .map_err(|e| e.at(here!()))?;
+            let mut canvas = canvas_bitmap.get_window_u8().unwrap()
+                .to_bitmap_bgra().map_err(|e| e.at(here!()))?;
+
+            let mut input_bitmap = bitmaps.try_borrow_mut(input_key)
+                .map_err(|e| e.at(here!()))?;
+            let mut input = input_bitmap.get_window_u8().unwrap()
+                .to_bitmap_bgra().map_err(|e| e.at(here!()))?;
+
 
             let hints = hints.as_ref();
             if x + w > canvas.w || y + h > canvas.h {
-
                 return Err(nerror!(crate::ErrorKind::InvalidNodeParams, "DrawImageExact target rect x1={},y1={},w={},h={} does not fit canvas size {}x{}.", x,y,  w, h, canvas.w, canvas.h));
             }
             if input.fmt.bytes() != 4 || canvas.fmt.bytes() != 4 {
                 return Err(nerror!(crate::ErrorKind::InvalidNodeConnections, "DrawImageExact can only operate on Rgb32 and Rgba32 bitmaps. Input pixel format {:?}. Canvas pixel format {:?}.", input.fmt, canvas.fmt));
             }
-            match hints.and_then(|h| h.resample_when){
+            match hints.and_then(|h| h.resample_when) {
                 Some(s::ResampleWhen::Always) | None => {},
                 v => {
                     return Err(nerror!(crate::ErrorKind::InvalidNodeParams, "DrawImageExact already has a canvas and cannot honor ResampleWhen value {:?}, ", v));
@@ -219,7 +233,7 @@ impl NodeDefOneInputOneCanvas for DrawImageDef {
 
             let sharpen_percent = match hints
                 .and_then(|h| h.sharpen_when)
-                .unwrap_or(s::SharpenWhen::Always){
+                .unwrap_or(s::SharpenWhen::Always) {
                 imageflow_types::SharpenWhen::Always => sharpen_percent_raw,
                 imageflow_types::SharpenWhen::Downscaling if downscaling => sharpen_percent_raw,
                 imageflow_types::SharpenWhen::Upscaling if upscaling => sharpen_percent_raw,
@@ -230,14 +244,14 @@ impl NodeDefOneInputOneCanvas for DrawImageDef {
             let sharpen_requested = sharpen_percent != 0f32;
 
 
-
             let floatspace = hints
                 .and_then(|h| h.scaling_colorspace)
-                .unwrap_or( s::ScalingFloatspace::Linear); //TODO: reconsider upscaling in srgb by default //if downscaling { s::ScalingFloatspace::Linear} else {s::ScalingFloatspace::Srgb});
+                .unwrap_or(s::ScalingFloatspace::Linear); //TODO: reconsider upscaling in srgb by default //if downscaling { s::ScalingFloatspace::Linear} else {s::ScalingFloatspace::Srgb});
 
             let compose = blend.unwrap_or(::imageflow_types::CompositingMode::Compose) == s::CompositingMode::Compose;
 
-            if canvas.compositing_mode == crate::ffi::BitmapCompositingMode::ReplaceSelf && compose{
+            // We can write to the temporary BitmapBgra field because we set it on the real bitmap later after we're done
+            if canvas.compositing_mode == crate::ffi::BitmapCompositingMode::ReplaceSelf && compose {
                 canvas.compositing_mode = crate::ffi::BitmapCompositingMode::BlendWithSelf;
             }
             if canvas.compositing_mode == crate::ffi::BitmapCompositingMode::BlendWithMatte && !compose && canvas.fmt == PixelFormat::Bgra32 {
@@ -246,7 +260,7 @@ impl NodeDefOneInputOneCanvas for DrawImageDef {
 
 
             let ffi_struct = ffi::Scale2dRenderToCanvas1d {
-                interpolation_filter:                ffi::Filter::from(picked_filter),
+                interpolation_filter: ffi::Filter::from(picked_filter),
                 x,
                 y,
                 w,
@@ -255,14 +269,14 @@ impl NodeDefOneInputOneCanvas for DrawImageDef {
                 scale_in_colorspace: crate::ffi::Floatspace::from(floatspace)
             };
 
-            unsafe {
-                if !crate::ffi::flow_node_execute_scale2d_render1d(c.flow_c(),
-                                                              input, canvas, &ffi_struct as *const ffi::Scale2dRenderToCanvas1d) {
-                    return Err(cerror!(c, "Failed to execute Scale2D:  "));
-                }
-            }
-            canvas.compositing_mode = crate::ffi::BitmapCompositingMode::BlendWithSelf;
 
+            if !crate::ffi::flow_node_execute_scale2d_render1d(c.flow_c(),
+                                                               &mut input, &mut canvas, &ffi_struct as *const ffi::Scale2dRenderToCanvas1d) {
+                return Err(cerror!(c, "Failed to execute Scale2D:  "));
+            }
+
+            canvas_bitmap.set_compositing(BitmapCompositing::BlendWithSelf);
+        }
             Ok(())
         } else {
             Err(nerror!(crate::ErrorKind::NodeParamsMismatch, "Need DrawImageExact, got {:?}",p))

@@ -51,6 +51,35 @@ pub enum Filter {
     LegacyIDCTFilter = 31
 }
 
+impl From<imageflow_types::Filter> for Filter {
+    fn from(filter: imageflow_types::Filter) -> Self {
+        match filter{
+            imageflow_types::Filter::RobidouxFast => Filter::RobidouxFast,
+            imageflow_types::Filter::Robidoux => Filter::Robidoux,
+            imageflow_types::Filter::RobidouxSharp => Filter::RobidouxSharp,
+            imageflow_types::Filter::Ginseng => Filter::Ginseng,
+            imageflow_types::Filter::GinsengSharp => Filter::GinsengSharp,
+            imageflow_types::Filter::Lanczos => Filter::Lanczos,
+            imageflow_types::Filter::LanczosSharp => Filter::LanczosSharp,
+            imageflow_types::Filter::Lanczos2 => Filter::Lanczos2,
+            imageflow_types::Filter::Lanczos2Sharp => Filter::Lanczos2Sharp,
+            imageflow_types::Filter::Cubic => Filter::Cubic,
+            imageflow_types::Filter::CubicSharp => Filter::CubicSharp,
+            imageflow_types::Filter::CatmullRom => Filter::CatmullRom,
+            imageflow_types::Filter::Mitchell => Filter::Mitchell,
+            imageflow_types::Filter::CubicBSpline => Filter::CubicBSpline,
+            imageflow_types::Filter::Hermite => Filter::Hermite,
+            imageflow_types::Filter::Jinc => Filter::Jinc,
+            imageflow_types::Filter::Triangle => Filter::Triangle,
+            imageflow_types::Filter::Linear => Filter::Linear,
+            imageflow_types::Filter::Box => Filter::Box,
+            imageflow_types::Filter::Fastest => Filter::Fastest,
+            imageflow_types::Filter::NCubic => Filter::NCubic,
+            imageflow_types::Filter::NCubicSharp => Filter::NCubicSharp,
+        }
+
+    }
+}
 
 pub struct InterpolationDetails {
     /// 1 is the default; near-zero overlapping between windows. 2 overlaps 50% on each side.

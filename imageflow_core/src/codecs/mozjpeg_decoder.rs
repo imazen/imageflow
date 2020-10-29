@@ -2,12 +2,12 @@ use std;
 use crate::for_other_imageflow_crates::preludes::external_without_std::*;
 use crate::ffi;
 use crate::{Context, CError,  Result, JsonResponse};
-use crate::ffi::{wrap_jpeg_get_custom_state, WrapJpegSourceManager, flow_node_execute_scale2d_render1d};
+use crate::ffi::{wrap_jpeg_get_custom_state, WrapJpegSourceManager};
 use crate::ffi::BitmapBgra;
 use imageflow_types::collections::AddRemoveSet;
 use crate::io::IoProxy;
 use uuid::Uuid;
-use imageflow_types::IoDirection;
+use imageflow_types::{IoDirection, PixelLayout};
 use super::*;
 use std::any::Any;
 use std::rc::Rc;
@@ -18,6 +18,7 @@ extern crate mozjpeg_sys;
 use ::mozjpeg_sys::*;
 use imageflow_helpers::preludes::from_std::ptr::{null, slice_from_raw_parts, null_mut};
 use imageflow_types::DecoderCommand::IgnoreColorProfileErrors;
+use crate::graphics::bitmaps::{BitmapKey, ColorSpace, BitmapCompositing};
 
 static CMYK_PROFILE: &'static [u8] = include_bytes!("cmyk.icc");
 
@@ -97,16 +98,34 @@ impl Decoder for MozJpegDecoder {
         }
     }
 
-    fn read_frame(&mut self, c: &Context) -> Result<*mut BitmapBgra> {
+    fn read_frame(&mut self, c: &Context) -> Result<BitmapKey> {
 
         let (w,h) = self.decoder.get_final_size()?;
 
-        let canvas =
-            BitmapBgra::create(c, w, h, ffi::PixelFormat::Bgr32, s::Color::Transparent)?;
+        let mut bitmaps = c.borrow_bitmaps_mut()
+            .map_err(|e| e.at(here!()))?;
 
-        self.decoder.read_frame(canvas)?;
+        let bitmap_key = bitmaps
+            .create_bitmap_u8(w as u32,
+                              h as u32,
+                              PixelLayout::BGRA,
+                              false,
+                              false,
+                              ColorSpace::StandardRGB,
+                              BitmapCompositing::ReplaceSelf)
+            .map_err(|e| e.at(here!()))?;
 
-        Ok(canvas)
+        let mut bitmap = bitmaps.try_borrow_mut(bitmap_key)
+            .map_err(|e| e.at(here!()))?;
+
+        unsafe {
+            let mut canvas = bitmap.get_window_u8().unwrap()
+                .to_bitmap_bgra()?;
+
+            self.decoder.read_frame(&mut canvas)?;
+        }
+
+        Ok(bitmap_key)
     }
     fn has_more_frames(&mut self) -> Result<bool> {
         Ok(false)
