@@ -8,6 +8,7 @@ use imageflow_core::graphics::bitmaps::*;
 use imageflow_core::graphics::scaling::ScaleAndRenderParams;
 use imageflow_core::graphics::color::WorkingFloatspace;
 use std::time::Duration;
+use itertools::Itertools;
 
 
 fn benchmark_transpose(ctx: &mut Criterion) {
@@ -194,48 +195,27 @@ extern "C" {
 }
 
 fn benchmark_downscaling(ctx: &mut Criterion) {
-    unsafe {
-        let mut output = Vec::with_capacity(8);
-
-        for _ in 0..8 {
-            output.push(
-                {
-                    let mut temp = Vec::with_capacity(8);
-                    for _ in 0..8 {
-                        temp.push(0u8);
-                    }
-                    let ptr = temp.as_mut_ptr();
-                    std::mem::forget(temp);
-                    ptr
-                }
-            )
-        }
-        let ptr = output.as_mut_ptr();
-        let mut input = Vec::with_capacity(64);
-        for _ in 0..64 {
-            input.push(0);
-        }
-        let input_ptr = input.as_ptr();
-        std::mem::forget(output);
-        std::mem::forget(input);
-        let funs = [flow_scale_spatial_srgb_7x7,
-            flow_scale_spatial_srgb_6x6,
-            flow_scale_spatial_srgb_5x5,
-            flow_scale_spatial_srgb_4x4,
-            flow_scale_spatial_srgb_3x3, flow_scale_spatial_srgb_2x2,
-            flow_scale_spatial_srgb_1x1, flow_scale_spatial_7x7, flow_scale_spatial_6x6,
-            flow_scale_spatial_5x5, flow_scale_spatial_4x4, flow_scale_spatial_3x3,
-            flow_scale_spatial_2x2, flow_scale_spatial_1x1
-        ];
+    let mut output = [[0u8; 8]; 8];
+    let input = [0u8; 64];
+    let input_ptr = input.as_ptr();
+    let mut row = output.iter_mut().map(|ele| ele.as_mut_ptr()).collect_vec();
+    let funs = [flow_scale_spatial_srgb_7x7,
+        flow_scale_spatial_srgb_6x6,
+        flow_scale_spatial_srgb_5x5,
+        flow_scale_spatial_srgb_4x4,
+        flow_scale_spatial_srgb_3x3, flow_scale_spatial_srgb_2x2,
+        flow_scale_spatial_srgb_1x1, flow_scale_spatial_7x7, flow_scale_spatial_6x6,
+        flow_scale_spatial_5x5, flow_scale_spatial_4x4, flow_scale_spatial_3x3,
+        flow_scale_spatial_2x2, flow_scale_spatial_1x1
+    ];
 
 
-        for (i,&fun) in funs.iter().enumerate() {
-            ctx.bench_function(&format!("downscale function={}",i), |bn| bn.iter(|| {
-                fun(input_ptr, ptr, 0)
-            }));
-        }
+    for (i, &fun) in funs.iter().enumerate() {
+        ctx.bench_function(&format!("downscale function={}", i), |bn| bn.iter(|| {
+            unsafe { fun(input_ptr, row.as_mut_ptr(), 0) }
+        }));
     }
 }
-criterion_group!(benches, benchmark_scale_2d,benchmark_transpose,/*benchmark_downscaling,*/benchmark_flip_h,benchmark_flip_v);
+criterion_group!(benches ,benchmark_scale_2d,benchmark_transpose,benchmark_downscaling,benchmark_flip_h,benchmark_flip_v);
 criterion_main!(benches);
 
