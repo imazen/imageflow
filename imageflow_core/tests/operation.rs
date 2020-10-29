@@ -126,29 +126,14 @@ extern "C" {
 
 fn benchmark_downscaling(ctx: &mut Criterion) {
     unsafe {
-        let mut output = Vec::with_capacity(8);
+        let mut output =[{
+            let mut temp=[0u8;8];
+            temp.as_mut_ptr()
+        };8];
 
-        for _ in 0..8 {
-            output.push(
-                {
-                    let mut temp = Vec::with_capacity(8);
-                    for _ in 0..8 {
-                        temp.push(0u8);
-                    }
-                    let ptr = temp.as_mut_ptr();
-                    std::mem::forget(temp);
-                    ptr
-                }
-            )
-        }
         let ptr = output.as_mut_ptr();
-        let mut input = Vec::with_capacity(64);
-        for _ in 0..64 {
-            input.push(0);
-        }
+        let mut input =[0u8;64];
         let input_ptr = input.as_ptr();
-        std::mem::forget(output);
-        std::mem::forget(input);
         let funs = [flow_scale_spatial_srgb_7x7,
             flow_scale_spatial_srgb_6x6,
             flow_scale_spatial_srgb_5x5,
@@ -167,6 +152,7 @@ fn benchmark_downscaling(ctx: &mut Criterion) {
         }
     }
 }
+
 criterion_group!(benches, benchmark_transpose,benchmark_scale_2d,benchmark_downscaling,benchmark_flip_h,benchmark_flip_v);
 criterion_main!(benches);
 
