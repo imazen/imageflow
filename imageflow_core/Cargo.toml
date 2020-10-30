@@ -30,7 +30,7 @@ lazy_static = "1"
 
 # fast hashes, crypto hashes
 twox-hash = "1"
-fnv = "*"
+fnv = "1"
 blake2-rfc = "0.2"
 
 ## Crate-specific dependencies
@@ -39,9 +39,9 @@ threadpool = "1"
 petgraph = "0.4" #Upgrade to 0.5
 daggy = "0.5" # Upgrade to 0.6
 
-smallvec = "*"
+smallvec = "1"
 
-itertools = "*"
+itertools = "0.9"
 imgref = "1.4.1"
 slotmap = "0.4.0"
 
@@ -56,7 +56,7 @@ libz-sys = { version="1", features = ["static"] }
 jpeg-decoder = "0.1"
 
 lcms2 = { git = "https://github.com/imazen/rust-lcms2" }
-lcms2-sys = "*"
+lcms2-sys = "3"
 chashmap = "2.2"
 
 getopts ="0.2"
