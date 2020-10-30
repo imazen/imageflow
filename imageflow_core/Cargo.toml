@@ -45,7 +45,7 @@ itertools = "*"
 imgref = "1.4.1"
 slotmap = "0.4.0"
 
-gif = "*"
+gif = "0.10"
 rgb = { version = "0.8", features = ["argb"] }
 imagequant = "2"
 lodepng = "3"
