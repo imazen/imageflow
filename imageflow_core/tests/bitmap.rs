@@ -39,6 +39,27 @@ fn flow_bitmap_float_compare(a: &BitmapFloat, b:&BitmapFloat,pixels_a:&[f32],pix
     return difference_total / (a.h as f32);
 }
 
+fn linear_to_srgb(clr: f32) -> f32
+{
+// Gamma correction
+// http://www.4p8.com/eric.brasseur/gamma.html#formulas
+
+    if clr <= 0.0031308f32 {
+        return 12.92f32 * clr * 255.0f32;
+    }
+
+
+// a = 0.055; ret ((1+a) * s**(1/2.4) - a) * 255
+    return 1.055f32 * 255.0f32 * (f32::powf(clr, 0.41666666f32)) - 14.025f32;
+}
+
+fn srgb_to_linear(s: f32) -> f32
+{
+    if s <= 0.04045f32 {
+        return s / 12.92f32;
+    }
+    return f32::powf((s + 0.055f32) / (1f32 + 0.055f32), 2.4f32);
+}
 
 #[inline]
 fn uchar_clamp_ff(clr:f32)->u8 {
