@@ -424,7 +424,7 @@ impl Bitmap{
         Ok(stride as u32)
     }
 
-   pub(crate) fn create_float(w: u32,
+   pub fn create_float(w: u32,
                             h: u32,
                             pixel_layout: PixelLayout,
                             alpha_premultiplied: bool,

@@ -11,7 +11,7 @@ pub mod transpose;
 pub(crate) mod histogram;
 pub(crate) mod color_matrix;
 pub(crate) mod luv;
-pub(crate) mod convolve;
+pub mod convolve;
 pub(crate) mod fill;
 
 //pub mod faces;
