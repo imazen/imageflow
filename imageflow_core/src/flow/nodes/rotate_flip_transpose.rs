@@ -48,8 +48,8 @@ impl NodeDefOneInputExpand for ApplyOrientationDef{
         if let NodeParams::Json(s::Node::ApplyOrientation { flag }) = p {
             let replacement_nodes: Vec<&'static dyn NodeDef> = match flag {
                 7 => vec![&ROTATE_180, &TRANSPOSE],
-                8 => vec![&ROTATE_90],
-                6 => vec![&ROTATE_270],
+                8 => vec![&ROTATE_270],
+                6 => vec![&ROTATE_90],
                 5 => vec![&TRANSPOSE],
                 4 => vec![&FLIP_V],
                 3 => vec![&ROTATE_180],
