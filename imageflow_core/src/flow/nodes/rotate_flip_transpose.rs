@@ -246,8 +246,8 @@ impl NodeDefOneInputExpand for Rotate90Def {
     fn expand(&self, ctx: &mut OpCtxMut, ix: NodeIndex, p: NodeParams, parent: FrameInfo) -> Result<()> {
         ctx.replace_node(ix,
                          vec![
-                             Node::n(&TRANSPOSE, NodeParams::None),
                              Node::n(&FLIP_V, NodeParams::None),
+                             Node::n(&TRANSPOSE, NodeParams::None)
                          ]);
         Ok(())
     }
@@ -272,8 +272,8 @@ impl NodeDefOneInputExpand for Rotate270Def {
     fn expand(&self, ctx: &mut OpCtxMut, ix: NodeIndex, p: NodeParams, parent: FrameInfo) -> Result<()> {
         ctx.replace_node(ix,
                          vec![
-                             Node::n(&FLIP_V, NodeParams::None),
                              Node::n(&TRANSPOSE, NodeParams::None),
+                             Node::n(&FLIP_V, NodeParams::None),
                          ]);
         Ok(())
     }

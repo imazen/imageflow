@@ -413,6 +413,16 @@ fn test_jpeg_simple() {
 }
 
 
+#[test]
+fn test_jpeg_simple_rot_90() {
+    let url = "https://s3-us-west-2.amazonaws.com/imageflow-resources/test_inputs/orientation/Landscape_1.jpg".to_owned();
+    let title = "test rotate jpeg 90 degrees".to_owned();
+    let matched = compare(Some(IoTestEnum::Url(url)), 500, &title, POPULATE_CHECKSUMS, DEBUG_GRAPH,
+                          vec![Node::Decode { io_id: 0, commands: None },
+                               Node::Constrain(Constraint { mode: ConstraintMode::Within, w: Some(70), h: Some(70), hints: None, gravity: None, canvas_color: None })
+                          , Node::Rotate90]);
+    assert!(matched);
+}
 
 #[test]
 fn test_jpeg_rotation() {
