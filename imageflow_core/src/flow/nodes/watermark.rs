@@ -141,7 +141,7 @@ impl NodeDefOneInputExpand for WatermarkDef {
             ctx.delete_node_and_snap_together(ix);
             Ok(())
         } else {
-            Err(nerror!(crate::ErrorKind::NodeParamsMismatch, "Need Constrain, got {:?}", params))
+            Err(nerror!(crate::ErrorKind::NodeParamsMismatch, "Need Watermark, got {:?}", params))
         }
     }
 }

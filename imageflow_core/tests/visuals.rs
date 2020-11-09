@@ -425,6 +425,33 @@ fn test_jpeg_simple_rot_90() {
 }
 
 #[test]
+fn test_rot_90_and_red_dot() {
+    let url = "https://s3-us-west-2.amazonaws.com/imageflow-resources/test_inputs/orientation/Landscape_1.jpg".to_owned();
+    let title = "test_rot_90_and_red_dot".to_owned();
+    let matched = compare(Some(IoTestEnum::Url(url)), 500, &title, POPULATE_CHECKSUMS, DEBUG_GRAPH,
+                          vec![Node::Decode { io_id: 0, commands: None },
+                               Node::Constrain(Constraint { mode: ConstraintMode::Within, w: Some(70), h: Some(70), hints: None, gravity: None, canvas_color: None })
+                               , Node::Rotate90,
+                                Node::WatermarkRedDot]);
+    assert!(matched);
+}
+#[test]
+fn test_rot_90_and_red_dot_command_string() {
+    let url = "https://s3-us-west-2.amazonaws.com/imageflow-resources/test_inputs/orientation/Landscape_1.jpg".to_owned();
+    let title = "test_rot_90_and_red_dot_command_string".to_owned();
+    let matched = compare(Some(IoTestEnum::Url(url)), 500, &title, POPULATE_CHECKSUMS, DEBUG_GRAPH,
+                          vec![Node::CommandString {
+                              kind: CommandStringKind::ImageResizer4,
+                              value: "w=70&h=70&mode=max&rotate=90&watermark_red_dot=true".to_string(),
+                              decode: Some(0),
+                              encode: None,
+                              watermarks: None
+                          }]);
+    assert!(matched);
+}
+
+
+#[test]
 fn test_jpeg_rotation() {
     let orientations = vec!["Landscape", "Portrait"];
 

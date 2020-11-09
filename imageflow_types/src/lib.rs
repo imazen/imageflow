@@ -725,6 +725,8 @@ pub enum Node {
 //    },
     #[serde(rename="watermark")]
     Watermark (Watermark),
+    #[serde(rename="watermark_red_dot")]
+    WatermarkRedDot,
     #[serde(rename="white_balance_histogram_area_threshold_srgb")]
     WhiteBalanceHistogramAreaThresholdSrgb{
         threshold: Option<f32>

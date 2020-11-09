@@ -520,6 +520,11 @@ impl Ir4Layout{
         b.add_rotate(self.i.rotate);
         b.add_flip(self.i.flip);
 
+        //We apply red dot watermarking after rotate/flip unlike imageresizer
+        if self.i.watermark_red_dot == Some(true){
+            b.add(s::Node::WatermarkRedDot);
+        }
+
         Ok(Ir4LayoutInfo {
             canvas
         })

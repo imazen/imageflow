@@ -214,11 +214,11 @@ pub enum ScalingColorspace {
 
 }
 
-pub static IR4_KEYS: [&'static str;79] = ["mode", "anchor", "flip", "sflip", "scale", "cache", "process",
+pub static IR4_KEYS: [&'static str;80] = ["mode", "anchor", "flip", "sflip", "scale", "cache", "process",
     "quality", "jpeg.quality", "zoom", "crop", "cropxunits", "cropyunits",
     "w", "h", "width", "height", "maxwidth", "maxheight", "format", "thumbnail",
      "autorotate", "srotate", "rotate", "ignoreicc", "ignore_icc_errors", //really? : "precise_scaling_ratio",
-    "stretch", "webp.lossless", "webp.quality",
+    "stretch", "webp.lossless", "webp.quality", "watermark_red_dot",
     "frame", "page", "subsampling", "colors", "f.sharpen", "f.sharpen_when", "down.colorspace",
     "404", "bgcolor", "paddingcolor", "bordercolor", "preset", "floatspace",
     "jpeg_idct_downscale_linear", "watermark", "s.invert", "s.sepia", "s.grayscale", "s.alpha",
@@ -360,6 +360,9 @@ impl Instructions{
         add(&mut m, "down.filter", self.down_filter.map(|v| format!("{:?}", v).to_lowercase()));
         add(&mut m, "up.filter", self.up_filter.map(|v| format!("{:?}", v).to_lowercase()));
         add(&mut m, "decoder.min_precise_scaling_ratio", self.min_precise_scaling_ratio);
+
+        add(&mut m, "watermark_red_dot", self.watermark_red_dot);
+
         m
     }
 
@@ -447,6 +450,7 @@ impl Instructions{
         i.jpeg_progressive = p.parse_bool("jpeg.progressive");
         i.jpeg_turbo = p.parse_bool("jpeg.turbo");
 
+        i.watermark_red_dot = p.parse_bool("watermark_red_dot");
         i
     }
 
@@ -890,6 +894,7 @@ pub struct Instructions{
     pub png_lossless: Option<bool>,
     pub up_filter: Option<FilterStrings>,
     pub down_filter: Option<FilterStrings>,
+    pub watermark_red_dot: Option<bool>
 }
 #[derive(Debug,Copy, Clone,PartialEq)]
 pub enum Anchor1D{
@@ -1060,6 +1065,8 @@ fn test_url_parsing() {
     t("down.filter=lanczos",  Instructions{down_filter: Some(FilterStrings::Lanczos), ..Default::default()}, vec![]);
 
     t("anchor=bottomleft",  Instructions{anchor: Some((Anchor1D::Near, Anchor1D::Far)), ..Default::default()}, vec![]);
+    t("watermark_red_dot=true",  Instructions{watermark_red_dot: Some(true), ..Default::default()}, vec![]);
+
 
     expect_warning("a.balancewhite","gimp",  Instructions{a_balance_white: Some(HistogramThresholdAlgorithm::Gimp), ..Default::default()});
     expect_warning("a.balancewhite","simple",  Instructions{a_balance_white: Some(HistogramThresholdAlgorithm::Simple), ..Default::default()});
@@ -1126,5 +1133,6 @@ fn test_tostr(){
     t("anchor=bottomleft",  Instructions{anchor: Some((Anchor1D::Near, Anchor1D::Far)), ..Default::default()});
     t("ignoreicc=true", Instructions { ignoreicc: Some(true), ..Default::default() });
     t("ignore_icc_errors=true", Instructions { ignore_icc_errors: Some(true), ..Default::default() });
+    t("watermark_red_dot=true",  Instructions{watermark_red_dot: Some(true), ..Default::default()});
 
 }

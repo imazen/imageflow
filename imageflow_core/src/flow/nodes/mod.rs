@@ -15,6 +15,7 @@ mod constrain;
 mod white_balance;
 mod color;
 mod watermark;
+mod watermark_red_dot;
 mod enable_transparency;
 //mod detection;
 
@@ -67,6 +68,7 @@ pub use self::color::COLOR_MATRIX_SRGB_MUTATE;
 pub use self::color::COLOR_MATRIX_SRGB;
 pub use self::color::COLOR_FILTER_SRGB;
 pub use self::watermark::WATERMARK;
+pub use self::watermark_red_dot::WATERMARK_RED_DOT;
 pub use self::enable_transparency::ENABLE_TRANSPARENCY;
 
 //pub use self::detection::CROP_FACES;
