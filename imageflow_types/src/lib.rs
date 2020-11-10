@@ -1304,6 +1304,17 @@ pub struct EncodeResult {
 
     pub bytes: ResultBytes,
 }
+#[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
+pub struct DecodeResult {
+    pub preferred_mime_type: String,
+    pub preferred_extension: String,
+
+    pub io_id: i32,
+    pub w: i32,
+    pub h: i32,
+}
+
+
 
 #[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
 pub struct NodePerf{
@@ -1329,6 +1340,7 @@ pub struct FramePerformance{
 #[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
 pub struct JobResult {
     pub encodes: Vec<EncodeResult>,
+    pub decodes: Vec<DecodeResult>,
     pub performance: Option<BuildPerformance>
 }
 
@@ -1393,6 +1405,7 @@ impl Response001 {
             success: true,
             message: None,
             data: ResponsePayload::JobResult(JobResult {
+                decodes: vec![],
                 encodes: vec![EncodeResult {
                                   io_id,
                                   w,

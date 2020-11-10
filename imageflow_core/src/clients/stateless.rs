@@ -135,8 +135,8 @@ impl LibClient {
         let payload = context.execute_1(send_execute).map_err(|e| e.at(here!()))?;
 
 
-        let (encodes, perf): (Vec<s::EncodeResult>, Option<s::BuildPerformance>) = match payload {
-            s::ResponsePayload::JobResult(s::JobResult { encodes, performance}) => (encodes, performance),
+        let (decodes, encodes, perf): (Vec<s::DecodeResult>, Vec<s::EncodeResult>, Option<s::BuildPerformance>) = match payload {
+            s::ResponsePayload::JobResult(s::JobResult { decodes, encodes, performance}) => (decodes, encodes, performance),
             _ => {
                 unreachable!()
             }

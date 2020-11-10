@@ -12,7 +12,7 @@ use crate::common::*;
 
 
 use imageflow_core::{Context, FlowError, CodeLocation};
-use s::{CommandStringKind};
+use s::{CommandStringKind, ResponsePayload};
 
 
 const DEBUG_GRAPH: bool = false;
@@ -244,7 +244,24 @@ pub fn compare_encoded_to_source(input: IoTestEnum, debug: bool, require: Constr
     IoTestTranslator{}.add(&mut context, 0, input).unwrap();
     IoTestTranslator{}.add(&mut context, 1, IoTestEnum::OutputBuffer).unwrap();
 
-    let _ = context.execute_1(execute).unwrap();
+    let response = context.execute_1(execute).unwrap();
+
+    match response{
+
+        ResponsePayload::JobResult(r) => {
+            assert_eq!(r.decodes.len(), 1);
+            assert!(r.decodes[0].preferred_mime_type.len() > 0);
+            assert!(r.decodes[0].preferred_extension.len() > 0);
+            assert!(r.decodes[0].w > 0);
+            assert!(r.decodes[0].h > 0);
+            assert_eq!(r.encodes.len(), 1);
+            assert!(r.encodes[0].preferred_mime_type.len() > 0);
+            assert!(r.encodes[0].preferred_extension.len() > 0);
+            assert!(r.encodes[0].w > 0);
+            assert!(r.encodes[0].h > 0);
+        }
+        _ => {}
+    }
 
     let bytes = context.get_output_buffer_slice(1).unwrap();
 

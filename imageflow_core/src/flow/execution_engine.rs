@@ -561,6 +561,9 @@ impl<'a> Engine<'a> {
         }
         encodes
     }
+
+
+
     pub fn collect_augmented_encode_results(&self, io: &[s::IoObject]) -> Vec<s::EncodeResult>{
         self.collect_encode_results().into_iter().map(|r: s::EncodeResult|{
             if r.bytes == s::ResultBytes::Elsewhere {

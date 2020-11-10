@@ -15,6 +15,7 @@ use crate::ffi::IoDirection;
 use crate::graphics::bitmaps::{BitmapWindowMut, BitmapKey, Bitmap, BitmapsContainer};
 use crate::allocation_container::AllocationContainer;
 use imageflow_types::ImageInfo;
+use itertools::Itertools;
 
 /// Something of a god object (which is necessary for a reasonable FFI interface).
 pub struct Context {
@@ -188,6 +189,8 @@ impl Context {
 
     fn add_io(&self, io: IoProxy, io_id: i32, direction: IoDirection) -> Result<()>{
 
+        self.io_id_list.borrow_mut().push(io_id);
+
         let codec_value = CodecInstanceContainer::create(self, io, io_id, direction).map_err(|e| e.at(here!()))?;
         let mut codec = self.codecs.add_mut(codec_value);
         if let Ok(d) = codec.get_decoder(){
@@ -274,6 +277,28 @@ impl Context {
         Ok(image_info)
     }
 
+    pub fn get_image_decodes(&mut self) -> Vec<s::DecodeResult>{
+        let io_ids = self.io_id_list.borrow().to_vec();
+
+        io_ids.iter().map(|io_id| {
+            if let Ok(info) = self.get_unscaled_rotated_image_info(*io_id){
+                Some(imageflow_types::DecodeResult{
+                    io_id: *io_id,
+                    preferred_extension: info.preferred_extension,
+                    preferred_mime_type: info.preferred_mime_type,
+                    w: info.image_width,
+                    h: info.image_width
+                })
+            }else{
+                None
+            }
+        })
+            .filter(|r| r.is_some())
+            .map(|r| r.unwrap())
+            .sorted_by_key(|r| r.io_id)
+            .collect_vec()
+    }
+
     pub fn get_scaled_unrotated_image_info(&mut self, io_id: i32) -> Result<s::ImageInfo> {
         self.get_codec(io_id)
             .map_err(|e| e.at(here!()))?
@@ -344,12 +369,14 @@ impl Context {
 
         crate::parsing::IoTranslator{}.add_all( self, parsed.io.clone())?;
 
+        let decodes = self.get_image_decodes();
+
         let mut engine = crate::flow::execution_engine::Engine::create(self, g);
 
         let perf = engine.execute_many().map_err(|e| e.at(here!())) ?;
 
 
-        Ok(s::ResponsePayload::BuildResult(s::JobResult { encodes: engine.collect_augmented_encode_results(&parsed.io), performance: Some(perf) }))
+        Ok(s::ResponsePayload::BuildResult(s::JobResult  { decodes, encodes: engine.collect_augmented_encode_results(&parsed.io), performance: Some(perf) }))
     }
 
     pub fn configure_graph_recording(&mut self, recording: s::Build001GraphRecording) {
@@ -384,11 +411,13 @@ impl Context {
             self.configure_security(s);
         }
 
+        let decodes = self.get_image_decodes();
+
         let mut engine = crate::flow::execution_engine::Engine::create(self, g);
 
         let perf = engine.execute_many().map_err(|e| e.at(here!()))?;
 
-        Ok(s::ResponsePayload::JobResult(s::JobResult { encodes: engine.collect_encode_results(), performance: Some(perf) }))
+        Ok(s::ResponsePayload::JobResult(s::JobResult { decodes, encodes: engine.collect_encode_results(), performance: Some(perf) }))
     }
 
     pub fn get_version_info(&self) -> Result<s::VersionInfo>{
