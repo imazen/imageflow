@@ -396,7 +396,9 @@ impl Context {
             long_version_string: imageflow_types::version::one_line_version().to_string(),
             last_git_commit: imageflow_types::version::last_commit().to_string(),
             dirty_working_tree: imageflow_types::version::dirty(),
-            build_date: imageflow_types::version::get_build_date().to_string()
+            build_date: imageflow_types::version::get_build_date().to_string(),
+            git_tag: imageflow_types::version::get_build_env_value("GIT_OPTIONAL_TAG").to_owned().map(|s| s.to_string()),
+            git_describe_always: imageflow_types::version::get_build_env_value("GIT_DESCRIBE_ALWAYS").or(Some("")).unwrap().to_owned(),
         })
     }
 }

@@ -147,7 +147,7 @@ fn what_to_collect() -> Vec<EnvTidbit>{
     c.push(EnvTidbit::CmdOrEnv{key: "GIT_COMMIT_SHORT", cmd: "git rev-parse --short HEAD"});
     c.push(EnvTidbit::CmdOrEnv{key: "GIT_DESCRIBE_ALWAYS", cmd: "git describe --always --tags"});
     c.push(EnvTidbit::CmdOrEnvReq{key: "GIT_DESCRIBE_ALWAYS_LONG", cmd: "git describe --always --tags --long"});
-    c.push(EnvTidbit::CmdOrEnv{key: "GIT_DESCRIBE_AAL", cmd: "git describe --always --all --long"});
+    c.push(EnvTidbit::CmdOrEnv{key: "GIT_DESCRIBE_ALL", cmd: "git describe --always --all --long"});
     c.push(EnvTidbit::CmdOrEnv{key: "GIT_OPTIONAL_TAG", cmd: "git describe --exact-match --tags"});
     c.push(EnvTidbit::CmdOrEnv{key: "GIT_OPTIONAL_BRANCH", cmd: "git symbolic-ref --short HEAD"});
     static ENV_VARS: [&'static str;21] = ["ESTIMATED_ARTIFACT_URL","ESTIMATED_DOCS_URL","CI_SEQUENTIAL_BUILD_NUMBER","CI_BUILD_URL","CI_JOB_URL","CI_JOB_TITLE","CI_STRING",

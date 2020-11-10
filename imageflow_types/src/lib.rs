@@ -1338,6 +1338,8 @@ pub struct VersionInfo{
     pub last_git_commit: String,
     pub dirty_working_tree: bool,
     pub build_date: String,
+    pub git_tag: Option<String>,
+    pub git_describe_always: String
 }
 #[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
 pub enum ResponsePayload {
