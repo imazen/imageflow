@@ -235,6 +235,7 @@ impl Context {
         self.add_io(io, io_id, IoDirection::In).map_err(|e| e.at(here!()))
     }
 
+    
     pub fn add_output_buffer(&mut self, io_id: i32) -> Result<()> {
         let io = IoProxy::create_output_buffer(self, io_id).map_err(|e| e.at(here!()))?;
 
