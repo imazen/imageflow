@@ -24,7 +24,6 @@ matrix:
     rust: stable
     install:
       - ci/travis_install.sh
-      - brew install sccache
   - os: linux
     dist: trusty
     env: TARGET_CPU=haswell PACKAGE_SUFFIX=ubuntu_18_04-x86_64-haswell NUGET_RUNTIME=ubuntu.18.04-x64 DOCKER_IMAGE=imazen/imageflow_build_ubuntu18 UPLOAD_BUILD=True UPLOAD_DOCS=True FETCH_COMMIT_SUFFIX=linux64_haswell_glibc227
