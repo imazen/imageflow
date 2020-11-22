@@ -69,6 +69,7 @@ impl Encoder for MozjpegEncoder {
             .apply_matte(self.matte.clone().unwrap_or(
                 imageflow_types::Color::Srgb(imageflow_types::ColorSrgb::Hex("FFFFFFFF".to_owned()))))
             .map_err(|e| e.at(here!()))?;
+        bitmap.set_alpha_meaningful(false);
 
         let frame = unsafe{ bitmap.get_window_u8()
             .ok_or_else(|| nerror!(ErrorKind::InvalidBitmapType))?

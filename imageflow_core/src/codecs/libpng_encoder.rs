@@ -48,6 +48,10 @@ impl Encoder for LibPngEncoder {
                 bitmap.get_window_u8().unwrap()
                     .apply_matte(color.clone())
                     .map_err(|e| e.at(here!()))?;
+                // Optimize png size
+                if color.is_opaque(){
+                    bitmap.set_alpha_meaningful(false);
+                }
             }
         }
 
