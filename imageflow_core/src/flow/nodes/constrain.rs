@@ -153,11 +153,30 @@ impl NodeDefOneInputExpand for ConstrainDef{
             if let Some(c) = constraint_results.crop{
                 b.push(Node::from(s::Node::Crop { x1: c[0], y1: c[1], x2: c[2], y2: c[3] }));
             }
+
+            // Override background_color with canvas_color
+            let merged_hints = if constraint.canvas_color.is_some() {
+                if constraint.hints.is_some() {
+                    Some(imageflow_types::ResampleHints {
+                        background_color: constraint.canvas_color.clone(),
+                        ..constraint.hints.unwrap().clone()
+                    })
+                }else {
+                    Some(imageflow_types::ResampleHints {
+                        background_color: constraint.canvas_color.clone(),
+                        ..imageflow_types::ResampleHints::new()
+                    })
+                }
+            }else{
+                constraint.hints.clone()
+            };
+
+
             b.push(Node::from(
                 imageflow_types::Node::Resample2D {
                     w: constraint_results.scale_to.width() as u32,
                     h: constraint_results.scale_to.height() as u32,
-                    hints: constraint.hints,
+                    hints: merged_hints,
                 })
             );
 

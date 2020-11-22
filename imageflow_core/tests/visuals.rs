@@ -67,6 +67,41 @@ fn test_transparent_png_to_jpeg() {
     );
 }
 
+#[test]
+fn test_transparent_png_to_jpeg_constrain() {
+    compare_encoded(
+        Some(IoTestEnum::Url("https://s3-us-west-2.amazonaws.com/imageflow-resources/test_inputs/shirt_transparent.png".to_owned())),
+        "transparent_png_to_jpeg_constrained",
+        POPULATE_CHECKSUMS,
+        DEBUG_GRAPH,
+        Constraints {
+            similarity: Similarity::AllowDssimMatch(0.0, 0.002),
+            max_file_size: None
+        },
+        vec![
+            Node::Decode{
+                io_id: 0,
+                commands: None
+            },
+            Node::Constrain(Constraint {
+                    mode: ConstraintMode::Within,
+                    w: Some(30),
+                    h: Some(30),
+                    hints: None,
+                    gravity: None,
+                    canvas_color: Some(Color::Srgb(ColorSrgb::Hex("FFFFFFFF".to_string())))
+                }
+            ),
+            Node::Encode{
+                io_id: 1,
+                preset: EncoderPreset::Mozjpeg { quality: Some(90), progressive: None }
+            }
+        ]
+    );
+}
+
+//https://imageflow-resources.s3-us-west-2.amazonaws.com/test_inputs/pnglogo_transparent.png
+
 
 #[test]
 fn test_fill_rect(){
