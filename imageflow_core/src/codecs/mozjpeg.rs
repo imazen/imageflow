@@ -2,7 +2,7 @@ use super::Encoder;
 use super::s::{EncoderPreset, EncodeResult};
 use crate::io::IoProxy;
 use crate::ffi::BitmapBgra;
-use imageflow_types::PixelFormat;
+use imageflow_types::{PixelFormat, Color};
 use imageflow_types::PixelBuffer;
 use crate::{Context, Result, ErrorKind, FlowError};
 use std::result::Result as StdResult;
@@ -30,24 +30,26 @@ pub struct MozjpegEncoder {
     progressive: Option<bool>,
     optimize_coding: Option<bool>,
     defaults: Defaults,
+    matte: Option<Color>
 }
 
 impl MozjpegEncoder {
     // Quality is in range 0-100
-    pub(crate) fn create(c: &Context, quality: Option<u8>, progressive: Option<bool>, io: IoProxy) -> Result<Self> {
+    pub(crate) fn create(c: &Context, quality: Option<u8>, progressive: Option<bool>, matte: Option<Color>, io: IoProxy) -> Result<Self> {
         if !c.enabled_codecs.encoders.contains(&crate::codecs::NamedEncoders::MozJpegEncoder){
             return Err(nerror!(ErrorKind::CodecDisabledError, "The MozJpeg encoder has been disabled"));
         }
         Ok(MozjpegEncoder {
-            io, quality, progressive,
+            io, quality, progressive, matte,
             optimize_coding: Some(true),
             defaults: Defaults::MozJPEG,
+
         })
     }
 
-    pub(crate) fn create_classic(c: &Context, quality: Option<u8>, progressive: Option<bool>, optimize_coding: Option<bool>, io: IoProxy) -> Result<Self> {
+    pub(crate) fn create_classic(c: &Context, quality: Option<u8>, progressive: Option<bool>, optimize_coding: Option<bool>, matte: Option<Color>, io: IoProxy) -> Result<Self> {
         Ok(MozjpegEncoder {
-            io, quality, progressive,
+            io, quality, progressive, matte,
             optimize_coding,
             defaults: Defaults::LibJPEGv6,
         })
@@ -63,6 +65,10 @@ impl Encoder for MozjpegEncoder {
         let mut bitmap = bitmaps.try_borrow_mut(bitmap_key)
             .map_err(|e| e.at(here!()))?;
 
+        bitmap.get_window_u8().unwrap()
+            .apply_matte(self.matte.clone().unwrap_or(
+                imageflow_types::Color::Srgb(imageflow_types::ColorSrgb::Hex("FFFFFFFF".to_owned()))))
+            .map_err(|e| e.at(here!()))?;
 
         let frame = unsafe{ bitmap.get_window_u8()
             .ok_or_else(|| nerror!(ErrorKind::InvalidBitmapType))?

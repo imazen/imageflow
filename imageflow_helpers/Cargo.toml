@@ -35,7 +35,7 @@ smallvec = "*"
 # regex
 regex = { version = "1" } #, features = ["pattern"]
 rand = "*"
-
+rgb = "0.8"
 
 base64 = "0.13"
 

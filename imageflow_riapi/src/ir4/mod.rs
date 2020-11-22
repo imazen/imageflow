@@ -245,11 +245,13 @@ impl Ir4Expand{
                 OutputFormat::Jpeg if Some(true) == i.jpeg_turbo => s::EncoderPreset::LibjpegTurbo {
                     quality: Some(i.quality.unwrap_or(90)),
                     progressive: i.jpeg_progressive,
-                    optimize_huffman_coding:  i.jpeg_progressive
+                    optimize_huffman_coding:  i.jpeg_progressive,
+                    matte: None
                 },
                 OutputFormat::Jpeg=> s::EncoderPreset::Mozjpeg {
                     quality: Some(i.quality.unwrap_or(90) as u8),
-                    progressive: i.jpeg_progressive
+                    progressive: i.jpeg_progressive,
+                    matte: None
                 },
                 OutputFormat::Png if !png_lossless => s::EncoderPreset::Pngquant {
                     quality: Some(i.png_quality.unwrap_or(100)),

@@ -314,7 +314,18 @@ impl From<::gif::DecodingError> for FlowError{
         }
     }
 }
-
+impl From<::imageflow_helpers::colors::ParseColorError> for FlowError{
+    fn from(f: ::imageflow_helpers::colors::ParseColorError) -> Self {
+        match f {
+            ::imageflow_helpers::colors::ParseColorError::ColorNotRecognized(e) =>
+                FlowError::without_location(ErrorKind::InvalidArgument, format!("Color Not Recognized: {:?}", e)),
+            ::imageflow_helpers::colors::ParseColorError::FormatIncorrect(e) =>
+                FlowError::without_location(ErrorKind::InvalidArgument, format!("Color Format Incorrect: {:?}", e)),
+            ::imageflow_helpers::colors::ParseColorError::NotHexadecimal{ desc, parse_error } =>
+                FlowError::without_location(ErrorKind::InvalidArgument, format!("Color Not Hexadecimal: {:?} {:?}",desc, parse_error)),
+        }
+    }
+}
 
 impl From<jpeg_decoder::Error> for FlowError{
     fn from(f: jpeg_decoder::Error) -> Self {

@@ -127,6 +127,7 @@ fn test_encode_mozjpeg_resized() {
             preset: s::EncoderPreset::Mozjpeg {
                 progressive: None,
                 quality: Some(50),
+                matte: None
             },
         },
     ];
@@ -146,6 +147,7 @@ fn test_encode_mozjpeg() {
     let steps = reencode_with(s::EncoderPreset::Mozjpeg {
                 progressive: None,
                 quality: Some(50),
+                matte: None
             });
 
     compare_encoded_to_source(IoTestEnum::Url(FRYMIRE_URL.to_owned()),

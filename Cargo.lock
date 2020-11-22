@@ -1317,6 +1317,7 @@ dependencies = [
  "mockito",
  "rand 0.7.3",
  "regex",
+ "rgb",
  "rustc-serialize",
  "serde",
  "serde_derive",

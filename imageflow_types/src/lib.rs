@@ -257,7 +257,8 @@ pub enum EncoderPreset {
     LibjpegTurbo {
         quality: Option<i32>,
         progressive: Option<bool>,
-        optimize_huffman_coding: Option<bool>
+        optimize_huffman_coding: Option<bool>,
+        matte: Option<Color>
     },
     Libpng {
         depth: Option<PngBitDepth>,
@@ -276,6 +277,7 @@ pub enum EncoderPreset {
     Mozjpeg {
         quality: Option<u8>,
         progressive: Option<bool>,
+        matte: Option<Color>
     },
     WebPLossy{
         quality: f32
@@ -297,14 +299,16 @@ impl EncoderPreset {
         EncoderPreset::LibjpegTurbo {
             quality: Some(100),
             optimize_huffman_coding: None,
-            progressive: None
+            progressive: None,
+            matte: None
         }
     }
     pub fn libjpeg_turbo_q(quality: Option<i32>) -> EncoderPreset {
         EncoderPreset::LibjpegTurbo {
             quality,
             optimize_huffman_coding: None,
-            progressive: None
+            progressive: None,
+            matte: None
         }
     }
 }
@@ -1107,7 +1111,7 @@ impl Framewise {
                               },
                               Node::Encode {
                                   io_id: 1,
-                                  preset: EncoderPreset::LibjpegTurbo { quality: Some(90), optimize_huffman_coding: Some(true), progressive: Some(true)},
+                                  preset: EncoderPreset::LibjpegTurbo { quality: Some(90), optimize_huffman_coding: Some(true), progressive: Some(true), matte: None},
                               }])
     }
     pub fn example_graph() -> Framewise {
@@ -1161,7 +1165,7 @@ impl Framewise {
         nodes.insert("5".to_owned(),
                      Node::Encode {
                          io_id: 2,
-                         preset: EncoderPreset::LibjpegTurbo { quality: Some(90), optimize_huffman_coding: Some(true), progressive: Some(true) },
+                         preset: EncoderPreset::LibjpegTurbo { quality: Some(90), optimize_huffman_coding: Some(true), progressive: Some(true), matte: None},
                      });
 
         Framewise::Graph(Graph {

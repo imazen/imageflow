@@ -114,7 +114,20 @@ pub struct BitmapWindowMut<'a, T>{
     info: BitmapInfo
 }
 
+impl<'a> BitmapWindowMut<'a,u8> {
+    pub fn apply_matte(&mut self, matte: imageflow_types::Color) -> Result<(), FlowError> {
+        crate::graphics::blend::apply_matte(self, matte)
+    }
 
+    pub fn slice_of_pixels(&mut self) -> Option<&mut [rgb::alt::BGRA8]>{
+        if self.info().channels() != 4 || self.slice.len() %4 != 0{
+            return None;
+        }
+        unsafe {
+            Some(core::slice::from_raw_parts_mut(self.slice.as_mut_ptr() as *mut rgb::alt::BGRA8, self.slice.len() / 4))
+        }
+    }
+}
 impl<'a,T>  BitmapWindowMut<'a, T> {
 
     pub unsafe fn to_bitmap_float(&mut self) -> Result<BitmapFloat, FlowError>{
@@ -218,6 +231,7 @@ impl<'a,T>  BitmapWindowMut<'a, T> {
     pub fn slice(&'a mut self) -> &'a mut [T]{
         self.slice
     }
+
 
     pub(crate) fn slice_ptr(&mut self) -> *mut T {
         self.slice.as_mut_ptr()

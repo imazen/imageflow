@@ -1,5 +1,6 @@
 use crate::preludes::from_std::*;
 use std;
+use rgb;
 
 
 fn parse_rgba_slices(r: &str, g: &str, b: &str, a :&str) -> Result<Color32,std::num::ParseIntError>{
@@ -83,6 +84,19 @@ impl Color32{
         Color32(0)
     }
 
+    pub fn to_rgba8(&self) -> rgb::RGBA8{
+        rgb::RGBA8::new(((self.0 & 0xFF_00_00) >> 16) as u8,
+                        ((self.0 & 0xFF_00) >> 8) as u8,
+                        (self.0 & 0xFF)  as u8,
+                        ((self.0 & 0xFF_00_00_00) >> 24) as u8)
+    }
+    pub fn to_bgra8(&self) -> rgb::alt::BGRA8{
+        rgb::alt::BGRA8 { r: ((self.0 & 0xFF_00_00) >> 16) as u8,
+                         g: ((self.0 & 0xFF_00) >> 8) as u8,
+                        b: (self.0 & 0xFF)  as u8,
+                        a: ((self.0 & 0xFF_00_00_00) >> 24) as u8
+        }
+    }
     pub fn black() -> Color32{
         Color32(0xFF_00_00_00)
     }

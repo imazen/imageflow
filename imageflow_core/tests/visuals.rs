@@ -85,16 +85,16 @@ fn test_transparent_png_to_jpeg_constrain() {
             },
             Node::Constrain(Constraint {
                     mode: ConstraintMode::Within,
-                    w: Some(30),
-                    h: Some(30),
+                    w: Some(300),
+                    h: Some(300),
                     hints: None,
                     gravity: None,
-                    canvas_color: Some(Color::Srgb(ColorSrgb::Hex("FFFFFFFF".to_string())))
+                    canvas_color: None //  Some(Color::Srgb(ColorSrgb::Hex("FFFFFFFF".to_string())))
                 }
             ),
             Node::Encode{
                 io_id: 1,
-                preset: EncoderPreset::Mozjpeg { quality: Some(90), progressive: None }
+                preset: EncoderPreset::Mozjpeg { quality: Some(100), progressive: None, matte: None }
             }
         ]
     );
@@ -870,7 +870,7 @@ fn test_encode_jpeg_smoke() {
     let steps = vec![
         Node::Decode {io_id: 0, commands: None},
         Node::Resample2D{ w: 400, h: 300,  hints: Some(ResampleHints::new().with_bi_filter(Filter::Robidoux)) },
-        Node::Encode{ io_id: 1, preset: EncoderPreset::LibjpegTurbo {quality: Some(100), progressive: None, optimize_huffman_coding: None}}
+        Node::Encode{ io_id: 1, preset: EncoderPreset::LibjpegTurbo {quality: Some(100), progressive: None, optimize_huffman_coding: None, matte: None}}
     ];
 
     smoke_test(Some(IoTestEnum::Url("https://s3-us-west-2.amazonaws.com/imageflow-resources/test_inputs/MarsRGB_v4_sYCC_8bit.jpg".to_owned())),

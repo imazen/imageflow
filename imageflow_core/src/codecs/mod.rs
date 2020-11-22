@@ -221,11 +221,11 @@ impl CodecInstanceContainer{
                  s::EncoderPreset::Pngquant {speed, quality , minimum_quality, maximum_deflate} => {
                      CodecKind::Encoder(Box::new(pngquant::PngquantEncoder::create(c, speed, quality, minimum_quality, maximum_deflate, io)?))
                  },
-                 s::EncoderPreset::Mozjpeg {quality, progressive} => {
-                     CodecKind::Encoder(Box::new(mozjpeg::MozjpegEncoder::create(c, quality, progressive, io)?))
+                 s::EncoderPreset::Mozjpeg {quality, progressive, ref matte} => {
+                     CodecKind::Encoder(Box::new(mozjpeg::MozjpegEncoder::create(c, quality, progressive, matte.clone(), io)?))
                  },
-                 s::EncoderPreset::LibjpegTurbo {quality, progressive, optimize_huffman_coding} => {
-                     CodecKind::Encoder(Box::new(mozjpeg::MozjpegEncoder::create_classic(c, quality.map(|q| q as u8), progressive, optimize_huffman_coding, io)?))
+                 s::EncoderPreset::LibjpegTurbo {quality, progressive, optimize_huffman_coding, ref matte} => {
+                     CodecKind::Encoder(Box::new(mozjpeg::MozjpegEncoder::create_classic(c, quality.map(|q| q as u8), progressive, optimize_huffman_coding, matte.clone(), io)?))
                  },
                  s::EncoderPreset::Lodepng { maximum_deflate }=> {
                      CodecKind::Encoder(Box::new(lode::LodepngEncoder::create(c, io, maximum_deflate)?))

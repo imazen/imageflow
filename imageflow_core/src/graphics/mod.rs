@@ -13,6 +13,7 @@ pub(crate) mod color_matrix;
 pub(crate) mod luv;
 pub(crate) mod convolve;
 pub(crate) mod fill;
+pub(crate) mod blend;
 
 //pub mod faces;
 
