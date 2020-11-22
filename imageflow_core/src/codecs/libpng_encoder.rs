@@ -43,6 +43,14 @@ impl Encoder for LibPngEncoder {
         let mut bitmap = bitmaps.try_borrow_mut(bitmap_key)
             .map_err(|e| e.at(here!()))?;
 
+        if let EncoderPreset::Libpng {ref matte, ..} = preset{
+            if let Some(ref color) = matte{
+                bitmap.get_window_u8().unwrap()
+                    .apply_matte(color.clone())
+                    .map_err(|e| e.at(here!()))?;
+            }
+        }
+
         unsafe {
             let frame = bitmap.get_window_u8()
                 .ok_or_else(|| nerror!(ErrorKind::InvalidBitmapType))?
