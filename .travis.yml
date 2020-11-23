@@ -40,7 +40,7 @@ matrix:
 install:
 - ci/travis_install.sh
 script:
-- travis_wait ci/travis_run.sh
+- ci/travis_run.sh
 before_cache:
   - rm -rf $HOME/.cargo/registry/src
 before_deploy:
