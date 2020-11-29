@@ -7,6 +7,7 @@ on:
     branches:
       - main
       - github_action
+      - ci_test
 
 jobs:
   build:
