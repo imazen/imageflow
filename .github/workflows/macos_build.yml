@@ -48,7 +48,8 @@ jobs:
       - name: Create Artifacts Header
         run: |
             mkdir -p ./artifacts/staging/headers || true
-
+            ls
+            ls ./target
             (
               cd ./${TARGET_DIR}doc
               tar czf "../docs.tar.gz" ./*
