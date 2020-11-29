@@ -21,7 +21,7 @@ jobs:
       - name: Check Build
         run: cargo check --all
       - name: Build Release
-        run: cargo build --all
+        run: cargo build --all --release
         env:
           ESTIMATED_ARTIFACT_URL: https://s3-us-west-1.amazonaws.com/imageflow-nightlies/imageflow-${{env.GITHUB_REF_NAME_SLUG}}-${{env.GITHUB_SHA_SHORT}}-${{env.PACKAGE_SUFFIX}}.tar.gz
           ESTIMATED_DOCS_URL: https://s3-us-west-1.amazonaws.com/imageflow-nightlies/doc
