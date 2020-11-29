@@ -1,0 +1,78 @@
+#  NUGET_RUNTIME= UPLOAD_BUILD=True FETCH_COMMIT_SUFFIX=mac64
+name: Test Linux
+
+on:
+
+  push:
+    branches:
+      - main
+      - github_action
+
+jobs:
+  build:
+    runs-on: macos-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@master
+      - uses: FranzDiebold/github-env-vars-action@v1.3.0
+      - name: Install nasm and dssim
+        run: brew install nasm dssim
+      - name: Check Build
+        run: cargo check --all
+      - name: Build Release
+        run: cargo build --all
+        env:
+          ESTIMATED_ARTIFACT_URL: https://s3-us-west-1.amazonaws.com/imageflow-nightlies/imageflow-${{env.GITHUB_REF_NAME_SLUG}}-${{env.GITHUB_SHA_SHORT}}-${{env.PACKAGE_SUFFIX}}".tar.gz
+          ESTIMATED_DOCS_URL: https://s3-us-west-1.amazonaws.com/imageflow-nightlies/doc
+          CI_SEQUENTIAL_BUILD_NUMBER: ${{env.GITHUB_RUN_NUMBER}}
+          CI_BUILD_URL: https://github.com/${{env.GITHUB_REPOSITORY}}/actions/runs/${{github.job_id}}
+          CI_JOB_URL: https://github.com/${{env.GITHUB_REPOSITORY}}/actions/runs/${{github.job_id}}
+          CI_JOB_TITLE: Github ${github.job_id} ${macos}
+          CI_STRING: Github actions
+          CI_PULL_REQUEST_INFO: ${{github.event_name!="release"}}
+          CI_TAG: ${{env.GITHUB_REF_NAME_SLUG}}
+          CI_REPO: ${{env.GITHUB_REPOSITORY}}
+          CI_RELATED_BRANCH:
+          CI: True
+          TARGET: x86_64-apple-darwin
+          OPT_LEVEL: 0
+          DEBUG: False
+          PROFILE: release
+          RUSTC: ""
+          RUSTFLAGS: ""
+          TARGET_CPU: nehalem
+          NUGET_RUNTIME: osx-x64
+          FETCH_COMMIT_SUFFIX: mac64
+      - name: Test Release
+        run: cargo test --all --release
+      - name: Build Docs
+        run: cargo doc --all --release --no-deps
+      - name: Create Artifacts Header
+        run: |
+            mkdir -p ./artifacts/staging/headers || true
+
+            (
+              cd ./${TARGET_DIR}doc
+              tar czf "../docs.tar.gz" ./*
+            )
+            mv ./${TARGET_DIR}docs.tar.gz ./artifacts/staging/
+
+            cp -R ${TARGET_DIR}release/{imageflow_,libimageflow}*  ./artifacts/staging/
+            cp bindings/headers/*.h  ./artifacts/staging/headers/
+            cp bindings/headers/imageflow_default.h  ./artifacts/staging/imageflow.h
+            cp ./ci/packaging_extras/{install,uninstall}.sh ./artifacts/staging
+            rm ./artifacts/staging/*.{o,d,rlib} || true
+            rm ./artifacts/staging/*-* || true
+            rm -rf ./artifacts/staging/doc || true
+            rm -rf ./artifacts/staging/release || true
+
+        env:
+          TARGET_DIR: "target/",
+
+
+
+
+
+
+
+
