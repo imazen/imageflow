@@ -30,10 +30,10 @@ jobs:
           CI_JOB_URL: https://github.com/${{env.GITHUB_REPOSITORY}}/actions/runs/${{github.job_id}}
           CI_JOB_TITLE: Github ${github.job_id} ${macos}
           CI_STRING: Github actions
-          CI_PULL_REQUEST_INFO: ${{github.event_name!="release"}}
+          CI_PULL_REQUEST_INFO: ${{github.event_name!='release'}}
           CI_TAG: ${{env.GITHUB_REF_NAME_SLUG}}
           CI_REPO: ${{env.GITHUB_REPOSITORY}}
-          CI_RELATED_BRANCH:
+          CI_RELATED_BRANCH: " "
           CI: True
           TARGET: x86_64-apple-darwin
           OPT_LEVEL: 0
