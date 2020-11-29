@@ -33,14 +33,11 @@ jobs:
           CI_PULL_REQUEST_INFO: ${{github.event_name!='release'}}
           CI_TAG: ${{env.GITHUB_REF_NAME_SLUG}}
           CI_REPO: ${{env.GITHUB_REPOSITORY}}
-          CI_RELATED_BRANCH: ''
           CI: True
           TARGET: x86_64-apple-darwin
           OPT_LEVEL: 0
           DEBUG: False
           PROFILE: release
-          RUSTC: ''
-          RUSTFLAGS: ''
           TARGET_CPU: nehalem
           NUGET_RUNTIME: osx-x64
           FETCH_COMMIT_SUFFIX: mac64
