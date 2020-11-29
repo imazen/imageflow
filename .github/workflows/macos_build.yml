@@ -66,9 +66,8 @@ jobs:
             rm ./artifacts/staging/*-* || true
             rm -rf ./artifacts/staging/doc || true
             rm -rf ./artifacts/staging/release || true
-
         env:
-          TARGET_DIR: "target/",
+          TARGET_DIR: "target/"
 
 
 
