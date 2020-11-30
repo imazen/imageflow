@@ -64,10 +64,16 @@ jobs:
             rm ./artifacts/staging/*-* || true
             rm -rf ./artifacts/staging/doc || true
             rm -rf ./artifacts/staging/release || true
+            mkdir -p "./artifacts/upload/$(dirname "${ARTIFACT_UPLOAD_PATH}")" || true
+            cp "${ARTIFACT_ARCHIVE_NAME}" "./artifacts/upload/${ARTIFACT_UPLOAD_PATH}.tar.gz"
+            mkdir -p "./artifacts/upload/${DOCS_UPLOAD_DIR}" || true
+            cp -a ./${TARGET_DIR}doc/* "./artifacts/upload/${DOCS_UPLOAD_DIR}/"
+            tree ./artifacts
         env:
-          TARGET_DIR: "target/"
-
-
+          TARGET_DIR: target/
+          ARTIFACT_UPLOAD_PATH: /imageflow-${{env.GITHUB_SHA_SHORT}}-macos
+          ARTIFACT_ARCHIVE_NAME: ./artifacts/staging/archive.tar.gz
+          DOCS_UPLOAD_DIR}: doc
 
 
 
