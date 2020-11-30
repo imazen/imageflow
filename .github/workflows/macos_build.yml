@@ -2,12 +2,9 @@
 name: Test Linux
 
 on:
-
-  push:
-    branches:
-      - main
-      - github_action
-      - ci_test
+    release:
+        types:
+            - published
 
 jobs:
   build:
@@ -69,9 +66,16 @@ jobs:
             ls ./artifacts/upload
         env:
           TARGET_DIR: target/
-          ARTIFACT_UPLOAD_PATH: /imageflow-${{env.GITHUB_SHA_SHORT}}-macos
+          ARTIFACT_UPLOAD_PATH: /imageflow-${{env.GITHUB_REF_NAME_SLUG}}-${{env.GITHUB_SHA_SHORT}}-macos
           ARTIFACT_ARCHIVE_NAME: ./artifacts/staging/archive.tar.gz
           DOCS_UPLOAD_DIR}: doc
+      - name: Upload to release
+        uses: Shopify/upload-to-release@master
+        with:
+            name: ARTIFACT_UPLOAD_PATH: imageflow--${{env.GITHUB_REF_NAME_SLUG}}-${{env.GITHUB_SHA_SHORT}}-macos.tar.gz
+            path: ./artifacts/upload/imageflow--${{env.GITHUB_REF_NAME_SLUG}}-${{env.GITHUB_SHA_SHORT}}-macos.tar.gz
+            repo-token: ${{ secrets.GITHUB_TOKEN }}
+            content-type: text/plain
 
 
 
