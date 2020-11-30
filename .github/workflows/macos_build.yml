@@ -71,7 +71,7 @@ jobs:
       - name: Upload to release
         uses: Shopify/upload-to-release@master
         with:
-            name: ARTIFACT_UPLOAD_PATH: imageflow--${{env.GITHUB_REF_NAME_SLUG}}-${{env.GITHUB_SHA_SHORT}}-macos.tar.gz
+            name: imageflow--${{env.GITHUB_REF_NAME_SLUG}}-${{env.GITHUB_SHA_SHORT}}-macos.tar.gz
             path: ./artifacts/upload/imageflow--${{env.GITHUB_REF_NAME_SLUG}}-${{env.GITHUB_SHA_SHORT}}-macos.tar.gz
             repo-token: ${{ secrets.GITHUB_TOKEN }}
             content-type: text/plain
