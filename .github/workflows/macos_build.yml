@@ -63,7 +63,6 @@ jobs:
             cp "${ARTIFACT_ARCHIVE_NAME}" "./artifacts/upload/${ARTIFACT_UPLOAD_PATH}.tar.gz"
             mkdir -p "./artifacts/upload/${DOCS_UPLOAD_DIR}" || true
             cp "${ARTIFACT_ARCHIVE_NAME}" "./artifacts/upload/${ARTIFACT_UPLOAD_PATH}.tar.gz"
-            ls ./artifacts/upload
         env:
           TARGET_DIR: target/
           ARTIFACT_UPLOAD_PATH: /imageflow-${{env.GITHUB_REF_NAME_SLUG}}-${{env.GITHUB_SHA_SHORT}}-macos
@@ -77,6 +76,12 @@ jobs:
             repo-token: ${{ secrets.GITHUB_TOKEN }}
             content-type: text/plain
 
+      - uses: shallwefootball/s3-upload-action@master
+        with:
+          aws_key_id: ${{ secrets.AWS_KEY_ID }}
+          aws_secret_access_key: ${{ secrets.AWS_SECRET_ACCESS_KEY}}
+          aws_bucket: ${{ secrets.AWS_BUCKET }}
+          source_dir: ./artifacts/upload/
 
 
 
