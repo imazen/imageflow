@@ -65,7 +65,8 @@ jobs:
             mkdir -p "./artifacts/upload/$(dirname "${ARTIFACT_UPLOAD_PATH}")" || true
             cp "${ARTIFACT_ARCHIVE_NAME}" "./artifacts/upload/${ARTIFACT_UPLOAD_PATH}.tar.gz"
             mkdir -p "./artifacts/upload/${DOCS_UPLOAD_DIR}" || true
-            ls ./artifacts/staging
+            cp "${ARTIFACT_ARCHIVE_NAME}" "./artifacts/upload/${ARTIFACT_UPLOAD_PATH}.tar.gz"
+            ls ./artifacts/upload
         env:
           TARGET_DIR: target/
           ARTIFACT_UPLOAD_PATH: /imageflow-${{env.GITHUB_SHA_SHORT}}-macos
