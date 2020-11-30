@@ -60,10 +60,10 @@ jobs:
             cp bindings/headers/*.h  ./artifacts/staging/headers/
             cp bindings/headers/imageflow_default.h  ./artifacts/staging/imageflow.h
             cp ./ci/packaging_extras/{install,uninstall}.sh ./artifacts/staging
-            rm ./artifacts/staging/*.{o,d,rlib} || true
-            rm ./artifacts/staging/*-* || true
-            rm -rf ./artifacts/staging/doc || true
-            rm -rf ./artifacts/staging/release || true
+            (
+              cd ./artifacts/staging
+              tar czf "./archive.tar.gz" ./*
+            )
             mkdir -p "./artifacts/upload/$(dirname "${ARTIFACT_UPLOAD_PATH}")" || true
             cp "${ARTIFACT_ARCHIVE_NAME}" "./artifacts/upload/${ARTIFACT_UPLOAD_PATH}.tar.gz"
             mkdir -p "./artifacts/upload/${DOCS_UPLOAD_DIR}" || true
