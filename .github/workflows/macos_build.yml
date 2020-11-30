@@ -48,8 +48,6 @@ jobs:
       - name: Create Artifacts Header
         run: |
             mkdir -p ./artifacts/staging/headers || true
-            ls
-            ls ./target/release
             (
               cd ./${TARGET_DIR}doc
               tar czf "../docs.tar.gz" ./*
@@ -68,9 +66,7 @@ jobs:
             cp "${ARTIFACT_ARCHIVE_NAME}" "./artifacts/upload/${ARTIFACT_UPLOAD_PATH}.tar.gz"
             mkdir -p "./artifacts/upload/${DOCS_UPLOAD_DIR}" || true
             cp -a ./${TARGET_DIR}doc/* "./artifacts/upload/${DOCS_UPLOAD_DIR}/"
-            ls ./artifacts
             ls ./artifacts/upload
-            ls ./artifact/staging
         env:
           TARGET_DIR: target/
           ARTIFACT_UPLOAD_PATH: /imageflow-${{env.GITHUB_SHA_SHORT}}-macos
