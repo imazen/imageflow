@@ -1,0 +1,1184 @@
+<!DOCTYPE HTML>
+<html lang="en" class="sidebar-visible no-js light">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>Imageflow</title>
+        
+        <meta name="robots" content="noindex" />
+        
+
+        <meta content="text/html; charset=utf-8" http-equiv="Content-Type">
+        <meta name="description" content="">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff" />
+
+        <link rel="shortcut icon" href="favicon.png">
+        <link rel="stylesheet" href="css/variables.css">
+        <link rel="stylesheet" href="css/general.css">
+        <link rel="stylesheet" href="css/chrome.css">
+        <link rel="stylesheet" href="css/print.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="FontAwesome/css/font-awesome.css">
+        <link href="https://fonts.googleapis.com/css?family=Open+Sans:300italic,400italic,600italic,700italic,800italic,400,300,600,700,800" rel="stylesheet" type="text/css">
+        <link href="https://fonts.googleapis.com/css?family=Source+Code+Pro:500" rel="stylesheet" type="text/css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" href="highlight.css">
+        <link rel="stylesheet" href="tomorrow-night.css">
+        <link rel="stylesheet" href="ayu-highlight.css">
+
+        <!-- Custom theme stylesheets -->
+        
+
+        
+    </head>
+    <body>
+        <!-- Provide site root to javascript -->
+        <script type="text/javascript">
+            var path_to_root = "";
+            var default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "light" : "light";
+        </script>
+
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script type="text/javascript">
+            try {
+                var theme = localStorage.getItem('mdbook-theme');
+                var sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script type="text/javascript">
+            var theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            var html = document.querySelector('html');
+            html.classList.remove('no-js')
+            html.classList.remove('light')
+            html.classList.add(theme);
+            html.classList.add('js');
+        </script>
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script type="text/javascript">
+            var html = document.querySelector('html');
+            var sidebar = 'hidden';
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            }
+            html.classList.remove('sidebar-visible');
+            html.classList.add("sidebar-" + sidebar);
+        </script>
+
+        <nav id="sidebar" class="sidebar" aria-label="Table of contents">
+            <div class="sidebar-scrollbox">
+                <ol class="chapter"><li class="chapter-item expanded "><a href="introduction.html"><strong aria-hidden="true">1.</strong> Introduction</a></li><li class="chapter-item expanded "><a href="querystring/introduction.html"><strong aria-hidden="true">2.</strong> Querystring API</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="querystring/introduction.html"><strong aria-hidden="true">2.1.</strong> Introduction</a></li><li class="chapter-item expanded "><a href="querystring/transforms.html"><strong aria-hidden="true">2.2.</strong> Image Transforms</a></li><li class="chapter-item expanded "><a href="querystring/filters.html"><strong aria-hidden="true">2.3.</strong> Image Filters</a></li><li class="chapter-item expanded "><a href="querystring/encoding.html"><strong aria-hidden="true">2.4.</strong> Image Encoding</a></li><li class="chapter-item expanded "><a href="querystring/examples.html"><strong aria-hidden="true">2.5.</strong> Examples</a></li></ol></li><li class="chapter-item expanded "><a href="json/introduction.html"><strong aria-hidden="true">3.</strong> JSON Reference</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="json/introduction.html"><strong aria-hidden="true">3.1.</strong> Introduction</a></li><li class="chapter-item expanded "><a href="json/security.html"><strong aria-hidden="true">3.2.</strong> Security</a></li><li class="chapter-item expanded "><a href="json/decode.html"><strong aria-hidden="true">3.3.</strong> Decode</a></li><li class="chapter-item expanded "><a href="json/encode.html"><strong aria-hidden="true">3.4.</strong> Encode</a></li><li class="chapter-item expanded "><a href="json/constrain.html"><strong aria-hidden="true">3.5.</strong> Constrain</a></li><li class="chapter-item expanded "><a href="json/region.html"><strong aria-hidden="true">3.6.</strong> Region</a></li><li class="chapter-item expanded "><a href="json/crop_whitespace.html"><strong aria-hidden="true">3.7.</strong> Crop Whitespace</a></li><li class="chapter-item expanded "><a href="json/rotate_flip.html"><strong aria-hidden="true">3.8.</strong> Rotate &amp; Flip</a></li><li class="chapter-item expanded "><a href="json/fill_rect.html"><strong aria-hidden="true">3.9.</strong> Fill Rectangle</a></li><li class="chapter-item expanded "><a href="json/expand_canvas.html"><strong aria-hidden="true">3.10.</strong> Expand Canvas</a></li><li class="chapter-item expanded "><a href="json/watermark.html"><strong aria-hidden="true">3.11.</strong> Watermark</a></li><li class="chapter-item expanded "><a href="json/command_string.html"><strong aria-hidden="true">3.12.</strong> Command String</a></li><li class="chapter-item expanded "><a href="json/white_balance_srgb.html"><strong aria-hidden="true">3.13.</strong> White Balance sRGB</a></li><li class="chapter-item expanded "><a href="json/color_filter_srgb.html"><strong aria-hidden="true">3.14.</strong> Color Filter sRGB</a></li><li class="chapter-item expanded "><a href="json/resampling_hints.html"><strong aria-hidden="true">3.15.</strong> Re-sampling Hints</a></li><li class="chapter-item expanded "><a href="json/color.html"><strong aria-hidden="true">3.16.</strong> Specifying Colors</a></li><li class="chapter-item expanded "><a href="json/graph.html"><strong aria-hidden="true">3.17.</strong> Graph API</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="json/create_canvas.html"><strong aria-hidden="true">3.17.1.</strong> Create Canvas</a></li><li class="chapter-item expanded "><a href="json/copy_rect_to_canvas.html"><strong aria-hidden="true">3.17.2.</strong> Copy Rectangle</a></li><li class="chapter-item expanded "><a href="json/draw_image_exact.html"><strong aria-hidden="true">3.17.3.</strong> Draw Image Exact</a></li></ol></li></ol></li><li class="chapter-item expanded "><a href="imageflow_tool.html"><strong aria-hidden="true">4.</strong> Using imageflow_tool</a></li><li class="chapter-item expanded "><a href="imageflow_server.html"><strong aria-hidden="true">5.</strong> Using imageflow_server</a></li></ol>
+            </div>
+            <div id="sidebar-resize-handle" class="sidebar-resize-handle"></div>
+        </nav>
+
+        <div id="page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                
+                <div id="menu-bar-hover-placeholder"></div>
+                <div id="menu-bar" class="menu-bar sticky bordered">
+                    <div class="left-buttons">
+                        <button id="sidebar-toggle" class="icon-button" type="button" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="sidebar">
+                            <i class="fa fa-bars"></i>
+                        </button>
+                        <button id="theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="theme-list">
+                            <i class="fa fa-paint-brush"></i>
+                        </button>
+                        <ul id="theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="light">Light (default)</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="ayu">Ayu</button></li>
+                        </ul>
+                        
+                    </div>
+
+                    <h1 class="menu-title">Imageflow</h1>
+
+                    <div class="right-buttons">
+                        <a href="print.html" title="Print this book" aria-label="Print this book">
+                            <i id="print-button" class="fa fa-print"></i>
+                        </a>
+                        
+                    </div>
+                </div>
+
+                
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script type="text/javascript">
+                    document.getElementById('sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="content" class="content">
+                    <main>
+                        <h1><a class="header" href="#introduction" id="introduction">Introduction</a></h1>
+<ul>
+<li>Imageflow can be used as a library (libimageflow or <a href="https://github.com/imazen/imageflow-dotnet">imageflow-dotnet</a>)</li>
+<li>Imageflow can be used as a command-line tool for scripting (<a href="imageflow_tool.html">imageflow_tool</a>)</li>
+<li>Imageflow can be used as an HTTP server (<a href="imageflow_server.html">imageflow_server</a>)</li>
+</ul>
+<p>All share support for the querystring API (<a href="querystring/introduction.html">RIAPI</a>). 
+libimageflow, imageflow-dotnet, and imageflow_tool currently support the <a href="json/introduction.html">JSON API</a>.</p>
+<p>The querystring API is much simpler, but the JSON API can compose multiple images or generate multiple image 
+versions in a single job. You can also use the querystring API from within the JSON API. </p>
+<h1><a class="header" href="#querystring-api" id="querystring-api">Querystring API</a></h1>
+<p><em>Also called RIAPI (RESTful Image API)</em></p>
+<p>This API doesn't care about the order in which you specify commands; they're executed in a standard order regardless.</p>
+<p><code>trim whitespace</code> -&gt; <code>srotate</code> -&gt; <code>sflip</code> -&gt; <code>crop</code> -&gt; <code>scale</code> -&gt; <code>filter</code> -&gt; <code>pad</code> -&gt; <code>rotate</code> -&gt; <code>flip</code></p>
+<h3><a class="header" href="#executing-with-imageflow_tool" id="executing-with-imageflow_tool">Executing with imageflow_tool</a></h3>
+<pre><code class="language-bash">imageflow_tool v1/querystring --in a.jpg --out b.jpg --command &quot;w=100&amp;h=100&amp;mode=max&quot; --quiet
+</code></pre>
+<h3><a class="header" href="#urls-with-demo-server" id="urls-with-demo-server">URLs with demo server</a></h3>
+<p>http://localhost:39876/demo_images/tulip-leaf.jpg?w=300&amp;h=300&amp;mode=max</p>
+<h2><a class="header" href="#common-examples" id="common-examples">Common examples</a></h2>
+<ul>
+<li><code>width=100&amp;height=100&amp;mode=max&amp;scale=down</code> ensures the image is downscaled to 100x100 or less,
+but does not upscale the image if it is already smaller than that. Aspect ratio is maintained. </li>
+<li><code>width=200&amp;height=200&amp;mode=max&amp;scale=both</code> ensures the image is downscaled or upscaled to fit within 200x200, 
+maintaining aspect ratio. </li>
+<li><code>width=200&amp;height=200&amp;mode=pad&amp;scale=both</code> ensures the image is downscaled or upscaled to fit within 200x200, 
+maintaining aspect ratio, then is padded to make the result always 200x200.</li>
+<li><code>width=300&amp;height=300&amp;mode=crop&amp;scale=both</code> ensures the image is downscaled or upscaled to fit around 300x300,
+then minimally cropped to meet the aspect ratio. <code>scale=both</code> ensures the image is upscaled if smaller so the result 
+is always 300x300. </li>
+</ul>
+<h1><a class="header" href="#querystring-api-1" id="querystring-api-1">Querystring API</a></h1>
+<p><em>Also called RIAPI (RESTful Image API)</em></p>
+<p>This API doesn't care about the order in which you specify commands; they're executed in a standard order regardless.</p>
+<p><code>trim whitespace</code> -&gt; <code>srotate</code> -&gt; <code>sflip</code> -&gt; <code>crop</code> -&gt; <code>scale</code> -&gt; <code>filter</code> -&gt; <code>pad</code> -&gt; <code>rotate</code> -&gt; <code>flip</code></p>
+<h3><a class="header" href="#executing-with-imageflow_tool-1" id="executing-with-imageflow_tool-1">Executing with imageflow_tool</a></h3>
+<pre><code class="language-bash">imageflow_tool v1/querystring --in a.jpg --out b.jpg --command &quot;w=100&amp;h=100&amp;mode=max&quot; --quiet
+</code></pre>
+<h3><a class="header" href="#urls-with-demo-server-1" id="urls-with-demo-server-1">URLs with demo server</a></h3>
+<p>http://localhost:39876/demo_images/tulip-leaf.jpg?w=300&amp;h=300&amp;mode=max</p>
+<h2><a class="header" href="#common-examples-1" id="common-examples-1">Common examples</a></h2>
+<ul>
+<li><code>width=100&amp;height=100&amp;mode=max&amp;scale=down</code> ensures the image is downscaled to 100x100 or less,
+but does not upscale the image if it is already smaller than that. Aspect ratio is maintained. </li>
+<li><code>width=200&amp;height=200&amp;mode=max&amp;scale=both</code> ensures the image is downscaled or upscaled to fit within 200x200, 
+maintaining aspect ratio. </li>
+<li><code>width=200&amp;height=200&amp;mode=pad&amp;scale=both</code> ensures the image is downscaled or upscaled to fit within 200x200, 
+maintaining aspect ratio, then is padded to make the result always 200x200.</li>
+<li><code>width=300&amp;height=300&amp;mode=crop&amp;scale=both</code> ensures the image is downscaled or upscaled to fit around 300x300,
+then minimally cropped to meet the aspect ratio. <code>scale=both</code> ensures the image is upscaled if smaller so the result 
+is always 300x300. </li>
+</ul>
+<h2><a class="header" href="#image-transform-commands" id="image-transform-commands">Image Transform Commands</a></h2>
+<ul>
+<li><code>width</code> constrains the image width. <code>w</code> is an alias for <code>width</code></li>
+<li><code>height</code> constrains the image height. <code>h</code> is an alias for <code>height</code></li>
+<li><code>dpr</code> is a multiplier for <code>width</code>/<code>height</code> to make responsive image usage easier. </li>
+<li><code>mode</code> determines how to handle aspect ratio differences.
+<ul>
+<li><code>stretch</code> distorts the image to be exactly the given dimensions, if <code>scale=both</code>. If <code>scale=down</code> (the default), the image is only scaled if <code>width</code> and <code>height</code> are smaller than the image. </li>
+<li><code>pad</code> scales the image to fit within <code>width</code> and <code>height</code>, then pads 2 edges (<code>bgcolor</code>) to make it.</li>
+<li><code>crop</code> scales the image to fit above <code>width</code> and <code>height</code>, then minimally crops to meet aspect ratio. </li>
+<li><code>max</code> scales the image to fit within <code>width</code> and <code>height</code></li>
+</ul>
+</li>
+<li><code>scale</code> controls whether images are upsampled or not.
+<ul>
+<li><code>down</code> - Never upscale an image - return at original size instead</li>
+<li><code>both</code> - Downscale or upscale to meet size requirements. Image enlargement causes blurriness and should be avoided.</li>
+<li><code>canvas</code> - Add padding instead of upscaling to meet size requirements.</li>
+<li><code>up</code> - Never downscale, only upscale to meet requirements. Rarely used. </li>
+</ul>
+</li>
+<li><code>anchor</code> determines how the image is aligned when you use <code>mode=crop</code>, <code>mode=pad</code> or <code>scale=canvas</code>. 
+The default is <code>middlecenter</code>
+<ul>
+<li>values are <code>topleft</code>, <code>topcenter</code>, <code>topright</code>, <code>middleleft</code>, <code>middlecenter</code>, <code>middleright</code>, 
+<code>bottomleft</code>, <code>bottomcenter</code>, and <code>bottomright</code>.</li>
+</ul>
+</li>
+<li><code>sflip</code> flips the source image in the <code>x</code>, <code>y</code>, or <code>xy</code> dimensions. </li>
+<li><code>flip</code> flips the result image in the <code>x</code>, <code>y</code>, or <code>xy</code> dimensions. </li>
+<li><code>srotate</code> rotates the source image <code>90</code>, <code>180</code>, or <code>270</code> degrees. </li>
+<li><code>rotate</code> rotates the result image <code>90</code>, <code>180</code>, or <code>270</code> degrees. </li>
+<li><code>crop=x1,y1,x2,y2</code> crops the source image to the given coordinates. If x2 or y2 are negative, they are relative to 
+the bottom-right corner of the image. <code>crop=10,10,-10,-10</code> removes 10 pixels from the edge of the image. </li>
+<li><code>cropxunits=100&amp;cropyunits=100</code> makes the <code>crop</code> coordinates percentages of the image instead of pixels. </li>
+<li><code>trim.threshold=80</code> specifies a threshold to use for trimming whitespace.</li>
+<li><code>trim.percentpadding=0.5</code> specifies percentage of padding to restore after trimming.</li>
+<li><code>bgcolor</code> must be in the form RGB, RGBA, RRGGBBAA, RRGGBB, or be a named color.
+<code>bgcolor</code> determines the color of padding added with <code>mode=pad</code> or <code>scale=canvas</code>. </li>
+<li><code>ignoreicc=true</code> causes the source image's color profile to be ignored and treated as sRGB. </li>
+<li><code>ignore_icc_errors=true</code> causes color profile errors to be ignored rather than causing the operation to fail. </li>
+</ul>
+<h2><a class="header" href="#image-filter-commands" id="image-filter-commands">Image Filter Commands</a></h2>
+<ul>
+<li><code>f.sharpen=0..99</code> determines how much sharpening to apply when scaling the image.</li>
+<li><code>f.sharpenwhen=always|downscaling|sizediffers</code> determines when to sharpen. </li>
+<li><code>down.filter</code>determines the down-sampling filter to use. Must be one of <code>robidoux</code>, 
+<code>robidoux_sharp</code>, <code>robidoux_fast</code>, <code>ginseng</code>, <code>ginseng_sharp</code>, <code>lanczos</code>, <code>lanczos_sharp</code>
+, <code>lanczos_2</code>, <code>lanczos_2_sharp</code> , <code>cubic</code>, <code>cubic_sharp</code>, <code>catmull_rom</code>, <code>mitchell</code>, 
+<code>cubic_b_spline</code>, <code>hermite</code>, <code>jinc</code>, <code>triangle</code>, <code>linear</code>, <code>box</code>, <code>fastest</code>, <code>n_cubic</code>, <code>n_cubic_sharp</code></li>
+<li><code>up.filter</code> determines the up-sampling filter to use. See <code>down.filter</code></li>
+<li><code>down.colorspace=srgb</code> downscales in the srgb color space instead of linear RGB. Mimics widespread but bad behavior; destroys image highlights. </li>
+<li><code>up.colorspace=srgb</code> up-scales in the srgb color space instead of linear RGB. </li>
+<li><code>s.grayscale</code>=<code>true|y|ry|ntsc|bt709|flat</code> transforms the image into grayscale using various methods.</li>
+<li><code>s.sepia=true</code> turns the image into sepia tone</li>
+<li><code>s.invert=true</code> inverts the image colors in the srgb space</li>
+<li><code>s.alpha=0..1</code> makes the image partially transparent</li>
+<li><code>s.contrast=-1..1</code> adjusts the contrast in the srgb space</li>
+<li><code>s.brightness=-1..1</code> adjusts brightness in the srgb space</li>
+<li><code>s.saturation=-1..1</code> adjusts saturation in the srgb space</li>
+</ul>
+<h2><a class="header" href="#image-encoding-commands" id="image-encoding-commands">Image Encoding Commands</a></h2>
+<ul>
+<li><code>format=png|gif|jpeg|webp</code> determines the format to encode the image as. Defaults to the original format.</li>
+<li><code>jpeg.quality=0..100</code> determines the jpeg encoding quality. Default is <code>90</code></li>
+<li><code>jpeg.progressive=true</code> enables progressive jpeg encoding. </li>
+<li><code>jpeg.turbo=true</code> encodes files faster at the expense of file size. </li>
+<li><code>webp.quality=0..100</code> determines the webp encoding quality.</li>
+<li><code>webp.lossless=true</code> enables lossless webp encoding. Default <code>false</code></li>
+<li><code>png.lossless=false</code> disables lossless PNG encoding. Default <code>true</code> unless <code>png.quality</code> is specified. </li>
+<li><code>png.quality=0..100</code> determines lossy png quality. Default <code>100</code>. </li>
+<li><code>png.min_quality=0..100</code> determines the minimum png quality that must be realized before lossless is used. Default <code>0</code></li>
+</ul>
+<h2><a class="header" href="#querystring-examples" id="querystring-examples">Querystring Examples</a></h2>
+<h2><a class="header" href="#todo" id="todo">TODO</a></h2>
+<h3><a class="header" href="#4-ways-to-grayscale" id="4-ways-to-grayscale">4 ways to grayscale</a></h3>
+<p><code>s.grayscale</code>=<code>true|y|ry|ntsc|bt709|flat</code>  (true, ntsc, and y produce identical results)</p>
+<p>The following examples use NTSC/Y/True, RY, BT709, and Flat respectively</p>
+<p><img src="https://z.zr.io/ri/utah2.jpg;width=200;s.grayscale=true" alt="s.grayscale=true" />
+<img src="https://z.zr.io/ri/utah2.jpg;width=200;s.grayscale=ry" alt="s.grayscale=ry" />
+<img src="https://z.zr.io/ri/utah2.jpg;width=200;s.grayscale=bt709" alt="s.grayscale=bt709" />
+<img src="https://z.zr.io/ri/utah2.jpg;width=200;s.grayscale=flat" alt="s.grayscale=flat" /></p>
+<h3><a class="header" href="#1-way-to-sepia" id="1-way-to-sepia">1 way to sepia</a></h3>
+<p><img src="https://z.zr.io/ri/utah2.jpg;width=200;s.sepia=true" alt="s.sepia=true" /></p>
+<h3><a class="header" href="#inversion" id="inversion">Inversion</a></h3>
+<p><img src="https://z.zr.io/ri/utah2.jpg;width=200;s.invert=true" alt="s.invert=true" /></p>
+<h3><a class="header" href="#adjust-opacityalpha" id="adjust-opacityalpha">Adjust opacity/alpha</a></h3>
+<p><code>s.alpha</code>= <code>0..1</code></p>
+<p>For true transparency, combine with <code>format=png</code>. Otherwise, the image will be blended against <code>bgcolor</code>.</p>
+<p><img src="https://z.zr.io/ri/utah.jpg;width=200;s.alpha=0.25" alt="s.alpha=0.25" />
+<img src="https://z.zr.io/ri/utah.jpg;width=200;s.alpha=0.75" alt="s.alpha=0.75" />
+<img src="https://z.zr.io/ri/utah.jpg;width=200;s.alpha=0.85" alt="s.alpha=0.85" />
+<img src="https://z.zr.io/ri/utah.jpg;width=200;s.alpha=1" alt="s.alpha=1" /></p>
+<h3><a class="header" href="#adjust-contrast" id="adjust-contrast">Adjust contrast</a></h3>
+<p><code>s.contrast</code>= <code>-1..1</code></p>
+<p><img src="https://z.zr.io/ri/utah.jpg;width=200;s.contrast=-0.99" alt="s.contrast=-0.80" />
+<img src="https://z.zr.io/ri/utah.jpg;width=200;s.contrast=-0.80" alt="s.contrast=-0.80" />
+<img src="https://z.zr.io/ri/utah.jpg;width=200;s.contrast=-0.40" alt="s.contrast=-0.40" />
+<img src="https://z.zr.io/ri/utah.jpg;width=200;s.contrast=-0.20" alt="s.contrast=-0.20" /></p>
+<p><img src="https://z.zr.io/ri/utah.jpg;width=200;s.contrast=0" alt="s.contrast=0" /></p>
+<p><img src="https://z.zr.io/ri/utah.jpg;width=200;s.contrast=0.20" alt="s.contrast=0.20" />
+<img src="https://z.zr.io/ri/utah.jpg;width=200;s.contrast=0.40" alt="s.contrast=0.40" />
+<img src="https://z.zr.io/ri/utah.jpg;width=200;s.contrast=0.80" alt="s.contrast=0.80" />
+<img src="https://z.zr.io/ri/utah.jpg;width=200;s.contrast=0.99" alt="s.contrast=0.99" /></p>
+<h3><a class="header" href="#adjust-brightness" id="adjust-brightness">Adjust brightness</a></h3>
+<p><code>s.brightness</code>= <code>-1..1</code></p>
+<p><img src="https://z.zr.io/ri/red-leaf.jpg;width=100;s.brightness=-1" alt="" />
+<img src="https://z.zr.io/ri/red-leaf.jpg;width=100;s.brightness=-0.7" alt="" />
+<img src="https://z.zr.io/ri/red-leaf.jpg;width=100;s.brightness=-0.5" alt="" />
+<img src="https://z.zr.io/ri/red-leaf.jpg;width=100;s.brightness=-0.2" alt="" />
+<img src="https://z.zr.io/ri/red-leaf.jpg;width=100;s.brightness=0" alt="" />
+<img src="https://z.zr.io/ri/red-leaf.jpg;width=100;s.brightness=0.2" alt="" />
+<img src="https://z.zr.io/ri/red-leaf.jpg;width=100;s.brightness=0.5" alt="" />
+<img src="https://z.zr.io/ri/red-leaf.jpg;width=100;s.brightness=0.7" alt="" />
+<img src="https://z.zr.io/ri/red-leaf.jpg;width=100;s.brightness=1" alt="" /></p>
+<h3><a class="header" href="#adjust-saturation" id="adjust-saturation">Adjust saturation</a></h3>
+<p><code>s.saturation</code>= <code>-1..1</code></p>
+<p><img src="https://z.zr.io/ri/red-leaf.jpg;width=100;s.saturation=-1" alt="" />
+<img src="https://z.zr.io/ri/red-leaf.jpg;width=100;s.saturation=-0.9" alt="" />
+<img src="https://z.zr.io/ri/red-leaf.jpg;width=100;s.saturation=-0.5" alt="" />
+<img src="https://z.zr.io/ri/red-leaf.jpg;width=100;s.saturation=-0.2" alt="" />
+<img src="https://z.zr.io/ri/red-leaf.jpg;width=100;s.saturation=0" alt="" />
+<img src="https://z.zr.io/ri/red-leaf.jpg;width=100;s.saturation=0.2" alt="" />
+<img src="https://z.zr.io/ri/red-leaf.jpg;width=100;s.saturation=0.5" alt="" />
+<img src="https://z.zr.io/ri/red-leaf.jpg;width=100;s.saturation=0.9" alt="" />
+<img src="https://z.zr.io/ri/red-leaf.jpg;width=100;s.saturation=1" alt="" /></p>
+<h1><a class="header" href="#json-api" id="json-api">JSON API</a></h1>
+<p>JSON is primarily used by libimageflow and imageflow_tool. </p>
+<p>You can specify a series of <code>steps</code> to take (the easiest), or you can specify a <a href="json/graph.html">graph</a> with 
+nodes and edges (which allows for multiple inputs and outputs).  Note that you can watermark with a series of steps. </p>
+<p>JSON jobs have the keys <code>io</code> and <code>framewise</code>, which refer to your inputs/outputs and steps/graph to apply to each image frame. </p>
+<p>JSON jobs also have a <code>security</code> key that you can read more about <a href="json/security.html">here</a>.</p>
+<p>If you're using <code>imageflow_tool v1/build</code>, you'll need to specify your inputs and outputs. This isn't needed if you're using <code>libimageflow</code> and <code>v1/execute</code>, as you'll have already registered the inputs and outputs.</p>
+<p>The following example uses <code>steps</code> to constrain an image to 1400px or less and encodes it in 8-bit png. </p>
+<pre><code class="language-json">{
+  &quot;io&quot;: [
+    {
+      &quot;io_id&quot;: 0,
+      &quot;direction&quot;: &quot;in&quot;,
+      &quot;io&quot;: &quot;placeholder&quot;
+    },
+    {
+      &quot;io_id&quot;: 1,
+      &quot;direction&quot;: &quot;out&quot;,
+      &quot;io&quot;: &quot;placeholder&quot;
+    }
+  ],
+  &quot;security&quot;: {
+    &quot;max_decode_size&quot;: {
+      &quot;w&quot;: 10000,
+      &quot;h&quot;: 10000,
+      &quot;megapixels&quot;: 100
+    },
+    &quot;max_frame_size&quot;: null,
+    &quot;max_encode_size&quot;: null
+  },
+  &quot;framewise&quot;: {
+    &quot;steps&quot;: [
+      {
+        &quot;decode&quot;: {
+          &quot;io_id&quot;: 0
+        }
+      },
+      {
+        &quot;constrain&quot;: {
+          &quot;mode&quot;: &quot;within&quot;,
+          &quot;w&quot;: 1400
+        }
+      },
+      {
+        &quot;encode&quot;: {
+          &quot;io_id&quot;: 1,
+          &quot;preset&quot;: {
+            &quot;pngquant&quot;: {
+              &quot;quality&quot;: 80
+            }
+          }
+        }
+      }
+    ]
+  }
+}
+</code></pre>
+<h1><a class="header" href="#json-api-1" id="json-api-1">JSON API</a></h1>
+<p>JSON is primarily used by libimageflow and imageflow_tool. </p>
+<p>You can specify a series of <code>steps</code> to take (the easiest), or you can specify a <a href="json/graph.html">graph</a> with 
+nodes and edges (which allows for multiple inputs and outputs).  Note that you can watermark with a series of steps. </p>
+<p>JSON jobs have the keys <code>io</code> and <code>framewise</code>, which refer to your inputs/outputs and steps/graph to apply to each image frame. </p>
+<p>JSON jobs also have a <code>security</code> key that you can read more about <a href="json/security.html">here</a>.</p>
+<p>If you're using <code>imageflow_tool v1/build</code>, you'll need to specify your inputs and outputs. This isn't needed if you're using <code>libimageflow</code> and <code>v1/execute</code>, as you'll have already registered the inputs and outputs.</p>
+<p>The following example uses <code>steps</code> to constrain an image to 1400px or less and encodes it in 8-bit png. </p>
+<pre><code class="language-json">{
+  &quot;io&quot;: [
+    {
+      &quot;io_id&quot;: 0,
+      &quot;direction&quot;: &quot;in&quot;,
+      &quot;io&quot;: &quot;placeholder&quot;
+    },
+    {
+      &quot;io_id&quot;: 1,
+      &quot;direction&quot;: &quot;out&quot;,
+      &quot;io&quot;: &quot;placeholder&quot;
+    }
+  ],
+  &quot;security&quot;: {
+    &quot;max_decode_size&quot;: {
+      &quot;w&quot;: 10000,
+      &quot;h&quot;: 10000,
+      &quot;megapixels&quot;: 100
+    },
+    &quot;max_frame_size&quot;: null,
+    &quot;max_encode_size&quot;: null
+  },
+  &quot;framewise&quot;: {
+    &quot;steps&quot;: [
+      {
+        &quot;decode&quot;: {
+          &quot;io_id&quot;: 0
+        }
+      },
+      {
+        &quot;constrain&quot;: {
+          &quot;mode&quot;: &quot;within&quot;,
+          &quot;w&quot;: 1400
+        }
+      },
+      {
+        &quot;encode&quot;: {
+          &quot;io_id&quot;: 1,
+          &quot;preset&quot;: {
+            &quot;pngquant&quot;: {
+              &quot;quality&quot;: 80
+            }
+          }
+        }
+      }
+    ]
+  }
+}
+</code></pre>
+<h1><a class="header" href="#security" id="security">Security</a></h1>
+<p>If you're getting things like source images, command strings or width/height values from untrusted sources, 
+it's important to place limits on image sizes to prevent denial-of-service attacks. </p>
+<p>JSON jobs have a <code>security</code> key that can be filled out like this:</p>
+<p>Note that <code>max_frame_size</code> also limits the maximum decode and encode size, 
+so you don't have to specify <code>max_decode_size</code> and <code>max_encode_size</code> unless they are smaller.</p>
+<p>If you don't specify a default, a <code>max_frame_size</code> of 10,000x10,000 and 100 megapixels will be set for you.</p>
+<pre><code class="language-json">{
+&quot;security&quot;: {
+    &quot;max_decode_size&quot;: {
+        &quot;w&quot;: 10000,
+        &quot;h&quot;: 10000,
+        &quot;megapixels&quot;: 50
+    },
+    &quot;max_frame_size&quot;: {
+        &quot;w&quot;: 10000,
+        &quot;h&quot;: 10000,
+        &quot;megapixels&quot;: 100
+    },
+    &quot;max_encode_size&quot;:  {
+        &quot;w&quot;: 8000,
+        &quot;h&quot;: 8000,
+        &quot;megapixels&quot;: 20
+    }
+}
+}
+</code></pre>
+<h1><a class="header" href="#decode-command" id="decode-command">Decode Command</a></h1>
+<p>Typically, you only need to specify the <code>io_id</code> of the file you're decoding. </p>
+<pre><code class="language-json">{
+    &quot;decode&quot;: {
+        &quot;io_id&quot;: 0
+    }
+}
+</code></pre>
+<p>However, some decoders accept commands that can be used to speed up the process. </p>
+<p>The following causes the JPEG decoder to spatially downscale - in linear light - while decoding.</p>
+<p>The image may not be scaled to the exact size requested, but it will be closer.</p>
+<pre><code class="language-json">
+{
+    &quot;decode&quot;: {
+      &quot;io_id&quot;: 0,
+      &quot;commands&quot;: [
+        {
+          &quot;jpeg_downscale_hints&quot;: {
+            &quot;width&quot;: 1600,
+            &quot;height&quot;: 1600,
+            &quot;scale_luma_spatially&quot;: true,
+            &quot;gamma_correct_for_srgb_during_spatial_luma_scaling&quot;: true
+          }
+        }
+      ]
+    }
+}
+</code></pre>
+<p>You can also do this for WebP images, although there is no support for linear light scaling:</p>
+<pre><code class="language-json">
+{
+    &quot;decode&quot;: {
+      &quot;io_id&quot;: 0,
+      &quot;commands&quot;: [
+        {
+          &quot;webp_decoder_hints&quot;: {
+            &quot;width&quot;: 1600,
+            &quot;height&quot;: 1600
+          }
+        }
+      ]
+    }
+}
+</code></pre>
+<p>You can force the color profile to be ignored. </p>
+<pre><code class="language-json">
+{
+    &quot;decode&quot;: {
+      &quot;io_id&quot;: 0,
+      &quot;commands&quot;: [
+        &quot;discard_color_profile&quot;
+      ]
+    }
+}
+</code></pre>
+<p>Or just ignore color profile errors. </p>
+<pre><code class="language-json">
+{
+    &quot;decode&quot;: {
+      &quot;io_id&quot;: 0,
+      &quot;commands&quot;: [
+        &quot;ignore_color_profile_errors&quot;
+      ]
+    }
+}
+</code></pre>
+<h1><a class="header" href="#encode-command" id="encode-command">Encode Command</a></h1>
+<p>When encoding, you'll need the <code>io_id</code> of the file you're encoding to, and a encoding preset. </p>
+<pre><code class="language-json">{
+    &quot;encode&quot;: {
+        &quot;io_id&quot;: 1,
+        &quot;preset&quot;: &quot;gif&quot;
+    }
+}
+</code></pre>
+<h3><a class="header" href="#jpeg-mozjpeg-encoder" id="jpeg-mozjpeg-encoder">Jpeg (MozJpeg encoder)</a></h3>
+<ul>
+<li><code>quality: 0..100</code> controls the image quality. Consider 80 as a good starting point. </li>
+<li><code>progressive: true</code> enables progressive jpeg encoding, which takes more CPU time.</li>
+</ul>
+<pre><code class="language-json">{
+    &quot;mozjpeg&quot;: {
+      &quot;quality&quot;: 90,
+      &quot;progressive&quot;: false
+    }
+}
+</code></pre>
+<h3><a class="header" href="#gif" id="gif">Gif</a></h3>
+<pre><code class="language-json">&quot;gif&quot;
+</code></pre>
+<h3><a class="header" href="#lossless-png" id="lossless-png">Lossless PNG</a></h3>
+<pre><code class="language-json">{
+  &quot;lodepng&quot;: {
+    &quot;maximum_deflate&quot;: false
+  }
+}
+</code></pre>
+<h3><a class="header" href="#lossy-png" id="lossy-png">Lossy PNG</a></h3>
+<ul>
+<li><code>quality: 0..100</code> specifies the target quality to aim for. </li>
+<li><code>minimum_quality: 0.100</code> specifies the actual quality below which to switch to lossless PNG. </li>
+<li><code>speed: 1..10</code> controls the speed/quality tradeoff for encoding. </li>
+<li><code>maximum_deflate: true</code> gains 1-2% in file size reduction at the expense of a tenfold increase in CPU time. </li>
+</ul>
+<pre><code class="language-json">{
+    &quot;pngquant&quot;: {
+      &quot;quality&quot;: 90,
+      &quot;minimum_quality&quot;: 20,
+      &quot;speed&quot;: null,
+      &quot;maximum_deflate&quot;: null
+    }
+}
+</code></pre>
+<h3><a class="header" href="#webp-lossy" id="webp-lossy">WebP (Lossy)</a></h3>
+<ul>
+<li><code>quality: 0..100</code> determines the encoding quality. 80 is a good starting point. </li>
+</ul>
+<pre><code class="language-json">{
+&quot;webplossy&quot;: {
+  &quot;quality&quot;: 80
+}
+}
+</code></pre>
+<h3><a class="header" href="#webp-lossless" id="webp-lossless">WebP (Lossless)</a></h3>
+<pre><code class="language-json">&quot;webplossless&quot;
+</code></pre>
+<h2><a class="header" href="#deprecated-presets" id="deprecated-presets">Deprecated Presets</a></h2>
+<pre><code class="language-json">{
+  &quot;libjpegturbo&quot;: {
+    &quot;quality&quot;: 90,
+    &quot;progressive&quot;: false,
+    &quot;optimize_huffman_coding&quot;: true
+  }
+}
+</code></pre>
+<pre><code class="language-json">{
+    &quot;libpng&quot;: {
+      &quot;depth&quot;: &quot;png_24&quot;,
+      &quot;matte&quot;: {
+        &quot;srgb&quot;: {
+          &quot;hex&quot;: &quot;9922FF&quot;
+        }
+      },
+      &quot;zlib_compression&quot;: 7
+    }
+}
+</code></pre>
+<h3><a class="header" href="#constrain" id="constrain">Constrain</a></h3>
+<ul>
+<li><code>w</code> The width constraint in pixels</li>
+<li><code>h</code> The height constraint in pixels</li>
+<li><code>mode</code> A <a href="json/constrain.html#constraint-modes">constraint mode</a></li>
+<li><code>gravity</code> determines how the image is anchored when cropped or padded. 
+<code>{x: 0, y: 0}</code> represents top-left, <code>{x: 50, y: 50}</code> represents center, 
+<code>{x:100, y:100}</code> represents bottom-right. <em>Default: <code>center</code></em></li>
+<li><code>hints</code> See <a href="json/constrain.html#resampling-hints">resampling hints</a></li>
+<li><code>canvas_color</code> See <a href="json/constrain.html#colors">Color</a>. The color of padding added to the image. </li>
+</ul>
+<pre><code class="language-json">{ 
+  &quot;constrain&quot;: {
+    &quot;mode&quot;: &quot;within&quot;,
+    &quot;w&quot;: 800,
+    &quot;h&quot;: 600,
+    &quot;hints&quot;: {
+      &quot;sharpen_percent&quot;: 7 
+    },
+    &quot;gravity&quot;: { &quot;percentage&quot;:  { &quot;x&quot;:  50, &quot;y&quot;:  50}},
+    &quot;canvas_color&quot;: &quot;transparent&quot;
+  }
+}
+</code></pre>
+<h3><a class="header" href="#constraint-modes" id="constraint-modes">Constraint Modes</a></h3>
+<ul>
+<li><code>distort</code> Distort the image to exactly the given dimensions.
+If only one dimension is specified, behaves like <code>fit</code>.</li>
+<li><code>within</code>
+Ensure the result fits within the provided dimensions. No upscaling.</li>
+<li><code>fit</code>
+Fit the image within the dimensions, upscaling if needed</li>
+<li><code>larger_than</code>
+Ensure the image is larger than the given dimensions</li>
+<li><code>within_crop</code>
+Crop to desired aspect ratio if image is larger than requested, then downscale. Ignores smaller images.
+If only one dimension is specified, behaves like <code>within</code>.</li>
+<li><code>fit_crop</code>
+Crop to desired aspect ratio, then downscale or upscale to fit.
+If only one dimension is specified, behaves like <code>fit</code>.</li>
+<li><code>aspect_crop</code>
+Crop to desired aspect ratio, no upscaling or downscaling. If only one dimension is specified, behaves like Fit.</li>
+<li><code>within_pad</code>
+Pad to desired aspect ratio if image is larger than requested, then downscale. Ignores smaller images.
+If only one dimension is specified, behaves like <code>within</code></li>
+<li><code>fit_pad</code>
+Pad to desired aspect ratio, then downscale or upscale to fit
+If only one dimension is specified, behaves like <code>fit</code>.</li>
+</ul>
+<h1><a class="header" href="#region-command" id="region-command">Region Command</a></h1>
+<p>Region is like a crop command, but you can specify coordinates outside of the image and thereby add padding. 
+It's like a window.</p>
+<p>You can specify a region as a percentage of the image's width and height:</p>
+<pre><code class="language-json">{
+    &quot;region_percent&quot;: {
+        &quot;x1&quot;: -1.0,
+        &quot;y1&quot;: -1.0,
+        &quot;x2&quot;: 101.0,
+        &quot;y2&quot;: 101.0,
+        &quot;background_color&quot;: &quot;transparent&quot;
+    }
+}
+</code></pre>
+<p>Or you can specify a pixel region </p>
+<pre><code class="language-json">{
+    &quot;region&quot;: {
+        &quot;x1&quot;: -1,
+        &quot;y1&quot;: -1,
+        &quot;x2&quot;: 800,
+        &quot;y2&quot;: 800,
+        &quot;background_color&quot;: &quot;transparent&quot;
+    }
+}
+</code></pre>
+<h1><a class="header" href="#crop-whitespace-command" id="crop-whitespace-command">Crop Whitespace Command</a></h1>
+<ul>
+<li><code>threshold: 1..255</code> determines how much noise/edges to tolerate before cropping is finalized. <code>80</code> is a good starting point.</li>
+<li><code>percent_padding</code> determines how much of the image to restore after cropping to provide some padding. <code>0.5</code> (half a percent) is a good starting point. </li>
+</ul>
+<pre><code class="language-json">{
+  &quot;crop_whitespace&quot;: {
+    &quot;threshold&quot;: 80,
+    &quot;percent_padding&quot; : 2
+  }
+}
+</code></pre>
+<h1><a class="header" href="#rotation-and-flipping" id="rotation-and-flipping">Rotation and flipping</a></h1>
+<p>The following nodes are simply strings rather than objects</p>
+<pre><code class="language-json">[
+  &quot;flip_h&quot;,
+  &quot;flip_v&quot;,
+  &quot;transpose&quot;,
+  &quot;rotate_90&quot;,
+  &quot;rotate_180&quot;,
+  &quot;rotate_270&quot;
+]
+</code></pre>
+<h1><a class="header" href="#fill-rectangle-command" id="fill-rectangle-command">Fill Rectangle Command</a></h1>
+<p>This draws a black 8x8 square at the top-left of the image. </p>
+<pre><code class="language-json">{
+    &quot;fill_rect&quot;: {
+        &quot;x1&quot;: 0,
+        &quot;y1&quot;: 0,
+        &quot;x2&quot;: 8,
+        &quot;y2&quot;: 8,
+        &quot;color&quot;: &quot;black&quot;
+    }
+}
+</code></pre>
+<h1><a class="header" href="#expand-canvas-command" id="expand-canvas-command">Expand Canvas Command</a></h1>
+<p>The following adds a 10px pink border around the image. </p>
+<pre><code class="language-json">{
+    &quot;expand_canvas&quot;: {
+        &quot;left&quot;: 10,
+        &quot;top&quot;: 10,
+        &quot;right&quot;: 10,
+        &quot;bottom&quot;: 10,
+        &quot;color&quot;: {
+            &quot;srgb&quot;: {
+              &quot;hex&quot;: &quot;FFEECCFF&quot;
+            }
+        }
+    }
+}
+</code></pre>
+<h3><a class="header" href="#watermark" id="watermark">Watermark</a></h3>
+<ul>
+<li><code>io_id</code> (<strong>required</strong>) specifies which input image to use as a watermark. </li>
+<li><code>gravity</code> determines how the image is placed within the <code>fit_box</code>. 
+<code>{x: 0, y: 0}</code> represents top-left, <code>{x: 50, y: 50}</code> represents center, 
+<code>{x:100, y:100}</code> represents bottom-right. <em>Default: <code>center</code></em></li>
+<li><code>fit_mode</code> is one of <code>distort</code>, <code>within</code>, <code>fit</code>, <code>within_crop</code>, or <code>fit_crop</code>. 
+Meanings are the same as for <a href="json/constrain.html#constraint-modes">constraint modes</a>. <em>Default: <code>within</code></em></li>
+<li><code>fit_box</code> can be either <code>image_percentage</code> (a box represented by percentages of target image width/height) or 
+<code>image_margins</code> (a box represented by pixels from the edge of the image). <em>Default <code>image_margins</code> 0</em></li>
+<li><code>min_canvas_width</code> sets a minimum canvas width below which the watermark will be hidden. </li>
+<li><code>min_canvas_height</code> sets a minimum canvas height below which the watermark will be hidden. </li>
+<li><code>opacity</code> (0..1) How opaque to draw the image. <em>Default 1.0</em></li>
+<li><code>hints</code> See <a href="json/resampling_hints.html">resampling hints</a></li>
+</ul>
+<h4><a class="header" href="#example-with-fit_box-image_percentage" id="example-with-fit_box-image_percentage">Example with fit_box: image_percentage</a></h4>
+<p>This will align the watermark to 10% from the bottom and right edges of the image, 
+scaling the watermark down if it takes more than 80% of the image space,
+drawing it at 80% opacity and applying 15% sharpening. It will not display on images smaller than 50x50px in either dimension.</p>
+<pre><code class="language-json">{
+  &quot;watermark&quot;: {
+    &quot;io_id&quot;: 1,
+    &quot;gravity&quot;: { 
+      &quot;percentage&quot; : {
+        &quot;x&quot;: 100,
+        &quot;y&quot;: 100 
+      }
+    },
+    &quot;fit_mode&quot;: &quot;within&quot;,
+    &quot;fit_box&quot;: { 
+      &quot;image_percentage&quot;: {
+        &quot;x1&quot;: 10,
+        &quot;y1&quot;: 10,
+        &quot;x2&quot;: 90,
+        &quot;y2&quot;: 90
+      } 
+    }, 
+    &quot;min_canvas_width&quot;: 50,
+    &quot;min_canvas_height&quot;: 50,
+    &quot;opacity&quot;: 0.8,
+    &quot;hints&quot;: {
+      &quot;sharpen_percent&quot;: 15
+    }
+  }
+}
+</code></pre>
+<h4><a class="header" href="#example-with-fit_box-image_margins" id="example-with-fit_box-image_margins">Example with fit_box: image_margins</a></h4>
+<p>This will stretch/distort the watermark to fill the image except for a 5px margin.</p>
+<pre><code class="language-json">{
+  &quot;watermark&quot;: {
+    &quot;io_id&quot;: 1,
+    &quot;gravity&quot;: { &quot;center&quot;: null },
+    &quot;fit_mode&quot;: &quot;distort&quot;,
+    &quot;fit_box&quot;: { 
+      &quot;image_margins&quot;: {
+        &quot;left&quot;: 5,
+        &quot;top&quot;: 5,
+        &quot;right&quot;: 5,
+        &quot;bottom&quot;: 5
+      } 
+    }
+  }
+}
+</code></pre>
+<h1><a class="header" href="#command-string-command" id="command-string-command">Command String Command</a></h1>
+<p>It's possible to execute a querystring command within a JSON file. </p>
+<p>This is commonly used by <code>libimageflow</code> bindings to execute querystring commands. </p>
+<p>When specifying a <code>decode</code> <code>io_id</code>, no <code>decode</code> node is needed. 
+When specifying an <code>encode</code> <code>io_id</code>, no <code>encode</code> node is needed.</p>
+<p>When specifying both, no other nodes are needed in the job. This is the preferred method of use, as
+decode hints will be optimized and encoder commands will be honored. </p>
+<pre><code class="language-json">{
+  &quot;command_string&quot;: {
+    &quot;kind&quot;: &quot;ir4&quot;,
+    &quot;value&quot;: &quot;width=100&amp;height=100&amp;mode=max&quot;,
+    &quot;decode&quot;: 0,
+    &quot;encode&quot;: 1  
+  }
+}
+</code></pre>
+<h1><a class="header" href="#white-balance-srgb-command" id="white-balance-srgb-command">White Balance sRGB Command</a></h1>
+<p>This command is not recommended as it operates in the sRGB space and does not produce perfect results. </p>
+<pre><code class="language-json">{
+    &quot;white_balance_histogram_area_threshold_srgb&quot;: {
+       &quot;threshold&quot;: 30
+    }
+}
+</code></pre>
+<h1><a class="header" href="#color-filter-srgb" id="color-filter-srgb">Color Filter sRGB</a></h1>
+<p>This command is not ideal as it operates in the sRGB space. For alpha operations it doesn't matter, and for grayscale conversion it matches various international standards. </p>
+<pre><code class="language-json">{ 
+  &quot;color_filter_srgb&quot;: &quot;grayscale_ntsc&quot;
+}
+</code></pre>
+<pre><code class="language-json">{ 
+  &quot;color_filter_srgb&quot;: &quot;grayscale_flat&quot;
+}
+</code></pre>
+<pre><code class="language-json">{ 
+  &quot;color_filter_srgb&quot;: &quot;grayscale_bt709&quot;
+}
+</code></pre>
+<pre><code class="language-json">{ 
+  &quot;color_filter_srgb&quot;: &quot;grayscale_ry&quot;
+}
+</code></pre>
+<pre><code class="language-json">{ 
+  &quot;color_filter_srgb&quot;: &quot;sepia&quot;
+}
+</code></pre>
+<pre><code class="language-json">{ 
+  &quot;color_filter_srgb&quot;: &quot;invert&quot;
+}
+</code></pre>
+<ul>
+<li><code>alpha: 0..1</code></li>
+</ul>
+<pre><code class="language-json">{ 
+  &quot;color_filter_srgb&quot;: {&quot;alpha&quot;:  0.5}
+}
+</code></pre>
+<ul>
+<li><code>contrast: -1..1</code></li>
+</ul>
+<pre><code class="language-json">{ 
+  &quot;color_filter_srgb&quot;: {&quot;contrast&quot;:  0.5}
+}
+</code></pre>
+<ul>
+<li><code>brightness: -1..1</code></li>
+</ul>
+<pre><code class="language-json">{ 
+  &quot;color_filter_srgb&quot;: {&quot;brightness&quot;:  0.5}
+}
+</code></pre>
+<ul>
+<li><code>saturation: -1...1</code></li>
+</ul>
+<pre><code class="language-json">{ 
+  &quot;color_filter_srgb&quot;: {&quot;saturation&quot;:  0.5}
+}
+</code></pre>
+<h1><a class="header" href="#resampling-hints" id="resampling-hints">Resampling Hints</a></h1>
+<p>Resampling hints can be specified in constraint commands, scale commands, watermarking, and for compositing. They offer control over image sharpness, resampling color space, background color, and more. </p>
+<ul>
+<li><code>sharpen_percent</code> (0..100) The amount of sharpening to apply during resampling</li>
+<li><code>up_filter</code> The resampling filter to use if upscaling in one or more directions</li>
+<li><code>down_filter</code> The resampling filter to use if downscaling in both directions.</li>
+<li><code>scaling_colorspace</code> Use <code>linear</code> for the best results, or <code>srgb</code> to mimick poorly-written software. <code>srgb</code> can destroy image highlights.</li>
+<li><code>background_color</code> The background color to apply. </li>
+<li><code>resample_when</code> One of <code>size_differs</code>, <code>size_differs_or_sharpening_requested</code>, or <code>always</code>.</li>
+<li><code>sharpen_when</code> One of <code>downscaling</code>, <code>upscaling</code>, <code>size_differs</code>, or <code>always</code></li>
+</ul>
+<pre><code class="language-json">{ 
+  &quot;sharpen_percent&quot;: 15,
+  &quot;down_filter&quot;:  &quot;robidoux&quot;,
+  &quot;up_filter&quot;: &quot;ginseng&quot;,
+  &quot;scaling_colorspace&quot;: &quot;linear&quot;,
+  &quot;background_color&quot;: &quot;transparent&quot;,
+  &quot;resample_when&quot;: &quot;size_differs_or_sharpening_requested&quot;,
+  &quot;sharpen_when&quot;: &quot;downscaling&quot;
+}
+</code></pre>
+<h3><a class="header" href="#resampling-filters" id="resampling-filters">Resampling Filters</a></h3>
+<ul>
+<li><code>robidoux</code> - The default and recommended downsampling filter</li>
+<li><code>robidoux_sharp</code> - A sharper version of the above</li>
+<li><code>robidoux_fast</code> - A faster, less accurate version of robidoux</li>
+<li><code>ginseng</code> - The default and suggested upsampling filter</li>
+<li><code>ginseng_sharp</code> </li>
+<li><code>lanczos</code> </li>
+<li><code>lanczos_sharp</code></li>
+<li><code>lanczos_2</code> </li>
+<li><code>lanczos_2_sharp</code></li>
+<li><code>cubic</code> </li>
+<li><code>cubic_sharp</code> </li>
+<li><code>catmull_rom</code> </li>
+<li><code>mitchell</code> </li>
+<li><code>cubic_b_spline</code> </li>
+<li><code>hermite</code> </li>
+<li><code>jinc</code> </li>
+<li><code>triangle</code> </li>
+<li><code>linear</code> </li>
+<li><code>box</code> </li>
+<li><code>fastest</code> </li>
+<li><code>n_cubic</code> </li>
+<li><code>n_cubic_sharp</code> </li>
+</ul>
+<h3><a class="header" href="#colors" id="colors">Colors</a></h3>
+<p>Colors can be named, or be RRGGBBAA hexadecimals.</p>
+<ul>
+<li><code>transparent</code></li>
+<li><code>black</code></li>
+<li><code>{ &quot;srgb&quot;: { &quot;hex&quot; : &quot;ffffff&quot; } }</code></li>
+</ul>
+<h1><a class="header" href="#using-a-json-graph" id="using-a-json-graph">Using a JSON Graph</a></h1>
+<p>The following generates 4 sizes of images in a single job. Much execution time is saved
+because the image is not re-decoded for each output. </p>
+<p>Still, it is best to use a fluent API to help build JSON graphs, as it can be error prone. </p>
+<pre><code class="language-json">{
+  &quot;io&quot;: [
+    {
+      &quot;io_id&quot;: 0,
+      &quot;direction&quot;: &quot;in&quot;,
+      &quot;io&quot;: &quot;placeholder&quot;
+    },
+    {
+      &quot;io_id&quot;: 1,
+      &quot;direction&quot;: &quot;out&quot;,
+      &quot;io&quot;: &quot;placeholder&quot;
+    },
+    {
+      &quot;io_id&quot;: 2,
+      &quot;direction&quot;: &quot;out&quot;,
+      &quot;io&quot;: &quot;placeholder&quot;
+    },
+    {
+      &quot;io_id&quot;: 3,
+      &quot;direction&quot;: &quot;out&quot;,
+      &quot;io&quot;: &quot;placeholder&quot;
+    },
+    {
+      &quot;io_id&quot;: 4,
+      &quot;direction&quot;: &quot;out&quot;,
+      &quot;io&quot;: &quot;placeholder&quot;
+    }
+  ],
+  &quot;framewise&quot;: {
+    &quot;graph&quot;: {
+      &quot;nodes&quot;: {
+        &quot;0&quot;: {
+          &quot;decode&quot;: {
+            &quot;io_id&quot;: 0
+          }
+        },
+        &quot;1&quot;: {
+          &quot;constrain&quot;: {
+            &quot;mode&quot;: &quot;within&quot;,
+            &quot;w&quot;: 1600
+          }
+        },
+        &quot;2&quot;: {
+          &quot;constrain&quot;: {
+            &quot;mode&quot;: &quot;within&quot;,
+            &quot;w&quot;: 1200
+          }
+        },
+        &quot;3&quot;: {
+          &quot;constrain&quot;: {
+            &quot;mode&quot;: &quot;within&quot;,
+            &quot;w&quot;: 800
+          }
+        },
+        &quot;4&quot;: {
+          &quot;constrain&quot;: {
+            &quot;mode&quot;: &quot;within&quot;,
+            &quot;w&quot;: 400
+          }
+        },
+        &quot;5&quot;: {
+          &quot;encode&quot;: {
+            &quot;io_id&quot;: 1,
+            &quot;preset&quot;: {
+              &quot;mozjpeg&quot;: {
+                &quot;quality&quot;: 90
+              }
+            }
+          }
+        },
+        &quot;6&quot;: {
+          &quot;encode&quot;: {
+            &quot;io_id&quot;: 2,
+            &quot;preset&quot;: {
+              &quot;mozjpeg&quot;: {
+                &quot;quality&quot;: 90
+              }
+            }
+          }
+        },
+        &quot;7&quot;: {
+          &quot;encode&quot;: {
+            &quot;io_id&quot;: 3,
+            &quot;preset&quot;: {
+              &quot;mozjpeg&quot;: {
+                &quot;quality&quot;: 90
+              }
+            }
+          }
+        }
+        &quot;8&quot;: {
+          &quot;encode&quot;: {
+            &quot;io_id&quot;: 4,
+            &quot;preset&quot;: {
+              &quot;mozjpeg&quot;: {
+                &quot;quality&quot;: 90
+              }
+            }
+          }
+        },
+      },
+      &quot;edges&quot;: [
+        {
+          &quot;from&quot;: 4,
+          &quot;to&quot;: 8,
+          &quot;kind&quot;: &quot;input&quot;
+        },
+        {
+          &quot;from&quot;: 2,
+          &quot;to&quot;: 4,
+          &quot;kind&quot;: &quot;input&quot;
+        },
+        {
+          &quot;from&quot;: 1,
+          &quot;to&quot;: 2,
+          &quot;kind&quot;: &quot;input&quot;
+        },
+        {
+          &quot;from&quot;: 0,
+          &quot;to&quot;: 1,
+          &quot;kind&quot;: &quot;input&quot;
+        },
+        {
+          &quot;from&quot;: 3,
+          &quot;to&quot;: 7,
+          &quot;kind&quot;: &quot;input&quot;
+        },
+        {
+          &quot;from&quot;: 1,
+          &quot;to&quot;: 3,
+          &quot;kind&quot;: &quot;input&quot;
+        },
+        {
+          &quot;from&quot;: 2,
+          &quot;to&quot;: 6,
+          &quot;kind&quot;: &quot;input&quot;
+        },
+        {
+          &quot;from&quot;: 1,
+          &quot;to&quot;: 5,
+          &quot;kind&quot;: &quot;input&quot;
+        }
+      ]
+    }
+  }
+}
+</code></pre>
+<h1><a class="header" href="#create-canvas-command" id="create-canvas-command">Create Canvas Command.</a></h1>
+<p>The following node creates a 200x200 transparent canvas. </p>
+<pre><code class="language-json">{
+  &quot;create_canvas&quot;: {
+    &quot;format&quot;: &quot;bgra_32&quot;,
+    &quot;w&quot;: 200,
+    &quot;h&quot;: 200,
+    &quot;color&quot;: &quot;transparent&quot;
+  }
+}
+</code></pre>
+<p>The following node creates a 200x200 black canvas. Transparency operations will not work as the canvas doesn't support an alpha channel.</p>
+<pre><code class="language-json">{
+  &quot;create_canvas&quot;: {
+    &quot;format&quot;: &quot;bgr_32&quot;,
+    &quot;w&quot;: 200,
+    &quot;h&quot;: 200,
+    &quot;color&quot;: &quot;black&quot;
+  }
+}
+</code></pre>
+<h1><a class="header" href="#copy-rectangle-command" id="copy-rectangle-command">Copy Rectangle Command</a></h1>
+<p>This node can only be used with <code>graph</code>, as it requires both a <code>canvas</code> and an <code>input</code> node. </p>
+<p>The following node copies (but does not blend/composite) a 100x100 square from the <code>input</code> node to <code>x:100, y:100</code> on the <code>canvas</code> node. </p>
+<pre><code class="language-json">{
+  &quot;copy_rect_to_canvas&quot;: {
+    &quot;from_x&quot;: 0,
+    &quot;from_y&quot;: 0,
+    &quot;w&quot;: 100,
+    &quot;h&quot;: 100,
+    &quot;x&quot;: 100,
+    &quot;y&quot;: 100
+  }
+}
+</code></pre>
+<h1><a class="header" href="#draw-image-exact-command" id="draw-image-exact-command">Draw Image Exact Command</a></h1>
+<p>The following node will compose the <code>input</code> image with the top-left 100x100 square on the 
+<code>canvas</code>, distorting it if the aspect ratio is different. 15% sharpening will be applied. </p>
+<p>This node can only be used with <code>graph</code>.</p>
+<pre><code class="language-json">{
+  &quot;draw_image_exact&quot;: {
+    &quot;x&quot;: 0,
+    &quot;y&quot;: 0,
+    &quot;w&quot;: 100,
+    &quot;h&quot;: 100,
+    &quot;blend&quot;: &quot;compose&quot;,
+    &quot;hints&quot;: {
+      &quot;sharpen_percent&quot;: 15
+    }
+  }
+}
+</code></pre>
+<h1><a class="header" href="#todo-1" id="todo-1">TODO</a></h1>
+<h1><a class="header" href="#todo-2" id="todo-2">TODO</a></h1>
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                        
+
+                        
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                
+
+                
+            </nav>
+
+        </div>
+
+        
+
+        
+
+        
+        
+        
+        <script type="text/javascript">
+            window.playpen_copyable = true;
+        </script>
+        
+
+        
+
+        
+
+        <script src="clipboard.min.js" type="text/javascript" charset="utf-8"></script>
+        <script src="highlight.js" type="text/javascript" charset="utf-8"></script>
+        <script src="book.js" type="text/javascript" charset="utf-8"></script>
+
+        <!-- Custom JS scripts -->
+        
+
+        
+        
+        <script type="text/javascript">
+        window.addEventListener('load', function() {
+            window.setTimeout(window.print, 100);
+        });
+        </script>
+        
+        
+
+    </body>
+</html>
