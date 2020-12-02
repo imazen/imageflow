@@ -13,7 +13,6 @@ use staticfile::Static;
 #[macro_use] extern crate serde_derive;
 
 extern crate staticfile;
-extern crate rustc_serialize;
 extern crate hyper;
 
 extern crate time;

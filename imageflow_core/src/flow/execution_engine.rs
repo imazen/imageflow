@@ -5,8 +5,6 @@ use petgraph::dot::Dot;
 use std::process::Command;
 use super::visualize::{notify_graph_changed, GraphRecordingUpdate, GraphRecordingInfo};
 use petgraph::EdgeDirection;
-use rustc_serialize::base64;
-use rustc_serialize::base64::ToBase64;
 use imageflow_helpers::timeywimey::precise_time_ns;
 
 pub struct Engine<'a> {
@@ -572,7 +570,10 @@ impl<'a> Engine<'a> {
                     s::IoEnum::Filename(ref str) => s::ResultBytes::PhysicalFile(str.to_owned()),
                     s::IoEnum::OutputBase64 => {
                         let slice = self.c.get_output_buffer_slice(r.io_id).map_err(|e| e.at(here!())).unwrap();
-                        s::ResultBytes::Base64(slice.to_base64(base64::Config{char_set: base64::CharacterSet::Standard, line_length: None, newline: base64::Newline::LF, pad: true}))
+                        let b64 = base64::encode_config(slice,
+                                                        base64::Config::new(base64::CharacterSet::Standard, true));
+
+                        s::ResultBytes::Base64(b64)
                     },
                     _ => s::ResultBytes::Elsewhere
                 };
@@ -600,6 +601,7 @@ impl<'a> OpCtxMut<'a> {
 use daggy::walker::Walker;
 use crate::flow::definitions::NodeResult::Frame;
 use crate::codecs::NamedEncoders::LodePngEncoder;
+use base64::CharacterSet;
 
 
 pub fn flow_node_has_dimensions(g: &Graph, node_id: NodeIndex) -> bool {

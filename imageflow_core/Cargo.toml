@@ -44,6 +44,8 @@ smallvec = "1"
 itertools = "0.9"
 imgref = "1.4.1"
 slotmap = "0.4.0"
+base64 = "0.13"
+hex = "0.4"
 
 gif = "0.10"
 rgb = { version = "0.8", features = ["argb"] }

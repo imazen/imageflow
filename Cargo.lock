@@ -1004,6 +1004,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "hex"
+version = "0.4.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "644f9158b2f133fd50f5fb3242878846d9eb792e445c893805ff0e3824006e35"
+
+[[package]]
 name = "http"
 version = "0.1.21"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1253,6 +1259,7 @@ dependencies = [
 name = "imageflow_core"
 version = "0.1.0"
 dependencies = [
+ "base64 0.13.0",
  "blake2-rfc",
  "byteorder",
  "chashmap",
@@ -1265,6 +1272,7 @@ dependencies = [
  "fnv",
  "getopts",
  "gif",
+ "hex",
  "hyper 0.13.8",
  "imageflow_c_components",
  "imageflow_helpers",
@@ -1363,6 +1371,7 @@ dependencies = [
 name = "imageflow_server"
 version = "0.1.0"
 dependencies = [
+ "base64 0.13.0",
  "bincode",
  "blake2-rfc",
  "chrono",
@@ -1857,7 +1866,8 @@ checksum = "41f5c9112cb662acd3b204077e0de5bc66305fa8df65c8019d5adb10e9ab6e58"
 [[package]]
 name = "mount"
 version = "0.3.0"
-source = "git+https://github.com/iron/mount.git?rev=2c3d719be4c158d4ddbd8cdb402fafccdefec58c#2c3d719be4c158d4ddbd8cdb402fafccdefec58c"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "32245731923cd096899502fc4c4317cfd09f121e80e73f7f576cf3777a824256"
 dependencies = [
  "iron",
  "sequence_trie",
@@ -1866,8 +1876,7 @@ dependencies = [
 [[package]]
 name = "mount"
 version = "0.3.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "32245731923cd096899502fc4c4317cfd09f121e80e73f7f576cf3777a824256"
+source = "git+https://github.com/iron/mount.git?rev=2c3d719be4c158d4ddbd8cdb402fafccdefec58c#2c3d719be4c158d4ddbd8cdb402fafccdefec58c"
 dependencies = [
  "iron",
  "sequence_trie",

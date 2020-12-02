@@ -19,6 +19,7 @@ serde = "1"
 serde_json = "1"
 serde_derive = "1"
 rustc-serialize = "*"
+base64 = "0.13"
 
 #lazy static
 lazy_static = "1"

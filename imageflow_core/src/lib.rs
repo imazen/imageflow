@@ -25,7 +25,6 @@ extern crate serde_derive;
 extern crate serde_json;
 extern crate lcms2;
 extern crate libc;
-extern crate rustc_serialize;
 extern crate uuid;
 extern crate imagequant;
 extern crate gif;
