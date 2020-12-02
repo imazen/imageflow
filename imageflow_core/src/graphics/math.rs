@@ -1,31 +1,17 @@
 
 extern "C" {
-    #[no_mangle]
     pub(crate) fn pow(_: f64, _: f64) -> f64;
-    #[no_mangle]
-    fn memcpy(_: *mut libc::c_void, _: *const libc::c_void, _: u64) -> *mut libc::c_void;
-    #[no_mangle]
     fn fabs(_: f64) -> f64;
-    #[no_mangle]
     fn j1(_: f64) -> f64;
-    #[no_mangle]
     fn fmin(_: f64, _: f64) -> f64;
-    #[no_mangle]
     fn ceil(_: f64) -> f64;
-    #[no_mangle]
     fn floor(_: f64) -> f64;
-    #[no_mangle]
     fn fmax(_: f64, _: f64) -> f64;
-    #[no_mangle]
     fn sqrt(_: f64) -> f64;
-    #[no_mangle]
     fn exp(_: f64) -> f64;
-    #[no_mangle]
-    fn memset(_: *mut libc::c_void, _: i32, _: u64) -> *mut libc::c_void;
 }
 
-pub const BESSEL_01: unsafe extern "C" fn(_: f64) -> f64 = j1;
-pub const IR_PI: f64 = 3.1415926535897932384626433832795f64;
+pub const IR_PI: f64 = std::f64::consts::PI;
 #[inline]
 unsafe fn int_max(a: i32, b: i32) -> i32 {
     return if a >= b { a } else { b };
