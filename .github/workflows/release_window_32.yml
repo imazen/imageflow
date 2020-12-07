@@ -86,13 +86,13 @@ jobs:
           NUGET_RUNTIME: win-x86
           TARGET_DIR: target/i686-pc-windows-msvc
 
-      # - name: Upload to release
-      #   uses: Shopify/upload-to-release@master
-      #   with:
-      #     name: imageflow-${{env.GITHUB_REF_NAME_SLUG}}-${{env.GITHUB_SHA_SHORT}}-win-x86.tar.gz
-      #     path: ./artifacts/upload/imageflow-${{env.GITHUB_REF_NAME_SLUG}}-${{env.GITHUB_SHA_SHORT}}-win-x86.tar.gz
-      #     repo-token: ${{ secrets.GITHUB_TOKEN }}
-      #     content-type: text/plain
+      - name: Upload to release
+        uses: Shopify/upload-to-release@master
+        with:
+          name: imageflow-${{env.GITHUB_REF_NAME_SLUG}}-${{env.GITHUB_SHA_SHORT}}-win-x86.tar.gz
+          path: ./artifacts/upload/imageflow-${{env.GITHUB_REF_NAME_SLUG}}-${{env.GITHUB_SHA_SHORT}}-win-x86.tar.gz
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+          content-type: text/plain
       - name: Upload to S3
         uses: shallwefootball/s3-upload-action@master
         with:
