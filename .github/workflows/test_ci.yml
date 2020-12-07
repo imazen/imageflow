@@ -1,0 +1,78 @@
+name: Test
+
+on:
+  push:
+    - main
+
+jobs:
+  build:
+    strategy:
+      matrix:
+        include:
+          - name: ubuntu_16_04-x86_64
+            os: ubuntu-16.04
+            TARGET_CPU: x86-64
+
+          - name: ubuntu_18_04-x86_64
+            os: ubuntu-18.04
+            TARGET_CPU: x86-64
+
+          - name: ubuntu_20_04-x86_64
+            os: ubuntu-20.04
+            TARGET_CPU: x86-64
+
+          - name: osx_11_0-x86_64
+            os: macos-11.0
+            TARGET_CPU: x86-64
+
+          - name: osx_10_11-x86_64
+            os: macos-10.15
+            TARGET_CPU: x86-64
+
+          - name: win-x86_64
+            os: windows-2019
+            TARGET_CPU: x86-64
+
+          - name: ubuntu_16_04-x86_64-haswell
+            os: ubuntu-16.04
+            TARGET_CPU: haswell
+
+          - name: ubuntu_18_04-x86_64-haswell
+            os: ubuntu-18.04
+            TARGET_CPU: haswell
+
+          - name: ubuntu_20_04-x86_64-haswell
+            os: ubuntu-20.04
+            TARGET_CPU: haswell
+
+          - name: win-x86_64-haswell
+            os: windows-2019
+            TARGET_CPU: haswell
+
+    runs-on: ${{matrix.os}}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@master
+      - uses: FranzDiebold/github-env-vars-action@v1.3.0
+      - name: Install nasm
+        run: brew install nasm
+        if: ${{contains( matrix.os, 'macos' )}}
+      - name: Install nasm
+        run: choco install nasm
+        if: ${{contains( matrix.os, 'windows' )}}
+      - name: Install nasm
+        run: sudo apt install nasm
+        if: ${{contains( matrix.os, 'ubuntu' )}}
+      - name: Install dssim
+        run: cargo install dssim
+      - name: Check Build
+        run: cargo check --all
+      - name: Test Build
+        run: cargo test --all
+        env:
+          RUSTFLAGS: -C target-cpu=${{matrix.TARGET_CPU}}
+      - name: Build Release
+        run: cargo build --all
+        shell: bash
+        env:
+          RUSTFLAGS: -C target-cpu=${{matrix.TARGET_CPU}}

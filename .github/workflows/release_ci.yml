@@ -1,0 +1,257 @@
+#  NUGET_RUNTIME= UPLOAD_BUILD=True FETCH_COMMIT_SUFFIX=mac64
+name: Release
+
+on:
+  release:
+    types:
+      - published
+
+jobs:
+  build:
+    strategy:
+      matrix:
+        include:
+          - name: ubuntu_16_04-x86_64
+            os: ubuntu-16.04
+            FETCH_COMMIT_SUFFIX: linux64
+            TARGET_CPU: x86-64
+            NUGET_RUNTIME: linux-x64
+
+          - name: ubuntu_18_04-x86_64
+            os: ubuntu-18.04
+            TARGET_CPU: x86-64
+            FETCH_COMMIT_SUFFIX: linux64_glibc227
+            NUGET_RUNTIME: ubuntu.18.04-x64
+
+          - name: ubuntu_20_04-x86_64
+            os: ubuntu-20.04
+            TARGET_CPU: x86-64
+            FETCH_COMMIT_SUFFIX: linux64_glibc231
+            NUGET_RUNTIME: ubuntu.20.04-x64
+
+          - name: osx_11_0-x86_64
+            os: macos-11.0
+            TARGET_CPU: x86-64
+            FETCH_COMMIT_SUFFIX: mac64
+            NUGET_RUNTIME: osx-x64
+
+          - name: osx_10_11-x86_64
+            os: macos-10.15
+            TARGET_CPU: x86-64
+            FETCH_COMMIT_SUFFIX: mac64
+            NUGET_RUNTIME: osx-x64
+
+          - name: win-x86_64
+            os: windows-2019
+            TARGET_CPU: x86-64
+            FETCH_COMMIT_SUFFIX: win-x86_64
+            NUGET_RUNTIME: win-x64
+
+          - name: ubuntu_16_04-x86_64-haswell
+            os: ubuntu-16.04
+            TARGET_CPU: haswell
+            FETCH_COMMIT_SUFFIX: linux64_haswell
+            NUGET_RUNTIME: linux-x64
+
+          - name: ubuntu_18_04-x86_64-haswell
+            os: ubuntu-18.04
+            TARGET_CPU: haswell
+            FETCH_COMMIT_SUFFIX: linux64_haswell_glibc227
+            NUGET_RUNTIME: ubuntu.18.04-x64
+
+          - name: ubuntu_20_04-x86_64-haswell
+            os: ubuntu-20.04
+            TARGET_CPU: haswell
+            FETCH_COMMIT_SUFFIX: linux64_haswell_glibc231
+            NUGET_RUNTIME: ubuntu.20.04-x64
+
+          - name: win-x86_64-haswell
+            os: windows-2019
+            TARGET_CPU: haswell
+            FETCH_COMMIT_SUFFIX: win-x86_64-haswell
+            NUGET_RUNTIME: win-x64
+
+    runs-on: ${{matrix.os}}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@master
+      - uses: FranzDiebold/github-env-vars-action@v1.3.0
+      - name: Install nasm
+        run: brew install nasm
+        if: ${{contains( matrix.os, 'macos' )}}
+      - name: Install nasm
+        run: choco install nasm
+        if: ${{contains( matrix.os, 'windows' )}}
+      - name: Install nasm
+        run: sudo apt install nasm
+        if: ${{contains( matrix.os, 'ubuntu' )}}
+      - name: Install dssim
+        run: cargo install dssim
+      # Install Valgrind
+      # - name: Install Valgrind
+      #   run: |
+      #     brew tap LouisBrunner/valgrind
+      #     brew install --HEAD LouisBrunner/valgrind/valgrind
+      # - name: Count Unsafe code
+      #   run: |
+      #     cargo install cargo-count
+      #     (cd imageflow_core && cargo count --unsafe-statistics)
+      #     (cd imageflow_abi && cargo count --unsafe-statistics)
+      #     (cd imageflow_tool && cargo count --unsafe-statistics)
+      #     (cd imageflow_riapi && cargo count --unsafe-statistics)
+      #     (cd imageflow_helpers && cargo count --unsafe-statistics)
+      #     (cd imageflow_types && cargo count --unsafe-statistics)
+      #     (cd imageflow_server && cargo count --unsafe-statistics)
+      #     (cd c_components/lib && cargo count --unsafe-statistics)
+      # - name: Test Release
+      #   run: cargo test --all --release
+      # - name: Test Under Valgrind
+      #   run: |
+      #       TEST_BINARIES=("$@")
+      #       shopt -s nullglob
+      #       TEST_BINARIES=(./${TEST_BINARIES_TARGET}release/deps/imageflow*[a-f0-9][a-f0-9][a-f0-9][a-f0-9][a-f0-9][a-f0-9][a-f0-9][a-f0-9][a-f0-9][a-f0-9][a-f0-9][a-f0-9][a-f0-9][a-f0-9][a-f0-9][a-f0-9])
+      #       shopt -u nullglob
+      #       printf "discovered binaries:\n"
+
+      #       printf "%s\n" "${TEST_BINARIES[@]}"
+
+      #       SKIP_BINARIES+=("$(ls ./"${TEST_BINARIES_TARGET}"release/test_ir4* || true )")
+      #       SKIP_BINARIES+=("$(ls ./"${TEST_BINARIES_TARGET}"release/*imageflow_helpers* || true )")
+      #       SKIP_BINARIES+=("$(ls ./"${TEST_BINARIES_TARGET}"release/*imageflow_riapi* || true )")
+      #       SKIP_BINARIES+=("$(ls ./"${TEST_BINARIES_TARGET}"release/*imageflow_types* || true )")
+      #       SKIP_BINARIES+=("$(ls ./"${TEST_BINARIES_TARGET}"release/bench_graphics* || true )")
+
+      #       function join_by { local IFS="$1"; shift; echo "$*"; }
+      #       SKIP_BINARIES_STR="$(join_by " " "${SKIP_BINARIES[@]}")"
+      #       SKIP_BINARIES_STR=" $SKIP_BINARIES_STR "
+
+      #       create_valgrind_files_in()(
+      #         (
+      #           SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+
+      #           cd "$1"
+      #           FILE_NAMES=(".valgrindrc" "valgrind_suppressions.txt")
+      #           for f in "${FILE_NAMES[@]}"
+      #           do
+      #             cp "${SCRIPT_DIR}/${f}" "./${f}"
+      #           done
+      #         )
+      #       )
+      #       for f in "${TEST_BINARIES[@]}"
+      #       do
+      #         if [[ "$SKIP_BINARIES_STR" == *"${f}"* ]]; then
+      #           echo "SKIPPING"
+      #         else
+
+      #           REL_F=$(basename "${f}")
+      #           DIR=$(dirname "${f}")
+      #           DIR="${DIR}/valgrind_${REL_F}_temp"
+      #           mkdir -p "${DIR}" || true
+
+      #           create_valgrind_files_in "$DIR"
+
+      #           FULL_COMMAND="(cd $DIR && valgrind $VALGRIND_ARGS ../$REL_F)"
+
+      #           export VALGRIND_RUNNING=1
+      #           export RUST_BACKTRACE=1
+      #           export RUST_TEST_TASKS=1
+      #           eval "$FULL_COMMAND"
+
+      #         fi
+      #       done
+
+      #       printf "\n%s Completed valgrind_existing.sh (" "$(date '+[%H:%M:%S]')"
+      #       printf "%s " "${TEST_BINARIES[@]}"
+      #       printf ")\n"
+      #   env:
+      #     TARGET_DIR: target/
+      #     VALGRIND_ARGS: -q --error-exitcode=9 --gen-suppressions=all
+      #     TEST_BINARIES_TARGET: target/
+      - name: Check Build
+        run: cargo check --all
+      - name: Build Release
+        run: cargo build --all --release
+        shell: bash
+        env:
+          ESTIMATED_ARTIFACT_URL: https://s3-us-west-1.amazonaws.com/imageflow-nightlies/imageflow-${{env.GITHUB_REF_NAME_SLUG}}-${{env.GITHUB_SHA_SHORT}}-${{env.PACKAGE_SUFFIX}}.tar.gz
+          ESTIMATED_DOCS_URL: https://s3-us-west-1.amazonaws.com/imageflow-nightlies/doc
+          CI_SEQUENTIAL_BUILD_NUMBER: ${{env.GITHUB_RUN_NUMBER}}
+          CI_BUILD_URL: https://github.com/${{env.GITHUB_REPOSITORY}}/actions/runs/${{github.job_id}}
+          CI_JOB_URL: https://github.com/${{env.GITHUB_REPOSITORY}}/actions/runs/${{github.job_id}}
+          CI_JOB_TITLE: Github ${{github.job_id}} ${{matrix.name}}
+          CI_STRING: Github actions
+          CI_PULL_REQUEST_INFO: ${{github.event_name!='release'}}
+          CI_TAG: ${{env.GITHUB_REF_NAME_SLUG}}
+          CI_REPO: ${{env.GITHUB_REPOSITORY}}
+          CI: True
+          OPT_LEVEL: 0
+          DEBUG: False
+          PROFILE: release
+          TARGET_CPU: ${{matrix.TARGET_CPU}}
+          FETCH_COMMIT_SUFFIX: ${{matrix.FETCH_COMMIT_SUFFIX}}
+          RUSTFLAGS: -C target-cpu=${{matrix.TARGET_CPU}}
+
+      - name: Build Docs
+        run: cargo doc --all --release --no-deps
+
+      - name: Create Artifacts Header
+        shell: bash
+        run: |
+          mkdir -p ./artifacts/staging/headers || true
+          (
+            cd ./${TARGET_DIR}doc
+            tar czf "../docs.tar.gz" ./*
+          )
+          mv ./${TARGET_DIR}docs.tar.gz ./artifacts/staging/
+
+          cp -R ./${TARGET_DIR}release/{imageflow_,libimageflow}*  ./artifacts/staging/
+          cp bindings/headers/*.h  ./artifacts/staging/headers/
+          cp bindings/headers/imageflow_default.h  ./artifacts/staging/imageflow.h
+          cp ./ci/packaging_extras/{install,uninstall}.sh ./artifacts/staging
+          rm ./artifacts/staging/*.{o,d,rlib} || true
+          rm ./artifacts/staging/*-* || true
+          (
+            cd ./artifacts/staging
+            tar czf "./archive.tar.gz" ./*
+          )
+          mkdir -p "./artifacts/upload/$(dirname "${ARTIFACT_UPLOAD_PATH}")" || true
+          cp "${ARTIFACT_ARCHIVE_NAME}" "./artifacts/upload/${ARTIFACT_UPLOAD_PATH}.tar.gz"
+          mkdir -p "./artifacts/upload/${DOCS_UPLOAD_DIR}" || true
+          cp "${ARTIFACT_ARCHIVE_NAME}" "./artifacts/upload/${ARTIFACT_UPLOAD_PATH}.tar.gz"
+        env:
+          TARGET_DIR: target/
+          ARTIFACT_UPLOAD_PATH: /imageflow-${{env.GITHUB_REF_NAME_SLUG}}-${{env.GITHUB_SHA_SHORT}}-${{matrix.name}}
+          ARTIFACT_ARCHIVE_NAME: ./artifacts/staging/archive.tar.gz
+          DOCS_UPLOAD_DIR}: doc
+
+      - name: Nuget to S3
+        shell: bash
+        run: ./ci/pack_nuget/pack.sh tool
+        env:
+          CI_TAG: ${{env.GITHUB_REF_NAME_SLUG}}
+          PACKAGE_SUFFIX: ${{matrix.name}}
+          NUGET_RUNTIME: ${{matrix.NUGET_RUNTIME}}
+
+      - name: Upload to release
+        uses: Shopify/upload-to-release@master
+        with:
+          name: imageflow-${{env.GITHUB_REF_NAME_SLUG}}-${{env.GITHUB_SHA_SHORT}}-${{matrix.name}}.tar.gz
+          path: ./artifacts/upload/imageflow-${{env.GITHUB_REF_NAME_SLUG}}-${{env.GITHUB_SHA_SHORT}}-${{matrix.name}}.tar.gz
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+          content-type: text/plain
+      - name: Upload to S3
+        uses: shallwefootball/s3-upload-action@master
+        with:
+          aws_key_id: ${{ secrets.AWS_KEY_ID }}
+          aws_secret_access_key: ${{ secrets.AWS_SECRET_ACCESS_KEY}}
+          aws_bucket: ${{ secrets.AWS_BUCKET }}
+          source_dir: ./artifacts/upload/
+          destination_dir: ''
+      - name: Upload to S3
+        uses: shallwefootball/s3-upload-action@master
+        with:
+          aws_key_id: ${{ secrets.AWS_KEY_ID }}
+          aws_secret_access_key: ${{ secrets.AWS_SECRET_ACCESS_KEY}}
+          aws_bucket: ${{ secrets.AWS_BUCKET }}
+          source_dir: ./artifacts/nuget/
+          destination_dir: ''
