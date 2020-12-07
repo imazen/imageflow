@@ -2,7 +2,9 @@
 name: Release Window 32
 
 on:
-  push:
+  release:
+    types:
+      - published
 
 jobs:
   build:
@@ -16,10 +18,10 @@ jobs:
       - name: Install latest nightly
         uses: actions-rs/toolchain@v1
         with:
-            toolchain: stable
-            override: true
-            components: rustfmt, clippy
-            target: i686-pc-windows-msvc
+          toolchain: stable
+          override: true
+          components: rustfmt, clippy
+          target: i686-pc-windows-msvc
       # - name: Check Build
       #   run: cargo check --all --target=i686-pc-windows-msvc
       - name: Build Release
@@ -79,7 +81,7 @@ jobs:
         shell: bash
         run: ./ci/pack_nuget/pack.sh tool
         env:
-          CI_TAG: v${{env.GITHUB_REF_NAME_SLUG}}
+          CI_TAG: ${{env.GITHUB_REF_NAME_SLUG}}
           PACKAGE_SUFFIX: win-x86
           NUGET_RUNTIME: win-x86
           TARGET_DIR: target/i686-pc-windows-msvc
