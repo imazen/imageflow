@@ -15,7 +15,7 @@ jobs:
       - uses: FranzDiebold/github-env-vars-action@v1.3.0
       - name: Install nasm
         run: choco install nasm
-      - name: Install latest nightly
+      - name: Install latest 32bit target
         uses: actions-rs/toolchain@v1
         with:
           toolchain: stable
