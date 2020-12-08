@@ -59,7 +59,7 @@ jobs:
 
           cp -R ./${TARGET_DIR}release/{imageflow_,libimageflow}*  ./artifacts/staging/
           [ -f "./${TARGET_DIR}release/imageflow.dll" ] && cp -R "./${TARGET_DIR}release/imageflow.dll" ./artifacts/staging/imageflow.dll
-          [ -f "./${TARGET_DIR}release/imageflow.pdb" ] && cp -R "./${TARGET_DIR}release/imageflow.pdb" ./artifacts/staging/imageflow.pdb          cp bindings/headers/*.h  ./artifacts/staging/headers/
+          [ -f "./${TARGET_DIR}release/imageflow.pdb" ] && cp -R "./${TARGET_DIR}release/imageflow.pdb" ./artifacts/staging/imageflow.pdb
           cp bindings/headers/imageflow_default.h  ./artifacts/staging/imageflow.h
           cp ./ci/packaging_extras/{install,uninstall}.sh ./artifacts/staging
           rm ./artifacts/staging/*.{o,d,rlib} || true
