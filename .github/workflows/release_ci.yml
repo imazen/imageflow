@@ -76,6 +76,21 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@master
       - uses: FranzDiebold/github-env-vars-action@v1.3.0
+      - name: Cache cargo registry
+        uses: actions/cache@v2
+        with:
+          path: ~/.cargo/registry
+          key: ${{ runner.os }}-${{matrix.name}}-cargo-registry-${{ hashFiles('**/Cargo.lock') }}
+      - name: Cache cargo index
+        uses: actions/cache@v2
+        with:
+          path: ~/.cargo/git
+          key: ${{ runner.os }}-${{matrix.name}}-cargo1073325810292-index-${{ hashFiles('**/Cargo.lock') }}
+      - name: Cache cargo build
+        uses: actions/cache@v2
+        with:
+          path: target
+          key: ${{ runner.os }}-${{matrix.name}}-cargo-build-target-${{ hashFiles('**/Cargo.lock') }}
       - name: Install nasm
         run: brew install nasm
         if: ${{contains( matrix.os, 'macos' )}}
