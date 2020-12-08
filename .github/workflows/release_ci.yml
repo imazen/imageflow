@@ -204,7 +204,7 @@ jobs:
           )
           mv ./${TARGET_DIR}docs.tar.gz ./artifacts/staging/
 
-          cp -R ./${TARGET_DIR}release/{imageflow_,libimageflow}*  ./artifacts/staging/
+          cp -R ./${TARGET_DIR}release/{imageflow,imageflow_,libimageflow}*  ./artifacts/staging/
           cp bindings/headers/*.h  ./artifacts/staging/headers/
           cp bindings/headers/imageflow_default.h  ./artifacts/staging/imageflow.h
           cp ./ci/packaging_extras/{install,uninstall}.sh ./artifacts/staging
