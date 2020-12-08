@@ -52,21 +52,21 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@master
-      - name: Cache cargo registry
+      ### BUILD CACHE ###
+      # NB: We install gnu-tar because BSD tar is buggy on Github's macos machines. https://github.com/actions/cache/issues/403
+      - name: Install GNU tar (Macos)
+        if: ${{contains( matrix.os, 'macos' )}}
+        run: |
+          brew install gnu-tar
+          echo PATH="/usr/local/opt/gnu-tar/libexec/gnubin:$PATH" >> $GITHUB_ENV
+      - name: Cache cargo
         uses: actions/cache@v2
         with:
-          path: ~/.cargo/registry
-          key: ${{ runner.os }}-${{matrix.name}}-cargo-registry-${{ hashFiles('**/Cargo.lock') }}
-      - name: Cache cargo index
-        uses: actions/cache@v2
-        with:
-          path: ~/.cargo/git
-          key: ${{ runner.os }}-${{matrix.name}}-cargo1073325810292-index-${{ hashFiles('**/Cargo.lock') }}
-      - name: Cache cargo build
-        uses: actions/cache@v2
-        with:
-          path: target
-          key: ${{ runner.os }}-${{matrix.name}}-cargo-build-target-${{ hashFiles('**/Cargo.lock') }}
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-${{matrix.name}}-cargo-${{ hashFiles('**/Cargo.lock') }}
       - name: Install nasm
         run: brew install nasm
         if: ${{contains( matrix.os, 'macos' )}}
