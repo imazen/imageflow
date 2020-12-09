@@ -185,6 +185,8 @@ jobs:
       #     TEST_BINARIES_TARGET: target/
       - name: Check Build
         run: cargo check --all
+      - name: Test Build
+        run: cargo test --all --release
       - name: Build Release
         run: cargo build --all --release
         shell: bash
