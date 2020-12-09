@@ -210,8 +210,9 @@ jobs:
       - name: Build Docs
         run: cargo doc --all --release --no-deps
 
-      - name: Create Artifacts Header
+      - name: Create Artifacts Header (POSIX)
         shell: bash
+        if: ${{!contains( matrix.os, 'windows' )}}
         run: |
           mkdir -p ./artifacts/staging/headers || true
           (
@@ -221,8 +222,6 @@ jobs:
           mv ./${TARGET_DIR}docs.tar.gz ./artifacts/staging/
 
           cp -R ./${TARGET_DIR}release/{imageflow_,libimageflow}*  ./artifacts/staging/
-          [ -f "./${TARGET_DIR}release/imageflow.dll" ] && cp -R "./${TARGET_DIR}release/imageflow.dll" ./artifacts/staging/imageflow.dll
-          [ -f "./${TARGET_DIR}release/imageflow.pdb" ] && cp -R "./${TARGET_DIR}release/imageflow.pdb" ./artifacts/staging/imageflow.pdb
           cp bindings/headers/*.h  ./artifacts/staging/headers/
           cp bindings/headers/imageflow_default.h  ./artifacts/staging/imageflow.h
           cp ./ci/packaging_extras/{install,uninstall}.sh ./artifacts/staging
@@ -242,6 +241,39 @@ jobs:
           ARTIFACT_ARCHIVE_NAME: ./artifacts/staging/archive.tar.gz
           DOCS_UPLOAD_DIR}: doc
 
+      - name: Create Artifacts Header Windows
+        shell: bash
+        if: ${{contains( matrix.os, 'windows' )}}
+        run: |
+          mkdir -p ./artifacts/staging/headers || true
+          (
+            cd ./${TARGET_DIR}doc
+            7z a -r "../docs.zip" ./*
+          )
+          mv ./${TARGET_DIR}docs.zip ./artifacts/staging/
+
+          cp -R ./${TARGET_DIR}release/{imageflow_,libimageflow}*  ./artifacts/staging/
+          cp -R "./${TARGET_DIR}release/imageflow.dll" ./artifacts/staging/imageflow.dll
+          cp -R "./${TARGET_DIR}release/imageflow.pdb" ./artifacts/staging/imageflow.pdb
+          cp bindings/headers/*.h  ./artifacts/staging/headers/
+          cp bindings/headers/imageflow_default.h  ./artifacts/staging/imageflow.h
+          cp ./ci/packaging_extras/{install,uninstall}.sh ./artifacts/staging
+          rm ./artifacts/staging/*.{o,d,rlib} || true
+          rm ./artifacts/staging/*-* || true
+          (
+            cd ./artifacts/staging
+            7z a -r "./archive.zip" ./*
+          )
+          mkdir -p "./artifacts/upload/$(dirname "${ARTIFACT_UPLOAD_PATH}")" || true
+          cp "${ARTIFACT_ARCHIVE_NAME}" "./artifacts/upload/${ARTIFACT_UPLOAD_PATH}.zip"
+          mkdir -p "./artifacts/upload/${DOCS_UPLOAD_DIR}" || true
+          cp "${ARTIFACT_ARCHIVE_NAME}" "./artifacts/upload/${ARTIFACT_UPLOAD_PATH}.zip"
+        env:
+          TARGET_DIR: target/
+          ARTIFACT_UPLOAD_PATH: /imageflow-${{env.GITHUB_REF_NAME_SLUG}}-${{env.GITHUB_SHA_SHORT}}-${{matrix.name}}
+          ARTIFACT_ARCHIVE_NAME: ./artifacts/staging/archive.zip
+          DOCS_UPLOAD_DIR}: doc
+
       - name: Nuget to S3
         shell: bash
         run: ./ci/pack_nuget/pack.sh tool
@@ -250,13 +282,24 @@ jobs:
           PACKAGE_SUFFIX: ${{matrix.name}}
           NUGET_RUNTIME: ${{matrix.NUGET_RUNTIME}}
 
-      - name: Upload to release
+      - name: Upload to release (POSIX)
         uses: Shopify/upload-to-release@master
+        if: ${{!contains( matrix.os, 'windows' )}}
         with:
           name: imageflow-${{env.GITHUB_REF_NAME_SLUG}}-${{env.GITHUB_SHA_SHORT}}-${{matrix.name}}.tar.gz
           path: ./artifacts/upload/imageflow-${{env.GITHUB_REF_NAME_SLUG}}-${{env.GITHUB_SHA_SHORT}}-${{matrix.name}}.tar.gz
           repo-token: ${{ secrets.GITHUB_TOKEN }}
           content-type: text/plain
+
+      - name: Upload to release (Windows)
+        uses: Shopify/upload-to-release@master
+        if: ${{contains( matrix.os, 'windows' )}}
+        with:
+          name: imageflow-${{env.GITHUB_REF_NAME_SLUG}}-${{env.GITHUB_SHA_SHORT}}-${{matrix.name}}.zip
+          path: ./artifacts/upload/imageflow-${{env.GITHUB_REF_NAME_SLUG}}-${{env.GITHUB_SHA_SHORT}}-${{matrix.name}}.zip
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+          content-type: text/plain
+
       - name: Upload to S3
         uses: shallwefootball/s3-upload-action@master
         with:

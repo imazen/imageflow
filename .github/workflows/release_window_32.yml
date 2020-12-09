@@ -36,7 +36,7 @@ jobs:
         run: cargo build --all --release --target=i686-pc-windows-msvc
         shell: bash
         env:
-          ESTIMATED_ARTIFACT_URL: https://s3-us-west-1.amazonaws.com/imageflow-nightlies/imageflow-${{env.GITHUB_REF_NAME_SLUG}}-${{env.GITHUB_SHA_SHORT}}-${{env.PACKAGE_SUFFIX}}.tar.gz
+          ESTIMATED_ARTIFACT_URL: https://s3-us-west-1.amazonaws.com/imageflow-nightlies/imageflow-${{env.GITHUB_REF_NAME_SLUG}}-${{env.GITHUB_SHA_SHORT}}-${{env.PACKAGE_SUFFIX}}.zip
           ESTIMATED_DOCS_URL: https://s3-us-west-1.amazonaws.com/imageflow-nightlies/doc
           CI_SEQUENTIAL_BUILD_NUMBER: ${{env.GITHUB_RUN_NUMBER}}
           CI_BUILD_URL: https://github.com/${{env.GITHUB_REPOSITORY}}/actions/runs/${{github.job_id}}
@@ -61,29 +61,30 @@ jobs:
           mkdir -p ./artifacts/staging/headers || true
           (
             cd ./${TARGET_DIR}doc
-            tar czf "../docs.tar.gz" ./*
+            7z a -r "../docs.zip" ./*
           )
-          mv ./${TARGET_DIR}docs.tar.gz ./artifacts/staging/
+          mv ./${TARGET_DIR}docs.zip ./artifacts/staging/
 
           cp -R ./${TARGET_DIR}release/{imageflow_,libimageflow}*  ./artifacts/staging/
-          [ -f "./${TARGET_DIR}release/imageflow.dll" ] && cp -R "./${TARGET_DIR}release/imageflow.dll" ./artifacts/staging/imageflow.dll
-          [ -f "./${TARGET_DIR}release/imageflow.pdb" ] && cp -R "./${TARGET_DIR}release/imageflow.pdb" ./artifacts/staging/imageflow.pdb
+          cp -R "./${TARGET_DIR}release/imageflow.dll" ./artifacts/staging/imageflow.dll
+          cp -R "./${TARGET_DIR}release/imageflow.pdb" ./artifacts/staging/imageflow.pdb
+          cp bindings/headers/*.h  ./artifacts/staging/headers/
           cp bindings/headers/imageflow_default.h  ./artifacts/staging/imageflow.h
           cp ./ci/packaging_extras/{install,uninstall}.sh ./artifacts/staging
           rm ./artifacts/staging/*.{o,d,rlib} || true
           rm ./artifacts/staging/*-* || true
           (
             cd ./artifacts/staging
-            tar czf "./archive.tar.gz" ./*
+            7z a -r "./archive.zip" ./*
           )
           mkdir -p "./artifacts/upload/$(dirname "${ARTIFACT_UPLOAD_PATH}")" || true
-          cp "${ARTIFACT_ARCHIVE_NAME}" "./artifacts/upload/${ARTIFACT_UPLOAD_PATH}.tar.gz"
+          cp "${ARTIFACT_ARCHIVE_NAME}" "./artifacts/upload/${ARTIFACT_UPLOAD_PATH}.zip"
           mkdir -p "./artifacts/upload/${DOCS_UPLOAD_DIR}" || true
-          cp "${ARTIFACT_ARCHIVE_NAME}" "./artifacts/upload/${ARTIFACT_UPLOAD_PATH}.tar.gz"
+          cp "${ARTIFACT_ARCHIVE_NAME}" "./artifacts/upload/${ARTIFACT_UPLOAD_PATH}.zip"
         env:
           TARGET_DIR: target/i686-pc-windows-msvc/
           ARTIFACT_UPLOAD_PATH: /imageflow-${{env.GITHUB_REF_NAME_SLUG}}-${{env.GITHUB_SHA_SHORT}}-win-x86
-          ARTIFACT_ARCHIVE_NAME: ./artifacts/staging/archive.tar.gz
+          ARTIFACT_ARCHIVE_NAME: ./artifacts/staging/archive.zip
           DOCS_UPLOAD_DIR}: doc
 
       - name: Nuget to S3
@@ -98,8 +99,8 @@ jobs:
       - name: Upload to release
         uses: Shopify/upload-to-release@master
         with:
-          name: imageflow-${{env.GITHUB_REF_NAME_SLUG}}-${{env.GITHUB_SHA_SHORT}}-win-x86.tar.gz
-          path: ./artifacts/upload/imageflow-${{env.GITHUB_REF_NAME_SLUG}}-${{env.GITHUB_SHA_SHORT}}-win-x86.tar.gz
+          name: imageflow-${{env.GITHUB_REF_NAME_SLUG}}-${{env.GITHUB_SHA_SHORT}}-win-x86.zip
+          path: ./artifacts/upload/imageflow-${{env.GITHUB_REF_NAME_SLUG}}-${{env.GITHUB_SHA_SHORT}}-win-x86.zip
           repo-token: ${{ secrets.GITHUB_TOKEN }}
           content-type: text/plain
       - name: Upload to S3
