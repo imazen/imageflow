@@ -17,6 +17,7 @@ mod color;
 mod watermark;
 mod watermark_red_dot;
 mod enable_transparency;
+mod command_string;
 //mod detection;
 
 mod internal_prelude {
@@ -61,7 +62,7 @@ pub use self::scale_render::DRAW_IMAGE_EXACT;
 //pub use self::scale_render::SCALE_1D;
 //pub use self::scale_render::SCALE_1D_TO_CANVAS_1D;
 pub use self::constrain::CONSTRAIN;
-pub use self::constrain::COMMAND_STRING;
+pub use self::command_string::COMMAND_STRING;
 pub use self::white_balance::WHITE_BALANCE_SRGB_MUTATE;
 pub use self::white_balance::WHITE_BALANCE_SRGB;
 pub use self::color::COLOR_MATRIX_SRGB_MUTATE;
