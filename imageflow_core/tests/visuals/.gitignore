@@ -1,5 +1,7 @@
 *.html
 *.png
+*.jpg
+*.unknown
 
 !checksums.list
 visuals.html

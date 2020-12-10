@@ -43,6 +43,28 @@ fn test_encode_gradients() {
 }
 
 
+#[test]
+fn test_trim_whitespace() {
+    compare_encoded(
+        Some(IoTestEnum::Url("https://s3-us-west-2.amazonaws.com/imageflow-resources/test_inputs/shirt_transparent.png".to_owned())),
+        "transparent_trim_whitespace",
+        POPULATE_CHECKSUMS,
+        DEBUG_GRAPH,
+        Constraints {
+            similarity: Similarity::AllowDssimMatch(0.0, 0.002),
+            max_file_size: None
+        },
+        vec![
+            Node::CommandString{
+                kind: CommandStringKind::ImageResizer4,
+                value: "trim.threshold=80".to_owned(),
+                decode: Some(0),
+                encode: Some(1),
+                watermarks: None
+            }
+        ]
+    );
+}
 
 #[test]
 fn test_transparent_png_to_jpeg() {
