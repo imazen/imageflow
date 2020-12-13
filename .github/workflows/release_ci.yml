@@ -83,9 +83,9 @@ jobs:
       - name: Install nasm
         run: brew install nasm
         if: ${{contains( matrix.os, 'macos' )}}
-      - name: Install nasm
-        run: choco install nasm
-        if: ${{contains( matrix.os, 'windows' )}}
+      # - name: Install nasm
+      #   run: choco install nasm
+      #   if: ${{contains( matrix.os, 'windows' )}}
       - name: Install nasm
         run: sudo apt install nasm
         if: ${{contains( matrix.os, 'ubuntu' )}}
