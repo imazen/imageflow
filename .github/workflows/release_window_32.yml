@@ -22,7 +22,7 @@ jobs:
             ~/.cargo/registry
             ~/.cargo/git
             target
-          key: ${{ runner.os }}-${{matrix.name}}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          key: ${{ runner.os }}-windows-release-test-cargo-${{ hashFiles('**/Cargo.lock') }}
       - name: Install latest 32bit target
         uses: actions-rs/toolchain@v1
         with:

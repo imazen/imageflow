@@ -1,0 +1,36 @@
+#  NUGET_RUNTIME= UPLOAD_BUILD=True FETCH_COMMIT_SUFFIX=mac64
+name: Test Window 32
+
+on:
+  push:
+
+jobs:
+  build:
+    runs-on: windows-2019
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@master
+      # - name: Install nasm
+      #   run: choco install nasm
+      - name: Cache cargo
+        uses: actions/cache@v2
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-windows-test-32-cargo-${{ hashFiles('**/Cargo.lock') }}
+      - name: Install latest 32bit target
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          override: true
+          components: rustfmt, clippy
+          target: i686-pc-windows-msvc
+      - name: Check Build
+        run: cargo check --all --target=i686-pc-windows-msvc
+      - name: Test Build
+        run: cargo test --all --release --target=i686-pc-windows-msvc
+      - name: Build Release
+        run: cargo build --all --target=i686-pc-windows-msvc
+        shell: bash
