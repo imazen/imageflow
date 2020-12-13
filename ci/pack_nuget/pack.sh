@@ -41,7 +41,6 @@ mkdir -p "$STAGING_DIR" || true
 	PROPS_PATH="build/net45/${NUGET_PACKAGE_NAME}.targets"
 	NUGET_OUTPUT_DIR="${SCRIPT_DIR}/../../artifacts/nuget"
 	NUGET_OUTPUT_FILE="${NUGET_OUTPUT_DIR}/${NUGET_COMBINED_NAME}.nupkg"
-	echo "NUGET_OUTPUT_FILE=${NUGET_OUTPUT_DIR}/${NUGET_COMBINED_NAME}.nupkg" >> $GITHUB_ENV
 	echo RELEASE_DIR=${RELEASE_DIR}
 
 	mkdir -p "${NUGET_OUTPUT_DIR}" || true

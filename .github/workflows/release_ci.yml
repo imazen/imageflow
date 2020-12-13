@@ -31,15 +31,15 @@ jobs:
 
           - name: osx_11_0-x86_64
             os: macos-11.0
-            TARGET_CPU: x86-64
+            TARGET_CPU: nehalem
             FETCH_COMMIT_SUFFIX: mac64
             NUGET_RUNTIME: osx-x64
 
           - name: osx_10_11-x86_64
             os: macos-10.15
-            TARGET_CPU: x86-64
+            TARGET_CPU: nehalem
             FETCH_COMMIT_SUFFIX: mac64
-            NUGET_RUNTIME: osx-x64
+            NUGET_RUNTIME: osx_10_11-x86_64
 
           - name: win-x86_64
             os: windows-2019
@@ -47,23 +47,11 @@ jobs:
             FETCH_COMMIT_SUFFIX: win-x86_64
             NUGET_RUNTIME: win-x64
 
-          - name: ubuntu_16_04-x86_64-haswell
-            os: ubuntu-16.04
-            TARGET_CPU: haswell
-            FETCH_COMMIT_SUFFIX: linux64_haswell
-            NUGET_RUNTIME: linux-x64
-
           - name: ubuntu_18_04-x86_64-haswell
             os: ubuntu-18.04
             TARGET_CPU: haswell
             FETCH_COMMIT_SUFFIX: linux64_haswell_glibc227
             NUGET_RUNTIME: ubuntu.18.04-x64
-
-          - name: ubuntu_20_04-x86_64-haswell
-            os: ubuntu-20.04
-            TARGET_CPU: haswell
-            FETCH_COMMIT_SUFFIX: linux64_haswell_glibc231
-            NUGET_RUNTIME: ubuntu.20.04-x64
 
           - name: win-x86_64-haswell
             os: windows-2019
@@ -183,10 +171,10 @@ jobs:
       #     TARGET_DIR: target/
       #     VALGRIND_ARGS: -q --error-exitcode=9 --gen-suppressions=all
       #     TEST_BINARIES_TARGET: target/
-      - name: Check Build
-        run: cargo check --all
-      - name: Test Build
-        run: cargo test --all --release
+      # - name: Check Build
+      #   run: cargo check --all
+      # - name: Test Build
+      #   run: cargo test --all --release
       - name: Build Release
         run: cargo build --all --release
         shell: bash
@@ -259,7 +247,6 @@ jobs:
           cp -R "./${TARGET_DIR}release/imageflow.pdb" ./artifacts/staging/imageflow.pdb
           cp bindings/headers/*.h  ./artifacts/staging/headers/
           cp bindings/headers/imageflow_default.h  ./artifacts/staging/imageflow.h
-          cp ./ci/packaging_extras/{install,uninstall}.sh ./artifacts/staging
           rm ./artifacts/staging/*.{o,d,rlib} || true
           rm ./artifacts/staging/*-* || true
           (
@@ -276,9 +263,17 @@ jobs:
           ARTIFACT_ARCHIVE_NAME: ./artifacts/staging/archive.zip
           DOCS_UPLOAD_DIR}: doc
 
-      - name: Nuget to S3
+      - name: Nuget(Tool) to S3
         shell: bash
         run: ./ci/pack_nuget/pack.sh tool
+        env:
+          CI_TAG: ${{env.GITHUB_REF_NAME_SLUG}}
+          PACKAGE_SUFFIX: ${{matrix.name}}
+          NUGET_RUNTIME: ${{matrix.NUGET_RUNTIME}}
+
+      - name: Nuget(Runtime) to S3
+        shell: bash
+        run: ./ci/pack_nuget/pack.sh
         env:
           CI_TAG: ${{env.GITHUB_REF_NAME_SLUG}}
           PACKAGE_SUFFIX: ${{matrix.name}}
@@ -293,28 +288,35 @@ jobs:
           repo-token: ${{ secrets.GITHUB_TOKEN }}
           content-type: text/plain
 
-      - name: Upload to release (Windows)
-        uses: Shopify/upload-to-release@master
-        if: ${{contains( matrix.os, 'windows' )}}
-        with:
-          name: imageflow-${{env.GITHUB_REF_NAME_SLUG}}-${{env.GITHUB_SHA_SHORT}}-${{matrix.name}}.zip
-          path: ./artifacts/upload/imageflow-${{env.GITHUB_REF_NAME_SLUG}}-${{env.GITHUB_SHA_SHORT}}-${{matrix.name}}.zip
-          repo-token: ${{ secrets.GITHUB_TOKEN }}
-          content-type: text/plain
+      # - name: Upload to release (Windows)
+      #   uses: Shopify/upload-to-release@master
+      #   if: ${{contains( matrix.os, 'windows' )}}
+      #   with:
+      #     name: imageflow-${{env.GITHUB_REF_NAME_SLUG}}-${{env.GITHUB_SHA_SHORT}}-${{matrix.name}}.zip
+      #     path: ./artifacts/upload/imageflow-${{env.GITHUB_REF_NAME_SLUG}}-${{env.GITHUB_SHA_SHORT}}-${{matrix.name}}.zip
+      #     repo-token: ${{ secrets.GITHUB_TOKEN }}
+      #     content-type: text/plain
 
-      - name: Upload to S3
-        uses: shallwefootball/s3-upload-action@master
-        with:
-          aws_key_id: ${{ secrets.AWS_KEY_ID }}
-          aws_secret_access_key: ${{ secrets.AWS_SECRET_ACCESS_KEY}}
-          aws_bucket: ${{ secrets.AWS_BUCKET }}
-          source_dir: ./artifacts/upload/
-          destination_dir: ''
-      - name: Upload to S3
-        uses: shallwefootball/s3-upload-action@master
-        with:
-          aws_key_id: ${{ secrets.AWS_KEY_ID }}
-          aws_secret_access_key: ${{ secrets.AWS_SECRET_ACCESS_KEY}}
-          aws_bucket: ${{ secrets.AWS_BUCKET }}
-          source_dir: ./artifacts/nuget/
-          destination_dir: ''
+      # - name: Upload to S3
+      #   uses: shallwefootball/s3-upload-action@master
+      #   with:
+      #     aws_key_id: ${{ secrets.AWS_KEY_ID }}
+      #     aws_secret_access_key: ${{ secrets.AWS_SECRET_ACCESS_KEY}}
+      #     aws_bucket: ${{ secrets.AWS_BUCKET }}
+      #     source_dir: ./artifacts/upload/
+      #     destination_dir: ''
+      # - name: Upload to S3
+      #   uses: shallwefootball/s3-upload-action@master
+      #   with:
+      #     aws_key_id: ${{ secrets.AWS_KEY_ID }}
+      #     aws_secret_access_key: ${{ secrets.AWS_SECRET_ACCESS_KEY}}
+      #     aws_bucket: ${{ secrets.AWS_BUCKET }}
+      #     source_dir: ./artifacts/nuget/
+      #     destination_dir: ''
+      - name: Publish nuget
+        run: |
+            for f in ./artifacts/nuget/*.nupkg
+            do
+              curl -vX PUT -u "anshulrgoyal:${{ secrets.GITHUB_TOKEN }}" -F package=@$f https://nuget.pkg.github.com/anshulrgoyal/
+            done
+        shell: bash

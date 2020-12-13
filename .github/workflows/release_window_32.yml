@@ -30,8 +30,10 @@ jobs:
           override: true
           components: rustfmt, clippy
           target: i686-pc-windows-msvc
-      # - name: Check Build
-      #   run: cargo check --all --target=i686-pc-windows-msvc
+      - name: Check Build
+        run: cargo check --all --target=i686-pc-windows-msvc
+      - name: Test Build
+        run: cargo test --all --release --target=i686-pc-windows-msvc
       - name: Build Release
         run: cargo build --all --release --target=i686-pc-windows-msvc
         shell: bash
@@ -70,7 +72,6 @@ jobs:
           cp -R "./${TARGET_DIR}release/imageflow.pdb" ./artifacts/staging/imageflow.pdb
           cp bindings/headers/*.h  ./artifacts/staging/headers/
           cp bindings/headers/imageflow_default.h  ./artifacts/staging/imageflow.h
-          cp ./ci/packaging_extras/{install,uninstall}.sh ./artifacts/staging
           rm ./artifacts/staging/*.{o,d,rlib} || true
           rm ./artifacts/staging/*-* || true
           (
@@ -87,7 +88,7 @@ jobs:
           ARTIFACT_ARCHIVE_NAME: ./artifacts/staging/archive.zip
           DOCS_UPLOAD_DIR}: doc
 
-      - name: Nuget to S3
+      - name: Nuget(Tool) to S3
         shell: bash
         run: ./ci/pack_nuget/pack.sh tool
         env:
@@ -96,26 +97,42 @@ jobs:
           NUGET_RUNTIME: win-x86
           TARGET_DIR: target/i686-pc-windows-msvc
 
-      - name: Upload to release
-        uses: Shopify/upload-to-release@master
-        with:
-          name: imageflow-${{env.GITHUB_REF_NAME_SLUG}}-${{env.GITHUB_SHA_SHORT}}-win-x86.zip
-          path: ./artifacts/upload/imageflow-${{env.GITHUB_REF_NAME_SLUG}}-${{env.GITHUB_SHA_SHORT}}-win-x86.zip
-          repo-token: ${{ secrets.GITHUB_TOKEN }}
-          content-type: text/plain
-      - name: Upload to S3
-        uses: shallwefootball/s3-upload-action@master
-        with:
-          aws_key_id: ${{ secrets.AWS_KEY_ID }}
-          aws_secret_access_key: ${{ secrets.AWS_SECRET_ACCESS_KEY}}
-          aws_bucket: ${{ secrets.AWS_BUCKET }}
-          source_dir: ./artifacts/upload/
-          destination_dir: ''
-      - name: Upload to S3
-        uses: shallwefootball/s3-upload-action@master
-        with:
-          aws_key_id: ${{ secrets.AWS_KEY_ID }}
-          aws_secret_access_key: ${{ secrets.AWS_SECRET_ACCESS_KEY}}
-          aws_bucket: ${{ secrets.AWS_BUCKET }}
-          source_dir: ./artifacts/nuget/
-          destination_dir: ''
+      - name: Nuget(Runtime) to S3
+        shell: bash
+        run: ./ci/pack_nuget/pack.sh
+        env:
+          CI_TAG: ${{env.GITHUB_REF_NAME_SLUG}}
+          PACKAGE_SUFFIX: win-x86
+          NUGET_RUNTIME: win-x86
+          TARGET_DIR: target/i686-pc-windows-msvc
+
+      # - name: Upload to release
+      #   uses: Shopify/upload-to-release@master
+      #   with:
+      #     name: imageflow-${{env.GITHUB_REF_NAME_SLUG}}-${{env.GITHUB_SHA_SHORT}}-win-x86.zip
+      #     path: ./artifacts/upload/imageflow-${{env.GITHUB_REF_NAME_SLUG}}-${{env.GITHUB_SHA_SHORT}}-win-x86.zip
+      #     repo-token: ${{ secrets.GITHUB_TOKEN }}
+      #     content-type: text/plain
+      # - name: Upload to S3
+      #   uses: shallwefootball/s3-upload-action@master
+      #   with:
+      #     aws_key_id: ${{ secrets.AWS_KEY_ID }}
+      #     aws_secret_access_key: ${{ secrets.AWS_SECRET_ACCESS_KEY}}
+      #     aws_bucket: ${{ secrets.AWS_BUCKET }}
+      #     source_dir: ./artifacts/upload/
+      #     destination_dir: ''
+      # - name: Upload to S3
+      #   uses: shallwefootball/s3-upload-action@master
+      #   with:
+      #     aws_key_id: ${{ secrets.AWS_KEY_ID }}
+      #     aws_secret_access_key: ${{ secrets.AWS_SECRET_ACCESS_KEY}}
+      #     aws_bucket: ${{ secrets.AWS_BUCKET }}
+      #     source_dir: ./artifacts/nuget/
+      #     destination_dir: ''
+      - name: Publish nuget
+        run: |
+            for f in ./artifacts/nuget/*.nupkg
+            do
+              curl -vX PUT -u "anshulrgoyal:${{ secrets.GITHUB_TOKEN }}" -F package=@$f https://nuget.pkg.github.com/anshulrgoyal/
+            done
+        shell: bash
