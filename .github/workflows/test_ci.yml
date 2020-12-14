@@ -69,7 +69,8 @@ jobs:
         run: |
             curl https://argoyal.s3.us-east-2.amazonaws.com/nasm-2.14.02-installer-x64.exe --output nasm.exe
             ./nasm.exe /S
-            echo "C:\Program Files\NASM;C:\Program Files (x86)\nasm" >> $GITHUB_PATH
+            echo "C:\Program Files\NASM" >> $GITHUB_PATH
+            echo "C:\Program Files (x86)\nasm" >> $GITHUB_PATH
         if: ${{contains( matrix.os, 'windows' )}}
       - name: Test nasm Install
         run: nasm
