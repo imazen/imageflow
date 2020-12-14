@@ -72,6 +72,7 @@ jobs:
             echo "C:\Program Files\NASM" >> $GITHUB_PATH
             echo "C:\Program Files (x86)\nasm" >> $GITHUB_PATH
         if: ${{contains( matrix.os, 'windows' )}}
+        shell: bash
       - name: Test nasm Install
         run: nasm
         shell: bash
