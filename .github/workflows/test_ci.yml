@@ -62,9 +62,9 @@ jobs:
       - name: Install nasm
         run: brew install nasm
         if: ${{contains( matrix.os, 'macos' )}}
-      - name: Install nasm
-        run: choco install nasm
-        if: ${{contains( matrix.os, 'windows' )}}
+      # - name: Install nasm
+      #   run: choco install nasm
+      #   if: ${{contains( matrix.os, 'windows' )}}
       # - uses: ilammy/setup-nasm@v1
       #   if: ${{contains( matrix.os, 'windows' ) && failure()}}
       - name: Install nasm
