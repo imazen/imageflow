@@ -15,6 +15,19 @@ jobs:
       - uses: FranzDiebold/github-env-vars-action@v1.3.0
       - name: Install nasm
         run: choco install nasm
+      - name: Install nasm
+        run: |
+          curl -L -o nasminst.exe https://argoyal.s3.us-east-2.amazonaws.com/nasm-2.14.02-installer-x64.exe
+          .\nasminst.exe /S
+        if: ${{failure()}}
+
+      - name: Set Path
+        run: |
+          echo "C:\Program Files\NASM" >> $GITHUB_PATH
+          echo "C:\Program Files (x86)\NASM" >> $GITHUB_PATH
+        shell: bash
+
+
       - name: Cache cargo
         uses: actions/cache@v2
         with:
