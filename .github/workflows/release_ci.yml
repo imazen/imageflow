@@ -197,7 +197,7 @@ jobs:
         run: cargo build --all --release
         shell: bash
         env:
-          ESTIMATED_ARTIFACT_URL: https://s3-us-west-1.amazonaws.com/imageflow-nightlies/imageflow-${{env.CI_REF_NAME}}-${{env.GITHUB_SHA_SHORT}}-${{env.PACKAGE_SUFFIX}}.tar.gz
+          ESTIMATED_ARTIFACT_URL: https://s3-us-west-1.amazonaws.com/imageflow-nightlies/imageflow-${{env.GITHUB_REF_NAME}}-${{env.GITHUB_SHA_SHORT}}-${{env.PACKAGE_SUFFIX}}.tar.gz
           ESTIMATED_DOCS_URL: https://s3-us-west-1.amazonaws.com/imageflow-nightlies/doc
           CI_SEQUENTIAL_BUILD_NUMBER: ${{env.GITHUB_RUN_NUMBER}}
           CI_BUILD_URL: https://github.com/${{env.GITHUB_REPOSITORY}}/actions/runs/${{github.job_id}}
@@ -205,7 +205,7 @@ jobs:
           CI_JOB_TITLE: Github ${{github.job_id}} ${{matrix.name}}
           CI_STRING: Github actions
           CI_PULL_REQUEST_INFO: ${{github.event_name!='release'}}
-          CI_TAG: ${{env.CI_REF_NAME}}
+          CI_TAG: ${{env.GITHUB_REF_NAME}}
           CI_REPO: ${{env.GITHUB_REPOSITORY}}
           CI: True
           OPT_LEVEL: 0
@@ -248,7 +248,7 @@ jobs:
           cp "${ARTIFACT_ARCHIVE_NAME}" "./artifacts/upload/${ARTIFACT_UPLOAD_PATH}.tar.gz"
         env:
           TARGET_DIR: target/
-          ARTIFACT_UPLOAD_PATH: /imageflow-${{env.CI_REF_NAME}}-${{env.GITHUB_SHA_SHORT}}-${{matrix.name}}
+          ARTIFACT_UPLOAD_PATH: /imageflow-${{env.GITHUB_REF_NAME}}-${{env.GITHUB_SHA_SHORT}}-${{matrix.name}}
           ARTIFACT_ARCHIVE_NAME: ./artifacts/staging/archive.tar.gz
           DOCS_UPLOAD_DIR}: doc
 
@@ -281,7 +281,7 @@ jobs:
           cp "${ARTIFACT_ARCHIVE_NAME}" "./artifacts/upload/${ARTIFACT_UPLOAD_PATH}.zip"
         env:
           TARGET_DIR: target/
-          ARTIFACT_UPLOAD_PATH: /imageflow-${{env.CI_REF_NAME}}-${{env.GITHUB_SHA_SHORT}}-${{matrix.name}}
+          ARTIFACT_UPLOAD_PATH: /imageflow-${{env.GITHUB_REF_NAME}}-${{env.GITHUB_SHA_SHORT}}-${{matrix.name}}
           ARTIFACT_ARCHIVE_NAME: ./artifacts/staging/archive.zip
           DOCS_UPLOAD_DIR}: doc
 
@@ -290,7 +290,7 @@ jobs:
         shell: bash
         run: ./ci/pack_nuget/pack.sh tool
         env:
-          CI_TAG: ${{env.CI_REF_NAME}}
+          CI_TAG: ${{env.GITHUB_REF_NAME}}
           PACKAGE_SUFFIX: ${{matrix.name}}
           NUGET_RUNTIME: ${{matrix.NUGET_RUNTIME}}
 
@@ -300,7 +300,7 @@ jobs:
         shell: bash
         run: ./ci/pack_nuget/pack.sh
         env:
-          CI_TAG: ${{env.CI_REF_NAME}}
+          CI_TAG: ${{env.GITHUB_REF_NAME}}
           PACKAGE_SUFFIX: ${{matrix.name}}
           NUGET_RUNTIME: ${{matrix.NUGET_RUNTIME}}
 
@@ -309,8 +309,8 @@ jobs:
         uses: Shopify/upload-to-release@master
         if: ${{!contains( matrix.os, 'windows' )}}
         with:
-          name: imageflow-${{env.CI_REF_NAME}}-${{env.GITHUB_SHA_SHORT}}-${{matrix.name}}.tar.gz
-          path: ./artifacts/upload/imageflow-${{env.CI_REF_NAME}}-${{env.GITHUB_SHA_SHORT}}-${{matrix.name}}.tar.gz
+          name: imageflow-${{env.GITHUB_REF_NAME}}-${{env.GITHUB_SHA_SHORT}}-${{matrix.name}}.tar.gz
+          path: ./artifacts/upload/imageflow-${{env.GITHUB_REF_NAME}}-${{env.GITHUB_SHA_SHORT}}-${{matrix.name}}.tar.gz
           repo-token: ${{ secrets.GITHUB_TOKEN }}
           content-type: text/plain
 
@@ -320,8 +320,8 @@ jobs:
         uses: Shopify/upload-to-release@master
         if: ${{contains( matrix.os, 'windows' )}}
         with:
-          name: imageflow-${{env.CI_REF_NAME}}-${{env.GITHUB_SHA_SHORT}}-${{matrix.name}}.zip
-          path: ./artifacts/upload/imageflow-${{env.CI_REF_NAME}}-${{env.GITHUB_SHA_SHORT}}-${{matrix.name}}.zip
+          name: imageflow-${{env.GITHUB_REF_NAME}}-${{env.GITHUB_SHA_SHORT}}-${{matrix.name}}.zip
+          path: ./artifacts/upload/imageflow-${{env.GITHUB_REF_NAME}}-${{env.GITHUB_SHA_SHORT}}-${{matrix.name}}.zip
           repo-token: ${{ secrets.GITHUB_TOKEN }}
           content-type: text/plain
 
