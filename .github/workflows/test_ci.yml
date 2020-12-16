@@ -94,10 +94,6 @@ jobs:
         run: sudo apt install nasm
         if: ${{contains( matrix.os, 'ubuntu' )}}
 
-    ### Install dssim using cargo ###
-      - name: Install dssim
-        run: cargo install dssim
-
     ### Check Build ###
       - name: Check Build
         run: cargo check --all

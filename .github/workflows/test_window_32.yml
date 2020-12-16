@@ -48,6 +48,3 @@ jobs:
         run: cargo check --all --target=i686-pc-windows-msvc
       - name: Test Build
         run: cargo test --all --release --target=i686-pc-windows-msvc
-      - name: Build Release
-        run: cargo build --all --target=i686-pc-windows-msvc
-        shell: bash
