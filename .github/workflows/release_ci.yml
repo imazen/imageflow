@@ -292,40 +292,40 @@ jobs:
           PACKAGE_SUFFIX: ${{matrix.name}}
           NUGET_RUNTIME: ${{matrix.NUGET_RUNTIME}}
 
-      # - name: Upload to release (POSIX)
-      #   uses: Shopify/upload-to-release@master
-      #   if: ${{!contains( matrix.os, 'windows' )}}
-      #   with:
-      #     name: imageflow-${{env.GITHUB_REF_NAME_SLUG}}-${{env.GITHUB_SHA_SHORT}}-${{matrix.name}}.tar.gz
-      #     path: ./artifacts/upload/imageflow-${{env.GITHUB_REF_NAME_SLUG}}-${{env.GITHUB_SHA_SHORT}}-${{matrix.name}}.tar.gz
-      #     repo-token: ${{ secrets.GITHUB_TOKEN }}
-      #     content-type: text/plain
+      - name: Upload to release (POSIX)
+        uses: Shopify/upload-to-release@master
+        if: ${{!contains( matrix.os, 'windows' )}}
+        with:
+          name: imageflow-${{env.GITHUB_REF_NAME_SLUG}}-${{env.GITHUB_SHA_SHORT}}-${{matrix.name}}.tar.gz
+          path: ./artifacts/upload/imageflow-${{env.GITHUB_REF_NAME_SLUG}}-${{env.GITHUB_SHA_SHORT}}-${{matrix.name}}.tar.gz
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+          content-type: text/plain
 
-      # - name: Upload to release (Windows)
-      #   uses: Shopify/upload-to-release@master
-      #   if: ${{contains( matrix.os, 'windows' )}}
-      #   with:
-      #     name: imageflow-${{env.GITHUB_REF_NAME_SLUG}}-${{env.GITHUB_SHA_SHORT}}-${{matrix.name}}.zip
-      #     path: ./artifacts/upload/imageflow-${{env.GITHUB_REF_NAME_SLUG}}-${{env.GITHUB_SHA_SHORT}}-${{matrix.name}}.zip
-      #     repo-token: ${{ secrets.GITHUB_TOKEN }}
-      #     content-type: text/plain
+      - name: Upload to release (Windows)
+        uses: Shopify/upload-to-release@master
+        if: ${{contains( matrix.os, 'windows' )}}
+        with:
+          name: imageflow-${{env.GITHUB_REF_NAME_SLUG}}-${{env.GITHUB_SHA_SHORT}}-${{matrix.name}}.zip
+          path: ./artifacts/upload/imageflow-${{env.GITHUB_REF_NAME_SLUG}}-${{env.GITHUB_SHA_SHORT}}-${{matrix.name}}.zip
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+          content-type: text/plain
 
-      # - name: Upload to S3
-      #   uses: shallwefootball/s3-upload-action@master
-      #   with:
-      #     aws_key_id: ${{ secrets.AWS_KEY_ID }}
-      #     aws_secret_access_key: ${{ secrets.AWS_SECRET_ACCESS_KEY}}
-      #     aws_bucket: ${{ secrets.AWS_BUCKET }}
-      #     source_dir: ./artifacts/upload/
-      #     destination_dir: ''
-      # - name: Upload to S3
-      #   uses: shallwefootball/s3-upload-action@master
-      #   with:
-      #     aws_key_id: ${{ secrets.AWS_KEY_ID }}
-      #     aws_secret_access_key: ${{ secrets.AWS_SECRET_ACCESS_KEY}}
-      #     aws_bucket: ${{ secrets.AWS_BUCKET }}
-      #     source_dir: ./artifacts/nuget/
-      #     destination_dir: ''
+      - name: Upload to S3
+        uses: shallwefootball/s3-upload-action@master
+        with:
+          aws_key_id: ${{ secrets.AWS_KEY_ID }}
+          aws_secret_access_key: ${{ secrets.AWS_SECRET_ACCESS_KEY}}
+          aws_bucket: ${{ secrets.AWS_BUCKET }}
+          source_dir: ./artifacts/upload/
+          destination_dir: ''
+      - name: Upload to S3
+        uses: shallwefootball/s3-upload-action@master
+        with:
+          aws_key_id: ${{ secrets.AWS_KEY_ID }}
+          aws_secret_access_key: ${{ secrets.AWS_SECRET_ACCESS_KEY}}
+          aws_bucket: ${{ secrets.AWS_BUCKET }}
+          source_dir: ./artifacts/nuget/
+          destination_dir: ''
       - name: Publish nuget
         run: |
             for f in ./artifacts/nuget/*.nupkg
