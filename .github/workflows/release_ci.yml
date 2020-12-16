@@ -192,12 +192,24 @@ jobs:
       - name: Test Build
         run: cargo test --all --release
 
+      - name: Add Artifacts URL (POSIX)
+        run: echo ESTIMATED_ARTIFACT_URL=$ARTIFACT_PATH.tar.gz >> $GITHUB_ENV
+        env:
+           ARTIFACT_PATH: https://s3-us-west-1.amazonaws.com/imageflow-nightlies/imageflow-${{env.GITHUB_REF_NAME}}-${{env.GITHUB_SHA_SHORT}}-${{env.PACKAGE_SUFFIX}}
+        if: ${{!contains( matrix.os, 'windows' )}}
+
+      - name: Add Artifacts URL (Windows)
+        run: echo ESTIMATED_ARTIFACT_URL=$ARTIFACT_PATH.zip >> $GITHUB_ENV
+        env:
+           ARTIFACT_PATH: https://s3-us-west-1.amazonaws.com/imageflow-nightlies/imageflow-${{env.GITHUB_REF_NAME}}-${{env.GITHUB_SHA_SHORT}}-${{env.PACKAGE_SUFFIX}}
+        if: ${{contains( matrix.os, 'windows' )}}
+        shell: bash
+
       ## Build the code ##
       - name: Build Release
         run: cargo build --all --release
         shell: bash
         env:
-          ESTIMATED_ARTIFACT_URL: https://s3-us-west-1.amazonaws.com/imageflow-nightlies/imageflow-${{env.GITHUB_REF_NAME}}-${{env.GITHUB_SHA_SHORT}}-${{env.PACKAGE_SUFFIX}}.tar.gz
           ESTIMATED_DOCS_URL: https://s3-us-west-1.amazonaws.com/imageflow-nightlies/doc
           CI_SEQUENTIAL_BUILD_NUMBER: ${{env.GITHUB_RUN_NUMBER}}
           CI_BUILD_URL: https://github.com/${{env.GITHUB_REPOSITORY}}/actions/runs/${{github.job_id}}

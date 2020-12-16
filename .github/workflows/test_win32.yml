@@ -1,4 +1,4 @@
-name: Test Window 32
+name: Test Win32
 
 on:
   push:
