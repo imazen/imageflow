@@ -1,4 +1,3 @@
-#  NUGET_RUNTIME= UPLOAD_BUILD=True FETCH_COMMIT_SUFFIX=mac64
 name: Test Window 32
 
 on:
@@ -10,6 +9,8 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@master
+
+      ### Install Nasm with fallback to S3 ###
       - name: Install nasm
         run: choco install nasm
       - name: Install nasm
@@ -24,6 +25,8 @@ jobs:
           echo "C:\Program Files (x86)\NASM" >> $GITHUB_PATH
         shell: bash
 
+
+     ### Cargo cache for Build artifacts ###
       - name: Cache cargo
         uses: actions/cache@v2
         with:
@@ -39,6 +42,8 @@ jobs:
           override: true
           components: rustfmt, clippy
           target: i686-pc-windows-msvc
+
+      ### check and test build ###
       - name: Check Build
         run: cargo check --all --target=i686-pc-windows-msvc
       - name: Test Build

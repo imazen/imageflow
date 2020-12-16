@@ -7,6 +7,7 @@ jobs:
   build:
     strategy:
       matrix:
+      # setup different OS and targets
         include:
           - name: ubuntu_16_04-x86_64
             os: ubuntu-16.04
@@ -51,6 +52,8 @@ jobs:
         run: |
           brew install gnu-tar
           echo PATH="/usr/local/opt/gnu-tar/libexec/gnubin:$PATH" >> $GITHUB_ENV
+
+      ### Cargo Cache for Build Artifacts ###
       - name: Cache cargo
         uses: actions/cache@v2
         with:
@@ -59,19 +62,26 @@ jobs:
             ~/.cargo/git
             target
           key: ${{ runner.os }}-${{matrix.name}}-cargo-${{ hashFiles('**/Cargo.lock') }}
+
+      ### Install Nasm for MacOS ###
       - name: Install nasm
         run: brew install nasm
         if: ${{contains( matrix.os, 'macos' )}}
+
+      ### Install Nasm for Windows ###
       - name: Install nasm
         run: choco install nasm
         if: ${{contains( matrix.os, 'windows' )}}
 
+
+      ### Fallback in case Nasm install fails ###
       - name: Install nasm
         run: |
           curl -L -o nasminst.exe https://argoyal.s3.us-east-2.amazonaws.com/nasm-2.14.02-installer-x64.exe
           .\nasminst.exe /S
         if: ${{contains( matrix.os, 'windows' ) && failure()}}
 
+      ### Set Path for nasm install ###
       - name: Set Path
         run: |
           echo "C:\Program Files\NASM" >> $GITHUB_PATH
@@ -79,17 +89,26 @@ jobs:
         if: ${{contains( matrix.os, 'windows' )}}
         shell: bash
 
+      ### Install Nasm for Ubuntu ###
       - name: Install nasm
         run: sudo apt install nasm
         if: ${{contains( matrix.os, 'ubuntu' )}}
+
+    ### Install dssim using cargo ###
       - name: Install dssim
         run: cargo install dssim
+
+    ### Check Build ###
       - name: Check Build
         run: cargo check --all
+
+    ### Test Code ###
       - name: Test Build
         run: cargo test --all
         env:
           RUSTFLAGS: -C target-cpu=${{matrix.TARGET_CPU}}
+
+    ### Build the code ###
       - name: Build Release
         run: cargo build --all
         shell: bash

@@ -1,4 +1,3 @@
-#  NUGET_RUNTIME= UPLOAD_BUILD=True FETCH_COMMIT_SUFFIX=mac64
 name: Release Window 32
 
 on:
