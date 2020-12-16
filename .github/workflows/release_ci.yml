@@ -33,7 +33,7 @@ jobs:
             os: macos-10.15
             TARGET_CPU: nehalem
             FETCH_COMMIT_SUFFIX: mac64
-            NUGET_RUNTIME: macos-x86_64
+            NUGET_RUNTIME: osx-x64
 
           - name: win-x86_64
             os: windows-2019
