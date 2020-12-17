@@ -26,7 +26,6 @@ jobs:
           echo "C:\Program Files (x86)\NASM" >> $GITHUB_PATH
         shell: bash
 
-
       - name: Cache cargo
         uses: actions/cache@v2
         with:
@@ -50,14 +49,14 @@ jobs:
         env:
           ESTIMATED_ARTIFACT_URL: https://s3-us-west-1.amazonaws.com/imageflow-nightlies/imageflow-${{env.GITHUB_REF_NAME}}-${{env.GITHUB_SHA_SHORT}}-${{env.PACKAGE_SUFFIX}}.zip
           ESTIMATED_DOCS_URL: https://s3-us-west-1.amazonaws.com/imageflow-nightlies/doc
-          CI_SEQUENTIAL_BUILD_NUMBER: ${{env.GITHUB_RUN_NUMBER}}
-          CI_BUILD_URL: https://github.com/${{env.GITHUB_REPOSITORY}}/actions/runs/${{github.job_id}}
-          CI_JOB_URL: https://github.com/${{env.GITHUB_REPOSITORY}}/actions/runs/${{github.job_id}}
+          CI_SEQUENTIAL_BUILD_NUMBER: ${{github.run_number}}
+          CI_BUILD_URL: https://github.com/${{env.GITHUB_REPOSITORY_OWNER}}/${{env.GITHUB_REPOSITORY_NAME}}/actions/runs/${{github.run_id}}
+          CI_JOB_URL: https://github.com/${{env.GITHUB_REPOSITORY_NAME}}/actions/runs/${{github.run_id}}
           CI_JOB_TITLE: Github ${{github.job_id}}
           CI_STRING: Github actions
           CI_PULL_REQUEST_INFO: ${{github.event_name!='release'}}
           CI_TAG: ${{env.GITHUB_REF_NAME}}
-          CI_REPO: ${{env.GITHUB_REPOSITORY}}
+          CI_REPO: ${{env.GITHUB_REPOSITORY_NAME}}
           CI: True
           OPT_LEVEL: 0
           DEBUG: False
@@ -141,8 +140,8 @@ jobs:
           destination_dir: ''
       - name: Publish nuget
         run: |
-            for f in ./artifacts/nuget/*.nupkg
-            do
-              curl -vX PUT -u "anshulrgoyal:${{ secrets.GITHUB_TOKEN }}" -F package=@$f https://nuget.pkg.github.com/anshulrgoyal/
-            done
+          for f in ./artifacts/nuget/*.nupkg
+          do
+            curl -vX PUT -u "anshulrgoyal:${{ secrets.GITHUB_TOKEN }}" -F package=@$f https://nuget.pkg.github.com/anshulrgoyal/
+          done
         shell: bash
