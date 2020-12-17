@@ -20,17 +20,17 @@ jobs:
             os: ubuntu-18.04
             TARGET_CPU: x86-64
 
-          - name: ubuntu_20_04-x86_64
-            os: ubuntu-20.04
-            TARGET_CPU: x86-64
+          # - name: ubuntu_20_04-x86_64
+          #   os: ubuntu-20.04
+          #   TARGET_CPU: x86-64
 
-          - name: osx_11_0-x86_64
-            os: macos-11.0
-            TARGET_CPU: x86-64
+          # - name: osx_11_0-x86_64
+          #   os: macos-11.0
+          #   TARGET_CPU: x86-64
 
           - name: osx_10_11-x86_64
             os: macos-10.15
-            TARGET_CPU: x86-64
+            TARGET_CPU: nehalem
 
           - name: win-x86_64
             os: windows-2019
