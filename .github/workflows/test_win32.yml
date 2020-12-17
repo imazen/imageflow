@@ -2,6 +2,9 @@ name: Test Win32
 
 on:
   push:
+    tags-ignore:
+      - '*'
+  pull_request:
 
 jobs:
   build:
