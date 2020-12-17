@@ -2,8 +2,10 @@ name: Test
 
 on:
   push:
-    tags-ignore:
+    branches:
       - '*'
+    tags-ignore:
+      - 'v*'
   pull_request:
 
 jobs:
