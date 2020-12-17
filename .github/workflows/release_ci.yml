@@ -72,7 +72,7 @@ jobs:
         with:
           path: |
              ~/.cargo/registry
-            ~/.cargo/git
+             ~/.cargo/git
              target
           key: ${{ runner.os }}-${{matrix.name}}-cargo-${{ hashFiles('**/Cargo.lock') }}
 
