@@ -56,7 +56,7 @@ jobs:
           CI_STRING: Github actions
           CI_PULL_REQUEST_INFO: ${{github.event_name!='release'}}
           CI_TAG: ${{env.GITHUB_REF_NAME}}
-          CI_REPO: ${{env.GITHUB_REPOSITORY_NAME}}
+          CI_REPO: ${{env.GITHUB_REPOSITORY_OWNER}}/${{env.GITHUB_REPOSITORY_NAME}}
           CI: True
           OPT_LEVEL: 0
           DEBUG: False
