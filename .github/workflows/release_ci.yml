@@ -23,11 +23,11 @@ jobs:
             FETCH_COMMIT_SUFFIX: linux64_glibc227
             NUGET_RUNTIME: ubuntu.18.04-x64
 
-          - name: ubuntu_20_04-x86_64
-            os: ubuntu-20.04
-            TARGET_CPU: x86-64
-            FETCH_COMMIT_SUFFIX: linux64_glibc231
-            NUGET_RUNTIME: ubuntu.20.04-x64
+          # - name: ubuntu_20_04-x86_64
+          #   os: ubuntu-20.04
+          #   TARGET_CPU: x86-64
+          #   FETCH_COMMIT_SUFFIX: linux64_glibc231
+          #   NUGET_RUNTIME: ubuntu.20.04-x64
 
           - name: osx_10_11-x86_64
             os: macos-10.15
