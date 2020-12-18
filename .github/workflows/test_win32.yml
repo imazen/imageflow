@@ -2,8 +2,10 @@ name: Test Win32
 
 on:
   push:
-    tags-ignore:
+    branches:
       - '*'
+    tags-ignore:
+      - 'v*'
   pull_request:
 
 jobs:
