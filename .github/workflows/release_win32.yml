@@ -51,7 +51,7 @@ jobs:
           ESTIMATED_DOCS_URL: https://s3-us-west-1.amazonaws.com/imageflow-nightlies/doc
           CI_SEQUENTIAL_BUILD_NUMBER: ${{github.run_number}}
           CI_BUILD_URL: https://github.com/${{env.GITHUB_REPOSITORY_OWNER}}/${{env.GITHUB_REPOSITORY_NAME}}/actions/runs/${{github.run_id}}
-          CI_JOB_URL: https://github.com/${{env.GITHUB_REPOSITORY_NAME}}/actions/runs/${{github.run_id}}
+          CI_JOB_URL: https://github.com/${{env.GITHUB_REPOSITORY_OWNER}}/${{env.GITHUB_REPOSITORY_NAME}}/actions/runs/${{github.run_id}}
           CI_JOB_TITLE: Github ${{github.job_id}}
           CI_STRING: Github actions
           CI_PULL_REQUEST_INFO: ${{github.event_name!='release'}}
