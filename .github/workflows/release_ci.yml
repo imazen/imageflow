@@ -256,8 +256,8 @@ jobs:
           cp "${ARTIFACT_ARCHIVE_NAME}" "./artifacts/upload/${ARTIFACT_UPLOAD_PATH}.tar.gz"
           mkdir -p ./artifacts/upload/releases
           mkdir -p ./artifacts/upload/commits/${GIT_COMMIT}
-          cp "${ARTIFACT_ARCHIVE_NAME}" "./artifacts/upload/releases/${ARTIFACT_UPLOAD_PATH}.zip"
-          cp "${ARTIFACT_ARCHIVE_NAME}" "./artifacts/upload/commits/${GIT_COMMIT}/${ARTIFACT_UPLOAD_PATH_1}.zip"
+          cp "${ARTIFACT_ARCHIVE_NAME}" "./artifacts/upload/releases/${ARTIFACT_UPLOAD_PATH}.tar.gz"
+          cp "${ARTIFACT_ARCHIVE_NAME}" "./artifacts/upload/commits/${GIT_COMMIT}/${ARTIFACT_UPLOAD_PATH_1}.tar.gz"
         env:
           TARGET_DIR: target/
           ARTIFACT_UPLOAD_PATH: /imageflow-${{env.GITHUB_REF_NAME}}-${{env.GITHUB_SHA_SHORT}}-${{matrix.name}}
