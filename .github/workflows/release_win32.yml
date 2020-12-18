@@ -94,10 +94,11 @@ jobs:
           mkdir -p ./artifacts/upload/commits/${GIT_COMMIT}
           cp "${ARTIFACT_ARCHIVE_NAME}" "./artifacts/upload/releases/${ARTIFACT_UPLOAD_PATH}.zip"
           cp "${ARTIFACT_ARCHIVE_NAME}" "./artifacts/upload/commits/${GIT_COMMIT}/${ARTIFACT_UPLOAD_PATH_1}.zip"
+        env:
           TARGET_DIR: target/i686-pc-windows-msvc/
           ARTIFACT_UPLOAD_PATH: /imageflow-${{env.GITHUB_REF_NAME}}-${{env.GITHUB_SHA_SHORT}}-win-x86
           ARTIFACT_ARCHIVE_NAME: ./artifacts/staging/archive.zip
-          DOCS_UPLOAD_DIR}: doc
+          DOCS_UPLOAD_DIR: doc
           GIT_COMMIT: ${{github.sha}}
           ARTIFACT_UPLOAD_PATH_1: /win-x86
 
