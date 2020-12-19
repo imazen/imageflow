@@ -36,6 +36,13 @@ fn assert_valid_image(url: &str) {
         Err(e) => { panic!("{:?} for {}", &e, &url); }
     }
 }
+
+fn assert_ok(url: &str) {
+    match fetch(url, Some(FetchConfig{ custom_ca_trust_file: None, read_error_body: Some(true)})){
+        Ok(_) => { },
+        Err(e) => { panic!("{:?} for {}", &e, &url); }
+    }
+}
 //fn write_env_vars(path: &Path){
 //    let mut f = File::create(&path).unwrap();
 //    for (k,v) in std::env::vars(){
@@ -223,6 +230,9 @@ fn run_server_test_i4(){
         let c = context.subfolder_context("demo"); //stuck on port 39876
         c.subfolder_context("demo");
         let (_po, callback_result) = ServerInstance::run(&c, Proto::Http, vec!["--demo", "--data-dir=."], | server | {
+            assert_ok(&server.url_for("/imageflow.ready"));
+            assert_ok(&server.url_for("/imageflow.health"));
+
             fetch_bytes(&server.url_for("/ir4/proxy_unsplash/photo-1422493757035-1e5e03968f95?width=100"))?;
             //TODO: Find a way to test upstream 404 and 403 errors
             // assert_eq!(server.get_status("/demo_images/notthere.jpg")?, http::StatusCode::NOT_FOUND);

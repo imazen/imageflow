@@ -611,6 +611,18 @@ pub fn serve(c: StartServerConfig) {
         }, "test-shutdown");
     }
 
+    router.get("/imageflow.ready", move |_: &mut Request| -> IronResult<Response> {
+        Ok(Response::with((Mime::from_str("text/plain").unwrap(),
+                           status::Ok,
+                           "Imageflow Server is ready to start accepting requests.")))
+    }, "imageflow-ready");
+
+    router.get("/imageflow.health", move |_: &mut Request| -> IronResult<Response> {
+        Ok(Response::with((Mime::from_str("text/plain").unwrap(),
+                           status::Ok,
+                           "Imageflow Server is healthy.")))
+    }, "imageflow-health");
+
     let mut chain = Chain::new(mou);
 
     chain.link(persistent::Read::<SharedData>::both(shared_data));
