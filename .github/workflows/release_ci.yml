@@ -377,7 +377,7 @@ jobs:
       #     destination_dir: commits/${{github.sha}}
 
       - name: Uplaod to s3
-        run: aws cp ./artifacts/upload s3://${AWS_BUCKET}/ --recursive
+        run: aws s3 cp ./artifacts/upload s3://${AWS_BUCKET}/ --recursive
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY}}
