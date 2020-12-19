@@ -188,8 +188,8 @@ jobs:
       #     TEST_BINARIES_TARGET: target/
 
       ### Test build ##
-      - name: Test Build
-        run: cargo test --all --release
+      # - name: Test Build
+      #   run: cargo test --all --release
 
       - name: Add Artifacts URL (POSIX)
         run: echo ESTIMATED_ARTIFACT_URL=$ARTIFACT_PATH.tar.gz >> $GITHUB_ENV
@@ -357,24 +357,31 @@ jobs:
           content-type: text/plain
 
       ### Upload to S3(build artifacts) ###
-      - name: Upload to S3
-        uses: shallwefootball/s3-upload-action@master
-        with:
-          aws_key_id: ${{ secrets.AWS_KEY_ID }}
-          aws_secret_access_key: ${{ secrets.AWS_SECRET_ACCESS_KEY}}
-          aws_bucket: ${{ secrets.AWS_BUCKET }}
-          source_dir: ./artifacts/upload/releases
-          destination_dir: releases
+      # - name: Upload to S3
+      #   uses: shallwefootball/s3-upload-action@master
+      #   with:
+      #     aws_key_id: ${{ secrets.AWS_KEY_ID }}
+      #     aws_secret_access_key: ${{ secrets.AWS_SECRET_ACCESS_KEY}}
+      #     aws_bucket: ${{ secrets.AWS_BUCKET }}
+      #     source_dir: ./artifacts/upload/releases
+      #     destination_dir: releases
 
-           ### Upload to S3(build artifacts) ###
-      - name: Upload to S3(commits)
-        uses: shallwefootball/s3-upload-action@master
-        with:
-          aws_key_id: ${{ secrets.AWS_KEY_ID }}
-          aws_secret_access_key: ${{ secrets.AWS_SECRET_ACCESS_KEY}}
-          aws_bucket: ${{ secrets.AWS_BUCKET }}
-          source_dir: ./artifacts/upload/commits/${{github.sha}}
-          destination_dir: commits/${{github.sha}}
+      #      ### Upload to S3(build artifacts) ###
+      # - name: Upload to S3(commits)
+      #   uses: shallwefootball/s3-upload-action@master
+      #   with:
+      #     aws_key_id: ${{ secrets.AWS_KEY_ID }}
+      #     aws_secret_access_key: ${{ secrets.AWS_SECRET_ACCESS_KEY}}
+      #     aws_bucket: ${{ secrets.AWS_BUCKET }}
+      #     source_dir: ./artifacts/upload/commits/${{github.sha}}
+      #     destination_dir: commits/${{github.sha}}
+
+      - name: Uplaod to s3
+        run: aws cp ./artifacts/upload s3://${AWS_BUCKET}/ --recursive
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY}}
+          AWS_BUCKET: ${{ secrets.AWS_BUCKET }}
 
       ### upload to S3(nugets) ###
       - name: Upload to S3(tags)
