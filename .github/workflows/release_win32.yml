@@ -127,20 +127,26 @@ jobs:
           path: ./artifacts/upload/imageflow-${{env.GITHUB_REF_NAME}}-${{env.GITHUB_SHA_SHORT}}-win-x86.zip
           repo-token: ${{ secrets.GITHUB_TOKEN }}
           content-type: text/plain
-      - name: Uplaod to s3
-        run: aws s3 cp ./artifacts/upload s3://argoyal --recursive
-        env:
-          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_KEY_ID }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY}}
-          AWS_BUCKET: ${{ secrets.AWS_BUCKET }}
+
+      ## Upload to S3(build artifacts) ###
       - name: Upload to S3
-        uses: shallwefootball/s3-upload-action@master
+        uses: anshulrgoyal/upload-s3-action@master
+        with:
+          aws_key_id: ${{ secrets.AWS_KEY_ID }}
+          aws_secret_access_key: ${{ secrets.AWS_SECRET_ACCESS_KEY}}
+          aws_bucket: ${{ secrets.AWS_BUCKET }}
+          source_dir: ./artifacts/upload
+          destination_dir: ''
+      ### upload to S3(nugets) ###
+      - name: Upload to S3(nugets)
+        uses: anshulrgoyal/upload-s3-action@master
         with:
           aws_key_id: ${{ secrets.AWS_KEY_ID }}
           aws_secret_access_key: ${{ secrets.AWS_SECRET_ACCESS_KEY}}
           aws_bucket: ${{ secrets.AWS_BUCKET }}
           source_dir: ./artifacts/nuget/
           destination_dir: 'nuget'
+
       - name: Publish nuget
         run: |
           for f in ./artifacts/nuget/*.nupkg
