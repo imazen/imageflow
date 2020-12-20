@@ -1,6 +1,7 @@
 name: Release
 
 on:
+  push:
   release:
     types:
       - published
@@ -358,7 +359,7 @@ jobs:
 
       ## Upload to S3(build artifacts) ###
       - name: Upload to S3
-        uses: anshulrgoyal/s3-upload-action@master
+        uses: anshulrgoyal/upload-s3-action@master
         with:
           aws_key_id: ${{ secrets.AWS_KEY_ID }}
           aws_secret_access_key: ${{ secrets.AWS_SECRET_ACCESS_KEY}}
@@ -376,7 +377,7 @@ jobs:
 
       ### upload to S3(nugets) ###
       - name: Upload to S3(nugets)
-        uses: anshulrgoyal/s3-upload-action@master
+        uses: anshulrgoyal/upload-s3-action@master
         with:
           aws_key_id: ${{ secrets.AWS_KEY_ID }}
           aws_secret_access_key: ${{ secrets.AWS_SECRET_ACCESS_KEY}}
