@@ -399,3 +399,4 @@ jobs:
           PUBLISH_DOCKER: True
           DOCKER_USERNAME: ${{secrets.DOCKER_USERNAME}}
           DOCKER_PASSWORD: ${{secrets.DOCKER_PASSWORD}}
+          PUBLISH_DOCKER_TAG: ${{env.GITHUB_REF_NAME}}
