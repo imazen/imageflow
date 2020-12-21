@@ -394,8 +394,8 @@ jobs:
       - name: Publish To Docker
         run: |
           docker login -u "$DOCKER_USERNAME" -p "$DOCKER_PASSWORD"
-          ./ci/travis_publish_docker_images.sh docker/imageflow_tool imazen/imageflow_tool
-          ./ci/travis_publish_docker_images.sh docker/imageflow_server_unsecured imazen/imageflow_server_unsecured
+          ./ci/travis_publish_docker_images.sh docker/imageflow_tool anshulgoyal/imageflow_tools
+          ./ci/travis_publish_docker_images.sh docker/imageflow_server_unsecured anshulgoyal/imageflow_unsecured
         env:
           SOURCE_COMMIT: ${{github.sha}}
           PUBLISH_DOCKER: True
