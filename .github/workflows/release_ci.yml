@@ -389,6 +389,7 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@master
+      - uses: FranzDiebold/github-env-vars-action@v1.3.0
       - name: Publish To Docker
         run: |
           docker login -u "$DOCKER_USERNAME" -p "$DOCKER_PASSWORD"
