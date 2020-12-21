@@ -386,6 +386,7 @@ jobs:
         if: ${{'ubuntu.20.04-x64'!=matrix.NUGET_RUNTIME}}
   publish:
     runs-on: ubuntu-16.04
+    needs: build
     steps:
       - name: Checkout code
         uses: actions/checkout@master
