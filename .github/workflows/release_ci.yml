@@ -402,3 +402,19 @@ jobs:
           DOCKER_USERNAME: ${{secrets.DOCKER_USERNAME}}
           DOCKER_PASSWORD: ${{secrets.DOCKER_PASSWORD}}
           PUBLISH_DOCKER_TAG: ${{env.GITHUB_REF_NAME}}
+
+  docs:
+    runs-on: ubuntu-16.04
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@master
+      - name: Build
+        run: |
+          cargo install mdbook --no-default-features --features output --vers "^0.3"
+          cd ./docs
+          mdbook build
+      - name: Deploy
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./docs/book
