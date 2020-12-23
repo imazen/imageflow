@@ -95,6 +95,8 @@ mkdir -p "$STAGING_DIR" || true
 	cat ../../${NUSPEC_NAME} \
 		| sed -e "s/:id:/${SED_NUGET_PACKAGE_NAME}/g" \
 		 | sed -e "s/:version:/${SED_NUGET_PACKAGE_VERSION}/g" > "${NUGET_PACKAGE_NAME}.nuspec"
+		 | sed -e "s/:repo_name_native:/${REPO_NAME_NATIVE}/g" > "${NUGET_PACKAGE_NAME}.nuspec"
+		 | sed -e "s/:repo_name_tool:/${REPO_NAME_TOOL}/g" > "${NUGET_PACKAGE_NAME}.nuspec"
 
 
 	echo "${NUGET_PACKAGE_NAME}.nuspec:"

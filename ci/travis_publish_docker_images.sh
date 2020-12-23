@@ -20,17 +20,9 @@ if [[ -z "$TRAVIS_PULL_REQUEST_SHA" ]]; then
 fi
 if [[ -n "$PUBLISH_DOCKER_TAG" ]]; then
 
-    if [[ -z "$SOURCE_COMMIT" ]]; then
-        export SOURCE_COMMIT="${SOURCE_COMMIT:-$(git rev-parse HEAD)}"
-        echo "Updating SOURCE_COMMIT from git rev-parse HEAD"
-        echo "SOURCE_COMMIT: $SOURCE_COMMIT"
-    fi
-    echo "Logging into Docker"
-
-
     echo "Building image $2:$PUBLISH_DOCKER_TAG in directory $1"
 
-    (cd $1 && docker build -t "$2:$PUBLISH_DOCKER_TAG" --build-arg "SOURCE_COMMIT=$SOURCE_COMMIT" --build-arg "DOCKER_TAG=$PUBLISH_DOCKER_TAG" . && docker push "$2:$PUBLISH_DOCKER_TAG" && echo Exited with code $?)
+    (cd $1 && docker build -t "$2:$PUBLISH_DOCKER_TAG" --build-arg "IMAGEFLOW_DOWNLOAD_URL_TAR_GZ=${IMAGEFLOW_DOWNLOAD_URL_TAR_GZ}" --build-arg "DOCKER_TAG=$PUBLISH_DOCKER_TAG" . && docker push "$2:$PUBLISH_DOCKER_TAG" && echo Exited with code $?)
 
 
 fi

@@ -273,7 +273,7 @@ jobs:
         if: ${{contains( matrix.os, 'windows' )}}
         shell: bash
 
-      - name: Run imageflow-tools (Windows)
+      - name: Run imageflow-tools (POSIX)
         run: ./${TARGET_DIR}release/imageflow_tool diagnose --show-compilation-info
         env:
           TARGET_DIR: target/
@@ -326,6 +326,8 @@ jobs:
           CI_TAG: ${{env.GITHUB_REF_NAME}}
           PACKAGE_SUFFIX: ${{matrix.name}}
           NUGET_RUNTIME: ${{matrix.NUGET_RUNTIME}}
+          REPO_NAME_TOOL: ${{env.GITHUB_REPOSITORY_OWNER}}/${{env.GITHUB_REPOSITORY_NAME}}
+          REPO_NAME_NATIVE: ${{env.GITHUB_REPOSITORY_OWNER}}/${{env.GITHUB_REPOSITORY_NAME}}
 
       ### create nuget runtime ###
       - name: Nuget(Runtime) to S3
@@ -335,6 +337,8 @@ jobs:
           CI_TAG: ${{env.GITHUB_REF_NAME}}
           PACKAGE_SUFFIX: ${{matrix.name}}
           NUGET_RUNTIME: ${{matrix.NUGET_RUNTIME}}
+          REPO_NAME_TOOL: ${{env.GITHUB_REPOSITORY_OWNER}}/${{env.GITHUB_REPOSITORY_NAME}}
+          REPO_NAME_NATIVE: ${{env.GITHUB_REPOSITORY_OWNER}}/${{env.GITHUB_REPOSITORY_NAME}}
 
       ### upload to Github release POSIX ###
       - name: Upload to release (POSIX)
@@ -397,11 +401,11 @@ jobs:
           ./ci/travis_publish_docker_images.sh docker/imageflow_tool anshulgoyal/imageflow_tools
           ./ci/travis_publish_docker_images.sh docker/imageflow_server_unsecured anshulgoyal/imageflow_unsecured
         env:
-          SOURCE_COMMIT: ${{github.sha}}
           PUBLISH_DOCKER: True
           DOCKER_USERNAME: ${{secrets.DOCKER_USERNAME}}
           DOCKER_PASSWORD: ${{secrets.DOCKER_PASSWORD}}
           PUBLISH_DOCKER_TAG: ${{env.GITHUB_REF_NAME}}
+          IMAGEFLOW_DOWNLOAD_URL_TAR_GZ: https://argoyal.s3.us-east-2.amazonaws.com/commits/${{github.sha}}/linux64_glibc227.tar.gz
 
   docs:
     runs-on: ubuntu-16.04
