@@ -9,7 +9,7 @@ on:
   pull_request:
 
 jobs:
-  build:
+  test:
     strategy:
       matrix:
         # setup different OS and targets
@@ -114,3 +114,47 @@ jobs:
         shell: bash
         env:
           RUSTFLAGS: -C target-cpu=${{matrix.TARGET_CPU}}
+
+  test_win32:
+    runs-on: windows-2019
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@master
+
+      ### Install Nasm with fallback to S3 ###
+      - name: Install nasm
+        run: choco install nasm
+      - name: Install nasm
+        run: |
+          curl -L -o nasminst.exe https://argoyal.s3.us-east-2.amazonaws.com/nasm-2.14.02-installer-x64.exe
+          .\nasminst.exe /S
+        if: ${{failure()}}
+
+      - name: Set Path
+        run: |
+          echo "C:\Program Files\NASM" >> $GITHUB_PATH
+          echo "C:\Program Files (x86)\NASM" >> $GITHUB_PATH
+        shell: bash
+
+      ### Cargo cache for Build artifacts ###
+      - name: Cache cargo
+        uses: actions/cache@v2
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-windows-test-32-cargo-${{ hashFiles('**/Cargo.lock') }}
+      - name: Install latest 32bit target
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          override: true
+          components: rustfmt, clippy
+          target: i686-pc-windows-msvc
+
+      ### check and test build ###
+      - name: Check Build
+        run: cargo check --all --target=i686-pc-windows-msvc
+      - name: Test Build
+        run: cargo test --all --release --target=i686-pc-windows-msvc
