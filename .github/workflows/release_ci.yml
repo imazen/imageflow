@@ -540,7 +540,7 @@ jobs:
 
   publish:
     runs-on: ubuntu-16.04
-    needs: build
+    needs: [build, build_win32]
     steps:
       - name: Checkout code
         uses: actions/checkout@master
