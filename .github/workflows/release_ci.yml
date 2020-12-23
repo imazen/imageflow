@@ -389,7 +389,7 @@ jobs:
         shell: bash
         if: ${{'ubuntu.20.04-x64'!=matrix.NUGET_RUNTIME}}
 
-build_win32:
+  build_win32:
     runs-on: windows-2019
     steps:
       - name: Checkout code
