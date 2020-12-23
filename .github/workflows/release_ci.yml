@@ -326,8 +326,8 @@ jobs:
           CI_TAG: ${{env.GITHUB_REF_NAME}}
           PACKAGE_SUFFIX: ${{matrix.name}}
           NUGET_RUNTIME: ${{matrix.NUGET_RUNTIME}}
-          REPO_NAME_TOOL: ${{env.GITHUB_REPOSITORY_OWNER}}/${{env.GITHUB_REPOSITORY_NAME}}
-          REPO_NAME_NATIVE: ${{env.GITHUB_REPOSITORY_OWNER}}/${{env.GITHUB_REPOSITORY_NAME}}
+          REPO_NAME_TOOL: ${{env.GITHUB_REPOSITORY_OWNER}}\/${{env.GITHUB_REPOSITORY_NAME}}
+          REPO_NAME_NATIVE: ${{env.GITHUB_REPOSITORY_OWNER}}\/${{env.GITHUB_REPOSITORY_NAME}}
 
       ### create nuget runtime ###
       - name: Nuget(Runtime) to S3
@@ -337,8 +337,8 @@ jobs:
           CI_TAG: ${{env.GITHUB_REF_NAME}}
           PACKAGE_SUFFIX: ${{matrix.name}}
           NUGET_RUNTIME: ${{matrix.NUGET_RUNTIME}}
-          REPO_NAME_TOOL: ${{env.GITHUB_REPOSITORY_OWNER}}/${{env.GITHUB_REPOSITORY_NAME}}
-          REPO_NAME_NATIVE: ${{env.GITHUB_REPOSITORY_OWNER}}/${{env.GITHUB_REPOSITORY_NAME}}
+          REPO_NAME_TOOL: ${{env.GITHUB_REPOSITORY_OWNER}}\/${{env.GITHUB_REPOSITORY_NAME}}
+          REPO_NAME_NATIVE: ${{env.GITHUB_REPOSITORY_OWNER}}\/${{env.GITHUB_REPOSITORY_NAME}}
 
       ### upload to Github release POSIX ###
       - name: Upload to release (POSIX)
@@ -493,6 +493,8 @@ jobs:
           PACKAGE_SUFFIX: win-x86
           NUGET_RUNTIME: win-x86
           TARGET_DIR: target/i686-pc-windows-msvc
+          REPO_NAME_TOOL: ${{env.GITHUB_REPOSITORY_OWNER}}\/${{env.GITHUB_REPOSITORY_NAME}}
+          REPO_NAME_NATIVE: ${{env.GITHUB_REPOSITORY_OWNER}}\/${{env.GITHUB_REPOSITORY_NAME}}
 
       - name: Nuget(Runtime) to S3
         shell: bash
@@ -502,6 +504,8 @@ jobs:
           PACKAGE_SUFFIX: win-x86
           NUGET_RUNTIME: win-x86
           TARGET_DIR: target/i686-pc-windows-msvc
+          REPO_NAME_TOOL: ${{env.GITHUB_REPOSITORY_OWNER}}\/${{env.GITHUB_REPOSITORY_NAME}}
+          REPO_NAME_NATIVE: ${{env.GITHUB_REPOSITORY_OWNER}}\/${{env.GITHUB_REPOSITORY_NAME}}
 
       - name: Upload to release
         uses: Shopify/upload-to-release@master
