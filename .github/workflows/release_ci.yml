@@ -555,14 +555,13 @@ jobs:
         shell: bash
         if: ${{NUGET_UPLOAD_GITHUB == true}}
       - name: Publish nuget(Nuget)
-       run: |
+        run: |
           for f in ./artifacts/nuget/*.nupkg
           do
              curl -L "https://www.nuget.org/api/v2/package" -H "X-NuGet-ApiKey: ${{ secrets.NUGET_API_KEY }}" -H "X-NuGet-Client-Version: 4.1.0" -A "NuGet Command Line/3.4.4.1321 (Unix 4.4.0.92)" --upload-file "$f" --fail
           done
         shell: bash
         if: ${{NUGET_UPLOAD_NUGET == true}}
-
 
   publish:
     runs-on: ubuntu-16.04
