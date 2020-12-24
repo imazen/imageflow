@@ -191,9 +191,9 @@ jobs:
       #     VALGRIND_ARGS: -q --error-exitcode=9 --gen-suppressions=all
       #     TEST_BINARIES_TARGET: target/
 
-      ### Test build ##
-      # - name: Test Build
-      #   run: cargo test --all --release
+      ## Test build ##
+      - name: Test Build
+        run: cargo test --all --release
 
       - name: Add Artifacts URL (POSIX)
         run: echo ESTIMATED_ARTIFACT_URL=$ARTIFACT_PATH.tar.gz >> $GITHUB_ENV
