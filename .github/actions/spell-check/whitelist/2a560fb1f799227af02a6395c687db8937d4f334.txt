@@ -8,3 +8,6 @@ pdb
 rustfmt
 shallwefootball
 Shopify
+anshulgoyal
+gh
+peaceiris
