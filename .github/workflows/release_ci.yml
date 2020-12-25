@@ -4,7 +4,6 @@ on:
   release:
     types:
       - published
-  push:
 jobs:
   build:
     env:
