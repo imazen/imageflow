@@ -7,8 +7,8 @@ on:
 jobs:
   build:
     env:
-      NUGET_UPLOAD_NUGET: false
-      NUGET_UPLOAD_GITHUB: true
+      NUGET_UPLOAD_NUGET: ${{false}}
+      NUGET_UPLOAD_GITHUB: ${{true}}
     strategy:
       matrix:
         ### Set various targets and OS for build ###
@@ -401,8 +401,8 @@ jobs:
 
   build_win32:
     env:
-      NUGET_UPLOAD_NUGET: false
-      NUGET_UPLOAD_GITHUB: true
+      NUGET_UPLOAD_NUGET: ${{false}}
+      NUGET_UPLOAD_GITHUB: ${{true}}
 
     runs-on: windows-2019
     steps:
