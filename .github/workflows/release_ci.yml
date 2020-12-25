@@ -6,9 +6,6 @@ on:
       - published
 jobs:
   build:
-    env:
-      NUGET_UPLOAD_NUGET: ${{false}}
-      NUGET_UPLOAD_GITHUB: ${{true}}
     strategy:
       matrix:
         ### Set various targets and OS for build ###
@@ -389,7 +386,7 @@ jobs:
             curl -vX PUT -u "${{env.GITHUB_REPOSITORY_OWNER}}:${{ secrets.GITHUB_TOKEN }}" -F package=@$f https://nuget.pkg.github.com/${{env.GITHUB_REPOSITORY_OWNER}}/
           done
         shell: bash
-        if: ${{'ubuntu.20.04-x64'!=matrix.NUGET_RUNTIME && env.NUGET_UPLOAD_GITHUB == 'true' }}
+        if: ${{'ubuntu.20.04-x64'!=matrix.NUGET_RUNTIME && secrets.NUGET_UPLOAD_GITHUB == 'true' }}
       - name: Publish nuget(Nuget)
         run: |
           for f in ./artifacts/nuget/*.nupkg
@@ -397,13 +394,9 @@ jobs:
              curl -L "https://www.nuget.org/api/v2/package" -H "X-NuGet-ApiKey: ${{ secrets.NUGET_API_KEY }}" -H "X-NuGet-Client-Version: 4.1.0" -A "NuGet Command Line/3.4.4.1321 (Unix 4.4.0.92)" --upload-file "$f" --fail
           done
         shell: bash
-        if: ${{'ubuntu.20.04-x64'!=matrix.NUGET_RUNTIME && env.NUGET_UPLOAD_NUGET == 'true'}}
+        if: ${{'ubuntu.20.04-x64'!=matrix.NUGET_RUNTIME && secrets.NUGET_UPLOAD_NUGET == 'true'}}
 
   build_win32:
-    env:
-      NUGET_UPLOAD_NUGET: ${{false}}
-      NUGET_UPLOAD_GITHUB: ${{true}}
-
     runs-on: windows-2019
     steps:
       - name: Checkout code
@@ -555,7 +548,7 @@ jobs:
             curl -vX PUT -u "${{env.GITHUB_REPOSITORY_OWNER}}:${{ secrets.GITHUB_TOKEN }}" -F package=@$f https://nuget.pkg.github.com/${{env.GITHUB_REPOSITORY_OWNER}}/
           done
         shell: bash
-        if: ${{env.NUGET_UPLOAD_GITHUB == 'true'}}
+        if: ${{secrets.NUGET_UPLOAD_GITHUB == 'true'}}
       - name: Publish nuget(Nuget)
         run: |
           for f in ./artifacts/nuget/*.nupkg
@@ -563,7 +556,7 @@ jobs:
              curl -L "https://www.nuget.org/api/v2/package" -H "X-NuGet-ApiKey: ${{ secrets.NUGET_API_KEY }}" -H "X-NuGet-Client-Version: 4.1.0" -A "NuGet Command Line/3.4.4.1321 (Unix 4.4.0.92)" --upload-file "$f" --fail
           done
         shell: bash
-        if: ${{env.NUGET_UPLOAD_NUGET == 'true'}}
+        if: ${{secrets.NUGET_UPLOAD_NUGET == 'true'}}
 
   publish:
     runs-on: ubuntu-16.04
