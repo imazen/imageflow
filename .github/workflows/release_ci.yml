@@ -401,8 +401,8 @@ jobs:
 
   build_win32:
     env:
-      NUGET_UPLOAD_NUGET: ${{false}}
-      NUGET_UPLOAD_GITHUB: ${{true}}
+      NUGET_UPLOAD_NUGET: ${{secrets.NUGET_UPLOAD_NUGET}}
+      NUGET_UPLOAD_GITHUB: ${{secrets.NUGET_UPLOAD_GITHUB}}
 
     runs-on: windows-2019
     steps:
