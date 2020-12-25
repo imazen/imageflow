@@ -382,7 +382,7 @@ jobs:
           destination_dir: 'nuget'
 
       ### Publish to nugets ###
-      - name: Publish nuget
+      - name: Publish nuget(Github)
         run: |
           for f in ./artifacts/nuget/*.nupkg
           do
