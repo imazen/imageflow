@@ -1,0 +1,114 @@
+# Default values for imageflow.
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+
+#Sets the number of replicas that need to run
+replicaCount: 1
+
+image:
+  repository: imazen/imageflow_server_unsecured
+  pullPolicy: IfNotPresent
+
+imagePullSecrets: []
+nameOverride: "imageflow"
+fullnameOverride: "imageflow"
+
+# Startupargs for imageflow server, Here you can specify the mounts and other options.
+# see https://github.com/imazen/imageflow#beyond-the-demo for more information on this.
+startupArgs: [
+    "sudo chown -R imageflow /home/imageflow/; /home/imageflow/imageflow_server start \
+    --bind-address 0.0.0.0 \
+    --port 3000 \
+    --demo \
+    --data-dir /home/imageflow/data/",
+  ]
+livenessProbe:
+  # Enables a livenessprobe to a path to check health of the container
+  enabled: false
+  # Path to an asset on server that will answer with a 200 ok
+  path: /path/to/image.jpg
+
+readinessProbe:
+  # enables a readyness probe to see if container has finished starting
+  enabled: false
+  # Path to an asset on server that will answer with a 200 ok
+  path: /path/to/image.jpg
+
+persistentVolume:
+  # Enabled creates a PV for the container with fullname as name
+  enabled: true
+  # Sets accessmode https://kubernetes.io/docs/concepts/storage/persistent-volumes/
+  accessModes: ReadWriteMany #ReadWriteOnce, ReadOnlyMany or ReadWriteMany
+  # Sets storageclass can be azurefile || azurefile-premium for readWriteMany and shared between containers.
+  # OR default || managed-premium for disk type claims that are only accessable to one container
+  storageClassName: azurefile
+  #Size in Mi || Gi etc
+  size: 500Mi
+
+serviceAccount:
+  # Specifies whether a service account should be created
+  create: false
+  # Annotations to add to the service account
+  annotations: {}
+  # The name of the service account to use.
+  # If not set and create is true, a name is generated using the fullname template
+  name: ""
+
+podAnnotations: {}
+
+podSecurityContext:
+  {}
+  # fsGroup: 2000
+
+securityContext:
+  {}
+  # capabilities:
+  #   drop:
+  #   - ALL
+  # readOnlyRootFilesystem: true
+  # runAsNonRoot: true
+  # runAsUser: 1000
+
+service:
+  type: ClusterIP
+  port: 3000
+
+ingress:
+  enabled: true
+  annotations:
+    kubernetes.io/ingress.class: nginx
+    cert-manager.io/cluster-issuer: tif-letsencrypt-cluster-issuer
+  hosts:
+    - host: domain.ext
+      paths:
+        - path: /
+  tls:
+    - secretName: secretname-tls
+      hosts:
+        - domain.ext
+
+resources:
+  {}
+  # We usually recommend not to specify default resources and to leave this as a conscious
+  # choice for the user. This also increases chances charts run on environments with little
+  # resources, such as Minikube. If you do want to specify resources, uncomment the following
+  # lines, adjust them as necessary, and remove the curly braces after 'resources:'.
+  # limits:
+  #   cpu: 100m
+  #   memory: 128Mi
+  # requests:
+  #   cpu: 100m
+  #   memory: 128Mi
+
+autoscaling:
+  enabled: false
+  minReplicas: 1
+  maxReplicas: 100
+  targetCPUUtilizationPercentage: 80
+  # targetMemoryUtilizationPercentage: 80
+
+nodeSelector: {}
+
+tolerations: []
+
+affinity: {}

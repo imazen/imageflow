@@ -1,0 +1,15 @@
+{{- if .Values.persistentVolume.enabled }}
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ include "imageflow.fullname" . }}
+  labels:
+    {{- include "imageflow.labels" . | nindent 4 }}
+spec:
+  accessModes:
+    - {{ .Values.persistentVolume.accessModes | quote }}
+  storageClassName: {{ .Values.persistentVolume.storageClassName | quote }}
+  resources:
+    requests:
+      storage: {{ .Values.persistentVolume.size | quote }}
+{{- end }}
