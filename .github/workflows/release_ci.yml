@@ -255,7 +255,6 @@ jobs:
             tar czf "./archive.tar.gz" ./*
           )
           mkdir -p "./artifacts/upload/$(dirname "${ARTIFACT_UPLOAD_PATH}")" || true
-          cp "${ARTIFACT_ARCHIVE_NAME}" "./artifacts/upload/${ARTIFACT_UPLOAD_PATH}.tar.gz"
           mkdir -p ./artifacts/upload/releases
           mkdir -p ./artifacts/upload/commits/${GIT_COMMIT}
           cp "${ARTIFACT_ARCHIVE_NAME}" "./artifacts/upload/releases/${ARTIFACT_UPLOAD_PATH}.tar.gz"
@@ -306,7 +305,6 @@ jobs:
             7z a -r "./archive.zip" ./*
           )
           mkdir -p "./artifacts/upload/$(dirname "${ARTIFACT_UPLOAD_PATH}")" || true
-          cp "${ARTIFACT_ARCHIVE_NAME}" "./artifacts/upload/${ARTIFACT_UPLOAD_PATH}.zip"
           mkdir -p "./artifacts/upload/${DOCS_UPLOAD_DIR}" || true
           mkdir -p ./artifacts/upload/releases
           mkdir -p ./artifacts/upload/commits/${GIT_COMMIT}
@@ -485,7 +483,6 @@ jobs:
             7z a -r "./archive.zip" ./*
           )
           mkdir -p "./artifacts/upload/$(dirname "${ARTIFACT_UPLOAD_PATH}")" || true
-          cp "${ARTIFACT_ARCHIVE_NAME}" "./artifacts/upload/${ARTIFACT_UPLOAD_PATH}.zip"
           mkdir -p "./artifacts/upload/${DOCS_UPLOAD_DIR}" || true
           mkdir -p ./artifacts/upload/releases
           mkdir -p ./artifacts/upload/commits/${GIT_COMMIT}
