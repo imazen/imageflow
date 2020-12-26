@@ -31,7 +31,7 @@ jobs:
             FETCH_COMMIT_SUFFIX: linux64_glibc231
             NUGET_RUNTIME: ubuntu.20.04-x64
 
-          - name: osx_10_11-x86_64
+          - name: osx
             os: macos-10.15
             TARGET_CPU: nehalem
             FETCH_COMMIT_SUFFIX: mac64
