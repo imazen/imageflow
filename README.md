@@ -12,7 +12,7 @@
 * **imageflow_tool** is a command-line tool for experimenting, running batch jobs,
 or when you want process isolation. Up to 17x faster than ImageMagick. Also produces smaller files at higher quality.
 * **imageflow_server** can run JSON jobs or manipulate images in-flight (e.g.`/bucket/img.jpg?w=200`) for direct use from
-HTML. Source images can reside in blob storage, on another server, or on the filesystem. However, for production use, we reccomend using [Imageflow.NET Server](https://github.com/imazen/imageflow-dotnet-server), which is far more feature-rich and doesn't need a reverse proxy in front for security.
+HTML. Source images can reside in blob storage, on another server, or on the filesystem. However, for production use, we recommend using [Imageflow.NET Server](https://github.com/imazen/imageflow-dotnet-server), which is far more feature-rich and doesn't need a reverse proxy in front for security.
 * **libimageflow** is for direct (in-process) use from *your* programming language. See our [**Node bindings**](https://github.com/imazen/imageflow-node),  [**Go bindings**](https://github.com/imazen/imageflow-go), [**Scala bindings**](https://github.com/Dealermade/imageflow-scala), [**Elixir bindings**](https://github.com/naps62/imageflow_ex), or  [**.NET bindings**](https://github.com/imazen/imageflow-dotnet). If we don't already have bindings for your language, consider spending a day to add them. Imageflow has a simple
 C-compatible ABI, of which only 4 methods are needed to implement bindings. 
 
