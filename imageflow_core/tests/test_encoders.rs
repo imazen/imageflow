@@ -154,7 +154,7 @@ fn test_encode_mozjpeg() {
                               DEBUG_GRAPH,
                               Constraints {
                                   max_file_size: Some(301_000),
-                                  similarity: Similarity::AllowDssimMatch(0.028, 0.06),
+                                  similarity: Similarity::AllowDssimMatch(0.0275, 0.06),
                               },
                               steps
     );
