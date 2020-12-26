@@ -575,14 +575,14 @@ jobs:
       - name: Publish To Docker
         run: |
           docker login -u "$DOCKER_USERNAME" -p "$DOCKER_PASSWORD"
-          ./ci/travis_publish_docker_images.sh docker/imageflow_tool anshulgoyal/imageflow_tools
-          ./ci/travis_publish_docker_images.sh docker/imageflow_server_unsecured anshulgoyal/imageflow_unsecured
+          ./ci/travis_publish_docker_images.sh docker/imageflow_tool imazen/imageflow_tool
+          ./ci/travis_publish_docker_images.sh docker/imageflow_server_unsecured imazen/imageflow_server_unsecured
         env:
           PUBLISH_DOCKER: True
           DOCKER_USERNAME: ${{secrets.DOCKER_USERNAME}}
           DOCKER_PASSWORD: ${{secrets.DOCKER_PASSWORD}}
           PUBLISH_DOCKER_TAG: ${{env.GITHUB_REF_NAME}}
-          IMAGEFLOW_DOWNLOAD_URL_TAR_GZ: https://argoyal.s3.us-east-2.amazonaws.com/commits/${{github.sha}}/linux64_glibc227.tar.gz
+          IMAGEFLOW_DOWNLOAD_URL_TAR_GZ: https://s3-us-west-1.amazonaws.com/imageflow-nightlies/commits/${{github.sha}}/linux64_glibc227.tar.gz
 
   docs:
     runs-on: ubuntu-16.04

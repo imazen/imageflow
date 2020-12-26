@@ -81,7 +81,7 @@ jobs:
       ### Fallback in case Nasm install fails ###
       - name: Install nasm
         run: |
-          curl -L -o nasminst.exe https://argoyal.s3.us-east-2.amazonaws.com/nasm-2.14.02-installer-x64.exe
+          curl -L -o nasminst.exe https://imageflow-resources.s3-us-west-2.amazonaws.com/tools/nasm-2.15.05-installer-x64.exe
           .\nasminst.exe /S
         if: ${{contains( matrix.os, 'windows' ) && failure()}}
 
@@ -126,7 +126,7 @@ jobs:
         run: choco install nasm
       - name: Install nasm
         run: |
-          curl -L -o nasminst.exe https://argoyal.s3.us-east-2.amazonaws.com/nasm-2.14.02-installer-x64.exe
+          curl -L -o nasminst.exe https://imageflow-resources.s3-us-west-2.amazonaws.com/tools/nasm-2.15.05-installer-x86.exe
           .\nasminst.exe /S
         if: ${{failure()}}
 
