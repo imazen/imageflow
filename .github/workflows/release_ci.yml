@@ -31,7 +31,7 @@ jobs:
             FETCH_COMMIT_SUFFIX: linux64_glibc231
             NUGET_RUNTIME: ubuntu.20.04-x64
 
-          - name: osx_10_11-x86_64
+          - name: osx-x86_64
             os: macos-10.15
             TARGET_CPU: nehalem
             FETCH_COMMIT_SUFFIX: mac64
@@ -255,10 +255,11 @@ jobs:
             tar czf "./archive.tar.gz" ./*
           )
           mkdir -p "./artifacts/upload/$(dirname "${ARTIFACT_UPLOAD_PATH}")" || true
-          cp "${ARTIFACT_ARCHIVE_NAME}" "./artifacts/upload/${ARTIFACT_UPLOAD_PATH}.tar.gz"
-          mkdir -p ./artifacts/upload/releases
+          mkdir -p ./artifacts/github
+          mkdir -p ./artifacts/upload/releases/${GITHUB_REF_NAME}
           mkdir -p ./artifacts/upload/commits/${GIT_COMMIT}
-          cp "${ARTIFACT_ARCHIVE_NAME}" "./artifacts/upload/releases/${ARTIFACT_UPLOAD_PATH}.tar.gz"
+          cp "${ARTIFACT_ARCHIVE_NAME}" ./artifacts/github/${ARTIFACT_UPLOAD_PATH}.tar.gz
+          cp "${ARTIFACT_ARCHIVE_NAME}" "./artifacts/upload/releases/${GITHUB_REF_NAME}/${ARTIFACT_UPLOAD_PATH}.tar.gz"
           cp "${ARTIFACT_ARCHIVE_NAME}" "./artifacts/upload/commits/${GIT_COMMIT}/${ARTIFACT_UPLOAD_PATH_1}.tar.gz"
         env:
           TARGET_DIR: target/
@@ -306,11 +307,12 @@ jobs:
             7z a -r "./archive.zip" ./*
           )
           mkdir -p "./artifacts/upload/$(dirname "${ARTIFACT_UPLOAD_PATH}")" || true
-          cp "${ARTIFACT_ARCHIVE_NAME}" "./artifacts/upload/${ARTIFACT_UPLOAD_PATH}.zip"
           mkdir -p "./artifacts/upload/${DOCS_UPLOAD_DIR}" || true
-          mkdir -p ./artifacts/upload/releases
+          mkdir -p ./artifacts/upload/releases/${GITHUB_REF_NAME}
+          mkdir -p ./artifacts/github
           mkdir -p ./artifacts/upload/commits/${GIT_COMMIT}
-          cp "${ARTIFACT_ARCHIVE_NAME}" "./artifacts/upload/releases/${ARTIFACT_UPLOAD_PATH}.zip"
+          cp "${ARTIFACT_ARCHIVE_NAME}" ./artifacts/github/${ARTIFACT_UPLOAD_PATH}.zip
+          cp "${ARTIFACT_ARCHIVE_NAME}" "./artifacts/upload/releases/${GITHUB_REF_NAME}/${ARTIFACT_UPLOAD_PATH}.zip"
           cp "${ARTIFACT_ARCHIVE_NAME}" "./artifacts/upload/commits/${GIT_COMMIT}/${ARTIFACT_UPLOAD_PATH_1}.zip"
         env:
           TARGET_DIR: target/
@@ -348,7 +350,7 @@ jobs:
         if: ${{!contains( matrix.os, 'windows' )}}
         with:
           name: imageflow-${{env.GITHUB_REF_NAME}}-${{env.GITHUB_SHA_SHORT}}-${{matrix.name}}.tar.gz
-          path: ./artifacts/upload/imageflow-${{env.GITHUB_REF_NAME}}-${{env.GITHUB_SHA_SHORT}}-${{matrix.name}}.tar.gz
+          path: ./artifacts/github/imageflow-${{env.GITHUB_REF_NAME}}-${{env.GITHUB_SHA_SHORT}}-${{matrix.name}}.tar.gz
           repo-token: ${{ secrets.GITHUB_TOKEN }}
           content-type: application/gzip
 
@@ -358,7 +360,7 @@ jobs:
         if: ${{contains( matrix.os, 'windows' )}}
         with:
           name: imageflow-${{env.GITHUB_REF_NAME}}-${{env.GITHUB_SHA_SHORT}}-${{matrix.name}}.zip
-          path: ./artifacts/upload/imageflow-${{env.GITHUB_REF_NAME}}-${{env.GITHUB_SHA_SHORT}}-${{matrix.name}}.zip
+          path: ./artifacts/github/imageflow-${{env.GITHUB_REF_NAME}}-${{env.GITHUB_SHA_SHORT}}-${{matrix.name}}.zip
           repo-token: ${{ secrets.GITHUB_TOKEN }}
           content-type: application/zip
 
@@ -485,11 +487,12 @@ jobs:
             7z a -r "./archive.zip" ./*
           )
           mkdir -p "./artifacts/upload/$(dirname "${ARTIFACT_UPLOAD_PATH}")" || true
-          cp "${ARTIFACT_ARCHIVE_NAME}" "./artifacts/upload/${ARTIFACT_UPLOAD_PATH}.zip"
           mkdir -p "./artifacts/upload/${DOCS_UPLOAD_DIR}" || true
-          mkdir -p ./artifacts/upload/releases
+          mkdir -p ./artifacts/github
+          mkdir -p ./artifacts/upload/releases/${GITHUB_REF_NAME}
           mkdir -p ./artifacts/upload/commits/${GIT_COMMIT}
-          cp "${ARTIFACT_ARCHIVE_NAME}" "./artifacts/upload/releases/${ARTIFACT_UPLOAD_PATH}.zip"
+          cp "${ARTIFACT_ARCHIVE_NAME}" ./artifacts/github/${ARTIFACT_UPLOAD_PATH}.zip
+          cp "${ARTIFACT_ARCHIVE_NAME}" "./artifacts/upload/releases/${GITHUB_REF_NAME}/${ARTIFACT_UPLOAD_PATH}.zip"
           cp "${ARTIFACT_ARCHIVE_NAME}" "./artifacts/upload/commits/${GIT_COMMIT}/${ARTIFACT_UPLOAD_PATH_1}.zip"
         env:
           TARGET_DIR: target/i686-pc-windows-msvc/
@@ -525,7 +528,7 @@ jobs:
         uses: Shopify/upload-to-release@master
         with:
           name: imageflow-${{env.GITHUB_REF_NAME}}-${{env.GITHUB_SHA_SHORT}}-win-x86.zip
-          path: ./artifacts/upload/imageflow-${{env.GITHUB_REF_NAME}}-${{env.GITHUB_SHA_SHORT}}-win-x86.zip
+          path: ./artifacts/github/imageflow-${{env.GITHUB_REF_NAME}}-${{env.GITHUB_SHA_SHORT}}-win-x86.zip
           repo-token: ${{ secrets.GITHUB_TOKEN }}
           content-type: text/plain
 
