@@ -1,4 +1,0 @@
-ative
-jpegtinysize
-msbuild
-untimes

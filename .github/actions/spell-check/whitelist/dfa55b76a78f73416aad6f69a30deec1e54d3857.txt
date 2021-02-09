@@ -1,4 +1,0 @@
-ele
-powf
-slotmap
-Zeroable

@@ -1,7 +1,7 @@
 # Base 64 encodings
+:\&'static str = "[A-Za-z0-9+/=:]*"
 Base64\("[A-Za-z0-9+/=:]*"
 \&b"[A-Za-z0-9+/=:]*"
-_B64:\&'static str = "[A-Za-z0-9+/=:]*"
 deserialize\(.*?"[A-Za-z0-9+/=:]*"
 ^      secure: [A-Za-z0-9+/=:]*$
 # dos shell variables
@@ -19,6 +19,8 @@ Secret: test[a-f0-9]+
 Hex\("[A-F0-9]+"
 "bgcolor=[a-f0-9]+"
 t\("[a-f0-9]+", Color32
+# hex digits including css/html color classes:
+(?:[\\0][xX]|\\u|[uU]\+|#x?|\%23)[0-9a-fA-FgGrR_]{2,}(?:[uU]?[lL]{0,2}|u\d+)\b
 assert_eq!\("[a-f0-9/]+"
 # valgrind
 ^   fun:_\S+$
@@ -28,3 +30,5 @@ assert_eq!\("[a-f0-9/]+"
 access_key_id: [A-Z0-9]+
 # bench.sh
 \\results:
+# targets:
+\\native
