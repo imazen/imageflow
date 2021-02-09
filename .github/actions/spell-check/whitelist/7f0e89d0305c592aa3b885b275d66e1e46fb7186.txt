@@ -26,7 +26,6 @@ livenessprobe
 Minikube
 namespacename
 nindent
-readyness
 secretname
 semver
 serviceaccount

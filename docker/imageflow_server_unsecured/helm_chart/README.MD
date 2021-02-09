@@ -73,6 +73,6 @@ startupArgs: [
 
 This chart comes with ingress support out of the box. For ingress to work you do need to have an ingress controller installed on your cluster. The example uses an Nginx ingress with TLS, but by changing the annotations you can change this to another installed ingress controller. Ingress settings are located in Values.yaml
 
-## live and readyness probes.
+## live and readiness probes.
 
 Inside of the values.yaml you are able to switch on or off the monitoring of the container, these settings are used to avoid stuck containers from traffic being routed to them. When disabled, the container will always keep running.
