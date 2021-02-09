@@ -1,5 +1,4 @@
 accessmode
-applicaton
 Appversion
 Autoscaler
 autoscaling
