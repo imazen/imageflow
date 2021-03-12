@@ -1,8 +1,9 @@
 ## ![imageflow](https://www.imageflow.io/images/imageflow.svg) optimal images at incredible speeds
 
-[![travis-main](https://img.shields.io/travis/imazen/imageflow/main.svg?label=main%3A%20MacOS,%20Ubuntu%2016.04%2018.04)](https://travis-ci.com/github/imazen/imageflow/builds/) [![AppVeyor build status](https://ci.appveyor.com/api/projects/status/0356x95fa312m3wy/branch/main?svg=true&passingText=main%3A%20win32%20win64%20-%20passing&failingText=main%3A%20win32%20win64%20-%20failed)](https://ci.appveyor.com/project/imazen/imageflow/branch/main) [![state: release candidate](https://img.shields.io/badge/state-release%E2%80%93candidate-yellow.svg)](#flaws)
+[![tests](https://github.com/imazen/imageflow/workflows/Test/badge.svg?branch=main)](https://github.com/imazen/imageflow/actions?query=workflow%3ATest)  [![state: release candidate](https://img.shields.io/badge/state-release%E2%80%93candidate-yellow.svg)](#flaws)
 
 [![Docker Pulls](https://img.shields.io/docker/pulls/imazen/imageflow_tool.svg)](https://hub.docker.com/r/imazen/imageflow_tool/)
+[![Docker Pulls](https://img.shields.io/docker/pulls/imazen/imageflow_server_unsecured.svg)](https://hub.docker.com/r/imazen/imageflow_server_unsecured/)
 [![view releases](https://img.shields.io/badge/-download%20binaries%20for%20windows,%20mac,%20or%20linux-green.svg)](https://github.com/imazen/imageflow/releases) [![license: Choose AGPLv3 or Commercial](https://img.shields.io/badge/license-Choose%20AGPLv3%20or%20Commercial-green.svg)](https://imageresizing.net/pricing)
 
 
@@ -12,8 +13,8 @@
 * **imageflow_tool** is a command-line tool for experimenting, running batch jobs,
 or when you want process isolation. Up to 17x faster than ImageMagick. Also produces smaller files at higher quality.
 * **imageflow_server** can run JSON jobs or manipulate images in-flight (e.g.`/bucket/img.jpg?w=200`) for direct use from
-HTML. Source images can reside in blob storage, on another server, or on the filesystem.
-* **libimageflow** is for direct (in-process) use from *your* programming language. [**Node bindings available here**](https://github.com/imazen/imageflow-node),  [**Go bindings available here**](https://github.com/imazen/imageflow-go), and  [**.NET Standard bindings here**](https://github.com/imazen/imageflow-dotnet). If we don't already have bindings for your language, consider spending a day to add them. Imageflow has a simple
+HTML. Source images can reside in blob storage, on another server, or on the filesystem. However, for production use, we recommend using [Imageflow.NET Server](https://github.com/imazen/imageflow-dotnet-server), which is far more feature-rich and doesn't need a reverse proxy in front for security.
+* **libimageflow** is for direct (in-process) use from *your* programming language. See our [**Node bindings**](https://github.com/imazen/imageflow-node),  [**Go bindings**](https://github.com/imazen/imageflow-go), [**Scala bindings**](https://github.com/Dealermade/imageflow-scala), [**Elixir bindings**](https://github.com/naps62/imageflow_ex), or  [**.NET bindings**](https://github.com/imazen/imageflow-dotnet). If we don't already have bindings for your language, consider spending a day to add them. Imageflow has a simple
 C-compatible ABI, of which only 4 methods are needed to implement bindings. 
 
 **[Open an issue](https://github.com/imazen/imageflow/issues/new) to have us write example code for your use case. We believe in feedback-driven design, and streamlining real-world usage is the fastest way to a great product.**
@@ -135,8 +136,7 @@ You also may find that `imageflow_tool` is quite fast enough for your needs.
 You'll need more than just Rust to compile Imageflow, as it has a couple C dependencies.
 
 1. **Install platform-specific prerequisites (find the right section below).**
-2. Run `cargo install dssim`
-3. Clone and cd into this repository
+2. Clone and cd into this repository
    E.g., `git clone git@github.com:imazen/imageflow.git && cd imageflow`)
 
 If you are using `bash` on any platform, you should be able to use `build.sh`
@@ -172,7 +172,7 @@ If you want to replicate the Imageflow CI environment:
 
 This will create caches within `~/.docker_imageflow_caches` specific to the docker image used. Instances will be ephemeral; the only state will be in the caches.
 
-The [official Dockerfiles](https://github.com/imazen/dockerfiles_imageflow) are also a great place to get more detailed environment setup steps, as we don't list steps for setting up:
+The [official Dockerfiles](https://github.com/imazen/imageflow/tree/main/docker) are also a great place to get more detailed environment setup steps, as we don't list steps for setting up:
 * Valgrind (common versions break openssl; you may need to build from source)
 * Code coverage
 * Bindings.
@@ -183,7 +183,7 @@ The [official Dockerfiles](https://github.com/imazen/dockerfiles_imageflow) are 
 
 ```bash
 #Install Rust 1.41+ by running
-`curl https://sh.rustup.rs -sSf | sh -s -- -y --default-toolchain beta`
+`curl https://sh.rustup.rs -sSf | sh -s -- -y --default-toolchain stable`
 #Ensure build tools are installed (git, curl, wget, gcc, g++, nasm, pkg-config, openssl, ca-certificates)
 `sudo apt-get install git wget curl build-essential pkg-config libssl-dev libpng-dev nasm `
 ```
@@ -203,7 +203,7 @@ The [official Dockerfiles](https://github.com/imazen/dockerfiles_imageflow) are 
 2. Run Ubuntu 18.04 and create your username/password
 3. `sudo apt-get update` to update available packages.
 4. Install Rust 1.28+ by running
-  `curl https://sh.rustup.rs -sSf | sh -s -- -y --default-toolchain beta`
+  `curl https://sh.rustup.rs -sSf | sh -s -- -y --default-toolchain stable`
 5. Ensure build tools are installed (git, curl, wget, gcc, g++, nasm, pkg-config, openssl, ca-certificates)
     `sudo apt-get install git wget curl build-essential pkg-config libssl-dev libpng-dev nasm `
 6. (optional) To use a graphical text editor, you'll need to download imageflow to a "Windows" directory, then map it to a location in Ubuntu.
@@ -218,7 +218,7 @@ The [official Dockerfiles](https://github.com/imazen/dockerfiles_imageflow) are 
 2. Install [Git 64-bit](https://git-scm.com/download/win).
 3. `Run As Administrator` the [NASM 64-bit](https://www.nasm.us/pub/nasm/releasebuilds/2.14.02/win64/nasm-2.14.02-installer-x64.exe) installer - it will not prompt.
 4. Install [Rust 64-bit](https://static.rust-lang.org/rustup/dist/x86_64-pc-windows-msvc/rustup-init.exe) if you want 64-bit Imageflow or [Rust 32-bit](https://static.rust-lang.org/rustup/dist/i686-pc-windows-msvc/rustup-init.exe) if you don't.
-Install toolchain `beta` as the default, and confirm adding it to `PATH`.
+Install toolchain `stable` as the default, and confirm adding it to `PATH`.
 5. Open the command line and switch to this repository's root directory
 5. Edit `ci/wintools/SETUP_PATH.bat` to ensure that rust/cargo, nasm, git, and Git/mingw64/bin are all in `%PATH%`.
 7. Run `win_enter_env.bat` to start a sub-shell (edit it if you want a 32-bit build)

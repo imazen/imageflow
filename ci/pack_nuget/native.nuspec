@@ -12,5 +12,6 @@
         <dependencies>
             <group targetFramework=".NETStandard1.0" />
         </dependencies>
+        <repository type="git" url="https://github.com/:repo_name_native:" />
     </metadata>
 </package>

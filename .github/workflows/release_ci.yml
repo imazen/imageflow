@@ -1,0 +1,604 @@
+name: Release
+
+on:
+  release:
+    types:
+      - published
+jobs:
+  build:
+    env:
+      NUGET_UPLOAD_NUGET: ${{secrets.NUGET_UPLOAD_NUGET}}
+      NUGET_UPLOAD_GITHUB: ${{secrets.NUGET_UPLOAD_GITHUB}}
+    strategy:
+      matrix:
+        ### Set various targets and OS for build ###
+        include:
+          - name: ubuntu_16_04-x86_64
+            os: ubuntu-16.04
+            FETCH_COMMIT_SUFFIX: linux64
+            TARGET_CPU: x86-64
+            NUGET_RUNTIME: linux-x64
+
+          - name: ubuntu_18_04-x86_64
+            os: ubuntu-18.04
+            TARGET_CPU: x86-64
+            FETCH_COMMIT_SUFFIX: linux64_glibc227
+            NUGET_RUNTIME: ubuntu.18.04-x64
+
+          - name: ubuntu_20_04-x86_64
+            os: ubuntu-20.04
+            TARGET_CPU: x86-64
+            FETCH_COMMIT_SUFFIX: linux64_glibc231
+            NUGET_RUNTIME: ubuntu.20.04-x64
+
+          - name: osx-x86_64
+            os: macos-10.15
+            TARGET_CPU: nehalem
+            FETCH_COMMIT_SUFFIX: mac64
+            NUGET_RUNTIME: osx-x64
+
+          - name: win-x86_64
+            os: windows-2019
+            TARGET_CPU: x86-64
+            FETCH_COMMIT_SUFFIX: win-x86_64
+            NUGET_RUNTIME: win-x64
+
+          - name: ubuntu_18_04-x86_64-haswell
+            os: ubuntu-18.04
+            TARGET_CPU: haswell
+            FETCH_COMMIT_SUFFIX: linux64_haswell_glibc227
+            NUGET_RUNTIME: ubuntu.18.04-x64
+
+          - name: win-x86_64-haswell
+            os: windows-2019
+            TARGET_CPU: haswell
+            FETCH_COMMIT_SUFFIX: win-x86_64-haswell
+            NUGET_RUNTIME: win-x64
+
+    runs-on: ${{matrix.os}}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@master
+      - uses: FranzDiebold/github-env-vars-action@v1.3.0
+
+      ### BUILD CACHE ###
+      # NB: We install gnu-tar because BSD tar is buggy on Github's macos machines. https://github.com/actions/cache/issues/403
+      - name: Install GNU tar (Macos)
+        if: ${{contains( matrix.os, 'macos' )}}
+        run: |
+          brew install gnu-tar
+          echo PATH="/usr/local/opt/gnu-tar/libexec/gnubin:$PATH" >> $GITHUB_ENV
+
+      - name: Cache cargo
+        uses: actions/cache@v2
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-${{matrix.name}}-cargo-${{ hashFiles('**/Cargo.lock') }}
+
+      ### Install Nasm for MacOS ###
+      - name: Install nasm
+        run: brew install nasm
+        if: ${{contains( matrix.os, 'macos' )}}
+
+      ### Install Nasm for Windows ###
+      - name: Install nasm
+        run: choco install nasm
+        if: ${{contains( matrix.os, 'windows' )}}
+
+      ### Fallback for Nasm in case of failure ###
+      - name: Install nasm
+        run: |
+          curl -L -o nasminst.exe https://imageflow-resources.s3-us-west-2.amazonaws.com/tools/nasm-2.15.05-installer-x64.exe
+          .\nasminst.exe /S
+        if: ${{contains( matrix.os, 'windows' ) && failure()}}
+
+      ### Set path for Nasm Install ###
+      - name: Set Path
+        run: |
+          echo "C:\Program Files\NASM" >> $GITHUB_PATH
+          echo "C:\Program Files (x86)\NASM" >> $GITHUB_PATH
+        if: ${{contains( matrix.os, 'windows' )}}
+        shell: bash
+
+      ### Install NASM for Ubuntu ###
+      - name: Install nasm
+        run: sudo apt install nasm
+        if: ${{contains( matrix.os, 'ubuntu' )}}
+
+      # Install Valgrind
+      # - name: Install Valgrind
+      #   run: |
+      #     brew tap LouisBrunner/valgrind
+      #     brew install --HEAD LouisBrunner/valgrind/valgrind
+      # - name: Count Unsafe code
+      #   run: |
+      #     cargo install cargo-count
+      #     (cd imageflow_core && cargo count --unsafe-statistics)
+      #     (cd imageflow_abi && cargo count --unsafe-statistics)
+      #     (cd imageflow_tool && cargo count --unsafe-statistics)
+      #     (cd imageflow_riapi && cargo count --unsafe-statistics)
+      #     (cd imageflow_helpers && cargo count --unsafe-statistics)
+      #     (cd imageflow_types && cargo count --unsafe-statistics)
+      #     (cd imageflow_server && cargo count --unsafe-statistics)
+      #     (cd c_components/lib && cargo count --unsafe-statistics)
+      # - name: Test Release
+      #   run: cargo test --all --release
+      # - name: Test Under Valgrind
+      #   run: |
+      #       TEST_BINARIES=("$@")
+      #       shopt -s nullglob
+      #       TEST_BINARIES=(./${TEST_BINARIES_TARGET}release/deps/imageflow*[a-f0-9][a-f0-9][a-f0-9][a-f0-9][a-f0-9][a-f0-9][a-f0-9][a-f0-9][a-f0-9][a-f0-9][a-f0-9][a-f0-9][a-f0-9][a-f0-9][a-f0-9][a-f0-9])
+      #       shopt -u nullglob
+      #       printf "discovered binaries:\n"
+
+      #       printf "%s\n" "${TEST_BINARIES[@]}"
+
+      #       SKIP_BINARIES+=("$(ls ./"${TEST_BINARIES_TARGET}"release/test_ir4* || true )")
+      #       SKIP_BINARIES+=("$(ls ./"${TEST_BINARIES_TARGET}"release/*imageflow_helpers* || true )")
+      #       SKIP_BINARIES+=("$(ls ./"${TEST_BINARIES_TARGET}"release/*imageflow_riapi* || true )")
+      #       SKIP_BINARIES+=("$(ls ./"${TEST_BINARIES_TARGET}"release/*imageflow_types* || true )")
+      #       SKIP_BINARIES+=("$(ls ./"${TEST_BINARIES_TARGET}"release/bench_graphics* || true )")
+
+      #       function join_by { local IFS="$1"; shift; echo "$*"; }
+      #       SKIP_BINARIES_STR="$(join_by " " "${SKIP_BINARIES[@]}")"
+      #       SKIP_BINARIES_STR=" $SKIP_BINARIES_STR "
+
+      #       create_valgrind_files_in()(
+      #         (
+      #           SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+
+      #           cd "$1"
+      #           FILE_NAMES=(".valgrindrc" "valgrind_suppressions.txt")
+      #           for f in "${FILE_NAMES[@]}"
+      #           do
+      #             cp "${SCRIPT_DIR}/${f}" "./${f}"
+      #           done
+      #         )
+      #       )
+      #       for f in "${TEST_BINARIES[@]}"
+      #       do
+      #         if [[ "$SKIP_BINARIES_STR" == *"${f}"* ]]; then
+      #           echo "SKIPPING"
+      #         else
+
+      #           REL_F=$(basename "${f}")
+      #           DIR=$(dirname "${f}")
+      #           DIR="${DIR}/valgrind_${REL_F}_temp"
+      #           mkdir -p "${DIR}" || true
+
+      #           create_valgrind_files_in "$DIR"
+
+      #           FULL_COMMAND="(cd $DIR && valgrind $VALGRIND_ARGS ../$REL_F)"
+
+      #           export VALGRIND_RUNNING=1
+      #           export RUST_BACKTRACE=1
+      #           export RUST_TEST_TASKS=1
+      #           eval "$FULL_COMMAND"
+
+      #         fi
+      #       done
+
+      #       printf "\n%s Completed valgrind_existing.sh (" "$(date '+[%H:%M:%S]')"
+      #       printf "%s " "${TEST_BINARIES[@]}"
+      #       printf ")\n"
+      #   env:
+      #     TARGET_DIR: target/
+      #     VALGRIND_ARGS: -q --error-exitcode=9 --gen-suppressions=all
+      #     TEST_BINARIES_TARGET: target/
+
+      ## Test build ##
+      - name: Test Build
+        run: cargo test --all --release
+
+      - name: Add Artifacts URL (POSIX)
+        run: echo ESTIMATED_ARTIFACT_URL=$ARTIFACT_PATH.tar.gz >> $GITHUB_ENV
+        env:
+          ARTIFACT_PATH: https://s3-us-west-1.amazonaws.com/imageflow-nightlies/imageflow-${{env.GITHUB_REF_NAME}}-${{env.GITHUB_SHA_SHORT}}-${{matrix.name}}
+        if: ${{!contains( matrix.os, 'windows' )}}
+
+      - name: Add Artifacts URL (Windows)
+        run: echo ESTIMATED_ARTIFACT_URL=$ARTIFACT_PATH.zip >> $GITHUB_ENV
+        env:
+          ARTIFACT_PATH: https://s3-us-west-1.amazonaws.com/imageflow-nightlies/imageflow-${{env.GITHUB_REF_NAME}}-${{env.GITHUB_SHA_SHORT}}-${{matrix.name}}
+        if: ${{contains( matrix.os, 'windows' )}}
+        shell: bash
+
+      ## Build the code ##
+      - name: Build Release
+        run: cargo build --all --release
+        shell: bash
+        env:
+          ESTIMATED_DOCS_URL: https://s3-us-west-1.amazonaws.com/imageflow-nightlies/doc
+          CI_SEQUENTIAL_BUILD_NUMBER: ${{github.run_number}}
+          CI_BUILD_URL: https://github.com/${{env.GITHUB_REPOSITORY_OWNER}}/${{env.GITHUB_REPOSITORY_NAME}}/actions/runs/${{github.run_id}}
+          CI_JOB_URL: https://github.com/${{env.GITHUB_REPOSITORY_OWNER}}/${{env.GITHUB_REPOSITORY_NAME}}/actions/runs/${{github.run_id}}
+          CI_JOB_TITLE: Github ${{github.job_id}} ${{matrix.name}}
+          CI_STRING: Github actions
+          CI_PULL_REQUEST_INFO: ${{github.event_name!='release'}}
+          CI_TAG: ${{env.GITHUB_REF_NAME}}
+          CI_REPO: ${{env.GITHUB_REPOSITORY_OWNER}}/${{env.GITHUB_REPOSITORY_NAME}}
+          CI: True
+          OPT_LEVEL: 0
+          DEBUG: False
+          PROFILE: release
+          TARGET_CPU: ${{matrix.TARGET_CPU}}
+          FETCH_COMMIT_SUFFIX: ${{matrix.FETCH_COMMIT_SUFFIX}}
+          RUSTFLAGS: -C target-cpu=${{matrix.TARGET_CPU}}
+
+      ### Build docs ###
+      - name: Build Docs
+        run: cargo doc --all --release --no-deps
+
+      ### create archive with required files and docs for POSIX ###
+      - name: Create Artifacts Header (POSIX)
+        shell: bash
+        if: ${{!contains( matrix.os, 'windows' )}}
+        run: |
+          mkdir -p ./artifacts/staging/headers || true
+          (
+            cd ./${TARGET_DIR}doc
+            tar czf "../docs.tar.gz" ./*
+          )
+          mv ./${TARGET_DIR}docs.tar.gz ./artifacts/staging/
+
+          cp -R ./${TARGET_DIR}release/{imageflow_,libimageflow}*  ./artifacts/staging/
+          cp bindings/headers/*.h  ./artifacts/staging/headers/
+          cp bindings/headers/imageflow_default.h  ./artifacts/staging/imageflow.h
+          cp ./ci/packaging_extras/{install,uninstall}.sh ./artifacts/staging
+          rm ./artifacts/staging/*.{o,d,rlib} || true
+          rm ./artifacts/staging/*-* || true
+          (
+            cd ./artifacts/staging
+            tar czf "./archive.tar.gz" ./*
+          )
+          mkdir -p "./artifacts/upload/$(dirname "${ARTIFACT_UPLOAD_PATH}")" || true
+          mkdir -p ./artifacts/github
+          mkdir -p ./artifacts/upload/releases/${GITHUB_REF_NAME}
+          mkdir -p ./artifacts/upload/commits/${GIT_COMMIT}
+          cp "${ARTIFACT_ARCHIVE_NAME}" ./artifacts/github/${ARTIFACT_UPLOAD_PATH}.tar.gz
+          cp "${ARTIFACT_ARCHIVE_NAME}" "./artifacts/upload/releases/${GITHUB_REF_NAME}/${ARTIFACT_UPLOAD_PATH}.tar.gz"
+          cp "${ARTIFACT_ARCHIVE_NAME}" "./artifacts/upload/commits/${GIT_COMMIT}/${ARTIFACT_UPLOAD_PATH_1}.tar.gz"
+        env:
+          TARGET_DIR: target/
+          ARTIFACT_UPLOAD_PATH: /imageflow-${{env.GITHUB_REF_NAME}}-${{env.GITHUB_SHA_SHORT}}-${{matrix.name}}
+          ARTIFACT_ARCHIVE_NAME: ./artifacts/staging/archive.tar.gz
+          DOCS_UPLOAD_DIR: doc
+          GIT_COMMIT: ${{github.sha}}
+          ARTIFACT_UPLOAD_PATH_1: /${{matrix.FETCH_COMMIT_SUFFIX}}
+
+      - name: Run imageflow-tools (Windows)
+        run: ${TARGET_DIR}release/imageflow_tool.exe diagnose --show-compilation-info
+        env:
+          TARGET_DIR: target/
+        if: ${{contains( matrix.os, 'windows' )}}
+        shell: bash
+
+      - name: Run imageflow-tools (POSIX)
+        run: ./${TARGET_DIR}release/imageflow_tool diagnose --show-compilation-info
+        env:
+          TARGET_DIR: target/
+        if: ${{!contains( matrix.os, 'windows' )}}
+        shell: bash
+
+      ### create archive with required files and docs for Windows ###
+      - name: Create Artifacts Header Windows
+        shell: bash
+        if: ${{contains( matrix.os, 'windows' )}}
+        run: |
+          mkdir -p ./artifacts/staging/headers || true
+          (
+            cd ./${TARGET_DIR}doc
+            7z a -r "../docs.zip" ./*
+          )
+          mv ./${TARGET_DIR}docs.zip ./artifacts/staging/
+
+          cp -R ./${TARGET_DIR}release/{imageflow_,libimageflow}*  ./artifacts/staging/
+          cp -R "./${TARGET_DIR}release/imageflow.dll" ./artifacts/staging/imageflow.dll
+          cp -R "./${TARGET_DIR}release/imageflow.pdb" ./artifacts/staging/imageflow.pdb
+          cp bindings/headers/*.h  ./artifacts/staging/headers/
+          cp bindings/headers/imageflow_default.h  ./artifacts/staging/imageflow.h
+          rm ./artifacts/staging/*.{o,d,rlib} || true
+          rm ./artifacts/staging/*-* || true
+          (
+            cd ./artifacts/staging
+            7z a -r "./archive.zip" ./*
+          )
+          mkdir -p "./artifacts/upload/$(dirname "${ARTIFACT_UPLOAD_PATH}")" || true
+          mkdir -p "./artifacts/upload/${DOCS_UPLOAD_DIR}" || true
+          mkdir -p ./artifacts/upload/releases/${GITHUB_REF_NAME}
+          mkdir -p ./artifacts/github
+          mkdir -p ./artifacts/upload/commits/${GIT_COMMIT}
+          cp "${ARTIFACT_ARCHIVE_NAME}" ./artifacts/github/${ARTIFACT_UPLOAD_PATH}.zip
+          cp "${ARTIFACT_ARCHIVE_NAME}" "./artifacts/upload/releases/${GITHUB_REF_NAME}/${ARTIFACT_UPLOAD_PATH}.zip"
+          cp "${ARTIFACT_ARCHIVE_NAME}" "./artifacts/upload/commits/${GIT_COMMIT}/${ARTIFACT_UPLOAD_PATH_1}.zip"
+        env:
+          TARGET_DIR: target/
+          ARTIFACT_UPLOAD_PATH: /imageflow-${{env.GITHUB_REF_NAME}}-${{env.GITHUB_SHA_SHORT}}-${{matrix.name}}
+          ARTIFACT_ARCHIVE_NAME: ./artifacts/staging/archive.zip
+          DOCS_UPLOAD_DIR: doc
+          GIT_COMMIT: ${{github.sha}}
+          ARTIFACT_UPLOAD_PATH_1: /${{matrix.FETCH_COMMIT_SUFFIX}}
+
+      ### create nuget tool ###
+      - name: Nuget(Tool) to S3
+        shell: bash
+        run: ./ci/pack_nuget/pack.sh tool
+        env:
+          CI_TAG: ${{env.GITHUB_REF_NAME}}
+          PACKAGE_SUFFIX: ${{matrix.name}}
+          NUGET_RUNTIME: ${{matrix.NUGET_RUNTIME}}
+          REPO_NAME_TOOL: ${{env.GITHUB_REPOSITORY_OWNER}}\/${{env.GITHUB_REPOSITORY_NAME}}
+          REPO_NAME_NATIVE: ${{env.GITHUB_REPOSITORY_OWNER}}\/${{env.GITHUB_REPOSITORY_NAME}}
+
+      ### create nuget runtime ###
+      - name: Nuget(Runtime) to S3
+        shell: bash
+        run: ./ci/pack_nuget/pack.sh
+        env:
+          CI_TAG: ${{env.GITHUB_REF_NAME}}
+          PACKAGE_SUFFIX: ${{matrix.name}}
+          NUGET_RUNTIME: ${{matrix.NUGET_RUNTIME}}
+          REPO_NAME_TOOL: ${{env.GITHUB_REPOSITORY_OWNER}}\/${{env.GITHUB_REPOSITORY_NAME}}
+          REPO_NAME_NATIVE: ${{env.GITHUB_REPOSITORY_OWNER}}\/${{env.GITHUB_REPOSITORY_NAME}}
+
+      ### upload to Github release POSIX ###
+      - name: Upload to release (POSIX)
+        uses: Shopify/upload-to-release@master
+        if: ${{!contains( matrix.os, 'windows' )}}
+        with:
+          name: imageflow-${{env.GITHUB_REF_NAME}}-${{env.GITHUB_SHA_SHORT}}-${{matrix.name}}.tar.gz
+          path: ./artifacts/github/imageflow-${{env.GITHUB_REF_NAME}}-${{env.GITHUB_SHA_SHORT}}-${{matrix.name}}.tar.gz
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+          content-type: application/gzip
+
+      ### upload to github release Windows ###
+      - name: Upload to release (Windows)
+        uses: Shopify/upload-to-release@master
+        if: ${{contains( matrix.os, 'windows' )}}
+        with:
+          name: imageflow-${{env.GITHUB_REF_NAME}}-${{env.GITHUB_SHA_SHORT}}-${{matrix.name}}.zip
+          path: ./artifacts/github/imageflow-${{env.GITHUB_REF_NAME}}-${{env.GITHUB_SHA_SHORT}}-${{matrix.name}}.zip
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+          content-type: application/zip
+
+      ## Upload to S3(build artifacts) ###
+      - name: Upload to S3
+        uses: anshulrgoyal/upload-s3-action@master
+        with:
+          aws_key_id: ${{ secrets.AWS_KEY_ID }}
+          aws_secret_access_key: ${{ secrets.AWS_SECRET_ACCESS_KEY}}
+          aws_bucket: ${{ secrets.AWS_BUCKET }}
+          source_dir: ./artifacts/upload
+          destination_dir: ''
+      ### upload to S3(nugets) ###
+      - name: Upload to S3(nugets)
+        uses: anshulrgoyal/upload-s3-action@master
+        with:
+          aws_key_id: ${{ secrets.AWS_KEY_ID }}
+          aws_secret_access_key: ${{ secrets.AWS_SECRET_ACCESS_KEY}}
+          aws_bucket: ${{ secrets.AWS_BUCKET }}
+          source_dir: ./artifacts/nuget/
+          destination_dir: 'nuget'
+
+      ### Publish to nugets ###
+      - name: Publish nuget(Github)
+        run: |
+          for f in ./artifacts/nuget/*.nupkg
+          do
+            curl -vX PUT -u "${{env.GITHUB_REPOSITORY_OWNER}}:${{ secrets.GITHUB_TOKEN }}" -F package=@$f https://nuget.pkg.github.com/${{env.GITHUB_REPOSITORY_OWNER}}/
+          done
+        shell: bash
+        if: ${{'ubuntu.20.04-x64'!=matrix.NUGET_RUNTIME && env.NUGET_UPLOAD_GITHUB == 'true' }}
+      - name: Publish nuget(Nuget)
+        run: |
+          for f in ./artifacts/nuget/*.nupkg
+          do
+             curl -L "https://www.nuget.org/api/v2/package" -H "X-NuGet-ApiKey: ${{ secrets.NUGET_API_KEY }}" -H "X-NuGet-Client-Version: 4.1.0" -A "NuGet Command Line/3.4.4.1321 (Unix 4.4.0.92)" --upload-file "$f" --fail
+          done
+        shell: bash
+        if: ${{'ubuntu.20.04-x64'!=matrix.NUGET_RUNTIME && env.NUGET_UPLOAD_NUGET == 'true'}}
+
+  build_win32:
+    env:
+      NUGET_UPLOAD_NUGET: ${{secrets.NUGET_UPLOAD_NUGET}}
+      NUGET_UPLOAD_GITHUB: ${{secrets.NUGET_UPLOAD_GITHUB}}
+
+    runs-on: windows-2019
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@master
+      - uses: FranzDiebold/github-env-vars-action@v1.3.0
+      - name: Install nasm
+        run: choco install nasm
+      - name: Install nasm
+        run: |
+          curl -L -o nasminst.exe https://imageflow-resources.s3-us-west-2.amazonaws.com/tools/nasm-2.15.05-installer-x86.exe
+          .\nasminst.exe /S
+        if: ${{failure()}}
+
+      - name: Set Path
+        run: |
+          echo "C:\Program Files\NASM" >> $GITHUB_PATH
+          echo "C:\Program Files (x86)\NASM" >> $GITHUB_PATH
+        shell: bash
+
+      - name: Cache cargo
+        uses: actions/cache@v2
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-windows-cargo-${{ hashFiles('**/Cargo.lock') }}
+      - name: Install latest 32bit target
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          override: true
+          components: rustfmt, clippy
+          target: i686-pc-windows-msvc
+      - name: Test Build
+        run: cargo test --all --release --target=i686-pc-windows-msvc
+      - name: Build Release
+        run: cargo build --all --release --target=i686-pc-windows-msvc
+        shell: bash
+        env:
+          ESTIMATED_ARTIFACT_URL: https://s3-us-west-1.amazonaws.com/imageflow-nightlies/imageflow-${{env.GITHUB_REF_NAME}}-${{env.GITHUB_SHA_SHORT}}-${{env.PACKAGE_SUFFIX}}.zip
+          ESTIMATED_DOCS_URL: https://s3-us-west-1.amazonaws.com/imageflow-nightlies/doc
+          CI_SEQUENTIAL_BUILD_NUMBER: ${{github.run_number}}
+          CI_BUILD_URL: https://github.com/${{env.GITHUB_REPOSITORY_OWNER}}/${{env.GITHUB_REPOSITORY_NAME}}/actions/runs/${{github.run_id}}
+          CI_JOB_URL: https://github.com/${{env.GITHUB_REPOSITORY_OWNER}}/${{env.GITHUB_REPOSITORY_NAME}}/actions/runs/${{github.run_id}}
+          CI_JOB_TITLE: Github ${{github.job_id}}
+          CI_STRING: Github actions
+          CI_PULL_REQUEST_INFO: ${{github.event_name!='release'}}
+          CI_TAG: ${{env.GITHUB_REF_NAME}}
+          CI_REPO: ${{env.GITHUB_REPOSITORY_OWNER}}/${{env.GITHUB_REPOSITORY_NAME}}
+          CI: True
+          OPT_LEVEL: 0
+          DEBUG: False
+          PROFILE: release
+          FETCH_COMMIT_SUFFIX: win-x86
+
+      - name: Build Docs
+        run: cargo doc --all --release --no-deps --target=i686-pc-windows-msvc
+
+      - name: Create Artifacts Header
+        shell: bash
+        run: |
+          mkdir -p ./artifacts/staging/headers || true
+          (
+            cd ./${TARGET_DIR}doc
+            7z a -r "../docs.zip" ./*
+          )
+          mv ./${TARGET_DIR}docs.zip ./artifacts/staging/
+
+          cp -R ./${TARGET_DIR}release/{imageflow_,libimageflow}*  ./artifacts/staging/
+          cp -R "./${TARGET_DIR}release/imageflow.dll" ./artifacts/staging/imageflow.dll
+          cp -R "./${TARGET_DIR}release/imageflow.pdb" ./artifacts/staging/imageflow.pdb
+          cp bindings/headers/*.h  ./artifacts/staging/headers/
+          cp bindings/headers/imageflow_default.h  ./artifacts/staging/imageflow.h
+          rm ./artifacts/staging/*.{o,d,rlib} || true
+          rm ./artifacts/staging/*-* || true
+          (
+            cd ./artifacts/staging
+            7z a -r "./archive.zip" ./*
+          )
+          mkdir -p "./artifacts/upload/$(dirname "${ARTIFACT_UPLOAD_PATH}")" || true
+          mkdir -p "./artifacts/upload/${DOCS_UPLOAD_DIR}" || true
+          mkdir -p ./artifacts/github
+          mkdir -p ./artifacts/upload/releases/${GITHUB_REF_NAME}
+          mkdir -p ./artifacts/upload/commits/${GIT_COMMIT}
+          cp "${ARTIFACT_ARCHIVE_NAME}" ./artifacts/github/${ARTIFACT_UPLOAD_PATH}.zip
+          cp "${ARTIFACT_ARCHIVE_NAME}" "./artifacts/upload/releases/${GITHUB_REF_NAME}/${ARTIFACT_UPLOAD_PATH}.zip"
+          cp "${ARTIFACT_ARCHIVE_NAME}" "./artifacts/upload/commits/${GIT_COMMIT}/${ARTIFACT_UPLOAD_PATH_1}.zip"
+        env:
+          TARGET_DIR: target/i686-pc-windows-msvc/
+          ARTIFACT_UPLOAD_PATH: /imageflow-${{env.GITHUB_REF_NAME}}-${{env.GITHUB_SHA_SHORT}}-win-x86
+          ARTIFACT_ARCHIVE_NAME: ./artifacts/staging/archive.zip
+          DOCS_UPLOAD_DIR: doc
+          GIT_COMMIT: ${{github.sha}}
+          ARTIFACT_UPLOAD_PATH_1: /win-x86
+
+      - name: Nuget(Tool) to S3
+        shell: bash
+        run: ./ci/pack_nuget/pack.sh tool
+        env:
+          CI_TAG: ${{env.GITHUB_REF_NAME}}
+          PACKAGE_SUFFIX: win-x86
+          NUGET_RUNTIME: win-x86
+          TARGET_DIR: target/i686-pc-windows-msvc
+          REPO_NAME_TOOL: ${{env.GITHUB_REPOSITORY_OWNER}}\/${{env.GITHUB_REPOSITORY_NAME}}
+          REPO_NAME_NATIVE: ${{env.GITHUB_REPOSITORY_OWNER}}\/${{env.GITHUB_REPOSITORY_NAME}}
+
+      - name: Nuget(Runtime) to S3
+        shell: bash
+        run: ./ci/pack_nuget/pack.sh
+        env:
+          CI_TAG: ${{env.GITHUB_REF_NAME}}
+          PACKAGE_SUFFIX: win-x86
+          NUGET_RUNTIME: win-x86
+          TARGET_DIR: target/i686-pc-windows-msvc
+          REPO_NAME_TOOL: ${{env.GITHUB_REPOSITORY_OWNER}}\/${{env.GITHUB_REPOSITORY_NAME}}
+          REPO_NAME_NATIVE: ${{env.GITHUB_REPOSITORY_OWNER}}\/${{env.GITHUB_REPOSITORY_NAME}}
+
+      - name: Upload to release
+        uses: Shopify/upload-to-release@master
+        with:
+          name: imageflow-${{env.GITHUB_REF_NAME}}-${{env.GITHUB_SHA_SHORT}}-win-x86.zip
+          path: ./artifacts/github/imageflow-${{env.GITHUB_REF_NAME}}-${{env.GITHUB_SHA_SHORT}}-win-x86.zip
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+          content-type: text/plain
+
+      ## Upload to S3(build artifacts) ###
+      - name: Upload to S3
+        uses: anshulrgoyal/upload-s3-action@master
+        with:
+          aws_key_id: ${{ secrets.AWS_KEY_ID }}
+          aws_secret_access_key: ${{ secrets.AWS_SECRET_ACCESS_KEY}}
+          aws_bucket: ${{ secrets.AWS_BUCKET }}
+          source_dir: ./artifacts/upload
+          destination_dir: ''
+      ### upload to S3(nugets) ###
+      - name: Upload to S3(nugets)
+        uses: anshulrgoyal/upload-s3-action@master
+        with:
+          aws_key_id: ${{ secrets.AWS_KEY_ID }}
+          aws_secret_access_key: ${{ secrets.AWS_SECRET_ACCESS_KEY}}
+          aws_bucket: ${{ secrets.AWS_BUCKET }}
+          source_dir: ./artifacts/nuget/
+          destination_dir: 'nuget'
+
+      - name: Publish nuget(Github)
+        run: |
+          for f in ./artifacts/nuget/*.nupkg
+          do
+            curl -vX PUT -u "${{env.GITHUB_REPOSITORY_OWNER}}:${{ secrets.GITHUB_TOKEN }}" -F package=@$f https://nuget.pkg.github.com/${{env.GITHUB_REPOSITORY_OWNER}}/
+          done
+        shell: bash
+        if: ${{env.NUGET_UPLOAD_GITHUB == 'true'}}
+      - name: Publish nuget(Nuget)
+        run: |
+          for f in ./artifacts/nuget/*.nupkg
+          do
+             curl -L "https://www.nuget.org/api/v2/package" -H "X-NuGet-ApiKey: ${{ secrets.NUGET_API_KEY }}" -H "X-NuGet-Client-Version: 4.1.0" -A "NuGet Command Line/3.4.4.1321 (Unix 4.4.0.92)" --upload-file "$f" --fail
+          done
+        shell: bash
+        if: ${{env.NUGET_UPLOAD_NUGET == 'true'}}
+
+  publish:
+    runs-on: ubuntu-16.04
+    needs: [build, build_win32]
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@master
+      - uses: FranzDiebold/github-env-vars-action@v1.3.0
+      - name: Publish To Docker
+        run: |
+          docker login -u "$DOCKER_USERNAME" -p "$DOCKER_PASSWORD"
+          ./ci/travis_publish_docker_images.sh docker/imageflow_tool imazen/imageflow_tool
+          ./ci/travis_publish_docker_images.sh docker/imageflow_server_unsecured imazen/imageflow_server_unsecured
+        env:
+          PUBLISH_DOCKER: True
+          DOCKER_USERNAME: ${{secrets.DOCKER_USERNAME}}
+          DOCKER_PASSWORD: ${{secrets.DOCKER_PASSWORD}}
+          PUBLISH_DOCKER_TAG: ${{env.GITHUB_REF_NAME}}
+          IMAGEFLOW_DOWNLOAD_URL_TAR_GZ: https://s3-us-west-1.amazonaws.com/imageflow-nightlies/commits/${{github.sha}}/linux64_glibc227.tar.gz
+
+  docs:
+    runs-on: ubuntu-16.04
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@master
+      - name: Build
+        run: |
+          cargo install mdbook --no-default-features --features output --vers "^0.3"
+          cd ./docs
+          mdbook build
+      - name: Deploy
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./docs/book

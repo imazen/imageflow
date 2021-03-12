@@ -1,0 +1,160 @@
+name: Test
+
+on:
+  push:
+    branches:
+      - '*'
+    tags-ignore:
+      - 'v*'
+  pull_request:
+
+jobs:
+  test:
+    strategy:
+      matrix:
+        # setup different OS and targets
+        include:
+          - name: ubuntu_16_04-x86_64
+            os: ubuntu-16.04
+            TARGET_CPU: x86-64
+
+          - name: ubuntu_18_04-x86_64
+            os: ubuntu-18.04
+            TARGET_CPU: x86-64
+
+          # - name: ubuntu_20_04-x86_64
+          #   os: ubuntu-20.04
+          #   TARGET_CPU: x86-64
+
+          # - name: osx_11_0-x86_64
+          #   os: macos-11.0
+          #   TARGET_CPU: x86-64
+
+          - name: osx_10_11-x86_64
+            os: macos-10.15
+            TARGET_CPU: nehalem
+
+          - name: win-x86_64
+            os: windows-2019
+            TARGET_CPU: x86-64
+
+          - name: ubuntu_18_04-x86_64-haswell
+            os: ubuntu-18.04
+            TARGET_CPU: haswell
+
+          - name: win-x86_64-haswell
+            os: windows-2019
+            TARGET_CPU: haswell
+
+    runs-on: ${{matrix.os}}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@master
+      ### BUILD CACHE ###
+      # NB: We install gnu-tar because BSD tar is buggy on Github's macos machines. https://github.com/actions/cache/issues/403
+      - name: Install GNU tar (Macos)
+        if: ${{contains( matrix.os, 'macos' )}}
+        run: |
+          brew install gnu-tar
+          echo PATH="/usr/local/opt/gnu-tar/libexec/gnubin:$PATH" >> $GITHUB_ENV
+
+      ### Cargo Cache for Build Artifacts ###
+      - name: Cache cargo
+        uses: actions/cache@v2
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-${{matrix.name}}-cargo-${{ hashFiles('**/Cargo.lock') }}
+
+      ### Install Nasm for MacOS ###
+      - name: Install nasm
+        run: brew install nasm
+        if: ${{contains( matrix.os, 'macos' )}}
+
+      ### Install Nasm for Windows ###
+      - name: Install nasm
+        run: choco install nasm
+        if: ${{contains( matrix.os, 'windows' )}}
+
+      ### Fallback in case Nasm install fails ###
+      - name: Install nasm
+        run: |
+          curl -L -o nasminst.exe https://imageflow-resources.s3-us-west-2.amazonaws.com/tools/nasm-2.15.05-installer-x64.exe
+          .\nasminst.exe /S
+        if: ${{contains( matrix.os, 'windows' ) && failure()}}
+
+      ### Set Path for nasm install ###
+      - name: Set Path
+        run: |
+          echo "C:\Program Files\NASM" >> $GITHUB_PATH
+          echo "C:\Program Files (x86)\NASM" >> $GITHUB_PATH
+        if: ${{contains( matrix.os, 'windows' )}}
+        shell: bash
+
+      ### Install Nasm for Ubuntu ###
+      - name: Install nasm
+        run: sudo apt install nasm
+        if: ${{contains( matrix.os, 'ubuntu' )}}
+
+      ### Check Build ###
+      - name: Check Build
+        run: cargo check --all
+
+      ### Test Code ###
+      - name: Test Build
+        run: cargo test --all
+        env:
+          RUSTFLAGS: -C target-cpu=${{matrix.TARGET_CPU}}
+
+      ### Build the code ###
+      - name: Build Release
+        run: cargo build --all
+        shell: bash
+        env:
+          RUSTFLAGS: -C target-cpu=${{matrix.TARGET_CPU}}
+
+  test_win32:
+    runs-on: windows-2019
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@master
+
+      ### Install Nasm with fallback to S3 ###
+      - name: Install nasm
+        run: choco install nasm
+      - name: Install nasm
+        run: |
+          curl -L -o nasminst.exe https://imageflow-resources.s3-us-west-2.amazonaws.com/tools/nasm-2.15.05-installer-x86.exe
+          .\nasminst.exe /S
+        if: ${{failure()}}
+
+      - name: Set Path
+        run: |
+          echo "C:\Program Files\NASM" >> $GITHUB_PATH
+          echo "C:\Program Files (x86)\NASM" >> $GITHUB_PATH
+        shell: bash
+
+      ### Cargo cache for Build artifacts ###
+      - name: Cache cargo
+        uses: actions/cache@v2
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-windows-test-32-cargo-${{ hashFiles('**/Cargo.lock') }}
+      - name: Install latest 32bit target
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          override: true
+          components: rustfmt, clippy
+          target: i686-pc-windows-msvc
+
+      ### check and test build ###
+      - name: Check Build
+        run: cargo check --all --target=i686-pc-windows-msvc
+      - name: Test Build
+        run: cargo test --all --release --target=i686-pc-windows-msvc
