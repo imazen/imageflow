@@ -1,6 +1,0 @@
-globals
-intptr
-movehl
-movelh
-setr
-setzero

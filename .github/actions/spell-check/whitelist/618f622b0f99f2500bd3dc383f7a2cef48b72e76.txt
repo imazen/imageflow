@@ -1,9 +1,0 @@
-Autorelease
-chrm
-cmyk
-coords
-Jdk
-Jpe
-Mz
-ths
-YCCK

@@ -353,7 +353,7 @@ DOCKER_ENV_VARS=(
 
 echo_maybe
 echo_maybe "========================================================="
-echo_maybe "Relevant dockered ENV VARS for build.sh: ${DOCKER_ENV_VARS[*]}"
+echo_maybe "Relevant dockerd ENV VARS for build.sh: ${DOCKER_ENV_VARS[*]}"
 echo_maybe "========================================================="
 echo_maybe
 ##############################

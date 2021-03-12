@@ -2,7 +2,7 @@ Thank you for installing ImageFlow!
 
 
 {{- if .Values.ingress.enabled }}
-1. Your applicatonURL is:
+1. Your applicationURL is:
 {{- range $host := .Values.ingress.hosts }}
   {{- range .paths }}
   http{{ if $.Values.ingress.tls }}s{{ end }}://{{ $host.host }}{{ .path }}

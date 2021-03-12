@@ -29,7 +29,7 @@ livenessProbe:
   path: /path/to/image.jpg
 
 readinessProbe:
-  # enables a readyness probe to see if container has finished starting
+  # enables a readiness probe to see if container has finished starting
   enabled: false
   # Path to an asset on server that will answer with a 200 ok
   path: /path/to/image.jpg
