@@ -26,9 +26,9 @@ pub fn apply_matte(b: &mut BitmapWindowMut<u8>, matte_color: imageflow_types::Co
         for mut pixel in row.slice_of_pixels().unwrap().iter_mut(){
             let pixel_a = (*pixel).a;
             let pixel_a_f32 = pixel_a as i32 as f32 * alpha_to_float;
-            // if pixel_a == 0{
-            //     *pixel = matte;
-            // }else if pixel_a != 255{
+            if pixel_a == 0{
+                 *pixel = matte;
+            }else if pixel_a != 255{
                 let matte_a = (1.0f32 - pixel_a_f32) * matte_a;
                 let final_a: f32 = matte_a + pixel_a_f32;
                 (*pixel).b = colorcontext.floatspace_to_srgb(
@@ -38,7 +38,7 @@ pub fn apply_matte(b: &mut BitmapWindowMut<u8>, matte_color: imageflow_types::Co
                 (*pixel).r = colorcontext.floatspace_to_srgb(
                     (colorcontext.srgb_to_floatspace(pixel.r) * pixel_a_f32 + matte_r * matte_a) / final_a);
                 (*pixel).a =    uchar_clamp_ff(255f32 * final_a);
-            //}
+            }
         }
     }
 
