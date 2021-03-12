@@ -96,6 +96,7 @@ pub enum ServerError {
     DiskCacheReadIoError(std::io::Error),
     DiskCacheWriteIoError(std::io::Error),
     UpstreamResponseError(reqwest::StatusCode),
+    UpstreamResponseErrorWithBytes((reqwest::StatusCode, Vec<u8>)),
     UpstreamHyperError(hyper::Error),
     UpstreamReqwestError(reqwest::Error),
     UpstreamIoError(std::io::Error),
@@ -150,11 +151,19 @@ fn fetch_bytes(url: &str, config: Option<FetchConfig>) -> std::result::Result<Fe
     let downloaded = precise_time_ns();
 
     match result{
-        Ok(r) => Ok(FetchedResponse{
-            bytes: r.bytes,
-            content_type: r.content_type,
-            perf: AcquirePerf { fetch_ns: downloaded - start, ..Default::default() }
-        }),
+        Ok(r) => {
+            if r.code.is_success() {
+                Ok(FetchedResponse {
+                    bytes: r.bytes,
+                    content_type: r.content_type,
+                    perf: AcquirePerf { fetch_ns: downloaded - start, ..Default::default() }
+                })
+            }else if r.bytes.len() > 0{
+                Err(ServerError::UpstreamResponseErrorWithBytes((r.code, r.bytes)))
+            } else {
+                Err(ServerError::UpstreamResponseError(r.code))
+            }
+        },
         Err(e) => Err(error_upstream(e.into()))
     }
 }
@@ -196,7 +205,7 @@ fn fetch_bytes_using_cache_by_url(cache: &CacheFolder, url: &str) -> std::result
             Err(e) => Err(ServerError::DiskCacheReadIoError(e))
         }
     } else {
-        let result = fetch_bytes(url, None);
+        let result = fetch_bytes(url, Some(FetchConfig{ custom_ca_trust_file: None, read_error_body: Some(true) }));
         if let Ok(FetchedResponse { bytes, perf, .. }) = result {
             let start = precise_time_ns();
             match entry.write(&bytes) {
@@ -622,6 +631,8 @@ pub fn serve(c: StartServerConfig) {
                            status::Ok,
                            "Imageflow Server is healthy.")))
     }, "imageflow-health");
+
+    mou.mount("/", router);
 
     let mut chain = Chain::new(mou);
 

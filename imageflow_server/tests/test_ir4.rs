@@ -31,6 +31,9 @@ lazy_static! {
 fn assert_valid_image(url: &str) {
     match fetch(url, Some(FetchConfig{ custom_ca_trust_file: None, read_error_body: Some(true)})){
         Ok(v) => {
+            if !v.code.is_success(){
+                panic!("Error {:?} for {}", v.code, &url);
+            }
             fc::clients::stateless::LibClient {}.get_image_info(&v.bytes).expect("Image response should be valid");
         },
         Err(e) => { panic!("{:?} for {}", &e, &url); }
@@ -39,7 +42,11 @@ fn assert_valid_image(url: &str) {
 
 fn assert_ok(url: &str) {
     match fetch(url, Some(FetchConfig{ custom_ca_trust_file: None, read_error_body: Some(true)})){
-        Ok(_) => { },
+        Ok(response) => {
+            if !response.code.is_success(){
+                panic!("Error {:?} for {}", response.code, &url);
+            }
+        },
         Err(e) => { panic!("{:?} for {}", &e, &url); }
     }
 }

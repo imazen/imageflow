@@ -38,6 +38,7 @@ impl fmt::Display for FetchError {
 pub type FetchResult = ::std::result::Result<FetchedResponse,FetchError>;
 
 pub struct FetchedResponse {
+    pub code: reqwest::StatusCode,
     pub bytes: Vec<u8>,
     pub content_type: reqwest::header:: HeaderValue,
 }
@@ -115,6 +116,7 @@ pub fn fetch(url: &str, config: Option<FetchConfig>) -> std::result::Result<Fetc
         let mut source_bytes = Vec::new();
         let _ = res.read_to_end(&mut source_bytes)?;
         Some(FetchedResponse {
+            code: res.status(),
             bytes: source_bytes,
             content_type: res.headers().get(reqwest::header::CONTENT_TYPE).expect("content type required").clone()
         })
