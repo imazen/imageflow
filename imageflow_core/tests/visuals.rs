@@ -717,6 +717,21 @@ fn webp_lossy_alpha_decode_and_scale() {
     );
     assert!(matched);
 }
+#[test]
+fn webp_lossy_noalpha_decode_and_scale() {
+    let matched = compare(Some(IoTestEnum::Url("https://imageflow-resources.s3-us-west-2.amazonaws.com/test_inputs/lossy_mountain.webp".to_owned())), 500,
+                          "webp_lossy_opaque_decode_and_scale", POPULATE_CHECKSUMS, DEBUG_GRAPH, vec![
+            Node::CommandString{
+                kind: CommandStringKind::ImageResizer4,
+                value: "width=100&height=100".to_owned(),
+                decode: Some(0),
+                encode: None,
+                watermarks: None
+            }
+        ]
+    );
+    assert!(matched);
+}
 
 #[test]
 fn webp_lossless_alpha_roundtrip(){

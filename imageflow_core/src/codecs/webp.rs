@@ -53,6 +53,15 @@ impl WebPDecoder {
             None
         }
     }
+
+    pub fn has_alpha(&self) -> Option<bool>{
+        if self.features_read {
+            Some(self.config.input.has_alpha == 1)
+        }else{
+            None
+        }
+    }
+
     pub fn input_height(&self) -> Option<i32>{
         if self.features_read {
             Some(self.config.input.height)
@@ -103,7 +112,7 @@ impl Decoder for WebPDecoder {
         self.ensure_features_read()?;
 
         Ok(s::ImageInfo {
-            frame_decodes_into: s::PixelFormat::Bgra32,
+            frame_decodes_into: if self.has_alpha().unwrap() { s::PixelFormat::Bgra32 } else { s::PixelFormat::Bgr32 },
             image_width: self.output_width().unwrap(),
             image_height: self.output_height().unwrap(),
             preferred_mime_type: "image/webp".to_owned(),
@@ -115,7 +124,7 @@ impl Decoder for WebPDecoder {
         self.ensure_features_read()?;
 
         Ok(s::ImageInfo {
-            frame_decodes_into: s::PixelFormat::Bgra32,
+            frame_decodes_into:  if self.has_alpha().unwrap() { s::PixelFormat::Bgra32 } else { s::PixelFormat::Bgr32 },
             image_width: self.input_width().unwrap(),
             image_height: self.input_height().unwrap(),
             preferred_mime_type: "image/webp".to_owned(),
@@ -152,7 +161,7 @@ impl Decoder for WebPDecoder {
                                   h as u32,
                                   PixelLayout::BGRA,
                                   false,
-                                  true,
+                                  self.has_alpha().unwrap(),
                                   ColorSpace::StandardRGB,
                                   BitmapCompositing::ReplaceSelf)
                 .map_err(|e| e.at(here!()))?;

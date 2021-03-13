@@ -56,5 +56,6 @@
   "transparent_trim_whitespace": "0FBC6A5C3930ADEF7.png",
   "webp_lossless_alpha_decode_and_scale": "057FA4CBAC9D0E267_0172196390B512E97",
   "webp_lossy_alpha_decode_and_scale": "09F54D063249F69C8_0172196390B512E97",
+  "webp_lossy_opaque_decode_and_scale": "041A5FD590623EB11_0172196390B512E97",
   "wrenches_decode": "0E680C080BE9CD3A9_01397E6B9AECAB9F4"
 }
