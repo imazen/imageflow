@@ -84,7 +84,7 @@ impl Decoder for LibPngDecoder {
             w,h,fmt.pixel_layout(),
             false, fmt.alpha_meaningful(),
             ColorSpace::StandardRGB,
-            BitmapCompositing::BlendWithMatte(s::Color::Transparent))
+            BitmapCompositing::ReplaceSelf)
             .map_err(|e| e.at(here!()))?;
 
 
