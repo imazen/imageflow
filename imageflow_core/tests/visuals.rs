@@ -465,6 +465,38 @@ fn test_watermark_image_on_png() {
     );
     assert!(matched);
 }
+
+#[test]
+fn test_watermark_jpeg_over_pnga() {
+    let matched = compare_multiple(Some(vec![
+        IoTestEnum::Url("https://imageflow-resources.s3-us-west-2.amazonaws.com/test_inputs/shirt_transparent.png".to_owned()),
+        IoTestEnum::Url("https://imageflow-resources.s3-us-west-2.amazonaws.com/test_inputs/gamma_test.jpg".to_owned())
+    ]), 500,
+                                   "watermark_jpeg_over_pnga", POPULATE_CHECKSUMS, DEBUG_GRAPH, vec![
+            Node::Decode {io_id: 0, commands: None},
+            Node::Watermark(imageflow_types::Watermark{
+                io_id: 1,
+                gravity: Some(imageflow_types::ConstraintGravity::Percentage {x: 100f32, y: 100f32}),
+                fit_box: Some(imageflow_types::WatermarkConstraintBox::ImagePercentage {x1: 0f32, y1: 0f32, x2: 90f32, y2: 90f32}),
+                fit_mode: Some(imageflow_types::WatermarkConstraintMode::Within),
+                min_canvas_width: None,
+                min_canvas_height: None,
+                opacity: Some(0.3f32),
+                hints: Some(imageflow_types::ResampleHints{
+                    sharpen_percent: None,
+                    down_filter: None,
+                    up_filter: None,
+                    scaling_colorspace: None,
+                    background_color: None,
+                    resample_when: None,
+                    sharpen_when: None
+                }),
+
+            })
+        ]
+    );
+    assert!(matched);
+}
 // Does not reproduce across different compiler optimizations
 // #[test]
 // fn test_image_rs_jpeg_decode(){

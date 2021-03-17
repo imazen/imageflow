@@ -107,7 +107,7 @@ impl NodeDefOneInputExpand for WatermarkDef {
 
                     let opacity = f32::max(0f32, f32::min(1f32, watermark.opacity.unwrap_or(1f32)));
                     if opacity < 1f32 {
-                        //TODO: push EnableTransparency node
+                        //ColorFilterSrgb pushes the EnableTransparency node if Alpha is used, so we don't need to do that here
                         b.push(Node::from(imageflow_types::Node::ColorFilterSrgb(imageflow_types::ColorFilterSrgb::Alpha(opacity))));
                     }
 
