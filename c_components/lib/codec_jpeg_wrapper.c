@@ -64,6 +64,7 @@ void wrap_jpeg_setup_error_handler(j_decompress_ptr codec_info, struct wrap_jpeg
     codec_info->err->error_exit = wrap_jpeg_error_exit;
     state->error_mgr.emit_message = flow_jpeg_ignore_emit;
     state->error_mgr.output_message = flow_jpeg_ignore_message;
+    state->error_handler = error_handler;
 }
 
 /// Only works after wrap_jpeg_setup_error_handler has been called

@@ -175,6 +175,7 @@ impl MzDec{
     #[no_mangle]
     extern "C" fn jpeg_error_handler(custom_state: *mut c_void,
                                      codec_info: *mut mozjpeg_sys::jpeg_common_struct,
+                                     error_mgr: *mut mozjpeg_sys::jpeg_error_mgr,
                                      error_code: i32,
                                      message_buffer: *const u8,
                                      message_buffer_length: i32) -> bool{
@@ -185,9 +186,14 @@ impl MzDec{
                 let bytes = unsafe {
                     std::slice::from_raw_parts(message_buffer, message_buffer_length as usize)
                 };
-                let cstr = CStr::from_bytes_with_nul(bytes).expect("MozJpeg error message was not null terminated");
-                let message = cstr.to_str().expect("MozJpeg error message was not UTF-8");
-                decoder.error = Some(nerror!(ErrorKind::JpegDecodingError, "MozJPEG error {}: {}", error_code, message));
+                if let Some(null_index) = bytes.iter().position(|x| *x == 0){
+                    let cstr = CStr::from_bytes_with_nul(&bytes[0..=null_index]).unwrap();
+                    let message = cstr.to_str().expect("MozJpeg error message was not UTF-8");
+                    decoder.error = Some(nerror!(ErrorKind::JpegDecodingError, "MozJPEG error {}: {}", error_code, message));
+                }else {
+                    panic!("MozJpeg error message was not null terminated");
+                }
+
             }else {
                 decoder.error = Some(nerror!(ErrorKind::JpegDecodingError, "MozJPEG error {}", error_code));
             }

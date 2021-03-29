@@ -66,6 +66,8 @@ fn test_trim_whitespace() {
     );
 }
 
+
+
 #[test]
 fn test_transparent_png_to_jpeg() {
     compare_encoded(
@@ -989,6 +991,27 @@ fn smoke_test_png_ir4(){
     ];
 
     smoke_test(Some(IoTestEnum::Url("https://user-images.githubusercontent.com/2650124/31182064-e1c54784-a8f0-11e7-8bb3-833bba872975.png".to_owned())),
+               Some(IoTestEnum::OutputBuffer),
+               None,
+               DEBUG_GRAPH,
+               steps,
+    ).unwrap();
+}
+
+#[test]
+fn smoke_test_corrupt_jpeg(){
+
+    let steps = vec![
+        Node::CommandString{
+            kind: CommandStringKind::ImageResizer4,
+            value: "format=jpg".to_owned(),
+            decode: Some(0),
+            encode: Some(1),
+            watermarks: None
+        }
+    ];
+
+    smoke_test(Some(IoTestEnum::Url("https://imageflow-resources.s3-us-west-2.amazonaws.com/test_inputs/corrupt.jpg".to_owned())),
                Some(IoTestEnum::OutputBuffer),
                None,
                DEBUG_GRAPH,
