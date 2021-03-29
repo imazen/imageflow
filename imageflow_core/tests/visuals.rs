@@ -1016,7 +1016,7 @@ fn smoke_test_corrupt_jpeg(){
                None,
                DEBUG_GRAPH,
                steps,
-    ).unwrap();
+    ).expect_err("Should fail without crashing process");
 }
 
 
