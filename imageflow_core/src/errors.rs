@@ -448,7 +448,7 @@ impl FlowError {
 
     pub fn panic(&self) -> !{
         eprintln!("{}", self);
-        panic!(format!("{}", self));
+        panic!("{}", self);
     }
 
     /// Create a FlowError (InvalidJson) from ::serde_json::Error

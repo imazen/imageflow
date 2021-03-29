@@ -100,7 +100,7 @@ impl PngquantEncoder {
                             a: input_row[i * 4 + 3],
                         }
                     }
-                };
+                }
                 convert_bgra32
             },
             PixelFormat::Bgr32 => {
@@ -115,7 +115,7 @@ impl PngquantEncoder {
                             a: 255,
                         }
                     }
-                };
+                }
                 convert_bgr32
             },
             PixelFormat::Bgr24 => {
@@ -130,7 +130,7 @@ impl PngquantEncoder {
                             a: 255,
                         }
                     }
-                };
+                }
                 convert_bgr24
             },
             PixelFormat::Gray8 => {
@@ -145,7 +145,7 @@ impl PngquantEncoder {
                             a: 255,
                         }
                     }
-                };
+                }
                 convert_gray8
             },
         };
