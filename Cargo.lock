@@ -16,6 +16,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ee2a4ec343196209d6594e19543ae87a39f96d5534d7174822a3ad825dd6ed7e"
 
 [[package]]
+name = "ahash"
+version = "0.4.7"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "739f4a8db6605981345c5654f3a85b056ce52f37a39d34da03f25bf2151ea16e"
+
+[[package]]
 name = "aho-corasick"
 version = "0.7.14"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -258,9 +264,9 @@ dependencies = [
 
 [[package]]
 name = "cc"
-version = "1.0.61"
+version = "1.0.67"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ed67cbde08356238e75fc4656be4749481eeffb09e19f320a25237d5221c985d"
+checksum = "e3c69b077ad434294d3ce9f1f6143a2a4b89a8a2d54ef813d85003a4fd1137fd"
 dependencies = [
  "jobserver",
 ]
@@ -740,6 +746,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "fallible_collections"
+version = "0.4.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "74bebf0efe2e883c1619c455e3f1764333064694ebd5125d2faddabfb5963186"
+dependencies = [
+ "hashbrown",
+]
+
+[[package]]
 name = "fixedbitset"
 version = "0.1.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -984,6 +999,9 @@ name = "hashbrown"
 version = "0.9.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d7afe4a420e3fe79967a00898cc1f4db7c8a49a9333a29f8a4bd76a253d5cd04"
+dependencies = [
+ "ahash",
+]
 
 [[package]]
 name = "heck"
@@ -1611,9 +1629,9 @@ dependencies = [
 
 [[package]]
 name = "libc"
-version = "0.2.80"
+version = "0.2.91"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4d58d1b70b004888f764dfbf6a26a3b0342a1632d33968e4a179d8011c760614"
+checksum = "8916b1f6ca17130ec6568feccee27c156ad12037880833a3b842a823236502e7"
 
 [[package]]
 name = "libpng-sys"
@@ -1884,11 +1902,12 @@ dependencies = [
 
 [[package]]
 name = "mozjpeg"
-version = "0.8.20"
+version = "0.8.24"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c1d3a4f737389e9512b662e4f2c412761919994203874e2366afa97927865b27"
+checksum = "7fa82c1c64a5c3af9e8ad958ad0da8de3045c4c433e180453662a9a678e26ce6"
 dependencies = [
  "arrayvec 0.5.2",
+ "fallible_collections",
  "libc",
  "mozjpeg-sys",
  "rgb",
@@ -1896,9 +1915,9 @@ dependencies = [
 
 [[package]]
 name = "mozjpeg-sys"
-version = "0.10.11"
+version = "0.10.13"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c74d75bf8736c3f408e05c61c83a96ba753a56b4b9744d7aba6a7f8218bd2321"
+checksum = "798a7f921b39b07a6491c8a3c8c0cbabd5cc9826089603abdf31e6ed9121dfcc"
 dependencies = [
  "cc",
  "dunce",
