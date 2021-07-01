@@ -12,6 +12,6 @@ jobs:
       with:
         ref: ${{ github.event.pull_request.head.sha }}
         fetch-depth: 5
-    - uses: check-spelling/check-spelling@0.0.17-alpha
+    - uses: check-spelling/check-spelling@main
       with:
         config: .github/actions/spell-check
