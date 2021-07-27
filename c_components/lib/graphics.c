@@ -26,8 +26,16 @@
 #include <string.h>
 #include <immintrin.h>
 
+#if defined(__FreeBSD__) || defined(__OpenBSD__) || defined(__NetBSD__)
+#ifndef __BSD__
+#define __BSD__
+#endif
+#endif
+
 #ifndef _MSC_VER
+#ifndef __BSD__
 #include <alloca.h>
+#endif
 #else
 #pragma unmanaged
 #ifndef alloca
