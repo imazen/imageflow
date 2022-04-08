@@ -83,7 +83,7 @@ pub fn one_line_version() -> String {
     let profile_release = get_build_env_value("PROFILE") == &Some("release");
     let ci_job_title = get_build_env_value("CI_JOB_TITLE").unwrap_or("Local ");
     let profile = get_build_env_value("PROFILE").unwrap_or("[profile missing]");
-    let ci = benv::BUILT_ON_CI;
+    let ci = built_on_ci();
 
     let target_cpu = match get_build_env_value("TARGET_CPU").unwrap_or(get_build_env_value("RUSTFLAGS").unwrap_or("?")){
         "x86-64" | "x86"=> "",
@@ -154,4 +154,16 @@ pub fn all_build_info_pairs() -> String {
         s += &line;
     }
     s
+}
+
+pub fn built_on_ci() -> bool {
+    benv::BUILT_ON_CI
+}
+
+pub fn git_username_and_repo() -> &'static str {
+    benv::BUILD_ENV_INFO.get("CI_REPO").unwrap_or(&Some("imazen/imageflow")).unwrap_or("imazen/imageflow")
+}
+
+pub fn git_commit() -> &'static str {
+    benv::GIT_COMMIT
 }

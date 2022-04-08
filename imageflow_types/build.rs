@@ -157,7 +157,7 @@ fn what_to_collect() -> Vec<EnvTidbit>{
         c.push(EnvTidbit::Env(name));
     }
     c.push(EnvTidbit::EnvReq("CARGO_MANIFEST_DIR"));
-    c.push(EnvTidbit::Cmd{key: "GIT_STATUS", cmd: "git checkout ../c_components/tests/visuals/weights.txt && git status"});
+    c.push(EnvTidbit::Cmd{key: "GIT_STATUS", cmd: "git status"});
     c.push(EnvTidbit::Cmd{key: "GLIBC_VERSION", cmd: "ldd --version"});
     c.push(EnvTidbit::Cmd{key: "UNAME", cmd: "uname -av"});
     c.push(EnvTidbit::Cmd{key: "WIN_SYSTEMINFO", cmd: "systeminfo.exe"});

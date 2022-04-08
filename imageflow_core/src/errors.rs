@@ -512,9 +512,9 @@ impl fmt::Debug for FlowError {
         // And we assume that any recorded stack frames are from within the `imageflow` repository.
         // Click-to-source is handy
 
-        let url = if::imageflow_types::build_env_info::BUILT_ON_CI{
-            let repo = ::imageflow_types::build_env_info::BUILD_ENV_INFO.get("CI_REPO").unwrap_or(&Some("imazen/imageflow")).unwrap_or("imazen/imageflow");
-            let commit =  ::imageflow_types::build_env_info::GIT_COMMIT;
+        let url = if::imageflow_types::version::built_on_ci(){
+            let repo = ::imageflow_types::version::git_username_and_repo();
+            let commit =  ::imageflow_types::version::git_commit();
             Some(format!("https://github.com/{}/blob/{}/", repo, commit))
         }else { None };
 
@@ -522,7 +522,7 @@ impl fmt::Debug for FlowError {
             write!(f, "{}:{}:{}\n", recorded_frame.file(), recorded_frame.line(), recorded_frame.col())?;
 
             if let Some(ref url) = url{
-                write!(f, "{}{}#L{}\n",url, recorded_frame.file(), recorded_frame.line())?;
+                write!(f, "{}{}#L{}\n",url, recorded_frame.file().replace("\\", "/"), recorded_frame.line())?;
             }
         }
         if let Some(ref n) = self.node{

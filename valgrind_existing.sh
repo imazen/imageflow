@@ -18,7 +18,7 @@ if [ "$#" -lt 1 ]; then
 		find . -type d -name 'grind_*' -exec rm -rf {} +
 	)
 	shopt -s nullglob
-	TEST_BINARIES=(./${TEST_BINARIES_TARGET}release/*-[a-f0-9][a-f0-9][a-f0-9][a-f0-9][a-f0-9][a-f0-9][a-f0-9][a-f0-9][a-f0-9][a-f0-9][a-f0-9][a-f0-9][a-f0-9][a-f0-9][a-f0-9][a-f0-9])
+	TEST_BINARIES=(./${TEST_BINARIES_TARGET}release/deps/imageflow*-[a-f0-9][a-f0-9][a-f0-9][a-f0-9][a-f0-9][a-f0-9][a-f0-9][a-f0-9][a-f0-9][a-f0-9][a-f0-9][a-f0-9][a-f0-9][a-f0-9][a-f0-9][a-f0-9])
 	shopt -u nullglob
 	printf "discovered binaries:\n"
 else
