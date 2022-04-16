@@ -10,11 +10,11 @@
 [Download](https://github.com/imazen/imageflow/releases) blazing fast and [safer](https://cve.mitre.org/cgi-bin/cvekey.cgi?keyword=imagemagick) tools for a modern image workflow.
 
 
-* **imageflow_tool** is a command-line tool for experimenting, running batch jobs,
+* **`imageflow_tool`** is a command-line tool for experimenting, running batch jobs,
 or when you want process isolation. Up to 17x faster than ImageMagick. Also produces smaller files at higher quality.
-* **imageflow_server** can run JSON jobs or manipulate images in-flight (e.g.`/bucket/img.jpg?w=200`) for direct use from
+* **`imageflow_server`** can run JSON jobs or manipulate images in-flight (e.g.`/bucket/img.jpg?w=200`) for direct use from
 HTML. Source images can reside in blob storage, on another server, or on the filesystem. However, for production use, we recommend using [Imageflow.NET Server](https://github.com/imazen/imageflow-dotnet-server), which is far more feature-rich and doesn't need a reverse proxy in front for security.
-* **libimageflow** is for direct (in-process) use from *your* programming language. See our [**Node bindings**](https://github.com/imazen/imageflow-node),  [**Go bindings**](https://github.com/imazen/imageflow-go), [**Scala bindings**](https://github.com/Dealermade/imageflow-scala), [**Elixir bindings**](https://github.com/naps62/imageflow_ex), or  [**.NET bindings**](https://github.com/imazen/imageflow-dotnet). If we don't already have bindings for your language, consider spending a day to add them. Imageflow has a simple
+* **`libimageflow`** is for direct (in-process) use from *your* programming language. See our [**Node bindings**](https://github.com/imazen/imageflow-node),  [**Go bindings**](https://github.com/imazen/imageflow-go), [**Scala bindings**](https://github.com/Dealermade/imageflow-scala), [**Elixir bindings**](https://github.com/naps62/imageflow_ex), or  [**.NET bindings**](https://github.com/imazen/imageflow-dotnet). If we don't already have bindings for your language, consider spending a day to add them. Imageflow has a simple
 C-compatible ABI, of which only 4 methods are needed to implement bindings. 
 
 **[Open an issue](https://github.com/imazen/imageflow/issues/new) to have us write example code for your use case. We believe in feedback-driven design, and streamlining real-world usage is the fastest way to a great product.**
@@ -23,17 +23,17 @@ C-compatible ABI, of which only 4 methods are needed to implement bindings.
 
 [JSON API Documentation](https://docs.imageflow.io/json/introduction.html) 
 
-libimageflow, imageflow_tool, and imageflow_server are available as
-[self-contained binaries](https://github.com/imazen/imageflow/releases) for Windows, Ubuntu, and Mac. We also offer [Docker images](https://hub.docker.com/r/imazen/imageflow_tool/) for Linux (where glibc and OpenSSL are required). 
+`libimageflow`, `imageflow_tool`, and `imageflow_server` are available as
+[self-contained binaries](https://github.com/imazen/imageflow/releases) for Windows, Ubuntu, and Mac. We also offer [Docker images](https://hub.docker.com/r/imazen/imageflow_tool/) for Linux (where `glibc` and OpenSSL are required). 
 
 [We thank our backers on Kickstarter](https://www.kickstarter.com/projects/njones/imageflow-respect-the-pixels-a-secure-alt-to-image/posts/1616122)
 and [the many supporters of ImageResizer](https://imageresizing.net) for making this project a reality.
 Visit [Imageresizing.net](https://imageresizing.net/pricing) if you need an AGPLv3 exception for commercial use.
 
 
-## Start with imageflow_tool (recommended)
+## Start with `imageflow_tool` (recommended)
 
-`imageflow_tool examples --generate` - creates an *examples* directory with JSON jobs and invocation scripts.
+`imageflow_tool examples --generate` - creates an `examples` directory with JSON jobs and invocation scripts.
 
 You can use command strings that are compatible with [ImageResizer 4 querystrings](https://imageresizing.net/docs/basics):
 
@@ -53,15 +53,15 @@ imageflow_tool v1/build --json examples/export_4_sizes/export_4_sizes.json
         --response operation_result.json
 ```
 
-By default, imageflow_tool prints a JSON response to stdout. You write this to disk with `--response`.
+By default, `imageflow_tool` prints a JSON response to stdout. You write this to disk with `--response`.
 
 `--debug-package` will create a .zip file to reproduce problematic behavior with both `v1/build` and `v1/querystring`. Please submit bug reports; we try to make it easy.
 
-## Using imageflow_server for dynamic imaging
+## Using `imageflow_server` for dynamic imaging
 
 `imageflow_server start --demo`
 
-Now you can edit images from HTML... and use srcset without headache.
+Now you can edit images from HTML and use `srcset` without headache.
 
 ```
 <img src="http://localhost:39876/demo_images/u3.jpg?w=300" />
@@ -89,38 +89,38 @@ You'll want to mount various image source locations to prefixes. The `--mount` c
 
 ![](https://www.imageflow.io/images/imageflow-server-advanced.svg)
 
-## Using libimageflow from your language
+## Using `libimageflow` from your language
 
 ![](https://www.imageflow.io/images/libimageflow-direct.svg)
 
 * .NET Standard bindings can be found at https://github.com/imazen/imageflow-dotnet
-* Node bindings available  at https://github.com/imazen/imageflow-node
-* Ruby - Basic bindings can be found in [bindings/ruby/](https://github.com/imazen/imageflow/tree/main/bindings/ruby)
+* Node bindings available at https://github.com/imazen/imageflow-node
+* Basic Ruby bindings can be found in [bindings/ruby/](https://github.com/imazen/imageflow/tree/main/bindings/ruby)
 * C and C++ interface is stable - use [bindings/headers/imageflow_default.h](https://github.com/imazen/imageflow/blob/main/bindings/headers/imageflow_default.h) or one of the many alternate conventions provided with each release.
 * Rust - Imageflow is written in Rust, so you can use the `imageflow_core` crate.
-* other languages - Use an [FFI](https://en.wikipedia.org/wiki/Foreign_function_interface) binding-generation tool for your language, and feed it whichever [header file it likes best](https://github.com/imazen/imageflow/tree/main/bindings/headers).
+* Other languages - Use an [FFI](https://en.wikipedia.org/wiki/Foreign_function_interface) binding-generation tool for your language, and feed it whichever [header file it likes best](https://github.com/imazen/imageflow/tree/main/bindings/headers).
 
 You also may find that `imageflow_tool` is quite fast enough for your needs.
 
 ### Crates within this project
 
-* imageflow_abi - The stable API of libimageflow/imageflow.dll.
-  Headers for libimageflow are located in `bindings/headers`
-* imageflow_tool - The command-line tool
-* imageflow_server - The HTTP server
-* c_components - A rust crate containing C source
-* c_components/tests - Tests for the C components
-* imageflow_types - Shared types used by most crates, with JSON serialization
-* imageflow_helpers - Common helper functions and utilities
-* imageflow_riapi - RIAPI and ImageResizer4 compatibility parsing/layout
-* imageflow_core - The main library and execution engine
+* `imageflow_abi` - The stable API of `libimageflow/imageflow.dll`.
+  Headers for `libimageflow` are located in `bindings/headers`
+* `imageflow_tool` - The command-line tool
+* `imageflow_server` - The HTTP server
+* `c_components` - A Rust crate containing C source
+* `c_components/tests` - Tests for the C components
+* `imageflow_types` - Shared types used by most crates, with JSON serialization
+* `imageflow_helpers` - Common helper functions and utilities
+* `imageflow_riapi` - RIAPI and ImageResizer4 compatibility parsing/layout
+* `imageflow_core` - The main library and execution engine
 
 
 ### Known flaws and missing features (as of May 2020)
 
 #### Flaws
 
-- [ ] imageflow_server doesn't expose the JSON API yet.
+- [ ] `imageflow_server` doesn't expose the JSON API yet.
 - [ ] No fuzz testing or third-party auditing yet.
 
 #### Missing features
@@ -136,7 +136,7 @@ You also may find that `imageflow_tool` is quite fast enough for your needs.
 You'll need more than just Rust to compile Imageflow, as it has a couple C dependencies.
 
 1. **Install platform-specific prerequisites (find the right section below).**
-2. Clone and cd into this repository
+2. Clone and `cd` into this repository
    E.g., `git clone git@github.com:imazen/imageflow.git && cd imageflow`)
 
 If you are using `bash` on any platform, you should be able to use `build.sh`
@@ -147,7 +147,7 @@ If you are using `bash` on any platform, you should be able to use `build.sh`
 * `./build.sh install` - install release binaries to `/usr/local` (must run `./build.sh release` first)
 * `./build.sh uninstall` - uninstall release binaries
 
-`build.sh` places binaries in the `./artifacts/ directory`
+`build.sh` places binaries in the `./artifacts/` directory.
 
 If you are on Windows, only run build commands in the window created by `win_enter_env.bat`.
 
@@ -163,17 +163,17 @@ You can also build using `cargo` directly, although this will place binaries in 
 ## Building from Source with Docker
 If you want to replicate the Imageflow CI environment:
 1. [Install Docker](https://docs.docker.com/install/)
-2. Run from a bash session ([Docker + Windows WSL](https://nickjanetakis.com/blog/setting-up-docker-for-windows-and-wsl-to-work-flawlessly), macOS, or linux)
+2. Run from a `bash` session ([Docker + Windows WSL](https://nickjanetakis.com/blog/setting-up-docker-for-windows-and-wsl-to-work-flawlessly), macOS, or linux)
 3. ```bash
    git clone git@github.com:imazen/imageflow.git
    cd imageflow
    ./build_via_docker.sh debug
    ```
 
-This will create caches within `~/.docker_imageflow_caches` specific to the docker image used. Instances will be ephemeral; the only state will be in the caches.
+This will create caches within `~/.docker_imageflow_caches` specific to the Docker image used. Instances will be ephemeral; the only state will be in the caches.
 
 The [official Dockerfiles](https://github.com/imazen/imageflow/tree/main/docker) are also a great place to get more detailed environment setup steps, as we don't list steps for setting up:
-* Valgrind (common versions break openssl; you may need to build from source)
+* Valgrind (common versions break OpenSSL; you may need to build from source)
 * Code coverage
 * Bindings.
 
@@ -188,11 +188,11 @@ The [official Dockerfiles](https://github.com/imazen/imageflow/tree/main/docker)
 `sudo apt-get install git wget curl build-essential pkg-config libssl-dev libpng-dev nasm `
 ```
 
-## Mac OS Pre-requisites
+## MacOS Pre-requisites
 
 1. Install [XCode Command-Line Tools](http://railsapps.github.io/xcode-command-line-tools.html) if you haven't already
 2. Install [Homebrew](https://brew.sh/) if you haven't already.
-3. Install nasm, pkg-config, and wget
+3. Install `nasm`, `pkg-config`, and `wget`
    `brew install nasm pkg-config wget`
 4. Install [Rust](https://www.rust-lang.org/en-US/install.html)
 
@@ -204,10 +204,10 @@ The [official Dockerfiles](https://github.com/imazen/imageflow/tree/main/docker)
 3. `sudo apt-get update` to update available packages.
 4. Install Rust 1.28+ by running
   `curl https://sh.rustup.rs -sSf | sh -s -- -y --default-toolchain stable`
-5. Ensure build tools are installed (git, curl, wget, gcc, g++, nasm, pkg-config, openssl, ca-certificates)
+5. Ensure build tools are installed (`git`, `curl`, `wget`, `gcc`, `g++`, `nasm`, `pkg-config`, `openssl`, `ca-certificates`)
     `sudo apt-get install git wget curl build-essential pkg-config libssl-dev libpng-dev nasm `
-6. (optional) To use a graphical text editor, you'll need to download imageflow to a "Windows" directory, then map it to a location in Ubuntu.
-   For example, if you cloned imageflow to Documents/imageflow, you would run:
+6. (optional) To use a graphical text editor, you'll need to download Imageflow to a Windows directory, then map it to a location in Ubuntu.
+   For example, if you cloned Imageflow to `Documents/imageflow`, you would run:
    `ln -s /mnt/c/Users/[YourWindowsUserName]/Documents/imageflow ~/win_imageflow`
 7. Close and re-open Ubuntu
 
@@ -220,7 +220,7 @@ The [official Dockerfiles](https://github.com/imazen/imageflow/tree/main/docker)
 4. Install [Rust 64-bit](https://static.rust-lang.org/rustup/dist/x86_64-pc-windows-msvc/rustup-init.exe) if you want 64-bit Imageflow or [Rust 32-bit](https://static.rust-lang.org/rustup/dist/i686-pc-windows-msvc/rustup-init.exe) if you don't.
 Install toolchain `stable` as the default, and confirm adding it to `PATH`.
 5. Open the command line and switch to this repository's root directory
-5. Edit `ci/wintools/SETUP_PATH.bat` to ensure that rust/cargo, nasm, git, and Git/mingw64/bin are all in `%PATH%`.
+5. Edit `ci/wintools/SETUP_PATH.bat` to ensure that `rust/cargo`, `nasm`, `git`, and `Git/mingw64/bin` are all in `%PATH%`.
 7. Run `win_enter_env.bat` to start a sub-shell (edit it if you want a 32-bit build)
 8. All build commands should be run in the sub-shell. Run `cmd.exe /c "ci\wintools\win_verify_tools.bat"` to check tools are present.
 
