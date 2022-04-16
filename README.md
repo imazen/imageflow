@@ -144,7 +144,7 @@ If you are using `bash` on any platform, you should be able to use `build.sh`
 * `./build.sh test` - run all tests
 * `./build.sh debug` - generate slow debug binaries
 * `./build.sh release` - generate release binaries
-* `./build.sh install` - install release binaries to `/usr/local` (must run `./build.sh release first)
+* `./build.sh install` - install release binaries to `/usr/local` (must run `./build.sh release` first)
 * `./build.sh uninstall` - uninstall release binaries
 
 `build.sh` places binaries in the `./artifacts/ directory`
