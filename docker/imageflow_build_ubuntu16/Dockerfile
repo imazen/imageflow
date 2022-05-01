@@ -39,7 +39,7 @@ RUN RUSTVER="stable" && curl https://sh.rustup.rs -sSf | sh -s -- -y --default-t
     && rustup show \
     && rustc -V
 
-RUN PKG_CONFIG_ALL_STATIC=1 cargo install --force --git=https://github.com/mozilla/sccache.git --features=s3 \
+RUN PKG_CONFIG_ALL_STATIC=1 cargo install --force --git=https://github.com/mozilla/sccache.git --features=s3 sccache \
     && PKG_CONFIG_ALL_STATIC=1 cargo install dssim \
     && cargo install mdbook --no-default-features --features output --vers "^0.3" \
     && rm -rf ~/.cargo/registry
