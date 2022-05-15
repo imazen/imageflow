@@ -326,3 +326,10 @@ c_components/tests/generated_idct.c
 c_components/tests/rect_1_1_9_9.png
 c_components/tests/rect_2_3_70_70.png
 imageflow_core/generated_idct.c
+docker/imageflow_bench_ubuntu20/results/imageflow_2000x2000.jpg
+docker/imageflow_bench_ubuntu20/results/imageflow_2000x2000.png
+docker/imageflow_bench_ubuntu20/results/imageflow_reference_2000x2000.png
+docker/imageflow_bench_ubuntu20/results/reference_2000x2000.png
+docker/imageflow_bench_ubuntu20/results/vips_2000x2000.jpg
+docker/imageflow_bench_ubuntu20/results/vips_2000x2000.png
+docker/imageflow_bench_ubuntu20/results/vips_reference_2000x2000.png
