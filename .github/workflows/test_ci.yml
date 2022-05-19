@@ -22,9 +22,9 @@ jobs:
             os: ubuntu-18.04
             TARGET_CPU: x86-64
 
-          - name: ubuntu_22_04-x86_64
-            os: ubuntu-22.04
-            TARGET_CPU: x86-64
+#          - name: ubuntu_22_04-x86_64
+#            os: ubuntu-22.04
+#            TARGET_CPU: x86-64
 
           # - name: osx_11_0-x86_64
           #   os: macos-11.0
