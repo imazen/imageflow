@@ -267,6 +267,56 @@ fn test_fill_rect_original(){
 }
 
 #[test]
+fn test_round_corners_large(){
+    //let white = Color::Srgb(ColorSrgb::Hex("FFFFFFFF".to_owned()));
+    let blue = Color::Srgb(ColorSrgb::Hex("0000FFFF".to_owned()));
+    let matched = compare(None, 1, "RoundCornersLarge", POPULATE_CHECKSUMS, DEBUG_GRAPH, vec![
+        Node::CreateCanvas {w: 400, h: 400, format: PixelFormat::Bgra32, color: Color::Srgb(ColorSrgb::Hex("FFFF00FF".to_owned()))},
+        Node::RoundImageCorners { background_color: blue, radius: 200}
+    ]
+    );
+    assert!(matched);
+}
+
+#[test]
+fn test_round_corners_small(){
+    //let white = Color::Srgb(ColorSrgb::Hex("FFFFFFFF".to_owned()));
+    let blue = Color::Srgb(ColorSrgb::Hex("0000FFFF".to_owned()));
+    let matched = compare(None, 1, "RoundCornersSmall", POPULATE_CHECKSUMS, DEBUG_GRAPH, vec![
+        Node::CreateCanvas {w: 100, h: 100, format: PixelFormat::Bgra32, color: Color::Srgb(ColorSrgb::Hex("FFFF00FF".to_owned()))},
+        Node::RoundImageCorners { background_color: blue, radius: 5}
+    ]
+    );
+    assert!(matched);
+}
+
+
+#[test]
+fn test_round_corners_excessive_radius(){
+    //let white = Color::Srgb(ColorSrgb::Hex("FFFFFFFF".to_owned()));
+    let blue = Color::Srgb(ColorSrgb::Hex("0000FFFF".to_owned()));
+    let matched = compare(None, 1, "RoundCornersExcessiveRadius", POPULATE_CHECKSUMS, DEBUG_GRAPH, vec![
+        Node::CreateCanvas {w: 200, h: 150, format: PixelFormat::Bgra32, color: Color::Srgb(ColorSrgb::Hex("FFFF00FF".to_owned()))},
+        Node::RoundImageCorners { background_color: blue, radius: 100}
+    ]
+    );
+    assert!(matched);
+}
+
+
+#[test]
+fn test_round_image_corners_transparent() {
+    let matched = compare(Some(IoTestEnum::Url("https://s3-us-west-2.amazonaws.com/imageflow-resources/test_inputs/waterhouse.jpg".to_owned())), 500,
+                          "RoundImageCornersTransparent", POPULATE_CHECKSUMS, DEBUG_GRAPH, vec![
+            Node::Decode {io_id: 0, commands: None},
+            Node::Resample2D{ w: 400, h: 300,  hints: Some(ResampleHints::new().with_bi_filter(Filter::Robidoux)) },
+            Node::RoundImageCorners { background_color: Color::Transparent, radius: 100}
+        ]
+    );
+    assert!(matched);
+}
+
+#[test]
 fn test_scale_image() {
     let matched = compare(Some(IoTestEnum::Url("https://s3-us-west-2.amazonaws.com/imageflow-resources/test_inputs/waterhouse.jpg".to_owned())), 500,
                           "ScaleTheHouse", POPULATE_CHECKSUMS, DEBUG_GRAPH, vec![

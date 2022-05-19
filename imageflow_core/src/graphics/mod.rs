@@ -14,6 +14,7 @@ pub(crate) mod luv;
 pub(crate) mod convolve;
 pub(crate) mod fill;
 pub(crate) mod blend;
+pub(crate) mod rounded_corners;
 
 //pub mod faces;
 
