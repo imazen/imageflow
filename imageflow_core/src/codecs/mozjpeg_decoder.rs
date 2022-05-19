@@ -19,6 +19,7 @@ use ::mozjpeg_sys::*;
 use imageflow_helpers::preludes::from_std::ptr::{null, slice_from_raw_parts, null_mut};
 use imageflow_types::DecoderCommand::IgnoreColorProfileErrors;
 use crate::graphics::bitmaps::{BitmapKey, ColorSpace, BitmapCompositing};
+use mozjpeg_sys::c_void;
 
 static CMYK_PROFILE: &'static [u8] = include_bytes!("cmyk.icc");
 
@@ -562,7 +563,7 @@ impl MzDec{
             },
             gamma: self.gamma
         };
-        
+
         if let Some(profile) = self.color_profile.as_deref_mut() {
             //let hash = imageflow_helpers::hashing::hash_64(&profile[80..]);
 
