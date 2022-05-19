@@ -1,26 +1,42 @@
+use imageflow_types::{Color, RoundCornersMode};
 use crate::graphics::prelude::*;
+
+
+
+fn get_radius_pixels(radius: RoundCornersMode, w: u32, h: u32) -> Result<f32, FlowError>{
+    match radius{
+        RoundCornersMode::Percentage(p) =>  Ok(w.min(h) as f32 * p / 200f32),
+        RoundCornersMode::Pixels(p) => Ok(p),
+        RoundCornersMode::Circle =>  Err(unimpl!("RoundCornersMode::Circle is not implemented")),
+        RoundCornersMode::PercentageCustom {.. } => Err(unimpl!("RoundCornersMode::PercentageCustom is not implemented")),
+        RoundCornersMode::PixelsCustom {.. } => Err(unimpl!("RoundCornersMode::PixelsCustom is not implemented"))
+    }
+}
 
 pub unsafe fn flow_bitmap_bgra_clear_around_rounded_corners(
     b: &mut BitmapWindowMut<u8>,
-    radius: u32,
+    radius_mode: RoundCornersMode,
     color: imageflow_types::Color
 ) -> Result<(), FlowError> {
     if  b.info().pixel_layout() != PixelLayout::BGRA {
         return Err(nerror!(ErrorKind::InvalidArgument));
     }
 
+    let radius = get_radius_pixels(radius_mode, b.w(), b.h())?;
+    let radius_ceil = radius.ceil() as usize;
+
     let rf = radius as f32;
     let r2f = rf * rf;
 
-    let mut clear_widths = Vec::with_capacity(radius as usize);
-    for y in (0..=radius).rev(){
+    let mut clear_widths = Vec::with_capacity(radius_ceil);
+    for y in (0..=radius_ceil).rev(){
         let yf = y as f32 - 0.5;
-        clear_widths.push((radius - f32::sqrt(r2f - yf * yf).round() as u32) as usize);
+        clear_widths.push(radius_ceil - f32::sqrt(r2f - yf * yf).round() as usize);
     }
 
     let bgcolor = color.to_color_32().unwrap().to_bgra8();
 
-    let radius_usize = radius as usize;
+    let radius_usize = radius_ceil;
     let width = b.w() as usize;
     let height = b.h() as usize;
 

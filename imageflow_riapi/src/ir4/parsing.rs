@@ -270,6 +270,12 @@ impl std::fmt::Display for Instructions{
     }
 }
 
+pub(crate) fn iter_all_eq<T: PartialEq>(iter: impl IntoIterator<Item = T>) -> Option<T> {
+    let mut iter = iter.into_iter();
+    let first = iter.next()?;
+    iter.all(|elem| elem == first).then(|| first)
+}
+
 impl Instructions{
 
     pub fn to_string(&self) -> String{
@@ -291,6 +297,7 @@ impl Instructions{
         }
         s
     }
+
 
     pub fn to_map(&self) -> HashMap<&'static str,String>{
         let mut m = HashMap::new();
@@ -351,6 +358,14 @@ impl Instructions{
         add(&mut m, "trim.percentpadding", self.trim_whitespace_padding_percent);
         add(&mut m, "trim.threshold", self.trim_whitespace_threshold);
 
+        add(&mut m, "s.roundcorners", self.s_round_corners.map(|a|
+            if let Some(v) = iter_all_eq(a.iter()){
+                format!("{}", v)
+            }else {
+                format!("{},{},{},{}", a[0], a[1], a[2], a[3])
+            }
+        ));
+
         add(&mut m, "crop", self.crop.map(|a| format!("{},{},{},{}", a[0],a[1],a[2],a[3])));
         add(&mut m, "anchor", self.anchor_string());
 
@@ -400,6 +415,9 @@ impl Instructions{
         i.ignoreicc = p.parse_bool("ignoreicc");
         i.ignore_icc_errors = p.parse_bool("ignore_icc_errors");
         i.crop = p.parse_crop_strict("crop").or_else(|| p.parse_crop("crop"));
+
+        i.s_round_corners = p.parse_round_corners("s.roundcorners");
+
         i.cropxunits = p.parse_f64("cropxunits");
         i.cropyunits = p.parse_f64("cropyunits");
         i.quality = p.parse_i32("quality").or_else(||p.parse_i32("jpeg.quality"));
@@ -563,6 +581,25 @@ impl<'a> Parser<'a>{
             } else {
                 Err(())
             }
+        }
+        )
+    }
+
+
+    fn parse_round_corners(&mut self, key: &'static str) -> Option<[f64;4]> {
+        self.warning_parse(key, |s| {
+            let values = s.split(',').map(|v| v.trim().parse::<f64>()).collect::<Vec<std::result::Result<f64,::std::num::ParseFloatError>>>();
+            if let Some(&Err(ref e)) = values.iter().find(|v| v.is_err()) {
+                Err(ParseRoundCornersError::InvalidNumber(e.clone()))
+            } else if values.len() == 4{
+                Ok(([*values[0].as_ref().unwrap(), *values[1].as_ref().unwrap(), *values[2].as_ref().unwrap(), *values[3].as_ref().unwrap()], None, true))
+            } else if values.len() == 1{
+                let v = *values[0].as_ref().unwrap();
+                Ok(([v,v,v,v], None, true))
+            } else{
+                Err(ParseRoundCornersError::InvalidNumberOfValues("s.roundcorners must contain exactly 1 value or 4 values, separated by commas"))
+            }
+
         }
         )
     }
@@ -751,6 +788,12 @@ enum ParseCropError{
     InvalidNumberOfValues(&'static str)
 }
 
+#[derive(Debug,Clone,PartialEq)]
+enum ParseRoundCornersError{
+    InvalidNumber(std::num::ParseFloatError),
+    InvalidNumberOfValues(&'static str)
+}
+
 impl OutputFormatStrings{
     pub fn clean(&self) -> OutputFormat{
         match *self{
@@ -861,6 +904,7 @@ pub struct Instructions{
     pub ignoreicc: Option<bool>,
     pub ignore_icc_errors: Option<bool>,
     pub crop: Option<[f64;4]>,
+    pub s_round_corners: Option<[f64;4]>,
     pub cropxunits: Option<f64>,
     pub cropyunits: Option<f64>,
     pub zoom: Option<f64>,
@@ -964,8 +1008,10 @@ fn test_url_parsing() {
             let _ = write!(::std::io::stderr(), "Expected bgcolor={}, actual={}\n", expected.bgcolor_srgb.unwrap().to_aarrggbb_string(), i.bgcolor_srgb.unwrap().to_aarrggbb_string());
         }
         debug_diff(&i, &expected);
+
         assert_eq!(i, expected);
         assert_eq!(warns, expected_warnings);
+
     }
     fn expect_warning(key: &'static str, value: &str, expected: Instructions){
         let mut expect_warnings = Vec::new();
@@ -1055,6 +1101,11 @@ fn test_url_parsing() {
     t("crop=0,0,40,50", Instructions { crop: Some([0f64,0f64,40f64,50f64]), ..Default::default() }, vec![]);
     t("crop= 0, 0,40 ,  50", Instructions { crop: Some([0f64,0f64,40f64,50f64]), ..Default::default() }, vec![]);
 
+
+
+    t("s.roundcorners= 0, 0,40 ,  50", Instructions { s_round_corners: Some([0f64,0f64,40f64,50f64]), ..Default::default() }, vec![]);
+    t("s.roundcorners= 100", Instructions { s_round_corners: Some([100f64,100f64,100f64,100f64]), ..Default::default() }, vec![]);
+
     t("a.balancewhite=true",  Instructions{a_balance_white: Some(HistogramThresholdAlgorithm::Area), ..Default::default()}, vec![]);
     t("a.balancewhite=area",  Instructions{a_balance_white: Some(HistogramThresholdAlgorithm::Area), ..Default::default()}, vec![]);
     t("down.colorspace=linear",  Instructions{down_colorspace: Some(ScalingColorspace::Linear), ..Default::default()}, vec![]);
@@ -1113,6 +1164,10 @@ fn test_tostr(){
     t("down.colorspace=srgb",  Instructions{down_colorspace: Some(ScalingColorspace::Srgb), ..Default::default()});
     t("down.colorspace=linear",  Instructions{down_colorspace: Some(ScalingColorspace::Linear), ..Default::default()});
     t("decoder.min_precise_scaling_ratio=3.5", Instructions { min_precise_scaling_ratio: Some(3.5f64), ..Default::default() });
+
+    t("s.roundcorners=0,0,40,50", Instructions { s_round_corners: Some([0f64,0f64,40f64,50f64]), ..Default::default() });
+    t("s.roundcorners=100", Instructions { s_round_corners: Some([100f64,100f64,100f64,100f64]), ..Default::default() });
+
 
     t("f.sharpen=10", Instructions{ f_sharpen: Some(10f64), ..Default::default()});
     t("f.sharpen_when=always", Instructions{ f_sharpen_when: Some(SharpenWhen::Always), ..Default::default()});

@@ -4,7 +4,7 @@ use imageflow_types as s;
 use crate::sizing;
 use crate::sizing::prelude::*;
 use crate::ir4::parsing::*;
-use imageflow_types::{ConstraintMode, ConstraintGravity, WatermarkConstraintBox};
+use imageflow_types::{ConstraintMode, ConstraintGravity, WatermarkConstraintBox, RoundCornersMode};
 
 
 pub struct Ir4Layout{
@@ -444,6 +444,15 @@ impl Ir4Layout{
             })
         });
 
+        if let Some(quadrants) = self.i.s_round_corners{
+            if let Some(all) = iter_all_eq(quadrants){
+                b.add(s::Node::RoundImageCorners { radius: RoundCornersMode::Percentage(all as f32), background_color: bgcolor.clone() })
+            }else{
+                b.add(s::Node::RoundImageCorners { radius:
+                RoundCornersMode::PercentageCustom {top_left: quadrants[0] as f32, top_right: quadrants[1] as f32, bottom_right: quadrants[2] as f32, bottom_left: quadrants[3] as f32},
+                    background_color: bgcolor.clone() })
+            }
+        }
 
 
         // Perform white balance
@@ -452,6 +461,13 @@ impl Ir4Layout{
                 threshold: None
             });
         }
+        // TODO: Decide if we should match ImageResizer order of operations below
+        // if (!string.IsNullOrEmpty(alpha) && double.TryParse(alpha, ParseUtils.FloatingPointStyle, NumberFormatInfo.InvariantInfo, out temp)) filters.Add(Alpha((float)temp));
+        // if (!string.IsNullOrEmpty(brightness) && double.TryParse(brightness, ParseUtils.FloatingPointStyle, NumberFormatInfo.InvariantInfo, out temp)) filters.Add(Brightness((float)temp));
+        // if (!string.IsNullOrEmpty(contrast) && double.TryParse(contrast, ParseUtils.FloatingPointStyle, NumberFormatInfo.InvariantInfo, out temp)) filters.Add(Contrast((float)temp));
+        // if (!string.IsNullOrEmpty(saturation) && double.TryParse(saturation, ParseUtils.FloatingPointStyle, NumberFormatInfo.InvariantInfo, out temp)) filters.Add(Saturation((float)temp));
+        //
+
 
         if let Some(c) = self.i.s_contrast {
             b.add(s::Node::ColorFilterSrgb(s::ColorFilterSrgb::Contrast(c as f32)));
@@ -498,7 +514,7 @@ impl Ir4Layout{
         //Add padding. This may need to be revisited - how do jpegs behave with transparent padding?
         if left > 0 || top > 0 || right > 0 || bottom > 0 {
             if left >= 0 && top >= 0 && right >= 0 && bottom >= 0 {
-                b.add(s::Node::ExpandCanvas { color: bgcolor, left: left as u32, top: top as u32, right: right as u32, bottom: bottom as u32 });
+                b.add(s::Node::ExpandCanvas { color: bgcolor.clone(), left: left as u32, top: top as u32, right: right as u32, bottom: bottom as u32 });
             } else {
                 panic!("Negative padding showed up: {},{},{},{}", left, top, right, bottom);
             }
@@ -519,6 +535,7 @@ impl Ir4Layout{
 
         b.add_rotate(self.i.rotate);
         b.add_flip(self.i.flip);
+
 
         //We apply red dot watermarking after rotate/flip unlike imageresizer
         if self.i.watermark_red_dot == Some(true){
