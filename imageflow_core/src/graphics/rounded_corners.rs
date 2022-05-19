@@ -15,9 +15,7 @@ pub unsafe fn flow_bitmap_bgra_clear_around_rounded_corners(
     let mut clear_widths = Vec::with_capacity(radius as usize);
     for y in (0..=radius).rev(){
         let yf = y as f32 - 0.5;
-        let fwidth = f32::sqrt(r2f - yf * yf);
-        let uwidth = (radius - fwidth.round() as u32) as usize;
-        clear_widths.push(uwidth);
+        clear_widths.push((radius - f32::sqrt(r2f - yf * yf).round() as u32) as usize);
     }
 
     let bgcolor = color.to_color_32().unwrap().to_bgra8();
