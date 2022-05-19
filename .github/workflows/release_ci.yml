@@ -582,7 +582,7 @@ jobs:
           DOCKER_USERNAME: ${{secrets.DOCKER_USERNAME}}
           DOCKER_PASSWORD: ${{secrets.DOCKER_PASSWORD}}
           PUBLISH_DOCKER_TAG: ${{env.GITHUB_REF_NAME}}
-          IMAGEFLOW_DOWNLOAD_URL_TAR_GZ: https://s3-us-west-1.amazonaws.com/imageflow-nightlies/commits/${{github.sha}}/linux64_glibc227.tar.gz
+          IMAGEFLOW_DOWNLOAD_URL_TAR_GZ: https://s3-us-west-1.amazonaws.com/imageflow-nightlies/commits/${{github.sha}}/linux64.tar.gz
 
   docs:
     runs-on: ubuntu-latest
