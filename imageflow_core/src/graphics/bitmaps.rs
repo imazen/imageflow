@@ -119,12 +119,12 @@ impl<'a> BitmapWindowMut<'a,u8> {
         crate::graphics::blend::apply_matte(self, matte)
     }
 
-    pub fn slice_of_pixels(&mut self) -> Option<&mut [rgb::alt::BGRA8]>{
+    pub fn slice_of_pixels_first_row(&mut self) -> Option<&mut [rgb::alt::BGRA8]>{
         if self.info().channels() != 4 || self.slice.len() %4 != 0{
             return None;
         }
         unsafe {
-            Some(core::slice::from_raw_parts_mut(self.slice.as_mut_ptr() as *mut rgb::alt::BGRA8, self.slice.len() / 4))
+            Some(core::slice::from_raw_parts_mut(self.slice.as_mut_ptr() as *mut rgb::alt::BGRA8, (self.slice.len() / 4).min(self.info.w as usize)))
         }
     }
 }
