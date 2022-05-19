@@ -18,6 +18,7 @@ mod watermark;
 mod watermark_red_dot;
 mod enable_transparency;
 mod command_string;
+mod round_corners;
 //mod detection;
 
 mod internal_prelude {
@@ -57,6 +58,7 @@ pub use self::rotate_flip_transpose::ROTATE_180;
 pub use self::rotate_flip_transpose::ROTATE_270;
 pub use self::rotate_flip_transpose::ROTATE_90;
 pub use self::rotate_flip_transpose::TRANSPOSE;
+pub use self::round_corners::ROUND_IMAGE_CORNERS;
 pub use self::scale_render::SCALE;
 pub use self::scale_render::DRAW_IMAGE_EXACT;
 //pub use self::scale_render::SCALE_1D;

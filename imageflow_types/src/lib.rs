@@ -653,6 +653,11 @@ pub enum Node {
         x: u32,
         y: u32,
     },
+    #[serde(rename="round_image_corners")]
+    RoundImageCorners {
+        radius: u32,
+        background_color: Color
+    },
     #[serde(rename="decode")]
     Decode {
         io_id: i32,
