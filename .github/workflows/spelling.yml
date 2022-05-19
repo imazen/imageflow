@@ -15,3 +15,8 @@ jobs:
     - uses: check-spelling/check-spelling@main
       with:
         config: .github/actions/spell-check
+        extra_dictionaries:
+          cspell:cpp/cpp.txt
+          cspell:html/html.txt
+          cspell:css/css.txt
+          cspell:filetypes/filetypes.txt
