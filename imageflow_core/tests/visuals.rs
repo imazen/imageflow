@@ -11,7 +11,7 @@ use crate::common::*;
 
 use imageflow_types;
 use imageflow_core::{Context, ErrorKind, FlowError, CodeLocation};
-use imageflow_types::{PixelFormat, Color, Node, ColorSrgb, EncoderPreset, ResampleHints, Filter, CommandStringKind, ConstraintMode, Constraint, PngBitDepth, PixelLayout};
+use imageflow_types::{PixelFormat, Color, Node, ColorSrgb, EncoderPreset, ResampleHints, Filter, CommandStringKind, ConstraintMode, Constraint, PngBitDepth, PixelLayout, RoundCornersMode};
 use imageflow_core::graphics::bitmaps::{BitmapCompositing, ColorSpace};
 
 
@@ -272,7 +272,7 @@ fn test_round_corners_large(){
     let blue = Color::Srgb(ColorSrgb::Hex("0000FFFF".to_owned()));
     let matched = compare(None, 1, "RoundCornersLarge", POPULATE_CHECKSUMS, DEBUG_GRAPH, vec![
         Node::CreateCanvas {w: 400, h: 400, format: PixelFormat::Bgra32, color: Color::Srgb(ColorSrgb::Hex("FFFF00FF".to_owned()))},
-        Node::RoundImageCorners { background_color: blue, radius: 200}
+        Node::RoundImageCorners { background_color: blue, radius: RoundCornersMode::Pixels(200f32)}
     ]
     );
     assert!(matched);
@@ -284,7 +284,7 @@ fn test_round_corners_small(){
     let blue = Color::Srgb(ColorSrgb::Hex("0000FFFF".to_owned()));
     let matched = compare(None, 1, "RoundCornersSmall", POPULATE_CHECKSUMS, DEBUG_GRAPH, vec![
         Node::CreateCanvas {w: 100, h: 100, format: PixelFormat::Bgra32, color: Color::Srgb(ColorSrgb::Hex("FFFF00FF".to_owned()))},
-        Node::RoundImageCorners { background_color: blue, radius: 5}
+        Node::RoundImageCorners { background_color: blue, radius: RoundCornersMode::Pixels(5f32)}
     ]
     );
     assert!(matched);
@@ -297,7 +297,7 @@ fn test_round_corners_excessive_radius(){
     let blue = Color::Srgb(ColorSrgb::Hex("0000FFFF".to_owned()));
     let matched = compare(None, 1, "RoundCornersExcessiveRadius", POPULATE_CHECKSUMS, DEBUG_GRAPH, vec![
         Node::CreateCanvas {w: 200, h: 150, format: PixelFormat::Bgra32, color: Color::Srgb(ColorSrgb::Hex("FFFF00FF".to_owned()))},
-        Node::RoundImageCorners { background_color: blue, radius: 100}
+        Node::RoundImageCorners { background_color: blue, radius: RoundCornersMode::Pixels(100f32)}
     ]
     );
     assert!(matched);
@@ -310,7 +310,7 @@ fn test_round_image_corners_transparent() {
                           "RoundImageCornersTransparent", POPULATE_CHECKSUMS, DEBUG_GRAPH, vec![
             Node::Decode {io_id: 0, commands: None},
             Node::Resample2D{ w: 400, h: 300,  hints: Some(ResampleHints::new().with_bi_filter(Filter::Robidoux)) },
-            Node::RoundImageCorners { background_color: Color::Transparent, radius: 100}
+            Node::RoundImageCorners { background_color: Color::Transparent, radius: RoundCornersMode::Pixels(100f32)}
         ]
     );
     assert!(matched);
@@ -649,6 +649,21 @@ fn test_rot_90_and_red_dot_command_string() {
                           vec![Node::CommandString {
                               kind: CommandStringKind::ImageResizer4,
                               value: "w=70&h=70&mode=max&rotate=90&watermark_red_dot=true".to_string(),
+                              decode: Some(0),
+                              encode: None,
+                              watermarks: None
+                          }]);
+    assert!(matched);
+}
+
+#[test]
+fn test_round_corners_command_string() {
+    let url = "https://s3-us-west-2.amazonaws.com/imageflow-resources/test_inputs/orientation/Landscape_1.jpg".to_owned();
+    let title = "test_round_corners_command_string".to_owned();
+    let matched = compare(Some(IoTestEnum::Url(url)), 500, &title, POPULATE_CHECKSUMS, DEBUG_GRAPH,
+                          vec![Node::CommandString {
+                              kind: CommandStringKind::ImageResizer4,
+                              value: "w=70&h=70&s.roundcorners=100".to_string(),
                               decode: Some(0),
                               encode: None,
                               watermarks: None

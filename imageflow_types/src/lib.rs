@@ -613,6 +613,20 @@ pub struct ExecutionSecurity{
     pub max_encode_size: Option<FrameSizeLimit>
 }
 
+#[derive(Serialize, Deserialize, Copy, Clone, PartialEq, Debug)]
+pub enum RoundCornersMode {
+    #[serde(rename = "percentage")]
+    Percentage(f32),
+    #[serde(rename = "pixels")]
+    Pixels(f32),
+    #[serde(rename = "circle")]
+    Circle,
+    #[serde(rename = "percentage_custom")]
+    PercentageCustom{top_left: f32, top_right: f32, bottom_right: f32, bottom_left: f32 },
+    #[serde(rename = "pixels_custom")]
+    PixelsCustom{top_left: f32, top_right: f32, bottom_right: f32, bottom_left: f32 },
+}
+
 /// Represents a image operation. Currently used both externally (for JSON API) and internally.
 /// The most important data type
 #[allow(unreachable_patterns)]
@@ -655,7 +669,7 @@ pub enum Node {
     },
     #[serde(rename="round_image_corners")]
     RoundImageCorners {
-        radius: u32,
+        radius: RoundCornersMode,
         background_color: Color
     },
     #[serde(rename="decode")]
