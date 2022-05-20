@@ -78,7 +78,7 @@ impl NodeDef for BitmapKeyDef {
             // Also very dangerous, as invalid data can cause us to write this byte to arbitrary
             // memory
             unsafe {
-                *key_ptr = KeyData::from(bitmap_key).as_ffi();
+                *key_ptr = bitmap_key.data().as_ffi();
             }
             Ok(NodeResult::Frame(bitmap_key))
         } else {

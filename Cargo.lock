@@ -1451,10 +1451,10 @@ dependencies = [
  "slotmap",
  "smallvec 1.8.0",
  "threadpool",
- "time 0.2.27",
+ "time 0.3.9",
  "twox-hash",
  "url 1.7.2",
- "uuid 0.7.4",
+ "uuid 1.0.0",
 ]
 
 [[package]]
@@ -3178,9 +3178,12 @@ checksum = "eb703cfe953bccee95685111adeedb76fabe4e97549a58d16f03ea7b9367bb32"
 
 [[package]]
 name = "slotmap"
-version = "0.4.3"
+version = "1.0.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6bf34684c5767b87de9119790e92e9a1d60056be2ceeaf16a8e6ef13082aeab1"
+checksum = "e1e08e261d0e8f5c43123b7adf3e4ca1690d655377ac93a03b2c9d3e98de1342"
+dependencies = [
+ "version_check 0.9.4",
+]
 
 [[package]]
 name = "smallvec"

@@ -16,7 +16,7 @@ libc = "0.2"
 num = "0.4"
 
 # time
-time = "0.2" # Update to 0.2.9
+time = "0.3" #
 chrono =  "0.4"
 
 # serialization
@@ -43,7 +43,7 @@ smallvec = "1"
 
 itertools = "0.10"
 imgref = "1.4.1"
-slotmap = "0.4.0"
+slotmap = "1"
 base64 = "0.13"
 hex = "0.4"
 
@@ -65,7 +65,7 @@ getopts ="0.2"
 byteorder="1"
 
 url = "1" # Upgrade to 2.1.1
-uuid = { version = "0.7", features = ["v4"] } # Upgrade to 0.8
+uuid = { version = "1", features = ["v4"] }
 
 rustface = { git = "https://github.com/atomashpolskiy/rustface" }
 imageflow_types = { path = "../imageflow_types", version = "*" }
