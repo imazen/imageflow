@@ -11,6 +11,7 @@ use std::rc::Rc;
 use std::cell::RefCell;
 use std::os::raw::c_int;
 use imagequant;
+use rgb::ComponentSlice;
 use crate::codecs::lode;
 use crate::graphics::bitmaps::BitmapKey;
 
@@ -27,11 +28,11 @@ impl PngquantEncoder {
         }
         let mut liq = imagequant::new();
         if let Some(speed) = speed {
-            liq.set_speed(u8::min(10, u8::max(1, speed)).into());
+            liq.set_speed(u8::min(10, u8::max(1, speed)).into()).unwrap();
         }
         let min = u8::min(100, minimum_quality.unwrap_or(0));
         let max = u8::min(100,quality.unwrap_or(100));
-        liq.set_quality(min.into(), max.into());
+        liq.set_quality(min.into(), max.into()).unwrap();
 
         Ok(PngquantEncoder {
             liq,
@@ -40,7 +41,12 @@ impl PngquantEncoder {
         })
     }
 }
-
+impl PngquantEncoder{
+    unsafe fn raw_byte_access(rgba: &[rgb::RGBA8]) -> &[u8] {
+        use std::slice;
+        slice::from_raw_parts(rgba.as_ptr() as *const u8, rgba.len() * 4)
+    }
+}
 impl Encoder for PngquantEncoder {
     fn write_frame(&mut self, c: &Context, preset: &EncoderPreset, bitmap_key: BitmapKey, decoder_io_ids: &[i32]) -> Result<EncodeResult> {
 
@@ -51,21 +57,31 @@ impl Encoder for PngquantEncoder {
             .map_err(|e| e.at(here!()))?;
 
         unsafe {
-            let frame = bitmap.get_window_u8()
+            let (vec,w,h) = bitmap.get_window_u8()
                 .ok_or_else(|| nerror!(ErrorKind::InvalidBitmapType))?
-                .to_bitmap_bgra().map_err(|e| e.at(here!()))?;
+                .to_vec_rgba()
+                .map_err(|e| e.at(here!()))?;
 
+            let mut img = imagequant::Image::new_borrowed(&self.liq, &vec ,w, h,0.)?;
 
-            if let Some((pal, pixels)) = self.quantize(&frame)? {
-                lode::LodepngEncoder::write_png8(&mut self.io, &pal, &pixels, bitmap.w() as usize, bitmap.h() as usize, self.maximum_deflate)?;
-            } else {
-                lode::LodepngEncoder::write_png_auto(&mut self.io, &frame, self.maximum_deflate)?;
+            let res = match self.liq.quantize(&mut img) {
+                Ok(mut res) => {
+                    res.set_dithering_level(1.).unwrap();
+
+                    let (pal, pixels) = res.remapped(&mut img).unwrap(); // could have alloc failure here, should map
+
+                    lode::LodepngEncoder::write_png8(&mut self.io, &pal, &pixels, w, h, self.maximum_deflate)?;
+                },
+                Err(imagequant::liq_error::QualityTooLow) => {
+                    lode::LodepngEncoder::write_png_auto_slice(&mut self.io, PngquantEncoder::raw_byte_access(vec.as_slice()), w, h, lodepng::ColorType::RGBA, self.maximum_deflate)?;
+                }
+                Err(err) => return Err(err)?,
             };
 
 
             Ok(EncodeResult {
-                w: frame.w as i32,
-                h: frame.h as i32,
+                w: w as i32,
+                h: h as i32,
                 io_id: self.io.io_id(),
                 bytes: ::imageflow_types::ResultBytes::Elsewhere,
                 preferred_extension: "png".to_owned(),
@@ -76,95 +92,5 @@ impl Encoder for PngquantEncoder {
 
     fn get_io(&self) -> Result<IoProxyRef> {
         Ok(IoProxyRef::Borrow(&self.io))
-    }
-}
-
-impl PngquantEncoder {
-    fn quantize(&mut self, frame: &BitmapBgra) -> StdResult<Option<(Vec<imagequant::Color>, Vec<u8>)>, imagequant::liq_error> {
-        // BitmapBgra contains a *mut pointer, which isn't Sync.
-        struct SyncBitmap<'a> {
-            pixels: &'a [u8],
-            stride_bytes: usize,
-        }
-
-        let convert_row = match frame.fmt {
-            PixelFormat::Bgra32 => {
-                unsafe extern "C" fn convert_bgra32(output_row: *mut imagequant::Color, y: c_int, width: c_int, frame: *mut SyncBitmap) {
-                    let output_row = slice::from_raw_parts_mut(output_row, width as usize);
-                    let input_row = &(*frame).pixels[y as usize * (*frame).stride_bytes..];
-                    for (i, px) in output_row.iter_mut().enumerate() {
-                        *px = imagequant::Color {
-                            b: input_row[i * 4 + 0],
-                            g: input_row[i * 4 + 1],
-                            r: input_row[i * 4 + 2],
-                            a: input_row[i * 4 + 3],
-                        }
-                    }
-                }
-                convert_bgra32
-            },
-            PixelFormat::Bgr32 => {
-                unsafe extern "C" fn convert_bgr32(output_row: *mut imagequant::Color, y: c_int, width: c_int, frame: *mut SyncBitmap) {
-                    let output_row = slice::from_raw_parts_mut(output_row, width as usize);
-                    let input_row = &(*frame).pixels[y as usize * (*frame).stride_bytes..];
-                    for (i, px) in output_row.iter_mut().enumerate() {
-                        *px = imagequant::Color {
-                            b: input_row[i * 4 + 0],
-                            g: input_row[i * 4 + 1],
-                            r: input_row[i * 4 + 2],
-                            a: 255,
-                        }
-                    }
-                }
-                convert_bgr32
-            },
-            PixelFormat::Bgr24 => {
-                unsafe extern "C" fn convert_bgr24(output_row: *mut imagequant::Color, y: c_int, width: c_int, frame: *mut SyncBitmap) {
-                    let output_row = slice::from_raw_parts_mut(output_row, width as usize);
-                    let input_row = &(*frame).pixels[y as usize * (*frame).stride_bytes..];
-                    for (i, px) in output_row.iter_mut().enumerate() {
-                        *px = imagequant::Color {
-                            b: input_row[i * 3 + 0],
-                            g: input_row[i * 3 + 1],
-                            r: input_row[i * 3 + 2],
-                            a: 255,
-                        }
-                    }
-                }
-                convert_bgr24
-            },
-            PixelFormat::Gray8 => {
-                unsafe extern "C" fn convert_gray8(output_row: *mut imagequant::Color, y: c_int, width: c_int, frame: *mut SyncBitmap) {
-                    let output_row = slice::from_raw_parts_mut(output_row, width as usize);
-                    let input_row = &(*frame).pixels[y as usize * (*frame).stride_bytes..];
-                    for (px, g) in output_row.iter_mut().zip(input_row.iter().cloned()) {
-                        *px = imagequant::Color {
-                            b: g,
-                            g: g,
-                            r: g,
-                            a: 255,
-                        }
-                    }
-                }
-                convert_gray8
-            },
-        };
-
-        let stride_bytes = frame.stride as usize;
-        let width_bytes = frame.w as usize * frame.fmt.bytes();
-        let mut frame_sync = SyncBitmap {
-            pixels: unsafe {
-                slice::from_raw_parts(frame.pixels, stride_bytes * frame.h as usize - stride_bytes + width_bytes)
-            },
-            stride_bytes,
-        };
-        let mut img = imagequant::Image::new_unsafe_fn(&self.liq, convert_row, &mut frame_sync, frame.w as usize, frame.h as usize, 0.)?;
-        let mut res = match self.liq.quantize(&mut img) {
-            Ok(res) => res,
-            Err(imagequant::liq_error::LIQ_QUALITY_TOO_LOW) => return Ok(None),
-            Err(err) => return Err(err)?,
-        };
-        res.set_dithering_level(1.);
-        Ok(Some(res.remapped(&mut img)?))
     }
 }

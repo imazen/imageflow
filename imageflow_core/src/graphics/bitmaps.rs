@@ -128,6 +128,45 @@ impl<'a> BitmapWindowMut<'a,u8> {
         }
     }
 }
+
+impl<'a>  BitmapWindowMut<'a, u8> {
+
+    pub unsafe fn to_vec_rgba(&self) -> Result<(Vec<rgb::RGBA8>, usize, usize), FlowError>{
+
+        let w = self.w() as usize;
+        let h = self.h() as usize;
+
+        match &self.info().compose{
+            BitmapCompositing::ReplaceSelf | BitmapCompositing::BlendWithSelf =>{
+                let mut v = vec![rgb::RGBA8::new(0,0,0,255);w * h];
+
+                if self.info().channels() != 4 || self.slice.len() %4 != 0{
+                    return Err(unimpl!("Only Bgr(a)32 supported"));
+                }
+
+                // TODO: if alpha might be random, we should clear it if self.info.alpha_meaningful(){
+
+                let mut y = 0;
+                for stride_row in self.slice.chunks(self.info.item_stride as usize){
+                    for x in 0..w{
+                        v[y * w + x].b = stride_row[x * 4 + 0];
+                        v[y * w + x].g = stride_row[x * 4 + 1];
+                        v[y * w + x].r = stride_row[x * 4 + 2];
+                        v[y * w + x].a = stride_row[x * 4 + 3];
+                    }
+                    y = y + 1;
+                }
+
+
+                Ok((v, w, h))
+            } BitmapCompositing::BlendWithMatte(c) => {
+                let matte = c.clone().to_color_32().unwrap().to_rgba8();
+                Ok((vec![matte;w * h], w, h))
+            }
+        }
+    }
+
+}
 impl<'a,T>  BitmapWindowMut<'a, T> {
 
     pub unsafe fn to_bitmap_float(&mut self) -> Result<BitmapFloat, FlowError>{
@@ -196,6 +235,7 @@ impl<'a,T>  BitmapWindowMut<'a, T> {
 
         Ok(b)
     }
+
 
 
     pub fn w(&self) -> u32{
@@ -338,6 +378,8 @@ impl BitmapInfo{
     pub fn height(&self) -> u32{
         self.h
     }
+
+    /// Row stride
     #[inline]
     pub fn item_stride(&self) -> u32{
         self.item_stride

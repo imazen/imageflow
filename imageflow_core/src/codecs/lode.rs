@@ -82,11 +82,7 @@ impl LodepngEncoder {
 
 
 
-    pub fn write_png_auto<W: Write>(mut writer: W, frame: &BitmapBgra, use_highest_compression: Option<bool>) -> Result<()> {
-        let mut lode = lodepng::Encoder::new();
-        lode.set_auto_convert(true);
-
-
+    pub fn write_png_auto<W: Write>(writer: W, frame: &BitmapBgra, use_highest_compression: Option<bool>) -> Result<()> {
         let pixels_slice = unsafe {frame.pixels_slice()}.ok_or(nerror!(ErrorKind::BitmapPointerNull))?;
         let mut pixels_buf;
         let pixels = if frame.stride != frame.w {
@@ -99,12 +95,24 @@ impl LodepngEncoder {
             pixels_slice
         };
 
-        lode.info_raw_mut().colortype = match frame.fmt {
+        let color_type = match frame.fmt {
             PixelFormat::Bgra32 => lodepng::ColorType::BGRA,
             PixelFormat::Bgr32 => lodepng::ColorType::BGRX,
             PixelFormat::Bgr24 => lodepng::ColorType::BGR,
             PixelFormat::Gray8 => lodepng::ColorType::GREY,
         };
+
+        LodepngEncoder::write_png_auto_slice(writer, pixels, frame.width(), frame.height(), color_type, use_highest_compression)
+            .map_err(|e| e.at(here!()))
+    }
+
+    pub fn write_png_auto_slice<W: Write>(mut writer: W, pixels: &[u8], width: usize, height: usize, pixel_format: lodepng::ColorType, use_highest_compression: Option<bool>) -> Result<()> {
+
+
+        let mut lode = lodepng::Encoder::new();
+        lode.set_auto_convert(true);
+
+        lode.info_raw_mut().colortype = pixel_format;
         lode.info_raw_mut().set_bitdepth(8);
 
         if use_highest_compression.unwrap_or(false){
@@ -113,7 +121,7 @@ impl LodepngEncoder {
             lode.set_custom_zlib(Some(zlib_compressor_6), std::ptr::null());
         }
 
-        let png = lode.encode(pixels, frame.width(), frame.height())?;
+        let png = lode.encode(pixels, width, height)?;
 
         writer.write_all(&png).map_err(|e| FlowError::from_encoder(e))?;
         Ok(())
