@@ -456,8 +456,8 @@ pub fn run(tool_location: Option<PathBuf>) -> i32 {
     }
 
 
-    // It seems that Clap always uses status code 1 to indicate a parsing failure
-    c.exec("bad command").expect_status_code(Some(1));
+    // It seems that Clap v3 now uses status code 2 instead of 1 to indicate a parsing failure
+    c.exec("bad command").expect_status_code(Some(2));
 
     // Write something unexpected, but valid JSON
     c.write_json("random_object.json", &s::PngBitDepth::Png24);

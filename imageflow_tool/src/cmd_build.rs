@@ -13,7 +13,7 @@ use crate::fc::errors::CategorizedError;
 
 pub enum JobSource {
     JsonFile(String),
-    NamedDemo(String),
+    // NamedDemo(String),
     Ir4QueryString(String)
 }
 
@@ -62,7 +62,7 @@ pub struct CmdBuild {
 
 #[derive(Debug)]
 pub enum CmdError {
-    DemoNotFound(String),
+    // DemoNotFound(String),
     JsonRecipeNotFound(String),
     IoError(std::io::Error),
     InvalidJson(serde_json::error::Error),
@@ -77,7 +77,7 @@ impl CategorizedError for CmdError{
     fn category(&self) -> ErrorCategory{
         match *self{
             CmdError::JsonRecipeNotFound(_) |
-            CmdError::DemoNotFound(_) => ErrorCategory::PrimaryResourceNotFound,
+           // CmdError::DemoNotFound(_) => ErrorCategory::PrimaryResourceNotFound,
             CmdError::IoError(_) => ErrorCategory::IoError,
             CmdError::BadArguments(_)|
             CmdError::InconsistentUseOfIoId(_) |
@@ -180,7 +180,7 @@ impl CmdBuild {
                 };
                 Ok(build)
             }
-            JobSource::NamedDemo(name) => Err(CmdError::DemoNotFound(name)),
+            // JobSource::NamedDemo(name) => Err(CmdError::DemoNotFound(name)),
         }
     }
 

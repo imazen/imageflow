@@ -81,9 +81,11 @@ pub fn main_with_exit_code() -> i32 {
             .arg(
                 Arg::new("in").long("in").min_values(1)
                     .multiple_occurrences(true)
+                    .allow_invalid_utf8(true)
                     .help("Replace/add inputs for the operation file")
             )
             .arg(Arg::new("out").long("out").multiple_occurrences(true).min_values(1)
+                .allow_invalid_utf8(true)
                 .help("Replace/add outputs for the operation file"))
             //.arg(Arg::new("demo").long("demo").takes_value(true).possible_values(&["example:200x200_png"]))
             .arg(Arg::new("json").long("json").takes_value(true).required(true).help("The JSON operation file."))
@@ -97,10 +99,11 @@ pub fn main_with_exit_code() -> i32 {
             .about("Run an command querystring")
             .arg(
                 Arg::new("in").long("in").min_values(1)
+                    .allow_invalid_utf8(true)
                     .multiple_occurrences(true).required(true)
                     .help("Input image")
             )
-            .arg(Arg::new("out").long("out").multiple_occurrences(true).min_values(1).required(true)
+            .arg(Arg::new("out").long("out").multiple_occurrences(true).min_values(1).required(true).allow_invalid_utf8(true)
                 .help("Output image"))
             .arg(Arg::new("quiet").long("quiet").takes_value(false).help("Don't write the JSON response to stdout"))
             .arg(Arg::new("response").long("response").takes_value(true).help("Write the JSON job result to file instead of stdout"))
@@ -130,11 +133,11 @@ pub fn main_with_exit_code() -> i32 {
     }
 
     let build_triple = if let Some(m) = matches.subcommand_matches("v1/build") {
-        let source = if m.is_present("demo") {
-            cmd_build::JobSource::NamedDemo(m.value_of("demo").unwrap().to_owned())
-        } else {
-            cmd_build::JobSource::JsonFile(m.value_of("json").unwrap().to_owned())
-        };
+        // let source = if m.is_present("demo") {
+        //     cmd_build::JobSource::NamedDemo(m.value_of("demo").unwrap().to_owned())
+        // } else {
+        let source = cmd_build::JobSource::JsonFile(m.value_of("json").unwrap().to_owned());
+        //};
         Some((m, source, "v1/build"))
     }else if let Some(m) = matches.subcommand_matches("v1/querystring"){
         Some((m,cmd_build::JobSource::Ir4QueryString(m.value_of("command").unwrap().to_owned()), "v1/querystring"))
