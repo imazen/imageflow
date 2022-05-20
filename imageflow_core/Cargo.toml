@@ -13,7 +13,7 @@ bench = false
 [dependencies]
 libc = "0.2"
 
-num = "0.3"
+num = "0.4"
 
 # time
 time = "0.2" # Update to 0.2.9
@@ -41,7 +41,7 @@ daggy = "0.5" # Upgrade to 0.6
 
 smallvec = "1"
 
-itertools = "0.9"
+itertools = "0.10"
 imgref = "1.4.1"
 slotmap = "0.4.0"
 base64 = "0.13"
@@ -52,7 +52,7 @@ rgb = { version = "0.8", features = ["argb"] }
 imagequant = "2"
 lodepng = "3"
 flate2 = { version = "1.0", features = ["zlib"], default-features = false }
-libwebp-sys = "0.3"
+libwebp-sys = "0.6"
 libz-sys = { version="1", features = ["static"] }
 
 jpeg-decoder = "0.1"
@@ -72,9 +72,9 @@ imageflow_types = { path = "../imageflow_types", version = "*" }
 imageflow_helpers = { path = "../imageflow_helpers", version = "*" }
 imageflow_riapi = { path = "../imageflow_riapi", version = "*" }
 imageflow_c_components = { path = "../c_components" }
-mozjpeg = "0.8.17"
+mozjpeg = "0.9"
 
-mozjpeg-sys = {version = "0.10.5", features = ["nasm_simd"]}
+mozjpeg-sys = {version = "1", features = ["nasm_simd"]}
 
 evalchroma = "1"
 

@@ -63,9 +63,9 @@ dependencies = [
 
 [[package]]
 name = "arrayvec"
-version = "0.5.2"
+version = "0.7.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "23b62fc65de8e4e7f52534fb52b0f3ed04746ae267519eef2a83941e8085068b"
+checksum = "8da52d66c7071e2e3fa2a1e5c6d088fec47b593032b254f5e980de8ea54454d6"
 
 [[package]]
 name = "assert-json-diff"
@@ -456,7 +456,7 @@ dependencies = [
  "clap",
  "criterion-plot",
  "csv",
- "itertools 0.10.3",
+ "itertools",
  "lazy_static 1.4.0",
  "num-traits",
  "oorandom",
@@ -478,7 +478,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d00996de9f2f7559f7f4dc286073197f83e92256a59ed395f9aac01fe717da57"
 dependencies = [
  "cast",
- "itertools 0.10.3",
+ "itertools",
 ]
 
 [[package]]
@@ -659,7 +659,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ba2443cbe633d33d180719a96dd6d75f32b933fb032149a98b6ea3bb8bf1c3bf"
 dependencies = [
  "imgref",
- "itertools 0.10.3",
+ "itertools",
  "rayon",
  "rgb",
 ]
@@ -1324,7 +1324,7 @@ dependencies = [
  "imageflow_types",
  "imagequant",
  "imgref",
- "itertools 0.9.0",
+ "itertools",
  "jpeg-decoder",
  "lazy_static 1.4.0",
  "lcms2 5.3.0-alpha",
@@ -1336,7 +1336,7 @@ dependencies = [
  "lodepng",
  "mozjpeg",
  "mozjpeg-sys",
- "num 0.3.1",
+ "num 0.4.0",
  "petgraph",
  "rgb",
  "rustc-serialize",
@@ -1468,7 +1468,7 @@ dependencies = [
  "serde",
  "serde_json",
  "threadpool",
- "time 0.2.27",
+ "time 0.3.9",
 ]
 
 [[package]]
@@ -1557,15 +1557,6 @@ dependencies = [
  "plugin",
  "typemap",
  "url 1.7.2",
-]
-
-[[package]]
-name = "itertools"
-version = "0.9.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "284f18f85651fe11e8a991b2adb42cb078325c996ed026d994719efcfca1d54b"
-dependencies = [
- "either",
 ]
 
 [[package]]
@@ -1696,9 +1687,9 @@ dependencies = [
 
 [[package]]
 name = "libwebp-sys"
-version = "0.3.2"
+version = "0.6.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d4a27a462a1a56f5101d909c08894548918d835516304ac24b84b768a537b329"
+checksum = "4af44c06d41ebcf4484bfe8d36371f09d532666953f1b9f3803e96ef723d3045"
 dependencies = [
  "cc",
 ]
@@ -1732,10 +1723,11 @@ dependencies = [
 
 [[package]]
 name = "load_image"
-version = "2.12.1"
+version = "2.16.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d326645af741a5a6f07d792c8acde0352106ce995c4215ad321e5181ad1e1250"
+checksum = "4dee1f83efa01291dbf6d87a6ad629aa8e3482b93d1ead8d4b1bd09d2167b67b"
 dependencies = [
+ "fallible_collections",
  "imgref",
  "lcms2 5.4.1",
  "lodepng",
@@ -1960,11 +1952,11 @@ dependencies = [
 
 [[package]]
 name = "mozjpeg"
-version = "0.8.24"
+version = "0.9.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7fa82c1c64a5c3af9e8ad958ad0da8de3045c4c433e180453662a9a678e26ce6"
+checksum = "75fce8c02d82d7dc473d6c156c52cc9f161e9eef0bca5145d87ad6c62a20ac3f"
 dependencies = [
- "arrayvec 0.5.2",
+ "arrayvec 0.7.2",
  "fallible_collections",
  "libc",
  "mozjpeg-sys",
@@ -1973,9 +1965,9 @@ dependencies = [
 
 [[package]]
 name = "mozjpeg-sys"
-version = "0.10.13"
+version = "1.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "798a7f921b39b07a6491c8a3c8c0cbabd5cc9826089603abdf31e6ed9121dfcc"
+checksum = "215a592d91abceb187028dfc6d9c07811bdfc5584d4ada50a4d387d82ed0aedc"
 dependencies = [
  "cc",
  "dunce",
@@ -2733,9 +2725,9 @@ dependencies = [
 
 [[package]]
 name = "rexif"
-version = "0.5.3"
+version = "0.7.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c982e5c23c2e2d169616f7a171a8d26b53aa52fdb66cc4cf0fba6f4f81acff7f"
+checksum = "49352965b70522af9085d7a8c2a6df7494713c67ac58b9af02bcff7fb4ca1483"
 dependencies = [
  "num 0.4.0",
 ]
@@ -3178,26 +3170,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d326610f408c7a4eb6f51c37c330e496b08506c9457c9d34287ecc38809fb060"
 dependencies = [
  "unicode-width",
-]
-
-[[package]]
-name = "thiserror"
-version = "1.0.31"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "bd829fe32373d27f76265620b5309d0340cb8550f523c1dda251d6298069069a"
-dependencies = [
- "thiserror-impl",
-]
-
-[[package]]
-name = "thiserror-impl"
-version = "1.0.31"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0396bc89e626244658bef819e22d0cc459e795a5ebe878e6ec336d1674a8d79a"
-dependencies = [
- "proc-macro2",
- "quote",
- "syn",
 ]
 
 [[package]]
@@ -3921,11 +3893,11 @@ dependencies = [
 
 [[package]]
 name = "zip"
-version = "0.5.13"
+version = "0.6.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "93ab48844d61251bb3835145c521d88aa4031d7139e8485990f60ca911fa0815"
+checksum = "bf225bcf73bb52cbb496e70475c7bd7a3f769df699c0020f6c7bd9a96dcf0b8d"
 dependencies = [
  "byteorder",
  "crc32fast",
- "thiserror",
+ "crossbeam-utils 0.8.8",
 ]
