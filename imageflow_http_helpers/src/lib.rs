@@ -4,9 +4,9 @@ extern crate imageflow_helpers;
 
 use std;
 use std::fmt;
-use reqwest;
+use reqwest::blocking;
 use hyper;
-use reqwest::{Client, Certificate};
+use reqwest::Certificate;
 use ::imageflow_helpers::filesystem::read_file_bytes;
 use std::path::PathBuf;
 use std::io::Read;
@@ -93,12 +93,12 @@ impl FetchConfig {
 //        Client::with_connector(connector)
 //    }
 
-    pub fn build_client(&self) -> Client{
+    pub fn build_client(&self) -> blocking::Client{
         let builder = if let Some(ref cert) = self.custom_ca_trust_file{
             let bytes = read_file_bytes(cert).unwrap();
-            reqwest::ClientBuilder::new().add_root_certificate(Certificate::from_pem(&bytes).unwrap())
+            reqwest::blocking::ClientBuilder::new().add_root_certificate(Certificate::from_pem(&bytes).unwrap())
         } else{
-            reqwest::ClientBuilder::new()
+            reqwest::blocking::ClientBuilder::new()
         };
         builder.build().unwrap()
     }
@@ -140,7 +140,7 @@ pub fn fetch(url: &str, config: Option<FetchConfig>) -> std::result::Result<Fetc
 
 pub fn get_status_code_for(url: &str) -> std::result::Result<reqwest::StatusCode, FetchError> {
 
-    let client = reqwest::ClientBuilder::new().use_default_tls().build().unwrap();
+    let client = reqwest::blocking::ClientBuilder::new().build().unwrap();
 
     let res = client.get(url).send()?;
     Ok(res.status())

@@ -9,11 +9,11 @@ edition = "2018"
 [dependencies]
 imageflow_helpers = { path = "../imageflow_helpers", version = "*" }
 
-hyper = { version = "0.13"}
-reqwest = { version = "0.9"}
+hyper = { version = "0.14"}
+reqwest = { version = "0.11", features = ["blocking"]}
 hyper-native-tls = { version = "*"}
 
 
 [target.'cfg(not(any(target_os = "windows", target_os = "macos")))'.dependencies]
 openssl = { version = "0.10"}
-hyper-openssl = { version = "0.8"}
+hyper-openssl = { version = "0.9"}
