@@ -67,6 +67,53 @@ fn test_trim_whitespace() {
 }
 
 
+#[test]
+fn test_transparent_png_to_png() {
+    compare_encoded(
+        Some(IoTestEnum::Url("https://s3-us-west-2.amazonaws.com/imageflow-resources/test_inputs/shirt_transparent.png".to_owned())),
+        "transparent_png_to_png",
+        POPULATE_CHECKSUMS,
+        DEBUG_GRAPH,
+        Constraints {
+            similarity: Similarity::AllowOffByOneBytesCount(100),
+            max_file_size: None
+        },
+        vec![
+            Node::CommandString{
+                kind: CommandStringKind::ImageResizer4,
+                value: "format=png".to_owned(),
+                decode: Some(0),
+                encode: Some(1),
+                watermarks: None
+            }
+        ]
+    );
+}
+
+#[test]
+fn test_transparent_png_to_png_rounded_corners() {
+    compare_encoded(
+        Some(IoTestEnum::Url("https://s3-us-west-2.amazonaws.com/imageflow-resources/test_inputs/shirt_transparent.png".to_owned())),
+        "transparent_png_to_png_round_corners",
+        POPULATE_CHECKSUMS,
+        DEBUG_GRAPH,
+        Constraints {
+            similarity: Similarity::AllowOffByOneBytesCount(100),
+            max_file_size: None
+        },
+        vec![
+            Node::CommandString{
+                kind: CommandStringKind::ImageResizer4,
+                value: "format=png&s.roundcorners=100".to_owned(),
+                decode: Some(0),
+                encode: Some(1),
+                watermarks: None
+            }
+        ]
+    );
+}
+
+
 
 #[test]
 fn test_transparent_png_to_jpeg() {
@@ -663,7 +710,7 @@ fn test_round_corners_command_string() {
     let matched = compare(Some(IoTestEnum::Url(url)), 500, &title, POPULATE_CHECKSUMS, DEBUG_GRAPH,
                           vec![Node::CommandString {
                               kind: CommandStringKind::ImageResizer4,
-                              value: "w=70&h=70&s.roundcorners=100".to_string(),
+                              value: "w=70&h=70&s.roundcorners=100&format=png".to_string(),
                               decode: Some(0),
                               encode: None,
                               watermarks: None
@@ -866,7 +913,32 @@ fn webp_lossy_noalpha_decode_and_scale() {
 }
 
 #[test]
-fn webp_lossless_alpha_roundtrip(){
+fn test_transparent_webp_to_webp() {
+    compare_encoded(
+        Some(IoTestEnum::Url("https://imageflow-resources.s3-us-west-2.amazonaws.com/test_inputs/1_webp_ll.webp".to_owned())),
+        "transparent_webp_to_webp",
+        POPULATE_CHECKSUMS,
+        DEBUG_GRAPH,
+        Constraints {
+            similarity: Similarity::AllowOffByOneBytesCount(500),
+            max_file_size: None
+        },
+        vec![
+            Node::CommandString{
+                kind: CommandStringKind::ImageResizer4,
+                value: "format=webp&width=100&height=100&webp.lossless=true".to_owned(),
+                decode: Some(0),
+                encode: Some(1),
+                watermarks: None
+            }
+        ]
+    );
+}
+
+
+
+#[test]
+fn webp_lossless_alpha_decode_and_encode(){
 
     let steps = vec![
         Node::CommandString{
@@ -886,7 +958,7 @@ fn webp_lossless_alpha_roundtrip(){
     ).unwrap();
 }
 #[test]
-fn webp_lossy_alpha_roundtrip(){
+fn webp_lossy_alpha_decode_and_encode(){
 
     let steps = vec![
         Node::CommandString{
@@ -1011,6 +1083,7 @@ fn test_max_decode_dimensions(){
 
 }
 
+
 #[test]
 fn test_max_frame_dimensions(){
 
@@ -1062,6 +1135,7 @@ fn smoke_test_png_ir4(){
                steps,
     ).unwrap();
 }
+
 
 #[test]
 fn smoke_test_corrupt_jpeg(){

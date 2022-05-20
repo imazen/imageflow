@@ -330,6 +330,8 @@ impl ChecksumCtx{
             "gif"
         }else if bytes.starts_with(&[0xFF,0xD8,0xFF]) {
             "jpg"
+        } else if bytes.starts_with(b"RIFF") && bytes.len() >= 12 && bytes[8..12].starts_with(b"WEBP"){
+            "webp"
         } else{
             "unknown"
         }

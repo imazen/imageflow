@@ -2,6 +2,7 @@
 *.png
 *.jpg
 *.unknown
+*.webp
 
 !checksums.list
 visuals.html
