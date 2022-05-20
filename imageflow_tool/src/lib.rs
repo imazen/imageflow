@@ -13,7 +13,7 @@ mod cmd_build;
 pub mod self_test;
 
 
-use clap::{App, Arg, SubCommand, AppSettings};
+use clap::{App, Arg, SubCommand, AppSettings, Command};
 
 
 fn artifact_source() -> hlp::process_capture::IncludeBinary{
@@ -25,33 +25,33 @@ pub fn main_with_exit_code() -> i32 {
     imageflow_helpers::debug::set_panic_hook_once();
 
     let version = s::version::one_line_version();
-    let app = App::new("imageflow_tool").version(version.as_ref())
-        .arg(  Arg::with_name("capture-to").long("capture-to").takes_value(true)
+    let app = Command::new("imageflow_tool").version(version.as_ref())
+        .arg(  Arg::new("capture-to").long("capture-to").takes_value(true)
             .help("Run whatever you're doing in a sub-process, capturing output, input, and version detail")
-        ).setting(AppSettings::SubcommandRequiredElseHelp).setting(AppSettings::VersionlessSubcommands)
+        ).subcommand_required(true).arg_required_else_help(true)
         .subcommand(
-            SubCommand::with_name("diagnose").setting(AppSettings::ArgRequiredElseHelp)
+            Command::new("diagnose").arg_required_else_help(true)
                 .about("Diagnostic utilities")
                 .arg(
-                    Arg::with_name("show-compilation-info").long("show-compilation-info")
+                    Arg::new("show-compilation-info").long("show-compilation-info")
                         .help("Show all the information stored in this executable about the environment in which it was compiled.")
                 ).arg(
-                Arg::with_name("self-test").long("self-test")
+                Arg::new("self-test").long("self-test")
                     .help("Creates a 'self_tests' directory and runs self-tests"))
                 .arg(
-                    Arg::with_name("wait").long("wait")
+                    Arg::new("wait").long("wait")
                         .help("Process stays in memory until you press the enter key.")
                 )
                 .arg(
-                    Arg::with_name("call-panic").long("call-panic")
+                    Arg::new("call-panic").long("call-panic")
                         .help("Triggers a Rust panic (so you can observe failure/backtrace behavior)")
                 )
         )
         .subcommand(
-            SubCommand::with_name("examples")
+            Command::new("examples")
                 .about("Generate usage examples")
                 .arg(
-                    Arg::with_name("generate").long("generate").required(true)
+                    Arg::new("generate").long("generate").required(true)
                         .help("Create an 'examples' directory")
                 )
         )
@@ -76,37 +76,37 @@ pub fn main_with_exit_code() -> i32 {
         // file.json --in 0 a.png 1 b.png --out 3 base64
 
 
-        .subcommand(SubCommand::with_name("v1/build").alias("v0.1/build")
+        .subcommand(Command::new("v1/build").alias("v0.1/build")
             .about("Runs the given operation file")
             .arg(
-                Arg::with_name("in").long("in").min_values(1)
-                    .multiple(true)
+                Arg::new("in").long("in").min_values(1)
+                    .multiple_occurrences(true)
                     .help("Replace/add inputs for the operation file")
             )
-            .arg(Arg::with_name("out").long("out").multiple(true).min_values(1)
+            .arg(Arg::new("out").long("out").multiple_occurrences(true).min_values(1)
                 .help("Replace/add outputs for the operation file"))
-            //.arg(Arg::with_name("demo").long("demo").takes_value(true).possible_values(&["example:200x200_png"]))
-            .arg(Arg::with_name("json").long("json").takes_value(true).required(true).help("The JSON operation file."))
-            .arg(Arg::with_name("quiet").long("quiet").takes_value(false).help("Don't write the JSON response to stdout"))
-            .arg(Arg::with_name("response").long("response").takes_value(true).help("Write the JSON job result to file instead of stdout"))
-            .arg(Arg::with_name("bundle-to").long("bundle-to").takes_value(true).help("Copies the recipe and all dependencies into the given folder, simplifying it."))
-            .arg(Arg::with_name("debug-package").long("debug-package").takes_value(true).help("Creates a debug package in the given folder so others can reproduce the behavior you are seeing"))
+            //.arg(Arg::new("demo").long("demo").takes_value(true).possible_values(&["example:200x200_png"]))
+            .arg(Arg::new("json").long("json").takes_value(true).required(true).help("The JSON operation file."))
+            .arg(Arg::new("quiet").long("quiet").takes_value(false).help("Don't write the JSON response to stdout"))
+            .arg(Arg::new("response").long("response").takes_value(true).help("Write the JSON job result to file instead of stdout"))
+            .arg(Arg::new("bundle-to").long("bundle-to").takes_value(true).help("Copies the recipe and all dependencies into the given folder, simplifying it."))
+            .arg(Arg::new("debug-package").long("debug-package").takes_value(true).help("Creates a debug package in the given folder so others can reproduce the behavior you are seeing"))
 
         )
-        .subcommand(SubCommand::with_name("v1/querystring").aliases(&["v0.1/ir4","v1/ir4"])
+        .subcommand(Command::new("v1/querystring").aliases(&["v0.1/ir4","v1/ir4"])
             .about("Run an command querystring")
             .arg(
-                Arg::with_name("in").long("in").min_values(1)
+                Arg::new("in").long("in").min_values(1)
                     .multiple(true).required(true)
                     .help("Input image")
             )
-            .arg(Arg::with_name("out").long("out").multiple(true).min_values(1).required(true)
+            .arg(Arg::new("out").long("out").multiple(true).min_values(1).required(true)
                 .help("Output image"))
-            .arg(Arg::with_name("quiet").long("quiet").takes_value(false).help("Don't write the JSON response to stdout"))
-            .arg(Arg::with_name("response").long("response").takes_value(true).help("Write the JSON job result to file instead of stdout"))
-            .arg(Arg::with_name("command").long("command").takes_value(true).required(true).help("w=200&h=200&mode=crop&format=png&rotate=90&flip=v - querystring style command"))
-            .arg(Arg::with_name("bundle-to").long("bundle-to").takes_value(true).help("Copies the recipe and all dependencies into the given folder, simplifying it."))
-            .arg(Arg::with_name("debug-package").long("debug-package").takes_value(true).help("Creates a debug package in the given folder so others can reproduce the behavior you are seeing"))
+            .arg(Arg::new("quiet").long("quiet").takes_value(false).help("Don't write the JSON response to stdout"))
+            .arg(Arg::new("response").long("response").takes_value(true).help("Write the JSON job result to file instead of stdout"))
+            .arg(Arg::new("command").long("command").takes_value(true).required(true).help("w=200&h=200&mode=crop&format=png&rotate=90&flip=v - querystring style command"))
+            .arg(Arg::new("bundle-to").long("bundle-to").takes_value(true).help("Copies the recipe and all dependencies into the given folder, simplifying it."))
+            .arg(Arg::new("debug-package").long("debug-package").takes_value(true).help("Creates a debug package in the given folder so others can reproduce the behavior you are seeing"))
 
         );
     let matches = app.get_matches();
