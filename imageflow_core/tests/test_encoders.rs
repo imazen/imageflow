@@ -49,7 +49,7 @@ fn test_encode_pngquant() {
                               DEBUG_GRAPH,
                               Constraints {
                                   max_file_size: Some(280_000),
-                                  similarity: Similarity::AllowDssimMatch(0.004, 0.008),
+                                  similarity: Similarity::AllowDssimMatch(0.002, 0.008),
                               },
                               steps
     );
@@ -62,7 +62,7 @@ fn test_encode_pngquant_command() {
                               DEBUG_GRAPH,
                               Constraints {
                                   max_file_size: Some(280_000),
-                                  similarity: Similarity::AllowDssimMatch(0.004, 0.008),
+                                  similarity: Similarity::AllowDssimMatch(0.002, 0.008),
                               },
                               steps
     );
@@ -136,7 +136,7 @@ fn test_encode_mozjpeg_resized() {
                               DEBUG_GRAPH,
                               Constraints {
                                   max_file_size: Some(160_000),
-                                  similarity: Similarity::AllowDssimMatch(0.075, 0.2),
+                                  similarity: Similarity::AllowDssimMatch(0.04, 0.2),
                               },
                               steps
     );
@@ -154,7 +154,7 @@ fn test_encode_mozjpeg() {
                               DEBUG_GRAPH,
                               Constraints {
                                   max_file_size: Some(301_000),
-                                  similarity: Similarity::AllowDssimMatch(0.01, 0.06),
+                                  similarity: Similarity::AllowDssimMatch(0.007, 0.06),
                               },
                               steps
     );
