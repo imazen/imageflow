@@ -13,7 +13,7 @@ mod cmd_build;
 pub mod self_test;
 
 
-use clap::{App, Arg, SubCommand, AppSettings, Command};
+use clap::{Arg,AppSettings, Command};
 
 
 fn artifact_source() -> hlp::process_capture::IncludeBinary{
@@ -97,10 +97,10 @@ pub fn main_with_exit_code() -> i32 {
             .about("Run an command querystring")
             .arg(
                 Arg::new("in").long("in").min_values(1)
-                    .multiple(true).required(true)
+                    .multiple_occurrences(true).required(true)
                     .help("Input image")
             )
-            .arg(Arg::new("out").long("out").multiple(true).min_values(1).required(true)
+            .arg(Arg::new("out").long("out").multiple_occurrences(true).min_values(1).required(true)
                 .help("Output image"))
             .arg(Arg::new("quiet").long("quiet").takes_value(false).help("Don't write the JSON response to stdout"))
             .arg(Arg::new("response").long("response").takes_value(true).help("Write the JSON job result to file instead of stdout"))
