@@ -10,20 +10,20 @@
 [Download](https://github.com/imazen/imageflow/releases) blazing fast and [safer](https://cve.mitre.org/cgi-bin/cvekey.cgi?keyword=imagemagick) tools for a modern image workflow.
 
 
-* **imageflow_tool** is a command-line tool for experimenting, running batch jobs,
+* **`imageflow_tool`** is a command-line tool for experimenting, running batch jobs, JSON jobs,
 or when you want process isolation. Up to 17x faster than ImageMagick. Also produces smaller files at higher quality.
-* **imageflow_server** can run JSON jobs or manipulate images in-flight (e.g.`/bucket/img.jpg?w=200`) for direct use from
-HTML. Source images can reside in blob storage, on another server, or on the filesystem. However, for production use, we recommend using [Imageflow.NET Server](https://github.com/imazen/imageflow-dotnet-server), which is far more feature-rich and doesn't need a reverse proxy in front for security.
-* **libimageflow** is for direct (in-process) use from *your* programming language. See our [**Node bindings**](https://github.com/imazen/imageflow-node),  [**Go bindings**](https://github.com/imazen/imageflow-go), [**Scala bindings**](https://github.com/Dealermade/imageflow-scala), [**Elixir bindings**](https://github.com/naps62/imageflow_ex), or  [**.NET bindings**](https://github.com/imazen/imageflow-dotnet). If we don't already have bindings for your language, consider spending a day to add them. Imageflow has a simple
-C-compatible ABI, of which only 4 methods are needed to implement bindings. 
+* **`libimageflow`** is for direct (in-process) use from *your* programming language. See our [**Node bindings**](https://github.com/imazen/imageflow-node),  [**Go bindings**](https://github.com/imazen/imageflow-go), [**Scala bindings**](https://github.com/Dealermade/imageflow-scala), [**Elixir bindings**](https://github.com/naps62/imageflow_ex), or  [**.NET bindings**](https://github.com/imazen/imageflow-dotnet). If we don't already have bindings for your language, consider spending a day to add them. Imageflow has a simple
+  C-compatible ABI, of which only 4 methods are needed to implement bindings. 
+* **[Imageflow.Server](https://github.com/imazen/imageflow-dotnet-server)** is cross-platform and can manipulate images in-flight (e.g.`/bucket/img.jpg?w=200`) for direct use from
+HTML. Source images can reside in blob storage, on another server, or on the filesystem. It's a production ready server with excellent hybrid disk caching, support for Azure and Amazon blob storage, and excellent scriptability. You can deploy it easily via Docker, on a VM, or via any cloud host. 
 
-**[Open an issue](https://github.com/imazen/imageflow/issues/new) to have us write example code for your use case. We believe in feedback-driven design, and streamlining real-world usage is the fastest way to a great product.**
+**[Open an issue](https://github.com/imazen/imageflow/issues/new) to share ideas, feedback, or ask questions. We believe in feedback-driven design, and streamlining real-world usage is the fastest way to a great product.**
 
 [Querystring API Documentation](https://docs.imageflow.io/querystring/introduction.html)
 
 [JSON API Documentation](https://docs.imageflow.io/json/introduction.html) 
 
-libimageflow, imageflow_tool, and imageflow_server are available as
+libimageflow and  imageflow_tool are available as
 [self-contained binaries](https://github.com/imazen/imageflow/releases) for Windows, Ubuntu, and Mac. We also offer [Docker images](https://hub.docker.com/r/imazen/imageflow_tool/) for Linux (where glibc and OpenSSL are required). 
 
 [We thank our backers on Kickstarter](https://www.kickstarter.com/projects/njones/imageflow-respect-the-pixels-a-secure-alt-to-image/posts/1616122)
@@ -161,7 +161,7 @@ You can also build using `cargo` directly, although this will place binaries in 
 
 
 ## Building from Source with Docker
-If you want to replicate the Imageflow CI environment:
+Note that we no longer use docker containers for CI, so this method is outdated.
 1. [Install Docker](https://docs.docker.com/install/)
 2. Run from a bash session ([Docker + Windows WSL](https://nickjanetakis.com/blog/setting-up-docker-for-windows-and-wsl-to-work-flawlessly), macOS, or linux)
 3. ```bash
@@ -182,7 +182,7 @@ The [official Dockerfiles](https://github.com/imazen/imageflow/tree/main/docker)
 (tested on Ubuntu 16.04 and 18.04.)
 
 ```bash
-#Install Rust 1.41+ by running
+#Install Rust by running
 `curl https://sh.rustup.rs -sSf | sh -s -- -y --default-toolchain stable`
 #Ensure build tools are installed (git, curl, wget, gcc, g++, nasm, pkg-config, openssl, ca-certificates)
 `sudo apt-get install git wget curl build-essential pkg-config libssl-dev libpng-dev nasm `
@@ -197,12 +197,12 @@ The [official Dockerfiles](https://github.com/imazen/imageflow/tree/main/docker)
 4. Install [Rust](https://www.rust-lang.org/en-US/install.html)
 
 
-## Windows WSL (Ubuntu Bionic Subsystem) Pre-requisites
+## Windows WSL (Ubuntu) Pre-requisites
 
-1. Install [Ubuntu 18.04 from the Windows Store](https://www.microsoft.com/store/productId/9N9TNGVNDL3Q)
+1. Install Ubuntu from the Windows Store
 2. Run Ubuntu 18.04 and create your username/password
 3. `sudo apt-get update` to update available packages.
-4. Install Rust 1.28+ by running
+4. Install Rust by running
   `curl https://sh.rustup.rs -sSf | sh -s -- -y --default-toolchain stable`
 5. Ensure build tools are installed (git, curl, wget, gcc, g++, nasm, pkg-config, openssl, ca-certificates)
     `sudo apt-get install git wget curl build-essential pkg-config libssl-dev libpng-dev nasm `
