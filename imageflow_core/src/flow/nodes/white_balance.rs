@@ -29,7 +29,7 @@ fn area_threshold(histogram: &[u64], total_pixels: u64, low_threshold: f64, high
             break;
         }
     }
-    eprintln!("{},{}", low,high);
+    // eprintln!("{},{}", low,high);
     (low, high)
 }
 
