@@ -13,7 +13,7 @@ mod cmd_build;
 pub mod self_test;
 
 
-use clap::{Arg,AppSettings, Command};
+use clap::{Arg,Command};
 
 
 fn artifact_source() -> hlp::process_capture::IncludeBinary{
