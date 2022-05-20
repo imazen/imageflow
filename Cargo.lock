@@ -1407,7 +1407,7 @@ dependencies = [
  "itertools",
  "jpeg-decoder",
  "lazy_static 1.4.0",
- "lcms2 5.3.0-alpha",
+ "lcms2",
  "lcms2-sys",
  "libc",
  "libpng-sys",
@@ -1723,15 +1723,6 @@ checksum = "e2abad23fbc42b3700f2f279844dc832adb2b2eb069b2df918f455c4e18cc646"
 
 [[package]]
 name = "lcms2"
-version = "5.3.0-alpha"
-source = "git+https://github.com/imazen/rust-lcms2#da58dd32b2ebad5cf02dd92273b8f14b4989a54c"
-dependencies = [
- "foreign-types 0.5.0",
- "lcms2-sys",
-]
-
-[[package]]
-name = "lcms2"
 version = "5.4.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "74f7631e1b74291f15094277a67eea8645d78547abc27a8c8ce7069bc28baff8"
@@ -1815,7 +1806,7 @@ checksum = "4dee1f83efa01291dbf6d87a6ad629aa8e3482b93d1ead8d4b1bd09d2167b67b"
 dependencies = [
  "fallible_collections",
  "imgref",
- "lcms2 5.4.1",
+ "lcms2",
  "lodepng",
  "mozjpeg",
  "rexif",

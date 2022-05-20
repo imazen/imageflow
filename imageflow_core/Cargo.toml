@@ -57,7 +57,7 @@ libz-sys = { version="1", features = ["static"] }
 
 jpeg-decoder = "0.1"
 
-lcms2 = { git = "https://github.com/imazen/rust-lcms2" }
+lcms2 = "5"
 lcms2-sys = "3"
 chashmap = "2.2"
 
