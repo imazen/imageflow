@@ -16,14 +16,14 @@ mod bgra;
 use self::bgra::BGRA8;
 use self::screen::Screen;
 use crate::gif::Frame;
-use crate::gif::SetParameter;
 use std::rc::Rc;
+use lcms2_sys::cmsAllocProfileSequenceDescription;
 use crate::io::IoProxyProxy;
 use crate::io::IoProxyRef;
 use crate::graphics::bitmaps::{BitmapKey, ColorSpace, BitmapCompositing};
 
 pub struct GifDecoder{
-    reader: ::gif::Reader<IoProxy>,
+    reader: ::gif::Decoder<IoProxy>,
     screen: Screen,
     buffer: Option<Vec<u8>>,
     last_frame: Option<Frame<'static>>,
@@ -33,12 +33,15 @@ pub struct GifDecoder{
 impl GifDecoder {
     pub fn create(c: &Context, io: IoProxy, io_id: i32) -> Result<GifDecoder> {
 
-        let mut decoder = ::gif::Decoder::new(io);
 
-        // Important:
-        decoder.set(::gif::ColorOutput::Indexed);
+        let mut options = ::gif::Decoder::<IoProxy>::build();
+        options.allow_unknown_blocks(true);
+        options.set_memory_limit(::gif::MemoryLimit(8000*8000));
+        options.set_color_output(::gif::ColorOutput::Indexed); // Important
 
-        let reader = decoder.read_info().map_err(|e| FlowError::from(e).at(here!()))?;
+
+        let reader = options.read_info(io)
+            .map_err(|e| FlowError::from(e).at(here!()))?;
 
         let screen = Screen::new(&reader);
 
@@ -247,7 +250,7 @@ impl GifEncoder{
             io_id,
             io_ref: io_ref.clone(),
             // Global color table??
-            encoder: ::gif::Encoder::new(IoProxyProxy(io_ref), bitmap.w() as u16, bitmap.h() as u16, &[]).map_err(|e| FlowError::from_encoder(e).at(here!()))?,
+            encoder: ::gif::Encoder::new(IoProxyProxy(io_ref), bitmap.w() as u16, bitmap.h() as u16, &[]).map_err(|e| FlowError::from(e).at(here!()))?,
             frame_ix: 0
         })
     }
@@ -303,7 +306,7 @@ impl Encoder for GifEncoder{
                 // Only write before any frames
                 if let Some(r) = repeat {
 //                    eprintln!("Writing repeat");
-                    self.encoder.write_extension(::gif::ExtensionData::Repetitions(r)).map_err(|e| FlowError::from_encoder(e).at(here!()))?;
+                    self.encoder.write_extension(::gif::ExtensionData::Repetitions(r)).map_err(|e| FlowError::from(e).at(here!()))?;
                 }else{
 //                    eprintln!("Skipping repeat");
                 }
@@ -318,7 +321,7 @@ impl Encoder for GifEncoder{
             // rect
             // transparency??
 
-            self.encoder.write_frame(&f).map_err(|e| FlowError::from_encoder(e).at(here!()))?;
+            self.encoder.write_frame(&f).map_err(|e| FlowError::from(e).at(here!()))?;
 
             self.frame_ix+=1;
             Ok(

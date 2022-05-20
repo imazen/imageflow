@@ -47,7 +47,7 @@ slotmap = "1"
 base64 = "0.13"
 hex = "0.4"
 
-gif = "0.10"
+gif = "0.11"
 rgb = { version = "0.8", features = ["argb"] }
 imagequant = "4"
 lodepng = "3"

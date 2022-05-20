@@ -309,11 +309,22 @@ impl From<::gif::DecodingError> for FlowError{
     fn from(f: ::gif::DecodingError) -> Self {
         match f {
             ::gif::DecodingError::Io(e) => FlowError::without_location(ErrorKind::DecodingIoError, format!("{:?}", e)),
-            ::gif::DecodingError::Internal(msg) => FlowError::without_location(ErrorKind::InternalError,format!("Internal error in gif decoder: {:?}",msg)),
+            //::gif::DecodingError::Internal(msg) => FlowError::without_location(ErrorKind::InternalError,format!("Internal error in gif decoder: {:?}",msg)),
             ::gif::DecodingError::Format(msg) => FlowError::without_location(ErrorKind::GifDecodingError,format!("{:?}",msg))
         }
     }
 }
+
+impl From<::gif::EncodingError> for FlowError{
+    fn from(f: ::gif::EncodingError) -> Self {
+        match f {
+            ::gif::EncodingError::Io(e) => FlowError::without_location(ErrorKind::EncodingIoError, format!("{:?}", e)),
+            ::gif::EncodingError::Format(msg) => FlowError::without_location(ErrorKind::GifEncodingError,format!("{:?}",msg))
+        }
+    }
+}
+
+
 impl From<::imageflow_helpers::colors::ParseColorError> for FlowError{
     fn from(f: ::imageflow_helpers::colors::ParseColorError) -> Self {
         match f {
