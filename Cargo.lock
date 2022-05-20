@@ -1453,7 +1453,7 @@ dependencies = [
  "threadpool",
  "time 0.3.9",
  "twox-hash",
- "url 1.7.2",
+ "url 2.2.2",
  "uuid 1.0.0",
 ]
 

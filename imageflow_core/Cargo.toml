@@ -64,7 +64,7 @@ chashmap = "2.2"
 getopts ="0.2"
 byteorder="1"
 
-url = "1" # Upgrade to 2.1.1
+url = "2"
 uuid = { version = "1", features = ["v4"] }
 
 rustface = { git = "https://github.com/atomashpolskiy/rustface" }
