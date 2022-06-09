@@ -301,6 +301,25 @@ impl<'a,T>  BitmapWindowMut<'a, T> {
     }
 }
 
+impl<'a>  BitmapWindowMut<'a, u8> {
+
+    pub fn fill_rectangle(&mut self, color: imageflow_helpers::colors::Color32, x: u32, y: u32, x2: u32, y2: u32) -> Result<(), FlowError>{
+        if y2 == y || x2 == x { return Ok(()); } // Don't fail on zero width rect
+        if y2 < y || x2 < x || x2 > self.w() || y2 > self.h(){
+            return Err(nerror!(ErrorKind::InvalidArgument, "Coordinates must be within image dimensions"));
+        }
+        if  self.info().pixel_layout() != PixelLayout::BGRA {
+            return Err(nerror!(ErrorKind::InvalidArgument, "Only BGRA supported for rounded corners"));
+        }
+        let bgra = color.to_bgra8();
+        for y in y..y2 {
+            let mut row_window = self.row_window(y).unwrap();
+            let row_pixels = row_window.slice_of_pixels_first_row().unwrap();
+            row_pixels[x as usize..x2 as usize].fill(bgra.clone());
+        }
+        Ok(())
+    }
+}
 
 impl Bitmap{
     pub fn get_window_u8(&mut self) -> Option<BitmapWindowMut<u8>>{

@@ -104,7 +104,7 @@ fn test_transparent_png_to_png_rounded_corners() {
         vec![
             Node::CommandString{
                 kind: CommandStringKind::ImageResizer4,
-                value: "format=png&s.roundcorners=100".to_owned(),
+                value: "format=png&crop=10,10,70,70&cropxunits=100&cropyunits=100&s.roundcorners=100".to_owned(),
                 decode: Some(0),
                 encode: Some(1),
                 watermarks: None
@@ -337,6 +337,38 @@ fn test_round_corners_small(){
     assert!(matched);
 }
 
+#[test]
+fn test_round_corners_custom_pixels(){
+    let matte = Color::Srgb(ColorSrgb::Hex("000000BB".to_owned()));
+    let matched = compare(None, 1, "RoundCornersCustomPixelsSemiTransparent", POPULATE_CHECKSUMS, DEBUG_GRAPH, vec![
+        Node::CreateCanvas {w: 100, h: 99, format: PixelFormat::Bgra32, color: Color::Srgb(ColorSrgb::Hex("ddeecc88".to_owned()))},
+        Node::RoundImageCorners { background_color: matte, radius: RoundCornersMode::PixelsCustom {
+            top_left: 0.0,
+            top_right: 1f32,
+            bottom_right: 50f32,
+            bottom_left: 20f32
+        }}
+    ]
+    );
+    assert!(matched);
+}
+
+#[test]
+fn test_round_corners_custom_percent(){
+    let matte = Color::Srgb(ColorSrgb::Hex("000000DD".to_owned()));
+    let matched = compare(None, 1, "RoundCornersCustomPercentSemiTransparent", POPULATE_CHECKSUMS, DEBUG_GRAPH, vec![
+        Node::CreateCanvas {w: 100, h: 99, format: PixelFormat::Bgra32, color: Color::Srgb(ColorSrgb::Hex("2288ffEE".to_owned()))},
+        Node::RoundImageCorners { background_color: matte, radius: RoundCornersMode::PixelsCustom {
+            top_left: 50f32,
+            top_right: 5f32,
+            bottom_right: 100f32,
+            bottom_left: 200f32
+        }}
+    ]
+    );
+    assert!(matched);
+}
+
 
 #[test]
 fn test_round_corners_excessive_radius(){
@@ -350,6 +382,28 @@ fn test_round_corners_excessive_radius(){
     assert!(matched);
 }
 
+#[test]
+fn test_round_corners_circle_wide_canvas(){
+    //let white = Color::Srgb(ColorSrgb::Hex("FFFFFFFF".to_owned()));
+    let matte = Color::Srgb(ColorSrgb::Hex("000000FF".to_owned()));
+    let matched = compare(None, 1, "RoundCornersCircleWider", POPULATE_CHECKSUMS, DEBUG_GRAPH, vec![
+        Node::CreateCanvas {w: 200, h: 150, format: PixelFormat::Bgra32, color: Color::Srgb(ColorSrgb::Hex("FFFFFFFF".to_owned()))},
+        Node::RoundImageCorners { background_color: matte, radius: RoundCornersMode::Circle}
+    ]
+    );
+    assert!(matched);
+}
+#[test]
+fn test_round_corners_circle_tall_canvas(){
+    //let white = Color::Srgb(ColorSrgb::Hex("FFFFFFFF".to_owned()));
+    let matte = Color::Srgb(ColorSrgb::Hex("00000000".to_owned()));
+    let matched = compare(None, 1, "RoundCornersCircleTaller", POPULATE_CHECKSUMS, DEBUG_GRAPH, vec![
+        Node::CreateCanvas {w: 150, h: 200, format: PixelFormat::Bgra32, color: Color::Srgb(ColorSrgb::Hex("FFFFFFFF".to_owned()))},
+        Node::RoundImageCorners { background_color: matte, radius: RoundCornersMode::Circle}
+    ]
+    );
+    assert!(matched);
+}
 
 #[test]
 fn test_round_image_corners_transparent() {
@@ -362,6 +416,8 @@ fn test_round_image_corners_transparent() {
     );
     assert!(matched);
 }
+
+
 
 #[test]
 fn test_scale_image() {
@@ -710,7 +766,7 @@ fn test_round_corners_command_string() {
     let matched = compare(Some(IoTestEnum::Url(url)), 500, &title, POPULATE_CHECKSUMS, DEBUG_GRAPH,
                           vec![Node::CommandString {
                               kind: CommandStringKind::ImageResizer4,
-                              value: "w=70&h=70&s.roundcorners=100&format=png".to_string(),
+                              value: "w=70&h=70&s.roundcorners=100,20,70,30&format=png".to_string(),
                               decode: Some(0),
                               encode: None,
                               watermarks: None
