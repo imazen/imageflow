@@ -6,6 +6,7 @@ ignore$
 \.icc$
 \.jpg$
 \.png$
+\.hpp$
 \.props$
 ^appveyor\.yml$
 ^imageflow_core/tests/visuals\.rs$
