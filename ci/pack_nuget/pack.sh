@@ -39,6 +39,7 @@ mkdir -p "$STAGING_DIR" || true
     RELEASE_DIR="${SCRIPT_DIR}/../../${TARGET_DIR:-target}/release/"
     RUNTIME_DIR="runtimes/${NUGET_RUNTIME}/native/"
     PROPS_PATH="build/net45/${NUGET_PACKAGE_NAME}.targets"
+    PROPS_PATH_2="buildTransitive/net45/${NUGET_PACKAGE_NAME}.targets"
     NUGET_OUTPUT_DIR="${SCRIPT_DIR}/../../artifacts/nuget"
     NUGET_OUTPUT_FILE="${NUGET_OUTPUT_DIR}/${NUGET_COMBINED_NAME}.nupkg"
     echo RELEASE_DIR=${RELEASE_DIR}
@@ -79,10 +80,12 @@ mkdir -p "$STAGING_DIR" || true
             # add props
             mkdir -p build/net45
             cat ../../imageflow_x64.targets | sed -e "s/:rid:/$NUGET_RUNTIME/g" > "$PROPS_PATH"
+            cat ../../imageflow_x64.targets | sed -e "s/:rid:/$NUGET_RUNTIME/g" > "$PROPS_PATH_2"
             elif [[ "${NUGET_RUNTIME}" == *'x86'* ]]; then
             # add props
             mkdir -p build/net45
             cat ../../imageflow_x86.targets | sed -e "s/:rid:/$NUGET_RUNTIME/g" > "$PROPS_PATH"
+            cat ../../imageflow_x86.targets | sed -e "s/:rid:/$NUGET_RUNTIME/g" > "$PROPS_PATH_2"
         fi
     fi
     
