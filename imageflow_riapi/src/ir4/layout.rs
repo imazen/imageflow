@@ -58,10 +58,10 @@ impl Ir4Layout{
     }
 
     fn get_wh_from_all(&self, source: AspectRatio) -> sizing::Result<(Option<i32>, Option<i32>)>{
-        let mut w = self.i.w.unwrap_or(-1);
-        let mut h = self.i.h.unwrap_or(-1);
-        let mut mw = self.i.legacy_max_width.unwrap_or(-1);
-        let mut mh = self.i.legacy_max_height.unwrap_or(-1);
+        let mut w = self.i.w.unwrap_or(-1).max(-1);
+        let mut h = self.i.h.unwrap_or(-1).max(-1);
+        let mut mw = self.i.legacy_max_width.unwrap_or(-1).max(-1);
+        let mut mh = self.i.legacy_max_height.unwrap_or(-1).max(-1);
 
 
         //Eliminate cases where both a value and a max value are specified: use the smaller value for the width/height

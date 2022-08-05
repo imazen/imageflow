@@ -588,6 +588,36 @@ fn test_watermark_image_small() {
     assert!(matched);
 }
 
+#[test]
+fn test_watermark_image_pixel_margins() {
+    let matched = compare_multiple(Some(vec![
+        IoTestEnum::Url("https://s3-us-west-2.amazonaws.com/imageflow-resources/test_inputs/waterhouse.jpg".to_owned()),
+        IoTestEnum::Url("https://s3-us-west-2.amazonaws.com/imageflow-resources/test_inputs/1_webp_a.sm.png".to_owned())
+    ]), 500,
+                                   "WatermarkPixelMargins", POPULATE_CHECKSUMS, DEBUG_GRAPH, vec![
+            Node::Decode {io_id: 0, commands: None},
+            Node::Constrain(imageflow_types::Constraint{
+                w: Some(800),
+                h: Some(800),
+                hints: None,
+                gravity: None,
+                mode: ConstraintMode::Within,
+                canvas_color: None
+            }),
+            Node::Watermark(imageflow_types::Watermark{
+                io_id: 1,
+                gravity: Some(imageflow_types::ConstraintGravity::Percentage {x: 100f32, y: 100f32}),
+                fit_box: Some(imageflow_types::WatermarkConstraintBox::ImageMargins {left: 700, top: 700, right: 0, bottom: 0}),
+                fit_mode: Some(imageflow_types::WatermarkConstraintMode::Within),
+                min_canvas_width: None,
+                min_canvas_height: None,
+                opacity: Some(0.9f32),
+                hints: None,
+            })
+        ]
+    );
+    assert!(matched);
+}
 
 #[test]
 fn test_watermark_image_on_png() {
@@ -773,6 +803,23 @@ fn test_round_corners_command_string() {
                           }]);
     assert!(matched);
 }
+
+#[test]
+fn test_negatives_in_command_string() {
+    let url = "https://s3-us-west-2.amazonaws.com/imageflow-resources/test_inputs/red-leaf.jpg".to_owned();
+    let title = "test_negatives_in_command_string".to_owned();
+    let matched = compare(Some(IoTestEnum::Url(url)), 500, &title, POPULATE_CHECKSUMS, DEBUG_GRAPH,
+                          vec![Node::CommandString {
+                              kind: CommandStringKind::ImageResizer4,
+                              value: "h=-100&maxwidth=2&mode=crop".to_string(),
+                              decode: Some(0),
+                              encode: None,
+                              watermarks: None
+                          }]);
+    assert!(matched);
+}
+
+
 
 
 #[test]
