@@ -16,7 +16,7 @@ chrono =  "0.4"
 serde = "*"
 serde_json = "*"
 serde_derive = "*"
-rustc-serialize = "*"
+
 
 #lazy static
 lazy_static = "1"
