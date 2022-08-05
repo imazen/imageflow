@@ -12,6 +12,8 @@ members = [
     "c_components",
     "c_components/tests",
 ]
+[patch.crates-io]
+traitobject = { git = 'https://github.com/imazen/traitobject2' }
 
 
 [profile.release]
