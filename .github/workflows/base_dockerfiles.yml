@@ -12,6 +12,8 @@ on:
   schedule:
     # Also build on the first and sixteenth of every month
     - cron: '0 0 1,16 * *'
+  # Allows you to run this workflow manually from the Actions tab
+  workflow_dispatch:
 
 jobs:
   base_os:
@@ -69,9 +71,9 @@ jobs:
         snapshot: true
 
 
-        
+
 #tag_names:true
 #snapshot_ture
 
 
- 
+
