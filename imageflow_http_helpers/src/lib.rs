@@ -9,7 +9,6 @@ use hyper;
 use reqwest::Certificate;
 use ::imageflow_helpers::filesystem::read_file_bytes;
 use std::path::PathBuf;
-use std::io::Read;
 
 #[derive(Debug)]
 pub enum FetchError {
@@ -17,6 +16,7 @@ pub enum FetchError {
     HyperError(hyper::Error),
     IoError(std::io::Error),
     UpstreamResponseError(reqwest::StatusCode),
+    ContentLengthMismatch,
 
     UpstreamResponseErrorWithResponse{ status: reqwest::StatusCode, response: FetchedResponse},
 }
@@ -31,6 +31,7 @@ impl fmt::Display for FetchError {
             FetchError::UpstreamResponseErrorWithResponse {ref status, ..} => {
                 write!(f, "Response status {}", status)
             },
+            FetchError::ContentLengthMismatch => write!(f, "Content-Length value did not match bytes recieved.")
         }
     }
 }
@@ -110,28 +111,35 @@ pub fn fetch(url: &str, config: Option<FetchConfig>) -> std::result::Result<Fetc
     let conf = config.unwrap_or_default();
     let client = conf.build_client();
 
-    let mut res = client.get(url).send()?;
+    let res = client.get(url).send()?;
+    let status = res.status().to_owned();
 
-    let response = if res.status().is_success() || conf.read_error_body.unwrap_or(false) {
-        let mut source_bytes = Vec::new();
-        let _ = res.read_to_end(&mut source_bytes)?;
+    let response = if status.is_success() || conf.read_error_body.unwrap_or(false) {
+
+        let content_length =  res.content_length();
+        let code = status;
+        let content_type = res.headers().get(reqwest::header::CONTENT_TYPE).expect("content type required").clone();
+        let bytes = res.bytes()?.to_vec();
+        if content_length.is_some() && content_length.unwrap() != bytes.len() as u64{
+            return Err(FetchError::ContentLengthMismatch);
+        }
         Some(FetchedResponse {
-            code: res.status(),
-            bytes: source_bytes,
-            content_type: res.headers().get(reqwest::header::CONTENT_TYPE).expect("content type required").clone()
+            code: code,
+            content_type: content_type,
+            bytes: bytes,
         })
     } else {
         None
     };
 
-    if res.status().is_success() && response.is_some(){
+    if status.is_success() && response.is_some(){
         Ok(response.unwrap())
     }else {
-        match (response, res.status()) {
+        match (response, status) {
             (Some(r),
                 _) =>
-                Err(FetchError::UpstreamResponseErrorWithResponse { status: res.status(), response: r }),
-            (None, _) => Err(FetchError::UpstreamResponseError(res.status()))
+                Err(FetchError::UpstreamResponseErrorWithResponse { status: status, response: r }),
+            (None, _) => Err(FetchError::UpstreamResponseError(status))
         }
     }
 }
