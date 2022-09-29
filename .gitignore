@@ -5,6 +5,9 @@
 #Artifacts to upload
 /artifacts/
 
+/_site/
+/docs/_site/
+
 /imageflow_data/
 
 #Test images
@@ -51,8 +54,6 @@ gmon.out
 /imageflow_core/valgrind_suppressions.txt
 /imageflow_types/.valgrindrc
 /imageflow_types/valgrind_suppressions.txt
-/imageflow_server/.valgrindrc
-/imageflow_server/valgrind_suppressions.txt
 /imageflow_tool/.valgrindrc
 /imageflow_tool/valgrind_suppressions.txt
 /imageflow_riapi/.valgrindrc
