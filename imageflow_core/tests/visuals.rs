@@ -171,6 +171,35 @@ fn test_transparent_png_to_jpeg_constrain() {
     );
 }
 
+
+
+
+#[test]
+fn test_branching_crop_whitespace() {
+
+    let preset = EncoderPreset::Lodepng { maximum_deflate: None };
+
+    let s = imageflow_core::clients::fluent::fluently().decode(0);
+    let v1 = s.branch();
+    let v2 = v1.branch().crop_whitespace(200,0f32);
+    let framewise = v1.encode(1,preset.clone()).builder().with(v2.encode(2,preset.clone())).to_framewise();
+
+
+
+    compare_encoded_framewise(
+        Some(IoTestEnum::Url("https://imageflow-resources.s3.us-west-2.amazonaws.com/test_inputs/little_gradient_whitespace.jpg".to_owned())),
+        "test_branching_crop_whitespace_gradient",
+        POPULATE_CHECKSUMS,
+        DEBUG_GRAPH,
+        Constraints {
+            similarity: Similarity::AllowDssimMatch(0.0, 0.002),
+            max_file_size: None
+        },
+        framewise,
+        2
+    );
+}
+
 #[test]
 fn test_matte_transparent_png() {
     compare_encoded(

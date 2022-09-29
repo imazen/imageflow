@@ -310,7 +310,7 @@ impl<T> NodeDefOneInputExpand for MutProtect<T> where T: NodeDef{
     fn expand(&self, ctx: &mut OpCtxMut, ix: NodeIndex, params: NodeParams, parent: FrameInfo) -> Result<()>{
         let mut new_nodes = Vec::with_capacity(2);
         if ctx.has_other_children(ctx.first_parent_input(ix).unwrap(), ix) {
-            new_nodes.push(Node::n(self.node, NodeParams::None));
+            new_nodes.push(Node::n(&CLONE, NodeParams::None));
         }
         new_nodes.push(Node::n(&*self.node, ctx.weight(ix).params.clone()));
         ctx.replace_node(ix, new_nodes);

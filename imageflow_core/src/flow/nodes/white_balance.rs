@@ -4,8 +4,8 @@ use super::internal_prelude::*;
 // http://localhost:39876/ir4/proxy_unsplash/photo-1496264057429-6a331647b69e?w=800
 
 
-    pub static  WHITE_BALANCE_SRGB: WhiteBalanceSrgbMutDef = WhiteBalanceSrgbMutDef{};
-    pub static  WHITE_BALANCE_SRGB_MUTATE: MutProtect<WhiteBalanceSrgbMutDef> = MutProtect{node: &WHITE_BALANCE_SRGB, fqn: "imazen.white_balance_srgb"};
+    pub static  WHITE_BALANCE_SRGB_MUTATE: WhiteBalanceSrgbMutDef = WhiteBalanceSrgbMutDef{};
+    pub static  WHITE_BALANCE_SRGB: MutProtect<WhiteBalanceSrgbMutDef> = MutProtect{node: &WHITE_BALANCE_SRGB_MUTATE, fqn: "imazen.white_balance_srgb"};
 
 
 

@@ -111,7 +111,17 @@ impl IoTestTranslator {
 
 }
 
+
+
+
 pub fn build_steps(context: &mut Context, steps: &[s::Node], io: Vec<IoTestEnum>, security: Option<imageflow_types::ExecutionSecurity>,  debug: bool) -> Result<ResponsePayload, FlowError>{
+
+    build_framewise(context, s::Framewise::Steps(steps.to_vec()), io, security, debug).map_err(|e| e.at(here!()))
+}
+
+
+
+pub fn build_framewise(context: &mut Context, framewise: s::Framewise, io: Vec<IoTestEnum>, security: Option<imageflow_types::ExecutionSecurity>,  debug: bool) -> Result<ResponsePayload, FlowError>{
 
     for (ix, val) in io.into_iter().enumerate() {
         IoTestTranslator{}.add(context, ix as i32, val)?;
@@ -119,7 +129,7 @@ pub fn build_steps(context: &mut Context, steps: &[s::Node], io: Vec<IoTestEnum>
     let build = s::Execute001{
         security,
         graph_recording: default_graph_recording(debug),
-        framewise: s::Framewise::Steps(steps.to_vec())
+        framewise: framewise
     };
     if debug {
         println!("{}", serde_json::to_string_pretty(&build).unwrap());
@@ -759,26 +769,45 @@ pub fn compare_with_context(context: &mut Context, inputs: Option<Vec<IoTestEnum
 ///
 /// The output io_id is 1
 pub fn compare_encoded(input: Option<IoTestEnum>, checksum_name: &str, store_if_missing: bool, debug: bool, require: Constraints, steps: Vec<s::Node>) -> bool {
+    compare_encoded_framewise(input, checksum_name, store_if_missing, debug, require, imageflow_types::Framewise::Steps(steps), 1)
+}
+
+pub fn compare_encoded_framewise(input: Option<IoTestEnum>, checksum_name: &str, store_if_missing: bool, debug: bool, require: Constraints, framewise: imageflow_types::Framewise, output_count: usize) -> bool {
 
     let mut io_vec = Vec::new();
     if let Some(i) = input{
         io_vec.push(i);
     }
-    io_vec.push(IoTestEnum::OutputBuffer);
+    let mut output_ids = Vec::new();
+    for _ in 0..output_count{
+        output_ids.push(io_vec.len() as i32);
+        io_vec.push(IoTestEnum::OutputBuffer);
+    }
+
 
     let mut context = Context::create().unwrap();
 
+    let _ = build_framewise(&mut context, framewise, io_vec, None, debug).unwrap();
 
-    let _ = build_steps(&mut context, &steps, io_vec, None, debug).unwrap();
+    for output_io_id in output_ids{
 
-    let bytes = context.get_output_buffer_slice(1).unwrap();
+        let checksum_sub_name = if output_count > 1{
+            format!("{checksum_name}_output_{output_io_id}")
+        }else{
+            checksum_name.to_owned()
+        };
 
-    let mut ctx = ChecksumCtx::visuals();
-    ctx.create_if_missing = store_if_missing;
+        let bytes = context.get_output_buffer_slice(output_io_id).unwrap();
 
+        let mut ctx = ChecksumCtx::visuals();
+        ctx.create_if_missing = store_if_missing;
+        let result = evaluate_result(&ctx, &checksum_sub_name, ResultKind::Bytes(bytes), require.clone(), true);
+        if !result{
+            return false;
+        }
+    }
+    return true;
 
-
-    evaluate_result(&ctx, checksum_name, ResultKind::Bytes(bytes), require, true)
 }
 
 

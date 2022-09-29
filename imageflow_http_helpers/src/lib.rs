@@ -31,7 +31,7 @@ impl fmt::Display for FetchError {
             FetchError::UpstreamResponseErrorWithResponse {ref status, ..} => {
                 write!(f, "Response status {}", status)
             },
-            FetchError::ContentLengthMismatch => write!(f, "Content-Length value did not match bytes recieved.")
+            FetchError::ContentLengthMismatch => write!(f, "Content-Length value did not match bytes received.")
         }
     }
 }

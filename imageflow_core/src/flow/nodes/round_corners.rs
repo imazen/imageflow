@@ -3,9 +3,9 @@ use super::internal_prelude::*;
 
 pub static ROUND_IMAGE_CORNERS: RoundImageCorners = RoundImageCorners{};
 
-pub static ROUND_IMAGE_CORNERS_SRGB_MUTATE: RoundImageCornersMut = RoundImageCornersMut{};
+pub static ROUND_IMAGE_CORNERS_SRGB: MutProtect<RoundImageCornersMut> = MutProtect{node: &ROUND_IMAGE_CORNERS_SRGB_MUTATE, fqn: "imazen.round_image_corners_srgb"};
 
-//TODO: May need MutProtect to prevent invalid mutation order (also, does MutProtect work right??)
+pub static ROUND_IMAGE_CORNERS_SRGB_MUTATE: RoundImageCornersMut = RoundImageCornersMut{};
 
 #[derive(Debug,Clone)]
 pub struct RoundImageCorners;
@@ -26,7 +26,7 @@ impl NodeDefOneInputExpand for RoundImageCorners{
                 nodes.push(Node::n(&ENABLE_TRANSPARENCY, NodeParams::None));
 
             }
-            nodes.push(Node::n(&ROUND_IMAGE_CORNERS_SRGB_MUTATE,
+            nodes.push(Node::n(&ROUND_IMAGE_CORNERS_SRGB,
                                NodeParams::Json(s::Node::RoundImageCorners { background_color: background_color.to_owned(), radius: *radius })));
 
             ctx.replace_node(ix, nodes);

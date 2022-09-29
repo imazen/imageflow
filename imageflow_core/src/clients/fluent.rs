@@ -143,6 +143,10 @@ impl FluentNode {
         self.to(s::Node::Transpose)
     }
 
+    pub fn crop_whitespace(self, threshold: u32, percent_padding: f32) -> FluentNode {
+        self.to(s::Node::CropWhitespace { threshold: threshold, percent_padding: percent_padding })
+    }
+
     #[cfg_attr(feature = "cargo-clippy", allow(too_many_arguments))]
     pub fn copy_rect_from(self,
                           from: FluentNode,
