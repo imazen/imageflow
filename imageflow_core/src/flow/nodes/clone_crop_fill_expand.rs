@@ -394,12 +394,17 @@ impl NodeDefOneInputExpand for RegionDef {
 pub struct CropMutNodeDef;
 
 impl CropMutNodeDef {
-    fn est_validate(&self, p: &NodeParams, input_est: FrameEstimate) -> Result<FrameEstimate> {
+    fn est_validate(&self, p: &NodeParams, input_est: FrameEstimate, unrotated: bool) -> Result<FrameEstimate> {
         if let NodeParams::Json(s::Node::Crop {  x1,  y1,  x2,  y2 }) = *p {
             if (x1 as i32) < 0 || (y1 as i32) < 0 || x2 <= x1 || y2 <= y1 {
                 Err(nerror!(crate::ErrorKind::InvalidNodeParams, "Invalid coordinates: {},{} {},{} should describe the top-left and bottom-right corners of a rectangle", x1,y1,x2,y2))
             } else if let FrameEstimate::Some(input) = input_est {
-                if x2 > input.w as u32 || y2 > input.h as u32 {
+                let (width_limit, height_limit) = if unrotated{
+                    (input.w.max(input.h), input.w.max(input.h))
+                } else{
+                    (input.w, input.h)
+                };
+                if x2 > width_limit as u32 || y2 > height_limit as u32 {
                     Err(nerror!(crate::ErrorKind::InvalidNodeParams, "Crop coordinates {},{} {},{} invalid for {}x{} bitmap", x1,y1,x2,y2, input.w, input.h))
                 } else {
                     Ok(FrameEstimate::Some(FrameInfo {
@@ -427,13 +432,13 @@ impl NodeDef for CropMutNodeDef{
     }
 
     fn validate_params(&self, p: &NodeParams) -> Result<()> {
-        self.est_validate(p, FrameEstimate::None).map(|_| ()).map_err(|e| e.at(here!()))
+        self.est_validate(p, FrameEstimate::None, false).map(|_| ()).map_err(|e| e.at(here!()))
     }
 
     fn estimate(&self, ctx: &mut OpCtxMut, ix: NodeIndex) -> Result<FrameEstimate> {
         let input_est = ctx.frame_est_from(ix, EdgeKind::Input).map_err(|e| e.at(here!()))?;
         let p = &ctx.weight(ix).params;
-        self.est_validate(p, input_est).map_err(|e| e.at(here!()))
+        self.est_validate(p, input_est, true).map_err(|e| e.at(here!()))
     }
 
     fn can_execute(&self) -> bool { true }
@@ -452,7 +457,7 @@ impl NodeDef for CropMutNodeDef{
 
                 // Validate against actual bitmap
                 let _ = self.est_validate(&ctx.weight(ix).params,
-                                          FrameEstimate::Some(bitmap.frame_info()))
+                                          FrameEstimate::Some(bitmap.frame_info()), true)
                     .map_err(|e| e.at(here!()))?;
 
                 bitmap.crop(x1, y1, x2, y2)

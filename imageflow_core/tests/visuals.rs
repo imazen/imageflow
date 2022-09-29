@@ -235,17 +235,35 @@ fn test_expand_rect(){
 
 #[test]
 fn test_crop(){
-    for _ in 1..100 { //TODO: WTF are we looping 100 times for?
-        let matched = compare(None, 500,
-                              "FillRectAndCrop", POPULATE_CHECKSUMS, DEBUG_GRAPH, vec![
-            Node::CreateCanvas { w: 200, h: 200, format: PixelFormat::Bgra32, color: Color::Srgb(ColorSrgb::Hex("FF5555FF".to_owned())) },
-            Node::FillRect { x1: 0, y1: 0, x2: 10, y2: 100, color: Color::Srgb(ColorSrgb::Hex("0000FFFF".to_owned())) },
-            Node::Crop { x1: 0, y1: 50, x2: 100, y2: 100 }
-            ]
-        );
+let matched = compare(None, 500,
+                            "FillRectAndCrop", POPULATE_CHECKSUMS, DEBUG_GRAPH, vec![
+        Node::CreateCanvas { w: 200, h: 200, format: PixelFormat::Bgra32, color: Color::Srgb(ColorSrgb::Hex("FF5555FF".to_owned())) },
+        Node::FillRect { x1: 0, y1: 0, x2: 10, y2: 100, color: Color::Srgb(ColorSrgb::Hex("0000FFFF".to_owned())) },
+        Node::Crop { x1: 0, y1: 50, x2: 100, y2: 100 }
+        ]
+    );
+    assert!(matched);
+
+}
+
+
+#[test]
+fn test_crop_exif(){
+
+    for ix in 1..9 {
+        let url = format!("https://s3-us-west-2.amazonaws.com/imageflow-resources/test_inputs/orientation/Landscape_{ix}.jpg");
+        let title = format!("test cropping jpeg with exif rotate {ix}");
+        let matched = compare(Some(IoTestEnum::Url(url)), 500, &title, POPULATE_CHECKSUMS, DEBUG_GRAPH,
+                            vec![
+                                Node::Decode { io_id: 0, commands: None },
+                                Node::Crop { x1: 0, y1: 0, x2: 599, y2: 449 },
+                                Node::Constrain(Constraint { mode: ConstraintMode::Within, w: Some(70), h: Some(70), hints: None, gravity: None, canvas_color: None })
+                            ]);
         assert!(matched);
     }
+
 }
+
 
 #[test]
 fn test_off_surface_region(){
