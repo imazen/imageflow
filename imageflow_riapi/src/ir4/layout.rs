@@ -455,28 +455,23 @@ impl Ir4Layout{
         }
 
 
-        // Perform white balance
-        if Some(HistogramThresholdAlgorithm::Area) == self.i.a_balance_white{
-            b.add( s::Node::WhiteBalanceHistogramAreaThresholdSrgb {
-                threshold: None
-            });
-        }
-        // TODO: Decide if we should match ImageResizer order of operations below
+        // We now match ImageResizer order of operations below
         // if (!string.IsNullOrEmpty(alpha) && double.TryParse(alpha, ParseUtils.FloatingPointStyle, NumberFormatInfo.InvariantInfo, out temp)) filters.Add(Alpha((float)temp));
         // if (!string.IsNullOrEmpty(brightness) && double.TryParse(brightness, ParseUtils.FloatingPointStyle, NumberFormatInfo.InvariantInfo, out temp)) filters.Add(Brightness((float)temp));
         // if (!string.IsNullOrEmpty(contrast) && double.TryParse(contrast, ParseUtils.FloatingPointStyle, NumberFormatInfo.InvariantInfo, out temp)) filters.Add(Contrast((float)temp));
         // if (!string.IsNullOrEmpty(saturation) && double.TryParse(saturation, ParseUtils.FloatingPointStyle, NumberFormatInfo.InvariantInfo, out temp)) filters.Add(Saturation((float)temp));
-        //
+        // Last, &a.* operations like &a.balance_white
 
 
-        if let Some(c) = self.i.s_contrast {
-            b.add(s::Node::ColorFilterSrgb(s::ColorFilterSrgb::Contrast(c as f32)));
-        }
+
         if let Some(c) = self.i.s_alpha {
             b.add(s::Node::ColorFilterSrgb(s::ColorFilterSrgb::Alpha(c as f32)));
         }
         if let Some(c) = self.i.s_brightness {
             b.add(s::Node::ColorFilterSrgb(s::ColorFilterSrgb::Brightness(c as f32)));
+        }
+        if let Some(c) = self.i.s_contrast {
+            b.add(s::Node::ColorFilterSrgb(s::ColorFilterSrgb::Contrast(c as f32)));
         }
         if let Some(c) = self.i.s_saturation {
             b.add(s::Node::ColorFilterSrgb(s::ColorFilterSrgb::Saturation(c as f32)));
@@ -493,6 +488,14 @@ impl Ir4Layout{
                 GrayscaleAlgorithm::Bt709 => s::ColorFilterSrgb::GrayscaleBt709,
                 GrayscaleAlgorithm::Ry => s::ColorFilterSrgb::GrayscaleRy
             }));
+        }
+
+
+        // Perform white balance
+        if Some(HistogramThresholdAlgorithm::Area) == self.i.a_balance_white{
+            b.add( s::Node::WhiteBalanceHistogramAreaThresholdSrgb {
+                threshold: None
+            });
         }
 
         if let Some(v) = watermarks{
