@@ -273,7 +273,7 @@ impl Ir4Layout{
                 i.scale = Some(ScaleMode::DownscaleOnly);
             },
             ConstraintMode::FitPad => {
-                i.mode = Some(FitMode::Crop);
+                i.mode = Some(FitMode::Pad);
                 i.scale = Some(ScaleMode::Both);
             },
             ConstraintMode::AspectCrop => {

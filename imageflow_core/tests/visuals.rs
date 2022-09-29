@@ -264,6 +264,22 @@ fn test_crop_exif(){
 
 }
 
+#[test]
+fn test_fit_pad_exif(){
+
+    for ix in 1..9 {
+        let url = format!("https://s3-us-west-2.amazonaws.com/imageflow-resources/test_inputs/orientation/Landscape_{ix}.jpg");
+        let title = format!("test ConstraintMode::FitPad on jpeg with exif rotate {ix}");
+        let matched = compare(Some(IoTestEnum::Url(url)), 500, &title, POPULATE_CHECKSUMS, DEBUG_GRAPH,
+                            vec![
+                                Node::Decode { io_id: 0, commands: None },
+                                Node::Constrain(Constraint { mode: ConstraintMode::FitPad, w: Some(70), h: Some(70), hints: None, gravity: None, canvas_color: None })
+                            ]);
+        assert!(matched);
+    }
+
+}
+
 
 #[test]
 fn test_off_surface_region(){
