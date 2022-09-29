@@ -58,7 +58,7 @@ By default, imageflow_tool prints a JSON response to stdout. You write this to d
 
 ## Using Imageflow.Server for dynamic imaging
 
-NOTE: imageflow_server has been removed as the underlying web framework (iron) is abandoned and no longer secure. For the last few years we have suggested moving to the production-ready [Imageflow.Server product](https://github.com/imazen/imageflow-dotnet-server), which also offers docker deployment (but we suggest your own dockerfile to permit configration)
+NOTE: imageflow_server has been removed as the underlying web framework (iron) is abandoned and no longer secure. For the last few years we have suggested moving to the production-ready [Imageflow.Server product](https://github.com/imazen/imageflow-dotnet-server), which also offers docker deployment (but we suggest your own dockerfile to permit configuration)
 
 Now you can edit images from HTML... and use srcset without headache.
 
