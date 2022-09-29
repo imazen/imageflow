@@ -12,7 +12,7 @@ path = "src/profile.rs"
 
 [dependencies]
 imageflow_c_components = {path = ".."}
-lcms2-sys = "3.1.4"
+lcms2-sys = "4"
 libpng-sys = "1.1.7"
 mozjpeg-sys = "1"
 libz-sys = "1.0.18"
