@@ -1,6 +1,6 @@
 ## imazen/imageflow_base_os
 
-* This image should contain the runtime dependencies needed by imageflow_server and imageflow_tool. 
+* This image should contain the runtime dependencies needed by imageflow_tool. 
 * It should also contain wget, for use in child dockerfiles
 * RUST_BACKTRACE=1
 

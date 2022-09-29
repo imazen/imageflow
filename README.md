@@ -3,7 +3,6 @@
 [![tests](https://github.com/imazen/imageflow/workflows/Test/badge.svg?branch=main)](https://github.com/imazen/imageflow/actions?query=workflow%3ATest)  [![state: release candidate](https://img.shields.io/badge/state-release%E2%80%93candidate-yellow.svg)](#flaws)
 
 [![Docker Pulls](https://img.shields.io/docker/pulls/imazen/imageflow_tool.svg)](https://hub.docker.com/r/imazen/imageflow_tool/)
-[![Docker Pulls](https://img.shields.io/docker/pulls/imazen/imageflow_server_unsecured.svg)](https://hub.docker.com/r/imazen/imageflow_server_unsecured/)
 [![view releases](https://img.shields.io/badge/-download%20binaries%20for%20windows,%20mac,%20or%20linux-green.svg)](https://github.com/imazen/imageflow/releases) [![license: Choose AGPLv3 or Commercial](https://img.shields.io/badge/license-Choose%20AGPLv3%20or%20Commercial-green.svg)](https://imageresizing.net/pricing)
 
 
@@ -57,9 +56,9 @@ By default, imageflow_tool prints a JSON response to stdout. You write this to d
 
 `--debug-package` will create a .zip file to reproduce problematic behavior with both `v1/build` and `v1/querystring`. Please submit bug reports; we try to make it easy.
 
-## Using imageflow_server for dynamic imaging
+## Using Imageflow.Server for dynamic imaging
 
-`imageflow_server start --demo`
+NOTE: imageflow_server has been removed as the underlying web framework (iron) is abandoned and no longer secure. For the last few years we have suggested moving to the production-ready [Imageflow.Server product](https://github.com/imazen/imageflow-dotnet-server), which also offers docker deployment (but we suggest your own dockerfile to permit configration)
 
 Now you can edit images from HTML... and use srcset without headache.
 
@@ -155,7 +154,6 @@ You can also build using `cargo` directly, although this will place binaries in 
     * `cargo test --all` to test Imageflow in debug (slooow) mode
     * `cargo build --package imageflow_abi --release` to compile `libimageflow/imageflow.dll`
     * `cargo build --package imageflow_tool --release` to compile `imageflow_tool(.exe)`
-    * `cargo build --package imageflow_server --release` to compile `imageflow_server(.exe)`
     * `cargo build --all --release` to compile everything in release mode
     * `cargo doc --no-deps --all --release` to generate documentation.
 

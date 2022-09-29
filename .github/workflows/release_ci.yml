@@ -119,7 +119,6 @@ jobs:
       #     (cd imageflow_riapi && cargo count --unsafe-statistics)
       #     (cd imageflow_helpers && cargo count --unsafe-statistics)
       #     (cd imageflow_types && cargo count --unsafe-statistics)
-      #     (cd imageflow_server && cargo count --unsafe-statistics)
       #     (cd c_components/lib && cargo count --unsafe-statistics)
       # - name: Test Release
       #   run: cargo test --all --release
@@ -576,7 +575,6 @@ jobs:
         run: |
           docker login -u "$DOCKER_USERNAME" -p "$DOCKER_PASSWORD"
           ./ci/travis_publish_docker_images.sh docker/imageflow_tool imazen/imageflow_tool
-          ./ci/travis_publish_docker_images.sh docker/imageflow_server_unsecured imazen/imageflow_server_unsecured
         env:
           PUBLISH_DOCKER: True
           DOCKER_USERNAME: ${{secrets.DOCKER_USERNAME}}

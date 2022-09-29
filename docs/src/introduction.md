@@ -2,7 +2,7 @@
 
 * Imageflow can be used as a library (libimageflow or [imageflow-dotnet](https://github.com/imazen/imageflow-dotnet))
 * Imageflow can be used as a command-line tool for scripting ([imageflow_tool](imageflow_tool.md))
-* Imageflow can be used as an HTTP server ([imageflow_server](imageflow_server.md))
+* Imageflow can be used as an HTTP server ([Imageflow.Server](https://github.com/imazen/imageflow-dotnet-server))
 
 All share support for the querystring API ([RIAPI](querystring/introduction.md)). 
 libimageflow, imageflow-dotnet, and imageflow_tool currently support the [JSON API](json/introduction.md).

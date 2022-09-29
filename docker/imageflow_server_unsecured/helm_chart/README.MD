@@ -1,5 +1,8 @@
 # Imageflow Helm Chart
 
+# Obsolete! Use https://github.com/imazen/imageflow-dotnet-server instead
+
+
 This is a heml deployment chart for kubernetes.
 The chart pulls and deploys the image with the configuration options in Values.yaml
 

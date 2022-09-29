@@ -108,7 +108,6 @@ if [[ "$IMAGEFLOW_BUILD_OVERRIDE" == 'codestats' ]]; then
 		(cd imageflow_riapi && cargo count --unsafe-statistics)
 		(cd imageflow_helpers && cargo count --unsafe-statistics)
 		(cd imageflow_types && cargo count --unsafe-statistics)
-		(cd imageflow_server && cargo count --unsafe-statistics)
 		(cd c_components/lib && cargo count --unsafe-statistics)
 	)
 	exit 0
@@ -289,9 +288,6 @@ export TEST_RELEASE="${TEST_RELEASE:-$BUILD_RELEASE}"
 
 # Rebuild final Rust artifacts (not deps)
 export CLEAN_RUST_TARGETS="${CLEAN_RUST_TARGETS:-False}"
-
-# Ignored
-export IMAGEFLOW_SERVER=True
 
 
 # Chooses values for ARTIFACT_UPLOAD_PATH and DOCS_UPLOAD_DIR if they are empty

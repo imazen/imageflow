@@ -1,3 +1,4 @@
+# Obsolete! Use https://github.com/imazen/imageflow-dotnet-server instead
 
 
 

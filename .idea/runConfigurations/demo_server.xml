@@ -1,7 +1,6 @@
 <component name="ProjectRunConfigurationManager">
   <configuration default="false" name="demo server" type="CargoCommandRunConfiguration" factoryName="Cargo Command">
     <option name="channel" value="DEFAULT" />
-    <option name="command" value="run --package imageflow_server -- start --demo" />
     <option name="nocapture" value="true" />
     <option name="backtrace" value="FULL" />
     <option name="workingDirectory" value="file://$PROJECT_DIR$" />

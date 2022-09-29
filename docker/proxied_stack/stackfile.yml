@@ -1,3 +1,6 @@
+# Obsolete! Use https://github.com/imazen/imageflow-dotnet-server instead
+
+
 volume-config:
   image: imazen/nginx_template
   autoredeploy: false

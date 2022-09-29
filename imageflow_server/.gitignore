@@ -1,8 +1,0 @@
-/bin/
-/self_tests/
-/server_tests/
-/server_tests_heavy/
-/imageflow_data/
-/Dockerfile
-/imageflow_tool
-/imageflow_server

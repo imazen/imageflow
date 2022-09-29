@@ -1,5 +1,9 @@
 # Prereq
 
+
+# Obsolete! Use https://github.com/imazen/imageflow-dotnet-server instead
+
+
 1. jq and doctl must be installed. 
 2. `doctl auth init`
 3. Put the right SSH fingerprint in use_key.txt

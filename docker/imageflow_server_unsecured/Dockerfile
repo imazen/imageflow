@@ -1,5 +1,8 @@
 FROM imazen/imageflow_base_os
 
+# Obsolete! Use https://github.com/imazen/imageflow-dotnet-server instead
+
+
 MAINTAINER Lilith River
 
 ARG IMAGEFLOW_DOWNLOAD_URL_TAR_GZ

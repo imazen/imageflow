@@ -1,6 +1,9 @@
 
 ## imageflow_server_unsecured
 
+# Obsolete! Use https://github.com/imazen/imageflow-dotnet-server instead
+
+
 No HTTPS support, no TLS, no NGINX proxy. Just imageflow_server, that's it. Compiled for Sandy Bridge and higher architectures
 
 Starts the demo server by default on port 39876

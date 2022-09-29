@@ -8,7 +8,6 @@ members = [
     "imageflow_abi",
     "imageflow",
     "imageflow_tool",
-    "imageflow_server",
     "c_components",
     "c_components/tests",
 ]
