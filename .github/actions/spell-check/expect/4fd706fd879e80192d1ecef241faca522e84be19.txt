@@ -6,10 +6,8 @@ dotfiles
 Jfif
 jpegs
 mallocs
-ostringstreams
 Pragmas
 Readme
 rustface
 SRCS
-testsuites
 urls
