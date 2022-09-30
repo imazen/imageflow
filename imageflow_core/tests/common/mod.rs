@@ -433,7 +433,7 @@ impl ChecksumCtx{
 
 pub fn decode_image(c: &mut Context, io_id: i32) -> BitmapKey {
     let mut bit = BitmapBgraContainer::empty();
-    let _result = c.execute_1(s::Execute001 {
+    let result = c.execute_1(s::Execute001 {
         graph_recording: None,
         security: None,
         framewise: s::Framewise::Steps(vec![
@@ -443,7 +443,9 @@ pub fn decode_image(c: &mut Context, io_id: i32) -> BitmapKey {
             },
             unsafe { bit.get_node() }
         ])
-    }).unwrap();
+    })
+
+    result.unwrap();
     unsafe{ bit.bitmap_key(c).unwrap() }
 }
 
