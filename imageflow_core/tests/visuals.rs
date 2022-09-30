@@ -780,6 +780,20 @@ fn test_read_gif() {
     assert!(matched);
 }
 
+#[test]
+#[ignore] // gif crate doesn't support files without Trailer: https://github.com/image-rs/image-gif/issues/138
+fn test_read_gif_eof() {
+    let matched = compare(Some(IoTestEnum::Url("https://user-images.githubusercontent.com/657201/139770827-18e25c4e-eb0a-4058-ba48-ddc3849090ee.gif".to_owned())), 500,
+                          "buggy_animated-gif", POPULATE_CHECKSUMS, DEBUG_GRAPH, vec![
+            Node::Decode {io_id: 0, commands: None},
+            Node::Resample2D{ w: 400, h: 300,  hints: Some(ResampleHints::new().with_bi_filter(Filter::Robidoux)) }
+        ]
+    );
+    assert!(matched);
+}
+
+
+
 
 
 #[test]
