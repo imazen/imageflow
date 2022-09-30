@@ -1,0 +1,12 @@
+max_width=120
+use_small_heuristics="Max"
+newline_style="Unix"
+fn_args_layout="Compressed"
+
+# Once these stabilize, they'd be nice
+# indent_style="Visual"
+# fn_single_line=true
+# fn_params_layout="Compressed"
+# comment_width=100
+# overflow_delimited_expr=true
+# imports_granularity="Module"
