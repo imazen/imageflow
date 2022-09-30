@@ -443,7 +443,7 @@ pub fn decode_image(c: &mut Context, io_id: i32) -> BitmapKey {
             },
             unsafe { bit.get_node() }
         ])
-    })
+    });
 
     result.unwrap();
     unsafe{ bit.bitmap_key(c).unwrap() }
