@@ -55,7 +55,7 @@ pub fn bits_format(bits: &[u8], format: &'static str) -> String{
         if from == 0 && until == bits.len() * 8{
             format!("{:01$x}", HexableBytes(bits), padding)
         }else{
-            format!("{:01$x}", bits_select(bits, from, until).expect("Formats may specify up to 57 bits or the entire range, but no range greater than 58 and less than the the whole"), padding)
+            format!("{:01$x}", bits_select(bits, from, until).expect("Formats may specify up to 57 bits or the entire range, but no range greater than 58 and less than the whole"), padding)
         }
     }).into_owned()
 }
