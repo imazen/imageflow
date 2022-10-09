@@ -84,7 +84,7 @@ upstream {{ $host }} {
            server {{ $address.IP }}:{{ $address.Port }};
         {{ end }}
 
-    {{/* If a VIRTUAL_NETWORK is specified use use its IP */}}
+    {{/* If a VIRTUAL_NETWORK is specified use its IP */}}
     {{ else if $value.Env.VIRTUAL_NETWORK }}
         {{ range $i, $network := $value.Networks }}
            {{ if eq $network.Name $value.Env.VIRTUAL_NETWORK }}
