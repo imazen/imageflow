@@ -1,6 +1,6 @@
 name: Build base dockerfiles for test and production
 
-# uses https://github.com/elgohr/Publish-Docker-Github-Action
+# uses https://github.com/elgohr/Publish-Docker-GitHub-Action
 
 on:
   push:
@@ -22,7 +22,7 @@ jobs:
     steps:
     - uses: actions/checkout@v1
     - name: Publish to Docker Repository
-      uses: elgohr/Publish-Docker-Github-Action@master
+      uses: elgohr/Publish-Docker-GitHub-Action@master
       env:
         BASE_OS_SOURCE_COMMIT: $GITHUB_SHA
       with:
@@ -37,7 +37,7 @@ jobs:
     steps:
     - uses: actions/checkout@v1
     - name: Publish to Docker Repository
-      uses: elgohr/Publish-Docker-Github-Action@master
+      uses: elgohr/Publish-Docker-GitHub-Action@master
       with:
         name: imazen/imageflow_build_ubuntu16
         username: ${{ secrets.DOCKER_USERNAME }}
@@ -50,7 +50,7 @@ jobs:
     steps:
     - uses: actions/checkout@v1
     - name: Publish to Docker Repository
-      uses: elgohr/Publish-Docker-Github-Action@master
+      uses: elgohr/Publish-Docker-GitHub-Action@master
       with:
         name: imazen/imageflow_build_ubuntu18
         username: ${{ secrets.DOCKER_USERNAME }}
@@ -62,7 +62,7 @@ jobs:
     steps:
     - uses: actions/checkout@v1
     - name: Publish to Docker Repository
-      uses: elgohr/Publish-Docker-Github-Action@master
+      uses: elgohr/Publish-Docker-GitHub-Action@master
       with:
         name: imazen/imageflow_build_ubuntu18_debug
         username: ${{ secrets.DOCKER_USERNAME }}

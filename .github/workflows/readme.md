@@ -8,4 +8,4 @@
 * DOCKER_USERNAME: Docker hub username
 * DOCKER_PASSWORD: Docker hub password
 * NUGET_UPLOAD_NUGET: true|false, switch for upload to Nuget.org
-* NUGET_UPLOAD_GITHUB: true|false, switch for upload to Github package registry
+* NUGET_UPLOAD_GITHUB: true|false, switch for upload to GitHub package registry

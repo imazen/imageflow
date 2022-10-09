@@ -59,7 +59,7 @@ jobs:
       - uses: FranzDiebold/github-env-vars-action@v1.3.0
 
       ### BUILD CACHE ###
-      # NB: We install gnu-tar because BSD tar is buggy on Github's macos machines. https://github.com/actions/cache/issues/403
+      # NB: We install gnu-tar because BSD tar is buggy on GitHub's macos machines. https://github.com/actions/cache/issues/403
       - name: Install GNU tar (Macos)
         if: ${{contains( matrix.os, 'macos' )}}
         run: |
@@ -211,8 +211,8 @@ jobs:
           CI_SEQUENTIAL_BUILD_NUMBER: ${{github.run_number}}
           CI_BUILD_URL: https://github.com/${{env.GITHUB_REPOSITORY_OWNER}}/${{env.GITHUB_REPOSITORY_NAME}}/actions/runs/${{github.run_id}}
           CI_JOB_URL: https://github.com/${{env.GITHUB_REPOSITORY_OWNER}}/${{env.GITHUB_REPOSITORY_NAME}}/actions/runs/${{github.run_id}}
-          CI_JOB_TITLE: Github ${{github.job_id}} ${{matrix.name}}
-          CI_STRING: Github actions
+          CI_JOB_TITLE: GitHub ${{github.job_id}} ${{matrix.name}}
+          CI_STRING: GitHub actions
           CI_PULL_REQUEST_INFO: ${{github.event_name!='release'}}
           CI_TAG: ${{env.GITHUB_REF_NAME}}
           CI_REPO: ${{env.GITHUB_REPOSITORY_OWNER}}/${{env.GITHUB_REPOSITORY_NAME}}
@@ -340,7 +340,7 @@ jobs:
           REPO_NAME_TOOL: ${{env.GITHUB_REPOSITORY_OWNER}}\/${{env.GITHUB_REPOSITORY_NAME}}
           REPO_NAME_NATIVE: ${{env.GITHUB_REPOSITORY_OWNER}}\/${{env.GITHUB_REPOSITORY_NAME}}
 
-      ### upload to Github release POSIX ###
+      ### upload to GitHub release POSIX ###
       - name: Upload to release (POSIX)
         uses: Shopify/upload-to-release@master
         if: ${{!contains( matrix.os, 'windows' )}}
@@ -380,7 +380,7 @@ jobs:
           destination_dir: 'nuget'
 
       ### Publish to nugets ###
-      - name: Publish nuget(Github)
+      - name: Publish nuget(GitHub)
         run: |
           for f in ./artifacts/nuget/*.nupkg
           do
@@ -447,8 +447,8 @@ jobs:
           CI_SEQUENTIAL_BUILD_NUMBER: ${{github.run_number}}
           CI_BUILD_URL: https://github.com/${{env.GITHUB_REPOSITORY_OWNER}}/${{env.GITHUB_REPOSITORY_NAME}}/actions/runs/${{github.run_id}}
           CI_JOB_URL: https://github.com/${{env.GITHUB_REPOSITORY_OWNER}}/${{env.GITHUB_REPOSITORY_NAME}}/actions/runs/${{github.run_id}}
-          CI_JOB_TITLE: Github ${{github.job_id}}
-          CI_STRING: Github actions
+          CI_JOB_TITLE: GitHub ${{github.job_id}}
+          CI_STRING: GitHub actions
           CI_PULL_REQUEST_INFO: ${{github.event_name!='release'}}
           CI_TAG: ${{env.GITHUB_REF_NAME}}
           CI_REPO: ${{env.GITHUB_REPOSITORY_OWNER}}/${{env.GITHUB_REPOSITORY_NAME}}
@@ -547,7 +547,7 @@ jobs:
           source_dir: ./artifacts/nuget/
           destination_dir: 'nuget'
 
-      - name: Publish nuget(Github)
+      - name: Publish nuget(GitHub)
         run: |
           for f in ./artifacts/nuget/*.nupkg
           do
