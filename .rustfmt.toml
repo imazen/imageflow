@@ -2,6 +2,7 @@ max_width=120
 use_small_heuristics="Max"
 newline_style="Unix"
 fn_args_layout="Compressed"
+group_imports = StdExternalCrate
 
 # Once these stabilize, they'd be nice
 # indent_style="Visual"
