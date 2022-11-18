@@ -78,6 +78,7 @@
   "test_branching_crop_whitespace_gradient_output_1": "01864661ED8AB31EF.png",
   "test_branching_crop_whitespace_gradient_output_2": "0B3D16EB972FE0DBB.png",
   "test_negatives_in_command_string": "0BA85F7DC751DD69E_0726847C75419A20C",
+  "test_problematic_png_lossy": "0E5E63543D35A149D.png",
   "test_rot_90_and_red_dot": "0176FBE641002F3ED_0AE4839D1D9B04C57",
   "test_rot_90_and_red_dot_command_string": "0C790C6600AFBBADA_0AE4839D1D9B04C57",
   "test_round_corners_command_string": "05218274046A5989B_0BF80F0AE71CD9A63",

@@ -89,6 +89,28 @@ fn test_transparent_png_to_png() {
         ]
     );
 }
+#[test]
+fn test_problematic_png_lossy() {
+    compare_encoded(
+        Some(IoTestEnum::Url("https://imageflow-resources.s3.us-west-2.amazonaws.com/test_inputs/png_turns_empty.png".to_owned())),
+        "test_problematic_png_lossy",
+        POPULATE_CHECKSUMS,
+        DEBUG_GRAPH,
+        Constraints {
+            similarity: Similarity::AllowOffByOneBytesCount(100),
+            max_file_size: None
+        },
+        vec![
+            Node::CommandString{
+                kind: CommandStringKind::ImageResizer4,
+                value: "w=1230&h=760&png.quality=75&mode=crop&scale=both".to_owned(),
+                decode: Some(0),
+                encode: Some(1),
+                watermarks: None
+            }
+        ]
+    );
+}
 
 #[test]
 fn test_transparent_png_to_png_rounded_corners() {
