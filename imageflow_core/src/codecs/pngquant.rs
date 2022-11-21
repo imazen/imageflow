@@ -56,6 +56,11 @@ impl Encoder for PngquantEncoder {
         let mut bitmap = bitmaps.try_borrow_mut(bitmap_key)
             .map_err(|e| e.at(here!()))?;
 
+        {
+            let mut bitmap_bgra = unsafe { bitmap.get_window_u8().unwrap().to_bitmap_bgra()? };
+            bitmap_bgra.normalize_alpha().map_err(|e| e.at(here!()))?;
+        }
+
         unsafe {
             let (vec,w,h) = bitmap.get_window_u8()
                 .ok_or_else(|| nerror!(ErrorKind::InvalidBitmapType))?

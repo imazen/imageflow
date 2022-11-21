@@ -92,12 +92,12 @@ fn test_transparent_png_to_png() {
 #[test]
 fn test_problematic_png_lossy() {
     compare_encoded(
-        Some(IoTestEnum::Url("https://imageflow-resources.s3.us-west-2.amazonaws.com/test_inputs/png_turns_empty.png".to_owned())),
+        Some(IoTestEnum::Url("https://imageflow-resources.s3.us-west-2.amazonaws.com/test_inputs/png_turns_empty_2.png".to_owned())),
         "test_problematic_png_lossy",
         POPULATE_CHECKSUMS,
         DEBUG_GRAPH,
         Constraints {
-            similarity: Similarity::AllowOffByOneBytesCount(100),
+            similarity: Similarity::AllowDssimMatch(0.0, 0.002),
             max_file_size: None
         },
         vec![
