@@ -140,7 +140,9 @@ impl Ir4SourceFrameInfo{
 pub struct Ir4Expand{
     pub i: Ir4Command,
     pub source: Ir4SourceFrameInfo,
+    /// The actual, not-pre-shrunk image width. May differ from the bitmap size during IDCT scaling
     pub reference_width: i32,
+    /// The actual, not-pre-shrunk image height. May differ from the bitmap size during IDCT scaling
     pub reference_height: i32,
     pub encode_id: Option<i32>,
     pub watermarks: Option<Vec<imageflow_types::Watermark>>

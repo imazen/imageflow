@@ -9,7 +9,9 @@ use imageflow_types::{ConstraintMode, ConstraintGravity, WatermarkConstraintBox,
 
 pub struct Ir4Layout{
     i: Instructions,
+    /// The actual, not-pre-shrunk image width. May differ from the bitmap size during IDCT scaling
     reference_width: i32,
+    /// The actual, not-pre-shrunk image height. May differ from the bitmap size during IDCT scaling
     reference_height: i32,
     /// source width
     w: i32,
@@ -37,6 +39,11 @@ impl Ir4Layout{
         Ir4Layout{
             i, w, h, reference_width, reference_height
         }
+    }
+
+
+    fn get_preshrink_ratio(&self) ->f64{
+        return f64::from(self.w) / f64::from(self.reference_width)
     }
 
 
@@ -82,12 +89,16 @@ impl Ir4Layout{
         Ok((if w < 1 { None } else { Some(w) }, if h < 1 { None } else { Some(h)}))
     }
 
-    fn get_ideal_target_size(&self, source: AspectRatio) -> sizing::Result<AspectRatio>{
+    fn get_ideal_target_size(&self, source: AspectRatio, preshrink_ratio: f64) -> sizing::Result<AspectRatio>{
 
+        // When no w/h is specified, we should apply zoom relative to the original image dimensions. 
+        let unshrunk_w = (f64::from(source.w) / preshrink_ratio) as i32;
+        let unshrunk_h = (f64::from(source.h) / preshrink_ratio) as i32;
+        
 
         let (w,h) = match self.get_wh_from_all(source)? {
             (Some(w), Some(h)) => (w,h),
-            (None, None) => (source.w, source.h),
+            (None, None) => (unshrunk_w, unshrunk_h),
             (Some(w), None) => (w, source.height_for(w, None)?),
             (None, Some(h)) => (source.width_for(h, None)?,h)
         };
@@ -291,7 +302,7 @@ impl Ir4Layout{
 
         let initial_size = AspectRatio::create(source_w, source_h)?;
 
-        let target = ir_layout.get_ideal_target_size(initial_size)?;
+        let target = ir_layout.get_ideal_target_size(initial_size, ir_layout.get_preshrink_ratio())?;
 
         let constraints = ir_layout.build_constraints();
 
@@ -353,7 +364,7 @@ impl Ir4Layout{
 
         let initial_size = sizing::AspectRatio::create(initial_crop[2] - initial_crop[0], initial_crop[3] - initial_crop[1])?;
 
-        let target = self.get_ideal_target_size(initial_size)?;
+        let target = self.get_ideal_target_size(initial_size, self.get_preshrink_ratio())?;
 
         let constraints = self.build_constraints();
 

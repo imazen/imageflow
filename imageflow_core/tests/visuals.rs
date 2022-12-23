@@ -1069,6 +1069,25 @@ fn test_crop_with_preshrink() {
 }
 
 #[test]
+fn test_zoom_with_preshrink() {
+
+    //Certain dimensions of images would trigger preshrinking and also break zoom calculation
+    let steps = vec![
+        Node::CommandString{
+            kind: CommandStringKind::ImageResizer4,
+            value: "zoom=0.25".to_owned(),
+            decode: Some(0),
+            encode: None,
+            watermarks: None
+        }
+        ];
+    let (w, _h) = get_result_dimensions(&steps, vec![ IoTestEnum::Url("https://imageflow-resources.s3.us-west-2.amazonaws.com/test_inputs/5760_x_4320.jpg".to_owned())], false);
+    assert_eq!(w, 1440);
+
+}
+
+
+#[test]
 fn webp_lossless_alpha_decode_and_scale() {
     let matched = compare(Some(IoTestEnum::Url("https://imageflow-resources.s3-us-west-2.amazonaws.com/test_inputs/1_webp_ll.webp".to_owned())), 500,
                           "webp_lossless_alpha_decode_and_scale", POPULATE_CHECKSUMS, DEBUG_GRAPH, vec![
