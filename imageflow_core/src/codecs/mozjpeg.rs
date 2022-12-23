@@ -33,14 +33,20 @@ pub struct MozjpegEncoder {
     matte: Option<Color>
 }
 
+const DEFAULT_QUALITY:u8 = 75;
+
 impl MozjpegEncoder {
     // Quality is in range 0-100
     pub(crate) fn create(c: &Context, quality: Option<u8>, progressive: Option<bool>, matte: Option<Color>, io: IoProxy) -> Result<Self> {
         if !c.enabled_codecs.encoders.contains(&crate::codecs::NamedEncoders::MozJpegEncoder){
             return Err(nerror!(ErrorKind::CodecDisabledError, "The MozJpeg encoder has been disabled"));
         }
+
         Ok(MozjpegEncoder {
-            io, quality, progressive, matte,
+            io, 
+            quality: Some(u8::min(100,quality.unwrap_or(DEFAULT_QUALITY))), 
+            progressive, 
+            matte,
             optimize_coding: Some(true),
             defaults: Defaults::MozJPEG,
 
@@ -49,7 +55,9 @@ impl MozjpegEncoder {
 
     pub(crate) fn create_classic(c: &Context, quality: Option<u8>, progressive: Option<bool>, optimize_coding: Option<bool>, matte: Option<Color>, io: IoProxy) -> Result<Self> {
         Ok(MozjpegEncoder {
-            io, quality, progressive, matte,
+            io, 
+            quality: Some(u8::min(100,quality.unwrap_or(DEFAULT_QUALITY)))
+            ,progressive, matte,
             optimize_coding,
             defaults: Defaults::LibJPEGv6,
         })
@@ -103,7 +111,9 @@ impl Encoder for MozjpegEncoder {
             cinfo.set_optimize_coding(o);
         }
 
-        let chroma_quality = self.quality.unwrap_or(75) as f32; // Lower values allow blurrier color
+        let chroma_quality = self.quality.unwrap_or(DEFAULT_QUALITY) as f32; // Lower values allow blurrier color
+
+
         let pixels_buffer = unsafe {frame.pixels_buffer()}.ok_or(nerror!(ErrorKind::BitmapPointerNull))?;
         let max_sampling = PixelSize{cb:(2,2), cr:(2,2)}; // Set to 1 to force higher res
         let res = match pixels_buffer {

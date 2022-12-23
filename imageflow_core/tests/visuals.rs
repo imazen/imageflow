@@ -1087,6 +1087,7 @@ fn test_zoom_with_preshrink() {
 }
 
 
+
 #[test]
 fn webp_lossless_alpha_decode_and_scale() {
     let matched = compare(Some(IoTestEnum::Url("https://imageflow-resources.s3-us-west-2.amazonaws.com/test_inputs/1_webp_ll.webp".to_owned())), 500,
@@ -1239,6 +1240,37 @@ fn smoke_test_ignore_invalid_color_profile(){
                steps,
     ).unwrap();
 }
+
+
+#[test]
+fn smoke_test_invalid_params(){
+
+    
+    let tinypng = vec![0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, 0x00, 0x00, 0x00, 0x0D, 0x49, 0x48, 0x44, 0x52, 0x00,
+                       0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x08, 0x06, 0x00, 0x00, 0x00, 0x1F, 0x15, 0xC4, 0x89, 0x00,
+                       0x00, 0x00, 0x0A, 0x49, 0x44, 0x41, 0x54, 0x78, 0x9C, 0x63, 0x00, 0x01, 0x00, 0x00, 0x05, 0x00, 0x01,
+                       0x0D, 0x0A, 0x2D, 0xB4, 0x00, 0x00, 0x00, 0x00, 0x49, 0x45, 0x4E, 0x44, 0xAE, 0x42, 0x60, 0x82 ];
+
+
+    let steps = vec![
+        Node::CommandString{
+            kind: CommandStringKind::ImageResizer4,
+            value: "quality=957".to_owned(),
+            decode: Some(0),
+            encode: Some(1),
+            watermarks: None
+        }
+    ];
+
+    smoke_test(Some(IoTestEnum::ByteArray(tinypng)),
+               Some(IoTestEnum::OutputBuffer),
+               None,
+               DEBUG_GRAPH,
+               steps,
+    ).unwrap();
+}
+
+
 
 #[test]
 fn test_max_encode_dimensions(){
