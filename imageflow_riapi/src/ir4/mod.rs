@@ -3,6 +3,7 @@ use imageflow_types as s;
 
 pub mod parsing;
 mod layout;
+mod srcset;
 
 use crate::sizing;
 use crate::sizing::prelude::*;
