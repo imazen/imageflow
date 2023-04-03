@@ -1,4 +1,5 @@
 # See https://github.com/check-spelling/check-spelling/wiki/Configuration-Examples:-excludes
+^\Qdocker/proxied_stack/config_only_image/true\E$
 (?:^|/)(?i)COPYRIGHT
 (?:^|/)(?i)LICEN[CS]E
 (?:^|/)Cargo\.

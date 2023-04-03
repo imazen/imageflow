@@ -10,6 +10,9 @@
 # hex runs
 \b[0-9a-fA-F]{16,}\b
 
+# base 64 runs
+\b\"[0-9a-zA-Z+/=]{16,}\"\b
+
 # hit-count: 20 file-count: 15
 # tar arguments
 \b(?:\\n|)g?tar(?:\.exe|)(?:(?:\s+--[-a-zA-Z]+|\s+-[a-zA-Z]+|\s[ABGJMOPRSUWZacdfh-pr-xz]+\b)(?:=[^ ]*|))+
