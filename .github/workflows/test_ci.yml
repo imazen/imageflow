@@ -16,8 +16,8 @@ jobs:
       matrix:
         # setup different OS and targets
         include:
-          - name: ubuntu_18_04-x86_64
-            os: ubuntu-18.04
+          - name: ubuntu_20_04-x86_64
+            os: ubuntu-20.04
             TARGET_CPU: x86-64
 
           - name: ubuntu_22_04-x86_64
@@ -36,8 +36,8 @@ jobs:
             os: windows-2019
             TARGET_CPU: x86-64
 
-          - name: ubuntu_18_04-x86_64-haswell
-            os: ubuntu-18.04
+          - name: ubuntu_20_04-x86_64-haswell
+            os: ubuntu-20.04
             TARGET_CPU: haswell
 
           - name: win-x86_64-haswell
