@@ -1,11 +1,9 @@
 
-extern crate hyper_native_tls;
 extern crate imageflow_helpers;
 
 use std;
 use std::fmt;
 use reqwest::blocking;
-use hyper;
 use reqwest::Certificate;
 use ::imageflow_helpers::filesystem::read_file_bytes;
 use std::path::PathBuf;
@@ -13,7 +11,7 @@ use std::path::PathBuf;
 #[derive(Debug)]
 pub enum FetchError {
     ReqwestError(reqwest::Error),
-    HyperError(hyper::Error),
+    //HyperError(hyper::Error),
     IoError(std::io::Error),
     UpstreamResponseError(reqwest::StatusCode),
     ContentLengthMismatch,
@@ -25,7 +23,7 @@ impl fmt::Display for FetchError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match *self {
             FetchError::ReqwestError(ref e) => e.fmt(f),
-            FetchError::HyperError(ref e) => e.fmt(f),
+            //FetchError::HyperError(ref e) => e.fmt(f),
             FetchError::IoError(ref e) => e.fmt(f),
             FetchError::UpstreamResponseError(ref status) |
             FetchError::UpstreamResponseErrorWithResponse {ref status, ..} => {
@@ -162,11 +160,11 @@ impl From<reqwest::Error> for FetchError {
     }
 }
 
-impl From<hyper::Error> for FetchError {
-    fn from(e: hyper::Error) -> FetchError {
-        FetchError::HyperError(e)
-    }
-}
+// impl From<hyper::Error> for FetchError {
+//     fn from(e: hyper::Error) -> FetchError {
+//         FetchError::HyperError(e)
+//     }
+// }
 
 impl From<std::io::Error> for FetchError {
     fn from(e: std::io::Error) -> FetchError {

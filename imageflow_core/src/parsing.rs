@@ -87,9 +87,10 @@ impl IoTranslator {
             }
             s::IoEnum::Base64(b64_string) => {
                 //TODO: test and disable slow methods
-                let bytes = base64::decode(b64_string.as_str())
-                    .map_err(|e| nerror!(ErrorKind::InvalidArgument, "base64: {}", e))?;
-                c.add_copied_input_buffer(io_id, &bytes).map_err(|e| e.at(here!()))
+                use base64::Engine;
+                let decoded_vec = base64::engine::general_purpose::STANDARD.decode(&b64_string)
+                        .map_err(|e| nerror!(ErrorKind::InvalidArgument, "base64: {}", e))?;
+                c.add_copied_input_buffer(io_id, &decoded_vec).map_err(|e| e.at(here!()))
             }
             s::IoEnum::BytesHex(hex_string) => {
                 let bytes = hex::decode(hex_string.as_str()).unwrap();
