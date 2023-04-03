@@ -46,6 +46,7 @@ jobs:
 
     runs-on: ${{matrix.os}}
     steps:
+      - run: rustup show
       - name: Checkout code
         uses: actions/checkout@v3
 
@@ -109,6 +110,7 @@ jobs:
   test_win32:
     runs-on: windows-2019
     steps:
+      - run: rustup show
       - name: Checkout code
         uses: actions/checkout@v3
 
