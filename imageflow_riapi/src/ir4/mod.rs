@@ -271,7 +271,8 @@ impl Ir4Expand{
                 },
                 OutputFormat::Webp if i.webp_lossless == Some(true) => s::EncoderPreset::WebPLossless,
                 OutputFormat::Webp => s::EncoderPreset::WebPLossy {
-                    quality: i.webp_quality.unwrap_or(80f64) as f32
+                    //Fall back to using quality value
+                    quality: i.webp_quality.unwrap_or(i.quality.unwrap_or(80i32).into()) as f32
                 },
             };
             Some(s::Node::Encode { io_id: id, preset: encoder })

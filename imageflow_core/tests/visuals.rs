@@ -1157,6 +1157,29 @@ fn test_transparent_webp_to_webp() {
     );
 }
 
+#[test]
+fn test_webp_to_webp_quality() {
+    // We're verifying that the &quality setting is respected if &webp.quality is missing
+    compare_encoded(
+        Some(IoTestEnum::Url("https://imageflow-resources.s3-us-west-2.amazonaws.com/test_inputs/1_webp_ll.webp".to_owned())),
+        "test_webp_to_webp_quality",
+        POPULATE_CHECKSUMS,
+        DEBUG_GRAPH,
+        Constraints {
+            similarity: Similarity::AllowDssimMatch(0.0, 1.0),
+            max_file_size: Some(2000)
+        },
+        vec![
+            Node::CommandString{
+                kind: CommandStringKind::ImageResizer4,
+                value: "format=webp&width=100&height=100&quality=5".to_owned(),
+                decode: Some(0),
+                encode: Some(1),
+                watermarks: None
+            }
+        ]
+    );
+}
 
 
 #[test]
@@ -1245,7 +1268,7 @@ fn smoke_test_ignore_invalid_color_profile(){
 #[test]
 fn smoke_test_invalid_params(){
 
-    
+
     let tinypng = vec![0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, 0x00, 0x00, 0x00, 0x0D, 0x49, 0x48, 0x44, 0x52, 0x00,
                        0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x08, 0x06, 0x00, 0x00, 0x00, 0x1F, 0x15, 0xC4, 0x89, 0x00,
                        0x00, 0x00, 0x0A, 0x49, 0x44, 0x41, 0x54, 0x78, 0x9C, 0x63, 0x00, 0x01, 0x00, 0x00, 0x05, 0x00, 0x01,
