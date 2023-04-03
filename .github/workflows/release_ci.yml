@@ -58,14 +58,6 @@ jobs:
         uses: actions/checkout@master
       - uses: FranzDiebold/github-env-vars-action@v1.3.0
 
-      ### BUILD CACHE ###
-      # NB: We install gnu-tar because BSD tar is buggy on GitHub's macos machines. https://github.com/actions/cache/issues/403
-      - name: Install GNU tar (Macos)
-        if: ${{contains( matrix.os, 'macos' )}}
-        run: |
-          brew install gnu-tar
-          echo PATH="/usr/local/opt/gnu-tar/libexec/gnubin:$PATH" >> $GITHUB_ENV
-
       - name: Cache cargo
         uses: actions/cache@v3
         with:
