@@ -47,7 +47,7 @@ jobs:
     runs-on: ${{matrix.os}}
     steps:
       - name: Checkout code
-        uses: actions/checkout@master
+        uses: actions/checkout@v3
 
       ### Cargo Cache for Build Artifacts ###
       - name: Cache cargo
@@ -110,7 +110,7 @@ jobs:
     runs-on: windows-2019
     steps:
       - name: Checkout code
-        uses: actions/checkout@master
+        uses: actions/checkout@v3
 
       ### Install Nasm with fallback to S3 ###
       - name: Install nasm
@@ -137,11 +137,9 @@ jobs:
             target
           key: ${{ runner.os }}-windows-test-32-cargo-${{ hashFiles('**/Cargo.lock') }}
       - name: Install latest 32bit target
-        uses: actions-rs/toolchain@v1
+        uses: dtolnay/rust-toolchain@stable
         with:
-          toolchain: stable
-          override: true
-          components: rustfmt, clippy
+          #components: rustfmt, clippy
           target: i686-pc-windows-msvc
 
       ### check and test build ###

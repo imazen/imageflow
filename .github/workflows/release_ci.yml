@@ -47,7 +47,7 @@ jobs:
     runs-on: ${{matrix.os}}
     steps:
       - name: Checkout code
-        uses: actions/checkout@master
+        uses: actions/checkout@v3
       - uses: FranzDiebold/github-env-vars-action@v1.3.0
 
       - name: Cache cargo
@@ -389,7 +389,7 @@ jobs:
     runs-on: windows-2019
     steps:
       - name: Checkout code
-        uses: actions/checkout@master
+        uses: actions/checkout@v3
       - uses: FranzDiebold/github-env-vars-action@v1.3.0
       - name: Install nasm
         run: choco install nasm
@@ -553,7 +553,7 @@ jobs:
     needs: [build, build_win32]
     steps:
       - name: Checkout code
-        uses: actions/checkout@master
+        uses: actions/checkout@v3
       - uses: FranzDiebold/github-env-vars-action@v1.3.0
       - name: Publish To Docker
         run: |
