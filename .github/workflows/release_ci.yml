@@ -47,6 +47,11 @@ jobs:
     runs-on: ${{matrix.os}}
     steps:
       - run: rustup show
+
+      - run: rustup update stable
+        if: ${{contains( matrix.os, 'macos' )}}
+
+
       - name: Checkout code
         uses: actions/checkout@v3
       - uses: FranzDiebold/github-env-vars-action@v1.3.0

@@ -50,6 +50,10 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
 
+      - run: rustup update stable
+        if: ${{contains( matrix.os, 'macos' )}}
+
+
       ### Cargo Cache for Build Artifacts ###
       - name: Cache cargo
         uses: actions/cache@v3
