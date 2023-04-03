@@ -67,7 +67,7 @@ jobs:
           echo PATH="/usr/local/opt/gnu-tar/libexec/gnubin:$PATH" >> $GITHUB_ENV
 
       - name: Cache cargo
-        uses: actions/cache@v2
+        uses: actions/cache@v3
         with:
           path: |
             ~/.cargo/registry
@@ -422,7 +422,7 @@ jobs:
         shell: bash
 
       - name: Cache cargo
-        uses: actions/cache@v2
+        uses: actions/cache@v3
         with:
           path: |
             ~/.cargo/registry

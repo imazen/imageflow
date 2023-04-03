@@ -58,7 +58,7 @@ jobs:
 
       ### Cargo Cache for Build Artifacts ###
       - name: Cache cargo
-        uses: actions/cache@v2
+        uses: actions/cache@v3
         with:
           path: |
             ~/.cargo/registry
@@ -136,7 +136,7 @@ jobs:
 
       ### Cargo cache for Build artifacts ###
       - name: Cache cargo
-        uses: actions/cache@v2
+        uses: actions/cache@v3
         with:
           path: |
             ~/.cargo/registry
