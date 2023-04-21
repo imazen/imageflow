@@ -14,7 +14,7 @@ fi
 # Set INSTALL_BASE to customize install location
 export INSTALL_BASE="${INSTALL_BASE:-/usr/local}"
 
-if [[ ! -e "./libimageflow.${DLL_EXT}" || ! -e "./imageflow_tool"  " ]]; then
+if [[ ! -e "./libimageflow.${DLL_EXT}" || ! -e "./imageflow_tool" ]]; then
     echo Cannot install - libimageflow or imageflow_tool not found
     exit 1;
 fi
