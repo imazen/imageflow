@@ -177,7 +177,7 @@ The [official Dockerfiles](https://github.com/imazen/imageflow/tree/main/docker)
 
 ## Linux Pre-requisites
 
-(tested on Ubuntu 16.04 and 18.04.)
+(tested on Ubuntu 20.04 and 22.04.)
 
 ```bash
 #Install Rust by running
@@ -198,7 +198,7 @@ The [official Dockerfiles](https://github.com/imazen/imageflow/tree/main/docker)
 ## Windows WSL (Ubuntu) Pre-requisites
 
 1. Install Ubuntu from the Windows Store
-2. Run Ubuntu 18.04 and create your username/password
+2. Run Ubuntu 22.04 and create your username/password
 3. `sudo apt-get update` to update available packages.
 4. Install Rust by running
   `curl https://sh.rustup.rs -sSf | sh -s -- -y --default-toolchain stable`
