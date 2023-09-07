@@ -382,7 +382,7 @@ impl MzDec{
     extern "C" fn source_fill_buffer(codec_info: &mut mozjpeg_sys::jpeg_decompress_struct, custom_state: *mut c_void, suspend_io: &mut bool) -> bool{
         let decoder = unsafe{ &mut *(custom_state as *mut MzDec) };
 
-        let mut source_manager = decoder.source_manager.as_deref_mut().unwrap();
+        let source_manager = decoder.source_manager.as_deref_mut().unwrap();
 
 
         let buffer = source_manager.buffer.as_mut();
@@ -419,7 +419,7 @@ impl MzDec{
     extern "C" fn source_skip_bytes(codec_info: &mut mozjpeg_sys::jpeg_decompress_struct, custom_state: *mut c_void, mut byte_count: c_long) -> bool{
         if byte_count > 0 {
             let decoder = unsafe{ &mut *(custom_state as *mut MzDec) };
-            let mut source_manager = decoder.source_manager.as_deref_mut().unwrap();
+            let source_manager = decoder.source_manager.as_deref_mut().unwrap();
 
             while byte_count > source_manager.manager.shared_mgr.bytes_in_buffer as c_long {
                 byte_count -= source_manager.manager.shared_mgr.bytes_in_buffer as c_long;

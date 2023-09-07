@@ -23,7 +23,7 @@ pub fn apply_matte(b: &mut BitmapWindowMut<u8>, matte_color: imageflow_types::Co
     for y in 0..b.h(){
         let mut row = b.row_window(y).unwrap();
 
-        for mut pixel in row.slice_of_pixels_first_row().unwrap().iter_mut(){
+        for pixel in row.slice_of_pixels_first_row().unwrap().iter_mut(){
             let pixel_a = (*pixel).a;
             let pixel_a_f32 = pixel_a as i32 as f32 * alpha_to_float;
             if pixel_a == 0{

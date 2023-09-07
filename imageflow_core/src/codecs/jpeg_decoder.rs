@@ -121,7 +121,7 @@ impl Decoder for JpegDecoder {
                         let to_row: &mut [BGRA8] = std::slice::from_raw_parts_mut(copy_mut.pixels.offset(copy_mut.stride as isize * row as isize) as *mut BGRA8, w as usize);
 
                         let mut x = 0;
-                        for mut pixel in to_row{
+                        for pixel in to_row{
                             pixel.r = pixels[x * 3];
                             pixel.b = pixels[x * 3 + 1];
                             pixel.g = pixels[x * 3 + 2];
@@ -134,7 +134,7 @@ impl Decoder for JpegDecoder {
                         let to_row: &mut [BGRA8] = std::slice::from_raw_parts_mut(copy_mut.pixels.offset(copy_mut.stride as isize * row as isize) as *mut BGRA8, w as usize);
 
                         let mut x = 0;
-                        for mut pixel in to_row{
+                        for pixel in to_row{
                             pixel.r = pixels[x];
                             pixel.b = pixel.r;
                             pixel.g = pixel.r;
