@@ -316,8 +316,8 @@ jobs:
           CI_TAG: ${{github.ref_name}}
           PACKAGE_SUFFIX: ${{matrix.name}}
           NUGET_RUNTIME: ${{matrix.NUGET_RUNTIME}}
-          REPO_NAME_TOOL: ${{github.repository}}
-          REPO_NAME_NATIVE: ${{github.repository}}
+          REPO_NAME_TOOL: ${{env.GITHUB_REPOSITORY_OWNER}}\/${{env.GITHUB_REPOSITORY_NAME}}
+          REPO_NAME_NATIVE: ${{env.GITHUB_REPOSITORY_OWNER}}\/${{env.GITHUB_REPOSITORY_NAME}}
 
       ### create nuget runtime ###
       - name: Nuget(Runtime) to S3
@@ -327,8 +327,8 @@ jobs:
           CI_TAG: ${{github.ref_name}}
           PACKAGE_SUFFIX: ${{matrix.name}}
           NUGET_RUNTIME: ${{matrix.NUGET_RUNTIME}}
-          REPO_NAME_TOOL: ${{ github.repository }}
-          REPO_NAME_NATIVE: ${{ github.repository }}
+          REPO_NAME_TOOL: ${{env.GITHUB_REPOSITORY_OWNER}}\/${{env.GITHUB_REPOSITORY_NAME}}
+          REPO_NAME_NATIVE: ${{env.GITHUB_REPOSITORY_OWNER}}\/${{env.GITHUB_REPOSITORY_NAME}}
 
       ### upload to GitHub release POSIX ###
       - name: Upload to release (POSIX)
