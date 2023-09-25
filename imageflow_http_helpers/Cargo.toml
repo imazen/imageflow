@@ -9,5 +9,5 @@ edition = "2018"
 [dependencies]
 imageflow_helpers = { path = "../imageflow_helpers", version = "*" }
 
-reqwest = { version = "0.11", features = ["blocking"]}
+reqwest = { version = "0.11", default-features = false, features = ["blocking", "rustls-tls"]}
 tokio = { version = "1", features = ["full"] }
