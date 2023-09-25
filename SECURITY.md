@@ -12,4 +12,4 @@ currently being supported with security updates.
 
 ## Reporting a Vulnerability
 
-If you discover a security vulnerability or a bug that may be usable for reducing the performance of Imageflow or Imageflow Server, please email lilith@imazen.io. Please refrain from posting publicly until we have had a chance to verify the issue and issue an update. 
+If you discover a security vulnerability or a bug that may be usable for reducing the performance of Imageflow or Imageflow Server, please email lilith@imazen.io or use the [Report a Vulnerability button on Github](https://github.com/imazen/imageflow/security/advisories?state=Triage). Please refrain from posting anything publicly until we have had a chance to verify the issue and make an update available. 
