@@ -840,6 +840,7 @@ pub enum IoEnum {
     Base64(String),
     #[serde(rename="byte_array")]
     ByteArray(Vec<u8>),
+    // TODO: A PathBuf might be more appropriate
     #[serde(rename="file")]
     Filename(String),
     #[serde(rename="output_buffer")]

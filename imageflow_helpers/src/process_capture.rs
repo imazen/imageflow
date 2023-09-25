@@ -6,7 +6,7 @@ use std::process::{Command, Output};
 pub struct CaptureTo{
     args: Vec<String>,
     executable: PathBuf,
-    basepath: String,
+    basepath: PathBuf,
     include_binary: IncludeBinary
 }
 
@@ -28,7 +28,7 @@ pub enum IncludeBinary{
 
 impl CaptureTo{
 
-    pub fn create(capture_to: &str, bin_location: Option<PathBuf>, args: Vec<String>, include_binary: IncludeBinary) -> CaptureTo{
+    pub fn create(capture_to: &PathBuf, bin_location: Option<PathBuf>, args: Vec<String>, include_binary: IncludeBinary) -> CaptureTo{
         let executable= bin_location.unwrap_or_else(|| std::env::current_exe().expect("For CaptureTo to work, we need to know the binary's location. env::current_exe failed"));
 
         CaptureTo{
@@ -40,7 +40,10 @@ impl CaptureTo{
 
     }
     fn write_bytes(&self, suffix: &str, bytes: &[u8]) -> std::result::Result<(),std::io::Error>{
-        let filename = format!("{}_{}", self.basepath, suffix);
+
+        let mut filename = self.basepath.as_os_str().to_owned();
+        filename.push("_");
+        filename.push(suffix);
         let mut file = BufWriter::new(File::create(&filename)?);
         file.write_all(bytes).and_then(|_| Ok(()))
     }
@@ -50,7 +53,9 @@ impl CaptureTo{
         cmd.args(args).env("RUST_BACKTRACE","1");
         let output = cmd.output()?;
 
-        let filename = format!("{}_{}", self.basepath, suffix);
+        let mut filename = self.basepath.as_os_str().to_owned();
+        filename.push("_");
+        filename.push(suffix);
         let mut file = BufWriter::new(File::create(&filename)?);
 
         let header = format!("{:?} exited with status {:?}\nSTDERR:\n", cmd, output.status);
@@ -103,7 +108,10 @@ impl CaptureTo{
             self.write_bytes("artifact_url.txt", s.as_bytes()).unwrap();
         }else if or_copy{
             //Otherwise copy the binary
-            let target_path = format!("{}_{}", self.basepath, self.executable.as_path().file_name().unwrap().to_str().unwrap());
+            let mut target_path = self.basepath.as_os_str().to_owned();
+            target_path.push("_");
+            target_path.push(self.executable.as_path().file_name().unwrap());
+
             std::fs::copy(&self.executable, &target_path).unwrap();
         }
 

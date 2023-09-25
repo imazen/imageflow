@@ -48,15 +48,16 @@ use super::timeywimey::Utc;
 pub struct ProcOutput {
     exit_code: Option<i32>,
     r: Option<Output>,
-    empty: Vec<u8>
+    empty: Vec<u8>,
+    invocation: String
 }
 
 impl ProcOutput {
-    pub fn from(r: Output) -> ProcOutput {
-        ProcOutput { exit_code: r.status.code(),r: Some(r), empty: Vec::new() }
+    pub fn from(r: Output, invocation: String) -> ProcOutput {
+        ProcOutput { exit_code: r.status.code(),r: Some(r), empty: Vec::new(),invocation }
     }
     pub fn from_code(code: Option<i32>) -> ProcOutput {
-        ProcOutput { r: None, exit_code: code, empty: Vec::new() }
+        ProcOutput { r: None, exit_code: code, empty: Vec::new(), invocation: String::new() }
     }
     //    fn status_code(&self) -> Option<i32> {
     //        match *self {
@@ -134,6 +135,18 @@ impl ProcOutput {
                          self.r,
                             self.stdout_str(),
                          self.stderr_str());
+        self
+    }
+
+    pub fn print_to_err(&self) -> &ProcOutput {
+        eprintln!("{}", self.invocation);
+        eprintln!("Exited with {:?}", self.status_code());
+        eprintln!("===== STDERR =====");
+        eprint!("{}",self.stderr_str());
+        eprintln!("===== STDERR =====");
+        eprintln!("===== STDOUT =====");
+        eprint!("{}",self.stdout_str());
+        eprintln!("===== STDOUT =====");
         self
     }
 }
@@ -249,6 +262,7 @@ impl ProcTestContext {
         let mut cmd = Command::new(exe);
         cmd.args(args_vec.as_slice()).current_dir(dir).env("RUST_BACKTRACE", "1");
 
+        let invocation = format!("{:?}", cmd);
 
         cmd.stderr(Stdio::piped()).stdout(Stdio::piped());
 
@@ -295,7 +309,7 @@ impl ProcTestContext {
             }
         }
 
-        ProcOutput::from(output)
+        ProcOutput::from(output, invocation)
     }
 
 

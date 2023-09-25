@@ -9,7 +9,7 @@ edition = "2018"
 imageflow_core = { path = "../imageflow_core", version = "*" }
 imageflow_types = { path = "../imageflow_types", version = "*" }
 libc = "0.2"
-clap = "3"
+clap = "4"
 time = "0.3"
 threadpool = "1"
 serde = "1"
