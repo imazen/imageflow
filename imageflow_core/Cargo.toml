@@ -25,8 +25,8 @@ blake2-rfc = "0.2"
 
 ## Crate-specific dependencies
 threadpool = "1"
-petgraph = "0.4" #Upgrade to 0.5
-daggy = "0.5" # Upgrade to 0.6
+petgraph = "0.6" #Upgrade to
+daggy = "0.8" # Upgrade to
 
 smallvec = "1"
 itertools = "0.11"

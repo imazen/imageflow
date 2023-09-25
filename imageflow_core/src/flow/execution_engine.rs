@@ -598,7 +598,7 @@ impl<'a> OpCtxMut<'a> {
 
 
 
-use daggy::walker::Walker;
+use petgraph::visit::Walker;
 use crate::flow::definitions::NodeResult::Frame;
 use crate::codecs::NamedEncoders::LodePngEncoder;
 
