@@ -29,7 +29,7 @@ fn find_integral_weights(divisor: &mut u32, contribs: &PixelWeightsSimple) -> Re
                     break;
                 }
 
-                eight[(contribs.left as usize + index)] = f as i8;
+                eight[contribs.left as usize + index] = f as i8;
                 sum += eight[contribs.left as usize + index] as i32;
             }
             if !failed && sum as u32 != *divisor {
