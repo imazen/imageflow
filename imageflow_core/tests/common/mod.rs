@@ -9,7 +9,7 @@ extern crate rgb;
 extern crate itertools;
 extern crate twox_hash;
 extern crate imgref;
-
+use std::marker::PhantomPinned;
 use std::ffi::CString;
 use std::path::Path;
 use imageflow_core::{Context, FlowError, ErrorKind};
@@ -20,6 +20,7 @@ use std::fs::File;
 use std::path::{PathBuf};
 use std::io::Write;
 use std;
+use std::pin::Pin;
 use imageflow_core;
 
 use std::sync::RwLock;
@@ -53,6 +54,29 @@ pub enum IoTestEnum {
     Url(String)
 }
 
+
+pub fn get_url_bytes_with_retry(url: &str) -> Result<Vec<u8>, FlowError> {
+    let mut retry_count = 3;
+    let mut retry_wait = 100;
+    loop {
+        match ::imageflow_http_helpers::fetch_bytes(&url)
+            .map_err(|e| nerror!(ErrorKind::FetchError, "{}: {}", url, e)){
+            Err(e) => {
+                if retry_count > 0{
+                    retry_count -= 1;
+                    std::thread::sleep(Duration::from_millis( retry_wait));
+                    retry_wait *= 5;
+                }else{
+                    return Err(e)
+                }
+            }
+            Ok(bytes) => {
+                return Ok(bytes);
+            }
+        }
+    }
+}
+
 pub struct IoTestTranslator;
 impl IoTestTranslator {
     pub fn add(&self,c: &mut Context,
@@ -78,25 +102,8 @@ impl IoTestTranslator {
             //     c.add_file(io_id, dir, &path )
             // }
             IoTestEnum::Url(url) => {
-                let mut retry_count = 3;
-                let mut retry_wait = 100;
-                loop {
-                    match ::imageflow_http_helpers::fetch_bytes(&url)
-                        .map_err(|e| nerror!(ErrorKind::FetchError, "{}: {}", url, e)){
-                        Err(e) => {
-                            if retry_count > 0{
-                                retry_count -= 1;
-                                std::thread::sleep(Duration::from_millis( retry_wait));
-                                retry_wait *= 5;
-                            }else{
-                                return Err(e)
-                            }
-                        }
-                        Ok(bytes) => {
-                            return c.add_input_vector(io_id, bytes).map_err(|e| e.at(here!()))
-                        }
-                    }
-                }
+                let bytes = get_url_bytes_with_retry(&url).map_err(|e| e.at(here!()))?;
+                c.add_input_vector(io_id, bytes).map_err(|e| e.at(here!()))
             },
 
             IoTestEnum::OutputBuffer  => {
@@ -144,7 +151,7 @@ pub fn build_framewise(context: &mut Context, framewise: s::Framewise, io: Vec<I
 pub fn get_result_dimensions(steps: &[s::Node], io: Vec<IoTestEnum>, debug: bool) -> (u32, u32) {
     let mut bit = BitmapBgraContainer::empty();
     let mut steps = steps.to_vec();
-    steps.push(unsafe { bit.get_node() });
+    steps.push(unsafe { bit.as_mut().get_node() });
 
     let mut context = Context::create().unwrap();
 
@@ -441,7 +448,7 @@ pub fn decode_image(c: &mut Context, io_id: i32) -> BitmapKey {
                 io_id,
                 commands: None
             },
-            unsafe { bit.get_node() }
+            unsafe { bit.as_mut().get_node() }
         ])
     });
 
@@ -457,7 +464,7 @@ pub fn decode_input(c: &mut Context, input: IoTestEnum) -> BitmapKey {
             io_id: 0,
             commands: None
         },
-        unsafe { bit.get_node() }
+        unsafe { bit.as_mut().get_node() }
     ], vec![input], None, false).unwrap();
 
     unsafe { bit.bitmap_key(c).unwrap() }
@@ -749,7 +756,7 @@ pub fn compare_multiple(inputs: Option<Vec<IoTestEnum>>, allowed_off_by_one_byte
 
 pub fn compare_with_context(context: &mut Context, inputs: Option<Vec<IoTestEnum>>, allowed_off_by_one_bytes: usize, checksum_name: &str, store_if_missing: bool, debug: bool, mut steps: Vec<s::Node>) -> bool {
     let mut bit = BitmapBgraContainer::empty();
-    steps.push(unsafe{ bit.get_node()});
+    steps.push(unsafe{ bit.as_mut().get_node()});
 
     let response = build_steps(context, &steps,inputs.unwrap_or(vec![]), None, debug ).unwrap();
 
@@ -835,7 +842,7 @@ pub fn test_with_callback(checksum_name: &str, input: IoTestEnum, callback: fn(&
 
 
         let mut bit = BitmapBgraContainer::empty();
-        steps.push(bit.get_node());
+        steps.push(bit.as_mut().get_node());
 
         let send_execute = imageflow_types::Execute001{
             framewise: imageflow_types::Framewise::Steps(steps),
@@ -870,19 +877,27 @@ pub fn default_graph_recording(debug: bool) -> Option<imageflow_types::Build001G
 /// Simplifies access to raw bitmap data from Imageflow (when using imageflow_types::Node)
 /// Consider this an unmovable type. If you move it, you will corrupt the heap.
 pub struct BitmapBgraContainer{
-    dest_bitmap: BitmapKey
+    dest_bitmap: BitmapKey,
+    _marker: PhantomPinned
 }
 impl BitmapBgraContainer{
-    pub fn empty() -> Self{
-        BitmapBgraContainer{
-            dest_bitmap: BitmapKey::null()
-        }
+    pub fn empty() -> Pin<Box<Self>>{
+        Box::pin(BitmapBgraContainer{
+            dest_bitmap: BitmapKey::null(),
+            _marker: PhantomPinned
+        })
     }
     /// Creates an operation node containing a pointer to self. Do not move self!
-    pub unsafe fn get_node(&mut self) -> s::Node{
-        let ptr_to_key = &mut self.dest_bitmap as *mut BitmapKey;
+    pub unsafe fn get_node(self: Pin<&mut Self>) -> s::Node{
+        let key = unsafe {
+            let this = self.get_unchecked_mut();
+            &mut this.dest_bitmap
+        };
+
+        let ptr_to_key = key as *mut BitmapKey;
         s::Node::FlowBitmapKeyPtr { ptr_to_bitmap_key: ptr_to_key as usize}
     }
+
 
     pub unsafe fn bitmap_key(&self, _c: &Context) -> Option<BitmapKey>{
         if self.dest_bitmap.is_null() {

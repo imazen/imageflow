@@ -13,9 +13,9 @@ pub static PRIMITIVE_DECODER: DecoderPrimitiveDef = DecoderPrimitiveDef{};
 pub struct BitmapKeyDef{}
 
 impl BitmapKeyDef{
-    fn get_key_ptr(&self, p: &NodeParams) -> Result<*mut u64> {
+    fn get_key_ptr(&self, p: &NodeParams) -> Result<*mut BitmapKey> {
         if let NodeParams::Json(s::Node::FlowBitmapKeyPtr { ptr_to_bitmap_key }) = *p {
-            let ptr: *mut u64 = ptr_to_bitmap_key as *mut u64;
+            let ptr: *mut BitmapKey = ptr_to_bitmap_key as *mut BitmapKey;
             if ptr.is_null() {
                 return Err(nerror!(crate::ErrorKind::InvalidNodeParams, "The pointer to the bitmap key is null! Must be a valid reference to a pointer's location."));
             } else {
@@ -45,8 +45,7 @@ impl NodeDef for BitmapKeyDef {
         let key_ptr = self.get_key_ptr(params).map_err(|e| e.at(here!()))?;
 
         //This is the dangerous step, as the pointer may be invalid
-        let key: BitmapKey = KeyData::from_ffi(unsafe { *key_ptr }).into();
-
+        let key: BitmapKey = unsafe { *key_ptr };
 
         let bitmaps = ctx.c.borrow_bitmaps()
             .map_err(|e| e.at(here!()))?;
@@ -78,18 +77,18 @@ impl NodeDef for BitmapKeyDef {
             // Also very dangerous, as invalid data can cause us to write this byte to arbitrary
             // memory
             unsafe {
-                *key_ptr = bitmap_key.data().as_ffi();
+                *key_ptr = bitmap_key;
             }
             Ok(NodeResult::Frame(bitmap_key))
         } else {
-            unsafe {
-                if (*key_ptr) == 0 ||
-                    BitmapKey::from(KeyData::from_ffi(*key_ptr)).is_null(){
-                    return Err(nerror!(crate::ErrorKind::InvalidNodeParams, "When serving as an input node (no parent), FlowBitmapKeyPtr must point to a u64 (BitmapKey in ffi mode)."));
-                }
-                //Ok(NodeResult::Frame(*ptr))
-                Ok(NodeResult::Frame(BitmapKey::null()))
+
+            if key_ptr.is_null() ||
+                unsafe {*key_ptr}.is_null(){
+                return Err(nerror!(crate::ErrorKind::InvalidNodeParams, "When serving as an input node (no parent), FlowBitmapKeyPtr must point to a u64 (BitmapKey in ffi mode)."));
             }
+            //Ok(NodeResult::Frame(*ptr))
+            Ok(NodeResult::Frame(BitmapKey::null()))
+
         }
     }
 }

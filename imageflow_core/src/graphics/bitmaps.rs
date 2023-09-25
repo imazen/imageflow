@@ -33,12 +33,19 @@ impl BitmapsContainer{
     }
 
     pub fn try_borrow_mut(&self, key: BitmapKey) -> Result<RefMut<Bitmap>, FlowError> {
-        self.get(key).ok_or_else(|| nerror!(ErrorKind::BitmapKeyNotFound))?
+        let lookup = self.get(key);
+        if lookup.is_none(){
+            // collect all the slotmap keys
+            let keys = self.map.keys().map(|key| format!("{:?}",key)).collect::<Vec<String>>().join(",");
+            return  Err(nerror!(ErrorKind::BitmapKeyNotFound, "Could not find key {:?} in slotmap {:p} of length {:?} and keys {:?}", key, &self.map, self.map.len(), keys));
+        }
+        lookup.unwrap()
             .try_borrow_mut()
             .map_err(|e| nerror!(ErrorKind::FailedBorrow))
     }
 
     pub fn free(&mut self, key: BitmapKey) -> bool {
+        // eprintln!("Freeing {:?} from slotmap {:p}", key, &self.map);
         self.map.remove(key).is_some()
     }
 
@@ -49,7 +56,9 @@ impl BitmapsContainer{
                             alpha_premultiplied: bool,
                             alpha_meaningful: bool,
                             color_space: ColorSpace) -> Result<BitmapKey, FlowError>{
-        Ok(self.map.insert(RefCell::new(Bitmap::create_float(w,h,pixel_layout, alpha_premultiplied, alpha_meaningful, color_space)?)))
+        let key = self.map.insert(RefCell::new(Bitmap::create_float(w,h,pixel_layout, alpha_premultiplied, alpha_meaningful, color_space)?));
+        // eprintln!("Creating bitmap {:?} in slotmap {:p}", key, &self.map);
+        Ok(key)
     }
 
     pub fn create_bitmap_u8(&mut self,
@@ -60,7 +69,9 @@ impl BitmapsContainer{
                              alpha_meaningful: bool,
                              color_space: ColorSpace,
                              compose: BitmapCompositing) -> Result<BitmapKey, FlowError>{
-        Ok(self.map.insert(RefCell::new(Bitmap::create_u8(w,h,pixel_layout, alpha_premultiplied, alpha_meaningful, color_space, compose)?)))
+        let key = self.map.insert(RefCell::new(Bitmap::create_u8(w,h,pixel_layout, alpha_premultiplied, alpha_meaningful, color_space, compose)?));
+        // eprintln!("Creating bitmap {:?} in slotmap {:p}", key, &self.map);
+        Ok(key)
     }
 }
 
@@ -80,6 +91,9 @@ fn crop_bitmap(){
     window.slice()[0] = 3f32;
 
     bitmap.set_alpha_meaningful(false);
+
+    let _ = c.get(b1).unwrap();
+    let _ = c.get(b2).unwrap();
 
 }
 
