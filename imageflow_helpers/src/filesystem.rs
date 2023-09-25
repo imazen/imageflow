@@ -9,7 +9,7 @@ pub fn read_file_bytes<P: AsRef<Path>>(path: P) -> std::io::Result<Vec<u8>>{
     Ok(data)
 }
 
-pub fn zip_directory_nonrecursive<P: AsRef<Path>>(dir: P, archive_name: P) -> zip::result::ZipResult<()> {
+pub fn zip_directory_non_recursive<P: AsRef<Path>>(dir: P, archive_name: P) -> zip::result::ZipResult<()> {
     let mut zip = zip::ZipWriter::new(File::create(archive_name.as_ref()).unwrap());
 
     let options = zip::write::FileOptions::default().compression_method(zip::CompressionMethod::Stored);

@@ -6,7 +6,7 @@ use std::process::{Command, Output};
 pub struct CaptureTo{
     args: Vec<String>,
     executable: PathBuf,
-    basepath: PathBuf,
+    base_path: PathBuf,
     include_binary: IncludeBinary
 }
 
@@ -34,14 +34,14 @@ impl CaptureTo{
         CaptureTo{
             args: args,
             executable: executable,
-            basepath: capture_to.to_owned(),
+            base_path: capture_to.to_owned(),
             include_binary: include_binary
         }
 
     }
     fn write_bytes(&self, suffix: &str, bytes: &[u8]) -> std::result::Result<(),std::io::Error>{
 
-        let mut filename = self.basepath.as_os_str().to_owned();
+        let mut filename = self.base_path.as_os_str().to_owned();
         filename.push("_");
         filename.push(suffix);
         let mut file = BufWriter::new(File::create(&filename)?);
@@ -53,7 +53,7 @@ impl CaptureTo{
         cmd.args(args).env("RUST_BACKTRACE","1");
         let output = cmd.output()?;
 
-        let mut filename = self.basepath.as_os_str().to_owned();
+        let mut filename = self.base_path.as_os_str().to_owned();
         filename.push("_");
         filename.push(suffix);
         let mut file = BufWriter::new(File::create(&filename)?);
@@ -108,7 +108,7 @@ impl CaptureTo{
             self.write_bytes("artifact_url.txt", s.as_bytes()).unwrap();
         }else if or_copy{
             //Otherwise copy the binary
-            let mut target_path = self.basepath.as_os_str().to_owned();
+            let mut target_path = self.base_path.as_os_str().to_owned();
             target_path.push("_");
             target_path.push(self.executable.as_path().file_name().unwrap());
 

@@ -1,1 +1,1 @@
-64-bit macOS 10.11 or higher
+64-bit macOS 11 or higher

@@ -181,15 +181,15 @@ pub fn main_with_exit_code() -> i32 {
             builder.write_errors_maybe().unwrap();
             let dir = Path::new(&dir_str);
             builder.bundle_to(dir);
-            let curdir = std::env::current_dir().unwrap();
+            let current_dir = std::env::current_dir().unwrap();
             std::env::set_current_dir(&dir).unwrap();
             let cap = hlp::process_capture::CaptureTo::create(&OsStr::new("recipe").to_owned().into(), None, vec![subcommand_name.to_owned(), "--json".to_owned(), "recipe.json".to_owned()], artifact_source());
             cap.run();
             //Restore current directory
-            std::env::set_current_dir(&curdir).unwrap();
+            std::env::set_current_dir(&current_dir).unwrap();
             let mut archive_name = dir_str.as_os_str().to_owned();
             archive_name.push(".zip");
-            hlp::filesystem::zip_directory_nonrecursive(&dir,&Path::new(&archive_name)).unwrap();
+            hlp::filesystem::zip_directory_non_recursive(&dir,&Path::new(&archive_name)).unwrap();
             return cap.exit_code();
         } else if let Some(dir) = m.get_one::<PathBuf>("bundle-to").map(|v| v.to_owned()) {
                 builder.write_errors_maybe().unwrap();
