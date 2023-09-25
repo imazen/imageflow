@@ -24,12 +24,8 @@ jobs:
             os: ubuntu-22.04
             TARGET_CPU: x86-64
 
-          # - name: osx_11_0-x86_64
-          #   os: macos-11.0
-          #   TARGET_CPU: x86-64
-
-          - name: osx_10_11-x86_64
-            os: macos-10.15
+          - name: osx_11-x86_64
+            os: macos-11
             TARGET_CPU: nehalem
 
           - name: win-x86_64
