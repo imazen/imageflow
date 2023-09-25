@@ -1,5 +1,12 @@
 
 
+
+
+
+
+
+
+
 typedef enum imageflow_lifetime {
   imageflow_lifetime_lifetime_outlives_function_call = 0,
   imageflow_lifetime_lifetime_outlives_context = 1,
@@ -15,7 +22,7 @@ bool imageflow_context_add_input_buffer(void *context,
                                         int32_t io_id,
                                         const uint8_t *buffer,
                                         size_t buffer_byte_count,
-                                        imageflow_lifetime lifetime);
+                                        enum imageflow_lifetime lifetime);
 
 bool imageflow_context_add_output_buffer(void *context, int32_t io_id);
 

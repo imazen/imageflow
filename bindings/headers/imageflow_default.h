@@ -60,7 +60,7 @@ bool imageflow_context_add_input_buffer(struct imageflow_context *context,
                                         int32_t io_id,
                                         const uint8_t *buffer,
                                         size_t buffer_byte_count,
-                                        imageflow_lifetime lifetime);
+                                        enum imageflow_lifetime lifetime);
 
 //
 // Adds an output buffer to the job context.
