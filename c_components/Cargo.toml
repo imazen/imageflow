@@ -24,7 +24,7 @@ profiling = []
 shared = []
 
 [dependencies]
-mozjpeg-sys = {version = "1", features = ["nasm_simd"]}
+mozjpeg-sys = {version = "2", features = ["nasm_simd"]}
 libc = "0.2.*"
 # For build info see
 
