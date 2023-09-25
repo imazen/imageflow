@@ -68,6 +68,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "anstyle"
+version = "1.0.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b84bf0a05bbb2a83e5eb6fa36bb6e87baa08193c35ff52bbf6b38d8af2890e46"
+
+[[package]]
 name = "arrayvec"
 version = "0.4.12"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -123,12 +129,6 @@ dependencies = [
  "object",
  "rustc-demangle",
 ]
-
-[[package]]
-name = "base64"
-version = "0.13.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9e1b586273c5702936fe7b7d6896644d8be71e6314cfe09d3167c95f712589e8"
 
 [[package]]
 name = "base64"
@@ -319,11 +319,30 @@ checksum = "4ea181bf566f71cb9a5d17a59e1871af638180a18fb0035c92ae62b705207123"
 dependencies = [
  "atty",
  "bitflags 1.3.2",
- "clap_lex",
+ "clap_lex 0.2.4",
  "indexmap",
  "strsim 0.10.0",
  "termcolor",
  "textwrap 0.16.0",
+]
+
+[[package]]
+name = "clap"
+version = "4.4.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b1d7b8d5ec32af0fadc644bf1fd509a688c2103b185644bb1e29d164e0703136"
+dependencies = [
+ "clap_builder",
+]
+
+[[package]]
+name = "clap_builder"
+version = "4.4.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "5179bb514e4d7c2051749d8fcefa2ed6d06a9f4e6d69faf3805f5d80b8cf8d56"
+dependencies = [
+ "anstyle",
+ "clap_lex 0.5.1",
 ]
 
 [[package]]
@@ -334,6 +353,12 @@ checksum = "2850f2f5a82cbf437dd5af4d49848fbdfc27c157c3d010345776f952765261c5"
 dependencies = [
  "os_str_bytes",
 ]
+
+[[package]]
+name = "clap_lex"
+version = "0.5.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "cd7cc57abe963c6d3b9d8be5b06ba7c8957a930305ca90304f24ef040aa6f961"
 
 [[package]]
 name = "color_quant"
@@ -384,19 +409,19 @@ dependencies = [
 
 [[package]]
 name = "criterion"
-version = "0.4.0"
+version = "0.5.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e7c76e09c1aae2bc52b3d2f29e13c6572553b30c4aa1b8a49fd70de6412654cb"
+checksum = "f2b12d017a929603d80db1831cd3a24082f8137ce19c69e6447f54f5fc8d692f"
 dependencies = [
  "anes",
- "atty",
  "cast",
  "ciborium",
- "clap 3.2.25",
+ "clap 4.4.4",
  "criterion-plot",
+ "is-terminal",
  "itertools 0.10.5",
- "lazy_static",
  "num-traits",
+ "once_cell",
  "oorandom",
  "plotters",
  "rayon",
@@ -587,9 +612,9 @@ dependencies = [
 
 [[package]]
 name = "fastrand"
-version = "2.0.0"
+version = "2.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6999dc1837253364c2ebb0704ba97994bd874e8f195d665c50b7548f6ea92764"
+checksum = "25cbce373ec4653f1a01a31e8a5e5ec0c622dc27ff9c4e6606eefef5cbbed4a5"
 
 [[package]]
 name = "fixedbitset"
@@ -993,7 +1018,7 @@ name = "imageflow_abi"
 version = "0.1.0"
 dependencies = [
  "backtrace",
- "base64 0.21.4",
+ "base64",
  "cbindgen",
  "imageflow_core",
  "imageflow_helpers",
@@ -1019,7 +1044,7 @@ dependencies = [
 name = "imageflow_core"
 version = "0.1.0"
 dependencies = [
- "base64 0.21.4",
+ "base64",
  "blake2-rfc",
  "byteorder",
  "chashmap",
@@ -1041,10 +1066,10 @@ dependencies = [
  "imageflow_types",
  "imagequant",
  "imgref",
- "itertools 0.10.5",
+ "itertools 0.11.0",
  "jpeg-decoder",
  "lazy_static",
- "lcms2 5.6.0",
+ "lcms2",
  "lcms2-sys",
  "libc",
  "libpng-sys",
@@ -1074,7 +1099,7 @@ name = "imageflow_helpers"
 version = "0.1.0"
 dependencies = [
  "backtrace",
- "base64 0.13.1",
+ "base64",
  "blake2-rfc",
  "chrono",
  "digest",
@@ -1260,16 +1285,6 @@ checksum = "e2abad23fbc42b3700f2f279844dc832adb2b2eb069b2df918f455c4e18cc646"
 
 [[package]]
 name = "lcms2"
-version = "5.6.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b9d50a4d00d909da0ec023ab34ea09bf3b3b79b5a36b3e0da3a305112edaf150"
-dependencies = [
- "foreign-types",
- "lcms2-sys",
-]
-
-[[package]]
-name = "lcms2"
 version = "6.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "897a7716b253bb5c58ac17a1a74ddda694f57fcf1c8a65799087783592c71092"
@@ -1347,7 +1362,7 @@ dependencies = [
  "bytemuck",
  "imgref",
  "jpeg-decoder",
- "lcms2 6.0.0",
+ "lcms2",
  "lodepng",
  "quick-error",
  "rexif",
@@ -1456,9 +1471,9 @@ dependencies = [
 
 [[package]]
 name = "mozjpeg"
-version = "0.9.8"
+version = "0.10.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e8a807fbca64e7df4847726d172f459fb13e65cbf5e23b01f27408581d58258f"
+checksum = "e74f902ad8aa988bd3f3b7b42510899733d638c20ff5739becbf0999d67afb30"
 dependencies = [
  "arrayvec 0.7.4",
  "libc",
@@ -1468,9 +1483,9 @@ dependencies = [
 
 [[package]]
 name = "mozjpeg-sys"
-version = "1.1.1"
+version = "2.0.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "74c4fe4006093b2948ccb37bb413b6b9da2d654a9a50419b5861b0f4e8ad4da9"
+checksum = "808feab72499ffd6c267a6fd06bd07e37bef14650c328a5c64636fecfa113eff"
 dependencies = [
  "cc",
  "dunce",
@@ -1941,7 +1956,7 @@ version = "0.11.20"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "3e9ad3fe7488d7e34558a2033d45a0c90b72d97b4f80705666fea71472e2e6a1"
 dependencies = [
- "base64 0.21.4",
+ "base64",
  "bytes",
  "encoding_rs",
  "futures-core",
@@ -2054,7 +2069,7 @@ version = "1.0.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "2d3987094b1d07b653b7dfdc3f70ce9a1da9c51ac18c1b06b662e4f9a0e9f4b2"
 dependencies = [
- "base64 0.21.4",
+ "base64",
 ]
 
 [[package]]

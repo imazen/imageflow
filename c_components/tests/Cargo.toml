@@ -14,7 +14,7 @@ path = "src/profile.rs"
 imageflow_c_components = {path = ".."}
 lcms2-sys = "4"
 libpng-sys = "1.1.7"
-mozjpeg-sys = "1"
+mozjpeg-sys = "2"
 libz-sys = "1.0.18"
 
 

@@ -37,7 +37,7 @@ regex = { version = "1" } #, features = ["pattern"]
 rand = "*"
 rgb = "0.8"
 
-base64 = "0.13"
+base64 = "0.21"
 
 zip = { version = "0.6", default-features = false }
 

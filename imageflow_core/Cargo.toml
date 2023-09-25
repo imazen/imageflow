@@ -29,7 +29,7 @@ petgraph = "0.4" #Upgrade to 0.5
 daggy = "0.5" # Upgrade to 0.6
 
 smallvec = "1"
-itertools = "0.10"
+itertools = "0.11"
 imgref = "1.4.1"
 slotmap = "1"
 base64 = "0.21.0"
@@ -44,7 +44,7 @@ libz-sys = { version="1", features = ["static"] }
 
 jpeg-decoder ="0.3.0"
 
-lcms2 = "5"
+lcms2 = "6"
 lcms2-sys = "4"
 chashmap = "2.2"
 
@@ -59,9 +59,9 @@ imageflow_types = { path = "../imageflow_types", version = "*" }
 imageflow_helpers = { path = "../imageflow_helpers", version = "*" }
 imageflow_riapi = { path = "../imageflow_riapi", version = "*" }
 imageflow_c_components = { path = "../c_components" }
-mozjpeg = "0.9"
+mozjpeg = "0.10"
 
-mozjpeg-sys = {version = "1", features = ["nasm_simd"]}
+mozjpeg-sys = {version = "2", features = ["nasm_simd"]}
 
 evalchroma = "1"
 
@@ -72,8 +72,8 @@ libpng-sys = { version = "1.1.8", features = ["static", "static-libz", "libz-sys
 [dev-dependencies]
 hyper = "0.14"
 imageflow_http_helpers = { path = "../imageflow_http_helpers", version = "*" }
-dssim = "3.2.0"
-criterion = "0.4"
+dssim = "3.2"
+criterion = "0.5"
 
 [features]
 default = []

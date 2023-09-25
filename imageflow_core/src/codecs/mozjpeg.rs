@@ -132,21 +132,22 @@ impl Encoder for MozjpegEncoder {
             c.v_samp_factor = (max_sampling_v / v).into();
         }
 
-        cinfo.set_mem_dest();
-        cinfo.start_compress();
+        let mut compressor = cinfo.start_compress(&mut self.io)
+            .map_err(|io_error| nerror!(ErrorKind::EncodingIoError, "{:?}", io_error))?;
+
+
         let pixels_slice = unsafe {frame.pixels_slice()}.ok_or(nerror!(ErrorKind::BitmapPointerNull))?;
         if frame.width() == frame.stride() {
-            cinfo.write_scanlines(pixels_slice);
+            compressor.write_scanlines(pixels_slice)
+                .map_err(|io_error| nerror!(ErrorKind::EncodingIoError, "{:?}", io_error))?;
         } else {
             let width_bytes = frame.width() * frame.fmt.bytes();
             for row in pixels_slice.chunks(frame.stride()) {
-                cinfo.write_scanlines(&row[0..width_bytes]);
+                compressor.write_scanlines(&row[0..width_bytes])
+                    .map_err(|io_error| nerror!(ErrorKind::EncodingIoError, "{:?}", io_error))?;
             }
         }
-        cinfo.finish_compress();
-        let data = cinfo.data_as_mut_slice()
-            .map_err(|_| nerror!(ErrorKind::MozjpegEncodingError, "Internal error"))?;
-        self.io.write_all(data).map_err(|e| FlowError::from_encoder(e))?;
+        compressor.finish().map_err(|io_error| nerror!(ErrorKind::EncodingIoError, "{:?}", io_error))?;
 
         Ok(EncodeResult {
             w: frame.w as i32,
