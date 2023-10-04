@@ -424,7 +424,7 @@ impl Instructions{
         i.cropyunits = p.parse_f64("cropyunits");
         i.quality = p.parse_i32("quality").or_else(||p.parse_i32("jpeg.quality"));
         i.zoom = p.parse_f64("zoom").or_else(|| p.parse_f64("dpr"));
-        i.bgcolor_srgb = p.parse_color_srgb("bgcolor").or_else(||p.parse_color_srgb("bgcolor"));
+        i.bgcolor_srgb = p.parse_color_srgb("bgcolor");
         i.jpeg_subsampling = p.parse_subsampling("subsampling");
 
         i.webp_quality = p.parse_f64("webp.quality");
@@ -1098,6 +1098,7 @@ fn test_url_parsing() {
     t("s.grayscale=Y",  Instructions{s_grayscale: Some(GrayscaleAlgorithm::Y), ..Default::default()}, vec![]);
     t("s.grayscale=Bt709",  Instructions{s_grayscale: Some(GrayscaleAlgorithm::Bt709), ..Default::default()}, vec![]);
 
+    t("bgcolor=é", Default::default(), vec![ParseWarning::ValueInvalid(("bgcolor".into(), "é".into())), ParseWarning::KeyNotSupported(("bgcolor".into(), "é".into()))]);
     t("bgcolor=red", Instructions { bgcolor_srgb: Some(Color32(0xffff0000)), ..Default::default() }, vec![]);
     t("bgcolor=f00", Instructions { bgcolor_srgb: Some(Color32(0xffff0000)), ..Default::default() }, vec![]);
     t("bgcolor=f00f", Instructions { bgcolor_srgb: Some(Color32(0xffff0000)), ..Default::default() }, vec![]);

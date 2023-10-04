@@ -28,6 +28,9 @@ fn parse_rgba_slices(r: &str, g: &str, b: &str, a :&str) -> Result<Color32,std::
 ///
 /// Parses #RRGGBBAA #RRGGBB #RGB #RGBA - with and without leading #, case insensitive
 pub fn parse_color_hex(value: &str) -> std::result::Result<Color32, ParseColorError> {
+    if ! value.is_ascii() {
+        return Err(ParseColorError::FormatIncorrect("CSS colors must be in ASCII only"));
+    }
     let value = match &value[0..1] {
         "#" => &value[1..],
         _ => value
