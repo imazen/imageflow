@@ -119,14 +119,13 @@ pub unsafe fn flow_bitmap_bgra_transpose(
     while x < (*to).w {
         let mut y: u32 = 0 as i32 as u32;
         while y < (*to).h {
-            *(&mut *(*to).pixels.offset(
+            *((*to).pixels.offset(
                 x.wrapping_mul(4u32)
                     .wrapping_add(y.wrapping_mul((*to).stride)) as isize,
-            ) as *mut libc::c_uchar as *mut u32) = *(&mut *(*from).pixels.offset(
+            ) as *mut u32) = *((*from).pixels.offset(
                 x.wrapping_mul((*from).stride)
                     .wrapping_add(y.wrapping_mul(4u32)) as isize,
-            ) as *mut libc::c_uchar
-                as *mut u32);
+            ) as *mut u32);
             y = y.wrapping_add(1)
         }
         x = x.wrapping_add(1)
@@ -135,14 +134,13 @@ pub unsafe fn flow_bitmap_bgra_transpose(
     while x_0 < cropped_h as u32 {
         let mut y_0: u32 = cropped_w as u32;
         while y_0 < (*to).h {
-            *(&mut *(*to).pixels.offset(
+            *((*to).pixels.offset(
                 x_0.wrapping_mul(4u32)
                     .wrapping_add(y_0.wrapping_mul((*to).stride)) as isize,
-            ) as *mut libc::c_uchar as *mut u32) = *(&mut *(*from).pixels.offset(
+            ) as *mut u32) = *((*from).pixels.offset(
                 x_0.wrapping_mul((*from).stride)
                     .wrapping_add(y_0.wrapping_mul(4u32)) as isize,
-            ) as *mut libc::c_uchar
-                as *mut u32);
+            ) as *mut u32);
             y_0 = y_0.wrapping_add(1)
         }
         x_0 = x_0.wrapping_add(1)
@@ -164,14 +162,13 @@ unsafe fn flow_bitmap_bgra_transpose_slow(
         while x < (*to).w {
             let mut y: u32 = 0 as i32 as u32;
             while y < (*to).h {
-                *(&mut *(*to).pixels.offset(
+                *((*to).pixels.offset(
                     x.wrapping_mul(4u32)
                         .wrapping_add(y.wrapping_mul((*to).stride)) as isize,
-                ) as *mut libc::c_uchar as *mut u32) = *(&mut *(*from).pixels.offset(
+                ) as *mut u32) = *((*from).pixels.offset(
                     x.wrapping_mul((*from).stride)
                         .wrapping_add(y.wrapping_mul(4u32)) as isize,
-                ) as *mut libc::c_uchar
-                    as *mut u32);
+                ) as *mut u32);
                 y = y.wrapping_add(1)
             }
             x = x.wrapping_add(1)
