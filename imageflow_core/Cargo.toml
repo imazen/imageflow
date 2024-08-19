@@ -29,12 +29,12 @@ petgraph = "0.6" #Upgrade to
 daggy = "0.8" # Upgrade to
 
 smallvec = "1"
-itertools = "0.11"
+itertools = "0.13"
 imgref = "1.4.1"
 slotmap = "1"
-base64 = "0.21.0"
+base64 = "0.22"
 hex = "0.4"
-gif = "0.12"
+gif = "0.13.1"
 rgb = { version = "0.8", features = ["argb"] }
 imagequant = "4"
 lodepng = "3"
@@ -70,7 +70,7 @@ evalchroma = "1"
 libpng-sys = { version = "1.1.8", features = ["static", "static-libz", "libz-sys"] }
 
 [dev-dependencies]
-hyper = "0.14"
+hyper = "1.4.1"
 imageflow_http_helpers = { path = "../imageflow_http_helpers", version = "*" }
 dssim = "3.2"
 criterion = "0.5"
