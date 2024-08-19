@@ -28,6 +28,8 @@ mod mozjpeg_decoder_helpers;
 mod jpeg_decoder;
 mod webp;
 mod color_transform_cache;
+mod bmp;
+
 use crate::io::IoProxyRef;
 use crate::codecs::color_transform_cache::ColorTransformCache;
 use crate::codecs::NamedEncoders::LibPngRsEncoder;
@@ -64,15 +66,6 @@ enum CodecKind{
     Decoder(Box<dyn Decoder>)
 }
 
-#[derive(PartialEq, Copy, Clone)]
-pub enum NamedDecoders{
-    MozJpegRsDecoder,
-    WICJpegDecoder,
-    ImageRsJpegDecoder,
-    LibPngRsDecoder,
-    GifRsDecoder,
-    WebPDecoder,
-}
 impl NamedDecoders{
     pub fn works_for_magic_bytes(&self, bytes: &[u8]) -> bool{
         match self{
@@ -87,6 +80,9 @@ impl NamedDecoders{
             },
             NamedDecoders::WebPDecoder => {
                 bytes.starts_with(b"RIFF") && bytes[8..12].starts_with(b"WEBP")
+            },
+            NamedDecoders::BmpRsDecoder => {
+                bytes.starts_with(b"BM")
             }
         }
     }
@@ -98,6 +94,7 @@ impl NamedDecoders{
             NamedDecoders::GifRsDecoder => Ok(Box::new(gif::GifDecoder::create(c, io, io_id)?)),
             NamedDecoders::ImageRsJpegDecoder => Ok(Box::new(jpeg_decoder::JpegDecoder::create(c, io, io_id)?)),
             NamedDecoders::WebPDecoder => Ok(Box::new(webp::WebPDecoder::create(c, io, io_id)?)),
+            NamedDecoders::BmpRsDecoder => Ok(Box::new(bmp::BmpDecoder::create(c, io, io_id)?)),
             NamedDecoders::WICJpegDecoder => {
                 panic!("WIC Jpeg Decoder not implemented"); //TODO, use actual error for this
             }
@@ -105,6 +102,19 @@ impl NamedDecoders{
     }
 
 }
+
+
+#[derive(PartialEq, Copy, Clone)]
+pub enum NamedDecoders{
+    MozJpegRsDecoder,
+    WICJpegDecoder,
+    ImageRsJpegDecoder,
+    LibPngRsDecoder,
+    GifRsDecoder,
+    BmpRsDecoder,
+    WebPDecoder,
+}
+
 #[derive(PartialEq, Copy, Clone)]
 pub enum NamedEncoders{
     GifEncoder,
@@ -125,6 +135,7 @@ impl Default for EnabledCodecs {
                 &[NamedDecoders::MozJpegRsDecoder,
                     NamedDecoders::LibPngRsDecoder,
                     NamedDecoders::GifRsDecoder,
+                    NamedDecoders::BmpRsDecoder,
                     NamedDecoders::WebPDecoder]),
             encoders: smallvec::SmallVec::from_slice(
                 &[NamedEncoders::GifEncoder,
@@ -145,6 +156,9 @@ impl EnabledCodecs{
     }
     pub fn disable_decoder(&mut self, decoder: NamedDecoders){
         self.decoders.retain( |item| item != &decoder);
+    }
+    pub fn enable_decoder(&mut self, decoder: NamedDecoders){
+        self.decoders.push(decoder);
     }
     pub fn create_decoder_for_magic_bytes(&self, bytes: &[u8], c: &Context, io: IoProxy, io_id: i32) -> Result<Box<dyn Decoder>>{
         for &decoder in self.decoders.iter(){

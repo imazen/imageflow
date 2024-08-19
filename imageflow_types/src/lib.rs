@@ -610,7 +610,61 @@ pub struct FrameSizeLimit{
 pub struct ExecutionSecurity{
     pub max_decode_size: Option<FrameSizeLimit>,
     pub max_frame_size: Option<FrameSizeLimit>,
-    pub max_encode_size: Option<FrameSizeLimit>
+    pub max_encode_size: Option<FrameSizeLimit>,
+
+    pub only_decode_formats: Option<Vec<DecodeFormat>>,
+
+    pub enable_codecs: Option<Vec<String>>,
+    pub disable_codecs: Option<Vec<String>>,
+}
+
+#[derive(Serialize, Deserialize, Copy, Clone, PartialEq, Debug)]
+pub enum DecodeFormat{
+    #[serde(rename="jpg")]
+    Jpeg,
+    #[serde(rename="png")]
+    Png,
+    #[serde(rename="gif")]
+    Gif,
+    #[serde(rename="webp")]
+    Webp,
+    #[serde(rename="bmp")]
+    Bmp,
+}
+
+
+#[derive(Serialize, Deserialize, Copy, Clone, PartialEq, Debug)]
+pub enum NamedDecoders{
+    #[serde(rename="mozjpeg")]
+    MozJpegRsDecoder,
+    #[serde(rename="wic-jpeg")]
+    WICJpegDecoder,
+    #[serde(rename="image-rs-jpeg")]
+    ImageRsJpegDecoder,
+    #[serde(rename="libpng")]
+    LibPngRsDecoder,
+    #[serde(rename="gif")]
+    GifRsDecoder,
+    #[serde(rename="bmp")]
+    BmpRsDecoder,
+    #[serde(rename="libwebp")]
+    WebPDecoder,
+}
+
+#[derive(Serialize, Deserialize, Copy, Clone, PartialEq, Debug)]
+pub enum NamedEncoders{
+    #[serde(rename="gif")]
+    GifEncoder,
+    #[serde(rename="mozjpeg")]
+    MozJpegEncoder,
+    #[serde(rename="pngquant")]
+    PngQuantEncoder,
+    #[serde(rename="lodepng")]
+    LodePngEncoder,
+    #[serde(rename="libwebp")]
+    WebPEncoder,
+    #[serde(rename="libpng")]
+    LibPngRsEncoder, 
 }
 
 #[derive(Serialize, Deserialize, Copy, Clone, PartialEq, Debug)]

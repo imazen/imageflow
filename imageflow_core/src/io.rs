@@ -1,4 +1,5 @@
 use std;
+use std::ops::Range;
 use crate::for_other_imageflow_crates::preludes::external_without_std::*;
 use crate::{ffi, FlowError};
 use crate::{Context, Result, JsonResponse, ErrorKind};
@@ -53,6 +54,15 @@ impl IoBackend{
             _ => None
         }
     }
+
+    #[inline(always)]
+    pub fn get_read_bytes(&self) -> Option<&[u8]>{
+        match self{
+            IoBackend::ReadSlice(w) => Some(w.get_ref()),
+            IoBackend::ReadVec(w) => Some(w.get_ref()),
+            _ => None
+        }
+    }
     pub fn get_seek(&mut self) -> Option<&mut dyn Seek>{
         match self{
             IoBackend::ReadSlice(w) => Some(w),
@@ -67,8 +77,7 @@ impl IoBackend{
 /// Implements Read/Write
 pub struct IoProxy{
     io_id: i32,
-    path: Option<PathBuf>,
-    backend: IoBackend,
+    path: Option<PathBuf>, backend: IoBackend,
 }
 
 
@@ -79,6 +88,48 @@ impl io::Read for IoProxy{
         self.backend.get_read().expect("cannot read from writer").read(buf)
     }
 }
+
+pub struct ZuneIoProxyReader{
+    io: Option<IoProxy>,
+    buffer: Option<Vec<u8>>
+}
+
+impl ZuneIoProxyReader{
+    pub fn wrap_or_buffer(mut io: IoProxy) -> io::Result<Self>{
+        if io.backend.get_read_bytes().is_none(){
+            // read entire file into memory
+            let mut buffer = Vec::new();
+            let bytes_read = io.backend.get_read().expect("cannot read from writer")
+                .read_to_end(&mut buffer)?;
+            // Drop io
+            Ok(ZuneIoProxyReader{
+                io: None,
+                buffer: Some(buffer)
+            })
+        } else {
+            Ok(ZuneIoProxyReader{
+                io: Some(io),
+                buffer: None
+            })
+        }
+    }
+    #[inline(always)]
+    fn get_bytes(&self) -> &[u8]{
+        if let Some(ref io) = self.io{
+            io.backend.get_read_bytes().expect("cannot read from writer")
+        } else {
+            self.buffer.as_ref().expect("no buffer")
+        }
+    }
+}
+//impl zune_bmp::zune_core::bytestream::ZByteReaderTrait for ZuneIoProxyReader{
+impl AsRef<[u8]> for ZuneIoProxyReader{
+    fn as_ref(&self) -> &[u8] {
+        self.get_bytes()
+    }
+}
+
+
 impl io::Seek for IoProxy{
     fn seek(&mut self, pos: SeekFrom) -> io::Result<u64> {
         self.backend.get_seek().expect("cannot read from writer").seek(pos)

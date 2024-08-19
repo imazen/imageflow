@@ -10,6 +10,7 @@ use num::FromPrimitive;
 use crate::ffi;
 use std::ffi::CStr;
 use std::ptr;
+use zune_bmp::BmpDecoderErrors;
 use imageflow_riapi::sizing::LayoutError;
 use crate::flow::definitions::FrameEstimate;
 
@@ -311,6 +312,20 @@ impl From<::gif::DecodingError> for FlowError{
             ::gif::DecodingError::Io(e) => FlowError::without_location(ErrorKind::DecodingIoError, format!("{:?}", e)),
             //::gif::DecodingError::Internal(msg) => FlowError::without_location(ErrorKind::InternalError,format!("Internal error in gif decoder: {:?}",msg)),
             ::gif::DecodingError::Format(msg) => FlowError::without_location(ErrorKind::GifDecodingError,format!("{:?}",msg))
+        }
+    }
+}
+impl From<::zune_bmp::BmpDecoderErrors> for FlowError{
+    fn from(f: zune_bmp::BmpDecoderErrors) -> Self {
+        match f {
+            BmpDecoderErrors::InvalidMagicBytes => FlowError::without_location(ErrorKind::ImageDecodingError, "Invalid BMP magic bytes".to_owned()),
+            BmpDecoderErrors::TooSmallBuffer(a, b) => FlowError::without_location(ErrorKind::ImageDecodingError, format!("BMP buffer too small: {:?} {:?}", a, b)),
+            BmpDecoderErrors::GenericStatic(s) => FlowError::without_location(ErrorKind::ImageDecodingError, format!("BMP decoding error: {:?}", s)),
+            BmpDecoderErrors::Generic(s) => FlowError::without_location(ErrorKind::ImageDecodingError, format!("BMP decoding error: {:?}", s)),
+            BmpDecoderErrors::TooLargeDimensions(s, a, b) => FlowError::without_location(ErrorKind::ImageDecodingError, format!("BMP dimensions too large: {:?} {:?} {:?}", s, a, b)),
+            BmpDecoderErrors::OverFlowOccurred => FlowError::without_location(ErrorKind::ImageDecodingError, "BMP overflow error".to_owned()),
+            BmpDecoderErrors::IoErrors(e) => FlowError::without_location(ErrorKind::ImageDecodingError, format!("BMP decoding error: {:?}", e)),
+            e => FlowError::without_location(ErrorKind::ImageDecodingError, format!("BMP decoding error: {:?}", e))
         }
     }
 }

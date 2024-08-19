@@ -1032,6 +1032,41 @@ fn decode_cmyk_jpeg() {
     assert!(matched);
 
 }
+#[test]
+fn decode_rgba32_bmp() {
+    let matched = compare(Some(IoTestEnum::Url("https://raw.githubusercontent.com/etemesi254/zune-image/dev/test-images/bmp/rgba32-1.bmp".to_owned())), 500,
+                          "decode_rgba32_bmp", POPULATE_CHECKSUMS, DEBUG_GRAPH, vec![
+            Node::CommandString{
+                kind: CommandStringKind::ImageResizer4,
+                value: "".to_owned(),
+                decode: Some(0),
+                encode: None,
+                watermarks: None
+            }
+        ]
+    );
+    assert!(matched);
+
+}
+#[test]
+fn decode_rgb24_bmp() {
+    let matched = compare(Some(IoTestEnum::Url("https://raw.githubusercontent.com/etemesi254/zune-image/dev/test-images/bmp/rgb24.bmp".to_owned())), 500,
+                          "decode_rgb24_bmp", POPULATE_CHECKSUMS, DEBUG_GRAPH, vec![
+            Node::CommandString{
+                kind: CommandStringKind::ImageResizer4,
+                value: "".to_owned(),
+                decode: Some(0),
+                encode: None,
+                watermarks: None
+            }
+        ]
+    );
+    assert!(matched);
+
+}
+
+
+
 
 #[test]
 fn decode_rgb_with_cmyk_profile_jpeg() {

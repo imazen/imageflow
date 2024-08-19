@@ -400,6 +400,9 @@ impl Context {
         if let Some(encode) = s.max_encode_size{
             self.security.max_encode_size = Some(encode);
         }
+        if let Some(allowed) = s.allow_decoding{
+            self.enabled_codecs = allowed;
+        }
     }
 
     /// For executing an operation graph (assumes you have already configured the context with IO sources/destinations as needed)
