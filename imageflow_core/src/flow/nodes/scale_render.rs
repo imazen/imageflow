@@ -193,27 +193,23 @@ impl NodeDefOneInputOneCanvas for DrawImageDef {
 
     fn render(&self, c: &Context, canvas_key: BitmapKey, input_key: BitmapKey, p: &NodeParams) -> Result<()> {
         if let NodeParams::Json(s::Node::DrawImageExact { x, y, w, h, ref hints, blend }) = *p {
-
-        unsafe {
             let bitmaps = c.borrow_bitmaps()
                 .map_err(|e| e.at(here!()))?;
             let mut canvas_bitmap = bitmaps.try_borrow_mut(canvas_key)
                 .map_err(|e| e.at(here!()))?;
-            let mut canvas = canvas_bitmap.get_window_u8().unwrap()
-                .to_bitmap_bgra().map_err(|e| e.at(here!()))?;
 
             let mut input_bitmap = bitmaps.try_borrow_mut(input_key)
                 .map_err(|e| e.at(here!()))?;
-            let input = input_bitmap.get_window_u8().unwrap()
-                .to_bitmap_bgra().map_err(|e| e.at(here!()))?;
 
 
             let hints = hints.as_ref();
-            if x + w > canvas.w || y + h > canvas.h {
-                return Err(nerror!(crate::ErrorKind::InvalidNodeParams, "DrawImageExact target rect x1={},y1={},w={},h={} does not fit canvas size {}x{}.", x,y,  w, h, canvas.w, canvas.h));
+            if x + w > canvas_bitmap.w() || y + h > canvas_bitmap.h() {
+                return Err(nerror!(crate::ErrorKind::InvalidNodeParams, "DrawImageExact target rect x1={},y1={},w={},h={} does not fit canvas size {}x{}.",
+                    x,y,  w, h, canvas_bitmap.w(), canvas_bitmap.h()));
             }
-            if input.fmt.bytes() != 4 || canvas.fmt.bytes() != 4 {
-                return Err(nerror!(crate::ErrorKind::InvalidNodeConnections, "DrawImageExact can only operate on Rgb32 and Rgba32 bitmaps. Input pixel format {:?}. Canvas pixel format {:?}.", input.fmt, canvas.fmt));
+            if input_bitmap.info().channels() != 4 || canvas_bitmap.info().channels() != 4 {
+                return Err(nerror!(crate::ErrorKind::InvalidNodeConnections,
+                    "DrawImageExact can only operate on Rgb32 and Rgba32 bitmaps. Input pixel format {:?}. Canvas pixel format {:?}.", input_bitmap.frame_info().fmt, canvas_bitmap.frame_info().fmt));
             }
             match hints.and_then(|h| h.resample_when) {
                 Some(s::ResampleWhen::Always) | None => {},
@@ -222,9 +218,9 @@ impl NodeDefOneInputOneCanvas for DrawImageDef {
                 }
             }
 
-            let upscaling = w > input.w || h > input.h;
-            let downscaling = w < input.w || h < input.h;
-            let size_differs = w != input.w || h != input.h;
+            let upscaling = w > input_bitmap.w() || h > input_bitmap.h();
+            let downscaling = w < input_bitmap.w() || h < input_bitmap.h();
+            let size_differs = w != input_bitmap.w() || h != input_bitmap.h();
 
             let picked_filter = if upscaling {
                 hints.and_then(|h| h.up_filter).unwrap_or(s::Filter::Ginseng)
@@ -255,31 +251,14 @@ impl NodeDefOneInputOneCanvas for DrawImageDef {
             let compose = blend.unwrap_or(::imageflow_types::CompositingMode::Compose) == s::CompositingMode::Compose;
 
             // We can write to the temporary BitmapBgra field because we set it on the real bitmap later after we're done
-            if canvas.compositing_mode == crate::ffi::BitmapCompositingMode::ReplaceSelf && compose {
-                canvas.compositing_mode = crate::ffi::BitmapCompositingMode::BlendWithSelf;
+            if canvas_bitmap.info().compose() == &BitmapCompositing::ReplaceSelf && compose {
                 canvas_bitmap.set_compositing(BitmapCompositing::BlendWithSelf);
             }
-            if canvas.compositing_mode == crate::ffi::BitmapCompositingMode::BlendWithMatte && !compose && canvas.fmt == PixelFormat::Bgra32 {
-                canvas.compositing_mode = crate::ffi::BitmapCompositingMode::ReplaceSelf;
+            if matches!(canvas_bitmap.info().compose(),BitmapCompositing::BlendWithMatte(_))
+                && !compose
+                && canvas_bitmap.frame_info().fmt == PixelFormat::Bgra32 {
                 canvas_bitmap.set_compositing(BitmapCompositing::ReplaceSelf);
             }
-
-
-            // let ffi_struct = ffi::Scale2dRenderToCanvas1d {
-            //     interpolation_filter: ffi::Filter::from(picked_filter),
-            //     x,
-            //     y,
-            //     w,
-            //     h,
-            //     sharpen_percent_goal: sharpen_percent,
-            //     scale_in_colorspace: crate::ffi::Floatspace::from(floatspace)
-            // };
-
-
-            // if !crate::ffi::flow_node_execute_scale2d_render1d(c.flow_c(),
-            //                                                    &mut input, &mut canvas, &ffi_struct as *const ffi::Scale2dRenderToCanvas1d) {
-            //     return Err(cerror!(c, "Failed to execute Scale2D:  "));
-            // }
 
             let scale_and_render = ScaleAndRenderParams {
                 x,
@@ -287,24 +266,24 @@ impl NodeDefOneInputOneCanvas for DrawImageDef {
                 w,
                 interpolation_filter: Filter::from(picked_filter),
                 sharpen_percent_goal: sharpen_percent,
-                scale_in_colorspace: match floatspace{
+                scale_in_colorspace: match floatspace {
                     ScalingFloatspace::Srgb => WorkingFloatspace::StandardRGB,
                     ScalingFloatspace::Linear => WorkingFloatspace::LinearRGB
                 },
                 h,
             };
-            match crate::graphics::scaling::flow_node_execute_scale2d_render1d(input_bitmap.get_window_u8().unwrap(),
-                                                                               canvas_bitmap.get_window_u8().unwrap(), &scale_and_render, true) {
+            match crate::graphics::scaling::scale_and_render(input_bitmap.get_window_u8().unwrap(),
+                                                             canvas_bitmap.get_window_u8().unwrap(), &scale_and_render) {
                 Ok(_) => {},
                 Err(e) => {
                     return Err(e.at(here!()));
                 }
             }
             canvas_bitmap.set_compositing(BitmapCompositing::BlendWithSelf);
-        }
+
             Ok(())
         } else {
-            Err(nerror!(crate::ErrorKind::NodeParamsMismatch, "Need DrawImageExact, got {:?}",p))
+            Err(nerror!( crate::ErrorKind::NodeParamsMismatch, "Need DrawImageExact, got {:?}", p))
         }
     }
 }

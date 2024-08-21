@@ -183,13 +183,8 @@ fn benchmark_scale_2d(ctx: &mut Criterion) {
                         } ));
                     }
                     group.bench_function("SafeRust", |b| b.iter(|| {
-                        unsafe { assert_eq!(imageflow_core::graphics::scaling::flow_node_execute_scale2d_render1d(
-                            bitmap_a.get_window_u8().unwrap(),bitmap_b.get_window_u8().unwrap(),&scale_rust,true), Ok(())) }
-                    }));
-
-                    group.bench_function("Rust", |b| b.iter(|| {
-                        unsafe { assert_eq!(imageflow_core::graphics::scaling::flow_node_execute_scale2d_render1d(
-                            bitmap_a.get_window_u8().unwrap(),bitmap_b.get_window_u8().unwrap(),&scale_rust,false), Ok(())) }
+                        unsafe { assert_eq!(imageflow_core::graphics::scaling::scale_and_render(
+                            bitmap_a.get_window_u8().unwrap(),bitmap_b.get_window_u8().unwrap(),&scale_rust), Ok(())) }
                     }));
 
 
