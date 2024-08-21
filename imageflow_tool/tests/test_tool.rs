@@ -1,4 +1,4 @@
-#[cfg_attr(feature = "cargo-clippy", allow(useless_attribute))]
+//#[cfg_attr(feature = "cargo-clippy", allow(useless_attribute))]
 extern crate imageflow_tool_lib;
 extern crate imageflow_types as s;
 use std::io::Write;

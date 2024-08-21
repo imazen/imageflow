@@ -90,15 +90,15 @@ enum OutputDestination{
 //    ImageMatches{dest: &'a ReplacementOutput, w: Option<u32>, h: Option<u32>, content_type: Option<&'static str>},
 //
 //}
-trait TestScenario{
-    fn description() -> &'static str;
-    fn slug() -> &'static str;
-
-}
-
-trait TestExpectations{
-
-}
+// trait TestScenario{
+//     fn description() -> &'static str;
+//     fn slug() -> &'static str;
+//
+// }
+//
+// trait TestExpectations{
+//
+// }
 
 struct BuildScenario{
     pub description: &'static str,
