@@ -82,11 +82,31 @@ pub unsafe fn flow_node_execute_scale2d_render1d(
 
 fn render_safe(cc: &ColorContext, from: &mut BitmapWindowMut<u8>, weights_x: &PixelRowWeights, weights_y: &PixelRowWeights, canvas_window: &mut BitmapWindowMut<u8>, params: &ScaleAndRenderParams) -> Result<(), FlowError> {
 
+    // for benchmarking
+    // $env:RUSTFLAGS='-C target-cpu=native'; cargo bench --features c_rendering
+
     let buffer_color_space = if params.scale_in_colorspace == WorkingFloatspace::LinearRGB {
         ColorSpace::LinearRGB
     } else {
         ColorSpace::StandardRGB
     };
+
+    // Determine how many rows we need to buffer
+    let max_input_rows = weights_y.contrib_row()
+        .iter()
+        .map(|r| r.right_pixel - r.left_pixel + 1)
+        .max()
+        .ok_or_else(||nerror!(ErrorKind::InvalidState))?;
+
+    // Allocate reusable buffer of rows for multiplying by weights
+    let mut mult_buf_bitmap = Bitmap::create_float(
+        from.w(), max_input_rows,PixelLayout::BGRA, true, from.info().alpha_meaningful(),
+        buffer_color_space).map_err(|e| e.at(here!()))?;
+    let mut mult_buf_window = mult_buf_bitmap.get_window_f32().unwrap();
+
+    // Allocate coefficients and mappings to real pixel rows
+    let mut mult_row_coefficients = vec![1f32; max_input_rows as usize];
+    let mut mult_row_indexes = vec![-1i32; max_input_rows as usize];
 
     // Allocate buffer for summing the multiplied rows
     let mut summation_buf = Bitmap::create_float(
@@ -99,11 +119,6 @@ fn render_safe(cc: &ColorContext, from: &mut BitmapWindowMut<u8>, weights_x: &Pi
         canvas_window.w(), 1,PixelLayout::BGRA, true, from.info().alpha_meaningful(),
         buffer_color_space).map_err(|e| e.at(here!()))?;
     let mut h_scaled_buf_window = h_scaled_buf.get_window_f32().unwrap();
-
-    let mut float_buf = Bitmap::create_float(
-        from.w(), 1,PixelLayout::BGRA, true, from.info().alpha_meaningful(),
-        buffer_color_space).map_err(|e| e.at(here!()))?;
-    let mut float_buf_window = float_buf.get_window_f32().unwrap();
 
     for out_row_ix in 0..canvas_window.h() as usize {
         let contrib = &weights_y.contrib_row()[out_row_ix];
@@ -119,25 +134,49 @@ fn render_safe(cc: &ColorContext, from: &mut BitmapWindowMut<u8>, weights_x: &Pi
         // }
 
         for input_row_ix in contrib.left_pixel..=contrib.right_pixel {
-            bitmap_window_srgba32_to_f32x4(cc,
-                &from.row_window(input_row_ix).unwrap(),
-                    &mut float_buf_window);
+            // Try to find row in buffer if already loaded
+            let already_loaded_index = mult_row_indexes
+                .iter()
+                .position(|&v| v == input_row_ix as i32);
 
+            // Not loaded? Look for a buffer row that we're no longer using
+            let reusable_index = already_loaded_index
+                .or_else(|| mult_row_indexes
+                    .iter()
+                    .position(|&v| v < contrib.left_pixel as i32))
+                .ok_or_else(|| nerror!(ErrorKind::InvalidState))?;
 
+            if already_loaded_index.is_none() {
+                let buffer_window = &mut mult_buf_window.row_window(reusable_index as u32).unwrap();
+                // Load row
+                bitmap_window_srgba32_to_f32x4(
+                    cc,
+                    &from.row_window(input_row_ix).unwrap(),
+                    buffer_window,
+                );
+
+                mult_row_coefficients[reusable_index] = 1f32;
+                mult_row_indexes[reusable_index] = input_row_ix as i32;
+            }
+            let active_buf_ix = reusable_index;
 
             let weight: f32 = contrib_weights[input_row_ix as usize - contrib.left_pixel as usize];
             if (weight as f64).abs() > 0.00000002f64 {
+                // Apply coefficient, update tracking
+                let delta_coefficient: f32 = weight / mult_row_coefficients[active_buf_ix];
                 multiply_row_safe(
-                    float_buf_window.slice_mut(),
-                    weight,
+                    mult_buf_window.row_window(active_buf_ix as u32).unwrap().slice_mut(),
+                    delta_coefficient,
                 );
+                mult_row_coefficients[active_buf_ix] = weight;
                 // Add row
                 add_row_safe(
                     summation_buf_window.slice_mut(),
-                    float_buf_window.slice_mut()
+                    mult_buf_window.row_window(active_buf_ix as u32).unwrap().get_slice(),
                 );
             }
         }
+
         scale_row_bgra_f32(
             summation_buf_window.get_slice(),
             from.w() as usize,
@@ -146,13 +185,11 @@ fn render_safe(cc: &ColorContext, from: &mut BitmapWindowMut<u8>, weights_x: &Pi
             &weights_x,
             out_row_ix as u32,
         );
+
         composite_linear_over_srgb(
             cc,
             &mut h_scaled_buf_window,
-            &mut canvas_window.row_window(out_row_ix as u32).unwrap()).map_err(|e| e.at(here!()))?
-
-
-
+            &mut canvas_window.row_window(out_row_ix as u32).unwrap()).map_err(|e| e.at(here!()))?;
     }
     Ok(())
 }

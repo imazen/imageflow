@@ -29,7 +29,6 @@ libwebp-sys = { git = "https://github.com/lilith/libwebp-sys" }
 opt-level = 3
 lto = "fat"
 codegen-units = 1
-panic = "abort"
 
 # [build]
 # rustflags = ["-C", "target-cpu=native"]
