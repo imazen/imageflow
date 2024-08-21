@@ -262,7 +262,7 @@ impl<'a,T>  BitmapWindowMut<'a, T> {
     /// Replaces all data with zeroes. Will zero data outside the window if this is a cropped window.
     pub fn clear_slice(&mut self){
         unsafe {
-            std::ptr::write_bytes(self.slice.as_mut_ptr(), 0, self.slice.len() - 1);
+            std::ptr::write_bytes(self.slice.as_mut_ptr(), 0, self.slice.len());
         }
     }
 
