@@ -121,7 +121,7 @@ pub enum PixelBuffer<'a> {
     Bgra32(ImgRef<'a, rgb::alt::BGRA8>),
     Bgr32(ImgRef<'a, rgb::alt::BGRA8>), // there's no BGRX support in the rgb crate
     Bgr24(ImgRef<'a, rgb::alt::BGR8>),
-    Gray8(ImgRef<'a, rgb::alt::GRAY8>),
+    Gray8(ImgRef<'a, rgb::alt::Gray<u8>>),
 }
 
 /// Named interpolation function+configuration presets

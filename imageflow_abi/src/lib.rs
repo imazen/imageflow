@@ -552,7 +552,7 @@ pub extern "C" fn imageflow_context_send_json(context: *mut Context,
     }
 
     let panic_result = catch_unwind(AssertUnwindSafe(|| {
-        let method_str = if let Ok(str) = unsafe { ::std::ffi::CStr::from_ptr(method as *const i8)}.to_str() {
+        let method_str = if let Ok(str) = unsafe { ::std::ffi::CStr::from_ptr(method)}.to_str() {
             str
         } else {
             return (ptr::null(), Err(nerror!(ErrorKind::InvalidArgument, "The argument 'method' is invalid UTF-8.")));

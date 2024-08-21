@@ -2,11 +2,9 @@
 extern crate imageflow_helpers;
 
 use std;
+use std::error::Error;
 use std::fmt;
 use reqwest::blocking;
-use reqwest::Certificate;
-use ::imageflow_helpers::filesystem::read_file_bytes;
-use std::path::PathBuf;
 
 #[derive(Debug)]
 pub enum FetchError {
@@ -22,9 +20,13 @@ pub enum FetchError {
 impl fmt::Display for FetchError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match *self {
-            FetchError::ReqwestError(ref e) => e.fmt(f),
+            FetchError::ReqwestError(ref e) =>
+            match e.source() {
+                Some(source) => write!(f, "ReqwestError: {:?}\nCaused by: {:?}", e, source),
+                None => write!(f, "ReqwestError: {:?}", e)
+            },
             //FetchError::HyperError(ref e) => e.fmt(f),
-            FetchError::IoError(ref e) => e.fmt(f),
+            FetchError::IoError(ref e) => write!(f, "IoError: {:?}", e),
             FetchError::UpstreamResponseError(ref status) |
             FetchError::UpstreamResponseErrorWithResponse {ref status, ..} => {
                 write!(f, "Response status {}", status)
@@ -59,9 +61,7 @@ pub fn fetch_bytes(url: &str) -> std::result::Result<Vec<u8>, FetchError> {
 
 #[derive(Default, Clone, Debug)]
 pub struct FetchConfig{
-    /// Only honored on linux (maybe outdated?)
-    /// PEM format
-    pub custom_ca_trust_file: Option<PathBuf>,
+
     pub read_error_body: Option<bool>
 }
 
@@ -93,13 +93,7 @@ impl FetchConfig {
 //    }
 
     pub fn build_client(&self) -> blocking::Client{
-        let builder = if let Some(ref cert) = self.custom_ca_trust_file{
-            let bytes = read_file_bytes(cert).unwrap();
-            reqwest::blocking::ClientBuilder::new().add_root_certificate(Certificate::from_pem(&bytes).unwrap())
-        } else{
-            reqwest::blocking::ClientBuilder::new()
-        };
-        builder.build().unwrap()
+        reqwest::blocking::ClientBuilder::new().build().unwrap()
     }
 }
 
