@@ -68,13 +68,17 @@ fn main() {
         cc.flag("-Wshadow");
         cc.flag("-Wc++-compat");
     }
+    #[cfg(feature = "c_rendering")]
+    {
+        cc.define("C_RENDERING", Some("1"));
+    }
 
-    //let skipped = PathBuf::from("lib/graphics.c");
+    let skipped = PathBuf::from("lib/graphics.c");
     for file in glob::glob("lib/*.c").unwrap() {
         let path = file.unwrap();
-        //if path != skipped {
+        if path != skipped || cfg!(feature = "c_rendering"){
             cc.file(path);
-        //}
+        }
     }
 
     if cfg!(feature = "coverage") {

@@ -792,7 +792,7 @@ fn test_white_balance_image() {
     assert!(matched);
 }
 #[test]
-fn test_read_gif() {
+fn test_read_gif_and_scale() {
     let matched = compare(Some(IoTestEnum::Url("https://s3-us-west-2.amazonaws.com/imageflow-resources/test_inputs/mountain_800.gif".to_owned())), 500,
                           "mountain_gif_scaled400", POPULATE_CHECKSUMS, DEBUG_GRAPH, vec![
             Node::Decode {io_id: 0, commands: None},
@@ -801,6 +801,17 @@ fn test_read_gif() {
     );
     assert!(matched);
 }
+#[test]
+fn test_read_gif_and_vertical_distort() {
+    let matched = compare(Some(IoTestEnum::Url("https://s3-us-west-2.amazonaws.com/imageflow-resources/test_inputs/mountain_800.gif".to_owned())), 500,
+                          "read_gif_and_vertical_distort", POPULATE_CHECKSUMS, DEBUG_GRAPH, vec![
+            Node::Decode { io_id: 0, commands: None},
+            Node::Resample2D{ w: 800, h: 100,  hints: Some(ResampleHints::new().with_bi_filter(Filter::Box)) }
+        ]
+    );
+    assert!(matched);
+}
+
 
 #[test]
 #[ignore] // gif crate doesn't support files without Trailer: https://github.com/image-rs/image-gif/issues/138

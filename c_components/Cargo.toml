@@ -22,6 +22,7 @@ coverage = []
 c_tests = []
 profiling = []
 shared = []
+c_rendering = []
 
 [dependencies]
 mozjpeg-sys = {version = "2", features = ["nasm_simd"]}

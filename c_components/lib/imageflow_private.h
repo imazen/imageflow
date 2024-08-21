@@ -161,7 +161,7 @@ PUB bool write_frame_to_disk(flow_c * c, const char * path, struct flow_bitmap_b
 
 struct flow_nodeinfo_scale2d_render_to_canvas1d;
 
-
+#if defined(C_RENDERING)
 struct flow_nodeinfo_scale2d_render_to_canvas1d {
     // There will need to be consistency checks against the createcanvas node
 
@@ -224,6 +224,7 @@ PUB bool flow_bitmap_float_copy_linear_over_srgb(flow_c * c, struct flow_colorco
 PUB bool flow_bitmap_bgra_fill_rect(flow_c * c, struct flow_bitmap_bgra * b, uint32_t x1, uint32_t y1, uint32_t x2,
                                     uint32_t y2, uint32_t color_srgb_argb);
 
+#endif
 
 PUB void flow_scale_spatial_srgb_7x7(uint8_t input[64], uint8_t ** output_rows, uint32_t output_col);
 

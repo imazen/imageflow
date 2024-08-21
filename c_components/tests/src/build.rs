@@ -34,6 +34,10 @@ fn main() {
         cc.flag("-std=c11");
         cxx.flag("-std=c++11");
     }
+    #[cfg(feature = "c_rendering")]
+    {
+        cc.define("TEST_C_RENDERING", Some("1"));
+    }
 
     // C and C++ tests have to be compiled separately, otherwise C files get wrong symbols.
     cc.file(test_root.join("helpers.c"));
@@ -42,13 +46,13 @@ fn main() {
 
     // the C code wants __FILE__ to contain slashes
 
-    cxx.file(test_root.join("test.cpp"));
+    // cxx.file(test_root.join("test.cpp"));
     cxx.file(test_root.join("test_context.cpp"));
     cxx.file(test_root.join("test_error_handling.cpp"));
-    cxx.file(test_root.join("test_operations.cpp"));
+    // cxx.file(test_root.join("test_operations.cpp"));
     cxx.file(test_root.join("test_variations.cpp"));
-    cxx.file(test_root.join("test_weighting.cpp"));
-    cxx.file(test_root.join("test_weighting_helpers.cpp"));
+    // cxx.file(test_root.join("test_weighting.cpp"));
+    // cxx.file(test_root.join("test_weighting_helpers.cpp"));
     cxx.file(test_root.join("runner.cpp"));
     cxx.compile("imageflow_cxx_tests");
 }

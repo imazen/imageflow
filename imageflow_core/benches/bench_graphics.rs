@@ -28,13 +28,16 @@ fn benchmark_transpose(ctx: &mut Criterion) {
             };
 
             let mut group = ctx.benchmark_group(&format!("transpose w={} && h={}", w, h));
+            group.measurement_time(Duration::from_secs(1));
 
-            // Now we can perform benchmarks with this group
-            group.bench_function("C", |bencher| bencher.iter(|| {
-                unsafe {
-                    assert_eq!(flow_bitmap_bgra_transpose(c.flow_c(), &mut a as *mut BitmapBgra, &mut b as *mut BitmapBgra), true)
-                }
-            } ));
+            if has_c_rendering(){
+                // Now we can perform benchmarks with this group
+                group.bench_function("C", |bencher| bencher.iter(|| {
+                    unsafe {
+                        assert_eq!(flow_bitmap_bgra_transpose(c.flow_c(), &mut a as *mut BitmapBgra, &mut b as *mut BitmapBgra), true)
+                    }
+                } ));
+            }
             group.bench_function("Rust", |bencher| bencher.iter(|| {
                 unsafe {
                     assert_eq!(imageflow_core::graphics::transpose::flow_bitmap_bgra_transpose(&mut a as *mut BitmapBgra, &mut b as *mut BitmapBgra), Ok(()))
@@ -64,10 +67,12 @@ fn benchmark_flip_v(ctx: &mut Criterion) {
 
                 let mut group = ctx.benchmark_group(&format!("flip_v w={} && h={} fmt={:?}",w,h,fmt));
 
-                // Now we can perform benchmarks with this group
-                group.bench_function("C", |bencher| bencher.iter(|| {
-                    unsafe { assert_eq!(flow_bitmap_bgra_flip_vertical(c.flow_c(), &mut a as *mut BitmapBgra),true) }
-                } ));
+                if has_c_rendering() {
+                    // Now we can perform benchmarks with this group
+                    group.bench_function("C", |bencher| bencher.iter(|| {
+                        unsafe { assert_eq!(flow_bitmap_bgra_flip_vertical(c.flow_c(), &mut a as *mut BitmapBgra), true) }
+                    }));
+                }
                 group.bench_function("Rust", |b| b.iter(|| {
                     unsafe { assert_eq!(imageflow_core::graphics::flip::flow_bitmap_bgra_flip_vertical(&mut a as *mut BitmapBgra), Ok(())) }
                 }));
@@ -97,10 +102,12 @@ fn benchmark_flip_h(ctx: &mut Criterion) {
 
                 let mut group = ctx.benchmark_group(&format!("flip_h w={} && h={} fmt={:?}",w,h,fmt));
 
-                // Now we can perform benchmarks with this group
-                group.bench_function("C", |bencher| bencher.iter(|| {
-                    unsafe { assert_eq!(flow_bitmap_bgra_flip_horizontal(c.flow_c(), &mut a as *mut BitmapBgra),true) }
-                } ));
+                if has_c_rendering() {
+                    // Now we can perform benchmarks with this group
+                    group.bench_function("C", |bencher| bencher.iter(|| {
+                        unsafe { assert_eq!(flow_bitmap_bgra_flip_horizontal(c.flow_c(), &mut a as *mut BitmapBgra), true) }
+                    }));
+                }
                 group.bench_function("Rust", |b| b.iter(|| {
                     unsafe { assert_eq!(imageflow_core::graphics::flip::flow_bitmap_bgra_flip_horizontal(&mut a as *mut BitmapBgra), Ok(())) }
                 }));
@@ -111,10 +118,18 @@ fn benchmark_flip_h(ctx: &mut Criterion) {
     }
 
 }
+#[cfg(feature="c_rendering")]
+fn has_c_rendering()->bool{
+    true
+}
+#[cfg(not(feature="c_rendering"))]
+fn has_c_rendering()->bool{
+    false
+}
 
 fn benchmark_scale_2d(ctx: &mut Criterion) {
     let fmts=[PixelLayout::BGRA];
-    let float_spaces=[Floatspace::Srgb,Floatspace::Linear];
+    let float_spaces=[Floatspace::Linear, Floatspace::Srgb];
     for &float_space in float_spaces.iter(){
         for &fmt in fmts.iter(){
             for w in (500u32..4000u32).step_by(2400){
@@ -156,19 +171,27 @@ fn benchmark_scale_2d(ctx: &mut Criterion) {
 
                     let mut group = ctx.benchmark_group(&format!("scale_2d w={} && h={} fmt={:?} float_space={:?}",w,h,fmt,float_space));
 
-                    group.measurement_time(Duration::from_secs(10));
+                    group.measurement_time(Duration::from_secs(5));
 
-                    // Now we can perform benchmarks with this group
-                    group.bench_function("C", |bencher| bencher.iter(|| {
-                        unsafe { assert_eq!(flow_node_execute_scale2d_render1d(c.flow_c(),
-                                                                               &mut a as *mut BitmapBgra,
-                                                                               &mut b as *mut BitmapBgra,
-                                                                               &scale_c), true) }
-                    } ));
+                    if has_c_rendering(){
+                        // Now we can perform benchmarks with this group
+                        group.bench_function("C", |bencher| bencher.iter(|| {
+                            unsafe { assert_eq!(flow_node_execute_scale2d_render1d(c.flow_c(),
+                                                                                   &mut a as *mut BitmapBgra,
+                                                                                   &mut b as *mut BitmapBgra,
+                                                                                   &scale_c), true) }
+                        } ));
+                    }
+                    group.bench_function("SafeRust", |b| b.iter(|| {
+                        unsafe { assert_eq!(imageflow_core::graphics::scaling::flow_node_execute_scale2d_render1d(
+                            bitmap_a.get_window_u8().unwrap(),bitmap_b.get_window_u8().unwrap(),&scale_rust,true), Ok(())) }
+                    }));
+
                     group.bench_function("Rust", |b| b.iter(|| {
                         unsafe { assert_eq!(imageflow_core::graphics::scaling::flow_node_execute_scale2d_render1d(
-                            bitmap_a.get_window_u8().unwrap(),bitmap_b.get_window_u8().unwrap(),&scale_rust), Ok(())) }
+                            bitmap_a.get_window_u8().unwrap(),bitmap_b.get_window_u8().unwrap(),&scale_rust,false), Ok(())) }
                     }));
+
 
                     group.finish();
                 }
@@ -194,7 +217,11 @@ extern "C" {
     pub fn flow_scale_spatial_1x1(input:*const u8, output_rows:*const*mut u8, output_col:u32);
 }
 
+
 fn benchmark_downscaling(ctx: &mut Criterion) {
+    if !has_c_rendering(){
+        return;
+    }
     let mut output = [[0u8; 8]; 8];
     let input = [0u8; 64];
     let input_ptr = input.as_ptr();

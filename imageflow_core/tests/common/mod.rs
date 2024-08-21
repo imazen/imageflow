@@ -17,7 +17,7 @@ use imageflow_core::{Context, FlowError, ErrorKind};
 use imageflow_core::ffi::BitmapBgra;
 use std::collections::BTreeMap;
 use std::fs::File;
-use std::path::{PathBuf};
+use std::path::PathBuf;
 use std::io::Write;
 use std;
 use std::pin::Pin;
@@ -522,7 +522,8 @@ impl Similarity{
         eprintln!("{} {} {} {:?}", count, delta, len, self);
 
         if count != delta {
-            return Some(format!("Bitmaps mismatched, and not just off-by-one errors! count={} delta={}", count, delta));
+            let degree = delta as f64 / count as f64;
+            return Some(format!("Bitmaps mismatched, and not just off-by-one errors! count={} delta={} avg delta amount={}", count, delta, degree));
         }
 
 

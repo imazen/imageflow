@@ -88,7 +88,7 @@ fn crop_bitmap(){
     let mut bitmap = c.get(b1).unwrap().borrow_mut();
     let mut full_window = bitmap.get_window_f32().unwrap();
     let mut window = full_window.window(1,1,6,6).unwrap();
-    window.slice()[0] = 3f32;
+    window.slice_mut()[0] = 3f32;
 
     bitmap.set_alpha_meaningful(false);
 
@@ -206,6 +206,12 @@ impl<'a,T>  BitmapWindowMut<'a, T> {
             return Err(nerror!(ErrorKind::InvalidState));
         }
 
+        // zero width and zero height are invalid
+        if self.w() == 0 || self.h() == 0 {
+            return Err(nerror!(ErrorKind::InvalidArgument, "Bitmap dimensions cannot be zero"));
+        }
+
+
         let fmt = self.info().calculate_pixel_format()
             .map_err(|e| e.at(here!()))?;
 
@@ -266,7 +272,7 @@ impl<'a,T>  BitmapWindowMut<'a, T> {
         }
     }
 
-    pub fn row(&mut self, index: u32) -> Option<&mut [T]>{
+    pub fn row_mut(&mut self, index: u32) -> Option<&mut [T]>{
         if index >= self.info.h {
             None
         }else {
@@ -276,17 +282,41 @@ impl<'a,T>  BitmapWindowMut<'a, T> {
         }
     }
 
+    pub fn row(&self, index: u32) -> Option<&[T]>{
+        if index >= self.info.h {
+            None
+        }else {
+            let start_index = self.info.item_stride.checked_mul(index).unwrap() as usize;
+            let end_index = start_index + self.info.w as usize * self.info.channels();
+            Some(&self.slice[start_index..end_index])
+        }
+    }
+
+
+
     pub fn row_window(&mut self, index: u32) -> Option<BitmapWindowMut<T>>{
         let w= self.w();
         self.window(0, index, w, index + 1)
     }
 
 
-    pub fn slice(&'a mut self) -> &'a mut [T]{
+    pub fn underlying_slice_mut(&mut self) -> &mut [T]{
         self.slice
     }
 
-
+    pub fn slice_mut(&mut self) -> &mut [T]{
+        //Exclude padding/alignment/stride after last pixel
+        let last_pixel_offset = self.info.item_stride() * (self.info.h -1) + self.info.w * self.info.channels() as u32;
+        self.slice[0..last_pixel_offset as usize].as_mut()
+    }
+    pub fn get_slice(&self) -> &[T]{
+        //Exclude padding/alignment/stride after last pixel
+        let last_pixel_offset = self.info.item_stride() * (self.info.h -1) + self.info.w * self.info.channels() as u32;
+        self.slice[0..last_pixel_offset as usize].as_ref()
+    }
+    pub fn underlying_slice(&self) -> &[T]{
+        self.slice
+    }
     pub(crate) fn slice_ptr(&mut self) -> *mut T {
         self.slice.as_mut_ptr()
     }
@@ -382,6 +412,7 @@ impl Bitmap{
 pub struct BitmapInfo{
     w: u32,
     h: u32,
+    /// Row stride
     item_stride: u32,
     alpha_premultiplied: bool,
     alpha_meaningful: bool,

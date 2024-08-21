@@ -1,5 +1,9 @@
+use imageflow_types::ScalingFloatspace;
 use super::internal_prelude::*;
 use crate::graphics::bitmaps::BitmapCompositing;
+use crate::graphics::color::WorkingFloatspace;
+use crate::graphics::scaling::ScaleAndRenderParams;
+use crate::graphics::weights::Filter;
 
 pub static SCALE_2D_RENDER_TO_CANVAS_1D: Scale2dDef = Scale2dDef{};
 pub static SCALE: ScaleDef = ScaleDef{};
@@ -200,7 +204,7 @@ impl NodeDefOneInputOneCanvas for DrawImageDef {
 
             let mut input_bitmap = bitmaps.try_borrow_mut(input_key)
                 .map_err(|e| e.at(here!()))?;
-            let mut input = input_bitmap.get_window_u8().unwrap()
+            let input = input_bitmap.get_window_u8().unwrap()
                 .to_bitmap_bgra().map_err(|e| e.at(here!()))?;
 
 
@@ -253,28 +257,49 @@ impl NodeDefOneInputOneCanvas for DrawImageDef {
             // We can write to the temporary BitmapBgra field because we set it on the real bitmap later after we're done
             if canvas.compositing_mode == crate::ffi::BitmapCompositingMode::ReplaceSelf && compose {
                 canvas.compositing_mode = crate::ffi::BitmapCompositingMode::BlendWithSelf;
+                canvas_bitmap.set_compositing(BitmapCompositing::BlendWithSelf);
             }
             if canvas.compositing_mode == crate::ffi::BitmapCompositingMode::BlendWithMatte && !compose && canvas.fmt == PixelFormat::Bgra32 {
                 canvas.compositing_mode = crate::ffi::BitmapCompositingMode::ReplaceSelf;
+                canvas_bitmap.set_compositing(BitmapCompositing::ReplaceSelf);
             }
 
 
-            let ffi_struct = ffi::Scale2dRenderToCanvas1d {
-                interpolation_filter: ffi::Filter::from(picked_filter),
+            // let ffi_struct = ffi::Scale2dRenderToCanvas1d {
+            //     interpolation_filter: ffi::Filter::from(picked_filter),
+            //     x,
+            //     y,
+            //     w,
+            //     h,
+            //     sharpen_percent_goal: sharpen_percent,
+            //     scale_in_colorspace: crate::ffi::Floatspace::from(floatspace)
+            // };
+
+
+            // if !crate::ffi::flow_node_execute_scale2d_render1d(c.flow_c(),
+            //                                                    &mut input, &mut canvas, &ffi_struct as *const ffi::Scale2dRenderToCanvas1d) {
+            //     return Err(cerror!(c, "Failed to execute Scale2D:  "));
+            // }
+
+            let scale_and_render = ScaleAndRenderParams {
                 x,
                 y,
                 w,
-                h,
+                interpolation_filter: Filter::from(picked_filter),
                 sharpen_percent_goal: sharpen_percent,
-                scale_in_colorspace: crate::ffi::Floatspace::from(floatspace)
+                scale_in_colorspace: match floatspace{
+                    ScalingFloatspace::Srgb => WorkingFloatspace::StandardRGB,
+                    ScalingFloatspace::Linear => WorkingFloatspace::LinearRGB
+                },
+                h,
             };
-
-
-            if !crate::ffi::flow_node_execute_scale2d_render1d(c.flow_c(),
-                                                               &mut input, &mut canvas, &ffi_struct as *const ffi::Scale2dRenderToCanvas1d) {
-                return Err(cerror!(c, "Failed to execute Scale2D:  "));
+            match crate::graphics::scaling::flow_node_execute_scale2d_render1d(input_bitmap.get_window_u8().unwrap(),
+                                                                               canvas_bitmap.get_window_u8().unwrap(), &scale_and_render, true) {
+                Ok(_) => {},
+                Err(e) => {
+                    return Err(e.at(here!()));
+                }
             }
-
             canvas_bitmap.set_compositing(BitmapCompositing::BlendWithSelf);
         }
             Ok(())

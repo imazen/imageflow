@@ -1,3 +1,4 @@
+use crate::graphics::histogram::flow_bitmap_bgra_populate_histogram;
 use super::internal_prelude::*;
 // TODO: someday look into better algorithms - see http://colorconstancy.com/ and http://ipg.fer.hr/ipg/resources/color_constancy
 // http://localhost:39876/ir4/proxy_unsplash/photo-1496264057429-6a331647b69e?a.balancewhite=true&w=800
@@ -126,9 +127,11 @@ impl NodeDefMutateBitmap for WhiteBalanceSrgbMutDef{
 
             let mut histograms: [u64; 768] = [0; 768];
             let mut pixels_sampled: u64 = 0;
-            if !crate::ffi::flow_bitmap_bgra_populate_histogram(c.flow_c(), &mut bitmap as *mut BitmapBgra, histograms.as_mut_ptr(), 256, 3, &mut pixels_sampled as *mut u64) {
-                return Err(cerror!(c, "Failed to populate histogram"))
-            }
+
+            flow_bitmap_bgra_populate_histogram(&mut bitmap as *mut BitmapBgra, histograms.as_mut_ptr(), 256,
+                                                3, &mut pixels_sampled as *mut u64)
+                .map_err(|e| e.at(here!()))?;
+
             if let NodeParams::Json(s::Node::WhiteBalanceHistogramAreaThresholdSrgb { threshold }) = *p {
                 white_balance_srgb_mut(&mut bitmap, &histograms, pixels_sampled, threshold, threshold)
             } else {

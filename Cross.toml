@@ -1,0 +1,2 @@
+[build]
+pre-build = ["git config --system --add safe.directory '*'"]

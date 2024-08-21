@@ -333,10 +333,15 @@ pub enum Color {
 }
 
 use imageflow_helpers::colors::*;
+use rgb::alt::BGRA8;
 impl Color {
 
     pub fn to_u32_bgra(&self) -> std::result::Result<u32, ParseColorError> {
         self.to_color_32().map(|c| c.to_bgra_le() )
+    }
+
+    pub fn to_bgra8(&self) -> std::result::Result<BGRA8, ParseColorError> {
+        self.to_color_32().map(|c| c.to_bgra8())
     }
 
     pub fn to_u32_rgba_big_endian(&self) -> std::result::Result<u32, ParseColorError> {
