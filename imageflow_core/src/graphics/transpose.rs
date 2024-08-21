@@ -4,6 +4,7 @@ use crate::graphics::prelude::*;
 
 #[inline]
 #[allow(unused_assignments)]
+#[cfg(target_arch = "x86_64")]
 unsafe fn transpose4x4_sse(A: *mut f32, B: *mut f32, lda: i32, ldb: i32) {
     let mut row1: __m128 = _mm_loadu_ps(&mut *A.offset((0 as i32 * lda) as isize));
     let mut row2: __m128 = _mm_loadu_ps(&mut *A.offset((1 as i32 * lda) as isize));
@@ -26,6 +27,39 @@ unsafe fn transpose4x4_sse(A: *mut f32, B: *mut f32, lda: i32, ldb: i32) {
     _mm_storeu_ps(&mut *B.offset((2 as i32 * ldb) as isize), row3);
     _mm_storeu_ps(&mut *B.offset((3 as i32 * ldb) as isize), row4);
 }
+
+#[inline]
+#[allow(unused_assignments)]
+#[cfg(target_arch = "aarch64")]
+unsafe fn transpose4x4_neon(A: *mut f32, B: *mut f32, lda: i32, ldb: i32) {
+    let row1 = vld1q_f32(&*A.offset((0 * lda) as isize));
+    let row2 = vld1q_f32(&*A.offset((1 * lda) as isize));
+    let row3 = vld1q_f32(&*A.offset((2 * lda) as isize));
+    let row4 = vld1q_f32(&*A.offset((3 * lda) as isize));
+
+    let tmp01 = vtrnq_f32(row1, row2);
+    let tmp23 = vtrnq_f32(row3, row4);
+
+    let result1 = vzip1q_f32(tmp01.0, tmp23.0);
+    let result2 = vzip2q_f32(tmp01.0, tmp23.0);
+    let result3 = vzip1q_f32(tmp01.1, tmp23.1);
+    let result4 = vzip2q_f32(tmp01.1, tmp23.1);
+
+    vst1q_f32(&mut *B.offset((0 * ldb) as isize), result1);
+    vst1q_f32(&mut *B.offset((1 * ldb) as isize), result2);
+    vst1q_f32(&mut *B.offset((2 * ldb) as isize), result3);
+    vst1q_f32(&mut *B.offset((3 * ldb) as isize), result4);
+}
+
+#[inline]
+unsafe fn transpose4x4_generic(A: *mut f32, B: *mut f32, lda: i32, ldb: i32) {
+    for i in 0..4 {
+        for j in 0..4 {
+            *B.offset((j * ldb + i) as isize) = *A.offset((i * lda + j) as isize);
+        }
+    }
+}
+
 #[inline]
 unsafe fn transpose_block_SSE4x4(
     A: *mut f32,
@@ -55,12 +89,33 @@ unsafe fn transpose_block_SSE4x4(
             while i2 < max_i2 {
                 let mut j2: i32 = j;
                 while j2 < max_j2 {
-                    transpose4x4_sse(
-                        &mut *A.offset((i2 * lda + j2) as isize),
-                        &mut *B.offset((j2 * ldb + i2) as isize),
-                        lda,
-                        ldb,
-                    );
+                    #[cfg(target_arch = "x86_64")]
+                    {
+                        transpose4x4_sse(
+                            &mut *A.offset((i2 * lda + j2) as isize),
+                            &mut *B.offset((j2 * ldb + i2) as isize),
+                            lda,
+                            ldb,
+                        );
+                    }
+                    #[cfg(target_arch = "aarch64")]
+                    {
+                        transpose4x4_neon(
+                            &mut *A.offset((i2 * lda + j2) as isize),
+                            &mut *B.offset((j2 * ldb + i2) as isize),
+                            lda,
+                            ldb,
+                        );
+                    }
+                    #[cfg(all(not(target_arch = "aarch64"), not(target_arch = "x86_64")))]
+                    {
+                        transpose4x4_generic(
+                            &mut *A.offset((i2 * lda + j2) as isize),
+                            &mut *B.offset((j2 * ldb + i2) as isize),
+                            lda,
+                            ldb,
+                        );
+                    }
                     j2 += 4 as i32
                 }
                 i2 += 4 as i32
