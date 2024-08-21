@@ -622,7 +622,7 @@ impl Ir4Layout{
     }
 
     // Clippy considers an fp cast expensive enough to warrant a closure
-    #[cfg_attr(feature = "cargo-clippy", allow(or_fun_call))]
+
     fn get_initial_copy_window_floats(&self, original_width: i32, original_height: i32) -> [f64;4]{
         let defaults = [0f64, 0f64, f64::from(original_width), f64::from(original_height)];
         if let Some(values) = self.i.crop{

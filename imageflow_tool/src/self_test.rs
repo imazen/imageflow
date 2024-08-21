@@ -37,7 +37,7 @@ enum ReplacementInput{
 }
 impl ReplacementInput{
     pub fn prepare(&self, c: &ProcTestContext){
-        #[cfg_attr(feature = "cargo-clippy", allow(single_match))]
+        //#[cfg_attr(feature = "cargo-clippy", allow(single_match))]
         match *self{
             ReplacementInput::File{ref path, ref source} => {
                 let bytes = source.get_bytes();

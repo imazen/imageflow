@@ -1463,7 +1463,7 @@ impl Response001 {
         }
     }
 }
-#[cfg_attr(feature = "cargo-clippy", allow(needless_pass_by_value))]
+//#[cfg_attr(feature = "cargo-clippy", allow(needless_pass_by_value))]
 pub fn rtf<'de,T>(value: T) -> usize
     where T: serde::Serialize,
           T: serde::Deserialize<'de>
