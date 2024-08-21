@@ -117,7 +117,7 @@ fn test_output_weight() {
 
         for i in (0..scalings.len()).step_by(2) {
             let mut w = imageflow_core::graphics::weights::PixelRowWeights::new();
-            output.push_str(&format!("\r\nfilter_{:0>2} ({: >2}px to {: >2}px):",index+1,scalings[i],scalings[i+1]));
+            output.push_str(&format!("\nfilter_{:0>2} ({: >2}px to {: >2}px):",index+1,scalings[i],scalings[i+1]));
             assert_eq!(imageflow_core::graphics::weights::populate_weights(&mut w, scalings[i+1], scalings[i], &details), Ok(()));
             for (o_index,output_pixel) in w.contrib_row().iter().enumerate(){
                 output.push_str(&format!(" x={} from ",o_index));
@@ -129,7 +129,7 @@ fn test_output_weight() {
             }
         }
     }
-    assert_eq!(output.trim(),include_str!("visuals/weights.txt").to_string().trim());
+    assert_eq!(output.trim(),include_str!("visuals/weights.txt").to_string().trim().replace("\r\n","\n"));
 }
 
 #[test]
