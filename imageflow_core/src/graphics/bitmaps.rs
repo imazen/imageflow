@@ -298,7 +298,7 @@ impl<'a,T>  BitmapWindowMut<'a, T> {
         if x1 >= x2 || y1 >= y2 || x2 > self.info.width() || y2 > self.info.height(){
             return None;// Err(nerror!(ErrorKind::InvalidArgument, "x1,y1,x2,y2 must be within window bounds"));
         }
-        let offset = x1 + (y1 * self.info.item_stride());
+        let offset = (x1 * self.info.channels() as u32) + (y1 * self.info.item_stride());
         Some(BitmapWindowMut{
             slice: &mut self.slice[offset as usize..],
             info: BitmapInfo {
