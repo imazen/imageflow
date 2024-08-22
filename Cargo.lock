@@ -1438,8 +1438,7 @@ checksum = "d8adc4bb1803a324070e64a98ae98f38934d91957a99cfb3a43dcbc01bc56439"
 [[package]]
 name = "libpng-sys"
 version = "1.1.9"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b531eb8c558e697d1fc6a642b260426aa85ba4d054a8f0db66f5866918332674"
+source = "git+https://github.com/lilith/rust-libpng-sys#6c17db1dbff73e774e7a50ee5d8d9dfc7a5ec9b6"
 dependencies = [
  "cc",
  "dunce",
