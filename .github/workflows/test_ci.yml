@@ -40,6 +40,9 @@ jobs:
             os: windows-2019
             TARGET_CPU: haswell
 
+          - name: osx_14-aarch64
+            os: macos-14
+            TARGET_CPU: apple-m1
     runs-on: ${{matrix.os}}
     steps:
       - run: rustup show
@@ -48,7 +51,6 @@ jobs:
 
       - run: rustup update stable
         if: ${{contains( matrix.os, 'macos' )}}
-
 
       ### Cargo Cache for Build Artifacts ###
       - name: Cache cargo
