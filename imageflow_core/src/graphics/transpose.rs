@@ -37,13 +37,15 @@ unsafe fn transpose4x4_neon(A: *mut f32, B: *mut f32, lda: i32, ldb: i32) {
     let row3 = vld1q_f32(&*A.offset((2 * lda) as isize));
     let row4 = vld1q_f32(&*A.offset((3 * lda) as isize));
 
-    let tmp01 = vtrnq_f32(row1, row2);
-    let tmp23 = vtrnq_f32(row3, row4);
+    let tmp1 = vtrn1q_f32(row1, row2);
+    let tmp2 = vtrn2q_f32(row1, row2);
+    let tmp3 = vtrn1q_f32(row3, row4);
+    let tmp4 = vtrn2q_f32(row3, row4);
 
-    let result1 = vzip1q_f32(tmp01.0, tmp23.0);
-    let result2 = vzip2q_f32(tmp01.0, tmp23.0);
-    let result3 = vzip1q_f32(tmp01.1, tmp23.1);
-    let result4 = vzip2q_f32(tmp01.1, tmp23.1);
+    let result1 = vtrn1q_f32(tmp1, tmp3);
+    let result2 = vtrn2q_f32(tmp1, tmp3);
+    let result3 = vtrn1q_f32(tmp2, tmp4);
+    let result4 = vtrn2q_f32(tmp2, tmp4);
 
     vst1q_f32(&mut *B.offset((0 * ldb) as isize), result1);
     vst1q_f32(&mut *B.offset((1 * ldb) as isize), result2);
