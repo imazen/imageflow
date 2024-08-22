@@ -789,4 +789,80 @@ mod tests {
         // Test out of bounds access in to slice
         assert!(transpose_u32_slices(&from, &mut to, 2, 3, 2, 3).is_err());
     }
+    #[test]
+    #[cfg(target_arch = "aarch64")]
+    fn test_transpose_8x8_neon() {
+        // Create input matrix with obvious values
+        let input: [u32; 64] = [
+            0,  1,  2,  3,  4,  5,  6,  7,
+            10, 11, 12, 13, 14, 15, 16, 17,
+            20, 21, 22, 23, 24, 25, 26, 27,
+            30, 31, 32, 33, 34, 35, 36, 37,
+            40, 41, 42, 43, 44, 45, 46, 47,
+            50, 51, 52, 53, 54, 55, 56, 57,
+            60, 61, 62, 63, 64, 65, 66, 67,
+            70, 71, 72, 73, 74, 75, 76, 77
+        ];
+
+        let mut output = [0u32; 64];
+
+        unsafe {
+            transpose_8x8_neon(input.as_ptr(), output.as_mut_ptr(), 8, 8);
+        }
+
+        // Expected transposed matrix
+        let expected: [u32; 64] = [
+            0, 10, 20, 30, 40, 50, 60, 70,
+            1, 11, 21, 31, 41, 51, 61, 71,
+            2, 12, 22, 32, 42, 52, 62, 72,
+            3, 13, 23, 33, 43, 53, 63, 73,
+            4, 14, 24, 34, 44, 54, 64, 74,
+            5, 15, 25, 35, 45, 55, 65, 75,
+            6, 16, 26, 36, 46, 56, 66, 76,
+            7, 17, 27, 37, 47, 57, 67, 77
+        ];
+
+        assert_eq!(output, expected, "Transposed matrix does not match expected output");
+    }
+
+    #[test]
+    #[cfg(target_arch = "x86_64")]
+    fn test_transpose_8x8_avx2() {
+        if !is_x86_feature_detected!("avx2") {
+            println!("AVX2 not supported, skipping test");
+            return;
+        }
+
+        // Create input matrix with obvious values
+        let input: [u32; 64] = [
+            0,  1,  2,  3,  4,  5,  6,  7,
+            10, 11, 12, 13, 14, 15, 16, 17,
+            20, 21, 22, 23, 24, 25, 26, 27,
+            30, 31, 32, 33, 34, 35, 36, 37,
+            40, 41, 42, 43, 44, 45, 46, 47,
+            50, 51, 52, 53, 54, 55, 56, 57,
+            60, 61, 62, 63, 64, 65, 66, 67,
+            70, 71, 72, 73, 74, 75, 76, 77
+        ];
+
+        let mut output = [0u32; 64];
+
+        unsafe {
+            transpose_8x8_avx2(input.as_ptr(), output.as_mut_ptr(), 8, 8);
+        }
+
+        // Expected transposed matrix
+        let expected: [u32; 64] = [
+            0, 10, 20, 30, 40, 50, 60, 70,
+            1, 11, 21, 31, 41, 51, 61, 71,
+            2, 12, 22, 32, 42, 52, 62, 72,
+            3, 13, 23, 33, 43, 53, 63, 73,
+            4, 14, 24, 34, 44, 54, 64, 74,
+            5, 15, 25, 35, 45, 55, 65, 75,
+            6, 16, 26, 36, 46, 56, 66, 76,
+            7, 17, 27, 37, 47, 57, 67, 77
+        ];
+
+        assert_eq!(output, expected, "Transposed matrix does not match expected output");
+    }
 }
