@@ -81,6 +81,7 @@ hyper = "1.4"
 imageflow_http_helpers = { path = "../imageflow_http_helpers", version = "*" }
 dssim = "3.3"
 criterion = "0.5"
+rand = "*"
 
 [features]
 default = []

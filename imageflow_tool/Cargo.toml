@@ -3,7 +3,7 @@ name = "imageflow_tool_lib"
 version = "0.1.0"
 authors = ["Lilith River <lilith@imazen.io>"]
 workspace = "../"
-edition = "2018"
+edition = "2021"
 
 [dependencies]
 imageflow_core = { path = "../imageflow_core", version = "*" }

@@ -1,6 +1,16 @@
 #![allow(non_snake_case)]
 
 use crate::graphics::prelude::*;
+use multiversion::multiversion;
+
+#[cfg(feature = "nightly")]
+use std::simd::{Simd};
+
+#[cfg(feature = "nightly")]
+use  std::simd::prelude::SimdUint;
+
+#[cfg(target_arch = "x86_64")]
+use std::arch::x86_64::*;
 
 #[inline]
 #[allow(unused_assignments)]
@@ -27,30 +37,124 @@ unsafe fn transpose4x4_sse(A: *mut f32, B: *mut f32, lda: i32, ldb: i32) {
     _mm_storeu_ps(&mut *B.offset((2 as i32 * ldb) as isize), row3);
     _mm_storeu_ps(&mut *B.offset((3 as i32 * ldb) as isize), row4);
 }
+#[target_feature(enable = "sse2")]
+unsafe fn transpose4x4_sse2(A: *const u32, B: *mut u32, stride_a: usize, stride_b: usize) {
+    let row1: __m128i = _mm_loadu_si128(A as *const __m128i);
+    let row2: __m128i = _mm_loadu_si128(A.add(stride_a) as *const __m128i);
+    let row3: __m128i = _mm_loadu_si128(A.add(stride_a * 2) as *const __m128i);
+    let row4: __m128i = _mm_loadu_si128(A.add(stride_a * 3) as *const __m128i);
 
-#[inline]
-#[allow(unused_assignments)]
+    let tmp0: __m128i = _mm_unpacklo_epi32(row1, row2);
+    let tmp1: __m128i = _mm_unpackhi_epi32(row1, row2);
+    let tmp2: __m128i = _mm_unpacklo_epi32(row3, row4);
+    let tmp3: __m128i = _mm_unpackhi_epi32(row3, row4);
+
+    let row1 = _mm_unpacklo_epi64(tmp0, tmp2);
+    let row2 = _mm_unpackhi_epi64(tmp0, tmp2);
+    let row3 = _mm_unpacklo_epi64(tmp1, tmp3);
+    let row4 = _mm_unpackhi_epi64(tmp1, tmp3);
+
+    _mm_storeu_si128(B as *mut __m128i, row1);
+    _mm_storeu_si128(B.add(stride_b) as *mut __m128i, row2);
+    _mm_storeu_si128(B.add(stride_b * 2) as *mut __m128i, row3);
+    _mm_storeu_si128(B.add(stride_b * 3) as *mut __m128i, row4);
+}
+
+#[target_feature(enable = "avx2")]
+#[cfg(target_arch = "x86_64")]
+unsafe fn transpose_8x8_avx2(src: *const u32, dst: *mut u32, src_stride: usize, dst_stride: usize) {
+    // Load 8 rows of 8 32-bit integers each
+    let row0 = _mm256_loadu_si256(src as *const __m256i);
+    let row1 = _mm256_loadu_si256(src.add(src_stride) as *const __m256i);
+    let row2 = _mm256_loadu_si256(src.add(src_stride * 2) as *const __m256i);
+    let row3 = _mm256_loadu_si256(src.add(src_stride * 3) as *const __m256i);
+    let row4 = _mm256_loadu_si256(src.add(src_stride * 4) as *const __m256i);
+    let row5 = _mm256_loadu_si256(src.add(src_stride * 5) as *const __m256i);
+    let row6 = _mm256_loadu_si256(src.add(src_stride * 6) as *const __m256i);
+    let row7 = _mm256_loadu_si256(src.add(src_stride * 7) as *const __m256i);
+
+    // Transpose 8x8 matrix
+    let tmp0 = _mm256_unpacklo_epi32(row0, row1);
+    let tmp1 = _mm256_unpackhi_epi32(row0, row1);
+    let tmp2 = _mm256_unpacklo_epi32(row2, row3);
+    let tmp3 = _mm256_unpackhi_epi32(row2, row3);
+    let tmp4 = _mm256_unpacklo_epi32(row4, row5);
+    let tmp5 = _mm256_unpackhi_epi32(row4, row5);
+    let tmp6 = _mm256_unpacklo_epi32(row6, row7);
+    let tmp7 = _mm256_unpackhi_epi32(row6, row7);
+
+    let tmp8 = _mm256_unpacklo_epi64(tmp0, tmp2);
+    let tmp9 = _mm256_unpackhi_epi64(tmp0, tmp2);
+    let tmp10 = _mm256_unpacklo_epi64(tmp1, tmp3);
+    let tmp11 = _mm256_unpackhi_epi64(tmp1, tmp3);
+    let tmp12 = _mm256_unpacklo_epi64(tmp4, tmp6);
+    let tmp13 = _mm256_unpackhi_epi64(tmp4, tmp6);
+    let tmp14 = _mm256_unpacklo_epi64(tmp5, tmp7);
+    let tmp15 = _mm256_unpackhi_epi64(tmp5, tmp7);
+
+    let row0 = _mm256_permute2x128_si256(tmp8, tmp12, 0x20);
+    let row1 = _mm256_permute2x128_si256(tmp9, tmp13, 0x20);
+    let row2 = _mm256_permute2x128_si256(tmp10, tmp14, 0x20);
+    let row3 = _mm256_permute2x128_si256(tmp11, tmp15, 0x20);
+    let row4 = _mm256_permute2x128_si256(tmp8, tmp12, 0x31);
+    let row5 = _mm256_permute2x128_si256(tmp9, tmp13, 0x31);
+    let row6 = _mm256_permute2x128_si256(tmp10, tmp14, 0x31);
+    let row7 = _mm256_permute2x128_si256(tmp11, tmp15, 0x31);
+
+    // Store the transposed rows
+    _mm256_storeu_si256(dst as *mut __m256i, row0);
+    _mm256_storeu_si256(dst.add(dst_stride) as *mut __m256i, row1);
+    _mm256_storeu_si256(dst.add(dst_stride * 2) as *mut __m256i, row2);
+    _mm256_storeu_si256(dst.add(dst_stride * 3) as *mut __m256i, row3);
+    _mm256_storeu_si256(dst.add(dst_stride * 4) as *mut __m256i, row4);
+    _mm256_storeu_si256(dst.add(dst_stride * 5) as *mut __m256i, row5);
+    _mm256_storeu_si256(dst.add(dst_stride * 6) as *mut __m256i, row6);
+    _mm256_storeu_si256(dst.add(dst_stride * 7) as *mut __m256i, row7);
+}
+
+#[target_feature(enable = "neon")]
 #[cfg(target_arch = "aarch64")]
-unsafe fn transpose4x4_neon(A: *mut f32, B: *mut f32, lda: i32, ldb: i32) {
-    let row1 = vld1q_f32(&*A.offset((0 * lda) as isize));
-    let row2 = vld1q_f32(&*A.offset((1 * lda) as isize));
-    let row3 = vld1q_f32(&*A.offset((2 * lda) as isize));
-    let row4 = vld1q_f32(&*A.offset((3 * lda) as isize));
+#[inline(always)]
+unsafe fn transpose_8x8_neon(src: *const u32, dst: *mut u32, src_stride: usize, dst_stride: usize) {
+    // Load 8 rows of 8 32-bit integers each
+    let row0 = vld1q_u32(src as *const u32);
+    let row1 = vld1q_u32(src.add(src_stride) as *const u32);
+    let row2 = vld1q_u32(src.add(src_stride * 2) as *const u32);
+    let row3 = vld1q_u32(src.add(src_stride * 3) as *const u32);
+    let row4 = vld1q_u32(src.add(src_stride * 4) as *const u32);
+    let row5 = vld1q_u32(src.add(src_stride * 5) as *const u32);
+    let row6 = vld1q_u32(src.add(src_stride * 6) as *const u32);
+    let row7 = vld1q_u32(src.add(src_stride * 7) as *const u32);
 
-    let tmp1 = vtrn1q_f32(row1, row2);
-    let tmp2 = vtrn2q_f32(row1, row2);
-    let tmp3 = vtrn1q_f32(row3, row4);
-    let tmp4 = vtrn2q_f32(row3, row4);
+    // Transpose 8x8 matrix
+    let (tmp0, tmp1) = vtrnq_u32(row0, row1);
+    let (tmp2, tmp3) = vtrnq_u32(row2, row3);
+    let (tmp4, tmp5) = vtrnq_u32(row4, row5);
+    let (tmp6, tmp7) = vtrnq_u32(row6, row7);
 
-    let result1 = vtrn1q_f32(tmp1, tmp3);
-    let result2 = vtrn2q_f32(tmp1, tmp3);
-    let result3 = vtrn1q_f32(tmp2, tmp4);
-    let result4 = vtrn2q_f32(tmp2, tmp4);
+    let (tmp8, tmp9) = vuzpq_u32(tmp0, tmp2);
+    let (tmp10, tmp11) = vuzpq_u32(tmp1, tmp3);
+    let (tmp12, tmp13) = vuzpq_u32(tmp4, tmp6);
+    let (tmp14, tmp15) = vuzpq_u32(tmp5, tmp7);
 
-    vst1q_f32(&mut *B.offset((0 * ldb) as isize), result1);
-    vst1q_f32(&mut *B.offset((1 * ldb) as isize), result2);
-    vst1q_f32(&mut *B.offset((2 * ldb) as isize), result3);
-    vst1q_f32(&mut *B.offset((3 * ldb) as isize), result4);
+    let result0 = vreinterpretq_u32_u64(vtrn1q_u64(vreinterpretq_u64_u32(tmp8), vreinterpretq_u64_u32(tmp12)));
+    let result1 = vreinterpretq_u32_u64(vtrn1q_u64(vreinterpretq_u64_u32(tmp9), vreinterpretq_u64_u32(tmp13)));
+    let result2 = vreinterpretq_u32_u64(vtrn1q_u64(vreinterpretq_u64_u32(tmp10), vreinterpretq_u64_u32(tmp14)));
+    let result3 = vreinterpretq_u32_u64(vtrn1q_u64(vreinterpretq_u64_u32(tmp11), vreinterpretq_u64_u32(tmp15)));
+    let result4 = vreinterpretq_u32_u64(vtrn2q_u64(vreinterpretq_u64_u32(tmp8), vreinterpretq_u64_u32(tmp12)));
+    let result5 = vreinterpretq_u32_u64(vtrn2q_u64(vreinterpretq_u64_u32(tmp9), vreinterpretq_u64_u32(tmp13)));
+    let result6 = vreinterpretq_u32_u64(vtrn2q_u64(vreinterpretq_u64_u32(tmp10), vreinterpretq_u64_u32(tmp14)));
+    let result7 = vreinterpretq_u32_u64(vtrn2q_u64(vreinterpretq_u64_u32(tmp11), vreinterpretq_u64_u32(tmp15)));
+
+    // Store the transposed rows
+    vst1q_u32(dst as *mut u32, result0);
+    vst1q_u32(dst.add(dst_stride) as *mut u32, result1);
+    vst1q_u32(dst.add(dst_stride * 2) as *mut u32, result2);
+    vst1q_u32(dst.add(dst_stride * 3) as *mut u32, result3);
+    vst1q_u32(dst.add(dst_stride * 4) as *mut u32, result4);
+    vst1q_u32(dst.add(dst_stride * 5) as *mut u32, result5);
+    vst1q_u32(dst.add(dst_stride * 6) as *mut u32, result6);
+    vst1q_u32(dst.add(dst_stride * 7) as *mut u32, result7);
 }
 
 #[inline]
@@ -63,7 +167,7 @@ unsafe fn transpose4x4_generic(A: *mut f32, B: *mut f32, lda: i32, ldb: i32) {
 }
 
 #[inline]
-unsafe fn transpose_block_SSE4x4(
+unsafe fn transpose_block_4x4(
     A: *mut f32,
     B: *mut f32,
     n: i32,
@@ -128,6 +232,368 @@ unsafe fn transpose_block_SSE4x4(
     }
 }
 
+// Generic transposition function for [u32] slices
+pub fn transpose_u32_slices(
+    from: &[u32],
+    to: &mut [u32],
+    from_stride: usize,
+    to_stride: usize,
+    width: usize,
+    height: usize,
+) -> Result<(), FlowError> {
+    if to_stride < height {
+        return Err(nerror!(ErrorKind::InvalidArgument,
+            "to_stride({}) < height({})", to_stride, height));
+    }
+    // Ensure we don't go out of bounds
+    if from_stride * (height -1) + width > from.len() {
+        return Err(nerror!(ErrorKind::InvalidArgument,
+            "Slice bounds exceeded: from_stride({}) * (height ({}) - 1) + width ({}) > from.len({})", from_stride, height, width, from.len()));
+    }
+    if from_stride < width {
+        return Err(nerror!(ErrorKind::InvalidArgument,
+            "from_stride({}) < width({})", from_stride, width));
+    }
+
+    if to_stride * (width - 1) + height > to.len() {
+        return Err(nerror!(ErrorKind::InvalidArgument,
+            "Slice bounds exceeded: to_stride({}) * (width ({}) - 1) + height ({}) > to.len({})", to_stride, width, height, to.len()));
+    }
+
+    let block_size = 128;
+    let cropped_h = (height / block_size) * block_size;
+    let cropped_w = (width / block_size) * block_size;
+
+    // Transpose the main part of the image
+    transpose_multiple_of_block_size_rectangle(from, to, from_stride, to_stride, cropped_w, cropped_h, block_size);
+
+    // Handle the remaining edges
+    transpose_edges(from, to, cropped_h, cropped_w, from_stride, to_stride, width, height);
+
+    Ok(())
+}
+
+
+// transpose main cropped part of the image
+#[multiversion(targets("x86_64+avx2","aarch64+neon","x86_64+sse4.1"))]
+fn transpose_multiple_of_block_size_rectangle(
+    src: &[u32],
+    dst: &mut [u32],
+    src_stride: usize,
+    dst_stride: usize,
+    width: usize,
+    height: usize,
+    block_size: usize
+) {
+    #[cfg(target_arch = "x86_64")]
+    let use8x8simd = is_x86_feature_detected!("avx2");
+
+    #[cfg(target_arch = "aarch64")]
+    let use8x8simd = std::arch::is_aarch64_feature_detected!("neon");
+
+    #[cfg(all(not(target_arch = "aarch64"), not(target_arch = "x86_64")))]
+    let use8x8simd = false;
+
+    #[cfg(target_arch = "x86_64")]
+    let use4x4simd = false;
+
+    #[cfg(not(target_arch = "x86_64"))]
+    let use4x4simd = false;
+
+
+    for y_block in (0..height).step_by(block_size) {
+        for x_block in (0..width).step_by(block_size) {
+            let max_y = (y_block + block_size).min(height);
+            let max_x = (x_block + block_size).min(width);
+
+            if use8x8simd {
+                for y in (y_block..max_y).step_by(8) {
+                    for x in (x_block..max_x).step_by(8) {
+                        #[cfg(target_arch = "x86_64")]
+                        unsafe {
+                            transpose_8x8_avx2(
+                                src.as_ptr().add(y * src_stride + x),
+                                dst.as_mut_ptr().add(x * dst_stride + y),
+                                src_stride,
+                                dst_stride,
+                            );
+                        }
+                        #[cfg(target_arch = "aarch64")]
+                        unsafe {
+                            transpose_8x8_neon(
+                                src.as_ptr().add(y * src_stride + x),
+                                dst.as_mut_ptr().add(x * dst_stride + y),
+                                src_stride,
+                                dst_stride,
+                            );
+                        }
+                    }
+                }
+            } else if use4x4simd {
+                for y in (y_block..max_y).step_by(4) {
+                    for x in (x_block..max_x).step_by(4) {
+                        unsafe {
+                            transpose4x4_sse2(
+                                src.as_ptr().add(y * src_stride + x),
+                                dst.as_mut_ptr().add(x * dst_stride + y),
+                                src_stride,
+                                dst_stride,
+                            );
+                        }
+                    }
+                }
+            }else {
+                #[cfg(feature = "nightly")]
+                {
+                    transpose_in_blocks_of_8x8_simd(
+                        src,
+                        dst,
+                        src_stride,
+                        dst_stride,
+                        x_block,
+                        y_block,
+                        max_x,
+                        max_y,
+                    );
+                }
+                #[cfg(not(feature = "nightly"))]
+                {
+                    transpose_in_blocks_of_8x8_scalar(
+                        src,
+                        dst,
+                        src_stride,
+                        dst_stride,
+                        x_block,
+                        y_block,
+                        max_x,
+                        max_y,
+                    );
+                }
+            }
+
+        }
+    }
+}
+
+
+#[multiversion(targets("x86_64+avx2","aarch64+neon","x86_64+sse4.1"))]
+#[cfg(feature = "nightly")]
+fn transpose_in_blocks_of_8x8_simd(
+    src: &[u32],
+    dst: &mut [u32],
+    src_stride: usize,
+    dst_stride: usize,
+    x1: usize,
+    y1: usize,
+    x2: usize,
+    y2: usize,
+) {
+    for y in (y1..y2).step_by(8) {
+        let src_row = y * src_stride;
+        for x in (x1..x2).step_by(8) {
+            let block_x = src_row + x;
+            let block_y = x * dst_stride + y;
+
+            // Load 8x8 block from source
+            let input: [Simd<u32, 8>; 8] = [
+                Simd::from_slice(&src[block_x..]),
+                Simd::from_slice(&src[block_x + src_stride..]),
+                Simd::from_slice(&src[block_x + 2 * src_stride..]),
+                Simd::from_slice(&src[block_x + 3 * src_stride..]),
+                Simd::from_slice(&src[block_x + 4 * src_stride..]),
+                Simd::from_slice(&src[block_x + 5 * src_stride..]),
+                Simd::from_slice(&src[block_x + 6 * src_stride..]),
+                Simd::from_slice(&src[block_x + 7 * src_stride..]),
+            ];
+
+            // Transpose the block
+            let transposed = transpose_8x8_simd(input);
+
+            // Store the transposed block
+            for (i, row) in transposed.iter().enumerate() {
+                row.copy_to_slice(&mut dst[block_y + i * dst_stride..]);
+            }
+        }
+    }
+}
+
+#[cfg(feature = "nightly")]
+fn transpose_8x8_simd(input: [Simd<u32, 8>; 8]) -> [Simd<u32, 8>; 8] {
+    let [r0, r1, r2, r3, r4, r5, r6, r7] = input;
+
+    // Transpose pairs
+    let (r0, r1) = r0.interleave(r1);
+    let (r2, r3) = r2.interleave(r3);
+    let (r4, r5) = r4.interleave(r5);
+    let (r6, r7) = r6.interleave(r7);
+
+    // Transpose quads
+    let (r0, r2) = r0.interleave(r2);
+    let (r1, r3) = r1.interleave(r3);
+    let (r4, r6) = r4.interleave(r6);
+    let (r5, r7) = r5.interleave(r7);
+
+    // Final transpose
+    let (r0, r4) = r0.interleave(r4);
+    let (r1, r5) = r1.interleave(r5);
+    let (r2, r6) = r2.interleave(r6);
+    let (r3, r7) = r3.interleave(r7);
+
+    [r0, r1, r2, r3, r4, r5, r6, r7]
+}
+
+#[cfg(not(feature = "nightly"))]
+#[multiversion(targets("x86_64+avx2","aarch64+neon","x86_64+sse4.1"))]
+fn transpose_in_blocks_of_8x8_scalar(
+    src: &[u32],
+    dst: &mut [u32],
+    src_stride: usize,
+    dst_stride: usize,
+    x1: usize,
+    y1: usize,
+    x2: usize,
+    y2: usize,
+) {
+    for y in (y1..y2).step_by(8) {
+        let src_row = y * src_stride;
+        for x in (x1..x2).step_by(8) {
+            let block_x = src_row + x;
+            let block_y = x * dst_stride + y;
+
+            unsafe {
+                for i in 0..8 {
+                    for j in 0..8 {
+                        *dst.get_unchecked_mut(block_y + j * dst_stride + i) =
+                            *src.get_unchecked(block_x + i * src_stride + j);
+                    }
+                }
+            }
+        }
+    }
+}
+
+#[multiversion(targets("x86_64+avx2","aarch64+neon","x86_64+sse4.1"))]
+fn transpose_in_blocks_of_4x4(
+    src: &[u32],
+    dst: &mut [u32],
+    src_stride: usize,
+    dst_stride: usize,
+    x1: usize,
+    y1: usize,
+    x2: usize,
+    y2: usize,
+) {
+    unsafe {
+        for y in (y1..y2).step_by(4) {
+            let src_row = y*src_stride;
+            for x in (x1..x2).step_by(4) {
+                let block_x = src_row + x;
+                let block_y = x*dst_stride + y;
+                for i in 0..4 {
+                    for j in 0..4 {
+                        *dst.get_unchecked_mut(block_y + j * dst_stride + i) =
+                        *src.get_unchecked(block_x + i * src_stride + j);
+                    }
+                }
+            }
+        }
+    }
+}
+
+// #[multiversion(targets("x86_64+avx2","aarch64+neon","x86_64+sse4.1"))]
+#[inline(always)]
+fn transpose_4x4(
+    src: &[u32],
+    dst: &mut [u32],
+    src_stride: usize,
+    dst_stride: usize,
+) {
+    unsafe {
+        for i in 0..4 {
+            for j in 0..4 {
+                *dst.get_unchecked_mut(j * dst_stride + i) = *src.get_unchecked(i * src_stride + j);
+            }
+        }
+    }
+}
+
+
+// #[multiversion(targets("x86_64+avx2","aarch64+neon","x86_64+sse4.1"))]
+#[inline(always)]
+fn transpose_8x8(
+    src: &[u32],
+    dst: &mut [u32],
+    src_stride: usize,
+    dst_stride: usize,
+) {
+    unsafe {
+        for i in 0..8 {
+            for j in 0..8 {
+                *dst.get_unchecked_mut(j * dst_stride + i) = *src.get_unchecked(i * src_stride + j);
+            }
+        }
+    }
+}
+
+
+
+#[inline(always)]
+fn transpose_edges(
+    src: &[u32],
+    dst: &mut [u32],
+    cropped_height: usize,
+    cropped_width: usize,
+    src_stride: usize,
+    dst_stride: usize,
+    width: usize,
+    height: usize,
+) {
+    unsafe {
+        // Transpose the right edge
+        for x in cropped_width..width {
+            for y in 0..cropped_height {
+                *dst.get_unchecked_mut(x * dst_stride + y) = *src.get_unchecked(y * src_stride + x);
+            }
+        }
+
+        // Transpose the bottom edge
+        for y in cropped_height..height {
+            for x in 0..width {
+                *dst.get_unchecked_mut(x * dst_stride + y) = *src.get_unchecked(y * src_stride + x);
+            }
+        }
+    }
+}
+
+// Function for BitmapWindowMut
+pub fn bitmap_window_transpose(
+    from: &mut BitmapWindowMut<u8>,
+    to: &mut BitmapWindowMut<u8>
+) -> Result<(), FlowError> {
+    if from.w() != to.h() || from.h() != to.w() || from.info().pixel_layout() != to.info().pixel_layout() {
+        return Err(nerror!(ErrorKind::InvalidArgument, "Canvas and input formats must be the same and dimensions must be swapped"));
+    }
+
+    if from.info().pixel_layout() != PixelLayout::BGRA {
+        return Err(nerror!(ErrorKind::InvalidArgument, "Only BGRA layout is supported"));
+    }
+
+    let from_slice = unsafe {
+        std::slice::from_raw_parts(from.slice_mut().as_ptr() as *const u32, from.slice_mut().len() / 4)
+    };
+    let to_slice = unsafe {
+        std::slice::from_raw_parts_mut(to.slice_mut().as_mut_ptr() as *mut u32, to.slice_mut().len() / 4)
+    };
+
+    let from_stride = from.info().item_stride() as usize / 4;
+    let to_stride = to.info().item_stride() as usize / 4;
+    let width = from.w() as usize;
+    let height = from.h() as usize;
+
+    transpose_u32_slices(from_slice, to_slice, from_stride, to_stride, width, height).map_err(|e| e.at(here!()))
+}
+
+// Function for flow_bitmap_bgra
 pub unsafe fn flow_bitmap_bgra_transpose(
     from: *mut flow_bitmap_bgra,
     to: *mut flow_bitmap_bgra,
@@ -136,143 +602,189 @@ pub unsafe fn flow_bitmap_bgra_transpose(
         return Err(nerror!(ErrorKind::InvalidArgument, "Canvas and input formats must be the same and dimensions must be swapped"));
     }
 
-    if (*from).fmt != PixelFormat::Bgra32
-        && (*from).fmt != PixelFormat::Bgr32
-    {
-        flow_bitmap_bgra_transpose_slow( from, to)
-            .map_err(|e| e.at(here!()))?;
+    if (*from).fmt != PixelFormat::Bgra32 && (*from).fmt != PixelFormat::Bgr32 {
+        return Err(nerror!(ErrorKind::InvalidArgument, "Only Bgra32 and Bgr32 are supported"));
+    }
 
-        return Ok(());
-    }
-    // We require 8 when we only need 4 - in case we ever want to enable avx (like if we make it faster)
-    let min_block_size: i32 = 8 as i32;
-    // Strides must be multiple of required alignments
-    if (*from).stride.wrapping_rem(min_block_size as u32) != 0 as i32 as u32
-        || (*to).stride.wrapping_rem(min_block_size as u32) != 0 as i32 as u32
-    {
-        return Err(nerror!(ErrorKind::InvalidArgument));
-    }
-    // 256 (1024x1024 bytes) at 18.18ms, 128 at 18.6ms,  64 at 20.4ms, 16 at 25.71ms
-    let block_size: i32 = 128 as i32;
-    let cropped_h: i32 = (*from)
-        .h
-        .wrapping_sub((*from).h.wrapping_rem(min_block_size as u32))
-        as i32;
-    let cropped_w: i32 = (*from)
-        .w
-        .wrapping_sub((*from).w.wrapping_rem(min_block_size as u32))
-        as i32;
-    transpose_block_SSE4x4(
-        (*from).pixels as *mut f32,
-        (*to).pixels as *mut f32,
-        cropped_h,
-        cropped_w,
-        (*from).stride.wrapping_div(4u32) as i32,
-        (*to).stride.wrapping_div(4u32) as i32,
-        block_size,
-    );
-    // Copy missing bits
-    let mut x: u32 = cropped_h as u32;
-    while x < (*to).w {
-        let mut y: u32 = 0 as i32 as u32;
-        while y < (*to).h {
-            *((*to).pixels.offset(
-                x.wrapping_mul(4u32)
-                    .wrapping_add(y.wrapping_mul((*to).stride)) as isize,
-            ) as *mut u32) = *((*from).pixels.offset(
-                x.wrapping_mul((*from).stride)
-                    .wrapping_add(y.wrapping_mul(4u32)) as isize,
-            ) as *mut u32);
-            y = y.wrapping_add(1)
-        }
-        x = x.wrapping_add(1)
-    }
-    let mut x_0: u32 = 0 as i32 as u32;
-    while x_0 < cropped_h as u32 {
-        let mut y_0: u32 = cropped_w as u32;
-        while y_0 < (*to).h {
-            *((*to).pixels.offset(
-                x_0.wrapping_mul(4u32)
-                    .wrapping_add(y_0.wrapping_mul((*to).stride)) as isize,
-            ) as *mut u32) = *((*from).pixels.offset(
-                x_0.wrapping_mul((*from).stride)
-                    .wrapping_add(y_0.wrapping_mul(4u32)) as isize,
-            ) as *mut u32);
-            y_0 = y_0.wrapping_add(1)
-        }
-        x_0 = x_0.wrapping_add(1)
-    }
-    return Ok(());
+    let from_slice = std::slice::from_raw_parts((*from).pixels as *const u32, ((*from).stride * (*from).h) as usize / 4);
+    let to_slice = std::slice::from_raw_parts_mut((*to).pixels as *mut u32, ((*to).stride * (*to).h) as usize / 4);
+
+    let from_stride = (*from).stride as usize / 4;
+    let to_stride = (*to).stride as usize / 4;
+    let width = (*from).w as usize;
+    let height = (*from).h as usize;
+
+    transpose_u32_slices(from_slice, to_slice, from_stride, to_stride, width, height).map_err(|e| e.at(here!()))
 }
 
-unsafe fn flow_bitmap_bgra_transpose_slow(
-    from: *mut flow_bitmap_bgra,
-    to: *mut flow_bitmap_bgra,
-) -> Result<(), FlowError> {
-    if (*from).w != (*to).h || (*from).h != (*to).w || (*from).fmt as u32 != (*to).fmt as u32 {
-        return Err(nerror!(ErrorKind::InvalidArgument));
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use rand::Rng;
+
+    #[test]
+    fn test_transpose_u32_slices_square() {
+        let from = vec![1, 2, 3, 4, 5, 6, 7, 8, 9];
+        let mut to = vec![0; 9];
+        transpose_u32_slices(&from, &mut to, 3, 3, 3, 3).unwrap();
+        assert_eq!(to, vec![1, 4, 7, 2, 5, 8, 3, 6, 9]);
     }
-    if (*from).fmt == PixelFormat::Bgra32
-        || (*from).fmt == PixelFormat::Bgr32
-    {
-        let mut x: u32 = 0 as i32 as u32;
-        while x < (*to).w {
-            let mut y: u32 = 0 as i32 as u32;
-            while y < (*to).h {
-                *((*to).pixels.offset(
-                    x.wrapping_mul(4u32)
-                        .wrapping_add(y.wrapping_mul((*to).stride)) as isize,
-                ) as *mut u32) = *((*from).pixels.offset(
-                    x.wrapping_mul((*from).stride)
-                        .wrapping_add(y.wrapping_mul(4u32)) as isize,
-                ) as *mut u32);
-                y = y.wrapping_add(1)
+
+    #[test]
+    fn test_transpose_u32_slices_rectangle_wide() {
+        let from = vec![1, 2, 3, 4, 5, 6];
+        let mut to = vec![0; 6];
+        transpose_u32_slices(&from, &mut to, 6, 1, 6, 1).unwrap();
+        assert_eq!(to, vec![1, 2, 3, 4, 5, 6]);
+    }
+
+    #[test]
+    fn test_transpose_u32_slices_rectangle_tall() {
+        let from = vec![1, 2, 3, 4, 5, 6];
+        let mut to = vec![0; 6];
+        transpose_u32_slices(&from, &mut to, 1, 6, 1, 6).unwrap();
+        assert_eq!(to, vec![1, 2, 3, 4, 5, 6]);
+    }
+
+    #[test]
+    fn test_transpose_u32_slices_small_rectangle() {
+        let from = vec![1, 2, 3, 4, 5, 6];
+        let mut to = vec![0; 6];
+        transpose_u32_slices(&from, &mut to, 3, 2, 3, 2).unwrap();
+        assert_eq!(to, vec![1, 4, 2, 5, 3, 6]);
+    }
+
+    #[test]
+    fn test_transpose_u32_slices_with_stride() {
+        let from = vec![1, 2, 3, 0, 4, 5, 6, 0, 7, 8, 9, 0];
+        let mut to = vec![0; 9];
+        transpose_u32_slices(&from, &mut to, 4, 3, 3, 3).unwrap();
+        assert_eq!(to, vec![1, 4, 7, 2, 5, 8, 3, 6, 9]);
+    }
+
+    #[test]
+    fn test_transpose_u32_slices_partial_fill() {
+        let from = vec![1, 2, 3, 4, 5, 6, 7, 8, 9];
+        let mut to = vec![0; 12];
+        transpose_u32_slices(&from, &mut to, 3, 4, 3, 3).unwrap();
+        assert_eq!(to, vec![1, 4, 7, 0, 2, 5, 8, 0, 3, 6, 9, 0]);
+    }
+
+    #[test]
+    fn test_transpose_u32_slices_error_dimensions_mismatch() {
+        let from = vec![1, 2, 3, 4];
+        let mut to = vec![0; 4];
+        let result = transpose_u32_slices(&from, &mut to, 2, 2, 3, 2);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_transpose_large_square_matrix() {
+        let size = 256;
+        let mut rng = rand::thread_rng();
+        let from: Vec<u32> = (0..size*size).map(|_| rng.gen()).collect();
+        let mut to = vec![0; size*size];
+
+        transpose_u32_slices(&from, &mut to, size, size, size, size).unwrap();
+
+        for i in 0..size {
+            for j in 0..size {
+                assert_eq!(from[i*size + j], to[j*size + i]);
             }
-            x = x.wrapping_add(1)
         }
-        return Ok(());
-    } else if (*from).fmt == PixelFormat::Bgr24 {
-        let from_stride: i32 = (*from).stride as i32;
-        let to_stride: i32 = (*to).stride as i32;
-        let mut x_0: u32 = 0 as i32 as u32;
-        let mut x_stride: u32 = 0 as i32 as u32;
-        let mut x_3: u32 = 0 as i32 as u32;
-        while x_0 < (*to).w {
-            let mut y_0: u32 = 0 as i32 as u32;
-            let mut y_stride: u32 = 0 as i32 as u32;
-            let mut y_3: u32 = 0 as i32 as u32;
-            while y_0 < (*to).h {
-                *(*to).pixels.offset(x_3.wrapping_add(y_stride) as isize) =
-                    *(*from).pixels.offset(x_stride.wrapping_add(y_3) as isize);
-                *(*to)
-                    .pixels
-                    .offset(x_3.wrapping_add(y_stride).wrapping_add(1u32) as isize) = *(*from)
-                    .pixels
-                    .offset(x_stride.wrapping_add(y_3).wrapping_add(1u32) as isize);
-                *(*to)
-                    .pixels
-                    .offset(x_3.wrapping_add(y_stride).wrapping_add(2u32) as isize) = *(*from)
-                    .pixels
-                    .offset(x_stride.wrapping_add(y_3).wrapping_add(2u32) as isize);
-                y_0 = y_0.wrapping_add(1);
-                y_stride = (y_stride as u32).wrapping_add(to_stride as u32) as u32 as u32;
-                y_3 = (y_3 as u32).wrapping_add(3u32) as u32 as u32
-            }
-            x_0 = x_0.wrapping_add(1);
-            x_stride = (x_stride as u32).wrapping_add(from_stride as u32) as u32 as u32;
-            x_3 = (x_3 as u32).wrapping_add(3u32) as u32 as u32
-        }
-        return Ok(());
-    } else {
-        return Err(nerror!(ErrorKind::InvalidArgument));
-    };
-}
-/*
-static void unpack24bitRow(u32 width, unsigned char* sourceLine, unsigned char* destArray){
-    for (u32 i = 0; i < width; i++){
+    }
 
-        memcpy(destArray + i * 4, sourceLine + i * 3, 3);
-        destArray[i * 4 + 3] = 255;
+    #[test]
+    fn test_transpose_large_rectangular_matrix() {
+        let width = 256;
+        let height = 128;
+        let mut rng = rand::thread_rng();
+        let from: Vec<u32> = (0..width*height).map(|_| rng.gen()).collect();
+        let mut to = vec![0; width*height];
+
+        transpose_u32_slices(&from, &mut to, width, height, width, height).unwrap();
+
+        for i in 0..height {
+            for j in 0..width {
+                assert_eq!(from[i*width + j], to[j*height + i]);
+            }
+        }
+    }
+
+    #[test]
+    fn test_transpose_with_padding() {
+        let width = 130;
+        let height = 100;
+        let src_stride = 132;
+        let dst_stride = 104;
+        let mut rng = rand::thread_rng();
+        let from: Vec<u32> = (0..src_stride*height).map(|_| rng.gen()).collect();
+        let mut to = vec![0; dst_stride*width];
+
+        transpose_u32_slices(&from, &mut to, src_stride, dst_stride, width, height).unwrap();
+
+        for i in 0..height {
+            for j in 0..width {
+                assert_eq!(from[i*src_stride + j], to[j*dst_stride + i]);
+            }
+        }
+    }
+
+    #[test]
+    fn test_transpose_small_matrices() {
+        let sizes = vec![(4, 4), (8, 8), (16, 16), (32, 32), (64, 64)];
+
+        for (width, height) in sizes {
+            let mut rng = rand::thread_rng();
+            let from: Vec<u32> = (0..width*height).map(|_| rng.gen()).collect();
+            let mut to = vec![0; width*height];
+
+            transpose_u32_slices(&from, &mut to, width, height, width, height).unwrap();
+
+            for i in 0..height {
+                for j in 0..width {
+                    assert_eq!(from[i*width + j], to[j*height + i]);
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn test_transpose_edge_cases() {
+        // Test 1x1 matrix
+        let from = vec![42];
+        let mut to = vec![0];
+        transpose_u32_slices(&from, &mut to, 1, 1, 1, 1).unwrap();
+        assert_eq!(to[0], 42);
+
+        // Test 1xN matrix
+        let from = vec![1, 2, 3, 4, 5];
+        let mut to = vec![0; 5];
+        transpose_u32_slices(&from, &mut to, 5, 1, 5, 1).unwrap();
+        assert_eq!(to, from);
+
+        // Test Nx1 matrix
+        let from = vec![1, 2, 3, 4, 5];
+        let mut to = vec![0; 5];
+        transpose_u32_slices(&from, &mut to, 1, 5, 1, 5).unwrap();
+        assert_eq!(to, from);
+    }
+
+    #[test]
+    fn test_transpose_error_cases() {
+        let from = vec![1, 2, 3, 4];
+        let mut to = vec![0; 4];
+
+        // Test invalid from_stride
+        assert!(transpose_u32_slices(&from, &mut to, 1, 2, 2, 2).is_err());
+
+        // Test invalid to_stride
+        assert!(transpose_u32_slices(&from, &mut to, 2, 1, 2, 2).is_err());
+
+        // Test out of bounds access in from slice
+        assert!(transpose_u32_slices(&from, &mut to, 3, 2, 3, 2).is_err());
+
+        // Test out of bounds access in to slice
+        assert!(transpose_u32_slices(&from, &mut to, 2, 3, 2, 3).is_err());
     }
 }
-*/

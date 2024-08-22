@@ -28,7 +28,7 @@ fn benchmark_transpose(ctx: &mut Criterion) {
             };
 
             let mut group = ctx.benchmark_group(&format!("transpose w={} && h={}", w, h));
-            group.measurement_time(Duration::from_secs(1));
+            group.measurement_time(Duration::from_secs(3));
 
             if has_c_rendering(){
                 // Now we can perform benchmarks with this group
@@ -183,9 +183,9 @@ fn benchmark_scale_2d(ctx: &mut Criterion) {
                         } ));
                     }
                     group.bench_function("SafeRust", |b| b.iter(|| {
-                        unsafe { assert_eq!(imageflow_core::graphics::scaling::scale_and_render(
+                        assert_eq!(imageflow_core::graphics::scaling::scale_and_render(
                             bitmap_a.get_window_u8().unwrap(),bitmap_b.get_window_u8().unwrap(),&scale_rust), Ok(())) }
-                    }));
+                    ));
 
 
                     group.finish();
