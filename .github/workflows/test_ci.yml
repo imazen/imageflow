@@ -95,11 +95,11 @@ jobs:
 
       ### Set Path for nasm install ###
       - name: Set Path
-        run: |
-          echo "C:\Program Files\NASM" >> $GITHUB_PATH
-          echo "C:\Program Files (x86)\NASM" >> $GITHUB_PATH
         if: ${{contains( matrix.os, 'windows' )}}
-        shell: bash
+        shell: pwsh
+        run: |
+          echo "C:\Program Files\NASM" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+          echo "C:\Program Files (x86)\NASM" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
 
       ### Install Nasm for Ubuntu ###
       - name: Install nasm
