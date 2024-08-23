@@ -1,0 +1,7 @@
+
+# ring isn't even supposed to be compiled - it's not in cargo tree -
+# but we can't build unless ring can find llvm/cland and it's terrible at finding it
+# ring is the one project with a worse build system than openssl...
+# Might replace reqwest with shelling out to wget for unit test fixtures instead.
+[env]
+PATH = { value = "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\Llvm\\ARM64\\bin;${PATH}", relative = false }
