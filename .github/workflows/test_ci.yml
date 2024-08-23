@@ -54,6 +54,16 @@ jobs:
 
     runs-on: ${{matrix.os}}
     steps:
+
+
+      - name: Install Rust
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          override: true
+          profile: minimal
+        if: ${{contains( matrix.os, 'windows-11-arm' )}}
+
       - run: rustup show
       - name: Checkout code
         uses: actions/checkout@v3
@@ -72,13 +82,13 @@ jobs:
           key: ${{ runner.os }}-${{matrix.name}}-cargo-${{ hashFiles('**/Cargo.lock') }}
 
       ### Install Nasm for MacOS ###
-      - name: Install nasm (macos)
+      - name: Install nasm
         run: brew install nasm
         if: ${{contains( matrix.os, 'macos' )}}
 
       ### Install Nasm for Windows ###
-      - name: Install nasm (windows)
-        run: winget install nasm
+      - name: Install nasm
+        run: choco install nasm
         if: ${{contains( matrix.os, 'windows' )}}
 
       ### Fallback in case Nasm install fails ###
@@ -162,3 +172,4 @@ jobs:
         run: cargo check --all --target=i686-pc-windows-msvc
       - name: Test Build
         run: cargo test --all --release --target=i686-pc-windows-msvc
+
