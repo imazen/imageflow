@@ -72,21 +72,23 @@ jobs:
           key: ${{ runner.os }}-${{matrix.name}}-cargo-${{ hashFiles('**/Cargo.lock') }}
 
       ### Install Nasm for MacOS ###
-      - name: Install nasm
+      - name: Install nasm (macos)
         run: brew install nasm
         if: ${{contains( matrix.os, 'macos' )}}
 
       ### Install Nasm for Windows ###
-      - name: Install nasm
-        run: choco install nasm
+      - name: Install nasm (windows)
+        run: winget install nasm
         if: ${{contains( matrix.os, 'windows' )}}
 
       ### Fallback in case Nasm install fails ###
       - name: Install nasm
-        run: |
-          curl -L -o nasminst.exe https://imageflow-resources.s3-us-west-2.amazonaws.com/tools/nasm-2.15.05-installer-x64.exe
-          .\nasminst.exe /S
         if: ${{contains( matrix.os, 'windows' ) && failure()}}
+        shell: powershell
+        run: |
+          $url = "https://imageflow-resources.s3-us-west-2.amazonaws.com/tools/nasm-2.15.05-installer-x64.exe"
+          Invoke-WebRequest -Uri $url -OutFile nasminst.exe
+          Start-Process -FilePath .\nasminst.exe -ArgumentList "/S" -Wait
 
       ### Set Path for nasm install ###
       - name: Set Path
