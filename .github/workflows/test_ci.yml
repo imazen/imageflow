@@ -83,15 +83,10 @@ jobs:
         run: choco install nasm
         if: ${{contains( matrix.os, 'windows' ) && !contains( matrix.os, 'windows-11-arm' )}}
 
-      ### Install Nasm for Windows (arm) ###
-      - name: Install nasm
-        run: winget install nasm
-        if: ${{contains( matrix.os, 'windows-11-arm' )}}
-
 
       ### Fallback in case Nasm install fails ###
       - name: Install nasm (windows fallback)
-        if: ${{contains( matrix.os, 'windows' ) && failure()}}
+        if: ${{contains( matrix.os, 'windows' ) && (failure() || contains( matrix.os, 'windows-11-arm' ))}}
         shell: powershell
         run: |
           $url = "https://imageflow-resources.s3-us-west-2.amazonaws.com/tools/nasm-2.15.05-installer-x64.exe"
