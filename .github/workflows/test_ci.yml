@@ -88,7 +88,7 @@ jobs:
 
       ### Install Nasm for Windows ###
       - name: Install nasm
-        run: choco install nasm
+        run: winget install nasm
         if: ${{contains( matrix.os, 'windows' )}}
 
       ### Fallback in case Nasm install fails ###
