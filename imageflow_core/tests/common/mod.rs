@@ -547,19 +547,15 @@ impl Similarity{
         };
         eprintln!("{} {} {} {} {:?}", count, premultiplied_delta, abs_diff, len, self);
 
-        if count < abs_diff / 4 {
+        //TODO: This doesn't really work, since off-by-one errors are averaged and thus can hide +/- 4
+
+        if count < premultiplied_delta / 4 || premultiplied_delta > allowed_off_by_one_bytes{
             let premult_degree = premultiplied_delta as f64 / (count * 4) as f64;
             let abs_degree = abs_diff as f64 / (count * 4) as f64;
-            return Some(format!("Bitmaps mismatched, and not just off-by-one errors! count={} premultiplied_delta={} abs_diff={} avg premultiplied delta={} avg absolute delta={}",
-                                count, premultiplied_delta, abs_diff, premult_degree, abs_degree));
+            return Some(format!("Bitmaps mismatched: after adjusting for transparency, an average channel error of {} (total {}) on {} ({}% of {}) pixels. Absolute error avg {} (total {})",
+                                premult_degree, premultiplied_delta, count, (count as f64 * 100f64 / len as f64), len, abs_degree, abs_diff));
         }
 
-        if premultiplied_delta > allowed_off_by_one_bytes {
-            return Some(format!("There were {} premultiplied off-by-one errors, more than the {} ({}%) allowed. Absolute diff: {}",
-                                premultiplied_delta, allowed_off_by_one_bytes,
-                                allowed_off_by_one_bytes as f64 / len as f64 * 100f64,
-                                abs_diff));
-        }
         None
     }
 }
