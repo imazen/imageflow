@@ -475,31 +475,58 @@ pub fn decode_input(c: &mut Context, input: IoTestEnum) -> BitmapKey {
 
 /// Returns the number of bytes that differ, followed by the total value of all differences
 /// If these are equal, then only off-by-one errors are occurring
-fn diff_bytes(a: &[u8], b: &[u8]) ->(i64,i64){
-    a.iter().zip(b.iter()).fold((0,0), |(count, delta), (a,b)| if a != b { (count + 1, delta + (i64::from(*a) - i64::from(*b)).abs()) } else { (count,delta)})
+// fn diff_bytes(a: &[u8], b: &[u8]) ->(i64,i64){
+//     a.iter().zip(b.iter()).fold((0,0), |(count, delta), (a,b)| if a != b { (count + 1, delta + (i64::from(*a) - i64::from(*b)).abs()) } else { (count,delta)})
+// }
+
+fn diff_bytes(a: &[u8], b: &[u8]) -> (i64, i64, i64) {
+    let mut count = 0;
+    let mut premultiplied_delta = 0;
+    let mut abs_diff = 0;
+
+    for (a_pixel, b_pixel) in a.chunks_exact(4).zip(b.chunks_exact(4)) {
+        let a_alpha = a_pixel[3] as f32 / 255.0;
+        let b_alpha = b_pixel[3] as f32 / 255.0;
+
+        if a_pixel != b_pixel {
+            count += 1;
+
+            // Calculate premultiplied delta for RGB channels
+            for i in 0..3 {
+                let a_premultiplied = (a_pixel[i] as f32 * a_alpha).round() as i64;
+                let b_premultiplied = (b_pixel[i] as f32 * b_alpha).round() as i64;
+                premultiplied_delta += (a_premultiplied - b_premultiplied).abs();
+            }
+
+            // Add alpha channel difference to premultiplied delta
+            premultiplied_delta += (i64::from(a_pixel[3]) - i64::from(b_pixel[3])).abs();
+
+            // Calculate absolute difference for all channels
+            for i in 0..4 {
+                abs_diff += (i64::from(a_pixel[i]) - i64::from(b_pixel[i])).abs();
+            }
+        }
+    }
+
+    (count, premultiplied_delta, abs_diff)
 }
 
-///
-/// Likely a slow spot. Returns the number of bytes that differ, followed by the sum of the absolute value of each difference.
-///
-fn diff_bitmap_bytes(a: &BitmapBgra, b: &BitmapBgra) -> (i64,i64){
+fn diff_bitmap_bytes(a: &BitmapBgra, b: &BitmapBgra) -> (i64, i64, i64) {
     if a.w != b.w || a.h != b.h || a.fmt.bytes() != b.fmt.bytes() {
         panic!("Bitmap dimensions differ. a:\n{:#?}\nb:\n{:#?}", a, b);
     }
 
     let width_bytes = a.w as usize * a.fmt.bytes();
     (0isize..a.h as isize).map(|h| {
-
         let a_contents_slice = unsafe { ::std::slice::from_raw_parts(a.pixels.offset(h * a.stride as isize), width_bytes) };
         let b_contents_slice = unsafe { ::std::slice::from_raw_parts(b.pixels.offset(h * b.stride as isize), width_bytes) };
 
         if a_contents_slice == b_contents_slice {
-            (0, 0)
-        }else {
+            (0, 0, 0)
+        } else {
             diff_bytes(a_contents_slice, b_contents_slice)
         }
-
-    }).fold((0, 0), |(a, b), (c, d)| (a + c, b + d))
+    }).fold((0, 0, 0), |(a, b, c), (d, e, f)| (a + d, b + e, c + f))
 }
 
 
@@ -512,23 +539,26 @@ pub enum Similarity{
 }
 
 impl Similarity{
-    fn report_on_bytes(&self, count: i64, delta: i64, len: usize) -> Option<String>{
-
+    fn report_on_bytes(&self, count: i64, premultiplied_delta: i64, abs_diff: i64, len: usize) -> Option<String>{
         let allowed_off_by_one_bytes: i64 = match *self {
             Similarity::AllowOffByOneBytesCount(v) => v,
             Similarity::AllowOffByOneBytesRatio(ratio) => (ratio * len as f32) as i64,
             Similarity::AllowDssimMatch(..) => return None,
         };
-        eprintln!("{} {} {} {:?}", count, delta, len, self);
+        eprintln!("{} {} {} {} {:?}", count, premultiplied_delta, abs_diff, len, self);
 
-        if count != delta {
-            let degree = delta as f64 / count as f64;
-            return Some(format!("Bitmaps mismatched, and not just off-by-one errors! count={} delta={} avg delta amount={}", count, delta, degree));
+        if count < abs_diff / 4 {
+            let premult_degree = premultiplied_delta as f64 / (count * 4) as f64;
+            let abs_degree = abs_diff as f64 / (count * 4) as f64;
+            return Some(format!("Bitmaps mismatched, and not just off-by-one errors! count={} premultiplied_delta={} abs_diff={} avg premultiplied delta={} avg absolute delta={}",
+                                count, premultiplied_delta, abs_diff, premult_degree, abs_degree));
         }
 
-
-        if delta > allowed_off_by_one_bytes {
-            return Some(format!("There were {} off-by-one errors, more than the {} ({}%) allowed.", delta, allowed_off_by_one_bytes, allowed_off_by_one_bytes as f64 / len as f64 * 100f64));
+        if premultiplied_delta > allowed_off_by_one_bytes {
+            return Some(format!("There were {} premultiplied off-by-one errors, more than the {} ({}%) allowed. Absolute diff: {}",
+                                premultiplied_delta, allowed_off_by_one_bytes,
+                                allowed_off_by_one_bytes as f64 / len as f64 * 100f64,
+                                abs_diff));
         }
         None
     }
@@ -597,7 +627,7 @@ pub fn compare_bitmaps(_c: &ChecksumCtx, actual_context: &Context, actual_key: B
 
         let expected = &mut expected_bgra;
 
-        let (count, delta) = diff_bitmap_bytes(actual, expected);
+        let (count, premultiplied_delta, abs_diff) = diff_bitmap_bytes(actual, expected);
 
         if count == 0 {
             return true;
@@ -632,7 +662,7 @@ pub fn compare_bitmaps(_c: &ChecksumCtx, actual_context: &Context, actual_key: B
                 true
             }
         } else {
-            if let Some(message) = require.report_on_bytes(count, delta, actual.w as usize * actual.h as usize * actual.fmt.bytes()) {
+            if let Some(message) = require.report_on_bytes(count, premultiplied_delta, abs_diff, actual.w as usize * actual.h as usize * actual.fmt.bytes()) {
                 if panic {
                     panic!("{}", message);
                 } else {
@@ -677,7 +707,7 @@ pub fn compare_with<'a, 'b>(c: &ChecksumCtx, expected_checksum: &str, expected_c
     if result_checksum == expected_checksum {
         true
     } else{
-        compare_bitmaps(c, actual_context, actual_bitmap_key, expected_context,expected_bitmap_key, require.similarity, panic)
+        compare_bitmaps(c, actual_context, actual_bitmap_key, expected_context, expected_bitmap_key, require.similarity, panic)
     }
 }
 
