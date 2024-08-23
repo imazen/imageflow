@@ -54,6 +54,16 @@ jobs:
 
     runs-on: ${{matrix.os}}
     steps:
+
+
+      - name: Install Rust
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          override: true
+          profile: minimal
+        if: ${{contains( matrix.os, 'windows-11-arm' )}}
+
       - run: rustup show
       - name: Checkout code
         uses: actions/checkout@v3
@@ -82,7 +92,7 @@ jobs:
         if: ${{contains( matrix.os, 'windows' )}}
 
       ### Fallback in case Nasm install fails ###
-      - name: Install nasm
+      - name: Install nasm (windows fallback)
         if: ${{contains( matrix.os, 'windows' ) && failure()}}
         shell: powershell
         run: |
@@ -129,7 +139,7 @@ jobs:
 
       ### Install Nasm with fallback to S3 ###
       - name: Install nasm
-        run: choco install nasm
+        run: winget install nasm
       - name: Install nasm
         run: |
           curl -L -o nasminst.exe https://imageflow-resources.s3-us-west-2.amazonaws.com/tools/nasm-2.15.05-installer-x86.exe
@@ -162,3 +172,4 @@ jobs:
         run: cargo check --all --target=i686-pc-windows-msvc
       - name: Test Build
         run: cargo test --all --release --target=i686-pc-windows-msvc
+
