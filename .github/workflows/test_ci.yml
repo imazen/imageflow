@@ -43,6 +43,15 @@ jobs:
           - name: osx_14-aarch64
             os: macos-14
             TARGET_CPU: apple-m1
+
+          - name: ubuntu_24-arm64
+            os: ubuntu-24-arm-32gb
+            TARGET_CPU: generic
+
+          - name: win-arm64
+            os: windows-11-arm-32gb
+            TARGET_CPU: generic
+
     runs-on: ${{matrix.os}}
     steps:
       - run: rustup show
