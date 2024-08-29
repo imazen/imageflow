@@ -1,8 +1,17 @@
+use bytemuck::Zeroable;
 use crate::graphics::prelude::*;
 use crate::graphics::weights::*;
 use itertools::max;
 use multiversion::multiversion;
 use rgb::alt::BGRA8;
+#[cfg(feature = "nightly")]
+use std::simd::{Simd};
+
+#[cfg(feature = "nightly")]
+use  std::simd::prelude::SimdUint;
+
+#[cfg(target_arch = "x86_64")]
+use std::arch::x86_64::*;
 
 #[derive(Copy, Clone)]
 pub struct ScaleAndRenderParams {
@@ -14,6 +23,35 @@ pub struct ScaleAndRenderParams {
     pub interpolation_filter: crate::graphics::weights::Filter,
     pub scale_in_colorspace: WorkingFloatspace,
 }
+#[repr(C)]
+#[derive(Copy, Clone, Debug, Default, Eq, PartialEq, Ord, PartialOrd, Hash)]
+struct Bgra32 {
+    /// Blue Component
+    pub b: u8,
+    /// Green Component
+    pub g: u8,
+    /// Red Component
+    pub r: u8,
+    /// Alpha Component
+    pub a: u8,
+}
+#[repr(C)]
+#[derive(Copy, Clone, Debug, Default, PartialEq, PartialOrd)]
+struct Bgra128 {
+    /// Blue Component
+    pub b: f32,
+    /// Green Component
+    pub g: f32,
+    /// Red Component
+    pub r: f32,
+    /// Alpha Component
+    pub a: f32,
+}
+
+unsafe impl bytemuck::Pod for Bgra32 {}
+unsafe impl Zeroable for Bgra32 {}
+unsafe impl bytemuck::Pod for Bgra128 {}
+unsafe impl Zeroable for Bgra128 {}
 
 
 pub fn scale_and_render(
@@ -149,17 +187,22 @@ fn render_safe(cc: &ColorContext, from: &mut BitmapWindowMut<u8>, weights_x: &Pi
 
             let weight: f32 = contrib_weights[input_row_ix as usize - contrib.left_pixel as usize];
             if (weight as f64).abs() > 0.00000002f64 {
-                // Apply coefficient, update tracking
-                let delta_coefficient: f32 = weight / mult_row_coefficients[active_buf_ix];
-                multiply_row_safe(
-                    mult_buf_window.row_window(active_buf_ix as u32).unwrap().slice_mut(),
-                    delta_coefficient,
-                );
-                mult_row_coefficients[active_buf_ix] = weight;
-                // Add row
-                add_row_safe(
+                //    // Apply coefficient, update tracking
+                //    let delta_coefficient: f32 = weight / mult_row_coefficients[active_buf_ix];
+                //    multiply_row_safe(
+                //        mult_buf_window.row_window(active_buf_ix as u32).unwrap().slice_mut(),
+                //        delta_coefficient,
+                //    );
+                //    mult_row_coefficients[active_buf_ix] = weight;
+                //    // Add row
+                //    add_row_safe(
+                //        summation_buf_window.slice_mut(),
+                //        mult_buf_window.row_window(active_buf_ix as u32).unwrap().get_slice(),
+                //    );
+                multiply_and_add_row_simple(
                     summation_buf_window.slice_mut(),
                     mult_buf_window.row_window(active_buf_ix as u32).unwrap().get_slice(),
+                    weight,
                 );
             }
         }
@@ -238,8 +281,8 @@ pub fn scale_row_bgra_f32(
     if source.len() != source_width * 4 || target.len() != target_width * 4 {
         panic!("Mismatched source or target slice lengths: source.len={}, source_width={}, target.len={}, target_width={}", source.len(), source_width, target.len(), target_width);
     }
-    let source_pixels = bytemuck::cast_slice::<f32, rgb::Bgra<f32, f32>>(source);
-    let target_pixels = bytemuck::cast_slice_mut::<f32, rgb::Bgra<f32, f32>>(target);
+    let source_pixels = bytemuck::cast_slice::<f32, Bgra128>(source);
+    let target_pixels = bytemuck::cast_slice_mut::<f32, Bgra128>(target);
 
     //check weights correspond
     if weights.weights().len() as u32 != weights.contrib_row().iter().map(|r| r.right_weight - r.left_weight + 1).sum::<u32>() {
@@ -251,7 +294,7 @@ pub fn scale_row_bgra_f32(
     }
 
     for (dst_x, contrib) in weights.contrib_row().iter().enumerate() {
-        let mut sum = rgb::Bgra::<f32> { r: 0.0, g: 0.0, b: 0.0, a: 0.0 };
+        let mut sum = Bgra128 { r: 0.0, g: 0.0, b: 0.0, a: 0.0 };
 
         // if (dst_x == source_width -1 || dst_x ==  source_width -2) && (y_fyi == 0 || y_fyi == 20){
         //     // print the contrib weights for this output row
@@ -260,7 +303,7 @@ pub fn scale_row_bgra_f32(
         for (src_x, &weight) in (contrib.left_pixel as usize..=contrib.right_pixel as usize)
             .zip(&weights.weights()[contrib.left_weight as usize..=contrib.right_weight as usize])
         {
-            let pixel: &rgb::Bgra<f32, f32> = &source_pixels[src_x];
+            let pixel: &Bgra128 = &source_pixels[src_x];
 
             // if pixel[0] < 0.01 && pixel[1] < 0.01 && pixel[2] < 0.01 && dst_x > source_width - 10{
             //      println!("Dark pixel in buffer prior to horizontal scaling at y={}, x={}, x_target={}, pixel={:?}", y_fyi, src_x, dst_x, &pixel);
@@ -309,24 +352,12 @@ pub fn scale_row_bgra_f32(
 
 //     Ok(())
 // }
+#[multiversion(targets("x86_64+avx2", "aarch64+neon", "x86_64+sse4.1"))]
+fn multiply_and_add_row_simple(mutate_row: &mut [f32], input_row: &[f32], coefficient: f32) {
+    assert_eq!(mutate_row.len(), input_row.len(), "Mismatched row lengths");
 
-#[multiversion(targets("x86_64+avx"))]
-fn multiply_row_safe(row: &mut [f32], coefficient: f32) {
-    for v in row {
-        *v *= coefficient;
-    }
-}
-#[multiversion(targets("x86_64+avx"))]
-fn add_row_safe(mutate_row: &mut [f32], input_row: &[f32]) {
-    if mutate_row.len() != input_row.len() {
-        panic!("Mismatched row lengths: mutate_row.len={}, input_row.len={}", mutate_row.len(), input_row.len());
-    }
-    // for i in 0..mutate_row.len() {
-    //     mutate_row[i] += input_row[i];
-    // }
-    // maximum speed and simd compatibility
-    for v in mutate_row.iter_mut().zip(input_row.iter()) {
-        *v.0 += *v.1;
+    for (v, &input) in mutate_row.iter_mut().zip(input_row.iter()) {
+        *v += input * coefficient;
     }
 }
 
@@ -475,7 +506,7 @@ fn compose_linear_over_srgb(
         //
         for col in 0..src.w() as usize {
             let src_a = src_slice[col * 4 + 3];
-            if src_a == 1.0f32 || !src.info().alpha_meaningful() {
+            if src_a > 0.994f32 || !src.info().alpha_meaningful() {
                 canvas_slice[col * 4 + 0] = cc.floatspace_to_srgb(src_slice[col * 4 + 0]);
                 canvas_slice[col * 4 + 1] = cc.floatspace_to_srgb(src_slice[col * 4 + 1]);
                 canvas_slice[col * 4 + 2] = cc.floatspace_to_srgb(src_slice[col * 4 + 2]);
