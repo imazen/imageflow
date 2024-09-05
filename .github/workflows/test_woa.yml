@@ -20,6 +20,21 @@ jobs:
       - name: Setup Windows ARM64
         uses: ./.github/actions/setup-win-arm64
 
+      - name: Checkout code again with git, so git commands work.
+        uses: actions/checkout@v3
+
+      - name: Set Git Environment Variables
+        id: set_git_env_vars
+        run: |
+          echo "GIT_COMMIT=$(git rev-parse HEAD)" >> $GITHUB_ENV
+          echo "GIT_COMMIT_SHORT=$(git rev-parse --short HEAD)" >> $GITHUB_ENV
+          echo "GIT_OPTIONAL_TAG=$(git describe --tags --exact-match 2>/dev/null || echo '')" >> $GITHUB_ENV
+          echo "GIT_DESCRIBE_ALWAYS=$(git describe --always --tags)" >> $GITHUB_ENV
+          echo "GIT_DESCRIBE_ALWAYS_LONG=$(git describe --always --tags --long)" >> $GITHUB_ENV
+          echo "GIT_DESCRIBE_AAL=$(git describe --always --all --long)" >> $GITHUB_ENV
+          echo "GIT_OPTIONAL_BRANCH=$(git symbolic-ref --short HEAD 2>/dev/null || echo '')" >> $GITHUB_ENV
+
+
       - name: Install NASM
         uses: ./.github/actions/install-nasm
 
