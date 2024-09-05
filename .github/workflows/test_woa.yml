@@ -1,4 +1,4 @@
-name: Experimental CI
+name: Windows on ARM64 Test
 
 on:
   push:
@@ -11,7 +11,6 @@ on:
 jobs:
   test_win_arm64:
     runs-on: windows-11-arm-32gb
-    continue-on-error: true  # Allow this job to fail without failing the workflow
 
     steps:
       - name: Checkout code
@@ -25,15 +24,24 @@ jobs:
 
       - name: Set Git Environment Variables
         id: set_git_env_vars
+        shell: powershell
         run: |
-          echo "GIT_COMMIT=$(git rev-parse HEAD)" >> $GITHUB_ENV
-          echo "GIT_COMMIT_SHORT=$(git rev-parse --short HEAD)" >> $GITHUB_ENV
-          echo "GIT_OPTIONAL_TAG=$(git describe --tags --exact-match 2>/dev/null || echo '')" >> $GITHUB_ENV
-          echo "GIT_DESCRIBE_ALWAYS=$(git describe --always --tags)" >> $GITHUB_ENV
-          echo "GIT_DESCRIBE_ALWAYS_LONG=$(git describe --always --tags --long)" >> $GITHUB_ENV
-          echo "GIT_DESCRIBE_AAL=$(git describe --always --all --long)" >> $GITHUB_ENV
-          echo "GIT_OPTIONAL_BRANCH=$(git symbolic-ref --short HEAD 2>/dev/null || echo '')" >> $GITHUB_ENV
+          $env:GIT_COMMIT = git rev-parse HEAD
+          $env:GIT_COMMIT_SHORT = git rev-parse --short HEAD
+          $env:GIT_OPTIONAL_TAG = if ($(git describe --tags --exact-match 2>$null)) { $(git describe --tags --exact-match) } else { '' }
+          $env:GIT_DESCRIBE_ALWAYS = git describe --always --tags
+          $env:GIT_DESCRIBE_ALWAYS_LONG = git describe --always --tags --long
+          $env:GIT_DESCRIBE_AAL = git describe --always --all --long
+          $env:GIT_OPTIONAL_BRANCH = if ($(git symbolic-ref --short HEAD 2>$null)) { $(git symbolic-ref --short HEAD) } else { '' }
 
+          # Output the variables to GITHUB_ENV
+          "GIT_COMMIT=$env:GIT_COMMIT" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          "GIT_COMMIT_SHORT=$env:GIT_COMMIT_SHORT" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          "GIT_OPTIONAL_TAG=$env:GIT_OPTIONAL_TAG" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          "GIT_DESCRIBE_ALWAYS=$env:GIT_DESCRIBE_ALWAYS" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          "GIT_DESCRIBE_ALWAYS_LONG=$env:GIT_DESCRIBE_ALWAYS_LONG" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          "GIT_DESCRIBE_AAL=$env:GIT_DESCRIBE_AAL" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          "GIT_OPTIONAL_BRANCH=$env:GIT_OPTIONAL_BRANCH" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
 
       - name: Install NASM
         uses: ./.github/actions/install-nasm
