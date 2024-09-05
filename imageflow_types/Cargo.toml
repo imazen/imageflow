@@ -4,7 +4,7 @@ version = "0.1.0"
 authors = ["Lilith River <lilith@imazen.io>"]
 workspace = "../"
 build = "build.rs"
-edition = "2018"
+edition = "2021"
 
 [lib]
 name="imageflow_types"
@@ -18,8 +18,8 @@ lazy_static = "1"
 regex = { version = "1" } #, features = ["pattern"]
 imageflow_helpers = { path = "../imageflow_helpers", version = "*" }
 chrono = "0.4"
-imgref = "1.4.0"
-rgb = "0.8.11"
+imgref = "1.10"
+rgb = "0.8"
 
 [build-dependencies]
 quick-error = "2"

@@ -37,7 +37,7 @@ enum ReplacementInput{
 }
 impl ReplacementInput{
     pub fn prepare(&self, c: &ProcTestContext){
-        #[cfg_attr(feature = "cargo-clippy", allow(single_match))]
+        //#[cfg_attr(feature = "cargo-clippy", allow(single_match))]
         match *self{
             ReplacementInput::File{ref path, ref source} => {
                 let bytes = source.get_bytes();
@@ -90,15 +90,15 @@ enum OutputDestination{
 //    ImageMatches{dest: &'a ReplacementOutput, w: Option<u32>, h: Option<u32>, content_type: Option<&'static str>},
 //
 //}
-trait TestScenario{
-    fn description() -> &'static str;
-    fn slug() -> &'static str;
-
-}
-
-trait TestExpectations{
-
-}
+// trait TestScenario{
+//     fn description() -> &'static str;
+//     fn slug() -> &'static str;
+//
+// }
+//
+// trait TestExpectations{
+//
+// }
 
 struct BuildScenario{
     pub description: &'static str,

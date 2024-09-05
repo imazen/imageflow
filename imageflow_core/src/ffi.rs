@@ -688,17 +688,6 @@ mod mid_term {
                             line: i32)
                             -> bool;
 
-        pub fn flow_bitmap_bgra_flip_vertical(c: *mut ImageflowContext, bitmap: *mut BitmapBgra) -> bool;
-        pub fn flow_bitmap_bgra_flip_horizontal(c: *mut ImageflowContext, bitmap: *mut BitmapBgra) -> bool;
-
-
-
-        pub fn flow_node_execute_scale2d_render1d(c: *mut ImageflowContext,
-                                                  input: *mut BitmapBgra,
-                                                  canvas: *mut BitmapBgra,
-                                                  info: *const Scale2dRenderToCanvas1d)
-                                                  -> bool;
-
 
         pub fn flow_context_has_error(context: *mut ImageflowContext) -> bool;
         pub fn flow_context_clear_error(context: *mut ImageflowContext);
@@ -727,9 +716,25 @@ mod mid_term {
                                              function_name: *const libc::c_char)
                                              -> bool;
 
-        pub fn flow_bitmap_bgra_populate_histogram(c: *mut ImageflowContext, input: *mut BitmapBgra, histograms: *mut u64, histogram_size_per_channel: u32, histogram_count: u32, pixels_sampled: *mut u64) -> bool;
-        pub fn flow_bitmap_bgra_apply_color_matrix(c: *mut ImageflowContext, input: *mut BitmapBgra, row: u32, count: u32, matrix: *const *const f32) -> bool;
 
+
+        //#[cfg(feature = "c_rendering")]
+        pub fn flow_bitmap_bgra_flip_vertical(c: *mut ImageflowContext, bitmap: *mut BitmapBgra) -> bool;
+        //#[cfg(feature = "c_rendering")]
+        pub fn flow_bitmap_bgra_flip_horizontal(c: *mut ImageflowContext, bitmap: *mut BitmapBgra) -> bool;
+
+
+        //#[cfg(feature = "c_rendering")]
+        pub fn flow_node_execute_scale2d_render1d(c: *mut ImageflowContext,
+                                                  input: *mut BitmapBgra,
+                                                  canvas: *mut BitmapBgra,
+                                                  info: *const Scale2dRenderToCanvas1d)
+                                                  -> bool;
+        //#[cfg(feature = "c_rendering")]
+        pub fn flow_bitmap_bgra_populate_histogram(c: *mut ImageflowContext, input: *mut BitmapBgra, histograms: *mut u64, histogram_size_per_channel: u32, histogram_count: u32, pixels_sampled: *mut u64) -> bool;
+        //#[cfg(feature = "c_rendering")]
+        pub fn flow_bitmap_bgra_apply_color_matrix(c: *mut ImageflowContext, input: *mut BitmapBgra, row: u32, count: u32, matrix: *const *const f32) -> bool;
+        //#[cfg(feature = "c_rendering")]
         pub fn flow_bitmap_bgra_transpose(c: *mut ImageflowContext, input: *mut BitmapBgra, output: *mut BitmapBgra) -> bool;
     }
 }

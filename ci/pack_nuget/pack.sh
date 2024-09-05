@@ -50,7 +50,7 @@ mkdir -p "$STAGING_DIR" || true
     if [[ "${NUGET_RUNTIME}" == *'win'* ]]; then
         LIB_NAME=imageflow.dll
         TOOL_NAME=imageflow_tool.exe
-        elif [[ "${NUGET_RUNTIME}" == *'osx'* ]]; then
+    elif [[ "${NUGET_RUNTIME}" == *'osx'* ]]; then
         LIB_NAME=libimageflow.dylib
         TOOL_NAME=imageflow_tool
     else
@@ -75,19 +75,24 @@ mkdir -p "$STAGING_DIR" || true
     
     
     if [[ "${NUGET_RUNTIME}" == *'win'* ]]; then
-        
         if [[ "${NUGET_RUNTIME}" == *'x64'* ]]; then
             # add props
             mkdir -p build/net45
             mkdir -p buildTransitive/net45
             cat ../../imageflow_x64.targets | sed -e "s/:rid:/$NUGET_RUNTIME/g" > "$PROPS_PATH"
             cat ../../imageflow_x64.targets | sed -e "s/:rid:/$NUGET_RUNTIME/g" > "$PROPS_PATH_2"
-            elif [[ "${NUGET_RUNTIME}" == *'x86'* ]]; then
+        elif [[ "${NUGET_RUNTIME}" == *'x86'* ]]; then
             # add props
             mkdir -p build/net45
             mkdir -p buildTransitive/net45
             cat ../../imageflow_x86.targets | sed -e "s/:rid:/$NUGET_RUNTIME/g" > "$PROPS_PATH"
             cat ../../imageflow_x86.targets | sed -e "s/:rid:/$NUGET_RUNTIME/g" > "$PROPS_PATH_2"
+        elif [[ "${NUGET_RUNTIME}" == *'arm64'* ]]; then
+            # add props
+            mkdir -p build/net45
+            mkdir -p buildTransitive/net45
+            cat ../../imageflow_arm64.targets | sed -e "s/:rid:/$NUGET_RUNTIME/g" > "$PROPS_PATH"
+            cat ../../imageflow_arm64.targets | sed -e "s/:rid:/$NUGET_RUNTIME/g" > "$PROPS_PATH_2"
         fi
     fi
     

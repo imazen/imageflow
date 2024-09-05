@@ -8,6 +8,8 @@
 #![allow(unused_imports)]
 #![allow(dead_code)]
 #![allow(unused_variables)]
+#![cfg_attr(feature = "nightly", feature(portable_simd))]
+
 
 extern crate petgraph;
 extern crate daggy;
@@ -16,6 +18,10 @@ extern crate imageflow_c_components;
 extern crate imageflow_helpers;
 extern crate imageflow_riapi;
 extern crate num;
+
+// for testing
+#[cfg(test)]
+extern crate rand;
 
 #[macro_use]
 extern crate lazy_static;

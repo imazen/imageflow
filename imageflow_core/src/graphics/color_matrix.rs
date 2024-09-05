@@ -4,7 +4,7 @@ pub unsafe fn flow_bitmap_bgra_apply_color_matrix(
     bmp: *mut flow_bitmap_bgra,
     row: u32,
     count: u32,
-    m: *const *mut f32,
+    m: *const *const f32,
 ) -> Result<(), FlowError> {
     let stride: u32 = (*bmp).stride;
     let ch: u32 = flow_pixel_format_bytes_per_pixel((*bmp).fmt);

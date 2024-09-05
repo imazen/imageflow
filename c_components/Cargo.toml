@@ -5,6 +5,7 @@ authors = ["Lilith River <lilith@imazen.io>", "Kornel Lesiński <kornel@geekhood
 links = "imageflow_c"
 workspace = "../"
 build = "build.rs"
+edition = "2021"
 
 [lib]
 name = "imageflow_c_components"
@@ -22,6 +23,7 @@ coverage = []
 c_tests = []
 profiling = []
 shared = []
+c_rendering = []
 
 [dependencies]
 mozjpeg-sys = {version = "2", features = ["nasm_simd"]}

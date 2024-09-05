@@ -3,7 +3,7 @@
 #![recursion_limit = "1024"]
 
 //hexadecimal colors aren't numbers
-#![cfg_attr(feature = "cargo-clippy", allow(unreadable_literal))]
+//#![cfg_attr(feature = "cargo-clippy", allow(unreadable_literal))]
 
 
 //

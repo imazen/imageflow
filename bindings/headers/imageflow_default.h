@@ -264,8 +264,8 @@ bool imageflow_json_response_read(struct imageflow_context *context,
                                   size_t *buffer_size_out);
 
 #ifdef __cplusplus
-} // extern "C"
-#endif // __cplusplus
+}  // extern "C"
+#endif  // __cplusplus
 
 
 #endif // generated_imageflow_h

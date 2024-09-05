@@ -242,7 +242,7 @@ pub enum ParseWarning{
     ValueInvalid((&'static str, String))
 }
 
-#[cfg_attr(feature = "cargo-clippy", allow(map_entry))]
+
 pub fn parse_url(url: &Url) -> (Instructions, Vec<ParseWarning>) {
     let mut warnings = Vec::new();
     let mut map = HashMap::new();
@@ -383,7 +383,7 @@ impl Instructions{
         m
     }
 
-    #[cfg_attr(feature = "cargo-clippy", allow(or_fun_call))]
+
     pub fn delete_from_map(map: &mut HashMap<String,String>, warnings: Option<&mut Vec<ParseWarning>>) -> Instructions {
         let mut p = Parser { m: map, w: warnings, delete_supported: true };
         let mut i = Instructions::new();

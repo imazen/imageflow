@@ -112,7 +112,7 @@
 #![cfg_attr(feature = "nightly", feature(core_intrinsics))]
 
 // These functions are not for use from Rust, so marking them unsafe just reduces compile-time verification and safety
-#![cfg_attr(feature = "cargo-clippy", allow(not_unsafe_ptr_arg_deref))]
+//#![cfg_attr(feature = "cargo-clippy", allow(not_unsafe_ptr_arg_deref))]
 
 
 
@@ -248,7 +248,7 @@ include!("abi_version.rs");
 /// False means that
 ///
 #[no_mangle]
-#[cfg_attr(feature = "cargo-clippy", allow(absurd_extreme_comparisons))]
+//#[cfg_attr(feature = "cargo-clippy", allow(absurd_extreme_comparisons))]
 pub extern "C" fn imageflow_abi_compatible(imageflow_abi_ver_major: u32, imageflow_abi_ver_minor: u32) -> bool {
     imageflow_abi_ver_major == IMAGEFLOW_ABI_VER_MAJOR && imageflow_abi_ver_minor <= IMAGEFLOW_ABI_VER_MINOR
 }
@@ -552,7 +552,7 @@ pub extern "C" fn imageflow_context_send_json(context: *mut Context,
     }
 
     let panic_result = catch_unwind(AssertUnwindSafe(|| {
-        let method_str = if let Ok(str) = unsafe { ::std::ffi::CStr::from_ptr(method as *const i8)}.to_str() {
+        let method_str = if let Ok(str) = unsafe { ::std::ffi::CStr::from_ptr(method)}.to_str() {
             str
         } else {
             return (ptr::null(), Err(nerror!(ErrorKind::InvalidArgument, "The argument 'method' is invalid UTF-8.")));

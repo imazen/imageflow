@@ -36,7 +36,7 @@ impl GifDecoder {
 
         let mut options = ::gif::Decoder::<IoProxy>::build();
         options.allow_unknown_blocks(true);
-        options.set_memory_limit(::gif::MemoryLimit(8000*8000));
+        options.set_memory_limit(::gif::MemoryLimit::Bytes(std::num::NonZeroU64::new(8000*8000).unwrap()));
         options.set_color_output(::gif::ColorOutput::Indexed); // Important
 
 

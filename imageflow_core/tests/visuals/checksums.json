@@ -57,6 +57,7 @@
   "jpeg_crop": "0071CBD976FC79E41_0FB5487907981932B",
   "matte_transparent_png": "03D1AA84D6ED36458.png",
   "mountain_gif_scaled400": "03FB3160ED6A86E15_05C9232CFE2672D1C",
+  "read_gif_and_vertical_distort": "02791C7249C972865_0B92852F636EA711E",
   "test ConstraintMode::FitPad on jpeg with exif rotate 1": "00196D6A86FF77C80_0BF80F0AE71CD9A63",
   "test ConstraintMode::FitPad on jpeg with exif rotate 2": "0539F9C3B850149CB_0BF80F0AE71CD9A63",
   "test ConstraintMode::FitPad on jpeg with exif rotate 3": "0B43B2563C986473D_0BF80F0AE71CD9A63",

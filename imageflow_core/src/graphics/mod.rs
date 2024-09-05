@@ -34,6 +34,10 @@ mod prelude{
         __m128, _mm_add_ps, _mm_loadu_ps, _mm_movehl_ps, _mm_movelh_ps, _mm_mul_ps, _mm_set1_ps,
         _mm_setr_ps, _mm_setzero_ps, _mm_storeu_ps, _mm_unpackhi_ps, _mm_unpacklo_ps,
     };
+
+    #[cfg(target_arch = "aarch64")]
+    pub(crate) use std::arch::aarch64::*;
+
     pub(crate) use crate::graphics::bitmaps::{BitmapWindowMut, PixelLayout, Bitmap, ColorSpace};
     pub(crate) use crate::graphics::color::{WorkingFloatspace, ColorContext, flow_colorcontext_floatspace_to_srgb, uchar_clamp_ff};
     pub(crate) use crate::graphics::weights::{PixelRowWeights, PixelWeightIndexes};

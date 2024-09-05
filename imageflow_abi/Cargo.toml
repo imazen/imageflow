@@ -4,7 +4,7 @@ version = "0.1.0"
 authors = ["Lilith River <lilith@imazen.io>"]
 workspace = "../"
 build = "build.rs"
-edition = "2018"
+edition = "2021"
 
 [lib]
 name = "imageflow"
@@ -17,11 +17,11 @@ libc = "0.2"
 imageflow_core = { path = "../imageflow_core", version = "*"}
 backtrace = "*"
 smallvec="*"
-base64="0.21.0"
+base64="0.22"
 
 [build-dependencies]
 imageflow_helpers = { path = "../imageflow_helpers", version = "*"}
-cbindgen = "0.26"
+cbindgen = "0.27"
 regex = "1"
 
 [features]

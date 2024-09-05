@@ -2,12 +2,15 @@
 name = "imageflow_http_helpers"
 version = "0.1.0"
 authors = ["Lilith River <lilith@imazen.io>"]
-edition = "2018"
+edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
 imageflow_helpers = { path = "../imageflow_helpers", version = "*" }
 
-reqwest = { version = "0.11", default-features = false, features = ["blocking", "rustls-tls"]}
+reqwest = { version = "0.12.7", features = ["blocking"] }
 tokio = { version = "1", features = ["full"] }
+
+[target.'cfg(any(all(target_arch = "aarch64", target_os = "windows"), target_os = "linux"))'.dependencies]
+reqwest = { version = "0.12.7", features = ["blocking", "native-tls-vendored"] }

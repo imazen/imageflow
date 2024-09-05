@@ -1,5 +1,5 @@
-
-
+use crate::graphics::bitmaps::BitmapCompositing;
+use crate::graphics::color_matrix::flow_bitmap_bgra_apply_color_matrix;
 use super::internal_prelude::*;
 
 
@@ -32,10 +32,10 @@ impl NodeDefMutateBitmap for ColorMatrixSrgbMutDef{
 
 
                 let color_matrix_ptrs = matrix.iter().map(|row| row as *const f32).collect::<Vec<*const f32>>();
-
-                if !crate::ffi::flow_bitmap_bgra_apply_color_matrix(c.flow_c(), &mut bitmap, 0, bitmap.h, color_matrix_ptrs.as_ptr()) {
-                    return Err(cerror!(c, "Failed to apply color matrix"))
-                }
+//TODO: create test first.
+                flow_bitmap_bgra_apply_color_matrix( &mut bitmap, 0, bitmap.h, color_matrix_ptrs.as_ptr())
+                    .map_err(|e| e.at(here!()))?;
+                bitmap_bitmap.set_compositing(BitmapCompositing::BlendWithSelf);
 
                 let _ = color_matrix_ptrs;
 

@@ -12,7 +12,7 @@ pub fn read_file_bytes<P: AsRef<Path>>(path: P) -> std::io::Result<Vec<u8>>{
 pub fn zip_directory_non_recursive<P: AsRef<Path>>(dir: P, archive_name: P) -> zip::result::ZipResult<()> {
     let mut zip = zip::ZipWriter::new(File::create(archive_name.as_ref()).unwrap());
 
-    let options = zip::write::FileOptions::default().compression_method(zip::CompressionMethod::Stored);
+    let options = zip::write::SimpleFileOptions::default().compression_method(zip::CompressionMethod::Stored);
 
     zip.add_directory(archive_name.as_ref().file_stem().unwrap().to_str().unwrap().to_owned(), options)?;
     let entries = std::fs::read_dir(dir.as_ref()).unwrap();
@@ -27,7 +27,7 @@ pub fn zip_directory_non_recursive<P: AsRef<Path>>(dir: P, archive_name: P) -> z
                 let mut contents = Vec::new();
                 file.read_to_end(&mut contents).unwrap();
 
-                let options = zip::write::FileOptions::default().compression_method(zip::CompressionMethod::Stored);
+                let options = zip::write::SimpleFileOptions::default().compression_method(zip::CompressionMethod::Stored);
 
                 zip.start_file(file_name, options)?;
                 zip.write_all(&contents)?;

@@ -61,6 +61,7 @@ pub struct CmdBuild {
 }
 
 #[derive(Debug)]
+#[allow(dead_code)]
 pub enum CmdError {
     // DemoNotFound(String),
     JsonRecipeNotFound(String),

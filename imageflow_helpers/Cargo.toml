@@ -3,7 +3,7 @@ name = "imageflow_helpers"
 version = "0.1.0"
 authors = ["Lilith River <lilith@imazen.io>"]
 workspace = "../"
-edition = "2018"
+edition = "2021"
 
 [dependencies]
 libc = "0.2"
@@ -37,9 +37,9 @@ regex = { version = "1" } #, features = ["pattern"]
 rand = "*"
 rgb = "0.8"
 
-base64 = "0.21"
+base64 = "0.22"
 
-zip = { version = "0.6", default-features = false }
+zip = { version = "2" }
 
 
 

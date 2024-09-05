@@ -19,5 +19,6 @@ lazy_static = "1"
 [dev-dependencies]
 difference = "2" # update to v2
 
+
 [features]
 nightly = ["imageflow_helpers/nightly"]
