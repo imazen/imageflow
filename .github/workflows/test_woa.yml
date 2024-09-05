@@ -1,0 +1,44 @@
+name: Experimental CI
+
+on:
+  push:
+    branches:
+      - '*'
+  pull_request:
+  # Allow manual triggers
+  workflow_dispatch:
+
+jobs:
+  test_win_arm64:
+    runs-on: windows-11-arm-32gb
+    continue-on-error: true  # Allow this job to fail without failing the workflow
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Setup Windows ARM64
+        uses: ./.github/actions/setup-win-arm64
+
+      - name: Install NASM
+        uses: ./.github/actions/install-nasm
+
+      - name: Check Build
+        run: cargo check --all
+
+      - name: Test Build
+        run: cargo test --all
+        env:
+          RUSTFLAGS: -C target-cpu=generic
+
+      - name: Build Release
+        run: cargo build --all
+        shell: bash
+        env:
+          RUSTFLAGS: -C target-cpu=generic
+
+  # You can add more experimental jobs here in the future
+  # test_another_experimental:
+  #   runs-on: ...
+  #   steps:
+  #     ...

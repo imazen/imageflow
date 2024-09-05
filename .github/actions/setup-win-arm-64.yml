@@ -1,0 +1,64 @@
+name: 'Setup Windows ARM64'
+description: 'Set up Windows ARM64 environment with necessary tools'
+runs:
+  using: "composite"
+  steps:
+    - name: Cache tools
+      uses: actions/cache@v3
+      id: cache-tools
+      with:
+        path: |
+          C:\BuildTools
+          C:\Program Files\Git
+          C:\Users\runneradmin\.rustup
+          C:\Users\runneradmin\.cargo
+        key: ${{ runner.os }}-arm64-tools-v1
+
+    - name: Install Visual Studio Build Tools
+      if: steps.cache-tools.outputs.cache-hit != 'true'
+      shell: powershell
+      run: |
+        $url = "https://aka.ms/vs/17/release/vs_buildtools.exe"
+        Invoke-WebRequest -Uri $url -OutFile vs_buildtools.exe
+        Start-Process -FilePath .\vs_buildtools.exe -ArgumentList "--quiet", "--wait", "--norestart", "--nocache", `
+          "--installPath", "C:\BuildTools", `
+          "--add", "Microsoft.VisualStudio.Component.VC.Tools.ARM64", `
+          "--add", "Microsoft.VisualStudio.Component.VC.Tools.x86.x64", `
+          "--add", "Microsoft.VisualStudio.Component.Windows11SDK.22000" `
+          -NoNewWindow -Wait
+        Remove-Item .\vs_buildtools.exe
+
+    - name: Install Git
+      if: steps.cache-tools.outputs.cache-hit != 'true'
+      shell: powershell
+      run: |
+        $url = "https://github.com/git-for-windows/git/releases/download/v2.41.0.windows.1/Git-2.41.0-64-bit.exe"
+        Invoke-WebRequest -Uri $url -OutFile git-installer.exe
+        Start-Process -FilePath .\git-installer.exe -ArgumentList "/VERYSILENT", "/NORESTART" -Wait
+        Remove-Item .\git-installer.exe
+
+    - name: Install Rust
+      if: steps.cache-tools.outputs.cache-hit != 'true'
+      shell: powershell
+      run: |
+        $url = "https://static.rust-lang.org/rustup/dist/aarch64-pc-windows-msvc/rustup-init.exe"
+        Invoke-WebRequest -Uri $url -OutFile rustup-init.exe
+        .\rustup-init.exe -y --default-host aarch64-pc-windows-msvc
+        Remove-Item .\rustup-init.exe
+
+    - name: Install NASM
+      uses: ./.github/actions/install-nasm
+
+    - name: Setup environment
+      shell: powershell
+      run: |
+        echo "Adding tools to PATH"
+        echo "C:\Program Files\Git\bin" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+        echo "C:\BuildTools\VC\Tools\MSVC\14.38.33130\bin\Hostx64\arm64" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+        echo "C:\BuildTools\VC\Tools\MSVC\14.38.33130\bin\Hostx64\x64" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+        echo "$env:USERPROFILE\.cargo\bin" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+
+        echo "Setting up environment variables"
+        echo "INCLUDE=C:\BuildTools\VC\Tools\MSVC\14.38.33130\include;C:\Program Files (x86)\Windows Kits\10\include\10.0.22000.0\ucrt" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+        echo "LIB=C:\BuildTools\VC\Tools\MSVC\14.38.33130\lib\arm64;C:\Program Files (x86)\Windows Kits\10\lib\10.0.22000.0\ucrt\arm64" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+        echo "LIBPATH=C:\BuildTools\VC\Tools\MSVC\14.38.33130\lib\arm64" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append

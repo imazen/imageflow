@@ -48,20 +48,14 @@ jobs:
             os: ubuntu-24-arm-32gb
             TARGET_CPU: generic
 
-          - name: win-arm64
-            os: windows-11-arm-32gb
-            TARGET_CPU: generic
-
     runs-on: ${{matrix.os}}
     steps:
 
       - run: rustup show
-        if: ${{!contains( matrix.os, 'windows-11-arm' )}}
       - name: Checkout code
         uses: actions/checkout@v3
 
-      - run: rustup update stable
-        if: ${{contains( matrix.os, 'macos' )}}
+      - uses: dtolnay/rust-toolchain@stable
 
       ### Cargo Cache for Build Artifacts ###
       - name: Cache cargo
@@ -73,38 +67,8 @@ jobs:
             target
           key: ${{ runner.os }}-${{matrix.name}}-cargo-${{ hashFiles('**/Cargo.lock') }}
 
-      ### Install Nasm for MacOS ###
-      - name: Install nasm
-        run: brew install nasm
-        if: ${{contains( matrix.os, 'macos' )}}
-
-      ### Install Nasm for Windows ###
-      - name: Install nasm
-        run: choco install nasm
-        if: ${{contains( matrix.os, 'windows' ) && !contains( matrix.os, 'windows-11-arm' )}}
-
-
-      ### Fallback in case Nasm install fails ###
-      - name: Install nasm (windows fallback)
-        if: ${{contains( matrix.os, 'windows' ) && (failure() || contains( matrix.os, 'windows-11-arm' ))}}
-        shell: powershell
-        run: |
-          $url = "https://imageflow-resources.s3-us-west-2.amazonaws.com/tools/nasm-2.15.05-installer-x64.exe"
-          Invoke-WebRequest -Uri $url -OutFile nasminst.exe
-          Start-Process -FilePath .\nasminst.exe -ArgumentList "/S" -Wait
-
-      ### Set Path for nasm install ###
-      - name: Set Path
-        if: ${{contains( matrix.os, 'windows' )}}
-        shell: pwsh
-        run: |
-          echo "C:\Program Files\NASM" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
-          echo "C:\Program Files (x86)\NASM" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
-
-      ### Install Nasm for Ubuntu ###
-      - name: Install nasm
-        run: sudo apt install nasm
-        if: ${{contains( matrix.os, 'ubuntu' )}}
+      - name: Install NASM
+        uses: ./.github/actions/install-nasm
 
       ### Check Build ###
       - name: Check Build
@@ -132,18 +96,7 @@ jobs:
 
       ### Install Nasm with fallback to S3 ###
       - name: Install nasm
-        run: choco install nasm
-      - name: Install nasm
-        run: |
-          curl -L -o nasminst.exe https://imageflow-resources.s3-us-west-2.amazonaws.com/tools/nasm-2.15.05-installer-x86.exe
-          .\nasminst.exe /S
-        if: ${{failure()}}
-
-      - name: Set Path
-        run: |
-          echo "C:\Program Files\NASM" >> $GITHUB_PATH
-          echo "C:\Program Files (x86)\NASM" >> $GITHUB_PATH
-        shell: bash
+        uses: ./.github/actions/install-nasm
 
       ### Cargo cache for Build artifacts ###
       - name: Cache cargo
