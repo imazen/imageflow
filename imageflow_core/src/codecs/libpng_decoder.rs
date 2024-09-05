@@ -161,11 +161,11 @@ impl PngDec{
                     let len = decoder.io.try_get_length();
                     let pos = decoder.io.try_get_position();
                     let remaining = if len.is_some() && pos.is_some() {
-                        Some(len.unwrap() - pos.unwrap())
+                        Some(len.unwrap() as i64 - pos.unwrap() as i64)
                     } else {
                         None
                     };
-                    let missing = remaining.map(|r| (bytes_requested as u64) - r);
+                    let missing = remaining.map(|r| (bytes_requested as i64) - (r as i64));
                     let err =
                     FlowError::without_location(ErrorKind::DecodingIoError,
                         format!("{:?} (failed to read requested {} bytes (only {:?} remain), pos={:?}, len={:?}, missing={:?})", err, bytes_requested, remaining, pos, len, missing)).at(here!());
