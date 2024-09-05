@@ -113,6 +113,23 @@ impl IoProxy {
     pub fn io_id(&self) -> i32{
         self.io_id
     }
+    pub fn try_get_length(&mut self) -> Option<u64>{
+        match &self.backend{
+            IoBackend::ReadVec(v) => Some(v.get_ref().len() as u64),
+            IoBackend::ReadSlice(v) => Some(v.get_ref().len() as u64),
+            IoBackend::ReadFile(v) => v.get_ref().metadata().map(|m| m.len()).ok(),
+            _ => None
+        }
+    }
+
+    pub fn try_get_position(&mut self) -> Option<u64>{
+        match &self.backend{
+            IoBackend::ReadVec(v) => Some(v.position()),
+            IoBackend::ReadSlice(v) => Some(v.position()),
+            IoBackend::ReadFile(v) => v.get_ref().stream_position().ok(),
+            _ => None
+        }
+    }
 
     pub fn read_exact(&mut self, buf: &mut [u8]) -> std::io::Result<()>{
         self.backend.get_read().expect("cannot read from writer").read_exact(buf)

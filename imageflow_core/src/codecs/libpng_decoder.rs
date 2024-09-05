@@ -157,8 +157,26 @@ impl PngDec{
                 true
             },
             Err(err) => {
-                decoder.error = Some(FlowError::from_decoder(err).at(here!()));
-                false
+                if err.kind() == ::std::io::ErrorKind::UnexpectedEof {
+                    let len = decoder.io.try_get_length();
+                    let pos = decoder.io.try_get_position();
+                    let remaining = if len.is_some() && pos.is_some() {
+                        Some(len.unwrap() - pos.unwrap())
+                    } else {
+                        None
+                    };
+                    let missing = remaining.map(|r| (bytes_requested as u64) - r);
+                    let err =
+                    FlowError::without_location(ErrorKind::DecodingIoError,
+                        format!("{:?} (failed to read requested {} bytes (only {:?} remain), pos={:?}, len={:?}, missing={:?})", err, bytes_requested, remaining, pos, len, missing)).at(here!());
+
+                    decoder.error = Some(err);
+
+                    false
+                } else {
+                    decoder.error = Some(FlowError::from_decoder(err).at(here!()));
+                    false
+                }
             }
         }
 
