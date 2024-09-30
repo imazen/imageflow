@@ -31,11 +31,12 @@ daggy = "0.8" # Upgrade to
 smallvec = "1"
 itertools = "0.13"
 imgref = "1.4.1"
+png = "0.17.8"
 slotmap = "1"
 base64 = "0.22"
 hex = "0.4"
 gif = "0.13.1"
-rgb = { version = "0.8", features = ["argb"] }
+rgb = { version = "0.8.90", features = ["bytemuck"] }
 imagequant = "4"
 lodepng = "3"
 flate2 = { version = "1.0", features = ["zlib"], default-features = false }

@@ -579,7 +579,7 @@ impl<'a> ResultKind<'a>{
     }
 }
 
-fn get_imgref_bgra32(b: &mut BitmapBgra) -> imgref::ImgVec<rgb::RGBA<f32>> {
+fn get_imgref_bgra32(b: &mut BitmapBgra) -> imgref::ImgVec<rgb::Rgba<f32>> {
     use self::dssim::*;
 
     match b.fmt {

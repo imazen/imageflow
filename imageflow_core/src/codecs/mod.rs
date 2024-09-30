@@ -25,6 +25,7 @@ mod mozjpeg_decoder;
 mod libpng_decoder;
 mod libpng_encoder;
 mod mozjpeg_decoder_helpers;
+mod image_png_decoder;
 mod jpeg_decoder;
 mod webp;
 mod color_transform_cache;
@@ -69,6 +70,7 @@ pub enum NamedDecoders{
     MozJpegRsDecoder,
     WICJpegDecoder,
     ImageRsJpegDecoder,
+    ImageRsPngDecoder,
     LibPngRsDecoder,
     GifRsDecoder,
     WebPDecoder,
@@ -82,7 +84,7 @@ impl NamedDecoders{
             NamedDecoders::GifRsDecoder => {
                 bytes.starts_with(b"GIF89a") || bytes.starts_with(b"GIF87a")
             },
-            NamedDecoders::LibPngRsDecoder => {
+            NamedDecoders::LibPngRsDecoder | NamedDecoders::ImageRsPngDecoder => {
                 bytes.starts_with( b"\x89\x50\x4E\x47\x0D\x0A\x1A\x0A")
             },
             NamedDecoders::WebPDecoder => {
@@ -97,6 +99,7 @@ impl NamedDecoders{
             NamedDecoders::LibPngRsDecoder => Ok(Box::new(libpng_decoder::LibPngDecoder::create(c, io, io_id)?)),
             NamedDecoders::GifRsDecoder => Ok(Box::new(gif::GifDecoder::create(c, io, io_id)?)),
             NamedDecoders::ImageRsJpegDecoder => Ok(Box::new(jpeg_decoder::JpegDecoder::create(c, io, io_id)?)),
+            NamedDecoders::ImageRsPngDecoder => Ok(Box::new(image_png_decoder::ImagePngDecoder::create(c, io, io_id)?)),
             NamedDecoders::WebPDecoder => Ok(Box::new(webp::WebPDecoder::create(c, io, io_id)?)),
             NamedDecoders::WICJpegDecoder => {
                 panic!("WIC Jpeg Decoder not implemented"); //TODO, use actual error for this
@@ -123,6 +126,8 @@ impl Default for EnabledCodecs {
         EnabledCodecs{
             decoders: smallvec::SmallVec::from_slice(
                 &[NamedDecoders::MozJpegRsDecoder,
+
+                    NamedDecoders::ImageRsPngDecoder,
                     NamedDecoders::LibPngRsDecoder,
                     NamedDecoders::GifRsDecoder,
                     NamedDecoders::WebPDecoder]),

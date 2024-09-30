@@ -58,9 +58,9 @@ mod codecs;
 mod io;
 pub mod graphics;
 
-pub use crate::context::{Context};
+pub use crate::context::Context;
 pub use crate::io::IoProxy;
-pub use crate::ffi::{IoDirection};
+pub use crate::ffi::IoDirection;
 pub use crate::flow::definitions::Graph;
 pub use crate::json::JsonResponse;
 pub use crate::json::MethodRouter;

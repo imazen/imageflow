@@ -24,6 +24,7 @@ opt-level = 2
 [patch.crates-io]
 libwebp-sys = { git = "https://github.com/lilith/libwebp-sys" }
 libpng-sys = { git = "https://github.com/lilith/rust-libpng-sys" }
+rgb.git = "https://github.com/kornelski/rust-rgb"
 
 #bennch with cpu native
 [profile.bench]

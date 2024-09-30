@@ -6,7 +6,7 @@ use chrono::*;
 use std::convert::AsRef;
 use std::fs::{File, create_dir_all};
 use std::io::{Write, Read, BufWriter};
-use std::path::{Path};
+use std::path::Path;
 use std::process::{Command, Output};
 use std::collections::HashMap;
 

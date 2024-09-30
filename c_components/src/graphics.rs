@@ -25,7 +25,7 @@ pub struct flow_decoder_frame_info {
     pub h: i32,
     pub format: flow_pixel_format,
 }
-extern "C" {
+extern "C-unwind" {
     #[no_mangle]
     fn flow_pixel_format_bytes_per_pixel(format: flow_pixel_format) -> u32;
     #[no_mangle]

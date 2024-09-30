@@ -383,6 +383,13 @@ impl FlowError {
         }
 
     }
+    pub fn from_png_decoder(e: png::DecodingError) -> Self{
+        match e{
+            png::DecodingError::IoError(e) => FlowError::without_location(ErrorKind::DecodingIoError, format!("{:?}", e)),
+            png::DecodingError::Format(e) => FlowError::without_location(ErrorKind::ImageDecodingError, format!("{:?}", e)),
+            _ => FlowError::without_location(ErrorKind::ImageDecodingError, format!("{:?}", e)),
+        }
+    }
 }
 
 
