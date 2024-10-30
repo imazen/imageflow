@@ -289,9 +289,13 @@ impl ChecksumCtx{
         if dest_path.exists() {
             println!("{} (trusted) exists", checksum);
         }else{
-            println!("Fetching {} to {:?}", &source_url, &dest_path);
+            print!("Fetching {} to {:?}...", &source_url, &dest_path);
             let bytes = ::imageflow_http_helpers::fetch_bytes(&source_url).expect("Did you forget to upload {} to s3?");
-            File::create(&dest_path).unwrap().write_all(bytes.as_ref()).unwrap();
+            let mut f = File::create(&dest_path).unwrap();
+            f.write_all(bytes.as_ref()).unwrap();
+            f.flush().unwrap();
+
+            println!("{} bytes written successfully.", bytes.len());
         }
     }
 
