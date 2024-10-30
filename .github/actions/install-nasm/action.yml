@@ -18,7 +18,7 @@ runs:
       shell: powershell
       run: |
         try {
-          winget install NASM.NASM
+          winget install NASM.NASM --accept-source-agreements --accept-package-agreements
         } catch {
           Write-Host "Winget installation failed, falling back to manual installation"
           $url = "https://www.nasm.us/pub/nasm/releasebuilds/2.15.05/win64/nasm-2.15.05-installer-x64.exe"
