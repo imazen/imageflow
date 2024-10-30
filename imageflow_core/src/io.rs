@@ -135,6 +135,22 @@ impl IoProxy {
         self.backend.get_read().expect("cannot read from writer").read_exact(buf)
     }
 
+    pub fn read(&mut self, buf: &mut [u8]) -> std::io::Result<usize>{
+        self.backend.get_read().expect("cannot read from writer").read(buf)
+    }
+
+    pub fn read_maximally(&mut self, buf: &mut [u8]) -> std::io::Result<usize>{
+        let mut total_read = 0;
+        while total_read < buf.len(){
+            let read = self.read(&mut buf[total_read..])?;
+            if read == 0{
+                break;
+            }
+            total_read += read;
+        }
+        Ok(total_read)
+    }
+
     pub fn read_file(context: &Context, filename: PathBuf, io_id: i32) -> Result<IoProxy> {
         IoProxy::file_with_mode(context,  io_id, filename,IoDirection::In)
     }

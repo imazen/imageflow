@@ -151,9 +151,10 @@ impl PngDec{
 
         let buffer_slice = unsafe{ std::slice::from_raw_parts_mut(buffer, bytes_requested) };
 
-        return match decoder.io.read_exact(buffer_slice) {
-            Ok(()) => {
-                *out_bytes_read = buffer_slice.len();
+        return match decoder.io.read_maximally(buffer_slice) {
+            Ok(read_total) => {
+                assert!(read_total <= bytes_requested);
+                *out_bytes_read = read_total;
                 true
             },
             Err(err) => {
