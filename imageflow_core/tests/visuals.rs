@@ -826,6 +826,16 @@ fn test_read_gif_eof() {
 }
 
 
+#[test]
+fn test_read_animated_transparent_gif() {
+    let matched = compare(Some(IoTestEnum::Url("https://s3-us-west-2.amazonaws.com/imageflow-resources/test_inputs/transparent-animated.gif".to_owned())), 500,
+                          "transparent-animated.gif", POPULATE_CHECKSUMS, DEBUG_GRAPH, vec![
+            Node::Decode {io_id: 0, commands: None}
+        ]
+    );
+    assert!(matched);
+}
+
 
 
 

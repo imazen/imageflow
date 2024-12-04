@@ -6,15 +6,12 @@ use crate::ffi::BitmapBgra;
 use imageflow_types::collections::AddRemoveSet;
 use crate::io::IoProxy;
 use uuid::Uuid;
-use imageflow_types::{IoDirection, PixelLayout};
+use imageflow_types::{FrameSizeLimit, IoDirection, PixelLayout};
 use super::*;
 use std::any::Any;
-mod disposal;
-mod subimage;
-mod screen;
-mod bgra;
-use self::bgra::BGRA8;
-use self::screen::Screen;
+
+use rgb::alt::BGRA8;
+use gif_dispose::Screen;
 use crate::gif::Frame;
 use std::rc::Rc;
 use lcms2_sys::cmsAllocProfileSequenceDescription;
@@ -22,32 +19,36 @@ use crate::io::IoProxyProxy;
 use crate::io::IoProxyRef;
 use crate::graphics::bitmaps::{BitmapKey, ColorSpace, BitmapCompositing};
 
+
 pub struct GifDecoder{
     reader: ::gif::Decoder<IoProxy>,
     screen: Screen,
     buffer: Option<Vec<u8>>,
     last_frame: Option<Frame<'static>>,
-    next_frame: Option<Frame<'static>>
+    next_frame: Option<Frame<'static>>,
+    state: Option<gif_dispose::TempDisposedStateScreen<'static>>
 }
 
 impl GifDecoder {
     pub fn create(c: &Context, io: IoProxy, io_id: i32) -> Result<GifDecoder> {
 
+        let max_pixels = c.security.max_frame_size.clone().or(Some(FrameSizeLimit{ w: 8000, h: 8000, megapixels: 16f32 })).unwrap().megapixels * 1000f32 * 1000f32;
 
         let mut options = ::gif::Decoder::<IoProxy>::build();
         options.allow_unknown_blocks(true);
-        options.set_memory_limit(::gif::MemoryLimit::Bytes(std::num::NonZeroU64::new(8000*8000).unwrap()));
+        options.set_memory_limit(::gif::MemoryLimit::Bytes(std::num::NonZeroU64::new(max_pixels as u64).unwrap()));
         options.set_color_output(::gif::ColorOutput::Indexed); // Important
 
 
         let reader = options.read_info(io)
             .map_err(|e| FlowError::from(e).at(here!()))?;
 
-        let screen = Screen::new(&reader);
+        let screen = Screen::new_decoder(&reader);
 
         Ok(GifDecoder{
             reader,
             screen,
+            state: None,
             buffer: None,
             last_frame: None,
             next_frame: None
@@ -65,14 +66,13 @@ impl GifDecoder {
     fn create_bitmap_from_screen(&self, c: &Context) -> Result<BitmapKey>{
         // Create output bitmap and copy to it
         unsafe {
-            let w = self.screen.width;
-            let h = self.screen.height;
+            let w = self.screen.width();
+            let h = self.screen.height();
 
             let mut bitmaps = c.borrow_bitmaps_mut()
                 .map_err(|e| e.at(here!()))?;
 
-            let bitmap_key = bitmaps.create_bitmap_u8(w as u32,
-                                        h as u32,
+            let bitmap_key = bitmaps.create_bitmap_u8(w as u32, h as u32,
                                     PixelLayout::BGRA,
                                     false,
                                     true,
@@ -89,8 +89,14 @@ impl GifDecoder {
             let copy_mut = &mut copy;
 
             for row in 0..h{
+                let row_bytes = bitmap.get_window_u8().unwrap().row_mut(row as u32).unwrap();
+
+                let row_pixels = bytemuck::cast_mut::<[u8],BGRA8>(row_bytes);
+                self.screen.
+                rgb
                 let to_row: &mut [BGRA8] = std::slice::from_raw_parts_mut(copy_mut.pixels.offset(copy_mut.stride as isize * row as isize) as *mut BGRA8, w as usize);
-                to_row.copy_from_slice(&self.screen.pixels[row * w..(row + 1) * w]);
+                self.screen.
+                to_row.copy_from_slice(&self.screen.pixels_rgba()[row * w..(row + 1) * w]);
             }
             Ok(bitmap_key)
         }
