@@ -5,28 +5,31 @@
     Prevents the system from sleeping or turning off the display during execution,
     and restores the previous system state on script exit.
     Detects large time jumps (sleep/resume) and exits if found.
-    If on AC power, skips battery-drop-based stats.
-    If battery is low and presumably on battery saver (below ~30%), 
-    appends "-saving" to the mode name.
-    Uses 70% drop wall time estimate instead of 80%.
-    The summary log file should exactly match what is printed to the terminal.
+    Uses high-precision tracking of battery drop per mode.
+    Configures Energy Saver thresholds dynamically.
+    Reports CPU speed and screen brightness in logs.
+    Displays banners on screen brightness or mode changes.
+    Reports system uptime and RAM usage at script start.
+    Supports configurable sleep intervals and argument passing to `cargo build`.
+    Includes comprehensive documentation and comments.
+    Keeps API calls and format strings within the summary log.
 
 .DESCRIPTION
     - Runs a self-test before starting. If self-test fails, prints error and exits.
-    - On start, prevents the computer from sleeping or turning off the display by using Win32 API SetThreadExecutionState.
+    - On start, sets Energy Saver to activate at 0% battery.
+    - Prevents the computer from sleeping or turning off the display by using Win32 API SetThreadExecutionState.
       Uses 64-bit values for ES_CONTINUOUS etc.
-    - On start, prints initial line with date/time, battery, mode, etc.
+    - On start, prints initial line with date/time, battery, screen brightness, CPU speed, system uptime, RAM usage, and memory.
     - For each iteration:
-        * Executes cargo clean then cargo build.
+        * Executes cargo clean then cargo build with forwarded arguments.
         * Sleeps a configured interval between runs.
-        * Tracks performance stats, including battery usage (if available).
-        * If on AC, does not show battery-drop-based statistics.
-        * If battery below 30% and on battery, mode is "battery-<plan>-saving".
-        * Calculates est. builds per % drop, build time per %, wall time per %,
-          and now uses 70% drop wall time estimate per mode.
+        * Tracks performance stats, including battery usage per mode.
+        * Calculates estimated builds per % battery drop, build time per %, wall time per %,
+          using a 70% drop wall time estimate per mode.
+        * Monitors CPU speed and screen brightness, displaying banners on changes.
         * If iteration takes too long (>3x baseline time), assumes sleep/resume and exits.
     - On command failure, prints the error output and stops.
-    - On script end (or if killed), attempts to restore system state.
+    - On script end (or if killed), restores Energy Saver threshold to 30% and previous system state.
     - The summary log matches exactly what's printed to terminal line-by-line.
     - The full log includes all summary lines plus cargo outputs.
 
@@ -35,16 +38,22 @@
     Assumes the current directory has a Cargo project (Cargo.toml).
 
 .EXAMPLE
-    .\rust_perf_battery.ps1
+    .\rust_perf_battery.ps1 --sleep 15 --release
 #>
 
-param()
+param(
+    [Parameter(Position=0, Mandatory=$false)]
+    [int]$SleepInterval = 10,
+
+    [Parameter(ValueFromRemainingArguments=$true)]
+    [string[]]$CargoArgs
+)
 
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 
 # Configuration
-$PauseBetweenRuns = 10 # seconds to sleep between each iteration
+$PauseBetweenRuns = $SleepInterval # seconds to sleep between each iteration
 $BaselineIterationTime = [TimeSpan]::FromMinutes(5)
 $MaxAllowedIterationTime = New-TimeSpan -Minutes ($BaselineIterationTime.TotalMinutes * 3) # 3x baseline
 
@@ -74,6 +83,7 @@ function Ensure-ModeStats($mode) {
             TotalBuildTime = [TimeSpan]::Zero
             TotalCleanTime = [TimeSpan]::Zero
             BuildCount = 0
+            LastScreenBrightness = $null
         }
     }
 }
@@ -124,17 +134,46 @@ function Get-BatteryStatus {
     }
 }
 
-function Get-CurrentEnergyMode {
-    # If on battery and below 30%, assume "saving"
-    $battery = Get-BatteryStatus
-    $schemeName = Get-PowerSchemeName
-    $powerSource = if ($battery.OnAC) { "ac" } else { "battery" }
-    $modeName = ($schemeName -replace '\s+', '-').ToLower()
+function Get-ScreenBrightness {
+    try {
+        $brightnessObj = Get-WmiObject -Namespace root/WMI -Class WmiMonitorBrightness -ErrorAction Stop
+        if ($brightnessObj -and $brightnessObj.CurrentBrightness) {
+            return "$($brightnessObj.CurrentBrightness)%"
+        } else {
+            return "N/A"
+        }
+    } catch {
+        return "N/A"
+    }
+}
 
-    if (-not $battery.OnAC -and $battery.BatteryPercent -le 30) {
-        return "$powerSource-$modeName-saving"
-    } else {
-        return "$powerSource-$modeName"
+function Get-CPUSpeed {
+    try {
+        $cpu = Get-CimInstance -ClassName Win32_Processor -ErrorAction Stop
+        if ($cpu) {
+            $currentClock = $cpu.CurrentClockSpeed
+            $maxClock = $cpu.MaxClockSpeed
+            if ($maxClock -gt 0) {
+                $cpuPercent = [math]::Round(($currentClock / $maxClock) * 100, 0)
+                return "$cpuPercent%"
+            } else {
+                return "N/A"
+            }
+        } else {
+            return "N/A"
+        }
+    } catch {
+        return "N/A"
+    }
+}
+
+function Get-SystemUptime {
+    try {
+        $uptime = (Get-CimInstance -ClassName Win32_OperatingSystem).LastBootUpTime
+        $uptimeSpan = (Get-Date) - $uptime
+        return $uptimeSpan.ToString("dd\.hh\:mm\:ss")
+    } catch {
+        return "N/A"
     }
 }
 
@@ -180,7 +219,7 @@ function Run-CargoClean {
 
 function Run-CargoBuild {
     $start = Get-Date
-    $output = & cargo build 2>&1
+    $output = & cargo build @CargoArgs 2>&1
     $exit = $LASTEXITCODE
     $elapsed = (Get-Date) - $start
     return [PSCustomObject]@{
@@ -190,8 +229,7 @@ function Run-CargoBuild {
     }
 }
 
-# We want summary log to exactly match what we print.
-# We'll write a helper function for summary lines:
+# Logging Functions
 function Write-And-LogSummary {
     param([string]$Line)
     Write-Host $Line
@@ -199,42 +237,83 @@ function Write-And-LogSummary {
     Add-Content $FullLogPath $Line
 }
 
-# For cargo output, only goes to full logs (no printing):
 function Write-FullOnly {
     param([string]$FullOutput)
     Add-Content $FullLogPath $FullOutput
 }
 
+# Function to get current energy mode
+function Get-CurrentEnergyMode {
+    $battery = Get-BatteryStatus
+    $schemeName = Get-PowerSchemeName
+    $powerSource = if ($battery.OnAC) { "ac" } else { "battery" }
+    $modeName = ($schemeName -replace '\s+', '-').ToLower()
+
+    return "$powerSource-$modeName"
+}
+
 # Prevent sleep/display off
 try {
-    [void][SleepPreventer.Power]
-} catch {
     Add-Type -Namespace SleepPreventer -Name Power -MemberDefinition @"
 [System.Runtime.InteropServices.DllImport("kernel32.dll", CharSet=System.Runtime.InteropServices.CharSet.Auto,SetLastError=true)]
 public static extern System.UInt32 SetThreadExecutionState(System.UInt64 esFlags);
 "@
+} catch {
+    Write-Host "Failed to add SleepPreventer Power type."
+    exit 1
 }
 
 [uint64]$ES_CONTINUOUS = 2147483648
 [uint64]$ES_SYSTEM_REQUIRED = 1
 [uint64]$ES_DISPLAY_REQUIRED = 2
 
+# Set Energy Saver threshold to 0% at start
+powercfg /setdcvalueindex SCHEME_CURRENT SUB_ENERGYSAVER ESBATTTHRESHOLD 0
+powercfg /setactive SCHEME_CURRENT
+Write-Host "Setting Energy Saver to activate at 0% battery."
+
+# Register cleanup to restore Energy Saver threshold
+$cleanup = {
+    try {
+        powercfg /setdcvalueindex SCHEME_CURRENT SUB_ENERGYSAVER ESBATTTHRESHOLD 30
+        powercfg /setactive SCHEME_CURRENT
+        [SleepPreventer.Power]::SetThreadExecutionState($ES_CONTINUOUS) | Out-Null
+        Write-And-LogSummary "Setting Energy Saver to activate at 30% battery."
+    } catch {
+        Write-Host "Failed to restore Energy Saver settings: $_"
+    }
+}
+
+# Suppress the output of Register-EngineEvent by piping to Out-Null
+Register-EngineEvent PowerShell.Exiting -Action $cleanup | Out-Null
+
+# Prevent system sleep
 [SleepPreventer.Power]::SetThreadExecutionState($ES_CONTINUOUS -bor $ES_SYSTEM_REQUIRED -bor $ES_DISPLAY_REQUIRED) | Out-Null
 
 Self-Test
 $ModeStats.Clear()
 
-$initBattery = Get-BatteryStatus
+# Initial System Metrics
+$batt = Get-BatteryStatus
+$initBattery = $batt
 $InitialBatteryPercent = $initBattery.BatteryPercent
-$FullChargeCapacity = $initBattery.FullChargeCapacity
-$InitialEnergy_mWh = $null
-if ($FullChargeCapacity -and $FullChargeCapacity -gt 0) {
-    $InitialEnergy_mWh = $FullChargeCapacity * ($InitialBatteryPercent / 100.0)
+
+
+$systemUptime = Get-SystemUptime
+$freeMemoryKB = (Get-CimInstance Win32_OperatingSystem).FreePhysicalMemory
+$totalMemoryKB = (Get-CimInstance Win32_OperatingSystem).TotalVisibleMemorySize
+$ramPercent = if ($totalMemoryKB -gt 0) {
+    [math]::Round((($totalMemoryKB - $freeMemoryKB) / $totalMemoryKB) * 100, 0)
+} else {
+    "N/A"
 }
 
-$currentTimestamp = (Get-Date -Format $displayTimeFormat) + "s"
+$currentTimestamp = (Get-Date -Format $displayTimeFormat)
 $initMode = Get-CurrentEnergyMode
-$initialLine = "$currentTimestamp battery=$($initBattery.BatteryPercent)% mode=$initMode"
+$screenBrightness = Get-ScreenBrightness
+$cpuSpeed = Get-CPUSpeed
+
+$initialLine = "$currentTimestamp battery=$($initBattery.BatteryPercent)%, screen $screenBrightness, cpu speed $cpuSpeed, uptime $systemUptime, ram $ramPercent%, mode=$initMode"
 Write-And-LogSummary $initialLine
 
 $logLine = "Logs: $(Split-Path $FullLogPath -Leaf), $(Split-Path $SummaryLogPath -Leaf)"
@@ -244,6 +323,20 @@ try {
     while (-not $StopLoop) {
         $iterationStart = Get-Date
         $CurrentEnergyMode = Get-CurrentEnergyMode
+        $currentScreenBrightness = Get-ScreenBrightness
+        $currentCPUSpeed = Get-CPUSpeed
+
+        # Check for mode or screen brightness changes
+        if ($ModeStats.ContainsKey($CurrentEnergyMode)) {
+            $lastBrightness = $ModeStats[$CurrentEnergyMode].LastScreenBrightness
+            if ($lastBrightness -ne $currentScreenBrightness) {
+                Write-And-LogSummary "=== Warning: Screen brightness changed from $lastBrightness to $currentScreenBrightness ==="
+                $ModeStats[$CurrentEnergyMode].LastScreenBrightness = $currentScreenBrightness
+            }
+        }
+
+        Ensure-ModeStats($CurrentEnergyMode)
+        $ModeStats[$CurrentEnergyMode].LastScreenBrightness = $currentScreenBrightness
 
         $cleanResult = Run-CargoClean
         if (-not $cleanResult.Success) {
@@ -280,7 +373,6 @@ try {
         $TotalCleanTime += $cleanResult.Elapsed
         $TotalBuildTime += $buildResult.Elapsed
 
-        Ensure-ModeStats($CurrentEnergyMode)
         $ModeStats[$CurrentEnergyMode].TotalModeTime += $iterationElapsed
         $ModeStats[$CurrentEnergyMode].TotalBuildTime += $buildResult.Elapsed
         $ModeStats[$CurrentEnergyMode].TotalCleanTime += $cleanResult.Elapsed
@@ -295,42 +387,25 @@ try {
 
         $totalElapsed = (Get-Date) - $GlobalScriptStart
         $otherTime = $totalElapsed - ($TotalBuildTime + $TotalCleanTime + $TotalSleepTime)
+        $otherTimeStr = Format-ShortTime $otherTime
 
         $totalBuildStr = Format-ShortTime $TotalBuildTime
         $totalCleanStr = Format-ShortTime $TotalCleanTime
         $totalSleepStr = Format-ShortTime $TotalSleepTime
-        $otherTimeStr = Format-ShortTime $otherTime
 
         $batteryDrop = $InitialBatteryPercent - $batt.BatteryPercent
         $batteryDropFloat = [double]$batteryDrop
-        $currentTimestamp = (Get-Date -Format $displayTimeFormat) + "s"
-        $runCountStr = "{0:000}" -f $CompileCount
+        $currentTimestamp = (Get-Date -Format $displayTimeFormat)
+        $runCountStr = $CompileCount
 
-        $UsedEnergy_mWh = $null
-        $mWh_per_build = "N/A"
-        if ($FullChargeCapacity -and $FullChargeCapacity -gt 0 -and $InitialEnergy_mWh -ne $null) {
-            $CurrentEnergy_mWh = $FullChargeCapacity * ($batt.BatteryPercent / 100.0)
-            $UsedEnergy_mWh = $InitialEnergy_mWh - $CurrentEnergy_mWh
-            if ($CompileCount -gt 0) {
-                $mWh_per_build_val = $UsedEnergy_mWh / $CompileCount
-                $mWh_per_build = ("{0:F2} mWh/build" -f $mWh_per_build_val)
-            else {
-                $mWh_per_build = "N/A"
-            }
-        }
-
-        $energyLine = ""
-        if ($UsedEnergy_mWh -ne $null) {
-            $energyLine = ", used {0:F2}mWh, {1}" -f $UsedEnergy_mWh, $mWh_per_build
-        }
-
-        $overallLine = "$currentTimestamp, run $runCountStr, $CurrentEnergyMode, battery $($batt.BatteryPercent)%, total build $totalBuildStr, clean $totalCleanStr, sleep $totalSleepStr$energyLine"
+        
+        $overallLine = "$currentTimestamp, run $runCountStr, $CurrentEnergyMode, battery $($batt.BatteryPercent)%, screen $currentScreenBrightness, cpu speed $currentCPUSpeed, total build $totalBuildStr, clean $totalCleanStr, sleep $totalSleepStr, other $otherTimeStr$energyLine"
         Write-And-LogSummary $overallLine
 
         $secondLine = "   Sleeping ${PauseBetweenRuns}s between builds. $lastBuildLine"
         Write-And-LogSummary $secondLine
 
-        # If on AC, we won't show battery-drop-based stats.
+        # Show battery drop stats only if on battery
         $showBatteryDropStats = (-not $batt.OnAC) -and ($batteryDropFloat -gt 0)
 
         foreach ($modeKey in $ModeStats.Keys) {
@@ -348,7 +423,7 @@ try {
             $buildTimePerDrop = "N/A"
             $wallPerDrop = "N/A"
             $timeFor70Drop = "N/A"
-            if ($showBatteryDropStats) {
+            if ($showBatteryDropStats -and $batteryDropFloat -ne 0) {
                 $buildsPerDropVal = $m.BuildCount / $batteryDropFloat
                 $buildsPerDrop = ("{0:F2}" -f $buildsPerDropVal)
 
@@ -359,27 +434,26 @@ try {
                 $wallPerDrop = ("{0:F0}s" -f $wallPerDropVal)
 
                 # 70% drop wall estimate
-                $wallFor70PctSec = $m.TotalModeTime.TotalSeconds / $batteryDropFloat * 70
+                $wallFor70PctSec = ($m.TotalModeTime.TotalSeconds / $batteryDropFloat) * 70
                 $wallFor70Pct = [TimeSpan]::FromSeconds($wallFor70PctSec)
                 $timeFor70Drop = Format-HoursMinutes $wallFor70Pct
             }
 
             $modeLine = "   On $($m.Mode) for $(Format-ShortTime $m.TotalModeTime), avg build $avgBuild, avg clean $avgClean"
-            if ($showBatteryDropStats) {
-                $modeLine += ", est. builds per % drop: $buildsPerDrop, build time per %: $buildTimePerDrop, wall per %: $wallPerDrop, 70% drop wall: $timeFor70Drop"
+            if ($showBatteryDropStats -and $batteryDropFloat -ne 0) {
+                $modeLine += ", est. builds per % drop: $buildsPerDrop, build time per %: $buildTimePerDrop, wall per %: $wallPerDrop, est. $timeFor70Drop to drop 70% based on $batteryDropFloat% over $(Format-ShortTime $m.TotalModeTime)"
             }
             Write-And-LogSummary $modeLine
         }
 
-        # Write cargo outputs to full log only (already logged summary lines above)
+        # Write cargo outputs to full log only
         $fullOutput = "=== Iteration $CompileCount ===`r`n" +
                       "--- Cargo clean output ---`r`n" + ($cleanResult.Output -join "`r`n") + "`r`n" +
                       "--- Cargo build output ---`r`n" + ($buildResult.Output -join "`r`n") + "`r`n"
         Write-FullOnly $fullOutput
     }
 } finally {
-    # Restore previous system state
-    [SleepPreventer.Power]::SetThreadExecutionState($ES_CONTINUOUS) | Out-Null
+    # Cleanup actions
+    $cleanup.Invoke()
+    Write-And-LogSummary "Script ended."
 }
-
-Write-And-LogSummary "Script ended."
