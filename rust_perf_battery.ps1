@@ -252,6 +252,25 @@ function Get-CurrentEnergyMode {
     return "$powerSource-$modeName"
 }
 
+
+function Get-RAMUsage {
+    try {
+        $os = Get-CimInstance Win32_OperatingSystem
+        if ($os.TotalVisibleMemorySize -gt 0) {
+            return [math]::Round((($os.TotalVisibleMemorySize - $os.FreePhysicalMemory) / $os.TotalVisibleMemorySize) * 100, 0)
+        }
+        return "N/A"
+    } catch {
+        return "N/A"
+    }
+}
+
+function Get-SystemStatusString {
+    $battery = Get-BatteryStatus
+    return "battery $($battery.BatteryPercent)%, screen $(Get-ScreenBrightness), cpu speed $(Get-CPUSpeed), ram $(Get-RAMUsage)%"
+}
+
+
 # Prevent sleep/display off
 try {
     Add-Type -Namespace SleepPreventer -Name Power -MemberDefinition @"
@@ -298,22 +317,7 @@ $batt = Get-BatteryStatus
 $initBattery = $batt
 $InitialBatteryPercent = $initBattery.BatteryPercent
 
-
-$systemUptime = Get-SystemUptime
-$freeMemoryKB = (Get-CimInstance Win32_OperatingSystem).FreePhysicalMemory
-$totalMemoryKB = (Get-CimInstance Win32_OperatingSystem).TotalVisibleMemorySize
-$ramPercent = if ($totalMemoryKB -gt 0) {
-    [math]::Round((($totalMemoryKB - $freeMemoryKB) / $totalMemoryKB) * 100, 0)
-} else {
-    "N/A"
-}
-
-$currentTimestamp = (Get-Date -Format $displayTimeFormat)
-$initMode = Get-CurrentEnergyMode
-$screenBrightness = Get-ScreenBrightness
-$cpuSpeed = Get-CPUSpeed
-
-$initialLine = "$currentTimestamp battery=$($initBattery.BatteryPercent)%, screen $screenBrightness, cpu speed $cpuSpeed, uptime $systemUptime, ram $ramPercent%, mode=$initMode"
+$initialLine = "$(Get-Date -Format $displayTimeFormat) $(Get-CurrentEnergyMode), $(Get-SystemStatusString), sys uptime $(Get-SystemUptime)"
 Write-And-LogSummary $initialLine
 
 $logLine = "Logs: $(Split-Path $FullLogPath -Leaf), $(Split-Path $SummaryLogPath -Leaf)"
@@ -324,7 +328,7 @@ try {
         $iterationStart = Get-Date
         $CurrentEnergyMode = Get-CurrentEnergyMode
         $currentScreenBrightness = Get-ScreenBrightness
-        $currentCPUSpeed = Get-CPUSpeed
+        
 
         # Check for mode or screen brightness changes
         if ($ModeStats.ContainsKey($CurrentEnergyMode)) {
@@ -333,7 +337,13 @@ try {
                 Write-And-LogSummary "=== Warning: Screen brightness changed from $lastBrightness to $currentScreenBrightness ==="
                 $ModeStats[$CurrentEnergyMode].LastScreenBrightness = $currentScreenBrightness
             }
+            
+            # Add mode change warning
+            if ($PreviousMode -and $PreviousMode -ne $CurrentEnergyMode) {
+                Write-And-LogSummary "=== Warning: Power mode changed from $PreviousMode to $CurrentEnergyMode ==="
+            }
         }
+        $PreviousMode = $CurrentEnergyMode
 
         Ensure-ModeStats($CurrentEnergyMode)
         $ModeStats[$CurrentEnergyMode].LastScreenBrightness = $currentScreenBrightness
@@ -399,7 +409,7 @@ try {
         $runCountStr = $CompileCount
 
         
-        $overallLine = "$currentTimestamp, run $runCountStr, $CurrentEnergyMode, battery $($batt.BatteryPercent)%, screen $currentScreenBrightness, cpu speed $currentCPUSpeed, total build $totalBuildStr, clean $totalCleanStr, sleep $totalSleepStr, other $otherTimeStr$energyLine"
+        $overallLine = "$currentTimestamp, run $runCountStr, $CurrentEnergyMode, $(Get-SystemStatusString), total build $totalBuildStr, clean $totalCleanStr, sleep $totalSleepStr, other $otherTimeStr"
         Write-And-LogSummary $overallLine
 
         $secondLine = "   Sleeping ${PauseBetweenRuns}s between builds. $lastBuildLine"
