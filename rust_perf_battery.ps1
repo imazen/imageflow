@@ -4,28 +4,31 @@
     Logs comprehensive performance and battery statistics per iteration.
     Prevents the system from sleeping or turning off the display during execution,
     and restores the previous system state on script exit.
-    If the computer sleeps, it will cause a large time jump in iteration time; 
-    we detect that and terminate.
+    Detects large time jumps (sleep/resume) and exits if found.
+    If on AC power, skips battery-drop-based stats.
+    If battery is low and presumably on battery saver (below ~30%), 
+    appends "-saving" to the mode name.
+    Uses 70% drop wall time estimate instead of 80%.
+    The summary log file should exactly match what is printed to the terminal.
 
 .DESCRIPTION
     - Runs a self-test before starting. If self-test fails, prints error and exits.
-    - On start, prevents the computer from sleeping or turning off the display by using the Win32 API SetThreadExecutionState.
+    - On start, prevents the computer from sleeping or turning off the display by using Win32 API SetThreadExecutionState.
+      Uses 64-bit values for ES_CONTINUOUS etc.
     - On start, prints initial line with date/time, battery, mode, etc.
     - For each iteration:
-        * Executes `cargo clean` then `cargo build`
-        * Sleeps a configured interval between runs
-        * Tracks performance stats, including battery usage
-        * Logs results to full and summary log files
-        * If any iteration takes unexpectedly long (e.g., due to sleep/resume),
-          we detect a time jump and exit. By default, "unexpectedly long" is >3x a baseline of 5 minutes.
+        * Executes cargo clean then cargo build.
+        * Sleeps a configured interval between runs.
+        * Tracks performance stats, including battery usage (if available).
+        * If on AC, does not show battery-drop-based statistics.
+        * If battery below 30% and on battery, mode is "battery-<plan>-saving".
+        * Calculates est. builds per % drop, build time per %, wall time per %,
+          and now uses 70% drop wall time estimate per mode.
+        * If iteration takes too long (>3x baseline time), assumes sleep/resume and exits.
     - On command failure, prints the error output and stops.
-    - On AC power, we do not show battery drop-related stats since they don't make sense.
-    - On script end (or if killed), attempts to restore system sleep/display-off behavior.
-
-    Time formats:
-      - Display time: "yyyy-MM-dd HH:mm:sss" (with 's' appended)
-      - File names: "yyyy-MM-dd_HH-mm-ss"
-      - Time spans: "HH:MM:SSs" for total times
+    - On script end (or if killed), attempts to restore system state.
+    - The summary log matches exactly what's printed to terminal line-by-line.
+    - The full log includes all summary lines plus cargo outputs.
 
 .NOTES
     Requires PowerShell 5.1+ and `cargo` in PATH.
@@ -122,11 +125,17 @@ function Get-BatteryStatus {
 }
 
 function Get-CurrentEnergyMode {
-    $schemeName = Get-PowerSchemeName
+    # If on battery and below 30%, assume "saving"
     $battery = Get-BatteryStatus
+    $schemeName = Get-PowerSchemeName
     $powerSource = if ($battery.OnAC) { "ac" } else { "battery" }
     $modeName = ($schemeName -replace '\s+', '-').ToLower()
-    return "$powerSource-$modeName"
+
+    if (-not $battery.OnAC -and $battery.BatteryPercent -le 30) {
+        return "$powerSource-$modeName-saving"
+    } else {
+        return "$powerSource-$modeName"
+    }
 }
 
 function Format-ShortTime($ts) {
@@ -181,14 +190,19 @@ function Run-CargoBuild {
     }
 }
 
-function Write-Logs {
-    param(
-        [string]$FullOutput,
-        [string]$SummaryLine
-    )
-    Add-Content -Path $FullLogPath -Value $FullOutput
-    Add-Content -Path $FullLogPath -Value $SummaryLine
-    Add-Content -Path $SummaryLogPath -Value $SummaryLine
+# We want summary log to exactly match what we print.
+# We'll write a helper function for summary lines:
+function Write-And-LogSummary {
+    param([string]$Line)
+    Write-Host $Line
+    Add-Content $SummaryLogPath $Line
+    Add-Content $FullLogPath $Line
+}
+
+# For cargo output, only goes to full logs (no printing):
+function Write-FullOnly {
+    param([string]$FullOutput)
+    Add-Content $FullLogPath $FullOutput
 }
 
 # Prevent sleep/display off
@@ -221,10 +235,10 @@ if ($FullChargeCapacity -and $FullChargeCapacity -gt 0) {
 $currentTimestamp = (Get-Date -Format $displayTimeFormat) + "s"
 $initMode = Get-CurrentEnergyMode
 $initialLine = "$currentTimestamp battery=$($initBattery.BatteryPercent)% mode=$initMode"
-Write-Host $initialLine
+Write-And-LogSummary $initialLine
 
 $logLine = "Logs: $(Split-Path $FullLogPath -Leaf), $(Split-Path $SummaryLogPath -Leaf)"
-Write-Host $logLine
+Write-And-LogSummary $logLine
 
 try {
     while (-not $StopLoop) {
@@ -233,16 +247,20 @@ try {
 
         $cleanResult = Run-CargoClean
         if (-not $cleanResult.Success) {
-            Write-Host "cargo clean failed, output:"
-            $cleanResult.Output | Write-Host
+            Write-And-LogSummary "cargo clean failed, output:"
+            foreach ($line in $cleanResult.Output) {
+                Write-And-LogSummary $line
+            }
             $StopLoop = $true
             break
         }
 
         $buildResult = Run-CargoBuild
         if (-not $buildResult.Success) {
-            Write-Host "cargo build failed, output:"
-            $buildResult.Output | Write-Host
+            Write-And-LogSummary "cargo build failed, output:"
+            foreach ($line in $buildResult.Output) {
+                Write-And-LogSummary $line
+            }
             $StopLoop = $true
             break
         }
@@ -253,13 +271,11 @@ try {
 
         $iterationElapsed = (Get-Date) - $iterationStart
 
-        # Check for time jump
         if ($iterationElapsed -gt $MaxAllowedIterationTime) {
-            Write-Host "Detected time jump (iteration took $($iterationElapsed.ToString())) - possibly slept. Exiting."
+            Write-And-LogSummary "Detected time jump (iteration took $($iterationElapsed.ToString())) - possibly slept. Exiting."
             break
         }
 
-        # Update stats
         $TotalSleepTime += $sleepElapsed
         $TotalCleanTime += $cleanResult.Elapsed
         $TotalBuildTime += $buildResult.Elapsed
@@ -277,7 +293,6 @@ try {
         $lastBuildLine = if ($buildLineObj) { [string]$buildLineObj } else { "" }
         $lastBuildLine = $lastBuildLine.Trim()
 
-        # Compute metrics
         $totalElapsed = (Get-Date) - $GlobalScriptStart
         $otherTime = $totalElapsed - ($TotalBuildTime + $TotalCleanTime + $TotalSleepTime)
 
@@ -299,7 +314,7 @@ try {
             if ($CompileCount -gt 0) {
                 $mWh_per_build_val = $UsedEnergy_mWh / $CompileCount
                 $mWh_per_build = ("{0:F2} mWh/build" -f $mWh_per_build_val)
-            } else {
+            else {
                 $mWh_per_build = "N/A"
             }
         }
@@ -310,14 +325,14 @@ try {
         }
 
         $overallLine = "$currentTimestamp, run $runCountStr, $CurrentEnergyMode, battery $($batt.BatteryPercent)%, total build $totalBuildStr, clean $totalCleanStr, sleep $totalSleepStr$energyLine"
-        Write-Host $overallLine
+        Write-And-LogSummary $overallLine
 
-        # Second line
         $secondLine = "   Sleeping ${PauseBetweenRuns}s between builds. $lastBuildLine"
-        Write-Host $secondLine
+        Write-And-LogSummary $secondLine
 
-        # Mode lines
-        $OnAC = $batt.OnAC
+        # If on AC, we won't show battery-drop-based stats.
+        $showBatteryDropStats = (-not $batt.OnAC) -and ($batteryDropFloat -gt 0)
+
         foreach ($modeKey in $ModeStats.Keys) {
             $m = $ModeStats[$modeKey]
             $avgBuild = "N/A"
@@ -332,10 +347,8 @@ try {
             $buildsPerDrop = "N/A"
             $buildTimePerDrop = "N/A"
             $wallPerDrop = "N/A"
-            $timeFor80Drop = "N/A"
-
-            # Only show battery-drop related stats if not on AC
-            if (-not $OnAC -and $batteryDropFloat -gt 0) {
+            $timeFor70Drop = "N/A"
+            if ($showBatteryDropStats) {
                 $buildsPerDropVal = $m.BuildCount / $batteryDropFloat
                 $buildsPerDrop = ("{0:F2}" -f $buildsPerDropVal)
 
@@ -345,26 +358,28 @@ try {
                 $wallPerDropVal = $m.TotalModeTime.TotalSeconds / $batteryDropFloat
                 $wallPerDrop = ("{0:F0}s" -f $wallPerDropVal)
 
-                $wallFor80PctSec = $m.TotalModeTime.TotalSeconds / $batteryDropFloat * 80
-                $wallFor80Pct = [TimeSpan]::FromSeconds($wallFor80PctSec)
-                $timeFor80Drop = Format-HoursMinutes $wallFor80Pct
+                # 70% drop wall estimate
+                $wallFor70PctSec = $m.TotalModeTime.TotalSeconds / $batteryDropFloat * 70
+                $wallFor70Pct = [TimeSpan]::FromSeconds($wallFor70PctSec)
+                $timeFor70Drop = Format-HoursMinutes $wallFor70Pct
             }
 
             $modeLine = "   On $($m.Mode) for $(Format-ShortTime $m.TotalModeTime), avg build $avgBuild, avg clean $avgClean"
-            if (-not $OnAC -and $batteryDropFloat -gt 0) {
-                $modeLine += ", est. builds per % drop: $buildsPerDrop, build time per %: $buildTimePerDrop, wall per %: $wallPerDrop, 80% drop wall: $timeFor80Drop"
+            if ($showBatteryDropStats) {
+                $modeLine += ", est. builds per % drop: $buildsPerDrop, build time per %: $buildTimePerDrop, wall per %: $wallPerDrop, 70% drop wall: $timeFor70Drop"
             }
-            Write-Host $modeLine
+            Write-And-LogSummary $modeLine
         }
 
+        # Write cargo outputs to full log only (already logged summary lines above)
         $fullOutput = "=== Iteration $CompileCount ===`r`n" +
                       "--- Cargo clean output ---`r`n" + ($cleanResult.Output -join "`r`n") + "`r`n" +
                       "--- Cargo build output ---`r`n" + ($buildResult.Output -join "`r`n") + "`r`n"
-
-        Write-Logs -FullOutput $fullOutput -SummaryLine $overallLine
+        Write-FullOnly $fullOutput
     }
 } finally {
+    # Restore previous system state
     [SleepPreventer.Power]::SetThreadExecutionState($ES_CONTINUOUS) | Out-Null
 }
 
-Write-Host "Script ended."
+Write-And-LogSummary "Script ended."
