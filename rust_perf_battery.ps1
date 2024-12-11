@@ -199,10 +199,19 @@ function Self-Test {
         $mode = Get-CurrentEnergyMode
         Ensure-ModeStats($mode)
         $ModeStats[$mode].TotalModeTime += (New-TimeSpan -Seconds 5)
+        Test-Process-Functions
+        
     } catch {
         Write-Host "Self-test failed: $($_.Exception.Message)"
         exit 1
     }
+}
+
+function Test-Process-Functions {
+    $s = Get-ProcessStats
+    $t = Get-Date
+    $diff = Get-ProcessDiff $s $t
+    $table = Format-ProcessDiffTable $diff
 }
 
 function Run-CargoClean {
@@ -276,21 +285,24 @@ function Get-ProcessStats {
             WorkingSet = $_.WorkingSet64
             Threads = $_.Threads.Count
             Handles = $_.HandleCount
-            ID = $_.Id
+            ID = if ($_.Id) { $_.Id } else { "unknown" }
         }
     }
 }
 
 function Get-ProcessDiff {
-    param([Array]$previous)
+    param([Array]$previous, [DateTime]$previousTaken)
     
     $current = Get-ProcessStats
+    $currentTaken = (Get-Date)
     $diff = @()
+    $totalCpuDelta = 0
     
     foreach ($proc in $current) {
         $prevProc = $previous | Where-Object { $_.ID -eq $proc.ID }
         $cpuDelta = if ($prevProc) { $proc.CPU - $prevProc.CPU } else { $proc.CPU }
-        
+
+        $totalCpuDelta += $cpuDelta
         if ($cpuDelta -gt 0) {
             $diff += @{
                 Name = $proc.Name
@@ -301,34 +313,44 @@ function Get-ProcessDiff {
             }
         }
     }
+
+    $percentCpuDelta = $totalCpuDelta / ($currentTaken - $previousTaken).TotalSeconds
     
     return @{
-        Processes = $current
+        CurrentProcesses = $current
+        CurrentTaken = $currentTaken
+        PreviousProcesses = $previous
+        PreviousTaken = $previousTaken
+        TotalCpuDelta = $totalCpuDelta
+        PercentCpuDelta = $percentCpuDelta
+        ElapsedTime = ($currentTaken - $previousTaken)
         Changes = ($diff | Sort-Object -Property CPUDelta -Descending)
     }
 }
 
-function Format-ProcessTable {
-    param(
-        [Array]$processes,
-        [Array]$changes,
-        [TimeSpan]$interval
-    )
+function Format-ProcessDiffTable {
+    param([PSCustomObject]$diff)
     
-    if (-not $changes -or $changes.Count -eq 0) {
-        return "No significant CPU usage detected"
+    if ($diff.TotalCpuDelta -eq 0) {
+        return "No change to process cpu usage detected"
     }
+    # if percent cpu delta is less than 1%, then don't show it, unless ElapsedTime is under 10 minns
+    if ($diff.PercentCpuDelta -lt 1 -and $diff.ElapsedTime.TotalMinutes -gt 10) {
+        return "Less than 1% overall CPU usage detected in long-running processes, skipping CPU table display"
+    }
+
+    $totalCpuDelta = "{0:N1}s" -f $diff.TotalCpuDelta
+    $percentCpuDelta = "{0:N1}%" -f $diff.PercentCpuDelta
+    $timeDelta = Format-ShortTime $diff.ElapsedTime
     
-    $intervalMins = [math]::Round($interval.TotalMinutes, 1)
-    Write-And-LogSummary "Process CPU changes over last $intervalMins minutes:"
-    
-    $changes | 
+    $text = "CPU use $totalCpuDelta ($percentCpuDelta) over $timeDelta (among long-running processes), top 5:`r`n"
+    $text += $diff.Changes | 
         Select-Object -First 5 | 
         ForEach-Object {
             [PSCustomObject]@{
                 Name = $_.Name
                 CPUDelta = "{0:N1}s" -f $_.CPUDelta
-                PerMin = "{0:N1}s" -f ($_.CPUDelta / $intervalMins)
+                Pct = "{0:N1}%" -f ($_.CPUDelta / $diff.ElapsedTime.TotalSeconds)
                 RAMMb = "{0:N0}" -f ($_.WorkingSet / 1MB)
                 PID = $_.ID
             }
@@ -336,11 +358,20 @@ function Format-ProcessTable {
         Format-Table -Property @(
             @{Label="NAME"; Expression={$_.Name}; Align="Left"},
             @{Label="+CPU TIME"; Expression={$_.CPUDelta}; Align="Right"},
-            @{Label="CPU/MIN"; Expression={$_.PerMin}; Align="Right"},
+            @{Label="% CPU"; Expression={$_.Pct}; Align="Right"},
             @{Label="RAM MB"; Expression={$_.RAMMb}; Align="Right"},
             @{Label="PID"; Expression={$_.PID}; Align="Right"}
         ) -AutoSize | 
         Out-String
+
+    $text += "`r`n"
+    ## Now, a single liner with top RAM users
+    $text += "Top RAM users: " + ($diff.CurrentProcesses | Sort-Object -Property WorkingSet -Descending | Select-Object -First 5 | ForEach-Object { "$($_.Name) ($($_.WorkingSet / 1MB) MB)" } | Join-String -Separator ", ")
+    return $text
+}
+
+function Get-TopRAMUsersString {
+    return "Top RAM users: " + (Get-Process | Sort-Object -Property WorkingSet -Descending | Select-Object -First 5 | ForEach-Object { "$($_.Name) ($($_.WorkingSet / 1MB) MB)" } | Join-String -Separator ", ")
 }
 
 function Get-SystemStatusString {
@@ -397,13 +428,14 @@ $InitialBatteryPercent = $initBattery.BatteryPercent
 
 $initialLine = "$(Get-Date -Format $displayTimeFormat) $(Get-CurrentEnergyMode), $(Get-SystemStatusString), sys uptime $(Get-SystemUptime)"
 Write-And-LogSummary $initialLine
+Write-And-LogSummary "Warning: 'balanced' may not be accurate, as powercfg /getactivescheme is a lying liar. Verify your power settings manually."
+Write-And-LogSummary (Get-TopRAMUsersString)
 
 $logLine = "Logs: $(Split-Path $FullLogPath -Leaf), $(Split-Path $SummaryLogPath -Leaf)"
 Write-And-LogSummary $logLine
 
 # Add these near the top with other global variables
 $LastProcessCheck = [DateTime]::MinValue
-$LastProcessStats = $null
 $BaselineProcessStats = Get-ProcessStats
 $BaselineProcessCheck = Get-Date
 $ProcessCheckInterval = [TimeSpan]::FromMinutes(5)
@@ -550,18 +582,9 @@ try {
         Write-FullOnly $fullOutput
 
         if (((Get-Date) - $LastProcessCheck) -gt $ProcessCheckInterval -or $CompileCount -eq 1) {
-            $interval = if ($LastProcessCheck -eq [DateTime]::MinValue) {
-                (Get-Date) - $BaselineProcessCheck
-            } else {
-                (Get-Date) - $LastProcessCheck
-            }
-            
-            $diff = Get-ProcessDiff $BaselineProcessStats
-            $period = (Get-Date) - $BaselineProcessCheck
-            $table = Format-ProcessTable $diff.Processes $diff.Changes $period
+            $diff = Get-ProcessDiff $BaselineProcessStats $BaselineProcessCheck
+            $table = Format-ProcessDiffTable $diff
             Write-And-LogSummary $table
-            
-            $LastProcessStats = $diff.Processes
             $LastProcessCheck = Get-Date
         }
     }
