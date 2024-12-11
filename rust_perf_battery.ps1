@@ -265,6 +265,84 @@ function Get-RAMUsage {
     }
 }
 
+function Get-ProcessStats {
+    param([int]$MinProcessCPUSeconds = 10)
+    Get-Process | Where-Object {
+        $_.CPU -gt $MinProcessCPUSeconds
+    } | ForEach-Object {
+        @{
+            Name = $_.ProcessName
+            CPU = $_.CPU
+            WorkingSet = $_.WorkingSet64
+            Threads = $_.Threads.Count
+            Handles = $_.HandleCount
+            ID = $_.Id
+        }
+    }
+}
+
+function Get-ProcessDiff {
+    param([Array]$previous)
+    
+    $current = Get-ProcessStats
+    $diff = @()
+    
+    foreach ($proc in $current) {
+        $prevProc = $previous | Where-Object { $_.ID -eq $proc.ID }
+        $cpuDelta = if ($prevProc) { $proc.CPU - $prevProc.CPU } else { $proc.CPU }
+        
+        if ($cpuDelta -gt 0) {
+            $diff += @{
+                Name = $proc.Name
+                CPUDelta = $cpuDelta
+                CurrentCPU = $proc.CPU
+                WorkingSet = $proc.WorkingSet
+                ID = $proc.ID
+            }
+        }
+    }
+    
+    return @{
+        Processes = $current
+        Changes = ($diff | Sort-Object -Property CPUDelta -Descending)
+    }
+}
+
+function Format-ProcessTable {
+    param(
+        [Array]$processes,
+        [Array]$changes,
+        [TimeSpan]$interval
+    )
+    
+    if (-not $changes -or $changes.Count -eq 0) {
+        return "No significant CPU usage detected"
+    }
+    
+    $intervalMins = [math]::Round($interval.TotalMinutes, 1)
+    Write-And-LogSummary "Process CPU changes over last $intervalMins minutes:"
+    
+    $changes | 
+        Select-Object -First 5 | 
+        ForEach-Object {
+            [PSCustomObject]@{
+                Name = $_.Name
+                CPUDelta = "{0:N1}s" -f $_.CPUDelta
+                PerMin = "{0:N1}s" -f ($_.CPUDelta / $intervalMins)
+                RAMMb = "{0:N0}" -f ($_.WorkingSet / 1MB)
+                PID = $_.ID
+            }
+        } | 
+        Format-Table -Property @(
+            @{Label="NAME"; Expression={$_.Name}; Align="Left"},
+            @{Label="+CPU TIME"; Expression={$_.CPUDelta}; Align="Right"},
+            @{Label="CPU/MIN"; Expression={$_.PerMin}; Align="Right"},
+            @{Label="RAM MB"; Expression={$_.RAMMb}; Align="Right"},
+            @{Label="PID"; Expression={$_.PID}; Align="Right"}
+        ) -AutoSize | 
+        Out-String
+}
+
 function Get-SystemStatusString {
     $battery = Get-BatteryStatus
     return "battery $($battery.BatteryPercent)%, screen $(Get-ScreenBrightness), cpu speed $(Get-CPUSpeed), ram $(Get-RAMUsage)%"
@@ -322,6 +400,15 @@ Write-And-LogSummary $initialLine
 
 $logLine = "Logs: $(Split-Path $FullLogPath -Leaf), $(Split-Path $SummaryLogPath -Leaf)"
 Write-And-LogSummary $logLine
+
+# Add these near the top with other global variables
+$LastProcessCheck = [DateTime]::MinValue
+$LastProcessStats = $null
+$BaselineProcessStats = Get-ProcessStats
+$BaselineProcessCheck = Get-Date
+$ProcessCheckInterval = [TimeSpan]::FromMinutes(5)
+
+
 
 try {
     while (-not $StopLoop) {
@@ -461,6 +548,22 @@ try {
                       "--- Cargo clean output ---`r`n" + ($cleanResult.Output -join "`r`n") + "`r`n" +
                       "--- Cargo build output ---`r`n" + ($buildResult.Output -join "`r`n") + "`r`n"
         Write-FullOnly $fullOutput
+
+        if (((Get-Date) - $LastProcessCheck) -gt $ProcessCheckInterval -or $CompileCount -eq 1) {
+            $interval = if ($LastProcessCheck -eq [DateTime]::MinValue) {
+                (Get-Date) - $BaselineProcessCheck
+            } else {
+                (Get-Date) - $LastProcessCheck
+            }
+            
+            $diff = Get-ProcessDiff $BaselineProcessStats
+            $period = (Get-Date) - $BaselineProcessCheck
+            $table = Format-ProcessTable $diff.Processes $diff.Changes $period
+            Write-And-LogSummary $table
+            
+            $LastProcessStats = $diff.Processes
+            $LastProcessCheck = Get-Date
+        }
     }
 } finally {
     # Cleanup actions
