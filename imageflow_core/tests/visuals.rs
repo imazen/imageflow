@@ -112,6 +112,31 @@ fn test_problematic_png_lossy() {
     );
 }
 
+
+// #[test]
+// fn test_problematic_png_crushed() {
+//     compare_encoded(
+//         Some(IoTestEnum::Url("https://imageflow-resources.s3.us-west-2.amazonaws.com/test_inputs/imageflow-operational.png".to_owned())),
+//         "test_problematic_png_crushed",
+//         POPULATE_CHECKSUMS,
+//         DEBUG_GRAPH,
+//         Constraints {
+//             similarity: Similarity::AllowDssimMatch(0.0, 0.002),
+//             max_file_size: None
+//         },
+//         vec![
+//             Node::CommandString{
+//                 kind: CommandStringKind::ImageResizer4,
+//                 value: "format=png&w=100".to_owned(),
+//                 decode: Some(0),
+//                 encode: Some(1),
+//                 watermarks: None
+//             }
+//         ]
+//     );
+//     eprintln!("hello");
+//     assert!(false);
+// }
 #[test]
 fn test_transparent_png_to_png_rounded_corners() {
     compare_encoded(
