@@ -141,6 +141,15 @@ impl<'a> BitmapWindowMut<'a,u8> {
             Some(core::slice::from_raw_parts_mut(self.slice.as_mut_ptr() as *mut rgb::alt::BGRA8, (self.slice.len() / 4).min(self.info.w as usize)))
         }
     }
+
+    pub fn get_pixel_bgra8(&self, x: u32, y: u32) -> Option<rgb::alt::BGRA<u8>>   {
+        if self.info().channels() != 4 || self.slice.len() %4 != 0{
+            return None;
+        }
+        let index = (y * self.info.item_stride + x * 4) as usize;
+        let pixel =  bytemuck::cast_slice::<u8,rgb::alt::BGRA8>(&self.slice[index..index+4]);
+        Some(pixel[0])
+    }
 }
 
 impl<'a>  BitmapWindowMut<'a, u8> {
@@ -629,6 +638,11 @@ impl Bitmap{
         self.info.w = x2 - x1;
         self.info.h = y2 - y1;
         Ok(())
+    }
+
+    pub fn get_pixel_bgra32(&mut self, x: u32, y: u32) -> Option<rgb::alt::BGRA<u8>> {
+        let window = self.get_window_u8().unwrap();
+        return window.get_pixel_bgra8(x, y);
     }
 }
 

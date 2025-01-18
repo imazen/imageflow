@@ -44,12 +44,24 @@ impl Encoder for LodepngEncoder {
         let mut bitmap = bitmaps.try_borrow_mut(bitmap_key)
             .map_err(|e| e.at(here!()))?;
 
+            // check if the top-right pixel is transparent
+            // let x= bitmap.w() - 1;
+            // let y= 0;
+            // let window = bitmap.get_window_u8()
+            //         .unwrap();
+            // let  top_right_pixel = window.get_pixel_bgra8(x, y).unwrap();
+            // if top_right_pixel.a == 0 {
+            //     eprintln!("lodepng: top-right pixel of image is transparent");
+            // }
+
+
+
         unsafe {
             let frame = bitmap.get_window_u8()
                 .ok_or_else(|| nerror!(ErrorKind::InvalidBitmapType))?
                 .to_bitmap_bgra().map_err(|e| e.at(here!()))?;
 
-
+        
             Self::write_png_auto(&mut self.io, &frame, self.use_highest_compression)?;
 
             Ok(EncodeResult {
