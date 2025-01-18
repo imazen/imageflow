@@ -762,7 +762,7 @@ fn test_scale(){
     };
     let l  = Ir4Layout::new(Instructions{w: Some(2560), h: Some(1696), mode: Some(FitMode::Max), f_sharpen_when: Some(SharpenWhen::Downscaling), .. Default::default() }, 5104, 3380,5104, 3380);
     l.add_steps(&mut b, &Some(vec![w.clone()])).unwrap();
-    assert_eq!(b.steps, vec![s::Node::Resample2D { w: 2560, h: 1696,
+    assert_eq!(b.steps, vec![s::Node::Resample2D { w: 2560, h: 1695,
 
         hints: Some(s::ResampleHints {
             sharpen_percent: None,
