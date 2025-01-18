@@ -131,7 +131,7 @@ pub const FILTER_OPTIONS: &'static [&'static str] = &["robidouxfast",
 
 
 
-
+/// Not for external use
 #[repr(C)]
 #[derive(Clone,Debug,PartialEq)]
 pub struct BitmapBgra {
@@ -237,10 +237,18 @@ impl BitmapBgra {
         Ok(())
     }
 
+    pub fn is_pointer_null(&self) -> bool{
+        self.pixels.is_null()
+    }
+
     /// Call normalize_alpha first; this function does not skip unused alpha bytes, only unused whole pixels.
     /// Otherwise Bgr32 may be non-deterministic
-    pub fn short_hash_pixels(&self) -> u64{
+    pub unsafe fn short_hash_pixels(&self) -> u64{
         use std::hash::Hasher;
+
+        if self.is_pointer_null(){
+            panic!("BitmapBgra::short_hash_pixels called on invalid pointer");
+        }
 
         let width_bytes = self.w as usize *  self.fmt.bytes();
 
