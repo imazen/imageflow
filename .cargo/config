@@ -1,0 +1,5 @@
+#[target.x86_64-unknown-linux-gnu]
+#runner = ".cargo/codelldb.sh"
+
+#finds the current target triple
+#rustc -vV | sed -n 's|host: ||p' 
