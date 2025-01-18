@@ -619,6 +619,24 @@ fn test_crop_aspect(){
     assert_eq!(result.get_source_crop(), r(636,423))
 }
 
+// to fix this, 99 is wrong
+// initial_size: 1200x400
+// target: 100x33
+// constraints: [SkipUnless(Either(Greater)), ScaleToInner, Pad]
+// layout: Layout { source_max: 1200x400, source: 1200x400, target: 100x33, canvas: 100x33, image: 99x33 }
+
+#[test]
+fn test_rounding_99 () {
+    let cropper = sizing::IdentityCropProvider::new();
+    let result = Layout::create(r(1200,400), r(100,33)).execute_all(&steps().scale_to_inner().into_vec(), &cropper).unwrap();
+    assert_eq!(result.get_box(BoxTarget::CurrentCanvas), r(100,33), "canvas");
+    assert_eq!(result.get_box(BoxTarget::CurrentImage), r(100,33), "image");
+    assert_eq!(result.get_source_crop(), r(1200,400), "source_crop");
+}
+
+
+
+
 #[test]
 fn test_steps() {
     let kits = step_kits();

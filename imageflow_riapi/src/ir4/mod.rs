@@ -16,6 +16,7 @@ pub fn process_constraint(source_w: i32, source_h: i32, constraint: &imageflow_t
     layout::Ir4Layout::process_constraint(source_w,source_h, constraint)
 }
 
+#[derive(Debug, Clone)]
 pub enum Ir4Command{
     Instructions(Box<Instructions>),
     Url(String),
@@ -53,6 +54,7 @@ pub struct Ir4Translate{
 // If using trim.threshold, delayed expansion is required.
 
 
+#[derive(Debug, Clone)]
 pub struct Ir4Result{
     pub parse_warnings: Vec<parsing::ParseWarning>,
     pub parsed: Instructions,
@@ -110,6 +112,7 @@ impl Ir4Translate{
     }
 }
 
+#[derive(Debug, Clone)]
 pub struct Ir4SourceFrameInfo{
     pub w: i32,
     pub h: i32,
@@ -138,6 +141,7 @@ impl Ir4SourceFrameInfo{
 }
 
 /// Cannot expand decoder. use `Ir4Translate` for that.
+#[derive(Debug, Clone)]
 pub struct Ir4Expand{
     pub i: Ir4Command,
     pub source: Ir4SourceFrameInfo,
