@@ -511,7 +511,8 @@ impl NodeDefOneInputExpand for CropWhitespaceDef {
                             if rect.x2 <= rect.x1 || rect.y2 <= rect.y1 {
                                 return Err(nerror!(crate::ErrorKind::InvalidState, "Whitespace detection returned invalid rectangle"));
                             }
-                            let padding = (percent_padding * (rect.x2 - rect.x1 + rect.y2 - rect.y1) as f32 / 2f32).ceil() as i64;
+                            let padding = (percent_padding / 100f32 * (rect.x2 - rect.x1 + rect.y2 - rect.y1) as f32 / 2f32).ceil() as i64;
+                            //eprintln!("Detected {}x{} whitespace rect: {:?} within {}x{}, padding: {}", rect.x2 - rect.x1, rect.y2 - rect.y1, rect, frame.w, frame.h, padding);
                             Ok((cmp::max(0, rect.x1 as i64 - padding) as u32, cmp::max(0, rect.y1 as i64 - padding) as u32,
                                 cmp::min(bitmap.w() as i64, rect.x2 as i64 + padding) as u32, cmp::min(bitmap.h() as i64, rect.y2 as i64 + padding) as u32))
                         } else {
@@ -521,6 +522,7 @@ impl NodeDefOneInputExpand for CropWhitespaceDef {
                 },
                 other => { Err(nerror!(crate::ErrorKind::InvalidOperation, "Cannot CropWhitespace without a parent bitmap; got {:?}", other)) }
             }?;
+            //eprintln!("Whitespace cropping to {}x{} of {}x{}: x1={}, y1={}, x2={}, y2={}", x2-x1, y2-y1, b.w, b.h, x1, y1, x2, y2);
             ctx.replace_node(ix, vec![
                 Node::n(&CROP,
                         NodeParams::Json(s::Node::Crop { x1, y1, x2, y2 }))

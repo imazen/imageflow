@@ -71,6 +71,7 @@ const SCAN_FULL: ScanRegion = ScanRegion {
     y_2_percent: 1f32,
 };
 
+#[derive(Copy, Clone, Debug)]
 pub struct RectCorners {
     pub x1: u32,
     pub y1: u32,
@@ -78,6 +79,7 @@ pub struct RectCorners {
     pub y2: u32,
 }
 
+#[derive(Copy, Clone, Debug)]
 struct Rect {
     x: u32,
     y: u32,
