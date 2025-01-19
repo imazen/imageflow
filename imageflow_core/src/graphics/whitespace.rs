@@ -220,7 +220,7 @@ pub fn detect_content(b: &BitmapBgra, threshold: u32) -> Option<RectCorners> {
     // We should now have a good idea of where boundaries lie. However... if it seems that more than 25% is whitespace,
     // we should do a different type of scan.
     let area_to_scan_separately: i64 = search.min_x as i64 * search.h as i64 + search.min_y as i64 * search.w as i64 + (search.w as i64 - search.max_x as i64) * search.h as i64
-        + (search.h as i64 - search.max_y as i64) * search.h as i64;
+        + (search.h as i64 - search.max_y as i64) * search.w as i64;
 
     if area_to_scan_separately > (search.h as i64 * search.w as i64) {
         // Just scan it all at once, non-directionally
