@@ -362,7 +362,9 @@ impl ChecksumCtx{
     /// This format is preserved from legacy C tests, thus its rudimentary (but, I suppose, sufficient) nature.
     pub fn checksum_bitmap(bitmap: &BitmapBgra) -> String {
         let info = format!("{}x{} fmt={}", bitmap.w, bitmap.h, bitmap.fmt as i32);
-        return format!("{:02$X}_{:02$X}", bitmap.short_hash_pixels(), hlp::hashing::legacy_djb2(info.as_bytes()), 17)
+        unsafe {
+            return format!("{:02$X}_{:02$X}", bitmap.short_hash_pixels(), hlp::hashing::legacy_djb2(info.as_bytes()), 17)
+        }
     }
 
 
