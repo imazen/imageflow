@@ -294,6 +294,8 @@ impl ChecksumCtx{
             let mut f = File::create(&dest_path).unwrap();
             f.write_all(bytes.as_ref()).unwrap();
             f.flush().unwrap();
+            f.sync_all().unwrap();
+            
 
             println!("{} bytes written successfully.", bytes.len());
         }
