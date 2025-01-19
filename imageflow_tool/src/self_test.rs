@@ -591,6 +591,156 @@ pub fn run(tool_location: Option<PathBuf>) -> i32 {
     // file.json --in 0 a.png 1 b.png --out 3 base64
 
 
+// Below is an example integration test for image output to stdout, followed by verification via imageflow_tool itself.
+/*
+Goal:
+    Test image output to stdout for both v1/querystring and v1/build.
+    We want to ensure that:
+       1) The output is a valid image.
+       2) No JSON or other text contaminates the stream.
+       3) We rely on imageflow_tool to do the decoding rather than diagnosing.
+*/
+
+    {
+        // Step 1: Create a dedicated subfolder for test isolation.
+        // Reasoning: This keeps our testing artifacts cleanly separated.
+        let c = c.subfolder_context("stdout_image_test");
+
+        // Step 2: Create a blank image to serve as input.
+        // Reasoning: We want a known test file that’s guaranteed to decode (100x100) as a baseline.
+        c.create_blank_image_here("100x100", 100, 100, s::EncoderPreset::libjpeg_turbo());
+
+        // Step 3: Test v1/querystring with --out "-".
+        //   We request a 60x40 JPEG, verifying only image bytes emit on stdout.
+        {
+            // Step 3.1: Execute v1/querystring
+            let result = c.exec("v1/querystring --command width=60&height=40&mode=max&format=jpg --in 100x100.jpg --out -");
+            // Step 3.2: Expect a successful status code
+            result.expect_status_code(Some(0));
+
+            // Step 3.3: Collect stdout bytes (the image data)
+            let stdout_bytes = result.stdout_bytes();
+            // Step 3.4: Write them to a file for subsequent decode testing
+            let out_fname = c.working_dir().join("stdout_querystring.jpg");
+            std::fs::write(&out_fname, &stdout_bytes).unwrap();
+
+            // Step 3.5: Verify the file is recognized as a valid image by decoding it with imageflow_tool.
+            // Reasoning: We do a minimal transformation (1x1) to confirm that decoding the entire file is valid.
+            let decode_cmd = format!(
+                "v1/querystring --command width=1&height=1&mode=max&format=jpg --in {} --out verify.jpg",
+                out_fname.display()
+            );
+            c.exec(&decode_cmd).expect_status_code(Some(0));
+        }
+
+        // Step 4: Test v1/build with --out "-".
+        //   We craft a minimal recipe, feed our 100x100 JPEG, and ensure the build emits only image bytes to stdout.
+        {
+            // Step 4.1: Create a simple recipe that scales to 60x40 and encodes to JPEG
+            let recipe = fluent::fluently()
+                .decode(0)
+                .constrain_within(Some(60), Some(40), None)
+                .encode(1, s::EncoderPreset::libjpeg_turbo())
+                .into_build_0_1();
+
+            // Step 4.2: Write the recipe to JSON
+            c.write_json("stdout_image.json", &recipe);
+
+            // Step 4.3: Execute v1/build with --out -
+            let result = c.exec("v1/build --json stdout_image.json --in 100x100.jpg --out -");
+            result.expect_status_code(Some(0));
+
+            // Step 4.4: Save the image bytes from stdout
+            let stdout_bytes = result.stdout_bytes();
+            let out_fname = c.working_dir().join("stdout_build.jpg");
+            std::fs::write(&out_fname, &stdout_bytes).unwrap();
+
+            // Step 4.5: Verify validity by decoding this file using imageflow_tool
+            let decode_cmd = format!(
+                "v1/querystring --command width=1&height=1&mode=max&format=jpg --in {} --out verify.jpg",
+                out_fname.display()
+            );
+            c.exec(&decode_cmd).expect_status_code(Some(0));
+        }
+        // Below is an extension to our integration tests, now verifying handling of --in - (stdin).
+/*
+Goal:
+    1) Test reading image data from stdin (both with v1/querystring and v1/build).
+    2) Confirm output remains valid image data.
+*/
+
+{
+    // Step 5: Test v1/querystring with --in "-"
+    //         We'll read our 100x100.jpg from disk and pipe its bytes into stdin for imageflow_tool.
+    {
+        // We'll reuse the same subfolder context as before or create a new one for clarity.
+        let c = c.subfolder_context("stdin_image_test_qs");
+
+        // Create a blank image again as input. 
+        // This ensures we have a known JPEG file to feed through stdin.
+        c.create_blank_image_here("100x100", 100, 100, s::EncoderPreset::libjpeg_turbo());
+
+        // Read the file bytes from disk.
+        let input_path = c.working_dir().join("100x100.jpg");
+        let input_bytes = std::fs::read(&input_path).unwrap();
+
+        // Execute v1/querystring with --in "-" and pass the bytes in via stdin.
+        let command = "v1/querystring --command width=32&height=32&mode=max&format=jpg --in - --out from_stdin_qs.jpg";
+        let result = c.exec_with_stdin(command, &input_bytes);
+
+        // Expect success status code
+        result.expect_status_code(Some(0));
+
+        // Verify the output is a valid image by decoding with imageflow_tool
+        let out_fname = c.working_dir().join("from_stdin_qs.jpg");
+        let decode_cmd = format!(
+            "v1/querystring --command width=1&height=1&mode=max&format=jpg --in {} --out verify_qs.jpg",
+            out_fname.display()
+        );
+        c.exec(&decode_cmd).expect_status_code(Some(0));
+    }
+
+    // Step 6: Test v1/build with --in "-"
+    //         We craft a minimal recipe, feed a JPEG via stdin, 
+    //         and ensure the build decodes successfully.
+    {
+        // We'll use a new subfolder context for isolation.
+        let c = c.subfolder_context("stdin_image_test_build");
+
+        // Create a known blank image.
+        c.create_blank_image_here("100x100", 100, 100, s::EncoderPreset::libjpeg_turbo());
+
+        // Read the file bytes from disk to provide via stdin.
+        let input_path = c.working_dir().join("100x100.jpg");
+        let input_bytes = std::fs::read(&input_path).unwrap();
+
+        // Create a simple scaling recipe.
+        let recipe = fluent::fluently()
+            .decode(0)
+            .constrain_within(Some(40), Some(30), None)
+            .encode(1, s::EncoderPreset::libjpeg_turbo())
+            .into_build_0_1();
+
+        // Write the recipe to JSON.
+        c.write_json("stdin_recipe.json", &recipe);
+
+        // Pass in the image via stdin to v1/build with --in -
+        let command = "v1/build --json stdin_recipe.json --in - --out from_stdin_build.jpg";
+        let result = c.exec_with_stdin(command, &input_bytes);
+        result.expect_status_code(Some(0));
+
+        // Verify the output file is a valid image by decoding it 
+        // (37x30 or so, depending on aspect ratio).
+        let out_fname = c.working_dir().join("from_stdin_build.jpg");
+        let decode_cmd = format!(
+            "v1/querystring --command width=1&height=1&mode=max&format=jpg --in {} --out verify_build.jpg",
+            out_fname.display()
+        );
+        c.exec(&decode_cmd).expect_status_code(Some(0));
+    }
+}
+    }
+
 
     println!("Self-test complete. All tests passed.");
     0

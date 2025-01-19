@@ -240,6 +240,12 @@ impl ProcTestContext {
         let _ = args.remove(0);
         self.execute(args, true, |_| {})
     }
+    pub fn exec_with_stdin(&self, args: &str, stdin: &[u8]) -> ProcOutput{
+        let args = args.split_whitespace().collect::<Vec<&str>>();
+        self.execute(args, true, |child| {
+            child.stdin.as_mut().unwrap().write_all(stdin).unwrap();
+        })
+    }
 
     ///
     /// Pass false for valgrind_on_signal_death if your callback might kill the child

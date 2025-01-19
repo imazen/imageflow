@@ -87,15 +87,15 @@ pub fn main_with_exit_code() -> i32 {
                     .value_hint(ValueHint::FilePath)
                     // Since the s::Build01 requires valid UTF8, it's better to reject it early.
                     //.value_parser(clap::value_parser!(PathBuf))
-                    .value_names(["source-image.jpg", "source-image-2.png"])
-                    .help("Replace/add inputs for the operation file")
+                    .value_names(["source-image.jpg", "source-image-2.png", "-"])
+                    .help("Replace/add inputs for the operation file. '-' reads from stdin")
             )
             .arg(Arg::new("out").long("out").action(clap::ArgAction::Append).num_args(1..)
                 // Since the s::Build01 requires valid UTF8, it's better to reject it early.
                 //.value_parser(clap::value_parser!(PathBuf))
                 .value_hint(ValueHint::FilePath)
-                .value_names(["result-1.jpg"])
-                .help("Replace/add outputs for the operation file"))
+                .value_names(["result-1.jpg","-"])
+                .help("Replace/add outputs for the operation file. '-' writes to stdout"))
             //.arg(Arg::new("demo").long("demo").takes_value(true).possible_values(&["example:200x200_png"]))
             .arg(Arg::new("json").long("json").num_args(1)
                 .value_hint(ValueHint::FilePath)
@@ -106,7 +106,6 @@ pub fn main_with_exit_code() -> i32 {
             .arg(Arg::new("response").long("response").num_args(1).value_hint(ValueHint::FilePath).value_parser(clap::value_parser!(PathBuf)).help("Write the JSON job result to file instead of stdout"))
             .arg(Arg::new("bundle-to").long("bundle-to").num_args(1).value_hint(ValueHint::DirPath).value_parser(clap::value_parser!(PathBuf)).help("Copies the recipe and all dependencies into the given folder, simplifying it."))
             .arg(Arg::new("debug-package").long("debug-package").num_args(1).value_hint(ValueHint::FilePath).value_parser(clap::value_parser!(PathBuf)).help("Creates a debug package in the given folder so others can reproduce the behavior you are seeing"))
-
         )
         .subcommand(Command::new("v1/querystring").aliases(&["v0.1/ir4","v1/ir4"])
             .about("Run an command querystring")
@@ -116,15 +115,15 @@ pub fn main_with_exit_code() -> i32 {
                     //.value_parser(clap::value_parser!(PathBuf))
                     .action(clap::ArgAction::Append).required(true)
                     .value_hint(ValueHint::FilePath)
-                    .value_names(["source-image.jpg", "source-image-2.png"])
-                    .help("Input image")
+                    .value_names(["source-image.jpg", "source-image-2.png", "-"])
+                    .help("Input image or '-' to read from stdin")
             )
             .arg(Arg::new("out").long("out")
                 .action(ArgAction::Append).num_args(1..).required(true)
                 //.value_parser(clap::value_parser!(PathBuf))
                 .value_hint(ValueHint::FilePath)
-                .value_names(["result-1.jpg"])
-                .help("Output image"))
+                .value_names(["result-1.jpg", "-"])
+                .help("Output image file or '-' to write to stdout"))
             .arg(Arg::new("quiet").action(ArgAction::SetTrue).long("quiet").num_args(0).help("Don't write the JSON response to stdout"))
             .arg(Arg::new("response")
                 .long("response")
@@ -171,34 +170,87 @@ pub fn main_with_exit_code() -> i32 {
         Some((m,cmd_build::JobSource::Ir4QueryString(m.get_one::<String>("command").unwrap().to_owned()), "v1/querystring"))
     }else{ None };
 
-    if let Some((m, source, subcommand_name)) = build_triple{
+    // Step 1: Identify locations where we parse the --in and --out arguments for v1/build or v1/querystring.
+    // We do this in the block that handles build_triple, because that's where we parse the subcommand matches.
 
-        let builder =
-            cmd_build::CmdBuild::parse(source, m.get_many::<String>("in").map(|v| v.cloned().collect()),
-                                                m.get_many::<String>("out").map(|v| v.cloned().collect()))
-                .build_maybe();
-        if let Some(dir_str) = m.get_one::<PathBuf>("debug-package"){
+    if let Some((m, source, subcommand_name)) = build_triple {
+        // Step 2: Collect the raw "in" and "out" arguments the user passed.
+        // Our goal is to detect "-" and treat it as stdin/stdout.
+        let in_args = m.get_many::<String>("in")
+            .map(|args_iter| {
+                args_iter
+                    .map(|arg| {
+                        // Step 3: If the user passed "-", we recognize it as a request to read from stdin.
+                        // Otherwise, keep the provided argument as-is.
+                        if arg == "-" {
+                            // You might handle this specially in your builder, e.g., storing "stdin" as a placeholder.
+                            // or mapping "-" to a special path or internal representation.
+                            "stdin".to_string()
+                        } else {
+                            arg.clone()
+                        }
+                    })
+                    .collect::<Vec<_>>()
+            });
+
+        let out_args = m.get_many::<String>("out")
+            .map(|args_iter| {
+                args_iter
+                    .map(|arg| {
+                        // Step 4: If the user passed "-", we recognize it as a request to write to stdout.
+                        // We could store "stdout" or handle it similarly.
+                        if arg == "-" {
+                            "stdout".to_string()
+                        } else {
+                            arg.clone()
+                        }
+                    })
+                    .collect::<Vec<_>>()
+            });
+
+        let out_to_stdout = out_args.as_ref().map(|args| 
+            args.iter().any(|arg| arg == "stdout")).unwrap_or(false);
+
+        // Step 5: Construct our builder with the updated "in" and "out" argument lists.
+        // cmd_build::CmdBuild::parse is responsible for interpreting these placeholders and
+        // actually opening stdin or stdout in the imageflow pipeline.
+        let builder = cmd_build::CmdBuild::parse(
+            source,
+            in_args,
+            out_args.clone()
+        )
+        .build_maybe();
+
+        // Step 6: Continue with existing logic for writing responses, error handling, etc.
+        if let Some(dir_str) = m.get_one::<PathBuf>("debug-package") {
             builder.write_errors_maybe().unwrap();
             let dir = Path::new(&dir_str);
             builder.bundle_to(dir);
             let current_dir = std::env::current_dir().unwrap();
             std::env::set_current_dir(&dir).unwrap();
-            let cap = hlp::process_capture::CaptureTo::create(&OsStr::new("recipe").to_owned().into(), None, vec![subcommand_name.to_owned(), "--json".to_owned(), "recipe.json".to_owned()], artifact_source());
+            let cap = hlp::process_capture::CaptureTo::create(
+                &OsStr::new("recipe").to_owned().into(),
+                None,
+                vec![subcommand_name.to_owned(), "--json".to_owned(), "recipe.json".to_owned()],
+                artifact_source()
+            );
             cap.run();
-            //Restore current directory
             std::env::set_current_dir(&current_dir).unwrap();
             let mut archive_name = dir_str.as_os_str().to_owned();
             archive_name.push(".zip");
             hlp::filesystem::zip_directory_non_recursive(&dir,&Path::new(&archive_name)).unwrap();
             return cap.exit_code();
         } else if let Some(dir) = m.get_one::<PathBuf>("bundle-to").map(|v| v.to_owned()) {
-                builder.write_errors_maybe().unwrap();
-                let dir = Path::new(&dir);
-                return builder.bundle_to(dir);
+            builder.write_errors_maybe().unwrap();
+            let dir = Path::new(&dir);
+            return builder.bundle_to(dir);
         } else {
-            builder.write_response_maybe(m.get_one("response"), !m.get_flag("quiet"))
+            builder
+                .write_response_maybe(m.get_one("response"), !m.get_flag("quiet") && !out_to_stdout)
                 .expect("IO error writing JSON output file. Does the directory exist?");
-            builder.write_errors_maybe().expect("Writing to stderr failed!");
+            builder
+                .write_errors_maybe()
+                .expect("Writing to stderr failed!");
             return builder.get_exit_code().unwrap();
         }
     }
