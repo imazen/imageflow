@@ -50,35 +50,20 @@ jobs:
 
       - uses: dtolnay/rust-toolchain@stable
 
-      ### Cargo Cache for Build Artifacts ###
-      - name: Cache cargo
-        uses: actions/cache@v3
+      - uses: Swatinem/rust-cache@v2
         with:
-          path: |
-            ~/.cargo/registry
-            ~/.cargo/git
-            target
-          key: ${{ runner.os }}-${{matrix.name}}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          key: ${{matrix.name}}
 
       - name: Install NASM
         uses: ./.github/actions/install-nasm
 
-      ### Check Build ###
-      - name: Check Build
-        run: cargo check --all
-
       ### Test Code ###
       - name: Test Build
         run: cargo test --all
-        env:
-          RUSTFLAGS: -C target-cpu=${{matrix.TARGET_CPU}}
-
-      ### Build the code ###
-      - name: Build Release
-        run: cargo build --all
         shell: bash
         env:
           RUSTFLAGS: -C target-cpu=${{matrix.TARGET_CPU}}
+
 
   test_win32:
     runs-on: windows-2019
@@ -92,23 +77,17 @@ jobs:
         uses: ./.github/actions/install-nasm
 
       ### Cargo cache for Build artifacts ###
-      - name: Cache cargo
-        uses: actions/cache@v3
+      - uses: Swatinem/rust-cache@v2
         with:
-          path: |
-            ~/.cargo/registry
-            ~/.cargo/git
-            target
-          key: ${{ runner.os }}-windows-test-32-cargo-${{ hashFiles('**/Cargo.lock') }}
+          key: ${{matrix.name}}
+
       - name: Install latest 32bit target
         uses: dtolnay/rust-toolchain@stable
         with:
           #components: rustfmt, clippy
           target: i686-pc-windows-msvc
 
-      ### check and test build ###
-      - name: Check Build
-        run: cargo check --all --target=i686-pc-windows-msvc
+      ### Test build ###
       - name: Test Build
         run: cargo test --all --release --target=i686-pc-windows-msvc
 

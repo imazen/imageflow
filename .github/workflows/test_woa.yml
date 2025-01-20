@@ -22,23 +22,14 @@ jobs:
       - name: Checkout code again with git, so git commands work.
         uses: actions/checkout@v4
 
-      
       - name: Install NASM
         uses: ./.github/actions/install-nasm
 
-      - name: Check Build
-        run: & "Launch-VsDevShell.ps1" | cargo check --all
-
       - name: Test Build
-        run: & "Launch-VsDevShell.ps1" | cargo test --all
+        run: "& Launch-VsDevShell.ps1" | cargo test --all"
         env:
           RUSTFLAGS: -C target-cpu=generic
 
-      - name: Build Release
-        run: & "Launch-VsDevShell.ps1" | cargo build --all
-        shell: bash
-        env:
-          RUSTFLAGS: -C target-cpu=generic
 
   # You can add more experimental jobs here in the future
   # test_another_experimental:
