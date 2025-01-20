@@ -21,7 +21,7 @@ runs:
           winget install NASM.NASM --accept-source-agreements --accept-package-agreements
         } catch {
           Write-Host "Winget installation failed, falling back to manual installation"
-          $url = "https://www.nasm.us/pub/nasm/releasebuilds/2.15.05/win64/nasm-2.15.05-installer-x64.exe"
+          $url = "https://www.nasm.us/pub/nasm/releasebuilds/2.16.03/win64/nasm-2.16.03-installer-x64.exe"
           Invoke-WebRequest -Uri $url -OutFile nasminst.exe
           Start-Process -FilePath .\nasminst.exe -ArgumentList "/S" -Wait
         }
