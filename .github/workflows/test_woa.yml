@@ -14,28 +14,28 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Setup Windows ARM64
         uses: ./.github/actions/setup-win-arm64
 
       - name: Checkout code again with git, so git commands work.
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       
       - name: Install NASM
         uses: ./.github/actions/install-nasm
 
       - name: Check Build
-        run: cargo check --all
+        run: & "Launch-VsDevShell.ps1" | cargo check --all
 
       - name: Test Build
-        run: cargo test --all
+        run: & "Launch-VsDevShell.ps1" | cargo test --all
         env:
           RUSTFLAGS: -C target-cpu=generic
 
       - name: Build Release
-        run: cargo build --all
+        run: & "Launch-VsDevShell.ps1" | cargo build --all
         shell: bash
         env:
           RUSTFLAGS: -C target-cpu=generic
