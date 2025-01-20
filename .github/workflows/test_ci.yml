@@ -46,10 +46,11 @@ jobs:
 
       - run: rustup show
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - uses: dtolnay/rust-toolchain@stable
-
+      - run: rustup show
+      
       - uses: Swatinem/rust-cache@v2
         with:
           key: ${{matrix.name}}
@@ -70,7 +71,7 @@ jobs:
     steps:
       - run: rustup show
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       ### Install Nasm with fallback to S3 ###
       - name: Install nasm

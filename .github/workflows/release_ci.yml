@@ -46,24 +46,20 @@ jobs:
 
     runs-on: ${{ matrix.os }}
     steps:
+      - run: rustup show
       - name: Use stable Rust toolchain
         uses: dtolnay/rust-toolchain@stable
-
       - run: rustup show
 
+
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - uses: FranzDiebold/github-env-vars-action@v1.3.0
 
-      - name: Cache cargo
-        uses: actions/cache@v3
+      - uses: Swatinem/rust-cache@v2
         with:
-          path: |
-            ~/.cargo/registry
-            ~/.cargo/git
-            target
-          key: ${{ runner.os }}-${{ matrix.name }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          key: ${{matrix.name}}
 
       - name: Install NASM
         uses: ./.github/actions/install-nasm
@@ -237,7 +233,7 @@ jobs:
           content-type: application/zip
 
       - name: Upload to S3
-        uses: anshulrgoyal/upload-s3-action@master
+        uses: shallwefootball/s3-upload-action@master
         with:
           aws_key_id: ${{ secrets.AWS_KEY_ID }}
           aws_secret_access_key: ${{ secrets.AWS_SECRET_ACCESS_KEY}}
@@ -246,7 +242,7 @@ jobs:
           destination_dir: ''
 
       - name: Upload to S3(nugets)
-        uses: anshulrgoyal/upload-s3-action@master
+        uses: shallwefootball/s3-upload-action@master
         with:
           aws_key_id: ${{ secrets.AWS_KEY_ID }}
           aws_secret_access_key: ${{ secrets.AWS_SECRET_ACCESS_KEY}}
@@ -281,7 +277,7 @@ jobs:
     steps:
       - run: rustup show
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Install nasm
         uses: ./.github/actions/install-nasm
@@ -393,7 +389,7 @@ jobs:
           content-type: text/plain
 
       - name: Upload to S3
-        uses: anshulrgoyal/upload-s3-action@master
+        uses: shallwefootball/s3-upload-action@master
         with:
           aws_key_id: ${{ secrets.AWS_KEY_ID }}
           aws_secret_access_key: ${{ secrets.AWS_SECRET_ACCESS_KEY}}
@@ -402,7 +398,7 @@ jobs:
           destination_dir: ''
 
       - name: Upload to S3(nugets)
-        uses: anshulrgoyal/upload-s3-action@master
+        uses: shallwefootball/s3-upload-action@master
         with:
           aws_key_id: ${{ secrets.AWS_KEY_ID }}
           aws_secret_access_key: ${{ secrets.AWS_SECRET_ACCESS_KEY}}
@@ -433,7 +429,7 @@ jobs:
     needs: [build, build_win32]
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
       - uses: FranzDiebold/github-env-vars-action@v1.3.0
 
       - name: Publish To Docker
