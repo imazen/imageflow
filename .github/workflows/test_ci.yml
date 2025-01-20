@@ -15,6 +15,7 @@ jobs:
     strategy:
       matrix:
         # setup different OS and targets
+        # TODO: add musl+mimalloc-secure for linux builds to drop libc dependency
         include:
           - name: ubuntu_20_04-x86_64
             os: ubuntu-20.04
@@ -24,21 +25,13 @@ jobs:
             os: ubuntu-22.04
             TARGET_CPU: x86-64
 
-          - name: osx_11-x86_64
-            os: macos-11
-            TARGET_CPU: nehalem
+          - name: osx_13-x86_64
+            os: macos-13
+            TARGET_CPU: haswell
 
           - name: win-x86_64
             os: windows-2019
             TARGET_CPU: x86-64
-
-          - name: ubuntu_20_04-x86_64-haswell
-            os: ubuntu-20.04
-            TARGET_CPU: haswell
-
-          - name: win-x86_64-haswell
-            os: windows-2019
-            TARGET_CPU: haswell
 
           - name: osx_14-aarch64
             os: macos-14
