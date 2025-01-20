@@ -41,16 +41,26 @@ jobs:
             os: ubuntu-24-arm-32gb
             TARGET_CPU: generic
 
+          - name: win32
+            os: windows-2019
+
     runs-on: ${{matrix.os}}
-    steps:
+    steps
 
       - run: rustup show
       - name: Checkout code
         uses: actions/checkout@v4
 
       - uses: dtolnay/rust-toolchain@stable
-      - run: rustup show
       
+      - name: Install win32 rust (i686-pc-windows-msvc)
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          target: i686-pc-windows-msvc
+        if: ${{ contains(matrix.name, 'win32') }}
+
+      - run: rustup show
+
       - uses: Swatinem/rust-cache@v2
         with:
           key: ${{matrix.name}}
@@ -58,37 +68,16 @@ jobs:
       - name: Install NASM
         uses: ./.github/actions/install-nasm
 
-      ### Test Code ###
+
       - name: Test Build
         run: cargo test --all
         shell: bash
         env:
           RUSTFLAGS: -C target-cpu=${{matrix.TARGET_CPU}}
+        if: ${{ !contains(matrix.name, 'win32') }}
 
-
-  test_win32:
-    runs-on: windows-2019
-    steps:
-      - run: rustup show
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      ### Install Nasm with fallback to S3 ###
-      - name: Install nasm
-        uses: ./.github/actions/install-nasm
-
-      ### Cargo cache for Build artifacts ###
-      - uses: Swatinem/rust-cache@v2
-        with:
-          key: ${{matrix.name}}
-
-      - name: Install latest 32bit target
-        uses: dtolnay/rust-toolchain@stable
-        with:
-          #components: rustfmt, clippy
-          target: i686-pc-windows-msvc
-
-      ### Test build ###
-      - name: Test Build
+      - name: Test Build (Win32)
         run: cargo test --all --release --target=i686-pc-windows-msvc
+        if: ${{ contains(matrix.name, 'win32') }}
+
 
