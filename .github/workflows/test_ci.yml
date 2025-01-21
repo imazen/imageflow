@@ -61,20 +61,17 @@ jobs:
             features: mimalloc
             cross: 'true'
 
-          # - name: wasm32-unknown-emscripten
-          #   os: ubuntu-24.04
-          #   target: wasm32-unknown-emscripten
+          # todo target: aarch64-pc-windows-msvc instead of in test_woa.yml (once an official image is released)
+          # todo: Someday rewrite imageflow for  wasm32-unknown-emscripten
 
-          - name: aarch64-unknown-linux-musl
-            os: ubuntu-24.04 # cross doesn't support ubuntu-24-arm-32gb
-            target-cpu: generic
-            target: aarch64-unknown-linux-musl
-            features: mimalloc
-            cross: 'true'
+          # todo: Waiting on https://github.com/NoXF/libwebp-sys/issues/36
+          # - name: aarch64-unknown-linux-musl
+          #   os: ubuntu-24.04 # cross doesn't support ubuntu-24-arm-32gb
+          #   target-cpu: generic
+          #   target: aarch64-unknown-linux-musl
+          #   features: mimalloc
+          #   cross: 'true'
 
-
-
-            #todo target: aarch64-pc-windows-msvc
 
     runs-on: ${{matrix.os}}
     steps:
@@ -82,25 +79,25 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      # matrix item NOT using cross
       - uses: Swatinem/rust-cache@v2
         with:
           key: ${{matrix.name}}
-        if: ${{ !contains(matrix.cross, 'true') }}
-
-
+        if: matrix.cross != 'true'
       - uses: dtolnay/rust-toolchain@stable
-      
-      # - name: Install win32 rust (i686-pc-windows-msvc)
-      #   uses: dtolnay/rust-toolchain@stable
-      #   with:
-      #     target: i686-pc-windows-msvc
-      #   if: ${{ contains(matrix.name, 'win32') }}
-
+        if: matrix.cross != 'true'
       - run: rustup show
-
       - name: Install NASM
         uses: ./.github/actions/install-nasm
+        if: matrix.cross != 'true'
+      - name: Test
+        run: cargo test --all --locked --release ${{ matrix.features && format('--features={0}',matrix.features) }}
+        shell: bash
+        env:
+          RUSTFLAGS: "${{ matrix.cpu-target && format('-C target-cpu={0}',matrix.cpu-target) }}"
+        if: matrix.cross != 'true'
 
+      # matrix items USING CROSS
       - name: Cross Test
         uses: houseabsolute/actions-rust-cross@v1
         env:
@@ -111,13 +108,7 @@ jobs:
           toolchain: stable
           args:
             "--locked --release ${{ matrix.features && format('--features={0}',matrix.features) }}"
-        if: ${{ matrix.cross == 'true' }}
-      
-      - name: Test
-        run: cargo test --all --locked --release ${{ matrix.features && format('--features={0}',matrix.features) }}
-        shell: bash
-        env:
-          RUSTFLAGS: "${{ matrix.cpu-target && format('-C target-cpu={0}',matrix.cpu-target) }}"
-        if: ${{ matrix.cross != 'true' }}
+        if: matrix.cross == 'true'
+
 
 
