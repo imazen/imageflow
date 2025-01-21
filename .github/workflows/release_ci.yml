@@ -162,7 +162,7 @@ jobs:
           echo "IMAGEFLOW_TAG_SHA_SUFFIX=imageflow-${{ env.TAG_SHA_SUFFIX }}" >> $GITHUB_ENV
           echo "IMAGEFLOW_TOOL_PATH=${{ env.REL_BINARIES_DIR }}imageflow_tool${{ contains(matrix.os, 'windows') && '.exe' || '' }}" >> $GITHUB_ENV
           echo "ESTIMATED_ARTIFACT_URL=${{ env.HTTPS_IMAGEFLOW_NIGHTLIES }}/${{ env.IMAGEFLOW_TAG_SHA_SUFFIX }}.${{ env.EXTENSION }}" >> $GITHUB_ENV
-          echo "RELATIVE_ARTIFACT_ARCHIVE=./artifacts/github/${{ env.IMAGEFLOW_TAG_SHA_SUFFIX }}.${{ env.EXTENSION }}" >> $GITHUB_ENV
+          echo "RELATIVE_ARTIFACT_ARCHIVE=./artifacts/github/imageflow-${{ env.TAG_SHA_SUFFIX }}.${{ env.EXTENSION }}" >> $GITHUB_ENV
           echo "CARGO_PROFILE_TARGET_FEATURES_ARGS=--${{ env.PROFILE }} ${{ matrix.target && format('--target={0}',matrix.target) }} ${{ matrix.features && format('--features={0}',matrix.features) }}" >> $GITHUB_ENV
           echo "CROSS_ARGS=--locked --${{ env.PROFILE }} ${{ matrix.features && format('--features={0}',matrix.features) }}" >> $GITHUB_ENV
           echo "RUSTFLAGS=${{ matrix.target-cpu && format('-C target-cpu={0}',matrix.target-cpu) }}" >> $GITHUB_ENV
@@ -282,7 +282,7 @@ jobs:
           CI_TAG: ${{ github.ref_name }}
           PACKAGE_SUFFIX: ${{ matrix.suffix }}
           NUGET_RUNTIME: ${{ matrix.nuget-rid }}
-          REPO_NAME: ${{ github.repository }}
+          REPO_NAME: ${{env.GITHUB_REPOSITORY_OWNER}}\/${{env.GITHUB_REPOSITORY_NAME}}
           BINARIES_DIR: "${{ github.workspace }}/${{ env.REL_BINARIES_DIR }}"
 
       - name: "Create NuGet Package Imageflow.NativeRuntime.${{ matrix.nuget-rid }} in ./artifacts/nuget"
@@ -292,7 +292,7 @@ jobs:
           CI_TAG: ${{ github.ref_name }}
           PACKAGE_SUFFIX: ${{ matrix.suffix }}
           NUGET_RUNTIME: ${{ matrix.nuget-rid }}
-          REPO_NAME: ${{ github.repository }}
+          REPO_NAME: ${{env.GITHUB_REPOSITORY_OWNER}}\/${{env.GITHUB_REPOSITORY_NAME}}
           BINARIES_DIR: "${{ github.workspace }}/${{ env.REL_BINARIES_DIR }}"
 
       - name: Upload ./artifacts/upload to S3
