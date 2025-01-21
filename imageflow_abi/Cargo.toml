@@ -10,19 +10,13 @@ edition = "2021"
 name = "imageflow"
 doc = true
 # Default crate type for non-musl targets
-crate-type = ["cdylib"]
+crate-type = ["staticlib"]
 doctest = false
 
-# Specify the exact musl target triple
-[target.'x86_64-unknown-linux-musl']
-crate-type = ["staticlib"]
-strip = true
-lto = true
+[profile.release]
+# enable on musl: strip = true
+# enable on musl: lto = true
 
-[target.'aarch64-unknown-linux-musl']
-crate-type = ["staticlib"]
-strip = true
-lto = true
 
 
 [dependencies]
