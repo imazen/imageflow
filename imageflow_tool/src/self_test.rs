@@ -361,7 +361,7 @@ pub fn run(tool_location: Option<PathBuf>) -> i32 {
 
         c.exec("v1/build --json example1.json --in 200x200.png 200x200.jpg --out out0.jpg --response out0.json").expect_exit_0_no_output("");
         // TODO: Verify out0.json exists and was created
-        c.exec("v1/build --bundle-to bundle_example_1 --json example1.json --in 200x200.png 200x200.jpg --out out0.jpg --response out0.json").expect_status_code(Some(0));
+        c.exec("v1/build --bundle-to bundle_example_1a --json example1.json --in 200x200.png 200x200.jpg --out out0.jpg --response out0.json").expect_status_code(Some(0));
         //TODO: verify bundle was created
         //TODO: test URL fetch
     }
@@ -607,10 +607,10 @@ pub fn test_capture(tool_location: Option<PathBuf>) -> i32 {
 
         c.exec("v1/build --json example1.json --in 200x200.png 200x200.jpg --out out0.jpg --response out0.json").expect_exit_0_no_output("");
         // TODO: Verify out0.json exists and was created
-        c.exec("v1/build --bundle-to bundle_example_1 --json example1.json --in 200x200.png 200x200.jpg --out out0.jpg --response out0.json").expect_status_code(Some(0));
+        c.exec("v1/build --bundle-to bundle_example_1b --json example1.json --in 200x200.png 200x200.jpg --out out0.jpg --response out0.json").expect_status_code(Some(0));
         //TODO: verify bundle was created
         //TODO: test URL fetch
-        c.subfolder_context(Path::new("bundle_example_1"))
+        c.subfolder_context(Path::new("bundle_example_1b"))
                 .exec("--capture-to recipe v1/build --json recipe.json --response response.json").print_to_err().expect_status_code(Some(0));
 
     }
