@@ -26,7 +26,8 @@ runs:
           C:\Users\runneradmin\.rustup
           C:\Users\runneradmin\.cargo
           C:\Program Files (x86)\Windows Kits
-        key: ${{ runner.os }}-arm64-tools-v2
+          C:\Program Files (x86)\Microsoft Visual Studio\
+        key: ${{ runner.os }}-arm64-tools-v3
 
     - name: Install Visual Studio Build Tools (Preview)
       if: steps.cache-tools.outputs.cache-hit != 'true'
