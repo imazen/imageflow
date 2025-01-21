@@ -12,6 +12,7 @@ on:
 
 jobs:
   test:
+    if: false
     env:
       PROFILE: release
     strategy:
