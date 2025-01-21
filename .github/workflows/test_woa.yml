@@ -22,10 +22,15 @@ jobs:
       - name: Checkout code again with git, so git commands work.
         uses: actions/checkout@v4
 
-      - name: Test Build
-        run: "& Launch-VsDevShell.ps1 | cargo test --all"
+      - name: Test
+        run: "& Launch-VsDevShell.ps1 | cargo test --all --release --target=aarch64-pc-windows-msvc"
         env:
-          RUSTFLAGS: -C target-cpu=generic
+          RUSTFLAGS: -Ctarget-cpu=generic
+
+      - name: Build
+        run: "& Launch-VsDevShell.ps1 | cargo build --all --release --target=aarch64-pc-windows-msvc"
+        env:
+          RUSTFLAGS: -Ctarget-cpu=generic
 
 
   # You can add more experimental jobs here in the future
