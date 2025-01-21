@@ -75,7 +75,7 @@ jobs:
 
 
     runs-on: ${{matrix.os}}
-    name: ${{ matrix.name }}${{ (matrix.cross == 'true') && '(CROSS)' }} (${{ matrix.target-cpu }},${{ matrix.target }},${{ matrix.features }}) runner=${{ matrix.os }}  
+    name: ${{ matrix.name }}${{ (matrix.cross == 'true') && '(CROSS)' }} (${{ matrix.target-cpu }},${{ matrix.target }},${{ matrix.features }}) runner=${{ matrix.os }}
     steps:
       - run: rustup show
       - name: Checkout code
@@ -101,7 +101,7 @@ jobs:
 
       # matrix items USING CROSS
       - name: Cross Test
-        uses: houseabsolute/actions-rust-cross@fix-running-on-arm-host
+        uses: houseabsolute/actions-rust-cross@v1.0.1
         env:
           RUSTFLAGS: "${{ matrix.cpu-target && format('-C target-cpu={0}',matrix.cpu-target) }}"
         with:
