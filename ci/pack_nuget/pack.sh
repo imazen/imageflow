@@ -33,18 +33,6 @@ if [[ -z "$BINARIES_DIR" ]]; then
     exit 1
 fi
 
-# fail if BINARIES_DIR is relative (windows or unix)
-if [[ "${BINARIES_DIR:0:1}" != "/" && "${BINARIES_DIR:0:1}" != "\\" ]]; then
-    echo "BINARIES_DIR cannot be relative: $BINARIES_DIR"
-    exit 1
-fi
-
-# fail if BINARIES_DIR is not a directory
-if [[ ! -d "$BINARIES_DIR" ]]; then
-    echo "BINARIES_DIR is not a directory: $BINARIES_DIR"
-    exit 1
-fi
-
 # fail if BINARIES_DIR doesn't have a trailing slash
 if [[ "${BINARIES_DIR: -1}" != "/" ]]; then
     echo "BINARIES_DIR must end with a slash: $BINARIES_DIR"
@@ -59,6 +47,16 @@ fi
 
 if [[ -z "$NUGET_RUNTIME" ]]; then
     echo "NUGET_RUNTIME not set. Should be the RID to build for"
+    exit 1
+fi
+
+# Resolve the relative path in BINARIES_DIR relative to the root of the repository (../../)
+# We are currintly in ci/pack_nuget/pack.sh
+BINARIES_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")/../.."; pwd)/$BINARIES_DIR
+
+# fail if BINARIES_DIR is not a directory
+if [[ ! -d "$BINARIES_DIR" ]]; then
+    echo "BINARIES_DIR is not a directory: $BINARIES_DIR"
     exit 1
 fi
 

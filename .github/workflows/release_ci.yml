@@ -12,6 +12,7 @@ jobs:
       NUGET_UPLOAD_GITHUB: ${{ secrets.NUGET_UPLOAD_GITHUB }}
       HTTPS_IMAGEFLOW_NIGHTLIES: "https://s3-us-west-1.amazonaws.com/imageflow-nightlies"
       DOCKER_FETCH_COMMIT_SUFFIX: linux64
+      profile: release
 
     strategy:
       fail-fast: false
@@ -152,9 +153,10 @@ jobs:
         run: |
           echo "TARGET_DIR=target/${{ matrix.target }}/" >> $GITHUB_ENV
           echo "TAG_SHA_SUFFIX=${{ github.ref_name }}-${{ env.GITHUB_SHA_SHORT }}-${{ matrix.suffix }}" >> $GITHUB_ENV
-          echo "RUSTFLAGS=${{ matrix.target-cpu && format('-C target-cpu={0}',matrix.target-cpu) }} ${{ matrix.target-feature && format('-C target-feature={0}',matrix.target-feature) }}" >> $GITHUB_ENV
-          echo "PROFILE=release" >> $GITHUB_ENV
-          echo "REL_BINARIES_DIR=target/${{ matrix.target }}/release/" >> $GITHUB_ENV
+          echo "RUSTFLAGS=${{ matrix.target-cpu && format('-Ctarget-cpu={0}',matrix.target-cpu) }} ${{ matrix.target-feature && format('-Ctarget-feature={0}',matrix.target-feature) }}" >> $GITHUB_ENV
+          echo "CARGO_PROFILE_TARGET_FEATURES_ARGS=--${{ env.PROFILE }} ${{ matrix.target && format('--target={0}',matrix.target) }} ${{ matrix.features && format('--features={0}',matrix.features) }}" >> $GITHUB_ENV
+          echo "CROSS_ARGS=--locked --${{ env.PROFILE }} ${{ matrix.features && format('--features={0}',matrix.features) }}" >> $GITHUB_ENV
+          echo "REL_BINARIES_DIR=target/${{ matrix.target }}/${{ env.PROFILE }}/" >> $GITHUB_ENV
 
       - name: Set env vars IMAGEFLOW_TOOL_PATH, ESTIMATED_ARTIFACT_URL
         shell: bash
@@ -163,9 +165,6 @@ jobs:
           echo "IMAGEFLOW_TOOL_PATH=${{ env.REL_BINARIES_DIR }}imageflow_tool${{ contains(matrix.os, 'windows') && '.exe' || '' }}" >> $GITHUB_ENV
           echo "ESTIMATED_ARTIFACT_URL=${{ env.HTTPS_IMAGEFLOW_NIGHTLIES }}/${{ env.IMAGEFLOW_TAG_SHA_SUFFIX }}.${{ env.EXTENSION }}" >> $GITHUB_ENV
           echo "RELATIVE_ARTIFACT_ARCHIVE=./artifacts/github/imageflow-${{ env.TAG_SHA_SUFFIX }}.${{ env.EXTENSION }}" >> $GITHUB_ENV
-          echo "CARGO_PROFILE_TARGET_FEATURES_ARGS=--${{ env.PROFILE }} ${{ matrix.target && format('--target={0}',matrix.target) }} ${{ matrix.features && format('--features={0}',matrix.features) }}" >> $GITHUB_ENV
-          echo "CROSS_ARGS=--locked --${{ env.PROFILE }} ${{ matrix.features && format('--features={0}',matrix.features) }}" >> $GITHUB_ENV
-          echo "RUSTFLAGS=${{ matrix.target-cpu && format('-C target-cpu={0}',matrix.target-cpu) }}" >> $GITHUB_ENV
           echo "FETCH_COMMIT_SUFFIX=${{ matrix.commit-suffix }}" >> $GITHUB_ENV
           echo "CI_TAG=${{ github.ref_name }}" >> $GITHUB_ENV
           echo "CI=True" >> $GITHUB_ENV
@@ -241,12 +240,12 @@ jobs:
         run: |
           mkdir -p ./artifacts/staging/headers || true
           (
-            cd ./${TARGET_DIR}doc
+            cd ./${{ env.TARGET_DIR }}doc
             tar czf "../docs.${{ env.EXTENSION }}" ./*
           )
           mv ./${{ env.TARGET_DIR }}docs.${{ env.EXTENSION }} ./artifacts/staging/
 
-          cp -R ./${REL_BINARIES_DIR}/{imageflow_,libimageflow}*  ./artifacts/staging/
+          cp -R ./${{ env.REL_BINARIES_DIR }}/{imageflow_,libimageflow}*  ./artifacts/staging/
           cp bindings/headers/*.h  ./artifacts/staging/headers/
           cp bindings/headers/imageflow_default.h  ./artifacts/staging/imageflow.h
           cp ./ci/packaging_extras/{install,uninstall}.sh ./artifacts/staging
@@ -256,18 +255,18 @@ jobs:
             cd ./artifacts/staging
             tar czf "./archive.${{ env.EXTENSION }}" ./*
           )
-          mkdir -p "./artifacts/upload/$(dirname "${RELATIVE_ARTIFACT_ARCHIVE}")" || true
+          mkdir -p "./artifacts/upload/$(dirname "${{ env.RELATIVE_ARTIFACT_ARCHIVE }}")" || true
           mkdir -p ./artifacts/github
           mkdir -p ./artifacts/upload/releases/${{ github.ref_name }}
           mkdir -p ./artifacts/upload/commits/${{ github.sha }}
-          cp "${TEMP_ARCHIVE_NAME}" "./${RELATIVE_ARTIFACT_ARCHIVE}"
+          cp "${TEMP_ARCHIVE_NAME}" "./${{ env.RELATIVE_ARTIFACT_ARCHIVE }}"
           cp "${TEMP_ARCHIVE_NAME}" "./artifacts/upload/releases/${{ github.ref_name }}/${{ env.IMAGEFLOW_TAG_SHA_SUFFIX }}.${{ env.EXTENSION }}"
           cp "${TEMP_ARCHIVE_NAME}" "./artifacts/upload/commits/${{ github.sha }}/${{ matrix.commit-suffix }}.${{ env.EXTENSION }}"
         env:
           TEMP_ARCHIVE_NAME: "./artifacts/staging/archive.${{ env.EXTENSION }}"
 
 
-      - name: Upload archive to Github Release
+      - name: Upload archive to Github Release from ${{ env.RELATIVE_ARTIFACT_ARCHIVE }}
         uses: Shopify/upload-to-release@master
         with:
           name: ${{ env.IMAGEFLOW_TAG_SHA_SUFFIX }}.${{ env.EXTENSION }}
@@ -283,7 +282,7 @@ jobs:
           PACKAGE_SUFFIX: ${{ matrix.suffix }}
           NUGET_RUNTIME: ${{ matrix.nuget-rid }}
           REPO_NAME: ${{env.GITHUB_REPOSITORY_OWNER}}\/${{env.GITHUB_REPOSITORY_NAME}}
-          BINARIES_DIR: "${{ github.workspace }}/${{ env.REL_BINARIES_DIR }}"
+          BINARIES_DIR: "${{ env.REL_BINARIES_DIR }}"
 
       - name: "Create NuGet Package Imageflow.NativeRuntime.${{ matrix.nuget-rid }} in ./artifacts/nuget"
         shell: bash
@@ -293,7 +292,7 @@ jobs:
           PACKAGE_SUFFIX: ${{ matrix.suffix }}
           NUGET_RUNTIME: ${{ matrix.nuget-rid }}
           REPO_NAME: ${{env.GITHUB_REPOSITORY_OWNER}}\/${{env.GITHUB_REPOSITORY_NAME}}
-          BINARIES_DIR: "${{ github.workspace }}/${{ env.REL_BINARIES_DIR }}"
+          BINARIES_DIR: "${{ env.REL_BINARIES_DIR }}"
 
       - name: Upload ./artifacts/upload to S3
         uses: shallwefootball/s3-upload-action@master

@@ -12,6 +12,8 @@ on:
 
 jobs:
   test:
+    env:
+      PROFILE: release
     strategy:
       fail-fast: false
       matrix:
@@ -105,15 +107,19 @@ jobs:
         run: |
           echo "TARGET_DIR=target/${{ matrix.target }}/" >> $GITHUB_ENV
           echo "REL_BINARIES_DIR=target/${{ matrix.target }}/release/" >> $GITHUB_ENV
-          echo "RUSTFLAGS=${{ matrix.target-cpu && format('-C target-cpu={0}',matrix.target-cpu) }} ${{ matrix.target-feature && format('-C target-feature={0}',matrix.target-feature) }}" >> $GITHUB_ENV
+          echo "RUSTFLAGS=${{ matrix.target-cpu && format('-Ctarget-cpu={0}',matrix.target-cpu) }} ${{ matrix.target-feature && format('-Ctarget-feature={0}',matrix.target-feature) }}" >> $GITHUB_ENV
+          echo "CARGO_PROFILE_TARGET_FEATURES_ARGS=--${{ env.PROFILE }} ${{ matrix.target && format('--target={0}',matrix.target) }} ${{ matrix.features && format('--features={0}',matrix.features) }}" >> $GITHUB_ENV
+          echo "CROSS_ARGS=--locked --${{ env.PROFILE }} ${{ matrix.features && format('--features={0}',matrix.features) }}" >> $GITHUB_ENV
+          echo "REL_BINARIES_DIR=target/${{ matrix.target }}/${{ env.PROFILE }}/" >> $GITHUB_ENV
 
-      - name: Test
-        run: cargo test --all --locked --target ${{ matrix.target }} --release ${{ matrix.features && format('--features={0}',matrix.features) }}
+      - name: "cargo test --all --locked ${{ env.CARGO_PROFILE_TARGET_FEATURES_ARGS }}"
+        run: cargo test --all --locked ${{ env.CARGO_PROFILE_TARGET_FEATURES_ARGS }}
         shell: bash
         if: matrix.cross != 'true'
 
+
       # matrix items USING CROSS
-      - name: Cross Test
+      - name: cross cargo test --target ${{ matrix.target }} ${{ env.CROSS_ARGS }}
         uses: houseabsolute/actions-rust-cross@v1.0.1
         env:
           RUSTFLAGS: ${{ env.RUSTFLAGS }}
@@ -121,6 +127,5 @@ jobs:
           command: "test"
           target: ${{ matrix.target }}
           toolchain: stable
-          args:
-            "--locked --release ${{ matrix.features && format('--features={0}',matrix.features) }}"
+          args: "${{ env.CROSS_ARGS }}"
         if: matrix.cross == 'true'
