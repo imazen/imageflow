@@ -233,6 +233,29 @@ jobs:
           echo "TARGET_CPU=${{ matrix.target-cpu }}" >> $GITHUB_ENV
 
       # ----------------------------------------------------------------------------
+      # Test steps (like in both test_ci and release_ci).
+      # For cross and WOA, special steps are used, otherwise normal cargo test.
+      # ----------------------------------------------------------------------------
+      - name: "cargo test --all --locked ${{ env.CARGO_PROFILE_TARGET_FEATURES_ARGS }}"
+        run: cargo test --all --locked ${{ env.CARGO_PROFILE_TARGET_FEATURES_ARGS }}
+        shell: bash
+        if: matrix.cross != 'true' && matrix.woa != 'true'
+
+      - name: "& Launch-VsDevShell.ps1 | cargo test --all  ${{ env.CARGO_PROFILE_TARGET_FEATURES_ARGS }}"
+        run: "& Launch-VsDevShell.ps1 | cargo test --all  ${{ env.CARGO_PROFILE_TARGET_FEATURES_ARGS }}"
+        shell: powershell
+        if: matrix.woa == 'true'
+
+      - name: "cross cargo test --target ${{ matrix.target }} ${{ env.CROSS_ARGS }}"
+        uses: houseabsolute/actions-rust-cross@v1.0.1
+        with:
+          command: "test"
+          target: ${{ matrix.target }}
+          toolchain: stable
+          args: "${{ env.CROSS_ARGS }}"
+        if: matrix.cross == 'true'
+
+      # ----------------------------------------------------------------------------
       # Build steps. We incorporate test_ci's approach (cargo build + cargo test).
       # For cross or WOA, we use cross or the special powershell step.
       # ----------------------------------------------------------------------------
@@ -263,29 +286,6 @@ jobs:
         shell: bash
         # This may fail if the tool doesn't exist for a certain platform,
         # but in release_ci it was unconditional. We keep it consistent.
-
-      # ----------------------------------------------------------------------------
-      # Test steps (like in both test_ci and release_ci).
-      # For cross and WOA, special steps are used, otherwise normal cargo test.
-      # ----------------------------------------------------------------------------
-      - name: "cargo test --all --locked ${{ env.CARGO_PROFILE_TARGET_FEATURES_ARGS }}"
-        run: cargo test --all --locked ${{ env.CARGO_PROFILE_TARGET_FEATURES_ARGS }}
-        shell: bash
-        if: matrix.cross != 'true' && matrix.woa != 'true'
-
-      - name: "& Launch-VsDevShell.ps1 | cargo test --all  ${{ env.CARGO_PROFILE_TARGET_FEATURES_ARGS }}"
-        run: "& Launch-VsDevShell.ps1 | cargo test --all  ${{ env.CARGO_PROFILE_TARGET_FEATURES_ARGS }}"
-        shell: powershell
-        if: matrix.woa == 'true'
-
-      - name: "cross cargo test --target ${{ matrix.target }} ${{ env.CROSS_ARGS }}"
-        uses: houseabsolute/actions-rust-cross@v1.0.1
-        with:
-          command: "test"
-          target: ${{ matrix.target }}
-          toolchain: stable
-          args: "${{ env.CROSS_ARGS }}"
-        if: matrix.cross == 'true'
 
       # ----------------------------------------------------------------------------
       # Build documentation (cargo doc) if cross isn't used. For cross,
