@@ -47,11 +47,12 @@ jobs:
             os: ubuntu-24-arm-32gb
             target-cpu: generic
             target: aarch64-unknown-linux-gnu
+            features: neon
 
           - name: win32
             os: windows-2019
             target: i686-pc-windows-msvc
-            cross: true
+            cross: 'true'
 
           - name: x86_64-unknown-linux-musl
             os: ubuntu-24.04
