@@ -102,7 +102,7 @@ jobs:
           # todo: Someday rewrite imageflow for  wasm32-unknown-emscripten
 
     runs-on: ${{ matrix.os }}
-    name: "${{ matrix.name }}${{ (matrix.cross == 'true') && ' (CROSS)' || ''}}${{ matrix.target-cpu && format(' cpu: {0}', matrix.target-cpu) }}${{ matrix.target && format(' target: {0}', matrix.target) }}${{ matrix.features && format(' features: {0}', matrix.features) }} runs-on:${{ matrix.os }}"
+    name: "${{ (matrix.cross == 'true') && 'cross ' || ''}}${{ matrix.name }}${{ matrix.target-cpu && format(' cpu: {0}', matrix.target-cpu) }}${{ matrix.target && format(' target: {0}', matrix.target) }}${{ matrix.features && format(' features: {0}', matrix.features) }} runs-on:${{ matrix.os }}"
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
