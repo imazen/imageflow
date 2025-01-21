@@ -252,7 +252,7 @@ impl BitmapBgra {
 
         let width_bytes = self.w as usize *  self.fmt.bytes();
 
-        let mut hash = ::twox_hash::XxHash::with_seed(0x8ed1_2ad9_483d_28a0);
+        let mut hash = ::twox_hash::XxHash64::with_seed(0x8ed1_2ad9_483d_28a0);
         for h in 0isize..(self.h as isize){
             let row_slice = unsafe{ slice::from_raw_parts(self.pixels.offset(h * self.stride as isize), width_bytes) };
             hash.write(row_slice)

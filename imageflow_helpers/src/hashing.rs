@@ -3,7 +3,7 @@ use std;
 use crate::preludes::from_std::*;
 use std::path::MAIN_SEPARATOR;
 use regex::{Regex,Captures};
-use twox_hash::XxHash;
+use twox_hash::XxHash64;
 use std::hash::Hasher;
 
 // Guidance for selecting a hash function
@@ -18,7 +18,7 @@ pub fn hash_64(bytes: &[u8]) -> u64{
     // But metrohash is 20% faster and can do 128bit
     // https://github.com/arthurprs/metrohash-rs
     // So maybe we should consider that...
-    let mut h = XxHash::with_seed(0x8ed1_2ad9_483d_28a0);
+    let mut h = XxHash64::with_seed(0x8ed1_2ad9_483d_28a0);
     h.write(bytes);
     h.finish()
 }

@@ -21,7 +21,7 @@ base64="0.22"
 
 [build-dependencies]
 imageflow_helpers = { path = "../imageflow_helpers", version = "*"}
-cbindgen = "0.27"
+cbindgen = "0.28"
 regex = "1"
 
 [features]

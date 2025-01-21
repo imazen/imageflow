@@ -19,7 +19,7 @@ serde = "1"
 serde_json = "1"
 serde_derive = "1"
 lazy_static = "1"
-twox-hash = "1"
+twox-hash = "2"
 fnv = "1"
 blake2-rfc = "0.2"
 
@@ -29,7 +29,7 @@ petgraph = "0.6" #Upgrade to
 daggy = "0.8" # Upgrade to
 
 smallvec = "1"
-itertools = "0.13"
+itertools = "0.14"
 imgref = "1.4.1"
 slotmap = "1"
 base64 = "0.22"
@@ -39,7 +39,7 @@ rgb = { version = "0.8", features = ["argb"] }
 imagequant = "4"
 lodepng = "3"
 flate2 = { version = "1.0", features = ["zlib"], default-features = false }
-libwebp-sys = { version = "0.9", features = ["neon"] }
+libwebp-sys = { version = "0.12", features = ["neon"] }
 libz-sys = { version="1", features = ["static"] }
 zune-bmp = "0.5.0-rc4"
 
@@ -63,7 +63,7 @@ imageflow_helpers = { path = "../imageflow_helpers", version = "*" }
 imageflow_riapi = { path = "../imageflow_riapi", version = "*" }
 imageflow_c_components = { path = "../c_components" }
 mozjpeg = "0.10"
-multiversion = "0.7.4"
+multiversion = "0.8"
 
 mozjpeg-sys = {version = "2", features = ["nasm_simd"]}
 

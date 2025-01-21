@@ -22,7 +22,7 @@ serde_derive = "*"
 lazy_static = "1"
 
 # fast hashes, crypto hashs
-twox-hash = "1"
+twox-hash = "2"
 fnv = "*"
 blake2-rfc = "*"
 sha2 = "*"
