@@ -17,6 +17,27 @@ runs:
       shell: powershell
       run:  echo "C:\Program Files\Git\usr\bin" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
 
+    - name: Install winget
+      shell: powershell
+      run: Add-AppxPackage -RegisterByFamilyName -MainPackage Microsoft.DesktopAppInstaller_8wekyb3d8bbwe
+#Set-ExecutionPolicy RemoteSigned -Scope CurrentUser
+
+    - name: Install pwsh
+      shell: powershell
+      run: winget install --id Microsoft.Powershell -e --source winget
+
+    # - name: Install Node
+    #   shell: pwsh
+    #   run: winget install --id OpenJS.NodeJS.LTS -e --source winget
+
+
+#  - name: "Download and Configure GitHub Runner"
+#       run: |
+#         Invoke-WebRequest -Uri https://github.com/actions/runner/releases/download/v2.308.0/actions-runner-win-arm64-2.308.0.zip -OutFile actions-runner.zip
+#         Expand-Archive -Path actions-runner.zip -DestinationPath .
+#         .\config.cmd --unattended --url https://github.com/<your-repo> --token <your-token>
+
+
     - name: Cache tools
       uses: actions/cache@v4
       id: cache-tools
@@ -40,7 +61,7 @@ runs:
           "--add", "Microsoft.VisualStudio.Component.VC.Tools.ARM64", `
           "--add", "Microsoft.VisualStudio.Component.Windows11SDK.22621" `
           -NoNewWindow -Wait
-        
+
     - name: Install Rust
       if: steps.cache-tools.outputs.cache-hit != 'true'
       shell: powershell
@@ -48,7 +69,9 @@ runs:
         $url = "https://static.rust-lang.org/rustup/dist/aarch64-pc-windows-msvc/rustup-init.exe"
         Invoke-WebRequest -Uri $url -OutFile rustup-init.exe
         .\rustup-init.exe -y --default-host aarch64-pc-windows-msvc --profile minimal
-        
+
+    - name: Install powershell
+    Set-ExecutionPolicy RemoteSigned -Scope CurrentUser
 
     - name: Install NASM
       uses: ./.github/actions/install-nasm
