@@ -76,7 +76,7 @@ evalchroma = "1"
 # And https://github.com/kornelski/rust-libpng-sys/blob/master/build.rs
 libpng-sys = { version = "1.1.9", features = ["static", "static-libz", "libz-sys"] }
 
-[dependencies]
+
 mimalloc = { version = "*", features = ["secure"], optional = true }
 
 [dev-dependencies]
