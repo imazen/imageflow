@@ -103,7 +103,7 @@ jobs:
       - name: Cross Test
         uses: houseabsolute/actions-rust-cross@v1
         env:
-          RUSTFLAGS: ${{ matrix.cpu-target && format('-C target-cpu={0}',matrix.cpu-target) }}
+          RUSTFLAGS: "${{ matrix.cpu-target && format('-C target-cpu={0}',matrix.cpu-target) }}"
         with:
           command: "test"
           target: ${{ matrix.target }}
@@ -116,7 +116,7 @@ jobs:
         run: cargo test --all --locked --release ${{ matrix.features && format('--features={0}',matrix.features) }}
         shell: bash
         env:
-          RUSTFLAGS: ${{ matrix.cpu-target && format('-C target-cpu={0}',matrix.cpu-target) }}
+          RUSTFLAGS: "${{ matrix.cpu-target && format('-C target-cpu={0}',matrix.cpu-target) }}"
         if: ${{ !contains(matrix.cross, 'true') }}
 
 
