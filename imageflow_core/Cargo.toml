@@ -77,7 +77,6 @@ evalchroma = "1"
 libpng-sys = { version = "1.1.9", features = ["static", "static-libz", "libz-sys"] }
 
 
-mimalloc = { version = "*", features = ["secure"], optional = true }
 
 [dev-dependencies]
 hyper = "1.4"
@@ -90,8 +89,6 @@ rand = "*"
 default = []
 nightly = []
 c_rendering = []
-mimalloc = ["dep:mimalloc"]
-
 [[bench]]
 name="bench_graphics"
 path = "benches/bench_graphics.rs"

@@ -151,10 +151,3 @@ pub mod for_other_imageflow_crates {
         }
     }
 }
-
-#[cfg(feature = "mimalloc")]
-use mimalloc::MiMalloc;
-
-#[cfg(feature = "mimalloc")]
-#[global_allocator]
-static GLOBAL: MiMalloc = MiMalloc;

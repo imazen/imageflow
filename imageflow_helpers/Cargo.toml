@@ -52,9 +52,13 @@ unicase = "2"
 
 backtrace = "0.3"
 
+mimalloc = { version = "*", features = ["secure"], optional = true }
+
+
 [dev-dependencies]
 mockito = "*"
 
 [features]
 nightly = []
+mimalloc = ["dep:mimalloc"]
 
