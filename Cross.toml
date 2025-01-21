@@ -1,2 +1,36 @@
 [build]
 pre-build = ["git config --system --add safe.directory '*'"]
+
+[build.env]
+passthrough = [
+    "ESTIMATED_ARTIFACT_URL",
+    "ESTIMATED_DOCS_URL",
+    "CI_SEQUENTIAL_BUILD_NUMBER",
+    "CI_BUILD_URL",
+    "CI_JOB_URL",
+    "CI_JOB_TITLE",
+    "CI_STRING",
+    "CI_PULL_REQUEST_INFO",
+    "CI_TAG",
+    "CI_REPO",
+    "CI_RELATED_BRANCH",
+    "CI",
+    "OPT_LEVEL",
+    "DEBUG",
+    "PROFILE",
+    "TARGET_CPU",
+    "commit-suffix",
+    "FETCH_COMMIT_SUFFIX",
+    "RUSTFLAGS",
+    "GIT_COMMIT",
+    "GIT_COMMIT_SHORT",
+    "GIT_DESCRIBE_ALWAYS",
+    "GIT_DESCRIBE_ALWAYS_LONG",
+    "GIT_DESCRIBE_ALL",
+    "GIT_OPTIONAL_TAG",
+    "GIT_OPTIONAL_BRANCH",
+    "CARGO_MANIFEST_DIR",
+    "OUT_DIR",
+    "HOST",
+    "RUSTC",
+]

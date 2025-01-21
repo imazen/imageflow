@@ -10,145 +10,235 @@ jobs:
     env:
       NUGET_UPLOAD_NUGET: ${{ secrets.NUGET_UPLOAD_NUGET }}
       NUGET_UPLOAD_GITHUB: ${{ secrets.NUGET_UPLOAD_GITHUB }}
+      HTTPS_IMAGEFLOW_NIGHTLIES: "https://s3-us-west-1.amazonaws.com/imageflow-nightlies"
+      DOCKER_FETCH_COMMIT_SUFFIX: linux64
 
     strategy:
+      fail-fast: false
       matrix:
         include:
-          - name: ubuntu-x86_64
+          - name: x86_64-ubuntu-20
+            suffix: ubuntu-x86_64
             os: ubuntu-20.04
-            TARGET_CPU: x86-64
-            FETCH_COMMIT_SUFFIX: linux64
-            NUGET_RUNTIME: linux-x64
-            RUST_TARGET: x86_64-unknown-linux-gnu
+            target-cpu: x86-64
+            commit-suffix: linux64
+            nuget-rid: linux-x64
+            target: x86_64-unknown-linux-gnu
 
-          - name: ubuntu-arm64
+          - name: ARM64-ubuntu-24
+            suffix: ubuntu-arm64
             os: ubuntu-24-arm-32gb
-            TARGET_CPU: generic
-            FETCH_COMMIT_SUFFIX: linux_arm64_glibc239
-            NUGET_RUNTIME: linux-arm64
-            RUST_TARGET: aarch64-unknown-linux-gnu
+            target-cpu: generic
+            commit-suffix: linux_arm64_glibc239
+            nuget-rid: linux-arm64
+            target: aarch64-unknown-linux-gnu
+            features: neon
+            cross: 'true'
 
-          - name: win-x86_64
-            os: windows-2022
-            TARGET_CPU: x86-64
-            FETCH_COMMIT_SUFFIX: win-x86_64
-            NUGET_RUNTIME: win-x64
-            RUST_TARGET: x86_64-pc-windows-msvc
-
-          - name: osx-x86_64
+          - name: x86_64-macos-13
+            suffix: osx-x86_64
             os: macos-13
-            TARGET_CPU: haswell
-            FETCH_COMMIT_SUFFIX: mac64
-            NUGET_RUNTIME: osx-x64
-            RUST_TARGET: x86_64-apple-darwin
+            target-cpu: haswell
+            commit-suffix: mac64
+            nuget-rid: osx-x64
+            target: x86_64-apple-darwin
 
-          - name: osx-aarch64
+          - name: ARM64-macos-14
+            suffix: osx-aarch64
             os: macos-14
-            TARGET_CPU: apple-m1
-            FETCH_COMMIT_SUFFIX: mac_aarch64
-            NUGET_RUNTIME: osx-arm64
-            RUST_TARGET: aarch64-apple-darwin
+            target-cpu: apple-m1
+            commit-suffix: mac_aarch64
+            nuget-rid: osx-arm64
+            target: aarch64-apple-darwin
 
-          - name: win-x86
-            os: windows-2019
-            TARGET_CPU: i686
-            FETCH_COMMIT_SUFFIX: win-x86
-            NUGET_RUNTIME: win-x86
-            RUST_TARGET: i686-pc-windows-msvc
+
+          - name: x86_64-windows
+            suffix: win-x86_64
+            os: windows-2022
+            target-cpu: x86-64
+            commit-suffix: win-x86_64
+            nuget-rid: win-x64
+            target: x86_64-pc-windows-msvc
+
+          - name: win32
+            suffix: win-x86
+            os: windows-2022
+            target-cpu: i686
+            commit-suffix: win-x86
+            nuget-rid: win-x86
+            target: i686-pc-windows-msvc
+            cross: 'true'
+
+          - name: ARM64-windows
+            suffix: win-arm64
+            os: windows-11-arm-32gb
+            target-cpu: generic
+            commit-suffix: win-arm64
+            nuget-rid: win-arm64
+            target: aarch64-pc-windows-msvc
+            woa: 'true'
+
+          - name: x86_64-linux-musl
+            suffix: linux-musl-x64
+            commit-suffix: linux-musl-x64
+            nuget-rid: linux-musl-x64
+            os: ubuntu-24.04
+            target-cpu: x86-64
+            target: x86_64-unknown-linux-musl
+            features: mimalloc
+            cross: 'true'
+
+          - name: ARM64-linux-musl
+            suffix: linux-musl-arm64
+            commit-suffix: linux_arm64_musl
+            nuget-rid: linux-musl-arm64
+            os: ubuntu-24-arm-32gb
+            target-cpu: generic
+            target: aarch64-unknown-linux-musl
+            features: mimalloc
+            cross: 'true'
+
+          # todo target: aarch64-pc-windows-msvc instead of in test_woa.yml (once an official image is released)
+          # todo: Someday rewrite imageflow for  wasm32-unknown-emscripten
 
     runs-on: ${{ matrix.os }}
+    name: ${{ matrix.name }}${{ (matrix.cross == 'true') && '(CROSS)' }} (${{ matrix.target-cpu }},${{ matrix.target }},${{ matrix.features }}) runner=${{ matrix.os }}
     steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: "WOA: Setup Windows ARM64"
+        uses: ./.github/actions/setup-win-arm64
+        if: matrix.woa == 'true'
+      - name: "WOA: Checkout code again with git, so git commands work."
+        uses: actions/checkout@v4
+        if: matrix.woa == 'true'
+
+      # Setup for matrix item NOT using cross or WOA
+      - uses: Swatinem/rust-cache@v2
+        with:
+          key: ${{matrix.name}}
+        if: matrix.cross != 'true' && matrix.woa != 'true'
+      - uses: dtolnay/rust-toolchain@stable
+        if: matrix.cross != 'true' && matrix.woa != 'true'
       - run: rustup show
-      - name: Use stable Rust toolchain (main)
-        uses: dtolnay/rust-toolchain@stable
+      - name: Install NASM
+        uses: ./.github/actions/install-nasm
+        if: matrix.cross != 'true' && matrix.woa != 'true'
       - name: Install i686 target
-        if: ${{ matrix.RUST_TARGET == 'i686-pc-windows-msvc' }}
+        if: ${{ matrix.target == 'i686-pc-windows-msvc' && matrix.cross != 'true' }}
         uses: dtolnay/rust-toolchain@stable
         with:
           target: i686-pc-windows-msvc
       - run: rustup show
 
-      - name: Checkout code
-        uses: actions/checkout@v4
-
+      # Setup vars
       - uses: FranzDiebold/github-env-vars-action@v1.3.0
 
-      - uses: Swatinem/rust-cache@v2
-        with:
-          key: ${{ matrix.name }}
-
-      - name: Install NASM
-        uses: ./.github/actions/install-nasm
-
-      - name: Test Build
-        run: |
-          if [ -n "${{ matrix.RUST_TARGET }}" ]; then
-            cargo test --all --release --target=${{ matrix.RUST_TARGET }}
-          else
-            cargo test --all --release
-          fi
-        env:
-          RUSTFLAGS: -C target-cpu=${{ matrix.TARGET_CPU }}
-
-      - name: Add Artifacts URL (POSIX)
-        run: echo ESTIMATED_ARTIFACT_URL=$ARTIFACT_PATH.tar.gz >> $GITHUB_ENV
-        env:
-          ARTIFACT_PATH: https://s3-us-west-1.amazonaws.com/imageflow-nightlies/imageflow-${{ github.ref_name }}-${{ env.GITHUB_SHA_SHORT }}-${{ matrix.name }}
-        if: ${{ !contains(matrix.os, 'windows') }}
-
-      - name: Add Artifacts URL (Windows)
-        run: echo ESTIMATED_ARTIFACT_URL=$ARTIFACT_PATH.zip >> $GITHUB_ENV
-        env:
-          ARTIFACT_PATH: https://s3-us-west-1.amazonaws.com/imageflow-nightlies/imageflow-${{ github.ref_name }}-${{ env.GITHUB_SHA_SHORT }}-${{ matrix.name }}
-        if: ${{ contains(matrix.os, 'windows') }}
+      - name: Set EXTENSION=zip if windows
+        if: contains(matrix.os, 'windows')
         shell: bash
+        run: echo "EXTENSION=zip" >> $GITHUB_ENV
+      - name: Set EXTENSION=tar.gz if not windows
+        if: ${{ !contains(matrix.os, 'windows') }}
+        shell: bash
+        run: echo "EXTENSION=tar.gz" >> $GITHUB_ENV
+
+      - name: Set ENV vars TARGET_DIR, BINARIES_DIR, TAG_SHA_SUFFIX
+        shell: bash
+        run: |
+          echo "TARGET_DIR=target/${{ matrix.target }}/" >> $GITHUB_ENV
+          echo "BINARIES_DIR=${{ github.workspace }}/target/${{ matrix.target }}/release/" >> $GITHUB_ENV
+          echo "TAG_SHA_SUFFIX=${{ github.ref_name }}-${{ env.GITHUB_SHA_SHORT }}-${{ matrix.suffix }}" >> $GITHUB_ENV
+
+      - name: Set env vars IMAGEFLOW_TOOL_PATH, ESTIMATED_ARTIFACT_URL
+        shell: bash
+        run: |
+          echo "IMAGEFLOW_TAG_SHA_SUFFIX=imageflow-${{ env.TAG_SHA_SUFFIX }}" >> $GITHUB_ENV
+          echo "IMAGEFLOW_TOOL_PATH=${{ env.BINARIES_DIR }}imageflow_tool${{ contains(matrix.os, 'windows') && '.exe' || '' }}" >> $GITHUB_ENV
+          echo "ESTIMATED_ARTIFACT_URL=${{ env.HTTPS_IMAGEFLOW_NIGHTLIES }}/${{ env.IMAGEFLOW_TAG_SHA_SUFFIX }}.${{ env.EXTENSION }}" >> $GITHUB_ENV
+          echo "RELATIVE_ARTIFACT_ARCHIVE=./artifacts/github/${{ env.IMAGEFLOW_TAG_SHA_SUFFIX }}.${{ env.EXTENSION }}" >> $GITHUB_ENV
+          echo "CARGO_TARGET_FEATURES_ARGS=${{ matrix.target && format('--target={0}',matrix.target-cpu) }} ${{ matrix.features && format('--features={0}',matrix.features) }}" >> $GITHUB_ENV
+          echo "RUSTFLAGS=${{ matrix.target-cpu && format('-C target-cpu={0}',matrix.target-cpu) }}" >> $GITHUB_ENV
+          echo "FETCH_COMMIT_SUFFIX=${{ matrix.commit-suffix }}" >> $GITHUB_ENV
+          echo "CI_TAG=${{ github.ref_name }}" >> $GITHUB_ENV
+          echo "CI=True" >> $GITHUB_ENV
+          echo "CI_REPO=${{ github.repository }}" >> $GITHUB_ENV
+          echo "CI_JOB_URL=https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}" >> $GITHUB_ENV
+          echo "CI_JOB_TITLE=GitHub ${{ github.job_id }} ${{ matrix.name }}" >> $GITHUB_ENV
+          echo "CI_STRING=GitHub actions" >> $GITHUB_ENV
+          echo "CI_PULL_REQUEST_INFO=${{ github.event_name!='release' }}" >> $GITHUB_ENV
+          echo "CI_BUILD_URL=https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}" >> $GITHUB_ENV
+          echo "ESTIMATED_DOCS_URL=${{ env.HTTPS_IMAGEFLOW_NIGHTLIES }}/doc" >> $GITHUB_ENV
+          echo "DEBUG=False" >> $GITHUB_ENV
+          echo "PROFILE=release" >> $GITHUB_ENV
+          echo "TARGET_CPU=${{ matrix.target-cpu }}" >> $GITHUB_ENV
+          echo "FETCH_COMMIT_SUFFIX=${{ matrix.commit-suffix }}" >> $GITHUB_ENV
 
       - name: Build Release
-        run: |
-          if [ -n "${{ matrix.RUST_TARGET }}" ]; then
-            cargo build --all --release --target=${{ matrix.RUST_TARGET }}
-          else
-            cargo build --all --release
-          fi
+        if: matrix.cross != 'true'
+        run: cargo build --all --release ${{ env.CARGO_TARGET_FEATURES_ARGS }}
+        shell: bash
+        #env:
+          # OPT_LEVEL: 0
+
+      - name: Cross Build Release
+        uses: houseabsolute/actions-rust-cross@v1.0.1
+        with:
+          command: "build"
+          target: ${{ matrix.target }}
+          toolchain: stable
+          args:
+            "--locked --release ${{ matrix.features && format('--features={0}',matrix.features) }}"
+        if: matrix.cross == 'true'
+
+
+      - name: imageflow_tool diagnose --show-compilation-info
+        run: "${{ env.IMAGEFLOW_TOOL_PATH }} diagnose --show-compilation-info"
+        shell: bash
+
+      - name: Test
+        run: cargo test --all --locked --release ${{ env.CARGO_TARGET_FEATURES_ARGS }}
         shell: bash
         env:
-          ESTIMATED_DOCS_URL: https://s3-us-west-1.amazonaws.com/imageflow-nightlies/doc
-          CI_SEQUENTIAL_BUILD_NUMBER: ${{ github.run_number }}
-          CI_BUILD_URL: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
-          CI_JOB_URL: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
-          CI_JOB_TITLE: GitHub ${{ github.job_id }} ${{ matrix.name }}
-          CI_STRING: GitHub actions
-          CI_PULL_REQUEST_INFO: ${{ github.event_name!='release' }}
-          CI_TAG: ${{ github.ref_name }}
-          CI_REPO: ${{ github.repository }}
-          CI: True
-          OPT_LEVEL: 0
-          DEBUG: False
-          PROFILE: release
-          TARGET_CPU: ${{ matrix.TARGET_CPU }}
-          FETCH_COMMIT_SUFFIX: ${{ matrix.FETCH_COMMIT_SUFFIX }}
-          RUSTFLAGS: -C target-cpu=${{ matrix.TARGET_CPU }}
+          RUSTFLAGS: "${{ env.RUSTFLAGS }}"
+        if: matrix.cross != 'true'
+
+      - name: Cross Test
+        uses: houseabsolute/actions-rust-cross@v1.0.1
+        with:
+          command: "test"
+          target: ${{ matrix.target }}
+          toolchain: stable
+          args:
+            "--locked --release ${{ matrix.features && format('--features={0}',matrix.features) }}"
+        if: matrix.cross == 'true'
 
       - name: Build Docs
-        run: |
-          if [ -n "${{ matrix.RUST_TARGET }}" ]; then
-            cargo doc --all --release --no-deps --target=${{ matrix.RUST_TARGET }}
-          else
-            cargo doc --all --release --no-deps
-          fi
+        run: cargo doc --all --release --no-deps ${{ env.CARGO_TARGET_FEATURES_ARGS }}
+        if: matrix.cross != 'true'
 
-      - name: Create Artifacts Header (POSIX)
+      - name: Cross Build Docs
+        uses: houseabsolute/actions-rust-cross@v1.0.1
+        with:
+          command: "doc"
+          target: ${{ matrix.target }}
+          toolchain: stable
+          args:
+            "--all --release --no-deps ${{ env.CARGO_TARGET_FEATURES_ARGS }}"
+        if: matrix.cross == 'true'
+
+      - name: Create .zip / .tar.gz files for upload to Github Release & S3
         shell: bash
-        if: ${{ !contains(matrix.os, 'windows') }}
         run: |
           mkdir -p ./artifacts/staging/headers || true
           (
             cd ./${TARGET_DIR}doc
-            tar czf "../docs.tar.gz" ./*
+            tar czf "../docs.${{ env.EXTENSION }}" ./*
           )
-          mv ./${TARGET_DIR}docs.tar.gz ./artifacts/staging/
+          mv ./${TARGET_DIR}docs.${{ env.EXTENSION }} ./artifacts/staging/
 
-          cp -R ./${TARGET_DIR}release/{imageflow_,libimageflow}*  ./artifacts/staging/
+          cp -R ./${BINARIES_DIR}/{imageflow_,libimageflow}*  ./artifacts/staging/
           cp bindings/headers/*.h  ./artifacts/staging/headers/
           cp bindings/headers/imageflow_default.h  ./artifacts/staging/imageflow.h
           cp ./ci/packaging_extras/{install,uninstall}.sh ./artifacts/staging
@@ -156,114 +246,48 @@ jobs:
           rm ./artifacts/staging/*-* || true
           (
             cd ./artifacts/staging
-            tar czf "./archive.tar.gz" ./*
+            tar czf "./archive.${{ env.EXTENSION }}" ./*
           )
-          mkdir -p "./artifacts/upload/$(dirname "${ARTIFACT_UPLOAD_PATH}")" || true
+          mkdir -p "./artifacts/upload/$(dirname "${RELATIVE_ARTIFACT_ARCHIVE}")" || true
           mkdir -p ./artifacts/github
-          mkdir -p ./artifacts/upload/releases/${GITHUB_REF_NAME}
-          mkdir -p ./artifacts/upload/commits/${GIT_COMMIT}
-          cp "${ARTIFACT_ARCHIVE_NAME}" ./artifacts/github/${ARTIFACT_UPLOAD_PATH}.tar.gz
-          cp "${ARTIFACT_ARCHIVE_NAME}" "./artifacts/upload/releases/${GITHUB_REF_NAME}/${ARTIFACT_UPLOAD_PATH}.tar.gz"
-          cp "${ARTIFACT_ARCHIVE_NAME}" "./artifacts/upload/commits/${GIT_COMMIT}/${ARTIFACT_UPLOAD_PATH_1}.tar.gz"
+          mkdir -p ./artifacts/upload/releases/${{ github.ref_name }}
+          mkdir -p ./artifacts/upload/commits/${{ github.sha }}
+          cp "${TEMP_ARCHIVE_NAME}" "./${RELATIVE_ARTIFACT_ARCHIVE}"
+          cp "${TEMP_ARCHIVE_NAME}" "./artifacts/upload/releases/${{ github.ref_name }}/${{ env.IMAGEFLOW_TAG_SHA_SUFFIX }}.${{ env.EXTENSION }}"
+          cp "${TEMP_ARCHIVE_NAME}" "./artifacts/upload/commits/${{ github.sha }}/${{ matrix.commit-suffix }}.${{ env.EXTENSION }}"
         env:
-          TARGET_DIR: target/
-          ARTIFACT_UPLOAD_PATH: /imageflow-${{ github.ref_name }}-${{ env.GITHUB_SHA_SHORT }}-${{ matrix.name }}
-          ARTIFACT_ARCHIVE_NAME: ./artifacts/staging/archive.tar.gz
-          DOCS_UPLOAD_DIR: doc
-          GIT_COMMIT: ${{ github.sha }}
-          ARTIFACT_UPLOAD_PATH_1: /${{ matrix.FETCH_COMMIT_SUFFIX }}
+          TEMP_ARCHIVE_NAME: "./artifacts/staging/archive${{ env.EXTENSION }}"
 
-      - name: Run imageflow-tools (Windows)
-        run: ${TARGET_DIR}release/imageflow_tool.exe diagnose --show-compilation-info
-        env:
-          TARGET_DIR: target/
-        if: ${{ contains(matrix.os, 'windows') }}
-        shell: bash
 
-      - name: Run imageflow-tools (POSIX)
-        run: ./${TARGET_DIR}release/imageflow_tool diagnose --show-compilation-info
-        env:
-          TARGET_DIR: target/
-        if: ${{ !contains(matrix.os, 'windows') }}
-        shell: bash
+      - name: Upload archive to Github Release
+        uses: Shopify/upload-to-release@master
+        with:
+          name: ${{ env.IMAGEFLOW_TAG_SHA_SUFFIX }}.${{ env.EXTENSION }}
+          path: ${{ env.RELATIVE_ARTIFACT_ARCHIVE }}
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+          content-type: application/${{ env.EXTENSION == 'tar.gz' && 'gzip' || 'zip' }}
 
-      - name: Create Artifacts Header Windows
-        shell: bash
-        if: ${{ contains(matrix.os, 'windows') }}
-        run: |
-          mkdir -p ./artifacts/staging/headers || true
-          (
-            cd ./${TARGET_DIR}doc
-            7z a -r "../docs.zip" ./*
-          )
-          mv ./${TARGET_DIR}docs.zip ./artifacts/staging/
-
-          cp -R ./${TARGET_DIR}release/{imageflow_,libimageflow}*  ./artifacts/staging/
-          cp -R "./${TARGET_DIR}release/imageflow.dll" ./artifacts/staging/imageflow.dll
-          cp -R "./${TARGET_DIR}release/imageflow.pdb" ./artifacts/staging/imageflow.pdb
-          cp bindings/headers/*.h  ./artifacts/staging/headers/
-          cp bindings/headers/imageflow_default.h  ./artifacts/staging/imageflow.h
-          rm ./artifacts/staging/*.{o,d,rlib} || true
-          rm ./artifacts/staging/*-* || true
-          (
-            cd ./artifacts/staging
-            7z a -r "./archive.zip" ./*
-          )
-          mkdir -p "./artifacts/upload/$(dirname "${ARTIFACT_UPLOAD_PATH}")" || true
-          mkdir -p "./artifacts/upload/${DOCS_UPLOAD_DIR}" || true
-          mkdir -p ./artifacts/github
-          mkdir -p ./artifacts/upload/releases/${GITHUB_REF_NAME}
-          mkdir -p ./artifacts/upload/commits/${GIT_COMMIT}
-          cp "${ARTIFACT_ARCHIVE_NAME}" ./artifacts/github/${ARTIFACT_UPLOAD_PATH}.zip
-          cp "${ARTIFACT_ARCHIVE_NAME}" "./artifacts/upload/releases/${GITHUB_REF_NAME}/${ARTIFACT_UPLOAD_PATH}.zip"
-          cp "${ARTIFACT_ARCHIVE_NAME}" "./artifacts/upload/commits/${GIT_COMMIT}/${ARTIFACT_UPLOAD_PATH_1}.zip"
-        env:
-          TARGET_DIR: target/${{ matrix.RUST_TARGET }}/
-          ARTIFACT_UPLOAD_PATH: /imageflow-${{ github.ref_name }}-${{ env.GITHUB_SHA_SHORT }}-${{ matrix.name }}
-          ARTIFACT_ARCHIVE_NAME: ./artifacts/staging/archive.zip
-          DOCS_UPLOAD_DIR: doc
-          GIT_COMMIT: ${{ github.sha }}
-          ARTIFACT_UPLOAD_PATH_1: /${{ matrix.FETCH_COMMIT_SUFFIX }}
-
-      - name: Nuget(Tool) to S3
+      - name: "Create NuGet Package Imageflow.NativeTool.${{ matrix.nuget-rid }} in ./artifacts/nuget"
         shell: bash
         run: ./ci/pack_nuget/pack.sh tool
         env:
           CI_TAG: ${{ github.ref_name }}
-          PACKAGE_SUFFIX: ${{ matrix.name }}
-          NUGET_RUNTIME: ${{ matrix.NUGET_RUNTIME }}
-          REPO_NAME_TOOL: ${{ env.GITHUB_REPOSITORY_OWNER }}\/${{ env.GITHUB_REPOSITORY_NAME }}
-          REPO_NAME_NATIVE: ${{ env.GITHUB_REPOSITORY_OWNER }}\/${{ env.GITHUB_REPOSITORY_NAME }}
+          PACKAGE_SUFFIX: ${{ matrix.suffix }}
+          NUGET_RUNTIME: ${{ matrix.nuget-rid }}
+          REPO_NAME: ${{ github.repository }}
+          BINARIES_DIR: ${{ env.BINARIES_DIR }}
 
-      - name: Nuget(Runtime) to S3
+      - name: "Create NuGet Package Imageflow.NativeRuntime.${{ matrix.nuget-rid }} in ./artifacts/nuget"
         shell: bash
         run: ./ci/pack_nuget/pack.sh
         env:
           CI_TAG: ${{ github.ref_name }}
-          PACKAGE_SUFFIX: ${{ matrix.name }}
-          NUGET_RUNTIME: ${{ matrix.NUGET_RUNTIME }}
-          REPO_NAME_TOOL: ${{ env.GITHUB_REPOSITORY_OWNER }}\/${{ env.GITHUB_REPOSITORY_NAME }}
-          REPO_NAME_NATIVE: ${{ env.GITHUB_REPOSITORY_OWNER }}\/${{ env.GITHUB_REPOSITORY_NAME }}
+          PACKAGE_SUFFIX: ${{ matrix.suffix }}
+          NUGET_RUNTIME: ${{ matrix.nuget-rid }}
+          REPO_NAME: ${{ github.repository }}
+          BINARIES_DIR: ${{ env.BINARIES_DIR }}
 
-      - name: Upload to release (POSIX)
-        uses: Shopify/upload-to-release@master
-        if: ${{ !contains(matrix.os, 'windows') }}
-        with:
-          name: imageflow-${{ github.ref_name }}-${{ env.GITHUB_SHA_SHORT }}-${{ matrix.name }}.tar.gz
-          path: ./artifacts/github/imageflow-${{ github.ref_name }}-${{ env.GITHUB_SHA_SHORT }}-${{ matrix.name }}.tar.gz
-          repo-token: ${{ secrets.GITHUB_TOKEN }}
-          content-type: application/gzip
-
-      - name: Upload to release (Windows)
-        uses: Shopify/upload-to-release@master
-        if: ${{ contains(matrix.os, 'windows') }}
-        with:
-          name: imageflow-${{ github.ref_name }}-${{ env.GITHUB_SHA_SHORT }}-${{ matrix.name }}.zip
-          path: ./artifacts/github/imageflow-${{ github.ref_name }}-${{ env.GITHUB_SHA_SHORT }}-${{ matrix.name }}.zip
-          repo-token: ${{ secrets.GITHUB_TOKEN }}
-          content-type: application/zip
-
-      - name: Upload to S3
+      - name: Upload ./artifacts/upload to S3
         uses: shallwefootball/s3-upload-action@master
         with:
           aws_key_id: ${{ secrets.AWS_KEY_ID }}
@@ -272,7 +296,7 @@ jobs:
           source_dir: ./artifacts/upload
           destination_dir: ''
 
-      - name: Upload to S3(nugets)
+      - name: Upload ./artifacts/nuget to S3
         uses: shallwefootball/s3-upload-action@master
         with:
           aws_key_id: ${{ secrets.AWS_KEY_ID }}
@@ -281,7 +305,7 @@ jobs:
           source_dir: ./artifacts/nuget/
           destination_dir: 'nuget'
 
-      - name: Publish nuget(GitHub)
+      - name: Publish to nuget.pkg.github.com
         run: |
           for f in ./artifacts/nuget/*.nupkg
           do
@@ -290,7 +314,7 @@ jobs:
         shell: bash
         if: ${{ env.NUGET_UPLOAD_GITHUB == 'true' }}
 
-      - name: Publish nuget(Nuget)
+      - name: Publish to nuget.org
         run: |
           for f in ./artifacts/nuget/*.nupkg
           do
@@ -316,4 +340,4 @@ jobs:
           DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
           DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
           PUBLISH_DOCKER_TAG: ${{ github.ref_name }}
-          IMAGEFLOW_DOWNLOAD_URL_TAR_GZ: https://s3-us-west-1.amazonaws.com/imageflow-nightlies/commits/${{ github.sha }}/linux64.tar.gz
+          IMAGEFLOW_DOWNLOAD_URL_TAR_GZ: ${{ env.HTTPS_IMAGEFLOW_NIGHTLIES }}/commits/${{ github.sha }}/${{ env.DOCKER_FETCH_COMMIT_SUFFIX }}.tar.gz
