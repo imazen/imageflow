@@ -158,7 +158,7 @@ jobs:
           echo "IMAGEFLOW_TOOL_PATH=${{ env.BINARIES_DIR }}imageflow_tool${{ contains(matrix.os, 'windows') && '.exe' || '' }}" >> $GITHUB_ENV
           echo "ESTIMATED_ARTIFACT_URL=${{ env.HTTPS_IMAGEFLOW_NIGHTLIES }}/${{ env.IMAGEFLOW_TAG_SHA_SUFFIX }}.${{ env.EXTENSION }}" >> $GITHUB_ENV
           echo "RELATIVE_ARTIFACT_ARCHIVE=./artifacts/github/${{ env.IMAGEFLOW_TAG_SHA_SUFFIX }}.${{ env.EXTENSION }}" >> $GITHUB_ENV
-          echo "CARGO_TARGET_FEATURES_ARGS=${{ matrix.target && format('--target={0}',matrix.target-cpu) }} ${{ matrix.features && format('--features={0}',matrix.features) }}" >> $GITHUB_ENV
+          echo "CARGO_TARGET_FEATURES_ARGS=${{ matrix.target && format('--target={0}',matrix.target) }} ${{ matrix.features && format('--features={0}',matrix.features) }}" >> $GITHUB_ENV
           echo "RUSTFLAGS=${{ matrix.target-cpu && format('-C target-cpu={0}',matrix.target-cpu) }}" >> $GITHUB_ENV
           echo "FETCH_COMMIT_SUFFIX=${{ matrix.commit-suffix }}" >> $GITHUB_ENV
           echo "CI_TAG=${{ github.ref_name }}" >> $GITHUB_ENV
@@ -173,7 +173,6 @@ jobs:
           echo "DEBUG=False" >> $GITHUB_ENV
           echo "PROFILE=release" >> $GITHUB_ENV
           echo "TARGET_CPU=${{ matrix.target-cpu }}" >> $GITHUB_ENV
-          echo "FETCH_COMMIT_SUFFIX=${{ matrix.commit-suffix }}" >> $GITHUB_ENV
 
       - name: Build Release
         if: matrix.cross != 'true'
