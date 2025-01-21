@@ -155,6 +155,13 @@ mkdir -p "$STAGING_DIR" || true
     
     rm "${NUGET_OUTPUT_FILE}" || true
     zip -r "${NUGET_OUTPUT_FILE}" . || 7z a -tzip "${NUGET_OUTPUT_FILE}" "*" || powershell.exe -ExecutionPolicy Bypass -File "${SCRIPT_DIR}/zip.ps1" "${NUGET_OUTPUT_FILE}" "*"
+    
+    # verify file is not empty
+    if [[ ! -s "${NUGET_OUTPUT_FILE}" ]]; then
+        echo "Error: ${NUGET_OUTPUT_FILE} is empty"
+        exit 1
+    fi
+    
     echo  "${NUGET_OUTPUT_FILE} packed"
     
 )

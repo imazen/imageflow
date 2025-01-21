@@ -375,18 +375,18 @@ jobs:
         shell: bash
         run: ./ci/pack_nuget/pack.sh tool
         env:
-          CI_TAG: ${{ github.ref_name }}
+          CI_TAG: ${{ github.ref_name || "vTEST" }}
           PACKAGE_SUFFIX: ${{ matrix.suffix }}
           NUGET_RUNTIME: ${{ matrix.nuget-rid }}
           REPO_NAME: ${{ env.GITHUB_REPOSITORY_OWNER }}\/${{ env.GITHUB_REPOSITORY_NAME }}
           BINARIES_DIR: "${{ env.REL_BINARIES_DIR }}"
 
       - name: "Create NuGet Package Imageflow.NativeRuntime.${{ matrix.nuget-rid }}"
-        if: ${{ matrix.build-exclude != 'imageflow_abi' }}
+        if: ${{ contains(matrix.target, 'musl') }}
         shell: bash
         run: ./ci/pack_nuget/pack.sh
         env:
-          CI_TAG: ${{ github.ref_name }}
+          CI_TAG: ${{ github.ref_name || "vTEST" }}
           PACKAGE_SUFFIX: ${{ matrix.suffix }}
           NUGET_RUNTIME: ${{ matrix.nuget-rid }}
           REPO_NAME: ${{ env.GITHUB_REPOSITORY_OWNER }}\/${{ env.GITHUB_REPOSITORY_NAME }}
