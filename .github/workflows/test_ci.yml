@@ -16,7 +16,7 @@ jobs:
       fail-fast: false
       matrix:
         # setup different OS and targets
-        # TODO: add musl+mimalloc-secure for linux builds to drop libc dependency
+
         include:
           - name: ubuntu_20_04-x86_64
             os: ubuntu-20.04
@@ -48,9 +48,10 @@ jobs:
             target-cpu: generic
             target: aarch64-unknown-linux-gnu
             features: neon
+            cross: 'true'
 
           - name: win32
-            os: windows-2019
+            os: windows-2022
             target: i686-pc-windows-msvc
             cross: 'true'
 
@@ -64,13 +65,13 @@ jobs:
           # todo target: aarch64-pc-windows-msvc instead of in test_woa.yml (once an official image is released)
           # todo: Someday rewrite imageflow for  wasm32-unknown-emscripten
 
-          # todo: Waiting on https://github.com/NoXF/libwebp-sys/issues/36
-          # - name: aarch64-unknown-linux-musl
-          #   os: ubuntu-24.04 # cross doesn't support ubuntu-24-arm-32gb
-          #   target-cpu: generic
-          #   target: aarch64-unknown-linux-musl
-          #   features: mimalloc
-          #   cross: 'true'
+          # todo: Won't pass tests due to https://github.com/NoXF/libwebp-sys/issues/36
+          - name: aarch64-unknown-linux-musl
+            os: ubuntu-24-arm-32gb # ubuntu-24.04 # cross doesn't support ubuntu-24-arm-32gb
+            target-cpu: generic
+            target: aarch64-unknown-linux-musl
+            features: mimalloc
+            cross: 'true'
 
 
     runs-on: ${{matrix.os}}
@@ -99,7 +100,7 @@ jobs:
 
       # matrix items USING CROSS
       - name: Cross Test
-        uses: houseabsolute/actions-rust-cross@v1
+        uses: houseabsolute/actions-rust-cross@fix-running-on-arm-host
         env:
           RUSTFLAGS: "${{ matrix.cpu-target && format('-C target-cpu={0}',matrix.cpu-target) }}"
         with:
