@@ -42,6 +42,7 @@ jobs:
             commit-suffix: linux64
             nuget-rid: linux-x64
             target: x86_64-unknown-linux-gnu
+            cross: 'true'
 
           # From test_ci only (new):
           - name: x86_64-ubuntu-22
