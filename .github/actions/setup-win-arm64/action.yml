@@ -17,20 +17,16 @@ runs:
       shell: powershell
       run:  echo "C:\Program Files\Git\usr\bin" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
 
-    - name: Cache tools
-      uses: actions/cache@v4
-      id: cache-tools
-      with:
-        path: |
-          C:\BuildTools
-          C:\Users\runneradmin\.rustup
-          C:\Users\runneradmin\.cargo
-          C:\Program Files (x86)\Windows Kits
-          C:\Program Files (x86)\Microsoft Visual Studio\
-        key: ${{ runner.os }}-arm64-tools-v3
+    # - name: Cache tools
+    #   uses: actions/cache@v4
+    #   id: cache-tools
+    #   with:
+    #     path: |
+    #       C:\Users\runneradmin\.rustup
+    #       C:\Users\runneradmin\.cargo
+    #     key: ${{ runner.os }}-arm64-tools-v3
 
     - name: Install Visual Studio Build Tools (Preview)
-      if: steps.cache-tools.outputs.cache-hit != 'true'
       shell: powershell
       run: |
         $url = "https://aka.ms/vs/17/release/vs_buildtools.exe"
@@ -43,7 +39,6 @@ runs:
           -NoNewWindow -Wait
 
     - name: Install Rust
-      if: steps.cache-tools.outputs.cache-hit != 'true'
       shell: powershell
       run: |
         $url = "https://static.rust-lang.org/rustup/dist/aarch64-pc-windows-msvc/rustup-init.exe"
