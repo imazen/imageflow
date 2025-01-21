@@ -290,12 +290,12 @@ impl ChecksumCtx{
             println!("{} (trusted) exists", checksum);
         }else{
             print!("Fetching {} to {:?}...", &source_url, &dest_path);
-            let bytes = ::imageflow_http_helpers::fetch_bytes(&source_url).expect("Did you forget to upload {} to s3?");
+            let bytes = get_url_bytes_with_retry(&source_url).expect("Did you forget to upload {} to s3?");
             let mut f = File::create(&dest_path).unwrap();
             f.write_all(bytes.as_ref()).unwrap();
             f.flush().unwrap();
             f.sync_all().unwrap();
-            
+
 
             println!("{} bytes written successfully.", bytes.len());
         }
