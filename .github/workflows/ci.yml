@@ -156,7 +156,7 @@ jobs:
       - uses: Swatinem/rust-cache@v2
         with:
           key: ${{ matrix.name }}
-        if: matrix.cross != 'true' && matrix.woa != 'true'
+        if: matrix.cross != 'true'
       - uses: dtolnay/rust-toolchain@stable
         if: matrix.cross != 'true' && matrix.woa != 'true'
 
