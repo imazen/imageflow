@@ -375,7 +375,7 @@ jobs:
         shell: bash
         run: ./ci/pack_nuget/pack.sh tool
         env:
-          CI_TAG: ${{ github.ref_name || "vTEST" }}
+          CI_TAG: ${{ github.ref_name || 'vTEST' }}
           PACKAGE_SUFFIX: ${{ matrix.suffix }}
           NUGET_RUNTIME: ${{ matrix.nuget-rid }}
           REPO_NAME: ${{ env.GITHUB_REPOSITORY_OWNER }}\/${{ env.GITHUB_REPOSITORY_NAME }}
@@ -386,7 +386,7 @@ jobs:
         shell: bash
         run: ./ci/pack_nuget/pack.sh
         env:
-          CI_TAG: ${{ github.ref_name || "vTEST" }}
+          CI_TAG: ${{ github.ref_name || 'vTEST' }}
           PACKAGE_SUFFIX: ${{ matrix.suffix }}
           NUGET_RUNTIME: ${{ matrix.nuget-rid }}
           REPO_NAME: ${{ env.GITHUB_REPOSITORY_OWNER }}\/${{ env.GITHUB_REPOSITORY_NAME }}
