@@ -240,8 +240,8 @@ jobs:
         run: |
           echo "Editing imageflow_abi/Cargo.toml to replace the string \"[\"cdylib\"]\" with \"[\"staticlib\"]\""
           sed -i 's/\["cdylib"\]/\["staticlib"\]/g' imageflow_abi/Cargo.toml
-          echo "Editing to remove all instances of '# enable on musl: '"
-          sed -i '/# enable on musl:/d' imageflow_abi/Cargo.toml
+          echo "Editing ./Cargo.toml to remove all instances of '# enable on musl: '"
+          sed -i '/# enable on musl:/d' ./Cargo.toml
           echo "Finished editing imageflow_abi/Cargo.toml: "
           cat imageflow_abi/Cargo.toml
       # ----------------------------------------------------------------------------

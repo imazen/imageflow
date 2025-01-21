@@ -13,10 +13,6 @@ doc = true
 crate-type = ["staticlib"]
 doctest = false
 
-[profile.release]
-# enable on musl: strip = true
-# enable on musl: lto = true
-
 
 
 [dependencies]
