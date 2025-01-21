@@ -110,7 +110,7 @@ jobs:
           toolchain: stable
           args:
             "--locked --release ${{ matrix.features && format('--features={0}',matrix.features) }}"
-        if: ${{ matrix.cross == 'true') }}
+        if: ${{ matrix.cross == 'true' }}
       
       - name: Test
         run: cargo test --all --locked --release ${{ matrix.features && format('--features={0}',matrix.features) }}
