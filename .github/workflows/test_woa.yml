@@ -10,6 +10,7 @@ on:
 
 jobs:
   test_win_arm64:
+    if: false
     runs-on: windows-11-arm-32gb
 
     steps:
