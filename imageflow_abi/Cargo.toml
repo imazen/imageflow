@@ -17,6 +17,11 @@ doctest = false
 [target.'cfg(target_env = "musl")'.lib]
 crate-type = ["staticlib"]
 
+# Musl-specific settings - strip symbols since these are static builds
+[target.'cfg(target_env = "musl")'.profile.release]
+strip = true  # Strip symbols only for musl builds
+lto = true    # Keep link-time optimization for better size/performance
+
 [dependencies]
 libc = "0.2"
 imageflow_core = { path = "../imageflow_core", version = "*"}
