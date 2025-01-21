@@ -366,7 +366,18 @@ impl CmdBuild {
     // Write new invocation to STDOUT, for execution in 'directory'.
     // Will write recipe and dependencies into directory
     pub fn bundle_to(self, directory: &Path) -> i32{
-        std::fs::create_dir(directory).unwrap();
+        match std::fs::create_dir(directory) {
+            Ok(_) => (),
+            Err(e) => {
+                if e.kind() == std::io::ErrorKind::AlreadyExists {
+                    eprintln!("Error: --bundle-to target directory already exists: {}", e);
+                    return 1;
+                } else {
+                    eprintln!("Failed to create directory: {}", e);
+                    return 1;
+                }
+            }
+        }
         let (log, transformed) = CmdBuild::transform_build(self.job.unwrap(), directory).unwrap();
         CmdBuild::write_json(&directory.join("recipe.json"), &transformed);
         println!("cd {:?}", &directory);
