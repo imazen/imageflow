@@ -76,6 +76,9 @@ evalchroma = "1"
 # And https://github.com/kornelski/rust-libpng-sys/blob/master/build.rs
 libpng-sys = { version = "1.1.9", features = ["static", "static-libz", "libz-sys"] }
 
+[dependencies]
+mimalloc = { version = "*", features = ["secure"], optional = true }
+
 [dev-dependencies]
 hyper = "1.4"
 imageflow_http_helpers = { path = "../imageflow_http_helpers", version = "*" }
@@ -87,9 +90,11 @@ rand = "*"
 default = []
 nightly = []
 c_rendering = []
+mimalloc = ["dep:mimalloc"]
 
 [[bench]]
 name="bench_graphics"
 path = "benches/bench_graphics.rs"
 harness = false
+
 
