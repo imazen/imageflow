@@ -136,6 +136,9 @@ jobs:
     name: "${{ (matrix.cross == 'true') && 'cross ' || ''}}${{ matrix.name }}${{ matrix.target-cpu && format(' cpu: {0}', matrix.target-cpu) }}${{ matrix.target && format(' target: {0}', matrix.target) }}${{ matrix.features && format(' features: {0}', matrix.features) }} runs-on:${{ matrix.os }}"
 
     steps:
+      - name: "Goal: ${{ matrix.skip-publish != 'true' && github.event_name == 'release' && 'publish' || 'test' }} Imageflow.NativeRuntime.${{ matrix.suffix }} & Imageflow.NativeTool.${{ matrix.suffix }} with RID ${{ matrix.nuget-rid }}"
+        run: echo "Hi"
+
       - name: Checkout code
         uses: actions/checkout@v4
 
@@ -321,7 +324,7 @@ jobs:
 
           rm ./artifacts/staging/*.{o,d,rlib} || true
           rm ./artifacts/staging/*-* || true
-
+          ls -l ./artifacts/staging
           (
             cd ./artifacts/staging
             tar czf "./archive.${{ env.EXTENSION }}" ./*
@@ -331,13 +334,17 @@ jobs:
           mkdir -p ./artifacts/github
           mkdir -p ./artifacts/upload/releases/${{ github.ref_name }}
           mkdir -p ./artifacts/upload/commits/${{ github.sha }}
-          cp "${TEMP_ARCHIVE_NAME}" "./${{ env.RELATIVE_ARTIFACT_ARCHIVE }}"
+          cp "${TEMP_ARCHIVE_NAME}" "${{ env.RELATIVE_ARTIFACT_ARCHIVE }}"
           cp "${TEMP_ARCHIVE_NAME}" "./artifacts/upload/releases/${{ github.ref_name }}/${{ env.IMAGEFLOW_TAG_SHA_SUFFIX }}.${{ env.EXTENSION }}"
           cp "${TEMP_ARCHIVE_NAME}" "./artifacts/upload/commits/${{ github.sha }}/${{ matrix.commit-suffix }}.${{ env.EXTENSION }}"
+          ls -l ./artifacts/github
+          ls -l ./artifacts/upload
+          ls -l ./artifacts/upload/releases
+          ls -l ./artifacts/upload/commits
         env:
           TEMP_ARCHIVE_NAME: "./artifacts/staging/archive.${{ env.EXTENSION }}"
 
-      - name: Upload archive to Github Release
+      - name: "Upload to Github Release: ${{ env.RELATIVE_ARTIFACT_ARCHIVE }}"
         if: ${{ env.ALLOW_PUBLISH == 'true' }}
         uses: Shopify/upload-to-release@master
         with:
