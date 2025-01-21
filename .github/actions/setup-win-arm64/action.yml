@@ -5,13 +5,13 @@ description: 'Set up Windows ARM64 environment with necessary tools'
 runs:
   using: "composite"
   steps:
-    - name: Install winget
-      shell: powershell
-      run: Add-AppxPackage -RegisterByFamilyName -MainPackage Microsoft.DesktopAppInstaller_8wekyb3d8bbwe
+    # - name: Install winget
+    #   shell: powershell
+    #   run: Add-AppxPackage -RegisterByFamilyName -MainPackage Microsoft.DesktopAppInstaller_8wekyb3d8bbwe
 
-    - name: Install pwsh via winget
-      shell: powershell
-      run: winget install --id Microsoft.Powershell -e --source winget --accept-source-agreements --accept-package-agreements
+    # - name: Install pwsh via winget
+    #   shell: powershell
+    #   run: winget install --id Microsoft.Powershell -e --source winget --accept-source-agreements --accept-package-agreements
 
     - name: Install Git (required for actions/cache to work (tar is needed))
       shell: powershell
