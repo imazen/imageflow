@@ -65,7 +65,7 @@ jobs:
           #   target: wasm32-unknown-emscripten
 
           - name: aarch64-unknown-linux-musl
-            os: ubuntu-24.04
+            os: ubuntu-24-arm-32gb
             target-cpu: generic
             target: aarch64-unknown-linux-musl
             features: mimalloc
