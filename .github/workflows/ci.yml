@@ -54,7 +54,6 @@ jobs:
             target: x86_64-unknown-linux-gnu
             skip-publish: 'true'
 
-
           - name: ARM64-ubuntu-24
             suffix: ubuntu-arm64
             os: ubuntu-24-arm-32gb
@@ -96,7 +95,6 @@ jobs:
             commit-suffix: win-x86
             nuget-rid: win-x86
             target: i686-pc-windows-msvc
-
 
           - name: ARM64-windows
             suffix: win-arm64
@@ -204,6 +202,7 @@ jobs:
           echo "REL_BINARIES_DIR=target/${{ matrix.target }}/${{ env.PROFILE }}/" >> $GITHUB_ENV
           echo "BUILD_EXCLUDE=${{ matrix.build-exclude && format('--exclude={0}',matrix.build-exclude) }}" >> $GITHUB_ENV
           echo "ALLOW_PUBLISH=${{ matrix.skip-publish != 'true' && github.event_name == 'release' && 'true' || 'false' }}" >> $GITHUB_ENV
+
       # ----------------------------------------------------------------------------
       # More environment variables that are used for artifact naming/publishing
       # in release mode. In test mode, they are still set, but only relevant if we
@@ -214,8 +213,14 @@ jobs:
         run: |
           echo "IMAGEFLOW_TAG_SHA_SUFFIX=imageflow-${{ env.TAG_SHA_SUFFIX }}" >> $GITHUB_ENV
           echo "IMAGEFLOW_TOOL_PATH=${{ env.REL_BINARIES_DIR }}imageflow_tool${{ contains(matrix.os, 'windows') && '.exe' || '' }}" >> $GITHUB_ENV
-          echo "ESTIMATED_ARTIFACT_URL=${{ env.HTTPS_IMAGEFLOW_NIGHTLIES }}/${{ env.IMAGEFLOW_TAG_SHA_SUFFIX }}.${{ env.EXTENSION }}" >> $GITHUB_ENV
+
           echo "RELATIVE_ARTIFACT_ARCHIVE=./artifacts/github/imageflow-${{ env.TAG_SHA_SUFFIX }}.${{ env.EXTENSION }}" >> $GITHUB_ENV
+
+          echo "ESTIMATED_ARTIFACT_URL=${{ env.HTTPS_IMAGEFLOW_NIGHTLIES }}/releases/${{ github.ref_name }}/${{ env.IMAGEFLOW_TAG_SHA_SUFFIX }}.${{ env.EXTENSION }}" >> $GITHUB_ENV
+          echo "ESTIMATED_ARTIFACT_URL_COMMITS=${{ env.HTTPS_IMAGEFLOW_NIGHTLIES }}/commits/${{ github.sha }}/${{ matrix.commit-suffix }}.${{ env.EXTENSION }}" >> $GITHUB_ENV
+          echo "ESTIMATED_MUSL_VERSIONED_URL=${{ env.HTTPS_IMAGEFLOW_NIGHTLIES }}/static/${{ github.ref_name }}/${{ env.IMAGEFLOW_TAG_SHA_SUFFIX }}.${{ env.EXTENSION }}" >> $GITHUB_ENV
+          echo "ESTIMATED_MUSL_LATEST_URL=${{ env.HTTPS_IMAGEFLOW_NIGHTLIES }}/static/latest/${{ matrix.target }}.${{ env.EXTENSION }}" >> $GITHUB_ENV
+
           echo "FETCH_COMMIT_SUFFIX=${{ matrix.commit-suffix }}" >> $GITHUB_ENV
           echo "CI_TAG=${{ github.ref_name }}" >> $GITHUB_ENV
           echo "CI=True" >> $GITHUB_ENV
@@ -317,6 +322,7 @@ jobs:
           touch ./${{ env.TARGET_DIR }}doc/not-available.txt
         if: matrix.cross == 'true'
 
+
       # ----------------------------------------------------------------------------
       # Conditionally create and upload artifacts only if this is a release.
       # In "test mode," we skip. This keeps the workflow DRY but clarifies
@@ -339,6 +345,7 @@ jobs:
           cp ./ci/packaging_extras/{install,uninstall}.sh ./artifacts/staging
 
           rm ./artifacts/staging/*.{o,d,rlib} || true
+          rm ./artifacts/staging/imageflow.a || true
           rm ./artifacts/staging/*-* || true
           ls -l ./artifacts/staging
           (
@@ -360,6 +367,25 @@ jobs:
         env:
           TEMP_ARCHIVE_NAME: "./artifacts/staging/archive.${{ env.EXTENSION }}"
 
+      - name: "Package imageflow.a for musl targets"
+        if: endsWith(matrix.target, '-musl')
+        shell: bash
+        run: |
+          # Reasoning: Create a separate .tar.gz for imageflow.a on musl targets
+          # Goal: Facilitate easy downloading for Go package by maintaining versioned and latest archives
+
+          # Define archive names
+          VERSIONED_ARCHIVE="imageflow.a-${{ github.ref_name || github.sha }}-${{ matrix.target }}.tar.gz"
+          LATEST_ARCHIVE="imageflow.a-latest-${{ matrix.target }}.tar.gz"
+
+          # Create versioned tar.gz
+          mkdir -p ./artifacts/upload/versioned/musl/${{ matrix.target }}
+          tar -czf "./artifacts/upload/versioned/musl/${{ matrix.target }}/$VERSIONED_ARCHIVE" -C "${{ env.REL_BINARIES_DIR }}" imageflow.a
+
+          # Create latest tar.gz (overwrite if exists)
+          mkdir -p ./artifacts/upload/latest/musl/${{ matrix.target }}
+          tar -czf "./artifacts/upload/latest/musl/${{ matrix.target }}/$LATEST_ARCHIVE" -C "${{ env.REL_BINARIES_DIR }}" imageflow.a
+
       - name: "Upload to Github Release: ${{ env.RELATIVE_ARTIFACT_ARCHIVE }}"
         if: ${{ env.ALLOW_PUBLISH == 'true' }}
         uses: xresloader/upload-to-github-release@v1
@@ -375,18 +401,18 @@ jobs:
         shell: bash
         run: ./ci/pack_nuget/pack.sh tool
         env:
-          CI_TAG: ${{ github.ref_name || "vTEST" }}
+          CI_TAG: ${{ github.ref_name || 'vTEST' }}
           PACKAGE_SUFFIX: ${{ matrix.suffix }}
           NUGET_RUNTIME: ${{ matrix.nuget-rid }}
           REPO_NAME: ${{ env.GITHUB_REPOSITORY_OWNER }}\/${{ env.GITHUB_REPOSITORY_NAME }}
           BINARIES_DIR: "${{ env.REL_BINARIES_DIR }}"
 
       - name: "Create NuGet Package Imageflow.NativeRuntime.${{ matrix.nuget-rid }}"
-        if: ${{ contains(matrix.target, 'musl') }}
+        if: ${{ matrix.build-exclude != 'imageflow_abi' }}
         shell: bash
         run: ./ci/pack_nuget/pack.sh
         env:
-          CI_TAG: ${{ github.ref_name || "vTEST" }}
+          CI_TAG: ${{ github.ref_name || 'vTEST' }}
           PACKAGE_SUFFIX: ${{ matrix.suffix }}
           NUGET_RUNTIME: ${{ matrix.nuget-rid }}
           REPO_NAME: ${{ env.GITHUB_REPOSITORY_OWNER }}\/${{ env.GITHUB_REPOSITORY_NAME }}
@@ -402,15 +428,6 @@ jobs:
           source_dir: ./artifacts/upload
           destination_dir: ''
 
-      - name: Upload ./artifacts/nuget to S3
-        if: ${{ env.ALLOW_PUBLISH == 'true' }}
-        uses: shallwefootball/s3-upload-action@master
-        with:
-          aws_key_id: ${{ secrets.AWS_KEY_ID }}
-          aws_secret_access_key: ${{ secrets.AWS_SECRET_ACCESS_KEY}}
-          aws_bucket: ${{ secrets.AWS_BUCKET }}
-          source_dir: ./artifacts/nuget/
-          destination_dir: 'nuget'
 
       - name: Publish to nuget.pkg.github.com
         if: ${{ env.ALLOW_PUBLISH == 'true' && env.NUGET_UPLOAD_GITHUB == 'true' }}
@@ -429,6 +446,24 @@ jobs:
              curl -L "https://www.nuget.org/api/v2/package" -H "X-NuGet-ApiKey: ${{ secrets.NUGET_API_KEY }}" -H "X-NuGet-Client-Version: 4.1.0" -A "NuGet Command Line/3.4.4.1321 (Unix 4.4.0.92)" --upload-file "$f" --fail
           done
         shell: bash
+
+      - name: "Verify artifacts are now on S3, and public. Use curl to check, then delete"
+        if: ${{ env.ALLOW_PUBLISH == 'true' }}
+        shell: bash
+        run: |
+          mkdir -p ./artifacts/verify
+          cd ./artifacts/verify
+          curl -s ${{ env.ESTIMATED_ARTIFACT_URL }}
+          curl -s ${{ env.ESTIMATED_ARTIFACT_URL_COMMITS }}
+          # if musl
+          if [[ ${{ matrix.target }} == *"musl"* ]]; then
+            curl -s ${{ env.ESTIMATED_MUSL_VERSIONED_URL }}
+            curl -s ${{ env.ESTIMATED_MUSL_LATEST_URL }}
+          fi
+          cd ${{ github.workspace }}
+          rm -rf ./artifacts/verify
+
+
 
   # ----------------------------------------------------------------------------
   # Reasoning: The existing release_ci.yml had a second job "publish" that
