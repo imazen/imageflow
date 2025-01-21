@@ -91,7 +91,7 @@ jobs:
           - name: win32
             suffix: win-x86
             os: windows-2022
-            target-cpu: i686
+            # target-cpu: generic # any target-cpu causes the build to fail
             commit-suffix: win-x86
             nuget-rid: win-x86
             target: i686-pc-windows-msvc
