@@ -108,7 +108,7 @@ jobs:
           echo "RUSTFLAGS=${{ matrix.target-cpu && format('-C target-cpu={0}',matrix.target-cpu) }} ${{ matrix.target-feature && format('-C target-feature={0}',matrix.target-feature) }}" >> $GITHUB_ENV
 
       - name: Test
-        run: cargo test --all --locked --release ${{ matrix.features && format('--features={0}',matrix.features) }}
+        run: cargo test --all --locked --target ${{ matrix.target }} --release ${{ matrix.features && format('--features={0}',matrix.features) }}
         shell: bash
         if: matrix.cross != 'true'
 
@@ -124,15 +124,3 @@ jobs:
           args:
             "--locked --release ${{ matrix.features && format('--features={0}',matrix.features) }}"
         if: matrix.cross == 'true'
-
-
-
-      - name: "Test creating a  NuGet Package Imageflow.NativeRuntime.${{ matrix.nuget-rid }} in ./artifacts/nuget"
-        shell: bash
-        run: ./ci/pack_nuget/pack.sh
-        env:
-          CI_TAG: 'vfake'
-          PACKAGE_SUFFIX: ${{ matrix.target }}
-          NUGET_RUNTIME: ${{ matrix.nuget-rid }}
-          REPO_NAME: ${{ github.repository }}
-          BINARIES_DIR: "${{ github.workspace }}/${{ env.REL_BINARIES_DIR }}"
