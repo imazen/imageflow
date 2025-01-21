@@ -19,38 +19,54 @@ jobs:
             TARGET_CPU: x86-64
             FETCH_COMMIT_SUFFIX: linux64
             NUGET_RUNTIME: linux-x64
+            RUST_TARGET: x86_64-unknown-linux-gnu
 
           - name: ubuntu-arm64
             os: ubuntu-24-arm-32gb
             TARGET_CPU: generic
             FETCH_COMMIT_SUFFIX: linux_arm64_glibc239
             NUGET_RUNTIME: linux-arm64
+            RUST_TARGET: aarch64-unknown-linux-gnu
 
           - name: win-x86_64
             os: windows-2022
             TARGET_CPU: x86-64
             FETCH_COMMIT_SUFFIX: win-x86_64
             NUGET_RUNTIME: win-x64
+            RUST_TARGET: x86_64-pc-windows-msvc
 
           - name: osx-x86_64
             os: macos-13
             TARGET_CPU: haswell
             FETCH_COMMIT_SUFFIX: mac64
             NUGET_RUNTIME: osx-x64
+            RUST_TARGET: x86_64-apple-darwin
 
           - name: osx-aarch64
             os: macos-14
             TARGET_CPU: apple-m1
             FETCH_COMMIT_SUFFIX: mac_aarch64
             NUGET_RUNTIME: osx-arm64
+            RUST_TARGET: aarch64-apple-darwin
+
+          - name: win-x86
+            os: windows-2019
+            TARGET_CPU: i686
+            FETCH_COMMIT_SUFFIX: win-x86
+            NUGET_RUNTIME: win-x86
+            RUST_TARGET: i686-pc-windows-msvc
 
     runs-on: ${{ matrix.os }}
     steps:
       - run: rustup show
-      - name: Use stable Rust toolchain
+      - name: Use stable Rust toolchain (main)
         uses: dtolnay/rust-toolchain@stable
+      - name: Install i686 target
+        if: ${{ matrix.RUST_TARGET == 'i686-pc-windows-msvc' }}
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          target: i686-pc-windows-msvc
       - run: rustup show
-
 
       - name: Checkout code
         uses: actions/checkout@v4
@@ -59,13 +75,18 @@ jobs:
 
       - uses: Swatinem/rust-cache@v2
         with:
-          key: ${{matrix.name}}
+          key: ${{ matrix.name }}
 
       - name: Install NASM
         uses: ./.github/actions/install-nasm
 
       - name: Test Build
-        run: cargo test --all --release
+        run: |
+          if [ -n "${{ matrix.RUST_TARGET }}" ]; then
+            cargo test --all --release --target=${{ matrix.RUST_TARGET }}
+          else
+            cargo test --all --release
+          fi
         env:
           RUSTFLAGS: -C target-cpu=${{ matrix.TARGET_CPU }}
 
@@ -83,7 +104,12 @@ jobs:
         shell: bash
 
       - name: Build Release
-        run: cargo build --all --release
+        run: |
+          if [ -n "${{ matrix.RUST_TARGET }}" ]; then
+            cargo build --all --release --target=${{ matrix.RUST_TARGET }}
+          else
+            cargo build --all --release
+          fi
         shell: bash
         env:
           ESTIMATED_DOCS_URL: https://s3-us-west-1.amazonaws.com/imageflow-nightlies/doc
@@ -104,7 +130,12 @@ jobs:
           RUSTFLAGS: -C target-cpu=${{ matrix.TARGET_CPU }}
 
       - name: Build Docs
-        run: cargo doc --all --release --no-deps
+        run: |
+          if [ -n "${{ matrix.RUST_TARGET }}" ]; then
+            cargo doc --all --release --no-deps --target=${{ matrix.RUST_TARGET }}
+          else
+            cargo doc --all --release --no-deps
+          fi
 
       - name: Create Artifacts Header (POSIX)
         shell: bash
@@ -180,14 +211,14 @@ jobs:
           )
           mkdir -p "./artifacts/upload/$(dirname "${ARTIFACT_UPLOAD_PATH}")" || true
           mkdir -p "./artifacts/upload/${DOCS_UPLOAD_DIR}" || true
-          mkdir -p ./artifacts/upload/releases/${GITHUB_REF_NAME}
           mkdir -p ./artifacts/github
+          mkdir -p ./artifacts/upload/releases/${GITHUB_REF_NAME}
           mkdir -p ./artifacts/upload/commits/${GIT_COMMIT}
           cp "${ARTIFACT_ARCHIVE_NAME}" ./artifacts/github/${ARTIFACT_UPLOAD_PATH}.zip
           cp "${ARTIFACT_ARCHIVE_NAME}" "./artifacts/upload/releases/${GITHUB_REF_NAME}/${ARTIFACT_UPLOAD_PATH}.zip"
           cp "${ARTIFACT_ARCHIVE_NAME}" "./artifacts/upload/commits/${GIT_COMMIT}/${ARTIFACT_UPLOAD_PATH_1}.zip"
         env:
-          TARGET_DIR: target/
+          TARGET_DIR: target/${{ matrix.RUST_TARGET }}/
           ARTIFACT_UPLOAD_PATH: /imageflow-${{ github.ref_name }}-${{ env.GITHUB_SHA_SHORT }}-${{ matrix.name }}
           ARTIFACT_ARCHIVE_NAME: ./artifacts/staging/archive.zip
           DOCS_UPLOAD_DIR: doc
@@ -268,165 +299,9 @@ jobs:
         shell: bash
         if: ${{ env.NUGET_UPLOAD_NUGET == 'true' }}
 
-  build_win32:
-    env:
-      NUGET_UPLOAD_NUGET: ${{ secrets.NUGET_UPLOAD_NUGET }}
-      NUGET_UPLOAD_GITHUB: ${{ secrets.NUGET_UPLOAD_GITHUB }}
-
-    runs-on: windows-2019
-    steps:
-      - run: rustup show
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Install nasm
-        uses: ./.github/actions/install-nasm
-
-      - name: Cache cargo
-        uses: actions/cache@v3
-        with:
-          path: |
-            ~/.cargo/registry
-            ~/.cargo/git
-            target
-          key: ${{ runner.os }}-windows-cargo-${{ hashFiles('**/Cargo.lock') }}
-
-      - name: Install latest 32bit target
-        uses: dtolnay/rust-toolchain@stable
-        with:
-          target: i686-pc-windows-msvc
-
-      - name: Test Build
-        run: cargo test --all --release --target=i686-pc-windows-msvc
-      - name: Build Release
-        run: cargo build --all --release --target=i686-pc-windows-msvc
-        shell: bash
-        env:
-          ESTIMATED_ARTIFACT_URL: https://s3-us-west-1.amazonaws.com/imageflow-nightlies/imageflow-${{ github.ref_name }}-${{ env.GITHUB_SHA_SHORT }}-${{ env.PACKAGE_SUFFIX }}.zip
-          ESTIMATED_DOCS_URL: https://s3-us-west-1.amazonaws.com/imageflow-nightlies/doc
-          CI_SEQUENTIAL_BUILD_NUMBER: ${{ github.run_number }}
-          CI_BUILD_URL: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
-          CI_JOB_URL: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
-          CI_JOB_TITLE: GitHub ${{ github.job_id }}
-          CI_STRING: GitHub actions
-          CI_PULL_REQUEST_INFO: ${{ github.event_name!='release' }}
-          CI_TAG: ${{ github.ref_name }}
-          CI_REPO: ${{ github.repository }}
-          CI: True
-          OPT_LEVEL: 0
-          DEBUG: False
-          PROFILE: release
-          FETCH_COMMIT_SUFFIX: win-x86
-
-      - name: Build Docs
-        run: cargo doc --all --release --no-deps --target=i686-pc-windows-msvc
-
-      - name: Create Artifacts Header
-        shell: bash
-        run: |
-          mkdir -p ./artifacts/staging/headers || true
-          (
-            cd ./${TARGET_DIR}doc
-            7z a -r "../docs.zip" ./*
-          )
-          mv ./${TARGET_DIR}docs.zip ./artifacts/staging/
-
-          cp -R ./${TARGET_DIR}release/{imageflow_,libimageflow}*  ./artifacts/staging/
-          cp -R "./${TARGET_DIR}release/imageflow.dll" ./artifacts/staging/imageflow.dll
-          cp -R "./${TARGET_DIR}release/imageflow.pdb" ./artifacts/staging/imageflow.pdb
-          cp bindings/headers/*.h  ./artifacts/staging/headers/
-          cp bindings/headers/imageflow_default.h  ./artifacts/staging/imageflow.h
-          rm ./artifacts/staging/*.{o,d,rlib} || true
-          rm ./artifacts/staging/*-* || true
-          (
-            cd ./artifacts/staging
-            7z a -r "./archive.zip" ./*
-          )
-          mkdir -p "./artifacts/upload/$(dirname "${ARTIFACT_UPLOAD_PATH}")" || true
-          mkdir -p "./artifacts/upload/${DOCS_UPLOAD_DIR}" || true
-          mkdir -p ./artifacts/github
-          mkdir -p ./artifacts/upload/releases/${GITHUB_REF_NAME}
-          mkdir -p ./artifacts/upload/commits/${GIT_COMMIT}
-          cp "${ARTIFACT_ARCHIVE_NAME}" ./artifacts/github/${ARTIFACT_UPLOAD_PATH}.zip
-          cp "${ARTIFACT_ARCHIVE_NAME}" "./artifacts/upload/releases/${GITHUB_REF_NAME}/${ARTIFACT_UPLOAD_PATH}.zip"
-          cp "${ARTIFACT_ARCHIVE_NAME}" "./artifacts/upload/commits/${GIT_COMMIT}/${ARTIFACT_UPLOAD_PATH_1}.zip"
-        env:
-          TARGET_DIR: target/i686-pc-windows-msvc/
-          ARTIFACT_UPLOAD_PATH: /imageflow-${{ github.ref_name }}-${{ env.GITHUB_SHA_SHORT }}-win-x86
-          ARTIFACT_ARCHIVE_NAME: ./artifacts/staging/archive.zip
-          DOCS_UPLOAD_DIR: doc
-          GIT_COMMIT: ${{ github.sha }}
-          ARTIFACT_UPLOAD_PATH_1: /win-x86
-
-      - name: Nuget(Tool) to S3
-        shell: bash
-        run: ./ci/pack_nuget/pack.sh tool
-        env:
-          CI_TAG: ${{ github.ref_name }}
-          PACKAGE_SUFFIX: win-x86
-          NUGET_RUNTIME: win-x86
-          TARGET_DIR: target/i686-pc-windows-msvc
-          REPO_NAME_TOOL: ${{ env.GITHUB_REPOSITORY_OWNER }}\/${{ env.GITHUB_REPOSITORY_NAME }}
-          REPO_NAME_NATIVE: ${{ env.GITHUB_REPOSITORY_OWNER }}\/${{ env.GITHUB_REPOSITORY_NAME }}
-
-      - name: Nuget(Runtime) to S3
-        shell: bash
-        run: ./ci/pack_nuget/pack.sh
-        env:
-          CI_TAG: ${{ github.ref_name }}
-          PACKAGE_SUFFIX: win-x86
-          NUGET_RUNTIME: win-x86
-          TARGET_DIR: target/i686-pc-windows-msvc
-          REPO_NAME_TOOL: ${{ env.GITHUB_REPOSITORY_OWNER }}\/${{ env.GITHUB_REPOSITORY_NAME }}
-          REPO_NAME_NATIVE: ${{ env.GITHUB_REPOSITORY_OWNER }}\/${{ env.GITHUB_REPOSITORY_NAME }}
-
-      - name: Upload to release
-        uses: Shopify/upload-to-release@master
-        with:
-          name: imageflow-${{ github.ref_name }}-${{ env.GITHUB_SHA_SHORT }}-win-x86.zip
-          path: ./artifacts/github/imageflow-${{ github.ref_name }}-${{ env.GITHUB_SHA_SHORT }}-win-x86.zip
-          repo-token: ${{ secrets.GITHUB_TOKEN }}
-          content-type: text/plain
-
-      - name: Upload to S3
-        uses: shallwefootball/s3-upload-action@master
-        with:
-          aws_key_id: ${{ secrets.AWS_KEY_ID }}
-          aws_secret_access_key: ${{ secrets.AWS_SECRET_ACCESS_KEY}}
-          aws_bucket: ${{ secrets.AWS_BUCKET }}
-          source_dir: ./artifacts/upload
-          destination_dir: ''
-
-      - name: Upload to S3(nugets)
-        uses: shallwefootball/s3-upload-action@master
-        with:
-          aws_key_id: ${{ secrets.AWS_KEY_ID }}
-          aws_secret_access_key: ${{ secrets.AWS_SECRET_ACCESS_KEY}}
-          aws_bucket: ${{ secrets.AWS_BUCKET }}
-          source_dir: ./artifacts/nuget/
-          destination_dir: 'nuget'
-
-      - name: Publish nuget(GitHub)
-        run: |
-          for f in ./artifacts/nuget/*.nupkg
-          do
-            curl -vX PUT -u "${{github.repository_owner}}:${{ secrets.GITHUB_TOKEN }}" -F package=@$f https://nuget.pkg.github.com/${{github.repository_owner}}/
-          done
-        shell: bash
-        if: ${{ env.NUGET_UPLOAD_GITHUB == 'true' }}
-
-      - name: Publish nuget(Nuget)
-        run: |
-          for f in ./artifacts/nuget/*.nupkg
-          do
-             curl -L "https://www.nuget.org/api/v2/package" -H "X-NuGet-ApiKey: ${{ secrets.NUGET_API_KEY }}" -H "X-NuGet-Client-Version: 4.1.0" -A "NuGet Command Line/3.4.4.1321 (Unix 4.4.0.92)" --upload-file "$f" --fail
-          done
-        shell: bash
-        if: ${{ env.NUGET_UPLOAD_NUGET == 'true' }}
-
   publish:
     runs-on: ubuntu-latest
-    needs: [build, build_win32]
+    needs: [build]
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
