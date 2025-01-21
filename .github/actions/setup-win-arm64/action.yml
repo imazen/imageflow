@@ -5,15 +5,27 @@ description: 'Set up Windows ARM64 environment with necessary tools'
 runs:
   using: "composite"
   steps:
+
+    - name: Install Git (required for actions/cache to work (tar is needed))
+      shell: powershell
+      run: |
+        $url = "https://github.com/git-for-windows/git/releases/download/v2.47.1.windows.2/Git-2.47.1.2-arm64.exe"
+        Invoke-WebRequest -Uri $url -OutFile git-installer.exe
+        Start-Process -FilePath .\git-installer.exe -ArgumentList "/VERYSILENT", "/NORESTART" -Wait
+
+    - name: Use GNU tar from Git
+      shell: powershell
+      run:  echo "C:\Program Files\Git\usr\bin" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+
     - name: Cache tools
       uses: actions/cache@v4
       id: cache-tools
       with:
         path: |
           C:\BuildTools
-          C:\Program Files\Git
           C:\Users\runneradmin\.rustup
           C:\Users\runneradmin\.cargo
+          C:\Program Files (x86)\Windows Kits
         key: ${{ runner.os }}-arm64-tools-v2
 
     - name: Install Visual Studio Build Tools (Preview)
@@ -29,16 +41,6 @@ runs:
           "--add", "Microsoft.VisualStudio.Component.Windows11SDK.22621" `
           -NoNewWindow -Wait
         
-
-    - name: Install Git
-      if: steps.cache-tools.outputs.cache-hit != 'true'
-      shell: powershell
-      run: |
-        $url = "https://github.com/git-for-windows/git/releases/download/v2.47.1.windows.2/Git-2.47.1.2-arm64.exe"
-        Invoke-WebRequest -Uri $url -OutFile git-installer.exe
-        Start-Process -FilePath .\git-installer.exe -ArgumentList "/VERYSILENT", "/NORESTART" -Wait
-        
-
     - name: Install Rust
       if: steps.cache-tools.outputs.cache-hit != 'true'
       shell: powershell
