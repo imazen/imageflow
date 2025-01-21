@@ -202,7 +202,8 @@ jobs:
           echo "REL_BINARIES_DIR=target/${{ matrix.target }}/${{ env.PROFILE }}/" >> $GITHUB_ENV
           echo "BUILD_EXCLUDE=${{ matrix.build-exclude && format('--exclude={0}',matrix.build-exclude) }}" >> $GITHUB_ENV
           echo "ALLOW_PUBLISH=${{ matrix.skip-publish != 'true' && github.event_name == 'release' && 'true' || 'false' }}" >> $GITHUB_ENV
-
+          echo "LIBIMAGEFLOW_DYNAMIC${{ contains(matrix.target, 'win') && 'imageflow.dll'  || contains(matrix.target, 'apple') && 'libimageflow.dylib' || 'libimageflow.so' }}" >> $GITHUB_ENV
+          echo "LIBIMAGEFLOW_STATIC=${{ contains(matrix.target, 'win') && 'imageflow.lib' || 'libimageflow.a' }}" >> $GITHUB_ENV
       # ----------------------------------------------------------------------------
       # More environment variables that are used for artifact naming/publishing
       # in release mode. In test mode, they are still set, but only relevant if we
@@ -214,7 +215,7 @@ jobs:
           echo "IMAGEFLOW_TAG_SHA_SUFFIX=imageflow-${{ env.TAG_SHA_SUFFIX }}" >> $GITHUB_ENV
           echo "IMAGEFLOW_TOOL_PATH=${{ env.REL_BINARIES_DIR }}imageflow_tool${{ contains(matrix.os, 'windows') && '.exe' || '' }}" >> $GITHUB_ENV
 
-          echo "RELATIVE_ARTIFACT_ARCHIVE=./artifacts/github/imageflow-${{ env.TAG_SHA_SUFFIX }}.${{ env.EXTENSION }}" >> $GITHUB_ENV
+          echo "RELATIVE_GITHUB_ARCHIVE=./artifacts/github/imageflow-${{ env.TAG_SHA_SUFFIX }}.${{ env.EXTENSION }}" >> $GITHUB_ENV
 
           echo "ESTIMATED_ARTIFACT_URL=${{ env.HTTPS_IMAGEFLOW_NIGHTLIES }}/releases/${{ github.ref_name }}/${{ env.IMAGEFLOW_TAG_SHA_SUFFIX }}.${{ env.EXTENSION }}" >> $GITHUB_ENV
           echo "ESTIMATED_ARTIFACT_URL_COMMITS=${{ env.HTTPS_IMAGEFLOW_NIGHTLIES }}/commits/${{ github.sha }}/${{ matrix.commit-suffix }}.${{ env.EXTENSION }}" >> $GITHUB_ENV
@@ -280,16 +281,25 @@ jobs:
           args: "--all ${{ env.BUILD_EXCLUDE }} ${{ env.CROSS_ARGS }}"
         if: matrix.cross == 'true'
 
-      # on *unknown-linux-gnu, check and extract exact glibc version of imageflow.so
-      - name: Check glibc version of imageflow.so
+      # on *unknown-linux-gnu, check and extract exact glibc version of libimageflow.so
+      - name: Check glibc version of ${{ env.LIBIMAGEFLOW_STATIC }}
         if: matrix.target == 'x86_64-unknown-linux-gnu' || matrix.target == 'aarch64-unknown-linux-gnu'
         run: |
+          # list all files in the target directory
+          ls -l ${REL_BINARIES_DIR}
+
+          # if libimageflow.so does not exist, fail
+          if [[ ! -f ${REL_BINARIES_DIR}${env.LIBIMAGEFLOW_STATIC} ]]; then
+            echo "Error: ${REL_BINARIES_DIR}${env.LIBIMAGEFLOW_STATIC} does not exist"
+            exit 1
+          fi
+
           # Use objdump to find all GLIBC version requirements
           echo "GLIBC version requirements:"
-          objdump -T ${REL_BINARIES_DIR}imageflow.so | grep GLIBC_ | sed 's/.*GLIBC_\([0-9.]*\).*/\1/g' | sort -Vu
+          objdump -T ${REL_BINARIES_DIR}${env.LIBIMAGEFLOW_STATIC} | grep GLIBC_ | sed 's/.*GLIBC_\([0-9.]*\).*/\1/g' | sort -Vu
 
           # Find the highest GLIBC version required
-          HIGHEST_GLIBC=$(objdump -T ${REL_BINARIES_DIR}imageflow.so | grep GLIBC_ | sed 's/.*GLIBC_\([0-9.]*\).*/\1/g' | sort -V | tail -n1)
+          HIGHEST_GLIBC=$(objdump -T ${REL_BINARIES_DIR}${env.LIBIMAGEFLOW_STATIC} | grep GLIBC_ | sed 's/.*GLIBC_\([0-9.]*\).*/\1/g' | sort -V | tail -n1)
           echo "Highest GLIBC version required: $HIGHEST_GLIBC"
 
           # Fail if version is above 2.17 and this is not a skipped build
@@ -328,11 +338,12 @@ jobs:
       # In "test mode," we skip. This keeps the workflow DRY but clarifies
       # that packaging/publishing logic won't happen on pushes or PRs.
       # ----------------------------------------------------------------------------
-      - name: "Create zip/tar files like ${{ env.RELATIVE_ARTIFACT_ARCHIVE }} for upload"
+      - name: "Create zip/tar files like ${{ env.RELATIVE_GITHUB_ARCHIVE }} for upload"
         if: ${{ github.event_name == 'release' }}
         shell: bash
         run: |
           mkdir -p ./artifacts/staging/headers || true
+          mkdir -p "$(dirname "${{ env.TEMP_STATIC_LIB }}")" || true
           (
             cd ./${{ env.TARGET_DIR }}doc
             tar czf "../docs.${{ env.EXTENSION }}" ./*
@@ -345,7 +356,7 @@ jobs:
           cp ./ci/packaging_extras/{install,uninstall}.sh ./artifacts/staging
 
           rm ./artifacts/staging/*.{o,d,rlib} || true
-          rm ./artifacts/staging/imageflow.a || true
+          mv ./artifacts/staging/${{ env.LIBIMAGEFLOW_STATIC }} ${{ env.TEMP_STATIC_LIB }} || true
           rm ./artifacts/staging/*-* || true
           ls -l ./artifacts/staging
           (
@@ -353,46 +364,59 @@ jobs:
             tar czf "./archive.${{ env.EXTENSION }}" ./*
           )
 
-          mkdir -p "./artifacts/upload/$(dirname "${{ env.RELATIVE_ARTIFACT_ARCHIVE }}")" || true
-          mkdir -p ./artifacts/github
+
+          # Create release archives for upload
+          mkdir -p "$(dirname "${{ env.RELATIVE_GITHUB_ARCHIVE }}")" || true
           mkdir -p ./artifacts/upload/releases/${{ github.ref_name }}
           mkdir -p ./artifacts/upload/commits/${{ github.sha }}
-          cp "${TEMP_ARCHIVE_NAME}" "${{ env.RELATIVE_ARTIFACT_ARCHIVE }}"
+          cp "${TEMP_ARCHIVE_NAME}" "${{ env.RELATIVE_GITHUB_ARCHIVE }}"
           cp "${TEMP_ARCHIVE_NAME}" "./artifacts/upload/releases/${{ github.ref_name }}/${{ env.IMAGEFLOW_TAG_SHA_SUFFIX }}.${{ env.EXTENSION }}"
           cp "${TEMP_ARCHIVE_NAME}" "./artifacts/upload/commits/${{ github.sha }}/${{ matrix.commit-suffix }}.${{ env.EXTENSION }}"
-          ls -l ./artifacts/github
-          ls -l ./artifacts/upload
-          ls -l ./artifacts/upload/releases
-          ls -l ./artifacts/upload/commits
+
+
+          # Create static archives for upload
+          echo "if ${{ env.TEMP_STATIC_LIB }} exists, make an archive of it"
+          if [[ -f ${{ env.TEMP_STATIC_LIB }} ]]; then
+            (
+              echo "${{ env.TEMP_STATIC_LIB }} exists"
+
+              tar czf "${{ env.TEMP_STATIC_ARCHIVE }}" "${{ env.TEMP_STATIC_LIB }}"
+              UPLOAD_DIR="./artifacts/upload
+              env STATIC_ARCHIVE_1 = "/static/${{ matrix.target }}/latest/${{ env.LIBIMAGEFLOW_STATIC }}.${{ env.EXTENSION }}"
+              env STATIC_ARCHIVE_2 = "/static/${{ matrix.target }}/releases/${{ github.ref_name }}/${{ env.LIBIMAGEFLOW_STATIC }}.${{ env.EXTENSION }}"
+              env STATIC_ARCHIVE_3 = "/static/${{ matrix.target }}/commits/${{ github.sha }}/${{ matrix.commit-suffix }}.${{ env.EXTENSION }}"
+              mkdir -p $(dirname $STATIC_UPLOAD_DIR$STATIC_ARCHIVE_1)
+              mkdir -p $(dirname $STATIC_UPLOAD_DIR$STATIC_ARCHIVE_2)
+              mkdir -p $(dirname $STATIC_UPLOAD_DIR$STATIC_ARCHIVE_3)
+              cp $TEMP_STATIC_ARCHIVE $STATIC_UPLOAD_DIR$STATIC_ARCHIVE_1
+              cp $TEMP_STATIC_ARCHIVE $STATIC_UPLOAD_DIR$STATIC_ARCHIVE_2
+              mv $TEMP_STATIC_ARCHIVE $STATIC_UPLOAD_DIR$STATIC_ARCHIVE_3
+              echo "Uploaded static archive to ${{ env.HTTPS_IMAGEFLOW_NIGHTLIES }}$STATIC_UPLOAD_DIR$STATIC_ARCHIVE_1"
+              echo "Uploaded static archive to ${{ env.HTTPS_IMAGEFLOW_NIGHTLIES }}$STATIC_UPLOAD_DIR$STATIC_ARCHIVE_2"
+              echo "Uploaded static archive to ${{ env.HTTPS_IMAGEFLOW_NIGHTLIES }}$STATIC_UPLOAD_DIR$STATIC_ARCHIVE_3"
+            )
+          else
+            echo "No static archive found at ${{ env.TEMP_STATIC_LIB }}"
+          fi
+
+          echo "github release artifacts"
+          ls -l -R ./artifacts/github
+
+          echo "upload artifacts recursively"
+          ls -l -R ./artifacts/upload
         env:
           TEMP_ARCHIVE_NAME: "./artifacts/staging/archive.${{ env.EXTENSION }}"
+          TEMP_STATIC_LIB: "./artifacts/static-staging/${{ env.LIBIMAGEFLOW_STATIC }}"
+          TEMP_STATIC_ARCHIVE: "./artifacts/static-staging/${{ env.LIBIMAGEFLOW_STATIC }}.${{ env.EXTENSION }}"
 
-      - name: "Package imageflow.a for musl targets"
-        if: endsWith(matrix.target, '-musl')
-        shell: bash
-        run: |
-          # Reasoning: Create a separate .tar.gz for imageflow.a on musl targets
-          # Goal: Facilitate easy downloading for Go package by maintaining versioned and latest archives
 
-          # Define archive names
-          VERSIONED_ARCHIVE="imageflow.a-${{ github.ref_name || github.sha }}-${{ matrix.target }}.tar.gz"
-          LATEST_ARCHIVE="imageflow.a-latest-${{ matrix.target }}.tar.gz"
-
-          # Create versioned tar.gz
-          mkdir -p ./artifacts/upload/versioned/musl/${{ matrix.target }}
-          tar -czf "./artifacts/upload/versioned/musl/${{ matrix.target }}/$VERSIONED_ARCHIVE" -C "${{ env.REL_BINARIES_DIR }}" imageflow.a
-
-          # Create latest tar.gz (overwrite if exists)
-          mkdir -p ./artifacts/upload/latest/musl/${{ matrix.target }}
-          tar -czf "./artifacts/upload/latest/musl/${{ matrix.target }}/$LATEST_ARCHIVE" -C "${{ env.REL_BINARIES_DIR }}" imageflow.a
-
-      - name: "Upload to Github Release: ${{ env.RELATIVE_ARTIFACT_ARCHIVE }}"
+      - name: "Upload to Github Release: ${{ env.RELATIVE_GITHUB_ARCHIVE }}"
         if: ${{ env.ALLOW_PUBLISH == 'true' }}
         uses: xresloader/upload-to-github-release@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          file: ${{ env.RELATIVE_ARTIFACT_ARCHIVE }}
+          file: ${{ env.RELATIVE_GITHUB_ARCHIVE }}
           tags: true
           overwrite: true
           verbose: true
