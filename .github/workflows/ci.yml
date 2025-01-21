@@ -202,7 +202,7 @@ jobs:
           echo "REL_BINARIES_DIR=target/${{ matrix.target }}/${{ env.PROFILE }}/" >> $GITHUB_ENV
           echo "BUILD_EXCLUDE=${{ matrix.build-exclude && format('--exclude={0}',matrix.build-exclude) }}" >> $GITHUB_ENV
           echo "ALLOW_PUBLISH=${{ matrix.skip-publish != 'true' && github.event_name == 'release' && 'true' || 'false' }}" >> $GITHUB_ENV
-          echo "LIBIMAGEFLOW_DYNAMIC${{ contains(matrix.target, 'win') && 'imageflow.dll'  || contains(matrix.target, 'apple') && 'libimageflow.dylib' || 'libimageflow.so' }}" >> $GITHUB_ENV
+          echo "LIBIMAGEFLOW_DYNAMIC=${{ contains(matrix.target, 'win') && 'imageflow.dll'  || contains(matrix.target, 'apple') && 'libimageflow.dylib' || 'libimageflow.so' }}" >> $GITHUB_ENV
           echo "LIBIMAGEFLOW_STATIC=${{ contains(matrix.target, 'win') && 'imageflow.lib' || 'libimageflow.a' }}" >> $GITHUB_ENV
       # ----------------------------------------------------------------------------
       # More environment variables that are used for artifact naming/publishing
