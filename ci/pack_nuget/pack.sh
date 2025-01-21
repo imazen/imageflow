@@ -105,9 +105,9 @@ mkdir -p "$STAGING_DIR" || true
     
     mkdir -p "$RUNTIME_DIR"
     if [[ "$1" == "tool" ]]; then
-        cp "${BINARIES_DIR}${TOOL_NAME}" "${RUNTIME_DIR}${TOOL_NAME}"
+        cp "${BINARIES_DIR//\\//}${TOOL_NAME}" "${RUNTIME_DIR}${TOOL_NAME}"
     else
-        cp "${BINARIES_DIR}${LIB_NAME}" "${RUNTIME_DIR}${LIB_NAME}"
+        cp "${BINARIES_DIR//\\//}${LIB_NAME}" "${RUNTIME_DIR}${LIB_NAME}"
     fi
     
     
