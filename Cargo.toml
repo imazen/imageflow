@@ -17,6 +17,11 @@ resolver = "2"
 debug = true
 split-debuginfo = "packed"
 
+# Musl-specific settings - strip symbols since these are static builds
+[target.'cfg(target_env = "musl")'.profile.release]
+strip = true  # Strip symbols only for musl builds
+lto = true    # Keep link-time optimization for better size/performance
+
 # RIAPI Tests take 600ms each at 0, 200ms each at 1, 36ms each at 2, 26ms each at 3
 [profile.test]
 opt-level = 2

@@ -9,8 +9,13 @@ edition = "2021"
 [lib]
 name = "imageflow"
 doc = true
+# Default crate type for non-musl targets
 crate-type = ["cdylib"]
 doctest = false
+
+# Override crate-type for musl targets
+[target.'cfg(target_env = "musl")'.lib]
+crate-type = ["staticlib"]
 
 [dependencies]
 libc = "0.2"

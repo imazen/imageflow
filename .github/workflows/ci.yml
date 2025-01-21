@@ -114,11 +114,9 @@ jobs:
             os: ubuntu-24.04
             target-cpu: x86-64
             target: x86_64-unknown-linux-musl
-            #target-feature: -crt-static
             features: mimalloc
             cross: 'true'
             skip-publish: 'true'
-            build-exclude: 'imageflow_abi'
 
           - name: ARM64-linux-musl
             suffix: linux-musl-arm64
@@ -126,12 +124,10 @@ jobs:
             nuget-rid: linux-musl-arm64
             os: ubuntu-24-arm-32gb
             target-cpu: generic
-            #target-feature: -crt-static
             target: aarch64-unknown-linux-musl
             features: mimalloc
             cross: 'true'
             skip-publish: 'true'
-            build-exclude: 'imageflow_abi'
 
     runs-on: ${{ matrix.os }}
     name: "${{ (matrix.cross == 'true') && 'cross ' || ''}}${{ matrix.name }}${{ matrix.target-cpu && format(' cpu: {0}', matrix.target-cpu) }}${{ matrix.target && format(' target: {0}', matrix.target) }}${{ matrix.features && format(' features: {0}', matrix.features) }} runs-on:${{ matrix.os }}"
