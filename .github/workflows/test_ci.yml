@@ -58,7 +58,7 @@ jobs:
             target-cpu: x86-64
             target: x86_64-unknown-linux-musl
             features: mimalloc
-            cross: true
+            cross: 'true'
 
           # - name: wasm32-unknown-emscripten
           #   os: ubuntu-24.04
@@ -69,7 +69,7 @@ jobs:
             target-cpu: generic
             target: aarch64-unknown-linux-musl
             features: mimalloc
-            cross: true
+            cross: 'true'
 
 
 
@@ -117,6 +117,6 @@ jobs:
         shell: bash
         env:
           RUSTFLAGS: "${{ matrix.cpu-target && format('-C target-cpu={0}',matrix.cpu-target) }}"
-        if: ${{ !contains(matrix.cross, 'true') }}
+        if: ${{ matrix.cross != 'true' }}
 
 
