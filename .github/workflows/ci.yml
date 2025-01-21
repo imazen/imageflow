@@ -346,12 +346,14 @@ jobs:
 
       - name: "Upload to Github Release: ${{ env.RELATIVE_ARTIFACT_ARCHIVE }}"
         if: ${{ env.ALLOW_PUBLISH == 'true' }}
-        uses: Shopify/upload-to-release@master
+        uses: xresloader/upload-to-github-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          name: ${{ env.IMAGEFLOW_TAG_SHA_SUFFIX }}.${{ env.EXTENSION }}
-          path: ${{ env.RELATIVE_ARTIFACT_ARCHIVE }}
-          repo-token: ${{ secrets.GITHUB_TOKEN }}
-          content-type: application/${{ env.EXTENSION == 'tar.gz' && 'gzip' || 'zip' }}
+          file: ${{ env.RELATIVE_ARTIFACT_ARCHIVE }}
+          tags: true
+          overwrite: true
+          verbose: true
 
       - name: "Create NuGet Package Imageflow.NativeTool.${{ matrix.nuget-rid }}"
         shell: bash
