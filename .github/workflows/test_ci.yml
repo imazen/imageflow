@@ -13,6 +13,7 @@ on:
 jobs:
   test:
     strategy:
+      fail-fast: false
       matrix:
         # setup different OS and targets
         # TODO: add musl+mimalloc-secure for linux builds to drop libc dependency
@@ -47,11 +48,17 @@ jobs:
             target-cpu: generic
             target: aarch64-unknown-linux-gnu
 
+          - name: win32
+            os: windows-2019
+            target: i686-pc-windows-msvc
+            cross: true
+
           - name: x86_64-unknown-linux-musl
             os: ubuntu-24.04
             target-cpu: x86-64
             target: x86_64-unknown-linux-musl
             features: mimalloc
+            cross: true
 
           # - name: wasm32-unknown-emscripten
           #   os: ubuntu-24.04
@@ -62,10 +69,9 @@ jobs:
             target-cpu: generic
             target: aarch64-unknown-linux-musl
             features: mimalloc
+            cross: true
 
-          - name: win32
-            os: windows-2019
-            target: i686-pc-windows-msvc
+
 
             #todo target: aarch64-pc-windows-msvc
 
@@ -74,6 +80,12 @@ jobs:
       - run: rustup show
       - name: Checkout code
         uses: actions/checkout@v4
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          key: ${{matrix.name}}
+        if: ${{ !contains(matrix.cross, 'true') }}
+
 
       - uses: dtolnay/rust-toolchain@stable
       
@@ -88,7 +100,7 @@ jobs:
       - name: Install NASM
         uses: ./.github/actions/install-nasm
 
-      - name: Test
+      - name: Cross Test
         uses: houseabsolute/actions-rust-cross@v1
         env:
           RUSTFLAGS: ${{ matrix.cpu-target && format('-C target-cpu={0}',matrix.cpu-target) }}
@@ -98,4 +110,13 @@ jobs:
           toolchain: stable
           args:
             "--locked --release ${{ matrix.features && format('--features={0}',matrix.features) }}"
-   
+        if: ${{ matrix.cross == 'true') }}
+      
+      - name: Test
+        run: cargo test --all --locked --release ${{ matrix.features && format('--features={0}',matrix.features) }}
+        shell: bash
+        env:
+          RUSTFLAGS: ${{ matrix.cpu-target && format('-C target-cpu={0}',matrix.cpu-target) }}
+        if: ${{ !contains(matrix.cross, 'true') }}
+
+
