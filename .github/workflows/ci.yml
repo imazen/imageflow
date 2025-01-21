@@ -278,6 +278,25 @@ jobs:
           args: "--all ${{ env.BUILD_EXCLUDE }} ${{ env.CROSS_ARGS }}"
         if: matrix.cross == 'true'
 
+      # on *unknown-linux-gnu, check and extract exact glibc version of imageflow.so
+      - name: Check glibc version of imageflow.so
+        if: matrix.target == 'x86_64-unknown-linux-gnu' || matrix.target == 'aarch64-unknown-linux-gnu'
+        run: |
+          # Use objdump to find all GLIBC version requirements
+          echo "GLIBC version requirements:"
+          objdump -T ${REL_BINARIES_DIR}imageflow.so | grep GLIBC_ | sed 's/.*GLIBC_\([0-9.]*\).*/\1/g' | sort -Vu
+
+          # Find the highest GLIBC version required
+          HIGHEST_GLIBC=$(objdump -T ${REL_BINARIES_DIR}imageflow.so | grep GLIBC_ | sed 's/.*GLIBC_\([0-9.]*\).*/\1/g' | sort -V | tail -n1)
+          echo "Highest GLIBC version required: $HIGHEST_GLIBC"
+
+          # Fail if version is above 2.17 and this is not a skipped build
+          if [[ "${{ matrix.skip-publish }}" != "true" ]] && [[ $(echo -e "2.17\n$HIGHEST_GLIBC" | sort -V | tail -n1) != "2.17" ]]; then
+            echo "Error: GLIBC version $HIGHEST_GLIBC is higher than maximum allowed version 2.17"
+            exit 1
+          fi
+        shell: bash
+
       # ----------------------------------------------------------------------------
       # Diagnose build results for debugging.
       # ----------------------------------------------------------------------------
