@@ -94,7 +94,7 @@ jobs:
           RUSTFLAGS: ${{ matrix.cpu-target && format('-C target-cpu={0}',matrix.cpu-target) }}
         with:
           command: "test"
-          target: ${{ matrix.platform.target }}
+          target: ${{ matrix.target }}
           toolchain: stable
           args:
             "--locked --release ${{ matrix.features && format('--features={0}',matrix.features) }}"
