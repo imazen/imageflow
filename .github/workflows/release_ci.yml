@@ -12,7 +12,7 @@ jobs:
       NUGET_UPLOAD_GITHUB: ${{ secrets.NUGET_UPLOAD_GITHUB }}
       HTTPS_IMAGEFLOW_NIGHTLIES: "https://s3-us-west-1.amazonaws.com/imageflow-nightlies"
       DOCKER_FETCH_COMMIT_SUFFIX: linux64
-      profile: release
+      PROFILE: release
 
     strategy:
       fail-fast: false
@@ -101,6 +101,7 @@ jobs:
             target: aarch64-unknown-linux-musl
             features: mimalloc
             cross: 'true'
+
 
           # todo target: aarch64-pc-windows-msvc instead of in test_woa.yml (once an official image is released)
           # todo: Someday rewrite imageflow for  wasm32-unknown-emscripten
