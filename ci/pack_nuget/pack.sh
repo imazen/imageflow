@@ -154,7 +154,7 @@ mkdir -p "$STAGING_DIR" || true
     echo
     
     rm "${NUGET_OUTPUT_FILE}" || true
-    zip -r "${NUGET_OUTPUT_FILE}" . || 7z a -tzip "${NUGET_OUTPUT_FILE}" "*"
+    zip -r "${NUGET_OUTPUT_FILE}" . || 7z a -tzip "${NUGET_OUTPUT_FILE}" "*" || powershell.exe -ExecutionPolicy Bypass -File "${SCRIPT_DIR}/zip.ps1" "${NUGET_OUTPUT_FILE}" "*"
     echo  "${NUGET_OUTPUT_FILE} packed"
     
 )
