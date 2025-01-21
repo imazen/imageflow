@@ -22,9 +22,6 @@ jobs:
       - name: Checkout code again with git, so git commands work.
         uses: actions/checkout@v4
 
-      - name: Install NASM
-        uses: ./.github/actions/install-nasm
-
       - name: Test Build
         run: "& Launch-VsDevShell.ps1 | cargo test --all"
         env:

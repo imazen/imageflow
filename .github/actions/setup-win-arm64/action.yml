@@ -24,7 +24,7 @@ runs:
         Invoke-WebRequest -Uri $url -OutFile vs_buildtools.exe
         Start-Process -FilePath .\vs_buildtools.exe -ArgumentList "--quiet", "--wait", "--norestart", "--nocache", `
           "--installPath", "C:\BuildTools", `
-          "--channelUri", "https://aka.ms/vs/17/pre/channel", `
+          "--channelUri", "https://aka.ms/vs/17/pre/channel", ` #https://aka.ms/vs/17/release/channel
           "--add", "Microsoft.VisualStudio.Component.VC.Tools.ARM64", `
           "--add", "Microsoft.VisualStudio.Component.Windows11SDK.22621" `
           -NoNewWindow -Wait
@@ -62,14 +62,18 @@ runs:
         ls "C:\Program Files (x86)\Windows Kits\10\include\10.0.22621.0\ucrt"
     - name: Adding tools to PATH/INCLUDE/LIB/LIBPATH
       shell: powershell
+      env:
+        msvc_ver: "14.43.34618"
+        sdk_ver: "10.0.22621.0"
+
       run: |
         echo "Adding tools to PATH"
         echo "C:\BuildTools\Common7\Tools"  | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
         echo "C:\Program Files\Git\bin" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
-        echo "C:\BuildTools\VC\Tools\MSVC\14.43.34618\bin\Hostx64\arm64" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
-        echo "C:\BuildTools\VC\Tools\MSVC\14.43.34618\bin\Hostx64\x64" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+        echo "C:\BuildTools\VC\Tools\MSVC\$msvc_ver\bin\Hostx64\arm64" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+        echo "C:\BuildTools\VC\Tools\MSVC\$msvc_ver\bin\Hostx64\x64" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
         echo "$env:USERPROFILE\.cargo\bin" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
         echo "Setting up INCLUDE, LIB, LIBPATH environment variables"
-        echo "INCLUDE=C:\BuildTools\VC\Tools\MSVC\14.43.34618\include;C:\Program Files (x86)\Windows Kits\10\include\10.0.22621.0\ucrt" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
-        echo "LIB=C:\BuildTools\VC\Tools\MSVC\14.43.34618\lib\arm64;C:\Program Files (x86)\Windows Kits\10\lib\10.0.22621.0\ucrt\arm64" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
-        echo "LIBPATH=C:\BuildTools\VC\Tools\MSVC\14.43.34618\lib\arm64" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+        echo "INCLUDE=C:\BuildTools\VC\Tools\MSVC\$msvc_ver\include;C:\Program Files (x86)\Windows Kits\10\include\$sdk_ver\ucrt" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+        echo "LIB=C:\BuildTools\VC\Tools\MSVC\$msvc_ver\lib\arm64;C:\Program Files (x86)\Windows Kits\10\lib\$sdk_ver\ucrt\arm64" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+        echo "LIBPATH=C:\BuildTools\VC\Tools\MSVC\$msvc_ver\lib\arm64" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
