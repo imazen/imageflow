@@ -26,7 +26,7 @@ jobs:
         uses: ./.github/actions/install-nasm
 
       - name: Test Build
-        run: "& Launch-VsDevShell.ps1" | cargo test --all"
+        run: "& Launch-VsDevShell.ps1 | cargo test --all"
         env:
           RUSTFLAGS: -C target-cpu=generic
 
