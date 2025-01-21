@@ -19,65 +19,83 @@ jobs:
         include:
           - name: ubuntu_20_04-x86_64
             os: ubuntu-20.04
-            TARGET_CPU: x86-64
+            target-cpu: x86-64
+            target: x86_64-unknown-linux-gnu
 
           - name: ubuntu_22_04-x86_64
             os: ubuntu-22.04
-            TARGET_CPU: x86-64
-
-          - name: osx_13-x86_64
-            os: macos-13
-            TARGET_CPU: haswell
+            target-cpu: x86-64
+            target: x86_64-unknown-linux-gnu
 
           - name: win-x86_64
             os: windows-2019
-            TARGET_CPU: x86-64
+            target-cpu: x86-64
+            target: x86_64-pc-windows-msvc
+
+          - name: osx_13-x86_64
+            os: macos-13
+            target-cpu: haswell
+            target: x86_64-apple-darwin
 
           - name: osx_14-aarch64
             os: macos-14
-            TARGET_CPU: apple-m1
+            target-cpu: apple-m1
+            target: aarch64-apple-darwin
 
-          - name: ubuntu_24-arm64
+          - name: ubuntu_24-aarch64
             os: ubuntu-24-arm-32gb
-            TARGET_CPU: generic
+            target-cpu: generic
+            target: aarch64-unknown-linux-gnu
+
+          - name: x86_64-unknown-linux-musl
+            os: ubuntu-24.04
+            target-cpu: x86-64
+            target: x86_64-unknown-linux-musl
+            features: mimalloc
+
+          - name: wasm32-unknown-emscripten
+            os: ubuntu-24.04
+            target: wasm32-unknown-emscripten
+
+          - name: aarch64-unknown-linux-musl
+            os: ubuntu-24.04
+            target-cpu: generic
+            target: aarch64-unknown-linux-musl
+            features: mimalloc
 
           - name: win32
             os: windows-2019
+            target: i686-pc-windows-msvc
+
+            #todo target: aarch64-pc-windows-msvc
 
     runs-on: ${{matrix.os}}
-    steps
-
+    steps:
       - run: rustup show
       - name: Checkout code
         uses: actions/checkout@v4
 
       - uses: dtolnay/rust-toolchain@stable
       
-      - name: Install win32 rust (i686-pc-windows-msvc)
-        uses: dtolnay/rust-toolchain@stable
-        with:
-          target: i686-pc-windows-msvc
-        if: ${{ contains(matrix.name, 'win32') }}
+      # - name: Install win32 rust (i686-pc-windows-msvc)
+      #   uses: dtolnay/rust-toolchain@stable
+      #   with:
+      #     target: i686-pc-windows-msvc
+      #   if: ${{ contains(matrix.name, 'win32') }}
 
       - run: rustup show
-
-      - uses: Swatinem/rust-cache@v2
-        with:
-          key: ${{matrix.name}}
 
       - name: Install NASM
         uses: ./.github/actions/install-nasm
 
-
-      - name: Test Build
-        run: cargo test --all
-        shell: bash
+      - name: Test
+        uses: houseabsolute/actions-rust-cross@v1
         env:
-          RUSTFLAGS: -C target-cpu=${{matrix.TARGET_CPU}}
-        if: ${{ !contains(matrix.name, 'win32') }}
-
-      - name: Test Build (Win32)
-        run: cargo test --all --release --target=i686-pc-windows-msvc
-        if: ${{ contains(matrix.name, 'win32') }}
-
-
+          RUSTFLAGS: ${{ matrix.cpu-target && format('-C target-cpu={0}',matrix.cpu-target) }}
+        with:
+          command: "test"
+          target: ${{ matrix.platform.target }}
+          toolchain: stable
+          args:
+            "--locked --release ${{ matrix.features && format('--features={0}',matrix.features) }}
+          rust-cache-parameters: ${{matrix.name}}
