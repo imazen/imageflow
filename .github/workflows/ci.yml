@@ -113,7 +113,7 @@ jobs:
             os: ubuntu-24.04
             target-cpu: x86-64
             target: x86_64-unknown-linux-musl
-            target-feature: -crt-static
+            #target-feature: -crt-static
             features: mimalloc
             cross: 'true'
             skip-publish: 'true'
@@ -125,7 +125,7 @@ jobs:
             nuget-rid: linux-musl-arm64
             os: ubuntu-24-arm-32gb
             target-cpu: generic
-            target-feature: -crt-static
+            #target-feature: -crt-static
             target: aarch64-unknown-linux-musl
             features: mimalloc
             cross: 'true'
