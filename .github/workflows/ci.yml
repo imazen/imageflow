@@ -252,7 +252,7 @@ jobs:
           command: "build"
           target: ${{ matrix.target }}
           toolchain: stable
-          args: "${{ env.BUILD_EXCLUDE }} ${{ env.CROSS_ARGS }}"
+          args: "--all ${{ env.BUILD_EXCLUDE }} ${{ env.CROSS_ARGS }}"
         if: matrix.cross == 'true'
 
       # ----------------------------------------------------------------------------
