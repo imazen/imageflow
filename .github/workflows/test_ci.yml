@@ -96,7 +96,6 @@ jobs:
           command: "test"
           target: ${{ matrix.platform.target }}
           toolchain: stable
-          rust-cache-parameters: ${{matrix.name}}
           args:
             "--locked --release ${{ matrix.features && format('--features={0}',matrix.features) }}"
    
