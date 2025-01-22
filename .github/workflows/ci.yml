@@ -217,7 +217,7 @@ jobs:
       - if: contains(matrix.target, 'musl')
         name: "Edit imageflow_abi/Cargo.toml to build staticlib instead of cdylib and use strip and lto"
         run: |
-          echo "Editing imageflow_abi/Cargo.toml to replace the string \"[\"cdylib\"\]" with \"[\"staticlib\"\]"
+          echo "Editing imageflow_abi/Cargo.toml to replace the cydlib with staticlib"
           sed -i 's/\["cdylib"\]/\["staticlib"\]/g' imageflow_abi/Cargo.toml
           echo "Editing ./Cargo.toml to remove all instances of '# enable on musl: '"
           sed -i '/# enable on musl:/d' ./Cargo.toml
