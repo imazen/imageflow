@@ -395,15 +395,19 @@ jobs:
               env STATIC_ARCHIVE_1 = "/static/${{ matrix.target }}/latest/${{ env.LIBIMAGEFLOW_STATIC }}.${{ env.EXTENSION }}"
               env STATIC_ARCHIVE_2 = "/static/${{ matrix.target }}/releases/${{ github.ref_name }}/${{ env.LIBIMAGEFLOW_STATIC }}.${{ env.EXTENSION }}"
               env STATIC_ARCHIVE_3 = "/static/${{ matrix.target }}/commits/${{ github.sha }}/${{ matrix.commit-suffix }}.${{ env.EXTENSION }}"
+              env STATIC_ARCHIVE_GITHUB = "./artifacts/github/lib${{ env.IMAGEFLOW_TAG_SHA_SUFFIX }}-${{ matrix.commit-suffix }}.${{ env.LIBIMAGEFLOW_STATIC }}.${{ env.EXTENSION }}"
+
               mkdir -p $(dirname $STATIC_UPLOAD_DIR$STATIC_ARCHIVE_1)
               mkdir -p $(dirname $STATIC_UPLOAD_DIR$STATIC_ARCHIVE_2)
               mkdir -p $(dirname $STATIC_UPLOAD_DIR$STATIC_ARCHIVE_3)
               cp $TEMP_STATIC_ARCHIVE $STATIC_UPLOAD_DIR$STATIC_ARCHIVE_1
               cp $TEMP_STATIC_ARCHIVE $STATIC_UPLOAD_DIR$STATIC_ARCHIVE_2
-              mv $TEMP_STATIC_ARCHIVE $STATIC_UPLOAD_DIR$STATIC_ARCHIVE_3
+              cp $TEMP_STATIC_ARCHIVE $STATIC_UPLOAD_DIR$STATIC_ARCHIVE_3
+              mv $TEMP_STATIC_ARCHIVE $STATIC_ARCHIVE_GITHUB
               echo "Uploaded static archive to ${{ env.HTTPS_IMAGEFLOW_NIGHTLIES }}$STATIC_UPLOAD_DIR$STATIC_ARCHIVE_1"
               echo "Uploaded static archive to ${{ env.HTTPS_IMAGEFLOW_NIGHTLIES }}$STATIC_UPLOAD_DIR$STATIC_ARCHIVE_2"
               echo "Uploaded static archive to ${{ env.HTTPS_IMAGEFLOW_NIGHTLIES }}$STATIC_UPLOAD_DIR$STATIC_ARCHIVE_3"
+              echo "RELATIVE_GITHUB_ARCHIVE_STATIC=$STATIC_ARCHIVE_GITHUB" >> $GITHUB_ENV
             )
           else
             echo "No static archive found at ${{ env.TEMP_STATIC_LIB }}"
@@ -426,7 +430,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          file: ${{ env.RELATIVE_GITHUB_ARCHIVE }}
+          file: "${{ env.RELATIVE_GITHUB_ARCHIVE }}${{ env.RELATIVE_GITHUB_ARCHIVE_STATIC && format(';{0}', env.RELATIVE_GITHUB_ARCHIVE_STATIC) }}"
           tags: true
           overwrite: true
           verbose: true
