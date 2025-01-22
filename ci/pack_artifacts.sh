@@ -47,9 +47,8 @@ mkdir -p ./artifacts/staging/headers  # Explicitly create headers directory
 if [ -d "./${TARGET_DIR}doc" ]; then
     (
         cd "./${TARGET_DIR}doc"
-        if [ "$(ls -A)" ]; then  # Only create archive if directory is not empty
-            tar czf "../docs.${EXTENSION}" ./*
-            mv "../docs.${EXTENSION}" ./artifacts/staging/
+        if [ [ -A ] ]; then  # Only create archive if directory is not empty
+            tar czf "../../artifacts/staging/docs.${EXTENSION}" ./*
         else
             echo "Documentation directory exists but is empty - skipping"
         fi
